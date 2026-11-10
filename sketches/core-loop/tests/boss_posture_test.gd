@@ -130,23 +130,25 @@ func _run() -> void:
 		"cockpit closed after the stagger %s; the crack paid off in the next opening: %d chunks, hp %.0f, stagger over %s, published %s"
 			% [closed, _boss.chunks_left(), _boss.hp, not _boss.staggered(), _weak])
 
-	# The broken chunk holds the phase until its minimum time; the bar takes nothing meanwhile.
+	# The broken chunk holds the phase until its minimum time; a hit meanwhile banks toward the next bar
+	# (brindle_held_bank_test owns the bank's rule).
 	await _hit(hull, "ram", RAM_FORCE)
 	var held_posture: float = _boss.posture()
 	var held: bool = _boss.phase == 1 and _boss.music_state()["held"]
 	_advance(Rules.PHASE_MIN_SECONDS[0] - _boss.phase_clock - 0.5)
 	var still_one: bool = _boss.phase == 1
 	_advance(1.0)
-	_report("phase waits its minimum", held and held_posture == 0.0 and still_one and _boss.phase == 2 and _phases == [1, 2],
-		"chunk broken at phase 1: held %s, a ram moved the bar to %.1f; phase 1 at %.1f s %s, then phases %s"
+	_report("phase waits its minimum", held and held_posture > 0.0 and held_posture <= Rules.HELD_BANK and still_one and _boss.phase == 2
+			and _phases == [1, 2],
+		"chunk broken at phase 1: held %s, a ram banked %.1f; phase 1 at %.1f s %s, then phases %s"
 			% [held, held_posture, Rules.PHASE_MIN_SECONDS[0] - 0.5, still_one, _phases])
 
 	# Phase 2 opens with the transition beat (fight_phases.gd): the bar takes nothing until it ends.
 	_combat.strike(hull, "arc", 1.0e6)
 	var beat_posture: float = _boss.posture()
 	_advance(FightPhases.TRANSITION_SECONDS + 0.05)
-	_report("transition beat holds the bar", beat_posture == 0.0 and not _boss._in_transition(),
-		"a 1e6 shot in the beat moved the bar to %.1f; beat over %s" % [beat_posture, not _boss._in_transition()])
+	_report("transition beat holds the bar", beat_posture == held_posture and not _boss._in_transition(),
+		"a 1e6 shot in the beat left the banked bar at %.1f (banked %.1f); beat over %s" % [beat_posture, held_posture, not _boss._in_transition()])
 
 	# Guns press the bar to a stagger, but never crack the core.
 	var shots := 0

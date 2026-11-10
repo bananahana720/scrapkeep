@@ -70,6 +70,11 @@ func _process(_delta: float) -> bool:
 			var shots := _cues("shot_fired")
 			var played := shots.filter(func(c: Array): return c[2] == "now").size()
 			_check("voice limit", played == 1 and shots.size() == 10, "ten shots in one frame play %d; the rest are gated so fire never turns to mush" % played)
+			# A stage's resting weather is announced with no lead and then starts: no alarm.
+			_game.events.event_announced.emit("dawn_still", 0.0)
+			_game.events.event_started.emit("dawn_still")
+			_check("calm weather is no alarm", _cues("event_announced").is_empty() and _cues("event_started").is_empty(),
+				"an announcement with no lead plays no klaxon and no start cue: %s" % [_cues("event_announced") + _cues("event_started")])
 			_game.events.event_announced.emit("flood", 5.0)
 			var klaxon := _cues("event_announced")
 			_check("klaxon on beat", klaxon.size() == 1 and klaxon[0][2] == "beat" and int(klaxon[0][3]) % Harmony.BEAT == 0 and int(klaxon[0][3]) >= engine.clock, "the klaxon waits for the next beat (sample %d, play head %d)" % [int(klaxon[0][3]) if klaxon.size() > 0 else -1, engine.clock])
@@ -109,7 +114,10 @@ func _process(_delta: float) -> bool:
 			for frames in 20:
 				engine.render(Harmony.BEAT / 4)
 				dead_mode = dead_mode or engine.mode == MusicEngine.DEAD
-			_check("death", died.size() == 1 and died[0][2] == "now" and dead_mode, "the death cue plays at once and the band drops to the keys on the next beat")
+			# The cue on the death's frame, then the fall's three notes booked on the grid from the boom's beat.
+			var cues_now: Array = died.filter(func(c: Array): return c[2] == "now")
+			var fall: Array = died.filter(func(c: Array): return c[2] == "grid")
+			_check("death", cues_now.size() == 1 and fall.size() == died.size() - 1 and fall.size() == 3 and dead_mode, "the death cue plays at once (%d), the fall is booked on the grid (%d notes) and the band drops to the keys on the next beat" % [cues_now.size(), fall.size()])
 			_check("band clock", engine.clock > 0, "the band ran %d samples on the %s driver (live output %s)" % [engine.clock, AudioServer.get_driver_name(), _audio.live_output])
 			# The output path the game uses on a real device: render into a generator.
 			var generator := AudioStreamGenerator.new()

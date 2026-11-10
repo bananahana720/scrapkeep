@@ -10,7 +10,7 @@ const Icons := preload("res://src/ui/icons.gd")
 const FILES := {
 	"res://src/ui/hud.gd": {
 		"cog": ['const ICON := "res_scrap"'],
-		"mass": ['Gauge.new("res_mass", ARMOR_BAR, true)'],
+		"mass": ['Gauge.new("res_mass", ARMOR_BAR, true, ARMOR_WORD)'],
 	},
 	"res://src/ui/growth_sheet.gd": {
 		"cog": ['draw_texture_rect(Icons.texture("res_scrap"), Rect2(rect.get_center()'],
@@ -21,8 +21,8 @@ const FILES := {
 		"mass": ['"callout_scrap": {"before": ["res_mass"]'],
 	},
 	"res://src/ui/screens.gd": {
-		"cog": ['["res_scrap", str(s["cogs"])]'],
-		"mass": ['["res_mass", str(s["scrap"])]'],
+		"cog": ['["res_scrap", str(s["cogs"]), "cogs left"]'],
+		"mass": ['["res_mass", str(s["scrap"]), "scrap held"]'],
 	},
 }
 
@@ -49,7 +49,8 @@ func _initialize() -> void:
 
 	var screens := FileAccess.get_file_as_string("res://src/ui/screens.gd")
 	var start := screens.find("var chips := [")
-	var block := screens.substr(start, screens.find("\n\t]", start) - start) if start >= 0 else ""
+	# The whole of summary_chips(): the list and the save chip a run that used one adds after it.
+	var block := screens.substr(start, screens.find("return chips", start) - start) if start >= 0 else ""
 	var ids: Array[String] = []
 	for m in RegEx.create_from_string("\\[\"([a-z0-9_]+)\",").search_all(block):
 		ids.append(m.get_string(1))

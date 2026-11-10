@@ -2,10 +2,11 @@ extends Control
 
 signal finished
 
+const AppShell := preload("res://src/core/app_shell.gd")
 const Worlds := preload("res://src/core/worlds.gd")
 const Palette := preload("res://src/core/palette.gd")
 const WorldLook := preload("res://src/presentation/world_look.gd")
-const UiFonts := preload("res://src/ui/ui_fonts.gd")
+const UiDraw := preload("res://src/ui/ui_draw.gd")
 const CompanionBody := preload("res://src/presentation/companion_body.gd")
 const DigScenery := preload("res://src/presentation/dig_scenery.gd")
 const HighdraftScenery := preload("res://src/presentation/highdraft_scenery.gd")
@@ -112,7 +113,7 @@ func start(game_ref, lap_stats := {}, prelude_only := false) -> void:
 	advance(0.0)
 	# run_ended already selects the summary music through the audio director. Calling
 	# its menu API also covers a sequence started from an already-settled summary.
-	var audio = game.presentation.audio
+	var audio = game.audio()
 	if audio != null:
 		audio._flush_flow()
 		audio.engine.menu_theme("summary", true)
@@ -229,12 +230,7 @@ func credits_rect() -> Rect2:
 
 
 func _label(size_px: int, color: Color) -> Label:
-	var label := Label.new()
-	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	label.add_theme_font_override("font", UiFonts.bold())
-	label.add_theme_font_size_override("font_size", size_px)
-	label.add_theme_color_override("font_color", color)
-	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var label := UiDraw.label(size_px, color)
 	add_child(label)
 	return label
 
@@ -297,7 +293,7 @@ func _build_crater() -> void:
 	crater.name = "MeteorCrater"
 	crater.visible = false
 	_scene.add_child(crater)
-	_crater_serial = DisplayServer.get_name() == "headless"
+	_crater_serial = AppShell.headless()
 	if _crater_serial:
 		_crater_requests.append_array(_crater_paths())
 		return
@@ -532,7 +528,7 @@ func advance(delta: float) -> void:
 	if world_index == 2 and local >= 8.0 and not cannon_answered:
 		cannon_answered = true
 		cannon_answer_at = local
-		var audio = game.presentation.audio
+		var audio = game.audio()
 		if audio != null:
 			audio.cannon_motif("ending_cannon", true)
 	phase = "flyover" if local < ESTABLISH_SECONDS else "copy"

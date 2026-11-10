@@ -61,7 +61,6 @@ var _scan := 0.0
 var _slab: MeshInstance3D
 var _brakes: MeshInstance3D
 var _brakes_y := 0.0
-static var _warned_asset := false
 static var _shared: Array = []
 
 
@@ -266,31 +265,8 @@ func _snap_stake() -> void:
 
 
 static func _parts() -> Array:
-	if not _shared.is_empty():
-		return _shared
-	var path := "res://assets/models/world_three/enemy_ballast_heavy.glb"
-	if not ResourceLoader.exists(path):
-		return _shared
-	var packed := load(path) as PackedScene
-	if packed == null:
-		return _shared
-	var scene := packed.instantiate()
-	var painted := Palette.solid(Color.WHITE)
-	painted.vertex_color_use_as_albedo = true
-	for node in scene.find_children("*", "MeshInstance3D", true, false):
-		var mi := node as MeshInstance3D
-		var mesh: Mesh = mi.mesh.duplicate()
-		var flash := -1
-		for i in mesh.get_surface_count():
-			var surface_material := mesh.surface_get_material(i)
-			if surface_material == null and not _warned_asset:
-				_warned_asset = true
-				push_warning("ballast_heavy: surface has no material; using default finish")
-			if surface_material != null and surface_material.resource_name == "fleet_paint":
-				flash = i
-			mesh.surface_set_material(i, painted)
-		_shared.append({"name": mi.name, "mesh": mesh, "xform": mi.transform, "flash": flash})
-	scene.free()
+	if _shared.is_empty():
+		_shared = EnemyCasting.parts("res://assets/models/world_three/enemy_ballast_heavy.glb", "ballast_heavy")
 	return _shared
 
 

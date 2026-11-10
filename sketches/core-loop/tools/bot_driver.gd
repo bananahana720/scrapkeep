@@ -716,6 +716,16 @@ func _init(game_ref, policy_name: String, seed_number: int) -> void:
 # stage plan (events, scrap, spawns); the base seed alone would give every run of a
 # policy the same map draw.
 func start(resume := false) -> void:
+	wire()
+	if resume and game.flow.resume_run():
+		return
+	game.flow.press_start()
+	game.flow.choose_class(class_index)
+
+
+# start()'s wiring alone, for a caller that begins the run itself (self-play pressing the menus' keys).
+# Call it once, in place of start(): both together connect every handler twice.
+func wire() -> void:
 	game.ctx.rng.seed = 20260926 + seed_value * 7919
 	game.player.source = source
 	var events = game.events
@@ -787,10 +797,6 @@ func start(resume := false) -> void:
 		game.player.tree.late_offer = true
 	if tree_policy == "random":
 		_connect_optional("tree_offered", _on_tree_offered)
-	if resume and game.flow.resume_run():
-		return
-	game.flow.press_start()
-	game.flow.choose_class(class_index)
 
 
 func _on_tree_offered(_class_id: String, depth: int, choices: Array) -> void:
@@ -1097,7 +1103,7 @@ func _on_stage_entered(stage: int, _retry: bool) -> void:
 	_warden_hp_at = -1.0
 	_warden_kinds = {}
 	_note = {"stage": stage, "warden_engaged_s": null, "warden_fight_s": null, "warden_broken_s": null, "exit_s": null, "events_joined": [],
-		"cores": [], "parts": [], "vault_tried": false, "waypoints": 0, "stuck_detours": 0, "hp_lost": 0.0, "hits": 0,
+		"cores": [], "parts": [], "vault_tried": false, "pockets_drawn": null, "waypoints": 0, "stuck_detours": 0, "hp_lost": 0.0, "hits": 0,
 		"max_hp": game.run.max_hp, "evasions": 0, "cap_hits": 0, "magnet_stuns": 0, "plants": 0, "slingshots": 0,
 		"specials": 0, "punch_short_s": 0.0, "plate_slams": 0, "thermal_rides": 0,
 		"first_contact_s": null, "first_hit_s": null, "hull_lost_120s": 0.0, "alive_120s": null, "fight_s": 0.0, "circle_s": 0.0,
@@ -1369,6 +1375,9 @@ func _content_scan() -> void:
 	if _note.is_empty():
 		return
 	var world = game.world
+	var activities = world.get("activities") if world != null else null
+	if activities != null and _note.get("pockets_drawn") == null:
+		_note["pockets_drawn"] = drawn_pockets(activities.sites)
 	var rogue = world.get("rogue") if world != null else null
 	if rogue != null and is_instance_valid(rogue) and rogue.get_instance_id() != _rogue_id:
 		_rogue_seen = rogue
@@ -1403,6 +1412,17 @@ func _content_scan() -> void:
 		closest[key] = snappedf(minf(float(closest.get(key, INF)), _flat(ball, now[id])), 0.1)
 	_note["rib_closest_m"] = closest
 	_caches_seen = now
+
+
+# The pockets this stage drew (pocket_draw.gd), by library id ("rim_vault", "dome_camp"), in the
+# order the stage built them; [] when it drew none. Read only, so a frame read or a band can say
+# which seeds met which pocket.
+static func drawn_pockets(sites: Array) -> Array:
+	var out: Array = []
+	for s in sites:
+		if s.drawn:
+			out.append(String(s.interior.get("id", s.id)))
+	return out
 
 
 func _close_note() -> void:

@@ -26,6 +26,18 @@ static func text(canvas: CanvasItem, x: float, y: float, value: String, font_siz
 	return width(value, font_size, numbers)
 
 
+# A centred bold label that ignores the mouse, for the pages' text rows.
+static func label(font_size: int, color: Color, words := "") -> Label:
+	var node := Label.new()
+	node.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	node.add_theme_font_override("font", UiFonts.bold())
+	node.add_theme_font_size_override("font_size", font_size)
+	node.add_theme_color_override("font_color", color)
+	node.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	node.text = words
+	return node
+
+
 static func bar(canvas: CanvasItem, rect: Rect2, fraction: float, color: Color) -> void:
 	canvas.draw_rect(rect.grow(1.5), OUTLINE)
 	canvas.draw_rect(rect, TRACK)

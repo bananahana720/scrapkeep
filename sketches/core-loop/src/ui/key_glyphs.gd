@@ -6,7 +6,7 @@ const EventKinds := preload("res://src/core/event_kinds.gd")
 const Icons := preload("res://src/ui/icons.gd")
 const Keycap := preload("res://src/ui/keycap.gd")
 const Glyphs := preload("res://src/ui/glyphs.gd")
-const UiFonts := preload("res://src/ui/ui_fonts.gd")
+const UiDraw := preload("res://src/ui/ui_draw.gd")
 
 # The prompt (design-v3/LEGIBILITY.md sections 2, 3 and 5): a sand keycap about 28 px tall plus
 # the verb's icon in the live colour, drawn at the thing the verb acts on and only on ticks
@@ -39,6 +39,10 @@ const BALL_VERBS := ["boost", "interact", "jump"]
 const RETICLE_VERBS := ["ultimate"]
 const LETGO := "letgo"
 const LETGO_WORD := "LET GO"
+# The verbs whose prompt says what the key does where the ball is, and the one reading the
+# bindings table words for the code and not for a player: E off the pylon mounts it.
+const READ_ALOUD := ["interact", "jump"]
+const READ_AS := {"interact": "mount"}
 const ULTIMATE_WORD := "ULTIMATE"
 const MAX_PROMPTS := 2
 const RETIRE_AFTER := {"harpoon": 3, "haul": 3, "smash": 5, "boost": 3, "interact": 3, "jump": 3, "letgo": 3, "ultimate": 3}
@@ -160,14 +164,20 @@ func icon_of(verb: String, line: String) -> String:
 	return Bindings.icon(verb)
 
 
-# The word riding a prompt: HOOK until the first bite on the profile, SMASH until the first smash.
-func word_for(verb: String, line: String) -> String:
+# The word riding a prompt: HOOK until the first bite on the profile, SMASH until the first smash,
+# and for E and Space what the key does in the ball's `state` (the bindings table's reading) until
+# the prompt first retires. A keycap and an icon alone told a new player nothing (player's-eye
+# pass, 10 Nov 2026).
+func word_for(verb: String, line: String, state := "") -> String:
 	if verb == "harpoon" and profile.uses("harpoon") == 0:
 		return EventKinds.LINE_ROWS["locked"]["word"]
 	if verb == "haul" and line == "body" and profile.uses("smash") == 0:
 		return EventKinds.LINE_ROWS["latched_body"]["word"]
 	if verb == "ultimate" and profile.uses("ultimate") < RETIRE_AFTER["ultimate"]:
 		return ULTIMATE_WORD
+	if verb in READ_ALOUD and profile.uses(verb) < RETIRE_AFTER[verb]:
+		var reading := Bindings.reading(verb, state)
+		return String(READ_AS.get(reading, reading)).to_upper()
 	return ""
 
 
@@ -210,6 +220,12 @@ func _state_of(verb: String, view: Dictionary) -> String:
 	return Bindings.ball_state("", view["charging"], view["mounted"], view["airborne"])
 
 
+# The state a prompt's word reads. On the pylon Space is the slingshot whether or not it is
+# charging, which the ball's state ranks first.
+func _word_state(verb: String, view: Dictionary) -> String:
+	return "mounted" if verb == "jump" and view["mounted"] else _state_of(verb, view)
+
+
 # One tick of the prompt rules over `view`; fills `shown`.
 func step(delta: float, view: Dictionary) -> void:
 	for verb in PROMPT_VERBS:
@@ -249,7 +265,7 @@ func step(delta: float, view: Dictionary) -> void:
 		if not open:
 			continue
 		if _first[verb] or _forced[verb] > 0.0 or _revived[verb] or not retired(verb, line) or (verb == "jump" and vault_open):
-			candidates.append({"verb": verb, "state": _state_of(verb, view), "word": word_for(verb, line)})
+			candidates.append({"verb": verb, "state": _state_of(verb, view), "word": word_for(verb, line, _word_state(verb, view))})
 	if line == "world" and _letgo_latch >= 1 and _letgo_latch <= RETIRE_AFTER[LETGO]:
 		candidates.append({"verb": LETGO, "state": _state_of("haul", view), "word": LETGO_WORD})
 	candidates.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
@@ -428,6 +444,5 @@ func _draw() -> void:
 			edge = icon.end.x + 5.0
 		var word: String = placed["word"]
 		if word != "":
-			var font := UiFonts.bold()
-			draw_string(font, Vector2(edge, at.y + (font.get_ascent(WORD_SIZE) - font.get_descent(WORD_SIZE)) * 0.5), word,
-				HORIZONTAL_ALIGNMENT_LEFT, -1, WORD_SIZE, live)
+			# Outlined, as every word drawn over the world is: the live colour alone is lost on pale sand.
+			UiDraw.text(self, edge, at.y, word, WORD_SIZE, live)

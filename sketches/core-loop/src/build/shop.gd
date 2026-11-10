@@ -21,6 +21,10 @@ const SHELF_SIZE := 3
 const SHELF_RARITIES := ["common", "rare"]
 const TOP_RARITIES := ["relic"]
 const FLOOR_RARITIES := ["rare"]
+# The hook's stock once the table's relics are all held (in world 1, once the Spare Frame is
+# yours): the top ordinary rung of the alpha, cobalt (ruling bn), so the part Moss calls too
+# strong for you is never a common off the shelf.
+const TOP_FALLBACK := FLOOR_RARITIES
 # Prices are cogs, from Fabricators.COG_PRICES: the reroll costs reroll_base at the first
 # stage's shelf and rises by reroll_growth each stage's shelf after; a charge cell costs cell_base, rising
 # by cell_growth for each cell already in that slot; a sale pays sell_share of the price.
@@ -182,8 +186,8 @@ func _stock_stage(here: Array) -> void:
 	_rng.seed = hash([SEED, ctx.flow.run_key() if ctx.flow != null else ctx.run.run_seed, ctx.run.world, ctx.run.stage, "shelf"])
 	shelf = _stock()
 	var lock_class: int = mini(TOP_CLASS_MAX, ctx.run.heft_class() + 1)
-	var top_id := _roll_one(TOP_RARITIES, shelf.map(func(entry): return entry["part_id"]))
-	top = {"part_id": top_id, "lock_class": lock_class, "sold": false} if top_id != "" else {}
+	var hook := _roll_hook(shelf.map(func(entry): return entry["part_id"]))
+	top = {"part_id": hook["part_id"], "table": hook["table"], "lock_class": lock_class, "sold": false} if hook["part_id"] != "" else {}
 	_stage_stocks[str(here)] = {"shelf": shelf.duplicate(true), "top": top.duplicate(true), "rng": _rng.state}
 
 
@@ -384,10 +388,10 @@ func top_shelf() -> Dictionary:
 	if top.is_empty():
 		return {}
 	var locked: bool = ctx.run.heft_class() < top["lock_class"]
-	# The table the hook was drawn from: the top rarities, or the shelf's when _roll_one fell back.
-	var table: Array = TOP_RARITIES if Parts.rarity_of(top["part_id"]) in TOP_RARITIES else SHELF_RARITIES
+	# The odds are the table the hook was drawn from (_roll_hook): the top rarities, else the
+	# cobalt fallback, else the shelf's.
 	return {"part_id": top["part_id"], "name": Parts.display_name(top["part_id"]), "price": price(top["part_id"]),
-		"odds": OddsReadout.odds_for(table, ctx.run.class_id()), "locked": locked, "needs_class": top["lock_class"], "heft_class": ctx.run.heft_class(),
+		"odds": OddsReadout.odds_for(top.get("table", TOP_RARITIES), ctx.run.class_id()), "locked": locked, "needs_class": top["lock_class"], "heft_class": ctx.run.heft_class(),
 		"lock_icon": "res_heft", "sold": top["sold"], "relented": talks["relented"]}
 
 
@@ -543,6 +547,23 @@ func _roll_one(rarities: Array, exclude: Array = []) -> String:
 		var any: Array = Parts.roll(_rng, SHELF_RARITIES, ctx.run.class_id(), ctx.run.parts, 1, exclude)
 		return any[0] if not any.is_empty() else ""
 	return ItemGen.roll_id(_rng, rarities[0])
+
+
+# The hook's part and the table it came from: {"part_id", "table"}. A table that lists a relic
+# for this pilot (the park's Spare Frame) draws the top rarities first; once those relics are all
+# held the hook draws a cobalt (TOP_FALLBACK), and only a pool with no cobalt left reaches the
+# shelf's rarities. A table with no relic to list (alpha, slice, the default) and a table that
+# generates its parts draw exactly as before, so their runs replay.
+func _roll_hook(exclude: Array = []) -> Dictionary:
+	if Parts.listed_only() and not Parts.offer_pool(ctx.run.class_id(), TOP_RARITIES).is_empty():
+		for table in [TOP_RARITIES, TOP_FALLBACK]:
+			var picks: Array = Parts.roll(_rng, table, ctx.run.class_id(), ctx.run.parts, 1, exclude)
+			if not picks.is_empty():
+				return {"part_id": picks[0], "table": table}
+		return {"part_id": _roll_one(SHELF_RARITIES, exclude), "table": SHELF_RARITIES}
+	var part_id := _roll_one(TOP_RARITIES, exclude)
+	var top_rung: bool = part_id != "" and Parts.rarity_of(part_id) in TOP_RARITIES
+	return {"part_id": part_id, "table": TOP_RARITIES if top_rung else SHELF_RARITIES}
 
 
 func _cheapest_price() -> int:

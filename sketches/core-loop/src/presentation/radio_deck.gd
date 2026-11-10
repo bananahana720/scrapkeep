@@ -28,14 +28,13 @@ var _dirty := false
 
 func setup(game_ref) -> void:
 	game = game_ref
-	var presentation = game.get("presentation")
-	_audio = presentation.get("audio") if presentation != null else null
+	_audio = game.audio()
 	radio.from_dict(game.ctx.profile.radio())
 	if game.hud != null:
 		dial = RadioDial.new()
 		dial.name = "RadioDial"
 		dial.deck = self
-		game.hud.add_child(dial)
+		game.hud.mount_corner(dial)
 	var events = game.events
 	if events != null:
 		events.run_started.connect(func(_class_id: String): _counts.clear())
@@ -95,12 +94,15 @@ func _on_tune_heard(tune: String) -> void:
 			find(String(t["id"]))
 
 
-# A Signal cache in a park (radio_cache.gd) was reached.
+# A Signal cache in a park (radio_cache.gd) was reached. True when its take is on file, so the
+# cache has done its work. A find is the player's own, made in play: a ball that rolls into one
+# under the summary or after a death finds nothing (false), and the cache stands for the next run.
 func cache_found(id: String) -> bool:
 	var t := RadioTakes.take(id)
-	if t.is_empty() or t["found"].get("on") != "cache":
+	if t.is_empty() or t["found"].get("on") != "cache" or not _live():
 		return false
-	return find(id)
+	find(id)
+	return game.ctx.profile.has_tune(id)
 
 
 # Files a take, announces it and premieres it. False when the profile already holds it.
@@ -304,7 +306,15 @@ func reading() -> Dictionary:
 		"live", "":
 			line = "Live from the run"
 		"new_signal":
-			line = "New signal. Listen in."
+			# The score is playing a tune for the first time: the dial names it, as a radio would.
+			# Once it has been heard it is no longer news, and it holds the air under its own name.
+			var fresh := String(RadioTakes.track(_cut_in).get("name", ""))
+			if fresh == "":
+				line = "New signal. Listen in."
+			elif _audio != null and _audio.tune_unheard(_cut_in):
+				line = "New signal: %s" % fresh
+			else:
+				line = "Live: %s" % fresh
 		"boss":
 			line = "The fight has the air"
 		"finale":

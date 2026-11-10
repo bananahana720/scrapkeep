@@ -188,11 +188,12 @@ func _run() -> void:
 	var wanted: String = audio.score_tune_wanted()
 	_t.eq("the score wants the stage's roam", wanted, "roam-1-1")
 	_t.eq("a tune not heard yet keeps the air", [audio.radio_hold, deck.applied.get("why", "")], ["", "new_signal"])
-	_t.eq("and the dial says so", deck.reading()["line"], "New signal. Listen in.")
+	_t.eq("and the dial names it", deck.reading()["line"], "New signal: Top Shelf")
 	audio.knows_tune("roam-1-1")
 	profile.hear_tune("roam-1-1")
 	deck._plan_now()
 	_t.eq("a heard tune keeps the air until the moment moves on", audio.radio_hold, "")
+	_t.eq("and is no longer news on the dial", deck.reading()["line"], "Live: Top Shelf")
 	_press("cl_radio_skip")
 	_t.check("a key press lets the radio back on air", audio.radio_hold != "" and audio.radio_hold in RadioTakes.on_station(station), audio.radio_hold)
 	deck.radio.track = a
@@ -289,7 +290,28 @@ func _run() -> void:
 	_t.check("caches share their meshes and materials (made once, not per cache on the entry frame)",
 		cache._ring.mesh == twin._ring.mesh and cache._ring.material_override == twin._ring.material_override and cache._lamp.mesh == twin._lamp.mesh)
 	twin.free()
-	_t.check("reaching a Signal cache files its take", cache.collect() and profile.has_tune(cache_take))
+	# The cache is handed the game's own ball, as radio_deck hands it: the PlayerBall node sits at
+	# the origin for the whole run, so reach is measured from the ball, never from that node.
+	var ball: Vector3 = _game.ctx.player.ball_position()
+	_t.check("the ball is away from the PlayerBall node's own origin", ball.distance_to(_game.ctx.player.global_position) > RadioCache.REACH * 4.0, "ball at %s" % ball)
+	cache.player = _game.ctx.player
+	cache.global_position = _game.ctx.player.global_position - Vector3.UP
+	cache._physics_process(0.0)
+	_t.check("a cache out of the ball's reach stays", not cache.is_queued_for_deletion() and not profile.has_tune(cache_take))
+	cache.global_position = ball - Vector3.UP
+	# A find is made in play. Under the summary or after a death the ball can still roll into a
+	# cache: nothing is filed, announced or premiered, and the cache stands for the next run.
+	var flow = _game.flow
+	var in_play_state: int = flow.state
+	var station_before: String = deck.radio.station
+	for off_air in [flow.SUMMARY, flow.DEAD]:
+		flow.state = off_air
+		cache._physics_process(0.0)
+		_t.check("a ball in reach of a cache finds nothing in %s" % flow.state_name(),
+			not cache.is_queued_for_deletion() and not profile.has_tune(cache_take) and deck.radio.station == station_before)
+	flow.state = in_play_state
+	cache._physics_process(0.0)
+	_t.check("rolling up to a Signal cache files its take", cache.is_queued_for_deletion() and profile.has_tune(cache_take))
 	_t.eq("and a found one is no longer wanted", RadioCache.wanted("park_dam", func(id): return profile.has_tune(id), spots), [])
 
 	deck.tune(station)

@@ -1,6 +1,7 @@
 extends VBoxContainer
 
 const Palette := preload("res://src/core/palette.gd")
+const UiDraw := preload("res://src/ui/ui_draw.gd")
 const UiFonts := preload("res://src/ui/ui_fonts.gd")
 const ChoiceButton := preload("res://src/ui/choice_button.gd")
 const Radio := preload("res://src/core/radio.gd")
@@ -41,7 +42,7 @@ func _init() -> void:
 	alignment = BoxContainer.ALIGNMENT_CENTER
 	add_theme_constant_override("separation", 14)
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_count = _label(22, Palette.AMBER)
+	_count = UiDraw.label(22, Palette.AMBER)
 	add_child(_count)
 	_tapes = HBoxContainer.new()
 	_tapes.alignment = BoxContainer.ALIGNMENT_CENTER
@@ -57,7 +58,7 @@ func _init() -> void:
 	var tape_column := _column(body, "")
 	_tape_name = tape_column.get_parent().get_parent().get_child(0)
 	_tape = tape_column
-	_note = _label(19, Palette.SAND)
+	_note = UiDraw.label(19, Palette.SAND)
 	_note.custom_minimum_size = Vector2(0.0, 28.0)
 	add_child(_note)
 	var buttons := HBoxContainer.new()
@@ -74,24 +75,13 @@ func _init() -> void:
 		buttons.add_child(b)
 
 
-func _label(font_size: int, color: Color, words := "") -> Label:
-	var label := Label.new()
-	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	label.add_theme_font_override("font", UiFonts.bold())
-	label.add_theme_font_size_override("font_size", font_size)
-	label.add_theme_color_override("font_color", color)
-	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	label.text = words
-	return label
-
-
 # A titled, scrolling column; returns the list inside it.
 func _column(parent: Control, title: String) -> VBoxContainer:
 	var column := VBoxContainer.new()
 	column.add_theme_constant_override("separation", 8)
 	column.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	parent.add_child(column)
-	column.add_child(_label(18, Palette.COPPER, title))
+	column.add_child(UiDraw.label(18, Palette.COPPER, title))
 	var scroll := ScrollContainer.new()
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	scroll.follow_focus = true

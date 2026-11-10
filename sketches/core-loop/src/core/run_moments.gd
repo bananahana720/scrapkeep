@@ -27,6 +27,7 @@ extends Node
 
 signal page_ready(page: Dictionary)
 
+const AppShell := preload("res://src/core/app_shell.gd")
 const Worlds := preload("res://src/core/worlds.gd")
 const Parts := preload("res://src/build/parts.gd")
 const SafeStore := preload("res://src/core/safe_store.gd")
@@ -159,6 +160,12 @@ func _physics_process(delta: float) -> void:
 			_top_speed = planar
 			# The still waits for a lead worth framing, not every new decimal.
 			_offer("top_speed", planar, {"speed": snappedf(planar, 0.1)})
+
+
+# Whether a still has been asked for and not yet read back: the frame it photographs has not
+# drawn. The summary screen waits on this, so a death's picture is of the death.
+func still_pending() -> bool:
+	return _grabs_pending > 0
 
 
 func _on_stage_entered(stage: int, retry: bool) -> void:
@@ -389,7 +396,7 @@ func _moment(kind: String, score: float, facts: Dictionary) -> Dictionary:
 # The still is read after the frame that shows the moment has drawn. A rare moment (a
 # stagger, a death, a boss down) skips the gap.
 func _grab_into(row: Dictionary, rare := false) -> void:
-	if not stills or (_shot_wait > 0.0 and not rare) or DisplayServer.get_name() == "headless" or not is_inside_tree():
+	if not stills or (_shot_wait > 0.0 and not rare) or AppShell.headless() or not is_inside_tree():
 		return
 	_shot_wait = SHOT_GAP
 	_grabs_pending += 1

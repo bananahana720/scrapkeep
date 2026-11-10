@@ -24,13 +24,19 @@ func _init(action_id := "", key_id := "", words := "") -> void:
 	mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 	add_theme_font_override("font", UiFonts.bold())
 	add_theme_font_size_override("font_size", 22)
-	add_theme_color_override("font_color", Palette.SAND)
-	add_theme_color_override("font_hover_color", Color.WHITE)
 	add_theme_color_override("font_pressed_color", Palette.AMBER)
-	add_theme_color_override("font_focus_color", Color.WHITE)
+	set_asking(false)
 	add_theme_color_override("font_disabled_color", Color(Palette.SAND, 0.4))
 	_plates()
 	custom_minimum_size = Vector2(0.0, 52.0)
+
+
+# A choice that asks before it acts (the pause menu's Restart run and Quit) words itself in the hazard
+# colour while it asks.
+func set_asking(asking: bool) -> void:
+	add_theme_color_override("font_color", Palette.HAZARD if asking else Palette.SAND)
+	add_theme_color_override("font_hover_color", Palette.HAZARD if asking else Color.WHITE)
+	add_theme_color_override("font_focus_color", Palette.HAZARD if asking else Color.WHITE)
 
 
 # The same choice under another key: the cap and the plate's inset follow it.

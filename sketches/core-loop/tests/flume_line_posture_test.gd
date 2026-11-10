@@ -65,8 +65,14 @@ func _run() -> void:
 	print("[report] reference damage %.4f (mean of the six pilots' base weapon damage %s); heft %.2f" % [reference,
 		_pilot_damage().values(), game.run.heft()])
 	game.flow._engage()
+	await physics_frame
+	# The objective plate names the line fight on the real Warden (core/objectives.gd): latch first,
+	# then fire from the line. A shut clamp or a yard lock would hold the plate; calm stands neither.
+	t.eq("unlatched: the mounting reads the flume with the line off", w.mount_driver.plate_reading(w), {"mount": "flume", "latched": false})
+	t.eq("unlatched: the plate says to latch on", [game.hud.objective_reading()["id"], game.hud.objective_reading()["words"]], ["latch_warden", "Latch onto the Warden"])
 	_latch(w)
 	await physics_frame
+	t.eq("latched: the plate says to shoot the Warden", [game.hud.objective_reading()["id"], game.hud.objective_reading()["words"]], ["fire_from_line", "Latched: shoot the Warden"])
 
 	# Pay per bolt, latched, reference heft, Rivet's pilot (FL1's numbers, which FL3 keeps for Rivet).
 	var rivet = _def("runner_gunner")

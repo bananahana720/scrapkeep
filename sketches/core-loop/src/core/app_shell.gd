@@ -6,6 +6,11 @@ extends RefCounted
 # and prints one line that reads the live project settings so the shell is observable in a log.
 
 
+# The one headless question: true when no display server draws (the sketch tests, bots, the
+# cloud), false when a window is up. Every caller means one of two things by it. Nothing is seen,
+# so the idles, stills, the boot card and the title intro have no viewer. And the dummy renderer's
+# mesh RIDs are not thread-safe, so mesh loads stay on the main thread. Game code asks here and
+# never spells the display server's name itself; app_shell_test scans src/ for a stray copy.
 static func headless() -> bool:
 	return DisplayServer.get_name() == "headless"
 

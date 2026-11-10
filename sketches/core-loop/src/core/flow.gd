@@ -10,6 +10,7 @@ const RunState := preload("res://src/core/run_state.gd")
 const RunStore := preload("res://src/core/run_store.gd")
 const RunTier := preload("res://src/core/run_tier.gd")
 const DeathCause := preload("res://src/core/death_cause.gd")
+const DeathTips := preload("res://src/core/death_tips.gd")
 const UpgradeTree := preload("res://src/core/upgrade_tree.gd")
 const StartPickCard := preload("res://src/ui/start_pick_card.gd")
 const VictoryLap := preload("res://src/world/victory_lap.gd")
@@ -41,6 +42,10 @@ const NET_DAMP := 0.5
 
 var ctx
 var start_card
+# Where the start card sits: its top edge outside a briefing, and how far down the view its
+# free height is shared above it in a briefing (0.5 is the middle; lower keeps it clear of Moss's bubble).
+const START_CARD_TOP := 160.0
+const BRIEFING_CENTRE := 0.6
 var beacon
 var state := TITLE
 var classes: Array[Resource] = []
@@ -54,18 +59,22 @@ var warden: Node3D = null
 # The park Warden's gate and the yard's arena lock (world/stage_locks.gd), when the world has one.
 var gate = null
 # Seam for wave 4: the boss flow sets boss_active when it enters its "boss" state and
-# boss_plating to the hull's plating. The death screen then shows the boss gap line and
-# offers T, which replays stage 3 from the start the run kept.
+# boss_plating to the hull's plating. The store-less death screen then offers T, which replays
+# stage 3 from the start the run kept.
 var boss_active := false
 var boss_plating := 120.0
 # True from arena entry until the run leaves the fight, so a death there retries the
 # arena, not stage 3.
 var in_arena := false
-# The plating that stood in the way when the ball died in the arena, for the gap line.
-var _death_plating := -1.0
 # RUN OVER's cause line for this run's death (death_cause.gd), "" before one; and the source of
 # the last hit taken, which player_hit publishes just before a killing hit's player_died.
 var death_cause := ""
+# RUN OVER's "next shift" line for the same death (death_tips.gd), "" when there is none.
+var death_tip := ""
+# The fight in hand as the build met it: {"who", "punch", "plating"}, read when the Warden engages or
+# the boss arena opens. Scrap is armour (run_state.gd), so the killing hit lands on a stripped ball
+# whose punch is bare whatever it arrived with; the tip's gap rule reads the arrival, not the death.
+var _arrival := {}
 var _last_hit_source := ""
 var _victory_left := 0.0
 # The boss's flourishes (flourish_cues.gd) size the victory window: plan() returns {hold, veil},
@@ -368,23 +377,32 @@ func new_run() -> void:
 	_begin_run(ctx.run.class_def)
 
 
+# The run's briefing (workshop.gd): in a played game the kit pick comes first, then this card on
+# the same paused screen, so the pick is made before the ball rolls and is never open in play.
+# The workshop holds the pause while the card shows; this function only says when it shows.
 func show_start_card() -> void:
 	# Under the launch take's panel the card stays hidden; game shows it when the panel has gone.
 	var take = ctx.root.get("launch_take")
-	var interactive: bool = not ctx.root.bot_driven and not (take != null and take.busy())
-	start_card.set_interactive(interactive)
-	start_card.show_picks(ctx.run, ctx.profile)
-	start_card.position = Vector2((get_viewport().get_visible_rect().size.x - start_card.size.x) * 0.5, 160.0)
-	if not interactive or not in_stage():
-		start_card.hide_card()
 	var host = ctx.root.get_node_or_null("Workshop")
+	var interactive: bool = not ctx.root.bot_driven and not (take != null and take.busy())
+	var briefing: bool = host != null and host.armed
+	start_card.set_interactive(interactive)
+	start_card.set_briefing(briefing)
+	start_card.show_picks(ctx.run, ctx.profile)
+	var view := get_viewport().get_visible_rect().size
+	start_card.position = Vector2((view.x - start_card.size.x) * 0.5,
+		maxf(START_CARD_TOP, (view.y - start_card.size.y) * BRIEFING_CENTRE) if briefing else START_CARD_TOP)
+	# The kit pick has the screen first; the workshop calls back here when it closes.
+	if not interactive or not in_stage() or (host != null and host.kit_pick_due()):
+		start_card.hide_card()
 	if host != null:
 		host.sync_start_card_pointer()
+		host.sync_briefing()
 
 
-# The card holds no menu while it keeps mouse look (start_pick_card.gd wants_pointer), so the pause
-# menu or the hotwire offer can open over it; while one is open it owns the keys and the clicks, and
-# a tier button pressed under it changes nothing (the pause menu also opens over the tier choice).
+# A screen open over the card (the pause menu or the hotwire offer) owns the keys and the clicks:
+# the card takes nothing under it and a tier button pressed under it changes nothing. The briefing
+# holds both shut; a test game's card, shown without the hold, can still be covered.
 func _start_card_covered() -> bool:
 	var game = ctx.root
 	var menu = game.get_node_or_null("PauseMenu")
@@ -429,6 +447,8 @@ func _begin_run(chosen: Resource) -> void:
 	lap_stats = {}
 	_world = 0
 	death_cause = ""
+	death_tip = ""
+	_arrival = {}
 	_last_hit_source = ""
 	if ctx.run_log != null:
 		ctx.run_log.abandon_open_run()
@@ -742,6 +762,7 @@ func enter_boss(carried: Vector3) -> void:
 	ctx.player.set_frozen(false)
 	seed_stage_stream(ctx.run.stage, "arena")
 	boss.enter_arena(carried)
+	_arrival = _met(_boss_called(), boss_plating_now())
 	ctx.run.set_snapshot_entry(ctx.player.ball_position(), ctx.player.state.velocity, ctx.camera.yaw)
 
 
@@ -765,6 +786,7 @@ func _retry_arena() -> void:
 	ctx.events.stage_content_cleared.emit("arena_retry")
 	seed_stage_stream(ctx.run.stage, "arena")
 	boss.enter_arena(ctx.run.snapshot_value("entry_velocity"))
+	_arrival = _met(_boss_called(), boss_plating_now())
 
 
 # The boss's live read of the fight (CONTRACTS, Flow seams): the plating that stands in
@@ -815,7 +837,6 @@ func _rescue_in_arena(ball: Vector3) -> void:
 		landing = entry
 	var v: Vector3 = ctx.player.state.velocity
 	ctx.player.reset_to(landing, Vector3(v.x, 0.0, v.z))
-	ctx.player.body().global_position = landing
 
 
 # The treasure burst for a first discovery in a run: scrap at the spot, which feeds
@@ -834,25 +855,36 @@ func can_replay_final_stage() -> bool:
 	return boss_active and ctx.run.has_stage_start(final_stage())
 
 
-# What the death screen says about the fight that killed you: your punch against the
-# plating that stood in the way, and your heft. Empty when no plated lock was live.
-func gap_line() -> String:
-	var plating := -1.0
-	if boss_active:
-		plating = _death_plating if state == DEAD and _death_plating >= 0.0 else boss_plating_now()
-	elif sealed and is_instance_valid(warden):
-		plating = warden_plating()
-	if plating < 0.0:
-		return ""
-	return "Punch %d / plating %d · Heft %s" % [int(punch_now()), int(plating), ctx.run.roman(ctx.run.heft_class())]
+# The live fight's arrival numbers for the death tip: the engaged Warden's or the boss's; empty off one.
+func _fight_gap() -> Dictionary:
+	if state == BOSS or (state in [STAGE, BEACON] and sealed and _engaged and is_instance_valid(warden)):
+		return _arrival
+	return {}
+
+
+func _met(who: String, plating: float) -> Dictionary:
+	return {"who": who, "punch": build_punch(), "plating": plating}
+
+
+# The world's boss as a sentence names it: "Admiral Brindle", "the Waking".
+func _boss_called() -> String:
+	var called := String(boss_row(ctx.stages.world_of(ctx.run.stage)).get("name", "the boss"))
+	return "the " + called.substr(4) if called.begins_with("The ") else called
+
+
+# The punch the build carries whatever the ball was doing when it was read: punch_now(), or a ram
+# at base cruise when that is more, so a ball knocked to a stop does not read as a weak build.
+func build_punch() -> float:
+	var punch := punch_now()
+	if ctx.spawner != null and ctx.spawner.has_method("punch_of") and ctx.spawner.has_method("panel_punch"):
+		punch = maxf(punch, ctx.spawner.punch_of("ram", ctx.player.tuning.tier_cruise()) + ctx.spawner.panel_punch("ram", "ram_or_contact"))
+	return punch
 
 
 func _place_ball(at: Vector3, velocity: Vector3, heading: Vector3) -> void:
 	ctx.player.set_frozen(false)
 	ctx.player.reset_to(at, velocity)
-	# The body takes its new transform on the next physics step; the camera is snapped
-	# to the target now so the first drawn frame already looks down the run.
-	ctx.player.body().global_position = at
+	# The camera is snapped now so the first drawn frame already looks down the run.
 	ctx.camera.snap(heading)
 
 
@@ -869,6 +901,7 @@ func _place_beacon() -> void:
 	if is_instance_valid(warden):
 		warden.queue_free()
 	_engaged = false
+	_arrival = {}
 	_sighted = false
 	sealed = (not ctx.calm) or force_warden
 	warden = _spawn_warden() if sealed else null
@@ -1184,6 +1217,7 @@ func _engage() -> void:
 	if _engaged:
 		return
 	_engaged = true
+	_arrival = _met("the Warden", warden_plating()) if is_instance_valid(warden) else {}
 	_sighted = true
 	if ctx.run.run_tier_open():
 		ctx.run.close_run_tier()
@@ -1202,8 +1236,8 @@ func _landed_attack() -> String:
 func _on_player_died() -> void:
 	if not in_play() or state == LAP:
 		return
-	_death_plating = boss_plating_now() if state == BOSS else -1.0
 	death_cause = DeathCause.line(_last_hit_source, _landed_attack(), DeathCause.phase_note(_boss_module()) if state == BOSS else "")
+	death_tip = DeathTips.line(_last_hit_source, _landed_attack(), _fight_gap())
 	ctx.player.set_frozen(true)
 	if store != null:
 		_end_run(false)

@@ -94,7 +94,9 @@ const RULES := {
 	},
 	"enemy_camp": {
 		"starts": "ring", "ring": 8.0, "pack": ["chaser", "chaser", "chaser"], "finishes": "pack_dead",
-		"pay": {"scrap": PAY_SCRAP, "named": "hot_rivets", "rarities": PAY_RARITIES, "source": "activity_camp", "where": "camp"},
+		# The on-line pocket's common roll (PARK.md 2.12; ruling bu, 2026-11-09: a camp pays from the pool,
+		# where it always paid Hot Rivets). A park row may still author a named part.
+		"pay": {"scrap": PAY_SCRAP, "rarities": ["common"], "source": "activity_camp", "where": "camp"},
 	},
 	"ambush_altar": {
 		"starts": "ring", "ring": 8.0, "pack": ["chaser", "chaser", "lobber"], "finishes": "pack_dead",
@@ -383,7 +385,7 @@ func _prepare_stage(stage_number: int) -> void:
 	if terrain == null or not "maps" in terrain or not terrain.has_method("map_for"):
 		return
 	if stage_number >= 1 and stage_number <= terrain.maps.size():
-		_prepare_map(terrain.map_for(stage_number), stage_number)
+		_prepare_map(terrain.map_for(stage_number))
 
 
 static func graph_path(map_id: String) -> String:
@@ -404,10 +406,10 @@ static func _adopt_graph(path: String, graph) -> void:
 		_shared_graphs[path] = graph
 
 
-# Starts the worker for a park map's entry data. stage_number says whether the pocket-draw
-# layout is wanted (only past stage 1, as _on_stage_entered asks for it). The worker reads its
-# own graph and a deep copy of the rows, so no live object is shared with it.
-func _prepare_map(map, stage_number: int) -> void:
+# Starts the worker for a park map's entry data, the pocket-draw layout included (every stage
+# draws, the dam too). The worker reads its own graph and a deep copy of the rows, so no live
+# object is shared with it.
+func _prepare_map(map) -> void:
 	if map == null or not "park" in map or map.park.is_empty():
 		return
 	var id := String(map.park.map)
@@ -416,8 +418,7 @@ func _prepare_map(map, stage_number: int) -> void:
 	var rows := {"park": map.park.duplicate(true), "activity_sites": map.activity_sites.duplicate(true), "play_rect": map.play_rect}
 	var out := {}
 	var path := graph_path(id)
-	var layout := stage_number > 1
-	_prep[id] = {"task": WorkerThreadPool.add_task(func(): out.merge(prepare_data(path, rows, layout)), false, "activities prep " + id), "out": out}
+	_prep[id] = {"task": WorkerThreadPool.add_task(func(): out.merge(prepare_data(path, rows, true)), false, "activities prep " + id), "out": out}
 	# The director's read of the same map (its rows and corridor reader) goes on a worker too.
 	load("res://src/world/director.gd").prepare_park(id)
 
@@ -548,7 +549,7 @@ func _plan(map, entry_data: Dictionary) -> Dictionary:
 		if _draw_map != _graph_map:
 			_draw_layout = {}
 			_draw_map = _graph_map
-		if _draw_layout.is_empty() and ctx.run.stage > 1:
+		if _draw_layout.is_empty():
 			if entry_data.layout.is_empty():
 				entry_data.layout = PocketDraw.prepare(_graph, map)
 			_draw_layout = entry_data.layout
@@ -557,6 +558,11 @@ func _plan(map, entry_data: Dictionary) -> Dictionary:
 			if not ctx.calm or RULES[drawn_spec.id].finishes == "wall_broken":
 				out.append({"kind": "drawn", "id": drawn_spec.id, "at": drawn_spec.at, "spec": drawn_spec})
 	return {"sites": out, "modifier": modifier}
+
+
+# What a site kind's marker calls it ("Arena", "Pickup course"), "" for a kind whose cue has no word.
+static func called(id: String) -> String:
+	return String(RULES.get(id, {}).get("cue", {}).get("word", ""))
 
 
 # One planned site, built and dressed as its kind asks. Interact does not know it yet (_arm).
@@ -858,13 +864,12 @@ func _build_trade(s: Site) -> void:
 	var label := Label3D.new()
 	label.name = "TradePrices"
 	label.position = Vector3(door[0], 3.4, door[1] + 1.0)
-	label.text = "%s (%s)\n%s\nHold E at a device" % [s.interior.tell.word, s.trade.family, "\n".join(words)]
+	label.text = "%s\n%s\nHold E at a device" % [TradePockets.door_words(s.trade, s.interior.tell.word), "\n".join(words)]
 	label.font_size = 36
 	label.outline_size = 8
 	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 	label.no_depth_test = true
 	s.add_child(label)
-	s.view.word.text = "%s: %s" % [s.interior.tell.word, " / ".join(words)]
 
 
 func _watch_trade(s: Site, ball: Vector3) -> void:
@@ -875,6 +880,7 @@ func _watch_trade(s: Site, ball: Vector3) -> void:
 		s.done = true
 		TradePockets.see(ctx.run.trade_memory, s.trade)
 		TradePockets.decide(ctx.run.trade_memory, s.trade, true)
+		ctx.events.trade_taken.emit(s.id, s.global_position)
 
 
 func _build_interior(s: Site) -> void:
@@ -2031,8 +2037,8 @@ func _pay_scrap(s: Site, at: Vector3) -> void:
 		ctx.run.add_cogs(amount)
 
 
-# A field find, a first-win room or the timed door rolls on its own stream, so it never pays the part the stage's
-# ordinary cracked cache pays; every other site keeps its id, and so its rolls.
+# A field find, a first-win room, the timed door or a drawn pocket rolls on its own stream, so it never pays the
+# part the stage's ordinary site of its kind pays; every other site keeps its id, and so its rolls.
 func _luck_id(s: Site) -> String:
 	if s.has_meta("find"):
 		return "%s:%s" % [s.id, s.get_meta("find")]
@@ -2040,6 +2046,10 @@ func _luck_id(s: Site) -> String:
 		return "%s:%s" % [s.id, s.get_meta("room")]
 	if s.has_meta("door"):
 		return "%s:timed_door" % s.id
+	# A drawn pocket rolls apart from the stage's authored site of its kind, or the two paid the same part:
+	# a drawn vault and the stage's own cache did on 23 of 40 dam runs and 24 of 40 flume runs (2026-11-09).
+	if s.drawn:
+		return "%s:%s" % [s.id, s.interior.id]
 	return s.id
 
 

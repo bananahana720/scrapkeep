@@ -13,8 +13,16 @@ const GameEvents := preload("res://src/core/game_events.gd")
 const Context := preload("res://src/core/context.gd")
 const SimClock := preload("res://src/core/sim_clock.gd")
 const EnemyMotion := preload("res://src/presentation/enemy_motion.gd")
+const Director := preload("res://src/world/director.gd")
+const ParkDefs := preload("res://src/core/park_defs.gd")
 
-const TABLE := {"DEFS": [{"stage": 1, "world": 1, "map": "park_test"}, {"stage": 2, "world": 2, "map": "park_test"}]}
+# The dam's and the flume's own packs and elite on a bare table: stage 3 is the flume, entered
+# after the dam, so only the kinds the dam cannot send are new to it.
+const TABLE := {"DEFS": [
+	{"stage": 1, "world": 1, "map": "park_test", "packs": ParkDefs.PACKS_DAM, "elite": ParkDefs.ELITE_SPILLWAY},
+	{"stage": 2, "world": 2, "map": "park_test", "packs": [], "elite": {}},
+	{"stage": 3, "world": 1, "map": "park_test", "packs": ParkDefs.PACKS_FLUME, "elite": ParkDefs.ELITE_SPILLWAY},
+]}
 
 var t := T.new("bake_warm_test")
 
@@ -44,18 +52,44 @@ func _run() -> void:
 	t.check("a world 2 entry queues none of world 1's kits", node._queue.is_empty())
 	events.stage_entered.emit(1, false)
 	var kits: Array = BakeWarm.WORLD_KITS[1]
+	# What stage 1 can send: its packs' kinds and its elite's, the plated brute among them.
+	var sent: Array = Director.kinds_sent(TABLE.DEFS[0], TABLE)
+	t.check("the dam's stand list is its packs and its elite", sent.size() == 8 and sent.has("plated_brute") and node._to_stand == sent, str(node._to_stand))
 	t.check("a world 1 entry queues every world 1 kit once", node._queue.size() == kits.size(), "%d of %d" % [node._queue.size(), kits.size()])
 	events.stage_entered.emit(1, true)
 	t.check("a retry queues no kit twice", node._queue.size() == kits.size())
 	var sizes := []
 	var spawns := []
-	while not node._queue.is_empty() and sizes.size() < 200:
+	# What each drawn frame held: process_frame comes before any node's _process, so the tree read
+	# here is the one the frame before was drawn with. -1 with no warm spawn standing, else the
+	# debris boxes in it.
+	var boxes := []
+	var pieces := []
+	while (not node._queue.is_empty() or _spawn_warms(node) > 0) and sizes.size() < 200:
 		await process_frame
 		sizes.append(node._queue.size())
 		spawns.append(_spawn_warms(node))
-	await process_frame
-	t.check("stage 1's kinds each stand once out of sight, one at a time, and leave",
-		spawns.count(1) == BakeWarm.SPAWN_WARM.size() and spawns.max() == 1 and _spawn_warms(node) == 0, str(spawns))
+		boxes.append(_debris_boxes(node))
+		pieces.append(_debris_pieces(node))
+	t.check("the kinds stage 1 can send each stand out of sight for two drawn frames, one at a time, and leave",
+		spawns.count(1) == sent.size() * 2 and spawns.max() == 1 and _spawn_warms(node) == 0, str(spawns))
+	# The renderer only learns of a node that is in the tree when a frame is drawn, so the debris
+	# boxes death_warm adds must be there for one: each kind's first frame is its body alone, its
+	# second has the boxes. Freed in the call that added them, they were never drawn (the dam's
+	# first deaths on the 4080, 10 November 2026).
+	var bodies := 0
+	var twinned := 0
+	for i in boxes.size():
+		if boxes[i] == 0 and i + 1 < boxes.size() and boxes[i + 1] > 0:
+			bodies += 1
+		if boxes[i] > 0:
+			twinned += 1
+	t.check("each kind's debris boxes stand through a drawn frame, the frame after its body alone",
+		bodies == sent.size() and twinned == sent.size(), str(boxes))
+	var thrown := true
+	for i in boxes.size():
+		thrown = thrown and (pieces[i] >= EnemyMotion.PARTS_MIN) == (boxes[i] > 0)
+	t.check("with them stands the body's break-up, built as a death builds it", thrown, str(pieces))
 	var steady := true
 	for i in range(1, sizes.size()):
 		steady = steady and sizes[i - 1] - sizes[i] <= 1
@@ -83,6 +117,34 @@ func _run() -> void:
 	BakeLook.dress(view)
 	t.check("dress after the warm-up draws the copy made ahead", ahead != null and view.mesh == ahead)
 
+	# A later stage stands only what no stage before it could send: the flume adds the foreman and
+	# the dispatcher, and its kits are warm already, so nothing else is queued.
+	events.stage_entered.emit(3, false)
+	var late: Array = node._queue.map(func(kit): return BakeWarm.kind_of(kit))
+	late.sort()
+	t.check("the flume's entry queues only the kinds the dam could not send", late == ["dispatcher", "foreman"] and node._to_stand.size() == 2, "%s; to stand %s" % [late, node._to_stand])
+	# A game switched off stops its warm: a test that freezes the game reads a tree with nothing of
+	# the warm's standing in it (dress_material_test counted the debris boxes, 10 November 2026).
+	holder.process_mode = Node.PROCESS_MODE_DISABLED
+	var idle := 0
+	for i in 4:
+		await process_frame
+		idle += _spawn_warms(node)
+	t.check("a game switched off stops the warm where it is", idle == 0 and node._queue.size() == 2 and node._to_stand.size() == 2, "%d stood, queue %d" % [idle, node._queue.size()])
+	holder.process_mode = Node.PROCESS_MODE_INHERIT
+	# The briefing pauses the tree a few frames into a run: the warm goes on under it.
+	paused = true
+	var stood := 0
+	var frames := 0
+	while (not node._queue.is_empty() or _spawn_warms(node) > 0) and frames < 40:
+		await process_frame
+		frames += 1
+		stood += _spawn_warms(node)
+	paused = false
+	t.check("each stands its two drawn frames, under a paused tree too", stood == 4 and node._to_stand.is_empty(), "%d frames" % stood)
+	events.stage_entered.emit(1, true)
+	t.check("a kind stands once a session: the dam again queues nothing", node._queue.is_empty() and node._to_stand.is_empty(), str(node._to_stand))
+
 	# On screen a rigged kit seats its GLB's own scene: those scenes are held and their meshes readied.
 	var rigs: Array = BakeWarm.WORLD_RIGS[1]
 	t.check("headless, no rig scene is queued (spawns copy _parts() meshes there)", node._queue.is_empty() and not BakeWarm._held.has(rigs[0]))
@@ -105,6 +167,24 @@ func _run() -> void:
 	events.queue_free()
 	await process_frame
 	quit(t.verdict())
+
+
+# The debris boxes (death_warm's) in the warm spawn standing under the node now, -1 with none standing.
+func _debris_boxes(node: Node) -> int:
+	for child in node.get_children():
+		if child.has_meta("spawn_warm") and not child.is_queued_for_deletion():
+			return child.get_children().filter(func(view): return view is MeshInstance3D and view.mesh is BoxMesh and view.get_parent() == child).size()
+	return -1
+
+
+# The pieces of the break-up (EnemyMotion.scatter) in the warm spawn standing under the node now.
+func _debris_pieces(node: Node) -> int:
+	for child in node.get_children():
+		if child.has_meta("spawn_warm") and not child.is_queued_for_deletion():
+			for part in child.get_children():
+				if part.get_script() == EnemyMotion:
+					return part.get_child_count()
+	return 0
 
 
 # The warm spawns standing under the node now (spawn_warm_test checks what they draw).

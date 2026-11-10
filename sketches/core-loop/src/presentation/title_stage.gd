@@ -1,5 +1,6 @@
 extends Node
 
+const AppShell := preload("res://src/core/app_shell.gd")
 const HeroAssets := preload("res://src/presentation/hero_assets.gd")
 const CompanionBody := preload("res://src/presentation/companion_body.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
@@ -82,7 +83,7 @@ func setup(ctx) -> void:
 	# boot.gd marks the game before it enters the tree while its 2D title card is up.
 	intro_hold = ctx.root != null and ctx.root.has_meta(&"intro_hold")
 	intro_autoplay = ctx.root != null and not bool(ctx.root.get("bot_driven")) and not bool(ctx.root.get("test_mode")) \
-		and DisplayServer.get_name() != "headless" and not "--no-intro" in OS.get_cmdline_user_args()
+		and not AppShell.headless() and not "--no-intro" in OS.get_cmdline_user_args()
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	viewport = SubViewport.new()
 	viewport.name = "TitleViewport"

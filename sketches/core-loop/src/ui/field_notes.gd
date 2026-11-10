@@ -18,15 +18,16 @@ const LoreRows := preload("res://src/core/lore_rows.gd")
 # calm-screen budget of 40 words. CONTROLS below is the one key list; the diagram draws
 # its rows with caps and a short word. The tester notes (TESTING, QUESTIONS, TRY_FIRST,
 # SCREEN_KEYS) and the legend are no longer drawn on Tab; README.md mirrors them.
-# What the run asks of you, in one line: the title screen shows it too.
-const OBJECTIVE := "Break each stage's Warden at its beacon; grow your punch through its plating. Three worlds: rout Brindle, still the Waking, quiet the Mind."
+# What the run asks of you and why, in one line: the title screen shows it too. The why is the game's
+# one line (ruling cj, design-v3/STORY-MAP.md): a machine runs the world and calls it perfect (the quote marks are the crew's), and the crew takes it back.
+const OBJECTIVE := "A machine runs your world \"perfectly\". Take it back: grow, crack Warden guards, smash their cores. Rout Brindle, still the Waking, quiet the Mind."
 
 const TESTING := [
-	"One run: title, class, then two stages in each of three worlds, each sealed by a Warden at its beacon. Grow until your punch beats its plating, break it, roll through a reward gate and launch into the next stage. Each world's last stage launches you into its boss arena: rout Admiral Brindle, still the Waking, quiet the Mind. Quieting the Mind ends the run.",
-	"Growth is heft: scrap you roll up becomes mass, parts add more, and heft multiplies your punch. Under the objective, the top bar is your punch and the hatched bar the Warden's plating; get the punch past the white notch.",
+	"One run: title, pilot, then two stages in each of three worlds, each sealed by a Warden at its beacon. Grow, crack its guard, smash its open core, then roll through a reward gate and launch into the next stage. Each world's last stage launches you into its boss arena: rout Admiral Brindle, still the Waking, quiet the Mind. Quieting the Mind ends the run.",
+	"Growth is heft: scrap you roll up becomes mass, parts add more, and heft multiplies your punch. The plate at the top of the screen is the Warden's guard: hits fill its bar, a full bar staggers the Warden and opens its core, and a hit on the open core shatters one of its chunks. A light ball fills the bar slowly, so grow and come back.",
 	"Outweigh fodder and you roll straight through it with no speed lost. Events and vaults drop bonus cores (the diamonds beside the objective) that raise the gate tiers.",
 	"Sable's pylon banks the speed you plant with. Space slingshots you off along the face with it plus a boost; E drops off where you are. The camera goes to the shoulder while mounted.",
-	"Death ends the run; the next one starts from world 1: N starts a new run as the same class. The one second chance is a part you earn, the Spare Frame, which leaves you at 20% health once a run. Hold R in play to abandon the run and start a new one.",
+	"Death ends the run; the next one starts from world 1: N starts a new run as the same pilot. The one second chance is a part you earn, the Spare Frame, which leaves you at 20% health once a run. Hold R in play to abandon the run and start a new one.",
 ]
 
 const QUESTIONS := [
@@ -40,10 +41,10 @@ const QUESTIONS := [
 const TRY_FIRST := [
 	"Pick Sable, Rivet or Kest with a number key or a click. You drop in already rolling; the Warden is at the beacon you can see from the drop, and a chevron at the screen edge points to it when it is out of view.",
 	"Roll the scrap lines on the way down: scrap is your armour and your weight, and a heavier ball hits harder.",
-	"Break the Warden: the line at the top of the screen says what it wants next. Its gates open when it breaks; roll through one to take its part.",
+	"Break the Warden: the line at the top of the screen says what it wants next. At the dam, ride the water sheet up the face into its core; at the flume, latch your line onto it and fire. Its gates open when it breaks; roll through one to take its part.",
 	"As Sable, hit a steep face at speed, press E, fire with left mouse, then hold and release Space to slingshot off.",
 	"Get scrapped on purpose, then hold R: a new run, the same pilot, from world 1.",
-	"Against Brindle, read the ship's plating line: hit what glows amber, slam the vent caps in phase 2, and ram or stomp the scooter when he runs.",
+	"Against Brindle, read the line at the top of the screen: shoot the crane magnets in phase 1, slam the vent caps in phase 2, bait his charge into the rim wall in phase 3 and hit the open cockpit, then ram or stomp the scooter when he runs.",
 ]
 
 # The key list. The ten verbs come first, their keys read from the bindings table; the rest
@@ -72,7 +73,7 @@ const MENU_ROWS := [
 	{"keys": "P / Esc", "does": "pause menu: resume, restart the run, field notes, music and effects volume; quit with X (hold)", "caps": ["key_p"], "short": "pause"},
 	{"keys": "R (hold)", "does": "restart the run: a new run as the same pilot, from world 1; release before holding again", "caps": ["key_r"], "short": "hold restart"},
 	{"keys": "F1", "does": "launched with --dev only: tuning panel (frees the mouse)"},
-	{"keys": "F3", "does": "launched with --dev only: physics interpolation on/off (off by default)"},
+	{"keys": "F3", "does": "launched with --dev only: frame smoothing on/off for this session (Settings, Display keeps it)"},
 	{"keys": "F4", "does": "launched with --dev only: save every tuning value to user://tuning-<time>.json"},
 	{"keys": "Esc", "does": "outside play: quit"},
 ]
@@ -95,10 +96,10 @@ const FIELD_RULES := [
 ]
 
 const SCREEN_KEYS := [
-	{"keys": "Space", "does": "title: start; summary: choose a class (pad B on the summary)"},
+	{"keys": "Space", "does": "title: start; summary: choose a pilot (pad B on the summary)"},
 	{"keys": "H", "does": "title: how to play, and back"},
-	{"keys": "1, 2, ...", "does": "class select: one number per class card, left to right"},
-	{"keys": "N", "does": "summary: new run, same class (pad A on the summary)"},
+	{"keys": "1, 2, ...", "does": "pilot select: one number per pilot card, left to right"},
+	{"keys": "N", "does": "summary: new run, same pilot (pad A on the summary)"},
 ]
 
 # The key list in display order: a row per verb with its table keys and caps, then the menu keys.

@@ -72,10 +72,18 @@ func _run() -> void:
 
 	game.flow.choose_class(1)
 	await _frames(2)
+	# The cold open has the floor first (one voice at a time, ruling cf): a plate waits for its
+	# card, so the run's opening flourish is ended before the plate is asked for.
+	game.presentation.flourish.stop_all()
 	game.events.achievement_earned.emit("first_win")
 	game.hud._step_ach(0.1)
 	_t.check("UI1-3 a toast is up before the ending", not game.hud.ach_toasts().is_empty())
 	game.events.achievement_earned.emit("first_win")
+	# test_mode sets bot_driven, and screens.gd closes a bot's ending after ENDING_HOLD (1 s of
+	# frame time). The credits loop below waits 30 frames: under a second alone, over it on a
+	# loaded box, where the roll was freed mid-loop and the next call on it crashed (signal 11).
+	# This part plays the human, as the ending tests do.
+	game.bot_driven = false
 	screens.start_ending_sequence()
 	var seq = screens.ending_sequence
 	seq.set_process(false)
@@ -97,6 +105,9 @@ func _run() -> void:
 		seq.elapsed = Sequence.WORLD_SECONDS * 3.0 + step * Sequence.CREDITS_SECONDS / 15.0
 		seq.advance(0.0)
 		await _frames(2)
+		if not is_instance_valid(seq):
+			_t.check("UI1-3 the ending stays open through credits step %d" % step, false, "the sequence was freed mid-roll")
+			break
 		var seen: Rect2 = seq.credits_rect()
 		most = maxf(most, seen.end.y)
 		_t.check("UI1-3 credits step %d stays out of the hint band" % step, not seen.intersects(band), "%s vs %s" % [seen, band])

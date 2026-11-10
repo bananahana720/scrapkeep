@@ -33,7 +33,6 @@ var _jaw: MeshInstance3D
 var _jaw_rest := Vector3.ZERO
 var _jaw_set := Vector3.ZERO
 
-static var _warned_asset := false
 static var _shared: Array = []
 
 
@@ -90,31 +89,8 @@ func _build_tool() -> void:
 
 
 static func _parts() -> Array:
-	if not _shared.is_empty():
-		return _shared
-	var path := BODY
-	if not ResourceLoader.exists(path):
-		return []
-	var packed := load(path) as PackedScene
-	if packed == null:
-		return []
-	var scene := packed.instantiate()
-	var painted := Palette.solid(Color.WHITE)
-	painted.vertex_color_use_as_albedo = true
-	for node in scene.find_children("*", "MeshInstance3D", true, false):
-		var mi := node as MeshInstance3D
-		var mesh: Mesh = mi.mesh.duplicate()
-		var flash := -1
-		for i in mesh.get_surface_count():
-			var surface_material := mesh.surface_get_material(i)
-			if surface_material == null and not _warned_asset:
-				_warned_asset = true
-				push_warning("pit_jaw: surface has no material; using default finish")
-			if surface_material != null and surface_material.resource_name == "fleet_paint":
-				flash = i
-			mesh.surface_set_material(i, painted)
-		_shared.append({"name": mi.name, "mesh": mesh, "xform": mi.transform, "flash": flash})
-	scene.free()
+	if _shared.is_empty():
+		_shared = EnemyCasting.parts(BODY, "pit_jaw")
 	return _shared
 
 

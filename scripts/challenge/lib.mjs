@@ -180,8 +180,65 @@ export function shardJobs(jobs, spec) {
 export function botArgs(job, out) {
   return [
     "--headless", "--fixed-fps", "90", "--path", "sketches/core-loop", "--script", "res://tools/band_run.gd", "--",
-    "--out=" + out, "--policy=" + job.policy, "--seeds=" + job.seed, "--table=park", "--gate=1", ...job.args,
+    "--out=" + out, "--policy=" + job.policy, "--seeds=" + job.seed, "--table=park", "--gate=1", "--qa-log=1", ...job.args,
   ];
+}
+
+// --- what a player would report -----------------------------------------------------------------
+
+// Every band run plays the park table with the play watch on (bot_run --qa-log=1, src/core/play_watch.gd,
+// which only reads the game): a run judged on its win or loss is also read for what a player would
+// report. Worst first: a wedge against a wall, a fall through the floor, an empty objective plate and
+// a hull bar off the hull are bugs wherever they happen; stuck and hung are read with the bot's goal (a camper waits by design).
+export const QA_KINDS = ["wedged", "fell", "blank", "bar", "stuck", "hung"];
+const QA_PLACE_M = 10;
+
+// The watch's rows from one run's qa-<seed>.ndjson, without the objective rows (every plate change).
+export function qaRows(text) {
+  return parseNdjson(text)
+    .filter((row) => QA_KINDS.includes(row.kind))
+    .map(({ kind, stage, s, at, flow, goal }) => ({ kind, stage, s, at, flow, goal }));
+}
+
+// runs: the runs.ndjson lines; a line carries `qa` (qaRows of its run) when the watch's file was read.
+// Rows are gathered by kind, stage and place (a QA_PLACE_M square), so one bad spot met by ten runs is one line.
+export function playerReport(runs) {
+  const watched = runs.filter((run) => Array.isArray(run.qa));
+  const kinds = Object.fromEntries(QA_KINDS.map((kind) => [kind, { rows: 0, runs: 0 }]));
+  const places = new Map();
+  for (const run of watched) {
+    for (const kind of new Set(run.qa.map((row) => row.kind))) kinds[kind].runs += 1;
+    for (const row of run.qa) {
+      kinds[row.kind].rows += 1;
+      const near = (row.at ?? []).map((x) => Math.round(x / QA_PLACE_M) * QA_PLACE_M);
+      const key = [row.kind, row.stage, ...near].join(" ");
+      const place = places.get(key) ?? { kind: row.kind, stage: row.stage, near, rows: 0, runs: new Set(), cells: new Set(), goals: new Set() };
+      place.rows += 1;
+      place.runs.add(run.id);
+      place.cells.add(run.cell);
+      if (row.goal) place.goals.add(row.goal);
+      places.set(key, place);
+    }
+  }
+  const list = [...places.values()]
+    .map((place) => ({ ...place, runs: place.runs.size, cells: [...place.cells].sort(), goals: [...place.goals].sort() }))
+    .sort((a, b) => QA_KINDS.indexOf(a.kind) - QA_KINDS.indexOf(b.kind) || b.runs - a.runs || a.stage - b.stage || String(a.near).localeCompare(String(b.near)));
+  return { runs: runs.length, watched: watched.length, kinds, places: list };
+}
+
+export function renderPlayerReport(report, limit = 25) {
+  const lines = ["## What a player would report", ""];
+  if (report.watched === 0) return [...lines, "No run carried the play watch's rows (runs recorded before it was switched on).", ""].join("\n");
+  lines.push(`The play watch (src/core/play_watch.gd) read ${report.watched} of ${report.runs} runs. It only reads the game, so the win rates above are what they would be without it. Information, not graded: a wedge, a fall, an empty objective plate or a hull bar off the hull is a bug to chase wherever it shows; a stuck or hung row is read with the bot's goal, since a camper waits by design.`, "");
+  lines.push("| Kind | Rows | Runs with one |", "| --- | --- | --- |");
+  for (const kind of QA_KINDS) lines.push(`| ${kind} | ${report.kinds[kind].rows} | ${report.kinds[kind].runs} |`);
+  lines.push("");
+  if (report.places.length === 0) return [...lines, "No place was reported.", ""].join("\n");
+  lines.push("| Kind | Stage | Near (x, y, z) | Runs | Rows | Cells | Bot's goal |", "| --- | --- | --- | --- | --- | --- | --- |");
+  for (const place of report.places.slice(0, limit)) lines.push(`| ${place.kind} | ${place.stage} | ${place.near.join(", ")} | ${place.runs} | ${place.rows} | ${place.cells.join(", ")} | ${place.goals.slice(0, 3).join("; ")} |`);
+  if (report.places.length > limit) lines.push("", `${report.places.length - limit} more places are in table.json.`);
+  lines.push("");
+  return lines.join("\n");
 }
 
 // --- grading --------------------------------------------------------------------------------

@@ -18,6 +18,7 @@ extends Node3D
 # Placement rules (validate): line_clear (height tier or the kind's line_clear_m, whichever is larger), route_lane, scatter_row, keepout,
 # low_ground, telegraph (the event's own zone, a lightning strike circle or the site box, grown by hold_clear_m), home_clear, play_rect, ground_row, slope, seat.
 
+const AppShell := preload("res://src/core/app_shell.gd")
 const ParkSites := preload("res://src/presentation/park_sites.gd")
 const SetDressing := preload("res://src/presentation/set_dressing.gd")
 const ParkMap := preload("res://src/world/park/park_map.gd")
@@ -1819,7 +1820,7 @@ func _take() -> void:
 # loads them on the loader thread first.
 static func _uncached(paths: Array) -> Array:
 	var out := paths.filter(func(path: String): return not _meshes.has(path))
-	if DisplayServer.get_name() != "headless":
+	if not AppShell.headless():
 		for path: String in out:
 			if not _requested.has(path) and ResourceLoader.load_threaded_request(path) == OK:
 				_requested[path] = true

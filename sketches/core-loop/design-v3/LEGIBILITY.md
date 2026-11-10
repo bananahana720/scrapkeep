@@ -42,14 +42,14 @@ Ten situations. Each has one source table.
 
 | Situation | What it shows | Where | Source table |
 | --- | --- | --- | --- |
-| A verb is available (the press would succeed this tick) | A sand keycap plus the verb's glyph in the live colour. One word rides it until that verb's first success on the profile. At most two prompts at once. | At the thing the verb acts on | `src/core/bindings.gd` `VERBS` |
+| A verb is available (the press would succeed this tick) | A sand keycap plus the verb's glyph in the live colour. One word rides it until that verb's first success on the profile; E (mount; it shows only where the ball would mount) and Space, whose reading changes with the ball's state (jump, double jump and slingshot), say that reading until the prompt first retires. At most two prompts at once. | At the thing the verb acts on | `src/core/bindings.gd` `VERBS` |
 | A target can be hooked | Live corner brackets close on it and its cap pulses at 2 Hz. Out of range is a hollow slate ring with no sound. | On the target, mirrored by the reticle | `event_kinds.gd` `LINE_ROWS` |
 | Something is active on you | A persistent object and a loop sound for as long as it is true: the taut cable and its hum for your line, a hazard binding line and a creak for a hostile hold, flakes and a rasp for wear | On the ball and along the line to the cause | `LINE_ROWS`, `STATE_ROWS` |
 | A target is in a state | On the struck part: barb and collar for latched, a live rim and crack for will-break or open, slate for glancing, a flipped pose and star for interrupted. No floor rings. | On the enemy body. On the Warden, repeated once as the plate's state glyph. | `STATE_ROWS` |
 | Something fired | A hit: sparks at the contact point sized by what it did. A synergy or map mechanic: two cause glyphs, an arrow, the effect glyph, in the row's own shape with its motif. | At the contact point or on the object. Never in the toast band. | `IMPACT` for hits, `CAUSE_ROWS` for the rest |
 | Something failed | Always an answer: a slack line and a dull tick for a dry harpoon, slate sparks and a low clank for a glance, the cable snapping with a rust twang for a forced break. The failed verb's prompt returns for 3 s. | Where the action would have landed | `VERBS` field `fail`, `STATE_ROWS`, `LINE_ROWS` |
 | A goal exists | A glyph, five words or fewer, a distance chevron. The same glyph on a world beacon and on the edge marker. | Objective plate, the beacon, the screen edge | `src/core/objectives.gd`, which absorbs `OBJECTIVE_SHORT` and the `objective` strings in `ROWS` |
-| A threat is coming | The hazard floor telegraph with fill progress, the wind-up pose on the body, the row's warn sound. Unchanged. | The floor and the attacker | `ATTACK_ROWS`, `THREAT_ROWS` |
+| A threat is coming | The hazard floor telegraph with fill progress, the wind-up pose on the body, the row's warn sound. Unchanged. While the ball stands where the hit will land, a hazard diamond with a bang stands over the ball and fills with the same progress (`src/ui/danger_mark.gd`, from the dodge watch's `standing_in`): a camera inside a floor mark sees its rails and no edge. | The floor and the attacker; over the ball while it stands in the mark | `ATTACK_ROWS`, `THREAT_ROWS` |
 | An activity is on offer | A standing amber beam and ground ring from stage start with the family glyph on top. No timer and no toast. Its goal is a gauge on the object itself. | At the site | `ACTIVITY_ROWS` |
 | A reward is paid | The part rises from the exact spot the goal completed, the won sound plays, and its glyph flies onto the ball with a two-word name. | The completion spot, then the ball | `LOOT_ROWS` |
 
@@ -139,7 +139,7 @@ The slice Warden is the posture chassis and nothing else. In one line: hit it un
 - **On the body.** Cracks spread across the jaw plates at 25, 50 and 75 posture and seal as it drains. No amber anywhere on the Warden. The live colour appears on it only while it is open.
 - **The plate** sits top-centre, about 420 by 44 px at 1080p, from `warden_engaged`: a name of two words or fewer, four chunks, a posture bar, one state glyph. The 24-segment ring goes. The overhead diamond stays as a landmark.
 - **Sound.** Each posture quarter raises the hit's note one step of a four-note phrase. The stagger lands the chord. A chunk shatters on a bass hit.
-- **The objective line** is the fight's state: "Find the Warden", "Break its guard", "Smash the core", "Roll through a gate". "Grow, then return" appears only when posture has failed to reach 50 across 10 s of trying, never on a hit count. A matched build must never see it.
+- **The objective line** is the fight's state: "Find the Warden", "Break its guard", "Smash the core", "Roll through a gate". Since 9 Nov 2026 a mounted reactor Warden names its own road in place of "Break its guard" ("Ride the water sheet up" at the dam; "Latch onto the Warden", then "Latched: shoot the Warden" at the flume, which is the fire-from-the-line rule said as an order), Brindle's arena names each phase's verb and the markers point at what the verb names (the crane magnets, the vent caps, the open cockpit, the scooter), and the activity row names the nearest site with its metres (`src/core/objectives.gd`). "Grow, then return" appears only when posture has failed to reach 50 across 10 s of trying, never on a hit count. A matched build must never see it.
 
 **Bands** (bots decide only whether the build is worth his time):
 
@@ -292,7 +292,7 @@ Each is worded so he can veto it.
 29. Enemies arrive as three whole packs drawn without repeats, with no hidden unlock clock. The plated brute and a winch drone arrive once per stage as the third arrival.
 30. A hold can bend the ball's path by at most 60 degrees a second and can never slow it. The winch drone's cable snaps past 19 m/s and kicks the ball forward.
 31. The slice has no timed events and no vault. Standing activities replace them in the wave after.
-32. The objective line reads "Find the Warden", "Break its guard", "Smash the core" or "Roll through a gate". "Grow, then return" shows only after ten seconds of trying leave the guard under half.
+32. The objective line reads "Find the Warden", "Break its guard" (or the mounted Warden's own road: the dam's sheet, the flume's line), "Smash the core" or "Roll through a gate". "Grow, then return" shows only after ten seconds of trying leave the guard under half.
 33. The scrap number shows only where it is spent. The core pips and first-run sentence callouts are gone with the dial, bars and clock.
 34. The map retrofit is a new map file used by the slice only. The three-stage game keeps today's Reach until he has played the new one.
 35. Devices belong to a map. The Reach has none until the standing-activities unit places its own.

@@ -98,6 +98,11 @@ var _posture := BossPosture.new(Rules.POSTURE)
 var _phases: FightPhases
 # The Furnace's owed reprise ring: {at, cue_at, cued, turn}; empty when none is owed.
 var _reprise := {}
+# The Scuttle's hint (take_hint): tries that came up short this phase, the best punch the
+# ball has shown in it, and the fight clock the hint may next show at.
+var _short_tries := 0
+var _scuttle_punch := 0.0
+var _hint_next := 0.0
 
 
 func setup(ctx_ref) -> void:
@@ -169,7 +174,6 @@ func _place_ball(entry_velocity: Vector3) -> void:
 	var velocity := heading * flat + Vector3.UP * clampf(entry_velocity.y, -8.0, 0.0)
 	var at: Vector3 = arena.entry_point()
 	ctx.player.reset_to(at, velocity)
-	ctx.player.body().global_position = at
 	ctx.camera.snap(heading)
 
 
@@ -277,6 +281,24 @@ func _held() -> bool:
 	return state == FIGHT and _chunks_lost() >= phase
 
 
+# The hold banks: its hits fill the bar the next phase opens with (Rules.HELD_BANK).
+func banking() -> bool:
+	return _held() and phase < 3 and not _in_transition()
+
+
+# How much of the bar a hold can bank, 0 to 1, for the plate's mark.
+func bank_cap() -> float:
+	return Rules.HELD_BANK / BossPosture.FULL
+
+
+# A hit on a held hull: it breaks nothing, and its gain stops at the bank's cap.
+func _bank(result: Dictionary) -> void:
+	result["gain"] = clampf(float(result.get("gain", 0.0)), 0.0, maxf(0.0, Rules.HELD_BANK - _posture.posture)) if banking() else 0.0
+	result["crack"] = false
+	result["shatter"] = false
+	result["dealt"] = 0.0
+
+
 func _enter_phase(next: int) -> void:
 	_cancel_hazards()
 	if next > 1:
@@ -299,6 +321,9 @@ func _enter_phase(next: int) -> void:
 			ship.shed_armour()
 			ship.cockpit_open(true, "enter_scuttle")
 			_combo_left = -1
+			_short_tries = 0
+			_scuttle_punch = 0.0
+			_hint_next = 0.0
 			_charge = {"state": CHARGE_REST, "timer": ChallengeDials.period("brindle", Rules.CHARGE_REST, 3)}
 	ship.cue_phase(next)
 	_publish("boss_phase_changed", [next, Rules.PHASE_NAMES[next - 1]])
@@ -811,8 +836,13 @@ func _clear_arc(from: Vector3, launch: Vector3) -> bool:
 # --- Phase 3: scuttle the flagship ------------------------------------------------------
 
 func _step_charges(delta: float, ball: Vector3) -> void:
+	_scuttle_punch = maxf(_scuttle_punch, ctx.flow.punch_now())
 	match _charge.get("state", CHARGE_REST):
 		CHARGE_REST, CHARGE_RECOVER, CHARGE_STUN, CHARGE_HOOK:
+			if _charge["state"] == CHARGE_HOOK:
+				# The hook turn starts on its cue: the hull digs in and swings its bow round after
+				# the ball, so the short tell that follows has only the last of the turn left.
+				_turn_ship(_aim_at(ball), Rules.CHARGE_TURN_RATE, delta)
 			_charge["timer"] -= delta
 			if _charge["timer"] <= 0.0:
 				if _charge["state"] == CHARGE_REST:
@@ -824,6 +854,7 @@ func _step_charges(delta: float, ball: Vector3) -> void:
 				else:
 					_charge = {"state": CHARGE_REST, "timer": _rest_time()}
 		CHARGE_BRACE:
+			_brace_turn(delta)
 			if _charge["hazard"].is_live():
 				_charge["state"] = CHARGE_RUN
 		CHARGE_RUN:
@@ -833,6 +864,37 @@ func _step_charges(delta: float, ball: Vector3) -> void:
 			_charge = {"state": CHARGE_REST, "timer": _rest_time()}
 
 
+# Where a charge committed now would point: at the ball, or straight on when the ball is
+# too close to the ship's centre to give a bearing.
+func _aim_at(ball: Vector3) -> Vector3:
+	var to_ball := Vector3(ball.x - ship.global_position.x, 0.0, ball.z - ship.global_position.z)
+	return to_ball.normalized() if to_ball.length() > 2.0 else ship.heading
+
+
+# Swings the bow toward `heading` in place, by at most `rate` radians a second. The hull
+# never takes a heading in one tick: it is a 14 m kinematic box, and a ball leaning on its
+# flank takes a one-tick turn as a 300 to 500 m/s kick (or, amidships, is swallowed by the
+# hull and held inside it).
+func _turn_ship(heading: Vector3, rate: float, delta: float) -> void:
+	var owed := Vector2(ship.heading.x, ship.heading.z).angle_to(Vector2(heading.x, heading.z))
+	var step := clampf(owed, -rate * delta, rate * delta)
+	var arrives := absf(owed - step) < Rules.CHARGE_TURN_SNAP
+	ship.move_to(ship.global_position, heading if arrives else (ship.heading as Vector3).rotated(Vector3.UP, -step))
+
+
+# The wind-up: the hull turns to its committed lane inside the tell, at CHARGE_TURN_RATE or
+# as much faster as it takes to be square in the lane CHARGE_TURN_SETTLE before the lane can
+# hurt. The lane itself was laid at the commit and never moves.
+func _brace_turn(delta: float) -> void:
+	var h = _charge["hazard"]
+	var heading: Vector3 = _charge["heading"]
+	var owed := absf(Vector2(ship.heading.x, ship.heading.z).angle_to(Vector2(heading.x, heading.z)))
+	if owed <= 0.0:
+		return
+	var time_left := maxf(delta, h.warn_seconds - h.age - Rules.CHARGE_TURN_SETTLE)
+	_turn_ship(heading, maxf(Rules.CHARGE_TURN_RATE, owed / time_left), delta)
+
+
 # A cued charge is the Scuttle's hook turn: its ratchet cue sounded CUE_LEAD ago, so it
 # draws the short tell, and it never leads a combo or a second hook turn.
 func _commit_charge(ball: Vector3, cued := false) -> void:
@@ -840,7 +902,7 @@ func _commit_charge(ball: Vector3, cued := false) -> void:
 		_combo_left = ChallengeDials.combo_step("brindle", _combo_left)
 	var from: Vector3 = ship.global_position
 	var to_ball := Vector3(ball.x - from.x, 0.0, ball.z - from.z)
-	var heading: Vector3 = to_ball.normalized() if to_ball.length() > 2.0 else ship.heading
+	var heading := _aim_at(ball)
 	var to_wall := _travel_to_rim(from, heading)
 	var wanted := to_ball.length() + Rules.CHARGE_OVERSHOOT
 	var into_wall := wanted >= to_wall
@@ -854,7 +916,7 @@ func _commit_charge(ball: Vector3, cued := false) -> void:
 	h.commit_lane("charge", Hazard.Threat.Type.LANE, from, heading, half, length + half, Requisition.HULL.x * 0.5 + 1.0,
 		Requisition.HULL.y + 0.5, warn, length / Rules.CHARGE_SPEED + 0.2)
 	_add_hazard(h)
-	ship.move_to(from, heading)
+	# The hull keeps its heading at the commit: _brace_turn owns the turn onto this one.
 	ship.cue("charge_warn", h.get_instance_id())
 	_charge = {"state": CHARGE_BRACE, "hazard": h, "from": from, "heading": heading, "length": length,
 		"into_wall": into_wall, "travelled": 0.0, "cued": cued}
@@ -891,10 +953,12 @@ func _run_charge(delta: float, ball: Vector3) -> void:
 			_stun(ChallengeDials.punish("brindle", Rules.WALL_STUN))
 			_discover(CodexEntries.WALL_BAIT, ship.global_position)
 		elif not _charge.get("cued", false) and _follow_ups() > 0:
+			_note_missed_charge()
 			# The hook turn: the cue sounds as the hull digs in, the lane draws CUE_LEAD later.
 			_phases.cue("charge")
 			_charge = {"state": CHARGE_HOOK, "timer": FightPhases.CUE_LEAD}
 		else:
+			_note_missed_charge()
 			_charge = {"state": CHARGE_RECOVER, "timer": Rules.CHARGE_RECOVER}
 
 
@@ -941,6 +1005,45 @@ func _stun(seconds: float) -> void:
 
 func stunned() -> bool:
 	return state == FIGHT and phase == 3 and _charge.get("state", "") == CHARGE_STUN
+
+
+# --- The Scuttle's hint ---------------------------------------------------------------
+
+# A charge ran out with no stun. It counts as a try that came up short only for a ball whose
+# punch has stayed under the hull's plating all phase: that build cannot hit its way in.
+func _note_missed_charge() -> void:
+	if _scuttle_punch < Rules.HULL_PLATING:
+		_short_tries += 1
+
+
+# A hit on the closed hull that its plating turned. Like a missed charge, it is a short try
+# only while the ball's best punch of the phase is under the plating: a heavy build's stray
+# light hit is not one.
+func _note_glance(target, part: String, result: Dictionary) -> void:
+	if state != FIGHT or phase != 3 or target.role != "hull" or part.begins_with("cap_") or stunned() or _posture.staggered:
+		return
+	var punch := float(result.get("punch", 0.0))
+	_scuttle_punch = maxf(_scuttle_punch, punch)
+	if punch < float(result.get("plating", Rules.HULL_PLATING)) and _scuttle_punch < Rules.HULL_PLATING:
+		_short_tries += 1
+
+
+# The hint the fight asks the HUD for right now, "" for none; taking it starts its gap (the
+# HUD polls this when its toast row is free and shows the UI row there). In the Scuttle a
+# build whose punch is short of the plating has one way in: a stun, and for a light build
+# that is a charge baited into the rim wall. The hint is owed once a try has come up short
+# (a hit the plating turned, or a charge that ran out), repeats every SCUTTLE_HINT_GAP
+# seconds, and stops for the fight at the first stun, which is the lesson learned, or once
+# the ball's punch has met the plating.
+func take_hint() -> String:
+	if state != FIGHT or phase != 3 or stuns > 0 or _short_tries <= 0 or clock < _hint_next:
+		return ""
+	if _scuttle_punch >= Rules.HULL_PLATING:
+		return ""
+	if _in_transition() or _held() or _posture.staggered:
+		return ""
+	_hint_next = clock + Rules.SCUTTLE_HINT_GAP
+	return Rules.SCUTTLE_HINT
 
 
 func charging() -> bool:
@@ -1185,7 +1288,6 @@ func _rescue(ball: Vector3) -> void:
 	var turning := signf(v.dot(Arena.tangent(arena.angle_of(ball))))
 	var at := rescue_point(ball)
 	ctx.player.reset_to(at, Arena.tangent(arena.angle_of(at)) * speed * (turning if turning != 0.0 else 1.0))
-	ctx.player.body().global_position = at
 
 
 # --- The enemy protocol, answered for every piece (boss_target.gd forwards here) -------
@@ -1276,6 +1378,7 @@ func on_struck(target, kind: String, part: String, result: Dictionary) -> void:
 		_stun(ChallengeDials.punish("brindle", Rules.CLASH_STUN))
 	if state != FIGHT:
 		return
+	_note_glance(target, part, result)
 	if target.role == "hull" and result.has("gain"):
 		_apply_posture(result)
 	elif target.role == "hull" and not part.begins_with("cap_"):
@@ -1343,7 +1446,7 @@ func chunk_cracked() -> bool:
 
 # What the rule says a hit on the hull does, or {} for any other piece so combat's own
 # rule runs. Out of a stagger a slam on a vent cap meets the cap's plating; in one any
-# contact meets the open cockpit. A held phase answers with the hit and no effect.
+# contact meets the open cockpit. A held phase answers with the hit and what it banks.
 func judge_hit(target, kind: String, punch: float, smash: bool, tier: int) -> Dictionary:
 	if target.role != "hull" or state != FIGHT:
 		return {}
@@ -1355,25 +1458,30 @@ func judge_hit(target, kind: String, punch: float, smash: bool, tier: int) -> Di
 	if part != "":
 		result["part"] = part
 	if _held() or _in_transition():
-		result["gain"] = 0.0
-		result["crack"] = false
-		result["shatter"] = false
-		result["dealt"] = 0.0
+		_bank(result)
 	return result
 
 
 # A weak point's full hit adds to the hull's bar as the rule would weigh it on a body of
 # that plating. It never touches the open cockpit: only a contact on the hull does.
 func _pressure(kind: String, result: Dictionary) -> void:
-	if _posture.staggered or _held() or _in_transition() or not bool(result.get("full", false)):
+	if _posture.staggered or (_held() and not banking()) or _in_transition() or not bool(result.get("full", false)):
 		return
-	_apply_posture(_posture.judge({"kind": kind, "punch": float(result.get("punch", 0.0)),
-			"plating": float(result.get("plating", 0.0)), "charging": charging(), "frame": Engine.get_physics_frames()}))
+	var judged := _posture.judge({"kind": kind, "punch": float(result.get("punch", 0.0)),
+			"plating": float(result.get("plating", 0.0)), "charging": charging(), "frame": Engine.get_physics_frames()})
+	if banking():
+		_bank(judged)
+	_apply_posture(judged)
 
 
 func _apply_posture(result: Dictionary) -> void:
 	var before := _posture_signature()
 	var was_staggered: bool = _posture.staggered
+	# A hit is judged before its strike is published and applied after: the bank's stop is
+	# measured again here, against the bar as it stands now.
+	if _held() or _in_transition():
+		result = result.duplicate()
+		_bank(result)
 	_posture.apply(result, Engine.get_physics_frames())
 	_sync_stagger(was_staggered)
 	_publish_posture(before)
@@ -1382,6 +1490,9 @@ func _apply_posture(result: Dictionary) -> void:
 func _step_posture(delta: float) -> void:
 	var before := _posture_signature()
 	var was_staggered: bool = _posture.staggered
+	# A banked bar is kept: it does not drain through the hold or the beat after it.
+	if (_held() or _in_transition()) and not _posture.staggered:
+		_posture.idle = 0.0
 	_posture.step(delta)
 	_sync_stagger(was_staggered)
 	_publish_posture(before)
@@ -1437,6 +1548,39 @@ func _update_readout() -> void:
 
 
 # --- Live state for the HUD (flow's objective and gap lines read these) --------------
+
+# The objective plate's reading of the fight (ui/hud.gd, core/objectives.gd): the phase whose
+# verb the plate names (CHASE_PHASE is the scooter) and whether the plate should send the player
+# at the open cockpit now: a stagger in any phase (the weak points pay nothing through it,
+# _pressure), or a stun in Scuttle. A stagger does not hold a Scuttle charge back, so while one is
+# coming down its lane the plate keeps the charge's row: the lane is what the player must read.
+func plate_reading() -> Dictionary:
+	return {"phase": phase if active() else 0, "open": (stunned() or staggered()) and not charge_coming()}
+
+
+# A Scuttle charge is committed: its lane is drawn (the tell) or he is running it.
+func charge_coming() -> bool:
+	return state == FIGHT and phase == 3 and _charge.get("state", "") in [CHARGE_BRACE, CHARGE_RUN]
+
+
+# Where the plate's row sends the player now, for the HUD to point at (ui/edge_markers.gd): the
+# crane magnets in the Requisition, the vent caps in the Furnace, the cockpit while the plate
+# names it, the scooter in the chase. Baiting a charge names no one place, so it marks none.
+func plate_targets() -> Array[Vector3]:
+	var out: Array[Vector3] = []
+	if state == EJECT and is_instance_valid(scooter):
+		out.append(scooter.global_position)
+	elif state == FIGHT:
+		if plate_reading()["open"]:
+			out.append(ship.cockpit_point())
+		elif phase == 1:
+			for magnet in ship.magnets:
+				out.append(magnet.global_position)
+		elif phase == 2:
+			for cap in ship.caps:
+				out.append(cap.global_position)
+	return out
+
 
 # What the player should do right now, in the objective line's voice. Flow shows it as
 # the whole objective line, so fight states end with punch against the live plating.

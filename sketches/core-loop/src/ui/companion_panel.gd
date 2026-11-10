@@ -3,7 +3,7 @@ extends CanvasLayer
 const Palette := preload("res://src/core/palette.gd")
 const Companion := preload("res://src/core/companion.gd")
 const ChoiceButton := preload("res://src/ui/choice_button.gd")
-const UiFonts := preload("res://src/ui/ui_fonts.gd")
+const UiDraw := preload("res://src/ui/ui_draw.gd")
 
 # The companion assembly screen, a calm menu between attempts. It lists the pieces the run
 # owns, shows the two sockets and writes the result back to run.companion (the model's
@@ -58,11 +58,11 @@ func setup(game_ref) -> void:
 	_column.add_theme_constant_override("separation", 14)
 	_column.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_column)
-	_title = _label(40, Palette.AMBER)
+	_title = UiDraw.label(40, Palette.AMBER)
 	_title.text = "COMPANION"
 	_column.add_child(_title)
 	for i in Companion.SOCKETS:
-		var socket := _label(24, Palette.SAND)
+		var socket := UiDraw.label(24, Palette.SAND)
 		_sockets.append(socket)
 		_column.add_child(socket)
 	_rows = VBoxContainer.new()
@@ -71,23 +71,13 @@ func setup(game_ref) -> void:
 	_rows.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	_rows.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_column.add_child(_rows)
-	_effect = _label(20, Palette.SAND)
+	_effect = UiDraw.label(20, Palette.SAND)
 	_column.add_child(_effect)
-	_line = _label(20, Palette.AMBER)
+	_line = UiDraw.label(20, Palette.AMBER)
 	_column.add_child(_line)
-	_hint = _label(18, Color(Palette.SAND, 0.7))
+	_hint = UiDraw.label(18, Color(Palette.SAND, 0.7))
 	_hint.text = "U empties. Esc leaves."
 	_column.add_child(_hint)
-
-
-func _label(font_size: int, color: Color) -> Label:
-	var label := Label.new()
-	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	label.add_theme_font_override("font", UiFonts.bold())
-	label.add_theme_font_size_override("font_size", font_size)
-	label.add_theme_color_override("font_color", color)
-	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	return label
 
 
 func is_open() -> bool:

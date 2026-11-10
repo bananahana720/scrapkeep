@@ -40,17 +40,24 @@ const WIDTH := 360.0
 const MARGIN := 18.0
 # The HUD's toast column width (hud.gd TOAST_WIDTH), which the banner stays beside.
 const TOAST_COLUMN := 800.0
-# The first-discovery card (cards mode) and the most that wait for the gate.
+# The first-discovery card (cards mode) and the most that wait for the gate. A card holds
+# CARD_HOLD for a line of up to CARD_WORDS words and CARD_WORD_HOLD more for each word past
+# that, up to CARD_HOLD_MAX, so a long line stays up long enough to read to its end.
 const CARD_HOLD := 4.0
+const CARD_WORDS := 18
+const CARD_WORD_HOLD := 0.2
+const CARD_HOLD_MAX := 8.0
 const MAX_HELD := 3
 const GLYPH_CARD := 132.0
 # A card is this tall (250 at 900p: from just under the toasts band, y 279, to 529, above
 # the prompts band at 558) so it reads as the bigger ceremony, and its line takes at
-# most CARD_LINES lines, so it stays clear of the play area whatever the text.
+# most CARD_LINES lines, so it stays clear of the play area whatever the text. Seven lines
+# is what the card holds beside its title without growing; a longer line is trimmed.
 const CARD_HEIGHT := 250.0
-const CARD_LINES := 4
+const CARD_LINES := 7
 const GLYPH_PERIOD := 1.2
 const DEFAULT_KIND := "synergy_discovered"
+const TINT_KICKER_LIFT := 0.35
 const CALM_SECONDS := WhyCallout.CALM_SECONDS
 
 var shown := 0
@@ -67,6 +74,9 @@ var last_style := ""
 var cards_shown := 0
 # The clock in milliseconds; tests swap it for a fake.
 var now_ms: Callable = Callable(Time, "get_ticks_msec")
+
+# An item is on screen now (key is its show_discovery id): the calm moment it waited for.
+signal came_up(key: String)
 
 var _queue: Array = []
 var _calm_left := 0.0
@@ -181,19 +191,37 @@ func held() -> bool:
 # waits its turn.
 # id names the discovery for the first-time test in cards mode (default: category and
 # title); kind is the EventKinds row whose shape and colour the glyph wears.
-func show_discovery(title: String, category: String, detail := "", kicker := "New synergy", id := "", kind := DEFAULT_KIND) -> void:
+# tint, when set, replaces the category colour on the edge, the kicker and the glyph, so a
+# banner can wear the colour of the thing it names (a part set's studs on the ball).
+# every_time is for a moment of the run, not a codex first (a completed set): in cards mode its
+# first showing ever is still the card, and each later one is the small banner instead of
+# nothing. It is never dropped for a full queue, and it does not wait behind first-find cards.
+func show_discovery(title: String, category: String, detail := "", kicker := "New synergy", id := "", kind := DEFAULT_KIND,
+		tint = null, every_time := false) -> void:
 	var style := "banner"
 	var key := id if id != "" else "%s:%s" % [category, title]
 	if cards:
 		style = "auto"
 		if profile == null and storage_dir != "":
 			profile = UiProfile.new(storage_dir)
+		if _queue.any(func(item: Array): return item[6] == key):
+			return
+		if every_time:
+			style = "banner" if _was_seen(key) else "auto"
 		# Seen means shown: the record is written when the card comes up (_next), so a
 		# discovery that is queued and then dropped stays unseen. A repeat, one already
 		# held, or one past MAX_HELD shows nothing.
-		if _was_seen(key) or _queue.size() >= MAX_HELD or _queue.any(func(item: Array): return item[6] == key):
+		elif _was_seen(key) or _queue.size() >= MAX_HELD:
 			return
-	_queue.append([title, category, detail, kicker, style, kind, key])
+	var item := [title, category, detail, kicker, style, kind, key, tint, every_time]
+	# A moment of the run goes ahead of the first-find cards still waiting (and behind an earlier
+	# moment), so it lands in the next calm moment after the pickup that earned it.
+	var at := _queue.size()
+	if every_time:
+		at = 0
+		while at < _queue.size() and _queue[at][8]:
+			at += 1
+	_queue.insert(at, item)
 	if not showing():
 		_next()
 
@@ -240,6 +268,12 @@ func _input(event: InputEvent) -> void:
 		_next()
 
 
+# How long a card with this line stays up between its slide in and its slide out.
+static func card_hold(line: String) -> float:
+	var extra := maxi(line.split(" ", false).size() - CARD_WORDS, 0)
+	return minf(CARD_HOLD + CARD_WORD_HOLD * extra, CARD_HOLD_MAX)
+
+
 func _apply_style(style: String, entry: Dictionary, kind: String) -> void:
 	_style_name = style
 	var card := style == "card"
@@ -252,6 +286,8 @@ func _apply_style(style: String, entry: Dictionary, kind: String) -> void:
 	_panel.custom_minimum_size = Vector2(WIDTH, 0.0)
 	_body.custom_minimum_size = Vector2(WIDTH - 90.0, 0.0)
 	_body.max_lines_visible = -1
+	# A card trims its line; a banner after a card must not keep the trim (it hid the whole line).
+	_body.text_overrun_behavior = TextServer.OVERRUN_NO_TRIMMING
 	_title.add_theme_font_size_override("font_size", 24)
 	_body.add_theme_font_size_override("font_size", 15)
 	if card:
@@ -283,18 +319,24 @@ func _next() -> void:
 		return
 	var item: Array = _queue.pop_front()
 	var entry := CodexStyle.category(item[1])
-	var color: Color = entry["color"]
+	var color: Color = item[7] if item[7] is Color else entry["color"]
 	var style: String = item[4]
 	if style == "auto":
 		style = "card"
 		_mark_seen(item[6])
 	_apply_style(style, entry, item[5])
-	_icon.texture = entry["icon"]
+	if item[7] is Color:
+		_glyph_color = color
+	_icon.texture = CodexStyle.icon(item[1], item[7])
 	_kicker.text = "%s  ·  %s" % [String(item[3]).to_upper(), String(entry["label"]).to_upper()]
-	_kicker.add_theme_color_override("font_color", color)
+	# The edge, icon and glyph wear a tint as given; the small kicker text is lifted so a dark
+	# tint (rust, slate) still reads on the panel.
+	_kicker.add_theme_color_override("font_color", color.lightened(TINT_KICKER_LIFT) if item[7] is Color else color)
 	_title.text = item[0]
 	_body.text = item[2]
 	_body.visible = item[2] != ""
+	if _style_name == "card":
+		_hold = card_hold(item[2])
 	_panel.reset_size()
 	_style.border_color = color
 	last_style = _style_name
@@ -305,6 +347,7 @@ func _next() -> void:
 	_started_ms = int(now_ms.call())
 	visible = true
 	_place(0.0)
+	came_up.emit(item[6])
 
 
 func _process(delta: float) -> void:

@@ -25,7 +25,7 @@ const SfxBank := preload("res://src/presentation/sfx_bank.gd")
 const Harmony := preload("res://src/presentation/harmony.gd")
 const MusicEngine := preload("res://src/presentation/music_engine.gd")
 const T := preload("res://tests/support/t.gd")
-const EXPECTED_CHECKS := 89
+const EXPECTED_CHECKS := 90
 const DT := 1.0 / 60.0
 var _t := T.new("sable_kit_test")
 var _game
@@ -120,6 +120,7 @@ func _run() -> void:
 	_cast()
 	_t.near("world exit", _player.state.velocity.length(), 29.0, 0.5)
 	_t.check("exit cone and cast share their direction", rad_to_deg(_player.state.velocity.angle_to(shape["dir"])) < 1.0)
+	_t.check("the exit cone is an aim, not an area a hit lands in", shape.get("aim", false), str(shape))
 	_t.check("exit follows eject_direction", rad_to_deg(_player.state.velocity.angle_to(Augments.eject_direction(_player.ball_position() - anchor, _player.drive_basis))) < 5.0)
 	_t.eq("quiet release", [_player.kit.hooked, _player.kit.line_end], [false, "bank"])
 	_player._publish_line(0.0)
@@ -255,7 +256,7 @@ func _tree() -> void:
 			good = good and knobs != other
 	_t.check("every depth-4 leaf has one distinct sibling knob", good)
 	_t.eq("world-one ids", Sable.NODES_WORLD_ONE.slice(0, 6).map(func(n): return n["id"]), ["s_cannonball", "s_beachhead", "s_coil_hook", "s_face_runner", "s_arc_nest", "s_bulwark"])
-	_t.eq("world-one cards stay unchanged", [Cards.ROWS["s_cannonball"], Cards.ROWS["s_face_runner"]], ["Vault kicks discharge. Weight launches farther.", "Vaults restore jumps. Heavy fins steer harder."])
+	_t.eq("world-one cards read as the table writes them", [Cards.ROWS["s_cannonball"], Cards.ROWS["s_face_runner"]], ["Vault kicks zap what's near. A heavier ball launches farther.", "Vaults restore jumps. Heavy fins steer harder."])
 	_t.eq("one crater relic", Relics.ids().filter(func(id): return Relics.fits(id, "pylon_engineer") and Relics.swap_of(id) == "crater_slam"), ["crater_heart"])
 	_t.eq("two Bank Shot relics", Relics.ids().filter(func(id): return Relics.fits(id, "pylon_engineer") and Relics.slot_of(id) == "line"), ["pit_coil", "storm_crater"])
 	var movement_local := true

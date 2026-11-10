@@ -1035,9 +1035,9 @@ class Updater extends Node3D:
 			return
 		var cam := get_viewport().get_camera_3d()
 		var kit = player.kit if player != null and "kit" in player else null
-		var ball: Vector3 = player.global_position if player != null and is_instance_valid(player) else Vector3.INF
-		if player != null and is_instance_valid(player) and player.has_method("ball_position"):
-			ball = player.ball_position()
+		var ball := Vector3.INF
+		if player != null and is_instance_valid(player):
+			ball = player.shown_position() if player.has_method("shown_position") else player.global_position
 		for row in anchors:
 			var eye: Node3D = row["eye"]
 			if cam != null:

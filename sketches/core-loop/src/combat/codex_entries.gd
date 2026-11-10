@@ -165,7 +165,7 @@ const ENTRIES := [
 	{
 		"id": "shift_over", "name": "Shift Over",
 		"hint": "Every crew has someone blowing the whistle.",
-		"clue": "a Foreman's horn + the Foreman down first",
+		"clue": "a Shift Boss's horn + the Shift Boss down first",
 		"text": "Never attacks: it horns every 5 s and its crew's cracked plating closes up again; knock it out first and the whole crew clocks out for a breath.",
 	},
 	{
@@ -202,7 +202,7 @@ const ENTRIES := [
 		"id": "paddle_ride", "name": "Ride the Swat",
 		"hint": "A knock is only a shove if you let it be one.",
 		"clue": "a swatter's paddle + a boost while it has you",
-		"text": "A crew figure behind a low paddle arm: the paddle never hurts, but it bats you along the sweep; boost inside the knock and the knock becomes your speed, or jump the low paddle.",
+		"text": "The paddle never hurts: it bats you along its sweep. Boost inside the knock and the knock becomes your speed, or jump the low paddle.",
 	},
 	# 2026-10-08 (wave 10, ST4): the rest of the roster that spawns: the alpha packs' and elite's
 	# Fleet crews, and the Warden with one entry per variant whose trick differs.
@@ -300,7 +300,7 @@ const ENTRIES := [
 	# --- end Sable ---
 	# --- P-C Rivet entries ---
 	{"id": "rivet_line_drive", "name": "Line Drive", "hint": "The cable carries more than you.",
-		"clue": "Rivet + slot 3 + a line on a machine", "text": "Pick 3 and click with a line on a machine: the winch kicks force down the cable and throws it into whatever stands behind. On a wall, the winch hauls you in and nothing can hold you. With no line, the next bite carries it."},
+		"clue": "Rivet + slot 3 + a line on a machine", "text": "Pick 3 and click with a line on a machine: the winch throws it into whatever stands behind. On a wall it hauls you in and nothing holds you. With no line, the next bite carries it."},
 	{"id": "rivet_foundry_cutter", "name": "Foundry Cutter", "hint": "Measured twice. Firing once.",
 		"clue": "Rivet + a full ring + Q", "text": "Q drives you from here to where you aim. The lens cuts wherever you look, on every beat. The middle beat sweeps wide. The landing skids on, and you keep the speed."},
 	{"id": "rivet_line_true", "name": "Line True", "hint": "Ten straight answers.",
@@ -327,7 +327,7 @@ const ENTRIES := [
 	# --- end Tarn ---
 	# --- P-C Tally entries ---
 	{"id": "tally_skim", "name": "Skim", "hint": "The line takes its cut on the way in.",
-		"clue": "a harpoon bite + the ledger clip on three enemies", "text": "Cast the ledger clip on a standing line, or load it before the bite. The line clips the target and two neighbours, and each clip pays a point of pressure. Hit any clip and the rest take it too."},
+		"clue": "a harpoon bite + the ledger clip on three enemies", "text": "Cast the ledger clip on a standing line, or load it before the bite. It clips the target and two neighbours, a point of pressure each. Hit one clip and the rest take it too."},
 	{"id": "tally_books_balanced", "name": "Books Balanced", "hint": "Every clip is a debt. Land and collect.",
 		"clue": "six clips + one Plate Return landing", "text": "Clip enemies on the ride in, then land. The landing settles every clip you made, wherever it ran, and your reader refills."},
 	{"id": "tally_punch_tape", "name": "Punch Tape", "hint": "Keep the tape running.",

@@ -133,7 +133,7 @@ Every committed hostile attack draws the declared geometry damage will use, and 
 
 - **Geometry.** Draw exactly the geometry the hit test resolves. Solid means the release now. A dashed outline shows the full-charge extent.
 - **Forgiveness.** Aim forgiveness lives in the hit test, where a target counts if its hull touches the geometry. It never lives in a drawing that differs from the damage (see Conflicts resolved).
-- **Style.** Class colour, 15% clean fill, rounded caps and class tick marks on the rim. No stripes, ever.
+- **Style.** Class colour, 15% clean fill, rounded caps and class tick marks on the rim. No stripes, ever. An aim cone (the vault kick, the slingshot, the bank shot) marks a direction the ball leaves along, not an area a hit lands in: its fill is a root at the ball, 15% there and thinned to nothing 3 m out whatever the cone's length, and the dashed lines carry the direction, so it cannot lie across the view when the kick points back over the camera.
 - **Gauge ring.** A 48 px ring around the reticle fills clockwise from 12 o'clock, linearly over `charge_max`. At full it holds with a slow class-colour breathe (0.5 s period) through the 0.5 s grace, then fires.
 - **Cancel or knock.** The indicator and the gauge collapse to the reticle in 120 ms with a dry click. No release sound plays and no cooldown sweep starts.
 - **Blocked.** A blocked or invalid aim draws the indicator in bone, dashed, with a charcoal cross at the reticle (RR-03).
@@ -246,7 +246,7 @@ No `CONTRACTS.md` Icons section existed when this was written. It was checked in
 | `trg_on_hit` | On hit | A four-bracket reticle with a centre dot |
 | `trg_on_kill` | On kill | A four-bracket reticle with an X |
 | `trg_on_smash` | On smash | A down chevron striking a ground line |
-| `trg_on_rebound` | On rebound | A ball tracing a V off a slanted line |
+| `trg_on_rebound` | On rebound | A ball hopping up off a floor line (never a bare V: it reads as a tick) |
 | `trg_on_vault` | On vault kick | A wall bar with a sharp exit arrow |
 | `trg_on_charge_release` | On charge release | A three-quarter gauge ring with an arrow leaving its gap |
 | `trg_on_cloak_break` | On cloak break | A dotted cloud split by a spark |
@@ -349,10 +349,11 @@ This section makes "legible workshop instrumentation" concrete (AD-08, AC-15).
 - **Panels.** Charcoal at 88% opacity, with 6 px chamfered corners like cut plate steel. A 2 px petrol inner line runs inside the edge, with a 4 px bone bolt dot at each corner. Grime lives only in the outer 4 px border band and never sits behind text, reticles or critical states.
 - **Ability bar.** Bottom centre, four 64 px rounded-square slots (LMB, RMB, F, Ctrl). A 20 px key glyph sits under each slot, with 6 px charge pips beneath the glyph. The ability icon's accent is the class colour.
 - **Cooldown sweep.** The icon drops to 40% value. A petrol wedge sweeps clockwise from 12 o'clock and shrinks linearly. No digits.
-- **Gauges.** Health is a horizontal tank gauge with a tick every 25% and the cockpit-dome glyph at its left. Below 25%, its edge turns iron oxide and pulses at 1 Hz. Heft is a pressure dial with a needle and class tick marks. The needle swings to a new class with a clunk. The run clock is Noto Sans Mono digits. Difficulty is a filling notched bar under the clock (I2 §5).
+- **Gauges.** Health is a horizontal tank gauge with a tick every 25% and the cockpit-dome glyph at its left. Below 25%, its edge turns iron oxide and pulses at 1 Hz. A hit leaves the slice it took standing in the hit colour for 0.35 s, then drains it over 0.45 s, so the bar that took the hit shows itself and how much went (`src/ui/gauge.gd`). Each bar carries one small word under its left end, in its own colour: HEALTH, and ARMOUR over the scrap bar. Without the word no blind reader took the amber bar for armour (0 of 12, against 12 of 12 with it; 10 Nov 2026). Heft is a pressure dial with a needle and class tick marks. The needle swings to a new class with a clunk. The run clock is Noto Sans Mono digits. Difficulty is a ramp of rising steps on the run plate, the lowest always lit and one more for each threat tier, with the word THREAT beside them (`src/ui/run_status.gd`). It is never a filled bar: a filled red bar in a status corner was read as the health bar by six blind readers of six.
 - **Type.** Noto Sans Bold for labels and toasts, and Noto Sans Mono Bold for numbers so digits do not jitter. Both are SIL OFL and installed at `/usr/share/fonts/noto/`. Vendoring the TTFs into the sketch with their licence is W1's call, with Godot's default font as the fallback.
 - **Type sizes at 1080p, scaled by UI scale.** Priority-3 toast 28 px, priority-2 toast 22 px, objective 20 px, labels 16 px. Nothing is under 14 px.
 - **Motion.** A ready pulse scales 1.00 to 1.12 to 1.00 over 180 ms with a class-colour rim flash and the class instrument's single note. A toast enters in 120 ms (fade plus 16 px drop, ease-out), holds 1.6 s at priority 2 or 2.4 s at priority 3, and leaves in 200 ms (fade, ease-in). At most two toasts are visible, and a newer one pushes the older out.
+- **Caller plate.** Whoever speaks through the speech bubble besides Moss at his counter (a call-in, a site crew's hello, a boss's line) stands on a 68 px plate at the speech bubble's left, name on a tag across its head, and the bubble takes the caller's colour and points its tail at the plate ([STORY-MAP.md](design-v3/STORY-MAP.md), "Call-ins"). The plate's shape says whose hands the caller is and its colour says which of them: a rounded scrap plate for the crew (a site crew in its site's colour, a freed pilot in the pilot's own colour with the pilot's emblem); Moss's hatch slot with two mitts on the lip, since Moss is never seen; a clipped requisition tag in hazard red for the Fleet; a scanned hard-cornered lozenge in ancient green for the old works, which shows the works' mark and no face. The plate hops on the syllables while the voice lasts; reduced motion keeps it still. `src/ui/caller_tile.gd` owns it.
 
 **Words-on-screen budget, 25 in a fight.** A word is any run of letters. Digits and keycap letters do not count.
 
@@ -398,7 +399,7 @@ These briefs are for headless Blender work. The style is chunky, bevelled and sm
 | `fleet_paint` | Iron oxide |
 | `requisition_tag` | Brass |
 | `ancient_enamel` | Petrol, cast and seamless, with sandstone dust on top faces. Capped at HSV value 45% and saturation 45%, and never emissive. |
-| `ancient_light` | ANCIENT (pending; A is the default), emissive in thin seams set in charcoal grooves |
+| `ancient_light` | ANCIENT (uranium-glass green `#9dff3c`, chosen 2026-10-09), emissive in thin seams set in charcoal grooves |
 | `rarity` | Set at runtime from the rarity ramp |
 
 | Asset | Silhouette | Tris | Slots | Must read at gameplay distance |
@@ -478,9 +479,9 @@ Tenacity immunity (DESIGN-V2 §10) shows as the broken-bracket flicker from Rive
 
 **Wardens.** Each stage's Warden is one family on a shared clamp base (§9): stage 1 a reactor relic, stage 2 a swarm-remnant hive, stage 3 one of the Mind's hands.
 
-**Enamel cap.** Ancient enamel stays dull petrol. In HSV its value is at most 45% and its saturation at most 45% (petrol itself is value 34%, saturation 38%, and mint is value 94%). The brightest colour the cap allows at petrol's hue, `#3f736e`, measures CIELAB L* 45 against mint's 88 and sits at ΔE 43 or more from mint in normal, deuteranopic, protanopic and tritanopic simulation. The enamel never glows. Only the Cherenkov blue seams emit light. The primer board's s4 and f03 showed bright turquoise enamel reading close to mint, which this cap forbids.
+**Enamel cap.** Ancient enamel stays dull petrol. In HSV its value is at most 45% and its saturation at most 45% (petrol itself is value 34%, saturation 38%, and mint is value 94%). The brightest colour the cap allows at petrol's hue, `#3f736e`, measures CIELAB L* 45 against mint's 88 and sits at ΔE 43 or more from mint in normal, deuteranopic, protanopic and tritanopic simulation. The enamel never glows. Only the ANCIENT green seams emit light. The primer board's s4 and f03 showed bright turquoise enamel reading close to mint, which this cap forbids.
 
-Ancient light is the ANCIENT colour (pending, Cherenkov blue by default), never mint, because mint belongs to the living salvage field. The thin seams show where the cast shells part. They are the mechanism, not decoration (AD-11).
+Ancient light is the ANCIENT colour (uranium-glass green `#9dff3c`, chosen 2026-10-09), never mint, because mint belongs to the living salvage field. The thin seams show where the cast shells part. They are the mechanism, not decoration (AD-11).
 
 **The world.**
 

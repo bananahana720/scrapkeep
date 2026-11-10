@@ -10,11 +10,11 @@ const Keycap := preload("res://src/ui/keycap.gd")
 const UiFonts := preload("res://src/ui/ui_fonts.gd")
 const ChoiceButton := preload("res://src/ui/choice_button.gd")
 const ClassCard := preload("res://src/ui/class_card.gd")
-const ClassKit := preload("res://src/ui/class_kit.gd")
 const HelpPage := preload("res://src/ui/help_page.gd")
 const AchievementsPage := preload("res://src/ui/achievements_page.gd")
 const SettingsPages := preload("res://src/ui/settings_pages.gd")
 const CampMenu := preload("res://src/ui/camp_menu.gd")
+const CampScrapbook := preload("res://src/ui/camp_scrapbook.gd")
 const JukeboxPage := preload("res://src/ui/jukebox_page.gd")
 const RadioPage := preload("res://src/ui/radio_page.gd")
 const Achievements := preload("res://src/core/achievements.gd")
@@ -23,6 +23,8 @@ const Worlds := preload("res://src/core/worlds.gd")
 const EndingSequence := preload("res://src/ui/ending_sequence.gd")
 const PrologueRows := preload("res://src/core/prologue_rows.gd")
 const CreditsHint := preload("res://src/ui/credits_hint.gd")
+const DeathTips := preload("res://src/core/death_tips.gd")
+const ScrapFrame := preload("res://src/ui/scrap_frame.gd")
 
 # The screens outside play: title (with its how-to-play page on H), class select,
 # death, victory and summary. Each is one glance and one key, and every choice is also
@@ -42,12 +44,16 @@ const CARD_GAP := 24.0
 const CARD_GAP_TIGHT := 12.0
 const CARD_MAX := 420.0
 const SIDE := 60.0
+# Frames the card row waits for its first layout before it levels.
+const LEVEL_TRIES := 6
 # The actions' gap, between buttons and between rows. A row that would pass the narrowest
 # supported width (int_screen_layout_test's 1280) less SIDE each way wraps onto a second
 # centred row; no button is dropped or shrunk.
 const ACTION_GAP := 18
 const NARROW_W := 1280.0
 const MENU_STATES := ["title", "class_select", "dead", "victory", "summary"]
+# The screens a run ends on.
+const END_STATES := ["dead", "summary"]
 const TITLE := "SCRAPKEEP"
 # The title's name lands like an ink stamp (TONE-BIBLE UI motion): it starts big and tilted and
 # snaps down with a short overshoot. It rests straight, because its container's layout resets a
@@ -60,18 +66,43 @@ const STAMP_TILT := -6.0
 # it; after that Space, Enter, Esc or any pad button shows the summary beneath.
 const ENDING_HOLD := 1.0
 const PROLOGUE_TITLE := "FIRST SHIFT"
+# The one line under "Choose your pilot"; empty shows none. The screen has room for one line
+# (ui_class_card_level_test L4 pins it with the key row on screen). It is the game's one line
+# (STORY-MAP.md section 1) as the crew's board would say it.
+const PILOT_LINE := "Loose cannons, all of them. Pick one."
 # Start is the one filled button on the title: the primary action reads first and biggest.
 # The run-end comic page (run_moments.gd) on the summary, drawn by the camp's comic_page.gd
 # when the build has it: 3:4, at most this share of the screen's height.
 const COMIC_PAGE_PATH := "res://src/ui/comic_page.gd"
 const COMIC_HEIGHT := 0.5
+# The word under each of the summary's stats.
+const STAT_WORD_FONT := 13
 const COMIC_MAX_HEIGHT := 540.0
+const COMIC_BODY_LINES := 3
+const COMIC_MIN_HEIGHT := 240.0
+# RUN OVER's "next shift" note (core/death_tips.gd): an amber-edged plate taped up beside the comic page,
+# where the column has room; under the body it pushed the actions off a 900 px screen. Its words wrap at
+# TIP_WIDTH.
+const TIP_FONT := 20
+const TIP_HEAD_FONT := 16
+const TIP_WIDTH := 300.0
+const TIP_GAP := 28
+const TIP_SERIAL := 33
+# The summary's input latch (game.summary_latched) shuts every key while an input held at its opening is
+# still down. The cue names that input once the latch has held LATCH_CUE_AFTER seconds, or at once when a
+# press is turned away, and goes with the release. It is laid over the actions row, which it dims to
+# LATCH_DIM while it shows: the row takes nothing then, the column has no spare line, and laying it over
+# moves nothing.
+const LATCH_CUE_AFTER := 0.5
+const LATCH_DIM := 0.12
 const PRIMARY_FONT := 26
 const PRIMARY_HEIGHT := 60.0
 
 var game
 var _victory_boss := {}
 var _veil_wait := 0.0
+# The end screen is held back while the run's last still is being taken (_step_still_wait).
+var _still_wait := false
 
 var _veil: ColorRect
 var _content: VBoxContainer
@@ -79,6 +110,12 @@ var _title: Label
 # A beaten boss row's "stamp" (Worlds.BOSSES), inked under the victory title: the Mind's HIRED.
 var _mark: Label
 var _body: Label
+# The summary's "next shift" note, in the comic row; null when the screen has none.
+var _tip: Control
+var _tip_said := ""
+var _latch_cue
+var _latch_held := 0.0
+var _latch_glyph := ""
 var _stats: HBoxContainer
 var _choices: HBoxContainer
 var _comic_row: HBoxContainer
@@ -115,6 +152,7 @@ var _state := ""
 # (the headless tests) skips it unless it opts in, so its Start lands on the cards as before.
 var prologue_enabled := true
 var _prologue_line := -1
+var _level_tries := 0
 
 
 func setup(game_ref) -> void:
@@ -146,7 +184,7 @@ func setup(game_ref) -> void:
 	_content.add_child(_body)
 	_stats = _row(30)
 	_content.add_child(_stats)
-	_comic_row = _row(0)
+	_comic_row = _row(TIP_GAP)
 	_content.add_child(_comic_row)
 	_choices = _row(CARD_GAP)
 	_content.add_child(_choices)
@@ -230,6 +268,9 @@ func setup(game_ref) -> void:
 	_ending_body.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	_ending.add_child(_ending_body)
 	_content.add_child(_ending)
+	_latch_cue = CreditsHint.new()
+	_latch_cue.visible = false
+	add_child(_latch_cue)
 	game.events.flow_changed.connect(_on_flow_changed)
 	game.events.run_started.connect(func(_class_id): _victory_boss = {})
 	if game.run_moments != null:
@@ -275,6 +316,9 @@ func _on_flow_changed(state: String) -> void:
 	_footer.visible = false
 	_breath_row.visible = false
 	_refusal.text = ""
+	_tip = null
+	_tip_said = ""
+	_latch_held = 0.0
 	_title.visible = true
 	_mark.visible = false
 	_unstamp()
@@ -318,7 +362,11 @@ func _on_flow_changed(state: String) -> void:
 				_refusal.text = "Saved run not loaded (%s): %s" % [game.flow.saved_run_cause, continue_refusal()]
 				button_for("start").grab_focus()
 		"class_select":
-			_show("Choose your class", Palette.SAND, "")
+			_show("Choose your pilot", Palette.SAND, PILOT_LINE)
+			# Pilot select fills none of these rows; hidden, their gaps (26 px each) are room for
+			# the line under the title with the cards at full height and the key row on screen.
+			for row in [_stats, _comic_row, _actions]:
+				row.visible = false
 			var classes: Array = game.flow.classes
 			var gap := CARD_GAP if classes.size() <= 4 else CARD_GAP_TIGHT
 			_choices.add_theme_constant_override("separation", int(gap))
@@ -329,18 +377,20 @@ func _on_flow_changed(state: String) -> void:
 				_choices.add_child(card)
 				card.bind_profile(game.ctx.profile)
 				card.set_locked(not game.pilot_unlocked(classes[i]), _unlock_hint(classes[i]))
-			# The cards' wrapped words measure true only once laid out, so the row levels next frame.
-			if not get_tree().process_frame.is_connected(_level_cards):
-				get_tree().process_frame.connect(_level_cards, CONNECT_ONE_SHOT)
+			_queue_level()
 			_footer.setup([{"cap": "key_1", "say": "1"}, {"say": "to"}, {"cap": "key_%d" % classes.size(), "say": str(classes.size())},
 				{"say": "choose"}, {"say": "·"}, {"cap": "key_enter", "say": "Enter"}, {"say": "start"}])
 			_footer.visible = true
 			if _prologue_due():
 				_begin_prologue()
 		"dead":
-			_show("SCRAPPED", EventKinds.color("player_died"), game.flow.gap_line())
+			# The store-less flow's end screen says what RUN OVER says: who, then what to try (death_tips.gd).
+			var said: String = game.flow.death_cause
+			if game.flow.death_tip != "":
+				said += "\n" + DeathTips.shown(game.flow.death_tip)
+			_show("SCRAPPED", EventKinds.color("player_died"), said.strip_edges())
 			_action("new", "key_n", "New run")
-			_action("class", "key_c", "Choose class")
+			_action("class", "key_c", "Choose pilot")
 			if not game.run.companion.is_empty():
 				_companion_action()
 			if game.flow.can_replay_final_stage():
@@ -359,7 +409,9 @@ func _on_flow_changed(state: String) -> void:
 			# What scrapped you, under the pilot (core/death_cause.gd): a won run has none.
 			if not game.flow.run_won and game.flow.death_cause != "":
 				body += "\n" + game.flow.death_cause
-			var trade_lines := ResultsOdds.text(game.run.summary().trade_pockets)
+			# The trade pockets' odds are a tuning readout (recency, safe share, refusal weight), so
+			# only a --dev launch prints them; a played run's summary keeps to the run.
+			var trade_lines := ResultsOdds.text(game.run.summary().trade_pockets) if game.ctx.dev else ""
 			if trade_lines != "":
 				body += "\n" + trade_lines
 			var epitaph := String(_victory_boss.get("epitaph", ""))
@@ -372,16 +424,23 @@ func _on_flow_changed(state: String) -> void:
 			if board != "":
 				body += "\n" + board
 			_show("RUN COMPLETE" if game.flow.run_won else "RUN OVER", EventKinds.color("run_ended"), body)
+			# The summary has no choice cards; hidden, the row's gap is the column's (a first win
+			# that lands several shift board stamps takes two body lines for them).
+			_choices.visible = false
+			# What to try next shift (core/death_tips.gd): only a lost run has one.
+			if not game.flow.run_won and game.flow.death_tip != "":
+				_show_tip(game.flow.death_tip)
 			_summary_stats()
 			_action("again", "key_n", "Run again")
-			_action("class", "key_space", "Choose class")
+			_action("class", "key_space", "Choose pilot")
 			if not game.run.companion.is_empty():
 				_companion_action()
 			_action("camp", "key_k", "Camp")
 			if ending:
 				_open_ending()
 	_veil_wait = game.flow.victory_veil if state == "victory" and "victory_veil" in game.flow else 0.0
-	if _veil_wait > 0.0:
+	_still_wait = state in END_STATES and game.run_moments != null and game.run_moments.still_pending()
+	if _veil_wait > 0.0 or _still_wait:
 		_hide_for_rout()
 	else:
 		_fade(state in MENU_STATES)
@@ -389,13 +448,25 @@ func _on_flow_changed(state: String) -> void:
 
 
 # The victory card waits while a boss's rout plays over the world (flourish_cues.gd); flow
-# zeroes victory_veil when the rout is skipped.
+# zeroes victory_veil when the rout is skipped. An end screen waits the same way for the run's
+# last still (_step_still_wait).
 func _hide_for_rout() -> void:
 	if _tween != null:
 		_tween.kill()
 	_veil.modulate.a = 0.0
 	_content.modulate.a = 0.0
 	visible = false
+
+
+# A run that ends on a death is photographed for its comic page on the frame it ends
+# (run_moments.gd). The end screen comes up the frame after the picture is taken, so the
+# page's last panel shows the death and not this screen fading in over it.
+func _step_still_wait() -> void:
+	if not _still_wait or game.run_moments.still_pending():
+		return
+	_still_wait = false
+	if _state in END_STATES:
+		_fade(true)
 
 
 func _step_veil_wait(delta: float) -> void:
@@ -450,6 +521,7 @@ func _begin_prologue() -> void:
 	_prologue_line = 0
 	_choices.visible = false
 	_footer.visible = false
+	_actions.visible = true
 	_show_prologue_line()
 
 
@@ -493,11 +565,11 @@ func end_prologue() -> void:
 	for child in _actions.get_children():
 		_actions.remove_child(child)
 		child.queue_free()
-	_show("Choose your class", Palette.SAND, "")
+	_show("Choose your pilot", Palette.SAND, PILOT_LINE)
+	_actions.visible = false
 	_choices.visible = true
 	_footer.visible = true
-	if not get_tree().process_frame.is_connected(_level_cards):
-		get_tree().process_frame.connect(_level_cards, CONNECT_ONE_SHOT)
+	_queue_level()
 	_fade(true)
 
 
@@ -673,6 +745,9 @@ func _sync_walk() -> void:
 	var customizing: bool = _camp.customize != null and _camp.customize.visible
 	game.walk_input(live)
 	game.camp_hub.set_prompts_visible(live)
+	# The camp's caption card belongs to the walk: a page over it is read alone.
+	for card in get_tree().get_nodes_in_group(CampScrapbook.LINE_GROUP):
+		card.visible = live
 	_camp.visible = live or customizing
 	_veil.visible = not live
 	_title.visible = not live
@@ -874,8 +949,7 @@ func _refresh_jukebox() -> void:
 
 
 func _audio():
-	var presentation = game.get("presentation")
-	return presentation.get("audio") if presentation != null else null
+	return game.audio()
 
 
 # R on the camp swaps it for the radio's mixtapes, and back. The radio keeps what was changed.
@@ -1257,15 +1331,66 @@ func _show_comic_page(page: Dictionary) -> void:
 	if _state != "summary" or not ResourceLoader.exists(COMIC_PAGE_PATH):
 		return
 	var comic: Control = load(COMIC_PAGE_PATH).new()
-	var height := minf(COMIC_MAX_HEIGHT, _screen().y * COMIC_HEIGHT)
-	comic.custom_minimum_size = Vector2(height * 0.75, height)
 	comic.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_comic_row.add_child(comic)
+	_comic_row.move_child(comic, 0)
+	_fit_comic()
 	comic.show_page(page)
 
 
+# Sizes the summary's comic page to the body as it reads now. The page and a lost run's shift
+# board line both arrive after the summary opens, in either order, so each asks again.
+func _fit_comic() -> void:
+	var comic := comic_page()
+	if comic == null:
+		return
+	var height := comic_height(_screen().y, _body.get_line_count(), _body.get_line_height() + _body.get_theme_constant("line_spacing"))
+	comic.custom_minimum_size = Vector2(height * 0.75, height)
+
+
+# The comic page's height on the summary: half the screen, less a line's height for every body
+# line past the COMIC_BODY_LINES the column holds with the page at full height, so a long
+# summary (cause, epitaph, a two-line shift board) never pushes the buttons off the screen. It
+# stops at COMIC_MIN_HEIGHT, under which the page is no longer a page (a --dev summary's odds lines).
+static func comic_height(screen_h: float, body_lines: int, line_h: float) -> float:
+	return maxf(COMIC_MIN_HEIGHT, minf(COMIC_MAX_HEIGHT, screen_h * COMIC_HEIGHT) - maxi(0, body_lines - COMIC_BODY_LINES) * line_h)
+
+
 func comic_page() -> Control:
-	return _comic_row.get_child(0) if _comic_row.get_child_count() > 0 else null
+	for child in _comic_row.get_children():
+		if child != _tip:
+			return child
+	return null
+
+
+# The "next shift" note: its head in amber, the tip's words wrapped under it. It stands right of the
+# comic page once that arrives, and alone in the row until then.
+func _show_tip(tip: String) -> void:
+	var plate := ScrapFrame.plate(Color(Palette.AMBER, 0.7), TIP_SERIAL, Color(Palette.CHARCOAL, 0.94), 2.0, 0.5)
+	plate.content_margin_left = 16.0
+	plate.content_margin_right = 16.0
+	plate.content_margin_top = 16.0
+	plate.content_margin_bottom = 14.0
+	_tip = PanelContainer.new()
+	_tip.add_theme_stylebox_override("panel", plate)
+	_tip.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	_tip.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var column := VBoxContainer.new()
+	column.add_theme_constant_override("separation", 6)
+	column.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_tip.add_child(column)
+	var head := _label(TIP_HEAD_FONT)
+	head.text = DeathTips.HEAD.to_upper()
+	head.add_theme_color_override("font_color", Palette.AMBER)
+	column.add_child(head)
+	var words := _label(TIP_FONT)
+	words.text = tip
+	words.add_theme_color_override("font_color", Palette.SAND)
+	words.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	words.custom_minimum_size.x = TIP_WIDTH
+	column.add_child(words)
+	_tip_said = DeathTips.shown(tip)
+	_comic_row.add_child(_tip)
 
 
 # What the run did to the shift board (progress.gd board_line). A lost run's summary is built before
@@ -1285,23 +1410,34 @@ func _on_run_ended_board(_won: bool) -> void:
 		return
 	if not _body.text.contains(String(progress.board_line)):
 		_body.text += "\n" + String(progress.board_line)
+		_fit_comic()
 
 
-# The summary as icons and numbers: time, stages, cogs (the cog), scrap taken as mass (the heap), parts, kills, events won and
-# the earned save used (0 or 1), each on its own icon.
-func _summary_stats() -> void:
-	var s: Dictionary = game.run.summary()
+# The summary as icons and numbers, each on its own icon with its word under it, so nobody has to
+# learn the icons to read a run. The words say what the number counts: the cogs are the ones still
+# in the wallet (cogs spent are gone), the scrap is what the run still holds (theft and spending
+# take from it), the events are the ones won. The earned save is a yes or no, so its chip shows only on a run that used it.
+static func summary_chips(s: Dictionary, stage_count: int) -> Array:
 	var chips := [
-		["res_timer", "%d:%02d" % [int(s["time"]) / 60, int(s["time"]) % 60]],
-		["obj_beacon", "%d/%d" % [s["stages"], game.ctx.stages.COUNT]],
-		["res_scrap", str(s["cogs"])],
-		["res_mass", str(s["scrap"])],
-		["cat_transform", str((s["parts"] as Array).size())],
-		["thr_instant", str(s["kills"])],
-		["obj_event", str(s["events_won"])],
-		["res_health", str(s["save_used"])],
+		["res_timer", "%d:%02d" % [int(s["time"]) / 60, int(s["time"]) % 60], "time"],
+		["obj_beacon", "%d/%d" % [s["stages"], stage_count], "stages"],
+		["res_scrap", str(s["cogs"]), "cogs left"],
+		["res_mass", str(s["scrap"]), "scrap held"],
+		["cat_transform", str((s["parts"] as Array).size()), "parts"],
+		["thr_instant", str(s["kills"]), "kills"],
+		["obj_event", str(s["events_won"]), "events won"],
 	]
+	if int(s["save_used"]) > 0:
+		chips.append(["res_health", str(s["save_used"]), "save used"])
+	return chips
+
+
+func _summary_stats() -> void:
+	var chips := summary_chips(game.run.summary(), game.ctx.stages.COUNT)
 	for chip in chips:
+		var cell := VBoxContainer.new()
+		cell.add_theme_constant_override("separation", 0)
+		cell.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		var row := _row(8)
 		var icon := TextureRect.new()
 		icon.texture = Icons.texture(chip[0])
@@ -1315,7 +1451,12 @@ func _summary_stats() -> void:
 		value.add_theme_font_override("font", UiFonts.mono())
 		value.text = chip[1]
 		row.add_child(value)
-		_stats.add_child(row)
+		cell.add_child(row)
+		var word := _label(STAT_WORD_FONT)
+		word.text = String(chip[2]).to_upper()
+		word.add_theme_color_override("font_color", Color(Palette.SAND, 0.7))
+		cell.add_child(word)
+		_stats.add_child(cell)
 
 
 func _stamp(target: Label = null) -> void:
@@ -1402,6 +1543,7 @@ func _screen() -> Vector2:
 func _process(delta: float) -> void:
 	_guard = maxf(0.0, _guard - delta)
 	_step_veil_wait(delta)
+	_step_still_wait()
 	if ending_open():
 		_ending_left = maxf(0.0, _ending_left - delta)
 		if game.bot_driven and _ending_left <= 0.0:
@@ -1409,6 +1551,7 @@ func _process(delta: float) -> void:
 				ending_sequence.skip()
 			else:
 				_close_ending()
+	_step_latch_cue(delta)
 	_update_enabled()
 
 
@@ -1422,6 +1565,46 @@ func _update_enabled() -> void:
 		for child in row.get_children():
 			(child as BaseButton).disabled = not live
 	_refusal.visible = _state == "title" and _actions.visible and _refusal.text != ""
+
+
+# The latch cue's clock and words. A press the latch turned away (game._screen_key) shows it at once.
+func _step_latch_cue(delta: float) -> void:
+	var latched: bool = _state == "summary" and game.summary_latched and not ending_open()
+	_latch_held = _latch_held + delta if latched else 0.0
+	var glyph: String = game.held_glyph() if latched and _latch_held >= LATCH_CUE_AFTER else ""
+	if glyph != _latch_glyph:
+		_latch_glyph = glyph
+		_latch_cue.setup(latch_cue_parts(glyph))
+	_latch_cue.visible = glyph != ""
+	_actions.modulate.a = LATCH_DIM if _latch_cue.visible else 1.0
+	if _latch_cue.visible:
+		var cue_size: Vector2 = _latch_cue.custom_minimum_size
+		_latch_cue.size = cue_size
+		_latch_cue.position = _actions.global_position + (_actions.size - cue_size) * 0.5
+
+
+func latch_pressed() -> void:
+	_latch_held = maxf(_latch_held, LATCH_CUE_AFTER)
+
+
+# The cue's words for a held input's cap id: "Let go of [W] to continue", or without the cap when the
+# input has none to draw.
+static func latch_cue_parts(glyph: String) -> Array:
+	if glyph == "":
+		return []
+	if not (glyph.begins_with("key_") or glyph.begins_with("pad_")):
+		return [{"say": "Let go to continue"}]
+	return [{"say": "Let go of"}, {"cap": glyph, "say": Keycap.label(glyph)}, {"say": "to continue"}]
+
+
+# What the latch cue says now, "" while it is down.
+func latch_cue_text() -> String:
+	return _latch_cue.text() if _latch_cue.visible else ""
+
+
+# The note as it reads, "Next shift: ..."; "" when the screen has none.
+func tip_text() -> String:
+	return _tip_said if is_instance_valid(_tip) and _tip.visible else ""
 
 
 func button_for(action: String) -> Button:
@@ -1450,7 +1633,7 @@ func class_cards() -> Array:
 # Every card's name, role and fantasy line take the row's tallest, so a line that wraps on one
 # card does not push that card's text rows below the others'.
 func _level_text(row: Array) -> void:
-	for pick in [func(c): return c.name_label(), func(c): return c.role_label(), _fantasy_label]:
+	for pick in [func(c): return c.name_label(), func(c): return c.role_label(), func(c): return c.fantasy_label()]:
 		var tallest := 0.0
 		for card in row:
 			tallest = maxf(tallest, pick.call(card).get_combined_minimum_size().y)
@@ -1458,18 +1641,28 @@ func _level_text(row: Array) -> void:
 			pick.call(card).custom_minimum_size.y = tallest
 
 
+# The cards' wrapped words measure true only once laid out, so the row levels on a later frame.
+# A fresh request restarts the count, so a row rebuilt mid-wait gets its full wait.
+func _queue_level() -> void:
+	_level_tries = LEVEL_TRIES
+	if not get_tree().process_frame.is_connected(_level_cards):
+		get_tree().process_frame.connect(_level_cards)
+
+
 # Every card in the row gives its preview the row's largest overflow, so every key row ends
-# inside its card on the same bottom edge.
-func _fantasy_label(card) -> Label:
-	var said: String = ClassKit.fantasy(card.def)
-	for label in card.find_children("*", "Label", true, false):
-		if label.text == said:
-			return label
-	return card.name_label()
-
-
+# inside its card on the same bottom edge. The containers sort after a physics tick or at the
+# end of the frame, so on a frame with no tick the next frame signal comes before the cards'
+# first sort: the row waits for it frame by frame, and a row that never lays out (hidden under
+# the prologue) keeps its built heights until the next request.
 func _level_cards() -> void:
 	var row := class_cards()
+	var ready: bool = not row.is_empty() and row.all(func(c): return c.laid_out())
+	_level_tries -= 1
+	if not ready and _level_tries > 0:
+		return
+	get_tree().process_frame.disconnect(_level_cards)
+	if not ready:
+		return
 	_level_text(row)
 	var spill: float = row.reduce(func(m, c): return maxf(m, c.overflow()), 0.0)
 	for card in row:
@@ -1481,6 +1674,8 @@ func body_text() -> String:
 	var lines := PackedStringArray()
 	if _body.text != "":
 		lines.append(_body.text)
+		if tip_text() != "":
+			lines.append(tip_text())
 		lines.append("")
 	for card in _choices.get_children():
 		lines.append("%s   %s" % [Keycap.label(card.key), card.words().to_lower()])

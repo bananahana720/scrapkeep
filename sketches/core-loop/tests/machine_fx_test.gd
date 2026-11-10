@@ -134,6 +134,34 @@ func _run() -> void:
 	t.check("forced words still stamp", fx.word("SHIFT OVER", ball, Color.WHITE, true))
 	Density.live().force(0.0)
 
+	# A word fits the view: a panel pickup's three-word pop is stamped at the ball, beside the
+	# camera, and at its size in metres it was wider than the screen. Its room is a share of the
+	# view's height, so its letters stand as tall on a wide screen. A short word far off is left alone.
+	var cam := root.get_camera_3d()
+	var view_h: float = root.get_visible_rect().size.y
+	var near: Vector3 = cam.global_position - cam.global_basis.z * 8.0
+	t.check("the pop stamps", fx.word("COLLAR +6% HARPOON RECOVERY", near, Color.WHITE, true, 1.2, 1.1))
+	t.check("a far word stamps", fx.word("TONK", cam.global_position - cam.global_basis.z * 40.0, Color.WHITE, true))
+	# Past the slam (the first WORD_SLAM seconds draw a word up to 1.6 times its held size), by
+	# the words' own clocks: a frame count is no time on a fast machine.
+	var newest: Dictionary = fx._words[posmod(fx._word_next - 1, fx._words.size())]
+	var settle := 0
+	while float(newest["t"]) <= MachineFx.WORD_SLAM and settle < 600:
+		settle += 1
+		await process_frame
+	var widths := {}
+	for slot in fx._words:
+		var label: Label3D = slot["node"]
+		if not label.visible:
+			continue
+		var at: Vector3 = slot["at"]
+		var px_per_m: float = cam.unproject_position(at + cam.global_basis.x).distance_to(cam.unproject_position(at))
+		widths[label.text] = [float(slot["width_px"]) * label.pixel_size * label.scale.x * px_per_m / view_h, label.scale.x]
+	var pop: Array = widths.get("COLLAR +6% HARPOON RECOVERY", [9.0, 0.0])
+	var far: Array = widths.get("TONK", [9.0, 0.0])
+	t.check("a long pop beside the camera is held to the view", pop[0] <= MachineFx.WORD_FIT + 0.01 and pop[0] > MachineFx.WORD_FIT - 0.05 and pop[1] < 1.1, str(pop))
+	t.check("a short word far off keeps its size", is_equal_approx(far[1], 1.0) and far[0] < MachineFx.WORD_FIT, str(far))
+
 	# A boss phase, then the fall: blasts first, the wink one beat after the last.
 	fx.boss_phase("waking", ball + Vector3(0, 0, 20))
 	t.check("a boss phase fires its word", _moments(fx, "word").back()[2] == "KRAKK")

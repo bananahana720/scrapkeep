@@ -48,7 +48,6 @@ var _floats: MultiMeshInstance3D
 var _reel: Node3D
 var _lamps: MultiMeshInstance3D
 
-static var _warned_asset := false
 static var _shared: Array = []
 
 
@@ -160,35 +159,8 @@ func _pop_float(i: int) -> void:
 
 
 static func _parts() -> Array:
-	if not _shared.is_empty():
-		return _shared
-	if not ResourceLoader.exists(BODY):
-		return []
-	var packed := load(BODY) as PackedScene
-	if packed == null:
-		return []
-	var scene := packed.instantiate()
-	var painted := Palette.solid(Color.WHITE)
-	painted.vertex_color_use_as_albedo = true
-	for node in scene.find_children("*", "MeshInstance3D", true, false):
-		var mi := node as MeshInstance3D
-		var mesh: Mesh = mi.mesh.duplicate()
-		var flash := -1
-		for i in mesh.get_surface_count():
-			var surface_material := mesh.surface_get_material(i)
-			if surface_material == null and not _warned_asset:
-				_warned_asset = true
-				push_warning("boom_tender: surface has no material; using default finish")
-			if surface_material != null and surface_material.resource_name == "fleet_paint":
-				flash = i
-			mesh.surface_set_material(i, painted)
-		var xform := mi.transform
-		var parent := mi.get_parent() as Node3D
-		while parent != null and parent != scene:
-			xform = parent.transform * xform
-			parent = parent.get_parent() as Node3D
-		_shared.append({"name": mi.name, "mesh": mesh, "xform": xform, "flash": flash})
-	scene.free()
+	if _shared.is_empty():
+		_shared = EnemyCasting.parts(BODY, "boom_tender", true)
 	return _shared
 
 

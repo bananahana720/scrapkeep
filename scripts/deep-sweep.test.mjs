@@ -66,3 +66,11 @@ test("sweep reports new wrappers, leaks and growth on added code only", () => {
   assert.match(text, /## D1 Pass-through wrappers \(1\)/);
   assert.match(text, /"run_seed" is spelled in 3 src files/);
 });
+
+test("sweep skips string keys that the event schema owns", () => {
+  const file = "sketches/core-loop/src/x.gd";
+  const src = { [file]: 'var k = "enemy_killed"\n', "sketches/core-loop/src/y.gd": '"enemy_killed"', "sketches/core-loop/src/z.gd": '"enemy_killed"', "sketches/core-loop/src/core/event_kinds.gd": 'const K := ["enemy_killed"]' };
+  const diff = `+++ b/${file}\n@@ -0,0 +1,1 @@\n+var k = "enemy_killed"\n`;
+  const findings = sweep({ base: "b", head: "h", read: (f) => src[f] ?? "", diff, listSrc: () => Object.keys(src), linesAt: () => 0 });
+  assert.deepEqual(findings, []);
+});

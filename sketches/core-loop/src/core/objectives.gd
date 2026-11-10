@@ -20,13 +20,42 @@ const ROWS := {
 	"break_brindle": {"glyph": "fac_fleet", "words": "Break Brindle's Requisition"},
 	"break_yard_crew": {"glyph": "cat_damage", "words": "Yard locked: break the crew"},
 	"break_clamp_crews": {"glyph": "cat_defense", "words": "Clamp shut: break the crews"},
+	# A mounted reactor Warden's own road to its core (warden_reactor.gd): the dam's sheet ram,
+	# the flume's line fight. They stand where "Break its guard" stands on any other Warden.
+	"ride_sheet": {"glyph": "cat_defense", "words": "Ride the water sheet up"},
+	"latch_warden": {"glyph": "cat_defense", "words": "Latch onto the Warden"},
+	"fire_from_line": {"glyph": "cat_defense", "words": "Latched: shoot the Warden"},
+	# Brindle's fight by phase (boss.gd plate_reading; objective_text() is the long readout).
+	"shoot_magnets": {"glyph": "fac_fleet", "words": "Shoot the crane magnets"},
+	"slam_caps": {"glyph": "fac_fleet", "words": "Slam the vent caps"},
+	"bait_charge": {"glyph": "fac_fleet", "words": "Bait his charge into walls"},
+	"hit_cockpit": {"glyph": "cat_damage", "words": "Hit the open cockpit"},
+	"ram_scooter": {"glyph": "fac_fleet", "words": "Ram the Admiral's scooter"},
+}
+
+# What "find_activity" says for the site the plate names (pick_site): the site's kind
+# (EventKinds.ACTIVITY_ROWS) and the verb that finishes it (activities.gd RULES `finishes`).
+const ACTIVITY_WORDS := {
+	"enemy_camp": "Clear the camp",
+	"ambush_altar": "Spring the ambush",
+	"cracked_cache": "Crack open the cache",
+	"hold_the_relay": "Hold the relay",
+	"surge_run": "Outrun the surge",
+	"hauler_bounty": "Break the bounty hauler",
+	# The trade spots by their ruled names (ruling ci): the risky ones are the keeper's gamble, the
+	# safe one the foreman's kindness. The site's own label says the same.
+	"trade_risk": "Find the keeper's gamble",
+	"curse": "Find the keeper's gamble",
+	"sacrifice": "Find the keeper's gamble",
+	"trade_safe": "Find the foreman's kindness",
 }
 
 # What choose() reads. state is flow.state_name(); card is true while the stage card owns
 # the launch moment; distance is the ball's metres to the Warden; yard_locked and clamp_shut
 # are the stage locks' yard and Warden clamp holding (stage_locks.gd lock_active(), locked()).
 const EMPTY_READING := {"state": "", "sealed": false, "engaged": false, "fight": "plating", "staggered": false,
-	"struggling": false, "distance": INF, "card": false, "activities_left": 0, "yard_locked": false, "clamp_shut": false}
+	"struggling": false, "distance": INF, "card": false, "activities_left": 0, "yard_locked": false, "clamp_shut": false,
+	"mount": "", "latched": false, "phase": 0, "open": false}
 
 
 static func glyph(id: String) -> String:
@@ -35,6 +64,51 @@ static func glyph(id: String) -> String:
 
 static func words(id: String) -> String:
 	return ROWS[id]["words"] if ROWS.has(id) else ""
+
+
+# The "find_activity" row's words for a site of this kind. A kind with no words here is named by
+# what its own marker calls it (called: a drawn pocket's cue word, "Arena" reads "Find the arena");
+# with neither, the row's own words.
+static func activity_words(kind: String, called := "") -> String:
+	if ACTIVITY_WORDS.has(kind):
+		return String(ACTIVITY_WORDS[kind])
+	return "Find the " + called.to_lower() if called != "" else String(ROWS["find_activity"]["words"])
+
+
+# Which site the activity row names: the one ahead, not merely the nearest. A site's score is its
+# distance, stretched by how far it lies off the heading (straight ahead x1, abeam x2, behind x3),
+# and the lowest score is named. The row keeps the site it names until another scores under
+# SITE_KEEP of it, so two sites at like range never trade the row back and forth.
+# The heading is the ball's way (Way below): the view until the ball has travelled, and after that
+# where the ball is going. At the dam's drop this names the camp the drop faces (310 m, 1 degree
+# off) and not the relay beside it (305 m, 21 degrees off).
+const SITE_OFF_VIEW := 1.0
+const SITE_KEEP := 0.8
+
+
+# offset is the site's place less the ball's; forward is the heading (Way.ahead). Height counts in
+# the distance and not in the angle.
+static func site_score(offset: Vector3, forward: Vector3) -> float:
+	var flat := Vector3(offset.x, 0.0, offset.z)
+	var ahead := Vector3(forward.x, 0.0, forward.z)
+	if flat.length_squared() < 0.0001 or ahead.length_squared() < 0.0001:
+		return offset.length()
+	return offset.length() * (1.0 + SITE_OFF_VIEW * (1.0 - flat.normalized().dot(ahead.normalized())))
+
+
+# The index of the offset the row names, or -1 for none. held is the index the row names now (-1
+# when it names none, or its site has gone).
+static func pick_site(offsets: Array, forward: Vector3, held := -1) -> int:
+	var best := -1
+	var best_score := INF
+	for i in offsets.size():
+		var score := site_score(offsets[i], forward)
+		if score < best_score:
+			best_score = score
+			best = i
+	if held >= 0 and held < offsets.size() and best != held and best_score >= site_score(offsets[held], forward) * SITE_KEEP:
+		return held
+	return best
 
 
 # The row id the plate shows for this reading, or "" when it shows nothing.
@@ -56,15 +130,68 @@ static func choose(reading: Dictionary) -> String:
 					return "break_clamp_crews"
 				if r["staggered"]:
 					return "smash_core"
-				return "grow_return" if r["struggling"] else "break_guard"
+				if r["struggling"]:
+					return "grow_return"
+				match r["mount"]:
+					"dam_face":
+						return "ride_sheet"
+					"flume":
+						return "fire_from_line" if r["latched"] else "latch_warden"
+				return "break_guard"
 			return "break_warden"
 		"gates":
 			return "roll_gate"
 		"launch":
 			return "" if r["card"] else "hold_line"
 		"boss":
+			var phase := int(r["phase"])
+			if r["open"] and phase >= 1 and phase <= 3:
+				return "hit_cockpit"
+			match phase:
+				1:
+					return "shoot_magnets"
+				2:
+					return "slam_caps"
+				3:
+					return "bait_charge"
+				4:
+					return "ram_scooter"
 			return "break_brindle"
 	return ""
+
+
+# Which way the ball is going, for the activity row. The row once read the view's heading, and on
+# the road through either Spillway stage one look round then changed the goal two or three times
+# with nothing done (first-timer film, PF-11). The way is the heading the ball last travelled on at
+# SPEED or more, eased over EASE seconds so a bounce or a swerve does not swing it; slower than
+# that it stays as it was. Until the ball has travelled since begin() (the drop, a new stage) it is
+# the view's heading, so the row names what the drop faces.
+class Way:
+	extends RefCounted
+
+	const SPEED := 6.0
+	const EASE := 0.75
+
+	var _heading := Vector3.ZERO
+
+	func begin() -> void:
+		_heading = Vector3.ZERO
+
+	# velocity is the ball's; only its flat part counts.
+	func step(velocity: Vector3, delta: float) -> void:
+		var flat := Vector3(velocity.x, 0.0, velocity.z)
+		if flat.length() < SPEED:
+			return
+		var to := flat.normalized()
+		if _heading == Vector3.ZERO:
+			_heading = to
+			return
+		# Turned by a share of the angle between them, so a full reversal comes round as any turn does.
+		_heading = _heading.rotated(Vector3.UP, _heading.signed_angle_to(to, Vector3.UP) * (1.0 - exp(-delta / EASE))).normalized()
+
+	# The heading the row reads: the ball's way once it has travelled, else the view's.
+	func ahead(view: Vector3) -> Vector3:
+		return _heading if _heading != Vector3.ZERO else view
 
 
 # Counts the seconds a build spends trying against a posture Warden. A second counts while

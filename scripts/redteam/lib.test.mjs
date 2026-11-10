@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { PERSONAS, PILOTS, sweepSeed, carryList, grade, hitches, logErrors, pileUps, planWave, readBotJob, renderMarkdown } from "./lib.mjs";
+import { FILMS, FILM_OF, FINDINGS_HEADER, PERSONAS, PILOTS, READERS, sweepSeed, carryList, filmArgs, grade, hitches, judgeSheet, logErrors, overdueFindings, parseFindings, pileUps, planWave, readBotJob, readerBrief, readerPack, renderMarkdown } from "./lib.mjs";
 
 const job = (over = {}) => ({ id: "speedrunner-tarn-2500", kind: "bot", persona: "speedrunner", policy: "skipper", pilot: "tarn", seed: 2500, stages: null, args: [], ...over });
 const result = (over = {}) => ({ job: job(), exit: 0, timedOut: false, row: { outcome: "won", stage_reached: 7, game_seconds: 600, stages: [], beats: [] }, errors: [], piles: [], perf: { spikes: [], loads: 0, p99: 4 }, ...over });
@@ -105,4 +105,80 @@ test("readBotJob tolerates a run cut short and the page ranks blockers first", (
   assert.match(page, /1 blocker, 1 major, 0 minor, 1 to watch/);
   assert.match(page, /1\. \*\*BLOCKER\*\* · stability · A run crashed/);
   assert.deepEqual(carryList(findings), [{ persona: "speedrunner", pilot: "tarn", seed: 2500, title: "A run crashed" }]);
+});
+
+const film = [
+  { file: "0001-screen-title.jpg", why: "screen-title", t: 0.5, flow: "title", plate: "", hp: 100, hp_max: 100 },
+  { file: "0002-hit-1-lead.jpg", why: "hit-1-lead", t: 40.0, flow: "stage", plate: "Clear the camp", hp: 100, hp_max: 100, source: "chaser", amount: 12 },
+  { file: "0003-hit-1-lead.jpg", why: "hit-1-lead", t: 40.4, flow: "stage", plate: "Clear the camp", hp: 100, hp_max: 100, source: "chaser", amount: 12 },
+  { file: "0004-hit-1.jpg", why: "hit-1", t: 40.8, flow: "stage", plate: "Clear the camp", hp: 88, hp_max: 100, source: "chaser", amount: 12 },
+  { file: "0005-hit-1-after.jpg", why: "hit-1-after", t: 41.1, flow: "stage", plate: "Clear the camp", hp: 88, hp_max: 100, source: "chaser", amount: 12 },
+  { file: "0006-held.jpg", why: "held", t: 50, flow: "stage", paused: true, plate: "Clear the camp", hp: 88, hp_max: 100 },
+  { file: "0007-death-lead.jpg", why: "death-lead", t: 60, flow: "stage", plate: "Find | the Warden", hp: 3, hp_max: 100 },
+  { file: "0008-death.jpg", why: "death", t: 60.4, flow: "dead", plate: "", hp: 0, hp_max: 100 },
+  { file: "0009-death-after.jpg", why: "death-after", t: 60.9, flow: "dead", plate: "", hp: 0, hp_max: 100 },
+  { file: "0010-death-screen.jpg", why: "death-screen", t: 62.9, flow: "dead", plate: "", hp: 0, hp_max: 100 },
+];
+
+test("a film is handed to the reader with no word of why a frame was taken", () => {
+  const pack = readerPack(film);
+  assert.deepEqual(pack.frames.map((f) => f.set), [0, 1, 1, 1, 1, 0, 2, 2, 2, 0]);
+  assert.deepEqual(pack.sets, [{ id: 1, first: 2, last: 5, moment: 4 }, { id: 2, first: 7, last: 9, moment: 8 }]);
+  assert.equal(pack.key[3].n, 4);
+  const brief = readerBrief("cautious", pack);
+  assert.ok(brief.includes(READERS.cautious));
+  assert.ok(brief.includes("Pictures 002 to 005: something happens at 004."));
+  assert.ok(brief.includes("001.jpg to 010.jpg"));
+  for (const told of ["hit-1", "death", "chaser", "Clear the camp", "film.ndjson", "0004-"]) assert.ok(!brief.includes(told), "the brief gives away: " + told);
+  assert.throws(() => readerBrief("nobody", pack));
+  // A killing hit is one moment, and frames with no lead-in ask nothing.
+  const killed = readerPack(["hit-2-lead", "hit-2", "death", "hit-2-after", "death-after", "roam", "hit-3", "hit-3-after"].map((why) => ({ file: why + ".jpg", why })));
+  assert.deepEqual(killed.sets, [{ id: 1, first: 1, last: 5, moment: 2 }]);
+  assert.deepEqual(killed.frames.map((f) => f.set), [1, 1, 1, 1, 1, 0, 0, 0]);
+  // A death well after a filmed hit is not that hit's.
+  const later = readerPack([["hit-1-lead", 10], ["hit-1", 10.4], ["death-lead", 11.6], ["death", 12]].map(([why, t]) => ({ file: why + ".jpg", why, t })));
+  assert.deepEqual(later.sets, [{ id: 1, first: 1, last: 2, moment: 2 }, { id: 2, first: 3, last: 4, moment: 4 }]);
+  // Any other picture taken between a lead-in's first frame and its hit is left out: it would
+  // sit before the lead-in, out of game order (cautious film, 10 Nov: the same instant twice).
+  // A second moment's own frames stay, whatever window they fall in.
+  const doubled = readerPack([["plate", 250.9], ["plate", 253.0], ["roam", 253.94], ["roam", 254.0], ["hit-1-lead", 252.34], ["hit-1-lead", 253.94], ["hit-2-lead", 254.0],
+    ["hit-1", 254.1], ["death", 254.1], ["hit-2", 254.4], ["roam", 263.9], ["title", ""]].map(([why, t], i) => ({ file: i + ".jpg", why, t })));
+  assert.deepEqual(doubled.key.map((row) => row.t), [250.9, 252.34, 253.94, 254.0, 254.1, 254.1, 254.4, 263.9, ""]);
+  assert.deepEqual(doubled.sets.map((set) => set.id), [1, 2]);
+  assert.ok(readerBrief("first-timer", pack, { look: true }).includes("how it looks: say where"));
+  assert.ok(!readerBrief("first-timer", pack, { look: true }).includes("software renderer"));
+});
+
+test("the judge's sheet sets every picture beside what the game knew", () => {
+  const sheet = judgeSheet(readerPack(film)).split("\n");
+  assert.equal(sheet.length, 2 + film.length + 1);
+  assert.ok(sheet[5].startsWith("| 004 | hit-1 | 40.8 | stage | Clear the camp | 88/100 | chaser 12 |"));
+  assert.ok(sheet[7].includes("stage (held)"));
+  assert.ok(sheet[8].includes("Find / the Warden"), "a bar in the words must not break the table");
+});
+
+test("a film's flags: a player's game by its keys, the persona's default film, the control's plant", () => {
+  const whole = filmArgs({ film: "whole", seed: 7, out: "/tmp/f" });
+  for (const flag of ["--self-play", "--self-play-keys=1", "--self-play-eyes=1", "--self-play-seed=7", "--self-play-policy=skipper", "--self-play-film=/tmp/f", "--self-play-until=3"]) assert.ok(whole.includes(flag), flag);
+  assert.ok(!whole.some((a) => a.startsWith("--self-play-plant")));
+  assert.ok(!whole.includes("--self-play-film-live=1"));
+  assert.ok(filmArgs({ film: "whole", out: "/tmp/f", live: true }).includes("--self-play-film-live=1"));
+  const wait = filmArgs({ film: FILM_OF.cautious, out: "/tmp/f", world: 0.5, plant: "objective", pilot: "tarn" });
+  for (const flag of ["--self-play-policy=camper", "--self-play-plant-death=240", "--self-play-film-world=0.5", "--self-play-plant-hide=objective", "--self-play-pilot=tarn"]) assert.ok(wait.includes(flag), flag);
+  assert.throws(() => filmArgs({ film: "nope", out: "/tmp/f" }));
+  assert.deepEqual(Object.keys(FILMS), ["whole", "wait"]);
+});
+
+test("the play findings list: every row has an owner and a date, and a late row is reported", () => {
+  const head = FINDINGS_HEADER.join("\t");
+  const good = parseFindings(head + "\nPF-01\tmajor\tThe kit pick cannot be read\tclean 005\tdesign\t2026-11-10\t2026-11-14\n\nPF-02\tcheck\tA fan covers the view\tclean 026\tsight\t2026-11-10\t2026-11-20\n");
+  assert.deepEqual(good.problems, []);
+  assert.deepEqual(overdueFindings(good.rows, "2026-11-14"), []);
+  assert.deepEqual(overdueFindings(good.rows, "2026-11-15").map((row) => row.id), ["PF-01"]);
+  assert.equal(parseFindings("id\tgrade").problems.length, 1);
+  const bad = parseFindings(head + "\nPF-01\tsevere\tx\ty\tz\t2026-11-10\tsoon\nPF-01\tminor\tx\ty\t\t2026-11-10\t2026-11-11\nF2\tminor\tx\ty\tz\t2026-11-10\t2026-11-11");
+  assert.deepEqual(bad.problems.map((problem) => problem.line), [2, 2, 3, 4]);
+  // An id used twice and a date that is not one are each their own problem.
+  assert.deepEqual(parseFindings(head + "\nPF-03\tminor\tx\ty\tz\t2026-11-10\t2026-11-11\nPF-03\tminor\tx\ty\tz\t2026-11-10\t2026-11-11").problems.map((problem) => problem.line), [3]);
+  assert.deepEqual(parseFindings(head + "\nPF-04\tminor\tx\ty\tz\t2026-11-10\t2026-02-31").problems.map((problem) => problem.line), [2]);
 });

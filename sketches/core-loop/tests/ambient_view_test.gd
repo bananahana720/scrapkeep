@@ -50,8 +50,8 @@ class FakeFlow:
 class FakePlayer:
 	extends RefCounted
 	var node := Node3D.new()
-	func body() -> Node3D:
-		return node
+	func shown_position() -> Vector3:
+		return node.global_position
 
 
 class FakeCtx:

@@ -60,7 +60,7 @@ Each module folder holds one entry script with `setup(ctx)`: `combat/combat.gd`,
 | `tuning` | `Tuning` | movement knobs; `f(key)`, `base(key)`, `set_mod(key, x)`, `mod(key)`, `clear_mods()`, `boost_cooldown_scale` |
 | `player` | `PlayerBall` | the ball; hooks below |
 | `camera` | `ChaseCamera` | the camera; hooks below |
-| `flow` | flow node | read-only: `in_play()`, `in_stage()`, `state_name()`, `stage()`, `stage_def()`, `objective_text()`, `sealed`, `warden`, `punch_now()`, `warden_plating()`, `gap_line()` |
+| `flow` | flow node | read-only: `in_play()`, `in_stage()`, `state_name()`, `stage()`, `stage_def()`, `objective_text()`, `sealed`, `warden`, `punch_now()`, `warden_plating()`, `death_cause`, `death_tip` |
 | `terrain` | set by world | the terrain API below |
 | `spawner` | set by combat | the spawner API below |
 | `build` | set by build | the build module; read it through `has_method`. `build_module()` also reads a build that stored itself with `ctx.set_meta("build", self)` |
@@ -70,6 +70,7 @@ Each module folder holds one entry script with `setup(ctx)`: `combat/combat.gd`,
 | `rng` | `RandomNumberGenerator` | the run's one seeded stream (seed 20260926) |
 | `calm` | `bool` | tests set it; no own-schedule spawns, no world pushes |
 | `aim_origin()`, `aim_forward()` | `Vector3` | the camera's centre ray |
+| `heading()` | `Vector3` | the level direction the player faces (the view's yaw, no pitch, unit length); the read side of `camera.snap(heading)`. Simulation code calls this, never the camera's basis |
 | `hit_stop(seconds)` | method | a short freeze for weight; capped at 60 ms, never stacks, only in play |
 
 Flow states, as `state_name()` returns them: `title`, `class_select`, `stage`, `beacon`, `gates`, `launch`, `boss`, `victory`, `summary` and `dead`. `in_play()` is true for `stage`, `beacon`, `gates`, `launch` and `boss`.
@@ -231,7 +232,7 @@ Per-kind stats, transformer ids and `register_part` are documented in `src/comba
 - `integrity_of(enemy) -> float` is HP over max HP, or 1.0 for an invalid enemy.
 - `would_crush(enemy, kind, force) -> bool` is true when the enemy has no plating and the hit would kill it.
 
-The spine calls all of these defensively (`has_method`). The fallbacks are integrity 1.0, punch 0, plating 0 and would_crush false. The one exception is the objective line and gap line, which show the stage's `warden_plating` when the spawner cannot say.
+The spine calls all of these defensively (`has_method`). The fallbacks are integrity 1.0, punch 0, plating 0 and would_crush false. The one exception is the objective line, which shows the stage's `warden_plating` when the spawner cannot say.
 
 ### Special cues (`src/combat/special_cues.gd`)
 
@@ -250,6 +251,7 @@ Instance methods the spine and other modules may call:
 - `entry_heading(stage) -> Vector3` (flat, unit length)
 - `beacon_point(stage) -> Vector3` (on the ground; the Warden spawns here on every map)
 - `scrap_lines(stage) -> Array` (each entry is `[Vector2 from, Vector2 to]` on the ground plane)
+- `scrap_trail(stage) -> Dictionary` (`{points, spacing_m, phrase, rest, gaps}`: the line scrap is laid along to the beat, with no gears or hoops; empty for a stage with none)
 - `contains(point) -> bool`
 - `rescue_point(near) -> Vector3`
 - `material_at(point: Vector3) -> Dictionary`, which returns `{"material": "water" | "concrete" | "sand", "surface_y": float}` or `{}` where unknown. The Dictionary is the settled shape, because ice needs the surface height. D implements it. Until it does, build falls back to `build.register_material("water", provider)`.
@@ -263,7 +265,7 @@ Flow calls `spawn_point`, `entry_heading` and `beacon_point` right after `stage_
 - `kick(direction: Vector3, amount)` knocks the camera along a world direction, and it springs back.
 - `shake(amount, time = 0.4)` shakes the camera; the strongest shake wins.
 - `motion_scale: float` (0 to 1) is the viewer's Screen shake comfort. Juice sets it; the camera multiplies every punch, kick and shake by it, its own landing shake included.
-- `aim_origin()`, `aim_forward()`, `yaw_basis()` and `yaw` are read-only for modules.
+- `aim_origin()`, `aim_forward()`, `yaw_basis()` and `yaw` are read-only for modules. A module that wants the facing direction calls `ctx.heading()`, not `yaw_basis()`.
 
 Juice follows the player's actions and must never hide the next threat. Keep punches and shakes short.
 
@@ -295,8 +297,8 @@ Juice follows the player's actions and must never hide the next threat. Keep pun
   - **Arena entry.** After stage 3's launch flight, flow emits `stage_cleared(3)`. If `ctx.boss` exists it then enters `boss`, calls `ctx.boss.enter_arena(entry_velocity)` with the ball's velocity, and keeps an arena-entry checkpoint (the stage-3-end snapshot) once the call returns. The boss module builds its arena under `ctx.root`, places the ball keeping that velocity (entry must keep speed within 15%), and emits `boss_arena_entered`. The world's terrain API and the stage fall rescue are not used in the arena; the arena rescue (E's `floor_y()` and `rescue_point()`, below) is.
   - **Win.** `boss_defeated` in `boss` leads to `victory` for 2.5 s (plus the boss's rout and sign-on flourishes' hold, at most 2.0 s more, from `flow.victory_plan`; the victory card waits over the world while the rout plays), then the summary and `run_ended(true)`.
   - **Death.** A death in `boss` leads to `dead` only in a storeless flow (tests and bots); a store-bearing game ends the run on the summary. In a storeless flow, holding R in play restores the arena-entry checkpoint and calls `enter_arena` again; on the storeless death screen R does nothing, T calls `replay_stage(3)` and restores the first stage-3 start the run kept, and N starts a new run.
-  - **Boss seams.** The boss module sets `ctx.flow.boss_active` and `ctx.flow.boss_plating` (hull plating 120) on entry. The storeless death screen reads them for its gap line and for offering T. `flow.in_arena` is read-only.
-  - **Live boss reads (owner: E).** The boss module implements `live_plating() -> float`, the plating of whatever stands in the way right now (150 in a charge, 0 in a stun, the scooter's in the chase), and `objective_text() -> String`, the objective for the current phase ("" to use the standing one). Flow reads both through `boss_plating_now()` for the objective line and the death gap line; the gap line keeps the plating live at the moment of death. Without them flow falls back to `boss_plating` and the standing objective.
+  - **Boss seams.** The boss module sets `ctx.flow.boss_active` and `ctx.flow.boss_plating` (hull plating 120) on entry. The storeless death screen reads `boss_active` for offering T; its words are the run's `death_cause` and `death_tip`, as RUN OVER's are. `flow.in_arena` is read-only.
+  - **Live boss reads (owner: E).** The boss module implements `live_plating() -> float`, the plating of whatever stands in the way right now (150 in a charge, 0 in a stun, the scooter's in the chase), and `objective_text() -> String`, the objective for the current phase ("" to use the standing one). Flow reads both through `boss_plating_now()` for the objective line. Without them flow falls back to `boss_plating` and the standing objective.
   - **Arena fall rescue (owner: E, the boss module).** The boss module implements `floor_y() -> float` and `rescue_point() -> Vector3`. Every tick in `boss`, flow checks the ball against `floor_y()`. Below it, flow puts the ball at `rescue_point()` keeping its horizontal speed, with no damage, like the stage rescue. If the boss module lacks either method, flow warns once and uses 40 m below the arena-entry checkpoint as the floor and the entry position as the landing.
 - `discovery_burst(at)` grants 20 scrap times the stage at a discovery. The codex calls it, once per entry per run.
 
@@ -416,7 +418,7 @@ The event_kinds shapes (`ring`, `diamond`, `chevron` and the rest) are glyphs, n
 ### Where the HUD uses them
 
 - **Top band.**
-  - The run status shows stage pips, `fac_fleet` for the arena, `res_timer` in mono digits, and `res_difficulty` over a notched bar that fills with `threat_rose`.
+  - The run status shows stage pips, `fac_fleet` for the arena, `res_timer` in mono digits, and `res_difficulty` beside a ramp of rising steps in the `threat_rose` colour with the word THREAT, the lowest step always lit and one more per threat tier (never a filled bar, which reads as health).
   - The objective shows its `obj_` icon ringed by the Warden's broken share, at most five words, and the core diamonds. While a lock stands it shows two bars: punch (`cat_damage`) over plating (`cat_defense`, hatched), with a white notch at the plating.
 - **Toast band.** It holds the stage card (`obj_beacon` and the stage name, or `fac_fleet` for Brindle) or one toast, then a first-run callout or the hold-R meter (`key_r`). This supersedes the UI regions table above: one toast at a time (`ScreenRegions.TOAST_ROWS` is 1).
 - **Bottom band.** Left to right: the speed chevrons, health as a tank gauge (`res_health`), the ability bar, the heft dial (`res_heft`) and scrap (`res_scrap`). This replaces the speed line and the key hints.
@@ -710,6 +712,7 @@ A slot's charge cap and cooldown scale take two layers: upgrade-tree picks chang
 - **Settings.** `settings_store.gd` reads and writes `settings.json` in `game.storage_dir` as `{"volumes": {bus: level}}`. The per-process folder in test mode keeps tests off the player's file.
 - **Help.** `screens.toggle_help()` and `help_open()`; `button_for("help")` and `button_for("back")`. The page (`help_page.gd`) lists the `FieldNotes.CONTROLS` rows that carry `caps` (key glyph ids) and `short` (one or two words).
 - **Tests.** `ui_pause_menu_test`.
+- **Auto-pause (w33).** The node `AutoPause` under the game (`src/ui/auto_pause.gd`, processes while paused) opens the pause menu in play when the window loses focus (`NOTIFICATION_APPLICATION_FOCUS_OUT`, which Godot sends on X11 about 0.25 s after the focus leaves) or when the pad last touched disconnects (`Input.joy_connection_changed`). It only calls `open()`, so the coexistence rule above holds, and it never closes the menu: the player resumes. A pause that a held screen keeps shut (a reward ceremony ends on its own timer) is owed and opens the frame the screen lets go, unless the focus or a pad came back first (`owed()`). Each pause moves the node last under the game, so its `_input` runs ahead of the pause menu's. It does nothing while `game.bot_driven` is set (tests, bots, `--self-play`). `pause_menu.note(text)` shows one line under PAUSED ("Controller disconnected" until a pad connects) and `note_text()` reads it; `close()` clears it. For `CLICK_GUARD_MS` after the focus returns to an open menu, mouse presses are swallowed, so the click that focuses the window takes no row. Tested by `auto_pause_test`.
 - **Comfort rows (v3 W11).** `shake` (Screen shake) and `hitstop` (Hit-stop) sit under `effects`, drawn by `volume_row.gd`. A step calls `presentation.juice.set_comfort(id, level)` and `store.set_comfort(id, level)`; `settings.json` gains `"comfort": {id: level}`, applied at launch like the volumes. Tested by `presentation_comfort_test`.
 
 ## Juice v3 (v3 W11)
@@ -792,7 +795,7 @@ Limitation: `ctx.boss` is one slot, so two modules cannot both be current. The t
 
 ### Row-level packs
 
-`world._author_director` (`src/world/world.gd:448-450`) reads the stage row's `packs`, `elite` and `elite_arrival` and falls back to the table's (`ctx.stages.packs()`, `elite()`, `elite_arrival()`). The director spawns only authored packs when any exist.
+`Director.author(def, stages)` (`src/world/director.gd`; `world._author_director` calls it) reads the stage row's `packs`, `elite` and `elite_arrival` and falls back to the table's (`stages.packs()`, `elite()`, `elite_arrival()`). The director spawns only authored packs when any exist. `Director.kinds_sent(def, stages)` names every kind those packs and that elite hold; `BakeWarm` stands each one out of sight before play.
 
 ### Table rows 1 to 6
 
@@ -832,3 +835,13 @@ Rows 3 to 6 carry their own `packs`; rows 1 and 2 use the table's `PACKS`.
 - **Merge** (two writers, one file): `settled` and owned pieces are unions, the saver's assembly and escape flag win when it has an assembly (else theirs), and `rewards_settled` never goes back to false.
 - **Settle-once (RS4).** `Progress.settle(id) -> bool` is true the first time only. The run document's optional `settled` list (`RunState.settled`, entrance key `settled`, strings) and the profile's `settled` list are one set: an id in either is settled and settling copies it to both. `reconcile_settled()` unions the two after a run document loads. `grant_once(id, kind, target)` settles then unlocks a pilot, cosmetic or world and saves; achievement rewards go through it as `reward:<achievement>:<kind>`.
 - **Owed.** Grants outside the profile still unguarded by the ledger: the build module's hotwire offer (`build.gd` `_hotwire_id`) and discovery-part offers, and companion piece finds. They live outside the profile files; each should call `progress.settle(id)` before it fires. Tests: `profile_store_test`, `unlock_settle_once_test`.
+
+## Sitting notes and the play watch (w33, ruling cg)
+
+- **Launch flag.** `--sitting-notes` (after `--`, or as an engine argument) adds the node `SittingNotes` under the game (`src/core/sitting_notes.gd`, processes while paused). Without the flag the node is never made, and a `test_mode` game never makes it. `--sitting-notes-hitch=<ms>` changes the hitch limit (25 ms).
+- **File.** `user://sitting-notes/notes-<UTC start>.ndjson`, one JSON row a line through `SafeStore.append_line`, closed after every row so a crash keeps them. The game prints `SCRAPKEEP_SITTING_NOTES <full path>` once at launch. Every row has `t` (seconds since the notes started), `utc` and `kind`: `start`, `stuck`, `hung`, `wedged`, `fell`, `objective`, `blank`, `bar`, `hitch`, `mark`, `end`. The file's header comment lists each kind's fields.
+- **Mark.** F8, or both sticks clicked together on a pad, writes a `mark` row with the place, the objective's words and the frame rate. Nothing shows and nothing sounds. The notes never mark input as handled, so the sticks' own bindings still fire.
+- **Reads only.** The notes and the watch write no game state. The watch (`src/core/play_watch.gd`) takes a game and a sink: `watch(game, sink)`, `step(delta)` once a physics tick of play, `read_text(since)` about once a second, and the totals `counts`, `plates`, `blank_max`, `bar_off_max`. A bot's run uses the same watch through `tools/qa_watch.gd` (`bot_run --qa-log=1`, `--self-play-watch=1`), which adds the bot's goal to each row.
+- **Reading a row.** `stuck` is also what a person standing still for 8 s writes. `blank` reads the row the HUD chose, not the pixels drawn. `bar` is the hull bar standing more than 5% of a full bar away from the hull for 3 s of play, timed from the first reading that found it off (one reading alone is never a row): it reads the share the HUD gave the bar (`hud.hull_shown()`), not the pixels drawn. A `hitch` row is one burst of long frames, cut every 5 s; frames while the window is not focused are not counted.
+- **The film reads what the watch cannot.** `--self-play-film=<dir>` (`tools/eye_film.gd`, with `--self-play-keys=1 --self-play-eyes=1`) saves the picture on the screen at each screen, held screen, objective change, first prompt, offer, big hit (at most 16 a film, each with its two seconds of lead-in), stage clear, boss phase and death, one row of the game's own state a frame in `film.ndjson`. It needs a rendered display and `--fixed-fps`; it draws only the frames it keeps unless `--self-play-film-live=1`, so it is never a frame-time reading. In eyes mode the game is not told a bot is playing: the launch take and the briefing show, and each held screen is answered with its first key after 3 s. `--self-play-plant-hide=objective` draws the objective plate clear for a film's control run; the watch still reads its words. The red team's player's-eye pass (`scripts/redteam/README.md`, `scripts/redteam/eye.mjs`) is the user.
+- **Tests.** `play_watch_test` (every row kind made to fire, with its look-alike that must not; no game), `sitting_notes_test` (a real game: the file, a real stuck row, hitches, marks, the end row), `world1_run_test` (the watch on six launched runs), `session_test` (the watch on a keys-only session: quit and Continue, a death and a second run).

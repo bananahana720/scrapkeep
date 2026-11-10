@@ -66,7 +66,10 @@ func _process(_delta: float) -> bool:
 			root.add_child(_game)
 			_step = 3
 		3:
-			_t.check("FX-2 re-entry restarts the bake", Audio._bake_task >= 0 and not Audio._baked, "task %d, baked %s after the re-entered frame" % [Audio._bake_task, Audio._baked])
+			# The fault is a bank left abandoned: no task and not baked. A bake already finished is not it:
+			# few ids are left by now, so the restarted bake can end inside this one frame (the old check
+			# asked for a task still running and failed 1 run in 3 to 1 in 11 on that race, 2026-11-09).
+			_t.check("FX-2 re-entry restarts the bake", Audio._bake_task >= 0 or Audio._baked, "task %d, baked %s after the re-entered frame" % [Audio._bake_task, Audio._baked])
 			var audio = _game.presentation.audio
 			audio.bake_now()
 			var missing := _missing()

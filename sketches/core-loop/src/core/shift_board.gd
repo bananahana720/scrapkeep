@@ -174,8 +174,7 @@ static func open_seeds(profile) -> Array:
 static func run_line(before: Array, profile, punched: bool) -> String:
 	var fresh: Array = stamped_ids(profile).filter(func(id): return not id in before)
 	if not fresh.is_empty():
-		var names: Array = fresh.map(func(id): return String(RUNGS[id]["name"]))
-		return "Shift board: %s %s." % [String(RUNGS[fresh[0]]["stamp"]), ", ".join(names)]
+		return "Shift board: %s." % "; ".join(_stamp_groups(fresh))
 	if punched:
 		var holes := int(TIME_CARD["holes"])
 		if cards_paid(profile) >= CARDS.size() and punches(profile) > holes * CARDS.size():
@@ -186,6 +185,24 @@ static func run_line(before: Array, profile, punched: bool) -> String:
 			return "Time card full: %s pays %s next shift." % [String(card["name"]), item_name(String(card["pays"]["item"]))]
 		return "Time card punched, %d of %d." % [on_card, holes]
 	return ""
+
+
+# The rungs a run stamped, as the summary says them: each stamp once, in board order, after the
+# names it inked ("Rivet Freed, Brindle Routed (HIRED)"), so the stamp reads as a stamp on the
+# deeds and never as a verb. A rung whose name is its stamp (Clocked In) says the stamp alone.
+static func _stamp_groups(ids: Array) -> PackedStringArray:
+	var inked := {}
+	for id in ids:
+		var stamp := String(RUNGS[id]["stamp"])
+		var rung := String(RUNGS[id]["name"])
+		if not inked.has(stamp):
+			inked[stamp] = []
+		if rung.to_upper() != stamp:
+			inked[stamp].append(rung)
+	var out := PackedStringArray()
+	for stamp in inked:
+		out.append(stamp if inked[stamp].is_empty() else "%s (%s)" % [", ".join(PackedStringArray(inked[stamp])), stamp])
+	return out
 
 
 # The board as the camp shows it: the stamp count, the next rung's name and words, and the card.

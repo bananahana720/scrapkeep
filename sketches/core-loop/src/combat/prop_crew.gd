@@ -13,6 +13,7 @@ extends "res://src/combat/counter.gd"
 
 const RubbleFall := preload("res://src/world/events/rubble_fall.gd")
 const FoleyAudio := preload("res://src/presentation/foley_audio.gd")
+const DamageDoor := preload("res://src/combat/damage_door.gd")
 
 const HP := 60.0
 # The body (tools/blender/world_two/enemy_prop_crew.py, PR #64) carries a 5.2 m by 4.0 m
@@ -188,7 +189,7 @@ func pack_centre() -> Vector3:
 	var sum := Vector3.ZERO
 	var count := 0
 	for enemy in get_tree().get_nodes_in_group("enemy"):
-		if enemy == self or not is_instance_valid(enemy) or (enemy.has_method("is_dead") and enemy.is_dead()):
+		if enemy == self or DamageDoor.dead(enemy):
 			continue
 		if String(enemy.get("kind")) == kind:
 			continue

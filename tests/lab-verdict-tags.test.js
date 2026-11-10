@@ -15,6 +15,7 @@ import {
 } from "../scripts/lab/verdict-tags.mjs";
 import { openVerdictCache } from "../scripts/lab/verdict-cache.mjs";
 import { validateVerdicts } from "../scripts/lab/verdicts.mjs";
+import { shallowClone } from "./preconditions.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const REAL_FILE = path.join(root, "docs/playtests/verdicts.ndjson");
@@ -273,7 +274,7 @@ test("an entry with no hand label is never filled", async (t) => {
   assert.equal(run.entries[0].tags, undefined);
 });
 
-test("applyTags changes only the tags of reproduced entries and the file still validates", async (t) => {
+test("applyTags changes only the tags of reproduced entries and the file still validates", { skip: shallowClone }, async (t) => {
   const original = await readFile(REAL_FILE, "utf8");
   const run = {
     entries: [

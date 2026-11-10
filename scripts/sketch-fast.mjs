@@ -7,7 +7,9 @@ import {
   countChecks,
   acquireMachine,
   binary,
+  IMPORT_TRIES,
   importWithRetry,
+  scriptErrorCount,
   isBot,
   isSolo,
   judge,
@@ -18,22 +20,29 @@ import {
   readQuarantineEntries,
   testTimeoutMs,
 } from "./sketch-smoke.mjs";
+import { readLedger } from "./known-failing.mjs";
 
 // npm run sketch:fast: the fast PR lane of the tiered gate (ORCHESTRATOR, "Tiered gate").
 // It judges one PR head in about 15 minutes, cheapest and most-often-failing checks first, and
 // stops at the first failure that is the PR's own: red twice on the head and green on the base.
 //   1. static: sketch-lint, placeholder count no higher than the base, check:docs, the node
 //      tests that touch the changed scripts
-//   2. Godot: import (retried once), boot, then the tests the diff reaches, cheapest first
+//   2. Godot: import (up to three tries), boot, then the tests the diff reaches, cheapest first
 // The full gate runs once per staging head and the red team plays each staging head; the fast
 // lane never replaces them. Bot-tier tests the diff reaches are listed for the bot shards.
+// Every test run that ends red keeps its log beside the receipt (failedRunLog), also when a rerun
+// then passes, so a flaky crash can still be read afterwards.
 // Run: node scripts/sketch-fast.mjs [--base origin/main] [--budget 900] [--dry-run] [--receipt <label>]
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 export const SKETCH = "sketches/core-loop";
 const TIMINGS_FILE = path.join(root, "scripts", "sketch-fast.timings.json");
 const RECEIPT_SCHEMA = "scrapkeep-fast-receipt/1";
-const DEFAULT_ESTIMATE_MS = 30_000;
+// A test with no timings row is priced at 180 s. At 30 s the wave 18 lane ran 2289 s on a 600 s
+// budget: 14 of 86 picked tests had no row, and five of them were bot runs.
+export const DEFAULT_ESTIMATE_MS = 180_000;
+// A test with no row that is named like a bot run or a sweep is listed for the bot shards.
+export const UNKNOWN_BOT_NAME = /^(bot_.*|.*_sweep_.*)\.gd$/;
 // A file more tests than this reach directly is a hub (game.gd, tests/support/t.gd): its own
 // direct tests still run, but nothing is selected through it at the second step.
 export const HUB_TESTS = 25;
@@ -159,6 +168,20 @@ export function selectTests(index, changed, { hub = HUB_TESTS } = {}) {
     for (const rule of SHARD_RULES) if (rule.match.test(rel)) for (const test of expand(index, rule.tests)) if (!shards.has(test)) shards.set(test, `${rule.name}: ${rel}`);
     if (isTopLevelTest(rel)) {
       if (index.files.has(rel)) add(rel, 0, "changed");
+      // A test that extends a changed test runs its parent's checks: kest_set_piece_test
+      // went red on main in wave 31 because only its parent, kest_kit_test, was picked.
+      // The walk follows the whole chain, as scripts/gate/carry.mjs does: dress_wog_fallback_test
+      // extends dress_wog_test, which extends dress_material_test.
+      const reached = new Set([rel]);
+      const queue = [rel];
+      while (queue.length > 0) {
+        for (const test of referrers(index, queue.shift()).filter(isTopLevelTest)) {
+          if (reached.has(test)) continue;
+          reached.add(test);
+          queue.push(test);
+          add(test, 1, `reaches the changed test ${rel}`);
+        }
+      }
       continue;
     }
     const first = referrers(index, rel);
@@ -198,7 +221,8 @@ export function estimate(timings, test) {
 // Keep the highest tiers within the budget (changed tests always), then run cheapest first so
 // a failure shows as early as it can. Whatever the budget leaves out is named, never dropped
 // silently; the staging full gate runs it.
-export function plan({ picked, timings, budgetMs, width, solo = () => false, bots = () => false }) {
+export function plan({ picked, timings, budgetMs, width, solo = () => false, bots: knownBots = () => false }) {
+  const bots = (test) => knownBots(test) || (timings[test] === undefined && UNKNOWN_BOT_NAME.test(path.posix.basename(test)));
   const rows = [...picked].map(([test, row]) => ({ test, ...row, ms: estimate(timings, test) }));
   const botRows = rows.filter((row) => bots(row.test));
   const runnable = rows.filter((row) => !bots(row.test)).sort((a, b) => a.tier - b.tier || a.ms - b.ms || a.test.localeCompare(b.test));
@@ -237,6 +261,24 @@ export function classifyFailure({ rerunOk, baseOk, headChecks = [], baseChecks =
     return newChecks.length > 0 ? { kind: "pr-red", newChecks } : { kind: "base-red", newChecks: [] };
   }
   return { kind: "pr-red", newChecks: [] };
+}
+
+// A test the known-failing ledger lists as a flake can fail twice in a row with the base green
+// (audio_bake_cancel_test fails between 1 run in 5 and 1 in 3), and that pair alone would read as the PR's
+// red. So before such a test is the PR's red it gets up to LEDGER_FLAKE_RUNS more head runs:
+// one green makes it flaky, and red on every run makes it the PR's red after all. The row
+// buys more evidence; it never excuses a test the PR really broke.
+export const LEDGER_FLAKE_RUNS = 3;
+
+export function ledgerFlakes(rows) {
+  return new Set(rows.filter((row) => row.kind === "flake").map((row) => row.test));
+}
+
+// `verdict` is classifyFailure's "pr-red"; `runs` are the extra head runs, in order.
+export function settleLedgerFlake(verdict, runs) {
+  if (runs.some((run) => run.killed)) return { kind: "stopped", newChecks: [] };
+  if (runs.some((run) => run.ok)) return { kind: "flaky", newChecks: [], ledger: true };
+  return { ...verdict, ledgerRuns: runs.length };
 }
 
 // A check's name is its bracketed label ("[Spillway skipper breaks it in 50 to 90 s] median ..."),
@@ -323,12 +365,18 @@ function readTimings() {
   }
 }
 
-// Fold a smoke receipt's per-test wall times into the timings file the lane orders by.
+// Fold passing tests' wall times into the timings file the lane orders by. Three row shapes:
+// a smoke receipt's label ("... res://tests/a_test.gd", ms), a fast-lane row's test
+// ("tests/a_test.gd", ms) and a gate shard's test ("a_test", seconds; scripts/gate/shard.mjs).
 export function timingsFromReceipt(receipt) {
   const tests = {};
   for (const row of receipt.results ?? []) {
-    const match = /res:\/\/(tests\/[^ ]+\.gd)$/.exec(row.label);
-    if (match && row.ok) tests[match[1]] = Math.round(row.ms);
+    if (!row.ok) continue;
+    const text = String(row.test ?? row.label ?? "");
+    const match = /(?:^|res:\/\/)(tests\/[^ ]+\.gd)$/.exec(text);
+    const name = match ? match[1] : /^[a-z0-9_]+$/.test(text) ? `tests/${text}.gd` : null;
+    const ms = Number.isFinite(row.ms) ? row.ms : Number.isFinite(row.seconds) ? row.seconds * 1000 : 0;
+    if (name && ms > 0) tests[name] = Math.round(ms);
   }
   return tests;
 }
@@ -340,6 +388,46 @@ function placeholderRows(sketchDir) {
   } catch {
     throw new Error(`placeholder-gate gave no JSON for ${sketchDir}: ${(result.stderr || "").slice(0, 400)}`);
   }
+}
+
+// What a red run printed is kept whole up to this many lines. A longer log keeps its first
+// LOG_HEAD_LINES (the engine's start-up) and its last LOG_TAIL_LINES (the failure), with the cut named.
+export const LOG_HEAD_LINES = 200;
+export const LOG_TAIL_LINES = 2000;
+
+export function cappedLog(output, head = LOG_HEAD_LINES, tail = LOG_TAIL_LINES) {
+  const lines = String(output ?? "").split("\n");
+  if (lines.at(-1) === "") lines.pop();
+  if (lines.length <= head + tail) return lines.join("\n");
+  return [...lines.slice(0, head), `[sketch:fast cut ${lines.length - head - tail} lines here; ${lines.length} lines printed]`, ...lines.slice(lines.length - tail)].join("\n");
+}
+
+// The log of one red run: what ran, how it ended, then stdout and stderr as they arrived.
+export function failedRunLog({ test, where, attempt, head, exit, signal, timedOut, ms, reason, output }) {
+  const facts = [
+    `test: ${test}`,
+    `ran on: ${where === "base" ? "the merge base" : "the head"} (${head}), run ${attempt} there`,
+    `exit: ${exit ?? "none"}${signal ? `, signal ${signal}` : ""}${timedOut ? ", stopped at its time limit" : ""}`,
+    `seconds: ${(ms / 1000).toFixed(1)}`,
+    `reason: ${reason}`,
+  ];
+  return `${facts.join("\n")}\n--- stdout and stderr ---\n${cappedLog(output)}\n`;
+}
+
+// tests/a/b_test.gd, second red run on the head -> a__b_test.head-2.log
+export function failedRunLogName(test, where, attempt) {
+  return `${test.replace(/^tests\//, "").replace(/\.gd$/, "").replaceAll("/", "__")}.${where}-${attempt}.log`;
+}
+
+export function receiptBaseName(label, head, startedAt) {
+  return `${label}-${head.slice(0, 12)}-${startedAt.replace(/[:.]/g, "-")}`;
+}
+
+// A run that ended on a signal the lane did not send. SIGKILL is usually the container's memory
+// limit (dmesg "Memory cgroup out of memory"), not the test; any other signal is a crash.
+export function signalReason(signal) {
+  if (!signal || signal === "SIGKILL") return "killed by a signal before its time limit (often the container's memory limit; see dmesg)";
+  return `ended on ${signal} before its time limit (a crash in the engine or the test; the kept log has the backtrace)`;
 }
 
 const running = new Set();
@@ -364,10 +452,8 @@ function runGodot(sketchDir, test, timeoutMs, onChild = () => {}) {
       running.delete(child);
       rmSync(dataHome, { recursive: true, force: true });
       const verdict = judge({ test: "res://" + test, status: code, output });
-      // A kill before the time limit that the lane did not send is usually the container's
-      // memory limit (dmesg "Memory cgroup out of memory"), not the test.
-      const reason = code === null && !timedOut && child.killedByLane !== true ? "killed by a signal before its time limit (often the container's memory limit; see dmesg)" : verdict.reason;
-      resolve({ test, ok: verdict.ok, exit: code, signal: signal ?? null, ms: Date.now() - started, reason, checks: failingChecks(output), passes: countChecks(output).passes, tail: output.split("\n").slice(-30).join("\n"), killed: child.killedByLane === true, timedOut });
+      const reason = code === null && !timedOut && child.killedByLane !== true ? signalReason(signal) : verdict.reason;
+      resolve({ test, ok: verdict.ok, exit: code, signal: signal ?? null, ms: Date.now() - started, reason, checks: failingChecks(output), passes: countChecks(output).passes, tail: output.split("\n").slice(-30).join("\n"), killed: child.killedByLane === true, timedOut, output });
     });
   });
 }
@@ -480,6 +566,8 @@ async function main() {
     stages: [],
     ok: true,
   };
+  const receiptDirectory = path.join(root, "artifacts", "local", "receipts");
+  const receiptName = receiptBaseName(options.receipt, receipt.head, startedAt);
   const log = (line) => console.log(line);
   const stage = (name, ok, detail = {}) => {
     receipt.stages.push({ name, ok, ms: Date.now() - started, ...detail });
@@ -505,9 +593,8 @@ async function main() {
   const finish = (code) => {
     receipt.wall_ms = Date.now() - started;
     if (baseTree) spawnSync("git", ["-C", root, "worktree", "remove", "--force", baseTree]);
-    const directory = path.join(root, "artifacts", "local", "receipts");
-    mkdirSync(directory, { recursive: true });
-    const file = path.join(directory, `${options.receipt}-${receipt.head.slice(0, 12)}-${startedAt.replace(/[:.]/g, "-")}.json`);
+    mkdirSync(receiptDirectory, { recursive: true });
+    const file = path.join(receiptDirectory, `${receiptName}.json`);
     writeFileSync(file, JSON.stringify(receipt, null, 2) + "\n");
     log(`receipt ${file}`);
     log(`sketch:fast ${receipt.ok ? "pass" : "fail"} in ${Math.round(receipt.wall_ms / 1000)}s on ${receipt.head.slice(0, 8)} (merge base ${mergeBase.slice(0, 8)}). Fast lane only: the staging full gate and red team still judge the wave.`);
@@ -615,7 +702,7 @@ async function main() {
     finish();
   }
 
-  // Stage 2: Godot. Import with one retry, boot, then the selected tests.
+  // Stage 2: Godot. Import in up to three tries, boot, then the selected tests.
   const quarantineEntries = readQuarantineEntries(sketchDir);
   const quarantine = new Set(quarantineEntries.map((entry) => entry.test));
   const expired = expiredQuarantine(quarantineEntries);
@@ -623,6 +710,7 @@ async function main() {
   if (!stage("quarantine", expired.length === 0, { note: expired.length ? `${expired.length} expired: ${expired.map((entry) => entry.test).join(", ")}` : `${quarantineEntries.length} rows, none expired` })) finish();
   if (!existsSync(binary)) {
     console.error(`Godot binary not found at ${binary}; set GODOT_BIN`);
+    stage("godot", false, { note: "no Godot binary, so no test ran" });
     finish(2);
   }
   await acquireMachine();
@@ -630,20 +718,44 @@ async function main() {
   const imported = importWithRetry(SKETCH, base, (job) => {
     const t = Date.now();
     const result = spawnSync(binary, job.args, { encoding: "utf8", timeout: 180_000 });
-    return { label: job.label, exit: result.status, ok: result.status === 0, ms: Date.now() - t };
-  });
-  if (!stage("import", imported.ok, { note: imported.results.map((row) => `exit=${row.exit}`).join(", ") })) finish();
+    return { label: job.label, exit: result.status, signal: result.signal ?? null, scriptErrors: scriptErrorCount((result.stdout || "") + (result.stderr || "")), ok: result.status === 0, ms: Date.now() - t };
+  }, log);
+  if (!stage("import", imported.ok, { note: imported.tries.map((row) => `${row.outcome} exit=${row.exit ?? row.signal}`).join(", ") })) finish();
   const boot = spawnSync(binary, [...base, "--quit-after", "300"], { encoding: "utf8", timeout: 180_000, env: { ...process.env, XDG_DATA_HOME: mkdtempSync(path.join(os.tmpdir(), "sketch-fast-")) } });
   const bootVerdict = judge({ status: boot.status, output: (boot.stdout || "") + (boot.stderr || "") });
   if (!stage("boot", bootVerdict.ok, { note: bootVerdict.reason ?? "300 frames" })) finish();
 
   const results = [];
   const flaky = [];
+  const ledgerFlaky = [];
+  const flakeRows = ledgerFlakes((await readLedger(root))?.rows ?? []);
   const baseRed = [];
   let prRed = null;
   const inLane = lanePool(width);
   const stopped = (test) => ({ test, ok: false, exit: null, ms: 0, reason: "lane stopped", checks: [], tail: "", killed: true, timedOut: false });
-  const godot = (dir, test, timeoutMs, onChild, skip = () => false) => inLane(() => (prRed || skip() ? stopped(test) : runGodot(dir, test, timeoutMs, onChild)));
+  // Every run that ends red keeps its log in a folder named after the receipt, and the receipt
+  // lists it. A run the lane stopped is no verdict and keeps nothing.
+  receipt.failed_runs = [];
+  const redRuns = new Map();
+  const keepRed = (where) => ({ output, ...run }) => {
+    if (run.ok || run.killed) return run;
+    const key = `${run.test} ${where}`;
+    const attempt = (redRuns.get(key) ?? 0) + 1;
+    redRuns.set(key, attempt);
+    const file = path.join(receiptDirectory, `${receiptName}-logs`, failedRunLogName(run.test, where, attempt));
+    const kept = { test: run.test, where, attempt, exit: run.exit, signal: run.signal, timed_out: run.timedOut, ms: run.ms, reason: run.reason, log: null };
+    try {
+      mkdirSync(path.dirname(file), { recursive: true });
+      writeFileSync(file, failedRunLog({ ...run, where, attempt, head: where === "base" ? diffBase : receipt.head, output }));
+      kept.log = path.relative(root, file);
+      log(`  log of this red run of ${run.test}: ${kept.log}`);
+    } catch (error) {
+      log(`  log of this red run of ${run.test} not written (${error.message}); the verdict still stands`);
+    }
+    receipt.failed_runs.push(kept);
+    return run;
+  };
+  const godot = (dir, test, timeoutMs, onChild, skip = () => false) => inLane(() => (prRed || skip() ? stopped(test) : runGodot(dir, test, timeoutMs, onChild).then(keepRed(dir === sketchDir ? "head" : "base"))));
 
   // A failure is rerun on the head and on the merge base side by side before it is the PR's
   // (a solo test reruns alone first). Base verdicts are cached per base tree and Godot binary in
@@ -674,12 +786,16 @@ async function main() {
     baseImport ??= inLane(async () => {
       if (prRed) return false;
       const args = ["--headless", "--path", baseSketch];
-      if ((await importAsync(args)) === 0) return true;
-      log(`${SKETCH} (base) import failed; retrying once`);
-      return (await importAsync(args)) === 0;
+      // The base tree is a fresh checkout, where the engine's first import can crash (IMPORT_TRIES).
+      for (let attempt = 1; attempt <= IMPORT_TRIES; attempt++) {
+        if (prRed) return false;
+        if ((await importAsync(args)) === 0) return true;
+        if (attempt < IMPORT_TRIES) log(`${SKETCH} (base) import try ${attempt} of ${IMPORT_TRIES} failed; trying again`);
+      }
+      return false;
     });
     if (!(await baseImport)) {
-      log(`  ${test} on the merge base: no verdict (the base import failed twice)`);
+      log(`  ${test} on the merge base: no verdict (the base import failed ${IMPORT_TRIES} times)`);
       return null;
     }
     if (cancel.cancelled) return null;
@@ -738,7 +854,14 @@ async function main() {
     baseRun = usableBaseRun(rerun, baseRun);
     const baseOk = rerun.ok || !baseRun ? null : baseRun.ok;
     const baseChecks = rerun.ok || !baseRun ? [] : baseRun.checks;
-    return { ...classifyFailure({ rerunOk: rerun.ok, baseOk, headChecks: rerun.checks, baseChecks, baseCached: Boolean(baseRun?.cached) }), rerun };
+    const verdict = classifyFailure({ rerunOk: rerun.ok, baseOk, headChecks: rerun.checks, baseChecks, baseCached: Boolean(baseRun?.cached) });
+    if (verdict.kind !== "pr-red" || !flakeRows.has(path.posix.basename(first.test, ".gd"))) return { ...verdict, rerun };
+    const more = [];
+    while (more.length < LEDGER_FLAKE_RUNS && !more.some((run) => run.ok || run.killed)) {
+      log(`  ${first.test} has a flake row in the known-failing ledger: head run ${more.length + 1} of up to ${LEDGER_FLAKE_RUNS} more`);
+      more.push(await godot(sketchDir, first.test, timeoutMs));
+    }
+    return { ...settleLedgerFlake(verdict, more), rerun };
   }
 
   async function handle(result) {
@@ -750,13 +873,16 @@ async function main() {
       log(`  ${quarantineNote(entry)}`);
     }
     if (result.ok || quarantined || result.killed) return;
-    const { kind, newChecks } = await confirm(result);
-    log(`  ${result.test}: ${kind}${newChecks.length ? ` (new failing checks: ${newChecks.join("; ")})` : ""}`);
+    const { kind, newChecks, ledger, ledgerRuns } = await confirm(result);
+    log(`  ${result.test}: ${kind}${ledger ? " (a known-failing ledger flake: green on a later head run)" : ""}${newChecks.length ? ` (new failing checks: ${newChecks.join("; ")})` : ""}`);
     if (kind === "stopped") return;
-    if (kind === "flaky") flaky.push(result.test);
-    else if (kind === "base-red") baseRed.push(result.test);
+    if (kind === "flaky") {
+      flaky.push(result.test);
+      if (ledger) ledgerFlaky.push(result.test);
+    } else if (kind === "base-red") baseRed.push(result.test);
     else if (!prRed) {
-      prRed = { test: result.test, reason: newChecks.length ? `fails checks the base passes: ${newChecks.join("; ")}` : result.reason, tail: result.tail };
+      const reason = newChecks.length ? `fails checks the base passes: ${newChecks.join("; ")}` : result.reason;
+      prRed = { test: result.test, reason: ledgerRuns ? `${reason}; listed as a flake in the known-failing ledger, but red on all ${ledgerRuns + 2} head runs` : reason, tail: result.tail };
       stopRunning();
     }
   }
@@ -772,11 +898,12 @@ async function main() {
   await Promise.all(Array.from({ length: Math.min(width, queue.length) }, worker));
   for (const row of lanePlan.solo) {
     if (prRed) break;
-    await handle(await runGodot(sketchDir, row.test, testTimeoutMs(sourceOf(sketchDir, row.test))));
+    await handle(await runGodot(sketchDir, row.test, testTimeoutMs(sourceOf(sketchDir, row.test))).then(keepRed("head")));
   }
   receipt.results = results;
   receipt.quarantined = results.filter((row) => row.quarantined).map((row) => quarantineRecord(quarantineEntries.find((entry) => entry.test === path.posix.basename(row.test, ".gd")), { ok: row.ok, exit: row.exit, signal: row.signal, failing: row.failing }));
   receipt.flaky = flaky;
+  receipt.ledger_flaky = ledgerFlaky;
   receipt.base_red = baseRed;
   if (prRed) {
     log(prRed.tail);
@@ -793,10 +920,12 @@ async function main() {
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   if (process.argv[2] === "--fold-timings") {
-    const receipt = JSON.parse(readFileSync(process.argv[3], "utf8"));
-    const prior = readTimings();
-    const tests = { ...prior, ...timingsFromReceipt(receipt) };
-    writeFileSync(TIMINGS_FILE, JSON.stringify({ source: `${receipt.label} ${receipt.head ?? ""}`.trim(), tests: Object.fromEntries(Object.entries(tests).sort()) }, null, 2) + "\n");
-    console.log(`sketch:fast timings: ${Object.keys(tests).length} tests from ${process.argv[3]}`);
+    const files = process.argv.slice(3);
+    if (files.length === 0) throw new Error("--fold-timings takes one or more receipt files (smoke, fast lane or gate shard.json)");
+    const receipts = files.map((file) => JSON.parse(readFileSync(file, "utf8")));
+    const tests = Object.assign({}, readTimings(), ...receipts.map(timingsFromReceipt));
+    const source = receipts.length === 1 ? `${receipts[0].label ?? receipts[0].title ?? files[0]} ${receipts[0].head ?? ""}`.trim() : `${receipts.length} receipts on ${[...new Set(receipts.map((receipt) => String(receipt.head ?? "").slice(0, 8)))].join(", ")} (passing tests only; older rows kept)`;
+    writeFileSync(TIMINGS_FILE, JSON.stringify({ source, tests: Object.fromEntries(Object.entries(tests).sort()) }, null, 2) + "\n");
+    console.log(`sketch:fast timings: ${Object.keys(tests).length} tests after ${files.length} receipt${files.length === 1 ? "" : "s"}`);
   } else main();
 }

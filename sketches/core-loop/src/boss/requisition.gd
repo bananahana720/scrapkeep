@@ -1,5 +1,6 @@
 extends Node3D
 
+const AppShell := preload("res://src/core/app_shell.gd")
 const Palette := preload("res://src/core/palette.gd")
 const Target := preload("res://src/boss/boss_target.gd")
 const WorldPrompt := preload("res://src/ui/world_prompt.gd")
@@ -218,6 +219,11 @@ func _flush_hides(clip: StringName, ended: bool) -> void:
 				(part as Node3D).visible = false
 
 
+# Where the cockpit sits on the stern, for the HUD's pointer (boss.gd plate_targets).
+func cockpit_point() -> Vector3:
+	return _cockpit.global_position
+
+
 # `clip` names a phase-entry clip that flips the model's shield away; the hide waits for it.
 func cockpit_open(open: bool, clip := "") -> void:
 	_cockpit.visible = not open
@@ -355,7 +361,7 @@ static func warm() -> bool:
 		if not _ahead_reads.has(path):
 			if not ResourceLoader.exists(path):
 				_ahead_reads[path] = null
-			elif DisplayServer.get_name() == "headless":
+			elif AppShell.headless():
 				_ahead_reads[path] = load(path)
 			else:
 				var status := ResourceLoader.load_threaded_get_status(path)

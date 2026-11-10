@@ -259,7 +259,6 @@ func leave_walk() -> void:
 	player.set_frozen(true)
 	var home: Vector3 = game.ctx.terrain.spawn_point(1)
 	player.reset_to(home)
-	player.body().global_position = home
 	game.camera.snap(game.ctx.terrain.entry_heading(1))
 	var stage = _title_stage()
 	if stage != null:
@@ -275,7 +274,6 @@ func _place_ball() -> void:
 	var player = game.player
 	player.set_frozen(false)
 	player.reset_to(_spawn)
-	player.body().global_position = _spawn
 	game.camera.snap(Vector3(0.0, 0.0, -1.0))
 
 
@@ -714,7 +712,6 @@ func _pet_react() -> void:
 		var land := start + step * float(hop + 1) * 0.5
 		_pet_tween.tween_property(_pet, "position", Vector3(land.x, 0.55, land.z), 0.14).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 		_pet_tween.tween_property(_pet, "position", Vector3(land.x, 0.0, land.z), 0.14).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
-	var presentation = game.get("presentation")
-	var audio = presentation.get("audio") if presentation != null else null
+	var audio = game.audio()
 	if audio != null:
 		audio.chirp("primer_set")

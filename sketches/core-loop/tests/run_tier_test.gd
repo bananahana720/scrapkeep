@@ -1,5 +1,5 @@
 extends SceneTree
-# smoke: bots timeout=1200s
+# smoke: bots timeout=1800s
 # 2026-10-15 RT-CAP: a 20-seed whole-run replay (five batches of four child games) ran at 359.5 s
 # of the 360 s solo ceiling on a normal machine and timed out at load 55 to 59, so it moved to the
 # bot tier (npm run sketch:bots; sketch:gate runs both). Every check is unchanged.
@@ -185,8 +185,9 @@ func _parallel_runtime() -> void:
 			if record:
 				args.append("--record-base")
 			jobs.append({"script": "res://tests/run_tier_test.gd", "args": args})
-		# 150 s per batch of four (70 s before RT-CAP): the cap catches a hang, not a slow machine.
-		var results := ChildRuns.run(jobs, 150.0)
+		# 300 s per batch of four (70 s before RT-CAP, then 150 s): the cap catches a hang, not a slow machine. A child
+		# runs 83 s alone and 158-164 s four at a time on the w30 gate box, where 150 s killed all 20.
+		var results := ChildRuns.run(jobs, 300.0)
 		for i in results.size():
 			var result: Dictionary = results[i]
 			var summary := ChildRuns.summary(result)
@@ -456,15 +457,14 @@ func _card() -> void:
 	game.flow.show_start_card()
 	t.check("win offers tier 1", card.offered_tiers() == [0, 1])
 	t.check("a tier to choose releases the cursor", card.wants_pointer() and game.capture_requests.back() == false and game.get_meta("menu_held", false))
-	var labels := []
-	for node in card.get_children():
-		if node is Label and node.visible:
-			labels.append(node.text)
 	var hard: Dictionary = Cards.RUN_TIERS[1]
-	var expected_threat := "Threat: %d%% more crowd, %d%% shorter intervals" % [roundi(100.0 * (hard.cap_weight - 1.0)), roundi(100.0 * (1.0 - hard.interval_weight))]
+	var expected_threat := "Threat: %d%% more crowd, %d%% shorter intervals, plated elite brutes" % [roundi(100.0 * (hard.cap_weight - 1.0)), roundi(100.0 * (1.0 - hard.interval_weight))]
 	var expected_pay := "Pay: %d%% more event cores and rare weight; gain cap %.1fx" % [roundi(100.0 * (hard.event_core_multiplier - 1.0)), RunTier.PAY_GAIN_CAP]
-	t.check("rendered pre-choice threat/pay", expected_threat in labels
-		and expected_pay in labels and game.run.selected_run_tier() == 0)
+	# The ladder is drawn (pips and gauges); the rung looked at writes its threat and pay before the press.
+	card.tier_button(1).grab_focus()
+	t.check("rendered pre-choice threat/pay", expected_threat in card.drawn_words()
+		and expected_pay in card.drawn_words() and game.run.selected_run_tier() == 0, "words %s" % [card.drawn_words()])
+	card.tier_button(1).release_focus()
 	var host = game.get_node("Workshop")
 	t.check("start card sits above workshop", card.get_parent().layer > host.layer)
 	t.eq("start card handles input during workshop pause", card.process_mode, Node.PROCESS_MODE_ALWAYS)
@@ -504,14 +504,19 @@ func _card() -> void:
 	key.pressed = true
 	key.keycode = KEY_1
 	key.physical_keycode = KEY_1
+	# The workshop armed as in a launched game (ruling cl): the kit pick takes the screen from the
+	# start card and its own keys; with it closed the card comes back as the briefing and takes 1.
 	host.armed = true
 	host.open_pick()
-	t.check("competing workshop pick is open", host.pick.is_open())
+	t.check("the kit pick takes the screen from the start card", host.pick.is_open() and not card.showing())
 	var tree_before: Array = game.player.tree.picks.duplicate()
 	root.push_input(key, true)
-	t.check("scripted pick reaches RunState", game.run.start_pick.taken == game.run.start_pick_options()[0] and not card.showing())
-	t.check("start input does not choose a workshop upgrade", game.player.tree.picks == tree_before)
+	t.check("1 on the kit pick takes a kit card and no start pick", game.player.tree.picks.size() == tree_before.size() + 1 and game.run.start_pick.taken == "")
 	host.close_pick()
+	t.check("the start card comes back as the briefing", card.showing() and host.briefing() and paused)
+	root.push_input(key, true)
+	t.check("scripted pick reaches RunState", game.run.start_pick.taken == game.run.start_pick_options()[0] and not card.showing())
+	t.check("the briefing lets go", not host.briefing() and not paused)
 	host.armed = false
 	t.check("pick returns aim control", game.capture_requests.back() == true and not game.get_meta("menu_held", false))
 	var doc: Dictionary = game.run.to_entrance_doc()
@@ -636,14 +641,16 @@ func _continue_replay() -> void:
 		for tile in card.tiles():
 			shown_ids.append(tile.id)
 		t.eq(label + " shows saved three options", shown_ids, expected_options)
-		var labels := []
-		for child in card.get_children():
-			if child is Label and child.is_visible_in_tree():
-				labels.append(child.text)
 		var hard: Dictionary = Cards.RUN_TIERS[1]
-		var threat := "Threat: %d%% more crowd, %d%% shorter intervals" % [roundi(100.0 * (hard.cap_weight - 1.0)), roundi(100.0 * (1.0 - hard.interval_weight))]
+		var threat := "Threat: %d%% more crowd, %d%% shorter intervals, plated elite brutes" % [roundi(100.0 * (hard.cap_weight - 1.0)), roundi(100.0 * (1.0 - hard.interval_weight))]
 		var pay := "Pay: %d%% more event cores and rare weight; gain cap %.1fx" % [roundi(100.0 * (hard.event_core_multiplier - 1.0)), RunTier.PAY_GAIN_CAP]
-		t.check(label + " visible pre-choice tier disclosure", threat in labels and pay in labels and card.offered_tiers() == [0, 1])
+		# The ladder is drawn (pips and gauges); the rung looked at writes its threat and pay before the press.
+		if card.tier_button(1) != null:
+			card.tier_button(1).grab_focus()
+		t.check(label + " visible pre-choice tier disclosure", card.ladder_shown() and "Crowd" in card.drawn_words() and "Pay" in card.drawn_words()
+			and threat in card.drawn_words() and pay in card.drawn_words() and card.offered_tiers() == [0, 1], "words %s" % [card.drawn_words()])
+		if card.tier_button(1) != null:
+			card.tier_button(1).release_focus()
 		var key := InputEventKey.new()
 		key.pressed = true
 		key.keycode = KEY_2
@@ -690,7 +697,8 @@ func _tier_zero_format() -> void:
 func _mouse_tiles() -> void:
 	game.bot_driven = false
 	paused = true
-	var offers := [["cogs", "core", "long_barrel"], ["loose_trigger", "magnet_spool", "spiral_wave"]]
+	# The narrow offer's tiles must stay under the interactive card's 780 px floor, effect lines included.
+	var offers := [["cogs", "hot_rivets", "long_barrel"], ["loose_trigger", "magnet_spool", "spiral_wave"]]
 	for offer_index in offers.size():
 		for pick_index in 3:
 			_begin(706, 0)
@@ -704,7 +712,10 @@ func _mouse_tiles() -> void:
 			var widths := []
 			var total := StartCard.TILE_GAP * (tiles.size() - 1)
 			for tile in tiles:
-				var width := StartCard.PAD * 2.0 + StartCard.KEY + StartCard.GAP * 2.0 + StartCard.ICON + UiFonts.bold().get_string_size(tile.name, HORIZONTAL_ALIGNMENT_LEFT, -1, StartCard.FONT).x
+				# A tile is as wide as the wider of its name and the effect line under it.
+				var words := maxf(UiFonts.bold().get_string_size(tile.name, HORIZONTAL_ALIGNMENT_LEFT, -1, StartCard.FONT).x,
+					UiFonts.bold().get_string_size(tile.effect, HORIZONTAL_ALIGNMENT_LEFT, -1, StartCard.EFFECT_FONT).x)
+				var width := StartCard.PAD * 2.0 + StartCard.KEY + StartCard.GAP * 2.0 + StartCard.ICON + words
 				widths.append(width)
 				total += width
 			var label := "narrow" if offer_index == 0 else "wide"

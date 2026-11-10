@@ -4,6 +4,7 @@ const Telegraph := preload("res://src/combat/telegraph.gd")
 const Threat := preload("res://src/combat/threat_grammar.gd")
 const PackPressure := preload("res://src/combat/pack_pressure.gd")
 const Roster := preload("res://src/combat/roster.gd")
+const DamageDoor := preload("res://src/combat/damage_door.gd")
 
 # Pack pressure E, silt boils (pack_pressure.gd; idle while hazard.boil_by_stage reads 0). The ball stirs the
 # Spillway's silt: while a fight is on (an enemy within FIGHT_RADIUS) and the ball has rolled at least
@@ -162,7 +163,7 @@ func _in_warden_ring(ball: Vector3) -> bool:
 func _fighting(ball: Vector3, enemies: Array) -> bool:
 	var crews = null
 	for enemy in enemies:
-		if not is_instance_valid(enemy) or (enemy.has_method("is_dead") and enemy.is_dead()):
+		if DamageDoor.dead(enemy):
 			continue
 		if _set_piece(enemy) or _flat(enemy.global_position - ball).length() > FIGHT_RADIUS:
 			continue
@@ -199,7 +200,7 @@ func _erupt(k: float, enemies: Array) -> void:
 			deal.call(DAMAGE * k, Vector3.UP * KICK)
 	var tossed := 0
 	for enemy in enemies:
-		if not is_instance_valid(enemy) or (enemy.has_method("is_dead") and enemy.is_dead()):
+		if DamageDoor.dead(enemy):
 			continue
 		if _set_piece(enemy) or not is_instance_valid(_ring):
 			continue

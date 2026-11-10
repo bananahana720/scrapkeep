@@ -148,18 +148,10 @@ static func _is_flume(warden) -> bool:
 	return warden.spec.get("park_landmark", false) and warden.family == "reactor" and warden.mounting == "flume"
 
 
-# Lazily replaces the Warden's generic posture with the mounted one, carrying the script variables over.
-static func _swap_posture(warden, mounted) -> void:
-	for property in warden._posture.get_property_list():
-		if property.usage & PROPERTY_USAGE_SCRIPT_VARIABLE:
-			mounted.set(property.name, warden._posture.get(property.name))
-	mounted.mounted_warden = weakref(warden)
-	warden._posture = mounted
-
 func step(warden, delta: float) -> void:
 	if _is_dam(warden):
 		if not warden._posture is DamPosture:
-			_swap_posture(warden, DamPosture.new(warden.spec.get("posture", {})))
+			warden.replace_posture(DamPosture.new(warden.spec.get("posture", {})))
 		var engaged: bool = warden.fleet != null and warden.fleet.ctx.flow.engaged() \
 				and warden._in_play() and warden.hp > 0.0
 		warden._posture.contact_drain_delay = delta if engaged else 0.0
@@ -172,7 +164,7 @@ func step(warden, delta: float) -> void:
 				child.global_position = warden.family_point_at()
 	if _is_flume(warden):
 		if not warden._posture is FlumePosture:
-			_swap_posture(warden, FlumePosture.new(warden.spec.get("posture", {})))
+			warden.replace_posture(FlumePosture.new(warden.spec.get("posture", {})))
 		var held: bool = warden.fleet != null and warden.fleet.ctx.flow.engaged() \
 				and warden._in_play() and warden.hp > 0.0 and _line_on(warden)
 		warden._posture.line_held = held
@@ -439,6 +431,16 @@ static func base_dps(weapon: String) -> float:
 	if preload("res://src/core/ability_state.gd").ABILITIES.get(weapon, {}).has("pressure"):
 		return float(row["damage"]) / Weapons.PRESSURE_ROLL_S
 	return float(row["damage"]) * float(row["rate"])
+
+
+# The objective plate's reading of this mounting (ui/hud.gd, core/objectives.gd): which road
+# leads to the core, and on the flume whether the ball's line is bitten in.
+func plate_reading(warden) -> Dictionary:
+	if _is_dam(warden):
+		return {"mount": "dam_face"}
+	if _is_flume(warden):
+		return {"mount": "flume", "latched": _line_on(warden)}
+	return {}
 
 
 # Whether the ball's line is bitten into this Warden.

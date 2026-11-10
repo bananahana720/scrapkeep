@@ -7,9 +7,9 @@ const Keycap := preload("res://src/ui/keycap.gd")
 
 # A screen-space prompt attached to a point in the world, such as a reward gate's
 # offer or a fabricator's price. At range it shows an icon and a title of at most three
-# words; within DETAIL_RANGE of the ball it adds the detail lines. The HUD places every
-# prompt inside the prompts band each frame (ScreenRegions) and tells it whether the
-# ball is near.
+# words; within its detail_range of the ball (DETAIL_RANGE unless its owner says otherwise) it
+# adds the detail lines. The HUD places every prompt inside the prompts band each frame
+# (ScreenRegions) and tells it whether the ball is near.
 #
 # Owners pass structured parts with set_parts(title, detail, icon). Until they do, the
 # text they set is parsed (parse()): the first line is the title, the rest the detail.
@@ -33,7 +33,10 @@ const DEFAULT_ICON := "obj_gate"
 var anchor: Node3D
 var offset := Vector3.ZERO
 var reach := 60.0
-# Set by the HUD each frame: the ball is within DETAIL_RANGE of the anchor.
+# How close the ball must be for the detail lines. An owner whose detail is what the player
+# chooses by (a reward gate, picked by steering at it from across the yard) sets it to its reach.
+var detail_range := DETAIL_RANGE
+# Set by the HUD each frame: the ball is within detail_range of the anchor.
 var near := false
 
 var _structured := false

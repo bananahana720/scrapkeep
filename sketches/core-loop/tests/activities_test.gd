@@ -127,6 +127,7 @@ func _run() -> void:
 	await _boot("slice")
 	await physics_frame
 	_lit()
+	await _word()
 	await _bounty()
 	await _ambush()
 	await _cache()
@@ -138,6 +139,31 @@ func _run() -> void:
 	await _frames(2)
 	await _default_table()
 	quit(_t.verdict())
+
+
+# The word flies beside its column, never across it: centred, the amber column covered the
+# middle letters of an amber word, and a sentence ran the width of the screen.
+func _word() -> void:
+	var view := ActivityView.new()
+	root.add_child(view)
+	view.build("ambush_altar", 8.0)
+	view.near(Vector3.ZERO)
+	# A billboard's box covers every facing; flat, the box is the laid-out letters.
+	view.word.billboard = BaseMaterial3D.BILLBOARD_DISABLED
+	await _frames(2)
+	# Corner-on the column reaches 0.99 m; the outline's reach is taken off the word's side as well,
+	# whether or not the box counts it.
+	var corner := ActivityView.COLUMN_WIDTH * 0.5 * sqrt(2.0) + ActivityView.WORD_OUTLINE * view.word.pixel_size
+	var one: AABB = view.word.get_aabb()
+	_t.check("an activity's word starts clear of its column, seen corner-on", view.word.visible and one.position.x > corner,
+		"word from %.2f m, column to %.2f m" % [one.position.x, corner])
+	view.word.text = "Head gate: wheel turning. Stay ahead of the water."
+	await _frames(2)
+	var long: AABB = view.word.get_aabb()
+	var reach := (ActivityView.WORD_GAP + ActivityView.WORD_WIDTH) * view.word.pixel_size
+	_t.check("a sentence folds into a block beside the column", long.position.x > corner and long.end.x <= reach + 0.2 and long.size.y > one.size.y * 1.8,
+		"from %.2f to %.2f m (reach %.2f), %.2f m tall against %.2f" % [long.position.x, long.end.x, reach, long.size.y, one.size.y])
+	view.free()
 
 
 func _lit() -> void:
@@ -160,6 +186,10 @@ func _lit() -> void:
 		_t.check("%s is lit" % id, s.view.lit(), "column %s, glyph %s, ring %s" % [s.view.column.visible, s.view.glyph.visible, s.view.ring.visible])
 		_t.check("%s's column is the row's amber" % id, _rgb(s.view.column.material_override.albedo_color) == _rgb(color),
 			"column %s, row %s" % [s.view.column.material_override.albedo_color, color])
+		var veil: StandardMaterial3D = s.view.column.material_override
+		_t.check("%s's column thins to nothing at the lens" % id, veil.distance_fade_mode == BaseMaterial3D.DISTANCE_FADE_PIXEL_ALPHA
+			and veil.distance_fade_min_distance > 0.0 and veil.distance_fade_max_distance > veil.distance_fade_min_distance,
+			"fade mode %d, %.1f to %.1f m" % [veil.distance_fade_mode, veil.distance_fade_min_distance, veil.distance_fade_max_distance])
 		_t.check("%s's glyph is the row's amber" % id, _rgb(_first_mesh(s.view.glyph).material_override.albedo_color) == _rgb(color), "glyph colour")
 		_t.check("%s's ring is the row's amber" % id, _rgb(_first_mesh(s.view.ring).material_override.albedo_color) == _rgb(color), "ring colour")
 		_t.check("%s's word waits until the ball is near" % id, not s.view.word.visible, "word visible at the spawn")

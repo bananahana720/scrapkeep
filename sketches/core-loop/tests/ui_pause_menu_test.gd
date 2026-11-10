@@ -18,7 +18,8 @@ const Push := preload("res://tests/workshop/push.gd")
 #   - clicks set effects on the segments and step it on the arrows, the mixer follows,
 #     and settings.json keeps it and puts it back at launch;
 #   - Field notes pins the notes until the next click; Resume by click unpauses;
-#   - Esc opens and closes it, N restarts the run at stage 1;
+#   - Esc opens and closes it, N asks and N again restarts the run at stage 1 (the ask's own
+#     cases are death_summary_loop_test's);
 #   - a pick that opens under the menu keeps the tree paused after Resume.
 
 const CALM_BUDGET := 40
@@ -192,8 +193,11 @@ func _process(delta: float) -> bool:
 			var was: int = _game.run.stage
 			Push.key(root, KEY_P)
 			Push.key(root, KEY_N)
-			_report("N restarts", was == 2 and _game.run.stage == 1 and _game.flow.in_play() and not _menu.is_open() and not paused,
-				"from stage %d, N put the run at stage %d, in play %s, paused %s" % [was, _game.run.stage, _game.flow.in_play(), paused])
+			var asked: bool = _menu.armed() == "restart" and _game.run.stage == was and _menu.is_open()
+			_menu.step_arm(_menu.ARM_GUARD)
+			Push.key(root, KEY_N)
+			_report("N asks, N again restarts", asked and was == 2 and _game.run.stage == 1 and _game.flow.in_play() and not _menu.is_open() and not paused,
+				"from stage %d, the first N asked %s, the second put the run at stage %d, in play %s, paused %s" % [was, asked, _game.run.stage, _game.flow.in_play(), paused])
 			_next("under")
 		"under":
 			if _ws.pick.is_open():

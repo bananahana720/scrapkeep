@@ -9,6 +9,7 @@
 - [HANDOFF.md](HANDOFF.md): Historical handoff log (3 to 10 Oct). The live handoff is [GRAPH](../../../project-guide/coord/GRAPH.md).
 - [HOOK-CHAIN.md](HOOK-CHAIN.md): Detailed chain contract and acceptance work.
 - [POLES-FLAILS.md](POLES-FLAILS.md): Wave 20 proposal for poles and flails on the harpoon.
+- [SIGHT-PERSONA.md](SIGHT-PERSONA.md): The look persona (9 Nov; year picked 10 Nov): the artist, her habits, how the four makers are told apart, the year, 2010, and how a model, clip or effect gets checked.
 - [LEGIBILITY.md](LEGIBILITY.md): Accepted presentation grammar and measurement references.
 - [MACHINE-VFX.md](MACHINE-VFX.md): Enemy and boss effects, the specials' tell contract and their budget.
 - [TRAVERSAL.md](TRAVERSAL.md): Traversal measurements and definitions consumed by code and tests.
@@ -16,6 +17,7 @@
 - [ROADMAP.md](ROADMAP.md): Historical milestone definitions. The live roadmap is [project-guide/coord/ROADMAP.md](../../../project-guide/coord/ROADMAP.md).
 - [OWNER-INTERVIEW-2026-10-02.md](OWNER-INTERVIEW-2026-10-02.md): Accepted owner answers and provenance.
 - [LORE-TONE-SAMPLE.md](LORE-TONE-SAMPLE.md): Lore tone sample retained by the unit instruction.
+- [STORY-MAP.md](STORY-MAP.md): What the world is and what every place, system, enemy and item means in it, with what each should look, sound and play like. Owns story facts and meaning; read before any design, art or sound work.
 
 ## Archived documents
 

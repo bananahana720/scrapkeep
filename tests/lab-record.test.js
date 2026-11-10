@@ -15,6 +15,7 @@ import path from "node:path";
 import os from "node:os";
 import { fileURLToPath } from "node:url";
 import { SCHEMA, createRun, rebuildIndex } from "../scripts/lab/record.mjs";
+import { asRoot } from "./preconditions.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -328,7 +329,7 @@ test("seq is max(seq)+1 of the parsed index, and a missing trailing newline is r
   assert.ok(repaired.endsWith("\n"));
 });
 
-test("finished is set only after the locked write succeeds", async (t) => {
+test("finished is set only after the locked write succeeds", { skip: asRoot }, async (t) => {
   const { start } = await fixture(t);
   const run = await start();
   await chmod(run.directory, 0o500);
@@ -344,7 +345,7 @@ test("finished is set only after the locked write succeeds", async (t) => {
   await assert.rejects(run.finish({ result: "pass" }), /finished/);
 });
 
-test("a retry after a failed write records the source-mismatch limit once", async (t) => {
+test("a retry after a failed write records the source-mismatch limit once", { skip: asRoot }, async (t) => {
   const { repository, start } = await fixture(t);
   const run = await start();
   run.limit("caller limit");

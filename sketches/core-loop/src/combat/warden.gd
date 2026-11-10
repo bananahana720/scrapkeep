@@ -276,6 +276,15 @@ func family_open() -> bool:
 	return _posture.staggered
 
 
+# Swaps in a mounted posture, carrying the current one's script variables over.
+func replace_posture(next) -> void:
+	for property in _posture.get_property_list():
+		if property.usage & PROPERTY_USAGE_SCRIPT_VARIABLE:
+			next.set(property.name, _posture.get(property.name))
+	next.mounted_warden = weakref(self)
+	_posture = next
+
+
 func on_guard_scattered(swarm, _at: Vector3) -> void:
 	if swarm == guard and family == Roster.SWARM:
 		_guard_scatter_frame = Engine.get_physics_frames()

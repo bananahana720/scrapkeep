@@ -16,7 +16,18 @@ extends Node
 # game in place, since a quit in the middle of a threaded load logs script errors for every script
 # it was reading. --boot-card forces the card there (the cloud boot measure); --boot-sync forces the
 # synchronous path anywhere. A test sets force_card / force_sync before adding this scene.
+#
+# A build whose game does not load says so and leaves (_broken): main.tscn still loads when game.gd,
+# or anything it preloads, does not, and its root then comes up as a bare node. Without the check the
+# card fades onto an empty window that never answers. A test points game_scene at a stand-in.
+#
+# Every launch prints the build stamp once (build_stamp.gd, SCRAPKEEP_BUILD), and the card shows it
+# in its bottom right corner. The stamp script preloads nothing, so it costs the card no load.
 
+# The one headless question (src/core/app_shell.gd). It reads engine classes only and preloads
+# nothing, so the card stays as light as the note above asks.
+const AppShell := preload("res://src/core/app_shell.gd")
+const BuildStamp := preload("res://src/core/build_stamp.gd")
 const GAME_SCENE := "res://main.tscn"
 const FONT_PATH := "res://assets/fonts/NotoSans-Bold.ttf"
 # Palette.CHARCOAL and Palette.AMBER, copied: palette.gd pulls the material table with it.
@@ -39,6 +50,7 @@ signal handed_off(game: Node)
 var force_card := false
 var force_sync := false
 var close_handler := Callable()
+var game_scene := GAME_SCENE
 
 var _card: Control
 var _play: Button
@@ -47,6 +59,7 @@ var _loading := false
 var _game: Node
 var _start_wanted := false
 var _closing := false
+var _failed := false
 var _ground_wait := 0.0
 var _fade_started := false
 # The window's vsync mode and Engine.max_fps from before the load, put back at the hand-off.
@@ -55,13 +68,14 @@ var _paced := {}
 
 func _ready() -> void:
 	name = "Boot"
+	print(BuildStamp.line())
 	if _use_card():
 		# A close request in the middle of the load waits for it (_notification, _poll).
 		get_tree().auto_accept_quit = false
 		_build_card()
 		_boot("boot_card")
 		_unpace()
-		ResourceLoader.load_threaded_request(GAME_SCENE, "", false)
+		ResourceLoader.load_threaded_request(game_scene, "", false)
 		_loading = true
 		_announce_interactive.call_deferred()
 	else:
@@ -73,7 +87,7 @@ func _use_card() -> bool:
 		return false
 	if force_card or _flag("--boot-card"):
 		return true
-	return DisplayServer.get_name() != "headless"
+	return not AppShell.headless()
 
 
 static func _flag(flag: String) -> bool:
@@ -82,8 +96,9 @@ static func _flag(flag: String) -> bool:
 
 # The synchronous path: the old main scene, built in place, /root/Game, the boot scene gone.
 func _build_in_place() -> void:
-	_add_game(load(GAME_SCENE))
-	queue_free()
+	_add_game(load(game_scene))
+	if not _failed:
+		queue_free()
 
 
 func _process(delta: float) -> void:
@@ -95,19 +110,19 @@ func _process(delta: float) -> void:
 
 
 func _poll() -> void:
-	match ResourceLoader.load_threaded_get_status(GAME_SCENE):
+	match ResourceLoader.load_threaded_get_status(game_scene):
 		ResourceLoader.THREAD_LOAD_LOADED:
 			_loading = false
 			_boot("boot_loaded")
-			_add_game(ResourceLoader.load_threaded_get(GAME_SCENE))
+			_add_game(ResourceLoader.load_threaded_get(game_scene))
 			if _closing:
 				_quit()
 		ResourceLoader.THREAD_LOAD_IN_PROGRESS:
 			pass
 		_:
 			_loading = false
-			push_warning("boot: threaded load of %s failed; loading it in place" % GAME_SCENE)
-			_add_game(load(GAME_SCENE))
+			push_warning("boot: threaded load of %s failed; loading it in place" % game_scene)
+			_add_game(load(game_scene))
 			if _closing:
 				_quit()
 
@@ -129,11 +144,14 @@ func _repace() -> void:
 func _add_game(scene: PackedScene) -> void:
 	_repace()
 	if scene == null:
-		push_error("boot: %s did not load" % GAME_SCENE)
-		# A broken build quits instead of leaving the card up for good.
-		get_tree().quit(1)
+		_broken("%s did not load" % game_scene)
 		return
 	_game = scene.instantiate()
+	if _game.get_script() == null:
+		_game.free()
+		_game = null
+		_broken("the game script of %s did not load" % game_scene)
+		return
 	# The game builds its title stage inside add_child (_ready), and that stage queues the opening
 	# at once, so the hold is a meta read in TitleStage.setup: set before the game enters the tree.
 	# Only a card holds; the in-place path leaves it unset and the opening runs as ever.
@@ -147,6 +165,25 @@ func _add_game(scene: PackedScene) -> void:
 	if _start_wanted and _game.flow != null:
 		_game.flow.press_start()
 	_hand_over_input()
+
+
+# A build that cannot start. With no card (a headless launch, a test, a bot) it exits at once with
+# code 1. With the card up the player is told, Play becomes Quit, and the exit code is 1 however
+# they leave (the card still owns the window's close, _notification). SCRAPKEEP_BOOT_FAILED marks
+# the failure in the log. The exit with no card does not pass through close_handler: there is no
+# close to watch, and a broken build must never stay up.
+func _broken(why: String) -> void:
+	_failed = true
+	push_error("boot: %s" % why)
+	print("SCRAPKEEP_BOOT_FAILED %s" % why)
+	if _card == null:
+		get_tree().quit(1)
+		return
+	_status.text = "This build did not load. Quit, then install it again."
+	_play.text = "Quit"
+	_play.disabled = false
+	_play.focus_mode = Control.FOCUS_ALL
+	_play.grab_focus()
 
 
 # The card stops taking input the moment the game is up; a keyboard or pad focus on it goes to the
@@ -219,7 +256,7 @@ func _quit() -> void:
 	if close_handler.is_valid():
 		close_handler.call()
 	else:
-		get_tree().quit()
+		get_tree().quit(1 if _failed else 0)
 
 
 func _notification(what: int) -> void:
@@ -245,6 +282,9 @@ func _announce_interactive() -> void:
 
 
 func _on_play() -> void:
+	if _failed:
+		_quit()
+		return
 	if _game != null:
 		# Past the hand-off the card is click-through; a Play that still lands (Enter on a held focus)
 		# does what the real title's Play does.
@@ -303,6 +343,15 @@ func _build_card() -> void:
 		_status.add_theme_font_override("font", font)
 	for node in [title, _play, _status]:
 		box.add_child(node)
+	var stamp := Label.new()
+	stamp.name = "BuildStamp"
+	stamp.text = BuildStamp.label()
+	stamp.add_theme_font_size_override("font_size", 14)
+	stamp.add_theme_color_override("font_color", Color(AMBER, 0.6))
+	stamp.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT, Control.PRESET_MODE_MINSIZE, 16)
+	stamp.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	stamp.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	_card.add_child(stamp)
 	_play.pressed.connect(_on_play)
 
 

@@ -2,6 +2,7 @@ extends Node3D
 
 const Palette := preload("res://src/core/palette.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
+const DamageDoor := preload("res://src/combat/damage_door.gd")
 
 # Kest's sticky charges. A thrown charge flies the lobbed arc its throw committed and
 # sticks where that arc lands (or where the world cuts it short); a dropped one (the
@@ -166,7 +167,7 @@ func _fly(charge: Dictionary, delta: float, space: PhysicsDirectSpaceState3D) ->
 func _touching(charge: Dictionary, enemies: Array):
 	var reach: float = charge.get("reach", CONTACT_REACH)
 	for enemy in enemies:
-		if not is_instance_valid(enemy) or (enemy.has_method("is_dead") and enemy.is_dead()):
+		if DamageDoor.dead(enemy):
 			continue
 		var hull: float = float(enemy.get("radius")) if enemy.get("radius") != null else 1.0
 		if (enemy.global_position - charge["pos"]).length() - hull <= reach:

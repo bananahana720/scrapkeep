@@ -54,6 +54,52 @@ Each persona is a bot policy (`tools/bot_driver.gd`) played for a reason.
 | Placeholders | `scripts/placeholder-gate.mjs` | One major line with the count by kind. Expected until wave 20; read it as a trend. |
 | Skips and getting lost | Each stage's beats (`src/core/stage_beats.gd`) | A stage left with no fight beat, or a first-timer roaming over 90 s before the Warden: watch. |
 
+## The player's-eye pass
+
+Everything above reads the game's numbers. None of it sees the screen, so a build with an invisible objective, a telegraph that does not draw or a briefing nobody can follow passes it. This pass looks. One play of the launched game is filmed as a player's screen shows it, the film is read cold by a reader who has never seen the game, and a judge sets what the reader said beside what the game knew. A place where the two disagree is a finding a player would feel.
+
+```bash
+node scripts/redteam/eye.mjs --persona=cautious                       # film, then lay it out
+node scripts/redteam/eye.mjs --persona=cautious --plant=objective --death-at=60   # the control
+node scripts/redteam/eye.mjs --persona=first-timer --film=whole
+node scripts/redteam/eye.mjs --persona=cautious --from=<a film folder from the PC>
+```
+
+**The film** (`sketches/core-loop/tools/eye_film.gd`, `tools/self_play.gd --self-play-film`). The bot starts the game with its keys and the game is not told a bot is playing (`--self-play-eyes=1`), so the screens only a player's game shows are on film: the launch take, the briefing's kit pick and start pick, a hotwire offer. Frames are taken at each screen, each held (paused) screen, each objective change, each first key prompt and tip, each offer, each big hit with the two seconds before it (at most 16 a film, at least six seconds apart), each stage clear, each boss phase, the boss going down, each death, and every ten seconds of play. `film.ndjson` holds one row a frame of what the game knew: its state, the objective it had set, hull, and what hit.
+
+| Film | Plays | Length |
+| --- | --- | --- |
+| `whole` | world 1 start to finish on the fastest line: the dam, the flume, Brindle, the win and the first screen of world 2 | 8.1 game minutes, 23 minutes to film in the cloud, 175 pictures (measured on w33). Give it to two or three readers, about 60 pictures each, cut between two moments and never inside a hit's lead-in: one reader cannot hold that many pictures |
+| `wait` (the cautious default) | a player who hangs back in the dam for four minutes, a planted death, the death screen, and the start of a second run | 4.3 game minutes, 16 minutes to film in the cloud (measured on w33; the control with `--death-at=60` took 4 minutes) |
+
+**The reader** gets `reader/`: the pictures renumbered `001.jpg` up and `BRIEF.md`, which holds the persona's card and the questions. Nothing in it says why a frame was taken, what the game knew or how the game works. The reader is a fresh agent that reads only that folder; never the thread that filmed, and never one that has read the code or the design. It answers per picture: what is on the screen, what it thinks it is meant to do, words it does not understand, and what it cannot see or read. For each hit and death it is asked what the earlier pictures told it was coming.
+
+| Persona | Who reads |
+| --- | --- |
+| first-timer | has never seen the game; gives up on what it cannot work out in a few seconds |
+| cautious | reads every word, hangs back, hates being hit by what it could not see and words that leave too soon |
+| speedrunner | resents every screen that holds it and every second in which nothing is asked |
+| greedy | wants to know exactly what every offer gives and costs |
+
+**The judge** fills `judge/SHEET.md`, which lists each picture beside the game's own row. Findings come from disagreement: the reader thought it was meant to do one thing and the objective said another; the reader could not say what hit it and the row names the source; the reader quotes a word it does not know; the reader reports nothing where the game was showing something.
+
+**The control.** A clean read is evidence only if a planted fault is caught the same way. Each pass films one control with `--plant=objective` (the objective plate is not drawn; the play watch still sees its words, so the bots pass it) and gives it to a second reader, who is not told anything is planted. The control is caught when that reader cannot say what they are meant to do on the pictures where the game had set an objective and the clean film's reader could. A control that reads the same as the clean film voids the pass.
+
+Give each reader a copy of `reader/` at a path that says nothing (the film folder's own name can name the plant), and save its reply unedited beside the film as `READ.md`. The wait film's death is planted to reach the death screen, so a reader's complaint that it was killed by something it never saw is the plant and not a finding.
+
+**What a cloud film can and cannot say.** The cloud draws with a software renderer. Words, layout, marks, what is on screen and when all read true. Colour, light, bloom and frame pacing do not; the film draws only the frames it keeps, so GPU particles are under-shown, a picture-in-picture panel (a boss's entrance) is black in its first picture, and it is never a frame-time reading; the renderer also caps per-instance shader values at 4,096 objects and logs an error past that, which a GPU does not. For look, the PC lane films a first-timer's run once a wave (ruling cp): `node scripts/redteam/eye.mjs --persona=first-timer --gpu` uses the machine's own display and renderer and draws every frame, and its brief asks the reader to judge the look as well. `--from` lays out a film made elsewhere (add `--look` when it is a PC film). Sound is not read at all.
+
+## The receipt
+
+A hand-written receipt opens with two verdicts, not one:
+
+1. **Promotion:** new blockers against the base, as now. Base-same findings do not hold a promotion.
+2. **Player read:** how many things a player would feel on this build, whatever wave they came from. Base-same is a fact about the code's history; the player meets the fault either way.
+
+Each finding leads with one plain sentence of what the player sees or feels, then the picture numbers or the replay command, the bug-bar grade and area, and the thread that owns the fix. Ticks, seeds and file names go after that sentence, never in place of it. The receipt ends with what the pass could not see.
+
+Every player-read finding then gets a row in [PLAY-FINDINGS.tsv](../../project-guide/handoff/PLAY-FINDINGS.tsv): what the player meets, where it was seen, a grade, an owner and a review date (ruling cn). A finding never holds a promotion; the list is how one stops being forgotten. A finding the cloud film cannot settle (colour, light, effects, the camera) is graded `check` until the wave's PC film has decided it (ruling cp). The pull request that fixes a finding removes its row. The next film of the stage then checks the fix where the player meets it: a fresh reader reads the film, and a fix that does not read on screen gets its row back, rewritten with what that reader saw. `node scripts/redteam/findings.mjs --check` reads the list's shape, `--print` lists it by owner and `--overdue` names the rows past their date.
+
 ## The findings page
 
 One page, worst first, graded on the bug bar's severities (blocker, major, minor) and its 11 areas, plus a watch list for taste and tuning calls that are not bugs. One line per root cause, however many runs hit it:
@@ -71,4 +117,4 @@ Each blocker and major becomes a card for the wave coordinator, as the bug bar s
 
 ## Limits
 
-Bots are automated play: they find numbers, stalls and crashes, not feel. Everything runs headless, so there is no GPU or picture: a hitch here is main-thread time on a shared 4-core box, to be checked with MangoHud (`scripts/frametime-check.mjs`) on Andrew's PC. Bot runs use the source tree, not the exported pack; the export step proves the build exports and boots. Andrew's sitting decides feel.
+Bots are automated play: they find numbers, stalls and crashes, not feel. Everything but the player's-eye pass runs headless, so there is no GPU or picture: a hitch here is main-thread time on a shared 4-core box, to be checked with MangoHud (`scripts/frametime-check.mjs`) on Andrew's PC. Bot runs use the source tree, not the exported pack; the export step proves the build exports and boots. Andrew's sitting decides feel.

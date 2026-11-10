@@ -34,8 +34,8 @@ class Rig:
 		return true
 	func _ace_named(id: String, at: int, _boss := false, _won := true) -> void:
 		named.append([id, at])
-	func _ace_stage(stage: int, at: int) -> void:
-		staged.append([stage, at, level_tune(stage)])
+	func _ace_stage(stage: int, at: int, fight := false) -> void:
+		staged.append([stage, at, level_tune(stage, fight)])
 
 class FakeElite:
 	extends Node3D
@@ -228,6 +228,10 @@ func _process(_delta: float) -> bool:
 	a.end_moment("shop", "bay")
 	_t.eq("leaving the bay returns", _last(a), "")
 
+	n = a.staged.size()
+	a.fabricator_used()
+	_t.check("a one-pass tune does not begin inside the Warden's fight", a.staged.size() == n and a._moments.is_empty(), "%d moments" % a._moments.size())
+	events.beacon_unsealed.emit(4)
 	events.synergy_discovered.emit("flume_weir_cache", "world", true)
 	_t.eq("the Cable Reach cache finds the Lost Tape", _last(a), "secret-lost-tape")
 	a.engine.clock = int(a._moments[0].until)
@@ -245,6 +249,31 @@ func _process(_delta: float) -> bool:
 	a.engine.clock = int(a._moments[0].until)
 	a._tend_moments()
 	_t.eq("after one pass it hands back", _last(a), "")
+	a.fabricator_used()
+	events.synergy_discovered.emit("flume_weir_cache", "world", true)
+	var passes: int = a._moments.size()
+	events.warden_engaged.emit(4)
+	_t.check("a Warden engaging cuts a one-pass tune short", passes >= 1 and _last(a) == "" and a._moments.is_empty(),
+		"%d passes playing, then band '%s' with %d moments" % [passes, _last(a), a._moments.size()])
+	a.fabricator_used()
+	events.synergy_discovered.emit("thermal_ride", "world", true)
+	_t.check("and none begins until the arena opens", _last(a) == "" and a._moments.is_empty(), "%d moments" % a._moments.size())
+	events.beacon_unsealed.emit(4)
+	a.fabricator_used()
+	_t.eq("then the fabricator's tune plays again", _last(a), "fabricator")
+	a.end_moment("fabricator")
+
+	# An event still running when the Warden engages gives the band up for the fight too.
+	events.event_started.emit("flood")
+	_t.eq("an event's tune plays before the fight", _last(a), "event-flood")
+	events.warden_engaged.emit(4)
+	_t.eq("the Warden takes the band from an event's tune", _last(a), "")
+	events.event_ended.emit("flood", "passed")
+	var staged_in_fight: int = a.staged.size()
+	events.event_started.emit("flood")
+	_t.eq("an event that begins inside the fight does not take the band", a.staged.size(), staged_in_fight)
+	events.event_ended.emit("flood", "passed")
+	events.beacon_unsealed.emit(4)
 
 	# Rare remixes, read where they play.
 	var zone31 := 0

@@ -99,7 +99,7 @@ Facts used: a dawn drop-in from a survey deck, three runs through slot canyons a
 	},
 	{
 		"id": "lore.park_dam.intro.warden", "kind": "intro", "zone": "1-1", "subject": "warden",
-		"text": "Dam Warden. Gates open on its count, not ours.",
+		"text": "Warden on the dam. Gates open on its count, not ours.",
 	},
 ```
 
@@ -153,7 +153,7 @@ Facts used: a weir on a mesa feeds a 1.6 km wooden flume on trestles, with a sip
 	},
 	{
 		"id": "lore.park_flume.intro.warden", "kind": "intro", "zone": "1-2", "subject": "warden",
-		"text": "Head House Warden. Flume boiling. Flow still logged as normal.",
+		"text": "Warden in the head house. Flume boiling. Flow still logged as normal.",
 	},
 	{
 		"id": "lore.park_flume.intro.brindle", "kind": "intro", "zone": "1-2", "subject": "brindle",

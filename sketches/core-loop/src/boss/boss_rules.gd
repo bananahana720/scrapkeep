@@ -14,9 +14,13 @@ const POSTURE := {"curve": 2.0, "ram_shatters": false, "mult_max": 1.5}
 # the catch. hp reads the chunks left, so MAX_HP is the chunk count.
 const MAX_HP := 4.0
 # A phase ends when its chunk is shattered and its set piece has played for its minimum
-# time; a chunk lost earlier holds the phase, and the hull takes no posture, until then.
+# time; a chunk lost earlier holds the phase until then. Hits on a held hull bank toward the
+# next phase's bar, up to HELD_BANK of it (ruling bs): the bar they fill is kept through the
+# hold and the beat that follows, and no stagger starts from it. The Scuttle's hold banks
+# nothing, because no bar follows it.
 const PHASE_NAMES := ["Requisition", "Furnace", "Scuttle"]
 const PHASE_MIN_SECONDS := [28.0, 24.0, 22.0]
+const HELD_BANK := 50.0
 # No attack lands before this, so the entry and the hull readout are free to read.
 const INTRO_SECONDS := 3.0
 
@@ -104,6 +108,21 @@ const CHARGE_SHOVE_SIDE := 12.0
 const CHARGE_SHOVE_UP := 9.0
 const CHARGE_GRACE := 1.0
 const CHARGE_STOP_R := 49.0
+# The hull turns to its lane through the tell instead of taking the heading in one tick. At
+# this rate (radians a second) no corner of the 9 m by 14 m hull outruns CHARGE_SPEED: a corner
+# is 8.32 m from the centre. The rate is the rule, not a ceiling: the hull turns faster when
+# it must to be square in the lane CHARGE_TURN_SETTLE seconds before the lane goes live. The
+# most that asks is a full reverse inside the shortest tell: 3.7 rad/s (a 31 m/s corner) in
+# Hazard.MIN_WARN, and 7.0 rad/s (a 58 m/s corner) in the hook turn's cued tell, which only a
+# ball that stays dead astern through the hook's cue reaches. Under CHARGE_TURN_SNAP radians
+# owed the hull takes the heading exactly.
+const CHARGE_TURN_RATE := 2.88
+const CHARGE_TURN_SETTLE := 0.15
+const CHARGE_TURN_SNAP := 0.002
+# The Scuttle's hint for a build that cannot hit its way in (boss.gd take_hint): the UI row
+# it shows and the seconds before it may show again while he has still not been stunned.
+const SCUTTLE_HINT := "hint_wall_bait"
+const SCUTTLE_HINT_GAP := 20.0
 
 # The eject: a 2.5 s arc to the banked ring, then a lap-running chase.
 const EJECT_FLIGHT := 2.5

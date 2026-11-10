@@ -131,11 +131,13 @@ static func spawnable(kind: String) -> bool:
 
 
 static func name_of(kind: String) -> String:
-	return kind.replace("_", " ").capitalize()
+	return Roster.name_of(kind)
 
 
 static func line_of(kind: String) -> String:
-	return String(Roster.row(kind).get("line", ""))
+	var job := Roster.job_of(kind)
+	var line := String(Roster.row(kind).get("line", ""))
+	return line if job == "" else "%s %s" % [job, line]
 
 
 static func where_met(kind: String) -> String:

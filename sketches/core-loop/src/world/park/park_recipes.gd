@@ -35,6 +35,7 @@ extends RefCounted
 # (tools/blender/park/dam_dressing.py), so its node stands on seat() like a greybox stand-in of its stamp, not on the crest; no
 # `y` (which the graph reads as a deck), no stretch or shear, and the stamped ground stays the collider.
 
+const AppShell := preload("res://src/core/app_shell.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const RecipeProps := preload("res://src/presentation/recipe_props.gd")
 const MaterialSlots := preload("res://src/presentation/material_slots.gd")
@@ -1915,7 +1916,7 @@ class Placer extends Node3D:
 		# thread-safe, and these loader-thread loads raced the scatter's kit meshes and the indicator's mesh in the
 		# frames they were in flight (13 of 30 headless boots). ending_sequence.gd's _build_crater has the same gate.
 		# Those loads take a frame each before the rows place, as the loader's would, so no row step carries one.
-		var headless := DisplayServer.get_name() == "headless"
+		var headless := AppShell.headless()
 		for path: String in (wanted if threaded and not headless else []):
 			if ResourceLoader.load_threaded_request(path) == OK:
 				_pending.append(path)

@@ -1,6 +1,7 @@
 extends CanvasLayer
 
 const Palette := preload("res://src/core/palette.gd")
+const UiFonts := preload("res://src/ui/ui_fonts.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const Keycap := preload("res://src/ui/keycap.gd")
 const TreePick := preload("res://src/ui/tree_pick.gd")
@@ -37,6 +38,15 @@ const BUBBLE_Y := 0.30
 const COUNTER_X := 0.36
 const COUNTER_Y := 0.33
 const TALK_KEY := KEY_T
+# The start pick's page of the briefing, top to bottom over the card: the job in one line (the
+# game's one line, ruling cj: the works run perfectly and the crew is here to fix that) and the
+# prompt that says the tiles are a choice. Each is [words, font size, rise above the card]. With
+# the card's wordiest three tiles the page is 40 words, the calm-screen budget, so a word added
+# here needs one taken away (ui_workshop_pick_test counts it).
+const BRIEF_LINE := "Spillway Works. Running perfectly. Go and fix that."
+const BRIEF_WORDS := "Moss packed three. Take one."
+const BRIEF_ROWS := [[BRIEF_LINE, 22, 118.0], [BRIEF_WORDS, 30, 66.0]]
+const BRIEF_ROW_H := 44.0
 # States between runs where the companion panel edits the profile. The camp (C7) is an overlay on the title and the summary (screens.gd), not a flow state, so it never joins this list.
 const OUTSIDE_RUN := ["title", "class_select"]
 
@@ -44,6 +54,8 @@ var game
 var armed := true
 var _start_pointer_held := false
 var pick
+# The briefing's veil and its words (BRIEF_ROWS, one Label each), behind flow's start card (briefing()).
+var brief: ColorRect
 var counter
 var bubble
 var companion_panel
@@ -116,6 +128,21 @@ func setup(game_ref) -> void:
 	counter.acted.connect(_on_acted)
 	counter.pick_wanted.connect(open_pick)
 	counter.leave_wanted.connect(close_counter)
+	brief = ColorRect.new()
+	brief.color = Color(Palette.CHARCOAL, 0.72)
+	brief.set_anchors_preset(Control.PRESET_FULL_RECT)
+	brief.mouse_filter = Control.MOUSE_FILTER_STOP
+	brief.visible = false
+	add_child(brief)
+	for row in BRIEF_ROWS:
+		var words := Label.new()
+		words.text = row[0]
+		words.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		words.add_theme_font_override("font", UiFonts.bold())
+		words.add_theme_font_size_override("font_size", row[1])
+		words.add_theme_color_override("font_color", Palette.AMBER if row[0] == BRIEF_LINE else Palette.SAND)
+		words.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		brief.add_child(words)
 	pick = TreePick.new()
 	add_child(pick)
 	pick.chosen.connect(choose)
@@ -202,10 +229,22 @@ func _sync_pick() -> void:
 	if not t.pending():
 		if pick.is_open():
 			close_pick()
+		else:
+			_resync_start_card()
 		return
 	if pick.is_open() and pick.depth == t.path().size() + 1:
 		return
 	open_pick()
+	if not pick.is_open():
+		# An owed pick that cannot open (no pair to offer) must not keep the start card back.
+		_resync_start_card()
+
+
+# The start card waits while a kit pick is due (kit_pick_due); once the offer has settled, into an
+# open pick or into nothing, flow decides again whether the card shows.
+func _resync_start_card() -> void:
+	if game.flow != null and game.flow.in_play():
+		game.flow.show_start_card()
 
 
 func open_pick() -> void:
@@ -221,11 +260,16 @@ func open_pick() -> void:
 	# A pick taken from the counter's plate stands in for the counter until it closes,
 	# so the two screens never add their words together.
 	counter.visible = false
+	# The kit pick has the screen to itself: a start card that was up waits behind it.
+	_resync_start_card()
 	_apply_hold()
 
 
 func close_pick(chosen_index := -1) -> void:
 	pick.close(chosen_index)
+	# The kit pick has had the screen: the start pick's card, if one is owed, takes it now.
+	if game.flow != null and game.flow.in_play():
+		game.flow.show_start_card()
 	_apply_hold()
 	if counter.is_open():
 		counter.visible = true
@@ -314,8 +358,10 @@ func card_holds_only() -> bool:
 
 
 func _apply_hold() -> void:
-	var held_now: bool = pick.is_open() or counter.is_open()
-	var pause: bool = pick.is_open()
+	var briefed := briefing()
+	var held_now: bool = pick.is_open() or counter.is_open() or briefed
+	var pause: bool = pick.is_open() or briefed
+	_show_briefing(briefed)
 	if held_now == _held and pause == _paused:
 		return
 	_held = held_now
@@ -340,6 +386,42 @@ func _enforce_hold() -> void:
 		game.capture_mouse(false)
 	if _paused and not get_tree().paused:
 		get_tree().paused = true
+
+
+# ---- The briefing ----
+
+# The run's briefing: the kit pick (the pick above), then the start pick of three (flow's start
+# card), one after the other on a paused screen before the ball rolls. The start card is flow's
+# and draws on its own layer over this one; this layer gives it the veil, the heading and the
+# hold. Only an armed workshop briefs, so tests and bots see the card as flow shows it.
+func briefing() -> bool:
+	return armed and _start_card_showing() and not pick.is_open()
+
+
+# True while the kit pick is up or about to open (its offer arrives a frame ahead of the screen),
+# so flow keeps the start card back until the kit pick has had the screen. A tree with nothing owed
+# opens no pick, so the card takes the screen in the same frame the last kit card is taken.
+func kit_pick_due() -> bool:
+	if not armed:
+		return false
+	var t = tree()
+	return pick.is_open() or (_offer_pending and t != null and t.pending())
+
+
+# Flow calls this whenever it shows or hides the start card, so the hold follows in the same frame.
+func sync_briefing() -> void:
+	_apply_hold()
+
+
+func _show_briefing(on: bool) -> void:
+	brief.visible = on
+	if not on:
+		return
+	var card = game.flow.start_card
+	for i in BRIEF_ROWS.size():
+		var words: Label = brief.get_child(i)
+		words.position = Vector2(0.0, card.position.y - float(BRIEF_ROWS[i][2]))
+		words.size = Vector2(screen_size().x, BRIEF_ROW_H)
 
 
 # ---- The companion screen ----
@@ -449,6 +531,7 @@ static func babble_beat(record: Dictionary) -> int:
 
 func _process(_delta: float) -> void:
 	sync_start_card_pointer()
+	_apply_hold()
 	if _held:
 		_enforce_hold()
 	var s = shop()
@@ -472,10 +555,12 @@ func _update_talk(shown: bool) -> void:
 # ---- Keys and the pad ----
 
 func _input(event: InputEvent) -> void:
-	# The start card's keys (1-3, V) win while it shows, over the tree pick too, but the counter
-	# alone keeps its own keys: its Leave shows Esc (w23 cautious red team: the counter could not
-	# be left before the pick).
-	if _start_card_showing() and (pick.is_open() or not counter.is_open()):
+	# In the briefing the card takes its own keys (start_pick_card.gd); this layer only keeps the
+	# notes shut, as the kit page does: the notes let go of the tree's pause when they close. The
+	# kit pick and the counter never share the screen with the card (kit_pick_due, open_pick).
+	if briefing():
+		if _notes_key(event):
+			get_viewport().set_input_as_handled()
 		return
 	if not armed:
 		return
@@ -528,8 +613,10 @@ func _pick_key(event: InputEvent) -> bool:
 			KEY_D:
 				pick.step_focus(1)
 				return true
-			KEY_TAB, KEY_P:
+			KEY_P:
 				return true
+	if _notes_key(event):
+		return true
 	if event.is_action_pressed("ui_cancel"):
 		close_pick()
 		return true
@@ -546,6 +633,14 @@ func _pick_key(event: InputEvent) -> bool:
 			pick.confirm()
 		return true
 	return false
+
+
+# The keys that open the field notes (Tab, the pad's Back), press or release: the briefing's two
+# pages swallow them, so the notes never open over a held screen.
+func _notes_key(event: InputEvent) -> bool:
+	if event is InputEventKey:
+		return event.physical_keycode == KEY_TAB
+	return event is InputEventJoypadButton and event.button_index == JOY_BUTTON_BACK
 
 
 func _counter_key(event: InputEvent) -> bool:

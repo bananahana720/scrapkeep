@@ -213,11 +213,24 @@ class Track:
         return int(round(s0 + p)), p / RATE * 1000
 
 
-def plan_for(pack, tracks):
+def cues_for(pack, only=None):
+    """The cues a pack's cut needs; a zone pack recutting only calm and travel needs only its roam cue."""
+    kind, _key, cue, roam, _stage = PACKS[pack]
+    if kind == 'zone' and only and set(only) <= {'calm', 'travel'}:
+        return (roam,)
+    return tuple(c for c in (cue, roam) + EXTRA.get(pack, ()) if c)
+
+
+def plan_for(pack, tracks, only=None):
     """clip id -> (track, mix 'cur' or 'high', first bar, bars, loop target bar or None)."""
+    plan = full_plan(pack, tracks)
+    return {k: v for k, v in plan.items() if only is None or k in only}
+
+
+def full_plan(pack, tracks):
     kind, _key, cue, roam, stage = PACKS[pack]
-    t = tracks[cue]
-    m = t.music_bars
+    t = tracks.get(cue)
+    m = t.music_bars if t else None
     if kind == 'roam':
         return dict(calm=(t, 'cur', 4, 16, 1), travel=(t, 'cur', 20, 16, 1), cadence=(t, 'high', m - 2, 2, None))
     if kind == 'boss':
@@ -283,12 +296,12 @@ def fit_gain(pcm):
     return gain
 
 
-def cut_pack(work, pack, tracks):
+def cut_pack(work, pack, tracks, only=None):
     kind, key, cue, roam, _stage = PACKS[pack]
-    for c in (cue, roam) + EXTRA.get(pack, ()):
-        if c and c not in tracks:
+    for c in cues_for(pack, only):
+        if c not in tracks:
             tracks[c] = Track(work, c)
-    plan = plan_for(pack, tracks)
+    plan = plan_for(pack, tracks, only)
     rows = {}
     for cid, (tr, which, first, bars, loop_bar) in plan.items():
         stems = tr.hi if which == 'high' else tr.cur
@@ -310,13 +323,14 @@ def cut_pack(work, pack, tracks):
     return kind, key, rows
 
 
-def write_pack(work, pack, kind, key, rows):
+def write_pack(work, pack, kind, key, rows, only=None, renders=None):
     own = OUT / pack / 'manifest.json'
     beside = OUT / TEMPLATES.get(pack, 'title') / 'manifest.json'
-    template = json.loads((own if own.exists() and kind == 'zone' else beside).read_text())
+    template = json.loads((own if own.exists() and (kind == 'zone' or only) else beside).read_text())
     folder = OUT / pack
     folder.mkdir(parents=True, exist_ok=True)
-    clips, sources = {}, {}
+    # With --clips, the clips not recut keep their manifest rows and their Oggs untouched.
+    clips, sources = (dict(template['clips']), dict(template['sources'])) if only else ({}, {})
     for cid, r in rows.items():
         tr = r['tr']
         scaled = limit({s: v * 10 ** (r['gain'] / 20) for s, v in r['pcm'].items()})
@@ -326,8 +340,8 @@ def write_pack(work, pack, kind, key, rows):
             files[s] = f'{cid}.{s}.ogg'
             encode(v, folder / files[s])
         mixname = tr.hi_name if r['which'] == 'high' else tr.cur_name
-        # A shifted copy's source is the mix it was shifted from.
-        mix_path = SPICE / f'{mixname.replace("-up2", "")}.wav'
+        # A shifted copy's source is the mix it was shifted from; a stand-in take (--render) names its own file.
+        mix_path = (renders or {}).get(tr.cue) or SPICE / f'{mixname.replace("-up2", "")}.wav'
         stem_dir = work / ('stretched' if tr.loop else 'stems/htdemucs') / mixname
         total = len(r['pcm']['drums'])
         clips[cid] = dict(parent=kind, take=mixname, source_state=f'{mixname} bars {r["first"]}-{r["first"] + r["bars"] - 1}',
@@ -357,25 +371,28 @@ def main():
     ap.add_argument('cmd', choices=('stretch', 'plan', 'pack'))
     ap.add_argument('work', type=Path)
     ap.add_argument('--packs', nargs='*', default=list(PACKS))
+    ap.add_argument('--clips', nargs='*', help='recut only these clip ids; the rest keep their Oggs and manifest rows')
+    ap.add_argument('--render', action='append', default=[], metavar='CUE=WAV',
+                    help="a stand-in take's mastered mix, recorded as the cue's source render")
     args = ap.parse_args()
     if args.cmd == 'stretch':
         return stretch(args.work)
+    renders = dict((c, Path(p)) for c, p in (r.split('=', 1) for r in args.render))
     tracks = {}
     for pack in args.packs:
         if args.cmd == 'plan':
             kind, key, cue, roam, stage = PACKS[pack]
-            for c in (cue, roam) + EXTRA.get(pack, ()):
-                if c and c not in tracks:
+            for c in cues_for(pack, args.clips):
+                if c not in tracks:
                     tracks[c] = Track(args.work, c)
-            for c in (cue, roam):
-                if c:
-                    t = tracks[c]
-                    print(pack, c, kind, stage, f'tempo {t.tempo:.3f} (read {t.read:.3f}) music bars {t.music_bars} head {t.head / RATE:.4f}s')
-            for cid, (t, which, first, bars, loop) in plan_for(pack, tracks).items():
+            for c in cues_for(pack, args.clips):
+                t = tracks[c]
+                print(pack, c, kind, stage, f'tempo {t.tempo:.3f} (read {t.read:.3f}) music bars {t.music_bars} head {t.head / RATE:.4f}s')
+            for cid, (t, which, first, bars, loop) in plan_for(pack, tracks, args.clips).items():
                 print('   ', cid, t.cue, which, first, bars, loop, f'snap {t.snap(which, first)[1]:.1f} ms')
         else:
-            kind, key, rows = cut_pack(args.work, pack, tracks)
-            write_pack(args.work, pack, kind, key, rows)
+            kind, key, rows = cut_pack(args.work, pack, tracks, args.clips)
+            write_pack(args.work, pack, kind, key, rows, args.clips, renders)
 
 
 if __name__ == '__main__':

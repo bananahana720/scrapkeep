@@ -156,3 +156,6 @@ class _Ctx:
 	var player = null
 	var events = null
 	var camera = null
+
+	func heading() -> Vector3:
+		return Vector3.FORWARD

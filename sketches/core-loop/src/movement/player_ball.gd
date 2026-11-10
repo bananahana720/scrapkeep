@@ -199,12 +199,6 @@ func setup(tuning_ref, events_ref, spawn: Vector3) -> void:
 	_rigid.kit = kit
 	_rigid.velocity_setting.connect(_keep_spin)
 	_rigid.teleporting.connect(_spin_clear)
-	# Seed the body before its first physics step: a pending teleport arrives too late
-	# on the very first tick. Outside the tree only the local position can be set.
-	if _rigid.is_inside_tree():
-		_rigid.global_position = spawn_point
-	else:
-		_rigid.position = spawn_point
 	_rigid.enemy_touched.connect(_on_enemy_touched)
 	_rigid.slammed.connect(_on_rigid_slammed)
 	_rigid.pylon_planted.connect(_on_pylon_planted)
@@ -300,7 +294,7 @@ func ball_position() -> Vector3:
 # body's interpolated transform, so the visuals and the camera move every frame
 # instead of stepping at the 90 Hz physics rate; with it off it is the raw position.
 func shown_transform() -> Transform3D:
-	if is_inside_tree() and get_tree().physics_interpolation:
+	if is_inside_tree() and get_tree().physics_interpolation and not _rigid.placing:
 		return _rigid.get_global_transform_interpolated()
 	return _rigid.global_transform
 
@@ -463,7 +457,7 @@ var _bank_logging_deferred := false
 func bank_geometry() -> Dictionary:
 	var at := ball_position()
 	var launch := Augments.bank_exit(state.velocity.length(), at - kit.anchor, drive_basis, kit)
-	return yours({"kind": "cone", "apex": at, "dir": launch.normalized(),
+	return yours({"kind": "cone", "aim": true, "apex": at, "dir": launch.normalized(),
 		"length": AIM_CONE_LENGTH * (1.0 + launch.length() / Augments.LAUNCH_CEILING),
 		"half_angle": AIM_CONE_HALF, "speed": launch.length()})
 
@@ -1503,13 +1497,13 @@ func _update_aim_cones(at: Vector3) -> void:
 	else:
 		indicator.clear("bank")
 	if not kit.vault_aim.is_empty():
-		indicator.set_shape("vault", yours({"kind": "cone", "apex": at, "dir": kit.vault_aim["dir"],
+		indicator.set_shape("vault", yours({"kind": "cone", "aim": true, "apex": at, "dir": kit.vault_aim["dir"],
 			"length": AIM_CONE_LENGTH, "half_angle": AIM_CONE_HALF}))
 	else:
 		indicator.clear("vault")
 	if kit.mounted and not kit.slingshot_aim.is_empty():
 		var fill: float = kit.slingshot_aim["fill"]
-		indicator.set_shape("slingshot", yours({"kind": "cone", "apex": at, "dir": kit.slingshot_aim["dir"],
+		indicator.set_shape("slingshot", yours({"kind": "cone", "aim": true, "apex": at, "dir": kit.slingshot_aim["dir"],
 			"length": AIM_CONE_LENGTH * (1.0 + fill), "half_angle": AIM_CONE_HALF, "fill": fill}))
 	else:
 		indicator.clear("slingshot")

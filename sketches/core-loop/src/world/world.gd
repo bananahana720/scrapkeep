@@ -647,9 +647,7 @@ func _spawn_vault() -> void:
 # The stage's authored packs, if it has any; the director spawns nothing else then. A row's
 # own packs, elite and elite_arrival win over the table's.
 func _author_director(def := {}) -> void:
-	director.authored = def.get("packs", ctx.stages.packs())
-	director.elite = def.get("elite", ctx.stages.elite())
-	director.elite_arrival = int(def.get("elite_arrival", ctx.stages.elite_arrival()))
+	director.author(def, ctx.stages)
 
 
 # The enemy count the director is given: the group less the activities' standing enemies.
@@ -667,7 +665,7 @@ func _step_director(delta: float) -> void:
 	var alive := director_alive()
 	var ball: Vector3 = ctx.player.ball_position()
 	var v: Vector3 = ctx.player.state.velocity
-	var forward: Vector3 = -ctx.camera.yaw_basis().z
+	var forward: Vector3 = ctx.heading()
 	var due: Array = director.advance(delta, alive, Vector2(ball.x, ball.z), Vector2(v.x, v.z), Vector2(forward.x, forward.z))
 	for tier in director.take_threat_rises():
 		ctx.events.threat_rose.emit(tier)
@@ -707,7 +705,7 @@ func _step_director(delta: float) -> void:
 func _on_reward_chosen(_part_id: String) -> void:
 	var player = ctx.player
 	launch.gravity = ctx.tuning.f("gravity")
-	var velocity := Launch.launch_velocity(player.state.velocity, ctx.tuning.f("cruise"), -ctx.camera.yaw_basis().z)
+	var velocity := Launch.launch_velocity(player.state.velocity, ctx.tuning.f("cruise"), ctx.heading())
 	var start := Launch.rail_start(player.state.velocity)
 	if Vector2(start.x, start.z).length() < 0.5:
 		start = velocity

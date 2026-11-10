@@ -143,8 +143,14 @@ func _check_guard() -> void:
 	var ram := _strike(_brute, "ram", 20.0)
 	_report("dish blocks the front", bolt == 0.0 and ram == 0.0 and _deflected == deflected + 2,
 		"bolt removed %.1f, ram removed %.1f, deflected %d" % [bolt, ram, _deflected - deflected])
+	# The stomp's punch (52 at heft 1.0) sits just under the brute's plating (54), and the scrap
+	# the ball has rolled over by now moves heft a few percent either way. Over the plating the
+	# hit pops the brute's plate and removes nothing: that landed too. A stomp the dish took
+	# would do neither.
+	var plates: int = _brute.plates
 	var stomp := _strike(_brute, "stomp", 20.0)
-	_report("over the top lands", stomp > 0.0, "stomp removed %.1f" % stomp)
+	_report("over the top lands", stomp > 0.0 or _brute.plates < plates,
+		"stomp removed %.1f, plates %d to %d" % [stomp, plates, _brute.plates])
 	var behind: Vector3 = _brute.global_position + (_brute.global_position - _ball_at).normalized() * 9.0
 	_game.player.reset_to(_game.ctx.terrain.drop_point(behind.x, behind.z, 1.05))
 	_next()

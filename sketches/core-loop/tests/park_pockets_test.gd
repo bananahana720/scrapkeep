@@ -12,8 +12,8 @@ extends SceneTree
 # planted rows each break the rule they plant: a door 100 m from the spawn, a door on a line node
 # (which also has no detour), a hidden pocket whose site lists one route.
 #
-# The pay ladder (2.12): the on-line part is common (the camp's named Hot Rivets, which wins over
-# the roll, activities.gd _finish), the larger-detour off-line pocket pays rare only and the
+# The pay ladder (2.12): the on-line part is common (the camp's common roll, or a row's named part,
+# which wins over the roll, activities.gd _finish), the larger-detour off-line pocket pays rare only and the
 # smaller one common or rare. A planted swap, the camp paying rare and the larger-detour pocket
 # common, breaks the ladder on both rows, and a row with no pay.rarities and no named part breaks
 # it too. The full visit (spawn, all four doors in the best order, beacon) is reported and finite.

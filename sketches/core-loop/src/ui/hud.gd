@@ -2,6 +2,7 @@ extends CanvasLayer
 
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const Palette := preload("res://src/core/palette.gd")
+const Tuning := preload("res://src/movement/tuning.gd")
 const Objectives := preload("res://src/core/objectives.gd")
 const AimReticle := preload("res://src/ui/aim_reticle.gd")
 const ScreenRegions := preload("res://src/ui/screen_regions.gd")
@@ -28,6 +29,7 @@ const UiProfile := preload("res://src/ui/ui_profile.gd")
 const WorldPrompt := preload("res://src/ui/world_prompt.gd")
 const WhyCallout := preload("res://src/ui/why_callout.gd")
 const PartName := preload("res://src/ui/part_name.gd")
+const DangerMark := preload("res://src/ui/danger_mark.gd")
 const BossPlate := preload("res://src/ui/boss_plate.gd")
 const ChainCounter := preload("res://src/ui/chain_counter.gd")
 const DamageNumbers := preload("res://src/presentation/damage_numbers.gd")
@@ -98,6 +100,8 @@ const ACH_LAYER := 8
 const ACH_TOTAL := 3.0
 const ACH_TOP := 14.0
 const ACH_WORD := "Achievement"
+const ACH_FONT := 21
+const ACH_DETAIL_FONT := 15
 # A jukebox record found in play shares the achievement plate, after any achievement waiting.
 const TUNE_WORD := "New record"
 # A radio take found in play: the same plate, its own word, louder for a legend.
@@ -106,6 +110,10 @@ const TAKE_WORDS := {"b-side": "New B-side", "take": "New take", "legend": "Lege
 const LORE_WORDS := "New field note"
 const LORE_TOTAL := 3.0
 const LORE_TOP := 66.0
+# The top-right corner is one column: the radio chip, the unlock plate, the field note pill.
+# Each sits under whichever of the others is showing, this far apart, so none covers another.
+const CORNER_GAP := 4.0
+const CORNER_SLIDE := 480.0
 const OBJECTIVE_WORDS := Objectives.MAX_WORDS
 const TOAST_ICON := 26.0
 # How long a world card stands alone before its first stage card replaces it.
@@ -125,9 +133,13 @@ const RETIRED_TOASTS := ["part_gained", "reward_chosen", "heft_class_changed", "
 const ROW_COLOR := {"find_warden": "warden_engaged", "break_guard": "warden_engaged", "smash_core": "warden_engaged",
 	"grow_return": "warden_engaged", "break_warden": "warden_engaged", "charge_beacon": "beacon_charge_changed",
 	"find_activity": "activity_done", "roll_gate": "reward_offered", "hold_line": "launched", "break_brindle": "boss_arena_entered",
-	"break_yard_crew": "pack_arrived", "break_clamp_crews": "pack_arrived"}
+	"break_yard_crew": "pack_arrived", "break_clamp_crews": "pack_arrived",
+	"ride_sheet": "warden_engaged", "latch_warden": "warden_engaged", "fire_from_line": "warden_engaged",
+	"shoot_magnets": "boss_arena_entered", "slam_caps": "boss_arena_entered", "bait_charge": "boss_arena_entered",
+	"hit_cockpit": "boss_arena_entered", "ram_scooter": "boss_arena_entered"}
 # The rows whose glyph is ringed by how much of the Warden is broken.
-const RING_ROWS := ["find_warden", "break_guard", "smash_core", "grow_return", "break_warden", "charge_beacon"]
+const RING_ROWS := ["find_warden", "break_guard", "smash_core", "grow_return", "break_warden", "charge_beacon",
+	"ride_sheet", "latch_warden", "fire_from_line"]
 # The gaps of the top slot when a plate is mounted: from the band's top to the plate, and
 # from the plate to the objective plate under it.
 const PLATE_TOP := 6.0
@@ -136,6 +148,10 @@ const TOAST_WIDTH := 800.0
 const MARGIN := 18.0
 const BOTTOM_GAP := 20.0
 const HEALTH_BAR := 190.0
+# The word under each bar (ui/gauge.gd caption): the game's own words for them, as the perk
+# rows say "max health" and the wear stamp says "ARMOUR OFF".
+const HEALTH_WORD := "HEALTH"
+const ARMOR_WORD := "ARMOUR"
 const LOW_HEALTH := 0.25
 # Facts whose wording needs a field from the signal, by argument position.
 const FIELD_ARGS := {
@@ -154,8 +170,12 @@ var first_steps
 var field_tips
 var edge_markers
 var part_name
+var danger_mark
 var launch_card
 var _world_card_at := -1
+# The world and stage whose cards wait for the title's turn in a run's opening; 0 when none.
+var _title_world := 0
+var _title_stage := 0
 var _cursed := false
 var why_callout
 var hotwire_screen
@@ -173,6 +193,7 @@ var _toast := {}
 var _held_toast := {}
 var _ach_panel: PanelContainer
 var _ach_name: Label
+var _ach_detail: Label
 var _ach_queue: Array[String] = []
 var _tune_queue: Array[String] = []
 var _take_words := {}
@@ -181,7 +202,10 @@ var _ach_icon: TextureRect
 var _ach_entry := {}
 var _lore_panel: PanelContainer
 var _lore_left := 0.0
+# A field note was found while a flourish had reading matter up: the pill goes up after it.
+var _lore_due := false
 var _lore_age := 0.0
+var _corner_chip: Control
 var _lower: Control
 var _restart: Control
 var _health: Control
@@ -195,6 +219,10 @@ var boss_plate: Control
 # trying without getting anywhere (objectives.gd).
 var _engaged := false
 var _struggle := Objectives.Struggle.new()
+# The site the activity row names now (objective_reading), or null.
+var _plate_site = null
+# Where the ball is going, which is the "ahead" the activity row names a site by.
+var _way := Objectives.Way.new()
 # The armour gauge (scrap mode `armor`): the mass heap and the scrap layer over the hull, left of the hull
 # gauge, in the scrap colour where the hull is sand. A hit that reached the scrap flashes
 # its edge amber for ARMOR_FLASH seconds; the hull gauge turns rust only at low health.
@@ -279,9 +307,9 @@ func setup(game_ref) -> void:
 	ability_bar.hidden_source = key_glyphs.shown_glyphs
 	_speed = SpeedGlyph.new()
 	add_child(_speed)
-	_health = Gauge.new("res_health", HEALTH_BAR, true)
+	_health = Gauge.new("res_health", HEALTH_BAR, true, HEALTH_WORD)
 	add_child(_health)
-	_armor = Gauge.new("res_mass", ARMOR_BAR, true)
+	_armor = Gauge.new("res_mass", ARMOR_BAR, true, ARMOR_WORD)
 	add_child(_armor)
 	_armor.visible = false
 	_cogs = CogChip.new()
@@ -313,16 +341,20 @@ func setup(game_ref) -> void:
 	why_callout.setup(game, profile)
 	part_name = PartName.new()
 	add_child(part_name)
+	danger_mark = DangerMark.new()
+	add_child(danger_mark)
 	_mount_hotwire_screen()
 
 	_build_ach_toast()
 	_build_lore_pulse()
 	game.codex.lore_found.connect(func(_id: String): _show_lore())
 	game.events.achievement_earned.connect(func(id: String): _ach_queue.append(Achievements.toast_text(id)))
+	game.opening.turned.connect(_on_turned)
 	_connect_toasts(game.events)
 	game.events.boss_phase_changed.connect(func(_phase: int, phase_name: String):
 		toast_kind("boss_phase_changed", {"name": phase_name.capitalize()}))
 	game.events.event_ended.connect(_on_event_ended)
+	game.events.event_announced.connect(_on_event_announced)
 	game.events.part_gained.connect(func(part_id: String, _source: String): part_name.show_part(part_id))
 	game.events.warden_engaged.connect(func(_stage: int): _begin_engagement(true))
 	game.events.boss_arena_entered.connect(_seat_boss_plate)
@@ -332,12 +364,20 @@ func setup(game_ref) -> void:
 	game.events.world_entered.connect(_on_world_entered)
 	game.events.stage_entered.connect(_on_stage_entered)
 	game.events.threat_rose.connect(func(tier: int): _threat = maxi(_threat, tier))
+	# The boss's title, unless its arrival row is saying the name on a card of its own. The row
+	# starts on this signal too, and first: the presentation is set up before the HUD.
 	game.events.boss_arena_entered.connect(func():
-		launch_card.show_card("fac_fleet", EventKinds.hud("boss_arena_entered"), EventKinds.color("boss_arena_entered")))
+		var presentation = game.get("presentation")
+		if presentation == null or not presentation.names_boss():
+			launch_card.show_card("fac_fleet", EventKinds.hud("boss_arena_entered"), EventKinds.color("boss_arena_entered")))
 	game.events.run_started.connect(func(_class_id: String):
+		_title_world = 0
+		_title_stage = 0
 		_threat = 0
 		_begin_engagement(false)
-		_armor_peak = ARMOR_PEAK_FLOOR)
+		_armor_peak = ARMOR_PEAK_FLOOR
+		_health.clear()
+		_armor.clear())
 	layout(_screen_size())
 
 
@@ -366,8 +406,8 @@ func _build_ach_toast() -> void:
 	plate.set_corner_radius_all(8)
 	plate.content_margin_left = 16.0
 	plate.content_margin_right = 20.0
-	plate.content_margin_top = 8.0
-	plate.content_margin_bottom = 8.0
+	plate.content_margin_top = 5.0
+	plate.content_margin_bottom = 5.0
 	_ach_panel.add_theme_stylebox_override("panel", plate)
 	layer_node.add_child(_ach_panel)
 	var row := HBoxContainer.new()
@@ -389,9 +429,18 @@ func _build_ach_toast() -> void:
 	word.add_theme_color_override("font_color", Palette.AMBER)
 	row.add_child(word)
 	_ach_word = word
-	_ach_name = _label(TOAST_FONT[3])
+	# The name, then what it gives in smaller type: two lines that fit the top band under the chip.
+	var words := VBoxContainer.new()
+	words.add_theme_constant_override("separation", -3)
+	words.alignment = BoxContainer.ALIGNMENT_CENTER
+	words.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	row.add_child(words)
+	_ach_name = _label(ACH_FONT)
 	_ach_name.add_theme_color_override("font_color", Palette.SAND)
-	row.add_child(_ach_name)
+	words.add_child(_ach_name)
+	_ach_detail = _label(ACH_DETAIL_FONT)
+	_ach_detail.add_theme_color_override("font_color", Color(Palette.SAND, 0.78))
+	words.add_child(_ach_detail)
 
 
 func _build_lore_pulse() -> void:
@@ -424,9 +473,15 @@ func _build_lore_pulse() -> void:
 
 
 func _show_lore() -> void:
-	_lore_left = LORE_TOTAL
-	_lore_age = 0.0
-	_lore_panel.visible = true
+	_lore_due = true
+	_step_lore(0.0)
+
+
+# A flourish has a card, a caption or a comic panel up or on the way (presentation.reading):
+# one voice at a time, so the corner's plates and pill wait for it.
+func _reading() -> bool:
+	var presentation = game.get("presentation")
+	return presentation != null and presentation.reading()
 
 
 func lore_pulse_visible() -> bool:
@@ -434,14 +489,54 @@ func lore_pulse_visible() -> bool:
 
 
 func _step_lore(delta: float) -> void:
+	if _lore_due and not _reading():
+		_lore_due = false
+		_lore_left = LORE_TOTAL
+		_lore_age = 0.0
+		_lore_panel.visible = true
 	if _lore_left <= 0.0:
 		return
 	_lore_left -= delta
 	_lore_age += delta
 	_lore_panel.modulate.a = clampf(minf(_lore_age / TOAST_IN, _lore_left / TOAST_OUT), 0.0, 1.0)
-	_lore_panel.position = Vector2(_screen_size().x - _lore_panel.size.x - MARGIN, LORE_TOP)
+	# It slides, not jumps, when the plate above it leaves.
+	var want := _corner_under(_ach_panel, _corner_under(_corner_chip, LORE_TOP))
+	var y := want if _lore_age <= delta else move_toward(_lore_panel.position.y, want, delta * CORNER_SLIDE)
+	_lore_panel.position = Vector2(_screen_size().x - _lore_panel.size.x - MARGIN, y)
 	if _lore_left <= 0.0:
 		_lore_panel.visible = false
+
+
+# A chip that lives in the top-right corner (the pilot radio). The plate and the pill line up
+# under it while it shows.
+func mount_corner(chip: Control) -> void:
+	# Stepped before the HUD, so the plate under it reads this frame's size and not last frame's.
+	chip.process_priority = process_priority - 1
+	add_child(chip)
+	_corner_chip = chip
+
+
+# The chip is mid-swell (a station change, radio_dial.gd): for those seconds it is twice its
+# height, and a plate under it would hang below the top band. A new plate waits it out.
+func _corner_swollen() -> bool:
+	return _corner_chip != null and _corner_chip.visible and _corner_chip.has_method("swollen") and _corner_chip.swollen()
+
+
+# The y for a corner piece: under the piece above when that one is showing, else its own top.
+func _corner_under(above: Control, top: float) -> float:
+	if above == null or not above.visible:
+		return top
+	return above.position.y + above.size.y + CORNER_GAP
+
+
+# The corner's pieces now showing, top to bottom, each as its name and screen rect.
+func corner_rects() -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	for piece in [["chip", _corner_chip], ["plate", _ach_panel], ["pill", _lore_panel]]:
+		var control: Control = piece[1]
+		if control != null and control.visible:
+			out.append({"name": piece[0], "rect": Rect2(control.position, control.size)})
+	return out
 
 
 # The achievement toast on screen (its row's name), then the names still waiting.
@@ -496,19 +591,26 @@ func _step_ach(delta: float) -> void:
 	if game.screens != null and game.screens.ending_open():
 		clear_achievement_toasts()
 		return
-	if _ach_entry.is_empty() and not (_ach_queue.is_empty() and _tune_queue.is_empty()) and not _fight_live():
+	if _ach_entry.is_empty() and not (_ach_queue.is_empty() and _tune_queue.is_empty()) and not _fight_live() and not _corner_swollen() \
+			and not game.opening.waits("plate") and not _reading():
 		var tune := _ach_queue.is_empty()
 		_ach_entry = {"text": _tune_queue.pop_front() if tune else _ach_queue.pop_front(), "left": ACH_TOTAL, "age": 0.0}
-		_ach_name.text = _ach_entry["text"]
+		# The first line is the name; whatever follows it is the detail.
+		var lines := String(_ach_entry["text"]).split("\n", true, 1)
+		_ach_name.text = lines[0]
+		_ach_detail.text = lines[1] if lines.size() > 1 else ""
+		_ach_detail.visible = _ach_detail.text != ""
 		_ach_word.text = (String(_take_words.get(_ach_entry["text"], TUNE_WORD)) if tune else ACH_WORD)
 		_ach_icon.texture = Icons.shape("wave" if tune else "star")
+		# A panel grows to its words by itself and never shrinks: a short entry after a long one resets it.
+		_ach_panel.reset_size()
 		_ach_panel.visible = true
 	if _ach_entry.is_empty():
 		return
 	_ach_entry["left"] -= delta
 	_ach_entry["age"] += delta
 	_ach_panel.modulate.a = clampf(minf(_ach_entry["age"] / TOAST_IN, _ach_entry["left"] / TOAST_OUT), 0.0, 1.0)
-	_ach_panel.position = Vector2(_screen_size().x - _ach_panel.size.x - MARGIN, ACH_TOP)
+	_ach_panel.position = Vector2(_screen_size().x - _ach_panel.size.x - MARGIN, _corner_under(_corner_chip, ACH_TOP))
 	if _ach_entry["left"] <= 0.0:
 		_ach_entry = {}
 		_ach_panel.visible = false
@@ -532,7 +634,7 @@ static func toast_text(kind: String, fields := {}) -> String:
 
 func _connect_toasts(events) -> void:
 	for kind in toast_kinds():
-		if kind in ["boss_phase_changed", "event_ended"]:
+		if kind in ["boss_phase_changed", "event_ended", "event_announced"]:
 			continue
 		var argc: int = SignalWire.arg_count(events, kind)
 		if FIELD_ARGS.has(kind):
@@ -610,6 +712,13 @@ func _exit_tree() -> void:
 func _on_posture(enemy: Node3D, posture: float, staggered: bool) -> void:
 	if enemy == game.flow.warden:
 		_struggle.note_posture(posture, staggered)
+
+
+# "incoming" warns of something still on its way. An announcement with no lead is already here
+# (a stage's resting weather starts with the stage: "Dawn Still"), so it warns of nothing.
+func _on_event_announced(event_id: String, seconds_until: float) -> void:
+	if seconds_until > 0.0:
+		_on_field_fact(event_id, "event_announced")
 
 
 # Only a lost event gets a toast: a win already has its milestone toast.
@@ -692,6 +801,9 @@ func _on_launched(_velocity: Vector3) -> void:
 # stage's card, which follows after the world card has been up for a beat. A one-world
 # table shows no world card.
 func _on_world_entered(world: int) -> void:
+	if game.opening.waits("title"):
+		_title_world = world
+		return
 	if game.ctx.stages.worlds().size() <= 1:
 		return
 	var row := Worlds.row(world)
@@ -705,12 +817,38 @@ func _on_world_entered(world: int) -> void:
 func _on_stage_entered(stage: int, retry: bool) -> void:
 	_threat = 0
 	_begin_engagement(false)
+	_way.begin()
 	if retry:
 		return
+	if game.opening.waits("title"):
+		_title_stage = stage
+		return
+	_title_for(stage)
+
+
+# The title's turn in a run's opening (opening.gd): the world and stage cards held under the
+# launch take's panel go up now, where they can be read.
+func _on_turned(voice: String) -> void:
+	if voice != "title":
+		return
+	var world := _title_world
+	var stage := _title_stage
+	_title_world = 0
+	_title_stage = 0
+	if game.run == null or stage != game.run.stage or not game.flow.in_stage():
+		return
+	if world > 0:
+		_on_world_entered(world)
+	_title_for(stage)
+
+
+func _title_for(stage: int) -> void:
 	if _world_card_at >= 0:
 		_world_card_at = -1
+		# This run's card only: a restart inside the beat has its own on the way.
+		var run_id := String(game.run.run_id)
 		get_tree().create_timer(WORLD_CARD_BEAT).timeout.connect(func():
-			if game != null and game.run != null and game.run.stage == stage:
+			if game != null and game.run != null and game.run.stage == stage and String(game.run.run_id) == run_id:
 				_card_for_stage(stage))
 	elif launch_card.showing():
 		launch_card.extend()
@@ -724,7 +862,7 @@ func _step_curse() -> void:
 	if now and not _cursed:
 		launch_card.show_card("obj_beacon", StageModifier.CURSE.word, EventKinds.color("stage_entered"), StageModifier.CURSE.line)
 		if game.player != null:
-			StageModifier.announce(game.player.active_body().global_position)
+			StageModifier.announce(game.player.shown_position())
 	_cursed = now
 
 
@@ -734,7 +872,7 @@ func _card_for_stage(stage: int) -> void:
 	var modifier := StageModifier.for_stage(game.run, game.ctx.terrain, stage)
 	launch_card.show_card("obj_beacon", game.ctx.stages.of(stage)["name"], EventKinds.color("stage_entered"), StageModifier.card_line(game.run, game.ctx.terrain, stage))
 	if not modifier.is_empty() and game.player != null:
-		StageModifier.announce(game.player.active_body().global_position)
+		StageModifier.announce(game.player.shown_position())
 
 
 func _label(font_size: int) -> Label:
@@ -779,6 +917,11 @@ func layout(size: Vector2) -> void:
 		_objective.position.y = _plate.position.y + plate_size.y + PLATE_GAP
 	part_name.position = Vector2.ZERO
 	part_name.size = size
+	var ring := AimReticle.meter_radius() + AimReticle.METER_WIDTH
+	part_name.avoid = Rect2(size * 0.5 - Vector2.ONE * ring, Vector2.ONE * ring * 2.0)
+	danger_mark.position = Vector2.ZERO
+	danger_mark.size = size
+	danger_mark.avoid = part_name.avoid
 	_status.position = Vector2(MARGIN, top.position.y + 12.0)
 
 	var toast_width := minf(TOAST_WIDTH, size.x - 2.0 * MARGIN)
@@ -791,8 +934,8 @@ func layout(size: Vector2) -> void:
 	var bar_y := bottom.position.y + (bottom.size.y - bar_size.y) * 0.5
 	ability_bar.position = Vector2((size.x - bar_size.x) * 0.5, bar_y)
 	var slot_mid := bar_y + AbilityBar.SLOT * 0.5
-	_health.position = Vector2(ability_bar.position.x - BOTTOM_GAP - _health.size.x, slot_mid - _health.size.y * 0.5)
-	_armor.position = Vector2(_health.position.x - BOTTOM_GAP - _armor.size.x, slot_mid - _armor.size.y * 0.5)
+	_health.position = Vector2(ability_bar.position.x - BOTTOM_GAP - _health.size.x, slot_mid - _health.bar_mid())
+	_armor.position = Vector2(_health.position.x - BOTTOM_GAP - _armor.size.x, slot_mid - _armor.bar_mid())
 	_companion.position = Vector2(_armor.position.x - BOTTOM_GAP - _companion.size.x, slot_mid - _companion.size.y * 0.5)
 	_speed.position = Vector2(MARGIN, slot_mid - _speed.size.y * 0.5)
 	_cogs.position = Vector2(_speed.position.x + _speed.size.x + BOTTOM_GAP, slot_mid - _cogs.size.y * 0.5)
@@ -865,7 +1008,7 @@ func _step_companion(playing: bool) -> void:
 	if state != _companion_state and state != "none" and _companion_state != "none":
 		var kind := "companion_" + state
 		_companion_cues.append(kind)
-		var audio = game.presentation.audio if game.presentation != null else null
+		var audio = game.audio()
 		if audio != null and audio.has_method("play"):
 			audio.play(kind, 0.0, 1.0, "UI")
 	_companion_state = state
@@ -881,14 +1024,21 @@ static func _rect_of(control: Control) -> Rect2:
 	return Rect2(control.position, Vector2(maxf(s.x, control.size.x), maxf(s.y, control.size.y)))
 
 
+# The share of the hull bar that stands full, 0 to 1 (-1 before the HUD's first frame): what a player
+# reads as the hull. The play watch holds it against the hull itself.
+func hull_shown() -> float:
+	return _health.fraction
+
+
 # The objective for the flow's state: the row objectives.gd picks, with its glyph, its colour
-# and, while the Warden is still to be found, the metres to it.
+# and, while the Warden or an activity is still to be found, the metres to it.
 func objective_reading() -> Dictionary:
 	var flow = game.flow
 	var warden = flow.warden if is_instance_valid(flow.warden) else null
-	var distance: float = game.player.ball_position().distance_to(warden.global_position) if warden != null else INF
+	var distance: float = game.player.shown_position().distance_to(warden.global_position) if warden != null else INF
 	var gate = flow.gate
-	var id := Objectives.choose({
+	var sites: Array = edge_markers.unfinished_sites()
+	var reading := {
 		"state": flow.state_name(),
 		"sealed": flow.sealed,
 		"engaged": _engaged,
@@ -897,15 +1047,36 @@ func objective_reading() -> Dictionary:
 		"struggling": _struggle.struggling,
 		"distance": distance,
 		"card": launch_card.showing(),
-		"activities_left": edge_markers.unfinished_sites().size(),
+		"activities_left": sites.size(),
 		"yard_locked": gate != null and gate.lock_active(),
 		"clamp_shut": gate != null and gate.locked(),
-	})
+	}
+	# A mounted Warden and the arena's boss each say which verb their fight asks for now.
+	var driver = warden.get("mount_driver") if warden != null else null
+	if driver != null and driver.has_method("plate_reading"):
+		reading.merge(driver.plate_reading(warden), true)
+	var boss = game.ctx.boss
+	if is_instance_valid(boss) and boss.has_method("plate_reading"):
+		reading.merge(boss.plate_reading(), true)
+	var id := Objectives.choose(reading)
 	if id == "":
 		return {"id": "", "icon": "", "words": "", "color": Palette.SAND, "progress": -1.0, "distance": -1}
-	return {"id": id, "icon": Objectives.glyph(id), "words": Objectives.words(id), "color": row_color(id),
+	var words := Objectives.words(id)
+	if id == "find_activity":
+		# An unfinished site by name and metres, so the row is a place to go: the one ahead on the
+		# ball's way (Objectives.pick_site, Way), kept until another is clearly the better call.
+		var ball: Vector3 = game.player.shown_position()
+		var offsets := []
+		for site in sites:
+			offsets.append(site.global_position - ball)
+		var picked := Objectives.pick_site(offsets, _way.ahead(-game.camera.cam.global_transform.basis.z), sites.find(_plate_site) if is_instance_valid(_plate_site) else -1)
+		_plate_site = sites[picked] if picked >= 0 else null
+		if picked >= 0:
+			words = Objectives.activity_words(String(sites[picked].id), game.world.activities.called(String(sites[picked].id)))
+			distance = offsets[picked].length()
+	return {"id": id, "icon": Objectives.glyph(id), "words": words, "color": row_color(id),
 		"progress": _clamp_fraction(gate) if id == "break_clamp_crews" else game.beacon.fraction() if id in RING_ROWS else -1.0,
-		"distance": int(distance) if id == "find_warden" and distance < INF else -1}
+		"distance": int(distance) if id in ["find_warden", "find_activity"] and distance < INF else -1}
 
 
 # How many of the crews the Warden's clamp asks for are down, as the ring round the plate's glyph.
@@ -916,11 +1087,11 @@ static func _clamp_fraction(gate) -> float:
 # Every world-attached prompt in front of the camera and within its reach goes in the
 # prompts band, nearest first, at most MAX_PROMPTS of them. Each takes the free spot
 # nearest its anchor's column (free_spot); the rest wait off screen. A prompt shows its
-# detail only while the ball is within its DETAIL_RANGE.
+# detail only while the ball is within its detail_range.
 func place_prompts(size: Vector2, playing: bool) -> void:
 	prompt_rects.clear()
 	var cam: Camera3D = game.camera.cam
-	var ball: Vector3 = game.player.ball_position()
+	var ball: Vector3 = game.player.shown_position()
 	var near: Array = []
 	for prompt in get_tree().get_nodes_in_group(ScreenRegions.PROMPT_GROUP):
 		prompt.visible = false
@@ -939,17 +1110,28 @@ func place_prompts(size: Vector2, playing: bool) -> void:
 		if placed.size() >= ScreenRegions.MAX_PROMPTS:
 			break
 		var prompt: Label = entry[1]
-		prompt.near = ball.distance_to(entry[2]) <= WorldPrompt.DETAIL_RANGE
-		var extent: Vector2 = prompt.shown_extent()
-		var want := Rect2(ScreenRegions.clamp_prompt(cam.unproject_position(entry[2]), extent, size), extent)
-		var spot := free_spot(want, placed, band)
+		prompt.near = ball.distance_to(entry[2]) <= prompt.detail_range
+		var spot := prompt_spot(prompt, cam.unproject_position(entry[2]), size, placed, band)
 		if spot.size == Vector2.ZERO:
 			continue
 		prompt.position = spot.position
-		prompt.size = extent
+		prompt.size = spot.size
 		prompt.visible = true
 		placed.append(spot)
 		prompt_rects[prompt] = spot
+
+
+# The spot for a prompt whose anchor projects to `at`. A prompt showing its detail that finds no
+# room gives the detail up and is placed by its name alone, as it reads at range: a label with
+# less on it beats no label (three reward gates' details side by side do not always fit 1280x720).
+static func prompt_spot(prompt, at: Vector2, size: Vector2, placed: Array[Rect2], band: Rect2) -> Rect2:
+	var extent: Vector2 = prompt.shown_extent()
+	var spot := free_spot(Rect2(ScreenRegions.clamp_prompt(at, extent, size), extent), placed, band)
+	if spot.size == Vector2.ZERO and prompt.near:
+		prompt.near = false
+		extent = prompt.shown_extent()
+		spot = free_spot(Rect2(ScreenRegions.clamp_prompt(at, extent, size), extent), placed, band)
+	return spot
 
 
 # The spot for `want` that overlaps nothing already placed and stays in the band: its
@@ -997,6 +1179,8 @@ func _process(delta: float) -> void:
 	if _plate != null:
 		_plate.visible = playing
 	part_name.visible = playing and part_name.left > 0.0
+	danger_mark.show_run(game.combat.near_miss.standing_in() if playing else -1.0)
+	danger_mark.visible = danger_mark.shown()
 	_armor.visible = playing and game.run.armor_mode
 	_step_companion(playing)
 	if not playing:
@@ -1033,11 +1217,17 @@ func _process(delta: float) -> void:
 	var slots: Array = _slots.slots(game)
 	ability_bar.update_slots(slots, tint, shape)
 	ability_bar.hide_keys(key_glyphs.shown_glyphs())
-	if part_name.visible:
+	if part_name.visible or danger_mark.visible:
 		var cam: Camera3D = game.camera.cam
-		var ball: Vector3 = game.player.shown_position()
-		if not cam.is_position_behind(ball):
-			part_name.follow(cam.unproject_position(ball))
+		var top: Vector3 = game.player.shown_position() + cam.global_basis.y * Tuning.RADIUS
+		if not cam.is_position_behind(top):
+			var over: Vector2 = cam.unproject_position(top)
+			danger_mark.follow(over)
+			# A name gained inside a mark stands on the mark, not across it.
+			part_name.follow(Vector2(over.x, danger_mark.rect().position.y) if danger_mark.visible else over)
+		else:
+			# The ball is behind the camera: the mark has no place to stand this frame.
+			danger_mark.visible = false
 	reticle.gauge = AbilitySlots.gauge_of(slots)
 	# An interactable's hold-to-arm fills the same class ring (LOOP-REDESIGN section 9).
 	var interact = game.world.get("interact") if game.world != null else null
@@ -1096,7 +1286,31 @@ func _physics_process(delta: float) -> void:
 		return
 	if _engaged:
 		_struggle.step(delta)
+	if game.player != null:
+		_way.step(game.player.planar_velocity(), delta)
 	part_name.step(delta)
+	_step_fight_hint()
+
+
+# A boss fight's own hint (the boss module's take_hint: Brindle's Scuttle gives one to a build
+# too light to hit its way in). The fight owns when and how often; the HUD toasts the hint's UI
+# row with that row's chime and records it as a prompt, as every other lesson is.
+func _step_fight_hint() -> void:
+	var boss = game.get("boss")
+	if boss == null or not boss.has_method("take_hint") or game.flow == null or not game.flow.in_play():
+		return
+	# A toast replaces the one showing, and taking the hint starts its gap: ask only when the row is free.
+	if not _toast.is_empty() or not _held_toast.is_empty():
+		return
+	var kind := String(boss.take_hint())
+	var row: Dictionary = EventKinds.UI_ROWS.get(kind, {})
+	if row.is_empty():
+		return
+	toast(String(row["hud"]), row["color"], row["shape"], mini(int(row["priority"]), 3))
+	var audio = game.audio() if game.has_method("audio") else null
+	if audio != null and audio.has_method("play"):
+		audio.play(kind, 0.0, 1.0, "UI")
+	game.events.prompt_shown.emit(kind)
 
 
 # The words the toast row draws now: "" with no toast, or while the stage card covers it

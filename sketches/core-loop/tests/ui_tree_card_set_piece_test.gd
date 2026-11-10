@@ -67,5 +67,27 @@ func _initialize() -> void:
 	var room: float = TreeCard.HEIGHT - 14.0 - (box.global_position.y - fit.global_position.y)
 	t.check("7 three labels fit the card", sum <= room,
 		"heights %s with separations = %.1f of %.1f px for \"%s\" (box %.1f)" % [parts, sum, room, longest, box.size.y])
+	# The longest world-one effect line on a plain card (the run's first pick has no set piece line).
+	var wordiest := ""
+	var wordiest_id := ""
+	for id in Cards.ROWS:
+		if String(Cards.ROWS[id]).length() > wordiest.length():
+			wordiest = String(Cards.ROWS[id])
+			wordiest_id = String(id)
+	var first = TreeCard.new({"id": wordiest_id, "name": "Aftershock Overload", "effect": "x", "key": "movement"}, "key_1", Color.ORANGE, 1, true, true, table)
+	root.add_child(first)
+	await process_frame
+	await process_frame
+	var first_box: Control = first.get_child(0)
+	var first_sum := 0.0
+	var first_parts := []
+	for label in first_box.get_children():
+		if label.visible:
+			first_sum += label.get_combined_minimum_size().y
+			first_parts.append(snappedf(label.get_combined_minimum_size().y, 0.1))
+	first_sum += 6.0 * (first_parts.size() - 1)
+	var first_room: float = TreeCard.HEIGHT - 14.0 - (first_box.global_position.y - first.global_position.y)
+	t.check("7b the longest world-one line fits a plain card", first.effect_text() == wordiest and first_sum <= first_room,
+		"heights %s with separations = %.1f of %.1f px for \"%s\"" % [first_parts, first_sum, first_room, wordiest])
 	t.check("8 drawn_words counts keycap words only", fit.drawn_words().size() == 2, "got %s" % [fit.drawn_words()])
 	quit(t.verdict())

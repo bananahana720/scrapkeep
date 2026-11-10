@@ -5,9 +5,14 @@ Dependency-free. Writes one standalone 64x64 SVG per id to
 sketches/core-loop/assets/icons/<id>.svg and an index README next to them.
 
 Run: python3 sketches/core-loop/tools/icons/generate_icons.py
+Check, writing nothing: python3 sketches/core-loop/tools/icons/generate_icons.py --check
+(exits 1 and names every icon whose committed file is not what this script draws).
+The line and ultimate cards (ab_<pilot>_line, ab_<pilot>_ult) and res_mass are drawn by hand
+and are not this script's.
 """
 import math
 import os
+import sys
 
 # --- Palette (VISUAL-LANGUAGE.md section 2) ---------------------------------
 CHARCOAL = "#242a28"
@@ -23,6 +28,7 @@ ICE = "#c8f0ff"
 ANCIENT = "#9dff3c"  # ancient green (Palette.ANCIENT); the old Cherenkov blue is the cobalt rung now
 REDJAW_ASH = "#5e5a54"
 LEDGER_CREAM = "#f7f1e3"
+LEDGER = "#e6d9b8"  # Tally's own colour (Palette.LEDGER): her ability cards are drawn in it
 OLD_VERDIGRIS = "#4f7f7a"
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -635,7 +641,7 @@ register(
 
 def g_ab_tally_weapon():
     return [
-        path("M22 12 H38 L46 20 V42 H22 Z", stroke=BRASS, width=PRIMARY),
+        path("M22 12 H38 L46 20 V42 H22 Z", stroke=LEDGER, width=PRIMARY),
         *[dot(x, y, 1.8, fill=BONE) for y in (24, 32) for x in (29, 38)],
         line(12, 44, 52, 44, stroke=BONE, width=DETAIL),
     ]
@@ -643,7 +649,7 @@ def g_ab_tally_weapon():
 
 register(
     "ab_tally_weapon", "Ledger reader (LMB)",
-    "A clipped-corner brass program card with two rows of punch holes, half in a reader slot",
+    "A clipped-corner ledger program card with two rows of punch holes, half in a reader slot",
     plate_rounded_square, g_ab_tally_weapon,
 )
 
@@ -653,21 +659,21 @@ def g_ab_tally_move():
         ring(42, 32, 12, stroke=BONE, width=DETAIL),
         *[line(42, 32, 42 + 12 * math.cos(a), 32 + 12 * math.sin(a), stroke=BONE, width=DETAIL)
           for a in (-math.pi / 2, math.pi / 6, 5 * math.pi / 6)],
-        path("M23 20 Q10 16 12 28", stroke=BRASS, width=PRIMARY, dash="3 6"),
-        path("M23 40 Q8 38 12 49", stroke=BRASS, width=PRIMARY, dash="3 6"),
+        path("M23 20 Q10 16 12 28", stroke=LEDGER, width=PRIMARY, dash="3 6"),
+        path("M23 40 Q8 38 12 49", stroke=LEDGER, width=PRIMARY, dash="3 6"),
     ]
 
 
 register(
     "ab_tally_move", "Flywheel surge (Shift)",
-    "A three-spoke flywheel at right with two dashed brass steam puffs trailing left",
+    "A three-spoke flywheel at right with two dashed ledger steam puffs trailing left",
     plate_rounded_square, g_ab_tally_move,
 )
 
 
 def g_ab_tally_special():
     return [
-        rect(12, 12, 18, 12, fill="none", rx=3, stroke=BRASS, width=PRIMARY),
+        rect(12, 12, 18, 12, fill="none", rx=3, stroke=LEDGER, width=PRIMARY),
         path("M20 30 Q16 50 38 46", stroke=BONE, width=DETAIL),
         path("M32 39 L39 46 L31 51", stroke=BONE, width=DETAIL),
         dot(48, 42, 6, fill=BONE),
@@ -676,16 +682,16 @@ def g_ab_tally_special():
 
 register(
     "ab_tally_special", "Plate return (F)",
-    "A brass plate upper left with a curved return arrow to a ball lower right",
+    "A ledger plate upper left with a curved return arrow to a ball lower right",
     plate_rounded_square, g_ab_tally_special,
 )
 
 
 def g_ab_tally_smash():
     return [
-        ring(32, 14, 4, stroke=BRASS, width=PRIMARY),
-        line(32, 20, 32, 27, stroke=BRASS, width=PRIMARY),
-        path("M20 28 H44 V35 H20 Z", stroke=BRASS, width=PRIMARY),
+        ring(32, 14, 4, stroke=LEDGER, width=PRIMARY),
+        line(32, 20, 32, 27, stroke=LEDGER, width=PRIMARY),
+        path("M20 28 H44 V35 H20 Z", stroke=LEDGER, width=PRIMARY),
         line(10, 42, 54, 42, stroke=BONE, width=DETAIL),
         *[line(x, 49, x, 55, stroke=BONE, width=DETAIL) for x in (23, 29, 35, 41)],
         line(19, 55, 45, 48, stroke=BONE, width=DETAIL),
@@ -694,14 +700,14 @@ def g_ab_tally_smash():
 
 register(
     "ab_tally_smash", "Stamp slam (Ctrl)",
-    "A brass stamp over a ground line with four tally strokes and a slash printed beneath",
+    "A ledger stamp over a ground line with four tally strokes and a slash printed beneath",
     plate_rounded_square, g_ab_tally_smash,
 )
 
 
 def g_ab_tally_gather():
     return [
-        ring(32, 32, 9, stroke=BRASS, width=PRIMARY),
+        ring(32, 32, 9, stroke=LEDGER, width=PRIMARY),
         path("M13 21 L21 21 L21 13", stroke=BONE, width=DETAIL),
         path("M43 13 L43 21 L51 21", stroke=BONE, width=DETAIL),
         path("M13 43 L21 43 L21 51", stroke=BONE, width=DETAIL),
@@ -711,7 +717,7 @@ def g_ab_tally_gather():
 
 register(
     "ab_tally_gather", "Gather (1)",
-    "A brass plate disc with four bone corner chevrons pointing inward",
+    "A ledger plate disc with four bone corner chevrons pointing inward",
     plate_rounded_square, g_ab_tally_gather,
 )
 
@@ -719,23 +725,23 @@ register(
 def g_ab_tally_link():
     points = [(32, 15), (15, 46), (49, 46)]
     return [
-        path("M32 15 L15 46 H49 Z", stroke=BRASS, width=PRIMARY, dash="4 6"),
+        path("M32 15 L15 46 H49 Z", stroke=LEDGER, width=PRIMARY, dash="4 6"),
         *[dot(x, y, 5, fill=BONE) for x, y in points],
         *[path(f"M{x + 3} {y - 6} H{x + 7} V{y + 1}",
-               stroke=BRASS, width=PRIMARY) for x, y in points],
+               stroke=LEDGER, width=PRIMARY) for x, y in points],
     ]
 
 
 register(
     "ab_tally_link", "Link (2)",
-    "Three bone dots joined by a dashed brass triangle, each dot held by a brass clip",
+    "Three bone dots joined by a dashed ledger triangle, each dot held by a ledger clip",
     plate_rounded_square, g_ab_tally_link,
 )
 
 
 def g_ab_tally_balance():
     return [
-        ring(32, 32, 14, stroke=BRASS, width=PRIMARY),
+        ring(32, 32, 14, stroke=LEDGER, width=PRIMARY),
         line(26, 28, 38, 28, stroke=BONE, width=DETAIL),
         line(26, 36, 38, 36, stroke=BONE, width=DETAIL),
         line(32, 7, 32, 11, stroke=BONE, width=DETAIL),
@@ -747,7 +753,7 @@ def g_ab_tally_balance():
 
 register(
     "ab_tally_balance", "Balance Due (3)",
-    "A brass capacitor ring with a bone equals sign and four discharge rays",
+    "A ledger capacitor ring with a bone equals sign and four discharge rays",
     plate_rounded_square, g_ab_tally_balance,
 )
 
@@ -1128,15 +1134,19 @@ register(
 )
 
 
+# A hop off a floor, never a bare V: three blind readers of three took the V for a tick, and a first-timer
+# took a gate that wore it for a gate already taken (play finding 22).
 def g_trg_on_rebound():
     return [
-        path("M20 16 L34 38 L50 20", stroke=BONE, width=DETAIL),
-        dot(20, 16, 3, fill=BONE),
+        line(26, 46, 52, 46, stroke=BONE, width=DETAIL),
+        path("M27 41 Q34 4 41 41", stroke=BONE, width=DETAIL),
+        path("M41 41 Q44 27 49 27", stroke=BONE, width=DETAIL),
+        dot(49, 26, 4.5, fill=BONE),
     ]
 
 
 register(
-    "trg_on_rebound", "On rebound", "A ball tracing a V off a slanted line", plate_tag, g_trg_on_rebound,
+    "trg_on_rebound", "On rebound", "A ball hopping up off a floor line", plate_tag, g_trg_on_rebound,
 )
 
 
@@ -1629,5 +1639,19 @@ def main():
     return written
 
 
+def check():
+    stale = []
+    for icon_id in ICONS:
+        path_ = os.path.join(ICON_DIR, f"{icon_id}.svg")
+        if not os.path.exists(path_) or open(path_, "rb").read() != compose(icon_id).encode():
+            stale.append(icon_id)
+    for icon_id in stale:
+        print(f"{icon_id}.svg is not what this script draws")
+    print(f"{len(ICONS) - len(stale)} of {len(ICONS)} icons match")
+    return 1 if stale else 0
+
+
 if __name__ == "__main__":
+    if "--check" in sys.argv[1:]:
+        sys.exit(check())
     main()

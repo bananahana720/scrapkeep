@@ -1,6 +1,7 @@
 extends RefCounted
 
 const MusicRows := preload("res://src/presentation/music_rows.gd")
+const TuneMoments := preload("res://src/presentation/tune_moments.gd")
 
 # The ACE band for Spillway (design-v3 ACE-MUSIC-SYSTEM; the runtime rules proven by the
 # POC sequencer, core-loop-v3-seq 43453ab). ACE-Step performed the music; this plays its
@@ -42,11 +43,25 @@ const BAY_RAMP := 8820
 const TRAVEL_UP := 0.4
 const TRAVEL_DOWN := 0.2
 const TRAVEL_THREAT := 2
+# The Warden's guard (0 to 100): see guard_state.
+const GUARD_TIGHT := 75.0
+const GUARD_LOOSE := 50.0
 # The ultimate meter's pressure step: a full meter at rest pressure still reaches travel.
 const ULTIMATE_STEP := 0.4
 # The momentum faders (INTEGRATION section 2): speed is a fraction of top speed.
 const DRUMS_IN_SPEED := 0.25
 const DRUMS_FULL_SPEED := 0.5
+# The lead's level on a level's shelf with nothing lifting it: about half (-6 dB), so the calm
+# stretches of a run carry the tune (ruling bt). Threat, the approach and the chain lift it from
+# here to full.
+const LEAD_FLOOR := 0.5
+# The directed sections that end a Warden break: the kill cadence and the walk home carry the
+# lead whole, and the break's release stops stripping it from the cadence on.
+const LEAD_RETURN := ["return", "home"]
+# The Warden fight's held breath and its drop carry the lead whole, whatever the threat feed,
+# the fight floor or low armour say: the breath is the lead alone, so a lead at nothing is
+# silence, and the drop is the payoff.
+const LEAD_WHOLE := ["open", "drop"]
 const PROTECTED := ["pivot", "drop", "break", "return", "home"]
 const SHELF_CLIPS := ["calm", "travel"]
 
@@ -104,6 +119,12 @@ var short_reads := 0
 var misses := 0
 var render_usec := 0
 var rendered := 0
+# Stem voices opened and the time opening them took: each one seeks its recording on the
+# frame that asks for the section, so a call that opens more than one section's stems shows here.
+# Both are running totals for this sequencer, and a change of pack makes a new sequencer that
+# counts from zero: a frame's cost is the change across that frame, never the figure itself.
+var opened := 0
+var open_usec := 0
 
 # The section sounding at the render head, its grid and voices.
 var section := ""
@@ -124,6 +145,10 @@ var ultimate_lift := false
 var parameter_enabled := false
 var parameters := {}
 var parameter_released := false
+# The kill cadence has answered a Warden break (ruling bt): set as the break piece's return
+# section enters. The release stops stripping the lead from there, and audio.gd takes the mark on
+# its next pump (_answer_release): from then on the release no longer reaches this band.
+var lead_returned := false
 var parameter_layer_log: Array = []
 var _parameter_danger_floor := 0.0
 # The band engine's fight floor (music_engine PRESSURE_FLOOR: warden, miniboss, brindle:1..3),
@@ -246,8 +271,10 @@ func sound_from() -> int:
 
 # A stage starts on the shelf: calm (or travel) from bar 1 at transport sample at. A
 # restart while the band sounds fades the old section out and gives the new one its
-# full join, so no one-shot is left without a follower.
-func start_level(at: int) -> void:
+# full join, so no one-shot is left without a follower. With `fight`, the band is coming back
+# into a Warden fight already under way (after a radio hold or an ultimate): it enters on the
+# pivot and goes on to the build, and the shelf's recordings are never opened.
+func start_level(at: int, fight := false) -> void:
 	# A begun join's voices fade over the full ramp too, and calm waits out its join.
 	var faded := _cancel_pending(STOP_RAMP)
 	actions.clear()
@@ -263,12 +290,17 @@ func start_level(at: int) -> void:
 	section = ""
 	mode = "level"
 	built = false
+	lead_returned = false
 	piece_after_drop = false
 	hold_until = -1
 	warden_state = "closed"
 	threat = 0
 	pressure = float(parameters.get("threat", 0.0)) if parameter_enabled else 0.0
 	in_bay = false
+	if fight and not flat:
+		mode = "warden"
+		_schedule("pivot", maxi(at, earliest))
+		return
 	_schedule(_desired(), maxi(at, earliest))
 
 
@@ -349,12 +381,15 @@ func clear_release() -> void:
 
 
 # Demucs's other stem carries the melodic roles; drums and bass retain their profiles.
-# At full threat/approach the recorded mix is unchanged. Armour and release remove other.
+# At full threat/approach the recorded mix is unchanged. Low armour removes other, and so does a
+# Warden break's release until the kill cadence brings it back (LEAD_RETURN).
 # Two momentum faders ride on top when the feed carries them (INTEGRATION section 2):
 # drums follow rolling speed, in from a quarter of top speed and full at half, and the
-# lead (other) also opens with the kill chain: a third at chain 2 (the sax hook), full at 4.
+# lead (other) also opens with the kill chain: a third of the way at chain 2 (the sax hook),
+# full at 4. On a level's shelf the lead starts from LEAD_FLOOR, not from silence.
 # Boss sections keep the full kit: the duel does not breathe with the ball's speed.
-func parameter_gain(stem: String) -> float:
+# at names the section the gain is for, for voices that join ahead of it; "" is the live one.
+func parameter_gain(stem: String, at := "") -> float:
 	if not parameter_enabled or not parameters.has("threat"):
 		return 1.0
 	if stem == "drums":
@@ -363,10 +398,30 @@ func parameter_gain(stem: String) -> float:
 		return clampf(smoothstep(DRUMS_IN_SPEED, DRUMS_FULL_SPEED, float(parameters.speed)), 0.0, 1.0)
 	if stem != "other":
 		return 1.0
-	if parameter_released or (parameters.has("armour") and float(parameters.armour) < 0.3):
+	var name := section if at == "" else at
+	if mode == "warden" and name in LEAD_WHOLE:
+		return 1.0
+	var cadence := mode == "piece" and name in LEAD_RETURN
+	if _lead_stripped(cadence):
 		return 0.0
-	var open := maxf(maxf(pressure + (ULTIMATE_STEP if ultimate_lift else 0.0), maxf(_parameter_danger_floor, fight_floor)), float(parameters.get("approach", 0.0)))
-	return clampf(maxf(open, float(parameters.get("chain", 0.0))), 0.0, 1.0)
+	if cadence:
+		return 1.0
+	var approach := float(parameters.get("approach", 0.0))
+	if mode == "level":
+		# The landmark's own moment begins at LANDMARK_IN: the lead is whole from there on, not
+		# only at the landmark's foot.
+		approach = clampf(approach / TuneMoments.LANDMARK_IN, 0.0, 1.0)
+	var open := maxf(maxf(pressure + (ULTIMATE_STEP if ultimate_lift else 0.0), maxf(_parameter_danger_floor, fight_floor)), approach)
+	var lift := clampf(maxf(open, float(parameters.get("chain", 0.0))), 0.0, 1.0)
+	return lerpf(LEAD_FLOOR, 1.0, lift) if mode == "level" else lift
+
+
+# Low armour strips the lead anywhere. A Warden break's release strips it through the break's
+# held breath only: the kill cadence returns it, and it stays back.
+func _lead_stripped(cadence := false) -> bool:
+	if parameters.has("armour") and float(parameters.armour) < 0.3:
+		return true
+	return parameter_released and not lead_returned and not cadence
 
 
 # A full ultimate meter is one pressure step for the ACE band, as set_ultimate_lift is one
@@ -406,6 +461,36 @@ func set_warden_state(state: String) -> void:
 	_follow()
 
 
+# The Warden's guard as its posture fight reports it (0 to 100, rising toward the break).
+# The tight build ("telegraph") enters at GUARD_TIGHT and holds until the guard drains under
+# GUARD_LOOSE, so a guard that hovers at the line never flutters; a stagger is the held
+# breath ("open"); anything else is the build ("closed").
+static func guard_state(was: String, posture: float, staggered: bool) -> String:
+	if staggered:
+		return "open"
+	if posture >= GUARD_TIGHT or (was == "telegraph" and posture >= GUARD_LOOSE):
+		return "telegraph"
+	return "closed"
+
+
+# The fight follows the guard: its state from guard_state, and `landed` (the hit that
+# shattered a chunk) the drop. Returns the drop's transport sample, or -1 when none is
+# booked. Outside a Warden fight it does nothing.
+func follow_guard(posture: float, staggered: bool, landed: bool) -> int:
+	if mode != "warden":
+		return -1
+	var state := guard_state(warden_state, posture, staggered)
+	if landed:
+		# The drop is the answer, and the build comes back as the drop's own follower. Asking
+		# for the build first would open its three stems on this frame only to throw them away
+		# (10 ms on the hit's frame, measured on the PC).
+		warden_state = state
+		return drop_now()
+	if state != warden_state:
+		set_warden_state(state)
+	return -1
+
+
 # Contact on the core: the render head goes quiet now and the drop enters on the next
 # beat. Returns the drop's transport sample, or -1 when nothing plays or the break has
 # begun.
@@ -435,6 +520,7 @@ func warden_broken() -> void:
 	if flat or mode in ["off", "piece", "menu"]:
 		return
 	mode = "piece"
+	lead_returned = false
 	if pending.get("section", "") == "drop" or (section == "drop" and pending.is_empty()):
 		piece_after_drop = true
 		return
@@ -465,6 +551,12 @@ func set_breath(style: String) -> void:
 func duck(amount: float, hold_seconds: float) -> void:
 	duck_target = minf(duck_target, clampf(amount, 0.1, 1.0))
 	duck_until = maxi(duck_until, clock + int(hold_seconds * RATE))
+
+
+# The cue the band dipped under has stopped early: the band comes back from this frame.
+func free_duck() -> void:
+	duck_until = clock
+	duck_target = 1.0
 
 
 # --- The grid -------------------------------------------------------------------------
@@ -794,7 +886,7 @@ func _schedule(name: String, at: int, join_from_edge := false) -> void:
 	var fresh: Array = []
 	var gains := _profile(name)
 	for stem in stems:
-		fresh.append(_open(clip, stem, entry - (at - begin), gains[stem], ramp))
+		fresh.append(_open(clip, stem, entry - (at - begin), gains[stem], ramp, name))
 	_serial += 1
 	pending = {"section": name, "at": at, "begin": begin, "ramp": ramp, "entry": entry, "voices": fresh, "serial": _serial}
 	_add({"at": begin, "type": "begin", "serial": _serial})
@@ -812,7 +904,8 @@ func _clear_harmony(at: int) -> void:
 			_add({"at": maxi(clock, at - frames), "type": "clear", "voice": v, "frames": frames, "serial": _serial + 1})
 
 
-func _open(clip: Dictionary, stem: String, from: int, gains: Dictionary, ramp: int) -> Voice:
+func _open(clip: Dictionary, stem: String, from: int, gains: Dictionary, ramp: int, name: String) -> Voice:
+	var began := Time.get_ticks_usec()
 	var v := Voice.new()
 	v.stem = stem
 	v.pb = streams[clip["paths"][stem]].instantiate_playback()
@@ -825,7 +918,7 @@ func _open(clip: Dictionary, stem: String, from: int, gains: Dictionary, ramp: i
 	v.count = int(clip["sample_count"])
 	v.loop = bool(clip["loop"])
 	v.loop_offset = int(clip["loop_offset"])
-	var g := _gain_of(gains, stem)
+	var g := _gain_of(gains, stem, name)
 	var hz = gains.get("lowpass_hz")
 	if hz != null:
 		v.lp = lowpass_coeffs(float(hz))
@@ -838,12 +931,14 @@ func _open(clip: Dictionary, stem: String, from: int, gains: Dictionary, ramp: i
 		v.step = 1.0
 	else:
 		_ramp_to(v, g, ramp)
+	opened += 1
+	open_usec += Time.get_ticks_usec() - began
 	return v
 
 
-func _gain_of(stem_row: Dictionary, stem := "") -> float:
+func _gain_of(stem_row: Dictionary, stem := "", at := "") -> float:
 	var db := float(stem_row["volume_db"])
-	return 0.0 if db <= float(manifest.get("silent_db", -80.0)) else db_to_linear(db) * parameter_gain(stem)
+	return 0.0 if db <= float(manifest.get("silent_db", -80.0)) else db_to_linear(db) * parameter_gain(stem, at)
 
 
 func _ramp_to(v: Voice, g: float, frames: int) -> void:
@@ -877,7 +972,7 @@ func _retarget(frames: int) -> void:
 # voices, the threat and armour retargets and the Warden release keep their own ramps.
 func _smooth_momentum(drums_before: float, chain_before: float, stripped_before: bool) -> void:
 	var drums_moved := parameters.has("speed") and parameter_gain("drums") != drums_before
-	var stripped := parameter_released or (parameters.has("armour") and float(parameters.armour) < 0.3)
+	var stripped := _lead_stripped()
 	var lead_moved := parameters.has("chain") and float(parameters.chain) != chain_before and not stripped and not stripped_before
 	var joining: Array = pending.get("voices", [])
 	for v: Voice in voices:
@@ -920,12 +1015,14 @@ func _run(action: Dictionary) -> void:
 			var previous_gain := parameter_gain("other")
 			var drums_before := parameter_gain("drums")
 			var chain_before := float(parameters.get("chain", 0.0))
-			var stripped_before := parameter_released or (parameters.has("armour") and float(parameters.armour) < 0.3)
+			var stripped_before := _lead_stripped()
 			var previous := parameters.duplicate()
 			var previous_released := parameter_released
 			var previous_lift := ultimate_lift
 			parameters = action.values
 			parameter_released = action.released
+			if not parameter_released:
+				lead_returned = false
 			ultimate_lift = action.lift
 			pressure = float(parameters.get("threat", 0.0))
 			if action.reason != "ultimate":
@@ -937,7 +1034,7 @@ func _run(action: Dictionary) -> void:
 				var profile := _profile(String(pending.section))
 				for voice: Voice in pending.voices:
 					if voice.stem == "other" or voice.stem == "drums":
-						var gain := _gain_of(profile[voice.stem], voice.stem)
+						var gain := _gain_of(profile[voice.stem], voice.stem, String(pending.section))
 						if voice.target != gain:
 							_ramp_to(voice, gain, STOP_RAMP)
 			_smooth_momentum(drums_before, chain_before, stripped_before)
@@ -999,6 +1096,8 @@ func _commit() -> void:
 	events_log.append(["enter", clock, name])
 	if name == "build":
 		built = true
+	if name == "return" and mode == "piece":
+		lead_returned = true
 	hold_until = clock + int(row.get("hold_bars", 0)) * grid_bar if row.has("hold_bars") else -1
 	var length := -1
 	if row.has("bars"):

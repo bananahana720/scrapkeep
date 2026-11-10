@@ -70,15 +70,33 @@ export function isBot(source) {
     .some((line) => BOT_MARKER.test(line.replace(/\r$/, "")));
 }
 
-export function testTimeoutMs(source) {
+// SMOKE_TIME_SCALE stretches every test's time limit on a slow machine. It applies after
+// the marker and the ceiling, so it is the one way past 360 s (1800 s for bots), and it
+// never touches a limit a test sets for its own child processes. A run that used it says
+// so in its output and its receipt, so two runs are compared with the same scale in mind.
+const MAX_TIME_SCALE = 4;
+
+export function timeScale(env = process.env) {
+  const text = env.SMOKE_TIME_SCALE;
+  if (text === undefined || text === "") return 1;
+  const scale = Number(text);
+  if (!Number.isFinite(scale) || scale < 1 || scale > MAX_TIME_SCALE) {
+    throw new Error(`SMOKE_TIME_SCALE must be a number from 1 to ${MAX_TIME_SCALE}`);
+  }
+  return scale;
+}
+
+export function testTimeoutMs(source, scale = 1) {
   const bots = isBot(source);
+  let limit = bots ? BOT_TIMEOUT_MS : TIMEOUT_MS;
   for (const line of source.split("\n", MARKER_LINES)) {
     const match = TIMEOUT_MARKER.exec(line.replace(/\r$/, ""));
     if (match) {
-      return Math.min(bots ? MAX_BOT_TIMEOUT_MS : MAX_TIMEOUT_MS, Math.max(TIMEOUT_MS, Number(match[1]) * 1000));
+      limit = Math.min(bots ? MAX_BOT_TIMEOUT_MS : MAX_TIMEOUT_MS, Math.max(TIMEOUT_MS, Number(match[1]) * 1000));
+      break;
     }
   }
-  return bots ? BOT_TIMEOUT_MS : TIMEOUT_MS;
+  return Math.round(limit * scale);
 }
 
 export function isSolo(source) {
@@ -486,7 +504,7 @@ export function emitReceipt(receipt, write = writeReceipt, log = console.log) {
   }
 }
 
-export function buildReceipt({ label, argv, root: repoRoot, git: gitInfo, godot, sketches, flags, width, lockWaitMs, startedAt, wallMs, stems, results, botTierNotRun = [], expired = [] }) {
+export function buildReceipt({ label, argv, root: repoRoot, git: gitInfo, godot, sketches, flags, width, lockWaitMs, startedAt, wallMs, stems, results, botTierNotRun = [], expired = [], timeScale: scale = 1 }) {
   const rows = results.map((result) => ({
     label: result.label,
     ok: result.ok,
@@ -520,6 +538,7 @@ export function buildReceipt({ label, argv, root: repoRoot, git: gitInfo, godot,
     godot,
     sketches,
     flags,
+    ...(scale !== 1 ? { time_scale: scale } : {}),
     width,
     lock_wait_ms: lockWaitMs,
     started_at: startedAt,
@@ -561,34 +580,92 @@ export function judge({ test, status, output }) {
   return { ok, verdict, skips, missing, reason };
 }
 
+// The lines of a test's output that say why it failed: failed checks, engine errors and
+// time-outs. A long test prints them far above its last 40 lines, so a failure lists them
+// first and nobody has to patch the runner to find them.
+const FAILING_LINE = /-> FAIL\b|^\s*(?:SCRIPT ERROR|ERROR|FAIL)\b|\btimed[ _]out\b/;
+// A passing check can carry the words ("exit 0, timed out false -> PASS").
+const PASSING_LINE = /-> PASS\b/;
+const MAX_FAILING_LINES = 60;
+
+export function failingLines(output, limit = MAX_FAILING_LINES) {
+  const counts = new Map();
+  for (const line of output.split("\n").map((text) => text.replace(/\r$/, "")).filter((text) => FAILING_LINE.test(text) && !PASSING_LINE.test(text))) counts.set(line, (counts.get(line) ?? 0) + 1);
+  const lines = [...counts].map(([line, count]) => (count > 1 ? `${line} (x${count})` : line));
+  if (lines.length <= limit) return lines;
+  return [...lines.slice(0, limit), `... ${lines.length - limit} more failing lines (set SMOKE_LOG_DIR for the full output)`];
+}
+
+// SMOKE_LOG_DIR keeps every test's whole output, pass or fail, one file per test, so a
+// gate shard can compare check lines with the last promoted head. SMOKE_FULL=1 prints the
+// same output to the terminal instead.
+export function logFileName(label) {
+  return label.replace(/^.* res:\/\/tests\//, "").replace(/\.gd$/, "").replace(/[^\w.-]+/g, "_") + ".log";
+}
+
+function keepOutput(job, output, env = process.env) {
+  if (env.SMOKE_LOG_DIR) {
+    mkdirSync(env.SMOKE_LOG_DIR, { recursive: true });
+    writeFileSync(path.join(env.SMOKE_LOG_DIR, logFileName(job.label)), output);
+  }
+  if (env.SMOKE_FULL) console.log(output);
+}
+
 function report(job, status, output, ms, signal = null) {
   const { ok, verdict, skips, missing, reason } = judge({ test: job.test, status, output });
   const quarantined = Boolean(job.quarantined);
   const { passes, fails } = countChecks(output);
   console.log(`${ok ? "PASS" : "FAIL"} ${job.label} exit=${status} ${(ms / 1000).toFixed(1)}s`);
-  if (!ok) console.log(output.split("\n").slice(-40).join("\n"));
+  if (!ok) {
+    // The runner's own reason leads: a test killed at its limit prints nothing that says so.
+    const failing = [...(reason ? [reason] : []), ...failingLines(output)];
+    if (failing.length > 0) console.log(`failing lines (${passes} checks passed, ${fails} failed):\n${failing.map((line) => "  >> " + line).join("\n")}`);
+    if (!process.env.SMOKE_FULL) console.log(output.split("\n").slice(-40).join("\n"));
+  }
+  keepOutput(job, output);
   if (reason) console.log(reason);
   if (process.env.SMOKE_DEBUG_ARGS) console.log(`  args: ${job.args.join(" ")}`);
   return { label: job.label, ok, exit: status, ms, solo: Boolean(job.solo), passes, fails, verdict_line: verdict, skips, test: Boolean(job.test), quarantined, signal: signal ?? null, ...(quarantined && job.quarantine ? { quarantine: job.quarantine } : {}) };
 }
 
+export const scriptErrorCount = (output) => (output.match(/^SCRIPT ERROR\b/gm) ?? []).length;
+
 // Import writes the sketch's .godot cache, so it runs alone before anything reads it.
 function runSync(job) {
   const started = Date.now();
   const result = spawnSync(binary, job.args, { encoding: "utf8", timeout: TIMEOUT_MS });
-  return report(job, result.status, (result.stdout || "") + (result.stderr || ""), Date.now() - started);
+  const output = (result.stdout || "") + (result.stderr || "");
+  return { ...report(job, result.status, output, Date.now() - started, result.signal), scriptErrors: scriptErrorCount(output) };
 }
 
-// A fresh worktree's first import can die with signal 11 in Godot's threaded reimport and leave
-// .ctex files missing, so every test then fails its "no script errors" checks. The second import
-// finishes the missing files. Two crashed imports stop the run rather than produce misleading
-// reds. Only the exit code decides; an import that exits 0 with error lines still runs the tests.
+export const IMPORT_TRIES = 3;
+const CRASH_SIGNALS = new Set(["SIGSEGV", "SIGABRT"]);
+const CRASH_CODES = new Set([139, 134]); // 128 + the signal, when a shell reports it
+
+// What one import try came to. Godot 4.7.2's threaded font reimport can crash the first import of
+// a fresh .godot (signal 11 or 6, "malloc(): smallbin double linked list corrupted", last line a
+// .ttf): an engine race, never the project's red, and it leaves .ctex files missing, so every test
+// then fails its "no script errors" checks. An import can also exit 0 while scripts that preload
+// those missing files still print SCRIPT ERROR; the next import finds the files there.
+export function importTry({ exit, signal = null, scriptErrors = 0 }) {
+  if (exit === 0) return scriptErrors > 0 ? "script errors" : "ok";
+  return CRASH_SIGNALS.has(signal) || CRASH_CODES.has(exit) ? "engine crash" : "failed";
+}
+
+// Up to IMPORT_TRIES imports, stopping at the first that exits 0 with no SCRIPT ERROR line. The
+// import fails only when the last try does, so the run stops there and no test prints a misleading
+// red. On a pass, `results` holds the passing try alone (earlier tries are in `tries` and the log):
+// a crash that a retry cleared is not a failed row of the run.
 export function importWithRetry(name, base, run = runSync, log = console.log) {
-  const first = run({ label: `${name} import`, args: [...base, "--import"] });
-  if (first.exit === 0) return { ok: true, results: [first] };
-  log(`${name} import failed (exit=${first.exit}); retrying once`);
-  const second = run({ label: `${name} import (retry)`, args: [...base, "--import"] });
-  return { ok: second.exit === 0, results: [first, second] };
+  const tries = [];
+  for (let attempt = 1; attempt <= IMPORT_TRIES; attempt++) {
+    const result = run({ label: `${name} import${attempt > 1 ? ` (try ${attempt})` : ""}`, args: [...base, "--import"] });
+    const outcome = importTry(result);
+    tries.push({ ...result, outcome });
+    if (outcome === "ok") return { ok: true, results: [result], tries };
+    log(`${name} import try ${attempt} of ${IMPORT_TRIES}: ${outcome} (exit=${result.exit ?? result.signal ?? "none"})${attempt < IMPORT_TRIES ? "; trying again" : ""}`);
+  }
+  return { ok: false, results: tries, tries };
 }
 
 // Every test gets its own XDG_DATA_HOME, so user:// is never shared between parallel runs.
@@ -674,6 +751,14 @@ async function main() {
     console.error("sketch:smoke found no bot-tier tests in the selected sketches");
     process.exit(2);
   }
+  let scale;
+  try {
+    scale = timeScale();
+  } catch (problem) {
+    console.error(`sketch:smoke: ${problem.message}`);
+    process.exit(2);
+  }
+  if (scale !== 1) console.log(`sketch:smoke: time limits scaled by ${scale} (SMOKE_TIME_SCALE)`);
   const waited = await acquireMachine();
   if (waited > 0) console.log(`sketch:smoke waited ${(waited / 1000).toFixed(0)}s for the machine`);
   const width = options.bots ? 1 : named ? Math.min(NAMED_WIDTH, jobCount()) : jobCount();
@@ -693,13 +778,13 @@ async function main() {
     const imported = importWithRetry(name, base);
     results.push(...imported.results);
     if (!imported.ok) {
-      console.error(`${name} import failed twice; tests not run (gate/startup-crash.md)`);
+      console.error(`${name} import failed ${IMPORT_TRIES} times (${imported.tries.map((row) => row.outcome).join(", ")}); tests not run`);
       process.exit(1);
     }
     if (!named && !options.bots) jobs.push({ label: `${name} boot`, args: [...base, "--quit-after", "300"] });
     for (const script of scripts) {
       const isSoloJob = isSoloScript(directory, script);
-      const timeoutMs = testTimeoutMs(readFileSync(path.join(directory, script.replace(/^res:\/\//, "")), "utf8"));
+      const timeoutMs = testTimeoutMs(readFileSync(path.join(directory, script.replace(/^res:\/\//, "")), "utf8"), scale);
       const job = { label: `${name} ${script}`, args: [...base, "--script", script, ...userArgs], test: script, solo: isSoloJob, timeoutMs, quarantined: quarantine.has(path.posix.basename(script, ".gd")), quarantine: quarantineRows.find((row) => row.test === path.posix.basename(script, ".gd")) };
       (isSoloJob ? solo : jobs).push(job);
     }
@@ -748,6 +833,7 @@ async function main() {
     results,
     botTierNotRun,
     expired,
+    timeScale: scale,
   });
   const receiptFailure = emitReceipt(receipt);
   process.exit(receiptFailure ?? (ok ? 0 : 1));

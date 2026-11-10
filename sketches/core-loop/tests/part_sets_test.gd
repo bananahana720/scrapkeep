@@ -109,9 +109,11 @@ func _check_admission() -> void:
 		"shared": {"members": ["hot_rivets", "focus_lens", "long_barrel", "drop_weight"], "elements": {"dash": "frost"}},
 		"classy": {"members": ["grip_tread", "sprint_cell", "cap_relay", "fast_hands"], "elements": {"slam": "frost"}},
 		"unknown": {"members": ["cache_key", "re_rack", "overpressure", "brace_frame"], "elements": {"jump": "lava"}},
+		"mixed": {"members": ["arc_coil", "live_line", "beacon_lamp", "echo_locator"], "elements": {"slam": "arc", "dash": "frost"}},
 	}
 	var found: Array = S.problems(_row, AlphaDefs.part_in_play, planted)
-	var wants := ["short has 3 members", "hot_rivets is in short and shared", "classy has 2 class-neutral members", "unknown rule jump:lava"]
+	var wants := ["short has 3 members", "hot_rivets is in short and shared", "classy has 2 class-neutral members", "unknown rule jump:lava",
+		"mixed adds 2 elements"]
 	var missed: Array = wants.filter(func(w): return not found.any(func(line): return w in line))
 	_report("planted bad sets refused", missed.is_empty(), "missed %s of %d planted problems" % [missed, wants.size()])
 

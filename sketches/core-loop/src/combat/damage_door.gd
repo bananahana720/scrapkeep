@@ -109,12 +109,12 @@ static func health(enemy: Node3D, amount: float, hp_before: float) -> float:
 
 # hp is not part of the enemy protocol, but every implementation carries it; a target
 # without one reads 0.0 and never inflates a delta.
-static func hp_of(enemy: Node3D) -> float:
+static func hp_of(enemy) -> float:
 	if not is_instance_valid(enemy):
 		return 0.0
 	var v = enemy.get("hp")
 	return float(v) if v != null else 0.0
 
 
-static func dead(enemy: Node3D) -> bool:
+static func dead(enemy) -> bool:
 	return not is_instance_valid(enemy) or (enemy.has_method("is_dead") and enemy.is_dead())

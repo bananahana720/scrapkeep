@@ -7,8 +7,11 @@ extends RefCounted
 # read, or keeps the draw to the farthest few anchors. It is a stage-start parameter, never a
 # durable field (TADR-010:47), and nothing here reads or writes ball tuning, physics or input.
 
-# Stage 1 draws no pockets (pocket_draw.gd stage_sites), so it never has a modifier.
-const FIRST_STAGE := 2
+# Every park stage draws at least this many pockets, so every stage has a draw for a row to act
+# on. Only the dam needs it: its four authored sites already pass stage 1's count of three, so it
+# drew nothing and never had a modifier. It now draws the flume's one pocket and joins the same
+# roll (ruling bu, 2026-11-09). Stages 2 to 6 already draw more and are unchanged.
+const MIN_DRAWN := 1
 const CHANCE := 0.4
 # The drawn-plus-authored pocket cap (comps/isaac/floor-generation.md, cap 8).
 const CAP := 8
@@ -22,12 +25,15 @@ const EFFECTS := ["count_scale", "sight_scale", "far"]
 const LOOKS := ["id", "word", "line", "fx"]
 const WORLD_FX := "res://src/presentation/world_fx/world_fx.gd"
 const WORLD_FX_ANCHOR := "res://src/presentation/world_fx/world_fx_anchor.gd"
+# The lines are the Foreman's memos (STORY-MAP.md, the Foreman's voice): dry optimiser talk that
+# is pleased with itself, and each still ends on what the stage does. The card is up for about two
+# seconds over a launch, so a line stays inside eight short words (stage_modifier_test).
 const ROWS := [
-	{"id": "surplus", "word": "Surplus Yard", "line": "Somebody over-ordered. More pockets.", "fx": "plenty", "count_scale": 2.0},
-	{"id": "lean", "word": "Lean Haul", "line": "Budget cuts. Fewer pockets.", "fx": "scarce", "count_scale": 0.5},
-	{"id": "floodlit", "word": "Floodlit", "line": "Someone left the lights on. Beacons read far.", "sight_scale": 1.75},
-	{"id": "blackout", "word": "Blackout", "line": "The beacons are on a budget.", "fx": "hidden", "sight_scale": 0.5},
-	{"id": "far_haul", "word": "Far Haul", "line": "Everything good is at the edges.", "far": true},
+	{"id": "surplus", "word": "Surplus Yard", "line": "A forecasting win. More pockets.", "fx": "plenty", "count_scale": 2.0},
+	{"id": "lean", "word": "Lean Haul", "line": "More with less. Mostly less. Fewer pockets.", "fx": "scarce", "count_scale": 0.5},
+	{"id": "floodlit", "word": "Floodlit", "line": "Transparency is a value. Beacons read far.", "sight_scale": 1.75},
+	{"id": "blackout", "word": "Blackout", "line": "Lighting, right-sized. Beacons read near.", "fx": "hidden", "sight_scale": 0.5},
+	{"id": "far_haul", "word": "Far Haul", "line": "Value was relocated to the edges.", "far": true},
 ]
 
 
@@ -44,9 +50,11 @@ static func authored(map) -> int:
 	return map.activity_sites.filter(func(s: Dictionary) -> bool: return s.get("extra", "") != "card_2").size()
 
 
-# The drawn slots a stage has before any modifier (pocket_draw.gd draw: 3 to 5 rising one a stage).
+# The drawn slots a stage has before any modifier (pocket_draw.gd draw: 3 to 5 rising one a stage),
+# never under MIN_DRAWN while the cap has room.
 static func base_slots(stage: int, authored: int) -> int:
-	return maxi(0, mini(CAP, stage + 2) - authored)
+	var room := maxi(0, CAP - authored)
+	return clampi(mini(CAP, stage + 2) - authored, mini(MIN_DRAWN, room), room)
 
 
 # The drawn slots with the row applied: scaled, at least one, and never past the cap.
@@ -74,7 +82,7 @@ static func _eligible(row: Dictionary, stage: int, authored: int) -> bool:
 
 # The stage's modifier, or {} for none, from its own stream (no shared RNG is touched).
 static func pick(run_seed: int, stage: int, authored: int) -> Dictionary:
-	if stage < FIRST_STAGE:
+	if stage < 1:
 		return {}
 	var rng := RandomNumberGenerator.new()
 	rng.seed = hash([run_seed, stage, "stage_modifier"])
@@ -111,8 +119,9 @@ static func caption(row: Dictionary) -> String:
 
 
 # The run-long cursed state shares the card: its own card when the deal is taken, then a line
-# on every later stage card beside the stage's modifier.
-const CURSE := {"id": "curse", "word": "Cursed Run", "line": "The deal is on the books."}
+# on every later stage card beside the stage's modifier. The deal was a keeper's gamble, so the
+# line is the crew's, the door sign's "Nobody makes you." come due (trade_pockets.gd DOOR_WORDS).
+const CURSE := {"id": "curse", "word": "Cursed Run", "line": "You shook on it. Nobody made you."}
 
 
 static func card_line(run, terrain, stage: int) -> String:

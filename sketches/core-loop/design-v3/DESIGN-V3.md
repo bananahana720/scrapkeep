@@ -1,5 +1,7 @@
 # Scrapkeep alpha design
 
+The game in one line (Andrew, 9 November 2026, ruling cj): A crew of loose cannons, bulls in the Foreman's china shop, take their world back from a machine that believes life can be run perfectly. The story facts and what each system means are in the [Story map](STORY-MAP.md); this page owns how the game plays.
+
 Current gameplay design after checkpoint 1, as of base `981214373fecdad3c53be83b242993b62a1aa5ef`.
 Refresh: written against base `981214373fecdad3c53be83b242993b62a1aa5ef` before wave 3 landed. Wave 3 added the boss contract, the alpha table, the entrance document, the rarity ladder, the companion model, the guard-rack burst, hero asset guards, wind-up rows, lore rows, Spillway zone 1-1 and the nightly runner.
 [Playtest entry 12](../../../docs/playtests/PLAYTEST-LOG.md#12-checkpoint-1-the-cable-reach-first-human-play) and EV-0624 record the verdict.
@@ -83,7 +85,7 @@ The payout is damage, never Scrap.
 One player chain state feeds the counter, collar rings, sound, log and discovery.
 The counter appears from combo two, beside the ability bar.
 The collar gains one ring per link up to six.
-Bite pitch rises one semitone per link beyond the first and returns to the root on smash.
+Bite pitch rises one rung of the pentatonic per link beyond the first and returns to the root on smash.
 An ending chain sounds only if it reached combo two.
 The run log records chains, best combo and misses, including arena play.
 The first combo of three opens the Chain codex discovery.
@@ -131,8 +133,8 @@ Each pays a part at the completion site and 180 Scrap.
 Decision row 181 requires visible direction from drop-in after the sitting exposed their invisibility.
 [Objectives](../src/core/objectives.gd) supplies the plate's glyph and words, capped at five words.
 [Edge markers](../src/ui/edge_markers.gd) points at offscreen goals and unfinished activity sites.
-The current plate says "Find an activity" before the Warden engagement while a site remains.
-During the fight it says "Break its guard" or "Smash the core".
+Before the Warden engagement, while a site remains, the plate names the nearest unfinished site by its verb and gives the metres to it: "Clear the camp", "Spring the ambush", "Crack open the cache", "Hold the relay", "Outrun the surge" or "Break the bounty hauler" (9 Nov 2026; it said "Find an activity" for every site before, and still does for a drawn pocket or trade site, which has no words of its own). The order is unchanged: an activity stands before the Warden rows while a site remains. The site it names is the one ahead on the ball's way: the view's heading until the ball has travelled, and after that where the ball is going, so a look round never changes the goal and passing a place does (10 Nov 2026; it read the view before, and on the road one look round changed the goal two or three times).
+During the fight it says "Break its guard" or "Smash the core". A mounted reactor Warden names its own road where "Break its guard" would stand: "Ride the water sheet up" at the dam, and "Latch onto the Warden" then "Latched: shoot the Warden" at the flume (the fire-from-the-line rule, said as an order). In Brindle's arena the plate names each phase's verb: "Shoot the crane magnets", "Slam the vent caps", "Bait his charge into walls", "Hit the open cockpit" on a stagger or a stun and "Ram the Admiral's scooter" on the eject. While a charge is committed the plate keeps "Bait his charge into walls" even through a stagger, because the lane is what the player must read. A marker points at each thing the row names (the magnets, the caps, the open cockpit, the scooter): a small chevron over it in view, the edge chevron when it is out of view.
 "Grow, then return" requires ten seconds of sustained trying without reaching half posture.
 After the break it says "Roll through a gate".
 Activity markers hide during engagement and disappear when their site is done.

@@ -77,6 +77,13 @@ func aim_forward() -> Vector3:
 	return camera.aim_forward()
 
 
+# The level direction the player faces: the view's yaw with no pitch, unit length. It is the
+# read side of camera.snap(heading), and the one call simulation code makes for it, so no
+# module reads the camera's basis. A context with no camera faces Vector3.FORWARD.
+func heading() -> Vector3:
+	return -camera.yaw_basis().z if camera != null else Vector3.FORWARD
+
+
 # True when combat is present: the spawner exists and can spawn_enemy. Test stand-ins
 # for the spawner only need that method.
 func can_spawn() -> bool:
