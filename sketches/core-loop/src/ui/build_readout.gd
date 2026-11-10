@@ -167,12 +167,13 @@ func _part_row(row: Dictionary) -> void:
 	box.add_theme_constant_override("separation", 8)
 	box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_rows.add_child(box)
+	var icon_id := Parts.icon_of(String(row["id"]))
 	var icon := TextureRect.new()
-	icon.texture = Icons.texture("cat_" + String(row["icon"]))
+	icon.texture = Icons.texture(icon_id)
 	icon.custom_minimum_size = Vector2(24.0, 24.0)
 	icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	icon.modulate = Palette.SAND
+	icon.modulate = Icons.tint(icon_id, Palette.SAND)
 	icon.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	box.add_child(icon)
 	box.add_child(_label(row["text"]))
@@ -180,6 +181,18 @@ func _part_row(row: Dictionary) -> void:
 		var pips := PipRow.new(int(row["pips"]["filled"]), int(row["pips"]["total"]))
 		pips.name = "Pips"
 		box.add_child(pips)
+		# Copies past the cap: the full row, then how many more are held.
+		if int(row["over"]) > 0:
+			var extra := _label("+%d" % int(row["over"]))
+			extra.name = "Over"
+			extra.size_flags_horizontal = Control.SIZE_SHRINK_END
+			extra.add_theme_font_size_override("font_size", 14)
+			box.add_child(extra)
+	elif row["at_cap"]:
+		# A part with no copy count that has reached its ceiling: one filled pip, the full-row look.
+		var mark := PipRow.new(1, 1)
+		mark.name = "CapMark"
+		box.add_child(mark)
 
 
 # Filled and empty round pips: how many copies are held out of how many count.
@@ -289,7 +302,8 @@ static func describe(held: Array) -> Dictionary:
 		if d.stack_rule in ["linear", "capped"] and d.stack_cap >= 1.0:
 			pips = {"filled": mini(n, int(d.stack_cap)), "total": int(d.stack_cap)}
 		rows.append({"id": id, "copies": n, "layer": d.layer, "reads": d.reads.duplicate(), "icon": d.icon_category,
-			"cap": d.stack_cap, "stack": d.stack_rule, "at_cap": at_cap, "pips": pips, "bonuses": bonuses,
+			"cap": d.stack_cap, "stack": d.stack_rule, "at_cap": at_cap, "pips": pips,
+			"over": maxi(0, n - int(pips["total"])) if not pips.is_empty() else 0, "bonuses": bonuses,
 			"text": _part_words(d, n if pips.is_empty() else 1, bonuses)})
 	_pool(pools, "resistance", "multiplying remaining", effects.damage_reduction, 1.0 - remaining_cap)
 	return {"pools": pools, "parts": rows}

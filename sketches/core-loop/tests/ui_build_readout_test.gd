@@ -233,7 +233,7 @@ func _check_levels() -> void:
 		var damage: float = totals.get("weapon_damage", -1.0)
 		if not (is_equal_approx(punch, level.punch) and is_equal_approx(punch, sheet.punch)
 				and is_equal_approx(damage, level.mods["weapon_damage"]) and is_equal_approx(damage, sheet.mod("weapon_damage"))
-				and level.display_name in row["text"] and "%" in row["text"] and row["copies"] == n):
+				and level.display_name in row["text"] and _readout._signed((level.mods["weapon_damage"] - 1.0) * 100.0, "%") + " weapon damage" in row["text"] and row["copies"] == n):
 			wrong.append("x%d: punch %s damage %s, level %d is %s / %s; text %s" % [n, punch, damage, n, level.punch, level.mods["weapon_damage"], [row["text"]]])
 	var plates: Array = ["rivet_plating", "rivet_plating", "rivet_plating"]
 	var plate_row: Dictionary = _readout.describe(plates)["parts"][0]

@@ -10,6 +10,8 @@ extends SceneTree
 const Parts := preload("res://src/build/parts.gd")
 const Attachments := preload("res://src/build/attachments.gd")
 const BuildReadout := preload("res://src/ui/build_readout.gd")
+const Icons := preload("res://src/ui/icons.gd")
+const Palette := preload("res://src/core/palette.gd")
 
 const ROW_WORDS := 9
 const BANNED := ["weapon-local", "player-global", "Reads:", "multiplying", "shrinks", "no cap", "hyperbolic",
@@ -37,6 +39,20 @@ func _report(label: String, ok: bool, detail: String) -> void:
 
 func _banned_in(words: String) -> Array:
 	return BANNED.filter(func(word): return word in words)
+
+
+func _press(code: Key) -> void:
+	var key := InputEventKey.new()
+	key.keycode = code
+	key.physical_keycode = code
+	key.pressed = true
+	Input.parse_input_event(key)
+	Input.flush_buffered_events()
+
+
+func _over_text(view: Node, id: String) -> String:
+	var found: Array = view.find_children("Part_" + id, "HBoxContainer", true, false)[0].find_children("Over", "Label", true, false)
+	return found[0].text if found.size() == 1 else ""
 
 
 func _words_in(words: String) -> int:
@@ -97,8 +113,12 @@ func _run() -> void:
 	var two_rivets: Array = []
 	for i in 2:
 		two_rivets.append("slag_rounds")
+	# Slag Rounds has no copy cap (stack_cap 0), so its copies read as a count; Cap Relay has a cap of
+	# 3, so its copies are pips and the name carries no count.
 	var slag: String = BuildReadout.describe(two_rivets)["parts"][0]["text"]
-	_report("a part with no copy cap shows its count above one", "x2" in slag or Parts.def("slag_rounds").stack_cap >= 1.0, slag)
+	_report("a part with no copy cap shows its count above one", Parts.def("slag_rounds").stack_cap < 1.0 and "x2" in slag, slag)
+	var relay_text: String = BuildReadout.describe(["cap_relay", "cap_relay"])["parts"][0]["text"]
+	_report("planted control: a capped part does not show a count in its name", Parts.def("cap_relay").stack_cap >= 1.0 and not "x2" in relay_text, relay_text)
 	_report("a hot rivets row names its numbers", not hot.is_empty() and ("%" in hot["text"] or "+" in hot["text"]), hot.get("text", ""))
 
 	# Every authored part, alone and at a heavy stack: 9 words, one line, no banned word.
@@ -123,20 +143,57 @@ func _run() -> void:
 	_report("every authored part row is 9 words or fewer", over.is_empty(), "%d over: %s" % [over.size(), over.slice(0, 8)])
 	_report("no authored part or pool row carries a banned word", dirty.is_empty(), "%d dirty: %s" % [dirty.size(), dirty.slice(0, 8)])
 
+	# Copies past the cap show as the full pips and a small plus count; at the cap, none.
+	_report("four copies of a cap of three show the plus one", relay.get("over") == 1 and _over_text(view, "cap_relay") == "+1", "over %s, mark %s" % [relay.get("over"), _over_text(view, "cap_relay")])
+	var held_cap: float = Parts.def("cap_relay").stack_cap
+	var three := BuildReadout.new()
+	root.add_child(three)
+	three.show_build(["cap_relay", "cap_relay", "cap_relay"])
+	_report("planted control: copies at the cap draw no plus count", held_cap == 3.0 and three.find_children("Over", "Label", true, false).is_empty()
+		and three.snapshot()["parts"][0]["over"] == 0, "three of three")
+	# A part with no pip row that reaches its ceiling shows one filled pip; short of it, nothing.
+	var guards: Array = []
+	for i in 30:
+		guards.append("crush_guard")
+	var capped := BuildReadout.new()
+	root.add_child(capped)
+	capped.show_build(guards)
+	var short := BuildReadout.new()
+	root.add_child(short)
+	short.show_build(["crush_guard"])
+	_report("a part at its cap with no pip row shows a filled pip", capped.snapshot()["parts"][0]["at_cap"] and capped.snapshot()["parts"][0]["pips"].is_empty()
+		and capped.find_children("CapMark", "Control", true, false).size() == 1, "30 Crush Guard")
+	_report("planted control: a part short of its cap shows no cap mark", not short.snapshot()["parts"][0]["at_cap"] and short.find_children("CapMark", "Control", true, false).is_empty(), "1 Crush Guard")
+	# The icon is the part's own (Parts.icon_of) and wears Icons.tint.
+	var box: Node = view.find_children("Part_cap_relay", "HBoxContainer", true, false)[0]
+	var icon: TextureRect = box.get_child(0)
+	var icon_id := Parts.icon_of("cap_relay")
+	_report("the row icon comes from Parts.icon_of and Icons.tint", icon_id != "" and icon.texture == Icons.texture(icon_id) and icon.modulate == Icons.tint(icon_id, Palette.SAND), icon_id)
+	var element_id := ""
+	for id in rows:
+		if Parts.def(id) != null and Parts.def(id).element != "":
+			element_id = id
+			break
+	var element_view := BuildReadout.new()
+	root.add_child(element_view)
+	element_view.show_build([element_id])
+	var element_icon: TextureRect = element_view.find_children("Part_" + element_id, "HBoxContainer", true, false)[0].get_child(0)
+	_report("an element part wears its element icon", element_id != "" and element_icon.texture == Icons.texture("el_" + String(Parts.def(element_id).element)), element_id)
+
 	_report("no Close build text on the popup", not "Close build" in text and view._popup.find_children("Back", "Button", true, false).size() == 1, "Back button")
 	view._popup.popup_centered()
-	var esc := InputEventKey.new()
-	esc.keycode = KEY_ESCAPE
-	esc.physical_keycode = KEY_ESCAPE
-	esc.pressed = true
+	await process_frame
+	await process_frame
 	var opened: bool = view.popup_visible()
-	var closed: bool = view.has_method("close_on_key") and view.call("close_on_key", esc)
-	_report("Esc closes the popup", opened and closed and not view.popup_visible(), "open %s, closed %s" % [opened, closed])
-	var other := InputEventKey.new()
-	other.keycode = KEY_Q
-	other.pressed = true
+	_press(KEY_ESCAPE)
+	await process_frame
+	_report("Esc closes the popup", opened and not view.popup_visible(), "open before %s, open after %s" % [opened, view.popup_visible()])
 	view._popup.popup_centered()
-	_report("another key leaves it open", not (view.has_method("close_on_key") and view.call("close_on_key", other)) and view.popup_visible(), "Q")
+	await process_frame
+	await process_frame
+	_press(KEY_Q)
+	await process_frame
+	_report("another key leaves it open", view.popup_visible(), "Q")
 
 	print("build_readout_words_test: %s (%d checks)" % ["PASS" if _failures == 0 else "FAIL (%d)" % _failures, _checks])
 	quit(0 if _failures == 0 else 1)
