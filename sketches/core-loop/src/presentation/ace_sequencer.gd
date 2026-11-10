@@ -501,6 +501,12 @@ func duck(amount: float, hold_seconds: float) -> void:
 	duck_until = maxi(duck_until, clock + int(hold_seconds * RATE))
 
 
+# The cue the band dipped under has stopped early: the band comes back from this frame.
+func free_duck() -> void:
+	duck_until = clock
+	duck_target = 1.0
+
+
 # --- The grid -------------------------------------------------------------------------
 
 func next_beat(from := -1) -> int:

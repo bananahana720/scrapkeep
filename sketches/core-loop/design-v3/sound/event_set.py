@@ -241,7 +241,11 @@ def boss_arena_in():
     for i in range(6):
         place(out, crunch(0.06, 0.015, 0.4 + 0.08 * i), 0.47 + 0.058 * i)
     place(out, chord(brass, ("D3", "A3", "C4", "E4"), 1.6, 0.3), 0.82)
-    place(out, sub(1.0, 90, 40, 0.5, 1.0), 0.82)
+    low = sub(1.0, 90, 40, 0.5, 1.0)
+    # This sub is still at 13% of its level when it ends; without a fade the step clicks.
+    release = int(0.03 * SR)
+    low[-release:] *= np.linspace(1, 0, release)
+    place(out, low, 0.82)
     place(out, bell("D2", 1.4, ratio=2.76, level=0.5), 0.82)
     return out
 

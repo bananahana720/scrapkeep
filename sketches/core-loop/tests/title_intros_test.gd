@@ -193,6 +193,12 @@ func _play_row(game: Node, display, id: String, capture: String) -> void:
 		var middle: float = at + float(shots[i].bars) * TitleIntros.BAR * 0.5
 		player.advance(middle - player.clock)
 		kinds.append(player.shot_kind())
+		if String(shots[i].kind) == "postcard":
+			# The one-word label over the tiny pilot ("her.") read as a caption that lost its words.
+			var pointer: Control = display.find_child("Pointer", true, false)
+			var tail: Node2D = pointer.get_node_or_null("Tail") if pointer != null else null
+			_t.check(id + " pointer label has a tail under the middle of its box", tail != null and tail.position.y > 20.0
+				and is_equal_approx(tail.position.x, pointer.get_combined_minimum_size().x * 0.5))
 		if capture != "":
 			for frame in 6:
 				await process_frame

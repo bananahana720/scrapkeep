@@ -84,9 +84,19 @@ const WALL_S := 1100.0
 # Same day (ruling bl, the bot's point-blank bite at a 0.25 s re-press): Kest seeds moved again, small seed 4
 # 11.33 -> 19.49 and grown seed 2 20.03 -> 17.75. One run on d244fbb8: small median 23.9, grown [15.14, 19.54,
 # 17.75, 21.61, 9.05] median 17.8, after the clamp the same, 2.8 s over the 15 s floor.
-const EXPECT_SMALL_S := 23.9
-const EXPECT_GROWN_S := 17.8
-const EXPECT_GROWN_OPEN_S := 17.8
+# 2026-11-09 (ruling bu, #643, the dam draws a pocket): re-pinned. These runs enter stage 2 directly, but the
+# game builds the dam first, and the dam now builds one more site. Controls on 1d8d87da, small seeds 1 and 2:
+# with the dam's draw switched off (MIN_DRAWN 0) both replay the pins above to the hundredth of a second
+# (27.17 and 22.01 s); with the flume's level rule off, the siphon camp's named part back, or the old roll ids
+# they equal the head (30.88 and 32.99 s). A tick trace puts the first difference at tick 267, in the ball's
+# velocity at the ninth digit: the extra site reorders the physics bodies, so each seed plays a different
+# stage-2 fight, as on 2026-11-08. Nothing on the flume's line or in its Warden changed. One run of this test:
+# small [28.74, 30.88, 32.99, 31.49, 11.33] median 30.9 (per seed +2.3, +3.7, +11.0, +7.6, -8.2 s), grown
+# [22.44, 15.75, 14.33, 19.82, 6.86] median 15.8 (+7.3, -3.8, -3.4, -1.8, -2.2 s), after the clamp the same,
+# 0.8 s over the 15 s floor; every small and grown run breaks the Warden, campers never break.
+const EXPECT_SMALL_S := 30.9
+const EXPECT_GROWN_S := 15.8
+const EXPECT_GROWN_OPEN_S := 15.8
 const TOLERANCE := 0.10
 
 

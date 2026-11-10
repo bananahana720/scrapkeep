@@ -1,5 +1,5 @@
 {
-  "bake_sha256": "dd8c6dd9a334527e1b48252f36100618cb96c2a8bb36f7c4633dbd188529fcf0",
+  "bake_sha256": "8545a24eaa41fd0ea83ed0555716bf42475820af889cde0573607943fc53eead",
   "beacon_ok": true,
   "breaches": [],
   "bytes": 1311378,
@@ -21,7 +21,7 @@
   "longest_est_m": 3144,
   "map": "park_dam",
   "nodes": 40401,
-  "park_sha256": "6a1f9ad9c0cd98793231688e141518c00b9e73a73d44fc1a45dfe0e6262182fb",
+  "park_sha256": "129e444d3e475a284864d2e8aba1ab57ea54110548888c668f02cf78cf81edbe",
   "pockets": [
     {
       "clear_ring": [],
@@ -42,7 +42,7 @@
       "kind": "enemy_camp",
       "nearest_door": -1,
       "nearest_door_id": "",
-      "pay_named": "hot_rivets",
+      "pay_named": "",
       "pay_rarities": [
         "common"
       ],
@@ -200,7 +200,7 @@
       "value": 1.805
     }
   ],
-  "tool_sha256": "9a2f796d09989bc9186733fec4ad82ba88afe13bd684cd17ca75792c703333c1",
+  "tool_sha256": "a33c70d786843eec2d89c1ae510c6d8ef7c95aff43ff184940f56c816121dc7b",
   "zones": {
     "anchors": [
       {

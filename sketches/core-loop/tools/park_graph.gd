@@ -1923,13 +1923,18 @@ static func draw_arm(map_id: String, seeds := 1000, placement_seeds := 200) -> D
 		var sets := {}
 		var detours := []
 		var union_blocks := {}
-		var row := {"stage": stage, "map": id, "exempt": stage == 1, "stage_samples": seeds, "placement_samples": placement_seeds, "draw_count": 0, "nonempty_stages": 0, "counts_in_3_to_8": 0, "distinct_sets": 0, "detour_p10": 0.0, "detour_p90": 0.0, "detour_ratio": 0.0, "failed_placements": 0, "credit_lost": 0, "chance_opportunities": 0, "chance_hits": 0, "chance_rate": 0.0, "placement_draws": 0, "rule_samples": seeds, "rule_breaches": 0, "route_cuts": 0, "door_ring_breaches": 0, "placement_example": {}, "samples": []}
+		var row := {"stage": stage, "map": id, "stage_samples": seeds, "placement_samples": placement_seeds, "draw_count": 0, "nonempty_stages": 0, "counts_in_3_to_8": 0, "distinct_sets": 0, "detour_p10": 0.0, "detour_p90": 0.0, "detour_ratio": 0.0, "failed_placements": 0, "credit_lost": 0, "chance_opportunities": 0, "chance_hits": 0, "chance_rate": 0.0, "placement_draws": 0, "rule_samples": seeds, "rule_breaches": 0, "route_cuts": 0, "door_ring_breaches": 0, "placement_example": {}, "samples": []}
 		var envelope := draw_detour_bound(graph, prepared.from_line)
 		row.detour_bound = envelope.ratio
 		row.detour_bound_min = envelope.min
 		row.detour_bound_max = envelope.max
-		row.detour_floor = minf(2.0, 0.9 * row.detour_bound)
-		if not is_equal_approx(row.detour_floor, minf(2.0, 0.9 * envelope.max / envelope.min)):
+		# World 1's level-ground rule (pocket_draw.gd TIDY) leaves fewer pay points than the permissive probe
+		# sees (the dam's reach 283 m of its 503 m), so there the floor reads the anchors the draw may use.
+		row.anchor_bound = row.detour_bound
+		if id in Draw.TIDY and not prepared.anchors.is_empty():
+			row.anchor_bound = minf(row.detour_bound, prepared.from_line[prepared.anchors.back().node] / prepared.from_line[prepared.anchors.front().node])
+		row.detour_floor = minf(2.0, 0.9 * row.anchor_bound)
+		if id not in Draw.TIDY and not is_equal_approx(row.detour_floor, minf(2.0, 0.9 * envelope.max / envelope.min)):
 			result.errors.append("floor derivation requirement: " + id)
 		for seed_value in seeds:
 			var run = Run.new()
@@ -2003,13 +2008,11 @@ static func draw_arm(map_id: String, seeds := 1000, placement_seeds := 200) -> D
 						cut.ride.append(graph.ride[e])
 			cut.off.append(cut.to.size())
 		row.route_cuts = route_breaks(cut, map.park).size()
-		if stage != 1:
-			if row.distinct_sets < 8 or row.counts_in_3_to_8 < seeds * 0.95 or row.detour_ratio < row.detour_floor:
-				result.errors.append("variety/count/detour requirement: " + id)
-			if row.chance_opportunities == 0 or absf(row.chance_rate - 0.25) > 0.03:
-				result.errors.append("chance rate requirement: " + id)
-		elif row.draw_count != 0:
-			result.errors.append("D8 stage 1 must draw nothing")
+		# Every stage draws since ruling bu (2026-11-09); D8's stage 1 exemption is retired.
+		if row.distinct_sets < 8 or row.counts_in_3_to_8 < seeds * 0.95 or row.detour_ratio < row.detour_floor:
+			result.errors.append("variety/count/detour requirement: " + id)
+		if row.chance_opportunities == 0 or absf(row.chance_rate - 0.25) > 0.03:
+			result.errors.append("chance rate requirement: " + id)
 		if row.credit_lost != 0 or row.rule_breaches != 0 or row.route_cuts != 0:
 			result.errors.append("credit/rules/routes requirement: " + id)
 		result.stage_samples += seeds

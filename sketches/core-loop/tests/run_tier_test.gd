@@ -457,15 +457,14 @@ func _card() -> void:
 	game.flow.show_start_card()
 	t.check("win offers tier 1", card.offered_tiers() == [0, 1])
 	t.check("a tier to choose releases the cursor", card.wants_pointer() and game.capture_requests.back() == false and game.get_meta("menu_held", false))
-	var labels := []
-	for node in card.get_children():
-		if node is Label and node.visible:
-			labels.append(node.text)
 	var hard: Dictionary = Cards.RUN_TIERS[1]
-	var expected_threat := "Threat: %d%% more crowd, %d%% shorter intervals" % [roundi(100.0 * (hard.cap_weight - 1.0)), roundi(100.0 * (1.0 - hard.interval_weight))]
+	var expected_threat := "Threat: %d%% more crowd, %d%% shorter intervals, plated elite brutes" % [roundi(100.0 * (hard.cap_weight - 1.0)), roundi(100.0 * (1.0 - hard.interval_weight))]
 	var expected_pay := "Pay: %d%% more event cores and rare weight; gain cap %.1fx" % [roundi(100.0 * (hard.event_core_multiplier - 1.0)), RunTier.PAY_GAIN_CAP]
-	t.check("rendered pre-choice threat/pay", expected_threat in labels
-		and expected_pay in labels and game.run.selected_run_tier() == 0)
+	# The ladder is drawn (pips and gauges); the rung looked at writes its threat and pay before the press.
+	card.tier_button(1).grab_focus()
+	t.check("rendered pre-choice threat/pay", expected_threat in card.drawn_words()
+		and expected_pay in card.drawn_words() and game.run.selected_run_tier() == 0, "words %s" % [card.drawn_words()])
+	card.tier_button(1).release_focus()
 	var host = game.get_node("Workshop")
 	t.check("start card sits above workshop", card.get_parent().layer > host.layer)
 	t.eq("start card handles input during workshop pause", card.process_mode, Node.PROCESS_MODE_ALWAYS)
@@ -642,14 +641,16 @@ func _continue_replay() -> void:
 		for tile in card.tiles():
 			shown_ids.append(tile.id)
 		t.eq(label + " shows saved three options", shown_ids, expected_options)
-		var labels := []
-		for child in card.get_children():
-			if child is Label and child.is_visible_in_tree():
-				labels.append(child.text)
 		var hard: Dictionary = Cards.RUN_TIERS[1]
-		var threat := "Threat: %d%% more crowd, %d%% shorter intervals" % [roundi(100.0 * (hard.cap_weight - 1.0)), roundi(100.0 * (1.0 - hard.interval_weight))]
+		var threat := "Threat: %d%% more crowd, %d%% shorter intervals, plated elite brutes" % [roundi(100.0 * (hard.cap_weight - 1.0)), roundi(100.0 * (1.0 - hard.interval_weight))]
 		var pay := "Pay: %d%% more event cores and rare weight; gain cap %.1fx" % [roundi(100.0 * (hard.event_core_multiplier - 1.0)), RunTier.PAY_GAIN_CAP]
-		t.check(label + " visible pre-choice tier disclosure", threat in labels and pay in labels and card.offered_tiers() == [0, 1])
+		# The ladder is drawn (pips and gauges); the rung looked at writes its threat and pay before the press.
+		if card.tier_button(1) != null:
+			card.tier_button(1).grab_focus()
+		t.check(label + " visible pre-choice tier disclosure", card.ladder_shown() and "Crowd" in card.drawn_words() and "Pay" in card.drawn_words()
+			and threat in card.drawn_words() and pay in card.drawn_words() and card.offered_tiers() == [0, 1], "words %s" % [card.drawn_words()])
+		if card.tier_button(1) != null:
+			card.tier_button(1).release_focus()
 		var key := InputEventKey.new()
 		key.pressed = true
 		key.keycode = KEY_2

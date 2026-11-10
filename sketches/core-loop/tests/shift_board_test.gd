@@ -129,7 +129,7 @@ func _one_big_first_run() -> void:
 	store.hear_tune("secret-lost-tape")
 	bus.run_ended.emit(true)
 	_t.eq("one run, four stamps", listener.board_line,
-		"Shift board: CLOCKED IN; LOGGED Warden Breaker; HIRED Rivet Freed, Brindle Routed, Sable's Mark; FOUND Lost Tape.")
+		"Shift board: CLOCKED IN; Warden Breaker (LOGGED); Rivet Freed, Brindle Routed, Sable's Mark (HIRED); Lost Tape (FOUND).")
 	listener.free()
 	bus.free()
 
@@ -144,8 +144,8 @@ func _first_runs() -> void:
 	var listener := Progress.new()
 	listener.setup(bus, run, store, func(): return 1700000000.0)
 	var expect_next := ["clock_in", "first_warden", "rivet_freed", "rivet_freed", "lost_tape"]
-	var expect_line := ["", "Shift board: CLOCKED IN.", "Shift board: LOGGED Warden Breaker.",
-		"Time card punched, 1 of 3.", "Shift board: HIRED Rivet Freed, Brindle Routed, Sable's Mark."]
+	var expect_line := ["", "Shift board: CLOCKED IN.", "Shift board: Warden Breaker (LOGGED).",
+		"Time card punched, 1 of 3.", "Shift board: Rivet Freed, Brindle Routed, Sable's Mark (HIRED)."]
 	var scripts := [
 		[],
 		["kills:8"],

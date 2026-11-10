@@ -12,6 +12,9 @@ const Game := preload("res://src/game.gd")
 const Profile := preload("res://src/core/profile.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
 const StartPicks := preload("res://src/core/start_picks.gd")
+const WordBudget := preload("res://src/ui/word_budget.gd")
+const UiDraw := preload("res://src/ui/ui_draw.gd")
+const Push := preload("res://tests/workshop/push.gd")
 
 # Each lever and the way a harder rung moves it: up (hits, waits before regen) or down (cadence, regen rate).
 const HARDER_UP := ["mobs.damage_mult", "warden.pulse_damage_mult", "brindle.damage_mult", "mobs.elite_rate_mult",
@@ -151,19 +154,19 @@ func _locked(game) -> void:
 		var labels := _labels(card)
 		t.check(label + " shows", card.showing() and card.is_processing_input())
 		t.eq(label + " names only the unlock", labels, [card.UNLOCK_WORDS])
-		t.check(label + " has no tier buttons", card.tier_button(0) == null and card.tier_button(1) == null and card.rung_button == null)
+		t.check(label + " has no ladder", card.tier_button(0) == null and card.tier_button(1) == null and not card.ladder_shown())
 		t.check(label + " keeps the reroll", card.reroll_button != null)
 		t.check(label + " reports the same words", card.UNLOCK_WORDS in card.drawn_words()
-			and not Array(card.drawn_words()).any(func(w): return String(w).begins_with("Threat") or String(w).begins_with("Pay")),
+			and not Array(card.drawn_words()).any(func(w): return String(w) in ["Tier", "Crowd", "Hits", "Regen", "Pay"]),
 			"words %s" % [card.drawn_words()])
 		if not closed:
-			game.run._tier_closed = true
+			game.run.close_run_tier()
 			game.flow.show_start_card()
 	game.bot_driven = was
 
 
-# Beating rung N opens N+1 (run_tier.gd BEST_STAT); the start card offers the base tier and one rung, and
-# Next rung steps it through the opened rungs.
+# Beating rung N opens N+1 (run_tier.gd BEST_STAT); the start card draws the ladder, with a pip to press
+# for each rung the profile has opened and the selected rung's four gauges.
 func _unlock(game) -> void:
 	var profile = game.ctx.profile
 	# The card draws its buttons only for a player (flow.show_start_card).
@@ -173,11 +176,25 @@ func _unlock(game) -> void:
 	t.check("no locked profile tier", RunTier.top_unlocked(null) == 0 and not RunTier.unlocked(null, 1))
 	game.flow.show_start_card()
 	var card = game.flow.start_card
-	t.eq("one opened rung shows rung 1", card.shown_rung(), 1)
-	t.check("one opened rung has no Next rung", card.rung_button == null)
-	t.check("the card names the next unlock", "Win a run on Tier 1 to unlock Tier 2" in _labels(card))
-	t.check("rung 1 threat text is the old HARD's", RunTier.threat_text(1) in _labels(card)
-		and not "slower regen" in RunTier.threat_text(1))
+	t.check("the ladder shows", card.ladder_shown())
+	t.check("one opened rung: pips for the base tier and rung 1 only", card.tier_button(0) != null and card.tier_button(1) != null and card.tier_button(2) == null)
+	# At rest: the word, the selected rung's numeral and the four gauges, counted as the word budget counts.
+	t.eq("the ladder's words at rest", Array(card.drawn_words()).slice(-6), ["Tier", "0", "Crowd", "Hits", "Regen", "Pay"])
+	t.check("and no more than the held tier's line, so the ladder costs the page no more words than a held tier does",
+		WordBudget.words_in(" ".join(Array(card.drawn_words()).slice(-6))) <= WordBudget.words_in("Tier 0 held for this run"))
+	t.eq("the card writes no sentence under the tiles", _labels(card), [])
+	t.check("at rest no rung's numbers are written", not RunTier.threat_text(1) in card.drawn_words() and not RunTier.pay_text(1) in card.drawn_words())
+	# The rung looked at (the focus stands in for the mouse here): its numeral, and its contract in words.
+	card.tier_button(1).grab_focus()
+	t.eq("a looked-at rung adds its numeral and its two lines", Array(card.drawn_words()).slice(-9),
+		["Tier", "0", "1", "Crowd", "Hits", "Regen", "Pay", RunTier.threat_text(1), RunTier.pay_text(1)])
+	t.check("rung 1's lines say crowd, pace, plated elite brutes and pay, and no slower regen", "more crowd" in RunTier.threat_text(1)
+		and "shorter intervals" in RunTier.threat_text(1) and "plated elite brutes" in RunTier.threat_text(1) and not "slower regen" in RunTier.threat_text(1))
+	card.tier_button(0).grab_focus()
+	t.eq("the base tier's line", Array(card.drawn_words()).slice(-1), ["The standard shift."])
+	card.tier_button(0).release_focus()
+	t.eq("looking away takes the lines off", Array(card.drawn_words()).slice(-6), ["Tier", "0", "Crowd", "Hits", "Regen", "Pay"])
+	_gauges()
 	# A won run on rung 1, through flow's own run end.
 	game.flow.choose_run_tier(1)
 	game.flow._end_run(true)
@@ -193,25 +210,58 @@ func _unlock(game) -> void:
 	t.eq("rung 4 won opens the top", RunTier.top_unlocked(profile), RunTier.TOP)
 	t.eq("all tiers offered", StartPicks.offered_tiers(profile), range(RunTier.TOP + 1))
 	game.flow.show_start_card()
-	t.eq("the card shows the highest opened rung", card.shown_rung(), RunTier.TOP)
-	t.check("top rung disclosed", RunTier.threat_text(RunTier.TOP) in _labels(card) and RunTier.pay_text(RunTier.TOP) in _labels(card)
-		and "slower regen" in RunTier.threat_text(RunTier.TOP))
-	t.check("no unlock line at the top", not _labels(card).any(func(w): return String(w).contains("to unlock")))
-	t.check("Next rung shows", card.rung_button != null)
-	var seen := []
-	for i in RunTier.TOP:
-		card.rung_button.pressed.emit()
-		seen.append(card.shown_rung())
-	t.eq("Next rung steps through every opened rung", seen, [1, 2, 3, 4, 5])
-	card.rung_button.pressed.emit()
-	card.rung_button.pressed.emit()
-	t.eq("stepped to rung 2", card.shown_rung(), 2)
-	card.tier_button(2).pressed.emit()
-	t.eq("its button picks it", game.run.selected_run_tier(), 2)
-	t.check("the redrawn card marks it", card.tier_button(2) != null and card.tier_button(2).text == "Tier 2 (selected)")
-	card.rung_button.pressed.emit()
-	t.eq("with a rung selected, Next rung selects the next", [game.run.selected_run_tier(), card.shown_rung()], [3, 3])
-	t.check("and the card marks it", card.tier_button(3) != null and card.tier_button(3).text == "Tier 3 (selected)")
+	t.check("every rung has a pip", range(RunTier.TOP + 1).all(func(tier): return card.tier_button(tier) != null))
+	card.tier_button(RunTier.TOP).grab_focus()
+	t.check("the top rung's lines disclose it", RunTier.threat_text(RunTier.TOP) in card.drawn_words()
+		and RunTier.pay_text(RunTier.TOP) in card.drawn_words() and "slower regen" in RunTier.threat_text(RunTier.TOP))
+	var picked := []
+	for tier in [2, 5, 0, 3]:
+		card.tier_button(tier).grab_focus()
+		card.tier_button(tier).pressed.emit()
+		picked.append(game.run.selected_run_tier())
+		# flow redraws the card on a pick: the pips are new buttons, and the focus stays on the rung picked.
+		t.check("the redrawn card keeps a pip for rung %d, still under the focus" % tier, card.tier_button(tier) != null
+			and is_instance_valid(card.tier_button(tier)) and card.tier_button(tier).has_focus())
+		t.eq("and writes the picked rung's numeral once", Array(card.drawn_words()).slice(Array(card.drawn_words()).find("Tier"), Array(card.drawn_words()).find("Crowd")),
+			["Tier", str(tier)])
+	t.eq("a pip picks its rung, up or down the ladder", picked, [2, 5, 0, 3])
+	# The look is whichever of the focus and the mouse came to a pip last (the focus is on rung 3, just picked):
+	# a mouse over another rung reads that rung before its click, and the stick takes the look back.
+	Push.hover(root, card.tier_button(5))
+	t.check("the mouse over rung 5 reads rung 5, the focus still on rung 3", card.tier_button(3).has_focus() and RunTier.threat_text(5) in card.drawn_words()
+		and not RunTier.threat_text(3) in card.drawn_words() and "5" in card.drawn_words(), "words %s" % [card.drawn_words()])
+	card.tier_button(1).grab_focus()
+	t.check("the focus moved to rung 1 reads rung 1, the mouse still on rung 5", RunTier.threat_text(1) in card.drawn_words()
+		and not RunTier.threat_text(5) in card.drawn_words(), "words %s" % [card.drawn_words()])
+	Push.hover(root, card.tier_button(5))
+	Push.hover(root, card.tier_button(4))
+	t.check("the mouse moved on to rung 4 reads rung 4", RunTier.threat_text(4) in card.drawn_words() and not RunTier.threat_text(5) in card.drawn_words())
+	var off := InputEventMouseMotion.new()
+	off.position = Vector2(4.0, 4.0)
+	off.global_position = off.position
+	root.push_input(off, true)
+	t.check("the mouse off the pips, the look falls back to the rung under the focus", RunTier.threat_text(1) in card.drawn_words()
+		and not RunTier.threat_text(4) in card.drawn_words(), "words %s" % [card.drawn_words()])
+	Push.click(root, card.tier_button(4))
+	t.check("a click picks the rung it was reading, and keeps reading it", game.run.selected_run_tier() == 4 and RunTier.threat_text(4) in card.drawn_words(),
+		"tier %d, words %s" % [game.run.selected_run_tier(), card.drawn_words()])
+	card.tier_button(4).release_focus()
+	off.position = Vector2(6.0, 6.0)
+	off.global_position = off.position
+	root.push_input(off, true)
+	game.flow.choose_run_tier(3)
+	t.eq("the pips sit left to right in rung order", range(RunTier.TOP + 1).map(func(tier): return card.tier_button(tier).position.x),
+		_sorted(range(RunTier.TOP + 1).map(func(tier): return card.tier_button(tier).position.x)))
+	t.check("the ladder and the reroll sit inside the card", Rect2(Vector2.ZERO, card.size).encloses(card.tier_button(0).get_rect())
+		and Rect2(Vector2.ZERO, card.size).encloses(card.reroll_button.get_rect())
+		and not card.reroll_button.get_rect().intersects(card.tier_button(RunTier.TOP).get_rect()),
+		"card %s, pip 0 %s, reroll %s" % [card.size, card.tier_button(0).get_rect(), card.reroll_button.get_rect()])
+	var widest := 0.0
+	for tier in RunTier.TOP + 1:
+		for line in RunTier.contract_lines(tier):
+			widest = maxf(widest, UiDraw.width(line, card.CONTRACT_FONT))
+	t.check("the longest contract line fits the narrowest ladder card", widest <= card.LADDER_W and card.size.x >= card.LADDER_W,
+		"%.0f px in a card at least %.0f px wide (now %.0f)" % [widest, card.LADDER_W, card.size.x])
 	# Every win records through flow._record_end, the victory lap's (_begin_ending) included.
 	profile.set_stat(RunTier.BEST_STAT, 2.0)
 	game.flow._record_end(true)
@@ -231,7 +281,7 @@ func _unlock(game) -> void:
 	t.eq("a top-rung win caps at the top", [RunTier.note_win(profile, RunTier.TOP + 2), RunTier.best_rung(profile)], [true, RunTier.TOP])
 	game.flow._begin_run(ClassDef.all()[0])
 	game.flow.show_start_card()
-	t.eq("a new run's card starts back on the highest rung", card.shown_rung(), RunTier.TOP)
+	t.check("a new run's card has the whole ladder", card.ladder_shown() and card.tier_button(RunTier.TOP) != null)
 
 
 # The rung is chosen before stage 1's Warden fight (red team w21 speedrunner edge): engaging that Warden
@@ -249,7 +299,7 @@ func _late_choice(game) -> void:
 	t.check("the card names the held tier", "Tier 2 held for this run" in _labels(card))
 	t.check("and reports it to the word budget", "Tier 2 held for this run" in card.drawn_words()
 		and not RunTier.threat_text(2) in card.drawn_words())
-	t.check("and offers no tier buttons", card.tier_button(0) == null and card.tier_button(2) == null and card.rung_button == null)
+	t.check("and draws no ladder", card.tier_button(0) == null and card.tier_button(2) == null and not card.ladder_shown())
 	t.check("and gives the mouse back to aim (w22 first-timer red team)", card.showing() and not card.wants_pointer())
 	t.check("the start pick itself stays open", card.reroll_button != null and game.flow.take_start_pick(0))
 	game.flow._unseal()
@@ -266,6 +316,54 @@ func _late_choice(game) -> void:
 	game.flow.retry_stage()
 	t.check("back in the stage it opens", game.flow.choose_run_tier(2))
 	game.flow.choose_run_tier(0)
+
+
+func _sorted(values: Array) -> Array:
+	var out := values.duplicate()
+	out.sort()
+	return out
+
+
+# The gauges (RunTier.meters): the base tier reads at its mark on every gauge; up the ladder the works'
+# gauges and the pay never shrink and regen never grows; the top rung fills crowd, hits and pay.
+func _gauges() -> void:
+	var names: Array = RunTier.meters(0).map(func(m): return m["name"])
+	t.eq("four gauges, the works' two then the pilot's two", [names, RunTier.meters(0).map(func(m): return m["yours"])],
+		[["Crowd", "Hits", "Regen", "Pay"], [false, false, true, true]])
+	t.check("the base tier reads at its mark", RunTier.meters(0).all(func(m): return is_equal_approx(m["fill"], m["base"])))
+	var ok := true
+	for tier in range(1, RunTier.TOP + 1):
+		var was: Array = RunTier.meters(tier - 1)
+		var now: Array = RunTier.meters(tier)
+		for i in now.size():
+			if now[i]["name"] == "Regen":
+				ok = ok and now[i]["fill"] <= was[i]["fill"] + 0.0001
+			else:
+				ok = ok and now[i]["fill"] >= was[i]["fill"] - 0.0001
+			ok = ok and now[i]["fill"] <= 1.0001 and now[i]["fill"] > 0.0
+	t.check("up the ladder crowd, hits and pay never shrink and regen never grows", ok)
+	var top: Array = RunTier.meters(RunTier.TOP)
+	t.check("the top rung fills crowd, hits and pay and cuts regen", [0, 1, 3].all(func(i): return is_equal_approx(top[i]["fill"], 1.0)) and top[2]["fill"] < top[2]["base"],
+		"top %s" % [top])
+	t.check("rung 1 adds crowd and pay but no harder hits", RunTier.meters(1)[0]["fill"] > RunTier.meters(1)[0]["base"]
+		and is_equal_approx(RunTier.meters(1)[1]["fill"], RunTier.meters(1)[1]["base"]) and RunTier.meters(1)[3]["fill"] > RunTier.meters(1)[3]["base"])
+	# Rung 1 changes both the crowd's size and its pace: the gauge reads past the size alone.
+	t.check("the crowd gauge reads the pace with the size", RunTier.meters(1)[0]["fill"] / RunTier.meters(1)[0]["base"] > float(Cards.RUN_TIERS[1].cap_weight) + 0.0001)
+	# Every dial a rung turns is read by a gauge (run_tier.gd _readings), so a new dial needs a gauge
+	# or a line in the contract before this list takes it.
+	var read := ["mobs.damage_mult", "mobs.elite_rate_mult", "mobs.interval_scale_mult", "warden.pulse_damage_mult", "warden.pulse_cycle_mult",
+		"brindle.damage_mult", "brindle.period_mult", "pilot.regen_delay_mult", "pilot.regen_rate_mult"]
+	var turned := {}
+	for rung in RunTier.LADDER:
+		for key in RunTier.LADDER[rung]:
+			turned[key] = true
+	t.eq("every dial the ladder turns is read by a gauge", turned.keys().filter(func(key): return not key in read), [])
+	# Each of them moves its gauge: every rung that turns a works dial reads above the rung below.
+	var strict := true
+	for tier in range(2, RunTier.TOP + 1):
+		strict = strict and RunTier.meters(tier)[1]["fill"] > RunTier.meters(tier - 1)[1]["fill"] and RunTier.meters(tier)[0]["fill"] > RunTier.meters(tier - 1)[0]["fill"]
+	t.check("crowd and hits rise on every rung from 2 up", strict)
+	t.check("regen falls on rungs 4 and 5", RunTier.meters(4)[2]["fill"] < RunTier.meters(3)[2]["fill"] and RunTier.meters(5)[2]["fill"] < RunTier.meters(4)[2]["fill"])
 
 
 func _labels(card) -> Array:

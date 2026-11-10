@@ -197,6 +197,7 @@ func _runtime(model) -> void:
 		stage += 1
 		var safe := 0
 		var price_ok := true
+		var beam_words := {}
 		var trials := 1 if "--render-summary" in OS.get_cmdline_user_args() else 20
 		for trial in trials:
 			acts.clear()
@@ -213,6 +214,7 @@ func _runtime(model) -> void:
 			acts.sites.append(s)
 			var label: Label3D = s.get_node("TradePrices")
 			price_ok = price_ok and label.visible and label.position.z > entry.entrances[0].at[1]
+			beam_words[s.view.word.text] = true
 			for device in s.trade_devices:
 				price_ok = price_ok and label.text.contains(device.words()) and device.offer.cost_kind != "scrap" and device in game.world.interact.devices
 			var at: Vector3 = s.to_global(Vector3(entry.entry_spot[0], 0, entry.entry_spot[1]))
@@ -251,6 +253,8 @@ func _runtime(model) -> void:
 					game.world.interact.fire(device)
 				t.check(entry.id + " spent device cannot charge twice", game.run.trade_memory == settled and game.run.hp == after_hp and game.run.cogs == after_cogs)
 		t.check(entry.id + " every price shown before entry", price_ok)
+		# The beam's word is the counter's name alone (the view's own tell); the prices are the door label's.
+		t.check(entry.id + " the beam word is the counter's name", beam_words.keys() == [String(entry.tell.word)], str(beam_words.keys()))
 		t.check(entry.id + " idle first 2s safe at least 95 percent", float(safe) / trials >= 0.95)
 		print("trade_entry_rate: " + JSON.stringify({"interior": entry.id, "idle_entries": trials, "idle_safe": safe, "simulated_seconds": ceili(2.0 * Engine.physics_ticks_per_second / Engine.time_scale) * Engine.time_scale / Engine.physics_ticks_per_second, "time_scale": Engine.time_scale, "price_before_entry": price_ok}))
 	acts.clear()
