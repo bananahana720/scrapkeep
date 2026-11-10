@@ -10,10 +10,17 @@ extends SceneTree
 
 const T := preload("res://tests/support/t.gd")
 const BakeWarm := preload("res://src/presentation/bake_warm.gd")
+const EnemyMotion := preload("res://src/presentation/enemy_motion.gd")
 const Director := preload("res://src/world/director.gd")
 const ParkDefs := preload("res://src/core/park_defs.gd")
 
 var t := T.new("spawn_warm_test")
+
+
+# The stage's ground as a kit reads it: flat, 40 m up.
+class Ground:
+	func height(_x: float, _z: float) -> float:
+		return 40.0
 
 
 func _initialize() -> void:
@@ -28,26 +35,50 @@ func _run() -> void:
 	var sent := _sent()
 	var kits := BakeWarm.WORLD_KITS[1].filter(func(kit): return BakeWarm.kind_of(kit) in sent)
 	t.check("every kind world 1 can send is a world 1 kit", kits.size() == sent.size() and sent.has("plated_brute") and sent.has("foreman"), "%d of %d: %s" % [kits.size(), sent.size(), sent])
-	for kit in kits:
-		var kind := BakeWarm.kind_of(kit)
-		var live: Node3D = kit.new()
-		stage.add_child(live)
-		# The spec keys Combat.spawn_enemy adds past the kind (fleet, holds, threat, pressure) change
-		# health and behaviour for these kits, not their meshes or materials.
-		live.setup(target, null, stage, func() -> bool: return false, 1.0, {"kind": kind})
-		var warm := BakeWarm.spawn_view(kit, stage, target, null)
-		await process_frame
-		var want := _draws(live)
-		var got := _draws(warm.get_child(0))
-		var painted := want.filter(func(row): return row.owned).size()
-		t.check("%s: the warm view draws what a live spawn draws" % kind, got == want and not want.is_empty(), _diff(want, got))
-		t.check("%s: its paint is its own, dressed in place" % kind, painted > 0, "%d owned surfaces of %d" % [painted, want.size()])
-		var enemy := warm.get_child(0)
-		var quiet: bool = not enemy.is_in_group("enemy") and warm.process_mode == Node.PROCESS_MODE_DISABLED \
-				and (not enemy is CollisionObject3D or (enemy.collision_layer == 0 and enemy.collision_mask == 0))
-		t.check("%s: nothing in play can find it, and it stands out of sight" % kind, quiet and warm.global_position.y < -1000.0)
-		live.free()
-		warm.free()
+	# Twice: as every headless run builds a kit, then as a display builds it, where a rigged kit
+	# (the foreman, the dispatcher) seats its GLB's own scene (SpecialRig.seat) and the warm must
+	# stand that one.
+	for on_screen in [false, true]:
+		EnemyMotion.headless_idle = on_screen
+		var rig := " on screen" if on_screen else ""
+		for kit in kits:
+			var kind := BakeWarm.kind_of(kit) + rig
+			var live: Node3D = kit.new()
+			stage.add_child(live)
+			# The spec keys Combat.spawn_enemy adds past the kind (fleet, holds, threat, pressure) change
+			# health and behaviour for these kits, not their meshes or materials.
+			live.setup(target, null, stage, func() -> bool: return false, 1.0, {"kind": BakeWarm.kind_of(kit)})
+			var warm := BakeWarm.spawn_view(kit, stage, target, null)
+			await process_frame
+			var want := _draws(live)
+			var got := _draws(warm.get_child(0))
+			var painted := want.filter(func(row): return row.owned).size()
+			t.check("%s: the warm view draws what a live spawn draws" % kind, got == want and not want.is_empty(), _diff(want, got))
+			t.check("%s: its paint is its own, dressed in place" % kind, painted > 0, "%d owned surfaces of %d" % [painted, want.size()])
+			var enemy := warm.get_child(0)
+			var quiet: bool = not enemy.is_in_group("enemy") and warm.process_mode == Node.PROCESS_MODE_DISABLED \
+					and (not enemy is CollisionObject3D or (enemy.collision_layer == 0 and enemy.collision_mask == 0))
+			t.check("%s: nothing in play can find it, and it stands out of sight" % kind, quiet and warm.global_position.y < -1000.0)
+			live.free()
+			warm.free()
+			# In a game the kit is handed the stage's ground, and a kit may seat itself on it (the
+			# dispatcher climbs a mast it builds where it stands): the body and everything it built stay
+			# under the holder, and no collider of theirs keeps a layer.
+			var seated := BakeWarm.spawn_view(kit, stage, target, Ground.new())
+			await process_frame
+			var high := []
+			var solid := []
+			for node: Node3D in [seated.get_child(0)] + seated.find_children("*", "Node3D", true, false):
+				# A world-space line mesh with nothing drawn into it (the foreman's tethers, redrawn each
+				# tick it processes, which a stood one never does) is at the origin by design and draws nothing.
+				var empty: bool = node is MeshInstance3D and (node.mesh == null or node.mesh.get_surface_count() == 0)
+				if node.global_position.y > -1000.0 and not empty:
+					high.append(str(seated.get_path_to(node)))
+				if node is CollisionObject3D and (node.collision_layer != 0 or node.collision_mask != 0):
+					solid.append(str(seated.get_path_to(node)))
+			t.check("%s: handed a ground, it still stands out of sight with no collider in play" % kind, high.is_empty() and solid.is_empty(), "on the stage %s; solid %s" % [high, solid])
+			seated.free()
+	EnemyMotion.headless_idle = false
 	stage.free()
 	await process_frame
 	quit(t.verdict())

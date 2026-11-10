@@ -215,8 +215,9 @@ func author(def: Dictionary, stages) -> void:
 
 
 # Every kind author() hands the director for that row, once each: the packs' in the order they
-# name them, then the elite's. What a stage can send, for a caller that readies kinds before play
-# (BakeWarm).
+# name them, then the elite's. What an authored stage can send, for a caller that readies kinds
+# before play (BakeWarm). A row with no packs leaves the director to its own rules, and the kinds
+# those pick are not named here.
 static func kinds_sent(def: Dictionary, stages) -> Array:
 	var out := []
 	for pack: Dictionary in _packs_of(def, stages) + [_elite_of(def, stages)]:
@@ -232,6 +233,7 @@ static func _packs_of(def: Dictionary, stages) -> Array:
 
 static func _elite_of(def: Dictionary, stages) -> Dictionary:
 	return def["elite"] if def.has("elite") else stages.elite()
+
 
 func _init(seed_value := 20260922) -> void:
 	_rng.seed = seed_value

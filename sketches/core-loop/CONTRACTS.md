@@ -795,7 +795,7 @@ Limitation: `ctx.boss` is one slot, so two modules cannot both be current. The t
 
 ### Row-level packs
 
-`world._author_director` (`src/world/world.gd:448-450`) reads the stage row's `packs`, `elite` and `elite_arrival` and falls back to the table's (`ctx.stages.packs()`, `elite()`, `elite_arrival()`). The director spawns only authored packs when any exist.
+`Director.author(def, stages)` (`src/world/director.gd`; `world._author_director` calls it) reads the stage row's `packs`, `elite` and `elite_arrival` and falls back to the table's (`stages.packs()`, `elite()`, `elite_arrival()`). The director spawns only authored packs when any exist. `Director.kinds_sent(def, stages)` names every kind those packs and that elite hold; `BakeWarm` stands each one out of sight before play.
 
 ### Table rows 1 to 6
 

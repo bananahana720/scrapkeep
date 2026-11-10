@@ -115,7 +115,7 @@ func _on_stage_entered(stage: int, _retry: bool) -> void:
 	for row in ctx.stages.DEFS:
 		if row["stage"] == stage:
 			var world := int(row.get("world", 0))
-			_to_stand = stands(row, ctx.stages)
+			_to_stand = Director.kinds_sent(row, ctx.stages).filter(func(kind) -> bool: return not _stood.has(kind))
 			_to_stand.erase(_standing)
 			for item in WORLD_KITS.get(world, []) + (WORLD_RIGS.get(world, []) if EnemyMotion.active() else []):
 				var owed: bool = not _warm.has(item) or (item is Script and kind_of(item) in _to_stand)
@@ -228,9 +228,9 @@ static func first_view(first: String, parent: Node) -> Node3D:
 
 # A kit as a spawn builds it, under `parent`: Combat.spawn_enemy's add then setup() (an empty spec
 # but its kind), so its body, paint and extras are the live ones, and its own deferred bake
-# dresses it. The holder never processes, and the kit leaves the enemy group and every collision
-# layer, so nothing in play finds it; the holder is its world root, so nothing it builds lands
-# in the stage.
+# dresses it. The holder never processes, and the kit and everything it built leave the enemy
+# group and every collision layer, so nothing in play finds it; the holder is its world root and
+# the body is put back under it after setup, so nothing it builds lands in the stage.
 static func spawn_view(kit: Script, parent: Node, target, ground) -> Node3D:
 	var holder := spawn_holder(parent)
 	spawn_into(kit, holder, target, ground)
@@ -251,10 +251,17 @@ static func spawn_into(kit: Script, holder: Node3D, target, ground) -> void:
 	var enemy: Node3D = kit.new()
 	holder.add_child(enemy)
 	enemy.setup(target, ground, holder, func() -> bool: return false, 1.0, {"kind": kind_of(kit)})
+	# A kit may seat itself on the ground it is handed (the dispatcher climbs its mast, which put a
+	# stood one on the stage at the map's origin): the body goes back under the holder, and every
+	# collider it built (the mast is terrain to the ball) leaves its layers with it.
+	enemy.position = Vector3.ZERO
 	enemy.remove_from_group("enemy")
-	if enemy is CollisionObject3D:
-		enemy.collision_layer = 0
-		enemy.collision_mask = 0
+	var bodies: Array = enemy.find_children("*", "CollisionObject3D", true, false)
+	bodies.append(enemy)
+	for body in bodies:
+		if body is CollisionObject3D:
+			body.collision_layer = 0
+			body.collision_mask = 0
 
 
 # A kind's death debris boxes draw with BakeLook.unbaked twins of its body's materials
@@ -292,11 +299,6 @@ static func death_warm(holder: Node3D) -> int:
 	if body != null and body.get("kind") is String:
 		EnemyMotion.scatter(body, body.kind, Vector3.FORWARD)
 	return twins.size()
-
-
-# The kinds a stage row can send that no spawn warm has stood yet this session.
-static func stands(row: Dictionary, stages) -> Array:
-	return Director.kinds_sent(row, stages).filter(func(kind) -> bool: return not _stood.has(kind))
 
 
 # A kit's kind name: its script's file name (src/combat/mag_trapper.gd is "mag_trapper").
