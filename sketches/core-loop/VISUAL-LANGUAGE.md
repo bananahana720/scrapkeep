@@ -246,7 +246,7 @@ No `CONTRACTS.md` Icons section existed when this was written. It was checked in
 | `trg_on_hit` | On hit | A four-bracket reticle with a centre dot |
 | `trg_on_kill` | On kill | A four-bracket reticle with an X |
 | `trg_on_smash` | On smash | A down chevron striking a ground line |
-| `trg_on_rebound` | On rebound | A ball tracing a V off a slanted line |
+| `trg_on_rebound` | On rebound | A ball hopping up off a floor line (never a bare V: it reads as a tick) |
 | `trg_on_vault` | On vault kick | A wall bar with a sharp exit arrow |
 | `trg_on_charge_release` | On charge release | A three-quarter gauge ring with an arrow leaving its gap |
 | `trg_on_cloak_break` | On cloak break | A dotted cloud split by a spark |

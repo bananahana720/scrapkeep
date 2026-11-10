@@ -18,7 +18,7 @@ func run(t) -> void:
 		fx._process(0.2)
 		lifts.append(fx.next_pop_lift())
 		want.append(((i + 2) % PanelFx.POP_ROWS) * PanelFx.POP_LINE)
-	t.check("a longer streak goes round the lines, never two running on one", lifts == want and lifts.has(0.0), "lifts %s, want %s" % [lifts, want])
+	t.check("a longer streak goes round the lines, each pop a line off the one before it", lifts == want and lifts.has(0.0), "lifts %s, want %s" % [lifts, want])
 	fx._process(PanelFx.POP_LIFE + 0.1)
 	t.check("a pop after the last has gone stands at the pop height again", is_zero_approx(fx.next_pop_lift()), "")
 	fx.free()
