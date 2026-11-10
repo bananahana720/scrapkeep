@@ -17,9 +17,9 @@ const PartSets := preload("res://src/build/part_sets.gd")
 # band, synth or recorded, on the next beat with the fall in time. The contact itself still
 # sounds on its frame. A completed part set's chime plays as its banner comes up: three notes on
 # the band's eighths, an arc set on the clavinet and a frost set on the bell, both ending on the
-# appliance beep's high D; no other banner chimes, and no band means no chime. A long chain is
-# answered by name: the pilot's motif on the sax a beat after the landing, made for the sounding
-# band's step, and not again inside its gap.
+# appliance beep's high D, with the band dipped under them; no other banner chimes, and no band
+# means no chime. A long chain is answered by name: the pilot's motif on the sax a beat after the
+# landing, made for the sounding band's step, and not again inside its gap.
 
 var t := T.new("audio_melodic_payoff_test")
 var _clock_ms := 0
@@ -294,6 +294,7 @@ func _set_chime(game: Node, audio) -> void:
 		engine.stinger_starts.clear()
 		var head := engine.clock
 		game.presentation._on_set_completed(case[0], row["name"], row["text"], row["color"])
+		var ducked: bool = engine._duck_target < 1.0 and engine._duck_until > head
 		var notes := _grid(audio, "synergy_discovered")
 		var ids: Array = notes.map(func(e: Array): return e[1])
 		var times: Array = notes.map(func(e: Array): return int(e[3]))
@@ -304,9 +305,9 @@ func _set_chime(game: Node, audio) -> void:
 		t.check("set chime: %s climbs F A on the %s to the beep's D, on eighths, as its banner comes up" % [row["name"], case[1]],
 			banner.showing() and banner.last_title == row["name"] and ids == want and times == [first, first + eighth, first + 2 * eighth]
 				and first - head >= lead and first - head < lead + eighth and posmod(first - engine.grid_origin, eighth) == 0
-				and started == times,
-			"banner '%s' showing %s, notes %s at %s, sounded at %s, play head %d, eighth %d, lead %d" % [banner.last_title, banner.showing(),
-				ids, times, started, head, eighth, lead])
+				and started == times and ducked and engine._duck_until >= first + 3 * eighth,
+			"banner '%s' showing %s, notes %s at %s, sounded at %s, play head %d, eighth %d, lead %d, band dipped %s" % [banner.last_title, banner.showing(),
+				ids, times, started, head, eighth, lead, ducked])
 	# A set finished in a fight: the banner is held, and the chime with it.
 	var held: Dictionary = PartSets.SETS["hair_trigger"]
 	banner.dismiss(true)
