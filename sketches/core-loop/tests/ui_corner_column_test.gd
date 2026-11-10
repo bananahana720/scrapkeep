@@ -46,6 +46,8 @@ func _run() -> void:
 	game.flow.choose_class(0)
 	game.player.source = Intent.Scripted.new()
 	await _frames(4)
+	# The cold open has the floor first (plates and the pill wait for a flourish's reading matter); this is about the corner.
+	game.presentation.flourish.stop_all()
 	hud.take_found("Lights On, Late Set", "Moss's Back Room", "b-side")
 	game.codex.lore_found.emit("lore.spillway.note.shift")
 	await _frames(6)
