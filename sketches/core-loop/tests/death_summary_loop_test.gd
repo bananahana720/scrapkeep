@@ -23,7 +23,7 @@ const T := preload("res://tests/support/t.gd")
 #   (c) the latch cue: Space held through a death shuts the summary; the cue stays down for
 #       LATCH_CUE_AFTER, then names Space; a press the latch turns away shows it at once; it goes
 #       with the release and the screen takes keys.
-#   (d) the pause menu asks before Restart run and Quit: N arms the row and restarts nothing, N
+#   (d) the pause menu asks before New run and Quit: N arms the row and restarts nothing, N
 #       again inside ARM_GUARD is ignored, N after it restarts; the ask lapses after ARM_SECONDS
 #       and when the focus leaves; Quit asks on Enter and quits on the second; the X hold quits
 #       with no ask, and a tap of X answers a Quit row that is asking.
@@ -322,13 +322,13 @@ func _pause_asks() -> void:
 	var run_id: String = _game.run.run_id
 	menu.open()
 	_key(KEY_N)
-	_t.check("N arms Restart run and restarts nothing", menu.armed() == "restart" and menu.is_open() and _game.run.run_id == run_id
+	_t.check("N arms New run and restarts nothing", menu.armed() == "restart" and menu.is_open() and _game.run.run_id == run_id
 			and menu.row("restart").text == menu.ARM_WORDS["restart"] and menu.focused_id() == "restart",
 		"armed '%s', row '%s', focus '%s'" % [menu.armed(), menu.row("restart").text, menu.focused_id()])
 	_key(KEY_N)
 	_t.check("N again inside the guard is not the second press", menu.armed() == "restart" and _game.run.run_id == run_id, "armed '%s'" % menu.armed())
 	menu.step_arm(menu.ARM_SECONDS)
-	_t.check("the ask lapses and the row reads as before", menu.armed() == "" and menu.row("restart").text == "Restart run",
+	_t.check("the ask lapses and the row reads as before", menu.armed() == "" and menu.row("restart").text == "New run",
 		"armed '%s', row '%s'" % [menu.armed(), menu.row("restart").text])
 	_key(KEY_N)
 	_key(KEY_S)

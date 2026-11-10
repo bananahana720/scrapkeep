@@ -14,8 +14,8 @@ const Push := preload("res://tests/workshop/push.gd")
 #     the calm-screen budget, and closes by H, Esc and its Back button;
 #   - P does nothing while the upgrade pick holds the tree, and the pick keeps its pause;
 #   - P opens the menu paused with Resume focused, inside the budget;
-#   - S/W move the focus, D/A step a focused volume, Enter takes Resume;
-#   - clicks set effects on the segments and step it on the arrows, the mixer follows,
+#   - S/W move the focus, Enter takes Resume; in the Feel tab of Settings D/A step a focused volume;
+#   - clicks on the Feel tab set effects on the segments and step it on the arrows, the mixer follows,
 #     and settings.json keeps it and puts it back at launch;
 #   - Field notes pins the notes until the next click; Resume by click unpauses;
 #   - Esc opens and closes it, N asks and N again restarts the run at stage 1 (the ask's own
@@ -123,30 +123,36 @@ func _process(delta: float) -> bool:
 			var audio = _game.presentation.audio
 			Push.key(root, KEY_S)
 			var down: String = _menu.focused_id()
-			Push.key(root, KEY_S)
-			Push.key(root, KEY_S)
-			var on_music: String = _menu.focused_id()
+			Push.key(root, KEY_O)
+			var page = _menu.settings_page()
+			page.show_page(3)
+			page.focus_first()
+			var on_music: String = page.focused_id()
 			var before: float = audio.volumes["Music"]
 			Push.key(root, KEY_A)
 			var lowered: float = audio.volumes["Music"]
 			Push.key(root, KEY_D)
 			var raised: float = audio.volumes["Music"]
 			_report("keys focus and step", down == "restart" and on_music == "music" and is_equal_approx(lowered, before - 0.1)
-					and is_equal_approx(raised, before) and _menu.row("music").steps_filled() == roundi(before * 10.0),
-				"S focused %s, then %s; A took music %.2f to %.2f, D back to %.2f" % [down, on_music, before, lowered, raised])
-			for i in 3:
+					and is_equal_approx(raised, before) and page.row("music").steps_filled() == roundi(before * 10.0),
+				"S focused %s, then Feel opened on %s; A took music %.2f to %.2f, D back to %.2f" % [down, on_music, before, lowered, raised])
+			Push.key(root, KEY_ESCAPE)
+			var back_on: String = _menu.focused_id()
+			for i in 4:
 				Push.key(root, KEY_W)
 			var top: String = _menu.focused_id()
 			Push.key(root, KEY_ENTER)
 			_report("enter resumes", top == "resume" and not _menu.is_open() and not paused and not _game.pause_toggled(),
-				"W x3 focused %s; Enter left the menu open %s, paused %s" % [top, _menu.is_open(), paused])
+				"Esc left Settings on %s, W x4 focused %s; Enter left the menu open %s, paused %s" % [back_on, top, _menu.is_open(), paused])
 			_next("mouse_open")
 		"mouse_open":
 			Push.key(root, KEY_P)
+			Push.key(root, KEY_O)
+			_menu.settings_page().show_page(3)
 			_next("mouse")
 		"mouse":
 			var audio = _game.presentation.audio
-			var effects: Control = _menu.row("effects")
+			var effects: Control = _menu.settings_page().row("effects")
 			var at: Vector2 = effects.get_global_rect().position
 			_click_at(at + Vector2(effects.bar_rect().position.x + 2.5 * (effects.SEG_W + effects.SEG_GAP), effects.size.y * 0.5))
 			var on_bar: float = audio.volumes["SFX"]
@@ -158,13 +164,16 @@ func _process(delta: float) -> bool:
 			var saved := SettingsStore.new(_game.storage_dir)
 			_report("mouse volume", is_equal_approx(on_bar, 0.3) and is_equal_approx(stepped_up, 0.4) and is_equal_approx(stepped_down, 0.2)
 					and is_equal_approx(audio.volumes["UI"], 0.2) and is_equal_approx(float(saved.volumes.get("SFX", -1.0)), 0.2)
-					and _menu.focused_id() == "effects",
+					and _menu.settings_page().focused_id() == "effects",
 				"third segment set effects %.2f, up %.2f, down twice %.2f (UI bus %.2f); settings.json holds %s"
 					% [on_bar, stepped_up, stepped_down, audio.volumes["UI"], saved.volumes])
 			audio.set_volume("SFX", 1.0)
 			_menu.apply_saved()
 			_report("saved levels apply", is_equal_approx(audio.volumes["SFX"], 0.2),
 				"with the mixer reset to 1.00, the saved settings put effects back at %.2f" % audio.volumes["SFX"])
+			Push.key(root, KEY_ESCAPE)
+			_next("mouse_notes")
+		"mouse_notes":
 			var resume: Button = _menu.row("resume")
 			Push.hover(root, resume)
 			var lit: bool = resume.is_hovered()

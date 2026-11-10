@@ -60,6 +60,7 @@ func _process(delta: float) -> bool:
 		"boot":
 			_menu = _game.get_node("PauseMenu")
 			_audio = _game.presentation.audio
+			_game.dev = true  # the pause menu's Breath row is a --dev lab row since wave 36 (the column is six rows)
 			_game.ctx.calm = true
 			_game.player.source = Intent.Scripted.new()
 			_packaged = _audio.AceSequencer.new().ready()

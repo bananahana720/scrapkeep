@@ -7,15 +7,20 @@ const SettingsStore := preload("res://src/ui/settings_store.gd")
 const UiFonts := preload("res://src/ui/ui_fonts.gd")
 const Glyphs := preload("res://src/ui/glyphs.gd")
 const BuildStamp := preload("res://src/core/build_stamp.gd")
+const VolumeRow := preload("res://src/ui/volume_row.gd")
+const Harmony := preload("res://src/presentation/harmony.gd")
 
 # The settings page both hosts show: the pause menu in place of its first page, the title
 # through its Settings button. Three pages behind a tab strip, switched by LB and RB, Q and E
-# or a click, the last one kept for the session: Display (fullscreen, quality, reduced motion,
-# reduce flashes, frame smoothing), Controls (a key row and a pad row per verb, Reset keys, the two fixed
-# verbs) and Look (stick speed, invert Y, dead zone, mouse speed, aim assist, each stepped by
-# Enter, A or a click and by left and right). Back sits under every page. A key row waits for the next key or mouse
-# button, a pad row for the next pad button (and a trigger for fire and harpoon); Esc or B
-# cancels; a press another verb already holds is refused with "Taken".
+# or a click, the last one kept for the session: Display (fullscreen, quality, less motion,
+# fewer flashes, frame smoothing, wide picture), Controls (a verb's name, then its key cap and its pad
+# cap; Reset keys; the two fixed verbs), Look (stick speed, invert Y, dead zone, mouse speed, aim assist,
+# each stepped by Enter, A or a click and by left and right) and Feel (Music, Effects, Screen shake,
+# Hit-stop and Find cards). Feel is the one owner of those rows, so the title reaches the volume the
+# pause menu once held alone; Back sits under every page. A key cap waits for the next key or mouse
+# button, a pad cap for the next pad button (and a trigger for fire and harpoon); Esc or B
+# cancels; a press another verb already holds is refused with "Taken". Frame smoothing and Wide picture
+# show their one-line helper (SettingsStore.HELPERS) while they have the focus.
 # A new binding goes to the store and to the InputMap at once (game.apply_binding, the same
 # call boot makes), so a later launch reads what play just used. The host feeds its input
 # events to handle(); the page never reads the keyboard itself. The build stamp (build_stamp.gd)
@@ -28,8 +33,16 @@ signal back_requested
 const VERBS := ["jump", "fire", "harpoon", "haul", "boost", "select_1", "select_2", "select_3", "ultimate", "interact"]
 const SELECT_ROW := "select_"
 const FIXED := ["roll", "look"]
-const PAGES := ["display", "controls", "look"]
-const PAGE_WORDS := {"display": "Display", "controls": "Controls", "look": "Look"}
+const PAGES := ["display", "controls", "look", "feel"]
+const PAGE_WORDS := {"display": "Display", "controls": "Controls", "look": "Look", "feel": "Feel"}
+# The Feel rows: a mixer bus or a comfort level each, stepped in tenths, then the Find cards toggle.
+const FEEL := [
+	{"id": "music", "bus": "Music", "words": "Music", "glyph": "music"},
+	{"id": "effects", "bus": "SFX", "words": "Effects", "glyph": "effects"},
+	{"id": "shake", "comfort": "shake", "words": "Screen shake", "glyph": "shake"},
+	{"id": "hitstop", "comfort": "hitstop", "words": "Hit-stop", "glyph": "hitstop"},
+]
+const CARDS_ROW := "ceremony"
 # The verbs a trigger can fire, and how far a trigger is pulled before it counts as a press.
 const TRIGGER_VERBS := ["fire", "harpoon"]
 const TRIGGER_PULL := 0.6
@@ -46,7 +59,8 @@ const LOOK := [
 	{"id": SettingsStore.AIM_ASSIST, "words": "Aim assist", "steps": [0.0, 0.25, 0.5, 0.75, 1.0], "per": 1.0},
 ]
 const WIDTH := 500.0
-const HALF := 248.0
+# A key cap or a pad cap on the Controls tab, beside the verb's name.
+const CAP_W := 150.0
 const WORD_BUDGET := 70
 # Mouse buttons a press may bind: left, right, middle and the two side buttons. The wheel
 # is not a button press a player means.
@@ -58,6 +72,8 @@ static var last_page := 0
 var back: Button
 var stamp: Label
 var rows := {}
+
+var _helper: Label
 
 var _game
 var _back_key := "key_esc"
@@ -100,6 +116,7 @@ func setup(game_ref, back_key := "key_esc") -> void:
 	_build_display()
 	_build_controls()
 	_build_look()
+	_build_feel()
 	back = ChoiceButton.new("back", _back_key, "Back")
 	back.custom_minimum_size = Vector2(WIDTH, 40.0)
 	back.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
@@ -119,6 +136,24 @@ func setup(game_ref, back_key := "key_esc") -> void:
 func _build_display() -> void:
 	for id in ["fullscreen", "quality", "reduced_motion", "reduce_flashes", "frame_smoothing", "wide_picture"]:
 		_add_plain(id, "display")
+		if SettingsStore.HELPERS.has(id):
+			rows[id].focus_entered.connect(_show_helper.bind(String(SettingsStore.HELPERS[id])))
+			rows[id].focus_exited.connect(_show_helper.bind(""))
+	_helper = Label.new()
+	_helper.custom_minimum_size = Vector2(WIDTH, 22.0)
+	_helper.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_helper.add_theme_font_size_override("font_size", 16)
+	_helper.add_theme_color_override("font_color", Color(Palette.SAND, 0.8))
+	_helper.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_boxes["display"].add_child(_helper)
+
+
+func _show_helper(words: String) -> void:
+	_helper.text = words
+
+
+func helper_text() -> String:
+	return _helper.text
 
 
 func _build_controls() -> void:
@@ -128,9 +163,18 @@ func _build_controls() -> void:
 		pair.add_theme_constant_override("separation", 4)
 		pair.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		_boxes["controls"].add_child(pair)
+		var name_label := Label.new()
+		name_label.text = _caption(verb)
+		name_label.custom_minimum_size = Vector2(WIDTH - 2.0 * CAP_W - 8.0, 40.0)
+		name_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		name_label.add_theme_font_override("font", UiFonts.bold())
+		name_label.add_theme_font_size_override("font_size", 22)
+		name_label.add_theme_color_override("font_color", Palette.SAND)
+		name_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		pair.add_child(name_label)
 		for id in [verb, "pad_" + verb]:
 			var button := _bind_button(id)
-			button.custom_minimum_size = Vector2(HALF, 40.0)
+			button.custom_minimum_size = Vector2(CAP_W, 40.0)
 			rows[id] = button
 			_page_ids["controls"].append(id)
 			pair.add_child(button)
@@ -144,6 +188,86 @@ func _build_look() -> void:
 		_add_plain(String(spec["id"]), "look")
 
 
+func _build_feel() -> void:
+	for spec in FEEL:
+		var row := VolumeRow.new(spec["bus"] if spec.has("bus") else spec["comfort"], spec["words"], spec["glyph"], WIDTH)
+		row.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+		row.changed.connect(_on_feel.bind(spec))
+		rows[spec["id"]] = row
+		_page_ids["feel"].append(spec["id"])
+		_boxes["feel"].add_child(row)
+	_add_plain(CARDS_ROW, "feel")
+
+
+# The viewer's saved levels go to the mixer and the juice at launch; a level never set keeps its default.
+static func apply_saved(game) -> void:
+	var store = game.settings_store()
+	store.load_saved()
+	for bus in store.volumes:
+		_set_bus(game, bus, store.volumes[bus])
+	for id in store.comfort:
+		_set_comfort(game, id, store.comfort[id])
+
+
+static func _set_bus(game, bus: String, level: float) -> void:
+	var audio = game.audio()
+	if audio != null and audio.has_method("set_volume"):
+		audio.set_volume(bus, level)
+
+
+static func _juice(game):
+	var presentation = game.presentation
+	return presentation.get("juice") if presentation != null else null
+
+
+static func _set_comfort(game, id: String, level: float) -> void:
+	var juice = _juice(game)
+	if juice != null and juice.has_method("set_comfort"):
+		juice.set_comfort(id, level)
+
+
+# A Feel row moved: the mixer or the juice takes the level and the store keeps it.
+func _on_feel(level: float, spec: Dictionary) -> void:
+	if spec.has("bus"):
+		_set_bus(_game, spec["bus"], level)
+		_store().set_volume(spec["bus"], level)
+	else:
+		_set_comfort(_game, spec["comfort"], level)
+		_store().set_comfort(spec["comfort"], level)
+	var audio = _game.audio()
+	if audio != null and audio.has_method("play"):
+		audio.play("flow_changed", 0.0, Harmony.ratio(Harmony.pentatonic_step(int(level * 8.0))), "UI")
+
+
+# The levels as they stand in the mixer, the juice and the store; the Find cards row from the ceremony.
+func _show_feel() -> void:
+	var audio = _game.audio()
+	var juice = _juice(_game)
+	for spec in FEEL:
+		var level: float = 1.0
+		if spec.has("bus"):
+			level = _store().volumes.get(spec["bus"], 1.0)
+			if audio != null and "volumes" in audio:
+				level = audio.volumes.get(spec["bus"], level)
+		else:
+			level = _store().comfort.get(spec["comfort"], 1.0)
+			if juice != null and juice.has_method("comfort"):
+				level = juice.comfort(spec["comfort"])
+		rows[spec["id"]].show_level(level)
+	var ceremony = _game.presentation.get("ceremony") if _game.presentation != null else null
+	rows[CARDS_ROW].text = "Find cards: short" if ceremony != null and ceremony.short else "Find cards: full"
+
+
+# C once flipped this in the pause menu: every find at the rare tier ("short") or in full, saved as the
+# ceremony's comfort level (1 full, 0 short).
+func _toggle_cards() -> void:
+	var ceremony = _game.presentation.get("ceremony") if _game.presentation != null else null
+	if ceremony != null:
+		ceremony.short = not ceremony.short
+		_store().set_comfort(ceremony.SETTING, 0.0 if ceremony.short else 1.0)
+	_show_feel()
+
+
 func _tab_button(page: String) -> Button:
 	var button := Button.new()
 	button.focus_mode = Control.FOCUS_NONE
@@ -154,7 +278,7 @@ func _tab_button(page: String) -> Button:
 	button.add_theme_stylebox_override("normal", ChoiceButton.plate(Palette.VERDIGRIS, 2, ChoiceButton.PAD))
 	button.add_theme_stylebox_override("hover", ChoiceButton.plate(Palette.SAND, 2, ChoiceButton.PAD))
 	button.add_theme_stylebox_override("pressed", ChoiceButton.plate(Palette.AMBER, 3, ChoiceButton.PAD))
-	button.custom_minimum_size = Vector2(WIDTH / 3.0 - 3.0, 36.0)
+	button.custom_minimum_size = Vector2(WIDTH / PAGES.size() - 3.0, 36.0)
 	return button
 
 
@@ -183,6 +307,7 @@ func page_ids() -> Array:
 func show_page(index: int) -> void:
 	_clear_notice()
 	_capture_end()
+	_helper.text = ""
 	_page_index = posmod(index, PAGES.size())
 	last_page = _page_index
 	for i in PAGES.size():
@@ -297,9 +422,9 @@ func refresh() -> void:
 	_taken = ""
 	var store = _store()
 	rows["fullscreen"].text = "Fullscreen: %s" % ("on" if store.fullscreen() else "off")
-	rows["quality"].text = "Quality: %s" % ("Low" if store.quality() == 1 else "High")
-	rows["reduced_motion"].text = "Reduced motion: %s" % ("on" if store.reduced_motion() else "off")
-	rows["reduce_flashes"].text = "Reduce flashes: %s" % ("on" if store.reduce_flashes() else "off")
+	rows["quality"].text = "Quality: %s" % ("low" if store.quality() == 1 else "high")
+	rows["reduced_motion"].text = "Less motion: %s" % ("on" if store.reduced_motion() else "off")
+	rows["reduce_flashes"].text = "Fewer flashes: %s" % ("on" if store.reduce_flashes() else "off")
 	rows["frame_smoothing"].text = "Frame smoothing: %s" % ("on" if store.frame_smoothing() else "off")
 	rows["wide_picture"].text = "Wide picture: %s" % ("on" if store.wide_picture() else "off")
 	for verb in VERBS:
@@ -307,6 +432,7 @@ func refresh() -> void:
 		_rebuild("pad_" + verb)
 	for spec in LOOK:
 		_show_look(spec)
+	_show_feel()
 	show_page(last_page)
 
 
@@ -338,7 +464,7 @@ func _add_plain(id: String, page: String) -> void:
 func _bind_button(id: String) -> Button:
 	var row := row_of(id)
 	var glyph := pad_glyph_of(row) if id.begins_with("pad_") else glyph_of(row)
-	var button := ChoiceButton.new(id, glyph, _caption(id))
+	var button := ChoiceButton.new(id, glyph, "")
 	button.pressed.connect(press.bind(id))
 	return button
 
@@ -361,7 +487,7 @@ func _rebuild(id: String) -> void:
 	var had_focus := old.has_focus()
 	var parent := old.get_parent()
 	var fresh := _bind_button(id)
-	fresh.custom_minimum_size = Vector2(HALF, 40.0)
+	fresh.custom_minimum_size = Vector2(CAP_W, 40.0)
 	parent.add_child(fresh)
 	parent.move_child(fresh, old.get_index())
 	parent.remove_child(old)
@@ -418,17 +544,17 @@ func press(id: String) -> void:
 			var level: int = 1 - _store().quality()
 			_store().set_comfort(SettingsStore.QUALITY, float(level))
 			_game.set_quality(level)
-			rows["quality"].text = "Quality: %s" % ("Low" if level == 1 else "High")
+			rows["quality"].text = "Quality: %s" % ("low" if level == 1 else "high")
 		"reduced_motion":
 			var calm: bool = not _store().reduced_motion()
 			_store().set_comfort(SettingsStore.REDUCED_MOTION, 1.0 if calm else 0.0)
 			_game.set_reduced_motion(calm)
-			rows["reduced_motion"].text = "Reduced motion: %s" % ("on" if calm else "off")
+			rows["reduced_motion"].text = "Less motion: %s" % ("on" if calm else "off")
 		"reduce_flashes":
 			var dim: bool = not _store().reduce_flashes()
 			_store().set_comfort(SettingsStore.REDUCE_FLASHES, 1.0 if dim else 0.0)
 			_game.set_reduce_flashes(dim)
-			rows["reduce_flashes"].text = "Reduce flashes: %s" % ("on" if dim else "off")
+			rows["reduce_flashes"].text = "Fewer flashes: %s" % ("on" if dim else "off")
 		"frame_smoothing":
 			var smooth: bool = not _store().frame_smoothing()
 			_store().set_comfort(SettingsStore.FRAME_SMOOTHING, 1.0 if smooth else 0.0)
@@ -442,6 +568,8 @@ func press(id: String) -> void:
 		"reset":
 			_game.reset_bindings()
 			refresh()
+		CARDS_ROW:
+			_toggle_cards()
 		"back":
 			back_requested.emit()
 			return
@@ -450,26 +578,26 @@ func press(id: String) -> void:
 				_step_look(id, 1, true)
 			elif row_of(id) in VERBS:
 				_capturing = id
-				rows[id].text = "%s: press" % _caption(id)
+				rows[id].text = "press"
 	focus(id)
 
 
-# A row's words: the verb, or "Slot 2" for a pick row.
+# A verb's name, written once beside its caps: the verb, or "Pick 2" for a pick row.
 func _caption(id: String) -> String:
 	var n := _select_number(row_of(id))
-	return "Slot %d" % n if n > 0 else verb_of(id).capitalize()
+	return "Pick %d" % n if n > 0 else verb_of(id).capitalize()
 
 
 func _clear_notice() -> void:
 	if _taken != "":
 		var id := _taken
 		_taken = ""
-		rows[id].text = _caption(id)
+		rows[id].text = ""
 
 
 func _capture_end() -> void:
 	if _capturing != "":
-		rows[_capturing].text = _caption(_capturing)
+		rows[_capturing].text = ""
 		_capturing = ""
 
 
@@ -589,7 +717,7 @@ func _commit(id: String, event: InputEvent) -> void:
 	var verb := verb_of(id)
 	if _held_elsewhere(row_of(id), event):
 		_taken = id
-		rows[id].text = "%s: Taken" % _caption(id)
+		rows[id].text = "Taken"
 		return
 	var action := action_of(row_of(id))
 	if event is InputEventJoypadMotion:
@@ -636,6 +764,8 @@ func _nudge(direction: int) -> void:
 	var id := focused_id()
 	if not _look_spec(id).is_empty():
 		_step_look(id, direction, false)
+	elif rows.get(id) is VolumeRow:
+		rows[id].step(direction)
 
 
 func _accept() -> void:
