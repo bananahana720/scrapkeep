@@ -62,7 +62,7 @@ const FACTIONS := {
 const WARDEN_FAMILIES := [REACTOR, SWARM, MIND]
 # What a Warden is called on its plate and in the run summary: its family, and its variant when
 # the stage row sets one (stage 2's flume Warden is "meltdown", which its card names). The one owner.
-const WARDEN_NAMES := {REACTOR: {"": "Reactor Warden", "meltdown": "Meltdown Warden"}, SWARM: {"": "Hive Warden"}, MIND: {"": "Mind Warden"}}
+const WARDEN_NAMES := {REACTOR: {"": "Reactor Warden", "meltdown": "Meltdown Warden"}, SWARM: {"": "Hive Warden", "brood": "Brood Warden"}, MIND: {"": "Mind Warden", "choir": "Crown Warden"}}
 
 const T_INSTANT := Threat.Type.INSTANT
 const T_WAVE := Threat.Type.WAVE

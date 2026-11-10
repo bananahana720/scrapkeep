@@ -3,6 +3,7 @@ extends SceneTree
 const BossPlate := preload("res://src/ui/boss_plate.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const Harness := preload("res://tests/doubles/boss_harness.gd")
+const Warden := preload("res://src/combat/warden.gd")
 const Hud := preload("res://src/ui/hud.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const MachineFx := preload("res://src/presentation/machine_fx.gd")
@@ -31,9 +32,11 @@ const T := preload("res://tests/support/t.gd")
 const DT := 1.0 / 90.0
 const WINDOW := 2.0
 const ROUT_CARRIERS := 3
-# The HUD still toasts a phase's name (hud.gd:359-360, another unit's file). This is the one toast
-# owed per phase; it goes to 0 when the HUD stops toasting phase names, and the check fails on a second.
-const PHASE_TOASTS_OWED := 1
+# The HUD still toasts a phase's name (hud.gd:359-360, another unit's file). That one toast per
+# phase is owed: check 52 collects every distinct toast over the phase window and wants exactly
+# [the phase's name as the HUD prints it]. Change PHASE_TOAST_OWED to false when the HUD stops
+# toasting phase names, and the list must then be empty. A second toast fails it.
+const PHASE_TOAST_OWED := true
 const BREAK_KINDS := ["beacon_unsealed", "reward_offered"]
 const PLANTED_TOASTS := {"beacon_unsealed": "Warden broken: gates open", "reward_offered": "Reward gates ahead", "boss_defeated": "Brindle routed"}
 const PLANTED_SHOUTS := {"kind": "sfx_word", "at": 0.5, "for": 1.6, "text": "WOOO!", "at_share": Vector2(0.40, 0.33)}
@@ -45,6 +48,7 @@ class LegacyGame extends "res://src/game.gd":
 var _game
 var _t := T.new("moment_voices_test")
 var _started := false
+var _phase_name := ""
 
 
 func _initialize() -> void:
@@ -205,7 +209,7 @@ func _read_names(table: Dictionary) -> Dictionary:
 
 
 func _name_errors(table: Dictionary) -> Array:
-	var want := {"reactor:": "Reactor Warden", "reactor:meltdown": "Meltdown Warden", "swarm:": "Hive Warden", "mind:": "Mind Warden"}
+	var want := {"reactor:": "Reactor Warden", "reactor:meltdown": "Meltdown Warden", "swarm:": "Hive Warden", "swarm:brood": "Brood Warden", "mind:": "Mind Warden", "mind:choir": "Crown Warden"}
 	var bad: Array = []
 	for key in want:
 		var parts: PackedStringArray = key.split(":")
@@ -214,7 +218,25 @@ func _name_errors(table: Dictionary) -> Array:
 	return bad
 
 
+# Variants that take their family's name on purpose (none today).
+const SHARES_FAMILY_NAME: Array[String] = []
+
+
+# Every variant warden.gd reads has its own name row or is on the short list above.
+func _variant_name_gaps() -> Array:
+	var gaps: Array = []
+	for variant in Warden.VARIANTS:
+		if variant == "" or variant in SHARES_FAMILY_NAME:
+			continue
+		var family: String = Warden.VARIANT_FAMILIES[variant]
+		if not Roster.WARDEN_NAMES.get(family, {}).has(variant):
+			gaps.append(variant)
+	return gaps
+
+
 func _names() -> void:
+	_t.eq("25 every Warden variant has its own name row or shares on purpose", _variant_name_gaps(), [])
+	_t.eq("26 the lore's names: brood is the Brood Warden, choir the Crown Warden", [Roster.warden_name("swarm", "brood"), Roster.warden_name("mind", "choir")], ["Brood Warden", "Crown Warden"])
 	var card: String = String(Rows.pieces("flume_warden_reveal", false)[0].card[0])
 	var read := _read_names(Roster.WARDEN_NAMES)
 	_t.eq("20 the flume Warden's plate and summary read its card's name", [read.flume.plate.to_upper(), read.flume.summary], [card, "The Meltdown Warden"])
@@ -271,6 +293,7 @@ func _phases() -> void:
 	var player = _game.presentation.flourish
 	var fx = _game.presentation.machine_fx
 	var hud = _game.hud
+	_game.events.boss_phase_changed.connect(func(_n: int, phase_name: String): _phase_name = phase_name)
 	for phase in [2, 3]:
 		player.stop_all()
 		var before: int = fx.moments.filter(func(m): return m[1] == "word").size()
@@ -278,12 +301,15 @@ func _phases() -> void:
 		var row_id := "brindle_phase_%d" % phase
 		_t.check("50 phase %d plays its row" % phase, player.playing and player.id == row_id, player.id)
 		var kinds := _by_kind(Rows.resolve(row_id, player.short, 7))
-		var toasts: Array = hud.toast_texts()
+		var toasts: Array = []
 		var worst := {}
 		var t := 0.0
 		while t < WINDOW:
 			player.advance(DT)
 			fx._process(DT)
+			for text in hud.toast_texts():
+				if not text in toasts:
+					toasts.append(text)
 			var live := {}
 			for kind in player.live_kinds():
 				live[kind] = int(live.get(kind, 0)) + 1
@@ -294,7 +320,16 @@ func _phases() -> void:
 		_t.check("51 phase %d: one stamp, one caption, one machine word, nothing else on its own" % phase,
 			kinds.get("stamp", 0) == 1 and kinds.get("caption", 0) == 1 and not kinds.has("sfx_word") and not kinds.has("card") and machine == 1 and _worst(worst) <= 1,
 			"row %s, machine words %d, live %s" % [kinds, machine, worst])
-		_t.check("52 phase %d: only the phase-name toast the HUD still owes" % phase, toasts.size() == PHASE_TOASTS_OWED, "toasts %s, owed %d" % [toasts, PHASE_TOASTS_OWED])
+		var owed: Array = [Hud.toast_text("boss_phase_changed", {"name": _phase_name.capitalize()})] if PHASE_TOAST_OWED else []
+		_t.check("52 phase %d: the toasts over the window are exactly the phase name the HUD still owes" % phase, toasts == owed, "toasts %s, owed %s" % [toasts, owed])
+		# Planted: a second toast raised inside the window is seen by the same collection.
+		var planted_seen: Array = []
+		hud.toast("Second voice")
+		for i in 3:
+			for text in hud.toast_texts():
+				if not text in planted_seen:
+					planted_seen.append(text)
+		_t.check("53 planted: a second toast in the window is reported" if phase == 2 else "53 planted again (phase 3)", (toasts + planted_seen) != owed and "Second voice" in planted_seen, str(planted_seen))
 		player.advance(WINDOW)
 
 
@@ -326,7 +361,7 @@ func _rout() -> void:
 	var machine: int = fx.moments.filter(func(m): return m[1] == "word").size() - before
 	var extra: int = toasts.size() + (1 if panels > 0 else 0)
 	var carriers := _total(counts) + machine + extra
-	_t.check("61 the rout raises no toast, achievement panel or victory card over its window", toasts.is_empty() and panels == 0, "%s, panel frames %d" % [toasts.keys(), panels])
+	_t.check("61 the rout raises no toast and the victory card still waits (the achievement panel needs the HUD clock, not stepped here)", toasts.is_empty() and panels == 0, "%s, panel frames %d" % [toasts.keys(), panels])
 	_t.check("62 at most one of each kind, world words from the row and the machine together", _one_voice(counts, machine),
 		"row %s, machine words %d" % [counts, machine])
 	_t.check("63 at most three carriers in all", _few_carriers(counts, machine, extra), "%d carriers: row %s, machine %d, toasts and panels %d" % [carriers, counts, machine, extra])

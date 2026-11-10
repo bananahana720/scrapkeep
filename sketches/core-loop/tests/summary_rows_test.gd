@@ -138,7 +138,7 @@ func _esc() -> void:
 func _all_captions() -> Dictionary:
 	var worlds: Array = Worlds.ROWS.map(func(row): return String(row["name"]))
 	var parts: Array = Parts.rows().values().map(func(row): return String(row.get("name", "")))
-	var bosses: Array = ["The Reactor Warden", "The Meltdown Warden", "The Hive Warden", "The Mind Warden"]
+	var bosses: Array = ["The Reactor Warden", "The Meltdown Warden", "The Hive Warden", "The Brood Warden", "The Mind Warden", "The Crown Warden"]
 	for row in Worlds.ROWS:
 		bosses.append(String(Worlds.boss_of(int(row["id"])).get("name", "")))
 	var facts := {"opening": worlds, "key_item": parts, "boss_stagger": bosses, "biggest_hit": ["99999"],
