@@ -25,6 +25,7 @@ var _clock := 0.0
 var _last_hit := -INF
 var _hit_pending := false
 var _standing := -1.0
+var _way := Vector3.ZERO
 
 
 func setup(events_ref, ball_ref: Callable) -> void:
@@ -44,9 +45,62 @@ func standing_in() -> float:
 	return _standing
 
 
+# The flat way out of that same warning, as of the last step: a unit direction along the ground
+# toward its nearest edge, or zero when the ball stands in none.
+func way_out_now() -> Vector3:
+	return _way
+
+
+# The shortest way out of a warning for a ball at `at`, flat and unit length, from its committed
+# shape (the descriptor its damage reads): a ring or wave outward, a band (a ring with a hole)
+# inward or outward, a wedge also across its nearer side, a lane sideways or off either end.
+# Zero when the shape gives no way (the ball on a ring's very centre still gets one: outward
+# along the ring's own first edge).
+static func way_out(d: Dictionary, at: Vector3) -> Vector3:
+	var centre: Vector3 = d.get("centre", at)
+	var flat := Vector3(at.x - centre.x, 0.0, at.z - centre.z)
+	var best := INF
+	var way := Vector3.ZERO
+	match String(d.get("form", "")):
+		"radial":
+			var r := flat.length()
+			var out := flat / r if r > 0.01 else Vector3(cos(float(d.get("a0", 0.0))), 0.0, sin(float(d.get("a0", 0.0))))
+			best = float(d.get("r_out", 0.0)) - r
+			way = out
+			var r_in := float(d.get("r_in", 0.0))
+			if r_in > 0.0 and r - r_in < best:
+				best = r - r_in
+				way = -out
+			var a0 := float(d.get("a0", 0.0))
+			var a1 := float(d.get("a1", TAU))
+			if a1 - a0 < TAU - 0.01 and r > 0.01:
+				var angle := atan2(flat.z, flat.x)
+				for edge in [a0, a1]:
+					var across := r * absf(sin(wrapf(angle - edge, -PI, PI)))
+					if across < best:
+						best = across
+						var side := Vector3(-out.z, 0.0, out.x)
+						way = side if wrapf(edge - angle, -PI, PI) > 0.0 else -side
+		"lane":
+			var dir: Vector3 = d.get("dir", Vector3.FORWARD)
+			dir = Vector3(dir.x, 0.0, dir.z).normalized()
+			var along := flat.dot(dir)
+			var lateral := flat - dir * along
+			var side := lateral.normalized() if lateral.length() > 0.01 else Vector3(-dir.z, 0.0, dir.x)
+			best = float(d.get("half_width", 0.0)) - lateral.length()
+			way = side
+			if float(d.get("length", 0.0)) - along < best:
+				best = float(d.get("length", 0.0)) - along
+				way = dir
+			if along - float(d.get("back", 0.0)) < best:
+				way = -dir
+	return way.normalized() if way.length_squared() > 0.0 else Vector3.ZERO
+
+
 func step(delta: float) -> void:
 	_clock += delta
 	_standing = -1.0
+	_way = Vector3.ZERO
 	# A hit this tick counts from this tick, whichever ran first, the attack or this watch.
 	if _hit_pending:
 		_hit_pending = false
@@ -81,7 +135,10 @@ func step(delta: float) -> void:
 				# its answer is to stay down: a mark that says "get out or jump" would say the
 				# wrong thing, so it raises none.
 				if not bool(d.get("air", false)):
-					_standing = maxf(_standing, _run_of(node, at, d))
+					var ran := _run_of(node, at, d)
+					if ran >= _standing:
+						_standing = ran
+						_way = way_out(d, at)
 			continue
 		if _last_hit >= w["resolved"]:
 			w["done"] = true

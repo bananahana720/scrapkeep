@@ -38,6 +38,11 @@ const TICK_STEP_DEG := 30.0
 const TICK_LEN := 0.45
 # How far past its clear edge an aim cone's fill reaches before it has thinned to nothing.
 const AIM_FILL := 1.2
+# An aim mark's root is a strip along its line, this half-width at its foot and at its far end, not
+# the cone's spread: pitched up on a mount the spread stood over the view as a mint sheet (8.5 to
+# 9.6% of the PC's box, against its 8% line; the strip reads 2.8% in the cloud where the spread read
+# 6.1%, and the cloud reads the PC low by up to 1.6).
+const AIM_ROOT := Vector2(0.3, 0.15)
 # An aim mark fades with its distance from the lens: gone at LENS_CLEAR metres, whole at LENS_FULL.
 # A kick off a wall you face points back over the camera, and a line 0.28 m wide drawn a metre from
 # the lens is a bar across the view.
@@ -154,7 +159,7 @@ static func style(shape: Dictionary, now: float) -> Dictionary:
 # to its end. An aim cone leaves the ball along a line that follows the look, so beside a wall it comes
 # back over the lens: filled flat it lay across the middle of the view as a pale sheet (play finding 7).
 # Its fill is a root that starts at the cone's clear edge and thins to nothing AIM_FILL metres on,
-# whatever the cone's length, and the dashed line carries the rest.
+# whatever the cone's length, a strip AIM_ROOT wide along the line, and the dashed line carries the rest.
 static func cone_fill(shape: Dictionary, fill: Color) -> Dictionary:
 	if not is_aim(shape):
 		return {"from": 0.0, "reach": 1.0, "far": fill}
@@ -279,6 +284,12 @@ func _draw(shape: Dictionary, now: float) -> void:
 			var body := cone_fill(shape, fill)
 			var near := [apex.lerp(left, body["from"]), apex.lerp(right, body["from"])]
 			var far := [apex.lerp(left, body["reach"]), apex.lerp(right, body["reach"])]
+			if is_aim(shape):
+				# The root hugs the line rather than the cone's spread (see AIM_ROOT).
+				var foot := apex + dir * length * float(body["from"])
+				var tip := apex + dir * length * float(body["reach"])
+				near = [foot + side * AIM_ROOT.x, foot - side * AIM_ROOT.x]
+				far = [tip + side * AIM_ROOT.y, tip - side * AIM_ROOT.y]
 			for corner in [[near[0], fill], [far[0], body["far"]], [far[1], body["far"]], [near[0], fill], [far[1], body["far"]], [near[1], fill]]:
 				_tris.surface_set_color(corner[1])
 				_tris.surface_add_vertex(_p(corner[0]))

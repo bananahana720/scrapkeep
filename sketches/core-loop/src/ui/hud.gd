@@ -59,7 +59,7 @@ class CogChip extends Control:
 
 	func _draw() -> void:
 		var mid := size.y * 0.5
-		draw_texture_rect(Icons.texture(ICON), Rect2(Vector2(0.0, mid - 10.0), Vector2(20.0, 20.0)), false, Icons.tint(ICON, COLOR))
+		UiDraw.icon(self, Icons.texture(ICON), Rect2(Vector2(0.0, mid - 10.0), Vector2(20.0, 20.0)), Icons.tint(ICON, COLOR))
 		UiDraw.text(self, 26.0, mid, str(amount), 18, Palette.SAND, true)
 
 
@@ -1223,6 +1223,10 @@ func _process(delta: float) -> void:
 		if not cam.is_position_behind(top):
 			var over: Vector2 = cam.unproject_position(top)
 			danger_mark.follow(over)
+			var way: Vector3 = game.combat.near_miss.way_out_now()
+			var ball_at: Vector3 = game.player.shown_position()
+			danger_mark.show_way(cam.unproject_position(ball_at + way * 2.0) - cam.unproject_position(ball_at)
+				if way != Vector3.ZERO and not cam.is_position_behind(ball_at + way * 2.0) else Vector2.ZERO)
 			# A name gained inside a mark stands on the mark, not across it.
 			part_name.follow(Vector2(over.x, danger_mark.rect().position.y) if danger_mark.visible else over)
 		else:
