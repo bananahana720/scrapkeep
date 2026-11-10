@@ -10,6 +10,8 @@ const Push := preload("res://tests/workshop/push.gd")
 const Profile := preload("res://src/core/profile.gd")
 const Progress := preload("res://src/core/progress.gd")
 const GameEvents := preload("res://src/core/game_events.gd")
+const ScreenBusy := preload("res://src/ui/screen_busy.gd")
+const Hud := preload("res://src/ui/hud.gd")
 const T := preload("res://tests/support/t.gd")
 const PilotBlocks := preload("res://tests/support/pilot_blocks.gd")
 
@@ -52,12 +54,15 @@ func _settle(seconds: float) -> void:
 		left -= _game.get_process_delta_time()
 
 
-# Waits for a card other than the last one returned to come up and returns it ([] after 20 s).
+# Waits for a card other than the last one returned to come up and returns it ([] at the bound). The
+# bound is the source's own constants plus 60 frames: the screen's quiet hold for the first card after a
+# fight (screen_busy.gd SETTLE), a card's life (hud.gd ACH_TOTAL) for each next, and the Warden's own earn, raised by the break itself,
+# may also need the quiet hold.
 var _last_toast: Array[String] = []
 
 
-func _next_toast() -> Array[String]:
-	var limit := 20.0
+func _next_toast(bound: float) -> Array[String]:
+	var limit := bound + 1.0
 	while (_game.hud.ach_toasts().is_empty() or _game.hud.ach_toasts() == _last_toast) and limit > 0.0:
 		await _settle(0.05)
 		limit -= 0.05
@@ -157,9 +162,9 @@ func _run() -> void:
 		await _frames(3)
 	# The screen has to be quiet for two seconds after the fight (screen_busy.gd), then the cards come one
 	# at a time in the order earned: each is awaited, and a card that never shows fails the check.
-	_t.eq("P3-5 after the fight the first shows", await _next_toast(), [Achievements.toast_text("first_event")])
-	_t.eq("P3-5 then the next, in order", await _next_toast(), [Achievements.toast_text("full_rack")])
-	_t.eq("P3-5 the Warden's own earn comes last", await _next_toast(), [Achievements.toast_text("warden_broken")])
+	_t.eq("P3-5 after the fight the first shows", await _next_toast(ScreenBusy.SETTLE), [Achievements.toast_text("first_event")])
+	_t.eq("P3-5 then the next, in order", await _next_toast(Hud.ACH_TOTAL), [Achievements.toast_text("full_rack")])
+	_t.eq("P3-5 the Warden's own earn comes last", await _next_toast(Hud.ACH_TOTAL + ScreenBusy.SETTLE), [Achievements.toast_text("warden_broken")])
 	# 2026-10-05 (wave 14, prog-G10): the page after a won run's bus facts, on its own bus.
 	var bus = GameEvents.new()
 	_game.add_child(bus)

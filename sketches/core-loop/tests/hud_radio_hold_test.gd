@@ -58,10 +58,9 @@ func _radio() -> void:
 	var before: String = deck.radio.station
 	var filed: bool = deck.find(picks[0])
 	_t.check("the take is filed in the fight", filed and profile.has_tune(picks[0]), "filed %s" % filed)
-	_t.check("a boss fight holds the station", deck.radio.station == before, "station %s -> %s" % [before, deck.radio.station])
+	_t.check("a boss fight holds the station and the chip still", deck.radio.station == before and not deck.dial.swollen(), "station %s -> %s, swollen %s" % [before, deck.radio.station, deck.dial.swollen()])
 	_game.flow._unseal()
 	_game.hud.clear_toasts()
 	deck.find(picks[1])
 	_t.check("outside a fight the take moves the dial", deck.radio.station == RadioTakes.station_of(picks[1]), "station %s" % deck.radio.station)
-	var toasts: Array = _game.hud.toast_texts().filter(func(s): return s.begins_with("On air"))
-	_t.eq("and shows one toast", toasts, ["On air: %s" % Radio.station_name(deck.radio.station)])
+	_t.check("and pulses the chip once, with no toast", _game.radio_deck.dial.swollen() and _game.hud.toast_texts().is_empty(), "swollen %s, toasts %s" % [_game.radio_deck.dial.swollen(), _game.hud.toast_texts()])

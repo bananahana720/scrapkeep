@@ -4,26 +4,29 @@ const WhyCallout := preload("res://src/ui/why_callout.gd")
 const MixRows := preload("res://src/presentation/mix_rows.gd")
 
 # Is the screen busy? The one answer (PF-19), read by every card that can wait: a record, a
-# B-side, an achievement, a look, a field note, a synergy, a fleet grade find. A card asks
-# may_show(key) each frame; it is told yes only when the screen has been quiet for SETTLE seconds
-# of game time and the card is the oldest one waiting, and then it holds the screen alone until
-# it calls done(key). Nothing a player must act on ever asks: those cards show when they are due.
+# take, an achievement, a look, a field note, a synergy, a fleet grade find, and the crate. A
+# card asks may_show(key) each frame; it is told yes only when the screen has been quiet long
+# enough and the card is the oldest one ready, and then it holds the screen alone until it
+# calls done(key). Nothing a player must act on ever asks: those cards show when they are due.
 #
-# Busy is read from what is already published, never from a card: the fight on the bus
-# (pressure_changed with the mix's own hysteresis, fight_phase_changed, boss_arena_entered, the
-# Warden fight the flow reports), plus the screens that register themselves with add_source (the
-# kit pick, the briefing card, the reward crate). A waiting card is dropped when the run ends;
-# the run summary lists what was earned.
+# Quiet means none of these in the last `hold` seconds of game time: a fight (the stage's
+# pressure through MixRows.combat_after, the one hysteresis the music uses too; a named fight
+# that has entered a phase and whose enemy has not died; the Warden), a screen that registered
+# itself with add_source (the kit pick, the briefing card, the crate), damage to the player, a
+# live telegraph. SETTLE is the usual hold; a kind that must wait longer on purpose passes it.
+# A card still waiting when the run ends is dropped. Whether the fact survives is up to the
+# card's owner; the achievements page keeps an achievement.
 
 const SETTLE := 2.0
+# The longer hold the finds keep from before this gate: no damage or telegraph for this long.
+const FIND_HOLD := WhyCallout.CALM_SECONDS
 # A card asks every frame while it is ready to show. One that has not asked within this many
 # seconds is not ready (its own module holds it back), and a younger card may go ahead of it.
 const ASK_WINDOW := 0.3
 
 var _sources: Array[Callable] = []
-var _pressure_fight := false
-var _phase_fight := false
-var _arena_fight := false
+var _combat := false
+var _fights := {}
 var _quiet_for := SETTLE
 var _waiting: Array[String] = []
 var _holder := ""
@@ -36,16 +39,17 @@ func setup(ctx) -> void:
 	name = "ScreenBusy"
 	_flow = ctx.flow
 	var events = ctx.events
-	events.pressure_changed.connect(_on_pressure)
-	events.fight_phase_changed.connect(func(_id: String, _phase: int, _phases: int): _phase_fight = true)
-	events.boss_arena_entered.connect(func(): _arena_fight = true)
-	events.boss_defeated.connect(fight_over)
-	# A Warden's break ends its fight whatever the crowd's pressure is still doing (flow._unseal).
+	events.pressure_changed.connect(func(pressure: float): _combat = MixRows.combat_after(_combat, pressure))
+	# A named fight is live from its first phase until its own enemy dies.
+	events.fight_phase_changed.connect(func(id: String, _phase: int, _phases: int): _fights[id] = true)
+	events.boss_arena_entered.connect(func(): _fights["boss"] = true)
+	events.enemy_killed.connect(func(kind: String, _at: Vector3, _scrap: int): _fights.erase(kind))
+	events.boss_defeated.connect(func(): _fights.erase("boss"))
 	events.beacon_unsealed.connect(func(_stage: int): fight_over())
 	events.run_started.connect(func(_class_id: String): fight_over(); drop_all())
 	events.stage_entered.connect(func(_stage: int, _retry: bool): fight_over())
 	events.run_ended.connect(func(_won: bool): drop_all())
-	events.player_died.connect(drop_all)
+	events.player_hit.connect(func(_amount: float, _source: String): _quiet_for = 0.0)
 
 
 # A screen that holds the fight's attention while it is up: a Callable returning true while it is.
@@ -53,23 +57,15 @@ func add_source(source: Callable) -> void:
 	_sources.append(source)
 
 
-func _on_pressure(pressure: float) -> void:
-	if pressure >= MixRows.COMBAT_ON:
-		_pressure_fight = true
-	elif pressure < MixRows.COMBAT_OFF:
-		_pressure_fight = false
-		_phase_fight = false
-
-
+# Every named fight is over (a stage starts, a Warden breaks).
 func fight_over() -> void:
-	_pressure_fight = false
-	_phase_fight = false
-	_arena_fight = false
+	_combat = false
+	_fights.clear()
 
 
-# A fight is on: pressure, a boss phase, the boss arena or a Warden standing and engaged.
+# A fight is on: pressure, a named fight with its enemy alive, or a Warden standing and engaged.
 func fighting() -> bool:
-	return _pressure_fight or _phase_fight or _arena_fight or WhyCallout.warden_fight_live(_flow)
+	return _combat or not _fights.is_empty() or WhyCallout.warden_fight_live(_flow)
 
 
 # A fight is on, or a pick, briefing or crate is up.
@@ -82,9 +78,9 @@ func busy() -> bool:
 	return false
 
 
-# The screen is not busy and has been quiet for SETTLE seconds: a ready card would be let on.
-func settled() -> bool:
-	return _quiet_for >= SETTLE and not busy()
+# The screen is not busy and has been quiet for `hold` seconds.
+func settled(hold := SETTLE) -> bool:
+	return _quiet_for >= hold and not busy()
 
 
 # A card that wants the screen joins the line, oldest first.
@@ -100,12 +96,12 @@ func ready(key: String) -> void:
 
 # True when `key` may show now. It takes the screen on the first yes and keeps it until done.
 # Ask every frame while the card is ready: the oldest ready card goes first.
-func may_show(key: String) -> bool:
+func may_show(key: String, hold := SETTLE) -> bool:
 	_asked[key] = _clock
 	if key == _holder:
 		return true
 	request(key)
-	if _holder != "" or _quiet_for < SETTLE or busy():
+	if _holder != "" or not settled(hold):
 		return false
 	for older in _waiting:
 		if older == key:
@@ -125,11 +121,19 @@ func done(key: String) -> void:
 		_holder = ""
 
 
+# The card on screen was pushed off by something else (a crate): it keeps its place, first in line.
+func give_back(key: String) -> void:
+	if _holder == key:
+		_holder = ""
+	_waiting.erase(key)
+	_waiting.insert(0, key)
+
+
 func waiting() -> Array[String]:
 	return _waiting.duplicate()
 
 
-# A run ended: what still waits is not shown. The summary lists what was earned.
+# A run ended: what still waits is not shown.
 func drop_all() -> void:
 	_waiting.clear()
 	_asked.clear()
@@ -144,7 +148,8 @@ func _process(delta: float) -> void:
 # drives its cards with a clock of its own steps this too.
 func step(delta: float) -> void:
 	_clock += delta
-	if busy():
+	var tree := get_tree() if is_inside_tree() else null
+	if busy() or WhyCallout.threat_live(tree):
 		_quiet_for = 0.0
 	else:
 		_quiet_for += delta

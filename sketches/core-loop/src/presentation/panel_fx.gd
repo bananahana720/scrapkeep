@@ -50,8 +50,6 @@ var played: Array = []
 # Seconds each pop line is still held, and the pops waiting for a line: [panel_id, jackpot, count].
 # A folded line of mixed kinds has the id "".
 var _row_left: Array = []
-# False leaves every pop its own line (the check's planted control: pops then show late).
-var fold_waiting := true
 var _waiting: Array = []
 
 
@@ -108,7 +106,7 @@ func _on_panel_gained(panel_id: String, _count: int, _at: Vector3, jackpot: bool
 
 # A pop joins the line of pops waiting for a row; past POP_ROWS it folds into one already waiting.
 func _wait(panel_id: String, jackpot: bool) -> void:
-	if _waiting.size() < POP_ROWS or not fold_waiting:
+	if _waiting.size() < POP_ROWS:
 		_waiting.append([panel_id, jackpot, 1])
 		return
 	var line: Array = _waiting.back()

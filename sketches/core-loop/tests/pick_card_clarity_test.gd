@@ -141,7 +141,7 @@ func _process(_delta: float) -> bool:
 				_next("after")
 		"after":
 			if _wait == 3:
-				_report("the toast row returns after the pick", _game.hud._toast_row.is_visible_in_tree() or _game.hud.toast_texts().is_empty(), "toast row visible %s, toasts %s" % [_game.hud._toast_row.is_visible_in_tree(), _game.hud.toast_texts()])
+				_report("the toast row returns after the pick", not _game.hud.toast_texts().is_empty() and _game.hud._toast_row.is_visible_in_tree(), "toast row visible %s, toasts %s" % [_game.hud._toast_row.is_visible_in_tree(), _game.hud.toast_texts()])
 				_report("fight words return after the pick", not _ws.pick.is_open() and _word.is_visible_in_tree() and _ws.bubble.showing() and _game.hud.why_callout.is_visible_in_tree(),
 					"pick open %s, hit word %s, Moss's line %s, callout %s" % [_ws.pick.is_open(), _word.is_visible_in_tree(), _ws.bubble.showing(), _game.hud.why_callout.is_visible_in_tree()])
 				print("pick_card_clarity_test: %s" % ("PASS" if _failures == 0 else "FAIL (%d)" % _failures))

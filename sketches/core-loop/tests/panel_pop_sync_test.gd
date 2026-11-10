@@ -6,7 +6,7 @@ const T := preload("res://tests/support/t.gd")
 
 # A pickup pop is on screen within 1.2 s of its sound (PF-19). Ten pickups in one tick, a frame
 # at a time: every one is counted in a pop that shows inside the window, and the pile folds into
-# one "+N" line. The planted control switches the folding off: the tenth pop then shows 4.8 s
+# one "+N" line. The planted control feeds the old unfolded queue: the tenth pop then shows 4.8 s
 # after its sound and the check must fail.
 
 const STEP := 1.0 / 60.0
@@ -47,9 +47,13 @@ func _pile(ids: Array, fold: bool) -> Array:
 	fx.ctx = ctx
 	fx.audio = stub
 	fx.machine_fx = stub
-	fx.fold_waiting = fold
 	for id in ids:
-		fx._on_panel_gained(id, 1, Vector3.ZERO, false)
+		if fold:
+			fx._on_panel_gained(id, 1, Vector3.ZERO, false)
+		else:
+			# The planted control: the old queue, every pickup its own waiting pop.
+			fx._waiting.append([id, false])
+			fx._release()
 	var steps := int(6.0 / STEP)
 	for i in steps:
 		stub.clock += STEP

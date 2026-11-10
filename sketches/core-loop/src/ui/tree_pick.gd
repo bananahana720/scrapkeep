@@ -170,6 +170,14 @@ func _shell() -> bool:
 	return game.tuning != null and game.tuning.option("hotwire_shell") == "on"
 
 
+# Leaving the tree with the pick open (a run ended, a test freed it) gives the screen back.
+func _exit_tree() -> void:
+	if not _hidden.is_empty():
+		PickQuiet.restore(_hidden)
+		_hidden = []
+		_quiet_host(false)
+
+
 # Moss's line, which the workshop this screen sits under owns, goes quiet with the rest.
 func _quiet_host(on: bool) -> void:
 	var host = get_parent()

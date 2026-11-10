@@ -5,6 +5,7 @@ const ScreenRegions := preload("res://src/ui/screen_regions.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const UiProfile := preload("res://src/ui/ui_profile.gd")
 const WhyCallout := preload("res://src/ui/why_callout.gd")
+const ScreenBusy := preload("res://src/ui/screen_busy.gd")
 
 # The discovery banner: the category icon, a kicker ("New synergy" or "Found"), the
 # name and one line of what it does. Per the UI regions rule (CONTRACTS) it sits in
@@ -58,7 +59,6 @@ const CARD_LINES := 7
 const GLYPH_PERIOD := 1.2
 const DEFAULT_KIND := "synergy_discovered"
 const TINT_KICKER_LIFT := 0.35
-const CALM_SECONDS := WhyCallout.CALM_SECONDS
 
 var shown := 0
 var last_title := ""
@@ -79,7 +79,6 @@ var now_ms: Callable = Callable(Time, "get_ticks_msec")
 signal came_up(key: String)
 
 var _queue: Array = []
-var _calm_left := 0.0
 var _events = null
 var _flow = null
 # The screen_busy gate (src/ui/screen_busy.gd) and the key of the card up: it queues behind a fight.
@@ -168,12 +167,11 @@ func _ready() -> void:
 		node = node.get_parent()
 
 
-# Counts damage on this bus as a fight, so a card waits for CALM_SECONDS without it.
+# Hands the banner the bus: a retry drops what it holds.
 func watch(events) -> void:
 	if _events == events or not events.has_signal("player_hit"):
 		return
 	_events = events
-	events.player_hit.connect(func(_amount: float, _source: String): _calm_left = CALM_SECONDS)
 	# A retry rewinds the stage and clears the codex record: a held card goes unseen.
 	if events.has_signal("stage_entered"):
 		events.stage_entered.connect(func(_stage: int, retry: bool):
@@ -181,9 +179,9 @@ func watch(events) -> void:
 				dismiss(true))
 
 
-# Whether a find may show its card now: the shared gate, WhyCallout.find_may_speak.
+# Whether a find may show its card now: the screen is quiet (screen_busy.gd) for the finds' hold.
 func calm() -> bool:
-	return WhyCallout.find_may_speak(_calm_left, get_tree() if is_inside_tree() else null, _flow)
+	return _busy == null or _busy.settled(ScreenBusy.FIND_HOLD)
 
 
 # A card is waiting for a calm moment.
@@ -200,7 +198,7 @@ func held() -> bool:
 # every_time is for a moment of the run, not a codex first (a completed set): in cards mode its
 # first showing ever is still the card, and each later one is the small banner instead of
 # nothing. It is never dropped for a full queue, and it does not wait behind first-find cards.
-func show_discovery(title: String, category: String, detail := "", kicker := "Two parts team up", id := "", kind := DEFAULT_KIND,
+func show_discovery(title: String, category: String, detail := "", kicker := "New synergy", id := "", kind := DEFAULT_KIND,
 		tint = null, every_time := false) -> void:
 	var style := "banner"
 	var key := id if id != "" else "%s:%s" % [category, title]
@@ -329,7 +327,7 @@ func _next() -> void:
 		_next()
 		return
 	# Every head asks the shared gate, whatever its style.
-	if not calm() or (_busy != null and not _busy.may_show(head[6])):
+	if _busy != null and not _busy.may_show(head[6], ScreenBusy.FIND_HOLD):
 		return
 	_slot = head[6]
 	var item: Array = _queue.pop_front()
@@ -343,7 +341,8 @@ func _next() -> void:
 	if item[7] is Color:
 		_glyph_color = color
 	_icon.texture = CodexStyle.icon(item[1], item[7])
-	_kicker.text = "%s  ·  %s" % [String(item[3]).to_upper(), String(entry["label"]).to_upper()]
+	# The glyph, the colour and the name say what it is; the kicker is only the category, not a sentence.
+	_kicker.text = String(entry["label"]).to_upper()
 	# The edge, icon and glyph wear a tint as given; the small kicker text is lifted so a dark
 	# tint (rust, slate) still reads on the panel.
 	_kicker.add_theme_color_override("font_color", color.lightened(TINT_KICKER_LIFT) if item[7] is Color else color)
@@ -366,7 +365,6 @@ func _next() -> void:
 
 
 func _process(delta: float) -> void:
-	_calm_left = WhyCallout.calm_left_after(_calm_left, delta, get_tree() if is_inside_tree() else null)
 	if _started_ms < 0:
 		_next()
 		return
