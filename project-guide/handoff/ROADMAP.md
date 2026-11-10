@@ -33,7 +33,6 @@ The rest of the 28 Oct gap list is closed: the dunk tip, the held radio and acti
 ### Engineering hygiene that rides along (never holds a promotion)
 
 - Slow-box time caps (boss_weak_parts, crown_warden_bot, run_tier children, bot_skill_bar): the dam leftovers lane raises the tests' own caps; the runner gains a time scale for slow boxes ([GATE.md](GATE.md)).
-- `--audio-driver Dummy` in `bossSmokeCommand` in `scripts/sketch-export.mjs`.
 - Deep-modules batch 2 from the queued list ([DEEP-SWEEP.md](DEEP-SWEEP.md)).
 - Watches on the live board, and the carried reds in [KNOWN-FAILING.tsv](KNOWN-FAILING.tsv) (ruling bq).
 

@@ -1079,6 +1079,7 @@ func _on_stage_entered(stage: int, retry: bool) -> void:
 		_stage_dry = dropper.dry
 	_speed_tier = ctx.player.speed_tier()
 	scrap.lay_out(ctx.terrain, ctx.terrain.scrap_lines(stage), ctx.flow.stage_def()["scrap_density"], ctx.rng)
+	scrap.lay_trail(ctx.terrain, ctx.terrain.scrap_trail(stage))
 	fabricators.lay_out(ctx.terrain, stage, _class_id(), ctx.rng, ctx.run.parts)
 	recompute()
 
