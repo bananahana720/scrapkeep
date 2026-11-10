@@ -137,3 +137,8 @@ He said he won't dictate anything but direction (19:55Z 17 Oct), so the filing i
 ## Reading the build at a death, 9 Nov
 
 68. **Read a dead run's build as it met the Warden or entered the boss arena, never at the killing hit.** Scrap is armour, so at every death the ball is already stripped: anything that reads punch or heft at the killing hit reads a bare ball. The old SCRAPPED gap line did this, and so did the first build of the death note (#637).
+
+## A crashed first import, 10 Nov
+
+69. **A first `--import` that dies on signal 11 or 6 is the engine's, so try it again and let the last try decide.** Godot 4.7.2's threaded font reimport crashed the first headless import of a fresh `.godot` 2 times in 5 on the PC (exit 139 and 134, "malloc(): smallbin double linked list corrupted", the last line a `.ttf`) and 1 time in 5 in the cloud. It leaves imported files missing, so every test after it prints script errors that look like a project red. "Import twice" cleared it only by luck: two crashes running is about 1 run in 6 at the PC's rate. The runner, the fast lane and the gate shard now give an import up to three tries and take the first that exits 0 with no `SCRIPT ERROR` line; a healthy import prints none ([GATE.md](GATE.md)). By hand, do the same before calling any red on a fresh checkout. Not tried: importing on one thread (`editor/import/use_multiple_threads` off), kept for when three tries stop being enough.
+

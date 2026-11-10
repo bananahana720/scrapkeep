@@ -7,6 +7,7 @@ import {
   countChecks,
   acquireMachine,
   binary,
+  IMPORT_TRIES,
   importWithRetry,
   scriptErrorCount,
   isBot,
@@ -722,12 +723,15 @@ async function main() {
     baseImport ??= inLane(async () => {
       if (prRed) return false;
       const args = ["--headless", "--path", baseSketch];
-      if ((await importAsync(args)) === 0) return true;
-      log(`${SKETCH} (base) import failed; retrying once`);
-      return (await importAsync(args)) === 0;
+      // The base tree is a fresh checkout, where the engine's first import can crash (IMPORT_TRIES).
+      for (let attempt = 1; attempt <= IMPORT_TRIES; attempt++) {
+        if ((await importAsync(args)) === 0) return true;
+        if (attempt < IMPORT_TRIES) log(`${SKETCH} (base) import try ${attempt} of ${IMPORT_TRIES} failed; trying again`);
+      }
+      return false;
     });
     if (!(await baseImport)) {
-      log(`  ${test} on the merge base: no verdict (the base import failed twice)`);
+      log(`  ${test} on the merge base: no verdict (the base import failed ${IMPORT_TRIES} times)`);
       return null;
     }
     if (cancel.cancelled) return null;
