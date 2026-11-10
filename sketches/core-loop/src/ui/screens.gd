@@ -65,8 +65,9 @@ const STAMP_TILT := -6.0
 const ENDING_HOLD := 1.0
 const PROLOGUE_TITLE := "FIRST SHIFT"
 # The one line under "Choose your pilot"; empty shows none. The screen has room for one line
-# (ui_class_card_level_test L4 pins it with the key row on screen).
-const PILOT_LINE := ""
+# (ui_class_card_level_test L4 pins it with the key row on screen). It is the game's one line
+# (STORY-MAP.md section 1) as the crew's board would say it.
+const PILOT_LINE := "Loose cannons, all of them. Pick one."
 # Start is the one filled button on the title: the primary action reads first and biggest.
 # The run-end comic page (run_moments.gd) on the summary, drawn by the camp's comic_page.gd
 # when the build has it: 3:4, at most this share of the screen's height.
