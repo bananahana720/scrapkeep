@@ -3,13 +3,19 @@ extends SceneTree
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const UiProfile := preload("res://src/ui/ui_profile.gd")
+const Tuning := preload("res://src/movement/tuning.gd")
 
 # The FIRST-TIMER lessons (ui/first_steps.gd) on a fresh profile:
 #   - the drive keys show at the ball on the drop with the word DRIVE, and say so on the bus;
+#   - a part's name gained on the drop (the start pick's) rides above the ball's top edge, clear
+#     of the drive row, of the ball verbs' row at the same height and of the aim reticle;
 #   - DRIVE_LEARNED seconds of steering takes them down and counts one use; three uses retire them;
 #   - a staggered Warden shows Space Ctrl SLAM on the ground and Ctrl SLAM alone in the air;
 #   - a slam at the open core counts, one far from it does not, three retire the lesson, and the
 #     count persists.
+
+# The clear pixels a part's name keeps over the prompt rows beside the ball.
+const NAME_CLEAR := 16.0
 
 # A Warden stand-in: the lesson reads only staggered() and where it stands.
 class OpenCore:
@@ -66,6 +72,18 @@ func _physics_process(_delta: float) -> bool:
 	var row_end: float = placed[0]["at"].x + lessons.row_width(placed[0]["parts"]) if not placed.is_empty() else INF
 	_report("the drive row ends left of the ball", row_end < ball_x,
 		"row ends at x %.0f, ball at x %.0f (the ball verbs' prompts sit to its right)" % [row_end, ball_x])
+	var cam_now: Camera3D = _game.camera.cam
+	var ball_top: float = cam_now.unproject_position(_game.player.shown_position() + cam_now.global_basis.y * Tuning.RADIUS).y
+	var row_top: float = placed[0]["at"].y - lessons.KEY_H * 0.5 if not placed.is_empty() else -INF
+	_game.hud.part_name.show_part("rivet_plating")
+	_game.hud._process(0.0)
+	var name_rect: Rect2 = _game.hud.part_name.rect()
+	_report("a part's name rides above the ball, clear of the prompts beside it",
+		name_rect.size.x > 0.0 and name_rect.end.y <= ball_top and name_rect.end.y <= row_top - NAME_CLEAR,
+		"name %s, ball top y %.0f, prompt rows' top y %.0f (wants %.0f px clear)" % [name_rect, ball_top, row_top, NAME_CLEAR])
+	var ring: Rect2 = _game.hud.part_name.avoid
+	_report("and steps over the aim reticle", ring.size.x > 0.0 and ring.has_point(root.get_visible_rect().size * 0.5) and not name_rect.intersects(ring),
+		"name %s, reticle box %s" % [name_rect, ring])
 
 	_game.player.intent.move = Vector2(0.0, 1.0)
 	for i in int(ceil(lessons.DRIVE_LEARNED / 0.1)) + 1:

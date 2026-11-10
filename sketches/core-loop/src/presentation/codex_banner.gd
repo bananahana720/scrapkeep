@@ -40,15 +40,21 @@ const WIDTH := 360.0
 const MARGIN := 18.0
 # The HUD's toast column width (hud.gd TOAST_WIDTH), which the banner stays beside.
 const TOAST_COLUMN := 800.0
-# The first-discovery card (cards mode) and the most that wait for the gate.
+# The first-discovery card (cards mode) and the most that wait for the gate. A card holds
+# CARD_HOLD for a line of up to CARD_WORDS words and CARD_WORD_HOLD more for each word past
+# that, up to CARD_HOLD_MAX, so a long line stays up long enough to read to its end.
 const CARD_HOLD := 4.0
+const CARD_WORDS := 18
+const CARD_WORD_HOLD := 0.2
+const CARD_HOLD_MAX := 8.0
 const MAX_HELD := 3
 const GLYPH_CARD := 132.0
 # A card is this tall (250 at 900p: from just under the toasts band, y 279, to 529, above
 # the prompts band at 558) so it reads as the bigger ceremony, and its line takes at
-# most CARD_LINES lines, so it stays clear of the play area whatever the text.
+# most CARD_LINES lines, so it stays clear of the play area whatever the text. Seven lines
+# is what the card holds beside its title without growing; a longer line is trimmed.
 const CARD_HEIGHT := 250.0
-const CARD_LINES := 4
+const CARD_LINES := 7
 const GLYPH_PERIOD := 1.2
 const DEFAULT_KIND := "synergy_discovered"
 const TINT_KICKER_LIFT := 0.35
@@ -262,6 +268,12 @@ func _input(event: InputEvent) -> void:
 		_next()
 
 
+# How long a card with this line stays up between its slide in and its slide out.
+static func card_hold(line: String) -> float:
+	var extra := maxi(line.split(" ", false).size() - CARD_WORDS, 0)
+	return minf(CARD_HOLD + CARD_WORD_HOLD * extra, CARD_HOLD_MAX)
+
+
 func _apply_style(style: String, entry: Dictionary, kind: String) -> void:
 	_style_name = style
 	var card := style == "card"
@@ -323,6 +335,8 @@ func _next() -> void:
 	_title.text = item[0]
 	_body.text = item[2]
 	_body.visible = item[2] != ""
+	if _style_name == "card":
+		_hold = card_hold(item[2])
 	_panel.reset_size()
 	_style.border_color = color
 	last_style = _style_name
