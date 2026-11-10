@@ -121,6 +121,8 @@ var render_usec := 0
 var rendered := 0
 # Stem voices opened and the time opening them took: each one seeks its recording on the
 # frame that asks for the section, so a call that opens more than one section's stems shows here.
+# Both are running totals for this sequencer, and a change of pack makes a new sequencer that
+# counts from zero: a frame's cost is the change across that frame, never the figure itself.
 var opened := 0
 var open_usec := 0
 

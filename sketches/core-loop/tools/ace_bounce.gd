@@ -11,7 +11,13 @@ const RATE := 44100.0
 # plays at wall-clock speed.
 #
 #   godot --headless --path sketches/core-loop --script res://tools/ace_bounce.gd -- \
-#     --out=<absolute .wav> [--seconds=80] [--tail=3] [--policy=skipper] [--seed=1] --music=ace
+#     --out=<absolute .wav> [--seconds=80] [--tail=3] [--policy=skipper] [--seed=1] --music=ace \
+#     [--slow-at=<seconds>] [--slow-for=2.3] [--slow-scale=0.3]
+#
+# --slow-at slows the world at that second of the WAV the way the close-up at Brindle's entrance
+# does (game.slow_motion; flourish_rows.gd asks for 0.3 of the world's speed, about 2.3 s of
+# wall time), so the falling sweep, the held music and the rising sweep are recorded over
+# whatever the run is playing. No bot's run slows the world on its own.
 #
 # The recording runs --tail seconds past the tick the run ends on (a death, a win, a stall), so
 # what the music does after the end is in the WAV: the band stop and brass fall after a death,
@@ -24,6 +30,8 @@ const RATE := 44100.0
 #     samples count from the recording's start; origin and beat are null on the synth band.
 #     (stop sample - origin) mod beat says where in the beat the band stopped.
 #   [s, "run_over", outcome]   the tick the tail starts on
+#   [s, "slow_motion", true | false]   --slow-at's window opening and closing (it closes with
+#     the recording if the recording ends first)
 # cue_rows lists every cue with a start sample since the recording began, in order:
 # [seconds of the WAV, kind, sound, "now" | "beat" | "music" | ..., pitch, level in dB or null].
 
@@ -38,6 +46,10 @@ var _base_sample := 0
 var _mix_states: Array = []
 var _tail := 3.0
 var _end_at := -1.0
+var _slow_at := -1.0
+var _slow_for := 2.3
+var _slow_scale := 0.3
+var _slowing := false
 
 
 func _initialize() -> void:
@@ -50,6 +62,9 @@ func _initialize() -> void:
 		return
 	_seconds = float(_settings.get("seconds", "80"))
 	_tail = maxf(float(_settings.get("tail", "3")), 0.0)
+	_slow_at = float(_settings.get("slow-at", "-1"))
+	_slow_for = float(_settings.get("slow-for", "2.3"))
+	_slow_scale = clampf(float(_settings.get("slow-scale", "0.3")), Game.SLOW_MOTION_FLOOR, 1.0)
 	seed(int(_settings.get("seed", "1")))
 	_game = Game.new()
 	_game.test_mode = true
@@ -95,12 +110,23 @@ func _physics_process(delta: float) -> bool:
 		var state: String = audio.mix_state()
 		if _mix_states.is_empty() or _mix_states.back()[1] != state:
 			_mix_states.append([snappedf(_now(), 0.01), state])
+	_slow_window()
 	if _end_at < 0.0 and _driver.tick(delta):
 		_end_at = _now() + _tail
 		_facts.append([_now(), "run_over", _driver.outcome])
 	if (_end_at >= 0.0 and _now() >= _end_at) or _now() >= _seconds:
 		_finish()
 	return false
+
+
+# The world is slow between --slow-at and --slow-at + --slow-for seconds of the recording.
+func _slow_window() -> void:
+	var on := _slow_at >= 0.0 and _now() >= _slow_at and _now() < _slow_at + _slow_for
+	if on == _slowing:
+		return
+	_slowing = on
+	_game.slow_motion(_slow_scale if on else 1.0)
+	_facts.append([_now(), "slow_motion", on])
 
 
 func _on_player_died() -> void:
@@ -130,6 +156,11 @@ func _cue_rows(rows: Array) -> Array:
 
 
 func _finish() -> void:
+	if _slowing:
+		# The recording ended inside the window: the world gets its speed back, and the facts say so.
+		_slowing = false
+		_game.slow_motion(1.0)
+		_facts.append([_now(), "slow_motion", false])
 	var audio = _game.presentation.audio
 	_record.set_recording_active(false)
 	var wav: AudioStreamWAV = _record.get_recording()
