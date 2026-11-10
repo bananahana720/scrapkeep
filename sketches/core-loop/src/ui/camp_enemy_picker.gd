@@ -241,8 +241,6 @@ static func _most_note_lines() -> int:
 	return maxi(1, roundi(tallest / font.get_height(NOTE_FONT)))
 
 
-# One enemy kind in the list: a disc and the name. A kind not yet met is slate, with a dark
-# disc as its silhouette; a kind the yard cannot take right now is edged in copper.
 # The yard as one pip a slot: amber filled, slate empty (a count drawn, not worded).
 class YardPips extends Control:
 	const SIDE := 16.0
@@ -265,6 +263,8 @@ class YardPips extends Control:
 			draw_circle(Vector2(SIDE * 0.5 + i * (SIDE + GAP), size.y * 0.5), SIDE * 0.5, Palette.AMBER if i < live else Palette.SLATE)
 
 
+# One enemy kind in the list: a disc and the name. A kind not yet met is slate, with a dark
+# disc as its silhouette; a kind the yard cannot take right now is edged in copper.
 class Row extends Button:
 	var kind := ""
 	var met := false

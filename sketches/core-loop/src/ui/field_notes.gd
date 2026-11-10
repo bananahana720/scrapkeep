@@ -21,7 +21,7 @@ const Glyphs := preload("res://src/ui/glyphs.gd")
 # SCREEN_KEYS) and the legend are no longer drawn on Tab; README.md mirrors them.
 # What the run asks of you and why, in one line: the title screen shows it too. The why is the game's
 # one line (ruling cj, design-v3/STORY-MAP.md): a machine runs the world and calls it perfect (the quote marks are the crew's), and the crew takes it back.
-const OBJECTIVE := "A machine runs your world \"perfectly\". Take it back."
+const OBJECTIVE := "A machine runs your world \"perfectly\". Take it back: get heavy, crack the Wardens, smash their cores."
 
 const TESTING := [
 	"One run: title, pilot, then two stages in each of three worlds, each sealed by a Warden at its beacon. Grow, crack its guard, smash its open core, then roll through a reward gate and launch into the next stage. Each world's last stage launches you into its boss arena: rout Admiral Brindle, still the Waking, quiet the Mind. Quieting the Mind ends the run.",
@@ -88,9 +88,9 @@ static var CONTROLS := controls()
 # in play, when first met (field_tips.gd). A cast is a slot with a cast time: the Q variants and
 # Gather Plate (ability_state.gd VARIANT_CAST).
 const FIELD_RULES := [
-	{"id": "grip", "say": "Wall grip: stay fast, climb walls"},
+	{"id": "grip", "say": "Stay fast against a wall and you climb it."},
 	{"id": "radio", "say": "Radio", "keys": [["cl_radio_next", "next"], ["cl_radio_prev", "back"], ["cl_radio_skip", "skip"]]},
-	{"id": "stake", "say": "Relay mast: hold", "verb": "interact", "then": "to raise the bet"},
+	{"id": "stake", "say": "Hold", "verb": "interact", "then": "at a relay mast to raise the bet."},
 	{"id": "active", "verb": "active", "then": "fire your active"},
 ]
 

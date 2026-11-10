@@ -116,7 +116,7 @@ func _rebuild() -> void:
 		store.load_shots(pages[index])
 	_view = _page_view(pages[index])
 	_holder.add_child(_view)
-	_count.text = "%d/%d" % [index + 1, pages.size()]
+	_count.text = "%d / %d" % [index + 1, pages.size()]
 
 
 func _input(event: InputEvent) -> void:

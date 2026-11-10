@@ -8,6 +8,13 @@ const CampMenu := preload("res://src/ui/camp_menu.gd")
 const HelpPage := preload("res://src/ui/help_page.gd")
 const CreditsHint := preload("res://src/ui/credits_hint.gd")
 const Lanes := preload("res://src/build/lanes.gd")
+const ComicPage := preload("res://src/ui/comic_page.gd")
+const SummaryRows := preload("res://src/ui/summary_rows.gd")
+const ShiftBoard := preload("res://src/core/shift_board.gd")
+const UiFonts := preload("res://src/ui/ui_fonts.gd")
+const Glyphs := preload("res://src/ui/glyphs.gd")
+const FieldNotes := preload("res://src/ui/field_notes.gd")
+const ChoiceButton := preload("res://src/ui/choice_button.gd")
 const T := preload("res://tests/support/t.gd")
 
 # Ruling cx (no slop): the pages a player opens from the title, pause or camp say each thing once, show
@@ -61,13 +68,17 @@ static func texts(node: Node) -> PackedStringArray:
 	return out
 
 
+func _removed_hit(said: PackedStringArray, gone: String) -> String:
+	for line in said:
+		if line.contains(gone):
+			return line
+	return ""
+
+
 func _clean(label: String, page: Node) -> void:
 	var said := texts(page)
 	for gone in REMOVED:
-		var hit := ""
-		for line in said:
-			if line.contains(gone):
-				hit = line
+		var hit := _removed_hit(said, gone)
 		_t.check("%s has no \"%s\"" % [label, gone], hit == "", hit)
 	_t.check("%s types no key hint" % label, _typed(said) == "", _typed(said))
 
@@ -77,6 +88,10 @@ func _typed(said: PackedStringArray) -> String:
 		if _hint_rx.search(line) != null:
 			return line
 	return ""
+
+
+func _back_ok(back: Button) -> bool:
+	return back != null and back.text == "Back" and back.key == "key_esc"
 
 
 func _back_is_esc(label: String, back: Button) -> void:
@@ -105,6 +120,22 @@ func _run() -> void:
 	var clean := Label.new()
 	clean.text = "Relay mast: hold to raise the bet"
 	_t.check("a clean line passes", _typed(texts(clean)) == "")
+	# The removed-string check and the Back check each run on a broken copy and must report it.
+	var broken := Label.new()
+	broken.text = "Takes found: 2 of 5"
+	root.add_child(broken)
+	var broken_hits := 0
+	for gone in REMOVED:
+		if _removed_hit(texts(broken), gone) != "":
+			broken_hits += 1
+	_t.check("PLANTED a removed string is reported", broken_hits >= 1, str(broken_hits))
+	broken.free()
+	var wrong_back := ChoiceButton.new("back", "key_h", "Back")
+	_t.check("PLANTED a Back on H is reported", not _back_ok(wrong_back))
+	wrong_back.free()
+	var right_back := ChoiceButton.new("back", "key_esc", "Back")
+	_t.check("a Back on Esc passes", _back_ok(right_back))
+	right_back.free()
 	planted.free()
 	planted_hold.free()
 	planted_f.free()
@@ -122,7 +153,9 @@ func _run() -> void:
 	_t.check("Help rules draw their keys as caps", help.rules["stake"].parts.any(func(p): return p.has("cap"))
 		and help.rules["active"].parts.any(func(p): return p.has("cap")) and help.rules["radio"].parts.filter(func(p): return p.has("cap")).size() == 3)
 	_t.eq("Get heavy leads the goal row", HelpPage.GOAL[0]["words"], "Get heavy")
-	_t.check("one SPIL-9 caption", MechanicsCaptions.spil_count() == 1, str(MechanicsCaptions.spil_count()))
+	_t.check("SPIL-9 is introduced once as your companion", MechanicsCaptions.introduced() == 1, str(MechanicsCaptions.introduced()))
+	_t.check("no picture caption is empty", MechanicsCaptions.empty() == 0)
+	_t.check("no rule or caption opens with a Label: colon", MechanicsCaptions.colons(help) == 0, str(MechanicsCaptions.colons(help)))
 	_t.check("no picture caption is Label · sentence", MechanicsCaptions.dotted() == 0)
 
 	# Achievements: the board line is the count.
@@ -175,7 +208,7 @@ func _run() -> void:
 	_clean("Scrapbook", book)
 	var keys: Control = book.get_node("Keys")
 	_t.check("Scrapbook shows [Q] [E] turn and [Esc]", keys.parts.filter(func(p): return p.has("cap")).map(func(p): return p["cap"]) == ["key_q", "key_e", "key_esc"])
-	_t.eq("Scrapbook counts n/N", book._count.text, "1/1")
+	_t.eq("Scrapbook counts n / N", book._count.text, "1 / 1")
 	book.free()
 
 	# Customize: no single-row titles, no notice, no tooltip, no word under the drawn "?".
@@ -186,8 +219,7 @@ func _run() -> void:
 		_back_is_esc("Customize", custom.back)
 		custom.refresh()
 		_clean("Customize", custom)
-		_t.check("PILOT and BAY title no single row", not custom._group_labels.has("PILOT") and not custom._group_labels.has("BAY"))
-		_t.check("BALL and SPIL-9 still title their rows", custom._group_labels.has("BALL") and custom._group_labels.has("SPIL-9"))
+		_t.check("all four groups keep their titles", ["BALL", "PILOT", "SPIL-9", "BAY"].all(func(g): return custom._group_labels.has(g)))
 		_t.eq("no notice stands on the page", custom._notice.text, "")
 		_t.check("no row carries a how-to tooltip", custom.rows.values().all(func(r): return r.tooltip_text == ""))
 		var hidden := Customize.Card.new("x", "hidden", Color.WHITE, "Secret")
@@ -197,6 +229,73 @@ func _run() -> void:
 		_t.eq("an owned card writes its name", owned.caption(), "Dusk")
 		_t.eq("hover shows the name only", custom.hover_text(owned), "Dusk.")
 		owned.free()
+
+	# Help rules: the caps come from the live bindings and are refreshed as the page opens.
+	var before: Array = help.rules["radio"].parts.filter(func(p): return p.has("cap")).map(func(p): return p["cap"])
+	var action := "cl_radio_next"
+	var saved: Array = InputMap.action_get_events(action).duplicate()
+	InputMap.action_erase_events(action)
+	var rebound := InputEventKey.new()
+	rebound.physical_keycode = KEY_N
+	InputMap.action_add_event(action, rebound)
+	help.visible = true
+	help.visibility_changed.emit()
+	var after: Array = help.rules["radio"].parts.filter(func(p): return p.has("cap")).map(func(p): return p["cap"])
+	_t.check("PLANTED a rebind moves the radio cap when Help opens", before != after and after.has(Glyphs.of_action(action, "")), "%s then %s" % [before, after])
+	InputMap.action_erase_events(action)
+	for event in saved:
+		InputMap.action_add_event(action, event)
+	help.visible = false
+
+	# Customize: every row sits under the title of its own group.
+	if custom != null:
+		var order: Array = []
+		for child in custom._slot_list.get_children():
+			order.append(child)
+		var under := true
+		for group in Customize.GROUPS:
+			var at: int = order.find(custom._group_labels[group[0]])
+			for i in group[1].size():
+				under = under and at >= 0 and order[at + 1 + i] == custom.rows[group[1][i]]
+		_t.check("every customize row sits under its own group's title", under)
+
+	# The comic page: pilot, world and outcome in one plain sentence, even where the loss card is dropped.
+	var lost := {"run_id": "l1", "outcome": "lost", "pilot_name": "Rivet", "world_name": "Spillway"}
+	var won := {"run_id": "w1", "outcome": "won", "pilot_name": "Rivet", "world_name": "Spillway"}
+	_t.eq("a win's subtitle", ComicPage.subtitle_text(won), "Rivet in Spillway.")
+	_t.eq("a loss's subtitle", ComicPage.subtitle_text(lost), "Rivet in Spillway. Hull not returned.")
+	var panels: Array = []
+	for i in 6:
+		panels.append({"kind": "beat", "caption": "The pilot did a thing that took a whole sentence to say.", "size": ["wide", "tall", "square"][i % 3], "world": 1})
+	lost["panels"] = panels
+	var dropped_width := 0.0
+	var width := 720.0
+	while width >= 280.0:
+		var box := Rect2(Vector2.ZERO, Vector2(width, width / ComicPage.ASPECT))
+		var kept: Array = ComicPage.fit_rows(box, panels, ComicPage.melodrama(lost))
+		if not ComicPage.card_fits(box, panels, kept, ComicPage.melodrama(lost)):
+			dropped_width = width
+			break
+		width -= 8.0
+	_t.check("a size exists where the loss card is dropped", dropped_width > 0.0, str(dropped_width))
+	for w in [dropped_width, 280.0]:
+		var k: float = w / 720.0
+		var room: float = w - 22.0 * k * 2.0 - 26.0 * k * 2.0 - 12.0 * k
+		for page_dict in [won, lost]:
+			var fs := ComicPage.subtitle_font(page_dict, room, k)
+			var line := ComicPage.subtitle_text(page_dict)
+			var fits: bool = UiFonts.bold().get_string_size(line, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x <= room
+			_t.check("the subtitle states pilot and world and fits at %d px" % int(w), fits and line.contains("Rivet") and line.contains("Spillway"), line)
+	_t.check("a small page's subtitle still says how the run ended", ComicPage.subtitle_text(lost).contains("Hull not returned"))
+
+	# The run summary's stat words and the board's "pays" line.
+	var stats := {"time": 90.0, "stages": 1, "scrap": 5, "parts": [], "kills": 3, "events_won": 0, "save_used": 0}
+	var stat_words := SummaryRows.rows(stats, 6).map(func(r): return r[2])
+	_t.check("the summary says clocked out, not kills", "clocked out" in stat_words and not "kills" in stat_words, str(stat_words))
+	var pays := ShiftBoard.pays_words({"item": "strike_pocket"})
+	_t.check("an item pays as can turn up in runs", pays.ends_with("can turn up in runs") and not pays.contains("pools"), pays)
+	var logged := ["mark_sable", "mark_rivet", "mark_tarn", "mark_kest", "mark_tally", "mark_cannon"].all(func(id): return ShiftBoard.RUNGS[id]["stamp"] == "LOGGED")
+	_t.check("the six item marks are stamped LOGGED", logged)
 
 	# The word "class" reaches no player in lanes.gd.
 	var src := FileAccess.get_file_as_string("res://src/build/lanes.gd")
@@ -216,10 +315,28 @@ func _run() -> void:
 class MechanicsCaptions:
 	const Diagram := preload("res://src/ui/mechanics_diagram.gd")
 
-	static func spil_count() -> int:
+	static func introduced() -> int:
 		var n := 0
 		for id in Diagram.CAPTIONS:
-			if String(Diagram.CAPTIONS[id]).contains("SPIL-9"):
+			if String(Diagram.CAPTIONS[id]).contains("your companion"):
+				n += 1
+		return n
+
+	static func empty() -> int:
+		var n := 0
+		for id in Diagram.CAPTIONS:
+			if String(Diagram.CAPTIONS[id]).strip_edges() == "":
+				n += 1
+		return n
+
+	# A "Label: sentence" shape in a caption or a help rule's words.
+	static func colons(help) -> int:
+		var n := 0
+		for id in Diagram.CAPTIONS:
+			if String(Diagram.CAPTIONS[id]).contains(": "):
+				n += 1
+		for id in help.rules:
+			if help.rules[id].text().contains(": "):
 				n += 1
 		return n
 

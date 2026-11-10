@@ -30,13 +30,7 @@ func _run() -> void:
 	game.screens._content.modulate.a = 1.0
 	_t.check("controls open first", help.diagram.visible and not help._mechanics.visible)
 	var controls_words: Dictionary = WordBudget.count(game.screens)
-	# "Get heavy" is one word longer than "Grow" (ruling cx), and the screen's own "HOW TO PLAY" heading (three words,
-	# which the nav unit removes) sits in the page's 40; the budget measures the page's own content.
-	var heading_words := 0
-	for item in controls_words.items:
-		if item.text == "HOW TO PLAY":
-			heading_words += int(item.words)
-	_t.check("controls page fits 40 words", controls_words.hud - heading_words <= 40, "%d words, %d of them the heading: %s" % [controls_words.hud, heading_words, controls_words.items])
+	_t.check("controls page fits 40 words", controls_words.hud <= 40, "%d words: %s" % [controls_words.hud, controls_words.items])
 	var expected_keys := []
 	for row in FieldNotes.CONTROLS:
 		if row.has("caps") and row.has("short"):
@@ -82,7 +76,7 @@ func _run() -> void:
 	radio_picture.free()
 	_t.eq("the radio picture shows its four keys", radio_words, PackedStringArray([",", ".", "/", ";"]))
 	_t.check("Back fits screen", root.get_visible_rect().encloses(help.back.get_global_rect()))
-	_t.check("SPIL-9 caption says the next ram calls it in", MechanicsDiagram.CAPTIONS["companion"].contains("next ram calls it in"))
+	_t.check("SPIL-9 caption says the next ram calls it in", MechanicsDiagram.CAPTIONS["halo"].contains("next ram calls SPIL-9 in"))
 	help.page_button.pressed.emit()
 	await process_frame
 	game.screens._content.modulate.a = 1.0
@@ -99,7 +93,7 @@ func _run() -> void:
 		rules_in_order.append(rule.id)
 	# Jam and cast are the picture pages' captions now (ruling cx); the rules keep what a picture cannot say.
 	_t.eq("rules cover grip, radio, mast and active", rules_in_order, ["grip", "radio", "stake", "active"])
-	for want in ["wall grip", "radio", "relay mast", "hold e"]:
+	for want in ["wall", "radio", "relay mast", "hold e"]:
 		_t.check("rules page shows \"" + want + "\"", shown.contains(want))
 	# Actives off: no F line, and never the dev flag's name.
 	_t.check("actives off: no F line", not help.rules["active"].is_visible_in_tree() and not shown.contains("fire your active"), shown)

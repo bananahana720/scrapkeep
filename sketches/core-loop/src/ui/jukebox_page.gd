@@ -107,7 +107,7 @@ static func reading(profile, playing := "", detent := 2, sitting := false) -> Di
 		if has or not TuneRows.shut(id, profile, sitting):
 			shown.append(id)
 	return {"found": found, "shown": shown, "total": shown.size(), "playing": playing, "detent": detent,
-		"count": "%d/%d" % [found.size(), shown.size()]}
+		"count": "%d / %d" % [found.size(), shown.size()]}
 
 
 func refresh(profile, playing := "", detent := 2, sitting := false) -> void:

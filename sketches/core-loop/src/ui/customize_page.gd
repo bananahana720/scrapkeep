@@ -199,7 +199,8 @@ func _init() -> void:
 	_heft_strip = HBoxContainer.new()
 	_heft_strip.add_theme_constant_override("separation", 10)
 	_heft_strip.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var heft_word := _label("HEFT", 18)
+	# The preview shows the plates of the heft picked here; the label says both once.
+	var heft_word := _label("HEFT PLATES", 18)
 	_heft_strip.add_child(heft_word)
 	for i in HEFT_WORDS.size():
 		var pip := Button.new()
@@ -213,8 +214,6 @@ func _init() -> void:
 		pip.pressed.connect(pin_heft.bind(i + 1))
 		_pips.append(pip)
 		_heft_strip.add_child(pip)
-	var heft_note := _label("plates show your heft", 15)
-	_heft_strip.add_child(heft_note)
 	add_child(_heft_strip)
 	_column = VBoxContainer.new()
 	_column.add_theme_constant_override("separation", 8)
@@ -245,13 +244,13 @@ func _init() -> void:
 	_slot_list.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_column.add_child(_slot_list)
 	for group in GROUPS:
-		# A title over a single row names nothing the row does not (S1): only BALL and SPIL-9 title a group.
-		if group[1].size() > 1:
-			var heading := _label(group[0], 14)
-			heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
-			heading.add_theme_color_override("font_color", Palette.SANDSTONE)
-			_group_labels[group[0]] = heading
-			_slot_list.add_child(heading)
+		# Each group's title says whose slot its rows are (BALL, PILOT, SPIL-9, BAY): Outfit and Decoration
+		# read as a ball's or the companion's without it.
+		var heading := _label(group[0], 14)
+		heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+		heading.add_theme_color_override("font_color", Palette.SANDSTONE)
+		_group_labels[group[0]] = heading
+		_slot_list.add_child(heading)
 		for id in group[1]:
 			var row := _slot_row()
 			row.pressed.connect(_row_clicked.bind(id))
@@ -666,8 +665,7 @@ func refresh() -> void:
 				words = Cosmetics.row(worn)["name"]
 			rows[id].text = "%s   %s" % [SLOT_WORDS[id], words]
 			rows[id].queue_redraw()
-		if _group_labels.has(group[0]):
-			_group_labels[group[0]].visible = any
+		_group_labels[group[0]].visible = any
 	for def in ClassDef.all():
 		var portrait: Button = _portraits[def.id]
 		var open_pilot: bool = def.id in _pilots

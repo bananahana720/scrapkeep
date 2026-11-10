@@ -59,7 +59,7 @@ func _init() -> void:
 	_buttons.add_child(ChoiceButton.new("achievements", "key_a", "Achievements"))
 	_buttons.add_child(ChoiceButton.new("settings", "key_s", "Settings"))
 	_buttons.add_child(ChoiceButton.new("jukebox", "key_j", "Jukebox"))
-	_buttons.add_child(ChoiceButton.new("radio", "key_r", "Mixtapes"))
+	_buttons.add_child(ChoiceButton.new("radio", "key_r", "Radio"))
 	back = ChoiceButton.new("back", "key_esc", "Back")
 	_buttons.add_child(back)
 	_strip = HBoxContainer.new()

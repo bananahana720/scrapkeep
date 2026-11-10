@@ -22,7 +22,7 @@ const GOAL := [
 	{"icon": "res_heft", "kind": "heft_class_changed", "words": "Get heavy"},
 	{"icon": "obj_warden", "kind": "warden_engaged", "words": "Break the Warden"},
 	{"icon": "res_scrap", "kind": "bay_entered", "words": "Visit Moss"},
-	{"icon": "obj_launch", "kind": "world_entered", "words": "Next world"},
+	{"icon": "obj_launch", "kind": "world_entered", "words": "Launch"},
 ]
 
 var back: Button
@@ -113,6 +113,15 @@ func actives_on() -> bool:
 func _reset_page() -> void:
 	if not visible:
 		show_page(0)
+	else:
+		refresh_keys()
+
+
+# The rule lines' keycaps again from the live bindings, as the page opens: the lines are built once in
+# _init, and a rebind in Settings happens while this page is hidden.
+func refresh_keys() -> void:
+	for rule in FieldNotes.FIELD_RULES:
+		rules[rule["id"]].setup(FieldNotes.rule_parts(rule))
 
 
 static func key_rows() -> Array:

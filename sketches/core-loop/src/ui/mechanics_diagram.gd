@@ -10,13 +10,13 @@ const Glyphs := preload("res://src/ui/glyphs.gd")
 const CAPTIONS := {
 	"breach": "Slam the Dig's cracked plates.",
 	"lift": "Glide through Highdraft thermals.",
-	"companion": "SPIL-9: next ram calls it in.",
+	"companion": "SPIL-9, your companion, wears two modules.",
 	"grip": "Roll fast along walls to ride them.",
 	"cast": "Big actives wind up before firing.",
-	"jam": "Locks picks 2 and 3.",
+	"jam": "A pulse locks picks 2, 3 and recalls a wind-up.",
 	"stake": "Hold at a relay mast to raise the bet.",
 	"radio": "Change the pilot's station.",
-	"halo": "",
+	"halo": "Your next ram calls SPIL-9 in.",
 }
 # The help page's picture pages, in the order its page button walks them.
 const PAGES := [["breach", "lift", "companion"], ["grip", "cast", "jam"], ["stake", "radio", "halo"]]
