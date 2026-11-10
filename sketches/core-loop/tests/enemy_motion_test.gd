@@ -206,10 +206,29 @@ func _death(kind: String, index: int, label: String) -> void:
 	var ref: WeakRef = weakref(scatter)
 	var limit := ceili(float(death.seconds) * Engine.physics_ticks_per_second) + 1
 	var frames := 0
+	# A piece leaves by shrinking and never through the instance's transparency: a fade sends an
+	# opaque surface to the blended pass, and the first piece of a look to go there made the
+	# renderer build pipelines while the frame waited (enemy_motion.gd SHRINK).
+	var full: float = (scatter.get_child(0) as Node3D).basis.get_scale().length()
+	var sizes: Array[float] = []
+	var faded := 0
 	while ref.get_ref() != null and frames <= limit + 30:
 		await physics_frame
 		frames += 1
+		var live: Node = ref.get_ref()
+		if live != null and not live.is_queued_for_deletion():
+			sizes.append((live.get_child(0) as Node3D).basis.get_scale().length() / full)
+			for piece in live.get_children():
+				if piece is GeometryInstance3D and piece.transparency > 0.0:
+					faded += 1
 	_t.check(label + " freed " + kind, ref.get_ref() == null and frames <= limit, "freed after %d frames, limit %d" % [frames, limit])
+	var shrinks := sizes.size() >= 4
+	for i in range(1, sizes.size()):
+		shrinks = shrinks and sizes[i] <= sizes[i - 1] + 0.0001
+	# Full size through the first third of its life (SHRINK starts at the half), nearly gone at the end.
+	var third: float = sizes[sizes.size() / 3] if shrinks else -1.0
+	_t.check(label + " pieces shrink away " + kind, shrinks and sizes[0] > 0.99 and third > 0.99 and sizes[sizes.size() - 1] < 0.2 and faded == 0,
+		"first %.2f, a third in %.2f, last %.2f of full size over %d ticks; %d faded piece samples" % [sizes[0] if not sizes.is_empty() else -1.0, third, sizes[sizes.size() - 1] if not sizes.is_empty() else -1.0, sizes.size(), faded])
 
 
 func _reduced() -> void:
