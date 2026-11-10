@@ -211,6 +211,8 @@ class Voice:
 	var park_owned := false
 	var park_owner := ""
 	var park_rise := false
+	# The bank id of the stinger this voice is, "" for any other voice.
+	var stinger := ""
 
 
 var park_cue_log: Array[Dictionary] = []
@@ -807,6 +809,15 @@ func schedule_stinger_at(id: String, at: int, db := 0.0, home := false, step := 
 	_warm_stinger(id, at, home, step)
 
 
+# Takes a stinger back: its bookings are dropped and one already sounding is let go over a
+# short release.
+func cancel_stinger(id: String) -> void:
+	_actions = _actions.filter(func(a): return a.get("type") != "stinger" or a.get("id", "") != id)
+	for voice in _voices:
+		if voice.stinger == id:
+			voice.end = mini(voice.end, voice.pos + RELEASE)
+
+
 # The key a stinger booked at transport sample at will sound in.
 func stinger_key(at: int) -> int:
 	return key if grid == null else grid.key_at(at)
@@ -1401,6 +1412,13 @@ func duck(amount: float, hold_seconds: float) -> void:
 	_duck_until = maxi(_duck_until, clock + int(hold_seconds * Harmony.RATE))
 
 
+# The cue the band dipped under has stopped early: the band comes back from this frame, over
+# a beat.
+func free_duck() -> void:
+	_duck_until = clock
+	_duck_target = 1.0
+
+
 # Pulls only the bass down, so a danger cue is never masked by the low end.
 func duck_bass(amount: float, hold_seconds: float) -> void:
 	_bass_duck_target = minf(_bass_duck_target, clampf(amount, 0.1, 1.0))
@@ -1826,7 +1844,9 @@ func _run(action: Dictionary) -> void:
 			var made_for := int(action.get("step", 0))
 			var buf := SfxBank.samples_at(action["id"], made_for if made_for > 0 else step_len, 0 if music or action.get("home", false) else live_key, theme)
 			var gain := db_to_linear(SfxBank.trim_db(action["id"]) + float(action["db"]))
-			_start(buf, buf.size(), -1, gain, 0.0, not action["music"])
+			var voice := _start(buf, buf.size(), -1, gain, 0.0, not action["music"])
+			if voice != null:
+				voice.stinger = action["id"]
 			stinger_starts.append([action["id"], clock])
 		"restart":
 			parameters_stage_entered()

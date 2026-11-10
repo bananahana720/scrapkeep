@@ -49,6 +49,7 @@ func _run() -> void:
 	audio._flush_flow()
 	_pump_to(audio, audio.engine.clock + Harmony.BAR)
 	_call(audio)
+	_call_end(audio)
 	game.queue_free()
 	await process_frame
 	Rows.stem_dir = ""
@@ -74,8 +75,8 @@ func _voices() -> void:
 
 
 # Everyone alive has a mouth (Andrew, 10 November 2026); the Foreman has none, and the Cannon,
-# a machine on the crew's side, keeps its bent chime. Moss and Brindle carry theirs as the
-# working default while he listens to them against the rule on talking growls.
+# a machine on the crew's side, keeps its bent chime. Moss and Brindle, the low voices, are
+# said high so they do not turn into the talking growls he ruled out.
 func _mouths() -> void:
 	var mouthed: Array = Bank.CALLERS.keys().filter(func(speaker: String): return Bank.CALLERS[speaker].has("mouth"))
 	t.eq("everyone alive talks through a mouth; the Cannon and the Foreman do not",
@@ -286,6 +287,35 @@ func _call(audio) -> void:
 	var unit: int = audio.grid_unit(4)
 	t.check("the Foreman's call starts on the band's sixteenth", posmod(grid_at - audio.next_grid(4), unit) == 0 and grid_at >= from + lead
 		and grid_at < from + lead + unit and memo > Bank.say_seconds("mind", "Quick sync.", unit) and empty == 0.0, "at %d, %d past a sixteenth of %d" % [grid_at, posmod(grid_at - audio.next_grid(4), unit), unit])
+
+
+# The card closing early stops its caller: a line still booked never sounds, one sounding is
+# let go, the band comes back up and the next caller may talk at once.
+func _call_end(audio) -> void:
+	var engine = audio.engine
+	audio.clock += 60.0
+	audio.cue_log.clear()
+	engine.stinger_starts.clear()
+	audio.call_end()
+	t.check("ending a call when nobody is talking does nothing", audio.cue_log.is_empty(), "%d rows" % audio.cue_log.size())
+	var early: String = Bank.say_id("kest", LINE)
+	audio.call_in("call_in", "kest", LINE)
+	var at: int = int(audio.cue_log.filter(func(e: Array): return e[2] == "call")[0][3])
+	audio.call_end()
+	var booked: Array = engine._actions.filter(func(a: Dictionary): return a.get("id", "") == early)
+	var next: float = audio.call_in("call_in", "tarn", LINE)
+	_pump_to(audio, at + 4096)
+	t.check("a call ended before its voice starts never sounds, and the next caller talks at once", booked.is_empty() and next > 0.0
+		and engine.stinger_starts.filter(func(s: Array): return s[0] == early).is_empty(), "%d bookings left, next caller %.2f s" % [booked.size(), next])
+	var late: String = Bank.say_id("tarn", LINE)
+	var sounding: Array = engine._voices.filter(func(v): return v.stinger == late)
+	var left: int = sounding[0].end - sounding[0].pos if sounding.size() == 1 else -1
+	audio.call_end()
+	var after: int = sounding[0].end - sounding[0].pos if sounding.size() == 1 else -1
+	t.check("a call ended while its voice sounds lets the voice go and brings the band back up", left > engine.RELEASE * 10 and after >= 0 and after <= engine.RELEASE
+		and engine._duck_until <= engine.clock and engine._duck_target == 1.0 and audio.call_in("call_in", "sable", LINE) > 0.0,
+		"%d samples left before, %d after, duck until %d at clock %d" % [left, after, engine._duck_until, engine.clock])
+	audio.call_end()
 
 
 func _pump_to(audio, until: int) -> void:

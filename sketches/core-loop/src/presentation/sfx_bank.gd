@@ -310,9 +310,8 @@ const VOWELS := ["a", "e", "i", "o", "u"]
 # play them. grid is the Foreman alone: one note, every letter half a sixteenth, no bend,
 # no mouth and nothing left to chance. bench is Moss alone: his call is his bench line after
 # his bell, and a caller with no row gets his. db levels a voice against Moss's bench blips.
-# Moss and Brindle carry mouths as the working default while Andrew listens (card of 10
-# November 2026). To give one his old voice back, edit his row: Moss is {"bench": true}, and
-# Brindle loses mouth and takes db 1.5.
+# Moss and Brindle, the two low voices, are said high (Andrew, 10 November 2026): Moss an
+# octave over his bench pitch, Brindle at his brass's.
 const SAY := "say|"
 const MOSS := "moss"
 const PURE := "pure"
