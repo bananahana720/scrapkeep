@@ -110,6 +110,7 @@ func _run() -> void:
 		t.eq("the entrance opens the pivot and the build and nothing else", _ace.opened, _ace.stems.size() * 2)
 	_tight_build()
 	_breath_and_drop()
+	_drop_room()
 	_unhit_stagger()
 	_others_and_switch()
 	_last_chunk()
@@ -197,6 +198,51 @@ func _breath_and_drop() -> void:
 	# The drop is four bars, and the build waits for its end.
 	_bars(6)
 	t.check("the build comes back after the drop", _ace.section == "build" and _ace.mode == "warden", "section=%s mode=%s" % [_ace.section, _ace.mode])
+
+
+# Room for the drop (tuning drop_room, off by default): the candidates hold their offsets from
+# just before the drop's beat for two bars of the band's grid, and the default makes none.
+func _drop_room() -> void:
+	t.check("with the switch off the drop makes no room", _audio._drop_room_now().is_empty(), "room=%s" % [_audio._drop_room])
+	_game.tuning.set_option(Tuning.DROP_ROOM_KEY, "duck")
+	_audio.cue_log.clear()
+	_guard_reads(100.0, true)
+	_bars(1)
+	_guard_reads(0.0, false, 2)
+	var at: int = _drops()[0] if _drops().size() == 1 else -1
+	t.check("the duck's drop is booked", at > 0, "drops=%s" % [_drops()])
+	if at - _ace.clock > int(0.1 * Ace.RATE) + Ace.GEN_LEAD:
+		t.check("no room before the drop's lead", _audio._drop_room_now().is_empty(), "clock=%d at=%d" % [_ace.clock, at])
+	_pump(at - _ace.clock)
+	t.eq("on the drop's beat the effects step back", _audio._drop_room_now(), {"SFX": -5.0})
+	var sfx_was := float(_audio.mix_db.get("SFX", 0.0))
+	_audio._tend_mix(0.2)
+	t.check("the effects bus glides down", float(_audio.mix_db["SFX"]) <= sfx_was - 4.9, "was=%s now=%s" % [sfx_was, _audio.mix_db["SFX"]])
+	_pump(2 * _ace.grid_bar + 4096)
+	t.check("two bars later the room is gone", _audio._drop_room_now().is_empty(), "room=%s" % [_audio._drop_room])
+	_audio._tend_mix(0.1)
+	t.check("and the effects come back at the slow glide", float(_audio.mix_db["SFX"]) < sfx_was - 4.0, "now=%s" % _audio.mix_db["SFX"])
+	_audio._tend_mix(2.0)
+	t.check("all the way", absf(float(_audio.mix_db["SFX"]) - sfx_was) < 0.01, "now=%s" % _audio.mix_db["SFX"])
+	_game.tuning.set_option(Tuning.DROP_ROOM_KEY, "lift")
+	var music_was := float(_audio.mix_db.get("Music", 0.0))
+	_audio._make_drop_room(_ace.clock + 100)
+	t.eq("the lift raises the band", _audio._drop_room_now(), {"Music": 3.0})
+	_audio._tend_mix(0.1)
+	t.check("in a tenth of a second, not the slow climb", float(_audio.mix_db["Music"]) >= music_was + 2.9, "was=%s now=%s" % [music_was, _audio.mix_db["Music"]])
+	_game.tuning.set_option(Tuning.DROP_ROOM_KEY, "off")
+	_audio._make_drop_room(_ace.clock + 100)
+	t.check("off clears it", _audio._drop_room_now().is_empty(), "room=%s" % [_audio._drop_room])
+	# A new band (a pack change) ends the room it did not book.
+	_game.tuning.set_option(Tuning.DROP_ROOM_KEY, "duck")
+	_audio._make_drop_room(_ace.clock + 100)
+	var booked = _audio.ace
+	_audio.ace = Ace.new()
+	t.check("a new band ends the room", _audio._drop_room_now().is_empty(), "room=%s" % [_audio._drop_room])
+	_audio.ace = booked
+	_game.tuning.set_option(Tuning.DROP_ROOM_KEY, "off")
+	_audio._tend_mix(2.0)
+	_bars(6)
 
 
 func _unhit_stagger() -> void:

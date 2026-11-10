@@ -49,6 +49,10 @@ const SPECS := [
 	# nears breaking, the held breath through a stagger, the drop on the hit that shatters a
 	# chunk. `--warden-form=loop` keeps the build looping to the break, as it played before.
 	{"key": "warden_form", "label": "Warden form", "min": 0.0, "max": 1.0, "step": 1.0, "value": 1.0, "options": ["loop", "form"]},
+	# Room for the Warden form's drop (audio.gd _make_drop_room, mix_rows.gd DROP_ROOM): candidates
+	# for Andrew's ear under ruling cq, off by default so the game is unchanged. "duck" steps the
+	# effects back for the drop's first two bars, "lift" raises the band for them.
+	{"key": "drop_room", "label": "Drop room", "min": 0.0, "max": 2.0, "step": 1.0, "value": 0.0, "options": ["off", "duck", "lift"]},
 	{"key": "discovery", "label": "Discovery", "min": 0.0, "max": 1.0, "step": 1.0, "value": 1.0, "options": ["banner", "cards"]},
 	{"key": "telegraph", "label": "Telegraph", "min": 0.0, "max": 1.0, "step": 1.0, "value": 1.0, "options": ["classic", "haze"]},
 	# World-one builds (design-v3/research/build-systems/BUILD-SYSTEMS.md, unit G): the master
@@ -85,6 +89,7 @@ const SPECS := [
 const MUSIC_KEY := "music"
 const BREATH_KEY := "breath"
 const WARDEN_FORM_KEY := "warden_form"
+const DROP_ROOM_KEY := "drop_room"
 const DISCOVERY_KEY := "discovery"
 const TELEGRAPH_KEY := "telegraph"
 
@@ -201,6 +206,7 @@ const FLAGS := {
 	"music": ["music", "option", "launch"],
 	"breath": ["breath", "option", "launch"],
 	"warden-form": ["warden_form", "option", "launch"],
+	"drop-room": ["drop_room", "option", "launch"],
 	"discovery": ["discovery", "option", "launch"],
 	"telegraph": ["telegraph", "option", "launch"],
 	"world-one-builds": ["world_one_builds", "option", "launch"],
