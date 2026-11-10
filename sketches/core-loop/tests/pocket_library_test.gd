@@ -242,12 +242,16 @@ func _unchanged() -> void:
 	game.ctx.terrain.maps[index] = ParkMap.new("res://src/world/park/park_test.json")
 	acts._on_stage_entered(game.run.stage, false)
 	var s = acts.site("enemy_camp")
-	var want := {"starts": "ring", "ring": 8.0, "pack": ["chaser", "chaser", "chaser"], "finishes": "pack_dead", "pay": {"scrap": 180, "named": "hot_rivets", "rarities": ["common", "rare"], "source": "activity_camp", "where": "camp"}}
-	t.eq("unassigned wash_camp rule equals c81cec4", s.rule, want)
+	# 2026-11-09 (ruling bu): the camp rule's own pay is a common roll with no named part, so a row that
+	# names no rarities reads ["common"] where it read ["common", "rare"]. This row still names hot_rivets,
+	# which every table offers, so what the camp pays is the same; the pay table check below holds that.
+	var want := {"starts": "ring", "ring": 8.0, "pack": ["chaser", "chaser", "chaser"], "finishes": "pack_dead", "pay": {"scrap": 180, "named": "hot_rivets", "rarities": ["common"], "source": "activity_camp", "where": "camp"}}
+	t.eq("unassigned wash_camp rule equals c81cec4 but for the rule's own rarities", s.rule, want)
+	t.eq("unassigned wash_camp pays its named part as at c81cec4", acts.pay_table(s), {"named": "hot_rivets", "rarities": ["common"]})
 	t.check("unassigned wash_camp footprint equals c81cec4", s.footprint == Vector3(32, 8, 32) and s.fog._size == Vector3(32, 8, 32))
 	t.check("unassigned wash_camp state and view equal c81cec4", s.interior.is_empty() and s.difficulty == 1.0 and not s.started and not s.done and not s.failed and s.view.word.text == "Camp" and s.hazards.size() == 1 and s.pack.is_empty())
 	t.eq("unassigned camp location equals c81cec4", s.global_position, game.ctx.terrain.drop_point(-150, -300, 0))
-	print("unchanged-site c81cec4 wash_camp: ring=8; difficulty=1; pack=chaser/chaser/chaser; footprint=32x8x32; tell=Camp; pay=180/common+rare/named hot_rivets; at=(-150,-300); unstarted, unfinished, no enemies")
+	print("unchanged-site c81cec4 wash_camp: ring=8; difficulty=1; pack=chaser/chaser/chaser; footprint=32x8x32; tell=Camp; pay=180/named hot_rivets; at=(-150,-300); unstarted, unfinished, no enemies")
 	acts.clear()
 	await physics_frame
 	game.ctx.terrain.maps[index] = previous

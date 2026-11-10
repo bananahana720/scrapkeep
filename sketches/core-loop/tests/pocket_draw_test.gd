@@ -9,6 +9,9 @@ const Map := preload("res://src/world/park/park_map.gd")
 const Park := preload("res://src/core/park_defs.gd")
 const Rules := preload("res://tools/park_graph.gd")
 const Trade := preload("res://src/world/trade_pockets.gd")
+const Modifier := preload("res://src/world/events/stage_modifier.gd")
+const RogueDirector := preload("res://src/world/rogue_director.gd")
+const Secrets := preload("res://src/core/secrets.gd")
 class MeasuredGraph extends "res://src/world/park/park_graph.gd":
 	var footprint_scans := {}
 	func box_nodes(lo: Vector2, hi: Vector2) -> PackedInt32Array:
@@ -70,9 +73,12 @@ func _run() -> void:
 			var specs: Array = model.stage_sites(graph, map, run, 78000, trade, prepared)
 			t.eq("trade placement and memory unchanged", run.trade_memory, trade_before)
 			t.eq("authored sites unchanged", map.activity_sites, authored)
-			var expected_slots := maxi(0, mini(8, stage + 2) - authored.filter(func(s): return s.get("extra", "") != "card_2").size())
+			var standing: int = authored.filter(func(s): return s.get("extra", "") != "card_2").size()
+			# The dam's four authored sites pass stage 1's count of three; it draws one pocket all the same (ruling bu).
+			var expected_slots := maxi(1 if stage == 1 else 0, mini(8, stage + 2) - standing)
+			t.eq("the draw's slots are the modifier's base slots", Modifier.base_slots(stage, standing), expected_slots)
 			t.check("D2 extra slot cap", specs.size() <= expected_slots)
-			t.check("stage 1 exempt; later stages draw", specs.is_empty() if stage == 1 else not specs.is_empty())
+			t.check("every stage draws, the dam too", not specs.is_empty())
 			_audit(graph, map, specs, trade, from_line)
 			for spec in specs:
 				coverage[spec.interior.id] = true
@@ -170,10 +176,36 @@ func _audit(graph, map, specs: Array, trade: Dictionary, from_line: PackedFloat3
 			if key != "rarities":
 				t.eq("drawn pay preserves owner " + key, spec.pay.get(key), owner[key])
 		if entry.activity == "enemy_camp":
-			t.eq("drawn camp preserves named Hot Rivets", spec.pay.get("named", ""), "hot_rivets")
+			t.check("drawn camp pays the common roll, no named part", not spec.pay.has("named") and spec.pay.rarities == ["common"], str(spec.pay))
+		if map.park.map in model_tidy():
+			var low := INF
+			var high := -INF
+			for n in graph.box_nodes(box.position - Vector2.ONE * Graph.STEP_M, box.end + Vector2.ONE * Graph.STEP_M):
+				low = minf(low, graph.py[n])
+				high = maxf(high, graph.py[n])
+			t.check("world 1 pocket stands on level ground", high - low <= load(MODEL).LEVEL_M, "%s at %s rises %.1f m" % [entry.id, spec.at, high - low])
+			for row in map.park.get("rescue_rows", []):
+				var cage := Vector2(row.at[0], row.at[1])
+				t.check("world 1 pocket clear of the rescue cage", Vector2(clampf(cage.x, box.position.x, box.end.x), clampf(cage.y, box.position.y, box.end.y)).distance_to(cage) > Rules.RING_M)
+			for site in RogueDirector.read_sites(map.park.map).get("miniboss_sites", []):
+				var rogue := Vector2(site.at[0], site.at[1])
+				t.check("world 1 pocket outside the rogue site's disc", Vector2(clampf(rogue.x, box.position.x, box.end.x), clampf(rogue.y, box.position.y, box.end.y)).distance_to(rogue) > float(site.radius_m))
+			# Read from the secrets' own rows, not the draw's list of them.
+			var hidden := []
+			for find in Secrets.FINDS.values():
+				hidden.append_array(find.spots.filter(func(_spot): return find.map == map.park.map))
+			for row in Secrets.ROOMS.values() + [Secrets.DOOR]:
+				if row.map == map.park.map:
+					hidden.append(row)
+			for row in hidden:
+				var secret := Vector2(row.at[0], row.at[1])
+				t.check("world 1 pocket clear of a secret's spot", Vector2(clampf(secret.x, box.position.x, box.end.x), clampf(secret.y, box.position.y, box.end.y)).distance_to(secret) > Rules.RING_M, "%s at %s, secret at %s" % [entry.id, spec.at, secret])
 		var pay: Dictionary = Rules._pay(spec.pay)
 		var allowed: Array = Rules.PAY_FAR if spec == sorted.back() else Rules.PAY_NEAR
 		t.check("drawn set pay ladder", not pay.rarities.is_empty() and pay.rarities.all(func(r): return r in allowed))
+
+func model_tidy() -> Array:
+	return load(MODEL).TIDY
 
 func _failure(model, prepared: Dictionary, map, graph) -> void:
 	var rng := RandomNumberGenerator.new()
@@ -316,9 +348,11 @@ func _owned_rewards(acts, model) -> void:
 			if key != "rarities":
 				t.eq("restored built pay preserves owner " + key, built.rule.pay.get(key), owner[key])
 		if entry.activity == "enemy_camp":
-			t.eq("built drawn camp named Hot Rivets", built.rule.pay.get("named", ""), "hot_rivets")
-			t.eq("built drawn camp pays effective common Hot Rivets", acts.pay_table(built), {"named": "hot_rivets", "rarities": ["common"]})
+			t.eq("built drawn camp pays the common roll", acts.pay_table(built), {"named": "", "rarities": ["common"]})
+		t.eq("a drawn pocket rolls apart from the stage's authored site of its kind", acts._luck_id(built), "%s:%s" % [entry.activity, entry.id])
 		built.free()
+	# A save from before the dam drew holds an empty stage 1 draw; a later stage's empty draw is kept.
+	t.eq("an old save's empty dam draw is dropped on load", model.from_doc({"1": {"sites": []}, "2": {"sites": []}}), {"2": {"sites": []}})
 
 func _turned(at: Vector2, turn: int) -> Vector2:
 	return [at, Vector2(-at.y, at.x), -at, Vector2(at.y, -at.x)][turn]
@@ -371,8 +405,7 @@ func _detours(arm: Dictionary) -> void:
 	t.eq("detour arm includes every template", arm.templates.size(), Park.COUNT)
 	for row in arm.templates:
 		if row.stage == 1:
-			t.check("D8 stage 1 exempt with zero draws", row.exempt and row.draw_count == 0)
-			continue
+			t.check("the dam draws on every seed (D8's exemption retired, ruling bu)", row.nonempty_stages == row.stage_samples and row.draw_count >= row.stage_samples)
 		if not t.check("D10 bound and floor reported: " + row.map, row.has("detour_bound") and row.has("detour_floor")):
 			continue
 		var graph = Graph.read("res://assets/park/%s/graph.bin" % row.map)
@@ -401,6 +434,17 @@ func _detours(arm: Dictionary) -> void:
 						high = maxf(high, value)
 		var bound := high / low
 		t.check("D10 independent permissive bound: " + row.map, is_equal_approx(row.detour_bound, bound), str(row.detour_bound) + " vs " + str(bound))
+		# A park under the level-ground rule reads its floor against the anchors that rule leaves.
+		if row.map in model_tidy():
+			var anchors: Array = load(MODEL).prepare(graph, Map.new("res://src/world/park/%s.json" % row.map)).anchors
+			var reach_low := INF
+			var reach_high := 0.0
+			for anchor in anchors:
+				reach_low = minf(reach_low, distance[anchor.node])
+				reach_high = maxf(reach_high, distance[anchor.node])
+			t.check("level ground leaves anchors: " + row.map, not anchors.is_empty())
+			bound = minf(bound, reach_high / reach_low)
+			t.check("D10 anchor bound: " + row.map, is_equal_approx(row.anchor_bound, bound), str(row.anchor_bound) + " vs " + str(bound))
 		var floor_value := minf(2.0, 0.9 * bound)
 		t.check("D10 floor derivation: " + row.map, is_equal_approx(row.detour_floor, floor_value))
 		t.check("D10 measured detour meets floor: " + row.map, row.detour_ratio >= floor_value, "%.6f >= %.6f" % [row.detour_ratio, floor_value])
