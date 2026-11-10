@@ -10,13 +10,15 @@ Heads and open PRs change by the hour, so read them live (`git ls-remote origin`
 | Open stage | stage/alpha-w34 |
 | Live board | #738 |
 | Red team | greedy |
-| Compare against | gate/w33-bf58e379/ |
+| Compare against | gate/base-45691e94/ |
 
-The board is the GitHub issue in the table plus `/mnt/project-files/gate/w<N>-stack-queue.md` for the open stage. "Compare against" is the receipts folder under `/mnt/project-files/` that the next full gate reads its base values from. The Gate updates the table as its first commit on a new stage: `node scripts/wave-state.mjs --write --board <new board issue> --compare <receipts folder>` (the red team persona rotates by itself).
+The board is the GitHub issue in the table; the stage log (`git log origin/stage/alpha-w<N>`) is the stack queue. "Compare against" is the receipts folder the next full gate reads its base values from, under `~/scratch/` on the PC (under `/mnt/project-files/` while the project ran the gate). The Gate updates the table as its first commit on a new stage: `node scripts/wave-state.mjs --write --board <new board issue> --compare <receipts folder>` (the red team persona rotates by itself).
 
 **Priority (Andrew, 23 Oct 19:31Z).** World 1 first: a finished Spillway (dam, flume, Brindle, with the camp and title lead-in) and early progression, played at a world 1 sitting (10-15 min average run, about 30 min completionist, repeatable). Worlds 2 and 3 start nothing new (ruling at).
 
-**Now (10 Nov).** Wave 33, the pre-sitting improvement pass (ruling bo), is on `main` (full gate CLEAN on b0251c81; receipts `gate/w33-bf58e379-gate-plan.md`). The sitting follows this promotion. Wave 34 is open for the queued post-freeze PRs, and its gate must run the weekly sweep (due 15 Nov).
+**Now (10 Nov).** Wave 33, the pre-sitting improvement pass (ruling bo), is on `main` (full gate CLEAN on b0251c81; receipts `gate/w33-bf58e379-gate-plan.md`). Wave 34 is open for the queued post-freeze PRs, and its gate must run the weekly sweep (due 15 Nov). Coordination moved to a local session on the PC the same day, and Andrew ruled the sitting waits for world 1 fully polished (ruling cs).
+
+**The world 1 polish program (ruling cs).** Wave 34 closes with the first full gate run on the PC. Its base values come from a base run on main 45691e94 under `~/scratch/gate/base-45691e94/`, because the wave 33 receipts stayed in the project's shared folder. Then four small waves, each with its own board and promotion: wave 35, the kit cards and pick screen, the run summary, item wording, prompts, and the two missing sound checks; wave 36, danger marks, the HUD, the world 1 mesh faults and a behaviour-preserving split of the Warden form out of `audio.gd`; wave 37, the conductor link (`pack_inbound`, one conductor read, the band publishing beat, phrase and section) and the clip snaps; wave 38, the Warden form on the synth band and on Brindle, the stand crew bodies, the sitting sheet and the build he plays. Done is counted: no major or minor row left in [PLAY-FINDINGS.tsv](PLAY-FINDINGS.tsv), a clean gate with a fresh weekly sweep, 4080 frames in budget, zero placeholders, and that build installed.
 
 **World 1 sitting.** Andrew played the dam on the wave 26 build on 30 Oct: fun, many invisible walls, models clipping. Every fix shipped in wave 29. He has not marked any area yet. The PC has the wave 32 build installed (main 8180ec6c, 9 Nov; boss smokes PASS; cold launch to menu 4386 ms, 0 errors); the wave 33 build (main 45691e94) is next to install, with wave 32 as its rollback. The sitting sheet is refreshed for the build he plays, once that build is promoted.
 

@@ -1,6 +1,17 @@
-# Threads and sessions (checked 8 Nov 2026, project coordinator; three roles added 10 Nov)
+# Threads and sessions (local coordinator from 10 Nov 2026; project roles checked 8 Nov)
 
-Coordination runs from the claude.ai project "Scrapkeep". The coordinator talks to Andrew in the project chat and starts one thread per lane or unit; Remote Control sessions on his PC run GPU work. Thread ids change as lanes open and close, so the coordinator's project memory holds the current ids; this file names the standing roles. The 22 Oct PC-coordinator lane table is in git history.
+Since 10 Nov 2026 coordination runs from one local Claude Code session on Andrew's PC (ruling cs). The first table is who does what now. The second is the claude.ai project's roles as they stood at the handoff, kept as the map of who owned what and for a session that works there again.
+
+| Role | Where | What it does |
+| --- | --- | --- |
+| Coordinator and Gate | the local session on the PC | Talks to Andrew, cuts each `stage/alpha-w<N>`, opens the wave board, stacks reviewed PRs, runs the full gate on the PC (shards as background scripts, receipts under `~/scratch/gate/`), promotes, writes the register. Writes sequential and shared-file changes itself |
+| Writers | project writer agents, each in its own worktree | One disjoint unit each, from a brief; a draft PR on the open stage with a focused test and the fast-lane receipt. Never review their own work |
+| Reviewers | read-only agents | One independent review per finished diff, naming the head it read |
+| PC timing and renders | the same session, queued | 4080 frame rows and films on an idle card, 3060 stills and music renders. Never while gate shards run |
+
+## Project roles at the handoff (10 Nov)
+
+Thread ids lived in the project coordinator's memory. The 22 Oct PC-coordinator lane table is in git history.
 
 | Role | Where | What it does |
 | --- | --- | --- |
