@@ -47,10 +47,18 @@ How a failure is called:
 | mismatch | its row says `flake` and it failed every solo run (it gets twice the solo runs before this call) | Yes. The run contradicts the ledger: read the solo log, then re-list the test as `red` with its failing check, or fix it |
 | new-flake | no row; it passed every solo run | No. Add a flake row in the receipt's follow-up |
 | new-red | no row; it failed alone at least once | Yes. A new deterministic red goes to the pull request's owner (ruling ai). Confirm it is green on main before blaming the stage |
+| suspect-load | would be a new red or a mismatch, but every failed solo run timed out (`exit=null`) with no failing check line, and one started with the 1-minute load above half the thread count | Yes, and it is neither red nor pass: the shard says INCONCLUSIVE and exits 2. Once the other lanes have drained, settle it with `node scripts/gate/shard.mjs retime --tests <names> --out <folder>`. Post the retime receipt beside the shard's |
 
 For each failure the receipt prints the failing lines of its last solo run, so the check that failed sits beside the cause its row names. An `ERROR` line at exit fails a run even when every check passed. The receipt counts `ERROR`, `SCRIPT ERROR`, "still in use" and "previously freed" lines across every test's log, passing tests included.
 
 Every test the runner starts gets its own empty user data folder (`XDG_DATA_HOME`, in `scripts/sketch-smoke.mjs` and `scripts/sketch-fast.mjs`), removed when the test ends. So `user://` carries nothing from one test file to the next, in a shard or in the fast lane; the child runs a test starts share that test's folder unless the test or its helper gives them their own (a launched child gets its own, `tests/trees/child_runs.gd`). A bare Godot command typed by hand does not get one: it reads and writes the container's one shared folder, `~/.local/share/godot/app_userdata/core-loop`, with whatever earlier hand runs left there. Rerun a suspect test through the runner, or set `XDG_DATA_HOME` to a new empty folder first.
+
+### Running shards on one PC
+
+- A solo rerun uses a slot pool inside the shard's own `--out` folder (`solo-locks/`), so reruns from different shards never queue for one slot. The first run keeps the caller's `SCRAPKEEP_LOCK_DIR`.
+- A headless Godot test wants about two threads. A 32-thread PC runs about 16 Godot processes at full speed. A bot test starts up to 8 child processes, so three bot lanes are the PC's limit.
+- A time-out taken under load is `suspect-load`. It is not a red and it is not a pass. After the other lanes have drained, rerun the named tests alone with `retime`. It waits until the 1-minute load is at or under a quarter of the thread count (`--max-load` changes this), for at most 30 minutes, then runs each test alone `--runs` times (3 by default) and writes `receipt.md`.
+- Every step in a receipt shows the load it started and ended at, and the Box line says how many threads that load is read against. A receipt from before this change shows a dash.
 
 ### Slow boxes
 
