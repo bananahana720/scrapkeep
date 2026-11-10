@@ -22,7 +22,8 @@ const Context := preload("res://src/core/context.gd")
 const SimClock := preload("res://src/core/sim_clock.gd")
 const Palette := preload("res://src/core/palette.gd")
 
-const TABLE := {"DEFS": [{"stage": 1, "world": 1, "map": "park_test"}]}
+# A stage that sends nothing: the firsts are this test's subject, the kinds that stand are bake_warm_test's.
+const TABLE := {"DEFS": [{"stage": 1, "world": 1, "map": "park_test", "packs": [], "elite": {}}]}
 
 var t := T.new("first_warm_test")
 

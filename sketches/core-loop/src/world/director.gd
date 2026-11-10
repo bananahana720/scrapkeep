@@ -206,6 +206,33 @@ var _forward_homes: Array[Dictionary] = []
 var _stopped_kinds := {}
 
 
+# The stage table's say on what a stage sends: the row's own packs, elite and elite arrival win
+# over the table's.
+func author(def: Dictionary, stages) -> void:
+	authored = _packs_of(def, stages)
+	elite = _elite_of(def, stages)
+	elite_arrival = int(def["elite_arrival"] if def.has("elite_arrival") else stages.elite_arrival())
+
+
+# Every kind author() hands the director for that row, once each: the packs' in the order they
+# name them, then the elite's. What a stage can send, for a caller that readies kinds before play
+# (BakeWarm).
+static func kinds_sent(def: Dictionary, stages) -> Array:
+	var out := []
+	for pack: Dictionary in _packs_of(def, stages) + [_elite_of(def, stages)]:
+		for kind in pack.get("kinds", []):
+			if not out.has(kind):
+				out.append(kind)
+	return out
+
+
+static func _packs_of(def: Dictionary, stages) -> Array:
+	return def["packs"] if def.has("packs") else stages.packs()
+
+
+static func _elite_of(def: Dictionary, stages) -> Dictionary:
+	return def["elite"] if def.has("elite") else stages.elite()
+
 func _init(seed_value := 20260922) -> void:
 	_rng.seed = seed_value
 

@@ -8,10 +8,12 @@ extends SceneTree
 # twin of its own, the same look, so its shader is the one already compiled), at rest or killed mid
 # hit-flash, when the paint glows. A look here is every
 # switch and texture slot of the material, the settings Godot builds a material's shader from.
-# Every kind the warm builds (BakeWarm.SPAWN_WARM).
+# Every kind the warm stands: the ones world 1's stages can send (Director.kinds_sent).
 
 const T := preload("res://tests/support/t.gd")
 const BakeWarm := preload("res://src/presentation/bake_warm.gd")
+const Director := preload("res://src/world/director.gd")
+const ParkDefs := preload("res://src/core/park_defs.gd")
 const EnemyMotion := preload("res://src/presentation/enemy_motion.gd")
 
 var _t := T.new("death_warm_test")
@@ -24,8 +26,9 @@ func _initialize() -> void:
 func _run() -> void:
 	var world := Node3D.new()
 	root.add_child(world)
-	var kits := BakeWarm.WORLD_KITS[1].filter(func(kit): return BakeWarm.kind_of(kit) in BakeWarm.SPAWN_WARM)
-	_t.check("every warmed kind is under test", kits.size() == BakeWarm.SPAWN_WARM.size(), "%d of %d" % [kits.size(), BakeWarm.SPAWN_WARM.size()])
+	var sent := _sent()
+	var kits := BakeWarm.WORLD_KITS[1].filter(func(kit): return BakeWarm.kind_of(kit) in sent)
+	_t.check("every warmed kind is under test", kits.size() == sent.size(), "%d of %d" % [kits.size(), sent.size()])
 	for kit in kits:
 		var kind := BakeWarm.kind_of(kit)
 		var warm := BakeWarm.spawn_view(kit, world, null, null)
@@ -40,7 +43,7 @@ func _run() -> void:
 		var live := BakeWarm.spawn_view(kit, world, null, null)
 		await process_frame
 		var enemy: Node3D = live.get_child(0)
-		var found := _found(EnemyMotion.scatter(enemy, kind, Vector3.FORWARD), warmed)
+		var found := _found(enemy, kind, warmed)
 		_t.check("%s: the warm made its body's debris twins" % kind, made > 0 and warmed.size() > 0, "%d made, %d looks" % [made, warmed.size()])
 		_t.check("%s: a death at rest draws its boxes with warmed looks" % kind, found.y > 0 and found.x == found.y, "%d of %d boxes" % [found.x, found.y])
 		live.free()
@@ -50,19 +53,38 @@ func _run() -> void:
 		var hit: Node3D = lit.get_child(0)
 		hit.flash()
 		hit._update_flash(0.016)
-		found = _found(EnemyMotion.scatter(hit, kind, Vector3.FORWARD), warmed)
+		found = _found(hit, kind, warmed)
 		_t.check("%s: a death mid hit-flash draws its boxes with warmed looks" % kind, found.y > 0 and found.x == found.y, "%d of %d boxes" % [found.x, found.y])
 		lit.free()
 	quit(_t.verdict())
 
 
-# Of a death's debris boxes: how many draw a warmed look (x) and how many there are (y).
-func _found(debris: Node3D, warmed: Dictionary) -> Vector2i:
+# Every kind world 1's stages can send on the launch table (Director.kinds_sent): the list the warm
+# stands.
+func _sent() -> Array:
+	var out := []
+	for row: Dictionary in ParkDefs.DEFS:
+		if int(row["world"]) == 1:
+			for kind in Director.kinds_sent(row, ParkDefs):
+				if not out.has(kind):
+					out.append(kind)
+	return out
+
+
+# Of the debris boxes a death of `enemy` throws: how many draw something already drawn (x) and how
+# many there are (y). A box is drawn already when it is a twin look the warm put on a box, or when
+# it is one of the body's own box parts thrown with the material the standing body drew it with (a
+# kit built of boxes, the dispatcher).
+func _found(enemy: Node3D, kind: String, warmed: Dictionary) -> Vector2i:
+	var own := {}
+	for part: MeshInstance3D in enemy.find_children("*", "MeshInstance3D", true, false):
+		own[[part.mesh, part.material_override]] = true
+	var debris := EnemyMotion.scatter(enemy, kind, Vector3.FORWARD)
 	var out := Vector2i.ZERO
 	for piece in debris.get_children() if debris != null else []:
 		if piece is MeshInstance3D and piece.mesh is BoxMesh:
 			out.y += 1
-			if warmed.has(_look(piece.material_override)):
+			if own.has([piece.mesh, piece.material_override]) or (piece.material_override != null and warmed.has(_look(piece.material_override))):
 				out.x += 1
 	return out
 

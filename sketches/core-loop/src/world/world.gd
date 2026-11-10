@@ -647,9 +647,7 @@ func _spawn_vault() -> void:
 # The stage's authored packs, if it has any; the director spawns nothing else then. A row's
 # own packs, elite and elite_arrival win over the table's.
 func _author_director(def := {}) -> void:
-	director.authored = def.get("packs", ctx.stages.packs())
-	director.elite = def.get("elite", ctx.stages.elite())
-	director.elite_arrival = int(def.get("elite_arrival", ctx.stages.elite_arrival()))
+	director.author(def, ctx.stages)
 
 
 # The enemy count the director is given: the group less the activities' standing enemies.
