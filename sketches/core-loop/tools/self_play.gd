@@ -328,7 +328,7 @@ func _death_step() -> bool:
 		_died = true
 		_driver.source.hold = {}
 		var run = game.run
-		var held := "hp=%.2f mass=%.2f cogs=%d parts=%d" % [run.hp, run.mass, run.cogs, run.parts.size()]
+		var held := "hp=%.2f mass=%.2f cogs=%d parts=%d picks=%d" % [run.hp, run.mass, run.cogs, run.parts.size(), game.player.tree.picks.size()]
 		run.damage(RunState.SCRIPTED_KILL, "chaser")
 		if run.alive():
 			# A set piece, a ward or an earned save turned the hit aside: say so, not a menu stall.

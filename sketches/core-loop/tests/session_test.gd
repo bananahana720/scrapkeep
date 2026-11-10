@@ -15,7 +15,7 @@ const ChildRuns := preload("res://tests/trees/child_runs.gd")
 #            the saved picks replay without a warning, and the flume is played to its exit;
 #   death    a fresh save: a scripted kill DEATH_AT_S into the dam with scrap aboard, N on the
 #            death screen, and a second run that stands in play at stage 1 holding what a first run
-#            starts with;
+#            starts with (hull, no scrap, no cogs, no parts, one kit pick);
 #   back     the death leg's save launched again: Space and the pilot's key reach play, and the
 #            prologue, read once, does not play a second time;
 #   refused  the control: a fresh save has nothing to continue, C on its title starts nothing, and
@@ -86,7 +86,11 @@ func _initialize() -> void:
 	t.check("death: the scripted kill lands on a run holding scrap", hit != "" and not hit.contains(" mass=0.00 "), hit)
 	t.check("death: N on the death screen starts a new run", _line(death["text"], "self-play: new run pressed on ") != "", _line(death["text"], "self-play: new run pressed on "))
 	var runs := _lines(death["text"], "self-play: carry stage=1 ")
-	t.check("death: the second run starts at the dam holding what the first started with", runs.size() == 2 and runs[1] == runs[0] and String(runs[1]).contains(" mass=0.00 cogs=0 "), "%s" % [runs])
+	# Which kit pick the bot draws is not held: its draws run on through both runs, and the first run
+	# spends a second one when its haul reaches the next heft class before the kill (the planted
+	# death line counts its picks), which moves with real ticks. One pick, and the rest equal, is.
+	t.check("death: the second run starts at the dam holding what the first started with", runs.size() == 2 and _held(runs[1]) == _held(runs[0]) and String(runs[1]).contains(" mass=0.00 cogs=0 ")
+		and _picks(runs[0]) == 1 and _picks(runs[1]) == 1, "%s" % [runs])
 	t.check("death: and stands in play", _line(death["text"], "self-play: second run in play at ") != "", _line(death["text"], "self-play: second run in play at "))
 	_clean(t, "death", death)
 
@@ -123,6 +127,16 @@ func _clean(t: T, leg: String, run: Dictionary) -> void:
 	t.check("%s: no script error or ERROR line" % leg, errors.is_empty(), "%d lines%s" % [errors.size(), "" if errors.is_empty() else ": " + errors[0]])
 	var watch := _line(text, "self-play: watch ")
 	t.check("%s: the ball never wedged at rest and never fell through" % leg, watch.contains(" wedged=0 ") and watch.contains(" fell=0 "), watch)
+
+
+# A carry line without its picks, and how many picks it names.
+func _held(carry: String) -> String:
+	return carry.get_slice(" picks=", 0)
+
+
+func _picks(carry: String) -> int:
+	var named := carry.get_slice(" picks=", 1)
+	return 0 if named == "" else named.split("+").size()
 
 
 func _line(text: String, prefix: String) -> String:
