@@ -1550,10 +1550,10 @@ func _update_readout() -> void:
 # --- Live state for the HUD (flow's objective and gap lines read these) --------------
 
 # The objective plate's reading of the fight (ui/hud.gd, core/objectives.gd): the phase whose
-# verb the plate names (CHASE_PHASE is the scooter) and whether the plate should send the player
-# at the open cockpit now: a stagger in any phase (the weak points pay nothing through it,
-# _pressure), or a stun in Scuttle. A stagger does not hold a Scuttle charge back, so while one is
-# coming down its lane the plate keeps the charge's row: the lane is what the player must read.
+# verb the plate names (CHASE_PHASE is the scooter) and whether the cockpit is the place to hit
+# now: a stagger in any phase (the weak points pay nothing through it, _pressure), or a stun in
+# Scuttle. A stagger does not hold a Scuttle charge back, so while one is coming down its lane the
+# cockpit does not count as open: the lane is what the player must read.
 func plate_reading() -> Dictionary:
 	return {"phase": phase if active() else 0, "open": (stunned() or staggered()) and not charge_coming()}
 
@@ -1563,22 +1563,23 @@ func charge_coming() -> bool:
 	return state == FIGHT and phase == 3 and _charge.get("state", "") in [CHARGE_BRACE, CHARGE_RUN]
 
 
-# Where the plate's row sends the player now, for the HUD to point at (ui/edge_markers.gd): the
-# crane magnets in the Requisition, the vent caps in the Furnace, the cockpit while the plate
-# names it, the scooter in the chase. Baiting a charge names no one place, so it marks none.
-func plate_targets() -> Array[Vector3]:
-	var out: Array[Vector3] = []
+# Where the fight sends the player now, for the HUD to mark (ui/edge_markers.gd), each {at, what}
+# with what naming the thing (objectives.gd TAGS): the crane magnets in the Requisition, the vent
+# caps in the Furnace, the cockpit while it is open, the scooter in the chase. Baiting a charge
+# names no one place, so it marks none.
+func plate_targets() -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
 	if state == EJECT and is_instance_valid(scooter):
-		out.append(scooter.global_position)
+		out.append({"at": scooter.global_position, "what": "scooter"})
 	elif state == FIGHT:
 		if plate_reading()["open"]:
-			out.append(ship.cockpit_point())
+			out.append({"at": ship.cockpit_point(), "what": "cockpit"})
 		elif phase == 1:
 			for magnet in ship.magnets:
-				out.append(magnet.global_position)
+				out.append({"at": magnet.global_position, "what": "magnet"})
 		elif phase == 2:
 			for cap in ship.caps:
-				out.append(cap.global_position)
+				out.append({"at": cap.global_position, "what": "cap"})
 	return out
 
 

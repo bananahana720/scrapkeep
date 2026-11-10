@@ -6,6 +6,7 @@ const BossPosture := preload("res://src/combat/boss_posture.gd")
 const Game := preload("res://src/game.gd")
 const Harness := preload("res://tests/doubles/boss_harness.gd")
 const EdgeMarkers := preload("res://src/ui/edge_markers.gd")
+const FlourishPlayer := preload("res://src/presentation/flourish_player.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const Objectives := preload("res://src/core/objectives.gd")
 const Panels := preload("res://src/build/panels.gd")
@@ -22,12 +23,15 @@ const T := preload("res://tests/support/t.gd")
 #   P4  in the real Slag Bowl the HUD binds Brindle's own FightPhases: the plate follows
 #       jump_to_phase with a crack, and at 1280x720 and 1920x1080 it sits top-centre inside
 #       the top band, the diamonds clear of the objective plate under it;
-#   P5  the objective plate under it names each phase's verb: the crane magnets, the vent
-#       caps, the baited charge, the open cockpit on a stagger or a stun, and the scooter on the eject;
-#       while a Scuttle charge is committed the plate keeps the charge's row through a stagger;
-#   P6  the markers point at what the row names: each crane magnet, each vent cap, the cockpit
-#       while the plate names it, the scooter, and nothing while the row is the baited charge;
-#       a target in view keeps a small marker over it, one out of view goes to the edge;
+#   P5  the objective plate under it names each phase's loop, one row a phase: the crane magnets
+#       then the cockpit, the vent caps then the cockpit, the baited charge, and the scooter on the
+#       eject. An open cockpit (a stagger, or a stun in the Scuttle) keeps the row's words, turns
+#       its glyph to the cockpit's and makes the row's second step the live one; while a Scuttle
+#       charge is committed the cockpit is not open, even through a stagger;
+#   P6  the markers point at the next move: each crane magnet, each vent cap, the cockpit while it
+#       is open, the scooter, and nothing while the row is the baited charge; a target in view
+#       wears brackets and, where there is room, its tag; one out of view goes to the edge;
+#   P7  a thing behind a wall or Brindle's wreck keeps faint brackets and no tag; a comic panel over a thing takes no mark;
 #   R1  the pause build read with all twelve panels held (a long list) sits on screen, left of
 #       the pause column and clear of it, at 1280x720 and 1920x1080, and so does the empty read;
 #       on a short screen the turning view shrinks (to VIEW_MIN at least) and the read stays on screen.
@@ -88,7 +92,7 @@ func _physics_process(_delta: float) -> bool:
 func _run() -> void:
 	await _arena_checks()
 	await _pause_checks()
-	_late_phase_rows()
+	await _late_phase_rows()
 	_game.free()
 	quit(_t.verdict())
 
@@ -152,19 +156,31 @@ func _arena_checks() -> void:
 	var boss = _game.boss
 	_t.check("P4 the plate reads Brindle's own phases", plate._phases == boss._phases and plate.phase_count() == 3, "%s" % plate.phase_count())
 	_t.eq("P4 phase one lit, no crack", [plate.phase_pips(), plate.turn_age() < 0.0], [["live", "ahead", "ahead"], true])
-	_t.eq("P5 phase one: the plate names the crane magnets", _plate_row(), ["shoot_magnets", "Shoot the crane magnets"])
-	_t.eq("P6 phase one: a marker for each crane magnet, in the row's glyph", _marks(),
-		[boss.ship.magnets.map(func(m): return m.global_position), Objectives.glyph("shoot_magnets")])
+	_t.eq("P5 phase one: the plate names the crane magnets, then the cockpit", _plate_row(), ["shoot_magnets", "Shoot magnets, then cockpit", Objectives.glyph("shoot_magnets")])
+	_t.eq("P6 phase one: a marker for each crane magnet, tagged", _marks(),
+		[boss.ship.magnets.map(func(m): return m.global_position), "MAGNET", Objectives.glyph("shoot_magnets")])
+	boss._posture.staggered = true
+	_t.eq("P5 a stagger in phase one keeps the row's words and turns its glyph", [boss.staggered(), _plate_row()],
+		[true, ["shoot_magnets", "Shoot magnets, then cockpit", Objectives.COCKPIT_GLYPH]])
+	_t.eq("P6 and the one marker moves to the cockpit", _marks(), [[boss.ship.cockpit_point()], "COCKPIT", Objectives.COCKPIT_GLYPH])
+	_game.hud._process(0.0)
+	_t.eq("P5 the row's second step is live, on the reading and on the plate", [_game.hud.objective_reading()["step"], _game.hud._objective.step], [1, 1])
+	boss._posture.staggered = false
+	_game.hud._process(0.0)
+	_t.eq("P5 and its first again when the cockpit shuts", [_game.hud.objective_reading()["step"], _game.hud._objective.step], [0, 0])
 	_marker_checks(boss.ship.magnets[0].global_position)
+	await _sight_checks(boss.ship.magnets[0].global_position)
 	boss.jump_to_phase(2)
-	_t.eq("P5 phase two: the vent caps", _plate_row(), ["slam_caps", "Slam the vent caps"])
-	_t.eq("P6 phase two: a marker for each vent cap", [_marks()[0], boss.ship.caps.size()], [boss.ship.caps.map(func(c): return c.global_position), 3])
+	_t.eq("P5 phase two: the vent caps, then the cockpit", _plate_row(), ["slam_caps", "Slam caps, then cockpit", Objectives.glyph("slam_caps")])
+	_t.eq("P6 phase two: a marker for each vent cap, tagged", [_marks(), boss.ship.caps.size()],
+		[[boss.ship.caps.map(func(c): return c.global_position), "VENT CAP", Objectives.glyph("slam_caps")], 3])
 	# A stagger opens the cockpit in any phase, and the weak points pay nothing through it.
 	boss._posture.staggered = true
-	_t.eq("P5 a stagger in phase two names the open cockpit", [boss.staggered(), _plate_row()], [true, ["hit_cockpit", "Hit the open cockpit"]])
-	_t.eq("P6 and the one marker moves to the cockpit", _marks(), [[boss.ship.cockpit_point()], Objectives.glyph("hit_cockpit")])
+	_t.eq("P5 a stagger in phase two keeps the row's words and turns its glyph", [boss.staggered(), _plate_row()],
+		[true, ["slam_caps", "Slam caps, then cockpit", Objectives.COCKPIT_GLYPH]])
+	_t.eq("P6 and the one marker moves to the cockpit", _marks(), [[boss.ship.cockpit_point()], "COCKPIT", Objectives.COCKPIT_GLYPH])
 	boss._posture.staggered = false
-	_t.eq("P5 and the caps come back when it ends", _plate_row(), ["slam_caps", "Slam the vent caps"])
+	_t.eq("P5 and the caps' glyph comes back when it ends", _plate_row(), ["slam_caps", "Slam caps, then cockpit", Objectives.glyph("slam_caps")])
 	plate.advance(0.016)
 	_t.eq("P4 jump_to_phase(2) turns the diamonds", plate.phase_pips(), ["spent", "live", "ahead"])
 	_t.check("P4 and cracks the spent one", plate.turn_age() >= 0.0)
@@ -180,36 +196,142 @@ func _arena_checks() -> void:
 
 func _plate_row() -> Array:
 	var reading: Dictionary = _game.hud.objective_reading()
-	return [reading["id"], reading["words"]]
+	return [reading["id"], reading["words"], reading["icon"]]
 
 
-# What the markers point at for the row the plate shows now: the places, and the glyph they wear
-# ("" when there is none). The HUD hands the markers the row each frame; here it is handed over.
+# What the markers point at for the row the plate shows now: the places, the tag they wear and the
+# glyph they carry to the view's edge ("" when there is none or they differ). The HUD hands the
+# markers the row and its glyph each frame; here they are handed over.
 func _marks() -> Array:
 	var markers = _game.hud.edge_markers
-	markers.objective_id = _plate_row()[0]
+	var row := _plate_row()
+	markers.objective_id = row[0]
+	markers.objective_icon = row[2]
 	var targets: Array = markers.targets()
-	var same := targets.all(func(t): return t["kind"] == "boss_arena_entered" and t["mark"] and t["icon"] == targets[0]["icon"])
-	return [targets.map(func(t): return t["at"]), targets[0]["icon"] if same and not targets.is_empty() else ""]
+	var same := targets.all(func(t): return t["kind"] == "boss_arena_entered" and t["mark"] and t["icon"] == targets[0]["icon"] and t["tag"] == targets[0]["tag"])
+	return [targets.map(func(t): return t["at"]), targets[0]["tag"] if same and not targets.is_empty() else "", targets[0]["icon"] if same and not targets.is_empty() else ""]
 
 
-# One target looked at from 20 m keeps a small marker over it, pointing down; with the camera turned
-# away the same target goes to the edge of the play view as any marker does.
+# One target looked at from 20 m wears brackets round it, big enough to see, and the target nearest
+# the middle of the view wears the tag, all of it inside the play view; with the camera turned away
+# the same target goes to the edge of the play view as any marker does.
 func _marker_checks(at: Vector3) -> void:
 	var markers = _game.hud.edge_markers
 	var cam: Camera3D = _game.camera.cam
 	var size: Vector2 = cam.get_viewport().get_visible_rect().size
 	var was := cam.global_transform
+	var view: Rect2 = EdgeMarkers.view_rect(size)
+	_marks()
 	cam.look_at_from_position(at + Vector3(0.0, 0.0, 20.0), at)
-	var over: Array = markers.markers(size).filter(func(m): return m["dir"] == Vector2.DOWN and is_equal_approx(m["size"], EdgeMarkers.MARK_SIZE))
-	var want: Vector2 = cam.unproject_position(at) + Vector2.UP * EdgeMarkers.MARK_GAP
-	_t.check("P6 a target in view keeps a small marker over it, pointing down", over.any(func(m): return m["at"].distance_to(want) < 0.5),
-		"markers %s, wanted one at %s" % [markers.markers(size), want])
+	var want: Vector2 = cam.unproject_position(at)
+	var marks: Array = markers.markers(size).filter(func(m): return m.has("box"))
+	var on: Array = marks.filter(func(m): return m["box"].has_point(want))
+	_t.check("P6 a target in view wears brackets round it", on.size() == 1, "markers %s, wanted one round %s" % [markers.markers(size), want])
+	if on.size() == 1:
+		var box: Rect2 = on[0]["box"]
+		_t.check("P6 the brackets are big enough to see", minf(box.size.x, box.size.y) >= EdgeMarkers.MARK_MIN * 2.0, "box %s" % box)
+		_t.eq("P6 the target in the middle of the view wears the tag", on[0]["tag"], "MAGNET")
+		_t.check("P6 and brackets and tag sit between the top and bottom bands", EdgeMarkers.mark_view(size).encloses(EdgeMarkers.mark_rect(box, on[0]["tag"])),
+			"mark %s room %s" % [EdgeMarkers.mark_rect(box, on[0]["tag"]), EdgeMarkers.mark_view(size)])
+	# Every pair of brackets wears the tag where it has room (three blind readers could not tell
+	# whether brackets with no tag were a magnet too), and no tag covers another mark.
+	var taken: Array = marks.map(func(m): return EdgeMarkers.mark_rect(m["box"], m["tag"], m["under"]))
+	var covered := false
+	for i in taken.size():
+		for j in i:
+			covered = covered or taken[i].intersects(taken[j])
+	var bare := []
+	for m in marks:
+		var others: Array[Rect2] = []
+		for r in taken:
+			if not r.has_point(m["box"].get_center()):
+				others.append(r)
+		if m["tag"] != "MAGNET" and EdgeMarkers._free(EdgeMarkers.mark_rect(m["box"], "MAGNET"), EdgeMarkers.mark_view(size), others):
+			bare.append(m)
+	_t.check("P6 every pair of brackets with room wears the tag, and no mark covers another", not covered and bare.is_empty(), "marks %s" % [marks])
+	_t.eq("P6 the tags are counted as words on the screen", Array(markers.drawn_words()).size() if not markers._shown.is_empty() else -1,
+		markers._shown.filter(func(m): return m.get("tag", "") != "").size() if not markers._shown.is_empty() else -1)
+	var crowd: Array[Rect2] = [Rect2(100, 100, 80, 40)]
+	_t.eq("P6 a tag has no room over another mark", [EdgeMarkers._free(Rect2(150, 120, 40, 20), Rect2(0, 0, 400, 400), crowd), EdgeMarkers._free(Rect2(200, 200, 40, 20), Rect2(0, 0, 400, 400), crowd),
+		EdgeMarkers._free(Rect2(380, 200, 40, 20), Rect2(0, 0, 400, 400), crowd)], [false, true, false])
+	# Two targets close together on the screen share one pair of brackets.
+	var boxes: Array[Dictionary] = []
+	for box in [Rect2(100, 100, 60, 60), Rect2(150, 110, 60, 60), Rect2(400, 100, 60, 60)]:
+		EdgeMarkers._group(boxes, {"box": box, "color": Color.WHITE, "tag": "VENT CAP", "targets": [box]})
+	_t.eq("P6 boxes that touch share one pair of brackets", boxes.map(func(g): return [g["box"], g["targets"].size()]),
+		[[Rect2(100, 100, 110, 70), 2], [Rect2(400, 100, 60, 60), 1]])
+	# A box that bridges two groups takes both, and then a third that only the grown box touches.
+	var chain: Array[Dictionary] = []
+	for box in [Rect2(0, 0, 40, 40), Rect2(100, 0, 40, 40), Rect2(60, 60, 30, 30), Rect2(35, 30, 70, 35)]:
+		EdgeMarkers._group(chain, {"box": box, "color": Color.WHITE, "tag": "VENT CAP", "targets": [box]})
+	_t.eq("P6 a box that joins groups takes every group the joined box touches", chain.map(func(g): return [g["box"], g["targets"].size()]), [[Rect2(0, 0, 140, 90), 4]])
+	# A thing at the room's rim keeps its brackets: they move the least it takes to stand in the
+	# room while its middle stays inside them, and the tag goes under when there is no room over.
+	var room: Rect2 = EdgeMarkers.mark_view(size)
+	var rim := Rect2(room.get_center().x - 30.0, room.position.y - 10.0, 60.0, 60.0)
+	var slid: Rect2 = EdgeMarkers._slid(rim, room)
+	_t.check("P6 brackets at the room's rim slide into it, round the thing still", room.encloses(EdgeMarkers.mark_rect(slid, "")) and slid.has_point(rim.get_center())
+			and slid.position.x == rim.position.x, "%s to %s in %s" % [rim, slid, room])
+	_t.check("P6 with no room over them the tag fits under", not room.encloses(EdgeMarkers.mark_rect(slid, "SCOOTER")) and room.encloses(EdgeMarkers.mark_rect(slid, "SCOOTER", true))
+			and EdgeMarkers.tag_rect(slid, "SCOOTER", true).position.y > slid.end.y)
+	var out_of_room := Rect2(room.get_center().x - 30.0, room.position.y - 45.0, 60.0, 60.0)
+	_t.eq("P6 brackets whose thing is out of the room are left where they are", EdgeMarkers._slid(out_of_room, room), out_of_room)
+	# Under the top band a mark would cover the plate: the target goes to the edge instead.
+	var high := Vector2.ZERO
+	for drop in 80:
+		cam.look_at_from_position(at + Vector3(0.0, 0.0, 20.0), at + Vector3.DOWN * (4.0 + drop * 0.5))
+		high = cam.unproject_position(at)
+		if high.y < room.position.y - 2.0:
+			break
+	if _t.check("P6 (premise) the target projects on screen under the top band", Rect2(Vector2.ZERO, size).has_point(high) and high.y < room.position.y, "at %s, room %s" % [high, room]):
+		_t.check("P6 a target under the top band goes to the edge, with no brackets", markers.markers(size).all(func(m): return not m.has("box") or not m["box"].has_point(high)),
+			"markers %s" % [markers.markers(size)])
 	cam.look_at_from_position(at + Vector3(0.0, 0.0, 20.0), at + Vector3(0.0, 0.0, 40.0))
 	var away: Array = markers.markers(size)
-	var view: Rect2 = EdgeMarkers.view_rect(size)
 	_t.check("P6 out of view, every target goes to the edge of the play view", away.size() == markers.targets().size()
-			and away.all(func(m): return m["size"] > EdgeMarkers.MARK_SIZE and _on_rim(view, m["at"])), "markers %s" % [away])
+			and away.all(func(m): return m.has("dir") and _on_rim(view, m["at"])), "markers %s" % [away])
+	cam.global_transform = was
+
+
+# A mark is only as true as the picture under it (PC film of PR 729): a wall between the camera and
+# the thing leaves faint brackets and no tag, and a comic panel over the thing takes no mark.
+func _sight_checks(at: Vector3) -> void:
+	var markers = _game.hud.edge_markers
+	var cam: Camera3D = _game.camera.cam
+	var size: Vector2 = cam.get_viewport().get_visible_rect().size
+	var was := cam.global_transform
+	_marks()
+	cam.look_at_from_position(at + Vector3(0.0, 0.0, 20.0), at)
+	var want: Vector2 = cam.unproject_position(at)
+	_t.check("P7 (premise) nothing stands between the camera and the magnet", markers.in_sight(cam, at))
+	var wall := StaticBody3D.new()
+	wall.collision_layer = 1
+	var shape := CollisionShape3D.new()
+	var box := BoxShape3D.new()
+	box.size = Vector3(12.0, 12.0, 0.5)
+	shape.shape = box
+	wall.add_child(shape)
+	_game.add_child(wall)
+	wall.global_position = at + Vector3(0.0, 0.0, 10.0)
+	await _frames(2)
+	_t.check("P7 a wall between the camera and the thing hides it", not markers.in_sight(cam, at))
+	var on: Array = markers.markers(size).filter(func(m): return m.has("box") and m["box"].has_point(want))
+	_t.check("P7 behind a wall the thing keeps faint brackets and no tag", on.size() == 1 and on[0]["tag"] == "" and on[0]["color"].a < 0.5,
+		"marks %s" % [on])
+	wall.free()
+	await _frames(2)
+	var edges: int = markers.markers(size).filter(func(m): return m.has("dir")).size()
+	var panel := Control.new()
+	panel.add_to_group(FlourishPlayer.AVOID_GROUP)
+	_game.hud.add_child(panel)
+	panel.position = want - Vector2(150.0, 150.0)
+	panel.size = Vector2(300.0, 300.0)
+	var panel_rect := Rect2(panel.position, panel.size)
+	var shown: Array = markers.markers(size)
+	_t.check("P7 a comic panel over the thing takes no mark, at the edge or round it",
+		shown.all(func(m): return not m.has("box") or not m["box"].intersects(panel_rect)) and shown.filter(func(m): return m.has("dir")).size() == edges,
+		"marks %s" % [shown])
+	panel.free()
 	cam.global_transform = was
 
 
@@ -225,25 +347,36 @@ func _late_phase_rows() -> void:
 	if not _t.check("P5 the fight is still live", boss.active(), "state %s" % boss.state):
 		return
 	boss.jump_to_phase(3)
-	_t.eq("P5 phase three: bait the charge", _plate_row(), ["bait_charge", "Bait his charge into walls"])
-	_t.eq("P6 a baited charge names no one place, so nothing is marked", _marks(), [[], ""])
+	_t.eq("P5 phase three: bait the charge", _plate_row(), ["bait_charge", "Bait into walls, then cockpit", Objectives.glyph("bait_charge")])
+	_t.eq("P6 a baited charge names no one place, so nothing is marked", _marks(), [[], "", ""])
 	boss._posture.staggered = true
-	_t.eq("P5 a stagger between charges names the open cockpit", [boss.charge_coming(), _plate_row()], [false, ["hit_cockpit", "Hit the open cockpit"]])
+	_t.eq("P5 a stagger between charges keeps the row and turns its glyph", [boss.charge_coming(), _plate_row()], [false, ["bait_charge", "Bait into walls, then cockpit", Objectives.COCKPIT_GLYPH]])
 	# A stagger does not hold a Scuttle charge back. From the commit (the lane's tell) to the end of
 	# the run the plate keeps the charge's row, and no marker sends the player at the cockpit.
 	boss._commit_charge(_game.player.ball_position())
 	_t.eq("P5 a charge committed through the stagger keeps the charge's row", [boss.staggered(), boss.charge_coming(), _plate_row()],
-		[true, true, ["bait_charge", "Bait his charge into walls"]])
-	_t.eq("P6 and marks nothing", _marks(), [[], ""])
+		[true, true, ["bait_charge", "Bait into walls, then cockpit", Objectives.glyph("bait_charge")]])
+	_t.eq("P6 and marks nothing", _marks(), [[], "", ""])
 	boss._charge["state"] = boss.CHARGE_RUN
-	_t.eq("P5 and through the run", [boss.charging(), _plate_row()], [true, ["bait_charge", "Bait his charge into walls"]])
+	_t.eq("P5 and through the run", [boss.charging(), _plate_row()], [true, ["bait_charge", "Bait into walls, then cockpit", Objectives.glyph("bait_charge")]])
+	_t.eq("P5 with the row's first step live", _game.hud.objective_reading()["step"], 0)
 	boss._posture.staggered = false
 	boss._stun(2.0)
-	_t.eq("P5 a stun opens the cockpit on the plate", [boss.charge_coming(), _plate_row()], [false, ["hit_cockpit", "Hit the open cockpit"]])
-	_t.eq("P6 with its marker", _marks(), [[boss.ship.cockpit_point()], Objectives.glyph("hit_cockpit")])
+	_t.eq("P5 a stun keeps the row and turns its glyph", [boss.charge_coming(), _plate_row()], [false, ["bait_charge", "Bait into walls, then cockpit", Objectives.COCKPIT_GLYPH]])
+	_t.eq("P6 with its marker", _marks(), [[boss.ship.cockpit_point()], "COCKPIT", Objectives.COCKPIT_GLYPH])
+	_t.eq("P5 and the row's second step live", _game.hud.objective_reading()["step"], 1)
 	boss._begin_eject()
-	_t.eq("P5 the eject names the scooter", _plate_row(), ["ram_scooter", "Ram the Admiral's scooter"])
-	_t.eq("P6 and the marker follows the scooter", _marks(), [[boss.scooter.global_position], Objectives.glyph("ram_scooter")])
+	_t.eq("P5 the eject names the scooter", _plate_row(), ["ram_scooter", "Ram the Admiral's scooter", Objectives.glyph("ram_scooter")])
+	_t.eq("P6 and the marker follows the scooter", _marks(), [[boss.scooter.global_position], "SCOOTER", Objectives.glyph("ram_scooter")])
+	# The scooter lands across the arena from the ball, often with the wreck between: the wreck is
+	# world from the eject on and hides what is behind it like any wall.
+	await _frames(2)
+	var cam: Camera3D = _game.camera.cam
+	var was := cam.global_transform
+	var hull: Vector3 = boss.ship.hull.global_position
+	cam.look_at_from_position(hull + Vector3(0.0, 0.0, 20.0), hull)
+	_t.check("P7 the wreck hides a thing behind it", not _game.hud.edge_markers.in_sight(cam, hull + Vector3(0.0, 0.0, -20.0)))
+	cam.global_transform = was
 
 
 func _pause_checks() -> void:

@@ -66,13 +66,19 @@ func _run() -> void:
 		_pilot_damage().values(), game.run.heft()])
 	game.flow._engage()
 	await physics_frame
-	# The objective plate names the line fight on the real Warden (core/objectives.gd): latch first,
-	# then fire from the line. A shut clamp or a yard lock would hold the plate; calm stands neither.
-	t.eq("unlatched: the mounting reads the flume with the line off", w.mount_driver.plate_reading(w), {"mount": "flume", "latched": false})
-	t.eq("unlatched: the plate says to latch on", [game.hud.objective_reading()["id"], game.hud.objective_reading()["words"]], ["latch_warden", "Latch onto the Warden"])
+	# The objective plate names the line fight on the real Warden in one row (core/objectives.gd),
+	# and the mark on the relic says which step is next: latch on, then shoot from the line. A shut
+	# clamp or a yard lock would hold the plate; calm stands neither.
+	var plate := ["line_fight", "Latch on, shoot, smash core"]
+	t.eq("unlatched: the mounting reads the flume", w.mount_driver.plate_reading(w), {"mount": "flume"})
+	t.eq("unlatched: the plate names the line fight", [game.hud.objective_reading()["id"], game.hud.objective_reading()["words"]], plate)
+	t.eq("unlatched: the mark on the relic says to latch on", _mark_tags(), ["LATCH ON"])
+	t.eq("unlatched: the row's first step is live", game.hud.objective_reading()["step"], 0)
 	_latch(w)
 	await physics_frame
-	t.eq("latched: the plate says to shoot the Warden", [game.hud.objective_reading()["id"], game.hud.objective_reading()["words"]], ["fire_from_line", "Latched: shoot the Warden"])
+	t.eq("latched: the plate keeps its row", [game.hud.objective_reading()["id"], game.hud.objective_reading()["words"]], plate)
+	t.eq("latched: the mark says to shoot", _mark_tags(), ["SHOOT"])
+	t.eq("latched: the row's second step is live", game.hud.objective_reading()["step"], 1)
 
 	# Pay per bolt, latched, reference heft, Rivet's pilot (FL1's numbers, which FL3 keeps for Rivet).
 	var rivet = _def("runner_gunner")
@@ -196,6 +202,18 @@ func _def(id: String):
 		if def.id == id:
 			return def
 	return null
+
+
+# The tags of the marks the HUD's markers point at now, the Warden's own plain marker left out:
+# the mark on the relic stands in for it.
+func _mark_tags() -> Array:
+	var markers = game.hud.edge_markers
+	var goal: Dictionary = game.hud.objective_reading()
+	markers.objective_id = goal["id"]
+	markers.objective_icon = goal["icon"]
+	markers.engaged = true
+	var targets: Array = markers.targets().filter(func(target): return target["kind"] == "warden_engaged")
+	return targets.map(func(target): return target.get("tag", "(the Warden's plain marker)"))
 
 
 func _latch(w) -> void:

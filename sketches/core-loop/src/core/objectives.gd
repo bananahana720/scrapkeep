@@ -23,39 +23,78 @@ const ROWS := {
 	# A mounted reactor Warden's own road to its core (warden_reactor.gd): the dam's sheet ram,
 	# the flume's line fight. They stand where "Break its guard" stands on any other Warden.
 	"ride_sheet": {"glyph": "cat_defense", "words": "Ride the water sheet up"},
-	"latch_warden": {"glyph": "cat_defense", "words": "Latch onto the Warden"},
-	"fire_from_line": {"glyph": "cat_defense", "words": "Latched: shoot the Warden"},
-	# Brindle's fight by phase (boss.gd plate_reading; objective_text() is the long readout).
-	"shoot_magnets": {"glyph": "fac_fleet", "words": "Shoot the crane magnets"},
-	"slam_caps": {"glyph": "fac_fleet", "words": "Slam the vent caps"},
-	"bait_charge": {"glyph": "fac_fleet", "words": "Bait his charge into walls"},
-	"hit_cockpit": {"glyph": "cat_damage", "words": "Hit the open cockpit"},
+	"line_fight": {"glyph": "cat_defense", "words": "Latch on, shoot, smash core"},
+	# Brindle's fight by phase (boss.gd plate_reading; objective_text() is the long readout). A phase's
+	# row names its whole loop and holds for the phase (see choose()).
+	"shoot_magnets": {"glyph": "fac_fleet", "words": "Shoot magnets, then cockpit"},
+	"slam_caps": {"glyph": "fac_fleet", "words": "Slam caps, then cockpit"},
+	"bait_charge": {"glyph": "fac_fleet", "words": "Bait into walls, then cockpit"},
 	"ram_scooter": {"glyph": "fac_fleet", "words": "Ram the Admiral's scooter"},
 }
 
-# What "find_activity" says for the site the plate names (pick_site): the site's kind
+# What "find_activity" says for the site at hand (activities.gd at_hand): the site's kind
 # (EventKinds.ACTIVITY_ROWS) and the verb that finishes it (activities.gd RULES `finishes`).
 const ACTIVITY_WORDS := {
 	"enemy_camp": "Clear the camp",
-	"ambush_altar": "Spring the ambush",
+	"ambush_altar": "Break the ambush",
 	"cracked_cache": "Crack open the cache",
 	"hold_the_relay": "Hold the relay",
 	"surge_run": "Outrun the surge",
 	"hauler_bounty": "Break the bounty hauler",
 	# The trade spots by their ruled names (ruling ci): the risky ones are the keeper's gamble, the
 	# safe one the foreman's kindness. The site's own label says the same.
-	"trade_risk": "Find the keeper's gamble",
-	"curse": "Find the keeper's gamble",
-	"sacrifice": "Find the keeper's gamble",
-	"trade_safe": "Find the foreman's kindness",
+	"trade_risk": "The keeper's gamble",
+	"curse": "The keeper's gamble",
+	"sacrifice": "The keeper's gamble",
+	"trade_safe": "The foreman's kindness",
+}
+
+# What the plate says for Done.SECONDS when a goal is finished, in the goal's own place: a site by
+# its kind, and the stage's own steps (the yard, the Warden's clamp, the Warden).
+const DONE_WORDS := {
+	"enemy_camp": "Camp cleared",
+	"ambush_altar": "Ambush broken",
+	"cracked_cache": "Cache cracked",
+	"hold_the_relay": "Relay held",
+	"surge_run": "Surge outrun",
+	"hauler_bounty": "Bounty hauler broken",
+	"trade_risk": "Gamble taken",
+	"curse": "Gamble taken",
+	"sacrifice": "Gamble taken",
+	"trade_safe": "Kindness taken",
+	"yard": "Yard open",
+	"clamp": "Clamp open",
+	"warden": "Warden broken",
+}
+
+# And when a site that can be lost is lost (it re-arms; activities.gd `retry_s`).
+const LOST_WORDS := {
+	"hold_the_relay": "Relay lost",
+	"surge_run": "Surge lost",
+}
+
+# The one or two words a mark wears on the thing the plate's row sends the player at
+# (ui/edge_markers.gd), by what the thing or the move there is (boss.gd and warden_reactor.gd
+# plate_targets). The plate is the plan; the mark is the next move, on the thing itself.
+const TAGS := {
+	"magnet": "MAGNET",
+	"cap": "VENT CAP",
+	"cockpit": "COCKPIT",
+	"scooter": "SCOOTER",
+	"sheet": "RIDE UP",
+	"sheet_soon": "WATER SOON",
+	"latch": "LATCH ON",
+	"shoot": "SHOOT",
+	"core": "CORE",
 }
 
 # What choose() reads. state is flow.state_name(); card is true while the stage card owns
-# the launch moment; distance is the ball's metres to the Warden; yard_locked and clamp_shut
+# the launch moment; distance is the ball's metres to the Warden; site_at_hand is true while the
+# ball is at a side site it has started (activities.gd at_hand); yard_locked and clamp_shut
 # are the stage locks' yard and Warden clamp holding (stage_locks.gd lock_active(), locked()).
 const EMPTY_READING := {"state": "", "sealed": false, "engaged": false, "fight": "plating", "staggered": false,
-	"struggling": false, "distance": INF, "card": false, "activities_left": 0, "yard_locked": false, "clamp_shut": false,
-	"mount": "", "latched": false, "phase": 0, "open": false}
+	"struggling": false, "distance": INF, "card": false, "site_at_hand": false, "yard_locked": false, "clamp_shut": false,
+	"mount": "", "phase": 0, "open": false}
 
 
 static func glyph(id: String) -> String:
@@ -67,48 +106,44 @@ static func words(id: String) -> String:
 
 
 # The "find_activity" row's words for a site of this kind. A kind with no words here is named by
-# what its own marker calls it (called: a drawn pocket's cue word, "Arena" reads "Find the arena");
-# with neither, the row's own words.
+# what its own marker calls it (called: a drawn pocket's cue word); with neither, the row's own words.
 static func activity_words(kind: String, called := "") -> String:
 	if ACTIVITY_WORDS.has(kind):
 		return String(ACTIVITY_WORDS[kind])
-	return "Find the " + called.to_lower() if called != "" else String(ROWS["find_activity"]["words"])
+	return called if called != "" else String(ROWS["find_activity"]["words"])
 
 
-# Which site the activity row names: the one ahead, not merely the nearest. A site's score is its
-# distance, stretched by how far it lies off the heading (straight ahead x1, abeam x2, behind x3),
-# and the lowest score is named. The row keeps the site it names until another scores under
-# SITE_KEEP of it, so two sites at like range never trade the row back and forth.
-# The heading is the ball's way (Way below): the view until the ball has travelled, and after that
-# where the ball is going. At the dam's drop this names the camp the drop faces (310 m, 1 degree
-# off) and not the relay beside it (305 m, 21 degrees off).
-const SITE_OFF_VIEW := 1.0
-const SITE_KEEP := 0.8
+# The done row's words for a finished goal of this kind: its own, else what its marker calls it.
+static func done_words(kind: String, called := "") -> String:
+	if DONE_WORDS.has(kind):
+		return String(DONE_WORDS[kind])
+	return called + " done" if called != "" else "Activity done"
 
 
-# offset is the site's place less the ball's; forward is the heading (Way.ahead). Height counts in
-# the distance and not in the angle.
-static func site_score(offset: Vector3, forward: Vector3) -> float:
-	var flat := Vector3(offset.x, 0.0, offset.z)
-	var ahead := Vector3(forward.x, 0.0, forward.z)
-	if flat.length_squared() < 0.0001 or ahead.length_squared() < 0.0001:
-		return offset.length()
-	return offset.length() * (1.0 + SITE_OFF_VIEW * (1.0 - flat.normalized().dot(ahead.normalized())))
+static func lost_words(kind: String) -> String:
+	return String(LOST_WORDS.get(kind, ""))
 
 
-# The index of the offset the row names, or -1 for none. held is the index the row names now (-1
-# when it names none, or its site has gone).
-static func pick_site(offsets: Array, forward: Vector3, held := -1) -> int:
-	var best := -1
-	var best_score := INF
-	for i in offsets.size():
-		var score := site_score(offsets[i], forward)
-		if score < best_score:
-			best_score = score
-			best = i
-	if held >= 0 and held < offsets.size() and best != held and best_score >= site_score(offsets[held], forward) * SITE_KEEP:
-		return held
-	return best
+# The steps of a loop row, in the order of its words (the parts between its commas), each by the
+# name the fight's driver gives the thing that step asks for (plate_targets "what").
+const STEPS := {
+	"line_fight": ["latch", "shoot", "core"],
+	"shoot_magnets": ["magnet", "cockpit"],
+	"slam_caps": ["cap", "cockpit"],
+	"bait_charge": ["wall", "cockpit"],
+}
+# The glyph a Brindle row wears while its last step, the open cockpit, is live.
+const COCKPIT_GLYPH := "cat_damage"
+
+
+# Which step of the row is live while the fight asks for `what`: the plate dims the steps before
+# it, so a row that holds through its loop still says where in the loop the fight is.
+static func live_step(id: String, what: String) -> int:
+	return maxi(0, STEPS.get(id, []).find(what))
+
+
+static func tag(what: String) -> String:
+	return String(TAGS.get(what, ""))
 
 
 # The row id the plate shows for this reading, or "" when it shows nothing.
@@ -121,22 +156,25 @@ static func choose(reading: Dictionary) -> String:
 				return "break_yard_crew"
 			if not r["sealed"]:
 				return "charge_beacon"
-			if not r["engaged"] and int(r["activities_left"]) > 0:
+			# The Warden is the stage's goal from the drop. A side site is on offer at the site, and
+			# takes the row only while the ball is at one it has started.
+			if not r["engaged"] and r["site_at_hand"]:
 				return "find_activity"
 			if r["fight"] == "posture":
 				if not r["engaged"]:
 					return "find_warden"
 				if r["clamp_shut"]:
 					return "break_clamp_crews"
+				# The flume's line fight is one row: its steps turn over faster than a row can be read,
+				# so the row names the loop and the mark on the Warden says which step is next.
+				if r["mount"] == "flume" and (r["staggered"] or not r["struggling"]):
+					return "line_fight"
 				if r["staggered"]:
 					return "smash_core"
 				if r["struggling"]:
 					return "grow_return"
-				match r["mount"]:
-					"dam_face":
-						return "ride_sheet"
-					"flume":
-						return "fire_from_line" if r["latched"] else "latch_warden"
+				if r["mount"] == "dam_face":
+					return "ride_sheet"
 				return "break_guard"
 			return "break_warden"
 		"gates":
@@ -144,10 +182,11 @@ static func choose(reading: Dictionary) -> String:
 		"launch":
 			return "" if r["card"] else "hold_line"
 		"boss":
-			var phase := int(r["phase"])
-			if r["open"] and phase >= 1 and phase <= 3:
-				return "hit_cockpit"
-			match phase:
+			# One row a phase, naming the phase's whole loop: the cockpit opens and shuts faster than
+			# a row can be read (0.2 s in the Requisition, 1.1 s in the Scuttle on the film's bot), so
+			# the row holds, the plate dims the step that is done (STEPS) and the mark moves to the
+			# cockpit.
+			match int(r["phase"]):
 				1:
 					return "shoot_magnets"
 				2:
@@ -160,38 +199,48 @@ static func choose(reading: Dictionary) -> String:
 	return ""
 
 
-# Which way the ball is going, for the activity row. The row once read the view's heading, and on
-# the road through either Spillway stage one look round then changed the goal two or three times
-# with nothing done (first-timer film, PF-11). The way is the heading the ball last travelled on at
-# SPEED or more, eased over EASE seconds so a bounce or a swerve does not swing it; slower than
-# that it stays as it was. Until the ball has travelled since begin() (the drop, a new stage) it is
-# the view's heading, so the row names what the drop faces.
-class Way:
+# The plate's done row: a finished goal ticked in the goal's own place for SECONDS, before the next
+# goal shows. Nothing on the screen said a goal was finished (second first-timer film, PF-23), so
+# every change of goal read as a goal dropped. It gives way at once when the goal under it changes
+# again, so it never holds back a lock or a fight that starts while it is up.
+class Done:
 	extends RefCounted
 
-	const SPEED := 6.0
-	const EASE := 0.75
+	const SECONDS := 1.6
 
-	var _heading := Vector3.ZERO
+	var words := ""
+	var won := true
+	var _left := 0.0
+	var _under := ""
+	var _seen := false
 
-	func begin() -> void:
-		_heading = Vector3.ZERO
-
-	# velocity is the ball's; only its flat part counts.
-	func step(velocity: Vector3, delta: float) -> void:
-		var flat := Vector3(velocity.x, 0.0, velocity.z)
-		if flat.length() < SPEED:
+	# A goal was finished (or, won false, lost). A note that yields is dropped while another
+	# shows: what the player's act opened (the yard, the clamp) never covers the act itself.
+	func note(text: String, good := true, yields := false) -> void:
+		if text == "" or (yields and showing()):
 			return
-		var to := flat.normalized()
-		if _heading == Vector3.ZERO:
-			_heading = to
-			return
-		# Turned by a share of the angle between them, so a full reversal comes round as any turn does.
-		_heading = _heading.rotated(Vector3.UP, _heading.signed_angle_to(to, Vector3.UP) * (1.0 - exp(-delta / EASE))).normalized()
+		words = text
+		won = good
+		_left = SECONDS
+		_seen = false
 
-	# The heading the row reads: the ball's way once it has travelled, else the view's.
-	func ahead(view: Vector3) -> Vector3:
-		return _heading if _heading != Vector3.ZERO else view
+	# under is the words of the goal the plate would show now.
+	func step(delta: float, under: String) -> void:
+		if _left <= 0.0:
+			return
+		if not _seen:
+			_seen = true
+			_under = under
+		elif under != _under:
+			_left = 0.0
+			return
+		_left -= delta
+
+	func showing() -> bool:
+		return _left > 0.0
+
+	func clear() -> void:
+		_left = 0.0
 
 
 # Counts the seconds a build spends trying against a posture Warden. A second counts while

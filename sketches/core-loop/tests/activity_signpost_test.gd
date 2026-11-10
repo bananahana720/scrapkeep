@@ -5,12 +5,15 @@ const EventKinds := preload("res://src/core/event_kinds.gd")
 const Icons := preload("res://src/ui/icons.gd")
 const Objectives := preload("res://src/core/objectives.gd")
 const EdgeMarkers := preload("res://src/ui/edge_markers.gd")
+const Activities := preload("res://src/world/activities.gd")
 
 # Activity signposting: every unfinished activity site gets one amber edge target in its own
 # row's colour while the Warden fight is not engaged; a finished site gets none; engaging the
-# fight hides them and the Warden target stays; disengaging brings them back. The objective
-# plate's find_activity row comes before the Warden rows only when the beacon is sealed, the
-# fight is not engaged and a site is left, and never in the gates.
+# fight hides them and the Warden target stays; disengaging brings them back. The Warden is the
+# plate's goal from the drop; the find_activity row comes before the Warden rows only when the
+# beacon is sealed, the fight is not engaged and the ball is at a site it has started
+# (activities.gd at_hand), and never in the gates. A finished goal is ticked on the plate for
+# Objectives.Done.SECONDS before the next one shows; a lost relay or surge is crossed.
 
 var _game
 var _t := preload("res://tests/support/t.gd").new("activity_signpost_test")
@@ -54,88 +57,133 @@ func _run() -> void:
 		ok = ok and hit
 	_t.check("a_one_amber_target_per_site", ok, "%d targets for %d sites" % [targets.size(), sites.size()])
 
-	# Before the ball has travelled, the plate names the site in front of the view and gives the metres to it (Objectives.pick_site,
-	# ACTIVITY_WORDS). The expected site is worked out here from the rule's own words: distance,
-	# stretched by one for each unit the site's bearing falls short of straight ahead.
-	var ball: Vector3 = _game.player.ball_position()
-	var cam: Camera3D = _game.camera.cam
-	var named := []
-	hud._way.begin()
-	for facing in sites:
-		var eye := cam.global_position
-		var target: Vector3 = facing.global_position
-		if Vector2(target.x - eye.x, target.z - eye.z).length() < 1.0:
-			continue
-		cam.look_at(Vector3(target.x, eye.y, target.z), Vector3.UP)
-		var forward := -cam.global_transform.basis.z
-		var nearest = null
-		var low := INF
-		for site in sites:
-			var to: Vector3 = site.global_position - ball
-			var flat := Vector3(to.x, 0.0, to.z).normalized()
-			var score := to.length() * (2.0 - flat.dot(Vector3(forward.x, 0.0, forward.z).normalized()))
-			if score < low:
-				low = score
-				nearest = site
-		hud._plate_site = null
-		var faced: Dictionary = hud.objective_reading()
-		named.append([faced["id"], faced["words"], faced["distance"]] ==
-			["find_activity", Objectives.activity_words(String(nearest.id)), int(ball.distance_to(nearest.global_position))])
-	_t.check("a2_plate_names_the_site_ahead", not named.is_empty() and not named.has(false), "%s" % [named])
-	# Held: with the view turned right round, the row keeps its site unless another is clearly better.
-	var held = hud._plate_site
-	cam.rotate_y(PI)
-	var after: Dictionary = hud.objective_reading()
-	var held_score := Objectives.site_score(held.global_position - ball, -cam.global_transform.basis.z)
-	var now_score := Objectives.site_score(hud._plate_site.global_position - ball, -cam.global_transform.basis.z)
-	_t.check("a2_row_keeps_its_site_until_clearly_beaten", hud._plate_site == held or now_score < held_score * Objectives.SITE_KEEP,
-		"held %.1f now %.1f" % [held_score, now_score])
-	# Once the ball has travelled, the row reads where the ball is going and not where the camera
-	# looks (Objectives.Way). The ball is stood between the two sites farthest apart and sent at one
-	# of them; there the view alone would trade the row as the camera turns (worked out here, so the
-	# check is not empty), and the row holds through a whole look round.
+	# The Warden is the goal from the drop: sites stand, none is started, and the plate gives the
+	# metres to the Warden (second first-timer film, PF-11: the row named whichever site lay ahead,
+	# and changed six times on the dam road with nothing done).
+	var acts = _game.world.activities
 	var home: Vector3 = _game.player.ball_position()
-	var first = sites[0]
-	var far = sites[0]
+	# The sites are started and stopped by hand below, so their own watch stands still meanwhile
+	# (a camp started with no pack would finish on its next tick).
+	acts.set_physics_process(false)
 	for site in sites:
-		if site.global_position.distance_to(first.global_position) > far.global_position.distance_to(first.global_position):
-			far = site
-	var mid: Vector3 = (first.global_position + far.global_position) * 0.5
-	var toward: Vector3 = first.global_position - mid
-	hud._way.begin()
-	_game.player.reset_to(mid, Vector3(toward.x, 0.0, toward.z).normalized() * 20.0)
-	hud._physics_process(1.0 / 90.0)
-	_game.player.reset_to(mid)
+		site.started = false
+	var road: Dictionary = hud.objective_reading()
+	_t.eq("a2_the_warden_is_the_goal_while_sites_stand", [road["id"], road["words"], road["distance"] >= 0, acts.at_hand(home) == null],
+		["find_warden", Objectives.words("find_warden"), true, true])
+	# A site takes the row only while the ball is at one it has started.
+	var site = sites[0]
+	var near: Vector3 = site.global_position + Vector3(Activities.AT_HAND_M * 0.5, 0.0, 0.0)
+	var far: Vector3 = site.global_position + Vector3(Activities.AT_HAND_M + 5.0, 0.0, 0.0)
+	_t.check("a3_a_site_not_started_is_not_at_hand_even_beside_it", acts.at_hand(near) == null)
+	site.started = true
+	_t.eq("a3_started_and_near_it_is_at_hand", [acts.at_hand(near) == site, acts.at_hand(far) == null], [true, true])
+	_game.player.reset_to(near)
 	await physics_frame
 	await physics_frame
-	hud._plate_site = null
-	cam.look_at(Vector3(first.global_position.x, cam.global_position.y, first.global_position.z), Vector3.UP)
-	var rolling: Dictionary = hud.objective_reading()
-	var from: Vector3 = _game.player.shown_position()
-	var offsets := []
-	for site in sites:
-		offsets.append(site.global_position - from)
-	var by_view := {}
-	var by_view_held := -1
-	var seen := {}
-	for i in 36:
-		cam.rotate_y(TAU / 36.0)
-		by_view_held = Objectives.pick_site(offsets, -cam.global_transform.basis.z, by_view_held)
-		by_view[by_view_held] = true
-		seen[hud.objective_reading()["words"]] = true
-	_t.check("a2_between_two_sites_the_view_alone_would_trade_the_row", by_view.size() > 1, "sites the view names in one look round: %s" % [by_view.keys()])
-	_t.eq("a2_a_look_round_does_not_change_the_row_once_rolling", seen.keys(), [rolling["words"]])
+	var at_site: Dictionary = hud.objective_reading()
+	_t.eq("a3_the_plate_names_the_site_at_hand_with_no_metres", [at_site["id"], at_site["words"], at_site["distance"], at_site["icon"]],
+		["find_activity", Objectives.activity_words(String(site.id), Activities.called(String(site.id))), -1, Objectives.glyph("find_activity")])
+	_t.check("a3_and_the_site_has_its_own_words", at_site["words"] != Objectives.words("find_activity"), "%s reads \"%s\"" % [site.id, at_site["words"]])
+	# The site at hand keeps the row past AT_HAND_M, and lets go at LET_GO_M: the goal never
+	# flickers at the edge of a site's reach.
+	var gone: Vector3 = site.global_position + Vector3(Activities.LET_GO_M + 5.0, 0.0, 0.0)
+	_t.eq("a4_a_held_site_stays_at_hand_until_let_go", [acts.at_hand(far, site) == site, acts.at_hand(gone, site) == null, acts.at_hand(far) == null], [true, true, true])
+	_game.player.reset_to(far)
+	await physics_frame
+	await physics_frame
+	_t.eq("a4_rolled_a_little_past_its_reach_the_site_keeps_the_row", hud.objective_reading()["id"], "find_activity")
+	_game.player.reset_to(gone)
+	await physics_frame
+	await physics_frame
+	_t.eq("a4_rolled_away_the_warden_has_the_row_again", hud.objective_reading()["id"], "find_warden")
+	if sites.size() > 1:
+		var other = sites[1]
+		other.started = true
+		var between: Vector3 = site.global_position.lerp(other.global_position, 0.1)
+		if _t.check("a5_(premise)_a_place_at_hand_of_the_first_site", site.global_position.distance_to(between) < Activities.AT_HAND_M, "%.0f m" % site.global_position.distance_to(between)):
+			_t.check("a5_of_two_started_sites_the_nearer_is_at_hand", acts.at_hand(between) == site)
+			_t.check("a5_and_the_one_held_keeps_the_row_from_a_nearer_one", acts.at_hand(between, other) == other or other.global_position.distance_to(between) > Activities.LET_GO_M,
+				"%.0f m" % other.global_position.distance_to(between))
+		other.started = false
+	site.done = true
+	_t.check("a6_a_finished_site_is_never_at_hand", acts.at_hand(near) == null)
+	site.done = false
+	site.failed = true
+	_t.check("a6_nor_a_lost_one", acts.at_hand(near) == null)
+	site.failed = false
+	site.set_meta("find", "x")
+	_t.check("a6_nor_a_field_find", acts.at_hand(near) == null)
+	site.remove_meta("find")
+	# A trade spot is started by standing near it, so it never takes the row.
+	var rule = site.rule
+	_t.check("a6_(premise)_the_site_is_at_hand_by_its_own_rule", acts.at_hand(near) == site)
+	site.rule = Activities.RULES["trade_safe"]
+	_t.check("a6_nor_a_trade_spot_however_near", acts.at_hand(near) == null)
+	site.rule = rule
+	site.surge_live = true
+	_t.check("a6_a_live_surge_is_at_hand_wherever_its_water_has_carried_the_ball", acts.at_hand(far) == site)
+	site.surge_live = false
+	site.started = false
 	_game.player.reset_to(home)
 	await physics_frame
 	await physics_frame
-	hud._plate_site = null
-	hud._way.begin()
-	after = hud.objective_reading()
-	var nearest = hud._plate_site
-	var plate: Dictionary = after
-	_t.check("a2_named_site_has_its_own_words", Objectives.ACTIVITY_WORDS.has(String(nearest.id)) and plate["words"] != Objectives.words("find_activity"),
-		"%s reads \"%s\"" % [nearest.id, plate["words"]])
-	_t.eq("a2_plate_glyph_is_the_marker_glyph", plate["icon"], Objectives.glyph("find_activity"))
+
+	# The done row: a finished goal is ticked in the plate's own place before the next one shows.
+	var step := 1.0 / 90.0
+	var goal: Dictionary = hud.objective_reading()
+	_game.events.activity_done.emit(String(site.id), site.global_position)
+	var shown: Dictionary = hud.plate_shown()
+	_t.eq("a7_a_finished_site_is_ticked_on_the_plate", [shown["words"], shown.get("done", ""), shown["distance"], shown["progress"]],
+		[Objectives.done_words(String(site.id), Activities.called(String(site.id))), "won", -1, -1.0])
+	_t.eq("a7_the_goal_under_it_is_untouched", [shown["id"], hud.objective_reading()], [goal["id"], goal])
+	hud._process(0.0)
+	_t.eq("a7_the_plate_draws_the_done_row_and_the_markers_keep_the_goal", [hud._objective.words, hud._objective.done, markers.objective_id], [shown["words"], "won", goal["id"]])
+	var ticks := 0
+	while hud.plate_shown().has("done") and ticks < 900:
+		hud._physics_process(step)
+		ticks += 1
+	_t.near("a7_for_done_seconds_of_play", ticks * step, Objectives.Done.SECONDS, 2.0 * step)
+	_t.eq("a7_then_the_goal_shows", hud.plate_shown(), hud.objective_reading())
+	_game.events.event_ended.emit("hold_the_relay", "lost")
+	_t.eq("a8_a_lost_relay_is_crossed", [hud.plate_shown()["words"], hud.plate_shown().get("done", "")], ["Relay lost", "lost"])
+	hud._done.clear()
+	_game.events.trade_taken.emit("trade_risk", home)
+	_t.eq("a8_a_trade_taken_is_ticked", [hud.plate_shown()["words"], hud.plate_shown().get("done", "")], ["Gamble taken", "won"])
+	_game.events.event_ended.emit("hold_the_relay", "lost")
+	_game.events.event_ended.emit("some_flood", "passed")
+	_t.eq("a8_a_park_event_ending_changes_nothing", hud.plate_shown()["words"], "Relay lost")
+	# What an act opened never covers the act: the yard and the clamp are ticked only on a plate
+	# with no tick on it, and the clamp only in the fight (the road's plate never said it was shut).
+	_game.events.world_fact.emit("arena_unlocked", home)
+	_t.eq("a8_a_fact_leaves_a_tick_that_is_showing", hud.plate_shown()["words"], "Relay lost")
+	hud._done.clear()
+	_game.events.world_fact.emit("arena_unlocked", home)
+	_t.eq("a8_the_yard_opening_is_ticked", [hud.plate_shown()["words"], hud.plate_shown().get("done", "")], ["Yard open", "won"])
+	hud._done.clear()
+	_game.events.world_fact.emit("warden_gate_opened", home)
+	_t.eq("a8_the_clamp_opened_from_the_road_is_not", hud.plate_shown().has("done"), false)
+	hud._engaged = true
+	_game.events.world_fact.emit("warden_gate_opened", home)
+	_t.eq("a8_in_the_fight_it_is", hud.plate_shown()["words"], "Clamp open")
+	hud._engaged = false
+	_game.events.world_fact.emit("warden_gate_pip", home)
+	_t.eq("a8_a_fact_that_finishes_nothing_changes_nothing", hud.plate_shown()["words"], "Clamp open")
+	# The goal under a done row changing again takes the done row down at once.
+	hud._physics_process(step)
+	site.started = true
+	_game.player.reset_to(near)
+	await physics_frame
+	await physics_frame
+	hud._physics_process(step)
+	_t.eq("a9_a_new_goal_under_it_takes_the_done_row_down", [hud.plate_shown().has("done"), hud.plate_shown()["id"]], [false, "find_activity"])
+	site.started = false
+	_game.player.reset_to(home)
+	await physics_frame
+	await physics_frame
+	_game.events.activity_done.emit(String(site.id), site.global_position)
+	hud._on_stage_entered(_game.run.stage, true)
+	_t.eq("a9_a_stage_entered_clears_it", hud.plate_shown().has("done"), false)
+	acts.set_physics_process(true)
 
 	var finished = sites[0]
 	finished.done = true
@@ -161,13 +209,13 @@ func _run() -> void:
 	_t.check("d_disengage_restores", _activity_targets(markers).size() == sites.size(), "%d targets" % _activity_targets(markers).size())
 
 	var base := {"state": "stage", "sealed": true, "engaged": false, "fight": "posture"}
-	_t.eq("e_activity_row", Objectives.choose(base.merged({"activities_left": 2}, true)), "find_activity")
-	_t.eq("f_none_left_warden_row", Objectives.choose(base.merged({"activities_left": 0}, true)), "find_warden")
-	_t.eq("f_engaged_warden_row", Objectives.choose(base.merged({"activities_left": 2, "engaged": true}, true)), "break_guard")
-	_t.eq("f_plating_engaged_row", Objectives.choose({"state": "stage", "sealed": true, "engaged": true, "activities_left": 3}), "break_warden")
-	_t.eq("f_unsealed_beacon_first", Objectives.choose({"state": "stage", "sealed": false, "activities_left": 3}), "charge_beacon")
-	_t.eq("g_gates_never_activity", Objectives.choose({"state": "gates", "sealed": true, "activities_left": 3}), "roll_gate")
-	_t.eq("g_launch_never_activity", Objectives.choose({"state": "launch", "activities_left": 3}), "hold_line")
+	_t.eq("e_activity_row", Objectives.choose(base.merged({"site_at_hand": true}, true)), "find_activity")
+	_t.eq("f_none_at_hand_warden_row", Objectives.choose(base.merged({"site_at_hand": false}, true)), "find_warden")
+	_t.eq("f_engaged_warden_row", Objectives.choose(base.merged({"site_at_hand": true, "engaged": true}, true)), "break_guard")
+	_t.eq("f_plating_engaged_row", Objectives.choose({"state": "stage", "sealed": true, "engaged": true, "site_at_hand": true}), "break_warden")
+	_t.eq("f_unsealed_beacon_first", Objectives.choose({"state": "stage", "sealed": false, "site_at_hand": true}), "charge_beacon")
+	_t.eq("g_gates_never_activity", Objectives.choose({"state": "gates", "sealed": true, "site_at_hand": true}), "roll_gate")
+	_t.eq("g_launch_never_activity", Objectives.choose({"state": "launch", "site_at_hand": true}), "hold_line")
 	var row_words: PackedStringArray = Objectives.words("find_activity").split(" ")
 	_t.check("h_words_and_icon", row_words.size() <= Objectives.MAX_WORDS and Icons.has(Objectives.glyph("find_activity")),
 		"%s / %s" % [Objectives.words("find_activity"), Objectives.glyph("find_activity")])
