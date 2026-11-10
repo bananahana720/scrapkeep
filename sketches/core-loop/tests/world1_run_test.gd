@@ -1,4 +1,4 @@
-# smoke: bots timeout=1800s (six launched-game children and one planted control, three at a time, each from the title through the dam, the flume and Brindle into stage 3; 250 to 340 s a child and 662 s in all on a 4-core cloud box, 2026-11-09)
+# smoke: bots timeout=1800s (six launched-game children and one planted control, three at a time, each from the title through the dam, the flume and Brindle into stage 3; 250 to 340 s a child and 662 to 884 s in all on a 4-core cloud box; 1,137 s when one pilot needed a second go, 2026-11-10)
 extends SceneTree
 
 const T := preload("res://tests/support/t.gd")
