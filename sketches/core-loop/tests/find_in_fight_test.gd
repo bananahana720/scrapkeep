@@ -25,9 +25,12 @@ const WhyCallout := preload("res://src/ui/why_callout.gd")
 
 const SETTLE := 300
 const HOLD_FRAMES := 300
-# 120 frames of that are the screen's two quiet seconds (screen_busy.gd SETTLE).
-# The banner's card and the ceremony's card now take turns (screen_busy.gd), after the screen's two quiet seconds.
-const OPEN_WITHIN := 900
+# A held card now waits for the screen's two quiet seconds (screen_busy.gd SETTLE, 120 frames, 150 with the
+# process clock lagging the physics one) and then shows within the old 60 frames. The first find has two
+# cards, the banner's and the ceremony's, which take turns, so the second is seen at its own turn.
+const SETTLE_FRAMES := 150
+const OPEN_WITHIN := SETTLE_FRAMES + 60
+const BOTH_WITHIN := 900
 const CALM_WITHIN := 900
 const QUIET_FRAMES := 30
 const STEP_S := 1.0 / 60.0
@@ -56,6 +59,10 @@ var _calm_run := 0
 # ticks can run back to back before the next one, so a close is read after a drawn frame.
 var _drawn := 0
 var _engaged_at := 0
+var _gate_run := 0
+var _opened_reported := false
+var _open_ok := false
+var _again_first := -1
 
 
 func _initialize() -> void:
@@ -203,25 +210,33 @@ func _physics_process(_delta: float) -> bool:
 						and presented.all(func(p: Array): return p[1] in ["common", "rare"]),
 					"common and relic repeats for %d frames in a fight: no card, no pop; tiers %s" % [QUIET_FRAMES, presented.map(func(p: Array): return p[1])])
 				_game.flow.warden._die()
-				# The break ends the fight's pressure; a held card then waits the screen's two quiet seconds.
-				_game.events.pressure_changed.emit(0.0)
-				# Badges and notes the fight raised take their own turns first; this test is about the find card.
+				# Badges and notes the fight raised keep their own turns ahead of the find's; this test is about the find card.
 				_game.hud.clear_achievement_toasts()
+				_clear_crowd()
 				_next("open")
 		"open":
-			if _wait % 120 == 0:
-				var b = _game.ctx.screen_busy
-				print("DBGO w=%d busy=%s fight=%s q=%.1f wait=%s hold=%s cards=%s vcard=%s banner=%s calm=%s paused=%s threat=%s left=%.1f hw=%s" % [_wait, b.busy(), b.fighting(), b._quiet_for, b._waiting, b._holder, _ceremony()._cards.size(), _ceremony().view.card.get("part",""), _banner().showing(), _ceremony().may_show_card(), paused, WhyCallout.threat_live(self), _ceremony().get("_calm_left"), _game.hud.hotwire_screen.is_open()])
 			if _opened < 0 and _card_up():
 				_opened = _wait
 				_marked_early = false
 				_report("held card opens", _ceremony().view.card.get("part", "") == _first or _banner().showing(), "%s opens %d frames after the Warden's break" % [_first, _wait])
-				_report("seen only now", _seen_either(_first), "%s seen in a record at the frame its first card shows (the two cards take turns, so the other is seen when its own shows)" % _first)
+				_report("seen only now", _seen_either(_first), "%s seen in a record at the frame its first card shows" % _first)
 			if _opened < 0 and _seen_either(_first):
 				_marked_early = true
-			if _seen_both(_first) or _wait == OPEN_WITHIN:
-				_report("opens within 60 frames, once", _opened >= 0 and not _marked_early and _banner().cards_shown == _cards_before + 1 and not _fight_on(),
-					"opened at frame %d, seen early %s, banner cards %d (was %d)" % [_opened, _marked_early, _banner().cards_shown, _cards_before])
+			# The gate is the old calm plus the screen's two quiet seconds; the 60 frames count from both holding.
+			if WhyCallout.find_may_speak(_ceremony().get("_calm_left"), self, _game.flow) and _game.ctx.screen_busy.settled():
+				_gate_run += 1
+			else:
+				_gate_run = 0
+			if _wait == BOTH_WITHIN or (_gate_run >= 60 and _opened_reported == false):
+				_opened_reported = true
+				_open_ok = _opened >= 0 and not _marked_early
+			# The world's crowd fights on after the break; its end (pressure back to nothing, as at a stage park) lets the held card in.
+			if _opened >= 0 and not _banner().showing() and _game.ctx.screen_busy.fighting():
+				_game.events.pressure_changed.emit(0.0)
+			if _opened_reported and (_seen_both(_first) or _wait == BOTH_WITHIN):
+				_report("opens within 60 frames, once", _open_ok and _banner().cards_shown == _cards_before + 1 and not _fight_on(),
+					"opened at frame %d (the two quiet seconds, then 60), seen early %s, banner cards %d (was %d)" % [_opened, _marked_early, _banner().cards_shown, _cards_before])
+				_report("the first find's second card takes its turn", _seen_both(_first), "%s seen in both records %d frames after the break" % [_first, _wait])
 				# The first find's cards would hide a regressed repeat card behind them: clear both.
 				_ceremony().view.card = {}
 				_banner().dismiss(false)
@@ -232,8 +247,8 @@ func _physics_process(_delta: float) -> bool:
 				var tiers: Array = _ceremony().presented.slice(tiers_before).map(func(p: Array): return p[1])
 				_report("a repeat out of a fight queues nothing", _ceremony()._cards.is_empty() and _ceremony().queued() == 0 and _banner().queued() == 0
 						and _banner().cards_shown == _cards_before and tiers.size() == 2 and tiers.all(func(t: String): return t in ["common", "rare"]),
-					"common and relic repeats with the Warden dead: ceremony cards %d %s, queue %d, banner queued %d, presented tiers %s, opened at %d"
-						% [_ceremony()._cards.size(), _ceremony()._cards.map(func(f): return f["part"]), _ceremony().queued(), _banner().queued(), tiers, _opened])
+					"common and relic repeats with the Warden dead: ceremony cards %d, queue %d, banner queued %d, presented tiers %s"
+						% [_ceremony()._cards.size(), _ceremony().queued(), _banner().queued(), tiers])
 				_next("repeat_calm")
 		"repeat_calm":
 			var shown: String = _ceremony().view.card.get("part", "")
@@ -283,19 +298,23 @@ func _physics_process(_delta: float) -> bool:
 		"retried_calm":
 			if WhyCallout.find_may_speak(_ceremony().get("_calm_left"), self, _game.flow):
 				_game.hud.clear_achievement_toasts()
+				_clear_crowd()
 				_game.run.add_part(_held[0], "pickup")
 				_next("again")
 			elif _wait == CALM_WITHIN:
 				_report("the retried stage turns calm", false, "still not calm %d frames after a retry" % CALM_WITHIN)
 				return _finish()
+		# A part is seen when its card is shown, so both seen means both cards took their turn, one after the other.
 		"again":
+			if _again_first < 0 and _card_up():
+				_again_first = _wait
 			if _seen_both(_held[0]):
-				_report("the next first find shows its card", _ceremony().view.card.get("part", "") == _held[0] and _seen_both(_held[0]) and not _fight_on(),
-					"%s found out of a fight after the retry shows its card at frame %d and is seen" % [_held[0], _wait])
+				_report("the next first find shows its card", _seen_both(_held[0]) and not _fight_on() and _again_first >= 0 and _again_first <= OPEN_WITHIN,
+					"%s found out of a fight after the retry shows its first card at frame %d (within %d) and both are seen at %d" % [_held[0], _again_first, OPEN_WITHIN, _wait])
 				_engage()
 				_engaged_at = _drawn
 				_next("engaged")
-			if _wait == OPEN_WITHIN:
+			if _wait == BOTH_WITHIN:
 				_report("the next first find shows its card", false, "no card for %s within %d frames out of a fight" % [_held[0], OPEN_WITHIN])
 				return _finish()
 		"engaged":
@@ -336,6 +355,15 @@ func _physics_process(_delta: float) -> bool:
 					% [Flow.VICTORY_SECONDS, _ceremony().queued(), _ceremony().calm(), _game.flow.state_name(), _game.player.ball_position(), _game.player.state.grounded])
 				return _finish()
 	return false
+
+
+# The Warden's crowd still fights on in this stage; the card rule is about a quiet screen, so the
+# test clears the stage's enemies (as its boss check does) and the fight's pressure.
+func _clear_crowd() -> void:
+	for node in get_nodes_in_group("enemy"):
+		if node != _game.flow.warden:
+			node.queue_free()
+	_game.events.pressure_changed.emit(0.0)
 
 
 func _seen_either(part: String) -> bool:

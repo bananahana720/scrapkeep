@@ -40,6 +40,8 @@ func setup(ctx) -> void:
 	events.fight_phase_changed.connect(func(_id: String, _phase: int, _phases: int): _phase_fight = true)
 	events.boss_arena_entered.connect(func(): _arena_fight = true)
 	events.boss_defeated.connect(_end_fights)
+	# A Warden's break ends its fight whatever the crowd's pressure is still doing (flow._unseal).
+	events.beacon_unsealed.connect(func(_stage: int): _end_fights())
 	events.run_started.connect(func(_class_id: String): _end_fights(); drop_all())
 	events.stage_entered.connect(func(_stage: int, _retry: bool): _end_fights())
 	events.run_ended.connect(func(_won: bool): drop_all())
@@ -78,6 +80,11 @@ func busy() -> bool:
 		if source.call():
 			return true
 	return false
+
+
+# The screen is not busy and has been quiet for SETTLE seconds: a ready card would be let on.
+func settled() -> bool:
+	return _quiet_for >= SETTLE and not busy()
 
 
 # A card that wants the screen joins the line, oldest first.

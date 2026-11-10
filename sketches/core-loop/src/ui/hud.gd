@@ -619,6 +619,8 @@ func take_found(take_name: String, station_name: String, tier := "take") -> void
 
 # The ending owns the screen: no achievement toast waits for it or shows over it.
 func clear_achievement_toasts() -> void:
+	for card in _cards:
+		_free_slot(card["key"])
 	_cards.clear()
 	if not _ach_entry.is_empty():
 		_free_slot(_ach_entry["key"])
