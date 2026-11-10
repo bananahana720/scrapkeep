@@ -1,6 +1,6 @@
 # Start here
 
-Coordination runs from one local Claude Code session on Andrew's PC (since 10 Nov 2026, ruling cs). That session is the coordinator and the Gate: it talks to Andrew, stacks and promotes, runs the full gate on the PC, writes sequential changes itself and gives disjoint units to writer agents in their own worktrees. The claude.ai project "Scrapkeep" coordinated from 23 Oct to 10 Nov, and its threads stopped at the handoff posted on the wave 34 board (10 Nov, 17:05Z).
+Coordination runs from one local Claude Code session on Andrew's PC (since 10 Nov 2026, ruling cs). That session is the coordinator and the Gate: it talks to Andrew, stacks and promotes, runs the full gate on the PC, writes sequential changes itself and gives disjoint units to writer agents in their own worktrees. The claude.ai project "Scrapkeep" coordinated from 23 Oct to 10 Nov, and its threads stopped at the handoff posted on the wave 34 board (10 Nov, 16:33Z).
 
 **On the PC there is no `/mnt/project-files`.** Where a page names a path under it, use the PC stand-in: gate plans and receipts are under `~/scratch/gate/`, the coordinator's briefs and notes under `~/scratch/world1/`, and the repo copies under [shared/](shared/) (the tone bible, the sitting watch list). The Claude Doc and shared-folder copies of DECISIONS.md are frozen at ruling cr; the repo file is the register. A row below that says "project thread" describes how the project ran, kept for a session that works there again.
 
