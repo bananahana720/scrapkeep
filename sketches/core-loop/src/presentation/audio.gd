@@ -742,7 +742,7 @@ var _live_frame := -1
 
 func _tend_mix(delta: float) -> void:
 	var state := mix_state()
-	var focus := clock < _focus_until
+	var focus := clock < _focus_until or _slowed
 	var moved := false
 	for bus in BUSES:
 		var want := MixRows.state_db(state, bus) + (float(MixRows.FOCUS.get(bus, 0.0)) if focus else 0.0)
@@ -777,6 +777,22 @@ func _is_telegraph(kind: String, sound: String) -> bool:
 
 func _focus() -> void:
 	_focus_until = clock + float(MixRows.FOCUS["hold_s"])
+
+
+# The world slows for a close-up and comes back (game.slow_motion): a falling sweep as it slows,
+# the music and the ambience held under it as they are for a warning, and a rising sweep as the
+# speed returns. A pause lifts the slow motion without a sound, and the fall sounds again when
+# play resumes inside the window. A game torn down mid-window has left the tree: no sound.
+const SLOW_KIND := "slow_motion"
+var _slowed := false
+
+
+func slowed(on: bool) -> void:
+	if on == _slowed:
+		return
+	_slowed = on
+	if is_inside_tree() and not get_tree().paused:
+		play(SLOW_KIND, 0.0, 1.0, "SFX", "slow_dip" if on else "slow_rise")
 
 
 func _generator_player(bus: String, node_name: String) -> AudioStreamPlayer:

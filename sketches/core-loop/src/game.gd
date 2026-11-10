@@ -712,7 +712,8 @@ func _end_hit_stop() -> void:
 # when (flourish_cues.gd, the close-up at Brindle's entrance, ruling cf) and keeps it to a hand
 # on the controls, so no bot's run or band sees it. It multiplies whatever scale a tool set, and
 # a hit stop inside it lifts back to the slowed speed. Music runs on its own sample clock and
-# does not slow. Physics keeps its 90 ticks a second of wall time (each tick's delta is what
+# does not slow; the sound director is told, and marks the slowing and the return (audio.gd
+# slowed). Physics keeps its 90 ticks a second of wall time (each tick's delta is what
 # shrinks), so motion is drawn as often as at full speed and the smoothing setting is untouched.
 func slow_motion(scale: float) -> void:
 	scale = clampf(scale, SLOW_MOTION_FLOOR, 1.0)
@@ -724,6 +725,8 @@ func slow_motion(scale: float) -> void:
 		_scale_before_stop = base * scale
 	else:
 		Engine.time_scale = base * scale
+	if audio() != null:
+		audio().slowed(scale < 1.0)
 
 
 func toggle_interpolation() -> bool:

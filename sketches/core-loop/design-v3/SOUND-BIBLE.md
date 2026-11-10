@@ -40,6 +40,7 @@ So the score is one set, and the player is the room the DJ is reading. Every mov
 | Build | The Warden's guard near breaking (three quarters gone) plays the tight build | The recorded band, with the Warden form |
 | Hold the breath: pull the drums and bass, close the filter | A stagger; the Warden's break | The recorded band, with the Warden form |
 | Drop | The pilot's hit that shatters a chunk, on the next beat | The recorded band, with the Warden form |
+| Pull the room down for a held moment | The world slows for a close-up (Brindle's entrance): a falling sweep in, the music and the ambience held under it, a rising sweep out | Plays today, for a hand on the controls |
 | Mix the next record in on the bar | Zone, fight and moment changes enter on a bar or a beat | Plays today |
 | Mix in key | Each world has one key (D, E, G) and each pack declares it | Declared; not checked when a pack is swapped |
 | Ride the filter into a drop, pump the chords against the kick, tape stop, switch-hit | A set piece's lead time, a kill chain, the last phase | After the world 1 sitting |
@@ -84,6 +85,7 @@ He gave the threads their own judgement on mechanics and tuning for this build-o
 - The held breath and the drop keep the lead even at low armour. Low armour's missing lead is a warning everywhere else; in the breath it would be silence.
 - The Warden's fight takes the band from an event's tune that is still playing when it engages (the flood, a squall). Before, the event's tune played the whole fight and the Warden's music was never heard. An event that begins inside the fight does not start its tune.
 - After an ultimate's drop the recorded band comes back (it used to stay off for the rest of the stage, leaving the stand-in band). In a Warden fight it comes back to the fight's build, not to where it left.
+- Slow motion is marked at both ends, quietly and above 200 Hz, and the music neither slows nor filters: it is held 3 dB under, as it is for a warning. A tape stop on the band itself waits for after the sitting.
 - The Cannon keeps its bent chime and has no mouth: it is a machine on the crew's side.
 - Moss sounds the same at his bench as on a call.
 - Kest's kick reads a tenth of a decibel over the peak line after its trim. It is left alone: the limiter holds it, and lowering it would change how loud it is.
