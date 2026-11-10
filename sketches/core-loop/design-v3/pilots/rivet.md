@@ -317,7 +317,7 @@ Two first-time cards in the combat codex's shape (`src/combat/codex_entries.gd:1
 
 | id | Name | Hint | Clue | Text | Fires when |
 | --- | --- | --- | --- | --- | --- |
-| `rivet_line_drive` | Line Drive | The cable carries more than you. | Rivet + slot 3 + a line on a machine | Pick 3 and click with a line on a machine: the winch kicks force down the cable and throws it into whatever stands behind. On a wall, the winch hauls you in and nothing can hold you. With no line, the next bite carries it. | the first punch that pins a second machine |
+| `rivet_line_drive` | Line Drive | The cable carries more than you. | Rivet + slot 3 + a line on a machine | Pick 3 and click with a line on a machine: the winch throws it into whatever stands behind. On a wall it hauls you in and nothing holds you. With no line, the next bite carries it. | the first punch that pins a second machine |
 | `rivet_foundry_cutter` | Foundry Cutter | Measured twice. Firing once. | Rivet + a full ring + Q | Q drives you from here to where you aim. The lens cuts wherever you look, on every beat. The middle beat sweeps wide. The landing skids on, and you keep the speed. | the first Rivet set piece whose beam cuts 3 or more machines |
 
 The hint for the cutter is Rivet's own bark (`BIBLE.md:371`). The framework's shared rows (`loaded_line`, `set_piece`, `set_piece_core`, `set_piece_cash_in`, `set_piece_breakout`) also fire for Rivet.

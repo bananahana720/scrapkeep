@@ -4,17 +4,21 @@ const Banner := preload("res://src/presentation/codex_banner.gd")
 const UiProfile := preload("res://src/ui/ui_profile.gd")
 const ScreenRegions := preload("res://src/ui/screen_regions.gd")
 const Hud := preload("res://src/ui/hud.gd")
+const CombatCodex := preload("res://src/combat/codex_entries.gd")
+const BossCodex := preload("res://src/boss/codex_entries.gd")
 
 # The first-discovery card is the bigger ceremony: at least twice the flag-off banner's
 # height, on the right of the middle view, clear of the top, prompts and bottom bands,
 # the HUD toast column and the centre play rect. The banner keeps the
 # rect it had at base 39b0f3f (measured there, at 1600x900, line LINE). A long line (the
 # Soaked card's, which a player's-eye film caught cut off at "lands as...") shows whole in
-# the same card, and holds longer for its extra words.
+# the same card, and holds longer for its extra words. Every codex text fits the card whole.
 
 const DIR := "user://discovery_card_size_test/"
 const LINE := "Ram fast and everything ahead of you breaks."
 const LONG_LINE := "Spillway crews come out of the channel soaked: arc hits them for 150% (ZZAP!). Everything else lands as normal."
+# Line Drive's text before it was shortened: nine lines on the card, so the fit check can fail.
+const OVER_LINE := "Pick 3 and click with a line on a machine: the winch kicks force down the cable and throws it into whatever stands behind. On a wall, the winch hauls you in and nothing can hold you. With no line, the next bite carries it."
 const SCREEN := Vector2(1600.0, 900.0)
 # Measured at base 39b0f3f.
 const BASE_BANNER_SIZE := Vector2(360.0, 121.0)
@@ -110,6 +114,16 @@ func _process(_delta: float) -> bool:
 			_check("a short line holds as before", is_equal_approx(short_hold, Banner.CARD_HOLD), "%.2f s vs %.2f" % [short_hold, Banner.CARD_HOLD])
 			_check("the long line holds longer, under the cap", _cards._hold > short_hold and _cards._hold <= Banner.CARD_HOLD_MAX and is_equal_approx(_cards._hold, Banner.card_hold(LONG_LINE)), "%.2f s (short %.2f, cap %.2f)" % [_cards._hold, short_hold, Banner.CARD_HOLD_MAX])
 			_check("no line holds past the cap", is_equal_approx(Banner.card_hold(LONG_LINE + " " + LONG_LINE + " " + LONG_LINE), Banner.CARD_HOLD_MAX), "%.2f s" % Banner.card_hold(LONG_LINE + " " + LONG_LINE + " " + LONG_LINE))
+			# Every codex text is written to fit the card whole, so none is cut with an ellipsis.
+			var over := []
+			var entries: Array = CombatCodex.ENTRIES + BossCodex.ENTRIES + BossCodex.WAKING + BossCodex.MIND
+			for entry in entries:
+				body.text = entry["text"]
+				if body.get_line_count() > Banner.CARD_LINES:
+					over.append(entry["id"])
+			body.text = OVER_LINE
+			_check("every codex text fits the card whole", over.is_empty() and entries.size() > 80 and body.get_line_count() > Banner.CARD_LINES,
+				"%d texts, over %d lines: %s; the old Line Drive text counts %d" % [entries.size(), Banner.CARD_LINES, over, body.get_line_count()])
 			DirAccess.remove_absolute(DIR + UiProfile.FILE)
 			DirAccess.remove_absolute(DIR)
 			print("discovery_card_size_test: %s" % ("PASS" if _failures == 0 else "FAIL (%d)" % _failures))

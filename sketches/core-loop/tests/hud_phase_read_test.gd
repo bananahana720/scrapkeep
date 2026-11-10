@@ -5,7 +5,9 @@ const BuildRead := preload("res://src/ui/build_read.gd")
 const BossPosture := preload("res://src/combat/boss_posture.gd")
 const Game := preload("res://src/game.gd")
 const Harness := preload("res://tests/doubles/boss_harness.gd")
+const EdgeMarkers := preload("res://src/ui/edge_markers.gd")
 const Intent := preload("res://src/movement/intent.gd")
+const Objectives := preload("res://src/core/objectives.gd")
 const Panels := preload("res://src/build/panels.gd")
 const StageDefs := preload("res://src/core/stage_defs.gd")
 const T := preload("res://tests/support/t.gd")
@@ -22,6 +24,10 @@ const T := preload("res://tests/support/t.gd")
 #       the top band, the diamonds clear of the objective plate under it;
 #   P5  the objective plate under it names each phase's verb: the crane magnets, the vent
 #       caps, the baited charge, the open cockpit on a stagger or a stun, and the scooter on the eject;
+#       while a Scuttle charge is committed the plate keeps the charge's row through a stagger;
+#   P6  the markers point at what the row names: each crane magnet, each vent cap, the cockpit
+#       while the plate names it, the scooter, and nothing while the row is the baited charge;
+#       a target in view keeps a small marker over it, one out of view goes to the edge;
 #   R1  the pause build read with all twelve panels held (a long list) sits on screen, left of
 #       the pause column and clear of it, at 1280x720 and 1920x1080, and so does the empty read;
 #       on a short screen the turning view shrinks (to VIEW_MIN at least) and the read stays on screen.
@@ -147,11 +153,16 @@ func _arena_checks() -> void:
 	_t.check("P4 the plate reads Brindle's own phases", plate._phases == boss._phases and plate.phase_count() == 3, "%s" % plate.phase_count())
 	_t.eq("P4 phase one lit, no crack", [plate.phase_pips(), plate.turn_age() < 0.0], [["live", "ahead", "ahead"], true])
 	_t.eq("P5 phase one: the plate names the crane magnets", _plate_row(), ["shoot_magnets", "Shoot the crane magnets"])
+	_t.eq("P6 phase one: a marker for each crane magnet, in the row's glyph", _marks(),
+		[boss.ship.magnets.map(func(m): return m.global_position), Objectives.glyph("shoot_magnets")])
+	_marker_checks(boss.ship.magnets[0].global_position)
 	boss.jump_to_phase(2)
 	_t.eq("P5 phase two: the vent caps", _plate_row(), ["slam_caps", "Slam the vent caps"])
+	_t.eq("P6 phase two: a marker for each vent cap", [_marks()[0], boss.ship.caps.size()], [boss.ship.caps.map(func(c): return c.global_position), 3])
 	# A stagger opens the cockpit in any phase, and the weak points pay nothing through it.
 	boss._posture.staggered = true
 	_t.eq("P5 a stagger in phase two names the open cockpit", [boss.staggered(), _plate_row()], [true, ["hit_cockpit", "Hit the open cockpit"]])
+	_t.eq("P6 and the one marker moves to the cockpit", _marks(), [[boss.ship.cockpit_point()], Objectives.glyph("hit_cockpit")])
 	boss._posture.staggered = false
 	_t.eq("P5 and the caps come back when it ends", _plate_row(), ["slam_caps", "Slam the vent caps"])
 	plate.advance(0.016)
@@ -172,6 +183,42 @@ func _plate_row() -> Array:
 	return [reading["id"], reading["words"]]
 
 
+# What the markers point at for the row the plate shows now: the places, and the glyph they wear
+# ("" when there is none). The HUD hands the markers the row each frame; here it is handed over.
+func _marks() -> Array:
+	var markers = _game.hud.edge_markers
+	markers.objective_id = _plate_row()[0]
+	var targets: Array = markers.targets()
+	var same := targets.all(func(t): return t["kind"] == "boss_arena_entered" and t["mark"] and t["icon"] == targets[0]["icon"])
+	return [targets.map(func(t): return t["at"]), targets[0]["icon"] if same and not targets.is_empty() else ""]
+
+
+# One target looked at from 20 m keeps a small marker over it, pointing down; with the camera turned
+# away the same target goes to the edge of the play view as any marker does.
+func _marker_checks(at: Vector3) -> void:
+	var markers = _game.hud.edge_markers
+	var cam: Camera3D = _game.camera.cam
+	var size: Vector2 = cam.get_viewport().get_visible_rect().size
+	var was := cam.global_transform
+	cam.look_at_from_position(at + Vector3(0.0, 0.0, 20.0), at)
+	var over: Array = markers.markers(size).filter(func(m): return m["dir"] == Vector2.DOWN and is_equal_approx(m["size"], EdgeMarkers.MARK_SIZE))
+	var want: Vector2 = cam.unproject_position(at) + Vector2.UP * EdgeMarkers.MARK_GAP
+	_t.check("P6 a target in view keeps a small marker over it, pointing down", over.any(func(m): return m["at"].distance_to(want) < 0.5),
+		"markers %s, wanted one at %s" % [markers.markers(size), want])
+	cam.look_at_from_position(at + Vector3(0.0, 0.0, 20.0), at + Vector3(0.0, 0.0, 40.0))
+	var away: Array = markers.markers(size)
+	var view: Rect2 = EdgeMarkers.view_rect(size)
+	_t.check("P6 out of view, every target goes to the edge of the play view", away.size() == markers.targets().size()
+			and away.all(func(m): return m["size"] > EdgeMarkers.MARK_SIZE and _on_rim(view, m["at"])), "markers %s" % [away])
+	cam.global_transform = was
+
+
+static func _on_rim(view: Rect2, at: Vector2) -> bool:
+	var on_side := absf(at.x - view.position.x) < 1.0 or absf(at.x - view.end.x) < 1.0
+	var on_end := absf(at.y - view.position.y) < 1.0 or absf(at.y - view.end.y) < 1.0
+	return view.grow(1.0).has_point(at) and (on_side or on_end)
+
+
 # Last, since the stun and the eject leave the fight where no other check wants it.
 func _late_phase_rows() -> void:
 	var boss = _game.boss
@@ -179,10 +226,24 @@ func _late_phase_rows() -> void:
 		return
 	boss.jump_to_phase(3)
 	_t.eq("P5 phase three: bait the charge", _plate_row(), ["bait_charge", "Bait his charge into walls"])
+	_t.eq("P6 a baited charge names no one place, so nothing is marked", _marks(), [[], ""])
+	boss._posture.staggered = true
+	_t.eq("P5 a stagger between charges names the open cockpit", [boss.charge_coming(), _plate_row()], [false, ["hit_cockpit", "Hit the open cockpit"]])
+	# A stagger does not hold a Scuttle charge back. From the commit (the lane's tell) to the end of
+	# the run the plate keeps the charge's row, and no marker sends the player at the cockpit.
+	boss._commit_charge(_game.player.ball_position())
+	_t.eq("P5 a charge committed through the stagger keeps the charge's row", [boss.staggered(), boss.charge_coming(), _plate_row()],
+		[true, true, ["bait_charge", "Bait his charge into walls"]])
+	_t.eq("P6 and marks nothing", _marks(), [[], ""])
+	boss._charge["state"] = boss.CHARGE_RUN
+	_t.eq("P5 and through the run", [boss.charging(), _plate_row()], [true, ["bait_charge", "Bait his charge into walls"]])
+	boss._posture.staggered = false
 	boss._stun(2.0)
-	_t.eq("P5 a stun opens the cockpit on the plate", _plate_row(), ["hit_cockpit", "Hit the open cockpit"])
+	_t.eq("P5 a stun opens the cockpit on the plate", [boss.charge_coming(), _plate_row()], [false, ["hit_cockpit", "Hit the open cockpit"]])
+	_t.eq("P6 with its marker", _marks(), [[boss.ship.cockpit_point()], Objectives.glyph("hit_cockpit")])
 	boss._begin_eject()
 	_t.eq("P5 the eject names the scooter", _plate_row(), ["ram_scooter", "Ram the Admiral's scooter"])
+	_t.eq("P6 and the marker follows the scooter", _marks(), [[boss.scooter.global_position], Objectives.glyph("ram_scooter")])
 
 
 func _pause_checks() -> void:

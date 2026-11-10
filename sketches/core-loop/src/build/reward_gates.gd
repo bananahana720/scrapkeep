@@ -312,8 +312,8 @@ static func glyph_ids(offer: Dictionary) -> Array:
 		.filter(func(id): return id != "")
 
 
-# The prompt's structured parts: the name (at most three words) at range, and within
-# reach the verb with its punch, the effect line and the star line.
+# The prompt's structured parts: the name (at most three words), and under it the verb with
+# its punch, the effect line and the star line.
 static func prompt_parts(offer: Dictionary) -> Dictionary:
 	var words: PackedStringArray = String(offer.get("name", "")).split(" ", false)
 	var title := " ".join(words.slice(0, WorldPrompt.TITLE_WORDS))
@@ -385,6 +385,9 @@ func _build_gate(at: Vector3, facing: Vector3, offer: Dictionary) -> Node3D:
 	label.set_parts(parts["title"], parts["detail"], parts["icon"])
 	label.add_theme_color_override("font_color", tint.lerp(Color.WHITE, 0.25))
 	label.attach(gate, Vector3(0.0, HEIGHT + 1.2, 0.0), PROMPT_REACH)
+	# A gate is chosen by steering at it, long before the ball is beside it, so what each gives
+	# shows as far as its name does.
+	label.detail_range = PROMPT_REACH
 	gate.add_child(label)
 	return gate
 
