@@ -10,7 +10,7 @@ const Icons := preload("res://src/ui/icons.gd")
 const FILES := {
 	"res://src/ui/hud.gd": {
 		"cog": ['const ICON := "res_scrap"'],
-		"mass": ['Gauge.new("res_mass", ARMOR_BAR, true)'],
+		"mass": ['Gauge.new("res_mass", ARMOR_BAR, true, ARMOR_WORD)'],
 	},
 	"res://src/ui/growth_sheet.gd": {
 		"cog": ['draw_texture_rect(Icons.texture("res_scrap"), Rect2(rect.get_center()'],

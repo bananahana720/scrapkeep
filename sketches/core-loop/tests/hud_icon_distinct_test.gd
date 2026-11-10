@@ -21,7 +21,11 @@ const WordBudget := preload("res://src/ui/word_budget.gd")
 # the drive lesson (ui/first_steps.gd), the four drive keycaps and DRIVE at the ball.
 # Re-pinned 16 -> 17 on 2026-10-24 (#445, actives on by default): the racked active's F chip
 # adds its keycap word. The fight-case budget stays 25 (ruling l).
-const HUD_WORDS := 17
+# Re-pinned 17 -> 20 on 2026-11-10 (play finding PF-02): the health and armour bars each carry
+# their word (ui/gauge.gd caption) and the difficulty steps theirs (ui/run_status.gd). Blind
+# readers took the difficulty bar for health, the armour bar for a resource and the steps for
+# a signal meter; the three words are what the reads asked for. The budget stays 25.
+const HUD_WORDS := 20
 
 var _game
 var _frames := 0
@@ -61,6 +65,9 @@ func _process(_delta: float) -> bool:
 	var mass_color: Color = EventKinds.color("scrap_collected")
 	var words: int = WordBudget.count(hud)["hud"]
 	_report("no new HUD words", words == HUD_WORDS, "%d words, pinned %d" % [words, HUD_WORDS])
+	_report("each meter says what it holds", Array(hud._health.drawn_words()).has("HEALTH") and Array(gauge.drawn_words()).has("ARMOUR")
+			and Array(hud._status.drawn_words()).has("THREAT"),
+		"health %s, armour %s, plate %s" % [hud._health.drawn_words(), gauge.drawn_words(), hud._status.drawn_words()])
 	_report("gauge and chip icons differ", gauge.icon_id == "res_mass" and gauge.icon_id != chip.ICON
 			and Icons.glyph_of(gauge.icon_id) != Icons.glyph_of(chip.ICON),
 		"gauge %s (%s), chip %s (%s)" % [gauge.icon_id, Icons.glyph_of(gauge.icon_id), chip.ICON, Icons.glyph_of(chip.ICON)])
