@@ -42,7 +42,7 @@ Ten situations. Each has one source table.
 
 | Situation | What it shows | Where | Source table |
 | --- | --- | --- | --- |
-| A verb is available (the press would succeed this tick) | A sand keycap plus the verb's glyph in the live colour. One word rides it until that verb's first success on the profile. At most two prompts at once. | At the thing the verb acts on | `src/core/bindings.gd` `VERBS` |
+| A verb is available (the press would succeed this tick) | A sand keycap plus the verb's glyph in the live colour. One word rides it until that verb's first success on the profile; E and Space, whose reading changes with the ball's state (mount and dismount; jump, double jump and slingshot), say that reading until the prompt first retires. At most two prompts at once. | At the thing the verb acts on | `src/core/bindings.gd` `VERBS` |
 | A target can be hooked | Live corner brackets close on it and its cap pulses at 2 Hz. Out of range is a hollow slate ring with no sound. | On the target, mirrored by the reticle | `event_kinds.gd` `LINE_ROWS` |
 | Something is active on you | A persistent object and a loop sound for as long as it is true: the taut cable and its hum for your line, a hazard binding line and a creak for a hostile hold, flakes and a rasp for wear | On the ball and along the line to the cause | `LINE_ROWS`, `STATE_ROWS` |
 | A target is in a state | On the struck part: barb and collar for latched, a live rim and crack for will-break or open, slate for glancing, a flipped pose and star for interrupted. No floor rings. | On the enemy body. On the Warden, repeated once as the plate's state glyph. | `STATE_ROWS` |

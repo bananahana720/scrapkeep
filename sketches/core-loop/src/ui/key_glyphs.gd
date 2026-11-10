@@ -39,6 +39,10 @@ const BALL_VERBS := ["boost", "interact", "jump"]
 const RETICLE_VERBS := ["ultimate"]
 const LETGO := "letgo"
 const LETGO_WORD := "LET GO"
+# The verbs whose prompt says what the key does where the ball is, and the one reading the
+# bindings table words for the code and not for a player: E off the pylon mounts it.
+const READ_ALOUD := ["interact", "jump"]
+const READ_AS := {"interact": "mount"}
 const ULTIMATE_WORD := "ULTIMATE"
 const MAX_PROMPTS := 2
 const RETIRE_AFTER := {"harpoon": 3, "haul": 3, "smash": 5, "boost": 3, "interact": 3, "jump": 3, "letgo": 3, "ultimate": 3}
@@ -160,14 +164,20 @@ func icon_of(verb: String, line: String) -> String:
 	return Bindings.icon(verb)
 
 
-# The word riding a prompt: HOOK until the first bite on the profile, SMASH until the first smash.
-func word_for(verb: String, line: String) -> String:
+# The word riding a prompt: HOOK until the first bite on the profile, SMASH until the first smash,
+# and for E and Space what the key does in the ball's `state` (the bindings table's reading) until
+# the prompt first retires. A keycap and an icon alone told a new player nothing (player's-eye
+# pass, 10 Nov 2026).
+func word_for(verb: String, line: String, state := "") -> String:
 	if verb == "harpoon" and profile.uses("harpoon") == 0:
 		return EventKinds.LINE_ROWS["locked"]["word"]
 	if verb == "haul" and line == "body" and profile.uses("smash") == 0:
 		return EventKinds.LINE_ROWS["latched_body"]["word"]
 	if verb == "ultimate" and profile.uses("ultimate") < RETIRE_AFTER["ultimate"]:
 		return ULTIMATE_WORD
+	if verb in READ_ALOUD and profile.uses(verb) < RETIRE_AFTER[verb]:
+		var reading := Bindings.reading(verb, state)
+		return String(READ_AS.get(reading, reading)).to_upper()
 	return ""
 
 
@@ -249,7 +259,7 @@ func step(delta: float, view: Dictionary) -> void:
 		if not open:
 			continue
 		if _first[verb] or _forced[verb] > 0.0 or _revived[verb] or not retired(verb, line) or (verb == "jump" and vault_open):
-			candidates.append({"verb": verb, "state": _state_of(verb, view), "word": word_for(verb, line)})
+			candidates.append({"verb": verb, "state": _state_of(verb, view), "word": word_for(verb, line, _state_of(verb, view))})
 	if line == "world" and _letgo_latch >= 1 and _letgo_latch <= RETIRE_AFTER[LETGO]:
 		candidates.append({"verb": LETGO, "state": _state_of("haul", view), "word": LETGO_WORD})
 	candidates.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
