@@ -65,7 +65,12 @@ function glb(tris, { clips = [], weights = null, more = null, body = {}, skin = 
       ? keys.flatMap((degrees) => [0, Math.sin((degrees * Math.PI) / 360), 0, Math.cos((degrees * Math.PI) / 360)])
       : keys.flatMap((metres) => [metres, 0, 0]);
     const input = accessor(view(times), { count: times.length, type: "SCALAR", min: [0], max: [times.at(-1)] });
-    const output = accessor(view(values), { count: times.length, type: clip.degrees ? "VEC4" : "VEC3" });
+    // A cubic spline stores an in-tangent, the value and an out-tangent for every key.
+    const width = clip.degrees ? 4 : 3;
+    const stored = clip.interpolation === "CUBICSPLINE"
+      ? keys.flatMap((_, key) => [...new Array(width).fill(0), ...values.slice(key * width, (key + 1) * width), ...new Array(width).fill(0)])
+      : values;
+    const output = accessor(view(stored), { count: stored.length / width, type: clip.degrees ? "VEC4" : "VEC3" });
     return {
       name: clip.name,
       samplers: [{ input, output, interpolation: clip.interpolation ?? "LINEAR" }],
@@ -193,6 +198,16 @@ test("faults: skin weights that do not sum to 1 are counted, and the ones that s
   assert.equal(row.over4, 0);
 });
 
+test("faults: a skinned box carried by its joint stays sound, and a planted flip still shows", { skip: !numpy && "python3 has no numpy" }, (t) => {
+  const f = fixture(t);
+  const skin = { translation: [6, 2, -3] };
+  const [sound] = f.faults(f.write("skinned.glb", glb(box(1, 2, 1), { skin }))).rows;
+  assert.equal(sound.flipped, 0);
+  assert.equal(sound.bad_weights, 0);
+  const [planted] = f.faults(f.write("skinned-planted.glb", glb([...box(1, 2, 1), tri(5, DOWN)], { skin }))).rows;
+  assert.equal(planted.flipped, 1);
+});
+
 test("faults: a fifth influence is counted", { skip: !numpy && "python3 has no numpy" }, (t) => {
   const f = fixture(t);
   const weights = [[0.25, 0.25, 0.25, 0.25], [0.2, 0.2, 0.2, 0.2], [1, 0, 0, 0]];
@@ -210,10 +225,13 @@ test("faults: a one-frame jump is a snap, and a STEP sampler marks it held", { s
     { name: "beat", node: "Head", degrees: jump, interpolation: "STEP" },
     { name: "lurch", node: "Hull", metres: [0, 0.01, 0.02, 0.52, 0.53, 0.54] },
     { name: "dash", node: "Cart", metres: [0, 0.5, 1, 1.5, 2, 2.5] },
+    { name: "whip", node: "Tail", degrees: jump, interpolation: "CUBICSPLINE" },
   ] }));
   const { rows, stdout } = f.faults(file);
   const snaps = rows[0].snaps;
-  assert.equal(snaps.length, 3, "the even 15 m/s dash is a fast move, not a snap");
+  assert.equal(snaps.length, 4, "the even 15 m/s dash is a fast move, not a snap");
+  const whip = snaps.find((snap) => snap.clip === "whip");
+  assert.ok(Math.abs(whip.speed - 5100) < 1, `a cubic spline's values are read from between its tangents: ${whip.speed}`);
   const cast = snaps.find((snap) => snap.clip === "cast");
   assert.deepEqual({ node: cast.node, path: cast.path, t: cast.t, unit: cast.unit, held: cast.held },
     { node: "Hand", path: "rotation", t: 0.067, unit: "deg/s", held: false });

@@ -24,8 +24,8 @@ faults, per file (rest pose, world space):
                not tested. A number cannot tell style from fault: check the clip's pose table for keys one frame
                apart and draw the frames (tools/anim_clip_capture.gd) before calling one a pop.
 
-A skinned surface is placed by its joints in their rest pose, as glTF says, and a mirrored node's winding is
-reversed, so both read as the game draws them.
+A skinned surface is placed by its joints in their rest pose (the first four influences; its normals turn with
+the blended joints, which is exact unless a joint is scaled unevenly), and a mirrored node's winding is reversed.
 
 outlines: each model as a filled black outline from the play camera's side (orthographic, `pitch` down, `yaw`
 round), feet on a shared ground point, at `ppm` pixels a metre. 32 is a 1080p frame through a 60 degree lens from
