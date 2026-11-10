@@ -58,7 +58,7 @@ The rules of orchestration, each with what enforces it today.
 
 ### How it is checked
 
-A rule that cannot be checked is a wish. Each bank sound is bounced and measured for the faults a level meter cannot see (a click, a cut-off tail, a flat top, silence before the sound, the strongest note against its register, near twins), and every flagged sound is read as a picture before it is called a fault. The tools and their first run are in the project files under `music/soundcheck/`; a test in the game's own suite for the cheap rules, and checks with the band playing (a cue heard over the roaming and fight bands, cues that sum on one frame), are owed. The recorded packs are checked on the PC for loudness, peaks, start point, bar length and key.
+A rule that cannot be checked is a wish. Each bank sound is bounced and measured for the faults a level meter cannot see (a click, a cut-off tail, a flat top, silence before the sound, the strongest note against its register, near twins), and every flagged sound is read as a picture before it is called a fault. The tools and their first run are in the project files under `music/soundcheck/`. The faults that need no picture are a test in the game's own suite (`tests/sound_edges_test.gd`): no bank sound, event cue or talking voice is silent, starts loud or stops mid-wave, and every sound the game loops meets its own start; the sounds let through are listed in the test with why, and a row that stops being needed fails it. Checks with the band playing (a cue heard over the roaming and fight bands, cues that sum on one frame) are owed. The recorded packs are checked on the PC for loudness, peaks, start point, bar length and key.
 
 ### Adding a world
 

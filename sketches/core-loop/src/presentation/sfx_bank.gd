@@ -665,10 +665,16 @@ static func _pcm16(data: PackedByteArray, stereo: bool) -> PackedFloat32Array:
 	return out
 
 
+# Every id the game plays as a loop, through loop_stream or hum_stream. A looped sound is held
+# to a seam that tiles, not to ends at rest (tests/sound_edges_test.gd).
+const LOOPED := ["line_hum", "panel_cache", "find_drip", "find_radio",
+	"foreman_presence", "dispatcher_presence", "splitter_presence", "linker_presence"]
+
 # A presence loop: the file as a forward-looping stream, whole file as the loop. It copies the
 # stream the bake already encoded (bake_all), so a special's first spawn does not encode its
 # two-bar loop again on the main thread (12-14 ms at the Dispatcher's first spawn on the cloud).
 static func loop_stream(id: String) -> AudioStreamWAV:
+	assert(id in LOOPED, "a looped sound must be listed in SfxBank.LOOPED: " + id)
 	var key := id + "@loop"
 	if _cache_has(_streams, key):
 		return _cache_get(_streams, key)
