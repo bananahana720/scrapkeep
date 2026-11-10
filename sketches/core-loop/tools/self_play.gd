@@ -75,7 +75,7 @@ extends Node
 # "self-play: menus stalled in '<state>' at <s> s" (quit 3).
 # "self-play: stage <n> exit taken at <s> s", "self-play: done at <s> s". With --self-play-watch=1 also
 # "self-play: boss arena entered at <s> s", "self-play: boss defeated at <s> s" and
-# "self-play: watch stuck=<n> hung=<n> wedged=<n> fell=<n> objectives=<n> blank_max=<s> stages=<list>"
+# "self-play: watch stuck=<n> hung=<n> wedged=<n> fell=<n> objectives=<n> blank_max=<s> bar_off_max=<s> stages=<list>"
 # and "self-play: skills slot2=<n> slot3=<n> set_pieces=<n>" (casts of the skill bar's slots 2 and 3, set pieces fired).
 # Quit codes: 0 goal reached, 1 the run ended first or no Continue was offered, 2 bad flag, a pilot the keys cannot pick, or no tools/ in the pack
 # (game.gd), 3 stalled (every code waits for --self-play-min first, so a frame log stays whole): "self-play: stalled at stage <n> exit at <s> s pos <x,y,z>"
@@ -481,8 +481,9 @@ func _tell_watch() -> void:
 		return
 	_watch_told = true
 	var c: Dictionary = _watch.counts
-	print("self-play: watch stuck=%d hung=%d wedged=%d fell=%d objectives=%d blank_max=%.1f stages=%s" % [int(c.get("stuck", 0)),
-		int(c.get("hung", 0)), int(c.get("wedged", 0)), int(c.get("fell", 0)), _watch.plates, _watch.blank_max, ",".join(_stages.map(func(n): return str(n)))])
+	print("self-play: watch stuck=%d hung=%d wedged=%d fell=%d objectives=%d blank_max=%.1f bar_off_max=%.1f stages=%s" % [int(c.get("stuck", 0)),
+		int(c.get("hung", 0)), int(c.get("wedged", 0)), int(c.get("fell", 0)), _watch.plates, _watch.blank_max, _watch.bar_off_max,
+		",".join(_stages.map(func(n): return str(n)))])
 	# The skill bar's hands, as the driver's record counts them: casts of slots 2 and 3 and set pieces fired.
 	var record: Dictionary = _driver.record(_now())
 	var casts: Dictionary = record.get("slot_casts", {})

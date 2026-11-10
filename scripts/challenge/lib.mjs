@@ -188,9 +188,9 @@ export function botArgs(job, out) {
 
 // Every band run plays the park table with the play watch on (bot_run --qa-log=1, src/core/play_watch.gd,
 // which only reads the game): a run judged on its win or loss is also read for what a player would
-// report. Worst first: a wedge against a wall, a fall through the floor and an empty objective plate
-// are bugs wherever they happen; stuck and hung are read with the bot's goal (a camper waits by design).
-export const QA_KINDS = ["wedged", "fell", "blank", "stuck", "hung"];
+// report. Worst first: a wedge against a wall, a fall through the floor, an empty objective plate and
+// a hull bar off the hull are bugs wherever they happen; stuck and hung are read with the bot's goal (a camper waits by design).
+export const QA_KINDS = ["wedged", "fell", "blank", "bar", "stuck", "hung"];
 const QA_PLACE_M = 10;
 
 // The watch's rows from one run's qa-<seed>.ndjson, without the objective rows (every plate change).
@@ -229,7 +229,7 @@ export function playerReport(runs) {
 export function renderPlayerReport(report, limit = 25) {
   const lines = ["## What a player would report", ""];
   if (report.watched === 0) return [...lines, "No run carried the play watch's rows (runs recorded before it was switched on).", ""].join("\n");
-  lines.push(`The play watch (src/core/play_watch.gd) read ${report.watched} of ${report.runs} runs. It only reads the game, so the win rates above are what they would be without it. Information, not graded: a wedge, a fall or an empty objective plate is a bug to chase wherever it shows; a stuck or hung row is read with the bot's goal, since a camper waits by design.`, "");
+  lines.push(`The play watch (src/core/play_watch.gd) read ${report.watched} of ${report.runs} runs. It only reads the game, so the win rates above are what they would be without it. Information, not graded: a wedge, a fall, an empty objective plate or a hull bar off the hull is a bug to chase wherever it shows; a stuck or hung row is read with the bot's goal, since a camper waits by design.`, "");
   lines.push("| Kind | Rows | Runs with one |", "| --- | --- | --- |");
   for (const kind of QA_KINDS) lines.push(`| ${kind} | ${report.kinds[kind].rows} | ${report.kinds[kind].runs} |`);
   lines.push("");

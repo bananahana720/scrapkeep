@@ -182,5 +182,6 @@ func _exit_tree() -> void:
 	if not _open:
 		return
 	_close_burst()
-	_note({"kind": "end", "marks": marks, "hitches": hitches, "watch": _watch.counts, "plates": _watch.plates, "blank_max_s": snappedf(_watch.blank_max, 0.1)})
+	_note({"kind": "end", "marks": marks, "hitches": hitches, "watch": _watch.counts, "plates": _watch.plates, "blank_max_s": snappedf(_watch.blank_max, 0.1),
+		"bar_off_max_s": snappedf(_watch.bar_off_max, 0.1)})
 	_open = false

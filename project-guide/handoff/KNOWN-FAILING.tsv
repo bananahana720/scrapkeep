@@ -8,7 +8,6 @@ warden_counter_pulse_test	red	every check passes, but warden.gd pilot_heft print
 tree_bot_test	flake	seed 0 takes a random branch and fails [tree picks]; passed alone in the wave 31 gate, failed alone in wave 32	testing lane	2026-11-09	2026-11-23
 audio_bake_cancel_test	flake	check FX-2 (re-entry restarts the bake) read a bake that finished early (task -1, baked true) as a failure; since PR 648 the check accepts a finished bake and fails only on an abandoned bank. Not reproduced on the testing lane's box (0 reds in 29 runs of the old check, 74 greens of the new), so the row stays until a full gate and a box that showed the red read it green	testing lane	2026-11-09	2026-11-23
 kite_dive_stack_test	flake	every check passes, then an exit ERROR from player_fx.gd _on_beat_word under load; clean alone	testing lane	2026-11-09	2026-11-23
-park_reactor_repeat_test	flake	small and grown fight times stretch under load (47.6 s and 19.7 s in the wave 32 chunk); passes alone	testing lane	2026-11-09	2026-11-23
 park_swap_test	flake	the row placement step is timed in wall milliseconds (14.9 ms against 8 ms under load); passes alone	testing lane	2026-11-09	2026-11-23
 telegraph_timing_swarm_test	flake	runs 325 to 330 s alone against a 360 s time limit, so load kills it at the limit	testing lane	2026-11-09	2026-11-23
 presentation_juice_test	flake	[real freeze] samples the time_scale dip per frame and reads 0 ms under load; first seen in the wave 32 gate	testing lane	2026-11-09	2026-11-23
