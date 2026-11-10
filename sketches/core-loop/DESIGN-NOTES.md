@@ -428,7 +428,7 @@ Andrew's entry-7 verdict was "so much words and I can't really tell what to pres
    - Health is a tank gauge with quarter ticks. Its edge turns iron oxide and pulses at 1 Hz under 25%.
    - Heft is a pressure dial. Its needle swings to the class plus progress, and it flashes on a rise or a theft.
    - Scrap sits right beside the dial, because scrap is heft (form mirrors function).
-   - The top left holds the stage pips, the Fleet's tag for the arena, and the run clock in mono digits with the difficulty as a notched bar under it. Andrew plays against the clock.
+   - The top left holds the stage pips, the Fleet's tag for the arena, and the run clock in mono digits with the difficulty as a notched bar under it (since 10 Nov 2026 a ramp of rising steps with the word THREAT, `src/ui/run_status.gd`). Andrew plays against the clock.
 
    Demand: the Warden (heft against plating). Serves 4: growth reads at a glance.
 4. **The objective is an icon and at most five words, and it changes with distance.**

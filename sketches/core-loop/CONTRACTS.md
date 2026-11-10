@@ -418,7 +418,7 @@ The event_kinds shapes (`ring`, `diamond`, `chevron` and the rest) are glyphs, n
 ### Where the HUD uses them
 
 - **Top band.**
-  - The run status shows stage pips, `fac_fleet` for the arena, `res_timer` in mono digits, and `res_difficulty` over a notched bar that fills with `threat_rose`.
+  - The run status shows stage pips, `fac_fleet` for the arena, `res_timer` in mono digits, and `res_difficulty` beside a ramp of rising steps in the `threat_rose` colour with the word THREAT, the lowest step always lit and one more per threat tier (never a filled bar, which reads as health).
   - The objective shows its `obj_` icon ringed by the Warden's broken share, at most five words, and the core diamonds. While a lock stands it shows two bars: punch (`cat_damage`) over plating (`cat_defense`, hatched), with a white notch at the plating.
 - **Toast band.** It holds the stage card (`obj_beacon` and the stage name, or `fac_fleet` for Brindle) or one toast, then a first-run callout or the hold-R meter (`key_r`). This supersedes the UI regions table above: one toast at a time (`ScreenRegions.TOAST_ROWS` is 1).
 - **Bottom band.** Left to right: the speed chevrons, health as a tank gauge (`res_health`), the ability bar, the heft dial (`res_heft`) and scrap (`res_scrap`). This replaces the speed line and the key hints.

@@ -148,6 +148,10 @@ const TOAST_WIDTH := 800.0
 const MARGIN := 18.0
 const BOTTOM_GAP := 20.0
 const HEALTH_BAR := 190.0
+# The word under each bar (ui/gauge.gd caption): the game's own words for them, as the perk
+# rows say "max health" and the wear stamp says "ARMOUR OFF".
+const HEALTH_WORD := "HEALTH"
+const ARMOR_WORD := "ARMOUR"
 const LOW_HEALTH := 0.25
 # Facts whose wording needs a field from the signal, by argument position.
 const FIELD_ARGS := {
@@ -303,9 +307,9 @@ func setup(game_ref) -> void:
 	ability_bar.hidden_source = key_glyphs.shown_glyphs
 	_speed = SpeedGlyph.new()
 	add_child(_speed)
-	_health = Gauge.new("res_health", HEALTH_BAR, true)
+	_health = Gauge.new("res_health", HEALTH_BAR, true, HEALTH_WORD)
 	add_child(_health)
-	_armor = Gauge.new("res_mass", ARMOR_BAR, true)
+	_armor = Gauge.new("res_mass", ARMOR_BAR, true, ARMOR_WORD)
 	add_child(_armor)
 	_armor.visible = false
 	_cogs = CogChip.new()
@@ -930,8 +934,8 @@ func layout(size: Vector2) -> void:
 	var bar_y := bottom.position.y + (bottom.size.y - bar_size.y) * 0.5
 	ability_bar.position = Vector2((size.x - bar_size.x) * 0.5, bar_y)
 	var slot_mid := bar_y + AbilityBar.SLOT * 0.5
-	_health.position = Vector2(ability_bar.position.x - BOTTOM_GAP - _health.size.x, slot_mid - _health.size.y * 0.5)
-	_armor.position = Vector2(_health.position.x - BOTTOM_GAP - _armor.size.x, slot_mid - _armor.size.y * 0.5)
+	_health.position = Vector2(ability_bar.position.x - BOTTOM_GAP - _health.size.x, slot_mid - _health.bar_mid())
+	_armor.position = Vector2(_health.position.x - BOTTOM_GAP - _armor.size.x, slot_mid - _armor.bar_mid())
 	_companion.position = Vector2(_armor.position.x - BOTTOM_GAP - _companion.size.x, slot_mid - _companion.size.y * 0.5)
 	_speed.position = Vector2(MARGIN, slot_mid - _speed.size.y * 0.5)
 	_cogs.position = Vector2(_speed.position.x + _speed.size.x + BOTTOM_GAP, slot_mid - _cogs.size.y * 0.5)
