@@ -137,7 +137,13 @@ func _tag_on_summary() -> void:
 			and body.find(screens.tip_text()) > 1 and body.find(screens.tip_text()) < body.find(""), " | ".join(body))
 	await _frames(3)
 	var words: Array = screens._stats.get_children().map(func(cell): return (cell.get_child(1) as Label).text if cell.get_child_count() == 2 else "")
-	_t.check("each of the summary's stats has its word under its icon", words == ["TIME", "STAGES", "COGS", "SCRAP", "PARTS", "KILLS", "EVENTS", "SAVES"], str(words))
+	_t.check("each of the summary's stats has its word under its icon, and the word says what it counts",
+		words == ["TIME", "STAGES", "COGS LEFT", "SCRAP HELD", "PARTS", "KILLS", "EVENTS WON"], str(words))
+	var saved: Dictionary = _game.run.summary()
+	saved["save_used"] = 1
+	var saved_words: Array = screens.summary_chips(saved, _game.ctx.stages.COUNT).map(func(chip): return String(chip[2]))
+	_t.check("the earned save shows only on a run that used it", not words.has("SAVE USED") and saved_words.back() == "save used" and saved_words.size() == words.size() + 1,
+		str(saved_words))
 	var comic: Control = screens.comic_page()
 	var floor_y: float = screens._screen().y - 8.0
 	_t.check("the summary's column is on the screen, title to buttons", screens._title.get_global_rect().position.y >= 0.0

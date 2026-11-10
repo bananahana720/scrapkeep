@@ -1396,20 +1396,27 @@ func _on_run_ended_board(_won: bool) -> void:
 		_fit_comic()
 
 
-# The summary as icons and numbers: time, stages, cogs (the cog), scrap taken as mass (the heap), parts, kills, events won and
-# the earned save used (0 or 1), each on its own icon with its word under it, so nobody has to learn eight icons to read a run.
-func _summary_stats() -> void:
-	var s: Dictionary = game.run.summary()
+# The summary as icons and numbers, each on its own icon with its word under it, so nobody has to
+# learn the icons to read a run. The words say what the number counts: the cogs are the ones still
+# in the wallet (cogs spent are gone), the scrap is what the run still holds (theft and spending
+# take from it), the events are the ones won. The earned save is a yes or no, so its chip shows only on a run that used it.
+static func summary_chips(s: Dictionary, stage_count: int) -> Array:
 	var chips := [
 		["res_timer", "%d:%02d" % [int(s["time"]) / 60, int(s["time"]) % 60], "time"],
-		["obj_beacon", "%d/%d" % [s["stages"], game.ctx.stages.COUNT], "stages"],
-		["res_scrap", str(s["cogs"]), "cogs"],
-		["res_mass", str(s["scrap"]), "scrap"],
+		["obj_beacon", "%d/%d" % [s["stages"], stage_count], "stages"],
+		["res_scrap", str(s["cogs"]), "cogs left"],
+		["res_mass", str(s["scrap"]), "scrap held"],
 		["cat_transform", str((s["parts"] as Array).size()), "parts"],
 		["thr_instant", str(s["kills"]), "kills"],
-		["obj_event", str(s["events_won"]), "events"],
-		["res_health", str(s["save_used"]), "saves"],
+		["obj_event", str(s["events_won"]), "events won"],
 	]
+	if int(s["save_used"]) > 0:
+		chips.append(["res_health", str(s["save_used"]), "save used"])
+	return chips
+
+
+func _summary_stats() -> void:
+	var chips := summary_chips(game.run.summary(), game.ctx.stages.COUNT)
 	for chip in chips:
 		var cell := VBoxContainer.new()
 		cell.add_theme_constant_override("separation", 0)
