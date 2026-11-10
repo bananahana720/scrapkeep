@@ -1,6 +1,6 @@
 # Sight persona: one hand, four makers
 
-**Status: the year is picked. Andrew chose 2010 on 10 Nov 2026** (the joint look and sound card: "agreed wholly on this, approved"). Sections 1 to 4 are working calls from the thread "Develop visual artist and 3D models", written 9 Nov 2026; section 5 is the year. Nothing here changes a ruling.
+**Status: the year is picked. Andrew chose 2010 on 10 Nov 2026** (the joint look and sound card: "agreed wholly on this, approved"). Sections 1 to 4 are working calls from the thread "Develop visual artist and 3D models", written 9 Nov 2026; section 5 is the year and section 7 is how sight gets checked (10 Nov). Nothing here changes a ruling.
 
 This page owns the look persona: who draws the game, their habits, and how one hand keeps the four makers apart. It does not own story facts ([STORY-MAP.md](STORY-MAP.md) does), colour and shape rules ([VISUAL-LANGUAGE.md](../VISUAL-LANGUAGE.md)), per-pilot looks ([ROSTER-LOOK.md](ROSTER-LOOK.md)) or the finish recipe ([POLISH.md](../tools/blender/POLISH.md)). Where this page and one of those disagree, that page wins and this one is fixed. The sound persona is its sibling and shares the year, 2010.
 
@@ -87,3 +87,22 @@ Proposals, not yet built. Each is its own small change.
 5. **Every art change posts a before and after contact sheet.** Form is checked on cloud stills; the look is checked on the PC, in the game's renderer.
 6. **Fleet paint gets the bright edge.** `BakeLook` already carries the bake's shading to every enemy and boss material. It also lifts convex edges toward bone, on Fleet paint and not on a casting.
 7. **One brass.** Brass parts share one slot and one satin recipe, judged on the PC at dawn and in daylight.
+
+## 7. How a model, clip or effect gets checked
+
+Andrew asked on 10 Nov 2026 for a fresh look at how sight is verified. The existing checks hold numbers: budgets, names, sizes, loop seams, whether a warning clip fits its warning time, particle ceilings. None of them judges a drawn frame of an enemy, a clip or an effect, and none asks whether someone who has never seen the game can tell what a thing is. A model can pass all of them and still not read. So every new or changed model, clip or effect takes five steps, cheapest first.
+
+1. **Numbers.** The existing tests, plus the mesh and clip fault scan: `python3 tools/model_audit.py faults <glb>...` (flipped, doubled and empty faces, skin weights, one-frame snaps in clips).
+2. **A picture at play size, beside its neighbours.** `python3 tools/model_audit.py outlines <glb>... --out=<dir>` draws each model as a black outline at 32 pixels a metre (a 1080p frame from 30 m) and scores every pair's overlap. A close-up alone does not count.
+3. **A blind read.** Give the lettered sheet from step 2, and nothing else, to a fresh reviewer that has not seen the game, and ask what each thing is and does. If it cannot name the job, the outline is not doing the work. The same read works on an effect's frames.
+4. **Frames over time,** for clips and effects, on the ground they play on. One still is not a check. A snap the scan flags is a candidate: draw the frames ([anim_clip_capture.gd](../tools/anim_clip_capture.gd)) before calling it a fault, because a held pose cut to the beat looks the same to a number.
+5. **The PC for the look, Andrew's hands for the feel.** Nothing above stands in for either.
+
+A written claim about how the game or the pipeline works gets the same independent check as a code change before it is sent.
+
+The first run on world 1 (10 Nov) and its pictures are on the phone copy of this page. What it found, all small, none fixed before the world 1 sitting because each fix changes pixels:
+
+- **Outlines.** The blind reviewer named the job for 10 of the 24 Spillway enemies and picked the impact press, then the lobber, as the one in charge, with the Shift Boss third. The Shift Boss and the lobber overlap by 81 percent (they share a cart), the dispatcher and the vault by 82. An outline has no colour, motion or sound, so whether this matters in play is on the [sitting watch list](../../../project-guide/handoff/shared/alpha-status/sitting-watch-list.md).
+- **Meshes.** 1,554 of 1,727 models scan clean. On enemies and bosses: two top faces of the lobber lit sideways, 36 slivers on the dam Warden's clamp tower lit inside out, 64 slivers of Brindle's armour drawn twice, 60 faces shut inside the Mind Warden. On scenery: 94 of the 286 far versions of park props carry faces lit inside out, 7 of them over a tenth of their surface (the cable drums, a spool shed, the knot boards, two rope baskets). Those are drawn from 90 m out. Not yet looked at on the PC.
+- **Clips.** 59 one-frame snaps: 58 in the pilots' clips and one on Brindle's `enter_scuttle`. Rivet's 46 are held poses, by design. Tally's `cast_line` turns hand.R 171 degrees in one frame and wants an eye.
+- **Effects.** [fx_capture.gd](../tools/fx_capture.gd) takes one still per effect, a third of the way through its life, on sand. In the cloud's renderer 9 of the 32 change under 0.15 percent of the frame. That shows the gap in the check, not a fault in the effects: strips over each effect's life on Spillway ground, on the PC, are owed.
