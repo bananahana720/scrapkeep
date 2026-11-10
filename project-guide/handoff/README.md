@@ -1,6 +1,6 @@
 # Scrapkeep handoff folder
 
-Live coordination material for the alpha. The project coordinator (claude.ai project "Scrapkeep", since 23 Oct) owns it. Cloud threads read it.
+Live coordination material for the alpha. The coordinator owns it: since 10 Nov the local Claude Code session on Andrew's PC (ruling cs), before that the claude.ai project "Scrapkeep" (23 Oct to 10 Nov). Every session and writer agent reads it.
 
 | File | What it holds |
 | --- | --- |
