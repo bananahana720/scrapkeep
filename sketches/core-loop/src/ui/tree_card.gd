@@ -35,6 +35,7 @@ var _effect: Label
 var _set_piece: Label
 var _skip_prompt: Label
 var _depth_table: Button
+var _taken: Label
 var _lift := 0.0
 
 
@@ -82,9 +83,28 @@ func _init(node_row := {}, key_id := "", class_color := Palette.SAND, node_depth
 	_depth_table.add_theme_font_override("font", UiFonts.bold())
 	_depth_table.add_theme_font_size_override("font_size", 14)
 	box.add_child(_depth_table)
+	# Nothing here a first pick can use: the Build page and the slot's key tag come in with the
+	# second pick (PF-01).
+	_depth_table.visible = depth > 1
+	_taken = _text("Taken", 20, Palette.AMBER)
+	_taken.visible = false
+	_taken.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	_taken.position = Vector2(WIDTH - 100.0, 20.0)
+	add_child(_taken)
 	mouse_entered.connect(func():
 		if not disabled:
 			grab_focus())
+
+
+# Marks this card as the one taken: a "Taken" word and an amber edge that stays while the card
+# leaves, so the pick reads as made.
+func mark_taken() -> void:
+	_taken.visible = true
+	add_theme_stylebox_override("disabled", ClassCard._plate(Palette.AMBER, 4))
+
+
+func taken_text() -> String:
+	return _taken.text if _taken.visible else ""
 
 
 # The slot key the node changes, as a key glyph id (design-v3/SKILL-BAR.md section 5): the bar
@@ -142,7 +162,8 @@ func node_id() -> String:
 
 func drawn_words() -> PackedStringArray:
 	var out := Keycap.words(key)
-	out.append_array(Keycap.words(slot_key(node)))
+	if depth > 1:
+		out.append_array(Keycap.words(slot_key(node)))
 	return out
 
 
@@ -183,5 +204,6 @@ func _draw() -> void:
 		var x := rect.position.x + rect.size.x * 0.5 + (float(i) - (depth - 1) * 0.5) * (NOTCH + 4.0)
 		draw_rect(Rect2(x - NOTCH * 0.5, rect.position.y - 5.0, NOTCH, 8.0), Palette.CHARCOAL)
 		draw_rect(Rect2(x - NOTCH * 0.5 + 1.5, rect.position.y - 3.5, NOTCH - 3.0, 5.0), color)
-	var sk := slot_key(node)
-	Keycap.draw(self, Vector2(centre.x, rect.end.y + 8.0 + SLOT_KEY_H * 0.5), sk, bright, SLOT_KEY_H)
+	if depth > 1:
+		var sk := slot_key(node)
+		Keycap.draw(self, Vector2(centre.x, rect.end.y + 8.0 + SLOT_KEY_H * 0.5), sk, bright, SLOT_KEY_H)
