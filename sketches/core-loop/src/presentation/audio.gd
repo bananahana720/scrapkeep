@@ -176,8 +176,12 @@ const ENEMY_KINDS := ["hold_broken", "hold_ended", "tenacity_gained",
 var ctx
 # Per posture Warden, the stagger and chunk count the last posture_changed showed.
 var _posture_seen := {}
+# The fewest guard steps each Warden has been seen with (_guard_step_fell).
+var _guard_steps := {}
 # True from a charge cue the Warden began until vent_erupted or a stagger cuts it.
 var _warden_charging := false
+# Events announced with no lead, until each starts: see _on_event_announced.
+var _unwarned := {}
 var engine: MusicEngine
 # The ACE band (--music=ace): the zone's music row selects its manifest; a zone with
 # no pack, or any missing file, plays the synth.
@@ -362,6 +366,13 @@ var drop_log: Array = []
 # the last systemic pressure, which the ACE step sits on top of.
 var _ult_lift := false
 var _ult_armed := false
+# The ultimate in the air ended the stage's own recorded band (roaming or its Warden fight,
+# never a boss's or a champion's pack): its landing books the band back, and so does a cancel
+# for one of these reasons. A launch or the Warden's break in between takes the music for
+# itself and drops the booking (_ult_band_stays_off).
+const ULT_BAND_BACK := ["recall", "bail"]
+const STAGE_BAND_MODES := ["level", "warden"]
+var _ult_took_band := false
 var _pressure := 0.0
 # Lab knobs: facing is weighted by proximity, so a distant face cannot dominate.
 var parameter_threat_weights := Vector2(0.8, 0.2)
@@ -835,7 +846,7 @@ func _pump(virtual_frames := -1) -> void:
 		var stage := _ace_arrival_stage
 		_ace_arrival_stage = 0
 		_ace_arrival_at = -1
-		_ace_stage(stage, engine.next_bar())
+		_ace_return(stage, engine.next_bar())
 	if ace != null:
 		ace.set_fight_floor(_ace_fight_floor())
 		_answer_release()
@@ -1182,12 +1193,13 @@ func _ace_package_for(stage: int) -> String:
 
 # A stage whose row names an ACE package starts the ACE band at transport sample at; any
 # other stage hands back to the synth, except that the band held through a launch's flight waits for the landing.
-func _ace_stage(stage: int, at: int) -> void:
+func _ace_stage(stage: int, at: int, fight := false) -> void:
 	if radio_hold != "":
 		return
 	# The live moment's tune, else the stage's remix or modifier tune, else the stage's own pack.
-	_moment_playing = TuneMoments.top(_moments, tune_available)
-	var tune := level_tune(stage)
+	# A Warden's fight takes the band from every moment.
+	_moment_playing = "" if fight else TuneMoments.top(_moments, tune_available)
+	var tune := level_tune(stage, fight)
 	var manifest: String = MusicRows.resolve(tune)["ace_manifest"] if tune != "" else _music_row(stage)["ace_manifest"]
 	_select_ace_manifest(manifest)
 	# Preserve the launch riser and landing drop before the destination's recorded bed.
@@ -1201,7 +1213,7 @@ func _ace_stage(stage: int, at: int) -> void:
 		_ace_flight = false
 		_handover_at = -1
 		_prime_band_parameters()
-		ace.start_level(at if at >= 0 else engine.clock)
+		ace.start_level(at if at >= 0 else engine.clock, fight)
 		engine.grid = ace
 		return
 	if _ace_flight and ace_playing():
@@ -1381,11 +1393,7 @@ func radio_release() -> void:
 	else:
 		engine.force_track("warden" if _warden_engaged and ctx.flow.get("sealed") else "level", _stage_theme(_stage_now))
 	_moment_playing = ""
-	_ace_stage(_stage_now, engine.next_bar())
-	# A release inside a sealed Warden fight goes straight to the fight's sections: the shelf
-	# (the world's roaming take) never plays inside an arena.
-	if _warden_engaged and ctx.flow.get("sealed") and ace_playing() and ace.mode == "level":
-		ace.commit_warden()
+	_ace_return(_stage_now, engine.next_bar())
 	cue_log.append(["radio", "score", "bar", engine.next_bar(), 1.0])
 
 
@@ -1502,6 +1510,22 @@ func _ace_named(id: String, at: int, boss := false, won := true) -> void:
 		engine.grid = ace
 		return
 	_ace_end(ace.grid_beat if ace_playing() else AceSequencer.STOP_RAMP)
+
+
+# The stage's recorded band comes back at `at` (after a radio hold, an ultimate's drop, a
+# landing). Inside a sealed Warden fight it goes straight to the fight's sections: the shelf
+# (the world's roaming take) never plays inside an arena.
+func _ace_return(stage: int, at: int) -> void:
+	_ace_stage(stage, at, _warden_engaged and bool(ctx.flow.get("sealed")))
+
+
+# The music has moved on from the stage an ultimate took the recorded band from (a launch,
+# the Warden's break): the band is not booked back, and one already booked is dropped. A
+# launch's own arrival is booked after this, at the stage it lands in.
+func _ult_band_stays_off() -> void:
+	_ult_took_band = false
+	_ace_arrival_stage = 0
+	_ace_arrival_at = -1
 
 
 # The ACE band stops and the synth band plays again from this moment, so a note it starts
@@ -2022,7 +2046,14 @@ func wire_optional() -> void:
 		_begin_boss("warden_engaged", "warden")
 		engine.parameter_danger("warden_engaged")
 		if ace_playing():
-			ace.commit_warden())
+			ace.commit_warden()
+		elif _ace_arrival_stage > 0 and _ace_arrival_at >= 0:
+			# A drop still holds the recorded band (an ultimate's, a landing's): the Warden's
+			# entrance takes it back now, not when the drops are over.
+			var stage := _ace_arrival_stage
+			_ace_arrival_stage = 0
+			_ace_arrival_at = -1
+			_ace_stage(stage, engine.next_bar(), true))
 	_listen_optional(events, "boss_arena_entered", func():
 		_boss_phase = 1
 		_disarm_launch()
@@ -2465,7 +2496,12 @@ func _on_event_announced(event_id: String, seconds: float) -> void:
 	var state := _park_event_state(event_id)
 	var row := _park_event_row(event_id)
 	if row.is_empty():
-		on_beat("event_announced")
+		# An announcement with no lead warns of nothing (a stage's resting weather as the stage
+		# starts): no klaxon, and no start cue when it begins.
+		if seconds > 0.0:
+			on_beat("event_announced")
+		else:
+			_unwarned[event_id] = true
 		return
 	if sound_ready:
 		_flush_flow()
@@ -2558,7 +2594,7 @@ func _park_event_land(event_id: String) -> bool:
 
 func _on_event_started(event_id: String) -> void:
 	begin_moment("event", event_id, TuneMoments.event_tune(event_id))
-	if _park_event_land(event_id):
+	if _park_event_land(event_id) or _unwarned.erase(event_id):
 		return
 	on_beat("event_started")
 	if event_id in EVENT_SECONDS:
@@ -3037,8 +3073,8 @@ func new_run_tunes() -> void:
 
 # What the level band plays on this stage: the live moment's tune, else the run's modifier or
 # rolled remix for the stage, else "" for the stage's own pack.
-func level_tune(stage: int) -> String:
-	var top := TuneMoments.top(_moments, tune_available)
+func level_tune(stage: int, fight := false) -> String:
+	var top := "" if fight else TuneMoments.top(_moments, tune_available)
 	if top != "":
 		return top
 	return TuneMoments.stage_tune(MusicRows.zone_id(stage, _music_stages()), _run_modifiers(), _remixes, tune_available)
@@ -3054,9 +3090,10 @@ func _boss_entry(music: String) -> String:
 	return TuneMoments.remixed(music, PhaseMusic.entry_track(music, pack_available), _remixes, tune_available)
 
 
-# A tune on its one pass does not begin inside a Warden's fight (warden_took_band).
+# A tune on its one pass does not begin inside a Warden's fight (warden_took_band), and
+# neither does an event's.
 func begin_moment(kind: String, key: String, id: String) -> void:
-	if id == "" or (_warden_fighting and kind in TuneMoments.ONE_PASS):
+	if id == "" or (_warden_fighting and kind in TuneMoments.NOT_IN_A_FIGHT):
 		return
 	end_moment(kind, key, false)
 	_moment_seq += 1
@@ -3075,17 +3112,17 @@ func end_moment(kind: String, key := "", refresh := true) -> void:
 		_refresh_moment()
 
 
-func _refresh_moment() -> void:
+func _refresh_moment(fight := false) -> void:
 	if radio_hold != "" or not sound_ready or not ace_wanted() or _champion_hyped or _stage_now <= 0:
 		return
 	if not engine.track in ["level", "miniboss"]:
 		return
-	var want := TuneMoments.top(_moments, tune_available)
+	var want := "" if fight else TuneMoments.top(_moments, tune_available)
 	if want == _moment_playing:
 		return
 	_moment_playing = want
 	var at := engine.next_bar()
-	_ace_stage(_stage_now, at)
+	_ace_stage(_stage_now, at, fight)
 	cue_log.append(["tune_moment", want if want != "" else "stage", "bar", at, 1.0])
 
 
@@ -3123,15 +3160,18 @@ func tune_found(discovery_id: String) -> void:
 	begin_moment("find", discovery_id, TuneMoments.find_tune(discovery_id))
 
 
-# A Warden's fight takes the band: the landmark's tune ends and stays away for the stage, and a
-# tune on its one pass (a find, the fabricator) is cut short and none begins until the arena
-# opens, or its tempo holds the grid over the fight and the Warden's pivot never comes.
+# A Warden's fight takes the band from every moment: the landmark's tune ends and stays away
+# for the stage, a tune on its one pass (a find, the fabricator) is cut short and none begins
+# until the arena opens, and an event's tune still running ends too (one that begins inside
+# the fight does not start: TuneMoments.NOT_IN_A_FIGHT). A moment's recording has
+# no fight sections and its own tempo, so one left playing holds the grid over the whole fight
+# and the Warden's pivot never comes. The stage's own recording comes back straight into the
+# fight's sections.
 func warden_took_band() -> void:
 	_warden_engaged = true
 	_warden_fighting = true
-	for moment in ["landmark"] + TuneMoments.ONE_PASS:
-		end_moment(moment, "", false)
-	_refresh_moment()
+	_moments.clear()
+	_refresh_moment(true)
 
 
 func landmark_moment(landmark_id: String, approach: float) -> void:
@@ -3415,6 +3455,7 @@ func _on_launched(_velocity: Vector3) -> void:
 	# the ultimate's later cancel (its stage-entry abort) or landing must not end the launch's
 	# riser or ACE piece.
 	_ult_armed = false
+	_ult_band_stays_off()
 	# A launch out of the Warden's break is directed from A to B: the piece plays through
 	# the flight and the landing hands it to the synth on a beat (_land_drop). Any other
 	# ACE mode (an unsealed stage's gate) hands to the synth now, so its launch riser sounds.
@@ -3520,11 +3561,14 @@ func _on_ultimate_started(_id: String, _path: String, _from: Vector3, _to: Vecto
 	if engine.track == _boss_track() and not _id.begins_with("cannon_"):
 		return
 	_ult_armed = true
+	_ult_took_band = false
 	if ace_playing() and ace.mode == "piece":
 		_ace_flight = true
 		return
 	if ace_playing():
+		var stage_band: bool = ace.mode in STAGE_BAND_MODES
 		_ace_end(ace.grid_beat)
+		_ult_took_band = stage_band
 	engine.start_build(seconds, true)
 
 
@@ -3585,6 +3629,13 @@ func _on_ultimate_landed(_id: String, _at: Vector3, _hits: int, _damage: float) 
 			if ace_playing():
 				ace.stop_at(at, ace.grid_beat)
 				_handover_at = at
+		if _ult_took_band and _stage_now > 0 and _ace_arrival_stage == 0 and not ace_playing() and engine.track in STAGE_BAND_MODES:
+			# The synth band's build and drop are the ultimate's; the stage's recorded band comes
+			# back on the bar after the drop (_pump). A band something else already started, or a
+			# boss that arrived in between, keeps its own.
+			_ace_arrival_stage = _stage_now
+			_ace_arrival_at = at
+		_ult_took_band = false
 		cue_log.append(["ultimate_landed", "drop", "beat", at, 1.0])
 		_ult_armed = false
 	_set_ult_lift(false)
@@ -3600,6 +3651,11 @@ func _on_ultimate_cancelled(_id: String, _reason: String, refunded: bool) -> voi
 			_ace_flight = false
 			_ace_end(ace.grid_beat if ace_playing() else AceSequencer.STOP_RAMP)
 		engine.cancel_build()
+		# A recall or a bail leaves the player in the stage, so its band comes back; a death or
+		# a stage's end has its own music.
+		if _ult_took_band and _stage_now > 0 and _reason in ULT_BAND_BACK and not ace_playing() and engine.track in STAGE_BAND_MODES:
+			_ace_return(_stage_now, engine.next_bar())
+		_ult_took_band = false
 	if not refunded:
 		_set_ult_lift(false)
 
@@ -3763,7 +3819,7 @@ func _posture_note_ratio(enemy: Node3D) -> float:
 
 # The stagger lands the chord and cuts the charge it cancelled; a shattered chunk is its
 # row's sound over a low hit. A draining guard changes posture and makes no sound.
-func _on_posture_changed(enemy: Node3D, _posture: float, staggered: bool) -> void:
+func _on_posture_changed(enemy: Node3D, posture: float, staggered: bool) -> void:
 	if not is_instance_valid(enemy):
 		return
 	var id := enemy.get_instance_id()
@@ -3773,9 +3829,52 @@ func _on_posture_changed(enemy: Node3D, _posture: float, staggered: bool) -> voi
 	if staggered and not seen[0]:
 		_stagger_chord()
 		_cut_charge()
-	if chunks < int(seen[1]):
+	var shattered := chunks < int(seen[1])
+	if shattered:
 		play("posture_changed", 6.0, 1.0, "SFX", Rows.heard(EventKinds.state_row("chunk_shatter"), cue_context()))
 		play("posture_changed", 6.0, 1.0, "SFX", SHATTER_LOW)
+	# The reading that breaks the Warden asks the band for nothing: the break answers it on the
+	# next frame, and a build opened here would be opened only to be thrown away (8 ms on the
+	# break's frame, measured on the PC).
+	if ctx.flow != null and ctx.flow.get("warden") == enemy and chunks > 0:
+		# A hit that fills the bar from low down opens a stagger and passes a quarter on the same
+		# reading: the stagger's held breath answers it, not a drop.
+		# A smash inside the dam's stagger takes a real chunk while the wiped bar reads no
+		# quarter gone: a real chunk shattered with some left lands the drop there too.
+		var fell := _guard_step_fell(enemy, bool(seen[0]) and not staggered)
+		_follow_warden_form(posture, staggered, (fell or (shattered and chunks > 0)) and not staggered)
+
+
+# Whether this reading took a step off the Warden's guard and left it standing: the hit that
+# lands the drop. The guard is counted as the fight's phases count it (warden.gd
+# phase_chunks_left): the real chunks, or the bar's quarters on the dam, whose rule breaks all
+# four chunks on the last ram, so its real count goes from four to none in one step. The lowest
+# count seen is kept, so a bar that drains while the ball is away and fills again lands no drop
+# twice. The end of a stagger is the one moment the dam's bar is wiped: the count starts again
+# from there, so the climb after it lands its drops too.
+func _guard_step_fell(enemy: Node3D, stagger_ended: bool) -> bool:
+	var left: int = enemy.phase_chunks_left() if enemy.has_method("phase_chunks_left") else enemy.chunks_left()
+	var id := enemy.get_instance_id()
+	var lowest := int(_guard_steps.get(id, BossPosture.CHUNKS))
+	_guard_steps[id] = left if stagger_ended else mini(lowest, left)
+	return left < lowest and left > 0
+
+
+# The Warden's fight plays the recorded band like a set (AUDIO-V3 section 1.1, read for the
+# posture fight): the pilot's hits tighten the build, the stagger is the held breath, and
+# the hit that shatters a chunk lands the drop on the next beat. The chunk that breaks the
+# Warden lands no drop: the break and the kill cadence answer it (ruling bt). With the
+# launch switch on "loop" the band is told a guard that never moves, so the build loops.
+func _follow_warden_form(posture: float, staggered: bool, landed: bool) -> void:
+	var tuning = ctx.get("tuning")
+	if not ace_playing() or tuning == null:
+		return
+	if tuning.option(Tuning.WARDEN_FORM_KEY) != "form":
+		ace.follow_guard(0.0, false, false)
+		return
+	var at: int = ace.follow_guard(posture, staggered, landed)
+	if at >= 0:
+		cue_log.append(["warden_form", "drop", "beat", at, 1.0, 0.0])
 
 
 func _stagger_chord() -> void:
@@ -4111,6 +4210,8 @@ func _flush_flow() -> void:
 					_menu_home(at)
 			"unseal":
 				_release_answered = false
+				# The break is the synth band's when an ultimate holds the recorded one.
+				_ult_band_stays_off()
 				engine.parameters_warden_broken()
 				_unseal_ms = Time.get_ticks_msec()
 				if ace_playing():

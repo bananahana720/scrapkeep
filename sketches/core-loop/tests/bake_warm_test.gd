@@ -49,13 +49,36 @@ func _run() -> void:
 	t.check("a retry queues no kit twice", node._queue.size() == kits.size())
 	var sizes := []
 	var spawns := []
-	while not node._queue.is_empty() and sizes.size() < 200:
+	# What each drawn frame held: process_frame comes before any node's _process, so the tree read
+	# here is the one the frame before was drawn with. -1 with no warm spawn standing, else the
+	# debris boxes in it.
+	var boxes := []
+	var pieces := []
+	while (not node._queue.is_empty() or _spawn_warms(node) > 0) and sizes.size() < 200:
 		await process_frame
 		sizes.append(node._queue.size())
 		spawns.append(_spawn_warms(node))
-	await process_frame
-	t.check("stage 1's kinds each stand once out of sight, one at a time, and leave",
-		spawns.count(1) == BakeWarm.SPAWN_WARM.size() and spawns.max() == 1 and _spawn_warms(node) == 0, str(spawns))
+		boxes.append(_debris_boxes(node))
+		pieces.append(_debris_pieces(node))
+	t.check("stage 1's kinds each stand out of sight for two drawn frames, one at a time, and leave",
+		spawns.count(1) == BakeWarm.SPAWN_WARM.size() * 2 and spawns.max() == 1 and _spawn_warms(node) == 0, str(spawns))
+	# The renderer only learns of a node that is in the tree when a frame is drawn, so the debris
+	# boxes death_warm adds must be there for one: each kind's first frame is its body alone, its
+	# second has the boxes. Freed in the call that added them, they were never drawn (the dam's
+	# first deaths on the 4080, 10 November 2026).
+	var bodies := 0
+	var twinned := 0
+	for i in boxes.size():
+		if boxes[i] == 0 and i + 1 < boxes.size() and boxes[i + 1] > 0:
+			bodies += 1
+		if boxes[i] > 0:
+			twinned += 1
+	t.check("each kind's debris boxes stand through a drawn frame, the frame after its body alone",
+		bodies == BakeWarm.SPAWN_WARM.size() and twinned == BakeWarm.SPAWN_WARM.size(), str(boxes))
+	var thrown := true
+	for i in boxes.size():
+		thrown = thrown and (pieces[i] >= EnemyMotion.PARTS_MIN) == (boxes[i] > 0)
+	t.check("with them stands the body's break-up, built as a death builds it", thrown, str(pieces))
 	var steady := true
 	for i in range(1, sizes.size()):
 		steady = steady and sizes[i - 1] - sizes[i] <= 1
@@ -105,6 +128,24 @@ func _run() -> void:
 	events.queue_free()
 	await process_frame
 	quit(t.verdict())
+
+
+# The debris boxes (death_warm's) in the warm spawn standing under the node now, -1 with none standing.
+func _debris_boxes(node: Node) -> int:
+	for child in node.get_children():
+		if child.has_meta("spawn_warm") and not child.is_queued_for_deletion():
+			return child.get_children().filter(func(view): return view is MeshInstance3D and view.mesh is BoxMesh and view.get_parent() == child).size()
+	return -1
+
+
+# The pieces of the break-up (EnemyMotion.scatter) in the warm spawn standing under the node now.
+func _debris_pieces(node: Node) -> int:
+	for child in node.get_children():
+		if child.has_meta("spawn_warm") and not child.is_queued_for_deletion():
+			for part in child.get_children():
+				if part.get_script() == EnemyMotion:
+					return part.get_child_count()
+	return 0
 
 
 # The warm spawns standing under the node now (spawn_warm_test checks what they draw).

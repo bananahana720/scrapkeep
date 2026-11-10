@@ -186,6 +186,10 @@ func _lit() -> void:
 		_t.check("%s is lit" % id, s.view.lit(), "column %s, glyph %s, ring %s" % [s.view.column.visible, s.view.glyph.visible, s.view.ring.visible])
 		_t.check("%s's column is the row's amber" % id, _rgb(s.view.column.material_override.albedo_color) == _rgb(color),
 			"column %s, row %s" % [s.view.column.material_override.albedo_color, color])
+		var veil: StandardMaterial3D = s.view.column.material_override
+		_t.check("%s's column thins to nothing at the lens" % id, veil.distance_fade_mode == BaseMaterial3D.DISTANCE_FADE_PIXEL_ALPHA
+			and veil.distance_fade_min_distance > 0.0 and veil.distance_fade_max_distance > veil.distance_fade_min_distance,
+			"fade mode %d, %.1f to %.1f m" % [veil.distance_fade_mode, veil.distance_fade_min_distance, veil.distance_fade_max_distance])
 		_t.check("%s's glyph is the row's amber" % id, _rgb(_first_mesh(s.view.glyph).material_override.albedo_color) == _rgb(color), "glyph colour")
 		_t.check("%s's ring is the row's amber" % id, _rgb(_first_mesh(s.view.ring).material_override.albedo_color) == _rgb(color), "ring colour")
 		_t.check("%s's word waits until the ball is near" % id, not s.view.word.visible, "word visible at the spawn")

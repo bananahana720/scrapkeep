@@ -306,7 +306,15 @@ func reading() -> Dictionary:
 		"live", "":
 			line = "Live from the run"
 		"new_signal":
-			line = "New signal. Listen in."
+			# The score is playing a tune for the first time: the dial names it, as a radio would.
+			# Once it has been heard it is no longer news, and it holds the air under its own name.
+			var fresh := String(RadioTakes.track(_cut_in).get("name", ""))
+			if fresh == "":
+				line = "New signal. Listen in."
+			elif _audio != null and _audio.tune_unheard(_cut_in):
+				line = "New signal: %s" % fresh
+			else:
+				line = "Live: %s" % fresh
 		"boss":
 			line = "The fight has the air"
 		"finale":

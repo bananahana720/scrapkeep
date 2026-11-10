@@ -21,7 +21,7 @@ The three music stems the manifests already split (drums, bass, other) become th
 | --- | --- | --- |
 | Bass | always on in a stage | The world's identity; ducks under danger cues as today (`duck_bass`) |
 | Drums | rolling speed | Fades in from a quarter of top speed, full at half speed. Standing still leaves bass and keys: the world breathes. |
-| Other (sax lead, brass) | a floor on the shelf, lifted by threat, the approach and the chain | The tune is always there while the ball rolls a level: the lead never falls below about half level (`LEAD_FLOOR`, -6 dB; ruling bt, 9 November 2026). Threat, the approach to the landmark (full once the landmark is in reach) and the chain lift it from there to full: a third of the way at chain 2 (the sax hook), full at chain 4. A broken chain lets the lead finish its phrase, never cutting mid-note. A Warden break strips it through the break's held breath only; the kill cadence brings it back whole and the release stops reaching the recorded band from there, so the lead stays back on the shelf after it, whatever restarts the band there. The landmark hum and the synth band keep the release to the next stage, as before, and so does a recorded pack that plays no cadence (a flat pack). Low armour (under 30%) still strips it, and inside a fight its level is the fight floor's, not the shelf's. |
+| Other (sax lead, brass) | a floor on the shelf, lifted by threat, the approach and the chain | The tune is always there while the ball rolls a level: the lead never falls below about half level (`LEAD_FLOOR`, -6 dB; ruling bt, 9 November 2026). Threat, the approach to the landmark (full once the landmark is in reach) and the chain lift it from there to full: a third of the way at chain 2 (the sax hook), full at chain 4. A broken chain lets the lead finish its phrase, never cutting mid-note. A Warden break strips it through the break's held breath only; the kill cadence brings it back whole and the release stops reaching the recorded band from there, so the lead stays back on the shelf after it, whatever restarts the band there. The landmark hum and the synth band keep the release to the next stage, as before, and so does a recorded pack that plays no cadence (a flat pack). Low armour (under 30%) still strips it, and inside a fight its level is the fight floor's, not the shelf's. The Warden fight's held breath and its drop are the exception: they carry the lead whole whatever the feed says (`LEAD_WHOLE`), because the breath is the lead alone and a lead at nothing is silence. |
 
 This is `set_pressure` with a new parameter source (`set_parameter_source` already exists), so the three faders are one call fed by speed and chain. Smoothing: a fader rises over one beat and falls over two bars, so a single bump never makes the band stutter.
 
@@ -95,7 +95,94 @@ Hype rule and extras (sound bible, "The hype rule" and "The four extras"). Decid
 
 Only one buff colours the music at a time. Low hull wins over every other buff, because danger outranks reward.
 
-## 7. Hand-over list for the coordinator
+## 7. Conductor and band
+
+The contract between the level conductor and the music, agreed by the systems thread and the sound thread on 10 November 2026. Andrew, the same day: "allign this with the dungeon master level/map conductor and integrate game events, states, character and build progress as a system that feeds from and into the sound design and orchestration." This section is its one home; the systems side links here.
+
+**Who is who.** The conductor is two schedulers stepped by `src/world/world.gd`: the spawn director (`src/world/director.gd`: crowd, packs, the elite, the clock) and the event director (`src/world/event_director.gd`: offers, weather, park set pieces). Fights publish for themselves (`warden.gd`, `boss/boss.gd`, `fight_phases.gd`). The band is `src/presentation/audio.gd` with its two players, the recorded band (`ace_sequencer.gd`) and the synth band (`music_engine.gd`).
+
+**The rules.**
+
+1. Each side reads only the names in the tables below, through the event bus or one small call. Neither reaches into the other.
+2. Game time never waits on music, except by slack the conductor offers. Before the world 1 sitting it offers none.
+3. The game never shortens a warning and never moves a hit the player is timing a dodge against. The band lands on those; it has the lead time to do it.
+4. Sound on the frame, music on the grid (section 1) is unchanged.
+5. In bot runs the music clock counts physics ticks, so anything the conductor reads from the band is deterministic. Anything new must keep to that.
+
+### What the conductor publishes
+
+| The band wants | Name today | Value | After the sitting |
+| --- | --- | --- | --- |
+| Tension: how hard the stage presses | `GameEvents.pressure_changed(pressure)` | 0 to 1, sent on a move of 0.05 or more, 0 on bay entry and stage clear | The set's energy level. The band's own `run_threat` (enemies near and ahead within 48 m) stays as well: it moves the layers inside that level. |
+| Phase of the stage | `StageBeats.classify()` (`src/core/stage_beats.gd`): arrive, loot, find, hold, fight, leave. Only the bot recorder calls it. | No live read yet | A live read mapped to four words: lull (arrive, loot, find), build (a send inside its lead, or a Warden's guard under half), peak (pressure at or over 0.4, or the guard over half), release (a stagger, and leave). |
+| What is coming, and when | Separate signals, each with its seconds (table below) | 1.4 to 10 s of sure warning for a set piece or an attack | One read: a short list of `{kind, in_s, sure, slack_s}`. First addition: `pack_inbound(faction, at, kinds, seconds)` when a pack's ring is placed, so the band hears the crowd 1 s ahead. |
+| Fight state | `warden_engaged`, `posture_changed(enemy, posture, staggered)`, `weak_point_opened(id, at, seconds)`, `vent_charging(at, seconds)`, `vent_erupted(at)`, `attack_cued`, `fight_phase_changed`, `beacon_unsealed`; Brindle: `boss_arena_entered`, `boss_phase_changed`, `boss_attack_telegraphed`, `boss_defeated` | Every state can be read today from these | One signal, `fight_state_changed(fight_id, state, seconds)`, with the six fight words below, so a new world's fights need no code in the band. |
+| Build and pilot | `run_started(class_id)`, `heft_class_changed`; `director.build_axes()` (heft, speed, air, contact, weapon, steer, each 0 to 1) is a pull the band cannot reach cleanly | Pilot and heft reach the band | `build_changed(axes, class_id)` on the bus. |
+
+**The six fight words.** A fight has two clocks, and the band follows both: the guard (the player's progress) and the attack (the enemy's).
+
+| Word | Meaning | Read today from | What the band plays |
+| --- | --- | --- | --- |
+| closed | The guard holds | engaged, not staggered, posture under the line | The build |
+| cracking | The guard is near breaking: in at posture 75, out under 50 | `posture_changed` | The tight build (the pack section named `telegraph`) |
+| telegraph | An attack is charging, with its seconds | `vent_charging` (the Warden's pulse, 2.0 s, and its counter, 0.8 s inside the stagger: read the seconds), `attack_cued`, `boss_attack_telegraphed` | The attack's own cue and pedal; never a section change (a pulse comes every 6 s and would chop the track) |
+| open | The stagger | `posture_changed` staggered, `weak_point_opened` | The held breath |
+| recover | A step came off the guard and the Warden still stands, or the stagger ended | a fall in `phase_chunks_left()` that leaves it above 0; staggered back to false | The drop on the next beat, for the step; the build on the next bar, for a stagger nobody landed |
+| down | The fight is won | `beacon_unsealed`, `boss_defeated` | The break, the kill cadence, home |
+
+**A step off the guard, and the dam.** The drop answers a step off the guard, counted as the fight's phases count it (`warden.gd` `phase_chunks_left`). On most Wardens that is a real chunk shattered inside a stagger. The dam's rule breaks all four chunks on the last ram and opens no stagger on that path, so its real count goes from four to none in one step; there the count is the bar's quarters, and each paid ram that takes a quarter lands the drop: two or three a fight. The ball the bots bring pays about 30 a ram (31, 62, 93, break), so a clean fight is build, drop, drop, drop, tight build, break: AUDIO-V3's four landings. A grown ball pays a full third (33, 67, break) and lands two; a small one (about 14 a ram) lands three, one every other ram. The dam has no held breath on that path: its sheet opens every 6 s whether or not the player rams, and a breath on it would chop the track for a player who hangs back. A hit off the water can still open a stagger there, which is the held breath (also when the same hit passes a quarter on its way to a full bar: the breath answers it, not a drop), and when it ends the bar is wiped: the count starts again from that reading, so the climb after it lands its drops again. A smash that lands inside that stagger takes a real chunk and lands the drop, as on any Warden; the phases' count then reads three at a wiped bar, so the next ram to a quarter lands no drop and the one after it does. The world's `chunk_N` pulses are the fight's progress and fire once a fight, so they do not start again after a stagger: from there the drops and the pulses stop lining up, by design (the drops answer hits, so they may repeat). Otherwise the lowest count seen is kept, so a bar that drains while the ball is away lands no drop twice. The shatter sound stays on real chunks. Agreed with the systems thread on 10 November 2026 from its dam traces; the rule is `audio.gd` `_guard_step_fell`.
+
+On the recorded band the Warden's fight plays this form: `ace_sequencer.gd` `follow_guard`, fed by `audio.gd` (launch switch `--warden-form=loop` restores the looping build). The synth band and Brindle's fight do not yet. The shattering hit asks for the drop only (the build comes back as the drop's follower), so the hit's frame opens one section's recordings, and the reading that breaks the Warden opens none (the break is a frame away); the sequencer counts every recording it opens and the time it took (`opened`, `open_usec`) for a frame-cost measurement. An ultimate in the fight takes the music for its flight and drop, and the band then comes back to the fight's build (SKILL-BAR section 4, Music). The Warden's entrance takes the band from whatever is playing: a landmark's tune, a tune on its one pass, an event's tune still running (it used to play through the whole fight, because its recording has no fight sections; an event that begins inside the fight does not start its tune either, `TuneMoments.NOT_IN_A_FIGHT`), and an ultimate's or a landing's drop that still holds the recorded band. Each way in enters on the pivot and opens the pivot and the build, never the roaming take first (`audio.gd` `warden_took_band`, `AceSequencer.start_level` with `fight`).
+
+### How far ahead the conductor knows
+
+Lead times as the systems thread read them on stage 14709f17 and checked again on d45adc8e.
+
+| Send | Signal | Lead | Sure |
+| --- | --- | --- | --- |
+| Crowd and pack bodies | none yet (`pack_arrived` fires as they land) | every body shows a ground ring for 1.0 s | yes |
+| The next spawn slot | private | 1.5 to 6.5 s | no: it can be skipped, and its contents are drawn when it fires |
+| Clock tier rise | `threat_rose(tier)` | stage second 45 and 90, known from stage entry | yes |
+| Offers | `event_announced(id, seconds_until)` | 4.0 s | yes |
+| Squall, flood | `event_announced` | 6.0 s | yes |
+| Park set pieces | `event_announced` | 5 to 10 s; rows marked `on_bar` already wait for the band's next bar | yes |
+| Warden pulse | `vent_charging(at, seconds)` | 2.0 s, every 6.0 s | yes |
+| Warden counter (reactor family) | `vent_charging(at, seconds)` | 0.8 s, never under 0.6; it fires inside the stagger, 1.0 s after the stagger starts | yes |
+| Rogues, the mini-boss, generic fight phases | `attack_cued` | 1.1 s | yes |
+| Brindle | `boss_attack_telegraphed` | crane and charge 1.4 s, slag 2.5 s (his eject flies for 2.5 s; whether it is sent on this signal is not checked) | yes |
+| Fight phase change | `fight_phase_changed` | 2.0 s | yes |
+
+### What the band publishes
+
+| The conductor wants | Name today | After the sitting |
+| --- | --- | --- |
+| Transport | `audio.park_transport(stage_s)`: `{bar_s, bar_origin_s}` in stage seconds | The same shape with beat and phrase added; no second call |
+| Section | none | The section playing (build, breath, drop, break), so an optional send waits for a build or a drop and never lands in a break |
+| Key | never | The conductor has no use for it |
+
+### Slack
+
+Before the sitting: zero. Moving a spawn slot by any amount changes later random draws, so every bot band redraws.
+
+After, each behind a switch and read on bot bands with the switch off and on, on a probe branch first:
+
+- Attacks and pulses: none. The band lands on them.
+- A crowd body may land up to one beat later than its ring second (0.35 s at 172, 0.47 s at 129), never earlier.
+- An offer, the elite's arrival or a clock rise may wait for the phrase, up to one bar, as `on_bar` park rows do today.
+
+### Before and after the world 1 sitting
+
+Before: the conductor's timing does not change, and the band reads only the names above. The band's one change is the Warden form on the recorded band, behind its switch.
+
+After, in order:
+
+1. `pack_inbound`, and a fill into the arrival.
+2. The conductor's one read (tension, phase, next, fight, build), `fight_state_changed` with the six words, `build_changed`.
+3. The band publishes beat, phrase and section.
+4. Arrivals on the grid behind a switch: bodies one beat late at most; the elite, offers and clock rises on the phrase.
+5. The Warden form on the synth band and on Brindle's fight.
+
+## 8. Hand-over list for the coordinator
 
 1. Import the picked takes as `music_ace/` theme sources with htdemucs stems, using the grid-stretched WAVs from RENDERS.md.
 2. Register the 49 event WAVs in `sfx_bank.gd` under their existing keys. Cues with tiers (`kill_chain_tier_1` to `_5`, `scrap_tick_1` to `_5`, `rarity_bell_common`, `_rare`, `_epic`) map to the existing tier and rarity arguments. Keep per-cue voice limits.
