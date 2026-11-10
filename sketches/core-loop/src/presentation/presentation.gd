@@ -163,6 +163,21 @@ func setup(ctx_ref) -> void:
 		_read_windups(enemy)
 
 
+# One voice at a time (rulings bw, cf). reading: a flourish has a card, a caption or a comic
+# panel up or on the way. close_up: a live close-up panel has the moment. names_boss: the
+# fight's arrival row says the boss's name itself. The HUD and the speech bubble wait on these.
+func reading() -> bool:
+	return flourish != null and flourish.reading()
+
+
+func close_up() -> bool:
+	return flourish != null and flourish.close_up()
+
+
+func names_boss() -> bool:
+	return flourish_cues != null and flourish_cues.names_boss()
+
+
 func _exit_tree() -> void:
 	if get_tree().node_added.is_connected(_on_node_added):
 		get_tree().node_added.disconnect(_on_node_added)

@@ -1,8 +1,8 @@
 # Sight persona: one hand, four makers
 
-**Status: candidate, 9 Nov 2026, from the thread "Develop visual artist and 3D models".** Andrew has not picked the year. Until he does, sections 1 to 4 are working calls and section 5 lists three candidates. Nothing here changes a ruling.
+**Status: the year is picked. Andrew chose 2010 on 10 Nov 2026** (the joint look and sound card: "agreed wholly on this, approved"). Sections 1 to 4 are working calls from the thread "Develop visual artist and 3D models", written 9 Nov 2026; section 5 is the year. Nothing here changes a ruling.
 
-This page owns the look persona: who draws the game, their habits, and how one hand keeps the four makers apart. It does not own story facts ([STORY-MAP.md](STORY-MAP.md) does), colour and shape rules ([VISUAL-LANGUAGE.md](../VISUAL-LANGUAGE.md)), per-pilot looks ([ROSTER-LOOK.md](ROSTER-LOOK.md)) or the finish recipe ([POLISH.md](../tools/blender/POLISH.md)). Where this page and one of those disagree, that page wins and this one is fixed. The sound persona is its sibling and shares the same three years.
+This page owns the look persona: who draws the game, their habits, and how one hand keeps the four makers apart. It does not own story facts ([STORY-MAP.md](STORY-MAP.md) does), colour and shape rules ([VISUAL-LANGUAGE.md](../VISUAL-LANGUAGE.md)), per-pilot looks ([ROSTER-LOOK.md](ROSTER-LOOK.md)) or the finish recipe ([POLISH.md](../tools/blender/POLISH.md)). Where this page and one of those disagree, that page wins and this one is fixed. The sound persona is its sibling and shares the year, 2010.
 
 The phone copy with sample sheets and the model audit is the project library page "Scrapkeep Sight Persona", listed under "Art and look" in the shared project files' INDEX.md (outside this repository).
 
@@ -18,7 +18,7 @@ The sound persona's line for the same idea is "the grid is the machine's, the be
 
 ## 2. Seven habits
 
-They hold in every candidate year.
+They were written to hold in any of the three years considered, and they hold in 2010.
 
 1. **Fasteners are the signature.** A keeper's thing shows at least one bolt, strap, stitch or weld on every part you could take off. The old works show none.
 2. **People are stuffed, machines are built.** A body has no hard edge and its seams are stitching. A machine has crisp bevels and its seams are joints. No ordinary enemy is a person (ruling ch).
@@ -56,21 +56,27 @@ Five consequences:
 - Make the ball bigger to show power. Heft is panels, caps and chunks ([ROSTER-LOOK.md](ROSTER-LOOK.md) owns the rule).
 - Borrow a real brand, a franchise design, or East Asian dress for the genre's tropes (Bible AD-11 and DECISIONS.md section 3 own these).
 
-## 5. The three candidate years
+## 5. The year: 2010
 
-The palette, the silhouettes and every ruling are the same in all three. The year changes finish, wear, lettering and light. Each year is matched to a period of the sound persona's house band.
+Andrew picked 2010 on 10 Nov 2026, on one card for look and sound: "2010, the festival years. Sax over a machine, big-room anthems. Look: today's game plus edge wear and real brass. Replaces nothing." The sound half lives with the sound persona.
 
-| Year | Finish | The old works look like | Lettering | Main risk |
-| --- | --- | --- | --- | --- |
-| **2010, Loose Tolerance** (the art thread's recommendation) | Hand-painted custom vinyl for machines, wool felt for crews, real copper and brass fittings. Satin. Wear brushed on in bone at edges, ink left in seams. | The sealed product design that followed the maker years | Gig poster and record sleeve: thick ink, halftone, stamped numbers | The quietest change; a toy finish can drift clean, which Bible AD-11 forbids. The brushed wear is the guard. |
-| 1996, the sticker sheet | Moulded toy-line plastic, one clean colour per part, chrome fittings, stripes and numbers as stickers. Hard flash light. | Beige moulded housings with vents and one lamp | Sticker sheets and card-back roll calls | Drops "greasy" and "weathered" (AD-09) and walks toward the toy showroom, so it needs a Bible amendment. |
-| 1978, the shop models | Die-cast metal under thick gloss enamel that chips to bare metal. Flocked animals. One warm lamp. | The striped industrial giants of that decade's paperback covers | Sign-painter caps and dance posters, two inks | Gloss highlights compete with "light means a fact". Highest cost; needs a frame check on the 4080. |
+**What 2010 is.** Hand-painted custom vinyl for machines, wool felt for crews, real copper and brass fittings. Satin, never glossy. Wear brushed on in bone at edges, ink left in seams like a comic line. The old works look like the sealed product design that followed the maker years: one-piece shells, soft square corners, a status light. Lettering is gig poster and record sleeve: thick ink, halftone, stamped numbers.
 
-Why 2010 is recommended: the years 2004 to 2012 were hands-on years, and the sealed decade that followed is what the Foreman stands for. The touchstones Andrew has named sit inside that window.
+**What stays.** The palette, the silhouettes, the warm daylight and every ruling. The year changes finish, wear and lettering only.
 
-A separable extra: the two years that are not picked could become finishes earned in play, as the sound persona turns its other two periods into radio stations.
+**The guard.** A toy finish can drift clean, which Bible AD-11 forbids. The brushed wear is the guard, and habit 4 says where it goes. Working call: brushed bone wear belongs to what a hand made or repainted, so to keeper gear and Fleet paint, and a casting takes none. The Wardens' enamel already bakes with `edge=0` ([POLISH.md](../tools/blender/POLISH.md), for the enamel colour cap), which suits a casting.
 
-## 6. What changes in the pipeline once a year is picked
+**Where the game stood on the day** (PC stills at build 1c9bc643, RTX 4080; code at stage 31fae243). The mechanism belongs to [POLISH.md](../tools/blender/POLISH.md) and `src/presentation/bake_look.gd`; this is a dated reading of them.
+
+- Keeper gear wears most. The `paint` slot draws a salvaged-plate map that carries its own wear, over the bake's vertex colours (`src/presentation/hero_assets.gd`). On the PC, Sable's ball has chipped bone on its hoop.
+- Fleet machines carry the bake's shading but not its bright edge. Enemy and boss scripts put their own materials on the model, and `BakeLook.dress` gives those the bake's occlusion and crease darkening through a multiply layer. A multiply cannot brighten, so convex edges stop at neutral, and the body drops the world grain on purpose so a soft-toy body reads smooth. On the PC the Shift Boss and the lobber read as clean paint with soft shading.
+- The rogues' hulls do carry the bake's edge: their kit makes `fleet_paint` a vertex-colour slot and the hull draws vertex colour. The bake lightens an edge by at most 18 percent in its own hue, so it reads as a soft highlight, not as bone. On the PC the rogue crane reads as clean paint.
+- Brass is drawn three ways: vertex colour in `paint` (the tags), `requisition_tag` at half metal, and a brass material built in an enemy's own script. In the one still that shows horn bells, the Shift Boss at the dam at dawn, they read dark. The cause is not established.
+- Nothing on screen is glossy, and the light at the rogue crane is warm daylight on sandstone, as the 2010 sample shows it.
+
+**The years not picked.** 1996 (moulded toy plastic, chrome, stickers, hard flash) and 1978 (die-cast under chipped gloss enamel, flocked animals, one warm lamp). A separable extra, not approved: either could come back as a finish earned in play, as the sound persona keeps its other two periods as radio stations.
+
+## 6. What changes in the pipeline for 2010
 
 Proposals, not yet built. Each is its own small change.
 
@@ -79,3 +85,5 @@ Proposals, not yet built. Each is its own small change.
 3. **Fasteners and marks become kit parts:** strap, stitch seam, weld bead, number plate, brass tag, stencil, seam of light. The rogues' kit already has the stencil, the cut line and the governor.
 4. **Reference sheets open with these habits and the year** in place of the generic style line.
 5. **Every art change posts a before and after contact sheet.** Form is checked on cloud stills; the look is checked on the PC, in the game's renderer.
+6. **Fleet paint gets the bright edge.** `BakeLook` already carries the bake's shading to every enemy and boss material. It also lifts convex edges toward bone, on Fleet paint and not on a casting.
+7. **One brass.** Brass parts share one slot and one satin recipe, judged on the PC at dawn and in daylight.

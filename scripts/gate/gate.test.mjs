@@ -8,7 +8,7 @@ import { parseLedger } from "../known-failing.mjs";
 import { place, sortChanges, testsToRerun } from "./carry.mjs";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
-import { WEEKLY_HEADER, chunks, classifyFailure, errorCounts, gateLists, nearLimit, numbered, parseSmokeLog, parseWeekly, parseWindow, renderReceipt, shardVerdict } from "./shard.mjs";
+import { WEEKLY_HEADER, chunks, classifyFailure, errorCounts, gateLists, importOutcome, nearLimit, numbered, parseSmokeLog, parseWeekly, parseWindow, renderReceipt, shardVerdict } from "./shard.mjs";
 import { WEEKLY_MAX_DAYS, checkTally, checkWeeklySweep, expectedShards, isPass, planHead, tallyRows } from "./tally.mjs";
 import { WEEKLY_FILE, checkWeekly } from "./weekly.mjs";
 
@@ -303,4 +303,13 @@ test("the docs check fails a weekly list that does not parse or names a test wit
   } finally {
     rmSync(root, { recursive: true, force: true });
   }
+});
+
+test("a shard reads its import the way the runner does: a signal is the engine's crash, a script error is not clean", () => {
+  assert.equal(importOutcome(0, "[ DONE ] reimport\n"), "ok");
+  assert.equal(importOutcome("SIGSEGV", "[   0% ] reimport | NotoSans-Bold.ttf\n"), "engine crash");
+  assert.equal(importOutcome("SIGABRT", "malloc(): smallbin double linked list corrupted\n"), "engine crash");
+  assert.equal(importOutcome(139, ""), "engine crash");
+  assert.equal(importOutcome("SIGKILL", ""), "failed", "the shard's own time limit is not an engine crash");
+  assert.equal(importOutcome(0, "SCRIPT ERROR: Parse Error: Could not preload resource file\n"), "script errors");
 });

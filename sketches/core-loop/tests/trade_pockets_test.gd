@@ -234,8 +234,14 @@ func _runtime(model) -> void:
 				var hp: float = game.run.hp
 				var max_hp: float = game.run.max_hp
 				var cogs: int = game.run.cogs
+				var taken: Array = []
+				var heard := func(kind: String, _where: Vector3): taken.append(kind)
+				game.events.trade_taken.connect(heard)
 				game.world.interact.fire(device)
 				acts._watch_trade(s, at)
+				acts._watch_trade(s, at)
+				game.events.trade_taken.disconnect(heard)
+				t.eq(entry.id + " a taken trade is published once, by its kind", taken, [s.id])
 				t.check(entry.id + " consent buys the shown price", device.spent and (is_equal_approx(hp - game.run.hp + game.run.max_hp - max_hp, device.offer.cost) if device.offer.cost_kind == "hp" else cogs - game.run.cogs == device.offer.cost))
 				t.eq(entry.id + " risk memory follows successful purchase", game.run.trade_memory.risk_taken, spec.trade.family == "risk")
 				var settled: Dictionary = game.run.trade_memory.duplicate(true)

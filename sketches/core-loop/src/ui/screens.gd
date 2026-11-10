@@ -14,6 +14,7 @@ const HelpPage := preload("res://src/ui/help_page.gd")
 const AchievementsPage := preload("res://src/ui/achievements_page.gd")
 const SettingsPages := preload("res://src/ui/settings_pages.gd")
 const CampMenu := preload("res://src/ui/camp_menu.gd")
+const CampScrapbook := preload("res://src/ui/camp_scrapbook.gd")
 const JukeboxPage := preload("res://src/ui/jukebox_page.gd")
 const RadioPage := preload("res://src/ui/radio_page.gd")
 const Achievements := preload("res://src/core/achievements.gd")
@@ -63,12 +64,20 @@ const STAMP_TILT := -6.0
 # it; after that Space, Enter, Esc or any pad button shows the summary beneath.
 const ENDING_HOLD := 1.0
 const PROLOGUE_TITLE := "FIRST SHIFT"
+# The one line under "Choose your pilot"; empty shows none. The screen has room for one line
+# (ui_class_card_level_test L4 pins it with the key row on screen). It is the game's one line
+# (STORY-MAP.md section 1) as the crew's board would say it.
+const PILOT_LINE := "Loose cannons, all of them. Pick one."
 # Start is the one filled button on the title: the primary action reads first and biggest.
 # The run-end comic page (run_moments.gd) on the summary, drawn by the camp's comic_page.gd
 # when the build has it: 3:4, at most this share of the screen's height.
 const COMIC_PAGE_PATH := "res://src/ui/comic_page.gd"
 const COMIC_HEIGHT := 0.5
+# The word under each of the summary's stats.
+const STAT_WORD_FONT := 13
 const COMIC_MAX_HEIGHT := 540.0
+const COMIC_BODY_LINES := 3
+const COMIC_MIN_HEIGHT := 240.0
 # RUN OVER's "next shift" note (core/death_tips.gd): an amber-edged plate taped up beside the comic page,
 # where the column has room; under the body it pushed the actions off a 900 px screen. Its words wrap at
 # TIP_WIDTH.
@@ -349,7 +358,11 @@ func _on_flow_changed(state: String) -> void:
 				_refusal.text = "Saved run not loaded (%s): %s" % [game.flow.saved_run_cause, continue_refusal()]
 				button_for("start").grab_focus()
 		"class_select":
-			_show("Choose your pilot", Palette.SAND, "")
+			_show("Choose your pilot", Palette.SAND, PILOT_LINE)
+			# Pilot select fills none of these rows; hidden, their gaps (26 px each) are room for
+			# the line under the title with the cards at full height and the key row on screen.
+			for row in [_stats, _comic_row, _actions]:
+				row.visible = false
 			var classes: Array = game.flow.classes
 			var gap := CARD_GAP if classes.size() <= 4 else CARD_GAP_TIGHT
 			_choices.add_theme_constant_override("separation", int(gap))
@@ -367,7 +380,11 @@ func _on_flow_changed(state: String) -> void:
 			if _prologue_due():
 				_begin_prologue()
 		"dead":
-			_show("SCRAPPED", EventKinds.color("player_died"), game.flow.gap_line())
+			# The store-less flow's end screen says what RUN OVER says: who, then what to try (death_tips.gd).
+			var said: String = game.flow.death_cause
+			if game.flow.death_tip != "":
+				said += "\n" + DeathTips.shown(game.flow.death_tip)
+			_show("SCRAPPED", EventKinds.color("player_died"), said.strip_edges())
 			_action("new", "key_n", "New run")
 			_action("class", "key_c", "Choose pilot")
 			if not game.run.companion.is_empty():
@@ -403,6 +420,9 @@ func _on_flow_changed(state: String) -> void:
 			if board != "":
 				body += "\n" + board
 			_show("RUN COMPLETE" if game.flow.run_won else "RUN OVER", EventKinds.color("run_ended"), body)
+			# The summary has no choice cards; hidden, the row's gap is the column's (a first win
+			# that lands several shift board stamps takes two body lines for them).
+			_choices.visible = false
 			# What to try next shift (core/death_tips.gd): only a lost run has one.
 			if not game.flow.run_won and game.flow.death_tip != "":
 				_show_tip(game.flow.death_tip)
@@ -484,6 +504,7 @@ func _begin_prologue() -> void:
 	_prologue_line = 0
 	_choices.visible = false
 	_footer.visible = false
+	_actions.visible = true
 	_show_prologue_line()
 
 
@@ -527,7 +548,8 @@ func end_prologue() -> void:
 	for child in _actions.get_children():
 		_actions.remove_child(child)
 		child.queue_free()
-	_show("Choose your pilot", Palette.SAND, "")
+	_show("Choose your pilot", Palette.SAND, PILOT_LINE)
+	_actions.visible = false
 	_choices.visible = true
 	_footer.visible = true
 	_queue_level()
@@ -706,6 +728,9 @@ func _sync_walk() -> void:
 	var customizing: bool = _camp.customize != null and _camp.customize.visible
 	game.walk_input(live)
 	game.camp_hub.set_prompts_visible(live)
+	# The camp's caption card belongs to the walk: a page over it is read alone.
+	for card in get_tree().get_nodes_in_group(CampScrapbook.LINE_GROUP):
+		card.visible = live
 	_camp.visible = live or customizing
 	_veil.visible = not live
 	_title.visible = not live
@@ -1289,12 +1314,29 @@ func _show_comic_page(page: Dictionary) -> void:
 	if _state != "summary" or not ResourceLoader.exists(COMIC_PAGE_PATH):
 		return
 	var comic: Control = load(COMIC_PAGE_PATH).new()
-	var height := minf(COMIC_MAX_HEIGHT, _screen().y * COMIC_HEIGHT)
-	comic.custom_minimum_size = Vector2(height * 0.75, height)
 	comic.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_comic_row.add_child(comic)
 	_comic_row.move_child(comic, 0)
+	_fit_comic()
 	comic.show_page(page)
+
+
+# Sizes the summary's comic page to the body as it reads now. The page and a lost run's shift
+# board line both arrive after the summary opens, in either order, so each asks again.
+func _fit_comic() -> void:
+	var comic := comic_page()
+	if comic == null:
+		return
+	var height := comic_height(_screen().y, _body.get_line_count(), _body.get_line_height() + _body.get_theme_constant("line_spacing"))
+	comic.custom_minimum_size = Vector2(height * 0.75, height)
+
+
+# The comic page's height on the summary: half the screen, less a line's height for every body
+# line past the COMIC_BODY_LINES the column holds with the page at full height, so a long
+# summary (cause, epitaph, a two-line shift board) never pushes the buttons off the screen. It
+# stops at COMIC_MIN_HEIGHT, under which the page is no longer a page (a --dev summary's odds lines).
+static func comic_height(screen_h: float, body_lines: int, line_h: float) -> float:
+	return maxf(COMIC_MIN_HEIGHT, minf(COMIC_MAX_HEIGHT, screen_h * COMIC_HEIGHT) - maxi(0, body_lines - COMIC_BODY_LINES) * line_h)
 
 
 func comic_page() -> Control:
@@ -1351,23 +1393,27 @@ func _on_run_ended_board(_won: bool) -> void:
 		return
 	if not _body.text.contains(String(progress.board_line)):
 		_body.text += "\n" + String(progress.board_line)
+		_fit_comic()
 
 
 # The summary as icons and numbers: time, stages, cogs (the cog), scrap taken as mass (the heap), parts, kills, events won and
-# the earned save used (0 or 1), each on its own icon.
+# the earned save used (0 or 1), each on its own icon with its word under it, so nobody has to learn eight icons to read a run.
 func _summary_stats() -> void:
 	var s: Dictionary = game.run.summary()
 	var chips := [
-		["res_timer", "%d:%02d" % [int(s["time"]) / 60, int(s["time"]) % 60]],
-		["obj_beacon", "%d/%d" % [s["stages"], game.ctx.stages.COUNT]],
-		["res_scrap", str(s["cogs"])],
-		["res_mass", str(s["scrap"])],
-		["cat_transform", str((s["parts"] as Array).size())],
-		["thr_instant", str(s["kills"])],
-		["obj_event", str(s["events_won"])],
-		["res_health", str(s["save_used"])],
+		["res_timer", "%d:%02d" % [int(s["time"]) / 60, int(s["time"]) % 60], "time"],
+		["obj_beacon", "%d/%d" % [s["stages"], game.ctx.stages.COUNT], "stages"],
+		["res_scrap", str(s["cogs"]), "cogs"],
+		["res_mass", str(s["scrap"]), "scrap"],
+		["cat_transform", str((s["parts"] as Array).size()), "parts"],
+		["thr_instant", str(s["kills"]), "kills"],
+		["obj_event", str(s["events_won"]), "events"],
+		["res_health", str(s["save_used"]), "saves"],
 	]
 	for chip in chips:
+		var cell := VBoxContainer.new()
+		cell.add_theme_constant_override("separation", 0)
+		cell.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		var row := _row(8)
 		var icon := TextureRect.new()
 		icon.texture = Icons.texture(chip[0])
@@ -1381,7 +1427,12 @@ func _summary_stats() -> void:
 		value.add_theme_font_override("font", UiFonts.mono())
 		value.text = chip[1]
 		row.add_child(value)
-		_stats.add_child(row)
+		cell.add_child(row)
+		var word := _label(STAT_WORD_FONT)
+		word.text = String(chip[2]).to_upper()
+		word.add_theme_color_override("font_color", Color(Palette.SAND, 0.7))
+		cell.add_child(word)
+		_stats.add_child(cell)
 
 
 func _stamp(target: Label = null) -> void:

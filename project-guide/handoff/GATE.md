@@ -11,7 +11,7 @@ One promotion, one full gate, on the frozen stage head. The Gate thread writes a
 | Shard | What it runs | Usual wall time on a 4 vCPU cloud box |
 | --- | --- | --- |
 | tests, three windows | the non-bot list in thirds | 50 to 60 min each |
-| bots 1 to the last block | the bot list in blocks of 5 (22 tests, so 5 blocks, while the weekly list holds 9) | 35 to 60 min each |
+| bots 1 to the last block | the bot list in blocks of 5 (23 tests, so 5 blocks, while the weekly list holds 9) | 35 to 60 min each |
 | bands A | the posture-band tests, `skill_band`, `run_tier_dials`, the word budgets, less any test the weekly list names | 60 min |
 | bands B | the world 1 challenge, 24 seeds | 90 min |
 | bands C | swarm bands, `run_tier`, the HARD rungs | 3 h, one resume |
@@ -35,9 +35,9 @@ node scripts/gate/shard.mjs run --tests 361-720 --out ~/gate/tests-361-720
 node scripts/gate/shard.mjs run --bots 16-20 --out ~/gate/bots-4
 ```
 
-`run` does the whole shard: it records the head, imports the sketch twice (the first import of a fresh checkout can crash; the second is the one that counts), runs the window (non-bot tests in chunks of 60, two chunks at a time; bot tests one at a time), reruns every failure alone twice, sorts the failures with the known-failing ledger and writes `receipt.md` and `shard.json` in the folder. `state.json` records each finished step, so a killed run continues from the next step. It refuses to continue in a folder that holds a different head, window, chunk size, solo count or time scale. It also refuses a checkout with uncommitted changes or with an untracked test or list file under `tests/`, because the lists are built from the files on disk: one stray file renumbers every window. The checkout is checked before each step and once more after the last.
+`run` does the whole shard: it records the head, imports the sketch twice, and a third time when the second was not clean (Godot's first import of a fresh checkout can die on signal 11 or 6 in its font reimport; that is the engine's race and never a project red, so a crashed import is tried again, and the shard stops before any test only when the last import crashed, failed or exited 0 still printing `SCRIPT ERROR`; the runner and the fast lane give their own import up to three tries and take the first that is clean in that sense; the fast lane's import of the merge-base tree gets three tries too, judged by its exit code alone), runs the window (non-bot tests in chunks of 60, two chunks at a time; bot tests one at a time), reruns every failure alone twice, sorts the failures with the known-failing ledger and writes `receipt.md` and `shard.json` in the folder. `state.json` records each finished step, so a killed run continues from the next step. It refuses to continue in a folder that holds a different head, window, chunk size, solo count or time scale. It also refuses a checkout with uncommitted changes or with an untracked test or list file under `tests/`, because the lists are built from the files on disk: one stray file renumbers every window. The checkout is checked before each step and once more after the last.
 
-What the folder holds afterwards: `chunkNN.log` or `bot-<test>.log` (the runner's own output), `logs/<test>.log` (every test's whole output, pass or fail), `solo-<test>-<n>.log` and `solo-logs-<n>/`, and the receipt. The receipt's last section is left for the thread: compare `logs/` with the last promoted head's receipts and say what moved. A moved tick, pin or floor is a finding even when the test passes.
+What the folder holds afterwards: `import-N.log` (each import's whole output), `chunkNN.log` or `bot-<test>.log` (the runner's own output), `logs/<test>.log` (every test's whole output, pass or fail), `solo-<test>-<n>.log` and `solo-logs-<n>/`, and the receipt. The receipt's last section is left for the thread: compare `logs/` with the last promoted head's receipts and say what moved. A moved tick, pin or floor is a finding even when the test passes.
 
 How a failure is called:
 
@@ -49,6 +49,8 @@ How a failure is called:
 | new-red | no row; it failed alone at least once | Yes. A new deterministic red goes to the pull request's owner (ruling ai). Confirm it is green on main before blaming the stage |
 
 For each failure the receipt prints the failing lines of its last solo run, so the check that failed sits beside the cause its row names. An `ERROR` line at exit fails a run even when every check passed. The receipt counts `ERROR`, `SCRIPT ERROR`, "still in use" and "previously freed" lines across every test's log, passing tests included.
+
+Every test the runner starts gets its own empty user data folder (`XDG_DATA_HOME`, in `scripts/sketch-smoke.mjs` and `scripts/sketch-fast.mjs`), removed when the test ends. So `user://` carries nothing from one test file to the next, in a shard or in the fast lane; the child runs a test starts share that test's folder unless the test or its helper gives them their own (a launched child gets its own, `tests/trees/child_runs.gd`). A bare Godot command typed by hand does not get one: it reads and writes the container's one shared folder, `~/.local/share/godot/app_userdata/core-loop`, with whatever earlier hand runs left there. Rerun a suspect test through the runner, or set `XDG_DATA_HOME` to a new empty folder first.
 
 ### Slow boxes
 

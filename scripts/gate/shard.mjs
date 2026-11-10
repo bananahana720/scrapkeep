@@ -6,7 +6,7 @@
 //   node scripts/gate/shard.mjs run --bots 16-20 --out <folder>
 //   add --weekly to list or run the weekly names instead (WEEKLY.tsv, ruling ca)
 //
-// `run` imports the sketch twice, runs its window of the sorted list (non-bot
+// `run` imports the sketch twice (a third time when the second was not clean), runs its window of the sorted list (non-bot
 // tests in chunks, bot tests one at a time), reruns every failure alone, sorts
 // the failures with the known-failing ledger and writes <folder>/receipt.md
 // and <folder>/shard.json. Every step is recorded in <folder>/state.json, so
@@ -23,7 +23,7 @@ import { LEDGER_FILE, judgeFailures, parseLedger } from "../known-failing.mjs";
 import { WEEKLY_FILE, weeklyNames as readWeeklyNames } from "./weekly.mjs";
 
 export { WEEKLY_FILE, WEEKLY_HEADER, parseWeekly } from "./weekly.mjs";
-import { failingLines, isBot, testScripts, testTimeoutMs, timeScale } from "../sketch-smoke.mjs";
+import { IMPORT_TRIES, failingLines, importTry, isBot, scriptErrorCount, testScripts, testTimeoutMs, timeScale } from "../sketch-smoke.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 const SKETCH = "sketches/core-loop";
@@ -212,6 +212,11 @@ function boxLine() {
   return `${cpus.length} vCPU ${cpus[0]?.model ?? "unknown CPU"}, ${Math.round(os.totalmem() / 2 ** 30)} GB`;
 }
 
+// runToFile reports a signal by name in `exit`; importTry wants the code and the signal apart.
+export function importOutcome(exit, output) {
+  return importTry({ exit: typeof exit === "number" ? exit : null, signal: typeof exit === "string" ? exit : null, scriptErrors: scriptErrorCount(output) });
+}
+
 function runToFile(command, args, file, env, timeoutMs) {
   return new Promise((resolve) => {
     const started = Date.now();
@@ -281,9 +286,20 @@ async function run(options) {
   };
   const smokeArgs = (tests) => [smoke, "--sketch", "core-loop", ...(options.bots ? ["--bots"] : []), ...tests.flatMap((test) => ["--test", test])];
 
-  for (const pass of [1, 2]) {
-    await step(`import-${pass}`, () => runToFile(godot, ["--headless", "--path", sketchDir, "--import"], path.join(options.out, `import-${pass}.log`), env, IMPORT_TIMEOUT_MS));
+  // Two imports always (the second is quick and is the one that counts), and a third when the
+  // second was not clean. A crashed import is the engine's, so it is tried again; the shard stops
+  // only when the last try was not clean, before any test can print a misleading red.
+  let imported = "failed";
+  for (let pass = 1; pass <= IMPORT_TRIES && (pass <= 2 || imported !== "ok"); pass++) {
+    const file = path.join(options.out, `import-${pass}.log`);
+    await step(`import-${pass}`, async () => {
+      const ran = await runToFile(godot, ["--headless", "--path", sketchDir, "--import"], file, env, IMPORT_TIMEOUT_MS);
+      return { ...ran, outcome: importOutcome(ran.exit, readFileSync(file, "utf8")) };
+    });
+    imported = state.steps[`import-${pass}`].outcome ?? "ok"; // a step from before outcomes were recorded
+    if (imported !== "ok") console.log(`import ${pass} of ${IMPORT_TRIES}: ${imported}`);
   }
+  if (imported !== "ok") throw new Error(`the last import was not clean (${imported}); no test ran. Read ${options.out}/import-*.log, then start again in a new folder`);
 
   const groups = options.bots ? names.map((name) => [name]) : chunks(names, options.chunk);
   const groupName = (index) => (options.bots ? `bot-${names[index]}` : `chunk${String(index).padStart(2, "0")}`);

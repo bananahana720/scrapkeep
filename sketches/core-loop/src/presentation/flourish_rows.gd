@@ -5,8 +5,10 @@ extends RefCounted
 #
 # A row plays in full until a profile has seen most of it (seen key SEEN_PREFIX + id;
 # flourish_player.gd SEEN_SHARE) and in its short form after.
-# It never stops time and never takes the camera: play goes on under it (TONE-BIBLE guardrails),
-# so `held` stays 0 unless a caller holds the run itself.
+# It never stops time and never takes the controls: play goes on under it (TONE-BIBLE guardrails),
+# so `held` stays 0 unless a caller holds the run itself. Two ruled world beats bend that for a
+# hand on the controls only (flourish_cues.gd): a glance turns the camera to the subject (bv)
+# and a close-up slows the world while its panel is up (cf).
 #
 #   priority  a higher row ends a lower one that is showing; an equal or lower one waits its turn
 #   full      the first-time pieces; short: the repeat pieces. Each piece is
@@ -20,6 +22,9 @@ extends RefCounted
 #   panels       texts: up to three comic panels, popping one every PANEL_STEP seconds
 #   sfx_word     text; anchor (a name in play()'s anchors) or at: Vector2 screen share
 #   speed_lines  no fields; reduced motion drops it
+#   inset        a comic panel with a live close-up in it (flourish_inset.gd), on the right of
+#                the play view: anchor (the subject), home (the anchor it comes to rest at) and
+#                toward (the anchor its camera stands toward), all names in play()'s anchors
 #
 # TONE-READ: world 1 stage beats (unit 4), crew-log captions and card stats; every line awaits
 # Andrew's read.
@@ -34,7 +39,7 @@ const PANEL_STEP := 0.6
 # Lore lines keep the prologue's cap (prologue_rows.gd).
 const LINE_WORD_CAP := 14
 const SLOTS := ["left_top", "left_low", "column", "centre"]
-const KINDS := ["card", "stamp", "caption", "panels", "sfx_word", "speed_lines"]
+const KINDS := ["card", "stamp", "caption", "panels", "sfx_word", "speed_lines", "inset"]
 
 const ROWS := {
 	# Stage 1 entry, first stage of a run: the pump crew's card punches in at dawn.
@@ -43,13 +48,14 @@ const ROWS := {
 			{"kind": "caption", "at": 0.0, "for": 2.0, "slot": "left_low",
 				"text": ["Spillway Works. Dawn. Probably a Tuesday.", "Spillway Works. Dawn. Definitely a Wednesday.", "Spillway Works. Dawn. The kettle is on."]},
 			{"kind": "caption", "at": 2.0, "for": 2.0, "slot": "left_low",
-				"text": ["Moss's shift note: bring the runner back up.", "Moss's shift note: seals first. Then the runner."]},
+				"text": ["Moss's shift note: bring the runner back up.", "Moss's shift note: seals first. Then the runner.",
+					"Moss's shift note: nothing's out of place. Yet.", "Moss's shift note: very tidy out there. Boots on."]},
 			{"kind": "card", "at": 0.6, "for": 4.4, "slot": "left_top",
 				"card": ["PUMP CREW", "Card 0417 · Spillway shift", "Clocked in", "06:00", "Hands on shift", "all", "Runner", "not back yet"]},
 			{"kind": "stamp", "at": 1.4, "for": 2.0, "text": "CLOCKED IN", "colour": "HAZARD"},
 			{"kind": "sfx_word", "at": 1.4, "for": 1.2, "text": "KA-CHUNK", "at_share": Vector2(0.62, 0.34)},
 			{"kind": "caption", "at": 4.2, "for": 1.4, "slot": "left_low",
-				"text": ["Moss packed a spare card.", "Moss packed a spare thermos.", "Moss packed two. Just in case."]},
+				"text": ["Moss packed a spare card.", "Moss packed a spare thermos.", "Moss packed two. Just in case.", "Moss packed a broom. For after."]},
 		],
 		"short": [
 			{"kind": "stamp", "at": 0.0, "for": 1.8, "text": "CLOCKED IN", "colour": "HAZARD"},
@@ -117,14 +123,20 @@ const ROWS := {
 	# inside BossRules.INTRO_SECONDS (3.0 s, no attack lands); phase panels inside the 2.0 s
 	# transition beat (fight_phases.gd); rout and sign-on share the victory window.
 	"brindle_arrival": {"priority": 3, "on": "arrival", "boss": "brindle",
-		"world": {"full": [{"kind": "rise", "at": 0.0, "seconds": 1.4}, {"kind": "glance", "anchor": "ship", "seconds": 0.9}],
+		# The close-up (ruling cf): a low camera under the Requisition as it comes over the rim, in
+		# a comic panel beside his card, and the world slowed to SLOW for as long as the panel is
+		# up. Seconds here are the row's, which slow with the world: the panel's 0.7 s is about
+		# 2.3 s on the wall clock.
+		"world": {"full": [{"kind": "rise", "at": 0.0, "seconds": 1.4}, {"kind": "glance", "anchor": "ship", "seconds": 0.9},
+				{"kind": "slow", "at": 0.15, "for": 0.7, "scale": 0.3}],
 			"short": [{"kind": "glance", "anchor": "ship", "seconds": 0.7}]},
 		"full": [
 			{"kind": "speed_lines", "at": 0.0, "for": 0.9},
 			{"kind": "sfx_word", "at": 0.1, "for": 1.0, "text": "HONK", "anchor": "ship"},
+			{"kind": "inset", "at": 0.15, "for": 0.7, "anchor": "ship_body", "home": "ship", "toward": "arena"},
 			# left_low: Moss's bubble carries Brindle's per-pilot threat line in the column's top
 			# at the same moment (moss_bubble.gd, lore_rows intro), and the card sits under it.
-			{"kind": "card", "at": 0.5, "for": 2.4, "slot": "left_low",
+			{"kind": "card", "at": 0.2, "for": 2.7, "slot": "left_low",
 				"card": ["ADMIRAL BRINDLE", "Badger · Furnace Fleet", "Height", "two paws", "Iron", "twelve hundred tons (rounded up)", "Voice", "never raised"]},
 			{"kind": "sfx_word", "at": 1.4, "for": 0.9, "text": "CHUNK", "anchor": "ship"},
 		],

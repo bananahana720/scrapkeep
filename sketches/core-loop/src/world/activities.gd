@@ -881,6 +881,7 @@ func _watch_trade(s: Site, ball: Vector3) -> void:
 		s.done = true
 		TradePockets.see(ctx.run.trade_memory, s.trade)
 		TradePockets.decide(ctx.run.trade_memory, s.trade, true)
+		ctx.events.trade_taken.emit(s.id, s.global_position)
 
 
 func _build_interior(s: Site) -> void:

@@ -72,6 +72,9 @@ func _run() -> void:
 
 	game.flow.choose_class(1)
 	await _frames(2)
+	# The cold open has the floor first (one voice at a time, ruling cf): a plate waits for its
+	# card, so the run's opening flourish is ended before the plate is asked for.
+	game.presentation.flourish.stop_all()
 	game.events.achievement_earned.emit("first_win")
 	game.hud._step_ach(0.1)
 	_t.check("UI1-3 a toast is up before the ending", not game.hud.ach_toasts().is_empty())

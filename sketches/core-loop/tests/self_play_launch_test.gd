@@ -1,11 +1,12 @@
-# smoke: bots timeout=900s (seven real-tick played game children: four boot-only quits, two planted stalls, one planted-limit run, one from the title through stage 1 into stage 2; about 250 s for the last on the loaded cloud box, 2026-10-18)
+# smoke: bots timeout=900s (ten real-tick played game children: seven boot-only quits, two planted stalls, one planted-limit run, one from the title through stage 1 into stage 2; about 250 s for the last on the loaded cloud box, 2026-10-18)
 extends SceneTree
 
 const T := preload("res://tests/support/t.gd")
 
 # --self-play (src/game.gd, tools/self_play.gd): the launched main scene is played by a bot with
 # real ticks (a played game, not test_mode or SimClock) and quits by code: 0 the goal was reached,
-# 2 a bad flag or a missing script (--self-play-script= stands in for a pack without tools/),
+# 1 the run ended first or there was nothing to continue, 2 a bad flag or a missing script
+# (--self-play-script= stands in for a pack without tools/),
 # 3 a stall (planted: --self-play-plant-stall for the exit detector, --self-play-plant-after-exit
 # for an exit that opens no next stage, --self-play-plant-limit for the driver's limit). Evidence limit: one seed, skipper, headless; the gates trigger of the detector
 # is not exercised, only its timing, line and exit code.
@@ -18,6 +19,13 @@ func _initialize() -> void:
 	t.eq("an unreadable --self-play-until quits 2", bad_until["code"], 2)
 	var missing := _launch(["--self-play-script=res://tools/not_there.gd"])
 	t.eq("a pack without the self-play script quits 2", missing["code"], 2)
+	var bad_save := _launch(["--self-play-save=../elsewhere"])
+	t.eq("a save folder name that is not one plain name quits 2", bad_save["code"], 2)
+	var keys_from := _launch(["--self-play-keys=1", "--self-play-from=2"])
+	t.eq("keys with a later starting stage quit 2", keys_from["code"], 2)
+	var no_save := _launch(["--self-play-continue=1"])
+	t.eq("told to continue with nothing saved, the bot quits 1", no_save["code"], 1)
+	t.check("and starts no run", no_save["text"].contains("self-play: no Continue offered at ") and _line(no_save["text"], "self-play: stage ") == "", _line(no_save["text"], "self-play: no Continue offered at "))
 	var ended := _launch(["--self-play-plant-end"])
 	t.eq("a run that ends before the goal quits 1", ended["code"], 1)
 	t.check("the ended line names the outcome", ended["text"].contains("self-play: run ended 'planted_end'"))

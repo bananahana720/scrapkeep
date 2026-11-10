@@ -2,7 +2,6 @@
 extends SceneTree
 
 const Game := preload("res://src/game.gd")
-const StageDefs := preload("res://tests/doubles/two_world_defs.gd").FirstWorld
 const Intent := preload("res://src/movement/intent.gd")
 const SpawnerDouble := preload("res://tests/doubles/spine_spawner_double.gd")
 
@@ -82,8 +81,8 @@ func _retry() -> Dictionary:
 	}
 
 
-# The boss death screen: the gap line names plating, and T replays stage 3 from the
-# start the run kept. Wave 4 adds the boss state; here its seam is set by hand.
+# The store-less death screen: it says what scrapped you, and against the boss T replays
+# stage 3 from the start the run kept. Wave 4 adds the boss state; here its seam is set by hand.
 func _final_stage_checks() -> void:
 	var run = _game.run
 	var flow = _game.flow
@@ -108,9 +107,11 @@ func _final_stage_checks() -> void:
 	var begin := Time.get_ticks_usec()
 	var replayed: bool = flow.replay_stage(3)
 	var took := Time.get_ticks_usec() - begin
-	# Re-pinned 2026-10-15 (BRINDLE-SCUTTLE merge): hull plating 120 to 110 in boss_rules.gd.
-	_report("death gap line", warden_text.contains("plating %d" % int(StageDefs.of(3)["warden_plating"])) and boss_text.contains("plating 110") and boss_text.contains("T   replay stage 3"),
-		"warden death reads \"%s\"; boss death offers T %s" % [warden_text.get_slice("\n", 0), boss_text.contains("T   replay")])
+	# 2026-11-10: the screen's line is the run's cause line (death_cause.gd), as RUN OVER's is; the old
+	# "Punch n / plating m" gap line is gone, and neither death here met an engaged fight, so no next-shift line.
+	_report("death screen words", warden_text.get_slice("\n", 0) == "Scrapped by a test." and boss_text.get_slice("\n", 0) == "Scrapped by a test."
+			and not warden_text.contains("T   replay") and boss_text.contains("T   replay stage 3"),
+		"warden death reads \"%s\"; boss death reads \"%s\" and offers T %s" % [warden_text.get_slice("\n", 0), boss_text.get_slice("\n", 0), boss_text.contains("T   replay")])
 	_report("replay stage 3", offered and replayed and flow.state_name() == "stage" and run.stage == 3 and run.mass == start["mass"]
 			and run.parts == start["parts"] and is_equal_approx(run.hp, start["hp"]) and took < SECOND_USEC,
 		"T replayed stage %d in %.1f ms: mass %.0f (start %.0f), parts %s, hp %.0f, flow %s"
