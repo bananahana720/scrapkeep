@@ -10,7 +10,7 @@ const Glyphs := preload("res://src/ui/glyphs.gd")
 const CAPTIONS := {
 	"breach": "Slam the Dig's cracked plates.",
 	"lift": "Glide through Highdraft thermals.",
-	"companion": "SPIL-9, your companion: next ram calls it in.",
+	"companion": "SPIL-9: next ram calls it in.",
 	"grip": "Roll fast along walls to ride them.",
 	"cast": "Big actives wind up before firing.",
 	"jam": "Locks picks 2 and 3.",
