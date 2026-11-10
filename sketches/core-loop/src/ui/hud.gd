@@ -215,6 +215,8 @@ var _engaged := false
 var _struggle := Objectives.Struggle.new()
 # The site the activity row names now (objective_reading), or null.
 var _plate_site = null
+# Where the ball is going, which is the "ahead" the activity row names a site by.
+var _way := Objectives.Way.new()
 # The armour gauge (scrap mode `armor`): the mass heap and the scrap layer over the hull, left of the hull
 # gauge, in the scrap colour where the hull is sand. A hit that reached the scrap flashes
 # its edge amber for ARMOR_FLASH seconds; the hull gauge turns rust only at low health.
@@ -807,6 +809,7 @@ func _on_world_entered(world: int) -> void:
 func _on_stage_entered(stage: int, retry: bool) -> void:
 	_threat = 0
 	_begin_engagement(false)
+	_way.begin()
 	if retry:
 		return
 	if game.opening.waits("title"):
@@ -1043,13 +1046,13 @@ func objective_reading() -> Dictionary:
 		return {"id": "", "icon": "", "words": "", "color": Palette.SAND, "progress": -1.0, "distance": -1}
 	var words := Objectives.words(id)
 	if id == "find_activity":
-		# An unfinished site by name and metres, so the row is a place to go: the one in front of
-		# the view (Objectives.pick_site), kept until another is clearly the better call.
+		# An unfinished site by name and metres, so the row is a place to go: the one ahead on the
+		# ball's way (Objectives.pick_site, Way), kept until another is clearly the better call.
 		var ball: Vector3 = game.player.shown_position()
 		var offsets := []
 		for site in sites:
 			offsets.append(site.global_position - ball)
-		var picked := Objectives.pick_site(offsets, -game.camera.cam.global_transform.basis.z, sites.find(_plate_site) if is_instance_valid(_plate_site) else -1)
+		var picked := Objectives.pick_site(offsets, _way.ahead(-game.camera.cam.global_transform.basis.z), sites.find(_plate_site) if is_instance_valid(_plate_site) else -1)
 		_plate_site = sites[picked] if picked >= 0 else null
 		if picked >= 0:
 			words = Objectives.activity_words(String(sites[picked].id), game.world.activities.called(String(sites[picked].id)))
@@ -1247,6 +1250,8 @@ func _physics_process(delta: float) -> void:
 		return
 	if _engaged:
 		_struggle.step(delta)
+	if game.player != null:
+		_way.step(game.player.planar_velocity(), delta)
 	part_name.step(delta)
 	_step_fight_hint()
 

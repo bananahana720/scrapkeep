@@ -75,18 +75,19 @@ static func activity_words(kind: String, called := "") -> String:
 	return "Find the " + called.to_lower() if called != "" else String(ROWS["find_activity"]["words"])
 
 
-# Which site the activity row names: the one in front of the view, not merely the nearest. A site's
-# score is its distance, stretched by how far it lies off the view (straight ahead x1, abeam x2,
-# behind x3), and the lowest score is named. The row keeps the site it names until another scores
-# under SITE_KEEP of it, so two sites at like range never trade the row back and forth.
-# At the dam's drop this names the camp the drop faces (310 m, 1 degree off) and not the relay
-# beside it (305 m, 21 degrees off).
+# Which site the activity row names: the one ahead, not merely the nearest. A site's score is its
+# distance, stretched by how far it lies off the heading (straight ahead x1, abeam x2, behind x3),
+# and the lowest score is named. The row keeps the site it names until another scores under
+# SITE_KEEP of it, so two sites at like range never trade the row back and forth.
+# The heading is the ball's way (Way below): the view until the ball has travelled, and after that
+# where the ball is going. At the dam's drop this names the camp the drop faces (310 m, 1 degree
+# off) and not the relay beside it (305 m, 21 degrees off).
 const SITE_OFF_VIEW := 1.0
 const SITE_KEEP := 0.8
 
 
-# offset is the site's place less the ball's; forward is the view's heading. Height counts in the
-# distance and not in the angle.
+# offset is the site's place less the ball's; forward is the heading (Way.ahead). Height counts in
+# the distance and not in the angle.
 static func site_score(offset: Vector3, forward: Vector3) -> float:
 	var flat := Vector3(offset.x, 0.0, offset.z)
 	var ahead := Vector3(forward.x, 0.0, forward.z)
@@ -157,6 +158,40 @@ static func choose(reading: Dictionary) -> String:
 					return "ram_scooter"
 			return "break_brindle"
 	return ""
+
+
+# Which way the ball is going, for the activity row. The row once read the view's heading, and on
+# the road through either Spillway stage one look round then changed the goal two or three times
+# with nothing done (first-timer film, PF-11). The way is the heading the ball last travelled on at
+# SPEED or more, eased over EASE seconds so a bounce or a swerve does not swing it; slower than
+# that it stays as it was. Until the ball has travelled since begin() (the drop, a new stage) it is
+# the view's heading, so the row names what the drop faces.
+class Way:
+	extends RefCounted
+
+	const SPEED := 6.0
+	const EASE := 0.75
+
+	var _heading := Vector3.ZERO
+
+	func begin() -> void:
+		_heading = Vector3.ZERO
+
+	# velocity is the ball's; only its flat part counts.
+	func step(velocity: Vector3, delta: float) -> void:
+		var flat := Vector3(velocity.x, 0.0, velocity.z)
+		if flat.length() < SPEED:
+			return
+		var to := flat.normalized()
+		if _heading == Vector3.ZERO:
+			_heading = to
+			return
+		# Turned by a share of the angle between them, so a full reversal comes round as any turn does.
+		_heading = _heading.rotated(Vector3.UP, _heading.signed_angle_to(to, Vector3.UP) * (1.0 - exp(-delta / EASE))).normalized()
+
+	# The heading the row reads: the ball's way once it has travelled, else the view's.
+	func ahead(view: Vector3) -> Vector3:
+		return _heading if _heading != Vector3.ZERO else view
 
 
 # Counts the seconds a build spends trying against a posture Warden. A second counts while

@@ -102,7 +102,7 @@ func _mount_reading(t) -> void:
 	t.eq("another mounting keeps the guard row", driver.plate_reading(warden), {})
 
 
-# The activity row names the site in front of the view, and keeps it until another clearly wins.
+# The activity row names the site ahead, and keeps it until another clearly wins.
 func _site_pick(t) -> void:
 	var north := Vector3(0, 0, 1)
 	t.eq("no site, no pick", Objectives.pick_site([], north), -1)
@@ -133,6 +133,38 @@ func _site_pick(t) -> void:
 		if offsets[i].length() < offsets[plain].length():
 			plain = i
 	t.eq("the nearest site at the dam's drop is the relay, which is why the view decides", kinds[plain], "hold_the_relay")
+	_way(t)
+
+
+# The heading the row reads is the view until the ball has travelled, then where the ball is going:
+# a look round changes nothing once it rolls.
+func _way(t) -> void:
+	var north := Vector3(0, 0, 1)
+	var east := Vector3(1, 0, 0)
+	var way := Objectives.Way.new()
+	t.eq("before the ball has travelled, ahead is the view", [way.ahead(north), way.ahead(east)], [north, east])
+	way.step(east * (Objectives.Way.SPEED - 0.5), 1.0)
+	t.eq("a ball slower than SPEED sets no way", way.ahead(north), north)
+	way.step(east * 20.0 + Vector3.UP * 30.0, 1.0 / 90.0)
+	t.eq("the first travel sets the way at once, flat", way.ahead(north), east)
+	t.eq("and the view no longer moves it", [way.ahead(north), way.ahead(-east), way.ahead(-north)], [east, east, east])
+	way.step(Vector3.ZERO, 5.0)
+	t.eq("a stopped ball keeps its way", way.ahead(north), east)
+	way.step(north * 20.0, 1.0 / 90.0)
+	t.check("one tick of a new heading barely turns it (a bounce)", way.ahead(north).dot(east) > 0.99, str(way.ahead(north)))
+	for i in 270:
+		way.step(north * 20.0, 1.0 / 90.0)
+	t.check("three seconds on the new heading turns it there", way.ahead(east).dot(north) > 0.99, str(way.ahead(east)))
+	for i in 270:
+		way.step(-north * 20.0, 1.0 / 90.0)
+	t.check("a full reversal turns it round, never to nothing", way.ahead(east).dot(-north) > 0.99 and is_equal_approx(way.ahead(east).length(), 1.0), str(way.ahead(east)))
+	way.begin()
+	t.eq("begin() hands ahead back to the view", way.ahead(north), north)
+	# Two sites either side of the road: by the view a look round trades the row; by the way it holds.
+	var offsets := [Vector3(0, 0, 300), Vector3(0, 0, -250)]
+	t.eq("by the view, turning round moves the row to the site behind", [Objectives.pick_site(offsets, north, -1), Objectives.pick_site(offsets, -north, 0)], [0, 1])
+	way.step(north * 20.0, 1.0 / 90.0)
+	t.eq("by the way, it stays on the site the ball is heading for", [Objectives.pick_site(offsets, way.ahead(north), -1), Objectives.pick_site(offsets, way.ahead(-north), 0)], [0, 0])
 
 
 func _rows(t) -> void:
