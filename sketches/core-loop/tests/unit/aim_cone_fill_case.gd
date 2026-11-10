@@ -40,6 +40,12 @@ func run(t) -> void:
 		"aim %s, area %s" % [aim.vertex_color_is_srgb, plain.vertex_color_is_srgb])
 	t.check("a record is an aim mark only when it says so", Indicator.is_aim({"aim": true}) and not Indicator.is_aim({"kind": "cone"}) and not Indicator.is_aim({"kind": "ring"}), "")
 
+	var empty := [{"kind": "marks", "points": []}, {"kind": "arc", "points": [Vector3.ZERO]}, {"kind": "arc", "points": []}, {}]
+	var full := [{"kind": "marks", "points": [Vector3.ZERO]}, {"kind": "arc", "points": [Vector3.ZERO, Vector3.ONE]}, {"kind": "arc", "points": [Vector3.ZERO], "blocked": true},
+		{"kind": "ring"}, {"kind": "line"}, {"kind": "cone", "aim": true}]
+	t.check("a record with nothing to draw is left out of the mesh, and only such a record", empty.all(func(shape): return not Indicator.draws(shape)) and full.all(func(shape): return Indicator.draws(shape)),
+		"empty %s, full %s" % [empty.map(func(shape): return Indicator.draws(shape)), full.map(func(shape): return Indicator.draws(shape))])
+
 	var source := FileAccess.get_file_as_string("res://src/movement/player_ball.gd")
 	var cones := 0
 	var aims := 0
@@ -47,4 +53,4 @@ func run(t) -> void:
 		if text.contains("\"kind\": \"cone\""):
 			cones += 1
 			aims += 1 if text.contains("\"aim\": true") and text.contains("\"clear\": AIM_CONE_CLEAR") else 0
-	t.check("the ball builds its cones in one place, as aim marks that start clear of it", cones == 1 and aims == 1 and source.count("aim_cone(") == 4, "%d cones, %d aim, %d uses" % [cones, aims, source.count("aim_cone(") - 1])
+	t.check("the ball builds its cones in one place, as aim marks that start clear of it", cones == 1 and aims == 1 and source.count("_aim_cone(") == 4, "%d cones, %d aim, %d uses" % [cones, aims, source.count("_aim_cone(") - 1])

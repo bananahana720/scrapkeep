@@ -459,11 +459,11 @@ var _bank_logging_deferred := false
 func bank_geometry() -> Dictionary:
 	var at := ball_position()
 	var launch := Augments.bank_exit(state.velocity.length(), at - kit.anchor, drive_basis, kit)
-	return aim_cone(at, launch.normalized(), AIM_CONE_LENGTH * (1.0 + launch.length() / Augments.LAUNCH_CEILING), {"speed": launch.length()})
+	return _aim_cone(at, launch.normalized(), AIM_CONE_LENGTH * (1.0 + launch.length() / Augments.LAUNCH_CEILING), {"speed": launch.length()})
 
 
 # The record of an aim mark: the line the ball would leave `at` along, `length` metres of it.
-func aim_cone(at: Vector3, dir: Vector3, length: float, more := {}) -> Dictionary:
+func _aim_cone(at: Vector3, dir: Vector3, length: float, more := {}) -> Dictionary:
 	var shape := {"kind": "cone", "aim": true, "apex": at, "dir": dir, "length": length, "half_angle": AIM_CONE_HALF, "clear": AIM_CONE_CLEAR}
 	shape.merge(more)
 	return yours(shape)
@@ -1504,12 +1504,12 @@ func _update_aim_cones(at: Vector3) -> void:
 	else:
 		indicator.clear("bank")
 	if not kit.vault_aim.is_empty():
-		indicator.set_shape("vault", aim_cone(at, kit.vault_aim["dir"], AIM_CONE_LENGTH))
+		indicator.set_shape("vault", _aim_cone(at, kit.vault_aim["dir"], AIM_CONE_LENGTH))
 	else:
 		indicator.clear("vault")
 	if kit.mounted and not kit.slingshot_aim.is_empty():
 		var fill: float = kit.slingshot_aim["fill"]
-		indicator.set_shape("slingshot", aim_cone(at, kit.slingshot_aim["dir"], AIM_CONE_LENGTH * (1.0 + fill), {"fill": fill}))
+		indicator.set_shape("slingshot", _aim_cone(at, kit.slingshot_aim["dir"], AIM_CONE_LENGTH * (1.0 + fill), {"fill": fill}))
 	else:
 		indicator.clear("slingshot")
 	if face_tags.is_empty():

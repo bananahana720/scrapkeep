@@ -91,6 +91,21 @@ static func is_aim(shape: Dictionary) -> bool:
 	return bool(shape.get("aim", false))
 
 
+# Whether a record puts anything on screen. One that does not (marks with no points yet, an arc of
+# one point) is left out of the mesh: a surface that ends with no vertices is an engine error, and
+# with areas and aim marks on separate surfaces such a record can be alone on its own.
+static func draws(shape: Dictionary) -> bool:
+	match String(shape.get("kind", "")):
+		"ring", "line", "cone":
+			return true
+		"marks":
+			return not (shape["points"] as Array).is_empty()
+		"arc":
+			var count := (shape["points"] as Array).size()
+			return count >= 2 or (count == 1 and bool(shape.get("blocked", false)))
+	return false
+
+
 func set_shape(layer: String, shape: Dictionary) -> void:
 	shapes[layer] = shape
 	last_shape[layer] = shape
@@ -157,12 +172,12 @@ static func cone_tips(shape: Dictionary) -> Array:
 	var length: float = shape["length"]
 	if is_aim(shape):
 		return [apex + dir * length]
-	var side := cone_side(dir)
+	var side := _cone_side(dir)
 	var spread := tan(float(shape["half_angle"]))
 	return [apex + (dir + side * spread).normalized() * length, apex + (dir - side * spread).normalized() * length, apex + dir * length]
 
 
-static func cone_side(dir: Vector3) -> Vector3:
+static func _cone_side(dir: Vector3) -> Vector3:
 	var side := dir.cross(Vector3.UP)
 	return side.normalized() if side.length_squared() > 0.001 else Vector3.RIGHT
 
@@ -181,10 +196,12 @@ func _process(delta: float) -> void:
 	# Two surfaces: areas, then aim marks, whose material fades them near the lens.
 	var drawn := [[], []]
 	for layer in shapes:
-		drawn[int(is_aim(shapes[layer]))].append([shapes[layer], 1.0])
+		if draws(shapes[layer]):
+			drawn[int(is_aim(shapes[layer]))].append([shapes[layer], 1.0])
 	for layer in _collapsing:
 		var entry: Dictionary = _collapsing[layer]
-		drawn[int(is_aim(entry["shape"]))].append([entry["shape"], 1.0 - clampf(entry["t"] / COLLAPSE, 0.0, 1.0)])
+		if draws(entry["shape"]):
+			drawn[int(is_aim(entry["shape"]))].append([entry["shape"], 1.0 - clampf(entry["t"] / COLLAPSE, 0.0, 1.0)])
 	for i in drawn.size():
 		if drawn[i].is_empty():
 			continue
@@ -255,7 +272,7 @@ func _draw(shape: Dictionary, now: float) -> void:
 			var apex: Vector3 = shape["apex"]
 			var dir: Vector3 = (shape["dir"] as Vector3).normalized()
 			var length: float = shape["length"]
-			var side := cone_side(dir)
+			var side := _cone_side(dir)
 			var spread := tan(float(shape["half_angle"]))
 			var left := apex + (dir + side * spread).normalized() * length
 			var right := apex + (dir - side * spread).normalized() * length
