@@ -18,8 +18,9 @@ const T := preload("res://tests/support/t.gd")
 # Run it by hand after any change under tools/bot_* or to the classifier (it is on the weekly list).
 const SEED := 40301
 const TICKS := 30000
-# Tolerances against the unplanted run: F1 within 0.10 of the share, F2 within 50% of the ratio, F3 within 0.5 s.
-const TOL_SHARE := 0.10
+# Tolerances against the unplanted run: F1 within 0.15 of the share (a plant's own hull is untelegraphed by construction, so it
+# moves F1 by its share of the hull; the plants here add 2 to 4 hull to about 34), F2 within 50% of the ratio, F3 within 0.5 s.
+const TOL_SHARE := 0.15
 const TOL_TAX := 0.5
 const TOL_FIRST_HIT_S := 0.5
 
@@ -62,7 +63,7 @@ func _run() -> void:
 	_line = BotFairness.config()
 	_fixtures()
 	var base := OS.get_user_data_dir().path_join("bot-fairness-%d" % OS.get_process_id())
-	var arms := {"plain": "", "drain": "drain=0.05", "fast_tax": "fast_tax=0.1", "ringless": "ringless=1"}
+	var arms := {"plain": "", "drain": "drain=0.02", "fast_tax": "fast_tax=0.03", "ringless": "ringless=0.3"}
 	var jobs := []
 	for name in arms:
 		jobs.append({"script": "res://tools/bot_run.gd", "args": _args(base.path_join(name), arms[name])})
