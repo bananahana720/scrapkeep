@@ -8,6 +8,7 @@ const RunTier := preload("res://src/core/run_tier.gd")
 const StartPicks := preload("res://src/core/start_picks.gd")
 const Icons := preload("res://src/ui/icons.gd")
 const UiDraw := preload("res://src/ui/ui_draw.gd")
+const UiFonts := preload("res://src/ui/ui_fonts.gd")
 const Keycap := preload("res://src/ui/keycap.gd")
 const Palette := preload("res://src/core/palette.gd")
 
@@ -32,6 +33,32 @@ const REROLL_KEY := "key_v"
 # this much larger than the in-play strip.
 const BRIEFING_SCALE := 1.4
 const UNLOCK_WORDS := "A win unlocks Tier 1"
+# The HARD ladder on the card (a profile with a rung opened): the word, one pip per rung and four
+# gauges (RunTier.meters). At rest the gauges are the selected rung's and only its pip carries a
+# numeral. A pip under the focus or the mouse is the rung looked at: it shows its numeral, the
+# gauges read it, and its contract (RunTier.contract_lines) is written under them, so the numbers
+# reach a pad, a keyboard and a mouse the same way before the press. Sizes are the card's own,
+# unscaled in the briefing.
+const TIER_WORD := "Tier"
+const RUNG := 34.0
+const RUNG_GAP := 10.0
+const RUNG_FONT := 18
+const LADDER_ROW := 26.0
+const METER_ROW := 80.0
+const METER_FONT := 17
+const METER_BAR := Vector2(110.0, 12.0)
+const METER_GAP := 24.0
+const CONTRACT_ROW := 108.0
+const CONTRACT_STEP := 21.0
+const CONTRACT_FONT := 15
+# The interactive card's height under the tiles: the words and the reroll, or the ladder with room
+# for a looked-at rung's contract.
+const CONTROLS_H := 120.0
+const LADDER_H := 146.0
+# The interactive card's least width; the ladder's is wide enough for the top rung's threat line.
+const CONTROLS_W := 780.0
+const LADDER_W := 800.0
+const REROLL_SIZE := Vector2(138.0, 38.0)
 
 var _tiles: Array = []
 var _tile_rects: Array[Rect2] = []
@@ -42,16 +69,13 @@ var _interactive := false
 var _briefing := false
 var _profile
 var _run
+# The opened rungs' pips, by tier.
 var _tier_buttons := {}
-# The HARD ladder rung the card shows (0: the selected rung, else the highest unlocked); Next rung steps it.
-var _shown_rung := 0
-var _shown_for := ""
 # Whether a screen over the card owns the input now (flow.gd _start_card_covered); unset, nothing does.
 var covered := Callable()
 var reroll_button: Button
 # The tiles' buttons, in tile order (interactive only).
 var _tile_buttons: Array[Button] = []
-var rung_button: Button
 
 
 
@@ -81,9 +105,6 @@ func _k() -> float:
 
 
 func show_picks(run, profile = null) -> void:
-	if String(run.run_id) != _shown_for:
-		_shown_for = String(run.run_id)
-		_shown_rung = 0
 	_run = run
 	_profile = profile
 	_tiles = []
@@ -160,7 +181,11 @@ func extent() -> Vector2:
 	for tile in _tiles:
 		w += _tile_width(tile)
 	w += TILE_GAP * _k() * maxf(0.0, _tiles.size() - 1)
-	return Vector2(maxf(w, 780.0) if _interactive else w, _controls_top() + (120.0 if _interactive else 0.0))
+	if not _interactive:
+		return Vector2(w, _controls_top())
+	if ladder_shown():
+		return Vector2(maxf(w, LADDER_W), _controls_top() + LADDER_H)
+	return Vector2(maxf(w, CONTROLS_W), _controls_top() + CONTROLS_H)
 
 
 # Where the words and buttons under the tiles and their pips begin.
@@ -180,9 +205,42 @@ func drawn_words() -> PackedStringArray:
 		elif _interactive and not _run.run_tier_open():
 			out.append(_held_words())
 		elif _interactive:
-			out.append(RunTier.threat_text(shown_rung()))
-			out.append(RunTier.pay_text(shown_rung()))
+			out.append(TIER_WORD)
+			out.append_array(_numerals())
+			for meter in RunTier.meters(_shown_tier()):
+				out.append(String(meter["name"]))
+			if _looked_tier() >= 0:
+				out.append_array(RunTier.contract_lines(_looked_tier()))
 	return out
+
+
+# The rung looked at: the opened pip under the focus, else the one under the mouse; -1 with neither.
+func _looked_tier() -> int:
+	var hovered := -1
+	for tier in _tier_buttons:
+		var pip: Button = _tier_buttons[tier]
+		if not is_instance_valid(pip):
+			continue
+		if pip.has_focus():
+			return tier
+		if pip.is_hovered():
+			hovered = tier
+	return hovered
+
+
+# The rung the gauges read: the one looked at, else the one selected.
+func _shown_tier() -> int:
+	var looked := _looked_tier()
+	return looked if looked >= 0 else _run.selected_run_tier()
+
+
+# The numerals drawn on the pips, in rung order: the selected rung's and the looked-at rung's.
+func _numerals() -> PackedStringArray:
+	var tiers := [_run.selected_run_tier()]
+	if _looked_tier() >= 0 and not _looked_tier() in tiers:
+		tiers.append(_looked_tier())
+	tiers.sort()
+	return PackedStringArray(tiers.map(func(tier): return str(tier)))
 
 
 # A fresh profile has no rung to pick, so the card names only how to open one: HARD's threat, pay
@@ -195,35 +253,32 @@ func _held_words() -> String:
 	return "Tier %d held for this run" % _run.selected_run_tier()
 
 
-# The rung whose threat and pay the card discloses and whose button it offers: the one Next rung stepped
-# to, else the run's selected rung, else the highest the profile has opened (rung 1 while HARD is locked).
-func shown_rung() -> int:
-	var top := RunTier.top_unlocked(_profile)
-	if _shown_rung >= RunTier.HARD and _shown_rung <= top:
-		return _shown_rung
-	if _run != null and _run.selected_run_tier() >= RunTier.HARD:
-		return _run.selected_run_tier()
-	return maxi(RunTier.HARD, top)
-
-
-# With a rung selected, Next rung selects the next one too, so the card always shows the run's tier.
-# Under a covering screen it steps nothing, so the shown rung never leaves the run's.
-func step_rung() -> void:
-	var top := RunTier.top_unlocked(_profile)
-	if top < 2 or (covered.is_valid() and covered.call()):
-		return
-	_shown_rung = shown_rung() % top + 1
-	if _run != null and _run.selected_run_tier() >= RunTier.HARD:
-		tier_requested.emit(_shown_rung)
-	_controls()
-
-
 func offered_tiers() -> Array:
 	return StartPicks.offered_tiers(_profile)
 
 
+# An opened rung's pip; null for a rung the profile has not opened, or with no ladder on the card.
 func tier_button(tier: int) -> Button:
 	return _tier_buttons.get(tier)
+
+
+# Whether the card shows the ladder: a rung opened and the choice not yet closed by stage 1's Warden.
+func ladder_shown() -> bool:
+	return _interactive and visible and _run != null and ladder_open() and _run.run_tier_open()
+
+
+# The ladder row, left to right: the word, the pips, then the reroll with its key cap.
+func _ladder_width() -> float:
+	return UiDraw.width(TIER_WORD, 20) + GAP + _pips_width() + 40.0 + KEY + GAP + REROLL_SIZE.x
+
+
+func _pips_width() -> float:
+	return (RunTier.TOP + 1) * RUNG + RunTier.TOP * RUNG_GAP
+
+
+func _pip_centre(tier: int) -> Vector2:
+	var left := (size.x - _ladder_width()) * 0.5 + UiDraw.width(TIER_WORD, 20) + GAP
+	return Vector2(left + RUNG * 0.5 + tier * (RUNG + RUNG_GAP), _controls_top() + LADDER_ROW)
 
 
 func _button(at: Vector2, extent_value: Vector2, words: String, action: Callable) -> Button:
@@ -248,22 +303,29 @@ func _label(words: String, y: float) -> void:
 
 # centred is for a card that offers no tier beside it (the briefing on a profile with no rung, or a held tier).
 func _reroll(y: float, centred := false) -> void:
-	# The V key is a drawn cap left of the button (_draw), as the tiles' keys are; beside the tier
-	# buttons the button is narrower, so the cap and Next rung both clear it.
+	# The V key is a drawn cap left of the button (_draw), as the tiles' keys are.
 	var alone := centred and _briefing
 	var x := size.x * 0.5 - 80.0 if alone else size.x * 0.5 + 122.0
-	reroll_button = _button(Vector2(x, y + 60.0), Vector2(160.0 if alone else 138.0, 38.0), "Reroll", func(): reroll_requested.emit())
+	_reroll_at(Vector2(x, y + 60.0), Vector2(160.0 if alone else REROLL_SIZE.x, REROLL_SIZE.y))
+
+
+func _reroll_at(at: Vector2, extent_value: Vector2) -> void:
+	reroll_button = _button(at, extent_value, "Reroll", func(): reroll_requested.emit())
 	reroll_button.disabled = _rerolls <= 0
 
 
 func _controls() -> void:
+	# A pick redraws the card (flow.show_start_card): the focus stays on the rung it was on.
+	var held := -1
+	for tier in _tier_buttons:
+		if is_instance_valid(_tier_buttons[tier]) and _tier_buttons[tier].has_focus():
+			held = tier
 	for child in get_children():
 		remove_child(child)
 		child.queue_free()
 	_tier_buttons.clear()
 	_tile_buttons.clear()
 	reroll_button = null
-	rung_button = null
 	if not _interactive or not visible:
 		return
 	for index in _tiles.size():
@@ -282,34 +344,30 @@ func _controls() -> void:
 		_label(_held_words(), y)
 		_reroll(y, true)
 		return
-	var rung := shown_rung()
-	_label(RunTier.threat_text(rung), y)
-	_label(RunTier.pay_text(rung), y + 28.0)
-	var tiers := offered_tiers()
-	var top := tiers.size() - 1
-	var x := size.x * 0.5 - 250.0
-	# The base tier and one ladder rung; Next rung steps the rung through the ones the profile has opened.
-	for tier_value in [0, rung]:
-		if not tier_value in tiers:
-			continue
-		var words := "Tier %d%s" % [tier_value, " (selected)" if _run.selected_run_tier() == tier_value else ""]
-		_tier_buttons[tier_value] = _button(Vector2(x, y + 60.0), Vector2(160.0, 38.0), words, func(): tier_requested.emit(tier_value))
-		x += 170.0
-	if top < RunTier.TOP:
-		_label("Win a run on Tier %d to unlock Tier %d" % [top, top + 1], y + 96.0)
-	_reroll(y)
-	if top >= 2:
-		rung_button = _button(Vector2(size.x * 0.5 + 270.0, y + 60.0), Vector2(110.0, 38.0), "Next rung", step_rung)
+	# The ladder: a pip for each rung the profile has opened takes the press; the pips, the locked rungs,
+	# the gauges and a looked-at rung's contract are drawn (_draw_ladder).
+	for tier_value in offered_tiers():
+		var pip := _button(_pip_centre(tier_value) - Vector2(RUNG, RUNG) * 0.5, Vector2(RUNG, RUNG), "", func(): tier_requested.emit(tier_value))
+		pip.flat = true
+		# The looked-at ring is drawn (_draw_ladder), so the button's own focus box stays off.
+		pip.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
+		for looked in [pip.focus_entered, pip.focus_exited, pip.mouse_entered, pip.mouse_exited]:
+			looked.connect(queue_redraw)
+		_tier_buttons[tier_value] = pip
+	if held >= 0 and _tier_buttons.has(held) and is_inside_tree():
+		_tier_buttons[held].grab_focus()
+	var last := _pip_centre(RunTier.TOP)
+	_reroll_at(Vector2(last.x + RUNG * 0.5 + 40.0 + KEY + GAP, last.y - REROLL_SIZE.y * 0.5), REROLL_SIZE)
 
 
-# The buttons the focus walks, left to right as they read: the tiles, then the tier buttons,
-# Reroll and Next rung, leaving out any that cannot be pressed.
+# The buttons the focus walks, left to right as they read: the tiles, then the ladder's pips and
+# Reroll, leaving out any that cannot be pressed.
 func _focus_ring() -> Array:
 	var ring: Array = _tile_buttons.duplicate()
 	var tiers: Array = _tier_buttons.keys()
 	tiers.sort()
 	ring.append_array(tiers.map(func(tier): return _tier_buttons[tier]))
-	ring.append_array([reroll_button, rung_button])
+	ring.append(reroll_button)
 	return ring.filter(func(button): return button != null and is_instance_valid(button) and not button.disabled)
 
 
@@ -413,6 +471,8 @@ func _draw() -> void:
 	if reroll_button != null and is_instance_valid(reroll_button):
 		var cap := reroll_button.position + Vector2(-KEY * 0.5 - GAP, reroll_button.size.y * 0.5)
 		Keycap.draw(self, cap, REROLL_KEY, Color(Palette.SAND, 0.4 if reroll_button.disabled else 1.0), KEY)
+	if ladder_shown():
+		_draw_ladder()
 	# One pip per reroll left, centred under the tiles: a spent reroll leaves an outline.
 	for i in StartPicks.REROLLS:
 		var at := Vector2(size.x * 0.5 + (i - (StartPicks.REROLLS - 1) * 0.5) * PIP * k * 3.0, h + PIP * k * 1.5)
@@ -420,3 +480,60 @@ func _draw() -> void:
 			draw_circle(at, PIP * k, _color)
 		else:
 			draw_arc(at, PIP * k, 0.0, TAU, 16, Color(_color, 0.5), 1.5)
+
+
+# The ladder as drawn: the selected rung is a filled disc in the pilot's colour, an opened rung a
+# sand ring and a locked rung a faint one. Under it the gauges of the rung looked at, or of the
+# selected rung: hazard for what the works gains, arc for what is the pilot's. A gauge is faint up to
+# the base tier's mark and bright past it; a gauge short of the mark (the top rungs' regen) leaves the
+# lost length as a hazard outline. Under the gauges, the looked-at rung's contract in words.
+func _draw_ladder() -> void:
+	var row_y := _controls_top() + LADDER_ROW
+	var selected: int = _run.selected_run_tier()
+	var looked := _looked_tier()
+	var top := RunTier.top_unlocked(_profile)
+	UiDraw.text(self, _pip_centre(0).x - RUNG * 0.5 - GAP - UiDraw.width(TIER_WORD, 20), row_y, TIER_WORD, 20, Palette.SAND)
+	for tier in RunTier.TOP + 1:
+		var at := _pip_centre(tier)
+		var numeral := str(tier) if tier == selected or tier == looked else ""
+		var ink := Palette.SAND
+		if tier == selected:
+			draw_circle(at, RUNG * 0.5, _color)
+			draw_arc(at, RUNG * 0.5 + 4.0, 0.0, TAU, 32, _color, 2.0)
+			ink = Palette.CHARCOAL
+		elif tier <= top:
+			draw_circle(at, RUNG * 0.5, Color(Palette.CHARCOAL, 0.88))
+			draw_arc(at, RUNG * 0.5, 0.0, TAU, 32, Palette.SAND, 2.0)
+			if tier == looked:
+				draw_arc(at, RUNG * 0.5 + 4.0, 0.0, TAU, 32, Palette.SAND, 2.0)
+		else:
+			draw_arc(at, RUNG * 0.5, 0.0, TAU, 32, Color(Palette.SAND, 0.3), 1.5)
+			ink = Color(Palette.SAND, 0.3)
+		var font := UiFonts.bold()
+		var base := Vector2(at.x - UiDraw.width(numeral, RUNG_FONT) * 0.5, at.y + (font.get_ascent(RUNG_FONT) - font.get_descent(RUNG_FONT)) * 0.5)
+		draw_string(font, base, numeral, HORIZONTAL_ALIGNMENT_LEFT, -1, RUNG_FONT, ink)
+	var meters := RunTier.meters(_shown_tier())
+	var total := METER_GAP * (meters.size() - 1)
+	for meter in meters:
+		total += UiDraw.width(String(meter["name"]), METER_FONT) + GAP + METER_BAR.x
+	var x := (size.x - total) * 0.5
+	var y := _controls_top() + METER_ROW
+	for meter in meters:
+		x += UiDraw.text(self, x, y, String(meter["name"]), METER_FONT, Palette.SAND) + GAP
+		var bar := Rect2(Vector2(x, y - METER_BAR.y * 0.5), METER_BAR)
+		var colour := Palette.ARC if meter["yours"] else Palette.HAZARD
+		var fill := clampf(float(meter["fill"]), 0.0, 1.0)
+		var mark := clampf(float(meter["base"]), 0.0, 1.0)
+		UiDraw.bar(self, bar, minf(fill, mark), Color(colour, 0.4))
+		if fill > mark:
+			draw_rect(Rect2(bar.position + Vector2(bar.size.x * mark, 0.0), Vector2(bar.size.x * (fill - mark), bar.size.y)), colour)
+		elif fill < mark:
+			draw_rect(Rect2(bar.position + Vector2(bar.size.x * fill, 0.0), Vector2(bar.size.x * (mark - fill), bar.size.y)), Palette.HAZARD, false, 1.5)
+		if mark < 1.0:
+			draw_line(bar.position + Vector2(bar.size.x * mark, -3.0), bar.position + Vector2(bar.size.x * mark, bar.size.y + 3.0), Palette.SAND, 2.0)
+		x += METER_BAR.x + METER_GAP
+	if looked >= 0:
+		var lines := RunTier.contract_lines(looked)
+		for i in lines.size():
+			var line_y := _controls_top() + CONTRACT_ROW + i * CONTRACT_STEP
+			UiDraw.text(self, (size.x - UiDraw.width(lines[i], CONTRACT_FONT)) * 0.5, line_y, lines[i], CONTRACT_FONT, Palette.SAND)

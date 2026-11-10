@@ -83,6 +83,8 @@ static func dials(tier: int) -> Dictionary:
 static func threat_text(tier := HARD) -> String:
 	var hard := row(tier)
 	var words := "Threat: %d%% more crowd, %d%% shorter intervals" % [roundi((hard.cap_weight - 1.0) * 100.0), roundi((1.0 - hard.interval_weight) * 100.0)]
+	if hard.has("elite_stats"):
+		words += ", plated elites"
 	var d := dials(tier)
 	if d.has("warden.pulse_damage_mult"):
 		words += ", harder hits and Warden pulse"
@@ -92,6 +94,48 @@ static func threat_text(tier := HARD) -> String:
 
 static func pay_text(tier := HARD) -> String:
 	return "Pay: %d%% more event cores and rare weight; gain cap %.1fx" % [roundi((row(tier).event_core_multiplier - 1.0) * 100.0), PAY_GAIN_CAP]
+
+# A rung's contract in words, a line each, for the start card to show for the rung being looked at.
+static func contract_lines(tier: int) -> PackedStringArray:
+	if tier <= BASE:
+		return PackedStringArray(["The standard shift."])
+	return PackedStringArray([threat_text(tier), pay_text(tier)])
+
+# What each gauge reads, as a multiple of the base tier. Every dial in LADDER and every number in a
+# RUN_TIERS row is read by one of them, so a rung that changes anything moves a gauge:
+#   Crowd: how many may stand at once over how long the next pack takes to come.
+#   Hits: damage times how often it comes, averaged over the three that hit (the mobs with their
+#     elite repeat rate, the Warden's pulse, Brindle).
+#   Regen: the rate over the wait before it starts.
+#   Pay: event cores (rare weight steps with it in every row).
+# Elite plating (rung 1 up) is not a number that grows up the ladder; threat_text says it.
+static func _readings(tier: int) -> Dictionary:
+	var d := dials(tier)
+	var r := row(tier)
+	var mobs := float(d.get("mobs.damage_mult", 1.0)) * float(d.get("mobs.elite_rate_mult", 1.0))
+	var pulse := float(d.get("warden.pulse_damage_mult", 1.0)) / float(d.get("warden.pulse_cycle_mult", 1.0))
+	var brindle := float(d.get("brindle.damage_mult", 1.0)) / float(d.get("brindle.period_mult", 1.0))
+	return {
+		"Crowd": float(r.cap_weight) / (float(r.interval_weight) * float(d.get("mobs.interval_scale_mult", 1.0))),
+		"Hits": (mobs + pulse + brindle) / 3.0,
+		"Regen": float(d.get("pilot.regen_rate_mult", 1.0)) / float(d.get("pilot.regen_delay_mult", 1.0)),
+		"Pay": float(r.event_core_multiplier),
+	}
+
+# A rung's contract as four gauges for the start card (start_pick_card.gd): what the works gains
+# (crowd, hits) and what the pilot keeps (regen) or is paid. `fill` and `base` are shares of the gauge's
+# length, the top rung's reading being the whole of it: `base` is the base tier's reading, so the length
+# past it is what the rung adds and a length short of it is what the rung takes. A gauge is a glance;
+# the numbers are contract_lines.
+static func meters(tier: int) -> Array:
+	var now := _readings(tier)
+	var top := _readings(TOP)
+	var out := []
+	for name in ["Crowd", "Hits", "Regen", "Pay"]:
+		var whole := maxf(1.0, float(top[name]))
+		out.append({"name": name, "yours": name in ["Regen", "Pay"], "fill": float(now[name]) / whole, "base": 1.0 / whole})
+	return out
+
 
 static func stage_row(stage: Dictionary, tier: int) -> Dictionary:
 	if tier == BASE:
