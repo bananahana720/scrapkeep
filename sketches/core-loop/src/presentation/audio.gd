@@ -1195,8 +1195,9 @@ func _ace_stage(stage: int, at: int, fight := false) -> void:
 	if radio_hold != "":
 		return
 	# The live moment's tune, else the stage's remix or modifier tune, else the stage's own pack.
-	_moment_playing = TuneMoments.top(_moments, tune_available)
-	var tune := level_tune(stage)
+	# A Warden's fight takes the band from every moment.
+	_moment_playing = "" if fight else TuneMoments.top(_moments, tune_available)
+	var tune := level_tune(stage, fight)
 	var manifest: String = MusicRows.resolve(tune)["ace_manifest"] if tune != "" else _music_row(stage)["ace_manifest"]
 	_select_ace_manifest(manifest)
 	# Preserve the launch riser and landing drop before the destination's recorded bed.
@@ -2043,7 +2044,14 @@ func wire_optional() -> void:
 		_begin_boss("warden_engaged", "warden")
 		engine.parameter_danger("warden_engaged")
 		if ace_playing():
-			ace.commit_warden())
+			ace.commit_warden()
+		elif _ace_arrival_stage > 0 and _ace_arrival_at >= 0:
+			# A drop still holds the recorded band (an ultimate's, a landing's): the Warden's
+			# entrance takes it back now, not when the drops are over.
+			var stage := _ace_arrival_stage
+			_ace_arrival_stage = 0
+			_ace_arrival_at = -1
+			_ace_stage(stage, engine.next_bar(), true))
 	_listen_optional(events, "boss_arena_entered", func():
 		_boss_phase = 1
 		_disarm_launch()
@@ -3063,8 +3071,8 @@ func new_run_tunes() -> void:
 
 # What the level band plays on this stage: the live moment's tune, else the run's modifier or
 # rolled remix for the stage, else "" for the stage's own pack.
-func level_tune(stage: int) -> String:
-	var top := TuneMoments.top(_moments, tune_available)
+func level_tune(stage: int, fight := false) -> String:
+	var top := "" if fight else TuneMoments.top(_moments, tune_available)
 	if top != "":
 		return top
 	return TuneMoments.stage_tune(MusicRows.zone_id(stage, _music_stages()), _run_modifiers(), _remixes, tune_available)
@@ -3101,17 +3109,17 @@ func end_moment(kind: String, key := "", refresh := true) -> void:
 		_refresh_moment()
 
 
-func _refresh_moment() -> void:
+func _refresh_moment(fight := false) -> void:
 	if radio_hold != "" or not sound_ready or not ace_wanted() or _champion_hyped or _stage_now <= 0:
 		return
 	if not engine.track in ["level", "miniboss"]:
 		return
-	var want := TuneMoments.top(_moments, tune_available)
+	var want := "" if fight else TuneMoments.top(_moments, tune_available)
 	if want == _moment_playing:
 		return
 	_moment_playing = want
 	var at := engine.next_bar()
-	_ace_stage(_stage_now, at)
+	_ace_stage(_stage_now, at, fight)
 	cue_log.append(["tune_moment", want if want != "" else "stage", "bar", at, 1.0])
 
 
@@ -3151,13 +3159,15 @@ func tune_found(discovery_id: String) -> void:
 
 # A Warden's fight takes the band: the landmark's tune ends and stays away for the stage, and a
 # tune on its one pass (a find, the fabricator) is cut short and none begins until the arena
-# opens, or its tempo holds the grid over the fight and the Warden's pivot never comes.
+# opens, or its tempo holds the grid over the fight and the Warden's pivot never comes. Any
+# other moment's tune (an event still running) gives the band up for the fight too: the stage's
+# own recording comes back straight into the fight's sections.
 func warden_took_band() -> void:
 	_warden_engaged = true
 	_warden_fighting = true
 	for moment in ["landmark"] + TuneMoments.ONE_PASS:
 		end_moment(moment, "", false)
-	_refresh_moment()
+	_refresh_moment(true)
 
 
 func landmark_moment(landmark_id: String, approach: float) -> void:

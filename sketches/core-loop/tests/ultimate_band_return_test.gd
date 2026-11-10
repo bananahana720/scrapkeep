@@ -133,11 +133,19 @@ func _cancels() -> void:
 
 
 func _warden() -> void:
+	# The Warden engages inside an ultimate's drop: its entrance takes the band back at once,
+	# it does not wait for the drop to end.
+	_start()
+	_bars(1)
+	_land()
+	_bars(1)
 	var guard := Node3D.new()
 	root.add_child(guard)
 	_game.flow.warden = guard
 	_game.events.warden_engaged.emit(1)
 	_game.flow.sealed = true
+	_bars(1.5)
+	t.check("a Warden engaging inside the ultimate's drop takes the band back", _audio.ace_playing() and _ace.mode == "warden" and _audio._ace_arrival_stage == 0, _state())
 	_bars(4)
 	if not t.check("the fight's sections play", _ace.mode == "warden" and _ace.section == "build", _state()):
 		return

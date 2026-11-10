@@ -34,8 +34,8 @@ class Rig:
 		return true
 	func _ace_named(id: String, at: int, _boss := false, _won := true) -> void:
 		named.append([id, at])
-	func _ace_stage(stage: int, at: int, _fight := false) -> void:
-		staged.append([stage, at, level_tune(stage)])
+	func _ace_stage(stage: int, at: int, fight := false) -> void:
+		staged.append([stage, at, level_tune(stage, fight)])
 
 class FakeElite:
 	extends Node3D
@@ -262,6 +262,14 @@ func _process(_delta: float) -> bool:
 	a.fabricator_used()
 	_t.eq("then the fabricator's tune plays again", _last(a), "fabricator")
 	a.end_moment("fabricator")
+
+	# An event still running when the Warden engages gives the band up for the fight too.
+	events.event_started.emit("flood")
+	_t.eq("an event's tune plays before the fight", _last(a), "event-flood")
+	events.warden_engaged.emit(4)
+	_t.eq("the Warden takes the band from an event's tune", _last(a), "")
+	events.event_ended.emit("flood", "passed")
+	events.beacon_unsealed.emit(4)
 
 	# Rare remixes, read where they play.
 	var zone31 := 0

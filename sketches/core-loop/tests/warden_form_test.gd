@@ -6,6 +6,7 @@ const Harmony := preload("res://src/presentation/harmony.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
 const T := preload("res://tests/support/t.gd")
 const AceStub := preload("res://tests/support/ace_stub.gd")
+const TuneMoments := preload("res://src/presentation/tune_moments.gd")
 
 # The Warden's fight plays the recorded band as a form, not one loop (audio.gd
 # _follow_warden_form, ace_sequencer.gd follow_guard): the guard near breaking is the tight build, a stagger the held
@@ -78,10 +79,25 @@ func _run() -> void:
 	root.add_child(_guard)
 	_bars(2)
 	_on_the_shelf()
+	# The worst start for the fight: an event's tune (its own recording, with no fight sections)
+	# is playing as the Warden engages. The fight takes the band from it, and enters on the pivot
+	# without opening the roaming take first.
+	var flood := TuneMoments.event_tune("flood")
+	var tuned: bool = _audio.tune_available.call(flood)
+	if tuned:
+		_audio.begin_moment("event", "flood", flood)
+		_bars(3)
+		t.check("an event's tune plays before the fight", _audio.ace.flat and _audio.ace.section == "main", "flat=%s section=%s" % [_audio.ace.flat, _audio.ace.section])
+	else:
+		print("warden_form_test: the flood's recording is not on disk; the fight starts from the stage's own take")
 	_game.flow.warden = _guard
 	_game.events.warden_engaged.emit(1)
 	_bars(4)
+	_ace = _audio.ace
 	t.check("engaging the Warden reaches the build", _ace.mode == "warden" and _ace.section == "build", "mode=%s section=%s" % [_ace.mode, _ace.section])
+	if tuned:
+		# The stage's recording was loaded again for the fight, so its count starts at nothing.
+		t.eq("the entrance opens the pivot and the build and nothing else", _ace.opened, _ace.stems.size() * 2)
 	_tight_build()
 	_breath_and_drop()
 	_unhit_stagger()
