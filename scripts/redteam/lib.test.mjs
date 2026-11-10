@@ -138,6 +138,11 @@ test("a film is handed to the reader with no word of why a frame was taken", () 
   // A death well after a filmed hit is not that hit's.
   const later = readerPack([["hit-1-lead", 10], ["hit-1", 10.4], ["death-lead", 11.6], ["death", 12]].map(([why, t]) => ({ file: why + ".jpg", why, t })));
   assert.deepEqual(later.sets, [{ id: 1, first: 1, last: 2, moment: 2 }, { id: 2, first: 3, last: 4, moment: 4 }]);
+  // A picture taken on the ordinary cadence inside a lead-in is left out: it would sit before
+  // the lead-in, out of game order, and show the same instant twice (cautious film, 10 Nov).
+  const doubled = readerPack([["plate", 250.9], ["roam", 253.94], ["hit-1-lead", 252.34], ["hit-1-lead", 253.94], ["hit-1", 254.1], ["death", 254.1], ["roam", 263.9]].map(([why, t], i) => ({ file: i + ".jpg", why, t })));
+  assert.deepEqual(doubled.key.map((row) => row.t), [250.9, 252.34, 253.94, 254.1, 254.1, 263.9]);
+  assert.deepEqual(doubled.sets, [{ id: 1, first: 2, last: 5, moment: 4 }]);
   assert.ok(readerBrief("first-timer", pack, { look: true }).includes("how it looks: say where"));
   assert.ok(!readerBrief("first-timer", pack, { look: true }).includes("software renderer"));
 });
