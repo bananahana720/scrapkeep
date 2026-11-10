@@ -231,8 +231,8 @@ func _initialize() -> void:
 	var named := true
 	for id in shown["attachments"]:
 		named = named and words.contains(String(Attachments.ROWS[id]["name"]))
-	t.check("the build readout shows tier, count and second mode for an equipped weapon",
-		named and words.contains("Tier IV") and words.contains(String(Attachments.SECOND_MODES["rapid_laser"]["name"])), words.replace("\n", " / "))
+	t.check("the build readout shows count, attachment names and second mode for an equipped weapon",
+		named and words.contains("Rapid Laser: 2 of 3 attachments") and words.contains(String(Attachments.SECOND_MODES["rapid_laser"]["name"])), words.replace("\n", " / "))
 
 	var count_ok := t.checks + 1 == EXPECTED_CHECKS
 	t.check("expected check count", count_ok, "%d / EXPECTED_CHECKS=%d" % [t.checks + 1, EXPECTED_CHECKS])
