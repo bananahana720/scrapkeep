@@ -833,7 +833,9 @@ func _process(delta: float) -> void:
 	engine.pause_gain = 0.45 if get_tree().paused else 1.0
 	if ace != null:
 		ace.pause_gain = engine.pause_gain
-	_tend_mix(delta)
+	# The mix glides in real time: under slow motion the frame's delta is scaled down, and the
+	# hold that marks it would arrive late by the same factor.
+	_tend_mix(delta / maxf(Engine.time_scale, 0.05))
 	_flush_flow()
 	_tend_kill_streak()
 	_warm_grid_key()

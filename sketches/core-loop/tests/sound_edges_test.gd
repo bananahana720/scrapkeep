@@ -50,6 +50,15 @@ static func faults(buf: PackedFloat32Array, loop := false) -> Array:
 	var out := []
 	if absf(buf[0]) > START_MAX * peak:
 		out.append("starts at %d%% of its peak" % roundi(absf(buf[0]) / peak * 100.0))
+	elif buf.size() > 3:
+		# A start on zero that jumps on the next sample clicks as well: the step into the
+		# second sample may not be the largest step in the sound.
+		var inner := 0.0
+		for i in range(2, buf.size()):
+			inner = maxf(inner, absf(buf[i] - buf[i - 1]))
+		var first := absf(buf[1] - buf[0])
+		if first > START_MAX * peak and first > inner:
+			out.append("jumps to %d%% of its peak on its second sample" % roundi(absf(buf[1]) / peak * 100.0))
 	var last := mini(buf.size(), Harmony.RATE / 1000)
 	var sum := 0.0
 	for i in range(buf.size() - last, buf.size()):
@@ -79,6 +88,9 @@ func _rule() -> void:
 	t.eq("the same tone faded out is clean", faults(_tone(0.1037, 440.0, 600)), [])
 	var late := _tone(0.1, 440.0, 600).slice(25)
 	t.check("a tone that starts on its crest is a fault", faults(late).size() == 1, str(faults(late)))
+	var jump := late.duplicate()
+	jump[0] = 0.0
+	t.check("so is one that starts on zero and jumps to its crest on the next sample", faults(jump).size() == 1, str(faults(jump)))
 	t.eq("whole cycles tile as a loop", faults(_tone(0.1, 440.0), true), [])
 	var torn := _tone(0.1, 440.0).slice(0, Harmony.RATE / 10 - 25)
 	t.check("a loop cut short of its cycle is a fault", faults(torn, true).size() == 1, str(faults(torn, true)))

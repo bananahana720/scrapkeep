@@ -261,6 +261,7 @@ test("a packed Ogg stored in one-second pages is named, a short-paged one passes
   assert.equal(oggLongestPage(long), 1);
   assert.equal(oggLongestPage(short), 0.02);
   assert.equal(oggLongestPage(Buffer.from("fresh drums")), null, "not an Ogg is not judged");
+  assert.equal(oggLongestPage(long.subarray(0, 40)), null, "a file cut off inside its first page is not judged, and does not throw");
   const manifest = (pack, files) => ({ dir: pack, clips: { calm: { files } } });
   const dir = project({ "assets/music_ace/spillway/calm.drums.ogg": short, "assets/music_ace/spillway/calm.bass.ogg": long });
   try {

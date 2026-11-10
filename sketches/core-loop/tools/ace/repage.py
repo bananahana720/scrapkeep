@@ -22,6 +22,7 @@ New packs are born short-paged: `package_music.encode` passes PAGE_USEC to ffmpe
 """
 import argparse
 import hashlib
+import os
 import shutil
 import struct
 import subprocess
@@ -60,7 +61,10 @@ def pages(data):
 
 def longest_page(path):
     """Seconds of audio in the file's longest page, and its page count."""
-    rate, granules = pages(Path(path).read_bytes())
+    try:
+        rate, granules = pages(Path(path).read_bytes())
+    except (struct.error, IndexError):
+        rate, granules = 0, []
     if rate == 0 or not granules:
         raise ValueError(f'{path}: not an Ogg Vorbis file')
     steps = [b - a for a, b in zip([0] + granules, granules)]
@@ -108,11 +112,15 @@ def apply(root, backup):
             repage(f, out)
             was, was_len = pcm_sha(f)
             now, now_len = pcm_sha(out)
+            why = ''
             if was != now or was_len != now_len or was_len == 0:
-                print(f'REFUSED {f.relative_to(root)}: the re-paged copy does not decode to the same samples; left as it was')
-                return 1
-            if longest_page(out)[0] > MAX_PAGE_S:
-                print(f'REFUSED {f.relative_to(root)}: the re-paged copy still holds a long page; left as it was')
+                why = 'the re-paged copy does not decode to the same samples'
+            elif longest_page(out)[0] > MAX_PAGE_S:
+                why = 'the re-paged copy still holds a long page'
+            if why:
+                print(f'REFUSED {f.relative_to(root)}: {why}; left as it was, and the pass stopped here')
+                if done:
+                    print(f'{done} files before it were re-paged; run scripts/music/mx stem-hashes once the rest are done')
                 return 1
             if backup is not None:
                 keep = Path(backup) / f.relative_to(root)
@@ -121,7 +129,11 @@ def apply(root, backup):
                     shutil.copy2(f, keep)
             before += f.stat().st_size
             after += out.stat().st_size
-            shutil.copyfile(out, f)
+            # The new file lands beside the original and takes its name in one step, so a
+            # pass that is killed part way leaves every file whole: the old one or the new one.
+            beside = f.with_name(f.name + '.repaged')
+            shutil.copyfile(out, beside)
+            os.replace(beside, f)
         done += 1
     grew = (after / before - 1.0) * 100.0 if before else 0.0
     print(f'{done} of {len(files)} Oggs re-paged, every one decoding to the same samples; {before} to {after} bytes ({grew:+.1f} percent)')

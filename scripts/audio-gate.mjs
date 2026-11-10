@@ -414,7 +414,7 @@ export function oggLongestPage(data) {
     const body = at + 27 + segments;
     let size = 0;
     for (let i = at + 27; i < body && i < data.length; i++) size += data[i];
-    if (rate === 0 && data.subarray(body, body + 7).toString("latin1") === "\x01vorbis") rate = data.readUInt32LE(body + 12);
+    if (rate === 0 && body + 16 <= data.length && data.subarray(body, body + 7).toString("latin1") === "\x01vorbis") rate = data.readUInt32LE(body + 12);
     if (granule >= 0n) {
       longest = Math.max(longest, Number(granule) - last);
       last = Number(granule);

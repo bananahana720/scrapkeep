@@ -25,7 +25,7 @@ const RATE := 44100.0
 #     (stop sample - origin) mod beat says where in the beat the band stopped.
 #   [s, "run_over", outcome]   the tick the tail starts on
 # cue_rows lists every cue with a start sample since the recording began, in order:
-# [seconds of the WAV, kind, sound, "now" | "beat" | "music" | ...].
+# [seconds of the WAV, kind, sound, "now" | "beat" | "music" | ..., pitch, level in dB or null].
 
 var _settings := {}
 var _game
