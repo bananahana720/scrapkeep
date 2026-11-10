@@ -39,11 +39,11 @@ func setup(ctx) -> void:
 	events.pressure_changed.connect(_on_pressure)
 	events.fight_phase_changed.connect(func(_id: String, _phase: int, _phases: int): _phase_fight = true)
 	events.boss_arena_entered.connect(func(): _arena_fight = true)
-	events.boss_defeated.connect(_end_fights)
+	events.boss_defeated.connect(fight_over)
 	# A Warden's break ends its fight whatever the crowd's pressure is still doing (flow._unseal).
-	events.beacon_unsealed.connect(func(_stage: int): _end_fights())
-	events.run_started.connect(func(_class_id: String): _end_fights(); drop_all())
-	events.stage_entered.connect(func(_stage: int, _retry: bool): _end_fights())
+	events.beacon_unsealed.connect(func(_stage: int): fight_over())
+	events.run_started.connect(func(_class_id: String): fight_over(); drop_all())
+	events.stage_entered.connect(func(_stage: int, _retry: bool): fight_over())
 	events.run_ended.connect(func(_won: bool): drop_all())
 	events.player_died.connect(drop_all)
 
@@ -61,7 +61,7 @@ func _on_pressure(pressure: float) -> void:
 		_phase_fight = false
 
 
-func _end_fights() -> void:
+func fight_over() -> void:
 	_pressure_fight = false
 	_phase_fight = false
 	_arena_fight = false

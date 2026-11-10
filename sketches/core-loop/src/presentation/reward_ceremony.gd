@@ -317,7 +317,9 @@ func present(find: Dictionary) -> void:
 # Whether a find may wait for a card: a first find of a part nothing is already holding a
 # card for, with fewer than MAX_HELD waiting. Anything else shows its name at the ball only.
 func _may_hold(find: Dictionary) -> bool:
-	return find["first"] and not _is_held(find["part"]) and _queue.size() + _cards.size() < MAX_HELD
+	# A crate waits for its own calm, so reveal cards waiting their turn for a quiet screen do not count against it.
+	var held := _queue.size() + (_cards.size() if find["tier"] != "ceremony" else 0)
+	return find["first"] and not _is_held(find["part"]) and held < MAX_HELD
 
 
 func _is_held(part_id: String) -> bool:
