@@ -3,7 +3,7 @@ extends Control
 const Palette := preload("res://src/core/palette.gd")
 
 # The mark over the ball while it stands where a hit will land: a hazard diamond with a
-# bang, filling from its foot with the warning's own progress, so it is full on the tick
+# bang, filling from its foot with the warning's own progress, so it is all but full as
 # the hit lands. A floor mark is drawn on the world, and a camera inside it sees rails
 # overhead and a tinted floor with no edge (first-timer film, 10 Nov 2026: hit six times,
 # the reader could say what was coming before none). This says the one thing a floor mark
@@ -79,6 +79,8 @@ static func fill_points(half: float, share: float) -> PackedVector2Array:
 	var level := half - 2.0 * half * clampf(share, 0.0, 1.0)
 	if level >= half:
 		return PackedVector2Array()
+	if level <= -half:
+		return _diamond(half)
 	if level >= 0.0:
 		return PackedVector2Array([Vector2(-(half - level), level), Vector2(half - level, level), Vector2(0.0, half)])
 	return PackedVector2Array([Vector2(-(half + level), level), Vector2(half + level, level), Vector2(half, 0.0),

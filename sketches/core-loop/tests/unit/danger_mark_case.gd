@@ -29,4 +29,4 @@ func run(t) -> void:
 	var high := DangerMark.fill_points(10.0, 0.75)
 	t.check("three quarters fills past the waist", high.size() == 5 and is_equal_approx(high[0].y, -5.0) and is_equal_approx(high[1].x, 5.0), "%s" % [high])
 	var full := DangerMark.fill_points(10.0, 1.0)
-	t.check("a full run fills the diamond", full.size() == 5 and is_equal_approx(full[0].y, -10.0) and is_zero_approx(full[0].x), "%s" % [full])
+	t.check("a full run fills the diamond, four corners and no doubled point", full.size() == 4 and is_equal_approx(full[0].y, -10.0) and is_zero_approx(full[0].x), "%s" % [full])

@@ -171,6 +171,13 @@ func _process(_delta: float) -> bool:
 	_check("a landed threat is no warning", _watch.standing_in() < 0.0, "both landed: %.2f" % _watch.standing_in())
 	stood.queue_free()
 	second.queue_free()
+	var net := _ring(terrain, far + Vector3(60.0, 0.0, 60.0))
+	net.air_only = true
+	net.set_progress(0.5)
+	_at(net, 0.0)
+	_tick()
+	_check("an air-only mark raises none", _watch.standing_in() < 0.0, "under a net that catches only a ball in the air: %.2f" % _watch.standing_in())
+	net.queue_free()
 	var wave_in := _wave(terrain, far + Vector3(30.0, 0.0, 60.0))
 	_at(wave_in, 3.0)
 	_wave_run(wave_in, 0.5)

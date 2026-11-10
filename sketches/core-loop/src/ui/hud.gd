@@ -1201,6 +1201,9 @@ func _process(delta: float) -> void:
 			danger_mark.follow(over)
 			# A name gained inside a mark stands on the mark, not across it.
 			part_name.follow(Vector2(over.x, danger_mark.rect().position.y) if danger_mark.visible else over)
+		else:
+			# The ball is behind the camera: the mark has no place to stand this frame.
+			danger_mark.visible = false
 	reticle.gauge = AbilitySlots.gauge_of(slots)
 	# An interactable's hold-to-arm fills the same class ring (LOOP-REDESIGN section 9).
 	var interact = game.world.get("interact") if game.world != null else null

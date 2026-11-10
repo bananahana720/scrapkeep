@@ -77,7 +77,11 @@ func step(delta: float) -> void:
 				if not w["entered"]:
 					w["entered_at"] = _clock
 				w["entered"] = true
-				_standing = maxf(_standing, _run_of(node, at, d))
+				# An air-only mark (the netcaster's net) catches only a ball off the ground, and
+				# its answer is to stay down: a mark that says "get out or jump" would say the
+				# wrong thing, so it raises none.
+				if not bool(d.get("air", false)):
+					_standing = maxf(_standing, _run_of(node, at, d))
 			continue
 		if _last_hit >= w["resolved"]:
 			w["done"] = true
