@@ -1094,16 +1094,27 @@ func place_prompts(size: Vector2, playing: bool) -> void:
 			break
 		var prompt: Label = entry[1]
 		prompt.near = ball.distance_to(entry[2]) <= prompt.detail_range
-		var extent: Vector2 = prompt.shown_extent()
-		var want := Rect2(ScreenRegions.clamp_prompt(cam.unproject_position(entry[2]), extent, size), extent)
-		var spot := free_spot(want, placed, band)
+		var spot := prompt_spot(prompt, cam.unproject_position(entry[2]), size, placed, band)
 		if spot.size == Vector2.ZERO:
 			continue
 		prompt.position = spot.position
-		prompt.size = extent
+		prompt.size = spot.size
 		prompt.visible = true
 		placed.append(spot)
 		prompt_rects[prompt] = spot
+
+
+# The spot for a prompt whose anchor projects to `at`. A prompt showing its detail that finds no
+# room gives the detail up and is placed by its name alone, as it reads at range: a label with
+# less on it beats no label (three reward gates' details side by side do not always fit 1280x720).
+static func prompt_spot(prompt, at: Vector2, size: Vector2, placed: Array[Rect2], band: Rect2) -> Rect2:
+	var extent: Vector2 = prompt.shown_extent()
+	var spot := free_spot(Rect2(ScreenRegions.clamp_prompt(at, extent, size), extent), placed, band)
+	if spot.size == Vector2.ZERO and prompt.near:
+		prompt.near = false
+		extent = prompt.shown_extent()
+		spot = free_spot(Rect2(ScreenRegions.clamp_prompt(at, extent, size), extent), placed, band)
+	return spot
 
 
 # The spot for `want` that overlaps nothing already placed and stays in the band: its

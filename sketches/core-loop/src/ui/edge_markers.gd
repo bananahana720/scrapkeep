@@ -256,7 +256,7 @@ func markers(size: Vector2) -> Array[Dictionary]:
 			if not target.get("mark", false):
 				continue
 			var above := projected + Vector2.UP * MARK_GAP
-			if view.has_point(above + Vector2.UP * MARK_SIZE * 2.4):
+			if view.has_point(above) and view.has_point(above + Vector2.UP * MARK_SIZE * 2.4):
 				out.append({"at": above, "dir": Vector2.DOWN, "size": MARK_SIZE, "color": marker_color(target), "icon": target["icon"]})
 				continue
 		var dir: Vector2

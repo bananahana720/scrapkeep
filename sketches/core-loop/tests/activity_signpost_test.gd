@@ -60,6 +60,7 @@ func _run() -> void:
 	var ball: Vector3 = _game.player.ball_position()
 	var cam: Camera3D = _game.camera.cam
 	var named := []
+	hud._way.begin()
 	for facing in sites:
 		var eye := cam.global_position
 		var target: Vector3 = facing.global_position
