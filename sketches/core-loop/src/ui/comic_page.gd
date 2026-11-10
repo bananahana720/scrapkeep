@@ -144,13 +144,8 @@ static func title_text(p: Dictionary) -> String:
 
 
 static func subtitle_text(p: Dictionary) -> String:
-	var parts: Array = []
-	if String(p.get("pilot_name", "")) != "":
-		parts.append(String(p["pilot_name"]).to_upper())
-	if String(p.get("world_name", "")) != "":
-		parts.append(String(p["world_name"]).to_upper())
-	parts.append("RETURN ENTERED" if ScrapbookStore.is_won(p) else "HULL NOT RETURNED")
-	return "  |  ".join(parts)
+	# The world only: the heading colour carries the outcome and the body names the pilot (S7).
+	return String(p.get("world_name", "")).to_upper()
 
 
 static func world_color(world: int) -> Color:

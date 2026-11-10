@@ -54,7 +54,7 @@ func _init() -> void:
 	body.add_theme_constant_override("separation", 24)
 	body.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(body)
-	_crate = _column(body, "THE CRATE")
+	_crate = _column(body, "")
 	var tape_column := _column(body, "")
 	_tape_name = tape_column.get_parent().get_parent().get_child(0)
 	_tape = tape_column
@@ -69,7 +69,7 @@ func _init() -> void:
 	new_button = ChoiceButton.new("new", "key_n", "New tape")
 	shuffle_button = ChoiceButton.new("shuffle", "key_x", "Shuffle")
 	tune_button = ChoiceButton.new("tune", "key_t", "Play on the radio")
-	back = ChoiceButton.new("back", "key_r", "Back")
+	back = ChoiceButton.new("back", "key_esc", "Back")
 	for b in [new_button, shuffle_button, tune_button, back]:
 		b.focus_mode = Control.FOCUS_NONE if b != back else Control.FOCUS_ALL
 		buttons.add_child(b)
@@ -107,7 +107,7 @@ static func reading(profile, radio) -> Dictionary:
 			found.append(id)
 	var takes := RadioTakes.take_ids().filter(func(id): return profile != null and profile.has_tune(id)).size()
 	return {"found": found, "takes": takes, "tape": radio.mixtape, "ids": radio.current_mixtape()["ids"].duplicate(),
-		"count": "Takes found: %d of %d" % [takes, RadioTakes.takes().size()]}
+		"count": "%d/%d" % [takes, RadioTakes.takes().size()]}
 
 
 func refresh(profile, radio) -> void:

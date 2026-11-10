@@ -11,6 +11,7 @@ const ThreatSheet := preload("res://src/ui/threat_sheet.gd")
 const GrowthSheet := preload("res://src/ui/growth_sheet.gd")
 const ScrapFrame := preload("res://src/ui/scrap_frame.gd")
 const LoreRows := preload("res://src/core/lore_rows.gd")
+const Glyphs := preload("res://src/ui/glyphs.gd")
 
 # Tab's field notes are pictures (playtest entry 8: the old page was "a whole essay of
 # text"): the controls as a keyboard and mouse with your pilot's keys lit, what hurts
@@ -20,7 +21,7 @@ const LoreRows := preload("res://src/core/lore_rows.gd")
 # SCREEN_KEYS) and the legend are no longer drawn on Tab; README.md mirrors them.
 # What the run asks of you and why, in one line: the title screen shows it too. The why is the game's
 # one line (ruling cj, design-v3/STORY-MAP.md): a machine runs the world and calls it perfect (the quote marks are the crew's), and the crew takes it back.
-const OBJECTIVE := "A machine runs your world \"perfectly\". Take it back: grow, crack Warden guards, smash their cores. Rout Brindle, still the Waking, quiet the Mind."
+const OBJECTIVE := "A machine runs your world \"perfectly\". Take it back."
 
 const TESTING := [
 	"One run: title, pilot, then two stages in each of three worlds, each sealed by a Warden at its beacon. Grow, crack its guard, smash its open core, then roll through a reward gate and launch into the next stage. Each world's last stage launches you into its boss arena: rout Admiral Brindle, still the Waking, quiet the Mind. Quieting the Mind ends the run.",
@@ -87,12 +88,10 @@ static var CONTROLS := controls()
 # in play, when first met (field_tips.gd). A cast is a slot with a cast time: the Q variants and
 # Gather Plate (ability_state.gd VARIANT_CAST).
 const FIELD_RULES := [
-	{"id": "grip", "words": "Wall grip: stay fast, climb walls"},
-	{"id": "jam", "words": "Jam: mats lock slots 2, 3"},
-	{"id": "cast", "words": "Cast time: knocks drop casts"},
-	{"id": "radio", "words": "Radio: . next , back / skip"},
-	{"id": "stake", "words": "Stake: hold E at relay mast"},
-	{"id": "active", "words": "F: fire your active"},
+	{"id": "grip", "say": "Wall grip: stay fast, climb walls"},
+	{"id": "radio", "say": "Radio", "keys": [["cl_radio_next", "next"], ["cl_radio_prev", "back"], ["cl_radio_skip", "skip"]]},
+	{"id": "stake", "say": "Relay mast: hold", "verb": "interact", "then": "to raise the bet"},
+	{"id": "active", "verb": "active", "then": "fire your active"},
 ]
 
 const SCREEN_KEYS := [
@@ -101,6 +100,24 @@ const SCREEN_KEYS := [
 	{"keys": "1, 2, ...", "does": "pilot select: one number per pilot card, left to right"},
 	{"keys": "N", "does": "summary: new run, same pilot (pad A on the summary)"},
 ]
+
+# A rule as credits_hint.gd parts: its words, with each key drawn as the keycap the bindings give now
+# (a rebind moves the cap), never a typed letter. The jam and cast rules are the picture pages' captions.
+static func rule_parts(rule: Dictionary) -> Array:
+	var parts := []
+	if rule.has("say"):
+		parts.append({"say": rule["say"]})
+	for pair in rule.get("keys", []):
+		var cap := Glyphs.of_action(pair[0], "key_" + OS.get_keycode_string(Bindings.EXTRA_ACTIONS[pair[0]]["keys"][0]).to_lower())
+		parts.append({"cap": cap, "say": Keycap.label(cap)})
+		parts.append({"say": pair[1]})
+	if rule.has("verb"):
+		var glyph := Glyphs.of(rule["verb"])
+		parts.append({"cap": glyph, "say": Keycap.label(glyph)})
+	if rule.has("then"):
+		parts.append({"say": rule["then"]})
+	return parts
+
 
 # The key list in display order: a row per verb with its table keys and caps, then the menu keys.
 static func controls() -> Array:

@@ -22,7 +22,7 @@ const ENTRIES := [
 	{"id": "turkey", "category": "build", "name": "Turkey", "hint": "Strike", "clue": "+ two more inside 4 s",
 		"text": "Three strikes inside four seconds."},
 	{"id": "too_heavy_for_you", "category": "build", "name": "Too heavy for you", "hint": "Moss's locked hook",
-		"clue": "+ come back heavier", "text": "Moss sells the top shelf once your heft reaches the next class."},
+		"clue": "+ come back heavier", "text": "Moss sells the top shelf once your heft reaches the next tier."},
 ]
 
 var clock := 0.0
