@@ -89,8 +89,13 @@ func _run() -> void:
 	screens.toggle_achievements()
 	await _frames(2)
 	_t.check("Achievements holds no ACHIEVEMENTS heading", not _holds(screens, "ACHIEVEMENTS"), str(_texts(screens)))
+	_t.eq("Achievements' Back wears Esc from the title", screens._achievements.back.key, "key_esc")
 	screens.toggle_achievements()
 	screens._walking = true
+	screens.toggle_achievements()
+	await _frames(2)
+	_t.eq("Achievements' Back wears Esc from the camp walk", screens._achievements.back.key, "key_esc")
+	screens.toggle_achievements()
 	var page := PanelContainer.new()
 	var own := Label.new()
 	own.text = "Dispatch box"

@@ -617,8 +617,7 @@ func toggle_achievements() -> void:
 	_actions.visible = not _achievements.visible
 	if _achievements.visible:
 		_achievements.refresh(game.ctx.profile, game.progress, game.tuning != null and game.tuning.sitting())
-		# Over the camp walk A is the trophy wall's key, so Back shows the Esc that closes it.
-		_achievements.back.set_key("key_esc" if walking() else "key_a")
+		_achievements.back.set_key("key_esc")
 		_show("", Palette.AMBER, "")
 		_sync_walk()
 	else:
@@ -883,7 +882,7 @@ func toggle_jukebox() -> void:
 	_camp.visible = false
 	_jukebox.visible = true
 	_refresh_jukebox()
-	_show("MOSS'S JUKEBOX", Palette.AMBER, "")
+	_show("", Palette.AMBER, "")
 	_jukebox.focus_first()
 	_sync_walk()
 	_fade(true)
@@ -968,7 +967,7 @@ func toggle_radio() -> void:
 	_camp.visible = false
 	_radio.visible = true
 	_radio.refresh(game.ctx.profile, game.radio_deck.radio)
-	_show("MIXTAPES", Palette.AMBER, "")
+	_show("", Palette.AMBER, "")
 	_radio.focus_first()
 	_sync_walk()
 	_fade(true)
