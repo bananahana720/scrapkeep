@@ -10,9 +10,9 @@ const UiDraw := preload("res://src/ui/ui_draw.gd")
 # can raise. The run clock is not shown in play.
 #
 # The difficulty was a filled, notched bar in the threat colour. A filled red bar in a status
-# corner is a health bar in every other game: of six blind readers of one still (10 Nov 2026)
-# six named it as their health and none the real bar. Drawn as steps (a level, like a signal
-# meter) none of nine did, and all nine found the health bar.
+# corner is a health bar in every other game: of the six blind readers shown it with no other
+# cue (one still, 10 Nov 2026) six named it as their health and none the real bar. Drawn as
+# steps (a level, like a signal meter) none of twelve did, and all twelve found the health bar.
 
 const PIP := 18.0
 const PIP_STEP := 24.0
@@ -25,7 +25,7 @@ const STEP_GAP := 5.0
 # first step is a wedge with a foot and not a point.
 const STEP_FOOT := 0.35
 # The steps' own word, in the threat colour, the word the "Threat rising" toast uses. With no
-# word one blind reader of nine guessed threat (most said signal, heat or speed); with it
+# word one of nine blind readers guessed threat (most said signal, heat or speed); with it
 # three of three read "how dangerous things are".
 const THREAT_WORD := "THREAT"
 const WORD_FONT := 13

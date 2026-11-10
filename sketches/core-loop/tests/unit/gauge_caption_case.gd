@@ -10,6 +10,7 @@ const Gauge := preload("res://src/ui/gauge.gd")
 func run(t) -> void:
 	var plain = Gauge.new("res_health", 150.0, true)
 	var named = Gauge.new("res_health", 150.0, true, "HEALTH")
+	t.check("the caption is no word until the bar has a reading", named.drawn_words().is_empty(), "words %s" % [named.drawn_words()])
 	plain.set_reading(0.8, Color.WHITE)
 	named.set_reading(0.8, Color.WHITE)
 	t.check("a caption is one of the gauge's words", Array(named.drawn_words()) == ["HEALTH"] and plain.drawn_words().is_empty(),

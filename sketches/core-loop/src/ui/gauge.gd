@@ -8,12 +8,11 @@ const UiDraw := preload("res://src/ui/ui_draw.gd")
 # optional bar. Health is a tank gauge (a tick every quarter) and scrap a count. Below
 # its warning share the gauge's edge turns iron oxide and pulses at 1 Hz. A drop in the bar
 # leaves the lost slice standing in the hit colour for LOSS_HOLD seconds and then drains it
-# over LOSS_DRAIN, so a hit shows which bar took it and how much went, without a word.
+# over LOSS_DRAIN, so a hit shows which bar took it and how much went.
 #
 # A bar can carry a caption: one small word under its left end, in the bar's own colour,
-# saying what the bar holds. Blind readers of one still (10 Nov 2026) named the health bar
-# 3 of 3 once the red difficulty bar stopped competing for it, but the armour bar 0 of 12
-# without its word and 9 of 9 with it. The caption is part of the gauge's extent, and
+# saying what the bar holds. Of 24 blind readers of one still (10 Nov 2026), none of the 12
+# shown the armour bar without its word took it for armour and all 12 shown the word did. The caption is part of the gauge's extent, and
 # bar_mid() is the line the icon and bar sit on, so a caller centres on the bar, not the box.
 
 const ICON := 26.0
@@ -100,9 +99,11 @@ func lost_edge() -> float:
 
 func drawn_words() -> PackedStringArray:
 	var words := PackedStringArray()
-	for word in [label, caption]:
-		if word != "":
-			words.append(word)
+	if label != "":
+		words.append(label)
+	# The caption is drawn with the bar, so it is a word only once the bar has a reading.
+	if caption != "" and fraction >= 0.0:
+		words.append(caption)
 	return words
 
 
