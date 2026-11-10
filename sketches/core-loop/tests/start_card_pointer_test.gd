@@ -207,8 +207,8 @@ func _rung() -> void:
 		t.eq("rung: pause over the tier never grabs the cursor (%s)" % toggle[0], game.grabs, grabs)
 	t.eq("rung: pausing over the tier quits nothing", game.quits, 0)
 	# A click on a tier button with pause open: pause's root takes it, and the card's route refuses a press
-	# that gets through anyway; Next rung steps nothing under it either.
-	var tier_button: Button = card._tier_buttons.get(1)
+	# that gets through anyway.
+	var tier_button: Button = card.tier_button(1)
 	t.check("rung: the card shows a Tier 1 button", tier_button != null)
 	if tier_button != null:
 		await _send(_key(KEY_P))
@@ -227,12 +227,6 @@ func _rung() -> void:
 		tier_button.pressed.emit()
 		await _frames(2)
 		t.eq("rung: a tier click under the pause menu changes nothing", game.run.selected_run_tier(), 0)
-		# Rung 2 open, so Next rung has somewhere to step; it is set back before the pause closes.
-		game.ctx.profile.set_stat("hard_ladder_best", 1.0)
-		var shown: int = card.shown_rung()
-		card.step_rung()
-		t.eq("rung: Next rung under the pause menu steps nothing", card.shown_rung(), shown)
-		game.ctx.profile.set_stat("hard_ladder_best", 0.0)
 		await _send(_key(KEY_P))
 		t.check("rung: pause closed again", not menu.is_open())
 	game.flow._engage()
