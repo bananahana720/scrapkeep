@@ -57,7 +57,7 @@ Every test the runner starts gets its own empty user data folder (`XDG_DATA_HOME
 
 - A solo rerun uses a slot pool inside the shard's own `--out` folder (`solo-locks/`), so reruns from different shards never queue for one slot. The first run keeps the caller's `SCRAPKEEP_LOCK_DIR`.
 - A headless Godot test wants about two threads. A 32-thread PC runs about 16 Godot processes at full speed. A bot test starts up to 8 child processes, so three bot lanes are the PC's limit.
-- A time-out taken under load is `suspect-load`. It is not a red and it is not a pass. After the other lanes have drained, rerun the named tests alone with `retime`. It waits until the 1-minute load is at or under a quarter of the thread count (`--max-load` changes this), for at most 30 minutes, then runs each test alone `--runs` times (3 by default) and writes `receipt.md`.
+- A time-out taken under load is `suspect-load`. It is not a red and it is not a pass. After the other lanes have drained, rerun the named tests alone with `retime`. It waits until the 1-minute load is at or under a quarter of the thread count (`--max-load` changes this), for at most 30 minutes, then runs each test alone `--runs` times (3 by default) and writes `receipt.md`. When the retime passes, the shard's row on the gate plan reads `PASS after retime` and names both receipts; when it is red or still inconclusive, the row keeps the shard's own verdict.
 - Every step in a receipt shows the load it started and ended at, and the Box line says how many threads that load is read against. A receipt from before this change shows a dash.
 
 ### Slow boxes
