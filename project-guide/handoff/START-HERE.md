@@ -26,9 +26,11 @@ One home for every fact (ruling bz, Andrew, 9 Nov): update the page, doc or reco
 | Needing Andrew | [DECISIONS.md](DECISIONS.md) first: a ruled question is not asked again | A card to the coordinator (question, options, a recommendation); never a question inside a thread |
 | Holding a new ruling | The row it replaces, and the last letter taken | [DECISIONS.md](DECISIONS.md) on the open stage, then its two copies in the same turn (step 2 above). `npm run check:docs` fails a letter used twice |
 | Holding a lesson | [LESSONS.md](LESSONS.md), to see it is new | One numbered line in LESSONS.md; an art mistake goes in ART-MISTAKES.md |
+| Holding a play finding | [PLAY-FINDINGS.tsv](PLAY-FINDINGS.tsv), to see it is new | One row there with a grade, an owner and a review date (ruling cn); it never holds a promotion |
 | Showing Andrew something | The library (`/mnt/project-files/INDEX.md`), to find the page that already covers it | That page, updated. A new page gets a line in INDEX.md and on the Library page in the same turn |
 | Keeping evidence | `/mnt/project-files/INDEX.md`, for the folder that owns the area | The area's folder under `/mnt/project-files/`. Disposable output stays in `artifacts/local/` |
 | Learning a fact the next thread would ask again | The project memory index | One memory file per subject, as a pointer to the home above, not a copy of it |
+| Wanting something deleted or archived | `/mnt/project-files/housekeeping/pending-deletes.md`, to see it is not already listed | One row there with the reason; Andrew or the owner named decides. A thread deletes nothing itself, and merged branches go only through Andrew's prune script |
 | Just after a promotion | "After each promotion" in [STATE.md](STATE.md) | The Wave facts table, the fast-lane timings, the deep sweep report |
 
 What matters most right now: world 1 first. Andrew has played the dam (30 Oct) and not yet marked any area. On 9 Nov he asked for a pre-sitting improvement pass first (ruling bo), so the build he plays is the promotion that carries that pass (STATE.md). Post-sitting work comes from his marks. Worlds 2 and 3 start nothing new (ruling at).
