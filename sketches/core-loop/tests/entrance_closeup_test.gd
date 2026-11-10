@@ -238,6 +238,7 @@ func _physics_process(_delta: float) -> bool:
 	_t.check("O2 the panel gone, his line comes up", bubble.visible and bubble.text != "", "bubble '%s'" % bubble.text)
 	_to(player.length() + 0.1)
 	_frame()
+	_game.ctx.screen_busy.step(2.5)
 	hud._step_ach(DT)
 	_t.check("O3 a record found meanwhile waited for the card", plate_held and hud.corner_rects().any(func(r): return r["name"] == "plate"), "held %s" % plate_held)
 	hud._step_lore(DT)

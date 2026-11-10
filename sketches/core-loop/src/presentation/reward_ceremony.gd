@@ -754,6 +754,9 @@ func seen(part_id: String) -> bool:
 # lets go of the tree, and keeps the payoffs of parts the run still holds.
 func _reset(new_run: bool) -> void:
 	_queue.clear()
+	if _busy() != null:
+		for find in _cards:
+			_busy().done("find:" + String(find["part"]))
 	_cards.clear()
 	_calm_since = -1
 	if not _active.is_empty():

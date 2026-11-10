@@ -135,7 +135,8 @@ func _run() -> void:
 	await _settle(0.5)
 	_t.check("P3-5 during a live Warden fight the toast waits", hud.ach_toasts().is_empty() and hud.ach_waiting() == [Achievements.toast_text("first_event"), Achievements.toast_text("full_rack")], "showing %s waiting %s" % [hud.ach_toasts(), hud.ach_waiting()])
 	_game.flow._unseal()
-	await _settle(0.5)
+	# A card waits for two quiet seconds after a fight (screen_busy.gd SETTLE).
+	await _settle(2.6)
 	# 2026-10-04 (fix round D): since HW2 the Warden's break offers a hot-wired part, and the
 	# Fit / Recycle screen opens over the paused tree as the gates open, freezing the HUD's
 	# toast clock. Recycle it here so the earn queue runs; the toast order is unchanged.

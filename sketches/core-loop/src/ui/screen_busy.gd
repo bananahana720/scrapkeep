@@ -16,6 +16,9 @@ const MixRows := preload("res://src/presentation/mix_rows.gd")
 # the run summary lists what was earned.
 
 const SETTLE := 2.0
+# A card asks every frame while it is ready to show. One that has not asked within this many
+# seconds is not ready (its own module holds it back), and a younger card may go ahead of it.
+const ASK_WINDOW := 0.3
 
 var _sources: Array[Callable] = []
 var _pressure_fight := false
@@ -24,6 +27,8 @@ var _arena_fight := false
 var _quiet_for := SETTLE
 var _waiting: Array[String] = []
 var _holder := ""
+var _clock := 0.0
+var _asked := {}
 var _flow = null
 
 
@@ -82,12 +87,19 @@ func request(key: String) -> void:
 
 
 # True when `key` may show now. It takes the screen on the first yes and keeps it until done.
+# Ask every frame while the card is ready: the oldest ready card goes first.
 func may_show(key: String) -> bool:
+	_asked[key] = _clock
 	if key == _holder:
 		return true
 	request(key)
-	if _holder != "" or _quiet_for < SETTLE or busy() or _waiting[0] != key:
+	if _holder != "" or _quiet_for < SETTLE or busy():
 		return false
+	for older in _waiting:
+		if older == key:
+			break
+		if _clock - float(_asked.get(older, -1000.0)) <= ASK_WINDOW:
+			return false
 	_waiting.erase(key)
 	_holder = key
 	return true
@@ -96,6 +108,7 @@ func may_show(key: String) -> bool:
 # The card is gone, shown or dropped; the next one in line may come at once.
 func done(key: String) -> void:
 	_waiting.erase(key)
+	_asked.erase(key)
 	if _holder == key:
 		_holder = ""
 
@@ -107,10 +120,18 @@ func waiting() -> Array[String]:
 # A run ended: what still waits is not shown. The summary lists what was earned.
 func drop_all() -> void:
 	_waiting.clear()
+	_asked.clear()
 	_holder = ""
 
 
 func _process(delta: float) -> void:
+	step(delta)
+
+
+# Game time passes: the screen is quiet for `delta` more seconds, or busy again. A test that
+# drives its cards with a clock of its own steps this too.
+func step(delta: float) -> void:
+	_clock += delta
 	if busy():
 		_quiet_for = 0.0
 	else:

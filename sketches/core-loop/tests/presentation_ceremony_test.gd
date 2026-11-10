@@ -126,6 +126,8 @@ func _elapsed() -> int:
 func _physics_process(_delta: float) -> bool:
 	# Fixed simulation ticks continue through the ceremony's tree pause.
 	_clock_ms += 1000.0 / Engine.physics_ticks_per_second
+	# The screen's quiet seconds follow this test's own clock (screen_busy.gd).
+	_game.ctx.screen_busy.step(1.0 / Engine.physics_ticks_per_second)
 	if _game == null or _game.flow == null:
 		return false
 	if int(_clock_ms) > DEADLINE_MS:
@@ -188,7 +190,7 @@ func _physics_process(_delta: float) -> bool:
 					"body %s -> %s, state %s -> %s" % [_v0, v1, _s0, s1])
 				_next("payoff")
 		"payoff":
-			if _card_after and _elapsed() > 400:
+			if _card_after and _elapsed() > 2600:
 				_card_after = false
 				var shown: Dictionary = _ceremony.view.card
 				_report("a card the crate interrupted comes back", shown.get("part", "") == "tempest_core" and not shown.get("ceremony", true),

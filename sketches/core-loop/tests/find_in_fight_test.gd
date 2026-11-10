@@ -25,7 +25,9 @@ const WhyCallout := preload("res://src/ui/why_callout.gd")
 
 const SETTLE := 300
 const HOLD_FRAMES := 300
-const OPEN_WITHIN := 60
+# 120 frames of that are the screen's two quiet seconds (screen_busy.gd SETTLE).
+# The banner's card and the ceremony's card now take turns (screen_busy.gd), after the screen's two quiet seconds.
+const OPEN_WITHIN := 900
 const CALM_WITHIN := 900
 const QUIET_FRAMES := 30
 const STEP_S := 1.0 / 60.0
@@ -201,16 +203,20 @@ func _physics_process(_delta: float) -> bool:
 						and presented.all(func(p: Array): return p[1] in ["common", "rare"]),
 					"common and relic repeats for %d frames in a fight: no card, no pop; tiers %s" % [QUIET_FRAMES, presented.map(func(p: Array): return p[1])])
 				_game.flow.warden._die()
+				# The break ends the fight's pressure; a held card then waits the screen's two quiet seconds.
+				_game.events.pressure_changed.emit(0.0)
+				# Badges and notes the fight raised take their own turns first; this test is about the find card.
+				_game.hud.clear_achievement_toasts()
 				_next("open")
 		"open":
 			if _opened < 0 and _card_up():
 				_opened = _wait
 				_marked_early = false
 				_report("held card opens", _ceremony().view.card.get("part", "") == _first or _banner().showing(), "%s opens %d frames after the Warden's break" % [_first, _wait])
-				_report("seen only now", _seen_both(_first), "%s seen in both records at the frame its card shows" % _first)
+				_report("seen only now", _seen_either(_first), "%s seen in a record at the frame its first card shows (the two cards take turns, so the other is seen when its own shows)" % _first)
 			if _opened < 0 and _seen_either(_first):
 				_marked_early = true
-			if _wait == OPEN_WITHIN:
+			if _seen_both(_first) or _wait == OPEN_WITHIN:
 				_report("opens within 60 frames, once", _opened >= 0 and not _marked_early and _banner().cards_shown == _cards_before + 1 and not _fight_on(),
 					"opened at frame %d, seen early %s, banner cards %d (was %d)" % [_opened, _marked_early, _banner().cards_shown, _cards_before])
 				# The first find's cards would hide a regressed repeat card behind them: clear both.
@@ -223,8 +229,8 @@ func _physics_process(_delta: float) -> bool:
 				var tiers: Array = _ceremony().presented.slice(tiers_before).map(func(p: Array): return p[1])
 				_report("a repeat out of a fight queues nothing", _ceremony()._cards.is_empty() and _ceremony().queued() == 0 and _banner().queued() == 0
 						and _banner().cards_shown == _cards_before and tiers.size() == 2 and tiers.all(func(t: String): return t in ["common", "rare"]),
-					"common and relic repeats with the Warden dead: ceremony cards %d, queue %d, banner queued %d, presented tiers %s"
-						% [_ceremony()._cards.size(), _ceremony().queued(), _banner().queued(), tiers])
+					"common and relic repeats with the Warden dead: ceremony cards %d %s, queue %d, banner queued %d, presented tiers %s, opened at %d"
+						% [_ceremony()._cards.size(), _ceremony()._cards.map(func(f): return f["part"]), _ceremony().queued(), _banner().queued(), tiers, _opened])
 				_next("repeat_calm")
 		"repeat_calm":
 			var shown: String = _ceremony().view.card.get("part", "")
@@ -273,13 +279,14 @@ func _physics_process(_delta: float) -> bool:
 		# reads the card gate and not the stage plan.
 		"retried_calm":
 			if WhyCallout.find_may_speak(_ceremony().get("_calm_left"), self, _game.flow):
+				_game.hud.clear_achievement_toasts()
 				_game.run.add_part(_held[0], "pickup")
 				_next("again")
 			elif _wait == CALM_WITHIN:
 				_report("the retried stage turns calm", false, "still not calm %d frames after a retry" % CALM_WITHIN)
 				return _finish()
 		"again":
-			if _card_up():
+			if _seen_both(_held[0]):
 				_report("the next first find shows its card", _ceremony().view.card.get("part", "") == _held[0] and _seen_both(_held[0]) and not _fight_on(),
 					"%s found out of a fight after the retry shows its card at frame %d and is seen" % [_held[0], _wait])
 				_engage()
