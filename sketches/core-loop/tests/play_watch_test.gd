@@ -17,6 +17,8 @@ const T := preload("res://tests/support/t.gd")
 #   blank   an empty objective plate for BLANK_S of play, once a stretch; not on the victory lap,
 #           not outside play
 #   objective  one row a plate change
+#   bar     a hull bar off the hull for BAR_S of play, once a stretch; not a bar that catches up
+#           sooner, not one within BAR_OFF, not one reading off after a long gap, not outside play
 # Evidence limit: the stand-in is not the game. That the game's own members still carry these
 # names is what sitting_notes_test (a real game, a real stuck row) and world1_run_test hold.
 
@@ -65,6 +67,8 @@ class Flow:
 class Run:
 	var stage := 1
 	var stage_time := 0.0
+	var hp := 100.0
+	var max_hp := 100.0
 
 
 # A flat map 1 km square with its floor at height 0.
@@ -84,8 +88,13 @@ class Hud:
 	var id := "find_warden"
 	var words := "FIND THE WARDEN"
 
+	var shown := 1.0
+
 	func objective_reading() -> Dictionary:
 		return {"id": id, "words": words}
+
+	func hull_shown() -> float:
+		return shown
 
 
 class Stand:
@@ -108,6 +117,7 @@ func _initialize() -> void:
 	_rest()
 	_stuck()
 	_plate()
+	_bar()
 	quit(_t.verdict())
 
 
@@ -258,3 +268,47 @@ func _plate() -> void:
 	for i in 6:
 		_watch.read_text(1.0)
 	_t.check("nor is an empty plate outside play", _count("blank") == 0 and _watch.plates == 0, "%d rows" % _count("blank"))
+
+
+func _bar() -> void:
+	_fresh()
+	for i in 4:
+		_watch.read_text(1.0)
+	_t.check("a bar that shows the hull is never a bar row", _count("bar") == 0 and _watch.bar_off_max == 0.0, "%d rows, longest %s s" % [_count("bar"), _watch.bar_off_max])
+	# A stretch is timed from the first reading that found the bar off: three readings are 2 s.
+	_game.run.hp = 50.0
+	for i in 3:
+		_watch.read_text(1.0)
+	_game.hud.shown = 0.5
+	_watch.read_text(1.0)
+	_watch.read_text(1.0)
+	_t.check("a bar that catches up inside %d s is not a bar row" % int(PlayWatch.BAR_S), _count("bar") == 0 and _watch.bar_off_max == 2.0, "%d rows, longest %s s" % [_count("bar"), _watch.bar_off_max])
+	_game.hud.shown = 0.5 + PlayWatch.BAR_OFF * 0.8
+	for i in 5:
+		_watch.read_text(1.0)
+	_t.check("nor is a bar within %.2f of the hull" % PlayWatch.BAR_OFF, _count("bar") == 0 and _watch.bar_off_max == 2.0, "%d rows, longest %s s" % [_count("bar"), _watch.bar_off_max])
+	# One reading off the hull after a long gap (the frame a pause lifts, before the HUD has drawn
+	# again) is one reading, not the gap: a healthy game must never write this row.
+	_game.hud.shown = 1.0
+	_watch.read_text(30.0)
+	_game.hud.shown = 0.5
+	_watch.read_text(1.0)
+	_t.check("one reading off after a long gap is not a bar row", _count("bar") == 0 and _watch.bar_off_max == 2.0, "%d rows, longest %s s" % [_count("bar"), _watch.bar_off_max])
+	_game.hud.shown = 1.0
+	for i in 6:
+		_watch.read_text(1.0)
+	var rows := _of("bar")
+	_t.check("a bar that stays full over half a hull is one bar row, with both readings", _count("bar") == 1 and rows.size() == 1 and rows[0]["shown"] == 1.0 and rows[0]["hull"] == 0.5 and _watch.bar_off_max == 5.0,
+		"%s, longest %s s" % [rows, _watch.bar_off_max])
+	_game.hud.shown = 0.5
+	_watch.read_text(1.0)
+	_game.run.hp = 20.0
+	for i in 4:
+		_watch.read_text(1.0)
+	_t.check("a second stretch is a second row", _count("bar") == 2, "%d rows" % _count("bar"))
+
+	_fresh("summary")
+	_game.run.hp = 50.0
+	for i in 6:
+		_watch.read_text(1.0)
+	_t.check("a bar off the hull outside play is not a bar row", _count("bar") == 0 and _watch.bar_off_max == 0.0, "%d rows, longest %s s" % [_count("bar"), _watch.bar_off_max])
