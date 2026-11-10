@@ -105,8 +105,9 @@ const WORD_LIFE := 0.9
 const WORD_SLAM := 0.06
 const WORD_GAP := 0.4
 const WORD_HEIGHT := 3.2
-# No word is wider than this share of the view. Words are sized in metres, so one stamped beside
-# the camera (a panel pickup's three-word pop sits at the ball) was a wall of letters over the HUD.
+# No word holds wider than this share of the view (its slam, the first WORD_SLAM seconds, may
+# pass it, up to 0.96). Words are sized in metres, so one stamped beside the camera (a panel
+# pickup's three-word pop sits at the ball) was a wall of letters over the HUD.
 const WORD_FIT := 0.6
 const HIT_GAP := 0.12
 const HITS_PER_TENTH := 8

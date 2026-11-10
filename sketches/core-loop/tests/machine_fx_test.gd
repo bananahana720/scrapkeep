@@ -141,7 +141,13 @@ func _run() -> void:
 	var near: Vector3 = cam.global_position - cam.global_basis.z * 8.0
 	t.check("the pop stamps", fx.word("COLLAR +6% HARPOON RECOVERY", near, Color.WHITE, true, 1.2, 1.1))
 	t.check("a far word stamps", fx.word("TONK", cam.global_position - cam.global_basis.z * 40.0, Color.WHITE, true))
-	await _frames(8)
+	# Past the slam (the first WORD_SLAM seconds draw a word up to 1.6 times its held size), by
+	# the words' own clocks: a frame count is no time on a fast machine.
+	var newest: Dictionary = fx._words[posmod(fx._word_next - 1, fx._words.size())]
+	var settle := 0
+	while float(newest["t"]) <= MachineFx.WORD_SLAM and settle < 600:
+		settle += 1
+		await process_frame
 	var widths := {}
 	for slot in fx._words:
 		var label: Label3D = slot["node"]

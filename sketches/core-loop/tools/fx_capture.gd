@@ -38,6 +38,9 @@ func _initialize() -> void:
 		elif arg.begins_with("--world="):
 			world_row = int(arg.trim_prefix("--world="))
 		elif arg.begins_with("--freeze="):
+			if not arg.trim_prefix("--freeze=").is_valid_float():
+				quit(2)
+				return
 			freeze = clampf(float(arg.trim_prefix("--freeze=")), 0.0, 1.0)
 		elif arg.begins_with("--only="):
 			only = Array(arg.trim_prefix("--only=").split(","))
