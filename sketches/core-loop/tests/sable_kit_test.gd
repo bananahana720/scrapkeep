@@ -25,7 +25,7 @@ const SfxBank := preload("res://src/presentation/sfx_bank.gd")
 const Harmony := preload("res://src/presentation/harmony.gd")
 const MusicEngine := preload("res://src/presentation/music_engine.gd")
 const T := preload("res://tests/support/t.gd")
-const EXPECTED_CHECKS := 89
+const EXPECTED_CHECKS := 90
 const DT := 1.0 / 60.0
 var _t := T.new("sable_kit_test")
 var _game
@@ -120,6 +120,7 @@ func _run() -> void:
 	_cast()
 	_t.near("world exit", _player.state.velocity.length(), 29.0, 0.5)
 	_t.check("exit cone and cast share their direction", rad_to_deg(_player.state.velocity.angle_to(shape["dir"])) < 1.0)
+	_t.check("the exit cone is an aim, not an area a hit lands in", shape.get("aim", false), str(shape))
 	_t.check("exit follows eject_direction", rad_to_deg(_player.state.velocity.angle_to(Augments.eject_direction(_player.ball_position() - anchor, _player.drive_basis))) < 5.0)
 	_t.eq("quiet release", [_player.kit.hooked, _player.kit.line_end], [false, "bank"])
 	_player._publish_line(0.0)

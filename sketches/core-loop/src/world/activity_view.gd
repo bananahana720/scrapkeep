@@ -15,6 +15,10 @@ const GLYPH_SIZE := 3.2
 const GLYPH_ENERGY := 2.4
 const COLUMN_ENERGY := 1.8
 const COLUMN_ALPHA := 0.55
+# A column thins to nothing between these distances from the lens. Columns stand where the ball is sent, so
+# the lens, an arm's length behind the ball, passes through them: unfaded, that washed the whole view amber
+# for a tenth of a second (every flume entry flew through the bounty hauler's).
+const COLUMN_FADE := Vector2(3.0, 14.0)
 const BEAM_ALPHA := 0.5
 const RING_DASHES := 20
 const WORD_REACH := 30.0
@@ -60,7 +64,7 @@ func build(activity_id: String, ring_radius: float, tell := {}, tell_audio = nul
 	column = MeshInstance3D.new()
 	column.name = "Column"
 	column.mesh = _box_mesh(Vector3(COLUMN_WIDTH, COLUMN_HEIGHT, COLUMN_WIDTH))
-	column.material_override = _unshaded(_veil(color, COLUMN_ALPHA))
+	column.material_override = _column_material(color)
 	column.position = Vector3.UP * COLUMN_HEIGHT * 0.5
 	add_child(column)
 	glyph = _glyph(String(row.get("shape", "none")), color)
@@ -184,6 +188,17 @@ static func _unshaded(color: Color) -> StandardMaterial3D:
 	var key := "unshaded:%s" % color.to_html()
 	if not _shared.has(key):
 		_shared[key] = Palette.unshaded(color)
+	return _shared[key]
+
+
+static func _column_material(color: Color) -> StandardMaterial3D:
+	var key := "column:%s" % color.to_html()
+	if not _shared.has(key):
+		var mat := Palette.unshaded(_veil(color, COLUMN_ALPHA))
+		mat.distance_fade_mode = BaseMaterial3D.DISTANCE_FADE_PIXEL_ALPHA
+		mat.distance_fade_min_distance = COLUMN_FADE.x
+		mat.distance_fade_max_distance = COLUMN_FADE.y
+		_shared[key] = mat
 	return _shared[key]
 
 
