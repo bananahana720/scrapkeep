@@ -59,9 +59,6 @@ const GLYPH_PERIOD := 1.2
 const DEFAULT_KIND := "synergy_discovered"
 const TINT_KICKER_LIFT := 0.35
 const CALM_SECONDS := WhyCallout.CALM_SECONDS
-# A kill is its own beat: a card waits this long after one, so the body's break and its word read
-# before a card lands beside them (the death reel caught a synergy card on the jolt layer's break).
-const KILL_BEAT := 1.0
 
 var shown := 0
 var last_title := ""
@@ -167,15 +164,12 @@ func _ready() -> void:
 		node = node.get_parent()
 
 
-# Counts damage on this bus as a fight, so a card waits for CALM_SECONDS without it, and a kill as
-# a beat of KILL_BEAT.
+# Counts damage on this bus as a fight, so a card waits for CALM_SECONDS without it.
 func watch(events) -> void:
 	if _events == events or not events.has_signal("player_hit"):
 		return
 	_events = events
 	events.player_hit.connect(func(_amount: float, _source: String): _calm_left = CALM_SECONDS)
-	if events.has_signal("enemy_killed"):
-		events.enemy_killed.connect(func(_kind: String, _at: Vector3, _scrap: int): _calm_left = maxf(_calm_left, KILL_BEAT))
 	# A retry rewinds the stage and clears the codex record: a held card goes unseen.
 	if events.has_signal("stage_entered"):
 		events.stage_entered.connect(func(_stage: int, retry: bool):
