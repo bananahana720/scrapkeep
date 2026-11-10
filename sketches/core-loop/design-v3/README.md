@@ -9,7 +9,7 @@
 - [HANDOFF.md](HANDOFF.md): Historical handoff log (3 to 10 Oct). The live handoff is [GRAPH](../../../project-guide/coord/GRAPH.md).
 - [HOOK-CHAIN.md](HOOK-CHAIN.md): Detailed chain contract and acceptance work.
 - [POLES-FLAILS.md](POLES-FLAILS.md): Wave 20 proposal for poles and flails on the harpoon.
-- [SIGHT-PERSONA.md](SIGHT-PERSONA.md): Candidate look persona (9 Nov): the artist, her habits, how the four makers are told apart, and the three candidate years.
+- [SIGHT-PERSONA.md](SIGHT-PERSONA.md): The look persona (9 Nov; year picked 10 Nov): the artist, her habits, how the four makers are told apart, and the year, 2010.
 - [LEGIBILITY.md](LEGIBILITY.md): Accepted presentation grammar and measurement references.
 - [MACHINE-VFX.md](MACHINE-VFX.md): Enemy and boss effects, the specials' tell contract and their budget.
 - [TRAVERSAL.md](TRAVERSAL.md): Traversal measurements and definitions consumed by code and tests.
