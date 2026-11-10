@@ -79,6 +79,7 @@ func set_parts(title_text: String, detail_text := "", icon_id := DEFAULT_ICON) -
 
 # An interactable's prompt: icon "" hides it; words "" is the glyph alone.
 func set_interact(icon_id: String, words: String, key: String, fill: float) -> void:
+	assert(key == "" or words != "", "a key prompt needs a word beside its icon (PF-03)")
 	_structured = true
 	_glyph = icon_id != ""
 	keycap = key
