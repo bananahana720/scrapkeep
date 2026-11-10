@@ -13,6 +13,8 @@ import {
   hasFfmpeg,
   judge,
   missingInputs,
+  oggLongestPage,
+  pageFindings,
   run,
   missingCues,
   parseArgs,
@@ -231,6 +233,40 @@ test("the gate flags a stale pack and an unhashed one, and passes the good pack"
     write({ measured: { lufs: measured } });
     tone(path.join(music, "calm.bass.ogg"), 12, 0.02);
     assert.ok(kinds().includes("stale"), "a re-encoded stem differs from the hash list");
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+// A minimal Ogg Vorbis byte stream: an identification page, then one page per granule position.
+function oggOf(granules, rate = 44100) {
+  const page = (granule, body) => {
+    const head = Buffer.alloc(27 + 1);
+    head.write("OggS", 0, "latin1");
+    head.writeBigInt64LE(BigInt(granule), 6);
+    head[26] = 1;
+    head[27] = body.length;
+    return Buffer.concat([head, body]);
+  };
+  const id = Buffer.alloc(30);
+  id.write("\x01vorbis", 0, "latin1");
+  id[11] = 2;
+  id.writeUInt32LE(rate, 12);
+  return Buffer.concat([page(0, id), ...granules.map((g) => page(g, Buffer.from("OggS is not a page here")))]);
+}
+
+test("a packed Ogg stored in one-second pages is named, a short-paged one passes", () => {
+  const long = oggOf([44100, 88200, 132300]);
+  const short = oggOf(Array.from({ length: 150 }, (_, i) => (i + 1) * 882));
+  assert.equal(oggLongestPage(long), 1);
+  assert.equal(oggLongestPage(short), 0.02);
+  assert.equal(oggLongestPage(Buffer.from("fresh drums")), null, "not an Ogg is not judged");
+  const manifest = (pack, files) => ({ dir: pack, clips: { calm: { files } } });
+  const dir = project({ "assets/music_ace/spillway/calm.drums.ogg": short, "assets/music_ace/spillway/calm.bass.ogg": long });
+  try {
+    const found = pageFindings(dir, [manifest("spillway", { drums: "calm.drums.ogg", bass: "calm.bass.ogg", other: "calm.other.ogg" })]);
+    assert.deepEqual(found.map((f) => [f.kind, f.where]), [["pages", "spillway/calm.bass.ogg"]], "the long-paged stem is named; the short one and the absent one are not");
+    assert.match(found[0].what, /repage\.py apply/);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
