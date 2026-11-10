@@ -481,7 +481,6 @@ func _place_ball(center: Vector3, entry_velocity: Vector3) -> void:
 	var heading := Vector3.FORWARD
 	var flat := maxf(Vector2(entry_velocity.x, entry_velocity.z).length(), ctx.tuning.f("cruise"))
 	ctx.player.reset_to(at, heading * flat)
-	ctx.player.body().global_position = at
 	if ctx.camera != null and ctx.camera.has_method("snap"):
 		ctx.camera.snap(heading)
 

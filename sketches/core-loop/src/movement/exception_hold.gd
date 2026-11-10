@@ -157,7 +157,4 @@ func _set_beside(body: PhysicsBody3D) -> void:
 		out = Vector3(-v.x, 0.0, -v.z) if Vector2(v.x, v.z).length() > 0.1 else Vector3.BACK
 	out = out.normalized() * (reach + _radius + MARGIN)
 	var spot := Vector3(centre.x + out.x, at.y, centre.z + out.z)
-	if _ball.has_method("teleport"):
-		_ball.teleport(spot, _ball.linear_velocity)
-	else:
-		_ball.global_position = spot
+	_ball.teleport(spot, _ball.linear_velocity)

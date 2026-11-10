@@ -3,14 +3,16 @@ extends SceneTree
 const Game := preload("res://src/game.gd")
 const SettingsStore := preload("res://src/ui/settings_store.gd")
 const T := preload("res://tests/support/t.gd")
+# The speed FS-5 places the ball with: slow enough that the ball stays near the spot.
+const PLACED_SPEED := Vector3(0.0, 0.0, -3.0)
 
 # Frame smoothing (9 Nov 2026): the ball is drawn between its last two physics ticks, so a
 # display that is not 90 Hz shows it moving every frame. Checked here: interpolation is opt-in
 # per body (the Game root is off, only the ball's body asks); the saved Display row; and that a
 # test or a headless bot never takes the setting, because the sim reads the lens and the lens
-# follows the drawn ball; that a ball placed somewhere new is drawn there at once; and that the
-# drawn place is the ball's own place inside a physics tick, so rules that run on the tick never
-# see a between-ticks ball. tools/judder_probe.gd measures the picture at a display rate and
+# follows the drawn ball; that one reset_to places the ball and it is drawn there at once; and that
+# the drawn place is the ball's own place inside a physics tick, so rules that run on the tick
+# never see a between-ticks ball. tools/judder_probe.gd measures the picture at a display rate and
 # tools/interp_audit.gd lists every node the tree's interpolation would draw wrong.
 
 var _t := T.new("frame_smoothing_test")
@@ -18,6 +20,7 @@ var _game
 var _step := 0
 var _placed := Vector3.ZERO
 var _worst := 0.0
+var _strayed := 0.0
 var _ticks := 0
 var _tick_gap := 0.0
 var _frame_gap := 0.0
@@ -43,11 +46,13 @@ func _process(_delta: float) -> bool:
 		_bodies()
 		_game.toggle_interpolation()
 	elif _step == 12:
-		# A stage entry, a boss intro and a rescue place the ball this way: reset_to, then the
-		# body's position by hand so the lens can snap in the same breath.
+		# A stage entry, a boss intro and a rescue place the ball this way: one reset_to, and the
+		# ball reads at the new spot at once so the lens can snap in the same breath.
 		_placed = _game.player.body().global_position + Vector3(0.0, 30.0, 300.0)
-		_game.player.reset_to(_placed)
-		_game.player.body().global_position = _placed
+		_game.player.reset_to(_placed, PLACED_SPEED)
+		_t.check("FS-5 one call places a rolling ball: its body reads at the new spot at once", not _game.player.body().freeze and _game.player.ball_position().distance_to(_placed) < 0.01, "frozen %s, body %.1f m away" % [_game.player.body().freeze, _game.player.ball_position().distance_to(_placed)])
+		# A ride that catches the ball on this tick reads the body's speed, so it is the new one already.
+		_t.check("FS-5 the placed ball's body has its new speed at once", _game.player.body().linear_velocity.is_equal_approx(PLACED_SPEED), "body speed %s" % _game.player.body().linear_velocity)
 		# This is a frame, not a physics tick (the camp walk places the ball from a key press):
 		# the lens snaps before the reset has run and must still land on the new spot.
 		_game.camera.snap(Vector3(0.0, 0.0, -1.0))
@@ -55,7 +60,9 @@ func _process(_delta: float) -> bool:
 		_t.check("FS-5 a lens snapped in that breath is on the new spot", _game.camera.global_position.distance_to(_placed) < 2.0, "lens %.1f m away" % _game.camera.global_position.distance_to(_placed))
 	elif _step >= 13 and _step <= 16:
 		_worst = maxf(_worst, _game.player.shown_position().distance_to(_game.player.body().global_position))
+		_strayed = maxf(_strayed, _game.player.ball_position().distance_to(_placed))
 		if _step == 16:
+			_t.check("FS-5 the ball stays where it was placed on the frames after", _strayed < 2.0, "up to %.1f m from the spot" % _strayed)
 			# FS-5: no frame after a placement is drawn on the way from the old spot.
 			_t.check("FS-5 a placed ball is drawn where it was placed, not sliding from the old spot", _worst < 1.0, "drawn up to %.1f m from the ball" % _worst)
 	elif _step > 16:

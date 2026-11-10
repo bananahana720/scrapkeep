@@ -114,7 +114,6 @@ func _place(speed: float) -> void:
 	var at := entry_point()
 	ctx.player.set_frozen(false)
 	ctx.player.reset_to(at, Vector3.BACK * speed)
-	ctx.player.body().global_position = at
 	ctx.camera.snap(Vector3.BACK)
 
 

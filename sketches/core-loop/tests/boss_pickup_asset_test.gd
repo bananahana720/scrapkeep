@@ -35,7 +35,10 @@ const GLB := "res://assets/models/bosses/boss_pickup.glb"
 # Re-pinned 2026-11-10 (first-timer film, PF-17 and PF-18): plate_reading no longer calls the cockpit open while a
 # Scuttle charge is committed (charge_coming), and plate_targets hands the HUD the places the plate's row
 # names; both read-only, no hit or warning changes; pickup meshes unchanged. Was 894f3522.
-const BASE_LOGIC_SHA := "5188095652bcede2397f855ec26990dfd97b882d48fb1aec2d7f78a6a89469c6"
+# Re-pinned 2026-11-09 (one call places the ball): the intro and the rescue place the ball with reset_to
+# alone, no write to its body after; pickup meshes unchanged. Was 894f3522.
+# Re-pinned 2026-11-10 (w33 gate, stacking #709 onto #708): both changes in boss.gd together. Was 51880956 (#708) / 8cfc6e3b (#709).
+const BASE_LOGIC_SHA := "2304483c3e8d46f442dee3f5bef3192e6e8a673acd969320afc78bc0e43e28e7"
 
 var failures := 0
 var game
