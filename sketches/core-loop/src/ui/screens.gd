@@ -569,8 +569,8 @@ func end_prologue() -> void:
 	_fade(true)
 
 
-# While the prologue shows, every key but Escape stays on it, so a number cannot pick a
-# pilot unseen. A click on its own button is the GUI's, not a skip.
+# While the prologue shows, every key stays on it (Esc too, which never quits), so a number cannot
+# pick a pilot unseen. A click on its own button is the GUI's, not a skip.
 func _prologue_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton:
 		var next := button_for("prologue_next")
@@ -578,12 +578,11 @@ func _prologue_input(event: InputEvent) -> void:
 			return
 	if event.is_action_pressed("cl_interact"):
 		advance_prologue()
-		get_viewport().set_input_as_handled()
 	elif event.is_action_pressed("cl_fire") or event.is_action_pressed("cl_harpoon"):
 		end_prologue()
-		get_viewport().set_input_as_handled()
-	elif event is InputEventKey and event.pressed and event.physical_keycode != KEY_ESCAPE:
-		get_viewport().set_input_as_handled()
+	elif not (event is InputEventKey and event.pressed):
+		return
+	get_viewport().set_input_as_handled()
 
 
 # H on the title swaps its body and actions for the how-to-play page, and back.
@@ -882,7 +881,7 @@ func toggle_jukebox() -> void:
 	_camp.visible = false
 	_jukebox.visible = true
 	_refresh_jukebox()
-	_show("", Palette.AMBER, "")
+	_show("MOSS'S JUKEBOX", Palette.AMBER, "")
 	_jukebox.focus_first()
 	_sync_walk()
 	_fade(true)
@@ -1198,12 +1197,8 @@ func _input(event: InputEvent) -> void:
 		return
 	if _camp.visible:
 		# Pad B boosts in the walk; Start (the pause button elsewhere) leaves the camp. Esc leaves on keys.
-		var leave: bool = event is InputEventJoypadButton and event.pressed and (event.button_index == JOY_BUTTON_START
-			or (event.button_index == JOY_BUTTON_B and not _walking))
-		if leave:
-			toggle_camp()
-			get_viewport().set_input_as_handled()
-		elif event is InputEventKey and event.pressed and not event.echo and event.physical_keycode == KEY_ESCAPE:
+		var start: bool = event is InputEventJoypadButton and event.pressed and event.button_index == JOY_BUTTON_START
+		if start or (_backs(event) and not (_walking and event is InputEventJoypadButton)):
 			toggle_camp()
 			get_viewport().set_input_as_handled()
 		return
@@ -1229,7 +1224,8 @@ func _input(event: InputEvent) -> void:
 	var code: int = event.physical_keycode
 	var quit := button_for("quit")
 	if code == KEY_C and _state == "summary":
-		_press("key_c")
+		if not game.workshop().companion_panel.is_open():
+			_press("key_c")
 	elif code == KEY_ESCAPE and (_help.visible or _achievements.visible):
 		if _help.visible:
 			toggle_help()
@@ -1237,6 +1233,11 @@ func _input(event: InputEvent) -> void:
 			toggle_achievements()
 	elif code == KEY_ESCAPE and _state == "title" and quit != null:
 		quit.grab_focus()
+	elif code == KEY_ESCAPE and _state in ["class_select", "dead", "victory"]:
+		if _state == "class_select":
+			game.flow.show_title()
+		elif _state == "dead":
+			open_camp_from_summary()
 	elif quit != null and quit.has_focus() and code in [KEY_ENTER, KEY_KP_ENTER, KEY_SPACE]:
 		quit.pressed.emit()
 	else:

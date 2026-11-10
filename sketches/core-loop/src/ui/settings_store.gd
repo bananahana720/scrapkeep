@@ -33,7 +33,7 @@ const FRAME_SMOOTHING := "frame_smoothing"
 const WIDE_PICTURE := "wide_picture"
 # The one line the settings page shows under a row while it has the focus (eight words at most).
 const HELPERS := {
-	FRAME_SMOOTHING: "Smoother motion on screens that aren't 90 Hz",
+	FRAME_SMOOTHING: "Smoother motion, about 11 ms added input lag",
 	WIDE_PICTURE: "Fills ultrawide screens; off keeps black bars",
 }
 const STICK_SENSITIVITY := "stick_sensitivity"

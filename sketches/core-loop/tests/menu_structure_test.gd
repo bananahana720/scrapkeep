@@ -19,6 +19,10 @@ const T := preload("res://tests/support/t.gd")
 const PAUSE_COLUMN := ["resume", "restart", "notes", "radio", "settings", "quit"]
 const FEEL_ROWS := ["music", "effects", "shake", "hitstop", "ceremony"]
 const HEADINGS := ["SETTINGS", "Choose your pilot", "HOW TO PLAY", "ACHIEVEMENTS", "CAMP"]
+# The camp-walk path sets screens._walking directly (the 3D camp is not built here), as camp_hub_test's
+# feature page does, then opens a page through the real open_walk_page and toggle_achievements.
+# A heading that is allowed on a page, by page, with the reason: Moss's jukebox heading says whose jukebox it is.
+const ALLOWED := {}
 
 var _t := T.new("menu_structure_test")
 var _game
@@ -52,6 +56,29 @@ func _holds(node: Node, heading: String) -> bool:
 	return _texts(node).has(heading)
 
 
+# The restating headings a built screen still holds (an allowed one for that page excepted).
+func _restating(node: Node, page := "") -> Array:
+	return HEADINGS.filter(func(h): return _holds(node, h) and not ALLOWED.get(page, []).has(h))
+
+
+func _wears_esc(button: Button) -> bool:
+	return button != null and button.key == "key_esc"
+
+
+# One real Esc through the engine's input path, with game._input live (it returns early in test_mode).
+func _real_esc() -> void:
+	_game.test_mode = false
+	for down in [true, false]:
+		var event := InputEventKey.new()
+		event.keycode = KEY_ESCAPE
+		event.physical_keycode = KEY_ESCAPE
+		event.pressed = down
+		Input.parse_input_event(event)
+		Input.flush_buffered_events()
+	await _frames(3)
+	_game.test_mode = true
+
+
 func _key(code: Key) -> InputEventKey:
 	var event := InputEventKey.new()
 	event.keycode = code
@@ -77,24 +104,32 @@ func _run() -> void:
 	screens._on_flow_changed("title")
 	_t.check("planted: the plain title does not read SETTINGS", not _holds(screens, "SETTINGS"))
 
+	var plant := preload("res://src/ui/choice_button.gd").new("back", "key_a", "Back")
+	_t.check("planted: a Back wearing A is not read as Esc", not _wears_esc(plant))
+	plant.free()
+	screens._show("CAMP", Color.WHITE, "")
+	_t.check("planted: a CAMP heading is found by the restating scan", _restating(screens) == ["CAMP"], str(_restating(screens)))
+	screens._on_flow_changed("title")
+
 	# The five headings, on the screens that carried them.
 	screens.toggle_settings()
 	await _frames(2)
-	_t.check("the title's Settings holds no SETTINGS heading", screens._settings.visible and not _holds(screens, "SETTINGS"), str(_texts(screens)))
+	_t.check("the title's Settings holds no restating heading", screens._settings.visible and _restating(screens, "settings") == [], str(_texts(screens)))
 	screens.toggle_settings()
 	screens.toggle_help()
 	await _frames(2)
-	_t.check("Help holds no HOW TO PLAY heading", screens.help_open() and not _holds(screens, "HOW TO PLAY"), str(_texts(screens)))
+	_t.check("Help holds no HOW TO PLAY heading", screens.help_open() and _restating(screens, "help") == [], str(_texts(screens)))
 	screens.toggle_help()
 	screens.toggle_achievements()
 	await _frames(2)
 	_t.check("Achievements holds no ACHIEVEMENTS heading", not _holds(screens, "ACHIEVEMENTS"), str(_texts(screens)))
-	_t.eq("Achievements' Back wears Esc from the title", screens._achievements.back.key, "key_esc")
+	_t.check("Achievements' Back wears Esc from the title", _wears_esc(screens._achievements.back), screens._achievements.back.key)
+	_t.eq("Achievements holds no restating heading", _restating(screens, "achievements"), [])
 	screens.toggle_achievements()
 	screens._walking = true
 	screens.toggle_achievements()
 	await _frames(2)
-	_t.eq("Achievements' Back wears Esc from the camp walk", screens._achievements.back.key, "key_esc")
+	_t.check("Achievements' Back wears Esc from the camp walk", _wears_esc(screens._achievements.back), screens._achievements.back.key)
 	screens.toggle_achievements()
 	var page := PanelContainer.new()
 	var own := Label.new()
@@ -102,7 +137,7 @@ func _run() -> void:
 	page.add_child(own)
 	screens.open_walk_page(page)
 	await _frames(2)
-	_t.check("a station page stands alone, with no CAMP heading over it", _holds(screens, "Dispatch box") and not _holds(screens, "CAMP"), str(_texts(screens)))
+	_t.check("a station page stands alone, with no CAMP heading over it", _holds(screens, "Dispatch box") and _restating(screens, "walk_page") == [], str(_texts(screens)))
 	screens.close_walk_page()
 	screens._walking = false
 	_game.flow.open_class_select()
@@ -110,8 +145,7 @@ func _run() -> void:
 	_t.check("pilot select holds no Choose your pilot heading but keeps the voice line",
 		not _holds(screens, "Choose your pilot") and _holds(screens, Screens.PILOT_LINE), str(_texts(screens)))
 	_t.eq("its footer is the Enter cap and start", screens._footer.text(), "Enter start")
-	for heading in HEADINGS:
-		_t.check("%s is on no built screen now" % heading, not _holds(screens, heading) or heading == "CAMP", heading)
+	_t.eq("pilot select holds none of the five restating headings", _restating(screens, "class_select"), [])
 
 	# One name for starting over, on the death screen and the summary.
 	_game.flow.show_title()
@@ -191,11 +225,70 @@ func _run() -> void:
 	await _frames(1)
 	_t.eq("the helper leaves with the focus", title_pages.helper_text(), "")
 
+	# The stick steps a Feel row, as it did in the pause column (ui_right is the default map's stick and d-pad).
+	title_pages.show_page(3)
+	title_pages.row("effects").grab_focus()
+	var before_level: float = title_pages.row("effects").level
+	var stick := InputEventJoypadMotion.new()
+	stick.axis = JOY_AXIS_LEFT_X
+	stick.axis_value = -1.0
+	var used: bool = title_pages.handle(stick)
+	_t.check("a stick push left steps Effects down", used and is_equal_approx(title_pages.row("effects").level, maxf(before_level - 0.1, 0.0)), "%s -> %s" % [before_level, title_pages.row("effects").level])
+	stick.axis_value = 1.0
+	title_pages.handle(stick)
+	_t.near("a stick push right steps it back", title_pages.row("effects").level, before_level)
+	var idle := InputEventJoypadMotion.new()
+	idle.axis = JOY_AXIS_LEFT_X
+	idle.axis_value = 0.0
+	_t.check("a centred stick is not used", not title_pages.handle(idle))
+
+	# Esc on every screen outside the title goes back or stays; it never quits (real routing, game._input live).
+	screens.toggle_settings()
+	_game.flow.show_title()
+	_game.flow.open_class_select()
+	await _frames(2)
+	await _real_esc()
+	_t.check("Esc on pilot select goes back to the title and the game runs on", _game.flow.state_name() == "title", _game.flow.state_name())
+	_game.flow._set_state(_game.flow.DEAD)
+	await _frames(2)
+	_t.eq("the death screen is up", screens._state, "dead")
+	await _real_esc()
+	_t.check("Esc on the death screen opens the camp, as the summary's Esc does", screens.camp_open() and _game.flow.state_name() == "title", _game.flow.state_name())
+	await _real_esc()
+	_t.check("a second Esc leaves the camp and the game runs on", _game.flow.state_name() == "title" and not screens.camp_open(), "camp %s" % screens.camp_open())
+
+	# C on the summary: one press, one action, and none while the companion panel is open.
+	_game.flow.show_title()
+	_game.flow.press_start()
+	_game.pick_pilot(0)
+	await _frames(3)
+	_game.flow._set_state(_game.flow.SUMMARY)
+	await _frames(2)
+	_game.summary_latched = false
+	var panel = _game.workshop().companion_panel
+	panel._open = true
+	screens._input(_key(KEY_C))
+	_t.eq("C does nothing on the summary while the companion panel is open", screens._state, "summary")
+	panel._open = false
+	screens._input(_key(KEY_C))
+	await _frames(2)
+	_t.check("C chooses a pilot on the summary once the panel is shut", _game.flow.state_name() == "class_select", _game.flow.state_name())
+
 	# Title wording and Esc.
 	_game.flow.show_title()
 	await _frames(3)
 	_t.eq("the title reads SCRAPKEEP", screens._title.text, Screens.TITLE)
 	_t.check("the sitting tag is off the title", not "SITTING" in screens._title.text)
+	var menu_dev = _game.get_node("PauseMenu")
+	_t.check("Breath is hidden in the pause column without --dev", not _game.dev and not menu_dev.row("breath").visible)
+	var stamp: String = title_pages.stamp.text
+	_t.check("a default profile's build stamp has no sitting word", not stamp.contains("sitting") and stamp != "", stamp)
+	var sitting_seen := false
+	if _game.tuning != null:
+		_game.tuning.apply_args(PackedStringArray(["--profile=sitting"]), "launch")
+		title_pages.refresh()
+		sitting_seen = title_pages.stamp.text.ends_with("sitting") and not title_pages.stamp.text.contains(":")
+	_t.check("a sitting profile shows one word, sitting, after the build id", sitting_seen, title_pages.stamp.text)
 	var quit: Button = screens.button_for("quit")
 	quit.pressed.connect(func(): _quits += 1)
 	_t.check("nothing is focused on a fresh title", not quit.has_focus())
@@ -212,4 +305,6 @@ func _run() -> void:
 
 
 func quit_and_report() -> void:
+	_game.free()
+	await _frames(1)
 	quit(_t.verdict())

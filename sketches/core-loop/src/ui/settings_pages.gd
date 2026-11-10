@@ -420,6 +420,7 @@ func pad_glyph_of(verb: String) -> String:
 func refresh() -> void:
 	_capturing = ""
 	_taken = ""
+	stamp.text = BuildStamp.label() + (" · sitting" if _game.tuning != null and _game.tuning.sitting() else "")
 	var store = _store()
 	rows["fullscreen"].text = "Fullscreen: %s" % ("on" if store.fullscreen() else "off")
 	rows["quality"].text = "Quality: %s" % ("low" if store.quality() == 1 else "high")
@@ -630,6 +631,17 @@ func handle(event: InputEvent) -> bool:
 		elif code == KEY_ENTER or code == KEY_KP_ENTER or code == KEY_SPACE:
 			_accept()
 		return true
+	if event is InputEventJoypadMotion:
+		# The stick moves and steps as it did in the pause column (the ui_* actions the default map gives it).
+		for pair in [["ui_up", -1], ["ui_down", 1]]:
+			if event.is_action_pressed(pair[0], true):
+				_move(pair[1])
+				return true
+		for pair in [["ui_left", -1], ["ui_right", 1]]:
+			if event.is_action_pressed(pair[0], true):
+				_nudge(pair[1])
+				return true
+		return false
 	if event is InputEventJoypadButton and event.pressed:
 		if event.button_index == JOY_BUTTON_LEFT_SHOULDER:
 			_tab_pressed(_page_index - 1)
