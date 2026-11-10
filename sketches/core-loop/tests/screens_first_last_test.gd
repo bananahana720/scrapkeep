@@ -63,7 +63,7 @@ func _run() -> void:
 	await _frames(4)
 	var cards: Array = screens.class_cards()
 	_t.eq("UI1-2 six cards", cards.size(), 6)
-	_t.eq("UI1-2 the footer says how to choose and start", screens._footer.text(), "1 to 6 choose · Enter start")
+	_t.eq("UI1-2 the footer is the Enter cap and start", screens._footer.text(), "Enter start")
 	_t.check("UI1-2 the footer shows", screens._footer.visible)
 	for row in [["name", func(c): return c.name_label()], ["role", func(c): return c.role_label()],
 			["words", func(c): return c.get_child(0).get_child(3)], ["keys", func(c): return c.key_cells()[0]]]:

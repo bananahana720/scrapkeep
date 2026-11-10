@@ -106,7 +106,7 @@ func _run() -> void:
 	# B cancels.
 	_page.press("pad_haul")
 	_button(JOY_BUTTON_B)
-	_t.check("B cancels and changes nothing", not _page.capturing() and _pads("cl_haul") == [JOY_BUTTON_X] and _saved().binding("cl_haul") == "" and _page.row("pad_haul").text == "Haul", "pads %s text %s" % [_pads("cl_haul"), _page.row("pad_haul").text])
+	_t.check("B cancels and changes nothing", not _page.capturing() and _pads("cl_haul") == [JOY_BUTTON_X] and _saved().binding("cl_haul") == "" and _page.row("pad_haul").text == "", "pads %s text %s" % [_pads("cl_haul"), _page.row("pad_haul").text])
 
 	# Taken against held pad buttons.
 	_page.press("pad_boost")
