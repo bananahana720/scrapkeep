@@ -35,6 +35,7 @@ The rest of the 28 Oct gap list is closed: the dunk tip, the held radio and acti
 - Slow-box time caps (boss_weak_parts, crown_warden_bot, run_tier children, bot_skill_bar): the dam leftovers lane raises the tests' own caps; the runner gains a time scale for slow boxes ([GATE.md](GATE.md)).
 - Deep-modules batch 2 from the queued list ([DEEP-SWEEP.md](DEEP-SWEEP.md)).
 - Watches on the live board, and the carried reds in [KNOWN-FAILING.tsv](KNOWN-FAILING.tsv) (ruling bq).
+- After the sitting, once the sound lane's pull requests have settled: type the four audio files that worker threads run (`synth.gd`, `harmony.gd`, `sfx_bank.gd`, `music_engine.gd`), make an untyped declaration in them an error, and add a cold two-thread stress test ([issue 593](https://github.com/bananahana720/scrapkeep/issues/593)). Parked on 10 November 2026: 300 cold boots (150 in the cloud, 150 on the PC) showed no crash.
 
 ### Andrew plays
 

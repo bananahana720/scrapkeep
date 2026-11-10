@@ -234,6 +234,32 @@ export function lintL9(file, text) {
     .map((line) => finding("L9", file, line.number, "the player node never leaves the origin: ask ball_position() for a rule or shown_position() for a picture, not the node's own place"));
 }
 
+// L10: game code that moves the ball's body by hand. PlayerBall.reset_to(point, velocity) places the
+// ball in one call: its body reads at the new spot with its new speed at once, the next tick starts
+// there and no frame is drawn sliding in. A write to the body's place beside it is a reach into the
+// ball that moves it without its speed, its state or the drawn reset. The rule sees a write or a
+// setter call spelled through body(), active_body(), _ball_body() or the ball's own _rigid; a body
+// held in a local variable is not seen. rigid_ball.gd writes its own place and is not matched.
+// HAND_MOVED lists the writes that are not a placement: the file, how many, and why. A count that
+// drifts is a finding, and so is an entry with no write left.
+export const HAND_MOVED = {
+  "src/combat/kest_kit.gd": { sites: 1, why: "an ultimate's flight leg ends exactly on its mark and the next leg leaves from there with the kit, the chain and the speed intact, which a reset would clear" },
+};
+
+const handMove = /\b(?:(?:active_|_ball_)?body\(\)|_rigid)\s*\.\s*(?:(?:global_)?(?:position|transform)\b(?:\s*\.\s*\w+)*\s*[-+*\/]?=(?!=)|(?:set_(?:global_)?(?:position|transform)|global_translate|translate)\s*\()/g;
+
+// L10: rel is the path inside the sketch, file the repo path for the finding.
+export function lintL10(file, rel, text, allowed = HAND_MOVED) {
+  const writes = codeLines(text).flatMap((line) => (line.raw.match(handMove) ?? []).map(() => line));
+  const listed = allowed[rel]?.sites ?? 0;
+  if (writes.length === listed) return [];
+  if (writes.length === 0) return [finding("L10", file, 1, "HAND_MOVED lists a file that no longer moves the ball's body by hand: remove the entry")];
+  const message = listed === 0
+    ? "the ball's body is moved by hand: PlayerBall.reset_to(point, velocity) places it in one call and it reads at the new spot at once"
+    : `${writes.length} writes to the ball's body, HAND_MOVED lists ${listed}; a placement takes reset_to(point, velocity)`;
+  return writes.map((line) => finding("L10", file, line.number, message));
+}
+
 // The baseline only shrinks: offenders it lists stay quiet, a listed path that no longer
 // offends or no longer exists is itself a finding. exists(path) answers for the disk.
 export function applyBaseline(findings, baseline, exists) {
@@ -308,6 +334,7 @@ export function lintSketch(sketch) {
     findings.push(...lintL6(file.path, rel, file.text));
     findings.push(...lintL8(file.path, rel, file.text));
     findings.push(...lintL9(file.path, file.text));
+    findings.push(...lintL10(file.path, rel, file.text));
   }
   if (sketch === "core-loop") findings.push(...lintL6Owners(lit, relative));
   const lintSelf = new Set(["scripts/sketch-lint.mjs", "scripts/sketch-lint.test.mjs"]);

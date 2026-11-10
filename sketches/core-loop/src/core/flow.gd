@@ -837,7 +837,6 @@ func _rescue_in_arena(ball: Vector3) -> void:
 		landing = entry
 	var v: Vector3 = ctx.player.state.velocity
 	ctx.player.reset_to(landing, Vector3(v.x, 0.0, v.z))
-	ctx.player.body().global_position = landing
 
 
 # The treasure burst for a first discovery in a run: scrap at the spot, which feeds
@@ -885,9 +884,7 @@ func build_punch() -> float:
 func _place_ball(at: Vector3, velocity: Vector3, heading: Vector3) -> void:
 	ctx.player.set_frozen(false)
 	ctx.player.reset_to(at, velocity)
-	# The body takes its new transform on the next physics step; the camera is snapped
-	# to the target now so the first drawn frame already looks down the run.
-	ctx.player.body().global_position = at
+	# The camera is snapped now so the first drawn frame already looks down the run.
 	ctx.camera.snap(heading)
 
 

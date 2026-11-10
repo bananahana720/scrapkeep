@@ -192,3 +192,13 @@ func _check_prompts() -> void:
 	_report("prompts in band", gates_open and rects.size() == ScreenRegions.MAX_PROMPTS and inside and apart and clear_of_toasts,
 		"gates open %s; %d prompts placed at %s inside the prompts band %s, apart %s, clear of the top and toast bands %s"
 			% [gates_open, rects.size(), rects, band, apart, clear_of_toasts])
+	# A gate is chosen by steering at it from across the yard, so its prompt says what it gives
+	# (the verb, the effect) at that range, not only beside it; any other prompt keeps the short range.
+	var ball: Vector3 = _game.player.shown_position()
+	var gate_prompts: Array = _hud.prompt_rects.keys().filter(func(p): return p.get_parent() != _high)
+	var far: Array = gate_prompts.filter(func(p): return ball.distance_to(p.anchor_point()) > WorldPrompt.DETAIL_RANGE)
+	var high: Array = _hud.prompt_rects.keys().filter(func(p): return p.get_parent() == _high)
+	_report("gate prompts say what they give from range", not far.is_empty() and far.all(func(p): return p.near and p.shown_lines().size() >= 3)
+			and high.all(func(p): return not p.near and is_equal_approx(p.detail_range, WorldPrompt.DETAIL_RANGE)),
+		"%d gate prompts, %d beyond %d m, their lines %s; the other prompt near %s"
+			% [gate_prompts.size(), far.size(), int(WorldPrompt.DETAIL_RANGE), far.map(func(p): return p.shown_lines()), high.map(func(p): return p.near)])

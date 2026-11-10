@@ -72,7 +72,7 @@ func _run() -> void:
 	t.eq("unlatched: the plate says to latch on", [game.hud.objective_reading()["id"], game.hud.objective_reading()["words"]], ["latch_warden", "Latch onto the Warden"])
 	_latch(w)
 	await physics_frame
-	t.eq("latched: the plate says to fire from the line", [game.hud.objective_reading()["id"], game.hud.objective_reading()["words"]], ["fire_from_line", "Fire from the line"])
+	t.eq("latched: the plate says to shoot the Warden", [game.hud.objective_reading()["id"], game.hud.objective_reading()["words"]], ["fire_from_line", "Latched: shoot the Warden"])
 
 	# Pay per bolt, latched, reference heft, Rivet's pilot (FL1's numbers, which FL3 keeps for Rivet).
 	var rivet = _def("runner_gunner")

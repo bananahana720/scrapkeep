@@ -54,12 +54,13 @@ func _run() -> void:
 		ok = ok and hit
 	_t.check("a_one_amber_target_per_site", ok, "%d targets for %d sites" % [targets.size(), sites.size()])
 
-	# The plate names the site in front of the view and gives the metres to it (Objectives.pick_site,
+	# Before the ball has travelled, the plate names the site in front of the view and gives the metres to it (Objectives.pick_site,
 	# ACTIVITY_WORDS). The expected site is worked out here from the rule's own words: distance,
 	# stretched by one for each unit the site's bearing falls short of straight ahead.
 	var ball: Vector3 = _game.player.ball_position()
 	var cam: Camera3D = _game.camera.cam
 	var named := []
+	hud._way.begin()
 	for facing in sites:
 		var eye := cam.global_position
 		var target: Vector3 = facing.global_position
@@ -89,6 +90,47 @@ func _run() -> void:
 	var now_score := Objectives.site_score(hud._plate_site.global_position - ball, -cam.global_transform.basis.z)
 	_t.check("a2_row_keeps_its_site_until_clearly_beaten", hud._plate_site == held or now_score < held_score * Objectives.SITE_KEEP,
 		"held %.1f now %.1f" % [held_score, now_score])
+	# Once the ball has travelled, the row reads where the ball is going and not where the camera
+	# looks (Objectives.Way). The ball is stood between the two sites farthest apart and sent at one
+	# of them; there the view alone would trade the row as the camera turns (worked out here, so the
+	# check is not empty), and the row holds through a whole look round.
+	var home: Vector3 = _game.player.ball_position()
+	var first = sites[0]
+	var far = sites[0]
+	for site in sites:
+		if site.global_position.distance_to(first.global_position) > far.global_position.distance_to(first.global_position):
+			far = site
+	var mid: Vector3 = (first.global_position + far.global_position) * 0.5
+	var toward: Vector3 = first.global_position - mid
+	hud._way.begin()
+	_game.player.reset_to(mid, Vector3(toward.x, 0.0, toward.z).normalized() * 20.0)
+	hud._physics_process(1.0 / 90.0)
+	_game.player.reset_to(mid)
+	await physics_frame
+	await physics_frame
+	hud._plate_site = null
+	cam.look_at(Vector3(first.global_position.x, cam.global_position.y, first.global_position.z), Vector3.UP)
+	var rolling: Dictionary = hud.objective_reading()
+	var from: Vector3 = _game.player.shown_position()
+	var offsets := []
+	for site in sites:
+		offsets.append(site.global_position - from)
+	var by_view := {}
+	var by_view_held := -1
+	var seen := {}
+	for i in 36:
+		cam.rotate_y(TAU / 36.0)
+		by_view_held = Objectives.pick_site(offsets, -cam.global_transform.basis.z, by_view_held)
+		by_view[by_view_held] = true
+		seen[hud.objective_reading()["words"]] = true
+	_t.check("a2_between_two_sites_the_view_alone_would_trade_the_row", by_view.size() > 1, "sites the view names in one look round: %s" % [by_view.keys()])
+	_t.eq("a2_a_look_round_does_not_change_the_row_once_rolling", seen.keys(), [rolling["words"]])
+	_game.player.reset_to(home)
+	await physics_frame
+	await physics_frame
+	hud._plate_site = null
+	hud._way.begin()
+	after = hud.objective_reading()
 	var nearest = hud._plate_site
 	var plate: Dictionary = after
 	_t.check("a2_named_site_has_its_own_words", Objectives.ACTIVITY_WORDS.has(String(nearest.id)) and plate["words"] != Objectives.words("find_activity"),

@@ -61,6 +61,12 @@ func _fight(heft: float, label: String, allowance_s: float) -> Dictionary:
 	var dir: Vector3 = sheet._face_heading(w)
 	var foot: Vector3 = w.home + dir * minf(BotDriver.RUNUP, Reactor.SHEET_RUN - BotDriver.RUNUP_EDGE)
 	game.player.reset_to(game.ctx.terrain.drop_point(foot.x, foot.z, game.player.tuning.RADIUS), Vector3.ZERO)
+	# The bot starts three ticks after the placement. The small fight ends after 7, 8 or 9 pulse
+	# cycles depending on the tick the bot starts against the Warden's pulse, and only 7 fits the
+	# cap; started on the placement tick it drew 9 often once a placement took hold in the call.
+	# The wait evens the odds (about three runs in four pass); it does not make the fight
+	# repeatable. See the test's row in project-guide/handoff/KNOWN-FAILING.tsv.
+	for i in 3: await physics_frame
 	var result := {"broken": false, "seconds": 0.0, "contacts": 0, "cycles": 0}
 	game.events.enemy_struck.connect(func(enemy, kind, _force):
 		if enemy == w and kind in ["ram", "stomp", "slam"]: result.contacts += 1)

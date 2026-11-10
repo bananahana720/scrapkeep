@@ -174,7 +174,6 @@ func _place_ball(entry_velocity: Vector3) -> void:
 	var velocity := heading * flat + Vector3.UP * clampf(entry_velocity.y, -8.0, 0.0)
 	var at: Vector3 = arena.entry_point()
 	ctx.player.reset_to(at, velocity)
-	ctx.player.body().global_position = at
 	ctx.camera.snap(heading)
 
 
@@ -1289,7 +1288,6 @@ func _rescue(ball: Vector3) -> void:
 	var turning := signf(v.dot(Arena.tangent(arena.angle_of(ball))))
 	var at := rescue_point(ball)
 	ctx.player.reset_to(at, Arena.tangent(arena.angle_of(at)) * speed * (turning if turning != 0.0 else 1.0))
-	ctx.player.body().global_position = at
 
 
 # --- The enemy protocol, answered for every piece (boss_target.gd forwards here) -------
@@ -1552,11 +1550,36 @@ func _update_readout() -> void:
 # --- Live state for the HUD (flow's objective and gap lines read these) --------------
 
 # The objective plate's reading of the fight (ui/hud.gd, core/objectives.gd): the phase whose
-# verb the plate names (CHASE_PHASE is the scooter) and whether a hit meets the open cockpit
-# now: a stagger in any phase (the weak points pay nothing through it, _pressure), or a
-# stun in Scuttle.
+# verb the plate names (CHASE_PHASE is the scooter) and whether the plate should send the player
+# at the open cockpit now: a stagger in any phase (the weak points pay nothing through it,
+# _pressure), or a stun in Scuttle. A stagger does not hold a Scuttle charge back, so while one is
+# coming down its lane the plate keeps the charge's row: the lane is what the player must read.
 func plate_reading() -> Dictionary:
-	return {"phase": phase if active() else 0, "open": stunned() or staggered()}
+	return {"phase": phase if active() else 0, "open": (stunned() or staggered()) and not charge_coming()}
+
+
+# A Scuttle charge is committed: its lane is drawn (the tell) or he is running it.
+func charge_coming() -> bool:
+	return state == FIGHT and phase == 3 and _charge.get("state", "") in [CHARGE_BRACE, CHARGE_RUN]
+
+
+# Where the plate's row sends the player now, for the HUD to point at (ui/edge_markers.gd): the
+# crane magnets in the Requisition, the vent caps in the Furnace, the cockpit while the plate
+# names it, the scooter in the chase. Baiting a charge names no one place, so it marks none.
+func plate_targets() -> Array[Vector3]:
+	var out: Array[Vector3] = []
+	if state == EJECT and is_instance_valid(scooter):
+		out.append(scooter.global_position)
+	elif state == FIGHT:
+		if plate_reading()["open"]:
+			out.append(ship.cockpit_point())
+		elif phase == 1:
+			for magnet in ship.magnets:
+				out.append(magnet.global_position)
+		elif phase == 2:
+			for cap in ship.caps:
+				out.append(cap.global_position)
+	return out
 
 
 # What the player should do right now, in the objective line's voice. Flow shows it as

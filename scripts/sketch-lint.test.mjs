@@ -14,6 +14,7 @@ import {
   lintL7,
   lintL8,
   lintL9,
+  lintL10,
   parseTuning,
 } from "./sketch-lint.mjs";
 
@@ -80,6 +81,40 @@ test("L9 flags the player node's own place and passes the ball's, a guarded fall
     "# player.global_position is the origin\n",
   ];
   for (const text of passes) assert.deepEqual(lintL9("x/cache.gd", text), [], text);
+});
+
+test("L10 flags a write to the ball's body, passes reads and other bodies, and holds the listed count", () => {
+  const moved = [
+    "ctx.player.body().global_position = at\n",
+    "player.body().global_position.y = floor + 1.0\n",
+    "game.player.active_body().global_transform.origin = at\n",
+    "ctx.player.body() . position += push\n",
+    "player.body().transform = Transform3D(Basis.IDENTITY, at)\n",
+    "_rigid.global_position = spawn_point\n",
+    "_rigid.position = spawn_point\n",
+    "_ball_body().global_position = at\n",
+    "ctx.player.body().set_global_position(at)\n",
+    "player.body().global_translate(push)\n",
+    "_rigid.translate(push)\n",
+  ];
+  for (const text of moved) assert.deepEqual(lintL10("x/flow.gd", "src/core/flow.gd", text, {}).map((item) => `${item.rule} ${item.line}`), ["L10 1"], text);
+  const passes = [
+    "ctx.player.reset_to(at, velocity)\n",
+    "var at = ctx.player.body().global_position\n",
+    "if ctx.player.body().global_position == at:\n\tpass\n",
+    "enemy.global_position = at\n",
+    "return _rigid.global_position\n",
+    "var at := _ball_body().global_position\n",
+    "pin_body().global_position = at\n",
+    "ctx.player.body().set_collision_layer_value(2, false)\n",
+    "# ctx.player.body().global_position = at\n",
+  ];
+  for (const text of passes) assert.deepEqual(lintL10("x/flow.gd", "src/core/flow.gd", text, {}), [], text);
+  const listed = { "src/combat/kit.gd": { sites: 1, why: "a flight leg" } };
+  const one = "ctx.player.body().global_position = at\n";
+  assert.deepEqual(lintL10("x/kit.gd", "src/combat/kit.gd", one, listed), []);
+  assert.deepEqual(lintL10("x/kit.gd", "src/combat/kit.gd", one + one, listed).map((item) => item.line), [1, 2]);
+  assert.match(lintL10("x/kit.gd", "src/combat/kit.gd", "var at = 1\n", listed)[0].message, /remove the entry/);
 });
 
 test("L8 passes a listed sim read, and flags a drifted count and a stale entry", () => {

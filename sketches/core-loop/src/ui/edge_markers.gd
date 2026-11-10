@@ -19,6 +19,11 @@ const ScreenRegions := preload("res://src/ui/screen_regions.gd")
 # shows an amber chevron while the ball is inside POCKET_RANGE of it with a clear ray to it.
 # PARK.md:265 sets the range at 240 m (sight_ok), never the comps note's 60 m (memo 2, row 29a).
 # It is a pointer, not a map: no panel, no list, and no marker once the door is open.
+#
+# In Brindle's arena the markers point at what the plate's row names (boss.gd plate_targets: the
+# crane magnets, the vent caps, the open cockpit, the scooter). Nothing else on screen says which
+# part of the ship a row means, so these targets keep their marker in view too: the same chevron,
+# small, standing over the target and pointing down at it.
 
 const SIDE_INSET := 0.035
 const BAND_CLEARANCE := 16.0
@@ -35,6 +40,9 @@ const POCKET_STEP_M := 4.0
 const POCKET_DOOR_LIFT := 1.5
 const POCKET_RANGE_SLACK := 0.01
 const CLAMP_ROW := "break_clamp_crews"
+# A marked target in view: the chevron's size and the gap between its tip and the target.
+const MARK_SIZE := 18.0
+const MARK_GAP := 8.0
 
 var game
 # The objective row the plate shows now, set by the HUD each frame.
@@ -89,6 +97,11 @@ func targets() -> Array[Dictionary]:
 		"gates":
 			for at in gate_points:
 				out.append({"at": at, "kind": "reward_offered", "icon": _glyph("obj_gate")})
+		"boss":
+			var boss = game.ctx.boss
+			if is_instance_valid(boss) and boss.has_method("plate_targets") and Objectives.ROWS.has(objective_id):
+				for at in boss.plate_targets():
+					out.append({"at": at, "kind": "boss_arena_entered", "icon": Objectives.glyph(objective_id), "mark": true})
 	return out
 
 
@@ -223,7 +236,9 @@ static func view_rect(size: Vector2) -> Rect2:
 	return Rect2(inset, top, size.x - 2.0 * inset, bottom - top)
 
 
-# One record per off-screen target: {at (screen), dir, size, color, icon}.
+# One record per off-screen target: {at (screen), dir, size, color, icon}. A target with `mark`
+# has one in view as well, over the target and pointing down at it; under a HUD band it goes to
+# the play view's edge like any other.
 func markers(size: Vector2) -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
 	if game == null or not game.flow.in_play():
@@ -238,7 +253,12 @@ func markers(size: Vector2) -> Array[Dictionary]:
 		var behind := cam.is_position_behind(at)
 		var projected := cam.unproject_position(at) if not behind else Vector2.ZERO
 		if not behind and screen.has_point(projected):
-			continue
+			if not target.get("mark", false):
+				continue
+			var above := projected + Vector2.UP * MARK_GAP
+			if view.has_point(above) and view.has_point(above + Vector2.UP * MARK_SIZE * 2.4):
+				out.append({"at": above, "dir": Vector2.DOWN, "size": MARK_SIZE, "color": marker_color(target), "icon": target["icon"]})
+				continue
 		var dir: Vector2
 		if behind:
 			var local := cam.global_transform.affine_inverse() * at
