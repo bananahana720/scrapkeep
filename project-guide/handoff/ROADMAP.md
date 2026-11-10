@@ -20,7 +20,7 @@ World 1 is the title, the camp, the dam, the flume and Brindle in the Slag Bowl.
 
 | # | Item | Owner | State |
 | --- | --- | --- | --- |
-| 1 | Pre-sitting improvement pass (ruling bo, 9 Nov): workflows, world 1 polish, performance, deep modules, testing; then the wave 33 full gate, cautious red team and promotion | Five lanes, then Gate | Lanes claimed on the live board |
+| 1 | Pre-sitting improvement pass (ruling bo, 9 Nov): workflows, world 1 polish, performance, deep modules, testing; then the wave 33 full gate, cautious red team and promotion | Five lanes, then Gate | Done: promoted as wave 33 (main 45691e94, 10 Nov). The world 1 polish program (ruling cs, [STATE.md](STATE.md)) follows it |
 | 2 | Dam Warden `sheet_dir` [0,0,-1] plus the bot sheet-foot return | Dam lane | Not shipping for the sitting (ruling cm): two 24-seed reads bettered no band and the heading alone breaks the Novice ceiling. The sheet stays as it is; an axis heading with the lobbers or the foot moved is parked for after the sitting ([DECISIONS.md](DECISIONS.md) section 10) |
 | 3 | Dam east-end airborne invisible patch at (200, 94-98, 642), owed under ruling aa | Dam lane | PR #659: no ball can reach the strip; four drawn triangles close it so the sweep reads clean |
 | 4 | Clip-audit correction | Clipping lane | Done in wave 30 (#608); the queue line was a stale carry |
@@ -39,7 +39,7 @@ The rest of the 28 Oct gap list is closed: the dunk tip, the held radio and acti
 
 ### Andrew plays
 
-Ruling bm named the wave 32 build; ruling bo (9 Nov) moved the sitting behind the pre-sitting improvement pass, so he plays the promotion that carries it, launched from the plain menu entry. He plays world 1 as often as he likes and marks the world 1 areas on the [Sitting Kit](https://claude.ai/artifact/HxmWTSrJf1vifhjXXPW1qT). The sheet tells him what to try. A capture is void if he plays during it.
+Ruling bm named the wave 32 build and ruling bo (9 Nov) the promotion that carried the pre-sitting pass. Ruling cs (10 Nov) moved the sitting behind "world 1 fully polished": he plays the promotion that closes the polish program in [STATE.md](STATE.md), launched from the plain menu entry. He plays world 1 as often as he likes and marks the world 1 areas on the [Sitting Kit](https://claude.ai/artifact/HxmWTSrJf1vifhjXXPW1qT). The sheet tells him what to try. A capture is void if he plays during it.
 
 ### Re-read after the sitting (already ruled to wait)
 

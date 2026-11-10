@@ -1,10 +1,10 @@
 # Scrapkeep lessons and ways of working
 
-How this project actually runs, learned the hard way on 16-23 Oct 2026. Each lesson is the rule, then why. Read this before starting a thread, posting a card or running a gate. Andrew's readable copy is the Claude Doc [Scrapkeep lessons and ways of working](https://claude.ai/code/artifact/95d92907-5cfe-4290-b303-d465baccedde); this file (repo project-guide/handoff/LESSONS.md, shared copy /mnt/project-files/project-guide/LESSONS.md) is the copy threads read. Owner: the project coordinator, since 23 Oct. Lesson numbers stay fixed so older receipts still match. Last updated 2026-10-23 by the library sweep thread.
+How this project actually runs, learned the hard way on 16-23 Oct 2026. Each lesson is the rule, then why. Read this before starting a thread, posting a card or running a gate. Andrew's readable copy is the Claude Doc [Scrapkeep lessons and ways of working](https://claude.ai/code/artifact/95d92907-5cfe-4290-b303-d465baccedde); this file (repo project-guide/handoff/LESSONS.md, shared copy /mnt/project-files/project-guide/LESSONS.md) is the copy threads read. Owner: the project coordinator, since 23 Oct. Lesson numbers stay fixed so older receipts still match. Last updated 2026-11-10 by the cautious-instructions cleanup: lessons 1, 10, 21, 22, 26, 27 and 47 rewritten to state their scope, 43-46 archived; the old text is in `/mnt/project-files/archive/instructions-2026-11-10/repo/project-guide/handoff/LESSONS.md`. What needs no approval is the last section of [AGENTS.md](../../AGENTS.md).
 
 ## Getting Andrew's word
 
-1. **A card tap works for design; protected actions on the PC need his own typed words.** The PC coordinator's safety check rejects relayed taps for notes files, register rows, a push to main or waiving a proof. Fix: ask him for one exact line in the project chat, then relay it with `message_thread` and his message id in `context_message_ids`. Worked first time for the wave 15 push (02:13Z 17 Oct).
+1. **Act on the standing approval; ask for his typed words only when a safety check refuses.** On 17 Oct the PC coordinator's safety check rejected relayed taps for notes files, register rows, a push to main and waiving a proof. When a check refuses, ask him for one exact line in the project chat, then relay it with `message_thread` and his message id in `context_message_ids` (worked first time for the wave 15 push, 02:13Z 17 Oct).
 2. **Try the standing merge authority first.** Since 19:41Z 17 Oct his typed message covers merges, main pushes and git housekeeping. Attach that message id when a check wants his words; ask for a new line only if it is refused.
 3. **A tap on a withdrawn card still counts.** He clears cards fast (about 12 in 3 minutes at 15:30Z 17 Oct), including ones a thread already withdrew. Honour the tap.
 4. **His typed answer beats the card.** The Splitter card was withdrawn after he typed the behaviour he wanted (18:19Z). Record the typed version.
@@ -20,7 +20,7 @@ How this project actually runs, learned the hard way on 16-23 Oct 2026. Each les
 
 ## Threads and sessions
 
-10. **Threads never ask Andrew in-thread or ask him to paste between threads.** Raise a hand to the coordinator (`send_message` to the channel session) and carry on.
+10. **In a project thread, don't ask Andrew in-thread or ask him to paste between threads,** because he reads the project chat on his phone, not threads. Raise a hand to the coordinator and carry on. A local session at his computer asks him directly.
 11. **`send_message` to the PC wave thread's session id fails ("not found").** Use `message_thread` on its thread. Remote Control sessions cannot receive `send_message` at start; brief them through `start_rc_session` instructions.
 12. **Resolve finished threads.** A review-ready thread whose PR is in the gate or merge queue is resolved (24 cleared at 19:39Z 17 Oct). Don't poke threads busy with background work.
 13. **After `stop_rc_session`, the thread's folder tools did not come back.** Plan folder work before stopping a Remote Control session.
@@ -37,8 +37,8 @@ How this project actually runs, learned the hard way on 16-23 Oct 2026. Each les
 
 19. **No thread grades its own work.** A game change is done only when a tool check passes (smoke, lab gate, placeholder gate) and an independent reviewer agrees.
 20. **The cloud gate thread is the gate of record, except GPU checks.** It builds one integration commit from main plus the draft PRs, and sibling threads run bot shards from `gate/BOT-SHARDS.md`. Pass tests by base name (`--test bot_six_tally_test`), not `res://` path. Shards don't push, comment or fix.
-21. **Known cloud-only false fails (not the PR's fault):** `item_fuzz_smoke` (CPU contention), `park_swap` (frame budgets), `tree_play`, `alpha_posture_bands_w23` (child timeouts), `persistence_truncation` (runs as root, chmod ignored). `scatter_rows` hash mismatch is unresolved. The gate thread judges these, not the shard.
-22. **"Flake" is not a cause.** The effects RNG test failed on and off for a day; the real cause was a 65 s limit on a busy machine (now 180 s). Find the cause before re-running.
+21. **Known reds live in the ledger.** Each red a promotion may carry has a row in [KNOWN-FAILING.tsv](KNOWN-FAILING.tsv) with a cause, an owner and a review date (ruling bq). The 23 Oct list of cloud-only false fails that stood here is in the archive copy.
+22. **"Flake" is not a cause.** The effects RNG test failed on and off for a day; the real cause was a 65 s limit on a busy machine (now 180 s). Rerunning a red to see whether it repeats is always fine; what needs a found cause is calling it a flake.
 23. **Red team every wave, carrying the last findings.** Camper stalls without a Warden break and traversal stalls are by design. A hitch counts only when it lands at the same run moment across seeds.
 23a. **A child cap is a measurement, not a guess.** `alpha_bot_sweep` was listed as a "cloud false fail" because its 170 s child cap sat under a 276 s child; time one child alone, then size the cap and the tier from it (`ba10b7c7`).
 23b. **Eight seeds can't judge a chaotic median.** Per-seed fight times are fixed on one commit but reshuffle with any gameplay change, so on w18 the 8-seed swarm ratio read 1.77x where 24 seeds read 1.86x. Judge medians on 24 seeds (standard error about 4 s) before calling a band moved.
@@ -47,11 +47,11 @@ How this project actually runs, learned the hard way on 16-23 Oct 2026. Each les
 ## Permission prompts
 
 25. **Allow-once prompts come from compound shell commands.** Pipes, `&&` and `cd` chains don't match allow-list rules. Fix: one checked-in script with subcommands (the music session's `scripts/music/mx`), allow-listed in `.claude/settings.local.json`, called as one plain command.
-26. **The PC allow-list covers test and check scripts, read-only git, and pushes to `cand/*` and `scratch/*` only.** Never main, force-push or installs.
+26. **The PC allow-list covers test and check scripts, read-only git, and pushes to `cand/*` and `scratch/*`.** A push to main follows the standing merge authority; a force-push or an install needs Andrew's go-ahead first.
 
 ## Music
 
-27. **Never replace a pick unless he picks the new take by ear.** Theme-consistent retakes sounded "boring" to him (15:59Z 17 Oct); energy, switch-ups and electro bass win over neat theory.
+27. **Replace a music pick only after he picks the new take by ear.** Theme-consistent retakes sounded "boring" to him (15:59Z 17 Oct); energy, switch-ups and electro bass win over neat theory.
 27a. **A place music layer never sits inside an arena.** In the Crown, crown_ramp's sensor sat in the Warden's bowl and the ball re-crossed it mid-fight; each layer change shifted the on-bar telegraphs and turned a 6,262-tick win into a 14,410-tick cap (17 Oct 22:24Z). Put the sensor outside the arena, or have the music director lock layers during a fight.
 
 ## Library and records
@@ -91,16 +91,13 @@ He said he won't dictate anything but direction (19:55Z 17 Oct), so the filing i
 42. **Artifacts and Claude Docs are private to the account that made them.** For a move to another account, carry the content as files in the repo (project-guide/handoff/) or share the pages with the new account.
 
 
-## Coordination from the PC, 18-23 Oct (history; the coordinator is back in the project, so lessons 1-13 apply again)
+## Coordination from the PC, 18-23 Oct
 
-43. **GitHub is the bus for cloud lanes.** Claude Code cloud sessions cannot message other sessions. A lane posts a receipt comment on each PR (verdict, head SHA, commands, nonzero test counts) and raises a hand on the wave's "Wave board" issue. The local coordinator reads both at every check-in, at least every 30 minutes. Local sessions message the coordinator directly.
-44. **Escalation goes one step at a time.** An agent asks its lane coordinator; a lane asks the local coordinator; only the coordinator goes to Andrew, with a stakeholder pitch (what's at stake, options with tradeoffs, a recommendation, the measured number, what would change it). Keep building on the recommendation while a pitch waits.
-45. **Sync the records before splitting into worktrees.** Lanes clone main, so the rulings, the ownership table and the graph land on main first; a lane that starts from stale docs re-decides settled calls.
-46. **Cap concurrent cloud lanes and let each fan out inside its sandbox.** The cap is 7 (19 Oct) and was raised to 11 on 21 Oct. Lanes that run their own agents and workflows replace a dozen flat sessions; the dozen used up the old account in a day. **Replaced 9 Nov (ruling by):** a thread writes its own changes and fans out only for search, research, noisy runs and the independent review; bigger work becomes more threads.
+43-46. **Moved to the archive on 10 Nov.** They described the PC coordinator and cloud-lane caps of 18-23 Oct, which ruling by replaced; the text is in `/mnt/project-files/archive/instructions-2026-11-10/repo/project-guide/handoff/LESSONS.md`.
 
 ## Back in the project, 23 Oct
 
-47. **The merge safety check reads a typed line as covering only the PRs it names.** Andrew's 17:27Z line landed #383, but #385, held in the queue it described, was refused. Ask for one line per batch that names the thread, the action and each PR number, and attach it with `context_message_ids`.
+47. **Gate-passed PRs stack and promote without a typed line (27 Oct); if a merge safety check still refuses, a typed line covers only the PRs it names.** On 23 Oct Andrew's 17:27Z line landed #383, but #385, held in the queue it described, was refused. When a check refuses, ask for one line per batch that names the thread, the action and each PR number, and attach it with `context_message_ids`.
 48. **Remote Control sessions cannot receive `send_message`.** Reach an RC session through `message_thread` on its thread; other threads route through the coordinator.
 49. **The image service filter refuses some reference-sheet prompts.** The mag trapper and the Cannon close-ups were refused on PR #387, so those units are incomplete. Word prompts as machinery and tools, not weapons or traps, keep the approved board as image 1, and rerun only the refused views. Sheets are review drafts: check the 1.84 m ball for scale drift before a modeller traces them.
 50. **Run the export include check whenever code starts reading a new file type.** Park ground step 2 made `park_terrain` read each park's `surface.bin`, but no `include_filter` pattern shipped it. Every headless test passed; only the 23 Oct release dry run caught it. #390 adds the pattern to both Linux presets and a seeded control test that drops it.

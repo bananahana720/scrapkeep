@@ -5,7 +5,7 @@ The local coordinator fills the bracketed fields and starts each cloud lane with
 ## Read first
 
 1. [GRAPH.md](GRAPH.md): ownership, your units, their dependencies and the test gates.
-2. [DECISIONS.md](../handoff/DECISIONS.md): Andrew's rulings, newest wins. Never re-ask one.
+2. [DECISIONS.md](../handoff/DECISIONS.md): Andrew's rulings, newest wins. Don't re-ask one without new information.
 3. [LESSONS.md](../handoff/LESSONS.md): how this project works.
 4. [AMBITION-BRIEF.md](AMBITION-BRIEF.md): Andrew's 19 Oct goals, reframed through [the ambition article](../handoff/shared/ways-of-working/rieseberg-ambition-article.md). It covers the outcome, the hard targets with their instruments and outside checks, and the practices (by verb) your units use. Name the verb and the practice in every PR body.
 5. `AGENTS.md`, `ORCHESTRATOR.md`, `CONTRIBUTING.md` and the skill for your work (`scrapkeep-task`, `scrapkeep-verify`, `scrapkeep-lab`).
@@ -20,7 +20,7 @@ The local coordinator fills the bracketed fields and starts each cloud lane with
 
 ## Ownership
 
-Write only your units' files. Shared fold files (`registry.json`, attack ids, row digests) are re-folded by the Gate lane; claim ids on the Wave board issue first. Never push to `main`, never rebase or force-push a shared branch, never edit another lane's units or the coordinator's records (DECISIONS, LESSONS, STATE, GRAPH, TRACKING); propose those on the Wave board.
+Write only your units' files. Shared fold files (`registry.json`, attack ids, row digests) are re-folded by the Gate lane; claim ids on the Wave board issue first. Push your own branch freely. Main moves only through the Gate's promotion under the standing merge authority, and a rebase or force-push of a shared branch needs Andrew's go-ahead first, because other lanes build on it. Propose edits to another lane's units or the coordinator's records (DECISIONS, LESSONS, STATE, GRAPH, TRACKING) on the Wave board, because their owners admit them.
 
 ## Model routing
 
