@@ -95,7 +95,92 @@ Hype rule and extras (sound bible, "The hype rule" and "The four extras"). Decid
 
 Only one buff colours the music at a time. Low hull wins over every other buff, because danger outranks reward.
 
-## 7. Hand-over list for the coordinator
+## 7. Conductor and band
+
+The contract between the level conductor and the music, agreed by the systems thread and the sound thread on 10 November 2026. Andrew, the same day: "allign this with the dungeon master level/map conductor and integrate game events, states, character and build progress as a system that feeds from and into the sound design and orchestration." This section is its one home; the systems side links here.
+
+**Who is who.** The conductor is two schedulers stepped by `src/world/world.gd`: the spawn director (`src/world/director.gd`: crowd, packs, the elite, the clock) and the event director (`src/world/event_director.gd`: offers, weather, park set pieces). Fights publish for themselves (`warden.gd`, `boss/boss.gd`, `fight_phases.gd`). The band is `src/presentation/audio.gd` with its two players, the recorded band (`ace_sequencer.gd`) and the synth band (`music_engine.gd`).
+
+**The rules.**
+
+1. Each side reads only the names in the tables below, through the event bus or one small call. Neither reaches into the other.
+2. Game time never waits on music, except by slack the conductor offers. Before the world 1 sitting it offers none.
+3. The game never shortens a warning and never moves a hit the player is timing a dodge against. The band lands on those; it has the lead time to do it.
+4. Sound on the frame, music on the grid (section 1) is unchanged.
+5. In bot runs the music clock counts physics ticks, so anything the conductor reads from the band is deterministic. Anything new must keep to that.
+
+### What the conductor publishes
+
+| The band wants | Name today | Value | After the sitting |
+| --- | --- | --- | --- |
+| Tension: how hard the stage presses | `GameEvents.pressure_changed(pressure)` | 0 to 1, sent on a move of 0.05 or more, 0 on bay entry and stage clear | The set's energy level. The band's own `run_threat` (enemies near and ahead within 48 m) stays as well: it moves the layers inside that level. |
+| Phase of the stage | `StageBeats.classify()` (`src/core/stage_beats.gd`): arrive, loot, find, hold, fight, leave. Only the bot recorder calls it. | No live read yet | A live read mapped to four words: lull (arrive, loot, find), build (a send inside its lead, or a Warden's guard under half), peak (pressure at or over 0.4, or the guard over half), release (a stagger, and leave). |
+| What is coming, and when | Separate signals, each with its seconds (table below) | 1.4 to 10 s of sure warning for a set piece or an attack | One read: a short list of `{kind, in_s, sure, slack_s}`. First addition: `pack_inbound(faction, at, kinds, seconds)` when a pack's ring is placed, so the band hears the crowd 1 s ahead. |
+| Fight state | `warden_engaged`, `posture_changed(enemy, posture, staggered)`, `weak_point_opened(id, at, seconds)`, `vent_charging(at, seconds)`, `vent_erupted(at)`, `attack_cued`, `fight_phase_changed`, `beacon_unsealed`; Brindle: `boss_arena_entered`, `boss_phase_changed`, `boss_attack_telegraphed`, `boss_defeated` | Every state can be read today from these | One signal, `fight_state_changed(fight_id, state, seconds)`, with the six fight words below, so a new world's fights need no code in the band. |
+| Build and pilot | `run_started(class_id)`, `heft_class_changed`; `director.build_axes()` (heft, speed, air, contact, weapon, steer, each 0 to 1) is a pull the band cannot reach cleanly | Pilot and heft reach the band | `build_changed(axes, class_id)` on the bus. |
+
+**The six fight words.** A fight has two clocks, and the band follows both: the guard (the player's progress) and the attack (the enemy's).
+
+| Word | Meaning | Read today from | What the band plays |
+| --- | --- | --- | --- |
+| closed | The guard holds | engaged, not staggered, posture under the line | The build |
+| cracking | The guard is near breaking: in at posture 75, out under 50 | `posture_changed` | The tight build (the pack section named `telegraph`) |
+| telegraph | An attack is charging, with its seconds | `vent_charging` (the Warden's pulse, 2.0 s, and its counter, 0.8 s inside the stagger: read the seconds), `attack_cued`, `boss_attack_telegraphed` | The attack's own cue and pedal; never a section change (a pulse comes every 6 s and would chop the track) |
+| open | The stagger | `posture_changed` staggered, `weak_point_opened` | The held breath |
+| recover | The stagger ended | staggered back to false | The drop, if a chunk shattered; else the build on the next bar |
+| down | The fight is won | `beacon_unsealed`, `boss_defeated` | The break, the kill cadence, home |
+
+On the recorded band the Warden's fight plays this form: `ace_sequencer.gd` `follow_guard`, fed by `audio.gd` (launch switch `--warden-form=loop` restores the looping build). The synth band and Brindle's fight do not yet.
+
+### How far ahead the conductor knows
+
+Lead times as the systems thread read them on stage 14709f17 and checked again on d45adc8e.
+
+| Send | Signal | Lead | Sure |
+| --- | --- | --- | --- |
+| Crowd and pack bodies | none yet (`pack_arrived` fires as they land) | every body shows a ground ring for 1.0 s | yes |
+| The next spawn slot | private | 1.5 to 6.5 s | no: it can be skipped, and its contents are drawn when it fires |
+| Clock tier rise | `threat_rose(tier)` | stage second 45 and 90, known from stage entry | yes |
+| Offers | `event_announced(id, seconds_until)` | 4.0 s | yes |
+| Squall, flood | `event_announced` | 6.0 s | yes |
+| Park set pieces | `event_announced` | 5 to 10 s; rows marked `on_bar` already wait for the band's next bar | yes |
+| Warden pulse | `vent_charging(at, seconds)` | 2.0 s, every 6.0 s | yes |
+| Warden counter (reactor family) | `vent_charging(at, seconds)` | 0.8 s, never under 0.6; it fires inside the stagger, 1.0 s after the stagger starts | yes |
+| Rogues, the mini-boss, generic fight phases | `attack_cued` | 1.1 s | yes |
+| Brindle | `boss_attack_telegraphed` | crane and charge 1.4 s, slag 2.5 s (his eject flies for 2.5 s; whether it is sent on this signal is not checked) | yes |
+| Fight phase change | `fight_phase_changed` | 2.0 s | yes |
+
+### What the band publishes
+
+| The conductor wants | Name today | After the sitting |
+| --- | --- | --- |
+| Transport | `audio.park_transport(stage_s)`: `{bar_s, bar_origin_s}` in stage seconds | The same shape with beat and phrase added; no second call |
+| Section | none | The section playing (build, breath, drop, break), so an optional send waits for a build or a drop and never lands in a break |
+| Key | never | The conductor has no use for it |
+
+### Slack
+
+Before the sitting: zero. Moving a spawn slot by any amount changes later random draws, so every bot band redraws.
+
+After, each behind a switch and read on bot bands with the switch off and on, on a probe branch first:
+
+- Attacks and pulses: none. The band lands on them.
+- A crowd body may land up to one beat later than its ring second (0.35 s at 172, 0.47 s at 129), never earlier.
+- An offer, the elite's arrival or a clock rise may wait for the phrase, up to one bar, as `on_bar` park rows do today.
+
+### Before and after the world 1 sitting
+
+Before: the conductor's timing does not change, and the band reads only the names above. The band's one change is the Warden form on the recorded band, behind its switch.
+
+After, in order:
+
+1. `pack_inbound`, and a fill into the arrival.
+2. The conductor's one read (tension, phase, next, fight, build), `fight_state_changed` with the six words, `build_changed`.
+3. The band publishes beat, phrase and section.
+4. Arrivals on the grid behind a switch: bodies one beat late at most; the elite, offers and clock rises on the phrase.
+5. The Warden form on the synth band and on Brindle's fight.
+
+## 8. Hand-over list for the coordinator
 
 1. Import the picked takes as `music_ace/` theme sources with htdemucs stems, using the grid-stretched WAVs from RENDERS.md.
 2. Register the 49 event WAVs in `sfx_bank.gd` under their existing keys. Cues with tiers (`kill_chain_tier_1` to `_5`, `scrap_tick_1` to `_5`, `rarity_bell_common`, `_rare`, `_epic`) map to the existing tier and rarity arguments. Keep per-cue voice limits.

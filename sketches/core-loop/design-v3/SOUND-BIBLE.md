@@ -6,6 +6,84 @@ One page for how Scrapkeep sounds, written 2026-10-16 from Andrew's direction: *
 
 A house pulse you can't sit still to, played by a rusty machine band whose lead line phrases like a sax player: the kick and bass are the engine, the chords are jazz, the melody talks back.
 
+## The band: Local 172, recorded in 2010
+
+Ruled by Andrew on 10 November 2026, on one card for sight and sound together: the game looks and sounds as if it was made in **2010, the festival years**. He picked it by ear from Brindle's fight theme and anthem played three ways. The band's page, with the clips and the three generations in full, is https://claude.ai/artifact/4vBSSMqa4L23bGCrnYSzom; the render brief is [PERSONA-AUDITIONS.md](sound/PERSONA-AUDITIONS.md). The matching sight artist is Dot Marrow, on the same year.
+
+The score is played by the crews' own house band, working name Local 172, from Flagstaff: three generations of one family (working name Castellan, "keeper of a keep") playing one book of tunes, each with the gear of its day. The tunes stay; the year changes how they are recorded. The names are working names until Andrew has seen them; nothing ships carrying one.
+
+| Year | Who | How it is made | Where it is heard |
+| --- | --- | --- | --- |
+| **2010, the festival years (the live score)** | June on alto, who writes the tunes, and Arlo on laptop, who samples the garage's pistons and valves | A sax on top of a machine: chords pump against the kick, jazz voicings are chopped into off-beat stabs, the filter opens into every drop, a chip arpeggio flicks between phrases. Fight music is big-room anthems with a singable lead, a build, a drop and a bigger drop; the sax hook is doubled by a synth | Everything that follows the player's speed and combo, and the stations Furnace FM and Updraft 107 |
+| 1996, the pirate years | Mags and her station KEEP: one sampler and a crate of her father's tapes | Everything is a chop: breakbeats, sampled upright bass, twelve-bit crunch, rave piano, tape stops | Radio only: the Chop Shop and Low Shaft Radio |
+| 1978, the dance-band years | Hollis and the Night Shift, nine players in the works canteen | One room, straight to tape: horns, clavinet, Rhodes, slap bass, a talkbox for the answers | Radio only: Moss's Back Room |
+
+What the pick settles:
+
+- **Nothing Andrew has picked is replaced.** 2010 is the sound of nearly every standing pick. The work is making each piece obey the band's rule, not re-recording for its own sake, and a new take still replaces a standing pick only when he picks it by ear.
+- **New music is made in the 2010 sound.** A render caption names the year and its production (the 2010 captions in the audition brief are the pattern); the other two years are for radio records only.
+- **Roaming** was not part of the pick, because the renderer pulled the roaming covers to 150 BPM. New roaming takes are rendered at 174 and fitted to 172 (a pitch-keeping 1.16 percent stretch, labelled as such), checked by bar length before and after, and offered beside the current Spillway roaming tune, which stays until he picks one.
+- **The band's rule** is the game's one line in sound (ruling cj): the grid is the machine's, the bend is ours. The keepers are a band that listens: a call gets an answer, the solo is handed round, a wrong note is kept and answered. The Foreman is one perfect tone that needs nobody, beautiful and never sinister. [SOUND-STORY.md](../SOUND-STORY.md) section 8 applies it to who talks.
+
+## The set: the score is played like a DJ plays a room
+
+Andrew, 10 November 2026: "ensure ther musical layers are orchestrated well, and I love how jazzy DJ-ing and house music in a club setting is so infection! how sounds, drops, melody progressions and coupling, makes music in a game hitting on all cylinders. make the sound design system something that can be ironed out in this world 1 sprint and sustainable into worlds 2 3 and beyond!" And the same night: align it with the level conductor, so that game events, states, the pilot and the build feed the music and the music feeds them back.
+
+So the score is one set, and the player is the room the DJ is reading. Every move a DJ makes has one cause in the game, and nothing in the music changes without one. The contract with the level conductor (what each side publishes, the six fight words, the lead times) is [sound/INTEGRATION.md](sound/INTEGRATION.md) section 7.
+
+### The moves
+
+| The DJ's move | Its cause in the game | State |
+| --- | --- | --- |
+| Pick the record's energy | How hard the stage presses (`pressure_changed`): calm or travel on the shelf | Plays today |
+| Bring layers in and out | Rolling speed brings the drums; threat, the approach and the chain lift the lead from its floor | Plays today |
+| Build | The Warden's guard near breaking (three quarters gone) plays the tight build | The recorded band, with the Warden form |
+| Hold the breath: pull the drums and bass, close the filter | A stagger; the Warden's break | The recorded band, with the Warden form |
+| Drop | The pilot's hit that shatters a chunk, on the next beat | The recorded band, with the Warden form |
+| Mix the next record in on the bar | Zone, fight and moment changes enter on a bar or a beat | Plays today |
+| Mix in key | Each world has one key (D, E, G) and each pack declares it | Declared; not checked when a pack is swapped |
+| Ride the filter into a drop, pump the chords against the kick, tape stop, switch-hit | A set piece's lead time, a kill chain, the last phase | After the world 1 sitting |
+| Cue the next record before the room needs it | The conductor's warning of what is coming | After the world 1 sitting |
+
+### Who has the melody
+
+The rules of orchestration, each with what enforces it today.
+
+1. **One melody at a time.** On the shelf the lead stem has it and never falls under half level. A stinger, a call-in voice or a reward phrase takes it by dipping the band for its length. Today the dip lowers every stem together and nothing stops two melodic cues from sounding at once; a dip of the lead alone and a one-at-a-time gate are after the sitting.
+2. **The low end belongs to the kick and the bass.** A cue with weight under 100 Hz stays short. Under a danger cue the synth band dips its bass; the recorded band dips whole. Nothing yet measures a cue's low end against the band.
+3. **Music on the grid, sound on the frame.** A musical answer starts on the next beat in the live key. A gameplay sound (a hit, a hurt, a warning) never waits for the beat.
+4. **Registers say who is speaking.** Rewards and the pilot's own actions climb D Dorian. Threats sit on Eb, Ab and Bb, outside the scale on purpose, so a warning is heard as foreign. [SOUND-STORY.md](../SOUND-STORY.md) owns the registers.
+5. **The band answers, it does not talk over.** A call gets an answer; the solo is handed round. The busier the cues, the thinner the band should play; nothing thins it today (after the sitting).
+6. **Every fight ends on the drop** (the hype rule below).
+
+### How it is checked
+
+A rule that cannot be checked is a wish. Each bank sound is bounced and measured for the faults a level meter cannot see (a click, a cut-off tail, a flat top, silence before the sound, the strongest note against its register, near twins), and every flagged sound is read as a picture before it is called a fault. The tools and their first run are in the project files under `music/soundcheck/`; a test in the game's own suite for the cheap rules, and checks with the band playing (a cue heard over the roaming and fight bands, cues that sum on one frame), are owed. The recorded packs are checked on the PC for loudness, peaks, start point, bar length and key.
+
+### Adding a world
+
+A new world adds rows and recordings, not code, when it supplies:
+
+1. A key from the family (its offset from D) and the two tempos of the grid, 172 on the shelf and 129 in a fight.
+2. A roaming pack (calm, travel, cadence) and a stage pack for each zone with the Warden's sections (pivot, build, telegraph, open, drop, cadence), cut to the manifest format with drums, bass and the lead as separate stems.
+3. A boss pack, and the boss's anthem three ways, each phase 10 BPM faster than the last.
+4. One row per zone in `MusicRows.ROWS`, and one row per crew member who talks in `SfxBank.CALLERS`.
+5. Event sounds for its enemies in the threat register and for its rewards in the reward register.
+6. A clean run of the checks above.
+
+Today a fourth world's boss also needs an entry in tables that live in three code files (`MusicRows.THEME_COUNT`, the boss voices and sections in `music_engine.gd`, the phase tables in `phase_music.gd`), and the synth band has three themes. Folding those into the world's own rows is after the sitting.
+
+### Calls made for Andrew, his to overturn
+
+He gave the threads their own judgement on mechanics and tuning for this build-out (10 November 2026). Each call is one line here.
+
+- The Warden's tight build follows the guard (in at three quarters broken, out under half), not the pulse it charges every six seconds, which would chop the track.
+- The drop lands on the hit that shatters a chunk. The hit that breaks the Warden lands none: the break and the kill cadence answer it.
+- The Warden form is on by default; `--warden-form=loop` plays the fight as before.
+- The Cannon keeps its bent chime and has no mouth: it is a machine on the crew's side.
+- Moss sounds the same at his bench as on a call.
+- Kest's kick reads a tenth of a decibel over the peak line after its trim. It is left alone: the limiter holds it, and lowering it would change how loud it is.
+
 ## Tone: a game that loves having fun
 
 Andrew, 2026-10-16: carefree, experimental and **melodramatic, like an anime opening**, with real swings into intensity, anger, despair or sadness. The sadness is self-aware and a little corny, and the whole game is trying to make you smile. This applies to every beat of the game, not just the music.
