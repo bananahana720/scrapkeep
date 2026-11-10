@@ -139,6 +139,12 @@ func _tag_on_summary() -> void:
 	var words: Array = screens._stats.get_children().map(func(cell): return (cell.get_child(1) as Label).text if cell.get_child_count() == 2 else "")
 	_t.check("each of the summary's stats has its word under its icon", words == ["TIME", "STAGES", "COGS", "SCRAP", "PARTS", "KILLS", "EVENTS", "SAVES"], str(words))
 	var comic: Control = screens.comic_page()
+	var floor_y: float = screens._screen().y - 8.0
+	_t.check("the summary's column is on the screen, title to buttons", screens._title.get_global_rect().position.y >= 0.0
+			and screens._actions.get_global_rect().end.y <= floor_y and not screens._choices.visible,
+		"title from %.0f, buttons to %.0f of %.0f" % [screens._title.get_global_rect().position.y, screens._actions.get_global_rect().end.y, floor_y])
+	_t.check("a body past four lines takes its extra lines from the comic page", is_equal_approx(screens.comic_height(900.0, 4, 33.0), 450.0)
+			and is_equal_approx(screens.comic_height(900.0, 6, 33.0), 384.0) and is_equal_approx(screens.comic_height(900.0, 1, 33.0), 450.0), "comic_height")
 	_t.check("the comic page is still the row's first, the note beside it", comic != null and comic != screens._tip and comic.get_index() == 0
 			and screens._tip.get_index() == 1 and screens._tip.global_position.x >= comic.global_position.x + comic.size.x,
 		"comic %s, note at %.0f" % [comic, screens._tip.global_position.x])

@@ -75,6 +75,7 @@ const COMIC_HEIGHT := 0.5
 # The word under each of the summary's stats.
 const STAT_WORD_FONT := 13
 const COMIC_MAX_HEIGHT := 540.0
+const COMIC_BODY_LINES := 4
 # RUN OVER's "next shift" note (core/death_tips.gd): an amber-edged plate taped up beside the comic page,
 # where the column has room; under the body it pushed the actions off a 900 px screen. Its words wrap at
 # TIP_WIDTH.
@@ -413,6 +414,9 @@ func _on_flow_changed(state: String) -> void:
 			if board != "":
 				body += "\n" + board
 			_show("RUN COMPLETE" if game.flow.run_won else "RUN OVER", EventKinds.color("run_ended"), body)
+			# The summary has no choice cards; hidden, the row's gap is the column's (a first win
+			# that lands several shift board stamps takes two body lines for them).
+			_choices.visible = false
 			# What to try next shift (core/death_tips.gd): only a lost run has one.
 			if not game.flow.run_won and game.flow.death_tip != "":
 				_show_tip(game.flow.death_tip)
@@ -1304,12 +1308,19 @@ func _show_comic_page(page: Dictionary) -> void:
 	if _state != "summary" or not ResourceLoader.exists(COMIC_PAGE_PATH):
 		return
 	var comic: Control = load(COMIC_PAGE_PATH).new()
-	var height := minf(COMIC_MAX_HEIGHT, _screen().y * COMIC_HEIGHT)
+	var height := comic_height(_screen().y, _body.get_line_count(), _body.get_line_height() + _body.get_theme_constant("line_spacing"))
 	comic.custom_minimum_size = Vector2(height * 0.75, height)
 	comic.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_comic_row.add_child(comic)
 	_comic_row.move_child(comic, 0)
 	comic.show_page(page)
+
+
+# The comic page's height on the summary: half the screen, less a line's height for every body
+# line past the COMIC_BODY_LINES the column holds with the page at full height, so a long
+# summary (cause, epitaph, a two-line shift board) never pushes the buttons off the screen.
+static func comic_height(screen_h: float, body_lines: int, line_h: float) -> float:
+	return minf(COMIC_MAX_HEIGHT, screen_h * COMIC_HEIGHT) - maxi(0, body_lines - COMIC_BODY_LINES) * line_h
 
 
 func comic_page() -> Control:
