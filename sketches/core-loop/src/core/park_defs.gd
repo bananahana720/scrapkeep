@@ -109,7 +109,7 @@ const DEFS := [
 		"warden_plating": 90.0, "warden_hp": 650.0, "warden_lesson": "",
 		"posture": {"curve": POSTURE_CURVE * PRESSURE[0]["posture_curve"], "ram_shatters": false}, "pressure": PRESSURE[0], "warden_hint": "Break its guard, then smash the core.",
 		"packs": PACKS_DAM, "elite": ELITE_SPILLWAY, "warden_variant": ""},
-	{"stage": 2, "world": 1, "music": {"theme": 1, "ace": "cable_reach"}, "warden_family": "reactor", "name": "The Cable Reach", "map": "park_flume", "threat": 1.0,
+	{"stage": 2, "world": 1, "music": {"theme": 1, "ace": "cable_reach"}, "warden_family": "reactor", "name": "Spillway: the flume", "map": "park_flume", "threat": 1.0,
 		"unlock_base": 4, "ancient": "reactor_relic",
 		"event_mix": {}, "scrap_density": 1.0, "kill_scrap": 4.0, "beacon_seconds": 25.0, "beacon_radius": 30.0,
 		"warden_plating": 110.0, "warden_hp": 800.0, "warden_lesson": "",
