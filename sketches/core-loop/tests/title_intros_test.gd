@@ -194,11 +194,16 @@ func _play_row(game: Node, display, id: String, capture: String) -> void:
 		player.advance(middle - player.clock)
 		kinds.append(player.shot_kind())
 		if String(shots[i].kind) == "postcard":
-			# The one-word label over the tiny pilot ("her.") read as a caption that lost its words.
+			# The label over the tiny subject is a whole sentence with an arrow under its middle:
+			# one word read as a caption that had lost its words, and a box as a speech bubble.
+			await process_frame
 			var pointer: Control = display.find_child("Pointer", true, false)
-			var tail: Node2D = pointer.get_node_or_null("Tail") if pointer != null else null
-			_t.check(id + " pointer label has a tail under the middle of its box", tail != null and tail.position.y > 20.0
-				and is_equal_approx(tail.position.x, pointer.get_combined_minimum_size().x * 0.5))
+			var words: Label = pointer.get_node_or_null("Words") if pointer != null else null
+			var arrow: Control = pointer.get_node_or_null("Arrow") if pointer != null else null
+			_t.check(id + " pointer is a sentence, not one word", words != null and words.text.split(" ").size() >= 3 and words.text.ends_with("."))
+			_t.check(id + " pointer has no box", pointer != null and not (pointer is PanelContainer))
+			_t.check(id + " pointer's arrow hangs under the middle of its words", arrow != null and pointer.size.x > 0.0
+				and absf(arrow.position.x + arrow.size.x * 0.5 - pointer.size.x * 0.5) < 1.0)
 		if capture != "":
 			for frame in 6:
 				await process_frame
