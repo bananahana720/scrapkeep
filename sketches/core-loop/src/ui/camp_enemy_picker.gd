@@ -30,7 +30,7 @@ var clear_button: Button
 var back_button: Button
 
 var _count: Label
-var _live: Label
+var _live: YardPips
 var _note: Label
 var _grid: GridContainer
 var _rows := {}
@@ -46,7 +46,8 @@ func _init() -> void:
 	add_child(UiDraw.label(26, Palette.AMBER, "Dispatch box"))
 	_count = UiDraw.label(20, Palette.SAND)
 	add_child(_count)
-	_live = UiDraw.label(18, Palette.SLATE)
+	_live = YardPips.new()
+	_live.name = "YardPips"
 	add_child(_live)
 	var scroll := ScrollContainer.new()
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
@@ -146,8 +147,8 @@ func refresh(met: Array, live: int, cap := Sandbox.CAP) -> void:
 		var seen: bool = _met.has(kind)
 		known += 1 if seen else 0
 		_rows[kind].set_state(seen, _full)
-	_count.text = "Enemies on the manifest: %d of %d" % [known, _rows.size()]
-	_live.text = "In the yard: %d of %d" % [live, cap]
+	_count.text = "Met %d of %d" % [known, _rows.size()]
+	_live.set_yard(live, cap)
 	clear_button.disabled = live <= 0
 	var focused := focused_kind()
 	if focused != "":
@@ -191,8 +192,9 @@ func note_text() -> String:
 	return _note.text
 
 
-func live_text() -> String:
-	return _live.text
+# The yard as [live, cap]: the pips' filled and total count.
+func yard_pips() -> Vector2i:
+	return Vector2i(_live.live, _live.cap)
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -237,6 +239,28 @@ static func _most_note_lines() -> int:
 		for state in [[false, false], [true, true], [true, false]]:
 			tallest = maxf(tallest, font.get_multiline_string_size(_note_for(kind, state[0], state[1]), HORIZONTAL_ALIGNMENT_CENTER, NOTE_W, NOTE_FONT).y)
 	return maxi(1, roundi(tallest / font.get_height(NOTE_FONT)))
+
+
+# The yard as one pip a slot: amber filled, slate empty (a count drawn, not worded).
+class YardPips extends Control:
+	const SIDE := 16.0
+	const GAP := 8.0
+	var live := 0
+	var cap := 0
+
+	func _init() -> void:
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+		size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+
+	func set_yard(now: int, slots: int) -> void:
+		live = now
+		cap = slots
+		custom_minimum_size = Vector2(maxf(0.0, cap * (SIDE + GAP) - GAP), SIDE + 4.0)
+		queue_redraw()
+
+	func _draw() -> void:
+		for i in cap:
+			draw_circle(Vector2(SIDE * 0.5 + i * (SIDE + GAP), size.y * 0.5), SIDE * 0.5, Palette.AMBER if i < live else Palette.SLATE)
 
 
 # One enemy kind in the list: a disc and the name. A kind not yet met is slate, with a dark

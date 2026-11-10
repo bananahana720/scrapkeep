@@ -8,15 +8,14 @@ const Bindings := preload("res://src/core/bindings.gd")
 const Glyphs := preload("res://src/ui/glyphs.gd")
 
 const CAPTIONS := {
-	"breach": "Breach · Slam the Dig's cracked plates.",
-	"lift": "Lift · Glide through Highdraft thermals.",
-	"companion": "SPIL-9 · Next ram calls it in.",
-	"grip": "Grip · Roll fast along walls to ride them.",
-	"cast": "Actives · Big ones wind up before firing.",
-	"jam": "Jam field · A pulse recalls Q's wind-up.",
-	"stake": "Relay stake · Hold E to raise the bet.",
-	"radio": "Radio · Change the pilot's station.",
-	"halo": "SPIL-9 · Full halo: your next ram calls it.",
+	"breach": "Slam the Dig's cracked plates.",
+	"lift": "Glide through Highdraft thermals.",
+	"grip": "Roll fast to climb walls.",
+	"cast": "Big actives wind up before firing.",
+	"jam": "A pulse locks picks 2 and 3 and recalls a wind-up.",
+	"stake": "Hold at a relay mast to raise the bet.",
+	"radio": "Change the pilot's station.",
+	"halo": "Your next ram calls in SPIL-9, your companion.",
 }
 # The help page's picture pages, in the order its page button walks them.
 const PAGES := [["breach", "lift", "companion"], ["grip", "cast", "jam"], ["stake", "radio", "halo"]]
