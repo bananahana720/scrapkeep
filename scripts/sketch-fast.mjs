@@ -7,7 +7,9 @@ import {
   countChecks,
   acquireMachine,
   binary,
+  IMPORT_TRIES,
   importWithRetry,
+  scriptErrorCount,
   isBot,
   isSolo,
   judge,
@@ -25,7 +27,7 @@ import { readLedger } from "./known-failing.mjs";
 // stops at the first failure that is the PR's own: red twice on the head and green on the base.
 //   1. static: sketch-lint, placeholder count no higher than the base, check:docs, the node
 //      tests that touch the changed scripts
-//   2. Godot: import (retried once), boot, then the tests the diff reaches, cheapest first
+//   2. Godot: import (up to three tries), boot, then the tests the diff reaches, cheapest first
 // The full gate runs once per staging head and the red team plays each staging head; the fast
 // lane never replaces them. Bot-tier tests the diff reaches are listed for the bot shards.
 // Run: node scripts/sketch-fast.mjs [--base origin/main] [--budget 900] [--dry-run] [--receipt <label>]
@@ -659,7 +661,7 @@ async function main() {
     finish();
   }
 
-  // Stage 2: Godot. Import with one retry, boot, then the selected tests.
+  // Stage 2: Godot. Import in up to three tries, boot, then the selected tests.
   const quarantineEntries = readQuarantineEntries(sketchDir);
   const quarantine = new Set(quarantineEntries.map((entry) => entry.test));
   const expired = expiredQuarantine(quarantineEntries);
@@ -675,9 +677,9 @@ async function main() {
   const imported = importWithRetry(SKETCH, base, (job) => {
     const t = Date.now();
     const result = spawnSync(binary, job.args, { encoding: "utf8", timeout: 180_000 });
-    return { label: job.label, exit: result.status, ok: result.status === 0, ms: Date.now() - t };
-  });
-  if (!stage("import", imported.ok, { note: imported.results.map((row) => `exit=${row.exit}`).join(", ") })) finish();
+    return { label: job.label, exit: result.status, signal: result.signal ?? null, scriptErrors: scriptErrorCount((result.stdout || "") + (result.stderr || "")), ok: result.status === 0, ms: Date.now() - t };
+  }, log);
+  if (!stage("import", imported.ok, { note: imported.tries.map((row) => `${row.outcome} exit=${row.exit ?? row.signal}`).join(", ") })) finish();
   const boot = spawnSync(binary, [...base, "--quit-after", "300"], { encoding: "utf8", timeout: 180_000, env: { ...process.env, XDG_DATA_HOME: mkdtempSync(path.join(os.tmpdir(), "sketch-fast-")) } });
   const bootVerdict = judge({ status: boot.status, output: (boot.stdout || "") + (boot.stderr || "") });
   if (!stage("boot", bootVerdict.ok, { note: bootVerdict.reason ?? "300 frames" })) finish();
@@ -721,12 +723,16 @@ async function main() {
     baseImport ??= inLane(async () => {
       if (prRed) return false;
       const args = ["--headless", "--path", baseSketch];
-      if ((await importAsync(args)) === 0) return true;
-      log(`${SKETCH} (base) import failed; retrying once`);
-      return (await importAsync(args)) === 0;
+      // The base tree is a fresh checkout, where the engine's first import can crash (IMPORT_TRIES).
+      for (let attempt = 1; attempt <= IMPORT_TRIES; attempt++) {
+        if (prRed) return false;
+        if ((await importAsync(args)) === 0) return true;
+        if (attempt < IMPORT_TRIES) log(`${SKETCH} (base) import try ${attempt} of ${IMPORT_TRIES} failed; trying again`);
+      }
+      return false;
     });
     if (!(await baseImport)) {
-      log(`  ${test} on the merge base: no verdict (the base import failed twice)`);
+      log(`  ${test} on the merge base: no verdict (the base import failed ${IMPORT_TRIES} times)`);
       return null;
     }
     if (cancel.cancelled) return null;
