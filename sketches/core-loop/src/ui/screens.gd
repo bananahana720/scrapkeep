@@ -52,6 +52,8 @@ const LEVEL_TRIES := 6
 const ACTION_GAP := 18
 const NARROW_W := 1280.0
 const MENU_STATES := ["title", "class_select", "dead", "victory", "summary"]
+# The screens a run ends on.
+const END_STATES := ["dead", "summary"]
 const TITLE := "SCRAPKEEP"
 # The title's name lands like an ink stamp (TONE-BIBLE UI motion): it starts big and tilted and
 # snaps down with a short overshoot. It rests straight, because its container's layout resets a
@@ -99,6 +101,8 @@ const PRIMARY_HEIGHT := 60.0
 var game
 var _victory_boss := {}
 var _veil_wait := 0.0
+# The end screen is held back while the run's last still is being taken (_step_still_wait).
+var _still_wait := false
 
 var _veil: ColorRect
 var _content: VBoxContainer
@@ -435,7 +439,8 @@ func _on_flow_changed(state: String) -> void:
 			if ending:
 				_open_ending()
 	_veil_wait = game.flow.victory_veil if state == "victory" and "victory_veil" in game.flow else 0.0
-	if _veil_wait > 0.0:
+	_still_wait = state in END_STATES and game.run_moments != null and game.run_moments.still_pending()
+	if _veil_wait > 0.0 or _still_wait:
 		_hide_for_rout()
 	else:
 		_fade(state in MENU_STATES)
@@ -443,13 +448,25 @@ func _on_flow_changed(state: String) -> void:
 
 
 # The victory card waits while a boss's rout plays over the world (flourish_cues.gd); flow
-# zeroes victory_veil when the rout is skipped.
+# zeroes victory_veil when the rout is skipped. An end screen waits the same way for the run's
+# last still (_step_still_wait).
 func _hide_for_rout() -> void:
 	if _tween != null:
 		_tween.kill()
 	_veil.modulate.a = 0.0
 	_content.modulate.a = 0.0
 	visible = false
+
+
+# A run that ends on a death is photographed for its comic page on the frame it ends
+# (run_moments.gd). The end screen comes up the frame after the picture is taken, so the
+# page's last panel shows the death and not this screen fading in over it.
+func _step_still_wait() -> void:
+	if not _still_wait or game.run_moments.still_pending():
+		return
+	_still_wait = false
+	if _state in END_STATES:
+		_fade(true)
 
 
 func _step_veil_wait(delta: float) -> void:
@@ -1519,6 +1536,7 @@ func _screen() -> Vector2:
 func _process(delta: float) -> void:
 	_guard = maxf(0.0, _guard - delta)
 	_step_veil_wait(delta)
+	_step_still_wait()
 	if ending_open():
 		_ending_left = maxf(0.0, _ending_left - delta)
 		if game.bot_driven and _ending_left <= 0.0:
