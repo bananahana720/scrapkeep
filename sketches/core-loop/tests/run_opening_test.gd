@@ -4,6 +4,9 @@ const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const LaunchTake := preload("res://src/presentation/launch_take.gd")
 const Opening := preload("res://src/presentation/opening.gd")
+const LaunchCard := preload("res://src/ui/launch_card.gd")
+const EventKinds := preload("res://src/core/event_kinds.gd")
+const UiDraw := preload("res://src/ui/ui_draw.gd")
 const T := preload("res://tests/support/t.gd")
 
 # Ruling bw: a run's opening is said one voice at a time (src/presentation/opening.gd). A first
@@ -33,6 +36,7 @@ const STEP := 1.0 / 30.0
 var _t := T.new("run_opening_test")
 var _game
 var _turns: Array = []
+var holding_stamp := false
 
 
 func _initialize() -> void:
@@ -109,6 +113,13 @@ func _run() -> void:
 	var hud = _game.hud
 	opening.turned.connect(func(voice: String): _turns.append(voice))
 
+	# PF-08: the stage's name line keeps its contrast against the outline ink, in the card's own tint.
+	var tint: Color = EventKinds.color("stage_entered")
+	var ink := Color(0.0, 0.0, 0.0, 1.0)
+	_t.check("C1 the stage name line is lightened and heavily outlined: contrast at least %.1f to 1" % LaunchCard.MIN_CONTRAST,
+		LaunchCard.contrast(LaunchCard.word_colour(tint), ink) >= LaunchCard.MIN_CONTRAST and LaunchCard.TEXT_OUTLINE >= 10 and LaunchCard.FONT >= 32,
+		"colour %s contrast %.1f (base tint %.1f), outline %d, size %d" % [LaunchCard.word_colour(tint).to_html(false), LaunchCard.contrast(LaunchCard.word_colour(tint), ink), LaunchCard.contrast(tint, ink), LaunchCard.TEXT_OUTLINE, LaunchCard.FONT])
+
 	await _start_run()
 	await _frames(3)
 	var cold_open: bool = flourish.playing and flourish.id == "cold_open"
@@ -183,10 +194,42 @@ func _run() -> void:
 	var holds: bool = not take.busy() and opening.live and opening.turn() == "" and not flourish.playing and not hud.launch_card.showing() and not _moss_up()
 	paused = false
 	_game.player.set_velocity_now(Vector3.ZERO)
+	# Control is the flow's play state with the ball unfrozen; nothing in the opening gates it, so it
+	# is read on the release frame itself: 0 on the base and after the change.
+	var control_at := 0 if flow.in_play() and _game.player.get("_frozen") != true else -1
+	var start_frame := Engine.get_physics_frames()
+	var together := 0
+	var overlap := 0
+	var stamp_seen := false
+	var moss_during_stamp := false
+	for i in 400:
+		await process_frame
+		flourish.advance(0.05)
+		if control_at < 0 and flow.in_play() and _game.player.get("_frozen") != true:
+			control_at = Engine.get_physics_frames() - start_frame
+		var stamps: Array = []
+		for node in flourish.live_nodes():
+			if is_instance_valid(node) and node.name == "FlourishStamp" and node.visible:
+				stamps.append(node)
+		stamp_seen = stamp_seen or not stamps.is_empty()
+		if not stamps.is_empty() and _moss_up():
+			together += 1
+			for stamp in stamps:
+				if stamp.get_global_rect().intersects(_bubble().get_global_rect()):
+					overlap += 1
+		if i == 3:
+			holding_stamp = flourish.short and not stamps.is_empty()
+			moss_during_stamp = _moss_up()
+		if not flourish.playing and i > 10:
+			break
+	_t.check("X1 a paused tree holds every turn until it closes", holds and holding_stamp, "held %s, stamp up after the pause %s, stage card %s" % [holds, holding_stamp, hud.launch_card.showing()])
+	_t.check("S2 the second run's CLOCKED IN stamp never shares the screen with Moss's message box (one voice at a time, ruling bw)",
+		stamp_seen and together == 0 and overlap == 0 and not moss_during_stamp,
+		"stamp seen %s, frames with both up %d, rectangles overlapping %d, Moss up 3 frames in %s" % [stamp_seen, together, overlap, moss_during_stamp])
+	_t.eq("S3 the ball answers the player on the frame the drop releases, as on the base", control_at, 0)
+	print("S2 frames from the drop's release to the ball's first control: %d (physics frames; stage card up %s)" % [control_at, hud.launch_card.showing()])
 	await _frames(4)
-	_t.check("X1 a paused tree holds every turn until it closes", holds and opening.turn() != "" and hud.launch_card.showing(),
-		"held %s, then turn '%s', stage card %s" % [holds, opening.turn(), hud.launch_card.showing()])
-	_t.check("S1 the short cold open: Moss speaks as the panel clears, with the stage card up", flourish.short and opening.turn() == "moss" and _moss_up() and hud.launch_card.showing(),
+	_t.check("S1 the short cold open: Moss speaks once the stamp is off, with the opening on his turn", flourish.short and opening.turn() == "moss" and _moss_up(),
 		"short %s, turn '%s', Moss %s" % [flourish.short, opening.turn(), _moss_up()])
 	hud.take_found("Cable Reach", "Moss's Back Room")
 	await _frames(2)
@@ -206,8 +249,11 @@ func _run() -> void:
 	_game.player.set_velocity_now(Vector3.ZERO)
 	await _frames(3)
 	_t.check("R1 a restart while the opening holds everything goes straight in", holding and not opening.live and _turns.is_empty()
-			and flourish.playing and flourish.id == "cold_open" and hud.launch_card.showing() and _moss_up(),
-		"holding %s, live %s, turns %s, flourish %s, stage card %s, Moss %s" % [holding, opening.live, _turns, flourish.id, hud.launch_card.showing(), _moss_up()])
+			and flourish.playing and flourish.id == "cold_open" and hud.launch_card.showing() and not (flourish.reading() and _moss_up()),
+		"holding %s, live %s, turns %s, flourish %s, stage card %s, Moss %s while the cold open reads %s" % [holding, opening.live, _turns, flourish.id, hud.launch_card.showing(), _moss_up(), flourish.reading()])
+	flourish.advance(flourish.length() + 0.1)
+	await _frames(4)
+	_t.check("R1b the restart's cold open read, Moss follows it", not flourish.playing and _moss_up(), "flourish %s, Moss %s" % [flourish.playing, _moss_up()])
 	await _end_take()
 
 	opening.begin()

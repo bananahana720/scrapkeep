@@ -38,6 +38,9 @@ const AVOID_GROUP := "flourish_avoid"
 const AVOID_GAP := 12.0
 # The pieces that are read: a stamp and a sound word are looked at.
 const WRITTEN := ["card", "caption", "panels"]
+# What holds the other voices (reading()): the written pieces and the stamp, which is a voice too
+# and sits where Moss's message box goes when a second run's short cold open is only a stamp.
+const HOLDS_VOICES := ["card", "caption", "panels", "stamp"]
 const INK := Color("17141a")
 const PAPER := Color("f3ecdc")
 const CAPTION_FILL := Color("fff6c9")
@@ -154,14 +157,14 @@ func queued() -> Array:
 
 
 # Whether the row (or, with no name, whatever plays) still has reading matter to show: it waits
-# in the queue, or it plays with a card, a caption or a panel not yet off the screen. The run's
+# in the queue, or it plays with a card, a caption, a panel or a stamp not yet off the screen. The run's
 # opening holds Moss for it and the HUD holds its plates and its boss title for it.
 func reading(row_id := "") -> bool:
 	if row_id != "" and row_id in queued():
 		return true
 	if not playing or (row_id != "" and id != row_id):
 		return false
-	return _pieces.any(func(piece): return String(piece.kind) in WRITTEN and clock < float(piece.at) + float(piece["for"]))
+	return _pieces.any(func(piece): return String(piece.kind) in HOLDS_VOICES and clock < float(piece.at) + float(piece["for"]))
 
 
 # Whether the row plays or waits its turn in the queue.
