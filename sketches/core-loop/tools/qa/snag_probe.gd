@@ -62,7 +62,8 @@ func pieces(root: Node) -> Array:
 		if co.get_parent() != null and String(co.get_parent().name) == "Tiles":
 			continue
 		# The piece's box in its own yaw frame (a rotated wall is still a box to lanes along it).
-		var yaw := co.global_transform.basis.get_euler().y
+		# A body tilted off the vertical keeps the world frame (yaw 0): its box is read as it stands.
+		var yaw := co.global_transform.basis.get_euler().y if co.global_transform.basis.y.normalized().y > 0.99 else 0.0
 		var unyaw := Basis(Vector3.UP, -yaw)
 		var box := AABB()
 		var any := false
