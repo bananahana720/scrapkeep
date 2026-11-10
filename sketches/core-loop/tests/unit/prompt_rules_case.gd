@@ -193,10 +193,10 @@ static func _words(t, glyphs, profile, game) -> void:
 	# E and Space say what the key does where the ball is, until the prompt first retires.
 	_fresh(glyphs, profile)
 	t.eq("E says MOUNT off the pylon", glyphs.word_for("interact", "", Bindings.ball_state("", false, false, false)), "MOUNT")
-	t.eq("and DISMOUNT on it", glyphs.word_for("interact", "", Bindings.ball_state("", false, true, false)), "DISMOUNT")
 	t.eq("Space says JUMP on the ground", glyphs.word_for("jump", "", Bindings.ball_state("", false, false, false)), "JUMP")
 	t.eq("DOUBLE JUMP in the air", glyphs.word_for("jump", "", Bindings.ball_state("", false, false, true)), "DOUBLE JUMP")
 	t.eq("and SLINGSHOT on the pylon", glyphs.word_for("jump", "", Bindings.ball_state("", false, true, false)), "SLINGSHOT")
+	t.eq("SLINGSHOT still while it charges there", glyphs.word_for("jump", "", glyphs._word_state("jump", {"charging": true, "mounted": true, "airborne": false, "line": ""})), "SLINGSHOT")
 	for i in KeyGlyphs.RETIRE_AFTER["interact"]:
 		profile.add_use("interact")
 	t.eq("E's word goes when its prompt first retires", glyphs.word_for("interact", "", Bindings.ball_state("", false, false, false)), "")

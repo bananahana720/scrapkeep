@@ -220,6 +220,12 @@ func _state_of(verb: String, view: Dictionary) -> String:
 	return Bindings.ball_state("", view["charging"], view["mounted"], view["airborne"])
 
 
+# The state a prompt's word reads. On the pylon Space is the slingshot whether or not it is
+# charging, which the ball's state ranks first.
+func _word_state(verb: String, view: Dictionary) -> String:
+	return "mounted" if verb == "jump" and view["mounted"] else _state_of(verb, view)
+
+
 # One tick of the prompt rules over `view`; fills `shown`.
 func step(delta: float, view: Dictionary) -> void:
 	for verb in PROMPT_VERBS:
@@ -259,7 +265,7 @@ func step(delta: float, view: Dictionary) -> void:
 		if not open:
 			continue
 		if _first[verb] or _forced[verb] > 0.0 or _revived[verb] or not retired(verb, line) or (verb == "jump" and vault_open):
-			candidates.append({"verb": verb, "state": _state_of(verb, view), "word": word_for(verb, line, _state_of(verb, view))})
+			candidates.append({"verb": verb, "state": _state_of(verb, view), "word": word_for(verb, line, _word_state(verb, view))})
 	if line == "world" and _letgo_latch >= 1 and _letgo_latch <= RETIRE_AFTER[LETGO]:
 		candidates.append({"verb": LETGO, "state": _state_of("haul", view), "word": LETGO_WORD})
 	candidates.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:

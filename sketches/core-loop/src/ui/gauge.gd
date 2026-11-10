@@ -68,6 +68,14 @@ func extent() -> Vector2:
 	return Vector2(w, ICON)
 
 
+# A new run's first reading is no loss from the last run's: forget the bar and its slice.
+func clear() -> void:
+	fraction = -1.0
+	_lost_from = -1.0
+	_lost_left = 0.0
+	queue_redraw()
+
+
 # Where the lost slice ends, as a share of the bar: the bar's own share once it has drained.
 func lost_edge() -> float:
 	if _lost_left <= 0.0 or _lost_from <= fraction:

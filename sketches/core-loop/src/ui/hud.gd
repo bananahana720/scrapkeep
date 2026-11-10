@@ -364,7 +364,9 @@ func setup(game_ref) -> void:
 		_title_stage = 0
 		_threat = 0
 		_begin_engagement(false)
-		_armor_peak = ARMOR_PEAK_FLOOR)
+		_armor_peak = ARMOR_PEAK_FLOOR
+		_health.clear()
+		_armor.clear())
 	layout(_screen_size())
 
 

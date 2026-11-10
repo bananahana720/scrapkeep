@@ -4,7 +4,7 @@ const Gauge := preload("res://src/ui/gauge.gd")
 
 # The HUD gauge's lost slice (ui/gauge.gd): a drop in the bar leaves what went standing for
 # LOSS_HOLD seconds, drains it over LOSS_DRAIN, a second drop inside that time keeps the first
-# one's edge, and a rise or a gauge with no bar shows none. A player's-eye film found no bar
+# one's edge, a rise or a gauge with no bar shows none, and clear() (a new run) forgets the bar. A player's-eye film found no bar
 # that read as health after a hit; this is the answer that costs no word.
 
 
@@ -28,6 +28,10 @@ func run(t) -> void:
 	gauge.set_reading(0.4, Color.WHITE)
 	gauge.set_reading(0.95, Color.WHITE)
 	t.check("a rise past a slice ends it", is_equal_approx(gauge.lost_edge(), 0.95), "edge %.2f" % gauge.lost_edge())
+	gauge.set_reading(0.3, Color.WHITE)
+	gauge.clear()
+	gauge.set_reading(0.1, Color.WHITE)
+	t.check("a new run's first reading is no loss", is_equal_approx(gauge.lost_edge(), 0.1) and is_equal_approx(gauge.fraction, 0.1), "edge %.2f over %.2f" % [gauge.lost_edge(), gauge.fraction])
 	gauge.free()
 	var count = Gauge.new("res_scrap")
 	count.set_reading(0.8, Color.WHITE, "12")
