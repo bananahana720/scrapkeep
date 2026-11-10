@@ -106,6 +106,9 @@ func _kills(label: String) -> void:
 # scrap, part count and class-up count before the gem, after the finish alone, and after the take.
 func _take(id: String) -> Dictionary:
 	_quiet()
+	# The Warden leaves at the end of this tick. The ball goes into its ring on the next, so the
+	# ring never wakes a Warden that is on its way out.
+	await physics_frame
 	var acts = _game.world.activities
 	var s = acts.site(id)
 	var at: Vector3 = s.global_position

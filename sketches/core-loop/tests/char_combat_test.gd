@@ -5,6 +5,8 @@ const Intent := preload("res://src/movement/intent.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
 const AbilityState := preload("res://src/core/ability_state.gd")
 const Weapons := preload("res://src/combat/weapons.gd")
+# How far over the stage the blocked throw is made from: past the landing ray's 60 m reach down.
+const VOID_HEIGHT := 200.0
 
 # The class specials and Kest's kit through the real game (calm, stage 1): the gauge's
 # release scaling, the drawn geometry being exactly the committed one with the
@@ -377,12 +379,12 @@ func _tap_fire() -> void:
 	_source.press = {"fire_pressed": true}
 
 
-# A throw over the void has nowhere to stick: it draws blocked and throws nothing.
+# A throw with no ground under it has nowhere to stick: it draws blocked and throws nothing.
+# The ball is high over the stage, out of the landing ray's reach of the floor. Off the map
+# would not do: the fall rescue puts the ball back on the tick it is placed there.
 func _void_start() -> void:
 	_as_class("demolitions_caster")
-	var far := Vector3(6000.0, 40.0, 6000.0)
-	_player.reset_to(far)
-	_player.body().global_position = far
+	_player.reset_to(_game.ctx.terrain.spawn_point(1) + Vector3.UP * VOID_HEIGHT)
 	_record = {"cancelled": _facts["gauge_cancelled"].size(), "volleys": _combat.volleys}
 	_source.press = {"fire_pressed": true}
 
@@ -392,7 +394,7 @@ func _check_void() -> void:
 	var drawn: Dictionary = _player.indicator.last_shape.get("landing", {})
 	_report("blocked throw", drawn.get("blocked", false) and cancelled.size() == 1 and cancelled[0] == [Weapons.STICKY_CHARGE, "blocked"] \
 			and _combat.volleys == _record["volleys"] and _player.abilities.ready(AbilityState.WEAPON),
-		"a tapped throw over the void drew blocked (%s), threw nothing, kept its charge and said %s"
+		"a tapped throw with no ground under it drew blocked (%s), threw nothing, kept its charge and said %s"
 			% [drawn.get("blocked", false), cancelled])
 
 

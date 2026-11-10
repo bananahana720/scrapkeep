@@ -126,6 +126,10 @@ func _physics_process(_delta: float) -> bool:
 			_game.flow.choose_class(0)
 			_next("warden")
 		"warden":
+			# A test's run has no opening: the cold open's card starts with the stage, and the
+			# hello and the Warden's line wait for a card (bubble_gives_way_test).
+			_game.presentation.flourish.stop_all()
+			_bubble._process(0.016)
 			_bubble.dismiss_exchange()
 			_sight()
 			_t.check("Warden line shows at the sighting", _showing(spillway_warden), _bubble.text)
@@ -153,6 +157,9 @@ func _physics_process(_delta: float) -> bool:
 			_t.check("interact dismisses the intro", _silent(), _bubble.text)
 			_game.events.boss_arena_entered.emit()
 			_t.check("arena entry twice in a run shows nothing", _silent(), _bubble.text)
+			# The arena's own beat would hold the Warden's line. Arena, then a sighting, is this
+			# test's order and not a run's.
+			_game.presentation.flourish.stop_all()
 			_sight()
 			_t.check("Reach Warden line shows at the sighting", _showing(reach_warden), _bubble.text)
 			_game.flow._engage()

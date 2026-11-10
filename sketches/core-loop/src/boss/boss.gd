@@ -174,7 +174,6 @@ func _place_ball(entry_velocity: Vector3) -> void:
 	var velocity := heading * flat + Vector3.UP * clampf(entry_velocity.y, -8.0, 0.0)
 	var at: Vector3 = arena.entry_point()
 	ctx.player.reset_to(at, velocity)
-	ctx.player.body().global_position = at
 	ctx.camera.snap(heading)
 
 
@@ -1289,7 +1288,6 @@ func _rescue(ball: Vector3) -> void:
 	var turning := signf(v.dot(Arena.tangent(arena.angle_of(ball))))
 	var at := rescue_point(ball)
 	ctx.player.reset_to(at, Arena.tangent(arena.angle_of(at)) * speed * (turning if turning != 0.0 else 1.0))
-	ctx.player.body().global_position = at
 
 
 # --- The enemy protocol, answered for every piece (boss_target.gd forwards here) -------

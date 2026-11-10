@@ -150,7 +150,9 @@ func _observe() -> void:
 		4:
 			if not _acted and _phases.has("windup"):
 				_acted = true
-				_game.player.reset_to(_ball + Vector3(0.0, 0.0, -120.0))
+				# Out of range but on the map: off it, the fall rescue would bring the ball back
+				# beside the lobber on the same tick.
+				_game.player.reset_to(_ctx.terrain.drop_point(_ball.x, _ball.z + 120.0, 1.05))
 			elif _acted and _phases.has("cancelled"):
 				_done = true
 		2:
