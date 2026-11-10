@@ -1191,7 +1191,7 @@ func _ace_package_for(stage: int) -> String:
 
 # A stage whose row names an ACE package starts the ACE band at transport sample at; any
 # other stage hands back to the synth, except that the band held through a launch's flight waits for the landing.
-func _ace_stage(stage: int, at: int) -> void:
+func _ace_stage(stage: int, at: int, fight := false) -> void:
 	if radio_hold != "":
 		return
 	# The live moment's tune, else the stage's remix or modifier tune, else the stage's own pack.
@@ -1210,7 +1210,7 @@ func _ace_stage(stage: int, at: int) -> void:
 		_ace_flight = false
 		_handover_at = -1
 		_prime_band_parameters()
-		ace.start_level(at if at >= 0 else engine.clock)
+		ace.start_level(at if at >= 0 else engine.clock, fight)
 		engine.grid = ace
 		return
 	if _ace_flight and ace_playing():
@@ -1513,9 +1513,7 @@ func _ace_named(id: String, at: int, boss := false, won := true) -> void:
 # landing). Inside a sealed Warden fight it goes straight to the fight's sections: the shelf
 # (the world's roaming take) never plays inside an arena.
 func _ace_return(stage: int, at: int) -> void:
-	_ace_stage(stage, at)
-	if _warden_engaged and ctx.flow.get("sealed") and ace_playing() and ace.mode == "level":
-		ace.commit_warden()
+	_ace_stage(stage, at, _warden_engaged and bool(ctx.flow.get("sealed")))
 
 
 # The music has moved on from the stage an ultimate took the recorded band from (a launch,

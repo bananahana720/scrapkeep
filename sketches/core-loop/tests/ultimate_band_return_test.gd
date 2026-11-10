@@ -144,6 +144,7 @@ func _warden() -> void:
 	_start()
 	_bars(1)
 	_land()
+	var opened: int = _ace.opened
 	# The return is watched a beat at a time from the landing: the roaming take (the shelf's
 	# clips) must never sound in the arena.
 	var heard := []
@@ -155,6 +156,9 @@ func _warden() -> void:
 	t.check("in a Warden fight the band comes back to the fight", _audio.ace_playing() and _ace.mode == "warden" and _ace.section == "build", _state())
 	t.check("the roaming take never plays in the arena", not heard.any(func(now: String): return now.begins_with("level") or now.get_slice("/", 1) in Ace.SHELF_CLIPS),
 		"on the way back: %s" % [heard])
+	# The pivot and then the build: two sections' stems, and none for a roaming take opened
+	# only to be thrown away.
+	t.eq("the way back opens the pivot and the build and nothing else", _ace.opened - opened, _ace.stems.size() * 2)
 	_start()
 	_game.events.ultimate_cancelled.emit("test_ult", "bail", false)
 	_bars(2)

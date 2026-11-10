@@ -269,8 +269,10 @@ func sound_from() -> int:
 
 # A stage starts on the shelf: calm (or travel) from bar 1 at transport sample at. A
 # restart while the band sounds fades the old section out and gives the new one its
-# full join, so no one-shot is left without a follower.
-func start_level(at: int) -> void:
+# full join, so no one-shot is left without a follower. With `fight`, the band is coming back
+# into a Warden fight already under way (after a radio hold or an ultimate): it enters on the
+# pivot and goes on to the build, and the shelf's recordings are never opened.
+func start_level(at: int, fight := false) -> void:
 	# A begun join's voices fade over the full ramp too, and calm waits out its join.
 	var faded := _cancel_pending(STOP_RAMP)
 	actions.clear()
@@ -293,6 +295,10 @@ func start_level(at: int) -> void:
 	threat = 0
 	pressure = float(parameters.get("threat", 0.0)) if parameter_enabled else 0.0
 	in_bay = false
+	if fight and not flat:
+		mode = "warden"
+		_schedule("pivot", maxi(at, earliest))
+		return
 	_schedule(_desired(), maxi(at, earliest))
 
 
