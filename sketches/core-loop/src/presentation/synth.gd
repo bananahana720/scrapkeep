@@ -856,9 +856,11 @@ static func render_score(score: Array, tail_seconds := 1.0) -> PackedFloat32Arra
 			continue
 		var source := note(instrument, int(event[1]) + score_transpose)
 		var length := mini(source.size(), int(event[2]) * step + seconds(0.25))
-		var release := mini(1200, length)
+		# A note the buffer ends before releases into that end, so a short tail never cuts one
+		# mid-wave.
 		var count := mini(length, buf.size() - start)
+		var release := mini(1200, count)
 		for i in count:
-			var fade := 1.0 if i < length - release else float(length - i) / release
+			var fade := 1.0 if i < count - release else float(count - i) / release
 			buf[start + i] += source[i] * gain * fade
 	return buf

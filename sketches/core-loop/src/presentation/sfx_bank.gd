@@ -1549,9 +1549,11 @@ static func _mix(parts: Array, saturate := false, target := 0.9) -> PackedFloat3
 	return Synth.declick(Synth.normalize(buf, target), 16, 400)
 
 
-static func _cut(buf: PackedFloat32Array, length_seconds: float) -> PackedFloat32Array:
+# The first length_seconds of a buffer, faded out over `fade` samples. The default suits a
+# tick or a stab; a held note or a phrase cut while it still rings wants a longer one.
+static func _cut(buf: PackedFloat32Array, length_seconds: float, fade := 600) -> PackedFloat32Array:
 	var cut := buf.slice(0, mini(buf.size(), Synth.seconds(length_seconds)))
-	return Synth.declick(cut, 8, 600)
+	return Synth.declick(cut, 8, fade)
 
 
 # An oscillator with an exponential pitch sweep and exponential decay.
@@ -2544,7 +2546,7 @@ static func _pilot_unlocked(class_id: String) -> PackedFloat32Array:
 	var row := Harmony.motif_or_first(class_id)
 	var score := _motif_score(class_id, 0, row["voice"], 0.8)
 	score.append_array(_motif_score(class_id, 0, "bell", 0.25, 12))
-	return _cut(Synth.render_score(score, 0.4), 0.85)
+	return _cut(Synth.render_score(score, 0.4), 0.85, Synth.seconds(0.12))
 
 
 # A two-note ladder stab, the kill chain's own accent so a tier never sounds like a lone
@@ -2569,7 +2571,7 @@ static func _shell_spring() -> PackedFloat32Array:
 
 # The hot-wired offer: two brass notes a fifth apart, D4 to A4, the second riding the first's tail.
 static func _hotwire_offer() -> PackedFloat32Array:
-	return _mix([[_cut(_n("brass", 62), 0.14), 0, 0.8], [_cut(_n("brass", 69), 0.22), Synth.seconds(0.12), 0.95],
+	return _mix([[_cut(_n("brass", 62), 0.14), 0, 0.8], [_cut(_n("brass", 69), 0.22, Synth.seconds(0.05)), Synth.seconds(0.12), 0.95],
 		[_noise(0.012, 4500.0, 3000.0, 250.0), 0, 0.2]])
 
 
