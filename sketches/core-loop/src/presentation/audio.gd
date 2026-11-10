@@ -3836,8 +3836,10 @@ func _on_posture_changed(enemy: Node3D, posture: float, staggered: bool) -> void
 	if ctx.flow != null and ctx.flow.get("warden") == enemy:
 		# A hit that fills the bar from low down opens a stagger and passes a quarter on the same
 		# reading: the stagger's held breath answers it, not a drop.
+		# A smash inside the dam's stagger takes a real chunk while the wiped bar reads no
+		# quarter gone: a real chunk shattered with some left lands the drop there too.
 		var fell := _guard_step_fell(enemy, bool(seen[0]) and not staggered)
-		_follow_warden_form(posture, staggered, fell and not staggered)
+		_follow_warden_form(posture, staggered, (fell or (shattered and chunks > 0)) and not staggered)
 
 
 # Whether this reading took a step off the Warden's guard and left it standing: the hit that

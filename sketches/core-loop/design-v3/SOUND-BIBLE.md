@@ -79,7 +79,7 @@ He gave the threads their own judgement on mechanics and tuning for this build-o
 
 - The Warden's tight build follows the guard (in at three quarters broken, out under half), not the pulse it charges every six seconds, which would chop the track.
 - The drop lands on the hit that shatters a chunk. The hit that breaks the Warden lands none: the break and the kill cadence answer it.
-- On the dam every chunk breaks on the last ram, so the drop lands on each ram that takes a quarter of the bar instead: three drops a fight. The dam's sheet opening is not a held breath, because it opens every six seconds whether or not you ram.
+- On the dam every chunk breaks on the last ram, so the drop lands on each ram that takes a quarter of the bar instead: two or three drops a fight, by the size of the ball. The dam's sheet opening is not a held breath, because it opens every six seconds whether or not you ram.
 - The Warden form is on by default; `--warden-form=loop` plays the fight as before.
 - The held breath and the drop keep the lead even at low armour. Low armour's missing lead is a warning everywhere else; in the breath it would be silence.
 - The Warden's fight takes the band from an event's tune that is still playing when it engages (the flood, a squall). Before, the event's tune played the whole fight and the Warden's music was never heard. An event that begins inside the fight does not start its tune.

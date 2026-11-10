@@ -295,9 +295,18 @@ func _dam() -> void:
 	_bars(2)
 	ram.call(31.0)
 	t.eq("and the climb after it lands its drop", _drops().size(), 5)
+	# A smash that lands inside the dam's stagger takes a real chunk: the stagger ends on that
+	# reading with the bar wiped, and the drop answers the smash as it does on any Warden.
+	_bars(6)
+	ram.call(100.0, true)
+	_bars(1)
+	dam.chunks = 3
+	ram.call(0.0)
+	t.eq("a smash inside the dam's stagger lands the drop", _drops().size(), 6)
+	_bars(6)
 	# The last ram: every chunk at once, and no drop; the break answers it.
 	_bars(6)
 	dam.chunks = 0
 	ram.call(100.0)
-	t.eq("the ram that breaks the dam lands no drop", _drops().size(), 5)
+	t.eq("the ram that breaks the dam lands no drop", _drops().size(), 6)
 	dam.queue_free()
