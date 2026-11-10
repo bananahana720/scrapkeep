@@ -3,7 +3,7 @@ extends RefCounted
 # The density governor (design-v3/FEEL-READABILITY.md §1.1 and §1.2, E1-DENSITY.md §2 to
 # §4). One scalar per frame, 0 to 1, from the threats, effects and enemies in view. It
 # thins P5 player effects and P6 hostile fills and never touches P0 to P3: the ball, every
-# hostile edge, front, bracket and rail, the reads and the player's own targeting.
+# hostile edge, front and rail, the reads and the player's own targeting.
 #
 # One Governor is live at a time (live()). Vfx steps it once per frame and publishes the
 # P6 fill scale as the global shader value threat_fill_scale; every other reader, bolts

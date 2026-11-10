@@ -17,10 +17,11 @@ const Palette := preload("res://src/core/palette.gd")
 # the clip set on its instance, a boss hazard's fill mesh. The fill grows from the shape's
 # centre and its front meets the outline's inner face (read from the edge the painter drew) on
 # the tick the damage lands, not before, and never draws under the outline. The outline's
-# outer face is where contains() flips. A live hit draws exactly as before wave 36. The
-# shell's trace is a thin dashed arc onto its landing, outlines are capped at EDGE_MAX and
-# pending fills at FILL_CAP. Every check runs its own function on a broken copy, which must
-# fail.
+# outer face is where contains() flips. A live ring, lane (its band's width and length too)
+# and slag draw exactly as before wave 36; a live shell's one-tick fill is new. The shell's
+# fill is centred on its landing and its trace is a thin dashed arc onto it, outlines are
+# capped at EDGE_MAX, and a shape narrower than its outline draws no reversed or outside fill.
+# Every check runs its own function on a broken copy, which must fail.
 
 const DT := 1.0 / 90.0
 const CM := 0.01
@@ -56,6 +57,7 @@ func _process(_delta: float) -> bool:
 	_check_charge()
 	_check_live()
 	_check_caps()
+	_check_narrow()
 	print("danger_read_grammar_test: %s" % ("PASS" if _failures == 0 else "FAIL (%d)" % _failures))
 	_world.free()
 	quit(0 if _failures == 0 else 1)
@@ -176,11 +178,8 @@ static func _driven_fill(node: Node3D) -> Dictionary:
 	var d: Dictionary = node.descriptor()
 	var lane: bool = d["form"] == "lane"
 	var arrays: Array = (instance.mesh as ArrayMesh).surface_get_arrays(0)
-	var tags: PackedFloat32Array = arrays[Mesh.ARRAY_CUSTOM1]
-	var want := float(Threat.Drive.LANE if lane else Threat.Drive.RADIAL)
-	for i in range(0, tags.size(), 4):
-		if tags[i] != want:
-			return {"tag": false}
+	if not _tag_ok(arrays, _want_tag(d)):
+		return {"tag": false}
 	var mesh := _extent(d, arrays[Mesh.ARRAY_VERTEX])
 	var clip: Vector4 = instance.get_instance_shader_parameter("clip")
 	var out := {"tag": true}
@@ -196,6 +195,34 @@ static func _driven_fill(node: Node3D) -> Dictionary:
 		return out
 	out.merge({"lo": lo, "hi": hi2})
 	return out
+
+
+static func _want_tag(d: Dictionary) -> float:
+	return float(Threat.Drive.LANE if d["form"] == "lane" else Threat.Drive.RADIAL)
+
+
+# Every vertex of a fill mesh carries the drive the shader clips it by (CUSTOM1.x).
+static func _tag_ok(arrays: Array, want: float) -> bool:
+	var tags: PackedFloat32Array = arrays[Mesh.ARRAY_CUSTOM1]
+	if tags.is_empty():
+		return false
+	for i in range(0, tags.size(), 4):
+		if tags[i] != want:
+			return false
+	return true
+
+
+# The planted control for the tag: the node's own fill mesh with every tag zeroed (Drive.PASS,
+# which the shader never clips) must fail _tag_ok.
+static func _untagged_fails(node: Node3D) -> bool:
+	var instance: MeshInstance3D = node.painter()._layers.get("stripe_motion")
+	if instance == null or instance.mesh == null:
+		return false
+	var arrays: Array = (instance.mesh as ArrayMesh).surface_get_arrays(0)
+	var broken := PackedFloat32Array(arrays[Mesh.ARRAY_CUSTOM1])
+	broken.fill(0.0)
+	arrays[Mesh.ARRAY_CUSTOM1] = broken
+	return _tag_ok((instance.mesh as ArrayMesh).surface_get_arrays(0), _want_tag(node.descriptor())) and not _tag_ok(arrays, _want_tag(node.descriptor()))
 
 
 # The range of a vertex list along the grow axis, and along a lane.
@@ -246,14 +273,19 @@ static func _footprint_ok(node: Node3D, o: Dictionary, shift := 0.0) -> bool:
 	return ok
 
 
-# Reports one hit: the rule on the drawn series, the old mapping as its planted control, the
-# drive tag on every tick (driven only) and the footprint with its planted shift.
-func _report_hit(label: String, node: Node3D, o: Dictionary, series: Array, old: Array, hit: int, tagged: bool) -> void:
-	_report(label + " fill meets the outline on the hit tick", _fill_ok(series, hit) and tagged,
-		"%s; %d ticks, %.3f two ticks before, %.3f on the hit; outline inner face %.2f m%s; drive tag on every tick %s"
+# Reports one hit: the rule on the drawn series, the old mapping as its planted control, and
+# the footprint with its planted shift. A driven telegraph also reports its drive tag on every
+# tick, with a zeroed copy of its own mesh as the planted control.
+func _report_hit(label: String, node: Node3D, o: Dictionary, series: Array, old: Array, hit: int, driven := false, tagged := false) -> void:
+	_report(label + " fill meets the outline on the hit tick", _fill_ok(series, hit),
+		"%s; %d ticks, %.3f two ticks before, %.3f on the hit; outline inner face %.2f m%s"
 			% [_why(series, hit) if _why(series, hit) != "" else "rule holds", series.size(),
 				series[hit - 2] if hit >= 2 else -9.0, series[hit] if hit >= 0 else -9.0, o["hi"],
-				(", band from %.2f m" % o["lo"]) if o["lo"] > 0.0 else "", tagged])
+				(", band from %.2f m" % o["lo"]) if o["lo"] > 0.0 else ""])
+	if driven:
+		_report(label + " fill mesh carries its drive tag", tagged and _untagged_fails(node),
+			"every tick's stripe_motion mesh tagged %s %s; the same mesh with its tags zeroed fails" % [
+				"LANE" if node.descriptor()["form"] == "lane" else "RADIAL", tagged])
 	_report("planted: " + label + " under the old mapping fails", not _fill_ok(old, hit),
 		"a fill running to the footprint's edge: %s" % _why(old, hit))
 	_report(label + " outline is the damage footprint", _footprint_ok(node, o) and not _footprint_ok(node, o, 0.3),
@@ -279,7 +311,7 @@ func _check_silt_boil() -> void:
 		old.append(_old_share(ring.descriptor(), o))
 		if age >= SiltBoil.WARN:
 			hit = series.size() - 1
-	_report_hit("silt boil", ring, o, series, old, hit, tagged)
+	_report_hit("silt boil", ring, o, series, old, hit, true, tagged)
 	ring.free()
 
 
@@ -310,7 +342,9 @@ func _check_lobber() -> void:
 		old.append(_old_share(ring.descriptor(), o))
 		if landed[0]:
 			hit = series.size() - 1
-	_report_hit("lobber shell", ring, o, series, old, hit, tagged)
+	_report_hit("lobber shell", ring, o, series, old, hit, true, tagged)
+	_report("lobber shell fill centred on the landing", _centred(ring, ring.center) and not _centred(ring, ring.center + Vector3(1.0, 0.0, 0.0)),
+		"the fill's clip centre and its mesh's middle stand on the landing %s; checked against a landing 1 m off, they do not" % [ring.center])
 	var end_gap := points[points.size() - 1].distance_to(ring.center) if not points.is_empty() else INF
 	_report("lobber trace is a dashed arc onto the landing", _thin(tris) and end_gap <= 0.5 and points.size() >= 6,
 		"%d dashes, thin ribbons %s, the last dash ends %.2f m from the landing centre" % [points.size(), _thin(tris), end_gap])
@@ -321,6 +355,24 @@ func _check_lobber() -> void:
 	ring.free()
 	if is_instance_valid(shell):
 		shell.free()
+
+
+# A driven fill is centred on `landing`: the centre its shader clips about and the middle of its
+# mesh both stand there, within a centimetre.
+static func _centred(node: Node3D, landing: Vector3) -> bool:
+	var instance: MeshInstance3D = node.painter()._layers.get("stripe_motion")
+	if instance == null or instance.mesh == null:
+		return false
+	var centre: Vector3 = instance.get_instance_shader_parameter("centre")
+	var verts: PackedVector3Array = (instance.mesh as ArrayMesh).surface_get_arrays(0)[Mesh.ARRAY_VERTEX]
+	var lo := Vector2(INF, INF)
+	var hi := Vector2(-INF, -INF)
+	for v in verts:
+		lo = Vector2(minf(lo.x, v.x), minf(lo.y, v.z))
+		hi = Vector2(maxf(hi.x, v.x), maxf(hi.y, v.z))
+	var middle := (lo + hi) * 0.5
+	return Vector2(centre.x, centre.z).distance_to(Vector2(landing.x, landing.z)) <= CM \
+		and middle.distance_to(Vector2(landing.x, landing.z)) <= CM
 
 
 # Every quad (two triangles) in the trace is a thin ribbon: its long side at least three times
@@ -347,7 +399,13 @@ func _hazard_run(label: String, h: Node3D) -> void:
 		old.append(_old_share(h.descriptor(), o))
 		if h.is_live():
 			hit = series.size() - 1
-	_report_hit(label, h, o, series, old, hit, true)
+	if int(h.descriptor()["type"]) == Threat.Type.LANE and hit > 0:
+		# A LANE turns to its live band (base's look, _check_live_band) on the hit tick, so its
+		# pending fill is measured up to the tick before, where the warning stands at 0.99999.
+		hit -= 1
+		series.resize(hit + 1)
+		old.resize(hit + 1)
+	_report_hit(label, h, o, series, old, hit)
 
 
 func _check_slag() -> void:
@@ -398,9 +456,11 @@ static func _live_look(node: Node3D) -> Dictionary:
 	return look
 
 
-# The base 501b2821a live look, per kind: a live ring and shell stay in the "fill" class (1) at
-# PRIORITY under the scorch tint, a live lane moves to "live" (16) at LIVE_PRIORITY with the
-# LIVE_ALPHA / RUN_ALPHA scale, and a boss slag repaints at PRIORITY under the scorch.
+# The base 501b2821a live look, per kind: a live ring stays in the "fill" class (1) at PRIORITY
+# under the scorch tint, a live lane moves to "live" (16) at LIVE_PRIORITY with the
+# LIVE_ALPHA / RUN_ALPHA scale, and a boss slag repaints at PRIORITY under the scorch. A live
+# shell had no fill on base; its fill (new in wave 36) lives one tick (projectile.gd frees the
+# shell on its landing tick) in the "fill" class at PRIORITY.
 static func _live_ok(kind: String, look: Dictionary) -> bool:
 	var scorch := Color(Palette.HAZARD.lerp(Palette.CHARCOAL, 0.4), 0.8)
 	match kind:
@@ -427,13 +487,17 @@ func _check_live() -> void:
 	slag.color = Palette.BRASS
 	_world.add_child(slag)
 	slag.step(1.01)
-	var looks := {"ring": _live_look(ring), "lane": _live_look(lane), "shell": _live_look(shell), "slag": _live_look(slag)}
+	var looks := {"ring": _live_look(ring), "lane": _live_look(lane), "slag": _live_look(slag)}
 	var ok: bool = Threat.haze() and is_equal_approx(Threat.LIVE_ALPHA, 0.8) and is_equal_approx(Threat.LIVE_SCORCH_ALPHA, 0.8) \
 		and is_equal_approx(Threat.AIR_LIVE_ALPHA, 0.61) and slag.is_live()
 	for kind in looks:
 		ok = ok and _live_ok(kind, looks[kind])
-	_report("a live hit draws as base", ok, "haze %s, LIVE %.2f, scorch %.2f, air %.2f; %s" % [Threat.haze(), Threat.LIVE_ALPHA,
+	_report("a live ring, lane and slag draw as base", ok, "haze %s, LIVE %.2f, scorch %.2f, air %.2f; %s" % [Threat.haze(), Threat.LIVE_ALPHA,
 		Threat.LIVE_SCORCH_ALPHA, Threat.AIR_LIVE_ALPHA, looks])
+	var shell_look := _live_look(shell)
+	_report("a live shell's fill, one tick, new in wave 36", _live_ok("shell", shell_look) and not _live_ok("shell", looks["lane"]),
+		"%s; a fill in the live lane's class fails the same check" % [shell_look])
+	_check_live_band()
 	# The reverted bug: a live ring whose drive moved it into the "live" class.
 	var bad: Node3D = Telegraph.ring(_world, _ground, Threat.Type.INSTANT, Vector3(80.0, 0.0, -100.0), 4.5)
 	bad.set_progress(1.0)
@@ -446,38 +510,97 @@ func _check_live() -> void:
 		node.free()
 
 
+# A live lane's band, as base drew it: LIVE_LANE (0.9) of its half width, from its back end to
+# its full length. `fill` is the drawn extent (_driven_fill or _hazard_fill).
+static func _live_band_ok(d: Dictionary, fill: Dictionary) -> bool:
+	if not fill.has("hi"):
+		return false
+	return absf(fill["hi"] - float(d["half_width"]) * 0.9) <= CM and absf(fill["along_hi"] - float(d["length"])) <= CM \
+		and absf(fill["along_lo"] + float(d["back"])) <= CM
+
+
+# On lanes as wide as Brindle's charge (5.5 m half width): a driven pack lane and the charge
+# hazard itself, live. The planted control is round 2's band, to the rails' inner face and the
+# cap's, which must fail the same check.
+func _check_live_band() -> void:
+	var half := Requisition.HULL.x * 0.5 + 1.0
+	var lane: Node3D = Telegraph.lane(_world, _ground, Threat.Type.LANE, Vector3(100.0, 0.0, -100.0), Vector3.FORWARD, 40.0, half * 2.0)
+	lane.set_progress(1.0)
+	var lane_fill := _driven_fill(lane)
+	var h: Node3D = Hazard.new()
+	h.commit_lane("charge", Threat.Type.LANE, Vector3(140.0, 0.0, -100.0), Vector3(1.0, 0.0, 0.3), 7.0, 47.0, half, 5.5, 1.0, 2.0)
+	h.color = Palette.BRASS
+	_world.add_child(h)
+	h.step(1.01)
+	var charge_fill := _hazard_fill(h)
+	var d: Dictionary = h.descriptor()
+	var round_two := {"hi": half - Threat.RAIL, "along_lo": -float(d["back"]), "along_hi": float(d["length"]) - Threat.CAP}
+	_report("a live lane's band runs as base", lane_fill.get("tag", false) and _live_band_ok(lane.descriptor(), lane_fill) and h.is_live()
+			and _live_band_ok(d, charge_fill) and not _live_band_ok(d, round_two),
+		"pack lane %s, charge %s, against %.2f m either side and the full length; round 2's band %s fails"
+			% [lane_fill, charge_fill, half * 0.9, round_two])
+	lane.free()
+	h.free()
+
+
 # --- Caps -------------------------------------------------------------------------------
 
 static func _edge_ok(width: float) -> bool:
 	return width <= Threat.EDGE_MAX + 0.0001
 
 
-# The most opaque PENDING fill (stripe layers, as drawn) in a set of marks, against FILL_CAP.
-static func _pending_ok(all: Array) -> bool:
-	for m in all:
-		if m["layer"].begins_with("stripe") and (m["tone"] as Color).a > Threat.FILL_CAP + 0.0001:
-			return false
-	return true
-
-
 func _check_caps() -> void:
 	var wide := Threat.edge_width({"r_out": 30.0})
 	_report("outline width capped", _edge_ok(wide) and not _edge_ok(30.0 * Threat.EDGE_PER_METRE),
 		"a 30 m ring's edge %.2f m (cap %.2f); the uncapped %.2f m fails" % [wide, Threat.EDGE_MAX, 30.0 * Threat.EDGE_PER_METRE])
+
+
+# --- Shapes narrower than their outline ----------------------------------------------------
+
+# A span is ordered and not negative.
+static func _span_sane(span: Vector2) -> bool:
+	return span.x >= 0.0 and span.y >= span.x
+
+
+# Every fill and run vertex lies inside the footprint contains() tests.
+static func _inside(d: Dictionary, all: Array) -> bool:
+	var c: Vector3 = d["centre"]
+	var lane: bool = d["form"] == "lane"
+	var side := Vector3.UP.cross(d.get("dir", Vector3.FORWARD) as Vector3).normalized()
+	for m in all:
+		if not m["role"] in ["fill", "run"]:
+			continue
+		for v in m["tris"]:
+			var flat := Vector3(v.x - c.x, 0.0, v.z - c.z)
+			if lane:
+				var along := flat.dot(d["dir"])
+				if absf(flat.dot(side)) > float(d["half_width"]) + 0.001 or along < -float(d["back"]) - 0.001 or along > float(d["length"]) + 0.001:
+					return false
+			elif flat.length() > float(d["r_out"]) + 0.001:
+				return false
+	return true
+
+
+func _check_narrow() -> void:
 	var nodes := [
-		Telegraph.ring(_world, _ground, Threat.Type.INSTANT, Vector3(0.0, 0.0, -200.0), 30.0),
-		Telegraph.lane(_world, _ground, Threat.Type.LANE, Vector3(0.0, 0.0, -250.0), Vector3.RIGHT, 20.0, 6.0),
-		Telegraph.ring(_world, _ground, Threat.Type.PROJECTILE, Vector3(0.0, 0.0, -350.0), 3.6),
+		Telegraph.lane(_world, _ground, Threat.Type.LANE, Vector3(0.0, 0.0, -400.0), Vector3.FORWARD, 12.0, 0.4),
+		Telegraph.lane(_world, _ground, Threat.Type.INSTANT, Vector3(10.0, 0.0, -400.0), Vector3.FORWARD, 12.0, 0.4),
+		Telegraph.ring(_world, _ground, Threat.Type.INSTANT, Vector3(20.0, 0.0, -400.0), 0.3),
 	]
-	nodes[2].set_flight(Vector3(15.0, 2.0, -350.0), Threat.lob_bump(26.0, 1.9))
 	var ok := true
+	var rows: Array = []
 	for node in nodes:
-		for progress in [0.0, 0.5, 0.95]:
+		for progress in [0.0, 0.5, 1.0]:
 			node.set_progress(progress)
 			var d: Dictionary = node.descriptor()
-			ok = ok and _pending_ok(Threat.all_marks(d)) and _pending_ok(Threat.driven_marks(d))
-	var planted := [{"layer": "stripe_motion", "tone": Color(Palette.HAZARD, 0.9)}]
-	_report("pending fill opacity capped", ok and not _pending_ok(planted),
-		"ring, lane and shell at 0, 0.5 and 0.95: every pending fill at most %.2f; a planted 0.9 fill fails" % Threat.FILL_CAP)
+			var span := Threat.fill_span(d)
+			var good: bool = _span_sane(span) and _span_sane(Threat.fill_room(d)) and _inside(d, Threat.marks(d, true))
+			ok = ok and good
+			if progress == 1.0:
+				rows.append("%s %s span %s" % [Threat.kind(node.type), d["form"], span])
+	var d0: Dictionary = nodes[2].descriptor()
+	var outside := [{"role": "fill", "tris": PackedVector3Array([d0["centre"] + Vector3(0.8, 0.0, 0.0)])}]
+	_report("a 0.4 m lane and a 0.3 m ring draw no reversed or outside fill", ok and not _span_sane(Vector2(0.0, -0.05)) and not _inside(d0, outside),
+		"%s; a reversed span and a vertex 0.8 m out fail the same checks" % ", ".join(rows))
 	for node in nodes:
 		node.free()

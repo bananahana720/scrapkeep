@@ -334,7 +334,7 @@ func _check_driven() -> void:
 		rows.append("p %.2f wave front %.2f clip [%.2f, %.2f] flips %s, ring fill to %.2f" % [p, f, clip.x, clip.y, flips, ring_clip.y])
 	lane.set_progress(1.0)
 	var live: Dictionary = _drive(lane, "stripe_motion")
-	var end_ok: bool = is_equal_approx(float(live["span"].y), lane.width * 0.5 - Threat.RAIL) and lane.contains(lane.center + lane.dir * (lane.length - 0.01) + Vector3.UP) \
+	var end_ok: bool = is_equal_approx(float(live["span"].y), lane.width * 0.5 * Threat.LIVE_LANE) and lane.contains(lane.center + lane.dir * (lane.length - 0.01) + Vector3.UP) \
 		and not lane.contains(lane.center + lane.dir * (lane.length + 0.01) + Vector3.UP) and is_equal_approx(float(live["alpha"]), Threat.LIVE_ALPHA / Threat.RUN_ALPHA)
 	_report("driven numbers", agree and end_ok,
 		"drive(d) gives the numbers marks(d, true) draws, the wave clip is contains()'s front band and the fill grows from the centre: %s; a live lane fills to %.2f m either side, its rails"
