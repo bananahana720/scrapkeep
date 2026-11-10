@@ -209,6 +209,9 @@ func _physics_process(_delta: float) -> bool:
 				_game.hud.clear_achievement_toasts()
 				_next("open")
 		"open":
+			if _wait % 120 == 0:
+				var b = _game.ctx.screen_busy
+				print("DBGO w=%d busy=%s fight=%s q=%.1f wait=%s hold=%s cards=%s vcard=%s banner=%s calm=%s paused=%s threat=%s left=%.1f hw=%s" % [_wait, b.busy(), b.fighting(), b._quiet_for, b._waiting, b._holder, _ceremony()._cards.size(), _ceremony().view.card.get("part",""), _banner().showing(), _ceremony().may_show_card(), paused, WhyCallout.threat_live(self), _ceremony().get("_calm_left"), _game.hud.hotwire_screen.is_open()])
 			if _opened < 0 and _card_up():
 				_opened = _wait
 				_marked_early = false
