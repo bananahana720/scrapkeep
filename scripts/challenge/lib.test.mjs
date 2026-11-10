@@ -405,7 +405,8 @@ test("w1clear is selected only by name, never by --only=w1 or the default cells"
   assert.equal(jobs.length, 8);
   assert.ok(jobs.every((j) => j.kind === "clear" && j.entrance === null && !j.missing));
   const args = jobs[0].args.join(" ");
-  assert.match(args, /--to-boss=1 --until=2/);
+  assert.match(args, /--until=2/);
+  assert.ok(!args.includes("--to-boss"), "--to-boss would enter Brindle on the first tick");
   assert.match(args, /--ticks=\d+/);
   assert.ok(!args.includes("--from-stage"), "it starts at stage 1");
   // the same seeds as w1, so the two cells pair on stage 1; the Warden persona drives the whole run

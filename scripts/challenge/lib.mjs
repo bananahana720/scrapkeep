@@ -66,6 +66,9 @@ export const PARKS = [1, 2, 3, 4, 5, 6].map((n) => ({ id: "park" + n, park: n, w
 // today's band runs stay as they are; ask for it with `--only=w1clear` (`--cells=clear` alone selects nothing). Information only,
 // no target. One run has one persona, so the whole clear plays the Warden persona (skipper, the one `w1` uses and the seeds are
 // shared with, 40300 up) through Brindle too; the `brindle` cell plays the brawler, so its Brindle leg is not comparable.
+// No `--to-boss`: that flag (band_run.gd) calls enter_boss on the first in-stage tick, so a run from stage 1 would fight Brindle
+// at once on an unbuilt ball (seen on 40300 in the first clear receipts, boss entered at 0.01 s). The world's own flow reaches
+// Brindle after the flume's Warden, and `--until=2` ends the run when stage 3 opens, which is after Brindle falls.
 export const W1CLEAR = { id: "w1clear", world: 1, first: 1, last: 2 };
 export const W1CLEAR_COLUMNS = ["novice", "learner1", "learner5", "expert"];
 export const W1CLEAR_TICKS = (2 * 600 + 420 + 120) * 90; // two stages at the 600 s cap, the boss's 420 s limit, a margin
@@ -174,7 +177,7 @@ function base(def, col, i, persona, wardenPersona, parkPersona, doc = null, tune
   const args = [...tuneArgs, "--band=" + col.band, "--attempt=" + col.attempt, "--cell=" + def.id];
   if (doc) args.push("--entrance=" + doc.file, "--from-stage=" + from);
   else if (from !== 1) args.push("--from-stage=" + from);
-  if (def.kind === "clear") args.push("--to-boss=1", "--until=" + def.last, "--fight-limit=" + WARDEN_FIGHT_LIMIT_S, "--stage-limit=" + WARDEN_STAGE_LIMIT_S, "--ticks=" + W1CLEAR_TICKS);
+  if (def.kind === "clear") args.push("--until=" + def.last, "--fight-limit=" + WARDEN_FIGHT_LIMIT_S, "--stage-limit=" + WARDEN_STAGE_LIMIT_S, "--ticks=" + W1CLEAR_TICKS);
   else if (def.kind === "boss") args.push("--to-boss=1", "--until=" + def.stage, "--ticks=" + BOSS_TICKS);
   else if (def.kind === "warden") args.push("--until=" + def.stage, "--fight-limit=" + WARDEN_FIGHT_LIMIT_S, "--stage-limit=" + WARDEN_STAGE_LIMIT_S, "--ticks=" + WARDEN_TICKS);
   else args.push("--stop-at=engaged:" + def.last, "--ticks=" + WORLD_TICKS);
