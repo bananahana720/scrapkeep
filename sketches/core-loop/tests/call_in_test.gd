@@ -251,18 +251,31 @@ func _check() -> void:
 	_bubble._process(LoreRows.CALL_GAP_S + 1.0)
 	events.activity_done.emit("surge_run", at)
 	_t.check("the surge call is up and its caller talks", _said("call.spillway.surge") and voice.booked == 3, "bubble '%s', booked %d" % [_bubble.text, voice.booked])
-	# Another line takes the bubble: the hello's first speaker talks, so the caller before stopped first.
+	# Another line takes the bubble (a bark from the shop): the caller stops, and the bark books nobody.
+	_bubble.bark({"line_id": "test", "text": "Not for sale.", "root": ""}, "shop_refused")
+	_t.check("a bark that takes the bubble stops the caller under it", _bubble.text == "Not for sale." and voice.stopped == 3 and voice.booked == 3 and not voice.talking,
+		"bubble '%s', stopped %d, booked %d" % [_bubble.text, voice.stopped, voice.booked])
 	_bubble._zones_played.clear()
 	_bubble._begin_exchange(_game.run.stage)
-	_bubble.hush()
-	_bubble._clear_line()
-	_bubble._process(0.1)
-	_t.check("a call cut short leaves the next line its voice", not _bubble._exchange.is_empty() and voice.stopped == 3 and voice.booked == 4,
+	_t.check("the stage's hello takes the bubble and its first speaker talks", not _bubble._exchange.is_empty() and voice.stopped == 3 and voice.booked == 4,
 		"stopped %d, booked %d, bubble '%s'" % [voice.stopped, voice.booked, _bubble.text])
 	var lines: int = _bubble._exchange.size()
 	_bubble._advance_exchange()
-	_t.check("the hello's next line stops the speaker before it, and its own speaker talks", voice.stopped == 4 and voice.booked == (5 if lines > 1 else 4),
+	_t.check("the hello's next line stops the speaker before it, and its own speaker talks", lines > 1 and voice.stopped == 4 and voice.booked == 5,
 		"lines %d, stopped %d, booked %d" % [lines, voice.stopped, voice.booked])
+	# The Warden's intro is the site crew's line: the fight going live takes it and its voice down.
+	_bubble.dismiss_exchange()
+	_bubble._intros_played.clear()
+	var booked := voice.booked
+	var cut := voice.stopped
+	events.warden_sighted.emit(_game.run.stage)
+	_bubble._process(0.1)
+	_t.check("the Warden's intro books the site crew's voice", _bubble._intro_showing and voice.booked == booked + 1 and voice.talking,
+		"bubble '%s', booked %d (was %d)" % [_bubble.text, voice.booked, booked])
+	cut = voice.stopped
+	events.warden_engaged.emit(_game.run.stage)
+	_t.check("the Warden waking stops the intro's voice", not _bubble._intro_showing and voice.stopped == cut + 1 and not voice.talking,
+		"stopped %d (was %d)" % [voice.stopped, cut])
 	_bubble.dismiss_exchange()
 	var stopped := voice.stopped
 	events.run_started.emit(flying)
