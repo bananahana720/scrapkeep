@@ -375,6 +375,8 @@ test("boss smoke boots each boss through the GPU queue on Vulkan with the queue'
   assert.ok(inner.includes('exec "$0" --gpu-index "$SCRAPKEEP_GPU_INDEX" "$@"'));
   assert.deepEqual(inner.slice(inner.indexOf("--rendering-driver"), inner.indexOf("--rendering-driver") + 2), ["--rendering-driver", "vulkan"]);
   assert.deepEqual(inner.slice(inner.indexOf("--display-driver"), inner.indexOf("--display-driver") + 2), ["--display-driver", "x11"]);
+  assert.deepEqual(inner.slice(inner.indexOf("--audio-driver"), inner.indexOf("--audio-driver") + 2), ["--audio-driver", "Dummy"]);
+  assert.ok(inner.indexOf("--audio-driver") < inner.indexOf("--script"), "an engine flag goes before --script");
   assert.equal(inner[inner.indexOf("--script") + 1], "res://tools/look_harness.gd");
   assert.equal(args.at(-1), "--boss=waking");
 });

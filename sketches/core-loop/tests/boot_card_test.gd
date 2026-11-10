@@ -6,7 +6,8 @@ extends SceneTree
 # back before the game is added; the game hands off and the 3D title's MENU_READY follows; a Start picked while
 # loading is honoured once the game is up; a close request mid-load waits for the load; and the
 # synchronous path (what a headless launch, a test or a bot takes) leaves no card and no errors at
-# quit on the main scene's 300-frame boot.
+# quit on the main scene's 300-frame boot. A build whose game does not load says so and exits with
+# code 1, with and without the card (tests/support/boot_broken_child.gd, one process a case).
 
 const T := preload("res://tests/support/t.gd")
 const TitleIntros := preload("res://src/presentation/title_intros.gd")
@@ -221,6 +222,18 @@ func _run() -> void:
 	var text := "\n".join(out)
 	var bad := RegEx.create_from_string("(?m)^(SCRIPT ERROR|ERROR)")
 	_t.check("the 300-frame boot of the main scene exits clean", code == 0 and bad.search(text) == null, "exit %d %s" % [code, text.substr(0, 400)])
+
+	# 6. A build whose game does not load. Each case runs in its own process, because the boot's
+	# answer is an error line and an exit code, and neither belongs in this test's own output.
+	for mode in ["sync", "missing", "play", "close"]:
+		var child_out := []
+		var child_code := OS.execute(OS.get_executable_path(), ["--headless", "--path", ProjectSettings.globalize_path("res://"), "--script", "res://tests/support/boot_broken_child.gd", "--", mode], child_out, true)
+		var child_text := "\n".join(child_out)
+		# The child's tail goes on one line: its ERROR line at a line start would fail this test's run.
+		var child_tail := child_text.right(400).replace("\n", " | ")
+		_t.check("a game that does not load (%s) ends the boot with code 1 and the failure line" % mode, child_code == 1 and child_text.contains("SCRAPKEEP_BOOT_FAILED"), "exit %d %s" % [child_code, child_tail])
+		if mode in ["play", "close"]:
+			_t.check("the card says so and offers Quit, with no game added (%s)" % mode, child_text.contains("BOOT_CHILD play=Quit disabled=false focus=true game=false status=This build did not load"), child_tail)
 
 	# 4. A close request mid-load waits for the load, a frame at a time.
 	var closes := []

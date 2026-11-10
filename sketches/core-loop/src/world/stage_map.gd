@@ -12,6 +12,10 @@ var spawn := Vector2.ZERO
 var heading := Vector3(0.0, 0.0, 1.0)
 var beacon := Vector2.ZERO
 var scrap_lines: Array = []
+# The line scrap is laid along to the beat (scrap_field.gd lay_trail), with no gears and no fabricator hoops:
+# {"points": PackedVector2Array, "spacing_m", "phrase", "rest", "gaps": [[from_m, to_m]] along the line where no piece
+# stands}. Empty for a map with none.
+var scrap_trail := {}
 # The flood's bowl: centre (Vector2), radius, depth (m of water at full), plane_size
 # (Vector2) and plane_centre (Vector2). Empty for a map with no basin.
 var basin := {}
