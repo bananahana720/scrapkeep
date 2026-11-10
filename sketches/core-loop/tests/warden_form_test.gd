@@ -211,7 +211,8 @@ func _drop_room() -> void:
 	_guard_reads(0.0, false, 2)
 	var at: int = _drops()[0] if _drops().size() == 1 else -1
 	t.check("the duck's drop is booked", at > 0, "drops=%s" % [_drops()])
-	t.check("no room before the drop's lead", _audio._drop_room_now().is_empty(), "clock=%d at=%d" % [_ace.clock, at])
+	if at - _ace.clock > int(0.1 * Ace.RATE) + Ace.GEN_LEAD:
+		t.check("no room before the drop's lead", _audio._drop_room_now().is_empty(), "clock=%d at=%d" % [_ace.clock, at])
 	_pump(at - _ace.clock)
 	t.eq("on the drop's beat the effects step back", _audio._drop_room_now(), {"SFX": -5.0})
 	var sfx_was := float(_audio.mix_db.get("SFX", 0.0))
@@ -232,6 +233,14 @@ func _drop_room() -> void:
 	_game.tuning.set_option(Tuning.DROP_ROOM_KEY, "off")
 	_audio._make_drop_room(_ace.clock + 100)
 	t.check("off clears it", _audio._drop_room_now().is_empty(), "room=%s" % [_audio._drop_room])
+	# A new band (a pack change) ends the room it did not book.
+	_game.tuning.set_option(Tuning.DROP_ROOM_KEY, "duck")
+	_audio._make_drop_room(_ace.clock + 100)
+	var booked = _audio.ace
+	_audio.ace = Ace.new()
+	t.check("a new band ends the room", _audio._drop_room_now().is_empty(), "room=%s" % [_audio._drop_room])
+	_audio.ace = booked
+	_game.tuning.set_option(Tuning.DROP_ROOM_KEY, "off")
 	_audio._tend_mix(2.0)
 	_bars(6)
 

@@ -775,10 +775,18 @@ func _make_drop_room(at: int) -> void:
 func _drop_room_now() -> Dictionary:
 	if _drop_room.is_empty():
 		return {}
-	if _drop_room[0] != ace or ace == null or ace.clock >= int(_drop_room[2]):
+	if _drop_room[0] != ace or ace == null:
 		_drop_room = []
 		return {}
-	return _drop_room[3] if ace.clock >= int(_drop_room[1]) else {}
+	# Timed on the sample the player hears, not the render head (as live_key reads the key).
+	var queued := 0
+	if live_output and _music_pb != null:
+		queued = _ring_capacity - _music_pb.get_frames_available()
+	var heard: int = ace.audible_sample(queued)
+	if heard >= int(_drop_room[2]):
+		_drop_room = []
+		return {}
+	return _drop_room[3] if heard >= int(_drop_room[1]) else {}
 
 
 # The effect voices sounding, counted once a frame (plus the ones started since).
