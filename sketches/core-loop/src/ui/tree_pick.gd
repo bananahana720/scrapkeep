@@ -5,6 +5,7 @@ const ChoiceButton := preload("res://src/ui/choice_button.gd")
 const TreeCard := preload("res://src/ui/tree_card.gd")
 const TreeCrumb := preload("res://src/ui/tree_crumb.gd")
 const UiFonts := preload("res://src/ui/ui_fonts.gd")
+const PickQuiet := preload("res://src/ui/pick_quiet.gd")
 
 # The upgrade pick: two cards and the path so far, over a veil. It only shows and
 # animates; workshop.gd decides when it opens and what a choice does. A click, a number
@@ -24,11 +25,19 @@ const CARD_GAP := 36.0
 # Says the screen is a choice, in the crew's voice; the briefing's start pick answers it
 # (workshop.gd BRIEF_WORDS).
 const HEADING := "Rig your kit. Pick one."
+# Under the heading while the card holds the game (the tree is paused), so a pick that opens
+# mid-fight does not read as a frozen picture.
+const HELD := "Paused"
+# The toast that names the kit once it is taken, through the HUD's existing toast row.
+const TAKEN_TOAST := "Kit: %s"
 
 var depth := 0
 var _veil: ColorRect
 var _column: VBoxContainer
 var _heading: Label
+var _held_line: Label
+var _hidden: Array = []
+var _offered: Array = []
 var _crumb
 var _row: HBoxContainer
 var _later: Button
@@ -65,6 +74,14 @@ func _init() -> void:
 	_heading.add_theme_color_override("font_color", Palette.SAND)
 	_heading.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_column.add_child(_heading)
+	_held_line = Label.new()
+	_held_line.text = HELD
+	_held_line.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_held_line.add_theme_font_override("font", UiFonts.bold())
+	_held_line.add_theme_font_size_override("font_size", 18)
+	_held_line.add_theme_color_override("font_color", Palette.AMBER)
+	_held_line.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_column.add_child(_held_line)
 	_crumb = TreeCrumb.new()
 	_crumb.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	_column.add_child(_crumb)
@@ -82,8 +99,19 @@ func _init() -> void:
 	_column.add_child(_later)
 
 
+func _ready() -> void:
+	var host = get_parent()
+	if host != null and host.get("game") != null:
+		host.game.events.tree_picked.connect(_on_picked)
+
+
 func is_open() -> bool:
 	return _open
+
+
+# The line that says the game is held while a card is up, and whether it shows.
+func held_text() -> String:
+	return _held_line.text if _held_line.is_visible_in_tree() else ""
 
 
 func cards() -> Array:
@@ -101,6 +129,9 @@ func open(class_id: String, pick_depth: int, nodes: Array, path: Array, color: C
 	_pad_ready = false
 	depth = pick_depth
 	visible = true
+	_offered = nodes
+	if _hidden.is_empty():
+		_hidden = PickQuiet.hush(get_parent())
 	for child in _row.get_children():
 		_row.remove_child(child)
 		child.queue_free()
@@ -109,6 +140,8 @@ func open(class_id: String, pick_depth: int, nodes: Array, path: Array, color: C
 		card.pressed.connect(func(): chosen.emit(i))
 		_row.add_child(card)
 	_crumb.set_path(class_id, path, nodes.map(func(n): return n["id"]), color, _world_one())
+	# The tree diagram has nothing to show before the first pick; it comes in with the second.
+	_crumb.visible = not path.is_empty()
 	_set_live(true)
 	var first: Array = cards()
 	if not first.is_empty():
@@ -143,7 +176,22 @@ func close(chosen_index := -1) -> void:
 	_generation += 1
 	_open = false
 	_set_live(false)
+	PickQuiet.restore(_hidden)
+	_hidden = []
 	_play_out(chosen_index)
+
+
+# A pick was taken: its card wears the taken mark before the screen leaves, and the kit's name
+# shows once on the HUD's toast row.
+func _on_picked(_class_id: String, node_id: String, _depth: int) -> void:
+	if not _open:
+		return
+	for card in cards():
+		if card.node_id() == node_id:
+			card.mark_taken()
+			var hud = get_parent().game.get("hud")
+			if hud != null:
+				hud.toast(TAKEN_TOAST % String(card.node.get("name", "")), Palette.SAND, "diamond", 3)
 
 
 func focused_index() -> int:

@@ -10,7 +10,7 @@ const UpgradeTree := preload("res://src/core/upgrade_tree.gd")
 # the shell unfitted a card must describe what the pick does alone and say nothing of fins.
 
 const CASES := [
-	["pylon_engineer", "s_cannonball", "s_face_runner", "Vaults restore jumps.", "Vaults restore jumps. Heavy fins steer harder."],
+	["pylon_engineer", "s_cannonball", "s_face_runner", "Kick off a wall to jump again.", "Kick off a wall to jump again. A heavier shell steers sharper."],
 	["demolitions_caster", "k_ghost", "k_smoke_trail", "Glide cloaked.", "Glide cloaked. Heavy fins steer harder."],
 	["runner_gunner", "r_juggernaut", "r_second_wind", "Bank two sprints.", "Bank two sprints. Heavy fins open during sprint."],
 ]
