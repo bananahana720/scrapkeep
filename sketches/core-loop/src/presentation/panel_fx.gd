@@ -13,12 +13,16 @@ const Palette := preload("res://src/core/palette.gd")
 
 const POP_LIFE := 1.2
 const POP_HEIGHT := 2.6
-const POP_SIZE := 1.1
-const POP_SIZE_REDUCED := 0.8
+# The pop's letters stand about 4.6 percent of the view's height, six tenths of the player's
+# ordinary hit word (player_fx.gd WORD_SCREEN), and the longest line 3.3: picked from five
+# measured candidates on 10 Nov 2026 (design-v3/SIGHT-PERSONA.md section 7, "A taste call").
+const POP_SIZE := 0.5
+const POP_SIZE_REDUCED := 0.4
 # A pop that lands while the last one is still up takes the other of POP_ROWS lines, POP_LINE higher,
 # so two pickups in a row never print on top of each other. Two lines only: at the play camera a third
-# would stand across the objective plate.
-const POP_LINE := 1.5
+# would stand across the objective plate. The step is about one and a half of the pop's letter lines
+# (0.48 m at POP_SIZE), which keeps the upper line under the hint line below the objective plate.
+const POP_LINE := 0.7
 const POP_ROWS := 2
 const STREAK_MS := 2000
 const PHRASE_LENGTH := 8

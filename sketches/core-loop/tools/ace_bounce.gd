@@ -25,7 +25,7 @@ const RATE := 44100.0
 #     (stop sample - origin) mod beat says where in the beat the band stopped.
 #   [s, "run_over", outcome]   the tick the tail starts on
 # cue_rows lists every cue with a start sample since the recording began, in order:
-# [seconds of the WAV, kind, sound, "now" | "beat" | "music" | ...].
+# [seconds of the WAV, kind, sound, "now" | "beat" | "music" | ..., pitch, level in dB or null].
 
 var _settings := {}
 var _game
@@ -119,12 +119,13 @@ static func _cue_counts(rows: Array) -> Dictionary:
 	return counts
 
 
-# Cues with a start sample inside the recording, timed in seconds of the WAV.
+# Cues with a start sample inside the recording, timed in seconds of the WAV, each with the
+# pitch and the level the game played it at (tools/mix/mixsim.py places them from these).
 func _cue_rows(rows: Array) -> Array:
 	var out := []
 	for row in rows:
 		if row.size() > 3 and int(row[3]) >= _base_sample:
-			out.append([snappedf((int(row[3]) - _base_sample) / RATE, 0.001), row[0], row[1], row[2]])
+			out.append([snappedf((int(row[3]) - _base_sample) / RATE, 0.0001), row[0], row[1], row[2], row[4] if row.size() > 4 else 1.0, row[5] if row.size() > 5 else null])
 	return out
 
 

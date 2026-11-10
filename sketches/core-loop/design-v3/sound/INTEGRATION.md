@@ -170,6 +170,19 @@ After, each behind a switch and read on bot bands with the switch off and on, on
 - A crowd body may land up to one beat later than its ring second (0.35 s at 172, 0.47 s at 129), never earlier.
 - An offer, the elite's arrival or a clock rise may wait for the phrase, up to one bar, as `on_bar` park rows do today.
 
+**What one beat of slack costs, measured (systems thread, 10 November 2026).** A probe branch that never stacks (local commit cf492836, from stage d45adc8e) stretched each crowd body's 1.0 s ground ring so the body landed on the next 172 beat, later only: up to 0.349 s late, 0.17 s on average, behind a switch. The dam Warden, Novice band, seeds 40300 to 40347, the same tree each way:
+
+| Switch | Wins of 48 | Died | Hit the fight cap |
+| --- | --- | --- | --- |
+| Off | 20 (42%) | 13 | 15 |
+| On | 16 (33%) | 12 | 20 |
+
+- Seed by seed, 23 of 48 runs end the same way; 8 wins were lost and 4 gained. An exact paired test gives p = 0.39, so the two arms are not told apart. Deaths did not move: the lean is toward slower fights, not deadlier ones.
+- The runs are deterministic (17 off seeds run twice, once under heavy load, gave identical results), so the difference between the arms is the switch.
+- It does not show the slack is free: calling a 9 point gap either way needs about four times the seeds. So landing on the grid is read on 96 seeds an arm against the Novice ceiling before it is turned on.
+- It confirms why the conductor's timing does not move before the sitting: any timing change redraws about half the Novice seeds (25 of 48 here).
+- The probe counted beats from the stage's start, not from the band's transport. It measures what the delay costs the game, not whether the body lands on the band's beat; the real change asks `park_transport` for the grid.
+
 ### Before and after the world 1 sitting
 
 Before: the conductor's timing does not change, and the band reads only the names above. The band's one change is the Warden form on the recorded band, behind its switch.

@@ -15,10 +15,17 @@ const WorldLook := preload("res://src/presentation/world_look.gd")
 #     --script res://tools/fx_capture.gd -- --out=/abs/dir [--reduce-flashes] [--only=id,id] [--freeze=0.35]
 # Writes <id>.png and frames.json. One still cannot show how an effect starts, moves or ends, so
 # run it once per --freeze (0.1, 0.35, 0.6 and 0.85 of the life, one --out each) for a strip over time.
+# Each frame row carries drawn_px and contrast: how many pixels the effect changed against the
+# empty stage, and by how much on average (of 255; a pixel counts when it moved more than DRAWN, so 0 or 21
+# and over). An effect nobody could see reads 0 or a handful; a pale effect on pale sand reads a low contrast. Compare them on the machine that
+# renders the real look (the PC), not across machines.
 
 const SIZE := Vector2i(640, 400)
 const FREEZE := 0.35
 const ROW_KIND := "enemy_struck"
+# A pixel counts as drawn when a channel moved this far from the empty stage, of 255: over the
+# flicker of one still against the next, under the faintest dust.
+const DRAWN := 20
 
 var out := ""
 var freeze := FREEZE
@@ -27,6 +34,7 @@ var records := []
 var camera: Camera3D
 var stage: Node3D
 var world_row := 1
+var _empty := PackedByteArray()
 
 
 func _initialize() -> void:
@@ -112,6 +120,9 @@ func _run() -> void:
 	camera.current = true
 	camera.fov = 50.0
 	camera.look_at_from_position(Vector3(0.0, 3.2, 7.5), Vector3(0.0, 1.1, 0.0))
+	for i in 6:
+		await RenderingServer.frame_post_draw
+	_empty = _bytes(root.get_texture().get_image())
 	for id in FxLibrary.SPECS:
 		if only.is_empty() or id in only:
 			await _spec_shot(id)
@@ -156,6 +167,8 @@ func _burst_shot(vfx, kind: String) -> void:
 	for p in vfx._bursts[kind]:
 		p.emitting = false
 		p.speed_scale = 1.0
+	# What this burst threw dies before the next still, so the next count is its own.
+	await create_timer(float(spec["life"]) + 0.1).timeout
 
 
 func _save(id: String) -> void:
@@ -165,4 +178,24 @@ func _save(id: String) -> void:
 	var path := out.path_join(id + ".png")
 	if image.save_png(path) != OK:
 		quit(3)
-	records.append({"id": id, "sha256": FileAccess.get_sha256(path)})
+	var seen := _drawn(_bytes(image))
+	records.append({"id": id, "sha256": FileAccess.get_sha256(path), "drawn_px": seen.x, "contrast": seen.y})
+
+
+static func _bytes(image: Image) -> PackedByteArray:
+	image.convert(Image.FORMAT_RGB8)
+	return image.get_data()
+
+
+# (pixels the effect changed against the empty stage, their mean change of 255).
+func _drawn(bytes: PackedByteArray) -> Vector2i:
+	if bytes.size() != _empty.size():
+		return Vector2i(-1, -1)
+	var count := 0
+	var total := 0
+	for i in range(0, bytes.size(), 3):
+		var moved := maxi(absi(bytes[i] - _empty[i]), maxi(absi(bytes[i + 1] - _empty[i + 1]), absi(bytes[i + 2] - _empty[i + 2])))
+		if moved > DRAWN:
+			count += 1
+			total += moved
+	return Vector2i(count, roundi(float(total) / count) if count > 0 else 0)

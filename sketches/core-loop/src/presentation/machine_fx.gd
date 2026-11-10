@@ -105,10 +105,14 @@ const WORD_LIFE := 0.9
 const WORD_SLAM := 0.06
 const WORD_GAP := 0.4
 const WORD_HEIGHT := 3.2
-# No word holds wider than this share of the view (its slam, the first WORD_SLAM seconds, may
-# pass it, up to 0.96). Words are sized in metres, so one stamped beside the camera (a panel
-# pickup's three-word pop sits at the ball) was a wall of letters over the HUD.
-const WORD_FIT := 0.6
+# No word holds wider on screen than this share of the view's HEIGHT (its slam, the first
+# WORD_SLAM seconds, may pass it, up to 1.6 times). Words are sized in metres, so one stamped
+# beside the camera (a panel pickup's pop sits at the ball) was a wall of letters over the HUD.
+# The room is a share of the height, as the player's own words are sized (player_fx.gd
+# WORD_SCREEN), so letters stand as tall on an ultrawide screen as on 16:9: 0.9 of the height is
+# 0.51 of a 16:9 view's width and 0.38 of a 21:9 view's. Every machine word shares this room
+# (hits, tells, a boss's phase and fall words), not only the pickup's pop.
+const WORD_FIT := 0.9
 const HIT_GAP := 0.12
 const HITS_PER_TENTH := 8
 const DAZE_SPIN := 4.0
@@ -387,14 +391,14 @@ func _draw_word(slot: Dictionary) -> void:
 	label.outline_modulate.a = 1.0 - leave
 
 
-# `size`, held down so the word at `at` is no wider on screen than WORD_FIT of the view.
+# `size`, held down so the word at `at` is no wider on screen than WORD_FIT of the view's height.
 func _fit(slot: Dictionary, at: Vector3, size: float) -> float:
 	var cam := get_viewport().get_camera_3d() if is_inside_tree() else null
 	var width_m: float = float(slot.get("width_px", 0.0)) * (slot["node"] as Label3D).pixel_size * size
 	if cam == null or width_m <= 0.0 or cam.is_position_behind(at):
 		return size
 	var px_per_m := cam.unproject_position(at + cam.global_basis.x).distance_to(cam.unproject_position(at))
-	var room := get_viewport().get_visible_rect().size.x * WORD_FIT
+	var room := get_viewport().get_visible_rect().size.y * WORD_FIT
 	return size if width_m * px_per_m <= room else size * room / (width_m * px_per_m)
 
 
