@@ -10,6 +10,8 @@ const LoreRows := preload("res://src/core/lore_rows.gd")
 # read. Found on film at the flume: the Warden's reveal card comes up over the crew's hello, in
 # the bubble's place, on the sighting that also brings the Warden's own line.
 #
+#   W0     the story hears a sighting before the bubble does, so the reveal card is already
+#          reading when the bubble asks and the Warden's line never shows for a frame under it
 #   W1-W3  the film's case, by the game's real sighting: the flume Warden's reveal card comes up
 #          over the crew's hello; the hello goes down, the Warden's line waits, and both take
 #          their turns when the card has gone
@@ -18,8 +20,9 @@ const LoreRows := preload("res://src/core/lore_rows.gd")
 #   H3-H6  a hello that is up when a beat starts goes down, keeps its line, leaves the talk key
 #          to the world, and comes back at the same line
 #   H7     cruise speed leaves a held hello behind, as it leaves one that is up
-#   H8     the Warden's engagement ends a held hello
+#   H8-H9  the Warden's engagement and a shot end a held hello
 #   B1     a boss's line is not held by a card (ruling cf: his line follows his picture)
+#   B2     an intro waits behind a hello that is waiting its own turn
 
 const SETTLE_FRAMES := 12
 const DT := 0.1
@@ -103,6 +106,10 @@ func _wardens_line() -> void:
 	_bubble._process(DT)
 	var hello: String = _bubble.text
 	_t.check("the flume crew's hello is up", _bubble.visible and _bubble._exchange.size() > 1 and _bubble._exchange_index == 0, "bubble '%s'" % hello)
+	var heard: Array = _game.events.warden_sighted.get_connections().map(func(c): return c["callable"].get_object())
+	var story: int = heard.find(_game.presentation.spillway_story)
+	_t.check("W0 the story hears a sighting before the bubble", story >= 0 and story < heard.find(_bubble),
+		"story %d, bubble %d of %d listeners" % [story, heard.find(_bubble), heard.size()])
 	_game.flow._read_sighting(_game.flow._warden_at)
 	_t.check("W1 the flume Warden's sighting plays its reveal card", _beat.id == "flume_warden_reveal" and _game.presentation.reading(),
 		"beat '%s', reading %s" % [_beat.id, _game.presentation.reading()])
@@ -174,6 +181,14 @@ func _hellos() -> void:
 	_bubble._process(DT)
 	_t.check("H8 the Warden's engagement ends a held hello", held and _bubble._exchange.is_empty() and not _bubble.visible,
 		"held %s, bubble '%s'" % [held, _bubble.text])
+	_hello()
+	_beat.play(BEAT)
+	_bubble._process(DT)
+	held = not _bubble.visible and not _bubble._exchange.is_empty()
+	_press("cl_fire")
+	_beat.stop_all()
+	_bubble._process(DT)
+	_t.check("H9 a shot ends a held hello", held and _bubble._exchange.is_empty() and not _bubble.visible, "held %s, bubble '%s'" % [held, _bubble.text])
 
 
 func _boss_line() -> void:
@@ -181,5 +196,17 @@ func _boss_line() -> void:
 	_beat.play(BEAT)
 	_game.events.boss_arena_entered.emit()
 	_t.check("B1 a boss's line comes up beside a card", _game.presentation.reading() and _showing(line), "bubble '%s'" % _bubble.text)
+	_bubble._end_intro()
+	# The same line again, this time with a hello waiting for the card.
+	_bubble._intros_played.clear()
+	_hello()
+	_game.events.boss_arena_entered.emit()
+	_bubble._process(DT)
+	var waits: bool = not _bubble.visible and _bubble._hello_due == _game.run.stage and _bubble._intro_queue.size() == 1
 	_beat.stop_all()
+	_bubble._process(DT)
+	var hello_first: bool = _bubble.visible and not _bubble._exchange.is_empty() and _bubble._intro_queue.size() == 1
+	_bubble.dismiss_exchange()
+	_t.check("B2 an intro waits behind a hello that is waiting its turn, then follows it", waits and hello_first and _showing(line),
+		"waited %s, hello first %s, bubble '%s'" % [waits, hello_first, _bubble.text])
 	_bubble._end_intro()

@@ -256,7 +256,9 @@ func _close_up() -> bool:
 
 
 func _flush_intro() -> void:
-	if _intro_queue.is_empty() or not _exchange.is_empty() or _waits():
+	# An intro waits out an exchange, and so a hello that is waiting its own turn (_hello_due)
+	# goes first: the hello would otherwise take the bubble from the intro a frame later.
+	if _intro_queue.is_empty() or not _exchange.is_empty() or _hello_due > 0 or _waits():
 		return
 	if _yields(_intro_queue[0]) and _reading():
 		return
@@ -333,7 +335,8 @@ func _exchange_input(event: InputEvent) -> void:
 	if _exchange.is_empty():
 		return
 	if event.is_action_pressed("cl_interact"):
-		# A held hello shows no line to advance, so the key stays the world's.
+		# A held hello shows no line to advance, so the key stays the world's: there it skips
+		# the beat as any spare key does (flourish_player.gd), and the hello comes back.
 		if _exchange_held:
 			return
 		_advance_exchange()

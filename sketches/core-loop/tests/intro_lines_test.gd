@@ -157,7 +157,8 @@ func _physics_process(_delta: float) -> bool:
 			_t.check("interact dismisses the intro", _silent(), _bubble.text)
 			_game.events.boss_arena_entered.emit()
 			_t.check("arena entry twice in a run shows nothing", _silent(), _bubble.text)
-			# The arena's own beat would hold the Warden's line; no game sights a Warden after it.
+			# The arena's own beat would hold the Warden's line. Arena, then a sighting, is this
+			# test's order and not a run's.
 			_game.presentation.flourish.stop_all()
 			_sight()
 			_t.check("Reach Warden line shows at the sighting", _showing(reach_warden), _bubble.text)

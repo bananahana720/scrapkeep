@@ -126,11 +126,13 @@ func _run() -> void:
 	paused = true
 	_game.player.source = Intent.Scripted.new()
 	await _frames(3)
-	var hushed: bool = flow.in_stage() and not opening.live and not _moss_up()
+	# The cold open's card would hold the hello too (B1), so it goes first and the bubble is
+	# asked again: what holds the hello now is the pause alone.
+	flourish.stop_all()
+	_bubble()._process(0.0)
+	var hushed: bool = flow.in_stage() and not opening.live and not _game.presentation.reading() and not _moss_up()
 	paused = false
 	_game.player.set_velocity_now(Vector3.ZERO)
-	# The cold open's words are B1's; this is the pause.
-	flourish.stop_all()
 	await _frames(3)
 	_t.check("P1 without the take, Moss holds his hello while a screen pauses the drop", hushed and _moss_up(), "held %s, then Moss %s" % [hushed, _moss_up()])
 
