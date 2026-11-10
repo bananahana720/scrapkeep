@@ -1,6 +1,6 @@
 extends SceneTree
 
-# A kind's death debris boxes draw with BakeLook.unbaked twins of its body's materials, and on the
+# A kind's death debris boxes (a body of fewer than two parts throws boxes) draw with BakeLook.unbaked twins of its body's materials, and on the
 # 4080 the first use of a twin compiled its look's shader in the death frame (about 11 ms each for
 # the first chaser and lobber at dam f3870, #587 comment 6509692838). BakeWarm.death_warm, run on a
 # spawn warm once its kit is dressed, makes and uses those twins ahead; a later death of the kind
@@ -44,8 +44,11 @@ func _run() -> void:
 		await process_frame
 		var enemy: Node3D = live.get_child(0)
 		var found := _found(enemy, kind, warmed)
-		_t.check("%s: the warm made its body's debris twins" % kind, made > 0 and warmed.size() > 0, "%d made, %d looks" % [made, warmed.size()])
-		_t.check("%s: a death at rest draws its boxes with warmed looks" % kind, found.y > 0 and found.x == found.y, "%d of %d boxes" % [found.x, found.y])
+		# A body of two or more parts throws its own parts (again, smaller, once they run out) and no
+		# boxes at all: nothing new to compile.
+		if found.y > 0:
+			_t.check("%s: the warm made its body's debris twins" % kind, made > 0 and warmed.size() > 0, "%d made, %d looks" % [made, warmed.size()])
+		_t.check("%s: a death at rest draws its boxes with warmed looks" % kind, found.x == found.y, "%d of %d boxes" % [found.x, found.y])
 		live.free()
 		# Another one killed mid hit-flash: its owned body paint glows, and its twin is copied glowing.
 		var lit := BakeWarm.spawn_view(kit, world, null, null)
@@ -54,7 +57,7 @@ func _run() -> void:
 		hit.flash()
 		hit._update_flash(0.016)
 		found = _found(hit, kind, warmed)
-		_t.check("%s: a death mid hit-flash draws its boxes with warmed looks" % kind, found.y > 0 and found.x == found.y, "%d of %d boxes" % [found.x, found.y])
+		_t.check("%s: a death mid hit-flash draws its boxes with warmed looks" % kind, found.x == found.y, "%d of %d boxes" % [found.x, found.y])
 		lit.free()
 	quit(_t.verdict())
 

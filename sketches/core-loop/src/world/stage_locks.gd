@@ -415,6 +415,10 @@ func _hold_ball() -> void:
 	ctx.player.add_external_accel(-n * minf(WALL_ACCEL_CAP, WALL_SPRING * (dist - radius) + WALL_DAMP * maxf(outward, 0.0)))
 
 
+# How solid the fence is at its foot.
+const FENCE_ALPHA := 0.3
+
+
 func _build_wall(radius: float) -> void:
 	_drop_wall()
 	_wall = Node3D.new()
@@ -430,7 +434,7 @@ func _build_wall(radius: float) -> void:
 	tube.cap_bottom = false
 	tube.radial_segments = 64
 	shell.mesh = tube
-	shell.material_override = Palette.unshaded(Color(Palette.HAZARD, 0.22))
+	shell.material_override = _fence_material()
 	shell.position = Vector3.UP * WALL_HEIGHT * 0.5
 	_wall.add_child(shell)
 	var rim := MeshInstance3D.new()
@@ -439,11 +443,32 @@ func _build_wall(radius: float) -> void:
 	band.outer_radius = radius + 0.25
 	band.rings = 96
 	rim.mesh = band
-	rim.material_override = Palette.unshaded(Palette.HAZARD)
-	rim.position = Vector3.UP * WALL_HEIGHT
+	rim.material_override = Palette.unshaded(Color(Palette.SAND, 0.55))
+	# On the ground, where the fence is strongest: on top, over a fence faded to nothing, three of
+	# three blind readers took the floating bone band for a stray line.
+	rim.position = Vector3.UP * 1.3
 	_wall.add_child(rim)
 	_wall_rise = 0.0
 	_wall.scale = Vector3(1.0, 0.01, 1.0)
+
+
+# The lock wall is a fence, not a threat: it hurts nothing, it only holds you in the yard. HAZARD is
+# for hostile danger areas and nothing else (VISUAL-LANGUAGE section 2), and 11 of 12 blind readers
+# took the red wall for a mistake or an unexplained warning (sight's danger read, 10 Nov 2026). Worn
+# bone, strongest at the ground and gone at the top, so it stands as a fence line and not a sheet.
+static func _fence_material() -> StandardMaterial3D:
+	var mat := Palette.unshaded(Color(1.0, 1.0, 1.0, 0.99))
+	var ramp := Gradient.new()
+	ramp.set_color(0, Color(Palette.SAND, 0.0))
+	ramp.set_color(1, Color(Palette.SAND, FENCE_ALPHA))
+	var texture := GradientTexture2D.new()
+	texture.gradient = ramp
+	texture.fill_from = Vector2(0.0, 0.0)
+	texture.fill_to = Vector2(0.0, 1.0)
+	texture.width = 4
+	texture.height = 64
+	mat.albedo_texture = texture
+	return mat
 
 
 func _drop_wall() -> void:

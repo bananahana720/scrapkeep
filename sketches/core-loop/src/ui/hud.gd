@@ -59,7 +59,7 @@ class CogChip extends Control:
 
 	func _draw() -> void:
 		var mid := size.y * 0.5
-		draw_texture_rect(Icons.texture(ICON), Rect2(Vector2(0.0, mid - 10.0), Vector2(20.0, 20.0)), false, Icons.tint(ICON, COLOR))
+		UiDraw.icon(self, Icons.texture(ICON), Rect2(Vector2(0.0, mid - 10.0), Vector2(20.0, 20.0)), Icons.tint(ICON, COLOR))
 		UiDraw.text(self, 26.0, mid, str(amount), 18, Palette.SAND, true)
 
 

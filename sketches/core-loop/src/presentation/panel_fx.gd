@@ -18,9 +18,11 @@ const POP_HEIGHT := 2.6
 # measured candidates on 10 Nov 2026 (design-v3/SIGHT-PERSONA.md section 7, "A taste call").
 const POP_SIZE := 0.5
 const POP_SIZE_REDUCED := 0.4
-# A pop that lands while the last one is still up takes the other of POP_ROWS lines, POP_LINE higher,
-# so two pickups in a row never print on top of each other. Two lines only: at the play camera a third
-# would stand across the objective plate. The step is about one and a half of the pop's letter lines
+# A pop that lands while the last one is still up takes the next free one of POP_ROWS lines, POP_LINE
+# higher, so pickups in a row never print on top of each other. Two lines only: at the play camera a
+# third would stand across the objective plate. While both lines are held a pop waits for one to clear
+# (a cleared camp drops several panels at once, and a third pop on the bottom line printed over the
+# first, play finding from the goal plate film). The step is about one and a half of the pop's letter lines
 # (0.48 m at POP_SIZE), which keeps the upper line under the hint line below the objective plate.
 const POP_LINE := 0.7
 const POP_ROWS := 2
@@ -39,8 +41,9 @@ var _last_ms := -100000
 var _phrase_seed := -1
 # [id, rung, jackpot] per pickup, for tests and captures.
 var played: Array = []
-var _pop_row := -1
-var _pop_left := 0.0
+# Seconds each pop line is still held, and the pops waiting for a line: [panel_id, jackpot].
+var _row_left: Array = []
+var _waiting: Array = []
 
 
 func setup(ctx_ref, audio_ref, machine_fx_ref) -> void:
@@ -49,7 +52,13 @@ func setup(ctx_ref, audio_ref, machine_fx_ref) -> void:
 	machine_fx = machine_fx_ref
 	name = "PanelFx"
 	ctx.events.panel_gained.connect(_on_panel_gained)
-	ctx.events.run_started.connect(func(_class_id: String): streak = 0)
+	ctx.events.run_started.connect(_on_run_started)
+
+
+func _on_run_started(_class_id: String) -> void:
+	streak = 0
+	_waiting.clear()
+	_row_left.clear()
 
 
 # The run's phrase: PHRASE_LENGTH rungs of the reward pentatonic, seeded from the run seed.
@@ -84,19 +93,39 @@ func _on_panel_gained(panel_id: String, _count: int, _at: Vector3, jackpot: bool
 		audio.play("panel_gained", 0.0, Harmony.ratio(Harmony.pentatonic_step(rung)), "SFX", "panel_note")
 		if jackpot:
 			audio.play("panel_gained", 0.0, 1.0, "SFX", "panel_jackpot")
-	if machine_fx != null and ctx.player != null:
+	_waiting.append([panel_id, jackpot])
+	_release()
+
+
+# Shows waiting pops while a line is free, oldest first.
+func _release() -> void:
+	while not _waiting.is_empty():
+		var lift := next_pop_lift()
+		if lift < 0.0:
+			return
+		var pop: Array = _waiting.pop_front()
+		if machine_fx == null or ctx == null or ctx.player == null:
+			continue
 		var reduced: bool = machine_fx.reduced_motion
-		machine_fx.word(Panels.pop_text(panel_id), ctx.player.shown_position() + Vector3.UP * (POP_HEIGHT + next_pop_lift()),
-			Palette.AMBER if jackpot else Palette.SAND, true, POP_LIFE, POP_SIZE_REDUCED if reduced else POP_SIZE)
+		machine_fx.word(Panels.pop_text(pop[0]), ctx.player.shown_position() + Vector3.UP * (POP_HEIGHT + lift),
+			Palette.AMBER if pop[1] else Palette.SAND, true, POP_LIFE, POP_SIZE_REDUCED if reduced else POP_SIZE)
 
 
-# How far above POP_HEIGHT the next pop stands: nothing when no pop is up, else the line after the
-# last one's, back to the bottom line after POP_ROWS (the bottom pop is the oldest by then).
+# How far above POP_HEIGHT the next pop stands, holding that line for POP_LIFE: the lowest free line,
+# or -1 while every line is held.
 func next_pop_lift() -> float:
-	_pop_row = (_pop_row + 1) % POP_ROWS if _pop_left > 0.0 else 0
-	_pop_left = POP_LIFE
-	return _pop_row * POP_LINE
+	if _row_left.size() != POP_ROWS:
+		_row_left.resize(POP_ROWS)
+		_row_left.fill(0.0)
+	for row in POP_ROWS:
+		if float(_row_left[row]) <= 0.0:
+			_row_left[row] = POP_LIFE
+			return row * POP_LINE
+	return -1.0
 
 
 func _process(delta: float) -> void:
-	_pop_left = maxf(_pop_left - delta, 0.0)
+	for row in _row_left.size():
+		_row_left[row] = maxf(float(_row_left[row]) - delta, 0.0)
+	if not _waiting.is_empty():
+		_release()
