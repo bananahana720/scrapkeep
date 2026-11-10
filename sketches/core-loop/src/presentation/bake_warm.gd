@@ -8,11 +8,15 @@ extends Node
 # finds later. On screen a rigged kit (SpecialRig.seat) draws its GLB's own scene instead, so
 # that scene is held, as hero_assets holds the Warden scenes, and its meshes readied the same way.
 # Materials are left to dress: a twin depends on how the spawn uses its surfaces.
-# The kinds stage 1 spawns are then each built once more, as a spawn builds them (the kit's own
-# setup(), dressed by its own deferred bake), in an inert holder far under the stage for one frame,
-# so the render pipelines their surfaces need compile then and not at the first spawn's first
-# frame (six surface pipelines at f451 on the 4080; #241 comment 6399644476). The holder stands a
-# second frame with the kind's death debris boxes in it (death_warm).
+# The kinds the stage can send (Director.kinds_sent: its packs and its elite) are then each built
+# once more, as a spawn builds them (the kit's own setup(), dressed by its own deferred bake), in an
+# inert holder far under the stage for one frame, so the render pipelines their surfaces need
+# compile then and not at the first spawn's first frame (six surface pipelines at f451 on the 4080;
+# #241 comment 6399644476). The holder stands a second frame with the kind's death debris boxes in
+# it (death_warm). A kind stands once a session, at the first stage that can send it. Until
+# 10 November 2026 the list was the dam's ordinary packs by hand, and the elite's plated brute, the
+# one skinned body among them, built its pipelines the frame the dropship landed it (77 to 81 ms on
+# the 4080, seed 40317 f4345, three runs of three).
 # After them come the run's first moments, once a session: the first kill's scrap pickups, the
 # first armour read (its class icon and stamp words), the first synergy ring and the first arc
 # mark each draw a material nothing else drew before, and on the 4080 a lock pack's first multi-kill
@@ -28,6 +32,7 @@ const AppShell := preload("res://src/core/app_shell.gd")
 const BakeLook := preload("res://src/presentation/bake_look.gd")
 const SimClock := preload("res://src/core/sim_clock.gd")
 const Terrain := preload("res://src/world/terrain.gd")
+const Director := preload("res://src/world/director.gd")
 const EnemyMotion := preload("res://src/presentation/enemy_motion.gd")
 const ArmourMarks := preload("res://src/presentation/armour_marks.gd")
 const Vfx := preload("res://src/presentation/vfx.gd")
@@ -61,9 +66,6 @@ const WORLD_RIGS := {
 	],
 }
 
-# Stage 1's pack kinds (alpha_defs PACKS_DAM; its elite and set pieces are not here), by kind
-# name: the ones the warm also builds once.
-const SPAWN_WARM := ["chaser", "lobber", "mag_trapper", "jolt_layer", "hooker", "ramp_flipper", "boom_tender"]
 # The first moments with a view, in the order the warm builds them, one a frame; then each codex
 # category icon ("codex_icon:<category>"), one a frame. "hero_chunks" starts a threaded load of the kill
 # chunks' glb and holds it when done, so the first discovery burst reads it from the cache, not the disk.
@@ -74,6 +76,8 @@ const GLYPHS_A_FRAME := 4
 const OUT_OF_SIGHT := Vector3(0.0, -10000.0, 0.0)
 
 static var _warm := {}
+# Kinds a spawn warm has stood, so each stands once a session.
+static var _stood := {}
 # Rig scenes held for the session, so every spawn's load() returns the scene whose meshes were readied.
 static var _held := {}
 # Threaded loads a first started, held once done.
@@ -86,6 +90,10 @@ static var _glows: Array[Material] = []
 
 var ctx
 var _queue: Array = []
+# The kinds the entered stage can send that have not stood yet.
+var _to_stand: Array = []
+# The kind whose spawn warm is standing now.
+var _standing := ""
 var _first_queue: Array = []
 var _shown: Node3D
 
@@ -93,6 +101,9 @@ var _shown: Node3D
 static func hook(ctx_ref) -> void:
 	var node := new()
 	node.name = "BakeWarm"
+	# The run's briefing pauses the tree a few frames after the stage is entered. The warm goes on
+	# under it, behind a still picture, and not in the first frames the player rolls.
+	node.process_mode = Node.PROCESS_MODE_ALWAYS
 	node.ctx = ctx_ref
 	ctx_ref.root.add_child(node)
 	ctx_ref.events.stage_entered.connect(node._on_stage_entered)
@@ -104,8 +115,11 @@ func _on_stage_entered(stage: int, _retry: bool) -> void:
 	for row in ctx.stages.DEFS:
 		if row["stage"] == stage:
 			var world := int(row.get("world", 0))
+			_to_stand = Director.kinds_sent(row, ctx.stages).filter(func(kind) -> bool: return not _stood.has(kind))
+			_to_stand.erase(_standing)
 			for item in WORLD_KITS.get(world, []) + (WORLD_RIGS.get(world, []) if EnemyMotion.active() else []):
-				if not _warm.has(item) and not _queue.has(item):
+				var owed: bool = not _warm.has(item) or (item is Script and kind_of(item) in _to_stand)
+				if owed and not _queue.has(item):
 					_queue.append(item)
 			if not _firsts_done and _first_queue.is_empty():
 				_first_queue = firsts()
@@ -139,12 +153,18 @@ func _process(_delta: float) -> void:
 			_shown.set_meta("debris_warm", true)
 			death_warm(_shown)
 			return
+		# Stood only now, with both frames drawn: a warm node freed part way leaves the kind to the next.
+		if _standing != "":
+			_stood[_standing] = true
+			_standing = ""
 		_shown.queue_free()
 		_shown = null
 	if not _queue.is_empty():
 		var item = _queue.pop_front()
 		warm(item)
-		if item is Script and kind_of(item) in SPAWN_WARM:
+		if item is Script and kind_of(item) in _to_stand:
+			_standing = kind_of(item)
+			_to_stand.erase(_standing)
 			# Held before setup runs, so a setup that fails still leaves, two frames on.
 			_shown = spawn_holder(self)
 			spawn_into(item, _shown, ctx.player, ctx.spawner.get("ground") if ctx.spawner != null else null)
@@ -208,9 +228,9 @@ static func first_view(first: String, parent: Node) -> Node3D:
 
 # A kit as a spawn builds it, under `parent`: Combat.spawn_enemy's add then setup() (an empty spec
 # but its kind), so its body, paint and extras are the live ones, and its own deferred bake
-# dresses it. The holder never processes, and the kit leaves the enemy group and every collision
-# layer, so nothing in play finds it; the holder is its world root, so nothing it builds lands
-# in the stage.
+# dresses it. The holder never processes, and the kit and everything it built leave the enemy
+# group and every collision layer, so nothing in play finds it; the holder is its world root and
+# the body is put back under it after setup, so nothing it builds lands in the stage.
 static func spawn_view(kit: Script, parent: Node, target, ground) -> Node3D:
 	var holder := spawn_holder(parent)
 	spawn_into(kit, holder, target, ground)
@@ -231,10 +251,17 @@ static func spawn_into(kit: Script, holder: Node3D, target, ground) -> void:
 	var enemy: Node3D = kit.new()
 	holder.add_child(enemy)
 	enemy.setup(target, ground, holder, func() -> bool: return false, 1.0, {"kind": kind_of(kit)})
+	# A kit may seat itself on the ground it is handed (the dispatcher climbs its mast, which put a
+	# stood one on the stage at the map's origin): the body goes back under the holder, and every
+	# collider it built (the mast is terrain to the ball) leaves its layers with it.
+	enemy.position = Vector3.ZERO
 	enemy.remove_from_group("enemy")
-	if enemy is CollisionObject3D:
-		enemy.collision_layer = 0
-		enemy.collision_mask = 0
+	var bodies: Array = enemy.find_children("*", "CollisionObject3D", true, false)
+	bodies.append(enemy)
+	for body in bodies:
+		if body is CollisionObject3D:
+			body.collision_layer = 0
+			body.collision_mask = 0
 
 
 # A kind's death debris boxes draw with BakeLook.unbaked twins of its body's materials

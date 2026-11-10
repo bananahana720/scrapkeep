@@ -13,8 +13,16 @@ const GameEvents := preload("res://src/core/game_events.gd")
 const Context := preload("res://src/core/context.gd")
 const SimClock := preload("res://src/core/sim_clock.gd")
 const EnemyMotion := preload("res://src/presentation/enemy_motion.gd")
+const Director := preload("res://src/world/director.gd")
+const ParkDefs := preload("res://src/core/park_defs.gd")
 
-const TABLE := {"DEFS": [{"stage": 1, "world": 1, "map": "park_test"}, {"stage": 2, "world": 2, "map": "park_test"}]}
+# The dam's and the flume's own packs and elite on a bare table: stage 3 is the flume, entered
+# after the dam, so only the kinds the dam cannot send are new to it.
+const TABLE := {"DEFS": [
+	{"stage": 1, "world": 1, "map": "park_test", "packs": ParkDefs.PACKS_DAM, "elite": ParkDefs.ELITE_SPILLWAY},
+	{"stage": 2, "world": 2, "map": "park_test", "packs": [], "elite": {}},
+	{"stage": 3, "world": 1, "map": "park_test", "packs": ParkDefs.PACKS_FLUME, "elite": ParkDefs.ELITE_SPILLWAY},
+]}
 
 var t := T.new("bake_warm_test")
 
@@ -44,6 +52,9 @@ func _run() -> void:
 	t.check("a world 2 entry queues none of world 1's kits", node._queue.is_empty())
 	events.stage_entered.emit(1, false)
 	var kits: Array = BakeWarm.WORLD_KITS[1]
+	# What stage 1 can send: its packs' kinds and its elite's, the plated brute among them.
+	var sent: Array = Director.kinds_sent(TABLE.DEFS[0], TABLE)
+	t.check("the dam's stand list is its packs and its elite", sent.size() == 8 and sent.has("plated_brute") and node._to_stand == sent, str(node._to_stand))
 	t.check("a world 1 entry queues every world 1 kit once", node._queue.size() == kits.size(), "%d of %d" % [node._queue.size(), kits.size()])
 	events.stage_entered.emit(1, true)
 	t.check("a retry queues no kit twice", node._queue.size() == kits.size())
@@ -60,8 +71,8 @@ func _run() -> void:
 		spawns.append(_spawn_warms(node))
 		boxes.append(_debris_boxes(node))
 		pieces.append(_debris_pieces(node))
-	t.check("stage 1's kinds each stand out of sight for two drawn frames, one at a time, and leave",
-		spawns.count(1) == BakeWarm.SPAWN_WARM.size() * 2 and spawns.max() == 1 and _spawn_warms(node) == 0, str(spawns))
+	t.check("the kinds stage 1 can send each stand out of sight for two drawn frames, one at a time, and leave",
+		spawns.count(1) == sent.size() * 2 and spawns.max() == 1 and _spawn_warms(node) == 0, str(spawns))
 	# The renderer only learns of a node that is in the tree when a frame is drawn, so the debris
 	# boxes death_warm adds must be there for one: each kind's first frame is its body alone, its
 	# second has the boxes. Freed in the call that added them, they were never drawn (the dam's
@@ -74,7 +85,7 @@ func _run() -> void:
 		if boxes[i] > 0:
 			twinned += 1
 	t.check("each kind's debris boxes stand through a drawn frame, the frame after its body alone",
-		bodies == BakeWarm.SPAWN_WARM.size() and twinned == BakeWarm.SPAWN_WARM.size(), str(boxes))
+		bodies == sent.size() and twinned == sent.size(), str(boxes))
 	var thrown := true
 	for i in boxes.size():
 		thrown = thrown and (pieces[i] >= EnemyMotion.PARTS_MIN) == (boxes[i] > 0)
@@ -105,6 +116,25 @@ func _run() -> void:
 	holder.add_child(view)
 	BakeLook.dress(view)
 	t.check("dress after the warm-up draws the copy made ahead", ahead != null and view.mesh == ahead)
+
+	# A later stage stands only what no stage before it could send: the flume adds the foreman and
+	# the dispatcher, and its kits are warm already, so nothing else is queued.
+	events.stage_entered.emit(3, false)
+	var late: Array = node._queue.map(func(kit): return BakeWarm.kind_of(kit))
+	late.sort()
+	t.check("the flume's entry queues only the kinds the dam could not send", late == ["dispatcher", "foreman"] and node._to_stand.size() == 2, "%s; to stand %s" % [late, node._to_stand])
+	# The briefing pauses the tree a few frames into a run: the warm goes on under it.
+	paused = true
+	var stood := 0
+	var frames := 0
+	while (not node._queue.is_empty() or _spawn_warms(node) > 0) and frames < 40:
+		await process_frame
+		frames += 1
+		stood += _spawn_warms(node)
+	paused = false
+	t.check("each stands its two drawn frames, under a paused tree too", stood == 4 and node._to_stand.is_empty(), "%d frames" % stood)
+	events.stage_entered.emit(1, true)
+	t.check("a kind stands once a session: the dam again queues nothing", node._queue.is_empty() and node._to_stand.is_empty(), str(node._to_stand))
 
 	# On screen a rigged kit seats its GLB's own scene: those scenes are held and their meshes readied.
 	var rigs: Array = BakeWarm.WORLD_RIGS[1]

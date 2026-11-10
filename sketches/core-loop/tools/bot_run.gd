@@ -524,7 +524,10 @@ static func _vector(v: Vector3) -> Array:
 func _on_node_added(node: Node) -> void:
 	if _game == null or _game.build == null:
 		return
-	if "_strafe" in node:
+	# A body the warm stands out of sight (BakeWarm.spawn_holder) is no spawn: counting it gave every
+	# later unit the other side whenever the warm's list changed length (10 November 2026).
+	var stood: bool = node.get_parent() != null and node.get_parent().has_meta("spawn_warm")
+	if "_strafe" in node and not stood:
 		node.set_meta("bot_strafe", 1.0 if (_counter_serial + _seeds[_index]) % 2 == 0 else -1.0)
 		_counter_serial += 1
 	if node.get_parent() == _game.build.scrap:
