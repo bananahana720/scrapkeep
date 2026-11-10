@@ -69,7 +69,7 @@ node scripts/redteam/eye.mjs --persona=cautious --from=<a film folder from the P
 
 | Film | Plays | Length |
 | --- | --- | --- |
-| `whole` | world 1 start to finish on the fastest line: the dam, the flume, Brindle, the win and the first screen of world 2 | 8.1 game minutes, 23 minutes to film in the cloud, 175 pictures (measured on w33). Give it to two readers, split where the flume starts: one reader cannot hold that many pictures |
+| `whole` | world 1 start to finish on the fastest line: the dam, the flume, Brindle, the win and the first screen of world 2 | 8.1 game minutes, 23 minutes to film in the cloud, 175 pictures (measured on w33). Give it to two or three readers, split where a stage starts (the flume, Brindle's arena): one reader cannot hold that many pictures, and about 60 each read well |
 | `wait` (the cautious default) | a player who hangs back in the dam for four minutes, a planted death, the death screen, and the start of a second run | 4.3 game minutes, 16 minutes to film in the cloud (measured on w33; the control with `--death-at=60` took 4 minutes) |
 
 **The reader** gets `reader/`: the pictures renumbered `001.jpg` up and `BRIEF.md`, which holds the persona's card and the questions. Nothing in it says why a frame was taken, what the game knew or how the game works. The reader is a fresh agent that reads only that folder; never the thread that filmed, and never one that has read the code or the design. It answers per picture: what is on the screen, what it thinks it is meant to do, words it does not understand, and what it cannot see or read. For each hit and death it is asked what the earlier pictures told it was coming.
@@ -98,7 +98,7 @@ A hand-written receipt opens with two verdicts, not one:
 
 Each finding leads with one plain sentence of what the player sees or feels, then the picture numbers or the replay command, the bug-bar grade and area, and the thread that owns the fix. Ticks, seeds and file names go after that sentence, never in place of it. The receipt ends with what the pass could not see.
 
-Every player-read finding then gets a row in [PLAY-FINDINGS.tsv](../../project-guide/handoff/PLAY-FINDINGS.tsv): what the player meets, where it was seen, a grade, an owner and a review date (ruling cn). A finding never holds a promotion; the list is how one stops being forgotten. A finding the cloud film cannot settle (colour, light, effects, the camera) is graded `check` until the wave's PC film has decided it (ruling cp). The pull request that fixes a finding removes its row. `node scripts/redteam/findings.mjs --check` reads the list's shape, `--print` lists it by owner and `--overdue` names the rows past their date.
+Every player-read finding then gets a row in [PLAY-FINDINGS.tsv](../../project-guide/handoff/PLAY-FINDINGS.tsv): what the player meets, where it was seen, a grade, an owner and a review date (ruling cn). A finding never holds a promotion; the list is how one stops being forgotten. A finding the cloud film cannot settle (colour, light, effects, the camera) is graded `check` until the wave's PC film has decided it (ruling cp). The pull request that fixes a finding removes its row. The next film of the stage then checks the fix where the player meets it: a fresh reader reads the film, and a fix that does not read on screen gets its row back, rewritten with what that reader saw. `node scripts/redteam/findings.mjs --check` reads the list's shape, `--print` lists it by owner and `--overdue` names the rows past their date.
 
 ## The findings page
 
