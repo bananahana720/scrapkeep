@@ -271,8 +271,10 @@ func _physics_process(delta: float) -> void:
 		print("self-play: beat %.1f s stage %d %s%s stage_time %.1f pos %.0f,%.0f,%.0f" % [_now(), game.run.stage, state, " PAUSED" if get_tree().paused else "", game.run.stage_time, b.x, b.y, b.z])
 	if _menus:
 		_press_menus(state)
+		_watch_tick(delta)
 		return
 	if _plant_death >= 0.0 and _death_step():
+		_watch_tick(delta)
 		return
 	if _plant_stall:
 		# Planted stall: the bot stands still and the fight counts as over from now.
@@ -281,18 +283,17 @@ func _physics_process(delta: float) -> void:
 			_fight_end = _now()
 		if _now() - _fight_end > _stall:
 			_stalled("exit")
+		_watch_tick(delta)
 		return
 	if _plant_after_exit:
 		# Planted: the bot stands still and the exit counts as taken from now.
 		_driver.source.hold = {}
 		_exit_taken = true
 	elif _driver.tick(delta):
-		if _watch != null and not get_tree().paused:
-			_watch_step(delta)
+		_watch_tick(delta)
 		_finish()
 		return
-	if _watch != null and not get_tree().paused:
-		_watch_step(delta)
+	_watch_tick(delta)
 	if _fight_end < 0.0 and state == "gates" and not _exit_taken:
 		_fight_end = _now()
 	if _fight_end >= 0.0 and _goal_at < 0.0 and _now() - _fight_end > _stall:
@@ -464,6 +465,13 @@ func _end_run(code: int) -> void:
 	if _film != null and _quit_code < 0:
 		print("self-play: film %d frames (%d drawn) in %s" % [_film.frames, _film.drawn, _film_dir])
 	_quit_code = code
+
+
+# Every path of a tick that plays goes through here once, the planted ones and the menus the
+# keys press included, so a second run after a death is watched like the first.
+func _watch_tick(delta: float) -> void:
+	if _watch != null and not get_tree().paused:
+		_watch_step(delta)
 
 
 # The watch's ball checks every tick; once a second of play its plate read, and how long play has

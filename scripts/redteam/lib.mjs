@@ -480,6 +480,7 @@ export function filmArgs({ film, seed = 1, pilot = "", out, world = 1, plant = "
 // and the frame after make one set, so the reader can be asked whether they saw it coming.
 // Returns { frames: [{ n, file, set }], sets: [{ id, first, last, moment }], key: [row with n] }.
 export function readerPack(rows) {
+  rows = withoutLeadInDoubles(rows);
   const frames = [];
   const sets = [];
   const key = [];
@@ -510,6 +511,32 @@ export function readerPack(rows) {
     key.push({ n, ...row });
   });
   return { frames, sets: sets.map(({ id, first, last, moment }) => ({ id, first, last, moment })), key };
+}
+
+// The film writes a moment's lead-in when the hit lands. Any other picture taken between the
+// first lead-in frame and the hit is already in the file by then, so it would sit before the
+// lead-in, out of game order. It is left out: the lead-in's own pictures, 0.4 s apart, show
+// that stretch, and the reader's pictures run in game order. Rows with no game time are kept.
+function withoutLeadInDoubles(rows) {
+  const beatOf = (row) => {
+    const base = String(row.why || "").replace(/-(lead|after)$/, "");
+    return /^(hit-\d+|death)$/.test(base) ? base : "";
+  };
+  const timed = (row) => row.t != null && row.t !== "" && Number.isFinite(Number(row.t));
+  const windows = new Map();
+  for (const row of rows) {
+    if (!String(row.why || "").endsWith("-lead") || !timed(row)) continue;
+    const at = Number(row.t);
+    const span = windows.get(beatOf(row)) || { from: at, to: at };
+    windows.set(beatOf(row), { from: Math.min(span.from, at), to: Math.max(span.to, at) });
+  }
+  // The window runs on to the moment itself, when the film has it.
+  for (const row of rows) {
+    const span = windows.get(String(row.why || ""));
+    if (span && timed(row)) span.to = Math.max(span.to, Number(row.t));
+  }
+  const spans = [...windows.values()];
+  return rows.filter((row) => beatOf(row) || !timed(row) || !spans.some((span) => Number(row.t) >= span.from && Number(row.t) <= span.to));
 }
 
 const pad = (n) => String(n).padStart(3, "0");
