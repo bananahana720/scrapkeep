@@ -179,6 +179,8 @@ var _slow := 1.0
 var last_device := "kbm"
 # The saved Frame smoothing wish (settings, Display). interpolating() is what the tree does.
 var frame_smoothing := true
+# The player's Wide picture wish; the root fills only on a played game's window (set_wide_picture).
+var wide_picture := true
 # Loaded at run time only when the pack carries tools/, never preloaded (lint L7 allows this line).
 const SELF_PLAY := "res://tools/self_play.gd"
 # held_glyph()'s answer for a held input that has no keycap to draw.
@@ -1084,6 +1086,7 @@ func apply_saved_display(args: Array = []) -> void:
 	set_reduced_motion(saved.reduced_motion())
 	set_reduce_flashes(saved.reduce_flashes())
 	set_frame_smoothing(saved.frame_smoothing())
+	set_wide_picture(saved.wide_picture())
 
 
 # 0 High, 1 Low.
@@ -1142,6 +1145,37 @@ func set_frame_smoothing(on: bool) -> void:
 		if arg == "--smoothing=0" or arg == "--smoothing=1":
 			smooth = arg == "--smoothing=1"
 	_smooth(smooth)
+
+
+# Wide picture: on a window wider than 16:9 the picture fills it (the root's content aspect
+# "expand": the 3D view keeps its height and widens, the HUD anchors to the true corners), or keeps
+# the 1600x900 shape with bars ("keep", the project's own setting). A window as wide as 16:9 or
+# narrower (16:10) always keeps: "expand" there would make the view taller and narrower across.
+# Only a game on a window takes the setting: a headless window is not 16:9, so there "expand" would
+# move the HUD and widen the view every test and bot reads. --wide=0 or --wide=1 beats the setting
+# and the played-window rule, for a capture. A resized window is read again.
+func set_wide_picture(on: bool) -> void:
+	wide_picture = on
+	if not is_inside_tree():
+		return
+	var window := get_tree().root
+	if not window.size_changed.is_connected(_fit_picture):
+		window.size_changed.connect(_fit_picture)
+	_fit_picture()
+
+
+func _fit_picture() -> void:
+	var window := get_tree().root
+	var fill := wide_fills(wide_picture, not test_mode and _windowed(), OS.get_cmdline_args() + OS.get_cmdline_user_args(), window.size)
+	window.content_scale_aspect = Window.CONTENT_SCALE_ASPECT_EXPAND if fill else Window.CONTENT_SCALE_ASPECT_KEEP
+
+
+static func wide_fills(wish: bool, played_window: bool, args: Array, size: Vector2i) -> bool:
+	var fill := wish and played_window
+	for arg in args:
+		if arg == "--wide=0" or arg == "--wide=1":
+			fill = arg == "--wide=1"
+	return fill and size.y > 0 and size.x * 9 > size.y * 16
 
 
 func _smooth(on: bool) -> void:
