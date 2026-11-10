@@ -53,23 +53,16 @@ func _initialize() -> void:
 	var t := T.new("world1_run_test")
 	var jobs := []
 	for pilot in PILOTS:
-		jobs.append({"name": pilot, "args": _pilot_args(pilot, 1)})
+		jobs.append({"name": pilot, "pilot": pilot, "args": _pilot_args(pilot, 1)})
 	# The control: a run planted to end at once must read red on the same lines a pilot is judged by.
 	jobs.append({"name": "planted_end", "args": ["--self-play", "--self-play-until=3", "--self-play-watch=1", "--self-play-plant-end"]})
 	var base := ProjectSettings.globalize_path("user://").path_join("world1-run-%d" % OS.get_process_id())
-	var began := Time.get_ticks_msec()
-	var runs := ChildRuns.run_launched(jobs, base, CHILD_S, PARALLEL, BUDGET_S)
-	# The second goes, in what is left of the budget (a budget of 0 would mean no wall at all).
-	var again_jobs := []
-	for i in PILOTS.size():
-		if not _reached(runs[i]):
-			again_jobs.append({"name": PILOTS[i] + "-again", "pilot": PILOTS[i], "args": _pilot_args(PILOTS[i], AGAIN_SEED)})
+	# A pilot that did not get there plays once more in what is left of the budget; the control does not.
+	var both := ChildRuns.run_launched_twice(jobs, base, CHILD_S, PARALLEL, BUDGET_S, _reached, _second_go)
+	var runs: Array = both["first"]
 	var again := {}
-	if not again_jobs.is_empty():
-		var left := maxf(1.0, BUDGET_S - (Time.get_ticks_msec() - began) / 1000.0)
-		var second := ChildRuns.run_launched(again_jobs, base, CHILD_S, PARALLEL, left)
-		for i in again_jobs.size():
-			again[again_jobs[i]["pilot"]] = second[i]
+	for i in both["again"]:
+		again[PILOTS[i]] = both["again"][i]
 	print("world1_run_test: %d of %d pilots needed a second go%s" % [again.size(), PILOTS.size(),
 		"" if again.is_empty() else " (%s)" % ", ".join(again.keys())])
 	for i in PILOTS.size():
@@ -147,6 +140,13 @@ func _judge(pilot: String, goes: Array) -> Array:
 # The names of the rows that are not ok.
 func _failed(rows: Array) -> Array:
 	return rows.filter(func(row): return not row[1]).map(func(row): return row[0])
+
+
+# The second go's job for a pilot's job; null for the control, which gets none.
+func _second_go(job: Dictionary):
+	if not job.has("pilot"):
+		return null
+	return {"name": String(job["pilot"]) + "-again", "args": _pilot_args(job["pilot"], AGAIN_SEED)}
 
 
 func _pilot_args(pilot: String, run_seed: int) -> Array:

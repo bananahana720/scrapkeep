@@ -95,6 +95,30 @@ static func run_launched(jobs: Array, base: String, timeout_s: float, parallel: 
 	return out
 
 
+# run_launched, then one second go, inside the same wall budget, for each job whose first result
+# passed.call(result) calls false and for which again.call(job) gives a job ({name, args}; null
+# for a job that gets no second go). Returns {"first": the results in job order, "again": {job
+# index: its second result}}. A second go started with the budget spent reads as timed_out.
+static func run_launched_twice(jobs: Array, base: String, timeout_s: float, parallel: int, budget_s: float, passed: Callable, again: Callable) -> Dictionary:
+	var began := Time.get_ticks_msec()
+	var out := {"first": run_launched(jobs, base, timeout_s, parallel, budget_s), "again": {}}
+	var redo := []
+	var at := []
+	for i in jobs.size():
+		var job = null if passed.call(out["first"][i]) else again.call(jobs[i])
+		if job != null:
+			redo.append(job)
+			at.append(i)
+	if redo.is_empty():
+		return out
+	# What is left of the budget; never 0, which run_launched reads as no wall at all.
+	var left := maxf(1.0, budget_s - (Time.get_ticks_msec() - began) / 1000.0)
+	var second := run_launched(redo, base, timeout_s, parallel, left)
+	for k in redo.size():
+		out["again"][at[k]] = second[k]
+	return out
+
+
 static func _spent(began: int, budget_s: float) -> bool:
 	return budget_s > 0.0 and (Time.get_ticks_msec() - began) / 1000.0 >= budget_s
 
