@@ -17,6 +17,8 @@ const Map := preload("res://src/world/park/park_map.gd")
 const Park := preload("res://src/core/park_defs.gd")
 const Trade := preload("res://src/world/trade_pockets.gd")
 const ActivityView := preload("res://src/world/activity_view.gd")
+const LaunchCard := preload("res://src/ui/launch_card.gd")
+const UiDraw := preload("res://src/ui/ui_draw.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
 const Rules := preload("res://src/movement/ball_rules.gd")
 const BallState := preload("res://src/movement/ball_state.gd")
@@ -83,6 +85,19 @@ func _rows() -> void:
 		ids[row.id] = true
 		t.check("%s carries only allowed effect keys" % row.id, Modifier.valid(row))
 		t.check("%s caption fits the card (at most 8 words in its line)" % row.id, String(row.line).split(" ", false).size() <= 8)
+		# The memo voice never costs the read: the line still ends on what the stage does, the right way round.
+		var effect := "edges."
+		if row.has("count_scale"):
+			effect = "More pockets." if float(row.count_scale) > 1.0 else "Fewer pockets."
+		elif row.has("sight_scale"):
+			effect = "Beacons read far." if float(row.sight_scale) > 1.0 else "Beacons read near."
+		t.check("%s line ends on what the stage does" % row.id, String(row.line).ends_with(effect), String(row.line))
+		# The card draws its line unwrapped, so the longest it can carry (a cursed run's line beside
+		# the stage's) has to sit inside the 1600-wide view with a margin.
+		var pair: String = Modifier.caption(Modifier.CURSE) + "  /  " + Modifier.caption(row)
+		var pair_w: float = UiDraw.width(pair, LaunchCard.LINE_FONT)
+		t.check("%s line fits the card beside the cursed line" % row.id, pair_w <= 1600.0 * 0.85, "%.0f px: %s" % [pair_w, pair])
+	t.check("the cursed line fits the card too", String(Modifier.CURSE.line).split(" ", false).size() <= 8)
 	t.eq("row ids are unique", ids.size(), Modifier.ROWS.size())
 	t.check("world-effect overlays name WORLD-FX.md kinds", Modifier.ROWS.all(func(row): return String(row.get("fx", "")) in ["", "plenty", "scarce", "hidden"]))
 	var planted := {"id": "slick", "word": "Slick", "line": "x", "friction": 0.1}

@@ -70,6 +70,7 @@ Each module folder holds one entry script with `setup(ctx)`: `combat/combat.gd`,
 | `rng` | `RandomNumberGenerator` | the run's one seeded stream (seed 20260926) |
 | `calm` | `bool` | tests set it; no own-schedule spawns, no world pushes |
 | `aim_origin()`, `aim_forward()` | `Vector3` | the camera's centre ray |
+| `heading()` | `Vector3` | the level direction the player faces (the view's yaw, no pitch, unit length); the read side of `camera.snap(heading)`. Simulation code calls this, never the camera's basis |
 | `hit_stop(seconds)` | method | a short freeze for weight; capped at 60 ms, never stacks, only in play |
 
 Flow states, as `state_name()` returns them: `title`, `class_select`, `stage`, `beacon`, `gates`, `launch`, `boss`, `victory`, `summary` and `dead`. `in_play()` is true for `stage`, `beacon`, `gates`, `launch` and `boss`.
@@ -264,7 +265,7 @@ Flow calls `spawn_point`, `entry_heading` and `beacon_point` right after `stage_
 - `kick(direction: Vector3, amount)` knocks the camera along a world direction, and it springs back.
 - `shake(amount, time = 0.4)` shakes the camera; the strongest shake wins.
 - `motion_scale: float` (0 to 1) is the viewer's Screen shake comfort. Juice sets it; the camera multiplies every punch, kick and shake by it, its own landing shake included.
-- `aim_origin()`, `aim_forward()`, `yaw_basis()` and `yaw` are read-only for modules.
+- `aim_origin()`, `aim_forward()`, `yaw_basis()` and `yaw` are read-only for modules. A module that wants the facing direction calls `ctx.heading()`, not `yaw_basis()`.
 
 Juice follows the player's actions and must never hide the next threat. Keep punches and shakes short.
 
@@ -842,4 +843,5 @@ Rows 3 to 6 carry their own `packs`; rows 1 and 2 use the table's `PACKS`.
 - **Mark.** F8, or both sticks clicked together on a pad, writes a `mark` row with the place, the objective's words and the frame rate. Nothing shows and nothing sounds. The notes never mark input as handled, so the sticks' own bindings still fire.
 - **Reads only.** The notes and the watch write no game state. The watch (`src/core/play_watch.gd`) takes a game and a sink: `watch(game, sink)`, `step(delta)` once a physics tick of play, `read_text(since)` about once a second, and the totals `counts`, `plates`, `blank_max`. A bot's run uses the same watch through `tools/qa_watch.gd` (`bot_run --qa-log=1`, `--self-play-watch=1`), which adds the bot's goal to each row.
 - **Reading a row.** `stuck` is also what a person standing still for 8 s writes. `blank` reads the row the HUD chose, not the pixels drawn. A `hitch` row is one burst of long frames, cut every 5 s; frames while the window is not focused are not counted.
+- **The film reads what the watch cannot.** `--self-play-film=<dir>` (`tools/eye_film.gd`, with `--self-play-keys=1 --self-play-eyes=1`) saves the picture on the screen at each screen, held screen, objective change, first prompt, offer, big hit (at most 16 a film, each with its two seconds of lead-in), stage clear, boss phase and death, one row of the game's own state a frame in `film.ndjson`. It needs a rendered display and `--fixed-fps`; it draws only the frames it keeps unless `--self-play-film-live=1`, so it is never a frame-time reading. In eyes mode the game is not told a bot is playing: the launch take and the briefing show, and each held screen is answered with its first key after 3 s. `--self-play-plant-hide=objective` draws the objective plate clear for a film's control run; the watch still reads its words. The red team's player's-eye pass (`scripts/redteam/README.md`, `scripts/redteam/eye.mjs`) is the user.
 - **Tests.** `play_watch_test` (every row kind made to fire, with its look-alike that must not; no game), `sitting_notes_test` (a real game: the file, a real stuck row, hitches, marks, the end row), `world1_run_test` (the watch on six launched runs), `session_test` (the watch on a keys-only session: quit and Continue, a death and a second run).

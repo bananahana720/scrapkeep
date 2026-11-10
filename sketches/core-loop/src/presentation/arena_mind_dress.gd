@@ -1,5 +1,6 @@
 extends Node3D
 
+const AppShell := preload("res://src/core/app_shell.gd")
 const GraphicsPreset := preload("res://src/presentation/graphics_preset.gd")
 const Palette := preload("res://src/core/palette.gd")
 const Finishes := preload("res://src/presentation/highdraft_finishes.gd")
@@ -37,7 +38,7 @@ var _greybox: Array[Dictionary] = []
 static func prepare() -> void:
 	for key in PARTS:
 		var path: String = dir.path_join(PARTS[key][0])
-		if DisplayServer.get_name() != "headless" and ResourceLoader.exists(path) \
+		if not AppShell.headless() and ResourceLoader.exists(path) \
 				and ResourceLoader.load_threaded_get_status(path) == ResourceLoader.THREAD_LOAD_INVALID_RESOURCE:
 			ResourceLoader.load_threaded_request(path)
 	if _sky_material == null and _panorama_task < 0:
