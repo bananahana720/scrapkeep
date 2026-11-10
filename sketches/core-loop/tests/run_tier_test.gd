@@ -505,14 +505,19 @@ func _card() -> void:
 	key.pressed = true
 	key.keycode = KEY_1
 	key.physical_keycode = KEY_1
+	# The workshop armed as in a launched game (ruling cl): the kit pick takes the screen from the
+	# start card and its own keys; with it closed the card comes back as the briefing and takes 1.
 	host.armed = true
 	host.open_pick()
-	t.check("competing workshop pick is open", host.pick.is_open())
+	t.check("the kit pick takes the screen from the start card", host.pick.is_open() and not card.showing())
 	var tree_before: Array = game.player.tree.picks.duplicate()
 	root.push_input(key, true)
-	t.check("scripted pick reaches RunState", game.run.start_pick.taken == game.run.start_pick_options()[0] and not card.showing())
-	t.check("start input does not choose a workshop upgrade", game.player.tree.picks == tree_before)
+	t.check("1 on the kit pick takes a kit card and no start pick", game.player.tree.picks.size() == tree_before.size() + 1 and game.run.start_pick.taken == "")
 	host.close_pick()
+	t.check("the start card comes back as the briefing", card.showing() and host.briefing() and paused)
+	root.push_input(key, true)
+	t.check("scripted pick reaches RunState", game.run.start_pick.taken == game.run.start_pick_options()[0] and not card.showing())
+	t.check("the briefing lets go", not host.briefing() and not paused)
 	host.armed = false
 	t.check("pick returns aim control", game.capture_requests.back() == true and not game.get_meta("menu_held", false))
 	var doc: Dictionary = game.run.to_entrance_doc()

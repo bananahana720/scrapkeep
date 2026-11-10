@@ -7,6 +7,7 @@ const StageDefs := preload("res://src/core/stage_defs.gd")
 const BossPosture := preload("res://src/combat/boss_posture.gd")
 const Hud := preload("res://src/ui/hud.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
+const Activities := preload("res://src/world/activities.gd")
 const WardenReactor := preload("res://src/combat/warden_reactor.gd")
 
 # The objective table (design-v3/LEGIBILITY.md, "A goal exists") and its chooser, walked on
@@ -70,6 +71,7 @@ class FakeWarden extends RefCounted:
 
 func run(t) -> void:
 	_rows(t)
+	_site_pick(t)
 	_reached_once(t)
 	_fights(t)
 	_mount_reading(t)
@@ -100,6 +102,39 @@ func _mount_reading(t) -> void:
 	t.eq("another mounting keeps the guard row", driver.plate_reading(warden), {})
 
 
+# The activity row names the site in front of the view, and keeps it until another clearly wins.
+func _site_pick(t) -> void:
+	var north := Vector3(0, 0, 1)
+	t.eq("no site, no pick", Objectives.pick_site([], north), -1)
+	t.eq("one site is the pick wherever it lies", Objectives.pick_site([Vector3(0, 0, -50)], north), 0)
+	t.eq("straight ahead scores its distance", Objectives.site_score(Vector3(0, 0, 100), north), 100.0)
+	t.eq("abeam scores double", Objectives.site_score(Vector3(100, 0, 0), north), 200.0)
+	t.eq("behind scores triple", Objectives.site_score(Vector3(0, 0, -100), north), 300.0)
+	t.eq("height counts in the distance, not the angle", Objectives.site_score(Vector3(0, 30, 40), north), 50.0)
+	t.eq("a site on the ball scores its distance", Objectives.site_score(Vector3(0, 2, 0), north), 2.0)
+	t.eq("ahead beats a little nearer but off the view", Objectives.pick_site([Vector3(110, 0, 280), Vector3(0, 0, 310)], north), 1)
+	t.eq("much nearer wins even from behind", Objectives.pick_site([Vector3(0, 0, -60), Vector3(0, 0, 310)], north), 0)
+	t.eq("the held site stays while the other is not clearly better", Objectives.pick_site([Vector3(0, 0, 100), Vector3(0, 0, 90)], north, 0), 0)
+	t.eq("the held site gives way under SITE_KEEP of its score", Objectives.pick_site([Vector3(0, 0, 100), Vector3(0, 0, 79)], north, 0), 1)
+	t.eq("a held index that has gone is no hold", Objectives.pick_site([Vector3(0, 0, 100), Vector3(0, 0, 90)], north, 5), 1)
+	# The dam as authored (park_dam.json): the drop faces the camp, and the relay beside it is 5 m nearer.
+	var dam: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://src/world/park/park_dam.json"))
+	var at := Vector3(dam["spawn"]["at"][0], 0.0, dam["spawn"]["at"][1])
+	var heading := deg_to_rad(float(dam["spawn"]["heading_deg"]))
+	var kinds := []
+	var offsets := []
+	for row in dam["activity_rows"]:
+		kinds.append(String(row["activity"]))
+		offsets.append(Vector3(row["at"][0], 0.0, row["at"][1]) - at)
+	var picked := Objectives.pick_site(offsets, Vector3(sin(heading), 0.0, cos(heading)))
+	t.eq("the dam's drop names the camp it faces", kinds[picked] if picked >= 0 else "", "enemy_camp")
+	var plain := 0
+	for i in offsets.size():
+		if offsets[i].length() < offsets[plain].length():
+			plain = i
+	t.eq("the nearest site at the dam's drop is the relay, which is why the view decides", kinds[plain], "hold_the_relay")
+
+
 func _rows(t) -> void:
 	var bad := []
 	for id in Objectives.ROWS:
@@ -113,8 +148,20 @@ func _rows(t) -> void:
 		if not Objectives.ACTIVITY_WORDS.has(kind) or n < 1 or n > Objectives.MAX_WORDS:
 			long_sites.append(kind)
 	t.eq("every activity kind names its site in one to five words", long_sites, [])
-	t.eq("every named site is an activity kind", Objectives.ACTIVITY_WORDS.keys().filter(func(kind): return not EventKinds.ACTIVITY_ROWS.has(kind)), [])
+	t.eq("every named site is a site kind", Objectives.ACTIVITY_WORDS.keys().filter(func(kind): return not Activities.RULES.has(kind)), [])
+	t.eq("every named site keeps to five words", Objectives.ACTIVITY_WORDS.keys().filter(func(kind):
+		return WordBudget.words_in(Objectives.ACTIVITY_WORDS[kind]) > Objectives.MAX_WORDS), [])
 	t.eq("a kind with no words of its own keeps the row's", Objectives.activity_words("no_such_kind"), Objectives.words("find_activity"))
+	# Trade spots go by their ruled names (ruling ci); a drawn pocket by what its marker calls it.
+	t.eq("the risky trade spots are the keeper's gamble", ["trade_risk", "curse", "sacrifice"].map(func(kind): return Objectives.activity_words(kind)).filter(func(w): return w != "Find the keeper's gamble"), [])
+	t.eq("the safe trade spot is the foreman's kindness", Objectives.activity_words("trade_safe"), "Find the foreman's kindness")
+	t.eq("a drawn pocket is named by its marker's word", Objectives.activity_words("arena", Activities.called("arena")), "Find the arena")
+	var unnamed := []
+	for kind in Activities.RULES:
+		var words := Objectives.activity_words(kind, Activities.called(kind))
+		if words == Objectives.words("find_activity") or WordBudget.words_in(words) > Objectives.MAX_WORDS:
+			unnamed.append(kind)
+	t.eq("every site kind the plate can meet has a name in five words", unnamed, [])
 	t.eq("the chooser has a case for every row", CASES.keys().size(), Objectives.ROWS.size())
 	var lessons := []
 	for stage in StageDefs.COUNT:
