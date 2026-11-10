@@ -1067,7 +1067,7 @@ static func _clamp_fraction(gate) -> float:
 # Every world-attached prompt in front of the camera and within its reach goes in the
 # prompts band, nearest first, at most MAX_PROMPTS of them. Each takes the free spot
 # nearest its anchor's column (free_spot); the rest wait off screen. A prompt shows its
-# detail only while the ball is within its DETAIL_RANGE.
+# detail only while the ball is within its detail_range.
 func place_prompts(size: Vector2, playing: bool) -> void:
 	prompt_rects.clear()
 	var cam: Camera3D = game.camera.cam
@@ -1090,7 +1090,7 @@ func place_prompts(size: Vector2, playing: bool) -> void:
 		if placed.size() >= ScreenRegions.MAX_PROMPTS:
 			break
 		var prompt: Label = entry[1]
-		prompt.near = ball.distance_to(entry[2]) <= WorldPrompt.DETAIL_RANGE
+		prompt.near = ball.distance_to(entry[2]) <= prompt.detail_range
 		var extent: Vector2 = prompt.shown_extent()
 		var want := Rect2(ScreenRegions.clamp_prompt(cam.unproject_position(entry[2]), extent, size), extent)
 		var spot := free_spot(want, placed, band)
