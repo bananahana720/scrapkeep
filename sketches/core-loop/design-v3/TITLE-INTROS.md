@@ -36,7 +36,7 @@ Every name card holds three stats. One is true, one is deadpan, one is a joke at
 
 | # | Time | Bars | Beat | Shot | On screen | Music |
 | --- | --- | --- | --- | --- | --- | --- |
-| 1 | 0:00 | 2 | Hype | Postcard: the Spillway dam at dawn, low from the water; a tiny ball on the crest | Caption: "Spillway Works. Dawn. Probably a Tuesday." An arrow points at the ball: "her." | Theme A sax pickup alone |
+| 1 | 0:00 | 2 | Hype | Postcard: the Spillway dam at dawn, low from the water; a tiny ball on the crest | Caption: "Spillway Works. Dawn. Probably a Tuesday." An arrow points at the ball: "this is her." | Theme A sax pickup alone |
 | 2 | 0:04 | 2 | Hype | Low-angle hero shot, backlit, Dutch tilt; speed lines | Drawn word: VRRRM | Kick enters on the downbeat |
 | 3 | 0:07 | 2 | Hype | Freeze frame: Sable mid-cheer, ink-stamped name card | "SABLE. Fox, pylon engineer. Top speed: yes. Brakes: rumoured." | Band hit, then a held chord |
 | 4 | 0:11 | 2 | Hype | The ball launches over three chasers, which tumble | Drawn words: FWOOSH, KLANG; a "+1" pops off a chaser | Full groove, sax hook |
@@ -49,6 +49,8 @@ Every name card holds three stats. One is true, one is deadpan, one is a joke at
 | 11 | 0:37 | 2, then hold | Back up | The crew lined up on the deck at sunset; SCRAPKEEP slams in | Logo stamp; "Press any key" blinks on the beat | Hook lands; the loop continues under the menu |
 
 The silhouette in shot 8 is the Cannon, which unlocks after the ending. The first intro teases it and never names it, so the first launch spoils nothing.
+
+The postcard's line is a whole sentence, drawn bare with a curved arrow and no box. The storyboard first had an arrow and the one word "her."; the game drew the word in a caption box. On two films of the game readers took it for the ball talking, or for a caption that had lost its words, and a tail under the box did not change that. Five drawings went to fifteen fresh readers, three each (10 Nov 2026): in a box the word was read as the ball's speech by 6 of 6, with a tail or with an arrow; the bare word with an arrow pointed at the ball for 3 of 3 but all three still called it cut off; "this is her." read whole to 6 of 6; in a box all three called the box a bubble (two of them a speech bubble), and out of one none did. Every row's postcard follows: a world's says "you are here." (its tiny ball is the player's), and another pilot's or a boss's says "this is" and the name on its card. The wording is the sight thread's assumption, which Andrew can overturn; only Sable's was read.
 
 ## How it is built
 
