@@ -2,7 +2,7 @@
 
 **Status: the year is picked. Andrew chose 2010 on 10 Nov 2026** (the joint look and sound card: "agreed wholly on this, approved"). Sections 1 to 4 are working calls from the thread "Develop visual artist and 3D models", written 9 Nov 2026; section 5 is the year. Nothing here changes a ruling.
 
-This page owns the look persona: who draws the game, their habits, and how one hand keeps the four makers apart. It does not own story facts ([STORY-MAP.md](STORY-MAP.md) does), colour and shape rules ([VISUAL-LANGUAGE.md](../VISUAL-LANGUAGE.md)), per-pilot looks ([ROSTER-LOOK.md](ROSTER-LOOK.md)) or the finish recipe ([POLISH.md](../tools/blender/POLISH.md)). Where this page and one of those disagree, that page wins and this one is fixed. The sound persona is its sibling and shares the same three years.
+This page owns the look persona: who draws the game, their habits, and how one hand keeps the four makers apart. It does not own story facts ([STORY-MAP.md](STORY-MAP.md) does), colour and shape rules ([VISUAL-LANGUAGE.md](../VISUAL-LANGUAGE.md)), per-pilot looks ([ROSTER-LOOK.md](ROSTER-LOOK.md)) or the finish recipe ([POLISH.md](../tools/blender/POLISH.md)). Where this page and one of those disagree, that page wins and this one is fixed. The sound persona is its sibling and shares the year, 2010.
 
 The phone copy with sample sheets and the model audit is the project library page "Scrapkeep Sight Persona", listed under "Art and look" in the shared project files' INDEX.md (outside this repository).
 
@@ -64,14 +64,14 @@ Andrew picked 2010 on 10 Nov 2026, on one card for look and sound: "2010, the fe
 
 **What stays.** The palette, the silhouettes, the warm daylight and every ruling. The year changes finish, wear and lettering only.
 
-**The guard.** A toy finish can drift clean, which Bible AD-11 forbids. The brushed wear is the guard, and habit 4 says where it goes. The old works and the Wardens take no edge wear: they are cast, and [POLISH.md](../tools/blender/POLISH.md) already bakes their enamel with `edge=0`.
+**The guard.** A toy finish can drift clean, which Bible AD-11 forbids. The brushed wear is the guard, and habit 4 says where it goes. Working call: brushed bone wear belongs to what a hand made or repainted, so to keeper gear and Fleet paint, and a casting takes none. The Wardens' enamel already bakes with `edge=0` ([POLISH.md](../tools/blender/POLISH.md), for the enamel colour cap), which suits a casting.
 
-**Where the game stood on the day** (PC stills at build 1c9bc643, RTX 4080, and the code at stage 31fae243):
+**Where the game stood on the day** (PC stills at build 1c9bc643, RTX 4080; code at stage 31fae243). The mechanism belongs to [POLISH.md](../tools/blender/POLISH.md) and `src/presentation/bake_look.gd`; this is a dated reading of them.
 
-- Keeper gear already wears. The `paint` slot shows the bake's vertex colours, so Sable's ball has chipped bone on its hoop.
-- Fleet machines do not. `fleet_paint` is not a vertex-colour slot in `tools/blender/common.py`, so the bake leaves it flat, and each enemy script builds its own body material. The Shift Boss, the lobber and the rogue crane are clean flat paint.
-- Every polished model already carries the raw bake in its second UV map (POLISH.md, "What the bake writes"). No game material reads it yet.
-- Brass is drawn three ways: flat vertex colour in `paint` (the tags), `requisition_tag` at half metal, and a plain brass material built in an enemy's own script. In the one still that shows horn bells, the Shift Boss at the dam at dawn, they read dark.
+- Keeper gear wears most. The `paint` slot draws a salvaged-plate map that carries its own wear, over the bake's vertex colours (`src/presentation/hero_assets.gd`). On the PC, Sable's ball has chipped bone on its hoop.
+- Fleet machines carry the bake's shading but not its bright edge. Enemy and boss scripts put their own materials on the model, and `BakeLook.dress` gives those the bake's occlusion and crease darkening through a multiply layer. A multiply cannot brighten, so convex edges stop at neutral, and the body drops the world grain on purpose so a soft-toy body reads smooth. On the PC the Shift Boss and the lobber read as clean paint with soft shading.
+- The rogues' hulls do carry the bake's edge: their kit makes `fleet_paint` a vertex-colour slot and the hull draws vertex colour. The bake lightens an edge by at most 18 percent in its own hue, so it reads as a soft highlight, not as bone. On the PC the rogue crane reads as clean paint.
+- Brass is drawn three ways: vertex colour in `paint` (the tags), `requisition_tag` at half metal, and a brass material built in an enemy's own script. In the one still that shows horn bells, the Shift Boss at the dam at dawn, they read dark. The cause is not established.
 - Nothing on screen is glossy, and the light at the rogue crane is warm daylight on sandstone, as the 2010 sample shows it.
 
 **The years not picked.** 1996 (moulded toy plastic, chrome, stickers, hard flash) and 1978 (die-cast under chipped gloss enamel, flocked animals, one warm lamp). A separable extra, not approved: either could come back as a finish earned in play, as the sound persona keeps its other two periods as radio stations.
@@ -85,5 +85,5 @@ Proposals, not yet built. Each is its own small change.
 3. **Fasteners and marks become kit parts:** strap, stitch seam, weld bead, number plate, brass tag, stencil, seam of light. The rogues' kit already has the stencil, the cut line and the governor.
 4. **Reference sheets open with these habits and the year** in place of the generic style line.
 5. **Every art change posts a before and after contact sheet.** Form is checked on cloud stills; the look is checked on the PC, in the game's renderer.
-6. **Fleet paint takes the bake.** One call, owned by the module that owns the game's materials, gives a Fleet body the 2010 finish: bone on edges, ink in creases. Enemy scripts ask for it in place of building a flat material each.
+6. **Fleet paint gets the bright edge.** `BakeLook` already carries the bake's shading to every enemy and boss material. It also lifts convex edges toward bone, on Fleet paint and not on a casting.
 7. **One brass.** Brass parts share one slot and one satin recipe, judged on the PC at dawn and in daylight.
