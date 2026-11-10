@@ -47,6 +47,7 @@ func _initialize() -> void:
 	_rows()
 	_validate_controls()
 	_first_runs()
+	_one_big_first_run()
 	_pilot_marks()
 	_time_card()
 	_pool()
@@ -111,6 +112,26 @@ func _validate_controls() -> void:
 	_t.check("the board refuses an item reward no rung reads", not ShiftBoard.validate(ShiftBoard.RUNGS, grants, TuneRows.ids()).is_empty(), "")
 
 
+# A first run that does everything at once stamps rungs under three different stamps: the summary
+# names each stamp once with what it inked, and Clocked In is not said twice.
+func _one_big_first_run() -> void:
+	var store := _fresh(_path())
+	var bus := GameEvents.new()
+	var run := FakeRun.new()
+	var listener := Progress.new()
+	listener.setup(bus, run, store, func(): return 1700000000.0)
+	bus.run_started.emit(SABLE)
+	run.kills = 30
+	bus.beacon_unsealed.emit(1)
+	bus.rescue_completed.emit("rivet")
+	bus.enemy_killed.emit("brindle", Vector3.ZERO, 0)
+	bus.run_ended.emit(true)
+	_t.eq("one run, three stamps", listener.board_line,
+		"Shift board: CLOCKED IN; LOGGED Warden Breaker; HIRED Rivet Freed, Brindle Routed, Sable's Mark.")
+	listener.free()
+	bus.free()
+
+
 # Runs 1 to 4 of a new player who flies Sable: a death on the dam, a Warden then a death in the
 # flume, a run that finds nothing new, then Rivet's cage and Brindle's rout. Profile n has n runs.
 func _first_runs() -> void:
@@ -121,7 +142,7 @@ func _first_runs() -> void:
 	var listener := Progress.new()
 	listener.setup(bus, run, store, func(): return 1700000000.0)
 	var expect_next := ["clock_in", "first_warden", "rivet_freed", "rivet_freed", "lost_tape"]
-	var expect_line := ["", "Shift board: CLOCKED IN Clocked In.", "Shift board: LOGGED Warden Breaker.",
+	var expect_line := ["", "Shift board: CLOCKED IN.", "Shift board: LOGGED Warden Breaker.",
 		"Time card punched, 1 of 3.", "Shift board: HIRED Rivet Freed, Brindle Routed, Sable's Mark."]
 	var scripts := [
 		[],
