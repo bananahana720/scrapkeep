@@ -20,6 +20,8 @@ const LoreRows := preload("res://src/core/lore_rows.gd")
 #     waits for it.
 # 11. The stage's hello waits for a call that is up.
 # 12. The killing hit calls nobody, and a call that is up does not follow the run off the field.
+# 13. A caller's voice goes with a line that is cut short (a fight, another line taking the
+#     bubble) and is left alone when the line runs out its time.
 # smoke: timeout=180s
 
 var _t := preload("res://tests/support/t.gd").new("call_in_test")
@@ -41,6 +43,28 @@ func _row(id: String) -> Dictionary:
 func _said(id: String) -> bool:
 	var row := _row(id)
 	return _bubble.visible and _bubble.text == "%s: %s" % [LoreRows.SPEAKERS[row["speaker"]], row["text"]]
+
+
+# A stand-in for the sound's two calls, with their rule (one caller at a time; ending is nothing
+# when nobody talks). No frame passes in this test, so a booked caller is still talking until
+# stopped. The sound itself is audio_call_in_test's.
+class Voice:
+	extends RefCounted
+	var booked := 0
+	var stopped := 0
+	var talking := false
+
+	func call_in(_kind: String, _speaker: String, text: String) -> float:
+		if talking or text == "":
+			return 0.0
+		talking = true
+		booked += 1
+		return 2.0
+
+	func call_end() -> void:
+		if talking:
+			talking = false
+			stopped += 1
 
 
 # The line on screen is read and gone, and the gap since the last call has passed.
@@ -196,7 +220,60 @@ func _check() -> void:
 	events.activity_done.emit("enemy_camp", at)
 	_bubble._process(0.1)
 	_t.check("a new run can say them again", _said("call.spillway.camp"), "bubble '%s'" % _bubble.text)
+	# 13. The voice and the card.
+	var sound = _game.presentation.audio
+	var voice := Voice.new()
+	_game.presentation.audio = voice
+	_quiet()
+	events.run_started.emit(flying)
+	_bubble.dismiss_exchange()
+	events.activity_done.emit("enemy_camp", at)
+	_bubble._process(0.1)
+	_t.check("the camp call books its caller's voice", _said("call.spillway.camp") and voice.booked == 1 and voice.talking,
+		"bubble '%s', booked %d" % [_bubble.text, voice.booked])
+	_bubble._hold = 0.01
+	_bubble._process(0.1)
+	_t.check("a line that runs out its time leaves the voice alone", _bubble._hold <= 0.0 and voice.stopped == 0 and voice.talking,
+		"hold %.2f, stopped %d" % [_bubble._hold, voice.stopped])
+	_bubble._clear_line()
+	_t.check("a line taken down stops its caller", voice.stopped == 1 and not voice.talking, "stopped %d" % voice.stopped)
+	_bubble._process(LoreRows.CALL_GAP_S + 1.0)
+	events.activity_done.emit("hold_the_relay", at)
+	_t.check("the relay call is up and its caller talks", _said("call.spillway.relay") and voice.booked == 2, "bubble '%s', booked %d" % [_bubble.text, voice.booked])
+	_game.flow.state = _game.flow.BOSS
+	_game.flow.boss_active = true
+	_bubble._process(0.1)
+	_t.check("a fight going live stops the caller with the card", _bubble._hold <= 0.0 and voice.stopped == 2 and not voice.talking,
+		"hold %.2f, stopped %d" % [_bubble._hold, voice.stopped])
+	_game.flow.boss_active = false
+	_game.flow.state = state
+	_bubble._clear_line()
+	_bubble._process(LoreRows.CALL_GAP_S + 1.0)
+	events.activity_done.emit("surge_run", at)
+	_t.check("the surge call is up and its caller talks", _said("call.spillway.surge") and voice.booked == 3, "bubble '%s', booked %d" % [_bubble.text, voice.booked])
+	# Another line takes the bubble: the hello's first speaker talks, so the caller before stopped first.
+	_bubble._zones_played.clear()
+	_bubble._begin_exchange(_game.run.stage)
+	_bubble.hush()
+	_bubble._clear_line()
+	_bubble._process(0.1)
+	_t.check("a call cut short leaves the next line its voice", not _bubble._exchange.is_empty() and voice.stopped == 3 and voice.booked == 4,
+		"stopped %d, booked %d, bubble '%s'" % [voice.stopped, voice.booked, _bubble.text])
+	var lines: int = _bubble._exchange.size()
+	_bubble._advance_exchange()
+	_t.check("the hello's next line stops the speaker before it, and its own speaker talks", voice.stopped == 4 and voice.booked == (5 if lines > 1 else 4),
+		"lines %d, stopped %d, booked %d" % [lines, voice.stopped, voice.booked])
+	_bubble.dismiss_exchange()
+	var stopped := voice.stopped
+	events.run_started.emit(flying)
+	_bubble.dismiss_exchange()
+	events.activity_done.emit("enemy_camp", at)
+	_bubble._process(0.1)
+	_t.check("a call is up for the run's end, its caller talking", _said("call.spillway.camp") and voice.talking, "bubble '%s'" % _bubble.text)
+	stopped = voice.stopped
 	# 12. The run ends under a call: it goes with the field.
 	_game.run.damage(1.0e9, "test")
 	_t.check("a call does not follow the run onto its end screen", not _game.flow.in_play() and _bubble._hold <= 0.0 and _bubble._call.is_empty(),
 		"flow %s, hold %.2f" % [_game.flow.state_name(), _bubble._hold])
+	_t.check("and its caller stops with it", voice.stopped == stopped + 1 and not voice.talking, "stopped %d (was %d)" % [voice.stopped, stopped])
+	_game.presentation.audio = sound
