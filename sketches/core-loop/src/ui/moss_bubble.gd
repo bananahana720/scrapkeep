@@ -6,6 +6,7 @@ const Icons := preload("res://src/ui/icons.gd")
 const UiFonts := preload("res://src/ui/ui_fonts.gd")
 const LoreRows := preload("res://src/core/lore_rows.gd")
 const WhyCallout := preload("res://src/ui/why_callout.gd")
+const CallerTile := preload("res://src/ui/caller_tile.gd")
 
 # Moss is never seen (DESIGN-V2 sections 12 and 15): a voice from the hatch and a pair
 # of hands. His line is a speech bubble whose tail runs off the screen's left edge, the
@@ -19,6 +20,11 @@ const WhyCallout := preload("res://src/ui/why_callout.gd")
 # motion (VISUAL-LANGUAGE section 8, bounce means good news): an amber, rounded bubble
 # that pops with overshoot over the moss_relent row's star. Colour and shape per fact
 # come from event_kinds' LOOT_ROWS.
+#
+# Other voices use the bubble too (a site crew's hello, a boss's line, a call-in). A caller the
+# plate can draw (caller_tile.gd) comes up beside the bubble with the name on a tag, so the bubble
+# holds the words alone, its edge takes the caller's colour and its tail points at the plate.
+# Moss's own counter talk stays as it was: the tail off the screen's edge, and a hand.
 
 const TEXT_WIDTH := 330.0
 const FONT := 20
@@ -33,6 +39,11 @@ const FADE := 0.25
 const HAND := 15.0
 const GESTURE_SECONDS := 0.6
 const INTRO_HOLD := 4.0
+# A caller's plate stands at the bubble's left: where it sits, how far the bubble's box moves
+# right to clear it, and the head room the name tag takes over the first line of words.
+const PLATE_AT := Vector2(6.0, 4.0)
+const PLATE_LEAD := CallerTile.SIDE - 8.0
+const PLATE_HEAD := 10.0
 
 # Reduced motion (Game.set_reduced_motion keeps it current): the bubble's shake and tail wag stop.
 static var reduced_motion := false
@@ -47,6 +58,10 @@ var grumble := false
 var sticky := false
 var gesture := ""
 var _label: Label
+var _tile: CallerTile
+# The box's shift right and the words' shift down while a caller's plate is up; 0 without one.
+var _lead := 0.0
+var _head := 0.0
 var _clock := 0.0
 var _hold := 0.0
 var _gesture_clock := 0.0
@@ -90,6 +105,10 @@ func _init() -> void:
 	_label.add_theme_color_override("font_color", Palette.SAND)
 	_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_label)
+	_tile = CallerTile.new()
+	_tile.name = "Caller"
+	_tile.position = PLATE_AT
+	add_child(_tile)
 
 
 func _ready() -> void:
@@ -234,8 +253,10 @@ func _flush_intro() -> void:
 	var row: Dictionary = _intro_queue.pop_front()
 	_intros_played[String(row["intro_key"])] = true
 	position = Vector2(0.0, get_viewport().get_visible_rect().size.y * 0.30)
-	_say(String(row["text"]), "moss_beat", "intro", 0.0, false, "")
-	_hold = maxf(INTRO_HOLD, _voice(LoreRows.voice_of(row), LoreRows.spoken(row)))
+	var who := LoreRows.voice_of(row)
+	var voice_s := _voice(who, LoreRows.spoken(row))
+	_say(String(row["text"]), "moss_beat", "intro", 0.0, false, "", who, voice_s)
+	_hold = maxf(INTRO_HOLD, voice_s)
 	_intro_showing = true
 
 
@@ -248,8 +269,8 @@ func _end_intro() -> void:
 
 func _show_exchange_line() -> void:
 	var line: Dictionary = _exchange[_exchange_index]
-	_say("%s: %s" % [line["speaker"], line["text"]], "moss_beat", "exchange", 0.0, false, "")
-	_voice(LoreRows.voice_of(line), String(line["text"]))
+	var who := LoreRows.voice_of(line)
+	_say("%s: %s" % [line["speaker"], line["text"]], "moss_beat", "exchange", 0.0, false, "", who, _voice(who, String(line["text"])))
 
 
 func _advance_exchange() -> void:
@@ -276,6 +297,7 @@ func _clear_line() -> void:
 	_hold = 0.0
 	text = ""
 	_label.text = ""
+	_tile.clear()
 	visible = false
 	modulate.a = 0.0
 
@@ -447,7 +469,7 @@ func _voice(speaker: String, words: String) -> float:
 # voice lasts. The card stays for the longer of reading time and the voice.
 func _present(speaker: String, words: String, voice_s: float) -> void:
 	position = Vector2(0.0, get_viewport().get_visible_rect().size.y * 0.30)
-	_say("%s: %s" % [LoreRows.SPEAKERS.get(speaker, speaker), words], "moss_beat", "call", 0.0, false, "")
+	_say("%s: %s" % [LoreRows.SPEAKERS.get(speaker, speaker), words], "moss_beat", "call", 0.0, false, "", speaker, voice_s)
 	_hold = maxf(_hold, voice_s)
 
 
@@ -493,6 +515,7 @@ func hush() -> void:
 	_hold = 0.0
 	if not visible:
 		return
+	_tile.quiet()
 	if _tween != null:
 		_tween.kill()
 	_tween = create_tween()
@@ -502,7 +525,10 @@ func hush() -> void:
 			visible = false)
 
 
-func _say(line: String, fact: String, mood_now: String, level: float, grumbles: bool, hand: String) -> void:
+# `caller` is who says the line (a LoreRows.SPEAKERS id; "" for Moss's counter talk) and
+# `voice_s` the seconds their voice lasts. `text` keeps the whole line, name and all.
+func _say(line: String, fact: String, mood_now: String, level: float, grumbles: bool, hand: String, caller := "", voice_s := 0.0) -> void:
+	var words := _seat_caller(caller, line, voice_s)
 	text = line
 	kind = fact
 	mood = mood_now
@@ -511,12 +537,12 @@ func _say(line: String, fact: String, mood_now: String, level: float, grumbles: 
 	gesture = hand
 	_gesture_clock = 0.0
 	_clock = 0.0
-	_label.text = line
+	_label.text = words
 	_label.add_theme_color_override("font_color", Palette.SAND)
 	_label.size = Vector2(TEXT_WIDTH, 0.0)
-	_body = Vector2(TEXT_WIDTH, _label.get_minimum_size().y) + PAD * 2.0
-	_label.position = Vector2(TAIL, 0.0) + PAD
-	size = Vector2(TAIL + _body.x + 12.0, _body.y + HAND * 3.5)
+	_body = Vector2(TEXT_WIDTH, _label.get_minimum_size().y + _head) + PAD * 2.0
+	_label.position = Vector2(TAIL + _lead, _head) + PAD
+	size = Vector2(TAIL + _lead + _body.x + 12.0, _body.y + HAND * 3.5)
 	pivot_offset = Vector2(0.0, _body.y * 0.5)
 	_hold = HOLD_BASE + HOLD_PER_WORD * line.split(" ", false).size()
 	visible = true
@@ -541,6 +567,26 @@ func _say(line: String, fact: String, mood_now: String, level: float, grumbles: 
 			_pop = 0.9 if grumbles else 0.96
 			_tween.tween_property(self, "_pop", 1.0, 0.18).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 			_tween.tween_property(self, "shown_exasperation", exasperation, 0.2).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+
+
+# The caller's plate comes up for a line, or goes for a line nobody on the plate says. Returns
+# the words the bubble shows: the line without the name it opens on when the tag carries the name.
+func _seat_caller(caller: String, line: String, voice_s: float) -> String:
+	var shown := String(LoreRows.SPEAKERS.get(caller, ""))
+	CallerTile.reduced_motion = reduced_motion
+	if _game != null and _game.flow != null:
+		_tile.pilots = _game.flow.classes
+	var named := shown != "" and _tile.present(caller, shown, voice_s)
+	if not named:
+		_tile.clear()
+	_lead = PLATE_LEAD if named else 0.0
+	_head = PLATE_HEAD if named else 0.0
+	return line.trim_prefix(shown + ": ") if named else line
+
+
+# Who is on the plate: a LoreRows.SPEAKERS id, "" when the bubble is down or is Moss's own.
+func caller() -> String:
+	return _tile.speaker if visible and _tile.visible else ""
 
 
 func _process(delta: float) -> void:
@@ -570,7 +616,7 @@ func _process(delta: float) -> void:
 # as Moss's patience runs out.
 func outline(e: float) -> PackedVector2Array:
 	var r := maxf(3.0, RADIUS - e * 3.0)
-	var box := Rect2(Vector2(TAIL, 0.0), _body)
+	var box := Rect2(Vector2(TAIL + _lead, 0.0), _body)
 	var corners := [
 		[box.position + Vector2(r, r), PI, PI * 1.5],
 		[Vector2(box.end.x - r, box.position.y + r), PI * 1.5, TAU],
@@ -614,18 +660,20 @@ func _draw() -> void:
 	var squash := Vector2(1.0 / _pop, _pop) if grumble and mood == "beat" else Vector2(_pop, _pop)
 	draw_set_transform(pivot_offset + shake, _spin, squash)
 	var root := -pivot_offset
-	var edge: Color = row().get("color", Palette.SAND)
+	var edge: Color = _tile.tint() if _tile.visible else row().get("color", Palette.SAND)
 	if mood == "relent":
 		var star := Icons.shape(String(row().get("shape", "star")))
 		var burst := _body.y * 1.6
-		draw_texture_rect(star, Rect2(root + Vector2(TAIL + _body.x - burst * 0.5, -burst * 0.3), Vector2(burst, burst)), false, Color(edge, 0.35))
+		draw_texture_rect(star, Rect2(root + Vector2(TAIL + _lead + _body.x - burst * 0.5, -burst * 0.3), Vector2(burst, burst)), false, Color(edge, 0.35))
 	var body := outline(e)
 	var shifted := PackedVector2Array()
 	for p in body:
 		shifted.append(p + root)
 	var mid_y := _body.y * 0.5
 	var wag := 0.0 if reduced_motion else sin(_clock * TAU * 3.0) * e * 1.5
-	var tail := PackedVector2Array([root + Vector2(TAIL + 2.0, mid_y - 10.0), root + Vector2(-4.0, mid_y + 8.0 + wag), root + Vector2(TAIL + 2.0, mid_y + 10.0)])
+	# The tail runs off the screen's edge to Moss's hatch, or stops at the caller's plate.
+	var tip := -4.0 if _lead == 0.0 else PLATE_AT.x + CallerTile.SIDE + 2.0
+	var tail := PackedVector2Array([root + Vector2(TAIL + _lead + 2.0, mid_y - 10.0), root + Vector2(tip, mid_y + 8.0 + wag), root + Vector2(TAIL + _lead + 2.0, mid_y + 10.0)])
 	draw_colored_polygon(tail, Color(Palette.CHARCOAL, 0.94))
 	draw_colored_polygon(shifted, Color(Palette.CHARCOAL, 0.94))
 	shifted.append(shifted[0])
@@ -634,9 +682,9 @@ func _draw() -> void:
 	draw_line(tail[1], tail[2], edge, 2.0)
 	var glyph := String(row().get("shape", "none"))
 	if glyph != "none" and mood in ["refuse", "bark"]:
-		draw_texture_rect(Icons.shape(glyph), Rect2(root + Vector2(TAIL + _body.x - 14.0, -10.0), Vector2(24.0, 24.0)), false, edge)
+		draw_texture_rect(Icons.shape(glyph), Rect2(root + Vector2(TAIL + _lead + _body.x - 14.0, -10.0), Vector2(24.0, 24.0)), false, edge)
 	draw_set_transform(Vector2.ZERO)
-	_label.position = Vector2(TAIL, 0.0) + PAD + shake
+	_label.position = Vector2(TAIL + _lead, _head) + PAD + shake
 	_draw_hand(Vector2(0.0, _body.y + HAND * 1.8), edge)
 
 
