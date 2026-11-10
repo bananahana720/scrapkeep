@@ -39,4 +39,27 @@ func run(t) -> void:
 	t.check("the steps carry their word, inside the plate", Array(plate.drawn_words()) == [RunStatus.THREAT_WORD] and RunStatus.THREAT_WORD == "THREAT"
 			and RunStatus.word_left() > top[3].x and plate.size.x >= RunStatus.PLATE_WIDTH,
 		"words %s, word at %.1f after %.1f, plate %.1f wide" % [plate.drawn_words(), RunStatus.word_left(), top[3].x, plate.size.x])
+	t.check("the word leaves room for its outline before the plate's edge", plate.size.x >= RunStatus.word_left() + RunStatus.WORD_PAD and RunStatus.WORD_PAD >= 4.0,
+		"plate %.1f, word from %.1f, pad %.1f" % [plate.size.x, RunStatus.word_left(), RunStatus.WORD_PAD])
+	var fresh = RunStatus.new()
+	fresh.set_status(1, 3, true, false, 0)
+	var quiet: bool = not fresh.rising()
+	fresh.set_status(1, 3, true, false, 1)
+	var rose: bool = fresh.rising()
+	fresh._process(RunStatus.RISE_BLINK * 0.5)
+	var still: bool = fresh.rising()
+	fresh._process(RunStatus.RISE_BLINK)
+	var settled: bool = not fresh.rising()
+	fresh.set_status(1, 3, true, false, 1)
+	var same: bool = not fresh.rising()
+	fresh.set_status(1, 3, true, false, 0)
+	var fell: bool = not fresh.rising()
+	fresh.set_status(1, 3, true, false, 9)
+	var at_top: bool = fresh.rising()
+	fresh._process(RunStatus.RISE_BLINK)
+	fresh.set_status(1, 3, true, false, 12)
+	var past_top: bool = not fresh.rising()
+	t.check("a step that lights blinks for a moment, and only a rise does it", quiet and rose and still and settled and same and fell and at_top and past_top and RunStatus.RISE_BLINK >= 1.0,
+		"quiet %s rose %s still %s settled %s same %s fell %s top %s past the top %s" % [quiet, rose, still, settled, same, fell, at_top, past_top])
+	fresh.free()
 	plate.free()
