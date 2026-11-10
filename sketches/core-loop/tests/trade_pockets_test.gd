@@ -181,7 +181,12 @@ func _runtime(model) -> void:
 		actual = acts.sites.filter(func(site): return not site.trade.is_empty())
 	t.eq("actual park stage has one seeded trade", actual.size(), 1)
 	if not actual.is_empty():
-		t.check("trade is appended after authored sites", acts.sites[-1] == actual[0])
+		# The stage's drawn pockets are planned round the trade, so they follow it (every stage draws since
+		# ruling bu, the dam too); nothing authored does.
+		var trade_at: int = acts.sites.find(actual[0])
+		t.check("trade is appended after authored sites", acts.sites.slice(trade_at + 1).all(func(site): return site.drawn)
+				and not acts.sites.slice(0, trade_at).any(func(site): return site.drawn),
+			str(acts.sites.map(func(site): return "%s%s" % [site.id, " (drawn)" if site.drawn else ""])))
 		_appearance_recency(game, model, actual[0])
 	acts.clear()
 	await physics_frame
