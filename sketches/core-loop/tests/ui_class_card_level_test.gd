@@ -9,9 +9,10 @@ const T := preload("res://tests/support/t.gd")
 # measured one letter wide, the row pinned that height, and every card's fantasy line and key
 # rows fell off the card's floor. Two ways in: a first Start, whose prologue hides the row until
 # it ends, and a plain open. For each, L1: every card's column fits its card. L2: the fantasy
-# line keeps a two-line height. L3: every key cell ends inside its card. L4: with one line under
-# the title (screens.PILOT_LINE's place) the title, the line, the cards and the key hints row
-# stack in that order without touching, all on the screen with a margin under the key row.
+# line keeps a two-line height. L3: every key cell ends inside its card. L4: with the line under
+# the title (screens.PILOT_LINE, pinned here as LINE so new words are measured again) the title,
+# the line, the cards and the key hints row stack in that order without touching, all on the
+# screen with a margin under the key row.
 
 const LINE_MAX := 90.0
 const SETTLE := 30
@@ -68,7 +69,8 @@ func _process(_delta: float) -> bool:
 					_t.check("prologue: its Next button is on the screen (pilot select hides the action row, the prologue shows it)",
 						next != null and next.is_visible_in_tree(), "next %s" % (next != null))
 					_game.screens.end_prologue()
-				_game.screens._show("Choose your pilot", Color.WHITE, LINE)
+				_t.check("%s: the screen shows the pilot line it was measured with" % WAYS[_way], _game.screens._body.text == LINE and _game.screens.PILOT_LINE == LINE,
+					"body \"%s\"" % _game.screens._body.text)
 				_mark = _frame
 				_step = 2
 		2:
