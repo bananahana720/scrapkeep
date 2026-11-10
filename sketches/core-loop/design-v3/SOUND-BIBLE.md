@@ -22,7 +22,7 @@ What the pick settles:
 
 - **Nothing Andrew has picked is replaced.** 2010 is the sound of nearly every standing pick. The work is making each piece obey the band's rule, not re-recording for its own sake, and a new take still replaces a standing pick only when he picks it by ear.
 - **New music is made in the 2010 sound.** A render caption names the year and its production (the 2010 captions in the audition brief are the pattern); the other two years are for radio records only.
-- **Roaming** was not part of the pick, because the renderer pulled the roaming covers to 150 BPM. New roaming takes are rendered at 174 and fitted to 172 (a pitch-keeping 1.16 percent stretch, labelled as such), checked by bar length before and after, and offered beside the current Spillway roaming tune, which stays until he picks one.
+- **Roaming** was not part of the pick, because the renderer pulled the roaming covers to 150 BPM. New roaming takes are rendered at 174 and fitted to 172 (a pitch-keeping 1.16 percent stretch, labelled as such), checked by bar length before and after, and offered beside the current Spillway roaming tune. Andrew picked take 6107 (10 November 2026: "Love the sound pick of 6107, very well tuned to my liking"); it is the roaming tune of the Spillway's two stages.
 - **The band's rule** is the game's one line in sound (ruling cj): the grid is the machine's, the bend is ours. The keepers are a band that listens: a call gets an answer, the solo is handed round, a wrong note is kept and answered. The Foreman is one perfect tone that needs nobody, beautiful and never sinister. [SOUND-STORY.md](../SOUND-STORY.md) section 8 applies it to who talks.
 
 ## The set: the score is played like a DJ plays a room
@@ -85,6 +85,8 @@ He gave the threads their own judgement on mechanics and tuning for this build-o
 - The held breath and the drop keep the lead even at low armour. Low armour's missing lead is a warning everywhere else; in the breath it would be silence.
 - The Warden's fight takes the band from an event's tune that is still playing when it engages (the flood, a squall). Before, the event's tune played the whole fight and the Warden's music was never heard. An event that begins inside the fight does not start its tune.
 - After an ultimate's drop the recorded band comes back (it used to stay off for the rest of the stage, leaving the stand-in band). In a Warden fight it comes back to the fight's build, not to where it left.
+- Take 6107 keeps its softer top end (4.9 to 6.3 dB below the old roaming tune above 8 kHz at speed). The clip he picked from was softer the same way, so it is the sound he chose. If it reads muffled against the fight, a shelf on the roaming band is one line.
+- Take 6107 keeps its drums 1 to 2 LU hotter than the old tune's. The game fades the drums in with speed, so they are loudest at full speed; the drive is the point of the 2010 pick.
 - Slow motion is marked at both ends, quietly and above 200 Hz, and the music neither slows nor filters: it is held 3 dB under, as it is for a warning. A tape stop on the band itself waits for after the sitting.
 - The Cannon keeps its bent chime and has no mouth: it is a machine on the crew's side.
 - Moss sounds the same at his bench as on a call.
