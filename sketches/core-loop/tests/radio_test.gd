@@ -188,11 +188,12 @@ func _run() -> void:
 	var wanted: String = audio.score_tune_wanted()
 	_t.eq("the score wants the stage's roam", wanted, "roam-1-1")
 	_t.eq("a tune not heard yet keeps the air", [audio.radio_hold, deck.applied.get("why", "")], ["", "new_signal"])
-	_t.eq("and the dial says so", deck.reading()["line"], "New signal. Listen in.")
+	_t.eq("and the dial names it", deck.reading()["line"], "New signal: Top Shelf")
 	audio.knows_tune("roam-1-1")
 	profile.hear_tune("roam-1-1")
 	deck._plan_now()
 	_t.eq("a heard tune keeps the air until the moment moves on", audio.radio_hold, "")
+	_t.eq("and is no longer news on the dial", deck.reading()["line"], "Live: Top Shelf")
 	_press("cl_radio_skip")
 	_t.check("a key press lets the radio back on air", audio.radio_hold != "" and audio.radio_hold in RadioTakes.on_station(station), audio.radio_hold)
 	deck.radio.track = a

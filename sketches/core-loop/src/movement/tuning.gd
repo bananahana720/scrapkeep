@@ -45,6 +45,10 @@ const SPECS := [
 	# synth band, and the Warden open's held breath in the ACE music.
 	{"key": "music", "label": "Music", "min": 0.0, "max": 1.0, "step": 1.0, "value": 1.0, "options": ["synth", "ace"]},
 	{"key": "breath", "label": "Breath", "min": 0.0, "max": 2.0, "step": 1.0, "value": 1.0, "options": ["raw", "hard", "gentle"]},
+	# The recorded band's Warden form (ace_sequencer.gd follow_guard): the tight build as the guard
+	# nears breaking, the held breath through a stagger, the drop on the hit that shatters a
+	# chunk. `--warden-form=loop` keeps the build looping to the break, as it played before.
+	{"key": "warden_form", "label": "Warden form", "min": 0.0, "max": 1.0, "step": 1.0, "value": 1.0, "options": ["loop", "form"]},
 	{"key": "discovery", "label": "Discovery", "min": 0.0, "max": 1.0, "step": 1.0, "value": 1.0, "options": ["banner", "cards"]},
 	{"key": "telegraph", "label": "Telegraph", "min": 0.0, "max": 1.0, "step": 1.0, "value": 1.0, "options": ["classic", "haze"]},
 	# World-one builds (design-v3/research/build-systems/BUILD-SYSTEMS.md, unit G): the master
@@ -80,6 +84,7 @@ const SPECS := [
 # The option rows other modules read by name.
 const MUSIC_KEY := "music"
 const BREATH_KEY := "breath"
+const WARDEN_FORM_KEY := "warden_form"
 const DISCOVERY_KEY := "discovery"
 const TELEGRAPH_KEY := "telegraph"
 
@@ -182,7 +187,7 @@ func _init() -> void:
 #         reads them); "launch" flags apply when game.gd calls apply_cmdline("launch"),
 #         so a bot or tool that builds a bare Tuning never sees them.
 # `--scrap=armor --wear=on --route-seed=7 --start-mass=200 --music=ace --breath=gentle
-# --discovery=cards --telegraph=haze --world-one-builds=on --hotwire-shell=on --hotwire-tread=on
+# --warden-form=loop --discovery=cards --telegraph=haze --world-one-builds=on --hotwire-shell=on --hotwire-tread=on
 # --grip=off`, from the engine args
 # or the user args (after Godot's `--`). A flag in neither table is ignored.
 # threat_grammar.gd's Painter.haze_on() reads --telegraph from the launch args itself,
@@ -195,6 +200,7 @@ const FLAGS := {
 	"start-mass": ["start_mass", "number", "start"],
 	"music": ["music", "option", "launch"],
 	"breath": ["breath", "option", "launch"],
+	"warden-form": ["warden_form", "option", "launch"],
 	"discovery": ["discovery", "option", "launch"],
 	"telegraph": ["telegraph", "option", "launch"],
 	"world-one-builds": ["world_one_builds", "option", "launch"],
