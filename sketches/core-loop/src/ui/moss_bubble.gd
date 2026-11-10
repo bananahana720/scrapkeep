@@ -298,6 +298,7 @@ func _clear_line() -> void:
 	text = ""
 	_label.text = ""
 	_tile.clear()
+	_end_voice()
 	visible = false
 	modulate.a = 0.0
 
@@ -459,10 +460,25 @@ func _tick_call(delta: float) -> void:
 
 # A caller's voice starts on a line; returns the seconds it lasts (0.0 when it stays silent:
 # nobody on the list says the line, or an earlier caller is still talking).
+# The bubble holds one line, so the caller of the line it replaces stops first (_end_voice).
 func _voice(speaker: String, words: String) -> float:
-	var presentation = _game.get("presentation")
-	var audio = presentation.get("audio") if presentation != null else null
+	_end_voice()
+	var audio = _audio()
 	return float(audio.call_in("call_in", speaker, words)) if audio != null and speaker != "" else 0.0
+
+
+# A caller's line went before their voice was done (a fight went live, the run ended, the ball
+# rolled off, another line took the bubble): the voice goes with it. Nothing happens when nobody
+# is talking.
+func _end_voice() -> void:
+	var audio = _audio()
+	if audio != null:
+		audio.call_end()
+
+
+func _audio():
+	var presentation = _game.get("presentation") if _game != null else null
+	return presentation.get("audio") if presentation != null else null
 
 
 # A caller's line comes up: who (a LoreRows.SPEAKERS id), the words, and the seconds their
@@ -488,6 +504,7 @@ func beat(record: Dictionary) -> void:
 	_end_exchange(false)
 	# A beat or bark replaces an intro line: the next press must not clear it as the intro.
 	_intro_showing = false
+	_end_voice()
 	var mood_now := "beat"
 	if record.get("relent", false):
 		mood_now = "relent"
@@ -504,18 +521,23 @@ func bark(line: Dictionary, fact: String) -> void:
 		return
 	_end_exchange(false)
 	_intro_showing = false
+	_end_voice()
 	var refused := fact == "shop_refused"
 	_say(String(line.get("text", "")), fact, "refuse" if refused else "bark", 0.0, refused,
 		"refuse" if refused else ("give" if fact in ["shop_bought", "shop_charge", "shop_sold"] else ""))
 
 
-func hush() -> void:
+# The bubble goes down. `spoken` is for a line that had its whole time: a line cut short takes
+# its caller's voice with it, a line that ran out leaves the last of the voice alone.
+func hush(spoken := false) -> void:
 	_end_exchange(false)
 	_intro_showing = false
 	_hold = 0.0
 	if not visible:
 		return
 	_tile.quiet()
+	if not spoken:
+		_end_voice()
 	if _tween != null:
 		_tween.kill()
 	_tween = create_tween()
@@ -608,7 +630,8 @@ func _process(delta: float) -> void:
 	if _exchange.is_empty() and not sticky and _hold > 0.0 and not get_tree().paused:
 		_hold -= delta
 		if _hold <= 0.0:
-			hush()
+			# The line had its whole time, and a caller's time is at least their voice's.
+			hush(true)
 	queue_redraw()
 
 
