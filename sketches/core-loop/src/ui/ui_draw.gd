@@ -10,6 +10,7 @@ const UiFonts := preload("res://src/ui/ui_fonts.gd")
 
 const OUTLINE := Color(0.0, 0.0, 0.0, 0.85)
 const TRACK := Color(0.14, 0.16, 0.16, 0.85)
+const ICON_EDGE := 1.5
 const CHAMFER := 6.0
 
 
@@ -36,6 +37,13 @@ static func label(font_size: int, color: Color, words := "") -> Label:
 	node.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	node.text = words
 	return node
+
+
+# An icon wearing the outline the words wear, so it holds on pale ground as they do.
+static func icon(canvas: CanvasItem, texture: Texture2D, rect: Rect2, tint: Color) -> void:
+	for i in 8:
+		canvas.draw_texture_rect(texture, Rect2(rect.position + Vector2.RIGHT.rotated(TAU * i / 8.0) * ICON_EDGE, rect.size), false, OUTLINE)
+	canvas.draw_texture_rect(texture, rect, false, tint)
 
 
 static func bar(canvas: CanvasItem, rect: Rect2, fraction: float, color: Color) -> void:

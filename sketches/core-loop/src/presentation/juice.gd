@@ -68,6 +68,12 @@ const SHELL_PER_CLASS := 0.0
 const SHELL_RATE := 9.0
 # A pickup kicks the shell's spring outward this fast per unit of pulse: a heft gain.
 const PULSE_SPEED := 9.0
+# Pickups that land together add their kicks, and with no ceiling a brute's pile swelled the ball
+# to twice its size (the PC's reel, 10 Nov 2026). Two limits hold any pile to a swell of a fifth
+# and leave one pickup as it was: the spring never moves faster than PULSE_MAX of pulse, and a
+# kick fades as the shell nears SHELL_SWING from rest on the kick's side.
+const PULSE_MAX := 0.22
+const SHELL_SWING := 0.15
 
 # The squash spring: underdamped, so a landing squashes, overshoots into a stretch and
 # settles in about a quarter second. Snappy on the hit, fluid on the way out.
@@ -240,7 +246,8 @@ func squash(amount: float, axis: Vector3) -> void:
 
 # A pop of the shell's spring: positive swells (heft gained), negative shrinks (lost).
 func pulse(amount: float) -> void:
-	_shell_velocity += amount * PULSE_SPEED
+	var room := clampf(1.0 - signf(amount) * (shell - shell_target()) / SHELL_SWING, 0.0, 1.0)
+	_shell_velocity = clampf(_shell_velocity + amount * room * PULSE_SPEED, -PULSE_MAX * PULSE_SPEED, PULSE_MAX * PULSE_SPEED)
 
 
 func _on_landed(impact: float) -> void:
@@ -266,17 +273,7 @@ func _process(delta: float) -> void:
 	if player == null:
 		return
 	# The springs run on scaled time, so a hit-stop freezes the squash mid-frame too.
-	var steps := clampi(ceili(delta / SPRING_STEP), 1, MAX_SPRING_STEPS)
-	var h := delta / float(steps)
-	var target := shell_target()
-	for _i in steps:
-		var accel := -SPRING * _squash - DAMPING * _squash_velocity
-		_squash_velocity += accel * h
-		_squash += _squash_velocity * h
-		# The shell: an underdamped spring toward the heft class's size.
-		var shell_accel := SHELL_RATE * SHELL_RATE * (target - shell) - 2.0 * 0.45 * SHELL_RATE * _shell_velocity
-		_shell_velocity += shell_accel * h
-		shell += _shell_velocity * h
+	step_springs(delta)
 	var juice: Node3D = player.juice_node()
 	var basis := _axis_scale(_axis, _squash)
 	# A gentle stretch along the travel line, scaled by speed.
@@ -295,6 +292,21 @@ func _process(delta: float) -> void:
 	_animate_pylon(delta)
 	if vfx != null and audio != null:
 		vfx.set_chain(audio.kill_streak.length if audio.kill_streak.live(Time.get_ticks_msec()) else 0, audio.kill_streak.rung)
+
+
+# One frame of the squash and shell springs.
+func step_springs(delta: float) -> void:
+	var steps := clampi(ceili(delta / SPRING_STEP), 1, MAX_SPRING_STEPS)
+	var h := delta / float(steps)
+	var target := shell_target()
+	for _i in steps:
+		var accel := -SPRING * _squash - DAMPING * _squash_velocity
+		_squash_velocity += accel * h
+		_squash += _squash_velocity * h
+		# The shell: an underdamped spring toward the heft class's size.
+		var shell_accel := SHELL_RATE * SHELL_RATE * (target - shell) - 2.0 * 0.45 * SHELL_RATE * _shell_velocity
+		_shell_velocity += shell_accel * h
+		shell += _shell_velocity * h
 
 
 # Squashes by amount along axis and bulges the other two to keep the volume.

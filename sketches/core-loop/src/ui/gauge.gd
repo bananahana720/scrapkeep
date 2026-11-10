@@ -117,7 +117,8 @@ func _process(delta: float) -> void:
 
 func _draw() -> void:
 	var mid := bar_mid()
-	draw_texture_rect(Icons.texture(icon_id), Rect2(Vector2(0.0, mid - ICON * 0.5), Vector2(ICON, ICON)), false, Icons.tint(icon_id, color))
+	# Outlined: on flat pale sand the PC saw the health and armour icons vanish beside their words.
+	UiDraw.icon(self, Icons.texture(icon_id), Rect2(Vector2(0.0, mid - ICON * 0.5), Vector2(ICON, ICON)), Icons.tint(icon_id, color))
 	var x := ICON + GAP
 	if label != "":
 		x += UiDraw.text(self, x, mid, label, FONT, color, true) + GAP
