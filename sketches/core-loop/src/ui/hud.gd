@@ -217,6 +217,8 @@ var _engaged := false
 var _struggle := Objectives.Struggle.new()
 # The site the activity row names now (objective_reading), or null.
 var _plate_site = null
+# Where the ball is going, which is the "ahead" the activity row names a site by.
+var _way := Objectives.Way.new()
 # The armour gauge (scrap mode `armor`): the mass heap and the scrap layer over the hull, left of the hull
 # gauge, in the scrap colour where the hull is sand. A hit that reached the scrap flashes
 # its edge amber for ARMOR_FLASH seconds; the hull gauge turns rust only at low health.
@@ -811,6 +813,7 @@ func _on_world_entered(world: int) -> void:
 func _on_stage_entered(stage: int, retry: bool) -> void:
 	_threat = 0
 	_begin_engagement(false)
+	_way.begin()
 	if retry:
 		return
 	if game.opening.waits("title"):
@@ -1050,13 +1053,13 @@ func objective_reading() -> Dictionary:
 		return {"id": "", "icon": "", "words": "", "color": Palette.SAND, "progress": -1.0, "distance": -1}
 	var words := Objectives.words(id)
 	if id == "find_activity":
-		# An unfinished site by name and metres, so the row is a place to go: the one in front of
-		# the view (Objectives.pick_site), kept until another is clearly the better call.
+		# An unfinished site by name and metres, so the row is a place to go: the one ahead on the
+		# ball's way (Objectives.pick_site, Way), kept until another is clearly the better call.
 		var ball: Vector3 = game.player.shown_position()
 		var offsets := []
 		for site in sites:
 			offsets.append(site.global_position - ball)
-		var picked := Objectives.pick_site(offsets, -game.camera.cam.global_transform.basis.z, sites.find(_plate_site) if is_instance_valid(_plate_site) else -1)
+		var picked := Objectives.pick_site(offsets, _way.ahead(-game.camera.cam.global_transform.basis.z), sites.find(_plate_site) if is_instance_valid(_plate_site) else -1)
 		_plate_site = sites[picked] if picked >= 0 else null
 		if picked >= 0:
 			words = Objectives.activity_words(String(sites[picked].id), game.world.activities.called(String(sites[picked].id)))
@@ -1074,7 +1077,7 @@ static func _clamp_fraction(gate) -> float:
 # Every world-attached prompt in front of the camera and within its reach goes in the
 # prompts band, nearest first, at most MAX_PROMPTS of them. Each takes the free spot
 # nearest its anchor's column (free_spot); the rest wait off screen. A prompt shows its
-# detail only while the ball is within its DETAIL_RANGE.
+# detail only while the ball is within its detail_range.
 func place_prompts(size: Vector2, playing: bool) -> void:
 	prompt_rects.clear()
 	var cam: Camera3D = game.camera.cam
@@ -1097,17 +1100,28 @@ func place_prompts(size: Vector2, playing: bool) -> void:
 		if placed.size() >= ScreenRegions.MAX_PROMPTS:
 			break
 		var prompt: Label = entry[1]
-		prompt.near = ball.distance_to(entry[2]) <= WorldPrompt.DETAIL_RANGE
-		var extent: Vector2 = prompt.shown_extent()
-		var want := Rect2(ScreenRegions.clamp_prompt(cam.unproject_position(entry[2]), extent, size), extent)
-		var spot := free_spot(want, placed, band)
+		prompt.near = ball.distance_to(entry[2]) <= prompt.detail_range
+		var spot := prompt_spot(prompt, cam.unproject_position(entry[2]), size, placed, band)
 		if spot.size == Vector2.ZERO:
 			continue
 		prompt.position = spot.position
-		prompt.size = extent
+		prompt.size = spot.size
 		prompt.visible = true
 		placed.append(spot)
 		prompt_rects[prompt] = spot
+
+
+# The spot for a prompt whose anchor projects to `at`. A prompt showing its detail that finds no
+# room gives the detail up and is placed by its name alone, as it reads at range: a label with
+# less on it beats no label (three reward gates' details side by side do not always fit 1280x720).
+static func prompt_spot(prompt, at: Vector2, size: Vector2, placed: Array[Rect2], band: Rect2) -> Rect2:
+	var extent: Vector2 = prompt.shown_extent()
+	var spot := free_spot(Rect2(ScreenRegions.clamp_prompt(at, extent, size), extent), placed, band)
+	if spot.size == Vector2.ZERO and prompt.near:
+		prompt.near = false
+		extent = prompt.shown_extent()
+		spot = free_spot(Rect2(ScreenRegions.clamp_prompt(at, extent, size), extent), placed, band)
+	return spot
 
 
 # The spot for `want` that overlaps nothing already placed and stays in the band: its
@@ -1262,6 +1276,8 @@ func _physics_process(delta: float) -> void:
 		return
 	if _engaged:
 		_struggle.step(delta)
+	if game.player != null:
+		_way.step(game.player.planar_velocity(), delta)
 	part_name.step(delta)
 	_step_fight_hint()
 

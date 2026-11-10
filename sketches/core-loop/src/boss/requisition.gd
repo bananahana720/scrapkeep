@@ -219,6 +219,11 @@ func _flush_hides(clip: StringName, ended: bool) -> void:
 				(part as Node3D).visible = false
 
 
+# Where the cockpit sits on the stern, for the HUD's pointer (boss.gd plate_targets).
+func cockpit_point() -> Vector3:
+	return _cockpit.global_position
+
+
 # `clip` names a phase-entry clip that flips the model's shield away; the hide waits for it.
 func cockpit_open(open: bool, clip := "") -> void:
 	_cockpit.visible = not open
