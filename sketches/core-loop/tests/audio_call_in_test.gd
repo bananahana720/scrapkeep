@@ -69,16 +69,20 @@ func _voices() -> void:
 	t.check("a line is said the same way twice", Bank._say_plan("sable", LINE) == Bank._say_plan("sable", LINE)
 		and Bank._say_plan("sable", LINE) != Bank._say_plan("sable", LINE + " Go."), "sable, twice")
 	var levels: Array = Bank.CALLERS.keys().map(func(speaker: String): return Bank.trim_db(Bank.say_id(speaker, LINE)))
-	t.check("each voice is levelled against Moss's", Bank.trim_db(Bank.say_id("moss", LINE)) == Bank.TRIM_DB["babble"]
+	t.check("each voice is levelled against Moss's bench voice", Bank.trim_db(Bank.say_id("cannon", LINE)) == Bank.TRIM_DB["babble"]
 		and levels.min() >= Bank.TRIM_DB["babble"] - 3.0 and levels.max() <= Bank.TRIM_DB["babble"] + 7.0, "trims %s" % [levels])
 
 
-# Everyone alive has a mouth (Andrew, 10 November 2026); the Foreman has none. Moss and Brindle
-# keep their blips until he has heard their mouths against the rule on talking growls, and the
-# Cannon, a machine on the crew's side, keeps its bent chime.
+# Everyone alive has a mouth (Andrew, 10 November 2026); the Foreman has none, and the Cannon,
+# a machine on the crew's side, keeps its bent chime. Moss and Brindle carry theirs as the
+# working default while he listens to them against the rule on talking growls.
 func _mouths() -> void:
 	var mouthed: Array = Bank.CALLERS.keys().filter(func(speaker: String): return Bank.CALLERS[speaker].has("mouth"))
-	t.eq("the pilots and the site crews talk through mouths", mouthed, ["sable", "rivet", "kest", "tarn", "tally", "pump_crew", "flume_crew", "signal_crew"])
+	t.eq("everyone alive talks through a mouth; the Cannon and the Foreman do not",
+		Bank.CALLERS.keys().filter(func(speaker: String): return not speaker in mouthed), ["cannon", "mind"])
+	var unsaid: Array = mouthed.filter(func(speaker: String): return not _said_by_mouth(speaker))
+	t.check("a mouthed caller's line is its letters said by its own mouth, and the Cannon's is not", unsaid.is_empty() and mouthed.size() == 10
+		and not _said_by_mouth("cannon"), "not said by the mouth: %s" % [unsaid])
 	var plan: Array = Bank._say_plan("sable", "Go on")[0]
 	t.check("the chirp stays on the instrument and each letter after it is said", plan.slice(0, 2).all(func(blip: Array): return blip[6] == "" and blip[5] == "bell")
 		and plan.slice(2).map(func(blip: Array): return blip[6]) == ["g", "o", "o", "n"], "letters %s" % [plan.map(func(blip: Array): return blip[6])])
@@ -93,11 +97,25 @@ func _mouths() -> void:
 	var small: PackedFloat32Array = Bank._mouth(69, 0.08, 0.0, "a", 1.4)
 	var grown: PackedFloat32Array = Bank._mouth(69, 0.08, 0.0, "a", 1.0)
 	t.check("a smaller mouth is brighter, a letter is said the same way twice, and a vowel is level with the chirp", _edge(small) > _edge(grown)
-		and small == Bank._mouth(69, 0.08, 0.0, "a", 1.4) and absf(Synth.peak(small) - Bank.MOUTH_PEAK) < 0.05
+		and Bank._mouth(69, 0.04, 0.0, "s", 1.4) == Bank._mouth(69, 0.04, 0.0, "s", 1.4) and absf(Synth.peak(small) - Bank.MOUTH_PEAK) < 0.05
 		and Synth.peak(Bank._mouth(69, 0.04, 0.0, "t", 1.4)) < Synth.peak(small), "edge %.3f over %.3f, peak %.2f" % [_edge(small), _edge(grown), Synth.peak(small)])
-	var said: PackedFloat32Array = Bank.samples(Bank.say_id("sable", LINE))
-	var played: PackedFloat32Array = Bank._letter("bell", 86, 0.08, 0.0)
-	t.check("a mouthed line is not the instrument's", said.size() > 0 and Bank._mouth(74, 0.08, 0.0, "a", 1.4) != played, "%d samples" % said.size())
+
+
+# Whether a caller's line as the bank says it (before the bake levels it) holds, where its
+# first letter falls, that letter said by a mouth of the caller's size at the caller's height.
+# The chirp before it has rung out and the next letter has not started, so the line there is
+# the one piece.
+func _said_by_mouth(speaker: String) -> bool:
+	var row: Dictionary = Bank.CALLERS[speaker]
+	var letters: Array = Bank._say_plan(speaker, LINE)[0].filter(func(blip: Array): return blip[6] != "")
+	var blip: Array = letters[0]
+	var piece: PackedFloat32Array = Bank._mouth(int(blip[1]) + int(row.get("drop", 0)), float(blip[2]), float(blip[4]), blip[6], float(row.get("mouth", 1.0)))
+	var baked: PackedFloat32Array = Bank._say(speaker, LINE)
+	var from := roundi(float(blip[0]) * Harmony.RATE)
+	for i in Synth.seconds(float(blip[2])):
+		if absf(baked[from + i] - piece[i] * float(blip[3])) > 0.001:
+			return false
+	return true
 
 
 # How much of a buffer sits on one partial of A4, the note the mouth checks are said on.
@@ -227,7 +245,7 @@ func _moss() -> void:
 	Bank.unknown_callers.clear()
 	var stranger: String = Bank.say_id("nobody", LINE)
 	t.check("a caller with no row gets Moss's voice and one warning", Bank._say_plan("nobody", LINE) == Bank._say_plan("moss", LINE)
-		and Bank.unknown_callers.keys() == ["nobody"] and Bank.trim_db(stranger) == Bank.TRIM_DB["babble"] and not Bank.caller_on_grid("nobody"),
+		and Bank.unknown_callers.keys() == ["nobody"] and Bank.trim_db(stranger) == Bank.trim_db(Bank.say_id("moss", LINE)) and not Bank.caller_on_grid("nobody"),
 		"warned about %s" % [Bank.unknown_callers.keys()])
 	t.check("an id with no line is a chirp and no crash", Bank._said("say|sable") == ["sable", ""] and Bank._said("say|sable|a|b") == ["sable", "a|b"]
 		and Bank.samples("say|sable").size() > 0, "%s" % [Bank._said("say|sable")])

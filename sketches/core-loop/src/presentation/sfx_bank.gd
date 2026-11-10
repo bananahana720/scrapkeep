@@ -308,13 +308,16 @@ const VOWELS := ["a", "e", "i", "o", "u"]
 # mouth of that size (1 is a grown voice, more is a smaller creature): the chirp stays on the
 # instrument, and the letters are said, drop semitones away from where the instrument would
 # play them. grid is the Foreman alone: one note, every letter half a sixteenth, no bend,
-# no mouth and nothing left to chance. db levels a voice against Moss's, whose row is empty:
-# his call is his bench voice after his bell.
+# no mouth and nothing left to chance. bench is Moss alone: his call is his bench line after
+# his bell, and a caller with no row gets his. db levels a voice against Moss's bench blips.
+# Moss and Brindle carry mouths as the working default while Andrew listens (card of 10
+# November 2026). To give one his old voice back, edit his row: Moss is {"bench": true}, and
+# Brindle loses mouth and takes db 1.5.
 const SAY := "say|"
 const MOSS := "moss"
 const PURE := "pure"
 const CALLERS := {
-	"moss": {},
+	"moss": {"bench": true, "mouth": 1.0, "drop": 12, "db": 3.5},
 	"sable": {"motif": "sable", "voice": "bell", "lift": 12, "pace": 0.8, "bend": 2.0, "mouth": 1.4, "drop": -12, "db": 3.5},
 	"rivet": {"motif": "rivet", "lift": 12, "pace": 0.7, "bend": 0.5, "run": true, "mouth": 1.3, "drop": -12, "db": 1.0},
 	"kest": {"motif": "kest", "lift": 12, "pace": 1.15, "bend": -2.0, "stop": 1.6, "mouth": 1.15, "db": 4.5},
@@ -324,7 +327,7 @@ const CALLERS := {
 	"pump_crew": {"root": 62, "voice": "mallet", "bend": 1.0, "second": -3, "mouth": 1.2, "db": 7.0},
 	"flume_crew": {"root": 64, "voice": "mallet", "bend": 1.0, "second": -3, "mouth": 1.25, "db": 5.5},
 	"signal_crew": {"root": 67, "voice": "mallet", "bend": 1.0, "second": -3, "mouth": 1.3, "db": 5.0},
-	"brindle": {"motif": "fleet", "lift": 12, "pace": 1.7, "lean": true, "db": 1.5},
+	"brindle": {"motif": "fleet", "lift": 12, "pace": 1.7, "lean": true, "mouth": 0.95, "db": 3.5},
 	"mind": {"root": 74, "voice": PURE, "grid": true, "db": -2.5},
 }
 # The incoming chirp: two notes a little under the voice, then the line starts this long after
@@ -2649,8 +2652,8 @@ static func babble(text: String, beat: int, shift := 0) -> PackedFloat32Array:
 	return Synth.declick(Synth.normalize(buf, 0.9), 16, 600)
 
 
-# A line laid out as Moss's blips [seconds, midi, seconds long, gain, glide, grumble], and
-# where the last one ends.
+# A line laid out as Moss's blips [seconds, midi, seconds long, gain, glide, grumble, letter],
+# and where the last one ends.
 static func _babble_blips(text: String, beat: int) -> Array:
 	var relent := beat == BABBLE_RELENT
 	var root: int = BABBLE_ROOTS[beat - 1] if beat >= 1 and beat <= 6 else 50
@@ -2675,10 +2678,10 @@ static func _babble_blips(text: String, beat: int) -> Array:
 				gain = db_to_linear(3.0)
 			if l == letters.size() - 1 and word.ends_with("?"):
 				midi += 5
-			blips.append([at, midi, length, gain, 0.0, false])
+			blips.append([at, midi, length, gain, 0.0, false, letters[l]])
 			at += length
 		if w == 0 and beat in [2, 4, 6]:
-			blips.append([0.0, root - 12, 0.2, 0.9, 0.0, true])
+			blips.append([0.0, root - 12, 0.2, 0.9, 0.0, true, ""])
 		if word.ends_with(","):
 			at += 0.12
 		elif _ends_sentence(word):
@@ -2795,7 +2798,7 @@ static func say_seconds(speaker: String, text: String, step := Harmony.STEP) -> 
 # time it is said. voice "" is Moss's own blip.
 static func _say_plan(speaker: String, text: String, step := Harmony.STEP) -> Array:
 	var row := _caller(speaker)
-	if row.is_empty():
+	if row.get("bench", false):
 		return _moss_call(text)
 	var notes := _caller_notes(speaker)
 	var voice := _caller_voice(speaker)
@@ -2859,7 +2862,7 @@ static func _moss_call(text: String) -> Array:
 		blips.append([i * 0.16, 86, CHIRP_NOTE_S, CHIRP_GAIN, 0.0, "mallet", ""])
 	var laid := _babble_blips(text, BABBLE_LEVEL)
 	for blip in laid[0]:
-		blips.append([CALL_TALK_S + float(blip[0]), blip[1], blip[2], blip[3], blip[4], "", ""])
+		blips.append([CALL_TALK_S + float(blip[0]), blip[1], blip[2], blip[3], blip[4], "", blip[6]])
 	return [blips, CALL_TALK_S + float(laid[1])]
 
 
@@ -2870,10 +2873,10 @@ static func _say(speaker: String, text: String) -> PackedFloat32Array:
 	for blip in plan[0]:
 		var voice: String = blip[5]
 		var piece: PackedFloat32Array
-		if voice == "":
-			piece = _blip(int(blip[1]) + _shift, float(blip[2]), false, float(blip[4]))
-		elif row.has("mouth") and blip[6] != "":
+		if row.has("mouth") and blip[6] != "":
 			piece = _mouth(int(blip[1]) + int(row.get("drop", 0)), float(blip[2]), float(blip[4]), blip[6], float(row["mouth"]))
+		elif voice == "":
+			piece = _blip(int(blip[1]) + _shift, float(blip[2]), false, float(blip[4]))
 		else:
 			piece = _letter(voice, int(blip[1]), float(blip[2]), float(blip[4]))
 		Synth.add_into(buf, piece, roundi(float(blip[0]) * Harmony.RATE), float(blip[3]))
@@ -2902,7 +2905,8 @@ static func _mouth(midi: int, length: float, bend: float, letter: String, size: 
 	var b2 := 0.0
 	for i in n:
 		var x := float(i) / n
-		phase = fposmod(phase + _hz(midi + (bend * (x - 1.0) if bend > 0.0 else bend * x)) * Synth.INV_RATE, 1.0)
+		var slot := minf(1.0, x * MOUTH_RING)
+		phase = fposmod(phase + _hz(midi + (bend * (slot - 1.0) if bend > 0.0 else bend * slot)) * Synth.INV_RATE, 1.0)
 		var reed := 2.0 * phase - 1.0
 		if x < air:
 			reed = lerpf(rng.randf_range(-1.0, 1.0), reed, x / air)
