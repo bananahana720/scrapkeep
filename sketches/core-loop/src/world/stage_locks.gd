@@ -443,7 +443,7 @@ func _build_wall(radius: float) -> void:
 	band.outer_radius = radius + 0.25
 	band.rings = 96
 	rim.mesh = band
-	rim.material_override = Palette.unshaded(Color(Palette.FENCE, 0.55))
+	rim.material_override = Palette.unshaded(Color(Palette.SAND, 0.55))
 	# On the ground, where the fence is strongest: on top, over a fence faded to nothing, three of
 	# three blind readers took the floating bone band for a stray line.
 	rim.position = Vector3.UP * 1.3
@@ -459,8 +459,8 @@ func _build_wall(radius: float) -> void:
 static func _fence_material() -> StandardMaterial3D:
 	var mat := Palette.unshaded(Color(1.0, 1.0, 1.0, 0.99))
 	var ramp := Gradient.new()
-	ramp.set_color(0, Color(Palette.FENCE, 0.0))
-	ramp.set_color(1, Color(Palette.FENCE, FENCE_ALPHA))
+	ramp.set_color(0, Color(Palette.SAND, 0.0))
+	ramp.set_color(1, Color(Palette.SAND, FENCE_ALPHA))
 	var texture := GradientTexture2D.new()
 	texture.gradient = ramp
 	texture.fill_from = Vector2(0.0, 0.0)
@@ -469,13 +469,6 @@ static func _fence_material() -> StandardMaterial3D:
 	texture.height = 64
 	mat.albedo_texture = texture
 	return mat
-
-
-# The fence's own colour as its material draws it, at full strength: the tone the danger
-# colour must stay clear of (tests/danger_read_grammar_test.gd).
-static func fence_tone() -> Color:
-	var ramp: Gradient = (_fence_material().albedo_texture as GradientTexture2D).gradient
-	return Color(ramp.get_color(1), 1.0)
 
 
 func _drop_wall() -> void:

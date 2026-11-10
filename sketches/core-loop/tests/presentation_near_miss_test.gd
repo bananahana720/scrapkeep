@@ -198,15 +198,13 @@ func _process(_delta: float) -> bool:
 	var cam: Camera3D = _game.camera.cam
 	var ball_top: float = cam.unproject_position(_game.player.shown_position() + cam.global_basis.y).y
 	var mark: Rect2 = hud.danger_mark.rect()
-	# Wave 36 (PF-16): the bang stacked on the aim reticle read as a target mark, so the HUD mark is
-	# retired; the dodge watch still hands it the run, and the ground mark's fill carries it.
-	_check("the HUD mark stays off the ball and the reticle inside a warning", not hud.danger_mark.visible and is_equal_approx(hud.danger_mark.run, 0.5)
-		and mark == Rect2() and over.contains(ball),
-		"in play %s, ball in the ring %s, visible %s, run %.2f, mark %s, reticle box %s" % [_game.flow.in_play(), over.contains(ball), hud.danger_mark.visible, hud.danger_mark.run, mark, hud.danger_mark.avoid])
+	_check("the HUD marks the ball inside a warning", hud.danger_mark.visible and is_equal_approx(hud.danger_mark.run, 0.5)
+		and mark.end.y <= ball_top and not mark.intersects(hud.danger_mark.avoid),
+		"in play %s, ball in the ring %s, visible %s, run %.2f, mark %s over the ball's top y %.0f, reticle box %s" % [_game.flow.in_play(), over.contains(ball), hud.danger_mark.visible, hud.danger_mark.run, mark, ball_top, hud.danger_mark.avoid])
 	hud.part_name.show_part("rivet_plating")
 	hud._process(0.0)
-	_check("a part's name stands over the ball", hud.part_name.rect().size.x > 0.0 and hud.part_name.rect().end.y <= ball_top,
-		"name %s, the ball's top y %.0f" % [hud.part_name.rect(), ball_top])
+	_check("a part's name stands on the mark", hud.part_name.rect().size.x > 0.0 and hud.part_name.rect().end.y <= mark.position.y,
+		"name %s, mark %s" % [hud.part_name.rect(), mark])
 	over.free()
 	_game.combat.near_miss.step(1.0 / 60.0)
 	hud._process(0.0)

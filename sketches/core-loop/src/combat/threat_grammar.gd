@@ -11,27 +11,30 @@ const FlashGuard := preload("res://src/presentation/flash_guard.gd")
 # where. Each node builds its descriptor from the same fields its contains() reads, so
 # the drawing and the damage use the same numbers (TH-03 AO-08, TH-16 RR-01).
 #
-# One rule for every ground hit (wave 36, PF-16): the footprint's outline on the ground,
-# and a fill that grows from the shape's centre (its centre point, its centre line, or a
-# band's middle) out to that outline over the warning, reaching it on the hit tick. A full
-# shape means now (fill_span). Every mark hugs the ground: no posts, rails or curtains
-# stand between the camera and the ball, outlines are capped at EDGE_MAX wide and no fill
-# is more opaque than FILL_CAP, so a full mark still shows the ground and the ball.
-#   INSTANT     a sharp edge and the growing fill; a solid flash marks the landing.
+# Four types, told apart by shape, fill, motion and sound, never by colour alone
+# (VISUAL-LANGUAGE.md sections 3 and 4).
+#   INSTANT     a sharp edge; a striped fill grows from the centre over the warning,
+#               and a solid flash marks the landing.
 #   WAVE        the whole reach dashed and faint; a bright front at its real position
-#               (speed x elapsed) with chevrons the way it travels, and 15% stripes over
-#               the ground it has swept.
-#   PROJECTILE  a thin dashed flight arc from the launcher that ends on the landing
-#               point, eaten as the shell flies, over the growing fill.
-#   LANE        rails along the strip, and the growing fill.
+#               (speed x elapsed) with chevrons the way it travels, a curtain as tall as
+#               its height band, and 15% stripes over the ground it has swept.
+#   PROJECTILE  a thin dashed flight arc from the launcher that ends on the landing point,
+#               eaten as the shell flies, over an edge and a fill that grows from the centre.
+#   LANE        rails along the strip, and a striped fill that grows from its centre line.
+#
+# The pending fill (wave 36, PF-16): every ground hit but a wave fills from the shape's
+# centre (its centre point, its centre line, or a band's middle) toward its outline, and
+# its front meets the outline's inner face on the hit tick and not before (fill_span), so a
+# shape that looks full means now. The fill never draws under the outline. The live look
+# (fill_tint, the live lane's class) is unchanged.
 #
 # The tone says whose it is. HAZARD is hostile: its areas carry 45-degree HAZARD and
 # charcoal stripes, it warns with its type's sound, and a boss's brass `owner` becomes a
 # tick every 30 degrees on the rim. AMBER is the player's own: clean fills, no stripes,
 # no warn sound. Bone (Palette.SAND) is a harmless field: a dashed ring and nothing else.
 # Every line sits on a charcoal keyline, because HAZARD on sandstone is only 1.3:1.
-# The height band (RR-02) is no longer drawn: its posts, rail and curtain were the tall
-# see-through frames that hid the ball and the boss (PF-27).
+# Instant, projectile and lane draw their height band (RR-02) as posts and a top rail at
+# `reach`; a wave draws it as a curtain on its front.
 #
 # A descriptor is a Dictionary:
 #   type      Type
@@ -68,17 +71,18 @@ const OUTLINE_ALPHA := 0.5
 const FILL_ALPHA := 0.35
 const SWEPT_ALPHA := 0.15
 const RUN_ALPHA := 0.35
-const LIVE_ALPHA := 0.52
+const LIVE_ALPHA := 0.8
 const FLASH_ALPHA := 0.9
 const FLASH_SECONDS := 0.22
 const EDGE_MIN := 0.35
 const EDGE_PER_METRE := 0.04
 # The widest an outline is drawn, metres: a 30 m ring's edge was 1.2 m of solid line.
 const EDGE_MAX := 0.6
-# No fill is drawn more opaque than this (call 5, PF-27): 40% of the ground and the ball
-# always shows through a full mark, at the hit tick and while it is live.
+# No PENDING fill (the growing fill of an INSTANT, a PROJECTILE or a pending LANE run) is drawn
+# more opaque than this. The live looks (LIVE_ALPHA, LIVE_SCORCH_ALPHA, AIR_LIVE_ALPHA) are not
+# capped by it.
 const FILL_CAP := 0.6
-# The flight arc: dash length share of each step, and the half width of its thin ribbon.
+# The shell's flight arc: the dash's share of each step, and the half width of its ribbon.
 const TRACE_DASH := 0.7
 const TRACE_HALF := 0.07
 const RAIL := 0.25
@@ -142,9 +146,8 @@ const OWNER_SPACING := 4.0
 # (the wave 19 card), not in this fill.
 const HAZE_FILL := 1.15
 const LIVE_SCORCH := 0.4
-# Capped at FILL_CAP in wave 36 (were 0.8 and 0.61): a live mark must show the ball under it.
-const LIVE_SCORCH_ALPHA := FILL_CAP
-const AIR_LIVE_ALPHA := FILL_CAP
+const LIVE_SCORCH_ALPHA := 0.8
+const AIR_LIVE_ALPHA := 0.61
 const TELEGRAPH_FLAG := "telegraph"
 
 
@@ -239,25 +242,43 @@ static func edge_width(d: Dictionary) -> float:
 	return clampf(float(d.get("r_out", 0.0)) * EDGE_PER_METRE, EDGE_MIN, EDGE_MAX)
 
 
-# How far the warning has run for the fill: 0 at commit, 1 on the hit tick and while live.
+# How far the warning has run for the pending fill: 0 at commit, 1 on the hit tick and live.
 static func fill_share(d: Dictionary) -> float:
 	return 1.0 if d.get("live", false) else clampf(float(d.get("progress", 0.0)), 0.0, 1.0)
 
 
-# The ground the fill covers now, along the shape's grow axis: [lo, hi] in radius for a
-# radial (from the centre, or from a band's middle out to both its edges), in |lateral|
-# for a lane (from its centre line out to both rails). At fill_share 1 it is the whole
-# footprint contains() tests.
-static func fill_span(d: Dictionary) -> Vector2:
-	var p := fill_share(d)
+# The ground the outline leaves for the fill: [lo, hi] between the outline's inner faces, in
+# radius for a radial, in |lateral| for a lane (whose far cap ends it at fill_end()).
+static func fill_room(d: Dictionary) -> Vector2:
 	if d["form"] == "lane":
-		return Vector2(0.0, float(d["half_width"]) * p)
+		return Vector2(0.0, float(d["half_width"]) - RAIL)
 	var r_in: float = d["r_in"]
 	var r_out: float = d["r_out"]
-	if r_in <= 0.05:
-		return Vector2(0.0, r_out * p)
-	var mid := (r_in + r_out) * 0.5
-	var half := (r_out - r_in) * 0.5 * p
+	var w := edge_width(d)
+	if int(d["type"]) == Type.PROJECTILE:
+		w *= 0.6
+	elif int(d["type"]) == Type.LANE:
+		# A radial LANE (a pull wedge) has no ring edge: its dashed outline is RAIL * 1.4 either
+		# side of r_out - RAIL.
+		w = RAIL * 2.4
+	return Vector2(r_in + w if r_in > 0.05 else 0.0, r_out - w)
+
+
+# A lane's fill runs from its back end to the inner face of its far cap (_edge_tris).
+static func fill_end(d: Dictionary) -> float:
+	return float(d["length"]) - RAIL * 2.0
+
+
+# The pending fill now, along the grow axis: from the centre (a disc from r 0, a band from
+# its middle out to both edges, a lane from its centre line out to both rails), reaching
+# fill_room's faces at fill_share 1 and inside them before.
+static func fill_span(d: Dictionary) -> Vector2:
+	var p := fill_share(d)
+	var room := fill_room(d)
+	if d["form"] == "lane" or room.x <= 0.0:
+		return Vector2(0.0, room.y * p)
+	var mid := (room.x + room.y) * 0.5
+	var half := (room.y - room.x) * 0.5 * p
 	return Vector2(mid - half, mid + half)
 
 
@@ -297,6 +318,8 @@ static func marks(d: Dictionary, motion: bool) -> Array:
 		return out
 	if not motion and d.has("owner"):
 		_lined(out, "owner", false, Color(d["owner"], 1.0), func(grow: float): return _owner_ticks(d, grow), {"owner": d["owner"]})
+	if not motion and int(d["type"]) != Type.WAVE:
+		_fence(out, d)
 	match int(d["type"]):
 		Type.INSTANT:
 			_instant(d, motion, out)
@@ -343,16 +366,17 @@ static func driven_marks(d: Dictionary) -> Array:
 	var lane: bool = d["form"] == "lane"
 	match int(d["type"]):
 		Type.INSTANT:
-			out.append(_driven(_mark("fill", _area_layer(d, true), _area_tone(d, FILL_ALPHA), _footprint(d)),
+			var fill_tris := _lane_strip(d, -float(d["back"]), fill_end(d), -float(d["half_width"]), float(d["half_width"])) if lane else _footprint(d)
+			out.append(_driven(_mark("fill", _area_layer(d, true), _pending_tone(d, FILL_ALPHA), fill_tris),
 				Drive.LANE if lane else Drive.RADIAL))
 		Type.LANE:
 			var tris: PackedVector3Array
 			if lane:
 				var half: float = d["half_width"]
-				tris = _lane_strip(d, -float(d["back"]), float(d["length"]), -half, half)
+				tris = _lane_strip(d, -float(d["back"]), fill_end(d), -half, half)
 			else:
 				tris = _arc(d, d["r_in"], d["r_out"], d["a0"], d["a1"])
-			out.append(_driven(_mark("run", _area_layer(d, true), _area_tone(d, RUN_ALPHA), tris),
+			out.append(_driven(_mark("run", _area_layer(d, true), _pending_tone(d, RUN_ALPHA), tris),
 				Drive.LANE if lane else Drive.RADIAL, 1.0))
 		Type.WAVE:
 			_driven_wave(d, out)
@@ -366,19 +390,14 @@ static func driven_marks(d: Dictionary) -> Array:
 static func drive(d: Dictionary) -> Dictionary:
 	var out := {}
 	var live: bool = d.get("live", false)
-	var p: float = 1.0 if live else float(d["progress"])
-	var lane: bool = d["form"] == "lane"
 	match int(d["type"]):
-		Type.INSTANT, Type.LANE, Type.PROJECTILE:
-			var span := fill_span(d)
-			var alpha := LIVE_ALPHA / RUN_ALPHA if live and int(d["type"]) == Type.LANE else 1.0
-			var clip := Vector4(-FAR, FAR, -1.0, span.y) if lane else Vector4(span.x, span.y, 0.0, 0.0)
-			out[_area_layer(d, true)] = {"clip": clip, "alpha": alpha, "span": span, "share": fill_share(d), "live": live}
-			if int(d["type"]) == Type.PROJECTILE:
-				# The flight arc keeps a dash while the shell has not passed its end.
-				var arc := {"clip": Vector4(0.0, 0.0, float(d["progress"]), 0.0), "alpha": 1.0}
-				out["motion"] = arc
-				out["motion_under"] = arc
+		Type.INSTANT:
+			# No "live" key: a live INSTANT keeps its fill class, under the scorch tint (as base).
+			out[_area_layer(d, true)] = _span_clip(d, 1.0)
+		Type.LANE:
+			var entry := _span_clip(d, LIVE_ALPHA / RUN_ALPHA if live else 1.0)
+			entry["live"] = live
+			out[_area_layer(d, true)] = entry
 		Type.WAVE:
 			var r_in: float = d["r_in"]
 			var r_out: float = d["r_out"]
@@ -391,7 +410,22 @@ static func drive(d: Dictionary) -> Dictionary:
 			out["motion"] = lines
 			out["motion_under"] = lines
 			out[_area_layer(d, true)] = {"clip": Vector4(-FAR, -1.0 if arming else maxf(r_in, f - WAVE_EDGE), 0.0, 0.0), "alpha": 1.0}
+		Type.PROJECTILE:
+			if stance(d["tone"]) == "hostile":
+				out[_area_layer(d, true)] = _span_clip(d, 1.0)
+			# The flight arc keeps a dash while the shell has not passed its end.
+			var arc := {"clip": Vector4(0.0, 0.0, float(d["progress"]), 0.0), "alpha": 1.0}
+			out["motion"] = arc
+			out["motion_under"] = arc
 	return out
+
+
+# A pending fill's clip (threat_mark: radial keeps r in [clip.x, clip.y]; a lane keeps along in
+# [clip.x, clip.y] and |lateral| in [clip.z, clip.w]) and the span it stands for.
+static func _span_clip(d: Dictionary, alpha: float) -> Dictionary:
+	var span := fill_span(d)
+	var clip := Vector4(-FAR, fill_end(d), -1.0, span.y) if d["form"] == "lane" else Vector4(span.x, span.y, 0.0, 0.0)
+	return {"clip": clip, "alpha": alpha, "span": span, "share": fill_share(d)}
 
 
 static func _driven(m: Dictionary, drive_mode: int, scaled := 0.0, grow := 0.0) -> Dictionary:
@@ -414,6 +448,7 @@ static func _driven_wave(d: Dictionary, out: Array) -> void:
 	var c: Vector3 = d["centre"]
 	var r_in: float = d["r_in"]
 	var r_out: float = d["r_out"]
+	var reach: float = d["reach"]
 	out.append(_driven(_mark("swept", _area_layer(d, true), _area_tone(d, SWEPT_ALPHA), _arc(d, r_in, r_out, 0.0, TAU)), Drive.RADIAL))
 	var hot := Color(bright(d["tone"]), 1.0)
 	_driven_lined(out, "front", hot, func(grow: float):
@@ -436,13 +471,29 @@ static func _driven_wave(d: Dictionary, out: Array) -> void:
 		m["c0"] = c0
 		m["c1"] = Vector4(Drive.CHEVRON, 0.0 if grow > 0.0 else 1.0, r_out, 0.0)
 		return m)
+	var wall := PackedVector3Array()
+	var top := PackedVector3Array()
+	var rays := PackedFloat32Array()
+	for i in CURTAIN_STEPS:
+		var a0 := TAU * i / CURTAIN_STEPS
+		var a1 := TAU * (i + 1) / CURTAIN_STEPS
+		_wall(wall, _at(c, a0, r_out), _at(c, a1, r_out), 0.0, reach)
+		_wall(top, _at(c, a0, r_out), _at(c, a1, r_out), reach - BAND_TOP, reach + BAND_TOP)
+		for a in [a0, a0, a1, a0, a1, a1]:
+			rays.append_array([cos(a), sin(a), 0.0, 0.0])
+	var band := _driven(_mark("band", "motion", Color(hot, BAND_ALPHA), wall, {"height": reach}), Drive.CURTAIN)
+	band["c0"] = rays
+	out.append(band)
+	var band_top := _driven(_mark("band_top", "motion", Color(hot, 0.8), top, {"height": reach}), Drive.CURTAIN, 1.0)
+	band_top["c0"] = rays
+	out.append(band_top)
 
 
 static func _driven_projectile(d: Dictionary, out: Array) -> void:
-	# Only a hostile shell's landing fills: a batted shell (AMBER) is the player's own, and its fill
+	# Only a hostile shell's landing fills: a batted (AMBER) shell is the player's own, and its fill
 	# would share the "motion" layer with the trace, a governed fill beside an exempt line.
 	if stance(d["tone"]) == "hostile":
-		out.append(_driven(_mark("fill", _area_layer(d, true), _area_tone(d, FILL_ALPHA), _footprint(d)), Drive.RADIAL))
+		out.append(_driven(_mark("fill", _area_layer(d, true), _pending_tone(d, FILL_ALPHA), _footprint(d)), Drive.RADIAL))
 	if not d.has("launch"):
 		return
 	var arc := _flight_arc(d, 0.0)
@@ -457,10 +508,10 @@ static func _driven_projectile(d: Dictionary, out: Array) -> void:
 
 
 # The shell's flight as a thin dashed arc (PF-25: a chain of squares read as placeholders):
-# one dash per step, each two crossed ribbons TRACE_HALF + grow wide, so it reads as a line
-# from any camera. Dash i covers [i + 1 - TRACE_DASH, i + 1] / steps of the flight, so the
-# last dash ends on the landing point. A dash whose end the shell has passed (share < from)
-# is left out. tris; points, each dash's end on the flight; shares, each vertex's dash end.
+# one dash per step, two crossed ribbons TRACE_HALF + grow wide, so it reads as a line from any
+# camera. Dash i covers [i + 1 - TRACE_DASH, i + 1] / steps of the flight, so the last dash
+# ends on the landing point; a dash whose end the shell has passed (share < from) is left out.
+# tris; points, each dash's end on the flight; shares, each vertex's dash end (Drive.DOTS).
 static func _flight_arc(d: Dictionary, grow: float, from := 0.0) -> Dictionary:
 	var c: Vector3 = d["centre"]
 	var launch: Vector3 = d["launch"]
@@ -494,7 +545,7 @@ static func _flight_arc(d: Dictionary, grow: float, from := 0.0) -> Dictionary:
 static func _instant(d: Dictionary, motion: bool, out: Array) -> void:
 	var tone: Color = d["tone"]
 	if motion:
-		out.append(_grown_fill(d, "fill", _area_tone(d, FILL_ALPHA)))
+		out.append(_grown_fill(d, "fill", _pending_tone(d, FILL_ALPHA)))
 		return
 	out.append(_mark("area", _area_layer(d, false), _area_tone(d, AREA_ALPHA), _footprint(d)))
 	_lined(out, "edge", false, Color(tone, EDGE_ALPHA), func(grow: float): return _edge_tris(d, grow),
@@ -519,6 +570,7 @@ static func _wave(d: Dictionary, motion: bool, out: Array) -> void:
 			swept = _arc(d, d["r_in"], d["r_out"], d["a0"], front_angle(d))
 		out.append(_mark("swept", _area_layer(d, true), _area_tone(d, SWEPT_ALPHA), swept))
 	var hot := Color(bright(tone), lerpf(0.35, 0.8, float(d["progress"])) if arming else 1.0)
+	var reach: float = d["reach"]
 	var c: Vector3 = d["centre"]
 	var r_in: float = d["r_in"]
 	var r_out: float = d["r_out"]
@@ -531,6 +583,10 @@ static func _wave(d: Dictionary, motion: bool, out: Array) -> void:
 		var ahead := f + WAVE_EDGE + 0.3 + CHEVRON_DEPTH
 		if ahead <= r_out:
 			_lined(out, "chevrons", true, hot, func(grow: float): return _radial_chevrons(c, ahead, grow), {"outward": true})
+		var ring: Array = []
+		for i in 49:
+			ring.append(_at(c, TAU * i / 48.0, clampf(f, r_in, r_out)))
+		_band(out, ring, reach, hot)
 		return
 	var angle := front_angle(d)
 	var a0: float = d["a0"]
@@ -540,6 +596,10 @@ static func _wave(d: Dictionary, motion: bool, out: Array) -> void:
 		{"angle": angle, "offset": maxf(float(d["front"]), 0.0)})
 	var tangent := Vector3(-sin(angle), 0.0, cos(angle)) * sweep
 	_lined(out, "chevrons", true, hot, func(grow: float): return _sweep_chevrons(c, angle, r_in, r_out, tangent, grow), {"along": sweep})
+	var line: Array = []
+	for i in 9:
+		line.append(_at(c, angle, lerpf(r_in, r_out, i / 8.0)))
+	_band(out, line, reach, hot)
 
 
 static func _projectile(d: Dictionary, motion: bool, out: Array) -> void:
@@ -554,7 +614,7 @@ static func _projectile(d: Dictionary, motion: bool, out: Array) -> void:
 		_lined(out, "pip", false, Color(tone, EDGE_ALPHA), func(grow: float): return _pip(c, grow), {"centre": c})
 		return
 	if stance(tone) == "hostile":
-		out.append(_grown_fill(d, "fill", _area_tone(d, FILL_ALPHA)))
+		out.append(_grown_fill(d, "fill", _pending_tone(d, FILL_ALPHA)))
 	if d.has("launch"):
 		var arc := _flight_arc(d, 0.0, float(d["progress"]))
 		var under := _mark("trace_under", "motion_under", Color(Palette.CHARCOAL, UNDERLAY_ALPHA),
@@ -569,7 +629,7 @@ static func _projectile(d: Dictionary, motion: bool, out: Array) -> void:
 static func _lane(d: Dictionary, motion: bool, out: Array) -> void:
 	var tone: Color = d["tone"]
 	var live: bool = d.get("live", false)
-	var run_tone := _area_tone(d, LIVE_ALPHA if live else RUN_ALPHA)
+	var run_tone := _area_tone(d, LIVE_ALPHA) if live else _pending_tone(d, RUN_ALPHA)
 	var run_layer := _area_layer(d, true)
 	if d["form"] == "lane":
 		var length: float = d["length"]
@@ -611,19 +671,89 @@ static func _area_layer(d: Dictionary, motion: bool) -> String:
 static func _area_tone(d: Dictionary, alpha: float) -> Color:
 	if stance(d["tone"]) != "hostile":
 		return Color(d["tone"], alpha)
-	return Color(Palette.HAZARD, minf(alpha * HAZE_FILL, FILL_CAP)) if haze() else Color(1.0, 1.0, 1.0, minf(alpha, FILL_CAP))
+	return Color(Palette.HAZARD, alpha * HAZE_FILL) if haze() else Color(1.0, 1.0, 1.0, alpha)
 
 
-# The fill of the one ground grammar: the footprint between fill_span's edges, from the
-# centre out. span and share are the numbers the tests compare with contains().
+# A pending fill's tone, never above FILL_CAP.
+static func _pending_tone(d: Dictionary, alpha: float) -> Color:
+	var tone := _area_tone(d, alpha)
+	tone.a = minf(tone.a, FILL_CAP)
+	return tone
+
+
+# The pending fill of the one ground grammar: the room between the outline's inner faces, from
+# the centre out (fill_span). span and share are the numbers the tests compare with contains().
 static func _grown_fill(d: Dictionary, role: String, tone: Color, layer := "") -> Dictionary:
 	var span := fill_span(d)
 	var tris: PackedVector3Array
 	if d["form"] == "lane":
-		tris = _lane_strip(d, -float(d["back"]), float(d["length"]), -span.y, span.y)
+		tris = _lane_strip(d, -float(d["back"]), fill_end(d), -span.y, span.y)
 	else:
 		tris = _arc(d, span.x, span.y, d["a0"], d["a1"])
 	return _mark(role, layer if layer != "" else _area_layer(d, true), tone, tris, {"span": span, "share": fill_share(d)})
+
+
+# RR-02 for the ground types: posts every POST_SPACING metres along the outer boundary
+# and a rail at `reach`, the height a jump must clear.
+static func _fence(out: Array, d: Dictionary) -> void:
+	var reach: float = d["reach"]
+	if reach <= 0.05:
+		return
+	var tone: Color = d["tone"]
+	var lines := _boundary(d)
+	var posts := PackedVector3Array()
+	for line in lines:
+		var run := 0.0
+		for i in line.size():
+			if i > 0:
+				run += (line[i] as Vector3).distance_to(line[i - 1])
+			if i == 0 or run >= POST_SPACING:
+				run = 0.0
+				var at: Vector3 = line[i]
+				_wall(posts, at + Vector3(-POST_HALF, 0.0, 0.0), at + Vector3(POST_HALF, 0.0, 0.0), 0.0, reach)
+				_wall(posts, at + Vector3(0.0, 0.0, -POST_HALF), at + Vector3(0.0, 0.0, POST_HALF), 0.0, reach)
+	out.append(_mark("band", "base", Color(tone, POST_ALPHA), posts, {"height": reach}))
+	_lined(out, "band_top", false, Color(tone, RAIL_ALPHA), func(grow: float): return _rail(lines, reach, BAND_TOP + grow), {"height": reach})
+
+
+static func _rail(lines: Array, h: float, half: float) -> PackedVector3Array:
+	var tris := PackedVector3Array()
+	for line in lines:
+		for i in line.size() - 1:
+			_wall(tris, line[i], line[i + 1], h - half, h + half)
+	return tris
+
+
+# The outer boundary as polylines, broken where a quenched span leaves a gap.
+static func _boundary(d: Dictionary) -> Array:
+	var lines: Array = []
+	if d["form"] == "lane":
+		var half: float = d["half_width"]
+		for side in [-1.0, 1.0]:
+			lines.append([_lane_at(d, -float(d["back"]), side * half), _lane_at(d, float(d["length"]), side * half)])
+		return lines
+	var c: Vector3 = d["centre"]
+	var r: float = d["r_out"]
+	var a0: float = d["a0"]
+	var a1: float = d["a1"]
+	var open: Array = d.get("open", [])
+	var steps := maxi(4, int(ceil(absf(a1 - a0) * r / LANE_STEP)))
+	var line: Array = []
+	if not is_full(d):
+		line.append(_at(c, a0, float(d["r_in"])))
+	for i in steps + 1:
+		var a := lerpf(a0, a1, float(i) / steps)
+		if _is_open(open, a):
+			if line.size() > 1:
+				lines.append(line)
+			line = []
+			continue
+		line.append(_at(c, a, r))
+	if not is_full(d):
+		line.append(_at(c, a1, float(d["r_in"])))
+	if line.size() > 1:
+		lines.append(line)
+	return lines
 
 
 # A boss's mark on its own attack: a brass tick every 30 degrees on the rim, or every
@@ -701,6 +831,18 @@ static func _mark(role: String, layer: String, tone: Color, tris: PackedVector3A
 static func _lined(out: Array, role: String, motion: bool, tone: Color, draw: Callable, extra: Dictionary) -> void:
 	out.append(_mark(role + "_under", "motion_under" if motion else "under", Color(Palette.CHARCOAL, UNDERLAY_ALPHA), draw.call(UNDERLAY), extra))
 	out.append(_mark(role, "motion" if motion else "base", tone, draw.call(0.0), extra))
+
+
+# A curtain along a ground line, as tall as the band a jump clears, with a bright rail
+# along its top: the height the attack reaches is drawn, not implied (RR-02).
+static func _band(out: Array, line: Array, reach: float, hot: Color) -> void:
+	var wall := PackedVector3Array()
+	var top := PackedVector3Array()
+	for i in line.size() - 1:
+		_wall(wall, line[i], line[i + 1], 0.0, reach)
+		_wall(top, line[i], line[i + 1], reach - BAND_TOP, reach + BAND_TOP)
+	out.append(_mark("band", "motion", Color(hot, BAND_ALPHA), wall, {"height": reach}))
+	out.append(_mark("band_top", "motion", Color(hot, 0.8 * hot.a), top, {"height": reach}))
 
 
 static func _footprint(d: Dictionary) -> PackedVector3Array:
@@ -827,6 +969,10 @@ static func _seg(tris: PackedVector3Array, p: Vector3, q: Vector3, half: float) 
 	var a := Vector3(p.x, 0.0, p.z)
 	var b := Vector3(q.x, 0.0, q.z)
 	_quad(tris, a - side, a + side, b + side, b - side)
+
+
+static func _wall(tris: PackedVector3Array, p: Vector3, q: Vector3, h0: float, h1: float) -> void:
+	_quad(tris, Vector3(p.x, h0, p.z), Vector3(p.x, h1, p.z), Vector3(q.x, h1, q.z), Vector3(q.x, h0, q.z))
 
 
 static func _quad(tris: PackedVector3Array, a: Vector3, b: Vector3, c: Vector3, d: Vector3) -> void:

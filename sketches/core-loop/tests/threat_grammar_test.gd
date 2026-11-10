@@ -10,16 +10,16 @@ const Density := preload("res://src/presentation/density.gd")
 # The four attack types draw four different grammars, each from the descriptor its node
 # builds out of the same fields contains() reads. A wave's drawn front is its damage
 # front at every time sampled, and a shell's fill and flight trace end on the landing
-# point it committed, along the path the shell actually flies. Since wave 36 every fill grows
-# from the centre to the outline and no mark stands up off the ground (no height band). Hostile areas are
+# point it committed, along the path the shell actually flies. Since wave 36 every pending
+# fill grows from the centre and meets the outline's inner face on the hit tick. Hostile areas are
 # striped, the player's own and harmless fields are not, and a boss marks its own.
 
 const DT := 1.0 / 90.0
 const EXPECTED := {
-	Threat.Type.INSTANT: ["area", "edge", "fill", "solid"],
-	Threat.Type.WAVE: ["chevrons", "front", "outline"],
-	Threat.Type.PROJECTILE: ["area", "edge", "fill", "pip", "trace"],
-	Threat.Type.LANE: ["area", "edge", "run"],
+	Threat.Type.INSTANT: ["area", "band", "band_top", "edge", "fill", "solid"],
+	Threat.Type.WAVE: ["band", "band_top", "chevrons", "front", "outline"],
+	Threat.Type.PROJECTILE: ["area", "band", "band_top", "edge", "fill", "pip", "trace"],
+	Threat.Type.LANE: ["area", "band", "band_top", "edge", "run"],
 }
 
 
@@ -131,14 +131,15 @@ func _check_grammars() -> void:
 	instant.set_progress(0.75)
 	var late: Vector2 = _mark(instant.descriptor(), "fill").get("span", -Vector2.ONE)
 	var fill_layer: String = _mark(instant.descriptor(), "fill").get("layer", "")
-	var no_band: bool = _mark(instant.descriptor(), "band_top").is_empty() and _mark(instant.descriptor(), "band").is_empty()
+	var band: float = _mark(instant.descriptor(), "band_top").get("height", -1.0)
+	var room: Vector2 = Threat.fill_room(instant.descriptor())
 	var before := _world.get_child_count()
 	instant.set_progress(1.0)
 	var flashed := _world.get_child_count() == before + 1
-	_report("instant fill", early.is_equal_approx(Vector2(0.0, 1.5)) and late.is_equal_approx(Vector2(0.0, 4.5)) and fill_layer == "stripe_motion" and flashed
-			and no_band,
-		"the fill grows from the centre (out to %.2f m at a quarter, %.2f m at three quarters of a 6 m ring), the landing leaves a solid flash (%s), and no height rail stands up (%s)"
-			% [early.y, late.y, flashed, no_band])
+	_report("instant fill", early.is_equal_approx(Vector2(0.0, room.y * 0.25)) and late.is_equal_approx(Vector2(0.0, room.y * 0.75)) and fill_layer == "stripe_motion" and flashed
+			and is_equal_approx(band, instant.reach_up),
+		"the fill grows from the centre (out to %.2f m at a quarter, %.2f m at three quarters of the %.2f m inside a 6 m ring's edge), the landing leaves a solid flash (%s), and the height rail stands at %.1f m, the reach"
+			% [early.y, late.y, room.y, flashed, band])
 
 	lane.set_progress(0.5)
 	var ld: Dictionary = lane.descriptor()
@@ -147,10 +148,10 @@ func _check_grammars() -> void:
 	var in_lane: bool = lane.contains(Vector3(10.9, 1.0, 41.45))
 	var off_lane: bool = lane.contains(Vector3(10.9, 1.0, 41.55))
 	var run_span: Vector2 = run.get("span", -Vector2.ONE)
-	_report("lane run", run_span.is_equal_approx(Vector2(0.0, lane.width * 0.25)) and is_equal_approx(rails.get("half_width", -1.0), lane.width * 0.5)
+	_report("lane run", run_span.is_equal_approx(Vector2(0.0, (lane.width * 0.5 - Threat.RAIL) * 0.5)) and is_equal_approx(rails.get("half_width", -1.0), lane.width * 0.5)
 			and is_equal_approx(rails.get("length", -1.0), lane.length) and in_lane and not off_lane,
 		"the fill grows from the centre line to %.2f of %.2f m either side at half the wind-up; rails at half width %.2f, contains() %s inside, %s outside"
-			% [run_span.y, lane.width * 0.5, rails.get("half_width", -1.0), in_lane, off_lane])
+			% [run_span.y, lane.width * 0.5 - Threat.RAIL, rails.get("half_width", -1.0), in_lane, off_lane])
 
 	var pd: Dictionary = shell.descriptor()
 	var pip := _mark(pd, "pip")
@@ -215,11 +216,11 @@ func _check_wave() -> void:
 		var behind: bool = f > Threat.WAVE_EDGE + 0.3 and wave.contains(at + Vector3(f - Threat.WAVE_EDGE - 0.3, 1.0, 0.0))
 		var above: bool = wave.contains(at + Vector3(f, 3.6, 0.0))
 		var ok: bool = absf(drawn - f) < 0.0001 and absf(f - 8.0 * (clock - 1.0)) < 0.001 and on and not ahead and not behind and not above \
-			and band.is_empty() and _mark(d, "swept").get("layer", "") == "stripe_motion"
+			and is_equal_approx(band.get("height", -1.0), 3.5) and _mark(d, "swept").get("layer", "") == "stripe_motion"
 		agree = agree and ok
 		rows.append("t %.2f drawn %.2f damage %.2f" % [clock, drawn, f])
 	_report("wave front", agree,
-		"the drawn front is the damage front, speed x elapsed, with no curtain standing up and stripes on the swept ground: %s" % ", ".join(rows))
+		"the drawn front is the damage front, speed x elapsed, with a 3.5 m band a jump clears and stripes on the swept ground: %s" % ", ".join(rows))
 	wave.free()
 
 
@@ -276,7 +277,7 @@ func _check_projectile() -> void:
 			eaten = eaten and now.size() <= last_count and now[now.size() - 1].is_equal_approx(ring.center)
 			last_count = now.size()
 	var gap: float = (_mark(ring.descriptor(), "fill").get("span", Vector2.ZERO) as Vector2).y
-	_report("shell flight", worst < 0.001 and eaten and gap > ring.radius * 0.9,
+	_report("shell flight", worst < 0.001 and eaten and gap > Threat.fill_room(ring.descriptor()).y * 0.9,
 		"the shell flies the drawn trace (worst %.5f m), the trace is eaten behind it and still ends on the landing, and the fill grew to %.2f m (blast %.1f m)"
 			% [worst, gap, ring.radius])
 	shell.bat()
@@ -328,12 +329,12 @@ func _check_driven() -> void:
 		var drawn: bool = is_equal_approx(clip.y, minf(wave.radius, f + edge)) and is_equal_approx(clip.x, maxf(0.0, f - edge))
 		var ring_clip: Vector4 = _drive(ring, "stripe_motion")["clip"]
 		var ring_edge: bool = ring.contains(ring.center + Vector3(ring.radius - 0.01, 1.0, 0.0)) and not ring.contains(ring.center + Vector3(ring.radius + 0.01, 1.0, 0.0)) \
-			and is_zero_approx(ring_clip.x) and is_equal_approx(ring_clip.y, ring.radius * p)
+			and is_zero_approx(ring_clip.x) and is_equal_approx(ring_clip.y, Threat.fill_room(ring.descriptor()).y * p)
 		agree = agree and flips and drawn and ring_edge
 		rows.append("p %.2f wave front %.2f clip [%.2f, %.2f] flips %s, ring fill to %.2f" % [p, f, clip.x, clip.y, flips, ring_clip.y])
 	lane.set_progress(1.0)
 	var live: Dictionary = _drive(lane, "stripe_motion")
-	var end_ok: bool = is_equal_approx(float(live["span"].y), lane.width * 0.5) and lane.contains(lane.center + lane.dir * (lane.length - 0.01) + Vector3.UP) \
+	var end_ok: bool = is_equal_approx(float(live["span"].y), lane.width * 0.5 - Threat.RAIL) and lane.contains(lane.center + lane.dir * (lane.length - 0.01) + Vector3.UP) \
 		and not lane.contains(lane.center + lane.dir * (lane.length + 0.01) + Vector3.UP) and is_equal_approx(float(live["alpha"]), Threat.LIVE_ALPHA / Threat.RUN_ALPHA)
 	_report("driven numbers", agree and end_ok,
 		"drive(d) gives the numbers marks(d, true) draws, the wave clip is contains()'s front band and the fill grows from the centre: %s; a live lane fills to %.2f m either side, its rails"
