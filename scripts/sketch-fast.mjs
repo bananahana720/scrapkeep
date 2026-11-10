@@ -399,7 +399,7 @@ export function cappedLog(output, head = LOG_HEAD_LINES, tail = LOG_TAIL_LINES) 
   const lines = String(output ?? "").split("\n");
   if (lines.at(-1) === "") lines.pop();
   if (lines.length <= head + tail) return lines.join("\n");
-  return [...lines.slice(0, head), `[sketch:fast cut ${lines.length - head - tail} lines here; ${lines.length} lines printed]`, ...lines.slice(-tail)].join("\n");
+  return [...lines.slice(0, head), `[sketch:fast cut ${lines.length - head - tail} lines here; ${lines.length} lines printed]`, ...lines.slice(lines.length - tail)].join("\n");
 }
 
 // The log of one red run: what ran, how it ended, then stdout and stderr as they arrived.

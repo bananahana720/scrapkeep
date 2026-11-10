@@ -495,6 +495,7 @@ test("a long log keeps its first and last lines and says how many it cut", () =>
   const exact = Array.from({ length: LOG_HEAD_LINES + LOG_TAIL_LINES }, (_, index) => `line ${index + 1}`).join("\n");
   assert.equal(cappedLog(exact), exact);
   assert.equal(cappedLog(""), "");
+  assert.equal(cappedLog("a\nb\nc\nd", 1, 0), "a\n[sketch:fast cut 3 lines here; 4 lines printed]");
 });
 
 test("each red run of a test gets its own log file beside the receipt", () => {
