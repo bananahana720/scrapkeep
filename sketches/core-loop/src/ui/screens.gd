@@ -367,7 +367,11 @@ func _on_flow_changed(state: String) -> void:
 			if _prologue_due():
 				_begin_prologue()
 		"dead":
-			_show("SCRAPPED", EventKinds.color("player_died"), game.flow.gap_line())
+			# The store-less flow's end screen says what RUN OVER says: who, then what to try (death_tips.gd).
+			var said: String = game.flow.death_cause
+			if game.flow.death_tip != "":
+				said += "\n" + DeathTips.shown(game.flow.death_tip)
+			_show("SCRAPPED", EventKinds.color("player_died"), said.strip_edges())
 			_action("new", "key_n", "New run")
 			_action("class", "key_c", "Choose pilot")
 			if not game.run.companion.is_empty():
