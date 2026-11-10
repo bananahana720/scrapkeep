@@ -423,6 +423,13 @@ export function receiptBaseName(label, head, startedAt) {
   return `${label}-${head.slice(0, 12)}-${startedAt.replace(/[:.]/g, "-")}`;
 }
 
+// A run that ended on a signal the lane did not send. SIGKILL is usually the container's memory
+// limit (dmesg "Memory cgroup out of memory"), not the test; any other signal is a crash.
+export function signalReason(signal) {
+  if (!signal || signal === "SIGKILL") return "killed by a signal before its time limit (often the container's memory limit; see dmesg)";
+  return `ended on ${signal} before its time limit (a crash in the engine or the test; the kept log has the backtrace)`;
+}
+
 const running = new Set();
 
 function runGodot(sketchDir, test, timeoutMs, onChild = () => {}) {
@@ -445,9 +452,7 @@ function runGodot(sketchDir, test, timeoutMs, onChild = () => {}) {
       running.delete(child);
       rmSync(dataHome, { recursive: true, force: true });
       const verdict = judge({ test: "res://" + test, status: code, output });
-      // A kill before the time limit that the lane did not send is usually the container's
-      // memory limit (dmesg "Memory cgroup out of memory"), not the test.
-      const reason = code === null && !timedOut && child.killedByLane !== true ? "killed by a signal before its time limit (often the container's memory limit; see dmesg)" : verdict.reason;
+      const reason = code === null && !timedOut && child.killedByLane !== true ? signalReason(signal) : verdict.reason;
       resolve({ test, ok: verdict.ok, exit: code, signal: signal ?? null, ms: Date.now() - started, reason, checks: failingChecks(output), passes: countChecks(output).passes, tail: output.split("\n").slice(-30).join("\n"), killed: child.killedByLane === true, timedOut, output });
     });
   });

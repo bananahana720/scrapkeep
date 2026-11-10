@@ -31,6 +31,7 @@ import {
   failedRunLog,
   failedRunLogName,
   receiptBaseName,
+  signalReason,
 } from "./sketch-fast.mjs";
 import { IMPORT_TRIES, importTry, importWithRetry, quarantineRecord, scriptErrorCount } from "./sketch-smoke.mjs";
 
@@ -502,4 +503,11 @@ test("each red run of a test gets its own log file beside the receipt", () => {
   assert.equal(failedRunLogName("tests/audio_rescue_test.gd", "base", 1), "audio_rescue_test.base-1.log");
   assert.equal(failedRunLogName("tests/trees/child_test.gd", "head", 1), "trees__child_test.head-1.log");
   assert.equal(receiptBaseName("fast", "0123456789abcdef0123", "2026-11-10T03:20:11.123Z"), "fast-0123456789ab-2026-11-10T03-20-11-123Z");
+});
+
+test("a crash signal is named as a crash, and only a plain kill points at the memory limit", () => {
+  assert.match(signalReason("SIGABRT"), /^ended on SIGABRT before its time limit \(a crash/);
+  assert.match(signalReason("SIGSEGV"), /^ended on SIGSEGV /);
+  assert.match(signalReason("SIGKILL"), /memory limit/);
+  assert.match(signalReason(null), /memory limit/);
 });
