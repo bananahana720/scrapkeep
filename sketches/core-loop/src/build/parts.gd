@@ -62,7 +62,7 @@ const CATALOGUE := {
 	"dash_vane": {"name": "Dash Vane", "verb": "Dash harder", "text": "+15% air dash",
 		"rarity": "common", "tier": 1, "family": "mobility", "tags": ["speed"],
 		"mods": {"dash_impulse": 1.15}},
-	"rivet_plating": {"touches": "roll", "name": "Rivet Plating", "verb": "Bolt on armour", "text": "+15 max health",
+	"rivet_plating": {"touches": "roll", "name": "Rivet Plating", "verb": "Raise your max health", "text": "+15 max health",
 		"rarity": "common", "tier": 1, "family": "stat", "tags": ["mass"],
 		"max_hp_bonus": 15.0, "stack": "capped", "cap": 3, "levels": [
 			{"max_hp_bonus": 15.0, "text": "+15 max health"},
@@ -151,7 +151,7 @@ const CATALOGUE := {
 		"element": "arc", "rarity": "common", "tier": 2, "family": "mobility", "tags": ["arc"],
 		"elements": {"slam": "arc"}},
 	# Class mods: offered only to their class.
-	"pylon_capacitor": {"touches": "jump", "name": "Pylon Capacitor", "verb": "Bank a bigger plant", "text": "+8 punch, slingshot +50% boost",
+	"pylon_capacitor": {"touches": "jump", "name": "Pylon Capacitor", "verb": "Launch harder off pylons", "text": "+8 punch, slingshot +50% boost",
 		"icon": "mobility", "rarity": "common", "tier": 2, "family": "class", "class_id": "pylon_engineer", "tags": ["anchor", "arc"],
 		"punch": 8.0, "mods": {"slingshot_boost": 1.5, "slingshot_keep": 1.1, "turret_damage": 1.4}},
 	"runner_overclock": {"touches": "fire", "name": "Runner Overclock", "verb": "Overclock the gun on the run", "text": "+4 punch, +35% fire rate",
