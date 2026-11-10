@@ -2,6 +2,7 @@ extends Control
 
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const UiDraw := preload("res://src/ui/ui_draw.gd")
+const Parts := preload("res://src/build/parts.gd")
 
 # The name of a part just gained, riding above the ball for SHOW_SECONDS of simulated time
 # in the amber role colour: the first NAME_WORDS words of its name, so a pickup is read
@@ -25,7 +26,8 @@ func _init() -> void:
 
 # The words shown for a part id: the first two words of its name.
 static func name_of(part_id: String) -> String:
-	var words: PackedStringArray = part_id.replace("_", " ").capitalize().split(" ", false)
+	var named := String(Parts.token(part_id).get("name", part_id.replace("_", " ").capitalize()))
+	var words: PackedStringArray = named.split(" ", false)
 	return " ".join(words.slice(0, NAME_WORDS))
 
 

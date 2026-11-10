@@ -5,7 +5,10 @@ const Profile := preload("res://src/core/profile.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
 const T := preload("res://tests/support/t.gd")
 
-# The stage 1 start-pick card and the mouse (w22 first-timer red team edge 3), driven as a player:
+# The stage 1 start-pick card and the mouse (w22 first-timer red team edge 3), driven as a player.
+# A launched game shows the card only in the run's briefing, paused, before the ball rolls (ruling cl;
+# ui_workshop_pick_test plays that). The fresh and rung cases here drive the card as flow shows it
+# without the workshop's hold, which only a test game reaches now:
 # every event goes through Input.parse_input_event to the real input chain (game.gd, the card, the
 # pause menu, the workshop's per-frame sync). Headless cannot capture a mouse, so PointerGame keeps
 # the capture flag game.gd asks for and reads it back; everything past that flag is the real code.
@@ -15,6 +18,8 @@ const T := preload("res://tests/support/t.gd")
 #   camera, a click does not recapture), Esc, P and pad Start open the pause menu over the tier
 #   choice and close it again with the cursor left free for the tier (w23 cautious red team watch 3),
 #   and engaging stage 1's Warden gives look back;
+# - Moss's counter, the workshop armed as in a launched game: the start pick is already taken, Esc
+#   and pad B leave the counter, P opens no pause menu over it and nothing quits;
 # - the run summary: Esc goes to the camp, as K does, and never quits (w23 cautious watch 4); under
 #   the summary's input latch it does nothing.
 # Real pointer capture on a desktop is a hands-on check (alpha-status/sitting-watch-list.md).
@@ -149,41 +154,27 @@ func _pad(button: int) -> InputEventJoypadButton:
 	return press
 
 
+# Moss's counter in a launched game. The start pick is taken before the ball rolls (the briefing,
+# ui_workshop_pick_test), so the card is never up at the counter; the counter keeps its own keys.
 func _counter() -> void:
 	await _begin(false)
 	var card = game.flow.start_card
+	game.flow.take_start_pick(0)
 	var ws = game.get_node("Workshop")
 	ws.armed = true
 	game.build.shop.enter()
 	await _frames(2)
+	t.check("counter: the start pick is taken before the counter can open", not card.showing() and not ws.briefing())
+	var menu = game.get_node("PauseMenu")
 	for leave in [["Esc", _key(KEY_ESCAPE)], ["pad B", _pad(JOY_BUTTON_B)]]:
 		ws.open_counter()
 		await _frames(2)
-		t.check("counter: it opens with the start card up (%s)" % leave[0], ws.counter.is_open() and card.showing())
+		t.check("counter: it opens (%s)" % leave[0], ws.counter.is_open())
+		await _send(_key(KEY_P))
+		t.check("counter: P opens no pause menu (%s)" % leave[0], not menu.is_open() and ws.counter.is_open())
 		await _send(leave[1])
-		t.check("counter: %s leaves it with the pick untaken" % leave[0], not ws.counter.is_open())
+		t.check("counter: %s leaves it" % leave[0], not ws.counter.is_open())
 		t.eq("counter: %s quits nothing" % leave[0], game.quits, 0)
-	# Moss's tree pick, opened from the counter's plate: the card keeps its keys over it, as it
-	# does over any tree pick (run_tier_test), so V rerolls and no tree pick is taken.
-	ws.open_counter()
-	await _frames(2)
-	var tree = ws.tree()
-	var nodes: Array = tree.offered(tree.class_id, 1) if tree != null else []
-	t.check("counter: the class tree offers a first pick", nodes.size() == 2)
-	if nodes.size() == 2:
-		var rerolls: int = card.rerolls_left()
-		var picks: Array = game.player.tree.picks.duplicate()
-		ws.pick.open(tree.class_id, 1, nodes, tree.path(), Color.WHITE)
-		await _frames(2)
-		await _send(_key(KEY_V))
-		t.check("counter: V under the tree pick rerolls the start card", card.rerolls_left() == rerolls - 1 and card.showing())
-		var first: String = String(game.run.start_pick_options()[0])
-		await _send(_key(KEY_1))
-		t.eq("counter: 1 under the tree pick takes the first start pick", String(game.run.start_pick.get("taken", "")), first)
-		t.check("counter: 1 under the tree pick takes no tree pick", game.player.tree.picks == picks)
-		ws.close_pick()
-		ws.close_counter()
-		await _frames(2)
 	game.build.shop.leave()
 	ws.armed = false
 	await _frames(2)
@@ -200,20 +191,7 @@ func _rung() -> void:
 	var yaw: float = game.camera.yaw
 	await _send(_motion())
 	t.check("rung: the free cursor does not turn the camera", is_equal_approx(game.camera.yaw, yaw))
-	var ws = game.get_node("Workshop")
-	ws.armed = true
-	game.build.shop.enter()
-	await _frames(2)
-	ws.open_counter()
-	await _frames(2)
 	var grabs: int = game.grabs
-	await _send(_key(KEY_ESCAPE))
-	t.check("rung: Esc leaves the counter", not ws.counter.is_open())
-	t.check("rung: leaving the counter keeps the cursor free for the tier", not game.captured and game.get_meta("menu_held", false) and card.wants_pointer())
-	t.eq("rung: leaving the counter never grabs the cursor, even for a frame", game.grabs, grabs)
-	game.build.shop.leave()
-	ws.armed = false
-	await _frames(2)
 	var menu = game.get_node("PauseMenu")
 	for toggle in [["Esc", _key(KEY_ESCAPE)], ["P", _key(KEY_P)], ["pad Start", _pad(JOY_BUTTON_START)]]:
 		grabs = game.grabs
@@ -257,17 +235,6 @@ func _rung() -> void:
 		game.ctx.profile.set_stat("hard_ladder_best", 0.0)
 		await _send(_key(KEY_P))
 		t.check("rung: pause closed again", not menu.is_open())
-	ws.armed = true
-	game.build.shop.enter()
-	await _frames(2)
-	ws.open_counter()
-	await _frames(2)
-	await _send(_key(KEY_P))
-	t.check("rung: P at Moss's counter still opens no pause menu", not menu.is_open() and ws.counter.is_open())
-	ws.close_counter()
-	game.build.shop.leave()
-	ws.armed = false
-	await _frames(2)
 	game.flow._engage()
 	await _frames(2)
 	t.check("rung: engaging stage 1's Warden closes the tier, the card stays", not game.run.run_tier_open() and card.showing() and not card.wants_pointer())

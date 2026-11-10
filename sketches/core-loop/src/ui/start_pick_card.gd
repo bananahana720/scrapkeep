@@ -8,6 +8,7 @@ const RunTier := preload("res://src/core/run_tier.gd")
 const StartPicks := preload("res://src/core/start_picks.gd")
 const Icons := preload("res://src/ui/icons.gd")
 const UiDraw := preload("res://src/ui/ui_draw.gd")
+const Keycap := preload("res://src/ui/keycap.gd")
 const Palette := preload("res://src/core/palette.gd")
 
 # The card draws the offer and emits choices. Flow owns the input routes and RunState
@@ -26,13 +27,19 @@ const TILE_GAP := 18.0
 const PAD := 10.0
 const PIP := 5.0
 const KEYS := ["key_1", "key_2", "key_3"]
-const UNLOCK_WORDS := "Win a run to unlock Tier 1"
+const REROLL_KEY := "key_v"
+# In the run's briefing (workshop.gd) the card has the paused screen to itself, so its tiles draw
+# this much larger than the in-play strip.
+const BRIEFING_SCALE := 1.4
+const UNLOCK_WORDS := "A win unlocks Tier 1"
 
 var _tiles: Array = []
 var _tile_rects: Array[Rect2] = []
 var _rerolls := 0
 var _color := Palette.SAND
 var _interactive := false
+# True in the run's briefing (set_briefing): larger tiles, and the reroll centred when no tier is offered.
+var _briefing := false
 var _profile
 var _run
 var _tier_buttons := {}
@@ -42,6 +49,8 @@ var _shown_for := ""
 # Whether a screen over the card owns the input now (flow.gd _start_card_covered); unset, nothing does.
 var covered := Callable()
 var reroll_button: Button
+# The tiles' buttons, in tile order (interactive only).
+var _tile_buttons: Array[Button] = []
 var rung_button: Button
 
 
@@ -60,6 +69,15 @@ func set_interactive(enabled: bool) -> void:
 	_interactive = enabled
 	mouse_filter = Control.MOUSE_FILTER_STOP if enabled else Control.MOUSE_FILTER_IGNORE
 	set_process_input(enabled)
+
+
+func set_briefing(on: bool) -> void:
+	_briefing = on
+
+
+# The tile metrics' scale: 1 for the in-play strip, BRIEFING_SCALE in the briefing.
+func _k() -> float:
+	return BRIEFING_SCALE if _briefing else 1.0
 
 
 func show_picks(run, profile = null) -> void:
@@ -115,7 +133,7 @@ func tile_rects() -> Array[Rect2]:
 
 func _layout_tiles() -> void:
 	var widths := []
-	var total := TILE_GAP * maxf(0.0, _tiles.size() - 1)
+	var total := TILE_GAP * _k() * maxf(0.0, _tiles.size() - 1)
 	for tile in _tiles:
 		var width := _tile_width(tile)
 		widths.append(width)
@@ -123,8 +141,8 @@ func _layout_tiles() -> void:
 	_tile_rects.clear()
 	var x := (size.x - total) * 0.5
 	for width in widths:
-		_tile_rects.append(Rect2(x, 0.0, width, ICON + PAD * 2.0))
-		x += width + TILE_GAP
+		_tile_rects.append(Rect2(x, 0.0, width, (ICON + PAD * 2.0) * _k()))
+		x += width + TILE_GAP * _k()
 
 
 func rerolls_left() -> int:
@@ -132,16 +150,22 @@ func rerolls_left() -> int:
 
 
 func _tile_width(tile: Dictionary) -> float:
-	var words := maxf(UiDraw.width(String(tile["name"]), FONT), UiDraw.width(String(tile.get("effect", "")), EFFECT_FONT))
-	return PAD + KEY + GAP + ICON + GAP + words + PAD
+	var k := _k()
+	var words := maxf(UiDraw.width(String(tile["name"]), int(FONT * k)), UiDraw.width(String(tile.get("effect", "")), int(EFFECT_FONT * k)))
+	return (PAD + KEY + GAP + ICON + GAP + PAD) * k + words
 
 
 func extent() -> Vector2:
 	var w := 0.0
 	for tile in _tiles:
 		w += _tile_width(tile)
-	w += TILE_GAP * maxf(0.0, _tiles.size() - 1)
-	return Vector2(maxf(w, 780.0) if _interactive else w, ICON + PAD * 2.0 + PIP * 3.0 + (120.0 if _interactive else 0.0))
+	w += TILE_GAP * _k() * maxf(0.0, _tiles.size() - 1)
+	return Vector2(maxf(w, 780.0) if _interactive else w, _controls_top() + (120.0 if _interactive else 0.0))
+
+
+# Where the words and buttons under the tiles and their pips begin.
+func _controls_top() -> float:
+	return (ICON + PAD * 2.0 + PIP * 3.0) * _k()
 
 
 func drawn_words() -> PackedStringArray:
@@ -222,8 +246,13 @@ func _label(words: String, y: float) -> void:
 	add_child(label)
 
 
-func _reroll(y: float) -> void:
-	reroll_button = _button(Vector2(size.x * 0.5 + 100.0, y + 60.0), Vector2(160.0, 38.0), "Reroll (V)", func(): reroll_requested.emit())
+# centred is for a card that offers no tier beside it (the briefing on a profile with no rung, or a held tier).
+func _reroll(y: float, centred := false) -> void:
+	# The V key is a drawn cap left of the button (_draw), as the tiles' keys are; beside the tier
+	# buttons the button is narrower, so the cap and Next rung both clear it.
+	var alone := centred and _briefing
+	var x := size.x * 0.5 - 80.0 if alone else size.x * 0.5 + 122.0
+	reroll_button = _button(Vector2(x, y + 60.0), Vector2(160.0 if alone else 138.0, 38.0), "Reroll", func(): reroll_requested.emit())
 	reroll_button.disabled = _rerolls <= 0
 
 
@@ -232,6 +261,7 @@ func _controls() -> void:
 		remove_child(child)
 		child.queue_free()
 	_tier_buttons.clear()
+	_tile_buttons.clear()
 	reroll_button = null
 	rung_button = null
 	if not _interactive or not visible:
@@ -241,15 +271,16 @@ func _controls() -> void:
 		var button := _button(rect.position, rect.size, "", func(): pick_requested.emit(index))
 		button.flat = true
 		button.tooltip_text = "Take " + String(_tiles[index].name)
-	var y := ICON + PAD * 2.0 + PIP * 3.0
+		_tile_buttons.append(button)
+	var y := _controls_top()
 	if not ladder_open():
 		_label(UNLOCK_WORDS, y)
-		_reroll(y)
+		_reroll(y, true)
 		return
 	if not _run.run_tier_open():
 		# Closed when stage 1's Warden engages (run_state.gd _tier_closed): the card names the tier the run holds.
 		_label(_held_words(), y)
-		_reroll(y)
+		_reroll(y, true)
 		return
 	var rung := shown_rung()
 	_label(RunTier.threat_text(rung), y)
@@ -271,10 +302,82 @@ func _controls() -> void:
 		rung_button = _button(Vector2(size.x * 0.5 + 270.0, y + 60.0), Vector2(110.0, 38.0), "Next rung", step_rung)
 
 
+# The buttons the focus walks, left to right as they read: the tiles, then the tier buttons,
+# Reroll and Next rung, leaving out any that cannot be pressed.
+func _focus_ring() -> Array:
+	var ring: Array = _tile_buttons.duplicate()
+	var tiers: Array = _tier_buttons.keys()
+	tiers.sort()
+	ring.append_array(tiers.map(func(tier): return _tier_buttons[tier]))
+	ring.append_array([reroll_button, rung_button])
+	return ring.filter(func(button): return button != null and is_instance_valid(button) and not button.disabled)
+
+
+# The briefing's focus moves: left and right step along the ring; with nothing focused the first
+# step lands on the first tile (or the ring's last button, stepping left).
+func step_focus(direction: int) -> void:
+	var ring := _focus_ring()
+	if ring.is_empty() or not visible:
+		return
+	var at := ring.find(get_viewport().gui_get_focus_owner())
+	var next := clampi(at + direction, 0, ring.size() - 1)
+	if at < 0:
+		next = 0 if direction >= 0 else ring.size() - 1
+	ring[next].grab_focus()
+
+
+func focused_tile() -> int:
+	for i in _tile_buttons.size():
+		if _tile_buttons[i].has_focus():
+			return i
+	return -1
+
+
+# Confirm presses whichever of the card's buttons holds the focus (a tile, the reroll, a tier).
+# With none focused a key does nothing, and the pad's press only lands the focus on the first tile,
+# so a confirm held from the page before takes nothing.
+func confirm(pad := false) -> void:
+	if not visible or not is_inside_tree():
+		return
+	var held := get_viewport().gui_get_focus_owner()
+	if held is BaseButton and is_ancestor_of(held) and not (held as BaseButton).disabled:
+		(held as BaseButton).pressed.emit()
+	elif pad:
+		step_focus(1)
+
+
+# The briefing's focus keys, for the keyboard and the pad: A and D or left and right step the
+# focus, confirm presses what it holds.
+func _focus_key(event: InputEvent) -> bool:
+	if event is InputEventKey and event.pressed and not event.echo:
+		match event.physical_keycode:
+			KEY_A:
+				step_focus(-1)
+				return true
+			KEY_D:
+				step_focus(1)
+				return true
+	if event.is_action_pressed("ui_left"):
+		step_focus(-1)
+		return true
+	if event.is_action_pressed("ui_right"):
+		step_focus(1)
+		return true
+	if event.is_action_pressed("ui_accept"):
+		confirm(event is InputEventJoypadButton)
+		return true
+	return false
+
+
 func _input(event: InputEvent) -> void:
-	if not _interactive or not visible or not event is InputEventKey or not event.pressed or event.echo:
+	if not _interactive or not visible:
 		return
 	if covered.is_valid() and covered.call():
+		return
+	if _briefing and _focus_key(event):
+		get_viewport().set_input_as_handled()
+		return
+	if not event is InputEventKey or not event.pressed or event.echo:
 		return
 	var key: int = event.physical_keycode if event.physical_keycode != KEY_NONE else event.keycode
 	if key >= KEY_1 and key <= KEY_3:
@@ -287,28 +390,33 @@ func _input(event: InputEvent) -> void:
 
 
 func _draw() -> void:
-	var h := ICON + PAD * 2.0
+	var k := _k()
+	var h := (ICON + PAD * 2.0) * k
 	for index in _tiles.size():
 		var tile: Dictionary = _tiles[index]
 		var rect := _tile_rects[index]
 		UiDraw.panel(self, rect)
 		var mid := h * 0.5
-		var cx := rect.position.x + PAD
-		draw_texture_rect(Icons.texture(tile["key"]), Rect2(Vector2(cx, mid - KEY * 0.5), Vector2(KEY, KEY)), false, Palette.SAND)
-		cx += KEY + GAP
-		draw_texture_rect(Icons.texture(tile["icon"]), Rect2(Vector2(cx, mid - ICON * 0.5), Vector2(ICON, ICON)), false,
+		var cx := rect.position.x + PAD * k
+		# A drawn cap, so the key's number shows (a key's own SVG imports as a blank cap, keycap.gd).
+		Keycap.draw(self, Vector2(cx + KEY * k * 0.5, mid), tile["key"], Palette.SAND, KEY * k)
+		cx += (KEY + GAP) * k
+		draw_texture_rect(Icons.texture(tile["icon"]), Rect2(Vector2(cx, mid - ICON * k * 0.5), Vector2(ICON, ICON) * k), false,
 			Icons.tint(tile["icon"], _color))
-		cx += ICON + GAP
+		cx += (ICON + GAP) * k
 		var effect := String(tile.get("effect", ""))
 		if effect == "":
-			UiDraw.text(self, cx, mid, String(tile["name"]), FONT, _color)
+			UiDraw.text(self, cx, mid, String(tile["name"]), int(FONT * k), _color)
 		else:
-			UiDraw.text(self, cx, mid - NAME_RISE, String(tile["name"]), FONT, _color)
-			UiDraw.text(self, cx, mid + EFFECT_DROP, effect, EFFECT_FONT, Palette.SAND)
+			UiDraw.text(self, cx, mid - NAME_RISE * k, String(tile["name"]), int(FONT * k), _color)
+			UiDraw.text(self, cx, mid + EFFECT_DROP * k, effect, int(EFFECT_FONT * k), Palette.SAND)
+	if reroll_button != null and is_instance_valid(reroll_button):
+		var cap := reroll_button.position + Vector2(-KEY * 0.5 - GAP, reroll_button.size.y * 0.5)
+		Keycap.draw(self, cap, REROLL_KEY, Color(Palette.SAND, 0.4 if reroll_button.disabled else 1.0), KEY)
 	# One pip per reroll left, centred under the tiles: a spent reroll leaves an outline.
 	for i in StartPicks.REROLLS:
-		var at := Vector2(size.x * 0.5 + (i - (StartPicks.REROLLS - 1) * 0.5) * PIP * 3.0, h + PIP * 1.5)
+		var at := Vector2(size.x * 0.5 + (i - (StartPicks.REROLLS - 1) * 0.5) * PIP * k * 3.0, h + PIP * k * 1.5)
 		if i < _rerolls:
-			draw_circle(at, PIP, _color)
+			draw_circle(at, PIP * k, _color)
 		else:
-			draw_arc(at, PIP, 0.0, TAU, 16, Color(_color, 0.5), 1.5)
+			draw_arc(at, PIP * k, 0.0, TAU, 16, Color(_color, 0.5), 1.5)

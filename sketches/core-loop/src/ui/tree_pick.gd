@@ -4,6 +4,7 @@ const Palette := preload("res://src/core/palette.gd")
 const ChoiceButton := preload("res://src/ui/choice_button.gd")
 const TreeCard := preload("res://src/ui/tree_card.gd")
 const TreeCrumb := preload("res://src/ui/tree_crumb.gd")
+const UiFonts := preload("res://src/ui/ui_fonts.gd")
 
 # The upgrade pick: two cards and the path so far, over a veil. It only shows and
 # animates; workshop.gd decides when it opens and what a choice does. A click, a number
@@ -20,10 +21,14 @@ const DROP := 26.0
 const STAGGER := 0.06
 const POP := 1.12
 const CARD_GAP := 36.0
+# Says the screen is a choice, in the crew's voice; the briefing's start pick answers it
+# (workshop.gd BRIEF_WORDS).
+const HEADING := "Rig your kit. Pick one."
 
 var depth := 0
 var _veil: ColorRect
 var _column: VBoxContainer
+var _heading: Label
 var _crumb
 var _row: HBoxContainer
 var _later: Button
@@ -52,6 +57,14 @@ func _init() -> void:
 	_column.add_theme_constant_override("separation", 22)
 	_column.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_column)
+	_heading = Label.new()
+	_heading.text = HEADING
+	_heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_heading.add_theme_font_override("font", UiFonts.bold())
+	_heading.add_theme_font_size_override("font_size", 30)
+	_heading.add_theme_color_override("font_color", Palette.SAND)
+	_heading.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_column.add_child(_heading)
 	_crumb = TreeCrumb.new()
 	_crumb.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	_column.add_child(_crumb)
@@ -198,6 +211,8 @@ func _play_in() -> void:
 	_tween.tween_property(_veil, "modulate:a", 1.0, FADE_IN).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 	_crumb.modulate.a = 0.0
 	_tween.tween_property(_crumb, "modulate:a", 1.0, FADE_IN).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	_heading.modulate.a = 0.0
+	_tween.tween_property(_heading, "modulate:a", 1.0, FADE_IN).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 	_later.modulate.a = 0.0
 	_tween.tween_property(_later, "modulate:a", 1.0, FADE_IN).set_delay(STAGGER * 2.0)
 	var list := cards()
@@ -230,6 +245,7 @@ func _play_out(chosen_index: int) -> void:
 			_tween.tween_property(card, "modulate:a", 0.0, FADE_OUT).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN)
 	_tween.tween_property(_veil, "modulate:a", 0.0, FADE_OUT * 1.45).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN)
 	_tween.tween_property(_crumb, "modulate:a", 0.0, FADE_OUT).set_ease(Tween.EASE_IN)
+	_tween.tween_property(_heading, "modulate:a", 0.0, FADE_OUT).set_ease(Tween.EASE_IN)
 	_tween.tween_property(_later, "modulate:a", 0.0, FADE_OUT).set_ease(Tween.EASE_IN)
 	_tween.chain().tween_callback(func():
 		if generation == _generation and not _open:
