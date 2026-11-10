@@ -112,8 +112,9 @@ func _validate_controls() -> void:
 	_t.check("the board refuses an item reward no rung reads", not ShiftBoard.validate(ShiftBoard.RUNGS, grants, TuneRows.ids()).is_empty(), "")
 
 
-# A first run that does everything at once stamps rungs under three different stamps: the summary
-# names each stamp once with what it inked, and Clocked In is not said twice.
+# A first run that does everything at once stamps rungs under all four stamps: the summary names
+# each stamp once with what it inked, Clocked In is not said twice, and the HIRED rungs stay in
+# one group although the Lost Tape (FOUND) sits between them on the board.
 func _one_big_first_run() -> void:
 	var store := _fresh(_path())
 	var bus := GameEvents.new()
@@ -125,9 +126,10 @@ func _one_big_first_run() -> void:
 	bus.beacon_unsealed.emit(1)
 	bus.rescue_completed.emit("rivet")
 	bus.enemy_killed.emit("brindle", Vector3.ZERO, 0)
+	store.hear_tune("secret-lost-tape")
 	bus.run_ended.emit(true)
-	_t.eq("one run, three stamps", listener.board_line,
-		"Shift board: CLOCKED IN; LOGGED Warden Breaker; HIRED Rivet Freed, Brindle Routed, Sable's Mark.")
+	_t.eq("one run, four stamps", listener.board_line,
+		"Shift board: CLOCKED IN; LOGGED Warden Breaker; HIRED Rivet Freed, Brindle Routed, Sable's Mark; FOUND Lost Tape.")
 	listener.free()
 	bus.free()
 
