@@ -19,6 +19,14 @@ const BEAM_ALPHA := 0.5
 const RING_DASHES := 20
 const WORD_REACH := 30.0
 const WORD_HEIGHT := 5.0
+# The word flies from the column like a pennant from its pole: it starts this many of its own
+# pixels to the column's right on screen. Centred on the column it lost its middle letters, amber
+# under amber (PC stills of 1c9bc643). The gap clears the column seen corner-on (0.99 m).
+const WORD_GAP := 100.0
+const WORD_OUTLINE := 14
+# A status line longer than this many pixels (about 9 m, 22 letters) folds under itself, so a
+# sentence stays a block beside the column and does not run off the screen.
+const WORD_WIDTH := 760.0
 
 var id := ""
 var column: MeshInstance3D
@@ -66,6 +74,12 @@ func build(activity_id: String, ring_radius: float, tell := {}, tell_audio = nul
 	word.text = String(row.get("word", ""))
 	word.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 	word.no_depth_test = true
+	word.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+	word.offset = Vector2(WORD_GAP, 0.0)
+	word.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	word.width = WORD_WIDTH
+	word.outline_size = WORD_OUTLINE
+	word.outline_modulate = Palette.CHARCOAL
 	word.modulate = color
 	word.pixel_size = 0.012
 	word.font_size = 64

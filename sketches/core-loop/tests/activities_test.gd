@@ -127,6 +127,7 @@ func _run() -> void:
 	await _boot("slice")
 	await physics_frame
 	_lit()
+	await _word()
 	await _bounty()
 	await _ambush()
 	await _cache()
@@ -138,6 +139,29 @@ func _run() -> void:
 	await _frames(2)
 	await _default_table()
 	quit(_t.verdict())
+
+
+# The word flies beside its column, never across it: centred, the amber column covered the
+# middle letters of an amber word, and a sentence ran the width of the screen.
+func _word() -> void:
+	var view := ActivityView.new()
+	root.add_child(view)
+	view.build("ambush_altar", 8.0)
+	view.near(Vector3.ZERO)
+	# A billboard's box covers every facing; flat, the box is the laid-out letters.
+	view.word.billboard = BaseMaterial3D.BILLBOARD_DISABLED
+	await _frames(2)
+	var corner := ActivityView.COLUMN_WIDTH * 0.5 * sqrt(2.0)
+	var one: AABB = view.word.get_aabb()
+	_t.check("an activity's word starts clear of its column, seen corner-on", view.word.visible and one.position.x > corner,
+		"word from %.2f m, column to %.2f m" % [one.position.x, corner])
+	view.word.text = "Head gate: wheel turning. Stay ahead of the water."
+	await _frames(2)
+	var long: AABB = view.word.get_aabb()
+	var reach := (ActivityView.WORD_GAP + ActivityView.WORD_WIDTH) * view.word.pixel_size
+	_t.check("a sentence folds into a block beside the column", long.position.x > corner and long.end.x <= reach + 0.2 and long.size.y > one.size.y * 1.8,
+		"from %.2f to %.2f m (reach %.2f), %.2f m tall against %.2f" % [long.position.x, long.end.x, reach, long.size.y, one.size.y])
+	view.free()
 
 
 func _lit() -> void:
