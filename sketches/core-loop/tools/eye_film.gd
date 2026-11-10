@@ -24,6 +24,8 @@ extends RefCounted
 #   page             a page the player turned (the prologue's lines), when the driver says so
 #   offer / reward / warden / arena   a kit pick offered, the reward gates, a Warden engaged,
 #                    the boss arena entered
+#   cleared / phase-<n> / boss-down   a stage's Warden broken, a boss phase begun, the boss beaten:
+#                    the ends of fights, which a player sees and a ten second gap can miss
 #   hit-<n>          a hit of BIG_HIT of the hull or more, or the run's first: the LEAD_S before
 #                    it from a rolling buffer (was the attack on the screen before it landed?),
 #                    then the frame after
@@ -94,6 +96,9 @@ func setup(game, dir: String, every: float, live := false, world_scale := 1.0) -
 	events.reward_offered.connect(_on_reward)
 	events.tree_offered.connect(_on_offer)
 	events.prompt_shown.connect(_on_prompt)
+	events.stage_cleared.connect(_on_cleared)
+	events.boss_phase_changed.connect(_on_phase)
+	events.boss_defeated.connect(_on_boss_down)
 	_live = live
 	# The world drawn at a fraction of the window, the HUD and every word at full size: for a
 	# software renderer, where the world's pixels are the cost and the words are the reading.
@@ -175,6 +180,20 @@ func _on_warden(_stage: int) -> void:
 func _on_arena() -> void:
 	_later(SETTLE_S, "arena")
 	_later(LATE_S, "arena-late")
+
+
+func _on_cleared(_stage: int) -> void:
+	_later(SETTLE_S, "cleared")
+	_later(LATE_S, "cleared-late")
+
+
+func _on_phase(phase: int, _name: String) -> void:
+	_later(SETTLE_S, "phase-%d" % phase)
+
+
+func _on_boss_down() -> void:
+	_later(SETTLE_S, "boss-down")
+	_later(LATE_S, "boss-down-late")
 
 
 func _on_reward(_offers: Array) -> void:

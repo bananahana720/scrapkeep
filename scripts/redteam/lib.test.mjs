@@ -1,7 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { readFileSync } from "node:fs";
-import { FILMS, FILM_OF, FINDINGS_FILE, FINDINGS_HEADER, PERSONAS, PILOTS, READERS, sweepSeed, carryList, filmArgs, grade, hitches, judgeSheet, logErrors, overdueFindings, parseFindings, pileUps, planWave, readBotJob, readerBrief, readerPack, renderMarkdown } from "./lib.mjs";
+import { FILMS, FILM_OF, FINDINGS_HEADER, PERSONAS, PILOTS, READERS, sweepSeed, carryList, filmArgs, grade, hitches, judgeSheet, logErrors, overdueFindings, parseFindings, pileUps, planWave, readBotJob, readerBrief, readerPack, renderMarkdown } from "./lib.mjs";
 
 const job = (over = {}) => ({ id: "speedrunner-tarn-2500", kind: "bot", persona: "speedrunner", policy: "skipper", pilot: "tarn", seed: 2500, stages: null, args: [], ...over });
 const result = (over = {}) => ({ job: job(), exit: 0, timedOut: false, row: { outcome: "won", stage_reached: 7, game_seconds: 600, stages: [], beats: [] }, errors: [], piles: [], perf: { spikes: [], loads: 0, p99: 4 }, ...over });
@@ -136,6 +135,11 @@ test("a film is handed to the reader with no word of why a frame was taken", () 
   const killed = readerPack(["hit-2-lead", "hit-2", "death", "hit-2-after", "death-after", "roam", "hit-3", "hit-3-after"].map((why) => ({ file: why + ".jpg", why })));
   assert.deepEqual(killed.sets, [{ id: 1, first: 1, last: 5, moment: 2 }]);
   assert.deepEqual(killed.frames.map((f) => f.set), [1, 1, 1, 1, 1, 0, 0, 0]);
+  // A death well after a filmed hit is not that hit's.
+  const later = readerPack([["hit-1-lead", 10], ["hit-1", 10.4], ["death-lead", 11.6], ["death", 12]].map(([why, t]) => ({ file: why + ".jpg", why, t })));
+  assert.deepEqual(later.sets, [{ id: 1, first: 1, last: 2, moment: 2 }, { id: 2, first: 3, last: 4, moment: 4 }]);
+  assert.ok(readerBrief("first-timer", pack, { look: true }).includes("how it looks: say where"));
+  assert.ok(!readerBrief("first-timer", pack, { look: true }).includes("software renderer"));
 });
 
 test("the judge's sheet sets every picture beside what the game knew", () => {
@@ -167,7 +171,7 @@ test("the play findings list: every row has an owner and a date, and a late row 
   assert.equal(parseFindings("id\tgrade").problems.length, 1);
   const bad = parseFindings(head + "\nPF-01\tsevere\tx\ty\tz\t2026-11-10\tsoon\nPF-01\tminor\tx\ty\t\t2026-11-10\t2026-11-11\nF2\tminor\tx\ty\tz\t2026-11-10\t2026-11-11");
   assert.deepEqual(bad.problems.map((problem) => problem.line), [2, 2, 3, 4]);
-  // The list in the repository is well formed.
-  const live = parseFindings(readFileSync(new URL("../../" + FINDINGS_FILE, import.meta.url), "utf8"));
-  assert.deepEqual(live.problems, []);
+  // An id used twice and a date that is not one are each their own problem.
+  assert.deepEqual(parseFindings(head + "\nPF-03\tminor\tx\ty\tz\t2026-11-10\t2026-11-11\nPF-03\tminor\tx\ty\tz\t2026-11-10\t2026-11-11").problems.map((problem) => problem.line), [3]);
+  assert.deepEqual(parseFindings(head + "\nPF-04\tminor\tx\ty\tz\t2026-11-10\t2026-02-31").problems.map((problem) => problem.line), [2]);
 });

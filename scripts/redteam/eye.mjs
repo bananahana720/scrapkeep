@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // node scripts/redteam/eye.mjs --persona=<first-timer|cautious|speedrunner|greedy> [--film=whole|wait]
-//     [--seed=1] [--pilot=<class id>] [--world=0.5] [--plant=objective] [--death-at=<s>] [--out=<dir>] [--from=<film dir>] [--gpu]
+//     [--seed=1] [--pilot=<class id>] [--world=0.5] [--plant=objective] [--death-at=<s>] [--out=<dir>] [--from=<film dir>] [--gpu] [--look]
 //
 // The red team's player's-eye pass (scripts/redteam/README.md). It films one play of the launched
 // game as a player's screen shows it (sketches/core-loop/tools/eye_film.gd), then lays the film out
@@ -14,7 +14,8 @@
 // (--death-at=<s> moves the wait film's planted death, so a control can be short).
 // It needs a display: it starts its own with xvfb-run unless DISPLAY is set and --no-xvfb is given.
 // --gpu is the PC film (ruling cp): the machine's own display and renderer, every frame drawn, so
-// colour, light and effects are the real game's.
+// colour, light and effects are the real game's, and the reader is asked to judge the look too.
+// --look asks the same of a PC film laid out with --from.
 // Exit 0 when the film was made and laid out; 1 when the game or the harness failed.
 import { spawnSync } from "node:child_process";
 import { copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
@@ -24,7 +25,7 @@ import { FILMS, FILM_OF, READERS, filmArgs, judgeSheet, parseNdjson, readerBrief
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const sketch = path.join(root, "sketches/core-loop");
-const opts = { persona: null, film: null, seed: 1, pilot: "", world: 1, plant: "", deathAt: 0, out: null, from: null, xvfb: true, gpu: false };
+const opts = { persona: null, film: null, seed: 1, pilot: "", world: 1, plant: "", deathAt: 0, out: null, from: null, xvfb: true, gpu: false, look: false };
 for (const arg of process.argv.slice(2)) {
   const [k, v] = arg.replace(/^--/, "").split("=");
   if (k === "persona") opts.persona = v;
@@ -37,7 +38,8 @@ for (const arg of process.argv.slice(2)) {
   else if (k === "out") opts.out = path.resolve(v);
   else if (k === "from") opts.from = path.resolve(v);
   else if (k === "no-xvfb") opts.xvfb = false;
-  else if (k === "gpu") opts.gpu = true;
+  else if (k === "gpu") opts.gpu = opts.look = true;
+  else if (k === "look") opts.look = true;
   else die("unknown option " + arg);
 }
 if (!READERS[opts.persona]) die("--persona must be one of " + Object.keys(READERS).join(", "));
@@ -77,6 +79,6 @@ const judge = path.join(out, "judge");
 mkdirSync(reader, { recursive: true });
 mkdirSync(judge, { recursive: true });
 for (const f of pack.frames) copyFileSync(path.join(filmDir, f.file), path.join(reader, String(f.n).padStart(3, "0") + ".jpg"));
-writeFileSync(path.join(reader, "BRIEF.md"), readerBrief(opts.persona, pack));
+writeFileSync(path.join(reader, "BRIEF.md"), readerBrief(opts.persona, pack, { look: opts.look }));
 writeFileSync(path.join(judge, "SHEET.md"), judgeSheet(pack));
 console.log(`eye: ${pack.frames.length} pictures, ${pack.sets.length} moments with a lead-in\n  reader: ${reader}\n  judge:  ${path.join(judge, "SHEET.md")}`);

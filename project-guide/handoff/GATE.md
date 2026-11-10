@@ -100,7 +100,7 @@ node scripts/known-failing.mjs --promotion          # fails if any row is past i
 
 ## The play findings list
 
-[PLAY-FINDINGS.tsv](PLAY-FINDINGS.tsv) lists every open thing a player would feel that a red team pass has found: what the player meets, where it was seen, grade (`blocker`, `major`, `minor`, or `check` when a PC film must decide first), owner, date added, review date (ruling cn). The testing lane owns the file. It is not a gate: a finding never holds a promotion and no gate step reads it. `node scripts/redteam/findings.mjs --print` lists it by owner and `--overdue` names the rows past their date, for the wave's red team receipt. [scripts/redteam/README.md](../../scripts/redteam/README.md) has the pass that fills it.
+[PLAY-FINDINGS.tsv](PLAY-FINDINGS.tsv) lists every open thing a player would feel that a red team pass has found: what the player meets, where it was seen, grade (`blocker`, `major`, `minor`, or `check` when a PC film must decide first), owner, date added, review date (ruling cn). The testing lane owns the file. It is not a gate: a finding never holds a promotion, and no gate step or test reads the file. `node scripts/redteam/findings.mjs --print` lists it by owner and `--overdue` names the rows past their date, for the wave's red team receipt. [scripts/redteam/README.md](../../scripts/redteam/README.md) has the pass that fills it.
 
 ## The node tests, once per promotion
 

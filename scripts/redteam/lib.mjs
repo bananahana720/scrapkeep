@@ -491,15 +491,20 @@ export function readerPack(rows) {
     const beat = /^(hit-\d+|death)$/.test(base) ? base : "";
     // A killing hit is one moment: its death frames join the hit's set. A set opens only on a
     // lead-in frame, since the question it asks is what the earlier pictures showed.
-    const joins = open && (open.beat === beat || beat === "death");
+    // (a death more than a second after the hit is its own moment, and asks its own question)
+    const at = Number(row.t) || 0;
+    const joins = open && (open.beat === beat || (beat === "death" && at - open.at <= 1));
     if (beat && !joins) {
-      open = why.endsWith("-lead") ? { beat, id: sets.length + 1, first: n, last: n, moment: n } : null;
+      open = why.endsWith("-lead") ? { beat, id: sets.length + 1, first: n, last: n, moment: n, at } : null;
       if (open) sets.push(open);
     }
     if (!beat) open = null;
     if (open) {
       open.last = n;
-      if (why === open.beat) open.moment = n;
+      if (why === open.beat) {
+        open.moment = n;
+        open.at = at;
+      }
     }
     frames.push({ n, file: row.file, set: open ? open.id : 0 });
     key.push({ n, ...row });
@@ -510,7 +515,8 @@ export function readerPack(rows) {
 const pad = (n) => String(n).padStart(3, "0");
 
 // What the reader is handed. Nothing here names a file, a system or what the game knew.
-export function readerBrief(persona, pack) {
+// look: the film is the real game's picture (a PC film, ruling cp), so the reader judges how it looks too.
+export function readerBrief(persona, pack, { look = false } = {}) {
   const card = READERS[persona];
   if (!card) throw new Error("--persona must be one of " + Object.keys(READERS).join(", "));
   const lines = [
@@ -520,7 +526,9 @@ export function readerBrief(persona, pack) {
     "",
     `The folder holds ${pack.frames.length} pictures of one play of a game, in order: ${pad(1)}.jpg to ${pad(pack.frames.length)}.jpg. They are what was on the screen. Read only these pictures. Do not look at anything else on this machine, and do not guess from file names or sizes.`,
     "",
-    "The pictures come from a software renderer: colour, lighting and effects are rougher than the real game, so do not judge how it looks. Judge what a player can read, understand and act on.",
+    look
+      ? "The pictures are the real game's own picture. Judge what a player can read, understand and act on, and also how it looks: say where colour, light or an effect hides something, where two things look the same and should not, and where something looks unfinished."
+      : "The pictures come from a software renderer: colour, lighting and effects are rougher than the real game, so do not judge how it looks. Judge what a player can read, understand and act on.",
     "",
     "For every picture, answer in one table row (keep each cell short):",
     "",
@@ -572,10 +580,16 @@ export function parseFindings(text) {
     if (!/^PF-\d+$/.test(row.id) || seen.has(row.id)) problems.push({ line: at, message: `the id must be PF-<n> and used once, got ${row.id}` });
     seen.add(row.id);
     if (!FINDING_GRADES.includes(row.grade)) problems.push({ line: at, message: "the grade must be one of " + FINDING_GRADES.join(", ") });
-    for (const date of ["added", "review"]) if (!/^\d{4}-\d{2}-\d{2}$/.test(row[date]) || Number.isNaN(Date.parse(row[date]))) problems.push({ line: at, message: `${date} must be a date, YYYY-MM-DD` });
+    for (const date of ["added", "review"]) if (!/^\d{4}-\d{2}-\d{2}$/.test(row[date]) || !realDate(row[date])) problems.push({ line: at, message: `${date} must be a date, YYYY-MM-DD` });
     rows.push(row);
   });
   return { rows, problems };
+}
+
+// 2026-02-31 is not a date, whatever Date.parse makes of it.
+function realDate(text) {
+  const date = new Date(text + "T00:00:00Z");
+  return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === text;
 }
 
 // The rows past their review date on `today` (YYYY-MM-DD).
