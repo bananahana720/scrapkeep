@@ -25,7 +25,6 @@ var _clock := 0.0
 var _last_hit := -INF
 var _hit_pending := false
 var _standing := -1.0
-var _way := Vector3.ZERO
 
 
 func setup(events_ref, ball_ref: Callable) -> void:
@@ -45,13 +44,9 @@ func standing_in() -> float:
 	return _standing
 
 
-# The flat way out of that same warning, as of the last step: a unit direction along the ground
-# toward its nearest edge, or zero when the ball stands in none.
-func way_out_now() -> Vector3:
-	return _way
-
-
-# The shortest way out of a warning for a ball at `at`, flat and unit length, from its committed
+# The shortest way out of a warning for a ball at `at` (for the danger mark's way out: a small
+# chevron on the mark failed its blind read on 10 Nov 2026, 0 of 9 answers named the way, so a
+# stronger candidate is owed), flat and unit length, from its committed
 # shape (the descriptor its damage reads): a ring or wave outward, a band (a ring with a hole)
 # inward or outward, a wedge also across its nearer side, a lane sideways or off either end.
 # Zero when the shape gives no way (the ball on a ring's very centre still gets one: outward
@@ -92,7 +87,8 @@ static func way_out(d: Dictionary, at: Vector3) -> Vector3:
 			if float(d.get("length", 0.0)) - along < best:
 				best = float(d.get("length", 0.0)) - along
 				way = dir
-			if along - float(d.get("back", 0.0)) < best:
+			# A lane reaches `back` metres behind its start (hazard.gd: along >= -back).
+			if along + float(d.get("back", 0.0)) < best:
 				way = -dir
 	return way.normalized() if way.length_squared() > 0.0 else Vector3.ZERO
 
@@ -100,7 +96,6 @@ static func way_out(d: Dictionary, at: Vector3) -> Vector3:
 func step(delta: float) -> void:
 	_clock += delta
 	_standing = -1.0
-	_way = Vector3.ZERO
 	# A hit this tick counts from this tick, whichever ran first, the attack or this watch.
 	if _hit_pending:
 		_hit_pending = false
@@ -135,10 +130,7 @@ func step(delta: float) -> void:
 				# its answer is to stay down: a mark that says "get out or jump" would say the
 				# wrong thing, so it raises none.
 				if not bool(d.get("air", false)):
-					var ran := _run_of(node, at, d)
-					if ran >= _standing:
-						_standing = ran
-						_way = way_out(d, at)
+					_standing = maxf(_standing, _run_of(node, at, d))
 			continue
 		if _last_hit >= w["resolved"]:
 			w["done"] = true

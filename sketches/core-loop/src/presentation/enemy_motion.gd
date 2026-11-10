@@ -193,7 +193,7 @@ static func _parts_of(enemy: Node3D) -> Array:
 				continue
 			for i in mini(mm.visible_instance_count if mm.visible_instance_count >= 0 else mm.instance_count, mm.instance_count):
 				parts.append({"mesh": mm.mesh, "override": mmi.material_override, "surfaces": [],
-					"material": mmi.material_override if mmi.material_override != null else mm.mesh.surface_get_material(0),
+					"material": mmi.material_override if mmi.material_override != null or mm.mesh.get_surface_count() == 0 else mm.mesh.surface_get_material(0),
 					"xform": mmi.global_transform * mm.get_instance_transform(i)})
 	return parts
 

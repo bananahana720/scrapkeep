@@ -31,4 +31,7 @@ func run(t) -> void:
 	t.check("a lane, at its far end: off the end", _near(way, Vector3.RIGHT), str(way))
 	way = NearMiss.way_out(lane, Vector3(0.5, 0.0, 0.0))
 	t.check("a lane, at its start: back off the start", _near(way, Vector3.LEFT), str(way))
+	var charge := {"form": "lane", "centre": Vector3.ZERO, "dir": Vector3.RIGHT, "back": 4.0, "length": 30.0, "half_width": 3.0}
+	way = NearMiss.way_out(charge, Vector3(0.5, 0.0, 0.5))
+	t.check("a lane reaching back past its start: sideways, not off the start", _near(way, Vector3.BACK), str(way))
 	t.check("no shape: no way", NearMiss.way_out({}, Vector3.ZERO) == Vector3.ZERO, "")

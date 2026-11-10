@@ -444,7 +444,9 @@ func _build_wall(radius: float) -> void:
 	band.rings = 96
 	rim.mesh = band
 	rim.material_override = Palette.unshaded(Color(Palette.SAND, 0.55))
-	rim.position = Vector3.UP * WALL_HEIGHT
+	# On the ground, where the fence is strongest: on top, over a fence faded to nothing, three of
+	# three blind readers took the floating bone band for a stray line.
+	rim.position = Vector3.UP * 1.3
 	_wall.add_child(rim)
 	_wall_rise = 0.0
 	_wall.scale = Vector3(1.0, 0.01, 1.0)

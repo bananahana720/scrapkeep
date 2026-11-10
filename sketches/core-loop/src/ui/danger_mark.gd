@@ -29,16 +29,7 @@ const BANG_TOP := -11.0
 const BANG_FOOT := 3.0
 const DOT_TOP := 6.0
 const DOT_SIZE := 5.0
-# The way-out chevron: its tip this far from the diamond's centre, its arms this long.
-const WAY_TIP := 40.0
-const WAY_ARM := 11.0
-const WAY_WIDTH := 5.0
 
-# The way out on screen, a unit direction, or zero when the warning gives none: a chevron outside
-# the diamond points along it (near_miss.way_out, the shortest way to the warning's edge). Readers
-# of the plain diamond could say they were in danger but not which way was safe (sight's danger
-# read, 10 Nov 2026).
-var way := Vector2.ZERO
 var avoid := Rect2()
 # How far the warning has run, 0 to 1, or -1 when the ball stands in none.
 var run := -1.0
@@ -56,22 +47,6 @@ func show_run(value: float) -> void:
 		return
 	run = next
 	queue_redraw()
-
-
-func show_way(direction: Vector2) -> void:
-	var next := direction.normalized() if direction.length() > 0.01 else Vector2.ZERO
-	if next.distance_to(way) < 0.02:
-		return
-	way = next
-	queue_redraw()
-
-
-# The chevron's three points (arm, tip, arm) about the diamond's centre for a way out.
-static func chevron(direction: Vector2) -> PackedVector2Array:
-	var tip := direction * WAY_TIP
-	var back := tip - direction * WAY_ARM * 0.8
-	var side := Vector2(-direction.y, direction.x) * WAY_ARM * 0.8
-	return PackedVector2Array([back + side, tip, back - side])
 
 
 func shown() -> bool:
@@ -95,10 +70,7 @@ func rect() -> Rect2:
 
 func _box(at: Vector2) -> Rect2:
 	var reach := Vector2.ONE * (HALF + KEYLINE + RIM)
-	var box := Rect2(at - reach, reach * 2.0)
-	if way != Vector2.ZERO:
-		box = box.expand(at + way * (WAY_TIP + WAY_WIDTH))
-	return box
+	return Rect2(at - reach, reach * 2.0)
 
 
 # The filled part of a diamond of half-diagonal `half` about the origin for a run of 0 to 1,
@@ -133,8 +105,4 @@ func _draw() -> void:
 		draw_colored_polygon(filled, Palette.HAZARD)
 	draw_rect(Rect2(-BANG_HALF, BANG_TOP, BANG_HALF * 2.0, BANG_FOOT - BANG_TOP), Palette.SAND)
 	draw_rect(Rect2(-DOT_SIZE * 0.5, DOT_TOP, DOT_SIZE, DOT_SIZE), Palette.SAND)
-	if way != Vector2.ZERO:
-		var points := chevron(way)
-		draw_polyline(points, Palette.CHARCOAL, WAY_WIDTH + KEYLINE * 2.0)
-		draw_polyline(points, Palette.SAND, WAY_WIDTH)
 	draw_set_transform(Vector2.ZERO)
