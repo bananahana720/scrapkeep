@@ -11,6 +11,7 @@ Live coordination material for the alpha. The project coordinator (claude.ai pro
 | [STATE.md](STATE.md) | Wave state: the Wave facts table (the one place that names the live board), holds and carried reds |
 | [GATE.md](GATE.md) | The promotion gate recipe: shards, bands, the tally check |
 | [KNOWN-FAILING.tsv](KNOWN-FAILING.tsv) | The ledger of red tests a promotion may carry, each with a cause, an owner and a review date |
+| [WEEKLY.tsv](WEEKLY.tsv) | Tests the promotion gate leaves to the weekly sweep (ruling ca): parked worlds and old-map bot proofs, each with why and when it returns |
 | [DEEP-SWEEP.md](DEEP-SWEEP.md) | The deep-modules sweep run after every promotion |
 | [THREADS.md](THREADS.md) | Threads and sessions, and who owns what |
 | [DEVICES.md](DEVICES.md) | The PC's GPUs, its rules, and what the cloud box can't do |

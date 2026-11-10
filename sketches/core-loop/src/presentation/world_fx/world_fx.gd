@@ -343,6 +343,13 @@ func _lens() -> Node3D:
 	return _camera if is_instance_valid(_camera) else null
 
 
+# Where the ball is drawn this frame. The game binds its PlayerBall, a node that never leaves the
+# origin (its body and its visuals move under it), so its place is shown_position(); a plain
+# Node3D (the workshop, a test) is its own place.
+func _ball_place() -> Vector3:
+	return _ball.shown_position() if _ball.has_method("shown_position") else _ball.global_position
+
+
 func _follow() -> void:
 	if _camera == null:
 		return
@@ -351,7 +358,7 @@ func _follow() -> void:
 		return
 	var eye := lens.global_position
 	var yaw := Basis(Vector3.UP, lens.global_rotation.y)
-	var feet := _ball.global_position if is_instance_valid(_ball) else eye
+	var feet := _ball_place() if is_instance_valid(_ball) else eye
 	Kit.set_clear(feet)
 	for p in ambient + overlay:
 		var s: Dictionary = Specs.SPECS[p.get_meta("world_fx")]
@@ -397,7 +404,7 @@ func _step_wake(delta: float) -> void:
 	if resting or not is_instance_valid(_ball) or _ctx == null or _ctx.get("terrain") == null or not _ctx.terrain.has_method("material_at"):
 		_last_ball = Vector3.INF
 		return
-	var ball: Vector3 = _ball.ball_position() if _ball.has_method("ball_position") else _ball.global_position
+	var ball := _ball_place()
 	var under: Dictionary = _ctx.terrain.material_at(ball)
 	var water := float(under["surface_y"]) if under.get("material", "") == "water" else NAN
 	var velocity := Vector3.ZERO

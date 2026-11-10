@@ -7,7 +7,9 @@ import {
   countChecks,
   acquireMachine,
   binary,
+  IMPORT_TRIES,
   importWithRetry,
+  scriptErrorCount,
   isBot,
   isSolo,
   judge,
@@ -18,13 +20,14 @@ import {
   readQuarantineEntries,
   testTimeoutMs,
 } from "./sketch-smoke.mjs";
+import { readLedger } from "./known-failing.mjs";
 
 // npm run sketch:fast: the fast PR lane of the tiered gate (ORCHESTRATOR, "Tiered gate").
 // It judges one PR head in about 15 minutes, cheapest and most-often-failing checks first, and
 // stops at the first failure that is the PR's own: red twice on the head and green on the base.
 //   1. static: sketch-lint, placeholder count no higher than the base, check:docs, the node
 //      tests that touch the changed scripts
-//   2. Godot: import (retried once), boot, then the tests the diff reaches, cheapest first
+//   2. Godot: import (up to three tries), boot, then the tests the diff reaches, cheapest first
 // The full gate runs once per staging head and the red team plays each staging head; the fast
 // lane never replaces them. Bot-tier tests the diff reaches are listed for the bot shards.
 // Run: node scripts/sketch-fast.mjs [--base origin/main] [--budget 900] [--dry-run] [--receipt <label>]
@@ -256,6 +259,24 @@ export function classifyFailure({ rerunOk, baseOk, headChecks = [], baseChecks =
     return newChecks.length > 0 ? { kind: "pr-red", newChecks } : { kind: "base-red", newChecks: [] };
   }
   return { kind: "pr-red", newChecks: [] };
+}
+
+// A test the known-failing ledger lists as a flake can fail twice in a row with the base green
+// (audio_bake_cancel_test fails between 1 run in 5 and 1 in 3), and that pair alone would read as the PR's
+// red. So before such a test is the PR's red it gets up to LEDGER_FLAKE_RUNS more head runs:
+// one green makes it flaky, and red on every run makes it the PR's red after all. The row
+// buys more evidence; it never excuses a test the PR really broke.
+export const LEDGER_FLAKE_RUNS = 3;
+
+export function ledgerFlakes(rows) {
+  return new Set(rows.filter((row) => row.kind === "flake").map((row) => row.test));
+}
+
+// `verdict` is classifyFailure's "pr-red"; `runs` are the extra head runs, in order.
+export function settleLedgerFlake(verdict, runs) {
+  if (runs.some((run) => run.killed)) return { kind: "stopped", newChecks: [] };
+  if (runs.some((run) => run.ok)) return { kind: "flaky", newChecks: [], ledger: true };
+  return { ...verdict, ledgerRuns: runs.length };
 }
 
 // A check's name is its bracketed label ("[Spillway skipper breaks it in 50 to 90 s] median ..."),
@@ -640,7 +661,7 @@ async function main() {
     finish();
   }
 
-  // Stage 2: Godot. Import with one retry, boot, then the selected tests.
+  // Stage 2: Godot. Import in up to three tries, boot, then the selected tests.
   const quarantineEntries = readQuarantineEntries(sketchDir);
   const quarantine = new Set(quarantineEntries.map((entry) => entry.test));
   const expired = expiredQuarantine(quarantineEntries);
@@ -648,6 +669,7 @@ async function main() {
   if (!stage("quarantine", expired.length === 0, { note: expired.length ? `${expired.length} expired: ${expired.map((entry) => entry.test).join(", ")}` : `${quarantineEntries.length} rows, none expired` })) finish();
   if (!existsSync(binary)) {
     console.error(`Godot binary not found at ${binary}; set GODOT_BIN`);
+    stage("godot", false, { note: "no Godot binary, so no test ran" });
     finish(2);
   }
   await acquireMachine();
@@ -655,15 +677,17 @@ async function main() {
   const imported = importWithRetry(SKETCH, base, (job) => {
     const t = Date.now();
     const result = spawnSync(binary, job.args, { encoding: "utf8", timeout: 180_000 });
-    return { label: job.label, exit: result.status, ok: result.status === 0, ms: Date.now() - t };
-  });
-  if (!stage("import", imported.ok, { note: imported.results.map((row) => `exit=${row.exit}`).join(", ") })) finish();
+    return { label: job.label, exit: result.status, signal: result.signal ?? null, scriptErrors: scriptErrorCount((result.stdout || "") + (result.stderr || "")), ok: result.status === 0, ms: Date.now() - t };
+  }, log);
+  if (!stage("import", imported.ok, { note: imported.tries.map((row) => `${row.outcome} exit=${row.exit ?? row.signal}`).join(", ") })) finish();
   const boot = spawnSync(binary, [...base, "--quit-after", "300"], { encoding: "utf8", timeout: 180_000, env: { ...process.env, XDG_DATA_HOME: mkdtempSync(path.join(os.tmpdir(), "sketch-fast-")) } });
   const bootVerdict = judge({ status: boot.status, output: (boot.stdout || "") + (boot.stderr || "") });
   if (!stage("boot", bootVerdict.ok, { note: bootVerdict.reason ?? "300 frames" })) finish();
 
   const results = [];
   const flaky = [];
+  const ledgerFlaky = [];
+  const flakeRows = ledgerFlakes((await readLedger(root))?.rows ?? []);
   const baseRed = [];
   let prRed = null;
   const inLane = lanePool(width);
@@ -699,12 +723,16 @@ async function main() {
     baseImport ??= inLane(async () => {
       if (prRed) return false;
       const args = ["--headless", "--path", baseSketch];
-      if ((await importAsync(args)) === 0) return true;
-      log(`${SKETCH} (base) import failed; retrying once`);
-      return (await importAsync(args)) === 0;
+      // The base tree is a fresh checkout, where the engine's first import can crash (IMPORT_TRIES).
+      for (let attempt = 1; attempt <= IMPORT_TRIES; attempt++) {
+        if (prRed) return false;
+        if ((await importAsync(args)) === 0) return true;
+        if (attempt < IMPORT_TRIES) log(`${SKETCH} (base) import try ${attempt} of ${IMPORT_TRIES} failed; trying again`);
+      }
+      return false;
     });
     if (!(await baseImport)) {
-      log(`  ${test} on the merge base: no verdict (the base import failed twice)`);
+      log(`  ${test} on the merge base: no verdict (the base import failed ${IMPORT_TRIES} times)`);
       return null;
     }
     if (cancel.cancelled) return null;
@@ -763,7 +791,14 @@ async function main() {
     baseRun = usableBaseRun(rerun, baseRun);
     const baseOk = rerun.ok || !baseRun ? null : baseRun.ok;
     const baseChecks = rerun.ok || !baseRun ? [] : baseRun.checks;
-    return { ...classifyFailure({ rerunOk: rerun.ok, baseOk, headChecks: rerun.checks, baseChecks, baseCached: Boolean(baseRun?.cached) }), rerun };
+    const verdict = classifyFailure({ rerunOk: rerun.ok, baseOk, headChecks: rerun.checks, baseChecks, baseCached: Boolean(baseRun?.cached) });
+    if (verdict.kind !== "pr-red" || !flakeRows.has(path.posix.basename(first.test, ".gd"))) return { ...verdict, rerun };
+    const more = [];
+    while (more.length < LEDGER_FLAKE_RUNS && !more.some((run) => run.ok || run.killed)) {
+      log(`  ${first.test} has a flake row in the known-failing ledger: head run ${more.length + 1} of up to ${LEDGER_FLAKE_RUNS} more`);
+      more.push(await godot(sketchDir, first.test, timeoutMs));
+    }
+    return { ...settleLedgerFlake(verdict, more), rerun };
   }
 
   async function handle(result) {
@@ -775,13 +810,16 @@ async function main() {
       log(`  ${quarantineNote(entry)}`);
     }
     if (result.ok || quarantined || result.killed) return;
-    const { kind, newChecks } = await confirm(result);
-    log(`  ${result.test}: ${kind}${newChecks.length ? ` (new failing checks: ${newChecks.join("; ")})` : ""}`);
+    const { kind, newChecks, ledger, ledgerRuns } = await confirm(result);
+    log(`  ${result.test}: ${kind}${ledger ? " (a known-failing ledger flake: green on a later head run)" : ""}${newChecks.length ? ` (new failing checks: ${newChecks.join("; ")})` : ""}`);
     if (kind === "stopped") return;
-    if (kind === "flaky") flaky.push(result.test);
-    else if (kind === "base-red") baseRed.push(result.test);
+    if (kind === "flaky") {
+      flaky.push(result.test);
+      if (ledger) ledgerFlaky.push(result.test);
+    } else if (kind === "base-red") baseRed.push(result.test);
     else if (!prRed) {
-      prRed = { test: result.test, reason: newChecks.length ? `fails checks the base passes: ${newChecks.join("; ")}` : result.reason, tail: result.tail };
+      const reason = newChecks.length ? `fails checks the base passes: ${newChecks.join("; ")}` : result.reason;
+      prRed = { test: result.test, reason: ledgerRuns ? `${reason}; listed as a flake in the known-failing ledger, but red on all ${ledgerRuns + 2} head runs` : reason, tail: result.tail };
       stopRunning();
     }
   }
@@ -802,6 +840,7 @@ async function main() {
   receipt.results = results;
   receipt.quarantined = results.filter((row) => row.quarantined).map((row) => quarantineRecord(quarantineEntries.find((entry) => entry.test === path.posix.basename(row.test, ".gd")), { ok: row.ok, exit: row.exit, signal: row.signal, failing: row.failing }));
   receipt.flaky = flaky;
+  receipt.ledger_flaky = ledgerFlaky;
   receipt.base_red = baseRed;
   if (prRed) {
     log(prRed.tail);

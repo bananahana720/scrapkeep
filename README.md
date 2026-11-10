@@ -2,6 +2,8 @@
 
 Scrapkeep: Godot alpha in `sketches/core-loop`, 3 worlds. Start at [AGENTS.md](AGENTS.md) and [docs/project/README.md](docs/project/README.md).
 
+**The game in one line** (Andrew, 9 November 2026, ruling cj): A crew of loose cannons, bulls in the Foreman's china shop, take their world back from a machine that believes life can be run perfectly. What every place, system, enemy and item means under that line is in the [Story map](sketches/core-loop/design-v3/STORY-MAP.md).
+
 A greasy junkyard adventure in a steam-cyberpunk universe. Pilots drive electromagnetic mechs that collect metal, grow, and recycle scrap into evolving weapons and skills across Southwest-inspired landscapes.
 
 ## Start here

@@ -5,6 +5,7 @@ const FxLibrary := preload("res://src/presentation/fx_library.gd")
 const RunState := preload("res://src/core/run_state.gd")
 const Context := preload("res://src/core/context.gd")
 const Flow := preload("res://src/core/flow.gd")
+const SittingNotes := preload("res://src/core/sitting_notes.gd")
 const Beacon := preload("res://src/core/beacon.gd")
 const Secrets := preload("res://src/core/secrets.gd")
 const Codex := preload("res://src/core/codex.gd")
@@ -50,6 +51,7 @@ const RunStore := preload("res://src/core/run_store.gd")
 const TuneRows := preload("res://src/core/tune_rows.gd")
 const RadioDeck := preload("res://src/presentation/radio_deck.gd")
 const LaunchTake := preload("res://src/presentation/launch_take.gd")
+const Opening := preload("res://src/presentation/opening.gd")
 # The camp, the workshop, the pause menu and the met-enemy watch are not on the title's path, so they
 # are loaded when first needed (menu_modules); a played game builds them a few frames after the menu.
 const MENU_PATHS := [
@@ -71,6 +73,7 @@ const GATE_OUT := 9.0
 const GATE_UP := 15.0
 const HIT_STOP_MAX := 0.06
 const HIT_STOP_SCALE := 0.05
+const SLOW_MOTION_FLOOR := 0.1
 const SEED := 20260926
 const SimClock := preload("res://src/core/sim_clock.gd")
 const BOSS_PATH := "res://src/boss/boss.gd"
@@ -128,6 +131,8 @@ var screens
 var radio_deck
 # The comic swipe that hides the cut from pilot select or the camp gate into the dam (launch_take.gd).
 var launch_take
+# A run's opening, one voice at a time (opening.gd): the speakers ask it, and it reads the rest.
+var opening
 var _first_control_said := false
 # The walkable camp (camp_hub.gd). Reading it builds the menu modules if they are not up yet.
 var camp_hub:
@@ -168,6 +173,8 @@ var _hit_stopped := false
 # A headless test's stop counts physics ticks, not wall time; -1 is a wall-time stop.
 var _stop_ticks_left := -1
 var _scale_before_stop := 1.0
+# The world's speed under slow_motion (1.0: none).
+var _slow := 1.0
 # The device the player touched last, "kbm" or "pad": the later glyph unit reads this.
 var last_device := "kbm"
 # The saved Frame smoothing wish (settings, Display). interpolating() is what the tree does.
@@ -229,13 +236,18 @@ func _ready() -> void:
 	flow.name = "Flow"
 	add_child(flow)
 	ctx.flow = flow
+	# Before every speaker, so each can hear its turn from its own setup.
+	opening = Opening.new()
+	add_child(opening)
+	opening.setup(self)
 	if test_mode:
 		storage_dir = "user://test-%d" % OS.get_process_id()
 		DirAccess.make_dir_recursive_absolute(storage_dir)
 	elif _launch_flag("--self-play"):
 		# A bot's run never touches the player's saves: codex, profile, run log and the run save
-		# all follow storage_dir, so they land in a folder of their own.
-		storage_dir = "user://self-play-%d" % OS.get_process_id()
+		# all follow storage_dir, so they land in a folder of their own. --self-play-save=<name> names
+		# that folder, so a second launch finds the first one's save (quit, then Continue).
+		storage_dir = "user://self-play-%s" % _self_play_save()
 		DirAccess.make_dir_recursive_absolute(storage_dir)
 	apply_saved_bindings()
 	camera.apply_look_settings(settings_store())
@@ -360,6 +372,11 @@ func _ready() -> void:
 		_menu_wait = MENU_MODULES_FRAMES_APART
 	if _launch_flag("--self-play") and not test_mode:
 		_start_self_play()
+	# --sitting-notes: the build takes notes while a person plays (ruling cg). Never in a test_mode game.
+	if SittingNotes.wanted() and not test_mode:
+		var sitting_notes := SittingNotes.new()
+		sitting_notes.game = self
+		add_child(sitting_notes)
 	if _launch_flag("--boot-profile"):
 		for frame in 5:
 			await get_tree().process_frame
@@ -557,6 +574,7 @@ func pilot_unlocked(def) -> bool:
 
 
 func _exit_tree() -> void:
+	slow_motion(1.0)
 	_end_hit_stop()
 	if not test_mode:
 		return
@@ -691,6 +709,24 @@ func _end_hit_stop() -> void:
 	_hit_stopped = false
 
 
+# Slow motion: the world runs at `scale` of its speed until asked back to 1.0. The caller owns
+# when (flourish_cues.gd, the close-up at Brindle's entrance, ruling cf) and keeps it to a hand
+# on the controls, so no bot's run or band sees it. It multiplies whatever scale a tool set, and
+# a hit stop inside it lifts back to the slowed speed. Music runs on its own sample clock and
+# does not slow. Physics keeps its 90 ticks a second of wall time (each tick's delta is what
+# shrinks), so motion is drawn as often as at full speed and the smoothing setting is untouched.
+func slow_motion(scale: float) -> void:
+	scale = clampf(scale, SLOW_MOTION_FLOOR, 1.0)
+	if is_equal_approx(scale, _slow):
+		return
+	var base := (_scale_before_stop if _hit_stopped else Engine.time_scale) / _slow
+	_slow = scale
+	if _hit_stopped:
+		_scale_before_stop = base * scale
+	else:
+		Engine.time_scale = base * scale
+
+
 func toggle_interpolation() -> bool:
 	_smooth(not interpolating())
 	return interpolating()
@@ -798,7 +834,10 @@ func _take_live() -> bool:
 # A pilot picked on pilot select: the deck camera lifts, the swipe covers, the run starts under it.
 func pick_pilot(index: int) -> void:
 	launch_take.live = _take_live()
-	launch_take.play(func(): flow.choose_class(index), func():
+	launch_take.play(func():
+		if flow.state_name() == "class_select":
+			_begin_opening()
+		flow.choose_class(index), func():
 		screens.fade_for_launch()
 		_launch_whoosh()
 		var title_stage = presentation.get("title_stage") if presentation != null else null
@@ -837,6 +876,7 @@ func launch_from_gate() -> void:
 		if flow.state_name() != "title":
 			return
 		screens.stop_walk_for_launch()
+		_begin_opening()
 		flow.launch_from_title(def), _fire_gate, _dam_drawn)
 
 
@@ -870,6 +910,12 @@ func _say_first_control() -> void:
 		return
 	_first_control_said = true
 	print("SCRAPKEEP_FIRST_CONTROL ms=%d" % Time.get_ticks_msec())
+
+
+# A run the take starts in a played game has an opening (opening.gd). A bot's take is not live.
+func _begin_opening() -> void:
+	if launch_take.live:
+		opening.begin()
 
 
 # The take is gone: the start-pick card it kept hidden shows, and first control is said.
@@ -1271,6 +1317,16 @@ func _dev_key(key: int) -> bool:
 func _boot(step: String) -> void:
 	if _launch_flag("--boot-profile"):
 		print("SCRAPKEEP_BOOT %s ms=%d" % [step, Time.get_ticks_msec()])
+
+
+# The self-play folder's name: --self-play-save=<one plain folder name, no dot>, else this process's
+# id (tools/self_play.gd quits 2 on a name refused here, so the fallback is never played on).
+static func _self_play_save() -> String:
+	for arg in OS.get_cmdline_user_args():
+		var folder := arg.trim_prefix("--self-play-save=")
+		if arg.begins_with("--self-play-save=") and folder.is_valid_filename() and not folder.contains("."):
+			return folder
+	return str(OS.get_process_id())
 
 
 static func _launch_flag(flag: String) -> bool:

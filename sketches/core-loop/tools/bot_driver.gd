@@ -716,6 +716,16 @@ func _init(game_ref, policy_name: String, seed_number: int) -> void:
 # stage plan (events, scrap, spawns); the base seed alone would give every run of a
 # policy the same map draw.
 func start(resume := false) -> void:
+	wire()
+	if resume and game.flow.resume_run():
+		return
+	game.flow.press_start()
+	game.flow.choose_class(class_index)
+
+
+# start()'s wiring alone, for a caller that begins the run itself (self-play pressing the menus' keys).
+# Call it once, in place of start(): both together connect every handler twice.
+func wire() -> void:
 	game.ctx.rng.seed = 20260926 + seed_value * 7919
 	game.player.source = source
 	var events = game.events
@@ -787,10 +797,6 @@ func start(resume := false) -> void:
 		game.player.tree.late_offer = true
 	if tree_policy == "random":
 		_connect_optional("tree_offered", _on_tree_offered)
-	if resume and game.flow.resume_run():
-		return
-	game.flow.press_start()
-	game.flow.choose_class(class_index)
 
 
 func _on_tree_offered(_class_id: String, depth: int, choices: Array) -> void:

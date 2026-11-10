@@ -58,6 +58,8 @@ var _moment_playing := ""
 var _remixes := {}
 var _remix_rng := RandomNumberGenerator.new()
 var _warden_engaged := false
+# A Warden's fight is on: from its engage until its arena opens.
+var _warden_fighting := false
 var specials_heard: Array = []
 
 # Moss's jukebox: the band's intensity at each of the dial's three detents (idle, cruise,
@@ -226,6 +228,9 @@ var _unmute_at := -1
 # landing hands it to the synth on a beat. _handover_at is that beat while it is coming.
 var _ace_flight := false
 var _handover_at := -1
+# The recorded band's kill cadence has answered the Warden break whose release the engine still
+# carries (_answer_release): that release no longer reaches the recorded band.
+var _release_answered := false
 var _ace_arrival_stage := 0
 var _ace_arrival_at := -1
 # The transport sample the synth band starts fading out under the ACE band, -1 when the
@@ -295,6 +300,28 @@ const DUNK_SPENT_MIDI := 74
 # eighths from the beat the band stops on, on the cue's own brass and in the cue's key.
 const DEATH_FALL := [56, 53, 50]
 const DEATH_FALL_VOICE := "brass"
+# A completed part set: three notes for its three parts climb the home chord (F A D) in eighths,
+# the first two in the voice of the set's element and under the third, which is the appliance
+# beep's "done" on high D. The first note waits SET_CHIME_LEAD_S, the time a worker needs to
+# make the three in the live key (a note is 17 to 25 ms).
+const SET_CHIME := [77, 81, 86]
+const SET_CHIME_VOICES := {"arc": "clav", "frost": "bell"}
+const SET_CHIME_DONE_VOICE := "beep"
+const SET_CHIME_LEAD_S := 0.12
+# The band sits at this gain under the chime. Its notes are the home chord's, which the band is
+# playing too: over the recorded band the last note stood only 2 to 5 dB over the band's own D
+# (PC listen, 9 November 2026).
+const SET_CHIME_DUCK := 0.6
+# The band answers a long chain by name: the pilot's quote starts a beat after the chain lands, and
+# not again for PILOT_QUOTE_BARS bars of the sounding band (sound/INTEGRATION.md section 6), so it
+# stays a treat.
+const PILOT_QUOTE_BARS := 8
+# A call-in is booked this far ahead, the time a worker has to make the line, and the band
+# sits at this gain under it.
+const CALL_LEAD_S := 0.3
+const CALL_DUCK := 0.6
+# The bank id of the line the last caller was booked to say, for call_end.
+var _calling := ""
 # The last_ms of the kill chain whose end has been heard.
 var _streak_landed_ms := -100000
 # The beat a death holds the recorded band to; the lost summary's pack starts once it has passed
@@ -811,6 +838,7 @@ func _pump(virtual_frames := -1) -> void:
 		_ace_stage(stage, engine.next_bar())
 	if ace != null:
 		ace.set_fight_floor(_ace_fight_floor())
+		_answer_release()
 	var ace_live := ace != null and ace.active()
 	_hand_over_band()
 	_release_grid()
@@ -899,7 +927,7 @@ func _render_music(frames: int, ace_live: bool) -> void:
 
 func _commit_band_parameters(at: int, values: Dictionary, released: bool, lift: bool, reason: String) -> void:
 	if ace != null:
-		ace.commit_parameters(at, values, released, lift, reason, {"phrase_step": engine._bar_step, "phrase": engine._parameter_phrase_due})
+		ace.commit_parameters(at, values, released and not _release_answered, lift, reason, {"phrase_step": engine._bar_step, "phrase": engine._parameter_phrase_due})
 	# The committed approach is the landmark's reach (sample_run_parameters): its tune in and out.
 	if values.has("approach"):
 		landmark_moment(_landmark_id(), float(values["approach"]))
@@ -1086,7 +1114,7 @@ func _prime_band_parameters() -> void:
 	ace.parameter_enabled = engine.parameter_source.is_valid()
 	if ace.parameter_enabled:
 		ace.parameters = engine.parameter_committed_values.duplicate()
-		ace.parameter_released = engine.parameter_committed_released
+		ace.parameter_released = engine.parameter_committed_released and not _release_answered
 		ace._parameter_danger_floor = engine.parameter_committed_danger_floor
 		ace.pressure = float(ace.parameters.get("threat", 0.0))
 		ace.ultimate_lift = engine.ultimate_lift
@@ -1507,6 +1535,21 @@ func ace_playing() -> bool:
 	return ace != null and ace.mode != "off"
 
 
+# The recorded band's kill cadence has entered: it answers the Warden break, so the release
+# stops reaching the recorded band (ruling bt), and a tune moment, a find or a pack swap that
+# restarts that band on the shelf afterwards starts it with its lead. The engine keeps its own
+# release to the next stage: the landmark hum and the synth band stay stripped as before. A
+# band that plays no cadence (a flat pack) keeps the release to the next stage too.
+func _answer_release() -> void:
+	if _release_answered and not engine.parameters_released():
+		_release_answered = false
+	if not ace.lead_returned:
+		return
+	_release_answered = engine.parameters_released()
+	ace.clear_release()
+	ace.lead_returned = false
+
+
 # The synth takes the stage stingers back once the ACE band has stopped.
 func _release_grid() -> void:
 	if engine.grid != null and not ace_playing():
@@ -1642,6 +1685,46 @@ func speak(kind: String, text: String, beat: int) -> bool:
 	return true
 
 
+# A caller's line on the call card (SOUND-STORY section 8, "Who talks on what"): the caller's
+# chirp, then babble in their own voice. It is made on a worker and sounded CALL_LEAD_S
+# later, so no frame waits for it, and a caller on the grid starts on the band's sixteenth.
+# The band dips under the voice by about what the lounge gives Moss at his bench. Returns
+# how long the voice lasts from now, for the card's hold; 0.0 when it stays silent, as it
+# does while an earlier caller is still talking.
+func call_in(kind: String, speaker: String, text: String) -> float:
+	if text == "" or clock < float(_gates.get("call_in", -1000.0)) or not _admit(kind, "babble", 1.0):
+		return 0.0
+	var step := grid_unit(4)
+	var at := engine.clock + int(CALL_LEAD_S * Harmony.RATE)
+	if SfxBank.caller_on_grid(speaker):
+		at += posmod(next_grid(4) - at, step)
+	var id := SfxBank.say_id(speaker, text)
+	SfxBank.keep_said(id)
+	engine.schedule_stinger_at(id, at, 0.0, false, step)
+	var seconds := float(at - engine.clock) / Harmony.RATE + SfxBank.say_seconds(speaker, text, step)
+	_gates["call_in"] = clock + seconds
+	_calling = id
+	_duck(CALL_DUCK, seconds)
+	cue_log.append([kind, "babble", "call", at, 1.0])
+	return seconds
+
+
+# The card that showed a caller closed before the voice was done (a fight went live, the run
+# ended): the caller stops, booked or sounding, the band comes back up and the next caller
+# may talk. Nothing happens when nobody is talking. A shorter dip another cue asked for in
+# that moment is freed with it.
+func call_end() -> void:
+	if _calling == "" or clock >= float(_gates.get("call_in", -1000.0)):
+		return
+	engine.cancel_stinger(_calling)
+	engine.free_duck()
+	if ace_playing():
+		ace.free_duck()
+	_gates["call_in"] = clock
+	_calling = ""
+	cue_log.append(["call_end", "babble", "now", engine.clock, 1.0])
+
+
 # What the run's rows resolve by: the player's class motif.
 func cue_context() -> Dictionary:
 	return {"motif": _motif}
@@ -1743,7 +1826,7 @@ func _end_hum(node_id: int) -> void:
 func _threat_distance_db(node: Node) -> float:
 	if ctx == null or ctx.player == null or not node.has_method("threat_at"):
 		return 0.0
-	var gap: float = (node.threat_at() as Vector3).distance_to(ctx.player.ball_position())
+	var gap: float = (node.threat_at() as Vector3).distance_to(ctx.player.shown_position())
 	return 9.0 * clampf((gap - 20.0) / 40.0, 0.0, 1.0)
 
 
@@ -1779,7 +1862,7 @@ func _connect_all(events) -> void:
 		engine.set_fleet_ticks(0)
 		new_run_tunes()
 		_flow_queue.append(["run"]))
-	events.warden_engaged.connect(func(_stage: int): warden_took_landmark())
+	events.warden_engaged.connect(func(_stage: int): warden_took_band())
 	events.activity_done.connect(func(id: String, _at: Vector3): end_moment("event", id))
 	events.synergy_discovered.connect(func(id: String, _category: String, _first: bool): tune_found(id))
 	events.flow_changed.connect(_on_flow_changed)
@@ -1854,7 +1937,9 @@ func _connect_all(events) -> void:
 func wire_optional() -> void:
 	var events = ctx.events
 	_wire_armor()
-	_listen_optional(events, "beacon_unsealed", func(_stage: int): _flow_queue.append(["unseal"]))
+	_listen_optional(events, "beacon_unsealed", func(_stage: int):
+		_warden_fighting = false
+		_flow_queue.append(["unseal"]))
 	_listen_optional(events, "heft_class_changed", _on_heft_class)
 	_listen_optional(events, "heft_class_dropped", _on_heft_dropped)
 	_listen_optional(events, "scrap_lost", func(amount: int, _at: Vector3, _total: int, _cause: String): play("scrap_lost", clampf(amount / 20.0, 0.0, 1.0) * 4.0 - 3.0))
@@ -2239,7 +2324,7 @@ func _tend_hum() -> void:
 	if not standing:
 		_stop_hum()
 		return
-	hum_pitch = hum_ratio(player.ball_position().distance_to(kit.anchor)) if kit.on_body else 1.0
+	hum_pitch = hum_ratio(player.shown_position().distance_to(kit.anchor)) if kit.on_body else 1.0
 	if _sfx != null and _hum_voice != AudioStreamPlaybackPolyphonic.INVALID_ID:
 		_sfx.set_stream_pitch_scale(_hum_voice, hum_pitch)
 
@@ -2409,7 +2494,8 @@ func _book_park_drop(event_id: String, cue: Dictionary) -> void:
 		PRIORITY_DB[Rows.priority("event_started")], event_id)
 
 
-# Check the director's exact guards before a block can render the predicted impact.
+# Check the director's exact guards before a block can render the predicted impact: the same
+# guards on the same ball, so the tick's place and the tick's velocity, never the drawn place.
 # Holding starts at the deadline; checking clearance during the lead protects the ring.
 func _guard_park_bookings() -> void:
 	var director = _park_director()
@@ -2556,6 +2642,7 @@ func _on_stage_entered(stage: int, retry: bool) -> void:
 	_moments.clear()
 	_moment_playing = ""
 	_warden_engaged = false
+	_warden_fighting = false
 	engine.parameters_stage_entered()
 	for event_id in _park_cues:
 		engine.cancel_park_cue(event_id)
@@ -2785,8 +2872,8 @@ func _tend_specials() -> void:
 		return
 	var from := Vector3.ZERO
 	var player = ctx.get("player") if ctx != null else null
-	if player != null and player.has_method("ball_position"):
-		from = player.ball_position()
+	if player != null and player.has_method("shown_position"):
+		from = player.shown_position()
 	var distances := {}
 	for id in _specials.keys():
 		var row: Dictionary = _specials[id]
@@ -2967,8 +3054,9 @@ func _boss_entry(music: String) -> String:
 	return TuneMoments.remixed(music, PhaseMusic.entry_track(music, pack_available), _remixes, tune_available)
 
 
+# A tune on its one pass does not begin inside a Warden's fight (warden_took_band).
 func begin_moment(kind: String, key: String, id: String) -> void:
-	if id == "":
+	if id == "" or (_warden_fighting and kind in TuneMoments.ONE_PASS):
 		return
 	end_moment(kind, key, false)
 	_moment_seq += 1
@@ -3035,9 +3123,15 @@ func tune_found(discovery_id: String) -> void:
 	begin_moment("find", discovery_id, TuneMoments.find_tune(discovery_id))
 
 
-func warden_took_landmark() -> void:
+# A Warden's fight takes the band: the landmark's tune ends and stays away for the stage, and a
+# tune on its one pass (a find, the fabricator) is cut short and none begins until the arena
+# opens, or its tempo holds the grid over the fight and the Warden's pivot never comes.
+func warden_took_band() -> void:
 	_warden_engaged = true
-	end_moment("landmark")
+	_warden_fighting = true
+	for moment in ["landmark"] + TuneMoments.ONE_PASS:
+		end_moment(moment, "", false)
+	_refresh_moment()
 
 
 func landmark_moment(landmark_id: String, approach: float) -> void:
@@ -3193,6 +3287,9 @@ func _warm_landing(rung: int) -> void:
 	for at in [due, due + 4 * grid_unit(1)]:
 		for id in _landing_ids(rung, _landing_tones(at)):
 			engine.warm_stinger(id, at)
+		# The quote a long chain earns, unless the last one is too recent to earn another.
+		if rung >= STREAK_BAR_RUNG and clock >= float(_gates.get("pilot_quote", -1000.0)):
+			engine.warm_stinger(_pilot_quote_id(), at, false, grid_unit(4))
 
 
 # The whip and the dunk answer a sixteenth after their contact, too soon to make a note: theirs
@@ -3236,7 +3333,48 @@ func land_streak(rung: int) -> int:
 	var land := Harmony.tone_below(last, _landing_tones(at))
 	_note_at("enemy_killed", STREAK_VOICE, land, at)
 	_note_at("enemy_killed", STREAK_BODY, land - 12, at, SfxBank.GRID_UNDER_DB)
+	if long:
+		_quote_pilot(at + grid_unit(1))
 	return at
+
+
+# The band answers a long chain by name (SOUND-BIBLE, "Pilot quotes"): the pilot's own motif on
+# the sax from transport sample at, in the sounding band's eighths and key.
+func _quote_pilot(at: int) -> void:
+	if not _gate("pilot_quote", pilot_quote_gap()):
+		return
+	var id := _pilot_quote_id()
+	engine.schedule_stinger_at(id, at, PRIORITY_DB[Rows.priority("enemy_killed")], false, grid_unit(4))
+	cue_log.append(["enemy_killed", id, "quote", at, 1.0])
+
+
+# The seconds between two quotes: PILOT_QUOTE_BARS bars of four beats at the sounding band's tempo.
+func pilot_quote_gap() -> float:
+	return float(PILOT_QUOTE_BARS * 4 * grid_unit(1)) / Harmony.RATE
+
+
+func _pilot_quote_id() -> String:
+	return SfxBank.pilot_quote_id(_motif if _motif != "" else Harmony.CLASS_MOTIFS[0])
+
+
+# A part set's banner is up (presentation.gd): its chime, on the band's next eighths and in the
+# live key. element is the one the set adds: an arc set climbs on the clavinet and a frost set on
+# the bell. Returns the transport sample of the first note, or -1 when no band is playing to
+# time it.
+func set_complete(element: String) -> int:
+	if not sound_ready or engine.mode != MusicEngine.PLAY:
+		return -1
+	var voice: String = SET_CHIME_VOICES.get(element, SET_CHIME_VOICES["frost"])
+	var eighth := grid_unit(2)
+	var first := next_grid(2)
+	while first - engine.clock < int(SET_CHIME_LEAD_S * Harmony.RATE):
+		first += eighth
+	for i in SET_CHIME.size():
+		var done: bool = i == SET_CHIME.size() - 1
+		_note_at("synergy_discovered", SET_CHIME_DONE_VOICE if done else voice, SET_CHIME[i], first + i * eighth,
+			0.0 if done else SfxBank.GRID_UNDER_DB)
+	_duck(SET_CHIME_DUCK, float(first + SET_CHIME.size() * eighth - engine.clock) / Harmony.RATE)
+	return first
 
 
 # The near miss is a reward in the class's own voice and ducks nothing (AUDIO-V3 section 5 rule
@@ -3512,7 +3650,7 @@ func _follow_brindle() -> void:
 	if engine.section == "chase":
 		var scooter = boss.get("scooter")
 		if scooter is Node3D and is_instance_valid(scooter) and boss.has_method("scooter_landed") and boss.scooter_landed():
-			var lead: float = (scooter as Node3D).global_position.distance_to(ctx.player.ball_position())
+			var lead: float = (scooter as Node3D).global_position.distance_to(ctx.player.shown_position())
 			if _chase_lead0 < 0.0:
 				_chase_lead0 = maxf(lead, 1.0)
 			engine.chase(clampf(1.0 - lead / _chase_lead0, 0.0, 1.0))
@@ -3799,7 +3937,7 @@ func _on_synergy(_id: String, _category: String, first_time: bool) -> void:
 func sample_run_parameters() -> Dictionary:
 	if ctx.run == null or ctx.player == null or ctx.flow == null or not ctx.flow.in_play():
 		return {}
-	var at: Vector3 = ctx.player.ball_position()
+	var at: Vector3 = ctx.player.shown_position()
 	var forward: Vector3 = ctx.aim_forward()
 	var enemies: Array = get_tree().get_nodes_in_group("enemy") if is_inside_tree() else []
 	var values := {"threat": run_threat(at, forward, enemies, parameter_threat_weights, parameter_threat_range)}
@@ -3972,6 +4110,7 @@ func _flush_flow() -> void:
 					engine.menu_theme("title", true, at)
 					_menu_home(at)
 			"unseal":
+				_release_answered = false
 				engine.parameters_warden_broken()
 				_unseal_ms = Time.get_ticks_msec()
 				if ace_playing():

@@ -353,6 +353,7 @@ This section makes "legible workshop instrumentation" concrete (AD-08, AC-15).
 - **Type.** Noto Sans Bold for labels and toasts, and Noto Sans Mono Bold for numbers so digits do not jitter. Both are SIL OFL and installed at `/usr/share/fonts/noto/`. Vendoring the TTFs into the sketch with their licence is W1's call, with Godot's default font as the fallback.
 - **Type sizes at 1080p, scaled by UI scale.** Priority-3 toast 28 px, priority-2 toast 22 px, objective 20 px, labels 16 px. Nothing is under 14 px.
 - **Motion.** A ready pulse scales 1.00 to 1.12 to 1.00 over 180 ms with a class-colour rim flash and the class instrument's single note. A toast enters in 120 ms (fade plus 16 px drop, ease-out), holds 1.6 s at priority 2 or 2.4 s at priority 3, and leaves in 200 ms (fade, ease-in). At most two toasts are visible, and a newer one pushes the older out.
+- **Caller plate.** Whoever speaks through the speech bubble besides Moss at his counter (a call-in, a site crew's hello, a boss's line) stands on a 68 px plate at the speech bubble's left, name on a tag across its head, and the bubble takes the caller's colour and points its tail at the plate ([STORY-MAP.md](design-v3/STORY-MAP.md), "Call-ins"). The plate's shape says whose hands the caller is and its colour says which of them: a rounded scrap plate for the crew (a site crew in its site's colour, a freed pilot in the pilot's own colour with the pilot's emblem); Moss's hatch slot with two mitts on the lip, since Moss is never seen; a clipped requisition tag in hazard red for the Fleet; a scanned hard-cornered lozenge in ancient green for the old works, which shows the works' mark and no face. The plate hops on the syllables while the voice lasts; reduced motion keeps it still. `src/ui/caller_tile.gd` owns it.
 
 **Words-on-screen budget, 25 in a fight.** A word is any run of letters. Digits and keycap letters do not count.
 
@@ -398,7 +399,7 @@ These briefs are for headless Blender work. The style is chunky, bevelled and sm
 | `fleet_paint` | Iron oxide |
 | `requisition_tag` | Brass |
 | `ancient_enamel` | Petrol, cast and seamless, with sandstone dust on top faces. Capped at HSV value 45% and saturation 45%, and never emissive. |
-| `ancient_light` | ANCIENT (pending; A is the default), emissive in thin seams set in charcoal grooves |
+| `ancient_light` | ANCIENT (uranium-glass green `#9dff3c`, chosen 2026-10-09), emissive in thin seams set in charcoal grooves |
 | `rarity` | Set at runtime from the rarity ramp |
 
 | Asset | Silhouette | Tris | Slots | Must read at gameplay distance |
@@ -478,9 +479,9 @@ Tenacity immunity (DESIGN-V2 §10) shows as the broken-bracket flicker from Rive
 
 **Wardens.** Each stage's Warden is one family on a shared clamp base (§9): stage 1 a reactor relic, stage 2 a swarm-remnant hive, stage 3 one of the Mind's hands.
 
-**Enamel cap.** Ancient enamel stays dull petrol. In HSV its value is at most 45% and its saturation at most 45% (petrol itself is value 34%, saturation 38%, and mint is value 94%). The brightest colour the cap allows at petrol's hue, `#3f736e`, measures CIELAB L* 45 against mint's 88 and sits at ΔE 43 or more from mint in normal, deuteranopic, protanopic and tritanopic simulation. The enamel never glows. Only the Cherenkov blue seams emit light. The primer board's s4 and f03 showed bright turquoise enamel reading close to mint, which this cap forbids.
+**Enamel cap.** Ancient enamel stays dull petrol. In HSV its value is at most 45% and its saturation at most 45% (petrol itself is value 34%, saturation 38%, and mint is value 94%). The brightest colour the cap allows at petrol's hue, `#3f736e`, measures CIELAB L* 45 against mint's 88 and sits at ΔE 43 or more from mint in normal, deuteranopic, protanopic and tritanopic simulation. The enamel never glows. Only the ANCIENT green seams emit light. The primer board's s4 and f03 showed bright turquoise enamel reading close to mint, which this cap forbids.
 
-Ancient light is the ANCIENT colour (pending, Cherenkov blue by default), never mint, because mint belongs to the living salvage field. The thin seams show where the cast shells part. They are the mechanism, not decoration (AD-11).
+Ancient light is the ANCIENT colour (uranium-glass green `#9dff3c`, chosen 2026-10-09), never mint, because mint belongs to the living salvage field. The thin seams show where the cast shells part. They are the mechanism, not decoration (AD-11).
 
 **The world.**
 

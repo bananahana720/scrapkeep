@@ -116,8 +116,10 @@ Each opened item is a rare, every-pilot row with no seam, chosen for a pinball v
 - **Trophy wall page:** three lines over the achievement list: "SHIFT BOARD 3 of 6 stamped",
   "Next: Rivet Freed. Find the cage on the dam and ram it open. Signs on a pilot.", and the card
   "Time card ●○○ Full card opens Spring Hull".
-- **Run summary:** one line, "Shift board: HIRED Rivet Freed, Brindle Routed, Sable's Mark." or
-  "Time card punched, 2 of 3." or "Time card full: First Card pays Spring Hull next shift."
+- **Run summary:** one line, "Shift board: Rivet Freed, Brindle Routed, Sable's Mark (HIRED)." or
+  "Time card punched, 2 of 3." or "Time card full: First Card pays Spring Hull next shift." A run
+  that stamps under more than one stamp says each stamp once, after its deeds ("Shift board: CLOCKED IN;
+  Warden Breaker (LOGGED)."), and Clocked In is the stamp alone.
 - Earns still toast as before (achievement rows), with the pilot beat line for Rivet and Tarn.
 
 ## For the world 1 sitting

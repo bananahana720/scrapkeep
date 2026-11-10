@@ -18,6 +18,9 @@ const MET_PREFIX := "met."
 const ROW_SIZE := Vector2(250.0, 40.0)
 const COLUMNS := 3
 const LIST_H := 330.0
+const NOTE_FONT := 19
+const NOTE_W := (ROW_SIZE.x + 10.0) * COLUMNS - 10.0
+const NOTE_OPEN := "Pick a crew to send to the grate. Four at a time; the box does not argue."
 
 signal kind_chosen(kind: String)
 signal clear_chosen
@@ -62,9 +65,13 @@ func _init() -> void:
 		row.focus_entered.connect(_show_note.bind(kind))
 		_grid.add_child(row)
 		_rows[kind] = row
-	_note = UiDraw.label(19, Palette.SAND)
-	_note.custom_minimum_size = Vector2(760.0, 52.0)
+	# The note keeps to the list's width (a line across the whole screen reads as one long
+	# line) and holds the height of the longest note, so the buttons never move under a focus.
+	_note = UiDraw.label(NOTE_FONT, Palette.SAND)
 	_note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_note.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	var lines := _most_note_lines()
+	_note.custom_minimum_size = Vector2(NOTE_W, lines * UiFonts.bold().get_height(NOTE_FONT) + (lines - 1) * _note.get_theme_constant("line_spacing"))
 	add_child(_note)
 	var buttons := HBoxContainer.new()
 	buttons.alignment = BoxContainer.ALIGNMENT_CENTER
@@ -146,7 +153,7 @@ func refresh(met: Array, live: int, cap := Sandbox.CAP) -> void:
 	if focused != "":
 		_show_note(focused)
 	else:
-		_note.text = "Pick a crew to send to the grate. Four at a time; the box does not argue."
+		_note.text = NOTE_OPEN
 		_note.add_theme_color_override("font_color", Palette.SAND)
 
 
@@ -206,14 +213,30 @@ func _show_note(kind: String) -> void:
 		return
 	var color := Palette.SAND
 	if not _met.has(kind):
-		_note.text = "Not met yet. %s" % Sandbox.where_met(kind)
 		color = Palette.SLATE
 	elif _full:
-		_note.text = "%s. The yard is full. Clear it, or wait for the floor to thin out." % Sandbox.name_of(kind)
 		color = Palette.COPPER
-	else:
-		_note.text = "%s. %s" % [Sandbox.name_of(kind), Sandbox.line_of(kind)]
+	_note.text = _note_for(kind, _met.has(kind), _full)
 	_note.add_theme_color_override("font_color", color)
+
+
+# A kind's note: where it turns up when not met, that the yard is full, or its own line.
+static func _note_for(kind: String, met: bool, full: bool) -> String:
+	if not met:
+		return "Not met yet. %s" % Sandbox.where_met(kind)
+	if full:
+		return "%s. The yard is full. Clear it, or wait for the floor to thin out." % Sandbox.name_of(kind)
+	return "%s. %s" % [Sandbox.name_of(kind), Sandbox.line_of(kind)]
+
+
+# The most lines any note the page can show takes, wrapped at the note's width.
+static func _most_note_lines() -> int:
+	var font := UiFonts.bold()
+	var tallest := font.get_multiline_string_size(NOTE_OPEN, HORIZONTAL_ALIGNMENT_CENTER, NOTE_W, NOTE_FONT).y
+	for kind in Sandbox.kinds():
+		for state in [[false, false], [true, true], [true, false]]:
+			tallest = maxf(tallest, font.get_multiline_string_size(_note_for(kind, state[0], state[1]), HORIZONTAL_ALIGNMENT_CENTER, NOTE_W, NOTE_FONT).y)
+	return maxi(1, roundi(tallest / font.get_height(NOTE_FONT)))
 
 
 # One enemy kind in the list: a disc and the name. A kind not yet met is slate, with a dark

@@ -172,6 +172,8 @@ func _check_hud() -> void:
 	game.player.source = Intent.Scripted.new()
 	await physics_frame
 	var hud = game.hud
+	# The cold open has the floor first (the pill waits for a flourish's reading matter); this is about the pill.
+	game.presentation.flourish.stop_all()
 	_t.check("no pulse before a note", not hud.lore_pulse_visible())
 	game.codex.lore_found.emit("lore.spillway.note.shift")
 	_t.check("the pulse shows on lore_found", hud.lore_pulse_visible())

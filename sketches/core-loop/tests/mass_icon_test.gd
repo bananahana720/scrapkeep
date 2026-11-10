@@ -21,8 +21,8 @@ const FILES := {
 		"mass": ['"callout_scrap": {"before": ["res_mass"]'],
 	},
 	"res://src/ui/screens.gd": {
-		"cog": ['["res_scrap", str(s["cogs"])]'],
-		"mass": ['["res_mass", str(s["scrap"])]'],
+		"cog": ['["res_scrap", str(s["cogs"]), "cogs"]'],
+		"mass": ['["res_mass", str(s["scrap"]), "scrap"]'],
 	},
 }
 

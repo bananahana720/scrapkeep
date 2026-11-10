@@ -70,9 +70,11 @@ const BASE_ROWS := {
 	# The first cut's roster, kept: each already owns its mechanic.
 	"chaser": {"faction": FLEET, "role": "punisher", "mechanic": "lunge_lane", "telegraph": T_LANE, "holds": false,
 		"breaks": [], "tag": "", "tests": "speed",
+		"job": "Was a pipe pig that scraped the penstocks clear.",
 		"line": "Runs you down and lunges along a committed lane; a hard hit in the wind-up breaks the lunge."},
 	"lobber": {"faction": FLEET, "role": "punisher", "mechanic": "batted_shell", "telegraph": T_PROJECTILE, "holds": false,
 		"breaks": [], "tag": "", "tests": "weapon",
+		"job": "Was a leak plugger that threw bungs at a breach.",
 		"line": "Lobs a shell at where you will be; roll into it fast and you bat it home."},
 	"miniboss": {"faction": FLEET, "role": "punisher", "mechanic": "vented_window", "telegraph": T_INSTANT, "holds": false,
 		"breaks": [], "tag": "", "tests": "contact",
@@ -87,11 +89,13 @@ const BASE_ROWS := {
 	# Fleet reinforcements (DESIGN-V2 section 10): engineered anti-ball gear.
 	"mag_trapper": {"faction": FLEET, "role": "controller", "mechanic": "mag_pit", "telegraph": T_INSTANT, "holds": true,
 		"breaks": ["jump", "smash", "hook"], "tag": "hold_pit", "tag_next": "tag_mag_pit", "hold": "hold_pit", "tests": "heft",
+		"job": "Was the rack magnet that lifted scrap off the intake.",
 		"line": "Throws a magnetic pit disc that drags a ball lighter than its rating; heft rolls through it."},
 	# The Spillway's own crew (design-v3/SPILLWAY-ROSTER.md): re-admitted in wave 19, reworked around Flow.
 	"hooker": {"faction": FLEET, "role": "controller", "mechanic": "anchor_tether", "telegraph": T_LANE, "holds": true,
 		"breaks": ["boost", "speed", "hook"], "tag": "hold_tether", "tag_next": "tag_tether_crack", "hold": "hold_tether", "tests": "speed",
 		"world": 1,
+		"job": "Was a mooring winch that hauled barges in.",
 		"line": "Harpoons you to its anchor post; outrun the line, boost, or bite another post and it snaps and slings you."},
 	"netcaster": {"faction": FLEET, "role": "controller", "mechanic": "air_net", "telegraph": T_INSTANT, "holds": true,
 		"breaks": ["jump", "glide", "smash"], "tag": "hold_net", "tag_next": "tag_net_crackle", "hold": "zap_hum", "tests": "air",
@@ -101,6 +105,7 @@ const BASE_ROWS := {
 		"line": "Throws a slow arcing bola at where you will be; it wraps you, stings, and drags you down out of the air."},
 	"plated_brute": {"faction": FLEET, "role": "punisher", "mechanic": "extra_plate", "telegraph": T_INSTANT, "holds": false,
 		"breaks": ["smash"], "tag": "womp", "tag_next": "tag_plate_clang", "tests": "contact",
+		"job": "Was a stoplog setter that shut bays with steel.",
 		"line": "A mini-Warden: its plate takes one extra breaking hit before the body does, and it slams the ground."},
 	"deflector": {"faction": FLEET, "role": "controller", "mechanic": "reflect_shield", "telegraph": T_LANE, "holds": false,
 		"breaks": ["jump"], "tag": "vault_drop", "tag_next": "tag_shield_boing", "tests": "contact",
@@ -117,25 +122,30 @@ const BASE_ROWS := {
 	# wave 19 (design-v3/SPILLWAY-ROSTER.md).
 	"jolt_layer": {"faction": FLEET, "role": "controller", "mechanic": "static_jam", "telegraph": T_INSTANT, "holds": false,
 		"breaks": ["speed", "jump"], "tag": "", "tests": "speed", "script": "res://src/combat/jolt_layer.gd", "world": 1,
+		"job": "Was the fish fence layer.",
 		"line": "Unrolls a live cable mat that jolts a slow ball: charges and casts drop and specials jam; roll fast, jump or hook out."},
 	"swatter": {"faction": FLEET, "role": "punisher", "mechanic": "paddle_bat", "telegraph": T_INSTANT, "holds": true,
 		"breaks": ["jump", "boost"], "tag": "hit_thwack", "tag_next": "tag_paddle_swat", "hold": "", "tests": "steer",
 		"line": "Swings a low paddle arm that bats you along its sweep; jump the paddle, or boost to ride the knock."},
 	"ramp_flipper": {"faction": FLEET, "role": "controller", "mechanic": "tilt_fling", "telegraph": T_INSTANT, "holds": true,
 		"breaks": ["jump"], "tag": "vault_rise", "tag_next": "tag_ramp_creak", "hold": "", "tests": "steer", "world": 1,
+		"job": "Was a flap tender that tipped the overflow.",
 		"line": "A sluice flap that tilts to fling a slow ball off course; hit it fast, or jump the tilt, and it launches you instead."},
 	# Boom Tender No. 22 (design-v3/SPILLWAY-ROSTER.md): the Spillway's own body, a bowling exam.
 	"boom_tender": {"faction": FLEET, "role": "controller", "mechanic": "boom_pin", "telegraph": T_LANE, "holds": true,
 		"breaks": ["boost", "jump", "hook"], "tag": "", "hold": "", "tests": "speed", "script": "res://src/combat/boom_tender.gd", "world": 1,
+		"job": "Was a boom tender that strung floats to catch drift.",
 		"line": "Swings a debris boom of five floats across your lane and pins a slow ball to its hull; bowl through fast and the floats pop like pins."},
 	"catch_trap": {"faction": FLEET, "role": "controller", "mechanic": "cup_hold", "telegraph": T_INSTANT, "holds": true,
 		"breaks": ["boost", "smash", "hook"], "tag": "ice_form", "tag_next": "tag_cup_snap", "hold": "ice_form", "tests": "speed",
+		"job": "Was the fish lift.",
 		"line": "A cup that closes over a ball rolling onto it and holds it dead still; boost or smash out, or break it first."},
 
 	# Kill-first specials (design-v3/ENEMY-PRIORITY.md 4): each makes its pack worse until it
 	# is removed, and never attacks, so it takes no attacker budget.
 	"linker": {"faction": FLEET, "role": "kill_first", "mechanic": "dish_guard", "telegraph": -1, "holds": false,
 		"breaks": [], "tag": "", "tests": "air", "script": "res://src/combat/linker.gd",
+		"job": "Was a shield tender that kept the weather off a weld.",
 		"line": "Holds a dish over a partner that shrugs off hits through it; cut the cable, come over the top or kill the Linker."},
 
 	# Awakened ancients (DESIGN-V2 section 10): one per family, each its cause's mechanic.
@@ -268,6 +278,16 @@ static func has(id: String) -> bool:
 
 static func row(id: String) -> Dictionary:
 	return ROWS.get(id, {})
+
+
+# The name a screen shows: the row's own "name" (the Shift Boss, whose id stays foreman), else the id in words.
+static func name_of(id: String) -> String:
+	return String(row(id).get("name", id.replace("_", " ").capitalize()))
+
+
+# What the machine did before the works were turned on you; "" for a kind with no job written yet.
+static func job_of(id: String) -> String:
+	return String(row(id).get("job", ""))
 
 
 static func faction_of(id: String) -> String:

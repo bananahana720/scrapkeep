@@ -18,6 +18,7 @@ const Palette := preload("res://src/core/palette.gd")
 # that reveals it still plays (both a player's only): the drop already carries the card, so neither
 # is met, and one already waiting leaves the queue, until the pick is taken (w22 first-timer red
 # team watch 5). Their verbs stay met, so they queue again on the next calm frame.
+# In a run's opening every tip waits for its turn (opening.gd): the title and Moss go first.
 # The HUD shows one toast at a time and a newer one replaces it, so a met tip joins `pending`
 # and goes up only when the toast slot is empty and no other tip is up: one tip per toast
 # lifetime. A tip met now goes ahead of the cast tip a slot only promises (has_cast_slot).
@@ -101,7 +102,7 @@ func _physics_process(delta: float) -> void:
 		var deck = game.get("radio_deck")
 		if deck != null and deck.dial != null and deck.dial.is_visible_in_tree():
 			meet("radio")
-	if not seen("stake") and stake_near(player.ball_position()):
+	if not seen("stake") and stake_near(player.shown_position()):
 		meet("stake")
 	var combat = game.get("combat")
 	if combat != null and not picking and not seen("active") and combat.get("actives") != null and combat.actives.enabled() \
@@ -115,7 +116,7 @@ func _physics_process(delta: float) -> void:
 		_withdraw()
 		return
 	_step_showing(delta)
-	if showing == "" and not pending.is_empty() and hud.toast_texts().is_empty():
+	if showing == "" and not pending.is_empty() and hud.toast_texts().is_empty() and not game.opening.waits("tip"):
 		_put_up(pending.pop_front())
 
 

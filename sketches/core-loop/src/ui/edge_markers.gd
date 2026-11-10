@@ -164,7 +164,7 @@ func _pocket_targets_now() -> Array[Dictionary]:
 	var opened := _opened_ids(game.world.contraptions.get(terrain.stage))
 	for door in doors:
 		door["done"] = opened.has(door["id"])
-	return pocket_targets(doors, discovered, game.player.ball_position(), Callable(terrain, "height"))
+	return pocket_targets(doors, discovered, game.player.shown_position(), Callable(terrain, "height"))
 
 
 # Latches every door that is in view, in range and in sight as discovered. Called each frame.
@@ -174,7 +174,7 @@ func note_pockets(size: Vector2) -> void:
 	var terrain = game.world.terrain
 	var cam: Camera3D = game.camera.cam
 	var ground := Callable(terrain, "height")
-	var ball: Vector3 = game.player.ball_position()
+	var ball: Vector3 = game.player.shown_position()
 	for door in pocket_doors(terrain.map()):
 		if discovered.has(door["key"]):
 			continue
@@ -212,7 +212,7 @@ func _clamp_crew() -> Node3D:
 	var gate = game.flow.get("gate")
 	if objective_id != CLAMP_ROW or gate == null or not gate.has_method("clamp_crew") or game.player == null:
 		return null
-	return gate.clamp_crew(game.player.ball_position())
+	return gate.clamp_crew(game.player.shown_position())
 
 
 # The play view markers stay inside: clear of the top, toast and bottom bands.
@@ -232,7 +232,7 @@ func markers(size: Vector2) -> Array[Dictionary]:
 	var view := view_rect(size)
 	var screen := Rect2(Vector2.ZERO, size)
 	var centre := size * 0.5
-	var ball: Vector3 = game.player.ball_position()
+	var ball: Vector3 = game.player.shown_position()
 	for target in targets():
 		var at: Vector3 = target["at"]
 		var behind := cam.is_position_behind(at)

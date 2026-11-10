@@ -237,7 +237,7 @@ static func _pose(rupture: Dictionary, seconds: float) -> void:
 func _nearby_grit() -> void:
 	if _player == null or not is_instance_valid(_player):
 		return
-	var ball: Vector3 = _player.ball_position()
+	var ball: Vector3 = _player.shown_position()
 	var local_ball := to_local(ball)
 	var nearest: Array[Vector3] = []
 	for face in faces:

@@ -211,6 +211,8 @@ class Voice:
 	var park_owned := false
 	var park_owner := ""
 	var park_rise := false
+	# The bank id of the stinger this voice is, "" for any other voice.
+	var stinger := ""
 
 
 var park_cue_log: Array[Dictionary] = []
@@ -726,6 +728,11 @@ func parameters_warden_broken() -> void:
 	_parameter_released = true
 
 
+# True while a Warden break's release is set, committed or still waiting for its phrase.
+func parameters_released() -> bool:
+	return _parameter_released or parameter_committed_released
+
+
 func parameters_stage_entered() -> void:
 	_parameter_released = false
 	_parameter_danger_floor = 0.0
@@ -795,10 +802,20 @@ func schedule_stinger(id: String, db := 0.0, lane := false, repeats := 1) -> int
 
 
 # home keeps the cue in D whatever key the band is in (a death's fall sits under the death cue,
-# which is not keyed).
-func schedule_stinger_at(id: String, at: int, db := 0.0, home := false) -> void:
-	_add_action(at, {"type": "stinger", "id": id, "db": db, "music": false, "home": home})
-	_warm_stinger(id, at, home)
+# which is not keyed). step is the sixteenth a cue with notes of its own is made for, when the
+# sounding band's is not this engine's (the recorded band); 0 is this engine's.
+func schedule_stinger_at(id: String, at: int, db := 0.0, home := false, step := 0) -> void:
+	_add_action(at, {"type": "stinger", "id": id, "db": db, "music": false, "home": home, "step": step})
+	_warm_stinger(id, at, home, step)
+
+
+# Takes a stinger back: its bookings are dropped and one already sounding is let go over a
+# short release.
+func cancel_stinger(id: String) -> void:
+	_actions = _actions.filter(func(a): return a.get("type") != "stinger" or a.get("id", "") != id)
+	for voice in _voices:
+		if voice.stinger == id:
+			voice.end = mini(voice.end, voice.pos + RELEASE)
 
 
 # The key a stinger booked at transport sample at will sound in.
@@ -808,16 +825,16 @@ func stinger_key(at: int) -> int:
 
 # A stinger made ahead of its booking: a kill chain's landing is known a chain window before it
 # is booked, and a note a sixteenth from its contact is made when its key arrives.
-func warm_stinger(id: String, at: int, home := false) -> void:
-	_warm_stinger(id, at, home)
+func warm_stinger(id: String, at: int, home := false, step := 0) -> void:
+	_warm_stinger(id, at, home, step)
 
 
 # The variant _run's "stinger" will ask for at `at`, on a worker, unless it is made already.
-func _warm_stinger(id: String, at: int, home := false) -> void:
+func _warm_stinger(id: String, at: int, home := false, made_for := 0) -> void:
 	if not warm_stingers:
 		return
 	var shift: int = 0 if home else stinger_key(at)
-	var step := step_len
+	var step := made_for if made_for > 0 else step_len
 	var theme_now := theme
 	if SfxBank.cached_at(id, step, shift, theme_now):
 		return
@@ -1395,6 +1412,13 @@ func duck(amount: float, hold_seconds: float) -> void:
 	_duck_until = maxi(_duck_until, clock + int(hold_seconds * Harmony.RATE))
 
 
+# The cue the band dipped under has stopped early: the band comes back from this frame, over
+# a beat.
+func free_duck() -> void:
+	_duck_until = clock
+	_duck_target = 1.0
+
+
 # Pulls only the bass down, so a danger cue is never masked by the low end.
 func duck_bass(amount: float, hold_seconds: float) -> void:
 	_bass_duck_target = minf(_bass_duck_target, clampf(amount, 0.1, 1.0))
@@ -1817,9 +1841,12 @@ func _run(action: Dictionary) -> void:
 			# Pitched stingers sound in the live key, and a themed one in this level's motif.
 			var music: bool = action.get("music", false)
 			var live_key: int = key if grid == null else grid.key_at(clock)
-			var buf := SfxBank.samples_at(action["id"], step_len, 0 if music or action.get("home", false) else live_key, theme)
+			var made_for := int(action.get("step", 0))
+			var buf := SfxBank.samples_at(action["id"], made_for if made_for > 0 else step_len, 0 if music or action.get("home", false) else live_key, theme)
 			var gain := db_to_linear(SfxBank.trim_db(action["id"]) + float(action["db"]))
-			_start(buf, buf.size(), -1, gain, 0.0, not action["music"])
+			var voice := _start(buf, buf.size(), -1, gain, 0.0, not action["music"])
+			if voice != null:
+				voice.stinger = action["id"]
 			stinger_starts.append([action["id"], clock])
 		"restart":
 			parameters_stage_entered()

@@ -153,6 +153,8 @@ Andrew, 2026-10-17: the boss music should feel like Eurodance and electro house,
 
 Code: [sound/extras.py](sound/extras.py).
 
+In the game so far (9 November 2026): the pilot quote answers a long kill chain, six kills inside the chain window. The chain lands on the bar line under its crash, and a beat later the band plays the pilot's motif on the synth sax in eighths, with the brass an octave under the last note and a kick with it (`audio._quote_pilot`, `SfxBank.pilot_quote_score`). It is made for the sounding band's step and key, and it plays at most once in eight bars so it stays a treat. Kest's and Tarn's motifs go up an octave so the sax can sing them. The crit and gauge-release triggers and the other three extras are not built yet.
+
 ## Renders from this pass
 
 ACE-Step 1.5 XL turbo on the RTX 4080, draft mode, two seeds each. Files sit in `~/Music/Scrapkeep-sound-direction/sound-bible-2026-10-16/`, outside the repo like every other music render. [sound/RENDERS.md](sound/RENDERS.md) lists them with checksums. They are linear previews. Seamless loops, stems and final bf16 renders come after Andrew picks by ear.

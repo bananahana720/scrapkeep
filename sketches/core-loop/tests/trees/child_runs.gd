@@ -41,6 +41,64 @@ static func run(jobs: Array, timeout_s: float, parallel := 0) -> Array:
 	return out
 
 
+# Launches the game itself (the main scene, no --script) once a job, at most `parallel` at a time, each
+# with its own XDG data, config and cache under `base` and its own log, as a player's install has. A job
+# is {name, args}; args follow "--" (the game's launch flags). Returns one {code, timed_out, seconds,
+# text, data} per job, in order: text is the child's log and data its XDG data folder, left in place
+# for the caller to read saves from. timeout_s runs from each child's own start; budget_s (when over 0)
+# is the wall all the children share from the first start, so a late child's hang is still killed
+# inside the caller's own limit: at the budget every live child is killed and none left is started
+# (both read as timed_out).
+static func run_launched(jobs: Array, base: String, timeout_s: float, parallel: int, budget_s := 0.0) -> Array:
+	var project := ProjectSettings.globalize_path("res://")
+	var began := Time.get_ticks_msec()
+	var runs := []
+	for job in jobs:
+		var home := base.path_join(String(job["name"]))
+		for dir in ["data", "config", "cache"]:
+			DirAccess.make_dir_recursive_absolute(home.path_join(dir))
+		runs.append({"args": job.get("args", []), "home": home, "log": home.path_join("run.log"), "pid": 0, "start": 0, "live": false,
+			"done": false, "timed_out": false, "seconds": 0.0})
+	var next := 0
+	while runs.any(func(r): return not r["done"]):
+		for r in runs.filter(func(r): return r["live"]):
+			var running: bool = OS.is_process_running(r["pid"])
+			r["seconds"] = (Time.get_ticks_msec() - int(r["start"])) / 1000.0
+			if running and r["seconds"] < timeout_s and not _spent(began, budget_s):
+				continue
+			if running:
+				OS.kill(r["pid"])
+				r["timed_out"] = true
+			r["live"] = false
+			r["done"] = true
+		while next < runs.size() and runs.filter(func(r): return r["live"]).size() < maxi(1, parallel):
+			var r: Dictionary = runs[next]
+			next += 1
+			if _spent(began, budget_s):
+				r["timed_out"] = true
+				r["done"] = true
+				continue
+			var home: String = r["home"]
+			var args: Array = ["XDG_DATA_HOME=" + home.path_join("data"), "XDG_CONFIG_HOME=" + home.path_join("config"),
+				"XDG_CACHE_HOME=" + home.path_join("cache"), OS.get_executable_path(), "--headless", "--fixed-fps", "90",
+				"--log-file", r["log"], "--path", project, "--"] + r["args"]
+			r["pid"] = OS.create_process("env", PackedStringArray(args))
+			r["start"] = Time.get_ticks_msec()
+			# A child that never started (pid -1) must not reach waitpid(-1) or kill(-1).
+			r["live"] = r["pid"] > 0
+			r["done"] = r["pid"] <= 0
+		OS.delay_msec(250)
+	var out := []
+	for r in runs:
+		out.append({"code": -1 if r["timed_out"] or r["pid"] <= 0 else OS.get_process_exit_code(r["pid"]), "timed_out": r["timed_out"],
+			"seconds": r["seconds"], "text": FileAccess.get_file_as_string(r["log"]), "data": String(r["home"]).path_join("data")})
+	return out
+
+
+static func _spent(began: int, budget_s: float) -> bool:
+	return budget_s > 0.0 and (Time.get_ticks_msec() - began) / 1000.0 >= budget_s
+
+
 # Runs jobs one at a time inside a shared wall budget. Each child's hang guard is an equal share
 # of what is left, so a slow box spends more of the budget and a hung child is still killed inside
 # it. A job's optional "env" is set for its child only. Each result also carries "seconds" and "wall".

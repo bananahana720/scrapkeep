@@ -165,7 +165,7 @@ const ENTRIES := [
 	{
 		"id": "shift_over", "name": "Shift Over",
 		"hint": "Every crew has someone blowing the whistle.",
-		"clue": "a Foreman's horn + the Foreman down first",
+		"clue": "a Shift Boss's horn + the Shift Boss down first",
 		"text": "Never attacks: it horns every 5 s and its crew's cracked plating closes up again; knock it out first and the whole crew clocks out for a breath.",
 	},
 	{

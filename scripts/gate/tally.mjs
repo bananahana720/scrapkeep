@@ -6,7 +6,8 @@
 // every "| Shard | Verdict |" table in the plan and refuses unless: each
 // expected shard has a row, no verdict is empty, each names its receipt, the
 // test windows cover the whole non-bot list, the newest row for each shard
-// opens with PASS (CLEAR for the red team), the plan gates the checked-out head, and no known-failing row is past its review date. When a head moves
+// opens with PASS (CLEAR for the red team), the plan gates the checked-out head, no known-failing row is past its review date,
+// and, while tests sit on the weekly list, a "weekly sweep" row dates a sweep no older than a week. When a head moves
 // and a shard is read again, add a new row; the newest row for a name wins.
 
 import { spawnSync } from "node:child_process";
@@ -57,7 +58,29 @@ export function planHead(file) {
   return /(?:^|[/-])w\d+-([0-9a-f]{7,40})-gate-plan\.md$/.exec(file)?.[1] ?? null;
 }
 
-export function checkTally(rows, { testCount, botCount, planHead: gated = null, head = null }) {
+export const WEEKLY_SHARD = "weekly sweep";
+export const WEEKLY_MAX_DAYS = 7;
+
+// The weekly list's hold (ruling ca): a test the promotion does not run must still have run lately. While
+// the list names any test, the plan carries a "weekly sweep" row whose verdict gives the day the sweep ran
+// (YYYY-MM-DD, the first date in it). checkTally's own checks make that row open with PASS and name its
+// receipt; this one refuses a missing row, a row with no day, and a sweep more than WEEKLY_MAX_DAYS old.
+export function checkWeeklySweep(rows, { weeklyCount = 0, today = new Date() } = {}) {
+  if (weeklyCount === 0) return [];
+  const sweep = `node scripts/gate/shard.mjs run --weekly --tests 1-N, then --weekly --bots 1-N`;
+  const row = [...rows].reverse().find((candidate) => candidate.shard.toLowerCase() === WEEKLY_SHARD);
+  if (!row) return [`no row for "${WEEKLY_SHARD}": ${weeklyCount} tests are on the weekly list and a promotion needs their last sweep (${sweep}; verdict "PASS YYYY-MM-DD ..." with its receipts)`];
+  if (row.verdict === "") return [];
+  const match = /\b(\d{4})-(\d{2})-(\d{2})\b/.exec(row.verdict);
+  const ran = match ? Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3])) : NaN;
+  if (!match || new Date(ran).toISOString().slice(0, 10) !== match[0]) return [`line ${row.line}: "${row.shard}" gives no day the sweep ran; write it as YYYY-MM-DD in the verdict`];
+  const age = Math.round((Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate()) - ran) / 86_400_000);
+  if (age < 0) return [`line ${row.line}: "${row.shard}" is dated ${match[0]}, which is after today`];
+  if (age > WEEKLY_MAX_DAYS) return [`line ${row.line}: the weekly sweep last ran on ${match[0]}, ${age} days ago; a promotion needs one within ${WEEKLY_MAX_DAYS} days (${sweep}), then a new row`];
+  return [];
+}
+
+export function checkTally(rows, { testCount, botCount, planHead: gated = null, head = null, weeklyCount = 0, today = new Date() }) {
   const problems = [];
   if (gated && head && !head.startsWith(gated) && !gated.startsWith(head)) problems.push(`the plan gates ${gated} and this checkout is at ${head.slice(0, 8)}; the test and bot lists are counted here, so check out the gated head first`);
   const latest = new Map();
@@ -84,6 +107,7 @@ export function checkTally(rows, { testCount, botCount, planHead: gated = null, 
     next = Math.max(next, last + 1);
   }
   if (next <= testCount) problems.push(windows.length === 0 ? 'no "tests FIRST-LAST" row' : `non-bot tests ${next} to ${testCount} have no row`);
+  problems.push(...checkWeeklySweep(rows, { weeklyCount, today }));
   return problems;
 }
 
@@ -96,13 +120,13 @@ async function main() {
   const gated = planHead(argv[planAt + 1]);
   const head = spawnSync("git", ["-C", root, "rev-parse", "HEAD"], { encoding: "utf8" }).stdout.trim() || null;
   if (!gated) console.log("NOTE the plan's file name is not w<N>-<head>-gate-plan.md, so the head it gates was not checked against this checkout");
-  const problems = checkTally(rows, { testCount: lists.tests.length, botCount: lists.bots.length, planHead: gated, head });
+  const weekly = lists.weekly.tests.length + lists.weekly.bots.length;
+  const problems = checkTally(rows, { testCount: lists.tests.length, botCount: lists.bots.length, planHead: gated, head, weeklyCount: weekly });
   const notRun = new Set([...lists.weekly.tests, ...lists.weekly.bots]);
   const ledger = (await checkLedger(root, { promotion: true, notRun })).filter((finding) => finding.level === "failure");
   for (const finding of ledger) problems.push(`ledger line ${finding.line}: ${finding.message}`);
   for (const problem of problems) console.log("PROBLEM " + problem);
-  const weekly = lists.weekly.tests.length + lists.weekly.bots.length;
-  if (weekly > 0) console.log(`weekly: ${weekly} tests not run this promotion (${WEEKLY_FILE}, ruling ca); they run on a change to their files and in the weekly sweep`);
+  if (weekly > 0) console.log(`weekly: ${weekly} tests not run this promotion (${WEEKLY_FILE}, ruling ca); they run on a change to their files and in the weekly sweep, which the "${WEEKLY_SHARD}" row dates`);
   console.log(`gate tally: ${rows.length} rows, ${lists.tests.length} non-bot tests, ${lists.bots.length} bot tests. ${problems.length === 0 ? "Every row is filled; CLEAN may be written" : `Not clean: ${problems.length} problem${problems.length === 1 ? "" : "s"}`}.`);
   return problems.length === 0 ? 0 : 1;
 }

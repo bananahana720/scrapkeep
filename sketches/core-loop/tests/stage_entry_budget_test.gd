@@ -557,7 +557,7 @@ func _check_slow_plan_control() -> void:
 		out.merge(dressing.plan(rows, keep, ground, seed_two, flags))
 		if gate.armed:
 			gate.sem.wait()
-	dressing._prep = {"key": dressing._key(2, terrain.geometry_root(2)), "out": out,
+	dressing._prep = {"key": dressing._key(2, terrain.geometry_root(2)), "out": out, "stop": [false],
 		"task": WorkerThreadPool.add_task(planted, true, "planted slow plan")}
 	dressing._stage_entered(2, false)
 	gate.armed = true

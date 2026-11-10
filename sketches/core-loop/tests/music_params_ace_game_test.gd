@@ -61,7 +61,7 @@ func _run() -> void:
 	_pump_to(audio, lift_boundary - 4096)
 	t.eq("performing ACE ultimate waits for next bar", _other_target(ace), before)
 	_pump_to(audio, lift_boundary + 4096)
-	t.near("performing ACE ultimate adds existing pressure step at next bar", _other_target(ace), _profile_other(ace) * Ace.ULTIMATE_STEP)
+	t.near("performing ACE ultimate adds existing pressure step at next bar", _other_target(ace), _profile_other(ace) * _shelf(Ace.ULTIMATE_STEP))
 	t.check("performing ACE ultimate logs its next-bar commit", ace.parameter_layer_log.back().ultimate and ace.parameter_layer_log.back().at == lift_boundary)
 	audio._set_ult_lift(false)
 	_pump_to(audio, lift_boundary + engine.bar_len() + 4096)
@@ -88,7 +88,7 @@ func _run() -> void:
 		return
 	var change: Dictionary = ace.parameter_layer_log.back()
 	t.eq("audible ACE threat change commits on phrase", int(change.at), boundary)
-	t.near("ACE other stem keeps profile level at sampled gain", _other_target(ace), _profile_other(ace) * expected, 0.0001)
+	t.near("ACE other stem keeps profile level at sampled gain", _other_target(ace), _profile_other(ace) * _shelf(expected), 0.0001)
 	t.check("ACE committed change reaches actual gain and PCM", ace.voices.any(func(v): return v.stem == "other" and v.gain > 0.0) and Array(audio.out_music).any(func(v): return v.length_squared() > 0.0))
 	ace.solo = ["other"]
 	var other_peak := 0.0
@@ -238,7 +238,7 @@ func _crossfade_fixture(manifest_path: String) -> void:
 				t.near("outgoing join %s %s at %d" % [outgoing, v.stem, elapsed], v.gain, float(starts[i]) * (1.0 - float(elapsed) / duration))
 			for v in seq.voices:
 				var row: Dictionary = seq.manifest.profiles[seq.sections[incoming].profile][v.stem]
-				var target: float = db_to_linear(float(row.volume_db)) * (float(feed.threat) if v.stem == "other" else 1.0)
+				var target: float = db_to_linear(float(row.volume_db)) * (_shelf(float(feed.threat)) if v.stem == "other" else 1.0)
 				t.near("incoming join %s %s at %d" % [incoming, v.stem, elapsed], v.gain, target * float(elapsed) / duration)
 		t.check("completed join removes outgoing voices " + incoming, old.all(func(v): return not seq.fading.has(v)))
 
@@ -294,7 +294,7 @@ func _ultimate_section_fixture(manifest_path: String) -> void:
 				t.near("ultimate outgoing join %s %s at %d" % [outgoing, v.stem, elapsed], v.gain, float(starts[i]) * (1.0 - float(elapsed) / duration))
 			for v in seq.voices:
 				var row: Dictionary = seq.manifest.profiles[seq.sections[incoming].profile][v.stem]
-				var target := db_to_linear(float(row.volume_db)) * (clampf(effective, 0.0, 1.0) if v.stem == "other" else 1.0)
+				var target := db_to_linear(float(row.volume_db)) * (_shelf(effective) if v.stem == "other" else 1.0)
 				t.near("ultimate incoming join %s %s at %d" % [incoming, v.stem, elapsed], v.gain, target * float(elapsed) / duration)
 		t.check("ultimate completed join removes outgoing voices " + incoming, old.all(func(v): return not seq.fading.has(v)))
 		t.check("ultimate transition logs authorized bar " + incoming, seq.parameter_layer_log.back().ultimate and seq.parameter_layer_log.back().at == boundary)
@@ -407,3 +407,6 @@ func _seq_to(seq, until: int) -> void:
 		seq.render(mini(4096, until - seq.clock))
 
 
+# The lead's level on a level's shelf for a lift of x: it starts from the floor (ruling bt).
+func _shelf(x: float) -> float:
+	return lerpf(Ace.LEAD_FLOOR, 1.0, clampf(x, 0.0, 1.0))

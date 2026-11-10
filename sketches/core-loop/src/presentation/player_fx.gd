@@ -1329,7 +1329,7 @@ func _draw_carve() -> void:
 		var up: Vector3 = normal
 		if absf(back.dot(up)) > 0.95:
 			up = Vector3.UP
-		_carve.global_transform = Transform3D(Basis.looking_at(back, up), player.ball_position() - normal * 0.95)
+		_carve.global_transform = Transform3D(Basis.looking_at(back, up), player.shown_position() - normal * 0.95)
 		var steep := clampf((CARVE_NORMAL_Y - normal.y) / CARVE_NORMAL_Y, 0.0, 1.0)
 		var fast := clampf(speed / 30.0, 0.0, 1.0)
 		_carve.amount_ratio = clampf((0.35 + 0.65 * steep) * (0.7 + 0.3 * might) * fast, 0.1, 1.0)
@@ -1345,7 +1345,7 @@ func _draw_carve() -> void:
 func column(tint: Color, at := Vector3.INF) -> void:
 	var p: GPUParticles3D = _columns[_column_next]
 	_column_next = (_column_next + 1) % _columns.size()
-	var base: Vector3 = player.ball_position() - Vector3.UP * 0.8 if at == Vector3.INF else at
+	var base: Vector3 = player.shown_position() - Vector3.UP * 0.8 if at == Vector3.INF else at
 	p.global_transform = Transform3D(Basis.IDENTITY, base)
 	p.set_instance_shader_parameter("tint", _glow(heat_tint(tint), 1.15))
 	p.amount_ratio = clampf(0.5 + 0.5 * might, 0.0, 1.0)

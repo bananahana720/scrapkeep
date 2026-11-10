@@ -24,6 +24,28 @@ Rejected: the bola thrower (tests the air, the Highdraft's verb), the gyro jamme
 
 `damage_families.gd` gains a `wet` row: weak to arc (150%, ZZAP!), resists nothing. The chaser, the hooker, the sluice flap and the boom tender carry it (`ARMOUR_OF`); the jolt layer stands on rubber boots and is dry. This is Andrew's Q3 answer ("Spillway flow/current, wet machines conduct") placed on the crews themselves, as the Dig's Plate is placed on the drill crew. Overpowered pays: it only makes an arc build stronger here, never weaker. The first arc hit discovers the codex entry `armour_wet` and badges every soaked crew.
 
+## Old jobs (ruling ch, 9 Nov 2026)
+
+Andrew ruled that ordinary enemies are the old works' machines still on the job, requisitioned by the Fleet, and that each attack is the old job done to you ([Story map](STORY-MAP.md), ruling ch). The Spillway is a water works, and to its machines the ball is something in the water that should not be there. The jobs below are working calls from the game systems thread, written to fit each kind's rule as built; Andrew can strike any of them. The art thread draws from this table (the tool is the silhouette and the only hand-fitted part), the sound thread takes the job's noise from it, and each kind's row in `src/combat/roster.gd` and `roster_specials.gd` carries the job as its `job` line, which the camp's enemy list shows ahead of the kind's own line.
+
+| Kind | Old job | The tool | To it, you are |
+| --- | --- | --- | --- |
+| Chaser | Pipe pig: ran the penstocks end to end to scrape them clear | A scraper head on a sprung body | A blockage |
+| Dispatcher (special) | Pig launcher: loaded pipe pigs into the line from a station above it | A launch tube on a gantry | The line that needs clearing |
+| Lobber | Leak plugger: threw bungs and sandbags at a breach until it stopped | A sling arm over a hopper | A leak |
+| Mag trapper | Rack magnet: lifted scrap iron off the intake screens, up to its rated load | A lifting magnet on a short jib, with a load plate | Scrap under its rating |
+| Jolt layer | Fish fence layer: rolled out the live mat that kept fish out of the turbines | A cable drum and a mat roller; rubber boots | A fish |
+| Catch trap | Fish lift: carried the fish that got through over the dam in a bucket | A cup on a hoist | A fish that got through |
+| Hooker | Mooring winch: made barges fast to a bollard and hauled them in | A line gun and a capstan | A barge adrift |
+| Ramp flipper (sluice flap) | Flap tender: tipped the overflow off the weir | A hinged plate and a counterweight | Overflow |
+| Boom tender | Boom tender: strung floats across the channel to catch drift (No. 22) | A cable reel and five floats | Drift |
+| Plated brute | Stoplog setter: dropped steel logs into a bay to shut it | A stack of stoplogs carried as its plate | An open bay |
+| Splitter (special) | Jam breaker: set charges on log jams and ice | A rack of fused charges | A jam |
+| Linker (special) | Shield tender: held the weather screen over a weld until it cooled | A dish on an arm | Weather |
+| Shift Boss (special; code name `foreman`; Andrew named it on 9 Nov, ruling ck) | Shift horn: called the patch crews, and every machine in earshot re-sealed | A horn on a mast | The reason for the horn |
+
+Two things follow for play, both after the sitting. The pig launcher and the pipe pig are one job in two bodies, so a Dispatcher's chasers can wear its number. And a kind's counter is the way that job fails: a pig jams on a harder plug (ram it in the wind-up), a bung comes back (bat the shell home), a magnet drops what is over its rating.
+
 ## Packs
 
 | Stage | Pack | Kinds | What it asks |

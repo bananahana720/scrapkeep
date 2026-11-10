@@ -202,13 +202,15 @@ const ROWS := {
 	"relay_stake_paid": {"group": "event", "color": Palette.SAND, "shape": "none", "sound": "ui_tick", "hud": "", "objective": "", "priority": 0},
 	"maker_set_completed": {"group": "economy", "color": Palette.SAND, "shape": "none", "sound": "ui_tick", "hud": "", "objective": "", "priority": 0},
 	"overflow_cashed": {"group": "combat", "color": Palette.SAND, "shape": "none", "sound": "ui_tick", "hud": "", "objective": "", "priority": 0},
+	# A trade taken: a quiet fact; the device's own cue and the caller's line (LoreRows.CALLS) are the player's.
+	"trade_taken": {"group": "event", "color": Palette.SAND, "shape": "none", "sound": "ui_tick", "hud": "", "objective": "", "priority": 0},
 }
 
 # The grammar's bus signals that have no presentation listener. A unit that wires a listener
 # for one removes it from this list. The skill-bar signals wait for wave P-B's HUD and
 # ultimate units (design-v3/SKILL-BAR.md section 10), which wire their listeners.
 const GRAMMAR_SIGNALS := ["prompt_shown", "escape_window", "slot_selected", "slot_cast", "line_skill_expired",
-	"special_broken", "radio_take_found", "relay_stake_paid", "maker_set_completed", "overflow_cashed"]
+	"special_broken", "radio_take_found", "relay_stake_paid", "maker_set_completed", "overflow_cashed", "trade_taken"]
 
 # v3 W11 juice
 # How hard a fact lands, keyed by the ROWS kind it dresses, so a fact's stop, shake,
@@ -229,7 +231,9 @@ const JUICE := {
 		"heavy": {"stop_add_ms": 10.0, "kick": 0.45, "dust": 12}, "fx": {"spark_core": 16, "spark_halo": 16}},
 	"enemy_rebounded": {"kick": 0.55, "shake": 0.35, "dust": 14},
 	"enemy_killed": {"pop": 14, "debris": 10, "chain_ms": 1500, "chain_cap": 7, "multi_ms": 90, "multi_stop_ms": 30.0, "pips": 8},
-	"scrap_collected": {"chain_ms": 700, "chain_cap": 9, "pulse": 0.05, "pulse_cap": 0.16},
+	# A scrap trail's pieces are 9.8 m apart (ruling cd), 700 ms at the 14 m/s cruise: the window holds the run down to
+	# about 10 m/s, and a trail's rest (four empty beats, 2.8 s at cruise) still ends it.
+	"scrap_collected": {"chain_ms": 1000, "chain_cap": 9, "pulse": 0.05, "pulse_cap": 0.16},
 	# Recovered spill clusters arrive further apart than pickups, so the run's window is wider.
 	"armor_reclaim": {"chain_ms": 900, "chain_cap": 7},
 	"part_gained": {"fountain": 18, "element": {"frost": Palette.ANCIENT, "arc": Palette.ARC, "kinetic": Palette.SAND}},
@@ -447,6 +451,7 @@ const WEIGHT_EXEMPT := {
 	"relay_stake_paid": "Achievement facts own no impact; the earned toast is the cue.",
 	"maker_set_completed": "Achievement facts own no impact; the earned toast is the cue.",
 	"overflow_cashed": "Achievement facts own no impact; the earned toast is the cue.",
+	"trade_taken": "World, interaction and activity rows own their contextual glyph and sound.",
 	"ultimate_peak": "The verb or ability grammar owns this cue; its landed strike is enemy_struck.",
 	"ultimate_ready": "The verb or ability grammar owns this cue; its landed strike is enemy_struck.",
 	"ultimate_started": "The verb or ability grammar owns this cue; its landed strike is enemy_struck.",

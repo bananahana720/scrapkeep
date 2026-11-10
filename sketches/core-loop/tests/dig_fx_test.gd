@@ -17,7 +17,7 @@ class DigGame extends "res://src/game.gd":
 
 class BallProbe extends RefCounted:
 	var at := Vector3.ZERO
-	func ball_position() -> Vector3:
+	func shown_position() -> Vector3:
 		return at
 
 var t := T.new("dig_fx_test")

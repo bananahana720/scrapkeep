@@ -29,6 +29,8 @@ const GLANCE_BREAK_PX := 6.0
 const GLANCE_BREAK_STICK := 0.25
 # A subject inside this share of the lens's half-width is in the picture and needs no glance.
 const GLANCE_IN_VIEW := 0.7
+# The longest wall step one frame gives the glance (see _process).
+const GLANCE_STEP_CAP := 0.05
 # Situation rows. arm 0.0 means no opinion; pitch_bias tilts the arm without touching the
 # player's pitch; shake_cap is the most total shake allowed while the row is active.
 const PROFILES := {
@@ -278,7 +280,10 @@ func shake(amount: float, time := 0.4) -> void:
 func _process(delta: float) -> void:
 	if target == null:
 		return
-	_step_glance(delta)
+	# The glance is the player's own look, so it keeps wall time when the world is slowed. The
+	# engine scaled this delta by the scale the frame began with, so on the frame a slow motion
+	# or a hit stop starts the division overshoots: the step is capped at a slow frame's worth.
+	_step_glance(minf(delta / maxf(Engine.time_scale, 0.01), GLANCE_STEP_CAP))
 	var velocity: Vector3 = target.state.velocity
 	var fraction := SpeedTier.fraction(velocity.length(), tuning.f("cruise"))
 	shoulder_blend = move_toward(shoulder_blend, clampf(shoulder_target, 0.0, 1.0), SHOULDER_RATE * delta)

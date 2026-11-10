@@ -24,8 +24,16 @@ const Palette := preload("res://src/core/palette.gd")
 # (phase rows) and earned (sign-on rows). A row plays in full the first time a profile sees
 # it and in its short form after that (the player keeps the seen key). Any skip cuts the
 # hold it was paying for. A row's "world" {full, short} lists its world beats ("rise",
-# "eject", "glance"), which are this module's: the player only draws the overlay. The hold a beat paid
+# "eject", "glance", "slow"), which are this module's: the player only draws the overlay. The hold a beat paid
 # for is written into its entry in the run's "flourishes" meta, which the run log keeps.
+#
+# Two world beats are for a hand on the controls only, so a bot's run is the one the bands were
+# measured on: "glance" (ruling bv) and "slow" (ruling cf), which drops the world to the beat's
+# scale between its at and at + for on the row's own clock (game.slow_motion). The row's clock
+# slows with the world, so the pieces drawn inside the window stay up for the whole of it.
+# Music keeps its own sample clock and does not slow. A pause lifts the slow motion and gives
+# it back; the row's end, a skip (the player's skip grace counts wall seconds, so a press can
+# land inside the window) or a screen away from play ends it.
 
 const HOLD_CAP := 2.0
 # The Requisition's arc over the bowl rim: it starts this far out and up from where it stands.
@@ -48,12 +56,17 @@ var _chain_from := ""
 # Per playing id: the seconds of the victory hold it is paying for and whether it is full.
 var _playing := {}
 var _world := []
+# The slow-motion window a playing row asked for: {id, from, to, scale}; empty when none.
+var _slow := {}
 
 
 func setup(ctx_ref, player_ref) -> void:
 	ctx = ctx_ref
 	player = player_ref
 	name = "FlourishCues"
+	# It lifts a slow motion the moment the tree pauses, so it runs under a pause too.
+	process_mode = Node.PROCESS_MODE_ALWAYS
+	set_process(false)
 	var events = ctx.events
 	events.run_started.connect(func(_class_id: String):
 		_played_this_run.clear()
@@ -80,6 +93,12 @@ func _on_arena_entered() -> void:
 			continue
 		_played_this_run[id] = true
 		_play(id)
+
+
+# Whether the fight's arrival row is saying the boss's name on a card of its own, now or when
+# its turn comes: the HUD's boss title stays down for it.
+func names_boss() -> bool:
+	return matching("arrival", _boss_id()).any(func(id): return player != null and player.reading(id))
 
 
 func _on_phase(phase: int, _name: String) -> void:
@@ -156,7 +175,7 @@ func _play(id: String, held := 0.0) -> void:
 		return
 	_playing[id] = {"held": held, "full": full}
 	for beat in world_beats(id, not full):
-		_world_beat(beat)
+		_world_beat(id, beat)
 
 
 func _seed() -> int:
@@ -171,6 +190,9 @@ func _anchors() -> Dictionary:
 			var node = boss.get(key)
 			if node is Node3D and is_instance_valid(node):
 				out[key] = node
+		# The ship's body: the model that arcs over the rim, or the ship where primitives stand in.
+		if out.has("ship"):
+			out["ship_body"] = out.ship.model if out.ship.get("model") is Node3D else out.ship
 	if ctx.player != null and ctx.player.has_method("body"):
 		out["ball"] = ctx.player.body()
 	return out
@@ -181,6 +203,8 @@ func _on_finished(id: String, skipped: bool) -> void:
 		return
 	var info: Dictionary = _playing.get(id, {})
 	_playing.erase(id)
+	if String(_slow.get("id", "")) == id:
+		_end_slow()
 	var held := float(info.get("held", 0.0))
 	if skipped and _victory_ids.has(id):
 		# A skipped beat gives back its hold and every hold the chain still owed.
@@ -210,6 +234,7 @@ func _on_flow_changed(state: String) -> void:
 		_victory_ids.clear()
 		_chain_from = ""
 		_playing.clear()
+		_end_slow()
 		for node in _world:
 			if is_instance_valid(node):
 				node.queue_free()
@@ -222,10 +247,12 @@ func _reduced_motion() -> bool:
 
 # --- World beats -----------------------------------------------------------------------
 
-func _world_beat(beat: Dictionary) -> void:
+func _world_beat(id: String, beat: Dictionary) -> void:
 	if _reduced_motion():
 		return
 	match String(beat.get("kind", "")):
+		"slow":
+			_slow_for(id, float(beat.get("at", 0.0)), float(beat.get("for", 0.0)), float(beat.get("scale", 1.0)))
 		"rise":
 			_rise(float(beat.get("at", 0.0)), float(beat.get("seconds", 1.0)))
 		"eject":
@@ -240,11 +267,41 @@ func _world_beat(beat: Dictionary) -> void:
 func _glance(anchor: String, seconds: float) -> void:
 	if ctx.camera == null or not ctx.camera.has_method("glance_at"):
 		return
-	if ctx.root != null and bool(ctx.root.get("bot_driven")):
+	if not _hands_on():
 		return
 	var subject = _anchors().get(anchor)
 	if subject is Node3D:
 		ctx.camera.glance_at(subject, seconds)
+
+
+func _hands_on() -> bool:
+	return ctx.root != null and not bool(ctx.root.get("bot_driven"))
+
+
+# The world slows while the row's close-up is up (ruling cf). Read off the row's clock each
+# frame, so a queued row slows nothing until it plays and a paused one gives the speed back.
+func _slow_for(id: String, at: float, seconds: float, scale: float) -> void:
+	if not _hands_on() or seconds <= 0.0 or ctx.root == null or not ctx.root.has_method("slow_motion"):
+		return
+	_slow = {"id": id, "from": at, "to": at + seconds, "scale": scale}
+	set_process(true)
+
+
+func _process(_delta: float) -> void:
+	# The row is neither playing nor waiting its turn: its window is over, however it ended.
+	if not player.has(String(_slow.id)):
+		_end_slow()
+		return
+	var on: bool = not get_tree().paused and player.in_window(String(_slow.id), float(_slow.from), float(_slow.to))
+	ctx.root.slow_motion(float(_slow.scale) if on else 1.0)
+
+
+func _end_slow() -> void:
+	if _slow.is_empty():
+		return
+	_slow = {}
+	set_process(false)
+	ctx.root.slow_motion(1.0)
 
 
 # The Requisition crests the bowl rim: its model, never its hull, arcs in from outside and
@@ -280,7 +337,7 @@ func _eject(at: float, seconds: float) -> void:
 	var scooter = boss.get("scooter") if boss != null else null
 	if not (arena is Node3D) or not is_instance_valid(arena):
 		return
-	var from: Vector3 = scooter.global_position if scooter is Node3D and is_instance_valid(scooter) else ctx.player.ball_position()
+	var from: Vector3 = scooter.global_position if scooter is Node3D and is_instance_valid(scooter) else ctx.player.shown_position()
 	var prop := Node3D.new()
 	prop.name = "RoutScooter"
 	arena.add_child(prop)

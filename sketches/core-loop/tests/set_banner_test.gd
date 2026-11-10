@@ -15,6 +15,7 @@ const UiProfile := preload("res://src/ui/ui_profile.gd")
 # 4. A recompute with no gain (a resume or a retry restoring a held set) raises nothing.
 # 5. In cards mode the first showing ever is the card and the next run's is the small banner,
 #    with its line and the set's colour; an ordinary repeat discovery still shows nothing.
+# 6. The set's banner goes ahead of first-find cards still waiting.
 # smoke: timeout=180s
 
 # Live Wire without Arc Coil (part_sets_test's fixture), then a fourth member.
@@ -71,13 +72,16 @@ func _check() -> void:
 	run.add_part(WIRE[2], "test")
 	_t.check("the third member raises the set once, with its row", _raised == [[SET, row["name"], row["text"], row["color"]]],
 		"raised %s" % [_raised])
-	# The part cards queue beside it; step the banner through whatever stands ahead of the set.
+	# The first part's card is up and the other two wait: the set goes ahead of them, so its
+	# banner and chime land in the next calm moment and not two cards later.
+	_t.check("the set goes ahead of the waiting part cards", banner.showing() and banner.queued() == 3 and banner._queue[0][6] == "set:" + SET,
+		"showing %s, queue %s" % [banner.last_title, banner._queue.map(func(item): return item[6])])
 	var guard := 0
 	while banner.last_title != row["name"] and guard < 8:
 		guard += 1
 		banner.dismiss(false)
 		banner._next()
-	_t.check("the banner names the set, in its colour", banner.showing() and banner.last_title == row["name"]
+	_t.check("the banner names the set, in its colour", guard == 1 and banner.showing() and banner.last_title == row["name"]
 		and banner._body.text == row["text"] and banner._kicker.text.begins_with("SET COMPLETE")
 		and banner._style.border_color.is_equal_approx(row["color"]) and banner.shown > shown_before,
 		"title '%s', body '%s', kicker '%s', edge %s vs %s" % [banner.last_title, banner._body.text, banner._kicker.text,

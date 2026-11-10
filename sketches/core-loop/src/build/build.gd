@@ -969,6 +969,11 @@ func _class_id() -> String:
 
 
 
+# The element a part set's rule adds, "frost" or "arc": what its chime rings in.
+func set_element(set_id: String) -> String:
+	return PartSets.element(set_id)
+
+
 func _on_part_gained(part_id: String, _source: String) -> void:
 	recompute()
 	# A copy: a listener's own part gain recomputes and replaces the list.
@@ -1074,6 +1079,7 @@ func _on_stage_entered(stage: int, retry: bool) -> void:
 		_stage_dry = dropper.dry
 	_speed_tier = ctx.player.speed_tier()
 	scrap.lay_out(ctx.terrain, ctx.terrain.scrap_lines(stage), ctx.flow.stage_def()["scrap_density"], ctx.rng)
+	scrap.lay_trail(ctx.terrain, ctx.terrain.scrap_trail(stage))
 	fabricators.lay_out(ctx.terrain, stage, _class_id(), ctx.rng, ctx.run.parts)
 	recompute()
 

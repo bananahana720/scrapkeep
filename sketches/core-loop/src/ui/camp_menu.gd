@@ -7,13 +7,19 @@ const Companion := preload("res://src/core/companion.gd")
 const UiFonts := preload("res://src/ui/ui_fonts.gd")
 const ChoiceButton := preload("res://src/ui/choice_button.gd")
 const ClassCard := preload("res://src/ui/class_card.gd")
+const CreditsHint := preload("res://src/ui/credits_hint.gd")
 
 # The camp page on K. The camp is now a walk through the 3D hub (camp_hub.gd), so in walk mode this page is only a
 # key-hint strip; the pilot lines, the pieces count and the button row stay built (reading() and labels() still
 # serve the tests) but hidden, since every station is a zone in the world that opens its page by its own key.
 
 const NO_PIECES := "Companion: no pieces yet. Pieces turn up during runs."
-const WALK_HINTS := ["Roll: WASD", "Jump: Space", "Look: mouse", "Leave camp: K"]
+# The walk's keys, as the keycap row every other screen draws (credits_hint.gd).
+const WALK_HINTS := [{"cap": "key_w", "say": "W"}, {"cap": "key_a", "say": "A"}, {"cap": "key_s", "say": "S"}, {"cap": "key_d", "say": "D"},
+	{"say": "roll"}, {"say": "·"}, {"cap": "key_space", "say": "Space"}, {"say": "jump"}, {"say": "·"}, {"say": "mouse to look"}, {"say": "·"},
+	{"cap": "key_k", "say": "K"}, {"say": "leave camp"}]
+# The row's plate lifts it off the screen's bottom edge and keeps it readable over the camp's pale ground.
+const STRIP_LIFT := 14
 const PAINT := "Paint: choose on each pilot's card after Launch."
 
 var back: Button
@@ -58,17 +64,31 @@ func _init() -> void:
 	_strip.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_strip.visible = false
 	add_child(_strip)
-	for hint in WALK_HINTS:
-		var label := Label.new()
-		label.text = hint
-		label.add_theme_font_override("font", UiFonts.bold())
-		label.add_theme_font_size_override("font_size", 18)
-		label.add_theme_color_override("font_color", Palette.SAND)
-		label.add_theme_color_override("font_outline_color", Color(0.0, 0.0, 0.0, 0.85))
-		label.add_theme_constant_override("outline_size", 5)
-		label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		_strip.add_child(label)
+	var plate := PanelContainer.new()
+	plate.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var box := StyleBoxFlat.new()
+	box.bg_color = Color(Palette.CHARCOAL, 0.82)
+	box.set_corner_radius_all(8)
+	box.content_margin_left = 14.0
+	box.content_margin_right = 14.0
+	box.content_margin_top = 4.0
+	box.content_margin_bottom = 4.0
+	plate.add_theme_stylebox_override("panel", box)
+	var keys := CreditsHint.new()
+	keys.name = "WalkKeys"
+	keys.setup(WALK_HINTS)
+	plate.add_child(keys)
+	var lifted := MarginContainer.new()
+	lifted.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	lifted.add_theme_constant_override("margin_bottom", STRIP_LIFT)
+	lifted.add_child(plate)
+	_strip.add_child(lifted)
 	preload("res://src/ui/customize_page.gd").attach(self)
+
+
+# The walk's key row as a player reads it.
+func walk_words() -> String:
+	return _strip.find_child("WalkKeys", true, false).text()
 
 
 # Walk mode on or off: the strip replaces the lines and the button row.
