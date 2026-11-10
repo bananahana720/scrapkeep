@@ -32,7 +32,7 @@ const ROWS := [
 	{"id": "surplus", "word": "Surplus Yard", "line": "A forecasting win. More pockets.", "fx": "plenty", "count_scale": 2.0},
 	{"id": "lean", "word": "Lean Haul", "line": "More with less. Mostly less. Fewer pockets.", "fx": "scarce", "count_scale": 0.5},
 	{"id": "floodlit", "word": "Floodlit", "line": "Transparency is a value. Beacons read far.", "sight_scale": 1.75},
-	{"id": "blackout", "word": "Blackout", "line": "Lighting, right-sized. Beacons read short.", "fx": "hidden", "sight_scale": 0.5},
+	{"id": "blackout", "word": "Blackout", "line": "Lighting, right-sized. Beacons read near.", "fx": "hidden", "sight_scale": 0.5},
 	{"id": "far_haul", "word": "Far Haul", "line": "Value was relocated to the edges.", "far": true},
 ]
 
