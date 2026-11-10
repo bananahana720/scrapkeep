@@ -58,7 +58,7 @@ func _run() -> void:
 	_game._screen_key(KEY_R)
 	_t.check("R opens the mixtapes", screens.radio_open() and not screens.walk_live())
 	var page = screens.radio_page()
-	_t.eq("it counts found takes", page._count.text, "Takes found: 2 of %d" % takes.size())
+	_t.eq("it counts found takes", page._count.text, "2/%d" % takes.size())
 	_t.check("the crate holds found tracks", page.crate_row(a) != null and page.crate_row(b) != null and page.crate_row("roam-1-1") != null)
 	_t.check("and never an unfound one", page.crate_row(takes[2]) == null)
 	page.crate_row(b).grab_focus()
