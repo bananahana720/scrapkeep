@@ -869,7 +869,6 @@ func _build_trade(s: Site) -> void:
 	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 	label.no_depth_test = true
 	s.add_child(label)
-	s.view.word.text = "%s: %s" % [s.interior.tell.word, " / ".join(words)]
 
 
 func _watch_trade(s: Site, ball: Vector3) -> void:
