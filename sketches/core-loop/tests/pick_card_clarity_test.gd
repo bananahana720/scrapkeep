@@ -119,12 +119,15 @@ func _process(_delta: float) -> bool:
 				_word = WordFxWord.stamp(_game, "KA-CHUNK", Vector3.ZERO)
 				_game.events.cause_fired.emit("wrecking_ball", null, _game.player.ball_position())
 				_ws.bubble.beat({"text": "Mind the gap."})
+				# The stage card holds the toast row back; clear it so the row can show.
+				_game.hud.launch_card.visible = false
 				_game.hud.toast("Test toast")
 				_next("fight_up")
 		"fight_up":
 			if _wait == 10:
 				_report("the fight words are up before the pick", _ws.bubble.showing() and _word.is_visible_in_tree() and _game.hud.why_callout.is_visible_in_tree(),
 					"Moss's line %s, hit word %s, callout %s" % [_ws.bubble.showing(), _word.is_visible_in_tree(), _game.hud.why_callout.is_visible_in_tree()])
+				_report("the toast row is up before the pick", _game.hud._toast_row.is_visible_in_tree(), "toast row visible %s, launch card %s, toasts %s" % [_game.hud._toast_row.is_visible_in_tree(), _game.hud.launch_card.showing(), _game.hud.toast_texts()])
 				_game.player.tree.open_checkpoint()
 				_next("held")
 		"held":
