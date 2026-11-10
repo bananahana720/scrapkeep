@@ -21,6 +21,10 @@ extends RefCounted
 #                          source "rut_plant", so it counts as a hit; scrap armour is bypassed for it. Pack damage x4 could not make circling lose:
 #                          the circling arm stalled to the cap on all six stages, on stage 2 without one hit.
 #
+#   drain=K                An untelegraphed drain, the telegraph-share number's positive control (fairness.telegraph_share):
+#                          once a game second on a stage, whatever the ball is doing, it takes K x DRAIN_SHARE of its max
+#                          hull, source "drain_plant". rut above does the same only to a ball that circles, which a skipper
+#                          never does, so it cannot move the number on an ordinary run.
 #   fast_tax=K             A stand-in for a world that taxes a rolling ball, the stop-against-move number's positive control
 #                          (the bot record's fairness.stop_tax): once a game second, a ball at or above cruise speed takes
 #                          K x FAST_TAX_SHARE of its max hull, source "fast_tax_plant", so the hull is lost while moving.
@@ -28,14 +32,15 @@ extends RefCounted
 #                          first_hit_s): the tick a stage's contact opens (bot_driver.contact_open), the ball takes K x
 #                          RINGLESS_SHARE of its max hull, source "ringless_plant", as the ambush an unringed spawn would land.
 #
-# rut, fast_tax and ringless drain the hull straight through run.damage, which is a hit that no telegraph announced, so
+# rut, drain, fast_tax and ringless drain the hull straight through run.damage, which is a hit that no telegraph announced, so
 # they also move the telegraph share (fairness.telegraph_share) down.
 #
 # pack_damage and packs_passive both own mobs.damage_mult, so they cannot be combined.
 
 const AttackBudget := preload("res://src/combat/attack_budget.gd")
 
-const NAMES := ["pack_damage", "damage", "packs_passive", "hide_pack_telegraphs", "rut", "fast_tax", "ringless"]
+const NAMES := ["pack_damage", "damage", "packs_passive", "hide_pack_telegraphs", "rut", "drain", "fast_tax", "ringless"]
+const DRAIN_SHARE := 0.01
 const FAST_TAX_SHARE := 0.02
 const RINGLESS_SHARE := 0.05
 const RUT_WINDOW_S := 10.0
@@ -53,6 +58,8 @@ var _rut_clock := 0.0
 var _rut_stage := -1
 var _tax_clock := 0.0
 var _tax_stage := -1
+var _drain_clock := 0.0
+var _drain_stage := -1
 var _ringless_stage := -1
 
 
@@ -94,6 +101,8 @@ func attach(game, driver, planted: Dictionary) -> void:
 func step() -> void:
 	if values.has("rut"):
 		_rut(float(values["rut"]))
+	if values.has("drain"):
+		_steady_drain(float(values["drain"]))
 	if values.has("fast_tax"):
 		_fast_tax(float(values["fast_tax"]))
 	if values.has("ringless"):
@@ -141,3 +150,48 @@ func _rut(scale: float) -> void:
 		run.armor_mode = false
 		run.damage(scale * RUT_SHARE * float(run.max_hp), "rut_plant")
 		run.armor_mode = armored
+
+
+# Hull straight off the ball, past scrap armour (armour would absorb it and the spill be picked back up).
+func _drain(share: float, source: String) -> void:
+	var run = _game.run
+	var armored: bool = run.armor_mode
+	run.armor_mode = false
+	run.damage(share * float(run.max_hp), source)
+	run.armor_mode = armored
+
+
+func _steady_drain(scale: float) -> void:
+	var run = _game.run
+	if run == null or not _game.flow.in_stage() or not run.alive():
+		return
+	if _drain_stage != run.stage:
+		_drain_stage = run.stage
+		_drain_clock = float(run.stage_time)
+	if float(run.stage_time) < _drain_clock:
+		return
+	_drain_clock += 1.0
+	_drain(scale * DRAIN_SHARE, "drain_plant")
+
+
+func _fast_tax(scale: float) -> void:
+	var run = _game.run
+	if run == null or not _game.flow.in_stage() or not run.alive():
+		return
+	if _tax_stage != run.stage:
+		_tax_stage = run.stage
+		_tax_clock = float(run.stage_time)
+	if float(run.stage_time) < _tax_clock:
+		return
+	_tax_clock += 1.0
+	if _game.player.planar_velocity().length() >= _game.player.tuning.f("cruise"):
+		_drain(scale * FAST_TAX_SHARE, "fast_tax_plant")
+
+
+func _ringless(scale: float) -> void:
+	var run = _game.run
+	if run == null or _driver == null or not _game.flow.in_stage() or not run.alive():
+		return
+	if _ringless_stage != run.stage and _driver.contact_open():
+		_ringless_stage = run.stage
+		_drain(scale * RINGLESS_SHARE, "ringless_plant")
