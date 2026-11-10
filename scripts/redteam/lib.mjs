@@ -462,14 +462,14 @@ export const FILMS = {
 export const FILM_OF = { cautious: "wait" };
 
 // The self-play flags for one film (after `--`). plant is "" or "objective" (the control run).
-export function filmArgs({ film, seed = 1, pilot = "", out, world = 1, plant = "", deathAt = 0 }) {
+export function filmArgs({ film, seed = 1, pilot = "", out, world = 1, plant = "", deathAt = 0, save = "" }) {
   const spec = FILMS[film];
   if (!spec) throw new Error("--film must be one of " + Object.keys(FILMS).join(", "));
   // deathAt moves the wait film's planted death (a short control run does not need four minutes).
   const args = spec.args.map((a) => (deathAt > 0 && a.startsWith("--self-play-plant-death=") ? `--self-play-plant-death=${deathAt}` : a));
   return [
     "--self-play", `--self-play-seed=${seed}`, `--self-play-policy=${spec.policy}`, "--self-play-keys=1", "--self-play-eyes=1",
-    "--self-play-watch=1", `--self-play-save=eye-${film}-${seed}`, "--self-play-stall=600", `--self-play-film=${out}`,
+    "--self-play-watch=1", `--self-play-save=${save || `eye-${film}-${seed}`}`, "--self-play-stall=600", `--self-play-film=${out}`,
     ...(pilot ? [`--self-play-pilot=${pilot}`] : []), ...(world < 1 ? [`--self-play-film-world=${world}`] : []),
     ...(plant ? [`--self-play-plant-hide=${plant}`] : []), ...args,
   ];
@@ -489,14 +489,17 @@ export function readerPack(rows) {
     const why = String(row.why || "");
     const base = why.replace(/-(lead|after)$/, "");
     const beat = /^(hit-\d+|death)$/.test(base) ? base : "";
-    if (beat && (!open || open.beat !== beat)) {
-      open = { beat, id: sets.length + 1, first: n, last: n, moment: n };
-      sets.push(open);
+    // A killing hit is one moment: its death frames join the hit's set. A set opens only on a
+    // lead-in frame, since the question it asks is what the earlier pictures showed.
+    const joins = open && (open.beat === beat || beat === "death");
+    if (beat && !joins) {
+      open = why.endsWith("-lead") ? { beat, id: sets.length + 1, first: n, last: n, moment: n } : null;
+      if (open) sets.push(open);
     }
     if (!beat) open = null;
     if (open) {
       open.last = n;
-      if (why === beat) open.moment = n;
+      if (why === open.beat) open.moment = n;
     }
     frames.push({ n, file: row.file, set: open ? open.id : 0 });
     key.push({ n, ...row });

@@ -21,6 +21,7 @@ extends RefCounted
 #   roam             every `every` seconds of play, so quiet stretches are seen too
 #   plate            the objective plate changed
 #   prompt-<verb>    a key prompt or first-meet tip drew (once a verb)
+#   page             a page the player turned (the prologue's lines), when the driver says so
 #   offer / reward / warden / arena   a kit pick offered, the reward gates, a Warden engaged,
 #                    the boss arena entered
 #   hit-<n>          a hit of BIG_HIT of the hull or more, or the run's first: the LEAD_S before
@@ -44,6 +45,7 @@ const BIG_HIT := 0.1
 const HIT_GAP_S := 6.0
 const MAX_HITS := 16
 const QUALITY := 0.82
+const NEAR_S := 0.25
 
 var frames := 0
 var drawn := 0
@@ -69,6 +71,7 @@ var _asked := []
 var _held := false
 var _held_shots := 0
 var _held_next := 0.0
+var _shot_at := -1.0
 
 
 # False when there is no picture to film or the folder cannot be made.
@@ -197,8 +200,18 @@ func _lead_in(why: String, extra: Dictionary) -> void:
 	_shoot(why, extra)
 
 
+# One picture a moment: a frame asked for within NEAR_S of the last kept one shows the same
+# screen, so only a hit or a death is kept that close.
 func _shoot(why: String, extra := {}) -> void:
+	if _t - _shot_at < NEAR_S and not (why.begins_with("hit-") or why.begins_with("death")):
+		return
+	_shot_at = _t
 	_ask(why, extra, false)
+
+
+# A page the player turned (the prologue's lines): the new page, once it has settled.
+func page() -> void:
+	_later(SETTLE_S, "page")
 
 
 # Ask for this frame's picture; it is taken in _drawn, once the frame has been drawn.

@@ -51,7 +51,8 @@ extends Node
 #                             pick and start pick) and each held screen is answered with its first key
 #                             after EYES_READ_S, as a player who reads it and takes the first choice.
 #                             Kit picks are then the first card, not the bot's seeded draw. A pause menu
-#                             the game opened by itself is closed with Esc and said.
+#                             the game opened by itself is closed with Esc and said. Each prologue line
+#                             stands EYES_READ_S before it is turned and a death screen twice that.
 #   --self-play-film=<dir>    film the run as the player's eyes meet it (tools/eye_film.gd, reads only): the
 #                             picture at each screen, plate change, prompt, offer, big hit (with the two
 #                             seconds before it) and death, and every --self-play-film-every=<s> seconds
@@ -326,6 +327,10 @@ func _press_menus(state: String) -> void:
 		return
 	if _key != KEY_NONE or _now() - _pressed_at < KEY_GAP_S:
 		return
+	# A player reads a page before turning it and a death screen before leaving it.
+	var reading: bool = _eyes and (state == "dead" or state == "summary" or (state == "class_select" and game.screens.prologue_showing()))
+	if reading and _now() - maxf(_pressed_at, _menu_at) < EYES_READ_S * (1.0 if state == "class_select" else 2.0):
+		return
 	match state:
 		"title":
 			if not _continue or _died:
@@ -346,6 +351,8 @@ func _press_menus(state: String) -> void:
 			if game.screens.prologue_showing():
 				_prologue += 1
 				_press(KEY_E)
+				if _film != null:
+					_film.page()
 			else:
 				if _prologue > 0:
 					print("self-play: prologue read with %d presses at %.2f s" % [_prologue, _now()])

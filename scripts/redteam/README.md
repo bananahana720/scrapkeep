@@ -69,8 +69,8 @@ node scripts/redteam/eye.mjs --persona=cautious --from=<a film folder from the P
 
 | Film | Plays | Length |
 | --- | --- | --- |
-| `whole` | world 1 start to finish on the fastest line | about 8 game minutes, 30 minutes to film in the cloud |
-| `wait` (the cautious default) | a player who hangs back in the dam for four minutes, a planted death, the death screen, and the start of a second run | about 4.5 game minutes, 15 minutes to film |
+| `whole` | world 1 start to finish on the fastest line | about 4 seconds of filming for each game second, as the wait film |
+| `wait` (the cautious default) | a player who hangs back in the dam for four minutes, a planted death, the death screen, and the start of a second run | 4.3 game minutes, 16 minutes to film in the cloud (measured on w33; the control with `--death-at=60` took 4 minutes) |
 
 **The reader** gets `reader/`: the pictures renumbered `001.jpg` up and `BRIEF.md`, which holds the persona's card and the questions. Nothing in it says why a frame was taken, what the game knew or how the game works. The reader is a fresh agent that reads only that folder; never the thread that filmed, and never one that has read the code or the design. It answers per picture: what is on the screen, what it thinks it is meant to do, words it does not understand, and what it cannot see or read. For each hit and death it is asked what the earlier pictures told it was coming.
 
@@ -83,7 +83,9 @@ node scripts/redteam/eye.mjs --persona=cautious --from=<a film folder from the P
 
 **The judge** fills `judge/SHEET.md`, which lists each picture beside the game's own row. Findings come from disagreement: the reader thought it was meant to do one thing and the objective said another; the reader could not say what hit it and the row names the source; the reader quotes a word it does not know; the reader reports nothing where the game was showing something.
 
-**The control.** A clean read is evidence only if a planted fault is caught the same way. Each pass films one control with `--plant=objective` (the objective plate is not drawn; the play watch still sees its words, so the bots pass it) and gives it to a second reader. A reader who does not say the objective is missing voids the pass.
+**The control.** A clean read is evidence only if a planted fault is caught the same way. Each pass films one control with `--plant=objective` (the objective plate is not drawn; the play watch still sees its words, so the bots pass it) and gives it to a second reader, who is not told anything is planted. The control is caught when that reader cannot say what they are meant to do on the pictures where the game had set an objective and the clean film's reader could. A control that reads the same as the clean film voids the pass.
+
+Give each reader a copy of `reader/` at a path that says nothing (the film folder's own name can name the plant), and save its reply unedited beside the film as `READ.md`. The wait film's death is planted to reach the death screen, so a reader's complaint that it was killed by something it never saw is the plant and not a finding.
 
 **What a cloud film can and cannot say.** The cloud draws with a software renderer. Words, layout, marks, what is on screen and when all read true. Colour, light, bloom and frame pacing do not; the film draws only the frames it keeps, so GPU particles are under-shown and it is never a frame-time reading; the renderer also caps per-instance shader values at 4,096 objects and logs an error past that, which a GPU does not. For look, a PC job films the same run live (`--self-play-film-live=1`, no `--rendering-driver`), and `--from` lays that film out. Sound is not read at all.
 

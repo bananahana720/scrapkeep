@@ -54,9 +54,10 @@ if (!opts.from) {
   if (!godot || !existsSync(godot)) die("set GODOT_BIN to the Godot 4.7.2 editor (the cloud SessionStart hook does)");
   mkdirSync(filmDir, { recursive: true });
   const game = [godot, "--rendering-driver", "opengl3", "--audio-driver", "Dummy", "--resolution", "1280x720", "--fixed-fps", "30", "--path", sketch, "--",
-    ...filmArgs({ film, seed: opts.seed, pilot: opts.pilot, out: filmDir, world: opts.world, plant: opts.plant, deathAt: opts.deathAt })];
+    // A save folder of its own every time: a film is a new player's first launch (the prologue, the first-meet tips).
+    ...filmArgs({ film, seed: opts.seed, pilot: opts.pilot, out: filmDir, world: opts.world, plant: opts.plant, deathAt: opts.deathAt, save: `eye-${film}-${opts.seed}-${Date.now().toString(36)}` })];
   const argv = opts.xvfb ? ["xvfb-run", "-a", "-s", "-screen 0 1280x720x24", ...game] : game;
-  console.log(`eye: filming ${FILMS[film].says} (${opts.plant ? "CONTROL, plant " + opts.plant : "no plant"}); a software renderer takes about 3 seconds for each game second`);
+  console.log(`eye: filming ${FILMS[film].says} (${opts.plant ? "CONTROL, plant " + opts.plant : "no plant"}); a software renderer takes about 4 seconds for each game second`);
   const run = spawnSync(argv[0], argv.slice(1), { encoding: "utf8", maxBuffer: 256 * 1024 * 1024 });
   writeFileSync(path.join(out, "game.log"), (run.stdout || "") + (run.stderr || ""));
   const said = (run.stdout || "").split("\n").filter((l) => l.startsWith("self-play: "));

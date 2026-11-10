@@ -131,6 +131,10 @@ test("a film is handed to the reader with no word of why a frame was taken", () 
   assert.ok(brief.includes("001.jpg to 010.jpg"));
   for (const told of ["hit-1", "death", "chaser", "Clear the camp", "film.ndjson", "0004-"]) assert.ok(!brief.includes(told), "the brief gives away: " + told);
   assert.throws(() => readerBrief("nobody", pack));
+  // A killing hit is one moment, and frames with no lead-in ask nothing.
+  const killed = readerPack(["hit-2-lead", "hit-2", "death", "hit-2-after", "death-after", "roam", "hit-3", "hit-3-after"].map((why) => ({ file: why + ".jpg", why })));
+  assert.deepEqual(killed.sets, [{ id: 1, first: 1, last: 5, moment: 2 }]);
+  assert.deepEqual(killed.frames.map((f) => f.set), [1, 1, 1, 1, 1, 0, 0, 0]);
 });
 
 test("the judge's sheet sets every picture beside what the game knew", () => {
