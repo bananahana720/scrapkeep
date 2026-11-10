@@ -3833,7 +3833,10 @@ func _on_posture_changed(enemy: Node3D, posture: float, staggered: bool) -> void
 	if shattered:
 		play("posture_changed", 6.0, 1.0, "SFX", Rows.heard(EventKinds.state_row("chunk_shatter"), cue_context()))
 		play("posture_changed", 6.0, 1.0, "SFX", SHATTER_LOW)
-	if ctx.flow != null and ctx.flow.get("warden") == enemy:
+	# The reading that breaks the Warden asks the band for nothing: the break answers it on the
+	# next frame, and a build opened here would be opened only to be thrown away (8 ms on the
+	# break's frame, measured on the PC).
+	if ctx.flow != null and ctx.flow.get("warden") == enemy and chunks > 0:
 		# A hit that fills the bar from low down opens a stagger and passes a quarter on the same
 		# reading: the stagger's held breath answers it, not a drop.
 		# A smash inside the dam's stagger takes a real chunk while the wiped bar reads no

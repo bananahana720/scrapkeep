@@ -239,8 +239,11 @@ func _last_chunk() -> void:
 	_audio.cue_log.clear()
 	_guard_reads(100.0, true)
 	_bars(1)
+	var opened: int = _ace.opened
 	_guard_reads(0.0, false, 0)
-	t.check("the last chunk books no drop", _drops().is_empty() and _ace.warden_state == "closed", "drops=%s state=%s" % [_drops(), _ace.warden_state])
+	t.check("the last chunk books no drop", _drops().is_empty(), "drops=%s state=%s" % [_drops(), _ace.warden_state])
+	# The break is a frame away: a build asked for here would be opened and thrown away.
+	t.eq("and opens nothing before the break", _ace.opened - opened, 0)
 	_ace.warden_broken()
 	_bars(2)
 	t.check("the break answers it", _ace.mode == "piece" and _ace.section == "break", "mode=%s section=%s" % [_ace.mode, _ace.section])
@@ -307,6 +310,8 @@ func _dam() -> void:
 	# The last ram: every chunk at once, and no drop; the break answers it.
 	_bars(6)
 	dam.chunks = 0
+	var opened: int = _ace.opened
 	ram.call(100.0)
 	t.eq("the ram that breaks the dam lands no drop", _drops().size(), 6)
+	t.eq("and opens nothing before the break", _ace.opened - opened, 0)
 	dam.queue_free()
