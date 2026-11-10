@@ -4,6 +4,8 @@ const EventKinds := preload("res://src/core/event_kinds.gd")
 const Icons := preload("res://src/ui/icons.gd")
 const Objectives := preload("res://src/core/objectives.gd")
 const Palette := preload("res://src/core/palette.gd")
+const FlourishPlayer := preload("res://src/presentation/flourish_player.gd")
+const Hitscan := preload("res://src/combat/hitscan.gd")
 const ScreenRegions := preload("res://src/ui/screen_regions.gd")
 const UiDraw := preload("res://src/ui/ui_draw.gd")
 const UiFonts := preload("res://src/ui/ui_fonts.gd")
@@ -31,6 +33,12 @@ const UiFonts := preload("res://src/ui/ui_fonts.gd")
 # move there (objectives.gd TAGS). The plate is the plan; the mark is the
 # next move, on the thing itself. A chevron over the thing was tried first and nobody saw it
 # (second first-timer film, PF-17).
+#
+# A mark is only as true as the picture under it (PC film of PR 729): a thing behind a wall, a
+# pillar or the ground wears its brackets faint and no tag, so the brackets never claim a wall is
+# the scooter; a ray stopped by the fight's own machine still counts as seen, since its parts stand
+# on it. A comic panel up over the play (Brindle's arrival close-up) or the start pick card takes
+# no mark either: the marks belong to the play view, and the panel shows another camera.
 
 const SIDE_INSET := 0.035
 const BAND_CLEARANCE := 16.0
@@ -55,6 +63,12 @@ const MARK_MAX := 56.0
 const MARK_STROKE := 4.0
 const MARK_PULSE := 0.08
 const MARK_HZ := 1.2
+# A thing counts as seen when the ray from the camera stops within SIGHT_SLACK_M of it (its own
+# ground, its own mount); a thing behind something else wears HIDDEN_ALPHA of its colour and no
+# tag. The avoided panels are grown by AVOID_GROW pixels, for their tilt.
+const SIGHT_SLACK_M := 2.5
+const HIDDEN_ALPHA := 0.35
+const AVOID_GROW := 12.0
 # The tag: its font size, the padding of its chip, and the gap between the chip and the brackets.
 const TAG_FONT := 17
 const TAG_PAD := Vector2(8.0, 4.0)
@@ -304,17 +318,27 @@ func markers(size: Vector2) -> Array[Dictionary]:
 			away.append(target)
 		elif target.get("mark", false):
 			var half := clampf(cam.unproject_position(at + cam.global_transform.basis.x * MARK_RADIUS_M).distance_to(projected), MARK_MIN, MARK_MAX)
-			_group(groups, {"box": Rect2(projected - Vector2(half, half), Vector2(half, half) * 2.0), "color": marker_color(target),
-				"tag": String(target.get("tag", "")), "targets": [target]})
-	# Every group wears its tag where there is room for it, the group nearest the middle of the
-	# view first: over the brackets, else under them, else not at all. A group with no room even
-	# for its brackets sends its targets to the edge.
+			var seen := in_sight(cam, at)
+			var color := marker_color(target)
+			_group(groups, {"box": Rect2(projected - Vector2(half, half), Vector2(half, half) * 2.0),
+				"color": color if seen else Color(color, color.a * HIDDEN_ALPHA),
+				"tag": String(target.get("tag", "")) if seen else "", "seen": seen, "targets": [target]})
+	# Every group wears its tag where there is room for it, the seen groups first and the group
+	# nearest the middle of the view first among them: over the brackets, else under them, else not
+	# at all. A group with no room even for its brackets sends its targets to the edge; one under a
+	# comic panel or the start pick card is not drawn.
 	var room := mark_view(size)
 	var centre := size * 0.5
-	groups.sort_custom(func(a, b): return a["box"].get_center().distance_to(centre) < b["box"].get_center().distance_to(centre))
-	var taken: Array[Rect2] = []
+	groups.sort_custom(func(a, b):
+		if a["seen"] != b["seen"]:
+			return a["seen"]
+		return a["box"].get_center().distance_to(centre) < b["box"].get_center().distance_to(centre))
+	var covered := avoid_rects()
+	var taken: Array[Rect2] = covered.duplicate()
 	for group in groups:
 		var box := _slid(group["box"], room)
+		if covered.any(func(panel: Rect2): return panel.intersects(mark_rect(box, ""))):
+			continue
 		var tag: String = group["tag"]
 		var under := false
 		if tag != "" and not _free(mark_rect(box, tag), room, taken):
@@ -341,6 +365,46 @@ func markers(size: Vector2) -> Array[Dictionary]:
 		var near := clampf((ball.distance_to(at) - NEAR) / (FAR - NEAR), 0.0, 1.0)
 		out.append({"at": _on_edge(view, centre, dir), "dir": dir, "size": lerpf(MAX_SIZE, MIN_SIZE, near),
 			"color": marker_color(target), "icon": target["icon"]})
+	return out
+
+
+# Whether the camera sees the thing at `at`: the world ray to it (Hitscan.WORLD; the ball
+# is on its own layer) meets nothing short of SIGHT_SLACK_M before it, or meets the fight's own machine.
+func in_sight(cam: Camera3D, at: Vector3) -> bool:
+	if not cam.is_inside_tree():
+		return true
+	var from := cam.global_position
+	var query := PhysicsRayQueryParameters3D.create(from, at, Hitscan.WORLD)
+	var hit: Dictionary = cam.get_world_3d().direct_space_state.intersect_ray(query)
+	if hit.is_empty() or hit["position"].distance_to(at) <= SIGHT_SLACK_M:
+		return true
+	return _fight_owns(hit.get("collider"))
+
+
+# Whether a collider belongs to the machine the plate's fight is against: Brindle's ship or
+# scooter, or the engaged Warden. The arena's walls are not the machine.
+func _fight_owns(collider) -> bool:
+	var boss = game.ctx.boss if game.ctx != null else null
+	var owners: Array = [game.flow.warden]
+	if is_instance_valid(boss):
+		owners.append_array([boss.get("ship"), boss.get("scooter")])
+	var node = collider
+	while node is Node:
+		if owners.any(func(owner): return is_instance_valid(owner) and owner == node):
+			return true
+		node = node.get_parent()
+	return false
+
+
+# The screen held by a comic panel or the start pick card (flourish_player.gd AVOID_GROUP), grown
+# for their tilt.
+func avoid_rects() -> Array[Rect2]:
+	var out: Array[Rect2] = []
+	if not is_inside_tree():
+		return out
+	for node in get_tree().get_nodes_in_group(FlourishPlayer.AVOID_GROUP):
+		if node is Control and node.is_visible_in_tree():
+			out.append(node.get_global_rect().grow(AVOID_GROW))
 	return out
 
 

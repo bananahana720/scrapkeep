@@ -6,6 +6,7 @@ const BossPosture := preload("res://src/combat/boss_posture.gd")
 const Game := preload("res://src/game.gd")
 const Harness := preload("res://tests/doubles/boss_harness.gd")
 const EdgeMarkers := preload("res://src/ui/edge_markers.gd")
+const FlourishPlayer := preload("res://src/presentation/flourish_player.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const Objectives := preload("res://src/core/objectives.gd")
 const Panels := preload("res://src/build/panels.gd")
@@ -30,6 +31,7 @@ const T := preload("res://tests/support/t.gd")
 #   P6  the markers point at the next move: each crane magnet, each vent cap, the cockpit while it
 #       is open, the scooter, and nothing while the row is the baited charge; a target in view
 #       wears brackets and, where there is room, its tag; one out of view goes to the edge;
+#   P7  a thing behind a wall keeps faint brackets and no tag; a comic panel over a thing takes no mark;
 #   R1  the pause build read with all twelve panels held (a long list) sits on screen, left of
 #       the pause column and clear of it, at 1280x720 and 1920x1080, and so does the empty read;
 #       on a short screen the turning view shrinks (to VIEW_MIN at least) and the read stays on screen.
@@ -167,6 +169,7 @@ func _arena_checks() -> void:
 	_game.hud._process(0.0)
 	_t.eq("P5 and its first again when the cockpit shuts", [_game.hud.objective_reading()["step"], _game.hud._objective.step], [0, 0])
 	_marker_checks(boss.ship.magnets[0].global_position)
+	await _sight_checks(boss.ship.magnets[0].global_position)
 	boss.jump_to_phase(2)
 	_t.eq("P5 phase two: the vent caps, then the cockpit", _plate_row(), ["slam_caps", "Slam caps, then cockpit", Objectives.glyph("slam_caps")])
 	_t.eq("P6 phase two: a marker for each vent cap, tagged", [_marks(), boss.ship.caps.size()],
@@ -287,6 +290,44 @@ func _marker_checks(at: Vector3) -> void:
 	var away: Array = markers.markers(size)
 	_t.check("P6 out of view, every target goes to the edge of the play view", away.size() == markers.targets().size()
 			and away.all(func(m): return m.has("dir") and _on_rim(view, m["at"])), "markers %s" % [away])
+	cam.global_transform = was
+
+
+# A mark is only as true as the picture under it (PC film of PR 729): a wall between the camera and
+# the thing leaves faint brackets and no tag, and a comic panel over the thing takes no mark.
+func _sight_checks(at: Vector3) -> void:
+	var markers = _game.hud.edge_markers
+	var cam: Camera3D = _game.camera.cam
+	var size: Vector2 = cam.get_viewport().get_visible_rect().size
+	var was := cam.global_transform
+	_marks()
+	cam.look_at_from_position(at + Vector3(0.0, 0.0, 20.0), at)
+	var want: Vector2 = cam.unproject_position(at)
+	_t.check("P7 (premise) nothing stands between the camera and the magnet", markers.in_sight(cam, at))
+	var wall := StaticBody3D.new()
+	wall.collision_layer = 1
+	var shape := CollisionShape3D.new()
+	var box := BoxShape3D.new()
+	box.size = Vector3(12.0, 12.0, 0.5)
+	shape.shape = box
+	wall.add_child(shape)
+	_game.add_child(wall)
+	wall.global_position = at + Vector3(0.0, 0.0, 10.0)
+	await _frames(2)
+	_t.check("P7 a wall between the camera and the thing hides it", not markers.in_sight(cam, at))
+	var on: Array = markers.markers(size).filter(func(m): return m.has("box") and m["box"].has_point(want))
+	_t.check("P7 behind a wall the thing keeps faint brackets and no tag", on.size() == 1 and on[0]["tag"] == "" and on[0]["color"].a < 0.5,
+		"marks %s" % [on])
+	wall.free()
+	await _frames(2)
+	var panel := Control.new()
+	panel.add_to_group(FlourishPlayer.AVOID_GROUP)
+	_game.hud.add_child(panel)
+	panel.position = want - Vector2(150.0, 150.0)
+	panel.size = Vector2(300.0, 300.0)
+	var under: Array = markers.markers(size).filter(func(m): return m.has("box") and m["box"].intersects(Rect2(panel.position, panel.size)))
+	_t.check("P7 a comic panel over the thing takes no mark", under.is_empty(), "marks %s" % [under])
+	panel.free()
 	cam.global_transform = was
 
 
