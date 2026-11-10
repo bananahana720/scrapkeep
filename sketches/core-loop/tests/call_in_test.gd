@@ -99,6 +99,8 @@ func _check() -> void:
 	var at := Vector3.ZERO
 	# The run's cold open is a comic beat with a card (check 10): no frame passes here to end it.
 	_game.presentation.flourish.stop_all()
+	# The hello waited for that card too (bubble_gives_way_test) and takes the bubble now.
+	_bubble._process(0.1)
 	# 1. The stage's hello has the bubble: a cause now waits for it, and speaks when it is gone.
 	events.activity_done.emit("enemy_camp", at)
 	_t.check("a call waits for the stage's hello", _bubble.visible and not _said("call.spillway.camp") and not _bubble._call.is_empty(),
