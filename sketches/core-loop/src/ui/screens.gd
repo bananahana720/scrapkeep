@@ -3,6 +3,7 @@ extends CanvasLayer
 const ResultsOdds := preload("res://src/ui/results_odds.gd")
 
 const Palette := preload("res://src/core/palette.gd")
+const SummaryRows := preload("res://src/ui/summary_rows.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const FieldNotes := preload("res://src/ui/field_notes.gd")
 const Icons := preload("res://src/ui/icons.gd")
@@ -1413,50 +1414,52 @@ func _on_run_ended_board(_won: bool) -> void:
 		_fit_comic()
 
 
-# The summary as icons and numbers, each on its own icon with its word under it, so nobody has to
-# learn the icons to read a run. The words say what the number counts: the cogs are the ones still
-# in the wallet (cogs spent are gone), the scrap is what the run still holds (theft and spending
-# take from it), the events are the ones won. The earned save is a yes or no, so its chip shows only on a run that used it.
+# The summary as icons and numbers, each with its word and what becomes of it (summary_rows.gd).
 static func summary_chips(s: Dictionary, stage_count: int) -> Array:
-	var chips := [
-		["res_timer", "%d:%02d" % [int(s["time"]) / 60, int(s["time"]) % 60], "time"],
-		["obj_beacon", "%d/%d" % [s["stages"], stage_count], "stages"],
-		["res_scrap", str(s["cogs"]), "cogs left"],
-		["res_mass", str(s["scrap"]), "scrap held"],
-		["cat_transform", str((s["parts"] as Array).size()), "parts"],
-		["thr_instant", str(s["kills"]), "kills"],
-		["obj_event", str(s["events_won"]), "events won"],
-	]
-	if int(s["save_used"]) > 0:
-		chips.append(["res_health", str(s["save_used"]), "save used"])
-	return chips
+	return SummaryRows.rows(s, stage_count)
 
 
 func _summary_stats() -> void:
-	var chips := summary_chips(game.run.summary(), game.ctx.stages.COUNT)
-	for chip in chips:
-		var cell := VBoxContainer.new()
-		cell.add_theme_constant_override("separation", 0)
-		cell.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		var row := _row(8)
-		var icon := TextureRect.new()
-		icon.texture = Icons.texture(chip[0])
-		icon.modulate = Icons.tint(chip[0], Palette.SAND)
-		icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-		icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-		icon.custom_minimum_size = Vector2(30.0, 30.0)
-		icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		row.add_child(icon)
-		var value := _label(26)
-		value.add_theme_font_override("font", UiFonts.mono())
-		value.text = chip[1]
-		row.add_child(value)
-		cell.add_child(row)
-		var word := _label(STAT_WORD_FONT)
-		word.text = String(chip[2]).to_upper()
-		word.add_theme_color_override("font_color", Color(Palette.SAND, 0.7))
-		cell.add_child(word)
-		_stats.add_child(cell)
+	for block in SummaryRows.grouped(summary_chips(game.run.summary(), game.ctx.stages.COUNT)):
+		var group := VBoxContainer.new()
+		group.add_theme_constant_override("separation", 2)
+		group.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		if block[0] != "":
+			var head := _label(STAT_WORD_FONT)
+			head.text = block[0]
+			head.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+			head.add_theme_color_override("font_color", Palette.AMBER)
+			group.add_child(head)
+		var cells := _row(30)
+		for chip in block[1]:
+			cells.add_child(_stat_cell(chip))
+		group.add_child(cells)
+		_stats.add_child(group)
+
+
+func _stat_cell(chip: Array) -> VBoxContainer:
+	var cell := VBoxContainer.new()
+	cell.add_theme_constant_override("separation", 0)
+	cell.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var row := _row(8)
+	var icon := TextureRect.new()
+	icon.texture = Icons.texture(chip[0])
+	icon.modulate = Icons.tint(chip[0], Palette.SAND)
+	icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	icon.custom_minimum_size = Vector2(30.0, 30.0)
+	icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	row.add_child(icon)
+	var value := _label(26)
+	value.add_theme_font_override("font", UiFonts.mono())
+	value.text = chip[1]
+	row.add_child(value)
+	cell.add_child(row)
+	var word := _label(STAT_WORD_FONT)
+	word.text = String(chip[2]).to_upper()
+	word.add_theme_color_override("font_color", Color(Palette.SAND, 0.7))
+	cell.add_child(word)
+	return cell
 
 
 func _stamp(target: Label = null) -> void:
