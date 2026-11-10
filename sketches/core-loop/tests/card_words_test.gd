@@ -26,6 +26,7 @@ func _report(label: String, ok: bool, detail: String) -> void:
 
 
 # Every word a card shows for a catalogue row: verb, pitch, text and each level's text.
+# The caller adds the display name, so a part named "Armor" that fills no armour bar fails too.
 func _words(row: Dictionary) -> Array:
 	var out: Array = []
 	for key in ["verb", "pitch", "text", "label"]:
@@ -56,6 +57,7 @@ func _run() -> void:
 	for key in rows:
 		var row: Dictionary = rows[key]
 		var words := _words(row)
+		words.append(Parts.display_name(key))
 		for gone in GONE_LINES:
 			_report(key + " lines", not _says(words, gone.to_lower()), "%s still says \"%s\"" % [key, gone])
 		# No catalogue or item row fills the ARMOUR bar, so none may use the word.
@@ -66,7 +68,7 @@ func _run() -> void:
 			_report(key + " health", _says(words, "health"), "%s changes max health but its card never says health" % key)
 	for key in Parts.HOTWIRED:
 		var spec: Dictionary = Parts.HOTWIRED[key]
-		var texts: Array = [String(spec.get("label", ""))]
+		var texts: Array = [String(spec.get("label", "")), String(spec.get("name", ""))]
 		for side in ["upside", "downside"]:
 			texts.append(String(spec.get(side, {}).get("words", "")))
 		var part: Dictionary = spec.get("part", {})

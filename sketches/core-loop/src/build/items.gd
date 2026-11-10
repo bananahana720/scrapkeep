@@ -172,7 +172,7 @@ const TABLE := {
 		"tags": ["mass", "kinetic"], "verb": "Brace on landing", "text": "Big drops blunt hits for 1s",
 		"effect": {"do": "brace", "min_impact": 11.0, "window": 1.0, "share": 0.2}},
 	"scrap_armor": {"maker": "fleet_surplus", "touches": "roll", "base": "defense", "rarity": "common", "stack": "linear", "cap": 2, "tags": ["mass"],
-		"verb": "Wear your scrap", "text": "+1 max health per 50 mass", "effect": {"do": "hp_per_mass", "per": 1.0, "mass": 50.0, "cap_hp": 40.0}},
+		"name": "Scrap Bulk", "verb": "Wear your scrap", "text": "+1 max health per 50 mass", "effect": {"do": "hp_per_mass", "per": 1.0, "mass": 50.0, "cap_hp": 40.0}},
 	"rebound_skin": {"maker": "waking", "base": "defense", "rarity": "rare", "trigger": "on_rebound", "stack": "capped", "cap": 1,
 		"tags": ["mass", "speed"], "verb": "Skin off the heavy", "text": "After a bounce, hits glance off 1s",
 		"effect": {"do": "brace", "window": 1.0, "share": 1.0, "min_impact": 0.0}},
