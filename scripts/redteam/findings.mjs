@@ -6,8 +6,8 @@
 //   node scripts/redteam/findings.mjs --print        the list as a Markdown table, by owner
 //
 // A row is an open thing a player would feel: what they meet, where it was seen, who owns the fix
-// and the date it is looked at again. The pull request that fixes one removes its row. No gate
-// step runs --overdue today: whether a late row holds a promotion is Andrew's call.
+// and the date it is looked at again. The pull request that fixes one removes its row. A finding
+// never holds a promotion (ruling cn): --overdue is a report for the owners, not a gate step.
 
 import { readFileSync } from "node:fs";
 import path from "node:path";

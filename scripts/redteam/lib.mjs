@@ -549,8 +549,8 @@ export function judgeSheet(pack) {
 
 // The play findings list: project-guide/handoff/PLAY-FINDINGS.tsv. One row for each open thing a
 // player would feel, with an owner and a review date. The pull request that fixes one removes
-// its row. Whether a row past its date holds a promotion is Andrew's call (a card is open);
-// overdueFindings only reports them.
+// its row. A finding never holds a promotion (ruling cn): a row past its date is reported, and
+// its owner fixes it or re-dates it.
 export const FINDINGS_FILE = "project-guide/handoff/PLAY-FINDINGS.tsv";
 export const FINDINGS_HEADER = ["id", "grade", "meets", "evidence", "owner", "added", "review"];
 // check: seen on a cloud film only; a PC film decides before anyone acts.

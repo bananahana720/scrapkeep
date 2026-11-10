@@ -98,6 +98,10 @@ node scripts/known-failing.mjs --promotion          # fails if any row is past i
 - A row past its review date holds the next promotion. Either the owner fixed it (remove the row) or the coordinator gives it a new date and says why in the pull request.
 - `sketches/core-loop/tests/QUARANTINE.tsv` is a different tool with a different job: at most three rows, a listed test stops failing runs, and a release candidate carries none. Nothing is in it today.
 
+## The play findings list
+
+[PLAY-FINDINGS.tsv](PLAY-FINDINGS.tsv) lists every open thing a player would feel that a red team pass has found: what the player meets, where it was seen, grade (`blocker`, `major`, `minor`, or `check` when a PC film must decide first), owner, date added, review date (ruling cn). The testing lane owns the file. It is not a gate: a finding never holds a promotion and no gate step reads it. `node scripts/redteam/findings.mjs --print` lists it by owner and `--overdue` names the rows past their date, for the wave's red team receipt. [scripts/redteam/README.md](../../scripts/redteam/README.md) has the pass that fills it.
+
 ## The node tests, once per promotion
 
 The fast lane runs only the node tests a diff selects, and the shards run Godot tests. So once per promotion the whole node suite runs on the PC, where no test is skipped for the box: a full clone, an ordinary user, installed packages. The coordinator queues it on the PC lane when the Gate calls the promotion.
