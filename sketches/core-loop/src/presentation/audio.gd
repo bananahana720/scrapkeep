@@ -58,6 +58,8 @@ var _moment_playing := ""
 var _remixes := {}
 var _remix_rng := RandomNumberGenerator.new()
 var _warden_engaged := false
+# A Warden's fight is on: from its engage until its arena opens.
+var _warden_fighting := false
 var specials_heard: Array = []
 
 # Moss's jukebox: the band's intensity at each of the dial's three detents (idle, cruise,
@@ -1841,7 +1843,7 @@ func _connect_all(events) -> void:
 		engine.set_fleet_ticks(0)
 		new_run_tunes()
 		_flow_queue.append(["run"]))
-	events.warden_engaged.connect(func(_stage: int): warden_took_landmark())
+	events.warden_engaged.connect(func(_stage: int): warden_took_band())
 	events.activity_done.connect(func(id: String, _at: Vector3): end_moment("event", id))
 	events.synergy_discovered.connect(func(id: String, _category: String, _first: bool): tune_found(id))
 	events.flow_changed.connect(_on_flow_changed)
@@ -1916,7 +1918,9 @@ func _connect_all(events) -> void:
 func wire_optional() -> void:
 	var events = ctx.events
 	_wire_armor()
-	_listen_optional(events, "beacon_unsealed", func(_stage: int): _flow_queue.append(["unseal"]))
+	_listen_optional(events, "beacon_unsealed", func(_stage: int):
+		_warden_fighting = false
+		_flow_queue.append(["unseal"]))
 	_listen_optional(events, "heft_class_changed", _on_heft_class)
 	_listen_optional(events, "heft_class_dropped", _on_heft_dropped)
 	_listen_optional(events, "scrap_lost", func(amount: int, _at: Vector3, _total: int, _cause: String): play("scrap_lost", clampf(amount / 20.0, 0.0, 1.0) * 4.0 - 3.0))
@@ -2619,6 +2623,7 @@ func _on_stage_entered(stage: int, retry: bool) -> void:
 	_moments.clear()
 	_moment_playing = ""
 	_warden_engaged = false
+	_warden_fighting = false
 	engine.parameters_stage_entered()
 	for event_id in _park_cues:
 		engine.cancel_park_cue(event_id)
@@ -3030,8 +3035,9 @@ func _boss_entry(music: String) -> String:
 	return TuneMoments.remixed(music, PhaseMusic.entry_track(music, pack_available), _remixes, tune_available)
 
 
+# A tune on its one pass does not begin inside a Warden's fight (warden_took_band).
 func begin_moment(kind: String, key: String, id: String) -> void:
-	if id == "":
+	if id == "" or (_warden_fighting and kind in TuneMoments.ONE_PASS):
 		return
 	end_moment(kind, key, false)
 	_moment_seq += 1
@@ -3098,9 +3104,15 @@ func tune_found(discovery_id: String) -> void:
 	begin_moment("find", discovery_id, TuneMoments.find_tune(discovery_id))
 
 
-func warden_took_landmark() -> void:
+# A Warden's fight takes the band: the landmark's tune ends and stays away for the stage, and a
+# tune on its one pass (a find, the fabricator) is cut short and none begins until the arena
+# opens, or its tempo holds the grid over the fight and the Warden's pivot never comes.
+func warden_took_band() -> void:
 	_warden_engaged = true
-	end_moment("landmark")
+	_warden_fighting = true
+	for moment in ["landmark"] + TuneMoments.ONE_PASS:
+		end_moment(moment, "", false)
+	_refresh_moment()
 
 
 func landmark_moment(landmark_id: String, approach: float) -> void:
