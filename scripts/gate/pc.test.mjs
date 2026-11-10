@@ -140,6 +140,14 @@ test("compareLines ignores wall seconds and order, and reports a line that moved
   assert.deepEqual(moved.onlyHead, ["y -> FAIL"]);
 });
 
+test("compareLines drops a bot run's wall seconds as the runner prints them, and keeps its game seconds", () => {
+  const line = (game, wall) => `bot_run: skipper seed 1 (runner_gunner) -> ticks_done at stage 4, 30000 ticks (${game} s game), ${wall} s wall\n`;
+  assert.equal(compareLines(line("333.3", "247.6"), line("333.3", "301.2")).code, 0);
+  assert.equal(compareLines(line("333.3", "247.6"), line("215.7", "247.6")).code, 1);
+  const median = (seconds) => `[Spillway skipper breaks it in 45 to 90 s] median ${seconds} s of [54.59, 89.72] -> PASS\n`;
+  assert.equal(compareLines(median("89.7"), median("88.1")).code, 1);
+});
+
 test("band comparison reads each band against the base, and reads null with no base", () => {
   const files = { base: {}, head: {} };
   const put = (rel, text) => ((files.base[rel] = text), (files.head[rel] = text));

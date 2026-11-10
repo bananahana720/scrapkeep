@@ -206,7 +206,7 @@ export function sortedLines(logText) {
   return logText
     .split("\n")
     .filter((line) => line.includes("->"))
-    .map((line) => line.replace(/\bwall[= ]\d+(?:\.\d+)?s?\b/g, "wall").replace(/\b\d+(?:\.\d+)?s\b/g, "Ns").trimEnd())
+    .map((line) => line.replace(/\b\d+(?:\.\d+)? s wall\b/g, "N s wall").replace(/\bwall[= ]\d+(?:\.\d+)?s?\b/g, "wall").replace(/\b\d+(?:\.\d+)?s\b/g, "Ns").trimEnd())
     .sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
 }
 
