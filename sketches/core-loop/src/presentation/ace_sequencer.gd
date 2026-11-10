@@ -43,6 +43,9 @@ const BAY_RAMP := 8820
 const TRAVEL_UP := 0.4
 const TRAVEL_DOWN := 0.2
 const TRAVEL_THREAT := 2
+# The Warden's guard (0 to 100): see guard_state.
+const GUARD_TIGHT := 75.0
+const GUARD_LOOSE := 50.0
 # The ultimate meter's pressure step: a full meter at rest pressure still reaches travel.
 const ULTIMATE_STEP := 0.4
 # The momentum faders (INTEGRATION section 2): speed is a fraction of top speed.
@@ -437,6 +440,30 @@ func commit_warden() -> void:
 func set_warden_state(state: String) -> void:
 	warden_state = state
 	_follow()
+
+
+# The Warden's guard as its posture fight reports it (0 to 100, rising toward the break).
+# The tight build ("telegraph") enters at GUARD_TIGHT and holds until the guard drains under
+# GUARD_LOOSE, so a guard that hovers at the line never flutters; a stagger is the held
+# breath ("open"); anything else is the build ("closed").
+static func guard_state(was: String, posture: float, staggered: bool) -> String:
+	if staggered:
+		return "open"
+	if posture >= GUARD_TIGHT or (was == "telegraph" and posture >= GUARD_LOOSE):
+		return "telegraph"
+	return "closed"
+
+
+# The fight follows the guard: its state from guard_state, and `landed` (the hit that
+# shattered a chunk) the drop. Returns the drop's transport sample, or -1 when none is
+# booked. Outside a Warden fight it does nothing.
+func follow_guard(posture: float, staggered: bool, landed: bool) -> int:
+	if mode != "warden":
+		return -1
+	var state := guard_state(warden_state, posture, staggered)
+	if state != warden_state:
+		set_warden_state(state)
+	return drop_now() if landed else -1
 
 
 # Contact on the core: the render head goes quiet now and the drop enters on the next

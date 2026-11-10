@@ -3763,7 +3763,7 @@ func _posture_note_ratio(enemy: Node3D) -> float:
 
 # The stagger lands the chord and cuts the charge it cancelled; a shattered chunk is its
 # row's sound over a low hit. A draining guard changes posture and makes no sound.
-func _on_posture_changed(enemy: Node3D, _posture: float, staggered: bool) -> void:
+func _on_posture_changed(enemy: Node3D, posture: float, staggered: bool) -> void:
 	if not is_instance_valid(enemy):
 		return
 	var id := enemy.get_instance_id()
@@ -3773,9 +3773,29 @@ func _on_posture_changed(enemy: Node3D, _posture: float, staggered: bool) -> voi
 	if staggered and not seen[0]:
 		_stagger_chord()
 		_cut_charge()
-	if chunks < int(seen[1]):
+	var shattered := chunks < int(seen[1])
+	if shattered:
 		play("posture_changed", 6.0, 1.0, "SFX", Rows.heard(EventKinds.state_row("chunk_shatter"), cue_context()))
 		play("posture_changed", 6.0, 1.0, "SFX", SHATTER_LOW)
+	if ctx.flow != null and ctx.flow.get("warden") == enemy:
+		_follow_warden_form(posture, staggered, shattered and chunks > 0)
+
+
+# The Warden's fight plays the recorded band like a set (AUDIO-V3 section 1.1, read for the
+# posture fight): the pilot's hits tighten the build, the stagger is the held breath, and
+# the hit that shatters a chunk lands the drop on the next beat. The chunk that breaks the
+# Warden lands no drop: the break and the kill cadence answer it (ruling bt). With the
+# launch switch on "loop" the band is told a guard that never moves, so the build loops.
+func _follow_warden_form(posture: float, staggered: bool, landed: bool) -> void:
+	var tuning = ctx.get("tuning")
+	if not ace_playing() or tuning == null:
+		return
+	if tuning.option(Tuning.WARDEN_FORM_KEY) != "form":
+		ace.follow_guard(0.0, false, false)
+		return
+	var at: int = ace.follow_guard(posture, staggered, landed)
+	if at >= 0:
+		cue_log.append(["warden_form", "drop", "beat", at, 1.0, 0.0])
 
 
 func _stagger_chord() -> void:
