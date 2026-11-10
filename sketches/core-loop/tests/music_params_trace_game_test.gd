@@ -81,6 +81,16 @@ func _run() -> void:
 	var physics := PhysicsProbe.new()
 	root.add_child(physics)
 	var engine = audio.engine
+	# A clamp names its feed and raw value: the one red so far (w33 gate, under load) left only a count.
+	var feed: Callable = engine.parameter_source
+	var out_of_range := []
+	engine.parameter_source = func():
+		var raw: Dictionary = feed.call()
+		for id in raw:
+			var value := float(raw[id])
+			if out_of_range.size() < 8 and (not is_finite(value) or value < 0.0 or value > 1.0):
+				out_of_range.append("%s %s at clock %d" % [id, value, engine.clock])
+		return raw
 	for frame in 18000:
 		bot.tick(1.0 / 60.0)
 		await physics_frame
@@ -112,7 +122,8 @@ func _run() -> void:
 	t.check("trace has no scaled physics steps", physics.wrong_step == 0, "%d off-step frames, first %s" % [physics.wrong_step, str(physics.wrong_seen)])
 	t.near("trace covers 300 simulation seconds", physics.seconds, 300.0, 0.000001)
 	t.check("five-minute trace is recorded", FileAccess.file_exists(trace_path) and not samples.is_empty(), trace_path)
-	t.eq("trace sampler clamps zero values", engine.parameter_clamps, 0)
+	t.check("trace sampler clamps zero values", engine.parameter_clamps == 0, "%d clamps, first %s" % [engine.parameter_clamps, out_of_range])
+	engine.parameter_source = feed
 	t.eq("trace records every transport sample", samples.size(), ceili(float(engine._parameter_step) / (Harmony.STEPS_PER_BAR / Music.PARAMETER_SAMPLES_PER_BAR)))
 	t.check("trace values stay in range", samples.all(func(s): return s.values.values().all(func(v): return v >= 0.0 and v <= 1.0)))
 	t.check("trace has no unflagged mid-phrase changes", changes.all(func(c): return (c.phrase and c.phrase_step % (Harmony.PHRASE_BARS * Harmony.STEPS_PER_BAR) == 0) or MusicRows.danger(c.danger) or (c.get("ultimate", false) and c.phrase_step % Harmony.STEPS_PER_BAR == 0)), str(changes.size()))

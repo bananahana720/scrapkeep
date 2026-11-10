@@ -8,7 +8,7 @@ static func elapse_wall(msec: int) -> void:
 
 # Runs headless child scripts side by side, each at a fixed 90 fps (the physics rate, so
 # the same ticks as real time, but not held to the clock) and logging to its own file.
-# Returns one {code, log, timed_out} per job, in order. A job is {script, args}.
+# Returns one {code, log, timed_out, seconds} per job, in order. A job is {script, args}.
 # With parallel > 0, at most that many children run at once, each starting as one ends, and
 # timeout_s runs from each child's own start; at 0 every child starts together.
 static func run(jobs: Array, timeout_s: float, parallel := 0) -> Array:
@@ -27,6 +27,8 @@ static func run(jobs: Array, timeout_s: float, parallel := 0) -> Array:
 			elif Time.get_ticks_msec() - r["start"] >= timeout_s * 1000.0:
 				OS.kill(r["pid"])
 				r["live"] = false
+			if not r["live"]:
+				r["seconds"] = (Time.get_ticks_msec() - r["start"]) / 1000.0
 		while next < jobs.size() and running.filter(func(r): return r["live"]).size() < limit:
 			running.append(_start(jobs[next], dir.path_join("child-%d.log" % next), project))
 			next += 1
@@ -35,7 +37,7 @@ static func run(jobs: Array, timeout_s: float, parallel := 0) -> Array:
 	for r in running:
 		var timed_out: bool = r["timed_out"]
 		out.append({"code": -1 if timed_out or r["pid"] <= 0 else OS.get_process_exit_code(r["pid"]),
-			"log": FileAccess.get_file_as_string(r["log"]), "timed_out": timed_out})
+			"log": FileAccess.get_file_as_string(r["log"]), "timed_out": timed_out, "seconds": r.get("seconds", 0.0)})
 		DirAccess.remove_absolute(r["log"])
 	DirAccess.remove_absolute(dir)
 	return out
