@@ -87,7 +87,7 @@ node scripts/redteam/eye.mjs --persona=cautious --from=<a film folder from the P
 
 Give each reader a copy of `reader/` at a path that says nothing (the film folder's own name can name the plant), and save its reply unedited beside the film as `READ.md`. The wait film's death is planted to reach the death screen, so a reader's complaint that it was killed by something it never saw is the plant and not a finding.
 
-**What a cloud film can and cannot say.** The cloud draws with a software renderer. Words, layout, marks, what is on screen and when all read true. Colour, light, bloom and frame pacing do not; the film draws only the frames it keeps, so GPU particles are under-shown and it is never a frame-time reading; the renderer also caps per-instance shader values at 4,096 objects and logs an error past that, which a GPU does not. For look, a PC job films the same run live (`--self-play-film-live=1`, no `--rendering-driver`), and `--from` lays that film out. Sound is not read at all.
+**What a cloud film can and cannot say.** The cloud draws with a software renderer. Words, layout, marks, what is on screen and when all read true. Colour, light, bloom and frame pacing do not; the film draws only the frames it keeps, so GPU particles are under-shown and it is never a frame-time reading; the renderer also caps per-instance shader values at 4,096 objects and logs an error past that, which a GPU does not. For look, the PC lane films a first-timer's run once a wave (ruling cp): `node scripts/redteam/eye.mjs --persona=first-timer --gpu` uses the machine's own display and renderer and draws every frame. `--from` lays out a film made elsewhere. Sound is not read at all.
 
 ## The receipt
 

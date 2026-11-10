@@ -462,7 +462,7 @@ export const FILMS = {
 export const FILM_OF = { cautious: "wait" };
 
 // The self-play flags for one film (after `--`). plant is "" or "objective" (the control run).
-export function filmArgs({ film, seed = 1, pilot = "", out, world = 1, plant = "", deathAt = 0, save = "" }) {
+export function filmArgs({ film, seed = 1, pilot = "", out, world = 1, plant = "", deathAt = 0, save = "", live = false }) {
   const spec = FILMS[film];
   if (!spec) throw new Error("--film must be one of " + Object.keys(FILMS).join(", "));
   // deathAt moves the wait film's planted death (a short control run does not need four minutes).
@@ -471,7 +471,7 @@ export function filmArgs({ film, seed = 1, pilot = "", out, world = 1, plant = "
     "--self-play", `--self-play-seed=${seed}`, `--self-play-policy=${spec.policy}`, "--self-play-keys=1", "--self-play-eyes=1",
     "--self-play-watch=1", `--self-play-save=${save || `eye-${film}-${seed}`}`, "--self-play-stall=600", `--self-play-film=${out}`,
     ...(pilot ? [`--self-play-pilot=${pilot}`] : []), ...(world < 1 ? [`--self-play-film-world=${world}`] : []),
-    ...(plant ? [`--self-play-plant-hide=${plant}`] : []), ...args,
+    ...(plant ? [`--self-play-plant-hide=${plant}`] : []), ...(live ? ["--self-play-film-live=1"] : []), ...args,
   ];
 }
 

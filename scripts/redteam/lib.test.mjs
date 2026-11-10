@@ -150,6 +150,8 @@ test("a film's flags: a player's game by its keys, the persona's default film, t
   const whole = filmArgs({ film: "whole", seed: 7, out: "/tmp/f" });
   for (const flag of ["--self-play", "--self-play-keys=1", "--self-play-eyes=1", "--self-play-seed=7", "--self-play-policy=skipper", "--self-play-film=/tmp/f", "--self-play-until=3"]) assert.ok(whole.includes(flag), flag);
   assert.ok(!whole.some((a) => a.startsWith("--self-play-plant")));
+  assert.ok(!whole.includes("--self-play-film-live=1"));
+  assert.ok(filmArgs({ film: "whole", out: "/tmp/f", live: true }).includes("--self-play-film-live=1"));
   const wait = filmArgs({ film: FILM_OF.cautious, out: "/tmp/f", world: 0.5, plant: "objective", pilot: "tarn" });
   for (const flag of ["--self-play-policy=camper", "--self-play-plant-death=240", "--self-play-film-world=0.5", "--self-play-plant-hide=objective", "--self-play-pilot=tarn"]) assert.ok(wait.includes(flag), flag);
   assert.throws(() => filmArgs({ film: "nope", out: "/tmp/f" }));
