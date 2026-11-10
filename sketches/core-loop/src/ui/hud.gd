@@ -2,6 +2,7 @@ extends CanvasLayer
 
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const Palette := preload("res://src/core/palette.gd")
+const Tuning := preload("res://src/movement/tuning.gd")
 const Objectives := preload("res://src/core/objectives.gd")
 const AimReticle := preload("res://src/ui/aim_reticle.gd")
 const ScreenRegions := preload("res://src/ui/screen_regions.gd")
@@ -364,7 +365,9 @@ func setup(game_ref) -> void:
 		_title_stage = 0
 		_threat = 0
 		_begin_engagement(false)
-		_armor_peak = ARMOR_PEAK_FLOOR)
+		_armor_peak = ARMOR_PEAK_FLOOR
+		_health.clear()
+		_armor.clear())
 	layout(_screen_size())
 
 
@@ -903,6 +906,8 @@ func layout(size: Vector2) -> void:
 		_objective.position.y = _plate.position.y + plate_size.y + PLATE_GAP
 	part_name.position = Vector2.ZERO
 	part_name.size = size
+	var ring := AimReticle.meter_radius() + AimReticle.METER_WIDTH
+	part_name.avoid = Rect2(size * 0.5 - Vector2.ONE * ring, Vector2.ONE * ring * 2.0)
 	_status.position = Vector2(MARGIN, top.position.y + 12.0)
 
 	var toast_width := minf(TOAST_WIDTH, size.x - 2.0 * MARGIN)
@@ -1181,9 +1186,9 @@ func _process(delta: float) -> void:
 	ability_bar.hide_keys(key_glyphs.shown_glyphs())
 	if part_name.visible:
 		var cam: Camera3D = game.camera.cam
-		var ball: Vector3 = game.player.shown_position()
-		if not cam.is_position_behind(ball):
-			part_name.follow(cam.unproject_position(ball))
+		var top: Vector3 = game.player.shown_position() + cam.global_basis.y * Tuning.RADIUS
+		if not cam.is_position_behind(top):
+			part_name.follow(cam.unproject_position(top))
 	reticle.gauge = AbilitySlots.gauge_of(slots)
 	# An interactable's hold-to-arm fills the same class ring (LOOP-REDESIGN section 9).
 	var interact = game.world.get("interact") if game.world != null else null

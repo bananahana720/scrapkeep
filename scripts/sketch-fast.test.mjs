@@ -25,6 +25,13 @@ import {
   timingsFromReceipt,
   DEFAULT_ESTIMATE_MS,
   usableBaseRun,
+  LOG_HEAD_LINES,
+  LOG_TAIL_LINES,
+  cappedLog,
+  failedRunLog,
+  failedRunLogName,
+  receiptBaseName,
+  signalReason,
 } from "./sketch-fast.mjs";
 import { IMPORT_TRIES, importTry, importWithRetry, quarantineRecord, scriptErrorCount } from "./sketch-smoke.mjs";
 
@@ -464,4 +471,44 @@ test("a changed test picks a test two steps away, and a loop of references ends"
   assert.deepEqual([...picked.keys()].filter((test) => test.includes("dress")).sort(), ["tests/dress_material_test.gd", "tests/dress_wog_fallback_test.gd", "tests/dress_wog_test.gd"]);
   assert.equal(picked.get("tests/dress_material_test.gd").why, "changed");
   assert.equal(picked.has("tests/other_test.gd"), false);
+});
+
+test("a red run's log keeps a short output whole and names how the run ended", () => {
+  const output = "Godot Engine v4.7.2\nFAIL: the rescue cue plays\nhandle_crash: Program crashed with signal 6\n";
+  const text = failedRunLog({ test: "tests/audio_rescue_test.gd", where: "head", attempt: 1, head: "abc123", exit: null, signal: "SIGABRT", timedOut: false, ms: 4210, reason: "exit null", output });
+  assert.match(text, /^test: tests\/audio_rescue_test\.gd\nran on: the head \(abc123\), run 1 there\nexit: none, signal SIGABRT\nseconds: 4\.2\nreason: exit null\n--- stdout and stderr ---\n/);
+  assert.ok(text.endsWith("--- stdout and stderr ---\n" + output));
+  const base = failedRunLog({ test: "tests/a_test.gd", where: "base", attempt: 2, head: "def456", exit: 1, signal: null, timedOut: true, ms: 0, reason: "timed out", output: "" });
+  assert.match(base, /ran on: the merge base \(def456\), run 2 there\nexit: 1, stopped at its time limit\n/);
+});
+
+test("a long log keeps its first and last lines and says how many it cut", () => {
+  const lines = Array.from({ length: LOG_HEAD_LINES + LOG_TAIL_LINES + 50 }, (_, index) => `line ${index + 1}`);
+  const kept = cappedLog(lines.join("\n") + "\n").split("\n");
+  assert.equal(kept.length, LOG_HEAD_LINES + LOG_TAIL_LINES + 1);
+  assert.equal(kept[0], "line 1");
+  assert.equal(kept[LOG_HEAD_LINES - 1], `line ${LOG_HEAD_LINES}`);
+  assert.equal(kept[LOG_HEAD_LINES], `[sketch:fast cut 50 lines here; ${lines.length} lines printed]`);
+  assert.equal(kept[LOG_HEAD_LINES + 1], `line ${LOG_HEAD_LINES + 51}`);
+  assert.equal(kept.at(-1), `line ${lines.length}`);
+  assert.ok(LOG_TAIL_LINES >= 200, "the last 200 lines of a red run are always kept");
+  const exact = Array.from({ length: LOG_HEAD_LINES + LOG_TAIL_LINES }, (_, index) => `line ${index + 1}`).join("\n");
+  assert.equal(cappedLog(exact), exact);
+  assert.equal(cappedLog(""), "");
+  assert.equal(cappedLog("a\nb\nc\nd", 1, 0), "a\n[sketch:fast cut 3 lines here; 4 lines printed]");
+});
+
+test("each red run of a test gets its own log file beside the receipt", () => {
+  assert.equal(failedRunLogName("tests/audio_rescue_test.gd", "head", 1), "audio_rescue_test.head-1.log");
+  assert.equal(failedRunLogName("tests/audio_rescue_test.gd", "head", 2), "audio_rescue_test.head-2.log");
+  assert.equal(failedRunLogName("tests/audio_rescue_test.gd", "base", 1), "audio_rescue_test.base-1.log");
+  assert.equal(failedRunLogName("tests/trees/child_test.gd", "head", 1), "trees__child_test.head-1.log");
+  assert.equal(receiptBaseName("fast", "0123456789abcdef0123", "2026-11-10T03:20:11.123Z"), "fast-0123456789ab-2026-11-10T03-20-11-123Z");
+});
+
+test("a crash signal is named as a crash, and only a plain kill points at the memory limit", () => {
+  assert.match(signalReason("SIGABRT"), /^ended on SIGABRT before its time limit \(a crash/);
+  assert.match(signalReason("SIGSEGV"), /^ended on SIGSEGV /);
+  assert.match(signalReason("SIGKILL"), /memory limit/);
+  assert.match(signalReason(null), /memory limit/);
 });

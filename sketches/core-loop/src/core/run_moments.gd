@@ -161,6 +161,12 @@ func _physics_process(delta: float) -> void:
 			_offer("top_speed", planar, {"speed": snappedf(planar, 0.1)})
 
 
+# Whether a still has been asked for and not yet read back: the frame it photographs has not
+# drawn. The summary screen waits on this, so a death's picture is of the death.
+func still_pending() -> bool:
+	return _grabs_pending > 0
+
+
 func _on_stage_entered(stage: int, retry: bool) -> void:
 	if retry and not _pending_death.is_empty():
 		_pending_death["caption_kind"] = "retried"

@@ -17,6 +17,9 @@ const T := preload("res://tests/support/t.gd")
 #       ball grew before it died; a build that arrived grown and was stripped by the fight
 #       (scrap is armour) shows the Warden's own row; a short build entering the boss arena reads
 #       the gap against the hull; a new run clears it.
+#   (e) the death's picture: the comic page's last still is taken on the frame the run ends, so
+#       the end screen stays down until that still is read back and comes up the frame after;
+#       the moments hear of a death before the flow does, which is what makes the wait work.
 #   (c) the latch cue: Space held through a death shuts the summary; the cue stays down for
 #       LATCH_CUE_AFTER, then names Space; a press the latch turns away shows it at once; it goes
 #       with the release and the screen takes keys.
@@ -52,6 +55,7 @@ func _run() -> void:
 	_game.player.source = Intent.Scripted.new()
 	await _frames(2)
 	await _tag_on_summary()
+	await _still_first()
 	await _latch_cue()
 	await _pause_asks()
 	_game.free()
@@ -219,6 +223,36 @@ func _die_to_the_boss() -> void:
 	_t.check("a short build at the boss reads the gap against the hull", hull > 0.0
 			and _game.flow.death_tip.contains("met Admiral Brindle's plating %d." % int(hull)), "hull %.0f, tip '%s'" % [hull, _game.flow.death_tip])
 	_game.combat.heft_override = -1.0
+
+
+# A headless run takes no stills, so the pending one is planted and the end screen is asked to
+# come up again, as the death's own flow change asks it.
+func _still_first() -> void:
+	var screens = _game.screens
+	var heard: Array = []
+	for row in _game.events.player_died.get_connections():
+		var who = row["callable"].get_object()
+		if who == _game.run_moments or who == _game.flow:
+			heard.append("moments" if who == _game.run_moments else "flow")
+	_t.eq("the moments hear of a death before the flow ends the run on it", heard, ["moments", "flow"])
+	_game.flow.new_run()
+	await _frames(5)
+	_game.run.damage(99999.0, "chaser")
+	await _frames(2)
+	_t.check("with no still to wait for the end screen comes up with the death", _game.flow.state_name() == "summary" and screens.visible
+			and not _game.run_moments.still_pending(), "state %s, up %s" % [_game.flow.state_name(), screens.visible])
+	_game.run_moments._grabs_pending = 1
+	screens._on_flow_changed("summary")
+	var held: bool = not screens.visible
+	await _frames(3)
+	_t.check("the end screen stays down while the run's last still is being taken", held and not screens.visible and _game.run_moments.still_pending(),
+		"down at once %s, down three frames on %s" % [held, not screens.visible])
+	_game.run_moments._grabs_pending = 0
+	await _frames(2)
+	_t.check("and comes up once the still is read back", screens.visible and screens.tip_text() != "" and screens._actions.get_child_count() > 0,
+		"up %s, tip '%s', actions %d" % [screens.visible, screens.tip_text(), screens._actions.get_child_count()])
+	_game.flow.new_run()
+	await _frames(5)
 
 
 func _hold(code: int, down: bool) -> void:

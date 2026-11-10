@@ -1,11 +1,14 @@
 extends Control
 
+const EventKinds := preload("res://src/core/event_kinds.gd")
 const Icons := preload("res://src/ui/icons.gd")
 const UiDraw := preload("res://src/ui/ui_draw.gd")
 
 # One HUD readout: an icon, an optional short label (a count, in mono digits) and an
 # optional bar. Health is a tank gauge (a tick every quarter) and scrap a count. Below
-# its warning share the gauge's edge turns iron oxide and pulses at 1 Hz.
+# its warning share the gauge's edge turns iron oxide and pulses at 1 Hz. A drop in the bar
+# leaves the lost slice standing in the hit colour for LOSS_HOLD seconds and then drains it
+# over LOSS_DRAIN, so a hit shows which bar took it and how much went, without a word.
 
 const ICON := 26.0
 const BAR_H := 12.0
@@ -13,6 +16,8 @@ const FONT := 22
 const GAP := 8.0
 const PULSE_HZ := 1.0
 const TICKS := 4
+const LOSS_HOLD := 0.35
+const LOSS_DRAIN := 0.45
 
 var icon_id := ""
 var color := Color.WHITE
@@ -23,6 +28,9 @@ var ticks := false
 var warn := false
 var warn_color := Color.WHITE
 var _clock := 0.0
+# The share the bar stood at before its last drop, and the seconds its slice has left.
+var _lost_from := -1.0
+var _lost_left := 0.0
 
 
 func _init(icon := "", width_of_bar := 0.0, quarter_ticks := false) -> void:
@@ -38,6 +46,9 @@ func set_reading(value: float, tint: Color, text := "", warning := false, warnin
 	# Called every frame by the HUD: shape and redraw only when a shown value changed.
 	if value == fraction and tint == color and text == label and warning == warn and warning_color == warn_color:
 		return
+	if bar_width > 0.0 and fraction >= 0.0 and value >= 0.0 and value < fraction:
+		_lost_from = lost_edge()
+		_lost_left = LOSS_HOLD + LOSS_DRAIN
 	fraction = value
 	color = tint
 	label = text
@@ -57,13 +68,30 @@ func extent() -> Vector2:
 	return Vector2(w, ICON)
 
 
+# A new run's first reading is no loss from the last run's: forget the bar and its slice.
+func clear() -> void:
+	fraction = -1.0
+	_lost_from = -1.0
+	_lost_left = 0.0
+	queue_redraw()
+
+
+# Where the lost slice ends, as a share of the bar: the bar's own share once it has drained.
+func lost_edge() -> float:
+	if _lost_left <= 0.0 or _lost_from <= fraction:
+		return fraction
+	return lerpf(fraction, _lost_from, clampf(_lost_left / LOSS_DRAIN, 0.0, 1.0))
+
+
 func drawn_words() -> PackedStringArray:
 	return PackedStringArray([label]) if label != "" else PackedStringArray()
 
 
 func _process(delta: float) -> void:
 	_clock += delta
-	if warn:
+	var draining := _lost_left > 0.0
+	_lost_left = maxf(0.0, _lost_left - delta)
+	if warn or draining:
 		queue_redraw()
 
 
@@ -77,6 +105,9 @@ func _draw() -> void:
 		return
 	var bar := Rect2(Vector2(x, mid - BAR_H * 0.5), Vector2(bar_width, BAR_H))
 	UiDraw.bar(self, bar, fraction, color)
+	var lost := lost_edge() - fraction
+	if lost > 0.0:
+		draw_rect(Rect2(bar.position + Vector2(bar.size.x * fraction, 0.0), Vector2(bar.size.x * lost, BAR_H)), EventKinds.color("player_hit"))
 	if ticks:
 		for i in range(1, TICKS):
 			var tx := bar.position.x + bar.size.x * i / TICKS
