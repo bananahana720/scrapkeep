@@ -136,6 +136,8 @@ func _tag_on_summary() -> void:
 	_t.check("the screen reads pilot, cause, and the note before the choices", body.size() > 2 and body[1] == "Scrapped by the Warden."
 			and body.find(screens.tip_text()) > 1 and body.find(screens.tip_text()) < body.find(""), " | ".join(body))
 	await _frames(3)
+	var words: Array = screens._stats.get_children().map(func(cell): return (cell.get_child(1) as Label).text if cell.get_child_count() == 2 else "")
+	_t.check("each of the summary's stats has its word under its icon", words == ["TIME", "STAGES", "COGS", "SCRAP", "PARTS", "KILLS", "EVENTS", "SAVES"], str(words))
 	var comic: Control = screens.comic_page()
 	_t.check("the comic page is still the row's first, the note beside it", comic != null and comic != screens._tip and comic.get_index() == 0
 			and screens._tip.get_index() == 1 and screens._tip.global_position.x >= comic.global_position.x + comic.size.x,

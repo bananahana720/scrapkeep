@@ -71,6 +71,8 @@ const PILOT_LINE := ""
 # when the build has it: 3:4, at most this share of the screen's height.
 const COMIC_PAGE_PATH := "res://src/ui/comic_page.gd"
 const COMIC_HEIGHT := 0.5
+# The word under each of the summary's stats.
+const STAT_WORD_FONT := 13
 const COMIC_MAX_HEIGHT := 540.0
 # RUN OVER's "next shift" note (core/death_tips.gd): an amber-edged plate taped up beside the comic page,
 # where the column has room; under the body it pushed the actions off a 900 px screen. Its words wrap at
@@ -1363,20 +1365,23 @@ func _on_run_ended_board(_won: bool) -> void:
 
 
 # The summary as icons and numbers: time, stages, cogs (the cog), scrap taken as mass (the heap), parts, kills, events won and
-# the earned save used (0 or 1), each on its own icon.
+# the earned save used (0 or 1), each on its own icon with its word under it, so nobody has to learn eight icons to read a run.
 func _summary_stats() -> void:
 	var s: Dictionary = game.run.summary()
 	var chips := [
-		["res_timer", "%d:%02d" % [int(s["time"]) / 60, int(s["time"]) % 60]],
-		["obj_beacon", "%d/%d" % [s["stages"], game.ctx.stages.COUNT]],
-		["res_scrap", str(s["cogs"])],
-		["res_mass", str(s["scrap"])],
-		["cat_transform", str((s["parts"] as Array).size())],
-		["thr_instant", str(s["kills"])],
-		["obj_event", str(s["events_won"])],
-		["res_health", str(s["save_used"])],
+		["res_timer", "%d:%02d" % [int(s["time"]) / 60, int(s["time"]) % 60], "time"],
+		["obj_beacon", "%d/%d" % [s["stages"], game.ctx.stages.COUNT], "stages"],
+		["res_scrap", str(s["cogs"]), "cogs"],
+		["res_mass", str(s["scrap"]), "scrap"],
+		["cat_transform", str((s["parts"] as Array).size()), "parts"],
+		["thr_instant", str(s["kills"]), "kills"],
+		["obj_event", str(s["events_won"]), "events"],
+		["res_health", str(s["save_used"]), "saves"],
 	]
 	for chip in chips:
+		var cell := VBoxContainer.new()
+		cell.add_theme_constant_override("separation", 0)
+		cell.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		var row := _row(8)
 		var icon := TextureRect.new()
 		icon.texture = Icons.texture(chip[0])
@@ -1390,7 +1395,12 @@ func _summary_stats() -> void:
 		value.add_theme_font_override("font", UiFonts.mono())
 		value.text = chip[1]
 		row.add_child(value)
-		_stats.add_child(row)
+		cell.add_child(row)
+		var word := _label(STAT_WORD_FONT)
+		word.text = String(chip[2]).to_upper()
+		word.add_theme_color_override("font_color", Color(Palette.SAND, 0.7))
+		cell.add_child(word)
+		_stats.add_child(cell)
 
 
 func _stamp(target: Label = null) -> void:
