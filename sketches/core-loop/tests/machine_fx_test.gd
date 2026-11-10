@@ -135,9 +135,10 @@ func _run() -> void:
 	Density.live().force(0.0)
 
 	# A word fits the view: a panel pickup's three-word pop is stamped at the ball, beside the
-	# camera, and at its size in metres it was wider than the screen. A short word far off is left alone.
+	# camera, and at its size in metres it was wider than the screen. Its room is a share of the
+	# view's height, so its letters stand as tall on a wide screen. A short word far off is left alone.
 	var cam := root.get_camera_3d()
-	var view_w: float = root.get_visible_rect().size.x
+	var view_h: float = root.get_visible_rect().size.y
 	var near: Vector3 = cam.global_position - cam.global_basis.z * 8.0
 	t.check("the pop stamps", fx.word("COLLAR +6% HARPOON RECOVERY", near, Color.WHITE, true, 1.2, 1.1))
 	t.check("a far word stamps", fx.word("TONK", cam.global_position - cam.global_basis.z * 40.0, Color.WHITE, true))
@@ -155,7 +156,7 @@ func _run() -> void:
 			continue
 		var at: Vector3 = slot["at"]
 		var px_per_m: float = cam.unproject_position(at + cam.global_basis.x).distance_to(cam.unproject_position(at))
-		widths[label.text] = [float(slot["width_px"]) * label.pixel_size * label.scale.x * px_per_m / view_w, label.scale.x]
+		widths[label.text] = [float(slot["width_px"]) * label.pixel_size * label.scale.x * px_per_m / view_h, label.scale.x]
 	var pop: Array = widths.get("COLLAR +6% HARPOON RECOVERY", [9.0, 0.0])
 	var far: Array = widths.get("TONK", [9.0, 0.0])
 	t.check("a long pop beside the camera is held to the view", pop[0] <= MachineFx.WORD_FIT + 0.01 and pop[0] > MachineFx.WORD_FIT - 0.05 and pop[1] < 1.1, str(pop))

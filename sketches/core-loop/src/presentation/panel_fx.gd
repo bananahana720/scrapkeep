@@ -13,8 +13,11 @@ const Palette := preload("res://src/core/palette.gd")
 
 const POP_LIFE := 1.2
 const POP_HEIGHT := 2.6
-const POP_SIZE := 1.1
-const POP_SIZE_REDUCED := 0.8
+# The pop's letters stand about 4.6 percent of the view's height, six tenths of the player's
+# ordinary hit word (player_fx.gd WORD_SCREEN), and the longest line 3.3: picked from five
+# measured candidates on 10 Nov 2026 (design-v3/SIGHT-PERSONA.md section 7, "A taste call").
+const POP_SIZE := 0.5
+const POP_SIZE_REDUCED := 0.4
 const STREAK_MS := 2000
 const PHRASE_LENGTH := 8
 # The phrase walks the reward pentatonic (Harmony.PENTATONIC rungs) from the tonic, a step
