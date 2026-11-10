@@ -10,7 +10,7 @@ The roadmap is ordered by what has to be true, not by dates. Wave numbers keep c
 - **Priority (23 Oct, ruling at):** world 1 first. Worlds 2 and 3 start nothing new until the world 1 sitting is done.
 - **World 1 sitting:** started, not finished. Andrew played the dam on the wave 26 build on 30 Oct ("fun"; many invisible walls; models clipping). Every fix shipped in wave 29 (#600, #601, #602 and the clipping lane). No area verdicts are recorded yet (Sitting Kit store empty, read 8 Nov).
 - **Build on the PC:** the promoted wave 32 build (main 8180ec6c), installed 9 Nov. Rollbacks: the wave 32 pre-gate and wave 31 AppImages.
-- **Measured on w32 (gate CLEAN on 8f12596a, bands identical to w31):** W1 Novice 42%, Learner a1 79%, a5 83%, Expert 100%; HARD rungs 100/100/96/88/56%. 4080 p99 medians: dam 14.8 ms, flume 15.2 ms, Brindle 12.2 ms. 0 placeholders.
+- **Measured on w34 (gate CLEAN on 75099fa7, bands identical to w33 main run for run):** W1 Novice 38% (9 of 24), Rusty 75%, Expert 100%; HARD rungs 100/96/100/88/63%. 0 placeholders. The 4080 p99 medians are the wave 32 ones until the next frame pass: dam 14.8 ms, flume 15.2 ms, Brindle 12.2 ms.
 
 ## Phase 1: the world 1 sitting
 
@@ -20,15 +20,14 @@ World 1 is the title, the camp, the dam, the flume and Brindle in the Slag Bowl.
 
 | # | Item | Owner | State |
 | --- | --- | --- | --- |
-| 1 | Pre-sitting improvement pass (ruling bo, 9 Nov): workflows, world 1 polish, performance, deep modules, testing; then the wave 33 full gate, cautious red team and promotion | Five lanes, then Gate | Done: promoted as wave 33 (main 45691e94, 10 Nov). The world 1 polish program (ruling cs, [STATE.md](STATE.md)) follows it |
-| 2 | Dam Warden `sheet_dir` [0,0,-1] plus the bot sheet-foot return | Dam lane | Not shipping for the sitting (ruling cm): two 24-seed reads bettered no band and the heading alone breaks the Novice ceiling. The sheet stays as it is; an axis heading with the lobbers or the foot moved is parked for after the sitting ([DECISIONS.md](DECISIONS.md) section 10) |
-| 3 | Dam east-end airborne invisible patch at (200, 94-98, 642), owed under ruling aa | Dam lane | PR #659: no ball can reach the strip; four drawn triangles close it so the sweep reads clean |
-| 4 | Clip-audit correction | Clipping lane | Done in wave 30 (#608); the queue line was a stale carry |
-| 5 | Sitting sheet refresh for the build he plays (Try lines from the watch list) | Sitting prep | Owed |
-| 6 | Esc on the run summary quits in one press (SITTING-GAPS 11) | Cloud | Not re-checked since 28 Oct |
-| 7 | Slag Bowl stand crew bodies (163 recipe shapes): refsheets and one Mojulo shell, then a mesh swap | PC, then cloud | A Look note if it misses, not a gate fail |
+| 1 | Wave 34: the first full gate on the PC, the weekly sweep, promotion | Local coordinator | Done: main bc4adc1a (#745), 10 Nov |
+| 2 | Wave 35, words and first checks: kit pick cards, the run summary and Esc in one press, item words, key prompts, the sound contract checks, three map checks (ruling ct), the PC gate command, stage 2's card named for the flume | Local coordinator | Stacked on `stage/alpha-w35`; its gate is next |
+| 3 | Wave 36, read the fight and build the instruments: danger marks and the yard wall look (PF-16, 25, 27), the HUD (PF-19, 20, 21), the landmark beam (PF-28), the snag sweep and far-prop mesh faults, the difficulty measurement, the hand-over rows and test, the map sheet and transition strip captures, the Warden-form split out of `audio.gd`; a player's-eye read on its head | Local coordinator | Not started |
+| 4 | Wave 37, harder by movement (ruling cu): chasers lead and run faster, the Warden pulse, a third clock tier, regen only while rolling, terrain stops shells with more lobber lead, boils punish the stall; the conductor link S1 to S3 default off | Local coordinator | Not started. Paired band reads, 24 to 96 seeds an arm, to the targets in [the difficulty plan](shared/world1/difficulty-plan.md) |
+| 5 | Wave 38, one ride (ruling cv): a swipe over both stage cuts, the rail turns to the arrival heading, the Slag Bowl ahead of the flume launch with landing rings and a smoke column, objective markers, scrap on the skill lines, breather zones paired with pressure, the four clip snaps | Local coordinator | Not started |
+| 6 | Wave 39, the sitting build: the Warden form on the synth band and on Brindle, the camera only if the film asks, the Slag Bowl stand crew bodies, the sitting sheet refresh, the final gate with a first-timer red team, the install with rollbacks | Local coordinator | Not started. It closes as "ready for your verdict" |
 
-The rest of the 28 Oct gap list is closed: the dunk tip, the held radio and active tips, the rung card on a fresh profile, the clamp crew marker and pause over the tier card are in the code; the audio gate and the 4080 frame row ran on the PC.
+Parked until after the sitting: the way out of the Slag Bowl into world 2, the dam launch over the crest, the rebuilt concave flume yard (the bowl test records it as OWED), a reactive valve, two-variant sub-regions, arrivals on the musical grid, enemy health (ruling al), and the dam Warden's sheet heading (ruling cm).
 
 ### Engineering hygiene that rides along (never holds a promotion)
 
@@ -43,8 +42,8 @@ Ruling bm named the wave 32 build and ruling bo (9 Nov) the promotion that carri
 
 ### Re-read after the sitting (already ruled to wait)
 
-- HARD rung 5 target (rulings aq, bc, be: 56% at 48 seeds).
-- w1 Novice ceiling (ruling bk: 42%, was ab's 40%).
+- HARD rung 5 target (rulings aq, bc, be: 56% at 48 seeds when ruled; the wave 34 gate reads 63% on main and on the head).
+- w1 Novice: no longer a ceiling to hold. Ruling cu makes it a target that must drop (20% or less at the dam Warden); the wave 34 gate reads 38%.
 - Flume length (ruling ax: skipper 154 s under its 180 s floor; levers: a 1-2 pack clamp or a longer route).
 - Completionist time (ruling ag: bot 20.8 min against 15-20; his wall time decides).
 - Brindle's cobalt pick (ruling ap): parked until world 2 is in a sitting.
