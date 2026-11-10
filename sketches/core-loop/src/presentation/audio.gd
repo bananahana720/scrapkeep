@@ -3110,8 +3110,8 @@ func tune_found(discovery_id: String) -> void:
 func warden_took_band() -> void:
 	_warden_engaged = true
 	_warden_fighting = true
-	for kind in ["landmark"] + TuneMoments.ONE_PASS:
-		end_moment(kind, "", false)
+	for moment in ["landmark"] + TuneMoments.ONE_PASS:
+		end_moment(moment, "", false)
 	_refresh_moment()
 
 
