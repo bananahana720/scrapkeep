@@ -35,9 +35,9 @@ const UiFonts := preload("res://src/ui/ui_fonts.gd")
 # (second first-timer film, PF-17).
 #
 # A mark is only as true as the picture under it (PC film of PR 729): a thing behind a wall, a
-# pillar or the ground wears its brackets faint and no tag, so the brackets never claim a wall is
-# the scooter; a ray stopped by the fight's own machine still counts as seen, since its parts stand
-# on it. A comic panel up over the play (Brindle's arrival close-up) or the start pick card takes
+# pillar, the ground or Brindle's wreck wears its brackets faint and no tag, so the brackets never
+# claim a wall is the scooter; with no room it is left out, never sent to the edge, since it is in
+# view. A comic panel up over the play (Brindle's arrival close-up) or the start pick card takes
 # no mark either: the marks belong to the play view, and the panel shows another camera.
 
 const SIDE_INSET := 0.035
@@ -68,7 +68,7 @@ const MARK_HZ := 1.2
 # tag. The avoided panels are grown by AVOID_GROW pixels, for their tilt.
 const SIGHT_SLACK_M := 2.5
 const HIDDEN_ALPHA := 0.35
-const AVOID_GROW := 12.0
+const AVOID_GROW := 16.0
 # The tag: its font size, the padding of its chip, and the gap between the chip and the brackets.
 const TAG_FONT := 17
 const TAG_PAD := Vector2(8.0, 4.0)
@@ -345,7 +345,8 @@ func markers(size: Vector2) -> Array[Dictionary]:
 			under = _free(mark_rect(box, tag, true), room, taken)
 			tag = tag if under else ""
 		if tag == "" and not _free(mark_rect(box, ""), room, taken):
-			away.append_array(group["targets"])
+			if group["seen"]:
+				away.append_array(group["targets"])
 			continue
 		taken.append(mark_rect(box, tag, under))
 		out.append({"box": box, "color": group["color"], "tag": tag, "under": under})
@@ -368,32 +369,17 @@ func markers(size: Vector2) -> Array[Dictionary]:
 	return out
 
 
-# Whether the camera sees the thing at `at`: the world ray to it (Hitscan.WORLD; the ball
-# is on its own layer) meets nothing short of SIGHT_SLACK_M before it, or meets the fight's own machine.
+# Whether the camera sees the thing at `at`: the world ray to it (Hitscan.WORLD; the ball is on
+# its own layer) meets nothing short of SIGHT_SLACK_M before it. A live Brindle part and a Warden's
+# body are on the enemy layer, so they never hide their own parts; Brindle's wreck turns world at
+# the eject and hides the scooter like any wall.
 func in_sight(cam: Camera3D, at: Vector3) -> bool:
 	if not cam.is_inside_tree():
 		return true
 	var from := cam.global_position
 	var query := PhysicsRayQueryParameters3D.create(from, at, Hitscan.WORLD)
 	var hit: Dictionary = cam.get_world_3d().direct_space_state.intersect_ray(query)
-	if hit.is_empty() or hit["position"].distance_to(at) <= SIGHT_SLACK_M:
-		return true
-	return _fight_owns(hit.get("collider"))
-
-
-# Whether a collider belongs to the machine the plate's fight is against: Brindle's ship or
-# scooter, or the engaged Warden. The arena's walls are not the machine.
-func _fight_owns(collider) -> bool:
-	var boss = game.ctx.boss if game.ctx != null else null
-	var owners: Array = [game.flow.warden]
-	if is_instance_valid(boss):
-		owners.append_array([boss.get("ship"), boss.get("scooter")])
-	var node = collider
-	while node is Node:
-		if owners.any(func(owner): return is_instance_valid(owner) and owner == node):
-			return true
-		node = node.get_parent()
-	return false
+	return hit.is_empty() or hit["position"].distance_to(at) <= SIGHT_SLACK_M
 
 
 # The screen held by a comic panel or the start pick card (flourish_player.gd AVOID_GROUP), grown

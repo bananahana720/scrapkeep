@@ -31,7 +31,7 @@ const T := preload("res://tests/support/t.gd")
 #   P6  the markers point at the next move: each crane magnet, each vent cap, the cockpit while it
 #       is open, the scooter, and nothing while the row is the baited charge; a target in view
 #       wears brackets and, where there is room, its tag; one out of view goes to the edge;
-#   P7  a thing behind a wall keeps faint brackets and no tag; a comic panel over a thing takes no mark;
+#   P7  a thing behind a wall or Brindle's wreck keeps faint brackets and no tag; a comic panel over a thing takes no mark;
 #   R1  the pause build read with all twelve panels held (a long list) sits on screen, left of
 #       the pause column and clear of it, at 1280x720 and 1920x1080, and so does the empty read;
 #       on a short screen the turning view shrinks (to VIEW_MIN at least) and the read stays on screen.
@@ -92,7 +92,7 @@ func _physics_process(_delta: float) -> bool:
 func _run() -> void:
 	await _arena_checks()
 	await _pause_checks()
-	_late_phase_rows()
+	await _late_phase_rows()
 	_game.free()
 	quit(_t.verdict())
 
@@ -320,13 +320,17 @@ func _sight_checks(at: Vector3) -> void:
 		"marks %s" % [on])
 	wall.free()
 	await _frames(2)
+	var edges: int = markers.markers(size).filter(func(m): return m.has("dir")).size()
 	var panel := Control.new()
 	panel.add_to_group(FlourishPlayer.AVOID_GROUP)
 	_game.hud.add_child(panel)
 	panel.position = want - Vector2(150.0, 150.0)
 	panel.size = Vector2(300.0, 300.0)
-	var under: Array = markers.markers(size).filter(func(m): return m.has("box") and m["box"].intersects(Rect2(panel.position, panel.size)))
-	_t.check("P7 a comic panel over the thing takes no mark", under.is_empty(), "marks %s" % [under])
+	var panel_rect := Rect2(panel.position, panel.size)
+	var shown: Array = markers.markers(size)
+	_t.check("P7 a comic panel over the thing takes no mark, at the edge or round it",
+		shown.all(func(m): return not m.has("box") or not m["box"].intersects(panel_rect)) and shown.filter(func(m): return m.has("dir")).size() == edges,
+		"marks %s" % [shown])
 	panel.free()
 	cam.global_transform = was
 
@@ -364,6 +368,15 @@ func _late_phase_rows() -> void:
 	boss._begin_eject()
 	_t.eq("P5 the eject names the scooter", _plate_row(), ["ram_scooter", "Ram the Admiral's scooter", Objectives.glyph("ram_scooter")])
 	_t.eq("P6 and the marker follows the scooter", _marks(), [[boss.scooter.global_position], "SCOOTER", Objectives.glyph("ram_scooter")])
+	# The scooter lands across the arena from the ball, often with the wreck between: the wreck is
+	# world from the eject on and hides what is behind it like any wall.
+	await _frames(2)
+	var cam: Camera3D = _game.camera.cam
+	var was := cam.global_transform
+	var hull: Vector3 = boss.ship.hull.global_position
+	cam.look_at_from_position(hull + Vector3(0.0, 0.0, 20.0), hull)
+	_t.check("P7 the wreck hides a thing behind it", not _game.hud.edge_markers.in_sight(cam, hull + Vector3(0.0, 0.0, -20.0)))
+	cam.global_transform = was
 
 
 func _pause_checks() -> void:
