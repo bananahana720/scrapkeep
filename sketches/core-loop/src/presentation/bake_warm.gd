@@ -12,8 +12,9 @@ extends Node
 # once more, as a spawn builds them (the kit's own setup(), dressed by its own deferred bake), in an
 # inert holder far under the stage for one frame, so the render pipelines their surfaces need
 # compile then and not at the first spawn's first frame (six surface pipelines at f451 on the 4080;
-# #241 comment 6399644476). The holder stands a second frame with the kind's death debris boxes in
-# it (death_warm). A kind stands once a session, at the first stage that can send it. Until
+# #241 comment 6399644476). The holder stands a second frame with what play adds to the kind
+# (glow_warm: its hidden parts shown, its death debris, its owned glow switched the other way).
+# A kind stands once a session, at the first stage that can send it. Until
 # 10 November 2026 the list was the dam's ordinary packs by hand, and the elite's plated brute, the
 # one skinned body among them, built its pipelines the frame the dropship landed it (77 to 81 ms on
 # the 4080, seed 40317 f4345, three runs of three).
@@ -150,10 +151,10 @@ func _process(_delta: float) -> void:
 			_loading.erase(path)
 	if _shown != null:
 		if _shown.has_meta("spawn_warm") and not _shown.has_meta("debris_warm"):
-			# The debris joins the holder now, and a node that leaves before a frame is drawn never
-			# reaches the renderer: the holder stands this frame too, then goes.
+			# What play adds to the kind joins the holder now, and a node that leaves before a frame is
+			# drawn never reaches the renderer: the holder stands this frame too, then goes.
 			_shown.set_meta("debris_warm", true)
-			death_warm(_shown)
+			glow_warm(_shown)
 			return
 		# Stood only now, with both frames drawn: a warm node freed part way leaves the kind to the next.
 		if _standing != "":
@@ -311,6 +312,61 @@ static func death_warm(holder: Node3D) -> int:
 	if body != null and body.get("kind") is String:
 		EnemyMotion.scatter(body, body.kind, Vector3.FORWARD)
 	return twins.size()
+
+
+# The holder's second frame. A stood body is at rest, but in play the kit flips the glow on the
+# materials it owns (a hit flash; the plated brute's lit rim from its first tick as an elite) and
+# shows parts it built hidden (the plate cracks), and each of those is a look the stood body never
+# drew: on the 4080 the elite brute's lit plates built two pipelines the frame it landed (76 to
+# 86 ms, seed 40317 f4344, the #724 read). So first the hidden parts are shown, then the death
+# debris is thrown (death_warm: its boxes and the body's own meshes as pieces, cracks among them),
+# then every mesh in the holder that wears a material the body owns gets a copy beside it (same
+# mesh, skin and skeleton) wearing that material with its glow switched the other way. The copies'
+# materials are held, so their shaders stay compiled. Returns how many copies stand.
+static func glow_warm(holder: Node3D) -> int:
+	var body := holder.get_child(0) as Node3D if holder.get_child_count() > 0 else null
+	if body == null:
+		return 0
+	for part: Node3D in body.find_children("*", "Node3D", true, false):
+		part.visible = true
+	death_warm(holder)
+	var owned: Array = body.owned_materials() if body.has_method("owned_materials") else []
+	if owned.is_empty():
+		return 0
+	var flipped := {}
+	var copies := 0
+	for view: MeshInstance3D in holder.find_children("*", "MeshInstance3D", true, false):
+		if view.mesh == null or not view.is_visible_in_tree():
+			continue
+		var wears := false
+		for i in view.mesh.get_surface_count():
+			wears = wears or view.get_active_material(i) in owned
+		if not wears:
+			continue
+		var copy := MeshInstance3D.new()
+		copy.name = view.name + "Glow"
+		copy.mesh = view.mesh
+		copy.skin = view.skin
+		copy.cast_shadow = view.cast_shadow
+		copy.transparency = view.transparency
+		copy.material_overlay = view.material_overlay
+		copy.layers = view.layers
+		copy.transform = view.transform
+		view.get_parent().add_child(copy)
+		# A sibling, so the skeleton path reads the same from the copy.
+		copy.skeleton = view.skeleton
+		for i in view.mesh.get_surface_count():
+			var mat: Material = view.get_active_material(i)
+			if mat in owned and mat is StandardMaterial3D:
+				if not flipped.has(mat):
+					var glow := (mat as StandardMaterial3D).duplicate() as StandardMaterial3D
+					glow.emission_enabled = not glow.emission_enabled
+					_glows.append(glow)
+					flipped[mat] = glow
+				mat = flipped[mat]
+			copy.set_surface_override_material(i, mat)
+		copies += 1
+	return copies
 
 
 # A kit's kind name: its script's file name (src/combat/mag_trapper.gd is "mag_trapper").
