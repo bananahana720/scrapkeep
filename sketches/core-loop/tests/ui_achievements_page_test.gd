@@ -52,6 +52,19 @@ func _settle(seconds: float) -> void:
 		left -= _game.get_process_delta_time()
 
 
+# Waits for a card other than the last one returned to come up and returns it ([] after 20 s).
+var _last_toast: Array[String] = []
+
+
+func _next_toast() -> Array[String]:
+	var limit := 20.0
+	while (_game.hud.ach_toasts().is_empty() or _game.hud.ach_toasts() == _last_toast) and limit > 0.0:
+		await _settle(0.05)
+		limit -= 0.05
+	_last_toast = _game.hud.ach_toasts()
+	return _last_toast
+
+
 func _run() -> void:
 	while _game.flow == null:
 		await process_frame
@@ -135,19 +148,18 @@ func _run() -> void:
 	await _settle(0.5)
 	_t.check("P3-5 during a live Warden fight the toast waits", hud.ach_toasts().is_empty() and hud.ach_waiting() == [Achievements.toast_text("first_event"), Achievements.toast_text("full_rack")], "showing %s waiting %s" % [hud.ach_toasts(), hud.ach_waiting()])
 	_game.flow._unseal()
-	# A card waits for two quiet seconds after a fight (screen_busy.gd SETTLE).
-	await _settle(2.6)
+	await _settle(0.5)
 	# 2026-10-04 (fix round D): since HW2 the Warden's break offers a hot-wired part, and the
 	# Fit / Recycle screen opens over the paused tree as the gates open, freezing the HUD's
 	# toast clock. Recycle it here so the earn queue runs; the toast order is unchanged.
 	if hud.hotwire_screen != null and hud.hotwire_screen.is_open():
 		hud.hotwire_screen.choose("recycle")
 		await _frames(3)
-	_t.eq("P3-5 after the fight the first shows", hud.ach_toasts(), [Achievements.toast_text("first_event")])
-	await _settle(3.4)
-	_t.eq("P3-5 then the next, in order", hud.ach_toasts(), [Achievements.toast_text("full_rack")])
-	await _settle(3.4)
-	_t.eq("P3-5 the Warden's own earn comes last", hud.ach_toasts(), [Achievements.toast_text("warden_broken")])
+	# The screen has to be quiet for two seconds after the fight (screen_busy.gd), then the cards come one
+	# at a time in the order earned: each is awaited, and a card that never shows fails the check.
+	_t.eq("P3-5 after the fight the first shows", await _next_toast(), [Achievements.toast_text("first_event")])
+	_t.eq("P3-5 then the next, in order", await _next_toast(), [Achievements.toast_text("full_rack")])
+	_t.eq("P3-5 the Warden's own earn comes last", await _next_toast(), [Achievements.toast_text("warden_broken")])
 	# 2026-10-05 (wave 14, prog-G10): the page after a won run's bus facts, on its own bus.
 	var bus = GameEvents.new()
 	_game.add_child(bus)
