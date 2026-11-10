@@ -10,10 +10,12 @@ const LoreRows := preload("res://src/core/lore_rows.gd")
 # 2. A second cause inside the gap is dropped, not queued; after the gap the next one speaks.
 # 3. A call is said once a run.
 # 4. A call that cannot come up (a paused screen holds it) goes stale and is dropped.
-# 5. The low-hull call needs a low hull.
-# 6. A pilot's line is said by a freed pilot who is not the one flying.
-# 7. A call never talks over a fight: with the boss up it waits, then goes stale.
-# 8. A new run can say them again.
+# 5. The low-hull call needs a low hull, when it is caused and when it is said.
+# 6. A pilot's line is said by a freed pilot who is not the one flying, one tease a run.
+# 7. A call never talks over a fight: with the boss up nothing is caused, and a call that is up
+#    gives way.
+# 8. A Warden's fall is called by the crew whose gates they were.
+# 9. A new run can say them again.
 # smoke: timeout=180s
 
 var _t := preload("res://tests/support/t.gd").new("call_in_test")
@@ -91,7 +93,7 @@ func _check() -> void:
 	_t.check("a call is said once a run", not _bubble.visible and _bubble._call.is_empty(), "bubble '%s'" % _bubble.text)
 	# 4. Held by a paused screen, it goes stale.
 	paused = true
-	events.activity_done.emit("trade_risk", at)
+	events.trade_taken.emit("trade_risk", at)
 	_t.check("a paused screen holds the call", not _bubble.visible and _bubble._call.get("id", "") == "call.spillway.gamble", "waiting %s" % [_bubble._call.get("id", "")])
 	_bubble._process(LoreRows.CALL_FRESH_S + 0.1)
 	paused = false
@@ -106,7 +108,15 @@ func _check() -> void:
 	_game.run.hp = _game.run.max_hp * 0.2
 	events.player_hit.emit(1.0, "test")
 	_t.check("a hit on a low hull brings Moss's spare seal", _said("call.spillway.low_hull"), "bubble '%s'" % _bubble.text)
+	_quiet()
+	_bubble._calls_played.erase("call.spillway.low_hull")
+	paused = true
+	events.player_hit.emit(1.0, "test")
 	_game.run.hp = hp
+	paused = false
+	_bubble._process(0.1)
+	_t.check("a hull mended before the call's turn calls nobody", not _bubble.visible and _bubble._call.is_empty()
+		and not _bubble._calls_played.has("call.spillway.low_hull"), "bubble '%s'" % _bubble.text)
 	# 6. A freed pilot who is not flying.
 	_quiet()
 	events.drop_landed.emit(3)
@@ -123,18 +133,31 @@ func _check() -> void:
 			free = _game.pilot_unlocked(def)
 	_t.check("a big drop is teased by a freed pilot who is not flying", caller.has("pilot") and caller["pilot"] != flying and free
 		and _said(caller["id"]), "flying %s, caller %s, bubble '%s'" % [flying, caller.get("pilot", ""), _bubble.text])
+	_quiet()
+	events.drop_landed.emit(3)
+	_t.check("one tease a run: the next big drop calls nobody", not _bubble.visible and _bubble._call.is_empty(), "bubble '%s'" % _bubble.text)
 	# 7. Never over a fight.
 	_quiet()
 	var state: int = _game.flow.state
 	_game.flow.state = _game.flow.BOSS
 	_game.flow.boss_active = true
 	events.evolution_fired.emit("hot_rivets")
-	_t.check("a call waits while the boss is up", not _bubble.visible and _bubble._call.get("id", "") == "call.spillway.evolved", "waiting %s" % [_bubble._call.get("id", "")])
-	_bubble._process(LoreRows.CALL_FRESH_S + 0.1)
-	_t.check("and is gone when the fight outlasts it", _bubble._call.is_empty() and not _bubble.visible, "bubble '%s'" % _bubble.text)
+	_t.check("with the boss up a cause calls nobody", not _bubble.visible and _bubble._call.is_empty(), "bubble '%s'" % _bubble.text)
 	_game.flow.boss_active = false
 	_game.flow.state = state
-	# 8. A new run.
+	events.evolution_fired.emit("hot_rivets")
+	_t.check("the same cause outside the fight brings Moss's line", _said("call.spillway.evolved"), "bubble '%s'" % _bubble.text)
+	_game.flow.state = _game.flow.BOSS
+	_game.flow.boss_active = true
+	_bubble._process(0.1)
+	_t.check("a call that is up gives way when the fight goes live", _bubble._hold <= 0.0, "hold %.2f s" % _bubble._hold)
+	_game.flow.boss_active = false
+	_game.flow.state = state
+	# 8. The Warden's fall.
+	_quiet()
+	events.beacon_unsealed.emit(1)
+	_t.check("the dam Warden's fall is called by the pump crew", _said("call.spillway.dam_warden"), "bubble '%s'" % _bubble.text)
+	# 9. A new run.
 	events.run_started.emit(flying)
 	_bubble.dismiss_exchange()
 	events.activity_done.emit("enemy_camp", at)

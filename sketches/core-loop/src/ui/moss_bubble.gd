@@ -127,6 +127,8 @@ func _on_run_started(_class_id: String) -> void:
 	_calls_played.clear()
 	_call = {}
 	_call_quiet = LoreRows.CALL_GAP_S
+	if mood == "call":
+		_clear_line()
 	_hello_due = 0
 	_zones_played.clear()
 	_intros_played.clear()
@@ -329,13 +331,13 @@ func _call_event_3(a, b, c, event: String) -> void:
 # A bus signal happened: the first call row it causes takes the waiting slot. Returns the row
 # (empty when nothing answers, or the last call was too recent).
 func call_caused(event: String, args: Array) -> Dictionary:
-	if not _game.flow.in_play() or _call_quiet < LoreRows.CALL_GAP_S or not _call.is_empty():
+	if _call_quiet < LoreRows.CALL_GAP_S or not _call.is_empty() or not _game.flow.in_play() or _fight():
 		return {}
 	var row := _call_for(event, args)
 	if row.is_empty():
 		return {}
 	_call = row
-	_call_fresh = float(row.get("fresh", LoreRows.CALL_FRESH_S))
+	_call_fresh = LoreRows.CALL_FRESH_S
 	_tick_call(0.0)
 	return row
 
@@ -346,7 +348,7 @@ func _call_for(event: String, args: Array) -> Dictionary:
 	for row in LoreRows.CALLS:
 		if _calls_played.has(row["id"]) or int(row["world"]) != world or not LoreRows.call_matches(row, event, args):
 			continue
-		if row.get("when", "") == "low_hull" and _game.run.hp >= _game.run.max_hp * LoreRows.CALL_LOW_HULL:
+		if not _call_holds(row):
 			continue
 		if not row.has("pilot"):
 			return row
@@ -354,6 +356,17 @@ func _call_for(event: String, args: Array) -> Dictionary:
 			pilots.append(row)
 	# Which freed pilot was watching is the run's own: the same seed, the same voice.
 	return pilots[absi(_game.run.run_seed) % pilots.size()] if not pilots.is_empty() else {}
+
+
+# A row's `when` is true now.
+func _call_holds(row: Dictionary) -> bool:
+	return row.get("when", "") != "low_hull" or _game.run.hp < _game.run.max_hp * LoreRows.CALL_LOW_HULL
+
+
+# A Warden or a boss is up: no call is caused or said across that fight.
+func _fight() -> bool:
+	var flow = _game.flow
+	return WhyCallout.warden_fight_live(flow) or (flow.state_name() == "boss" and flow.boss_active)
 
 
 func _pilot_free(class_id: String) -> bool:
@@ -365,8 +378,7 @@ func _pilot_free(class_id: String) -> bool:
 
 # Whether a call may come up now: in play, no fight, nothing held (see _waits), the bubble free.
 func _call_may_speak() -> bool:
-	var flow = _game.flow
-	if not flow.in_play() or _waits() or WhyCallout.warden_fight_live(flow) or (flow.state_name() == "boss" and flow.boss_active):
+	if not _game.flow.in_play() or _waits() or _fight():
 		return false
 	# The run's opening is one voice at a time and all of them are spoken for.
 	var opening = _game.get("opening")
@@ -377,12 +389,20 @@ func _call_may_speak() -> bool:
 
 func _tick_call(delta: float) -> void:
 	_call_quiet += delta
+	# A fight going live takes the screen from a call that is up.
+	if visible and mood == "call" and _fight():
+		hush()
 	if _call.is_empty():
 		return
 	if _call_may_speak():
 		var row := _call
 		_call = {}
-		_calls_played[row["id"]] = true
+		if not _call_holds(row):
+			return
+		# One pilot's line on a cause is the run's: the others' rows for it are spent with it.
+		for other in LoreRows.CALLS:
+			if other["id"] == row["id"] or (row.has("pilot") and other.has("pilot") and other["on"] == row["on"]):
+				_calls_played[other["id"]] = true
 		_call_quiet = 0.0
 		_present(String(row["speaker"]), String(row["text"]), _voice(String(row["speaker"]), String(row["text"])))
 		return
