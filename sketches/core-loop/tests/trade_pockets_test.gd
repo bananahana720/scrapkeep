@@ -213,6 +213,8 @@ func _runtime(model) -> void:
 			acts.sites.append(s)
 			var label: Label3D = s.get_node("TradePrices")
 			price_ok = price_ok and label.visible and label.position.z > entry.entrances[0].at[1]
+			# The beam's word is the counter's name alone; the prices are the door label's.
+			price_ok = price_ok and s.view.word.text == String(entry.tell.word)
 			for device in s.trade_devices:
 				price_ok = price_ok and label.text.contains(device.words()) and device.offer.cost_kind != "scrap" and device in game.world.interact.devices
 			var at: Vector3 = s.to_global(Vector3(entry.entry_spot[0], 0, entry.entry_spot[1]))
