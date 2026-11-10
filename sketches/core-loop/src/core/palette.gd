@@ -20,6 +20,11 @@ const ANCIENT := Color("9dff3c")
 const CABLE := Color("2a3231")
 # Outside the greybox palette on purpose: a klaxon has to read as nothing else on screen.
 const HAZARD := Color("ff5a3c")
+# A wall that only holds you in (the yard lock's fence): worn bone, never the danger colour
+# or its outline style (PF-16: the attack's outline was read as the yard walls). It sits at
+# least FENCE_GAP CIE76 from HAZARD, the gap LEGIBILITY.md asks of the live colour.
+const FENCE := Color("d2c5a5")
+const FENCE_GAP := 35.0
 # Admiral Brindle's brass: every boss fact wears it.
 const BRASS := Color("d9b44a")
 # Tally's ledger-paper cream: a pilot's colour, kept off the hostile hues.

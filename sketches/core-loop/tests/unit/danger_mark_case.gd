@@ -2,21 +2,20 @@ extends RefCounted
 
 const DangerMark := preload("res://src/ui/danger_mark.gd")
 
-# The danger mark's own rules (ui/danger_mark.gd): it shows only for a run of 0 to 1, its fill
-# grows foot first to the whole diamond, it stands over the ball's top edge and steps up
-# over the box it is told to avoid.
+# The danger mark's own rules (ui/danger_mark.gd): it keeps the run of 0 to 1 and its fill
+# grows foot first to the whole diamond, but since wave 36 it never shows over the ball.
 
 
 func run(t) -> void:
 	var mark = DangerMark.new()
 	t.check("no warning, no mark", not mark.shown() and mark.rect() == Rect2(), "run %.2f" % mark.run)
 	mark.show_run(0.25)
-	mark.follow(Vector2(800.0, 600.0))
-	var box: Rect2 = mark.rect()
-	t.check("it stands over the ball's top edge", mark.shown() and box.end.y <= 600.0 and is_equal_approx(box.get_center().x, 800.0), "box %s" % box)
 	mark.avoid = Rect2(762.0, 520.0, 76.0, 76.0)
 	mark.follow(Vector2(800.0, 601.0))
-	t.check("and steps up over the box it avoids", not mark.rect().intersects(mark.avoid) and mark.rect().end.y <= mark.avoid.position.y, "box %s, avoid %s" % [mark.rect(), mark.avoid])
+	# Wave 36 (PF-16): the bang stacked on the aim reticle read as a target mark; the ground
+	# mark's growing fill carries the warning, so this mark never stands over the ball.
+	t.check("the retired mark stays off the reticle mid-warning", not mark.shown() and mark.rect() == Rect2() and is_equal_approx(mark.run, 0.25),
+		"run %.2f, box %s" % [mark.run, mark.rect()])
 	mark.show_run(-1.0)
 	t.check("the mark goes with the warning", not mark.shown(), "run %.2f" % mark.run)
 	mark.show_run(7.0)

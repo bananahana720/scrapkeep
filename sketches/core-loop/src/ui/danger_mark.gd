@@ -14,6 +14,13 @@ const Palette := preload("res://src/core/palette.gd")
 # near miss's chevrons then fire. No word, no sound, no flash: the fill is its only motion.
 # It stands LIFT over the ball's top edge on screen and steps up over `avoid` (the aim
 # reticle's box, from the HUD) as the part name does (ui/part_name.gd).
+#
+# Retired in wave 36 (PF-16, design call 2): stacked on the aim reticle, the bang read as a
+# target mark, and no reader could say where safe ground was. The ground mark now says "this
+# soon" itself (its fill grows from the centre to the outline on the hit tick,
+# combat/threat_grammar.gd fill_span), so this mark keeps reading the dodge watch but never
+# shows. A cue kept above an enemy marks that attacker winding up, and is not this mark.
+const RETIRED := true
 
 const HALF := 19.0
 const KEYLINE := 3.0
@@ -50,7 +57,7 @@ func show_run(value: float) -> void:
 
 
 func shown() -> bool:
-	return run >= 0.0
+	return run >= 0.0 and not RETIRED
 
 
 # Where the ball's top edge is on screen; the mark stands above it.
