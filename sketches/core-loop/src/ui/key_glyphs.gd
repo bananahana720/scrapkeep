@@ -6,7 +6,7 @@ const EventKinds := preload("res://src/core/event_kinds.gd")
 const Icons := preload("res://src/ui/icons.gd")
 const Keycap := preload("res://src/ui/keycap.gd")
 const Glyphs := preload("res://src/ui/glyphs.gd")
-const UiFonts := preload("res://src/ui/ui_fonts.gd")
+const UiDraw := preload("res://src/ui/ui_draw.gd")
 
 # The prompt (design-v3/LEGIBILITY.md sections 2, 3 and 5): a sand keycap about 28 px tall plus
 # the verb's icon in the live colour, drawn at the thing the verb acts on and only on ticks
@@ -444,6 +444,5 @@ func _draw() -> void:
 			edge = icon.end.x + 5.0
 		var word: String = placed["word"]
 		if word != "":
-			var font := UiFonts.bold()
-			draw_string(font, Vector2(edge, at.y + (font.get_ascent(WORD_SIZE) - font.get_descent(WORD_SIZE)) * 0.5), word,
-				HORIZONTAL_ALIGNMENT_LEFT, -1, WORD_SIZE, live)
+			# Outlined, as every word drawn over the world is: the live colour alone is lost on pale sand.
+			UiDraw.text(self, edge, at.y, word, WORD_SIZE, live)
