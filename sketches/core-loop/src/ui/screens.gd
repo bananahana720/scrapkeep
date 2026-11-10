@@ -14,6 +14,7 @@ const HelpPage := preload("res://src/ui/help_page.gd")
 const AchievementsPage := preload("res://src/ui/achievements_page.gd")
 const SettingsPages := preload("res://src/ui/settings_pages.gd")
 const CampMenu := preload("res://src/ui/camp_menu.gd")
+const CampScrapbook := preload("res://src/ui/camp_scrapbook.gd")
 const JukeboxPage := preload("res://src/ui/jukebox_page.gd")
 const RadioPage := preload("res://src/ui/radio_page.gd")
 const Achievements := preload("res://src/core/achievements.gd")
@@ -717,6 +718,9 @@ func _sync_walk() -> void:
 	var customizing: bool = _camp.customize != null and _camp.customize.visible
 	game.walk_input(live)
 	game.camp_hub.set_prompts_visible(live)
+	# The camp's caption card belongs to the walk: a page over it is read alone.
+	for card in get_tree().get_nodes_in_group(CampScrapbook.LINE_GROUP):
+		card.visible = live
 	_camp.visible = live or customizing
 	_veil.visible = not live
 	_title.visible = not live
