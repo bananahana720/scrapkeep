@@ -743,16 +743,50 @@ var _live_frame := -1
 func _tend_mix(delta: float) -> void:
 	var state := mix_state()
 	var focus := clock < _focus_until or _slowed
+	var room := _drop_room_now()
 	var moved := false
 	for bus in BUSES:
-		var want := MixRows.state_db(state, bus) + (float(MixRows.FOCUS.get(bus, 0.0)) if focus else 0.0)
+		var want := MixRows.state_db(state, bus) + (float(MixRows.FOCUS.get(bus, 0.0)) if focus else 0.0) + float(room.get(bus, 0.0))
 		var now := float(mix_db.get(bus, want))
-		var next := MixRows.glide(now, want, delta) if mix_db.has(bus) else want
+		var next := MixRows.glide(now, want, delta, room.has(bus)) if mix_db.has(bus) else want
 		if not mix_db.has(bus) or absf(next - now) > 0.001:
 			moved = true
 		mix_db[bus] = next
 	if moved:
 		_apply_volumes()
+
+
+# Room for the Warden form's drop (tuning drop_room, mix_rows.gd DROP_ROOM): the band that
+# booked the drop and the transport span its offsets hold for. A new band (a pack change)
+# ends it.
+var _drop_room := []
+
+
+func _make_drop_room(at: int) -> void:
+	var tuning = ctx.get("tuning") if ctx != null else null
+	var name: String = tuning.option(Tuning.DROP_ROOM_KEY) if tuning != null else "off"
+	if not MixRows.DROP_ROOM.has(name):
+		_drop_room = []
+		return
+	var from := at - int(MixRows.DROP_ROOM_LEAD_S * AceSequencer.RATE)
+	_drop_room = [ace, from, at + MixRows.DROP_ROOM_BARS * ace.grid_bar, MixRows.DROP_ROOM[name]]
+
+
+func _drop_room_now() -> Dictionary:
+	if _drop_room.is_empty():
+		return {}
+	if _drop_room[0] != ace or ace == null:
+		_drop_room = []
+		return {}
+	# Timed on the sample the player hears, not the render head (as live_key reads the key).
+	var queued := 0
+	if live_output and _music_pb != null:
+		queued = _ring_capacity - _music_pb.get_frames_available()
+	var heard: int = ace.audible_sample(queued)
+	if heard >= int(_drop_room[2]):
+		_drop_room = []
+		return {}
+	return _drop_room[3] if heard >= int(_drop_room[1]) else {}
 
 
 # The effect voices sounding, counted once a frame (plus the ones started since).
@@ -3893,6 +3927,7 @@ func _follow_warden_form(posture: float, staggered: bool, landed: bool) -> void:
 	var at: int = ace.follow_guard(posture, staggered, landed)
 	if at >= 0:
 		cue_log.append(["warden_form", "drop", "beat", at, 1.0, 0.0])
+		_make_drop_room(at)
 
 
 func _stagger_chord() -> void:

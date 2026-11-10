@@ -134,7 +134,9 @@ const TRIM_DB := {
 	"breach_crack": -4.0,
 	# v2 W5: the leitmotifs, the crowd-control holds, the ancients and Moss's bench.
 	"sable_arpeggio": -3.0, "rivet_hihat_roll": -3.0, "kest_low_thump": -2.0, "tarn_latch_tear": -3.0, "tally_balance_due": -3.0, "cannon_recall": -3.0,
-	"sable_ready": -9.0, "rivet_ready": -9.0, "kest_ready": -8.0, "tarn_ready": -9.0, "tally_ready": -9.0, "cannon_ready": -9.0,
+	# The ultimate's ready pulse carries news: 4 dB up from -9 (-8 for Kest) after mixsim read
+	# rivet_ready buried in a Warden fight (median -2.2 on the PC, -2.0 in the cloud; +2.0 here).
+	"sable_ready": -5.0, "rivet_ready": -5.0, "kest_ready": -4.0, "tarn_ready": -5.0, "tally_ready": -5.0, "cannon_ready": -5.0,
 	"sable_break": -3.0, "rivet_break": -3.0, "kest_break": -3.0, "tarn_break": -3.0, "tally_break": -3.0, "cannon_break": -3.0,
 	"fleet_motif": -4.0, "reactor_tick": -6.0, "reactor_erupt": -2.0, "swarm_buzz": -9.0, "swarm_lock": -6.0, "swarm_scatter": -8.0,
 	"mind_sable": -5.0, "mind_rivet": -5.0, "mind_kest": -5.0, "mind_tarn": -5.0, "mind_tally": -5.0, "mind_cannon": -5.0,

@@ -105,24 +105,25 @@ static func pose_basis(spec: Dictionary) -> Basis:
 	return Basis(Vector3.RIGHT, -deg_to_rad(float(pose.get("degrees", 0.0))))
 
 
+# A part thrown a second time is this much of its size, so the repeats read as smaller pieces of
+# the same machine.
+const REPEAT_SCALE := 0.6
+
+
 static func part_count(death: Dictionary) -> int:
 	var parts := int(death.get("parts", PARTS_MIN))
 	return mini(parts, LOW_PART_CAP) if GraphicsPreset.current == "low" else parts
 
 
 # Breaks the dying enemy's look into its row's pieces, thrown along `direction`. Pieces reuse
-# the model's meshes and materials; with fewer than two meshes they are boxes in its
-# material. The spread is a hash of the death point, so seeded runs replay it.
+# the model's meshes and materials, each part again smaller and turned once the parts run out;
+# with fewer than two meshes they are boxes in its material. The spread is a hash of the death point, so seeded runs replay it.
 static func scatter(enemy: Node3D, kind: String, direction: Vector3) -> Node3D:
 	var death: Dictionary = WindupRows.ROWS.get(kind, {}).get("death", {})
 	var parent := enemy.get_parent()
 	if death.is_empty() or parent == null:
 		return null
-	var sources: Array[MeshInstance3D] = []
-	for found in enemy.find_children("*", "MeshInstance3D", true, false):
-		var mi := found as MeshInstance3D
-		if mi.mesh != null and mi.is_visible_in_tree():
-			sources.append(mi)
+	var sources := _parts_of(enemy)
 	var node: Node3D = (load("res://src/presentation/enemy_motion.gd") as GDScript).new()
 	node.name = "DeathScatter"
 	node.style = String(death.style)
@@ -132,7 +133,7 @@ static func scatter(enemy: Node3D, kind: String, direction: Vector3) -> Node3D:
 	node.global_transform = Transform3D(Basis.IDENTITY, at)
 	var material: Material = null
 	if not sources.is_empty():
-		material = sources[0].material_override if sources[0].material_override != null else sources[0].get_active_material(0)
+		material = sources[0]["material"]
 	var throw := Vector3(direction.x, 0.0, direction.z)
 	throw = throw.normalized() if throw.length_squared() > 0.0001 else Vector3.ZERO
 	var count := part_count(death)
@@ -142,13 +143,23 @@ static func scatter(enemy: Node3D, kind: String, direction: Vector3) -> Node3D:
 		var angle := TAU * (float(i) + float((seed_hash >> (i % 16)) % 7) / 14.0) / float(count)
 		var out := Vector3(cos(angle), 0.0, sin(angle))
 		node.add_child(piece)
-		if sources.size() >= 2 and i < sources.size():
-			var src := sources[i]
-			piece.mesh = src.mesh
-			piece.material_override = src.material_override
-			for s in src.get_surface_override_material_count():
-				piece.set_surface_override_material(s, src.get_surface_override_material(s))
-			piece.global_transform = src.global_transform
+		if sources.size() >= 2:
+			# The body's own parts. Past one each, a part is thrown again smaller and turned,
+			# so a death never fills with plain boxes (technicals counted half of each death's
+			# pieces as boxes, 10 Nov 2026).
+			var src: Dictionary = sources[i % sources.size()]
+			piece.mesh = src["mesh"]
+			piece.material_override = src["override"]
+			var overrides: Array = src["surfaces"]
+			for surface in overrides.size():
+				piece.set_surface_override_material(surface, overrides[surface])
+			piece.global_transform = src["xform"]
+			var again := i / sources.size()
+			if again > 0:
+				var turn := Basis(out.cross(Vector3.UP).normalized(), PI * 0.5 * float(again) + float(seed_hash % 5) * 0.3)
+				var xform: Transform3D = src["xform"]
+				piece.basis = turn * xform.basis * REPEAT_SCALE
+				piece.global_position = xform.origin + out * 0.3 * float(again)
 		else:
 			var box := BoxMesh.new()
 			box.size = Vector3.ONE * (0.45 - 0.03 * float(i % 4))
@@ -157,6 +168,34 @@ static func scatter(enemy: Node3D, kind: String, direction: Vector3) -> Node3D:
 			piece.position = out * 0.4 + Vector3.UP * 0.6
 		node._pieces.append({"node": piece, "velocity": _throw(node.style, out, throw), "spin": out.cross(Vector3.UP) * 6.0, "turn": piece.basis})
 	return node
+
+
+# The visible parts of a body as death pieces: {mesh, override, surfaces, material, xform}. A
+# multimesh without instance colours (the reactor relic's vent stacks) gives one part per instance.
+static func _parts_of(enemy: Node3D) -> Array:
+	var parts := []
+	for found in enemy.find_children("*", "GeometryInstance3D", true, false):
+		if not (found as Node3D).is_visible_in_tree():
+			continue
+		if found is MeshInstance3D and (found as MeshInstance3D).mesh != null:
+			var mi := found as MeshInstance3D
+			var surfaces := []
+			for i in mi.get_surface_override_material_count():
+				surfaces.append(mi.get_surface_override_material(i))
+			parts.append({"mesh": mi.mesh, "override": mi.material_override, "surfaces": surfaces,
+				"material": mi.material_override if mi.material_override != null else mi.get_active_material(0), "xform": mi.global_transform})
+		elif found is MultiMeshInstance3D:
+			var mmi := found as MultiMeshInstance3D
+			var mm := mmi.multimesh
+			# Instance colours do not carry to a single mesh, so a tinted multimesh (the boom
+			# tender's lamps) stays out.
+			if mm == null or mm.mesh == null or mm.transform_format != MultiMesh.TRANSFORM_3D or mm.use_colors:
+				continue
+			for i in mini(mm.visible_instance_count if mm.visible_instance_count >= 0 else mm.instance_count, mm.instance_count):
+				parts.append({"mesh": mm.mesh, "override": mmi.material_override, "surfaces": [],
+					"material": mmi.material_override if mmi.material_override != null or mm.mesh.get_surface_count() == 0 else mm.mesh.surface_get_material(0),
+					"xform": mmi.global_transform * mm.get_instance_transform(i)})
+	return parts
 
 
 static func _throw(death_style: String, out: Vector3, throw: Vector3) -> Vector3:

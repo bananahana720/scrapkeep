@@ -4,11 +4,19 @@ extends SceneTree
 # 5): the game on its dam, the chase camera and the HUD. First the panel pickup's pop at the ball
 # (its shortest, middle and longest line, then one of the player's own hit words for scale). Then
 # one kind at a time arrives ahead of the ball, works on it, takes a hit, stands stunned if it can
-# be (the kinds built on counter.gd), and dies, with its name on screen.
+# be (the kinds built on counter.gd), and dies, with its name on screen. It arrives and works under
+# the play camera; for the hit, the stun and the death a second camera stands CLOSE_M from it on
+# the ball's side (a little round from the ball), because from the ball a death 14 m off is a few
+# pixels and the ball's own warning rings stand in the way. The ball's hull is filled before every kind and the reel stops
+# if the ball is ever scrapped: on the PC's first run it was, and the last kind played under the
+# game-over screen.
 # Record it with Godot's movie writer, which draws every frame at the stated rate whatever the
 # machine's speed, so the film runs at play speed:
-#   <godot> --path sketches/core-loop --resolution 1920x1080 --fixed-fps 60 --write-movie /abs/dir/reel.avi \
+#   <godot> --path sketches/core-loop --fixed-fps 60 --write-movie /abs/dir/reel.avi \
 #     --script res://tools/sight_reel.gd -- --out=/abs/dir [--only=pop,chaser,lobber] [--captions=0]
+# The film is the game's own view (1600 by 900, kept at 16:9 on any screen). The PC lane found
+# that --resolution did not change the film and that a wider one only stretched the same view;
+# reel.json's `size` is the view, not the film's pixels, so it cannot tell.
 # A display is needed for the film (xvfb-run works; the cloud's renderer judges motion and place,
 # not the look). Headless, with --fixed-fps 60 and no --write-movie, it plays the same reel and
 # writes only reel.json. The movie writer films from the engine's first frame, so the reel's
@@ -38,6 +46,7 @@ const MachineFx := preload("res://src/presentation/machine_fx.gd")
 const PanelFx := preload("res://src/presentation/panel_fx.gd")
 const Panels := preload("res://src/build/panels.gd")
 const Palette := preload("res://src/core/palette.gd")
+const MossBubble := preload("res://src/ui/moss_bubble.gd")
 
 # The Spillway roster (design-v3/SPILLWAY-ROSTER.md), ordinary kinds first, then the specials.
 const KINDS := ["chaser", "lobber", "mag_trapper", "jolt_layer", "catch_trap", "hooker", "ramp_flipper", "boom_tender", "plated_brute",
@@ -62,6 +71,12 @@ const WAIT_TICKS := 2400
 const QUIET_TICKS := 900
 # The ball's centre this close over the ground is the ball on the ground.
 const LANDED := 1.6
+const HULL := 999999.0
+# The close camera: how far from the kind, how high, and where on the kind it looks.
+const CLOSE_M := 7.0
+const CLOSE_UP := 2.4
+const CLOSE_AIM := 1.0
+const CLOSE_TURN := 0.6
 
 var game
 var out := ""
@@ -83,6 +98,11 @@ var _clip := ""
 var _cut_age := 0
 var _step_min := INF
 var _step_max := 0.0
+var _play_camera: Camera3D
+var _close_camera: Camera3D
+var _close := false
+var _spot := Vector3.ZERO
+var _bubble: Node
 
 
 func _initialize() -> void:
@@ -134,6 +154,7 @@ func _run() -> void:
 	if game.hud.get("first_steps") != null:
 		game.hud.first_steps.modulate.a = 0.0
 	var spot: Vector3 = game.player.ball_position()
+	_spot = spot
 	var ahead := Vector3.BACK
 	if is_instance_valid(game.flow.beacon):
 		ahead = game.flow.beacon.global_position - spot
@@ -149,6 +170,7 @@ func _run() -> void:
 
 	var at := spot + ahead * AHEAD
 	at.y = Telegraph.ground_under(ground, at) + 1.0
+	_hush()
 	if POP in only:
 		await _pop()
 	for kind in only:
@@ -159,6 +181,13 @@ func _run() -> void:
 		if not (kind in BASE_KINDS or game.combat.fleet.makes(kind)):
 			rows.append({"kind": kind, "skipped": "the game makes no such kind"})
 			continue
+		# The pop's panels and a stage entry put the hull's ceiling back; fill it for every kind.
+		# A scrapped ball cannot be healed, so a kind never starts under the game-over screen.
+		if not game.run.alive():
+			return _fail("the ball was scrapped before the %s" % kind)
+		game.run.set_max_hp(HULL)
+		game.run.heal(HULL)
+		_hush()
 		_row = {"kind": kind, "start_s": snappedf(clock, 0.01), "clips": false, "parts": 0, "frames": 0, "snaps": [], "cuts": [], "beats": {}}
 		_say("%s  arrives and works" % kind)
 		_enemy = game.combat.spawn_enemy(kind, at)
@@ -167,6 +196,7 @@ func _run() -> void:
 		_clip = ""
 		await _seconds(WORK)
 		if is_instance_valid(_enemy):
+			_closeup(true)
 			_beat("hit")
 			_say("%s  takes a hit" % kind)
 			# The flinch a player's hit gives it (its hit clip rides on the reaction), and the damage.
@@ -190,6 +220,10 @@ func _run() -> void:
 			if pivot is Node3D and is_instance_valid(pivot) and pivot.get_parent() is Node3D and pivot.get_parent() != _enemy:
 				_body = pivot.get_parent()
 		await _seconds(DEATH)
+		_closeup(false)
+		if not game.run.alive():
+			return _fail("the ball was scrapped while the %s was up" % kind)
+		_row["hull_left"] = snappedf(game.run.hp / game.run.max_hp, 0.001)
 		_row["end_s"] = snappedf(clock, 0.01)
 		_row["in_clip"] = (_row["snaps"] as Array).size()
 		# A kind that never stood, or that the light hit killed, was not counted through its death.
@@ -270,6 +304,7 @@ static func _newest(fx) -> Dictionary:
 # the step after it is known.
 func _process(delta: float) -> bool:
 	clock += delta
+	_aim_close()
 	if not is_instance_valid(_body) or delta <= 0.0 or _row.is_empty():
 		return false
 	_step_min = minf(_step_min, delta)
@@ -332,6 +367,49 @@ func _process(delta: float) -> bool:
 			for key in ["deg", "m", "clip", "cut"]:
 				(part[key] as Array).pop_front()
 	return false
+
+
+# The close camera on or off. Off hands the picture back to the play camera.
+func _closeup(on: bool) -> void:
+	if on and _close_camera == null:
+		_play_camera = root.get_camera_3d()
+		_close_camera = Camera3D.new()
+		_close_camera.name = "ReelClose"
+		if _play_camera != null:
+			_close_camera.fov = _play_camera.fov
+			_close_camera.far = _play_camera.far
+		root.add_child(_close_camera)
+	_close = on
+	if on:
+		_aim_close()
+		_close_camera.make_current()
+	elif is_instance_valid(_play_camera):
+		_play_camera.make_current()
+
+
+# The close camera stands CLOSE_M from the kind, on the ball's side and CLOSE_TURN round from the
+# ball, and looks at the kind: a kind that works at arm's length would have the ball in the way.
+func _aim_close() -> void:
+	if not _close or not is_instance_valid(_body) or not is_instance_valid(_close_camera):
+		return
+	var at: Vector3 = _body.global_position
+	var back := _spot - at
+	back.y = 0.0
+	back = (back.normalized() if back.length() > 0.5 else Vector3.BACK).rotated(Vector3.UP, CLOSE_TURN)
+	var eye := at + back * CLOSE_M + Vector3.UP * CLOSE_UP
+	_close_camera.look_at_from_position(eye, at + Vector3.UP * CLOSE_AIM, Vector3.UP)
+
+
+# The crew's hello stays up until a key answers it; it is put down as a press of fire does.
+func _hush() -> void:
+	if _bubble == null:
+		for node in game.find_children("*", "Control", true, false):
+			if node.get_script() == MossBubble:
+				_bubble = node
+				break
+	if is_instance_valid(_bubble) and _bubble.showing():
+		_bubble.dismiss_exchange()
+		_bubble.hush()
 
 
 # The kind's clip driver (enemy_clips.gd seats it on the body's pivot), or null for a kind with no clips.

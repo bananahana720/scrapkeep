@@ -44,6 +44,55 @@ func standing_in() -> float:
 	return _standing
 
 
+# The shortest way out of a warning for a ball at `at` (for the danger mark's way out: a small
+# chevron on the mark failed its blind read on 10 Nov 2026, 0 of 9 answers named the way, so a
+# stronger candidate is owed), flat and unit length, from its committed
+# shape (the descriptor its damage reads): a ring or wave outward, a band (a ring with a hole)
+# inward or outward, a wedge also across its nearer side, a lane sideways or off either end.
+# Zero when the shape gives no way (the ball on a ring's very centre still gets one: outward
+# along the ring's own first edge).
+static func way_out(d: Dictionary, at: Vector3) -> Vector3:
+	var centre: Vector3 = d.get("centre", at)
+	var flat := Vector3(at.x - centre.x, 0.0, at.z - centre.z)
+	var best := INF
+	var way := Vector3.ZERO
+	match String(d.get("form", "")):
+		"radial":
+			var r := flat.length()
+			var out := flat / r if r > 0.01 else Vector3(cos(float(d.get("a0", 0.0))), 0.0, sin(float(d.get("a0", 0.0))))
+			best = float(d.get("r_out", 0.0)) - r
+			way = out
+			var r_in := float(d.get("r_in", 0.0))
+			if r_in > 0.0 and r - r_in < best:
+				best = r - r_in
+				way = -out
+			var a0 := float(d.get("a0", 0.0))
+			var a1 := float(d.get("a1", TAU))
+			if a1 - a0 < TAU - 0.01 and r > 0.01:
+				var angle := atan2(flat.z, flat.x)
+				for edge in [a0, a1]:
+					var across := r * absf(sin(wrapf(angle - edge, -PI, PI)))
+					if across < best:
+						best = across
+						var side := Vector3(-out.z, 0.0, out.x)
+						way = side if wrapf(edge - angle, -PI, PI) > 0.0 else -side
+		"lane":
+			var dir: Vector3 = d.get("dir", Vector3.FORWARD)
+			dir = Vector3(dir.x, 0.0, dir.z).normalized()
+			var along := flat.dot(dir)
+			var lateral := flat - dir * along
+			var side := lateral.normalized() if lateral.length() > 0.01 else Vector3(-dir.z, 0.0, dir.x)
+			best = float(d.get("half_width", 0.0)) - lateral.length()
+			way = side
+			if float(d.get("length", 0.0)) - along < best:
+				best = float(d.get("length", 0.0)) - along
+				way = dir
+			# A lane reaches `back` metres behind its start (hazard.gd: along >= -back).
+			if along + float(d.get("back", 0.0)) < best:
+				way = -dir
+	return way.normalized() if way.length_squared() > 0.0 else Vector3.ZERO
+
+
 func step(delta: float) -> void:
 	_clock += delta
 	_standing = -1.0

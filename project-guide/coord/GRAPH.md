@@ -1,6 +1,6 @@
 # Alpha workflow graph, waves 18 to 21
 
-> **History (29 Oct).** Frozen at wave 18. Since wave 19 the live board is each wave's board issue (#583 for wave 26) plus `/mnt/project-files/gate/w<N>-stack-queue.md`, and coordination runs from the claude.ai project. Current state is in [STATE.md](../handoff/STATE.md).
+> **History (29 Oct).** Frozen at wave 18. Since wave 19 the live board is each wave's board issue (#583 for wave 26) plus `/mnt/project-files/gate/w<N>-stack-queue.md`, and coordination ran from the claude.ai project until 10 Nov, when it moved to a local session on the PC. Current state is in [STATE.md](../handoff/STATE.md).
 
 The one board for who owns what, which unit waits on which, and which test gates each unit must pass. Owner: the local coordinator (a Claude Code session on Andrew's PC). Lanes propose changes on the wave's Wave board issue (#241); only the coordinator edits this file. Rulings live in [DECISIONS.md](../handoff/DECISIONS.md); newest wins. Session names are in [THREADS.md](../handoff/THREADS.md).
 

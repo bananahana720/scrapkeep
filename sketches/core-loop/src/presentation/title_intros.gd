@@ -172,6 +172,21 @@ static func mark_met(profile, boss: String) -> bool:
 	return profile.mark_seen(MET_PREFIX + boss)
 
 
+# What a row's postcard says about its tiny subject, under an arrow. A whole sentence: the one
+# word "her." read as a line that had lost its other words (design-v3/TITLE-INTROS.md). A
+# world's postcard shows the player's own ball.
+static func pointer_line(id: String) -> String:
+	var r := row(id)
+	if r.is_empty():
+		return ""
+	if id == "sable":
+		return "this is her."
+	if r.kind == "world":
+		return "you are here."
+	var who := String(r.card[0]).capitalize()
+	return "this is %s." % (("the " + who.trim_prefix("The ")) if who.begins_with("The ") else who)
+
+
 # The shot list a row plays, in bars. Sable's opening is the storyboarded one plus her hop-out
 # (12 shots, 24 bars); every other row uses the same swing in 8 shots and 17 bars, and a
 # pilot row adds the hop-out after its card (9 shots, 19 bars). kind names what the

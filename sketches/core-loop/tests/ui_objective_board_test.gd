@@ -3,6 +3,7 @@ extends SceneTree
 const Game := preload("res://src/game.gd")
 const Hud := preload("res://src/ui/hud.gd")
 const Intent := preload("res://src/movement/intent.gd")
+const Objectives := preload("res://src/core/objectives.gd")
 const ScreenRegions := preload("res://src/ui/screen_regions.gd")
 const WordBudget := preload("res://src/ui/word_budget.gd")
 
@@ -166,9 +167,14 @@ func _gates() -> void:
 	await _frames(3)
 	if _hud.edge_markers.gate_points.is_empty():
 		_game.events.reward_offered.emit([{"at": _game.player.ball_position() + Vector3(0.0, 0.0, -30.0)}])
+	# The finished Warden is ticked in the goal's own place first, then the gate row follows.
+	var ticked := _plate_state()
+	_report("O1-3 the Warden is ticked", ticked["words"] == "Warden broken" and _hud._objective.done == "won",
+		"at the unseal the plate reads \"%s\", done \"%s\"" % [ticked["words"], _hud._objective.done])
+	await _seconds(Objectives.Done.SECONDS + 0.1)
 	var state := _plate_state()
 	_report("O1-3 gates", state["words"] == "Roll through a gate" and state["marker"] == state["icon"] and state["icon"] != "",
-		"at the gates the plate reads \"%s\", glyph %s, edge marker glyph %s" % [state["words"], state["icon"], state["marker"]])
+		"%.1f s after the unseal the plate reads \"%s\", glyph %s, edge marker glyph %s" % [Objectives.Done.SECONDS + 0.1, state["words"], state["icon"], state["marker"]])
 
 
 func _play_view() -> void:

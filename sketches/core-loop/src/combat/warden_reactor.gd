@@ -434,13 +434,37 @@ static func base_dps(weapon: String) -> float:
 
 
 # The objective plate's reading of this mounting (ui/hud.gd, core/objectives.gd): which road
-# leads to the core, and on the flume whether the ball's line is bitten in.
+# leads to the core.
 func plate_reading(warden) -> Dictionary:
 	if _is_dam(warden):
 		return {"mount": "dam_face"}
 	if _is_flume(warden):
-		return {"mount": "flume", "latched": _line_on(warden)}
+		return {"mount": "flume"}
 	return {}
+
+
+# Where the fight sends the player now, for the HUD to mark (ui/edge_markers.gd), each {at, what}
+# with what naming the next move there (objectives.gd TAGS). On the dam, the foot of the water
+# sheet once the first pulse has set its heading: ride it while it runs, and between pulses the
+# water is coming there. On the flume, the relic itself, by the step of the line fight that comes
+# next: latch on, shoot from the line, the open core.
+func plate_targets(warden) -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	if _is_dam(warden):
+		if sheet_dir != Vector3.ZERO:
+			out.append({"at": _sheet_foot(warden), "what": "sheet" if sheet_live() else "sheet_soon"})
+	elif _is_flume(warden):
+		var what := "core" if warden.staggered() else "shoot" if _line_on(warden) else "latch"
+		out.append({"at": warden.global_position, "what": what})
+	return out
+
+
+# The sheet's foot on the ground: SHEET_RUN down its heading from the relic.
+func _sheet_foot(warden) -> Vector3:
+	var at: Vector3 = warden.home + sheet_dir * SHEET_RUN
+	if warden.terrain != null:
+		at.y = warden.terrain.height(at.x, at.z)
+	return at
 
 
 # Whether the ball's line is bitten into this Warden.

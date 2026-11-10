@@ -38,7 +38,9 @@ const GLB := "res://assets/models/bosses/boss_pickup.glb"
 # Re-pinned 2026-11-09 (one call places the ball): the intro and the rescue place the ball with reset_to
 # alone, no write to its body after; pickup meshes unchanged. Was 894f3522.
 # Re-pinned 2026-11-10 (w33 gate, stacking #709 onto #708): both changes in boss.gd together. Was 51880956 (#708) / 8cfc6e3b (#709).
-const BASE_LOGIC_SHA := "2304483c3e8d46f442dee3f5bef3192e6e8a673acd969320afc78bc0e43e28e7"
+# Re-pinned 2026-11-10 (second first-timer film, PF-17): plate_targets names each thing it marks ({at, what});
+# pickup meshes unchanged. Was 2304483c.
+const BASE_LOGIC_SHA := "9165b6e4be07adf4c17258caf1653bad32f7bfb66eb02b478891019217f63624"
 
 var failures := 0
 var game

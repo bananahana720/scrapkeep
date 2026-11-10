@@ -57,6 +57,18 @@ const GLIDE_UP_DB_S := 6.0
 # then they come back at GLIDE_UP_DB_S.
 const FOCUS := {"Music": -3.0, "Ambient": -8.0, "hold_s": 0.4}
 
+# Room for the Warden form's drop (tuning drop_room, off by default): offsets in dB that hold from
+# just before the drop's beat for DROP_ROOM_BARS bars of the band's grid, gliding in at
+# GLIDE_DOWN_DB_S both ways so a lift lands with the beat, and out at the usual glide. The PC's
+# whole-mix read (10 Nov) had the drop only 1.1 to 1.6 dB over the held breath because the
+# effects set a fight's level; the pass line is the drop at least 3 dB over the breath with no
+# ceiling hit (SOUND-BIBLE "How it is checked").
+#   duck  the effects step back, so the band's own drop is what changes
+#   lift  the band comes up, the effects stay where they are
+const DROP_ROOM := {"duck": {"SFX": -5.0}, "lift": {"Music": 3.0}}
+const DROP_ROOM_BARS := 2
+const DROP_ROOM_LEAD_S := 0.1
+
 # The crowd rule: the high-rate cues in CROWD_SOUNDS (the ones a swarm or a streak stacks,
 # 12 a second each in a measured Warden fight) get quieter as live effect voices pile up, by
 # CROWD_DB_PER_DOUBLING for each doubling above CROWD_FREE, never below CROWD_FLOOR_DB.
@@ -116,7 +128,9 @@ static func crowd_db(live: int, priority: int) -> float:
 
 
 # One glide step from now toward want over delta seconds.
-static func glide(now: float, want: float, delta: float) -> float:
-	if want < now:
+static func glide(now: float, want: float, delta: float, fast := false) -> float:
+	if want < now or fast:
+		if want > now:
+			return minf(want, now + GLIDE_DOWN_DB_S * delta)
 		return maxf(want, now - GLIDE_DOWN_DB_S * delta)
 	return minf(want, now + GLIDE_UP_DB_S * delta)

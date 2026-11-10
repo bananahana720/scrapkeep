@@ -339,6 +339,10 @@ func _smash(name: String) -> void:
 	var kit = _player.kit
 	_pilot(name)
 	var chaser := _spawn("chaser", _point(0, -22, 1.5))
+	# The body outlives the smash: a kill clears the rewind (player_ball's enemy_killed hook), and
+	# whether a 40 hp chaser died turned on the landing speed (red unloaded and under load, w33).
+	chaser.max_hp = 1.0e6
+	chaser.hp = chaser.max_hp
 	_combat.heft_override = 0.4
 	await _sim(0.1)
 	_mark()

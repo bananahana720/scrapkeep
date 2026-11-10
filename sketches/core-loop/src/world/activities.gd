@@ -196,6 +196,11 @@ const DOOR_CLOCK_M := 1.6
 # One wet material for every seep streak.
 static var _find_wet: StandardMaterial3D
 
+# How near the ball must be to a site it has started for the site to be the one at hand, and how
+# far it must roll before a site that was at hand lets go (at_hand).
+const AT_HAND_M := 80.0
+const LET_GO_M := 100.0
+
 var ctx
 var sites: Array = []
 var _piece_paid := false
@@ -1232,6 +1237,36 @@ func _physics_process(delta: float) -> void:
 
 func _planar(a: Vector3, b: Vector3) -> float:
 	return Vector2(a.x - b.x, a.z - b.z).length()
+
+
+# The side site the ball is at, or null: one it has started and has neither finished nor lost,
+# while the ball is within AT_HAND_M of it. A surge's water carries the ball down its course, so a
+# live surge is at hand wherever the ball is; a bounty is its hauler, once the ball has met it. A
+# trade spot is started by standing near it and nothing else, so it is never at hand: its own
+# label and offer say what it is. The site that was at hand (`held`) stays so until it is finished
+# or the ball is LET_GO_M from it, so the goal never flickers at the edge of a site's reach or
+# between two sites. A site is on offer at the site until then (LEGIBILITY.md, "An activity is on
+# offer"), and the objective plate names only the one at hand (ui/hud.gd objective_reading).
+func at_hand(ball: Vector3, held: Site = null) -> Site:
+	if is_instance_valid(held) and _hand_metres(held, ball) <= LET_GO_M:
+		return held
+	var best: Site = null
+	var best_m := AT_HAND_M
+	for s in sites:
+		var m := _hand_metres(s, ball)
+		if m <= best_m:
+			best = s
+			best_m = m
+	return best
+
+
+# The metres from the ball to a site that can be at hand, INF for one that cannot.
+func _hand_metres(s: Site, ball: Vector3) -> float:
+	if not is_instance_valid(s) or s.done or s.failed or not s.started or s.has_meta("find") or s.rule.finishes == "trade":
+		return INF
+	if s.id == "hauler_bounty":
+		return _planar(ball, s.brute.global_position) if is_instance_valid(s.brute) and s.brute.bounty_met else INF
+	return 0.0 if s.surge_live else _planar(ball, s.global_position)
 
 
 func _build_pocket(s: Site, spec: Dictionary) -> void:

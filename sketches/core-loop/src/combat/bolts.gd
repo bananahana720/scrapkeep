@@ -57,6 +57,11 @@ func setup() -> void:
 	var mat := StandardMaterial3D.new()
 	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	mat.vertex_color_use_as_albedo = true
+	# The tints are the palette's sRGB values, written by code: without this the PC's renderer read
+	# them as linear light and drew every bolt a pale cream (sight's colour probe, 10 Nov 2026: the
+	# bolts were most of what the switch moved, cream 190,184,157 to 176,162,113), a pale burst
+	# that hid three kinds' deaths on the PC reel. The cloud's renderer ignores the switch.
+	mat.vertex_color_is_srgb = true
 	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	mat.render_priority = PRIORITY
 	view.material_override = mat

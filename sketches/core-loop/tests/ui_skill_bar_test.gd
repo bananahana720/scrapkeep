@@ -72,6 +72,9 @@ var _pixel_bars: Array = []
 
 
 func _initialize() -> void:
+	# One physics tick a frame, as on an idle box: a loaded box otherwise packs several ticks into one
+	# frame and the frame-paced checks drift (w33 gate, red only under load). The game just runs slower.
+	Engine.max_physics_steps_per_frame = 1
 	_game = Game.new()
 	_game.test_mode = true
 	root.add_child(_game)

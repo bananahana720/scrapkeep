@@ -26,8 +26,11 @@ const LAYER := 6
 const INK := Color("17141a")
 const PAPER := Color("f3ecdc")
 const CAPTION_FILL := Color("fff6c9")
-# Half width and drop of the tail under a pointer label, in overlay pixels.
-const POINTER_TAIL := Vector2(9.0, 16.0)
+# The arrow under a pointer line, in overlay pixels: how far it drops, how far its stem bows,
+# and its head's half width and height.
+const POINTER_DROP := 58.0
+const POINTER_BOW := 7.0
+const POINTER_HEAD := Vector2(10.0, 15.0)
 const SFX_FILL := Color("ffd23f")
 const BOSS_FILL := Color("ffe1dc")
 
@@ -430,7 +433,7 @@ func _enter_shot(shot: Dictionary) -> void:
 	match kind:
 		"postcard":
 			_caption(String(lines[0]), Vector2(0.03, 0.05))
-			_pointer("her." if _row.id == "sable" else "here.", Vector2(0.47, 0.56))
+			_pointer(TitleIntros.pointer_line(_row.id), Vector2(0.47, 0.56))
 		"hero":
 			camera.fov = 62.0
 			_speed_lines()
@@ -676,22 +679,51 @@ func _caption(text: String, at: Vector2, fill := CAPTION_FILL) -> PanelContainer
 	return panel
 
 
+# A bare outlined line with an arrow curving down to the subject. No box: a caption box under a
+# line reads as a speech bubble, and the subject as the speaker.
 func _pointer(text: String, at: Vector2) -> void:
-	var panel := _panel(CAPTION_FILL, 3)
-	panel.name = "Pointer"
-	panel.add_child(_label(text, 30, INK))
-	panel.position = at * _screen()
-	_overlay.add_child(panel)
-	# A tail from the box down to the subject, so the word reads as a label on the pilot and
-	# not as a caption that lost its other words.
-	var tail := Polygon2D.new()
-	tail.name = "Tail"
-	tail.color = INK
-	tail.polygon = PackedVector2Array([Vector2(-POINTER_TAIL.x, 0.0), Vector2(POINTER_TAIL.x, 0.0), Vector2(0.0, POINTER_TAIL.y)])
-	var box := panel.get_combined_minimum_size()
-	tail.position = Vector2(box.x * 0.5, box.y)
-	panel.add_child(tail)
-	_pop(panel, 1.2)
+	var column := VBoxContainer.new()
+	column.name = "Pointer"
+	column.add_theme_constant_override("separation", 0)
+	column.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var words := _label(text, 36, CAPTION_FILL, 12)
+	words.name = "Words"
+	words.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	column.add_child(words)
+	# No wider than a line, so the column centres it and its left edge is the words' middle.
+	var arrow := Control.new()
+	arrow.name = "Arrow"
+	arrow.custom_minimum_size = Vector2(0.0, POINTER_DROP)
+	arrow.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	arrow.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	column.add_child(arrow)
+	var shaft := POINTER_DROP - POINTER_HEAD.y - 7.0
+	var rim := Line2D.new()
+	rim.width = 10.0
+	rim.default_color = CAPTION_FILL
+	var line := Line2D.new()
+	line.width = 5.0
+	line.default_color = INK
+	for i in 9:
+		var u := float(i) / 8.0
+		var point := Vector2(-POINTER_BOW * sin(u * PI), 6.0 + u * shaft)
+		rim.add_point(point)
+		line.add_point(point)
+	arrow.add_child(rim)
+	arrow.add_child(line)
+	var head_rim := Polygon2D.new()
+	head_rim.color = CAPTION_FILL
+	head_rim.polygon = PackedVector2Array([Vector2(-POINTER_HEAD.x - 5.0, shaft), Vector2(POINTER_HEAD.x + 5.0, shaft),
+		Vector2(0.0, POINTER_DROP)])
+	arrow.add_child(head_rim)
+	var head := Polygon2D.new()
+	head.color = INK
+	head.polygon = PackedVector2Array([Vector2(-POINTER_HEAD.x, shaft + 3.0), Vector2(POINTER_HEAD.x, shaft + 3.0),
+		Vector2(0.0, POINTER_DROP - 4.0)])
+	arrow.add_child(head)
+	column.position = at * _screen()
+	_overlay.add_child(column)
+	_pop(column, 1.2)
 
 
 func _name_card(card: Array, boss: bool, at: Vector2, tilt: float) -> void:

@@ -5,8 +5,8 @@ const SimClock := preload("res://src/core/sim_clock.gd")
 
 # A headless test's hit stop (Game.test_mode, no SimClock.ticks) slows floor(seconds * physics rate)
 # physics ticks and hands back the time scale that was in force before it. The count is exact
-# while a frame carries one physics tick (Godot reads the scale once per frame), so a CPU too slow
-# for that could add ticks. A played game keeps the wall-time timer; this covers the tick path only.
+# while a frame carries one physics tick (Godot reads the scale once per frame), so the test caps
+# a frame at one tick. A played game keeps the wall-time timer; this covers the tick path only.
 
 var _game
 var _failures := 0
@@ -21,6 +21,9 @@ var _runs: Array = []
 
 
 func _initialize() -> void:
+	# One physics tick a frame, as on an idle box: a loaded box otherwise packs several ticks into one
+	# frame and the frame-paced checks drift (w33 gate, red only under load). The game just runs slower.
+	Engine.max_physics_steps_per_frame = 1
 	_game = Game.new()
 	_game.test_mode = true
 	root.add_child(_game)

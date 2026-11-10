@@ -42,7 +42,7 @@ const ROWS := {
 	"foreman": {"color_role": "neutral", "shape": "none", "sound": "none", "attacks": {"none": []},
 		"idle": {"style": "tick", "amplitude": 0.03, "beats": 2.0}, "death": {"style": "collapse", "parts": 6, "seconds": 0.6}},
 	"catch_trap": {"color_role": "hazard", "shape": "ring", "sound": "none", "attacks": {"E15": ["warn_seconds"]},
-		"idle": {"style": "tick", "amplitude": 0.05, "beats": 2.0}, "death": {"style": "pop", "parts": 4, "seconds": 0.4}},
+		"idle": {"style": "tick", "amplitude": 0.05, "beats": 2.0}, "death": {"style": "scatter", "parts": 6, "seconds": 0.6}},
 	"reactor_relic": {"color_role": "hazard", "shape": "burst", "sound": "none", "attacks": {"E16": ["warn_seconds"]},
 		"idle": {"style": "breathe", "amplitude": 0.025, "beats": 1.5}, "death": {"style": "collapse", "parts": 7, "seconds": 0.7}},
 	"swarm_remnant": {"color_role": "hazard", "shape": "arrow", "sound": "none", "attacks": {"E17": ["LOCK_WARN"]},

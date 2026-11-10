@@ -103,6 +103,13 @@ func _picks() -> void:
 		_t.check("%s opening is 30 to 45 s (%.1f)" % [row.id, length], length >= 30.0 and length <= 45.0)
 		_t.eq("%s card holds three stats" % row.id, row.card.size(), 8)
 		_t.eq("%s ends on the slam" % row.id, TitleIntros.shots(String(row.id)).back().kind, "slam")
+		var line := TitleIntros.pointer_line(String(row.id))
+		_t.check("%s postcard line is a sentence (%s)" % [row.id, line], line.split(" ").size() >= 3 and line.ends_with(".")
+			and line == line.strip_edges() and not line.contains("  "))
+	_t.eq("Sable's postcard line", TitleIntros.pointer_line("sable"), "this is her.")
+	_t.eq("a world's postcard line", TitleIntros.pointer_line("spillway"), "you are here.")
+	_t.eq("a boss's postcard line names it", TitleIntros.pointer_line("brindle"), "this is Admiral Brindle.")
+	_t.eq("a name that starts with The keeps a small the", TitleIntros.pointer_line("waking"), "this is the Waking.")
 
 
 func _pick(profile, flyable: Callable) -> String:
@@ -194,11 +201,17 @@ func _play_row(game: Node, display, id: String, capture: String) -> void:
 		player.advance(middle - player.clock)
 		kinds.append(player.shot_kind())
 		if String(shots[i].kind) == "postcard":
-			# The one-word label over the tiny pilot ("her.") read as a caption that lost its words.
+			# The label over the tiny subject is a whole sentence with an arrow under its middle:
+			# one word read as a caption that had lost its words, and a box as a speech bubble.
+			await process_frame
 			var pointer: Control = display.find_child("Pointer", true, false)
-			var tail: Node2D = pointer.get_node_or_null("Tail") if pointer != null else null
-			_t.check(id + " pointer label has a tail under the middle of its box", tail != null and tail.position.y > 20.0
-				and is_equal_approx(tail.position.x, pointer.get_combined_minimum_size().x * 0.5))
+			var words: Label = pointer.get_node_or_null("Words") if pointer != null else null
+			var arrow: Control = pointer.get_node_or_null("Arrow") if pointer != null else null
+			_t.check(id + " pointer shows the row's line", words != null and words.text == TitleIntros.pointer_line(id) and words.text != "")
+			_t.check(id + " pointer has no box", pointer != null and not (pointer is PanelContainer))
+			# The arrow is drawn from its own left edge, so it must be no wider than a line.
+			_t.check(id + " pointer's arrow hangs under the middle of its words", arrow != null and pointer.size.x > 0.0
+				and arrow.size.x < 2.0 and absf(arrow.position.x - pointer.size.x * 0.5) < 2.0)
 		if capture != "":
 			for frame in 6:
 				await process_frame

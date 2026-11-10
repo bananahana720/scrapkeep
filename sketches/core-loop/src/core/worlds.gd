@@ -22,7 +22,7 @@ const ROWS := [
 # pad, until its fight lands.
 const BOSSES := {
 	"brindle": {"name": "Admiral Brindle", "title": "BRINDLE ROUTED", "script": "res://src/boss/boss.gd", "kind": "brindle", "music": "brindle",
-		"built": true, "victory": "Brindle is routed.", "epitaph": "Brindle, crane parked over the Slag Bowl. Anchors accounted for."},
+		"built": true, "victory": "The Spillway is ours again.", "epitaph": "Brindle, crane parked over the Slag Bowl. Anchors accounted for."},
 	"waking": {"name": "The Waking", "title": "THE WAKING STILLED", "script": "res://src/boss/waking.gd", "kind": "waking", "music": "waking",
 		"built": true, "victory": "The Waking is stilled.", "epitaph": "The Waking, stilled in the Dig. Fallen floors await pit inspection."},
 	"mind": {"name": "The Mind", "title": "THE MIND IS QUIET", "script": "res://src/boss/mind.gd", "kind": "mind", "music": "mind",

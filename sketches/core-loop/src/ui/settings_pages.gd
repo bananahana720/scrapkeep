@@ -117,7 +117,7 @@ func setup(game_ref, back_key := "key_esc") -> void:
 
 
 func _build_display() -> void:
-	for id in ["fullscreen", "quality", "reduced_motion", "reduce_flashes", "frame_smoothing"]:
+	for id in ["fullscreen", "quality", "reduced_motion", "reduce_flashes", "frame_smoothing", "wide_picture"]:
 		_add_plain(id, "display")
 
 
@@ -301,6 +301,7 @@ func refresh() -> void:
 	rows["reduced_motion"].text = "Reduced motion: %s" % ("on" if store.reduced_motion() else "off")
 	rows["reduce_flashes"].text = "Reduce flashes: %s" % ("on" if store.reduce_flashes() else "off")
 	rows["frame_smoothing"].text = "Frame smoothing: %s" % ("on" if store.frame_smoothing() else "off")
+	rows["wide_picture"].text = "Wide picture: %s" % ("on" if store.wide_picture() else "off")
 	for verb in VERBS:
 		_rebuild(verb)
 		_rebuild("pad_" + verb)
@@ -433,6 +434,11 @@ func press(id: String) -> void:
 			_store().set_comfort(SettingsStore.FRAME_SMOOTHING, 1.0 if smooth else 0.0)
 			_game.set_frame_smoothing(smooth)
 			rows["frame_smoothing"].text = "Frame smoothing: %s" % ("on" if smooth else "off")
+		"wide_picture":
+			var wide: bool = not _store().wide_picture()
+			_store().set_comfort(SettingsStore.WIDE_PICTURE, 1.0 if wide else 0.0)
+			_game.set_wide_picture(wide)
+			rows["wide_picture"].text = "Wide picture: %s" % ("on" if wide else "off")
 		"reset":
 			_game.reset_bindings()
 			refresh()

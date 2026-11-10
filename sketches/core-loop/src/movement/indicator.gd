@@ -13,8 +13,10 @@ const Palette := preload("res://src/core/palette.gd")
 #   ring   {centre, radius, full_radius}     an area; fill > 0 adds the gauge sweep
 #   line   {from, to, width, full_to}        a lane on the ground
 #   arc    {points}                          a lobbed path, dashed
-#   cone   {apex, dir, length, half_angle}   an eject or vault line, dashed; aim marks a direction
-#                                            the ball would leave along, where no hit lands
+#   cone   {apex, dir, length, half_angle}   an area a release commits (the cannon's plate), dashed.
+#                                            aim marks a direction the ball would leave along, where
+#                                            no hit lands: one dashed line and a root of fill, both
+#                                            starting `clear` metres out so they stay off the ball
 #   marks  {points}                          small rings on faces (the arc slam's tags)
 # ticks is the class row's shape: ring (pips), chevron or burst (starburst spikes).
 # blocked draws the shape in bone, dashed, with a charcoal cross (RR-03).
@@ -34,8 +36,18 @@ const BREATHE := 0.5
 const COLLAPSE := 0.12
 const TICK_STEP_DEG := 30.0
 const TICK_LEN := 0.45
-# How far from the ball an aim cone's fill reaches before it has thinned to nothing.
-const AIM_FILL := 3.0
+# How far past its clear edge an aim cone's fill reaches before it has thinned to nothing.
+const AIM_FILL := 1.2
+# An aim mark's root is a strip along its line, this half-width at its foot and at its far end, not
+# the cone's spread: pitched up on a mount the spread stood over the view as a mint sheet (8.5 to
+# 9.6% of the PC's box, against its 8% line; the strip reads 2.8% in the cloud where the spread read
+# 6.1%, and the cloud reads the PC low by up to 1.6).
+const AIM_ROOT := Vector2(0.3, 0.15)
+# An aim mark fades with its distance from the lens: gone at LENS_CLEAR metres, whole at LENS_FULL.
+# A kick off a wall you face points back over the camera, and a line 0.28 m wide drawn a metre from
+# the lens is a bar across the view.
+const LENS_CLEAR := 1.5
+const LENS_FULL := 4.0
 
 var shapes := {}
 # The last record each layer drew before it was cleared, so a test can compare what
@@ -45,6 +57,7 @@ var _collapsing := {}
 
 var _mesh: MeshInstance3D
 var _tris: ImmediateMesh
+var _materials: Array = []
 var _k := 1.0
 var _anchor := Vector3.ZERO
 
@@ -54,16 +67,48 @@ func _ready() -> void:
 	_tris = ImmediateMesh.new()
 	_mesh = MeshInstance3D.new()
 	_mesh.mesh = _tris
+	_materials = [material(false), material(true)]
+	_mesh.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	add_child(_mesh)
+
+
+# The material a record is drawn with. The colours are written in code as the palette's sRGB
+# values, so the material says so: without it the PC's renderer reads them as linear light and
+# draws the charcoal keyline mid grey and the pilot's colour pale. An aim mark's material also
+# fades it near the lens.
+static func material(aim: bool) -> StandardMaterial3D:
 	var mat := StandardMaterial3D.new()
 	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	mat.vertex_color_use_as_albedo = true
+	mat.vertex_color_is_srgb = true
 	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	mat.cull_mode = BaseMaterial3D.CULL_DISABLED
 	mat.no_depth_test = true
 	mat.render_priority = RENDER_PRIORITY
-	_mesh.material_override = mat
-	_mesh.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	add_child(_mesh)
+	if aim:
+		mat.distance_fade_mode = BaseMaterial3D.DISTANCE_FADE_PIXEL_ALPHA
+		mat.distance_fade_min_distance = LENS_CLEAR
+		mat.distance_fade_max_distance = LENS_FULL
+	return mat
+
+
+static func is_aim(shape: Dictionary) -> bool:
+	return bool(shape.get("aim", false))
+
+
+# Whether a record puts anything on screen. One that does not (marks with no points yet, an arc of
+# one point) is left out of the mesh: a surface that ends with no vertices is an engine error, and
+# with areas and aim marks on separate surfaces such a record can be alone on its own.
+static func draws(shape: Dictionary) -> bool:
+	match String(shape.get("kind", "")):
+		"ring", "line", "cone":
+			return true
+		"marks":
+			return not (shape["points"] as Array).is_empty()
+		"arc":
+			var count := (shape["points"] as Array).size()
+			return count >= 2 or (count == 1 and bool(shape.get("blocked", false)))
+	return false
 
 
 func set_shape(layer: String, shape: Dictionary) -> void:
@@ -109,15 +154,37 @@ static func style(shape: Dictionary, now: float) -> Dictionary:
 	return {"edge": color, "fill": Color(color, fill_alpha), "dashed": kind == "arc" or kind == "cone", "cross": false}
 
 
-# A cone's fill: how far along the cone it reaches (a share of its length) and its colour at that far
-# edge. An area a release commits (the cannon's plate) is filled flat to its end. An aim cone leaves the
-# ball along a line that follows the look, so beside a wall it comes back over the lens: filled flat it
-# lay across the middle of the view as a pale sheet (play finding 7). Its fill is a root at the ball that
-# thins to nothing AIM_FILL metres out, whatever the cone's length, and the dashed lines carry the rest.
+# A cone's fill: where along the cone it starts and how far it reaches (shares of its length), and its
+# colour at that far edge. An area a release commits (the cannon's plate) is filled flat from its apex
+# to its end. An aim cone leaves the ball along a line that follows the look, so beside a wall it comes
+# back over the lens: filled flat it lay across the middle of the view as a pale sheet (play finding 7).
+# Its fill is a root that starts at the cone's clear edge and thins to nothing AIM_FILL metres on,
+# whatever the cone's length, a strip AIM_ROOT wide along the line, and the dashed line carries the rest.
 static func cone_fill(shape: Dictionary, fill: Color) -> Dictionary:
-	if not shape.get("aim", false):
-		return {"reach": 1.0, "far": fill}
-	return {"reach": minf(1.0, AIM_FILL / maxf(float(shape.get("length", AIM_FILL)), 0.01)), "far": Color(fill, 0.0)}
+	if not is_aim(shape):
+		return {"from": 0.0, "reach": 1.0, "far": fill}
+	var length := maxf(float(shape.get("length", AIM_FILL)), 0.01)
+	var from := minf(1.0, float(shape.get("clear", 0.0)) / length)
+	return {"from": from, "reach": minf(1.0, from + AIM_FILL / length), "far": Color(fill, 0.0)}
+
+
+# The ends of a cone's dashed lines. An area wears its two edges and its centre line. An aim cone wears
+# the centre line alone: the kick leaves along exactly that line, and readers of the three-line fan took
+# its spread for a width of travel that does not exist.
+static func cone_tips(shape: Dictionary) -> Array:
+	var apex: Vector3 = shape["apex"]
+	var dir: Vector3 = (shape["dir"] as Vector3).normalized()
+	var length: float = shape["length"]
+	if is_aim(shape):
+		return [apex + dir * length]
+	var side := _cone_side(dir)
+	var spread := tan(float(shape["half_angle"]))
+	return [apex + (dir + side * spread).normalized() * length, apex + (dir - side * spread).normalized() * length, apex + dir * length]
+
+
+static func _cone_side(dir: Vector3) -> Vector3:
+	var side := dir.cross(Vector3.UP)
+	return side.normalized() if side.length_squared() > 0.001 else Vector3.RIGHT
 
 
 func _process(delta: float) -> void:
@@ -131,15 +198,23 @@ func _process(delta: float) -> void:
 	if shapes.is_empty() and _collapsing.is_empty():
 		return
 	var now := Time.get_ticks_msec() / 1000.0
-	_tris.surface_begin(Mesh.PRIMITIVE_TRIANGLES)
+	# Two surfaces: areas, then aim marks, whose material fades them near the lens.
+	var drawn := [[], []]
 	for layer in shapes:
-		_k = 1.0
-		_draw(shapes[layer], now)
+		if draws(shapes[layer]):
+			drawn[int(is_aim(shapes[layer]))].append([shapes[layer], 1.0])
 	for layer in _collapsing:
 		var entry: Dictionary = _collapsing[layer]
-		_k = 1.0 - clampf(entry["t"] / COLLAPSE, 0.0, 1.0)
-		_draw(entry["shape"], now)
-	_tris.surface_end()
+		if draws(entry["shape"]):
+			drawn[int(is_aim(entry["shape"]))].append([entry["shape"], 1.0 - clampf(entry["t"] / COLLAPSE, 0.0, 1.0)])
+	for i in drawn.size():
+		if drawn[i].is_empty():
+			continue
+		_tris.surface_begin(Mesh.PRIMITIVE_TRIANGLES, _materials[i])
+		for item in drawn[i]:
+			_k = item[1]
+			_draw(item[0], now)
+		_tris.surface_end()
 
 
 func _origin(shape: Dictionary) -> Vector3:
@@ -202,18 +277,24 @@ func _draw(shape: Dictionary, now: float) -> void:
 			var apex: Vector3 = shape["apex"]
 			var dir: Vector3 = (shape["dir"] as Vector3).normalized()
 			var length: float = shape["length"]
-			var side := dir.cross(Vector3.UP)
-			side = side.normalized() if side.length_squared() > 0.001 else Vector3.RIGHT
+			var side := _cone_side(dir)
 			var spread := tan(float(shape["half_angle"]))
 			var left := apex + (dir + side * spread).normalized() * length
 			var right := apex + (dir - side * spread).normalized() * length
 			var body := cone_fill(shape, fill)
-			var corners := [apex, apex.lerp(left, body["reach"]), apex.lerp(right, body["reach"])]
-			for i in 3:
-				_tris.surface_set_color(fill if i == 0 else body["far"])
-				_tris.surface_add_vertex(_p(corners[i]))
-			for tip in [left, right, apex + dir * length]:
-				_dashed(apex, tip, EDGE, edge)
+			var near := [apex.lerp(left, body["from"]), apex.lerp(right, body["from"])]
+			var far := [apex.lerp(left, body["reach"]), apex.lerp(right, body["reach"])]
+			if is_aim(shape):
+				# The root hugs the line rather than the cone's spread (see AIM_ROOT).
+				var foot := apex + dir * length * float(body["from"])
+				var tip := apex + dir * length * float(body["reach"])
+				near = [foot + side * AIM_ROOT.x, foot - side * AIM_ROOT.x]
+				far = [tip + side * AIM_ROOT.y, tip - side * AIM_ROOT.y]
+			for corner in [[near[0], fill], [far[0], body["far"]], [far[1], body["far"]], [near[0], fill], [far[1], body["far"]], [near[1], fill]]:
+				_tris.surface_set_color(corner[1])
+				_tris.surface_add_vertex(_p(corner[0]))
+			for tip in cone_tips(shape):
+				_dashed(apex.lerp(tip, body["from"]), tip, EDGE, edge)
 		"marks":
 			for point in shape["points"]:
 				_anchor = point

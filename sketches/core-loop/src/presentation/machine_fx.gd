@@ -7,6 +7,7 @@ const Roster := preload("res://src/combat/roster.gd")
 const EnemyMotion := preload("res://src/presentation/enemy_motion.gd")
 const BossPosture := preload("res://src/combat/boss_posture.gd")
 const SpecialCues := preload("res://src/combat/special_cues.gd")
+const ScreenRegions := preload("res://src/ui/screen_regions.gd")
 const FlashGuard := preload("res://src/presentation/flash_guard.gd")
 
 # What the machines throw off: how a pack arrives, how a body winds up, takes a hit,
@@ -376,6 +377,7 @@ func _draw_word(slot: Dictionary) -> void:
 	size = _fit(slot, at, size)
 	if not reduced_motion and t < WORD_SLAM:
 		size *= lerpf(1.6, 1.0, t / WORD_SLAM)
+	at = _below_top(slot, at, size)
 	var leave := clampf((t - (life - 0.25)) / 0.25, 0.0, 1.0)
 	if leave > 0.0:
 		var side := Vector3.RIGHT
@@ -389,6 +391,24 @@ func _draw_word(slot: Dictionary) -> void:
 	# Reduce flashes dims the coloured face, never the ink outline, so the word still reads.
 	label.modulate.a = FlashGuard.info(1.0 - leave)
 	label.outline_modulate.a = 1.0 - leave
+
+
+# `at`, lowered along the view's up so the word's top stays under the HUD's top band. A tall body's
+# break word (SHIFT OVER on the foreman, OUT OF ORDER on the dispatcher) stood over the objective
+# plate with its letters cut off by the screen's top edge (the death reel, 10 Nov 2026).
+func _below_top(slot: Dictionary, at: Vector3, size: float) -> Vector3:
+	var cam := get_viewport().get_camera_3d() if is_inside_tree() else null
+	if cam == null or cam.is_position_behind(at):
+		return at
+	var label: Label3D = slot["node"]
+	var screen := cam.unproject_position(at)
+	var px_per_m := cam.unproject_position(at + cam.global_basis.y).distance_to(screen)
+	var half := label.font_size * label.pixel_size * size * px_per_m * 0.5
+	var top := get_viewport().get_visible_rect().size.y * ScreenRegions.BANDS["top"].y
+	var over := top - (screen.y - half)
+	if over <= 0.0 or px_per_m <= 0.0:
+		return at
+	return at - cam.global_basis.y * (over / px_per_m)
 
 
 # `size`, held down so the word at `at` is no wider on screen than WORD_FIT of the view's height.

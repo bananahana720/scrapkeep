@@ -1,6 +1,6 @@
 # Scrapkeep handoff folder
 
-Live coordination material for the alpha. The project coordinator (claude.ai project "Scrapkeep", since 23 Oct) owns it. Cloud threads read it.
+Live coordination material for the alpha. The coordinator owns it: since 10 Nov the local Claude Code session on Andrew's PC (ruling cs), before that the claude.ai project "Scrapkeep" (23 Oct to 10 Nov). Every session and writer agent reads it.
 
 | File | What it holds |
 | --- | --- |
@@ -11,6 +11,7 @@ Live coordination material for the alpha. The project coordinator (claude.ai pro
 | [STATE.md](STATE.md) | Wave state: the Wave facts table (the one place that names the live board), holds and carried reds |
 | [GATE.md](GATE.md) | The promotion gate recipe: shards, bands, the tally check |
 | [KNOWN-FAILING.tsv](KNOWN-FAILING.tsv) | The ledger of red tests a promotion may carry, each with a cause, an owner and a review date |
+| [PLAY-FINDINGS.tsv](PLAY-FINDINGS.tsv) | The one list of open things a player would feel, each with a grade, an owner and a review date (ruling cn). A finding never holds a promotion |
 | [WEEKLY.tsv](WEEKLY.tsv) | Tests the promotion gate leaves to the weekly sweep (ruling ca): parked worlds, old-map bot proofs and long tests that caught no planted fault, each with why and when it returns |
 | [DEEP-SWEEP.md](DEEP-SWEEP.md) | The deep-modules sweep run after every promotion |
 | [THREADS.md](THREADS.md) | Threads and sessions, and who owns what |

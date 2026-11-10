@@ -147,6 +147,9 @@ static func apply(kit, state, tuning, intent, aim: Basis, body_state) -> void:
 	var step: float = body_state.step
 	kit.tick_timers(step)
 	_sprint(kit, state, tuning, intent, aim, body_state, step)
+	# The kick's aim is this tick's answer or none: a mount or a held plant returns before _vault
+	# runs, and the last tick's record would keep the kick's mark drawn where no kick is on offer.
+	kit.vault_aim = {}
 	if _mount(kit, state, tuning, intent, aim, body_state, step):
 		_keep_body_line(kit, tuning, body_state)
 		return
@@ -203,7 +206,6 @@ static func face_key(point: Vector3, normal: Vector3) -> String:
 # along the slingshot's eject line. kit.vault_aim is the aim cone's record, set on every
 # tick a kick is available, so the drawn cone and the kick read one answer.
 static func _vault(kit, state, tuning, aim: Basis, body_state) -> void:
-	kit.vault_aim = {}
 	if not kit.on(VAULT) or state.grounded or kit.hooked:
 		return
 	var mask := WORLD_MASK | (ENEMY_MASK if kit.knob("vault_enemies") else 0)

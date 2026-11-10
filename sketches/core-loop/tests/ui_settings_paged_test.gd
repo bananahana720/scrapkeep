@@ -70,7 +70,7 @@ func _run() -> void:
 
 	_t.eq("three pages", SettingsPages.PAGES, ["display", "controls", "look"])
 	_t.eq("the session starts on Display", _page.current_page(), "display")
-	_t.eq("Display holds fullscreen, quality, reduced motion, reduce flashes, frame smoothing and Back", _page.page_ids(), ["fullscreen", "quality", "reduced_motion", "reduce_flashes", "frame_smoothing", "back"])
+	_t.eq("Display holds fullscreen, quality, reduced motion, reduce flashes, frame smoothing, wide picture and Back", _page.page_ids(), ["fullscreen", "quality", "reduced_motion", "reduce_flashes", "frame_smoothing", "wide_picture", "back"])
 	_t.check("the title's page is shown with its first row focused", screens.settings_open() and _page.focused_id() == "fullscreen", "focus %s" % _page.focused_id())
 	_t.check("only the shown page's rows are visible", _page.row("fullscreen").is_visible_in_tree() and not _page.row("jump").is_visible_in_tree() and not _page.row("aim_assist").is_visible_in_tree(), "visibility")
 
@@ -107,7 +107,7 @@ func _run() -> void:
 	# B2, design-v3/SKILL-BAR.md section 6): the special's rows retired; the pick's three keys
 	# (select_1 to select_3) and the ultimate each have a key row and a pad row.
 	var want := {
-		"display": ["fullscreen", "quality", "reduced_motion", "reduce_flashes", "frame_smoothing", "back"],
+		"display": ["fullscreen", "quality", "reduced_motion", "reduce_flashes", "frame_smoothing", "wide_picture", "back"],
 		"controls": ["jump", "pad_jump", "fire", "pad_fire", "harpoon", "pad_harpoon", "haul", "pad_haul", "boost", "pad_boost",
 			"select_1", "pad_select_1", "select_2", "pad_select_2", "select_3", "pad_select_3", "ultimate", "pad_ultimate",
 			"interact", "pad_interact", "reset", "back"],

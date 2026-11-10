@@ -1,9 +1,13 @@
 # Start here
 
-Coordination runs from the claude.ai project "Scrapkeep" on Andrew's main account (since 23 Oct 2026). The project coordinator talks to Andrew in the project chat; cloud threads are the lanes; Remote Control sessions on his PC run GPU work. A fresh coordinator or thread reads these in order:
+Coordination runs from one local Claude Code session on Andrew's PC (since 10 Nov 2026, ruling cs). That session is the coordinator and the Gate: it talks to Andrew, stacks and promotes, runs the full gate on the PC, writes sequential changes itself and gives disjoint units to writer agents in their own worktrees. The claude.ai project "Scrapkeep" coordinated from 23 Oct to 10 Nov, and its threads stopped at the handoff posted on the wave 34 board (10 Nov, 16:33Z).
 
-1. The project instructions (in the project settings): goal, mission statement, direction principles 1-22, how work flows, standing approval.
-2. [DECISIONS.md](DECISIONS.md): Andrew's rulings. Newest wins. Don't re-ask one. His readable copy is the Claude Doc https://claude.ai/code/artifact/e209a132-0f39-416d-a116-3be4e9df8de9; threads also read /mnt/project-files/project-guide/DECISIONS.md. All three change together.
+**On the PC there is no `/mnt/project-files`.** Where a page names a path under it, use the PC stand-in: gate plans and receipts are under `~/scratch/gate/`, the coordinator's briefs and notes under `~/scratch/world1/`, and the repo copies under [shared/](shared/) (the tone bible, the sitting watch list). The Claude Doc and shared-folder copies of DECISIONS.md are frozen at ruling cr; the repo file is the register. A row below that says "project thread" describes how the project ran, kept for a session that works there again.
+
+A fresh coordinator or session reads these in order:
+
+1. The project instructions (in the project settings, for project threads): goal, mission statement, how work flows, standing approval. The direction principles are DECISIONS.md's Direction table. What needs no approval, and what needs Andrew's go-ahead first, is the last section of [AGENTS.md](../../AGENTS.md).
+2. [DECISIONS.md](DECISIONS.md): Andrew's rulings. Newest wins. Don't re-ask one. The repo file is the register; the Claude Doc https://claude.ai/code/artifact/e209a132-0f39-416d-a116-3be4e9df8de9 and /mnt/project-files/project-guide/DECISIONS.md are the project's copies, frozen at ruling cr.
 3. [LESSONS.md](LESSONS.md): how this project works (numbered lessons; numbers stay fixed).
 4. [ROADMAP.md](ROADMAP.md): what is left, in order. Phone copy: https://claude.ai/artifact/55bppMdvsEXW52ZVFyhNna
 5. [STATE.md](STATE.md): where the wave stands and what holds it. Its Wave facts table is the one place that names the live board.
@@ -23,14 +27,16 @@ One home for every fact (ruling bz, Andrew, 9 Nov): update the page, doc or reco
 | Checking | The tiered gate in [ORCHESTRATOR.md](../../ORCHESTRATOR.md), then [CONTRIBUTING.md](../../CONTRIBUTING.md) for the commands | The fast-lane receipt (`artifacts/local/receipts/`) and one independent review of the finished diff |
 | Handing over | Nothing new | A draft pull request on the open stage, then one READY comment on the board with the receipts |
 | Running a gate shard | [GATE.md](GATE.md), [KNOWN-FAILING.tsv](KNOWN-FAILING.tsv), the gate plan under `/mnt/project-files/gate/` | The receipt under `/mnt/project-files/gate/w<N>-<head>/`, the verdict on the board, a reply to the Gate thread |
-| Needing Andrew | [DECISIONS.md](DECISIONS.md) first: a ruled question is not asked again | A card to the coordinator (question, options, a recommendation); never a question inside a thread |
-| Holding a new ruling | The row it replaces, and the last letter taken | [DECISIONS.md](DECISIONS.md) on the open stage, then its two copies in the same turn (step 2 above). `npm run check:docs` fails a letter used twice |
+| Needing Andrew | [DECISIONS.md](DECISIONS.md) first: a ruled question is not asked again | In a project thread, a card to the coordinator (question, options, a recommendation), because Andrew reads the project chat on his phone, not threads. In a local session at his computer, ask him directly, once, with a recommended default |
+| Holding a new ruling | The row it replaces, and the last letter taken | [DECISIONS.md](DECISIONS.md) on the open stage (its two project copies are frozen, step 2 above). `npm run check:docs` fails a letter used twice |
 | Holding a lesson | [LESSONS.md](LESSONS.md), to see it is new | One numbered line in LESSONS.md; an art mistake goes in ART-MISTAKES.md |
+| Holding a play finding | [PLAY-FINDINGS.tsv](PLAY-FINDINGS.tsv), to see it is new | One row there with a grade, an owner and a review date (ruling cn); it never holds a promotion |
 | Showing Andrew something | The library (`/mnt/project-files/INDEX.md`), to find the page that already covers it | That page, updated. A new page gets a line in INDEX.md and on the Library page in the same turn |
 | Keeping evidence | `/mnt/project-files/INDEX.md`, for the folder that owns the area | The area's folder under `/mnt/project-files/`. Disposable output stays in `artifacts/local/` |
 | Learning a fact the next thread would ask again | The project memory index | One memory file per subject, as a pointer to the home above, not a copy of it |
+| Wanting something deleted or archived | `/mnt/project-files/housekeeping/pending-deletes.md`, to see it is not already listed | One row there with the reason; Andrew or the owner named decides. A thread deletes nothing itself, and merged branches go only through Andrew's prune script |
 | Just after a promotion | "After each promotion" in [STATE.md](STATE.md) | The Wave facts table, the fast-lane timings, the deep sweep report |
 
-What matters most right now: world 1 first. Andrew has played the dam (30 Oct) and not yet marked any area. On 9 Nov he asked for a pre-sitting improvement pass first (ruling bo), so the build he plays is the promotion that carries that pass (STATE.md). Post-sitting work comes from his marks. Worlds 2 and 3 start nothing new (ruling at).
+What matters most right now: world 1 first, and world 1 fully polished before he plays (ruling cs, 10 Nov). Andrew has played the dam (30 Oct) and not yet marked any area. The pre-sitting improvement pass (ruling bo) is on `main` as wave 33. The open world 1 list is now worked wave by wave (STATE.md), and the build he plays is the promotion that closes it, handed over as "ready for your verdict". Worlds 2 and 3 start nothing new (ruling at).
 
 How to build (Andrew, 9 Nov): deepen the game's modules and keep the interfaces between the pieces as simple as possible. New behaviour goes inside the module that owns the state; callers get one small call, not a reach into private members. [DEEP-SWEEP.md](DEEP-SWEEP.md) has the method, and it applies to every unit, not only the sweep after a promotion.

@@ -14,14 +14,15 @@ const WardenReactor := preload("res://src/combat/warden_reactor.gd")
 # bare readings with no scene: every row is reached by one reading, every row has a glyph
 # and one to five words, a posture Warden never shows a lesson and a plating Warden never
 # shows the posture rows; the yard lock and a shut clamp each hold their row; a mounted
-# reactor changes only the guard row and Brindle's phases show only in the arena. Then the
-# struggle tally on fed gains and simulated seconds.
+# reactor changes only the guard row (and the flume the stagger's too) and Brindle's phases show
+# only in the arena. A side site takes the row only while the ball is at it; the done row; the
+# marks' tags. Then the struggle tally on fed gains and simulated seconds.
 
 const DT := 0.1
 
 # The reading that reaches each row, and nothing else does.
 const CASES := {
-	"find_activity": {"state": "stage", "sealed": true, "engaged": false, "activities_left": 1, "fight": "posture"},
+	"find_activity": {"state": "stage", "sealed": true, "engaged": false, "site_at_hand": true, "fight": "posture"},
 	"find_warden": {"state": "stage", "sealed": true, "fight": "posture", "engaged": false},
 	"break_guard": {"state": "stage", "sealed": true, "fight": "posture", "engaged": true},
 	"smash_core": {"state": "beacon", "sealed": true, "fight": "posture", "engaged": true, "staggered": true},
@@ -31,27 +32,25 @@ const CASES := {
 	"roll_gate": {"state": "gates"},
 	"hold_line": {"state": "launch"},
 	"break_brindle": {"state": "boss"},
-	"break_yard_crew": {"state": "stage", "sealed": true, "yard_locked": true, "activities_left": 1, "fight": "posture"},
+	"break_yard_crew": {"state": "stage", "sealed": true, "yard_locked": true, "site_at_hand": true, "fight": "posture"},
 	"break_clamp_crews": {"state": "stage", "sealed": true, "fight": "posture", "engaged": true, "clamp_shut": true, "struggling": true},
 	"ride_sheet": {"state": "stage", "sealed": true, "fight": "posture", "engaged": true, "mount": "dam_face"},
-	"latch_warden": {"state": "stage", "sealed": true, "fight": "posture", "engaged": true, "mount": "flume"},
-	"fire_from_line": {"state": "stage", "sealed": true, "fight": "posture", "engaged": true, "mount": "flume", "latched": true},
+	"line_fight": {"state": "stage", "sealed": true, "fight": "posture", "engaged": true, "mount": "flume"},
 	"shoot_magnets": {"state": "boss", "phase": 1},
 	"slam_caps": {"state": "boss", "phase": 2},
 	"bait_charge": {"state": "boss", "phase": 3},
-	"hit_cockpit": {"state": "boss", "phase": 3, "open": true},
 	"ram_scooter": {"state": "boss", "phase": 4},
 }
 
 # The mounted reactor's road and Brindle's phase, each as one axis of the walk.
-const MOUNTS := [{}, {"mount": "dam_face"}, {"mount": "flume"}, {"mount": "flume", "latched": true}, {"mount": "plain"}]
+const MOUNTS := [{}, {"mount": "dam_face"}, {"mount": "flume"}, {"mount": "plain"}]
 const PHASES := [{}, {"phase": 1}, {"phase": 2}, {"phase": 3}, {"phase": 1, "open": true}, {"phase": 3, "open": true}, {"phase": 4}, {"phase": 9}, {"open": true}]
-const MOUNT_ROWS := ["ride_sheet", "latch_warden", "fire_from_line"]
-const PHASE_ROWS := ["shoot_magnets", "slam_caps", "bait_charge", "hit_cockpit", "ram_scooter"]
+const MOUNT_ROWS := ["ride_sheet", "line_fight"]
+const PHASE_ROWS := ["shoot_magnets", "slam_caps", "bait_charge", "ram_scooter"]
 
 
 # Stand-ins for what the reactor's mounting reads off a Warden: its spec, family and
-# mounting, and through its target the ball's line.
+# mounting, where it hangs, whether it is staggered, and through its target the ball's line.
 class FakeKit extends RefCounted:
 	var hooked := false
 	var on_body := false
@@ -67,11 +66,18 @@ class FakeWarden extends RefCounted:
 	var family := "reactor"
 	var mounting := ""
 	var target = FakeBall.new()
+	var home := Vector3(10.0, 4.0, -20.0)
+	var global_position := Vector3(10.0, 16.0, -20.0)
+	var terrain = null
+	var open := false
+
+	func staggered() -> bool:
+		return open
 
 
 func run(t) -> void:
 	_rows(t)
-	_site_pick(t)
+	_done(t)
 	_reached_once(t)
 	_fights(t)
 	_mount_reading(t)
@@ -79,92 +85,70 @@ func run(t) -> void:
 
 
 # What the mounting hands the plate (WardenReactor.plate_reading): the dam and the flume by
-# name, the flume's latch only while the line is bitten into this Warden, nothing for a
-# reactor that is not a park landmark.
+# name, nothing for a reactor that is not a park landmark. And what it hands the markers
+# (plate_targets): on the flume the relic, by the step of the line fight that is next; on the dam
+# the water sheet's foot once the first pulse has set its heading, running or coming.
 func _mount_reading(t) -> void:
 	var driver = WardenReactor.new()
 	var warden := FakeWarden.new()
 	warden.mounting = "dam_face"
 	t.eq("the dam's mounting names the dam", driver.plate_reading(warden), {"mount": "dam_face"})
+	t.eq("before the first pulse the sheet has no place to mark", driver.plate_targets(warden), [])
+	driver.sheet_dir = Vector3(0.0, 0.0, 1.0)
+	var foot := warden.home + Vector3(0.0, 0.0, WardenReactor.SHEET_RUN)
+	t.eq("between pulses the foot is where the water is coming", driver.plate_targets(warden), [{"at": foot, "what": "sheet_soon"}])
+	driver.sheet_left = WardenReactor.SHEET_SECONDS
+	t.eq("while the sheet runs the foot is where to ride", driver.plate_targets(warden), [{"at": foot, "what": "sheet"}])
+	driver = WardenReactor.new()
 	warden.mounting = "flume"
-	t.eq("the flume's mounting names the flume, line off", driver.plate_reading(warden), {"mount": "flume", "latched": false})
+	t.eq("the flume's mounting names the flume", driver.plate_reading(warden), {"mount": "flume"})
+	t.eq("line off: the relic is the thing to latch", driver.plate_targets(warden), [{"at": warden.global_position, "what": "latch"}])
 	warden.target.kit.hooked = true
 	warden.target.kit.on_body = true
 	warden.target.kit.anchor_body = FakeWarden.new()
-	t.eq("a line on another body is not a latch", driver.plate_reading(warden)["latched"], false)
+	t.eq("a line on another body is not a latch", driver.plate_targets(warden)[0]["what"], "latch")
 	warden.target.kit.anchor_body = warden
-	t.eq("the line bitten into the flume Warden is the latch", driver.plate_reading(warden), {"mount": "flume", "latched": true})
-	t.eq("and the plate then says to fire", Objectives.choose(CASES["latch_warden"].merged(driver.plate_reading(warden), true)), "fire_from_line")
+	t.eq("the line bitten into the flume Warden: shoot", driver.plate_targets(warden)[0]["what"], "shoot")
+	warden.open = true
+	t.eq("staggered: the core, line on or off", driver.plate_targets(warden)[0]["what"], "core")
+	warden.open = false
 	warden.spec = {}
-	t.eq("a reactor off the park landmark keeps the guard row", driver.plate_reading(warden), {})
+	t.eq("a reactor off the park landmark keeps the guard row", [driver.plate_reading(warden), driver.plate_targets(warden)], [{}, []])
 	warden.spec = {"park_landmark": true}
 	warden.mounting = "head_house"
-	t.eq("another mounting keeps the guard row", driver.plate_reading(warden), {})
+	t.eq("another mounting keeps the guard row", [driver.plate_reading(warden), driver.plate_targets(warden)], [{}, []])
 
 
-# The activity row names the site ahead, and keeps it until another clearly wins.
-func _site_pick(t) -> void:
-	var north := Vector3(0, 0, 1)
-	t.eq("no site, no pick", Objectives.pick_site([], north), -1)
-	t.eq("one site is the pick wherever it lies", Objectives.pick_site([Vector3(0, 0, -50)], north), 0)
-	t.eq("straight ahead scores its distance", Objectives.site_score(Vector3(0, 0, 100), north), 100.0)
-	t.eq("abeam scores double", Objectives.site_score(Vector3(100, 0, 0), north), 200.0)
-	t.eq("behind scores triple", Objectives.site_score(Vector3(0, 0, -100), north), 300.0)
-	t.eq("height counts in the distance, not the angle", Objectives.site_score(Vector3(0, 30, 40), north), 50.0)
-	t.eq("a site on the ball scores its distance", Objectives.site_score(Vector3(0, 2, 0), north), 2.0)
-	t.eq("ahead beats a little nearer but off the view", Objectives.pick_site([Vector3(110, 0, 280), Vector3(0, 0, 310)], north), 1)
-	t.eq("much nearer wins even from behind", Objectives.pick_site([Vector3(0, 0, -60), Vector3(0, 0, 310)], north), 0)
-	t.eq("the held site stays while the other is not clearly better", Objectives.pick_site([Vector3(0, 0, 100), Vector3(0, 0, 90)], north, 0), 0)
-	t.eq("the held site gives way under SITE_KEEP of its score", Objectives.pick_site([Vector3(0, 0, 100), Vector3(0, 0, 79)], north, 0), 1)
-	t.eq("a held index that has gone is no hold", Objectives.pick_site([Vector3(0, 0, 100), Vector3(0, 0, 90)], north, 5), 1)
-	# The dam as authored (park_dam.json): the drop faces the camp, and the relay beside it is 5 m nearer.
-	var dam: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://src/world/park/park_dam.json"))
-	var at := Vector3(dam["spawn"]["at"][0], 0.0, dam["spawn"]["at"][1])
-	var heading := deg_to_rad(float(dam["spawn"]["heading_deg"]))
-	var kinds := []
-	var offsets := []
-	for row in dam["activity_rows"]:
-		kinds.append(String(row["activity"]))
-		offsets.append(Vector3(row["at"][0], 0.0, row["at"][1]) - at)
-	var picked := Objectives.pick_site(offsets, Vector3(sin(heading), 0.0, cos(heading)))
-	t.eq("the dam's drop names the camp it faces", kinds[picked] if picked >= 0 else "", "enemy_camp")
-	var plain := 0
-	for i in offsets.size():
-		if offsets[i].length() < offsets[plain].length():
-			plain = i
-	t.eq("the nearest site at the dam's drop is the relay, which is why the view decides", kinds[plain], "hold_the_relay")
-	_way(t)
-
-
-# The heading the row reads is the view until the ball has travelled, then where the ball is going:
-# a look round changes nothing once it rolls.
-func _way(t) -> void:
-	var north := Vector3(0, 0, 1)
-	var east := Vector3(1, 0, 0)
-	var way := Objectives.Way.new()
-	t.eq("before the ball has travelled, ahead is the view", [way.ahead(north), way.ahead(east)], [north, east])
-	way.step(east * (Objectives.Way.SPEED - 0.5), 1.0)
-	t.eq("a ball slower than SPEED sets no way", way.ahead(north), north)
-	way.step(east * 20.0 + Vector3.UP * 30.0, 1.0 / 90.0)
-	t.eq("the first travel sets the way at once, flat", way.ahead(north), east)
-	t.eq("and the view no longer moves it", [way.ahead(north), way.ahead(-east), way.ahead(-north)], [east, east, east])
-	way.step(Vector3.ZERO, 5.0)
-	t.eq("a stopped ball keeps its way", way.ahead(north), east)
-	way.step(north * 20.0, 1.0 / 90.0)
-	t.check("one tick of a new heading barely turns it (a bounce)", way.ahead(north).dot(east) > 0.99, str(way.ahead(north)))
-	for i in 270:
-		way.step(north * 20.0, 1.0 / 90.0)
-	t.check("three seconds on the new heading turns it there", way.ahead(east).dot(north) > 0.99, str(way.ahead(east)))
-	for i in 270:
-		way.step(-north * 20.0, 1.0 / 90.0)
-	t.check("a full reversal turns it round, never to nothing", way.ahead(east).dot(-north) > 0.99 and is_equal_approx(way.ahead(east).length(), 1.0), str(way.ahead(east)))
-	way.begin()
-	t.eq("begin() hands ahead back to the view", way.ahead(north), north)
-	# Two sites either side of the road: by the view a look round trades the row; by the way it holds.
-	var offsets := [Vector3(0, 0, 300), Vector3(0, 0, -250)]
-	t.eq("by the view, turning round moves the row to the site behind", [Objectives.pick_site(offsets, north, -1), Objectives.pick_site(offsets, -north, 0)], [0, 1])
-	way.step(north * 20.0, 1.0 / 90.0)
-	t.eq("by the way, it stays on the site the ball is heading for", [Objectives.pick_site(offsets, way.ahead(north), -1), Objectives.pick_site(offsets, way.ahead(-north), 0)], [0, 0])
+# The done row (Objectives.Done): up for SECONDS of stepped time from the first step after the
+# note, gone at once when the goal under it changes again, and never up for an empty note.
+func _done(t) -> void:
+	var done := Objectives.Done.new()
+	t.eq("nothing finished, nothing shown", done.showing(), false)
+	done.note("Camp cleared")
+	t.eq("a finished goal shows at once, as won", [done.showing(), done.words, done.won], [true, "Camp cleared", true])
+	var steps := 0
+	while done.showing() and steps < 1000:
+		done.step(DT, "Find the Warden")
+		steps += 1
+	t.near("it stays up for SECONDS under one goal", steps * DT, Objectives.Done.SECONDS, DT + 0.001)
+	done.note("Yard open")
+	done.step(DT, "Find the Warden")
+	done.step(DT, "Find the Warden")
+	t.eq("still up while the goal under it holds", done.showing(), true)
+	done.step(DT, "Clamp shut: break the crews")
+	t.eq("the goal under it changes again: it gives way at once", done.showing(), false)
+	done.note("Relay lost", false)
+	t.eq("a lost goal shows as lost", [done.showing(), done.won], [true, false])
+	done.clear()
+	t.eq("clear() takes it down", done.showing(), false)
+	done.note("")
+	t.eq("an empty note shows nothing", done.showing(), false)
+	done.note("Camp cleared")
+	done.note("Clamp open", true, true)
+	t.eq("a note that yields leaves the one showing", done.words, "Camp cleared")
+	done.clear()
+	done.note("Clamp open", true, true)
+	t.eq("and shows on a plate with no tick on it", [done.showing(), done.words], [true, "Clamp open"])
 
 
 func _rows(t) -> void:
@@ -185,9 +169,22 @@ func _rows(t) -> void:
 		return WordBudget.words_in(Objectives.ACTIVITY_WORDS[kind]) > Objectives.MAX_WORDS), [])
 	t.eq("a kind with no words of its own keeps the row's", Objectives.activity_words("no_such_kind"), Objectives.words("find_activity"))
 	# Trade spots go by their ruled names (ruling ci); a drawn pocket by what its marker calls it.
-	t.eq("the risky trade spots are the keeper's gamble", ["trade_risk", "curse", "sacrifice"].map(func(kind): return Objectives.activity_words(kind)).filter(func(w): return w != "Find the keeper's gamble"), [])
-	t.eq("the safe trade spot is the foreman's kindness", Objectives.activity_words("trade_safe"), "Find the foreman's kindness")
-	t.eq("a drawn pocket is named by its marker's word", Objectives.activity_words("arena", Activities.called("arena")), "Find the arena")
+	t.eq("the risky trade spots are the keeper's gamble", ["trade_risk", "curse", "sacrifice"].map(func(kind): return Objectives.activity_words(kind)).filter(func(w): return w != "The keeper's gamble"), [])
+	t.eq("the safe trade spot is the foreman's kindness", Objectives.activity_words("trade_safe"), "The foreman's kindness")
+	t.eq("a drawn pocket is named by its marker's word", Objectives.activity_words("arena", Activities.called("arena")), "Arena")
+	# The done row: every site kind has its own finished words, and every kind the plate can meet has some.
+	t.eq("every named site has its done words", Objectives.ACTIVITY_WORDS.keys().filter(func(kind): return not Objectives.DONE_WORDS.has(kind)), [])
+	t.eq("every done and lost row keeps to five words", (Objectives.DONE_WORDS.values() + Objectives.LOST_WORDS.values()).filter(func(w):
+		return WordBudget.words_in(w) < 1 or WordBudget.words_in(w) > Objectives.MAX_WORDS), [])
+	t.eq("every site kind's done row keeps to five words", Activities.RULES.keys().filter(func(kind):
+		return WordBudget.words_in(Objectives.done_words(kind, Activities.called(kind))) > Objectives.MAX_WORDS), [])
+	t.eq("a drawn pocket's done row is its marker's word, done", Objectives.done_words("arena", Activities.called("arena")), "Arena done")
+	t.eq("only a site that can be lost has lost words", Objectives.LOST_WORDS.keys().filter(func(kind): return not Activities.RULES[kind].has("retry_s")), [])
+	t.eq("a kind that cannot be lost has none", Objectives.lost_words("enemy_camp"), "")
+	# A mark's tag is one or two words in capitals, and names every thing a fight can mark.
+	t.eq("every tag is one or two words in capitals", Objectives.TAGS.values().filter(func(w):
+		return WordBudget.words_in(w) < 1 or WordBudget.words_in(w) > 2 or w != w.to_upper()), [])
+	t.eq("a thing with no tag wears none", Objectives.tag("no_such_thing"), "")
 	var unnamed := []
 	for kind in Activities.RULES:
 		var words := Objectives.activity_words(kind, Activities.called(kind))
@@ -216,12 +213,12 @@ func _reached_once(t) -> void:
 						for struggling in [false, true]:
 							for lesson in [""]:
 								for distance in [5.0, 39.9, 40.0, 200.0]:
-									for activities_left in [0, 1]:
+									for site_at_hand in [false, true]:
 										for locks in 4:
 											for extra in MOUNTS + PHASES:
 												var reading := {"state": state, "sealed": sealed, "fight": fight, "engaged": engaged,
 													"staggered": staggered, "struggling": struggling, "lesson": lesson, "distance": distance,
-													"activities_left": activities_left, "yard_locked": bool(locks & 1), "clamp_shut": bool(locks & 2)}
+													"site_at_hand": site_at_hand, "yard_locked": bool(locks & 1), "clamp_shut": bool(locks & 2)}
 												reading.merge(extra, true)
 												reached[Objectives.choose(reading)] = true
 	var missing := Objectives.ROWS.keys().filter(func(id): return not reached.has(id))
@@ -263,7 +260,8 @@ func _fights(t) -> void:
 
 
 # A mounted reactor names its own road only where "Break its guard" would stand: engaged, on
-# posture, the clamp open, no stagger and no struggle. Everything else keeps its row.
+# posture, the clamp open, no stagger and no struggle. The flume's line fight also keeps its row
+# through a stagger (the mark on the relic says the core is open). Everything else keeps its row.
 func _mounts(t) -> void:
 	var changed := []
 	for mount in MOUNTS:
@@ -271,17 +269,23 @@ func _mounts(t) -> void:
 			for mask in 256:
 				var reading := {"state": state, "sealed": bool(mask & 1), "fight": "posture" if mask & 2 else "plating",
 					"engaged": bool(mask & 4), "staggered": bool(mask & 8), "struggling": bool(mask & 16),
-					"activities_left": 1 if mask & 32 else 0, "yard_locked": bool(mask & 64), "clamp_shut": bool(mask & 128)}
+					"site_at_hand": bool(mask & 32), "yard_locked": bool(mask & 64), "clamp_shut": bool(mask & 128)}
 				var plain := Objectives.choose(reading)
 				var mounted := Objectives.choose(reading.merged(mount, true))
-				if mounted != plain and not (plain == "break_guard" and mounted in MOUNT_ROWS):
+				var flume_stagger: bool = plain == "smash_core" and mounted == "line_fight" and mount.get("mount", "") == "flume"
+				if mounted != plain and not (plain == "break_guard" and mounted in MOUNT_ROWS) and not flume_stagger:
 					changed.append([mount, reading, plain, mounted])
-	t.eq("a mounting changes only the guard row", changed, [])
+	t.eq("a mounting changes only the guard row, and the flume the stagger's", changed, [])
 	t.eq("an unknown mounting keeps the guard row", Objectives.choose(CASES["break_guard"].merged({"mount": "plain"}, true)), "break_guard")
 	t.eq("the dam's struggle still says to grow", Objectives.choose(CASES["ride_sheet"].merged({"struggling": true}, true)), "grow_return")
-	t.eq("the flume's stagger still says to smash", Objectives.choose(CASES["fire_from_line"].merged({"staggered": true}, true)), "smash_core")
+	t.eq("the dam's stagger still says to smash", Objectives.choose(CASES["ride_sheet"].merged({"staggered": true}, true)), "smash_core")
+	t.eq("the flume's stagger keeps the line fight's row", Objectives.choose(CASES["line_fight"].merged({"staggered": true}, true)), "line_fight")
+	t.eq("the flume's struggle still says to grow", Objectives.choose(CASES["line_fight"].merged({"struggling": true}, true)), "grow_return")
+	t.eq("and a stagger beats the struggle there too", Objectives.choose(CASES["line_fight"].merged({"struggling": true, "staggered": true}, true)), "line_fight")
 	t.eq("a shut clamp holds the plate over the dam's road", Objectives.choose(CASES["ride_sheet"].merged({"clamp_shut": true}, true)), "break_clamp_crews")
-	t.eq("an activity still stands before an unengaged dam Warden", Objectives.choose(CASES["find_activity"].merged({"mount": "dam_face"}, true)), "find_activity")
+	t.eq("a site at hand still stands before an unengaged dam Warden", Objectives.choose(CASES["find_activity"].merged({"mount": "dam_face"}, true)), "find_activity")
+	t.eq("with no site at hand the Warden is the goal from the drop", Objectives.choose(CASES["find_activity"].merged({"site_at_hand": false}, true)), "find_warden")
+	t.eq("a site at hand never takes the row from a fight", Objectives.choose(CASES["break_guard"].merged({"site_at_hand": true}, true)), "break_guard")
 
 
 # Brindle's phase rows stand only in the arena, and a fight that names no phase keeps the standing row.
@@ -296,8 +300,18 @@ func _phases(t) -> void:
 	t.eq("a phase row never shows outside the arena", outside, [])
 	t.eq("an arena with no phase keeps the standing row", [Objectives.choose({"state": "boss", "phase": 0}), Objectives.choose({"state": "boss", "phase": 9})],
 		["break_brindle", "break_brindle"])
-	t.eq("an open cockpit takes the plate in every fight phase",
-		[1, 2, 3].map(func(phase): return Objectives.choose({"state": "boss", "phase": phase, "open": true})), ["hit_cockpit", "hit_cockpit", "hit_cockpit"])
+	t.eq("an open cockpit never takes the row: every phase holds its loop's row",
+		[1, 2, 3].map(func(phase): return Objectives.choose({"state": "boss", "phase": phase, "open": true})), ["shoot_magnets", "slam_caps", "bait_charge"])
+	# A loop row has a step for each part of its words, and the live one is the one the fight asks for.
+	var uneven := []
+	for id in Objectives.STEPS:
+		if Objectives.words(id).split(", ").size() != Objectives.STEPS[id].size():
+			uneven.append(id)
+	t.eq("every loop row has one step for each part of its words", uneven, [])
+	t.eq("the live step is the one the fight asks for, and the first when it asks for nothing",
+		[Objectives.live_step("line_fight", "latch"), Objectives.live_step("line_fight", "shoot"), Objectives.live_step("line_fight", "core"),
+			Objectives.live_step("slam_caps", "cockpit"), Objectives.live_step("bait_charge", ""), Objectives.live_step("ride_sheet", "sheet")],
+		[0, 1, 2, 1, 0, 0])
 	t.eq("the scooter and a fight with no phase have no cockpit row",
 		[Objectives.choose(CASES["ram_scooter"].merged({"open": true}, true)), Objectives.choose({"state": "boss", "open": true})], ["ram_scooter", "break_brindle"])
 
