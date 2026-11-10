@@ -26,6 +26,8 @@ const LAYER := 6
 const INK := Color("17141a")
 const PAPER := Color("f3ecdc")
 const CAPTION_FILL := Color("fff6c9")
+# Half width and drop of the tail under a pointer label, in overlay pixels.
+const POINTER_TAIL := Vector2(9.0, 16.0)
 const SFX_FILL := Color("ffd23f")
 const BOSS_FILL := Color("ffe1dc")
 
@@ -680,6 +682,15 @@ func _pointer(text: String, at: Vector2) -> void:
 	panel.add_child(_label(text, 30, INK))
 	panel.position = at * _screen()
 	_overlay.add_child(panel)
+	# A tail from the box down to the subject, so the word reads as a label on the pilot and
+	# not as a caption that lost its other words.
+	var tail := Polygon2D.new()
+	tail.name = "Tail"
+	tail.color = INK
+	tail.polygon = PackedVector2Array([Vector2(-POINTER_TAIL.x, 0.0), Vector2(POINTER_TAIL.x, 0.0), Vector2(0.0, POINTER_TAIL.y)])
+	var box := panel.get_combined_minimum_size()
+	tail.position = Vector2(box.x * 0.5, box.y)
+	panel.add_child(tail)
 	_pop(panel, 1.2)
 
 
