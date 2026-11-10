@@ -243,6 +243,15 @@ func _moss() -> void:
 	t.check("Moss rings his bell twice and talks as he does at his bench", body.size() == bench.size()
 		and [plan[0][1], plan[1][1], plan[0][5]] == [86, 86, "mallet"] and same.size() == body.size(),
 		"%d letters after the bell, %d at the bench" % [body.size(), bench.size()])
+	# One Moss everywhere: his bench line is his caller row's mouth too, an octave up.
+	var first: Array = bench[0]
+	var row: Dictionary = Bank.CALLERS[Bank.MOSS]
+	var said: PackedFloat32Array = Bank._mouth(int(first[1]) + int(row["drop"]), float(first[2]), float(first[4]), first[6], float(row["mouth"]))
+	var blipped: PackedFloat32Array = Bank._blip(int(first[1]), float(first[2]), false, float(first[4]))
+	var line: PackedFloat32Array = Bank.babble(LINE, Bank.BABBLE_LEVEL)
+	t.check("at his bench Moss says his letters through the same mouth, levelled as on a call", _fit(line, said) < 0.02 and _fit(line, blipped) > 0.2
+		and Bank.trim_db("babble") == Bank.trim_db(Bank.say_id("moss", LINE)) and Synth.peak(Bank.babble(LINE, Bank.BABBLE_RELENT)) < Synth.peak(line),
+		"first letter off his mouth by %.3f, off his old blip by %.3f" % [_fit(line, said), _fit(line, blipped)])
 	Bank.unknown_callers.clear()
 	var stranger: String = Bank.say_id("nobody", LINE)
 	t.check("a caller with no row gets Moss's voice and one warning", Bank._say_plan("nobody", LINE) == Bank._say_plan("moss", LINE)
@@ -316,6 +325,20 @@ func _call_end(audio) -> void:
 		and engine._duck_until <= engine.clock and engine._duck_target == 1.0 and audio.call_in("call_in", "sable", LINE) > 0.0,
 		"%d samples left before, %d after, duck until %d at clock %d" % [left, after, engine._duck_until, engine.clock])
 	audio.call_end()
+
+
+# How far the opening of a buffer is from being a scaled copy of a piece: 0 when it is one
+# (a line levelled as a whole keeps each letter's shape), near 1 when they are unrelated.
+func _fit(buf: PackedFloat32Array, piece: PackedFloat32Array) -> float:
+	var n := mini(piece.size(), 1600)
+	var cross := 0.0
+	var own := 0.0
+	var other := 0.0
+	for i in n:
+		cross += buf[i] * piece[i]
+		own += piece[i] * piece[i]
+		other += buf[i] * buf[i]
+	return 1.0 - cross * cross / maxf(own * other, 0.000000001)
 
 
 func _pump_to(audio, until: int) -> void:

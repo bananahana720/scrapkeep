@@ -311,7 +311,8 @@ const VOWELS := ["a", "e", "i", "o", "u"]
 # no mouth and nothing left to chance. bench is Moss alone: his call is his bench line after
 # his bell, and a caller with no row gets his. db levels a voice against Moss's bench blips.
 # Moss and Brindle, the two low voices, are said high (Andrew, 10 November 2026): Moss an
-# octave over his bench pitch, Brindle at his brass's.
+# octave over his old bench pitch, Brindle at his brass's. Moss's row is his voice everywhere,
+# at his bench (babble) as on a call: {"bench": true} alone gives him his old blips back.
 const SAY := "say|"
 const MOSS := "moss"
 const PURE := "pure"
@@ -347,6 +348,10 @@ const MOUTH_BREATHED := ["s", "f", "h", "z", "c", "x", "t", "k", "p"]
 const MOUTH_RING := 1.25
 # A said vowel's peak, so a mouth sits level with the instrument that chirps before it.
 const MOUTH_PEAK := 0.8
+# Moss's sigh (the relent) is said through a mouth this much larger than his own, and this
+# much under his other lines, where the old sigh's softer blip sat.
+const BENCH_SIGH := 0.9
+const BENCH_SIGH_LEVEL := 0.75
 # A caller id with no row, warned about once (say_id) and given Moss's voice.
 static var unknown_callers := {}
 
@@ -392,6 +397,8 @@ static func trim_db(id: String) -> float:
 		return PILOT_QUOTE_DB
 	if id.begins_with(SAY):
 		return TRIM_DB["babble"] + float(_caller(_said(id)[0]).get("db", 0.0))
+	if id == "babble":
+		return TRIM_DB["babble"] + float(CALLERS[MOSS].get("db", 0.0))
 	if id.begins_with(ASSIST_STING):
 		return ASSIST_STING_DB
 	return TRIM_DB.get(id, TRIM_DB.get(base_key(id), -8.0))
@@ -2637,18 +2644,28 @@ static func _lift_hiss() -> PackedFloat32Array:
 
 
 # --- Moss's babble (SOUND-STORY.md section 8) --------------------------------------------
-# One blip per letter, a square through a 1.2 kHz low-pass, drawn from the beat root's
-# Dorian triad and seeded by the line, so a line always babbles the same way. beat is
-# 1 to 6 for the conversation loop, BABBLE_LEVEL for barks, BABBLE_RELENT for the sigh.
+# One letter at a time, drawn from the beat root's Dorian triad and seeded by the line, so a
+# line always babbles the same way. beat is 1 to 6 for the conversation loop, BABBLE_LEVEL
+# for barks, BABBLE_RELENT for the sigh. Moss says his letters through the mouth his caller
+# row gives him (Andrew, 10 November 2026: mouths for everyone alive), the sigh through a
+# larger one; with no mouth on his row each letter is his old blip, a square through a
+# 1.2 kHz low-pass.
 
 static func babble(text: String, beat: int, shift := 0) -> PackedFloat32Array:
 	var relent := beat == BABBLE_RELENT
 	var laid := _babble_blips(text, beat)
 	var buf := Synth.buffer(Synth.seconds(float(laid[1]) + 0.3))
+	var row: Dictionary = CALLERS[MOSS]
 	for blip in laid[0]:
-		var piece := _grumble(int(blip[1]) + shift) if blip[5] else _blip(int(blip[1]) + shift, float(blip[2]), relent, float(blip[4]))
+		var piece: PackedFloat32Array
+		if blip[5]:
+			piece = _grumble(int(blip[1]) + shift)
+		elif row.has("mouth"):
+			piece = _mouth(int(blip[1]) + shift + int(row.get("drop", 0)), float(blip[2]), float(blip[4]), blip[6], float(row["mouth"]) * (BENCH_SIGH if relent else 1.0))
+		else:
+			piece = _blip(int(blip[1]) + shift, float(blip[2]), relent, float(blip[4]))
 		Synth.add_into(buf, piece, Synth.seconds(float(blip[0])), float(blip[3]))
-	return Synth.declick(Synth.normalize(buf, 0.9), 16, 600)
+	return Synth.declick(Synth.normalize(buf, 0.9 * (BENCH_SIGH_LEVEL if relent and row.has("mouth") else 1.0)), 16, 600)
 
 
 # A line laid out as Moss's blips [seconds, midi, seconds long, gain, glide, grumble, letter],
@@ -2873,7 +2890,7 @@ static func _say(speaker: String, text: String) -> PackedFloat32Array:
 		var voice: String = blip[5]
 		var piece: PackedFloat32Array
 		if row.has("mouth") and blip[6] != "":
-			piece = _mouth(int(blip[1]) + int(row.get("drop", 0)), float(blip[2]), float(blip[4]), blip[6], float(row["mouth"]))
+			piece = _mouth(int(blip[1]) + int(row.get("drop", 0)) + _shift, float(blip[2]), float(blip[4]), blip[6], float(row["mouth"]))
 		elif voice == "":
 			piece = _blip(int(blip[1]) + _shift, float(blip[2]), false, float(blip[4]))
 		else:
@@ -2882,7 +2899,9 @@ static func _say(speaker: String, text: String) -> PackedFloat32Array:
 	return Synth.declick(buf, 16, 600)
 
 
-# One letter said by a mouth: a reed at the note through the letter's two resonances, scaled
+# One letter said by a mouth: a reed at the note (in the key the caller passes; nothing here
+# reads the bake's, so Moss's bench line can be said off a bake) through the letter's two
+# resonances, scaled
 # by the mouth's size, with the same scoop a played letter gets. A vowel is its own shape; a
 # consonant is half shut and shorter of breath, m and n hum, and the hissed and stopped ones
 # start as air. The air is seeded by the letter and the note, so a line is said the same
@@ -2905,7 +2924,7 @@ static func _mouth(midi: int, length: float, bend: float, letter: String, size: 
 	for i in n:
 		var x := float(i) / n
 		var slot := minf(1.0, x * MOUTH_RING)
-		phase = fposmod(phase + _hz(midi + (bend * (slot - 1.0) if bend > 0.0 else bend * slot)) * Synth.INV_RATE, 1.0)
+		phase = fposmod(phase + Harmony.hz(midi + (bend * (slot - 1.0) if bend > 0.0 else bend * slot)) * Synth.INV_RATE, 1.0)
 		var reed := 2.0 * phase - 1.0
 		if x < air:
 			reed = lerpf(rng.randf_range(-1.0, 1.0), reed, x / air)

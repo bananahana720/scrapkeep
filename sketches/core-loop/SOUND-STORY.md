@@ -343,7 +343,7 @@ The bay drops the band to a sax-led lounge re-voicing of the current stage theme
 
 ### Babble synthesis
 
-Moss's voice is synthesized babble, one blip per letter, in the live key, rising with exasperation. It never uses a formant (R1) or a wobble (R2). At his bench it is a bench radio, not a mouth; his call-ins are said through one ("Who talks on what", below), and whether the bench follows is not decided.
+Moss's voice is synthesized babble, one letter at a time, in the live key, rising with exasperation. Since 10 November 2026 he says his letters through a small mouth an octave over his old pitch, at his bench as on a call-in: Andrew ruled mouths for everyone alive and the high mouth for Moss, and the bench following is the coordinator's reading of that, on the sitting watch list for his ear. His row in `CALLERS` (`sfx_bank.gd`) is the one switch; with no mouth on it each letter is the old blip, a square through a low-pass. It never uses a wobble (R2), and it is kept high so that it is never the low talking growl R1 rules out.
 
 | Rule | Value |
 | --- | --- |
@@ -365,9 +365,9 @@ Moss's voice is synthesized babble, one blip per letter, in the live key, rising
 | 4 double down | G3 | grumble, shorter again |
 | 5 plead | A3 | the peak: highest root, fastest blips |
 | 6 send off | C3 | falls below where it started; grumble; a slow last word |
-| Relent | D3, ending with a fall of a fifth | slower than beat 1, on a warmer filtered-triangle blip: a sigh |
+| Relent | D3, ending with a fall of a fifth | slower than beat 1, through a larger mouth and a little under his other lines (the old voice: a warmer filtered-triangle blip): a sigh |
 | Shop barks | D3 | level |
-| Remembers-you lines | D3, filtered triangle | slow and warm |
+| Remembers-you lines | D3, said as the relent is | slow and warm |
 
 ### Who talks on what
 
@@ -375,7 +375,7 @@ Working (W), 9 November 2026, from Andrew's ask that the people in the game call
 
 The rule is the story map's: whose hands the caller is sets the instrument. A pilot talks in the notes of their own motif, on their own instrument, so their speech is their tune shuffled. Everyone on the crew's side bends into their notes and strays a little in time. The Foreman alone is on the grid: one pure note, every letter a thirty-second of the band's tempo, nothing bent and nothing left to chance, and it does not rise on a question. A line is laid out the same way every time it is said. The rows live in `sfx_bank.gd` (`CALLERS`).
 
-Mouths (Andrew, 10 November 2026: "reach big"). Everyone alive says their letters through a small vowel mouth, the way Animal Crossing's villagers do; the Foreman has none. A mouth is a reed on the caller's note pushed through two resonances the letter sets: five vowel shapes, a hum for m and n, a half-shut shape for the other consonants, and a breath opening the hissed and stopped ones. Each caller's mouth has a size, and a smaller mouth rings higher, which is what keeps it a creature's voice and not a growl. The chirp stays on the caller's instrument, a little under the voice, so who is calling is still heard in their hands before their mouth. The pilots and the site crews are built this way. R1 was written against low voices with moving formants, and Moss and Brindle are the two low voices here, so theirs went to Andrew as a card: both get the high mouth (Andrew, 10 November 2026), Moss an octave above his bench pitch and Brindle at his brass's pitch. The sound page keeps each of them with no mouth, a low mouth and the high one. Moss's voice at his bench is not touched by this; whether the bench follows is not decided. The Cannon is a machine on the crew's side and keeps its bent chime.
+Mouths (Andrew, 10 November 2026: "reach big"). Everyone alive says their letters through a small vowel mouth, the way Animal Crossing's villagers do; the Foreman has none. A mouth is a reed on the caller's note pushed through two resonances the letter sets: five vowel shapes, a hum for m and n, a half-shut shape for the other consonants, and a breath opening the hissed and stopped ones. Each caller's mouth has a size, and a smaller mouth rings higher, which is what keeps it a creature's voice and not a growl. The chirp stays on the caller's instrument, a little under the voice, so who is calling is still heard in their hands before their mouth. The pilots and the site crews are built this way. R1 was written against low voices with moving formants, and Moss and Brindle are the two low voices here, so theirs went to Andrew as a card: both get the high mouth (Andrew, 10 November 2026), Moss an octave above his bench pitch and Brindle at his brass's pitch. The sound page keeps each of them with no mouth, a low mouth and the high one. Moss's voice at his bench follows his row, so he has one voice everywhere. The Cannon is a machine on the crew's side and keeps its bent chime.
 
 | Caller | Voice | Notes | How they talk |
 | --- | --- | --- | --- |
