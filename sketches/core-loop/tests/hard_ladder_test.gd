@@ -14,6 +14,7 @@ const ClassDef := preload("res://src/core/class_def.gd")
 const StartPicks := preload("res://src/core/start_picks.gd")
 const WordBudget := preload("res://src/ui/word_budget.gd")
 const UiDraw := preload("res://src/ui/ui_draw.gd")
+const Push := preload("res://tests/workshop/push.gd")
 
 # Each lever and the way a harder rung moves it: up (hits, waits before regen) or down (cadence, regen rate).
 const HARDER_UP := ["mobs.damage_mult", "warden.pulse_damage_mult", "brindle.damage_mult", "mobs.elite_rate_mult",
@@ -187,8 +188,8 @@ func _unlock(game) -> void:
 	card.tier_button(1).grab_focus()
 	t.eq("a looked-at rung adds its numeral and its two lines", Array(card.drawn_words()).slice(-9),
 		["Tier", "0", "1", "Crowd", "Hits", "Regen", "Pay", RunTier.threat_text(1), RunTier.pay_text(1)])
-	t.check("rung 1's lines say crowd, pace, plated elites and pay, and no slower regen", "more crowd" in RunTier.threat_text(1)
-		and "shorter intervals" in RunTier.threat_text(1) and "plated elites" in RunTier.threat_text(1) and not "slower regen" in RunTier.threat_text(1))
+	t.check("rung 1's lines say crowd, pace, plated elite brutes and pay, and no slower regen", "more crowd" in RunTier.threat_text(1)
+		and "shorter intervals" in RunTier.threat_text(1) and "plated elite brutes" in RunTier.threat_text(1) and not "slower regen" in RunTier.threat_text(1))
 	card.tier_button(0).grab_focus()
 	t.eq("the base tier's line", Array(card.drawn_words()).slice(-1), ["The standard shift."])
 	card.tier_button(0).release_focus()
@@ -224,6 +225,31 @@ func _unlock(game) -> void:
 		t.eq("and writes the picked rung's numeral once", Array(card.drawn_words()).slice(Array(card.drawn_words()).find("Tier"), Array(card.drawn_words()).find("Crowd")),
 			["Tier", str(tier)])
 	t.eq("a pip picks its rung, up or down the ladder", picked, [2, 5, 0, 3])
+	# The look is whichever of the focus and the mouse came to a pip last (the focus is on rung 3, just picked):
+	# a mouse over another rung reads that rung before its click, and the stick takes the look back.
+	Push.hover(root, card.tier_button(5))
+	t.check("the mouse over rung 5 reads rung 5, the focus still on rung 3", card.tier_button(3).has_focus() and RunTier.threat_text(5) in card.drawn_words()
+		and not RunTier.threat_text(3) in card.drawn_words() and "5" in card.drawn_words(), "words %s" % [card.drawn_words()])
+	card.tier_button(1).grab_focus()
+	t.check("the focus moved to rung 1 reads rung 1, the mouse still on rung 5", RunTier.threat_text(1) in card.drawn_words()
+		and not RunTier.threat_text(5) in card.drawn_words(), "words %s" % [card.drawn_words()])
+	Push.hover(root, card.tier_button(5))
+	Push.hover(root, card.tier_button(4))
+	t.check("the mouse moved on to rung 4 reads rung 4", RunTier.threat_text(4) in card.drawn_words() and not RunTier.threat_text(5) in card.drawn_words())
+	var off := InputEventMouseMotion.new()
+	off.position = Vector2(4.0, 4.0)
+	off.global_position = off.position
+	root.push_input(off, true)
+	t.check("the mouse off the pips, the look falls back to the rung under the focus", RunTier.threat_text(1) in card.drawn_words()
+		and not RunTier.threat_text(4) in card.drawn_words(), "words %s" % [card.drawn_words()])
+	Push.click(root, card.tier_button(4))
+	t.check("a click picks the rung it was reading, and keeps reading it", game.run.selected_run_tier() == 4 and RunTier.threat_text(4) in card.drawn_words(),
+		"tier %d, words %s" % [game.run.selected_run_tier(), card.drawn_words()])
+	card.tier_button(4).release_focus()
+	off.position = Vector2(6.0, 6.0)
+	off.global_position = off.position
+	root.push_input(off, true)
+	game.flow.choose_run_tier(3)
 	t.eq("the pips sit left to right in rung order", range(RunTier.TOP + 1).map(func(tier): return card.tier_button(tier).position.x),
 		_sorted(range(RunTier.TOP + 1).map(func(tier): return card.tier_button(tier).position.x)))
 	t.check("the ladder and the reroll sit inside the card", Rect2(Vector2.ZERO, card.size).encloses(card.tier_button(0).get_rect())

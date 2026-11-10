@@ -84,7 +84,7 @@ static func threat_text(tier := HARD) -> String:
 	var hard := row(tier)
 	var words := "Threat: %d%% more crowd, %d%% shorter intervals" % [roundi((hard.cap_weight - 1.0) * 100.0), roundi((1.0 - hard.interval_weight) * 100.0)]
 	if hard.has("elite_stats"):
-		words += ", plated elites"
+		words += ", plated elite brutes"
 	var d := dials(tier)
 	if d.has("warden.pulse_damage_mult"):
 		words += ", harder hits and Warden pulse"
@@ -101,14 +101,15 @@ static func contract_lines(tier: int) -> PackedStringArray:
 		return PackedStringArray(["The standard shift."])
 	return PackedStringArray([threat_text(tier), pay_text(tier)])
 
-# What each gauge reads, as a multiple of the base tier. Every dial in LADDER and every number in a
-# RUN_TIERS row is read by one of them, so a rung that changes anything moves a gauge:
+# What each gauge reads, as a multiple of the base tier. Every dial in LADDER and a row's cap,
+# interval and pay are read by one of them, so a rung that turns any of those moves a gauge:
 #   Crowd: how many may stand at once over how long the next pack takes to come.
 #   Hits: damage times how often it comes, averaged over the three that hit (the mobs with their
 #     elite repeat rate, the Warden's pulse, Brindle).
 #   Regen: the rate over the wait before it starts.
 #   Pay: event cores (rare weight steps with it in every row).
-# Elite plating (rung 1 up) is not a number that grows up the ladder; threat_text says it.
+# The plating rungs 1 up give their elite plated brutes (combat.gd) is the same on every rung, so it
+# is no gauge's; threat_text says it.
 static func _readings(tier: int) -> Dictionary:
 	var d := dials(tier)
 	var r := row(tier)

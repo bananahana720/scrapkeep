@@ -458,7 +458,7 @@ func _card() -> void:
 	t.check("win offers tier 1", card.offered_tiers() == [0, 1])
 	t.check("a tier to choose releases the cursor", card.wants_pointer() and game.capture_requests.back() == false and game.get_meta("menu_held", false))
 	var hard: Dictionary = Cards.RUN_TIERS[1]
-	var expected_threat := "Threat: %d%% more crowd, %d%% shorter intervals, plated elites" % [roundi(100.0 * (hard.cap_weight - 1.0)), roundi(100.0 * (1.0 - hard.interval_weight))]
+	var expected_threat := "Threat: %d%% more crowd, %d%% shorter intervals, plated elite brutes" % [roundi(100.0 * (hard.cap_weight - 1.0)), roundi(100.0 * (1.0 - hard.interval_weight))]
 	var expected_pay := "Pay: %d%% more event cores and rare weight; gain cap %.1fx" % [roundi(100.0 * (hard.event_core_multiplier - 1.0)), RunTier.PAY_GAIN_CAP]
 	# The ladder is drawn (pips and gauges); the rung looked at writes its threat and pay before the press.
 	card.tier_button(1).grab_focus()
@@ -642,7 +642,7 @@ func _continue_replay() -> void:
 			shown_ids.append(tile.id)
 		t.eq(label + " shows saved three options", shown_ids, expected_options)
 		var hard: Dictionary = Cards.RUN_TIERS[1]
-		var threat := "Threat: %d%% more crowd, %d%% shorter intervals, plated elites" % [roundi(100.0 * (hard.cap_weight - 1.0)), roundi(100.0 * (1.0 - hard.interval_weight))]
+		var threat := "Threat: %d%% more crowd, %d%% shorter intervals, plated elite brutes" % [roundi(100.0 * (hard.cap_weight - 1.0)), roundi(100.0 * (1.0 - hard.interval_weight))]
 		var pay := "Pay: %d%% more event cores and rare weight; gain cap %.1fx" % [roundi(100.0 * (hard.event_core_multiplier - 1.0)), RunTier.PAY_GAIN_CAP]
 		# The ladder is drawn (pips and gauges); the rung looked at writes its threat and pay before the press.
 		if card.tier_button(1) != null:

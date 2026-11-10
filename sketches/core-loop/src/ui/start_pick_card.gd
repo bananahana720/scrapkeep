@@ -35,7 +35,7 @@ const BRIEFING_SCALE := 1.4
 const UNLOCK_WORDS := "A win unlocks Tier 1"
 # The HARD ladder on the card (a profile with a rung opened): the word, one pip per rung and four
 # gauges (RunTier.meters). At rest the gauges are the selected rung's and only its pip carries a
-# numeral. A pip under the focus or the mouse is the rung looked at: it shows its numeral, the
+# numeral. The pip the focus or the mouse came to last is the rung looked at: it shows its numeral, the
 # gauges read it, and its contract (RunTier.contract_lines) is written under them, so the numbers
 # reach a pad, a keyboard and a mouse the same way before the press. Sizes are the card's own,
 # unscaled in the briefing.
@@ -57,7 +57,7 @@ const CONTROLS_H := 120.0
 const LADDER_H := 146.0
 # The interactive card's least width; the ladder's is wide enough for the top rung's threat line.
 const CONTROLS_W := 780.0
-const LADDER_W := 800.0
+const LADDER_W := 840.0
 const REROLL_SIZE := Vector2(138.0, 38.0)
 
 var _tiles: Array = []
@@ -71,6 +71,8 @@ var _profile
 var _run
 # The opened rungs' pips, by tier.
 var _tier_buttons := {}
+# The rung looked at: the opened pip the focus or the mouse came to last, -1 with neither on a pip.
+var _looked := -1
 # Whether a screen over the card owns the input now (flow.gd _start_card_covered); unset, nothing does.
 var covered := Callable()
 var reroll_button: Button
@@ -214,18 +216,32 @@ func drawn_words() -> PackedStringArray:
 	return out
 
 
-# The rung looked at: the opened pip under the focus, else the one under the mouse; -1 with neither.
 func _looked_tier() -> int:
-	var hovered := -1
+	return _looked if _tier_buttons.has(_looked) else -1
+
+
+# The focus or the mouse came to a pip: whichever came last is the look, so a mouse over one rung
+# reads that rung while the focus still sits on the rung picked before, and the stick takes it back.
+func _look(tier: int) -> void:
+	_looked = tier
+	queue_redraw()
+
+
+# The focus or the mouse left a pip. The look stays while the other of the two is still on it, and
+# otherwise falls back to the pip under the focus.
+func _look_away(tier: int, by_mouse: bool) -> void:
+	var pip: Button = _tier_buttons.get(tier)
+	if _looked == tier and pip != null and is_instance_valid(pip) and not (pip.has_focus() if by_mouse else pip.is_hovered()):
+		_looked = _focused_tier()
+	queue_redraw()
+
+
+# The pip under the focus, by tier; -1 with the focus elsewhere.
+func _focused_tier() -> int:
 	for tier in _tier_buttons:
-		var pip: Button = _tier_buttons[tier]
-		if not is_instance_valid(pip):
-			continue
-		if pip.has_focus():
+		if is_instance_valid(_tier_buttons[tier]) and _tier_buttons[tier].has_focus():
 			return tier
-		if pip.is_hovered():
-			hovered = tier
-	return hovered
+	return -1
 
 
 # The rung the gauges read: the one looked at, else the one selected.
@@ -316,14 +332,12 @@ func _reroll_at(at: Vector2, extent_value: Vector2) -> void:
 
 func _controls() -> void:
 	# A pick redraws the card (flow.show_start_card): the focus stays on the rung it was on.
-	var held := -1
-	for tier in _tier_buttons:
-		if is_instance_valid(_tier_buttons[tier]) and _tier_buttons[tier].has_focus():
-			held = tier
+	var held := _focused_tier()
 	for child in get_children():
 		remove_child(child)
 		child.queue_free()
 	_tier_buttons.clear()
+	_looked = -1
 	_tile_buttons.clear()
 	reroll_button = null
 	if not _interactive or not visible:
@@ -351,8 +365,10 @@ func _controls() -> void:
 		pip.flat = true
 		# The looked-at ring is drawn (_draw_ladder), so the button's own focus box stays off.
 		pip.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
-		for looked in [pip.focus_entered, pip.focus_exited, pip.mouse_entered, pip.mouse_exited]:
-			looked.connect(queue_redraw)
+		pip.focus_entered.connect(_look.bind(tier_value))
+		pip.mouse_entered.connect(_look.bind(tier_value))
+		pip.focus_exited.connect(_look_away.bind(tier_value, false))
+		pip.mouse_exited.connect(_look_away.bind(tier_value, true))
 		_tier_buttons[tier_value] = pip
 	if held >= 0 and _tier_buttons.has(held) and is_inside_tree():
 		_tier_buttons[held].grab_focus()
@@ -529,8 +545,7 @@ func _draw_ladder() -> void:
 			draw_rect(Rect2(bar.position + Vector2(bar.size.x * mark, 0.0), Vector2(bar.size.x * (fill - mark), bar.size.y)), colour)
 		elif fill < mark:
 			draw_rect(Rect2(bar.position + Vector2(bar.size.x * fill, 0.0), Vector2(bar.size.x * (mark - fill), bar.size.y)), Palette.HAZARD, false, 1.5)
-		if mark < 1.0:
-			draw_line(bar.position + Vector2(bar.size.x * mark, -3.0), bar.position + Vector2(bar.size.x * mark, bar.size.y + 3.0), Palette.SAND, 2.0)
+		draw_line(bar.position + Vector2(bar.size.x * mark, -3.0), bar.position + Vector2(bar.size.x * mark, bar.size.y + 3.0), Palette.SAND, 2.0)
 		x += METER_BAR.x + METER_GAP
 	if looked >= 0:
 		var lines := RunTier.contract_lines(looked)
