@@ -20,11 +20,19 @@ const TOP_ABOVE_M := 300.0
 const CLEAR_ABOVE_M := 30.0
 const FAR_SHARE := 0.8
 const SIDES := 16
+# Near the column it must read as light, not a wall (PF-28): full alpha from FAR_FULL_M out, eased down to NEAR_SHARE of it
+# at NEAR_M and inside. 220 m is where the column is a signpost, 60 m where it fills the view; 0.3 keeps it visible.
+const FAR_FULL_M := 220.0
+const NEAR_M := 60.0
+const NEAR_SHARE := 0.3
+const Shade := preload("res://src/presentation/landmark_beam.gdshader")
 
 # The column in world space when it is not an impostor, and its view (top_level, so the impostor moves it alone).
 var bottom := Vector3.ZERO
 var top_y := 0.0
 var column: Node3D
+var _layers: Array[ShaderMaterial] = []
+var _alphas: Array[float] = []
 
 
 # A beam under parent from bottom (world) up to sight_top_y + TOP_ABOVE_M, lifted to anchor_y + CLEAR_ABOVE_M.
@@ -60,10 +68,12 @@ func _build() -> void:
 		var view := MeshInstance3D.new()
 		view.name = layer[0]
 		view.mesh = mesh
-		var color := Palette.ANCIENT
-		color.a = layer[2]
-		var material := Palette.unshaded(color)
-		material.disable_fog = true
+		var material := ShaderMaterial.new()
+		material.shader = Shade
+		material.set_shader_parameter("tint", Color(Palette.ANCIENT, 1.0))
+		material.set_shader_parameter("layer_alpha", layer[2])
+		_layers.append(material)
+		_alphas.append(layer[2])
 		view.material_override = material
 		view.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		view.position.y = height() * 0.5
@@ -76,6 +86,22 @@ func _process(_delta: float) -> void:
 	if camera == null or column == null:
 		return
 	column.global_transform = impostor(camera.global_position, camera.far)
+	fade_for(camera.global_position)
+
+
+# The alpha a layer of base layer_alpha holds for an eye distance_m (horizontal) from the axis: the one rule for nearness.
+static func near_alpha(layer_alpha: float, distance_m: float) -> float:
+	var t := clampf((distance_m - NEAR_M) / (FAR_FULL_M - NEAR_M), 0.0, 1.0)
+	return layer_alpha * lerpf(NEAR_SHARE, 1.0, t * t * (3.0 - 2.0 * t))
+
+
+# Sets each layer's drawn alpha and edge softness for an eye; far away it holds today's values and a hard edge.
+func fade_for(eye: Vector3) -> void:
+	var distance := Vector2(bottom.x - eye.x, bottom.z - eye.z).length()
+	for i in _layers.size():
+		var alpha := near_alpha(_alphas[i], distance)
+		_layers[i].set_shader_parameter("layer_alpha", alpha)
+		_layers[i].set_shader_parameter("edge", 1.0 - (alpha / _alphas[i] - NEAR_SHARE) / (1.0 - NEAR_SHARE))
 
 
 # The column's transform for a camera at eye with far plane far: as built inside FAR_SHARE of it, else scaled about the
