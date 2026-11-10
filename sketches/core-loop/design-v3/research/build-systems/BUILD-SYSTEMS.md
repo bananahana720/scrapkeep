@@ -34,8 +34,8 @@ Status: **E** = existing node/effect retained; **E+** = existing node with the e
 
 | ID / tier / parent | Node and one-line effect | Status and source |
 | --- | --- | --- |
-| S1 / 1 / root | Cannonball: **Vault kicks discharge. Weight launches farther.** Keep the small vault discharge. | E+; `s_cannonball`, `src/core/trees/sable.gd:9–10`; mass launch new. |
-| S2 / 1 / root | Beachhead: **Catch distant walls. Launch your weight.** Keep double mount reach; mount, take a firing opportunity, then launch toward the next collection line. | E+; `s_beachhead`, `src/core/trees/sable.gd:11–12`; mass launch new. |
+| S1 / 1 / root | Cannonball: **Vault kicks zap what's near. A heavier ball launches farther.** Keep the small vault discharge. | E+; `s_cannonball`, `src/core/trees/sable.gd:9–10`; mass launch new. |
+| S2 / 1 / root | Beachhead: **Mount walls from twice as far. A heavier ball launches farther.** Keep double mount reach; mount, take a firing opportunity, then launch toward the next collection line. | E+; `s_beachhead`, `src/core/trees/sable.gd:11–12`; mass launch new. |
 | S3 / 2 / S1 | Coil Hook: **Release the rope into a cannonball.** Keep the +10 m/s fling, adding the shared mass bonus only once under the launch ceiling. | E+; `s_coil_hook`, `src/core/trees/sable.gd:14–15`; cap composition new. |
 | S4 / 2 / S1 | Face Runner: **Vaults restore jumps. Heavy fins steer harder.** Each valid vault restores one air jump; same-face lock remains 1.5 s. For 2 s after a vault, Riveted Shell's air-control penalty flips to +25%. | P+; existing `s_face_runner` restores air and sets a 1 s lock at depth 3, `src/core/trees/sable.gd:29–30`; replaces world-one Live Wire at `:16–17`. Placement, lock choice and inversion new. |
 | S5 / 2 / S2 | Arc Nest: **Mounted bolts chain to another target.** Keep one additional turret chain jump; launch to find the next useful firing face. | E; `s_arc_nest`, `src/core/trees/sable.gd:18–19`. |
@@ -47,7 +47,7 @@ Identities: **wall cannonball**, S1→S3, turns an approach into a huge release;
 
 | ID / tier / parent | Node and one-line effect | Status and source |
 | --- | --- | --- |
-| R1 / 1 / root | Gunline: **Twin bolts sweep the running line.** Keep two bolts at 0.6 damage each and at least 3° spread. | E; `r_gunline`, `src/core/trees/rivet.gd:7–9`; retain mass contact verb. |
+| R1 / 1 / root | Gunline: **Your laser fires twin bolts.** Keep two bolts at 0.6 damage each and at least 3° spread. | E; `r_gunline`, `src/core/trees/rivet.gd:7–9`; retain mass contact verb. |
 | R2 / 1 / root | Juggernaut: **Starting a sprint blasts enemies back.** Keep the half-scale start blast and its 1 s proc gap. | E; `r_juggernaut`, `src/core/trees/rivet.gd:10–11`; retain mass contact verb. |
 | R3 / 2 / R1 | Tracer Rounds: **Running fire jumps to a neighbour.** Keep one 6 m chain and 0.9 damage multiplier. | E; `r_tracer`, `src/core/trees/rivet.gd:13–15`. |
 | R4 / 2 / R1 | Run and Gun: **Sustain fire. Worn scrap sparks behind you.** Keep half sprint drain while firing; each actual unit of rolling wear leaves one short arc patch, including Spark Tread's extra wear. | E+; drain exists at `src/core/trees/rivet.gd:16–17`; wear trail is new. |
@@ -62,8 +62,8 @@ Run and Gun's trail starts with 14 damage per patch, 1 m radius, 2 s life, at mo
 
 | ID / tier / parent | Node and one-line effect | Status and source |
 | --- | --- | --- |
-| K1 / 1 / root | Trapper: **Five waiting payloads. Weight widens their blasts.** Keep 2.5 s fuses and five live charges. | E+; `k_trapper`, `src/core/trees/kest.gd:7–8`; mass radius new. |
-| K2 / 1 / root | Ghost: **Blink unseen. Carry a larger surprise.** Keep cloaked sight factor 0.3. | E+; `k_ghost`, `src/core/trees/kest.gd:9–10`; mass radius new. |
+| K1 / 1 / root | Trapper: **Five charges can wait at once. A heavier ball blasts wider.** Keep 2.5 s fuses and five live charges. | E+; `k_trapper`, `src/core/trees/kest.gd:7–8`; mass radius new. |
+| K2 / 1 / root | Ghost: **Cloaked, enemies spot you only up close. A heavier ball blasts wider.** Keep cloaked sight factor 0.3. | E+; `k_ghost`, `src/core/trees/kest.gd:9–10`; mass radius new. |
 | K3 / 2 / K1 | Tripwire: **Charges spring when enemies approach.** Keep the 2 m contact trigger, distinct from mass-scaled blast radius. | E; `k_tripwire`, `src/core/trees/kest.gd:12–13`. |
 | K4 / 2 / K1 | Demo Expert: **Smash scatters five payloads.** Keep five demo charges; mass widens each committed blast, never the trigger radius or scatter count. | E; `k_demo_expert`, `src/core/trees/kest.gd:14–15`; inherits new mass verb. |
 | K5 / 2 / K2 | Smoke Trail: **Glide cloaked. Heavy fins steer harder.** Keep cloak while gliding; Riveted Shell's air-control penalty becomes +25% during a glide. | E+; `k_smoke_trail`, `src/core/trees/kest.gd:16–17`; inversion new. |

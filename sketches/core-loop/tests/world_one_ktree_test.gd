@@ -32,8 +32,8 @@ const BASE_EFFECT := {
 	"k_ambush": "Throwing no longer breaks your cloak",
 }
 const CODEX := {
-	"k_trapper": "Five waiting payloads. Weight widens their blasts.",
-	"k_ghost": "Blink unseen. Carry a larger surprise.",
+	"k_trapper": "Five charges can wait at once. A heavier ball blasts wider.",
+	"k_ghost": "Cloaked, enemies spot you only up close. A heavier ball blasts wider.",
 	"k_tripwire": "Charges spring when enemies approach.",
 	"k_demo_expert": "Smash scatters five payloads.",
 	"k_smoke_trail": "Glide cloaked. Heavy fins steer harder.",
