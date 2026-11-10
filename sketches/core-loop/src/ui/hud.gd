@@ -166,6 +166,9 @@ var edge_markers
 var part_name
 var launch_card
 var _world_card_at := -1
+# The world and stage whose cards wait for the title's turn in a run's opening; 0 when none.
+var _title_world := 0
+var _title_stage := 0
 var _cursed := false
 var why_callout
 var hotwire_screen
@@ -192,6 +195,8 @@ var _ach_icon: TextureRect
 var _ach_entry := {}
 var _lore_panel: PanelContainer
 var _lore_left := 0.0
+# A field note was found while a flourish had reading matter up: the pill goes up after it.
+var _lore_due := false
 var _lore_age := 0.0
 var _corner_chip: Control
 var _lower: Control
@@ -207,6 +212,8 @@ var boss_plate: Control
 # trying without getting anywhere (objectives.gd).
 var _engaged := false
 var _struggle := Objectives.Struggle.new()
+# The site the activity row names now (objective_reading), or null.
+var _plate_site = null
 # The armour gauge (scrap mode `armor`): the mass heap and the scrap layer over the hull, left of the hull
 # gauge, in the scrap colour where the hull is sand. A hit that reached the scrap flashes
 # its edge amber for ARMOR_FLASH seconds; the hull gauge turns rust only at low health.
@@ -331,6 +338,7 @@ func setup(game_ref) -> void:
 	_build_lore_pulse()
 	game.codex.lore_found.connect(func(_id: String): _show_lore())
 	game.events.achievement_earned.connect(func(id: String): _ach_queue.append(Achievements.toast_text(id)))
+	game.opening.turned.connect(_on_turned)
 	_connect_toasts(game.events)
 	game.events.boss_phase_changed.connect(func(_phase: int, phase_name: String):
 		toast_kind("boss_phase_changed", {"name": phase_name.capitalize()}))
@@ -344,9 +352,15 @@ func setup(game_ref) -> void:
 	game.events.world_entered.connect(_on_world_entered)
 	game.events.stage_entered.connect(_on_stage_entered)
 	game.events.threat_rose.connect(func(tier: int): _threat = maxi(_threat, tier))
+	# The boss's title, unless its arrival row is saying the name on a card of its own. The row
+	# starts on this signal too, and first: the presentation is set up before the HUD.
 	game.events.boss_arena_entered.connect(func():
-		launch_card.show_card("fac_fleet", EventKinds.hud("boss_arena_entered"), EventKinds.color("boss_arena_entered")))
+		var presentation = game.get("presentation")
+		if presentation == null or not presentation.names_boss():
+			launch_card.show_card("fac_fleet", EventKinds.hud("boss_arena_entered"), EventKinds.color("boss_arena_entered")))
 	game.events.run_started.connect(func(_class_id: String):
+		_title_world = 0
+		_title_stage = 0
 		_threat = 0
 		_begin_engagement(false)
 		_armor_peak = ARMOR_PEAK_FLOOR)
@@ -445,9 +459,15 @@ func _build_lore_pulse() -> void:
 
 
 func _show_lore() -> void:
-	_lore_left = LORE_TOTAL
-	_lore_age = 0.0
-	_lore_panel.visible = true
+	_lore_due = true
+	_step_lore(0.0)
+
+
+# A flourish has a card, a caption or a comic panel up or on the way (presentation.reading):
+# one voice at a time, so the corner's plates and pill wait for it.
+func _reading() -> bool:
+	var presentation = game.get("presentation")
+	return presentation != null and presentation.reading()
 
 
 func lore_pulse_visible() -> bool:
@@ -455,6 +475,11 @@ func lore_pulse_visible() -> bool:
 
 
 func _step_lore(delta: float) -> void:
+	if _lore_due and not _reading():
+		_lore_due = false
+		_lore_left = LORE_TOTAL
+		_lore_age = 0.0
+		_lore_panel.visible = true
 	if _lore_left <= 0.0:
 		return
 	_lore_left -= delta
@@ -552,7 +577,8 @@ func _step_ach(delta: float) -> void:
 	if game.screens != null and game.screens.ending_open():
 		clear_achievement_toasts()
 		return
-	if _ach_entry.is_empty() and not (_ach_queue.is_empty() and _tune_queue.is_empty()) and not _fight_live() and not _corner_swollen():
+	if _ach_entry.is_empty() and not (_ach_queue.is_empty() and _tune_queue.is_empty()) and not _fight_live() and not _corner_swollen() \
+			and not game.opening.waits("plate") and not _reading():
 		var tune := _ach_queue.is_empty()
 		_ach_entry = {"text": _tune_queue.pop_front() if tune else _ach_queue.pop_front(), "left": ACH_TOTAL, "age": 0.0}
 		# The first line is the name; whatever follows it is the detail.
@@ -754,6 +780,9 @@ func _on_launched(_velocity: Vector3) -> void:
 # stage's card, which follows after the world card has been up for a beat. A one-world
 # table shows no world card.
 func _on_world_entered(world: int) -> void:
+	if game.opening.waits("title"):
+		_title_world = world
+		return
 	if game.ctx.stages.worlds().size() <= 1:
 		return
 	var row := Worlds.row(world)
@@ -769,10 +798,35 @@ func _on_stage_entered(stage: int, retry: bool) -> void:
 	_begin_engagement(false)
 	if retry:
 		return
+	if game.opening.waits("title"):
+		_title_stage = stage
+		return
+	_title_for(stage)
+
+
+# The title's turn in a run's opening (opening.gd): the world and stage cards held under the
+# launch take's panel go up now, where they can be read.
+func _on_turned(voice: String) -> void:
+	if voice != "title":
+		return
+	var world := _title_world
+	var stage := _title_stage
+	_title_world = 0
+	_title_stage = 0
+	if game.run == null or stage != game.run.stage or not game.flow.in_stage():
+		return
+	if world > 0:
+		_on_world_entered(world)
+	_title_for(stage)
+
+
+func _title_for(stage: int) -> void:
 	if _world_card_at >= 0:
 		_world_card_at = -1
+		# This run's card only: a restart inside the beat has its own on the way.
+		var run_id := String(game.run.run_id)
 		get_tree().create_timer(WORLD_CARD_BEAT).timeout.connect(func():
-			if game != null and game.run != null and game.run.stage == stage:
+			if game != null and game.run != null and game.run.stage == stage and String(game.run.run_id) == run_id:
 				_card_for_stage(stage))
 	elif launch_card.showing():
 		launch_card.extend()
@@ -786,7 +840,7 @@ func _step_curse() -> void:
 	if now and not _cursed:
 		launch_card.show_card("obj_beacon", StageModifier.CURSE.word, EventKinds.color("stage_entered"), StageModifier.CURSE.line)
 		if game.player != null:
-			StageModifier.announce(game.player.active_body().global_position)
+			StageModifier.announce(game.player.shown_position())
 	_cursed = now
 
 
@@ -796,7 +850,7 @@ func _card_for_stage(stage: int) -> void:
 	var modifier := StageModifier.for_stage(game.run, game.ctx.terrain, stage)
 	launch_card.show_card("obj_beacon", game.ctx.stages.of(stage)["name"], EventKinds.color("stage_entered"), StageModifier.card_line(game.run, game.ctx.terrain, stage))
 	if not modifier.is_empty() and game.player != null:
-		StageModifier.announce(game.player.active_body().global_position)
+		StageModifier.announce(game.player.shown_position())
 
 
 func _label(font_size: int) -> Label:
@@ -948,7 +1002,7 @@ static func _rect_of(control: Control) -> Rect2:
 func objective_reading() -> Dictionary:
 	var flow = game.flow
 	var warden = flow.warden if is_instance_valid(flow.warden) else null
-	var distance: float = game.player.ball_position().distance_to(warden.global_position) if warden != null else INF
+	var distance: float = game.player.shown_position().distance_to(warden.global_position) if warden != null else INF
 	var gate = flow.gate
 	var sites: Array = edge_markers.unfinished_sites()
 	var reading := {
@@ -976,15 +1030,17 @@ func objective_reading() -> Dictionary:
 		return {"id": "", "icon": "", "words": "", "color": Palette.SAND, "progress": -1.0, "distance": -1}
 	var words := Objectives.words(id)
 	if id == "find_activity":
-		# The nearest unfinished site, by name and metres, so the row is a place to go.
-		var ball: Vector3 = game.player.ball_position()
-		var nearest = null
+		# An unfinished site by name and metres, so the row is a place to go: the one in front of
+		# the view (Objectives.pick_site), kept until another is clearly the better call.
+		var ball: Vector3 = game.player.shown_position()
+		var offsets := []
 		for site in sites:
-			if nearest == null or ball.distance_squared_to(site.global_position) < ball.distance_squared_to(nearest.global_position):
-				nearest = site
-		if nearest != null:
-			words = Objectives.activity_words(String(nearest.id))
-			distance = ball.distance_to(nearest.global_position)
+			offsets.append(site.global_position - ball)
+		var picked := Objectives.pick_site(offsets, -game.camera.cam.global_transform.basis.z, sites.find(_plate_site) if is_instance_valid(_plate_site) else -1)
+		_plate_site = sites[picked] if picked >= 0 else null
+		if picked >= 0:
+			words = Objectives.activity_words(String(sites[picked].id), game.world.activities.called(String(sites[picked].id)))
+			distance = offsets[picked].length()
 	return {"id": id, "icon": Objectives.glyph(id), "words": words, "color": row_color(id),
 		"progress": _clamp_fraction(gate) if id == "break_clamp_crews" else game.beacon.fraction() if id in RING_ROWS else -1.0,
 		"distance": int(distance) if id in ["find_warden", "find_activity"] and distance < INF else -1}
@@ -1002,7 +1058,7 @@ static func _clamp_fraction(gate) -> float:
 func place_prompts(size: Vector2, playing: bool) -> void:
 	prompt_rects.clear()
 	var cam: Camera3D = game.camera.cam
-	var ball: Vector3 = game.player.ball_position()
+	var ball: Vector3 = game.player.shown_position()
 	var near: Array = []
 	for prompt in get_tree().get_nodes_in_group(ScreenRegions.PROMPT_GROUP):
 		prompt.visible = false

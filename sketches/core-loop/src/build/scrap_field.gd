@@ -25,6 +25,10 @@ const HOME_SPEED := 16.0
 const HOME_OVER_BALL := 1.4
 const SPACING := 8.0
 const MAX_PER_LINE := 14
+# A trail piece floats this far over the ground, as a line's does; the trail is walked in steps this long.
+const TRAIL_OVER_GROUND := 1.4
+const TRAIL_STEP_M := 1.0
+const TRAIL_DROP := 1.0
 # A caught piece swings in on a curve (v3 W11): sideways and up at this share of its
 # homing speed while far, straight in as it closes, so the pull reads as a greedy
 # swirl. The homing term is unchanged, so the pull takes as long as it did.
@@ -34,7 +38,8 @@ const ARC_LIFT := 0.3
 # without bound (SR2's soak reached 21,000 nodes in 10 minutes). Past MAX_PIECES loose
 # pieces or MAX_GEARS loose gears, the oldest uncaught one folds its value into the piece
 # just dropped, so the newest scrap stays where the fight is and no value is lost. The
-# stage layout is never folded (it is under the cap) and nothing here draws rng.
+# stage layout is never folded (a line's pieces are under the cap, and a trail's are passed
+# over, so a long fight leaves the phrases ahead whole) and nothing here draws rng.
 const MAX_PIECES := 400
 const MAX_GEARS := 200
 # The live caps; a test's planted control raises them to prove the cap is what holds the count.
@@ -82,6 +87,8 @@ var _panel_column_material: Material
 # Rib caches (panels waiting at the end of a dead end): a tall thin column that clears the
 # route's skyline, and a two-note chime loop heard from CACHE_HEAR metres.
 var _caches := {}
+# The pieces lay_trail laid (item -> true): the fold passes over them.
+var _trail := {}
 var _cache_column: CylinderMesh
 const CACHE_COLUMN := 14.0
 const CACHE_HEAR := 45.0
@@ -244,6 +251,73 @@ func lay_out(terrain, lines: Array, density: float, rng: RandomNumberGenerator) 
 				_add_cog(terrain.drop_point(gear.x, gear.y, 1.4), COG_LINE_VALUE)
 
 
+# Scrap along a map's trail, laid to the beat (ruling cd): one piece every spacing_m of ground rolled, in phrases of
+# `phrase` pieces with `rest` empty beats between, so a ball holding its speed takes them in time and the pickup ladder
+# climbs once a phrase. Adds to what lay_out laid. It draws no rng and lays no gears: the same stage always has the same
+# trail. A piece is a pickup like any other (1 scrap and 1 mass, and it fires the on-pickup procs), so a whole trail is
+# about 100 mass, a fifth of a heft step: something to follow and hear far more than power.
+func lay_trail(terrain, trail: Dictionary) -> void:
+	for spot in trail_spots(trail, func(x: float, z: float) -> float: return terrain.height(x, z)):
+		_trail[_add(spot + Vector3.UP * TRAIL_OVER_GROUND)] = true
+
+
+# Where the trail's pieces still on the field float, in the order laid.
+func trail_points() -> Array[Vector3]:
+	var out: Array[Vector3] = []
+	for item in _items:
+		if _trail.has(item):
+			out.append(item.position)
+	return out
+
+
+# Where a trail's pieces stand on the ground, in line order. The line is walked in TRAIL_STEP_M steps and measured over
+# the ground it crosses (ground: Callable (x, z) -> height), so a slope keeps the same rolled distance between pieces.
+# The beats keep counting where no piece can stand, and that beat stays empty:
+#   a ledge   a step steeper than TRAIL_DROP is flown, not rolled: its run counts only up to a step short of the next
+#             beat, so no piece stands on its face and the piece due there stands a step past its foot instead (the
+#             beat slips by that much, and a long face holds one beat, not several);
+#   a gap     trail["gaps"], [from, to] in metres of plan distance along the line: a built ramp over the ground.
+# Beat 0 is the line's start and stays empty (the drop-in); a phrase the line ends inside is left out whole.
+static func trail_spots(trail: Dictionary, ground: Callable) -> Array[Vector3]:
+	var spots: Array[Vector3] = []
+	var points: PackedVector2Array = trail.get("points", PackedVector2Array())
+	var spacing := float(trail.get("spacing_m", 0.0))
+	var phrase := int(trail.get("phrase", 0))
+	var period := phrase + int(trail.get("rest", 0))
+	var gaps: Array = trail.get("gaps", [])
+	if points.size() < 2 or spacing <= 0.0 or phrase <= 0:
+		return spots
+	var last := Vector3(points[0].x, ground.call(points[0].x, points[0].y), points[0].y)
+	var rolled := 0.0
+	var plan := 0.0
+	var beat := 1
+	var whole := 0
+	for i in range(1, points.size()):
+		var leg := points[i] - points[i - 1]
+		var steps := maxi(1, ceili(leg.length() / TRAIL_STEP_M))
+		for s in range(1, steps + 1):
+			var p := points[i - 1] + leg * (float(s) / steps)
+			var here := Vector3(p.x, ground.call(p.x, p.y), p.y)
+			var run := Vector2(here.x - last.x, here.z - last.z).length()
+			if absf(here.y - last.y) > run * TRAIL_DROP:
+				rolled = minf(rolled + run, spacing * beat - TRAIL_STEP_M)
+			else:
+				var stride := last.distance_to(here)
+				while stride > 0.0 and rolled + stride >= spacing * beat:
+					var t := (spacing * beat - rolled) / stride
+					var at := plan + run * t
+					if (beat - 1) % period < phrase and not gaps.any(func(g: Array) -> bool: return at >= g[0] and at <= g[1]):
+						spots.append(last.lerp(here, t))
+					if (beat - 1) % period == phrase - 1:
+						whole = spots.size()
+					beat += 1
+				rolled += stride
+			plan += run
+			last = here
+	spots.resize(whole)
+	return spots
+
+
 func clear() -> void:
 	for item in _items:
 		item.queue_free()
@@ -256,6 +330,7 @@ func clear() -> void:
 	_units.clear()
 	_panels.clear()
 	_caches.clear()
+	_trail.clear()
 
 
 # Scrap pieces and recovery clusters on the field; gears and panels are counted apart.
@@ -477,6 +552,7 @@ func _forget(item: MeshInstance3D) -> void:
 	_units.erase(item)
 	_panels.erase(item)
 	_caches.erase(item)
+	_trail.erase(item)
 
 
 # Loose scrap pieces: no recovery cluster, no gear.
@@ -498,7 +574,7 @@ func _fold_pieces() -> void:
 		var item := _items[j]
 		if item == newest:
 			break
-		if _cogs.has(item) or _value.has(item) or _panels.has(item) or _caught.has(item):
+		if _cogs.has(item) or _value.has(item) or _panels.has(item) or _caught.has(item) or _trail.has(item):
 			j += 1
 			continue
 		_units[newest] = int(_units.get(newest, 0)) + 1 + int(_units.get(item, 0))

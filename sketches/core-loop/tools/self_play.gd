@@ -15,20 +15,66 @@ extends Node
 #                             stage n's exit is taken; win: once the run is won
 #   --self-play-hold=<s>      keep playing this long after the goal (default 30)
 #   --self-play-min=<s>       and until this many seconds since launch (default 0)
-#   --self-play-stall=<s>     seconds the exit may stay untaken after the fight ends (default 120)
+#   --self-play-stall=<s>     seconds the exit may stay untaken after the fight ends, and seconds the
+#                             next stage may stay unopened after an exit is taken, a boss fight
+#                             aside (default 120)
 #   --self-play-plant-stall   TEST PLANT: freeze the bot after its first tick and count the fight as
 #                             ended then, so the stall detector fires after --self-play-stall
+#   --self-play-keys=1        the menus are pressed as keys, as a player presses them (Space on the title,
+#                             the interact key through the prologue, the pilot's number at the pilot
+#                             select, N after a death), through the game's own input path; absent, the
+#                             run is started by code. The pilot must be one the save has open (no pilot
+#                             named: the first that is). The game is still bot-driven, so the launch
+#                             take and the start-pick card do not show. Not with --self-play-from.
+#   --self-play-continue=1    take the saved run: C on the title (with keys), or the bot's resume
+#                             (without). No Continue offered quits 1 and starts nothing; with keys C is
+#                             pressed all the same, and the title has to stand. The bot leaves the
+#                             upgrade tree's offers to the workshop on a continued run, so the saved
+#                             picks are replayed as a player's are.
+#   --self-play-save=<name>   the run's save folder is user://self-play-<name>, not one named for this
+#                             process, so a second launch can continue the first (read by src/game.gd)
+#   --self-play-plant-death=<s>  TEST PLANT, with keys: the ball takes a scripted kill after s seconds
+#                             of play; the keys then start a second run, which stands in play for
+#                             --self-play-hold with nobody steering (the dead run's driver is spent; its
+#                             signal handlers still answer offers). Quits 0 then; a hit that did not kill quits 3.
+#   --self-play-plant-after-exit  TEST PLANT: freeze the bot after its first tick and count the
+#                             stage's exit as taken then, so the after-exit stall fires
 #   --self-play-plant-end     TEST PLANT: end the run at once (outcome planted_end), so it quits 1
 #   --self-play-plant-limit=<s>  TEST PLANT: give the driver this stage limit (sim seconds), so its
 #                             own stall limit ends the run (the driver-limit branch)
 #   --self-play-beat=<s>      print a "self-play: beat" progress line every s seconds (default off)
+#   --self-play-watch=1       watch the run as a player would meet it (tools/qa_watch.gd, reads only): where the
+#                             ball sat stuck, hung off the ground, wedged or fell through, each objective plate
+#                             change, the longest stretch of play with an empty plate, and the boss fight's
+#                             start and end. Rows go to qa.ndjson in the run's own save folder; the totals print
+#                             on one "self-play: watch" line as the run ends. Absent, the run is unchanged.
 #
-# Lines: "self-play: stage <n> entered at <s> s" (one per stage entered, retries marked),
-# "self-play: stage <n> exit taken at <s> s", "self-play: done at <s> s".
-# Quit codes: 0 goal reached, 1 the run ended first, 2 bad flag or no tools/ in the pack
-# (game.gd), 3 stalled (every code waits for --self-play-min first, so a frame log stays whole): "self-play: stalled at stage <n> exit at <s> s pos <x,y,z>".
+# Lines: "self-play: stage <n> entered at <s> s" (one per stage entered, retries marked), each followed by
+# "self-play: carry stage=<n> hp=<f> mass=<f> cogs=<n> parts=<list> picks=<list>" (what the run carries in),
+# With keys: "self-play: prologue read with <n> presses at <s> s", "self-play: pilot <n> picked by key at <s> s",
+# "self-play: in play by keys at <s> s", "self-play: continue pressed at <s> s",
+# "self-play: no Continue offered at <s> s ...", "self-play: planted death at <s> s (stage <n>) holding ...",
+# "self-play: new run pressed on '<state>' at <s> s", "self-play: second run in play at <s> s ...",
+# "self-play: menus stalled in '<state>' at <s> s" (quit 3).
+# "self-play: stage <n> exit taken at <s> s", "self-play: done at <s> s". With --self-play-watch=1 also
+# "self-play: boss arena entered at <s> s", "self-play: boss defeated at <s> s" and
+# "self-play: watch stuck=<n> hung=<n> wedged=<n> fell=<n> objectives=<n> blank_max=<s> stages=<list>"
+# and "self-play: skills slot2=<n> slot3=<n> set_pieces=<n>" (casts of the skill bar's slots 2 and 3, set pieces fired).
+# Quit codes: 0 goal reached, 1 the run ended first or no Continue was offered, 2 bad flag, a pilot the keys cannot pick, or no tools/ in the pack
+# (game.gd), 3 stalled (every code waits for --self-play-min first, so a frame log stays whole): "self-play: stalled at stage <n> exit at <s> s pos <x,y,z>"
+# (the exit never taken), or "... stalled at stage <n> after-exit at ..." (the exit taken, the next stage never opened).
 
 const BotDriver := preload("res://tools/bot_driver.gd")
+const QaWatch := preload("res://tools/qa_watch.gd")
+const RunState := preload("res://src/core/run_state.gd")
+
+# Keys mode: how long a key stays down, the gap before the next, and how long the menus may take.
+const KEY_DOWN_S := 0.1
+const KEY_GAP_S := 0.5
+const MENU_STALL_S := 60.0
+const DEAD_WAIT_S := 2.0
+# A refused Continue: how long the title has to stand after C before the bot says so.
+const REFUSED_WAIT_S := 2.0
 
 var game: Node
 var _driver
@@ -42,13 +88,40 @@ var _from := 0
 var _until := "2"
 var _stall := 120.0
 var _fight_end := -1.0
+# The stage's exit is taken: the exit stall has nothing left to time until the next stage opens
+# (a boss fight after the exit is the driver's own limit to end, not this one's).
+var _exit_taken := false
+# Since when the taken exit has led nowhere (seconds; -1 while there is nothing to time): the wait
+# for the next stage outside a boss fight, a victory beat or a paused tree nobody answers included.
+var _after_exit := -1.0
 var _stage := 0
 var _beat := 0.0
 var _beat_at := 0.0
 var _quit_code := -1
 var _plant_stall := false
+var _plant_after_exit := false
+var _keys := false
+var _continue := false
+var _plant_death := -1.0
+# Keys mode: true while the menus still stand between the bot and play.
+var _menus := false
+var _menu_at := 0.0
+# The death leg waits for the dead run to leave play before it reads "in play" as the second run.
+var _await_out := false
+var _key := KEY_NONE
+var _pressed_at := -10.0
+var _play_at := -1.0
+var _died := false
+var _prologue := 0
+var _c_at := -1.0
+var _offered := false
 var _plant_end := false
 var _plant_limit := 0.0
+var _watch_on := false
+var _watch
+var _read_at := 0.0
+var _stages: Array[int] = []
+var _watch_told := false
 
 
 func _ready() -> void:
@@ -75,16 +148,34 @@ func _ready() -> void:
 			_stall = float(arg.trim_prefix("--self-play-stall="))
 		elif arg.begins_with("--self-play-script="):
 			pass  # test override, read by src/game.gd; named here so the launch-flag lint finds its parser
+		elif arg.begins_with("--self-play-save="):
+			# Read by src/game.gd, which falls back to a folder of this process's own on a name it will not use.
+			if not String(game.storage_dir).ends_with("self-play-" + arg.trim_prefix("--self-play-save=")):
+				push_error("self-play: --self-play-save wants a plain folder name (no dots, slashes or spaces at the ends), got '%s'" % arg.trim_prefix("--self-play-save="))
+				get_tree().quit.call_deferred(2)
 		elif arg == "--self-play-plant-end":
 			_plant_end = true
 		elif arg == "--self-play-plant-stall":
 			_plant_stall = true
+		elif arg == "--self-play-plant-after-exit":
+			_plant_after_exit = true
+		elif arg.begins_with("--self-play-keys="):
+			_keys = arg.trim_prefix("--self-play-keys=") == "1"
+		elif arg.begins_with("--self-play-continue="):
+			_continue = arg.trim_prefix("--self-play-continue=") == "1"
+		elif arg.begins_with("--self-play-plant-death="):
+			_plant_death = float(arg.trim_prefix("--self-play-plant-death="))
 		elif arg.begins_with("--self-play-plant-limit="):
 			_plant_limit = float(arg.trim_prefix("--self-play-plant-limit="))
 		elif arg.begins_with("--self-play-beat="):
 			_beat = float(arg.trim_prefix("--self-play-beat="))
+		elif arg.begins_with("--self-play-watch="):
+			_watch_on = arg.trim_prefix("--self-play-watch=") == "1"
 	if not (_policy in BotDriver.POLICIES or _policy in BotDriver.PROFILES):
 		push_error("self-play: unknown policy '%s'" % _policy)
+		get_tree().quit.call_deferred(2)
+	if _keys and _from > 1:
+		push_error("self-play: --self-play-keys starts at the title; it cannot be used with --self-play-from")
 		get_tree().quit.call_deferred(2)
 	if _until != "win" and not (_until.is_valid_int() or (_until.begins_with("exit") and _until.trim_prefix("exit").is_valid_int())):
 		push_error("self-play: --self-play-until wants <stage>, exit<stage> or win, got '%s'" % _until)
@@ -107,11 +198,17 @@ func _physics_process(delta: float) -> void:
 			get_tree().quit(_quit_code)
 		return
 	_answer_workshop()
+	_release()
 	var state: String = game.flow.state_name()
 	if _beat > 0.0 and _now() - _beat_at >= _beat:
 		_beat_at = _now()
 		var b: Vector3 = game.player.ball_position()
 		print("self-play: beat %.1f s stage %d %s%s stage_time %.1f pos %.0f,%.0f,%.0f" % [_now(), game.run.stage, state, " PAUSED" if get_tree().paused else "", game.run.stage_time, b.x, b.y, b.z])
+	if _menus:
+		_press_menus(state)
+		return
+	if _plant_death >= 0.0 and _death_step():
+		return
 	if _plant_stall:
 		# Planted stall: the bot stands still and the fight counts as over from now.
 		_driver.source.hold = {}
@@ -120,18 +217,136 @@ func _physics_process(delta: float) -> void:
 		if _now() - _fight_end > _stall:
 			_stalled("exit")
 		return
-	var over: bool = _driver.tick(delta)
-	if over:
+	if _plant_after_exit:
+		# Planted: the bot stands still and the exit counts as taken from now.
+		_driver.source.hold = {}
+		_exit_taken = true
+	elif _driver.tick(delta):
+		if _watch != null and not get_tree().paused:
+			_watch_step(delta)
 		_finish()
 		return
-	if _fight_end < 0.0 and state == "gates":
+	if _watch != null and not get_tree().paused:
+		_watch_step(delta)
+	if _fight_end < 0.0 and state == "gates" and not _exit_taken:
 		_fight_end = _now()
 	if _fight_end >= 0.0 and _goal_at < 0.0 and _now() - _fight_end > _stall:
 		_stalled("exit")
 		return
+	# The exit is taken: the next stage has to open. A boss fight on the way, and the victory lap
+	# after the last one, are the driver's own limits to end; everything else (the flight, the
+	# victory beat, a pause nobody answers) is timed here.
+	if not _exit_taken or state == "boss" or state == "lap":
+		_after_exit = -1.0
+	elif _after_exit < 0.0:
+		_after_exit = _now()
+	elif _goal_at < 0.0 and _now() - _after_exit > _stall:
+		_stalled("after-exit")
+		return
 	if _goal_at >= 0.0 and _now() >= maxf(_goal_at + _hold, _min):
 		print("self-play: done at %.2f s" % _now())
 		_end_run(0)
+
+
+# Keys mode: one key a step, as a player presses them, until the run is in play.
+func _press_menus(state: String) -> void:
+	var in_play: bool = game.flow.in_play()
+	if _await_out and not in_play:
+		_await_out = false
+	if in_play and not _await_out:
+		_menus = false
+		print("self-play: in play by keys at %.2f s" % _now())
+		return
+	if _now() - _menu_at > MENU_STALL_S:
+		print("self-play: menus stalled in '%s' at %.2f s" % [state, _now()])
+		_end_run(3)
+		return
+	if _key != KEY_NONE or _now() - _pressed_at < KEY_GAP_S:
+		return
+	match state:
+		"title":
+			if not _continue or _died:
+				_press(KEY_SPACE)
+			elif _c_at < 0.0:
+				# Continue is settled by the time the title shows. Not offered, C is pressed all the
+				# same: the title has to stand.
+				_c_at = _now()
+				_offered = game.flow.continue_ready
+				if _offered:
+					print("self-play: continue pressed at %.2f s" % _now())
+				_press(KEY_C)
+			elif not _offered and _now() - _c_at >= REFUSED_WAIT_S:
+				print("self-play: no Continue offered at %.2f s (C pressed, the title stands)%s" % [_now(), _why_refused()])
+				_end_run(1)
+		"class_select":
+			# A profile's first pilot select opens on the prologue: the interact key reads it line by line.
+			if game.screens.prologue_showing():
+				_prologue += 1
+				_press(KEY_E)
+			else:
+				if _prologue > 0:
+					print("self-play: prologue read with %d presses at %.2f s" % [_prologue, _now()])
+					_prologue = 0
+				print("self-play: pilot %d picked by key at %.2f s" % [_driver.class_index + 1, _now()])
+				_press(KEY_1 + _driver.class_index)
+		"dead", "summary":
+			# The death screen stands a moment first, as it does for a player.
+			if _now() - _menu_at >= DEAD_WAIT_S:
+				print("self-play: new run pressed on '%s' at %.2f s" % [state, _now()])
+				_press(KEY_N)
+
+
+func _press(key: Key) -> void:
+	_key = key
+	_pressed_at = _now()
+	_send(key, true)
+
+
+# A pressed key is let go a moment later, so nothing reads it as held (the summary's latch does).
+func _release() -> void:
+	if _key != KEY_NONE and _now() - _pressed_at >= KEY_DOWN_S:
+		_send(_key, false)
+		_key = KEY_NONE
+
+
+func _send(key: Key, down: bool) -> void:
+	var event := InputEventKey.new()
+	event.keycode = key
+	event.physical_keycode = key
+	event.pressed = down
+	Input.parse_input_event(event)
+
+
+# Planted death: the first run takes a fatal hit after _plant_death seconds of play; the keys then
+# start a second run. True once the hit has landed: the bot's driver is spent from there.
+func _death_step() -> bool:
+	if not _died:
+		if _play_at < 0.0:
+			_play_at = _now()
+		if _now() - _play_at < _plant_death:
+			return false
+		_died = true
+		_driver.source.hold = {}
+		var run = game.run
+		var held := "hp=%.2f mass=%.2f cogs=%d parts=%d picks=%d" % [run.hp, run.mass, run.cogs, run.parts.size(), game.player.tree.picks.size()]
+		run.damage(RunState.SCRIPTED_KILL, "chaser")
+		if run.alive():
+			# A set piece, a ward or an earned save turned the hit aside: say so, not a menu stall.
+			print("self-play: planted death did not land at %.2f s (stage %d, hp %.1f)" % [_now(), run.stage, run.hp])
+			_end_run(3)
+			return true
+		print("self-play: planted death at %.2f s (stage %d) holding %s" % [_now(), run.stage, held])
+		_menus = true
+		_await_out = true
+		_menu_at = _now()
+		return true
+	if _goal_at < 0.0:
+		_goal_at = _now()
+		print("self-play: second run in play at %.2f s stage %d hp %.0f of %.0f" % [_now(), game.run.stage, game.run.hp, game.run.max_hp])
+	if _now() >= maxf(_goal_at + _hold, _min):
+		print("self-play: done at %.2f s" % _now())
+		_end_run(0)
+	return true
 
 
 # A pick the offer signal did not settle (the workshop reopened it) is taken by its first card, so
@@ -144,7 +359,32 @@ func _answer_workshop() -> void:
 
 # Print the verdict now, quit with its code once --self-play-min has passed.
 func _end_run(code: int) -> void:
+	_tell_watch()
 	_quit_code = code
+
+
+# The watch's ball checks every tick; once a second its plate read, and how long play has gone on
+# with nothing on the objective plate (to the second).
+func _watch_step(delta: float) -> void:
+	_watch.step(delta)
+	if _now() - _read_at < 1.0:
+		return
+	var since := _now() - _read_at
+	_read_at = _now()
+	_watch.read_text(since)
+
+
+func _tell_watch() -> void:
+	if _watch == null or _watch_told:
+		return
+	_watch_told = true
+	var c: Dictionary = _watch.counts
+	print("self-play: watch stuck=%d hung=%d wedged=%d fell=%d objectives=%d blank_max=%.1f stages=%s" % [int(c.get("stuck", 0)),
+		int(c.get("hung", 0)), int(c.get("wedged", 0)), int(c.get("fell", 0)), _watch.plates, _watch.blank_max, ",".join(_stages.map(func(n): return str(n)))])
+	# The skill bar's hands, as the driver's record counts them: casts of slots 2 and 3 and set pieces fired.
+	var record: Dictionary = _driver.record(_now())
+	var casts: Dictionary = record.get("slot_casts", {})
+	print("self-play: skills slot2=%d slot3=%d set_pieces=%d" % [int(casts.get("special", 0)), int(casts.get("line", 0)), int(record.get("ultimates", 0))])
 
 
 func _start() -> void:
@@ -161,11 +401,51 @@ func _start() -> void:
 		_driver._end("planted_end")
 	game.events.stage_entered.connect(_on_stage_entered)
 	game.events.stage_cleared.connect(_on_stage_cleared)
-	_driver.start(false)
-	# As bot_run does: the stage is entered over the one the start pick opened.
-	if _from > 1:
-		game.flow.enter_stage(_from, Vector3.ZERO, false)
+	if _watch_on:
+		_watch = QaWatch.new()
+		_watch.setup(game, _driver, String(game.storage_dir).path_join("qa.ndjson"))
+		game.events.boss_arena_entered.connect(func(): print("self-play: boss arena entered at %.2f s" % _now()))
+		game.events.boss_defeated.connect(func(): print("self-play: boss defeated at %.2f s" % _now()))
+	if _keys:
+		# No pilot named: the first the save has open, as a new player's first run takes.
+		if _pilot == "":
+			for i in game.flow.classes.size():
+				if game.pilot_unlocked(game.flow.classes[i]):
+					_driver.class_index = i
+					break
+		if _driver.class_index < 0 or _driver.class_index >= 9 or not game.pilot_unlocked(game.flow.classes[_driver.class_index]):
+			push_error("self-play: --self-play-keys cannot pick pilot %d: it is locked on this save, or past key 9" % (_driver.class_index + 1))
+			get_tree().quit.call_deferred(2)
+			return
+		_leave_saved_picks()
+		_driver.wire()
+		_menus = true
+		_menu_at = _now()
+	elif _continue and not game.flow.continue_ready:
+		# Nothing to take: say so and start nothing, so no new run is written over the save's place.
+		print("self-play: no Continue offered at %.2f s%s" % [_now(), _why_refused()])
+		_end_run(1)
+		return
+	else:
+		_leave_saved_picks()
+		_driver.start(_continue)
+		# As bot_run does: the stage is entered over the one the start pick opened.
+		if _from > 1:
+			game.flow.enter_stage(_from, Vector3.ZERO, false)
 	print("self-play: %s seed %d until %s started at %.2f s" % [_policy, _seed, _until, _now()])
+
+
+# A continued run replays its saved tree picks as it lands. A driver that answers the tree's offer
+# on the signal gets in first and the saved picks no longer fit, so on a continued run the offers
+# are left to the workshop (the first card, _answer_workshop), as a player meets them.
+func _leave_saved_picks() -> void:
+	if _continue:
+		_driver.tree_policy = ""
+
+
+func _why_refused() -> String:
+	var why: String = game.flow.continue_refusal()
+	return "" if why == "" else ": " + why
 
 
 # The driver ended the run. A stall is the driver's own limit; won ends a "win" goal.
@@ -193,13 +473,22 @@ func _stalled(what: String) -> void:
 func _on_stage_entered(stage: int, retry := false) -> void:
 	_stage = stage
 	_fight_end = -1.0
+	_exit_taken = false
+	_after_exit = -1.0
+	if not retry:
+		_stages.append(stage)
 	print("self-play: stage %d entered%s at %.2f s" % [stage, " (retry)" if retry else "", _now()])
-	if _until.is_valid_int() and stage >= int(_until) and _goal_at < 0.0 and not retry:
+	var run = game.run
+	print("self-play: carry stage=%d hp=%.2f mass=%.2f cogs=%d parts=%s picks=%s" % [stage, run.hp, run.mass, run.cogs,
+		"+".join(PackedStringArray(Array(run.parts))), "+".join(PackedStringArray(Array(game.player.tree.picks)))])
+	if _until.is_valid_int() and stage >= int(_until) and _goal_at < 0.0 and not retry and _plant_death < 0.0:
 		_goal_at = _now()
 
 
 func _on_stage_cleared(stage: int) -> void:
 	print("self-play: stage %d exit taken at %.2f s" % [stage, _now()])
+	_fight_end = -1.0
+	_exit_taken = true
 	if _until == "exit%d" % stage and _goal_at < 0.0:
 		_goal_at = _now()
 

@@ -12,6 +12,8 @@ import {
   lintL6,
   lintL6Owners,
   lintL7,
+  lintL8,
+  lintL9,
   parseTuning,
 } from "./sketch-lint.mjs";
 
@@ -28,6 +30,67 @@ test("L7 allows only the guarded --self-play load in src/game.gd", () => {
   assert.equal(lintL7("sketches/core-loop/src/other.gd", line + guard).length, 1);
   assert.equal(lintL7("sketches/core-loop/src/game.gd", line + guard + 'var x = load("res://tools/bot_driver.gd")\n').length, 1);
   assert.equal(lintL7("sketches/core-loop/src/game.gd", 'const SELF_PLAY := "res://tools/other.gd"\n' + guard).length, 1);
+});
+
+test("L8 flags a tick-rate ball read in drawing code and passes the drawn read, the sim and comments", () => {
+  const bad = lintL8("x/vfx.gd", "src/presentation/vfx.gd", "func _process(_d):\n\t_roll.global_position = player.ball_position()\n\tvar at = ctx.player.shown_position()\n", {});
+  assert.deepEqual(bad.map((item) => `${item.rule} ${item.line}`), ["L8 2"]);
+  assert.equal(lintL8("x/hud.gd", "src/ui/hud.gd", "var d = game.player.ball_position().distance_to(at)\n", {}).length, 1);
+  assert.deepEqual(lintL8("x/vfx.gd", "src/presentation/vfx.gd", "var at = player.shown_position()\n# ball_position() is the tick's\n", {}), []);
+  assert.deepEqual(lintL8("x/combat.gd", "src/combat/combat.gd", "var at = player.ball_position()\n", {}), []);
+});
+
+test("L8 counts every mention as a read, however the call is spelled, and passes a has_method guard", () => {
+  const spelled = [
+    "var at = player.ball_position ()\n",
+    "var at = player.ball_position( )\n",
+    'var at = player.call("ball_position")\n',
+    'var ask := Callable(player, "ball_position")\n',
+    "var at = player.ball_position.call()\n",
+    "var at = ball_position()\n",
+    "var at = player \\\n\t.ball_position()\n",
+  ];
+  for (const text of spelled) assert.equal(lintL8("x/vfx.gd", "src/presentation/vfx.gd", text, {}).length, 1, text);
+  const twice = lintL8("x/vfx.gd", "src/presentation/vfx.gd", "var d = a.ball_position().distance_to(b.ball_position())\n", {});
+  assert.deepEqual(twice.map((item) => item.line), [1, 1]);
+  assert.deepEqual(lintL8("x/vfx.gd", "src/presentation/vfx.gd", 'if target.has_method("ball_position"):\n\tpass\n', {}), []);
+  for (const text of ["var at = ctx.player.body().global_position\n", "fx(game.player.active_body().global_position)\n", "var t = player.body().global_transform\n"]) {
+    assert.equal(lintL8("x/hud.gd", "src/ui/hud.gd", text, {}).length, 1, text);
+  }
+  assert.deepEqual(lintL8("x/vfx.gd", "src/presentation/vfx.gd", "var v = ctx.player.body().linear_velocity\nvar at = enemy.global_position\n", {}), []);
+});
+
+test("L9 flags the player node's own place and passes the ball's, a guarded fallback and other nodes", () => {
+  const asked = [
+    "if player.global_position.distance_to(at) <= REACH:\n",
+    "var feet := ctx.player.global_position\n",
+    "var at = game.ctx.player.global_transform.origin\n",
+    "var d = _player.position.distance_to(at)\n",
+    "var at = game.player . global_position\n",
+  ];
+  for (const text of asked) assert.deepEqual(lintL9("x/cache.gd", text).map((item) => `${item.rule} ${item.line}`), ["L9 1"], text);
+  const passes = [
+    "var at = player.ball_position()\n",
+    "var at = ctx.player.shown_position()\n",
+    'var ball: Vector3 = player.ball_position() if player.has_method("ball_position") else player.global_position\n',
+    'return _player.shown_position() if _player.has_method("shown_position") else _player.global_position\n',
+    "var at = ctx.player.body().global_position\n",
+    "var at = enemy.global_position\n",
+    "var at = multiplayer.global_position\n",
+    "# player.global_position is the origin\n",
+  ];
+  for (const text of passes) assert.deepEqual(lintL9("x/cache.gd", text), [], text);
+});
+
+test("L8 passes a listed sim read, and flags a drifted count and a stale entry", () => {
+  const allowed = { "src/presentation/hero_assets.gd": { sites: 1, why: "sight target" } };
+  const lens = "var dir = target.ball_position() - origin\n";
+  assert.deepEqual(lintL8("x/hero_assets.gd", "src/presentation/hero_assets.gd", lens, allowed), []);
+  const drift = lintL8("x/hero_assets.gd", "src/presentation/hero_assets.gd", lens + "var at = player.ball_position()\n", allowed);
+  assert.deepEqual(drift.map((item) => item.line), [1, 2]);
+  assert.equal(drift[0].message.includes("SIM_READS lists 1"), true);
+  const stale = lintL8("x/hero_assets.gd", "src/presentation/hero_assets.gd", "var at = player.shown_position()\n", allowed);
+  assert.deepEqual(stale.map((item) => `${item.rule} ${item.line}`), ["L8 1"]);
 });
 
 const tuningText = `

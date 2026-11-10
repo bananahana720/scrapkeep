@@ -8,8 +8,8 @@ import { parseLedger } from "../known-failing.mjs";
 import { place, sortChanges, testsToRerun } from "./carry.mjs";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
-import { WEEKLY_HEADER, chunks, classifyFailure, errorCounts, gateLists, nearLimit, numbered, parseSmokeLog, parseWeekly, parseWindow, renderReceipt, shardVerdict } from "./shard.mjs";
-import { checkTally, expectedShards, isPass, planHead, tallyRows } from "./tally.mjs";
+import { WEEKLY_HEADER, chunks, classifyFailure, errorCounts, gateLists, importOutcome, nearLimit, numbered, parseSmokeLog, parseWeekly, parseWindow, renderReceipt, shardVerdict } from "./shard.mjs";
+import { WEEKLY_MAX_DAYS, checkTally, checkWeeklySweep, expectedShards, isPass, planHead, tallyRows } from "./tally.mjs";
 import { WEEKLY_FILE, checkWeekly } from "./weekly.mjs";
 
 const repoRoot = fileURLToPath(new URL("../..", import.meta.url));
@@ -24,7 +24,8 @@ const ledger = parseLedger(
 test("the gate lists split the sorted tests by the bot marker and number from 1", () => {
   const lists = gateLists(path.join(repoRoot, "sketches", "core-loop"));
   assert.ok(lists.tests.length > 1000);
-  assert.ok(lists.bots.length >= 30);
+  // The bot tier as a whole: the weekly list (ruling ca) moves bot tests out of the promotion list, not out of the tree.
+  assert.ok(lists.bots.length + lists.weekly.bots.length >= 30);
   assert.deepEqual([...lists.tests].sort(), lists.tests);
   assert.ok(lists.bots.includes("alpha_bot_sweep_test") && !lists.tests.includes("alpha_bot_sweep_test"));
   assert.equal(numbered(["a_test", "b_test"]), "     1\ta_test.gd\n     2\tb_test.gd");
@@ -229,6 +230,26 @@ test("the tally refuses a plan that gates another head", () => {
   assert.match(checkTally(rows, { ...counts, planHead: "58a6de62", head: "8180ec6cc0000000000000000000000000000000" }).join("\n"), /the plan gates 58a6de62 and this checkout is at 8180ec6c/);
 });
 
+test("tests on the weekly list hold a promotion until a sweep within a week is on the tally", () => {
+  const today = new Date(Date.UTC(2026, 10, 20));
+  const weekly = { ...counts, weeklyCount: 64, today };
+  const withRow = (verdict) => tallyRows(plan([...full, `| weekly sweep | ${verdict} |`]));
+  assert.deepEqual(checkTally(tallyRows(plan(full)), { ...counts, today }), [], "no list, no hold");
+  assert.match(checkTally(tallyRows(plan(full)), weekly).join("\n"), /no row for "weekly sweep": 64 tests are on the weekly list/);
+  assert.deepEqual(checkTally(withRow("PASS 2026-11-13 on 3997358b, tests 55/55, bots 9/9. Receipts weekly-tests/receipt.md"), weekly), [], "seven days old still counts");
+  assert.match(checkTally(withRow("PASS 2026-11-12 on 3997358b. Receipt weekly.md"), weekly).join("\n"), /the weekly sweep last ran on 2026-11-12, 8 days ago; a promotion needs one within 7 days/);
+  assert.match(checkTally(withRow("PASS on 3997358b. Receipt weekly.md"), weekly).join("\n"), /"weekly sweep" gives no day the sweep ran/);
+  assert.match(checkTally(withRow("PASS 2026-13-45. Receipt weekly.md"), weekly).join("\n"), /gives no day the sweep ran/);
+  assert.match(checkTally(withRow("PASS 2026-11-21. Receipt weekly.md"), weekly).join("\n"), /is dated 2026-11-21, which is after today/);
+  assert.match(checkTally(withRow("RED 2026-11-19, mind_boss_test failed alone. Receipt weekly.md"), weekly).join("\n"), /"weekly sweep" does not open with PASS/);
+  assert.match(checkTally(withRow("PASS 2026-11-19, 64 of 64"), weekly).join("\n"), /"weekly sweep" names no receipt/);
+  // The newest row wins, as for every shard: an old sweep is cured by a new row, not by editing the old one.
+  const rerun = plan([...full, "| weekly sweep | PASS 2026-11-01. Receipt old.md |"]) + "\n\n## Sweep rerun\n| Shard | Verdict |\n| --- | --- |\n| weekly sweep | PASS 2026-11-20. Receipt new.md |\n";
+  assert.deepEqual(checkTally(tallyRows(rerun), weekly), []);
+  assert.equal(WEEKLY_MAX_DAYS, 7);
+  assert.deepEqual(checkWeeklySweep([], { weeklyCount: 0 }), []);
+});
+
 // A sketch folder with these test files, and the weekly list beside it when one is given.
 function listsOf(files) {
   const dir = mkdtempSync(path.join(os.tmpdir(), "gate-weekly-"));
@@ -282,4 +303,13 @@ test("the docs check fails a weekly list that does not parse or names a test wit
   } finally {
     rmSync(root, { recursive: true, force: true });
   }
+});
+
+test("a shard reads its import the way the runner does: a signal is the engine's crash, a script error is not clean", () => {
+  assert.equal(importOutcome(0, "[ DONE ] reimport\n"), "ok");
+  assert.equal(importOutcome("SIGSEGV", "[   0% ] reimport | NotoSans-Bold.ttf\n"), "engine crash");
+  assert.equal(importOutcome("SIGABRT", "malloc(): smallbin double linked list corrupted\n"), "engine crash");
+  assert.equal(importOutcome(139, ""), "engine crash");
+  assert.equal(importOutcome("SIGKILL", ""), "failed", "the shard's own time limit is not an engine crash");
+  assert.equal(importOutcome(0, "SCRIPT ERROR: Parse Error: Could not preload resource file\n"), "script errors");
 });

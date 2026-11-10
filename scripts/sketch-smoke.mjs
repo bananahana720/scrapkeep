@@ -628,23 +628,44 @@ function report(job, status, output, ms, signal = null) {
   return { label: job.label, ok, exit: status, ms, solo: Boolean(job.solo), passes, fails, verdict_line: verdict, skips, test: Boolean(job.test), quarantined, signal: signal ?? null, ...(quarantined && job.quarantine ? { quarantine: job.quarantine } : {}) };
 }
 
+export const scriptErrorCount = (output) => (output.match(/^SCRIPT ERROR\b/gm) ?? []).length;
+
 // Import writes the sketch's .godot cache, so it runs alone before anything reads it.
 function runSync(job) {
   const started = Date.now();
   const result = spawnSync(binary, job.args, { encoding: "utf8", timeout: TIMEOUT_MS });
-  return report(job, result.status, (result.stdout || "") + (result.stderr || ""), Date.now() - started);
+  const output = (result.stdout || "") + (result.stderr || "");
+  return { ...report(job, result.status, output, Date.now() - started, result.signal), scriptErrors: scriptErrorCount(output) };
 }
 
-// A fresh worktree's first import can die with signal 11 in Godot's threaded reimport and leave
-// .ctex files missing, so every test then fails its "no script errors" checks. The second import
-// finishes the missing files. Two crashed imports stop the run rather than produce misleading
-// reds. Only the exit code decides; an import that exits 0 with error lines still runs the tests.
+export const IMPORT_TRIES = 3;
+const CRASH_SIGNALS = new Set(["SIGSEGV", "SIGABRT"]);
+const CRASH_CODES = new Set([139, 134]); // 128 + the signal, when a shell reports it
+
+// What one import try came to. Godot 4.7.2's threaded font reimport can crash the first import of
+// a fresh .godot (signal 11 or 6, "malloc(): smallbin double linked list corrupted", last line a
+// .ttf): an engine race, never the project's red, and it leaves .ctex files missing, so every test
+// then fails its "no script errors" checks. An import can also exit 0 while scripts that preload
+// those missing files still print SCRIPT ERROR; the next import finds the files there.
+export function importTry({ exit, signal = null, scriptErrors = 0 }) {
+  if (exit === 0) return scriptErrors > 0 ? "script errors" : "ok";
+  return CRASH_SIGNALS.has(signal) || CRASH_CODES.has(exit) ? "engine crash" : "failed";
+}
+
+// Up to IMPORT_TRIES imports, stopping at the first that exits 0 with no SCRIPT ERROR line. The
+// import fails only when the last try does, so the run stops there and no test prints a misleading
+// red. On a pass, `results` holds the passing try alone (earlier tries are in `tries` and the log):
+// a crash that a retry cleared is not a failed row of the run.
 export function importWithRetry(name, base, run = runSync, log = console.log) {
-  const first = run({ label: `${name} import`, args: [...base, "--import"] });
-  if (first.exit === 0) return { ok: true, results: [first] };
-  log(`${name} import failed (exit=${first.exit}); retrying once`);
-  const second = run({ label: `${name} import (retry)`, args: [...base, "--import"] });
-  return { ok: second.exit === 0, results: [first, second] };
+  const tries = [];
+  for (let attempt = 1; attempt <= IMPORT_TRIES; attempt++) {
+    const result = run({ label: `${name} import${attempt > 1 ? ` (try ${attempt})` : ""}`, args: [...base, "--import"] });
+    const outcome = importTry(result);
+    tries.push({ ...result, outcome });
+    if (outcome === "ok") return { ok: true, results: [result], tries };
+    log(`${name} import try ${attempt} of ${IMPORT_TRIES}: ${outcome} (exit=${result.exit ?? result.signal ?? "none"})${attempt < IMPORT_TRIES ? "; trying again" : ""}`);
+  }
+  return { ok: false, results: tries, tries };
 }
 
 // Every test gets its own XDG_DATA_HOME, so user:// is never shared between parallel runs.
@@ -757,7 +778,7 @@ async function main() {
     const imported = importWithRetry(name, base);
     results.push(...imported.results);
     if (!imported.ok) {
-      console.error(`${name} import failed twice; tests not run (gate/startup-crash.md)`);
+      console.error(`${name} import failed ${IMPORT_TRIES} times (${imported.tries.map((row) => row.outcome).join(", ")}); tests not run`);
       process.exit(1);
     }
     if (!named && !options.bots) jobs.push({ label: `${name} boot`, args: [...base, "--quit-after", "300"] });

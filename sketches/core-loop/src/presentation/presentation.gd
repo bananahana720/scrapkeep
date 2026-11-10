@@ -84,6 +84,8 @@ var _dismiss_wired := {}
 var _windup_states := {}
 # Screens a queued discovery never plays over.
 const BANNER_SCREENS := ["title", "class_select", "summary", "dead", "victory"]
+# A completed part set's banner id is this and the set's id.
+const SET_KEY := "set:"
 
 
 func setup(ctx_ref) -> void:
@@ -132,6 +134,7 @@ func setup(ctx_ref) -> void:
 	add_child(layer)
 	banner = CodexBanner.new()
 	layer.add_child(banner)
+	banner.came_up.connect(_on_banner_up)
 	var codex = ctx.get("codex")
 	if ctx.tuning != null and ctx.tuning.option(Tuning.DISCOVERY_KEY) == "cards" and codex != null:
 		banner.cards = true
@@ -158,6 +161,21 @@ func setup(ctx_ref) -> void:
 	for enemy in get_tree().get_nodes_in_group("enemy"):
 		_ring_warden.call_deferred(enemy)
 		_read_windups(enemy)
+
+
+# One voice at a time (rulings bw, cf). reading: a flourish has a card, a caption or a comic
+# panel up or on the way. close_up: a live close-up panel has the moment. names_boss: the
+# fight's arrival row says the boss's name itself. The HUD and the speech bubble wait on these.
+func reading() -> bool:
+	return flourish != null and flourish.reading()
+
+
+func close_up() -> bool:
+	return flourish != null and flourish.close_up()
+
+
+func names_boss() -> bool:
+	return flourish_cues != null and flourish_cues.names_boss()
 
 
 func _exit_tree() -> void:
@@ -328,9 +346,15 @@ func _on_synergy(id: String, category: String, first_time: bool) -> void:
 func _on_part(part_id: String, _source: String) -> void:
 	if not auto_banner or not banner.cards:
 		return
+	var words := part_card(part_id)
+	banner.show_discovery(words["title"], "part", words["detail"], "Found", "part:" + part_id, "part_gained")
+
+
+# A part's banner card in words: its row's name and text, or a run token's (Parts.TOKENS).
+static func part_card(part_id: String) -> Dictionary:
 	var row := Parts.row(part_id)
-	var title: String = row.get("name", part_id.capitalize())
-	banner.show_discovery(title, "part", String(row.get("text", "")), "Found", "part:" + part_id, "part_gained")
+	return {"title": String(row.get("name", Parts.display_name(part_id))),
+		"detail": String(row.get("text", Parts.token(part_id).get("verb", "")))}
 
 
 # The third part of a set landed: the set's name and what it changes, in the set's own colour (the
@@ -338,7 +362,14 @@ func _on_part(part_id: String, _source: String) -> void:
 # moment, so a set finished in a fight is told when the fight lets go.
 func _on_set_completed(set_id: String, title: String, text: String, color: Color) -> void:
 	if auto_banner:
-		banner.show_discovery(title, "build", text, "Set complete", "set:" + set_id, "synergy_discovered", color, true)
+		banner.show_discovery(title, "build", text, "Set complete", SET_KEY + set_id, "synergy_discovered", color, true)
+
+
+# The set's chime plays as its banner comes up, so it waits for the same calm moment.
+func _on_banner_up(key: String) -> void:
+	var build = ctx.get("build")
+	if key.begins_with(SET_KEY) and build != null:
+		audio.set_complete(build.set_element(key.trim_prefix(SET_KEY)))
 
 
 # The registry entry for an id, if the spine's codex offers one.

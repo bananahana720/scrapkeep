@@ -8,7 +8,9 @@ const T := preload("res://tests/support/t.gd")
 # display that is not 90 Hz shows it moving every frame. Checked here: interpolation is opt-in
 # per body (the Game root is off, only the ball's body asks); the saved Display row; and that a
 # test or a headless bot never takes the setting, because the sim reads the lens and the lens
-# follows the drawn ball; and that a ball placed somewhere new is drawn there at once. tools/judder_probe.gd measures the picture at a display rate and
+# follows the drawn ball; that a ball placed somewhere new is drawn there at once; and that the
+# drawn place is the ball's own place inside a physics tick, so rules that run on the tick never
+# see a between-ticks ball. tools/judder_probe.gd measures the picture at a display rate and
 # tools/interp_audit.gd lists every node the tree's interpolation would draw wrong.
 
 var _t := T.new("frame_smoothing_test")
@@ -16,6 +18,9 @@ var _game
 var _step := 0
 var _placed := Vector3.ZERO
 var _worst := 0.0
+var _ticks := 0
+var _tick_gap := 0.0
+var _frame_gap := 0.0
 
 
 func _initialize() -> void:
@@ -53,8 +58,26 @@ func _process(_delta: float) -> bool:
 		if _step == 16:
 			# FS-5: no frame after a placement is drawn on the way from the old spot.
 			_t.check("FS-5 a placed ball is drawn where it was placed, not sliding from the old spot", _worst < 1.0, "drawn up to %.1f m from the ball" % _worst)
+	elif _step > 16:
+		# FS-6: a rolling ball is drawn behind its body between ticks (the control), and reads
+		# exactly on its body inside a tick.
+		_frame_gap = maxf(_frame_gap, _game.player.shown_position().distance_to(_game.player.body().global_position))
+		if _ticks >= 12:
+			_t.check("FS-6 between ticks a rolling ball is drawn off its body", _frame_gap > 0.01, "largest gap %.4f m" % _frame_gap)
+			_t.check("FS-6 inside a tick the drawn place is the body's place", _tick_gap == 0.0, "largest gap %.4f m" % _tick_gap)
 			_game.toggle_interpolation()
 			quit(_t.verdict())
+	return false
+
+
+func _physics_process(_delta: float) -> bool:
+	if _step <= 16:
+		return false
+	_ticks += 1
+	var velocity: Vector3 = _game.player.state.velocity
+	_game.player.set_velocity_now(Vector3(40.0, velocity.y, 0.0), "test")
+	if _ticks > 3:
+		_tick_gap = maxf(_tick_gap, _game.player.shown_position().distance_to(_game.player.body().global_position))
 	return false
 
 

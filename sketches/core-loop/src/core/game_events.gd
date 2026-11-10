@@ -227,6 +227,9 @@ signal ultimate_cancelled(ultimate_id: String, reason: String, refunded: bool)
 signal special_broken(kind: String)
 signal radio_take_found(take_id: String, tier: String, source: String)
 signal relay_stake_paid(stakes: int)
+# A trade spot's offer was taken: kind is the site's ("trade_risk" the keeper's gamble,
+# "trade_safe" the foreman's kindness). A trade is no activity, so activity_done never names it.
+signal trade_taken(kind: String, at: Vector3)
 signal maker_set_completed(maker: String, bonus: String)
 signal overflow_cashed(active_id: String, pieces: int)
 

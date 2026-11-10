@@ -143,6 +143,13 @@ func _run() -> void:
 	_t.check("the title actions hide under the camp", not screens._actions.visible, "")
 	_t.check("the walk holds no focus and shows the key strip", root.gui_get_focus_owner() == null and camp.walk
 		and not camp.button_for("launch").is_visible_in_tree(), str(root.gui_get_focus_owner()))
+	await _frames(2)
+	var strip: Control = camp.get_node("WalkStrip")
+	var keys: Control = strip.find_child("WalkKeys", true, false)
+	_t.check("the key strip is a keycap row, on screen with room under it", strip.is_visible_in_tree() and keys != null
+			and camp.walk_words() == "W A S D roll · Space jump · mouse to look · K leave camp"
+			and keys.get_global_rect().end.y <= root.get_visible_rect().size.y - 8.0, "%s, ends %.0f of %.0f" % [camp.walk_words(),
+				keys.get_global_rect().end.y if keys != null else -1.0, root.get_visible_rect().size.y])
 	_game._screen_key(KEY_K)
 	await _frames(1)
 	_t.check("K again closes the camp", not screens.camp_open() and screens._actions.visible, "")

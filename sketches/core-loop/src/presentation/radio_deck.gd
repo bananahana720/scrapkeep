@@ -94,12 +94,15 @@ func _on_tune_heard(tune: String) -> void:
 			find(String(t["id"]))
 
 
-# A Signal cache in a park (radio_cache.gd) was reached.
+# A Signal cache in a park (radio_cache.gd) was reached. True when its take is on file, so the
+# cache has done its work. A find is the player's own, made in play: a ball that rolls into one
+# under the summary or after a death finds nothing (false), and the cache stands for the next run.
 func cache_found(id: String) -> bool:
 	var t := RadioTakes.take(id)
-	if t.is_empty() or t["found"].get("on") != "cache":
+	if t.is_empty() or t["found"].get("on") != "cache" or not _live():
 		return false
-	return find(id)
+	find(id)
+	return game.ctx.profile.has_tune(id)
 
 
 # Files a take, announces it and premieres it. False when the profile already holds it.

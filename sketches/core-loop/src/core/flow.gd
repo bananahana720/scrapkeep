@@ -42,6 +42,10 @@ const NET_DAMP := 0.5
 
 var ctx
 var start_card
+# Where the start card sits: its top edge outside a briefing, and how far down the view its
+# free height is shared above it in a briefing (0.5 is the middle; lower keeps it clear of Moss's bubble).
+const START_CARD_TOP := 160.0
+const BRIEFING_CENTRE := 0.6
 var beacon
 var state := TITLE
 var classes: Array[Resource] = []
@@ -55,15 +59,13 @@ var warden: Node3D = null
 # The park Warden's gate and the yard's arena lock (world/stage_locks.gd), when the world has one.
 var gate = null
 # Seam for wave 4: the boss flow sets boss_active when it enters its "boss" state and
-# boss_plating to the hull's plating. The death screen then shows the boss gap line and
-# offers T, which replays stage 3 from the start the run kept.
+# boss_plating to the hull's plating. The store-less death screen then offers T, which replays
+# stage 3 from the start the run kept.
 var boss_active := false
 var boss_plating := 120.0
 # True from arena entry until the run leaves the fight, so a death there retries the
 # arena, not stage 3.
 var in_arena := false
-# The plating that stood in the way when the ball died in the arena, for the gap line.
-var _death_plating := -1.0
 # RUN OVER's cause line for this run's death (death_cause.gd), "" before one; and the source of
 # the last hit taken, which player_hit publishes just before a killing hit's player_died.
 var death_cause := ""
@@ -375,23 +377,32 @@ func new_run() -> void:
 	_begin_run(ctx.run.class_def)
 
 
+# The run's briefing (workshop.gd): in a played game the kit pick comes first, then this card on
+# the same paused screen, so the pick is made before the ball rolls and is never open in play.
+# The workshop holds the pause while the card shows; this function only says when it shows.
 func show_start_card() -> void:
 	# Under the launch take's panel the card stays hidden; game shows it when the panel has gone.
 	var take = ctx.root.get("launch_take")
-	var interactive: bool = not ctx.root.bot_driven and not (take != null and take.busy())
-	start_card.set_interactive(interactive)
-	start_card.show_picks(ctx.run, ctx.profile)
-	start_card.position = Vector2((get_viewport().get_visible_rect().size.x - start_card.size.x) * 0.5, 160.0)
-	if not interactive or not in_stage():
-		start_card.hide_card()
 	var host = ctx.root.get_node_or_null("Workshop")
+	var interactive: bool = not ctx.root.bot_driven and not (take != null and take.busy())
+	var briefing: bool = host != null and host.armed
+	start_card.set_interactive(interactive)
+	start_card.set_briefing(briefing)
+	start_card.show_picks(ctx.run, ctx.profile)
+	var view := get_viewport().get_visible_rect().size
+	start_card.position = Vector2((view.x - start_card.size.x) * 0.5,
+		maxf(START_CARD_TOP, (view.y - start_card.size.y) * BRIEFING_CENTRE) if briefing else START_CARD_TOP)
+	# The kit pick has the screen first; the workshop calls back here when it closes.
+	if not interactive or not in_stage() or (host != null and host.kit_pick_due()):
+		start_card.hide_card()
 	if host != null:
 		host.sync_start_card_pointer()
+		host.sync_briefing()
 
 
-# The card holds no menu while it keeps mouse look (start_pick_card.gd wants_pointer), so the pause
-# menu or the hotwire offer can open over it; while one is open it owns the keys and the clicks, and
-# a tier button pressed under it changes nothing (the pause menu also opens over the tier choice).
+# A screen open over the card (the pause menu or the hotwire offer) owns the keys and the clicks:
+# the card takes nothing under it and a tier button pressed under it changes nothing. The briefing
+# holds both shut; a test game's card, shown without the hold, can still be covered.
 func _start_card_covered() -> bool:
 	var game = ctx.root
 	var menu = game.get_node_or_null("PauseMenu")
@@ -845,19 +856,6 @@ func can_replay_final_stage() -> bool:
 	return boss_active and ctx.run.has_stage_start(final_stage())
 
 
-# What the death screen says about the fight that killed you: your punch against the
-# plating that stood in the way, and your heft. Empty when no plated lock was live.
-func gap_line() -> String:
-	var plating := -1.0
-	if boss_active:
-		plating = _death_plating if state == DEAD and _death_plating >= 0.0 else boss_plating_now()
-	elif sealed and is_instance_valid(warden):
-		plating = warden_plating()
-	if plating < 0.0:
-		return ""
-	return "Punch %d / plating %d · Heft %s" % [int(punch_now()), int(plating), ctx.run.roman(ctx.run.heft_class())]
-
-
 # The live fight's arrival numbers for the death tip: the engaged Warden's or the boss's; empty off one.
 func _fight_gap() -> Dictionary:
 	if state == BOSS or (state in [STAGE, BEACON] and sealed and _engaged and is_instance_valid(warden)):
@@ -1241,7 +1239,6 @@ func _landed_attack() -> String:
 func _on_player_died() -> void:
 	if not in_play() or state == LAP:
 		return
-	_death_plating = boss_plating_now() if state == BOSS else -1.0
 	death_cause = DeathCause.line(_last_hit_source, _landed_attack(), DeathCause.phase_note(_boss_module()) if state == BOSS else "")
 	death_tip = DeathTips.line(_last_hit_source, _landed_attack(), _fight_gap())
 	ctx.player.set_frozen(true)

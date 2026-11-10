@@ -177,7 +177,7 @@ static func rung_pitch(rarity: String) -> float:
 # The six words of what changes: the part's verb, cut to the reveal row's word limit.
 static func card_words(part_id: String) -> String:
 	var d: Resource = Parts.def(part_id)
-	var line: String = d.verb if d != null and d.verb != "" else (d.text if d != null else "")
+	var line: String = d.verb if d != null and d.verb != "" else (d.text if d != null else String(Parts.token(part_id).get("verb", "")))
 	var words := line.split(" ", false)
 	var limit := int(EventKinds.reward_row("reveal").get("words", 6))
 	return " ".join(words.slice(0, mini(words.size(), limit)))
@@ -344,7 +344,7 @@ func _flare(find: Dictionary) -> void:
 		if may_show_card():
 			juice.request_hit_stop(float(row["stop_ms"]) / 1000.0, "reward_rare")
 	if vfx != null and ctx.player != null:
-		var ball: Vector3 = ctx.player.ball_position()
+		var ball: Vector3 = ctx.player.shown_position()
 		var tint := RewardGates.rarity_color(find["rarity"])
 		vfx.glyph("reward_rare", ball + Vector3.UP * 0.3, 1.0, float(row["ring_m"]), float(row["flare_s"]), Vector3.ZERO, "ring", tint)
 		vfx.glyph("reward_rare", ball + Vector3.UP * 2.4, 0.4, 1.8, float(row["flare_s"]), Vector3.ZERO, "star", tint)
@@ -387,6 +387,8 @@ func card_state(find: Dictionary, start: int, in_ceremony: bool) -> Dictionary:
 	var stamp: String = stamps.get(rarity, "")
 	if find["first"] and rarity in ["common", "rare"]:
 		stamp = "%s %s" % [stamps["first"], stamp]
+	# A run token (Parts.TOKENS) is no rung of the item ladder: it wears its own stamp.
+	stamp = String(Parts.token(find["part"]).get("stamp", stamp))
 	var element := String(d.element) if d != null else ""
 	var relic := relic_of(find["part"])
 	var title: String = Relics.name_of(relic) if relic != "" else Parts.display_name(find["part"])
@@ -420,6 +422,7 @@ func calm() -> bool:
 	var st = ctx.player.state
 	if not st.grounded and absf(st.velocity.y) > float(row["fall_speed"]):
 		return false
+	# The tick's place: this is a rule that stops the world, read against threats at the tick.
 	var at: Vector3 = ctx.player.ball_position()
 	for node in get_tree().get_nodes_in_group("threat"):
 		if not node.has_method("threat_at") and not node is Node3D:
@@ -665,7 +668,7 @@ func _pay(armed: Dictionary, fact: String) -> void:
 	var row := EventKinds.reward_row("payoff")
 	audio.play("reward_payoff", 0.0, rung_pitch(armed["rarity"]))
 	var tint := RewardGates.rarity_color(armed["rarity"])
-	var ball: Vector3 = ctx.player.ball_position()
+	var ball: Vector3 = ctx.player.shown_position()
 	if vfx != null:
 		vfx.glyph("reward_payoff", ball + Vector3.UP * 0.3, 1.0, 3.5, float(row["flash_s"]), Vector3.ZERO, "ring", _class_color())
 	var cam = ctx.camera.cam if ctx.camera != null else null
