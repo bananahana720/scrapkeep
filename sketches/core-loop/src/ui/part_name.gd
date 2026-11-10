@@ -6,13 +6,20 @@ const Parts := preload("res://src/build/parts.gd")
 
 # The name of a part just gained, riding above the ball for SHOW_SECONDS of simulated time
 # in the amber role colour: the first NAME_WORDS words of its name, so a pickup is read
-# where the eye already is and needs no toast. A second pickup replaces the first.
+# where the eye already is and needs no toast. A second pickup replaces the first. It sits
+# LIFT over the ball's top edge on screen, not over its centre: the ball fills more of the
+# view the closer the camera rides, and a lift from the centre put the name on the ball and
+# on the prompts beside it (ui/key_glyphs.gd, ui/first_steps.gd). Where that would put it
+# across `avoid` (the aim reticle's box, from the HUD) it steps up over the box.
 
 const SHOW_SECONDS := 1.2
 const NAME_WORDS := 2
 const FONT := 20
 const FADE := 0.25
-const LIFT := Vector2(0.0, -64.0)
+const LIFT := Vector2(0.0, -24.0)
+const AVOID_GAP := 4.0
+
+var avoid := Rect2()
 
 var text := ""
 var left := 0.0
@@ -49,12 +56,24 @@ func step(delta: float) -> void:
 	queue_redraw()
 
 
-# Where the ball is on screen; the name rides above it.
-func follow(ball_screen: Vector2) -> void:
-	var at := (ball_screen + LIFT).round()
+# Where the ball's top edge is on screen; the name rides above it.
+func follow(ball_top: Vector2) -> void:
+	var at := (ball_top + LIFT).round()
+	if _box(at).intersects(avoid):
+		at.y = floorf(avoid.position.y - FONT * 0.5 - AVOID_GAP)
 	if at != _at:
 		_at = at
 		queue_redraw()
+
+
+# Where the name sits on screen while it shows, for what must stay clear of it.
+func rect() -> Rect2:
+	return _box(_at) if left > 0.0 else Rect2()
+
+
+func _box(at: Vector2) -> Rect2:
+	var extent := Vector2(UiDraw.width(text, FONT), float(FONT))
+	return Rect2(at - extent * 0.5, extent)
 
 
 func drawn_words() -> PackedStringArray:
