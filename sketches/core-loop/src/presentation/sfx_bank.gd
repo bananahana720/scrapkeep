@@ -124,6 +124,7 @@ const TRIM_DB := {
 	"stinger_boss_defeated": -1.0,
 	"womp": -8.0, "build_riser": -4.0, "stage_fade": -12.0,
 	"vault_rise": -6.0, "vault_drop": -2.0, "synergy_hit": -10.0,
+	"slow_dip": -9.0, "slow_rise": -9.0,
 	"threat_tick": -7.0, "threat_whoosh": -6.0, "threat_whistle": -8.0, "threat_hum": -7.0, "threat_tear": -7.0,
 	"warn_burrow": -7.0, "warn_bore": -7.0, "warn_lure": -7.0,
 	"warn_cut": -7.0, "warn_winch": -7.0, "warn_dive": -7.0,
@@ -665,10 +666,16 @@ static func _pcm16(data: PackedByteArray, stereo: bool) -> PackedFloat32Array:
 	return out
 
 
+# Every id the game plays as a loop, through loop_stream or hum_stream. A looped sound is held
+# to a seam that tiles, not to ends at rest (tests/sound_edges_test.gd).
+const LOOPED := ["line_hum", "panel_cache", "find_drip", "find_radio",
+	"foreman_presence", "dispatcher_presence", "splitter_presence", "linker_presence"]
+
 # A presence loop: the file as a forward-looping stream, whole file as the loop. It copies the
 # stream the bake already encoded (bake_all), so a special's first spawn does not encode its
 # two-bar loop again on the main thread (12-14 ms at the Dispatcher's first spawn on the cloud).
 static func loop_stream(id: String) -> AudioStreamWAV:
+	assert(id in LOOPED, "a looped sound must be listed in SfxBank.LOOPED: " + id)
 	var key := id + "@loop"
 	if _cache_has(_streams, key):
 		return _cache_get(_streams, key)
@@ -1086,6 +1093,15 @@ static func _bake(id: String) -> PackedFloat32Array:
 			return _stage_fade()
 		"vault_rise":
 			return _mix([[_noise(0.32, 600.0, 4200.0, 3.0, 0.2), 0, 0.6], [_tone(0.32, _hz(62), _hz(74), "saw_dark", 4.0), 0, 0.6]])
+		# The world slows for a close-up and comes back (audio.gd slowed): the air goes out of the
+		# room down a fourth past the octave, D5 to A3, and comes back up it faster. Both stay
+		# above 200 Hz: the entrance's own sound has the low end.
+		"slow_dip":
+			return _mix([[_tone(0.7, _hz(74), _hz(57), "sine", 3.5), 0, 0.7], [_tone(0.7, _hz(74), _hz(57), "saw_dark", 5.0), 0, 0.25],
+				[_noise(0.6, 3200.0, 500.0, 5.0, 0.02), 0, 0.35]])
+		"slow_rise":
+			# A decay under zero is a swell: the tone grows into the return and lets go in 40 ms.
+			return _cut(_mix([[_tone(0.3, _hz(57), _hz(74), "sine", -8.0), 0, 0.7], [_noise(0.3, 500.0, 3600.0, 2.0, 0.2), 0, 0.45]]), 0.3, 1800)
 		"vault_drop":
 			return Synth.render_score([[0, 0, 2, "kick", 1.0], [0, 0, 8, "crash", 0.6], [0, 38, 8, "sub", 0.8],
 				[0, 62, 4, "bell", 0.5], [0, 66, 4, "bell", 0.45], [0, 69, 4, "bell", 0.45], [2, 74, 6, "bell", 0.55]], 0.6)

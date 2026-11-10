@@ -338,6 +338,7 @@ export const KIND_TITLES = {
   loudness: "Tracks off the loudness target",
   peak: "Tracks over the true-peak limit",
   seam: "Loops that click at the wrap",
+  pages: "Packed Oggs stored in long pages (a start deep in the clip stalls its frame)",
   stale: "Packed audio that does not match its manifest or STEMS.sha256",
   unchecked: "Not checked",
 };
@@ -397,11 +398,53 @@ export function hashFindings(project, manifests) {
   return rejected.map((r) => ({ kind: "stale", where: r.file, what: r.why }));
 }
 
+// An Ogg is stored in pages, and a start anywhere but a page's first sample decodes from the page
+// before. ffmpeg writes pages one second long unless told otherwise, which made a section change deep
+// in a clip decode up to a second of audio on its frame (tools/ace/repage.py has the measurement and
+// the fix). Returns the seconds of audio in the file's longest page, or null when it is not Ogg Vorbis.
+export const MAX_OGG_PAGE_S = 0.1;
+export function oggLongestPage(data) {
+  let rate = 0;
+  let last = 0;
+  let longest = 0;
+  let pages = 0;
+  for (let at = data.indexOf("OggS"); at >= 0 && at + 27 <= data.length; ) {
+    const granule = data.readBigInt64LE(at + 6);
+    const segments = data[at + 26];
+    const body = at + 27 + segments;
+    let size = 0;
+    for (let i = at + 27; i < body && i < data.length; i++) size += data[i];
+    if (rate === 0 && body + 16 <= data.length && data.subarray(body, body + 7).toString("latin1") === "\x01vorbis") rate = data.readUInt32LE(body + 12);
+    if (granule >= 0n) {
+      longest = Math.max(longest, Number(granule) - last);
+      last = Number(granule);
+      pages += 1;
+    }
+    at = data.indexOf("OggS", body + size);
+  }
+  return rate > 0 && pages > 0 ? longest / rate : null;
+}
+
+// Every packed Ogg the manifests name and the disk holds must be short-paged.
+export function pageFindings(project, manifests) {
+  const dir = path.join(project, MUSIC_DIR);
+  const found = [];
+  for (const rel of [...new Set(namedStems(manifests))].sort()) {
+    const file = path.join(dir, rel);
+    if (!rel.endsWith(".ogg") || !existsSync(file)) continue;
+    const seconds = oggLongestPage(readFileSync(file));
+    if (seconds !== null && seconds > MAX_OGG_PAGE_S)
+      found.push({ kind: "pages", where: rel, what: `longest Ogg page holds ${round4(seconds)} s of audio (over ${MAX_OGG_PAGE_S}); run tools/ace/repage.py apply, then scripts/music/mx stem-hashes` });
+  }
+  return found;
+}
+
 export function run(args) {
   const delivered = args.music.flatMap((d) => walk(d, AUDIO_EXT));
   const findings = [...missingInputs(args, readManifests(args.project)), ...cueFindings(args.project, delivered)];
   const rows = [];
   if (!args.cuesOnly) findings.push(...hashFindings(args.project, readManifests(args.project)));
+  if (!args.cuesOnly) findings.push(...pageFindings(args.project, readManifests(args.project)));
   if (!args.cuesOnly) {
     if (!hasFfmpeg()) findings.push({ kind: "unchecked", where: "ffmpeg", what: "ffmpeg not found; loudness, peaks and seams not measured" });
     else {

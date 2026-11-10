@@ -22,7 +22,7 @@ What the pick settles:
 
 - **Nothing Andrew has picked is replaced.** 2010 is the sound of nearly every standing pick. The work is making each piece obey the band's rule, not re-recording for its own sake, and a new take still replaces a standing pick only when he picks it by ear.
 - **New music is made in the 2010 sound.** A render caption names the year and its production (the 2010 captions in the audition brief are the pattern); the other two years are for radio records only.
-- **Roaming** was not part of the pick, because the renderer pulled the roaming covers to 150 BPM. New roaming takes are rendered at 174 and fitted to 172 (a pitch-keeping 1.16 percent stretch, labelled as such), checked by bar length before and after, and offered beside the current Spillway roaming tune, which stays until he picks one.
+- **Roaming** was not part of the pick, because the renderer pulled the roaming covers to 150 BPM. New roaming takes are rendered at 174 and fitted to 172 (a pitch-keeping 1.16 percent stretch, labelled as such), checked by bar length before and after, and offered beside the current Spillway roaming tune. Andrew picked take 6107 (10 November 2026: "Love the sound pick of 6107, very well tuned to my liking"); it is the roaming tune of the Spillway's two stages.
 - **The band's rule** is the game's one line in sound (ruling cj): the grid is the machine's, the bend is ours. The keepers are a band that listens: a call gets an answer, the solo is handed round, a wrong note is kept and answered. The Foreman is one perfect tone that needs nobody, beautiful and never sinister. [SOUND-STORY.md](../SOUND-STORY.md) section 8 applies it to who talks.
 
 ## The set: the score is played like a DJ plays a room
@@ -40,6 +40,7 @@ So the score is one set, and the player is the room the DJ is reading. Every mov
 | Build | The Warden's guard near breaking (three quarters gone) plays the tight build | The recorded band, with the Warden form |
 | Hold the breath: pull the drums and bass, close the filter | A stagger; the Warden's break | The recorded band, with the Warden form |
 | Drop | The pilot's hit that shatters a chunk, on the next beat | The recorded band, with the Warden form |
+| Pull the room down for a held moment | The world slows for a close-up (Brindle's entrance): a falling sweep in, the music and the ambience held under it, a rising sweep out | Plays today, for a hand on the controls |
 | Mix the next record in on the bar | Zone, fight and moment changes enter on a bar or a beat | Plays today |
 | Mix in key | Each world has one key (D, E, G) and each pack declares it | Declared; not checked when a pack is swapped |
 | Ride the filter into a drop, pump the chords against the kick, tape stop, switch-hit | A set piece's lead time, a kill chain, the last phase | After the world 1 sitting |
@@ -58,7 +59,7 @@ The rules of orchestration, each with what enforces it today.
 
 ### How it is checked
 
-A rule that cannot be checked is a wish. Each bank sound is bounced and measured for the faults a level meter cannot see (a click, a cut-off tail, a flat top, silence before the sound, the strongest note against its register, near twins), and every flagged sound is read as a picture before it is called a fault. The tools and their first run are in the project files under `music/soundcheck/`; a test in the game's own suite for the cheap rules, and checks with the band playing (a cue heard over the roaming and fight bands, cues that sum on one frame), are owed. The recorded packs are checked on the PC for loudness, peaks, start point, bar length and key.
+A rule that cannot be checked is a wish. Each bank sound is bounced and measured for the faults a level meter cannot see (a click, a cut-off tail, a flat top, silence before the sound, the strongest note against its register, near twins), and every flagged sound is read as a picture before it is called a fault. The tools and their first run are in the project files under `music/soundcheck/`. The faults that need no picture are a test in the game's own suite (`tests/sound_edges_test.gd`): no trimmed bank sound, event cue or talking voice (one line a caller) is silent, starts loud, jumps on its second sample or stops mid-wave, and every sound the game loops meets its own start (the grid notes, cause notes, pilot quotes and keyed variants are not read yet); the sounds let through are listed in the test with why, and a row that stops being needed fails it. With everything playing, a whole bot run is read two ways. `tools/ace_bounce.gd` records the run's Master bus with every cue's time, pitch and level; `tools/mix/mixcheck.py` reads the recording (clipping, cues that pile up on one frame, the level in each of the game's mix states); `tools/mix/bounce_ids.gd` and `tools/mix/mixsim.py` rebuild the effect layer from the cue log and list each sound that leads no third of an octave over everything else sounding with it. A recording alone cannot say which of forty sounds a second is heard; the rebuild can. In the cloud the music ring underruns, so whole-mix levels and anything about the recorded band are read on the PC. The recorded packs are checked on the PC for loudness, peaks, start point, bar length and key, and are stored in 20 ms Ogg pages so that a section starting deep in a recording costs its frame no more than one starting at its head ([sound/RENDERS.md](sound/RENDERS.md), "Short pages").
 
 ### Adding a world
 
@@ -84,6 +85,9 @@ He gave the threads their own judgement on mechanics and tuning for this build-o
 - The held breath and the drop keep the lead even at low armour. Low armour's missing lead is a warning everywhere else; in the breath it would be silence.
 - The Warden's fight takes the band from an event's tune that is still playing when it engages (the flood, a squall). Before, the event's tune played the whole fight and the Warden's music was never heard. An event that begins inside the fight does not start its tune.
 - After an ultimate's drop the recorded band comes back (it used to stay off for the rest of the stage, leaving the stand-in band). In a Warden fight it comes back to the fight's build, not to where it left.
+- Take 6107 keeps its softer top end (4.9 to 6.3 dB below the old roaming tune above 8 kHz at speed). The clip he picked from was softer the same way, so it is the sound he chose. If it reads muffled against the fight, a shelf on the roaming band is one line.
+- Take 6107 keeps its drums 1 to 2 LU hotter than the old tune's. The game fades the drums in with speed, so they are loudest at full speed; the drive is the point of the 2010 pick.
+- Slow motion is marked at both ends, quietly and above 200 Hz, and the music neither slows nor filters: it is held 3 dB under, as it is for a warning. A tape stop on the band itself waits for after the sitting.
 - The Cannon keeps its bent chime and has no mouth: it is a machine on the crew's side.
 - Moss sounds the same at his bench as on a call.
 - Kest's kick reads a tenth of a decibel over the peak line after its trim. It is left alone: the limiter holds it, and lowering it would change how loud it is.

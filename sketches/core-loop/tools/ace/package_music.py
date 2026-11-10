@@ -37,6 +37,8 @@ LOOP_JOIN = 441
 STEMS = ('drums', 'bass', 'other')
 SILENT_DB = -80.0
 HERE = Path(__file__).resolve().parent
+sys.path.insert(0, str(HERE))
+from repage import PAGE_USEC  # noqa: E402
 SKETCH = HERE.parents[1]
 OUT = SKETCH / 'assets' / 'music_ace' / 'spillway'
 SLICE = Path('/home/andrew/Projects/scrapkeep-worktrees/core-loop-v3-audio-3/artifacts/local/v3-audio/slice0')
@@ -113,7 +115,7 @@ def encode(pcm, path):
     ints = np.clip(np.round(pcm * 32767.0), -32768, 32767).astype('<i2')
     cmd = ['ffmpeg', '-hide_banner', '-loglevel', 'error', '-y', '-f', 's16le', '-ar', str(RATE), '-ac', '2',
            '-i', 'pipe:0', '-c:a', 'libvorbis', '-q:a', '6', '-fflags', '+bitexact', '-flags:a', '+bitexact',
-           '-map_metadata', '-1', str(path)]
+           '-map_metadata', '-1', '-page_duration', str(PAGE_USEC), str(path)]
     subprocess.run(cmd, input=ints.tobytes(), check=True)
 
 
