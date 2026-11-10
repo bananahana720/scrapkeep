@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { PERSONAS, PILOTS, sweepSeed, carryList, grade, hitches, logErrors, pileUps, planWave, readBotJob, renderMarkdown } from "./lib.mjs";
+import { FILMS, FILM_OF, PERSONAS, PILOTS, READERS, sweepSeed, carryList, filmArgs, grade, hitches, judgeSheet, logErrors, pileUps, planWave, readBotJob, readerBrief, readerPack, renderMarkdown } from "./lib.mjs";
 
 const job = (over = {}) => ({ id: "speedrunner-tarn-2500", kind: "bot", persona: "speedrunner", policy: "skipper", pilot: "tarn", seed: 2500, stages: null, args: [], ...over });
 const result = (over = {}) => ({ job: job(), exit: 0, timedOut: false, row: { outcome: "won", stage_reached: 7, game_seconds: 600, stages: [], beats: [] }, errors: [], piles: [], perf: { spikes: [], loads: 0, p99: 4 }, ...over });
@@ -105,4 +105,48 @@ test("readBotJob tolerates a run cut short and the page ranks blockers first", (
   assert.match(page, /1 blocker, 1 major, 0 minor, 1 to watch/);
   assert.match(page, /1\. \*\*BLOCKER\*\* · stability · A run crashed/);
   assert.deepEqual(carryList(findings), [{ persona: "speedrunner", pilot: "tarn", seed: 2500, title: "A run crashed" }]);
+});
+
+const film = [
+  { file: "0001-screen-title.jpg", why: "screen-title", t: 0.5, flow: "title", plate: "", hp: 100, hp_max: 100 },
+  { file: "0002-hit-1-lead.jpg", why: "hit-1-lead", t: 40.0, flow: "stage", plate: "Clear the camp", hp: 100, hp_max: 100, source: "chaser", amount: 12 },
+  { file: "0003-hit-1-lead.jpg", why: "hit-1-lead", t: 40.4, flow: "stage", plate: "Clear the camp", hp: 100, hp_max: 100, source: "chaser", amount: 12 },
+  { file: "0004-hit-1.jpg", why: "hit-1", t: 40.8, flow: "stage", plate: "Clear the camp", hp: 88, hp_max: 100, source: "chaser", amount: 12 },
+  { file: "0005-hit-1-after.jpg", why: "hit-1-after", t: 41.1, flow: "stage", plate: "Clear the camp", hp: 88, hp_max: 100, source: "chaser", amount: 12 },
+  { file: "0006-held.jpg", why: "held", t: 50, flow: "stage", paused: true, plate: "Clear the camp", hp: 88, hp_max: 100 },
+  { file: "0007-death-lead.jpg", why: "death-lead", t: 60, flow: "stage", plate: "Find | the Warden", hp: 3, hp_max: 100 },
+  { file: "0008-death.jpg", why: "death", t: 60.4, flow: "dead", plate: "", hp: 0, hp_max: 100 },
+  { file: "0009-death-after.jpg", why: "death-after", t: 60.9, flow: "dead", plate: "", hp: 0, hp_max: 100 },
+  { file: "0010-death-screen.jpg", why: "death-screen", t: 62.9, flow: "dead", plate: "", hp: 0, hp_max: 100 },
+];
+
+test("a film is handed to the reader with no word of why a frame was taken", () => {
+  const pack = readerPack(film);
+  assert.deepEqual(pack.frames.map((f) => f.set), [0, 1, 1, 1, 1, 0, 2, 2, 2, 0]);
+  assert.deepEqual(pack.sets, [{ id: 1, first: 2, last: 5, moment: 4 }, { id: 2, first: 7, last: 9, moment: 8 }]);
+  assert.equal(pack.key[3].n, 4);
+  const brief = readerBrief("cautious", pack);
+  assert.ok(brief.includes(READERS.cautious));
+  assert.ok(brief.includes("Pictures 002 to 005: something happens at 004."));
+  assert.ok(brief.includes("001.jpg to 010.jpg"));
+  for (const told of ["hit-1", "death", "chaser", "Clear the camp", "film.ndjson", "0004-"]) assert.ok(!brief.includes(told), "the brief gives away: " + told);
+  assert.throws(() => readerBrief("nobody", pack));
+});
+
+test("the judge's sheet sets every picture beside what the game knew", () => {
+  const sheet = judgeSheet(readerPack(film)).split("\n");
+  assert.equal(sheet.length, 2 + film.length + 1);
+  assert.ok(sheet[5].startsWith("| 004 | hit-1 | 40.8 | stage | Clear the camp | 88/100 | chaser 12 |"));
+  assert.ok(sheet[7].includes("stage (held)"));
+  assert.ok(sheet[8].includes("Find / the Warden"), "a bar in the words must not break the table");
+});
+
+test("a film's flags: a player's game by its keys, the persona's default film, the control's plant", () => {
+  const whole = filmArgs({ film: "whole", seed: 7, out: "/tmp/f" });
+  for (const flag of ["--self-play", "--self-play-keys=1", "--self-play-eyes=1", "--self-play-seed=7", "--self-play-policy=skipper", "--self-play-film=/tmp/f", "--self-play-until=3"]) assert.ok(whole.includes(flag), flag);
+  assert.ok(!whole.some((a) => a.startsWith("--self-play-plant")));
+  const wait = filmArgs({ film: FILM_OF.cautious, out: "/tmp/f", world: 0.5, plant: "objective", pilot: "tarn" });
+  for (const flag of ["--self-play-policy=camper", "--self-play-plant-death=240", "--self-play-film-world=0.5", "--self-play-plant-hide=objective", "--self-play-pilot=tarn"]) assert.ok(wait.includes(flag), flag);
+  assert.throws(() => filmArgs({ film: "nope", out: "/tmp/f" }));
+  assert.deepEqual(Object.keys(FILMS), ["whole", "wait"]);
 });

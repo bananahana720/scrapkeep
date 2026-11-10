@@ -439,3 +439,107 @@ export function carryList(findings) {
   }
   return out.slice(0, 4);
 }
+
+// ---- The player's-eye pass (README, "The player's-eye pass") ----
+// A filmed run (sketches/core-loop/tools/eye_film.gd) is read cold by someone who has never seen
+// the game, in a persona, and a judge sets what they said beside what the game knew.
+
+// Who reads. The card is all the reader is told about themselves.
+export const READERS = {
+  "first-timer": "You have never played this game or seen anything about it. You read what the screen offers, try what it suggests, and give up on anything you cannot work out in a few seconds.",
+  cautious: "You have never played this game. You play carefully: you read every word before you move on, hang back from fights, and avoid anything that looks risky. Being hit by something you could not see coming, and words that leave before you have read them, annoy you more than anything.",
+  speedrunner: "You have played many games like this and want to go fast. You skip what you can, resent every screen that holds you, and notice every second in which nothing is asked of you.",
+  greedy: "You want everything the game will give you: every pickup, every upgrade, every optional job. You read every offer closely and want to know exactly what each choice gives and costs.",
+};
+
+// What is filmed. `whole` is world 1 start to finish on the fastest line; `wait` is a player who
+// hangs back in the dam until a planted death (the cause line names a chaser: it is scripted),
+// then starts again, so the death screen and a second briefing are on film.
+export const FILMS = {
+  whole: { policy: "skipper", args: ["--self-play-until=3", "--self-play-hold=5"], says: "world 1 start to finish, the fastest line" },
+  wait: { policy: "camper", args: ["--self-play-plant-death=240", "--self-play-hold=8"], says: "hanging back in the dam for four minutes, a death, and the start of a second run" },
+};
+export const FILM_OF = { cautious: "wait" };
+
+// The self-play flags for one film (after `--`). plant is "" or "objective" (the control run).
+export function filmArgs({ film, seed = 1, pilot = "", out, world = 1, plant = "", deathAt = 0 }) {
+  const spec = FILMS[film];
+  if (!spec) throw new Error("--film must be one of " + Object.keys(FILMS).join(", "));
+  // deathAt moves the wait film's planted death (a short control run does not need four minutes).
+  const args = spec.args.map((a) => (deathAt > 0 && a.startsWith("--self-play-plant-death=") ? `--self-play-plant-death=${deathAt}` : a));
+  return [
+    "--self-play", `--self-play-seed=${seed}`, `--self-play-policy=${spec.policy}`, "--self-play-keys=1", "--self-play-eyes=1",
+    "--self-play-watch=1", `--self-play-save=eye-${film}-${seed}`, "--self-play-stall=600", `--self-play-film=${out}`,
+    ...(pilot ? [`--self-play-pilot=${pilot}`] : []), ...(world < 1 ? [`--self-play-film-world=${world}`] : []),
+    ...(plant ? [`--self-play-plant-hide=${plant}`] : []), ...args,
+  ];
+}
+
+// The film's rows as the reader gets them: numbered in order, with no word of why each frame was
+// taken (a file called "death" tells the answer). A hit's or a death's lead-in, the frame itself
+// and the frame after make one set, so the reader can be asked whether they saw it coming.
+// Returns { frames: [{ n, file, set }], sets: [{ id, first, last, moment }], key: [row with n] }.
+export function readerPack(rows) {
+  const frames = [];
+  const sets = [];
+  const key = [];
+  let open = null;
+  rows.forEach((row, i) => {
+    const n = i + 1;
+    const why = String(row.why || "");
+    const base = why.replace(/-(lead|after)$/, "");
+    const beat = /^(hit-\d+|death)$/.test(base) ? base : "";
+    if (beat && (!open || open.beat !== beat)) {
+      open = { beat, id: sets.length + 1, first: n, last: n, moment: n };
+      sets.push(open);
+    }
+    if (!beat) open = null;
+    if (open) {
+      open.last = n;
+      if (why === beat) open.moment = n;
+    }
+    frames.push({ n, file: row.file, set: open ? open.id : 0 });
+    key.push({ n, ...row });
+  });
+  return { frames, sets: sets.map(({ id, first, last, moment }) => ({ id, first, last, moment })), key };
+}
+
+const pad = (n) => String(n).padStart(3, "0");
+
+// What the reader is handed. Nothing here names a file, a system or what the game knew.
+export function readerBrief(persona, pack) {
+  const card = READERS[persona];
+  if (!card) throw new Error("--persona must be one of " + Object.keys(READERS).join(", "));
+  const lines = [
+    "# Read this film as a player",
+    "",
+    card,
+    "",
+    `The folder holds ${pack.frames.length} pictures of one play of a game, in order: ${pad(1)}.jpg to ${pad(pack.frames.length)}.jpg. They are what was on the screen. Read only these pictures. Do not look at anything else on this machine, and do not guess from file names or sizes.`,
+    "",
+    "The pictures come from a software renderer: colour, lighting and effects are rougher than the real game, so do not judge how it looks. Judge what a player can read, understand and act on.",
+    "",
+    "For every picture, answer in one table row (keep each cell short):",
+    "",
+    "| n | what is on the screen | what I think I am meant to do now | words I read that I do not understand, quoted | anything I cannot see, cannot read or that looks broken |",
+    "",
+    "Say \"cannot tell\" when you cannot tell. That is the most useful answer you can give; never fill a cell with a guess.",
+  ];
+  if (pack.sets.length) {
+    lines.push("", "Some runs of pictures are 0.4 seconds apart and end at a moment something happened to you. For each, answer after the table:", "");
+    for (const s of pack.sets) lines.push(`- Pictures ${pad(s.first)} to ${pad(s.last)}: something happens at ${pad(s.moment)}. Looking only at the pictures before it, what was about to happen, and what on the screen told you? If nothing told you, say so.`);
+  }
+  lines.push("", "Then finish with:", "", "1. The five things most likely to confuse, bore or annoy the player on your card, worst first, each with the picture numbers that show it.", "2. Three things the screen told you clearly.", "3. In your own words, what this game is and what the goal is, as far as the pictures told you.");
+  return lines.join("\n") + "\n";
+}
+
+// The judge's sheet: each picture beside what the game knew when it was taken. The judge fills
+// the last column from the reader's table; a row where the two disagree is a finding.
+export function judgeSheet(pack) {
+  const cell = (v) => String(v ?? "").replace(/\|/g, "/");
+  const lines = ["| n | why it was taken | game s | state | objective the game set | hull | hit by | what the reader said (fill in) |", "| --- | --- | --- | --- | --- | --- | --- | --- |"];
+  for (const r of pack.key) {
+    lines.push(`| ${pad(r.n)} | ${cell(r.why)} | ${cell(r.t)} | ${cell(r.flow)}${r.paused ? " (held)" : ""} | ${cell(r.plate)} | ${cell(r.hp)}/${cell(r.hp_max)} | ${cell(r.source ? `${r.source} ${r.amount}` : "")} | |`);
+  }
+  return lines.join("\n") + "\n";
+}
