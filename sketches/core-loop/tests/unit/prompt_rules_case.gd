@@ -173,11 +173,11 @@ static func _words(t, glyphs, profile, game) -> void:
 	game.events.line_state_changed.emit("latched_world", null, Vector3.ZERO, "")
 	t.eq("a bite counts a success on the profile", profile.uses("harpoon"), 1)
 	glyphs.step(DT, _view(["harpoon"]))
-	t.check("HOOK is gone after the first bite", not "HOOK" in glyphs.drawn_words(), "words %s" % [glyphs.drawn_words()])
+	t.check("HOOK still reads on the prompt after the first bite, as what the key does", "HOOK" in glyphs.drawn_words(), "words %s" % [glyphs.drawn_words()])
 	for i in 5:
 		game.events.line_state_changed.emit("latched_body", null, Vector3.ZERO, "")
 	glyphs.step(DT, _view(["harpoon"]))
-	t.check("and never comes back", not "HOOK" in glyphs.drawn_words(), "words %s" % [glyphs.drawn_words()])
+	t.check("and the retired prompt draws no word", not "HOOK" in glyphs.drawn_words(), "words %s" % [glyphs.drawn_words()])
 
 	_fresh(glyphs, profile)
 	glyphs.step(2.0, _view(["haul"], "body"))
@@ -186,11 +186,11 @@ static func _words(t, glyphs, profile, game) -> void:
 	game.events.line_state_changed.emit("smash_committed", null, Vector3.ZERO, "")
 	t.eq("a committed smash counts a smash on the profile", profile.uses("smash"), 1)
 	glyphs.step(2.0, _view(["haul"], "body"))
-	t.check("SMASH is gone after the first smash", not "SMASH" in glyphs.drawn_words(), "words %s" % [glyphs.drawn_words()])
+	t.check("SMASH still reads on a body after the first smash, as what the key does", "SMASH" in glyphs.drawn_words(), "words %s" % [glyphs.drawn_words()])
 	glyphs.step(2.0, _view(["haul"], "world"))
 	t.check("the world-line haul prompt never carries SMASH", not "SMASH" in glyphs.drawn_words(), "words %s" % [glyphs.drawn_words()])
 
-	# E and Space say what the key does where the ball is, until the prompt first retires.
+	# E and Space say what the key does where the ball is, before and after the prompt first retires (PF-03).
 	_fresh(glyphs, profile)
 	t.eq("E says MOUNT off the pylon", glyphs.word_for("interact", "", Bindings.ball_state("", false, false, false)), "MOUNT")
 	t.eq("Space says JUMP on the ground", glyphs.word_for("jump", "", Bindings.ball_state("", false, false, false)), "JUMP")
@@ -199,7 +199,7 @@ static func _words(t, glyphs, profile, game) -> void:
 	t.eq("SLINGSHOT still while it charges there", glyphs.word_for("jump", "", glyphs._word_state("jump", {"charging": true, "mounted": true, "airborne": false, "line": ""})), "SLINGSHOT")
 	for i in KeyGlyphs.RETIRE_AFTER["interact"]:
 		profile.add_use("interact")
-	t.eq("E's word goes when its prompt first retires", glyphs.word_for("interact", "", Bindings.ball_state("", false, false, false)), "")
+	t.eq("E still reads MOUNT after its prompt first retires", glyphs.word_for("interact", "", Bindings.ball_state("", false, false, false)), "MOUNT")
 	t.eq("and Space keeps its own count", glyphs.word_for("jump", "", Bindings.ball_state("", false, false, false)), "JUMP")
 
 
