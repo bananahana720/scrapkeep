@@ -1398,14 +1398,14 @@ func _on_run_ended_board(_won: bool) -> void:
 
 # The summary as icons and numbers, each on its own icon with its word under it, so nobody has to
 # learn the icons to read a run. The words say what the number counts: the cogs are the ones still
-# in the wallet (cogs spent are gone), the scrap is what the ball rolled up as mass, the events
-# are the ones won. The earned save is a yes or no, so its chip shows only on a run that used it.
+# in the wallet (cogs spent are gone), the scrap is what the run still holds (theft and spending
+# take from it), the events are the ones won. The earned save is a yes or no, so its chip shows only on a run that used it.
 static func summary_chips(s: Dictionary, stage_count: int) -> Array:
 	var chips := [
 		["res_timer", "%d:%02d" % [int(s["time"]) / 60, int(s["time"]) % 60], "time"],
 		["obj_beacon", "%d/%d" % [s["stages"], stage_count], "stages"],
 		["res_scrap", str(s["cogs"]), "cogs left"],
-		["res_mass", str(s["scrap"]), "scrap rolled"],
+		["res_mass", str(s["scrap"]), "scrap held"],
 		["cat_transform", str((s["parts"] as Array).size()), "parts"],
 		["thr_instant", str(s["kills"]), "kills"],
 		["obj_event", str(s["events_won"]), "events won"],

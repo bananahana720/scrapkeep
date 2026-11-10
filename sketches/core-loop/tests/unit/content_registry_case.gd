@@ -8,7 +8,7 @@ const FIXTURES := "res://tests/fixtures/content_registry/"
 const TABLE_COUNT := 27
 # These two content pins exclude the stage table; unrelated registry pins stay canonical.
 const CONTENT_HASHES := {
-	"lore_rows.ROWS": "e783e2423cbf2e58914fa9f28510d17281d88baacc2fc63d7dbec52b7d4b4b71",
+	"lore_rows.ROWS": "5d8ad2b4450a20aadfa841794e5370ed26f93ec06cb06b8228da11cd6df61882",
 	"music_rows.ROWS": "6ae91061fe62a58b8935f508c4b253ffc8c8bb1cbe2d9167eddbb7c3c3126329",
 }
 

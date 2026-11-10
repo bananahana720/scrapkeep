@@ -138,7 +138,7 @@ func _tag_on_summary() -> void:
 	await _frames(3)
 	var words: Array = screens._stats.get_children().map(func(cell): return (cell.get_child(1) as Label).text if cell.get_child_count() == 2 else "")
 	_t.check("each of the summary's stats has its word under its icon, and the word says what it counts",
-		words == ["TIME", "STAGES", "COGS LEFT", "SCRAP ROLLED", "PARTS", "KILLS", "EVENTS WON"], str(words))
+		words == ["TIME", "STAGES", "COGS LEFT", "SCRAP HELD", "PARTS", "KILLS", "EVENTS WON"], str(words))
 	var saved: Dictionary = _game.run.summary()
 	saved["save_used"] = 1
 	var saved_words: Array = screens.summary_chips(saved, _game.ctx.stages.COUNT).map(func(chip): return String(chip[2]))

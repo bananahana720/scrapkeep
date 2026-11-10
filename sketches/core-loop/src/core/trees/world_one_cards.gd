@@ -9,8 +9,10 @@ extends RefCounted
 
 # A run's first pick is a depth-1 pair, read before the pilot has rolled a metre, so the three
 # starting pilots' depth-1 rows say the effect in the words the pilot card and the HUD already use
-# (vault kick, mount, charges, cloak, laser) and the weight rule as "a heavier ball ..." (player's-eye
-# pass, 10 Nov 2026: a first-time reader could not say what either Sable card did).
+# (vault kick, mount, charges, cloak, laser), and only what the card itself gives: Sable's two set
+# the weight launch ("a heavier ball launches farther"); Kest's blasts widen with weight whether or
+# not a card is taken, so her cards do not claim it (player's-eye pass, 10 Nov 2026: a first-time
+# reader could not say what either Sable card did).
 const ROWS := {
 	# Sable, S1 to S6.
 	"s_cannonball": "Vault kicks zap what's near. A heavier ball launches farther.",
@@ -20,8 +22,8 @@ const ROWS := {
 	"s_arc_nest": "Mounted bolts chain to another target.",
 	"s_bulwark": "Mounted, shrug off crowd control.",
 	# Kest, K1 to K6.
-	"k_trapper": "Five charges can wait at once. A heavier ball blasts wider.",
-	"k_ghost": "Cloaked, enemies spot you only up close. A heavier ball blasts wider.",
+	"k_trapper": "Charges wait longer. Five can wait at once.",
+	"k_ghost": "Cloaked, enemies spot you only up close.",
 	"k_tripwire": "Charges spring when enemies approach.",
 	"k_demo_expert": "Smash scatters five payloads.",
 	"k_smoke_trail": "Glide cloaked. Heavy fins steer harder.",

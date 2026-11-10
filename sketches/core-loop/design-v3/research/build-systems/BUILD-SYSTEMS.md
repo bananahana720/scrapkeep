@@ -62,8 +62,8 @@ Run and Gun's trail starts with 14 damage per patch, 1 m radius, 2 s life, at mo
 
 | ID / tier / parent | Node and one-line effect | Status and source |
 | --- | --- | --- |
-| K1 / 1 / root | Trapper: **Five charges can wait at once. A heavier ball blasts wider.** Keep 2.5 s fuses and five live charges. | E+; `k_trapper`, `src/core/trees/kest.gd:7–8`; mass radius new. |
-| K2 / 1 / root | Ghost: **Cloaked, enemies spot you only up close. A heavier ball blasts wider.** Keep cloaked sight factor 0.3. | E+; `k_ghost`, `src/core/trees/kest.gd:9–10`; mass radius new. |
+| K1 / 1 / root | Trapper: **Charges wait longer. Five can wait at once.** Keep 2.5 s fuses and five live charges. | E+; `k_trapper`, `src/core/trees/kest.gd:7–8`; mass radius new. |
+| K2 / 1 / root | Ghost: **Cloaked, enemies spot you only up close.** Keep cloaked sight factor 0.3. | E+; `k_ghost`, `src/core/trees/kest.gd:9–10`; mass radius new. |
 | K3 / 2 / K1 | Tripwire: **Charges spring when enemies approach.** Keep the 2 m contact trigger, distinct from mass-scaled blast radius. | E; `k_tripwire`, `src/core/trees/kest.gd:12–13`. |
 | K4 / 2 / K1 | Demo Expert: **Smash scatters five payloads.** Keep five demo charges; mass widens each committed blast, never the trigger radius or scatter count. | E; `k_demo_expert`, `src/core/trees/kest.gd:14–15`; inherits new mass verb. |
 | K5 / 2 / K2 | Smoke Trail: **Glide cloaked. Heavy fins steer harder.** Keep cloak while gliding; Riveted Shell's air-control penalty becomes +25% during a glide. | E+; `k_smoke_trail`, `src/core/trees/kest.gd:16–17`; inversion new. |
