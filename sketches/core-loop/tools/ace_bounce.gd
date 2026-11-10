@@ -119,12 +119,13 @@ static func _cue_counts(rows: Array) -> Dictionary:
 	return counts
 
 
-# Cues with a start sample inside the recording, timed in seconds of the WAV.
+# Cues with a start sample inside the recording, timed in seconds of the WAV, each with the
+# pitch and the level the game played it at (tools/mix/mixsim.py places them from these).
 func _cue_rows(rows: Array) -> Array:
 	var out := []
 	for row in rows:
 		if row.size() > 3 and int(row[3]) >= _base_sample:
-			out.append([snappedf((int(row[3]) - _base_sample) / RATE, 0.001), row[0], row[1], row[2]])
+			out.append([snappedf((int(row[3]) - _base_sample) / RATE, 0.0001), row[0], row[1], row[2], row[4] if row.size() > 4 else 1.0, row[5] if row.size() > 5 else null])
 	return out
 
 
