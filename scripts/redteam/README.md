@@ -98,6 +98,8 @@ A hand-written receipt opens with two verdicts, not one:
 
 Each finding leads with one plain sentence of what the player sees or feels, then the picture numbers or the replay command, the bug-bar grade and area, and the thread that owns the fix. Ticks, seeds and file names go after that sentence, never in place of it. The receipt ends with what the pass could not see.
 
+Every player-read finding then gets a row in [PLAY-FINDINGS.tsv](../../project-guide/handoff/PLAY-FINDINGS.tsv): what the player meets, where it was seen, a grade, an owner and a review date. A finding the cloud film cannot settle (colour, light, effects, the camera) is graded `check` until a PC film has decided it. The pull request that fixes a finding removes its row. `node scripts/redteam/findings.mjs --check` reads the list's shape, `--print` lists it by owner and `--overdue` names the rows past their date.
+
 ## The findings page
 
 One page, worst first, graded on the bug bar's severities (blocker, major, minor) and its 11 areas, plus a watch list for taste and tuning calls that are not bugs. One line per root cause, however many runs hit it:

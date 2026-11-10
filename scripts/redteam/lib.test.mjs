@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { FILMS, FILM_OF, PERSONAS, PILOTS, READERS, sweepSeed, carryList, filmArgs, grade, hitches, judgeSheet, logErrors, pileUps, planWave, readBotJob, readerBrief, readerPack, renderMarkdown } from "./lib.mjs";
+import { readFileSync } from "node:fs";
+import { FILMS, FILM_OF, FINDINGS_FILE, FINDINGS_HEADER, PERSONAS, PILOTS, READERS, sweepSeed, carryList, filmArgs, grade, hitches, judgeSheet, logErrors, overdueFindings, parseFindings, pileUps, planWave, readBotJob, readerBrief, readerPack, renderMarkdown } from "./lib.mjs";
 
 const job = (over = {}) => ({ id: "speedrunner-tarn-2500", kind: "bot", persona: "speedrunner", policy: "skipper", pilot: "tarn", seed: 2500, stages: null, args: [], ...over });
 const result = (over = {}) => ({ job: job(), exit: 0, timedOut: false, row: { outcome: "won", stage_reached: 7, game_seconds: 600, stages: [], beats: [] }, errors: [], piles: [], perf: { spikes: [], loads: 0, p99: 4 }, ...over });
@@ -153,4 +154,18 @@ test("a film's flags: a player's game by its keys, the persona's default film, t
   for (const flag of ["--self-play-policy=camper", "--self-play-plant-death=240", "--self-play-film-world=0.5", "--self-play-plant-hide=objective", "--self-play-pilot=tarn"]) assert.ok(wait.includes(flag), flag);
   assert.throws(() => filmArgs({ film: "nope", out: "/tmp/f" }));
   assert.deepEqual(Object.keys(FILMS), ["whole", "wait"]);
+});
+
+test("the play findings list: every row has an owner and a date, and a late row is reported", () => {
+  const head = FINDINGS_HEADER.join("\t");
+  const good = parseFindings(head + "\nPF-01\tmajor\tThe kit pick cannot be read\tclean 005\tdesign\t2026-11-10\t2026-11-14\n\nPF-02\tcheck\tA fan covers the view\tclean 026\tsight\t2026-11-10\t2026-11-20\n");
+  assert.deepEqual(good.problems, []);
+  assert.deepEqual(overdueFindings(good.rows, "2026-11-14"), []);
+  assert.deepEqual(overdueFindings(good.rows, "2026-11-15").map((row) => row.id), ["PF-01"]);
+  assert.equal(parseFindings("id\tgrade").problems.length, 1);
+  const bad = parseFindings(head + "\nPF-01\tsevere\tx\ty\tz\t2026-11-10\tsoon\nPF-01\tminor\tx\ty\t\t2026-11-10\t2026-11-11\nF2\tminor\tx\ty\tz\t2026-11-10\t2026-11-11");
+  assert.deepEqual(bad.problems.map((problem) => problem.line), [2, 2, 3, 4]);
+  // The list in the repository is well formed.
+  const live = parseFindings(readFileSync(new URL("../../" + FINDINGS_FILE, import.meta.url), "utf8"));
+  assert.deepEqual(live.problems, []);
 });

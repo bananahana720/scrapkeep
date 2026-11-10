@@ -546,3 +546,39 @@ export function judgeSheet(pack) {
   }
   return lines.join("\n") + "\n";
 }
+
+// The play findings list: project-guide/handoff/PLAY-FINDINGS.tsv. One row for each open thing a
+// player would feel, with an owner and a review date. The pull request that fixes one removes
+// its row. Whether a row past its date holds a promotion is Andrew's call (a card is open);
+// overdueFindings only reports them.
+export const FINDINGS_FILE = "project-guide/handoff/PLAY-FINDINGS.tsv";
+export const FINDINGS_HEADER = ["id", "grade", "meets", "evidence", "owner", "added", "review"];
+// check: seen on a cloud film only; a PC film decides before anyone acts.
+export const FINDING_GRADES = ["blocker", "major", "minor", "check"];
+
+// { rows, problems: [{ line, message }] }
+export function parseFindings(text) {
+  const lines = String(text || "").split("\n").map((line) => line.replace(/\r$/, ""));
+  const rows = [];
+  const problems = [];
+  if (lines[0] !== FINDINGS_HEADER.join("\t")) return { rows, problems: [{ line: 1, message: "the header must be: " + FINDINGS_HEADER.join(" TAB ") }] };
+  const seen = new Set();
+  lines.slice(1).forEach((line, index) => {
+    if (!line.trim()) return;
+    const at = index + 2;
+    const cells = line.split("\t").map((cell) => cell.trim());
+    if (cells.length !== FINDINGS_HEADER.length || cells.some((cell) => !cell)) return problems.push({ line: at, message: "a row needs " + FINDINGS_HEADER.join(", ") + ", with no cell empty" });
+    const row = Object.fromEntries(FINDINGS_HEADER.map((name, i) => [name, cells[i]]));
+    if (!/^PF-\d+$/.test(row.id) || seen.has(row.id)) problems.push({ line: at, message: `the id must be PF-<n> and used once, got ${row.id}` });
+    seen.add(row.id);
+    if (!FINDING_GRADES.includes(row.grade)) problems.push({ line: at, message: "the grade must be one of " + FINDING_GRADES.join(", ") });
+    for (const date of ["added", "review"]) if (!/^\d{4}-\d{2}-\d{2}$/.test(row[date]) || Number.isNaN(Date.parse(row[date]))) problems.push({ line: at, message: `${date} must be a date, YYYY-MM-DD` });
+    rows.push(row);
+  });
+  return { rows, problems };
+}
+
+// The rows past their review date on `today` (YYYY-MM-DD).
+export function overdueFindings(rows, today) {
+  return rows.filter((row) => row.review < today);
+}
