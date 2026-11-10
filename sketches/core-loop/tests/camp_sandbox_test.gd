@@ -44,6 +44,10 @@ func _pure() -> void:
 		var words: String = Sandbox.where_met(kind) + Sandbox.name_of(kind)
 		wordy = wordy and Sandbox.where_met(kind).length() > 12 and banned.search(words) == null
 	_t.check("every kind says where it turns up, in plain words", wordy, "where_met")
+	_t.eq("the horn enemy is the Shift Boss on screen, whatever its id", Sandbox.name_of("foreman"), "Shift Boss")
+	_t.eq("a kind with no name of its own reads as its id in words", Sandbox.name_of("boom_tender"), "Boom Tender")
+	_t.check("a kind with an old job says it before how to beat it", Sandbox.line_of("chaser").begins_with("Was a pipe pig") and Sandbox.line_of("chaser").ends_with(String(Roster.row("chaser")["line"])), Sandbox.line_of("chaser"))
+	_t.eq("a kind with no job yet shows its line alone", Sandbox.line_of("miniboss"), String(Roster.row("miniboss")["line"]))
 	var saved := Profile.new("user://camp_sandbox_test_unsaved.json")
 	_t.eq("a fresh save has met nothing", Picker.met_kinds(saved), [])
 	_t.check("marking a kind met is news once", Picker.mark_met(saved, "hooker") and not Picker.mark_met(saved, "hooker"), "mark_met")

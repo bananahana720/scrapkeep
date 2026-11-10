@@ -53,7 +53,7 @@ A camp page on R, next to Moss's jukebox (`src/ui/radio_page.gd`).
 | Take | about 135 s | a real reinterpretation (about 0.46) | hidden caches, events won, bosses beaten |
 | Legend | 3 to 4 min | wild, with hard switch-ups, ending with everything locked together (about 0.34) | the hardest challenges and the strangest places |
 
-**Signal caches** (`src/world/radio_cache.gd`) are small antenna masts with a dish, a blinking lamp and a pulsing ring; you collect one by rolling up to it. The park-dressing threads place them at the spots below. Each spot is chosen so reaching it is a skill test that fits its park.
+**Signal caches** (`src/world/radio_cache.gd`) are small antenna masts with a dish, a blinking lamp and a pulsing ring; you collect one by rolling up to it while the run is in play (a ball that rolls into one under the summary or after a death finds nothing, and the cache stays). The park-dressing threads place them at the spots below. Each spot is chosen so reaching it is a skill test that fits its park.
 
 | Park | Spot | Track | Tier |
 | --- | --- | --- | --- |

@@ -775,7 +775,7 @@ The `ref_` texts need a fact check before they ship.
 
 **Tests to re-pin** (names from the `tests/` listing; KD2 confirms): `alpha_posture_bands_test.gd`, `warden_variants_test.gd`, `warden_meltdown_slag_test.gd`, `warden_family_test.gd`, `world_one_wardens_test.gd`, `world_warden_flow_test.gd`, `stage_bay_test.gd`, `hero_warden_assets_test.gd`, `boss_flow_test.gd` (the hand-off to Brindle), and the win proof on `--table=park`.
 
-**Fields today's map carries that the park file has no table for:** the Reach's three authored lines (`map_reach.gd:5-14`) retire into the pilot lines; its 13 `scrap_lines` (`map_reach.gd:120-134`) derive from `assets/park/park_flume/lines.json`; its kicker (`map_reach.gd:135`) becomes kicker rows. The four swing pillars at today's Warden site (`map_reach.gd:11`) become the head house's roof-truss anchors.
+**Fields today's map carries that the park file has no table for:** the Reach's three authored lines (`map_reach.gd:5-14`) retire into the pilot lines; its 13 `scrap_lines` (`map_reach.gd:120-134`) became the `scrap_trail` of the floor line in `assets/park/park_flume/lines.json` (ruling cd, 9 Nov: scrap on the beat, no gears or hoops); its kicker (`map_reach.gd:135`) becomes kicker rows. The four swing pillars at today's Warden site (`map_reach.gd:11`) become the head house's roof-truss anchors.
 
 ## 13. The shipped park file
 

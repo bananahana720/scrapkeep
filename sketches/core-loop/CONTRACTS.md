@@ -250,6 +250,7 @@ Instance methods the spine and other modules may call:
 - `entry_heading(stage) -> Vector3` (flat, unit length)
 - `beacon_point(stage) -> Vector3` (on the ground; the Warden spawns here on every map)
 - `scrap_lines(stage) -> Array` (each entry is `[Vector2 from, Vector2 to]` on the ground plane)
+- `scrap_trail(stage) -> Dictionary` (`{points, spacing_m, phrase, rest, gaps}`: the line scrap is laid along to the beat, with no gears or hoops; empty for a stage with none)
 - `contains(point) -> bool`
 - `rescue_point(near) -> Vector3`
 - `material_at(point: Vector3) -> Dictionary`, which returns `{"material": "water" | "concrete" | "sand", "surface_y": float}` or `{}` where unknown. The Dictionary is the settled shape, because ice needs the surface height. D implements it. Until it does, build falls back to `build.register_material("water", provider)`.
@@ -833,3 +834,12 @@ Rows 3 to 6 carry their own `packs`; rows 1 and 2 use the table's `PACKS`.
 - **Merge** (two writers, one file): `settled` and owned pieces are unions, the saver's assembly and escape flag win when it has an assembly (else theirs), and `rewards_settled` never goes back to false.
 - **Settle-once (RS4).** `Progress.settle(id) -> bool` is true the first time only. The run document's optional `settled` list (`RunState.settled`, entrance key `settled`, strings) and the profile's `settled` list are one set: an id in either is settled and settling copies it to both. `reconcile_settled()` unions the two after a run document loads. `grant_once(id, kind, target)` settles then unlocks a pilot, cosmetic or world and saves; achievement rewards go through it as `reward:<achievement>:<kind>`.
 - **Owed.** Grants outside the profile still unguarded by the ledger: the build module's hotwire offer (`build.gd` `_hotwire_id`) and discovery-part offers, and companion piece finds. They live outside the profile files; each should call `progress.settle(id)` before it fires. Tests: `profile_store_test`, `unlock_settle_once_test`.
+
+## Sitting notes and the play watch (w33, ruling cg)
+
+- **Launch flag.** `--sitting-notes` (after `--`, or as an engine argument) adds the node `SittingNotes` under the game (`src/core/sitting_notes.gd`, processes while paused). Without the flag the node is never made, and a `test_mode` game never makes it. `--sitting-notes-hitch=<ms>` changes the hitch limit (25 ms).
+- **File.** `user://sitting-notes/notes-<UTC start>.ndjson`, one JSON row a line through `SafeStore.append_line`, closed after every row so a crash keeps them. The game prints `SCRAPKEEP_SITTING_NOTES <full path>` once at launch. Every row has `t` (seconds since the notes started), `utc` and `kind`: `start`, `stuck`, `hung`, `wedged`, `fell`, `objective`, `blank`, `hitch`, `mark`, `end`. The file's header comment lists each kind's fields.
+- **Mark.** F8, or both sticks clicked together on a pad, writes a `mark` row with the place, the objective's words and the frame rate. Nothing shows and nothing sounds. The notes never mark input as handled, so the sticks' own bindings still fire.
+- **Reads only.** The notes and the watch write no game state. The watch (`src/core/play_watch.gd`) takes a game and a sink: `watch(game, sink)`, `step(delta)` once a physics tick of play, `read_text(since)` about once a second, and the totals `counts`, `plates`, `blank_max`. A bot's run uses the same watch through `tools/qa_watch.gd` (`bot_run --qa-log=1`, `--self-play-watch=1`), which adds the bot's goal to each row.
+- **Reading a row.** `stuck` is also what a person standing still for 8 s writes. `blank` reads the row the HUD chose, not the pixels drawn. A `hitch` row is one burst of long frames, cut every 5 s; frames while the window is not focused are not counted.
+- **Tests.** `play_watch_test` (every row kind made to fire, with its look-alike that must not; no game), `sitting_notes_test` (a real game: the file, a real stuck row, hitches, marks, the end row), `world1_run_test` (the watch on six launched runs).

@@ -9,7 +9,8 @@ const NAMES := ["BentPlate", "GearSegment", "PipeStub", "BoltCluster"]
 # field's catch serial instead of its object id; layout, magnet, collection, value and timing unchanged.
 # Re-pinned 2026-10-16 (SCRAP-LEAK): drops fold the oldest loose piece past a cap into the newest; layout, magnet, collection, value and timing unchanged.
 # Re-pinned 2026-10-24 (IL-01 grey panels, #398): step() and clear() also take and clear panel pickups and rib caches; layout, magnet, collection, value and timing unchanged.
-const LOGIC_SHA := "5500e474c702d193b2a93fd53ef73c16e789898f09e2b0848ba7fce5f0a77d7c"
+# Re-pinned 2026-11-09 (ruling cd, scrap trail, #650): lay_trail and trail_spots lay a map's trail to the beat, and the fold passes over trail pieces; lay_out, magnet, collection, value and timing unchanged.
+const LOGIC_SHA := "e655db0cfa1a0116b69acc14f01821db5794efda6541419972b842e2225d38b1"
 
 var failures: Array[String] = []
 var game

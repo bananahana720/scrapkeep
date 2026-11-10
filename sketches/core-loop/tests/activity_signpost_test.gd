@@ -54,15 +54,43 @@ func _run() -> void:
 		ok = ok and hit
 	_t.check("a_one_amber_target_per_site", ok, "%d targets for %d sites" % [targets.size(), sites.size()])
 
-	# The plate names the nearest site and gives the metres to it (Objectives.ACTIVITY_WORDS).
+	# The plate names the site in front of the view and gives the metres to it (Objectives.pick_site,
+	# ACTIVITY_WORDS). The expected site is worked out here from the rule's own words: distance,
+	# stretched by one for each unit the site's bearing falls short of straight ahead.
 	var ball: Vector3 = _game.player.ball_position()
-	var nearest = sites[0]
-	for site in sites:
-		if ball.distance_squared_to(site.global_position) < ball.distance_squared_to(nearest.global_position):
-			nearest = site
-	var plate: Dictionary = hud.objective_reading()
-	_t.eq("a2_plate_names_the_nearest_site", [plate["id"], plate["words"], plate["distance"]],
-		["find_activity", Objectives.activity_words(String(nearest.id)), int(ball.distance_to(nearest.global_position))])
+	var cam: Camera3D = _game.camera.cam
+	var named := []
+	for facing in sites:
+		var eye := cam.global_position
+		var target: Vector3 = facing.global_position
+		if Vector2(target.x - eye.x, target.z - eye.z).length() < 1.0:
+			continue
+		cam.look_at(Vector3(target.x, eye.y, target.z), Vector3.UP)
+		var forward := -cam.global_transform.basis.z
+		var nearest = null
+		var low := INF
+		for site in sites:
+			var to: Vector3 = site.global_position - ball
+			var flat := Vector3(to.x, 0.0, to.z).normalized()
+			var score := to.length() * (2.0 - flat.dot(Vector3(forward.x, 0.0, forward.z).normalized()))
+			if score < low:
+				low = score
+				nearest = site
+		hud._plate_site = null
+		var faced: Dictionary = hud.objective_reading()
+		named.append([faced["id"], faced["words"], faced["distance"]] ==
+			["find_activity", Objectives.activity_words(String(nearest.id)), int(ball.distance_to(nearest.global_position))])
+	_t.check("a2_plate_names_the_site_ahead", not named.is_empty() and not named.has(false), "%s" % [named])
+	# Held: with the view turned right round, the row keeps its site unless another is clearly better.
+	var held = hud._plate_site
+	cam.rotate_y(PI)
+	var after: Dictionary = hud.objective_reading()
+	var held_score := Objectives.site_score(held.global_position - ball, -cam.global_transform.basis.z)
+	var now_score := Objectives.site_score(hud._plate_site.global_position - ball, -cam.global_transform.basis.z)
+	_t.check("a2_row_keeps_its_site_until_clearly_beaten", hud._plate_site == held or now_score < held_score * Objectives.SITE_KEEP,
+		"held %.1f now %.1f" % [held_score, now_score])
+	var nearest = hud._plate_site
+	var plate: Dictionary = after
 	_t.check("a2_named_site_has_its_own_words", Objectives.ACTIVITY_WORDS.has(String(nearest.id)) and plate["words"] != Objectives.words("find_activity"),
 		"%s reads \"%s\"" % [nearest.id, plate["words"]])
 	_t.eq("a2_plate_glyph_is_the_marker_glyph", plate["icon"], Objectives.glyph("find_activity"))

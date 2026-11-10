@@ -150,8 +150,15 @@ func _process(_delta: float) -> bool:
 			var stop: Array = _game.presentation.juice.hit_stop_log.filter(func(e: Array): return e[2] == "beacon_unsealed")
 			_check("unseal", unseal.size() == 1 and stop.size() == 1 and _game.presentation.vfx.spawned.get("beacon_unsealed", 0) >= 2,
 				"the unseal stinger on the beat, a hit-stop request and a flash over the beacon")
-			var grown: float = _game.presentation.juice.shell
-			_check("outline stays the collider", absf(grown - 1.0) < 0.02 and is_equal_approx(_collider_radius(), _radius_before), "the shell reads %.2fx at heft II (fixed outline, no whole-ball growth); the collider radius stays %.2f m" % [grown, _collider_radius()])
+			# The shell is read at rest. The ball is live: the scrap lost above kicked the shell's
+			# spring (-0.22, still 1.02x 600 ms on, this check's old limit) and every piece of scrap
+			# it rolls over kicks it again (0.05 and up), so the value passed or failed on the frame it
+			# was read. Two seconds of the spring's own frames, with nothing between them, is rest.
+			var springs = _game.presentation.juice
+			for _i in 240:
+				springs._process(1.0 / 120.0)
+			var grown: float = springs.shell
+			_check("outline stays the collider", absf(grown - 1.0) < 0.005 and is_equal_approx(_collider_radius(), _radius_before), "the shell reads %.2fx at heft II (fixed outline, no whole-ball growth); the collider radius stays %.2f m" % [grown, _collider_radius()])
 			events.emit_signal("stage_entered", 1, true)
 			_check("overcharge resets", engine.overcharge == 0, "a stage entry clears the warm pad")
 			print("presentation_rows_test: %s" % ("PASS" if _failures == 0 else "FAIL (%d)" % _failures))
