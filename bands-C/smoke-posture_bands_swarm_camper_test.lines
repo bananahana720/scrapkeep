@@ -1,0 +1,43 @@
+[camper seed 0 fought the live hoist] hoist { "driver": "res://src/combat/warden_swarm.gd", "first_stagger_s": -1.0, "staggers": [], "top": 29.0000003576279 } -> PASS
+[camper seed 0 plays pylon_engineer] got "pylon_engineer", want "pylon_engineer" -> PASS
+[camper seed 0 ran] exit 0, timed out false -> PASS
+[camper seed 0 wrote a record] child killed / no record, exit 0, timed out false -> PASS
+[camper seed 1 fought the live hoist] hoist { "driver": "res://src/combat/warden_swarm.gd", "first_stagger_s": -1.0, "staggers": [], "top": 29.0000003576279 } -> PASS
+[camper seed 1 plays runner_gunner] got "runner_gunner", want "runner_gunner" -> PASS
+[camper seed 1 ran] exit 0, timed out false -> PASS
+[camper seed 1 wrote a record] child killed / no record, exit 0, timed out false -> PASS
+[camper seed 2 fought the live hoist] hoist { "driver": "res://src/combat/warden_swarm.gd", "first_stagger_s": -1.0, "staggers": [], "top": 29.0000003576279 } -> PASS
+[camper seed 2 plays demolitions_caster] got "demolitions_caster", want "demolitions_caster" -> PASS
+[camper seed 2 ran] exit 0, timed out false -> PASS
+[camper seed 2 wrote a record] child killed / no record, exit 0, timed out false -> PASS
+[camper seed 3 fought the live hoist] hoist { "driver": "res://src/combat/warden_swarm.gd", "first_stagger_s": -1.0, "staggers": [], "top": 29.0000003576279 } -> PASS
+[camper seed 3 plays pylon_engineer] got "pylon_engineer", want "pylon_engineer" -> PASS
+[camper seed 3 ran] exit 0, timed out false -> PASS
+[camper seed 3 wrote a record] child killed / no record, exit 0, timed out false -> PASS
+[camper seed 4 fought the live hoist] hoist { "driver": "res://src/combat/warden_swarm.gd", "first_stagger_s": -1.0, "staggers": [], "top": 29.0000003576279 } -> PASS
+[camper seed 4 plays runner_gunner] got "runner_gunner", want "runner_gunner" -> PASS
+[camper seed 4 ran] exit 0, timed out false -> PASS
+[camper seed 4 wrote a record] child killed / no record, exit 0, timed out false -> PASS
+[camper seed 5 fought the live hoist] hoist { "driver": "res://src/combat/warden_swarm.gd", "first_stagger_s": -1.0, "staggers": [], "top": 29.0000003576279 } -> PASS
+[camper seed 5 plays demolitions_caster] got "demolitions_caster", want "demolitions_caster" -> PASS
+[camper seed 5 ran] exit 0, timed out false -> PASS
+[camper seed 5 wrote a record] child killed / no record, exit 0, timed out false -> PASS
+[camper seed 6 fought the live hoist] hoist { "driver": "res://src/combat/warden_swarm.gd", "first_stagger_s": -1.0, "staggers": [], "top": 29.0000003576279 } -> PASS
+[camper seed 6 plays pylon_engineer] got "pylon_engineer", want "pylon_engineer" -> PASS
+[camper seed 6 ran] exit 0, timed out false -> PASS
+[camper seed 6 wrote a record] child killed / no record, exit 0, timed out false -> PASS
+[camper seed 7 fought the live hoist] hoist { "driver": "res://src/combat/warden_swarm.gd", "first_stagger_s": -1.0, "staggers": [], "top": 29.0000003576279 } -> PASS
+[camper seed 7 plays runner_gunner] got "runner_gunner", want "runner_gunner" -> PASS
+[camper seed 7 ran] exit 0, timed out false -> PASS
+[camper seed 7 wrote a record] child killed / no record, exit 0, timed out false -> PASS
+[each arm ran its seeds] got [8], want [8] -> PASS
+[the camper never breaks it] got 0, want 0 -> PASS
+[the sweep has runs] 8 jobs -> PASS
+bot_run: camper seed 0 (pylon_engineer) -> stalled at stage 3, 21861 ticks (242.9 s game), N s wall
+bot_run: camper seed 1 (runner_gunner) -> stalled at stage 3, 21789 ticks (242.1 s game), N s wall
+bot_run: camper seed 2 (demolitions_caster) -> stalled at stage 3, 21942 ticks (243.8 s game), N s wall
+bot_run: camper seed 3 (pylon_engineer) -> stalled at stage 3, 21809 ticks (242.3 s game), N s wall
+bot_run: camper seed 4 (runner_gunner) -> stalled at stage 3, 21768 ticks (241.9 s game), N s wall
+bot_run: camper seed 5 (demolitions_caster) -> stalled at stage 3, 21905 ticks (243.4 s game), N s wall
+bot_run: camper seed 6 (pylon_engineer) -> stalled at stage 3, 21863 ticks (242.9 s game), N s wall
+bot_run: camper seed 7 (runner_gunner) -> stalled at stage 3, 21752 ticks (241.7 s game), N s wall

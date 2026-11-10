@@ -1,0 +1,31 @@
+[0.0m] red team wave 34 on 75099fa708: 6 bot runs, 8 slots, out artifacts/local/redteam/w34-greedy-20261110T211737
+[0.0m] start cloud export (export, headless boots)
+[0.5m] done  cloud export: PASS
+[0.5m] placeholders: 0
+[0.5m] start item fuzz 4450-4455
+[0.5m] start greedy-pylon_engineer-4478
+[0.5m] start greedy-runner_gunner-4479
+[0.5m] start greedy-demolitions_caster-4480
+[0.5m] start greedy-tarn-4481
+[0.5m] start greedy-tally-4482
+[0.5m] start greedy-remembered_cannon-4483
+[2.2m] done  build sweep: 0 problem(s)
+[5.5m] done  item fuzz: item_fuzz: 6 seeds, 6 anomalies, 10 of 12 trigger kinds fired naturally somewhere, written to /home/andrew/scratch/gate/w34/bC/artifacts/local/redteam/w34-greedy-20261110T211737/jobs/item-fuzz
+[10.4m] done  greedy-tarn-4481: won at stage 6
+[10.8m] done  greedy-tally-4482: won at stage 6
+[11.2m] done  greedy-pylon_engineer-4478: won at stage 6
+[11.6m] done  greedy-demolitions_caster-4480: won at stage 6
+[11.8m] done  greedy-runner_gunner-4479: won at stage 6
+[13.3m] done  greedy-remembered_cannon-4483: won at stage 6
+[13.3m] hitch triage alone: greedy-demolitions_caster-4480 to tick 9000
+[14.4m] hitch triage noMix: greedy-demolitions_caster-4480 to tick 9000
+[15.4m] hitch triage: {"run":"greedy-demolitions_caster-4480","tested":11,"alone":0,"noMix":0} (over 33 ms)
+[15.4m] start perf bench s3 (alone, so contention does not count)
+[16.1m] done  perf bench: {"p99":12.623,"max":31.285,"p50":2.508}
+[16.1m] findings: artifacts/local/redteam/w34-greedy-20261110T211737/findings.md
+# Red team, wave 34
+
+Build `75099fa708`, 2026-11-10T21:17Z, 16 min in a 4-core cloud container. 6 bot runs across 1 personas and 6 pilots.
+
+**0 blocker, 1 major, 2 minor, 3 to watch.**
+

@@ -1,0 +1,285 @@
+BOUNDARY stage 2->3 multipliers [1.0, 1.1, 0.9] -> [1.0, 1.2, 0.8]
+BOUNDARY stage 4->5 multipliers [1.0, 1.2, 0.8] -> [1.0, 1.3, 0.75]
+[Warden damage stays excluded] byte equality -> PASS
+[Warden damage stays excluded] byte equality -> PASS
+[Warden damage stays excluded] byte equality -> PASS
+[Warden damage stays excluded] byte equality -> PASS
+[Warden damage stays excluded] byte equality -> PASS
+[Warden damage stays excluded] byte equality -> PASS
+[Warden damage stays excluded] byte equality -> PASS
+[Warden damage stays excluded] byte equality -> PASS
+[Warden damage stays excluded] byte equality -> PASS
+[Warden damage stays excluded] byte equality -> PASS
+[Warden damage stays excluded] byte equality -> PASS
+[Warden damage stays excluded] byte equality -> PASS
+[Warden stays excluded] byte equality -> PASS
+[Warden stays excluded] byte equality -> PASS
+[Warden stays excluded] byte equality -> PASS
+[Warden stays excluded] byte equality -> PASS
+[Warden stays excluded] byte equality -> PASS
+[Warden stays excluded] byte equality -> PASS
+[Warden stays excluded] byte equality -> PASS
+[Warden stays excluded] byte equality -> PASS
+[Warden stays excluded] byte equality -> PASS
+[Warden stays excluded] byte equality -> PASS
+[Warden stays excluded] byte equality -> PASS
+[Warden stays excluded] byte equality -> PASS
+[all zero inputs are baseline] byte equality -> PASS
+[cap aggression at 0.0]  -> PASS
+[cap aggression at 0.1]  -> PASS
+[cap aggression at 0.25]  -> PASS
+[cap aggression at 0.5]  -> PASS
+[cap aggression at 2.5]  -> PASS
+[cap damage at 0.0]  -> PASS
+[cap damage at 0.1]  -> PASS
+[cap damage at 0.3]  -> PASS
+[cap damage at 0.6]  -> PASS
+[cap damage at 3.0]  -> PASS
+[health dial leaves counter tool rating] byte equality -> PASS
+[health dial leaves counter tool rating] byte equality -> PASS
+[health dial leaves counter tool rating] byte equality -> PASS
+[health dial leaves counter tool rating] byte equality -> PASS
+[health dial leaves counter tool rating] byte equality -> PASS
+[health dial leaves counter tool rating] byte equality -> PASS
+[health dial leaves counter tool rating] byte equality -> PASS
+[health dial leaves counter tool rating] byte equality -> PASS
+[health dial leaves counter tool rating] byte equality -> PASS
+[health dial leaves counter tool rating] byte equality -> PASS
+[health dial leaves counter tool rating] byte equality -> PASS
+[health dial leaves counter tool rating] byte equality -> PASS
+[named damage cap] got 1.3, want 1.3 -> PASS
+[named rest floor] got 0.75, want 0.75 -> PASS
+[no health dial cap]  -> PASS
+[no health world step]  -> PASS
+[one-dial-only aggression leaves 0] byte equality -> PASS
+[one-dial-only aggression leaves 0] byte equality -> PASS
+[one-dial-only aggression leaves 0] byte equality -> PASS
+[one-dial-only aggression leaves 0] byte equality -> PASS
+[one-dial-only aggression leaves 0] byte equality -> PASS
+[one-dial-only aggression leaves 1] byte equality -> PASS
+[one-dial-only aggression leaves 1] byte equality -> PASS
+[one-dial-only aggression leaves 1] byte equality -> PASS
+[one-dial-only aggression leaves 1] byte equality -> PASS
+[one-dial-only aggression leaves 1] byte equality -> PASS
+[one-dial-only damage leaves 0] byte equality -> PASS
+[one-dial-only damage leaves 0] byte equality -> PASS
+[one-dial-only damage leaves 0] byte equality -> PASS
+[one-dial-only damage leaves 0] byte equality -> PASS
+[one-dial-only damage leaves 0] byte equality -> PASS
+[one-dial-only damage leaves 2] byte equality -> PASS
+[one-dial-only damage leaves 2] byte equality -> PASS
+[one-dial-only damage leaves 2] byte equality -> PASS
+[one-dial-only damage leaves 2] byte equality -> PASS
+[one-dial-only damage leaves 2] byte equality -> PASS
+[positive world step aggression]  -> PASS
+[positive world step damage]  -> PASS
+[production ball health after hit] byte equality -> PASS
+[production ball health after hit] byte equality -> PASS
+[production ball health after hit] byte equality -> PASS
+[production ball health after hit] byte equality -> PASS
+[production ball health after hit] byte equality -> PASS
+[production ball health after hit] byte equality -> PASS
+[production ball health after hit] byte equality -> PASS
+[production ball health after hit] byte equality -> PASS
+[production ball health after hit] byte equality -> PASS
+[production ball health after hit] byte equality -> PASS
+[production ball health after hit] byte equality -> PASS
+[production ball health after hit] byte equality -> PASS
+[production counter health tier-0] byte equality -> PASS
+[production counter health tier-0] byte equality -> PASS
+[production counter health tier-0] byte equality -> PASS
+[production counter health tier-0] byte equality -> PASS
+[production counter health tier-0] byte equality -> PASS
+[production counter health tier-0] byte equality -> PASS
+[production counter health tier-1] got 50.0, want 50.0 within 0.0001 -> PASS
+[production counter health tier-1] got 50.0, want 50.0 within 0.0001 -> PASS
+[production counter health tier-1] got 55.0, want 55.0 within 0.0001 -> PASS
+[production counter health tier-1] got 60.0, want 60.0 within 0.0001 -> PASS
+[production counter health tier-1] got 65.0, want 65.0 within 0.0001 -> PASS
+[production counter health tier-1] got 70.0, want 70.0 within 0.0001 -> PASS
+[production delivered hit tier 0 stage 1] byte equality -> PASS
+[production delivered hit tier 0 stage 2] byte equality -> PASS
+[production delivered hit tier 0 stage 3] byte equality -> PASS
+[production delivered hit tier 0 stage 4] byte equality -> PASS
+[production delivered hit tier 0 stage 5] byte equality -> PASS
+[production delivered hit tier 0 stage 6] byte equality -> PASS
+[production delivered hit tier 1 stage 1] byte equality -> PASS
+[production delivered hit tier 1 stage 2] byte equality -> PASS
+[production delivered hit tier 1 stage 3] byte equality -> PASS
+[production delivered hit tier 1 stage 4] byte equality -> PASS
+[production delivered hit tier 1 stage 5] byte equality -> PASS
+[production delivered hit tier 1 stage 6] byte equality -> PASS
+[production health tier 0 stage 1] byte equality -> PASS
+[production health tier 0 stage 2] byte equality -> PASS
+[production health tier 0 stage 3] byte equality -> PASS
+[production health tier 0 stage 4] byte equality -> PASS
+[production health tier 0 stage 5] byte equality -> PASS
+[production health tier 0 stage 6] byte equality -> PASS
+[production health tier 1 stage 1] byte equality -> PASS
+[production health tier 1 stage 2] byte equality -> PASS
+[production health tier 1 stage 3] byte equality -> PASS
+[production health tier 1 stage 4] byte equality -> PASS
+[production health tier 1 stage 5] byte equality -> PASS
+[production health tier 1 stage 6] byte equality -> PASS
+[production lobber health] byte equality -> PASS
+[production lobber health] byte equality -> PASS
+[production lobber health] byte equality -> PASS
+[production lobber health] byte equality -> PASS
+[production lobber health] byte equality -> PASS
+[production lobber health] byte equality -> PASS
+[production lobber health] byte equality -> PASS
+[production lobber health] byte equality -> PASS
+[production lobber health] byte equality -> PASS
+[production lobber health] byte equality -> PASS
+[production lobber health] byte equality -> PASS
+[production lobber health] byte equality -> PASS
+[production max health] byte equality -> PASS
+[production max health] byte equality -> PASS
+[production max health] byte equality -> PASS
+[production max health] byte equality -> PASS
+[production max health] byte equality -> PASS
+[production max health] byte equality -> PASS
+[production max health] byte equality -> PASS
+[production max health] byte equality -> PASS
+[production max health] byte equality -> PASS
+[production max health] byte equality -> PASS
+[production max health] byte equality -> PASS
+[production max health] byte equality -> PASS
+[production miniboss health] byte equality -> PASS
+[production miniboss health] byte equality -> PASS
+[production miniboss health] byte equality -> PASS
+[production miniboss health] byte equality -> PASS
+[production miniboss health] byte equality -> PASS
+[production miniboss health] byte equality -> PASS
+[production miniboss health] byte equality -> PASS
+[production miniboss health] byte equality -> PASS
+[production miniboss health] byte equality -> PASS
+[production miniboss health] byte equality -> PASS
+[production miniboss health] byte equality -> PASS
+[production miniboss health] byte equality -> PASS
+[production opt-in tier]  -> PASS
+[production rest tier 0 stage 1] byte equality -> PASS
+[production rest tier 0 stage 2] byte equality -> PASS
+[production rest tier 0 stage 3] byte equality -> PASS
+[production rest tier 0 stage 4] byte equality -> PASS
+[production rest tier 0 stage 5] byte equality -> PASS
+[production rest tier 0 stage 6] byte equality -> PASS
+[production rest tier 1 stage 1] byte equality -> PASS
+[production rest tier 1 stage 2] byte equality -> PASS
+[production rest tier 1 stage 3] byte equality -> PASS
+[production rest tier 1 stage 4] byte equality -> PASS
+[production rest tier 1 stage 5] byte equality -> PASS
+[production rest tier 1 stage 6] byte equality -> PASS
+[routes and pockets identical stage 1 tier 0] byte equality -> PASS
+[routes and pockets identical stage 1 tier 1] byte equality -> PASS
+[routes and pockets identical stage 2 tier 0] byte equality -> PASS
+[routes and pockets identical stage 2 tier 1] byte equality -> PASS
+[routes and pockets identical stage 3 tier 0] byte equality -> PASS
+[routes and pockets identical stage 3 tier 1] byte equality -> PASS
+[routes and pockets identical stage 4 tier 0] byte equality -> PASS
+[routes and pockets identical stage 4 tier 1] byte equality -> PASS
+[routes and pockets identical stage 5 tier 0] byte equality -> PASS
+[routes and pockets identical stage 5 tier 1] byte equality -> PASS
+[routes and pockets identical stage 6 tier 0] byte equality -> PASS
+[routes and pockets identical stage 6 tier 1] byte equality -> PASS
+[sweep aggression expected at 0.0] got 1.0, want 1.0 within 0.0001 -> PASS
+[sweep aggression expected at 0.1] got 0.9, want 0.9 within 0.0001 -> PASS
+[sweep aggression expected at 0.25] got 0.75, want 0.75 within 0.0001 -> PASS
+[sweep aggression expected at 0.5] got 0.75, want 0.75 within 0.0001 -> PASS
+[sweep aggression expected at 2.5] got 0.75, want 0.75 within 0.0001 -> PASS
+[sweep damage expected at 0.0] got 1.0, want 1.0 within 0.0001 -> PASS
+[sweep damage expected at 0.1] got 1.1, want 1.1 within 0.0001 -> PASS
+[sweep damage expected at 0.3] got 1.3, want 1.3 within 0.0001 -> PASS
+[sweep damage expected at 0.6] got 1.3, want 1.3 within 0.0001 -> PASS
+[sweep damage expected at 3.0] got 1.3, want 1.3 within 0.0001 -> PASS
+[tier annotation preserves stage lists] byte equality -> PASS
+[tier annotation preserves stage lists] byte equality -> PASS
+[tier annotation preserves stage lists] byte equality -> PASS
+[tier annotation preserves stage lists] byte equality -> PASS
+[tier annotation preserves stage lists] byte equality -> PASS
+[tier annotation preserves stage lists] byte equality -> PASS
+[tier-0 damage/rest stage 1 time 0.0] byte equality -> PASS
+[tier-0 damage/rest stage 1 time 180.0] byte equality -> PASS
+[tier-0 damage/rest stage 1 time 45.0] byte equality -> PASS
+[tier-0 damage/rest stage 1 time 600.0] byte equality -> PASS
+[tier-0 damage/rest stage 1 time 90.0] byte equality -> PASS
+[tier-0 damage/rest stage 2 time 0.0] byte equality -> PASS
+[tier-0 damage/rest stage 2 time 180.0] byte equality -> PASS
+[tier-0 damage/rest stage 2 time 45.0] byte equality -> PASS
+[tier-0 damage/rest stage 2 time 600.0] byte equality -> PASS
+[tier-0 damage/rest stage 2 time 90.0] byte equality -> PASS
+[tier-0 damage/rest stage 3 time 0.0] byte equality -> PASS
+[tier-0 damage/rest stage 3 time 180.0] byte equality -> PASS
+[tier-0 damage/rest stage 3 time 45.0] byte equality -> PASS
+[tier-0 damage/rest stage 3 time 600.0] byte equality -> PASS
+[tier-0 damage/rest stage 3 time 90.0] byte equality -> PASS
+[tier-0 damage/rest stage 4 time 0.0] byte equality -> PASS
+[tier-0 damage/rest stage 4 time 180.0] byte equality -> PASS
+[tier-0 damage/rest stage 4 time 45.0] byte equality -> PASS
+[tier-0 damage/rest stage 4 time 600.0] byte equality -> PASS
+[tier-0 damage/rest stage 4 time 90.0] byte equality -> PASS
+[tier-0 damage/rest stage 5 time 0.0] byte equality -> PASS
+[tier-0 damage/rest stage 5 time 180.0] byte equality -> PASS
+[tier-0 damage/rest stage 5 time 45.0] byte equality -> PASS
+[tier-0 damage/rest stage 5 time 600.0] byte equality -> PASS
+[tier-0 damage/rest stage 5 time 90.0] byte equality -> PASS
+[tier-0 damage/rest stage 6 time 0.0] byte equality -> PASS
+[tier-0 damage/rest stage 6 time 180.0] byte equality -> PASS
+[tier-0 damage/rest stage 6 time 45.0] byte equality -> PASS
+[tier-0 damage/rest stage 6 time 600.0] byte equality -> PASS
+[tier-0 damage/rest stage 6 time 90.0] byte equality -> PASS
+[tier-0 health stage 1 time 0.0] byte equality -> PASS
+[tier-0 health stage 1 time 180.0] byte equality -> PASS
+[tier-0 health stage 1 time 45.0] byte equality -> PASS
+[tier-0 health stage 1 time 600.0] byte equality -> PASS
+[tier-0 health stage 1 time 90.0] byte equality -> PASS
+[tier-0 health stage 2 time 0.0] byte equality -> PASS
+[tier-0 health stage 2 time 180.0] byte equality -> PASS
+[tier-0 health stage 2 time 45.0] byte equality -> PASS
+[tier-0 health stage 2 time 600.0] byte equality -> PASS
+[tier-0 health stage 2 time 90.0] byte equality -> PASS
+[tier-0 health stage 3 time 0.0] byte equality -> PASS
+[tier-0 health stage 3 time 180.0] byte equality -> PASS
+[tier-0 health stage 3 time 45.0] byte equality -> PASS
+[tier-0 health stage 3 time 600.0] byte equality -> PASS
+[tier-0 health stage 3 time 90.0] byte equality -> PASS
+[tier-0 health stage 4 time 0.0] byte equality -> PASS
+[tier-0 health stage 4 time 180.0] byte equality -> PASS
+[tier-0 health stage 4 time 45.0] byte equality -> PASS
+[tier-0 health stage 4 time 600.0] byte equality -> PASS
+[tier-0 health stage 4 time 90.0] byte equality -> PASS
+[tier-0 health stage 5 time 0.0] byte equality -> PASS
+[tier-0 health stage 5 time 180.0] byte equality -> PASS
+[tier-0 health stage 5 time 45.0] byte equality -> PASS
+[tier-0 health stage 5 time 600.0] byte equality -> PASS
+[tier-0 health stage 5 time 90.0] byte equality -> PASS
+[tier-0 health stage 6 time 0.0] byte equality -> PASS
+[tier-0 health stage 6 time 180.0] byte equality -> PASS
+[tier-0 health stage 6 time 45.0] byte equality -> PASS
+[tier-0 health stage 6 time 600.0] byte equality -> PASS
+[tier-0 health stage 6 time 90.0] byte equality -> PASS
+[world boundary aggression dial]  -> PASS
+[world boundary aggression dial]  -> PASS
+[world boundary damage dial]  -> PASS
+[world boundary damage dial]  -> PASS
+[world boundary leaves health] got 1.0, want 1.0 -> PASS
+[world boundary leaves health] got 1.0, want 1.0 -> PASS
+[world dial stage 1 quantity 0] got 1.0, want 1.0 within 0.0001 -> PASS
+[world dial stage 1 quantity 1] got 1.1, want 1.1 within 0.0001 -> PASS
+[world dial stage 1 quantity 2] got 0.9, want 0.9 within 0.0001 -> PASS
+[world dial stage 2 quantity 0] got 1.0, want 1.0 within 0.0001 -> PASS
+[world dial stage 2 quantity 1] got 1.1, want 1.1 within 0.0001 -> PASS
+[world dial stage 2 quantity 2] got 0.9, want 0.9 within 0.0001 -> PASS
+[world dial stage 3 quantity 0] got 1.0, want 1.0 within 0.0001 -> PASS
+[world dial stage 3 quantity 1] got 1.2, want 1.2 within 0.0001 -> PASS
+[world dial stage 3 quantity 2] got 0.8, want 0.8 within 0.0001 -> PASS
+[world dial stage 4 quantity 0] got 1.0, want 1.0 within 0.0001 -> PASS
+[world dial stage 4 quantity 1] got 1.2, want 1.2 within 0.0001 -> PASS
+[world dial stage 4 quantity 2] got 0.8, want 0.8 within 0.0001 -> PASS
+[world dial stage 5 quantity 0] got 1.0, want 1.0 within 0.0001 -> PASS
+[world dial stage 5 quantity 1] got 1.3, want 1.3 within 0.0001 -> PASS
+[world dial stage 5 quantity 2] got 0.75, want 0.75 within 0.0001 -> PASS
+[world dial stage 6 quantity 0] got 1.0, want 1.0 within 0.0001 -> PASS
+[world dial stage 6 quantity 1] got 1.3, want 1.3 within 0.0001 -> PASS
+[world dial stage 6 quantity 2] got 0.75, want 0.75 within 0.0001 -> PASS
+[world steps in stage_defs]  -> PASS

@@ -1,0 +1,2161 @@
+{
+  "title": "Gate shard: tests 1-350 on 75099fa7",
+  "head": "75099fa7080378295788d9741a0a03fdf9e594b2",
+  "box": "32 vCPU AMD Ryzen 9 5950X 16-Core Processor, 63 GB",
+  "godot": "Godot_v4.7.2-stable_linux.x86_64",
+  "scale": 1,
+  "window": "non-bot list 1 to 350 of 1049 (ability_swap_pressure_test to enemy_kill_first_rig_test), 350 tests",
+  "steps": {
+    "import-1": {
+      "exit": 0,
+      "seconds": 165,
+      "outcome": "ok"
+    },
+    "import-2": {
+      "exit": 0,
+      "seconds": 4,
+      "outcome": "ok"
+    },
+    "chunk00": {
+      "exit": 0,
+      "seconds": 1025
+    },
+    "chunk01": {
+      "exit": 0,
+      "seconds": 1295
+    },
+    "chunk03": {
+      "exit": 0,
+      "seconds": 666
+    },
+    "chunk02": {
+      "exit": 0,
+      "seconds": 944
+    },
+    "chunk04": {
+      "exit": 0,
+      "seconds": 413
+    },
+    "chunk05": {
+      "exit": 0,
+      "seconds": 591
+    }
+  },
+  "results": [
+    {
+      "test": "ability_swap_pressure_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 0.5
+    },
+    {
+      "test": "ace_export_path_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 1.2
+    },
+    {
+      "test": "ace_fight_floor_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 39.3
+    },
+    {
+      "test": "ace_gentle_break_window_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 1.5
+    },
+    {
+      "test": "ace_kept_packages_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 1.4
+    },
+    {
+      "test": "ace_arena_release_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 56.3
+    },
+    {
+      "test": "ace_restart_state_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 1.5
+    },
+    {
+      "test": "ace_stage_window_grid_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 1.5
+    },
+    {
+      "test": "ace_tracks_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 11
+    },
+    {
+      "test": "ace_lead_floor_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 35.5
+    },
+    {
+      "test": "achievement_beat_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 15.9
+    },
+    {
+      "test": "achievement_fill_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 16.6
+    },
+    {
+      "test": "achievement_roundtrip_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 18.9
+    },
+    {
+      "test": "achievement_refresh_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 53
+    },
+    {
+      "test": "active_glass_lance_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 21.3
+    },
+    {
+      "test": "active_flashes_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 52.2
+    },
+    {
+      "test": "active_lift_pulse_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 24.4
+    },
+    {
+      "test": "active_offers_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 25
+    },
+    {
+      "test": "active_quake_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 30.5
+    },
+    {
+      "test": "active_rockets_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 37.2
+    },
+    {
+      "test": "active_silo_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 37.3
+    },
+    {
+      "test": "active_torch_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 34.7
+    },
+    {
+      "test": "activities_camp_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 30.5
+    },
+    {
+      "test": "activities_pay_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 30.5
+    },
+    {
+      "test": "addon_load_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 1.8
+    },
+    {
+      "test": "activity_signpost_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 36.1
+    },
+    {
+      "test": "aim_mark_mount_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 30.4
+    },
+    {
+      "test": "alpha_retry_continue_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 52
+    },
+    {
+      "test": "air_preset_follow_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 69.9
+    },
+    {
+      "test": "ambient_assets_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 1
+    },
+    {
+      "test": "alpha_table_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 12.5
+    },
+    {
+      "test": "ambient_homes_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 14.9
+    },
+    {
+      "test": "ambient_palette_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 1.9
+    },
+    {
+      "test": "ambient_pool_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 4
+    },
+    {
+      "test": "ambient_sounds_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 1.3
+    },
+    {
+      "test": "ambient_view_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 2.4
+    },
+    {
+      "test": "anim_tell_fit_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 4.7
+    },
+    {
+      "test": "ambient_hook_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 34.1
+    },
+    {
+      "test": "app_shell_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 1.2
+    },
+    {
+      "test": "answer_weights_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 28.3
+    },
+    {
+      "test": "arc_mark_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 30.7
+    },
+    {
+      "test": "arena_vx8_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 21.2
+    },
+    {
+      "test": "arena_posture_record_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 63.7
+    },
+    {
+      "test": "asset_capture_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 11.9
+    },
+    {
+      "test": "armor_scrapless_spill_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 48.4
+    },
+    {
+      "test": "asset_registry_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 5
+    },
+    {
+      "test": "assist_sting_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 2
+    },
+    {
+      "test": "attachment_layer_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 1.8
+    },
+    {
+      "test": "attack_rows_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 1.2
+    },
+    {
+      "test": "attack_sheet_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 5.5
+    },
+    {
+      "test": "attack_facts_enemy_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 27.5
+    },
+    {
+      "test": "audio_achievement_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 27.6
+    },
+    {
+      "test": "audio_au2_voices_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 3.2
+    },
+    {
+      "test": "audio_armor_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 23.7
+    },
+    {
+      "test": "audio_bake_cancel_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 37.8
+    },
+    {
+      "test": "audio_call_in_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 40.6
+    },
+    {
+      "test": "audio_board_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 89.9
+    },
+    {
+      "test": "audio_cue_resolution_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 26.5
+    },
+    {
+      "test": "alpha_flow_run_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 59.3
+    },
+    {
+      "test": "attack_budget_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 288.1
+    },
+    {
+      "test": "audio_event_bank_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 2.1
+    },
+    {
+      "test": "audio_event_latency_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 36.1
+    },
+    {
+      "test": "audio_momentum_join_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 1.3
+    },
+    {
+      "test": "audio_melodic_payoff_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 40.2
+    },
+    {
+      "test": "audio_music_picks_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 1.3
+    },
+    {
+      "test": "audio_music_layers_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 19
+    },
+    {
+      "test": "audio_pick_slots_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 22.5
+    },
+    {
+      "test": "audio_pool_small_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 12.6
+    },
+    {
+      "test": "audio_music_rows_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 62.4
+    },
+    {
+      "test": "audio_rescue_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 34.5
+    },
+    {
+      "test": "audio_quit_settle_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 63.3
+    },
+    {
+      "test": "audio_stinger_beat_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 10.8
+    },
+    {
+      "test": "audio_row_coverage_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 28
+    },
+    {
+      "test": "audio_title_summary_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 26
+    },
+    {
+      "test": "audio_v3_bank_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 26.1
+    },
+    {
+      "test": "authored_nemesis_packs_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 4.3
+    },
+    {
+      "test": "auto_pause_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 28
+    },
+    {
+      "test": "bake_look_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 3.3
+    },
+    {
+      "test": "audio_worlds_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 41.2
+    },
+    {
+      "test": "bake_warm_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 9.3
+    },
+    {
+      "test": "balance_report_old_record_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 2.6
+    },
+    {
+      "test": "baked_bracket_reach_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 37.2
+    },
+    {
+      "test": "bay_map_limit_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 10.6
+    },
+    {
+      "test": "ball_inside_body_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 43.6
+    },
+    {
+      "test": "beacon_colour_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 34.3
+    },
+    {
+      "test": "bindings_table_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 31.1
+    },
+    {
+      "test": "boss_brindle_read_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 28.1
+    },
+    {
+      "test": "boss_bughunt_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 32.2
+    },
+    {
+      "test": "boot_card_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 84.9
+    },
+    {
+      "test": "boss_clip_isolation_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 44.1
+    },
+    {
+      "test": "boss_charge_tear_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 104.9
+    },
+    {
+      "test": "boss_codex_detectors_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 54.4
+    },
+    {
+      "test": "boss_contract_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 27.4
+    },
+    {
+      "test": "boss_dress_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 23.6
+    },
+    {
+      "test": "boss_fixwave_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 23.3
+    },
+    {
+      "test": "boss_flow_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 34.8
+    },
+    {
+      "test": "boss_music_sections_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 18.3
+    },
+    {
+      "test": "boss_momentum_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 51.3
+    },
+    {
+      "test": "boss_pickup_asset_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 20.5
+    },
+    {
+      "test": "boss_plate_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 32.9
+    },
+    {
+      "test": "boss_posture_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 24.6
+    },
+    {
+      "test": "boss_prompt_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 25.4
+    },
+    {
+      "test": "boss_scaling_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 22.5
+    },
+    {
+      "test": "boss_ring_drive_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 53.4
+    },
+    {
+      "test": "boss_spill_cogs_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 20.7
+    },
+    {
+      "test": "boss_telegraph_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 25.1
+    },
+    {
+      "test": "boss_weak_points_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 92.2
+    },
+    {
+      "test": "boss_weak_visuals_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 0.7
+    },
+    {
+      "test": "bot_audio_clock_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 3
+    },
+    {
+      "test": "bot_charge_read_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 2.1
+    },
+    {
+      "test": "bot_charge_recover_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 2
+    },
+    {
+      "test": "bot_explore_by_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 2
+    },
+    {
+      "test": "bot_explorer_activities_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 34.7
+    },
+    {
+      "test": "boss_weak_parts_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 167.6
+    },
+    {
+      "test": "audio_momentum_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 47
+    },
+    {
+      "test": "boss_weak_crew_record_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 37.5
+    },
+    {
+      "test": "bot_basin_exit_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 36.4
+    },
+    {
+      "test": "bot_brindle_short_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 174.6
+    },
+    {
+      "test": "bot_flume_exit_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 82
+    },
+    {
+      "test": "bot_flume_gate0_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 60.2
+    },
+    {
+      "test": "bot_gate_leg_limit_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 2.4
+    },
+    {
+      "test": "bot_hands_flag_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 18.5
+    },
+    {
+      "test": "bot_harpoon_bites_count_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 17.3
+    },
+    {
+      "test": "bot_plant_climb_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 1.7
+    },
+    {
+      "test": "bot_run_seed_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 1.6
+    },
+    {
+      "test": "bot_rogue_rib_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 2.1
+    },
+    {
+      "test": "bot_shed_chase_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 1.8
+    },
+    {
+      "test": "bot_sling_drop_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 1.8
+    },
+    {
+      "test": "bot_wall_side_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 1.7
+    },
+    {
+      "test": "bot_switch_defaults_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 8.7
+    },
+    {
+      "test": "breach_attack_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 18.9
+    },
+    {
+      "test": "breach_plate_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 22
+    },
+    {
+      "test": "brindle_arena_ahead_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 21
+    },
+    {
+      "test": "brindle_beats_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 21.8
+    },
+    {
+      "test": "brindle_body_follows_hull_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 27.8
+    },
+    {
+      "test": "brindle_bowl_spill_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 19.5
+    },
+    {
+      "test": "brindle_death_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 27.8
+    },
+    {
+      "test": "brindle_heavy_ram_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 3.1
+    },
+    {
+      "test": "brindle_charge_turn_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 49.4
+    },
+    {
+      "test": "brindle_held_bank_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 20
+    },
+    {
+      "test": "brindle_pad_bake_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 74.9
+    },
+    {
+      "test": "bubble_gives_way_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 24
+    },
+    {
+      "test": "brindle_scuttle_hint_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 98.8
+    },
+    {
+      "test": "build_arena_retry_shell_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 15.6
+    },
+    {
+      "test": "build_bughunt_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 2.1
+    },
+    {
+      "test": "build_behaviour_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 16
+    },
+    {
+      "test": "build_charge_layers_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 0.7
+    },
+    {
+      "test": "build_catalogue_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 17.4
+    },
+    {
+      "test": "build_clock_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 14.7
+    },
+    {
+      "test": "build_compaction_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 14
+    },
+    {
+      "test": "build_codex_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 15
+    },
+    {
+      "test": "build_fabricator_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 15.2
+    },
+    {
+      "test": "build_frost_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 16
+    },
+    {
+      "test": "build_gate_props_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 17
+    },
+    {
+      "test": "build_gate_seam_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 22.5
+    },
+    {
+      "test": "build_magnet_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 14.1
+    },
+    {
+      "test": "build_parts_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 17.1
+    },
+    {
+      "test": "build_shell_window_run_reset_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 16.5
+    },
+    {
+      "test": "build_stamp_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 12.9
+    },
+    {
+      "test": "build_synergy_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 15.8
+    },
+    {
+      "test": "burden_sweep_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 4.9
+    },
+    {
+      "test": "burden_parts_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 14.9
+    },
+    {
+      "test": "cache_lane_rect_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 0.7
+    },
+    {
+      "test": "cableway_hanger_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 3.7
+    },
+    {
+      "test": "cage_contract_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 8.7
+    },
+    {
+      "test": "cache_waking_pylon_lit_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 23.5
+    },
+    {
+      "test": "call_in_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 13.8
+    },
+    {
+      "test": "camera_aim_rest_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 15.4
+    },
+    {
+      "test": "camera_profiles_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 0.5
+    },
+    {
+      "test": "camera_glance_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 17.9
+    },
+    {
+      "test": "camp_hub_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 20.6
+    },
+    {
+      "test": "camp_scrapbook_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 0.8
+    },
+    {
+      "test": "camp_skee_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 6.8
+    },
+    {
+      "test": "camp_sandbox_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 26.6
+    },
+    {
+      "test": "bot_frame_split_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 56.5
+    },
+    {
+      "test": "bot_latch_arm_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 93
+    },
+    {
+      "test": "bot_plants_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 1.5
+    },
+    {
+      "test": "bot_posture_boss_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 108.6
+    },
+    {
+      "test": "bot_relay_stake_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 64.1
+    },
+    {
+      "test": "bot_switch_replay_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 167.7
+    },
+    {
+      "test": "camp_stations_smoke_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 15.1
+    },
+    {
+      "test": "camp_trial_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 25.9
+    },
+    {
+      "test": "cannon_kit_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 22.7
+    },
+    {
+      "test": "cannon_look_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 4.1
+    },
+    {
+      "test": "cannon_line_lane_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 18.6
+    },
+    {
+      "test": "cannon_ultimate_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 14.5
+    },
+    {
+      "test": "carrier_bank_solver_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 1.4
+    },
+    {
+      "test": "cannon_ultimate_variants_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 14.2
+    },
+    {
+      "test": "carrier_bank_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 2.1
+    },
+    {
+      "test": "chain_listeners_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 26.5
+    },
+    {
+      "test": "cast_motion_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 40.7
+    },
+    {
+      "test": "chain_mask_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 0.7
+    },
+    {
+      "test": "chain_log_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 17.2
+    },
+    {
+      "test": "challenge_dials_warden_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 16.2
+    },
+    {
+      "test": "chain_readout_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 25.5
+    },
+    {
+      "test": "char_bot_sable_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 70.8
+    },
+    {
+      "test": "char_combat_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 25.5
+    },
+    {
+      "test": "char_bot_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 101.6
+    },
+    {
+      "test": "char_kits_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 3.5
+    },
+    {
+      "test": "char_movement_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 5.9
+    },
+    {
+      "test": "cinder_heat_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 0.5
+    },
+    {
+      "test": "class_portraits_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 2.1
+    },
+    {
+      "test": "class_preview_pilot_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 2.1
+    },
+    {
+      "test": "class_step_pick_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 28.7
+    },
+    {
+      "test": "clutter_kit_asset_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 0.5
+    },
+    {
+      "test": "cobalt_floor_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 9.1
+    },
+    {
+      "test": "cobalt_rung_voice_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 16.6
+    },
+    {
+      "test": "codex_coverage_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 8.9
+    },
+    {
+      "test": "codex_world_entries_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 1.7
+    },
+    {
+      "test": "char_full_run_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 108.7
+    },
+    {
+      "test": "cog_ui_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 24.2
+    },
+    {
+      "test": "cog_wallet_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 16.5
+    },
+    {
+      "test": "combat_arena_ground_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 16.3
+    },
+    {
+      "test": "combat_arena_retry_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 14
+    },
+    {
+      "test": "combat_bolt_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 14.9
+    },
+    {
+      "test": "combat_bughunt_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 12.9
+    },
+    {
+      "test": "combat_cap_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 15.8
+    },
+    {
+      "test": "combat_codex_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 16.6
+    },
+    {
+      "test": "combat_crush_veto_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 15.4
+    },
+    {
+      "test": "combat_delivered_damage_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 20.6
+    },
+    {
+      "test": "combat_knockback_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 18.2
+    },
+    {
+      "test": "combat_pattern_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 14
+    },
+    {
+      "test": "combat_pin_step_target_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 16.2
+    },
+    {
+      "test": "combat_miniboss_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 38.4
+    },
+    {
+      "test": "combat_plating_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 15.5
+    },
+    {
+      "test": "combat_ram_tint_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 14.3
+    },
+    {
+      "test": "combat_rediscovery_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 15.2
+    },
+    {
+      "test": "combat_resolve_part_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 16.6
+    },
+    {
+      "test": "combat_seams_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 21.3
+    },
+    {
+      "test": "combat_shred_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 17.4
+    },
+    {
+      "test": "combat_rogue_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 52.9
+    },
+    {
+      "test": "combat_synergy_kind_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 14.9
+    },
+    {
+      "test": "combat_turret_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 17.7
+    },
+    {
+      "test": "combat_vault_defs_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 16.6
+    },
+    {
+      "test": "combat_vault_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 19.7
+    },
+    {
+      "test": "combat_warden_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 33.7
+    },
+    {
+      "test": "combat_worlds_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 21.3
+    },
+    {
+      "test": "challenge_dials_brindle_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 15.3
+    },
+    {
+      "test": "challenge_dials_stage_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 14.3
+    },
+    {
+      "test": "challenge_dials_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 47.3
+    },
+    {
+      "test": "companion_cue_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 15.8
+    },
+    {
+      "test": "companion_body_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 18
+    },
+    {
+      "test": "companion_drivers_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 15.8
+    },
+    {
+      "test": "companion_drop_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 16
+    },
+    {
+      "test": "companion_escape_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 2.8
+    },
+    {
+      "test": "companion_model_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 0.5
+    },
+    {
+      "test": "companion_grows_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 16.4
+    },
+    {
+      "test": "companion_persist_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 16.6
+    },
+    {
+      "test": "companion_primer_expiry_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 16.6
+    },
+    {
+      "test": "companion_primer_refresh_cue_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 15.7
+    },
+    {
+      "test": "companion_ram_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 16.3
+    },
+    {
+      "test": "companion_primer_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 17.1
+    },
+    {
+      "test": "consumed_light_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 2
+    },
+    {
+      "test": "content_registry_reach_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 2.1
+    },
+    {
+      "test": "context_heading_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 4.2
+    },
+    {
+      "test": "contraptions_materials_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 9
+    },
+    {
+      "test": "cooldown_refund_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 1.3
+    },
+    {
+      "test": "companion_restart_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 23.4
+    },
+    {
+      "test": "cosmetic_trail_allocation_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 0.7
+    },
+    {
+      "test": "crush_order_repeat_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 5.2
+    },
+    {
+      "test": "cosmetic_apply_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 20.4
+    },
+    {
+      "test": "customization_system_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 3.9
+    },
+    {
+      "test": "customize_slots_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 1.7
+    },
+    {
+      "test": "dam_asset_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 1.9
+    },
+    {
+      "test": "customization_presentation_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 18.8
+    },
+    {
+      "test": "dam_gates_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 2.8
+    },
+    {
+      "test": "damage_families_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 19.4
+    },
+    {
+      "test": "damage_door_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 21.8
+    },
+    {
+      "test": "damage_shown_equals_removed_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 17.6
+    },
+    {
+      "test": "day_arc_sky_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 0.5
+    },
+    {
+      "test": "damage_numbers_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 20.8
+    },
+    {
+      "test": "death_cause_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 15
+    },
+    {
+      "test": "death_summary_loop_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 15.4
+    },
+    {
+      "test": "death_menu_timing_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 28.2
+    },
+    {
+      "test": "defence_bars_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 0.5
+    },
+    {
+      "test": "death_warm_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 3.8
+    },
+    {
+      "test": "device_caps_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 14.9
+    },
+    {
+      "test": "device_props_asset_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 14.2
+    },
+    {
+      "test": "director_homeless_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 23.5
+    },
+    {
+      "test": "director_credit_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 38.6
+    },
+    {
+      "test": "director_nemesis_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 18.5
+    },
+    {
+      "test": "director_homes_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 31.7
+    },
+    {
+      "test": "director_stage_packs_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 16.6
+    },
+    {
+      "test": "director_rows_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 23.5
+    },
+    {
+      "test": "discovery_card_size_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 2.7
+    },
+    {
+      "test": "discovery_cards_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 0.9
+    },
+    {
+      "test": "discovery_part_card_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 5
+    },
+    {
+      "test": "discovery_rest_onscreen_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 1
+    },
+    {
+      "test": "discovery_burst_cogs_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 16.1
+    },
+    {
+      "test": "domino_roll_order_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 0.7
+    },
+    {
+      "test": "dress_arb_fallback_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 17.3
+    },
+    {
+      "test": "dress_arb_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 16
+    },
+    {
+      "test": "discovery_skill_bar_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 45.9
+    },
+    {
+      "test": "dress_arb_yard_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 14.3
+    },
+    {
+      "test": "dress_bri_assets_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 0.5
+    },
+    {
+      "test": "dress_coverage_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 15.8
+    },
+    {
+      "test": "dress_cua_assets_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 1.7
+    },
+    {
+      "test": "dress_gpw_fallback_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 1.6
+    },
+    {
+      "test": "dress_bosses_wiring_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 32.1
+    },
+    {
+      "test": "dam_variety_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 23.1
+    },
+    {
+      "test": "dress_gpw_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 1.7
+    },
+    {
+      "test": "dress_mdm_assets_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 0.6
+    },
+    {
+      "test": "dress_mds_assets_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 0.6
+    },
+    {
+      "test": "dress_mhd_assets_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 0.5
+    },
+    {
+      "test": "dress_mhi_assets_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 0.7
+    },
+    {
+      "test": "dress_mhl_assets_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 0.5
+    },
+    {
+      "test": "dress_mhp_assets_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 0.5
+    },
+    {
+      "test": "dress_mhs_assets_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 0.5
+    },
+    {
+      "test": "dress_mnd_assets_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 0.6
+    },
+    {
+      "test": "dress_mwa_assets_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 0.6
+    },
+    {
+      "test": "dress_mwb_assets_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 0.6
+    },
+    {
+      "test": "dress_spl_assets_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 20.9
+    },
+    {
+      "test": "dress_wak_assets_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 1.9
+    },
+    {
+      "test": "dress_material_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 40.8
+    },
+    {
+      "test": "dress_whe_assets_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 14.8
+    },
+    {
+      "test": "dress_wog_fallback_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 19.4
+    },
+    {
+      "test": "dress_wog_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 19
+    },
+    {
+      "test": "dunk_charge_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 18
+    },
+    {
+      "test": "durability_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 22.4
+    },
+    {
+      "test": "ending_rid_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 15.7
+    },
+    {
+      "test": "earned_save_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 26.1
+    },
+    {
+      "test": "ending_snapshot_walk_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 2.6
+    },
+    {
+      "test": "enemies_bughunt_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 15.4
+    },
+    {
+      "test": "enemy_anchor_crew_asset_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 1
+    },
+    {
+      "test": "ending_routes_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 31.9
+    },
+    {
+      "test": "enemy_anchor_crew_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 23.2
+    },
+    {
+      "test": "enemy_body_cues_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 19.3
+    },
+    {
+      "test": "enemy_boom_tender_asset_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 0.5
+    },
+    {
+      "test": "enemy_burrower_asset_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 1.1
+    },
+    {
+      "test": "enemy_bola_thrower_asset_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 14.7
+    },
+    {
+      "test": "enemy_catch_trap_asset_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 8.1
+    },
+    {
+      "test": "enemy_burrower_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 20.3
+    },
+    {
+      "test": "enemy_chaser_asset_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 13.7
+    },
+    {
+      "test": "enemy_clips_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 20.4
+    },
+    {
+      "test": "enemy_chaser_windup_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 35.7
+    },
+    {
+      "test": "enemy_deflector_asset_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 12.9
+    },
+    {
+      "test": "enemy_counters_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 27.6
+    },
+    {
+      "test": "enemy_dispatcher_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 35.1
+    },
+    {
+      "test": "enemy_drill_crew_asset_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 13.7
+    },
+    {
+      "test": "enemy_deflector_windup_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 65.6
+    },
+    {
+      "test": "enemy_foreman_dispatcher_asset_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 0.7
+    },
+    {
+      "test": "enemy_drill_crew_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 19.5
+    },
+    {
+      "test": "enemy_gyro_jammer_asset_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 14.5
+    },
+    {
+      "test": "enemy_foreman_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 29.1
+    },
+    {
+      "test": "enemy_kill_first_asset_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 0.6
+    },
+    {
+      "test": "enemy_kill_first_rig_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 0.5
+    },
+    {
+      "test": "enemy_hooker_asset_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 13.7
+    },
+    {
+      "test": "elite_affix_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 132.5
+    },
+    {
+      "test": "ending_copy_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 64.9
+    },
+    {
+      "test": "ending_sequence_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 61
+    }
+  ],
+  "failures": [],
+  "counts": {
+    "error": 0,
+    "script_error": 0,
+    "in_use": 0,
+    "freed": 0,
+    "leaked_warning": 229
+  },
+  "slow": [],
+  "verdict": {
+    "ok": true,
+    "line": "PASS, no new red"
+  },
+  "startedAt": "2026-11-10T16:42:07.114Z",
+  "finishedAt": "2026-11-10T17:27:35.480Z"
+}

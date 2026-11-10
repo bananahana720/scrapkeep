@@ -1,0 +1,127 @@
+{
+  "title": "Gate shard: weekly bots 1-9 on 75099fa7",
+  "head": "75099fa7080378295788d9741a0a03fdf9e594b2",
+  "box": "32 vCPU AMD Ryzen 9 5950X 16-Core Processor, 63 GB",
+  "godot": "Godot_v4.7.2-stable_linux.x86_64",
+  "scale": 1,
+  "window": "weekly bot list 1 to 9 of 9 (alpha_posture_bands_w23_test to bot_world_arrivals_test), 9 tests",
+  "steps": {
+    "import-1": {
+      "exit": 0,
+      "seconds": 3,
+      "outcome": "ok"
+    },
+    "import-2": {
+      "exit": 0,
+      "seconds": 3,
+      "outcome": "ok"
+    },
+    "bot-alpha_posture_bands_w23_test": {
+      "exit": 0,
+      "seconds": 283
+    },
+    "bot-bot_isle_stage5_test": {
+      "exit": 0,
+      "seconds": 450
+    },
+    "bot-bot_park_stage3_break_test": {
+      "exit": 0,
+      "seconds": 350
+    },
+    "bot-bot_six_demolitions_caster_test": {
+      "exit": 0,
+      "seconds": 379
+    },
+    "bot-bot_six_remembered_cannon_test": {
+      "exit": 0,
+      "seconds": 405
+    },
+    "bot-bot_six_runner_gunner_test": {
+      "exit": 0,
+      "seconds": 316
+    },
+    "bot-bot_six_tally_test": {
+      "exit": 0,
+      "seconds": 423
+    },
+    "bot-bot_six_tarn_test": {
+      "exit": 0,
+      "seconds": 468
+    },
+    "bot-bot_world_arrivals_test": {
+      "exit": 0,
+      "seconds": 546
+    }
+  },
+  "results": [
+    {
+      "test": "alpha_posture_bands_w23_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 279.4
+    },
+    {
+      "test": "bot_isle_stage5_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 446.6
+    },
+    {
+      "test": "bot_park_stage3_break_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 346.7
+    },
+    {
+      "test": "bot_six_demolitions_caster_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 375.7
+    },
+    {
+      "test": "bot_six_remembered_cannon_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 401.4
+    },
+    {
+      "test": "bot_six_runner_gunner_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 311.7
+    },
+    {
+      "test": "bot_six_tally_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 419.1
+    },
+    {
+      "test": "bot_six_tarn_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 461.3
+    },
+    {
+      "test": "bot_world_arrivals_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 541.5
+    }
+  ],
+  "failures": [],
+  "counts": {
+    "error": 0,
+    "script_error": 0,
+    "in_use": 0,
+    "freed": 0,
+    "leaked_warning": 43
+  },
+  "slow": [],
+  "verdict": {
+    "ok": true,
+    "line": "PASS, no new red"
+  },
+  "startedAt": "2026-11-10T18:45:48.168Z",
+  "finishedAt": "2026-11-10T19:46:13.015Z"
+}

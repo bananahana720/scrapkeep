@@ -1,0 +1,87 @@
+{
+  "title": "Gate shard: bots 11-15 on 75099fa7",
+  "head": "75099fa7080378295788d9741a0a03fdf9e594b2",
+  "box": "32 vCPU AMD Ryzen 9 5950X 16-Core Processor, 63 GB",
+  "godot": "Godot_v4.7.2-stable_linux.x86_64",
+  "scale": 1,
+  "window": "bot list 11 to 15 of 23 (park_reactor_fight_test to posture_bands_swarm_test), 5 tests",
+  "steps": {
+    "import-1": {
+      "exit": 0,
+      "seconds": 5,
+      "outcome": "ok"
+    },
+    "import-2": {
+      "exit": 0,
+      "seconds": 4,
+      "outcome": "ok"
+    },
+    "bot-park_reactor_fight_test": {
+      "exit": 0,
+      "seconds": 313
+    },
+    "bot-pocket_entry_test": {
+      "exit": 0,
+      "seconds": 1137
+    },
+    "bot-posture_bands_flume_test": {
+      "exit": 0,
+      "seconds": 832
+    },
+    "bot-posture_bands_swarm_camper_test": {
+      "exit": 0,
+      "seconds": 417
+    },
+    "bot-posture_bands_swarm_test": {
+      "exit": 0,
+      "seconds": 255
+    }
+  },
+  "results": [
+    {
+      "test": "park_reactor_fight_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 308.1
+    },
+    {
+      "test": "pocket_entry_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 1132.9
+    },
+    {
+      "test": "posture_bands_flume_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 827.8
+    },
+    {
+      "test": "posture_bands_swarm_camper_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 411.9
+    },
+    {
+      "test": "posture_bands_swarm_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 252.2
+    }
+  ],
+  "failures": [],
+  "counts": {
+    "error": 0,
+    "script_error": 0,
+    "in_use": 0,
+    "freed": 0,
+    "leaked_warning": 88
+  },
+  "slow": [],
+  "verdict": {
+    "ok": true,
+    "line": "PASS, no new red"
+  },
+  "startedAt": "2026-11-10T19:27:07.112Z",
+  "finishedAt": "2026-11-10T20:16:30.975Z"
+}

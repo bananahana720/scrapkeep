@@ -1,0 +1,112 @@
+{
+  "title": "Gate shard: bots 6-10 on 75099fa7",
+  "head": "75099fa7080378295788d9741a0a03fdf9e594b2",
+  "box": "32 vCPU AMD Ryzen 9 5950X 16-Core Processor, 63 GB",
+  "godot": "Godot_v4.7.2-stable_linux.x86_64",
+  "scale": 1,
+  "window": "bot list 6 to 10 of 23 (bot_park_trace_repeat_test to matchup_lab_test), 5 tests",
+  "steps": {
+    "import-1": {
+      "exit": 0,
+      "seconds": 5,
+      "outcome": "ok"
+    },
+    "import-2": {
+      "exit": 0,
+      "seconds": 4,
+      "outcome": "ok"
+    },
+    "bot-bot_park_trace_repeat_test": {
+      "exit": 1,
+      "seconds": 853
+    },
+    "bot-bot_run_end_test": {
+      "exit": 0,
+      "seconds": 474
+    },
+    "bot-bot_six_pilots_test": {
+      "exit": 0,
+      "seconds": 544
+    },
+    "bot-bot_skill_bar_test": {
+      "exit": 0,
+      "seconds": 644
+    },
+    "bot-matchup_lab_test": {
+      "exit": 0,
+      "seconds": 479
+    },
+    "solo-bot_park_trace_repeat_test-1": {
+      "exit": 0,
+      "seconds": 424
+    },
+    "solo-bot_park_trace_repeat_test-2": {
+      "exit": 0,
+      "seconds": 439
+    }
+  },
+  "results": [
+    {
+      "test": "bot_park_trace_repeat_test",
+      "ok": false,
+      "exit": "1",
+      "seconds": 848.6
+    },
+    {
+      "test": "bot_run_end_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 469.2
+    },
+    {
+      "test": "bot_six_pilots_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 539.6
+    },
+    {
+      "test": "bot_skill_bar_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 639.4
+    },
+    {
+      "test": "matchup_lab_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 474.3
+    }
+  ],
+  "failures": [
+    {
+      "test": "bot_park_trace_repeat_test",
+      "call": "new-flake",
+      "alone": "2/2 pass alone",
+      "row": null,
+      "note": "fails under load only; add a flake row to project-guide/handoff/KNOWN-FAILING.tsv",
+      "lines": []
+    }
+  ],
+  "counts": {
+    "error": 0,
+    "script_error": 0,
+    "in_use": 0,
+    "freed": 0,
+    "leaked_warning": 44
+  },
+  "slow": [
+    {
+      "test": "bot_park_trace_repeat_test",
+      "ok": false,
+      "exit": "1",
+      "seconds": 848.6,
+      "limit": 900
+    }
+  ],
+  "verdict": {
+    "ok": true,
+    "line": "PASS, no new red (1 new load flake to list)"
+  },
+  "startedAt": "2026-11-10T19:27:06.845Z",
+  "finishedAt": "2026-11-10T20:31:32.654Z"
+}

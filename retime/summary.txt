@@ -1,0 +1,8 @@
+2026-11-10T21:01:08Z park_permanent_capacity_test run 1 head 75099fa7 exit 0 in 245 s, load at start 3.59 | PASS sketches/core-loop res://tests/park_permanent_capacity_test.gd exit=0 242.7s
+2026-11-10T21:05:14Z park_permanent_capacity_test run 2 head 75099fa7 exit 0 in 246 s, load at start 1.33 | PASS sketches/core-loop res://tests/park_permanent_capacity_test.gd exit=0 243.3s
+2026-11-10T21:09:18Z park_permanent_capacity_test run 3 head 75099fa7 exit 0 in 244 s, load at start 0.99 | PASS sketches/core-loop res://tests/park_permanent_capacity_test.gd exit=0 241.6s
+2026-11-10T21:09:18Z park_permanent_capacity_test: 3 of 3 passed alone
+2026-11-10T21:12:00Z music_params_test run 1 head 75099fa7 exit 0 in 162 s, load at start 1.49 | PASS sketches/core-loop res://tests/music_params_test.gd exit=0 159.3s
+2026-11-10T21:14:41Z music_params_test run 2 head 75099fa7 exit 0 in 161 s, load at start 1.53 | PASS sketches/core-loop res://tests/music_params_test.gd exit=0 159.0s
+2026-11-10T21:17:26Z music_params_test run 3 head 75099fa7 exit 0 in 165 s, load at start 1.90 | PASS sketches/core-loop res://tests/music_params_test.gd exit=0 162.0s
+2026-11-10T21:17:26Z music_params_test: 3 of 3 passed alone

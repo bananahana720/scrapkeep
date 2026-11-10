@@ -1,0 +1,2317 @@
+{
+  "title": "Gate shard: tests 701-1049 on 75099fa7",
+  "head": "75099fa7080378295788d9741a0a03fdf9e594b2",
+  "box": "32 vCPU AMD Ryzen 9 5950X 16-Core Processor, 63 GB",
+  "godot": "Godot_v4.7.2-stable_linux.x86_64",
+  "scale": 1,
+  "window": "non-bot list 701 to 1049 of 1049 (presentation_ace_test to zone_schema_test), 349 tests",
+  "steps": {
+    "import-1": {
+      "exit": 0,
+      "seconds": 165,
+      "outcome": "ok"
+    },
+    "import-2": {
+      "exit": 0,
+      "seconds": 4,
+      "outcome": "ok"
+    },
+    "chunk00": {
+      "exit": 1,
+      "seconds": 980
+    },
+    "chunk01": {
+      "exit": 0,
+      "seconds": 1532
+    },
+    "chunk02": {
+      "exit": 1,
+      "seconds": 1333
+    },
+    "chunk03": {
+      "exit": 1,
+      "seconds": 1282
+    },
+    "chunk04": {
+      "exit": 1,
+      "seconds": 749
+    },
+    "chunk05": {
+      "exit": 0,
+      "seconds": 319
+    },
+    "solo-presentation_hitstop_test-1": {
+      "exit": 0,
+      "seconds": 373
+    },
+    "solo-presentation_hitstop_test-2": {
+      "exit": 0,
+      "seconds": 2923
+    },
+    "solo-stage_entry_budget_test-1": {
+      "exit": 0,
+      "seconds": 38
+    },
+    "solo-stage_entry_budget_test-2": {
+      "exit": 0,
+      "seconds": 37
+    },
+    "solo-tree_play_test-1": {
+      "exit": 0,
+      "seconds": 66
+    },
+    "solo-tree_play_test-2": {
+      "exit": 0,
+      "seconds": 61
+    },
+    "solo-telegraph_timing_pack_test-1": {
+      "exit": 0,
+      "seconds": 271
+    },
+    "solo-telegraph_timing_pack_test-2": {
+      "exit": 0,
+      "seconds": 271
+    },
+    "solo-trace_readonly_test-1": {
+      "exit": 1,
+      "seconds": 24
+    },
+    "solo-trace_readonly_test-2": {
+      "exit": 1,
+      "seconds": 24
+    },
+    "solo-warden_counter_pulse_test-1": {
+      "exit": 1,
+      "seconds": 15
+    },
+    "solo-warden_counter_pulse_test-2": {
+      "exit": 1,
+      "seconds": 14
+    }
+  },
+  "results": [
+    {
+      "test": "presentation_ace_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 1.1
+    },
+    {
+      "test": "presentation_banner_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 19.3
+    },
+    {
+      "test": "presentation_audio_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 35.3
+    },
+    {
+      "test": "presentation_ceremony_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 24.6
+    },
+    {
+      "test": "presentation_chain_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 36
+    },
+    {
+      "test": "presentation_comfort_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 21.4
+    },
+    {
+      "test": "presentation_bass_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 105.9
+    },
+    {
+      "test": "presentation_density_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 26.4
+    },
+    {
+      "test": "presentation_gems_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 32.6
+    },
+    {
+      "test": "presentation_escalation_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 85.8
+    },
+    {
+      "test": "presentation_motifs_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 31.3
+    },
+    {
+      "test": "presentation_near_miss_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 31.3
+    },
+    {
+      "test": "presentation_opening_bake_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 57.4
+    },
+    {
+      "test": "presentation_random_lint_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 1.7
+    },
+    {
+      "test": "presentation_hitstop_test",
+      "ok": false,
+      "exit": "null",
+      "seconds": 180.3
+    },
+    {
+      "test": "presentation_retry_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 49.7
+    },
+    {
+      "test": "presentation_run_identity_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 2.4
+    },
+    {
+      "test": "presentation_rows_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 48.8
+    },
+    {
+      "test": "presentation_sfx_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 26.5
+    },
+    {
+      "test": "presentation_ultimate_music_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 48.6
+    },
+    {
+      "test": "pressure_rows_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 1.7
+    },
+    {
+      "test": "presentation_v3_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 53.5
+    },
+    {
+      "test": "profile_purity_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 0.9
+    },
+    {
+      "test": "priority_proof_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 11.5
+    },
+    {
+      "test": "profile_store_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 0.7
+    },
+    {
+      "test": "profile_unlock_gate_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 26.8
+    },
+    {
+      "test": "profile_unlock_sequence_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 39.7
+    },
+    {
+      "test": "progress_bus_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 19.7
+    },
+    {
+      "test": "prompt_shown_count_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 21.4
+    },
+    {
+      "test": "prop_crew_clearance_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 26.3
+    },
+    {
+      "test": "radio_page_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 22.8
+    },
+    {
+      "test": "rarity_ladder_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 1.1
+    },
+    {
+      "test": "reach_gates_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 22.6
+    },
+    {
+      "test": "radio_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 38.5
+    },
+    {
+      "test": "reach_map_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 22.3
+    },
+    {
+      "test": "recipe_props_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 1.3
+    },
+    {
+      "test": "reach_secret_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 25.2
+    },
+    {
+      "test": "reduce_flashes_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 21.5
+    },
+    {
+      "test": "relay_charge_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 1
+    },
+    {
+      "test": "relay_models_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 0.8
+    },
+    {
+      "test": "reduced_motion_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 19.1
+    },
+    {
+      "test": "relay_stack_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 1.1
+    },
+    {
+      "test": "relics_data_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 0.9
+    },
+    {
+      "test": "release_gate_placeholder_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 2.5
+    },
+    {
+      "test": "relics_run_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 23.9
+    },
+    {
+      "test": "relics_per_world_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 48.7
+    },
+    {
+      "test": "rescue_prompt_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 1.9
+    },
+    {
+      "test": "rescue_cage_asset_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 27.2
+    },
+    {
+      "test": "rescue_state_read_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 18.4
+    },
+    {
+      "test": "rescue_quest_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 30.4
+    },
+    {
+      "test": "rest_bake_threaded_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 44.5
+    },
+    {
+      "test": "retired_retry_text_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 0.8
+    },
+    {
+      "test": "reward_gates_park_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 24.1
+    },
+    {
+      "test": "reward_gates_slot_row_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 18
+    },
+    {
+      "test": "restart_parity_worlds_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 91.9
+    },
+    {
+      "test": "rib_cache_height_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 24.1
+    },
+    {
+      "test": "presentation_juice_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 15.5
+    },
+    {
+      "test": "presentation_music_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 9.8
+    },
+    {
+      "test": "presentation_themes_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 79
+    },
+    {
+      "test": "relay_park_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 64.5
+    },
+    {
+      "test": "rig_loop_seam_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 0.6
+    },
+    {
+      "test": "rib_cache_spots_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 7.1
+    },
+    {
+      "test": "ring_out_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 37
+    },
+    {
+      "test": "rivet_kit_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 31.6
+    },
+    {
+      "test": "rivet_warm_hitch_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 16.4
+    },
+    {
+      "test": "rogue_director_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 1.7
+    },
+    {
+      "test": "rogue_phase_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 16
+    },
+    {
+      "test": "roster_chassis_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 0.7
+    },
+    {
+      "test": "roster_speed_ratio_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 2
+    },
+    {
+      "test": "roster_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 31.7
+    },
+    {
+      "test": "rivet_set_piece_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 74.1
+    },
+    {
+      "test": "run_entrance_doc_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 2.8
+    },
+    {
+      "test": "run_identity_session_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 3.4
+    },
+    {
+      "test": "route_proof_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 28.6
+    },
+    {
+      "test": "run_log_abandon_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 27.2
+    },
+    {
+      "test": "run_log_pack_kinds_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 21
+    },
+    {
+      "test": "run_log_posture_stages_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 2.4
+    },
+    {
+      "test": "run_log_boss_attacks_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 33.3
+    },
+    {
+      "test": "run_moments_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 22.5
+    },
+    {
+      "test": "run_log_sitting_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 56.1
+    },
+    {
+      "test": "run_opening_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 52.3
+    },
+    {
+      "test": "run_prev_backup_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 37.5
+    },
+    {
+      "test": "run_resume_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 89.6
+    },
+    {
+      "test": "run_state_wear_whole_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 2.5
+    },
+    {
+      "test": "run_resume_worlds_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 133
+    },
+    {
+      "test": "run_store_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 2.5
+    },
+    {
+      "test": "run_store_refusal_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 103.3
+    },
+    {
+      "test": "sable_bot_hands_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 30.8
+    },
+    {
+      "test": "sable_kit_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 42.4
+    },
+    {
+      "test": "run_tier_dials_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 131.7
+    },
+    {
+      "test": "sable_set_piece_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 26.2
+    },
+    {
+      "test": "scrap_leak_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 3.3
+    },
+    {
+      "test": "scenery_teardown_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 28.6
+    },
+    {
+      "test": "scrap_trail_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 2.5
+    },
+    {
+      "test": "screens_first_last_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 20.4
+    },
+    {
+      "test": "scrap_pickup_asset_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 50
+    },
+    {
+      "test": "screens_prologue_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 25.2
+    },
+    {
+      "test": "seed_streams_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 31.2
+    },
+    {
+      "test": "set_dressing_stop_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 0.9
+    },
+    {
+      "test": "set_banner_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 20
+    },
+    {
+      "test": "set_piece_lines_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 2.3
+    },
+    {
+      "test": "shell_accent_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 2
+    },
+    {
+      "test": "shell_layers_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 2.4
+    },
+    {
+      "test": "shift_board_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 1.4
+    },
+    {
+      "test": "shop_economy_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 23.4
+    },
+    {
+      "test": "set_dressing_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 41.2
+    },
+    {
+      "test": "shop_lines_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 0.8
+    },
+    {
+      "test": "shop_model_report_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 3.3
+    },
+    {
+      "test": "shop_restock_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 21
+    },
+    {
+      "test": "shop_round_trip_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 24.1
+    },
+    {
+      "test": "shop_hook_stock_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 87.7
+    },
+    {
+      "test": "side_content_roster_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 14.1
+    },
+    {
+      "test": "signal_lifetime_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 23.9
+    },
+    {
+      "test": "sitting_notes_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 23.8
+    },
+    {
+      "test": "sitting_profile_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 16
+    },
+    {
+      "test": "skill_bar_select_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 19.5
+    },
+    {
+      "test": "shot_bits_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 189.6
+    },
+    {
+      "test": "scatter_rows_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 275.3
+    },
+    {
+      "test": "seed_isolation_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 277
+    },
+    {
+      "test": "slice_packs_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 70.6
+    },
+    {
+      "test": "slot_growth_sweep_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 3.7
+    },
+    {
+      "test": "slice_parts_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 25.6
+    },
+    {
+      "test": "sluice_surge_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 2.8
+    },
+    {
+      "test": "slow_motion_sound_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 30.8
+    },
+    {
+      "test": "sound_edges_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 16
+    },
+    {
+      "test": "slump_warning_foot_probe",
+      "ok": true,
+      "exit": "0",
+      "seconds": 37.5
+    },
+    {
+      "test": "spawn_physics_place_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 17.9
+    },
+    {
+      "test": "spawn_warm_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 4.5
+    },
+    {
+      "test": "special_audio_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 21
+    },
+    {
+      "test": "special_rig_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 0.8
+    },
+    {
+      "test": "special_cues_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 30
+    },
+    {
+      "test": "special_sfx_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 2.2
+    },
+    {
+      "test": "special_rig_wiring_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 18.8
+    },
+    {
+      "test": "spil9_marks_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 1.5
+    },
+    {
+      "test": "spillway_finds_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 26
+    },
+    {
+      "test": "spillway_park_steps_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 10
+    },
+    {
+      "test": "spillway_roster_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 14.9
+    },
+    {
+      "test": "spillway_scenery_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 4.5
+    },
+    {
+      "test": "spillway_sound_identity_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 29.9
+    },
+    {
+      "test": "spillway_zone_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 16.1
+    },
+    {
+      "test": "spine_arena_retry_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 22.3
+    },
+    {
+      "test": "spine_boss_seam_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 20.7
+    },
+    {
+      "test": "spine_brake_slam_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 16.4
+    },
+    {
+      "test": "spine_codex_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 16
+    },
+    {
+      "test": "spine_crush_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 16.6
+    },
+    {
+      "test": "spine_event_kinds_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 0.5
+    },
+    {
+      "test": "spine_heft_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 19.3
+    },
+    {
+      "test": "spine_live_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 17.4
+    },
+    {
+      "test": "spine_movement_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 9.3
+    },
+    {
+      "test": "spine_objective_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 15.6
+    },
+    {
+      "test": "spine_run_log_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 20.6
+    },
+    {
+      "test": "spine_run_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 48.7
+    },
+    {
+      "test": "speed_bank_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 339.4
+    },
+    {
+      "test": "spine_shove_retry_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 14.4
+    },
+    {
+      "test": "spine_stomp_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 15.9
+    },
+    {
+      "test": "spine_warden_gate_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 14.9
+    },
+    {
+      "test": "splitter_pod_rig_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 17.8
+    },
+    {
+      "test": "stage_barge_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 25.1
+    },
+    {
+      "test": "spine_worlds_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 61.1
+    },
+    {
+      "test": "stage_bay_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 20.1
+    },
+    {
+      "test": "stage_gate_sweep_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 16.5
+    },
+    {
+      "test": "stage_callbacks_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 39
+    },
+    {
+      "test": "stage_layers_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 34.7
+    },
+    {
+      "test": "stage_table_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 22.3
+    },
+    {
+      "test": "stage_terrain_events_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 23.4
+    },
+    {
+      "test": "stage_transitions_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 39.7
+    },
+    {
+      "test": "stake_devices_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 19.4
+    },
+    {
+      "test": "start_pick_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 2
+    },
+    {
+      "test": "start_card_pointer_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 21.7
+    },
+    {
+      "test": "stat_cache_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 34.7
+    },
+    {
+      "test": "status_marks_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 16.7
+    },
+    {
+      "test": "speed_bank_rest_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 5.2
+    },
+    {
+      "test": "spillway_fx_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 25.6
+    },
+    {
+      "test": "spine_restart_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 17.3
+    },
+    {
+      "test": "stack_sweep_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 193.6
+    },
+    {
+      "test": "stage_beats_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 79.3
+    },
+    {
+      "test": "stage_entry_budget_test",
+      "ok": false,
+      "exit": "1",
+      "seconds": 55.6
+    },
+    {
+      "test": "stage_gorge_perf_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 33.7
+    },
+    {
+      "test": "stage_locks_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 97.8
+    },
+    {
+      "test": "stage_modifier_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 161.2
+    },
+    {
+      "test": "strafe_spawn_order_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 1
+    },
+    {
+      "test": "storm_lattice_combat_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 44.5
+    },
+    {
+      "test": "stub_boss_phase_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 34.2
+    },
+    {
+      "test": "structure_rows_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 81.4
+    },
+    {
+      "test": "stub_boss_read_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 25.4
+    },
+    {
+      "test": "stub_boss_seat_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 23
+    },
+    {
+      "test": "swarm_remnant_pose_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 14
+    },
+    {
+      "test": "table_invariants_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 2.1
+    },
+    {
+      "test": "synergy_slice_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 19.9
+    },
+    {
+      "test": "tally_look_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 3.8
+    },
+    {
+      "test": "tally_set_piece_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 13.9
+    },
+    {
+      "test": "tally_kit_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 35.1
+    },
+    {
+      "test": "target_material_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 25.4
+    },
+    {
+      "test": "tarn_claw_drag_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 22.5
+    },
+    {
+      "test": "tarn_claw_freed_tow_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 14.1
+    },
+    {
+      "test": "tarn_look_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 3.5
+    },
+    {
+      "test": "tarn_kit_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 16
+    },
+    {
+      "test": "tarn_tree_depths_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 2.3
+    },
+    {
+      "test": "teardown_material_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 1.3
+    },
+    {
+      "test": "tarn_set_piece_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 19.6
+    },
+    {
+      "test": "telegraph_ground_batch_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 10.7
+    },
+    {
+      "test": "telegraph_held_looks_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 1.2
+    },
+    {
+      "test": "telegraph_slope_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 0.7
+    },
+    {
+      "test": "telegraph_haze_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 49.3
+    },
+    {
+      "test": "terrain_worlds_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 26.3
+    },
+    {
+      "test": "thread_guard_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 8.4
+    },
+    {
+      "test": "threat_grammar_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 1.9
+    },
+    {
+      "test": "threat_sites_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 25.3
+    },
+    {
+      "test": "threat_sound_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 27.4
+    },
+    {
+      "test": "timed_door_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 18.5
+    },
+    {
+      "test": "title_continue_refusal_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 17.2
+    },
+    {
+      "test": "title_intros_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 16.3
+    },
+    {
+      "test": "title_stage_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 16.2
+    },
+    {
+      "test": "title_theme_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 17.7
+    },
+    {
+      "test": "touch_body_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 18.5
+    },
+    {
+      "test": "telegraph_timing_swarm_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 279.6
+    },
+    {
+      "test": "tree_data_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 0.9
+    },
+    {
+      "test": "tree_depth_cap_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 15.6
+    },
+    {
+      "test": "traversal_measure_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 143.6
+    },
+    {
+      "test": "tree_safe_picks_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 1.1
+    },
+    {
+      "test": "tune_moments_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 18.4
+    },
+    {
+      "test": "tune_pack_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 1.2
+    },
+    {
+      "test": "tuning_flags_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 0.6
+    },
+    {
+      "test": "tuning_panel_title_cycle_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 0.5
+    },
+    {
+      "test": "tuning_reset_flags_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 0.5
+    },
+    {
+      "test": "tree_play_test",
+      "ok": false,
+      "exit": "1",
+      "seconds": 111
+    },
+    {
+      "test": "ui_ability_slots_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 16
+    },
+    {
+      "test": "ui_boss_plate_mount_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 16.6
+    },
+    {
+      "test": "ui_achievements_page_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 34.3
+    },
+    {
+      "test": "ui_build_readout_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 15.8
+    },
+    {
+      "test": "ui_breath_row_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 27.4
+    },
+    {
+      "test": "ui_caller_tile_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 0.5
+    },
+    {
+      "test": "ui_caller_bubble_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 14.9
+    },
+    {
+      "test": "ui_camp_menu_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 17.4
+    },
+    {
+      "test": "surge_course_park_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 48.3
+    },
+    {
+      "test": "telegraph_timing_pack_test",
+      "ok": false,
+      "exit": "null",
+      "seconds": 360.1
+    },
+    {
+      "test": "terrain_lazy_world_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 10.4
+    },
+    {
+      "test": "trace_readonly_test",
+      "ok": false,
+      "exit": "1",
+      "seconds": 22.6
+    },
+    {
+      "test": "tree_apply_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 33.7
+    },
+    {
+      "test": "tree_bot_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 109.9
+    },
+    {
+      "test": "ui_class_card_level_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 17.9
+    },
+    {
+      "test": "ui_class_card_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 20.1
+    },
+    {
+      "test": "ui_companion_panel_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 14.3
+    },
+    {
+      "test": "ui_contract_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 2.7
+    },
+    {
+      "test": "ui_corner_column_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 14.5
+    },
+    {
+      "test": "ui_continue_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 35.2
+    },
+    {
+      "test": "ui_customize_page_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 14
+    },
+    {
+      "test": "ui_ending_screen_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 20.5
+    },
+    {
+      "test": "ui_edge_marker_pocket_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 43.5
+    },
+    {
+      "test": "ui_field_notes_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 18.9
+    },
+    {
+      "test": "ui_key_glyph_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 12.8
+    },
+    {
+      "test": "ui_keycap_text_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 0.4
+    },
+    {
+      "test": "ui_hotwire_screen_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 24
+    },
+    {
+      "test": "ui_locked_card_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 15.3
+    },
+    {
+      "test": "ui_lore_wiring_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 13.9
+    },
+    {
+      "test": "ui_main_menu_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 12.7
+    },
+    {
+      "test": "ui_menu_click_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 14.5
+    },
+    {
+      "test": "ui_pause_menu_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 18
+    },
+    {
+      "test": "ui_objective_board_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 30.6
+    },
+    {
+      "test": "ui_scrap_frame_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 0.5
+    },
+    {
+      "test": "ui_redraw_gate_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 13
+    },
+    {
+      "test": "ui_settings_pad_rebind_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 11.6
+    },
+    {
+      "test": "ui_settings_paged_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 16.8
+    },
+    {
+      "test": "ui_settings_pages_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 22.9
+    },
+    {
+      "test": "ui_skill_bar_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 12.4
+    },
+    {
+      "test": "ui_tree_card_set_piece_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 1.6
+    },
+    {
+      "test": "ui_word_budget_first_find_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 17.4
+    },
+    {
+      "test": "ui_word_budget_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 17.4
+    },
+    {
+      "test": "ui_workshop_pick_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 14.2
+    },
+    {
+      "test": "ui_workshop_bay_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 16.5
+    },
+    {
+      "test": "ui_workshop_shop_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 13.4
+    },
+    {
+      "test": "ultimate_knobs_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 1
+    },
+    {
+      "test": "ultimate_meter_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 0.5
+    },
+    {
+      "test": "ultimate_band_return_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 36.4
+    },
+    {
+      "test": "ultimate_set_piece_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 36.1
+    },
+    {
+      "test": "unlock_settle_once_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 1.5
+    },
+    {
+      "test": "unlock_live_brindle_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 29
+    },
+    {
+      "test": "upgrade_tree_depth_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 63.3
+    },
+    {
+      "test": "w12_ground_route_proof_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 14.1
+    },
+    {
+      "test": "wall_grip_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 19.8
+    },
+    {
+      "test": "warden_bodies_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 65.9
+    },
+    {
+      "test": "warden_chunks_look_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 35.4
+    },
+    {
+      "test": "warden_family_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 15.9
+    },
+    {
+      "test": "visible_odds_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 207.1
+    },
+    {
+      "test": "warden_guard_posture_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 15.5
+    },
+    {
+      "test": "warden_form_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 33
+    },
+    {
+      "test": "warden_mantle_surface_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 1.6
+    },
+    {
+      "test": "warden_meltdown_slag_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 17.2
+    },
+    {
+      "test": "warden_no_light_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 14.7
+    },
+    {
+      "test": "warden_hook_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 46
+    },
+    {
+      "test": "warden_posture_point_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 16.3
+    },
+    {
+      "test": "warden_posture_look_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 29.6
+    },
+    {
+      "test": "warden_posture_sound_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 42.3
+    },
+    {
+      "test": "warden_reactor_asset_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 1.4
+    },
+    {
+      "test": "warden_posture_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 38.5
+    },
+    {
+      "test": "warden_sighted_step_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 13.9
+    },
+    {
+      "test": "warden_ring_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 21.7
+    },
+    {
+      "test": "unit_suite_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 39.7
+    },
+    {
+      "test": "vx_wire_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 28
+    },
+    {
+      "test": "warden_counter_pulse_test",
+      "ok": false,
+      "exit": "0",
+      "seconds": 15.5
+    },
+    {
+      "test": "warden_swarm_asset_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 1.1
+    },
+    {
+      "test": "warden_tell_read_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 4.5
+    },
+    {
+      "test": "warden_smash_prompt_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 19.2
+    },
+    {
+      "test": "warden_variants_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 16.7
+    },
+    {
+      "test": "warning_bound_containment_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 3.7
+    },
+    {
+      "test": "water_edges_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 0.4
+    },
+    {
+      "test": "weak_points_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 0.5
+    },
+    {
+      "test": "weapon_envelope_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 0.6
+    },
+    {
+      "test": "wear_fraction_debt_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 1.5
+    },
+    {
+      "test": "wear_trail_flashes_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 0.5
+    },
+    {
+      "test": "why_callout_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 16.7
+    },
+    {
+      "test": "wide_picture_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 13.6
+    },
+    {
+      "test": "warning_bound_park_ground_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 38
+    },
+    {
+      "test": "windup_rows_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 16.5
+    },
+    {
+      "test": "world1_day_rows_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 14.8
+    },
+    {
+      "test": "world1_loot_fixes_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 14.7
+    },
+    {
+      "test": "world_ambush_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 14.9
+    },
+    {
+      "test": "world_boss_files_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 15
+    },
+    {
+      "test": "world_bet_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 22.8
+    },
+    {
+      "test": "world_codex_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 0.6
+    },
+    {
+      "test": "world_cache_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 18.7
+    },
+    {
+      "test": "world_director_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 1.1
+    },
+    {
+      "test": "world_devices_by_map_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 20.2
+    },
+    {
+      "test": "world_events_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 2.2
+    },
+    {
+      "test": "world_flow_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 33.8
+    },
+    {
+      "test": "world_event_progress_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 45.5
+    },
+    {
+      "test": "world_fx_grain_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 2.8
+    },
+    {
+      "test": "world_fx_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 1.2
+    },
+    {
+      "test": "world_grade_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 13.7
+    },
+    {
+      "test": "world_interact_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 16.5
+    },
+    {
+      "test": "world_launch_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 16.5
+    },
+    {
+      "test": "world_one_G_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 13.6
+    },
+    {
+      "test": "world_one_ktree_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 14.1
+    },
+    {
+      "test": "world_one_mass_k_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 14.5
+    },
+    {
+      "test": "world_one_mass_r_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 14.9
+    },
+    {
+      "test": "world_one_mass_s_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 13.7
+    },
+    {
+      "test": "world_one_rtree_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 13.3
+    },
+    {
+      "test": "world_one_shell_card_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 13.5
+    },
+    {
+      "test": "world_one_shell_kest_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 1.2
+    },
+    {
+      "test": "world_one_shell_rivet_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 1.6
+    },
+    {
+      "test": "world_one_shell_sable_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 1.2
+    },
+    {
+      "test": "world_one_stree_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 12.6
+    },
+    {
+      "test": "world_route_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 14.4
+    },
+    {
+      "test": "world_sites_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 1.5
+    },
+    {
+      "test": "world_stages_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 15.5
+    },
+    {
+      "test": "world_table_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 0.5
+    },
+    {
+      "test": "world_warden_flow_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 20.1
+    },
+    {
+      "test": "zone_schema_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 1.3
+    },
+    {
+      "test": "world_one_wardens_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 69.9
+    }
+  ],
+  "failures": [
+    {
+      "test": "presentation_hitstop_test",
+      "call": "new-flake",
+      "alone": "2/2 pass alone",
+      "row": null,
+      "note": "fails under load only; add a flake row to project-guide/handoff/KNOWN-FAILING.tsv",
+      "lines": []
+    },
+    {
+      "test": "stage_entry_budget_test",
+      "call": "carried",
+      "alone": "2/2 pass alone",
+      "row": {
+        "test": "stage_entry_budget_test",
+        "kind": "flake",
+        "cause": "the stage 2 activities sample reads 34.9 ms against the 30 ms limit under load; its retry and a solo run pass (wave 31 gate)",
+        "owner": "testing lane",
+        "added": "2026-11-09",
+        "review": "2026-11-23",
+        "line": 16
+      },
+      "note": "flake, owner testing lane, review 2026-11-23: the stage 2 activities sample reads 34.9 ms against the 30 ms limit under load; its retry and a solo run pass (wave 31 gate)",
+      "lines": []
+    },
+    {
+      "test": "tree_play_test",
+      "call": "carried",
+      "alone": "2/2 pass alone",
+      "row": {
+        "test": "tree_play_test",
+        "kind": "red",
+        "cause": "the class 5 child process times out on a cloud box, with no script error; not yet re-read on the PC",
+        "owner": "testing lane",
+        "added": "2026-11-09",
+        "review": "2026-11-23",
+        "line": 5
+      },
+      "note": "red, owner testing lane, review 2026-11-23: the class 5 child process times out on a cloud box, with no script error; not yet re-read on the PC",
+      "lines": []
+    },
+    {
+      "test": "telegraph_timing_pack_test",
+      "call": "new-flake",
+      "alone": "2/2 pass alone",
+      "row": null,
+      "note": "fails under load only; add a flake row to project-guide/handoff/KNOWN-FAILING.tsv",
+      "lines": []
+    },
+    {
+      "test": "trace_readonly_test",
+      "call": "carried",
+      "alone": "0/2 pass alone",
+      "row": {
+        "test": "trace_readonly_test",
+        "kind": "red",
+        "cause": "the production actor wiring child process times out",
+        "owner": "testing lane",
+        "added": "2026-11-09",
+        "review": "2026-11-23",
+        "line": 4
+      },
+      "note": "red, owner testing lane, review 2026-11-23: the production actor wiring child process times out",
+      "lines": [
+        "[production actor wiring child passes without a direct replay_side call] exit -1, timeout true, errors [] -> FAIL"
+      ]
+    },
+    {
+      "test": "warden_counter_pulse_test",
+      "call": "carried",
+      "alone": "0/2 pass alone",
+      "row": {
+        "test": "warden_counter_pulse_test",
+        "kind": "red",
+        "cause": "every check passes, but warden.gd pilot_heft prints SCRIPT ERROR lines because the CtxDouble test double has no 'run'",
+        "owner": "testing lane",
+        "added": "2026-11-09",
+        "review": "2026-11-23",
+        "line": 7
+      },
+      "note": "red, owner testing lane, review 2026-11-23: every check passes, but warden.gd pilot_heft prints SCRIPT ERROR lines because the CtxDouble test double has no 'run'",
+      "lines": [
+        "SCRIPT ERROR: Invalid access to property or key 'run' on a base object of type 'RefCounted (CtxDouble)'. (x10)"
+      ]
+    }
+  ],
+  "counts": {
+    "error": 0,
+    "script_error": 10,
+    "in_use": 0,
+    "freed": 0,
+    "leaked_warning": 258
+  },
+  "slow": [
+    {
+      "test": "presentation_hitstop_test",
+      "ok": false,
+      "exit": "null",
+      "seconds": 180.3,
+      "limit": 180
+    },
+    {
+      "test": "telegraph_timing_pack_test",
+      "ok": false,
+      "exit": "null",
+      "seconds": 360.1,
+      "limit": 360
+    },
+    {
+      "test": "speed_bank_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 339.4,
+      "limit": 360
+    },
+    {
+      "test": "scatter_rows_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 275.3,
+      "limit": 300
+    }
+  ],
+  "verdict": {
+    "ok": true,
+    "line": "PASS, no new red (4 carried on the ledger, 2 new load flakes to list)"
+  },
+  "startedAt": "2026-11-10T16:42:08.283Z",
+  "finishedAt": "2026-11-10T18:45:48.065Z"
+}

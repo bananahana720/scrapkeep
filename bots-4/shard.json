@@ -1,0 +1,87 @@
+{
+  "title": "Gate shard: bots 16-20 on 75099fa7",
+  "head": "75099fa7080378295788d9741a0a03fdf9e594b2",
+  "box": "32 vCPU AMD Ryzen 9 5950X 16-Core Processor, 63 GB",
+  "godot": "Godot_v4.7.2-stable_linux.x86_64",
+  "scale": 1,
+  "window": "bot list 16 to 20 of 23 (posture_bands_test to self_play_launch_test), 5 tests",
+  "steps": {
+    "import-1": {
+      "exit": 0,
+      "seconds": 7,
+      "outcome": "ok"
+    },
+    "import-2": {
+      "exit": 0,
+      "seconds": 6,
+      "outcome": "ok"
+    },
+    "bot-posture_bands_test": {
+      "exit": 0,
+      "seconds": 1068
+    },
+    "bot-restart_latency_test": {
+      "exit": 0,
+      "seconds": 109
+    },
+    "bot-run_save_interrupt_test": {
+      "exit": 0,
+      "seconds": 119
+    },
+    "bot-run_tier_test": {
+      "exit": 0,
+      "seconds": 252
+    },
+    "bot-self_play_launch_test": {
+      "exit": 0,
+      "seconds": 261
+    }
+  },
+  "results": [
+    {
+      "test": "posture_bands_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 1062
+    },
+    {
+      "test": "restart_latency_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 106.7
+    },
+    {
+      "test": "run_save_interrupt_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 116.4
+    },
+    {
+      "test": "run_tier_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 249.6
+    },
+    {
+      "test": "self_play_launch_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 258.8
+    }
+  ],
+  "failures": [],
+  "counts": {
+    "error": 0,
+    "script_error": 0,
+    "in_use": 0,
+    "freed": 0,
+    "leaked_warning": 77
+  },
+  "slow": [],
+  "verdict": {
+    "ok": true,
+    "line": "PASS, no new red"
+  },
+  "startedAt": "2026-11-10T20:01:20.778Z",
+  "finishedAt": "2026-11-10T20:31:44.003Z"
+}

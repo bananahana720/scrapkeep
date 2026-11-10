@@ -1,0 +1,250 @@
+[an ordinary pilot first staggers the hive within 10 s of the measured 50.32 s] small first-stagger median 48.81 s -> PASS
+[each arm ran its seeds] got [24, 24], want [24, 24] -> PASS
+[grown breaks the hive in 25 to 45 s] grown median 33.91 s -> PASS
+[grown median within 10 percent of the pin] grown 33.91 s, pin 33.95 s -> PASS
+[grown seed 0 fought the live hoist] hoist { "driver": "res://src/combat/warden_swarm.gd", "first_stagger_s": 24.4616666666679, "staggers": [0.0, 0.0], "top": 29.0000003576279 } -> PASS
+[grown seed 0 plays pylon_engineer] got "pylon_engineer", want "pylon_engineer" -> PASS
+[grown seed 0 ran] exit 0, timed out false -> PASS
+[grown seed 0 wrote a record] child killed / no record, exit 0, timed out false -> PASS
+[grown seed 1 fought the live hoist] hoist { "driver": "res://src/combat/warden_swarm.gd", "first_stagger_s": 24.4333333333346, "staggers": [0.0, 0.0], "top": 29.0000003576279 } -> PASS
+[grown seed 1 plays runner_gunner] got "runner_gunner", want "runner_gunner" -> PASS
+[grown seed 1 ran] exit 0, timed out false -> PASS
+[grown seed 1 wrote a record] child killed / no record, exit 0, timed out false -> PASS
+[grown seed 10 fought the live hoist] hoist { "driver": "res://src/combat/warden_swarm.gd", "first_stagger_s": 21.2094444444452, "staggers": [30.0, 0.0, 0.0, 21.4749999999986], "top": 29.0000003576279 } -> PASS
+[grown seed 10 plays runner_gunner] got "runner_gunner", want "runner_gunner" -> PASS
+[grown seed 10 ran] exit 0, timed out false -> PASS
+[grown seed 10 wrote a record] child killed / no record, exit 0, timed out false -> PASS
+[grown seed 11 fought the live hoist] hoist { "driver": "res://src/combat/warden_swarm.gd", "first_stagger_s": 12.7138888888888, "staggers": [0.0, 0.0, 0.0, 0.0], "top": 29.0000003576279 } -> PASS
+[grown seed 11 plays demolitions_caster] got "demolitions_caster", want "demolitions_caster" -> PASS
+[grown seed 11 ran] exit 0, timed out false -> PASS
+[grown seed 11 wrote a record] child killed / no record, exit 0, timed out false -> PASS
+[grown seed 12 fought the live hoist] hoist { "driver": "res://src/combat/warden_swarm.gd", "first_stagger_s": 23.7405555555567, "staggers": [4.25833333331548, 0.0, 0.0], "top": 29.0000003576279 } -> PASS
+[grown seed 12 plays pylon_engineer] got "pylon_engineer", want "pylon_engineer" -> PASS
+[grown seed 12 ran] exit 0, timed out false -> PASS
+[grown seed 12 wrote a record] child killed / no record, exit 0, timed out false -> PASS
+[grown seed 13 fought the live hoist] hoist { "driver": "res://src/combat/warden_swarm.gd", "first_stagger_s": 21.2194444444452, "staggers": [30.0, 0.0, 0.0, 0.0], "top": 29.0000003576279 } -> PASS
+[grown seed 13 plays runner_gunner] got "runner_gunner", want "runner_gunner" -> PASS
+[grown seed 13 ran] exit 0, timed out false -> PASS
+[grown seed 13 wrote a record] child killed / no record, exit 0, timed out false -> PASS
+[grown seed 14 fought the live hoist] hoist { "driver": "res://src/combat/warden_swarm.gd", "first_stagger_s": 12.7138888888888, "staggers": [0.0, 0.0, 0.0, 0.0, 0.0], "top": 29.0000003576279 } -> PASS
+[grown seed 14 plays demolitions_caster] got "demolitions_caster", want "demolitions_caster" -> PASS
+[grown seed 14 ran] exit 0, timed out false -> PASS
+[grown seed 14 wrote a record] child killed / no record, exit 0, timed out false -> PASS
+[grown seed 15 fought the live hoist] hoist { "driver": "res://src/combat/warden_swarm.gd", "first_stagger_s": 25.3444444444458, "staggers": [0.0, 0.0], "top": 29.0000003576279 } -> PASS
+[grown seed 15 plays pylon_engineer] got "pylon_engineer", want "pylon_engineer" -> PASS
+[grown seed 15 ran] exit 0, timed out false -> PASS
+[grown seed 15 wrote a record] child killed / no record, exit 0, timed out false -> PASS
+[grown seed 16 fought the live hoist] hoist { "driver": "res://src/combat/warden_swarm.gd", "first_stagger_s": 24.5105555555568, "staggers": [0.0, 0.0, 0.0], "top": 29.0000003576279 } -> PASS
+[grown seed 16 plays runner_gunner] got "runner_gunner", want "runner_gunner" -> PASS
+[grown seed 16 ran] exit 0, timed out false -> PASS
+[grown seed 16 wrote a record] child killed / no record, exit 0, timed out false -> PASS
+[grown seed 17 fought the live hoist] hoist { "driver": "res://src/combat/warden_swarm.gd", "first_stagger_s": 12.7138888888888, "staggers": [0.0, 0.0, 0.0], "top": 29.0000003576279 } -> PASS
+[grown seed 17 plays demolitions_caster] got "demolitions_caster", want "demolitions_caster" -> PASS
+[grown seed 17 ran] exit 0, timed out false -> PASS
+[grown seed 17 wrote a record] child killed / no record, exit 0, timed out false -> PASS
+[grown seed 18 fought the live hoist] hoist { "driver": "res://src/combat/warden_swarm.gd", "first_stagger_s": 26.3566666666682, "staggers": [0.0, 0.0, 0.0, 0.0], "top": 29.0000003576279 } -> PASS
+[grown seed 18 plays pylon_engineer] got "pylon_engineer", want "pylon_engineer" -> PASS
+[grown seed 18 ran] exit 0, timed out false -> PASS
+[grown seed 18 wrote a record] child killed / no record, exit 0, timed out false -> PASS
+[grown seed 19 fought the live hoist] hoist { "driver": "res://src/combat/warden_swarm.gd", "first_stagger_s": 21.2216666666674, "staggers": [30.0, 0.0, 0.0], "top": 29.0000003576279 } -> PASS
+[grown seed 19 plays runner_gunner] got "runner_gunner", want "runner_gunner" -> PASS
+[grown seed 19 ran] exit 0, timed out false -> PASS
+[grown seed 19 wrote a record] child killed / no record, exit 0, timed out false -> PASS
+[grown seed 2 fought the live hoist] hoist { "driver": "res://src/combat/warden_swarm.gd", "first_stagger_s": 12.7138888888888, "staggers": [0.0, 0.0, 0.0], "top": 29.0000003576279 } -> PASS
+[grown seed 2 plays demolitions_caster] got "demolitions_caster", want "demolitions_caster" -> PASS
+[grown seed 2 ran] exit 0, timed out false -> PASS
+[grown seed 2 wrote a record] child killed / no record, exit 0, timed out false -> PASS
+[grown seed 20 fought the live hoist] hoist { "driver": "res://src/combat/warden_swarm.gd", "first_stagger_s": 12.7138888888888, "staggers": [0.0, 0.0, 0.0, 0.0], "top": 29.0000003576279 } -> PASS
+[grown seed 20 plays demolitions_caster] got "demolitions_caster", want "demolitions_caster" -> PASS
+[grown seed 20 ran] exit 0, timed out false -> PASS
+[grown seed 20 wrote a record] child killed / no record, exit 0, timed out false -> PASS
+[grown seed 21 fought the live hoist] hoist { "driver": "res://src/combat/warden_swarm.gd", "first_stagger_s": 36.4911111111142, "staggers": [0.0, 0.0, 0.0, 30.0], "top": 29.0000003576279 } -> PASS
+[grown seed 21 plays pylon_engineer] got "pylon_engineer", want "pylon_engineer" -> PASS
+[grown seed 21 ran] exit 0, timed out false -> PASS
+[grown seed 21 wrote a record] child killed / no record, exit 0, timed out false -> PASS
+[grown seed 22 fought the live hoist] hoist { "driver": "res://src/combat/warden_swarm.gd", "first_stagger_s": 24.4111111111123, "staggers": [0.0, 0.0, 0.0, 0.0], "top": 29.0000003576279 } -> PASS
+[grown seed 22 plays runner_gunner] got "runner_gunner", want "runner_gunner" -> PASS
+[grown seed 22 ran] exit 0, timed out false -> PASS
+[grown seed 22 wrote a record] child killed / no record, exit 0, timed out false -> PASS
+[grown seed 23 fought the live hoist] hoist { "driver": "res://src/combat/warden_swarm.gd", "first_stagger_s": 12.7138888888888, "staggers": [0.0, 0.0, 0.0], "top": 29.0000003576279 } -> PASS
+[grown seed 23 plays demolitions_caster] got "demolitions_caster", want "demolitions_caster" -> PASS
+[grown seed 23 ran] exit 0, timed out false -> PASS
+[grown seed 23 wrote a record] child killed / no record, exit 0, timed out false -> PASS
+[grown seed 3 fought the live hoist] hoist { "driver": "res://src/combat/warden_swarm.gd", "first_stagger_s": 24.5400000000013, "staggers": [0.0, 0.0, 1.80833333334718], "top": 29.0000003576279 } -> PASS
+[grown seed 3 plays pylon_engineer] got "pylon_engineer", want "pylon_engineer" -> PASS
+[grown seed 3 ran] exit 0, timed out false -> PASS
+[grown seed 3 wrote a record] child killed / no record, exit 0, timed out false -> PASS
+[grown seed 4 fought the live hoist] hoist { "driver": "res://src/combat/warden_swarm.gd", "first_stagger_s": 24.7105555555568, "staggers": [0.0, 0.0, 0.0], "top": 29.0000003576279 } -> PASS
+[grown seed 4 plays runner_gunner] got "runner_gunner", want "runner_gunner" -> PASS
+[grown seed 4 ran] exit 0, timed out false -> PASS
+[grown seed 4 wrote a record] child killed / no record, exit 0, timed out false -> PASS
+[grown seed 5 fought the live hoist] hoist { "driver": "res://src/combat/warden_swarm.gd", "first_stagger_s": 12.7138888888888, "staggers": [0.0, 0.0, 0.0, 0.0], "top": 29.0000003576279 } -> PASS
+[grown seed 5 plays demolitions_caster] got "demolitions_caster", want "demolitions_caster" -> PASS
+[grown seed 5 ran] exit 0, timed out false -> PASS
+[grown seed 5 wrote a record] child killed / no record, exit 0, timed out false -> PASS
+[grown seed 6 fought the live hoist] hoist { "driver": "res://src/combat/warden_swarm.gd", "first_stagger_s": 36.9194444444476, "staggers": [0.0, 0.0, 0.0, 0.0], "top": 29.0000003576279 } -> PASS
+[grown seed 6 plays pylon_engineer] got "pylon_engineer", want "pylon_engineer" -> PASS
+[grown seed 6 ran] exit 0, timed out false -> PASS
+[grown seed 6 wrote a record] child killed / no record, exit 0, timed out false -> PASS
+[grown seed 7 fought the live hoist] hoist { "driver": "res://src/combat/warden_swarm.gd", "first_stagger_s": 24.4555555555568, "staggers": [0.0, 0.0, 0.0], "top": 29.0000003576279 } -> PASS
+[grown seed 7 plays runner_gunner] got "runner_gunner", want "runner_gunner" -> PASS
+[grown seed 7 ran] exit 0, timed out false -> PASS
+[grown seed 7 wrote a record] child killed / no record, exit 0, timed out false -> PASS
+[grown seed 8 fought the live hoist] hoist { "driver": "res://src/combat/warden_swarm.gd", "first_stagger_s": 12.7138888888888, "staggers": [0.0, 0.0, 0.0, 0.0], "top": 29.0000003576279 } -> PASS
+[grown seed 8 plays demolitions_caster] got "demolitions_caster", want "demolitions_caster" -> PASS
+[grown seed 8 ran] exit 0, timed out false -> PASS
+[grown seed 8 wrote a record] child killed / no record, exit 0, timed out false -> PASS
+[grown seed 9 fought the live hoist] hoist { "driver": "res://src/combat/warden_swarm.gd", "first_stagger_s": 37.6227777777811, "staggers": [0.0, 30.0, 0.0, 0.0], "top": 29.0000003576279 } -> PASS
+[grown seed 9 plays pylon_engineer] got "pylon_engineer", want "pylon_engineer" -> PASS
+[grown seed 9 ran] exit 0, timed out false -> PASS
+[grown seed 9 wrote a record] child killed / no record, exit 0, timed out false -> PASS
+[half the grown seeds stagger the hive in a low dwell] 24 of 24 grown seeds, per seed [2, 2, 3, 2, 3, 4, 4, 3, 4, 3, 2, 4, 2, 3, 5, 2, 3, 3, 4, 2, 4, 3, 4, 3] -> PASS
+[one finish from a latch] 24 of 24 grown seeds took a chunk with a haul from a latch, per seed [3, 3, 3, 4, 3, 3, 3, 3, 3, 4, 4, 3, 3, 4, 4, 3, 3, 4, 4, 3, 3, 3, 3, 3] -> PASS
+[small and grown medians are measured under the run cap] small 70.05 s, grown 33.91 s, cap 300 s -> PASS
+[small median within 10 percent of the pin] small 70.05 s, pin 72.89 s -> PASS
+[small seed 0 fought the live hoist] hoist { "driver": "res://src/combat/warden_swarm.gd", "first_stagger_s": 40.0488888888926, "staggers": [0.0, 0.0, 0.0], "top": 29.0000003576279 } -> PASS
+[small seed 0 plays pylon_engineer] got "pylon_engineer", want "pylon_engineer" -> PASS
+[small seed 0 ran] exit 0, timed out false -> PASS
+[small seed 0 wrote a record] child killed / no record, exit 0, timed out false -> PASS
+[small seed 1 fought the live hoist] hoist { "driver": "res://src/combat/warden_swarm.gd", "first_stagger_s": 48.6533333333383, "staggers": [0.0, 0.0, 0.0, 0.0], "top": 29.0000003576279 } -> PASS
+[small seed 1 plays runner_gunner] got "runner_gunner", want "runner_gunner" -> PASS
+[small seed 1 ran] exit 0, timed out false -> PASS
+[small seed 1 wrote a record] child killed / no record, exit 0, timed out false -> PASS
+[small seed 10 fought the live hoist] hoist { "driver": "res://src/combat/warden_swarm.gd", "first_stagger_s": 52.1361111111167, "staggers": [0.83333333333346, 0.0], "top": 29.0000003576279 } -> PASS
+[small seed 10 plays runner_gunner] got "runner_gunner", want "runner_gunner" -> PASS
+[small seed 10 ran] exit 0, timed out false -> PASS
+[small seed 10 wrote a record] child killed / no record, exit 0, timed out false -> PASS
+[small seed 11 fought the live hoist] hoist { "driver": "res://src/combat/warden_swarm.gd", "first_stagger_s": 48.7477777777828, "staggers": [0.0, 0.0, 0.0], "top": 29.0000003576279 } -> PASS
+[small seed 11 plays demolitions_caster] got "demolitions_caster", want "demolitions_caster" -> PASS
+[small seed 11 ran] exit 0, timed out false -> PASS
+[small seed 11 wrote a record] child killed / no record, exit 0, timed out false -> PASS
+[small seed 12 fought the live hoist] hoist { "driver": "res://src/combat/warden_swarm.gd", "first_stagger_s": 23.7405555555567, "staggers": [4.25833333331548, 16.8083333333312, 0.0, 0.0, 0.0], "top": 29.0000003576279 } -> PASS
+[small seed 12 plays pylon_engineer] got "pylon_engineer", want "pylon_engineer" -> PASS
+[small seed 12 ran] exit 0, timed out false -> PASS
+[small seed 12 wrote a record] child killed / no record, exit 0, timed out false -> PASS
+[small seed 13 fought the live hoist] hoist { "driver": "res://src/combat/warden_swarm.gd", "first_stagger_s": 48.8450000000051, "staggers": [0.0, 0.0, 30.0], "top": 29.0000003576279 } -> PASS
+[small seed 13 plays runner_gunner] got "runner_gunner", want "runner_gunner" -> PASS
+[small seed 13 ran] exit 0, timed out false -> PASS
+[small seed 13 wrote a record] child killed / no record, exit 0, timed out false -> PASS
+[small seed 14 fought the live hoist] hoist { "driver": "res://src/combat/warden_swarm.gd", "first_stagger_s": 79.1794444444445, "staggers": [30.0, 0.0, 0.0], "top": 29.0000003576279 } -> PASS
+[small seed 14 plays demolitions_caster] got "demolitions_caster", want "demolitions_caster" -> PASS
+[small seed 14 ran] exit 0, timed out false -> PASS
+[small seed 14 wrote a record] child killed / no record, exit 0, timed out false -> PASS
+[small seed 15 fought the live hoist] hoist { "driver": "res://src/combat/warden_swarm.gd", "first_stagger_s": 72.30666666667, "staggers": [0.0, 0.0], "top": 29.0000003576279 } -> PASS
+[small seed 15 plays pylon_engineer] got "pylon_engineer", want "pylon_engineer" -> PASS
+[small seed 15 ran] exit 0, timed out false -> PASS
+[small seed 15 wrote a record] child killed / no record, exit 0, timed out false -> PASS
+[small seed 16 fought the live hoist] hoist { "driver": "res://src/combat/warden_swarm.gd", "first_stagger_s": 66.8694444444505, "staggers": [30.0, 0.0, 0.0], "top": 29.0000003576279 } -> PASS
+[small seed 16 plays runner_gunner] got "runner_gunner", want "runner_gunner" -> PASS
+[small seed 16 ran] exit 0, timed out false -> PASS
+[small seed 16 wrote a record] child killed / no record, exit 0, timed out false -> PASS
+[small seed 17 fought the live hoist] hoist { "driver": "res://src/combat/warden_swarm.gd", "first_stagger_s": 60.500000000007, "staggers": [0.0, 0.0, 0.0], "top": 29.0000003576279 } -> PASS
+[small seed 17 plays demolitions_caster] got "demolitions_caster", want "demolitions_caster" -> PASS
+[small seed 17 ran] exit 0, timed out false -> PASS
+[small seed 17 wrote a record] child killed / no record, exit 0, timed out false -> PASS
+[small seed 18 fought the live hoist] hoist { "driver": "res://src/combat/warden_swarm.gd", "first_stagger_s": 42.2944444444485, "staggers": [30.0, 0.0, 1.77500000001416], "top": 29.0000003576279 } -> PASS
+[small seed 18 plays pylon_engineer] got "pylon_engineer", want "pylon_engineer" -> PASS
+[small seed 18 ran] exit 0, timed out false -> PASS
+[small seed 18 wrote a record] child killed / no record, exit 0, timed out false -> PASS
+[small seed 19 fought the live hoist] hoist { "driver": "res://src/combat/warden_swarm.gd", "first_stagger_s": 60.2227777777847, "staggers": [0.0, 0.0, 0.0, 0.0, 28.6083333332896], "top": 29.0000003576279 } -> PASS
+[small seed 19 plays runner_gunner] got "runner_gunner", want "runner_gunner" -> PASS
+[small seed 19 ran] exit 0, timed out false -> PASS
+[small seed 19 wrote a record] child killed / no record, exit 0, timed out false -> PASS
+[small seed 2 fought the live hoist] hoist { "driver": "res://src/combat/warden_swarm.gd", "first_stagger_s": 49.3166666666719, "staggers": [0.0, 0.0, 0.0, 0.0, 0.0], "top": 29.0000003576279 } -> PASS
+[small seed 2 plays demolitions_caster] got "demolitions_caster", want "demolitions_caster" -> PASS
+[small seed 2 ran] exit 0, timed out false -> PASS
+[small seed 2 wrote a record] child killed / no record, exit 0, timed out false -> PASS
+[small seed 20 fought the live hoist] hoist { "driver": "res://src/combat/warden_swarm.gd", "first_stagger_s": 44.4288888888933, "staggers": [30.0, 0.0, 1.46666666668075], "top": 29.0000003576279 } -> PASS
+[small seed 20 plays demolitions_caster] got "demolitions_caster", want "demolitions_caster" -> PASS
+[small seed 20 ran] exit 0, timed out false -> PASS
+[small seed 20 wrote a record] child killed / no record, exit 0, timed out false -> PASS
+[small seed 21 fought the live hoist] hoist { "driver": "res://src/combat/warden_swarm.gd", "first_stagger_s": 48.5227777777828, "staggers": [0.0, 0.0, 2.10000000001408], "top": 29.0000003576279 } -> PASS
+[small seed 21 plays pylon_engineer] got "pylon_engineer", want "pylon_engineer" -> PASS
+[small seed 21 ran] exit 0, timed out false -> PASS
+[small seed 21 wrote a record] child killed / no record, exit 0, timed out false -> PASS
+[small seed 22 fought the live hoist] hoist { "driver": "res://src/combat/warden_swarm.gd", "first_stagger_s": 49.2577777777829, "staggers": [0.0, 0.0, 20.6416666666714], "top": 29.0000003576279 } -> PASS
+[small seed 22 plays runner_gunner] got "runner_gunner", want "runner_gunner" -> PASS
+[small seed 22 ran] exit 0, timed out false -> PASS
+[small seed 22 wrote a record] child killed / no record, exit 0, timed out false -> PASS
+[small seed 23 fought the live hoist] hoist { "driver": "res://src/combat/warden_swarm.gd", "first_stagger_s": 48.3088888888939, "staggers": [0.0, 0.0, 0.0, 0.0, 0.0], "top": 29.0000003576279 } -> PASS
+[small seed 23 plays demolitions_caster] got "demolitions_caster", want "demolitions_caster" -> PASS
+[small seed 23 ran] exit 0, timed out false -> PASS
+[small seed 23 wrote a record] child killed / no record, exit 0, timed out false -> PASS
+[small seed 3 fought the live hoist] hoist { "driver": "res://src/combat/warden_swarm.gd", "first_stagger_s": 59.9288888888957, "staggers": [2.44166666666217, 30.0, 0.0], "top": 29.0000003576279 } -> PASS
+[small seed 3 plays pylon_engineer] got "pylon_engineer", want "pylon_engineer" -> PASS
+[small seed 3 ran] exit 0, timed out false -> PASS
+[small seed 3 wrote a record] child killed / no record, exit 0, timed out false -> PASS
+[small seed 4 fought the live hoist] hoist { "driver": "res://src/combat/warden_swarm.gd", "first_stagger_s": 48.8227777777829, "staggers": [0.0, 30.0, 0.0, 0.0], "top": 29.0000003576279 } -> PASS
+[small seed 4 plays runner_gunner] got "runner_gunner", want "runner_gunner" -> PASS
+[small seed 4 ran] exit 0, timed out false -> PASS
+[small seed 4 wrote a record] child killed / no record, exit 0, timed out false -> PASS
+[small seed 5 fought the live hoist] hoist { "driver": "res://src/combat/warden_swarm.gd", "first_stagger_s": 51.4955555555611, "staggers": [0.0, 30.0, 0.0, 0.0], "top": 29.0000003576279 } -> PASS
+[small seed 5 plays demolitions_caster] got "demolitions_caster", want "demolitions_caster" -> PASS
+[small seed 5 ran] exit 0, timed out false -> PASS
+[small seed 5 wrote a record] child killed / no record, exit 0, timed out false -> PASS
+[small seed 6 fought the live hoist] hoist { "driver": "res://src/combat/warden_swarm.gd", "first_stagger_s": 43.1933333333375, "staggers": [30.0, 0.0, 0.0], "top": 29.0000003576279 } -> PASS
+[small seed 6 plays pylon_engineer] got "pylon_engineer", want "pylon_engineer" -> PASS
+[small seed 6 ran] exit 0, timed out false -> PASS
+[small seed 6 wrote a record] child killed / no record, exit 0, timed out false -> PASS
+[small seed 7 fought the live hoist] hoist { "driver": "res://src/combat/warden_swarm.gd", "first_stagger_s": 48.8205555555606, "staggers": [0.0, 0.0, 0.0], "top": 29.0000003576279 } -> PASS
+[small seed 7 plays runner_gunner] got "runner_gunner", want "runner_gunner" -> PASS
+[small seed 7 ran] exit 0, timed out false -> PASS
+[small seed 7 wrote a record] child killed / no record, exit 0, timed out false -> PASS
+[small seed 8 fought the live hoist] hoist { "driver": "res://src/combat/warden_swarm.gd", "first_stagger_s": 32.580555555558, "staggers": [30.0, 0.0, 0.0, 0.0, 2.75833333334717], "top": 29.0000003576279 } -> PASS
+[small seed 8 plays demolitions_caster] got "demolitions_caster", want "demolitions_caster" -> PASS
+[small seed 8 ran] exit 0, timed out false -> PASS
+[small seed 8 wrote a record] child killed / no record, exit 0, timed out false -> PASS
+[small seed 9 fought the live hoist] hoist { "driver": "res://src/combat/warden_swarm.gd", "first_stagger_s": 43.2288888888931, "staggers": [30.0, 0.0, 0.0, 0.0, 0.0], "top": 29.0000003576279 } -> PASS
+[small seed 9 plays pylon_engineer] got "pylon_engineer", want "pylon_engineer" -> PASS
+[small seed 9 ran] exit 0, timed out false -> PASS
+[small seed 9 wrote a record] child killed / no record, exit 0, timed out false -> PASS
+[small takes at least twice grown's time] small 70.05 s, grown 33.91 s -> PASS
+[the sweep has runs] 48 jobs -> PASS
+bot_run: skipper seed 0 (pylon_engineer) -> until at stage 4, 2979 ticks (33.1 s game), N s wall
+bot_run: skipper seed 0 (pylon_engineer) -> until at stage 4, 4775 ticks (53.1 s game), N s wall
+bot_run: skipper seed 1 (runner_gunner) -> until at stage 4, 3142 ticks (34.9 s game), N s wall
+bot_run: skipper seed 1 (runner_gunner) -> until at stage 4, 7912 ticks (87.9 s game), N s wall
+bot_run: skipper seed 10 (runner_gunner) -> until at stage 4, 4030 ticks (44.8 s game), N s wall
+bot_run: skipper seed 10 (runner_gunner) -> until at stage 4, 6446 ticks (71.6 s game), N s wall
+bot_run: skipper seed 11 (demolitions_caster) -> until at stage 4, 2228 ticks (24.8 s game), N s wall
+bot_run: skipper seed 11 (demolitions_caster) -> until at stage 4, 6810 ticks (75.7 s game), N s wall
+bot_run: skipper seed 12 (pylon_engineer) -> until at stage 4, 3717 ticks (41.3 s game), N s wall
+bot_run: skipper seed 12 (pylon_engineer) -> until at stage 4, 5211 ticks (57.9 s game), N s wall
+bot_run: skipper seed 13 (runner_gunner) -> until at stage 4, 4083 ticks (45.4 s game), N s wall
+bot_run: skipper seed 13 (runner_gunner) -> until at stage 4, 6565 ticks (72.9 s game), N s wall
+bot_run: skipper seed 14 (demolitions_caster) -> until at stage 4, 3056 ticks (34.0 s game), N s wall
+bot_run: skipper seed 14 (demolitions_caster) -> until at stage 4, 8516 ticks (94.6 s game), N s wall
+bot_run: skipper seed 15 (pylon_engineer) -> until at stage 4, 3488 ticks (38.8 s game), N s wall
+bot_run: skipper seed 15 (pylon_engineer) -> until at stage 4, 7445 ticks (82.7 s game), N s wall
+bot_run: skipper seed 16 (runner_gunner) -> until at stage 4, 3512 ticks (39.0 s game), N s wall
+bot_run: skipper seed 16 (runner_gunner) -> until at stage 4, 8603 ticks (95.6 s game), N s wall
+bot_run: skipper seed 17 (demolitions_caster) -> until at stage 4, 3432 ticks (38.1 s game), N s wall
+bot_run: skipper seed 17 (demolitions_caster) -> until at stage 4, 6897 ticks (76.6 s game), N s wall
+bot_run: skipper seed 18 (pylon_engineer) -> until at stage 4, 4201 ticks (46.7 s game), N s wall
+bot_run: skipper seed 18 (pylon_engineer) -> until at stage 4, 7665 ticks (85.2 s game), N s wall
+bot_run: skipper seed 19 (runner_gunner) -> until at stage 4, 2926 ticks (32.5 s game), N s wall
+bot_run: skipper seed 19 (runner_gunner) -> until at stage 4, 8005 ticks (88.9 s game), N s wall
+bot_run: skipper seed 2 (demolitions_caster) -> until at stage 4, 2129 ticks (23.7 s game), N s wall
+bot_run: skipper seed 2 (demolitions_caster) -> until at stage 4, 7237 ticks (80.4 s game), N s wall
+bot_run: skipper seed 20 (demolitions_caster) -> until at stage 4, 2626 ticks (29.2 s game), N s wall
+bot_run: skipper seed 20 (demolitions_caster) -> until at stage 4, 8397 ticks (93.3 s game), N s wall
+bot_run: skipper seed 21 (pylon_engineer) -> until at stage 4, 5335 ticks (59.3 s game), N s wall
+bot_run: skipper seed 21 (pylon_engineer) -> until at stage 4, 7800 ticks (86.7 s game), N s wall
+bot_run: skipper seed 22 (runner_gunner) -> until at stage 4, 3702 ticks (41.1 s game), N s wall
+bot_run: skipper seed 22 (runner_gunner) -> until at stage 4, 6830 ticks (75.9 s game), N s wall
+bot_run: skipper seed 23 (demolitions_caster) -> until at stage 4, 2133 ticks (23.7 s game), N s wall
+bot_run: skipper seed 23 (demolitions_caster) -> until at stage 4, 6331 ticks (70.3 s game), N s wall
+bot_run: skipper seed 3 (pylon_engineer) -> until at stage 4, 6532 ticks (72.6 s game), N s wall
+bot_run: skipper seed 3 (pylon_engineer) -> until at stage 4, 9056 ticks (100.6 s game), N s wall
+bot_run: skipper seed 4 (runner_gunner) -> until at stage 4, 3555 ticks (39.5 s game), N s wall
+bot_run: skipper seed 4 (runner_gunner) -> until at stage 4, 6455 ticks (71.7 s game), N s wall
+bot_run: skipper seed 5 (demolitions_caster) -> until at stage 4, 2604 ticks (28.9 s game), N s wall
+bot_run: skipper seed 5 (demolitions_caster) -> until at stage 4, 6527 ticks (72.5 s game), N s wall
+bot_run: skipper seed 6 (pylon_engineer) -> until at stage 4, 5015 ticks (55.7 s game), N s wall
+bot_run: skipper seed 6 (pylon_engineer) -> until at stage 4, 5162 ticks (57.4 s game), N s wall
+bot_run: skipper seed 7 (runner_gunner) -> until at stage 4, 3517 ticks (39.1 s game), N s wall
+bot_run: skipper seed 7 (runner_gunner) -> until at stage 4, 7754 ticks (86.2 s game), N s wall
+bot_run: skipper seed 8 (demolitions_caster) -> until at stage 4, 10204 ticks (113.4 s game), N s wall
+bot_run: skipper seed 8 (demolitions_caster) -> until at stage 4, 2626 ticks (29.2 s game), N s wall
+bot_run: skipper seed 9 (pylon_engineer) -> until at stage 4, 5111 ticks (56.8 s game), N s wall
+bot_run: skipper seed 9 (pylon_engineer) -> until at stage 4, 6558 ticks (72.9 s game), N s wall

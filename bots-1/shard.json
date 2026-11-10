@@ -1,0 +1,87 @@
+{
+  "title": "Gate shard: bots 1-5 on 75099fa7",
+  "head": "75099fa7080378295788d9741a0a03fdf9e594b2",
+  "box": "32 vCPU AMD Ryzen 9 5950X 16-Core Processor, 63 GB",
+  "godot": "Godot_v4.7.2-stable_linux.x86_64",
+  "scale": 1,
+  "window": "bot list 1 to 5 of 23 (alpha_bot_sweep_test to bot_completionist_repeat_test), 5 tests",
+  "steps": {
+    "import-1": {
+      "exit": 0,
+      "seconds": 5,
+      "outcome": "ok"
+    },
+    "import-2": {
+      "exit": 0,
+      "seconds": 4,
+      "outcome": "ok"
+    },
+    "bot-alpha_bot_sweep_test": {
+      "exit": 0,
+      "seconds": 400
+    },
+    "bot-alpha_posture_bands_test": {
+      "exit": 0,
+      "seconds": 385
+    },
+    "bot-boss_phase_hold_test": {
+      "exit": 0,
+      "seconds": 373
+    },
+    "bot-bot_chain_hand_test": {
+      "exit": 0,
+      "seconds": 454
+    },
+    "bot-bot_completionist_repeat_test": {
+      "exit": 0,
+      "seconds": 433
+    }
+  },
+  "results": [
+    {
+      "test": "alpha_bot_sweep_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 395.8
+    },
+    {
+      "test": "alpha_posture_bands_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 380.2
+    },
+    {
+      "test": "boss_phase_hold_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 368
+    },
+    {
+      "test": "bot_chain_hand_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 449.2
+    },
+    {
+      "test": "bot_completionist_repeat_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 428.1
+    }
+  ],
+  "failures": [],
+  "counts": {
+    "error": 0,
+    "script_error": 0,
+    "in_use": 0,
+    "freed": 0,
+    "leaked_warning": 34
+  },
+  "slow": [],
+  "verdict": {
+    "ok": true,
+    "line": "PASS, no new red"
+  },
+  "startedAt": "2026-11-10T19:27:06.368Z",
+  "finishedAt": "2026-11-10T20:01:20.564Z"
+}

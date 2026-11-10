@@ -1,0 +1,3070 @@
+{
+  "wave": 34,
+  "commit": "75099fa7080378295788d9741a0a03fdf9e594b2",
+  "started": "2026-11-10T21:17:37.143Z",
+  "minutes": 16,
+  "quick": false,
+  "pilots": [
+    "pylon_engineer",
+    "runner_gunner",
+    "demolitions_caster",
+    "tarn",
+    "tally",
+    "remembered_cannon"
+  ],
+  "runs": [
+    {
+      "id": "greedy-pylon_engineer-4478",
+      "kind": "bot",
+      "persona": "greedy",
+      "policy": "completionist",
+      "pilot": "pylon_engineer",
+      "seed": 4478,
+      "stages": null,
+      "args": [
+        "--late-offer=take"
+      ],
+      "outcome": "won",
+      "stage": 6,
+      "game_seconds": 903.23,
+      "hits": 15,
+      "exit": 0,
+      "piles": [],
+      "hitches": {
+        "spikes": [
+          {
+            "tick": 625,
+            "stage": 1,
+            "ms": 34
+          },
+          {
+            "tick": 653,
+            "stage": 1,
+            "ms": 74
+          },
+          {
+            "tick": 1621,
+            "stage": 1,
+            "ms": 76
+          },
+          {
+            "tick": 5340,
+            "stage": 1,
+            "ms": 80
+          },
+          {
+            "tick": 6113,
+            "stage": 2,
+            "ms": 102
+          },
+          {
+            "tick": 6867,
+            "stage": 2,
+            "ms": 99
+          },
+          {
+            "tick": 7675,
+            "stage": 2,
+            "ms": 81
+          },
+          {
+            "tick": 8541,
+            "stage": 2,
+            "ms": 98
+          },
+          {
+            "tick": 14857,
+            "stage": 2,
+            "ms": 49
+          },
+          {
+            "tick": 20946,
+            "stage": 2,
+            "ms": 67
+          },
+          {
+            "tick": 21016,
+            "stage": "boss",
+            "ms": 125
+          },
+          {
+            "tick": 21351,
+            "stage": "boss",
+            "ms": 125
+          },
+          {
+            "tick": 21644,
+            "stage": "boss",
+            "ms": 46
+          },
+          {
+            "tick": 21686,
+            "stage": "boss",
+            "ms": 137
+          },
+          {
+            "tick": 21853,
+            "stage": "boss",
+            "ms": 126
+          },
+          {
+            "tick": 22188,
+            "stage": "boss",
+            "ms": 102
+          },
+          {
+            "tick": 23653,
+            "stage": "boss",
+            "ms": 106
+          },
+          {
+            "tick": 23988,
+            "stage": "boss",
+            "ms": 102
+          },
+          {
+            "tick": 24155,
+            "stage": "boss",
+            "ms": 101
+          },
+          {
+            "tick": 24323,
+            "stage": "boss",
+            "ms": 133
+          },
+          {
+            "tick": 24490,
+            "stage": "boss",
+            "ms": 264
+          },
+          {
+            "tick": 24658,
+            "stage": "boss",
+            "ms": 280
+          },
+          {
+            "tick": 24825,
+            "stage": "boss",
+            "ms": 138
+          },
+          {
+            "tick": 24993,
+            "stage": "boss",
+            "ms": 250
+          },
+          {
+            "tick": 25160,
+            "stage": "boss",
+            "ms": 255
+          },
+          {
+            "tick": 25328,
+            "stage": "boss",
+            "ms": 251
+          },
+          {
+            "tick": 25830,
+            "stage": "boss",
+            "ms": 107
+          },
+          {
+            "tick": 25974,
+            "stage": "boss",
+            "ms": 97
+          },
+          {
+            "tick": 25992,
+            "stage": "boss",
+            "ms": 33
+          },
+          {
+            "tick": 26406,
+            "stage": "boss",
+            "ms": 140
+          },
+          {
+            "tick": 26550,
+            "stage": "boss",
+            "ms": 262
+          },
+          {
+            "tick": 26694,
+            "stage": "boss",
+            "ms": 261
+          },
+          {
+            "tick": 26982,
+            "stage": "boss",
+            "ms": 244
+          },
+          {
+            "tick": 27126,
+            "stage": "boss",
+            "ms": 256
+          },
+          {
+            "tick": 27556,
+            "stage": "boss",
+            "ms": 75
+          },
+          {
+            "tick": 27558,
+            "stage": "boss",
+            "ms": 252
+          },
+          {
+            "tick": 27702,
+            "stage": "boss",
+            "ms": 256
+          },
+          {
+            "tick": 28752,
+            "stage": "boss",
+            "ms": 191
+          },
+          {
+            "tick": 28877,
+            "stage": "boss",
+            "ms": 95
+          },
+          {
+            "tick": 29584,
+            "stage": "boss",
+            "ms": 122
+          },
+          {
+            "tick": 30062,
+            "stage": "boss",
+            "ms": 135
+          },
+          {
+            "tick": 33417,
+            "stage": "boss",
+            "ms": 73
+          },
+          {
+            "tick": 33562,
+            "stage": "boss",
+            "ms": 62
+          },
+          {
+            "tick": 34703,
+            "stage": "boss",
+            "ms": 72
+          },
+          {
+            "tick": 34937,
+            "stage": "boss",
+            "ms": 34
+          },
+          {
+            "tick": 35962,
+            "stage": "boss",
+            "ms": 34
+          },
+          {
+            "tick": 50004,
+            "stage": "boss",
+            "ms": 33
+          },
+          {
+            "tick": 50020,
+            "stage": "boss",
+            "ms": 40
+          },
+          {
+            "tick": 50978,
+            "stage": "boss",
+            "ms": 48
+          },
+          {
+            "tick": 51189,
+            "stage": "boss",
+            "ms": 121
+          },
+          {
+            "tick": 51315,
+            "stage": "boss",
+            "ms": 97
+          },
+          {
+            "tick": 51459,
+            "stage": "boss",
+            "ms": 98
+          },
+          {
+            "tick": 51603,
+            "stage": "boss",
+            "ms": 100
+          },
+          {
+            "tick": 51855,
+            "stage": "boss",
+            "ms": 96
+          },
+          {
+            "tick": 52357,
+            "stage": "boss",
+            "ms": 129
+          },
+          {
+            "tick": 52901,
+            "stage": "boss",
+            "ms": 229
+          },
+          {
+            "tick": 53027,
+            "stage": "boss",
+            "ms": 225
+          },
+          {
+            "tick": 53152,
+            "stage": "boss",
+            "ms": 223
+          },
+          {
+            "tick": 53232,
+            "stage": "boss",
+            "ms": 67
+          },
+          {
+            "tick": 53278,
+            "stage": "boss",
+            "ms": 131
+          },
+          {
+            "tick": 53403,
+            "stage": "boss",
+            "ms": 218
+          },
+          {
+            "tick": 53780,
+            "stage": "boss",
+            "ms": 129
+          },
+          {
+            "tick": 53997,
+            "stage": "boss",
+            "ms": 69
+          },
+          {
+            "tick": 54764,
+            "stage": "boss",
+            "ms": 65
+          },
+          {
+            "tick": 60017,
+            "stage": "boss",
+            "ms": 134
+          },
+          {
+            "tick": 60415,
+            "stage": "boss",
+            "ms": 35
+          },
+          {
+            "tick": 61587,
+            "stage": "boss",
+            "ms": 35
+          },
+          {
+            "tick": 62809,
+            "stage": "boss",
+            "ms": 47
+          },
+          {
+            "tick": 62841,
+            "stage": "boss",
+            "ms": 49
+          },
+          {
+            "tick": 78997,
+            "stage": "boss",
+            "ms": 54
+          },
+          {
+            "tick": 79853,
+            "stage": "boss",
+            "ms": 40
+          },
+          {
+            "tick": 79860,
+            "stage": "boss",
+            "ms": 35
+          },
+          {
+            "tick": 81082,
+            "stage": "boss",
+            "ms": 141
+          },
+          {
+            "tick": 81208,
+            "stage": "boss",
+            "ms": 93
+          },
+          {
+            "tick": 81292,
+            "stage": "boss",
+            "ms": 797
+          }
+        ],
+        "loads": 5,
+        "p99": 13.1
+      }
+    },
+    {
+      "id": "greedy-runner_gunner-4479",
+      "kind": "bot",
+      "persona": "greedy",
+      "policy": "completionist",
+      "pilot": "runner_gunner",
+      "seed": 4479,
+      "stages": null,
+      "args": [
+        "--late-offer=take"
+      ],
+      "outcome": "won",
+      "stage": 6,
+      "game_seconds": 898.09,
+      "hits": 17,
+      "exit": 0,
+      "piles": [],
+      "hitches": {
+        "spikes": [
+          {
+            "tick": 1157,
+            "stage": 1,
+            "ms": 68
+          },
+          {
+            "tick": 2536,
+            "stage": 1,
+            "ms": 75
+          },
+          {
+            "tick": 3233,
+            "stage": 1,
+            "ms": 68
+          },
+          {
+            "tick": 7767,
+            "stage": 1,
+            "ms": 78
+          },
+          {
+            "tick": 8499,
+            "stage": 2,
+            "ms": 98
+          },
+          {
+            "tick": 9253,
+            "stage": 2,
+            "ms": 101
+          },
+          {
+            "tick": 11235,
+            "stage": 2,
+            "ms": 107
+          },
+          {
+            "tick": 17243,
+            "stage": 2,
+            "ms": 51
+          },
+          {
+            "tick": 21289,
+            "stage": 2,
+            "ms": 82
+          },
+          {
+            "tick": 21893,
+            "stage": 2,
+            "ms": 35
+          },
+          {
+            "tick": 22690,
+            "stage": 2,
+            "ms": 78
+          },
+          {
+            "tick": 23067,
+            "stage": "boss",
+            "ms": 124
+          },
+          {
+            "tick": 23122,
+            "stage": "boss",
+            "ms": 161
+          },
+          {
+            "tick": 23234,
+            "stage": "boss",
+            "ms": 121
+          },
+          {
+            "tick": 23402,
+            "stage": "boss",
+            "ms": 125
+          },
+          {
+            "tick": 23466,
+            "stage": "boss",
+            "ms": 75
+          },
+          {
+            "tick": 23515,
+            "stage": "boss",
+            "ms": 35
+          },
+          {
+            "tick": 23737,
+            "stage": "boss",
+            "ms": 126
+          },
+          {
+            "tick": 23904,
+            "stage": "boss",
+            "ms": 100
+          },
+          {
+            "tick": 25621,
+            "stage": "boss",
+            "ms": 107
+          },
+          {
+            "tick": 25788,
+            "stage": "boss",
+            "ms": 100
+          },
+          {
+            "tick": 25955,
+            "stage": "boss",
+            "ms": 101
+          },
+          {
+            "tick": 26123,
+            "stage": "boss",
+            "ms": 99
+          },
+          {
+            "tick": 26290,
+            "stage": "boss",
+            "ms": 135
+          },
+          {
+            "tick": 26458,
+            "stage": "boss",
+            "ms": 265
+          },
+          {
+            "tick": 26625,
+            "stage": "boss",
+            "ms": 267
+          },
+          {
+            "tick": 26793,
+            "stage": "boss",
+            "ms": 134
+          },
+          {
+            "tick": 26960,
+            "stage": "boss",
+            "ms": 251
+          },
+          {
+            "tick": 27128,
+            "stage": "boss",
+            "ms": 248
+          },
+          {
+            "tick": 27462,
+            "stage": "boss",
+            "ms": 253
+          },
+          {
+            "tick": 27797,
+            "stage": "boss",
+            "ms": 114
+          },
+          {
+            "tick": 27941,
+            "stage": "boss",
+            "ms": 98
+          },
+          {
+            "tick": 28373,
+            "stage": "boss",
+            "ms": 134
+          },
+          {
+            "tick": 28517,
+            "stage": "boss",
+            "ms": 271
+          },
+          {
+            "tick": 28584,
+            "stage": "boss",
+            "ms": 45
+          },
+          {
+            "tick": 28643,
+            "stage": "boss",
+            "ms": 77
+          },
+          {
+            "tick": 28661,
+            "stage": "boss",
+            "ms": 269
+          },
+          {
+            "tick": 28949,
+            "stage": "boss",
+            "ms": 242
+          },
+          {
+            "tick": 29525,
+            "stage": "boss",
+            "ms": 33
+          },
+          {
+            "tick": 30163,
+            "stage": "boss",
+            "ms": 77
+          },
+          {
+            "tick": 30383,
+            "stage": "boss",
+            "ms": 101
+          },
+          {
+            "tick": 31105,
+            "stage": "boss",
+            "ms": 130
+          },
+          {
+            "tick": 32066,
+            "stage": "boss",
+            "ms": 136
+          },
+          {
+            "tick": 37512,
+            "stage": "boss",
+            "ms": 79
+          },
+          {
+            "tick": 38556,
+            "stage": "boss",
+            "ms": 35
+          },
+          {
+            "tick": 49050,
+            "stage": "boss",
+            "ms": 74
+          },
+          {
+            "tick": 49195,
+            "stage": "boss",
+            "ms": 60
+          },
+          {
+            "tick": 50804,
+            "stage": "boss",
+            "ms": 34
+          },
+          {
+            "tick": 53397,
+            "stage": "boss",
+            "ms": 53
+          },
+          {
+            "tick": 53882,
+            "stage": "boss",
+            "ms": 50
+          },
+          {
+            "tick": 54171,
+            "stage": "boss",
+            "ms": 101
+          },
+          {
+            "tick": 54459,
+            "stage": "boss",
+            "ms": 99
+          },
+          {
+            "tick": 54531,
+            "stage": "boss",
+            "ms": 99
+          },
+          {
+            "tick": 54656,
+            "stage": "boss",
+            "ms": 96
+          },
+          {
+            "tick": 55033,
+            "stage": "boss",
+            "ms": 130
+          },
+          {
+            "tick": 55159,
+            "stage": "boss",
+            "ms": 134
+          },
+          {
+            "tick": 55284,
+            "stage": "boss",
+            "ms": 136
+          },
+          {
+            "tick": 55372,
+            "stage": "boss",
+            "ms": 35
+          },
+          {
+            "tick": 55702,
+            "stage": "boss",
+            "ms": 228
+          },
+          {
+            "tick": 55828,
+            "stage": "boss",
+            "ms": 235
+          },
+          {
+            "tick": 55954,
+            "stage": "boss",
+            "ms": 221
+          },
+          {
+            "tick": 56049,
+            "stage": "boss",
+            "ms": 130
+          },
+          {
+            "tick": 56079,
+            "stage": "boss",
+            "ms": 131
+          },
+          {
+            "tick": 56205,
+            "stage": "boss",
+            "ms": 221
+          },
+          {
+            "tick": 56431,
+            "stage": "boss",
+            "ms": 63
+          },
+          {
+            "tick": 56582,
+            "stage": "boss",
+            "ms": 130
+          },
+          {
+            "tick": 58486,
+            "stage": "boss",
+            "ms": 33
+          },
+          {
+            "tick": 58821,
+            "stage": "boss",
+            "ms": 34
+          },
+          {
+            "tick": 66461,
+            "stage": "boss",
+            "ms": 138
+          },
+          {
+            "tick": 66649,
+            "stage": "boss",
+            "ms": 36
+          },
+          {
+            "tick": 66817,
+            "stage": "boss",
+            "ms": 38
+          },
+          {
+            "tick": 66984,
+            "stage": "boss",
+            "ms": 40
+          },
+          {
+            "tick": 67127,
+            "stage": "boss",
+            "ms": 40
+          },
+          {
+            "tick": 76852,
+            "stage": "boss",
+            "ms": 35
+          },
+          {
+            "tick": 76853,
+            "stage": "boss",
+            "ms": 37
+          },
+          {
+            "tick": 76854,
+            "stage": "boss",
+            "ms": 33
+          },
+          {
+            "tick": 76855,
+            "stage": "boss",
+            "ms": 33
+          },
+          {
+            "tick": 76879,
+            "stage": "boss",
+            "ms": 35
+          },
+          {
+            "tick": 76882,
+            "stage": "boss",
+            "ms": 33
+          },
+          {
+            "tick": 76883,
+            "stage": "boss",
+            "ms": 34
+          },
+          {
+            "tick": 76884,
+            "stage": "boss",
+            "ms": 40
+          },
+          {
+            "tick": 76885,
+            "stage": "boss",
+            "ms": 35
+          },
+          {
+            "tick": 76886,
+            "stage": "boss",
+            "ms": 36
+          },
+          {
+            "tick": 76887,
+            "stage": "boss",
+            "ms": 38
+          },
+          {
+            "tick": 76888,
+            "stage": "boss",
+            "ms": 36
+          },
+          {
+            "tick": 76889,
+            "stage": "boss",
+            "ms": 37
+          },
+          {
+            "tick": 76890,
+            "stage": "boss",
+            "ms": 39
+          },
+          {
+            "tick": 76891,
+            "stage": "boss",
+            "ms": 40
+          },
+          {
+            "tick": 76892,
+            "stage": "boss",
+            "ms": 38
+          },
+          {
+            "tick": 76893,
+            "stage": "boss",
+            "ms": 39
+          },
+          {
+            "tick": 76894,
+            "stage": "boss",
+            "ms": 39
+          },
+          {
+            "tick": 76895,
+            "stage": "boss",
+            "ms": 42
+          },
+          {
+            "tick": 76896,
+            "stage": "boss",
+            "ms": 40
+          },
+          {
+            "tick": 76897,
+            "stage": "boss",
+            "ms": 38
+          },
+          {
+            "tick": 76898,
+            "stage": "boss",
+            "ms": 41
+          },
+          {
+            "tick": 76899,
+            "stage": "boss",
+            "ms": 43
+          },
+          {
+            "tick": 76900,
+            "stage": "boss",
+            "ms": 38
+          },
+          {
+            "tick": 76901,
+            "stage": "boss",
+            "ms": 39
+          },
+          {
+            "tick": 76902,
+            "stage": "boss",
+            "ms": 41
+          },
+          {
+            "tick": 76903,
+            "stage": "boss",
+            "ms": 41
+          },
+          {
+            "tick": 76904,
+            "stage": "boss",
+            "ms": 40
+          },
+          {
+            "tick": 76905,
+            "stage": "boss",
+            "ms": 37
+          },
+          {
+            "tick": 76906,
+            "stage": "boss",
+            "ms": 37
+          },
+          {
+            "tick": 76907,
+            "stage": "boss",
+            "ms": 35
+          },
+          {
+            "tick": 76910,
+            "stage": "boss",
+            "ms": 34
+          },
+          {
+            "tick": 76911,
+            "stage": "boss",
+            "ms": 39
+          },
+          {
+            "tick": 76912,
+            "stage": "boss",
+            "ms": 38
+          },
+          {
+            "tick": 76913,
+            "stage": "boss",
+            "ms": 34
+          },
+          {
+            "tick": 76914,
+            "stage": "boss",
+            "ms": 35
+          },
+          {
+            "tick": 76915,
+            "stage": "boss",
+            "ms": 43
+          },
+          {
+            "tick": 76916,
+            "stage": "boss",
+            "ms": 39
+          },
+          {
+            "tick": 76922,
+            "stage": "boss",
+            "ms": 33
+          },
+          {
+            "tick": 76923,
+            "stage": "boss",
+            "ms": 33
+          },
+          {
+            "tick": 76924,
+            "stage": "boss",
+            "ms": 34
+          },
+          {
+            "tick": 76925,
+            "stage": "boss",
+            "ms": 34
+          },
+          {
+            "tick": 76926,
+            "stage": "boss",
+            "ms": 35
+          },
+          {
+            "tick": 76927,
+            "stage": "boss",
+            "ms": 35
+          },
+          {
+            "tick": 76928,
+            "stage": "boss",
+            "ms": 34
+          },
+          {
+            "tick": 76929,
+            "stage": "boss",
+            "ms": 36
+          },
+          {
+            "tick": 76930,
+            "stage": "boss",
+            "ms": 34
+          },
+          {
+            "tick": 76931,
+            "stage": "boss",
+            "ms": 34
+          },
+          {
+            "tick": 76933,
+            "stage": "boss",
+            "ms": 33
+          },
+          {
+            "tick": 76934,
+            "stage": "boss",
+            "ms": 33
+          },
+          {
+            "tick": 76935,
+            "stage": "boss",
+            "ms": 36
+          },
+          {
+            "tick": 76936,
+            "stage": "boss",
+            "ms": 35
+          },
+          {
+            "tick": 76937,
+            "stage": "boss",
+            "ms": 35
+          },
+          {
+            "tick": 76938,
+            "stage": "boss",
+            "ms": 35
+          },
+          {
+            "tick": 76939,
+            "stage": "boss",
+            "ms": 36
+          },
+          {
+            "tick": 76940,
+            "stage": "boss",
+            "ms": 37
+          },
+          {
+            "tick": 76941,
+            "stage": "boss",
+            "ms": 39
+          },
+          {
+            "tick": 76942,
+            "stage": "boss",
+            "ms": 37
+          },
+          {
+            "tick": 76943,
+            "stage": "boss",
+            "ms": 37
+          },
+          {
+            "tick": 76944,
+            "stage": "boss",
+            "ms": 36
+          },
+          {
+            "tick": 76945,
+            "stage": "boss",
+            "ms": 35
+          },
+          {
+            "tick": 76946,
+            "stage": "boss",
+            "ms": 39
+          },
+          {
+            "tick": 76947,
+            "stage": "boss",
+            "ms": 40
+          },
+          {
+            "tick": 76948,
+            "stage": "boss",
+            "ms": 39
+          },
+          {
+            "tick": 76949,
+            "stage": "boss",
+            "ms": 40
+          },
+          {
+            "tick": 76950,
+            "stage": "boss",
+            "ms": 39
+          },
+          {
+            "tick": 76951,
+            "stage": "boss",
+            "ms": 39
+          },
+          {
+            "tick": 76952,
+            "stage": "boss",
+            "ms": 40
+          },
+          {
+            "tick": 76953,
+            "stage": "boss",
+            "ms": 39
+          },
+          {
+            "tick": 76954,
+            "stage": "boss",
+            "ms": 37
+          },
+          {
+            "tick": 76955,
+            "stage": "boss",
+            "ms": 37
+          },
+          {
+            "tick": 76956,
+            "stage": "boss",
+            "ms": 38
+          },
+          {
+            "tick": 76957,
+            "stage": "boss",
+            "ms": 38
+          },
+          {
+            "tick": 76958,
+            "stage": "boss",
+            "ms": 35
+          },
+          {
+            "tick": 76961,
+            "stage": "boss",
+            "ms": 33
+          },
+          {
+            "tick": 76962,
+            "stage": "boss",
+            "ms": 36
+          },
+          {
+            "tick": 76963,
+            "stage": "boss",
+            "ms": 37
+          },
+          {
+            "tick": 76964,
+            "stage": "boss",
+            "ms": 35
+          },
+          {
+            "tick": 76965,
+            "stage": "boss",
+            "ms": 33
+          },
+          {
+            "tick": 76978,
+            "stage": "boss",
+            "ms": 41
+          },
+          {
+            "tick": 78737,
+            "stage": "boss",
+            "ms": 126
+          },
+          {
+            "tick": 78904,
+            "stage": "boss",
+            "ms": 189
+          },
+          {
+            "tick": 79325,
+            "stage": "boss",
+            "ms": 35
+          },
+          {
+            "tick": 79339,
+            "stage": "boss",
+            "ms": 43
+          },
+          {
+            "tick": 79635,
+            "stage": "boss",
+            "ms": 37
+          },
+          {
+            "tick": 80623,
+            "stage": "boss",
+            "ms": 138
+          },
+          {
+            "tick": 80748,
+            "stage": "boss",
+            "ms": 89
+          },
+          {
+            "tick": 80829,
+            "stage": "boss",
+            "ms": 796
+          }
+        ],
+        "loads": 5,
+        "p99": 15.3
+      }
+    },
+    {
+      "id": "greedy-demolitions_caster-4480",
+      "kind": "bot",
+      "persona": "greedy",
+      "policy": "completionist",
+      "pilot": "demolitions_caster",
+      "seed": 4480,
+      "stages": null,
+      "args": [
+        "--late-offer=take"
+      ],
+      "outcome": "won",
+      "stage": 6,
+      "game_seconds": 891.72,
+      "hits": 161,
+      "exit": 0,
+      "piles": [],
+      "hitches": {
+        "spikes": [
+          {
+            "tick": 1722,
+            "stage": 1,
+            "ms": 72
+          },
+          {
+            "tick": 3426,
+            "stage": 1,
+            "ms": 77
+          },
+          {
+            "tick": 8431,
+            "stage": 1,
+            "ms": 75
+          },
+          {
+            "tick": 9169,
+            "stage": 2,
+            "ms": 101
+          },
+          {
+            "tick": 9923,
+            "stage": 2,
+            "ms": 101
+          },
+          {
+            "tick": 9970,
+            "stage": 2,
+            "ms": 34
+          },
+          {
+            "tick": 11968,
+            "stage": 2,
+            "ms": 108
+          },
+          {
+            "tick": 13129,
+            "stage": 2,
+            "ms": 66
+          },
+          {
+            "tick": 17913,
+            "stage": 2,
+            "ms": 50
+          },
+          {
+            "tick": 24114,
+            "stage": 2,
+            "ms": 175
+          },
+          {
+            "tick": 24448,
+            "stage": "boss",
+            "ms": 150
+          },
+          {
+            "tick": 24490,
+            "stage": "boss",
+            "ms": 129
+          },
+          {
+            "tick": 24658,
+            "stage": "boss",
+            "ms": 128
+          },
+          {
+            "tick": 25160,
+            "stage": "boss",
+            "ms": 123
+          },
+          {
+            "tick": 25328,
+            "stage": "boss",
+            "ms": 124
+          },
+          {
+            "tick": 25495,
+            "stage": "boss",
+            "ms": 101
+          },
+          {
+            "tick": 25872,
+            "stage": "boss",
+            "ms": 50
+          },
+          {
+            "tick": 26960,
+            "stage": "boss",
+            "ms": 109
+          },
+          {
+            "tick": 27128,
+            "stage": "boss",
+            "ms": 99
+          },
+          {
+            "tick": 27295,
+            "stage": "boss",
+            "ms": 99
+          },
+          {
+            "tick": 27462,
+            "stage": "boss",
+            "ms": 100
+          },
+          {
+            "tick": 27483,
+            "stage": "boss",
+            "ms": 35
+          },
+          {
+            "tick": 27630,
+            "stage": "boss",
+            "ms": 132
+          },
+          {
+            "tick": 27797,
+            "stage": "boss",
+            "ms": 265
+          },
+          {
+            "tick": 27965,
+            "stage": "boss",
+            "ms": 271
+          },
+          {
+            "tick": 28132,
+            "stage": "boss",
+            "ms": 255
+          },
+          {
+            "tick": 28635,
+            "stage": "boss",
+            "ms": 33
+          },
+          {
+            "tick": 29179,
+            "stage": "boss",
+            "ms": 106
+          },
+          {
+            "tick": 29287,
+            "stage": "boss",
+            "ms": 166
+          },
+          {
+            "tick": 29323,
+            "stage": "boss",
+            "ms": 99
+          },
+          {
+            "tick": 29341,
+            "stage": "boss",
+            "ms": 33
+          },
+          {
+            "tick": 29467,
+            "stage": "boss",
+            "ms": 104
+          },
+          {
+            "tick": 29485,
+            "stage": "boss",
+            "ms": 33
+          },
+          {
+            "tick": 29755,
+            "stage": "boss",
+            "ms": 133
+          },
+          {
+            "tick": 29899,
+            "stage": "boss",
+            "ms": 270
+          },
+          {
+            "tick": 30043,
+            "stage": "boss",
+            "ms": 268
+          },
+          {
+            "tick": 30331,
+            "stage": "boss",
+            "ms": 254
+          },
+          {
+            "tick": 30475,
+            "stage": "boss",
+            "ms": 252
+          },
+          {
+            "tick": 30907,
+            "stage": "boss",
+            "ms": 262
+          },
+          {
+            "tick": 32775,
+            "stage": "boss",
+            "ms": 94
+          },
+          {
+            "tick": 33473,
+            "stage": "boss",
+            "ms": 122
+          },
+          {
+            "tick": 36347,
+            "stage": "boss",
+            "ms": 65
+          },
+          {
+            "tick": 41399,
+            "stage": "boss",
+            "ms": 33
+          },
+          {
+            "tick": 41544,
+            "stage": "boss",
+            "ms": 80
+          },
+          {
+            "tick": 42460,
+            "stage": "boss",
+            "ms": 78
+          },
+          {
+            "tick": 47118,
+            "stage": "boss",
+            "ms": 81
+          },
+          {
+            "tick": 47263,
+            "stage": "boss",
+            "ms": 64
+          },
+          {
+            "tick": 54468,
+            "stage": "boss",
+            "ms": 47
+          },
+          {
+            "tick": 54690,
+            "stage": "boss",
+            "ms": 99
+          },
+          {
+            "tick": 54834,
+            "stage": "boss",
+            "ms": 97
+          },
+          {
+            "tick": 54906,
+            "stage": "boss",
+            "ms": 98
+          },
+          {
+            "tick": 54921,
+            "stage": "boss",
+            "ms": 33
+          },
+          {
+            "tick": 55408,
+            "stage": "boss",
+            "ms": 132
+          },
+          {
+            "tick": 55659,
+            "stage": "boss",
+            "ms": 134
+          },
+          {
+            "tick": 55910,
+            "stage": "boss",
+            "ms": 242
+          },
+          {
+            "tick": 55942,
+            "stage": "boss",
+            "ms": 33
+          },
+          {
+            "tick": 56266,
+            "stage": "boss",
+            "ms": 230
+          },
+          {
+            "tick": 56391,
+            "stage": "boss",
+            "ms": 225
+          },
+          {
+            "tick": 56517,
+            "stage": "boss",
+            "ms": 222
+          },
+          {
+            "tick": 56609,
+            "stage": "boss",
+            "ms": 82
+          },
+          {
+            "tick": 56643,
+            "stage": "boss",
+            "ms": 134
+          },
+          {
+            "tick": 56768,
+            "stage": "boss",
+            "ms": 221
+          },
+          {
+            "tick": 56991,
+            "stage": "boss",
+            "ms": 65
+          },
+          {
+            "tick": 57145,
+            "stage": "boss",
+            "ms": 127
+          },
+          {
+            "tick": 58154,
+            "stage": "boss",
+            "ms": 68
+          },
+          {
+            "tick": 59594,
+            "stage": "boss",
+            "ms": 38
+          },
+          {
+            "tick": 64638,
+            "stage": "boss",
+            "ms": 131
+          },
+          {
+            "tick": 64826,
+            "stage": "boss",
+            "ms": 37
+          },
+          {
+            "tick": 67140,
+            "stage": "boss",
+            "ms": 42
+          },
+          {
+            "tick": 78489,
+            "stage": "boss",
+            "ms": 33
+          },
+          {
+            "tick": 78502,
+            "stage": "boss",
+            "ms": 38
+          },
+          {
+            "tick": 78781,
+            "stage": "boss",
+            "ms": 39
+          },
+          {
+            "tick": 79962,
+            "stage": "boss",
+            "ms": 127
+          },
+          {
+            "tick": 80034,
+            "stage": "boss",
+            "ms": 144
+          },
+          {
+            "tick": 80159,
+            "stage": "boss",
+            "ms": 91
+          },
+          {
+            "tick": 80256,
+            "stage": "boss",
+            "ms": 792
+          }
+        ],
+        "loads": 6,
+        "p99": 12
+      }
+    },
+    {
+      "id": "greedy-tarn-4481",
+      "kind": "bot",
+      "persona": "greedy",
+      "policy": "completionist",
+      "pilot": "tarn",
+      "seed": 4481,
+      "stages": null,
+      "args": [
+        "--late-offer=take"
+      ],
+      "outcome": "won",
+      "stage": 6,
+      "game_seconds": 860.87,
+      "hits": 29,
+      "exit": 0,
+      "piles": [],
+      "hitches": {
+        "spikes": [
+          {
+            "tick": 1118,
+            "stage": 1,
+            "ms": 74
+          },
+          {
+            "tick": 2981,
+            "stage": 1,
+            "ms": 77
+          },
+          {
+            "tick": 7058,
+            "stage": 1,
+            "ms": 71
+          },
+          {
+            "tick": 7871,
+            "stage": 2,
+            "ms": 102
+          },
+          {
+            "tick": 8625,
+            "stage": 2,
+            "ms": 98
+          },
+          {
+            "tick": 8939,
+            "stage": 2,
+            "ms": 81
+          },
+          {
+            "tick": 9942,
+            "stage": 2,
+            "ms": 98
+          },
+          {
+            "tick": 11639,
+            "stage": 2,
+            "ms": 126
+          },
+          {
+            "tick": 16804,
+            "stage": 2,
+            "ms": 44
+          },
+          {
+            "tick": 21393,
+            "stage": 2,
+            "ms": 33
+          },
+          {
+            "tick": 22094,
+            "stage": "boss",
+            "ms": 158
+          },
+          {
+            "tick": 22125,
+            "stage": "boss",
+            "ms": 123
+          },
+          {
+            "tick": 22293,
+            "stage": "boss",
+            "ms": 125
+          },
+          {
+            "tick": 22795,
+            "stage": "boss",
+            "ms": 99
+          },
+          {
+            "tick": 24595,
+            "stage": "boss",
+            "ms": 106
+          },
+          {
+            "tick": 24762,
+            "stage": "boss",
+            "ms": 98
+          },
+          {
+            "tick": 24783,
+            "stage": "boss",
+            "ms": 39
+          },
+          {
+            "tick": 24930,
+            "stage": "boss",
+            "ms": 98
+          },
+          {
+            "tick": 25097,
+            "stage": "boss",
+            "ms": 98
+          },
+          {
+            "tick": 25118,
+            "stage": "boss",
+            "ms": 41
+          },
+          {
+            "tick": 25265,
+            "stage": "boss",
+            "ms": 135
+          },
+          {
+            "tick": 25432,
+            "stage": "boss",
+            "ms": 262
+          },
+          {
+            "tick": 25600,
+            "stage": "boss",
+            "ms": 269
+          },
+          {
+            "tick": 25767,
+            "stage": "boss",
+            "ms": 247
+          },
+          {
+            "tick": 26855,
+            "stage": "boss",
+            "ms": 106
+          },
+          {
+            "tick": 26873,
+            "stage": "boss",
+            "ms": 39
+          },
+          {
+            "tick": 26999,
+            "stage": "boss",
+            "ms": 99
+          },
+          {
+            "tick": 27017,
+            "stage": "boss",
+            "ms": 39
+          },
+          {
+            "tick": 27143,
+            "stage": "boss",
+            "ms": 213
+          },
+          {
+            "tick": 27161,
+            "stage": "boss",
+            "ms": 39
+          },
+          {
+            "tick": 27431,
+            "stage": "boss",
+            "ms": 133
+          },
+          {
+            "tick": 27575,
+            "stage": "boss",
+            "ms": 264
+          },
+          {
+            "tick": 27719,
+            "stage": "boss",
+            "ms": 268
+          },
+          {
+            "tick": 27944,
+            "stage": "boss",
+            "ms": 77
+          },
+          {
+            "tick": 28007,
+            "stage": "boss",
+            "ms": 254
+          },
+          {
+            "tick": 29535,
+            "stage": "boss",
+            "ms": 96
+          },
+          {
+            "tick": 29551,
+            "stage": "boss",
+            "ms": 37
+          },
+          {
+            "tick": 29802,
+            "stage": "boss",
+            "ms": 35
+          },
+          {
+            "tick": 30256,
+            "stage": "boss",
+            "ms": 153
+          },
+          {
+            "tick": 34085,
+            "stage": "boss",
+            "ms": 69
+          },
+          {
+            "tick": 34952,
+            "stage": "boss",
+            "ms": 72
+          },
+          {
+            "tick": 35097,
+            "stage": "boss",
+            "ms": 63
+          },
+          {
+            "tick": 42453,
+            "stage": "boss",
+            "ms": 75
+          },
+          {
+            "tick": 42886,
+            "stage": "boss",
+            "ms": 74
+          },
+          {
+            "tick": 50298,
+            "stage": "boss",
+            "ms": 50
+          },
+          {
+            "tick": 50508,
+            "stage": "boss",
+            "ms": 96
+          },
+          {
+            "tick": 50652,
+            "stage": "boss",
+            "ms": 97
+          },
+          {
+            "tick": 50670,
+            "stage": "boss",
+            "ms": 40
+          },
+          {
+            "tick": 50796,
+            "stage": "boss",
+            "ms": 104
+          },
+          {
+            "tick": 50868,
+            "stage": "boss",
+            "ms": 104
+          },
+          {
+            "tick": 50884,
+            "stage": "boss",
+            "ms": 44
+          },
+          {
+            "tick": 50993,
+            "stage": "boss",
+            "ms": 96
+          },
+          {
+            "tick": 51009,
+            "stage": "boss",
+            "ms": 39
+          },
+          {
+            "tick": 51537,
+            "stage": "boss",
+            "ms": 230
+          },
+          {
+            "tick": 51663,
+            "stage": "boss",
+            "ms": 225
+          },
+          {
+            "tick": 51788,
+            "stage": "boss",
+            "ms": 222
+          },
+          {
+            "tick": 51871,
+            "stage": "boss",
+            "ms": 79
+          },
+          {
+            "tick": 51914,
+            "stage": "boss",
+            "ms": 130
+          },
+          {
+            "tick": 52040,
+            "stage": "boss",
+            "ms": 221
+          },
+          {
+            "tick": 52253,
+            "stage": "boss",
+            "ms": 64
+          },
+          {
+            "tick": 52416,
+            "stage": "boss",
+            "ms": 130
+          },
+          {
+            "tick": 53420,
+            "stage": "boss",
+            "ms": 64
+          },
+          {
+            "tick": 57440,
+            "stage": "boss",
+            "ms": 133
+          },
+          {
+            "tick": 57712,
+            "stage": "boss",
+            "ms": 39
+          },
+          {
+            "tick": 62498,
+            "stage": "boss",
+            "ms": 35
+          },
+          {
+            "tick": 62510,
+            "stage": "boss",
+            "ms": 36
+          },
+          {
+            "tick": 76193,
+            "stage": "boss",
+            "ms": 133
+          },
+          {
+            "tick": 76486,
+            "stage": "boss",
+            "ms": 52
+          },
+          {
+            "tick": 76635,
+            "stage": "boss",
+            "ms": 40
+          },
+          {
+            "tick": 76732,
+            "stage": "boss",
+            "ms": 53
+          },
+          {
+            "tick": 77094,
+            "stage": "boss",
+            "ms": 37
+          },
+          {
+            "tick": 77265,
+            "stage": "boss",
+            "ms": 144
+          },
+          {
+            "tick": 77281,
+            "stage": "boss",
+            "ms": 35
+          },
+          {
+            "tick": 77391,
+            "stage": "boss",
+            "ms": 94
+          },
+          {
+            "tick": 77406,
+            "stage": "boss",
+            "ms": 35
+          },
+          {
+            "tick": 77479,
+            "stage": "boss",
+            "ms": 840
+          }
+        ],
+        "loads": 5,
+        "p99": 12.8
+      }
+    },
+    {
+      "id": "greedy-tally-4482",
+      "kind": "bot",
+      "persona": "greedy",
+      "policy": "completionist",
+      "pilot": "tally",
+      "seed": 4482,
+      "stages": null,
+      "args": [
+        "--late-offer=take"
+      ],
+      "outcome": "won",
+      "stage": 6,
+      "game_seconds": 919.88,
+      "hits": 43,
+      "exit": 0,
+      "piles": [],
+      "hitches": {
+        "spikes": [
+          {
+            "tick": 1242,
+            "stage": 1,
+            "ms": 73
+          },
+          {
+            "tick": 2445,
+            "stage": 1,
+            "ms": 74
+          },
+          {
+            "tick": 3495,
+            "stage": 1,
+            "ms": 82
+          },
+          {
+            "tick": 5836,
+            "stage": 1,
+            "ms": 34
+          },
+          {
+            "tick": 7368,
+            "stage": 1,
+            "ms": 74
+          },
+          {
+            "tick": 8374,
+            "stage": 2,
+            "ms": 102
+          },
+          {
+            "tick": 8421,
+            "stage": 2,
+            "ms": 36
+          },
+          {
+            "tick": 9127,
+            "stage": 2,
+            "ms": 100
+          },
+          {
+            "tick": 9423,
+            "stage": 2,
+            "ms": 68
+          },
+          {
+            "tick": 12358,
+            "stage": 2,
+            "ms": 98
+          },
+          {
+            "tick": 17118,
+            "stage": 2,
+            "ms": 47
+          },
+          {
+            "tick": 18546,
+            "stage": 2,
+            "ms": 170
+          },
+          {
+            "tick": 22983,
+            "stage": "boss",
+            "ms": 122
+          },
+          {
+            "tick": 23004,
+            "stage": "boss",
+            "ms": 158
+          },
+          {
+            "tick": 23151,
+            "stage": "boss",
+            "ms": 123
+          },
+          {
+            "tick": 23318,
+            "stage": "boss",
+            "ms": 123
+          },
+          {
+            "tick": 23653,
+            "stage": "boss",
+            "ms": 123
+          },
+          {
+            "tick": 23988,
+            "stage": "boss",
+            "ms": 126
+          },
+          {
+            "tick": 24323,
+            "stage": "boss",
+            "ms": 126
+          },
+          {
+            "tick": 24490,
+            "stage": "boss",
+            "ms": 121
+          },
+          {
+            "tick": 24658,
+            "stage": "boss",
+            "ms": 99
+          },
+          {
+            "tick": 25495,
+            "stage": "boss",
+            "ms": 106
+          },
+          {
+            "tick": 25830,
+            "stage": "boss",
+            "ms": 100
+          },
+          {
+            "tick": 25997,
+            "stage": "boss",
+            "ms": 98
+          },
+          {
+            "tick": 26165,
+            "stage": "boss",
+            "ms": 134
+          },
+          {
+            "tick": 26332,
+            "stage": "boss",
+            "ms": 268
+          },
+          {
+            "tick": 26500,
+            "stage": "boss",
+            "ms": 253
+          },
+          {
+            "tick": 26667,
+            "stage": "boss",
+            "ms": 252
+          },
+          {
+            "tick": 26835,
+            "stage": "boss",
+            "ms": 34
+          },
+          {
+            "tick": 27714,
+            "stage": "boss",
+            "ms": 105
+          },
+          {
+            "tick": 27858,
+            "stage": "boss",
+            "ms": 98
+          },
+          {
+            "tick": 27876,
+            "stage": "boss",
+            "ms": 33
+          },
+          {
+            "tick": 27930,
+            "stage": "boss",
+            "ms": 128
+          },
+          {
+            "tick": 28002,
+            "stage": "boss",
+            "ms": 98
+          },
+          {
+            "tick": 28290,
+            "stage": "boss",
+            "ms": 137
+          },
+          {
+            "tick": 28341,
+            "stage": "boss",
+            "ms": 74
+          },
+          {
+            "tick": 28434,
+            "stage": "boss",
+            "ms": 271
+          },
+          {
+            "tick": 28578,
+            "stage": "boss",
+            "ms": 272
+          },
+          {
+            "tick": 28722,
+            "stage": "boss",
+            "ms": 252
+          },
+          {
+            "tick": 28866,
+            "stage": "boss",
+            "ms": 33
+          },
+          {
+            "tick": 30802,
+            "stage": "boss",
+            "ms": 96
+          },
+          {
+            "tick": 31516,
+            "stage": "boss",
+            "ms": 79
+          },
+          {
+            "tick": 31661,
+            "stage": "boss",
+            "ms": 61
+          },
+          {
+            "tick": 35362,
+            "stage": "boss",
+            "ms": 66
+          },
+          {
+            "tick": 35790,
+            "stage": "boss",
+            "ms": 68
+          },
+          {
+            "tick": 41286,
+            "stage": "boss",
+            "ms": 69
+          },
+          {
+            "tick": 43864,
+            "stage": "boss",
+            "ms": 74
+          },
+          {
+            "tick": 56102,
+            "stage": "boss",
+            "ms": 51
+          },
+          {
+            "tick": 56348,
+            "stage": "boss",
+            "ms": 97
+          },
+          {
+            "tick": 57102,
+            "stage": "boss",
+            "ms": 127
+          },
+          {
+            "tick": 57457,
+            "stage": "boss",
+            "ms": 233
+          },
+          {
+            "tick": 57583,
+            "stage": "boss",
+            "ms": 219
+          },
+          {
+            "tick": 57708,
+            "stage": "boss",
+            "ms": 226
+          },
+          {
+            "tick": 57834,
+            "stage": "boss",
+            "ms": 129
+          },
+          {
+            "tick": 57960,
+            "stage": "boss",
+            "ms": 223
+          },
+          {
+            "tick": 58190,
+            "stage": "boss",
+            "ms": 80
+          },
+          {
+            "tick": 58336,
+            "stage": "boss",
+            "ms": 130
+          },
+          {
+            "tick": 59343,
+            "stage": "boss",
+            "ms": 60
+          },
+          {
+            "tick": 59726,
+            "stage": "boss",
+            "ms": 65
+          },
+          {
+            "tick": 67588,
+            "stage": "boss",
+            "ms": 136
+          },
+          {
+            "tick": 68099,
+            "stage": "boss",
+            "ms": 34
+          },
+          {
+            "tick": 78657,
+            "stage": "boss",
+            "ms": 36
+          },
+          {
+            "tick": 78884,
+            "stage": "boss",
+            "ms": 38
+          },
+          {
+            "tick": 80035,
+            "stage": "boss",
+            "ms": 128
+          },
+          {
+            "tick": 80179,
+            "stage": "boss",
+            "ms": 127
+          },
+          {
+            "tick": 80323,
+            "stage": "boss",
+            "ms": 128
+          },
+          {
+            "tick": 80611,
+            "stage": "boss",
+            "ms": 243
+          },
+          {
+            "tick": 80755,
+            "stage": "boss",
+            "ms": 129
+          },
+          {
+            "tick": 82591,
+            "stage": "boss",
+            "ms": 119
+          },
+          {
+            "tick": 82716,
+            "stage": "boss",
+            "ms": 94
+          },
+          {
+            "tick": 82790,
+            "stage": "boss",
+            "ms": 830
+          }
+        ],
+        "loads": 6,
+        "p99": 10.7
+      }
+    },
+    {
+      "id": "greedy-remembered_cannon-4483",
+      "kind": "bot",
+      "persona": "greedy",
+      "policy": "completionist",
+      "pilot": "remembered_cannon",
+      "seed": 4483,
+      "stages": null,
+      "args": [
+        "--late-offer=take"
+      ],
+      "outcome": "won",
+      "stage": 6,
+      "game_seconds": 964.71,
+      "hits": 15,
+      "exit": 0,
+      "piles": [],
+      "hitches": {
+        "spikes": [
+          {
+            "tick": 1163,
+            "stage": 1,
+            "ms": 73
+          },
+          {
+            "tick": 2766,
+            "stage": 1,
+            "ms": 80
+          },
+          {
+            "tick": 6177,
+            "stage": 1,
+            "ms": 39
+          },
+          {
+            "tick": 6264,
+            "stage": 1,
+            "ms": 50
+          },
+          {
+            "tick": 8062,
+            "stage": 1,
+            "ms": 36
+          },
+          {
+            "tick": 8089,
+            "stage": 1,
+            "ms": 79
+          },
+          {
+            "tick": 8859,
+            "stage": 2,
+            "ms": 100
+          },
+          {
+            "tick": 9612,
+            "stage": 2,
+            "ms": 101
+          },
+          {
+            "tick": 10467,
+            "stage": 2,
+            "ms": 85
+          },
+          {
+            "tick": 11568,
+            "stage": 2,
+            "ms": 97
+          },
+          {
+            "tick": 17273,
+            "stage": 2,
+            "ms": 174
+          },
+          {
+            "tick": 17603,
+            "stage": 2,
+            "ms": 47
+          },
+          {
+            "tick": 23460,
+            "stage": "boss",
+            "ms": 154
+          },
+          {
+            "tick": 23496,
+            "stage": "boss",
+            "ms": 128
+          },
+          {
+            "tick": 23664,
+            "stage": "boss",
+            "ms": 126
+          },
+          {
+            "tick": 23831,
+            "stage": "boss",
+            "ms": 125
+          },
+          {
+            "tick": 24166,
+            "stage": "boss",
+            "ms": 125
+          },
+          {
+            "tick": 24491,
+            "stage": "boss",
+            "ms": 35
+          },
+          {
+            "tick": 25370,
+            "stage": "boss",
+            "ms": 124
+          },
+          {
+            "tick": 25538,
+            "stage": "boss",
+            "ms": 104
+          },
+          {
+            "tick": 25914,
+            "stage": "boss",
+            "ms": 111
+          },
+          {
+            "tick": 26249,
+            "stage": "boss",
+            "ms": 99
+          },
+          {
+            "tick": 26417,
+            "stage": "boss",
+            "ms": 102
+          },
+          {
+            "tick": 26438,
+            "stage": "boss",
+            "ms": 34
+          },
+          {
+            "tick": 26584,
+            "stage": "boss",
+            "ms": 138
+          },
+          {
+            "tick": 26752,
+            "stage": "boss",
+            "ms": 267
+          },
+          {
+            "tick": 26919,
+            "stage": "boss",
+            "ms": 253
+          },
+          {
+            "tick": 27086,
+            "stage": "boss",
+            "ms": 248
+          },
+          {
+            "tick": 28175,
+            "stage": "boss",
+            "ms": 105
+          },
+          {
+            "tick": 28319,
+            "stage": "boss",
+            "ms": 103
+          },
+          {
+            "tick": 28463,
+            "stage": "boss",
+            "ms": 128
+          },
+          {
+            "tick": 28472,
+            "stage": "boss",
+            "ms": 34
+          },
+          {
+            "tick": 28751,
+            "stage": "boss",
+            "ms": 138
+          },
+          {
+            "tick": 28752,
+            "stage": "boss",
+            "ms": 75
+          },
+          {
+            "tick": 28895,
+            "stage": "boss",
+            "ms": 268
+          },
+          {
+            "tick": 29039,
+            "stage": "boss",
+            "ms": 270
+          },
+          {
+            "tick": 29183,
+            "stage": "boss",
+            "ms": 261
+          },
+          {
+            "tick": 29471,
+            "stage": "boss",
+            "ms": 34
+          },
+          {
+            "tick": 30819,
+            "stage": "boss",
+            "ms": 96
+          },
+          {
+            "tick": 31534,
+            "stage": "boss",
+            "ms": 181
+          },
+          {
+            "tick": 32494,
+            "stage": "boss",
+            "ms": 75
+          },
+          {
+            "tick": 32639,
+            "stage": "boss",
+            "ms": 61
+          },
+          {
+            "tick": 33517,
+            "stage": "boss",
+            "ms": 46
+          },
+          {
+            "tick": 35818,
+            "stage": "boss",
+            "ms": 65
+          },
+          {
+            "tick": 39636,
+            "stage": "boss",
+            "ms": 35
+          },
+          {
+            "tick": 44918,
+            "stage": "boss",
+            "ms": 77
+          },
+          {
+            "tick": 53926,
+            "stage": "boss",
+            "ms": 52
+          },
+          {
+            "tick": 54169,
+            "stage": "boss",
+            "ms": 102
+          },
+          {
+            "tick": 54457,
+            "stage": "boss",
+            "ms": 100
+          },
+          {
+            "tick": 54472,
+            "stage": "boss",
+            "ms": 34
+          },
+          {
+            "tick": 54919,
+            "stage": "boss",
+            "ms": 100
+          },
+          {
+            "tick": 55494,
+            "stage": "boss",
+            "ms": 233
+          },
+          {
+            "tick": 55620,
+            "stage": "boss",
+            "ms": 225
+          },
+          {
+            "tick": 55745,
+            "stage": "boss",
+            "ms": 223
+          },
+          {
+            "tick": 55818,
+            "stage": "boss",
+            "ms": 78
+          },
+          {
+            "tick": 55871,
+            "stage": "boss",
+            "ms": 130
+          },
+          {
+            "tick": 55997,
+            "stage": "boss",
+            "ms": 225
+          },
+          {
+            "tick": 56203,
+            "stage": "boss",
+            "ms": 68
+          },
+          {
+            "tick": 56373,
+            "stage": "boss",
+            "ms": 129
+          },
+          {
+            "tick": 56986,
+            "stage": "boss",
+            "ms": 66
+          },
+          {
+            "tick": 61711,
+            "stage": "boss",
+            "ms": 34
+          },
+          {
+            "tick": 70857,
+            "stage": "boss",
+            "ms": 125
+          },
+          {
+            "tick": 71237,
+            "stage": "boss",
+            "ms": 33
+          },
+          {
+            "tick": 71404,
+            "stage": "boss",
+            "ms": 35
+          },
+          {
+            "tick": 71499,
+            "stage": "boss",
+            "ms": 34
+          },
+          {
+            "tick": 71515,
+            "stage": "boss",
+            "ms": 39
+          },
+          {
+            "tick": 85093,
+            "stage": "boss",
+            "ms": 123
+          },
+          {
+            "tick": 85443,
+            "stage": "boss",
+            "ms": 35
+          },
+          {
+            "tick": 85457,
+            "stage": "boss",
+            "ms": 39
+          },
+          {
+            "tick": 85722,
+            "stage": "boss",
+            "ms": 34
+          },
+          {
+            "tick": 86629,
+            "stage": "boss",
+            "ms": 113
+          },
+          {
+            "tick": 86754,
+            "stage": "boss",
+            "ms": 90
+          },
+          {
+            "tick": 86825,
+            "stage": "boss",
+            "ms": 762
+          }
+        ],
+        "loads": 5,
+        "p99": 12.9
+      }
+    }
+  ],
+  "extras": {
+    "fuzzSeconds": 60,
+    "placeholders": {
+      "total": 0,
+      "byKind": {}
+    },
+    "sweep": [],
+    "fuzzSummary": "item_fuzz: 6 seeds, 6 anomalies, 10 of 12 trigger kinds fired naturally somewhere, written to /home/andrew/scratch/gate/w34/bC/artifacts/local/redteam/w34-greedy-20261110T211737/jobs/item-fuzz",
+    "hitchTriage": {
+      "run": "greedy-demolitions_caster-4480",
+      "tested": 11,
+      "alone": 0,
+      "noMix": 0
+    },
+    "perfBench": {
+      "p99": 12.623,
+      "max": 31.285,
+      "p50": 2.508
+    },
+    "fuzzCount": 6
+  },
+  "findings": [
+    {
+      "severity": "major",
+      "area": "stability",
+      "key": "hitch:shared",
+      "title": "Hitch over 33 ms at the same moment in several runs",
+      "feel": "A stutter in play that comes back on a beat, whoever is playing.",
+      "runs": [
+        {
+          "id": "greedy-pylon_engineer-4478",
+          "persona": "greedy",
+          "pilot": "pylon_engineer",
+          "seed": 4478,
+          "note": "10 shared moment(s), e.g. 262.8 s (106 ms, the boss), 266.5 s (102 ms, the boss), 270.3 s (133 ms, the boss), 272.1 s (264 ms, the boss)",
+          "replay": "$GODOT_BIN --headless --fixed-fps 90 --path sketches/core-loop --script res://tools/bot_run.gd -- --out=artifacts/local/replay --policy=completionist --seeds=4478 --pilot=pylon_engineer --late-offer=take",
+          "carry": null
+        },
+        {
+          "id": "greedy-runner_gunner-4479",
+          "persona": "greedy",
+          "pilot": "runner_gunner",
+          "seed": 4479,
+          "note": "7 shared moment(s), e.g. 299.6 s (251 ms, the boss), 301.4 s (248 ms, the boss), 305.1 s (253 ms, the boss), 308.9 s (114 ms, the boss)",
+          "replay": "$GODOT_BIN --headless --fixed-fps 90 --path sketches/core-loop --script res://tools/bot_run.gd -- --out=artifacts/local/replay --policy=completionist --seeds=4479 --pilot=runner_gunner --late-offer=take",
+          "carry": null
+        },
+        {
+          "id": "greedy-demolitions_caster-4480",
+          "persona": "greedy",
+          "pilot": "demolitions_caster",
+          "seed": 4480,
+          "note": "11 shared moment(s), e.g. 272.1 s (129 ms, the boss), 274.0 s (128 ms, the boss), 279.6 s (123 ms, the boss), 281.4 s (124 ms, the boss)",
+          "replay": "$GODOT_BIN --headless --fixed-fps 90 --path sketches/core-loop --script res://tools/bot_run.gd -- --out=artifacts/local/replay --policy=completionist --seeds=4480 --pilot=demolitions_caster --late-offer=take",
+          "carry": null
+        },
+        {
+          "id": "greedy-tally-4482",
+          "persona": "greedy",
+          "pilot": "tally",
+          "seed": 4482,
+          "note": "8 shared moment(s), e.g. 262.8 s (123 ms, the boss), 266.5 s (126 ms, the boss), 270.3 s (126 ms, the boss), 272.1 s (121 ms, the boss)",
+          "replay": "$GODOT_BIN --headless --fixed-fps 90 --path sketches/core-loop --script res://tools/bot_run.gd -- --out=artifacts/local/replay --policy=completionist --seeds=4482 --pilot=tally --late-offer=take",
+          "carry": null
+        },
+        {
+          "id": "greedy-remembered_cannon-4483",
+          "persona": "greedy",
+          "pilot": "remembered_cannon",
+          "seed": 4483,
+          "note": "7 shared moment(s), e.g. 272.1 s (35 ms, the boss), 319.5 s (138 ms, the boss), 319.5 s (75 ms, the boss), 601.9 s (102 ms, the boss)",
+          "replay": "$GODOT_BIN --headless --fixed-fps 90 --path sketches/core-loop --script res://tools/bot_run.gd -- --out=artifacts/local/replay --policy=completionist --seeds=4483 --pilot=remembered_cannon --late-offer=take",
+          "carry": null
+        }
+      ],
+      "candidate": true,
+      "counts": {
+        "replayed alone: moments": 11,
+        "still hitched": 0,
+        "still hitched without the music mix": 0
+      }
+    },
+    {
+      "severity": "minor",
+      "area": "stage and world design",
+      "key": "stuck:2",
+      "title": "The ball gets stuck on stage 2 geometry",
+      "feel": "You roll into a spot and have to back out and steer around, again and again.",
+      "runs": [
+        {
+          "id": "greedy-runner_gunner-4479",
+          "persona": "greedy",
+          "pilot": "runner_gunner",
+          "seed": 4479,
+          "note": "6 stuck detours as greedy",
+          "replay": "$GODOT_BIN --headless --fixed-fps 90 --path sketches/core-loop --script res://tools/bot_run.gd -- --out=artifacts/local/replay --policy=completionist --seeds=4479 --pilot=runner_gunner --late-offer=take",
+          "carry": null
+        }
+      ]
+    },
+    {
+      "severity": "minor",
+      "area": "stage and world design",
+      "key": "stuck:6",
+      "title": "The ball gets stuck on stage 6 geometry",
+      "feel": "You roll into a spot and have to back out and steer around, again and again.",
+      "runs": [
+        {
+          "id": "greedy-runner_gunner-4479",
+          "persona": "greedy",
+          "pilot": "runner_gunner",
+          "seed": 4479,
+          "note": "3 stuck detours as greedy",
+          "replay": "$GODOT_BIN --headless --fixed-fps 90 --path sketches/core-loop --script res://tools/bot_run.gd -- --out=artifacts/local/replay --policy=completionist --seeds=4479 --pilot=runner_gunner --late-offer=take",
+          "carry": null
+        }
+      ]
+    },
+    {
+      "severity": "watch",
+      "area": "stability",
+      "key": "cpu-p99",
+      "title": "Main-thread tick p99 over 10 ms on the cloud box",
+      "feel": "Headroom is thin; check with MangoHud on Andrew's PC.",
+      "runs": [
+        {
+          "id": "greedy-pylon_engineer-4478",
+          "persona": "greedy",
+          "pilot": "pylon_engineer",
+          "seed": 4478,
+          "note": "p99 13.1 ms",
+          "replay": "$GODOT_BIN --headless --fixed-fps 90 --path sketches/core-loop --script res://tools/bot_run.gd -- --out=artifacts/local/replay --policy=completionist --seeds=4478 --pilot=pylon_engineer --late-offer=take",
+          "carry": null
+        },
+        {
+          "id": "greedy-runner_gunner-4479",
+          "persona": "greedy",
+          "pilot": "runner_gunner",
+          "seed": 4479,
+          "note": "p99 15.3 ms",
+          "replay": "$GODOT_BIN --headless --fixed-fps 90 --path sketches/core-loop --script res://tools/bot_run.gd -- --out=artifacts/local/replay --policy=completionist --seeds=4479 --pilot=runner_gunner --late-offer=take",
+          "carry": null
+        },
+        {
+          "id": "greedy-demolitions_caster-4480",
+          "persona": "greedy",
+          "pilot": "demolitions_caster",
+          "seed": 4480,
+          "note": "p99 12 ms",
+          "replay": "$GODOT_BIN --headless --fixed-fps 90 --path sketches/core-loop --script res://tools/bot_run.gd -- --out=artifacts/local/replay --policy=completionist --seeds=4480 --pilot=demolitions_caster --late-offer=take",
+          "carry": null
+        },
+        {
+          "id": "greedy-tarn-4481",
+          "persona": "greedy",
+          "pilot": "tarn",
+          "seed": 4481,
+          "note": "p99 12.8 ms",
+          "replay": "$GODOT_BIN --headless --fixed-fps 90 --path sketches/core-loop --script res://tools/bot_run.gd -- --out=artifacts/local/replay --policy=completionist --seeds=4481 --pilot=tarn --late-offer=take",
+          "carry": null
+        },
+        {
+          "id": "greedy-tally-4482",
+          "persona": "greedy",
+          "pilot": "tally",
+          "seed": 4482,
+          "note": "p99 10.7 ms",
+          "replay": "$GODOT_BIN --headless --fixed-fps 90 --path sketches/core-loop --script res://tools/bot_run.gd -- --out=artifacts/local/replay --policy=completionist --seeds=4482 --pilot=tally --late-offer=take",
+          "carry": null
+        },
+        {
+          "id": "greedy-remembered_cannon-4483",
+          "persona": "greedy",
+          "pilot": "remembered_cannon",
+          "seed": 4483,
+          "note": "p99 12.9 ms",
+          "replay": "$GODOT_BIN --headless --fixed-fps 90 --path sketches/core-loop --script res://tools/bot_run.gd -- --out=artifacts/local/replay --policy=completionist --seeds=4483 --pilot=remembered_cannon --late-offer=take",
+          "carry": null
+        }
+      ]
+    },
+    {
+      "severity": "watch",
+      "area": "in-run growth",
+      "key": "fuzz:frame_time",
+      "title": "Item fuzz outlier: frame_time",
+      "feel": "A build costs more time per tick than its cap; timed under load on the cloud box, so recheck alone.",
+      "runs": [
+        {
+          "id": "item_fuzz",
+          "seed": 4450,
+          "pilot": "tally",
+          "note": "p99 21.4 ms (cap 16.7 ms), build cross_split hot_rivets galvanic_rounds double_feed ...",
+          "replay": "$GODOT_BIN --headless --fixed-fps 90 --path sketches/core-loop --script res://tools/item_fuzz.gd -- --seeds=4450 --seconds=60 --out=artifacts/local/replay"
+        },
+        {
+          "id": "item_fuzz",
+          "seed": 4451,
+          "pilot": "remembered_cannon",
+          "note": "p99 31.4 ms (cap 16.7 ms), build scrap_gravity magnet_spool cache_key sunforged_core ...",
+          "replay": "$GODOT_BIN --headless --fixed-fps 90 --path sketches/core-loop --script res://tools/item_fuzz.gd -- --seeds=4451 --seconds=60 --out=artifacts/local/replay"
+        },
+        {
+          "id": "item_fuzz",
+          "seed": 4452,
+          "pilot": "pylon_engineer",
+          "note": "p99 27.6 ms (cap 16.7 ms), build brace_frame scrap_gravity arc_coil double_feed ...",
+          "replay": "$GODOT_BIN --headless --fixed-fps 90 --path sketches/core-loop --script res://tools/item_fuzz.gd -- --seeds=4452 --seconds=60 --out=artifacts/local/replay"
+        },
+        {
+          "id": "item_fuzz",
+          "seed": 4453,
+          "pilot": "runner_gunner",
+          "note": "p99 28.0 ms (cap 16.7 ms), build horizon_optic galvanic_rounds ram_plow grip_tread ...",
+          "replay": "$GODOT_BIN --headless --fixed-fps 90 --path sketches/core-loop --script res://tools/item_fuzz.gd -- --seeds=4453 --seconds=60 --out=artifacts/local/replay"
+        },
+        {
+          "id": "item_fuzz",
+          "seed": 4454,
+          "pilot": "demolitions_caster",
+          "note": "p99 30.9 ms (cap 16.7 ms), build scrap_gravity galvanic_rounds focus_lens tempest_core ...",
+          "replay": "$GODOT_BIN --headless --fixed-fps 90 --path sketches/core-loop --script res://tools/item_fuzz.gd -- --seeds=4454 --seconds=60 --out=artifacts/local/replay"
+        },
+        {
+          "id": "item_fuzz",
+          "seed": 4455,
+          "pilot": "tarn",
+          "note": "p99 27.1 ms (cap 16.7 ms), build rivet_seam impact_driver horizon_optic scrap_gravity ...",
+          "replay": "$GODOT_BIN --headless --fixed-fps 90 --path sketches/core-loop --script res://tools/item_fuzz.gd -- --seeds=4455 --seconds=60 --out=artifacts/local/replay"
+        }
+      ]
+    },
+    {
+      "severity": "watch",
+      "area": "stability",
+      "key": "hitch:scattered",
+      "title": "489 scattered ticks over 33 ms",
+      "feel": "Most likely the shared cloud box; MangoHud on Andrew's PC is the check.",
+      "runs": []
+    }
+  ],
+  "carry": [
+    {
+      "persona": "greedy",
+      "pilot": "pylon_engineer",
+      "seed": 4478,
+      "title": "Hitch over 33 ms at the same moment in several runs"
+    }
+  ]
+}
