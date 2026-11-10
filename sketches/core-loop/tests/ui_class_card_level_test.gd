@@ -64,6 +64,9 @@ func _process(_delta: float) -> bool:
 			if _frame - _mark == 4:
 				if WAYS[_way] == "prologue":
 					_t.check("prologue: a first Start shows it over the cards", _game.screens.prologue_showing(), "")
+					var next: Button = _game.screens.button_for("prologue_next")
+					_t.check("prologue: its Next button is on the screen (pilot select hides the action row, the prologue shows it)",
+						next != null and next.is_visible_in_tree(), "next %s" % (next != null))
 					_game.screens.end_prologue()
 				_game.screens._show("Choose your pilot", Color.WHITE, LINE)
 				_mark = _frame

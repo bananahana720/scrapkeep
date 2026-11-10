@@ -143,8 +143,23 @@ func _tag_on_summary() -> void:
 	_t.check("the summary's column is on the screen, title to buttons", screens._title.get_global_rect().position.y >= 0.0
 			and screens._actions.get_global_rect().end.y <= floor_y and not screens._choices.visible,
 		"title from %.0f, buttons to %.0f of %.0f" % [screens._title.get_global_rect().position.y, screens._actions.get_global_rect().end.y, floor_y])
-	_t.check("a body past four lines takes its extra lines from the comic page", is_equal_approx(screens.comic_height(900.0, 4, 33.0), 450.0)
-			and is_equal_approx(screens.comic_height(900.0, 6, 33.0), 384.0) and is_equal_approx(screens.comic_height(900.0, 1, 33.0), 450.0), "comic_height")
+	_t.check("a body past three lines takes its extra lines from the comic page, down to a floor", is_equal_approx(screens.comic_height(900.0, 3, 33.0), 450.0)
+			and is_equal_approx(screens.comic_height(900.0, 5, 33.0), 384.0) and is_equal_approx(screens.comic_height(900.0, 1, 33.0), 450.0)
+			and is_equal_approx(screens.comic_height(900.0, 40, 33.0), screens.COMIC_MIN_HEIGHT), "comic_height")
+	# The real path: a long shift board line lands on the summary after the page (a first win
+	# with every stamp at once), and the page gives up the height so the buttons stay on screen.
+	var short_page: float = comic.custom_minimum_size.y
+	var body_before: String = screens._body.text
+	screens._body.text = "Sable\nScrapped by the Warden.\nThe Fleet filed it as weather.\nShift board: CLOCKED IN Clocked In. LOGGED First Warden. HIRED Rivet, Tarn. FOUND the Lost Tape, in the wall."
+	screens._fit_comic()
+	await _frames(3)
+	var long_lines: int = screens._body.get_line_count()
+	_t.check("a long body shrinks the page it shares the column with, and the buttons stay on the screen", long_lines >= 5
+			and comic.custom_minimum_size.y < short_page and screens._actions.get_global_rect().end.y <= floor_y and screens._title.get_global_rect().position.y >= 0.0,
+		"%d lines, page %.0f from %.0f, buttons to %.0f of %.0f" % [long_lines, comic.custom_minimum_size.y, short_page, screens._actions.get_global_rect().end.y, floor_y])
+	screens._body.text = body_before
+	screens._fit_comic()
+	await _frames(2)
 	_t.check("the comic page is still the row's first, the note beside it", comic != null and comic != screens._tip and comic.get_index() == 0
 			and screens._tip.get_index() == 1 and screens._tip.global_position.x >= comic.global_position.x + comic.size.x,
 		"comic %s, note at %.0f" % [comic, screens._tip.global_position.x])

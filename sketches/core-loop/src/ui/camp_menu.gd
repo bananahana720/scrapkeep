@@ -73,7 +73,6 @@ func _init() -> void:
 	box.content_margin_right = 14.0
 	box.content_margin_top = 4.0
 	box.content_margin_bottom = 4.0
-	box.expand_margin_bottom = 0.0
 	plate.add_theme_stylebox_override("panel", box)
 	var keys := CreditsHint.new()
 	keys.name = "WalkKeys"

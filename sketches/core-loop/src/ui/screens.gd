@@ -75,7 +75,8 @@ const COMIC_HEIGHT := 0.5
 # The word under each of the summary's stats.
 const STAT_WORD_FONT := 13
 const COMIC_MAX_HEIGHT := 540.0
-const COMIC_BODY_LINES := 4
+const COMIC_BODY_LINES := 3
+const COMIC_MIN_HEIGHT := 240.0
 # RUN OVER's "next shift" note (core/death_tips.gd): an amber-edged plate taped up beside the comic page,
 # where the column has room; under the body it pushed the actions off a 900 px screen. Its words wrap at
 # TIP_WIDTH.
@@ -1308,19 +1309,29 @@ func _show_comic_page(page: Dictionary) -> void:
 	if _state != "summary" or not ResourceLoader.exists(COMIC_PAGE_PATH):
 		return
 	var comic: Control = load(COMIC_PAGE_PATH).new()
-	var height := comic_height(_screen().y, _body.get_line_count(), _body.get_line_height() + _body.get_theme_constant("line_spacing"))
-	comic.custom_minimum_size = Vector2(height * 0.75, height)
 	comic.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_comic_row.add_child(comic)
 	_comic_row.move_child(comic, 0)
+	_fit_comic()
 	comic.show_page(page)
+
+
+# Sizes the summary's comic page to the body as it reads now. The page and a lost run's shift
+# board line both arrive after the summary opens, in either order, so each asks again.
+func _fit_comic() -> void:
+	var comic := comic_page()
+	if comic == null:
+		return
+	var height := comic_height(_screen().y, _body.get_line_count(), _body.get_line_height() + _body.get_theme_constant("line_spacing"))
+	comic.custom_minimum_size = Vector2(height * 0.75, height)
 
 
 # The comic page's height on the summary: half the screen, less a line's height for every body
 # line past the COMIC_BODY_LINES the column holds with the page at full height, so a long
-# summary (cause, epitaph, a two-line shift board) never pushes the buttons off the screen.
+# summary (cause, epitaph, a two-line shift board) never pushes the buttons off the screen. It
+# stops at COMIC_MIN_HEIGHT, under which the page is no longer a page (a --dev summary's odds lines).
 static func comic_height(screen_h: float, body_lines: int, line_h: float) -> float:
-	return minf(COMIC_MAX_HEIGHT, screen_h * COMIC_HEIGHT) - maxi(0, body_lines - COMIC_BODY_LINES) * line_h
+	return maxf(COMIC_MIN_HEIGHT, minf(COMIC_MAX_HEIGHT, screen_h * COMIC_HEIGHT) - maxi(0, body_lines - COMIC_BODY_LINES) * line_h)
 
 
 func comic_page() -> Control:
@@ -1377,6 +1388,7 @@ func _on_run_ended_board(_won: bool) -> void:
 		return
 	if not _body.text.contains(String(progress.board_line)):
 		_body.text += "\n" + String(progress.board_line)
+		_fit_comic()
 
 
 # The summary as icons and numbers: time, stages, cogs (the cog), scrap taken as mass (the heap), parts, kills, events won and

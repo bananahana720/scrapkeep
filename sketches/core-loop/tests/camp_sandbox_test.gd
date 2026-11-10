@@ -97,13 +97,13 @@ func _picker_page() -> void:
 	var heights := {}
 	var widest := 0.0
 	for kind in page.kinds():
-		for met in [[], [kind]]:
-			page.refresh(met, 0)
+		for state in [[[], 0], [[kind], 0], [[kind], 4]]:
+			page.refresh(state[0], state[1])
 			page.row(kind).pressed.emit()
 			await process_frame
 			heights[note.size.y] = true
 			widest = maxf(widest, note.size.x)
-			if note.get_line_count() * note.get_line_height() > note.size.y + 0.5:
+			if note.get_line_count() * note.get_line_height() + (note.get_line_count() - 1) * note.get_theme_constant("line_spacing") > note.size.y + 0.5:
 				heights[-1.0] = true
 	_t.check("every note fits the note's box at the list's width, and the box never changes height", heights.size() == 1 and not heights.has(-1.0)
 			and widest <= Picker.NOTE_W + 0.5 and widest <= page._grid.size.x + 0.5, "heights %s, widest %.0f of grid %.0f" % [heights.keys(), widest, page._grid.size.x])
