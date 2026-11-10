@@ -343,7 +343,7 @@ The bay drops the band to a sax-led lounge re-voicing of the current stage theme
 
 ### Babble synthesis
 
-Moss's voice is synthesized babble, one blip per letter, in the live key, rising with exasperation. It never uses a formant (R1) or a wobble (R2). It is a bench radio, not a mouth.
+Moss's voice is synthesized babble, one blip per letter, in the live key, rising with exasperation. It never uses a formant (R1) or a wobble (R2). It is a bench radio, not a mouth; whether Moss gets one is Andrew's call by ear ("Who talks on what", below).
 
 | Rule | Value |
 | --- | --- |
@@ -371,24 +371,26 @@ Moss's voice is synthesized babble, one blip per letter, in the live key, rising
 
 ### Who talks on what
 
-Working (W), 9 November 2026, from Andrew's ask that the people in the game call in on a card and talk in cute babble, one voice each. Moss's bench voice above is unchanged. A call-in is one call, `audio.call_in(kind, speaker, text)`: a two-note chirp in the caller's instrument so the ear knows who it is before the eye finds the card, then the line, one blip a letter, in the live key. It returns how long the voice lasts so the card can hold for it. The line is made on a worker and sounds a third of a second later, the band dips under it by about what the lounge gives Moss at his bench, and one caller talks at a time.
+Working (W), 9 November 2026, from Andrew's ask that the people in the game call in on a card and talk in cute babble, one voice each. Moss's bench voice above is unchanged. A call-in is one call, `audio.call_in(kind, speaker, text)`: a two-note chirp in the caller's instrument so the ear knows who it is before the eye finds the card, then the line, one letter at a time, in the live key. It returns how long the voice lasts so the card can hold for it. The line is made on a worker and sounds a third of a second later, the band dips under it by about what the lounge gives Moss at his bench, and one caller talks at a time.
 
 The rule is the story map's: whose hands the caller is sets the instrument. A pilot talks in the notes of their own motif, on their own instrument, so their speech is their tune shuffled. Everyone on the crew's side bends into their notes and strays a little in time. The Foreman alone is on the grid: one pure note, every letter a thirty-second of the band's tempo, nothing bent and nothing left to chance, and it does not rise on a question. A line is laid out the same way every time it is said. The rows live in `sfx_bank.gd` (`CALLERS`).
 
+Mouths (Andrew, 10 November 2026: "reach big"). Everyone alive says their letters through a small vowel mouth, the way Animal Crossing's villagers do; the Foreman has none. A mouth is a reed on the caller's note pushed through two resonances the letter sets: five vowel shapes, a hum for m and n, a half-shut shape for the other consonants, and a breath opening the hissed and stopped ones. Each caller's mouth has a size, and a smaller mouth rings higher, which is what keeps it a creature's voice and not a growl. The chirp stays on the caller's instrument, so who is calling is still heard in their hands before their mouth. The pilots and the site crews are built this way. R1 was written against low voices with moving formants, and Moss and Brindle are the two low voices here, so they keep the blips in the table until Andrew has heard their mouths low and high on the sound page. The Cannon is a machine on the crew's side and keeps its bent chime.
+
 | Caller | Voice | Notes | How they talk |
 | --- | --- | --- | --- |
-| Moss | His bench blip, after the bell on his counter rings twice | D3's Dorian triad | Level and unhurried |
-| Sable | Bell (Sable's voice in the band; the motif's own mallet is the site crews') | Own motif, an octave up | Quick, scooping up into each word: Sable launches |
-| Rivet | Clavinet | Own motif, an octave up | Fast, with no gap between words: Rivet never stops |
-| Kest | Tom | Own motif, an octave up | Slow, falling away from each note, long rests after a sentence: Kest commits late |
-| Tarn | Round bass (Tarn's voice in the band) | Own motif, an octave up | The slowest pilot and the quietest voice: gentle while the machine snarls |
-| Tally | Electric piano | Own motif, an octave up | Every letter the same length, where the others stray: the honest ledger |
-| The Cannon | Chime | Own motif, an octave up | The Foreman's own clean tone, bent: the gun that chose a side |
-| Pump crew, flume crew, signal crew | Mallets | The triads on D, E and G | Two talkers trading words on one radio, the second a fourth lower and in before the first is done |
-| Brindle | Brass | The Fleet motif: D and E flat | Slow and grand; every sentence ends held on the flat second, because he rounds up |
+| Moss | His bench blip, after the bell on his counter rings twice (a mouth waits on Andrew's ear) | D3's Dorian triad | Level and unhurried |
+| Sable | Bell chirp (Sable's voice in the band; the motif's own mallet is the site crews'), then the smallest mouth | Own motif: the chirp an octave up, the words at the motif's own height | Quick, scooping up into each word: Sable launches |
+| Rivet | Clavinet chirp, then a small mouth | Own motif: the chirp an octave up, the words at the motif's own height | Fast, with no gap between words: Rivet never stops |
+| Kest | Tom chirp, then the largest pilot's mouth | Own motif, an octave up | Slow, falling away from each note, long rests after a sentence: Kest commits late |
+| Tarn | Round bass chirp (Tarn's voice in the band), then a mouth | Own motif, an octave up | The slowest pilot and the quietest voice: gentle while the machine snarls |
+| Tally | Electric piano chirp, then a small mouth | Own motif: the chirp an octave up, the words at the motif's own height | Every letter the same length, where the others stray: the honest ledger |
+| The Cannon | Chime, no mouth | Own motif, an octave up | The Foreman's own clean tone, bent: the gun that chose a side |
+| Pump crew, flume crew, signal crew | Mallet chirp, then two mouths | The triads on D, E and G | Two talkers trading words on one radio, the second a fourth lower and in before the first is done |
+| Brindle | Brass (a mouth waits on Andrew's ear) | The Fleet motif: D and E flat | Slow and grand; every sentence ends held on the flat second, because he rounds up |
 | The Foreman (the Mind) | A pure tone | One note, D; its chirp is a perfect fifth | On the grid, as above. The memo is read by a metronome. |
 
-A caller id with no row gets Moss's voice and one warning. Open, for Andrew's ear: whether the crew's letters stay instrument blips, as here and as R1 has kept every voice so far, or go through small vowel mouths the way Animal Crossing's do (clips of both are on the sound page). The Foreman has no mouth either way.
+A caller id with no row gets Moss's voice and one warning.
 
 ### The conversation loop
 

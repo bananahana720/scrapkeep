@@ -304,33 +304,47 @@ const VOWELS := ["a", "e", "i", "o", "u"]
 # that many semitones (a fall when negative), loose is how far a letter's length strays
 # (CALL_LOOSE unless the row says), run closes the gaps between words, stop stretches the
 # rest after a sentence, lean ends a sentence held on the flat second, and second has a
-# second talker take every other word that many scale steps away. grid is the
-# Foreman alone: one note, every letter half a sixteenth, no bend and nothing left to
-# chance. db levels a voice against Moss's, whose row is empty: his call is his bench voice
-# after his bell.
+# second talker take every other word that many scale steps away. mouth gives the caller a
+# mouth of that size (1 is a grown voice, more is a smaller creature): the chirp stays on the
+# instrument, and the letters are said, drop semitones away from where the instrument would
+# play them. grid is the Foreman alone: one note, every letter half a sixteenth, no bend,
+# no mouth and nothing left to chance. db levels a voice against Moss's, whose row is empty:
+# his call is his bench voice after his bell.
 const SAY := "say|"
 const MOSS := "moss"
 const PURE := "pure"
 const CALLERS := {
 	"moss": {},
-	"sable": {"motif": "sable", "voice": "bell", "lift": 12, "pace": 0.8, "bend": 2.0, "db": -1.0},
-	"rivet": {"motif": "rivet", "lift": 12, "pace": 0.7, "bend": 0.5, "run": true, "db": 2.0},
-	"kest": {"motif": "kest", "lift": 12, "pace": 1.15, "bend": -2.0, "stop": 1.6, "db": 1.5},
-	"tarn": {"motif": "tarn", "voice": "fbass", "lift": 12, "pace": 1.3, "bend": 0.7, "db": 2.0},
-	"tally": {"motif": "tally", "lift": 12, "bend": 0.5, "loose": 0.0, "db": 1.5},
+	"sable": {"motif": "sable", "voice": "bell", "lift": 12, "pace": 0.8, "bend": 2.0, "mouth": 1.4, "drop": -12, "db": 3.5},
+	"rivet": {"motif": "rivet", "lift": 12, "pace": 0.7, "bend": 0.5, "run": true, "mouth": 1.3, "drop": -12, "db": 1.0},
+	"kest": {"motif": "kest", "lift": 12, "pace": 1.15, "bend": -2.0, "stop": 1.6, "mouth": 1.15, "db": 4.5},
+	"tarn": {"motif": "tarn", "voice": "fbass", "lift": 12, "pace": 1.3, "bend": 0.7, "mouth": 1.2, "db": 2.0},
+	"tally": {"motif": "tally", "lift": 12, "bend": 0.5, "loose": 0.0, "mouth": 1.35, "drop": -12, "db": 4.0},
 	"cannon": {"motif": "cannon", "lift": 12, "bend": 1.5},
-	"pump_crew": {"root": 62, "voice": "mallet", "bend": 1.0, "second": -3, "db": 5.0},
-	"flume_crew": {"root": 64, "voice": "mallet", "bend": 1.0, "second": -3, "db": 4.5},
-	"signal_crew": {"root": 67, "voice": "mallet", "bend": 1.0, "second": -3, "db": 5.0},
+	"pump_crew": {"root": 62, "voice": "mallet", "bend": 1.0, "second": -3, "mouth": 1.2, "db": 7.0},
+	"flume_crew": {"root": 64, "voice": "mallet", "bend": 1.0, "second": -3, "mouth": 1.25, "db": 5.5},
+	"signal_crew": {"root": 67, "voice": "mallet", "bend": 1.0, "second": -3, "mouth": 1.3, "db": 5.0},
 	"brindle": {"motif": "fleet", "lift": 12, "pace": 1.7, "lean": true, "db": 1.5},
 	"mind": {"root": 74, "voice": PURE, "grid": true, "db": -2.5},
 }
-# The incoming chirp: two notes, then the line starts this long after the first.
+# The incoming chirp: two notes a little under the voice, then the line starts this long after
+# the first.
 const CHIRP_NOTE_S := 0.12
+const CHIRP_GAIN := 0.6
 const CALL_TALK_S := 0.36
 # A second talker comes in this long before the first has finished the word.
 const CALL_OVERLAP_S := 0.06
 const CALL_LOOSE := 0.15
+# A mouth's two resonances for each vowel, in Hz for a grown voice, and the half-shut shape
+# every consonant is said through. A letter rings on a little past its slot so speech joins up.
+const MOUTH_VOWELS := {"a": [800.0, 1200.0], "e": [500.0, 1900.0], "i": [320.0, 2500.0], "o": [500.0, 900.0], "u": [350.0, 750.0]}
+const MOUTH_SHUT := [420.0, 1400.0]
+const MOUTH_HUM := [250.0, 1100.0]
+const MOUTH_HUMMED := ["m", "n"]
+const MOUTH_BREATHED := ["s", "f", "h", "z", "c", "x", "t", "k", "p"]
+const MOUTH_RING := 1.25
+# A said vowel's peak, so a mouth sits level with the instrument that chirps before it.
+const MOUTH_PEAK := 0.8
 # A caller id with no row, warned about once (say_id) and given Moss's voice.
 static var unknown_callers := {}
 
@@ -2776,8 +2790,8 @@ static func say_seconds(speaker: String, text: String, step := Harmony.STEP) -> 
 	return float(_say_plan(speaker, text, step)[1]) + 0.3
 
 
-# A caller's line laid out as [seconds, midi, seconds long, gain, bend, voice] and where the
-# last one ends: the chirp, then one blip a letter. A line is laid out the same way every
+# A caller's line laid out as [seconds, midi, seconds long, gain, bend, voice, letter] and where
+# the last one ends: the chirp (no letter), then one blip a letter. A line is laid out the same way every
 # time it is said. voice "" is Moss's own blip.
 static func _say_plan(speaker: String, text: String, step := Harmony.STEP) -> Array:
 	var row := _caller(speaker)
@@ -2795,7 +2809,7 @@ static func _say_plan(speaker: String, text: String, step := Harmony.STEP) -> Ar
 	var chirp := [notes[0], notes[0] + 7] if grid else [notes[0], notes[notes.size() - 1]]
 	var blips: Array = []
 	for i in 2:
-		blips.append([i * (unit if grid else CHIRP_NOTE_S), chirp[i], unit * 0.7 if grid else CHIRP_NOTE_S, 1.0, 0.0, voice])
+		blips.append([i * (unit if grid else CHIRP_NOTE_S), chirp[i], unit * 0.7 if grid else CHIRP_NOTE_S, 1.0 if grid else CHIRP_GAIN, 0.0, voice, ""])
 	var at := 4.0 * unit if grid else CALL_TALK_S
 	var said := 0
 	var joined := false
@@ -2811,7 +2825,7 @@ static func _say_plan(speaker: String, text: String, step := Harmony.STEP) -> Ar
 		for l in letters.size():
 			var vowel: bool = letters[l] in VOWELS
 			if grid:
-				blips.append([at, notes[0], unit * 0.35, 1.0, 0.0, voice])
+				blips.append([at, notes[0], unit * 0.35, 1.0, 0.0, voice, letters[l]])
 				at += unit * 0.5
 				continue
 			var length := (0.08 if vowel else 0.04) * pace * rng.randf_range(1.0 - loose, 1.0 + loose)
@@ -2825,7 +2839,7 @@ static func _say_plan(speaker: String, text: String, step := Harmony.STEP) -> Ar
 				midi = int(notes[0]) + 1
 				length = 0.28
 			blips.append([at, midi, length, db_to_linear(3.0) if l == 0 else (0.7 if other else 1.0),
-				bend if vowel or l == 0 else 0.0, voice])
+				bend if vowel or l == 0 else 0.0, voice, letters[l]])
 			at += length
 		if grid:
 			at = (ceilf(at / unit + 0.499) + (2.0 if _ends_sentence(word) else (1.0 if word.ends_with(",") else 0.0))) * unit
@@ -2842,22 +2856,62 @@ static func _say_plan(speaker: String, text: String, step := Harmony.STEP) -> Ar
 static func _moss_call(text: String) -> Array:
 	var blips: Array = []
 	for i in 2:
-		blips.append([i * 0.16, 86, CHIRP_NOTE_S, 0.6, 0.0, "mallet"])
+		blips.append([i * 0.16, 86, CHIRP_NOTE_S, CHIRP_GAIN, 0.0, "mallet", ""])
 	var laid := _babble_blips(text, BABBLE_LEVEL)
 	for blip in laid[0]:
-		blips.append([CALL_TALK_S + float(blip[0]), blip[1], blip[2], blip[3], blip[4], ""])
+		blips.append([CALL_TALK_S + float(blip[0]), blip[1], blip[2], blip[3], blip[4], "", ""])
 	return [blips, CALL_TALK_S + float(laid[1])]
 
 
 static func _say(speaker: String, text: String) -> PackedFloat32Array:
 	var plan := _say_plan(speaker, text, Synth.score_step)
+	var row := _caller(speaker)
 	var buf := Synth.buffer(roundi((float(plan[1]) + 0.3) * Harmony.RATE))
 	for blip in plan[0]:
 		var voice: String = blip[5]
-		var piece := (_blip(int(blip[1]) + _shift, float(blip[2]), false, float(blip[4])) if voice == ""
-			else _letter(voice, int(blip[1]), float(blip[2]), float(blip[4])))
+		var piece: PackedFloat32Array
+		if voice == "":
+			piece = _blip(int(blip[1]) + _shift, float(blip[2]), false, float(blip[4]))
+		elif row.has("mouth") and blip[6] != "":
+			piece = _mouth(int(blip[1]) + int(row.get("drop", 0)), float(blip[2]), float(blip[4]), blip[6], float(row["mouth"]))
+		else:
+			piece = _letter(voice, int(blip[1]), float(blip[2]), float(blip[4]))
 		Synth.add_into(buf, piece, roundi(float(blip[0]) * Harmony.RATE), float(blip[3]))
 	return Synth.declick(buf, 16, 600)
+
+
+# One letter said by a mouth: a reed at the note through the letter's two resonances, scaled
+# by the mouth's size, with the same scoop a played letter gets. A vowel is its own shape; a
+# consonant is half shut and shorter of breath, m and n hum, and the hissed and stopped ones
+# start as air. The air is seeded by the letter and the note, so a line is said the same
+# way twice.
+static func _mouth(midi: int, length: float, bend: float, letter: String, size: float) -> PackedFloat32Array:
+	var n := Synth.seconds(length * MOUTH_RING)
+	var buf := Synth.buffer(n)
+	var vowel := MOUTH_VOWELS.has(letter)
+	var shape: Array = MOUTH_VOWELS.get(letter, MOUTH_HUM if letter in MOUTH_HUMMED else MOUTH_SHUT)
+	var g1 := 2.0 * sin(PI * float(shape[0]) * size * Synth.INV_RATE)
+	var g2 := 2.0 * sin(PI * float(shape[1]) * size * Synth.INV_RATE)
+	var air := 0.3 if letter in MOUTH_BREATHED else 0.0
+	var rng := RandomNumberGenerator.new()
+	rng.seed = hash(letter) + midi
+	var phase := 0.0
+	var l1 := 0.0
+	var b1 := 0.0
+	var l2 := 0.0
+	var b2 := 0.0
+	for i in n:
+		var x := float(i) / n
+		phase = fposmod(phase + _hz(midi + (bend * (x - 1.0) if bend > 0.0 else bend * x)) * Synth.INV_RATE, 1.0)
+		var reed := 2.0 * phase - 1.0
+		if x < air:
+			reed = lerpf(rng.randf_range(-1.0, 1.0), reed, x / air)
+		l1 += g1 * b1
+		b1 += g1 * (reed - l1 - 0.25 * b1)
+		l2 += g2 * b2
+		b2 += g2 * (reed - l2 - 0.2 * b2)
+		buf[i] = (b1 + 0.6 * b2) * minf(1.0, i / 220.0) * (1.0 - 0.7 * x)
+	return Synth.declick(Synth.normalize(buf, MOUTH_PEAK if vowel else MOUTH_PEAK * 0.6), 8, 200)
 
 
 # One letter in a caller's voice: the front of that instrument's note, scooped up into its

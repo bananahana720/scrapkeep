@@ -8,8 +8,8 @@ const Synth := preload("res://src/presentation/synth.gd")
 const T := preload("res://tests/support/t.gd")
 
 # Call-ins (SOUND-STORY section 8, "Who talks on what"). Every caller has a voice of their own:
-# a pilot talks in the notes of their own motif on their own instrument, bent; a site crew is
-# two talkers trading words; Brindle ends each sentence held on the flat second; the Foreman is
+# a pilot talks in the notes of their own motif, chirped on their own instrument and said
+# through a mouth, bent; a site crew is two talkers trading words; Brindle ends each sentence held on the flat second; the Foreman is
 # one pure note with every letter on the band's thirty-second grid and nothing bent or left to
 # chance; Moss rings his bell and talks as he does at his bench. A line is laid out the same way
 # every time. Through the game, one call books the line a moment ahead in the band's cue lane
@@ -29,6 +29,7 @@ func _initialize() -> void:
 
 func _run() -> void:
 	_voices()
+	_mouths()
 	_pilots()
 	_crew()
 	_brindle()
@@ -69,7 +70,69 @@ func _voices() -> void:
 		and Bank._say_plan("sable", LINE) != Bank._say_plan("sable", LINE + " Go."), "sable, twice")
 	var levels: Array = Bank.CALLERS.keys().map(func(speaker: String): return Bank.trim_db(Bank.say_id(speaker, LINE)))
 	t.check("each voice is levelled against Moss's", Bank.trim_db(Bank.say_id("moss", LINE)) == Bank.TRIM_DB["babble"]
-		and levels.min() >= Bank.TRIM_DB["babble"] - 3.0 and levels.max() <= Bank.TRIM_DB["babble"] + 5.0, "trims %s" % [levels])
+		and levels.min() >= Bank.TRIM_DB["babble"] - 3.0 and levels.max() <= Bank.TRIM_DB["babble"] + 7.0, "trims %s" % [levels])
+
+
+# Everyone alive has a mouth (Andrew, 10 November 2026); the Foreman has none. Moss and Brindle
+# keep their blips until he has heard their mouths against the rule on talking growls, and the
+# Cannon, a machine on the crew's side, keeps its bent chime.
+func _mouths() -> void:
+	var mouthed: Array = Bank.CALLERS.keys().filter(func(speaker: String): return Bank.CALLERS[speaker].has("mouth"))
+	t.eq("the pilots and the site crews talk through mouths", mouthed, ["sable", "rivet", "kest", "tarn", "tally", "pump_crew", "flume_crew", "signal_crew"])
+	var plan: Array = Bank._say_plan("sable", "Go on")[0]
+	t.check("the chirp stays on the instrument and each letter after it is said", plan.slice(0, 2).all(func(blip: Array): return blip[6] == "" and blip[5] == "bell")
+		and plan.slice(2).map(func(blip: Array): return blip[6]) == ["g", "o", "o", "n"], "letters %s" % [plan.map(func(blip: Array): return blip[6])])
+	var ee: PackedFloat32Array = Bank._mouth(69, 0.08, 0.0, "i", 1.0)
+	var oh: PackedFloat32Array = Bank._mouth(69, 0.08, 0.0, "o", 1.0)
+	var high := [_partial(ee, 6), _partial(oh, 6)]
+	var low := [_partial(ee, 2), _partial(oh, 2)]
+	t.check("a mouth shapes its vowels: ee rings high where oh rings low", high[0] > high[1] * 2.0 and low[1] > low[0] * 2.0,
+		"sixth partial %.3f against %.3f, second %.3f against %.3f" % [high[0], high[1], low[0], low[1]])
+	var pitched := [_pitched(Bank._mouth(76, 0.08, 0.0, "s", 1.0)), _pitched(Bank._mouth(76, 0.08, 0.0, "m", 1.0))]
+	t.check("a breathed letter opens on breath and a hummed one on its note", pitched[0] < pitched[1] * 0.75 and pitched[1] > 0.8, "pitched %.2f against %.2f" % pitched)
+	var small: PackedFloat32Array = Bank._mouth(69, 0.08, 0.0, "a", 1.4)
+	var grown: PackedFloat32Array = Bank._mouth(69, 0.08, 0.0, "a", 1.0)
+	t.check("a smaller mouth is brighter, a letter is said the same way twice, and a vowel is level with the chirp", _edge(small) > _edge(grown)
+		and small == Bank._mouth(69, 0.08, 0.0, "a", 1.4) and absf(Synth.peak(small) - Bank.MOUTH_PEAK) < 0.05
+		and Synth.peak(Bank._mouth(69, 0.04, 0.0, "t", 1.4)) < Synth.peak(small), "edge %.3f over %.3f, peak %.2f" % [_edge(small), _edge(grown), Synth.peak(small)])
+	var said: PackedFloat32Array = Bank.samples(Bank.say_id("sable", LINE))
+	var played: PackedFloat32Array = Bank._letter("bell", 86, 0.08, 0.0)
+	t.check("a mouthed line is not the instrument's", said.size() > 0 and Bank._mouth(74, 0.08, 0.0, "a", 1.4) != played, "%d samples" % said.size())
+
+
+# How much of a buffer sits on one partial of A4, the note the mouth checks are said on.
+func _partial(buf: PackedFloat32Array, partial: int) -> float:
+	var turn := TAU * Bank._hz(69) * partial / Harmony.RATE
+	var across := 0.0
+	var along := 0.0
+	var level := 0.0
+	for i in buf.size():
+		across += buf[i] * cos(turn * i)
+		along += buf[i] * sin(turn * i)
+		level += absf(buf[i])
+	return sqrt(across * across + along * along) / maxf(level, 0.000001)
+
+
+# How far a buffer's opening fifth repeats at the period of E5, clear of the shut mouth's own
+# ring: near 1 for a note, low for breath.
+func _pitched(buf: PackedFloat32Array) -> float:
+	var period := int(round(Harmony.RATE / Bank._hz(76)))
+	var same := 0.0
+	var level := 0.0
+	for i in range(period, buf.size() / 5):
+		same += buf[i] * buf[i - period]
+		level += buf[i] * buf[i]
+	return same / maxf(level, 0.000001)
+
+
+# How bright a buffer is: the size of its sample-to-sample steps against its level.
+func _edge(buf: PackedFloat32Array) -> float:
+	var steps := 0.0
+	var level := 0.0
+	for i in range(1, buf.size()):
+		steps += absf(buf[i] - buf[i - 1])
+		level += absf(buf[i])
+	return steps / maxf(level, 0.000001)
 
 
 func _pilots() -> void:
@@ -138,7 +201,7 @@ func _foreman() -> void:
 	var half := float(step) / Harmony.RATE / 2.0
 	var off: Array = plan.filter(func(blip: Array): return absf(float(blip[0]) / half - roundf(float(blip[0]) / half)) > 0.0001)
 	var body: Array = plan.slice(2)
-	var uneven: Array = body.filter(func(blip: Array): return blip.slice(1) != [74, half * 0.7, 1.0, 0.0, Bank.PURE])
+	var uneven: Array = body.filter(func(blip: Array): return blip.slice(1, 6) != [74, half * 0.7, 1.0, 0.0, Bank.PURE])
 	t.check("the Foreman is one pure note, every letter on the thirty-second grid, nothing bent, no rise on a question",
 		off.is_empty() and uneven.is_empty()
 		and [int(plan[0][1]), int(plan[1][1])] == [74, 81] and Bank.caller_on_grid("mind") and not Bank.caller_on_grid("sable"),
