@@ -269,6 +269,10 @@ func _process(_delta: float) -> bool:
 	events.warden_engaged.emit(4)
 	_t.eq("the Warden takes the band from an event's tune", _last(a), "")
 	events.event_ended.emit("flood", "passed")
+	var staged_in_fight: int = a.staged.size()
+	events.event_started.emit("flood")
+	_t.eq("an event that begins inside the fight does not take the band", a.staged.size(), staged_in_fight)
+	events.event_ended.emit("flood", "passed")
 	events.beacon_unsealed.emit(4)
 
 	# Rare remixes, read where they play.

@@ -285,9 +285,19 @@ func _dam() -> void:
 	t.check("the wiped bar goes back to the build with no drop", _ace.section == "build" and _drops().size() == 3, "section=%s drops=%d" % [_ace.section, _drops().size()])
 	ram.call(31.0)
 	t.eq("the climb after the stagger lands its drops again", _drops().size(), 4)
+	# A hit off the water from low on the bar fills it in one go: it passes two quarters and
+	# opens a stagger on the same reading, and the held breath answers it.
+	_bars(6)
+	ram.call(100.0, true)
+	_bars(1)
+	t.check("a stagger from low on the bar is the held breath, not a drop", _ace.section == "open" and _drops().size() == 4, "section=%s drops=%d" % [_ace.section, _drops().size()])
+	ram.call(0.0)
+	_bars(2)
+	ram.call(31.0)
+	t.eq("and the climb after it lands its drop", _drops().size(), 5)
 	# The last ram: every chunk at once, and no drop; the break answers it.
 	_bars(6)
 	dam.chunks = 0
 	ram.call(100.0)
-	t.eq("the ram that breaks the dam lands no drop", _drops().size(), 4)
+	t.eq("the ram that breaks the dam lands no drop", _drops().size(), 5)
 	dam.queue_free()

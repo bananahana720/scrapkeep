@@ -3090,9 +3090,10 @@ func _boss_entry(music: String) -> String:
 	return TuneMoments.remixed(music, PhaseMusic.entry_track(music, pack_available), _remixes, tune_available)
 
 
-# A tune on its one pass does not begin inside a Warden's fight (warden_took_band).
+# A tune on its one pass does not begin inside a Warden's fight (warden_took_band), and
+# neither does an event's.
 func begin_moment(kind: String, key: String, id: String) -> void:
-	if id == "" or (_warden_fighting and kind in TuneMoments.ONE_PASS):
+	if id == "" or (_warden_fighting and kind in TuneMoments.NOT_IN_A_FIGHT):
 		return
 	end_moment(kind, key, false)
 	_moment_seq += 1
@@ -3161,7 +3162,8 @@ func tune_found(discovery_id: String) -> void:
 
 # A Warden's fight takes the band from every moment: the landmark's tune ends and stays away
 # for the stage, a tune on its one pass (a find, the fabricator) is cut short and none begins
-# until the arena opens, and an event's tune still running ends too. A moment's recording has
+# until the arena opens, and an event's tune still running ends too (one that begins inside
+# the fight does not start: TuneMoments.NOT_IN_A_FIGHT). A moment's recording has
 # no fight sections and its own tempo, so one left playing holds the grid over the whole fight
 # and the Warden's pivot never comes. The stage's own recording comes back straight into the
 # fight's sections.
@@ -3832,7 +3834,10 @@ func _on_posture_changed(enemy: Node3D, posture: float, staggered: bool) -> void
 		play("posture_changed", 6.0, 1.0, "SFX", Rows.heard(EventKinds.state_row("chunk_shatter"), cue_context()))
 		play("posture_changed", 6.0, 1.0, "SFX", SHATTER_LOW)
 	if ctx.flow != null and ctx.flow.get("warden") == enemy:
-		_follow_warden_form(posture, staggered, _guard_step_fell(enemy, bool(seen[0]) and not staggered))
+		# A hit that fills the bar from low down opens a stagger and passes a quarter on the same
+		# reading: the stagger's held breath answers it, not a drop.
+		var fell := _guard_step_fell(enemy, bool(seen[0]) and not staggered)
+		_follow_warden_form(posture, staggered, fell and not staggered)
 
 
 # Whether this reading took a step off the Warden's guard and left it standing: the hit that
