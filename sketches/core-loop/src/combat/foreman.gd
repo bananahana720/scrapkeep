@@ -84,6 +84,10 @@ func _build_body() -> void:
 		return
 	_signal_material = Palette.solid(Palette.BRASS, 0.0)
 	_signal_material.vertex_color_use_as_albedo = true
+	# PROBE (sight, 2010 finish, never stacked): `-- --sight-brass` draws the horn as satin metal.
+	if "--sight-brass" in OS.get_cmdline_user_args():
+		_signal_material.metallic = 0.85
+		_signal_material.roughness = 0.38
 	# On screen the glb's own scene stands in, so its idle, tell and break clips play; the
 	# sockets, collider and special_tell signal are as before (a headless run copies meshes).
 	var model := SpecialRig.seat(self, _visual_parent(), MODEL, "foreman")

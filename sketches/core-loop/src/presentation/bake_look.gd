@@ -26,19 +26,45 @@ const Threat := preload("res://src/combat/threat_grammar.gd")
 
 static var _ramp: ImageTexture
 static var _twins := {}
+static var _edge := -1.0
+
+# PROBE (sight, 2010 finish, never stacked): `-- --sight-edge=0.35` lifts worn convex edges toward
+# bone by up to that share on every shaded surface. Off (0) unless the flag is given.
+const EDGE_BONE := Color("d2c5a5")
+
+
+static func edge_lift() -> float:
+	if _edge < 0.0:
+		_edge = 0.0
+		for arg in OS.get_cmdline_user_args():
+			if arg.begins_with("--sight-edge="):
+				_edge = clampf(arg.get_slice("=", 1).to_float(), 0.0, 1.0)
+	return _edge
 
 
 # The shade as a multiplier, capped at 1. x is the unoccluded fraction; y is the wear with glTF's
 # flipped V, so 0 is the most worn convex edge and 1 the deepest crease.
 static func ramp() -> ImageTexture:
 	if _ramp == null:
-		var img := Image.create_empty(RAMP, RAMP, false, Image.FORMAT_RGB8)
+		var lift := edge_lift()
+		var img := Image.create_empty(RAMP, RAMP, false, Image.FORMAT_RGBA8 if lift > 0.0 else Image.FORMAT_RGB8)
 		for j in RAMP:
 			var wear := (1.0 - float(j) / (RAMP - 1) * 2.0) * EDGE
 			for i in RAMP:
 				var occluded := 1.0 - float(i) / (RAMP - 1)
 				var shade := minf((1.0 - AO_STRENGTH * occluded) * (1.0 + wear), 1.0)
-				img.set_pixel(i, j, Color(shade, shade, shade))
+				if lift <= 0.0:
+					img.set_pixel(i, j, Color(shade, shade, shade))
+					continue
+				# One mix layer that both darkens and lifts: albedo * (1 - a) + c * a, with
+				# 1 - a = shade * (1 - w) in linear light (the multiply ramp is read as sRGB) and c * a = bone * w.
+				var w := lift * clampf(wear / EDGE, 0.0, 1.0)
+				var keep := Color(shade, shade, shade).srgb_to_linear().r * (1.0 - w)
+				var a := 1.0 - keep
+				var c := (EDGE_BONE.srgb_to_linear() * (w / a)) if a > 0.0001 else Color.BLACK
+				c.a = 1.0
+				c = c.linear_to_srgb()
+				img.set_pixel(i, j, Color(c.r, c.g, c.b, a))
 		_ramp = ImageTexture.create_from_image(img)
 	return _ramp
 
@@ -59,7 +85,7 @@ static func apply(mat: StandardMaterial3D) -> void:
 	Palette.smooth(mat)
 	mat.detail_enabled = true
 	mat.detail_uv_layer = BaseMaterial3D.DETAIL_UV_2
-	mat.detail_blend_mode = BaseMaterial3D.BLEND_MODE_MUL
+	mat.detail_blend_mode = BaseMaterial3D.BLEND_MODE_MIX if edge_lift() > 0.0 else BaseMaterial3D.BLEND_MODE_MUL
 	mat.detail_albedo = ramp()
 	mat.detail_mask = null
 	mat.uv2_triplanar = false
