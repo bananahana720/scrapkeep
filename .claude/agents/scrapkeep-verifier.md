@@ -1,6 +1,6 @@
 ---
 name: scrapkeep-verifier
-description: Run an exact Scrapkeep candidate's checks on the mid tier at medium effort and return command receipts, without edits or board writes. Use before the acceptance gate (scrapkeep-reviewer-medium) so the gate judges from receipts instead of rerunning.
+description: Run an exact Scrapkeep candidate's checks on the mid tier at medium effort and return command receipts, without edits or board writes. Use when a candidate's receipts are missing or disputed, so the reviewer judges from receipts instead of rerunning.
 model: opus
 effort: medium
 tools: Read, Grep, Glob, Bash
