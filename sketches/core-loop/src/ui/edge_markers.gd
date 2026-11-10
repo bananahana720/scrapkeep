@@ -3,7 +3,10 @@ extends Control
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const Icons := preload("res://src/ui/icons.gd")
 const Objectives := preload("res://src/core/objectives.gd")
+const Palette := preload("res://src/core/palette.gd")
 const ScreenRegions := preload("res://src/ui/screen_regions.gd")
+const UiDraw := preload("res://src/ui/ui_draw.gd")
+const UiFonts := preload("res://src/ui/ui_fonts.gd")
 
 # Edge markers: while the Warden (or the beacon, once it has no Warden) or an open
 # reward gate is off screen, a chevron on the edge of the play view points at it, with
@@ -20,10 +23,14 @@ const ScreenRegions := preload("res://src/ui/screen_regions.gd")
 # PARK.md:265 sets the range at 240 m (sight_ok), never the comps note's 60 m (memo 2, row 29a).
 # It is a pointer, not a map: no panel, no list, and no marker once the door is open.
 #
-# In Brindle's arena the markers point at what the plate's row names (boss.gd plate_targets: the
-# crane magnets, the vent caps, the open cockpit, the scooter). Nothing else on screen says which
-# part of the ship a row means, so these targets keep their marker in view too: the same chevron,
-# small, standing over the target and pointing down at it.
+# In a fight whose row names a thing (Brindle's arena, the Spillway's two mounted Wardens) the
+# markers point at that thing (boss.gd and warden_reactor.gd plate_targets: the crane magnets, the
+# vent caps, the open cockpit, the scooter, the water sheet's foot, the relic to latch). Nothing
+# else on the screen says which part of the scene a row means, so these targets keep a mark in
+# view too: brackets round the thing and, where there is room, a tag with its name or the next
+# move there (objectives.gd TAGS). The plate is the plan; the mark is the
+# next move, on the thing itself. A chevron over the thing was tried first and nobody saw it
+# (second first-timer film, PF-17).
 
 const SIDE_INSET := 0.035
 const BAND_CLEARANCE := 16.0
@@ -40,13 +47,25 @@ const POCKET_STEP_M := 4.0
 const POCKET_DOOR_LIFT := 1.5
 const POCKET_RANGE_SLACK := 0.01
 const CLAMP_ROW := "break_clamp_crews"
-# A marked target in view: the chevron's size and the gap between its tip and the target.
-const MARK_SIZE := 18.0
-const MARK_GAP := 8.0
+# A marked target in view. Its box's half-size is the screen size of MARK_RADIUS_M at the target,
+# kept between MARK_MIN and MARK_MAX; the brackets breathe by MARK_PULSE of it at MARK_HZ.
+const MARK_RADIUS_M := 1.6
+const MARK_MIN := 24.0
+const MARK_MAX := 56.0
+const MARK_STROKE := 4.0
+const MARK_PULSE := 0.08
+const MARK_HZ := 1.2
+# The tag: its font size, the padding of its chip, and the gap between the chip and the brackets.
+const TAG_FONT := 17
+const TAG_PAD := Vector2(8.0, 4.0)
+const TAG_GAP := 6.0
+# The rows of a mounted Warden's fight whose thing the driver names (warden_reactor.gd plate_targets).
+const MOUNT_ROWS := ["ride_sheet", "line_fight"]
 
 var game
-# The objective row the plate shows now, set by the HUD each frame.
+# The objective row the plate shows now and the glyph it wears, set by the HUD each frame.
 var objective_id := ""
+var objective_icon := ""
 # Whether the Warden fight is engaged, set by the HUD each frame; activity markers hide while it is.
 var engaged := false
 # Whether the yard lock holds the ball, set by the HUD each frame; every stage marker points past
@@ -63,6 +82,8 @@ func setup(game_ref) -> void:
 	game = game_ref
 	set_anchors_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
+	# Over the key prompts and the damage numbers: a mark is the fight's goal, and both sit where it does.
+	z_index = 1
 	game.events.reward_offered.connect(func(offers: Array):
 		gate_points.clear()
 		for offer in offers:
@@ -83,7 +104,12 @@ func targets() -> Array[Dictionary]:
 		"stage", "beacon":
 			if yard_locked:
 				return out
-			if flow.sealed and is_instance_valid(flow.warden):
+			var marks := _mount_marks()
+			out.append_array(marks)
+			# A mark on the Warden itself stands in for the Warden's own marker.
+			if is_instance_valid(flow.warden) and marks.any(func(mark): return mark["at"].is_equal_approx(flow.warden.global_position)):
+				pass
+			elif flow.sealed and is_instance_valid(flow.warden):
 				out.append({"at": flow.warden.global_position, "kind": "warden_engaged", "icon": _glyph("obj_warden")})
 			elif game.beacon != null:
 				out.append({"at": game.beacon.global_position, "kind": "beacon_charge_changed", "state": game.beacon.state_id(), "icon": _glyph("obj_beacon")})
@@ -100,8 +126,24 @@ func targets() -> Array[Dictionary]:
 		"boss":
 			var boss = game.ctx.boss
 			if is_instance_valid(boss) and boss.has_method("plate_targets") and Objectives.ROWS.has(objective_id):
-				for at in boss.plate_targets():
-					out.append({"at": at, "kind": "boss_arena_entered", "icon": Objectives.glyph(objective_id), "mark": true})
+				for target in boss.plate_targets():
+					out.append({"at": target["at"], "kind": "boss_arena_entered", "icon": _row_icon(), "mark": true,
+						"tag": Objectives.tag(target["what"])})
+	return out
+
+
+# The marked targets of a mounted Warden's fight, while the plate shows that fight's row.
+func _mount_marks() -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	var warden = game.flow.warden
+	if not engaged or objective_id not in MOUNT_ROWS or not is_instance_valid(warden):
+		return out
+	var driver = warden.get("mount_driver")
+	if driver == null or not driver.has_method("plate_targets"):
+		return out
+	for target in driver.plate_targets(warden):
+		out.append({"at": target["at"], "kind": "warden_engaged", "icon": _row_icon(), "mark": true,
+			"tag": Objectives.tag(target["what"])})
 	return out
 
 
@@ -213,6 +255,12 @@ static func _opened_ids(contraptions) -> Dictionary:
 	return out
 
 
+# The glyph a marked target wears at the view's edge: the plate's own now (an open cockpit turns
+# it), or the row's when the HUD has handed none.
+func _row_icon() -> String:
+	return objective_icon if objective_icon != "" else Objectives.glyph(objective_id)
+
+
 # The plate's glyph for the Warden and beacon markers; the activity row's own glyph belongs
 # to the activity markers, so it never stands in for the Warden's.
 # While the clamp row shows, its glyph rides the crew marker and the Warden's keeps its own.
@@ -237,41 +285,127 @@ static func view_rect(size: Vector2) -> Rect2:
 
 
 # One record per off-screen target: {at (screen), dir, size, color, icon}. A target with `mark`
-# has one in view as well, over the target and pointing down at it; under a HUD band it goes to
-# the play view's edge like any other.
+# has one in view as well: {box, color, tag}, brackets round the box, with targets whose boxes
+# touch sharing one pair of brackets, and the tag on the box nearest the middle of the view. Where
+# a mark would run under the top or the bottom band its targets go to the play view's edge like
+# any other.
 func markers(size: Vector2) -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
 	if game == null or not game.flow.in_play():
 		return out
 	var cam: Camera3D = game.camera.cam
-	var view := view_rect(size)
 	var screen := Rect2(Vector2.ZERO, size)
-	var centre := size * 0.5
-	var ball: Vector3 = game.player.shown_position()
+	var away: Array[Dictionary] = []
+	var groups: Array[Dictionary] = []
 	for target in targets():
 		var at: Vector3 = target["at"]
-		var behind := cam.is_position_behind(at)
-		var projected := cam.unproject_position(at) if not behind else Vector2.ZERO
-		if not behind and screen.has_point(projected):
-			if not target.get("mark", false):
-				continue
-			var above := projected + Vector2.UP * MARK_GAP
-			if view.has_point(above) and view.has_point(above + Vector2.UP * MARK_SIZE * 2.4):
-				out.append({"at": above, "dir": Vector2.DOWN, "size": MARK_SIZE, "color": marker_color(target), "icon": target["icon"]})
-				continue
+		var projected := cam.unproject_position(at) if not cam.is_position_behind(at) else Vector2.INF
+		if projected == Vector2.INF or not screen.has_point(projected):
+			away.append(target)
+		elif target.get("mark", false):
+			var half := clampf(cam.unproject_position(at + cam.global_transform.basis.x * MARK_RADIUS_M).distance_to(projected), MARK_MIN, MARK_MAX)
+			_group(groups, {"box": Rect2(projected - Vector2(half, half), Vector2(half, half) * 2.0), "color": marker_color(target),
+				"tag": String(target.get("tag", "")), "targets": [target]})
+	# Every group wears its tag where there is room for it, the group nearest the middle of the
+	# view first: over the brackets, else under them, else not at all. A group with no room even
+	# for its brackets sends its targets to the edge.
+	var room := mark_view(size)
+	var centre := size * 0.5
+	groups.sort_custom(func(a, b): return a["box"].get_center().distance_to(centre) < b["box"].get_center().distance_to(centre))
+	var taken: Array[Rect2] = []
+	for group in groups:
+		var box := _slid(group["box"], room)
+		var tag: String = group["tag"]
+		var under := false
+		if tag != "" and not _free(mark_rect(box, tag), room, taken):
+			under = _free(mark_rect(box, tag, true), room, taken)
+			tag = tag if under else ""
+		if tag == "" and not _free(mark_rect(box, ""), room, taken):
+			away.append_array(group["targets"])
+			continue
+		taken.append(mark_rect(box, tag, under))
+		out.append({"box": box, "color": group["color"], "tag": tag, "under": under})
+	var view := view_rect(size)
+	var ball: Vector3 = game.player.shown_position()
+	for target in away:
+		var at: Vector3 = target["at"]
 		var dir: Vector2
-		if behind:
+		if cam.is_position_behind(at):
 			var local := cam.global_transform.affine_inverse() * at
 			dir = Vector2(local.x, -local.y)
 			if dir.length() < 0.001:
 				dir = Vector2.DOWN
 		else:
-			dir = projected - centre
+			dir = cam.unproject_position(at) - centre
 		dir = dir.normalized()
 		var near := clampf((ball.distance_to(at) - NEAR) / (FAR - NEAR), 0.0, 1.0)
 		out.append({"at": _on_edge(view, centre, dir), "dir": dir, "size": lerpf(MAX_SIZE, MIN_SIZE, near),
 			"color": marker_color(target), "icon": target["icon"]})
 	return out
+
+
+# Adds a mark to the groups: into every group of its tag whose box touches it, as one box. The
+# box grows as it takes groups in, so the pass repeats until it takes none.
+static func _group(groups: Array[Dictionary], mark: Dictionary) -> void:
+	var took := true
+	while took:
+		took = false
+		for i in range(groups.size() - 1, -1, -1):
+			if groups[i]["tag"] == mark["tag"] and groups[i]["box"].intersects(mark["box"]):
+				mark["box"] = mark["box"].merge(groups[i]["box"])
+				mark["targets"].append_array(groups[i]["targets"])
+				groups.remove_at(i)
+				took = true
+	groups.append(mark)
+
+
+# Where a mark may stand: the screen between the top band and the bottom band. The toasts band is
+# sky in most fights, and a marked thing can be up there (Brindle's scooter), so a mark may too.
+static func mark_view(size: Vector2) -> Rect2:
+	var top := ScreenRegions.rect("top", size).end.y + BAND_CLEARANCE
+	var bottom := ScreenRegions.rect("bottom", size).position.y - BAND_CLEARANCE
+	var inset := size.x * SIDE_INSET
+	return Rect2(inset, top, size.x - 2.0 * inset, bottom - top)
+
+
+# The tags drawn now, for the HUD's word budget (word_budget.gd).
+func drawn_words() -> PackedStringArray:
+	var out := PackedStringArray()
+	for marker in _shown:
+		if marker.get("tag", "") != "":
+			out.append(marker["tag"])
+	return out
+
+
+# Whether a mark may take this screen: inside the room and over no mark already placed.
+static func _free(rect: Rect2, room: Rect2, taken: Array[Rect2]) -> bool:
+	return room.encloses(rect) and not taken.any(func(other: Rect2): return other.intersects(rect))
+
+
+# A mark's box moved the least it takes to stand in the room, while the thing's middle stays
+# inside the brackets (Brindle's scooter flies at the top band's edge); otherwise as it was.
+static func _slid(box: Rect2, room: Rect2) -> Rect2:
+	var grown := mark_rect(box, "")
+	var move := Vector2(maxf(room.position.x - grown.position.x, 0.0) + minf(room.end.x - grown.end.x, 0.0),
+		maxf(room.position.y - grown.position.y, 0.0) + minf(room.end.y - grown.end.y, 0.0))
+	if absf(move.x) >= box.size.x * 0.5 or absf(move.y) >= box.size.y * 0.5:
+		return box
+	return Rect2(box.position + move, box.size)
+
+
+# The screen a mark takes: its brackets at their widest, and its tag's chip over them (under
+# them when the room over them is taken).
+static func mark_rect(box: Rect2, tag: String, under := false) -> Rect2:
+	var out := box.grow(maxf(box.size.x, box.size.y) * 0.5 * MARK_PULSE + MARK_STROKE)
+	return out.merge(tag_rect(box, tag, under)) if tag != "" else out
+
+
+# The tag's chip: centred over the brackets, or under them.
+static func tag_rect(box: Rect2, tag: String, under := false) -> Rect2:
+	var chip := Vector2(UiDraw.width(tag, TAG_FONT), UiFonts.bold().get_height(TAG_FONT)) + TAG_PAD * 2.0
+	var off := maxf(box.size.x, box.size.y) * 0.5 * MARK_PULSE + MARK_STROKE + TAG_GAP
+	var top := box.end.y + off if under else box.position.y - off - chip.y
+	return Rect2(Vector2(box.get_center().x - chip.x * 0.5, top), chip)
 
 
 static func marker_color(target: Dictionary) -> Color:
@@ -300,13 +434,17 @@ func _process(_delta: float) -> void:
 		return
 	note_pockets(get_viewport_rect().size)
 	var now := markers(get_viewport_rect().size)
-	if now != _shown:
+	# A mark breathes, so it is drawn every frame while one is up.
+	if now != _shown or now.any(func(marker): return marker.has("box")):
 		_shown = now
 		queue_redraw()
 
 
 func _draw() -> void:
 	for marker in _shown:
+		if marker.has("box"):
+			_draw_mark(marker)
+			continue
 		var at: Vector2 = marker["at"]
 		var dir: Vector2 = marker["dir"]
 		var s: float = marker["size"]
@@ -319,3 +457,30 @@ func _draw() -> void:
 		draw_polyline(PackedVector2Array([chevron[0], chevron[1], chevron[2], chevron[3], chevron[0]]), Color(0.0, 0.0, 0.0, 0.7), 1.5)
 		var icon_at := tip - dir * s * 1.9
 		draw_texture_rect(Icons.texture(marker["icon"]), Rect2(icon_at - Vector2(s, s) * 0.5, Vector2(s, s)), false, Icons.tint(marker["icon"], color))
+
+
+# A mark in view: four corner brackets round the box, inked dark under the row's colour so they
+# hold on any ground, and the tag on a dark chip over them with a stem down to the brackets.
+func _draw_mark(marker: Dictionary) -> void:
+	var color: Color = marker["color"]
+	var rest: Rect2 = marker["box"]
+	var reach := maxf(rest.size.x, rest.size.y) * 0.5
+	var box := rest.grow(reach * MARK_PULSE * sin(Time.get_ticks_msec() * 0.001 * TAU * MARK_HZ))
+	var arm := minf(box.size.x, box.size.y) * 0.22
+	for corner in [Vector2(0.0, 0.0), Vector2(1.0, 0.0), Vector2(1.0, 1.0), Vector2(0.0, 1.0)]:
+		var tip: Vector2 = box.position + box.size * corner
+		var inward: Vector2 = Vector2(1.0, 1.0) - corner * 2.0
+		var bracket := PackedVector2Array([tip + Vector2(inward.x * arm, 0.0), tip, tip + Vector2(0.0, inward.y * arm)])
+		draw_polyline(bracket, UiDraw.OUTLINE, MARK_STROKE + 4.0)
+		draw_polyline(bracket, color, MARK_STROKE)
+	var tag: String = marker["tag"]
+	if tag == "":
+		return
+	var under: bool = marker.get("under", false)
+	var chip := tag_rect(rest, tag, under)
+	var stem := Vector2(chip.get_center().x, chip.position.y if under else chip.end.y)
+	var point := -1.0 if under else 1.0
+	draw_colored_polygon(PackedVector2Array([stem + Vector2(-6.0, -point), stem + Vector2(6.0, -point), stem + Vector2(0.0, (TAG_GAP + 2.0) * point)]), Color(Palette.CHARCOAL, 0.92))
+	draw_rect(chip, Color(Palette.CHARCOAL, 0.92))
+	draw_rect(chip, color, false, 2.0)
+	UiDraw.text(self, chip.position.x + TAG_PAD.x, chip.get_center().y, tag, TAG_FONT, color)

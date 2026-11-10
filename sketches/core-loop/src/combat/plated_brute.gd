@@ -52,6 +52,10 @@ var bounty_wake := 30.0
 var bounty_leash := 40.0
 var bounty_return_speed := 9.0
 var bounty_woken := false
+# Whether the ball has ever woken it. It falls asleep again each time it walks home, so a ball
+# shooting it from beyond its leash wakes it with every bolt; what reads "the player has met this
+# hauler" (the objective plate, through world/activities.gd at_hand) reads this.
+var bounty_met := false
 var _crate: MeshInstance3D
 var _absorb := false
 var _plate: MeshInstance3D
@@ -243,6 +247,7 @@ func _roam(to_ball: Vector3) -> Vector3:
 		return super(to_ball)
 	if not bounty_woken and to_ball.length() <= bounty_wake:
 		bounty_woken = true
+		bounty_met = true
 	if not bounty_woken:
 		return Vector3.ZERO
 	if _homeward(to_ball):
@@ -318,6 +323,7 @@ func _go_live() -> void:
 
 func on_struck(_kind: String, _part: String, result: Dictionary) -> void:
 	bounty_woken = true
+	bounty_met = true
 	if result.get("full", false) and plates == 0 and plates_popped > 0 and fleet != null:
 		fleet.discover("plate_peel", global_position)
 	if result.get("full", false) and plates > 0:

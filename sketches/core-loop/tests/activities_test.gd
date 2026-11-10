@@ -274,8 +274,11 @@ func _bounty() -> void:
 		and brute.find_child("BrutePlates", true, false) != null, "crate colour")
 	# Walked off and woken, with the ball 60 m away, it goes home inside 300 frames.
 	var near: Vector3 = _ground(s.global_position + Vector3(20.0, 0.0, 0.0))
+	var acts = _game.world.activities
+	_t.eq("a hauler the ball has not met is not at hand, however near", [brute.bounty_met, acts.at_hand(near) == null], [false, true])
 	_put(near)
 	await _hold(6)
+	_t.eq("woken, it is met and its site is at hand", [brute.bounty_met, acts.at_hand(near) == s], [true, true])
 	var away: Vector3 = _ground(s.global_position + Vector3(0.0, 0.0, 60.0))
 	var out: Vector3 = _ground(s.global_position + Vector3(35.0, 0.0, 0.0), 2.4)
 	brute.global_position = out
@@ -283,6 +286,10 @@ func _bounty() -> void:
 	await _hold(LEASH_FRAMES)
 	_t.check("with the ball 60 m off for 300 frames the brute is back within 10 m of its site", _planar(brute.global_position, s.global_position) <= 10.0,
 		"brute %.1f m from its site, started 35 m out" % _planar(brute.global_position, s.global_position))
+	# It falls asleep again at home; met, its site stays at hand (a ball shooting it from beyond
+	# its leash wakes it with every bolt, and the plate flickered with it).
+	brute.bounty_woken = false
+	_t.eq("asleep again at home, its site is still at hand", [brute.bounty_met, acts.at_hand(away) == s], [true, true])
 	_t.eq("no activity has finished yet", _done.size(), 0)
 	_put(_ground(s.global_position + Vector3(0.0, 0.0, 50.0)))
 	await _hold(2)

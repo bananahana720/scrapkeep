@@ -134,12 +134,16 @@ const ROW_COLOR := {"find_warden": "warden_engaged", "break_guard": "warden_enga
 	"grow_return": "warden_engaged", "break_warden": "warden_engaged", "charge_beacon": "beacon_charge_changed",
 	"find_activity": "activity_done", "roll_gate": "reward_offered", "hold_line": "launched", "break_brindle": "boss_arena_entered",
 	"break_yard_crew": "pack_arrived", "break_clamp_crews": "pack_arrived",
-	"ride_sheet": "warden_engaged", "latch_warden": "warden_engaged", "fire_from_line": "warden_engaged",
+	"ride_sheet": "warden_engaged", "line_fight": "warden_engaged",
 	"shoot_magnets": "boss_arena_entered", "slam_caps": "boss_arena_entered", "bait_charge": "boss_arena_entered",
-	"hit_cockpit": "boss_arena_entered", "ram_scooter": "boss_arena_entered"}
+	"ram_scooter": "boss_arena_entered"}
 # The rows whose glyph is ringed by how much of the Warden is broken.
 const RING_ROWS := ["find_warden", "break_guard", "smash_core", "grow_return", "break_warden", "charge_beacon",
-	"ride_sheet", "latch_warden", "fire_from_line"]
+	"ride_sheet", "line_fight"]
+# The stage locks' facts that finish a goal (stage_locks.gd), and the done row each one shows.
+const DONE_FACTS := {"arena_unlocked": "yard", "warden_gate_opened": "clamp"}
+# Brindle's rows that hold their words through a stagger; the open cockpit turns their glyph.
+const OPEN_ROWS := ["shoot_magnets", "slam_caps", "bait_charge"]
 # The gaps of the top slot when a plate is mounted: from the band's top to the plate, and
 # from the plate to the objective plate under it.
 const PLATE_TOP := 6.0
@@ -219,10 +223,11 @@ var boss_plate: Control
 # trying without getting anywhere (objectives.gd).
 var _engaged := false
 var _struggle := Objectives.Struggle.new()
-# The site the activity row names now (objective_reading), or null.
-var _plate_site = null
-# Where the ball is going, which is the "ahead" the activity row names a site by.
-var _way := Objectives.Way.new()
+# The finished goal the plate shows ticked before the next one (objectives.gd Done).
+var _done := Objectives.Done.new()
+# The side site the plate holds as its goal (activities.gd at_hand), stepped each physics tick: a
+# site once at hand keeps the row until it is finished or the ball has left it.
+var _site = null
 # The armour gauge (scrap mode `armor`): the mass heap and the scrap layer over the hull, left of the hull
 # gauge, in the scrap colour where the hull is sand. A hit that reached the scrap flashes
 # its edge amber for ARMOR_FLASH seconds; the hull gauge turns rust only at low health.
@@ -359,6 +364,18 @@ func setup(game_ref) -> void:
 	game.events.warden_engaged.connect(func(_stage: int): _begin_engagement(true))
 	game.events.boss_arena_entered.connect(_seat_boss_plate)
 	game.events.beacon_unsealed.connect(func(_stage: int): _begin_engagement(false))
+	# A finished goal is ticked on the plate before the next one shows (plate_shown).
+	game.events.activity_done.connect(func(id: String, _at: Vector3): _done.note(Objectives.done_words(id, game.world.activities.called(id))))
+	game.events.trade_taken.connect(func(kind: String, _at: Vector3): _done.note(Objectives.done_words(kind)))
+	game.events.event_ended.connect(func(id: String, outcome: String):
+		if outcome == "lost":
+			_done.note(Objectives.lost_words(id), false))
+	game.events.beacon_unsealed.connect(func(_stage: int): _done.note(Objectives.done_words("warden")))
+	# The clamp is the fight's: opened from the road it is ticked nowhere (the plate never said it
+	# was shut), and a site finished in the same breath keeps its own tick.
+	game.events.world_fact.connect(func(kind: String, _at: Vector3):
+		if DONE_FACTS.has(kind) and (kind != "warden_gate_opened" or _engaged):
+			_done.note(Objectives.done_words(DONE_FACTS[kind]), true, true))
 	game.events.posture_changed.connect(_on_posture)
 	game.events.launched.connect(_on_launched)
 	game.events.world_entered.connect(_on_world_entered)
@@ -817,7 +834,8 @@ func _on_world_entered(world: int) -> void:
 func _on_stage_entered(stage: int, retry: bool) -> void:
 	_threat = 0
 	_begin_engagement(false)
-	_way.begin()
+	_done.clear()
+	_site = null
 	if retry:
 		return
 	if game.opening.waits("title"):
@@ -1031,13 +1049,14 @@ func hull_shown() -> float:
 
 
 # The objective for the flow's state: the row objectives.gd picks, with its glyph, its colour
-# and, while the Warden or an activity is still to be found, the metres to it.
+# and, while the Warden is still to be found, the metres to it.
 func objective_reading() -> Dictionary:
 	var flow = game.flow
 	var warden = flow.warden if is_instance_valid(flow.warden) else null
 	var distance: float = game.player.shown_position().distance_to(warden.global_position) if warden != null else INF
 	var gate = flow.gate
-	var sites: Array = edge_markers.unfinished_sites()
+	var activities = game.world.activities if game.world != null else null
+	var site = _site if is_instance_valid(_site) and not _site.done and not _site.failed else null
 	var reading := {
 		"state": flow.state_name(),
 		"sealed": flow.sealed,
@@ -1047,7 +1066,7 @@ func objective_reading() -> Dictionary:
 		"struggling": _struggle.struggling,
 		"distance": distance,
 		"card": launch_card.showing(),
-		"activities_left": sites.size(),
+		"site_at_hand": site != null,
 		"yard_locked": gate != null and gate.lock_active(),
 		"clamp_shut": gate != null and gate.locked(),
 	}
@@ -1055,28 +1074,40 @@ func objective_reading() -> Dictionary:
 	var driver = warden.get("mount_driver") if warden != null else null
 	if driver != null and driver.has_method("plate_reading"):
 		reading.merge(driver.plate_reading(warden), true)
+	# What the fight asks for now (the things its marks stand on), for the row's live step.
+	var asked: Array = []
+	if driver != null and driver.has_method("plate_targets"):
+		asked.append_array(driver.plate_targets(warden))
 	var boss = game.ctx.boss
 	if is_instance_valid(boss) and boss.has_method("plate_reading"):
 		reading.merge(boss.plate_reading(), true)
+		asked.append_array(boss.plate_targets())
 	var id := Objectives.choose(reading)
 	if id == "":
-		return {"id": "", "icon": "", "words": "", "color": Palette.SAND, "progress": -1.0, "distance": -1}
+		return {"id": "", "icon": "", "words": "", "color": Palette.SAND, "progress": -1.0, "distance": -1, "step": 0}
 	var words := Objectives.words(id)
+	var icon := Objectives.glyph(id)
 	if id == "find_activity":
-		# An unfinished site by name and metres, so the row is a place to go: the one ahead on the
-		# ball's way (Objectives.pick_site, Way), kept until another is clearly the better call.
-		var ball: Vector3 = game.player.shown_position()
-		var offsets := []
-		for site in sites:
-			offsets.append(site.global_position - ball)
-		var picked := Objectives.pick_site(offsets, _way.ahead(-game.camera.cam.global_transform.basis.z), sites.find(_plate_site) if is_instance_valid(_plate_site) else -1)
-		_plate_site = sites[picked] if picked >= 0 else null
-		if picked >= 0:
-			words = Objectives.activity_words(String(sites[picked].id), game.world.activities.called(String(sites[picked].id)))
-			distance = offsets[picked].length()
-	return {"id": id, "icon": Objectives.glyph(id), "words": words, "color": row_color(id),
+		# The side site the ball is at, by what finishes it. No metres: the ball is there.
+		words = Objectives.activity_words(String(site.id), activities.called(String(site.id)))
+	elif id in OPEN_ROWS and reading.get("open", false):
+		# The cockpit is open: the row's words hold and its glyph turns to the cockpit row's.
+		icon = Objectives.COCKPIT_GLYPH
+	return {"id": id, "icon": icon, "words": words, "color": row_color(id),
 		"progress": _clamp_fraction(gate) if id == "break_clamp_crews" else game.beacon.fraction() if id in RING_ROWS else -1.0,
-		"distance": int(distance) if id in ["find_warden", "find_activity"] and distance < INF else -1}
+		"distance": int(distance) if id == "find_warden" and distance < INF else -1,
+		"step": Objectives.live_step(id, String(asked[0]["what"]) if not asked.is_empty() else "")}
+
+
+# What the plate shows: the objective, or for Objectives.Done.SECONDS after a goal is finished
+# (or lost) that goal ticked (crossed), in the objective's own place.
+func plate_shown(reading := {}) -> Dictionary:
+	if reading.is_empty():
+		reading = objective_reading()
+	if not _done.showing() or reading["id"] == "":
+		return reading
+	return {"id": reading["id"], "icon": "", "words": _done.words, "color": EventKinds.color("activity_done") if _done.won else Palette.RUST,
+		"progress": -1.0, "distance": -1, "step": 0, "done": "won" if _done.won else "lost"}
 
 
 # How many of the crews the Warden's clamp asks for are down, as the ring round the plate's glyph.
@@ -1191,9 +1222,11 @@ func _process(delta: float) -> void:
 	chain_counter.step(delta, game.player.chain.combo)
 
 	var run = game.run
-	var reading := objective_reading()
-	_objective.set_objective(reading["icon"], reading["words"], reading["color"], reading["progress"], reading["distance"])
-	edge_markers.objective_id = reading["id"]
+	var goal := objective_reading()
+	var reading := plate_shown(goal)
+	_objective.set_objective(reading["icon"], reading["words"], reading["color"], reading["progress"], reading["distance"], reading.get("done", ""), reading["step"])
+	edge_markers.objective_id = goal["id"]
+	edge_markers.objective_icon = goal["icon"]
 	edge_markers.engaged = _engaged
 	edge_markers.yard_locked = reading["id"] == "break_yard_crew"
 	var tbl = game.ctx.stages
@@ -1286,8 +1319,10 @@ func _physics_process(delta: float) -> void:
 		return
 	if _engaged:
 		_struggle.step(delta)
-	if game.player != null:
-		_way.step(game.player.planar_velocity(), delta)
+	var activities = game.world.activities if game.world != null else null
+	_site = activities.at_hand(game.player.shown_position(), _site if is_instance_valid(_site) else null) if activities != null and game.flow != null and game.flow.in_play() else null
+	if _done.showing() and game.flow != null and game.flow.in_play():
+		_done.step(delta, String(objective_reading()["words"]))
 	part_name.step(delta)
 	_step_fight_hint()
 
