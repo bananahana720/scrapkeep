@@ -34,7 +34,7 @@ class Rig:
 		return true
 	func _ace_named(id: String, at: int, _boss := false, _won := true) -> void:
 		named.append([id, at])
-	func _ace_stage(stage: int, at: int) -> void:
+	func _ace_stage(stage: int, at: int, _fight := false) -> void:
 		staged.append([stage, at, level_tune(stage)])
 
 class FakeElite:
