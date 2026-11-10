@@ -3,7 +3,8 @@ extends Node
 # --self-play (src/game.gd): a bot plays the launched game with real ticks, as a player's
 # game runs (no SimClock), so `npm run sketch:frametime -- --self-play` can log a stage swap
 # or a stage exit unattended (SWAP-HITCH-6, STAGE6-GATE). Only packs that carry tools/ have
-# it: `npm run sketch:export -- --self-play`. Seconds are since launch.
+# it: `npm run sketch:export -- --self-play`. Seconds are since launch; the watch line's blank_max
+# and bar_off_max are seconds of play.
 #
 # Flags (after `--`):
 #   --self-play-seed=<n>      run seed (default 1)
@@ -62,8 +63,8 @@ extends Node
 #                             and the run's seconds are then game seconds, not seconds since launch. Prints "self-play: film <n> frames in <dir>" as the run ends.
 #   --self-play-watch=1       watch the run as a player would meet it (tools/qa_watch.gd, reads only): where the
 #                             ball sat stuck, hung off the ground, wedged or fell through, each objective plate
-#                             change, the longest stretch of play with an empty plate, and the boss fight's
-#                             start and end. Rows go to qa.ndjson in the run's own save folder; the totals print
+#                             change, the longest stretches of play with an empty plate and with the hull bar
+#                             off the hull, and the boss fight's start and end. Rows go to qa.ndjson in the run's own save folder; the totals print
 #                             on one "self-play: watch" line as the run ends. Absent, the run is unchanged.
 #
 # Lines: "self-play: stage <n> entered at <s> s" (one per stage entered, retries marked), each followed by

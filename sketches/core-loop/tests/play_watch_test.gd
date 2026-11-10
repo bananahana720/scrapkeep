@@ -18,7 +18,7 @@ const T := preload("res://tests/support/t.gd")
 #           not outside play
 #   objective  one row a plate change
 #   bar     a hull bar off the hull for BAR_S of play, once a stretch; not a bar that catches up
-#           sooner, not one within BAR_OFF, not outside play
+#           sooner, not one within BAR_OFF, not one reading off after a long gap, not outside play
 # Evidence limit: the stand-in is not the game. That the game's own members still carry these
 # names is what sitting_notes_test (a real game, a real stuck row) and world1_run_test hold.
 

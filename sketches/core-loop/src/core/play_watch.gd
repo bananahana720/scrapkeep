@@ -130,8 +130,8 @@ func step(delta: float) -> void:
 		_emit("wedged", ball, state, {"n": _v(player.state.contact_normal)})
 
 
-# The HUD's objective plate, read about once a second by the runner (since = seconds of play
-# since the last read; a paused tree is not play): a row each time its id changes, with the gate's lock state beside it, so a wrong
+# The HUD's objective plate, read about once a second by the runner (since = unpaused seconds
+# since the last read; a read outside play counts nothing and starts every stretch again): a row each time its id changes, with the gate's lock state beside it, so a wrong
 # plate during a lock reads off the log; a row when it has stood empty for BLANK_S; and a row
 # when the hull bar has stood off the hull for BAR_S.
 func read_text(since := 1.0) -> void:

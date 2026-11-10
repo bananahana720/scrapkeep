@@ -46,10 +46,11 @@ const PLATE_BLANK_S := 10.0
 const BAR_OFF_S := 3.0
 const AGAIN_SEED := 2
 const AGAIN_MAX := 2
-# How the self-play tool names a pilot's death: 'lost' on the launched game (flow ends the run
-# for good before the bot hears of the death; measured 10 Nov 2026 with the damage turned up),
-# 'died' on a game with no save.
-const DEATHS := ["self-play: run ended 'lost' ", "self-play: run ended 'died' "]
+# How the self-play tool names a pilot's death on the launched game: flow ends the run for good
+# before the bot hears of the death, so the bot's ending is 'lost' (measured 10 Nov 2026 with the
+# damage turned up). 'died' is not a death here: the bot only gets to say it when the hull ran
+# out and the game did not end the run (out of play, or on the lap), which is a fault to read.
+const DIED := "self-play: run ended 'lost' "
 const NEEDS := [
 	["the dam's exit is taken", "self-play: stage 1 exit taken at "],
 	["the flume is entered", "self-play: stage 2 entered at "],
@@ -67,7 +68,7 @@ func _initialize() -> void:
 	# The control: a run planted to end at once must read red on the same lines a pilot is judged by.
 	jobs.append({"name": "planted_end", "args": ["--self-play", "--self-play-until=3", "--self-play-watch=1", "--self-play-plant-end"]})
 	var base := ProjectSettings.globalize_path("user://").path_join("world1-run-%d" % OS.get_process_id())
-	# A pilot that did not get there plays once more in what is left of the budget; the control does not.
+	# A pilot that died plays once more in what is left of the budget; no other ending does, nor the control.
 	var both := ChildRuns.run_launched_twice(jobs, base, CHILD_S, PARALLEL, BUDGET_S, _settled, _second_go)
 	var runs: Array = both["first"]
 	var again := {}
@@ -87,14 +88,13 @@ func _initialize() -> void:
 	t.check("control: and shows none of the run's milestones", NEEDS.all(func(need): return _line(planted["text"], need[1]) == ""),
 		"%d of %d lines present" % [NEEDS.filter(func(need): return _line(planted["text"], need[1]) != "").size(), NEEDS.size()])
 	# Which endings earn a second go: a death and nothing else.
-	var ended := {"code": 1, "timed_out": false, "text": "self-play: stage 1 entered at 9.10 s\n" + DEATHS[0] + "at stage 1 before the goal at 61.20 s\n"}
-	var ended_no_save: Dictionary = ended.duplicate()
-	ended_no_save["text"] = String(ended["text"]).replace(DEATHS[0], DEATHS[1])
-	t.check("control: a pilot that died gets a second go", not _settled(ended) and not _settled(ended_no_save))
+	var ended := {"code": 1, "timed_out": false, "text": "self-play: stage 1 entered at 9.10 s\n" + DIED + "at stage 1 before the goal at 61.20 s\n"}
+	t.check("control: a pilot that died gets a second go", not _settled(ended))
 	var others := {
 		"reached stage 3": {"code": 0, "timed_out": false, "text": "self-play: done at 300.00 s\n"},
 		"stalled": {"code": 3, "timed_out": false, "text": "self-play: stalled at stage 1 exit at 200.00 s pos 1.0,2.0,3.0\n"},
 		"ended early without dying": planted,
+		"the hull ran out and the game did not end the run": {"code": 1, "timed_out": false, "text": String(ended["text"]).replace("'lost'", "'died'")},
 		"quit 1 with no ending line (a crash)": {"code": 1, "timed_out": false, "text": "self-play: stage 1 entered at 9.10 s\n"},
 		"died, then crashed on the way out": {"code": 139, "timed_out": false, "text": ended["text"]},
 		"killed at the wall": {"code": -1, "timed_out": true, "text": ended["text"]},
@@ -125,8 +125,8 @@ func _initialize() -> void:
 	quit(code)
 
 
-# One pilot's rows, [what, ok, detail] each, from its goes in order (one, or two when the first
-# did not get there). Milestones, skills, stage order and the save read the last go; an error line
+# One pilot's rows, [what, ok, detail] each, from its goes in order (one, or two when the pilot
+# died on the first). Milestones, skills, stage order and the save read the last go; an error line
 # and the watch's findings read every go.
 func _judge(pilot: String, goes: Array) -> Array:
 	var rows := []
@@ -191,9 +191,9 @@ func _reached(run: Dictionary) -> bool:
 
 
 # A result that stands as it is: every ending but a pilot's death (the self-play tool's quit 1
-# with one of its DEATHS lines). If that line's wording moves, no go is repeated: red, not green.
+# with its DIED line). If that line's wording moves, no go is repeated: red, not green.
 func _settled(run: Dictionary) -> bool:
-	return not (run["code"] == 1 and not run["timed_out"] and DEATHS.any(func(death): return _line(run["text"], death) != ""))
+	return not (run["code"] == 1 and not run["timed_out"] and _line(run["text"], DIED) != "")
 
 
 # A line's name=value pairs.

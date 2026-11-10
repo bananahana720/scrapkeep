@@ -54,7 +54,7 @@ func _process(_delta: float) -> bool:
 		_game.flow.choose_class(0)
 		_stage_one = _game.flow.objective_text()
 		return false
-	# Half the hull is taken a frame before the HUD is read, so its bar has had a frame to follow.
+	# Half the hull is taken two frames before the HUD is read, so its bar has had a frame to follow.
 	# The regen clock is set back with it (a fresh run's hull regenerates at once), so the half holds.
 	if _frames == 2:
 		_game.run.hp = _game.run.max_hp * 0.5
