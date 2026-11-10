@@ -22,6 +22,16 @@ class Guard extends Node3D:
 	func chunks_left() -> int:
 		return chunks
 
+
+# The dam's Warden: every chunk breaks on the last ram, so the real count stays at four until
+# the break, and the fight's phases read the bar's quarters instead (warden_reactor.gd
+# phase_chunks_left).
+class DamGuard extends Guard:
+	var bar := 0.0
+
+	func phase_chunks_left() -> int:
+		return mini(chunks, maxi(1, 4 - floori(bar / 100.0 * 4.0 + 1e-6)))
+
 var t := T.new("warden_form_test")
 var _game
 var _audio
@@ -103,6 +113,7 @@ func _run() -> void:
 	_unhit_stagger()
 	_others_and_switch()
 	_last_chunk()
+	_dam()
 	_game.flow.warden = null
 	_game.queue_free()
 	await process_frame
@@ -129,6 +140,7 @@ func _on_the_shelf() -> void:
 		"mode=%s state=%s drops=%s" % [_ace.mode, _ace.warden_state, _drops()])
 	_guard.chunks = 4
 	_audio._posture_seen.clear()
+	_audio._guard_steps.clear()
 
 
 func _tight_build() -> void:
@@ -232,3 +244,50 @@ func _last_chunk() -> void:
 	_ace.warden_broken()
 	_bars(2)
 	t.check("the break answers it", _ace.mode == "piece" and _ace.section == "break", "mode=%s section=%s" % [_ace.mode, _ace.section])
+
+
+# The dam: each paid ram takes about a third of the bar and no chunk; the fourth breaks all
+# four at once. The drop lands on each ram that takes a quarter, and on nothing else.
+func _dam() -> void:
+	var dam := DamGuard.new()
+	root.add_child(dam)
+	_game.flow.warden = dam
+	_audio._ace_stage(1, _audio.engine.next_bar(), true)
+	_ace = _audio.ace
+	_bars(4)
+	if not t.check("the dam's fight plays the build", _ace.mode == "warden" and _ace.section == "build", "mode=%s section=%s" % [_ace.mode, _ace.section]):
+		return
+	_audio.cue_log.clear()
+	var ram := func(bar: float, staggered := false) -> void:
+		dam.bar = bar
+		_audio._on_posture_changed(dam, bar, staggered)
+	ram.call(31.0)
+	t.eq("the first ram lands a drop", _drops().size(), 1)
+	_bars(2)
+	t.check("and the drop plays", _ace.section == "drop", "section=%s" % _ace.section)
+	# The ball leaves, the bar drains a quarter and fills again: the same quarter lands nothing.
+	ram.call(20.0)
+	ram.call(33.0)
+	t.eq("a bar that drained and filled lands no drop twice", _drops().size(), 1)
+	ram.call(62.0)
+	t.eq("the second ram lands a drop", _drops().size(), 2)
+	ram.call(93.0)
+	t.eq("the third ram lands a drop", _drops().size(), 3)
+	_bars(7)
+	t.check("and past three quarters the tight build follows it", _ace.section == "telegraph", "section=%s state=%s" % [_ace.section, _ace.warden_state])
+	# A hit off the water fills the bar and opens a stagger with no break; when it ends the bar
+	# is wiped. The climb after it lands its drops again.
+	ram.call(100.0, true)
+	_bars(1)
+	t.check("a stagger on the dam is the held breath", _ace.section == "open", "section=%s" % _ace.section)
+	ram.call(0.0)
+	_bars(2)
+	t.check("the wiped bar goes back to the build with no drop", _ace.section == "build" and _drops().size() == 3, "section=%s drops=%d" % [_ace.section, _drops().size()])
+	ram.call(31.0)
+	t.eq("the climb after the stagger lands its drops again", _drops().size(), 4)
+	# The last ram: every chunk at once, and no drop; the break answers it.
+	_bars(6)
+	dam.chunks = 0
+	ram.call(100.0)
+	t.eq("the ram that breaks the dam lands no drop", _drops().size(), 4)
+	dam.queue_free()

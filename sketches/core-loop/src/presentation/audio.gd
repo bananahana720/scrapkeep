@@ -176,6 +176,8 @@ const ENEMY_KINDS := ["hold_broken", "hold_ended", "tenacity_gained",
 var ctx
 # Per posture Warden, the stagger and chunk count the last posture_changed showed.
 var _posture_seen := {}
+# The fewest guard steps each Warden has been seen with (_guard_step_fell).
+var _guard_steps := {}
 # True from a charge cue the Warden began until vent_erupted or a stagger cuts it.
 var _warden_charging := false
 # Events announced with no lead, until each starts: see _on_event_announced.
@@ -3157,16 +3159,16 @@ func tune_found(discovery_id: String) -> void:
 	begin_moment("find", discovery_id, TuneMoments.find_tune(discovery_id))
 
 
-# A Warden's fight takes the band: the landmark's tune ends and stays away for the stage, and a
-# tune on its one pass (a find, the fabricator) is cut short and none begins until the arena
-# opens, or its tempo holds the grid over the fight and the Warden's pivot never comes. Any
-# other moment's tune (an event still running) gives the band up for the fight too: the stage's
-# own recording comes back straight into the fight's sections.
+# A Warden's fight takes the band from every moment: the landmark's tune ends and stays away
+# for the stage, a tune on its one pass (a find, the fabricator) is cut short and none begins
+# until the arena opens, and an event's tune still running ends too. A moment's recording has
+# no fight sections and its own tempo, so one left playing holds the grid over the whole fight
+# and the Warden's pivot never comes. The stage's own recording comes back straight into the
+# fight's sections.
 func warden_took_band() -> void:
 	_warden_engaged = true
 	_warden_fighting = true
-	for moment in ["landmark"] + TuneMoments.ONE_PASS:
-		end_moment(moment, "", false)
+	_moments.clear()
 	_refresh_moment(true)
 
 
@@ -3830,7 +3832,22 @@ func _on_posture_changed(enemy: Node3D, posture: float, staggered: bool) -> void
 		play("posture_changed", 6.0, 1.0, "SFX", Rows.heard(EventKinds.state_row("chunk_shatter"), cue_context()))
 		play("posture_changed", 6.0, 1.0, "SFX", SHATTER_LOW)
 	if ctx.flow != null and ctx.flow.get("warden") == enemy:
-		_follow_warden_form(posture, staggered, shattered and chunks > 0)
+		_follow_warden_form(posture, staggered, _guard_step_fell(enemy, bool(seen[0]) and not staggered))
+
+
+# Whether this reading took a step off the Warden's guard and left it standing: the hit that
+# lands the drop. The guard is counted as the fight's phases count it (warden.gd
+# phase_chunks_left): the real chunks, or the bar's quarters on the dam, whose rule breaks all
+# four chunks on the last ram, so its real count goes from four to none in one step. The lowest
+# count seen is kept, so a bar that drains while the ball is away and fills again lands no drop
+# twice. The end of a stagger is the one moment the dam's bar is wiped: the count starts again
+# from there, so the climb after it lands its drops too.
+func _guard_step_fell(enemy: Node3D, stagger_ended: bool) -> bool:
+	var left: int = enemy.phase_chunks_left() if enemy.has_method("phase_chunks_left") else enemy.chunks_left()
+	var id := enemy.get_instance_id()
+	var lowest := int(_guard_steps.get(id, BossPosture.CHUNKS))
+	_guard_steps[id] = left if stagger_ended else mini(lowest, left)
+	return left < lowest and left > 0
 
 
 # The Warden's fight plays the recorded band like a set (AUDIO-V3 section 1.1, read for the
