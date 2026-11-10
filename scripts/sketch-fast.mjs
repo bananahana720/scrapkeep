@@ -57,6 +57,12 @@ export const PATH_RULES = [
     match: /(^|\/)parks?\/|(^|\/)park_[^/]*$/,
     tests: ["tests/park_park_*", "tests/park_bake_fresh_test.gd", "tests/park_graph_test.gd", "tests/park_dressing_pin_test.gd", "tests/park_props_test.gd"],
   },
+  {
+    // The map standard (ruling ct): a park change faces the checks that read the baked map.
+    name: "map standard",
+    match: /(^|\/)parks?\/|(^|\/)park_[^/]*$/,
+    tests: ["tests/park_landmark_sight_test.gd", "tests/park_fight_bowl_test.gd", "tests/park_feature_census_test.gd"],
+  },
 ];
 // Long whole-run proofs a change class must face; they go to the bot shards even past the budget.
 export const SHARD_RULES = [
