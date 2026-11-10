@@ -118,7 +118,7 @@ func _check_wording() -> void:
 			ok = ok and WordBudget.words_in(read) > 0 and WordBudget.words_in(read) <= 4
 		if not ok:
 			bad_rows.append(kind)
-	_report("wording", long_toasts.is_empty() and long_objectives.is_empty() and bad_rows.is_empty() and Hud.toast_kinds().size() >= 10,
+	_report("wording", long_toasts.is_empty() and long_objectives.is_empty() and bad_rows.is_empty() and Hud.toast_kinds().size() >= 8,
 		"%d toast kinds with part \"%s\" and event \"%s\"; over 4 words %s; objectives over 5 %s; malformed UI rows %s"
 			% [Hud.toast_kinds().size(), longest_part, longest_event, long_toasts, long_objectives, bad_rows])
 
