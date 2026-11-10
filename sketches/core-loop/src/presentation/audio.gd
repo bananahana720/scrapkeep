@@ -178,6 +178,8 @@ var ctx
 var _posture_seen := {}
 # True from a charge cue the Warden began until vent_erupted or a stagger cuts it.
 var _warden_charging := false
+# Events announced with no lead, until each starts: see _on_event_announced.
+var _unwarned := {}
 var engine: MusicEngine
 # The ACE band (--music=ace): the zone's music row selects its manifest; a zone with
 # no pack, or any missing file, plays the synth.
@@ -2465,7 +2467,12 @@ func _on_event_announced(event_id: String, seconds: float) -> void:
 	var state := _park_event_state(event_id)
 	var row := _park_event_row(event_id)
 	if row.is_empty():
-		on_beat("event_announced")
+		# An announcement with no lead warns of nothing (a stage's resting weather as the stage
+		# starts): no klaxon, and no start cue when it begins.
+		if seconds > 0.0:
+			on_beat("event_announced")
+		else:
+			_unwarned[event_id] = true
 		return
 	if sound_ready:
 		_flush_flow()
@@ -2558,7 +2565,7 @@ func _park_event_land(event_id: String) -> bool:
 
 func _on_event_started(event_id: String) -> void:
 	begin_moment("event", event_id, TuneMoments.event_tune(event_id))
-	if _park_event_land(event_id):
+	if _park_event_land(event_id) or _unwarned.erase(event_id):
 		return
 	on_beat("event_started")
 	if event_id in EVENT_SECONDS:
