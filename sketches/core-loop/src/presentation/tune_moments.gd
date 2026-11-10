@@ -23,6 +23,8 @@ const LANDMARK_OUT := 0.7
 const PRIORITY := {"miniboss": 5, "event": 4, "find": 4, "jukebox": 3, "fabricator": 2, "shop": 2, "landmark": 1}
 # Kinds that play one pass of their tune and hand back; another trigger restarts the pass.
 const ONE_PASS := ["find", "fabricator"]
+# Kinds that do not begin while a Warden's fight has the band: the one-pass tunes and an event's.
+const NOT_IN_A_FIGHT := ["find", "fabricator", "event"]
 
 # Every row of tunes.json: its hook, the key the hook reports, and its bpm.
 const TUNES := {
