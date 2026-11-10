@@ -23,6 +23,16 @@ const SECONDS_MAX := 0.7
 const REST_CLOCK := 1.0
 const LOW_PART_CAP := 4
 const GRAVITY := 18.0
+# The last share of a piece's life it spends shrinking to nothing. A piece leaves by size and
+# never by fading: a fade through the instance's transparency moves an opaque surface to the
+# blended pass, and the first piece of each look to go there made the renderer build that
+# pass's pipelines while the frame waited (43 to 48 ms on the 4080 the frame after the dam's
+# first kill, 10 November 2026). A shrinking piece of the model keeps the pipelines the living
+# machine drew with; a box piece keeps the ones its look was first drawn with (BakeWarm.death_warm
+# draws the dam pack kinds' box looks at stage entry).
+const SHRINK := 0.5
+# The smallest a piece is drawn, so its last frame still has a basis that can be inverted.
+const SPECK := 0.01
 const TICK_STEPS := [0.0, 0.5, 1.0, 0.5]
 
 # Reduced motion sets 0: no idle at all. The death scatter still runs and frees on time.
@@ -145,7 +155,7 @@ static func scatter(enemy: Node3D, kind: String, direction: Vector3) -> Node3D:
 			piece.mesh = box
 			piece.material_override = BakeLook.unbaked(material)
 			piece.position = out * 0.4 + Vector3.UP * 0.6
-		node._pieces.append({"node": piece, "velocity": _throw(node.style, out, throw), "spin": out.cross(Vector3.UP) * 6.0})
+		node._pieces.append({"node": piece, "velocity": _throw(node.style, out, throw), "spin": out.cross(Vector3.UP) * 6.0, "turn": piece.basis})
 	return node
 
 
@@ -162,7 +172,7 @@ static func _throw(death_style: String, out: Vector3, throw: Vector3) -> Vector3
 
 func _physics_process(delta: float) -> void:
 	t += delta
-	var fade := clampf(t / seconds, 0.0, 1.0)
+	var size := clampf((1.0 - t / seconds) / SHRINK, SPECK, 1.0)
 	for piece in _pieces:
 		var mi: MeshInstance3D = piece.node
 		var v: Vector3 = piece.velocity
@@ -170,8 +180,11 @@ func _physics_process(delta: float) -> void:
 		piece.velocity = v
 		mi.position += v * delta
 		var spin: Vector3 = piece.spin * (3.0 if style == "spin_down" else 1.0)
+		# The turn is kept at full size and the drawn basis is that turn at this tick's size.
+		var turn: Basis = piece.turn
 		if spin.length_squared() > 0.0:
-			mi.rotate(spin.normalized(), spin.length() * delta)
-		mi.transparency = fade
+			turn = turn.rotated(spin.normalized(), spin.length() * delta)
+			piece.turn = turn
+		mi.basis = turn * size
 	if t >= seconds:
 		queue_free()
