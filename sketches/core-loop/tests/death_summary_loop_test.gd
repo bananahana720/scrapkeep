@@ -140,13 +140,16 @@ func _tag_on_summary() -> void:
 	_t.check("the screen reads pilot, cause, and the note before the choices", body.size() > 2 and body[1] == "Scrapped by the Warden."
 			and body.find(screens.tip_text()) > 1 and body.find(screens.tip_text()) < body.find(""), " | ".join(body))
 	await _frames(3)
-	var words: Array = screens._stats.get_children().map(func(cell): return (cell.get_child(1) as Label).text if cell.get_child_count() == 2 else "")
+	var words: Array = []
+	for group in screens._stats.get_children():
+		for cell in group.get_child(group.get_child_count() - 1).get_children():
+			words.append((cell.get_child(1) as Label).text)
 	_t.check("each of the summary's stats has its word under its icon, and the word says what it counts",
-		words == ["TIME\nkept in your totals", "STAGES\nkept in your totals", "SCRAP\nlost with this run", "PARTS BOLTED ON\nlost with this run", "KILLS\nkept in your totals"], str(words))
+		words == ["TIME", "STAGES", "KILLS", "SCRAP", "PARTS BOLTED ON"], str(words))
 	var saved: Dictionary = _game.run.summary()
 	saved["save_used"] = 1
 	var saved_words: Array = screens.summary_chips(saved, _game.ctx.stages.COUNT).map(func(chip): return String(chip[2]))
-	_t.check("the earned save shows only on a run that used it", not words.any(func(w): return w.begins_with("SAVE USED")) and saved_words.back() == "save used" and saved_words.size() == words.size() + 1,
+	_t.check("the earned save shows only on a run that used it", not words.has("SAVE USED") and saved_words.back() == "save used" and saved_words.size() == words.size() + 1,
 		str(saved_words))
 	var comic: Control = screens.comic_page()
 	var floor_y: float = screens._screen().y - 8.0

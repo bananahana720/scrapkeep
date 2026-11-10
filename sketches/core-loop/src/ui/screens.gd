@@ -1420,30 +1420,46 @@ static func summary_chips(s: Dictionary, stage_count: int) -> Array:
 
 
 func _summary_stats() -> void:
-	var chips := summary_chips(game.run.summary(), game.ctx.stages.COUNT)
-	for chip in chips:
-		var cell := VBoxContainer.new()
-		cell.add_theme_constant_override("separation", 0)
-		cell.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		var row := _row(8)
-		var icon := TextureRect.new()
-		icon.texture = Icons.texture(chip[0])
-		icon.modulate = Icons.tint(chip[0], Palette.SAND)
-		icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-		icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-		icon.custom_minimum_size = Vector2(30.0, 30.0)
-		icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		row.add_child(icon)
-		var value := _label(26)
-		value.add_theme_font_override("font", UiFonts.mono())
-		value.text = chip[1]
-		row.add_child(value)
-		cell.add_child(row)
-		var word := _label(STAT_WORD_FONT)
-		word.text = String(chip[2]).to_upper() + "\n" + String(chip[3])
-		word.add_theme_color_override("font_color", Color(Palette.SAND, 0.7))
-		cell.add_child(word)
-		_stats.add_child(cell)
+	for block in SummaryRows.grouped(summary_chips(game.run.summary(), game.ctx.stages.COUNT)):
+		var group := VBoxContainer.new()
+		group.add_theme_constant_override("separation", 2)
+		group.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		if block[0] != "":
+			var head := _label(STAT_WORD_FONT)
+			head.text = block[0]
+			head.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+			head.add_theme_color_override("font_color", Palette.AMBER)
+			group.add_child(head)
+		var cells := _row(30)
+		for chip in block[1]:
+			cells.add_child(_stat_cell(chip))
+		group.add_child(cells)
+		_stats.add_child(group)
+
+
+func _stat_cell(chip: Array) -> VBoxContainer:
+	var cell := VBoxContainer.new()
+	cell.add_theme_constant_override("separation", 0)
+	cell.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var row := _row(8)
+	var icon := TextureRect.new()
+	icon.texture = Icons.texture(chip[0])
+	icon.modulate = Icons.tint(chip[0], Palette.SAND)
+	icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	icon.custom_minimum_size = Vector2(30.0, 30.0)
+	icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	row.add_child(icon)
+	var value := _label(26)
+	value.add_theme_font_override("font", UiFonts.mono())
+	value.text = chip[1]
+	row.add_child(value)
+	cell.add_child(row)
+	var word := _label(STAT_WORD_FONT)
+	word.text = String(chip[2]).to_upper()
+	word.add_theme_color_override("font_color", Color(Palette.SAND, 0.7))
+	cell.add_child(word)
+	return cell
 
 
 func _stamp(target: Label = null) -> void:

@@ -23,6 +23,8 @@ const MAX_PANELS := 6
 const INK_COLOR := Color("242a28")
 const BURST_POINTS := 11
 const WIDE_WEIGHT := 0.8
+# The finale carries a lost run's loss card under its caption, both at the 18 px floor.
+const FINALE_WEIGHT := 1.3
 const TALL_WEIGHT := 1.3
 
 # No caption draws under this many px: at the summary's page size the scaled 15 px read as 9 px
@@ -100,7 +102,7 @@ static func layout(rows: Array, area: Rect2, gutter: float) -> Array:
 	for g in groups:
 		var w := 1.0
 		if size_of(rows[g[0]]) == "wide" and g.size() == 1:
-			w = WIDE_WEIGHT
+			w = FINALE_WEIGHT if rows[g[0]].get("kind", "") == "finale" else WIDE_WEIGHT
 		for idx in g:
 			if size_of(rows[idx]) == "tall":
 				w = TALL_WEIGHT
@@ -172,14 +174,55 @@ func _draw() -> void:
 	var margin := 22.0 * k
 	var title_h := 118.0 * k
 	_draw_title(Rect2(box.position + Vector2(margin, margin), Vector2(box.size.x - margin * 2.0, title_h)), p, k)
+	var card := melodrama(p)
+	var kept := fit_rows(box, list, card)
+	var rects := panel_rects(box, kept.map(func(i): return list[i]))
+	for j in kept.size():
+		_draw_panel(rects[j], list[kept[j]], kept[j], k)
+	if card != "" and not rects.is_empty() and card_fits(box, list, kept, card):
+		_card(rects[rects.size() - 1], card, k)
+
+
+# The indexes of the rows the page draws. A small page cannot hold six panels' captions at the
+# caption floor, so while any caption (or the finale's loss card) would spill out of its panel the
+# last middle panel is left off, down to the opening, one middle panel and the finale.
+static func fit_rows(box: Rect2, list: Array, card := "") -> Array:
+	var kept: Array = range(list.size())
+	while kept.size() > 3:
+		if captions_fit(box, list, kept) and (card == "" or card_fits(box, list, kept, card)):
+			break
+		kept.remove_at(kept.size() - 2)
+	return kept
+
+
+static func captions_fit(box: Rect2, list: Array, kept: Array) -> bool:
+	var rects := panel_rects(box, kept.map(func(i): return list[i]))
+	for j in kept.size():
+		var said := String(list[kept[j]].get("caption", ""))
+		if said != "" and not rects[j].encloses(caption_rect(rects[j], said, box.size.x / 720.0)):
+			return false
+	return true
+
+
+# Whether the loss card sits in the finale clear of the finale's own caption. A page too small for
+# both draws the caption alone: the card is the joke, the caption is the story.
+static func card_fits(box: Rect2, list: Array, kept: Array, card: String) -> bool:
+	var rects := panel_rects(box, kept.map(func(i): return list[i]))
+	var last: Rect2 = rects[rects.size() - 1]
+	var k := box.size.x / 720.0
+	var plate := card_rect(last, card, k)
+	var said := String(list[kept[kept.size() - 1]].get("caption", ""))
+	return last.encloses(plate) and (said == "" or not plate.intersects(caption_rect(last, said, k)))
+
+
+# Where each panel sits on a page drawn into `box` (the page's own rectangle).
+static func panel_rects(box: Rect2, list: Array) -> Array:
+	var k := box.size.x / 720.0
+	var margin := 22.0 * k
+	var title_h := 118.0 * k
 	var area := Rect2(box.position.x + margin, box.position.y + margin * 2.0 + title_h,
 		box.size.x - margin * 2.0, box.size.y - margin * 3.0 - title_h)
-	var rects := layout(list, area, 12.0 * k)
-	for i in list.size():
-		_draw_panel(rects[i], list[i], i, k)
-	var card := melodrama(p)
-	if card != "" and not rects.is_empty():
-		_card(rects[list.size() - 1], card, k)
+	return layout(list, area, 12.0 * k)
 
 
 func _page_rect() -> Rect2:
@@ -299,28 +342,39 @@ static func caption_font(k: float) -> int:
 	return maxi(CAPTION_MIN_FONT, int(15.0 * k))
 
 
+# The narrator box inside panel `r`: top left, as wide as its words need up to the panel's width
+# less the 8 k margins, and as tall as the wrapped words. Drawing and the fit test share it.
+static func caption_rect(r: Rect2, text: String, k: float) -> Rect2:
+	var pad := 6.0 * k
+	var width := r.size.x - 16.0 * k
+	var inner := maxf(10.0, width - pad * 2.0)
+	var sz := UiFonts.bold().get_multiline_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, inner, caption_font(k))
+	return Rect2(r.position + Vector2(8.0 * k, 8.0 * k), Vector2(minf(width, sz.x + pad * 2.0), sz.y + pad * 2.0))
+
+
 func _caption(r: Rect2, text: String, k: float) -> void:
-	var font := UiFonts.bold()
 	var fs := caption_font(k)
 	var pad := 6.0 * k
-	var width := r.size.x - 20.0 * k
-	var inner := maxf(10.0, width - pad * 2.0)
-	var sz := font.get_multiline_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, inner, fs)
-	var box := Rect2(r.position + Vector2(8.0 * k, 8.0 * k), Vector2(minf(width, sz.x + pad * 2.0), sz.y + pad * 2.0))
+	var box := caption_rect(r, text, k)
 	draw_rect(box, Palette.BRASS.lerp(Palette.LEDGER, 0.55))
 	draw_rect(box, INK_COLOR, false, 3.0 * k)
-	draw_multiline_string(font, box.position + Vector2(pad, pad + fs), text, HORIZONTAL_ALIGNMENT_LEFT, inner, fs, -1, INK_COLOR)
+	draw_multiline_string(UiFonts.bold(), box.position + Vector2(pad, pad + fs), text, HORIZONTAL_ALIGNMENT_LEFT, box.size.x - pad * 2.0, fs, -1, INK_COLOR)
 
 
 # The loss card: ink box on the finale's bottom edge, amber type.
-func _card(r: Rect2, text: String, k: float) -> void:
-	var font := UiFonts.bold()
-	var fs := maxi(9, int(14.0 * k))
+# The same box on the finale's bottom edge.
+static func card_rect(r: Rect2, text: String, k: float) -> Rect2:
 	var pad := 6.0 * k
-	var width := r.size.x - 20.0 * k
+	var width := r.size.x - 16.0 * k
 	var inner := maxf(10.0, width - pad * 2.0)
-	var sz := font.get_multiline_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, inner, fs)
-	var box := Rect2(Vector2(r.position.x + 8.0 * k, r.end.y - sz.y - pad * 2.0 - 8.0 * k), Vector2(minf(width, sz.x + pad * 2.0), sz.y + pad * 2.0))
+	var sz := UiFonts.bold().get_multiline_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, inner, caption_font(k))
+	return Rect2(Vector2(r.position.x + 8.0 * k, r.end.y - sz.y - pad * 2.0 - 8.0 * k), Vector2(minf(width, sz.x + pad * 2.0), sz.y + pad * 2.0))
+
+
+func _card(r: Rect2, text: String, k: float) -> void:
+	var fs := caption_font(k)
+	var pad := 6.0 * k
+	var box := card_rect(r, text, k)
 	draw_rect(box, INK_COLOR)
 	draw_rect(box, Palette.AMBER, false, 2.0 * k)
-	draw_multiline_string(font, box.position + Vector2(pad, pad + fs), text, HORIZONTAL_ALIGNMENT_LEFT, inner, fs, -1, Palette.AMBER)
+	draw_multiline_string(UiFonts.bold(), box.position + Vector2(pad, pad + fs), text, HORIZONTAL_ALIGNMENT_LEFT, box.size.x - pad * 2.0, fs, -1, Palette.AMBER)
