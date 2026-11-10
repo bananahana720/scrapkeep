@@ -113,7 +113,7 @@ One page, worst first, graded on the bug bar's severities (blocker, major, minor
 
 The second line says what Andrew would feel at his sitting. Below the list: a table of every run (persona, pilot, seed, outcome, stage reached, hits and pile-ups, tick p99), the fuzz and placeholder counts, and what the pass cannot see.
 
-Each blocker and major becomes a card for the wave coordinator, as the bug bar says. The page goes to Andrew as a phone-friendly Artifact; taste calls go to the project coordinator as decision-card text.
+Each blocker and major becomes a card for the wave coordinator, as the bug bar says. The page goes to Andrew as a phone-friendly Artifact; taste calls go to the coordinator as decision-card text.
 
 ## Limits
 
