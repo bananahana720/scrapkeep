@@ -12,12 +12,18 @@ const RATE := 44100.0
 #
 #   godot --headless --path sketches/core-loop --script res://tools/ace_bounce.gd -- \
 #     --out=<absolute .wav> [--seconds=80] [--tail=3] [--policy=skipper] [--seed=1] --music=ace \
-#     [--slow-at=<seconds>] [--slow-for=2.3] [--slow-scale=0.3]
+#     [--slow-at=<seconds>] [--slow-for=2.3] [--slow-scale=0.3] [--only=music|effects]
 #
 # --slow-at slows the world at that second of the WAV the way the close-up at Brindle's entrance
 # does (game.slow_motion; flourish_rows.gd asks for 0.3 of the world's speed, about 2.3 s of
 # wall time), so the falling sweep, the held music and the rising sweep are recorded over
 # whatever the run is playing. No bot's run slows the world on its own.
+#
+# --only records one side of the mix from the same bot and seed: music turns the effects, UI and
+# ambience volumes to nothing, effects turns the music's to nothing (audio.set_volume, the pause
+# menu's own rows). The split is by bus: the band's stingers ride the effects bus, so they are on
+# the effects side. Each is its own run, so times differ a little. The Master compressor then works on less, so the two do not sum to the whole
+# mix; they say which side sets the level at a moment and how far the music moves on its own.
 #
 # The recording runs --tail seconds past the tick the run ends on (a death, a win, a stall), so
 # what the music does after the end is in the WAV: the band stop and brass fall after a death,
@@ -25,7 +31,11 @@ const RATE := 44100.0
 #
 # Beside the WAV, <out>.json lists the game facts the music follows (Warden states,
 # drops, the commit, the break) and the ACE sections entered, both in seconds of the WAV,
-# with the music ring's skip count. Two facts carry more:
+# with the music ring's skips. music_skips counts from the recording's start, music_skip_rows
+# lists [seconds of the WAV, skips since the last physics tick] wherever the ring ran dry (a gap
+# in the music you can hear), and music_skips_before is what setup and the bot's start cost
+# before the recording began. ace_sections covers every pack the run played; each row ends with
+# its pack. Two facts carry more:
 #   [s, "player_died", transport sample, ACE section origin sample, ACE beat in samples]
 #     samples count from the recording's start; origin and beat are null on the synth band.
 #     (stop sample - origin) mod beat says where in the beat the band stopped.
@@ -50,6 +60,12 @@ var _slow_at := -1.0
 var _slow_for := 2.3
 var _slow_scale := 0.3
 var _slowing := false
+# Every recorded band the run played, in order: a change of pack makes a new sequencer
+# (audio.gd ace_ready), and each keeps its own log and counters. Looked for once a physics tick.
+var _bands: Array = []
+var _skips_before := 0
+var _skips_seen := 0
+var _skip_rows: Array = []
 
 
 func _initialize() -> void:
@@ -58,6 +74,10 @@ func _initialize() -> void:
 			_settings[arg.substr(2, arg.find("=") - 2)] = arg.substr(arg.find("=") + 1)
 	if not _settings.has("out"):
 		printerr("ace_bounce: needs -- --out=<absolute .wav>")
+		quit(2)
+		return
+	if not String(_settings.get("only", "")) in ["", "music", "effects"]:
+		printerr("ace_bounce: --only takes music or effects")
 		quit(2)
 		return
 	_seconds = float(_settings.get("seconds", "80"))
@@ -97,6 +117,13 @@ func _physics_process(delta: float) -> bool:
 		_record.set_recording_active(true)
 		_started = Time.get_ticks_msec()
 		_base_sample = audio.engine.clock
+		_skips_before = _skips(audio)
+		_skips_seen = _skips_before
+		match String(_settings.get("only", "")):
+			"music":
+				audio.set_volume("SFX", 0.0)
+			"effects":
+				audio.set_volume("Music", 0.0)
 		var events = _game.events
 		events.stage_entered.connect(func(stage: int, retry: bool): _facts.append([_now(), "stage_entered", stage, retry]))
 		events.player_died.connect(_on_player_died)
@@ -110,6 +137,11 @@ func _physics_process(delta: float) -> bool:
 		var state: String = audio.mix_state()
 		if _mix_states.is_empty() or _mix_states.back()[1] != state:
 			_mix_states.append([snappedf(_now(), 0.01), state])
+	_keep_band(audio.ace)
+	var skips := _skips(audio)
+	if skips > _skips_seen:
+		_skip_rows.append([snappedf(_now(), 0.01), skips - _skips_seen])
+		_skips_seen = skips
 	_slow_window()
 	if _end_at < 0.0 and _driver.tick(delta):
 		_end_at = _now() + _tail
@@ -117,6 +149,15 @@ func _physics_process(delta: float) -> bool:
 	if (_end_at >= 0.0 and _now() >= _end_at) or _now() >= _seconds:
 		_finish()
 	return false
+
+
+func _skips(audio) -> int:
+	return audio._music_pb.get_skips() if audio._music_pb != null else 0
+
+
+func _keep_band(ace) -> void:
+	if ace != null and not _bands.has(ace):
+		_bands.append(ace)
 
 
 # The world is slow between --slow-at and --slow-at + --slow-for seconds of the recording.
@@ -167,17 +208,32 @@ func _finish() -> void:
 	var out: String = _settings["out"]
 	DirAccess.make_dir_recursive_absolute(out.get_base_dir())
 	wav.save_to_wav(out)
-	var sections := []
 	var ace = audio.ace
-	if ace != null:
-		for e in ace.events_log:
-			sections.append([snappedf((int(e[1]) - _base_sample) / RATE, 0.01), e[0], e[2]])
+	_keep_band(ace)
+	var sections := []
+	var misses := 0
+	var short_reads := 0
+	var render_usec := 0
+	var rendered := 0
+	for band in _bands:
+		var pack: String = band.manifest_source.get_base_dir().get_file()
+		for e in band.events_log:
+			sections.append([snappedf((int(e[1]) - _base_sample) / RATE, 0.01), e[0], e[2], pack, sections.size()])
+		misses += band.misses
+		short_reads += band.short_reads
+		render_usec += band.render_usec
+		rendered += band.rendered
+	# By time; rows at the same time keep the order they were logged in (a stop, then the next enter).
+	sections.sort_custom(func(a, b): return a[0] < b[0] or (a[0] == b[0] and a[4] < b[4]))
+	for row in sections:
+		row.pop_back()
 	var info := {"wav": out, "seconds": snappedf(_now(), 0.1), "mix_rate": AudioServer.get_mix_rate(), "driver": AudioServer.get_driver_name(),
 		"music": _game.tuning.option("music"), "breath": _game.tuning.option("breath"),
 		"policy": _driver.policy, "outcome": _driver.outcome, "stage": _game.run.stage, "tail": _tail,
-		"ace_loaded": ace != null, "ace_missing": audio.ace_missing, "music_skips": audio._music_pb.get_skips() if audio._music_pb != null else -1,
-		"ace_misses": ace.misses if ace != null else -1, "ace_short_reads": ace.short_reads if ace != null else -1,
-		"ace_render_ms_per_second": snappedf(ace.render_usec / 1000.0 / maxf(ace.rendered / RATE, 0.001), 0.01) if ace != null else -1.0,
+		"ace_loaded": ace != null, "ace_missing": audio.ace_missing, "only": String(_settings.get("only", "")),
+		"music_skips": _skips(audio) - _skips_before if audio._music_pb != null else -1, "music_skips_before": _skips_before, "music_skip_rows": _skip_rows,
+		"ace_bands": _bands.size(), "ace_misses": misses if ace != null else -1, "ace_short_reads": short_reads if ace != null else -1,
+		"ace_render_ms_per_second": snappedf(render_usec / 1000.0 / maxf(rendered / RATE, 0.001), 0.01) if ace != null else -1.0,
 		"note": "section times are the render head in seconds from the recording's start; the ring and device add about 75 ms",
 		"facts": _facts, "ace_sections": sections, "mix_states": _mix_states, "cue_counts": _cue_counts(audio.cue_log), "cue_rows": _cue_rows(audio.cue_log)}
 	var file := FileAccess.open(out.get_basename() + ".json", FileAccess.WRITE)
