@@ -72,10 +72,14 @@ var _tween: Tween
 var _game
 var _exchange: Array = []
 var _exchange_index := 0
+# The hello has given the screen to a comic beat and comes back at the same line (_tick_turn).
+var _exchange_held := false
 var _zones_played := {}
 var _intros_played := {}
 var _intro_queue: Array = []
 var _intro_showing := false
+# The intro row that is up, for a Warden's line to go back in its queue (_tick_turn).
+var _intro_row := {}
 # The stage whose hello waits (see _waits); 0 when none.
 var _hello_due := 0
 # Call-ins (LoreRows.CALLS): the ids said this run, the one waiting for its turn with the
@@ -167,8 +171,9 @@ func _begin_exchange(stage: int) -> void:
 	_hello_due = 0
 	if stage != _game.run.stage or not _game.flow.in_stage() or _game.flow.engaged():
 		return
-	# A call that is up finishes first: its caller's voice is still going.
-	if _waits() or _call_up():
+	# A call that is up finishes first: its caller's voice is still going. A comic beat's words do
+	# too (_reading): its card sits where the bubble does.
+	if _waits() or _reading() or _call_up():
 		_hello_due = stage
 		return
 	var zone := "%d-%d" % [_game.ctx.stages.world_of(stage), _game.ctx.stages.local(stage)]
@@ -194,7 +199,10 @@ func _begin_exchange(stage: int) -> void:
 # the moment the Warden is engaged: a fight's screen holds no intro (LEGIBILITY word budget).
 # The boss line plays when the arena opens, which only the last zone of a world reaches, where
 # the pilot's own threat line wins over the boss's general one. Each plays once per run and
-# zone once it has reached the screen, and waits out an exchange.
+# zone once it has reached the screen, and waits out an exchange. The Warden's line also waits
+# out a comic beat's words (the flume Warden's reveal card starts on the same sighting, in the
+# bubble's place); a boss's line waits for his close-up only (ruling cf: the picture, then his
+# line, beside the card that names him).
 func _zone_of(stage: int) -> String:
 	return "%d-%d" % [_game.ctx.stages.world_of(stage), _game.ctx.stages.local(stage)]
 
@@ -248,9 +256,14 @@ func _close_up() -> bool:
 
 
 func _flush_intro() -> void:
-	if _intro_queue.is_empty() or not _exchange.is_empty() or _waits():
+	# An intro waits out an exchange, and so a hello that is waiting its own turn (_hello_due)
+	# goes first: the hello would otherwise take the bubble from the intro a frame later.
+	if _intro_queue.is_empty() or not _exchange.is_empty() or _hello_due > 0 or _waits():
+		return
+	if _yields(_intro_queue[0]) and _reading():
 		return
 	var row: Dictionary = _intro_queue.pop_front()
+	_intro_row = row
 	_intros_played[String(row["intro_key"])] = true
 	position = Vector2(0.0, get_viewport().get_visible_rect().size.y * 0.30)
 	var who := LoreRows.voice_of(row)
@@ -260,8 +273,14 @@ func _flush_intro() -> void:
 	_intro_showing = true
 
 
+# Whether an intro row gives the screen to a comic beat: the Warden's does, a boss's does not.
+func _yields(row: Dictionary) -> bool:
+	return row.get("subject", "") == "warden"
+
+
 func _end_intro() -> void:
 	_intro_queue.clear()
+	_intro_row = {}
 	if _intro_showing:
 		_intro_showing = false
 		_clear_line()
@@ -286,6 +305,7 @@ func _end_exchange(flush := true) -> void:
 		return
 	_exchange.clear()
 	_exchange_index = 0
+	_exchange_held = false
 	_clear_line()
 	if flush:
 		_flush_intro()
@@ -315,6 +335,10 @@ func _exchange_input(event: InputEvent) -> void:
 	if _exchange.is_empty():
 		return
 	if event.is_action_pressed("cl_interact"):
+		# A held hello shows no line to advance, so the key stays the world's: there it skips
+		# the beat as any spare key does (flourish_player.gd), and the hello comes back.
+		if _exchange_held:
+			return
 		_advance_exchange()
 		get_viewport().set_input_as_handled()
 	elif event.is_action_pressed("cl_fire") or event.is_action_pressed("cl_harpoon"):
@@ -611,8 +635,37 @@ func caller() -> String:
 	return _tile.speaker if visible and _tile.visible else ""
 
 
+# One thing to read at a time: a hello or a Warden's line that is up when a comic beat's words
+# start (presentation.reading) goes down, and takes its turn again when the beat has been read.
+# The hello comes back at the line it was on, the Warden's line through its queue. A fight, a
+# shot, the hook and cruise speed still end a held hello as they end one that is up.
+func _tick_turn() -> void:
+	if _exchange_held:
+		if _rolled_off():
+			_end_exchange()
+		elif not _reading() and not _waits():
+			_exchange_held = false
+			_show_exchange_line()
+		return
+	if not visible or not _reading():
+		return
+	if not _exchange.is_empty():
+		_exchange_held = true
+		_clear_line()
+	elif _intro_showing and _yields(_intro_row):
+		_intro_queue.push_front(_intro_row)
+		_intro_showing = false
+		_clear_line()
+
+
+# The ball is at cruise speed: reading is optional and momentum is sacred, so a hello is left behind.
+func _rolled_off() -> bool:
+	return _game.player != null and _game.player.state.velocity.length() > _game.ctx.tuning.f("cruise")
+
+
 func _process(delta: float) -> void:
 	_tick_call(delta)
+	_tick_turn()
 	if _hello_due > 0 and not _waits():
 		_begin_exchange(_hello_due)
 	if not _intro_queue.is_empty() and not visible:
@@ -621,8 +674,7 @@ func _process(delta: float) -> void:
 		return
 	_clock += delta
 	_gesture_clock += delta
-	if not _exchange.is_empty() and _game.player != null \
-			and _game.player.state.velocity.length() > _game.ctx.tuning.f("cruise"):
+	if not _exchange.is_empty() and _rolled_off():
 		_end_exchange()
 		return
 	# A line waits out a pause (the pick screen over the bay's greeting) instead of

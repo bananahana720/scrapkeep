@@ -79,6 +79,9 @@ func _run() -> void:
 	_bubble._exchange = []
 	_bubble._intro_queue = [{"intro_key": "test.brindle", "text": "Brindle: On schedule."}]
 	_bubble._clear_line()
+	# The run's own hello is still waiting for the cold open's card, and an intro waits behind
+	# a waiting hello (bubble_gives_way_test B2). The plate is this check's subject.
+	_bubble._hello_due = 0
 	_bubble._flush_intro()
 	_t.check("B6 a crew's hello line and a boss's intro line get their plate", crew_ok and _bubble.caller() == "brindle" and tile.hands() == "fleet"
 			and label.text == "On schedule." and _bubble.text == "Brindle: On schedule.", "crew %s, caller '%s', label '%s', text '%s'" % [crew_ok, _bubble.caller(), label.text, _bubble.text])
