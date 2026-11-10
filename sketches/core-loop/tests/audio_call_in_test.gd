@@ -8,8 +8,8 @@ const Synth := preload("res://src/presentation/synth.gd")
 const T := preload("res://tests/support/t.gd")
 
 # Call-ins (SOUND-STORY section 8, "Who talks on what"). Every caller has a voice of their own:
-# a pilot talks in the notes of their own motif on their own instrument, bent; a site crew is
-# two talkers trading words; Brindle ends each sentence held on the flat second; the Foreman is
+# a pilot talks in the notes of their own motif, chirped on their own instrument and said
+# through a mouth, bent; a site crew is two talkers trading words; Brindle ends each sentence held on the flat second; the Foreman is
 # one pure note with every letter on the band's thirty-second grid and nothing bent or left to
 # chance; Moss rings his bell and talks as he does at his bench. A line is laid out the same way
 # every time. Through the game, one call books the line a moment ahead in the band's cue lane
@@ -29,6 +29,7 @@ func _initialize() -> void:
 
 func _run() -> void:
 	_voices()
+	_mouths()
 	_pilots()
 	_crew()
 	_brindle()
@@ -48,6 +49,7 @@ func _run() -> void:
 	audio._flush_flow()
 	_pump_to(audio, audio.engine.clock + Harmony.BAR)
 	_call(audio)
+	_call_end(audio)
 	game.queue_free()
 	await process_frame
 	Rows.stem_dir = ""
@@ -68,8 +70,88 @@ func _voices() -> void:
 	t.check("a line is said the same way twice", Bank._say_plan("sable", LINE) == Bank._say_plan("sable", LINE)
 		and Bank._say_plan("sable", LINE) != Bank._say_plan("sable", LINE + " Go."), "sable, twice")
 	var levels: Array = Bank.CALLERS.keys().map(func(speaker: String): return Bank.trim_db(Bank.say_id(speaker, LINE)))
-	t.check("each voice is levelled against Moss's", Bank.trim_db(Bank.say_id("moss", LINE)) == Bank.TRIM_DB["babble"]
-		and levels.min() >= Bank.TRIM_DB["babble"] - 3.0 and levels.max() <= Bank.TRIM_DB["babble"] + 5.0, "trims %s" % [levels])
+	t.check("each voice is levelled against Moss's bench voice", Bank.trim_db(Bank.say_id("cannon", LINE)) == Bank.TRIM_DB["babble"]
+		and levels.min() >= Bank.TRIM_DB["babble"] - 3.0 and levels.max() <= Bank.TRIM_DB["babble"] + 7.0, "trims %s" % [levels])
+
+
+# Everyone alive has a mouth (Andrew, 10 November 2026); the Foreman has none, and the Cannon,
+# a machine on the crew's side, keeps its bent chime. Moss and Brindle, the low voices, are
+# said high so they do not turn into the talking growls he ruled out.
+func _mouths() -> void:
+	var mouthed: Array = Bank.CALLERS.keys().filter(func(speaker: String): return Bank.CALLERS[speaker].has("mouth"))
+	t.eq("everyone alive talks through a mouth; the Cannon and the Foreman do not",
+		Bank.CALLERS.keys().filter(func(speaker: String): return not speaker in mouthed), ["cannon", "mind"])
+	var unsaid: Array = mouthed.filter(func(speaker: String): return not _said_by_mouth(speaker))
+	t.check("a mouthed caller's line is its letters said by its own mouth, and the Cannon's is not", unsaid.is_empty() and mouthed.size() == 10
+		and not _said_by_mouth("cannon"), "not said by the mouth: %s" % [unsaid])
+	var plan: Array = Bank._say_plan("sable", "Go on")[0]
+	t.check("the chirp stays on the instrument and each letter after it is said", plan.slice(0, 2).all(func(blip: Array): return blip[6] == "" and blip[5] == "bell")
+		and plan.slice(2).map(func(blip: Array): return blip[6]) == ["g", "o", "o", "n"], "letters %s" % [plan.map(func(blip: Array): return blip[6])])
+	var ee: PackedFloat32Array = Bank._mouth(69, 0.08, 0.0, "i", 1.0)
+	var oh: PackedFloat32Array = Bank._mouth(69, 0.08, 0.0, "o", 1.0)
+	var high := [_partial(ee, 6), _partial(oh, 6)]
+	var low := [_partial(ee, 2), _partial(oh, 2)]
+	t.check("a mouth shapes its vowels: ee rings high where oh rings low", high[0] > high[1] * 2.0 and low[1] > low[0] * 2.0,
+		"sixth partial %.3f against %.3f, second %.3f against %.3f" % [high[0], high[1], low[0], low[1]])
+	var pitched := [_pitched(Bank._mouth(76, 0.08, 0.0, "s", 1.0)), _pitched(Bank._mouth(76, 0.08, 0.0, "m", 1.0))]
+	t.check("a breathed letter opens on breath and a hummed one on its note", pitched[0] < pitched[1] * 0.75 and pitched[1] > 0.8, "pitched %.2f against %.2f" % pitched)
+	var small: PackedFloat32Array = Bank._mouth(69, 0.08, 0.0, "a", 1.4)
+	var grown: PackedFloat32Array = Bank._mouth(69, 0.08, 0.0, "a", 1.0)
+	t.check("a smaller mouth is brighter, a letter is said the same way twice, and a vowel is level with the chirp", _edge(small) > _edge(grown)
+		and Bank._mouth(69, 0.04, 0.0, "s", 1.4) == Bank._mouth(69, 0.04, 0.0, "s", 1.4) and absf(Synth.peak(small) - Bank.MOUTH_PEAK) < 0.05
+		and Synth.peak(Bank._mouth(69, 0.04, 0.0, "t", 1.4)) < Synth.peak(small), "edge %.3f over %.3f, peak %.2f" % [_edge(small), _edge(grown), Synth.peak(small)])
+
+
+# Whether a caller's line as the bank says it (before the bake levels it) holds, where its
+# first letter falls, that letter said by a mouth of the caller's size at the caller's height.
+# The chirp before it has rung out and the next letter has not started, so the line there is
+# the one piece.
+func _said_by_mouth(speaker: String) -> bool:
+	var row: Dictionary = Bank.CALLERS[speaker]
+	var letters: Array = Bank._say_plan(speaker, LINE)[0].filter(func(blip: Array): return blip[6] != "")
+	var blip: Array = letters[0]
+	var piece: PackedFloat32Array = Bank._mouth(int(blip[1]) + int(row.get("drop", 0)), float(blip[2]), float(blip[4]), blip[6], float(row.get("mouth", 1.0)))
+	var baked: PackedFloat32Array = Bank._say(speaker, LINE)
+	var from := roundi(float(blip[0]) * Harmony.RATE)
+	for i in Synth.seconds(float(blip[2])):
+		if absf(baked[from + i] - piece[i] * float(blip[3])) > 0.001:
+			return false
+	return true
+
+
+# How much of a buffer sits on one partial of A4, the note the mouth checks are said on.
+func _partial(buf: PackedFloat32Array, partial: int) -> float:
+	var turn := TAU * Bank._hz(69) * partial / Harmony.RATE
+	var across := 0.0
+	var along := 0.0
+	var level := 0.0
+	for i in buf.size():
+		across += buf[i] * cos(turn * i)
+		along += buf[i] * sin(turn * i)
+		level += absf(buf[i])
+	return sqrt(across * across + along * along) / maxf(level, 0.000001)
+
+
+# How far a buffer's opening fifth repeats at the period of E5, clear of the shut mouth's own
+# ring: near 1 for a note, low for breath.
+func _pitched(buf: PackedFloat32Array) -> float:
+	var period := int(round(Harmony.RATE / Bank._hz(76)))
+	var same := 0.0
+	var level := 0.0
+	for i in range(period, buf.size() / 5):
+		same += buf[i] * buf[i - period]
+		level += buf[i] * buf[i]
+	return same / maxf(level, 0.000001)
+
+
+# How bright a buffer is: the size of its sample-to-sample steps against its level.
+func _edge(buf: PackedFloat32Array) -> float:
+	var steps := 0.0
+	var level := 0.0
+	for i in range(1, buf.size()):
+		steps += absf(buf[i] - buf[i - 1])
+		level += absf(buf[i])
+	return steps / maxf(level, 0.000001)
 
 
 func _pilots() -> void:
@@ -138,7 +220,7 @@ func _foreman() -> void:
 	var half := float(step) / Harmony.RATE / 2.0
 	var off: Array = plan.filter(func(blip: Array): return absf(float(blip[0]) / half - roundf(float(blip[0]) / half)) > 0.0001)
 	var body: Array = plan.slice(2)
-	var uneven: Array = body.filter(func(blip: Array): return blip.slice(1) != [74, half * 0.7, 1.0, 0.0, Bank.PURE])
+	var uneven: Array = body.filter(func(blip: Array): return blip.slice(1, 6) != [74, half * 0.7, 1.0, 0.0, Bank.PURE])
 	t.check("the Foreman is one pure note, every letter on the thirty-second grid, nothing bent, no rise on a question",
 		off.is_empty() and uneven.is_empty()
 		and [int(plan[0][1]), int(plan[1][1])] == [74, 81] and Bank.caller_on_grid("mind") and not Bank.caller_on_grid("sable"),
@@ -161,10 +243,19 @@ func _moss() -> void:
 	t.check("Moss rings his bell twice and talks as he does at his bench", body.size() == bench.size()
 		and [plan[0][1], plan[1][1], plan[0][5]] == [86, 86, "mallet"] and same.size() == body.size(),
 		"%d letters after the bell, %d at the bench" % [body.size(), bench.size()])
+	# One Moss everywhere: his bench line is his caller row's mouth too, an octave up.
+	var first: Array = bench[0]
+	var row: Dictionary = Bank.CALLERS[Bank.MOSS]
+	var said: PackedFloat32Array = Bank._mouth(int(first[1]) + int(row["drop"]), float(first[2]), float(first[4]), first[6], float(row["mouth"]))
+	var blipped: PackedFloat32Array = Bank._blip(int(first[1]), float(first[2]), false, float(first[4]))
+	var line: PackedFloat32Array = Bank.babble(LINE, Bank.BABBLE_LEVEL)
+	t.check("at his bench Moss says his letters through the same mouth, levelled as on a call", _fit(line, said) < 0.02 and _fit(line, blipped) > 0.2
+		and Bank.trim_db("babble") == Bank.trim_db(Bank.say_id("moss", LINE)) and Synth.peak(Bank.babble(LINE, Bank.BABBLE_RELENT)) < Synth.peak(line),
+		"first letter off his mouth by %.3f, off his old blip by %.3f" % [_fit(line, said), _fit(line, blipped)])
 	Bank.unknown_callers.clear()
 	var stranger: String = Bank.say_id("nobody", LINE)
 	t.check("a caller with no row gets Moss's voice and one warning", Bank._say_plan("nobody", LINE) == Bank._say_plan("moss", LINE)
-		and Bank.unknown_callers.keys() == ["nobody"] and Bank.trim_db(stranger) == Bank.TRIM_DB["babble"] and not Bank.caller_on_grid("nobody"),
+		and Bank.unknown_callers.keys() == ["nobody"] and Bank.trim_db(stranger) == Bank.trim_db(Bank.say_id("moss", LINE)) and not Bank.caller_on_grid("nobody"),
 		"warned about %s" % [Bank.unknown_callers.keys()])
 	t.check("an id with no line is a chirp and no crash", Bank._said("say|sable") == ["sable", ""] and Bank._said("say|sable|a|b") == ["sable", "a|b"]
 		and Bank.samples("say|sable").size() > 0, "%s" % [Bank._said("say|sable")])
@@ -205,6 +296,49 @@ func _call(audio) -> void:
 	var unit: int = audio.grid_unit(4)
 	t.check("the Foreman's call starts on the band's sixteenth", posmod(grid_at - audio.next_grid(4), unit) == 0 and grid_at >= from + lead
 		and grid_at < from + lead + unit and memo > Bank.say_seconds("mind", "Quick sync.", unit) and empty == 0.0, "at %d, %d past a sixteenth of %d" % [grid_at, posmod(grid_at - audio.next_grid(4), unit), unit])
+
+
+# The card closing early stops its caller: a line still booked never sounds, one sounding is
+# let go, the band comes back up and the next caller may talk at once.
+func _call_end(audio) -> void:
+	var engine = audio.engine
+	audio.clock += 60.0
+	audio.cue_log.clear()
+	engine.stinger_starts.clear()
+	audio.call_end()
+	t.check("ending a call when nobody is talking does nothing", audio.cue_log.is_empty(), "%d rows" % audio.cue_log.size())
+	var early: String = Bank.say_id("kest", LINE)
+	audio.call_in("call_in", "kest", LINE)
+	var at: int = int(audio.cue_log.filter(func(e: Array): return e[2] == "call")[0][3])
+	audio.call_end()
+	var booked: Array = engine._actions.filter(func(a: Dictionary): return a.get("id", "") == early)
+	var next: float = audio.call_in("call_in", "tarn", LINE)
+	_pump_to(audio, at + 4096)
+	t.check("a call ended before its voice starts never sounds, and the next caller talks at once", booked.is_empty() and next > 0.0
+		and engine.stinger_starts.filter(func(s: Array): return s[0] == early).is_empty(), "%d bookings left, next caller %.2f s" % [booked.size(), next])
+	var late: String = Bank.say_id("tarn", LINE)
+	var sounding: Array = engine._voices.filter(func(v): return v.stinger == late)
+	var left: int = sounding[0].end - sounding[0].pos if sounding.size() == 1 else -1
+	audio.call_end()
+	var after: int = sounding[0].end - sounding[0].pos if sounding.size() == 1 else -1
+	t.check("a call ended while its voice sounds lets the voice go and brings the band back up", left > engine.RELEASE * 10 and after >= 0 and after <= engine.RELEASE
+		and engine._duck_until <= engine.clock and engine._duck_target == 1.0 and audio.call_in("call_in", "sable", LINE) > 0.0,
+		"%d samples left before, %d after, duck until %d at clock %d" % [left, after, engine._duck_until, engine.clock])
+	audio.call_end()
+
+
+# How far the opening of a buffer is from being a scaled copy of a piece: 0 when it is one
+# (a line levelled as a whole keeps each letter's shape), near 1 when they are unrelated.
+func _fit(buf: PackedFloat32Array, piece: PackedFloat32Array) -> float:
+	var n := mini(piece.size(), 1600)
+	var cross := 0.0
+	var own := 0.0
+	var other := 0.0
+	for i in n:
+		cross += buf[i] * piece[i]
+		own += piece[i] * piece[i]
+		other += buf[i] * buf[i]
+	return 1.0 - cross * cross / maxf(own * other, 0.000000001)
 
 
 func _pump_to(audio, until: int) -> void:

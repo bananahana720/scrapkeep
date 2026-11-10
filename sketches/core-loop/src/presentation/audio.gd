@@ -320,6 +320,8 @@ const PILOT_QUOTE_BARS := 8
 # sits at this gain under it.
 const CALL_LEAD_S := 0.3
 const CALL_DUCK := 0.6
+# The bank id of the line the last caller was booked to say, for call_end.
+var _calling := ""
 # The last_ms of the kill chain whose end has been heard.
 var _streak_landed_ms := -100000
 # The beat a death holds the recorded band to; the lost summary's pack starts once it has passed
@@ -1701,9 +1703,26 @@ func call_in(kind: String, speaker: String, text: String) -> float:
 	engine.schedule_stinger_at(id, at, 0.0, false, step)
 	var seconds := float(at - engine.clock) / Harmony.RATE + SfxBank.say_seconds(speaker, text, step)
 	_gates["call_in"] = clock + seconds
+	_calling = id
 	_duck(CALL_DUCK, seconds)
 	cue_log.append([kind, "babble", "call", at, 1.0])
 	return seconds
+
+
+# The card that showed a caller closed before the voice was done (a fight went live, the run
+# ended): the caller stops, booked or sounding, the band comes back up and the next caller
+# may talk. Nothing happens when nobody is talking. A shorter dip another cue asked for in
+# that moment is freed with it.
+func call_end() -> void:
+	if _calling == "" or clock >= float(_gates.get("call_in", -1000.0)):
+		return
+	engine.cancel_stinger(_calling)
+	engine.free_duck()
+	if ace_playing():
+		ace.free_duck()
+	_gates["call_in"] = clock
+	_calling = ""
+	cue_log.append(["call_end", "babble", "now", engine.clock, 1.0])
 
 
 # What the run's rows resolve by: the player's class motif.
