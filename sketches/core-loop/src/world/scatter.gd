@@ -8,6 +8,7 @@ extends RefCounted
 # The batches are not registered as scenery: a visibility range is measured to a batch's bounds
 # centre, and a map-wide batch would vanish whole (set_dressing.gd, _batch).
 
+const AppShell := preload("res://src/core/app_shell.gd")
 const ScatterRows := preload("res://src/world/scatter_rows.gd")
 const DigScenery := preload("res://src/presentation/dig_scenery.gd")
 const Palette := preload("res://src/core/palette.gd")
@@ -407,7 +408,7 @@ class Chunked extends Node3D:
 	# _build_crater has the same gate and its reasoning. GPU renderers keep the loader thread.
 	func start(map, ground: Callable, rows: Array, threaded: bool) -> void:
 		var t0 := Time.get_ticks_usec()
-		var loader := threaded and DisplayServer.get_name() != "headless"
+		var loader := threaded and not AppShell.headless()
 		_map = map
 		_ground = ground
 		_threaded = threaded

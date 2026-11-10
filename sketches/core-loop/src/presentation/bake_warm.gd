@@ -23,6 +23,7 @@ extends Node
 # A bot run that builds stages whole skips it, like fleet._warm_scripts, so frame costs stay as
 # they were where seeds must replay.
 
+const AppShell := preload("res://src/core/app_shell.gd")
 const BakeLook := preload("res://src/presentation/bake_look.gd")
 const SimClock := preload("res://src/core/sim_clock.gd")
 const Terrain := preload("res://src/world/terrain.gd")
@@ -179,7 +180,7 @@ static func first_view(first: String, parent: Node) -> Node3D:
 			# ArrayMeshes load on the main thread, as park_props._uncached does.
 			var path := HeroAssets.CHUNKS_PATH
 			if ResourceLoader.exists(path) and not _held.has(path) and not _loading.has(path):
-				if DisplayServer.get_name() == "headless":
+				if AppShell.headless():
 					_held[path] = load(path)
 				elif ResourceLoader.load_threaded_request(path) == OK:
 					_loading.append(path)

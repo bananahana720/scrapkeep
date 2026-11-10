@@ -24,6 +24,9 @@ extends Node
 # Every launch prints the build stamp once (build_stamp.gd, SCRAPKEEP_BUILD), and the card shows it
 # in its bottom right corner. The stamp script preloads nothing, so it costs the card no load.
 
+# The one headless question (src/core/app_shell.gd). It reads engine classes only and preloads
+# nothing, so the card stays as light as the note above asks.
+const AppShell := preload("res://src/core/app_shell.gd")
 const BuildStamp := preload("res://src/core/build_stamp.gd")
 const GAME_SCENE := "res://main.tscn"
 const FONT_PATH := "res://assets/fonts/NotoSans-Bold.ttf"
@@ -84,7 +87,7 @@ func _use_card() -> bool:
 		return false
 	if force_card or _flag("--boot-card"):
 		return true
-	return DisplayServer.get_name() != "headless"
+	return not AppShell.headless()
 
 
 static func _flag(flag: String) -> bool:
