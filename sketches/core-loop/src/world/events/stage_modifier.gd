@@ -25,12 +25,15 @@ const EFFECTS := ["count_scale", "sight_scale", "far"]
 const LOOKS := ["id", "word", "line", "fx"]
 const WORLD_FX := "res://src/presentation/world_fx/world_fx.gd"
 const WORLD_FX_ANCHOR := "res://src/presentation/world_fx/world_fx_anchor.gd"
+# The lines are the Foreman's memos (STORY-MAP.md, the Foreman's voice): dry optimiser talk that
+# is pleased with itself, and each still ends on what the stage does. The card is up for about two
+# seconds over a launch, so a line stays inside eight short words (stage_modifier_test).
 const ROWS := [
-	{"id": "surplus", "word": "Surplus Yard", "line": "Somebody over-ordered. More pockets.", "fx": "plenty", "count_scale": 2.0},
-	{"id": "lean", "word": "Lean Haul", "line": "Budget cuts. Fewer pockets.", "fx": "scarce", "count_scale": 0.5},
-	{"id": "floodlit", "word": "Floodlit", "line": "Someone left the lights on. Beacons read far.", "sight_scale": 1.75},
-	{"id": "blackout", "word": "Blackout", "line": "The beacons are on a budget.", "fx": "hidden", "sight_scale": 0.5},
-	{"id": "far_haul", "word": "Far Haul", "line": "Everything good is at the edges.", "far": true},
+	{"id": "surplus", "word": "Surplus Yard", "line": "A forecasting win. More pockets.", "fx": "plenty", "count_scale": 2.0},
+	{"id": "lean", "word": "Lean Haul", "line": "More with less. Mostly less. Fewer pockets.", "fx": "scarce", "count_scale": 0.5},
+	{"id": "floodlit", "word": "Floodlit", "line": "Transparency is a value. Beacons read far.", "sight_scale": 1.75},
+	{"id": "blackout", "word": "Blackout", "line": "Lighting, right-sized. Beacons read short.", "fx": "hidden", "sight_scale": 0.5},
+	{"id": "far_haul", "word": "Far Haul", "line": "Value was relocated to the edges.", "far": true},
 ]
 
 
@@ -116,8 +119,9 @@ static func caption(row: Dictionary) -> String:
 
 
 # The run-long cursed state shares the card: its own card when the deal is taken, then a line
-# on every later stage card beside the stage's modifier.
-const CURSE := {"id": "curse", "word": "Cursed Run", "line": "The deal is on the books."}
+# on every later stage card beside the stage's modifier. The deal was a keeper's gamble, so the
+# line is the crew's, the door sign's "Nobody makes you." come due (trade_pockets.gd DOOR_WORDS).
+const CURSE := {"id": "curse", "word": "Cursed Run", "line": "You shook on it. Nobody made you."}
 
 
 static func card_line(run, terrain, stage: int) -> String:

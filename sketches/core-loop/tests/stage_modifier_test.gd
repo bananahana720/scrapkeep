@@ -83,6 +83,10 @@ func _rows() -> void:
 		ids[row.id] = true
 		t.check("%s carries only allowed effect keys" % row.id, Modifier.valid(row))
 		t.check("%s caption fits the card (at most 8 words in its line)" % row.id, String(row.line).split(" ", false).size() <= 8)
+		# The memo voice never costs the read: the line still ends on what the stage does.
+		var effect: String = "pockets." if row.has("count_scale") else "Beacons read" if row.has("sight_scale") else "edges."
+		t.check("%s line ends on what the stage does" % row.id, String(row.line).get_slice(". ", String(row.line).get_slice_count(". ") - 1).contains(effect), String(row.line))
+	t.check("the cursed line fits the card too", String(Modifier.CURSE.line).split(" ", false).size() <= 8)
 	t.eq("row ids are unique", ids.size(), Modifier.ROWS.size())
 	t.check("world-effect overlays name WORLD-FX.md kinds", Modifier.ROWS.all(func(row): return String(row.get("fx", "")) in ["", "plenty", "scarce", "hidden"]))
 	var planted := {"id": "slick", "word": "Slick", "line": "x", "friction": 0.1}
