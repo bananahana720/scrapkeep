@@ -58,7 +58,7 @@ const EXPECTED_LAYERS := {
 	"breaker_drive": "local", "bladestorm_rotor": "local", "storm_mast": "local",
 	"grounding_spike": "local",
 }
-const FIXED_CHECKS := 27
+const FIXED_CHECKS := 29
 const FITTED_PARTS := ["hot_rivets", "hot_rivets", "slag_rounds", "rivet_plating", "quick_spool",
 	"crush_guard", "cap_relay", "cap_relay", "cap_relay", "cap_relay", "magnet_spool", "cross_split"]
 
@@ -72,6 +72,9 @@ var _failures := 0
 var _phase := 0
 var _frames := 0
 var _completed := 0
+var _esc_view
+var _esc_after_first: Array = []
+var _esc_pick_after_second := true
 
 
 func _initialize() -> void:
@@ -111,16 +114,66 @@ func _process(_delta: float) -> bool:
 		_game.flow.choose_class(0)
 		_phase = 1
 		_frames = 0
-	elif _frames >= 10:
+	elif _phase == 1 and _frames >= 10:
 		_check_build()
 		_check_tree()
 		_check_refunds()
-		_report("all acceptance groups completed", _completed == 4, "%d of 4 groups returned normally" % _completed)
+		_phase = 2
+		_frames = 0
+		_esc_setup()
+	elif _phase == 2 and _frames == 6:
+		_esc_first()
+	elif _phase == 2 and _frames == 12:
+		_esc_second()
+	elif _phase == 2 and _frames == 18:
+		_esc_done()
+		_report("all acceptance groups completed", _completed == 5, "%d of 5 groups returned normally" % _completed)
 		_report("expected check count", _checks + 1 == EXPECTED_CHECKS, "%d / EXPECTED_CHECKS=%d" % [_checks + 1, EXPECTED_CHECKS])
 		print("ui_build_readout_test: %s (%d checks, EXPECTED_CHECKS=%d)" % ["PASS" if _failures == 0 else "FAIL (%d)" % _failures, _checks, EXPECTED_CHECKS])
 		quit(0 if _failures == 0 else 1)
 		return true
 	return false
+
+
+# One real Esc over the readout popup, which stands over the workshop pick: the press closes the
+# popup alone, and a second press is the one that reaches the pick. Events go through the engine's
+# own input path (Input.parse_input_event), not a direct call.
+func _esc_setup() -> void:
+	var workshop = _game.get_node("Workshop")
+	workshop.armed = true
+	var def = ClassDef.all()[0]
+	workshop.pick.open(def.id, 2, UpgradeTree.nodes(def.id).slice(0, 2), [], def.color)
+	_esc_view = workshop.pick.cards()[0].find_children("BuildReadout", "", true, false)[0]
+	_esc_view.pressed.emit()
+
+
+func _press_esc() -> void:
+	var esc := InputEventKey.new()
+	esc.keycode = KEY_ESCAPE
+	esc.physical_keycode = KEY_ESCAPE
+	esc.pressed = true
+	Input.parse_input_event(esc)
+	Input.flush_buffered_events()
+
+
+func _esc_first() -> void:
+	var workshop = _game.get_node("Workshop")
+	var before: bool = _esc_view.popup_visible() and workshop.pick.is_open()
+	_press_esc()
+	_esc_after_first = [before, _esc_view.popup_visible(), workshop.pick.is_open()]
+
+
+func _esc_second() -> void:
+	var workshop = _game.get_node("Workshop")
+	_report("one Esc closes the readout popup and leaves the pick open",
+		_esc_after_first == [true, false, true], "popup and pick open before, then popup open %s, pick open %s" % [_esc_after_first[1], _esc_after_first[2]])
+	_press_esc()
+	_esc_pick_after_second = workshop.pick.is_open()
+
+
+func _esc_done() -> void:
+	_report("a second Esc acts on the pick", not _esc_pick_after_second, "pick open after the second press: %s" % _esc_pick_after_second)
+	_completed += 1
 
 
 func _check_classes() -> void:
