@@ -122,6 +122,11 @@ test("compareRuns ignores wall time, the play watch and naming fields, and names
   assert.equal(compareRuns(base, base).code, 0);
   const noisy = [runLine({ wallS: 99, qa: { a: 2 }, key: "z", commit: "d", comic_page: 9, label: "x" }), runLine({ seed: 2 })].join("\n");
   assert.equal(compareRuns(base, noisy).code, 0);
+  // The fairness record is a measurement: adding or changing it is not a different run, a moved outcome beside it still is.
+  const plain = [runLine({ row: { outcome: "won" } }), runLine({ seed: 2 })].join("\n");
+  const measured = [runLine({ row: { outcome: "won", fairness: { telegraph_share: 0.9, stop_tax: 3, first_hit_s: 4 } } }), runLine({ seed: 2 })].join("\n");
+  assert.equal(compareRuns(plain, measured).code, 0);
+  assert.equal(compareRuns(plain, [runLine({ row: { outcome: "died", fairness: { stop_tax: 1 } } }), runLine({ seed: 2 })].join("\n")).code, 1);
   const moved = compareRuns(base, [runLine({ game_seconds: 101 }), runLine({ seed: 2 })].join("\n"));
   assert.equal(moved.code, 1);
   assert.equal(moved.differing, 1);

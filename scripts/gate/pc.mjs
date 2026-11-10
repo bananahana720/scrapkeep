@@ -157,7 +157,11 @@ export async function runPlan(steps, { budget, start, isDone = () => null, onExi
 
 // ---- compare ----
 
-const IGNORED = new Set(["wall_seconds", "wallS", "qa", "label", "commit", "key", "id", "log", "comic_page", "started_at", "ended_at", "rerun"]);
+// `fairness` (the bot record's F1 to F3 numbers, wave 36 unit measure) is a measurement, not an outcome: it reads what the
+// simulation already published and moves nothing, so a head that adds or refines it must not read as a differing run.
+// It is one key on purpose: its parts (`first_hit_s`, `stop_tax`, `telegraph_share`) would also hide the stage notes' own
+// `first_hit_s` if listed here, because the strip below is by name at any depth.
+const IGNORED = new Set(["fairness", "wall_seconds", "wallS", "qa", "label", "commit", "key", "id", "log", "comic_page", "started_at", "ended_at", "rerun"]);
 
 function strip(value) {
   if (Array.isArray(value)) return value.map(strip);

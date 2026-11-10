@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { readFileSync } from "node:fs";
-import { BOSSES, COLUMNS, TARGETS, aggregate, buildTable, cellVerdict, describeDoc, estimate, gradeRun, mergeLibraryIndexes, wallStats, checkMerge, planHash, jobKey, dedupeBy, bucketInfo, fightStart, median, meets, pickBuilds, planCells, renderTable, shardJobs, wilson, MAX_RUN_TIER, botArgs, qaRows, playerReport, renderPlayerReport, QA_KINDS } from "./lib.mjs";
+import { BOSSES, COLUMNS, TARGETS, aggregate, buildTable, cellVerdict, describeDoc, estimate, gradeRun, mergeLibraryIndexes, wallStats, checkMerge, planHash, jobKey, dedupeBy, bucketInfo, fightStart, median, meets, pickBuilds, planCells, renderTable, shardJobs, wilson, MAX_RUN_TIER, botArgs, qaRows, playerReport, renderPlayerReport, QA_KINDS, FAIRNESS, fairnessOf, fairnessPool, fairnessByBand, renderFairness } from "./lib.mjs";
 
 const docs = (n, stage = 2) => Array.from({ length: n }, (_, i) => ({ file: `s${stage}/d${i}.json`, stage, mass: 100 + i * 10, parts: i % 5, pilot: "tarn" }));
 const builds = () => Object.fromEntries([2, 3, 4, 5, 6].map((s) => [s, pickBuilds(docs(24, s))]));
@@ -390,4 +390,113 @@ test("the player report gathers the watch's rows by kind and place, worst kind f
   assert.match(renderPlayerReport(playerReport([{ id: "a", cell: "w1" }])), /No run carried the play watch's rows/);
   assert.match(renderPlayerReport(playerReport([{ id: "a", cell: "w1", qa: [] }])), /No place was reported/);
   assert.deepEqual(QA_KINDS.slice(0, 3), ["wedged", "fell", "blank"]);
+});
+
+// --- wave 36 unit measure: the whole-World-1 clear and the fairness numbers ---------------------------------------
+
+test("w1clear is selected only by name, never by --only=w1 or the default cells", () => {
+  const ids = (jobs) => [...new Set(jobs.map((j) => j.cell))];
+  assert.deepEqual(ids(planCells({ builds: builds(), only: ["w1"], seeds: 2, columns: ["expert"] })), ["w1"]);
+  assert.ok(!ids(planCells({ builds: builds(), seeds: 2, columns: ["expert"] })).includes("w1clear"), "not in the default cells");
+  const jobs = planCells({ builds: builds(), only: ["w1clear"], seeds: 2, columns: ["novice", "learner1", "learner5", "expert", "expertTop"] });
+  assert.deepEqual(ids(jobs), ["w1clear"]);
+  assert.deepEqual([...new Set(jobs.map((j) => j.column))], ["novice", "learner1", "learner5", "expert"], "a fresh run has no top build, so no top column");
+  assert.equal(jobs.length, 8);
+  assert.ok(jobs.every((j) => j.kind === "clear" && j.entrance === null && !j.missing));
+  const args = jobs[0].args.join(" ");
+  assert.match(args, /--to-boss=1 --until=2/);
+  assert.match(args, /--ticks=\d+/);
+  assert.ok(!args.includes("--from-stage"), "it starts at stage 1");
+  // the existing w1 plan is unchanged by the new cell's existence
+  const w1 = planCells({ builds: builds(), only: ["w1"], seeds: 2, columns: ["expert"] });
+  assert.equal(w1.length, 2);
+  assert.ok(w1.every((j) => j.kind === "warden" && j.args.some((a) => a === "--until=1")));
+});
+
+test("a w1clear run is graded by where it ended: cleared, died or capped, with the stage and game seconds", () => {
+  const won = gradeRun("clear", { outcome: "won", stage_reached: 2, game_seconds: 640.5, boss: { defeated_s: 70 } });
+  assert.deepEqual(won, { result: "win", fightS: 640.5, hpLost: null, end: "clear", stage: 2, gameS: 640.5 });
+  const dead = gradeRun("clear", { outcome: "died", stage_reached: 1, game_seconds: 212.04, boss: null });
+  assert.deepEqual([dead.result, dead.end, dead.stage, dead.gameS], ["loss", "death", 1, 212.04]);
+  const capped = gradeRun("clear", { outcome: "stalled", stage_reached: 2, game_seconds: 900, boss: null });
+  assert.deepEqual([capped.result, capped.end, capped.reason, capped.stage], ["timeout", "cap", "stalled", 2]);
+  assert.equal(gradeRun("clear", { outcome: "ticks_done", stage_reached: 2, game_seconds: 1800, boss: { defeated_s: null } }).end, "cap");
+  assert.equal(gradeRun("clear", { outcome: "gave_up", stage_reached: 1 }).result, "error");
+  assert.equal(gradeRun("clear", null).result, "error");
+  // in the table: information only, in its own section, never a fail
+  const runs = [won, dead, capped].map((grade, i) => ({ cell: "w1clear", kind: "clear", stage: 1, column: "expert", band: "expert", seed: i, grade }));
+  const table = buildTable(runs);
+  assert.equal(table[0].info, true);
+  assert.equal(cellVerdict(table[0]), "info");
+  assert.equal(table[0].columns.expert.target, null);
+  assert.equal(table[0].ends.expert, "s1: 1 died / 0 capped / 0 cleared, s2: 0 died / 1 capped / 1 cleared");
+  const text = renderTable(table);
+  assert.match(text, /## Whole World 1 clear/);
+  assert.ok(!text.includes("## World chains"));
+});
+
+// A fixed fake trace: three runs of one band. Hull 40 of 50 shown on run a; 10 of 50 on run b; run c lost no hull.
+const fake = (band, f) => ({ band, row: { fairness: f } });
+const trace = () => [
+  fake("expert", { hull_lost: 50, hull_shown: 40, killing_hit_telegraphed: true, slow_s: 30, fast_s: 60, slow_hull: 30, fast_hull: 20, first_hit_s: 6, contact: true }),
+  fake("expert", { hull_lost: 50, hull_shown: 10, killing_hit_telegraphed: false, slow_s: 30, fast_s: 60, slow_hull: 40, fast_hull: 10, first_hit_s: 2, contact: true }),
+  fake("expert", { hull_lost: 0, hull_shown: 0, killing_hit_telegraphed: null, slow_s: 20, fast_s: 40, slow_hull: 0, fast_hull: 0, first_hit_s: null, contact: true }),
+];
+
+test("the three fairness numbers come out of a fixed trace by the plan's arithmetic", () => {
+  const p = fairnessPool(trace());
+  // F1: 50 shown of 100 hull = 0.5; the one killing hit that was shown out of two.
+  assert.equal(p.telegraphShare, 0.5);
+  assert.deepEqual([p.kills, p.killsShown, p.shareN], [2, 1, 2]);
+  // F2: slow 70 hull over 80 s = 0.875 per s; fast 30 hull over 160 s = 0.1875 per s; the ratio is 4.666...
+  assert.ok(Math.abs(p.stopTax - 0.875 / 0.1875) < 1e-9);
+  // F3: the median of 6 and 2 is 4 s; the hit-free run is counted apart, not as 0 or as a hit.
+  assert.equal(p.firstHitS, 4);
+  assert.deepEqual([p.firstHitN, p.hitFree], [2, 1]);
+});
+
+test("each fairness number moves the wrong way on a planted unfair trace, so its pass is not by default", () => {
+  const fair = fairnessPool(trace().slice(0, 1).map((r) => ({ ...r, row: { fairness: { ...r.row.fairness, hull_shown: 50, killing_hit_telegraphed: true, slow_hull: 40, fast_hull: 5, first_hit_s: 8 } } })));
+  assert.ok(fair.telegraphShare >= FAIRNESS.telegraphShare, "F1 passes when every hit was shown");
+  assert.ok(fair.stopTax >= FAIRNESS.stopTax, "F2 passes when the tax falls on the stopped ball");
+  assert.ok(fair.firstHitS >= FAIRNESS.firstHitS, "F3 passes when the first hit comes late");
+  // the plants: an untelegraphed drain, a tax on fast balls, a spawn with no ring
+  const unfair = fairnessPool([fake("expert", { hull_lost: 50, hull_shown: 20, killing_hit_telegraphed: false, slow_s: 30, fast_s: 60, slow_hull: 10, fast_hull: 40, first_hit_s: 0.5, contact: true })]);
+  assert.ok(unfair.telegraphShare < FAIRNESS.telegraphShare);
+  assert.ok(unfair.stopTax < FAIRNESS.stopTax);
+  assert.ok(unfair.firstHitS < FAIRNESS.firstHitS);
+  const text = renderFairness({ expert: unfair }).join("\n");
+  assert.equal((text.match(/✗/g) ?? []).length, 4, "share, killing hit, stop tax and first hit each fail");
+});
+
+test("a fairness field missing from a record reads as not measured, never as 0", () => {
+  assert.equal(fairnessOf({ row: {} }), null);
+  assert.equal(fairnessOf({ row: null }), null);
+  assert.equal(fairnessOf({}), null);
+  const part = fairnessOf({ row: { fairness: { hull_lost: 10, hull_shown: 10 } } });
+  assert.deepEqual([part.slowS, part.fastS, part.firstHitS, part.killShown], [null, null, null, null]);
+  const p = fairnessPool([{ band: "novice", row: { outcome: "won" } }, fake("novice", { hull_lost: 10, hull_shown: 10 })]);
+  assert.equal(p.telegraphShare, 1);
+  assert.equal(p.stopTax, null);
+  assert.equal(p.stopTaxNote, "not measured");
+  assert.equal(p.firstHitS, null, "an unmeasured first hit is null, not 0 s");
+  assert.deepEqual([p.runs, p.measured], [2, 1]);
+  // a run with no hull lost has no share; no hull at cruise has no tax; neither is a pass
+  const none = fairnessPool([fake("novice", { hull_lost: 0, hull_shown: 0, slow_s: 10, fast_s: 10, slow_hull: 0, fast_hull: 0, contact: false })]);
+  assert.equal(none.telegraphShare, null);
+  assert.equal(none.stopTax, null);
+  assert.equal(none.stopTaxNote, "no hull lost at cruise");
+  assert.equal(fairnessByBand([{ band: "novice", row: { outcome: "won" } }]), null);
+  const text = renderFairness(fairnessByBand([{ band: "novice", row: { outcome: "won" } }, fake("novice", { hull_lost: 10, hull_shown: 10 })])).join("\n");
+  assert.match(text, /F2 not measured/);
+  assert.match(text, /F3 not measured/);
+  assert.ok(!/F[23] [^n]*0(\.0)? s/.test(text), "no zero is printed for a number nobody measured");
+});
+
+test("the table gains one fairness line per band", () => {
+  const runs = [...trace(), fake("novice", { hull_lost: 10, hull_shown: 10, slow_s: 5, fast_s: 5, slow_hull: 5, fast_hull: 5, first_hit_s: 5, contact: true })]
+    .map((r, i) => ({ ...r, cell: "w1", kind: "warden", stage: 1, column: r.band, seed: i, grade: { result: "win", fightS: 1 } }));
+  const text = renderTable(buildTable(runs), { fairness: fairnessByBand(runs) });
+  assert.match(text, /## Fairness/);
+  assert.equal((text.match(/^- (novice|expert) /gm) ?? []).length, 2);
 });

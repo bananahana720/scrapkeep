@@ -21,11 +21,23 @@ extends RefCounted
 #                          source "rut_plant", so it counts as a hit; scrap armour is bypassed for it. Pack damage x4 could not make circling lose:
 #                          the circling arm stalled to the cap on all six stages, on stage 2 without one hit.
 #
+#   fast_tax=K             A stand-in for a world that taxes a rolling ball, the stop-against-move number's positive control
+#                          (the bot record's fairness.stop_tax): once a game second, a ball at or above cruise speed takes
+#                          K x FAST_TAX_SHARE of its max hull, source "fast_tax_plant", so the hull is lost while moving.
+#   ringless=K             A pack that spawns with no arrival ring, the first-hit number's positive control (fairness.
+#                          first_hit_s): the tick a stage's contact opens (bot_driver.contact_open), the ball takes K x
+#                          RINGLESS_SHARE of its max hull, source "ringless_plant", as the ambush an unringed spawn would land.
+#
+# rut, fast_tax and ringless drain the hull straight through run.damage, which is a hit that no telegraph announced, so
+# they also move the telegraph share (fairness.telegraph_share) down.
+#
 # pack_damage and packs_passive both own mobs.damage_mult, so they cannot be combined.
 
 const AttackBudget := preload("res://src/combat/attack_budget.gd")
 
-const NAMES := ["pack_damage", "damage", "packs_passive", "hide_pack_telegraphs", "rut"]
+const NAMES := ["pack_damage", "damage", "packs_passive", "hide_pack_telegraphs", "rut", "fast_tax", "ringless"]
+const FAST_TAX_SHARE := 0.02
+const RINGLESS_SHARE := 0.05
 const RUT_WINDOW_S := 10.0
 # Wider than the orbit ring at the outer edge of its band (2 x (14 + 3) m), so a full lap never clears it.
 const RUT_SPAN_M := 36.0
@@ -39,6 +51,9 @@ var _driver
 var _rut_trail: Array = []
 var _rut_clock := 0.0
 var _rut_stage := -1
+var _tax_clock := 0.0
+var _tax_stage := -1
+var _ringless_stage := -1
 
 
 # "a=1,b=2" -> {a: 1.0, b: 2.0}. An error string in "error" when a name or a value is not accepted.
@@ -79,6 +94,10 @@ func attach(game, driver, planted: Dictionary) -> void:
 func step() -> void:
 	if values.has("rut"):
 		_rut(float(values["rut"]))
+	if values.has("fast_tax"):
+		_fast_tax(float(values["fast_tax"]))
+	if values.has("ringless"):
+		_ringless(float(values["ringless"]))
 	if values.has("damage"):
 		_wrap_damage(float(values["damage"]))
 	if float(values.get("packs_passive", 0.0)) > 0.0:

@@ -625,6 +625,19 @@ var _harpoon_commit := false
 var kite
 var _cruise_hold := false
 var hide_pack_telegraphs := false
+# The fairness record (record()'s "fairness"; scripts/challenge/README.md): measured from what the simulation already
+# publishes, and read by nothing in the driver. It steers nothing and draws no random number.
+const FAIR_SEEN_S := 0.6
+var _fair_seen := {}
+var _fair_cover := false
+var _fair_last_hit_covered = null
+var _fair_fast := false
+var _fair_slow_s := 0.0
+var _fair_fast_s := 0.0
+var _fair_slow_hull := 0.0
+var _fair_fast_hull := 0.0
+var _fair_hull := 0.0
+var _fair_hull_shown := 0.0
 # Only the explorer changes hands: jump clear, bite, release at the apex, bite again, haul.
 # chain_hand_enabled = false keeps the one-bite hand, the control for the two-hook one.
 var chain_hand_enabled := true
@@ -890,6 +903,7 @@ func tick(delta: float) -> bool:
 	_harpoon_commit = false
 	_cruise_hold = false
 	_contact_scan()
+	_fair_tick(delta)
 	if flow.in_stage():
 		_content_scan()
 	_plant_cool -= delta
@@ -1187,6 +1201,7 @@ func _on_player_hit(amount: float, source_id: String) -> void:
 	_count("hull_lost", hull)
 	_count("hits")
 	_note_contact_hit(hull)
+	_fair_hit(hull)
 	if source_id == "brindle_charge":
 		_count("charge_hits")
 	var in_boss := _in_boss()
@@ -4737,6 +4752,11 @@ func _contact_scan() -> void:
 			return
 
 
+# Whether this stage's contact has opened (a pack within CONTACT_RADIUS, or a first hit). The ringless plant reads it.
+func contact_open() -> bool:
+	return not _note.is_empty() and _note.get("first_contact_s") != null
+
+
 # A hit on the stage: its first, and the hull it cost inside the contact window.
 func _note_contact_hit(hull: float) -> void:
 	if _in_boss() or _note.is_empty():
@@ -4759,6 +4779,79 @@ func _close_contact() -> void:
 	# circle_share: seconds on the ring over the window (first contact to its end or death), the anchor policies' measure.
 	if _note["alive_120s"] != null and float(_note["alive_120s"]) > 0.0:
 		_note["circle_share"] = snappedf(float(_note["circle_s"]) / float(_note["alive_120s"]), 0.001)
+
+
+# --- the fairness record (F1 to F3 of project-guide/handoff/shared/world1/difficulty-plan.md) ---------------
+
+# Once a tick: which side of cruise speed the ball is on, and whether it stands in a telegraph the player has been
+# shown for FAIR_SEEN_S. Reads the published telegraphs only; it moves nothing.
+func _fair_tick(delta: float) -> void:
+	if not (game.flow.in_stage() or game.flow.state_name() == "boss") or not game.run.alive():
+		_fair_cover = false
+		return
+	_fair_fast = game.player.planar_velocity().length() >= game.player.tuning.f("cruise")
+	if _fair_fast:
+		_fair_fast_s += delta
+	else:
+		_fair_slow_s += delta
+	_fair_cover = _fair_covered(true)
+
+
+# Whether the ball is inside a telegraph that has been up for FAIR_SEEN_S. `mark` records first sightings.
+func _fair_covered(mark: bool) -> bool:
+	var ball: Vector3 = game.player.ball_position()
+	var covered := false
+	var live := {}
+	for h in _hazards():
+		var id: int = h.get_instance_id()
+		live[id] = true
+		if not _fair_seen.has(id):
+			if mark:
+				_fair_seen[id] = ticks
+			continue
+		if float(ticks - int(_fair_seen[id])) / float(Engine.physics_ticks_per_second) >= FAIR_SEEN_S and h.contains(ball):
+			covered = true
+	if mark and _fair_seen.size() > 64:
+		for id in _fair_seen.keys():
+			if not live.has(id):
+				_fair_seen.erase(id)
+	return covered
+
+
+# A hit: its hull goes to the telegraphed or the untelegraphed side, and to the speed side it landed on. The hit counts
+# as shown when a seen telegraph held the ball now or on the tick before (a telegraph can free itself as it lands).
+func _fair_hit(hull: float) -> void:
+	var covered := _fair_cover or _fair_covered(false)
+	_fair_hull += hull
+	if covered:
+		_fair_hull_shown += hull
+	_fair_last_hit_covered = covered
+	if _fair_fast:
+		_fair_fast_hull += hull
+	else:
+		_fair_slow_hull += hull
+
+
+# The record's three fairness numbers as parts, so a table can pool them over runs. null is not measured.
+func _fair_record() -> Dictionary:
+	var first_hit = null
+	var contact := false
+	for note in stage_notes:
+		if note.get("first_contact_s") != null:
+			contact = true
+			if note.get("first_hit_s") != null:
+				first_hit = snappedf(float(note["first_hit_s"]) - float(note["first_contact_s"]), 0.01)
+			break
+	var died: bool = outcome == "died" or outcome == "lost"
+	return {
+		"telegraph_share": snappedf(_fair_hull_shown / _fair_hull, 0.001) if _fair_hull > 0.0 else null,
+		"killing_hit_telegraphed": _fair_last_hit_covered if died else null,
+		"hull_lost": snappedf(_fair_hull, 0.1), "hull_shown": snappedf(_fair_hull_shown, 0.1),
+		"stop_tax": snappedf((_fair_slow_hull / _fair_slow_s) / (_fair_fast_hull / _fair_fast_s), 0.001) if _fair_slow_s > 0.0 and _fair_fast_hull > 0.0 and _fair_fast_s > 0.0 else null,
+		"slow_s": snappedf(_fair_slow_s, 0.01), "fast_s": snappedf(_fair_fast_s, 0.01),
+		"slow_hull": snappedf(_fair_slow_hull, 0.1), "fast_hull": snappedf(_fair_fast_hull, 0.1),
+		"first_hit_s": first_hit, "contact": contact,
+	}
 
 
 # The test-only hide_pack_telegraphs plant: the committed telegraphs of every enemy but the Warden, and the shells a
@@ -4815,6 +4908,7 @@ func record(wall_seconds: float) -> Dictionary:
 		"wall_seconds": snappedf(wall_seconds, 0.01), "stages": stage_notes,
 		"boss": boss_note if not boss_note.is_empty() else null,
 		"reaction_s": _reaction(),
+		"fairness": _fair_record(),
 		"band": band.describe() if band else null,
 		"min_hp": snappedf(_min_hp, 0.1) if _min_hp != INF else null, "max_hp": game.run.max_hp,
 		# The skill bar (SKILL-BAR section 8): casts of slots 2 and 3, set pieces started, Q presses,
