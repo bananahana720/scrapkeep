@@ -17,8 +17,8 @@ const ChildRuns := preload("res://tests/trees/child_runs.gd")
 #     bot_six_<pilot> proofs carried, which now run weekly);
 #   - the run saved into its own folder.
 # Stuck and hung counts are printed, not judged: a camper's stall and a mounted special rest by design.
-# A second go: a pilot whose run ended because the pilot died (quit 1 with "run ended 'died'")
-# plays once more on AGAIN_SEED inside the same budget. The game is hard and its ticks are real,
+# A second go: a pilot whose run ended because the pilot died (quit 1 with "run ended 'lost'",
+# the launched game's name for a death: its save ends the run for good) plays once more on AGAIN_SEED inside the same budget. The game is hard and its ticks are real,
 # so a death is play, not a fault: on 10 Nov 2026 the test failed 5 of 22 runs of builds with
 # nothing wrong, mostly a pilot scrapped on the dam (the plant measurement). Every other ending
 # stands as it is and gets no second go: a stall (quit 3), a bad flag (quit 2), a crash, a kill at
@@ -46,7 +46,10 @@ const PLATE_BLANK_S := 10.0
 const BAR_OFF_S := 3.0
 const AGAIN_SEED := 2
 const AGAIN_MAX := 2
-const DIED := "self-play: run ended 'died' "
+# How the self-play tool names a pilot's death: 'lost' on the launched game (flow ends the run
+# for good before the bot hears of the death; measured 10 Nov 2026 with the damage turned up),
+# 'died' on a game with no save.
+const DEATHS := ["self-play: run ended 'lost' ", "self-play: run ended 'died' "]
 const NEEDS := [
 	["the dam's exit is taken", "self-play: stage 1 exit taken at "],
 	["the flume is entered", "self-play: stage 2 entered at "],
@@ -84,8 +87,10 @@ func _initialize() -> void:
 	t.check("control: and shows none of the run's milestones", NEEDS.all(func(need): return _line(planted["text"], need[1]) == ""),
 		"%d of %d lines present" % [NEEDS.filter(func(need): return _line(planted["text"], need[1]) != "").size(), NEEDS.size()])
 	# Which endings earn a second go: a death and nothing else.
-	var ended := {"code": 1, "timed_out": false, "text": "self-play: stage 1 entered at 9.10 s\n" + DIED + "at stage 1 before the goal at 61.20 s\n"}
-	t.check("control: a pilot that died gets a second go", not _settled(ended))
+	var ended := {"code": 1, "timed_out": false, "text": "self-play: stage 1 entered at 9.10 s\n" + DEATHS[0] + "at stage 1 before the goal at 61.20 s\n"}
+	var ended_no_save: Dictionary = ended.duplicate()
+	ended_no_save["text"] = String(ended["text"]).replace(DEATHS[0], DEATHS[1])
+	t.check("control: a pilot that died gets a second go", not _settled(ended) and not _settled(ended_no_save))
 	var others := {
 		"reached stage 3": {"code": 0, "timed_out": false, "text": "self-play: done at 300.00 s\n"},
 		"stalled": {"code": 3, "timed_out": false, "text": "self-play: stalled at stage 1 exit at 200.00 s pos 1.0,2.0,3.0\n"},
@@ -186,9 +191,9 @@ func _reached(run: Dictionary) -> bool:
 
 
 # A result that stands as it is: every ending but a pilot's death (the self-play tool's quit 1
-# with its "run ended 'died'" line). If that line's wording moves, no go is repeated: red, not green.
+# with one of its DEATHS lines). If that line's wording moves, no go is repeated: red, not green.
 func _settled(run: Dictionary) -> bool:
-	return not (run["code"] == 1 and not run["timed_out"] and _line(run["text"], DIED) != "")
+	return not (run["code"] == 1 and not run["timed_out"] and DEATHS.any(func(death): return _line(run["text"], death) != ""))
 
 
 # A line's name=value pairs.
