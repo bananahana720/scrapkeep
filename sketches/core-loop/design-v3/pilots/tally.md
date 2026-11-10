@@ -306,7 +306,7 @@ Two Tally rows in `src/combat/codex_entries.gd` (`ENTRIES` at `:12`; fields id, 
 
 | id | Name | Hint | Clue | Text | Detected in |
 | --- | --- | --- | --- | --- | --- |
-| `tally_skim` | Skim | The line takes its cut on the way in. | a harpoon bite + the ledger clip on three enemies | Cast the ledger clip on a standing line, or load it before the bite. The line clips the target and two neighbours, and each clip pays a point of pressure. Hit any clip and the rest take it too. | `combat.gd`, the first `link_clips` fire that clips 3 |
+| `tally_skim` | Skim | The line takes its cut on the way in. | a harpoon bite + the ledger clip on three enemies | Cast the ledger clip on a standing line, or load it before the bite. It clips the target and two neighbours, a point of pressure each. Hit one clip and the rest take it too. | `combat.gd`, the first `link_clips` fire that clips 3 |
 | `tally_books_balanced` | Books Balanced | Every clip is a debt. Land and collect. | six clips + one Plate Return landing | Clip enemies on the ride in, then land. The landing settles every clip you made, wherever it ran, and your reader refills. | `ultimate.gd`, the first Tally landing with 6 or more settles |
 
 Tree card copy for the depth-3 picks goes in `src/core/trees/world_one_cards.gd` (`ROWS` at `:10`), one sentence each; depth-4 cards show the node's own effect:
