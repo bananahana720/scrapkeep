@@ -15,9 +15,24 @@ extends SceneTree
 # Planted, on park_test: a 300 m wall across the square at z = 400 to 420 in a copy of its
 # heights drops the share below its sight_share, so the measure can fail; a deck 100 m up roofs
 # the grid points under it and a deck within ROOF_M of the ground roofs none.
+#
+# Line-weighted sight (owner map point 1, 10 Nov; map-audit section G): on each world 1 park the
+# share of stage graph nodes flagged LINE that also carry SIGHT_OK is at least LINE_SIGHT_MIN. The
+# open-grid share above weighs every open cell; this one weighs the nodes a player rides. Each world
+# 1 park prints `MAPCHECK <map> <measure> <value> pass>=<line> PASS|FAIL|OWED`. A stage under its
+# line goes in OWED with the measured value; the test fails if an OWED stage now meets its line, and
+# fails if a stage not in OWED is under it. Planted: a copy of the flags with SIGHT_OK cleared on
+# every LINE node fails the same function.
 
 const T := preload("res://tests/support/t.gd")
 const Stamps := preload("res://src/world/park/park_stamps.gd")
+const ParkGraph := preload("res://src/world/park/park_graph.gd")
+
+# World 1's parks (the dam and the flume). The Slag Bowl is an arena, not a park file.
+const WORLD1 := ["park_dam", "park_flume"]
+const LINE_SIGHT_MIN := 0.85
+# {"<map>": {"measure": "line_sight_share", "value": measured, "why": "..."}}. Empty: both parks pass.
+const OWED := {}
 
 const PARK_DIR := "res://src/world/park"
 const OUT_DIR := "res://assets/park"
@@ -56,9 +71,71 @@ func _run() -> void:
 			map_id, r["share"], r["counted"], r["skipped"], r["holes"], r["roofed"], need])
 		t.check("%s counts grid points" % map_id, r["counted"] > 0, "%d" % r["counted"])
 		t.check("%s sight share >= sight_share" % map_id, r["share"] >= need, "%.4f vs %.2f" % [r["share"], need])
+		if map_id in WORLD1:
+			print("MAPCHECK %s open_sight_share %.4f pass>=%.2f %s" % [map_id, r["share"], need, "PASS" if r["share"] >= need else "FAIL"])
+			_line_sight(map_id)
 		if map_id == FIXTURE:
 			_planted(park, bake)
+	for map_id in WORLD1:
+		t.check("%s is a baked world 1 park" % map_id, map_id in maps, map_id)
+	_line_planted()
 	quit(t.verdict())
+
+
+# The stage graph's own flags, read through flags(n), for a baked park.
+func _graph(map_id: String):
+	return ParkGraph.read("%s/%s/graph.bin" % [OUT_DIR, map_id])
+
+
+func _flags_of(g) -> PackedInt32Array:
+	var out := PackedInt32Array()
+	for n in g.node_count():
+		out.append(g.flags(n))
+	return out
+
+
+# {share, line, ok}: of the nodes flagged LINE, the share that also carry SIGHT_OK.
+static func line_sight(flags: PackedInt32Array) -> Dictionary:
+	var line := 0
+	var ok := 0
+	for f in flags:
+		if f & ParkGraph.LINE != 0:
+			line += 1
+			if f & ParkGraph.SIGHT_OK != 0:
+				ok += 1
+	return {"share": float(ok) / float(line) if line > 0 else 0.0, "line": line, "ok": ok}
+
+
+func _line_sight(map_id: String) -> void:
+	var g = _graph(map_id)
+	if not t.check("%s graph reads" % map_id, g != null, "graph.bin"):
+		return
+	var r := line_sight(_flags_of(g))
+	t.check("%s has LINE nodes" % map_id, r["line"] > 0, "%d" % r["line"])
+	var meets: bool = r["share"] >= LINE_SIGHT_MIN
+	var owed: bool = OWED.has(map_id)
+	var status := "PASS" if meets else ("OWED" if owed else "FAIL")
+	print("MAPCHECK %s line_sight_share %.4f pass>=%.2f %s" % [map_id, r["share"], LINE_SIGHT_MIN, status])
+	if owed:
+		t.check("%s OWED line_sight_share still under its line (prune the entry when it meets it)" % map_id, not meets, "%.4f vs %.2f" % [r["share"], LINE_SIGHT_MIN])
+	else:
+		t.check("%s LINE nodes with SIGHT_OK >= %.2f" % [map_id, LINE_SIGHT_MIN], meets, "%d of %d = %.4f" % [r["ok"], r["line"], r["share"]])
+
+
+# The same function on a copy of the dam's flags with SIGHT_OK cleared on the line nodes.
+func _line_planted() -> void:
+	var g = _graph("park_dam")
+	if g == null:
+		return
+	var flags := _flags_of(g)
+	var cleared := flags.duplicate()
+	for n in cleared.size():
+		if cleared[n] & ParkGraph.LINE != 0:
+			cleared[n] &= ~ParkGraph.SIGHT_OK
+	var real := line_sight(flags)
+	var r := line_sight(cleared)
+	print("PLANTED park_dam line_sight_share %.4f pass>=%.2f %s" % [r["share"], LINE_SIGHT_MIN, "PASS" if r["share"] >= LINE_SIGHT_MIN else "FAIL"])
+	t.check("planted: SIGHT_OK cleared on the line nodes fails the line-sight assertion", r["share"] < LINE_SIGHT_MIN, "%.4f vs %.2f (real %.4f)" % [r["share"], LINE_SIGHT_MIN, real["share"]])
 
 
 # Every park file with a bake and a graph beside it, by file name, sorted.

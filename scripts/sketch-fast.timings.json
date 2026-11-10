@@ -636,6 +636,8 @@
     "tests/park_events_game_test.gd": 47700,
     "tests/park_events_industrial_test.gd": 2600,
     "tests/park_events_test.gd": 1700,
+    "tests/park_feature_census_test.gd": 3600,
+    "tests/park_fight_bowl_test.gd": 2100,
     "tests/park_field_posts_test.gd": 4600,
     "tests/park_fin_chute_hide_test.gd": 27200,
     "tests/park_flume_lip_notch_probe_test.gd": 32100,
