@@ -69,7 +69,7 @@ node scripts/redteam/eye.mjs --persona=cautious --from=<a film folder from the P
 
 | Film | Plays | Length |
 | --- | --- | --- |
-| `whole` | world 1 start to finish on the fastest line: the dam, the flume, Brindle, the win and the first screen of world 2 | 8.1 game minutes, 23 minutes to film in the cloud, 175 pictures (measured on w33). Give it to two or three readers, split where a stage starts (the flume, Brindle's arena): one reader cannot hold that many pictures, and about 60 each read well |
+| `whole` | world 1 start to finish on the fastest line: the dam, the flume, Brindle, the win and the first screen of world 2 | 8.1 game minutes, 23 minutes to film in the cloud, 175 pictures (measured on w33). Give it to two or three readers, about 60 pictures each, cut between two moments and never inside a hit's lead-in: one reader cannot hold that many pictures |
 | `wait` (the cautious default) | a player who hangs back in the dam for four minutes, a planted death, the death screen, and the start of a second run | 4.3 game minutes, 16 minutes to film in the cloud (measured on w33; the control with `--death-at=60` took 4 minutes) |
 
 **The reader** gets `reader/`: the pictures renumbered `001.jpg` up and `BRIEF.md`, which holds the persona's card and the questions. Nothing in it says why a frame was taken, what the game knew or how the game works. The reader is a fresh agent that reads only that folder; never the thread that filmed, and never one that has read the code or the design. It answers per picture: what is on the screen, what it thinks it is meant to do, words it does not understand, and what it cannot see or read. For each hit and death it is asked what the earlier pictures told it was coming.
