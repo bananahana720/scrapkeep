@@ -15,7 +15,7 @@ import { spawn, spawnSync } from "node:child_process";
 import { appendFileSync, copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { COLUMNS, MAX_RUN_TIER, fairnessByBand, PILOTS, botArgs, buildTable, cellVerdict, describeDoc, bucketInfo, checkMerge, dedupeBy, estimate, gradeRun, jobKey, playerReport, qaRows, renderPlayerReport, hashString, mergeLibraryIndexes, planHash, parseNdjson, pickBuilds, planCells, renderTable, shardJobs, wallStats } from "./lib.mjs";
+import { COLUMNS, MAX_RUN_TIER, fairnessByCell, PILOTS, botArgs, buildTable, cellVerdict, describeDoc, bucketInfo, checkMerge, dedupeBy, estimate, gradeRun, jobKey, playerReport, qaRows, renderPlayerReport, hashString, mergeLibraryIndexes, planHash, parseNdjson, pickBuilds, planCells, renderTable, shardJobs, wallStats } from "./lib.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const godot = process.env.GODOT_BIN;
@@ -298,7 +298,7 @@ function finish(runs, outDir, meta) {
   const table = buildTable(runs, meta.buckets ?? {});
   const timing = wallStats(runs);
   const report = playerReport(runs);
-  const fairness = fairnessByBand(runs);
+  const fairness = fairnessByCell(runs);
   const md = renderTable(table, { ...meta, fairness, when: new Date().toISOString().slice(0, 16) + "Z" }) + "\n" + renderPlayerReport(report);
   writeFileSync(path.join(outDir, "table.md"), md);
   writeFileSync(path.join(outDir, "table.json"), JSON.stringify({ ...meta, runs: runs.length, timing, table, fairness, player_report: report }, null, 1) + "\n");

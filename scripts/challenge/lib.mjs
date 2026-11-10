@@ -3,6 +3,8 @@
 // here starts Godot. The skill bands themselves (Novice, Learner, Expert) live in
 // sketches/core-loop/tools/skill_band.gd.
 
+import fairnessLines from "./fairness.json" with { type: "json" };
+
 export const PILOTS = ["pylon_engineer", "runner_gunner", "demolitions_caster", "tarn", "tally", "remembered_cannon"];
 
 // Coordinator ruling, DECISIONS.md section 5, 19 Oct 01:58 (verbatim):
@@ -29,7 +31,7 @@ export const TARGETS = {
     learner1: { min: 0.8 },
   },
   earliestLearnerBossDeathS: 45,
-  tellS: 0.6, // not measured here: the bot cannot tell what a player reads
+  tellS: fairnessLines.tellS, // the one tell time (fairness.json); the readable-tell check itself is the attack sheet's, not this table's
 };
 
 export const COLUMNS = [
@@ -61,7 +63,9 @@ export const PARKS = [1, 2, 3, 4, 5, 6].map((n) => ({ id: "park" + n, park: n, w
 
 // The whole-World-1 clear (wave 36, difficulty-plan.md row D8): one bot run of the dam, the flume and Admiral Brindle in one
 // attempt. It is its own cell, never part of `--only=w1` (that id is the stage 1 Warden) and never in the default cells, so
-// today's band runs stay as they are; ask for it with `--only=w1clear`. Information only, no target.
+// today's band runs stay as they are; ask for it with `--only=w1clear` (`--cells=clear` alone selects nothing). Information only,
+// no target. One run has one persona, so the whole clear plays the Warden persona (skipper, the one `w1` uses and the seeds are
+// shared with, 40300 up) through Brindle too; the `brindle` cell plays the brawler, so its Brindle leg is not comparable.
 export const W1CLEAR = { id: "w1clear", world: 1, first: 1, last: 2 };
 export const W1CLEAR_COLUMNS = ["novice", "learner1", "learner5", "expert"];
 export const W1CLEAR_TICKS = (2 * 600 + 420 + 120) * 90; // two stages at the 600 s cap, the boss's 420 s limit, a margin
@@ -134,7 +138,7 @@ export function planCells(opts) {
   for (const w of WARDENS) if (cells.includes("warden") && want(w.id)) defs.push({ kind: "warden", ...w });
   for (const w of WORLDS) if (cells.includes("world") && want(w.id)) defs.push({ kind: "world", ...w, stage: w.first });
   for (const p of PARKS) if (cells.includes("park") && want(p.id)) defs.push({ kind: "world", ...p, stage: p.first });
-  if (cells.includes("clear") || only?.includes(W1CLEAR.id)) defs.push({ kind: "clear", ...W1CLEAR, stage: W1CLEAR.first });
+  if (only?.includes(W1CLEAR.id)) defs.push({ kind: "clear", ...W1CLEAR, stage: W1CLEAR.first });
   for (const def of defs) {
     const cols = COLUMNS.filter((c) => columns.includes(c.id) && (def.kind !== "world" || WORLD_COLUMNS.includes(c.id)) && (def.kind !== "clear" || W1CLEAR_COLUMNS.includes(c.id)));
     for (const col of cols) {
@@ -157,14 +161,15 @@ export function planCells(opts) {
 
 // Seeds depend on the cell and the index only, so columns of a cell face the same seeds.
 function cellSeed(def, i) {
-  if (def.kind === "clear") return 40000 + 20 * 100 + i;
+  // The same seeds as `w1` (the stage 1 Warden), so the two cells pair seed for seed on stage 1.
+  if (def.kind === "clear") return 40000 + (3 + W1CLEAR.first - 1) * 100 + i;
   const slot = def.kind === "boss" ? def.world - 1 : def.kind === "warden" ? 3 + def.stage - 1 : def.park ? 12 + def.park - 1 : 9 + def.world - 1;
   return 40000 + slot * 100 + i;
 }
 
 function base(def, col, i, persona, wardenPersona, parkPersona, doc = null, tuneArgs = []) {
   const seed = cellSeed(def, i);
-  const policy = def.kind === "world" || def.kind === "clear" ? parkPersona : def.kind === "warden" ? wardenPersona : persona;
+  const policy = def.kind === "clear" ? wardenPersona : def.kind === "world" ? parkPersona : def.kind === "warden" ? wardenPersona : persona;
   const from = def.kind === "world" || def.kind === "clear" ? def.first : def.stage;
   const args = [...tuneArgs, "--band=" + col.band, "--attempt=" + col.attempt, "--cell=" + def.id];
   if (doc) args.push("--entrance=" + doc.file, "--from-stage=" + from);
@@ -305,7 +310,8 @@ export function gradeRun(kind, row, job = {}) {
   if (kind === "clear") {
     // Won = Admiral Brindle defeated in the same attempt. Where it ended: the stage reached, and how (death, a cap, or the clear).
     const boss = row.boss;
-    const at = { stage: row.stage_reached ?? null, gameS: row.game_seconds ?? null };
+    // where: the stage the run was in, or the boss fight when a boss note exists, so a stage 2 death reads apart from a boss death.
+    const at = { stage: row.stage_reached ?? null, gameS: row.game_seconds ?? null, where: row.boss ? "boss" : "s" + (row.stage_reached ?? "?") };
     if (boss?.defeated_s != null) return { result: "win", fightS: row.game_seconds ?? null, hpLost: null, end: "clear", ...at };
     if (row.outcome === "died" || row.outcome === "lost") return { result: "loss", fightS: row.game_seconds ?? null, hpLost: null, diedS: row.game_seconds ?? null, end: "death", ...at };
     if (row.outcome === "stalled" || row.outcome === "fight_capped" || row.outcome === "boss_stalled" || row.outcome === "ticks_done") return { result: "timeout", reason: row.outcome, fightS: row.game_seconds ?? null, hpLost: null, end: "cap", ...at };
@@ -506,7 +512,7 @@ export function renderTable(table, meta = {}) {
   }
   const clears = table.filter((c) => c.kind === "clear");
   if (clears.length) {
-    lines.push("## Whole World 1 clear (information only, not graded)", "", "`w1clear` plays the dam, the flume and Admiral Brindle in one attempt from a fresh run; a win is Brindle defeated. Where each run ended: the stage it reached and whether it died, hit a time cap (a stall or a fight cap) or cleared.", "");
+    lines.push("## Whole World 1 clear (information only, not graded)", "", "`w1clear` plays the dam, the flume and Admiral Brindle in one attempt from a fresh run; a win is Brindle defeated. Where each run ended: the stage it reached, or the boss fight, and whether it died, hit a time cap (a stall or a fight cap) or cleared.", "");
     lines.push("| Band | Clears (runs) [Wilson 95%] | Ended (stage: died / capped / cleared) | Game s (median of clears) |", "| --- | --- | --- | --- |");
     for (const c of clears) for (const id of COLUMNS.map((x) => x.id)) if (c.columns[id]) lines.push(`| ${c.cell} ${id} | ${cellText(c.columns[id])} | ${c.ends[id]} | ${fmt(c.columns[id].medianFightS)} |`);
     lines.push("");
@@ -523,7 +529,13 @@ export function renderTable(table, meta = {}) {
   const incomplete = table.filter((c) => cellVerdict(c) === "incomplete").map((c) => c.cell);
   if (incomplete.length) lines.push(`Incomplete cells (over 10% of a column's jobs excluded as error or killed, no ✓/✗): ${incomplete.join(", ")}.`, "");
   const failing = table.filter((c) => cellVerdict(c) === "fail").map((c) => c.cell);
-  lines.push(failing.length ? `Cells with a ✗: ${failing.join(", ")}.` : "No cell has a ✗.", "");
+  const scope = meta.fairness ? " against a win-rate target" : "";
+  lines.push(failing.length ? `Cells with a ✗${scope}: ${failing.join(", ")}.` : `No cell has a ✗${scope}.`, "");
+  // The fairness marks are their own judgement and are summed apart, so the two sentences cannot disagree.
+  if (meta.fairness) {
+    const bad = meta.fairness.flatMap((p) => fairnessFails(p).map((f) => `${p.cell} ${p.column} ${f}`));
+    lines.push(bad.length ? `Fairness lines with a ✗: ${bad.join("; ")}.` : "No fairness line has a ✗.", "");
+  }
   return lines.join("\n");
 }
 
@@ -531,10 +543,10 @@ export function renderTable(table, meta = {}) {
 function endsByColumn(grades) {
   const out = {};
   for (const [id, list] of Object.entries(grades)) {
-    const stages = [...new Set(list.filter((g) => g.end).map((g) => g.stage))].sort((a, b) => a - b);
-    out[id] = stages.map((st) => {
-      const n = (end) => list.filter((g) => g.stage === st && g.end === end).length;
-      return `s${st}: ${n("death")} died / ${n("cap")} capped / ${n("clear")} cleared`;
+    const wheres = [...new Set(list.filter((g) => g.end).map((g) => g.where))].sort();
+    out[id] = wheres.map((where) => {
+      const n = (end) => list.filter((g) => g.where === where && g.end === end).length;
+      return `${where}: ${n("death")} died / ${n("cap")} capped / ${n("clear")} cleared`;
     }).join(", ") || "-";
   }
   return out;
@@ -542,61 +554,103 @@ function endsByColumn(grades) {
 
 // --- fairness: the three numbers wave 37 is judged by (difficulty-plan.md rows F1 to F3) -------------------------------
 
-// F1 telegraph share >= 95% of hull damage and every killing hit shown; F2 stop tax >= 2.0; F3 median first hit >= 3 s.
-export const FAIRNESS = { telegraphShare: 0.95, stopTax: 2.0, firstHitS: 3 };
+// The pass lines and the tell time live once, in fairness.json, which tools/bot_fairness.gd reads too.
+export const FAIRNESS = fairnessLines;
 
 const num = (x) => (typeof x === "number" && Number.isFinite(x) ? x : null);
 
-// One run's `row.fairness` (bot_driver.gd _fair_record). A run recorded before the field, or a field missing, is null:
+// One run's `row.fairness` (tools/bot_fairness.gd record). A run recorded before the field, or a field missing, is null:
 // not measured. It is never read as 0.
 export function fairnessOf(run) {
   const f = run?.row?.fairness;
   if (!f || typeof f !== "object") return null;
+  const hull = f.hull && typeof f.hull === "object" ? f.hull : {};
+  const k = f.killing_hit && typeof f.killing_hit === "object" ? f.killing_hit : null;
   return {
-    hull: num(f.hull_lost), shown: num(f.hull_shown), killShown: typeof f.killing_hit_telegraphed === "boolean" ? f.killing_hit_telegraphed : null,
-    slowS: num(f.slow_s), fastS: num(f.fast_s), slowHull: num(f.slow_hull), fastHull: num(f.fast_hull), firstHitS: num(f.first_hit_s), contact: f.contact === true,
+    telegraphed: num(hull.telegraphed), untelegraphed: num(hull.untelegraphed), contact: num(hull.contact), unknown: num(hull.unknown),
+    killing: k ? k.bucket ?? null : null,
+    slowS: num(f.slow_s), fastS: num(f.fast_s), slowHull: num(f.slow_hull), fastHull: num(f.fast_hull),
+    segments: f.first_hit && typeof f.first_hit === "object" ? Object.values(f.first_hit) : null,
   };
 }
 
-// Runs of one band, pooled. Hull and seconds are summed over the runs that measured them, so a long run counts for more than a short one.
-// Each number is null when no run measured it, and the reason is kept for the table.
+// Runs excluded the way the win table excludes them: no record, an unresumed doc, a harness kill.
+const counted = (run) => !EXCLUDED.includes(run.grade?.result ?? "") && run.row?.resumed !== false && run.row != null;
+
+// The runs of one cell and one arm, pooled. Hull and seconds are summed over the runs that measured them, so a long run counts
+// for more than a short one. Each number is null when no run measured it, and the reason is kept for the table.
 export function fairnessPool(runs) {
   const rows = runs.map(fairnessOf).filter(Boolean);
-  const out = { runs: runs.length, measured: rows.length, telegraphShare: null, shareN: 0, kills: 0, killsShown: 0, stopTax: null, firstHitS: null, firstHitN: 0, hitFree: 0 };
-  const withHull = rows.filter((r) => r.hull != null && r.shown != null && r.hull > 0);
-  out.shareN = withHull.length;
-  const hull = withHull.reduce((a, r) => a + r.hull, 0);
-  if (hull > 0) out.telegraphShare = withHull.reduce((a, r) => a + r.shown, 0) / hull;
-  for (const r of rows) if (r.killShown != null) { out.kills++; if (r.killShown) out.killsShown++; }
+  const out = { runs: runs.length, measured: rows.length };
+  const sum = (key) => rows.reduce((a, r) => a + (r[key] ?? 0), 0);
+  const bucketed = rows.filter((r) => r.telegraphed != null && r.untelegraphed != null);
+  const tel = bucketed.reduce((a, r) => a + r.telegraphed, 0);
+  const unt = bucketed.reduce((a, r) => a + r.untelegraphed, 0);
+  const hull = { telegraphed: tel, untelegraphed: unt, contact: sum("contact"), unknown: sum("unknown") };
+  const whole = hull.telegraphed + hull.untelegraphed + hull.contact + hull.unknown;
+  out.hull = hull;
+  out.unknownShare = whole > 0 ? hull.unknown / whole : null;
+  out.contactShare = whole > 0 ? hull.contact / whole : null;
+  out.telegraphShare = tel + unt > 0 ? tel / (tel + unt) : null;
+  // F1 carries no mark while the hull it could not match is over the line.
+  out.shareMarked = out.telegraphShare != null && !(out.unknownShare != null && out.unknownShare > FAIRNESS.unknownMaxShare);
+  const kills = rows.map((r) => r.killing).filter((b) => b === "telegraphed" || b === "untelegraphed");
+  out.kills = kills.length;
+  out.killsShown = kills.filter((b) => b === "telegraphed").length;
+  out.killsOther = rows.map((r) => r.killing).filter((b) => b === "contact" || b === "unknown").length;
   const tax = rows.filter((r) => [r.slowS, r.fastS, r.slowHull, r.fastHull].every((x) => x != null));
   const slowS = tax.reduce((a, r) => a + r.slowS, 0);
   const fastS = tax.reduce((a, r) => a + r.fastS, 0);
   const slowH = tax.reduce((a, r) => a + r.slowHull, 0);
   const fastH = tax.reduce((a, r) => a + r.fastHull, 0);
+  out.stopTax = null;
   out.stopTaxNote = !tax.length ? "not measured" : slowS <= 0 || fastS <= 0 ? "no time on one side of cruise" : fastH <= 0 ? "no hull lost at cruise" : null;
   if (!out.stopTaxNote) out.stopTax = slowH / slowS / (fastH / fastS);
-  out.firstHitN = rows.filter((r) => r.firstHitS != null).length;
-  out.hitFree = rows.filter((r) => r.contact && r.firstHitS == null).length;
-  out.firstHitS = median(rows.map((r) => r.firstHitS));
+  out.fastShare = slowS + fastS > 0 ? fastS / (slowS + fastS) : null;
+  // F3: one reading per stage and for the boss that a pack was met in. A segment with no hit is the best case and reads as
+  // infinitely late, so it can move the median; one a hit itself opened has no pack-to-hit time and is counted apart.
+  const segs = rows.flatMap((r) => r.segments ?? []).filter((g) => g && g.contact);
+  out.segments = segs.length;
+  out.openedByHit = segs.filter((g) => g.opened_by_hit).length;
+  const timed = segs.filter((g) => !g.opened_by_hit);
+  out.noHit = timed.filter((g) => !g.hit).length;
+  out.firstHitN = timed.length;
+  const times = timed.map((g) => (g.hit ? num(g.first_hit_s) : Infinity)).filter((x) => x != null).sort((a, b) => a - b);
+  const mid = times.length >> 1;
+  out.firstHitS = !times.length ? null : times.length % 2 ? times[mid] : times[mid - 1] === times[mid] ? times[mid] : (times[mid - 1] + times[mid]) / 2;
   return out;
 }
 
-// { novice: pool, learner: pool, expert: pool } over every run in the table, or null when no run carries the field.
-export function fairnessByBand(runs) {
-  const bands = [...new Set(runs.map((r) => r.band).filter(Boolean))];
-  const out = {};
-  for (const band of bands) out[band] = fairnessPool(runs.filter((r) => r.band === band));
-  return Object.values(out).some((p) => p.measured > 0) ? out : null;
+// One pool per cell and arm (the column), never across cells or across the arms that share a band name:
+// [{ cell, column, ...pool }], or null when no run carries the field.
+export function fairnessByCell(runs) {
+  const groups = new Map();
+  for (const r of runs.filter(counted)) {
+    const key = `${r.cell}\u0000${r.column ?? r.band}`;
+    if (!groups.has(key)) groups.set(key, { cell: r.cell, column: r.column ?? r.band, runs: [] });
+    groups.get(key).runs.push(r);
+  }
+  const out = [...groups.values()].map((g) => ({ cell: g.cell, column: g.column, ...fairnessPool(g.runs) }));
+  return out.some((p) => p.measured > 0) ? out : null;
+}
+
+// The numbers of one pool that miss their line (marked ones only), as "F1", "F2", "F3".
+export function fairnessFails(p) {
+  const out = [];
+  if (p.shareMarked && (p.telegraphShare < FAIRNESS.telegraphShare - 1e-9 || (p.kills && p.killsShown !== p.kills))) out.push("F1");
+  if (p.stopTax != null && p.stopTax < FAIRNESS.stopTax - 1e-9) out.push("F2");
+  if (p.firstHitS != null && p.firstHitS < FAIRNESS.firstHitS - 1e-9) out.push("F3");
+  return out;
 }
 
 export function renderFairness(fair) {
-  const lines = ["## Fairness (F1 to F3, information beside the difficulty change)", "", `F1 telegraph share: hull lost to a hazard the bot had been shown for 0.6 s or more, over all hull lost; pass >= ${pct(FAIRNESS.telegraphShare)}, and every killing hit shown. F2 stop tax: hull lost per minute below cruise speed over hull lost per minute at or above cruise; pass >= ${FAIRNESS.stopTax.toFixed(1)}. F3 first hit: median seconds from first contact with a pack to the first hit taken; pass >= ${FAIRNESS.firstHitS} s. Hull and seconds are pooled over the band's runs. "not measured" means no run carried the number; it is never read as zero.`, ""];
+  const lines = ["## Fairness (F1 to F3, information beside the difficulty change)", "", `The lines are in scripts/challenge/fairness.json. F1 telegraph share: hull lost to a hit whose own source had a telegraph over the ball for at least ${FAIRNESS.tellS} s, over that plus hull from sources that publish telegraphs and had none in time; pass >= ${pct(FAIRNESS.telegraphShare)} and every killing hit shown. Contact hull (body contact and ram, no telegraph by design) is printed beside it and is outside the share; unknown is hull whose source has no telegraph owner to match, and F1 carries no mark while unknown is over ${pct(FAIRNESS.unknownMaxShare)} of hull. F2 stop tax: hull per second below cruise speed over hull per second at or above it; pass >= ${FAIRNESS.stopTax.toFixed(1)}; the share of time at cruise is printed beside it. F3 first hit: median seconds from first contact with a pack to the first hit, one reading per stage and per boss fight; pass >= ${FAIRNESS.firstHitS} s; a stage with no hit reads as later than any, and a hit that itself opened contact is counted apart. One line per cell and arm, with the runs behind it; runs graded error or unresumed are left out. "not measured" means no run carried the number; it is never read as zero.`, ""];
   const mark = (ok) => (ok === null ? "" : ok ? " ✓" : " ✗");
-  for (const [band, p] of Object.entries(fair)) {
-    const f1 = p.telegraphShare == null ? "F1 not measured" : `F1 ${pct(p.telegraphShare)} of hull shown (${p.shareN} runs)${mark(p.telegraphShare >= FAIRNESS.telegraphShare - 1e-9)}, killing hits shown ${p.kills ? `${p.killsShown} of ${p.kills}${mark(p.killsShown === p.kills)}` : "none died"}`;
-    const f2 = p.stopTax == null ? `F2 not measured (${p.stopTaxNote})` : `F2 stop tax ${p.stopTax.toFixed(2)}${mark(p.stopTax >= FAIRNESS.stopTax - 1e-9)}`;
-    const f3 = p.firstHitS == null ? `F3 not measured (${p.hitFree} hit-free of ${p.measured})` : `F3 first hit ${fmt(p.firstHitS)} s median (${p.firstHitN} runs${p.hitFree ? `, ${p.hitFree} hit-free` : ""})${mark(p.firstHitS >= FAIRNESS.firstHitS - 1e-9)}`;
-    lines.push(`- ${band} (${p.measured} of ${p.runs} runs measured): ${f1}; ${f2}; ${f3}.`);
+  for (const p of fair) {
+    const f1 = p.telegraphShare == null ? "F1 not measured" : `F1 ${pct(p.telegraphShare)} of ${fmt(p.hull.telegraphed + p.hull.untelegraphed)} hull shown${p.shareMarked ? mark(p.telegraphShare >= FAIRNESS.telegraphShare - 1e-9) : " (no mark: unknown hull over the line)"}, killing hits shown ${p.kills ? `${p.killsShown} of ${p.kills}${p.shareMarked ? mark(p.killsShown === p.kills) : ""}` : "none counted"}${p.killsOther ? ` (${p.killsOther} killed by contact or unknown)` : ""}; contact ${fmt(p.hull.contact)} hull, unknown ${fmt(p.hull.unknown)} hull (${p.unknownShare == null ? "-" : pct(p.unknownShare)} of hull)`;
+    const f2 = p.stopTax == null ? `F2 not measured (${p.stopTaxNote})` : `F2 stop tax ${p.stopTax.toFixed(2)}${mark(p.stopTax >= FAIRNESS.stopTax - 1e-9)}, ${pct(p.fastShare)} of time at cruise`;
+    const f3 = p.firstHitS == null ? `F3 not measured (${p.openedByHit} opened by a hit)` : `F3 first hit ${Number.isFinite(p.firstHitS) ? fmt(p.firstHitS) + " s" : "no hit in over half"} median over ${p.firstHitN} stage readings${mark(p.firstHitS >= FAIRNESS.firstHitS - 1e-9)}, ${p.noHit} of ${p.firstHitN} took no hit${p.openedByHit ? `, ${p.openedByHit} opened by a hit` : ""}`;
+    lines.push(`- ${p.cell} ${p.column} (${p.measured} of ${p.runs} runs measured): ${f1}; ${f2}; ${f3}.`);
   }
   lines.push("");
   return lines;
@@ -616,7 +670,7 @@ export function parseNdjson(text) {
 }
 
 // Estimated wall seconds per job by kind (measured on the 4-vCPU box; see README), for --dry-run.
-export const SECONDS_PER_JOB = { boss: 335, warden: 330, world: 330, clear: 900 }; // wall s per job at 4 parallel on the 4-vCPU box, smoke medians; world is a guess (no sample before 19 Oct)
+export const SECONDS_PER_JOB = { boss: 335, warden: 330, world: 330, clear: 300 }; // wall s per job at 4 parallel on the 4-vCPU box, smoke medians; world is a guess (no sample before 19 Oct)
 
 export function estimate(jobs, parallel = 4, perKind = SECONDS_PER_JOB) {
   const total = jobs.reduce((s, j) => s + (perKind[j.kind] ?? 120), 0);

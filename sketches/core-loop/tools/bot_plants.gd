@@ -22,8 +22,8 @@ extends RefCounted
 #                          the circling arm stalled to the cap on all six stages, on stage 2 without one hit.
 #
 #   drain=K                An untelegraphed drain, the telegraph-share number's positive control (fairness.telegraph_share):
-#                          once a game second on a stage, whatever the ball is doing, it takes K x DRAIN_SHARE of its max
-#                          hull, source "drain_plant". rut above does the same only to a ball that circles, which a skipper
+#                          once a game second on a stage after the game's own first hit, whatever the ball is doing, it takes
+#                          K x DRAIN_SHARE of its max hull, source "drain_plant". rut above does the same only to a ball that circles, which a skipper
 #                          never does, so it cannot move the number on an ordinary run.
 #   fast_tax=K             A stand-in for a world that taxes a rolling ball, the stop-against-move number's positive control
 #                          (the bot record's fairness.stop_tax): once a game second, a ball at or above cruise speed takes
@@ -61,6 +61,7 @@ var _tax_stage := -1
 var _drain_clock := 0.0
 var _drain_stage := -1
 var _ringless_stage := -1
+var _hurt := false
 
 
 # "a=1,b=2" -> {a: 1.0, b: 2.0}. An error string in "error" when a name or a value is not accepted.
@@ -161,9 +162,17 @@ func _drain(share: float, source: String) -> void:
 	run.armor_mode = armored
 
 
+# drain and fast_tax start with the first hit the game itself landed, so the first-hit reading stays the game's own.
+func _after_first_hit() -> bool:
+	var run = _game.run
+	if run != null and float(run.hp) < float(run.max_hp) - 0.001:
+		_hurt = true
+	return _hurt
+
+
 func _steady_drain(scale: float) -> void:
 	var run = _game.run
-	if run == null or not _game.flow.in_stage() or not run.alive():
+	if run == null or not _game.flow.in_stage() or not run.alive() or not _after_first_hit():
 		return
 	if _drain_stage != run.stage:
 		_drain_stage = run.stage
@@ -176,7 +185,7 @@ func _steady_drain(scale: float) -> void:
 
 func _fast_tax(scale: float) -> void:
 	var run = _game.run
-	if run == null or not _game.flow.in_stage() or not run.alive():
+	if run == null or not _game.flow.in_stage() or not run.alive() or not _after_first_hit():
 		return
 	if _tax_stage != run.stage:
 		_tax_stage = run.stage
