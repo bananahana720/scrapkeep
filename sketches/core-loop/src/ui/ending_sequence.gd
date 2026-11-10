@@ -2,6 +2,7 @@ extends Control
 
 signal finished
 
+const AppShell := preload("res://src/core/app_shell.gd")
 const Worlds := preload("res://src/core/worlds.gd")
 const Palette := preload("res://src/core/palette.gd")
 const WorldLook := preload("res://src/presentation/world_look.gd")
@@ -292,7 +293,7 @@ func _build_crater() -> void:
 	crater.name = "MeteorCrater"
 	crater.visible = false
 	_scene.add_child(crater)
-	_crater_serial = DisplayServer.get_name() == "headless"
+	_crater_serial = AppShell.headless()
 	if _crater_serial:
 		_crater_requests.append_array(_crater_paths())
 		return

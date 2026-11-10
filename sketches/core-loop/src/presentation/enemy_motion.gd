@@ -1,5 +1,6 @@
 extends Node3D
 
+const AppShell := preload("res://src/core/app_shell.gd")
 const WindupRows := preload("res://src/presentation/windup_rows.gd")
 const GraphicsPreset := preload("res://src/presentation/graphics_preset.gd")
 const BakeLook := preload("res://src/presentation/bake_look.gd")
@@ -37,7 +38,7 @@ var _pieces: Array = []
 
 
 static func active() -> bool:
-	return headless_idle or DisplayServer.get_name() != "headless"
+	return headless_idle or not AppShell.headless()
 
 
 static func valid_idle(idle: Dictionary) -> bool:

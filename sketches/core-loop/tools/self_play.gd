@@ -37,12 +37,29 @@ extends Node
 #                             of play; the keys then start a second run, which stands in play for
 #                             --self-play-hold with nobody steering (the dead run's driver is spent; its
 #                             signal handlers still answer offers). Quits 0 then; a hit that did not kill quits 3.
+#   --self-play-plant-hide=objective  TEST PLANT, for a film's control run: the objective plate is drawn
+#                             clear from the first tick of play (its words still chosen, so the play
+#                             watch sees nothing), so a reader of the film has to say it is missing
 #   --self-play-plant-after-exit  TEST PLANT: freeze the bot after its first tick and count the
 #                             stage's exit as taken then, so the after-exit stall fires
 #   --self-play-plant-end     TEST PLANT: end the run at once (outcome planted_end), so it quits 1
 #   --self-play-plant-limit=<s>  TEST PLANT: give the driver this stage limit (sim seconds), so its
 #                             own stall limit ends the run (the driver-limit branch)
 #   --self-play-beat=<s>      print a "self-play: beat" progress line every s seconds (default off)
+#   --self-play-eyes=1        with keys: the game is not told a bot is at the controls, so what only a
+#                             player's game shows is on the screen (the launch take, the briefing's kit
+#                             pick and start pick) and each held screen is answered with its first key
+#                             after EYES_READ_S, as a player who reads it and takes the first choice.
+#                             Kit picks are then the first card, not the bot's seeded draw. A pause menu
+#                             the game opened by itself is closed with Esc and said. Each prologue line
+#                             stands EYES_READ_S before it is turned and a death screen twice that.
+#   --self-play-film=<dir>    film the run as the player's eyes meet it (tools/eye_film.gd, reads only): the
+#                             picture at each screen, plate change, prompt, offer, big hit (with the two
+#                             seconds before it) and death, and every --self-play-film-every=<s> seconds
+#                             of play (default 10), as frames with one row of ground truth each in
+#                             <dir>/film.ndjson. Needs a rendered display (not --headless; quits 2) and
+#                             --fixed-fps. It draws only the frames it keeps unless --self-play-film-live=1,
+#                             and the run's seconds are then game seconds, not seconds since launch. Prints "self-play: film <n> frames in <dir>" as the run ends.
 #   --self-play-watch=1       watch the run as a player would meet it (tools/qa_watch.gd, reads only): where the
 #                             ball sat stuck, hung off the ground, wedged or fell through, each objective plate
 #                             change, the longest stretch of play with an empty plate, and the boss fight's
@@ -66,6 +83,8 @@ extends Node
 
 const BotDriver := preload("res://tools/bot_driver.gd")
 const QaWatch := preload("res://tools/qa_watch.gd")
+const EyeFilm := preload("res://tools/eye_film.gd")
+const ObjectiveView := preload("res://src/ui/objective_view.gd")
 const RunState := preload("res://src/core/run_state.gd")
 
 # Keys mode: how long a key stays down, the gap before the next, and how long the menus may take.
@@ -75,6 +94,8 @@ const MENU_STALL_S := 60.0
 const DEAD_WAIT_S := 2.0
 # A refused Continue: how long the title has to stand after C before the bot says so.
 const REFUSED_WAIT_S := 2.0
+# Eyes mode: how long a held screen stands before its key, so a film sees it as a reader would.
+const EYES_READ_S := 3.0
 
 var game: Node
 var _driver
@@ -122,6 +143,15 @@ var _watch
 var _read_at := 0.0
 var _stages: Array[int] = []
 var _watch_told := false
+var _film_dir := ""
+var _film_every := 10.0
+var _film
+var _film_live := false
+var _film_world := 1.0
+var _clock := 0.0
+var _eyes := false
+var _plant_hide := ""
+var _held_at := -1.0
 
 
 func _ready() -> void:
@@ -171,8 +201,26 @@ func _ready() -> void:
 			_beat = float(arg.trim_prefix("--self-play-beat="))
 		elif arg.begins_with("--self-play-watch="):
 			_watch_on = arg.trim_prefix("--self-play-watch=") == "1"
+		elif arg.begins_with("--self-play-film="):
+			_film_dir = arg.trim_prefix("--self-play-film=")
+		elif arg.begins_with("--self-play-film-every="):
+			_film_every = float(arg.trim_prefix("--self-play-film-every="))
+		elif arg.begins_with("--self-play-film-world="):
+			_film_world = float(arg.trim_prefix("--self-play-film-world="))
+		elif arg.begins_with("--self-play-film-live="):
+			_film_live = arg.trim_prefix("--self-play-film-live=") == "1"
+		elif arg.begins_with("--self-play-plant-hide="):
+			_plant_hide = arg.trim_prefix("--self-play-plant-hide=")
+			if _plant_hide != "objective":
+				push_error("self-play: --self-play-plant-hide wants objective, got '%s'" % _plant_hide)
+				get_tree().quit.call_deferred(2)
+		elif arg.begins_with("--self-play-eyes="):
+			_eyes = arg.trim_prefix("--self-play-eyes=") == "1"
 	if not (_policy in BotDriver.POLICIES or _policy in BotDriver.PROFILES):
 		push_error("self-play: unknown policy '%s'" % _policy)
+		get_tree().quit.call_deferred(2)
+	if _eyes and not _keys:
+		push_error("self-play: --self-play-eyes needs --self-play-keys=1 (a player's game is started by its keys)")
 		get_tree().quit.call_deferred(2)
 	if _keys and _from > 1:
 		push_error("self-play: --self-play-keys starts at the title; it cannot be used with --self-play-from")
@@ -183,8 +231,16 @@ func _ready() -> void:
 
 
 func _physics_process(delta: float) -> void:
+	_clock += delta
 	if game.flow == null:
 		return
+	if _film_dir != "" and _film == null:
+		_film = EyeFilm.new()
+		if not _film.setup(game, _film_dir, _film_every, _film_live, _film_world):
+			get_tree().quit(2)
+			return
+	if _film != null:
+		_film.step(delta)
 	if _driver == null:
 		# The played game builds stage 1's ground behind the menu (ground_behind_menu); start the
 		# run once it is built, as a player pressing start after the menu settles.
@@ -197,7 +253,15 @@ func _physics_process(delta: float) -> void:
 		if _now() >= _min:
 			get_tree().quit(_quit_code)
 		return
-	_answer_workshop()
+	if _plant_hide != "" and game.hud != null:
+		# Planted: the plate is there and holds its words; it is only not seen.
+		for piece in game.hud.get_children():
+			if piece.get_script() == ObjectiveView:
+				piece.modulate.a = 0.0
+	if _eyes:
+		_answer_held()
+	else:
+		_answer_workshop()
 	_release()
 	var state: String = game.flow.state_name()
 	if _beat > 0.0 and _now() - _beat_at >= _beat:
@@ -263,6 +327,10 @@ func _press_menus(state: String) -> void:
 		return
 	if _key != KEY_NONE or _now() - _pressed_at < KEY_GAP_S:
 		return
+	# A player reads a page before turning it and a death screen before leaving it.
+	var reading: bool = _eyes and (state == "dead" or state == "summary" or (state == "class_select" and game.screens.prologue_showing()))
+	if reading and _now() - maxf(_pressed_at, _menu_at) < EYES_READ_S * (1.0 if state == "class_select" else 2.0):
+		return
 	match state:
 		"title":
 			if not _continue or _died:
@@ -283,6 +351,8 @@ func _press_menus(state: String) -> void:
 			if game.screens.prologue_showing():
 				_prologue += 1
 				_press(KEY_E)
+				if _film != null:
+					_film.page()
 			else:
 				if _prologue > 0:
 					print("self-play: prologue read with %d presses at %.2f s" % [_prologue, _now()])
@@ -357,9 +427,41 @@ func _answer_workshop() -> void:
 		workshop.choose(0)
 
 
+# Eyes mode: a screen that holds the game (the kit pick, the briefing's start pick, a hotwire
+# offer) stands for EYES_READ_S and is then answered with its first key; a pause menu the game
+# opened by itself is closed.
+func _answer_held() -> void:
+	if not get_tree().paused or _menus:
+		_held_at = -1.0
+		return
+	if _held_at < 0.0:
+		_held_at = _now()
+		return
+	if _now() - _held_at < EYES_READ_S or _key != KEY_NONE or _now() - _pressed_at < KEY_GAP_S:
+		return
+	_held_at = _now()
+	var workshop: Node = game.get_node_or_null("Workshop")
+	var menu: Node = game.get_node_or_null("PauseMenu")
+	var hotwire = game.hud.get("hotwire_screen") if game.hud != null else null
+	if menu != null and menu.is_open():
+		print("self-play: the game paused itself at %.2f s; closed with Esc" % _now())
+		_press(KEY_ESCAPE)
+	elif workshop != null and workshop.pick.is_open():
+		print("self-play: kit pick taken with 1 at %.2f s" % _now())
+		_press(KEY_1)
+	elif workshop != null and workshop.briefing():
+		print("self-play: start pick taken with 1 at %.2f s" % _now())
+		_press(KEY_1)
+	elif hotwire != null and hotwire.is_open():
+		print("self-play: hotwire offer fitted with E at %.2f s" % _now())
+		_press(KEY_E)
+
+
 # Print the verdict now, quit with its code once --self-play-min has passed.
 func _end_run(code: int) -> void:
 	_tell_watch()
+	if _film != null and _quit_code < 0:
+		print("self-play: film %d frames (%d drawn) in %s" % [_film.frames, _film.drawn, _film_dir])
 	_quit_code = code
 
 
@@ -418,7 +520,12 @@ func _start() -> void:
 			get_tree().quit.call_deferred(2)
 			return
 		_leave_saved_picks()
+		if _eyes:
+			# The kit pick is the player's to read and take: the driver leaves every offer on the screen.
+			_driver.tree_policy = ""
 		_driver.wire()
+		if _eyes:
+			game.bot_driven = false
 		_menus = true
 		_menu_at = _now()
 	elif _continue and not game.flow.continue_ready:
@@ -493,5 +600,7 @@ func _on_stage_cleared(stage: int) -> void:
 		_goal_at = _now()
 
 
-static func _now() -> float:
-	return Time.get_ticks_msec() / 1000.0
+# Seconds since launch. A filmed run counts game seconds instead (its own ticks), so its key
+# presses, holds and stall limits keep their meaning however slowly the renderer draws.
+func _now() -> float:
+	return _clock if _film_dir != "" else Time.get_ticks_msec() / 1000.0

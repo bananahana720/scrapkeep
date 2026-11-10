@@ -1,5 +1,6 @@
 extends Node3D
 
+const AppShell := preload("res://src/core/app_shell.gd")
 const Palette := preload("res://src/core/palette.gd")
 const Target := preload("res://src/boss/boss_target.gd")
 const WorldPrompt := preload("res://src/ui/world_prompt.gd")
@@ -355,7 +356,7 @@ static func warm() -> bool:
 		if not _ahead_reads.has(path):
 			if not ResourceLoader.exists(path):
 				_ahead_reads[path] = null
-			elif DisplayServer.get_name() == "headless":
+			elif AppShell.headless():
 				_ahead_reads[path] = load(path)
 			else:
 				var status := ResourceLoader.load_threaded_get_status(path)

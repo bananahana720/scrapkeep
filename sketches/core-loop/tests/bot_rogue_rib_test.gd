@@ -11,10 +11,11 @@ const T := preload("res://tests/support/t.gd")
 # (c) a rib cache goes first only within RIB_NEAR, at any distance after, and is given up at its cap;
 # (d) the note counts a cache taken only when it leaves the ground near the ball, and a rogue
 #     beaten once;
+# (f) the note names the pockets the stage drew, once, by library id, and not the stage's own sites;
 # (e) a rogue killed and freed between two scans still counts beaten (red team, f7af1604: the
 #     note missed 3 of 7 flume and dam rogue kills the events log recorded).
 
-const EXPECTED_CHECKS := 18
+const EXPECTED_CHECKS := 21
 
 var _t := T.new("bot_rogue_rib_test")
 
@@ -48,9 +49,25 @@ class SpyRogue extends Node3D:
 		return dead
 
 
+class SpySite extends RefCounted:
+	var id := ""
+	var drawn := false
+	var interior := {}
+
+	func _init(site_id: String, is_drawn: bool, pocket := "") -> void:
+		id = site_id
+		drawn = is_drawn
+		interior = {"id": pocket} if pocket != "" else {}
+
+
+class SpyActivities extends RefCounted:
+	var sites: Array = []
+
+
 class SpyWorld extends RefCounted:
 	var rogue: Node3D = null
 	var rogue_plan := {}
+	var activities = null
 
 
 class SpyScrap extends RefCounted:
@@ -196,3 +213,12 @@ func _note_rows() -> void:
 	spy.build.scrap.rows = []
 	driver._content_scan()
 	_t.eq("only the one under the ball counts taken", driver._note["rib_caches_taken"], 1)
+	_t.check("no pockets are named before the world has its sites", not driver._note.has("pockets_drawn"))
+	spy.world.activities = SpyActivities.new()
+	spy.world.activities.sites = [SpySite.new("cracked_cache", false), SpySite.new("enemy_camp", false, "runner_yard"),
+		SpySite.new("cracked_cache", true, "rim_vault"), SpySite.new("enemy_camp", true, "dome_camp")]
+	driver._content_scan()
+	_t.eq("the drawn pockets are named by library id; the stage's own cache and its own camp in a library room are not", driver._note["pockets_drawn"], ["rim_vault", "dome_camp"])
+	spy.world.activities.sites = []
+	driver._content_scan()
+	_t.eq("read once a stage: a later scan keeps the first reading", driver._note["pockets_drawn"], ["rim_vault", "dome_camp"])
