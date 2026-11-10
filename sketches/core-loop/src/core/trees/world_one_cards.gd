@@ -15,10 +15,10 @@ extends RefCounted
 # reader could not say what either Sable card did).
 const ROWS := {
 	# Sable, S1 to S6.
-	"s_cannonball": "Vault kicks zap what's near. A heavier ball launches farther.",
-	"s_beachhead": "Mount walls from twice as far. A heavier ball launches farther.",
-	"s_coil_hook": "Release the rope into a cannonball.",
-	"s_face_runner": "Vaults restore jumps. Heavy fins steer harder.",
+	"s_cannonball": "Kick off a wall to zap what's near. A heavier ball launches farther.",
+	"s_beachhead": "Grab a wall from twice as far.",
+	"s_coil_hook": "Let go of the rope to fling yourself.",
+	"s_face_runner": "Kick off a wall to jump again. A heavier shell steers sharper.",
 	"s_arc_nest": "Mounted bolts chain to another target.",
 	"s_bulwark": "Mounted, shrug off crowd control.",
 	# Kest, K1 to K6.
@@ -107,7 +107,7 @@ const SET_PIECE_LINES := {
 # The three rows that name the Riveted Shell inversion read these instead while the shell is
 # not fitted (--hotwire-shell off), because build.gd applies the inversion only with it fitted.
 const UNFITTED_ROWS := {
-	"s_face_runner": "Vaults restore jumps.",
+	"s_face_runner": "Kick off a wall to jump again.",
 	"k_smoke_trail": "Glide cloaked.",
 	"r_second_wind": "Bank two sprints.",
 }
