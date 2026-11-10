@@ -10,7 +10,7 @@ const Push := preload("res://tests/workshop/push.gd")
 #   - copy: no sentence appears on two world-one cards, none of the old jargon lines survives, and
 #     every card's first sentence is within the word budget;
 #   - taking a card marks it "Taken" before the screen leaves and the kit's name toasts once;
-#   - while a pick card is up in the middle of a fight, the "Game held" line shows and the hit
+#   - while a pick card is up in the middle of a fight, the "Paused" line shows and the hit
 #     word, the synergy callout and Moss's line behind it do not; they come back after the pick.
 
 const FIRST_LINE_WORDS := 8

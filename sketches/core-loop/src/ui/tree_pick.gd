@@ -27,7 +27,7 @@ const CARD_GAP := 36.0
 const HEADING := "Rig your kit. Pick one."
 # Under the heading while the card holds the game (the tree is paused), so a pick that opens
 # mid-fight does not read as a frozen picture.
-const HELD := "Game held"
+const HELD := "Paused"
 # The toast that names the kit once it is taken, through the HUD's existing toast row.
 const TAKEN_TOAST := "Kit: %s"
 
