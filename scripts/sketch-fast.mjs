@@ -27,7 +27,7 @@ import { readLedger } from "./known-failing.mjs";
 // stops at the first failure that is the PR's own: red twice on the head and green on the base.
 //   1. static: sketch-lint, placeholder count no higher than the base, check:docs, the node
 //      tests that touch the changed scripts
-//   2. Godot: import (retried once), boot, then the tests the diff reaches, cheapest first
+//   2. Godot: import (up to three tries), boot, then the tests the diff reaches, cheapest first
 // The full gate runs once per staging head and the red team plays each staging head; the fast
 // lane never replaces them. Bot-tier tests the diff reaches are listed for the bot shards.
 // Run: node scripts/sketch-fast.mjs [--base origin/main] [--budget 900] [--dry-run] [--receipt <label>]
@@ -661,7 +661,7 @@ async function main() {
     finish();
   }
 
-  // Stage 2: Godot. Import with one retry, boot, then the selected tests.
+  // Stage 2: Godot. Import in up to three tries, boot, then the selected tests.
   const quarantineEntries = readQuarantineEntries(sketchDir);
   const quarantine = new Set(quarantineEntries.map((entry) => entry.test));
   const expired = expiredQuarantine(quarantineEntries);
@@ -725,6 +725,7 @@ async function main() {
       const args = ["--headless", "--path", baseSketch];
       // The base tree is a fresh checkout, where the engine's first import can crash (IMPORT_TRIES).
       for (let attempt = 1; attempt <= IMPORT_TRIES; attempt++) {
+        if (prRed) return false;
         if ((await importAsync(args)) === 0) return true;
         if (attempt < IMPORT_TRIES) log(`${SKETCH} (base) import try ${attempt} of ${IMPORT_TRIES} failed; trying again`);
       }
