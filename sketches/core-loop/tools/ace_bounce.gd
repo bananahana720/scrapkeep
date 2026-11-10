@@ -12,12 +12,14 @@ const RATE := 44100.0
 #
 #   godot --headless --path sketches/core-loop --script res://tools/ace_bounce.gd -- \
 #     --out=<absolute .wav> [--seconds=80] [--tail=3] [--policy=skipper] [--seed=1] --music=ace \
-#     [--slow-at=<seconds>] [--slow-for=2.3] [--slow-scale=0.3] [--only=music|effects]
+#     [--slow-at=<seconds> | --slow-at=boss] [--slow-for=2.3] [--slow-scale=0.3] [--only=music|effects]
 #
 # --slow-at slows the world at that second of the WAV the way the close-up at Brindle's entrance
 # does (game.slow_motion; flourish_rows.gd asks for 0.3 of the world's speed, about 2.3 s of
 # wall time), so the falling sweep, the held music and the rising sweep are recorded over
-# whatever the run is playing. No bot's run slows the world on its own.
+# whatever the run is playing. No bot's run slows the world on its own. --slow-at=boss slows it
+# where the game does: 0.15 s after the boss's arena is entered (boss_arena_entered, the
+# arrival row's own "at"), so the sweeps are heard at Brindle's entrance over his anthem.
 #
 # --only records one side of the mix from the same bot and seed: music turns the effects, UI and
 # ambience volumes to nothing, effects turns the music's to nothing (audio.set_volume, the pause
@@ -60,6 +62,10 @@ var _slow_at := -1.0
 var _slow_for := 2.3
 var _slow_scale := 0.3
 var _slowing := false
+var _slow_on_boss := false
+# The arrival row's slow starts this long after the arena is entered (flourish_rows.gd
+# brindle_arrival, "at": 0.15 of the row's seconds, before the world slows).
+const BOSS_SLOW_AFTER := 0.15
 # Every recorded band the run played, in order: a change of pack makes a new sequencer
 # (audio.gd ace_ready), and each keeps its own log and counters. Looked for once a physics tick.
 var _bands: Array = []
@@ -82,7 +88,8 @@ func _initialize() -> void:
 		return
 	_seconds = float(_settings.get("seconds", "80"))
 	_tail = maxf(float(_settings.get("tail", "3")), 0.0)
-	_slow_at = float(_settings.get("slow-at", "-1"))
+	_slow_on_boss = String(_settings.get("slow-at", "")) == "boss"
+	_slow_at = -1.0 if _slow_on_boss else float(_settings.get("slow-at", "-1"))
 	_slow_for = float(_settings.get("slow-for", "2.3"))
 	_slow_scale = clampf(float(_settings.get("slow-scale", "0.3")), Game.SLOW_MOTION_FLOOR, 1.0)
 	seed(int(_settings.get("seed", "1")))
@@ -129,6 +136,7 @@ func _physics_process(delta: float) -> bool:
 		events.player_died.connect(_on_player_died)
 		events.warden_engaged.connect(func(stage: int): _facts.append([_now(), "warden_engaged", stage]))
 		events.beacon_unsealed.connect(func(stage: int): _facts.append([_now(), "warden_broken", stage]))
+		events.boss_arena_entered.connect(_on_boss_arena)
 		events.world_fact.connect(func(kind: String, _at: Vector3):
 			if kind.begins_with("steam_lift") or kind.begins_with("ride_"):
 				_facts.append([_now(), "world_fact", kind]))
@@ -158,6 +166,12 @@ func _skips(audio) -> int:
 func _keep_band(ace) -> void:
 	if ace != null and not _bands.has(ace):
 		_bands.append(ace)
+
+
+func _on_boss_arena() -> void:
+	_facts.append([_now(), "boss_arena_entered"])
+	if _slow_on_boss and _slow_at < 0.0:
+		_slow_at = _now() + BOSS_SLOW_AFTER
 
 
 # The world is slow between --slow-at and --slow-at + --slow-for seconds of the recording.
