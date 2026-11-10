@@ -35,8 +35,35 @@ func _initialize() -> void:
 	# Detector control: the same check on a planted off-beat start must fail.
 	var control := _check_stinger("172 bpm", Harmony.STEP, "stinger_stage", true, true)
 	t.eq("a planted off-beat start is caught", control, 0)
+	# The drop family (drop_now, the unseal drop, the boss-death cadence) books on the beat too.
+	var drops := 0
+	for grid in GRIDS:
+		drops += _check_drops(grid, int(GRIDS[grid]), _plant)
+	t.eq("a planted off-beat drop is caught", _check_drops("172 bpm", Harmony.STEP, true, true), 0)
 	print("STINGER_BEAT checked=%d stingers=%d grids=%d plant=%s" % [checked, stingers.size(), GRIDS.size(), str(_plant)])
 	quit(t.verdict())
+
+
+# Returns the number of drop bookings (of 3) that sit on the beat, within one beat of the
+# ask, on this grid. plant shifts each booked sample off the beat before it is judged.
+func _check_drops(grid: String, step: int, plant: bool, silent := false) -> int:
+	var engine := MusicEngine.new()
+	engine.step_len = step
+	var beat := engine.beat_len()
+	engine.render(beat + beat / 2 + 17)
+	var asked := engine.clock
+	var starts := {"drop_now": engine.drop_now(1, 0.6), "unseal_drop": engine.unseal_drop()}
+	engine.track = "warden"
+	starts["end_boss"] = engine.end_boss()
+	var good := 0
+	for label in starts:
+		var start: int = int(starts[label]) + (PLANT_OFFSET if plant else 0)
+		var ok := start % beat == 0 and start > asked and start - asked <= beat
+		good += 1 if ok else 0
+		if not silent:
+			t.check("%s %s books on the beat" % [grid, label], ok,
+				"asked %d, start %d (%.3f beats)" % [asked, start, float(start) / beat])
+	return good
 
 
 # Returns 1 when the stinger started on its beat, on this grid, within one beat of the ask.
