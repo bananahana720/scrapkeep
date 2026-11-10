@@ -3,7 +3,8 @@ extends Node
 # --self-play (src/game.gd): a bot plays the launched game with real ticks, as a player's
 # game runs (no SimClock), so `npm run sketch:frametime -- --self-play` can log a stage swap
 # or a stage exit unattended (SWAP-HITCH-6, STAGE6-GATE). Only packs that carry tools/ have
-# it: `npm run sketch:export -- --self-play`. Seconds are since launch.
+# it: `npm run sketch:export -- --self-play`. Seconds are since launch; the watch line's blank_max
+# and bar_off_max are seconds of play.
 #
 # Flags (after `--`):
 #   --self-play-seed=<n>      run seed (default 1)
@@ -62,8 +63,8 @@ extends Node
 #                             and the run's seconds are then game seconds, not seconds since launch. Prints "self-play: film <n> frames in <dir>" as the run ends.
 #   --self-play-watch=1       watch the run as a player would meet it (tools/qa_watch.gd, reads only): where the
 #                             ball sat stuck, hung off the ground, wedged or fell through, each objective plate
-#                             change, the longest stretch of play with an empty plate, and the boss fight's
-#                             start and end. Rows go to qa.ndjson in the run's own save folder; the totals print
+#                             change, the longest stretches of play with an empty plate and with the hull bar
+#                             off the hull, and the boss fight's start and end. Rows go to qa.ndjson in the run's own save folder; the totals print
 #                             on one "self-play: watch" line as the run ends. Absent, the run is unchanged.
 #
 # Lines: "self-play: stage <n> entered at <s> s" (one per stage entered, retries marked), each followed by
@@ -75,7 +76,7 @@ extends Node
 # "self-play: menus stalled in '<state>' at <s> s" (quit 3).
 # "self-play: stage <n> exit taken at <s> s", "self-play: done at <s> s". With --self-play-watch=1 also
 # "self-play: boss arena entered at <s> s", "self-play: boss defeated at <s> s" and
-# "self-play: watch stuck=<n> hung=<n> wedged=<n> fell=<n> objectives=<n> blank_max=<s> stages=<list>"
+# "self-play: watch stuck=<n> hung=<n> wedged=<n> fell=<n> objectives=<n> blank_max=<s> bar_off_max=<s> stages=<list>"
 # and "self-play: skills slot2=<n> slot3=<n> set_pieces=<n>" (casts of the skill bar's slots 2 and 3, set pieces fired).
 # Quit codes: 0 goal reached, 1 the run ended first or no Continue was offered, 2 bad flag, a pilot the keys cannot pick, or no tools/ in the pack
 # (game.gd), 3 stalled (every code waits for --self-play-min first, so a frame log stays whole): "self-play: stalled at stage <n> exit at <s> s pos <x,y,z>"
@@ -140,7 +141,7 @@ var _plant_end := false
 var _plant_limit := 0.0
 var _watch_on := false
 var _watch
-var _read_at := 0.0
+var _read_gap := 0.0
 var _stages: Array[int] = []
 var _watch_told := false
 var _film_dir := ""
@@ -465,15 +466,17 @@ func _end_run(code: int) -> void:
 	_quit_code = code
 
 
-# The watch's ball checks every tick; once a second its plate read, and how long play has gone on
-# with nothing on the objective plate (to the second).
+# The watch's ball checks every tick; once a second of play its plate read, and how long play has
+# gone on with nothing on the objective plate (to the second). The gap is counted in the ticks
+# this is called on, which a paused tree does not give it, so a pause, a held screen or the
+# launch before the run starts is never read as seconds of play.
 func _watch_step(delta: float) -> void:
 	_watch.step(delta)
-	if _now() - _read_at < 1.0:
+	_read_gap += delta
+	if _read_gap < 1.0:
 		return
-	var since := _now() - _read_at
-	_read_at = _now()
-	_watch.read_text(since)
+	_watch.read_text(_read_gap)
+	_read_gap = 0.0
 
 
 func _tell_watch() -> void:
@@ -481,8 +484,9 @@ func _tell_watch() -> void:
 		return
 	_watch_told = true
 	var c: Dictionary = _watch.counts
-	print("self-play: watch stuck=%d hung=%d wedged=%d fell=%d objectives=%d blank_max=%.1f stages=%s" % [int(c.get("stuck", 0)),
-		int(c.get("hung", 0)), int(c.get("wedged", 0)), int(c.get("fell", 0)), _watch.plates, _watch.blank_max, ",".join(_stages.map(func(n): return str(n)))])
+	print("self-play: watch stuck=%d hung=%d wedged=%d fell=%d objectives=%d blank_max=%.1f bar_off_max=%.1f stages=%s" % [int(c.get("stuck", 0)),
+		int(c.get("hung", 0)), int(c.get("wedged", 0)), int(c.get("fell", 0)), _watch.plates, _watch.blank_max, _watch.bar_off_max,
+		",".join(_stages.map(func(n): return str(n)))])
 	# The skill bar's hands, as the driver's record counts them: casts of slots 2 and 3 and set pieces fired.
 	var record: Dictionary = _driver.record(_now())
 	var casts: Dictionary = record.get("slot_casts", {})
