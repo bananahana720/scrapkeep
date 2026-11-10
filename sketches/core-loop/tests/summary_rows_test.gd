@@ -221,6 +221,21 @@ func _captions_fit() -> void:
 	var tiny: Array = ComicPage.panel_rects(small, [{"size": "wide"}, {"size": "square"}, {"size": "square"}, {"size": "wide", "kind": "finale"}])
 	var triple: String = longest["square"] + " " + longest["square"] + " " + longest["square"]
 	_t.check("planted: a caption three times the longest real one does not fit", not _fits(tiny[1], triple, small.size.x / 720.0), triple)
+	# Under 390 a long body squeezes the page past what dropping panels can rescue. There the page
+	# draws the picture alone: at the 240 floor the opening's longest caption is not shown, and at
+	# 450 the same caption is.
+	var floor_box := Rect2(Vector2.ZERO, Vector2(Screens.COMIC_MIN_HEIGHT * 0.75, Screens.COMIC_MIN_HEIGHT))
+	var floor_list: Array = [{"size": "wide", "caption": longest["first"]}, {"size": "square", "caption": longest["square"]}, {"size": "wide", "kind": "finale", "caption": longest["last_lost"]}]
+	var floor_rects: Array = ComicPage.panel_rects(floor_box, floor_list)
+	var floor_k := floor_box.size.x / 720.0
+	var spilled := 0
+	for j in floor_list.size():
+		var said := String(floor_list[j]["caption"])
+		if ComicPage.caption_shown(floor_rects[j], said, floor_k) and not _fits(floor_rects[j], said, floor_k):
+			spilled += 1
+	_t.check("at the page floor no caption is drawn outside its panel", spilled == 0, "%d spilled" % spilled)
+	_t.check("at the page floor the opening's longest caption is left off, not spilled", not ComicPage.caption_shown(floor_rects[0], longest["first"], floor_k), longest["first"])
+	_t.check("and at page height 450 the same caption is shown", ComicPage.caption_shown(ComicPage.panel_rects(small, floor_list)[0], longest["first"], small.size.x / 720.0), longest["first"])
 
 
 # Does the caption lie inside its panel, and clear of a loss card on the same panel?

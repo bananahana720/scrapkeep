@@ -263,7 +263,7 @@ func _draw_panel(r: Rect2, row: Dictionary, index: int, k: float) -> void:
 	if sfx != "":
 		_burst(r, sfx, index, k)
 	var caption := String(row.get("caption", ""))
-	if caption != "":
+	if caption_shown(r, caption, k):
 		_caption(r, caption, k)
 
 
@@ -350,6 +350,12 @@ static func caption_rect(r: Rect2, text: String, k: float) -> Rect2:
 	var inner := maxf(10.0, width - pad * 2.0)
 	var sz := UiFonts.bold().get_multiline_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, inner, caption_font(k))
 	return Rect2(r.position + Vector2(8.0 * k, 8.0 * k), Vector2(minf(width, sz.x + pad * 2.0), sz.y + pad * 2.0))
+
+
+# A page squeezed under what fit_rows can rescue (a long summary body) shows the picture alone:
+# a caption is drawn only where it lies inside its panel.
+static func caption_shown(r: Rect2, text: String, k: float) -> bool:
+	return text != "" and r.encloses(caption_rect(r, text, k))
 
 
 func _caption(r: Rect2, text: String, k: float) -> void:
