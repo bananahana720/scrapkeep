@@ -19,8 +19,6 @@ const UiDraw := preload("res://src/ui/ui_draw.gd")
 
 const SIZE := Vector2(420.0, 44.0)
 const GLANCE_SECONDS := 0.6
-const NAMES := {Roster.REACTOR: "Meltdown Warden", Roster.SWARM: "Hive Warden", Roster.MIND: "Mind Warden"}
-const NAME_FALLBACK := "Warden"
 const TICKS := [0.25, 0.5, 0.75]
 const FONT := 17
 const MARGIN := 14.0
@@ -122,7 +120,8 @@ func plate_name() -> String:
 		return String(_warden.get_meta("plate_name"))
 	if _warden.get("family") == null:
 		return String(EventKinds.hud("boss_arena_entered"))
-	return String(NAMES.get(_warden.family, NAME_FALLBACK))
+	var variant = _warden.get("variant")
+	return Roster.warden_name(String(_warden.family), String(variant) if variant != null else "")
 
 
 # Four pips, the first ones filled for each chunk left; the last filled one shows the

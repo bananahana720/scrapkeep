@@ -6,6 +6,7 @@ const EventKinds := preload("res://src/core/event_kinds.gd")
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const SpeedTier := preload("res://src/movement/speed_tier.gd")
+const Roster := preload("res://src/combat/roster.gd")
 const T := preload("res://tests/support/t.gd")
 
 # The boss plate reads one Warden (LEGIBILITY section 4), on the slice table with the
@@ -202,7 +203,7 @@ func _unbound() -> void:
 
 
 func _words_and_pips() -> void:
-	var name: String = BossPlate.NAMES[_warden.family]
+	var name: String = Roster.warden_name(_warden.family, _warden.variant)
 	_t.eq("it reports exactly the name's words", _plate.drawn_words(), Array(name.split(" ")))
 	_t.check("the name is two words or fewer", _plate.drawn_words().size() <= 2)
 	_t.eq("four pips", _plate.pips().size(), BossPosture.CHUNKS)

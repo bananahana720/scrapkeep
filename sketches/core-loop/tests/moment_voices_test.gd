@@ -172,9 +172,59 @@ func _colours() -> void:
 	_t.check("11 planted: a celebration stamp set back to hazard is reported", caught.bad == ["brindle_rout full ROUTED!"], str(caught.bad))
 
 
+# A minimal posture Warden: what the plate and the run summary read for its name.
+class NamedWarden:
+	extends Node3D
+	var family := "reactor"
+	var variant := ""
+
+	func fight() -> String:
+		return "posture"
+
+	func is_dead() -> bool:
+		return false
+
+	func chunks_left() -> int:
+		return 4
+
+
+# The name follows the variant: the dam's reactor Warden is the Reactor Warden, the flume's
+# meltdown one is the Meltdown Warden its card names. Returns what the plate and summary read.
+func _read_names(table: Dictionary) -> Dictionary:
+	var out := {}
+	for stage in [{"id": "dam", "variant": ""}, {"id": "flume", "variant": "meltdown"}]:
+		var w := NamedWarden.new()
+		w.variant = stage.variant
+		_game.add_child(w)
+		var plate := BossPlate.new()
+		plate.bind(w)
+		out[stage.id] = {"plate": plate.plate_name(), "summary": _game.run_moments._stagger_name(w, false)}
+		plate.free()
+		w.free()
+	return out
+
+
+func _name_errors(table: Dictionary) -> Array:
+	var want := {"reactor:": "Reactor Warden", "reactor:meltdown": "Meltdown Warden", "swarm:": "Hive Warden", "mind:": "Mind Warden"}
+	var bad: Array = []
+	for key in want:
+		var parts: PackedStringArray = key.split(":")
+		if String(table.get(parts[0], {}).get(parts[1], "")) != want[key]:
+			bad.append(key)
+	return bad
+
+
 func _names() -> void:
 	var card: String = String(Rows.pieces("flume_warden_reveal", false)[0].card[0])
-	_t.eq("20 the flume Warden's plate reads its card's name", BossPlate.NAMES[Roster.REACTOR].to_upper(), card)
+	var read := _read_names(Roster.WARDEN_NAMES)
+	_t.eq("20 the flume Warden's plate and summary read its card's name", [read.flume.plate.to_upper(), read.flume.summary], [card, "The Meltdown Warden"])
+	_t.eq("21 the dam's Warden reads Reactor Warden on the plate and in the summary", [read.dam.plate, read.dam.summary], ["Reactor Warden", "The Reactor Warden"])
+	_t.eq("22 the NAMES.md name for a variant with no name of its own is its family's", Roster.warden_name("reactor", "nothing"), "Reactor Warden")
+	_t.eq("23 the name table has no wrong mapping", _name_errors(Roster.WARDEN_NAMES), [])
+	# Planted: a variant mapped to the wrong name is reported.
+	var table: Dictionary = Roster.WARDEN_NAMES.duplicate(true)
+	table["reactor"][""] = "Meltdown Warden"
+	_t.eq("24 planted: the dam mapped to Meltdown Warden is reported", _name_errors(table), ["reactor:"])
 
 
 # The Warden break through the HUD's own signals: nothing is toasted at either one.

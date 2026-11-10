@@ -108,7 +108,7 @@ func _full_run() -> void:
 	_t.eq("a retried death outranks a 12% scrape", int(near.get("facts", {}).get("hull", -1)), 0)
 	_t.check("every panel has a caption", panels.all(func(p): return String(p["caption"]) != ""), "%s" % [panels.map(func(p): return p["caption"])])
 	var stagger: Dictionary = panels.filter(func(p): return p["kind"] == "boss_stagger").front() if kinds.has("boss_stagger") else {}
-	_t.eq("a park stagger names its Warden", String(stagger.get("facts", {}).get("who", "")), "The Meltdown Warden")
+	_t.eq("a park stagger names its Warden", String(stagger.get("facts", {}).get("who", "")), "The Reactor Warden")
 	_t.eq("page is won", page.get("won"), true)
 	var path: String = moments.saved_path()
 	_t.check("page saved under scrapbook/", path.contains("/%s/" % RunMoments.DIR) and FileAccess.file_exists(path), path)

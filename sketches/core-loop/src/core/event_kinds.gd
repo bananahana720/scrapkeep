@@ -648,7 +648,7 @@ const ATTACK_ROWS := {
 		"pose": "e39_spool_wind", "warn": "atk_e39_warn", "release": "atk_e39_release", "floor": "B", "open": []},
 	"E40": {"label": "Boom tender boom sweep", "group": "enemy", "owner_kind": "roster", "owner": "boom_tender", "allegiance": "hostile", "threat": "threat_lane", "glyph": "bar", "color": Palette.HAZARD,
 		"pose": "e40_reel_ratchet", "warn": "atk_e40_warn", "release": "atk_e40_release", "floor": "L", "open": []},
-	"W01": {"label": "Meltdown Warden pulse", "group": "warden", "owner_kind": "faction", "owner": "reactor", "allegiance": "hostile", "threat": "threat_instant", "glyph": "ring", "color": Palette.HAZARD,
+	"W01": {"label": "Warden pulse", "group": "warden", "owner_kind": "faction", "owner": "reactor", "allegiance": "hostile", "threat": "threat_instant", "glyph": "ring", "color": Palette.HAZARD,
 		"pose": "w01_vents_lift", "warn": "atk_w01_warn", "release": "atk_w01_release", "floor": "B", "open": []},
 	"W02": {"label": "Hive Warden pulse", "group": "warden", "owner_kind": "faction", "owner": "swarm", "allegiance": "hostile", "threat": "threat_instant", "glyph": "ring", "color": Palette.HAZARD,
 		"pose": "w02_cells_retract", "warn": "atk_w02_warn", "release": "atk_w02_release", "floor": "B", "open": []},
