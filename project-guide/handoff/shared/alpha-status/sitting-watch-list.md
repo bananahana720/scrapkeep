@@ -46,6 +46,7 @@ Things only Andrew can judge at his playtest sitting: feel, sound and his real h
 - Far scenery going dark (10 Nov): on the PC a dam cable drum is darker at 80 m and breaks into black streaks at 100 m, where the game swaps in its far version. The sight fault scan found the same fault in the far version of 94 of 286 park props, seven of them badly (cable drums, spool shed, knot boards, rope baskets). If distant props look sooty or striped, that is this; the fix rebuilds the far versions and comes after the sitting. (Sight thread)
 - Pickup words (10 Nov): the three-word line that pops when you take a grey panel was 1.6 to 2.1 view widths wide and is now held to 60 percent of the view; the sight thread is picking its final size from four candidates. If it still crowds the fight, or is now too small to read at speed, say which. (Sight thread)
 - Dam Warden, a full bar that empties (10 Nov): a hit off the water can top up a nearly full break bar, the core opens for 4 seconds, nothing you can do in that time breaks the dam, and the bar empties. It happens in about 1 fight in 7 and costs about 30 seconds. Does it read as a cheat? Nothing changes before the sitting; the systems thread measures it after. (Systems thread)
+- Death debris (#718, 10 Nov): a killed machine's debris now shrinks to nothing over the last half of its life, where it used to fade. Does any piece slide along the ground as it shrinks? (Technicals thread)
 
 ## For a film first
 
