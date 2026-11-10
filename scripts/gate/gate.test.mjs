@@ -6,9 +6,9 @@ import path from "node:path";
 import { indexFromFiles } from "../sketch-fast.mjs";
 import { parseLedger } from "../known-failing.mjs";
 import { place, sortChanges, testsToRerun } from "./carry.mjs";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
-import { WEEKLY_HEADER, chunks, classifyFailure, errorCounts, gateLists, importOutcome, nearLimit, numbered, parseSmokeLog, parseWeekly, parseWindow, renderReceipt, shardVerdict } from "./shard.mjs";
+import { WEEKLY_HEADER, chunks, classifyFailure, errorCounts, gateLists, importOutcome, nearLimit, numbered, parseSmokeLog, parseWeekly, parseWindow, renderReceipt, retime, shardVerdict, soloEnvironment } from "./shard.mjs";
 import { WEEKLY_MAX_DAYS, checkTally, checkWeeklySweep, expectedShards, isPass, planHead, tallyRows } from "./tally.mjs";
 import { WEEKLY_FILE, checkWeekly } from "./weekly.mjs";
 
@@ -312,4 +312,160 @@ test("a shard reads its import the way the runner does: a signal is the engine's
   assert.equal(importOutcome(139, ""), "engine crash");
   assert.equal(importOutcome("SIGKILL", ""), "failed", "the shard's own time limit is not an engine crash");
   assert.equal(importOutcome(0, "SCRIPT ERROR: Parse Error: Could not preload resource file\n"), "script errors");
+});
+
+const timedOut = { timedOut: true, failLines: 0 };
+const loaded = (load, extra = {}) => ({ ...timedOut, load, ...extra });
+const evidence = (...runs) => ({ threads: 32, runs });
+
+test("a solo rerun gets a lock folder of its own inside the shard's out folder", () => {
+  const out = mkdtempSync(path.join(os.tmpdir(), "gate-solo-"));
+  try {
+    const first = { SCRAPKEEP_LOCK_DIR: "/shared/locks", SMOKE_SLOTS: "3" };
+    const solo = soloEnvironment(first, out, "solo-logs-1");
+    assert.equal(solo.SCRAPKEEP_LOCK_DIR, path.join(out, "solo-locks"));
+    assert.notEqual(solo.SCRAPKEEP_LOCK_DIR, first.SCRAPKEEP_LOCK_DIR);
+    assert.equal(solo.SMOKE_SLOTS, "1");
+    assert.equal(solo.SMOKE_LOG_DIR, path.join(out, "solo-logs-1"));
+    assert.ok(existsSync(solo.SCRAPKEEP_LOCK_DIR));
+    assert.equal(first.SCRAPKEEP_LOCK_DIR, "/shared/locks");
+  } finally {
+    rmSync(out, { recursive: true, force: true });
+  }
+});
+
+test("two time-outs at load 58 on 32 threads with no failing check are suspect-load, never a new red (10 Nov)", () => {
+  const runs = evidence(loaded(58), loaded(61));
+  const call = classifyFailure("music_params_test", [false, false], ledger, runs);
+  assert.equal(call.call, "suspect-load");
+  assert.equal(classifyFailure("music_params_test", [false, false], ledger).call, "new-red", "without the evidence it is the old call");
+  assert.equal(classifyFailure("fresh_test", [false, false], ledger, evidence(loaded(58, { failLines: 1 }), loaded(58))).call, "new-red");
+  assert.equal(classifyFailure("fresh_test", [false, false], ledger, evidence(loaded(58), { timedOut: false, failLines: 0, load: 58 })).call, "new-red", "a failure that is not a time-out is not the machine's");
+  assert.equal(classifyFailure("fresh_test", [false, false], ledger, evidence(loaded(16), loaded(3))).call, "new-red", "load at the line (32 x 0.5) is not over it");
+  assert.equal(classifyFailure("fresh_test", [false, false], ledger, evidence(loaded(5), loaded(17))).call, "suspect-load", "one run over the line is enough");
+  assert.equal(classifyFailure("fresh_test", [true, true], ledger, evidence(loaded(99), loaded(99))).call, "new-flake");
+  assert.equal(classifyFailure("red_test", [false, false], ledger, runs).call, "carried");
+  assert.equal(classifyFailure("wobble_test", [true, false], ledger, evidence(loaded(5), loaded(90))).call, "carried");
+});
+
+test("a listed flake whose every solo run timed out under load is suspect-load, not a mismatch", () => {
+  const four = evidence(loaded(70), loaded(70), loaded(70), loaded(70));
+  assert.equal(classifyFailure("wobble_test", [false, false, false, false], ledger).call, "mismatch");
+  assert.equal(classifyFailure("wobble_test", [false, false, false, false], ledger, four).call, "suspect-load");
+  assert.equal(classifyFailure("wobble_test", [false, false], ledger, evidence(loaded(70, { failLines: 2 }), loaded(70))).call, "mismatch");
+});
+
+test("suspect-load blocks as INCONCLUSIVE, and a real red beside it keeps the shard RED and names both", () => {
+  const suspect = classifyFailure("music_params_test", [false, false], ledger, evidence(loaded(58), loaded(58)));
+  const red = classifyFailure("broken_test", [false, false], ledger);
+  const flake = classifyFailure("fresh_test", [true, true], ledger);
+  assert.deepEqual(shardVerdict([suspect, flake]), { ok: false, inconclusive: true, line: 'INCONCLUSIVE: 1 time-out(s) under load (music_params_test); rerun alone on a quiet machine with "node scripts/gate/shard.mjs retime"' });
+  assert.deepEqual(shardVerdict([suspect, red]), { ok: false, line: "RED: 1 new red (broken_test); 1 time-out(s) under load (music_params_test)" });
+});
+
+test("a plan row that opens with INCONCLUSIVE is not a pass", () => {
+  assert.equal(isPass('INCONCLUSIVE: 1 time-out(s) under load (a_test); rerun alone. Receipt x.md'), false);
+  assert.equal(isPass("**Verdict: INCONCLUSIVE: 2 time-out(s) under load (a_test)**"), false);
+});
+
+test("the receipt shows the load of every step, and a dash for a step saved before load was recorded", () => {
+  const failures = [];
+  const text = renderReceipt({
+    title: "Gate shard: tests 1-2 on abcd1234",
+    head: "abcd1234",
+    box: "32 vCPU, 64 GB",
+    threads: 32,
+    godot: "Godot_v4.7.2",
+    scale: 1,
+    window: "non-bot list 1 to 2 of 1087",
+    steps: { "import-1": { exit: 0, seconds: 90 }, chunk00: { exit: 0, seconds: 400, load_start: 12.5, load_end: 58 } },
+    results: [{ test: "a_test", ok: true, seconds: 12 }],
+    failures,
+    counts: errorCounts(""),
+    slow: [],
+    verdict: shardVerdict(failures),
+    startedAt: "2026-11-10T20:00:00Z",
+    finishedAt: "2026-11-10T20:40:00Z",
+  });
+  assert.match(text, /\| Step \| Exit \| Wall \| Load \|/);
+  assert.match(text, /\| chunk00 \| 0 \| 400 s \| 12\.5 to 58 \|/);
+  assert.match(text, /\| import-1 \| 0 \| 90 s \| - \|/);
+  assert.match(text, /read against 32 threads/);
+});
+
+// retime with a fake runner, load reader and sleep: no engine starts.
+async function retimeWith({ tests = ["a_test", "b_test"], runs = 2, outcome, loads = [3], known = ["a_test", "b_test"] }) {
+  const out = mkdtempSync(path.join(os.tmpdir(), "gate-retime-"));
+  const ran = [];
+  let sleeps = 0;
+  let reads = 0;
+  const load = () => loads[Math.min(reads++, loads.length - 1)];
+  const sleep = async () => {
+    sleeps++;
+  };
+  const runSolo = async (test, run) => {
+    ran.push(`${test}#${run}`);
+    return { exit: 0, seconds: 100, ok: true, timedOut: false, failLines: 0, ...outcome?.(test, run) };
+  };
+  const logged = [];
+  const log = console.log;
+  console.log = (line) => logged.push(line);
+  try {
+    const code = await retime({ tests, known, runs, out, maxLoad: 8, threads: 32, bots: false, head: "abcd1234ef", load, sleep, runSolo, refuse: () => {} });
+    const receipt = existsSync(path.join(out, "receipt.md")) ? readFileSync(path.join(out, "receipt.md"), "utf8") : null;
+    return { code, ran, sleeps, receipt, logged };
+  } finally {
+    console.log = log;
+    rmSync(out, { recursive: true, force: true });
+  }
+}
+
+test("retime: every run passing alone is PASS and exit 0, with one table row per run", async () => {
+  const result = await retimeWith({});
+  assert.equal(result.code, 0);
+  assert.deepEqual(result.ran, ["a_test#1", "a_test#2", "b_test#1", "b_test#2"]);
+  assert.match(result.receipt, /^# Gate retime: a_test, b_test on abcd1234\n\n\*\*Verdict: PASS: every run passed alone on a quiet machine\.\*\*/);
+  assert.match(result.receipt, /\| a_test \| 1 \| 0 \| 100 s \| 3 \| no \| 0 \|/);
+  assert.equal(result.receipt.split("\n").filter((line) => /^\| [ab]_test /.test(line)).length, 4);
+});
+
+test("retime: a failing check alone is RED and exit 1", async () => {
+  const result = await retimeWith({ outcome: (test, run) => (test === "b_test" && run === 2 ? { ok: false, exit: 1, failLines: 1 } : {}) });
+  assert.equal(result.code, 1);
+  assert.match(result.receipt, /Verdict: RED: b_test failed a check alone\./);
+  const crash = await retimeWith({ outcome: (test) => (test === "a_test" ? { ok: false, exit: 134 } : {}) });
+  assert.equal(crash.code, 1, "a failure that is not a time-out is red");
+});
+
+test("retime: time-outs only are INCONCLUSIVE and exit 2", async () => {
+  const result = await retimeWith({ outcome: (test, run) => (test === "a_test" && run === 1 ? { ok: false, exit: "null", timedOut: true } : {}) });
+  assert.equal(result.code, 2);
+  assert.match(result.receipt, /Verdict: INCONCLUSIVE: 1 time-out\(s\) even on a quiet machine \(a_test\)/);
+  assert.match(result.receipt, /\| a_test \| 1 \| null \| 100 s \| 3 \| yes \| 0 \|/);
+});
+
+test("retime: an unknown test name stops before any run", async () => {
+  const out = mkdtempSync(path.join(os.tmpdir(), "gate-retime-"));
+  let ran = 0;
+  try {
+    await assert.rejects(
+      retime({ tests: ["a_test", "no_such_test"], known: ["a_test"], runs: 1, out, maxLoad: 8, threads: 32, bots: false, head: "abcd1234ef", load: () => 0, sleep: async () => {}, runSolo: async () => ran++, refuse: () => {} }),
+      /not in the non-bot gate lists: no_such_test/,
+    );
+    assert.equal(ran, 0);
+  } finally {
+    rmSync(out, { recursive: true, force: true });
+  }
+});
+
+test("retime waits while the load is above the line, and gives up with exit 2 when the machine never goes quiet", async () => {
+  const waits = await retimeWith({ tests: ["a_test"], runs: 1, loads: [40, 30, 9, 3, 3] });
+  assert.equal(waits.code, 0);
+  assert.equal(waits.sleeps, 3);
+  const never = await retimeWith({ tests: ["a_test"], runs: 1, loads: [55] });
+  assert.equal(never.code, 2);
+  assert.deepEqual(never.ran, []);
+  assert.equal(never.sleeps, 90);
+  assert.equal(never.receipt, null);
+  assert.match(never.logged.join("\n"), /the machine never went quiet/);
 });
