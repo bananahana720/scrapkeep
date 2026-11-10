@@ -338,6 +338,43 @@ Each is worded so he can veto it.
 | The slice table hits a read that still assumes three stages by position | ST's review walks a slice run and lists every positional read; the bots in TM then run on the slice table |
 | Several audit claims were never run | The traversal baseline and one run of the word-budget test before R1 is cut |
 
+## 13. Words and screen structure: no slop (ruling cx)
+
+Andrew, 10 Nov 2026: "be sure to un-slop any ui/ux facing gameplay or menu design or text. Im looking at the way anything is presented to the player at all interactions and navigation. Im talkin eyebrow texts, headings and sub heading removals or redesign, and other ways to communicate info to the human".
+
+This section binds every screen, card, tip, toast, caption, prompt and menu in every world. It covers structure as much as wording. The voice in [TONE-BIBLE.md](TONE-BIBLE.md) stays: a joke or an in-world line the tone bible supports is not slop, and neither is a term the game has taught or a number a build choice needs.
+
+**Carrier order.** Before writing a word, ask what should carry the fact. Use the first that works: position, shape, colour (the colour law in section 1), an icon from `src/ui/icons.gd` or a keycap from `src/ui/key_glyphs.gd`, motion, sound, and only then a word. A word never restates what a mark on the same screen already says.
+
+**Structure patterns to remove.**
+
+| Code | Pattern |
+| --- | --- |
+| S1 | An eyebrow: a small label above a heading that names the category of the thing below it |
+| S2 | A heading that restates the screen the player just chose, or a subheading that restates the heading |
+| S3 | Heading, subheading and body where one line would do; a section title over a single item |
+| S4 | A label and colon that restates the value beside it, or a label on something whose icon, position or colour already says it |
+| S5 | A hint, footer or helper line that explains an obvious control, repeats on every screen or never goes away |
+| S6 | Words carrying what a shape, colour, icon, bar, position, motion or sound already carries or could carry better |
+| S7 | Two voices at once, or one fact shown in two places on one screen |
+| S8 | Navigation that names one action two ways (Back, Return, Close), a confirm step that protects nothing, a menu level that holds one item, a label that names the system instead of what the player gets |
+
+**Wording patterns to remove.**
+
+| Code | Pattern |
+| --- | --- |
+| W1 | Puffery used as filler: epic, ultimate, powerful, unleash, master, legendary |
+| W2 | Generic game filler where nothing needs saying: Welcome, Get ready, Good luck, Are you sure? |
+| W3 | A line that says how something feels and not what it does. The fix names the mechanism or the number |
+| W4 | A term a first-time player does not know and the game has not taught by that point; an internal system name shown to the player ("pilot", never "class") |
+| W5 | Lists forced into three, "not just X but Y", "from X to Y", stacked adjectives, an adverb propping a weak verb |
+| W6 | Em dashes, mid-sentence colons, Title Case On Every Word, capitals for more than a short mark, decorative symbols, curly quotes, an ellipsis or exclamation mark used as energy |
+| W7 | One thing called two names across screens. Pick one name and use it everywhere |
+| W8 | Passive or roundabout phrasing where a short imperative fits |
+| W9 | A sentence that could appear unchanged in another game |
+
+**How it is checked.** A review of any change a player can read or navigate cites this section by code. A lint over the player-facing strings and screen headings, with a planted bad case for each pattern it covers, is owed by wave 36; until it lands, the check is the review. The patterns a lint cannot judge (S6, S7, W3, W9) stay with the reviewer and with a blind read of a still.
+
 ## Changes to the plan
 
 - The fight axis and the harpoon-input axis are gone. There is no `--variant=` row.
