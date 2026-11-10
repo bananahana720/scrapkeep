@@ -10,7 +10,8 @@ const T := preload("res://tests/support/t.gd")
 # stage used to put the stage card, the shift card, Moss's hello (under the shift card), a tip
 # and an unlock plate up together, some of it under the launch take's panel.
 #   B1     a run that does not come through a live launch take (a bot's, a test's) has no
-#          opening: the cold open and Moss's hello start with the stage.
+#          opening: the cold open starts with the stage, and Moss's hello follows its words
+#          as it follows any comic beat's (bubble_gives_way_test).
 #   P1     without the take too, Moss holds his hello while a screen pauses the drop (the
 #          briefing on a restart), and says it when the screen closes.
 #   T1-T2  through the take, nothing of the title shows under its panel; the stage card and
@@ -107,10 +108,15 @@ func _run() -> void:
 
 	await _start_run()
 	await _frames(3)
-	_t.check("B1 a run that does not come through the take has no opening: the cold open and Moss's hello start with the stage",
-		not opening.live and flourish.playing and flourish.id == "cold_open" and _moss_up() and _turns.is_empty()
+	var cold_open: bool = flourish.playing and flourish.id == "cold_open"
+	var under_card: bool = _moss_up()
+	# Stopped, not read to its end: a cold open read through is the short form from then on.
+	flourish.stop_all()
+	await _frames(3)
+	_t.check("B1 a run that does not come through the take has no opening: the cold open starts with the stage and Moss's hello follows its words",
+		not opening.live and cold_open and not under_card and _moss_up() and _turns.is_empty()
 			and not opening.waits("title") and not opening.waits("plate"),
-		"live %s, flourish %s, Moss %s, turns %s" % [opening.live, flourish.id, _moss_up(), _turns])
+		"live %s, flourish %s, Moss under the card %s and after it %s, turns %s" % [opening.live, flourish.id, under_card, _moss_up(), _turns])
 
 	flow.show_title()
 	await _frames(2)
@@ -123,6 +129,8 @@ func _run() -> void:
 	var hushed: bool = flow.in_stage() and not opening.live and not _moss_up()
 	paused = false
 	_game.player.set_velocity_now(Vector3.ZERO)
+	# The cold open's words are B1's; this is the pause.
+	flourish.stop_all()
 	await _frames(3)
 	_t.check("P1 without the take, Moss holds his hello while a screen pauses the drop", hushed and _moss_up(), "held %s, then Moss %s" % [hushed, _moss_up()])
 

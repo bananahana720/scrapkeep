@@ -73,6 +73,12 @@ func _physics_process(_delta: float) -> bool:
 			_game.flow.choose_class(0)
 			_next("entry")
 		"entry":
+			# A test's run has no opening, so the cold open's card starts with the stage and the
+			# hello waits for it (bubble_gives_way_test). The card is not this test's subject.
+			if _game.presentation.reading():
+				_game.presentation.flourish.stop_all()
+				_next("entry")
+				return false
 			_report("Spillway entry", _said(spillway[0]) and _bubble.showing(), _bubble.text)
 			_bubble._process(30.0)
 			_report("waits for advance", _said(spillway[0]), "simulated 30 seconds without input")
@@ -118,6 +124,10 @@ func _physics_process(_delta: float) -> bool:
 			_game.flow.new_run()
 			_next("new_run")
 		"new_run":
+			if _game.presentation.reading():
+				_game.presentation.flourish.stop_all()
+				_next("new_run")
+				return false
 			_report("new run restores exchange", _said(spillway[0]), _bubble.text)
 			_report("note survives new run", _game.notes.note_entries()[0]["known"], "saved codex id remains known")
 			var warden_intro: Dictionary = _lines("1-1", "intro")[0]
