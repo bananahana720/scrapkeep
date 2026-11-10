@@ -16,6 +16,10 @@ const LoreRows := preload("res://src/core/lore_rows.gd")
 #    gives way.
 # 8. A Warden's fall is called by the crew whose gates they were.
 # 9. A new run can say them again.
+# 10. A comic beat with words up (a flourish's card, caption or panel) has the screen: the call
+#     waits for it.
+# 11. The stage's hello waits for a call that is up.
+# 12. The killing hit calls nobody, and a call that is up does not follow the run off the field.
 # smoke: timeout=180s
 
 var _t := preload("res://tests/support/t.gd").new("call_in_test")
@@ -69,6 +73,8 @@ func _run() -> void:
 func _check() -> void:
 	var events = _game.events
 	var at := Vector3.ZERO
+	# The run's cold open is a comic beat with a card (check 10): no frame passes here to end it.
+	_game.presentation.flourish.stop_all()
 	# 1. The stage's hello has the bubble: a cause now waits for it, and speaks when it is gone.
 	events.activity_done.emit("enemy_camp", at)
 	_t.check("a call waits for the stage's hello", _bubble.visible and not _said("call.spillway.camp") and not _bubble._call.is_empty(),
@@ -108,6 +114,12 @@ func _check() -> void:
 	_game.run.hp = _game.run.max_hp * 0.2
 	events.player_hit.emit(1.0, "test")
 	_t.check("a hit on a low hull brings Moss's spare seal", _said("call.spillway.low_hull"), "bubble '%s'" % _bubble.text)
+	_quiet()
+	_bubble._calls_played.erase("call.spillway.low_hull")
+	_game.run.hp = 0.0
+	events.player_hit.emit(1.0, "test")
+	_t.check("the killing hit calls nobody", not _bubble.visible and _bubble._call.is_empty(), "bubble '%s'" % _bubble.text)
+	_game.run.hp = _game.run.max_hp * 0.2
 	_quiet()
 	_bubble._calls_played.erase("call.spillway.low_hull")
 	paused = true
@@ -157,9 +169,34 @@ func _check() -> void:
 	_quiet()
 	events.beacon_unsealed.emit(1)
 	_t.check("the dam Warden's fall is called by the pump crew", _said("call.spillway.dam_warden"), "bubble '%s'" % _bubble.text)
+	# 11. The hello waits for the call that is up, then takes the bubble.
+	_bubble._zones_played.clear()
+	_bubble._begin_exchange(_game.run.stage)
+	_t.check("the stage's hello waits for a call that is up", _said("call.spillway.dam_warden") and _bubble._hello_due == _game.run.stage,
+		"bubble '%s', hello due %d" % [_bubble.text, _bubble._hello_due])
+	_bubble.hush()
+	_bubble._clear_line()
+	_bubble._process(0.1)
+	_t.check("and comes up when the call has gone", _bubble.visible and not _bubble._exchange.is_empty() and _bubble._hello_due == 0,
+		"bubble '%s'" % _bubble.text)
+	_bubble.dismiss_exchange()
+	# 10. A comic beat's words.
+	_quiet()
+	var beat = _game.presentation.flourish
+	_t.check("a comic beat with a card is up", beat.play("spillway_clear") and _game.presentation.reading())
+	events.activity_done.emit("surge_run", at)
+	_t.check("a call waits for a comic beat's words", not _bubble.visible and _bubble._call.get("id", "") == "call.spillway.surge",
+		"bubble '%s', waiting %s" % [_bubble.text, _bubble._call.get("id", "")])
+	beat.stop_all()
+	_bubble._process(0.1)
+	_t.check("and speaks when the beat has gone", _said("call.spillway.surge"), "bubble '%s'" % _bubble.text)
 	# 9. A new run.
 	events.run_started.emit(flying)
 	_bubble.dismiss_exchange()
 	events.activity_done.emit("enemy_camp", at)
 	_bubble._process(0.1)
 	_t.check("a new run can say them again", _said("call.spillway.camp"), "bubble '%s'" % _bubble.text)
+	# 12. The run ends under a call: it goes with the field.
+	_game.run.damage(1.0e9, "test")
+	_t.check("a call does not follow the run onto its end screen", not _game.flow.in_play() and _bubble._hold <= 0.0 and _bubble._call.is_empty(),
+		"flow %s, hold %.2f" % [_game.flow.state_name(), _bubble._hold])

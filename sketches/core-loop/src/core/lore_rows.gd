@@ -43,8 +43,6 @@ const CALLS := [
 		"text": "A sensible choice. It has been added to your schedule."},
 	{"id": "call.spillway.dam_warden", "on": "beacon_unsealed", "arg": [0, 1], "world": 1, "speaker": "pump_crew",
 		"text": "Gates open on our count now. We count on fingers."},
-	{"id": "call.spillway.head_house", "on": "beacon_unsealed", "arg": [0, 2], "world": 1, "speaker": "brindle",
-		"text": "Head house lost. Rounded up, that is a win. Ours."},
 	{"id": "call.spillway.evolved", "on": "evolution_fired", "world": 1, "speaker": "moss",
 		"text": "I didn't pack it like that. Keep it like that."},
 	{"id": "call.spillway.heft", "on": "heft_class_changed", "world": 1, "speaker": "moss",

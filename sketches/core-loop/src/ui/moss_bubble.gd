@@ -107,9 +107,11 @@ func _ready() -> void:
 	_game.events.flow_changed.connect(func(_state: String):
 		if not _game.flow.in_stage():
 			_end_exchange()
-		# A boss's line held for the close-up never follows the player off the fight's screen.
+		# A boss's line held for the close-up never follows the player off the fight's screen,
+		# and a call never follows the run onto its end screen.
 		if not _game.flow.in_play():
-			_end_intro())
+			_end_intro()
+			_end_call())
 
 
 func _install_exchange_input() -> void:
@@ -146,7 +148,8 @@ func _begin_exchange(stage: int) -> void:
 	_hello_due = 0
 	if stage != _game.run.stage or not _game.flow.in_stage() or _game.flow.engaged():
 		return
-	if _waits():
+	# A call that is up finishes first: its caller's voice is still going.
+	if _waits() or _call_up():
 		_hello_due = stage
 		return
 	var zone := "%d-%d" % [_game.ctx.stages.world_of(stage), _game.ctx.stages.local(stage)]
@@ -358,9 +361,11 @@ func _call_for(event: String, args: Array) -> Dictionary:
 	return pilots[absi(_game.run.run_seed) % pilots.size()] if not pilots.is_empty() else {}
 
 
-# A row's `when` is true now.
+# A row's `when` is true now. A hull at nothing is the killing hit, and that is nobody's cue.
 func _call_holds(row: Dictionary) -> bool:
-	return row.get("when", "") != "low_hull" or _game.run.hp < _game.run.max_hp * LoreRows.CALL_LOW_HULL
+	if row.get("when", "") != "low_hull":
+		return true
+	return _game.run.hp > 0.0 and _game.run.hp < _game.run.max_hp * LoreRows.CALL_LOW_HULL
 
 
 # A Warden or a boss is up: no call is caused or said across that fight.
@@ -376,9 +381,28 @@ func _pilot_free(class_id: String) -> bool:
 	return false
 
 
-# Whether a call may come up now: in play, no fight, nothing held (see _waits), the bubble free.
+# A comic beat has a card, a caption or a panel up or on the way (presentation.reading): one
+# thing to read at a time, and the beat was there first.
+func _reading() -> bool:
+	var presentation = _game.get("presentation")
+	return presentation != null and presentation.reading()
+
+
+func _call_up() -> bool:
+	return visible and mood == "call"
+
+
+# The waiting call is dropped and one that is up goes.
+func _end_call() -> void:
+	_call = {}
+	if _call_up():
+		hush()
+
+
+# Whether a call may come up now: in play, no fight, nothing held (see _waits), nothing else to
+# read, the bubble free.
 func _call_may_speak() -> bool:
-	if not _game.flow.in_play() or _waits() or _fight():
+	if not _game.flow.in_play() or _waits() or _fight() or _reading():
 		return false
 	# The run's opening is one voice at a time and all of them are spoken for.
 	var opening = _game.get("opening")
@@ -390,7 +414,7 @@ func _call_may_speak() -> bool:
 func _tick_call(delta: float) -> void:
 	_call_quiet += delta
 	# A fight going live takes the screen from a call that is up.
-	if visible and mood == "call" and _fight():
+	if _call_up() and _fight():
 		hush()
 	if _call.is_empty():
 		return
