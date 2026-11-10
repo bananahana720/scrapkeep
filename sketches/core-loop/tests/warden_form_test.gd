@@ -130,17 +130,42 @@ func _tight_build() -> void:
 	t.check("a guard left to drain goes back to the build", _ace.section == "build" and _ace.warden_state == "closed" and _drops().is_empty(), "section=%s state=%s drops=%s" % [_ace.section, _ace.warden_state, _drops()])
 
 
+# The lead's level in the section sounding, or -1 with no lead voice.
+func _lead() -> float:
+	for v in _ace.voices:
+		if v.stem == "other":
+			return v.target
+	return -1.0
+
+
 func _breath_and_drop() -> void:
 	_audio.cue_log.clear()
+	# The worst feed for the lead: no threat, no fight floor and armour nearly gone. The build
+	# loses its lead to it; the breath (the lead alone) and the drop must not.
+	var fed: Dictionary = _ace.parameters.duplicate()
+	var floor_was: float = _ace.fight_floor
+	_ace.parameters = {"threat": 0.0, "armour": 0.1}
+	_ace.pressure = 0.0
+	_ace.fight_floor = 0.0
+	t.check("low armour still strips the build's lead", _ace.parameter_gain("other", "build") == 0.0, "gain=%s" % _ace.parameter_gain("other", "build"))
+	t.check("the breath and the drop carry the lead whole", _ace.parameter_gain("other", "open") == 1.0 and _ace.parameter_gain("other", "drop") == 1.0,
+		"open=%s drop=%s" % [_ace.parameter_gain("other", "open"), _ace.parameter_gain("other", "drop")])
+	_ace.parameters = fed
+	_ace.fight_floor = floor_was
 	_guard_reads(100.0, true)
 	_bars(1)
 	t.check("a stagger is the held breath", _ace.section == "open", "section=%s" % _ace.section)
+	t.check("the breath is not silence", _lead() > 0.0, "lead=%s" % _lead())
 	var asked: int = _ace.clock
+	var opened: int = _ace.opened
 	_guard_reads(0.0, false, 3)
 	var at: int = _drops()[0] if _drops().size() == 1 else -1
 	t.check("the shattering hit books the drop on a coming beat", at > asked and at == _ace.next_beat(at), "asked=%d drop=%d" % [asked, at])
+	# One section's stems on the hit's frame: the build is not opened only to be thrown away.
+	t.eq("the hit opens the drop's stems and nothing else", _ace.opened - opened, _ace.stems.size())
 	_pump(at - _ace.clock + 4096)
 	t.check("the drop plays", _ace.section == "drop", "section=%s" % _ace.section)
+	t.check("the drop carries the lead", _lead() > 0.0, "lead=%s" % _lead())
 	# The drop is four bars, and the build waits for its end.
 	_bars(6)
 	t.check("the build comes back after the drop", _ace.section == "build" and _ace.mode == "warden", "section=%s mode=%s" % [_ace.section, _ace.mode])

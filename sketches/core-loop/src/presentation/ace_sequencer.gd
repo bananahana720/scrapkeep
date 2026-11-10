@@ -58,6 +58,10 @@ const LEAD_FLOOR := 0.5
 # The directed sections that end a Warden break: the kill cadence and the walk home carry the
 # lead whole, and the break's release stops stripping it from the cadence on.
 const LEAD_RETURN := ["return", "home"]
+# The Warden fight's held breath and its drop carry the lead whole, whatever the threat feed,
+# the fight floor or low armour say: the breath is the lead alone, so a lead at nothing is
+# silence, and the drop is the payoff.
+const LEAD_WHOLE := ["open", "drop"]
 const PROTECTED := ["pivot", "drop", "break", "return", "home"]
 const SHELF_CLIPS := ["calm", "travel"]
 
@@ -115,6 +119,10 @@ var short_reads := 0
 var misses := 0
 var render_usec := 0
 var rendered := 0
+# Stem voices opened and the time opening them took: each one seeks its recording on the
+# frame that asks for the section, so a call that opens more than one section's stems shows here.
+var opened := 0
+var open_usec := 0
 
 # The section sounding at the render head, its grid and voices.
 var section := ""
@@ -382,7 +390,10 @@ func parameter_gain(stem: String, at := "") -> float:
 		return clampf(smoothstep(DRUMS_IN_SPEED, DRUMS_FULL_SPEED, float(parameters.speed)), 0.0, 1.0)
 	if stem != "other":
 		return 1.0
-	var cadence := mode == "piece" and (section if at == "" else at) in LEAD_RETURN
+	var name := section if at == "" else at
+	if mode == "warden" and name in LEAD_WHOLE:
+		return 1.0
+	var cadence := mode == "piece" and name in LEAD_RETURN
 	if _lead_stripped(cadence):
 		return 0.0
 	if cadence:
@@ -461,9 +472,15 @@ func follow_guard(posture: float, staggered: bool, landed: bool) -> int:
 	if mode != "warden":
 		return -1
 	var state := guard_state(warden_state, posture, staggered)
+	if landed:
+		# The drop is the answer, and the build comes back as the drop's own follower. Asking
+		# for the build first would open its three stems on this frame only to throw them away
+		# (10 ms on the hit's frame, measured on the PC).
+		warden_state = state
+		return drop_now()
 	if state != warden_state:
 		set_warden_state(state)
-	return drop_now() if landed else -1
+	return -1
 
 
 # Contact on the core: the render head goes quiet now and the drop enters on the next
@@ -880,6 +897,7 @@ func _clear_harmony(at: int) -> void:
 
 
 func _open(clip: Dictionary, stem: String, from: int, gains: Dictionary, ramp: int, name: String) -> Voice:
+	var began := Time.get_ticks_usec()
 	var v := Voice.new()
 	v.stem = stem
 	v.pb = streams[clip["paths"][stem]].instantiate_playback()
@@ -905,6 +923,8 @@ func _open(clip: Dictionary, stem: String, from: int, gains: Dictionary, ramp: i
 		v.step = 1.0
 	else:
 		_ramp_to(v, g, ramp)
+	opened += 1
+	open_usec += Time.get_ticks_usec() - began
 	return v
 
 
