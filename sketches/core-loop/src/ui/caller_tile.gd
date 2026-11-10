@@ -100,6 +100,7 @@ func clear() -> void:
 # The voice was cut short (a fight hushes a call): the plate stands still until it goes.
 func quiet() -> void:
 	_voice = 0.0
+	set_process(false)
 	queue_redraw()
 
 
@@ -231,8 +232,3 @@ func _draw_tag(color: Color, live: bool, beat: float) -> void:
 		var bar_h := (TAG_H - 8.0) * level
 		draw_rect(Rect2(Vector2(text_w + 12.0 + i * 5.0, TAG_H - 4.0 - bar_h), Vector2(3.0, bar_h)), ink)
 	draw_set_transform(Vector2.ZERO)
-
-
-# The tag's width for a name, so the bubble can stand clear of it.
-func tag_width(shown_name: String) -> float:
-	return UiFonts.bold().get_string_size(shown_name.to_upper(), HORIZONTAL_ALIGNMENT_LEFT, -1, TAG_FONT).x + BARS * 5.0 + 20.0

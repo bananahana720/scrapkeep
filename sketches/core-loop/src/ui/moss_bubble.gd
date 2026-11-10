@@ -525,10 +525,10 @@ func hush() -> void:
 			visible = false)
 
 
-# `caller` is who says the line (a LoreRows.SPEAKERS id; "" for Moss's counter talk) and
-# `voice_s` the seconds their voice lasts. `text` keeps the whole line, name and all.
-func _say(line: String, fact: String, mood_now: String, level: float, grumbles: bool, hand: String, caller := "", voice_s := 0.0) -> void:
-	var words := _seat_caller(caller, line, voice_s)
+# `who` says the line (a LoreRows.SPEAKERS id; "" for Moss's counter talk) and `voice_s` is the
+# seconds their voice lasts. `text` keeps the whole line, name and all.
+func _say(line: String, fact: String, mood_now: String, level: float, grumbles: bool, hand: String, who := "", voice_s := 0.0) -> void:
+	var words := _seat_caller(who, line, voice_s)
 	text = line
 	kind = fact
 	mood = mood_now
@@ -571,12 +571,12 @@ func _say(line: String, fact: String, mood_now: String, level: float, grumbles: 
 
 # The caller's plate comes up for a line, or goes for a line nobody on the plate says. Returns
 # the words the bubble shows: the line without the name it opens on when the tag carries the name.
-func _seat_caller(caller: String, line: String, voice_s: float) -> String:
-	var shown := String(LoreRows.SPEAKERS.get(caller, ""))
+func _seat_caller(who: String, line: String, voice_s: float) -> String:
+	var shown := String(LoreRows.SPEAKERS.get(who, ""))
 	CallerTile.reduced_motion = reduced_motion
 	if _game != null and _game.flow != null:
 		_tile.pilots = _game.flow.classes
-	var named := shown != "" and _tile.present(caller, shown, voice_s)
+	var named := shown != "" and _tile.present(who, shown, voice_s)
 	if not named:
 		_tile.clear()
 	_lead = PLATE_LEAD if named else 0.0

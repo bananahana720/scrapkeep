@@ -99,7 +99,9 @@ func _run() -> void:
 	var babbling: bool = tile.talking()
 	_bubble.hush()
 	var still: bool = not tile.talking()
-	for i in 30:
+	# The fade is timed, not counted in frames: wait on the clock, however fast the machine draws.
+	var until := Time.get_ticks_msec() + 3000
+	while _bubble.visible and Time.get_ticks_msec() < until:
 		await process_frame
 	_t.check("B9 a hushed call's plate stops babbling at once and the line is free once it is down", babbling and still and not _bubble.visible
 			and _bubble.caller() == "", "babbling %s, still %s, bubble up %s, caller '%s'" % [babbling, still, _bubble.visible, _bubble.caller()])
