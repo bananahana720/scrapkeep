@@ -133,7 +133,7 @@ Every committed hostile attack draws the declared geometry damage will use, and 
 
 - **Geometry.** Draw exactly the geometry the hit test resolves. Solid means the release now. A dashed outline shows the full-charge extent.
 - **Forgiveness.** Aim forgiveness lives in the hit test, where a target counts if its hull touches the geometry. It never lives in a drawing that differs from the damage (see Conflicts resolved).
-- **Style.** Class colour, 15% clean fill, rounded caps and class tick marks on the rim. No stripes, ever.
+- **Style.** Class colour, 15% clean fill, rounded caps and class tick marks on the rim. No stripes, ever. An aim cone (the vault kick, the slingshot, the bank shot) marks a direction the ball leaves along, not an area a hit lands in: its fill is a root at the ball, 15% there and thinned to nothing 3 m out whatever the cone's length, and the dashed lines carry the direction, so it cannot lie across the view when the kick points back over the camera.
 - **Gauge ring.** A 48 px ring around the reticle fills clockwise from 12 o'clock, linearly over `charge_max`. At full it holds with a slow class-colour breathe (0.5 s period) through the 0.5 s grace, then fires.
 - **Cancel or knock.** The indicator and the gauge collapse to the reticle in 120 ms with a dry click. No release sound plays and no cooldown sweep starts.
 - **Blocked.** A blocked or invalid aim draws the indicator in bone, dashed, with a charcoal cross at the reticle (RR-03).
