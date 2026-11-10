@@ -24,7 +24,7 @@ const ROWS := {
 	# the flume's line fight. They stand where "Break its guard" stands on any other Warden.
 	"ride_sheet": {"glyph": "cat_defense", "words": "Ride the water sheet up"},
 	"latch_warden": {"glyph": "cat_defense", "words": "Latch onto the Warden"},
-	"fire_from_line": {"glyph": "cat_defense", "words": "Fire from the line"},
+	"fire_from_line": {"glyph": "cat_defense", "words": "Latched: shoot the Warden"},
 	# Brindle's fight by phase (boss.gd plate_reading; objective_text() is the long readout).
 	"shoot_magnets": {"glyph": "fac_fleet", "words": "Shoot the crane magnets"},
 	"slam_caps": {"glyph": "fac_fleet", "words": "Slam the vent caps"},

@@ -32,7 +32,10 @@ const GLB := "res://assets/models/bosses/boss_pickup.glb"
 # of snapping at the commit, and the Scuttle counts short tries for its hint; pickup meshes unchanged. Was 059a4a6d.
 # Re-pinned 2026-11-09 (ruling bs, held floor bank, #660): hits on a held hull bank toward the next phase's bar
 # (banking, bank_cap, _bank); pickup meshes unchanged. Was b8cc7630.
-const BASE_LOGIC_SHA := "894f3522ccb973142f0099dd550d5694265e6568695de5d788d5ef7596abd2d0"
+# Re-pinned 2026-11-10 (first-timer film, PF-17 and PF-18): plate_reading no longer calls the cockpit open while a
+# Scuttle charge is committed (charge_coming), and plate_targets hands the HUD the places the plate's row
+# names; both read-only, no hit or warning changes; pickup meshes unchanged. Was 894f3522.
+const BASE_LOGIC_SHA := "5188095652bcede2397f855ec26990dfd97b882d48fb1aec2d7f78a6a89469c6"
 
 var failures := 0
 var game
