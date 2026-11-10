@@ -2,7 +2,7 @@
 """Model audit over exported GLB files: mesh and clip faults, and outlines at play size.
 
     python3 tools/model_audit.py faults   <glb or glob>... [--out=<json>]
-    python3 tools/model_audit.py outlines <glb or glob>... --out=<dir> [--ppm=32] [--pitch=35] [--yaw=30]
+    python3 tools/model_audit.py outlines <glb or glob>... --out=<dir> [--ppm=32] [--pitch=35] [--yaw=30] [--seed=7]
 
 It reads the GLB the game loads, not the Blender scene, and needs no engine. `faults` needs numpy; `outlines`
 also needs Pillow. Both report and exit 0: a finding is a candidate for a look, never a verdict.
@@ -13,22 +13,27 @@ faults, per file (rest pose, world space):
   flipped      triangles whose three vertex normals, summed, point against the face's winding: the face is lit as
                if it faced the other way. Count and area, to set against the file's area_m2. A flipped face can
                be shut inside the body and never seen; look before fixing.
-  doubled      a triangle drawn twice with the same winding (overdraw and z-fight). Count and area.
+  doubled      a triangle drawn twice with the same winding (overdraw and z-fight). Count and area. Faces are
+               matched inside one surface only, corners on the same WELD grid point.
   two_sided    a triangle drawn twice with opposite winding: a sheet modelled with both faces. Listed, not a fault.
   bad_weights  skinned vertices whose weights do not sum to 1 (2% slack); zero_weights, the ones that sum to 0;
                over4, the ones with more than four influences (Godot keeps four).
   snaps        clip steps on one node that are fast (over SNAP_DEG degrees a second or SNAP_M metres a second) and
                over SNAP_RATIO times both neighbouring steps: one frame that jumps. `held` is true when the sampler
-               is STEP, which is a held pose by design. A number cannot tell style from fault: draw the frames
-               (tools/anim_clip_capture.gd) before calling one a pop.
+               is STEP, which is a held pose by design. A clip's first and last step have one neighbour and are
+               not tested. A number cannot tell style from fault: check the clip's pose table for keys one frame
+               apart and draw the frames (tools/anim_clip_capture.gd) before calling one a pop.
+
+A skinned surface is placed by its joints in their rest pose, as glTF says, and a mirrored node's winding is
+reversed, so both read as the game draws them.
 
 outlines: each model as a filled black outline from the play camera's side (orthographic, `pitch` down, `yaw`
 round), feet on a shared ground point, at `ppm` pixels a metre. 32 is a 1080p frame through a 60 degree lens from
 30 m. Writes to --out:
   outlines.json       each outline's area in pixels and every pair's overlap (shared area over joined area, 1 is
-                      identical), highest first.
-  outlines-blind.jpg  the outlines in shuffled order under letters, with an actual-size strip. Give this sheet,
-                      and nothing else, to a reviewer who has not seen the game and ask what each one is and does.
+                      identical), highest first. The canvas is sized to hold the largest model whole.
+  outlines-blind.jpg  the outlines at that size, in shuffled order under letters. Give this sheet, and nothing
+                      else, to a reviewer who has not seen the game and ask what each one is and does.
   outlines-key.json   letter to file name, for scoring the answers afterwards.
 An outline has no colour, motion or sound. A high overlap or a wrong blind answer says the shape is not doing the
 work on its own; whether it matters in play is for a PC photograph and a person.
@@ -46,13 +51,11 @@ SNAP_DEG = 360.0
 SNAP_M = 3.0
 SNAP_RATIO = 4.0
 WEIGHT_SLACK = 0.02
-WELD = 1e-4                  # vertices closer than this are one point when matching faces
+WELD = 1e-4                  # grid step, metres: corners on the same grid point are one point when matching faces
 AREA_EPS = 1e-9
-CANVAS_M = 12.0              # outline canvas, metres a side
-FOOT_M = 0.75                # ground point this far above the canvas's lower edge
+MARGIN_M = 0.25              # clear canvas round the largest outline
 BONE = (210, 197, 165)
 OXIDE = (155, 81, 58)
-CHARCOAL = (36, 42, 40)
 
 _COMPONENT = {5120: np.int8, 5121: np.uint8, 5122: np.int16, 5123: np.uint16, 5125: np.uint32, 5126: np.float32}
 _WIDTH = {"SCALAR": 1, "VEC2": 2, "VEC3": 3, "VEC4": 4, "MAT4": 16}
@@ -117,7 +120,8 @@ class Glb:
         return out
 
     def surfaces(self):
-        """Each triangle surface as (node name, world positions Nx3, world normals Nx3 or None, indices Mx3, primitive)."""
+        """Each triangle surface in the rest pose, in world space:
+        (node name, positions Nx3, normals Nx3 or None, indices Mx3, primitive, raw normal lengths or None)."""
         world = self.world()
         for index, node in enumerate(self.json.get("nodes", [])):
             if "mesh" not in node or index not in world:
@@ -125,21 +129,46 @@ class Glb:
             for prim in self.json["meshes"][node["mesh"]]["primitives"]:
                 if prim.get("mode", 4) != 4:
                     continue
-                at = world[index]
-                local = self.accessor(prim["attributes"]["POSITION"])
-                pos = local @ at[:3, :3].T + at[:3, 3]
-                nor = None
-                if "NORMAL" in prim["attributes"]:
-                    nor = self.accessor(prim["attributes"]["NORMAL"]) @ np.linalg.inv(at[:3, :3])
+                attrs = prim["attributes"]
+                local = self.accessor(attrs["POSITION"])
+                raw = self.accessor(attrs["NORMAL"]) if "NORMAL" in attrs else None
                 if "indices" in prim:
                     idx = self.accessor(prim["indices"]).reshape(-1, 3)
                 else:
-                    idx = np.arange(len(pos)).reshape(-1, 3)
-                yield node.get("name", "?"), pos, nor, idx, prim
+                    idx = np.arange(len(local)).reshape(-1, 3)
+                if "skin" in node and "JOINTS_0" in attrs and "WEIGHTS_0" in attrs:
+                    pos, nor, mirrored = self._skinned(node["skin"], world, local, raw, attrs)
+                else:
+                    at = world[index]
+                    pos = local @ at[:3, :3].T + at[:3, 3]
+                    nor = raw @ np.linalg.inv(at[:3, :3]) if raw is not None else None
+                    mirrored = np.linalg.det(at[:3, :3]) < 0
+                if mirrored:
+                    idx = idx[:, [0, 2, 1]]
+                yield (node.get("name", "?"), pos, nor, idx, prim,
+                       np.linalg.norm(raw, axis=1) if raw is not None else None)
+
+    def _skinned(self, skin_index, world, local, raw, attrs):
+        skin = self.json["skins"][skin_index]
+        joints = skin["joints"]
+        if "inverseBindMatrices" in skin:
+            bind = self.accessor(skin["inverseBindMatrices"]).reshape(-1, 4, 4).transpose(0, 2, 1)
+        else:
+            bind = np.tile(np.eye(4), (len(joints), 1, 1))
+        place = np.stack([world[joint] @ bind[i] for i, joint in enumerate(joints)])
+        which = self.accessor(attrs["JOINTS_0"]).astype(np.int64)
+        weight = self.accessor(attrs["WEIGHTS_0"])
+        total = weight.sum(axis=1, keepdims=True)
+        weight = np.where(total > 1e-9, weight / np.where(total > 1e-9, total, 1), 0.0)
+        blend = (place[which] * weight[:, :, None, None]).sum(axis=1)
+        blend[total.ravel() <= 1e-9] = np.eye(4)
+        pos = np.einsum("nij,nj->ni", blend[:, :3, :3], local) + blend[:, :3, 3]
+        nor = np.einsum("nij,nj->ni", blend[:, :3, :3], raw) if raw is not None else None
+        return pos, nor, bool(np.median(np.linalg.det(blend[:, :3, :3])) < 0)
 
 
 def _mesh_faults(glb, row):
-    for _name, pos, nor, idx, prim in glb.surfaces():
+    for _name, pos, nor, idx, prim, raw_length in glb.surfaces():
         row["tris"] += len(idx)
         a, b, c = pos[idx[:, 0]], pos[idx[:, 1]], pos[idx[:, 2]]
         face = np.cross(b - a, c - a)
@@ -148,25 +177,24 @@ def _mesh_faults(glb, row):
         row["degenerate"] += int(flat.sum())
         row["area_m2"] += float(area.sum())
         if nor is not None:
-            length = np.linalg.norm(nor, axis=1)
-            row["zero_normal"] += int((~(length >= 0.5)).sum())
+            row["zero_normal"] += int((~(raw_length >= 0.5)).sum())
             against = ((nor[idx].sum(axis=1) * face).sum(axis=1) < 0) & ~flat
             row["flipped"] += int(against.sum())
             row["flipped_m2"] += float(area[against].sum())
         _, weld = np.unique(np.round(pos / WELD).astype(np.int64), axis=0, return_inverse=True)
         corners = weld.ravel()[idx]
-        first = {}
+        seen = {}
         for i, tri in enumerate(corners):
             if flat[i] or len(set(tri)) < 3:
                 continue
-            key = tuple(sorted(tri))
-            if key not in first:
-                first[key] = i
-            elif np.dot(face[first[key]], face[i]) > 0:
+            sides = seen.setdefault(tuple(sorted(tri)), [])
+            if any(np.dot(face[j], face[i]) > 0 for j in sides):
                 row["doubled"] += 1
                 row["doubled_m2"] += float(area[i])
             else:
-                row["two_sided"] += 1
+                if sides:
+                    row["two_sided"] += 1
+                sides.append(i)
         if "WEIGHTS_0" in prim["attributes"]:
             total = glb.accessor(prim["attributes"]["WEIGHTS_0"]).sum(axis=1)
             if "WEIGHTS_1" in prim["attributes"]:
@@ -257,23 +285,39 @@ def faults(files, out):
     return rows
 
 
-def _outline(path, ppm, pitch, yaw, size):
-    from PIL import Image, ImageDraw
-    surfaces = [(pos, idx) for _name, pos, _nor, idx, _prim in Glb(path).surfaces()]
+def _flat(path, pitch, yaw):
+    """One model seen from the play camera's side, in metres from its ground point: [(across, up, indices)]."""
+    surfaces = [(pos, idx) for _name, pos, _nor, idx, _prim, _raw in Glb(path).surfaces()]
     if not surfaces:
         raise ValueError("no triangles")
     ground = min(pos[:, 1].min() for pos, _ in surfaces)
-    image = Image.new("L", (size, size), 0)
-    draw = ImageDraw.Draw(image)
     cy, sy, cp, sp = np.cos(yaw), np.sin(yaw), np.cos(pitch), np.sin(pitch)
+    out = []
     for pos, idx in surfaces:
         across = pos[:, 0] * cy + pos[:, 2] * sy
         depth = -pos[:, 0] * sy + pos[:, 2] * cy
-        up = (pos[:, 1] - ground) * cp + depth * sp
-        px = np.stack([size / 2 + across * ppm, size - FOOT_M * ppm - up * ppm], axis=1)
-        for tri in idx:
-            draw.polygon([tuple(px[tri[0]]), tuple(px[tri[1]]), tuple(px[tri[2]])], fill=255)
-    return np.array(image) > 0
+        out.append((across, (pos[:, 1] - ground) * cp + depth * sp, idx))
+    return out
+
+
+def _masks(files, ppm, pitch, yaw):
+    """Every model's filled outline on one canvas size, ground points together, the largest model whole."""
+    from PIL import Image, ImageDraw
+    flats = [_flat(path, pitch, yaw) for path in files]
+    reach = max(np.abs(across).max() for flat in flats for across, _up, _idx in flat) + MARGIN_M
+    top = max(up.max() for flat in flats for _across, up, _idx in flat) + MARGIN_M
+    foot = max(-up.min() for flat in flats for _across, up, _idx in flat) + MARGIN_M
+    width, height = int(np.ceil(2 * reach * ppm)), int(np.ceil((top + foot) * ppm))
+    masks = []
+    for flat in flats:
+        image = Image.new("L", (width, height), 0)
+        draw = ImageDraw.Draw(image)
+        for across, up, idx in flat:
+            px = np.stack([(reach + across) * ppm, (top - up) * ppm], axis=1)
+            for tri in idx:
+                draw.polygon([tuple(px[tri[0]]), tuple(px[tri[1]]), tuple(px[tri[2]])], fill=255)
+        masks.append(np.array(image) > 0)
+    return masks
 
 
 def _font(size):
@@ -303,17 +347,16 @@ def overlaps(masks):
 
 def outlines(files, out, ppm=32.0, pitch=35.0, yaw=30.0, seed=7):
     from PIL import Image, ImageDraw
-    size = int(round(CANVAS_M * ppm))
     names = [Path(path).stem for path in files]
-    masks = [_outline(path, ppm, np.radians(pitch), np.radians(yaw), size) for path in files]
+    masks = _masks(files, ppm, np.radians(pitch), np.radians(yaw))
+    high, wide = masks[0].shape
     pairs = overlaps(masks)
     out = Path(out)
     out.mkdir(parents=True, exist_ok=True)
-    clipped = [names[i] for i, mask in enumerate(masks) if mask[0].any() or mask[:, 0].any() or mask[:, -1].any()]
     (out / "outlines.json").write_text(json.dumps({
         "ppm": ppm, "pitch": pitch, "yaw": yaw,
         "area_px": {names[i]: int(masks[i].sum()) for i in range(len(masks))},
-        "clipped": clipped,
+        "canvas_px": [wide, high],
         "pairs": [[round(share, 3), names[i], names[j]] for share, i, j in pairs],
     }, indent=1) + "\n")
 
@@ -322,27 +365,17 @@ def outlines(files, out, ppm=32.0, pitch=35.0, yaw=30.0, seed=7):
     letters = [chr(65 + k) if k < 26 else chr(65 + k // 26 - 1) + chr(65 + k % 26) for k in range(len(order))]
     cols = min(6, max(1, len(order)))
     rows = (len(order) + cols - 1) // cols
-    strip = 34
-    sheet = Image.new("RGB", (max(cols * size, 95 * len(order) + 20), rows * size + strip + size + 10), BONE)
+    sheet = Image.new("RGB", (cols * wide, rows * high), BONE)
     draw = ImageDraw.Draw(sheet)
     for k, i in enumerate(order):
-        x, y = (k % cols) * size, (k // cols) * size
+        x, y = (k % cols) * wide, (k // cols) * high
         sheet.paste(_stamp(masks[i]), (x, y))
-        draw.text((x + 10, y + 6), letters[k], fill=OXIDE, font=_font(34))
-    top = rows * size + 6
-    draw.text((10, top), "Actual size at %g pixels a metre:" % ppm, fill=CHARCOAL, font=_font(22))
-    for k, i in enumerate(order):
-        filled = np.where(masks[i].any(axis=0))[0]
-        if len(filled):
-            sheet.paste(_stamp(masks[i][:, filled.min():filled.max() + 1]), (10 + k * 95, top + strip))
-        draw.text((10 + k * 95, top + strip), letters[k], fill=OXIDE, font=_font(14))
+        draw.text((x + 8, y + 6), letters[k], fill=OXIDE, font=_font(max(14, high // 12)))
     sheet.save(out / "outlines-blind.jpg", quality=88)
     (out / "outlines-key.json").write_text(json.dumps({letters[k]: names[i] for k, i in enumerate(order)}, indent=1) + "\n")
 
     for share, i, j in pairs[:10]:
         print("%.2f  %s / %s" % (share, names[i], names[j]))
-    if clipped:
-        print("clipped by the %g m canvas, overlap understated: %s" % (CANVAS_M, ", ".join(clipped)))
     print("wrote %s" % out)
     return pairs
 
@@ -369,7 +402,7 @@ def main(argv):
         print("outlines needs --out=<dir>")
         return 2
     outlines(files, options["out"], float(options.get("ppm", 32)), float(options.get("pitch", 35)),
-             float(options.get("yaw", 30)))
+             float(options.get("yaw", 30)), int(options.get("seed", 7)))
     return 0
 
 
