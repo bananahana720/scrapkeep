@@ -21,12 +21,19 @@ const T := preload("res://tests/support/t.gd")
 #   rout           no toast; at most one of each kind and three carriers in the two seconds after
 #   colour         no celebration stamp is drawn in the hazard colour
 #   names          the flume Warden's plate reads its card's name; the core toast says what it does
+# Gaps, written down: the HUD's own clock (toast, achievement panel and call-in timers) is private
+# to its process and is not stepped here, so the achievement panel (Brindle's rout earns one), the
+# victory card and the speech bubble are read only as far as a public read reaches them
+# (corner_rects, screens.visible); a lingering panel would still show as a carrier, a late one would not.
 # Each count has a planted case: the removed toast row, and the removed shout, put back in a copy
 # must trip the same check. Evidence limit: rules and counts, not how the beat reads on screen.
 
 const DT := 1.0 / 90.0
 const WINDOW := 2.0
 const ROUT_CARRIERS := 3
+# The HUD still toasts a phase's name (hud.gd:359-360, another unit's file). This is the one toast
+# owed per phase; it goes to 0 when the HUD stops toasting phase names, and the check fails on a second.
+const PHASE_TOASTS_OWED := 1
 const BREAK_KINDS := ["beacon_unsealed", "reward_offered"]
 const PLANTED_TOASTS := {"beacon_unsealed": "Warden broken: gates open", "reward_offered": "Reward gates ahead", "boss_defeated": "Brindle routed"}
 const PLANTED_SHOUTS := {"kind": "sfx_word", "at": 0.5, "for": 1.6, "text": "WOOO!", "at_share": Vector2(0.40, 0.33)}
@@ -72,16 +79,42 @@ func _run_all() -> void:
 	quit(code)
 
 
-# The kinds the HUD would toast for these events in this table, by the HUD's own rule.
-func _toasting(table: Dictionary, kinds: Array) -> Array:
-	var out: Array = []
-	for kind in kinds:
-		var row: Dictionary = table.get(kind, {})
-		if String(row.get("hud", "")) == "" or kind in Hud.CARD_OWNED or kind in Hud.PRESENTATION_OWNED or kind in Hud.RETIRED_TOASTS:
-			continue
-		if int(row.get("priority", 0)) > EventKinds.TOAST_PRIORITY or kind in Hud.NOTABLE:
-			out.append(kind)
-	return out
+# The kinds the HUD toasts for these events: its own public read for the live table.
+func _toasting(kinds: Array) -> Array:
+	return kinds.filter(func(kind): return kind in Hud.toast_kinds())
+
+
+# The HUD's rule applied to a copy of the table, for the planted case. Check 00 holds it equal to
+# Hud.toast_kinds() on the live table, so it cannot drift from the HUD's own rule.
+func _rule_toasts(table: Dictionary, kind: String) -> bool:
+	var row: Dictionary = table.get(kind, {})
+	if String(row.get("hud", "")) == "" or kind in Hud.CARD_OWNED or kind in Hud.PRESENTATION_OWNED or kind in Hud.RETIRED_TOASTS:
+		return false
+	return int(row.get("priority", 0)) > EventKinds.TOAST_PRIORITY or kind in Hud.NOTABLE or kind == "event_ended"
+
+
+# Celebration stamps drawn in the hazard colour, as "row form text", and how many were seen.
+func _hazard_celebrations(rows: Dictionary) -> Dictionary:
+	var celebrate := ["CLOCKED IN", "SHIFT COMPLETE", "ROUTED!", "HIRED"]
+	var seen := 0
+	var bad: Array = []
+	for id in rows:
+		for form in ["full", "short"]:
+			for piece in rows[id].get(form, []):
+				if piece.kind == "stamp" and String(piece.text) in celebrate:
+					seen += 1
+					if String(piece.get("colour", "HAZARD")) == "HAZARD":
+						bad.append("%s %s %s" % [id, form, piece.text])
+	return {"seen": seen, "bad": bad}
+
+
+# The rout's two count rules, shared by the live check and the planted one.
+func _one_voice(counts: Dictionary, machine: int) -> bool:
+	return _worst(counts) <= 1 and counts.get("sfx_word", 0) + machine <= 1
+
+
+func _few_carriers(counts: Dictionary, machine: int, extra: int) -> bool:
+	return _total(counts) + machine + extra <= ROUT_CARRIERS
 
 
 # Pieces that start inside the window, counted by kind.
@@ -109,34 +142,34 @@ func _total(counts: Dictionary) -> int:
 
 # The toast kinds and the table itself: the three rows say nothing, and a copy with them restored does.
 func _tables() -> void:
-	_t.eq("01 the real table toasts nothing for a Warden break or a rout", _toasting(EventKinds.ROWS, BREAK_KINDS + ["boss_defeated"]), [])
+	var equal := true
+	for kind in EventKinds.ROWS:
+		equal = equal and (kind in Hud.toast_kinds()) == _rule_toasts(EventKinds.ROWS, kind)
+	_t.check("00 the planted-case rule matches the HUD's own toast kinds on the live table", equal, "")
+	_t.eq("01 the real table toasts nothing for a Warden break or a rout", _toasting(BREAK_KINDS + ["boss_defeated"]), [])
 	var planted: Dictionary = EventKinds.ROWS.duplicate(true)
 	for kind in PLANTED_TOASTS:
 		planted[kind]["hud"] = PLANTED_TOASTS[kind]
-	_t.check("02 planted: the three toast rows put back are caught", _toasting(planted, BREAK_KINDS + ["boss_defeated"]).size() == 3,
-		str(_toasting(planted, BREAK_KINDS + ["boss_defeated"])))
+	var restored: Array = (BREAK_KINDS + ["boss_defeated"]).filter(func(kind): return _rule_toasts(planted, kind))
+	_t.check("02 planted: the three toast rows put back are caught", restored.size() == 3, str(restored))
 	_t.eq("03 the next objective stays", EventKinds.objective("reward_offered"), "Roll through a gate")
 	_t.eq("04 the plate tick stays", Objectives.done_words("warden"), "Warden broken")
-	_t.eq("05 the core toast says what the core does", EventKinds.hud("core_gained"), "Core found: richer gates")
+	_t.eq("05 the core toast says what the core does", EventKinds.hud("core_gained"), "Gates offer better parts")
 	_t.check("06 the sounds stay on the rows", EventKinds.row("beacon_unsealed").sound == "stinger_unseal" and EventKinds.row("reward_offered").sound == "gates_open"
 		and EventKinds.row("boss_defeated").sound == "stinger_boss_defeated", "")
 
 
 # Every stamp resolves to a colour: a celebration is amber, never the hazard colour.
 func _colours() -> void:
-	var celebrate := ["CLOCKED IN", "SHIFT COMPLETE", "ROUTED!", "HIRED"]
-	var seen := 0
-	var bad: Array = []
-	for id in Rows.ROWS:
-		for form in ["full", "short"]:
-			for piece in Rows.pieces(id, form == "short"):
-				if piece.kind == "stamp" and String(piece.text) in celebrate:
-					seen += 1
-					if String(piece.get("colour", "HAZARD")) == "HAZARD":
-						bad.append("%s %s %s" % [id, form, piece.text])
-	_t.check("10 every celebration stamp is amber", seen == 8 and bad.is_empty(), "%d stamps, hazard: %s" % [seen, bad])
-	var hazard_stamp := {"kind": "stamp", "text": "ROUTED!", "at": 0.9, "for": 1.5}
-	_t.check("11 planted: a stamp with no colour reads as hazard", String(hazard_stamp.get("colour", "HAZARD")) == "HAZARD", "")
+	var live := _hazard_celebrations(Rows.ROWS)
+	_t.check("10 every celebration stamp is amber", live.seen == 8 and live.bad.is_empty(), "%d stamps, hazard: %s" % [live.seen, live.bad])
+	# Planted: one celebration stamp set back to the hazard colour in a copy of the rows is reported.
+	var planted: Dictionary = Rows.ROWS.duplicate(true)
+	for piece in planted["brindle_rout"]["full"]:
+		if piece.kind == "stamp":
+			piece["colour"] = "HAZARD"
+	var caught := _hazard_celebrations(planted)
+	_t.check("11 planted: a celebration stamp set back to hazard is reported", caught.bad == ["brindle_rout full ROUTED!"], str(caught.bad))
 
 
 func _names() -> void:
@@ -210,7 +243,8 @@ func _phases() -> void:
 		var machine: int = fx.moments.filter(func(m): return m[1] == "word").size() - before
 		_t.check("51 phase %d: one stamp, one caption, one machine word, nothing else on its own" % phase,
 			kinds.get("stamp", 0) == 1 and kinds.get("caption", 0) == 1 and not kinds.has("sfx_word") and not kinds.has("card") and machine == 1 and _worst(worst) <= 1,
-			"row %s, machine words %d, live %s, toasts %s" % [kinds, machine, worst, toasts])
+			"row %s, machine words %d, live %s" % [kinds, machine, worst])
+		_t.check("52 phase %d: only the phase-name toast the HUD still owes" % phase, toasts.size() == PHASE_TOASTS_OWED, "toasts %s, owed %d" % [toasts, PHASE_TOASTS_OWED])
 		player.advance(WINDOW)
 
 
@@ -226,21 +260,26 @@ func _rout() -> void:
 	Harness.defeat(_game)
 	_t.check("60 the defeat plays the rout row", player.playing and player.id == "brindle_rout", player.id)
 	var toasts := {}
+	var panels := 0
 	var t := 0.0
 	while t < WINDOW:
 		player.advance(DT)
 		fx._process(DT)
+		var screens = _game.get("screens")
+		if hud.corner_rects().any(func(r): return r["name"] == "plate") or (screens != null and screens.visible):
+			panels += 1
 		for text in hud.toast_texts():
 			if not text in lingering:
 				toasts[text] = true
 		t += DT
 	var counts := _by_kind(Rows.resolve("brindle_rout", player.short, 7))
 	var machine: int = fx.moments.filter(func(m): return m[1] == "word").size() - before
-	var carriers := _total(counts) + machine + toasts.size()
-	_t.check("61 the rout raises no toast", toasts.is_empty(), str(toasts.keys()))
-	_t.check("62 at most one of each kind, world words from the row and the machine together", _worst(counts) <= 1 and counts.get("sfx_word", 0) + machine <= 1,
+	var extra: int = toasts.size() + (1 if panels > 0 else 0)
+	var carriers := _total(counts) + machine + extra
+	_t.check("61 the rout raises no toast, achievement panel or victory card over its window", toasts.is_empty() and panels == 0, "%s, panel frames %d" % [toasts.keys(), panels])
+	_t.check("62 at most one of each kind, world words from the row and the machine together", _one_voice(counts, machine),
 		"row %s, machine words %d" % [counts, machine])
-	_t.check("63 at most three carriers in all", carriers <= ROUT_CARRIERS, "%d carriers: row %s, machine %d, toasts %d" % [carriers, counts, machine, toasts.size()])
+	_t.check("63 at most three carriers in all", _few_carriers(counts, machine, extra), "%d carriers: row %s, machine %d, toasts and panels %d" % [carriers, counts, machine, extra])
 	_t.check("64 the kept three are the shout, the stamp and the caption", counts.get("sfx_word", 0) == 1 and counts.get("stamp", 0) == 1 and counts.get("caption", 0) == 1
 		and Rows.pieces("brindle_rout", false).any(func(p): return p.kind == "sfx_word" and p.text == "FWOOMP"), str(counts))
 	_t.check("65 Brindle's fall carries no word of his own", not MachineFx.BOSSES["brindle"].has("fall_word"), "")
@@ -248,7 +287,7 @@ func _rout() -> void:
 	var planted: Array = Rows.pieces("brindle_rout", false).duplicate(true)
 	planted.append(PLANTED_SHOUTS)
 	var planted_counts := _by_kind(planted)
-	_t.check("66 planted: a second shout put back is caught", counts.get("sfx_word", 0) < planted_counts.get("sfx_word", 0) and _total(planted_counts) + machine + toasts.size() > carriers,
+	_t.check("66 planted: with a second shout put back, both rout rules trip", not _one_voice(planted_counts, machine) and not _few_carriers(planted_counts, machine, extra),
 		str(planted_counts))
 	# The rout's stamp is amber, read from the resolved piece.
 	var stamp_colour := Palette.AMBER

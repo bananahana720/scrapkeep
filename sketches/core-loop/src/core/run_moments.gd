@@ -454,6 +454,8 @@ func _stagger_name(enemy: Node3D, boss: bool) -> String:
 	if boss:
 		return _boss_name()
 	var family = enemy.get("family")
+	if family != null and String(family) == "reactor":
+		return "The Meltdown Warden"  # the plate's and the card's name for it
 	return "The %s Warden" % String(family).capitalize() if family != null and String(family) != "" else "The Warden"
 
 
