@@ -215,10 +215,10 @@ func _note_rows() -> void:
 	_t.eq("only the one under the ball counts taken", driver._note["rib_caches_taken"], 1)
 	_t.check("no pockets are named before the world has its sites", not driver._note.has("pockets_drawn"))
 	spy.world.activities = SpyActivities.new()
-	spy.world.activities.sites = [SpySite.new("cracked_cache", false), SpySite.new("cracked_cache", true, "rim_vault"),
-		SpySite.new("enemy_camp", true, "dome_camp")]
+	spy.world.activities.sites = [SpySite.new("cracked_cache", false), SpySite.new("enemy_camp", false, "runner_yard"),
+		SpySite.new("cracked_cache", true, "rim_vault"), SpySite.new("enemy_camp", true, "dome_camp")]
 	driver._content_scan()
-	_t.eq("the drawn pockets are named by library id, the stage's own cache is not", driver._note["pockets_drawn"], ["rim_vault", "dome_camp"])
+	_t.eq("the drawn pockets are named by library id; the stage's own cache and its own camp in a library room are not", driver._note["pockets_drawn"], ["rim_vault", "dome_camp"])
 	spy.world.activities.sites = []
 	driver._content_scan()
 	_t.eq("read once a stage: a later scan keeps the first reading", driver._note["pockets_drawn"], ["rim_vault", "dome_camp"])

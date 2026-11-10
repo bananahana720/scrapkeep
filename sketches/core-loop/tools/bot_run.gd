@@ -119,7 +119,8 @@ const QaWatch := preload("res://tools/qa_watch.gd")
 # be an absolute path or a user:// path. Next to the spine's two logs the runner writes:
 #   bots.ndjson          one line per run: run_id, policy, seed, class, outcome, stage
 #                        reached, ticks, game and wall seconds, per-stage bot notes (pockets_drawn
-#                        names the pockets that stage drew by library id, [] for none), and the
+#                        names the pockets that stage drew by library id: [] for none, as on the
+#                        legacy maps, and null when the run ended before the stage was played), and the
 #                        beats column (src/core/stage_beats.gd): per stage entered, the physics
 #                        ticks of arrive, loot, find, hold, fight and leave and whether it exited.
 #   scrapbook/           the run-end comic page (src/core/run_moments.gd) of a run that ended:
