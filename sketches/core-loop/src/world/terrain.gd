@@ -739,6 +739,10 @@ func scrap_lines(index: int) -> Array:
 	return map_for(index).scrap_lines
 
 
+func scrap_trail(index: int) -> Dictionary:
+	return map_for(index).scrap_trail
+
+
 func contains(point: Vector3) -> bool:
 	_pad_rows()
 	var half := ParkTerrain.HALF if _is_park[stage - 1] else HALF

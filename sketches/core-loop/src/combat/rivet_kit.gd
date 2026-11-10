@@ -507,9 +507,11 @@ func _commit_beam(from: Vector3, dir: Vector3, length: float, width: float) -> D
 		"kind": "line", "rivet_shape": true, "from": from, "to": endpoint, "full_to": endpoint, "fill": 1.0})
 
 
-# Every area hit selects from its committed record, including its terrain planes.
+# Every area hit selects from its committed record, including its terrain planes. The tests'
+# copy is shallow: the record's cells are committed and never rewritten, and a deep copy of a
+# level Breach's carve cost a tenth of its landing tick.
 func select(shape: Dictionary) -> Array:
-	selected_shapes.append(shape.duplicate(true))
+	selected_shapes.append(shape.duplicate())
 	var picks: Array = []
 	var boxes := _cell_boxes(shape)
 	for enemy in _enemies():
@@ -751,11 +753,12 @@ func _subtract_shadow(cell: Dictionary, shadow: Array, hull_boundary := false) -
 	# Drawn volume stops at terrain first. Hull forgiveness also needs the silhouette caps.
 	var planes: Array = shadow if hull_boundary else [shadow.back()] + shadow.slice(0, shadow.size() - 1)
 	for plane in planes:
-		if (not hull_boundary or not plane.get("solid", false)) and (_bounds_distance(cell["bounds"], plane).x >= -0.0001 or (cell["vertices"] as Array).all(func(v): return (v - plane["at"]).dot(plane["normal"]) >= -0.0001)):
+		if (not hull_boundary or not plane.get("solid", false)) and (_bounds_distance(cell["bounds"], plane).x >= -0.0001 or _all_outside(cell["vertices"], plane)):
 			return [cell]
 	var lit: Array = []
 	var remaining := cell
-	for plane in planes:
+	for index in planes.size():
+		var plane: Dictionary = planes[index]
 		var solid: bool = hull_boundary and bool(plane.get("solid", false))
 		# Wholly inside a plane leaves nothing outside it and the rest unchanged; wholly outside
 		# empties the rest. Both are what the two clips below would return.
@@ -768,12 +771,71 @@ func _subtract_shadow(cell: Dictionary, shadow: Array, hull_boundary := false) -
 		var outside := _clip_cell(remaining, {"at": plane["at"], "normal": -plane["normal"], "terrain": true, "solid": solid})
 		if not (outside["faces"] as Array).is_empty():
 			lit.append(outside)
+		if not hull_boundary and _rest_inside(remaining, plane, planes.slice(index + 1)):
+			return lit
 		remaining = _clip_cell(remaining, {"at": plane["at"], "normal": plane["normal"], "terrain": true, "solid": solid})
 		if (remaining["faces"] as Array).is_empty():
 			if not hull_boundary:
 				return [cell]
 			break
 	return lit
+
+
+func _all_outside(vertices: Array, plane: Dictionary) -> bool:
+	var at: Vector3 = plane["at"]
+	var normal: Vector3 = plane["normal"]
+	for v: Vector3 in vertices:
+		if (v - at).dot(normal) < -0.0001:
+			return false
+	return true
+
+
+# True when the part of cell inside plane would pass every later plane wholly inside it, so the
+# loop above would only skip them and return lit: then that part, which nothing keeps, is not
+# clipped (a level Breach's floor cut, the stand's whole carve, took two clips a part). The part's
+# corners are at most the cell's corners inside plane and its edges' crossings, made as _clip_faces
+# makes them; each later plane must hold them all, and a corner REST_DEPTH inside plane and inside
+# that plane by the tolerance stays in the part, so the part cannot read as wholly outside it.
+const REST_DEPTH := 0.05
+
+
+func _rest_inside(cell: Dictionary, plane: Dictionary, later: Array) -> bool:
+	var at: Vector3 = plane["at"]
+	var normal: Vector3 = plane["normal"]
+	var corners: Array = []
+	var deep: Array = []
+	for face in cell["faces"]:
+		var count: int = face.size()
+		for i in count:
+			var a: Vector3 = face[i]
+			var b: Vector3 = face[(i + 1) % count]
+			var da := (a - at).dot(normal)
+			var db := (b - at).dot(normal)
+			da = 0.0 if absf(da) <= 0.0001 else da
+			db = 0.0 if absf(db) <= 0.0001 else db
+			if da <= 0.0:
+				corners.append(a)
+				if da < -REST_DEPTH:
+					deep.append(a)
+			if (da <= 0.0) != (db <= 0.0):
+				corners.append(a.lerp(b, da / (da - db)))
+	if deep.is_empty():
+		return false
+	for next: Dictionary in later:
+		var next_at: Vector3 = next["at"]
+		var next_normal: Vector3 = next["normal"]
+		for v: Vector3 in corners:
+			if (v - next_at).dot(next_normal) > 0.0001:
+				return false
+		var held := false
+		for v: Vector3 in deep:
+			if (v - next_at).dot(next_normal) < -0.0001:
+				held = true
+				break
+		if not held:
+			return false
+	return true
+
 
 func _face_shadow(origin: Vector3, face: Array) -> Array:
 	var centre := Vector3.ZERO

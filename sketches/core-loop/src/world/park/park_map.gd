@@ -15,6 +15,9 @@ const LANE_REACH_M := 8.0
 # A footprint is linear, a lane rather than an area, when its long side is at least this many times its short side.
 const LANE_LINEAR_ASPECT := 2.0
 const FIXTURE := "res://src/world/park/park_test.json"
+const LINES_PATH := "res://assets/park/%s/lines.json"
+# A scrap trail's gap reaches this far past a built kicker's footprint.
+const TRAIL_GAP_MARGIN_M := 1.0
 # Andrew's "Ride lips only" ruling (2026-10-17 06:16Z): a plain bank, drop, ground shelf or sky island whose height
 # stamp is its whole shape is terrain, not a placeholder, so scatter lands on it as on the open ground. The same rows
 # as scripts/placeholder-gate.mjs PLAIN_SLOPES and isPlainSlope.
@@ -114,6 +117,8 @@ func _fill() -> void:
 		rescue_sites.append({"id": row["id"], "quest": row["quest"], "prompt": row["prompt"], "pilot": row["pilot"],
 			"at": _v2(row["at"]), "face": _v2(row["face"]).normalized()})
 
+	scrap_trail = _scrap_trail()
+
 	# Scatter keeps out of every built footprint (PARK.md 2.9) but the ground, the plain slopes, the mesa
 	# edges and a row the scatter itself dresses; the kit rows come with KB5.
 	scatter = scatter.duplicate(true)
@@ -128,6 +133,68 @@ func _fill() -> void:
 	# ghost-solid band (#183) are sunk to the band along the park's line (scatter.gd, LANE_BAND_M), not across whole
 	# row footprints. Nothing is read or built here: scatter.gd's chunked build makes the mask on a worker, in the first
 	# of its chunk jobs (lane_mask_for), so a ParkMap stays cheap to make and the boot path never touches the graph.
+
+
+# The stage's scrap trail (stage_map.gd scrap_trail): the floor line of the park's lines.json, where that line carries
+# a scrap row ({"spacing_m", "phrase", "rest"}, the beat lay-out scrap_field.gd lay_trail reads), from the drop-in to
+# the engage ring, where the Warden's ground starts. Its gaps are the stretches of the line a built kicker stands on,
+# [from, to] in metres along the line: a plate ramp is built over the ground a piece would stand on (the flume's
+# mesa_entry_kicker buried one 0.9 m deep). A kicker stamped into the ground (the dam's) is ground, and keeps its pieces.
+# {} for a park whose floor line has no scrap row.
+func _scrap_trail() -> Dictionary:
+	var lines_path := LINES_PATH % title
+	if not FileAccess.file_exists(lines_path):
+		return {}
+	var line: Dictionary = ParkSchema.read_file(lines_path)["data"].get("floor", {})
+	var row = line.get("scrap")
+	if not row is Dictionary:
+		return {}
+	var points := PackedVector2Array()
+	for point in line.get("waypoints", []):
+		var at := place_of(park, point) if point is String else _v2(point)
+		if at == Vector2.INF:
+			push_warning("park_map: %s floor waypoint %s resolves to no place, so no scrap trail" % [lines_path, point])
+			return {}
+		if at.distance_to(beacon) <= reach_m and not points.is_empty():
+			var t := Geometry2D.segment_intersects_circle(points[-1], at, beacon, reach_m)
+			if t > 0.0:
+				points.append(points[-1].lerp(at, t))
+			break
+		points.append(at)
+	var ramps: Array = park["park_rows"].filter(func(r: Dictionary) -> bool:
+		return r["element"] == "kicker" and String(r.get("stamp", "")) == "")
+	var gaps := []
+	var along := 0.0
+	var inside := false
+	for i in range(1, points.size()):
+		var leg := points[i] - points[i - 1]
+		var steps := maxi(1, ceili(leg.length()))
+		for s in steps + 1:
+			var p := points[i - 1] + leg * (float(s) / steps)
+			var on_ramp := ramps.any(func(r: Dictionary) -> bool: return footprint_contains(r, p, TRAIL_GAP_MARGIN_M))
+			var at := along + leg.length() * s / steps
+			if on_ramp and not inside:
+				gaps.append([at, at])
+			elif on_ramp:
+				gaps[-1][1] = at
+			inside = on_ramp
+		along += leg.length()
+	return {"points": points, "spacing_m": float(row["spacing_m"]), "phrase": int(row["phrase"]), "rest": int(row["rest"]),
+		"gaps": gaps}
+
+
+# Where a line's named waypoint stands on a park file: drop_in is the spawn, landmark the landmark's beacon, any other
+# id a park row's or an activity's at. INF when the park has no such place.
+static func place_of(park_data: Dictionary, id: String) -> Vector2:
+	if id == ParkSchema.DROP_IN:
+		return _v2(park_data["spawn"]["at"])
+	if id == ParkSchema.LANDMARK:
+		return _v2(park_data["landmark"]["beacon"])
+	for table in ["park_rows", "activity_rows"]:
+		for row: Dictionary in park_data.get(table, []):
+			if row.get("id") == id:
+				return _v2(row["at"])
+	return Vector2.INF
 
 
 # The res:// path of a park file's baked graph.

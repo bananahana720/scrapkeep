@@ -210,6 +210,8 @@ var boss_plate: Control
 # trying without getting anywhere (objectives.gd).
 var _engaged := false
 var _struggle := Objectives.Struggle.new()
+# The site the activity row names now (objective_reading), or null.
+var _plate_site = null
 # The armour gauge (scrap mode `armor`): the mass heap and the scrap layer over the hull, left of the hull
 # gauge, in the scrap colour where the hull is sand. A hit that reached the scrap flashes
 # its edge amber for ARMOR_FLASH seconds; the hull gauge turns rust only at low health.
@@ -1011,15 +1013,17 @@ func objective_reading() -> Dictionary:
 		return {"id": "", "icon": "", "words": "", "color": Palette.SAND, "progress": -1.0, "distance": -1}
 	var words := Objectives.words(id)
 	if id == "find_activity":
-		# The nearest unfinished site, by name and metres, so the row is a place to go.
+		# An unfinished site by name and metres, so the row is a place to go: the one in front of
+		# the view (Objectives.pick_site), kept until another is clearly the better call.
 		var ball: Vector3 = game.player.shown_position()
-		var nearest = null
+		var offsets := []
 		for site in sites:
-			if nearest == null or ball.distance_squared_to(site.global_position) < ball.distance_squared_to(nearest.global_position):
-				nearest = site
-		if nearest != null:
-			words = Objectives.activity_words(String(nearest.id))
-			distance = ball.distance_to(nearest.global_position)
+			offsets.append(site.global_position - ball)
+		var picked := Objectives.pick_site(offsets, -game.camera.cam.global_transform.basis.z, sites.find(_plate_site) if is_instance_valid(_plate_site) else -1)
+		_plate_site = sites[picked] if picked >= 0 else null
+		if picked >= 0:
+			words = Objectives.activity_words(String(sites[picked].id), game.world.activities.called(String(sites[picked].id)))
+			distance = offsets[picked].length()
 	return {"id": id, "icon": Objectives.glyph(id), "words": words, "color": row_color(id),
 		"progress": _clamp_fraction(gate) if id == "break_clamp_crews" else game.beacon.fraction() if id in RING_ROWS else -1.0,
 		"distance": int(distance) if id in ["find_warden", "find_activity"] and distance < INF else -1}

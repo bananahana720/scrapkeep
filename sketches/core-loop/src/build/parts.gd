@@ -705,7 +705,21 @@ static func seam_met(need: String) -> bool:
 
 static func display_name(part_id: String) -> String:
 	var d: Resource = def(part_id)
-	return d.display_name if d != null else part_id.replace("_", " ").capitalize()
+	if d != null:
+		return d.display_name
+	return String(token(part_id).get("name", part_id.replace("_", " ").capitalize()))
+
+
+# Run tokens: ids a run holds as parts (run.add_part) with no catalogue row, so they are never
+# offered, rolled or read as a build part. Each row is what the token's reveal shows: its name,
+# its card line and its stamp.
+const TOKENS := {
+	"admirals_crest": {"name": "Admiral's Crest", "verb": "Fleet property. Yours now.", "stamp": "TROPHY"},
+}
+
+
+static func token(part_id: String) -> Dictionary:
+	return TOKENS.get(part_id, {})
 
 
 static func tags_of(part_id: String) -> Array:

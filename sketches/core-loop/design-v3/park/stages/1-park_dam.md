@@ -389,7 +389,7 @@ Draft text for the lore pass, in the tone of `SOUND-STORY.md:212`. Fragment ids 
 | `rescue_sites` | Rivet's cage at (60, -150), `map_spillway.gd:99-100`; Rivet unlocks by it (`class_def.gd:48`) | Must stay. The cage is `rescue_rows` rivet_cage at [60, -594] on the top shelf, at the north foot of dome_7 on flat ground, facing -x so the roll-in comes from the spawn side; moved 6 m from the first pick [60, -600], which sat on the dome's flank (park_rescue_test) |
 | `vault` | (-5, -130), `map_spillway.gd:67` | A plinth at [-260, -520] on the shelf's west side, off the fall line with a downhill way back (`stage_map.gd:26-27`) |
 | `unique_events` | `scrap_stampede`, `hold_the_relay`, `map_spillway.gd:86-97` | Retire into this page's event rows and the activities; the stampede's hauler becomes stage 2's `hauler_bounty` |
-| `scrap_lines` | four short lines, `map_spillway.gd:80-85` | Derive from the pilot lines in `assets/park/park_dam/lines.json` |
+| `scrap_lines` | four short lines, `map_spillway.gd:80-85` | Built 9 Nov (ruling cd) as `scrap_trail`: the `scrap` row on the floor line of `assets/park/park_dam/lines.json`, laid to the beat by `scrap_field.gd` `lay_trail`. `scrap_lines` stays empty, so no gears and no fabricator hoops |
 | `basin` | the flood bowl, `map_spillway.gd:77-78` | Replaced by `plunge_pool_flood` |
 | `beacon_floor` | 15 m, `map_spillway.gd:66` | The toe apron's height, read from the bake |
 
