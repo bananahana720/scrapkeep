@@ -50,6 +50,8 @@ How a failure is called:
 
 For each failure the receipt prints the failing lines of its last solo run, so the check that failed sits beside the cause its row names. An `ERROR` line at exit fails a run even when every check passed. The receipt counts `ERROR`, `SCRIPT ERROR`, "still in use" and "previously freed" lines across every test's log, passing tests included.
 
+Every test the runner starts gets its own empty user data folder (`XDG_DATA_HOME`, in `scripts/sketch-smoke.mjs` and `scripts/sketch-fast.mjs`), removed when the test ends. So `user://` carries nothing from one test file to the next, in a shard or in the fast lane; the child runs a test starts share that test's folder unless the test or its helper gives them their own (a launched child gets its own, `tests/trees/child_runs.gd`). A bare Godot command typed by hand does not get one: it reads and writes the container's one shared folder, `~/.local/share/godot/app_userdata/core-loop`, with whatever earlier hand runs left there. Rerun a suspect test through the runner, or set `XDG_DATA_HOME` to a new empty folder first.
+
 ### Slow boxes
 
 Cloud boxes differ by about a third in speed. On a slow one, export `SMOKE_TIME_SCALE=1.5` (1 to 4) before `run`: every test's time limit is multiplied after its marker and ceiling. The receipt names the scale. It does not reach a limit a test sets for its own child processes; those live in the test files. Do not patch the runner: the wave 19 to 32 shards each carried a local patch for full output and bot time limits, and both are now options (`SMOKE_LOG_DIR`, `SMOKE_FULL=1`, `SMOKE_TIME_SCALE`).

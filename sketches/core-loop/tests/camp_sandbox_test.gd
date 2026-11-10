@@ -6,6 +6,7 @@ const Picker := preload("res://src/ui/camp_enemy_picker.gd")
 const Scrapbook := preload("res://src/ui/camp_scrapbook.gd")
 const Profile := preload("res://src/core/profile.gd")
 const Roster := preload("res://src/combat/roster.gd")
+const TuneRows := preload("res://src/core/tune_rows.gd")
 const T := preload("res://tests/support/t.gd")
 
 # The camp's any-enemy sandbox: the kind list, the picker page, and the yard against a real
@@ -139,6 +140,12 @@ func _yard() -> void:
 	game.events.player_died.connect(func(): _deaths += 1)
 	game.events.player_hit.connect(func(_a, _s): _hits += 1)
 	game.events.synergy_discovered.connect(func(_i, _c, _f): _discovered += 1)
+	# The jukebox files the title's tune, and the radio premieres its late set, once the title
+	# has played long enough, wherever the ball is. That is the title screen's doing and lands
+	# mid-test on a slow machine, so the ear is told it knows every record: the save can then
+	# only change by something the yard did.
+	for id in TuneRows.ids():
+		game.audio().knows_tune(id)
 	var run_before := _run_reading(game)
 	var save_before := var_to_str(game.ctx.profile._doc)
 	sandbox.met_override = Sandbox.kinds()

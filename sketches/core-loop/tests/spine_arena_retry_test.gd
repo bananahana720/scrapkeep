@@ -9,7 +9,8 @@ const BossDouble := preload("res://tests/doubles/spine_boss_double.gd")
 #   - entering the arena clears with reason "arena", an arena retry with "arena_retry";
 #   - an arena discovery pays its burst again after R, while a stage-3 discovery made
 #     before the arena stays paid; T replaying stage 3 rewinds both;
-#   - the objective and the death gap line read the boss's live plating and objective;
+#   - the objective reads the boss's live plating and objective; the death screen says who
+#     scrapped you and the gap as the build met the fight, in the words RUN OVER uses;
 #   - arena deaths go in the run log's own arena record, not stage 3's deaths;
 #   - one held R retries once, from the death screen or from play;
 #   - the summary ignores keys for its first beat, then Space leaves it.
@@ -89,7 +90,9 @@ func _physics_process(_delta: float) -> bool:
 			_boss.chase = ""
 			run.damage(1.0e9, "test")
 			_boss.plating = 0.0
-			_s["gap"] = flow.gap_line()
+			_s["said"] = String(_game.screens._body.text)
+			_s["cause"] = String(flow.death_cause)
+			_s["tip"] = String(flow.death_tip)
 			_s["arena_deaths"] = (_game.run_log._record.get("arena", {}).get("deaths", []) as Array).size()
 			_s["stage3_deaths"] = (_game.run_log._stages[3]["deaths"] as Array).size()
 			# R is still down from the moment of death: the frame on the death screen sees it, and the
@@ -156,8 +159,9 @@ func _report_arena() -> void:
 		"after T replayed stage 3 the stage-3 trick fired again (%d in all)" % _s["facts_after_t"].count("i3_stage_trick"))
 	_report("live boss objective", "150" in _s["objective_live"] and _s["objective_chase"].begins_with("Brindle is running"),
 		"objective with live plating 150: \"%s\"; during the chase: \"%s\"" % [_s["objective_live"], _s["objective_chase"]])
-	_report("death gap line", "plating 150" in _s["gap"],
-		"died against plating 150 (the boss read 0 after the death): \"%s\"" % _s["gap"])
+	_report("death screen words", _s["cause"].begins_with("Scrapped by ") and _s["tip"].contains("plating 120.")
+			and _s["said"] == "%s\nNext shift: %s" % [_s["cause"], _s["tip"]],
+		"met the hull at plating 120 and died against a bow at 150: \"%s\"" % _s["said"].replace("\n", " | "))
 	_report("arena run log", _s["arena_deaths"] == 1 and _s["stage3_deaths"] == 0,
 		"an arena death went to the arena record (%d) and not to stage 3's deaths (%d)" % [_s["arena_deaths"], _s["stage3_deaths"]])
 	_report("one retry per held R", _s["after_r"] == "boss" and _s["clears_while_held"] == 2 and _s["clears_after_release"] == 3,
