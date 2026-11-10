@@ -174,7 +174,7 @@ static func open_seeds(profile) -> Array:
 static func run_line(before: Array, profile, punched: bool) -> String:
 	var fresh: Array = stamped_ids(profile).filter(func(id): return not id in before)
 	if not fresh.is_empty():
-		return "Shift board: %s." % "; ".join(_stamp_groups(fresh))
+		return _deeds_sentence(fresh)
 	if punched:
 		var holes := int(TIME_CARD["holes"])
 		if cards_paid(profile) >= CARDS.size() and punches(profile) > holes * CARDS.size():
@@ -187,22 +187,18 @@ static func run_line(before: Array, profile, punched: bool) -> String:
 	return ""
 
 
-# The rungs a run stamped, as the summary says them: each stamp once, in board order, after the
-# names it inked ("Rivet Freed, Brindle Routed (HIRED)"), so the stamp reads as a stamp on the
-# deeds and never as a verb. A rung whose name is its stamp (Clocked In) says the stamp alone.
-static func _stamp_groups(ids: Array) -> PackedStringArray:
-	var inked := {}
+# The rungs a run stamped, as a plain sentence for the summary: what the player did, by the rungs'
+# own names, in board order. Clocked In is the first finished shift and is not a deed to list.
+static func _deeds_sentence(ids: Array) -> String:
+	var deeds := PackedStringArray()
 	for id in ids:
-		var stamp := String(RUNGS[id]["stamp"])
-		var rung := String(RUNGS[id]["name"])
-		if not inked.has(stamp):
-			inked[stamp] = []
-		if rung.to_upper() != stamp:
-			inked[stamp].append(rung)
-	var out := PackedStringArray()
-	for stamp in inked:
-		out.append(stamp if inked[stamp].is_empty() else "%s (%s)" % [", ".join(PackedStringArray(inked[stamp])), stamp])
-	return out
+		if id != "clock_in":
+			deeds.append(String(RUNGS[id]["name"]))
+	var clocked: bool = "clock_in" in ids
+	if deeds.is_empty():
+		return "You clocked in: your first shift is on the shift board."
+	var list := deeds[0] if deeds.size() == 1 else "%s and %s" % [", ".join(deeds.slice(0, deeds.size() - 1)), deeds[deeds.size() - 1]]
+	return "You %smarked off %s on the shift board." % ["clocked in and " if clocked else "", list]
 
 
 # The board as the camp shows it: the stamp count, the next rung's name and words, and the card.
