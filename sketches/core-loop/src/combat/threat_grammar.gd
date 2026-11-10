@@ -439,7 +439,10 @@ static func _driven_wave(d: Dictionary, out: Array) -> void:
 
 
 static func _driven_projectile(d: Dictionary, out: Array) -> void:
-	out.append(_driven(_mark("fill", _area_layer(d, true), _area_tone(d, FILL_ALPHA), _footprint(d)), Drive.RADIAL))
+	# Only a hostile shell's landing fills: a batted shell (AMBER) is the player's own, and its fill
+	# would share the "motion" layer with the trace, a governed fill beside an exempt line.
+	if stance(d["tone"]) == "hostile":
+		out.append(_driven(_mark("fill", _area_layer(d, true), _area_tone(d, FILL_ALPHA), _footprint(d)), Drive.RADIAL))
 	if not d.has("launch"):
 		return
 	var arc := _flight_arc(d, 0.0)
@@ -550,7 +553,8 @@ static func _projectile(d: Dictionary, motion: bool, out: Array) -> void:
 			{"r_out": r})
 		_lined(out, "pip", false, Color(tone, EDGE_ALPHA), func(grow: float): return _pip(c, grow), {"centre": c})
 		return
-	out.append(_grown_fill(d, "fill", _area_tone(d, FILL_ALPHA)))
+	if stance(tone) == "hostile":
+		out.append(_grown_fill(d, "fill", _area_tone(d, FILL_ALPHA)))
 	if d.has("launch"):
 		var arc := _flight_arc(d, 0.0, float(d["progress"]))
 		var under := _mark("trace_under", "motion_under", Color(Palette.CHARCOAL, UNDERLAY_ALPHA),
