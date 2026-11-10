@@ -81,6 +81,7 @@ He gave the threads their own judgement on mechanics and tuning for this build-o
 - The drop lands on the hit that shatters a chunk. The hit that breaks the Warden lands none: the break and the kill cadence answer it.
 - The Warden form is on by default; `--warden-form=loop` plays the fight as before.
 - The held breath and the drop keep the lead even at low armour. Low armour's missing lead is a warning everywhere else; in the breath it would be silence.
+- After an ultimate's drop the recorded band comes back (it used to stay off for the rest of the stage, leaving the stand-in band). In a Warden fight it comes back to the fight's build, not to where it left.
 - The Cannon keeps its bent chime and has no mouth: it is a machine on the crew's side.
 - Moss sounds the same at his bench as on a call.
 - Kest's kick reads a tenth of a decibel over the peak line after its trim. It is left alone: the limiter holds it, and lowering it would change how loud it is.

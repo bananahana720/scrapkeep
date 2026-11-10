@@ -130,7 +130,7 @@ The contract between the level conductor and the music, agreed by the systems th
 | recover | The stagger ended | staggered back to false | The drop, if a chunk shattered; else the build on the next bar |
 | down | The fight is won | `beacon_unsealed`, `boss_defeated` | The break, the kill cadence, home |
 
-On the recorded band the Warden's fight plays this form: `ace_sequencer.gd` `follow_guard`, fed by `audio.gd` (launch switch `--warden-form=loop` restores the looping build). The synth band and Brindle's fight do not yet. The shattering hit asks for the drop only (the build comes back as the drop's follower), so the hit's frame opens one section's recordings; the sequencer counts every recording it opens and the time it took (`opened`, `open_usec`) for a frame-cost measurement.
+On the recorded band the Warden's fight plays this form: `ace_sequencer.gd` `follow_guard`, fed by `audio.gd` (launch switch `--warden-form=loop` restores the looping build). The synth band and Brindle's fight do not yet. The shattering hit asks for the drop only (the build comes back as the drop's follower), so the hit's frame opens one section's recordings; the sequencer counts every recording it opens and the time it took (`opened`, `open_usec`) for a frame-cost measurement. An ultimate in the fight takes the music for its flight and drop, and the band then comes back to the fight's build (SKILL-BAR section 4, Music).
 
 ### How far ahead the conductor knows
 
