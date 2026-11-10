@@ -175,18 +175,18 @@ func _check_levels() -> void:
 		var row: Dictionary = _readout.describe(held)["parts"][0]
 		var totals := {}
 		for bonus in row["bonuses"]:
-			totals[bonus["text"].get_slice(" · ", 0)] = float(bonus["total"])
-		var punch: float = totals.get(_readout._stat_words("punch"), -1.0)
-		var damage: float = totals.get(_readout._stat_words("weapon_damage"), -1.0)
+			totals[bonus["key"]] = float(bonus["total"])
+		var punch: float = totals.get("punch", -1.0)
+		var damage: float = totals.get("weapon_damage", -1.0)
 		if not (is_equal_approx(punch, level.punch) and is_equal_approx(punch, sheet.punch)
 				and is_equal_approx(damage, level.mods["weapon_damage"]) and is_equal_approx(damage, sheet.mod("weapon_damage"))
-				and level.text in row["text"] and row["copies"] == n):
+				and level.display_name in row["text"] and "%" in row["text"] and row["copies"] == n):
 			wrong.append("x%d: punch %s damage %s, level %d is %s / %s; text %s" % [n, punch, damage, n, level.punch, level.mods["weapon_damage"], [row["text"]]])
 	var plates: Array = ["rivet_plating", "rivet_plating", "rivet_plating"]
 	var plate_row: Dictionary = _readout.describe(plates)["parts"][0]
 	var hp := -1.0
 	for bonus in plate_row["bonuses"]:
-		if bonus["text"].begins_with(_readout._stat_words("max_hp_bonus")):
+		if bonus["key"] == "max_hp_bonus":
 			hp = float(bonus["total"])
 	if not (is_equal_approx(hp, Parts.def_at("rivet_plating", 3).max_hp_bonus) and is_equal_approx(hp, Sheet.from_parts(plates).max_hp_bonus)):
 		wrong.append("three Rivet Plating: max health %s, level 3 is %s" % [hp, Parts.def_at("rivet_plating", 3).max_hp_bonus])
@@ -232,9 +232,9 @@ func _check_build() -> void:
 	var capped := false
 	for row in data["parts"]:
 		if row["id"] == "cap_relay":
-			capped = row["copies"] == 4 and row["cap"] == 3 and row["at_cap"] and "stops at 3 copies" in row["text"]
+			capped = row["copies"] == 4 and row["cap"] == 3 and row["at_cap"] and row["pips"] == {"filled": 3, "total": 3} and not "(at cap)" in row["text"]
 		_report("part %s" % row["id"], row["text"] != "" and row["text"] in view.visible_text(), row["text"])
-	_report("family cap shown", capped, "four Cap Relay copies show stops at 3 copies")
+	_report("family cap shown", capped, "four Cap Relay copies show three full pips")
 	_check_levels()
 	for key in pools:
 		var row: Dictionary = pools[key]
@@ -310,20 +310,17 @@ func _check_catalog() -> void:
 		var data: Dictionary = _readout.describe([id])
 		var mismatch := _layer_mismatch(id, d.layer)
 		var shown: Dictionary = data["parts"][0]
-		var layer_words := "weapon-local" if EXPECTED_LAYERS.get(id) == "local" else "player-global"
-		_report("layer %s" % id, mismatch == "" and _layer_mismatch(id, shown["layer"]) == "" and layer_words in shown["text"],
+		_report("layer %s" % id, mismatch == "" and _layer_mismatch(id, shown["layer"]) == "" and d.display_name in shown["text"] and not "weapon-local" in shown["text"] and not "player-global" in shown["text"],
 			"%s layer %s" % [id, d.layer] if mismatch == "" else mismatch)
 		var raw: Dictionary = rows[id].duplicate(true)
 		raw.erase("layer")
 		var derived = PartDef.from_row(id, raw)
 		var derived_mismatch := _layer_mismatch(id, derived.layer)
 		_report("derived layer %s" % id, derived_mismatch == "", "PartDef rule agrees with table" if derived_mismatch == "" else derived_mismatch)
-		_report("reads %s" % id, d.layer == "local" or not d.reads.is_empty() and "\nReads: " in shown["text"], str(d.reads))
+		_report("reads %s" % id, d.layer == "local" or not d.reads.is_empty() and not "Reads:" in shown["text"], str(d.reads))
 		var words_ok := true
 		for part in data["parts"]:
-			for line in String(part["text"]).split("\n"):
-				if line.begins_with("Reads: "):
-					words_ok = words_ok and _player_words(line)
+			words_ok = words_ok and _player_words(part["text"])
 			for bonus in part["bonuses"]:
 				words_ok = words_ok and _player_words(bonus["text"])
 		for pool in data["pools"].values():
@@ -338,8 +335,10 @@ func _check_catalog() -> void:
 	_report("planted STAT_WORDS control", "magnet" in planted_missing, "missing %s" % [planted_missing])
 	var capped_mod: Dictionary = _readout.describe(["tracer_round", "tracer_round", "tracer_round", "tracer_round", "tracer_round"])
 	var mod_text: String = capped_mod["parts"][0]["bonuses"][0]["text"]
-	_report("multiplying cap unit", "total x" in mod_text and "cap x" in mod_text, mod_text)
-	_report("remaining pool player phrase", "shrinks what is left" in _readout.describe(["crush_guard"])["pools"]["resistance"]["text"], "resistance uses shrinks what is left")
+	var capped_bonus: Dictionary = capped_mod["parts"][0]["bonuses"][0]
+	_report("multiplying cap unit", mod_text.contains("%") and mod_text.contains(" +") and float(capped_bonus["cap"]) >= float(capped_bonus["total"]), mod_text)
+	var resistance_text: String = _readout.describe(["crush_guard"])["pools"]["resistance"]["text"]
+	_report("remaining pool player phrase", resistance_text.begins_with("Damage resistance +") and resistance_text.ends_with("%"), resistance_text)
 	for control in [{"id": "spring_shims", "layer": "local"}, {"id": "hot_rivets", "layer": "global"}]:
 		var planted: Dictionary = rows[control["id"]].duplicate(true)
 		planted["layer"] = control["layer"]
