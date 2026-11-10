@@ -140,6 +140,8 @@ static func settle() -> void:
 
 
 func _process(_delta: float) -> void:
+	if _switched_off():
+		return
 	for path: String in _loading.duplicate():
 		var status := ResourceLoader.load_threaded_get_status(path)
 		if status == ResourceLoader.THREAD_LOAD_LOADED:
@@ -172,6 +174,16 @@ func _process(_delta: float) -> void:
 		_shown = first_view(_first_queue.pop_front(), self)
 		# Done only once built, so a warm node freed part way leaves the rest to the next one.
 		_firsts_done = _first_queue.is_empty()
+
+
+# Running always is for the pause alone. A game switched off (a test freezes its game this way to
+# read a still tree) stops the warm with it: the mode in force above this node is the nearest
+# ancestor's that sets one.
+func _switched_off() -> bool:
+	var above := get_parent()
+	while above != null and above.process_mode == Node.PROCESS_MODE_INHERIT:
+		above = above.get_parent()
+	return above != null and above.process_mode == Node.PROCESS_MODE_DISABLED
 
 
 static func firsts() -> Array:

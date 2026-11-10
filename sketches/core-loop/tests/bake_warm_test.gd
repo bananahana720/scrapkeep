@@ -123,6 +123,15 @@ func _run() -> void:
 	var late: Array = node._queue.map(func(kit): return BakeWarm.kind_of(kit))
 	late.sort()
 	t.check("the flume's entry queues only the kinds the dam could not send", late == ["dispatcher", "foreman"] and node._to_stand.size() == 2, "%s; to stand %s" % [late, node._to_stand])
+	# A game switched off stops its warm: a test that freezes the game reads a tree with nothing of
+	# the warm's standing in it (dress_material_test counted the debris boxes, 10 November 2026).
+	holder.process_mode = Node.PROCESS_MODE_DISABLED
+	var idle := 0
+	for i in 4:
+		await process_frame
+		idle += _spawn_warms(node)
+	t.check("a game switched off stops the warm where it is", idle == 0 and node._queue.size() == 2 and node._to_stand.size() == 2, "%d stood, queue %d" % [idle, node._queue.size()])
+	holder.process_mode = Node.PROCESS_MODE_INHERIT
 	# The briefing pauses the tree a few frames into a run: the warm goes on under it.
 	paused = true
 	var stood := 0
