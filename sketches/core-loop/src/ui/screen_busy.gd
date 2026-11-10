@@ -93,6 +93,11 @@ func request(key: String) -> void:
 		_waiting.append(key)
 
 
+# A card that is ready but behind the one on screen says so, so it stays ahead of younger cards.
+func ready(key: String) -> void:
+	_asked[key] = _clock
+
+
 # True when `key` may show now. It takes the screen on the first yes and keeps it until done.
 # Ask every frame while the card is ready: the oldest ready card goes first.
 func may_show(key: String) -> bool:

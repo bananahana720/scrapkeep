@@ -643,6 +643,8 @@ func _step_ach(delta: float) -> void:
 	if game.screens != null and game.screens.ending_open():
 		clear_achievement_toasts()
 		return
+	if _busy != null and not _ach_entry.is_empty() and not _cards.is_empty():
+		_busy.ready(_cards[0]["key"])
 	if _ach_entry.is_empty() and not _cards.is_empty() and not _corner_swollen() and not game.opening.waits("plate") and not _reading() \
 			and (_busy == null or _busy.may_show(_cards[0]["key"])):
 		var card: Dictionary = _cards.pop_front()
