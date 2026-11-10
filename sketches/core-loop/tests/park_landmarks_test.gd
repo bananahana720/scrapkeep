@@ -88,10 +88,11 @@ func _beam(map_id: String, mark: Dictionary, node: Node3D) -> void:
 	t.check("%s beam starts clear of the fight" % map_id, beam.bottom.y >= anchor_y + beam.CLEAR_ABOVE_M - 0.001, "bottom %.1f, anchor %.1f" % [beam.bottom.y, anchor_y])
 	t.check("%s beam rises past sight_top" % map_id, beam.top_y > float(mark["sight_top"][1]))
 	var core := beam.get_node("Column/Core") as MeshInstance3D
-	var material := core.material_override as StandardMaterial3D
-	t.check("%s beam is unshaded uranium green with fog off and no shadow" % map_id, material.shading_mode == BaseMaterial3D.SHADING_MODE_UNSHADED
-		and material.disable_fog and core.cast_shadow == GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-		and Color(material.albedo_color, 1.0).is_equal_approx(Palette.ANCIENT))
+	var material := core.material_override as ShaderMaterial
+	var tint: Color = material.get_shader_parameter("tint")
+	t.check("%s beam is unshaded uranium green with fog off and no shadow" % map_id, material.shader.code.contains("unshaded")
+		and material.shader.code.contains("fog_disabled") and core.cast_shadow == GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		and tint.is_equal_approx(Palette.ANCIENT))
 
 
 func _headframe(node: Node3D, ground: Callable) -> void:
