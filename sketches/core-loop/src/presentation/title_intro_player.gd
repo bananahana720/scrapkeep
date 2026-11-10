@@ -433,7 +433,7 @@ func _enter_shot(shot: Dictionary) -> void:
 	match kind:
 		"postcard":
 			_caption(String(lines[0]), Vector2(0.03, 0.05))
-			_pointer(_pointer_words(), Vector2(0.47, 0.56))
+			_pointer(TitleIntros.pointer_line(_row.id), Vector2(0.47, 0.56))
 		"hero":
 			camera.fov = 62.0
 			_speed_lines()
@@ -677,18 +677,6 @@ func _caption(text: String, at: Vector2, fill := CAPTION_FILL) -> PanelContainer
 	_overlay.add_child(panel)
 	_pop(panel, 1.06)
 	return panel
-
-
-# What the postcard says about its tiny subject. A whole sentence: the single word "her." read
-# as a line that had lost its other words, in a box or out of one (design-v3/TITLE-INTROS.md).
-# A world's postcard shows the player's own ball.
-func _pointer_words() -> String:
-	if _row.id == "sable":
-		return "this is her."
-	if _row.kind == "world":
-		return "you are here."
-	var who := String(_row.card[0]).capitalize()
-	return "this is %s." % (("the " + who.trim_prefix("The ")) if who.begins_with("The ") else who)
 
 
 # A bare outlined line with an arrow curving down to the subject. No box: a caption box under a

@@ -25,13 +25,16 @@ extends SceneTree
 #   bolt in each weapon colour, and a ring, an arc, a spark and a beam of its attacks) and
 #   `arena` (Brindle's arena; not with --boss=0). For each scene:
 #     <scene>-as-is.png            as the game draws it
-#     <scene>-<script>.png         the switch turned on for one script's candidates, kept only
+#     <scene>-<family>.png         the switch turned on for one family of candidates (a script,
+#                                  and the view's name where the game gave it one), kept only
 #                                  where the picture changed
 #     <scene>-srgb.png             the switch turned on for every candidate
 #   probe.json    The swatches' measured colours against the palette; per scene the census
-#                 (every material that takes vertex colour, grouped by the script that owns it,
+#                 (every material that takes vertex colour, grouped by its owner: the nearest
+#                 script above it in the scene, so the cable arcs and the aura's motes list
+#                 under game.gd and the ball's trail and speed lines under player_ball.gd;
 #                 where its mesh came from, the switch, how far the switch would move its stored
-#                 colours) and, for each script's candidates, how many pixels the switch changed
+#                 colours) and, for each family of candidates, how many pixels the switch changed
 #                 and their mean colour before and after, beside the scene's `noise` (what
 #                 changes between two stills with nothing switched).
 #
@@ -90,6 +93,7 @@ var game
 var _stood := []
 var failed := ""
 var _tones := {}
+var _tints := {}
 var _report := {}
 
 
@@ -333,7 +337,7 @@ func _marks() -> void:
 	_report["marks_shots"] = game.combat.bolts.live()
 
 
-# The census, the still as the game draws it, then the switch turned on for one script's
+# The census, the still as the game draws it, then the switch turned on for one family of
 # candidates at a time, then for all of them. The game is held and its clock all but stopped
 # throughout. Every count is still taken against a still from a few frames before, and `noise`
 # is the count between two such stills with nothing switched.
@@ -355,13 +359,13 @@ func _pair(label: String) -> void:
 	for owner in owners:
 		var before := await _still("")
 		_switch(candidates[owner], true)
-		var file := "%s-%s.png" % [label, str(owner).get_basename()]
+		var file := "%s-%s.png" % [label, owner]
 		var after := await _still(file)
 		_switch(candidates[owner], false)
 		if before == null or after == null:
 			return
 		var row := _moved(before, after)
-		row["owner"] = owner
+		row["family"] = owner
 		row["materials"] = candidates[owner].size()
 		if row["pixels"] <= noise["pixels"]:
 			DirAccess.remove_absolute(out.path_join(file))
@@ -381,13 +385,18 @@ func _pair(label: String) -> void:
 	_report[label + "_changed"] = _moved(before_all, all)
 
 
-# The switch on or off for a set of materials; with --plant, a grey tint in its place.
+# The switch on or off for a set of materials; with --plant, a grey tint in its place, and the
+# material's own tint put back after.
 func _switch(materials: Array, on: bool) -> void:
 	for material in materials:
-		if plant:
-			material.albedo_color = PLANT if on else Color.WHITE
-		else:
+		if not plant:
 			material.vertex_color_is_srgb = on
+		elif on:
+			_tints[material.get_instance_id()] = material.albedo_color
+			material.albedo_color = PLANT
+		elif _tints.has(material.get_instance_id()):
+			material.albedo_color = _tints[material.get_instance_id()]
+			_tints.erase(material.get_instance_id())
 
 
 # How many pixels moved between two stills, and their mean colour in each.
@@ -423,8 +432,8 @@ func _still(file: String) -> Image:
 	return image
 
 
-# Every material in the scene that takes vertex colour, grouped. `candidates` collects, by owning
-# script, the ones with the switch off on a mesh built in code that carries colours.
+# Every material in the scene that takes vertex colour, grouped. `candidates` collects, by
+# family, the ones with the switch off on a mesh built in code that carries colours.
 func _census(candidates: Dictionary) -> Array:
 	var groups := {}
 	var seen := {}
@@ -469,9 +478,10 @@ func _census(candidates: Dictionary) -> Array:
 			var coloured: bool = stored["nearest"] != "not read" or mesh is ImmediateMesh
 			if not material.vertex_color_is_srgb and origin == "built in code" and coloured and not seen.has(material.get_instance_id()):
 				seen[material.get_instance_id()] = true
-				if not candidates.has(owner):
-					candidates[owner] = []
-				candidates[owner].append(material)
+				var family := _family(owner, view)
+				if not candidates.has(family):
+					candidates[family] = []
+				candidates[family].append(material)
 	var rows := groups.values()
 	rows.sort_custom(func(a, b): return str(a["owner"]) + str(a["mesh"]) < str(b["owner"]) + str(b["mesh"]))
 	return rows
@@ -492,6 +502,13 @@ static func _origin(mesh: Mesh) -> String:
 			if mesh.surface_get_name(surface) != "":
 				return "cast, copied"
 	return "built in code"
+
+
+# A candidate's family: its owner and, where the game named the view, that name, so two effects
+# under one script (the cable arcs and the aura's motes under game.gd) are switched apart.
+static func _family(owner: String, view: Node) -> String:
+	var named := str(view.name)
+	return owner.get_basename() if named.begins_with("@") else "%s-%s" % [owner.get_basename(), named]
 
 
 # The script that owns a view: its own, or its nearest ancestor's.

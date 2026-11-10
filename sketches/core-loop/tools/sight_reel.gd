@@ -8,14 +8,15 @@ extends SceneTree
 # the play camera; for the hit, the stun and the death a second camera stands CLOSE_M from it on
 # the ball's side (a little round from the ball), because from the ball a death 14 m off is a few
 # pixels and the ball's own warning rings stand in the way. The ball's hull is filled before every kind and the reel stops
-# if the ball is ever scrapped: on the PC's first run it was, and two kinds played under the
+# if the ball is ever scrapped: on the PC's first run it was, and the last kind played under the
 # game-over screen.
 # Record it with Godot's movie writer, which draws every frame at the stated rate whatever the
 # machine's speed, so the film runs at play speed:
 #   <godot> --path sketches/core-loop --fixed-fps 60 --write-movie /abs/dir/reel.avi \
 #     --script res://tools/sight_reel.gd -- --out=/abs/dir [--only=pop,chaser,lobber] [--captions=0]
-# The film is the game's own view (1600 by 900, kept at 16:9 on any screen); on the PC
-# --resolution did not change it, and a wider window only stretches the same view.
+# The film is the game's own view (1600 by 900, kept at 16:9 on any screen). The PC lane found
+# that --resolution did not change the film and that a wider one only stretched the same view;
+# reel.json's `size` is the view, not the film's pixels, so it cannot tell.
 # A display is needed for the film (xvfb-run works; the cloud's renderer judges motion and place,
 # not the look). Headless, with --fixed-fps 60 and no --write-movie, it plays the same reel and
 # writes only reel.json. The movie writer films from the engine's first frame, so the reel's
@@ -181,6 +182,9 @@ func _run() -> void:
 			rows.append({"kind": kind, "skipped": "the game makes no such kind"})
 			continue
 		# The pop's panels and a stage entry put the hull's ceiling back; fill it for every kind.
+		# A scrapped ball cannot be healed, so a kind never starts under the game-over screen.
+		if not game.run.alive():
+			return _fail("the ball was scrapped before the %s" % kind)
 		game.run.set_max_hp(HULL)
 		game.run.heal(HULL)
 		_hush()
