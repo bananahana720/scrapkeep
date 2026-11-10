@@ -12,14 +12,16 @@ const WorldLook := preload("res://src/presentation/world_look.gd")
 # particles draw can be compared side by side with the build before it. A display server is
 # needed (xvfb-run works; the cloud's software GL judges layout and read, not final look):
 #   xvfb-run -s "-screen 0 1280x800x24" <godot> --path sketches/core-loop --rendering-driver opengl3 \
-#     --script res://tools/fx_capture.gd -- --out=/abs/dir [--reduce-flashes] [--only=id,id]
-# Writes <id>.png and frames.json.
+#     --script res://tools/fx_capture.gd -- --out=/abs/dir [--reduce-flashes] [--only=id,id] [--freeze=0.35]
+# Writes <id>.png and frames.json. One still cannot show how an effect starts, moves or ends, so
+# run it once per --freeze (0.1, 0.35, 0.6 and 0.85 of the life, one --out each) for a strip over time.
 
 const SIZE := Vector2i(640, 400)
 const FREEZE := 0.35
 const ROW_KIND := "enemy_struck"
 
 var out := ""
+var freeze := FREEZE
 var only: Array = []
 var records := []
 var camera: Camera3D
@@ -35,6 +37,8 @@ func _initialize() -> void:
 			FlashGuard.on = true
 		elif arg.begins_with("--world="):
 			world_row = int(arg.trim_prefix("--world="))
+		elif arg.begins_with("--freeze="):
+			freeze = clampf(float(arg.trim_prefix("--freeze=")), 0.0, 1.0)
 		elif arg.begins_with("--only="):
 			only = Array(arg.trim_prefix("--only=").split(","))
 	if out.is_empty() or DisplayServer.get_name() == "headless":
@@ -118,7 +122,7 @@ func _run() -> void:
 		if only.is_empty() or id in only:
 			await _burst_shot(vfx, kind)
 	var file := FileAccess.open(out.path_join("frames.json"), FileAccess.WRITE)
-	file.store_string(JSON.stringify({"world": world_row, "size": [SIZE.x, SIZE.y], "freeze": FREEZE, "reduce_flashes": FlashGuard.on,
+	file.store_string(JSON.stringify({"world": world_row, "size": [SIZE.x, SIZE.y], "freeze": freeze, "reduce_flashes": FlashGuard.on,
 		"adapter": RenderingServer.get_video_adapter_name(), "frames": records}, "\t"))
 	quit()
 
@@ -127,7 +131,7 @@ func _spec_shot(id: String) -> void:
 	var s: Dictionary = FxLibrary.spec(id)
 	var p := FxLibrary.build(id)
 	stage.add_child(p)
-	p.preprocess = float(s["life"]) * FREEZE
+	p.preprocess = float(s["life"]) * freeze
 	var at := Vector3(0.0, 0.6, 0.0)
 	FxLibrary.fire(p, id, ROW_KIND, int(s["max"]), at, Color.TRANSPARENT, Vector3(1.0, 0.0, 0.0))
 	await process_frame
@@ -140,7 +144,7 @@ func _spec_shot(id: String) -> void:
 func _burst_shot(vfx, kind: String) -> void:
 	var spec: Dictionary = Vfx.BURSTS[kind]
 	for p in vfx._bursts[kind]:
-		p.preprocess = float(spec["life"]) * FREEZE
+		p.preprocess = float(spec["life"]) * freeze
 	vfx.burst(kind, Vector3(0.0, 0.6, 0.0), EventKinds.color(ROW_KIND), int(spec["max"]))
 	await process_frame
 	for p in vfx._bursts[kind]:

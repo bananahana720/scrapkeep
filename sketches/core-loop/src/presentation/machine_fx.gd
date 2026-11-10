@@ -105,6 +105,9 @@ const WORD_LIFE := 0.9
 const WORD_SLAM := 0.06
 const WORD_GAP := 0.4
 const WORD_HEIGHT := 3.2
+# No word is wider than this share of the view. Words are sized in metres, so one stamped beside
+# the camera (a panel pickup's three-word pop sits at the ball) was a wall of letters over the HUD.
+const WORD_FIT := 0.6
 const HIT_GAP := 0.12
 const HITS_PER_TENTH := 8
 const DAZE_SPIN := 4.0
@@ -352,6 +355,8 @@ func word(text: String, at: Vector3, tint: Color, force := false, life := WORD_L
 	slot["life"] = life
 	slot["at"] = at
 	slot["scale"] = size
+	var font: Font = label.font if label.font != null else ThemeDB.fallback_font
+	slot["width_px"] = font.get_string_size(text.to_upper(), HORIZONTAL_ALIGNMENT_LEFT, -1, label.font_size).x + label.outline_size
 	_draw_word(slot)
 	_note("word", text, at)
 	return true
@@ -363,6 +368,7 @@ func _draw_word(slot: Dictionary) -> void:
 	var life: float = slot["life"]
 	var size: float = slot["scale"]
 	var at: Vector3 = slot["at"]
+	size = _fit(slot, at, size)
 	if not reduced_motion and t < WORD_SLAM:
 		size *= lerpf(1.6, 1.0, t / WORD_SLAM)
 	var leave := clampf((t - (life - 0.25)) / 0.25, 0.0, 1.0)
@@ -378,6 +384,17 @@ func _draw_word(slot: Dictionary) -> void:
 	# Reduce flashes dims the coloured face, never the ink outline, so the word still reads.
 	label.modulate.a = FlashGuard.info(1.0 - leave)
 	label.outline_modulate.a = 1.0 - leave
+
+
+# `size`, held down so the word at `at` is no wider on screen than WORD_FIT of the view.
+func _fit(slot: Dictionary, at: Vector3, size: float) -> float:
+	var cam := get_viewport().get_camera_3d() if is_inside_tree() else null
+	var width_m: float = float(slot.get("width_px", 0.0)) * (slot["node"] as Label3D).pixel_size * size
+	if cam == null or width_m <= 0.0 or cam.is_position_behind(at):
+		return size
+	var px_per_m := cam.unproject_position(at + cam.global_basis.x).distance_to(cam.unproject_position(at))
+	var room := get_viewport().get_visible_rect().size.x * WORD_FIT
+	return size if width_m * px_per_m <= room else size * room / (width_m * px_per_m)
 
 
 # --- Bodies: arrival, wind-up, hits, stagger, death -----------------------------------
