@@ -364,9 +364,12 @@ var drop_log: Array = []
 # the last systemic pressure, which the ACE step sits on top of.
 var _ult_lift := false
 var _ult_armed := false
-# The ultimate in the air ended the stage's recorded band: its landing books the band back,
-# and so does a cancel for one of these reasons.
+# The ultimate in the air ended the stage's own recorded band (roaming or its Warden fight,
+# never a boss's or a champion's pack): its landing books the band back, and so does a cancel
+# for one of these reasons. A launch or the Warden's break in between takes the music for
+# itself and drops the booking (_ult_band_stays_off).
 const ULT_BAND_BACK := ["recall", "bail"]
+const STAGE_BAND_MODES := ["level", "warden"]
 var _ult_took_band := false
 var _pressure := 0.0
 # Lab knobs: facing is weighted by proximity, so a distant face cannot dominate.
@@ -1506,8 +1509,6 @@ func _ace_named(id: String, at: int, boss := false, won := true) -> void:
 	_ace_end(ace.grid_beat if ace_playing() else AceSequencer.STOP_RAMP)
 
 
-# The ACE band stops and the synth band plays again from this moment, so a note it starts
-# now (the death boom, a restart's first beat) is heard over the ACE fade tail.
 # The stage's recorded band comes back at `at` (after a radio hold, an ultimate's drop, a
 # landing). Inside a sealed Warden fight it goes straight to the fight's sections: the shelf
 # (the world's roaming take) never plays inside an arena.
@@ -1517,6 +1518,17 @@ func _ace_return(stage: int, at: int) -> void:
 		ace.commit_warden()
 
 
+# The music has moved on from the stage an ultimate took the recorded band from (a launch,
+# the Warden's break): the band is not booked back, and one already booked is dropped. A
+# launch's own arrival is booked after this, at the stage it lands in.
+func _ult_band_stays_off() -> void:
+	_ult_took_band = false
+	_ace_arrival_stage = 0
+	_ace_arrival_at = -1
+
+
+# The ACE band stops and the synth band plays again from this moment, so a note it starts
+# now (the death boom, a restart's first beat) is heard over the ACE fade tail.
 func _ace_end(ramp := AceSequencer.STOP_RAMP) -> void:
 	_ace_arrival_stage = 0
 	_ace_arrival_at = -1
@@ -3431,6 +3443,7 @@ func _on_launched(_velocity: Vector3) -> void:
 	# the ultimate's later cancel (its stage-entry abort) or landing must not end the launch's
 	# riser or ACE piece.
 	_ult_armed = false
+	_ult_band_stays_off()
 	# A launch out of the Warden's break is directed from A to B: the piece plays through
 	# the flight and the landing hands it to the synth on a beat (_land_drop). Any other
 	# ACE mode (an unsealed stage's gate) hands to the synth now, so its launch riser sounds.
@@ -3541,8 +3554,9 @@ func _on_ultimate_started(_id: String, _path: String, _from: Vector3, _to: Vecto
 		_ace_flight = true
 		return
 	if ace_playing():
+		var stage_band: bool = ace.mode in STAGE_BAND_MODES
 		_ace_end(ace.grid_beat)
-		_ult_took_band = true
+		_ult_took_band = stage_band
 	engine.start_build(seconds, true)
 
 
@@ -3603,10 +3617,10 @@ func _on_ultimate_landed(_id: String, _at: Vector3, _hits: int, _damage: float) 
 			if ace_playing():
 				ace.stop_at(at, ace.grid_beat)
 				_handover_at = at
-		if _ult_took_band and _stage_now > 0 and _ace_arrival_stage == 0 and not ace_playing():
+		if _ult_took_band and _stage_now > 0 and _ace_arrival_stage == 0 and not ace_playing() and engine.track in STAGE_BAND_MODES:
 			# The synth band's build and drop are the ultimate's; the stage's recorded band comes
-			# back on the bar after the drop (_pump). A launch that booked its own arrival, or a
-			# band something else already started, keeps its own.
+			# back on the bar after the drop (_pump). A band something else already started, or a
+			# boss that arrived in between, keeps its own.
 			_ace_arrival_stage = _stage_now
 			_ace_arrival_at = at
 		_ult_took_band = false
@@ -3627,7 +3641,7 @@ func _on_ultimate_cancelled(_id: String, _reason: String, refunded: bool) -> voi
 		engine.cancel_build()
 		# A recall or a bail leaves the player in the stage, so its band comes back; a death or
 		# a stage's end has its own music.
-		if _ult_took_band and _stage_now > 0 and _reason in ULT_BAND_BACK and not ace_playing():
+		if _ult_took_band and _stage_now > 0 and _reason in ULT_BAND_BACK and not ace_playing() and engine.track in STAGE_BAND_MODES:
 			_ace_return(_stage_now, engine.next_bar())
 		_ult_took_band = false
 	if not refunded:
@@ -4161,6 +4175,8 @@ func _flush_flow() -> void:
 					_menu_home(at)
 			"unseal":
 				_release_answered = false
+				# The break is the synth band's when an ultimate holds the recorded one.
+				_ult_band_stays_off()
 				engine.parameters_warden_broken()
 				_unseal_ms = Time.get_ticks_msec()
 				if ace_playing():

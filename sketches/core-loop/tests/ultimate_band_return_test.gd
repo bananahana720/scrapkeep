@@ -1,6 +1,7 @@
 extends SceneTree
 
 const Game := preload("res://src/game.gd")
+const Ace := preload("res://src/presentation/ace_sequencer.gd")
 const T := preload("res://tests/support/t.gd")
 const AceStub := preload("res://tests/support/ace_stub.gd")
 
@@ -8,7 +9,8 @@ const AceStub := preload("res://tests/support/ace_stub.gd")
 # band plays the build and the landing drop (audio.gd _on_ultimate_started). When the drop
 # is over the recorded band comes back (_on_ultimate_landed, _ace_return): the stage's own
 # take while roaming, the fight's sections inside a sealed Warden fight (never the roaming
-# take), and at once after a recall or a bail. A death or a stage's end brings nothing back.
+# take), and at once after a recall or a bail. A death or a stage's end brings nothing back,
+# and neither does a Warden's break or a launch inside the drop, or a boss's pack.
 # The real Game with the stage's recorded band (the stub tone tree in a checkout with no
 # Oggs). Sections are read from the sequencer, not from speakers.
 
@@ -142,16 +144,74 @@ func _warden() -> void:
 	_start()
 	_bars(1)
 	_land()
-	_through_the_drop()
-	# The return is watched a beat at a time: the roaming take must never sound in the arena.
-	var modes := []
-	for i in 16:
+	# The return is watched a beat at a time from the landing: the roaming take (the shelf's
+	# clips) must never sound in the arena.
+	var heard := []
+	for i in 48:
 		_bars(0.25)
-		if not _ace.mode in modes:
-			modes.append(_ace.mode)
+		var now := "%s/%s" % [_ace.mode, _ace.section]
+		if not now in heard:
+			heard.append(now)
 	t.check("in a Warden fight the band comes back to the fight", _audio.ace_playing() and _ace.mode == "warden" and _ace.section == "build", _state())
-	t.check("the roaming take never plays in the arena", not "level" in modes, "modes on the way back: %s" % [modes])
+	t.check("the roaming take never plays in the arena", not heard.any(func(now: String): return now.begins_with("level") or now.get_slice("/", 1) in Ace.SHELF_CLIPS),
+		"on the way back: %s" % [heard])
 	_start()
 	_game.events.ultimate_cancelled.emit("test_ult", "bail", false)
 	_bars(2)
 	t.check("a bail in the fight goes back to the fight", _audio.ace_playing() and _ace.mode == "warden", _state())
+	_moved_on()
+
+
+# The music moves on while the ultimate holds the recorded band: nothing is booked back.
+func _moved_on() -> void:
+	# The Warden breaks inside the ultimate's drop: the break and the kill cadence are the
+	# synth band's, and the roaming take must not start over them.
+	_start()
+	_bars(1)
+	_land()
+	_bars(1)
+	_audio._flow_queue.append(["unseal"])
+	_audio._flush_flow()
+	var came_back := false
+	for i in 64:
+		_bars(0.25)
+		came_back = came_back or _audio.ace_playing()
+	t.check("a Warden broken inside the ultimate's drop keeps the break", not came_back and _audio._ace_arrival_stage == 0, _state())
+	# The ultimate still in the air when the Warden breaks books nothing at its landing.
+	_audio._ace_stage(1, _audio.engine.next_bar())
+	_bars(2)
+	_start()
+	_audio._flow_queue.append(["unseal"])
+	_audio._flush_flow()
+	_bars(1)
+	_land()
+	_through_the_drop()
+	_bars(2)
+	t.check("so does one broken while the ultimate is in the air", not _audio.ace_playing() and _audio._ace_arrival_stage == 0, _state())
+	# A launch inside the ultimate's drop: the launch's riser plays alone to the next stage.
+	_game.flow.sealed = false
+	_audio._ace_stage(1, _audio.engine.next_bar())
+	_bars(2)
+	_start()
+	_bars(1)
+	_land()
+	_bars(1)
+	t.check("the band is booked before the launch", _audio._ace_arrival_stage > 0, _state())
+	_audio._on_launched(Vector3.UP)
+	came_back = false
+	for i in 48:
+		_bars(0.25)
+		came_back = came_back or _audio.ace_playing()
+	t.check("a launch inside the ultimate's drop drops the booking", not came_back and _audio._ace_arrival_stage == 0, _state())
+	_audio._disarm_launch()
+	# A band that is not the stage's own (a boss's or a champion's pack) is not booked back.
+	_audio._ace_stage(1, _audio.engine.next_bar())
+	_bars(2)
+	_ace.mode = "boss"
+	_start()
+	t.check("a boss's pack stopped by an ultimate books nothing", not _audio._ult_took_band, _state())
+	_bars(1)
+	_land()
+	_through_the_drop()
+	_bars(2)
+	t.check("and the stage's take does not start in its place", not _audio.ace_playing(), _state())
