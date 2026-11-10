@@ -21,8 +21,9 @@ const WORD_REACH := 30.0
 const WORD_HEIGHT := 5.0
 # The word flies from the column like a pennant from its pole: it starts this many of its own
 # pixels to the column's right on screen. Centred on the column it lost its middle letters, amber
-# under amber (PC stills of 1c9bc643). The gap clears the column seen corner-on (0.99 m).
-const WORD_GAP := 100.0
+# under amber (PC stills of 1c9bc643). The gap is 1.39 m: the column corner-on reaches 0.99 m,
+# about 1.05 m from close by, and the word's outline can reach 0.17 m back toward it.
+const WORD_GAP := 116.0
 const WORD_OUTLINE := 14
 # A status line longer than this many pixels (about 9 m, 22 letters) folds under itself, so a
 # sentence stays a block beside the column and does not run off the screen.

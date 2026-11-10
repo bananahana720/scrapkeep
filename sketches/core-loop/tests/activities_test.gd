@@ -151,7 +151,9 @@ func _word() -> void:
 	# A billboard's box covers every facing; flat, the box is the laid-out letters.
 	view.word.billboard = BaseMaterial3D.BILLBOARD_DISABLED
 	await _frames(2)
-	var corner := ActivityView.COLUMN_WIDTH * 0.5 * sqrt(2.0)
+	# Corner-on the column reaches 0.99 m; the outline's reach is taken off the word's side as well,
+	# whether or not the box counts it.
+	var corner := ActivityView.COLUMN_WIDTH * 0.5 * sqrt(2.0) + ActivityView.WORD_OUTLINE * view.word.pixel_size
 	var one: AABB = view.word.get_aabb()
 	_t.check("an activity's word starts clear of its column, seen corner-on", view.word.visible and one.position.x > corner,
 		"word from %.2f m, column to %.2f m" % [one.position.x, corner])
