@@ -208,7 +208,7 @@ const ROWS := [
 	},
 	{
 		"id": "lore.park_dam.intro.warden", "kind": "intro", "zone": "1-1", "subject": "warden",
-		"text": "Dam Warden. Gates open on its count, not ours.",
+		"text": "Warden on the dam. Gates open on its count, not ours.",
 	},
 	{
 		"id": "lore.spillway.intro.brindle", "kind": "intro", "zone": "1-1", "subject": "brindle",
@@ -320,7 +320,7 @@ const ROWS := [
 	},
 	{
 		"id": "lore.park_flume.intro.warden", "kind": "intro", "zone": "1-2", "subject": "warden",
-		"text": "Head House Warden. Flume boiling. Flow still logged as normal.",
+		"text": "Warden in the head house. Flume boiling. Flow still logged as normal.",
 	},
 	{
 		"id": "lore.park_flume.intro.brindle", "kind": "intro", "zone": "1-2", "subject": "brindle",
