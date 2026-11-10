@@ -29,6 +29,7 @@ const UiProfile := preload("res://src/ui/ui_profile.gd")
 const WorldPrompt := preload("res://src/ui/world_prompt.gd")
 const WhyCallout := preload("res://src/ui/why_callout.gd")
 const PartName := preload("res://src/ui/part_name.gd")
+const DangerMark := preload("res://src/ui/danger_mark.gd")
 const BossPlate := preload("res://src/ui/boss_plate.gd")
 const ChainCounter := preload("res://src/ui/chain_counter.gd")
 const DamageNumbers := preload("res://src/presentation/damage_numbers.gd")
@@ -165,6 +166,7 @@ var first_steps
 var field_tips
 var edge_markers
 var part_name
+var danger_mark
 var launch_card
 var _world_card_at := -1
 # The world and stage whose cards wait for the title's turn in a run's opening; 0 when none.
@@ -333,6 +335,8 @@ func setup(game_ref) -> void:
 	why_callout.setup(game, profile)
 	part_name = PartName.new()
 	add_child(part_name)
+	danger_mark = DangerMark.new()
+	add_child(danger_mark)
 	_mount_hotwire_screen()
 
 	_build_ach_toast()
@@ -908,6 +912,9 @@ func layout(size: Vector2) -> void:
 	part_name.size = size
 	var ring := AimReticle.meter_radius() + AimReticle.METER_WIDTH
 	part_name.avoid = Rect2(size * 0.5 - Vector2.ONE * ring, Vector2.ONE * ring * 2.0)
+	danger_mark.position = Vector2.ZERO
+	danger_mark.size = size
+	danger_mark.avoid = part_name.avoid
 	_status.position = Vector2(MARGIN, top.position.y + 12.0)
 
 	var toast_width := minf(TOAST_WIDTH, size.x - 2.0 * MARGIN)
@@ -1148,6 +1155,8 @@ func _process(delta: float) -> void:
 	if _plate != null:
 		_plate.visible = playing
 	part_name.visible = playing and part_name.left > 0.0
+	danger_mark.show_run(game.combat.near_miss.standing_in() if playing else -1.0)
+	danger_mark.visible = danger_mark.shown()
 	_armor.visible = playing and game.run.armor_mode
 	_step_companion(playing)
 	if not playing:
@@ -1184,11 +1193,14 @@ func _process(delta: float) -> void:
 	var slots: Array = _slots.slots(game)
 	ability_bar.update_slots(slots, tint, shape)
 	ability_bar.hide_keys(key_glyphs.shown_glyphs())
-	if part_name.visible:
+	if part_name.visible or danger_mark.visible:
 		var cam: Camera3D = game.camera.cam
 		var top: Vector3 = game.player.shown_position() + cam.global_basis.y * Tuning.RADIUS
 		if not cam.is_position_behind(top):
-			part_name.follow(cam.unproject_position(top))
+			var over: Vector2 = cam.unproject_position(top)
+			danger_mark.follow(over)
+			# A name gained inside a mark stands on the mark, not across it.
+			part_name.follow(Vector2(over.x, danger_mark.rect().position.y) if danger_mark.visible else over)
 	reticle.gauge = AbilitySlots.gauge_of(slots)
 	# An interactable's hold-to-arm fills the same class ring (LOOP-REDESIGN section 9).
 	var interact = game.world.get("interact") if game.world != null else null

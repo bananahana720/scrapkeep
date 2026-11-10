@@ -9,6 +9,10 @@ const EventKinds := preload("res://src/core/event_kinds.gd")
 # publishes near_miss when the ball was inside while the threat warned and outside when
 # it landed, or left within the grace without being hurt. It reads and publishes; it
 # never changes an outcome.
+#
+# The same watch answers the question before the landing: standing_in() is how far along
+# the furthest warning the ball stands in has run, for the HUD's mark over the ball
+# (ui/danger_mark.gd). A floor mark cannot say "you are in me" to a camera inside it.
 
 var events
 # The ball's position; combat points it at the real ball, a test at a scripted point.
@@ -20,6 +24,7 @@ var _watch := {}
 var _clock := 0.0
 var _last_hit := -INF
 var _hit_pending := false
+var _standing := -1.0
 
 
 func setup(events_ref, ball_ref: Callable) -> void:
@@ -33,8 +38,15 @@ func _physics_process(delta: float) -> void:
 	step(delta)
 
 
+# How far along the furthest warning the ball stands in has run, 0 to 1, as of the last
+# step, or -1 when it stands in none: the ball is inside a threat that has not landed.
+func standing_in() -> float:
+	return _standing
+
+
 func step(delta: float) -> void:
 	_clock += delta
+	_standing = -1.0
 	# A hit this tick counts from this tick, whichever ran first, the attack or this watch.
 	if _hit_pending:
 		_hit_pending = false
@@ -65,6 +77,7 @@ func step(delta: float) -> void:
 				if not w["entered"]:
 					w["entered_at"] = _clock
 				w["entered"] = true
+				_standing = maxf(_standing, _run_of(node, at, d))
 			continue
 		if _last_hit >= w["resolved"]:
 			w["done"] = true
@@ -90,6 +103,18 @@ static func _front_wave(node: Node, d := {}) -> bool:
 	if not (node.has_method("front_radius") and node.has_method("is_spent")):
 		return false
 	return int((d if not d.is_empty() else node.descriptor()).get("type", -1)) == Threat.Type.WAVE
+
+
+# How far a warning has run for a ball at `at`: its progress, and for a front wave half for
+# the arming and half for the front's run from the centre out to the ball.
+static func _run_of(node: Node, at: Vector3, d: Dictionary) -> float:
+	var progress := clampf(float(d.get("progress", 0.0)), 0.0, 1.0)
+	if not _front_wave(node, d):
+		return progress
+	var front: float = node.front_radius()
+	if front < 0.0:
+		return 0.5 * progress
+	return 0.5 + 0.5 * clampf(front / maxf(_flat_from(node, at, d), 0.01), 0.0, 1.0)
 
 
 static func _flat_from(node: Node, at: Vector3, d := {}) -> float:

@@ -10,7 +10,9 @@ const NearMiss := preload("res://src/combat/near_miss.gd")
 # was inside a threat while it warned and is outside when it lands, or leaves within the
 # grace unhurt; never when the ball was hit, never when it was never inside, never for a
 # threat withdrawn before it landed. The game's own watch is on the bus too, and juice
-# answers the fact with the dodge tick.
+# answers the fact with the dodge tick. Before the landing, standing_in() is the run of the
+# furthest warning the ball stands in, and the HUD's danger mark (ui/danger_mark.gd) shows it
+# over the ball.
 
 var _game
 var _watch
@@ -144,6 +146,63 @@ func _process(_delta: float) -> bool:
 	_wave_run(outside, 3.0)
 	_check("wave: never inside", _watch.fired == waved, "9 m out the whole wave: %d near_miss" % (_watch.fired - waved))
 	outside.queue_free()
+
+	# Before the landing the same watch says how far the warning the ball stands in has run,
+	# and the HUD's mark over the ball shows it.
+	var stood := _ring(terrain, far + Vector3(0.0, 0.0, 60.0))
+	_at(stood, 9.0)
+	stood.set_progress(0.4)
+	_tick()
+	_check("standing in none", _watch.standing_in() < 0.0, "9 m out of a 3 m ring at 0.4: %.2f" % _watch.standing_in())
+	_at(stood, 0.0)
+	_tick()
+	_check("standing in a warning", is_equal_approx(_watch.standing_in(), 0.4), "at its centre at 0.4: %.2f" % _watch.standing_in())
+	var second := _ring(terrain, stood.center)
+	second.set_progress(0.7)
+	_tick()
+	_check("the furthest along wins", is_equal_approx(_watch.standing_in(), 0.7), "a second ring at 0.7 over the first: %.2f" % _watch.standing_in())
+	_point.y += 6.0
+	_tick()
+	_check("a jump over the band is out", _watch.standing_in() < 0.0, "6 m up: %.2f" % _watch.standing_in())
+	_point.y -= 6.0
+	stood.set_progress(1.0)
+	second.set_progress(1.0)
+	_tick()
+	_check("a landed threat is no warning", _watch.standing_in() < 0.0, "both landed: %.2f" % _watch.standing_in())
+	stood.queue_free()
+	second.queue_free()
+	var wave_in := _wave(terrain, far + Vector3(30.0, 0.0, 60.0))
+	_at(wave_in, 3.0)
+	_wave_run(wave_in, 0.5)
+	var arming: float = _watch.standing_in()
+	_wave_run(wave_in, 0.75)
+	var running: float = _watch.standing_in()
+	_check("a wave counts its arming, then its front's run to the ball", arming > 0.0 and arming < 0.5 and running > 0.5 and running < 1.0,
+		"3 m in a 6 m wave: %.2f while it armed, %.2f with the front half way to the ball" % [arming, running])
+	wave_in.queue_free()
+
+	var hud = _game.hud
+	var ball: Vector3 = _game.player.ball_position()
+	# The ball is still on its drop this frame, so the warning is hung in the air around it.
+	var over := Telegraph.aerial_ring(_game, terrain, Threat.Type.INSTANT, ball - Vector3(0.0, 1.0, 0.0), 3.0, 3.0)
+	over.set_progress(0.5)
+	_game.combat.near_miss.step(1.0 / 60.0)
+	hud._process(0.0)
+	var cam: Camera3D = _game.camera.cam
+	var ball_top: float = cam.unproject_position(_game.player.shown_position() + cam.global_basis.y).y
+	var mark: Rect2 = hud.danger_mark.rect()
+	_check("the HUD marks the ball inside a warning", hud.danger_mark.visible and is_equal_approx(hud.danger_mark.run, 0.5)
+		and mark.end.y <= ball_top and not mark.intersects(hud.danger_mark.avoid),
+		"in play %s, ball in the ring %s, visible %s, run %.2f, mark %s over the ball's top y %.0f, reticle box %s" % [_game.flow.in_play(), over.contains(ball), hud.danger_mark.visible, hud.danger_mark.run, mark, ball_top, hud.danger_mark.avoid])
+	hud.part_name.show_part("rivet_plating")
+	hud._process(0.0)
+	_check("a part's name stands on the mark", hud.part_name.rect().size.x > 0.0 and hud.part_name.rect().end.y <= mark.position.y,
+		"name %s, mark %s" % [hud.part_name.rect(), mark])
+	over.free()
+	_game.combat.near_miss.step(1.0 / 60.0)
+	hud._process(0.0)
+	_check("and takes it down when the warning is gone", not hud.danger_mark.visible and not hud.danger_mark.shown(),
+		"visible %s, run %.2f" % [hud.danger_mark.visible, hud.danger_mark.run])
 
 	var juice = _game.presentation.juice
 	juice.reset_stops()
