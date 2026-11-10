@@ -82,6 +82,9 @@ var _queue: Array = []
 var _calm_left := 0.0
 var _events = null
 var _flow = null
+# The screen_busy gate (src/ui/screen_busy.gd) and the key of the card up: it queues behind a fight.
+var _busy = null
+var _slot := ""
 var _session_seen := {}
 var _style_name := "banner"
 var _hold := HOLD
@@ -160,6 +163,7 @@ func _ready() -> void:
 		var ctx = node.get("ctx")
 		if ctx != null and ctx.get("events") != null:
 			_flow = ctx.get("flow")
+			_busy = ctx.get("screen_busy")
 			watch(ctx.events)
 		node = node.get_parent()
 
@@ -196,7 +200,7 @@ func held() -> bool:
 # every_time is for a moment of the run, not a codex first (a completed set): in cards mode its
 # first showing ever is still the card, and each later one is the small banner instead of
 # nothing. It is never dropped for a full queue, and it does not wait behind first-find cards.
-func show_discovery(title: String, category: String, detail := "", kicker := "New synergy", id := "", kind := DEFAULT_KIND,
+func show_discovery(title: String, category: String, detail := "", kicker := "Two parts team up", id := "", kind := DEFAULT_KIND,
 		tint = null, every_time := false) -> void:
 	var style := "banner"
 	var key := id if id != "" else "%s:%s" % [category, title]
@@ -222,6 +226,8 @@ func show_discovery(title: String, category: String, detail := "", kicker := "Ne
 		while at < _queue.size() and _queue[at][8]:
 			at += 1
 	_queue.insert(at, item)
+	if _busy != null:
+		_busy.request(key)
 	if not showing():
 		_next()
 
@@ -238,7 +244,13 @@ func queued() -> int:
 func dismiss(clear_queue := true) -> void:
 	_started_ms = -1
 	visible = false
+	if _busy != null:
+		_busy.done(_slot)
+		_slot = ""
 	if clear_queue:
+		if _busy != null:
+			for item in _queue:
+				_busy.done(item[6])
 		_queue.clear()
 
 
@@ -311,12 +323,15 @@ func _next() -> void:
 		return
 	var head: Array = _queue[0]
 	if head[4] == "auto" and _was_seen(head[6]):
+		if _busy != null:
+			_busy.done(head[6])
 		_queue.pop_front()
 		_next()
 		return
 	# Every head asks the shared gate, whatever its style.
-	if not calm():
+	if not calm() or (_busy != null and not _busy.may_show(head[6])):
 		return
+	_slot = head[6]
 	var item: Array = _queue.pop_front()
 	var entry := CodexStyle.category(item[1])
 	var color: Color = item[7] if item[7] is Color else entry["color"]

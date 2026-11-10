@@ -338,7 +338,7 @@ func _on_synergy(id: String, category: String, first_time: bool) -> void:
 		return
 	var entry := _codex_entry(id)
 	var title: String = entry.get("name", id.capitalize())
-	banner.show_discovery(title, category, String(entry.get("text", "")), "New synergy" if first_time else "Synergy", id, "synergy_discovered")
+	banner.show_discovery(title, category, String(entry.get("text", "")), "Two parts team up" if first_time else "Parts team up", id, "synergy_discovered")
 
 
 # In cards mode a first-found part is queued as a banner card behind the shared find gate; a

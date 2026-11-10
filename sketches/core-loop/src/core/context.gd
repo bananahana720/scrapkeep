@@ -52,6 +52,8 @@ var rng := RandomNumberGenerator.new()
 # Set by the spine tests that measure momentum: while true, modules spawn no enemies
 # and apply no world pushes, so a speed check measures the ball and the seams alone.
 var calm := false
+# Is the screen busy (src/ui/screen_busy.gd): the one gate for every card that can wait.
+var screen_busy: Node
 # The game was launched with --dev: the dev keys (F1, F3, F4, F6) answer.
 var dev := false
 

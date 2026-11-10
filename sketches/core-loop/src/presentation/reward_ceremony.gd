@@ -79,6 +79,8 @@ var last_error := ""
 var _save_blocked := false
 var _queue: Array = []
 var _cards: Array = []
+# The screen_busy key of the reveal card now up (src/ui/screen_busy.gd), "" when none.
+var _slot := ""
 var _active := {}
 var _calm_since := -1
 var _calm_left := 0.0
@@ -102,6 +104,8 @@ func setup(ctx_ref, audio_ref, juice_ref, vfx_ref) -> void:
 	short = float(SettingsStore.new(dir).comfort.get(SETTING, 1.0)) < 0.5
 	_seen_path = dir.path_join(SEEN_FILE)
 	_load_seen()
+	if _busy() != null:
+		_busy().add_source(active)
 	var layer := CanvasLayer.new()
 	layer.name = "RewardLayer"
 	layer.layer = 41
@@ -361,14 +365,17 @@ func _demote(find: Dictionary) -> void:
 
 func _hold_card(find: Dictionary) -> void:
 	_cards.append(find)
+	if _busy() != null:
+		_busy().request("find:" + String(find["part"]))
 	if view.card.is_empty() or view.card.get("ceremony", false) and _active.is_empty():
 		_next_card()
 
 
 # The head of the held cards opens when the gate allows, and the part is seen only now.
 func _next_card() -> void:
+	_release_slot()
 	view.card = {}
-	if _cards.is_empty() or not may_show_card():
+	if _cards.is_empty() or not may_show_card() or not _take_slot(_cards[0]):
 		return
 	var find: Dictionary = _cards.pop_front()
 	_mark_seen(find["part"])
@@ -377,6 +384,27 @@ func _next_card() -> void:
 	if find["link"] == "lit":
 		audio.play("reward_reveal", -4.0, 1.0, "SFX", String(EventKinds.reward_row("reveal")["sound_snap"]))
 	_arm(find)
+
+
+func _busy():
+	return ctx.get("screen_busy") if ctx != null else null
+
+
+# A reveal card waits its turn with the other cards that can wait (screen_busy.gd): quiet screen, oldest first.
+func _take_slot(find: Dictionary) -> bool:
+	if _busy() == null:
+		return true
+	var key := "find:" + String(find["part"])
+	if not _busy().may_show(key):
+		return false
+	_slot = key
+	return true
+
+
+func _release_slot() -> void:
+	if _slot != "" and _busy() != null:
+		_busy().done(_slot)
+	_slot = ""
 
 
 func card_state(find: Dictionary, start: int, in_ceremony: bool) -> Dictionary:
@@ -461,6 +489,7 @@ func _process(delta: float) -> void:
 	if view.card.is_empty() and not _cards.is_empty() and _active.is_empty():
 		_next_card()
 	if not view.card.is_empty() and not view.card.get("ceremony", false) and WhyCallout.warden_fight_live(ctx.flow):
+		_release_slot()
 		view.card = {}
 	if not view.card.is_empty() and not view.card.get("ceremony", false):
 		var c: Dictionary = view.card
@@ -470,10 +499,15 @@ func _process(delta: float) -> void:
 	_step_payoffs()
 
 
+# A fight is on: a crate does not dim the screen over it (a boss's own reward is exempt above).
+func _fight_on() -> bool:
+	return _busy() != null and _busy().fighting()
+
+
 func _step_queue(now: int) -> void:
 	var row := EventKinds.reward_row("ceremony")
 	# A boss's own reward does not wait on the damage clock: its death ends the fight.
-	var gate: bool = String(_queue[0]["source"]) == "boss" or may_show_card()
+	var gate: bool = String(_queue[0]["source"]) == "boss" or (may_show_card() and not _fight_on())
 	if not gate or not calm():
 		_calm_since = -1
 		return
@@ -727,6 +761,7 @@ func _reset(new_run: bool) -> void:
 		_active = {}
 		audio.stop(String(EventKinds.reward_row("ceremony")["sound"]))
 	view.set_ceremony({})
+	_release_slot()
 	view.card = {}
 	if new_run:
 		_armed.clear()

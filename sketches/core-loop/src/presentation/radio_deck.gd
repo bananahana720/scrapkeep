@@ -3,6 +3,7 @@ extends Node
 const Radio := preload("res://src/core/radio.gd")
 const RadioTakes := preload("res://src/core/radio_takes.gd")
 const RadioDial := preload("res://src/ui/radio_dial.gd")
+const Palette := preload("res://src/core/palette.gd")
 const RadioCache := preload("res://src/world/radio_cache.gd")
 
 # The pilot radio in a run (design-v3/sound/RADIO.md): the dial's keys, the takes a run finds,
@@ -115,7 +116,9 @@ func find(id: String) -> bool:
 		game.hud.take_found(String(t["name"]), Radio.station_name(String(t["station"])), String(t["tier"]))
 	if _audio != null:
 		_audio.play("bay_jukebox", 0.0, 1.0, "UI")
-	radio.premiere(id)
+	var before := radio.station
+	if radio.premiere(id, context()) and radio.station != before and game.hud != null:
+		game.hud.toast("On air: %s" % Radio.station_name(radio.station), Palette.SAND, "wave", 2)
 	game.events.radio_take_found.emit(id, String(t["tier"]), String(t["found"].get("on", "")))
 	_save()
 	_plan_now()
