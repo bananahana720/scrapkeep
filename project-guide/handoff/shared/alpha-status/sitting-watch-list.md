@@ -49,6 +49,7 @@ Things only Andrew can judge at his playtest sitting: feel, sound and his real h
 Does it read, does it show: the wave's PC film (ruling cp) looks before Andrew does. A line comes back up when the film cannot settle it.
 
 - Reduce flashes: with the Display toggle on, does every flash still read, and does every active's flash obey it? Silo Battery #85, Cutting Torch #84, Quake Knock #87, Lift Pulse #89 and Glass Lance #90 add flashes but were not merged when #94 landed, so each must read FlashGuard (src/presentation/flash_guard.gd) before it passes. (Reduce flashes thread, PR #94.)
+- A killed machine's debris shrinks away (10 Nov): the pieces used to fade out over their half second, and the first fade of each kind cost a 43 to 48 ms frame on the 4080 (the frame after the dam's first kill). They now fly at full size for the first half of that time and shrink to nothing over the second half. Does a kill still read as a break-up, and do the pieces leave cleanly or pop? If it reads worse than the fade, the other fix is to draw each kind's fading pieces once at stage entry. (Technicals thread)
 
 ## Worlds 2 and 3
 
