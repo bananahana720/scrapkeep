@@ -26,6 +26,11 @@ const REDUCE_FLASHES := "reduce_flashes"
 # Frame smoothing, 1 on (the default) and 0 off: the ball is drawn between physics ticks, so it
 # moves every frame on a display that is not 90 Hz, about one tick (11 ms) behind the sim.
 const FRAME_SMOOTHING := "frame_smoothing"
+# Wide picture, 1 on (the default) and 0 off: on a screen wider than 16:9 the world fills it (same
+# height of view, wider across) and the HUD sits in the true corners; off keeps the 16:9 picture
+# with a black bar each side (the PC check on the 3440x1440 monitor, 10 Nov 2026: +2.1% median
+# frame time, p99 at most 9.51 ms).
+const WIDE_PICTURE := "wide_picture"
 const STICK_SENSITIVITY := "stick_sensitivity"
 const INVERT_Y := "invert_y"
 const STICK_DEADZONE := "stick_deadzone"
@@ -147,6 +152,10 @@ func reduce_flashes() -> bool:
 
 func frame_smoothing() -> bool:
 	return float(comfort.get(FRAME_SMOOTHING, 1.0)) >= 0.5
+
+
+func wide_picture() -> bool:
+	return float(comfort.get(WIDE_PICTURE, 1.0)) >= 0.5
 
 
 # 0 for High, 1 for Low.
