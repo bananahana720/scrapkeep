@@ -25,6 +25,9 @@ const BURST_POINTS := 11
 const WIDE_WEIGHT := 0.8
 const TALL_WEIGHT := 1.3
 
+# No caption draws under this many px: at the summary's page size the scaled 15 px read as 9 px
+# (the project's floor for bold small type is 18 px, VISUAL-LANGUAGE.md).
+const CAPTION_MIN_FONT := 18
 const EMPTY_CAPTION := "Page left blank. The pen is in the log, under the kettle."
 
 const LOSS_CARDS := [
@@ -292,9 +295,13 @@ func _burst(r: Rect2, text: String, index: int, k: float) -> void:
 	draw_string(font, at, text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Palette.LEDGER)
 
 
+static func caption_font(k: float) -> int:
+	return maxi(CAPTION_MIN_FONT, int(15.0 * k))
+
+
 func _caption(r: Rect2, text: String, k: float) -> void:
 	var font := UiFonts.bold()
-	var fs := maxi(9, int(15.0 * k))
+	var fs := caption_font(k)
 	var pad := 6.0 * k
 	var width := r.size.x - 20.0 * k
 	var inner := maxf(10.0, width - pad * 2.0)

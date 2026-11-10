@@ -112,9 +112,8 @@ func _validate_controls() -> void:
 	_t.check("the board refuses an item reward no rung reads", not ShiftBoard.validate(ShiftBoard.RUNGS, grants, TuneRows.ids()).is_empty(), "")
 
 
-# A first run that does everything at once stamps rungs under all four stamps: the summary names
-# each stamp once with what it inked, Clocked In is not said twice, and the HIRED rungs stay in
-# one group although the Lost Tape (FOUND) sits between them on the board.
+# A first run that does everything at once stamps every kind of rung: the summary says it as one
+# plain sentence, Clocked In first and not listed twice, the deeds in board order, no stamp word.
 func _one_big_first_run() -> void:
 	var store := _fresh(_path())
 	var bus := GameEvents.new()
@@ -129,7 +128,7 @@ func _one_big_first_run() -> void:
 	store.hear_tune("secret-lost-tape")
 	bus.run_ended.emit(true)
 	_t.eq("one run, four stamps", listener.board_line,
-		"Shift board: CLOCKED IN; Warden Breaker (LOGGED); Rivet Freed, Brindle Routed, Sable's Mark (HIRED); Lost Tape (FOUND).")
+		"You clocked in and marked off Warden Breaker, Rivet Freed, Lost Tape, Brindle Routed and Sable's Mark on the shift board.")
 	listener.free()
 	bus.free()
 
@@ -144,8 +143,8 @@ func _first_runs() -> void:
 	var listener := Progress.new()
 	listener.setup(bus, run, store, func(): return 1700000000.0)
 	var expect_next := ["clock_in", "first_warden", "rivet_freed", "rivet_freed", "lost_tape"]
-	var expect_line := ["", "Shift board: CLOCKED IN.", "Shift board: Warden Breaker (LOGGED).",
-		"Time card punched, 1 of 3.", "Shift board: Rivet Freed, Brindle Routed, Sable's Mark (HIRED)."]
+	var expect_line := ["", "You clocked in: your first shift is on the shift board.", "You marked off Warden Breaker on the shift board.",
+		"Time card punched, 1 of 3.", "You marked off Rivet Freed, Brindle Routed and Sable's Mark on the shift board."]
 	var scripts := [
 		[],
 		["kills:8"],

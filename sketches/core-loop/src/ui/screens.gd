@@ -3,6 +3,7 @@ extends CanvasLayer
 const ResultsOdds := preload("res://src/ui/results_odds.gd")
 
 const Palette := preload("res://src/core/palette.gd")
+const SummaryRows := preload("res://src/ui/summary_rows.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const FieldNotes := preload("res://src/ui/field_notes.gd")
 const Icons := preload("res://src/ui/icons.gd")
@@ -1413,23 +1414,9 @@ func _on_run_ended_board(_won: bool) -> void:
 		_fit_comic()
 
 
-# The summary as icons and numbers, each on its own icon with its word under it, so nobody has to
-# learn the icons to read a run. The words say what the number counts: the cogs are the ones still
-# in the wallet (cogs spent are gone), the scrap is what the run still holds (theft and spending
-# take from it), the events are the ones won. The earned save is a yes or no, so its chip shows only on a run that used it.
+# The summary as icons and numbers, each with its word and what becomes of it (summary_rows.gd).
 static func summary_chips(s: Dictionary, stage_count: int) -> Array:
-	var chips := [
-		["res_timer", "%d:%02d" % [int(s["time"]) / 60, int(s["time"]) % 60], "time"],
-		["obj_beacon", "%d/%d" % [s["stages"], stage_count], "stages"],
-		["res_scrap", str(s["cogs"]), "cogs left"],
-		["res_mass", str(s["scrap"]), "scrap held"],
-		["cat_transform", str((s["parts"] as Array).size()), "parts"],
-		["thr_instant", str(s["kills"]), "kills"],
-		["obj_event", str(s["events_won"]), "events won"],
-	]
-	if int(s["save_used"]) > 0:
-		chips.append(["res_health", str(s["save_used"]), "save used"])
-	return chips
+	return SummaryRows.rows(s, stage_count)
 
 
 func _summary_stats() -> void:
@@ -1453,7 +1440,7 @@ func _summary_stats() -> void:
 		row.add_child(value)
 		cell.add_child(row)
 		var word := _label(STAT_WORD_FONT)
-		word.text = String(chip[2]).to_upper()
+		word.text = String(chip[2]).to_upper() + "\n" + String(chip[3])
 		word.add_theme_color_override("font_color", Color(Palette.SAND, 0.7))
 		cell.add_child(word)
 		_stats.add_child(cell)
