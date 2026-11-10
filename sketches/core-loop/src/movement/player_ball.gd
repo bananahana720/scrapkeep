@@ -457,7 +457,7 @@ var _bank_logging_deferred := false
 func bank_geometry() -> Dictionary:
 	var at := ball_position()
 	var launch := Augments.bank_exit(state.velocity.length(), at - kit.anchor, drive_basis, kit)
-	return yours({"kind": "cone", "apex": at, "dir": launch.normalized(),
+	return yours({"kind": "cone", "aim": true, "apex": at, "dir": launch.normalized(),
 		"length": AIM_CONE_LENGTH * (1.0 + launch.length() / Augments.LAUNCH_CEILING),
 		"half_angle": AIM_CONE_HALF, "speed": launch.length()})
 
@@ -1497,13 +1497,13 @@ func _update_aim_cones(at: Vector3) -> void:
 	else:
 		indicator.clear("bank")
 	if not kit.vault_aim.is_empty():
-		indicator.set_shape("vault", yours({"kind": "cone", "apex": at, "dir": kit.vault_aim["dir"],
+		indicator.set_shape("vault", yours({"kind": "cone", "aim": true, "apex": at, "dir": kit.vault_aim["dir"],
 			"length": AIM_CONE_LENGTH, "half_angle": AIM_CONE_HALF}))
 	else:
 		indicator.clear("vault")
 	if kit.mounted and not kit.slingshot_aim.is_empty():
 		var fill: float = kit.slingshot_aim["fill"]
-		indicator.set_shape("slingshot", yours({"kind": "cone", "apex": at, "dir": kit.slingshot_aim["dir"],
+		indicator.set_shape("slingshot", yours({"kind": "cone", "aim": true, "apex": at, "dir": kit.slingshot_aim["dir"],
 			"length": AIM_CONE_LENGTH * (1.0 + fill), "half_angle": AIM_CONE_HALF, "fill": fill}))
 	else:
 		indicator.clear("slingshot")

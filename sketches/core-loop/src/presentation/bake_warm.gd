@@ -11,7 +11,8 @@ extends Node
 # The kinds stage 1 spawns are then each built once more, as a spawn builds them (the kit's own
 # setup(), dressed by its own deferred bake), in an inert holder far under the stage for one frame,
 # so the render pipelines their surfaces need compile then and not at the first spawn's first
-# frame (six surface pipelines at f451 on the 4080; #241 comment 6399644476).
+# frame (six surface pipelines at f451 on the 4080; #241 comment 6399644476). The holder stands a
+# second frame with the kind's death debris boxes in it (death_warm).
 # After them come the run's first moments, once a session: the first kill's scrap pickups, the
 # first armour read (its class icon and stamp words), the first synergy ring and the first arc
 # mark each draw a material nothing else drew before, and on the 4080 a lock pack's first multi-kill
@@ -69,7 +70,7 @@ const SPAWN_WARM := ["chaser", "lobber", "mag_trapper", "jolt_layer", "hooker", 
 const FIRSTS := ["scrap_pickup", "armour_read", "synergy_ring", "arc_mark", "machine_words", "hero_chunks"]
 # The machine word glyphs one warm frame rasterizes.
 const GLYPHS_A_FRAME := 4
-# Far under every stage, so the one frame a warm spawn stands there is never seen.
+# Far under every stage, so the two frames a warm spawn stands there are never seen.
 const OUT_OF_SIGHT := Vector3(0.0, -10000.0, 0.0)
 
 static var _warm := {}
@@ -132,15 +133,19 @@ func _process(_delta: float) -> void:
 		if status != ResourceLoader.THREAD_LOAD_IN_PROGRESS:
 			_loading.erase(path)
 	if _shown != null:
-		if _shown.has_meta("spawn_warm"):
+		if _shown.has_meta("spawn_warm") and not _shown.has_meta("debris_warm"):
+			# The debris joins the holder now, and a node that leaves before a frame is drawn never
+			# reaches the renderer: the holder stands this frame too, then goes.
+			_shown.set_meta("debris_warm", true)
 			death_warm(_shown)
+			return
 		_shown.queue_free()
 		_shown = null
 	if not _queue.is_empty():
 		var item = _queue.pop_front()
 		warm(item)
 		if item is Script and kind_of(item) in SPAWN_WARM:
-			# Held before setup runs, so a setup that fails still leaves with the next frame.
+			# Held before setup runs, so a setup that fails still leaves, two frames on.
 			_shown = spawn_holder(self)
 			spawn_into(item, _shown, ctx.player, ctx.spawner.get("ground") if ctx.spawner != null else null)
 	elif not _first_queue.is_empty():
@@ -241,6 +246,9 @@ static func spawn_into(kit: Script, holder: Node3D, target, ground) -> void:
 # paint the kit owns is copied at the death, so its twin carries the paint's glow state then: a kill
 # mid hit-flash or wind-up cue has emission on (enemy.gd _update_flash, chaser.gd's cue), another
 # look, so each twin is also put to use with its emission switched the other way, and held.
+# The boxes only count once a frame has been drawn with them in the tree: until 10 November 2026
+# the holder was freed in the call that added them, so the renderer never saw one and the first
+# death of a kind still built its box look (about 11 ms on the frame the debris appeared).
 static func death_warm(holder: Node3D) -> int:
 	var twins := {}
 	for view: MeshInstance3D in holder.find_children("*", "MeshInstance3D", true, false):
@@ -257,6 +265,12 @@ static func death_warm(holder: Node3D) -> int:
 			box.mesh = BoxMesh.new()
 			box.material_override = look
 			holder.add_child(box)
+	# The rest of a death's debris is the body's own meshes thrown as pieces. They are built here as
+	# a death builds them (inert, like everything under the holder), so anything a piece draws that
+	# the standing body did not is drawn ahead as well.
+	var body := holder.get_child(0) as Node3D if holder.get_child_count() > 0 else null
+	if body != null and body.get("kind") is String:
+		EnemyMotion.scatter(body, body.kind, Vector3.FORWARD)
 	return twins.size()
 
 

@@ -13,7 +13,8 @@ const Palette := preload("res://src/core/palette.gd")
 #   ring   {centre, radius, full_radius}     an area; fill > 0 adds the gauge sweep
 #   line   {from, to, width, full_to}        a lane on the ground
 #   arc    {points}                          a lobbed path, dashed
-#   cone   {apex, dir, length, half_angle}   an eject or vault line, dashed
+#   cone   {apex, dir, length, half_angle}   an eject or vault line, dashed; aim marks a direction
+#                                            the ball would leave along, where no hit lands
 #   marks  {points}                          small rings on faces (the arc slam's tags)
 # ticks is the class row's shape: ring (pips), chevron or burst (starburst spikes).
 # blocked draws the shape in bone, dashed, with a charcoal cross (RR-03).
@@ -33,6 +34,8 @@ const BREATHE := 0.5
 const COLLAPSE := 0.12
 const TICK_STEP_DEG := 30.0
 const TICK_LEN := 0.45
+# How far from the ball an aim cone's fill reaches before it has thinned to nothing.
+const AIM_FILL := 3.0
 
 var shapes := {}
 # The last record each layer drew before it was cleared, so a test can compare what
@@ -104,6 +107,17 @@ static func style(shape: Dictionary, now: float) -> Dictionary:
 		fill_alpha *= 1.0 + 0.8 * (0.5 + 0.5 * sin(TAU * now / BREATHE))
 	var kind := String(shape.get("kind", ""))
 	return {"edge": color, "fill": Color(color, fill_alpha), "dashed": kind == "arc" or kind == "cone", "cross": false}
+
+
+# A cone's fill: how far along the cone it reaches (a share of its length) and its colour at that far
+# edge. An area a release commits (the cannon's plate) is filled flat to its end. An aim cone leaves the
+# ball along a line that follows the look, so beside a wall it comes back over the lens: filled flat it
+# lay across the middle of the view as a pale sheet (play finding 7). Its fill is a root at the ball that
+# thins to nothing AIM_FILL metres out, whatever the cone's length, and the dashed lines carry the rest.
+static func cone_fill(shape: Dictionary, fill: Color) -> Dictionary:
+	if not shape.get("aim", false):
+		return {"reach": 1.0, "far": fill}
+	return {"reach": minf(1.0, AIM_FILL / maxf(float(shape.get("length", AIM_FILL)), 0.01)), "far": Color(fill, 0.0)}
 
 
 func _process(delta: float) -> void:
@@ -193,7 +207,11 @@ func _draw(shape: Dictionary, now: float) -> void:
 			var spread := tan(float(shape["half_angle"]))
 			var left := apex + (dir + side * spread).normalized() * length
 			var right := apex + (dir - side * spread).normalized() * length
-			_triangle(apex, left, right, fill)
+			var body := cone_fill(shape, fill)
+			var corners := [apex, apex.lerp(left, body["reach"]), apex.lerp(right, body["reach"])]
+			for i in 3:
+				_tris.surface_set_color(fill if i == 0 else body["far"])
+				_tris.surface_add_vertex(_p(corners[i]))
 			for tip in [left, right, apex + dir * length]:
 				_dashed(apex, tip, EDGE, edge)
 		"marks":

@@ -43,6 +43,9 @@ const BAY_RAMP := 8820
 const TRAVEL_UP := 0.4
 const TRAVEL_DOWN := 0.2
 const TRAVEL_THREAT := 2
+# The Warden's guard (0 to 100): see guard_state.
+const GUARD_TIGHT := 75.0
+const GUARD_LOOSE := 50.0
 # The ultimate meter's pressure step: a full meter at rest pressure still reaches travel.
 const ULTIMATE_STEP := 0.4
 # The momentum faders (INTEGRATION section 2): speed is a fraction of top speed.
@@ -55,6 +58,10 @@ const LEAD_FLOOR := 0.5
 # The directed sections that end a Warden break: the kill cadence and the walk home carry the
 # lead whole, and the break's release stops stripping it from the cadence on.
 const LEAD_RETURN := ["return", "home"]
+# The Warden fight's held breath and its drop carry the lead whole, whatever the threat feed,
+# the fight floor or low armour say: the breath is the lead alone, so a lead at nothing is
+# silence, and the drop is the payoff.
+const LEAD_WHOLE := ["open", "drop"]
 const PROTECTED := ["pivot", "drop", "break", "return", "home"]
 const SHELF_CLIPS := ["calm", "travel"]
 
@@ -112,6 +119,10 @@ var short_reads := 0
 var misses := 0
 var render_usec := 0
 var rendered := 0
+# Stem voices opened and the time opening them took: each one seeks its recording on the
+# frame that asks for the section, so a call that opens more than one section's stems shows here.
+var opened := 0
+var open_usec := 0
 
 # The section sounding at the render head, its grid and voices.
 var section := ""
@@ -258,8 +269,10 @@ func sound_from() -> int:
 
 # A stage starts on the shelf: calm (or travel) from bar 1 at transport sample at. A
 # restart while the band sounds fades the old section out and gives the new one its
-# full join, so no one-shot is left without a follower.
-func start_level(at: int) -> void:
+# full join, so no one-shot is left without a follower. With `fight`, the band is coming back
+# into a Warden fight already under way (after a radio hold or an ultimate): it enters on the
+# pivot and goes on to the build, and the shelf's recordings are never opened.
+func start_level(at: int, fight := false) -> void:
 	# A begun join's voices fade over the full ramp too, and calm waits out its join.
 	var faded := _cancel_pending(STOP_RAMP)
 	actions.clear()
@@ -282,6 +295,10 @@ func start_level(at: int) -> void:
 	threat = 0
 	pressure = float(parameters.get("threat", 0.0)) if parameter_enabled else 0.0
 	in_bay = false
+	if fight and not flat:
+		mode = "warden"
+		_schedule("pivot", maxi(at, earliest))
+		return
 	_schedule(_desired(), maxi(at, earliest))
 
 
@@ -379,7 +396,10 @@ func parameter_gain(stem: String, at := "") -> float:
 		return clampf(smoothstep(DRUMS_IN_SPEED, DRUMS_FULL_SPEED, float(parameters.speed)), 0.0, 1.0)
 	if stem != "other":
 		return 1.0
-	var cadence := mode == "piece" and (section if at == "" else at) in LEAD_RETURN
+	var name := section if at == "" else at
+	if mode == "warden" and name in LEAD_WHOLE:
+		return 1.0
+	var cadence := mode == "piece" and name in LEAD_RETURN
 	if _lead_stripped(cadence):
 		return 0.0
 	if cadence:
@@ -437,6 +457,36 @@ func commit_warden() -> void:
 func set_warden_state(state: String) -> void:
 	warden_state = state
 	_follow()
+
+
+# The Warden's guard as its posture fight reports it (0 to 100, rising toward the break).
+# The tight build ("telegraph") enters at GUARD_TIGHT and holds until the guard drains under
+# GUARD_LOOSE, so a guard that hovers at the line never flutters; a stagger is the held
+# breath ("open"); anything else is the build ("closed").
+static func guard_state(was: String, posture: float, staggered: bool) -> String:
+	if staggered:
+		return "open"
+	if posture >= GUARD_TIGHT or (was == "telegraph" and posture >= GUARD_LOOSE):
+		return "telegraph"
+	return "closed"
+
+
+# The fight follows the guard: its state from guard_state, and `landed` (the hit that
+# shattered a chunk) the drop. Returns the drop's transport sample, or -1 when none is
+# booked. Outside a Warden fight it does nothing.
+func follow_guard(posture: float, staggered: bool, landed: bool) -> int:
+	if mode != "warden":
+		return -1
+	var state := guard_state(warden_state, posture, staggered)
+	if landed:
+		# The drop is the answer, and the build comes back as the drop's own follower. Asking
+		# for the build first would open its three stems on this frame only to throw them away
+		# (10 ms on the hit's frame, measured on the PC).
+		warden_state = state
+		return drop_now()
+	if state != warden_state:
+		set_warden_state(state)
+	return -1
 
 
 # Contact on the core: the render head goes quiet now and the drop enters on the next
@@ -853,6 +903,7 @@ func _clear_harmony(at: int) -> void:
 
 
 func _open(clip: Dictionary, stem: String, from: int, gains: Dictionary, ramp: int, name: String) -> Voice:
+	var began := Time.get_ticks_usec()
 	var v := Voice.new()
 	v.stem = stem
 	v.pb = streams[clip["paths"][stem]].instantiate_playback()
@@ -878,6 +929,8 @@ func _open(clip: Dictionary, stem: String, from: int, gains: Dictionary, ramp: i
 		v.step = 1.0
 	else:
 		_ramp_to(v, g, ramp)
+	opened += 1
+	open_usec += Time.get_ticks_usec() - began
 	return v
 
 

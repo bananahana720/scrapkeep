@@ -15,6 +15,7 @@ const EXPECTED := {
 	"start-mass": ["start_mass", "200", "heavy", "start"],
 	"music": ["music", "ace", "bogus", "launch"],
 	"breath": ["breath", "gentle", "bogus", "launch"],
+	"warden-form": ["warden_form", "loop", "bogus", "launch"],
 	"discovery": ["discovery", "cards", "bogus", "launch"],
 	"telegraph": ["telegraph", "haze", "bogus", "launch"],
 	"world-one-builds": ["world_one_builds", "on", "bogus", "launch"],
@@ -28,7 +29,7 @@ const EXPECTED := {
 }
 
 # The lab's winners are the shipping defaults: a bare Tuning reports each one.
-const DEFAULTS := {"scrap_mode": "armor", "wear": "on", "music": "ace", "discovery": "cards", "telegraph": "haze",
+const DEFAULTS := {"scrap_mode": "armor", "wear": "on", "music": "ace", "warden_form": "form", "discovery": "cards", "telegraph": "haze",
 	"world_one_builds": "on", "hotwire_shell": "on", "hotwire_tread": "on", "grip": "on"}
 
 var _failures := 0

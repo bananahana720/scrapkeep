@@ -2,6 +2,8 @@
 
 Render brief for the PC (ACE-Step on the RTX 3060 or an idle 4080), written 2026-11-09 by the sound thread ("Develop sound artist and game music"). It changes no game file. The renders let Andrew judge the sound persona by ear on a phone: the same two picked tunes, produced the way the band would have produced them in three different years. The persona page that these feed is in the project library (INDEX.md, "Direction").
 
+**Outcome (10 November 2026): Andrew picked 2010, the festival years.** The band's section in [SOUND-BIBLE.md](../SOUND-BIBLE.md) records it. The fight and anthem cells decided it; the roam cell was left out of the card, and the free cell went up as an extra (one take per year). The captions under A are now the pattern for new music; B and C are for radio records. Roaming takes in 2010 follow "Roaming after the pick" at the end.
+
 ## What to render
 
 Three candidates, each a dated period of one band (the house band, working name Local 172). Per candidate: two covers of picks Andrew already knows, plus one free render with no parent so the period's own sound is heard without the parent's production showing through.
@@ -52,3 +54,15 @@ Put the MP3s where the cloud thread can read them (`/mnt/project-files/music/per
 ## Not in this job
 
 No stems, no loops, no packaging, no game files. Nothing replaces a standing pick; these are auditions (ruling: a new take replaces one only if Andrew picks it by ear).
+
+## Roaming after the pick
+
+Every roam cover asked for at 172 landed on a 150 BPM grid except one (2010, seed 6101), with or without the drums in the parent. So 2010 roaming takes are rendered at 174, the tempo the style is usually tagged with, and fitted:
+
+1. Fit the parent to 174 first, so the source and the ask agree: `ffmpeg -af rubberband=tempo=1.011628:pitchq=quality`.
+2. Render with the 2010 roam caption, "174 BPM" in place of "172 BPM", tempo field 174, cover strength 0.55, batch 1.
+3. Check by bar length at 174 (beat 0.3448 s, half bar 0.6897 s, bar 1.3793 s), by the rule above. A take on the 150 grid fails and is not fitted.
+4. Fit a passing take to 172: `ffmpeg -af rubberband=tempo=0.988372:pitchq=quality`, then check again at 172.
+5. Label it "rendered at 174, fitted to 172" wherever it is shown.
+
+This is the one allowed stretch: 1.16 percent, pitch kept. Fitting a 150 take to 172 (15 percent) is still out. A fitted take is an audition like any other: the current Spillway roaming tune stays until Andrew picks one by ear.

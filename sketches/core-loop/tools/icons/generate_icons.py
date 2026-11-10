@@ -1134,15 +1134,19 @@ register(
 )
 
 
+# A hop off a floor, never a bare V: three blind readers of three took the V for a tick, and a first-timer
+# took a gate that wore it for a gate already taken (play finding 22).
 def g_trg_on_rebound():
     return [
-        path("M20 16 L34 38 L50 20", stroke=BONE, width=DETAIL),
-        dot(20, 16, 3, fill=BONE),
+        line(26, 46, 52, 46, stroke=BONE, width=DETAIL),
+        path("M27 41 Q34 4 41 41", stroke=BONE, width=DETAIL),
+        path("M41 41 Q44 27 49 27", stroke=BONE, width=DETAIL),
+        dot(49, 26, 4.5, fill=BONE),
     ]
 
 
 register(
-    "trg_on_rebound", "On rebound", "A ball tracing a V off a slanted line", plate_tag, g_trg_on_rebound,
+    "trg_on_rebound", "On rebound", "A ball hopping up off a floor line", plate_tag, g_trg_on_rebound,
 )
 
 
