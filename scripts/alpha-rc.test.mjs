@@ -16,6 +16,8 @@ import {
   judgeCommand,
   judgeRedteam,
   judgeTree,
+  BOOT_FAILED,
+  bootFailure,
   launchAppImage,
   launchEnv,
   placeholderKinds,
@@ -271,6 +273,39 @@ test("cold launch fails on an early exit, on silence, and outlasts a game that i
   assert.match(late.note, /no SCRAPKEEP_TITLE_INTERACTIVE line within 0.4 s/);
   const stubborn = await launchAppImage(fake(dir, "stubborn.sh", "trap '' TERM; while true; do sleep 0.1; done"), { seconds: 0.3 });
   assert.equal(stubborn.status, "fail");
+});
+
+test("cold launch: a build that says it did not load fails at once, with the boot's reason, and does not wait out the menu", async () => {
+  const dir = tmp();
+  // The card is up, the boot gives up, and the window stays open on its Quit button.
+  const card = await launchAppImage(fake(dir, "card.sh", `echo "${TITLE_INTERACTIVE} ms=300"; echo "${BOOT_FAILED} the game scene's script did not load"; exec sleep 30`), { seconds: 5, menuWaitSeconds: 20 });
+  assert.equal(card.status, "fail");
+  assert.equal(card.note, "the build said it did not load (SCRAPKEEP_BOOT_FAILED): the game scene's script did not load");
+  assert.ok(card.ms < 5000, `failed in ${card.ms} ms, not at the 20 s menu wait`);
+  assert.equal(card.menuMs, null);
+  // No card (headless): the boot prints the line and exits 1. The exit waits for the last lines, so it names the reason.
+  const headless = await launchAppImage(fake(dir, "headless.sh", `echo "${BOOT_FAILED} res://scenes/main.tscn did not load"; exit 1`), { seconds: 5 });
+  assert.equal(headless.status, "fail");
+  assert.match(headless.note, /the build said it did not load \(SCRAPKEEP_BOOT_FAILED\): res:\/\/scenes\/main\.tscn did not load$/);
+  // A child of the exited process still holds the pipes: the exit is judged after a short wait, not at the title budget.
+  const held = await launchAppImage(fake(dir, "held.sh", "sleep 30 & echo last words; exit 3"), { seconds: 20 });
+  assert.match(held.note, /^exited \(3\) before the main menu$/);
+  assert.match(held.output, /last words/);
+  assert.ok(held.ms < 10000, `judged in ${held.ms} ms`);
+  // A healthy build that only mentions the marker inside another line still passes.
+  const quoted = await launchAppImage(fake(dir, "quoted.sh", `echo "note: ${BOOT_FAILED} is the failure marker"; echo "${TITLE_INTERACTIVE} ms=300"; echo "${MENU_READY} ms=400"; exec sleep 30`), { seconds: 5 });
+  assert.equal(quoted.status, "pass");
+});
+
+test("bootFailure reads the reason from one whole line that starts with the marker", () => {
+  assert.equal(bootFailure(""), null);
+  assert.equal(bootFailure(`${TITLE_INTERACTIVE} ms=300\n${MENU_READY} ms=900\n`), null);
+  assert.equal(bootFailure(`${BOOT_FAILED} the game scene's scr`), null, "a line still arriving is not read yet");
+  assert.equal(bootFailure(`${TITLE_INTERACTIVE} ms=300\n${BOOT_FAILED} the game scene's script did not load\nERROR: boot: x\n`), "the game scene's script did not load");
+  assert.equal(bootFailure(`${BOOT_FAILED} why\r\n`), "why");
+  assert.equal(bootFailure(`${BOOT_FAILED}\n`), "no reason given");
+  assert.equal(bootFailure(`ERROR: saw ${BOOT_FAILED} somewhere\n`), null);
+  assert.equal(bootFailure(`${BOOT_FAILED}_TWICE x\n`), null);
 });
 
 test("runProcess returns the exit, and a timeout kills the group and reads as killed", async () => {

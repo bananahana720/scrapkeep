@@ -98,7 +98,10 @@ func _ready() -> void:
 	_game.events.grapple_fired.connect(func(_anchor: Vector3): _end_exchange())
 	_game.events.flow_changed.connect(func(_state: String):
 		if not _game.flow.in_stage():
-			_end_exchange())
+			_end_exchange()
+		# A boss's line held for the close-up never follows the player off the fight's screen.
+		if not _game.flow.in_play():
+			_end_intro())
 
 
 func _install_exchange_input() -> void:
@@ -194,13 +197,19 @@ func _queue_intro(zone: String, warden: bool) -> void:
 	_flush_intro()
 
 
-# Moss holds his tongue: a screen has paused the drop (the briefing, a pick), or his turn in the
+# Moss holds his tongue: a screen has paused the drop (the briefing, a pick), a close-up panel
+# has the moment (Brindle's entrance, ruling cf: the picture, then his line), or his turn in the
 # run's opening has not come (opening.gd: the shift card goes first). _process asks again.
 func _waits() -> bool:
-	if get_tree().paused:
+	if get_tree().paused or _close_up():
 		return true
 	var opening = _game.get("opening")
 	return opening != null and opening.waits("moss")
+
+
+func _close_up() -> bool:
+	var presentation = _game.get("presentation")
+	return presentation != null and presentation.close_up()
 
 
 func _flush_intro() -> void:
