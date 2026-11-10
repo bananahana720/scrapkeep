@@ -66,6 +66,9 @@ func _bass_everywhere() -> void:
 # Melody first: at full pressure the lead plays notes and can be heard over the mix in every theme.
 # The synth engine only; the PC's recorded stems go through ace_sequencer.gd (ruling bt) and are
 # judged on a PC listen.
+# The engine's groove pick is not seeded, so the whole-mix figure moves between runs: over five
+# runs on 10 Nov 2026 the three themes read 11.4 to 11.7, 10.4 and 15.8 dB under, a 0.3 dB spread
+# against 6 dB of room to the line, and the planted cut (the lead 20 dB down) read 30 to 36.
 func _lead_heard() -> void:
 	var failing: Array = []
 	var lines: Array = []

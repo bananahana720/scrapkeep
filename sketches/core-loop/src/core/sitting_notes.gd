@@ -7,7 +7,7 @@ extends Node
 # One file a launch, user://sitting-notes/notes-<UTC start>.ndjson, one JSON row a line. Every row
 # has "t" (seconds since the notes started), "utc" and "kind":
 #   start      the build's facts: executable, window, refresh rate, physics rate, the hitch limit
-#   stuck, hung, wedged, fell, objective, blank   the play watch's rows (src/core/play_watch.gd).
+#   stuck, hung, wedged, fell, objective, blank, bar   the play watch's rows (src/core/play_watch.gd).
 #              A stuck row is also what a person standing still for 8 s in play writes: read it
 #              with the place.
 #   hitch      frames that each took hitch_ms or longer, one row a burst (frames within BURST_GAP_S
@@ -16,7 +16,8 @@ extends Node
 #              A frame while the window is not focused is not counted.
 #   mark       the player pressed MARK_KEY (F8), or clicked both sticks together on a pad: "look
 #              here". Carries the place, the objective plate's words and the frame rate.
-#   end        the watch's counts and the marks, as the game closes
+#   end        the watch's counts and the marks, with the longest stretches the plate stood empty
+#              (blank_max_s) and the hull bar stood off the hull (bar_off_max_s), as the game closes
 # Cost: one clock read a frame, the watch's reads a physics tick, the plate read once a second.
 # It only reads the game, and each row is closed onto disk as it is written, so a crash keeps them.
 

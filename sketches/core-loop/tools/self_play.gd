@@ -140,7 +140,7 @@ var _plant_end := false
 var _plant_limit := 0.0
 var _watch_on := false
 var _watch
-var _read_at := 0.0
+var _read_gap := 0.0
 var _stages: Array[int] = []
 var _watch_told := false
 var _film_dir := ""
@@ -465,15 +465,17 @@ func _end_run(code: int) -> void:
 	_quit_code = code
 
 
-# The watch's ball checks every tick; once a second its plate read, and how long play has gone on
-# with nothing on the objective plate (to the second).
+# The watch's ball checks every tick; once a second of play its plate read, and how long play has
+# gone on with nothing on the objective plate (to the second). The gap is counted in the ticks
+# this is called on, which a paused tree does not give it, so a pause, a held screen or the
+# launch before the run starts is never read as seconds of play.
 func _watch_step(delta: float) -> void:
 	_watch.step(delta)
-	if _now() - _read_at < 1.0:
+	_read_gap += delta
+	if _read_gap < 1.0:
 		return
-	var since := _now() - _read_at
-	_read_at = _now()
-	_watch.read_text(since)
+	_watch.read_text(_read_gap)
+	_read_gap = 0.0
 
 
 func _tell_watch() -> void:

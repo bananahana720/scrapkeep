@@ -17,13 +17,18 @@ const ChildRuns := preload("res://tests/trees/child_runs.gd")
 #     bot_six_<pilot> proofs carried, which now run weekly);
 #   - the run saved into its own folder.
 # Stuck and hung counts are printed, not judged: a camper's stall and a mounted special rest by design.
-# A second go: a pilot whose run does not reach stage 3 (it died, stalled or was killed at the
-# wall) plays once more on AGAIN_SEED inside the same budget. The game is hard and its ticks are
-# real, so a death is play, not a fault: on 10 Nov 2026 the test failed 5 of 22 runs of builds with
-# nothing wrong, mostly a pilot scrapped on the dam (the plant measurement). The milestones, the
-# skill slots, the stage order and the save are judged on the pilot's last go; an error line, a
-# wedge, a fall, an empty plate and a bar off the hull are judged on every go, so a second go
-# never hides one. A fault that stops every run (a Brindle that cannot die) fails both goes.
+# A second go: a pilot whose run ended because the pilot died (quit 1 with "run ended 'died'")
+# plays once more on AGAIN_SEED inside the same budget. The game is hard and its ticks are real,
+# so a death is play, not a fault: on 10 Nov 2026 the test failed 5 of 22 runs of builds with
+# nothing wrong, mostly a pilot scrapped on the dam (the plant measurement). Every other ending
+# stands as it is and gets no second go: a stall (quit 3), a bad flag (quit 2), a crash, a kill at
+# the wall. The milestones, the skill slots, the stage order and the save are judged on the
+# pilot's last go; an error line, a wedge, a fall, an empty plate and a bar off the hull are judged
+# on every go, so a second go never hides one. A fault that stops every run (a Brindle that
+# cannot die) fails both goes, and more than AGAIN_MAX pilots dying on their first go is a red of
+# its own: one death is the game being hard, half the roster dying is a build that got harder.
+# What this gives up: a fault that kills one or two pilots some of the time now reads green
+# with a "needed a second go" line; the band runs are where a death rate is measured.
 # Evidence limit: one seed a go, the skipper, headless; real ticks, so a seed does not replay
 # exactly. Menus are not pressed: the run starts
 # by code (flow.press_start); session_test presses the title, the prologue and the pilot select as keys. Each go
@@ -40,6 +45,8 @@ const BUDGET_S := 1650.0
 const PLATE_BLANK_S := 10.0
 const BAR_OFF_S := 3.0
 const AGAIN_SEED := 2
+const AGAIN_MAX := 2
+const DIED := "self-play: run ended 'died' "
 const NEEDS := [
 	["the dam's exit is taken", "self-play: stage 1 exit taken at "],
 	["the flume is entered", "self-play: stage 2 entered at "],
@@ -58,13 +65,15 @@ func _initialize() -> void:
 	jobs.append({"name": "planted_end", "args": ["--self-play", "--self-play-until=3", "--self-play-watch=1", "--self-play-plant-end"]})
 	var base := ProjectSettings.globalize_path("user://").path_join("world1-run-%d" % OS.get_process_id())
 	# A pilot that did not get there plays once more in what is left of the budget; the control does not.
-	var both := ChildRuns.run_launched_twice(jobs, base, CHILD_S, PARALLEL, BUDGET_S, _reached, _second_go)
+	var both := ChildRuns.run_launched_twice(jobs, base, CHILD_S, PARALLEL, BUDGET_S, _settled, _second_go)
 	var runs: Array = both["first"]
 	var again := {}
 	for i in both["again"]:
 		again[PILOTS[i]] = both["again"][i]
 	print("world1_run_test: %d of %d pilots needed a second go%s" % [again.size(), PILOTS.size(),
 		"" if again.is_empty() else " (%s)" % ", ".join(again.keys())])
+	t.check("no more than %d pilots died on their first go" % AGAIN_MAX, again.size() <= AGAIN_MAX, "%d of %d%s" % [again.size(), PILOTS.size(),
+		"" if again.is_empty() else ": " + ", ".join(again.keys())])
 	for i in PILOTS.size():
 		var pilot: String = PILOTS[i]
 		for row in _judge(pilot, [runs[i]] + ([again[pilot]] if again.has(pilot) else [])):
@@ -74,11 +83,24 @@ func _initialize() -> void:
 		"exit %d; %s" % [planted["code"], _last_line(planted["text"])])
 	t.check("control: and shows none of the run's milestones", NEEDS.all(func(need): return _line(planted["text"], need[1]) == ""),
 		"%d of %d lines present" % [NEEDS.filter(func(need): return _line(planted["text"], need[1]) != "").size(), NEEDS.size()])
+	# Which endings earn a second go: a death and nothing else.
+	var ended := {"code": 1, "timed_out": false, "text": "self-play: stage 1 entered at 9.10 s\n" + DIED + "at stage 1 before the goal at 61.20 s\n"}
+	t.check("control: a pilot that died gets a second go", not _settled(ended))
+	var others := {
+		"reached stage 3": {"code": 0, "timed_out": false, "text": "self-play: done at 300.00 s\n"},
+		"stalled": {"code": 3, "timed_out": false, "text": "self-play: stalled at stage 1 exit at 200.00 s pos 1.0,2.0,3.0\n"},
+		"ended early without dying": planted,
+		"quit 1 with no ending line (a crash)": {"code": 1, "timed_out": false, "text": "self-play: stage 1 entered at 9.10 s\n"},
+		"died, then crashed on the way out": {"code": 139, "timed_out": false, "text": ended["text"]},
+		"killed at the wall": {"code": -1, "timed_out": true, "text": ended["text"]},
+	}
+	var wrongly: Array = others.keys().filter(func(what): return not _settled(others[what]))
+	t.check("control: no other ending does", wrongly.is_empty(), "%d endings read; given a second go: %s" % [others.size(), wrongly])
 	# The second go's rules, on goes made from this run's own logs (no extra child). The stand-in
 	# for a good run is the first pilot's last go, so these only speak when that pilot passed.
 	var good: Dictionary = again.get(PILOTS[0], runs[0])
 	if _judge(PILOTS[0], [good]).all(func(row): return row[1]):
-		t.check("control: a first go that ended early is made good by a second go that gets there", _judge(PILOTS[0], [planted, good]).all(func(row): return row[1]))
+		t.check("control: a first go that died is made good by a second go that gets there", _judge(PILOTS[0], [ended, good]).all(func(row): return row[1]))
 		t.check("control: two goes that both end early stay red", _failed(_judge(PILOTS[0], [planted, planted])).has("the run reaches stage 3 and quits 0"))
 		var wedged: Dictionary = planted.duplicate()
 		wedged["text"] = String(good["text"]).replace(" wedged=0 ", " wedged=1 ")
@@ -87,7 +109,7 @@ func _initialize() -> void:
 		errored["text"] = String(planted["text"]) + "\nSCRIPT ERROR: planted\n"
 		t.eq("control: nor is an error line on the first go", _failed(_judge(PILOTS[0], [errored, good])), ["no script error or ERROR line"])
 		var stuck_bar: Dictionary = planted.duplicate()
-		stuck_bar["text"] = String(good["text"]).replace(" bar_off_max=0.0 ", " bar_off_max=40.0 ")
+		stuck_bar["text"] = RegEx.create_from_string(" bar_off_max=\\S+").sub(String(good["text"]), " bar_off_max=40.0")
 		t.eq("control: nor a hull bar that stood off the hull", _failed(_judge(PILOTS[0], [stuck_bar, good])), ["the hull bar never stands off the hull for %d s of play" % int(BAR_OFF_S)])
 	else:
 		print("world1_run_test: the second go's controls did not run (%s did not pass)" % PILOTS[0])
@@ -142,7 +164,7 @@ func _failed(rows: Array) -> Array:
 	return rows.filter(func(row): return not row[1]).map(func(row): return row[0])
 
 
-# The second go's job for a pilot's job; null for the control, which gets none.
+# The second go's job for a pilot's job; null for the control, which gets none whatever its ending.
 func _second_go(job: Dictionary):
 	if not job.has("pilot"):
 		return null
@@ -161,6 +183,12 @@ func _each(watches: Array, key: String) -> String:
 
 func _reached(run: Dictionary) -> bool:
 	return run["code"] == 0 and not run["timed_out"]
+
+
+# A result that stands as it is: every ending but a pilot's death (the self-play tool's quit 1
+# with its "run ended 'died'" line). If that line's wording moves, no go is repeated: red, not green.
+func _settled(run: Dictionary) -> bool:
+	return not (run["code"] == 1 and not run["timed_out"] and _line(run["text"], DIED) != "")
 
 
 # A line's name=value pairs.

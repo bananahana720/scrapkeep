@@ -15,6 +15,9 @@ extends RefCounted
 #   bar     the hull bar stood more than BAR_OFF of a full bar away from the hull for BAR_S of play
 #           (once a stretch). The HUD sets the bar every frame, so a bar off for seconds is a bar a
 #           player cannot trust. It reads the share the HUD gave the bar (hud.hull_shown), not pixels.
+#           A stretch is timed from the first reading that found the bar off, so one reading alone
+#           is never a row however long ago the reading before it was (the frame a pause lifts,
+#           before the HUD has drawn again; a run's first read).
 # stuck, hung, wedged and fell log again only REARM_M or more from where they last fired.
 
 const STUCK_M := 3.0
@@ -48,6 +51,7 @@ var _objective := ""
 var _blank := 0.0
 var _blank_told := false
 var _bar_off := 0.0
+var _bar_seen := false
 var _bar_told := false
 var _blinked := -10
 var _was_in_play := false
@@ -126,8 +130,8 @@ func step(delta: float) -> void:
 		_emit("wedged", ball, state, {"n": _v(player.state.contact_normal)})
 
 
-# The HUD's objective plate, read about once a second by the runner (since = seconds since the
-# last read): a row each time its id changes, with the gate's lock state beside it, so a wrong
+# The HUD's objective plate, read about once a second by the runner (since = seconds of play
+# since the last read; a paused tree is not play): a row each time its id changes, with the gate's lock state beside it, so a wrong
 # plate during a lock reads off the log; a row when it has stood empty for BLANK_S; and a row
 # when the hull bar has stood off the hull for BAR_S.
 func read_text(since := 1.0) -> void:
@@ -135,6 +139,7 @@ func read_text(since := 1.0) -> void:
 		_blank = 0.0
 		_blank_told = false
 		_bar_off = 0.0
+		_bar_seen = false
 		_bar_told = false
 		return
 	var reading: Dictionary = _game.hud.objective_reading()
@@ -142,7 +147,8 @@ func read_text(since := 1.0) -> void:
 	var hull: float = clampf(_game.run.hp / maxf(1.0, _game.run.max_hp), 0.0, 1.0)
 	var shown: float = _game.hud.hull_shown()
 	if absf(shown - hull) > BAR_OFF:
-		_bar_off += since
+		_bar_off = _bar_off + since if _bar_seen else 0.0
+		_bar_seen = true
 		bar_off_max = maxf(bar_off_max, _bar_off)
 		if _bar_off >= BAR_S and not _bar_told:
 			_bar_told = true
@@ -150,6 +156,7 @@ func read_text(since := 1.0) -> void:
 			_row("bar", _game.player.ball_position(), state, {"shown": snappedf(shown, 0.01), "hull": snappedf(hull, 0.01)})
 	else:
 		_bar_off = 0.0
+		_bar_seen = false
 		_bar_told = false
 	# The victory lap has no objective by design (objectives.gd), so its empty plate is not a fault.
 	if String(reading.get("words", "")).strip_edges() == "" and state != "lap":

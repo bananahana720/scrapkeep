@@ -14,10 +14,15 @@ var t = T.new("park_reactor_repeat_test")
 # park_reactor_fight_test does. Paced by the clock, the tick the bot reached the sheet moved with
 # the machine's load, and a fight is a whole number of pulse cycles (about 6 s each): grown ended
 # on 3 or 4 and small on 7, 8 or 9, while the old checks held only for grown 3 and small exactly 7
-# (1 fail in 3 side by side on stage 2887a970, 4 in 6 on a branch that moved the tick). Fixed, the
-# same build gives the same cycles every time.
+# (1 fail in 3 side by side on stage 2887a970, 4 in 6 on a branch that moved the tick; 1 red in
+# the wave 33 gate after a three-tick wait was tried). Fixed, the same build gives the same
+# numbers every time: grown 19.646 s on 3 cycles and small 55.714 s on 9, on 4 of 4 runs side by
+# side on four cores (stage 2b35a11f, 10 Nov 2026), and the same on 8 runs of earlier heads.
 # Each fight's allowance is 1.5 times its own pin in posture_bands_reactor_test. The small fight
 # used to share the grown one's allowance (47.7 s), which a small ball can only meet on 7 cycles.
+# The allowance only stops a fight that never ends; the fight's length is held by the "twice
+# grown" check here and by the pins there, so the cycle counts are printed and not pinned (a
+# tuning change that moves a fight by one cycle is not this test's to fail).
 const CHILD_ENV := "SCRAPKEEP_REACTOR_REPEAT_CHILD"
 
 class Hands extends BotDriver:
@@ -30,8 +35,10 @@ func _initialize() -> void:
 	if OS.get_environment(CHILD_ENV) != "1":
 		OS.set_environment(CHILD_ENV, "1")
 		var output := []
-		var code := OS.execute(OS.get_executable_path(), PackedStringArray(["--headless", "--fixed-fps", "90", "--path",
-			ProjectSettings.globalize_path("res://"), "--script", "res://tests/park_reactor_repeat_test.gd"]), output, true)
+		var args := PackedStringArray(["--headless", "--fixed-fps", "90", "--path", ProjectSettings.globalize_path("res://"),
+			"--script", "res://tests/park_reactor_repeat_test.gd", "--"])
+		args.append_array(OS.get_cmdline_user_args())
+		var code := OS.execute(OS.get_executable_path(), args, output, true)
 		for chunk in output:
 			print(String(chunk).strip_edges())
 		quit(code)
@@ -61,12 +68,6 @@ func _fight(heft: float, label: String, allowance_s: float) -> Dictionary:
 	var dir: Vector3 = sheet._face_heading(w)
 	var foot: Vector3 = w.home + dir * minf(BotDriver.RUNUP, Reactor.SHEET_RUN - BotDriver.RUNUP_EDGE)
 	game.player.reset_to(game.ctx.terrain.drop_point(foot.x, foot.z, game.player.tuning.RADIUS), Vector3.ZERO)
-	# The bot starts three ticks after the placement. The small fight ends after 7, 8 or 9 pulse
-	# cycles depending on the tick the bot starts against the Warden's pulse, and only 7 fits the
-	# cap; started on the placement tick it drew 9 often once a placement took hold in the call.
-	# The wait evens the odds (about three runs in four pass); it does not make the fight
-	# repeatable. See the test's row in project-guide/handoff/KNOWN-FAILING.tsv.
-	for i in 3: await physics_frame
 	var result := {"broken": false, "seconds": 0.0, "contacts": 0, "cycles": 0}
 	game.events.enemy_struck.connect(func(enemy, kind, _force):
 		if enemy == w and kind in ["ram", "stomp", "slam"]: result.contacts += 1)

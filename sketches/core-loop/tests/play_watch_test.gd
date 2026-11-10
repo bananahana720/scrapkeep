@@ -275,9 +275,10 @@ func _bar() -> void:
 	for i in 4:
 		_watch.read_text(1.0)
 	_t.check("a bar that shows the hull is never a bar row", _count("bar") == 0 and _watch.bar_off_max == 0.0, "%d rows, longest %s s" % [_count("bar"), _watch.bar_off_max])
+	# A stretch is timed from the first reading that found the bar off: three readings are 2 s.
 	_game.run.hp = 50.0
-	_watch.read_text(1.0)
-	_watch.read_text(1.0)
+	for i in 3:
+		_watch.read_text(1.0)
 	_game.hud.shown = 0.5
 	_watch.read_text(1.0)
 	_watch.read_text(1.0)
@@ -286,8 +287,15 @@ func _bar() -> void:
 	for i in 5:
 		_watch.read_text(1.0)
 	_t.check("nor is a bar within %.2f of the hull" % PlayWatch.BAR_OFF, _count("bar") == 0 and _watch.bar_off_max == 2.0, "%d rows, longest %s s" % [_count("bar"), _watch.bar_off_max])
+	# One reading off the hull after a long gap (the frame a pause lifts, before the HUD has drawn
+	# again) is one reading, not the gap: a healthy game must never write this row.
 	_game.hud.shown = 1.0
-	for i in 5:
+	_watch.read_text(30.0)
+	_game.hud.shown = 0.5
+	_watch.read_text(1.0)
+	_t.check("one reading off after a long gap is not a bar row", _count("bar") == 0 and _watch.bar_off_max == 2.0, "%d rows, longest %s s" % [_count("bar"), _watch.bar_off_max])
+	_game.hud.shown = 1.0
+	for i in 6:
 		_watch.read_text(1.0)
 	var rows := _of("bar")
 	_t.check("a bar that stays full over half a hull is one bar row, with both readings", _count("bar") == 1 and rows.size() == 1 and rows[0]["shown"] == 1.0 and rows[0]["hull"] == 0.5 and _watch.bar_off_max == 5.0,
@@ -295,7 +303,7 @@ func _bar() -> void:
 	_game.hud.shown = 0.5
 	_watch.read_text(1.0)
 	_game.run.hp = 20.0
-	for i in 3:
+	for i in 4:
 		_watch.read_text(1.0)
 	_t.check("a second stretch is a second row", _count("bar") == 2, "%d rows" % _count("bar"))
 
