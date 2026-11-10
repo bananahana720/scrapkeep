@@ -30,6 +30,8 @@ import { readLedger } from "./known-failing.mjs";
 //   2. Godot: import (up to three tries), boot, then the tests the diff reaches, cheapest first
 // The full gate runs once per staging head and the red team plays each staging head; the fast
 // lane never replaces them. Bot-tier tests the diff reaches are listed for the bot shards.
+// Every test run that ends red keeps its log beside the receipt (failedRunLog), also when a rerun
+// then passes, so a flaky crash can still be read afterwards.
 // Run: node scripts/sketch-fast.mjs [--base origin/main] [--budget 900] [--dry-run] [--receipt <label>]
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -388,6 +390,46 @@ function placeholderRows(sketchDir) {
   }
 }
 
+// What a red run printed is kept whole up to this many lines. A longer log keeps its first
+// LOG_HEAD_LINES (the engine's start-up) and its last LOG_TAIL_LINES (the failure), with the cut named.
+export const LOG_HEAD_LINES = 200;
+export const LOG_TAIL_LINES = 2000;
+
+export function cappedLog(output, head = LOG_HEAD_LINES, tail = LOG_TAIL_LINES) {
+  const lines = String(output ?? "").split("\n");
+  if (lines.at(-1) === "") lines.pop();
+  if (lines.length <= head + tail) return lines.join("\n");
+  return [...lines.slice(0, head), `[sketch:fast cut ${lines.length - head - tail} lines here; ${lines.length} lines printed]`, ...lines.slice(lines.length - tail)].join("\n");
+}
+
+// The log of one red run: what ran, how it ended, then stdout and stderr as they arrived.
+export function failedRunLog({ test, where, attempt, head, exit, signal, timedOut, ms, reason, output }) {
+  const facts = [
+    `test: ${test}`,
+    `ran on: ${where === "base" ? "the merge base" : "the head"} (${head}), run ${attempt} there`,
+    `exit: ${exit ?? "none"}${signal ? `, signal ${signal}` : ""}${timedOut ? ", stopped at its time limit" : ""}`,
+    `seconds: ${(ms / 1000).toFixed(1)}`,
+    `reason: ${reason}`,
+  ];
+  return `${facts.join("\n")}\n--- stdout and stderr ---\n${cappedLog(output)}\n`;
+}
+
+// tests/a/b_test.gd, second red run on the head -> a__b_test.head-2.log
+export function failedRunLogName(test, where, attempt) {
+  return `${test.replace(/^tests\//, "").replace(/\.gd$/, "").replaceAll("/", "__")}.${where}-${attempt}.log`;
+}
+
+export function receiptBaseName(label, head, startedAt) {
+  return `${label}-${head.slice(0, 12)}-${startedAt.replace(/[:.]/g, "-")}`;
+}
+
+// A run that ended on a signal the lane did not send. SIGKILL is usually the container's memory
+// limit (dmesg "Memory cgroup out of memory"), not the test; any other signal is a crash.
+export function signalReason(signal) {
+  if (!signal || signal === "SIGKILL") return "killed by a signal before its time limit (often the container's memory limit; see dmesg)";
+  return `ended on ${signal} before its time limit (a crash in the engine or the test; the kept log has the backtrace)`;
+}
+
 const running = new Set();
 
 function runGodot(sketchDir, test, timeoutMs, onChild = () => {}) {
@@ -410,10 +452,8 @@ function runGodot(sketchDir, test, timeoutMs, onChild = () => {}) {
       running.delete(child);
       rmSync(dataHome, { recursive: true, force: true });
       const verdict = judge({ test: "res://" + test, status: code, output });
-      // A kill before the time limit that the lane did not send is usually the container's
-      // memory limit (dmesg "Memory cgroup out of memory"), not the test.
-      const reason = code === null && !timedOut && child.killedByLane !== true ? "killed by a signal before its time limit (often the container's memory limit; see dmesg)" : verdict.reason;
-      resolve({ test, ok: verdict.ok, exit: code, signal: signal ?? null, ms: Date.now() - started, reason, checks: failingChecks(output), passes: countChecks(output).passes, tail: output.split("\n").slice(-30).join("\n"), killed: child.killedByLane === true, timedOut });
+      const reason = code === null && !timedOut && child.killedByLane !== true ? signalReason(signal) : verdict.reason;
+      resolve({ test, ok: verdict.ok, exit: code, signal: signal ?? null, ms: Date.now() - started, reason, checks: failingChecks(output), passes: countChecks(output).passes, tail: output.split("\n").slice(-30).join("\n"), killed: child.killedByLane === true, timedOut, output });
     });
   });
 }
@@ -526,6 +566,8 @@ async function main() {
     stages: [],
     ok: true,
   };
+  const receiptDirectory = path.join(root, "artifacts", "local", "receipts");
+  const receiptName = receiptBaseName(options.receipt, receipt.head, startedAt);
   const log = (line) => console.log(line);
   const stage = (name, ok, detail = {}) => {
     receipt.stages.push({ name, ok, ms: Date.now() - started, ...detail });
@@ -551,9 +593,8 @@ async function main() {
   const finish = (code) => {
     receipt.wall_ms = Date.now() - started;
     if (baseTree) spawnSync("git", ["-C", root, "worktree", "remove", "--force", baseTree]);
-    const directory = path.join(root, "artifacts", "local", "receipts");
-    mkdirSync(directory, { recursive: true });
-    const file = path.join(directory, `${options.receipt}-${receipt.head.slice(0, 12)}-${startedAt.replace(/[:.]/g, "-")}.json`);
+    mkdirSync(receiptDirectory, { recursive: true });
+    const file = path.join(receiptDirectory, `${receiptName}.json`);
     writeFileSync(file, JSON.stringify(receipt, null, 2) + "\n");
     log(`receipt ${file}`);
     log(`sketch:fast ${receipt.ok ? "pass" : "fail"} in ${Math.round(receipt.wall_ms / 1000)}s on ${receipt.head.slice(0, 8)} (merge base ${mergeBase.slice(0, 8)}). Fast lane only: the staging full gate and red team still judge the wave.`);
@@ -692,7 +733,29 @@ async function main() {
   let prRed = null;
   const inLane = lanePool(width);
   const stopped = (test) => ({ test, ok: false, exit: null, ms: 0, reason: "lane stopped", checks: [], tail: "", killed: true, timedOut: false });
-  const godot = (dir, test, timeoutMs, onChild, skip = () => false) => inLane(() => (prRed || skip() ? stopped(test) : runGodot(dir, test, timeoutMs, onChild)));
+  // Every run that ends red keeps its log in a folder named after the receipt, and the receipt
+  // lists it. A run the lane stopped is no verdict and keeps nothing.
+  receipt.failed_runs = [];
+  const redRuns = new Map();
+  const keepRed = (where) => ({ output, ...run }) => {
+    if (run.ok || run.killed) return run;
+    const key = `${run.test} ${where}`;
+    const attempt = (redRuns.get(key) ?? 0) + 1;
+    redRuns.set(key, attempt);
+    const file = path.join(receiptDirectory, `${receiptName}-logs`, failedRunLogName(run.test, where, attempt));
+    const kept = { test: run.test, where, attempt, exit: run.exit, signal: run.signal, timed_out: run.timedOut, ms: run.ms, reason: run.reason, log: null };
+    try {
+      mkdirSync(path.dirname(file), { recursive: true });
+      writeFileSync(file, failedRunLog({ ...run, where, attempt, head: where === "base" ? diffBase : receipt.head, output }));
+      kept.log = path.relative(root, file);
+      log(`  log of this red run of ${run.test}: ${kept.log}`);
+    } catch (error) {
+      log(`  log of this red run of ${run.test} not written (${error.message}); the verdict still stands`);
+    }
+    receipt.failed_runs.push(kept);
+    return run;
+  };
+  const godot = (dir, test, timeoutMs, onChild, skip = () => false) => inLane(() => (prRed || skip() ? stopped(test) : runGodot(dir, test, timeoutMs, onChild).then(keepRed(dir === sketchDir ? "head" : "base"))));
 
   // A failure is rerun on the head and on the merge base side by side before it is the PR's
   // (a solo test reruns alone first). Base verdicts are cached per base tree and Godot binary in
@@ -835,7 +898,7 @@ async function main() {
   await Promise.all(Array.from({ length: Math.min(width, queue.length) }, worker));
   for (const row of lanePlan.solo) {
     if (prRed) break;
-    await handle(await runGodot(sketchDir, row.test, testTimeoutMs(sourceOf(sketchDir, row.test))));
+    await handle(await runGodot(sketchDir, row.test, testTimeoutMs(sourceOf(sketchDir, row.test))).then(keepRed("head")));
   }
   receipt.results = results;
   receipt.quarantined = results.filter((row) => row.quarantined).map((row) => quarantineRecord(quarantineEntries.find((entry) => entry.test === path.posix.basename(row.test, ".gd")), { ok: row.ok, exit: row.exit, signal: row.signal, failing: row.failing }));

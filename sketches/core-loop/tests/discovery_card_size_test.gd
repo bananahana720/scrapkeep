@@ -8,10 +8,13 @@ const Hud := preload("res://src/ui/hud.gd")
 # The first-discovery card is the bigger ceremony: at least twice the flag-off banner's
 # height, on the right of the middle view, clear of the top, prompts and bottom bands,
 # the HUD toast column and the centre play rect. The banner keeps the
-# rect it had at base 39b0f3f (measured there, at 1600x900, line LINE).
+# rect it had at base 39b0f3f (measured there, at 1600x900, line LINE). A long line (the
+# Soaked card's, which a player's-eye film caught cut off at "lands as...") shows whole in
+# the same card, and holds longer for its extra words.
 
 const DIR := "user://discovery_card_size_test/"
 const LINE := "Ram fast and everything ahead of you breaks."
+const LONG_LINE := "Spillway crews come out of the channel soaked: arc hits them for 150% (ZZAP!). Everything else lands as normal."
 const SCREEN := Vector2(1600.0, 900.0)
 # Measured at base 39b0f3f.
 const BASE_BANNER_SIZE := Vector2(360.0, 121.0)
@@ -94,6 +97,19 @@ func _process(_delta: float) -> bool:
 			_settle = 2
 		2:
 			_check("a repeat shows nothing", not _cards.showing() and not _cards.visible and _cards.queued() == 0, "showing %s, visible %s, queued %d" % [_cards.showing(), _cards.visible, _cards.queued()])
+			_cards.show_discovery("Soaked", "enemy", LONG_LINE, "New entry", "armour_wet")
+			_fake_ms += 500
+			_step = 3
+			_settle = 2
+		3:
+			var body: Label = _cards._body
+			var long_card: Rect2 = _cards._panel.get_global_rect()
+			var short_hold: float = Banner.card_hold(LINE)
+			_check("a long line shows whole", _cards.showing() and body.get_line_count() > 4 and body.get_visible_line_count() == body.get_line_count(), "showing %s, %d lines, %d shown" % [_cards.showing(), body.get_line_count(), body.get_visible_line_count()])
+			_check("the long card is the same card", long_card.is_equal_approx(_card), "long %s vs %s" % [long_card, _card])
+			_check("a short line holds as before", is_equal_approx(short_hold, Banner.CARD_HOLD), "%.2f s vs %.2f" % [short_hold, Banner.CARD_HOLD])
+			_check("the long line holds longer, under the cap", _cards._hold > short_hold and _cards._hold <= Banner.CARD_HOLD_MAX and is_equal_approx(_cards._hold, Banner.card_hold(LONG_LINE)), "%.2f s (short %.2f, cap %.2f)" % [_cards._hold, short_hold, Banner.CARD_HOLD_MAX])
+			_check("no line holds past the cap", is_equal_approx(Banner.card_hold(LONG_LINE + " " + LONG_LINE + " " + LONG_LINE), Banner.CARD_HOLD_MAX), "%.2f s" % Banner.card_hold(LONG_LINE + " " + LONG_LINE + " " + LONG_LINE))
 			DirAccess.remove_absolute(DIR + UiProfile.FILE)
 			DirAccess.remove_absolute(DIR)
 			print("discovery_card_size_test: %s" % ("PASS" if _failures == 0 else "FAIL (%d)" % _failures))

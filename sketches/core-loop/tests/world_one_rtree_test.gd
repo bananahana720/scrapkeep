@@ -39,7 +39,7 @@ const BASE_EFFECT := {
 	"r_second_wind": "Stockpile two sprint charges",
 }
 const CODEX := {
-	"r_gunline": "Twin bolts sweep the running line.",
+	"r_gunline": "Your laser fires twin bolts.",
 	"r_juggernaut": "Starting a sprint blasts enemies back.",
 	"r_tracer": "Running fire jumps to a neighbour.",
 	"r_run_gun": "Sustain fire. Worn scrap sparks behind you.",

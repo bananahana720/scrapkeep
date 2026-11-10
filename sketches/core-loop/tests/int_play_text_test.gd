@@ -12,6 +12,7 @@ const EventView := preload("res://src/world/event_view.gd")
 #     stages, then Admiral Brindle; the notes cover the arena's R and T;
 #   - an undiscovered codex card prints its clue once;
 #   - a lost event toasts as a loss, a passed or won one adds no "over" toast;
+#   - a stage's resting weather (announced with no lead) toasts no "incoming";
 #   - the vault carries a prompt naming its rare part, bonus core and plating, and the
 #     event sign names the bonus core;
 #   - stage 3's hint says when the magnet can be shot.
@@ -94,6 +95,14 @@ func _check_toasts() -> void:
 	var lost := after_lost.filter(func(t): return String(t).begins_with("Surge Run lost"))
 	_report("lost event toast", after_quiet == before and lost.size() == 1 and not after_lost.any(func(t): return String(t).ends_with(" over")),
 		"passed and won ends added %d toasts; a lost Surge Run toasts %s" % [after_quiet.size() - before.size(), lost])
+	# "incoming" is a warning: the stage's resting weather is announced with no lead and warns of nothing.
+	hud.clear_toasts()
+	_game.events.event_announced.emit("dawn_still", 0.0)
+	var resting: Array = hud.toast_texts()
+	_game.events.event_announced.emit("monsoon_buildup", 20.0)
+	var coming: Array = hud.toast_texts()
+	_report("only weather on its way toasts as incoming", resting.is_empty() and coming == ["Monsoon Buildup incoming"],
+		"resting weather toasts %s; a monsoon 20 s out toasts %s" % [resting, coming])
 
 
 func _check_world() -> void:
