@@ -1711,7 +1711,8 @@ func call_in(kind: String, speaker: String, text: String) -> float:
 
 # The card that showed a caller closed before the voice was done (a fight went live, the run
 # ended): the caller stops, booked or sounding, the band comes back up and the next caller
-# may talk. Nothing happens when nobody is talking.
+# may talk. Nothing happens when nobody is talking. A shorter dip another cue asked for in
+# that moment is freed with it.
 func call_end() -> void:
 	if _calling == "" or clock >= float(_gates.get("call_in", -1000.0)):
 		return
