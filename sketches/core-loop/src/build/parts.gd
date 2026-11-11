@@ -841,6 +841,13 @@ static func completed_by(part_id: String, held: Array) -> String:
 	return Synergies.completed_by(maker_counts(held), maker_of(part_id))
 
 
+# The maker trick taking part_id now would start toward, or "": the first piece of its maker.
+static func started_by(part_id: String, held: Array) -> String:
+	if part_id in held:
+		return ""
+	return Synergies.started_by(maker_counts(held), maker_of(part_id))
+
+
 # The part in pool that would wake a maker trick as its named pair, or "": the callout partner
 # of a held part whose maker is one piece short. Any piece of that maker wakes the trick, but
 # the bait pulls only the named one, so the "one more piece" slot stays as rare as the old
