@@ -15,10 +15,16 @@ extends RefCounted
 #   whole crew counts as one of the gate's packs. No plated or holding kind rides in a ring: an
 #   ungrown ball inside a wall with a mag pit or a brute's plating has no way out but the clock
 #   (completionist seed 9, heft 1.0, timed out the 75 s lock on 99beaf80).
+# sentry: once, the first time the ball is on the ground within `within_m` of the beacon, one `kind`
+#   lands `ahead_m` up the ball's line to the beacon and `side_m` to its right: a plain enemy, no crew
+#   and no pack. On the dam a lobber, so its shell is met and dodged on the way into the yard, before
+#   the Warden's fight (systems audit pass E, change 4; ruling cu, harder sooner). 60 m ahead at cruise
+#   is about one lobber cycle (3.6 s), so it fires before the ball passes it; one left standing shells
+#   the ring from outside the wall.
 const ROWS := {
 	"park_dam": {
 		"gate": {"packs": 4, "also": ["enemy_camp"], "max_s": 75.0},
-		"lock": {"id": "apron_crew", "within_m": 200.0, "radius_m": 26.0, "ahead_m": 10.0, "max_s": 60.0, "wave_gap_s": 3.5,
+		"lock": {"id": "apron_crew", "within_m": 200.0, "sentry": {"kind": "lobber", "within_m": 290.0, "ahead_m": 60.0, "side_m": 20.0}, "radius_m": 26.0, "ahead_m": 10.0, "max_s": 60.0, "wave_gap_s": 3.5,
 			"waves": [["chaser", "chaser", "lobber"], ["lobber", "lobber", "chaser"], ["chaser", "chaser", "chaser", "lobber"], ["lobber", "chaser", "chaser"], ["chaser", "chaser", "lobber", "lobber"]]},
 	},
 	"park_flume": {

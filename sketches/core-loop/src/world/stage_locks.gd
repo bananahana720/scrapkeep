@@ -62,6 +62,7 @@ var _crew: Array = []
 var _wave := 0
 var _wave_wait := -1.0
 var _facing := 0.0
+var _sentry_landed := false
 var _also_done := false
 var _engaged_s := -1.0
 var _clock := 0.0
@@ -230,6 +231,7 @@ func _clear() -> void:
 	lock_left = 0.0
 	_packs.clear()
 	_crew.clear()
+	_sentry_landed = false
 	_also_done = false
 	_engaged_s = -1.0
 	_refused_at = -INF
@@ -318,7 +320,10 @@ func _step_lock(delta: float) -> void:
 				return
 			var ball: Vector3 = ctx.player.ball_position()
 			var beacon: Vector3 = ctx.flow.beacon.global_position
-			if ctx.player.state.grounded and _flat(ball, beacon) <= float(lock_row().get("within_m", 0.0)):
+			if not ctx.player.state.grounded:
+				return
+			_land_sentry(ball, beacon)
+			if _flat(ball, beacon) <= float(lock_row().get("within_m", 0.0)):
 				_lock(ball, beacon)
 		"locked":
 			lock_left -= delta
@@ -355,6 +360,20 @@ func _lock(ball: Vector3, beacon: Vector3) -> void:
 	_wave = 0
 	_wave_wait = -1.0
 	_land_wave()
+
+
+# The yard's sentry (the lock row's "sentry"): once, the first time the ball is on the ground inside
+# its circle, one enemy lands `ahead_m` up the ball's line to the beacon and `side_m` off it. It is
+# a plain enemy, no crew and no pack, so the yard's shells are met on the way in, and one left
+# standing keeps shelling the ring from outside the wall.
+func _land_sentry(ball: Vector3, beacon: Vector3) -> void:
+	var sentry: Dictionary = lock_row().get("sentry", {})
+	if _sentry_landed or sentry.is_empty() or _flat(ball, beacon) > float(sentry.get("within_m", 0.0)) or not ctx.can_spawn():
+		return
+	_sentry_landed = true
+	var toward := Vector3(beacon.x - ball.x, 0.0, beacon.z - ball.z).normalized()
+	var spot := ball + toward * float(sentry.get("ahead_m", 0.0)) + toward.cross(Vector3.UP) * float(sentry.get("side_m", 0.0))
+	ctx.spawner.spawn_enemy(String(sentry["kind"]), ctx.terrain.drop_point(spot.x, spot.z, 2.4))
 
 
 func _waves() -> Array:

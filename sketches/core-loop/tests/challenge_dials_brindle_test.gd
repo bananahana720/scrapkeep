@@ -82,8 +82,8 @@ func _run() -> void:
 	_t.check("slag warn stays >= MIN_WARN at tell_mult 0.1", slag != null and slag.warn_seconds >= Hazard.MIN_WARN - 1e-6,
 			str(slag.warn_seconds if slag != null else -1.0))
 	if slag != null:
-		# The shipped Furnace period is 0.5 (brindle.period_by_phase), so the gap halves; the warn and live do not.
-		var want: float = slag.warn_seconds + Rules.SLAG_LIVE + Rules.SLAG_GAP * 0.5
+		# The shipped Furnace period (brindle.period_by_phase) scales the gap; the warn and live do not.
+		var want: float = slag.warn_seconds + Rules.SLAG_LIVE + ChallengeDials.period("brindle", Rules.SLAG_GAP, 2)
 		_t.near("next slag is scheduled on the hazard's own warn", _boss._next_attack - _boss.clock, want, 0.02)
 	_boss._cancel_hazards()
 	_boss._enter_phase(3)
@@ -108,7 +108,7 @@ func _run() -> void:
 
 	# Period and combo: the rest before a charge, and a combo follow-up a warning gap after the lead.
 	ChallengeDials.set_overrides({"brindle.period_mult": 2.0})
-	_t.near("charge rest x2", _boss._rest_time(), Rules.CHARGE_REST * 2.0)
+	_t.near("charge rest x2", _boss._rest_time(), Rules.CHARGE_REST * 2.0 * ChallengeDials.by_phase("brindle.period_by_phase", 3))
 	ChallengeDials.set_overrides({"brindle.combo": 2.0, "brindle.punish_mult": 1.0})
 	_boss._combo_left = -1
 	_t.near("lead owes a follow-up: next in a warning gap", _boss._paced(3.4), ChallengeDials.WARN_GAP)

@@ -69,8 +69,13 @@ const DEFAULTS := {
 	# Top 100%, no Learner death under 45 s, largest hit 30% (brindle_slag). Learner a1 100% is reported,
 	# not graded (NEEDS 6267672032). Requisition (phase 1) deals no damage, so its damage entry stays 1.0;
 	# the tbr-k sweep ran it at 1.5 with the same result.
-	"brindle.damage_mult": 1.0, "brindle.damage_by_phase": [1.0, 2.0, 1.3, 1.0],
-	"brindle.period_mult": 1.0, "brindle.period_by_phase": [0.6, 0.5, 1.0, 1.0],
+	# Wave 37 (ruling cu; systems audit pass E, change 5): world 1 kept getting easier after the dam, so Brindle's
+	# Furnace slag hits x3 (36) on a 0.35 gap and his Scuttle charge x2 (36) on half the rest. Each hit stays under
+	# 30% of the hull a ball brings (123 to 166 in the read); the fight asks for more dodges, not one-shot luck.
+	# Four random-policy runs a side (seeds 2860 to 2863): the worst minute at Brindle took a median 43% of max hull
+	# before, against 105% at the dam Warden. Every run still cleared world 1; the after read is in the PR.
+	"brindle.damage_mult": 1.0, "brindle.damage_by_phase": [1.0, 3.0, 2.0, 1.0],
+	"brindle.period_mult": 1.0, "brindle.period_by_phase": [0.6, 0.35, 0.5, 1.0],
 	"brindle.tell_mult": 1.0, "brindle.punish_mult": 1.0, "brindle.combo": 0.0,
 	# Fight phases (fight_phases.gd, Andrew 23 Oct 19:02Z): cued follow-ups after each lead attack, per
 	# phase. Brindle's Furnace answers a slag ring with the other ring, his Scuttle answers a charge with a
