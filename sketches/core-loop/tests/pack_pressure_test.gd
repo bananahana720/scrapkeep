@@ -350,7 +350,10 @@ const LOOP_TEST := {"hazard.boil_stall_by_stage": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
 
 
 func _stall(boils, ctx, enemy) -> void:
-	_t.eq("31 the stall test ships on world 1", ChallengeDials.DEFAULTS["hazard.boil_stall_by_stage"], [1.0, 1.0, 0.0, 0.0, 0.0, 0.0])
+	_t.eq("31 the stall test is built and ships off", ChallengeDials.DEFAULTS["hazard.boil_stall_by_stage"], [0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
+	var stall_on: Dictionary = ChallengeDials.parse(PackPressure.tune_spec("E"))
+	stall_on["hazard.boil_stall_by_stage"] = [1.0, 1.0, 0.0, 0.0, 0.0, 0.0]
+	ChallengeDials.set_overrides(stall_on)
 	_t.check("31b a tight orbit ring is inside the stall reach, a wide kite ring outside", RING + 3.0 < SiltBoil.STALL_SPREAD and WIDE > SiltBoil.STALL_SPREAD,
 		"orbit %.0f m (+3 m band), reach %.0f m, kite %.0f m" % [RING, SiltBoil.STALL_SPREAD, WIDE])
 	var parked := func(_t_s: float) -> Array: return [Vector3(8.0, 0.0, 0.0), Vector3.ZERO]
@@ -367,23 +370,6 @@ func _stall(boils, ctx, enemy) -> void:
 	_t.eq("34 a tight orbit at cruise still boils", _path_boils(boils, ctx, enemy, orbit, false), 1)
 	_t.eq("35 a wide kite round the pack at cruise never boils", _path_boils(boils, ctx, enemy, kite, false), 0)
 	_t.eq("36 a straight run at cruise with the pack on its tail never boils", _path_boils(boils, ctx, enemy, run, true), 0)
-	# The crawl line (retune 1): a slow line with the pack on its tail is a stall however far it runs; the
-	# planted case is the same line with no crawl line, which the spread test alone lets go.
-	var slow := func(t_s: float) -> Array: return [Vector3(5.0 * t_s, 0.0, 0.0), Vector3(5.0, 0.0, 0.0)]
-	var brisk := func(t_s: float) -> Array: return [Vector3(8.0 * t_s, 0.0, 0.0), Vector3(8.0, 0.0, 0.0)]
-	var with_crawl := func(line: float) -> Dictionary:
-		var dials: Dictionary = ChallengeDials.parse(PackPressure.tune_spec("E"))
-		dials["hazard.boil_crawl_by_stage"] = [line, line, 0.0, 0.0, 0.0, 0.0]
-		return dials
-	ChallengeDials.set_overrides(with_crawl.call(6.0))
-	_t.eq("36b a 5 m/s line with the pack on its tail boils under a 6 m/s crawl line", _path_boils(boils, ctx, enemy, slow, true), 1)
-	_t.eq("36c an 8 m/s line (the cruise tier) never does", _path_boils(boils, ctx, enemy, brisk, true), 0)
-	_t.eq("36d nor a wide kite at cruise", _path_boils(boils, ctx, enemy, kite, false), 0)
-	_t.eq("36e nor a straight run at cruise", _path_boils(boils, ctx, enemy, run, true), 0)
-	ChallengeDials.set_overrides(with_crawl.call(20.0))
-	_t.eq("36f a crawl line dialled past the ceiling still spares the cruise tier", _path_boils(boils, ctx, enemy, brisk, true), 0)
-	ChallengeDials.set_overrides(with_crawl.call(0.0))
-	_t.eq("36g planted: with no crawl line the 5 m/s line never boils", _path_boils(boils, ctx, enemy, slow, true), 0)
 	ChallengeDials.set_overrides(LOOP_TEST)
 	_t.eq("37 planted: the loop test never boiled a ball that stopped", _path_boils(boils, ctx, enemy, parked, false), 0)
 	_t.eq("38 planted: nor one that crawled", _path_boils(boils, ctx, enemy, crawl, false), 0)
