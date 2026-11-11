@@ -22,19 +22,28 @@ var _emitted := 0
 var _visited := {}
 var _pick_rng := RandomNumberGenerator.new()
 var _keep_class := 0
+# The last tick's state, so the end row can be written after bot_run frees the game.
+var _snap := {}
+var _healed := 0.0
+var _max_grown := 0.0
 
 
 func _row(kind: String, extra := {}) -> void:
 	if _ledger == null or _game == null:
 		return
+	var r: Dictionary = _state()
+	r["kind"] = kind
+	r.merge(extra)
+	_ledger.store_line(JSON.stringify(r))
+
+
+func _state() -> Dictionary:
 	var run = _game.run
-	var r: Dictionary = {"t": snappedf(run.run_time, 0.01), "stage": run.stage, "kind": kind,
+	return {"t": snappedf(run.run_time, 0.01), "stage": run.stage,
 		"cogs": run.cogs, "scrap": run.scrap, "mass": snappedf(run.mass, 0.1), "hp": snappedf(run.hp, 0.1),
 		"max_hp": snappedf(run.max_hp, 0.1), "cores": run.bonus_cores, "parts": run.parts.size(),
 		"panels": run.panels.size(), "tree": run.tree_picks.size(), "relics": run.relics.size(),
-		"heft": run.heft_class()}
-	r.merge(extra)
-	_ledger.store_line(JSON.stringify(r))
+		"heft": run.heft_class(), "hp_healed": snappedf(_healed, 0.1), "max_hp_grown": snappedf(_max_grown, 0.1)}
 
 
 func _physics_process(delta: float) -> bool:
@@ -45,8 +54,11 @@ func _physics_process(delta: float) -> bool:
 		_watch()
 		if _econ == "minmax":
 			_choose()
-	if over and _ledger != null:
-		_row("end", {"outcome": _driver.outcome if _driver != null else ""})
+	if _game == null and _ledger != null:
+		# bot_run frees the game at the end of a run and returns false, so the end row is the
+		# last tick's state, written here.
+		_snap["kind"] = "end"
+		_ledger.store_line(JSON.stringify(_snap))
 		_ledger.close()
 		_ledger = null
 	return over
@@ -56,6 +68,8 @@ func _hook() -> void:
 	_hooked = _game
 	_last = {}
 	_visited = {}
+	_healed = 0.0
+	_max_grown = 0.0
 	_econ = String(_settings.get("econ", "none"))
 	_pick_rng.seed = hash(["econ", _seeds[_index]])
 	_ledger = FileAccess.open(_out.path_join("econ-%d.ndjson" % _seeds[_index]), FileAccess.WRITE)
@@ -72,17 +86,23 @@ func _hook() -> void:
 # Tick-to-tick changes no signal names: a cog gain nobody emitted, any cog drop, any heal.
 func _watch() -> void:
 	var run = _game.run
-	var now := {"cogs": run.cogs, "hp": run.hp}
+	var now := {"cogs": run.cogs, "hp": run.hp, "max_hp": run.max_hp}
 	if not _last.is_empty():
 		var gained: int = now["cogs"] - _last["cogs"]
 		if gained > _emitted:
 			_row("cogs+", {"amount": gained - _emitted, "source": "unsignalled"})
 		elif gained < 0 and _emitted == 0:
 			_row("cogs-", {"amount": -gained})
-		if now["hp"] > _last["hp"] + 0.5:
-			_row("heal", {"amount": snappedf(now["hp"] - _last["hp"], 0.1)})
+		# Every hull gain counts (regen is 6 a second, under 0.07 a tick); the part that rides a
+		# max-hull rise (a heft class up, a hull part) is kept apart from regen and heals.
+		var grown: float = maxf(0.0, now["max_hp"] - _last["max_hp"])
+		var hp_gain: float = now["hp"] - _last["hp"]
+		_max_grown += grown
+		if hp_gain > 0.0:
+			_healed += maxf(0.0, hp_gain - grown)
 	_emitted = 0
 	_last = now
+	_snap = _state()
 
 
 func _on_tree_offered(_class_id: String, depth: int, choices: Array) -> void:
@@ -152,7 +172,7 @@ func _shop_visit(world) -> void:
 
 
 # Moss's scale (PR 768, `--moss-scale=on`): when the next buy is out of reach, sell mass for
-# cogs until it is not, and stop once a press has dropped the ball below its class on boarding (the min-maxer keeps
+# cogs until it is not, and never make a press that would drop the ball below its class on boarding (the min-maxer keeps
 # its class: max hull, the hook lock and the tree's milestones ride it). True when affordable.
 func _afford(shop, price: int) -> bool:
 	if _game.run.cogs >= price:
@@ -160,13 +180,21 @@ func _afford(shop, price: int) -> bool:
 	if not shop.has_method("scale_open") or not shop.scale_open():
 		return false
 	var presses := 0
-	while _game.run.cogs < price and presses < 200 and _game.run.heft_class() >= _keep_class:
+	while _game.run.cogs < price and presses < 200 and _keeps_class(shop):
 		var r: Dictionary = shop.weigh()
 		if not r.get("ok", false):
 			break
 		presses += 1
 		_row("weigh", {"mass_sold": r.get("mass", 0), "paid": -int(r.get("price", 0))})
 	return _game.run.cogs >= price
+
+
+# Whether the next press leaves the ball at or above its boarding class (heft as run_state.gd
+# computes it, less the mass the press would weigh).
+func _keeps_class(shop) -> bool:
+	var run = _game.run
+	var after: float = run.heft() - float(shop.weigh_quote()["mass"]) * run.HEFT_PER_MASS
+	return run.raw_heft_class(after) >= _keep_class
 
 
 func _buy_shelf(shop) -> void:
