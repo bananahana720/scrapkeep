@@ -287,7 +287,7 @@ func interval() -> float:
 
 
 func lobber_share() -> float:
-	return clampf(0.15 + effective_tier() * 0.07, 0.0, 0.5)
+	return clampf(0.15 + effective_tier() * ChallengeDials.by_stage_or("mobs.lobber_share_step_by_stage", dial_stage, 0.07), 0.0, 0.5)
 
 
 # 0 with nothing alive and nothing coming, 1 at the cap during a beacon spike.

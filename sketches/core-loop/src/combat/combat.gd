@@ -582,6 +582,8 @@ func spawn_enemy(kind: String, at: Vector3, affix_id := "", perch := Vector3.INF
 	var target = Sight.new(ctx.player, self, enemy, kind) if Sight.REACH.has(kind) or fleet.makes(kind) else ctx.player
 	var health_scale := _threat()
 	var enemy_spec: Dictionary = fleet.dress(kind, _spec_for(kind))
+	if kind == "lobber" and ctx.flow.in_stage():
+		enemy_spec["lead"] = ChallengeDials.by_stage_or("mobs.lobber_lead_by_stage", ctx.flow.stage(), Lobber.LEAD)
 	if affix_id == EliteAffixes.PLATED:
 		enemy_spec["armour"] = EliteAffixes.PLATED
 	# A park perch top (terrain.perch_near) is the Dispatcher's spec["perch"]; with none it builds its own mast.
@@ -4099,7 +4101,8 @@ func _on_player_hit(amount: float, shove: Vector3, source: String) -> void:
 func _on_lobber_fired(origin: Vector3, landing: Vector3, flight: float, lobber: Node3D) -> void:
 	var shell := Projectile.new()
 	ctx.root.add_child(shell)
-	shell.setup(ctx.player, ground, ctx.root, Callable(ctx.flow, "in_play"), origin, landing, flight, lobber)
+	var cover := ctx.flow.in_stage() and ChallengeDials.by_stage_or("hazard.shell_cover_by_stage", ctx.flow.stage(), 0.0) > 0.5
+	shell.setup(ctx.player, ground, ctx.root, Callable(ctx.flow, "in_play"), origin, landing, flight, lobber, cover)
 	shell.hit_player.connect(_on_player_hit.bind("lobber"))
 	shell.returned_landed.connect(_on_shell_returned)
 	shell.exploded.connect(func(at: Vector3, blast: float, _hit: bool): effects.ring(at, blast, Palette.HAZARD))
