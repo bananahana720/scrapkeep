@@ -612,7 +612,12 @@ func recompute() -> void:
 		if Synergies.told_on_wake(trick_id) and not _woken.has(trick_id):
 			_woken[trick_id] = true
 			_sets_fresh.append(trick_id)
-			_note_found("trick:" + trick_id, "%s: %s" % [Synergies.ROWS[trick_id]["name"], Synergies.ROWS[trick_id]["text"]])
+			_discovered[trick_id] = true
+			var codex = _codex()
+			if codex != null:
+				if not _declared:
+					_declare()
+				codex.mark_known(trick_id, PARTICIPANTS)
 	_redraw()
 
 
@@ -1522,7 +1527,7 @@ func _step_fabricators(ball: Vector3, delta: float) -> void:
 		# (tunes.json "fabricator"). No WORLD_ROWS row, so it plays no sound of its own.
 		ctx.events.world_fact.emit("fabricator_used", fab["at"])
 		var part_id: String = fab["part_id"]
-		if ctx.run.spend_cogs(Fabricators.price(part_id, ctx.run.parts.size())):
+		if ctx.run.spend_cogs(Fabricators.price(part_id, Parts.priced_count(ctx.run.parts))):
 			fabricators.sold(fab)
 			ctx.run.add_part(part_id, "fabricator")
 

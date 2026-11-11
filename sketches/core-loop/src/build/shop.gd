@@ -1,6 +1,7 @@
 extends RefCounted
 
 const Parts := preload("res://src/build/parts.gd")
+const Relics := preload("res://src/build/relics.gd")
 const Items := preload("res://src/build/items.gd")
 const Fabricators := preload("res://src/build/fabricators.gd")
 const ItemGen := preload("res://src/build/item_gen.gd")
@@ -468,8 +469,8 @@ func _variation(beat_id: String, ids: Array) -> String:
 
 func price(part_id: String) -> int:
 	if ActiveOffers.is_offer(part_id):
-		return int(round(ActiveOffers.price(_active_row(part_id), ctx.run.parts.size()) * _price_scale()))
-	return int(round(Fabricators.price(part_id, ctx.run.parts.size()) * _price_scale()))
+		return int(round(ActiveOffers.price(_active_row(part_id), Parts.priced_count(ctx.run.parts)) * _price_scale()))
+	return int(round(Fabricators.price(part_id, Parts.priced_count(ctx.run.parts)) * _price_scale()))
 
 
 func _price_scale() -> float:
@@ -578,8 +579,9 @@ func _cheapest_price() -> int:
 # Sell-back never sells a pattern part, since combat rebuilds its patterns
 # only on part_gained and would keep shooting the sold pattern until the next stage.
 func _can_remove(part_id: String) -> bool:
+	# A relic is the slot's kit rewrite, not stock: Moss never buys one back.
 	var d: Resource = Parts.def(part_id)
-	return d != null and d.patterns.is_empty()
+	return d != null and d.patterns.is_empty() and not Relics.is_relic(part_id)
 
 
 func _remove_part(part_id: String) -> void:

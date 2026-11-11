@@ -179,8 +179,9 @@ static func callout(trick_id: String) -> Dictionary:
 	return ROWS.get(trick_id, {}).get("callout", {})
 
 
-# Codex cards, one per trick in play: {id, category, name, hint, text, maker, tags}. maker_name
-# turns a maker id into its display name; the hint says what wakes it.
+# Codex cards, one per trick in play: {id, category, name, hint, clue, text, maker, tags}.
+# maker_name turns a maker id into its display name; the hint says what wakes it, the clue the
+# piece still to find.
 static func declarations(maker_name: Callable) -> Array:
 	var cards: Array = []
 	for key in ROWS:
@@ -192,6 +193,7 @@ static func declarations(maker_name: Callable) -> Array:
 			"category": CATEGORY,
 			"name": row["name"],
 			"hint": "Two %s parts" % maker_name.call(row["maker"]),
+			"clue": "Another %s part" % maker_name.call(row["maker"]),
 			"text": row["text"],
 			"maker": row["maker"],
 			"tags": row["tags"],

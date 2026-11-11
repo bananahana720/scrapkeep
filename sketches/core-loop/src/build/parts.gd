@@ -211,9 +211,11 @@ const MILESTONE_FOR_EVENT := {
 }
 const MILESTONE_ORDER := ["scrap_gravity", "tempest_core", "rime_heart"]
 
-# How often an offer slot is spent on the part that wakes a maker trick (Synergies.AT pieces),
-# when one is a single piece away. Isaac's "one more piece" pull, kept off a sure thing.
-const SYNERGY_BAIT := 0.5
+# How often an offer slot is spent on the named partner (completing_part) of a held part whose
+# maker is one piece short of waking a trick. Isaac's "one more piece" pull, kept off a sure
+# thing. 0.35 since the pass D fold (was 0.5): more parts name a maker now, so the pull finds a
+# partner more often; 0.35 keeps every pilot's kit lean in its band (offer_weights_test).
+const SYNERGY_BAIT := 0.35
 
 # "Nudge loot" for maker sets (maker_sets.gd): once MAKER_NUDGE_AT distinct pieces of one maker
 # are held, that maker's other pieces weigh MAKER_NUDGE times their offer bucket's other parts
@@ -221,7 +223,9 @@ const SYNERGY_BAIT := 0.5
 # its total weight in each group (_nudged), so a pilot's kit, shelf, movement and pair shares hold
 # (offer_weights_test): the nudge picks which piece of a bucket shows, never which bucket.
 const MAKER_NUDGE_AT := 2
-const MAKER_NUDGE := 1.5
+# 1.1 since the pass D fold (was 1.5): with every world 1 part naming a maker the nudge fires on
+# far more draws, and 1.5 moved bucket shares past offer_weights_test's 0.03 drift bar.
+const MAKER_NUDGE := 1.1
 # Off only for a measurement that needs the kit lean alone on a fixed seed (offer_weights_test).
 static var maker_nudge_on := true
 
@@ -811,6 +815,12 @@ static func maker_of(part_id: String) -> String:
 	return _maker_of[part_id]
 
 
+# Held parts that set shop and fabricator prices: every part but relics, which come from caches
+# and never through a till (pass D fold: a relic on the ladder adds no price step).
+static func priced_count(held: Array) -> int:
+	return held.filter(func(part_id): return not Relics.is_relic(String(part_id))).size()
+
+
 # maker -> distinct pieces in held: a copy of a piece already held is not a second piece.
 static func maker_counts(held: Array) -> Dictionary:
 	var seen := {}
@@ -831,11 +841,23 @@ static func completed_by(part_id: String, held: Array) -> String:
 	return Synergies.completed_by(maker_counts(held), maker_of(part_id))
 
 
-# The part in pool that would wake a maker trick, or "".
+# The part in pool that would wake a maker trick as its named pair, or "": the callout partner
+# of a held part whose maker is one piece short. Any piece of that maker wakes the trick, but
+# the bait pulls only the named one, so the "one more piece" slot stays as rare as the old
+# named pairs' and does not crowd out each pilot's kit lean (offer_weights_test).
 static func completing_part(held: Array, pool: Array) -> String:
 	var counted := maker_counts(held)
+	var wanted := {}
+	for trick_id in Synergies.ROWS:
+		var call := Synergies.callout(trick_id)
+		if call.is_empty() or not Synergies.in_play(trick_id) or int(counted.get(Synergies.ROWS[trick_id]["maker"], 0)) != Synergies.AT - 1:
+			continue
+		if call["a"] in held and not call["b"] in held:
+			wanted[call["b"]] = true
+		elif call["b"] in held and not call["a"] in held:
+			wanted[call["a"]] = true
 	for key in pool:
-		if not key in held and Synergies.completed_by(counted, maker_of(key)) != "":
+		if wanted.has(key):
 			return key
 	return ""
 

@@ -109,7 +109,9 @@ func _check_spot() -> void:
 	var problems := []
 	if _mode == "slots" and _game.flow.state_name() != "gates":
 		problems.append("flow %s" % _game.flow.state_name())
-	var wanted := [_slots[0], _slots[2]]
+	# The rolled pair takes the two outermost slots; a hot-wired part waiting at the gates (the
+	# Warden break's rare part, systems audit pass D) makes three and fills all three.
+	var wanted: Array = _slots if offers.size() == 3 and _hotwire_waiting() else [_slots[0], _slots[2]]
 	if _mode == "slots":
 		if offers.size() != wanted.size():
 			problems.append("%d offers" % offers.size())
@@ -127,6 +129,11 @@ func _check_spot() -> void:
 		problems.append("no clear dock warning")
 	if not problems.is_empty():
 		_bad[_mode].append("spot %d at %s: %s" % [_spot, at, problems])
+
+
+func _hotwire_waiting() -> bool:
+	var pending: Dictionary = _game.ctx.build.hotwire_pending()
+	return pending["state"] == "fit" and pending["part_id"] != "" and not pending["part_id"] in _game.run.parts
 
 
 # A three-gate offer at the same spot: all three slots, in order, and the bay docks behind them.
@@ -193,7 +200,7 @@ func _run_past() -> bool:
 			_past_left -= 1
 			if _past_left == 0:
 				var offers: Array = _game.ctx.build.gates.offers
-				_t.check("past the row the offer is published once", _offered == 1 and offers.size() == 2,
+				_t.check("past the row the offer is published once", _offered == 1 and offers.size() == (3 if _hotwire_waiting() else 2),
 					"reward_offered fired %d times in %d ticks with the ball at %s; %d offers standing" % [_offered, PAST_TICKS, PAST_ROW, offers.size()])
 				_game.ctx.build.gates.chosen.connect(func(id: String): _chosen.append(id))
 				_step = 4
