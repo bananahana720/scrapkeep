@@ -1,0 +1,759 @@
+[
+ {
+  "run": "completionist-2860",
+  "outcome": "until",
+  "game_s": 629.42,
+  "end": {
+   "stage": 3,
+   "cogs": 1956,
+   "scrap": 1952,
+   "mass": 1708.0,
+   "hp": 127.0,
+   "cores": 0,
+   "parts": 5,
+   "panels": 11,
+   "tree": 0,
+   "relics": 0
+  },
+  "cogs_in_by_stage": {
+   "1": 571,
+   "2": 1025
+  },
+  "cogs_spent": 0,
+  "part_sources": {
+   "gate": 2,
+   "activity_surge": 1,
+   "activity_ambush": 1,
+   "boss": 1
+  },
+  "core_sources": {},
+  "panels": 11,
+  "scrap_lost": {
+   "crane": 240
+  },
+  "stage_entries": [
+   {
+    "t": 283.42,
+    "stage": 2,
+    "cogs": 571,
+    "scrap": 616,
+    "mass": 537.0,
+    "cores": 0,
+    "parts": 1,
+    "panels": 6,
+    "tree": 0
+   },
+   {
+    "t": 629.42,
+    "stage": 3,
+    "cogs": 1956,
+    "scrap": 1952,
+    "mass": 1708.0,
+    "cores": 0,
+    "parts": 5,
+    "panels": 11,
+    "tree": 0
+   }
+  ],
+  "bot": {
+   "outcome": "until",
+   "stage_reached": 3,
+   "game_seconds": 638.3,
+   "class": "tally",
+   "min_hp": 57.1
+  },
+  "stage_notes": [
+   {
+    "stage": 1,
+    "warden_broken_s": 277.88,
+    "exit_s": 283.42,
+    "hp_lost": 57.1,
+    "hits": 4.0,
+    "rib_caches_taken": 0,
+    "rogues_beaten": 0,
+    "secrets_found": []
+   },
+   {
+    "stage": 2,
+    "warden_broken_s": 256.7,
+    "exit_s": 267.55,
+    "hp_lost": 20.0,
+    "hits": 1.0,
+    "rib_caches_taken": 1,
+    "rogues_beaten": 0,
+    "secrets_found": []
+   },
+   {
+    "stage": 3,
+    "warden_broken_s": null,
+    "exit_s": 0.0,
+    "hp_lost": 0.0,
+    "hits": 0,
+    "rib_caches_taken": 0,
+    "rogues_beaten": 0,
+    "secrets_found": []
+   }
+  ]
+ },
+ {
+  "run": "completionist-2861",
+  "outcome": "until",
+  "game_s": 621.83,
+  "end": {
+   "stage": 3,
+   "cogs": 1912,
+   "scrap": 1950,
+   "mass": 1692.0,
+   "hp": 150.0,
+   "cores": 0,
+   "parts": 6,
+   "panels": 7,
+   "tree": 0,
+   "relics": 0
+  },
+  "cogs_in_by_stage": {
+   "1": 464,
+   "2": 908
+  },
+  "cogs_spent": 0,
+  "part_sources": {
+   "activity_camp": 1,
+   "gate": 2,
+   "activity_surge": 1,
+   "activity_ambush": 1,
+   "boss": 1
+  },
+  "core_sources": {},
+  "panels": 7,
+  "scrap_lost": {
+   "crane": 240
+  },
+  "stage_entries": [
+   {
+    "t": 235.96,
+    "stage": 2,
+    "cogs": 644,
+    "scrap": 672,
+    "mass": 555.0,
+    "cores": 0,
+    "parts": 2,
+    "panels": 4,
+    "tree": 0
+   },
+   {
+    "t": 621.83,
+    "stage": 3,
+    "cogs": 1912,
+    "scrap": 1950,
+    "mass": 1692.0,
+    "cores": 0,
+    "parts": 6,
+    "panels": 7,
+    "tree": 0
+   }
+  ],
+  "bot": {
+   "outcome": "until",
+   "stage_reached": 3,
+   "game_seconds": 630.04,
+   "class": "remembered_cannon",
+   "min_hp": 91.9
+  },
+  "stage_notes": [
+   {
+    "stage": 1,
+    "warden_broken_s": 230.36,
+    "exit_s": 235.96,
+    "hp_lost": 43.5,
+    "hits": 2.0,
+    "rib_caches_taken": 0,
+    "rogues_beaten": 0,
+    "secrets_found": []
+   },
+   {
+    "stage": 2,
+    "warden_broken_s": 291.04,
+    "exit_s": 300.47,
+    "hp_lost": 20.0,
+    "hits": 1.0,
+    "rib_caches_taken": 0,
+    "rogues_beaten": 0,
+    "secrets_found": []
+   },
+   {
+    "stage": 3,
+    "warden_broken_s": null,
+    "exit_s": 0.0,
+    "hp_lost": 0.0,
+    "hits": 0,
+    "rib_caches_taken": 0,
+    "rogues_beaten": 0,
+    "secrets_found": []
+   }
+  ]
+ },
+ {
+  "run": "random-2860",
+  "outcome": "until",
+  "game_s": 498.14,
+  "end": {
+   "stage": 3,
+   "cogs": 1332,
+   "scrap": 1293,
+   "mass": 1008.0,
+   "hp": 119.0,
+   "cores": 0,
+   "parts": 3,
+   "panels": 8,
+   "tree": 0,
+   "relics": 0
+  },
+  "cogs_in_by_stage": {
+   "1": 479,
+   "2": 833
+  },
+  "cogs_spent": 0,
+  "part_sources": {
+   "gate": 2,
+   "boss": 1
+  },
+  "core_sources": {},
+  "panels": 8,
+  "scrap_lost": {
+   "crane": 420
+  },
+  "stage_entries": [
+   {
+    "t": 254.3,
+    "stage": 2,
+    "cogs": 499,
+    "scrap": 494,
+    "mass": 319.0,
+    "cores": 0,
+    "parts": 1,
+    "panels": 7,
+    "tree": 0
+   },
+   {
+    "t": 498.14,
+    "stage": 3,
+    "cogs": 1332,
+    "scrap": 1293,
+    "mass": 1008.0,
+    "cores": 0,
+    "parts": 3,
+    "panels": 8,
+    "tree": 0
+   }
+  ],
+  "bot": {
+   "outcome": "until",
+   "stage_reached": 3,
+   "game_seconds": 506.82,
+   "class": "tally",
+   "min_hp": 44.8
+  },
+  "stage_notes": [
+   {
+    "stage": 1,
+    "warden_broken_s": 248.49,
+    "exit_s": 254.3,
+    "hp_lost": 157.5,
+    "hits": 6.0,
+    "rib_caches_taken": 0,
+    "rogues_beaten": 0,
+    "secrets_found": []
+   },
+   {
+    "stage": 2,
+    "warden_broken_s": 155.3,
+    "exit_s": 164.16,
+    "hp_lost": 9.0,
+    "hits": 1.0,
+    "rib_caches_taken": 0,
+    "rogues_beaten": 0,
+    "secrets_found": []
+   },
+   {
+    "stage": 3,
+    "warden_broken_s": null,
+    "exit_s": 0.0,
+    "hp_lost": 0.0,
+    "hits": 0,
+    "rib_caches_taken": 0,
+    "rogues_beaten": 0,
+    "secrets_found": []
+   }
+  ]
+ },
+ {
+  "run": "random-2861",
+  "outcome": "until",
+  "game_s": 497.6,
+  "end": {
+   "stage": 3,
+   "cogs": 1380,
+   "scrap": 1304,
+   "mass": 1085.5,
+   "hp": 140.0,
+   "cores": 0,
+   "parts": 3,
+   "panels": 7,
+   "tree": 0,
+   "relics": 0
+  },
+  "cogs_in_by_stage": {
+   "1": 506,
+   "2": 854
+  },
+  "cogs_spent": 0,
+  "part_sources": {
+   "gate": 2,
+   "boss": 1
+  },
+  "core_sources": {},
+  "panels": 7,
+  "scrap_lost": {
+   "crane": 300
+  },
+  "stage_entries": [
+   {
+    "t": 227.82,
+    "stage": 2,
+    "cogs": 526,
+    "scrap": 520,
+    "mass": 421.5,
+    "cores": 0,
+    "parts": 1,
+    "panels": 6,
+    "tree": 0
+   },
+   {
+    "t": 497.6,
+    "stage": 3,
+    "cogs": 1380,
+    "scrap": 1304,
+    "mass": 1085.5,
+    "cores": 0,
+    "parts": 3,
+    "panels": 7,
+    "tree": 0
+   }
+  ],
+  "bot": {
+   "outcome": "until",
+   "stage_reached": 3,
+   "game_seconds": 506.76,
+   "class": "remembered_cannon",
+   "min_hp": 80.8
+  },
+  "stage_notes": [
+   {
+    "stage": 1,
+    "warden_broken_s": 221.99,
+    "exit_s": 227.82,
+    "hp_lost": 73.5,
+    "hits": 3.0,
+    "rib_caches_taken": 0,
+    "rogues_beaten": 0,
+    "secrets_found": []
+   },
+   {
+    "stage": 2,
+    "warden_broken_s": 176.01,
+    "exit_s": 183.24,
+    "hp_lost": 29.0,
+    "hits": 2.0,
+    "rib_caches_taken": 0,
+    "rogues_beaten": 0,
+    "secrets_found": []
+   },
+   {
+    "stage": 3,
+    "warden_broken_s": null,
+    "exit_s": 0.0,
+    "hp_lost": 0.0,
+    "hits": 0,
+    "rib_caches_taken": 0,
+    "rogues_beaten": 0,
+    "secrets_found": []
+   }
+  ]
+ },
+ {
+  "run": "random-2862",
+  "outcome": "until",
+  "game_s": 381.5,
+  "end": {
+   "stage": 3,
+   "cogs": 1585,
+   "scrap": 1600,
+   "mass": 1238.0,
+   "hp": 155.0,
+   "cores": 0,
+   "parts": 3,
+   "panels": 10,
+   "tree": 0,
+   "relics": 0
+  },
+  "cogs_in_by_stage": {
+   "1": 544,
+   "2": 1021
+  },
+  "cogs_spent": 0,
+  "part_sources": {
+   "gate": 2,
+   "boss": 1
+  },
+  "core_sources": {},
+  "panels": 10,
+  "scrap_lost": {
+   "crane": 180
+  },
+  "stage_entries": [
+   {
+    "t": 171.61,
+    "stage": 2,
+    "cogs": 564,
+    "scrap": 558,
+    "mass": 440.0,
+    "cores": 0,
+    "parts": 1,
+    "panels": 7,
+    "tree": 0
+   },
+   {
+    "t": 381.5,
+    "stage": 3,
+    "cogs": 1585,
+    "scrap": 1600,
+    "mass": 1238.0,
+    "cores": 0,
+    "parts": 3,
+    "panels": 10,
+    "tree": 0
+   }
+  ],
+  "bot": {
+   "outcome": "until",
+   "stage_reached": 3,
+   "game_seconds": 390.48,
+   "class": "pylon_engineer",
+   "min_hp": 100.0
+  },
+  "stage_notes": [
+   {
+    "stage": 1,
+    "warden_broken_s": 166.36,
+    "exit_s": 171.61,
+    "hp_lost": 56.0,
+    "hits": 3.0,
+    "rib_caches_taken": 0,
+    "rogues_beaten": 0,
+    "secrets_found": []
+   },
+   {
+    "stage": 2,
+    "warden_broken_s": 117.47,
+    "exit_s": 126.69,
+    "hp_lost": 1.8,
+    "hits": 1.0,
+    "rib_caches_taken": 0,
+    "rogues_beaten": 0,
+    "secrets_found": []
+   },
+   {
+    "stage": 3,
+    "warden_broken_s": null,
+    "exit_s": 0.0,
+    "hp_lost": 0.0,
+    "hits": 0,
+    "rib_caches_taken": 0,
+    "rogues_beaten": 0,
+    "secrets_found": []
+   }
+  ]
+ },
+ {
+  "run": "skipper-2860",
+  "outcome": "until",
+  "game_s": 487.62,
+  "end": {
+   "stage": 3,
+   "cogs": 1473,
+   "scrap": 1520,
+   "mass": 429.5,
+   "hp": 108.0,
+   "cores": 0,
+   "parts": 3,
+   "panels": 8,
+   "tree": 0,
+   "relics": 0
+  },
+  "cogs_in_by_stage": {
+   "1": 637,
+   "2": 816
+  },
+  "cogs_spent": 0,
+  "part_sources": {
+   "gate": 2,
+   "boss": 1
+  },
+  "core_sources": {},
+  "panels": 8,
+  "scrap_lost": {
+   "crane": 180
+  },
+  "stage_entries": [
+   {
+    "t": 207.79,
+    "stage": 2,
+    "cogs": 657,
+    "scrap": 661,
+    "mass": 451.5,
+    "cores": 0,
+    "parts": 1,
+    "panels": 7,
+    "tree": 0
+   },
+   {
+    "t": 487.62,
+    "stage": 3,
+    "cogs": 1473,
+    "scrap": 1520,
+    "mass": 429.5,
+    "cores": 0,
+    "parts": 3,
+    "panels": 8,
+    "tree": 0
+   }
+  ],
+  "bot": {
+   "outcome": "until",
+   "stage_reached": 3,
+   "game_seconds": 496.81,
+   "class": "tally",
+   "min_hp": 90.0
+  },
+  "stage_notes": [
+   {
+    "stage": 1,
+    "warden_broken_s": 201.63,
+    "exit_s": 207.79,
+    "hp_lost": 131.2,
+    "hits": 10.0,
+    "rib_caches_taken": 0,
+    "rogues_beaten": 0,
+    "secrets_found": []
+   },
+   {
+    "stage": 2,
+    "warden_broken_s": 142.34,
+    "exit_s": 151.59,
+    "hp_lost": 20.0,
+    "hits": 1.0,
+    "rib_caches_taken": 0,
+    "rogues_beaten": 0,
+    "secrets_found": []
+   },
+   {
+    "stage": 3,
+    "warden_broken_s": null,
+    "exit_s": 0.0,
+    "hp_lost": 0.0,
+    "hits": 0,
+    "rib_caches_taken": 0,
+    "rogues_beaten": 0,
+    "secrets_found": []
+   }
+  ]
+ },
+ {
+  "run": "skipper-2861",
+  "outcome": "until",
+  "game_s": 425.02,
+  "end": {
+   "stage": 3,
+   "cogs": 1630,
+   "scrap": 1632,
+   "mass": 1303.0,
+   "hp": 135.0,
+   "cores": 0,
+   "parts": 3,
+   "panels": 12,
+   "tree": 0,
+   "relics": 0
+  },
+  "cogs_in_by_stage": {
+   "1": 759,
+   "2": 851
+  },
+  "cogs_spent": 0,
+  "part_sources": {
+   "gate": 2,
+   "boss": 1
+  },
+  "core_sources": {},
+  "panels": 12,
+  "scrap_lost": {
+   "crane": 240
+  },
+  "stage_entries": [
+   {
+    "t": 173.14,
+    "stage": 2,
+    "cogs": 779,
+    "scrap": 778,
+    "mass": 632.0,
+    "cores": 0,
+    "parts": 1,
+    "panels": 9,
+    "tree": 0
+   },
+   {
+    "t": 425.02,
+    "stage": 3,
+    "cogs": 1630,
+    "scrap": 1632,
+    "mass": 1303.0,
+    "cores": 0,
+    "parts": 3,
+    "panels": 12,
+    "tree": 0
+   }
+  ],
+  "bot": {
+   "outcome": "until",
+   "stage_reached": 3,
+   "game_seconds": 434.48,
+   "class": "remembered_cannon",
+   "min_hp": 105.0
+  },
+  "stage_notes": [
+   {
+    "stage": 1,
+    "warden_broken_s": 167.05,
+    "exit_s": 173.14,
+    "hp_lost": 84.6,
+    "hits": 6.0,
+    "rib_caches_taken": 0,
+    "rogues_beaten": 0,
+    "secrets_found": []
+   },
+   {
+    "stage": 2,
+    "warden_broken_s": 153.32,
+    "exit_s": 171.39,
+    "hp_lost": 37.0,
+    "hits": 3.0,
+    "rib_caches_taken": 0,
+    "rogues_beaten": 0,
+    "secrets_found": []
+   },
+   {
+    "stage": 3,
+    "warden_broken_s": null,
+    "exit_s": 0.0,
+    "hp_lost": 0.0,
+    "hits": 0,
+    "rib_caches_taken": 0,
+    "rogues_beaten": 0,
+    "secrets_found": []
+   }
+  ]
+ },
+ {
+  "run": "skipper-2862",
+  "outcome": "until",
+  "game_s": 355.87,
+  "end": {
+   "stage": 3,
+   "cogs": 1820,
+   "scrap": 1807,
+   "mass": 1593.0,
+   "hp": 165.0,
+   "cores": 0,
+   "parts": 3,
+   "panels": 15,
+   "tree": 0,
+   "relics": 0
+  },
+  "cogs_in_by_stage": {
+   "1": 654,
+   "2": 1146
+  },
+  "cogs_spent": 0,
+  "part_sources": {
+   "gate": 2,
+   "boss": 1
+  },
+  "core_sources": {},
+  "panels": 15,
+  "scrap_lost": {
+   "crane": 240
+  },
+  "stage_entries": [
+   {
+    "t": 134.4,
+    "stage": 2,
+    "cogs": 674,
+    "scrap": 663,
+    "mass": 624.0,
+    "cores": 0,
+    "parts": 1,
+    "panels": 12,
+    "tree": 0
+   },
+   {
+    "t": 355.87,
+    "stage": 3,
+    "cogs": 1820,
+    "scrap": 1807,
+    "mass": 1593.0,
+    "cores": 0,
+    "parts": 3,
+    "panels": 15,
+    "tree": 0
+   }
+  ],
+  "bot": {
+   "outcome": "until",
+   "stage_reached": 3,
+   "game_seconds": 364.73,
+   "class": "pylon_engineer",
+   "min_hp": 100.0
+  },
+  "stage_notes": [
+   {
+    "stage": 1,
+    "warden_broken_s": 129.0,
+    "exit_s": 134.4,
+    "hp_lost": 10.0,
+    "hits": 1.0,
+    "rib_caches_taken": 0,
+    "rogues_beaten": 0,
+    "secrets_found": []
+   },
+   {
+    "stage": 2,
+    "warden_broken_s": 126.19,
+    "exit_s": 137.06,
+    "hp_lost": 20.0,
+    "hits": 1.0,
+    "rib_caches_taken": 0,
+    "rogues_beaten": 0,
+    "secrets_found": []
+   },
+   {
+    "stage": 3,
+    "warden_broken_s": null,
+    "exit_s": 0.0,
+    "hp_lost": 0.0,
+    "hits": 0,
+    "rib_caches_taken": 0,
+    "rogues_beaten": 0,
+    "secrets_found": []
+   }
+  ]
+ }
+]

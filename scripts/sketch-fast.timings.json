@@ -891,6 +891,7 @@
     "tests/shot_bits_test.gd": 165600,
     "tests/side_content_roster_test.gd": 12600,
     "tests/signal_lifetime_test.gd": 21800,
+    "tests/site_markers_test.gd": 19200,
     "tests/sitting_profile_test.gd": 14100,
     "tests/skill_band_test.gd": 667100,
     "tests/skill_bar_select_test.gd": 18900,
