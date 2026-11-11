@@ -1,6 +1,7 @@
 extends CanvasLayer
 
 const Palette := preload("res://src/core/palette.gd")
+const UiTokens := preload("res://src/ui/ui_tokens.gd")
 const UiFonts := preload("res://src/ui/ui_fonts.gd")
 const ChoiceButton := preload("res://src/ui/choice_button.gd")
 const SettingsStore := preload("res://src/ui/settings_store.gd")
@@ -77,7 +78,6 @@ var store
 
 var _root: Control
 var _content: VBoxContainer
-var _title: Label
 var _note: Label
 var _page
 var _in_settings := false
@@ -128,19 +128,11 @@ func setup(game_ref) -> void:
 	_content.add_theme_constant_override("separation", 12)
 	_content.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_root.add_child(_content)
-	_title = Label.new()
-	_title.text = "PAUSED"
-	_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_title.add_theme_font_override("font", UiFonts.bold())
-	_title.add_theme_font_size_override("font_size", 56)
-	_title.add_theme_color_override("font_color", Palette.AMBER)
-	_title.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_content.add_child(_title)
 	_note = Label.new()
 	_note.visible = false
 	_note.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_note.add_theme_font_override("font", UiFonts.bold())
-	_note.add_theme_font_size_override("font_size", 22)
+	_note.add_theme_font_size_override("font_size", UiTokens.LABEL)
 	_note.add_theme_color_override("font_color", Palette.SAND)
 	_note.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_content.add_child(_note)

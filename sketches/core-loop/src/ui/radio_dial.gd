@@ -1,6 +1,7 @@
 extends Control
 
 const Palette := preload("res://src/core/palette.gd")
+const UiTokens := preload("res://src/ui/ui_tokens.gd")
 const UiFonts := preload("res://src/ui/ui_fonts.gd")
 const ScreenRegions := preload("res://src/ui/screen_regions.gd")
 const RadioTakes := preload("res://src/core/radio_takes.gd")
@@ -97,27 +98,27 @@ func _draw() -> void:
 	draw_line(knob, knob + Vector2(cos(angle), sin(angle)) * 11.0, Palette.SAND if not off else Palette.SLATE, 2.5)
 	var font := UiFonts.bold()
 	var x := 46.0
-	draw_string(font, Vector2(x, 21.0), String(_read.get("call", "")), HORIZONTAL_ALIGNMENT_LEFT, -1, 19, edge)
+	draw_string(font, Vector2(x, 21.0), String(_read.get("call", "")), HORIZONTAL_ALIGNMENT_LEFT, -1, UiTokens.BODY, edge)
 	var dial_words := String(_read.get("dial", ""))
 	if dial_words != "":
-		draw_string(font, Vector2(x + UiFonts.width(String(_read.get("call", "")), 19) + 8.0, 21.0), dial_words, HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color(Palette.SAND, 0.6))
+		draw_string(font, Vector2(x + UiFonts.width(String(_read.get("call", "")), UiTokens.BODY) + 8.0, 21.0), dial_words, HORIZONTAL_ALIGNMENT_LEFT, -1, UiTokens.CAPTION, UiTokens.quiet())
 	var meter_w := 4.0 * 7.0
 	var line_w := size.x - x - meter_w - 18.0
-	draw_string(font, Vector2(x, 39.0), String(_read.get("line", "")), HORIZONTAL_ALIGNMENT_LEFT, line_w, 15, Palette.SLATE if off else Palette.SAND)
+	draw_string(font, Vector2(x, 39.0), String(_read.get("line", "")), HORIZONTAL_ALIGNMENT_LEFT, line_w, UiTokens.CAPTION, UiTokens.quiet() if off else Palette.SAND)
 	if _read.get("pinned", false):
-		draw_string(font, Vector2(size.x - meter_w - 52.0, 21.0), "PIN", HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Palette.BRASS)
+		draw_string(font, Vector2(size.x - meter_w - 52.0, 21.0), "PIN", HORIZONTAL_ALIGNMENT_LEFT, -1, UiTokens.CAPTION, Palette.BRASS)
 	for i in LAYERS:
 		var h := 4.0 + _bars[i] * 26.0
 		var bx := size.x - meter_w - 10.0 + i * 7.0
 		draw_rect(Rect2(bx, 40.0 - h, 5.0, h), Color(color, 0.35 + 0.65 * _bars[i]) if not off else Color(Palette.SLATE, 0.4))
 	if swollen() and size.y > 70.0:
 		var a := clampf(_swell / 0.4, 0.0, 1.0)
-		draw_string(font, Vector2(12.0, 64.0), String(_read.get("name", "")), HORIZONTAL_ALIGNMENT_LEFT, size.x - 24.0, 16, Color(color, a))
+		draw_string(font, Vector2(12.0, 64.0), String(_read.get("name", "")), HORIZONTAL_ALIGNMENT_LEFT, size.x - 24.0, UiTokens.BODY, Color(color, a))
 		var blurb := String(RadioTakes.station(String(_read.get("station", ""))).get("blurb", ""))
-		draw_string(font, Vector2(12.0, 84.0), blurb, HORIZONTAL_ALIGNMENT_LEFT, size.x - 24.0, 13, Color(Palette.SAND, 0.75 * a))
+		draw_string(font, Vector2(12.0, 84.0), blurb, HORIZONTAL_ALIGNMENT_LEFT, size.x - 24.0, UiTokens.CAPTION, Color(Palette.SAND, 0.75 * a))
 	if _stamp > 0.0:
 		var s := clampf(_stamp / STAMP * 1.6, 0.0, 1.0)
 		draw_set_transform(Vector2(-86.0, 30.0), -0.14, Vector2.ONE * lerpf(1.0, 1.3, s))
-		draw_string(font, Vector2(2, 2), WORD, HORIZONTAL_ALIGNMENT_LEFT, -1, 26, Color(Palette.CHARCOAL, s))
-		draw_string(font, Vector2.ZERO, WORD, HORIZONTAL_ALIGNMENT_LEFT, -1, 26, Color(Palette.AMBER, s))
+		draw_string(font, Vector2(2, 2), WORD, HORIZONTAL_ALIGNMENT_LEFT, -1, UiTokens.LABEL, Color(Palette.CHARCOAL, s))
+		draw_string(font, Vector2.ZERO, WORD, HORIZONTAL_ALIGNMENT_LEFT, -1, UiTokens.LABEL, Color(Palette.AMBER, s))
 		draw_set_transform(Vector2.ZERO)

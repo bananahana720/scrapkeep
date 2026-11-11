@@ -1,6 +1,7 @@
 extends VBoxContainer
 
 const Palette := preload("res://src/core/palette.gd")
+const UiTokens := preload("res://src/ui/ui_tokens.gd")
 const TuneRows := preload("res://src/core/tune_rows.gd")
 const UiDraw := preload("res://src/ui/ui_draw.gd")
 const UiFonts := preload("res://src/ui/ui_fonts.gd")
@@ -37,13 +38,13 @@ var _playing := ""
 func _init() -> void:
 	name = "JukeboxPage"
 	alignment = BoxContainer.ALIGNMENT_CENTER
-	add_theme_constant_override("separation", 18)
+	add_theme_constant_override("separation", 16)
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_count = UiDraw.label(22, Palette.AMBER)
+	_count = UiDraw.label(UiTokens.LABEL, Palette.AMBER)
 	add_child(_count)
 	var body := HBoxContainer.new()
 	body.alignment = BoxContainer.ALIGNMENT_CENTER
-	body.add_theme_constant_override("separation", 28)
+	body.add_theme_constant_override("separation", 24)
 	body.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(body)
 	deck = Turntable.new()
@@ -63,22 +64,22 @@ func _init() -> void:
 	crate.add_child(_shelves)
 	for shelf in TuneRows.SHELVES.size():
 		var column := VBoxContainer.new()
-		column.add_theme_constant_override("separation", 6)
+		column.add_theme_constant_override("separation", 4)
 		column.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		_shelves.add_child(column)
-		column.add_child(UiDraw.label(18, SHELF_COLORS[shelf], TuneRows.SHELVES[shelf].to_upper()))
+		column.add_child(UiDraw.label(UiTokens.BODY, SHELF_COLORS[shelf], TuneRows.SHELVES[shelf].to_upper()))
 		for row in TuneRows.on_shelf(shelf):
 			var sleeve := Sleeve.new(row, SHELF_COLORS[shelf])
 			sleeve.pressed.connect(_on_sleeve.bind(String(row["id"])))
 			sleeve.focus_entered.connect(_show_note.bind(String(row["id"])))
 			column.add_child(sleeve)
 			_sleeves[row["id"]] = sleeve
-	_note = UiDraw.label(20, Palette.SAND)
+	_note = UiDraw.label(UiTokens.BODY, Palette.SAND)
 	_note.custom_minimum_size = Vector2(0.0, 30.0)
 	add_child(_note)
 	var buttons := HBoxContainer.new()
 	buttons.alignment = BoxContainer.ALIGNMENT_CENTER
-	buttons.add_theme_constant_override("separation", 14)
+	buttons.add_theme_constant_override("separation", 12)
 	buttons.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(buttons)
 	play_button = ChoiceButton.new("play", "key_space", "Play")
@@ -176,7 +177,7 @@ func _show_note(id: String) -> void:
 		_note.add_theme_color_override("font_color", Palette.SAND)
 	else:
 		_note.text = "Not heard yet. %s" % row["where"]
-		_note.add_theme_color_override("font_color", Palette.SLATE)
+		_note.add_theme_color_override("font_color", UiTokens.quiet())
 
 
 # A record sleeve in the crate: a small disc in the shelf's colour, then the name. A blank
@@ -190,13 +191,14 @@ class Sleeve extends Button:
 	func _init(r: Dictionary, color: Color) -> void:
 		row = r
 		tint = color
+		accessibility_name = String(r.get("name", ""))
 		focus_mode = Control.FOCUS_ALL
 		mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 		custom_minimum_size = SLEEVE_SIZE
 		alignment = HORIZONTAL_ALIGNMENT_LEFT
 		clip_text = true
 		add_theme_font_override("font", UiFonts.bold())
-		add_theme_font_size_override("font_size", 18)
+		add_theme_font_size_override("font_size", UiTokens.BODY)
 		set_state(false, false)
 
 	func set_state(is_found: bool, is_playing: bool) -> void:
@@ -210,10 +212,10 @@ class Sleeve extends Button:
 			box.content_margin_top = 4.0
 			box.content_margin_bottom = 4.0
 			add_theme_stylebox_override(state, box)
-		add_theme_stylebox_override("focus", ChoiceButton.plate(Palette.ARC if playing else Color.WHITE, 4, 50.0, false))
-		var words: Color = Palette.SAND if found else Palette.SLATE
+		add_theme_stylebox_override("focus", ChoiceButton.plate(Palette.ARC if playing else UiTokens.TEXT, 4, 50.0, false))
+		var words: Color = Palette.SAND if found else UiTokens.quiet()
 		for key in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color"]:
-			add_theme_color_override(key, Color.WHITE if key != "font_color" and found else words)
+			add_theme_color_override(key, UiTokens.TEXT if key != "font_color" and found else words)
 		queue_redraw()
 
 	func _draw() -> void:
@@ -302,6 +304,6 @@ class Turntable extends Control:
 			var a := clampf(stamp_left / STAMP * 1.6, 0.0, 1.0)
 			var at := Vector2(s.x * 0.08, s.y * 0.14)
 			draw_set_transform(at, -0.12, Vector2.ONE * lerpf(1.0, 1.25, a))
-			draw_string(UiFonts.bold(), Vector2(2, 2), WORD, HORIZONTAL_ALIGNMENT_LEFT, -1, 34, Color(Palette.CHARCOAL, a))
-			draw_string(UiFonts.bold(), Vector2.ZERO, WORD, HORIZONTAL_ALIGNMENT_LEFT, -1, 34, Color(Palette.AMBER, a))
+			draw_string(UiFonts.bold(), Vector2(2, 2), WORD, HORIZONTAL_ALIGNMENT_LEFT, -1, UiTokens.HEADING, Color(Palette.CHARCOAL, a))
+			draw_string(UiFonts.bold(), Vector2.ZERO, WORD, HORIZONTAL_ALIGNMENT_LEFT, -1, UiTokens.HEADING, Color(Palette.AMBER, a))
 			draw_set_transform(Vector2.ZERO)

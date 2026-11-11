@@ -1,6 +1,7 @@
 extends Control
 
 const EventKinds := preload("res://src/core/event_kinds.gd")
+const UiTokens := preload("res://src/ui/ui_tokens.gd")
 const UiDraw := preload("res://src/ui/ui_draw.gd")
 
 # The hook chain's combo beside the ability bar (design-v3/HOOK-CHAIN.md, "One source, every
@@ -9,7 +10,7 @@ const UiDraw := preload("res://src/ui/ui_draw.gd")
 # in PULSE seconds; when the chain ends the last number drops and fades over FALL seconds, then
 # hides. The colour is the chain_link row's, so the live colour law holds.
 
-const FONT := 40
+const FONT := UiTokens.HEADING
 const PULSE := 0.12
 const SWELL := 0.35
 const FALL := 0.3

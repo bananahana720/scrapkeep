@@ -1,6 +1,7 @@
 extends Control
 
 const Icons := preload("res://src/ui/icons.gd")
+const UiTokens := preload("res://src/ui/ui_tokens.gd")
 const UiDraw := preload("res://src/ui/ui_draw.gd")
 const Palette := preload("res://src/core/palette.gd")
 const FlashGuard := preload("res://src/presentation/flash_guard.gd")
@@ -13,7 +14,7 @@ const FlashGuard := preload("res://src/presentation/flash_guard.gd")
 const ICON := 24.0
 const RADIUS := 17.0
 const GAP := 6.0
-const FONT := 20
+const FONT := UiTokens.BODY
 const SWING := 9.0
 const FLASH_SECONDS := 0.9
 

@@ -1,6 +1,7 @@
 extends Control
 
 const Palette := preload("res://src/core/palette.gd")
+const UiTokens := preload("res://src/ui/ui_tokens.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const Icons := preload("res://src/ui/icons.gd")
 const UiFonts := preload("res://src/ui/ui_fonts.gd")
@@ -24,7 +25,7 @@ const UiFonts := preload("res://src/ui/ui_fonts.gd")
 
 const SIDE := 68.0
 const TAG_H := 20.0
-const TAG_FONT := 13
+const TAG_FONT := UiTokens.CAPTION
 const EDGE := 3.0
 const KEYLINE := 1.5
 const SYLLABLES := 6.5

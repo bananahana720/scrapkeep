@@ -1,6 +1,7 @@
 extends CanvasLayer
 
 const EventKinds := preload("res://src/core/event_kinds.gd")
+const UiTokens := preload("res://src/ui/ui_tokens.gd")
 const Palette := preload("res://src/core/palette.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
 const Objectives := preload("res://src/core/objectives.gd")
@@ -60,7 +61,7 @@ class CogChip extends Control:
 	func _draw() -> void:
 		var mid := size.y * 0.5
 		UiDraw.icon(self, Icons.texture(ICON), Rect2(Vector2(0.0, mid - 10.0), Vector2(20.0, 20.0)), Icons.tint(ICON, COLOR))
-		UiDraw.text(self, 26.0, mid, str(amount), 18, Palette.SAND, true)
+		UiDraw.text(self, 26.0, mid, str(amount), UiTokens.BODY, Palette.SAND, true)
 
 
 # The field-notes key drawn small: the cap Tab opens the notes with.
@@ -91,7 +92,7 @@ class NoteKey extends Control:
 const TOAST_IN := 0.12
 const TOAST_OUT := 0.2
 const TOAST_HOLD := {3: 2.4, 2: 1.6}
-const TOAST_FONT := {3: 23, 2: 19}
+const TOAST_FONT := {3: UiTokens.LABEL, 2: UiTokens.BODY}
 const TOAST_WORDS := 4
 # What the cores held do for the gates, by count (parts.gd gate_rarities reads min(count, RunState.CORE_TIER_CAP)):
 # one core lets a gate offer a rare, two make a gate offer rares or relics, and from a third the gates
@@ -103,8 +104,8 @@ const CORE_WORDS := ["", "Gates may offer rares", "Gates offer rares, relics", "
 const ACH_LAYER := 8
 const ACH_TOTAL := 3.0
 const ACH_TOP := 14.0
-const ACH_FONT := 21
-const ACH_DETAIL_FONT := 15
+const ACH_FONT := UiTokens.LABEL
+const ACH_DETAIL_FONT := UiTokens.CAPTION
 # A jukebox record found in play shares the achievement plate, in the one line with every other card
 # (screen_busy.gd), oldest first.
 # A record found in play wears the drawn wave on amber. A radio take wears the radio chip's knob
@@ -446,7 +447,7 @@ func _build_ach_toast() -> void:
 	_ach_panel.add_theme_stylebox_override("panel", plate)
 	layer_node.add_child(_ach_panel)
 	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 10)
+	row.add_theme_constant_override("separation", 8)
 	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_ach_panel.add_child(row)
 	var star := TextureRect.new()
@@ -460,7 +461,7 @@ func _build_ach_toast() -> void:
 	row.add_child(star)
 	_ach_icon = star
 	# A record or take says which it is here; an achievement's star and amber frame already do.
-	var word := _label(18)
+	var word := _label(UiTokens.BODY)
 	word.add_theme_color_override("font_color", Palette.AMBER)
 	word.visible = false
 	row.add_child(word)
@@ -498,7 +499,7 @@ func _build_lore_pulse() -> void:
 	_lore_panel.add_theme_stylebox_override("panel", plate)
 	layer_node.add_child(_lore_panel)
 	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 10)
+	row.add_theme_constant_override("separation", 8)
 	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_lore_panel.add_child(row)
 	row.add_child(NoteKey.new())
