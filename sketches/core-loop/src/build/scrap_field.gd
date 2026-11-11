@@ -86,6 +86,7 @@ var _panel_column: CylinderMesh
 var _panel_column_material: Material
 # Rib caches (panels waiting at the end of a dead end): a tall thin column that clears the
 # route's skyline, and a two-note chime loop heard from CACHE_HEAR metres.
+# Each maps the panel to the ground it was dropped on.
 var _caches := {}
 # The pieces lay_trail laid (item -> true): the fold passes over them.
 var _trail := {}
@@ -357,7 +358,7 @@ func drop_panel(at: Vector3, panel_id: String, jackpot := false, cache := false)
 	item.add_child(column)
 	_panels[item] = {"id": panel_id, "jackpot": jackpot}
 	if cache:
-		_caches[item] = true
+		_caches[item] = at
 		var chime := AudioStreamPlayer3D.new()
 		chime.name = "CacheChime"
 		chime.stream = SfxBank.loop_stream("panel_cache")
@@ -374,11 +375,12 @@ func cache_count() -> int:
 	return _caches.size()
 
 
-# Where each waiting rib cache stands, with its panel id: [{at, foot, id, item}], foot the ground under the panel.
+# Where each waiting rib cache stands, with its panel id: [{at, foot, id, item}], foot the ground it was
+# dropped on, which stays put while the magnet pulls the panel.
 func caches() -> Array:
 	var out := []
 	for item in _caches:
-		out.append({"at": item.global_position, "foot": item.global_position + Vector3.DOWN * PANEL_LIFT, "id": _panels[item]["id"], "item": item})
+		out.append({"at": item.global_position, "foot": _caches[item], "id": _panels[item]["id"], "item": item})
 	return out
 
 

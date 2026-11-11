@@ -89,7 +89,9 @@ static func sites(world, scrap, terrain) -> Array:
 		for c in scrap.caches():
 			var item: Node3D = c["item"]
 			if is_instance_valid(item):
-				out.append({"key": "cache:%d" % item.get_instance_id(), "kind": "cache", "at": c["foot"]})
+				# Keyed by where it stands: two caches never share a spot, and the key carries no object id.
+				var foot: Vector3 = c["foot"]
+				out.append({"key": "cache:%d:%d" % [roundi(foot.x * 10.0), roundi(foot.z * 10.0)], "kind": "cache", "at": foot})
 	var rescue = world.get("rescue") if world != null else null
 	if rescue != null:
 		for cage in rescue.waiting():
