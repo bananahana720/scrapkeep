@@ -162,7 +162,7 @@ func _production() -> void:
 			e._begin_windup(Vector3.FORWARD)
 			e._check_hit(e._telegraph)
 			var damage_want: float = Chaser.DAMAGE if tier_value == 0 else Chaser.DAMAGE * want[1]
-			# The stage's challenge dial rides on top of the tier (the dam ships mob hits at x1.5).
+			# The stage's challenge dial rides on top of the tier (the dam ships mob hits at x2).
 			damage_want *= ChallengeDials.stage_mult("mobs.damage", int(row.stage))
 			_same("production delivered hit tier %d stage %d" % [tier_value, row.stage], hits, [[damage_want, "chaser"]])
 			_same("production ball health after hit", game.run.hp, 100.0 - damage_want)
