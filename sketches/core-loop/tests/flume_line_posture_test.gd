@@ -69,10 +69,10 @@ func _run() -> void:
 	# The objective plate names the line fight on the real Warden in one row (core/objectives.gd),
 	# and the mark on the relic says which step is next: latch on, then shoot from the line. A shut
 	# clamp or a yard lock would hold the plate; calm stands neither.
-	var plate := ["line_fight", "Latch on, shoot, smash core"]
+	var plate := ["line_fight", "Hook, shoot, smash core"]
 	t.eq("unlatched: the mounting reads the flume", w.mount_driver.plate_reading(w), {"mount": "flume"})
 	t.eq("unlatched: the plate names the line fight", [game.hud.objective_reading()["id"], game.hud.objective_reading()["words"]], plate)
-	t.eq("unlatched: the mark on the relic says to latch on", _mark_tags(), ["LATCH ON"])
+	t.eq("unlatched: the mark on the relic says to hook it", _mark_tags(), ["HOOK"])
 	t.eq("unlatched: the row's first step is live", game.hud.objective_reading()["step"], 0)
 	_latch(w)
 	await physics_frame
