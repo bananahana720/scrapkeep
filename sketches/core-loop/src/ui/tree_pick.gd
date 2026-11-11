@@ -29,7 +29,7 @@ const HEADING := "Rig your kit. Pick one."
 # mid-fight does not read as a frozen picture.
 const HELD := "Paused"
 # The toast that names the kit once it is taken, through the HUD's existing toast row.
-const TAKEN_TOAST := "Kit: %s"
+const TAKEN_TOAST := "%s taken"
 
 var depth := 0
 var _veil: ColorRect

@@ -23,17 +23,17 @@ const ROWS := {
 	"s_bulwark": "Mounted, shrug off crowd control.",
 	# Kest, K1 to K6.
 	"k_trapper": "Charges wait longer. Five can wait at once.",
-	"k_ghost": "Cloaked, enemies spot you only up close.",
-	"k_tripwire": "Charges spring when enemies approach.",
+	"k_ghost": "Cloaked, machines spot you only up close.",
+	"k_tripwire": "Charges spring when machines approach.",
 	"k_demo_expert": "Smash scatters five payloads.",
 	"k_smoke_trail": "Glide cloaked. Heavy fins steer harder.",
 	"k_ambush": "Throw payloads without breaking cloak.",
 	# Rivet, R1 to R6.
 	"r_gunline": "Your laser fires twin bolts.",
-	"r_juggernaut": "Starting a sprint blasts enemies back.",
+	"r_juggernaut": "Starting a sprint blasts machines back.",
 	"r_tracer": "Running fire jumps to a neighbour.",
 	"r_run_gun": "Sustain fire. Worn scrap sparks behind you.",
-	"r_ram_fins": "Sprint through bodies instead of rebounding.",
+	"r_ram_fins": "Sprint through bodies instead of bouncing.",
 	"r_second_wind": "Bank two sprints. Heavy fins open during sprint.",
 	# Tarn, T1 to T6.
 	"t_long_claw": "Reach two metres farther. Close the gap.",
@@ -41,17 +41,17 @@ const ROWS := {
 	"t_twin_talons": "Two lighter talons rake each sweep.",
 	"t_heavy_paw": "Sweeps hurl the crowd twice as far.",
 	"t_spare_claw": "Bank two claw pulls.",
-	"t_vice_grip": "Every clamp hands back a claw pull.",
+	"t_vice_grip": "Every clamp refills a claw pull.",
 	# Tally, TL1 to TL6.
 	"tl_audit_stamp": "Every stamp slam throws a shockwave.",
 	"tl_steam_bank": "Bank two flywheel surges.",
 	"tl_through_feed": "Every hit winds your next surge closer.",
 	"tl_line_feed": "Harpoon smashes throw a second shockwave.",
-	"tl_spring_vent": "Each surge hands back your air jump.",
-	"tl_corner_plate": "Every gather plate hands back a surge.",
+	"tl_spring_vent": "Each surge refills your air jump.",
+	"tl_corner_plate": "Every gather plate refills a surge.",
 	# Remembered cannon, C1 to C6.
 	"c_quick_lane": "Call lanes a quarter faster.",
-	"c_brace_kick": "Every plate hands back a recoil kick.",
+	"c_brace_kick": "Every plate refills a recoil kick.",
 	"c_lane_fever": "Kills speed up your lanes.",
 	"c_spare_kick": "Bank two recoil kicks.",
 	"c_spare_plate": "Bank two plates.",
@@ -66,40 +66,44 @@ const ROWS := {
 const SET_PIECE_LINES := {
 	# Shared lines for the framework knobs (every pilot's depth-4 nodes set the same values);
 	# a pilot overrides one as "<class_id>:<knob>" in its own block.
-	"ult_beats": "Q lasts two beats longer.",
-	"ult_volley": "Q strikes one more each beat.",
-	"ult_radius": "Q lands two metres wider.",
-	"ult_encore": "Q can land a second time.",
+	"ult_beats": "Ultimate lasts two beats longer.",
+	"ult_volley": "Ultimate strikes one more each beat.",
+	"ult_radius": "Ultimate lands two metres wider.",
+	"ult_encore": "Ultimate can land a second time.",
 	# --- P-C Sable set piece lines ---
-	"ball_lightning": "Set piece: Ball Lightning",
-	"outpost": "Set piece: Outpost",
+	"ball_lightning": "Ultimate becomes Ball Lightning.",
+	"outpost": "Ultimate becomes Outpost.",
 	# --- end Sable ---
 	# --- P-C Rivet set piece lines ---
-	"foundry_cutter": "Q drives a measured cut to your aim.",
+	"foundry_cutter": "Ultimate drives a measured cut to your aim.",
 	"prism_cutter": "Your cutter splits three ways through a prism.",
-	"juggernaut_drive": "Q drives you through them. No beam.",
-	"ult_pins": "Q's landing throws machines twice as hard.",
-	"runner_gunner:ult_beats": "Q cuts or drives two beats longer.",
-	"runner_gunner:ult_volley": "Q cuts more or rams a wider corridor.",
-	"runner_gunner:ult_radius": "Q's landing skids two metres wider.",
-	"runner_gunner:ult_encore": "Q can cut or drive an encore.",
+	"juggernaut_drive": "Ultimate drives you through machines. No beam.",
+	"ult_pins": "The ultimate's landing throws machines twice as hard.",
+	"runner_gunner:ult_beats": "Ultimate cuts or drives two beats longer.",
+	"runner_gunner:ult_volley": "Ultimate cuts more or rams a wider corridor.",
+	"runner_gunner:ult_radius": "The ultimate's landing skids two metres wider.",
+	"runner_gunner:ult_encore": "Ultimate can cut or drive an encore.",
 	# --- end Rivet ---
 	# --- P-C Kest set piece lines ---
+	"minelayer": "Ultimate becomes Minelayer.",
+	"air_raid": "Ultimate becomes Air Raid.",
 	# --- end Kest ---
 	# --- P-C Tarn set piece lines ---
 	"redjaw_rend": "Climb the line, tow them, rend.",
 	"rake_run": "Rake both sides, then sweep faster.",
 	"vice_leap": "Hurl the catch, leap into the vice.",
-	"tarn:ult_volley": "Q rakes wider or grabs more.",
-	"tarn:ult_encore": "Q can rend a second landing.",
+	"tarn:ult_volley": "Ultimate rakes wider or grabs more.",
+	"tarn:ult_encore": "Ultimate can rend a second landing.",
 	# --- end Tarn ---
 	# --- P-C Tally set piece lines ---
 	"plate_return": "Ride home. Every clip settles on landing.",
-	"plate_audit": "Audit Trail: stamp what you steer over.",
-	"plate_flywheel": "Flywheel Throw: launch, gather, collect.",
+	"plate_audit": "Stamp what you steer over.",
+	"plate_flywheel": "Launch, gather, collect.",
 	"ult_settle": "Clips settle for more on landing.",
 	# --- end Tally ---
 	# --- P-C Cannon set piece lines ---
+	"cannon_creeping_barrage": "Ultimate becomes Creeping Barrage.",
+	"cannon_plate_mortar": "Ultimate becomes Plate Mortar.",
 	# --- end Cannon ---
 }
 
