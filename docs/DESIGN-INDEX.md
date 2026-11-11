@@ -23,6 +23,7 @@ The [project desk](project/README.md) owns orientation and requirements, [BACKLO
 | Andrew's confirmed preferences and remaining questions      | [Publisher discovery](DISCOVERY.md)                                                                                                   | Source of truth for accepted direction                                                         |
 | The earlier notebook                                        | [Transcription and interpretation](HANDWRITTEN-NOTES.md)                                                                              | Preserved source images; uncertain handwriting identified                                      |
 | Conflict, defensive mechanics and boss alternatives         | [Combat workshop](CONFLICT-AND-COMBAT.md)                                                                                             | Working candidates, including Furnace Fleet; exact defensive rhythm remains open               |
+| Loops you can't put down (11 Nov 2026)                      | [Loop design session](design/loops.md)                                                                                                | Proposal for the Feature fit pass; nothing built                                               |
 
 ## Deep research desk
 

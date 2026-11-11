@@ -1971,6 +1971,7 @@ func _connect_all(events) -> void:
 	events.landed.connect(_on_landed)
 	events.slammed.connect(_on_slammed)
 	_connect_dunk()
+	_connect_redline()
 	events.mounted.connect(func(_at: Vector3, banked: float): play("mounted", 0.0, Harmony.ratio(minf(banked / 4.0, 7.0))))
 	events.dismounted.connect(_on_dismounted)
 	events.enemy_spawned.connect(_on_enemy_spawned)
@@ -3983,6 +3984,28 @@ func _connect_dunk() -> void:
 	dunk.spent.connect(func(_record: Dictionary, _enemy: Node3D):
 		if play("slammed", 0.0, 1.0, "SFX", "smash_crack"):
 			_note_at("slammed", DUNK_VOICE, DUNK_SPENT_MIDI, next_grid(4)))
+
+
+# Heat on the shell (redline.gd) cues: each band it climbs into is a whistle a pentatonic rung
+# higher (a quarter on D's second, hot on the fifth, redline on the sixth), and a blast or a
+# cook-off is the slam's crack pitched down a fourth. They borrow the slammed row and existing
+# sound ids, like the dunk's, so the event table stays as it is.
+const REDLINE_RUNGS := [0.0, 2.0, 7.0, 9.0]
+var _redline_band := 0
+
+
+func _connect_redline() -> void:
+	var redline = ctx.player.get("redline") if ctx != null and ctx.get("player") != null else null
+	if redline == null:
+		return
+	redline.changed.connect(func(_value: float, band: int):
+		if band > _redline_band:
+			play("slammed", -6.0, Harmony.ratio(REDLINE_RUNGS[band]), "SFX", "smash_whistle")
+		_redline_band = band)
+	redline.detonated.connect(func(_at: Vector3, _force: float):
+		play("slammed", 2.0, Harmony.ratio(-5.0), "SFX", "smash_crack"))
+	redline.cooked_off.connect(func(_at: Vector3, _force: float):
+		play("slammed", 0.0, Harmony.ratio(-7.0), "SFX", "smash_crack"))
 
 
 # Each active sounds its own launch ("active_" + id) when the bank has it, else the row's.

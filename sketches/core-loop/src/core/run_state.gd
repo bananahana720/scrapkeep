@@ -114,6 +114,10 @@ var death_save_spent := false
 # is knocked loose. The one choke point every hit passes, so a boss's direct hit obeys it too.
 var defend_hook := Callable()
 var ride_hook := Callable()
+# Heat on the shell (combat/redline.gd): Callable(source) -> the multiplier on a hit, 1.0 when
+# the shell is cool. It runs first, at the one choke point, so every hit (a boss's included)
+# lands harder on a hot shell before any defence reads it.
+var taken_hook := Callable()
 # Whole wear units owed but not yet taken from the mass.
 var _wear_accum := 0.0
 # The armour metrics the run log carries; a retry adds to them, they are never restored.
@@ -465,6 +469,14 @@ func add_event_core(at: Vector3) -> void:
 		add_core("event", at)
 
 
+# A missed called shot (build/called_shot.gd) burns one of this stage's cores. Returns whether one burned.
+func lose_core() -> bool:
+	if bonus_cores <= 0:
+		return false
+	bonus_cores -= 1
+	return true
+
+
 # A lost risk bet burns this stage's cores (world/bet_crate.gd); its bet_resolved fact
 # reports the loss. Returns how many burned.
 func burn_cores() -> int:
@@ -622,6 +634,8 @@ func heal(amount: float) -> void:
 func damage(amount: float, source: String) -> void:
 	if not alive() or amount <= 0.0:
 		return
+	if taken_hook.is_valid():
+		amount *= float(taken_hook.call(source))
 	if defend_hook.is_valid():
 		amount = float(defend_hook.call(amount, hp))
 	if armor_mode:
