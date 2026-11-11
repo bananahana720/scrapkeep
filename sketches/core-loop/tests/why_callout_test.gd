@@ -73,7 +73,7 @@ func _card_step() -> void:
 
 # The quiet clock already past the finds' hold, as the old banner clock set to zero was.
 func _card_calm() -> void:
-	_game.ctx.screen_busy._quiet_for = ScreenBusy.FIND_HOLD
+	_game.ctx.screen_busy.step(ScreenBusy.FIND_HOLD)
 
 
 func _threat() -> Node:

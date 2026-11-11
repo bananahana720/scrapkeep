@@ -19,7 +19,7 @@ const ScreenBusy := preload("res://src/ui/screen_busy.gd")
 # entry, death and run end).
 #
 # A first-discovery card raised in a fight waits at the head of the queue and shows at the
-# next time WhyCallout.find_may_speak says so: calm, and no Warden engaged and alive. One
+# next time the screen's one gate says so (screen_busy.gd): quiet for the finds' hold. One
 # raised when the gate is already open shows at once. Whatever is showing closes when a
 # Warden fight goes live. In cards mode at most MAX_HELD wait and a repeat shows nothing; in
 # banner mode presentation drops a repeat synergy before it reaches the queue. The banner

@@ -61,4 +61,18 @@ func _run() -> void:
 		if _card_up():
 			shown_at = _clock - over_at
 	_t.check("the waiting card shows within the quiet hold plus 60 frames of the death", shown_at >= 0.0, "shown after %.2f s" % shown_at)
+	# A field machine freed without a kill (the arena opens) takes its named fight with it; a
+	# retry inside the arena keeps the Warden's.
+	var busy = _game.ctx.screen_busy
+	_game.events.fight_phase_changed.emit("rogue_crane", 2, 2)
+	_game.events.stage_content_cleared.emit("arena_retry")
+	_t.check("planted control: an arena retry keeps the named fight", busy.fighting(), "fighting %s" % busy.fighting())
+	_game.events.stage_content_cleared.emit("arena")
+	_t.check("the arena opening ends the field's named fight", not busy.fighting(), "fighting %s" % busy.fighting())
+	# Two finished sets wait in the order they finished, both ahead of an older plain card.
+	busy.request("test:plain")
+	busy.request("test:set_a", true)
+	busy.request("test:set_b", true)
+	var line: Array = busy.waiting().filter(func(key: String): return key.begins_with("test:"))
+	_t.eq("an earlier set stays ahead of a later one, both ahead of the plain card", line, ["test:set_a", "test:set_b", "test:plain"])
 	quit(_t.verdict())
