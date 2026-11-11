@@ -679,7 +679,7 @@ export function parseNdjson(text) {
 export const SECONDS_PER_JOB = { boss: 335, warden: 330, world: 330, clear: 300 }; // wall s per job at 4 parallel on the 4-vCPU box, smoke medians; world is a guess (no sample before 19 Oct)
 
 // The most Godot processes a sweep may run at once: one per core and 2 GiB of memory each
-// (a park bot run peaks near 0.7 GiB; the rest is headroom), never below the old fixed cap of 6.
+// (a world 1 park bot run to stage 2 peaked at 0.85 GiB; the rest is headroom), never below the old fixed cap of 6.
 export function maxJobs(cpus = os.cpus().length, memBytes = os.totalmem()) {
   return Math.max(6, Math.min(cpus, Math.floor(memBytes / 2 ** 31)));
 }
