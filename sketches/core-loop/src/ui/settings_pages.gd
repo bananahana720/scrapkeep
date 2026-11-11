@@ -26,8 +26,8 @@ const Keycap := preload("res://src/ui/keycap.gd")
 # show their one-line helper (SettingsStore.HELPERS) under the row while they have the focus. One column:
 # every row's label sits above its field (SettingRow.stack, VolumeRow.stack), a verb's key and pad caps
 # share one field under its name, and a page taller than PAGE_H scrolls down only, following the focus.
-# A cap that waits for a press shows amber dots and a line under it saying what to press and how to
-# cancel; a refused press turns the cap's edge red and the line says who holds that press and what to do.
+# A cap that waits for a press shows amber dots and a line under it saying what to press (Back's cap
+# cancels); a refused press turns the cap's edge red and the line says who holds that press and what to do.
 # A new binding goes to the store and to the InputMap at once (game.apply_binding, the same
 # call boot makes), so a later launch reads what play just used. The host feeds its input
 # events to handle(); the page never reads the keyboard itself. The build stamp (build_stamp.gd)
@@ -678,11 +678,11 @@ func _capture_end() -> void:
 		_notice.visible = false
 
 
-# What a waiting field asks for, and how to back out.
+# What a waiting field asks for. Backing out is Back's own cap, under the page.
 func _ask_words(id: String) -> String:
 	if id.begins_with("pad_"):
-		return "Press a pad button for %s. B cancels." % _caption(id)
-	return "Press a key or mouse button for %s. Esc cancels." % _caption(id)
+		return "Press a pad button for %s." % _caption(id)
+	return "Press a key or mouse button for %s." % _caption(id)
 
 
 # A line under a field: what it waits for (text colour) or why it refused and what to do (alert).
