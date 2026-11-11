@@ -41,7 +41,7 @@ func _lines() -> void:
 	_t.eq("a boss family with no row", DeathCause.line("waking_slam", "", "phase 1"), "Scrapped by the Waking's slam, phase 1.")
 	_t.eq("a rogue's landed attack under its name", DeathCause.line("rogue_crane", "E35"), "Scrapped by Gate Crane No. 14's leaf drop.")
 	_t.eq("a rogue with no attack named", DeathCause.line("rogue_crane"), "Scrapped by Gate Crane No. 14.")
-	_t.eq("the miniboss names the attack that landed", DeathCause.line("miniboss", "E04"), "Scrapped by a miniboss charge.")
+	_t.eq("the miniboss names the attack that landed", DeathCause.line("miniboss", "E04"), "Scrapped by a drop hammer charge.")
 	_t.eq("two rows and no attack name none", DeathCause.line("miniboss"), "Scrapped by a miniboss.")
 	_t.eq("an attack from another body is ignored", DeathCause.line("chaser", "E35"), "Scrapped by a chaser lunge.")
 	_t.eq("the Warden", DeathCause.line("warden"), "Scrapped by the Warden.")

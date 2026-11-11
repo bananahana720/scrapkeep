@@ -182,10 +182,13 @@ func _text() -> void:
 	var cache: String = Items.TABLE["cache_key"]["text"]
 	var drone: String = Items.TABLE["salvage_drone"]["text"]
 	var gravity: String = Parts.def("scrap_gravity").text
-	var ok := true
+	# NAMES.md (wave 36): what the ball rolls up is scrap, how much it carries is heft, and "mass" is retired.
+	var ok := drum.contains("heft")
+	for t in [cache, drone, gravity]:
+		ok = ok and t.contains("scrap")
 	for t in [drum, cache, drone, gravity]:
-		ok = ok and t.contains("mass") and not t.to_lower().contains("scrap")
-	_check("scrap effects say mass", ok, "\"%s\" | \"%s\" | \"%s\" | \"%s\"" % [drum, cache, drone, gravity])
+		ok = ok and not t.to_lower().contains("mass")
+	_check("scrap effects say scrap or heft, never mass", ok, "\"%s\" | \"%s\" | \"%s\" | \"%s\"" % [drum, cache, drone, gravity])
 
 
 func _activity() -> void:
