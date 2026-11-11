@@ -89,10 +89,12 @@ const DEFAULTS := {
 	# Wave 37 unit D4, ruling cu call 2: terrain stops enemy shells, and lobbers lead more of them. shell_cover is 1
 	# where a lobber shell bursts on the first terrain or landform it meets (0 = it flies through, the game before
 	# this unit); lobber_lead is the share of the ball's FLIGHT travel a lobber aims ahead (0.5 is Lobber.LEAD);
-	# lobber_share_step is the lobber share added per effective clock tier (0.07 is the old step).
+	# lobber_share_step is the lobber share added per effective clock tier. It ships at the old step, 0.07, on every
+	# stage: at 0.12 the dam's Novice runs replayed tick for tick (12 seeds, wave 37 screen s4), because the dam's
+	# packs are authored and never read the share, and the flume was not read.
 	"hazard.shell_cover_by_stage": [1.0, 1.0, 0.0, 0.0, 0.0, 0.0],
 	"mobs.lobber_lead_by_stage": [0.75, 0.75, 0.5, 0.5, 0.5, 0.5],
-	"mobs.lobber_share_step_by_stage": [0.12, 0.12, 0.07, 0.07, 0.07, 0.07],
+	"mobs.lobber_share_step_by_stage": [0.07, 0.07, 0.07, 0.07, 0.07, 0.07],
 	# Wardens (warden.gd): the pulse's damage and cycle, the meltdown slag's damage.
 	"warden.pulse_damage_mult": 1.0, "warden.pulse_cycle_mult": 1.0, "warden.slag_damage_mult": 1.0,
 	"warden.pulse_damage_by_stage": PULSE_DAMAGE_W1, "warden.pulse_cycle_by_stage": PULSE_CYCLE_W1, "warden.slag_damage_by_stage": ONES6,
@@ -123,13 +125,11 @@ const DEFAULTS := {
 	"pack.lead_by_stage": LEAD_W1, "pack.crew_extra_by_stage": ZEROS6, "pack.rest_by_stage": ONES6,
 	"pack.flank_by_stage": ZEROS6, "ground.churn_by_stage": ZEROS6, "hazard.boil_by_stage": SILT_W1,
 	# What the silt boils under (silt_boil.gd): 1 = a ball that stalls in a fight (it stops, crawls or holds a
-	# tight orbit), 0 = the loop test they shipped with on 24 Oct, which also boiled a wide kite round a pack and
-	# never boiled a ball that stood still. World 1 ships the stall test (wave 37 unit D5, ruling cu call 3).
-	"hazard.boil_stall_by_stage": [1.0, 1.0, 0.0, 0.0, 0.0, 0.0],
-	# The stall test's crawl line in m/s (silt_boil.gd _stalled): a ball that averaged under it across the boil
-	# window has stalled, however far the slow line took it. 0 = no crawl line (the stall test as unit D5 first
-	# built it). Held under SiltBoil.CRAWL_CEILING, below the cruise speed tier. Wave 37 unit D5, retune 1.
-	"hazard.boil_crawl_by_stage": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+	# tight orbit), 0 = the loop test they shipped with on 24 Oct, which also boils a wide kite round a pack and
+	# never a ball that stood still. The stall test (wave 37 unit D5, ruling cu call 3) is built and ships OFF:
+	# read with the other six units on the dam it eased the Novice (12 seeds: 8 wins against 4, boil hits on the
+	# ball 0.4 a run against 1.4), and two retunes did not pay for it. It waits for a pressure measured with it.
+	"hazard.boil_stall_by_stage": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
 	# Pilot regen: not allowed as defaults or tunes (--tune-unruled only). The HARD ladder's top rungs cut it
 	# (run_tier.gd LADDER, Andrew 27 Oct option 3).
 	"pilot.regen_delay_mult": 1.0, "pilot.regen_rate_mult": 1.0,
