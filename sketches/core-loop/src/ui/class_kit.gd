@@ -26,7 +26,7 @@ const WORDS := {
 	"sticky_charge": "sticky charges",
 	"sticky_rain": "sticky rain",
 	"smoke_blink": "smoke blink",
-	"detonation_line": "blast line",
+	"detonation_line": "detonation line",
 	"demo_slam": "demo slam",
 	"claw_sweep": "claw sweep",
 	"claw_pull": "claw pull",

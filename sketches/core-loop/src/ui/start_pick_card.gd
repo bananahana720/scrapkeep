@@ -32,7 +32,7 @@ const REROLL_KEY := "key_v"
 # In the run's briefing (workshop.gd) the card has the paused screen to itself, so its tiles draw
 # this much larger than the in-play strip.
 const BRIEFING_SCALE := 1.4
-const UNLOCK_WORDS := "A win unlocks Tier 1"
+const UNLOCK_WORDS := "A win opens harder runs"
 # The HARD ladder on the card (a profile with a rung opened): the word, one pip per rung and four
 # gauges (RunTier.meters). At rest the gauges are the selected rung's and only its pip carries a
 # numeral. The pip the focus or the mouse came to last is the rung looked at: it shows its numeral, the

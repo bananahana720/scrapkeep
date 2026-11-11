@@ -9,6 +9,7 @@ extends SceneTree
 const T := preload("res://tests/support/t.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
 const ClassCard := preload("res://src/ui/class_card.gd")
+const ClassKit := preload("res://src/ui/class_kit.gd")
 const Cosmetics := preload("res://src/core/cosmetics.gd")
 const Profile := preload("res://src/core/profile.gd")
 const StartPicks := preload("res://src/core/start_picks.gd")
@@ -20,13 +21,13 @@ const WordBudget := preload("res://src/ui/word_budget.gd")
 const LINE_WORDS := 8
 # Lower case; matched as substrings of each drawn text.
 const BANNED := ["set piece", " · ", " + ", "no paint", "boss-mirror", "linked payoff", "crowd control is fuel",
-	"detonation", "the gauge", "grapple", "rebound"]
+	"the gauge", "grapple", "rebound"]
 # Key letters that a rebindable key could carry; "A" and "I" are words.
 const KEY_LETTERS := ["Q", "E", "F", "V", "P", "R", "H", "J", "K", "X", "C", "Z"]
 # What the base drew, line for line (card rows and tiles). Every one must be flagged.
 const PLANTED := ["Boss-mirror cannon · rebuilt ancient", "glide + rocket", "set piece", "No paint",
 	"Linked payoff, needs pressure from rolling.", "Unstoppable sprinter. Crowd control is fuel.",
-	"detonation line", "arc discharge from the gauge", "Pull Q to fire"]
+	"arc discharge from the gauge", "Pull Q to fire"]
 
 var t := T.new("pilot_pick_words_test")
 var events := GameEvents.new()
@@ -59,6 +60,11 @@ func _planted() -> void:
 	for text in PLANTED:
 		t.check("planted base text is flagged: %s" % text, not hits(text).is_empty(), str(hits(text)))
 	t.check("a plain line is not flagged", hits("Fire faster").is_empty() and hits("A win opens harder runs").is_empty())
+	# Kest's line keeps the name the relics use for it (relics.gd: "Detonation line recharges…",
+	# "Stock a second detonation line"): one name for one thing.
+	t.eq("Kest's line reads as the relics name it", ClassKit.WORDS["detonation_line"], "detonation line")
+	# No tier has been shown to a profile with no win, so the unlock line names none.
+	t.check("the unlock line names no tier", not StartPickCard.UNLOCK_WORDS.to_lower().contains("tier"), StartPickCard.UNLOCK_WORDS)
 
 
 func _profile(won: bool) -> Profile:
