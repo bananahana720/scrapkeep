@@ -7,9 +7,9 @@ const Push := preload("res://tests/workshop/push.gd")
 
 # The workshop screens in Moss's real bay (v2 W8), armed as in play, through world's own
 # hooks: stage 1's Warden gates (world-one builds open the pick at the stage-1 visit), the barge docked, the ball rolled into the cradle.
-#   - The catch opens the next upgrade pick over the throw, paused, and Moss's greeting
-#     (world.bay_bark) is up in his bubble behind it.
-#   - A key takes the pick and the throw carries on aboard.
+#   - The catch opens the next upgrade pick over the throw, paused. Moss's greeting
+#     (world.bay_bark) is set in his bubble but not drawn while the pick is up (PF-30).
+#   - A key takes the pick, the greeting shows, and the throw carries on aboard.
 #   - Rolling up to Moss's hatch slowly opens the counter by itself and parks the ball;
 #     the talk key shows, and T gets a beat.
 #   - Esc leaves; parked in reach again, the counter waits until the ball has rolled away.
@@ -80,11 +80,13 @@ func _process(delta: float) -> bool:
 				var greeting: String = _game.world.bay_bark.get("text", "")
 				_report("the catch opens the pick", paused and _game.get_meta("menu_held", false) and _ws.pick.depth == 2,
 					"pick open at depth %d, paused %s, held %s" % [_ws.pick.depth, paused, _game.get_meta("menu_held", false)])
-				_report("Moss greets behind it", greeting != "" and _ws.bubble.text == greeting and _ws.bubble.visible,
-					"bubble \"%s\" for the bark \"%s\"" % [_ws.bubble.text, greeting])
+				_report("Moss's greeting waits behind it", greeting != "" and _ws.bubble.text == greeting and not _ws.bubble.visible,
+					"bubble \"%s\" for the bark \"%s\", drawn %s" % [_ws.bubble.text, greeting, _ws.bubble.visible])
 				Push.key(root, KEY_1)
 				_report("a key takes it", player.tree.path().size() == 2 and not paused and not _ws.pick.is_open(),
 					"path %s, paused %s" % [player.tree.path(), paused])
+				_report("the greeting shows once the pick is gone", _ws.bubble.text == greeting and _ws.bubble.visible,
+					"bubble \"%s\", drawn %s" % [_ws.bubble.text, _ws.bubble.visible])
 				_next("aboard")
 			elif _clock > 6.0:
 				return _finish("caught %s, pick open %s" % [_caught, _ws.pick.is_open()])
