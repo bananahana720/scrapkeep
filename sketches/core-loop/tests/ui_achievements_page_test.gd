@@ -153,6 +153,11 @@ func _run() -> void:
 	await _settle(0.5)
 	_t.check("P3-5 during a live Warden fight the toast waits", hud.ach_toasts().is_empty() and hud.ach_waiting() == [Achievements.toast_text("first_event"), Achievements.toast_text("full_rack")], "showing %s waiting %s" % [hud.ach_toasts(), hud.ach_waiting()])
 	_game.flow._unseal()
+	# The Warden's crowd is removed for real (its telegraphs would keep the screen loud), and the
+	# director spawns no next one, so the bounds below are the source's constants alone.
+	_game.ctx.calm = true
+	for node in _game.get_tree().get_nodes_in_group("enemy"):
+		node.queue_free()
 	await _settle(0.5)
 	# 2026-10-04 (fix round D): since HW2 the Warden's break offers a hot-wired part, and the
 	# Fit / Recycle screen opens over the paused tree as the gates open, freezing the HUD's

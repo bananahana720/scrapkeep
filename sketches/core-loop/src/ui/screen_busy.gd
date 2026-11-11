@@ -27,7 +27,9 @@ const ASK_WINDOW := 0.3
 var _sources: Array[Callable] = []
 var _combat := false
 var _fights := {}
-var _quiet_for := SETTLE
+# A screen nothing has disturbed yet has been quiet for as long as any hold asks (a find's card
+# at a calm start showed at once before this gate, and still does).
+var _quiet_for := INF
 var _waiting: Array[String] = []
 var _holder := ""
 var _clock := 0.0
@@ -78,8 +80,11 @@ func busy() -> bool:
 	return false
 
 
-# The screen is not busy and has been quiet for `hold` seconds.
+# The screen is not busy and has been quiet for `hold` seconds. A paused tree is never settled:
+# a waiting card waits for play to resume (the finds' rule from WhyCallout.is_calm).
 func settled(hold := SETTLE) -> bool:
+	if is_inside_tree() and get_tree().paused:
+		return false
 	return _quiet_for >= hold and not busy()
 
 
