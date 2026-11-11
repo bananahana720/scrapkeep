@@ -6,6 +6,10 @@ extends "res://src/core/play_watch.gd"
 # within DETAIL_M. Reads only, so the seed replays exactly with or without it.
 
 const DETAIL_M := 15.0
+# The kinds a run is failed on (world1_run_test). Their rows are printed as well as filed, because
+# the file goes with the run's save folder and a red log then only had a count, not a place.
+const TOLD := ["fell", "wedged"]
+const TOLD_PREFIX := "play-watch: "
 
 var _driver
 var _file: FileAccess
@@ -20,6 +24,8 @@ func setup(game, driver, path: String) -> void:
 func _write(row: Dictionary) -> void:
 	_file.store_line(JSON.stringify(row))
 	_file.flush()
+	if String(row.get("kind", "")) in TOLD:
+		print(TOLD_PREFIX + JSON.stringify(row))
 
 
 func _who() -> Dictionary:
