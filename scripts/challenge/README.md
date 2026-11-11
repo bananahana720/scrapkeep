@@ -62,7 +62,7 @@ npm run challenge:bands -- --merge=artifacts/local/challenge/main-1,artifacts/lo
 | `--seeds=<n>` | 24 fights, 16 parks | Runs per cell per column. Seeds are fixed per cell, so columns face the same seeds; each seed takes the next build of its bucket, so pilots mix. |
 | `--bands=` | `novice,learner1,learner5,expert` | Columns. The Expert top column is added whenever `expert` is, unless `--no-top`. Parks run only `novice` and `learner1`. |
 | `--persona=` | `brawler` | The bot policy for bosses and Wardens (`brawler` is the completionist's fight profile) for bosses; Wardens use `--warden-persona=skipper`, which beelines to the Warden (the completionist spends the stage cap on scrap lines before engaging); parks use `--park-persona=skipper`. |
-| `--jobs=<n>` | 4 | Godot processes at once (at most 6). Band sweeps can run out of memory; a job that times out or is killed is rerun once alone before it counts. |
+| `--jobs=<n>` | 4 | Godot processes at once (at most one a core and 2 GiB of memory each, and never less than 6: 6 on the 4-vCPU cloud box, more on the PC). Band sweeps can run out of memory; a job that times out or is killed is rerun once alone before it counts. |
 | `--label=` | `run-<stamp>` | Output folder name under `artifacts/local/challenge/`. |
 | `--tune=k=v,k=v` | none | Difficulty dials (`src/core/challenge_dials.gd`), passed to every job as Godot `--tune=` and printed in the table header. Arrays use `a/b/c/d`. Run records carry a `dials` field only when set. |
 | `--shard=i/n` | | Jobs `k` where `k mod n = i-1`, over the planned list: deterministic, disjoint, joined by `--merge`. |

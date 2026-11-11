@@ -15,7 +15,7 @@ import { spawn, spawnSync } from "node:child_process";
 import { appendFileSync, copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { COLUMNS, MAX_RUN_TIER, fairnessByCell, PILOTS, botArgs, buildTable, cellVerdict, describeDoc, bucketInfo, checkMerge, dedupeBy, estimate, gradeRun, jobKey, playerReport, qaRows, renderPlayerReport, hashString, mergeLibraryIndexes, planHash, parseNdjson, pickBuilds, planCells, renderTable, shardJobs, wallStats } from "./lib.mjs";
+import { COLUMNS, MAX_RUN_TIER, fairnessByCell, PILOTS, botArgs, buildTable, cellVerdict, describeDoc, bucketInfo, checkMerge, dedupeBy, estimate, gradeRun, maxJobs, jobKey, playerReport, qaRows, renderPlayerReport, hashString, mergeLibraryIndexes, planHash, parseNdjson, pickBuilds, planCells, renderTable, shardJobs, wallStats } from "./lib.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const godot = process.env.GODOT_BIN;
@@ -66,7 +66,8 @@ const log = (line) => console.log(`[${((Date.now() - started) / 60000).toFixed(1
 const stamp = new Date().toISOString().replace(/[-:]/g, "").replace(/\..*/, "");
 const read = (file) => (existsSync(file) ? readFileSync(file, "utf8") : "");
 
-if (opts.jobs < 1 || opts.jobs > 6) die("--jobs takes 1 to 6 (the box has 4 vCPU; band sweeps can run out of memory)");
+const jobCap = maxJobs();
+if (!(opts.jobs >= 1 && opts.jobs <= jobCap)) die(`--jobs takes 1 to ${jobCap} on this machine (one a core and 2 GiB each, at least 6)`);
 for (const b of opts.bands) if (!COLUMNS.some((c) => c.id === b)) die(`--bands: ${b} is not one of ${COLUMNS.map((c) => c.id).join(", ")}`);
 const columns = opts.top && opts.bands.includes("expert") ? [...opts.bands, "expertTop"] : opts.bands;
 

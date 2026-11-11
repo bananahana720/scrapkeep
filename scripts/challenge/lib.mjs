@@ -3,6 +3,7 @@
 // here starts Godot. The skill bands themselves (Novice, Learner, Expert) live in
 // sketches/core-loop/tools/skill_band.gd.
 
+import os from "node:os";
 import fairnessLines from "./fairness.json" with { type: "json" };
 
 export const PILOTS = ["pylon_engineer", "runner_gunner", "demolitions_caster", "tarn", "tally", "remembered_cannon"];
@@ -676,6 +677,12 @@ export function parseNdjson(text) {
 
 // Estimated wall seconds per job by kind (measured on the 4-vCPU box; see README), for --dry-run.
 export const SECONDS_PER_JOB = { boss: 335, warden: 330, world: 330, clear: 300 }; // wall s per job at 4 parallel on the 4-vCPU box, smoke medians; world is a guess (no sample before 19 Oct)
+
+// The most Godot processes a sweep may run at once: one per core and 2 GiB of memory each
+// (a park bot run peaks near 0.7 GiB; the rest is headroom), never below the old fixed cap of 6.
+export function maxJobs(cpus = os.cpus().length, memBytes = os.totalmem()) {
+  return Math.max(6, Math.min(cpus, Math.floor(memBytes / 2 ** 31)));
+}
 
 export function estimate(jobs, parallel = 4, perKind = SECONDS_PER_JOB) {
   const total = jobs.reduce((s, j) => s + (perKind[j.kind] ?? 120), 0);

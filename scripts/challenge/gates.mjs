@@ -12,7 +12,7 @@ import { spawnSync } from "node:child_process";
 import { appendFileSync, existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { dedupeBy, hashString, parseNdjson, shardJobs } from "./lib.mjs";
+import { dedupeBy, hashString, maxJobs, parseNdjson, shardJobs } from "./lib.mjs";
 import { ARMS, GATE_ARMS, RUNS_PER_SEED, SEEDS, STAGES, STAGE_LIMIT_S, driverAudioReads, evaluateGates, gateBotArgs, groupByArm, planGateJobs, renderGates, summarizeRun } from "./gates-lib.mjs";
 import { pool, runProcess, stateEnv } from "./proc.mjs";
 
@@ -52,7 +52,8 @@ const log = (line) => console.log(`[${((Date.now() - started) / 60000).toFixed(1
 const stamp = new Date().toISOString().replace(/[-:]/g, "").replace(/\..*/, "");
 const read = (file) => (existsSync(file) ? readFileSync(file, "utf8") : "");
 
-if (opts.jobs < 1 || opts.jobs > 6) die("--jobs takes 1 to 6");
+const jobCap = maxJobs();
+if (!(opts.jobs >= 1 && opts.jobs <= jobCap)) die(`--jobs takes 1 to ${jobCap} on this machine`);
 if (!(opts.stageLimit >= 150)) die("--stage-limit takes 150 s or more (contact plus the 120 s window)");
 for (const g of opts.gates) if (!["1", "2", "4"].includes(g)) die(`--gates: ${g} is not 1, 2 or 4 (gate 3 is card G-B)`);
 
