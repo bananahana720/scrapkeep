@@ -4,6 +4,15 @@ How the full gate runs, step by step, with the tools checked in. [ORCHESTRATOR.m
 
 The stage, the board and the receipts folder to compare against are in the Wave facts table of [STATE.md](STATE.md).
 
+## The wave gate and the release gate
+
+Since 11 November 2026 (ruling cy) a promotion runs the wave gate, and the full gate below is the release gate, run once at the end of a sprint on the head a sitting build is cut from. [ORCHESTRATOR.md](../../ORCHESTRATOR.md) has the rule. The wave gate's method:
+
+1. The node suite and the three test windows, as below.
+2. The scoped set, one shard run by name: the bot-tier tests and posture-band proofs the fast lane's receipt names for the stage diff, `world1_run_test`, and any fight, stage or bot run the diff plainly touches. Write the list and the reason for each name in the gate plan.
+3. The plan's tally has the test-window rows and one `scoped` row. A release shard may have a row that opens with DEFERRED and names the receipt of its last full read.
+4. `node scripts/gate/tally.mjs --wave --plan <plan>` must exit 0. Without `--wave` the tally is the release gate's and defers nothing.
+
 ## What a full gate is
 
 One promotion, one full gate, on the frozen stage head. The Gate thread writes a plan at `/mnt/project-files/gate/w<N>-<head>-gate-plan.md` and the coordinator starts about 13 shard threads from one post:
