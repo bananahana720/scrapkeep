@@ -119,7 +119,7 @@ func _run() -> void:
 	_t.eq("a stun drops the owed combo", _boss._combo_left, -1)
 
 	# Mobs: combat's enemy-hit door multiplies after damage_scale(); warden, vault and the hand are not.
-	# The stage list is held at identity so the global mult is what is read (the dam ships x1.5 by stage).
+	# The stage list is held at identity so the global mult is what is read (the dam ships x2 by stage).
 	ChallengeDials.set_overrides({"mobs.damage_mult": 2.0, "mobs.damage_by_stage": ChallengeDials.ONES6})
 	for source in ["chaser", "warden", "vault", "mind_hand"]:
 		_hits.clear()

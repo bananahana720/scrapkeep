@@ -350,7 +350,7 @@ const LOOP_TEST := {"hazard.boil_stall_by_stage": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
 
 
 func _stall(boils, ctx, enemy) -> void:
-	_t.eq("31 the stall test is built and ships off", ChallengeDials.DEFAULTS["hazard.boil_stall_by_stage"], [0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
+	_t.eq("31 the stall test ships on world 1", ChallengeDials.DEFAULTS["hazard.boil_stall_by_stage"], [1.0, 1.0, 0.0, 0.0, 0.0, 0.0])
 	var stall_on: Dictionary = ChallengeDials.parse(PackPressure.tune_spec("E"))
 	stall_on["hazard.boil_stall_by_stage"] = [1.0, 1.0, 0.0, 0.0, 0.0, 0.0]
 	ChallengeDials.set_overrides(stall_on)
