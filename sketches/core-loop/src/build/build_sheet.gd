@@ -2,11 +2,10 @@ extends RefCounted
 
 const Parts := preload("res://src/build/parts.gd")
 const Synergies := preload("res://src/build/synergies.gd")
-const PartSets := preload("res://src/build/part_sets.gd")
 const Weapons := preload("res://src/combat/weapons.gd")
 const Pattern := preload("res://src/combat/pattern.gd")
 
-# The derived build: every held part and live synergy folded into one sheet. It is a
+# The derived build: every held part and awake maker trick folded into one sheet. It is a
 # pure function of the part list, so a retry that restores the list restores the build
 # exactly, and applying it twice changes nothing (CONTRACTS: idempotent recompute).
 # Movement and weapon multipliers go out through tuning mods; pattern levels,
@@ -31,13 +30,8 @@ var magnet := 1.0
 var kill_scrap := 1.0
 var max_hp_bonus := 0.0
 var dials := {}
+# The maker tricks awake right now (Synergies.ROWS), in row order.
 var synergies: Array = []
-# Synergies consumed into a held Evolved part: folded once through the evolution, not live.
-var consumed: Array = []
-# Unnamed tag rules live right now (Synergies.TAG_RULES).
-var rules: Array = []
-# SI6 sets complete right now (PartSets.SETS), folded after the tag rules.
-var sets: Array = []
 # Flat per-hit weapon damage from parts, before the weapon multipliers.
 var punch := 0.0
 # Flat per-hit damage from Punch Rivet panels (panels.gd fold), which a weapon hit and a ball
@@ -52,13 +46,12 @@ static func from_parts(held: Array) -> RefCounted:
 	var sheet: RefCounted = load("res://src/build/build_sheet.gd").new()
 	sheet.parts = held.duplicate()
 	var counted := {}
-	sheet.consumed = Synergies.consumed(held)
 	for part_id in held:
 		var d: Resource = Parts.def(part_id)
 		if d == null:
 			continue
 		# An Evolved part gives nothing while an ingredient is missing.
-		if d.rarity == "evolved" and not Synergies.evolution_of(part_id) in sheet.consumed:
+		if not Synergies.evolution_live(part_id, held):
 			continue
 		# A linear or capped row stops adding at stack_cap copies (v2 W4 loot); the
 		# catalogue's first rows carry no cap, so their copies all count as before. A
@@ -76,30 +69,21 @@ static func from_parts(held: Array) -> RefCounted:
 		sheet.kill_scrap *= d.kill_scrap
 		sheet.max_hp_bonus += d.max_hp_bonus
 		sheet.punch += d.punch
-	var sets := Parts.tag_sets(held)
-	var live := Synergies.active(held, sets)
-	for key in sheet.consumed:
-		if not key in live:
-			live.append(key)
-	sheet.synergies = live.filter(func(key): return not key in sheet.consumed)
-	sheet.rules = Synergies.active_rules(sets)
-	var rows: Array = []
-	for key in live:
-		rows.append(Synergies.ROWS[key])
-	for key in sheet.rules:
-		rows.append(Synergies.TAG_RULES[key])
-	sheet.sets = PartSets.complete(held)
-	for key in sheet.sets:
-		rows.append(PartSets.row(key))
-	for row in rows:
-		sheet._fold(row.get("mods", {}), row.get("patterns", {}), row.get("elements", {}))
-		for t in row.get("transformers", []):
-			if not t in sheet.transformers:
-				sheet.transformers.append(t)
-		var dials: Dictionary = row.get("dials", {})
-		for dial in dials:
-			sheet.dials[dial] = sheet.dials.get(dial, 1.0) * dials[dial]
+	sheet.synergies = Synergies.active(Parts.maker_counts(held))
+	for key in sheet.synergies:
+		sheet.fold_row(Synergies.ROWS[key])
 	return sheet
+
+
+# A maker trick's row: its pattern levels, element triggers, transformers and dials.
+func fold_row(row: Dictionary) -> void:
+	_fold(row.get("mods", {}), row.get("patterns", {}), row.get("elements", {}))
+	for t in row.get("transformers", []):
+		if not t in transformers:
+			transformers.append(t)
+	var row_dials: Dictionary = row.get("dials", {})
+	for dial in row_dials:
+		dials[dial] = dials.get(dial, 1.0) * row_dials[dial]
 
 
 func _fold(part_mods: Dictionary, part_patterns: Dictionary, part_elements: Dictionary) -> void:

@@ -7,8 +7,6 @@ const Fabricators := preload("res://src/build/fabricators.gd")
 const ElementField := preload("res://src/build/element_field.gd")
 const Elements := preload("res://src/build/elements.gd")
 const Accretion := preload("res://src/build/accretion.gd")
-const PartSets := preload("res://src/build/part_sets.gd")
-const SetTell := preload("res://src/presentation/set_tell.gd")
 const Parts := preload("res://src/build/parts.gd")
 const HotwireRules := preload("res://src/build/hotwire_rules.gd")
 const Synergies := preload("res://src/build/synergies.gd")
@@ -25,6 +23,7 @@ const Relics := preload("res://src/build/relics.gd")
 const AbilityState := preload("res://src/core/ability_state.gd")
 const ActiveOffers := preload("res://src/combat/actives/active_offers.gd")
 const MakerBonuses := preload("res://src/build/maker_bonuses.gd")
+const MakerSets := preload("res://src/build/maker_sets.gd")
 const Panels := preload("res://src/build/panels.gd")
 const PanelShell := preload("res://src/build/panel_shell.gd")
 
@@ -33,11 +32,11 @@ const PanelShell := preload("res://src/build/panel_shell.gd")
 # the beacon offer two parts you roll through; vaults and won events award parts. Every
 # held part folds into one derived sheet (build_sheet.gd) that sets the tuning mods,
 # the pattern levels combat reads, the element triggers that feed the element x
-# material table (elements.gd, resolved by element_field.gd), and the live synergies.
+# material table (elements.gd, resolved by element_field.gd), and the awake maker tricks.
 #
-# Synergies (synergies.gd) are tag pairs. This module runs the behaviour of each named
-# one, tells the codex (ctx.codex) the first time each goes live in a run, and tells it
-# the first time an unnamed interaction fires. The codex publishes synergy_discovered
+# Maker tricks (synergies.gd) wake on two parts of one maker. This module runs the behaviour
+# of each, tells the codex (ctx.codex) the first time each fires in a run, and tells it the
+# first time an unnamed interaction fires. The codex publishes synergy_discovered
 # and interaction_found and grants the discovery burst; build never emits those two.
 #
 # Other modules reach this node as ctx.build (ctx.build_module() also finds it). Its
@@ -75,10 +74,10 @@ signal shell_air_changed(factor: float, rose: bool)
 # them; they go when that screen does.
 signal hotwire_offered(part_id: String, recycle: int)
 signal hotwire_resolved(part_id: String, choice: String, cogs: int)
-# A gained part completed a three-part set (part_sets.gd) for the first time this run. Build-local:
-# presentation raises the "Set complete" banner from it, with the set's name, its one line and
-# the colour of its studs on the ball. A resume or a retry that restores a held set recomputes
-# without a gain, so it never announces the set again.
+# A gained part woke a maker trick that is told on waking (Synergies.told_on_wake: one that only
+# adds an element) for the first time this run. Build-local: presentation raises the banner from
+# it, with the trick's name, its one line and its colour. A resume or a retry that restores a held
+# trick recomputes without a gain, so it never announces the trick again.
 signal set_completed(set_id: String, title: String, text: String, color: Color)
 const PARTICIPANTS := ["player"]
 # SG15: an offer of a part already held shows the level it would reach, by its current level.
@@ -159,11 +158,9 @@ var _cache_spots: Array = []
 # for the drop simulation's recorded streams (tools/bot_run.gd --panel-log=1).
 var kill_log: Array = []
 const KILL_LOG_CAP := 4000
-# SI6: the complete sets' tell on the ball, and the sets this run has completed (a respec
-# that breaks a set keeps it here and in the codex's Found list).
-var set_tell
-var set_ledger = PartSets.Ledger.new()
-# The sets the last recompute found complete for the first time this run.
+# The told-on-wake tricks this run has woken (a respec that sends one back to sleep keeps it
+# here and in the codex's Found list), and the ones the last recompute woke for the first time.
+var _woken := {}
 var _sets_fresh: Array = []
 var sheet
 # SI5: the derived sheet between part-list changes; recompute() reads it, so pickup,
@@ -277,9 +274,6 @@ func setup(ctx_ref) -> void:
 	accretion.setup()
 	panel_shell = PanelShell.new()
 	ctx.player.roll_node().add_child(panel_shell)
-	set_tell = SetTell.new()
-	set_tell.name = "SetTell"
-	ctx.player.roll_node().add_child(set_tell)
 	bus = Triggers.Bus.new()
 	effects = ItemEffects.new(self)
 	clock = RunClock.new()
@@ -360,10 +354,10 @@ func part_info(part_id: String) -> Dictionary:
 		"tags": d.tags, "rarity": d.rarity, "tier": d.tier, "family": d.family}
 
 
-# Codex hint cards for the build category: {id, category, name, hint, clue, text,
-# shown, tags}. Declared to ctx.codex at setup when the registry exists.
+# Codex cards for the build category: {id, category, name, hint, text, maker, tags}. Declared
+# to ctx.codex at setup when the registry exists.
 func codex_declarations() -> Array:
-	var cards: Array = Synergies.declarations(func(part_id: String) -> String: return Parts.display_name(part_id))
+	var cards: Array = Synergies.declarations(func(maker: String) -> String: return String(MakerSets.SETS.get(maker, {}).get("name", maker)))
 	for entry in Lanes.ENTRIES:
 		cards.append(entry.duplicate())
 	return cards
@@ -404,23 +398,15 @@ static func resolve(element_id: String, material_id: String) -> Dictionary:
 
 
 # The line an offer (gate or fabricator) adds under its name: "* completes X *" when
-# taking it brings a named synergy live, "* ingredient: ??? *" when it is the shown
-# ingredient of a synergy not yet live (named once discovered), else "".
+# taking it wakes a maker trick, "* level N *" for a part already held, else "".
 func offer_mark(part_id: String) -> String:
 	var held: Array = ctx.run.parts
 	var completes := Parts.completed_by(part_id, held)
 	if completes != "":
 		return "* completes %s *" % Synergies.ROWS[completes]["name"]
-	var set_id := PartSets.completed_by(part_id, held)
-	if set_id != "":
-		return "* completes %s *" % PartSets.SETS[set_id]["name"]
 	var level := Parts.level_of(part_id, held)
 	if level > 0 and level < LEVEL_NAMES.size():
 		return "* level %s *" % LEVEL_NAMES[level]
-	var ingredient := Parts.ingredient_of(part_id, held)
-	if ingredient != "":
-		var named: bool = is_known(ingredient) or has_perk("lens")
-		return "* ingredient: %s *" % (Synergies.ROWS[ingredient]["name"] if named else "???")
 	return ""
 
 
@@ -614,20 +600,19 @@ func recompute() -> void:
 	effects.apply_abilities(ctx.player)
 	scrap.magnet_scale = sheet.magnet
 	field.shatter_scale = sheet.dial("shatter_damage")
-	# A synergy folded into an Evolved part still acts, so it keeps its fired flag: erasing it
-	# would tell the codex the pair was discovered again.
 	for synergy_id in _live:
-		if not synergy_id in sheet.synergies and not synergy_id in sheet.consumed:
+		if not synergy_id in sheet.synergies:
 			_fired.erase(synergy_id)
 	for synergy_id in sheet.synergies:
 		if not synergy_id in _live:
 			_on_synergy_live(synergy_id)
 	_live = sheet.synergies.duplicate()
-	for synergy_id in sheet.consumed:
-		_live.append(synergy_id)
-	_sets_fresh = set_ledger.note(sheet.sets)
-	for set_id in _sets_fresh:
-		_note_found("set:" + set_id, "%s: %s" % [PartSets.SETS[set_id]["name"], PartSets.SETS[set_id]["text"]])
+	_sets_fresh = []
+	for trick_id in sheet.synergies:
+		if Synergies.told_on_wake(trick_id) and not _woken.has(trick_id):
+			_woken[trick_id] = true
+			_sets_fresh.append(trick_id)
+			_note_found("trick:" + trick_id, "%s: %s" % [Synergies.ROWS[trick_id]["name"], Synergies.ROWS[trick_id]["text"]])
 	_redraw()
 
 
@@ -895,9 +880,8 @@ func _apply_shell() -> void:
 
 
 func _redraw() -> void:
-	accretion.show_build(ctx.run.mass, ctx.run.parts, sheet.synergies + sheet.consumed, ctx.run.heft_class())
+	accretion.show_build(ctx.run.mass, ctx.run.parts, sheet.synergies, ctx.run.heft_class())
 	panel_shell.show_panels(ctx.run.panels, ctx.run.run_seed)
-	set_tell.show_sets(sheet.sets)
 
 
 func _codex():
@@ -915,7 +899,7 @@ func _declare() -> void:
 		return
 	for card in codex_declarations():
 		codex.declare({"id": card["id"], "category": card["category"], "name": card["name"],
-			"hint": card["hint"], "clue": card["clue"], "text": card["text"]})
+			"hint": card["hint"], "clue": String(card.get("clue", "")), "text": card["text"]})
 
 
 func _exit_tree() -> void:
@@ -979,17 +963,17 @@ func _class_id() -> String:
 
 
 
-# The element a part set's rule adds, "frost" or "arc": what its chime rings in.
-func set_element(set_id: String) -> String:
-	return PartSets.element(set_id)
+# The element a told-on-wake trick adds, "frost" or "arc": what its chime rings in.
+func set_element(trick_id: String) -> String:
+	return Synergies.element(trick_id)
 
 
 func _on_part_gained(part_id: String, _source: String) -> void:
 	recompute()
 	# A copy: a listener's own part gain recomputes and replaces the list.
-	for set_id in _sets_fresh.duplicate():
-		var row: Dictionary = PartSets.SETS[set_id]
-		set_completed.emit(set_id, row["name"], row["text"], row["color"])
+	for trick_id in _sets_fresh.duplicate():
+		var row: Dictionary = Synergies.ROWS[trick_id]
+		set_completed.emit(trick_id, row["name"], row["text"], row["color"])
 	_grant_evolutions()
 	var d: Resource = Parts.def(part_id)
 	if d != null and d.effect.get("do", "") == "ballast":
@@ -1030,7 +1014,7 @@ func _on_run_started(_class_id_value: String) -> void:
 	tread_fires = 0
 	_discovered.clear()
 	_found.clear()
-	set_ledger = PartSets.Ledger.new()
+	_woken.clear()
 	_refresh_seams()
 	bus.clear()
 	effects.reset_run()
@@ -1373,9 +1357,8 @@ func _on_shot_fired(_weapon_id: String, _from: Vector3, to: Vector3) -> void:
 		_fire("storm_lattice", null, ctx.player.ball_position())
 	if not sheet.elements_for("shot").is_empty():
 		_shots.append(to)
-	for rule_id in sheet.rules:
-		if Synergies.TAG_RULES[rule_id].get("fires_on", "") == "shot":
-			_note_found("rule:" + rule_id, Synergies.TAG_RULES[rule_id]["found"])
+	if has_transformer("linked_spiral"):
+		_note_found("trick:linked_spiral", Synergies.ROWS["linked_spiral"]["found"])
 
 
 # The ball's own line when it is moving, else where the player faces.
@@ -1603,24 +1586,9 @@ func _grant_evolutions() -> void:
 		ctx.run.add_part(part_id, "evolution")
 
 
-# Synergies consumed into a held Evolved part.
-func consumed_synergies() -> Array:
-	return sheet.consumed.duplicate()
-
-
-# The HUD's synergy list: each live synergy by name, then each consumed one as folded into
-# the Evolved part that took it over, so Wrecking Ball stays listed while it still acts.
+# The awake maker tricks by name, with the maker that woke each.
 func synergy_read() -> Array:
-	var read: Array = []
-	for key in sheet.synergies:
-		read.append({"id": key, "name": Synergies.ROWS[key]["name"], "into": ""})
-	for key in sheet.consumed:
-		var into: String = Synergies.ROWS[key]["evolution"]["into"]
-		var part: Resource = Parts.def(into)
-		var part_name: String = part.display_name if part != null else into
-		read.append({"id": key, "name": Synergies.ROWS[key]["name"], "into": into,
-			"text": "%s (folded into %s)" % [Synergies.ROWS[key]["name"], part_name]})
-	return read
+	return sheet.synergies.map(func(key): return {"id": key, "name": Synergies.ROWS[key]["name"], "maker": Synergies.ROWS[key]["maker"]})
 
 
 # ---- Named synergy behaviours ----

@@ -141,15 +141,10 @@ func _start(table: String) -> bool:
 
 
 func _hold_synergy() -> void:
-	var row: Dictionary = Synergies.ROWS[SYNERGY]
-	var partner := ""
-	for part_id in Parts.ids():
-		if part_id != row["shown"] and row["tags"][1] in Parts.tags_of(part_id) and Parts.def(part_id).class_id == "":
-			partner = part_id
-			break
+	var call := Synergies.callout(SYNERGY)
 	_game.run.parts.clear()
-	_game.run.parts.append(row["shown"])
-	_game.run.parts.append(partner)
+	_game.run.parts.append(call["a"])
+	_game.run.parts.append(call["b"])
 	_game.ctx.get_meta("build").recompute()
 
 

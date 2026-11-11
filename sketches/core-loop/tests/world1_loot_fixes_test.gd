@@ -2,7 +2,7 @@ extends SceneTree
 
 const Game := preload("res://src/game.gd")
 const Parts := preload("res://src/build/parts.gd")
-const PartSets := preload("res://src/build/part_sets.gd")
+const MakerSets := preload("res://src/build/maker_sets.gd")
 const ItemGen := preload("res://src/build/item_gen.gd")
 const Synergies := preload("res://src/build/synergies.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
@@ -50,10 +50,10 @@ func _check_parts() -> void:
 	var short: Array = []
 	for def in ClassDef.all():
 		var pool: Array = Parts.offer_pool(def.id, ItemGen.RARITIES)
-		for set_id in PartSets.SETS:
-			var offered: Array = PartSets.SETS[set_id]["members"].filter(func(id): return id in pool)
-			if offered.size() < PartSets.SIZE:
-				short.append("%s for %s (%s)" % [set_id, def.id, offered])
+		for maker in MakerSets.SETS:
+			var offered: Array = pool.filter(func(id): return Parts.maker_of(id) == maker)
+			if offered.size() < MakerSets.SETS[maker]["pieces"]:
+				short.append("%s for %s (%s)" % [maker, def.id, offered])
 	Synergies.table = before
 	_t.check("every maker set completes for every pilot from park offers", short.is_empty(), "short: %s" % [short])
 

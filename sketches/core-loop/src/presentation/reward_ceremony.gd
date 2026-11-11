@@ -235,8 +235,8 @@ func _on_part_gained(part_id: String, source: String) -> void:
 	present(find_of(part_id, source))
 
 
-# A find as the ceremony sees it: its tier, whether it is a first, and the synergy it
-# completes or feeds with that synergy's partner part.
+# A find as the ceremony sees it: its tier, whether it is a first, and the maker trick it
+# wakes or feeds with the partner part of the same maker.
 func find_of(part_id: String, source: String) -> Dictionary:
 	var held: Array = ctx.run.parts.duplicate() if ctx.run != null else []
 	var before := held.duplicate()
@@ -262,31 +262,23 @@ func find_of(part_id: String, source: String) -> Dictionary:
 		"partner": partner, "link": link, "at": int(now_ms.call()), "held": held}
 
 
-# The held part a completed synergy paired this one with.
+# The held part of the same maker that this one woke a maker trick with.
 static func _partner(synergy: String, part_id: String, before: Array) -> String:
-	var row: Dictionary = Synergies.ROWS[synergy]
-	if part_id != row["shown"]:
-		return row["shown"]
+	var maker: String = Synergies.ROWS[synergy]["maker"]
 	for other in before:
-		if row["tags"][1] in Parts.tags_of(other):
+		if other != part_id and Parts.maker_of(other) == maker:
 			return other
 	return ""
 
 
-# [synergy, partner] for a named synergy this part feeds but does not yet complete: it is
-# the shown part (partner unknown, the card shows a socket with a question mark), or it
-# carries the hidden tag while the shown part is still out there.
+# [trick, ""] for the maker trick this part is the first piece toward: one more part of its
+# maker wakes it (the card shows a socket with a question mark for the piece still out there).
 static func _fed(part_id: String, before: Array) -> Array:
-	var live := Synergies.active(before, Parts.tag_sets(before))
-	for key in Synergies.ROWS:
-		if key in live or not Synergies.in_play(key):
-			continue
-		var row: Dictionary = Synergies.ROWS[key]
-		if part_id == row["shown"]:
-			return [key, ""]
-		if row["tags"][1] in Parts.tags_of(part_id) and not before.has(row["shown"]):
-			return [key, row["shown"]]
-	return []
+	var maker := Parts.maker_of(part_id)
+	if maker == "" or part_id in before or int(Parts.maker_counts(before).get(maker, 0)) != 0:
+		return []
+	var tricks := Synergies.of_maker(maker)
+	return [tricks[0], ""] if not tricks.is_empty() and Synergies.AT > 1 else []
 
 
 func present(find: Dictionary) -> void:

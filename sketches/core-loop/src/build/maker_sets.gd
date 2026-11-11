@@ -11,6 +11,11 @@ const Relics := preload("res://src/build/relics.gd")
 # bonuses.gd does what each bonus does. A copy of a piece already held is not a second piece:
 # a set is a collection, so it pays for range, and luck still pays through the offer nudge.
 #
+# A maker set is the build's one set rule (systems audit pass D fold, Andrew 11 Nov 2026): two
+# distinct pieces of one maker wake its trick (synergies.gd, Synergies.AT), and SETS[maker]
+# ["pieces"] turn its bonus on. The named synergies and three-part sets that used to sit beside
+# it are those tricks now, and every part on the world 1 list names a maker.
+#
 # Overpowered pays: a set stays on while its pieces are held, and a bonus has no falloff.
 
 const SPILLWAY := "spillway_works"
@@ -38,15 +43,9 @@ const SETS := {
 		"text": "The next item each stage comes with a second copy"},
 }
 
-static var _maker_of := {}
-
-
-# The maker of a part row; "" for a generated recipe, an Evolved part, a burden or any row
-# without a maker. A relic's part row carries its relic's maker; actives name theirs in their rows.
+# The maker of a part (Parts.maker_of); actives name theirs in their own rows.
 static func maker_of(part_id: String) -> String:
-	if not _maker_of.has(part_id):
-		_maker_of[part_id] = String(Parts.row(part_id).get("maker", "")) if Parts.has(part_id) else ""
-	return _maker_of[part_id]
+	return Parts.maker_of(part_id)
 
 
 static func relic_maker(relic_id: String) -> String:
@@ -58,8 +57,10 @@ static func relic_maker(relic_id: String) -> String:
 static func counts(parts: Array, extra: Array = []) -> Dictionary:
 	var seen := {}
 	var out := {}
-	for part_id in parts:
-		_count(out, seen, "part:" + String(part_id), maker_of(String(part_id)))
+	var held := Parts.maker_counts(parts)
+	for maker in held:
+		if SETS.has(maker):
+			out[maker] = held[maker]
 	for i in extra.size():
 		_count(out, seen, "extra:%d" % i, String(extra[i]))
 	return out

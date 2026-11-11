@@ -10,13 +10,17 @@ const UpgradeTree := preload("res://src/core/upgrade_tree.gd")
 #
 # (a) slot count matches the depth cap at each milestone, never decreases, and reaches
 #     UpgradeTree.DEPTHS at the last milestone.
-# (b) at every milestone with a pair available, the best paired set beats the best unpaired set by
-#     15% to 40%.
+# (b) at every milestone with a pair available, the best paired set is no weaker than the best
+#     set with that trick asleep, and beats it by at most 40%. The floor was 15% while tag pairs
+#     made synergies; since systems audit pass D a trick wakes on two pieces of one maker and is
+#     a rule change the power estimate mostly cannot see (Storm Lattice's chain jumps are the one
+#     it counts), so a floor above zero measured nothing the player meets. Re-setting a floor is
+#     the world 1 economy pass's call (docs/systems-audit/).
 # (c) the best set at the last milestone is at most 6x the best set at the first.
 # Each band is written here, not read from the tool, so the test cannot pass by reading the tool's
 # own constants. Planted rows must make each gate fire, or the zero above proves nothing.
 
-const MARGIN_MIN := 0.15
+const MARGIN_MIN := 0.0
 const MARGIN_MAX := 0.40
 const RATIO_MAX := 6.0
 const NULL_MAX := 0.05
@@ -105,8 +109,9 @@ func _check_pair_availability(rows: Array) -> void:
 	var named := 0
 	for row in rows:
 		named = maxi(named, int(row.get("named_pairs", 0)))
-	_report("pair availability", named == Synergies.ROWS.size() and rows.size() > 0,
-		"%d of %d named synergies have a shown part and a partner in the legal pool" % [named, Synergies.ROWS.size()])
+	var called: int = Synergies.ROWS.keys().filter(func(id): return not Synergies.callout(id).is_empty()).size()
+	_report("pair availability", named == called and rows.size() > 0,
+		"%d of %d tricks with a callout pair have its first part and another piece of its maker in the legal pool" % [named, called])
 
 
 func _check_controls(tool: Script) -> void:
