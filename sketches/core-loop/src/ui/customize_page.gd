@@ -152,6 +152,10 @@ class Card:
 		add_theme_stylebox_override("pressed", lit)
 		add_theme_stylebox_override("focus", StyleBoxEmpty.new())
 
+	# What the card writes under its swatch: the drawn "?" says a hidden one, so it writes nothing (S6).
+	func caption() -> String:
+		return "" if state == "hidden" else words
+
 	func _draw() -> void:
 		var s := size
 		var swatch := Rect2(Vector2(14.0, 12.0), Vector2(s.x - 28.0, s.y - 52.0))
@@ -173,8 +177,7 @@ class Card:
 			draw_polyline(PackedVector2Array([c + Vector2(-5.0, 0.0), c + Vector2(-1.0, 4.0), c + Vector2(5.0, -4.0)]), Palette.CHARCOAL, 2.5)
 		elif state == "new":
 			draw_circle(Vector2(s.x - 16.0, 16.0), 7.0, Palette.ARC)
-		var label := words if state != "hidden" else "Hidden"
-		draw_string(font, Vector2(10.0, s.y - 14.0), label, HORIZONTAL_ALIGNMENT_CENTER, s.x - 20.0, 15, Palette.SAND if state != "locked" else Color(Palette.SAND, 0.6))
+		draw_string(font, Vector2(10.0, s.y - 14.0), caption(), HORIZONTAL_ALIGNMENT_CENTER, s.x - 20.0, 15, Palette.SAND if state != "locked" else Color(Palette.SAND, 0.6))
 
 
 func _init() -> void:
@@ -210,8 +213,6 @@ func _init() -> void:
 		pip.pressed.connect(pin_heft.bind(i + 1))
 		_pips.append(pip)
 		_heft_strip.add_child(pip)
-	var heft_note := _label("plates show the armour you carry", 15)
-	_heft_strip.add_child(heft_note)
 	add_child(_heft_strip)
 	_column = VBoxContainer.new()
 	_column.add_theme_constant_override("separation", 8)
@@ -242,6 +243,8 @@ func _init() -> void:
 	_slot_list.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_column.add_child(_slot_list)
 	for group in GROUPS:
+		# Each group's title says whose slot its rows are (BALL, PILOT, SPIL-9, BAY): Outfit and Decoration
+		# read as a ball's or the companion's without it.
 		var heading := _label(group[0], 14)
 		heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 		heading.add_theme_color_override("font_color", Palette.SANDSTONE)
@@ -660,7 +663,6 @@ func refresh() -> void:
 			if worn != "":
 				words = Cosmetics.row(worn)["name"]
 			rows[id].text = "%s   %s" % [SLOT_WORDS[id], words]
-			rows[id].tooltip_text = "Click to see its items. Left / right to choose."
 			rows[id].queue_redraw()
 		_group_labels[group[0]].visible = any
 	for def in ClassDef.all():
@@ -673,7 +675,7 @@ func refresh() -> void:
 	if not slot_shown(slot):
 		slot = "paint"
 	_build_cards()
-	_notice.text = "Hover to try on. Click to wear. Owned choices save at once."
+	_notice.text = ""
 	refresh_preview()
 
 
@@ -739,7 +741,7 @@ func hover_text(card) -> String:
 		return "%s  %d / %d" % [line, int(have), int(need)]
 	if card.id == "":
 		return "%s. The pilot's own look." % card.words
-	return "%s. %s" % [card.words, "Worn." if card.state == "worn" else "Click to wear."]
+	return "%s." % card.words
 
 
 func _hover_card(card) -> void:

@@ -75,7 +75,7 @@ func _rows() -> void:
 	for chip in full:
 		by_word[String(chip[2]).to_upper()] = chip[3]
 	_t.check("two side jobs won show the row, in the lost group", by_word.get("SIDE JOBS WON", "?") == "lost", str(by_word))
-	_t.check("the run's tally is kept, what the ball carried is lost", by_word.get("TIME") == "kept" and by_word.get("STAGES") == "kept" and by_word.get("KILLS") == "kept"
+	_t.check("the run's tally is kept, what the ball carried is lost", by_word.get("TIME") == "kept" and by_word.get("STAGES") == "kept" and by_word.get("CLOCKED OUT") == "kept"
 			and by_word.get("SCRAP") == "lost" and by_word.get("PARTS BOLTED ON") == "lost", str(by_word))
 	_t.check("the earned save is neither kept nor lost", by_word.get("SAVE USED", "?") == "", str(by_word))
 	var blocks: Array = SummaryRows.grouped(full)

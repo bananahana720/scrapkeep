@@ -297,8 +297,11 @@ func _run() -> void:
 	_report("seen tips persist on the profile", saved, "tips %s" % [FieldTips.TIPS.keys()])
 	var named := FieldNotes.FIELD_RULES.map(func(r): return r["id"])
 	var covered := true
-	for id in ["grip", "jam", "cast", "radio", "stake", "active"]:
+	for id in ["grip", "radio", "stake", "active"]:
 		covered = covered and id in named and FieldTips.TIPS.has(id)
+	# Jam and cast keep their tips; their rule lines became the picture captions (ruling cx).
+	for id in ["jam", "cast"]:
+		covered = covered and FieldTips.TIPS.has(id)
 	_report("every help rule has a tip", covered, "rules %s" % [named])
 	_radio_waits_for_the_pick()
 
