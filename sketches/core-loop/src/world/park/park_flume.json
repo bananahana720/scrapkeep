@@ -4,7 +4,7 @@
  "size_m": 1600,
  "time_of_day": "morning",
  "spawn": {"at": [-460, -650], "heading_deg": 31},
- "atlas": {"origin": [0, 0], "heading_deg": 0},
+ "atlas": {"origin": [460, 1600], "heading_deg": 0},
  "exit": {"kind": "launch", "speed_cruise": 1.0, "opens": "warden_broken"},
  "arrives": {"kind": "land", "speed_cruise": 1.0, "from": "dam gate"},
  "play_rect": [-780, -780, 1300, 1560],

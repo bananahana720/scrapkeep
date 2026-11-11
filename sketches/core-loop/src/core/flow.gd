@@ -883,6 +883,23 @@ func build_punch() -> float:
 	return punch
 
 
+# The heading the place after `stage` is entered on (ruling cv; world.gd turns that stage's launch to it): the next
+# stage's spawn heading, or the arrival heading of the boss that closes the world. A boss module not yet set up, or one
+# that states none, gives zero (no turn), so nothing is loaded early for it.
+func arrival_heading_after(stage: int) -> Vector3:
+	if ctx.stages.is_world_last(stage) and ctx.stages.BOSS != "":
+		var row: Dictionary = boss_row(ctx.stages.world_of(stage))
+		if bool(row.get("built", false)):
+			var path := String(row.get("script", SCENE_BOSS))
+			var boss = _scene_boss() if path == SCENE_BOSS else _row_modules.get(path)
+			if is_instance_valid(boss) and boss.has_method("arrival_heading"):
+				return boss.arrival_heading()
+			return Vector3.ZERO
+	if ctx.stages.is_run_last(stage):
+		return Vector3.ZERO
+	return ctx.terrain.entry_heading(stage + 1)
+
+
 func _place_ball(at: Vector3, velocity: Vector3, heading: Vector3) -> void:
 	ctx.player.set_frozen(false)
 	ctx.player.reset_to(at, velocity)

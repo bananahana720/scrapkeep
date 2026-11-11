@@ -4,16 +4,17 @@ extends SceneTree
 # reads the rows and says whether the exit a player takes matches how they arrive. Data only: no scene boots.
 #
 # Rows: ParkMap.handover() for the dam and the flume (park_dam.json, park_flume.json: atlas, exit, arrives) and
-# Arena.handover() for the Slag Bowl. Each stage's rows are in its own frame; the atlas puts them in one frame. Today the
-# dam and the flume sit unmoved in it (origin 0, heading 0): the maps were never placed against each other, so that is
-# the measure of what a player gets now. The bowl hangs above the flume's beacon (Arena.place), so its origin is that point.
+# Arena.handover() for the Slag Bowl. Each stage's rows are in its own frame; the atlas puts them in one frame. The dam
+# sits at the origin; since wave 37 the flume's frame sits north of it, past the dam's crest along the dam gate's aim,
+# unturned (heading 0, as the game plays both maps on the same axes) and clear of the dam's map. The bowl hangs ahead
+# of the flume's exit gate (Arena.place_ahead), so its origin is Arena.centre_ahead() of the flume's exit row.
 #
 # One line per seam and check: `HANDOVER <seam> <check> <value> pass <line> PASS|FAIL|OWED`.
 #   kind     the exit kind and the arrival kind are a declared pair (ParkSchema.HANDOVER_PAIRS)
 #   heading  angle between the exit heading and the arrival heading, atlas frame, at most HEADING_MAX_DEG
 #   speed    arrival speed over exit speed, at least SPEED_MIN
 #   ahead    angle between the exit heading and the line from the exit point to the arrival point, at most AHEAD_MAX_DEG
-# This unit measures; wave 38 fixes the seams. A seam under a line today is listed in OWED with its measured value: it
+# Wave 36 measured; wave 37 placed the bowl ahead and the flume in the atlas. A seam under a line today is listed in OWED with its measured value: it
 # prints OWED and passes, the line stays here, and the test fails if an OWED line now meets it (prune it) or an unlisted
 # line fails. Planted: a clean seam must pass all four, and each of four bent copies (arrival kind swapped, heading
 # turned 90 degrees, speed halved, arrival placed behind the exit) must fail its own check and no other.
@@ -31,12 +32,11 @@ const SPEED_MIN := 0.8
 const AHEAD_MAX_DEG := 45.0
 const CHECKS := ["kind", "heading", "speed", "ahead"]
 
-# Seam under its line today: "<seam> <check>" -> {"value": measured, "why": text}. Measured on base 501b2821a.
+# Seam under its line today: "<seam> <check>" -> {"value": measured, "why": text}. Measured on base 501b2821a; the
+# heading entry re-read on 803d342e2 (wave 37), where the rail turns the 31 degrees in flight but the rows still state
+# the gate's 0 and the spawn's 31.
 const OWED := {
-	"dam_to_flume heading": {"value": 31.0, "why": "the dam launch leaves at 0 degrees and the flume spawn faces 31"},
-	"dam_to_flume ahead": {"value": 158.7, "why": "the maps are not placed against each other: the flume spawn lies behind the dam gate's heading"},
-	"flume_to_bowl heading": {"value": 60.0, "why": "the flume gate faces 90 and the bowl's entry tangent faces 150"},
-	"flume_to_bowl ahead": {"value": 169.0, "why": "the bowl hangs over the beacon and its entry sits 35 m behind and to the side of the gate"},
+	"dam_to_flume heading": {"value": 31.0, "why": "the dam launch leaves at 0 degrees and the flume spawn faces 31; the rail turns the ball and camera through it in flight (launch.gd aim), which no row states"},
 }
 
 var t := T.new("handover_rows_test")
@@ -56,10 +56,12 @@ func _run() -> void:
 		quit(t.verdict())
 		return
 	t.check("one exit and one arrival per stage", dam_rows.has("exit") and dam_rows.has("arrives") and flume_rows.has("exit") and flume_rows.has("arrives") and bowl_rows.has("arrives"), "dam, flume, bowl")
-	# The bowl's atlas origin: the flume's beacon, which Arena.place only pulls inward when the bowl would leave the map.
-	var bowl_origin := to_atlas(flume.beacon, flume_rows["atlas"])
+	# The bowl's atlas origin: ahead of the flume's exit gate, which Arena.place_ahead only pulls inward when the bowl would leave the map.
+	t.check("the bowl hangs ahead of the exit", str(bowl_rows["atlas"].get("over", "")) == "exit", str(bowl_rows["atlas"]))
+	var centre := Arena.centre_ahead(flume_rows["exit"])
+	var bowl_origin := to_atlas(centre, flume_rows["atlas"])
 	var half := float(flume.park["size_m"]) * 0.5
-	t.check("the bowl fits over the flume's beacon without being pulled inward", absf(flume.beacon.x) + Arena.BANK_R + Arena.WALL_THICK + 2.0 <= half and absf(flume.beacon.y) + Arena.BANK_R + Arena.WALL_THICK + 2.0 <= half, "beacon %s" % flume.beacon)
+	t.check("the bowl fits ahead of the flume's exit without being pulled inward", absf(centre.x) + Arena.BANK_R + Arena.WALL_THICK + 2.0 <= half and absf(centre.y) + Arena.BANK_R + Arena.WALL_THICK + 2.0 <= half, "centre %s" % centre)
 	var bowl_atlas := {"origin": bowl_origin, "heading_deg": float(bowl_rows["atlas"]["heading_deg"])}
 	_seam("dam_to_flume", dam_rows["exit"], dam_rows["atlas"], flume_rows["arrives"], flume_rows["atlas"])
 	_seam("flume_to_bowl", flume_rows["exit"], flume_rows["atlas"], bowl_rows["arrives"], bowl_atlas)
