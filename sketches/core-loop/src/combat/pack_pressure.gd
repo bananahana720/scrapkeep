@@ -3,9 +3,11 @@ extends RefCounted
 # Pack pressure experiments, world 1 (the kiting sweep, scrapkeep#241 comment 6378906601: circling a pack
 # costs nothing on every stage). Five variants, each only a preset of ChallengeDials rows, chosen on the
 # command line with --pack-pressure=A, or a combination such as --pack-pressure=A+D. Without the flag every
-# dial but E's reads its identity. An explicit --tune of the same key wins over a preset.
+# dial but A's and E's reads its identity. An explicit --tune of the same key wins over a preset.
 #
 #   A  aim: crews lead the ball's roll, along its curve, when they steer and when they lay a lunge lane.
+#      A ships at half on world 1 (wave 37 unit D1, ChallengeDials.LEAD_W1); the preset names the full lead.
+#      --tune=pack.lead_by_stage=0/0/0/0/0/0 turns it off.
 #   B  numbers: one more chaser per crew and half the re-engage gap.
 #   C  flankers: every second chaser runs ahead of the ball's line, calls (a whistle, PRESSURE_CUE_S before
 #      its wind-up) and lunges across the line.
