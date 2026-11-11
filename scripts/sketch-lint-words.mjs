@@ -127,7 +127,8 @@ export function tokenize(text) {
 }
 
 const isKey = (masked, token) => /^\s*:(?!=)/.test(masked.slice(token.end, token.end + 40));
-const idLike = /^[a-z0-9_.\-]*$/;
+// An id may carry a colon between its parts (a card key such as "hud:note"); it has no space and no capital.
+const idLike = /^[a-z0-9_.\-:]*$/;
 const pathLike = /:\/\/|^[%^$]?[A-Za-z0-9_]+(?:\/[A-Za-z0-9_.%]+)+$|^%[A-Z][A-Za-z0-9]*$|\.(?:gd|tscn|tres|png|ogg|wav|json|res)$|^[A-Z][a-z0-9]+(?:[A-Z][a-z0-9]+)+$|^[A-Z_][A-Z0-9]*_[A-Z0-9_]+$/;
 const hasLetters = /[A-Za-z]{2}/;
 

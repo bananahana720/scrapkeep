@@ -351,8 +351,10 @@ test("words: extraction reads player text and skips keys, node paths, signals, i
     "\t# label.text = \"A commented line\"",
     "\tbutton = ChoiceButton.new(\"back\", \"key_esc\", \"Back\")",
     "\tgame.hud.toast(\"Gate open\")",
+    "const NOTE_KEY := \"hud:note\"",
+    "const NOTE_WORDS := \"Note: read it\"",
   ].join("\n");
-  assert.deepEqual(readUi(fixture).map((item) => item.value), ["Fast balls cling to walls.", "Roll up scrap", "Back", "Gate open"]);
+  assert.deepEqual(readUi(fixture).map((item) => item.value), ["Fast balls cling to walls.", "Roll up scrap", "Back", "Gate open", "Note: read it"]);
   const rows = '{"id": "s_bulwark", "name": "Bulwark", "effect": "Mounted, crowd control slides off you", "key": "movement",\n\t"icon": "ab_sable_mount"}';
   assert.deepEqual(readRows(rows, { fields: ["name", "effect"] }), [{ line: 1, value: "Bulwark" }, { line: 1, value: "Mounted, crowd control slides off you" }]);
 });
