@@ -6,10 +6,14 @@ const Parts := preload("res://src/build/parts.gd")
 const WordBudget := preload("res://src/ui/word_budget.gd")
 const Flow := preload("res://src/core/flow.gd")
 const WhyCallout := preload("res://src/ui/why_callout.gd")
+const ScreenBusy := preload("res://src/ui/screen_busy.gd")
+const Hud := preload("res://src/ui/hud.gd")
+const CodexBanner := preload("res://src/presentation/codex_banner.gd")
+const EventKinds := preload("res://src/core/event_kinds.gd")
 
 # A find never puts a card up during a fight (alpha R3, unit RV). A live slice game, a posture
 # Warden engaged by a real ram:
-#   - the one gate: the ceremony and the banner both ask WhyCallout.find_may_speak and test
+#   - the one gate: the ceremony and the banner both ask ScreenBusy (screen_busy.gd) and test
 #     calm no other way (a source scan);
 #   - a first find in the fight draws no ceremony card and no banner card for 300 physics
 #     frames, the part's name shows at the ball, and no hit-stop is asked for it;
@@ -25,7 +29,12 @@ const WhyCallout := preload("res://src/ui/why_callout.gd")
 
 const SETTLE := 300
 const HOLD_FRAMES := 300
-const OPEN_WITHIN := 60
+# Every bound is the source's own constant plus 60 frames. A find's card waits for the screen to be quiet
+# for FIND_HOLD (screen_busy.gd); the first find's two cards (the banner's and the ceremony's) then take turns,
+# so the second comes one card's life after the first; cards the HUD already holds go first, ACH_TOTAL each.
+const FIND_FRAMES := int(ScreenBusy.FIND_HOLD * 60.0)
+const OPEN_WITHIN := FIND_FRAMES + 60
+const NEXT_WITHIN := 60
 const CALM_WITHIN := 900
 const QUIET_FRAMES := 30
 const STEP_S := 1.0 / 60.0
@@ -54,6 +63,10 @@ var _calm_run := 0
 # ticks can run back to back before the next one, so a close is read after a drawn frame.
 var _drawn := 0
 var _engaged_at := 0
+var _ahead := 0
+var _first_by := 0
+var _both_by := 0
+var _again_first := -1
 
 
 func _initialize() -> void:
@@ -85,11 +98,11 @@ func _scan_sources() -> void:
 	var bad: Array = []
 	for path in SOURCES:
 		var text := FileAccess.get_file_as_string(path)
-		if not text.contains("WhyCallout.find_may_speak("):
+		if not (text.contains("_busy().settled(") or text.contains("_busy.settled(")):
 			bad.append("%s never calls the gate" % path)
-		if text.contains("is_calm(") or text.contains("threat_live("):
+		if text.contains("is_calm(") or text.contains("threat_live(") or text.contains("find_may_speak("):
 			bad.append("%s reads calm itself" % path)
-	_report("one gate", bad.is_empty(), "the ceremony and the banner both call WhyCallout.find_may_speak and neither tests calm another way; %s" % [bad])
+	_report("one gate", bad.is_empty(), "the ceremony and the banner both ask the screen_busy gate and neither tests calm another way; %s" % [bad])
 
 
 func _report(label: String, ok: bool, detail: String) -> void:
@@ -201,18 +214,28 @@ func _physics_process(_delta: float) -> bool:
 						and presented.all(func(p: Array): return p[1] in ["common", "rare"]),
 					"common and relic repeats for %d frames in a fight: no card, no pop; tiers %s" % [QUIET_FRAMES, presented.map(func(p: Array): return p[1])])
 				_game.flow.warden._die()
+				# The Warden's crowd is really removed (not announced away): the screen's quiet clock then runs.
+				_remove_crowd()
+				# The director would spawn the next crowd at once; this flag is how the tests ask it not to.
+				_game.ctx.calm = true
+				_ahead = _hud_ahead()
+				_first_by = OPEN_WITHIN + int(_ahead * Hud.ACH_TOTAL * 60.0)
+				_both_by = _first_by + _card_life_frames() + NEXT_WITHIN
 				_next("open")
 		"open":
 			if _opened < 0 and _card_up():
 				_opened = _wait
 				_marked_early = false
 				_report("held card opens", _ceremony().view.card.get("part", "") == _first or _banner().showing(), "%s opens %d frames after the Warden's break" % [_first, _wait])
-				_report("seen only now", _seen_both(_first), "%s seen in both records at the frame its card shows" % _first)
+				_report("seen only now", _seen_either(_first) and not _marked_early, "%s seen in a record at the frame its first card shows, not before" % _first)
 			if _opened < 0 and _seen_either(_first):
 				_marked_early = true
-			if _wait == OPEN_WITHIN:
-				_report("opens within 60 frames, once", _opened >= 0 and not _marked_early and _banner().cards_shown == _cards_before + 1 and not _fight_on(),
-					"opened at frame %d, seen early %s, banner cards %d (was %d)" % [_opened, _marked_early, _banner().cards_shown, _cards_before])
+			if _wait == _first_by:
+				_report("opens within the quiet hold plus 60 frames, once", _opened >= 0 and not _marked_early and not _fight_on(),
+					"opened at frame %d (bound %d: hold %d + 60, %d cards ahead), seen early %s" % [_opened, _first_by, FIND_FRAMES, _ahead, _marked_early])
+			if _wait == _both_by or (_wait > _first_by and _seen_both(_first)):
+				_report("seen in both records, each when its own card shows", _seen_both(_first) and _banner().cards_shown == _cards_before + 1,
+					"%s seen in both records by frame %d of %d, banner cards %d (was %d)" % [_first, _wait, _both_by, _banner().cards_shown, _cards_before])
 				# The first find's cards would hide a regressed repeat card behind them: clear both.
 				_ceremony().view.card = {}
 				_banner().dismiss(false)
@@ -233,10 +256,12 @@ func _physics_process(_delta: float) -> bool:
 				return _finish()
 			if _wait == QUIET_FRAMES:
 				_report("a repeat out of a fight shows nothing", true, "common and relic repeats with the Warden dead: no card, no pop for %d frames" % QUIET_FRAMES)
+				_game.ctx.calm = false
 				_game.flow.retry_stage()
 				_next("refight")
 		"refight":
 			if _wait == 5:
+				_game.ctx.calm = false
 				_engage()
 				_stops = _rare_stops()
 				for id in _held:
@@ -272,24 +297,34 @@ func _physics_process(_delta: float) -> bool:
 		# calm clock for a while; the next find is made once the stage is calm, so the check
 		# reads the card gate and not the stage plan.
 		"retried_calm":
-			if WhyCallout.find_may_speak(_ceremony().get("_calm_left"), self, _game.flow):
+			if _game.ctx.screen_busy.settled(ScreenBusy.FIND_HOLD):
+				_game.ctx.calm = true
+				_remove_crowd()
+				_ahead = _hud_ahead()
+				_first_by = OPEN_WITHIN + int(_ahead * Hud.ACH_TOTAL * 60.0)
 				_game.run.add_part(_held[0], "pickup")
 				_next("again")
 			elif _wait == CALM_WITHIN:
 				_report("the retried stage turns calm", false, "still not calm %d frames after a retry" % CALM_WITHIN)
 				return _finish()
 		"again":
-			if _card_up():
-				_report("the next first find shows its card", _ceremony().view.card.get("part", "") == _held[0] and _seen_both(_held[0]) and not _fight_on(),
-					"%s found out of a fight after the retry shows its card at frame %d and is seen" % [_held[0], _wait])
+			if _again_first < 0 and _card_up():
+				_again_first = _wait
+			if _again_first >= 0 and not _seen_both(_held[0]) and _wait > _again_first + NEXT_WITHIN + _card_life_frames():
+				_report("the next first find shows its card", false, "no second card within one card's life plus 60 frames of the first (frame %d)" % _again_first)
+				return _finish()
+			if _seen_both(_held[0]):
+				_report("the next first find shows its card", _again_first >= 0 and _again_first <= _first_by and not _fight_on(),
+					"%s found out of a fight after the retry shows its first card at frame %d (bound %d) and both are seen" % [_held[0], _again_first, _first_by])
+				_game.ctx.calm = false
 				_engage()
 				_engaged_at = _drawn
 				_next("engaged")
-			if _wait == OPEN_WITHIN:
+			if _again_first < 0 and _wait == _first_by:
 				_report("the next first find shows its card", false, "no card for %s within %d frames out of a fight" % [_held[0], OPEN_WITHIN])
 				return _finish()
 		"engaged":
-			if _wait >= 2 and (_drawn > _engaged_at or _wait == OPEN_WITHIN):
+			if _wait >= 2 and (_drawn > _engaged_at or _wait == 60):
 				_report("a reveal card closes when the fight goes live", _fight_on() and _ceremony().view.card.is_empty() and not _banner().showing() and _seen_both(_held[0]),
 					"a reveal card up as the Warden engages: card %s, banner showing %s, %s still seen in both records" % [_ceremony().view.card.get("part", "none"), _banner().showing(), _held[0]])
 				_game.flow.retry_stage()
@@ -308,7 +343,6 @@ func _physics_process(_delta: float) -> bool:
 				_game.presentation.ceremony.pause_armed = true
 				_game.presentation.ceremony.now_ms = func() -> int: return _clock_ms
 				_game.events.player_hit.emit(1.0, "test")
-				_game.presentation.ceremony._calm_left = WhyCallout.CALM_SECONDS - 0.5
 				_game.run.add_part(_boss_part, "boss")
 				_report("a boss reward is queued", _ceremony().queued() == 1 and _ceremony().presented.back()[2] == "boss" and _ceremony().calm(),
 					"a boss-source ceremony 0.5 s after a hit: queued %d, calm %s" % [_ceremony().queued(), _ceremony().calm()])
@@ -326,6 +360,27 @@ func _physics_process(_delta: float) -> bool:
 					% [Flow.VICTORY_SECONDS, _ceremony().queued(), _ceremony().calm(), _game.flow.state_name(), _game.player.ball_position(), _game.player.state.grounded])
 				return _finish()
 	return false
+
+
+# One card's life in frames: the longest of the banner's and the ceremony's reveal card.
+func _card_life_frames() -> int:
+	var row := EventKinds.reward_row("reveal")
+	var reveal := float(row["in_s"]) + float(row["hold_s"]) + float(row["out_s"])
+	var banner := CodexBanner.CARD_HOLD_MAX + CodexBanner.IN_TIME + CodexBanner.OUT_TIME
+	return int(ceilf(maxf(reveal, banner) * 60.0))
+
+
+# The HUD's own cards that go before a find's: waiting, or on screen now (the note counts while due or up).
+func _hud_ahead() -> int:
+	var hud = _game.hud
+	return hud.ach_waiting().size() + hud.tune_waiting().size() + (1 if hud._lore_due or hud._lore_left > 0.0 else 0) + (0 if hud._ach_entry.is_empty() else 1)
+
+
+# The Warden's crowd is removed for real, as a stage reset does (the Warden itself stays while it stands).
+func _remove_crowd() -> void:
+	for node in get_nodes_in_group("enemy"):
+		if node != _game.flow.warden:
+			node.queue_free()
 
 
 func _seen_either(part: String) -> bool:

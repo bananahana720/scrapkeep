@@ -99,15 +99,14 @@ const TOAST_WORDS := 4
 const ACH_LAYER := 8
 const ACH_TOTAL := 3.0
 const ACH_TOP := 14.0
-const ACH_WORD := "Achievement"
 const ACH_FONT := 21
 const ACH_DETAIL_FONT := 15
 # A jukebox record found in play shares the achievement plate, after any achievement waiting.
-const TUNE_WORD := "New record"
+# The record and take cards share one icon and frame (a wave on amber), so these words say which they are (NAMES.md).
+const TUNE_WORD := "Record"
 # A radio take found in play: the same plate, its own word, louder for a legend.
-const TAKE_WORDS := {"b-side": "New B-side", "take": "New take", "legend": "Legendary take"}
+const TAKE_WORDS := {"b-side": "B-side", "take": "Take", "legend": "Legendary take"}
 # A new field note: the Tab cap and these words under the achievement slot, 3 s, faded in and out.
-const LORE_WORDS := "New field note"
 const LORE_TOTAL := 3.0
 const LORE_TOP := 66.0
 # The top-right corner is one column: the radio chip, the unlock plate, the field note pill.
@@ -143,6 +142,7 @@ const RING_ROWS := ["find_warden", "break_guard", "smash_core", "grow_return", "
 # The stage locks' facts that finish a goal (stage_locks.gd), and the done row each one shows.
 const DONE_FACTS := {"arena_unlocked": "yard", "warden_gate_opened": "clamp"}
 # Brindle's rows that hold their words through a stagger; the open cockpit turns their glyph.
+const NOTE_KEY := "hud:note"
 const OPEN_ROWS := ["shoot_magnets", "slam_caps", "bait_charge"]
 # The gaps of the top slot when a plate is mounted: from the band's top to the plate, and
 # from the plate to the objective plate under it.
@@ -198,8 +198,13 @@ var _held_toast := {}
 var _ach_panel: PanelContainer
 var _ach_name: Label
 var _ach_detail: Label
-var _ach_queue: Array[String] = []
-var _tune_queue: Array[String] = []
+# What the cards that can wait say, by the key screen_busy.gd holds them under: {tune, text}. The
+# owner keeps the order and the turns; this keeps the words and the kind.
+var _cards := {}
+var _card_count := 0
+var _busy = null
+var _quiet := false
+var _quiet_hid: Array = []
 var _take_words := {}
 var _ach_word: Label
 var _ach_icon: TextureRect
@@ -352,8 +357,10 @@ func setup(game_ref) -> void:
 
 	_build_ach_toast()
 	_build_lore_pulse()
+	_busy = game.ctx.screen_busy
 	game.codex.lore_found.connect(func(_id: String): _show_lore())
-	game.events.achievement_earned.connect(func(id: String): _ach_queue.append(Achievements.toast_text(id)))
+	game.events.achievement_earned.connect(func(id: String): _raise_card(Achievements.toast_text(id), false))
+	game.events.run_ended.connect(func(_won: bool): clear_achievement_toasts())
 	game.opening.turned.connect(_on_turned)
 	_connect_toasts(game.events)
 	game.events.boss_phase_changed.connect(func(_phase: int, phase_name: String):
@@ -441,9 +448,10 @@ func _build_ach_toast() -> void:
 	star.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	row.add_child(star)
 	_ach_icon = star
+	# A record or take says which it is here; an achievement's star and amber frame already do.
 	var word := _label(18)
-	word.text = ACH_WORD
 	word.add_theme_color_override("font_color", Palette.AMBER)
+	word.visible = false
 	row.add_child(word)
 	_ach_word = word
 	# The name, then what it gives in smaller type: two lines that fit the top band under the chip.
@@ -483,14 +491,11 @@ func _build_lore_pulse() -> void:
 	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_lore_panel.add_child(row)
 	row.add_child(NoteKey.new())
-	var words := _label(18)
-	words.text = LORE_WORDS
-	words.add_theme_color_override("font_color", Palette.SAND)
-	row.add_child(words)
 
 
 func _show_lore() -> void:
 	_lore_due = true
+	_busy.request(NOTE_KEY)
 	_step_lore(0.0)
 
 
@@ -506,7 +511,7 @@ func lore_pulse_visible() -> bool:
 
 
 func _step_lore(delta: float) -> void:
-	if _lore_due and not _reading():
+	if _lore_due and not _reading() and _busy.may_show(NOTE_KEY):
 		_lore_due = false
 		_lore_left = LORE_TOTAL
 		_lore_age = 0.0
@@ -522,6 +527,7 @@ func _step_lore(delta: float) -> void:
 	_lore_panel.position = Vector2(_screen_size().x - _lore_panel.size.x - MARGIN, y)
 	if _lore_left <= 0.0:
 		_lore_panel.visible = false
+		_free_slot(NOTE_KEY)
 
 
 # A chip that lives in the top-right corner (the pilot radio). The plate and the pill line up
@@ -565,36 +571,65 @@ func ach_toasts() -> Array[String]:
 
 
 func ach_waiting() -> Array[String]:
-	return _ach_queue.duplicate()
+	return _waiting_texts(false)
 
 
 # A record found for Moss's jukebox: its name, then where to play it.
 func tune_found(tune_name: String) -> void:
-	_tune_queue.append("%s\nOn Moss's jukebox at camp" % tune_name)
+	_raise_card("%s\nOn Moss's jukebox at camp" % tune_name, true)
 
 
 func tune_waiting() -> Array[String]:
-	return _tune_queue.duplicate()
+	return _waiting_texts(true)
+
+
+func _waiting_texts(tune: bool) -> Array[String]:
+	var out: Array[String] = []
+	for key in _busy.waiting():
+		if _cards.has(key) and _cards[key]["tune"] == tune:
+			out.append(_cards[key]["text"])
+	return out
+
+
+# The oldest card of this HUD still waiting, by the owner's order.
+func _head_card() -> String:
+	for key in _busy.waiting():
+		if _cards.has(key):
+			return key
+	return ""
+
+
+func _raise_card(text: String, tune: bool) -> void:
+	_card_count += 1
+	var key := "hud:%d" % _card_count
+	_cards[key] = {"tune": tune, "text": text}
+	_busy.request(key)
+
+
+func _free_slot(key: String) -> void:
+	_busy.done(key)
 
 
 # A take found for the pilot radio: its name, then the station it airs on.
 func take_found(take_name: String, station_name: String, tier := "take") -> void:
 	var text := "%s\nOn the radio: %s" % [take_name, station_name]
 	_take_words[text] = TAKE_WORDS.get(tier, TAKE_WORDS["take"])
-	_tune_queue.append(text)
-
-
-# A fight is live while the Warden is engaged and still standing.
-func _fight_live() -> bool:
-	return game.flow != null and game.flow.engaged() and game.flow.sealed
+	_raise_card(text, true)
 
 
 # The ending owns the screen: no achievement toast waits for it or shows over it.
 func clear_achievement_toasts() -> void:
-	_ach_queue.clear()
-	_tune_queue.clear()
+	for key in _cards:
+		_free_slot(key)
+	_cards.clear()
+	if not _ach_entry.is_empty():
+		_free_slot(_ach_entry["key"])
 	_ach_entry = {}
 	_ach_panel.visible = false
+	_lore_due = false
+	_lore_left = 0.0
+	_lore_panel.visible = false
+	_free_slot(NOTE_KEY)
 
 
 # The victory lap opens on its own banner: no toast left over from the win shows under it.
@@ -608,16 +643,22 @@ func _step_ach(delta: float) -> void:
 	if game.screens != null and game.screens.ending_open():
 		clear_achievement_toasts()
 		return
-	if _ach_entry.is_empty() and not (_ach_queue.is_empty() and _tune_queue.is_empty()) and not _fight_live() and not _corner_swollen() \
-			and not game.opening.waits("plate") and not _reading():
-		var tune := _ach_queue.is_empty()
-		_ach_entry = {"text": _tune_queue.pop_front() if tune else _ach_queue.pop_front(), "left": ACH_TOTAL, "age": 0.0}
+	var head := _head_card()
+	if head != "" and not _ach_entry.is_empty():
+		_busy.ready(head)
+	if _ach_entry.is_empty() and head != "" and not _corner_swollen() and not game.opening.waits("plate") and not _reading() \
+			and _busy.may_show(head):
+		var card: Dictionary = _cards[head]
+		_cards.erase(head)
+		var tune: bool = card["tune"]
+		_ach_entry = {"text": card["text"], "key": head, "left": ACH_TOTAL, "age": 0.0}
 		# The first line is the name; whatever follows it is the detail.
 		var lines := String(_ach_entry["text"]).split("\n", true, 1)
 		_ach_name.text = lines[0]
 		_ach_detail.text = lines[1] if lines.size() > 1 else ""
 		_ach_detail.visible = _ach_detail.text != ""
-		_ach_word.text = (String(_take_words.get(_ach_entry["text"], TUNE_WORD)) if tune else ACH_WORD)
+		_ach_word.visible = tune
+		_ach_word.text = String(_take_words.get(_ach_entry["text"], TUNE_WORD)) if tune else ""
 		_ach_icon.texture = Icons.shape("wave" if tune else "star")
 		# A panel grows to its words by itself and never shrinks: a short entry after a long one resets it.
 		_ach_panel.reset_size()
@@ -629,6 +670,7 @@ func _step_ach(delta: float) -> void:
 	_ach_panel.modulate.a = clampf(minf(_ach_entry["age"] / TOAST_IN, _ach_entry["left"] / TOAST_OUT), 0.0, 1.0)
 	_ach_panel.position = Vector2(_screen_size().x - _ach_panel.size.x - MARGIN, _corner_under(_corner_chip, ACH_TOP))
 	if _ach_entry["left"] <= 0.0:
+		_free_slot(_ach_entry["key"])
 		_ach_entry = {}
 		_ach_panel.visible = false
 
@@ -1210,6 +1252,9 @@ func _process(delta: float) -> void:
 	if _plate != null:
 		_plate.visible = playing
 	part_name.visible = playing and part_name.left > 0.0
+	if _quiet:
+		for piece in [_toasts, why_callout, damage_numbers, part_name]:
+			piece.visible = false
 	danger_mark.show_run(game.combat.near_miss.standing_in() if playing else -1.0)
 	danger_mark.visible = danger_mark.shown()
 	_armor.visible = playing and game.run.armor_mode
@@ -1365,11 +1410,28 @@ func drop_toast(text: String) -> void:
 		_held_toast = {}
 
 
+# Everything this HUD draws that the player does not need to act hides while a card has the
+# screen (pick_quiet.gd), and comes back exactly as it was: the toast row, the synergy callout,
+# the hit numbers, the part name and the corner cards. Nothing the HUD tracks changes.
+func quiet(on: bool) -> void:
+	_quiet = on
+	if on:
+		for piece in [_toast_row, _toasts, why_callout, damage_numbers, part_name, _ach_panel, _lore_panel]:
+			if piece != null and piece.visible:
+				piece.visible = false
+				_quiet_hid.append(piece)
+		return
+	for piece in _quiet_hid:
+		if is_instance_valid(piece):
+			piece.visible = true
+	_quiet_hid.clear()
+
+
 func _step_toast(delta: float) -> void:
 	if not launch_card.showing() and not _held_toast.is_empty():
 		_show_toast(_held_toast)
 		_held_toast = {}
-	_toast_row.visible = not _toast.is_empty() and not launch_card.showing()
+	_toast_row.visible = not _toast.is_empty() and not launch_card.showing() and not _quiet
 	if _toast.is_empty():
 		return
 	_toast["left"] -= delta

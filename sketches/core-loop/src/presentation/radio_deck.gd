@@ -115,7 +115,10 @@ func find(id: String) -> bool:
 		game.hud.take_found(String(t["name"]), Radio.station_name(String(t["station"])), String(t["tier"]))
 	if _audio != null:
 		_audio.play("bay_jukebox", 0.0, 1.0, "UI")
-	radio.premiere(id)
+	var before := radio.station
+	# A station the game moved pulses the chip once, a mark and not a word; the chip shows the station.
+	if radio.premiere(id, context()) and radio.station != before and dial != null:
+		dial.swell()
 	game.events.radio_take_found.emit(id, String(t["tier"]), String(t["found"].get("on", "")))
 	_save()
 	_plan_now()

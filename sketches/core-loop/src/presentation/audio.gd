@@ -2713,10 +2713,7 @@ var _combat := false
 
 
 func mix_state() -> String:
-	if _pressure >= MixRows.COMBAT_ON:
-		_combat = true
-	elif _pressure <= MixRows.COMBAT_OFF:
-		_combat = false
+	_combat = MixRows.combat_after(_combat, _pressure)
 	var shop := _moments.any(func(m): return m.kind == "shop")
 	return MixRows.resolve(_flow_state, camp_open, engine.track if engine != null else "level", _boss_phase, shop, _combat)
 
