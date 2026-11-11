@@ -455,37 +455,6 @@ static func with_piece(doc: Dictionary, id: String) -> Dictionary:
 	return model.to_dict()
 
 
-# A carried core (run_state.stow_core, `--carry-core=on`; Andrew 11 Nov 2026 19:24Z: one core,
-# only into SPIL-9) takes a module socket while it rides. Stowing seats it in a free socket, or
-# unseats the last seated piece (it stays owned) into "core_seat"; unstow puts that piece back
-# when the core leaves at the next stage entry, or when a retry rewinds the stow. Docs only: the
-# live effects read "sockets", so the unseated piece stops helping at once.
-static func stow(doc: Dictionary) -> Dictionary:
-	var out := doc.duplicate(true)
-	var seated: Array = out.get("sockets", [])
-	if seated.size() >= SOCKETS:
-		out["core_seat"] = String(seated[-1])
-		seated.remove_at(seated.size() - 1)
-		out["sockets"] = seated
-	out["core"] = true
-	return out
-
-
-static func unstow(doc: Dictionary) -> Dictionary:
-	var out := doc.duplicate(true)
-	var piece := String(out.get("core_seat", ""))
-	out.erase("core_seat")
-	out.erase("core")
-	var seated: Array = out.get("sockets", [])
-	if piece != "" and seated.size() < SOCKETS and not seated.has(piece) and (out.get("owned", []) as Array).has(piece):
-		var ordered := []
-		for p in PIECES:
-			if seated.has(p["id"]) or p["id"] == piece:
-				ordered.append(p["id"])
-		out["sockets"] = ordered
-	return out
-
-
 func to_dict() -> Dictionary:
 	return {"chassis": CHASSIS, "owned": owned.duplicate(), "sockets": sockets.duplicate(),
 		"escape_ready": not _escape_spent, "escape_spent": _escape_spent}

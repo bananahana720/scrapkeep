@@ -11,8 +11,7 @@ const UiDraw := preload("res://src/ui/ui_draw.gd")
 # lower corners, and the price as the cog icon and a number. The name and what it does
 # show in the counter's detail line for the tile under the mouse or the keys.
 #
-# kind   shelf | top | cell | reroll | sell | pick | weigh | stow
-# A stow plate is a core carried in SPIL-9 (shop.stow_core): the core glyph over a socket ring.
+# kind   shelf | top | cell | reroll | sell | pick | weigh
 # A weigh plate is Moss's scale (shop.gd weigh): the mass glyph with the mass one press
 # takes under it, and the cogs it pays as the price.
 # state  ok | poor (too few cogs) | sold | locked (heft) | capped | welded | spent
@@ -108,9 +107,6 @@ func _draw() -> void:
 			draw_texture_rect(Icons.texture("res_mass"), icon_rect.grow(-10.0), false, Icons.tint("res_mass", Color(rec.get("color", Palette.SAND), dim)))
 			var mass := str(int(rec.get("mass", 0)))
 			UiDraw.text(self, centre.x - UiDraw.width(mass, PRICE_FONT, true) * 0.5, icon_rect.end.y + 6.0, mass, PRICE_FONT, Color(Palette.SAND, dim), true)
-		"stow":
-			draw_arc(centre, ICON * 0.42, 0.0, TAU, 32, Color(Palette.SAND, dim), 3.0)
-			draw_texture_rect(Icons.texture("res_core"), icon_rect.grow(-14.0), false, Icons.tint("res_core", Color(rec.get("color", Palette.SAND), dim)))
 		"cell":
 			var icon_id := String(rec.get("icon", ""))
 			draw_texture_rect(Icons.texture(icon_id), icon_rect.grow(-8.0), false, Icons.tint(icon_id, Color(rec.get("color", Palette.SAND), dim)))

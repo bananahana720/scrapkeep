@@ -333,25 +333,6 @@ func weigh() -> Dictionary:
 	return out
 
 
-# ---- Carry a core in SPIL-9 (systems audit pass D, new mechanic 3) ----
-
-# Behind `--carry-core=on` (Tuning "carry_core", default off). Moss seats one of this stage's
-# cores in a SPIL-9 socket; it rides to the next stage and counts at that stage's gate
-# (run_state.stow_core). SPIL-9's help here against a better gate there.
-func stow_open() -> bool:
-	return ctx != null and ctx.tuning != null and ctx.tuning.option("carry_core") == "on" and not ctx.run.companion.is_empty()
-
-
-func stow_core() -> Dictionary:
-	if not inside:
-		return _result(false, CLOSED)
-	if not stow_open():
-		return _result(false, LOCKED)
-	if not ctx.run.stow_core():
-		return _result(false, CAPPED if ctx.run.carried_core > 0 else CANT_AFFORD)
-	return _result(true, OK)
-
-
 # ---- Charge cells: the stockpile path ----
 
 # One record per ability slot that recharges (a slot with no cooldown has nothing to
