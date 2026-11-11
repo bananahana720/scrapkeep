@@ -117,7 +117,7 @@ func _evolutions() -> void:
 			for ingredient in EVOLUTIONS[synergy]:
 				_t.check("%s ingredient %s is in %s's common pool" % [synergy, ingredient, pilot], ingredient in pool, "")
 		var into: String = ""
-		for key in Synergies.ROWS:
-			if key == synergy:
-				into = String(Synergies.ROWS[key].get("evolution", {}).get("into", ""))
-		_t.check("%s still evolves" % synergy, into != "" and Parts.has(into), into)
+		for key in Synergies.EVOLUTIONS:
+			if Synergies.evolution_of(key) == synergy and Synergies.EVOLUTIONS[key] == EVOLUTIONS[synergy]:
+				into = key
+		_t.check("%s still evolves" % synergy, into != "" and Parts.EVOLVED.has(into), into)

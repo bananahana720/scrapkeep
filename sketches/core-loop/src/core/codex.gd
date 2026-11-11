@@ -188,6 +188,21 @@ func mark_discovered(id: String, at := Vector3.ZERO, participants: Array = ["pla
 	return first_time
 
 
+# A trick told when it wakes (its own banner and chime, build.gd set_completed) becomes known
+# like a discovery, without the discovery's card, chime or burst. Returns whether it was new.
+func mark_known(id: String, participants: Array = ["player"]) -> bool:
+	var first_time := not _discovered.has(id)
+	if first_time:
+		_discovered[id] = true
+		_save()
+	if not _run_seen.has(id):
+		_run_seen[id] = true
+		_run_discoveries.append(id)
+		_attempt_seen.append(id)
+		_log({"kind": "discovered", "category": category_of(id), "id": id, "participants": participants})
+	return first_time
+
+
 # An unnamed interaction fired: the first time in a run it logs and chimes. Returns
 # whether the saved Found list had never seen it.
 func mark_found(text: String, category := "world", participants: Array = ["player"]) -> bool:

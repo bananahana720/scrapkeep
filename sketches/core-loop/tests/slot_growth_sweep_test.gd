@@ -2,6 +2,8 @@ extends SceneTree
 
 const Synergies := preload("res://src/build/synergies.gd")
 const UpgradeTree := preload("res://src/core/upgrade_tree.gd")
+const BuildSheet := preload("res://src/build/build_sheet.gd")
+const Parts := preload("res://src/build/parts.gd")
 
 # SG14 slot growth sweep (W13-INTEGRATION-3.md SG14; comps/gunfire/weapons-and-inscriptions.md:93).
 # The arm is tools/build_sweep.gd --arm=slot_growth. Its rows are one per milestone (worlds one to
@@ -10,19 +12,28 @@ const UpgradeTree := preload("res://src/core/upgrade_tree.gd")
 #
 # (a) slot count matches the depth cap at each milestone, never decreases, and reaches
 #     UpgradeTree.DEPTHS at the last milestone.
-# (b) at every milestone with a pair available, the best paired set beats the best unpaired set by
-#     15% to 40%.
+# (b) at every milestone with a pair available, the best paired set is no weaker than the best
+#     set with that trick asleep, and beats it by at most 40%. The floor was 15% while tag pairs
+#     made synergies; since systems audit pass D a trick wakes on two pieces of one maker and is
+#     a rule change the power estimate mostly cannot see (Storm Lattice's chain jumps are the one
+#     it counts), so a floor above zero measured nothing the player meets. Re-setting a floor is
+#     the world 1 economy pass's call (docs/systems-audit/).
 # (c) the best set at the last milestone is at most 6x the best set at the first.
+# (d) every trick does something the player meets: two pieces of its maker, folded with the trick
+#     awake and again with it asleep (a table that leaves it out), give different builds (a
+#     transformer, pattern level, element trigger, dial or mod only the awake one has). This keeps
+#     the old 15% floor's intent, "a pair pays", at no extra wall-clock time; whether a trick is
+#     worth taking is a world 1 economy sim arm. A planted row with no effect must fail it.
 # Each band is written here, not read from the tool, so the test cannot pass by reading the tool's
 # own constants. Planted rows must make each gate fire, or the zero above proves nothing.
 
-const MARGIN_MIN := 0.15
+const MARGIN_MIN := 0.0
 const MARGIN_MAX := 0.40
 const RATIO_MAX := 6.0
 const NULL_MAX := 0.05
 const EPS := 1e-6
-# Five checks: schedule, margins, last-vs-first, pair availability, controls. Any other count fails.
-const EXPECTED_REPORTS := 5
+# Six checks: schedule, margins, last-vs-first, pair availability, controls, every trick acts. Any other count fails.
+const EXPECTED_REPORTS := 6
 
 var _failures := 0
 var _reports := 0
@@ -32,7 +43,7 @@ func _initialize() -> void:
 	var tool: Script = load("res://tools/build_sweep.gd")
 	if not tool.has_method("slot_growth_arm") or not tool.has_method("slot_growth_problems"):
 		# Red until the arm exists: every check reports, so the count still holds.
-		for label in ["schedule (a)", "pair margins (b)", "last vs first (c)", "pair availability", "controls fire"]:
+		for label in ["schedule (a)", "pair margins (b)", "last vs first (c)", "pair availability", "controls fire", "every trick acts (d)"]:
 			_report(label, false, "tools/build_sweep.gd has no slot_growth_arm yet")
 	else:
 		var rows: Array = tool.call("slot_growth_arm")
@@ -40,6 +51,7 @@ func _initialize() -> void:
 		_check_margins(rows)
 		_check_last_vs_first(rows)
 		_check_pair_availability(rows)
+		_check_tricks_act()
 		_check_controls(tool)
 	if _reports != EXPECTED_REPORTS:
 		_failures += 1
@@ -105,8 +117,9 @@ func _check_pair_availability(rows: Array) -> void:
 	var named := 0
 	for row in rows:
 		named = maxi(named, int(row.get("named_pairs", 0)))
-	_report("pair availability", named == Synergies.ROWS.size() and rows.size() > 0,
-		"%d of %d named synergies have a shown part and a partner in the legal pool" % [named, Synergies.ROWS.size()])
+	var called: int = Synergies.ROWS.keys().filter(func(id): return not Synergies.callout(id).is_empty()).size()
+	_report("pair availability", named == called and rows.size() > 0,
+		"%d of %d tricks with a callout pair have its first part and another piece of its maker in the legal pool" % [named, called])
 
 
 func _check_controls(tool: Script) -> void:
@@ -133,3 +146,52 @@ func _check_controls(tool: Script) -> void:
 func _row(world: int, slots: int, pair_ok: bool, margin: float, best: float) -> Dictionary:
 	return {"world": world, "slots": slots, "pair_available": pair_ok, "margin": margin, "best": best,
 		"named_pairs": Synergies.ROWS.size()}
+
+
+# A stage table that keeps every trick but one.
+class Without:
+	var skip := ""
+
+	func _init(trick_id: String) -> void:
+		skip = trick_id
+
+	func synergy_in_play(trick_id: String) -> bool:
+		return trick_id != skip
+
+
+# What the build hands the game: everything a trick's row can fold in.
+static func _build_of(sheet) -> String:
+	return var_to_str([sheet.transformers, sheet.patterns, sheet.triggers, sheet.dials, sheet.mods])
+
+
+# Two distinct class-neutral pieces of the trick's maker: its callout pair when it has one.
+static func _pieces(trick_id: String) -> Array:
+	var call := Synergies.callout(trick_id)
+	if not call.is_empty():
+		return [call["a"], call["b"]]
+	var out: Array = []
+	for part_id in Parts.ids():
+		if out.size() < 2 and Parts.maker_of(part_id) == Synergies.ROWS[trick_id]["maker"] and Parts.def(part_id).class_id == "":
+			out.append(part_id)
+	return out
+
+
+func _check_tricks_act() -> void:
+	var saved = Synergies.table
+	var idle: Array = []
+	for trick_id in Synergies.ROWS:
+		var pieces := _pieces(trick_id)
+		Synergies.table = null
+		var awake = BuildSheet.from_parts(pieces)
+		Synergies.table = Without.new(trick_id)
+		var asleep = BuildSheet.from_parts(pieces)
+		if not trick_id in awake.synergies or trick_id in asleep.synergies or _build_of(awake) == _build_of(asleep):
+			idle.append("%s %s" % [trick_id, pieces])
+	Synergies.table = saved
+	# Planted: a trick row with no effect, folded onto a real asleep build, changes nothing.
+	var planted = BuildSheet.from_parts(_pieces("wrecking_ball"))
+	var before := _build_of(planted)
+	planted.fold_row({"name": "Planted", "maker": "fleet_surplus", "tags": ["speed"], "text": ""})
+	var caught := _build_of(planted) == before
+	_report("every trick acts (d)", idle.is_empty() and caught,
+		"%d tricks folded awake and asleep; no difference for %s; planted empty row caught %s" % [Synergies.ROWS.size(), idle, caught])

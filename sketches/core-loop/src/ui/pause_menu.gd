@@ -209,9 +209,7 @@ func focused_id() -> String:
 
 
 func can_open() -> bool:
-	var offer = game.hud.hotwire_screen if game.hud != null else null
-	return game.flow.in_play() and not _screen_holds() and not game.notes_held() \
-		and not (offer != null and offer.is_open())
+	return game.flow.in_play() and not _screen_holds() and not game.notes_held()
 
 
 # menu_held, unless only the start card's tier choice holds it (workshop.gd card_holds_only).

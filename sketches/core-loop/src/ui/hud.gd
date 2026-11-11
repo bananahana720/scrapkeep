@@ -34,7 +34,6 @@ const DangerMark := preload("res://src/ui/danger_mark.gd")
 const BossPlate := preload("res://src/ui/boss_plate.gd")
 const ChainCounter := preload("res://src/ui/chain_counter.gd")
 const DamageNumbers := preload("res://src/presentation/damage_numbers.gd")
-const HotwireScreen := preload("res://src/ui/hotwire_screen.gd")
 const Companion := preload("res://src/core/companion.gd")
 const HullMark := preload("res://src/world/hull_mark.gd")
 
@@ -195,7 +194,6 @@ var _title_world := 0
 var _title_stage := 0
 var _cursed := false
 var why_callout
-var hotwire_screen
 # Where each prompt went this frame, for tests: prompt node to its screen rect.
 var prompt_rects := {}
 
@@ -366,7 +364,6 @@ func setup(game_ref) -> void:
 	add_child(part_name)
 	danger_mark = DangerMark.new()
 	add_child(danger_mark)
-	_mount_hotwire_screen()
 
 	_build_ach_toast()
 	_build_lore_pulse()
@@ -416,17 +413,6 @@ func setup(game_ref) -> void:
 		_health.clear()
 		_armor.clear())
 	layout(_screen_size())
-
-
-# The hot-wired Fit / Recycle screen (hotwire_screen.gd) is a modal like the pause menu, so it
-# sits beside it on the game, out of the HUD's play-view word budget; the HUD keeps the handle
-# and hides it outside play. It opens itself from build's hotwire_offered. Added at once, as the
-# pause menu is: a deferred add left the screen unparented when a test freed the game in the same
-# frame, and its labels then leaked at exit (2026-10-04, wave 6 gate 2 flagged 24 tests).
-func _mount_hotwire_screen() -> void:
-	hotwire_screen = HotwireScreen.new()
-	game.add_child(hotwire_screen)
-	hotwire_screen.setup(game)
 
 
 func _build_ach_toast() -> void:
@@ -1290,7 +1276,7 @@ func _process(delta: float) -> void:
 	var flow = game.flow
 	var playing: bool = flow.in_play()
 	place_prompts(size, playing)
-	for piece in [_objective, _status, _toasts, ability_bar, _health, _speed, _cogs, reticle, key_glyphs, first_steps, edge_markers, why_callout, hotwire_screen, damage_numbers]:
+	for piece in [_objective, _status, _toasts, ability_bar, _health, _speed, _cogs, reticle, key_glyphs, first_steps, edge_markers, why_callout, damage_numbers]:
 		piece.visible = playing
 	if _plate != null:
 		_plate.visible = playing

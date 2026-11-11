@@ -52,7 +52,9 @@ const OFFER_SIZE := 2
 # over unpaired margin band, and the last-over-first ratio.
 const SLOT_WORLDS := [1, 2, 3]
 const SLOT_RARITIES := ["common", "rare", "relic"]
-const SLOT_MARGIN_MIN := 0.15
+# 0 since systems audit pass D: maker tricks are rule changes power() mostly cannot see
+# (tests/slot_growth_sweep_test.gd has the reason); the world 1 economy pass re-sets a floor.
+const SLOT_MARGIN_MIN := 0.0
 const SLOT_MARGIN_MAX := 0.40
 const SLOT_RATIO_MAX := 6.0
 # The comps targets (comps/isaac/items-and-synergies.md:89): at least 30% of builds reach
@@ -63,7 +65,7 @@ const REPEAT_TARGET_PER_10K := 1.0
 # repeats are report-only. In-offer duplicates remain a structural invariant at zero.
 const EPS := 1e-6
 # SR4 round 3 ruling 2 (2026-10-11): these tag pairs are declared independent;
-# none has a Synergies.ROWS row or TAG_RULES rule. Include same-tag pairs because
+# none is the glyph pair of a Synergies.ROWS trick with a transformer. Include same-tag pairs because
 # different held parts can share a tag. SI4 moves this table beside the synergy rows
 # when the shot bits land. A pair absent from all three tables stays unspecified.
 const INDEPENDENT_PAIRS := [
@@ -265,14 +267,14 @@ static func print_stack_table(rows: Array) -> void:
 static func pair_outcome(a: String, b: String, independent_pairs: Array = INDEPENDENT_PAIRS) -> String:
 	if not a in PartDef.TAGS or not b in PartDef.TAGS:
 		return ""
+	# A trick's two glyphs name the pair its rule change is about (tricks wake on maker pieces
+	# since pass D, so tags no longer combine; this table keeps every pair accounted for).
 	for key in Synergies.ROWS:
 		var tags: Array = Synergies.ROWS[key]["tags"]
+		if tags.size() < 2 or Synergies.told_on_wake(key):
+			continue
 		if (tags[0] == a and tags[1] == b) or (tags[0] == b and tags[1] == a):
 			return "named:" + key
-	for key in Synergies.TAG_RULES:
-		var tags: Array = Synergies.TAG_RULES[key]["tags"]
-		if (tags[0] == a and tags[1] == b) or (tags[0] == b and tags[1] == a):
-			return "rule:" + key
 	for tags in independent_pairs:
 		if (tags[0] == a and tags[1] == b) or (tags[0] == b and tags[1] == a):
 			return "independent"
@@ -450,12 +452,13 @@ static func slot_growth_arm() -> Array:
 static func slot_growth_null(slots: int) -> Dictionary:
 	var pool := _legal_pool()
 	for key in Synergies.ROWS:
-		var row: Dictionary = Synergies.ROWS[key]
-		var shown: String = row["shown"]
+		var maker: String = Synergies.ROWS[key]["maker"]
+		var call := Synergies.callout(key)
+		var shown: String = call.get("a", "")
 		if not shown in pool:
 			continue
 		for partner in pool:
-			if partner == shown or not row["tags"][1] in Parts.tags_of(partner):
+			if partner == shown or Parts.maker_of(partner) != maker:
 				continue
 			if absf(_power([shown, partner]) - _power([shown])) > EPS:
 				continue
@@ -467,16 +470,16 @@ static func slot_growth_null(slots: int) -> Dictionary:
 	return {"row": "", "partner": "", "paired_dps": 0.0, "unpaired_dps": 0.0, "margin": -1.0}
 
 
-# The partner missing: keep the shown part (index 0 of a paired set) and every other held part
-# that does not carry the row's second tag, then refill to slots while the row stays unlive.
+# The partner missing: keep the first piece (index 0 of a paired set) and every other held part
+# not of the trick's maker, then refill to slots while the trick stays asleep.
 # With no pair row (no seed at this milestone), this is the no-pair legal set.
 static func _partner_missing(paired: Array, row_key: String, pool: Array, slots: int) -> Array:
 	if row_key == "" or paired.is_empty():
 		return _greedy([], pool, slots, true)
-	var tag: String = Synergies.ROWS[row_key]["tags"][1]
+	var maker: String = Synergies.ROWS[row_key]["maker"]
 	var kept: Array = []
 	for i in paired.size():
-		if i == 0 or not tag in Parts.tags_of(paired[i]):
+		if i == 0 or Parts.maker_of(paired[i]) != maker:
 			kept.append(paired[i])
 	return _substitute(kept, pool, paired.size(), row_key)
 
@@ -492,7 +495,7 @@ static func _substitute(seed: Array, pool: Array, size: int, row_key: String) ->
 			if part_id in held:
 				continue
 			var cand: Array = held + [part_id]
-			if Synergies.named_live(cand, Parts.tag_sets(cand), row_key):
+			if row_key in Synergies.active(Parts.maker_counts(cand)):
 				continue
 			var value := _power(cand)
 			if value > best + EPS:
@@ -516,16 +519,17 @@ static func _legal_pool() -> Array:
 	return pool
 
 
-# One seed per (named row, partner) where the shown part and a partner-tag part are both in pool.
+# One seed per (trick, partner) where the trick's first callout part and another piece of its
+# maker are both in pool.
 static func _pair_seeds(pool: Array) -> Array:
 	var seeds: Array = []
 	for key in Synergies.ROWS:
-		var row: Dictionary = Synergies.ROWS[key]
-		var shown: String = row["shown"]
+		var maker: String = Synergies.ROWS[key]["maker"]
+		var shown: String = Synergies.callout(key).get("a", "")
 		if not shown in pool:
 			continue
 		for partner in pool:
-			if partner != shown and row["tags"][1] in Parts.tags_of(partner):
+			if partner != shown and Parts.maker_of(partner) == maker:
 				seeds.append({"row": key, "seed": [shown, partner]})
 	return seeds
 
@@ -548,7 +552,7 @@ static func _greedy(seed: Array, pool: Array, slots: int, unpaired: bool) -> Arr
 			if part_id in held:
 				continue
 			var cand: Array = held + [part_id]
-			if unpaired and not Synergies.active(cand, Parts.tag_sets(cand)).is_empty():
+			if unpaired and not Synergies.active(Parts.maker_counts(cand)).is_empty():
 				continue
 			var value := _power(cand)
 			if value > best + EPS:

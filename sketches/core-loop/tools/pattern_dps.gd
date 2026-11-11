@@ -42,7 +42,7 @@ func _initialize() -> void:
 			definitions[id] = {"mods": part.mods, "patterns": part.patterns, "punch": part.punch,
 				"tags": Array(part.tags)}
 		print("pattern_dps proposal_input: " + JSON.stringify({"parts": definitions,
-			"pairs": BuildSweep.Synergies.ROWS, "rules": BuildSweep.Synergies.TAG_RULES,
+			"pairs": BuildSweep.Synergies.ROWS, "rules": {},
 			"seeds": BuildSweep._pair_seeds(BuildSweep._legal_pool())}))
 		quit(0)
 		return
