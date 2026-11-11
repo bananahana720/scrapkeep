@@ -86,7 +86,7 @@ Status: **playable** (in the world 1 build a player can reach it), **partial** (
 | 30 | Run flow: death, fast restart, save and resume at the stage entrance | playable | `src/core/flow.gd`, `run_store.gd` |
 | 31 | Respec of a tree branch by a special opportunity (Bible section 6) | spec only | no respec opportunity in `src/world/` (grep, 11 Nov); `build.gd` "respec" means a refold of stats |
 | 32 | Meta: profile, shift board rungs, pilot marks, cosmetics, codex, scrapbook, logbook | playable | `src/core/profile.gd`, `shift_board.gd`, `cosmetics.gd`, `codex.gd` |
-| 33 | Head starts (meta options) | partial: the page shows "0 of 4" and nothing opens one | `src/core/meta_options.gd` `open_earned` has no caller (re-checked 11 Nov) |
+| 33 | Head starts (meta options) | partial: four achievements earn them, but nothing shows or uses them | `src/core/meta_options.gd` (`open_earned` is called only from tests); `src/ui/meta_page.gd` is opened by no screen (re-checked 11 Nov) |
 | 34 | Achievements | partial: eleven are record-only | `src/core/achievements.gd` (Game systems audit, finding 5) |
 | 35 | Stage variants and whole-run modifiers, which are not the per-stage condition cards of row 12 (dam night shift, flume backwash, overtime, short crew) | spec only: four seeds on the shift board, "Nothing reads these yet" | `src/core/shift_board.gd` SEEDS |
 | 36 | Camp: Moss, the skee lane, the trial, the sandbox, the bay | playable | `src/world/camp_hub.gd`, `camp_*.gd` |

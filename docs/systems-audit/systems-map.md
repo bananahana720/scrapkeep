@@ -40,9 +40,9 @@ Pillar at stake: scrap becomes your build. Takes it: pass B (rates and prices). 
 
 ### 5. Promises that pay nothing (dead mechanics)
 
-Built pieces a player can see that do nothing yet: the "Head starts: 0 of 4" page (`src/core/meta_options.gd` `open_earned` has no caller, checked on this head); eleven record-only achievements (`src/core/achievements.gd`); four stage-variant and run-modifier seeds on the shift board ("Nothing reads these yet", `src/core/shift_board.gd`); carving, one of the four verbs, which sends no game event (`src/core/game_events.gd`), so sound, the tricks book and the crowd rules cannot answer it. Two more are spec only with no screen: the respec opportunity (BIBLE.md section 6) and the scrap-bot crew (TADR-011). The world 1 sitting's bar is zero placeholders.
+Built pieces a player can see that do nothing yet: head starts: the four `ach_meta_*` achievements (`achievements.gd`) pay head-start ids into the profile, but no screen opens `src/ui/meta_page.gd` (only `tests/meta_options_test.gd` builds it) and no shift board rung uses ShiftBoard's "A head start" line (corrected 11 Nov 19:12Z; an earlier read said the page showed "0 of 4", but no player can reach the page); eleven record-only achievements (`src/core/achievements.gd`); four stage-variant and run-modifier seeds on the shift board ("Nothing reads these yet", `src/core/shift_board.gd`); carving, one of the four verbs, which sends no game event (`src/core/game_events.gd`), so sound, the tricks book and the crowd rules cannot answer it. Two more are spec only with no screen: the respec opportunity (BIBLE.md section 6) and the scrap-bot crew (TADR-011). The world 1 sitting's bar is zero placeholders.
 
-Pillar at stake: a world worth crossing, and scrap becomes your build. Takes it: pass D (keep, cut or defer each; the cut of the head starts page is NEEDS ANDREW), pass C (the carve event).
+Pillar at stake: a world worth crossing, and scrap becomes your build. Takes it: pass D (keep, cut or defer each), pass C (the carve event).
 
 ## Before: how the systems connect today
 
@@ -74,7 +74,7 @@ flowchart LR
     SPIL["SPIL-9 modules"]
   end
   META["Camp board, marks, codex<br/>(no stats)"]
-  DEAD["Head starts 0/4<br/>11 record-only achievements<br/>4 unread shift seeds"]
+  DEAD["Head starts earned, never shown<br/>11 record-only achievements<br/>4 unread shift seeds"]
 
   ROLL --> FIGHT
   FIGHT -->|kills| SCRAP
@@ -138,7 +138,7 @@ flowchart LR
 | Detours pay more than the direct path: more scrap, cogs and part rungs in side spots than on the direct path | 2 | pass B | No (numbers), unless it needs a new reward kind |
 | Fold ten build systems into Path, Parts and Crew (a proposal; the Bible names Path, Relic and Parts) in what the player reads: one ladder, one set rule in place of three | 3 | D proposes, C builds feedback | Yes: it merges features |
 | Cogs scarce enough that the shelf is a choice; Moss weighs scrap for cogs; cores can be carried or spent | 4 | pass B | Yes for new conversions (a rule); no for rates |
-| Every promise pays: hide head starts until they fill, achievements pay a look or a tune | 5 | pass D | Yes for the cut of the head starts page |
+| Every promise pays: head starts either shown or their rewards re-pointed, achievements pay a look or a tune | 5 | pass D | No (the page is already unreachable) |
 
 ## Every system: inputs, outputs, resources, pillar
 
@@ -178,7 +178,7 @@ Pillars as named above. Verdict is pass A's first read: **keep**, **keep, connec
 | 30 | Run flow: death, restart, save and resume | death, quit | a fast restart, the same entrance on resume | everything run-local resets | mastery | keep (pass F hunts lost progress) |
 | 31 | Respec by a special opportunity | none (not built) | none | tree picks | build | defer; change request |
 | 32 | Meta: profile, shift board, marks, cosmetics, codex, scrapbook | finished runs, firsts, discoveries | items into the pool, paints, pages, codex lines | unlocks (no stats) | world | keep |
-| 33 | Head starts | none (nothing opens one) | a page that shows "0 of 4" | none | none today | cut (proposed) the page until it can fill (problem 5) |
+| 33 | Head starts | none (nothing opens one) | four achievements pay ids that nothing shows or uses | none | none today | keep, connect: re-point the four rewards (problem 5) |
 | 34 | Achievements | run summaries | eleven are record-only | none | world (discovery across runs) | keep, connect: each one pays something you can see (problem 5) |
 | 35 | Stage variants and run modifiers | none (four seeds, read by nothing) | none | none | world | defer; already planned for after the sitting |
 | 36 | Camp: Moss, skee, trial, sandbox, bay | between runs | practice, cosmetics, the shop's voice | none | mastery, world | keep |
@@ -186,7 +186,7 @@ Pillars as named above. Verdict is pass A's first read: **keep**, **keep, connec
 | 38 | Reactive music and sound | speed, threat, chains, size, boss phase | the band | none | mastery, world | keep, connect: it does not hear hull, items or sets (9 Nov audit, finding 8) |
 | 39 | Chain counter and tricks book | chains, stunts | a count, a book of firsts | none | mastery | keep |
 
-Every system feeds a pillar except the head starts page (row 33), which feeds none today and is marked "cut (proposed)".
+Every system feeds a pillar except head starts (row 33), which feeds none today until its rewards are re-pointed.
 
 ## How the evidence was made
 
@@ -231,6 +231,6 @@ Pass A is done when this page merges. B, C and D can start then.
 | Route and detours | A mapped; B and E next | Skipping wins on time with no loss | 8 of 8 runs cleared world 1; skipper 5.9 to 8.1 min, completionist 10.4 to 10.5 | Nothing |
 | Build layers | A mapped; D and C next | Ten build systems where the Bible names three | 3 to 6 parts and 7 to 15 panels a run | Nothing |
 | Cogs and cores | A mapped; B next | 1,332 to 1,956 cogs unspent; 0 cores in 8 runs | Ledger, 8 runs | Nothing |
-| Meta and promises | A mapped; D next | Head starts page shows 0 of 4 forever | Code read on 995f3dd2 | Nothing |
+| Meta and promises | A mapped; D next | Four head-start rewards pay into nothing visible | Code read on 995f3dd2 | Nothing |
 
 **One finding in plain words.** The game heals you for free if you avoid being hit for five seconds, at 6 hull a second. So anything priced in hull is priced in a few seconds of waiting, not in risk. That is why the keeper's gamble, which is meant to be the game's one real bet, does not feel like one, and why a heal for sale is worth nothing. The fix is either a different price (cogs, or max hull for a while) or regen that does not undo the bet. Which one is a design call, not a number.

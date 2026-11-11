@@ -1,6 +1,6 @@
 # Feature fit (pass D, world 1)
 
-**What this page says.** Of the 31 player-facing features in world 1 judged here, 26 stay (3 of them need connecting to the rest of the game and 1 needs a new price). Four should be merged into the item ladder so a player meets three build systems, not ten. One page (head starts) should be hidden until it can pay. Six are deferred: they are specs with nothing a player meets. Three new mechanics are proposed, each extending a rule already in the game, and each answers one of pass A's problems. The design thread's three mechanics (Heat, Reservoir, Called Shot) are already approved by Andrew and are logged, not re-judged. Every cut, merge and new mechanic here is a NEEDS ANDREW card in the thread; nothing is built by this pass.
+**What this page says.** Of the 31 player-facing features in world 1 judged here, 27 stay (4 of them need connecting to the rest of the game and 1 needs a new price). Four should be merged into the item ladder so a player meets three build systems, not ten. Head starts are earned but never shown; their four rewards should be re-pointed. Six are deferred: they are specs with nothing a player meets. Three new mechanics are proposed, each extending a rule already in the game, and each answers one of pass A's problems. The design thread's three mechanics (Heat, Reservoir, Called Shot) are already approved by Andrew and are logged, not re-judged. Every cut, merge and new mechanic here is a NEEDS ANDREW card in the thread; nothing is built by this pass.
 
 **Read at.** `stage/alpha-w37` head `995f3dd2`, 11 Nov 2026, with pass A's map ([systems-map.md](systems-map.md)) and its eight world 1 bot runs. Card: [SA-D in BACKLOG.md](../../BACKLOG.md#sa-d).
 
@@ -40,7 +40,7 @@
 | 28 | Camp: Moss, skee, trial, sandbox, bay | mastery, world | low | high: 3,071 lines | keep | Practice and the crew's home. |
 | 29 | Shift board, marks, cosmetics, codex, scrapbook | world | low | medium: `shift_board.gd` 322 lines, `camp_scrapbook.gd` | keep | Unlocks that widen the game, never a stat. |
 | 30 | Achievements | world | low | medium: 644 lines | keep, connect | Eleven are record-only (`achievements.gd` `RECORD_ONLY`); each should pay a look, a tune or a scrapbook sticker. |
-| 31 | Head starts page | none today | low, but it reads as broken | low: 243 lines | cut the page until it fills | `open_earned` has no caller; the page shows "0 of 4" forever. Keep the code; hide the page. |
+| 31 | Head starts | none today | none: a player never sees them | low: 243 lines | keep, connect | Corrected 11 Nov 19:12Z: the page is already unreachable (no screen opens `ui/meta_page.gd`), so Andrew's "hide it" (ruling de) is satisfied with no commit. The live problem: the four `ach_meta_*` achievements pay head-start ids that nothing shows. Re-point those four rewards to a look, a tune or a sticker, as row 30 does for the record-only ones (decided here; Andrew can overturn). |
 
 ### Deferred (specs with nothing a player meets)
 
@@ -112,7 +112,7 @@ Three cards in the project thread "Audit and improve game systems" (11 Nov 2026,
 
 1. Fold the build systems: merge relics and hot-wire into the part ladder, and named synergies and three-part sets into maker sets (rows 14, 15, 17, 18).
 2. Build the three new mechanics above: all three, Marked hull first, or none.
-3. Hide the head starts page until it can fill (row 31).
+3. Hide the head starts page (row 31). Since satisfied: the page was already unreachable; see row 31.
 
 Andrew chose the recommended option on all three on 11 Nov 2026 at 19:08Z; his answers are rulings dc, dd and de in [DECISIONS.md](../../project-guide/handoff/DECISIONS.md).
 
@@ -122,7 +122,7 @@ Who builds them is the coordinator's call, because the files belong to other thr
 
 | System group | Pass status | Top open issue | Last result | What changed |
 | --- | --- | --- | --- | --- |
-| Build systems | D done; Andrew chose all three | Ten build systems where three would do | 31 features judged: 26 keep (3 need connecting, 1 a new price), 4 merge, 1 page hidden; 6 specs deferred | Nothing in the game |
+| Build systems | D done; Andrew chose all three | Ten build systems where three would do | 31 features judged: 27 keep (4 need connecting, 1 a new price), 4 merge; 6 specs deferred | Nothing in the game |
 | Resources | D done | Hull free, cogs piling, cores missing | Three mechanics proposed, one per problem | Nothing |
 | Spec-only systems | D done | Crew and respec in the Bible, not the game | Four change requests | Nothing |
 
