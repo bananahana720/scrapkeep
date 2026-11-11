@@ -12,7 +12,7 @@ const Director := preload("res://src/world/director.gd")
 const Rules := preload("res://src/boss/boss_rules.gd")
 const Threat := preload("res://src/combat/threat_grammar.gd")
 const PRESSURE_ZERO := ["pack.lead_by_stage", "pack.crew_extra_by_stage", "pack.flank_by_stage", "ground.churn_by_stage", "hazard.boil_by_stage"]
-# Dials whose default is tuned for world 1 by wave 37 (ruling cu), one line a unit; each value is pinned in _init.
+# Dials whose default is tuned for world 1 by wave 37 (ruling cu), one line a unit; each value is pinned in _rules.
 const W37_TUNED := [
 	"mobs.chaser_speed_by_stage",  # D2
 	"warden.pulse_damage_by_stage",  # D6
