@@ -12,6 +12,7 @@ const Progress := preload("res://src/core/progress.gd")
 const GameEvents := preload("res://src/core/game_events.gd")
 const ScreenBusy := preload("res://src/ui/screen_busy.gd")
 const Hud := preload("res://src/ui/hud.gd")
+const TuneRows := preload("res://src/core/tune_rows.gd")
 const T := preload("res://tests/support/t.gd")
 const PilotBlocks := preload("res://tests/support/pilot_blocks.gd")
 
@@ -139,6 +140,11 @@ func _run() -> void:
 	_game.flow.choose_class(0)
 	# The cold open has the floor first (plates wait for a flourish's reading matter); this is about the plates.
 	_game.presentation.flourish.stop_all()
+	# 2026-11-11 (wave 36): every card waits in one line, oldest first (screen_busy.gd), so a record the
+	# band's ear reports around the Warden's break could land ahead of the Warden's earn. This is about
+	# the achievements' order, so the ear already knows every tune and raises no record here.
+	for id in TuneRows.ids():
+		_game.audio().knows_tune(String(id))
 	await _settle(0.5)
 	var hud = _game.hud
 	_game.events.achievement_earned.emit("first_win")
@@ -165,11 +171,15 @@ func _run() -> void:
 	if hud.hotwire_screen != null and hud.hotwire_screen.is_open():
 		hud.hotwire_screen.choose("recycle")
 		await _frames(3)
+	# 2026-11-11 (wave 36): a ball still rolling can pass a reward gate while the cards below come, and
+	# the gate's own crate and take then hold the one line. The gates close so the line is the earns alone.
+	_game.build.gates.close()
 	# The screen has to be quiet for two seconds after the fight (screen_busy.gd), then the cards come one
 	# at a time in the order earned: each is awaited, and a card that never shows fails the check.
 	_t.eq("P3-5 after the fight the first shows", await _next_toast(ScreenBusy.SETTLE), [Achievements.toast_text("first_event")])
 	_t.eq("P3-5 then the next, in order", await _next_toast(Hud.ACH_TOTAL), [Achievements.toast_text("full_rack")])
 	_t.eq("P3-5 the Warden's own earn comes last", await _next_toast(Hud.ACH_TOTAL + ScreenBusy.SETTLE), [Achievements.toast_text("warden_broken")])
+	_t.check("P3-5 no record card joined that line", hud.tune_waiting().is_empty(), "%s" % [hud.tune_waiting()])
 	# 2026-10-05 (wave 14, prog-G10): the page after a won run's bus facts, on its own bus.
 	var bus = GameEvents.new()
 	_game.add_child(bus)
