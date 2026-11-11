@@ -85,7 +85,7 @@ static func board_lines(profile, sitting := false) -> PackedStringArray:
 	var out := PackedStringArray()
 	out.append("SHIFT BOARD  %d of %d stamped" % [read["stamped"], read["shown"]])
 	if read["next"] != "":
-		out.append("Next: %s. %s %s." % [read["next_name"], read["next_text"], read["next_pays"]])
+		out.append("Next is %s. %s %s." % [read["next_name"], read["next_text"], read["next_pays"]])
 	else:
 		out.append("Board full. Moss wants a bigger board.")
 	var holes := "".join(range(int(read["holes_max"])).map(func(i): return "●" if i < int(read["holes"]) else "○"))
