@@ -41,11 +41,11 @@ const SETS := {
 static var _maker_of := {}
 
 
-# The maker of an authored part row; "" for a generated recipe, an Evolved part, a burden or
-# any row without a maker. Relics and actives name theirs in their own rows.
+# The maker of a part row; "" for a generated recipe, an Evolved part, a burden or any row
+# without a maker. A relic's part row carries its relic's maker; actives name theirs in their rows.
 static func maker_of(part_id: String) -> String:
 	if not _maker_of.has(part_id):
-		_maker_of[part_id] = String(Parts.rows().get(part_id, {}).get("maker", ""))
+		_maker_of[part_id] = String(Parts.row(part_id).get("maker", "")) if Parts.has(part_id) else ""
 	return _maker_of[part_id]
 
 
@@ -53,15 +53,13 @@ static func relic_maker(relic_id: String) -> String:
 	return String(Relics.row(relic_id).get("maker", ""))
 
 
-# maker -> distinct pieces held. `parts` is the run's part list, `relics` its slot -> relic id
-# map, `extra` more makers to count once each (the racked active's).
-static func counts(parts: Array, relics: Dictionary = {}, extra: Array = []) -> Dictionary:
+# maker -> distinct pieces held. `parts` is the run's part list (relics are parts in it),
+# `extra` more makers to count once each (the racked active's).
+static func counts(parts: Array, extra: Array = []) -> Dictionary:
 	var seen := {}
 	var out := {}
 	for part_id in parts:
 		_count(out, seen, "part:" + String(part_id), maker_of(String(part_id)))
-	for slot in relics:
-		_count(out, seen, "relic:" + String(relics[slot]), relic_maker(String(relics[slot])))
 	for i in extra.size():
 		_count(out, seen, "extra:%d" % i, String(extra[i]))
 	return out

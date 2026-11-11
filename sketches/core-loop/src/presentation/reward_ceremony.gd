@@ -191,10 +191,7 @@ static func card_words(part_id: String) -> String:
 
 # The relic a part stands for, or "" for an ordinary part: a relic card names the relic.
 static func relic_of(part_id: String) -> String:
-	for id in Relics.ids():
-		if Relics.part_of(id) == part_id:
-			return String(id)
-	return ""
+	return Relics.relic_of(part_id)
 
 
 static func icon_of(part_id: String) -> String:

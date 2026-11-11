@@ -250,9 +250,9 @@ func _check_gem_colours() -> void:
 	var ok := true
 	var seen := []
 	for i in _cache.offers.size():
-		# 2026-10-04: a cache may offer a relic (RL2); resolve its rarity the way cracked_cache.gd does.
+		# A cache may offer a relic (RL2), which is a part on the relic rung.
 		var offer: String = _cache.offers[i]
-		var d: Resource = Parts.def(Relics.part_of(offer) if Relics.has(offer) else offer)
+		var d: Resource = Parts.def(offer)
 		var rarity: String = d.rarity if d != null else "common"
 		var gem: Color = _cache._pedestals[i]["gem"].material_override.albedo_color
 		seen.append(rarity)

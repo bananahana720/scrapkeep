@@ -6,6 +6,7 @@ const Synergies := preload("res://src/build/synergies.gd")
 const Items := preload("res://src/build/items.gd")
 const ItemGen := preload("res://src/build/item_gen.gd")
 const Nemesis := preload("res://src/combat/nemesis.gd")
+const Relics := preload("res://src/build/relics.gd")
 
 # The parts catalogue (TADR-008): one row per part, turned into typed PartDef resources
 # once and cached. Each row has a verb (what it makes you do), punch (flat per-hit
@@ -474,6 +475,8 @@ static func _base_row(part_id: String) -> Dictionary:
 		return _settled(EVOLVED[part_id])
 	if is_burden(part_id):
 		return _settled(_burden_spec(part_id))
+	if Relics.is_relic(part_id):
+		return Relics.part_row(part_id)
 	var generated := ItemGen.generated_row(part_id)
 	return _settled(generated) if not generated.is_empty() else generated
 
@@ -619,7 +622,7 @@ static func def(part_id: String) -> Resource:
 
 
 static func has(part_id: String) -> bool:
-	return rows().has(part_id) or EVOLVED.has(part_id) or is_burden(part_id) or ItemGen.is_generated(part_id) and not ItemGen.parse(part_id).is_empty()
+	return rows().has(part_id) or EVOLVED.has(part_id) or is_burden(part_id) or Relics.is_relic(part_id) or ItemGen.is_generated(part_id) and not ItemGen.parse(part_id).is_empty()
 
 
 # The authored pool, catalogue first. Generated recipes are unbounded and not listed.

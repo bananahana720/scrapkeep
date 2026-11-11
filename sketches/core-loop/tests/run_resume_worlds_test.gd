@@ -83,7 +83,7 @@ func _state() -> Dictionary:
 	var run = _game.run
 	return {
 		"stage": run.stage, "world": run.world, "hp": run.hp, "parts": Array(run.parts.duplicate()),
-		"relics": run.relics.duplicate(), "picks": Array(_game.player.tree.picks.duplicate()),
+		"relics": Relics.held(run.parts), "picks": Array(_game.player.tree.picks.duplicate()),
 		"spent": run.retries_spent.duplicate(), "save": run.death_save_spent,
 	}
 
@@ -162,8 +162,10 @@ func _run() -> void:
 	# (a) world 2's entrance.
 	await _start_run()
 	_game.run.add_part("boost_coil", "test")
-	var relic_ids: Array = Relics.eligible(_game.run.class_id(), _game.run.relics)
-	var relic_added: bool = not relic_ids.is_empty() and _game.run.add_relic(relic_ids[0], "test")
+	var relic_ids: Array = Relics.eligible(_game.run.class_id(), Relics.held(_game.run.parts))
+	if not relic_ids.is_empty():
+		_game.run.add_part(Relics.part_of(relic_ids[0]), "test")
+	var relic_added: bool = not relic_ids.is_empty() and not Relics.held(_game.run.parts).is_empty()
 	_game.run.damage(12.0, "test")
 	var picked := _pick()
 	_game.run.retries_spent[1] = 1

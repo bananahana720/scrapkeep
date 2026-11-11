@@ -1714,9 +1714,9 @@ func _synergy_hit(enemy: Node3D, force: float, synergy_id: String) -> void:
 
 # ---- RL2: relics on the kit. -------------------------------------------------------------
 # What each slot's held relic did to the kit: slot to {relic, prev (the ability id the
-# swap replaced), swapped, cooldown, charges}. sync_relics() makes the kit match
-# run.relics from this record, so a gain, a stage entry, a retry and a loaded entrance
-# all land on the same kit and none applies a row twice.
+# swap replaced), swapped, cooldown, charges}. sync_relics() makes the kit match the relics
+# in the part list (Relics.held) from this record, so a gain, a stage entry, a retry and a
+# loaded entrance all land on the same kit and none applies a row twice.
 var _relic_fx := {}
 
 
@@ -1728,9 +1728,11 @@ func sync_relics() -> void:
 	var abilities = ctx.player.get("abilities") if ctx.player != null else null
 	if abilities == null:
 		return
+	_adopt_saved_relics()
+	var held := Relics.held(ctx.run.parts)
 	var touched := false
 	for slot in AbilityState.SLOTS:
-		var want: String = ctx.run.relics.get(slot, "")
+		var want: String = held.get(slot, "")
 		if not Relics.has(want):
 			want = ""
 		var fx: Dictionary = _relic_fx.get(slot, {})
@@ -1744,6 +1746,20 @@ func sync_relics() -> void:
 		touched = true
 	if touched and ctx.player.has_method("_refit"):
 		ctx.player._refit()
+
+
+# A save from before relics joined the part list holds them in RunState.relics, slot to relic
+# id. They move into the part list once, silently (no part_gained, so no second reveal), and
+# the old map is emptied so a later save writes them in one place only.
+func _adopt_saved_relics() -> void:
+	if ctx.run.relics.is_empty():
+		return
+	for slot in ctx.run.relics:
+		var part_id := Relics.part_of(String(ctx.run.relics[slot]))
+		if part_id != "" and not part_id in ctx.run.parts:
+			ctx.run.parts.append(part_id)
+	ctx.run.relics.clear()
+	recompute()
 
 
 func _relic_apply(abilities, slot: String, relic_id: String) -> Dictionary:

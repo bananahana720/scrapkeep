@@ -30,10 +30,10 @@ func run(t) -> void:
 	t.eq("live at three", MakerSets.live_bonuses(MakerSets.counts(["tracer_round", "magnet_coil", "rivet_seam"])), ["rounded_up"])
 	t.eq("not live at two", MakerSets.live_bonuses(MakerSets.counts(["tracer_round", "magnet_coil"])), [])
 	t.eq("Moss at two", MakerSets.live_bonuses(MakerSets.counts(["fast_hands", "cell_weapon"])), ["packed_a_spare"])
-	t.eq("a relic counts", MakerSets.counts(["tracer_round", "magnet_coil"], {"special": "brace_pin"}), {MakerSets.FLEET: 3})
-	t.eq("the racked active counts", MakerSets.counts(["quick_spool", "cap_relay"], {}, [ActiveDefs.row(ActiveDefs.SCRAP_ROCKET)["maker"]]),
+	t.eq("a relic counts", MakerSets.counts(["tracer_round", "magnet_coil", Relics.part_of("brace_pin")]), {MakerSets.FLEET: 3})
+	t.eq("the racked active counts", MakerSets.counts(["quick_spool", "cap_relay"], [ActiveDefs.row(ActiveDefs.SCRAP_ROCKET)["maker"]]),
 		{MakerSets.SPILLWAY: 3})
-	t.eq("unknown ids are ignored", MakerSets.counts(["gen:weapon:rare:arc:on_hit", "no_such_part"], {"x": "no_relic"}, ["nobody"]), {})
+	t.eq("unknown ids are ignored", MakerSets.counts(["gen:weapon:rare:arc:on_hit", "no_such_part", "relic:no_relic"], ["nobody"]), {})
 	var all_sets := ["tracer_round", "magnet_coil", "rivet_seam", "quick_spool", "cap_relay", "reserve_tank",
 		"pin_setter", "ten_pin", "clean_break", "light_frame", "low_rider", "slipstream", "re_rack", "brace_frame",
 		"ring_wave", "chain_arc", "static_burr", "synergy_lens", "fast_hands", "momentum_thief"]
