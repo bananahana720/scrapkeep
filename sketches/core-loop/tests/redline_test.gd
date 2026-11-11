@@ -29,9 +29,6 @@ func _check(label: String, ok: bool, detail: String) -> void:
 
 func _initialize() -> void:
 	_rules()
-	_game = Game.new()
-	_game.test_mode = true
-	root.add_child(_game)
 	_run()
 
 
@@ -103,22 +100,68 @@ func _enemy(offset: Vector3) -> Node3D:
 	return enemy
 
 
-func _run() -> void:
+func _start(flags: PackedStringArray) -> void:
+	_game = Game.new()
+	_game.test_mode = true
+	root.add_child(_game)
 	while _game.flow == null:
 		await physics_frame
 	_game.ctx.calm = true
 	_player = _game.player
 	_combat = _game.ctx.spawner
 	_player.source = Intent.Scripted.new()
+	_player.tuning.apply_args(flags)
 	_game.flow.press_start()
 	_game.flow.choose_class(0)
 	await _sim(0.6)
+
+
+# The run log's last line after a write.
+func _log_line() -> Dictionary:
+	var log = _game.run_log
+	log._write("died")
+	var lines := FileAccess.get_file_as_string(log.storage_dir.path_join(log.LOG_FILE)).strip_edges().split("\n")
+	var parsed = JSON.parse_string(lines[lines.size() - 1]) if lines.size() > 0 else null
+	return parsed if parsed is Dictionary else {}
+
+
+func _run() -> void:
+	await _start(PackedStringArray())
+	_check("flag off by default", _player.redline.mode == Redline.OFF, "mode %s" % _player.redline.mode)
+	var off_line := _log_line()
+	_check("a flag-off log line has no redline key", not off_line.is_empty() and not off_line.has("redline"),
+		"keys %d, redline %s" % [off_line.size(), off_line.has("redline")])
+	_game.queue_free()
+	await process_frame
+
+	await _start(PackedStringArray(["--heat=on"]))
+	var red: Redline = _player.redline
+	_check("the flag sets the mode at the run's start", red.mode == Redline.ON, "mode %s" % red.mode)
+
+	# The player's tick fills it at blazing; a near miss at speed is a skim.
+	var ball: Vector3 = _player.ball_position()
+	var blazing: float = _player.tuning.tier_cruise() * 2.6
+	_player.reset_to(_game.ctx.terrain.drop_point(ball.x, ball.z, 1.0), Vector3(blazing, 0.0, 0.0))
+	await _sim(0.15)
+	_check("the player's tick fills it", red.value > 0.0 and red.blazing_s > 0.0, "value %.1f, blazing %.2f s" % [red.value, red.blazing_s])
+	var skims := red.skims
+	_game.ctx.events.near_miss.emit("test", _player.ball_position())
+	_check("a near miss at speed skims", red.skims == skims + 1, "skims %d to %d" % [skims, red.skims])
+	_check("a heat-on log line has the counts", _log_line().has("redline"), "redline key")
+
+	# A real ram at redline detonates through the player's contact (a plain chaser, lighter than the ball).
+	var target := _enemy(Vector3(8.0, 0.0, 0.0))
+	var start: Vector3 = _game.ctx.terrain.drop_point(target.global_position.x - 8.0, target.global_position.z, 1.0)
+	_player.reset_to(start, Vector3(blazing, 0.0, 0.0))
+	red.value = Redline.MAX
+	var before_det := red.detonations
+	await _sim(1.0)
+	_check("a ram at redline detonates", red.detonations == before_det + 1, "detonations %d to %d, value %.1f" % [before_det, red.detonations, red.value])
+	target.queue_free()
+
 	_player.set_physics_process(false)
 	_game.ctx.events.player_hit.connect(func(amount: float, source: String): _hits.append([amount, source]))
-	_check("flag off by default", _player.redline.mode == Redline.OFF, "mode %s" % _player.redline.mode)
-
-	var red: Redline = _player.redline
-	red.set_mode(Redline.ON)
+	red.value = 0.0
 	_hits.clear()
 	_game.ctx.run.damage(10.0, "test")
 	red.value = Redline.HOT_AT
@@ -133,22 +176,23 @@ func _run() -> void:
 	var near_before: float = near.hp
 	var far_before: float = far.hp
 	red.value = Redline.MAX
-	var blasts := []
-	red.detonated.connect(func(at: Vector3, force: float): blasts.append(force))
-	# The ball stands where the test left it, in the air; the blast's centre is on the ground under it.
+	# The ball stands where the test left it, perhaps in the air; the blast's centre is on the ground under it.
 	var centre := Vector3(_player.ball_position().x, near.global_position.y, _player.ball_position().z)
-	_player._redline_blast(centre, red.spend("ram", centre, 40.0))
-	_check("the blast strikes inside its radius only", near.hp < near_before and is_equal_approx(far.hp, far_before)
-			and blasts.size() == 1 and red.value == 0.0,
-		"near lost %.1f, far lost %.1f, blasts %d" % [near_before - near.hp, far_before - far.hp, blasts.size()])
+	red.spend("ram", centre, 40.0)
+	_check("a spend blasts inside its radius only", near.hp < near_before and is_equal_approx(far.hp, far_before)
+			and red.value == 0.0 and red.detonations == before_det + 2,
+		"near lost %.1f, far lost %.1f, detonations %d" % [near_before - near.hp, far_before - far.hp, red.detonations])
 
 	_hits.clear()
+	near_before = near.hp
 	red.value = Redline.MAX
-	red.tick(Redline.COOK_OFF_S + 0.1, SpeedTier.CRUISE, _player.ball_position(), 20.0)
+	near.global_position = centre + Vector3(2.0, 0.0, 0.0)
+	red.tick(Redline.COOK_OFF_S + 0.1, SpeedTier.CRUISE, centre, 0.0)
 	var cook: Array = _hits.filter(func(h: Array): return h[1] == Redline.COOK_OFF_SOURCE)
 	_check("a cook-off takes its share of the hull", cook.size() == 1
 			and is_equal_approx(float(cook[0][0]), _game.ctx.run.max_hp * Redline.COOK_OFF_SELF_HULL),
 		"cook-off hits %s, max hull %.1f" % [str(cook), _game.ctx.run.max_hp])
+	_check("a cook-off at rest still blasts", near.hp < near_before, "near lost %.1f" % (near_before - near.hp))
 
 	near.queue_free()
 	far.queue_free()

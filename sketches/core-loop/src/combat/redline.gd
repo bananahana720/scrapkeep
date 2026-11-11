@@ -24,6 +24,8 @@ const FILL_BLAZING_PER_S := 12.0
 const FILL_SKIM := 25.0
 const DRAIN_PER_S := 20.0
 const HOT_AT := 50.0
+# Where the shell starts to show it (band 1, the rim's first warmth).
+const WARM_AT := MAX * 0.25
 const HOT_DAMAGE_TAKEN := 1.5
 const BLAST_RADIUS := 7.0
 # The blast strikes every enemy inside the radius as a slam at this many times the force of
@@ -31,6 +33,8 @@ const BLAST_RADIUS := 7.0
 const BLAST_FORCE := 2.0
 const COOK_OFF_S := 4.0
 const COOK_OFF_FORCE := 0.5
+# A cook-off at rest still blows: it reads the ball's speed or this, whichever is more.
+const COOK_OFF_MIN_SPEED := 14.0
 const COOK_OFF_SELF_HULL := 0.10
 const COOK_OFF_SOURCE := "heat_cook_off"
 # A skim only counts when the ball is rolling: no pay for the stall (ruling cu).
@@ -80,13 +84,25 @@ static func band_of(v: float) -> int:
 		return 3
 	if v >= HOT_AT:
 		return 2
-	if v >= MAX * 0.25:
+	if v >= WARM_AT:
 		return 1
 	return 0
 
 
 func band() -> int:
 	return band_of(value)
+
+
+# How warm the shell shows, 0 below WARM_AT (or with the flag not on) to 1 at MAX.
+func warmth() -> float:
+	if not on() or value < WARM_AT:
+		return 0.0
+	return value / MAX
+
+
+# 0 at WARM_AT to 1 at HOT_AT: how far the shell has turned from its first warmth to hot.
+func hot_share() -> float:
+	return clampf((value - WARM_AT) / (HOT_AT - WARM_AT), 0.0, 1.0)
 
 
 func hot() -> bool:
@@ -118,7 +134,7 @@ func tick(delta: float, tier: int, at := Vector3.ZERO, force := 0.0) -> void:
 		if waited >= COOK_OFF_S:
 			_set_value(0.0)
 			cook_offs += 1
-			cooked_off.emit(at, force * COOK_OFF_FORCE)
+			cooked_off.emit(at, maxf(force, COOK_OFF_MIN_SPEED) * COOK_OFF_FORCE)
 		return
 	if tier >= SpeedTier.BLAZING:
 		_set_value(value + FILL_BLAZING_PER_S * delta)

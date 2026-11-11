@@ -223,6 +223,7 @@ func setup(tuning_ref, events_ref, spawn: Vector3) -> void:
 	events.stage_entered.connect(func(_stage: int, _retry: bool): redline.clear())
 	events.near_miss.connect(func(_kind: String, at: Vector3): redline.skim(state.tier, at))
 	redline.cooked_off.connect(_redline_blast)
+	redline.detonated.connect(_redline_blast)
 	_smashes = {"arc": _smash_arc, "skid": _smash_skid, "demo": _smash_demo, "rend": _smash_rend, "stamp": _smash_stamp}
 	events.run_started.connect(func(class_id: String):
 		fit_class(ClassDef.by_id(class_id))
@@ -1413,7 +1414,7 @@ func _on_slammed(at: Vector3, speed: float, flatness: float) -> void:
 		var hits := _push_enemies(at, slam_radius(), Augments.SLAM_KNOCK * strength, SLAM, Contact.heft_knock(heft()))
 		if hits > 0:
 			events.drop_landed.emit(hits)
-			_redline_blast(at, redline.spend(SLAM, at, Augments.SLAM_KNOCK * strength))
+			redline.spend(SLAM, at, Augments.SLAM_KNOCK * strength)
 		else:
 			events.missed_drop.emit()
 	if _smashes.has(kit.smash_flavour):
@@ -1546,10 +1547,9 @@ func _on_pylon_planted(at: Vector3, banked_speed: float) -> void:
 	_push_enemies(at, Augments.MOUNT_REPEL_RADIUS, Augments.MOUNT_REPEL_KNOCK * tree.knob("plant_repel"), "")
 
 
-# knock_mult scales the shove only; the strike keeps force, so damage is unchanged.
-# A redline shell's blast (redline.gd): every enemy inside its radius takes a slam at `force`
-# with the slam's falloff, through the same push and strike path, so the ring drawn, the knock
-# and the damage are one shape. A zero force (no blast) does nothing.
+# A redline shell's blast (redline.gd detonated and cooked_off): every enemy inside its radius
+# takes a slam at `force` with the slam's falloff, through the same push and strike path, so the
+# ring drawn, the knock and the damage are one shape.
 func _redline_blast(at: Vector3, force: float) -> void:
 	if force <= 0.0:
 		return
@@ -1557,6 +1557,7 @@ func _redline_blast(at: Vector3, force: float) -> void:
 	_push_enemies(at, Redline.BLAST_RADIUS, force, SLAM, Contact.heft_knock(heft()))
 
 
+# knock_mult scales the shove only; the strike keeps force, so damage is unchanged.
 func _push_enemies(at: Vector3, radius: float, force: float, kind: String, knock_mult := 1.0) -> int:
 	var hits := 0
 	for enemy in get_tree().get_nodes_in_group("enemy"):
@@ -1623,7 +1624,7 @@ func _on_enemy_touched(enemy: Node3D, normal: Vector3) -> void:
 		enemy.knock(away * 0.6 + Vector3.DOWN * 0.2, 7.0 * _landing_mult)
 		shockwave.emit(enemy.global_position, 0.6)
 		struck.emit(enemy, STOMP, _landing_force(STOMP, -before.y))
-		_redline_blast(ball_position(), redline.spend(STOMP, ball_position(), _landing_force(STOMP, -before.y)))
+		redline.spend(STOMP, ball_position(), _landing_force(STOMP, -before.y))
 	elif _rebounds_off(enemy) and before.dot(normal) < -Contact.MIN_CLOSING:
 		_rebound(enemy, normal, before, planar, away)
 	elif SpeedTier.of(planar, tuning.tier_cruise()) >= SpeedTier.CRUISE:
@@ -1635,7 +1636,7 @@ func _on_enemy_touched(enemy: Node3D, normal: Vector3) -> void:
 		# Planar speed, the same measure punch_now and the crush check use (one query).
 		struck.emit(enemy, RAM, _landing_force(RAM, planar))
 		_bowl_if_killed(enemy, away, shove)
-		_redline_blast(ball_position(), redline.spend(RAM, ball_position(), _landing_force(RAM, planar)))
+		redline.spend(RAM, ball_position(), _landing_force(RAM, planar))
 	if landing:
 		_finish_landing(enemy, closing)
 	smash_landing = null
@@ -1712,4 +1713,5 @@ func _rebound(enemy: Node3D, normal: Vector3, before: Vector3, planar: float, aw
 	if SpeedTier.of(planar, tuning.tier_cruise()) >= SpeedTier.CRUISE:
 		struck.emit(enemy, RAM, _landing_force(RAM, planar))
 		_bowl_if_killed(enemy, away, Contact.ram_knock(Augments.RAM_KNOCK, planar, heft(), _landing_mult))
+		redline.spend(RAM, ball_position(), _landing_force(RAM, planar))
 	events.enemy_rebounded.emit(enemy, out.length())

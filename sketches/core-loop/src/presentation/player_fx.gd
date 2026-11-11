@@ -482,10 +482,10 @@ func _wire() -> void:
 	# Called Shot (build/called_shot.gd): a firm tap at the call; a met break holds the frame.
 	events.world_fact.connect(func(kind: String, at: Vector3):
 		if kind == "shot_called":
-			rumble(0.0, 0.5, 0.08)
+			_rumble(0.0, 0.5, 0.08)
 		elif kind == "call_met":
 			impact_frame(at, 1.0)
-			rumble(0.0, 1.0, 0.25))
+			_rumble(0.0, 1.0, 0.25))
 
 
 func _pilot_id() -> String:
@@ -1300,7 +1300,10 @@ func _draw_overdrive(delta: float) -> void:
 	if lit > 0.01:
 		_rim.global_position = ball
 		_rim_mat.set_shader_parameter("heat", lit)
-		_rim_mat.set_shader_parameter("rim", OVERDRIVE_RIM if heat >= shell else shell_color(player.redline.value))
+		# A hot shell keeps its own colour over overdrive's: the risk reads first.
+		var red = player.get("redline")
+		var shell_wins: bool = shell > 0.0 and (heat < shell or red.hot())
+		_rim_mat.set_shader_parameter("rim", shell_color(red) if shell_wins else OVERDRIVE_RIM)
 	if on:
 		_rim_mat.set_shader_parameter("pilot", player.class_color())
 		if speed > 1.0:
@@ -1331,16 +1334,13 @@ var _shell_band := 0
 # 0 to SHELL_RIM, how bright the rim burns for the shell's heat; 0 when the flag is not on.
 func shell_heat() -> float:
 	var redline = player.get("redline")
-	if redline == null or not redline.on() or redline.value < Redline.MAX * 0.25:
-		return 0.0
-	return SHELL_RIM * redline.value / Redline.MAX
+	return SHELL_RIM * redline.warmth() if redline != null else 0.0
 
 
-static func shell_color(value: float) -> Color:
-	if value >= Redline.MAX:
+static func shell_color(redline) -> Color:
+	if redline.redline():
 		return SHELL_COLORS[2]
-	var t := clampf((value - Redline.MAX * 0.25) / (Redline.HOT_AT - Redline.MAX * 0.25), 0.0, 1.0)
-	return SHELL_COLORS[0].lerp(SHELL_COLORS[1], t)
+	return SHELL_COLORS[0].lerp(SHELL_COLORS[1], redline.hot_share())
 
 
 func _wire_redline() -> void:
@@ -1349,8 +1349,8 @@ func _wire_redline() -> void:
 		return
 	redline.detonated.connect(_on_redline_blast)
 	redline.cooked_off.connect(_on_redline_blast)
-	redline.skimmed.connect(func(_at: Vector3): rumble(0.6, 0.0, 0.06))
-	redline.redlined.connect(func(): rumble(0.25, 0.0, Redline.COOK_OFF_S))
+	redline.skimmed.connect(func(_at: Vector3): _rumble(0.6, 0.0, 0.06))
+	redline.redlined.connect(func(): _rumble(0.25, 0.0, Redline.COOK_OFF_S))
 	redline.changed.connect(func(_value: float, band: int):
 		# The redline buzz stops when the shell leaves redline without a blast (a stage change).
 		if _shell_band == 3 and band < 3:
@@ -1365,11 +1365,14 @@ func _on_redline_blast(at: Vector3, _force: float) -> void:
 	impact_frame(at, 1.0)
 	if vfx != null:
 		vfx.glyph("redline_blast", at + Vector3.UP * 0.3, 1.0, Redline.BLAST_RADIUS, 0.35, Vector3.UP, "ring", BLAST_RING)
-	rumble(0.4, 1.0, 0.18)
+	_rumble(0.4, 1.0, 0.18)
 
 
-# The pad's two motors (weak: the high buzz, strong: the low thump) on every connected pad.
-static func rumble(weak: float, strong: float, seconds: float) -> void:
+# The pad's two motors (weak: the high buzz, strong: the low thump) on every connected pad;
+# reduced motion keeps the pad still. Moves to juice.gd's rumble rows once that lands.
+func _rumble(weak: float, strong: float, seconds: float) -> void:
+	if reduced_motion:
+		return
 	for pad in Input.get_connected_joypads():
 		Input.start_joy_vibration(pad, weak, strong, seconds)
 
