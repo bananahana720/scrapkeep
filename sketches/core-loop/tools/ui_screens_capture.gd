@@ -216,10 +216,11 @@ func _seed_profile() -> void:
 			profile.unlock_world(str(row["id"]))
 		for id in Cosmetics.ids():
 			profile.unlock_cosmetic(id)
-		var at := 100.0
+		# Unix time, one day apart from 1 Nov 2026, so the board's date column reads as a played save's would.
+		var at := 1793491200.0
 		for id in Achievements.ids():
 			profile.earn(id, at)
-			at += 37.0
+			at += 86400.0
 		for id in TuneRows.ids():
 			profile.hear_tune(id)
 		for stat in ["runs", "wins", "kills", "deaths", "stages_cleared", "time", "wardens_seen"]:
