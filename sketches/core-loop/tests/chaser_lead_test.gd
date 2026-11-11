@@ -17,6 +17,7 @@ const T := preload("res://tests/support/t.gd")
 #   - the lead fades out as the ball reaches cruise (pack.lead_cruise_by_stage, 0 on world 1): a ball rolling
 #     straight at a chaser at FAST is past it before the lunge, as before wave 37, and with the fade off (the
 #     planted case) the chaser winds up early and meets it. The stop-tax line F2 is what this holds.
+#     The planted case is read on a chaser at its own 4.8 m/s; check 21 reads the fade at the stage's chaser speed.
 # The ball is a roller on rails, so each pass is the same geometry: the chaser stands, the roller crosses GAP
 # metres off its nose. One lunge is read per pass; a chaser running a slow ball down from behind is not the lead.
 
@@ -76,7 +77,8 @@ func _boot() -> void:
 # One pass: {"hit", "tell" (seconds the lane stood before the lunge, -1 with no lunge), "lead" (the row the
 # chaser was spawned with)}.
 # head_on: the roller starts HEAD_ON_FROM metres off and rolls straight at the chaser, HEAD_ON_SIDE off its centre.
-func _pass(speed: float, overrides: Dictionary, head_on := false) -> Dictionary:
+# own_speed: the chaser is held at its own SPEED; false leaves it the stage's chaser speed (unit D2 raises it).
+func _pass(speed: float, overrides: Dictionary, head_on := false, own_speed := true) -> Dictionary:
 	ChallengeDials.set_overrides(overrides)
 	var enemy = _game.combat.spawn_enemy("chaser", _game.ctx.terrain.drop_point(-100.0, -90.0, 1.6))
 	ChallengeDials.set_overrides({})
@@ -96,18 +98,28 @@ func _pass(speed: float, overrides: Dictionary, head_on := false) -> Dictionary:
 	if head_on:
 		roller.at = enemy.global_position + Vector3(HEAD_ON_FROM, 0.0, HEAD_ON_SIDE)
 		roller.v = Vector3(-speed, 0.0, 0.0)
-		# The head-on roll is read on a chaser at its own SPEED, whatever the stage's chaser speed is (unit D2
-		# raises it), so the pass is the same geometry on every head of the stack. The fade is what differs.
-		if "run_speed" in enemy:
+		# The planted control is read on a chaser at its own SPEED, whatever the stage's chaser speed is (unit D2
+		# raises it), so that pass is the same geometry on every head of the stack. The fade is what differs.
+		if own_speed and "run_speed" in enemy:
 			enemy.run_speed = Chaser.SPEED
 	enemy._rest = 0.0
 	var wound_at := -1
 	var wound_m := -1.0
+	# Ticks the led aim was inside lunge range while the chaser still chased, and how many of them it was off
+	# the floor (a chaser in the air may not wind up).
+	var held := 0
+	var held_air := 0
 	var lunged_at := -1
 	for i in 360:
 		roller.at += roller.v * dt
 		roller.at.y = _game.ctx.terrain.height(roller.at.x, roller.at.z) + 0.8
 		await physics_frame
+		if head_on and wound_at < 0 and enemy.state == enemy.State.CHASE:
+			var led: float = PackPressure.lead_now(enemy.pressure, roller)
+			if led > 0.0 and enemy._led_aim(led).length() < Chaser.LUNGE_RANGE:
+				held += 1
+				if not enemy.is_on_floor():
+					held_air += 1
 		if enemy.state == enemy.State.WINDUP and wound_at < 0:
 			wound_at = i
 			wound_m = Vector2(roller.at.x - enemy.global_position.x, roller.at.z - enemy.global_position.z).length()
@@ -116,7 +128,8 @@ func _pass(speed: float, overrides: Dictionary, head_on := false) -> Dictionary:
 		if enemy.lunges >= 1 or (lunged_at >= 0 and enemy.state == enemy.State.RECOVER):
 			break
 	var out := {"hit": hits[0] > 0, "tell": float(lunged_at - wound_at) * dt if lunged_at >= 0 and wound_at >= 0 else -1.0,
-		"lead": float(enemy.pressure.get("lead", 0.0)), "wound_m": wound_m}
+		"lead": float(enemy.pressure.get("lead", 0.0)), "wound_m": wound_m, "held": held, "held_air": held_air,
+		"run": float(enemy.run_speed) if "run_speed" in enemy else Chaser.SPEED}
 	enemy.free()
 	await _frames(2)
 	return out
@@ -165,5 +178,13 @@ func _run() -> void:
 	_t.check("18 planted: with the fade off the chaser winds up beyond its lunge range", early.wound_m > Chaser.LUNGE_RANGE + 2.0, "lane laid with the ball %.1f m off, range %.1f m" % [early.wound_m, Chaser.LUNGE_RANGE])
 	_t.check("19 planted: and the same roll is hit", early.hit, "hit %s" % early.hit)
 	_t.check("20 planted: its lane still stood the whole wind-up", early.tell >= Chaser.WINDUP - tick - 0.0001, "lane to lunge %.3f s" % early.tell)
+	# The same roll on a chaser at the speed the stage ships (the game as played): not hit with the fade.
+	var shipped: Dictionary = await _pass(FAST, {}, true, false)
+	_t.check("21 at the stage's own chaser speed the ball rolling straight at it at %.0f m/s is not hit" % FAST, not shipped.hit and (shipped.wound_m < 0.0 or shipped.wound_m <= Chaser.LUNGE_RANGE + 0.5),
+		"chaser %.1f m/s: hit %s, lane laid with the ball %.1f m off (-1 is no lane)" % [shipped.run, shipped.hit, shipped.wound_m])
+	# Information, not a check: what the fade-off control does at that speed. On a 9 m/s chaser it need not
+	# fire in this geometry; the print says how long the led aim was in range before the wind-up and why it waited.
+	var loose: Dictionary = await _pass(FAST, FADE_OFF, true, false)
+	print("[info] fade off at the stage's chaser speed %.1f m/s: hit %s, lane laid with the ball %.1f m off; the led aim was in range for %d ticks before the wind-up, %d of them with the chaser off the floor" % [loose.run, loose.hit, loose.wound_m, loose.held, loose.held_air])
 	ChallengeDials.reset()
 	quit(_t.verdict())
