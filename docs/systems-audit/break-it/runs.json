@@ -1,0 +1,470 @@
+[
+ {
+  "run": "b3-quit-2876",
+  "seed": 2876,
+  "policy": "skipper",
+  "pilot": "demolitions_caster",
+  "outcome": "until",
+  "stage_reached": 3,
+  "game_s": 445.6,
+  "min_hp": 80.0,
+  "break_rows": {
+   "quit": 2,
+   "resume": 2
+  },
+  "peaks": {
+   "cogs": 1681,
+   "cores": 0,
+   "hp_max": 101.0,
+   "parts": 3,
+   "scrap": 1691,
+   "speed": 47.5366821289062
+  },
+  "qa": {},
+  "script_errors": 0
+ },
+ {
+  "run": "b3-quit-2877",
+  "seed": 2877,
+  "policy": "completionist",
+  "pilot": "tarn",
+  "outcome": "until",
+  "stage_reached": 3,
+  "game_s": 589.3,
+  "min_hp": 105.6,
+  "break_rows": {
+   "quit": 2,
+   "resume": 2
+  },
+  "peaks": {
+   "cogs": 2074,
+   "cores": 0,
+   "hp_max": 195.0,
+   "parts": 5,
+   "scrap": 2090,
+   "speed": 56.3699722290039
+  },
+  "qa": {
+   "stuck": 1
+  },
+  "script_errors": 0
+ },
+ {
+  "run": "b3-spam-2880",
+  "seed": 2880,
+  "policy": "random",
+  "pilot": "pylon_engineer",
+  "outcome": "stalled",
+  "stage_reached": 1,
+  "game_s": 289.6,
+  "min_hp": 100.0,
+  "break_rows": {},
+  "peaks": {
+   "cogs": 779,
+   "cores": 0,
+   "hp_max": 130.0,
+   "parts": 0,
+   "scrap": 788,
+   "speed": 60.5094528198242
+  },
+  "qa": {
+   "hung": 1
+  },
+  "script_errors": 0
+ },
+ {
+  "run": "b3-stack-2879",
+  "seed": 2879,
+  "policy": "skipper",
+  "pilot": "remembered_cannon",
+  "outcome": "until",
+  "stage_reached": 3,
+  "game_s": 421.2,
+  "min_hp": 22.5,
+  "break_rows": {
+   "stacked": 1,
+   "surge": 2
+  },
+  "peaks": {
+   "cogs": 2852,
+   "cores": 0,
+   "hp_max": 180.0,
+   "parts": 16,
+   "scrap": 2851,
+   "speed": 47.7812232971191
+  },
+  "qa": {},
+  "script_errors": 0
+ },
+ {
+  "run": "b4-beacon-2881",
+  "seed": 2881,
+  "policy": "skipper",
+  "pilot": "runner_gunner",
+  "outcome": "until",
+  "stage_reached": 3,
+  "game_s": 421.8,
+  "min_hp": 115.0,
+  "break_rows": {
+   "quit": 1,
+   "resume": 1
+  },
+  "peaks": {
+   "cogs": 1302,
+   "cores": 0,
+   "hp_max": 156.0,
+   "parts": 3,
+   "scrap": 1287,
+   "speed": 46.2585868835449
+  },
+  "qa": {},
+  "script_errors": 0
+ },
+ {
+  "run": "b4-boss-2883",
+  "seed": 2883,
+  "policy": "skipper",
+  "pilot": "tarn",
+  "outcome": "until",
+  "stage_reached": 3,
+  "game_s": 237.4,
+  "min_hp": 173.2,
+  "break_rows": {
+   "quit": 1,
+   "resume": 1
+  },
+  "peaks": {
+   "cogs": 1648,
+   "cores": 0,
+   "hp_max": 190.0,
+   "parts": 3,
+   "scrap": 1666,
+   "speed": 47.5114440917969
+  },
+  "qa": {},
+  "script_errors": 0
+ },
+ {
+  "run": "b4-gates-2884",
+  "seed": 2884,
+  "policy": "completionist",
+  "pilot": "tally",
+  "outcome": "until",
+  "stage_reached": 3,
+  "game_s": 548.2,
+  "min_hp": 75.4,
+  "break_rows": {
+   "quit": 1,
+   "resume": 1
+  },
+  "peaks": {
+   "cogs": 1894,
+   "cores": 0,
+   "hp_max": 127.0,
+   "parts": 6,
+   "scrap": 1975,
+   "speed": 46.8809967041016
+  },
+  "qa": {},
+  "script_errors": 0
+ },
+ {
+  "run": "b4-launch-2882",
+  "seed": 2882,
+  "policy": "skipper",
+  "pilot": "demolitions_caster",
+  "outcome": "until",
+  "stage_reached": 3,
+  "game_s": 432.4,
+  "min_hp": 80.0,
+  "break_rows": {},
+  "peaks": {
+   "cogs": 1607,
+   "cores": 0,
+   "hp_max": 101.0,
+   "parts": 3,
+   "scrap": 1593,
+   "speed": 49.3172569274902
+  },
+  "qa": {},
+  "script_errors": 0
+ },
+ {
+  "run": "b5-death",
+  "seed": 2885,
+  "policy": "skipper",
+  "pilot": "remembered_cannon",
+  "outcome": "lost",
+  "stage_reached": 1,
+  "game_s": 170.1,
+  "min_hp": 1.0,
+  "break_rows": {
+   "terminal": 1
+  },
+  "peaks": {
+   "cogs": 564,
+   "cores": 0,
+   "hp_max": 115.0,
+   "parts": 0,
+   "scrap": 587,
+   "speed": 48.4042663574219
+  },
+  "qa": {},
+  "script_errors": 0
+ },
+ {
+  "run": "b6-stack",
+  "seed": 2886,
+  "policy": "skipper",
+  "pilot": "pylon_engineer",
+  "outcome": "until",
+  "stage_reached": 2,
+  "game_s": 94.5,
+  "min_hp": 17.3,
+  "break_rows": {
+   "modifier": 2,
+   "stacked": 1
+  },
+  "peaks": {
+   "cogs": 1016,
+   "cores": 0,
+   "hp_max": 140.0,
+   "parts": 11,
+   "scrap": 1000,
+   "speed": 58.2622985839844
+  },
+  "qa": {},
+  "script_errors": 0
+ },
+ {
+  "run": "calm-2870",
+  "seed": 2870,
+  "policy": "skipper",
+  "pilot": "demolitions_caster",
+  "outcome": "until",
+  "stage_reached": 2,
+  "game_s": 224.0,
+  "min_hp": 67.0,
+  "break_rows": {},
+  "peaks": {
+   "cogs": 654,
+   "cores": 0,
+   "hp_max": 99.0,
+   "parts": 1,
+   "scrap": 654,
+   "speed": 50.77978515625
+  },
+  "qa": {},
+  "script_errors": 0
+ },
+ {
+  "run": "calm-2873",
+  "seed": 2873,
+  "policy": "skipper",
+  "pilot": "remembered_cannon",
+  "outcome": "until",
+  "stage_reached": 2,
+  "game_s": 261.9,
+  "min_hp": 105.0,
+  "break_rows": {},
+  "peaks": {
+   "cogs": 556,
+   "cores": 0,
+   "hp_max": 125.0,
+   "parts": 1,
+   "scrap": 561,
+   "speed": 49.8171119689941
+  },
+  "qa": {},
+  "script_errors": 0
+ },
+ {
+  "run": "calm-2875",
+  "seed": 2875,
+  "policy": "skipper",
+  "pilot": "runner_gunner",
+  "outcome": "until",
+  "stage_reached": 2,
+  "game_s": 114.9,
+  "min_hp": 115.0,
+  "break_rows": {},
+  "peaks": {
+   "cogs": 721,
+   "cores": 0,
+   "hp_max": 144.0,
+   "parts": 1,
+   "scrap": 710,
+   "speed": 92.8144378662109
+  },
+  "qa": {},
+  "script_errors": 0
+ },
+ {
+  "run": "plain",
+  "seed": 2870,
+  "policy": "skipper",
+  "pilot": "demolitions_caster",
+  "outcome": "until",
+  "stage_reached": 2,
+  "game_s": 220.6,
+  "min_hp": 80.0,
+  "break_rows": null,
+  "peaks": null,
+  "qa": {},
+  "script_errors": 0
+ },
+ {
+  "run": "r2880-calm",
+  "seed": 2880,
+  "policy": "random",
+  "pilot": "pylon_engineer",
+  "outcome": "until",
+  "stage_reached": 2,
+  "game_s": 232.5,
+  "min_hp": 100.0,
+  "break_rows": {},
+  "peaks": {
+   "cogs": 606,
+   "cores": 0,
+   "hp_max": 125.0,
+   "parts": 1,
+   "scrap": 595,
+   "speed": 60.5094528198242
+  },
+  "qa": {
+   "hung": 1
+  },
+  "script_errors": 0
+ },
+ {
+  "run": "r2880-rep",
+  "seed": 2880,
+  "policy": "random",
+  "pilot": "pylon_engineer",
+  "outcome": "stalled",
+  "stage_reached": 1,
+  "game_s": 289.6,
+  "min_hp": 100.0,
+  "break_rows": {},
+  "peaks": {
+   "cogs": 779,
+   "cores": 0,
+   "hp_max": 130.0,
+   "parts": 0,
+   "scrap": 788,
+   "speed": 60.5094528198242
+  },
+  "qa": {
+   "hung": 1
+  },
+  "script_errors": 0
+ },
+ {
+  "run": "spam-2873",
+  "seed": 2873,
+  "policy": "skipper",
+  "pilot": "remembered_cannon",
+  "outcome": "stalled",
+  "stage_reached": 1,
+  "game_s": 361.3,
+  "min_hp": 105.0,
+  "break_rows": {},
+  "peaks": {
+   "cogs": 734,
+   "cores": 0,
+   "hp_max": 125.0,
+   "parts": 0,
+   "scrap": 762,
+   "speed": 49.8171119689941
+  },
+  "qa": {},
+  "script_errors": 0
+ },
+ {
+  "run": "spam-2874",
+  "seed": 2874,
+  "policy": "skipper",
+  "pilot": "pylon_engineer",
+  "outcome": "until",
+  "stage_reached": 3,
+  "game_s": 722.9,
+  "min_hp": 55.6,
+  "break_rows": {},
+  "peaks": {
+   "cogs": 2223,
+   "cores": 0,
+   "hp_max": 155.0,
+   "parts": 3,
+   "scrap": 2104,
+   "speed": 67.7537612915039
+  },
+  "qa": {},
+  "script_errors": 0
+ },
+ {
+  "run": "spam-2875",
+  "seed": 2875,
+  "policy": "skipper",
+  "pilot": "runner_gunner",
+  "outcome": "stalled",
+  "stage_reached": 1,
+  "game_s": 315.6,
+  "min_hp": 115.0,
+  "break_rows": {},
+  "peaks": {
+   "cogs": 1082,
+   "cores": 0,
+   "hp_max": 161.0,
+   "parts": 0,
+   "scrap": 1093,
+   "speed": 92.8144378662109
+  },
+  "qa": {},
+  "script_errors": 0
+ },
+ {
+  "run": "spamtrace",
+  "seed": 2870,
+  "policy": "skipper",
+  "pilot": "demolitions_caster",
+  "outcome": "stalled",
+  "stage_reached": 1,
+  "game_s": 307.2,
+  "min_hp": 67.0,
+  "break_rows": {},
+  "peaks": {
+   "cogs": 820,
+   "cores": 0,
+   "hp_max": 99.0,
+   "parts": 0,
+   "scrap": 840,
+   "speed": 50.77978515625
+  },
+  "qa": {},
+  "script_errors": 0
+ },
+ {
+  "run": "stack1",
+  "seed": 2872,
+  "policy": "skipper",
+  "pilot": "tally",
+  "outcome": "until",
+  "stage_reached": 4,
+  "game_s": 661.2,
+  "min_hp": 20.8,
+  "break_rows": {
+   "stacked": 1,
+   "surge": 6
+  },
+  "peaks": {
+   "cogs": 6485,
+   "cores": 0,
+   "hp_max": 147.0,
+   "parts": 19,
+   "scrap": 6526,
+   "speed": 96.9293060302734
+  },
+  "qa": {},
+  "script_errors": 0
+ }
+]

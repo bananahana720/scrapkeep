@@ -6532,3 +6532,12 @@ Every card leaves alone the files another thread or an open pull request holds; 
 **Verification and evidence:** the break bot's logs and replay commands; a replay test per fix.
 
 **Boundary:** fixes severity high and above only.
+
+**Pass F's open rows** (11 Nov 2026; repro and evidence in [docs/systems-audit/break-it/](docs/systems-audit/break-it/README.md)):
+
+| Row | What | Severity | Owner | Done when |
+| --- | --- | --- | --- | --- |
+| SA-F1 | A quit or crash after a Warden breaks and before the launch lands continues at the start of the cleared stage | Major | `flow.gd`'s holder (wave 37 board thread) | a checkpoint at the break continues at the open gates or the next entrance, with a replay test from the page's repro command |
+| SA-F2 | `play_watch.gd` logs Sable's mounted pylon as "hung" (also in sitting notes) | Minor | any thread; `src/core/play_watch.gd` is not held | the mounted pylon is left out of hung and stuck; seed 2880's repro writes no hung row |
+| SA-F3 | One stuck row fighting a plated brute in the flume (seed 2877) | Minor, watch | the red team sweep | no repeat in two sweeps, or three on one stage becomes a finding |
+| SA-F4 | Quitting during the launch flight is untested (headless cuts the flight) | Coverage gap | the PC lane | one quit in the flight on a rendered build, Continue checked |
