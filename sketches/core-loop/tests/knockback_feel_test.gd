@@ -177,6 +177,10 @@ func _posture_case() -> void:
 	if not combat.has_method("bowl_hulk"):
 		_check("posture", false, "combat has no bowl_hulk: killed bodies do not bowl")
 		return
+	# This case's half-metre gaps were set with chasers at their own run speed. At the dam's 9 m/s (wave 37 unit
+	# D2) the chaser beside the Warden has run 0.9 m by the time the hulk arrives and the Warden's posture moves
+	# 0.1, so the case spawns its chasers at the old speed: it measures the hulk, not the chase.
+	ChallengeDials.set_overrides({"mobs.chaser_speed_by_stage": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]})
 	var warden: Node3D = combat.spawn_enemy("warden", _drop(_base.x + 3.0, _base.z))
 	var beyond := _spawn(_drop(_base.x + 3.0, _base.z + 0.5), 1000.0)
 	var dead := _spawn(_drop(_base.x, _base.z), 1000.0)
@@ -192,6 +196,7 @@ func _posture_case() -> void:
 	_check("posture", is_equal_approx(posture1, posture0) and not is_equal_approx(posture2, posture1) and beyond.knocks > 0,
 		"a 30 m/s hulk through a Warden: posture %.1f -> %.1f (a direct pin moves it to %.1f); the chaser beside it took %d pins"
 			% [posture0, posture1, posture2, beyond.knocks])
+	ChallengeDials.set_overrides({})
 	warden.queue_free()
 
 
