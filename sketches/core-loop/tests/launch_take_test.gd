@@ -249,7 +249,17 @@ func _seam_checks(label: String, run: Dictionary, reduced: bool) -> void:
 	_t.check("%s: at most %.1f s without control" % [label, SEAM_LIMIT_S], run["ended"] and seconds <= SEAM_LIMIT_S, "%.2f s" % seconds)
 	if reduced:
 		_t.check("%s: reduced motion keeps the lines still, as the camp swipe does" % label, run["lines"] == 0.0, str(run["lines"]))
-	print("seam %s: %.2f s from launch to the reveal's end, cut at step %d of %d" % [label, seconds, run["cut_step"], run["steps"]])
+	var full := -1
+	var reveal := -1
+	for i in run["frames"].size():
+		var f: Dictionary = run["frames"][i]
+		if full < 0 and f["progress"] >= 1.0:
+			full = i + 1
+		if reveal < 0 and f["phase"] == LaunchTake.REVEAL:
+			reveal = i + 1
+	var tick: float = run["dt"]
+	print("seam %s: %.2f s launch to the reveal's end; full cover at %.2f s, cut at %.2f s, reveal opens at %.2f s" % [label, seconds,
+		full * tick, run["cut_step"] * tick, reveal * tick])
 
 
 # A fresh run on stage 1 with the take not live (the pick starts the run at once).
