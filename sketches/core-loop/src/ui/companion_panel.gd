@@ -21,8 +21,7 @@ const Keycap := preload("res://src/ui/keycap.gd")
 #
 # No title and no socket text (ruling cx): the two sockets are drawn marks holding the
 # piece's icon, an empty socket an empty ring, and the cap beside them with the cross icon
-# empties both. The empty key is the action cl_companion_empty when the InputMap holds it
-# (a rebind moves the cap and the key); until bindings.gd registers it, U and pad Y.
+# empties both (U, pad Y: fixed keys, as before; the cap follows the device in hand).
 
 signal closed
 
@@ -30,7 +29,6 @@ const LAYER := 6
 const MAX_ROWS := 6
 const LINE_FULL := "Both sockets are full."
 const LINE_FAMILY := "One of each kind."
-const EMPTY_ACTION := "cl_companion_empty"
 # One icon per piece, from the icon registry, so a socket mark says which piece sits in it.
 const PIECE_ICONS := {"primer_coil": "bolt", "primer_mesh": "rings", "ram_prow": "double_chevron",
 	"ram_spring": "disc_ring", "escape_vent": "launch", "escape_rail": "arrow"}
@@ -172,15 +170,11 @@ func _commit() -> void:
 func handle(event: InputEvent) -> bool:
 	if not _open:
 		return false
-	if InputMap.has_action(EMPTY_ACTION):
-		if event.is_action_pressed(EMPTY_ACTION, false):
-			empty_sockets()
-			return true
-	elif event is InputEventKey and event.pressed and not event.echo and event.physical_keycode == KEY_U:
-		empty_sockets()
-		return true
 	if event is InputEventKey and event.pressed and not event.echo:
 		match event.physical_keycode:
+			KEY_U:
+				empty_sockets()
+				return true
 			KEY_W:
 				step(-1)
 				return true
@@ -193,7 +187,7 @@ func handle(event: InputEvent) -> bool:
 			KEY_KP_1, KEY_KP_2, KEY_KP_3, KEY_KP_4, KEY_KP_5, KEY_KP_6:
 				pick(event.physical_keycode - KEY_KP_1)
 				return true
-	if not InputMap.has_action(EMPTY_ACTION) and event is InputEventJoypadButton and event.pressed and event.button_index == JOY_BUTTON_Y:
+	if event is InputEventJoypadButton and event.pressed and event.button_index == JOY_BUTTON_Y:
 		empty_sockets()
 		return true
 	if event.is_action_pressed("ui_cancel"):
@@ -259,9 +253,9 @@ func socket_icons() -> Array[String]:
 	return out
 
 
-# The key glyph id the empty cap shows now: the rebound key when the action exists.
+# The key glyph id the empty cap shows now, for the device in hand.
 func empty_cap() -> String:
-	return Glyphs.of_action(EMPTY_ACTION, "pad_y" if Glyphs.is_pad() else "key_u")
+	return "pad_y" if Glyphs.is_pad() else "key_u"
 
 
 # The words on screen, one per line, for tests and the layout checks.

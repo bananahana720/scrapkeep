@@ -11,7 +11,7 @@ const T := preload("res://tests/support/t.gd")
 # look. The offer wears an amber stamp and no "HOT-WIRED" eyebrow, its Recycle choice is the
 # cog icon and the number ("Recycle +N", no colon, no word "cogs"). The companion panel has
 # no title, draws its two sockets as marks holding the piece icons (an empty ring when empty),
-# shows the empty key as a cap read from the InputMap (a rebind moves it) and refuses a
+# shows the empty key as a cap and refuses a
 # repeat kind with "One of each kind.".
 
 const HOTWIRE_BANNED := ["HOT-WIRED", "Recycle:", "cogs"]
@@ -143,26 +143,10 @@ func _companion() -> void:
 	await _frames(2)
 	_t.eq("a second piece of the same kind is refused", panel.message, "One of each kind.")
 	_t.check("the refusal reads on screen without the word family", panel.screen_text().contains("One of each kind.") and not panel.screen_text().contains("family"), panel.screen_text())
-	_t.eq("the cap defaults to U", panel.empty_cap(), "key_u")
+	_t.eq("the cap shows U on keys", panel.empty_cap(), "key_u")
 	Push.key(root, KEY_U)
 	await _frames(2)
-	_t.eq("by default U empties both sockets", panel.socket_icons(), ["", ""] as Array[String])
-	panel.pick(0)
-	await _frames(2)
-	# Rebind the empty-socket key: the cap and the key move together.
-	InputMap.add_action(panel.EMPTY_ACTION)
-	var j := InputEventKey.new()
-	j.physical_keycode = KEY_J
-	InputMap.action_add_event(panel.EMPTY_ACTION, j)
-	_t.eq("rebound to J, the cap shows J", panel.empty_cap(), "key_j")
-	Push.key(root, KEY_U)
-	await _frames(2)
-	_t.check("U no longer empties once rebound", panel.socket_icons()[0] != "", str(panel.socket_icons()))
-	Push.key(root, KEY_J)
-	await _frames(2)
-	_t.eq("J empties both sockets", panel.socket_icons(), ["", ""] as Array[String])
-	InputMap.erase_action(panel.EMPTY_ACTION)
-	_t.eq("unbound again, the cap falls back to U", panel.empty_cap(), "key_u")
+	_t.eq("U empties both sockets", panel.socket_icons(), ["", ""] as Array[String])
 	# Back stays on Esc.
 	var back := InputEventAction.new()
 	back.action = "ui_cancel"
