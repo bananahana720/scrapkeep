@@ -15,6 +15,8 @@ const Parts := preload("res://src/build/parts.gd")
 const RewardGates := preload("res://src/build/reward_gates.gd")
 const ScreenRegions := preload("res://src/ui/screen_regions.gd")
 const EventDirector := preload("res://src/world/event_director.gd")
+# Every kind the HUD toasts (ruling cx: a Warden break, a rout and a core toast no longer all fire).
+const EXPECTED_TOASTS: Array[String] = ["run_ended", "player_died", "milestone_won", "scrap_lost", "core_gained", "event_announced", "event_ended", "boss_phase_changed"]
 
 # The v2 W1 contract holds together:
 #   - CONTRACTS.md's Icons section lists exactly the registry's ids, every id resolves
@@ -118,9 +120,9 @@ func _check_wording() -> void:
 			ok = ok and WordBudget.words_in(read) > 0 and WordBudget.words_in(read) <= 4
 		if not ok:
 			bad_rows.append(kind)
-	_report("wording", long_toasts.is_empty() and long_objectives.is_empty() and bad_rows.is_empty() and Hud.toast_kinds().size() >= 10,
-		"%d toast kinds with part \"%s\" and event \"%s\"; over 4 words %s; objectives over 5 %s; malformed UI rows %s"
-			% [Hud.toast_kinds().size(), longest_part, longest_event, long_toasts, long_objectives, bad_rows])
+	_report("wording", long_toasts.is_empty() and long_objectives.is_empty() and bad_rows.is_empty() and Hud.toast_kinds() == EXPECTED_TOASTS,
+		"%s toast kinds with part \"%s\" and event \"%s\"; over 4 words %s; objectives over 5 %s; malformed UI rows %s"
+			% [Hud.toast_kinds(), longest_part, longest_event, long_toasts, long_objectives, bad_rows])
 
 
 func _check_prompt_parse() -> void:
