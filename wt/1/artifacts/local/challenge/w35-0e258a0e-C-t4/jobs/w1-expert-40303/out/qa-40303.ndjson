@@ -1,0 +1,13 @@
+{"at":[-146.9,156.5,-679.2],"clamp_shut":true,"flow":"stage","goal":"roll to spillway sheet","id":"find_warden","kind":"objective","s":1.0,"sealed":true,"stage":1,"words":"Find the Warden","yard_locked":false}
+{"at":[-9.9,7.3,407.7],"clamp_shut":true,"flow":"stage","goal":"fight lobber charge climb","id":"break_yard_crew","kind":"objective","s":82.0,"sealed":true,"stage":1,"words":"Yard locked: break the crew","yard_locked":true}
+{"at":[-21.2,18.3,382.1],"clamp_shut":true,"flow":"stage","goal":"roll to spillway sheet","id":"find_warden","kind":"objective","s":107.7,"sealed":true,"stage":1,"words":"Find the Warden","yard_locked":false}
+{"at":[-9.2,-1.0,514.2],"clamp_shut":true,"flow":"stage","goal":"fight lobber charge","id":"break_clamp_crews","kind":"objective","s":116.7,"sealed":true,"stage":1,"words":"Clamp shut: break the crews","yard_locked":false}
+{"at":[3.0,-0.4,563.3],"clamp_shut":false,"flow":"beacon","goal":"wait spillway sheet","id":"ride_sheet","kind":"objective","s":130.7,"sealed":true,"stage":1,"words":"Ride the water sheet up","yard_locked":false}
+{"at":[4.6,17.1,585.3],"clamp_shut":false,"flow":"beacon","goal":"wait spillway sheet","id":"grow_return","kind":"objective","s":167.5,"sealed":true,"stage":1,"words":"Grow, then return","yard_locked":false}
+{"at":[-2.8,0.4,586.4],"clamp_shut":false,"flow":"beacon","goal":"wait spillway sheet","id":"ride_sheet","kind":"objective","s":168.4,"sealed":true,"stage":1,"words":"Ride the water sheet up","yard_locked":false}
+{"at":[-1.8,1.0,600.0],"clamp_shut":false,"flow":"beacon","goal":"wait spillway sheet","id":"smash_core","kind":"objective","s":205.2,"sealed":true,"stage":1,"words":"Smash the core","yard_locked":false}
+{"at":[2.5,-0.1,566.4],"clamp_shut":false,"flow":"beacon","goal":"wait spillway sheet","id":"ride_sheet","kind":"objective","s":209.2,"sealed":true,"stage":1,"words":"Ride the water sheet up","yard_locked":false}
+{"at":[-0.5,18.6,590.7],"clamp_shut":false,"flow":"beacon","goal":"wait spillway sheet","id":"smash_core","kind":"objective","s":282.6,"sealed":true,"stage":1,"words":"Smash the core","yard_locked":false}
+{"at":[2.6,-0.3,566.4],"clamp_shut":false,"flow":"beacon","goal":"wait spillway sheet","id":"ride_sheet","kind":"objective","s":286.6,"sealed":true,"stage":1,"words":"Ride the water sheet up","yard_locked":false}
+{"at":[0.2,0.4,587.1],"clamp_shut":false,"flow":"beacon","goal":"wait spillway sheet","id":"smash_core","kind":"objective","s":326.2,"sealed":true,"stage":1,"words":"Smash the core","yard_locked":false}
+{"at":[2.6,-0.3,566.7],"clamp_shut":false,"flow":"beacon","goal":"wait spillway sheet","id":"ride_sheet","kind":"objective","s":330.2,"sealed":true,"stage":1,"words":"Ride the water sheet up","yard_locked":false}

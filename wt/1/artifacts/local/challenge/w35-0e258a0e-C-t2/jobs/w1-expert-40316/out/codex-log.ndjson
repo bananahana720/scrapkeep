@@ -1,0 +1,9 @@
+{"category":"enemy","heft":1.02444444444444,"id":"counter_ram","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40316","stage":1,"stage_ticks":6527}
+{"category":"enemy","heft":1.15333333333333,"id":"kest_cable_charge","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40316","stage":1,"stage_ticks":7358}
+{"category":"enemy","heft":1.73166666666667,"id":"set_piece","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40316","stage":1,"stage_ticks":15345}
+{"category":"enemy","heft":1.77611111111111,"id":"kest_windhover","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40316","stage":1,"stage_ticks":15346}
+{"category":"enemy","heft":1.68327777777778,"id":"heavy_roll","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40316","stage":1,"stage_ticks":18035}
+{"category":"enemy","heft":1.7255,"id":"shell_return","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40316","stage":1,"stage_ticks":18255}
+{"category":"enemy","heft":1.65661111111111,"id":"plate_peel","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40316","stage":1,"stage_ticks":19525}
+{"category":"build","heft":1.7055,"id":"spare","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40316","stage":1,"stage_ticks":19584}
+{"category":"enemy","heft":1.65977777777778,"id":"warden_shatter","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40316","stage":1,"stage_ticks":22549}

@@ -1,0 +1,9 @@
+{"category":"enemy","heft":1.0,"id":"counter_ram","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40318","stage":1,"stage_ticks":609}
+{"category":"enemy","heft":1.71208333333333,"id":"set_piece","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40318","stage":1,"stage_ticks":11912}
+{"category":"enemy","heft":1.71069444444444,"id":"mat_slip","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40318","stage":1,"stage_ticks":13775}
+{"category":"enemy","heft":1.66625,"id":"tether_snap","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40318","stage":1,"stage_ticks":13840}
+{"category":"enemy","heft":1.85958333333333,"id":"plate_peel","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40318","stage":1,"stage_ticks":14542}
+{"category":"enemy","heft":1.91208333333333,"id":"heavy_roll","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40318","stage":1,"stage_ticks":18719}
+{"category":"build","heft":1.89708333333333,"id":"spare","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40318","stage":1,"stage_ticks":21769}
+{"category":"enemy","heft":1.45166666666667,"id":"crush_chain","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40318","stage":1,"stage_ticks":24064}
+{"category":"enemy","heft":2.16055555555556,"id":"warden_shatter","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40318","stage":1,"stage_ticks":24580}

@@ -1,0 +1,13 @@
+{"category":"enemy","heft":1.04,"id":"loaded_line","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-14","stage":1,"stage_ticks":1436}
+{"category":"enemy","heft":1.08444444444444,"id":"kest_cable_charge","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-14","stage":1,"stage_ticks":1436}
+{"category":"enemy","heft":1.15155555555556,"id":"counter_ram","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-14","stage":1,"stage_ticks":1538}
+{"category":"enemy","heft":1.66044444444444,"id":"heavy_roll","kind":"discovered","participants":["player"],"parts":["hot_rivets","chain_arc"],"run_id":"bot-14","stage":1,"stage_ticks":3595}
+{"category":"enemy","heft":1.76488888888889,"id":"plate_peel","kind":"discovered","participants":["player"],"parts":["hot_rivets","chain_arc"],"run_id":"bot-14","stage":1,"stage_ticks":5153}
+{"category":"build","heft":1.83377777777778,"id":"spare","kind":"discovered","participants":["player"],"parts":["hot_rivets","chain_arc"],"run_id":"bot-14","stage":1,"stage_ticks":5154}
+{"category":"enemy","heft":1.936,"id":"shell_return","kind":"discovered","participants":["player"],"parts":["hot_rivets","chain_arc"],"run_id":"bot-14","stage":1,"stage_ticks":5404}
+{"category":"enemy","heft":1.98044444444444,"id":"chain","kind":"discovered","participants":["player"],"parts":["hot_rivets","chain_arc"],"run_id":"bot-14","stage":1,"stage_ticks":6424}
+{"category":"enemy","heft":2.02266666666667,"id":"warden_shatter","kind":"discovered","participants":["player"],"parts":["hot_rivets","chain_arc"],"run_id":"bot-14","stage":1,"stage_ticks":6844}
+{"category":"enemy","heft":2.06488888888889,"id":"set_piece_core","kind":"discovered","participants":["player"],"parts":["hot_rivets","chain_arc"],"run_id":"bot-14","stage":1,"stage_ticks":7283}
+{"category":"enemy","heft":2.10933333333333,"id":"set_piece","kind":"discovered","participants":["player"],"parts":["hot_rivets","chain_arc"],"run_id":"bot-14","stage":1,"stage_ticks":7283}
+{"category":"enemy","heft":2.15377777777778,"id":"kest_windhover","kind":"discovered","participants":["player"],"parts":["hot_rivets","chain_arc"],"run_id":"bot-14","stage":1,"stage_ticks":7284}
+{"category":"enemy","heft":2.19822222222222,"id":"tether_snap","kind":"discovered","participants":["player"],"parts":["hot_rivets","chain_arc"],"run_id":"bot-14","stage":1,"stage_ticks":7550}

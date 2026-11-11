@@ -1,0 +1,4 @@
+{"category":"enemy","heft":1.05333333333333,"id":"counter_ram","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40311","stage":1,"stage_ticks":5745}
+{"category":"enemy","heft":1.62666666666667,"id":"set_piece","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40311","stage":1,"stage_ticks":9805}
+{"category":"enemy","heft":1.67777777777778,"id":"tarn_redjaw_rend","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40311","stage":1,"stage_ticks":9805}
+{"category":"enemy","heft":2.14225,"id":"warden_shatter","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40311","stage":1,"stage_ticks":17307}

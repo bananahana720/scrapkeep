@@ -1,0 +1,16 @@
+00:17:07Z start import-1 load=77.3
+00:17:11Z end import-1 exit=0 wall=4s load=72.8
+00:17:11Z start import-2 load=72.8
+00:17:14Z end import-2 exit=0 wall=3s load=72.8
+00:17:14Z start bot-session_test load=72.8
+00:20:28Z end bot-session_test exit=0 wall=195s load=13.1
+00:20:28Z start bot-skill_band_test load=13.1
+00:28:08Z end bot-skill_band_test exit=0 wall=460s load=6.3
+00:28:08Z start bot-world1_run_test load=6.3
+00:38:51Z end bot-world1_run_test exit=1 wall=643s load=5.4
+00:38:51Z start solo-world1_run_test-1 load=5.4
+02:34:26Z start solo-world1_run_test-1 load=0.6
+02:56:44Z end solo-world1_run_test-1 exit=1 wall=1337s load=14.6
+02:56:44Z start solo-world1_run_test-2 load=14.6
+03:14:32Z end solo-world1_run_test-2 exit=0 wall=1069s load=26.7
+Gate shard: bots 21-23 on 0e258a0e: RED: 1 new red (world1_run_test). Receipt: /home/andrew/scratch/gate/w35-0e258a0e/bots-5/receipt.md

@@ -1,0 +1,15 @@
+23:40:57Z start import-1 load=10.9
+23:41:01Z end import-1 exit=0 wall=4s load=10.8
+23:41:01Z start import-2 load=10.8
+23:41:04Z end import-2 exit=0 wall=3s load=10.5
+23:41:04Z start bot-bot_park_trace_repeat_test load=10.5
+23:49:43Z end bot-bot_park_trace_repeat_test exit=0 wall=519s load=9.1
+23:49:43Z start bot-bot_run_end_test load=9.1
+23:54:21Z end bot-bot_run_end_test exit=0 wall=278s load=8.1
+23:54:21Z start bot-bot_six_pilots_test load=8.1
+23:59:21Z end bot-bot_six_pilots_test exit=0 wall=300s load=13.7
+23:59:21Z start bot-bot_skill_bar_test load=13.7
+00:07:07Z end bot-bot_skill_bar_test exit=0 wall=465s load=51.8
+00:07:07Z start bot-matchup_lab_test load=51.8
+00:12:09Z end bot-matchup_lab_test exit=0 wall=303s load=17.7
+Gate shard: bots 6-10 on 0e258a0e: PASS, no new red. Receipt: /home/andrew/scratch/gate/w35-0e258a0e/bots-2/receipt.md

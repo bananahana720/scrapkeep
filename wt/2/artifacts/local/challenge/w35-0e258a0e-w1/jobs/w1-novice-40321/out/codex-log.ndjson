@@ -1,0 +1,4 @@
+{"category":"enemy","heft":1.02666666666667,"id":"counter_ram","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40321","stage":1,"stage_ticks":6642}
+{"category":"enemy","heft":1.28222222222222,"id":"mat_slip","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40321","stage":1,"stage_ticks":14353}
+{"category":"enemy","heft":1.02666666666667,"id":"tether_snap","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40321","stage":1,"stage_ticks":18147}
+{"category":"build","heft":1.25444444444444,"id":"spare","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40321","stage":1,"stage_ticks":18583}

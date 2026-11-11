@@ -1,0 +1,16 @@
+  >> [small takes at least twice grown's time] small 60.2 s, grown 31.8 s -> FAIL
+[camper seed 0 ran] exit 0, timed out false, row 'camper	false	120.00	true	16	2	pylon_engineer' -> PASS
+[camper seed 1 ran] exit 0, timed out false, row 'camper	false	120.00	true	16	3	runner_gunner' -> PASS
+[camper seed 2 ran] exit 0, timed out false, row 'camper	false	120.00	true	18	1	demolitions_caster' -> PASS
+[every run mounted the reactor driver; the gates opened in every camper run] attached and gates per run ["true/3", "true/4", "true/7", "true/0", "true/1", "true/0", "true/16", "true/16", "true/18"] -> PASS
+[grown breaks it in 25 to 45 s] grown median 31.8 s -> PASS
+[grown median within 10 percent of the pin] grown 31.8 s, pin 31.8 s -> PASS
+[grown seed 0 ran] exit 0, timed out false, row 'grown	true	31.80	true	0	0	pylon_engineer' -> PASS
+[grown seed 1 ran] exit 0, timed out false, row 'grown	true	50.50	true	1	2	runner_gunner' -> PASS
+[grown seed 2 ran] exit 0, timed out false, row 'grown	true	26.78	true	0	0	demolitions_caster' -> PASS
+[small median within 10 percent of the pin] small 60.2 s, pin 60.2 s -> PASS
+[small seed 0 ran] exit 0, timed out false, row 'small	true	52.62	true	3	3	pylon_engineer' -> PASS
+[small seed 1 ran] exit 0, timed out false, row 'small	true	60.23	true	4	5	runner_gunner' -> PASS
+[small seed 2 ran] exit 0, timed out false, row 'small	true	90.12	true	7	6	demolitions_caster' -> PASS
+[small takes at least twice grown's time] small 60.2 s, grown 31.8 s -> FAIL
+[the camper never breaks it] got 0, want 0 -> PASS

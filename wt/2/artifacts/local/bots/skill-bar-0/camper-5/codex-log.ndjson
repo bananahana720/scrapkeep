@@ -1,0 +1,5 @@
+{"category":"enemy","heft":1.06666666666667,"id":"shell_return","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-5","stage":1,"stage_ticks":1357}
+{"category":"enemy","heft":1.02666666666667,"id":"tether_snap","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-5","stage":1,"stage_ticks":2368}
+{"category":"build","heft":1.11111111111111,"id":"spare","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-5","stage":1,"stage_ticks":8767}
+{"category":"enemy","heft":1.40222222222222,"id":"counter_ram","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-5","stage":1,"stage_ticks":10602}
+{"category":"enemy","heft":1.55333333333333,"id":"flap_ride","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-5","stage":1,"stage_ticks":14154}

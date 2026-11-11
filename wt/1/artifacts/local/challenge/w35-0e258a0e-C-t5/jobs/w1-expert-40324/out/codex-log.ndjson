@@ -1,0 +1,4 @@
+{"category":"enemy","heft":1.02888888888889,"id":"counter_ram","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40324","stage":1,"stage_ticks":6306}
+{"category":"enemy","heft":1.54222222222222,"id":"set_piece","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40324","stage":1,"stage_ticks":9330}
+{"category":"enemy","heft":1.45583333333333,"id":"tether_snap","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40324","stage":1,"stage_ticks":15128}
+{"category":"enemy","heft":1.18666666666667,"id":"crush_chain","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40324","stage":1,"stage_ticks":16460}

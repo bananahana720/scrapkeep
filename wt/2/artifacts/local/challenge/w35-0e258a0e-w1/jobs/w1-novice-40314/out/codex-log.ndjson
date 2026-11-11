@@ -1,0 +1,6 @@
+{"category":"enemy","heft":1.01333333333333,"id":"counter_ram","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40314","stage":1,"stage_ticks":3811}
+{"category":"enemy","heft":1.08444444444444,"id":"armour_wet","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40314","stage":1,"stage_ticks":3889}
+{"category":"enemy","heft":1.30888888888889,"id":"tether_snap","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40314","stage":1,"stage_ticks":12283}
+{"category":"enemy","heft":1.52666666666667,"id":"crush_chain","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40314","stage":1,"stage_ticks":12322}
+{"category":"enemy","heft":1.38222222222222,"id":"mat_slip","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40314","stage":1,"stage_ticks":13007}
+{"category":"enemy","heft":1.47555555555556,"id":"shell_return","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40314","stage":1,"stage_ticks":13094}

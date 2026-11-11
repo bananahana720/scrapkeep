@@ -1,0 +1,12 @@
+{"category":"enemy","heft":1.01333333333333,"id":"armour_wet","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40320","stage":1,"stage_ticks":3792}
+{"category":"enemy","heft":1.34,"id":"chain","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40320","stage":1,"stage_ticks":5388}
+{"category":"build","heft":1.48444444444444,"kind":"found","participants":["player"],"parts":[],"run_id":"bot-40320","stage":1,"stage_ticks":8586,"text":"Arc meets a heavy hit: the charge overloads in a burst. Elites and bosses take the full burst."}
+{"category":"enemy","heft":1.48666666666667,"id":"plate_peel","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40320","stage":1,"stage_ticks":8746}
+{"category":"build","heft":1.54444444444444,"id":"spare","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40320","stage":1,"stage_ticks":8747}
+{"category":"enemy","heft":1.71111111111111,"id":"shell_return","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40320","stage":1,"stage_ticks":10200}
+{"category":"enemy","heft":1.78,"id":"set_piece","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40320","stage":1,"stage_ticks":11041}
+{"category":"enemy","heft":1.97555555555556,"id":"counter_ram","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40320","stage":1,"stage_ticks":11569}
+{"category":"enemy","heft":2.41444444444444,"id":"mat_slip","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40320","stage":1,"stage_ticks":14121}
+{"category":"enemy","heft":2.99444444444444,"id":"heavy_roll","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40320","stage":1,"stage_ticks":19296}
+{"category":"enemy","heft":2.85222222222222,"id":"tether_snap","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40320","stage":1,"stage_ticks":20120}
+{"category":"enemy","heft":2.99888888888889,"id":"warden_shatter","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40320","stage":1,"stage_ticks":21479}

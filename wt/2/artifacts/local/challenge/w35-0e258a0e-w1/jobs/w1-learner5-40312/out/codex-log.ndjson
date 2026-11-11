@@ -1,0 +1,4 @@
+{"category":"enemy","heft":1.04444444444444,"id":"counter_ram","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40312","stage":1,"stage_ticks":6248}
+{"category":"enemy","heft":1.55777777777778,"id":"set_piece","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40312","stage":1,"stage_ticks":8930}
+{"category":"enemy","heft":1.99111111111111,"id":"warden_shatter","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40312","stage":1,"stage_ticks":15024}
+{"category":"enemy","heft":2.28222222222222,"id":"flap_ride","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40312","stage":1,"stage_ticks":15444}

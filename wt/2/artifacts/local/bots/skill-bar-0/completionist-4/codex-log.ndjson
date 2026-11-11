@@ -1,0 +1,8 @@
+{"category":"enemy","heft":1.0,"id":"counter_ram","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-4","stage":1,"stage_ticks":915}
+{"category":"build","heft":1.64666666666667,"id":"shrapnel_bloom","kind":"discovered","participants":["player"],"parts":["hot_rivets","cross_split"],"run_id":"bot-4","stage":1,"stage_ticks":2878}
+{"category":"enemy","heft":1.70222222222222,"id":"warden_shatter","kind":"discovered","participants":["player"],"parts":["hot_rivets","cross_split"],"run_id":"bot-4","stage":1,"stage_ticks":5162}
+{"category":"enemy","heft":1.74,"id":"set_piece_core","kind":"discovered","participants":["player"],"parts":["hot_rivets","cross_split"],"run_id":"bot-4","stage":1,"stage_ticks":6104}
+{"category":"enemy","heft":1.78444444444444,"id":"set_piece","kind":"discovered","participants":["player"],"parts":["hot_rivets","cross_split"],"run_id":"bot-4","stage":1,"stage_ticks":6104}
+{"category":"build","heft":1.86444444444444,"id":"spare","kind":"discovered","participants":["player"],"parts":["hot_rivets","cross_split"],"run_id":"bot-4","stage":1,"stage_ticks":6464}
+{"category":"enemy","heft":2.10666666666667,"id":"shell_return","kind":"discovered","participants":["player"],"parts":["hot_rivets","cross_split"],"run_id":"bot-4","stage":1,"stage_ticks":6489}
+{"category":"enemy","heft":2.58222222222222,"id":"loaded_line","kind":"discovered","participants":["player"],"parts":["hot_rivets","cross_split","ram_plow","winch_pawl"],"run_id":"bot-4","stage":2,"stage_ticks":2147}

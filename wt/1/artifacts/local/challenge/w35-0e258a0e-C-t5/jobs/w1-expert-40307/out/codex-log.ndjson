@@ -1,0 +1,11 @@
+{"category":"enemy","heft":1.02888888888889,"id":"counter_ram","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40307","stage":1,"stage_ticks":6524}
+{"category":"enemy","heft":1.15777777777778,"id":"cannon_lane_charge","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40307","stage":1,"stage_ticks":7362}
+{"category":"enemy","heft":1.62888888888889,"id":"set_piece","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40307","stage":1,"stage_ticks":9817}
+{"category":"enemy","heft":1.59388888888889,"id":"plate_peel","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40307","stage":1,"stage_ticks":10865}
+{"category":"build","heft":1.66944444444444,"id":"spare","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40307","stage":1,"stage_ticks":11024}
+{"category":"enemy","heft":1.90277777777778,"id":"crush_chain","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40307","stage":1,"stage_ticks":11131}
+{"category":"enemy","heft":2.01833333333333,"id":"heavy_roll","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40307","stage":1,"stage_ticks":11926}
+{"category":"enemy","heft":1.68833333333333,"id":"shell_return","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40307","stage":1,"stage_ticks":14139}
+{"category":"enemy","heft":1.83944444444444,"id":"tether_snap","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40307","stage":1,"stage_ticks":15361}
+{"category":"enemy","heft":2.01944444444444,"id":"cannon_fire_mission","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40307","stage":1,"stage_ticks":19051}
+{"category":"enemy","heft":1.54277777777778,"id":"mat_slip","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40307","stage":1,"stage_ticks":24121}

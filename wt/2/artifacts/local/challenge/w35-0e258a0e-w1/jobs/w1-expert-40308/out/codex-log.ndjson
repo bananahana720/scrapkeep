@@ -1,0 +1,5 @@
+{"category":"enemy","heft":1.0,"id":"armour_wet","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40308","stage":1,"stage_ticks":517}
+{"category":"enemy","heft":1.50222222222222,"id":"parting_shot","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40308","stage":1,"stage_ticks":5897}
+{"category":"enemy","heft":1.78888888888889,"id":"heavy_roll","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40308","stage":1,"stage_ticks":9872}
+{"category":"enemy","heft":1.84666666666667,"id":"warden_shatter","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40308","stage":1,"stage_ticks":10663}
+{"category":"enemy","heft":2.13111111111111,"id":"set_piece","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40308","stage":1,"stage_ticks":11170}

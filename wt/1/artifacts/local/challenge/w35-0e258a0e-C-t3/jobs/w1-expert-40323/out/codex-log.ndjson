@@ -1,0 +1,5 @@
+{"category":"enemy","heft":1.03777777777778,"id":"counter_ram","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40323","stage":1,"stage_ticks":5761}
+{"category":"world","heft":1.26,"id":"sluice_hammer","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40323","stage":1,"stage_ticks":7187}
+{"category":"enemy","heft":1.36666666666667,"id":"crush_chain","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40323","stage":1,"stage_ticks":7269}
+{"category":"enemy","heft":1.68,"id":"set_piece","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40323","stage":1,"stage_ticks":9230}
+{"category":"enemy","heft":2.04,"id":"warden_shatter","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40323","stage":1,"stage_ticks":13485}

@@ -1,0 +1,12 @@
+{"category":"enemy","heft":1.05111111111111,"id":"counter_ram","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40317","stage":1,"stage_ticks":5740}
+{"category":"world","heft":1.27333333333333,"id":"sluice_hammer","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40317","stage":1,"stage_ticks":7148}
+{"category":"enemy","heft":1.38,"id":"crush_chain","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40317","stage":1,"stage_ticks":7215}
+{"category":"enemy","heft":1.63277777777778,"id":"set_piece","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40317","stage":1,"stage_ticks":10075}
+{"category":"enemy","heft":1.56388888888889,"id":"mat_slip","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40317","stage":1,"stage_ticks":10604}
+{"category":"enemy","heft":1.72555555555556,"id":"plate_peel","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40317","stage":1,"stage_ticks":11287}
+{"category":"build","heft":1.85222222222222,"id":"spare","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40317","stage":1,"stage_ticks":11303}
+{"category":"enemy","heft":2.05166666666667,"id":"shell_return","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40317","stage":1,"stage_ticks":11981}
+{"category":"enemy","heft":1.92277777777778,"id":"heavy_roll","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40317","stage":1,"stage_ticks":13247}
+{"category":"build","heft":1.85166666666667,"id":"strike","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40317","stage":1,"stage_ticks":16209}
+{"category":"enemy","heft":2.03166666666667,"id":"tether_snap","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40317","stage":1,"stage_ticks":16329}
+{"category":"enemy","heft":2.12222222222222,"id":"warden_shatter","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40317","stage":1,"stage_ticks":17018}

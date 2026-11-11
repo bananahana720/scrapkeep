@@ -1,0 +1,4 @@
+{"category":"enemy","heft":1.41111111111111,"id":"loaded_line","kind":"discovered","participants":["player"],"parts":["loose_trigger"],"run_id":"bot-15","stage":1,"stage_ticks":1927}
+{"category":"enemy","heft":1.50444444444444,"id":"counter_ram","kind":"discovered","participants":["player"],"parts":["loose_trigger"],"run_id":"bot-15","stage":1,"stage_ticks":2141}
+{"category":"enemy","heft":1.74,"id":"plate_peel","kind":"discovered","participants":["player"],"parts":["loose_trigger"],"run_id":"bot-15","stage":1,"stage_ticks":2653}
+{"category":"build","heft":1.79555555555556,"id":"spare","kind":"discovered","participants":["player"],"parts":["loose_trigger"],"run_id":"bot-15","stage":1,"stage_ticks":2654}

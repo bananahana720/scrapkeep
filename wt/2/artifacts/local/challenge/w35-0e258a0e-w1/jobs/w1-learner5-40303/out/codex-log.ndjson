@@ -1,0 +1,4 @@
+{"category":"enemy","heft":1.27333333333333,"id":"counter_ram","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40303","stage":1,"stage_ticks":8697}
+{"category":"build","heft":1.56,"id":"spare","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40303","stage":1,"stage_ticks":10688}
+{"category":"enemy","heft":1.6,"id":"chain","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40303","stage":1,"stage_ticks":11118}
+{"category":"enemy","heft":1.06666666666667,"id":"shell_return","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40303","stage":1,"stage_ticks":14883}

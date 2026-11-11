@@ -1,0 +1,15 @@
+23:18:14Z start import-1 load=19.1
+23:18:17Z end import-1 exit=0 wall=3s load=19.1
+23:18:17Z start import-2 load=19.1
+23:18:20Z end import-2 exit=0 wall=3s load=19.3
+23:18:20Z start bot-alpha_bot_sweep_test load=19.3
+23:22:03Z end bot-alpha_bot_sweep_test exit=0 wall=223s load=18.3
+23:22:03Z start bot-alpha_posture_bands_test load=18.3
+23:26:12Z end bot-alpha_posture_bands_test exit=0 wall=249s load=14.5
+23:26:12Z start bot-boss_phase_hold_test load=14.5
+23:31:55Z end bot-boss_phase_hold_test exit=0 wall=344s load=11.6
+23:31:55Z start bot-bot_chain_hand_test load=11.6
+23:37:04Z end bot-bot_chain_hand_test exit=0 wall=309s load=15.4
+23:37:04Z start bot-bot_completionist_repeat_test load=15.4
+23:40:57Z end bot-bot_completionist_repeat_test exit=0 wall=232s load=10.9
+Gate shard: bots 1-5 on 0e258a0e: PASS, no new red. Receipt: /home/andrew/scratch/gate/w35-0e258a0e/bots-1/receipt.md

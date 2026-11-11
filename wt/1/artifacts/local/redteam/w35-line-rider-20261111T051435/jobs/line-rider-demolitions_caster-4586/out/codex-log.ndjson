@@ -1,0 +1,6 @@
+{"category":"enemy","heft":1.04,"id":"awaiting_operator","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-4586","stage":3,"stage_ticks":1512}
+{"category":"build","heft":1.19555555555556,"id":"strike","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-4586","stage":3,"stage_ticks":1575}
+{"category":"enemy","heft":1.30222222222222,"id":"crush_chain","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-4586","stage":3,"stage_ticks":3058}
+{"category":"enemy","heft":1.58888888888889,"id":"shift_over","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-4586","stage":3,"stage_ticks":3100}
+{"category":"enemy","heft":1.23555555555556,"id":"armour_plated","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-4586","stage":3,"stage_ticks":5283}
+{"category":"enemy","heft":1.77555555555556,"id":"lure_bloom","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-4586","stage":3,"stage_ticks":5572}

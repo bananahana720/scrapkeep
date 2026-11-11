@@ -1,0 +1,4 @@
+tests 1292
+pass 1290
+fail 0
+exit 0

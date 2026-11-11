@@ -1,0 +1,21 @@
+22:35:19Z start import-1 load=9.2
+22:37:08Z end import-1 exit=0 wall=108s load=9.8
+22:37:08Z start import-2 load=9.8
+22:37:11Z end import-2 exit=0 wall=3s load=9.8
+22:37:11Z start chunk00 load=9.8
+22:37:11Z start chunk01 load=9.8
+22:43:21Z end chunk01 exit=0 wall=370s load=21.2
+22:43:21Z start chunk02 load=21.2
+22:45:23Z end chunk00 exit=0 wall=492s load=17.9
+22:45:23Z start chunk03 load=17.9
+22:50:26Z end chunk02 exit=0 wall=425s load=25.1
+22:50:26Z start chunk04 load=25.1
+23:04:09Z end chunk03 exit=0 wall=1126s load=11.4
+23:04:09Z start chunk05 load=11.4
+23:13:25Z end chunk05 exit=1 wall=556s load=18.8
+23:14:29Z end chunk04 exit=0 wall=1443s load=12.8
+23:14:29Z start solo-posture_bands_reactor_test-1 load=12.8
+23:16:19Z end solo-posture_bands_reactor_test-1 exit=1 wall=111s load=19.3
+23:16:20Z start solo-posture_bands_reactor_test-2 load=19.3
+23:18:13Z end solo-posture_bands_reactor_test-2 exit=1 wall=114s load=19.1
+Gate shard: tests 353-704 on 0e258a0e: PASS, no new red (1 carried on the ledger). Receipt: /home/andrew/scratch/gate/w35-0e258a0e/tests-353-704/receipt.md

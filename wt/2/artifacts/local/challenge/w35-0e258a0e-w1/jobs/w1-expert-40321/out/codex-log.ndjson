@@ -1,0 +1,7 @@
+{"category":"enemy","heft":1.31111111111111,"id":"counter_ram","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40321","stage":1,"stage_ticks":9472}
+{"category":"enemy","heft":1.38444444444444,"id":"chain","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40321","stage":1,"stage_ticks":9545}
+{"category":"enemy","heft":1.70444444444444,"id":"plate_peel","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40321","stage":1,"stage_ticks":11119}
+{"category":"world","heft":1.74888888888889,"id":"sluice_hammer","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40321","stage":1,"stage_ticks":11119}
+{"category":"build","heft":1.81555555555556,"id":"spare","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40321","stage":1,"stage_ticks":11120}
+{"category":"enemy","heft":1.90333333333333,"id":"mat_slip","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40321","stage":1,"stage_ticks":18528}
+{"category":"enemy","heft":1.94555555555556,"id":"warden_shatter","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40321","stage":1,"stage_ticks":19508}

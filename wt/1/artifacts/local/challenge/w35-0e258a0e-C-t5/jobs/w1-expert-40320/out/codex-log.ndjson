@@ -1,0 +1,14 @@
+{"category":"enemy","heft":1.01333333333333,"id":"armour_wet","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40320","stage":1,"stage_ticks":3792}
+{"category":"enemy","heft":1.34,"id":"chain","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40320","stage":1,"stage_ticks":5377}
+{"category":"enemy","heft":1.41777777777778,"id":"plate_peel","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40320","stage":1,"stage_ticks":5888}
+{"category":"build","heft":1.77555555555556,"id":"spare","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40320","stage":1,"stage_ticks":6633}
+{"category":"build","heft":1.95333333333333,"kind":"found","participants":["player"],"parts":[],"run_id":"bot-40320","stage":1,"stage_ticks":7464,"text":"Arc meets a heavy hit: the charge overloads in a burst. Elites and bosses take the full burst."}
+{"category":"enemy","heft":1.90111111111111,"id":"set_piece_breakout","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40320","stage":1,"stage_ticks":8557}
+{"category":"enemy","heft":2.10333333333333,"id":"set_piece","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40320","stage":1,"stage_ticks":8734}
+{"category":"enemy","heft":2.18777777777778,"id":"mat_slip","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40320","stage":1,"stage_ticks":8745}
+{"category":"enemy","heft":2.05333333333333,"id":"counter_ram","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40320","stage":1,"stage_ticks":10659}
+{"category":"enemy","heft":2.12694444444444,"id":"shell_return","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40320","stage":1,"stage_ticks":11850}
+{"category":"enemy","heft":2.18916666666667,"id":"tether_snap","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40320","stage":1,"stage_ticks":13313}
+{"category":"build","heft":2.22027777777778,"id":"strike","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40320","stage":1,"stage_ticks":13611}
+{"category":"enemy","heft":1.95472222222222,"id":"heavy_roll","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40320","stage":1,"stage_ticks":18245}
+{"category":"enemy","heft":2.24361111111111,"id":"cable_run","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40320","stage":1,"stage_ticks":19960}

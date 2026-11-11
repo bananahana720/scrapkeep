@@ -1,0 +1,6 @@
+{"category":"enemy","heft":1.04444444444444,"id":"counter_ram","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40311","stage":1,"stage_ticks":5557}
+{"category":"enemy","heft":1.35555555555556,"id":"crush_chain","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40311","stage":1,"stage_ticks":7103}
+{"category":"enemy","heft":1.63333333333333,"id":"set_piece","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40311","stage":1,"stage_ticks":10011}
+{"category":"enemy","heft":1.68444444444444,"id":"tarn_redjaw_rend","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40311","stage":1,"stage_ticks":10011}
+{"category":"enemy","heft":1.96805555555556,"id":"mat_slip","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40311","stage":1,"stage_ticks":15185}
+{"category":"enemy","heft":1.15333333333333,"id":"plate_peel","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40311","stage":1,"stage_ticks":23148}

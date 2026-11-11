@@ -1,0 +1,5 @@
+{"category":"enemy","heft":1.0,"id":"armour_wet","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40302","stage":1,"stage_ticks":515}
+{"category":"enemy","heft":1.64888888888889,"id":"chain","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40302","stage":1,"stage_ticks":7036}
+{"category":"enemy","heft":1.62477777777778,"id":"shell_return","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40302","stage":1,"stage_ticks":10865}
+{"category":"enemy","heft":1.727,"id":"warden_shatter","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40302","stage":1,"stage_ticks":11996}
+{"category":"enemy","heft":1.97811111111111,"id":"set_piece","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40302","stage":1,"stage_ticks":12419}

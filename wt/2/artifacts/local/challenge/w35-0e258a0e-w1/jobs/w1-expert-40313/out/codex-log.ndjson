@@ -1,0 +1,6 @@
+{"category":"enemy","heft":1.03777777777778,"id":"counter_ram","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40313","stage":1,"stage_ticks":6338}
+{"category":"enemy","heft":1.16444444444444,"id":"cannon_lane_charge","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40313","stage":1,"stage_ticks":7148}
+{"category":"enemy","heft":1.62888888888889,"id":"set_piece","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40313","stage":1,"stage_ticks":9751}
+{"category":"enemy","heft":1.70222222222222,"id":"plate_peel","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40313","stage":1,"stage_ticks":11712}
+{"category":"build","heft":1.76444444444444,"id":"spare","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40313","stage":1,"stage_ticks":11713}
+{"category":"enemy","heft":1.92222222222222,"id":"warden_shatter","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40313","stage":1,"stage_ticks":16175}

@@ -1,0 +1,475 @@
+{
+  "wave": 35,
+  "commit": "0e258a0e19585ec14d917e3737ac32d3e2901fa3",
+  "started": "2026-11-11T05:14:35.017Z",
+  "minutes": 7,
+  "quick": false,
+  "pilots": [
+    "pylon_engineer",
+    "runner_gunner",
+    "demolitions_caster",
+    "tarn",
+    "tally",
+    "remembered_cannon"
+  ],
+  "runs": [
+    {
+      "id": "line-rider-pylon_engineer-4584",
+      "kind": "bot",
+      "persona": "line-rider",
+      "policy": "traversal",
+      "pilot": "pylon_engineer",
+      "seed": 4584,
+      "stages": 1,
+      "args": [
+        "--from-stage=1",
+        "--ticks=8100"
+      ],
+      "outcome": "ticks_done",
+      "stage": 1,
+      "game_seconds": 90,
+      "hits": 8,
+      "exit": 0,
+      "piles": [],
+      "hitches": {
+        "spikes": [
+          {
+            "tick": 569,
+            "stage": 1,
+            "ms": 39
+          },
+          {
+            "tick": 3223,
+            "stage": 1,
+            "ms": 43
+          }
+        ],
+        "loads": 0,
+        "p99": 12.8
+      }
+    },
+    {
+      "id": "line-rider-runner_gunner-4585",
+      "kind": "bot",
+      "persona": "line-rider",
+      "policy": "traversal",
+      "pilot": "runner_gunner",
+      "seed": 4585,
+      "stages": 2,
+      "args": [
+        "--from-stage=2",
+        "--ticks=8100"
+      ],
+      "outcome": "ticks_done",
+      "stage": 2,
+      "game_seconds": 90,
+      "hits": 5,
+      "exit": 0,
+      "piles": [],
+      "hitches": {
+        "spikes": [
+          {
+            "tick": 5953,
+            "stage": 2,
+            "ms": 38
+          },
+          {
+            "tick": 5967,
+            "stage": 2,
+            "ms": 44
+          }
+        ],
+        "loads": 0,
+        "p99": 13.1
+      }
+    },
+    {
+      "id": "line-rider-demolitions_caster-4586",
+      "kind": "bot",
+      "persona": "line-rider",
+      "policy": "traversal",
+      "pilot": "demolitions_caster",
+      "seed": 4586,
+      "stages": 3,
+      "args": [
+        "--from-stage=3",
+        "--ticks=8100"
+      ],
+      "outcome": "ticks_done",
+      "stage": 3,
+      "game_seconds": 90,
+      "hits": 16,
+      "exit": 0,
+      "piles": [],
+      "hitches": {
+        "spikes": [
+          {
+            "tick": 1801,
+            "stage": 3,
+            "ms": 172
+          },
+          {
+            "tick": 2136,
+            "stage": 3,
+            "ms": 36
+          },
+          {
+            "tick": 2183,
+            "stage": 3,
+            "ms": 166
+          },
+          {
+            "tick": 2945,
+            "stage": 3,
+            "ms": 92
+          },
+          {
+            "tick": 5132,
+            "stage": 3,
+            "ms": 94
+          },
+          {
+            "tick": 5499,
+            "stage": 3,
+            "ms": 51
+          },
+          {
+            "tick": 5500,
+            "stage": 3,
+            "ms": 35
+          },
+          {
+            "tick": 5506,
+            "stage": 3,
+            "ms": 45
+          },
+          {
+            "tick": 5507,
+            "stage": 3,
+            "ms": 49
+          }
+        ],
+        "loads": 0,
+        "p99": 16.2
+      }
+    },
+    {
+      "id": "line-rider-tarn-4587",
+      "kind": "bot",
+      "persona": "line-rider",
+      "policy": "traversal",
+      "pilot": "tarn",
+      "seed": 4587,
+      "stages": 4,
+      "args": [
+        "--from-stage=4",
+        "--ticks=8100"
+      ],
+      "outcome": "ticks_done",
+      "stage": 4,
+      "game_seconds": 90,
+      "hits": 9,
+      "exit": 0,
+      "piles": [],
+      "hitches": {
+        "spikes": [
+          {
+            "tick": 452,
+            "stage": 4,
+            "ms": 160
+          },
+          {
+            "tick": 1318,
+            "stage": 4,
+            "ms": 99
+          },
+          {
+            "tick": 5715,
+            "stage": 4,
+            "ms": 39
+          },
+          {
+            "tick": 5723,
+            "stage": 4,
+            "ms": 41
+          }
+        ],
+        "loads": 0,
+        "p99": 17.3
+      }
+    },
+    {
+      "id": "line-rider-tally-4588",
+      "kind": "bot",
+      "persona": "line-rider",
+      "policy": "traversal",
+      "pilot": "tally",
+      "seed": 4588,
+      "stages": 5,
+      "args": [
+        "--from-stage=5",
+        "--ticks=8100"
+      ],
+      "outcome": "ticks_done",
+      "stage": 5,
+      "game_seconds": 90,
+      "hits": 15,
+      "exit": 0,
+      "piles": [],
+      "hitches": {
+        "spikes": [
+          {
+            "tick": 452,
+            "stage": 5,
+            "ms": 186
+          },
+          {
+            "tick": 834,
+            "stage": 5,
+            "ms": 86
+          },
+          {
+            "tick": 4243,
+            "stage": 5,
+            "ms": 89
+          }
+        ],
+        "loads": 0,
+        "p99": 14.7
+      }
+    },
+    {
+      "id": "line-rider-remembered_cannon-4589",
+      "kind": "bot",
+      "persona": "line-rider",
+      "policy": "traversal",
+      "pilot": "remembered_cannon",
+      "seed": 4589,
+      "stages": 6,
+      "args": [
+        "--from-stage=6",
+        "--ticks=8100"
+      ],
+      "outcome": "ticks_done",
+      "stage": 6,
+      "game_seconds": 90,
+      "hits": 1,
+      "exit": 0,
+      "piles": [],
+      "hitches": {
+        "spikes": [
+          {
+            "tick": 786,
+            "stage": 6,
+            "ms": 90
+          },
+          {
+            "tick": 1120,
+            "stage": 6,
+            "ms": 87
+          },
+          {
+            "tick": 1721,
+            "stage": 6,
+            "ms": 87
+          },
+          {
+            "tick": 2114,
+            "stage": 6,
+            "ms": 34
+          },
+          {
+            "tick": 2119,
+            "stage": 6,
+            "ms": 55
+          },
+          {
+            "tick": 2246,
+            "stage": 6,
+            "ms": 112
+          },
+          {
+            "tick": 5287,
+            "stage": 6,
+            "ms": 37
+          },
+          {
+            "tick": 5288,
+            "stage": 6,
+            "ms": 53
+          },
+          {
+            "tick": 5293,
+            "stage": 6,
+            "ms": 37
+          },
+          {
+            "tick": 5294,
+            "stage": 6,
+            "ms": 56
+          },
+          {
+            "tick": 5295,
+            "stage": 6,
+            "ms": 36
+          }
+        ],
+        "loads": 0,
+        "p99": 15.3
+      }
+    }
+  ],
+  "extras": {
+    "fuzzSeconds": 60,
+    "placeholders": {
+      "total": 0,
+      "byKind": {}
+    },
+    "sweep": [],
+    "fuzzSummary": "item_fuzz: 6 seeds, 6 anomalies, 10 of 12 trigger kinds fired naturally somewhere, written to /home/andrew/scratch/gate/w35-0e258a0e/wt/1/artifacts/local/redteam/w35-line-rider-20261111T051435/jobs/item-fuzz",
+    "perfBench": {
+      "p99": 19.348,
+      "max": 46.877,
+      "p50": 8.009
+    },
+    "fuzzCount": 6
+  },
+  "findings": [
+    {
+      "severity": "watch",
+      "area": "stability",
+      "key": "cpu-p99",
+      "title": "Main-thread tick p99 over 10 ms on the cloud box",
+      "feel": "Headroom is thin; check with MangoHud on Andrew's PC.",
+      "runs": [
+        {
+          "id": "line-rider-pylon_engineer-4584",
+          "persona": "line-rider",
+          "pilot": "pylon_engineer",
+          "seed": 4584,
+          "note": "p99 12.8 ms",
+          "replay": "$GODOT_BIN --headless --fixed-fps 90 --path sketches/core-loop --script res://tools/bot_run.gd -- --out=artifacts/local/replay --policy=traversal --seeds=4584 --pilot=pylon_engineer --from-stage=1 --ticks=8100",
+          "carry": null
+        },
+        {
+          "id": "line-rider-runner_gunner-4585",
+          "persona": "line-rider",
+          "pilot": "runner_gunner",
+          "seed": 4585,
+          "note": "p99 13.1 ms",
+          "replay": "$GODOT_BIN --headless --fixed-fps 90 --path sketches/core-loop --script res://tools/bot_run.gd -- --out=artifacts/local/replay --policy=traversal --seeds=4585 --pilot=runner_gunner --from-stage=2 --ticks=8100",
+          "carry": null
+        },
+        {
+          "id": "line-rider-demolitions_caster-4586",
+          "persona": "line-rider",
+          "pilot": "demolitions_caster",
+          "seed": 4586,
+          "note": "p99 16.2 ms",
+          "replay": "$GODOT_BIN --headless --fixed-fps 90 --path sketches/core-loop --script res://tools/bot_run.gd -- --out=artifacts/local/replay --policy=traversal --seeds=4586 --pilot=demolitions_caster --from-stage=3 --ticks=8100",
+          "carry": null
+        },
+        {
+          "id": "line-rider-tarn-4587",
+          "persona": "line-rider",
+          "pilot": "tarn",
+          "seed": 4587,
+          "note": "p99 17.3 ms",
+          "replay": "$GODOT_BIN --headless --fixed-fps 90 --path sketches/core-loop --script res://tools/bot_run.gd -- --out=artifacts/local/replay --policy=traversal --seeds=4587 --pilot=tarn --from-stage=4 --ticks=8100",
+          "carry": null
+        },
+        {
+          "id": "line-rider-tally-4588",
+          "persona": "line-rider",
+          "pilot": "tally",
+          "seed": 4588,
+          "note": "p99 14.7 ms",
+          "replay": "$GODOT_BIN --headless --fixed-fps 90 --path sketches/core-loop --script res://tools/bot_run.gd -- --out=artifacts/local/replay --policy=traversal --seeds=4588 --pilot=tally --from-stage=5 --ticks=8100",
+          "carry": null
+        },
+        {
+          "id": "line-rider-remembered_cannon-4589",
+          "persona": "line-rider",
+          "pilot": "remembered_cannon",
+          "seed": 4589,
+          "note": "p99 15.3 ms",
+          "replay": "$GODOT_BIN --headless --fixed-fps 90 --path sketches/core-loop --script res://tools/bot_run.gd -- --out=artifacts/local/replay --policy=traversal --seeds=4589 --pilot=remembered_cannon --from-stage=6 --ticks=8100",
+          "carry": null
+        }
+      ]
+    },
+    {
+      "severity": "watch",
+      "area": "in-run growth",
+      "key": "fuzz:frame_time",
+      "title": "Item fuzz outlier: frame_time",
+      "feel": "A build costs more time per tick than its cap; timed under load on the cloud box, so recheck alone.",
+      "runs": [
+        {
+          "id": "item_fuzz",
+          "seed": 4550,
+          "pilot": "demolitions_caster",
+          "note": "p99 25.0 ms (cap 16.7 ms), build spiral_wave frost_barb loose_trigger frost_barb ...",
+          "replay": "$GODOT_BIN --headless --fixed-fps 90 --path sketches/core-loop --script res://tools/item_fuzz.gd -- --seeds=4550 --seconds=60 --out=artifacts/local/replay"
+        },
+        {
+          "id": "item_fuzz",
+          "seed": 4551,
+          "pilot": "tarn",
+          "note": "p99 22.6 ms (cap 16.7 ms), build scrap_gravity rivet_seam tempest_core fast_hands ...",
+          "replay": "$GODOT_BIN --headless --fixed-fps 90 --path sketches/core-loop --script res://tools/item_fuzz.gd -- --seeds=4551 --seconds=60 --out=artifacts/local/replay"
+        },
+        {
+          "id": "item_fuzz",
+          "seed": 4552,
+          "pilot": "tally",
+          "note": "p99 21.1 ms (cap 16.7 ms), build rime_rounds double_feed scrap_gravity cross_split ...",
+          "replay": "$GODOT_BIN --headless --fixed-fps 90 --path sketches/core-loop --script res://tools/item_fuzz.gd -- --seeds=4552 --seconds=60 --out=artifacts/local/replay"
+        },
+        {
+          "id": "item_fuzz",
+          "seed": 4553,
+          "pilot": "remembered_cannon",
+          "note": "p99 29.3 ms (cap 16.7 ms), build ram_plow double_feed cross_split spiral_wave ...",
+          "replay": "$GODOT_BIN --headless --fixed-fps 90 --path sketches/core-loop --script res://tools/item_fuzz.gd -- --seeds=4553 --seconds=60 --out=artifacts/local/replay"
+        },
+        {
+          "id": "item_fuzz",
+          "seed": 4554,
+          "pilot": "pylon_engineer",
+          "note": "p99 26.7 ms (cap 16.7 ms), build chain_arc arc_coil fast_hands rivet_plating ...",
+          "replay": "$GODOT_BIN --headless --fixed-fps 90 --path sketches/core-loop --script res://tools/item_fuzz.gd -- --seeds=4554 --seconds=60 --out=artifacts/local/replay"
+        },
+        {
+          "id": "item_fuzz",
+          "seed": 4555,
+          "pilot": "runner_gunner",
+          "note": "p99 27.5 ms (cap 16.7 ms), build runner_overclock scrap_gravity load_dividend runner_overclock ...",
+          "replay": "$GODOT_BIN --headless --fixed-fps 90 --path sketches/core-loop --script res://tools/item_fuzz.gd -- --seeds=4555 --seconds=60 --out=artifacts/local/replay"
+        }
+      ]
+    },
+    {
+      "severity": "watch",
+      "area": "stability",
+      "key": "hitch:scattered",
+      "title": "31 scattered ticks over 33 ms",
+      "feel": "Most likely the shared cloud box; MangoHud on Andrew's PC is the check.",
+      "runs": []
+    },
+    {
+      "severity": "watch",
+      "area": "stability",
+      "key": "perfbench",
+      "title": "Dense fight CPU frame p99 19.348 ms, max 46.877 ms",
+      "feel": "The biggest crowd the game builds costs more than a frame.",
+      "runs": [],
+      "counts": {
+        "p99": 19.348,
+        "max": 46.877,
+        "p50": 8.009
+      }
+    }
+  ],
+  "carry": []
+}

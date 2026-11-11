@@ -1,0 +1,4 @@
+{"category":"enemy","heft":1.02444444444444,"id":"armour_wet","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-6","stage":1,"stage_ticks":1535}
+{"category":"build","heft":1.13111111111111,"kind":"found","participants":["player"],"parts":[],"run_id":"bot-6","stage":1,"stage_ticks":4762,"text":"Arc meets a heavy hit: the charge overloads in a burst. Elites and bosses take the full burst."}
+{"category":"enemy","heft":1.29111111111111,"id":"shell_return","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-6","stage":1,"stage_ticks":6688}
+{"category":"enemy","heft":1.76555555555556,"id":"tether_snap","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-6","stage":1,"stage_ticks":12867}

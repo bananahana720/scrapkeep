@@ -1,0 +1,15 @@
+23:45:49Z start import-1 load=8.6
+23:45:53Z end import-1 exit=0 wall=4s load=8.5
+23:45:53Z start import-2 load=8.5
+23:45:56Z end import-2 exit=0 wall=3s load=8.5
+23:45:56Z start bot-park_reactor_fight_test load=8.5
+23:48:27Z end bot-park_reactor_fight_test exit=0 wall=151s load=7
+23:48:27Z start bot-pocket_entry_test load=7
+23:58:27Z end bot-pocket_entry_test exit=0 wall=600s load=13.2
+23:58:27Z start bot-posture_bands_flume_test load=13.2
+00:08:38Z end bot-posture_bands_flume_test exit=0 wall=611s load=21.1
+00:08:38Z start bot-posture_bands_swarm_camper_test load=21.1
+00:12:23Z end bot-posture_bands_swarm_camper_test exit=0 wall=225s load=15.7
+00:12:23Z start bot-posture_bands_swarm_test load=15.7
+00:17:06Z end bot-posture_bands_swarm_test exit=0 wall=283s load=77.3
+Gate shard: bots 11-15 on 0e258a0e: PASS, no new red. Receipt: /home/andrew/scratch/gate/w35-0e258a0e/bots-3/receipt.md

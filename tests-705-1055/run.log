@@ -1,0 +1,29 @@
+23:04:54Z start import-1 load=14.8
+23:04:57Z end import-1 exit=0 wall=3s load=14.8
+23:04:57Z start import-2 load=14.8
+23:05:01Z end import-2 exit=0 wall=3s load=15.4
+23:05:01Z start chunk00 load=15.4
+23:05:01Z start chunk01 load=15.4
+23:13:39Z end chunk00 exit=0 wall=519s load=16.4
+23:13:39Z start chunk02 load=16.4
+23:19:13Z end chunk01 exit=0 wall=853s load=17.5
+23:19:13Z start chunk03 load=17.5
+23:30:43Z end chunk02 exit=0 wall=1024s load=14.7
+23:30:43Z start chunk04 load=14.7
+23:35:29Z end chunk03 exit=1 wall=976s load=21.9
+23:35:29Z start chunk05 load=21.9
+23:39:39Z end chunk05 exit=0 wall=250s load=13
+23:40:10Z end chunk04 exit=1 wall=567s load=11.7
+23:40:10Z start solo-trace_readonly_test-1 load=11.7
+23:42:31Z end solo-trace_readonly_test-1 exit=0 wall=141s load=10.5
+23:42:31Z start solo-trace_readonly_test-2 load=10.5
+23:44:53Z end solo-trace_readonly_test-2 exit=0 wall=142s load=11
+23:44:54Z start solo-ui_workshop_bay_test-1 load=11
+23:45:09Z end solo-ui_workshop_bay_test-1 exit=1 wall=16s load=9.7
+23:45:09Z start solo-ui_workshop_bay_test-2 load=9.7
+23:45:25Z end solo-ui_workshop_bay_test-2 exit=1 wall=15s load=8.9
+23:45:25Z start solo-warden_counter_pulse_test-1 load=8.9
+23:45:37Z end solo-warden_counter_pulse_test-1 exit=1 wall=12s load=8.6
+23:45:37Z start solo-warden_counter_pulse_test-2 load=8.6
+23:45:49Z end solo-warden_counter_pulse_test-2 exit=1 wall=12s load=8.6
+Gate shard: tests 705-1055 on 0e258a0e: RED: 1 new red (ui_workshop_bay_test). Receipt: /home/andrew/scratch/gate/w35-0e258a0e/tests-705-1055/receipt.md

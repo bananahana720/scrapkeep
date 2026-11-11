@@ -1,0 +1,5 @@
+{"category":"enemy","heft":1.24666666666667,"id":"counter_ram","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40309","stage":1,"stage_ticks":8804}
+{"category":"build","heft":1.39333333333333,"id":"strike","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40309","stage":1,"stage_ticks":9460}
+{"category":"enemy","heft":1.47555555555556,"id":"chain","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40309","stage":1,"stage_ticks":9522}
+{"category":"enemy","heft":1.74,"id":"heavy_roll","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40309","stage":1,"stage_ticks":13451}
+{"category":"enemy","heft":1.78444444444444,"id":"warden_shatter","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40309","stage":1,"stage_ticks":13771}

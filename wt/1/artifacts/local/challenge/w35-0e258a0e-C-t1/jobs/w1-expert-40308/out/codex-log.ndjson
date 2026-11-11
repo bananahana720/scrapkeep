@@ -1,0 +1,9 @@
+{"category":"enemy","heft":1.0,"id":"armour_wet","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40308","stage":1,"stage_ticks":517}
+{"category":"enemy","heft":1.67111111111111,"id":"chain","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40308","stage":1,"stage_ticks":6850}
+{"category":"enemy","heft":1.74666666666667,"id":"shell_return","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40308","stage":1,"stage_ticks":8906}
+{"category":"build","heft":1.84666666666667,"kind":"found","participants":["player"],"parts":[],"run_id":"bot-40308","stage":1,"stage_ticks":9024,"text":"Arc meets a heavy hit: the charge overloads in a burst. Elites and bosses take the full burst."}
+{"category":"enemy","heft":1.84666666666667,"id":"set_piece_breakout","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40308","stage":1,"stage_ticks":9300}
+{"category":"enemy","heft":1.89111111111111,"id":"set_piece","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40308","stage":1,"stage_ticks":9477}
+{"category":"enemy","heft":1.93555555555556,"id":"parting_shot","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40308","stage":1,"stage_ticks":9502}
+{"category":"enemy","heft":2.28444444444444,"id":"crush_chain","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40308","stage":1,"stage_ticks":11509}
+{"category":"enemy","heft":2.44444444444444,"id":"warden_shatter","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40308","stage":1,"stage_ticks":11750}

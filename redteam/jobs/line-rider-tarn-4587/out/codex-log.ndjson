@@ -1,0 +1,5 @@
+{"category":"enemy","heft":1.03111111111111,"id":"lure_bloom","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-4587","stage":4,"stage_ticks":1025}
+{"category":"enemy","heft":1.21777777777778,"id":"brood_dark","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-4587","stage":4,"stage_ticks":1025}
+{"category":"enemy","heft":1.34666666666667,"id":"roof_drop","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-4587","stage":4,"stage_ticks":5525}
+{"category":"enemy","heft":1.43777777777778,"id":"burrow_lane","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-4587","stage":4,"stage_ticks":5820}
+{"category":"enemy","heft":1.70666666666667,"id":"armour_plated","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-4587","stage":4,"stage_ticks":6618}

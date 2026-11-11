@@ -1,0 +1,13 @@
+{"category":"enemy","heft":1.03777777777778,"id":"counter_ram","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40323","stage":1,"stage_ticks":5603}
+{"category":"enemy","heft":1.34666666666667,"id":"crush_chain","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40323","stage":1,"stage_ticks":7104}
+{"category":"enemy","heft":1.52222222222222,"id":"chain","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40323","stage":1,"stage_ticks":8252}
+{"category":"enemy","heft":1.57111111111111,"id":"set_piece","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40323","stage":1,"stage_ticks":8325}
+{"category":"enemy","heft":1.61555555555556,"id":"set_piece_cash_in","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40323","stage":1,"stage_ticks":8325}
+{"category":"enemy","heft":1.66666666666667,"id":"tarn_redjaw_rend","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40323","stage":1,"stage_ticks":8325}
+{"category":"enemy","heft":1.80222222222222,"id":"plate_peel","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40323","stage":1,"stage_ticks":9856}
+{"category":"build","heft":1.91333333333333,"id":"spare","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40323","stage":1,"stage_ticks":10104}
+{"category":"enemy","heft":2.18444444444444,"id":"heavy_roll","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40323","stage":1,"stage_ticks":11539}
+{"category":"enemy","heft":2.0,"id":"shell_return","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40323","stage":1,"stage_ticks":12119}
+{"category":"enemy","heft":2.22333333333333,"id":"tether_snap","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40323","stage":1,"stage_ticks":14499}
+{"category":"enemy","heft":1.91777777777778,"id":"mat_slip","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40323","stage":1,"stage_ticks":15376}
+{"category":"enemy","heft":2.43888888888889,"id":"warden_shatter","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40323","stage":1,"stage_ticks":17470}

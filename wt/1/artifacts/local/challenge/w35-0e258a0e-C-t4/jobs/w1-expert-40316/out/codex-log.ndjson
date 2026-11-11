@@ -1,0 +1,8 @@
+{"category":"enemy","heft":1.02444444444444,"id":"counter_ram","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40316","stage":1,"stage_ticks":6527}
+{"category":"enemy","heft":1.15333333333333,"id":"kest_cable_charge","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40316","stage":1,"stage_ticks":7358}
+{"category":"enemy","heft":1.62444444444444,"id":"set_piece","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40316","stage":1,"stage_ticks":10104}
+{"category":"enemy","heft":1.66888888888889,"id":"kest_windhover","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40316","stage":1,"stage_ticks":10105}
+{"category":"enemy","heft":1.68522222222222,"id":"heavy_roll","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40316","stage":1,"stage_ticks":12952}
+{"category":"world","heft":1.60577777777778,"id":"steam_thermal","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40316","stage":1,"stage_ticks":13181}
+{"category":"enemy","heft":1.82361111111111,"id":"shell_return","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40316","stage":1,"stage_ticks":18932}
+{"category":"enemy","heft":1.78875,"id":"warden_shatter","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40316","stage":1,"stage_ticks":21936}

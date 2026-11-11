@@ -1,0 +1,6 @@
+{"category":"enemy","heft":1.03777777777778,"id":"counter_ram","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40330","stage":1,"stage_ticks":6480}
+{"category":"enemy","heft":1.34666666666667,"id":"crush_chain","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40330","stage":1,"stage_ticks":7884}
+{"category":"enemy","heft":1.5,"id":"chain","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40330","stage":1,"stage_ticks":8899}
+{"category":"enemy","heft":1.55444444444444,"id":"set_piece","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40330","stage":1,"stage_ticks":10931}
+{"category":"build","heft":1.2,"id":"spare","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40330","stage":1,"stage_ticks":18930}
+{"category":"enemy","heft":1.27777777777778,"id":"shell_return","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40330","stage":1,"stage_ticks":19110}

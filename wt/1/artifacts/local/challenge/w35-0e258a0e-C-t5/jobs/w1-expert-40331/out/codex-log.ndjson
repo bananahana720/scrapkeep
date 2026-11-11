@@ -1,0 +1,12 @@
+{"category":"enemy","heft":1.07333333333333,"id":"plate_peel","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40331","stage":1,"stage_ticks":4897}
+{"category":"enemy","heft":1.12222222222222,"id":"counter_ram","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40331","stage":1,"stage_ticks":6473}
+{"category":"enemy","heft":1.24888888888889,"id":"cannon_lane_charge","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40331","stage":1,"stage_ticks":7314}
+{"category":"enemy","heft":1.68888888888889,"id":"cannon_recital","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40331","stage":1,"stage_ticks":11134}
+{"category":"enemy","heft":1.73333333333333,"id":"set_piece","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40331","stage":1,"stage_ticks":11134}
+{"category":"enemy","heft":1.89555555555556,"id":"crush_chain","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40331","stage":1,"stage_ticks":11285}
+{"category":"enemy","heft":2.00111111111111,"id":"heavy_roll","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40331","stage":1,"stage_ticks":13195}
+{"category":"build","heft":1.33444444444444,"id":"spare","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40331","stage":1,"stage_ticks":19806}
+{"category":"enemy","heft":1.33333333333333,"id":"mat_slip","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40331","stage":1,"stage_ticks":22282}
+{"category":"enemy","heft":1.45666666666667,"id":"shell_return","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40331","stage":1,"stage_ticks":23649}
+{"category":"enemy","heft":1.36888888888889,"id":"cannon_fire_mission","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40331","stage":1,"stage_ticks":24319}
+{"category":"enemy","heft":1.52,"id":"tether_snap","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40331","stage":1,"stage_ticks":26183}

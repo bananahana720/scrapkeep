@@ -1,0 +1,6 @@
+{"category":"enemy","heft":1.01333333333333,"id":"armour_wet","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40344","stage":1,"stage_ticks":3792}
+{"category":"enemy","heft":1.29777777777778,"id":"plate_peel","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40344","stage":1,"stage_ticks":5832}
+{"category":"enemy","heft":1.41777777777778,"id":"chain","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40344","stage":1,"stage_ticks":5903}
+{"category":"build","heft":1.84666666666667,"id":"spare","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40344","stage":1,"stage_ticks":7531}
+{"category":"enemy","heft":1.16888888888889,"id":"set_piece","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40344","stage":1,"stage_ticks":13191}
+{"category":"build","heft":1.23777777777778,"kind":"found","participants":["player"],"parts":[],"run_id":"bot-40344","stage":1,"stage_ticks":15409,"text":"Arc meets a heavy hit: the charge overloads in a burst. Elites and bosses take the full burst."}

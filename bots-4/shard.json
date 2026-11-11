@@ -1,0 +1,102 @@
+{
+  "title": "Gate shard: bots 16-20 on 0e258a0e",
+  "head": "0e258a0e19585ec14d917e3737ac32d3e2901fa3",
+  "box": "32 vCPU AMD Ryzen 9 5950X 16-Core Processor, 63 GB",
+  "threads": 32,
+  "godot": "Godot_v4.7.2-stable_linux.x86_64",
+  "scale": 1,
+  "window": "bot list 16 to 20 of 23 (posture_bands_test to self_play_launch_test), 5 tests",
+  "steps": {
+    "import-1": {
+      "exit": 0,
+      "seconds": 4,
+      "outcome": "ok",
+      "load_start": 17.7,
+      "load_end": 17.7
+    },
+    "import-2": {
+      "exit": 0,
+      "seconds": 3,
+      "outcome": "ok",
+      "load_start": 16.6,
+      "load_end": 16.6
+    },
+    "bot-posture_bands_test": {
+      "exit": 0,
+      "seconds": 743,
+      "load_start": 16.6,
+      "load_end": 10.6
+    },
+    "bot-restart_latency_test": {
+      "exit": 0,
+      "seconds": 117,
+      "load_start": 10.6,
+      "load_end": 7.3
+    },
+    "bot-run_save_interrupt_test": {
+      "exit": 0,
+      "seconds": 125,
+      "load_start": 7.3,
+      "load_end": 7.1
+    },
+    "bot-run_tier_test": {
+      "exit": 0,
+      "seconds": 267,
+      "load_start": 7.1,
+      "load_end": 17
+    },
+    "bot-self_play_launch_test": {
+      "exit": 0,
+      "seconds": 293,
+      "load_start": 17,
+      "load_end": 6.1
+    }
+  },
+  "results": [
+    {
+      "test": "posture_bands_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 739.6
+    },
+    {
+      "test": "restart_latency_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 114.1
+    },
+    {
+      "test": "run_save_interrupt_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 122.5
+    },
+    {
+      "test": "run_tier_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 264.3
+    },
+    {
+      "test": "self_play_launch_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 290.7
+    }
+  ],
+  "failures": [],
+  "counts": {
+    "error": 0,
+    "script_error": 0,
+    "in_use": 0,
+    "freed": 0,
+    "leaked_warning": 77
+  },
+  "slow": [],
+  "verdict": {
+    "ok": true,
+    "line": "PASS, no new red"
+  },
+  "startedAt": "2026-11-11T00:12:10.043Z",
+  "finishedAt": "2026-11-11T00:38:02.340Z"
+}
