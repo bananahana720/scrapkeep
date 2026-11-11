@@ -511,13 +511,14 @@ Each one is a call Andrew can overturn in one line.
 
 ## Decisions for Andrew
 
-1. **Prototype Heat first, on the dam yard, behind a flag, after the world 1 sitting.**
-   Recommended: yes. Alternatives: before the sitting (it would compete with polish); not at all. Or none of these.
-2. **Heat's danger: hits on a hot shell land at 1.5 x.**
-   Recommended: 1.5 x. Alternatives: 2 x (sharper, riskier against the fairness bar); no taken multiplier, cook-off only. Or none of these.
-3. **Reservoir's overtime pays on top of "yard pays once".**
-   Recommended: yes, as an optional keeper's gamble. Alternative: fold it into the one yard payout. Or none of these.
-4. **Called Shot's miss costs the bonus core.**
-   Recommended: yes. Alternatives: no cost (it loses its bite); costs one gate card (breaks the cobalt floor). Or none of these.
-5. **Stamp It HIRED (WILD) needs a second-companion exception or to replace SPIL-9 for the run.**
-   Recommended: park it until after the alpha. Alternative: prototype it on the dam Warden replacing SPIL-9. Or none of these.
+**Answered by Andrew, 11 Nov 2026 18:42Z:** "I like all the recommendations, and I would want to try to fit everything before the sitting if possible ... test where we need to, and not have to like have things be stalled because of ... long wall clock ... test sessions, UAT." So decisions 2 to 5 take the recommended option, and decision 1 changes: Heat, Reservoir and Called Shot are built before the world 1 sitting, with focused tests only and no separate play-test step per feature (the sitting is the play test). Stamp It HIRED stays parked, as recommended.
+
+| #   | Decision                                 | Answer                                                                |
+| --- | ---------------------------------------- | --------------------------------------------------------------------- |
+| 1   | When to build Heat (and the other two)   | Before the sitting, if it fits (changed from the recommended "after") |
+| 2   | Hits on a hot shell                      | 1.5 x                                                                 |
+| 3   | Overtime pays on top of "yard pays once" | Yes, as an optional keeper's gamble                                   |
+| 4   | A missed Called Shot costs               | The bonus core; the cobalt floor stays                                |
+| 5   | Stamp It HIRED                           | Parked until after the alpha                                          |
+
+How this changes the prototype: the Heat "kill it if" line is read from the 24-seed bot pair and from Andrew's own play at the sitting, not from a separate five-minute session before it. The bot half of the kill line (time at blazing up 50% or more; at least one detonation a minute) is checked when the Heat PR lands.
