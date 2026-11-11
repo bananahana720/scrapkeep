@@ -158,7 +158,7 @@ func _tables() -> void:
 	_t.check("02 planted: the three toast rows put back are caught", restored.size() == 3, str(restored))
 	_t.eq("03 the next objective stays", EventKinds.objective("reward_offered"), "Roll through a gate")
 	_t.eq("04 the plate tick stays", Objectives.done_words("warden"), "Warden broken")
-	_t.eq("05 the core toast says what the core does", EventKinds.hud("core_gained"), "Gates offer better parts")
+	_t.eq("05 the core toast says what the core does", EventKinds.hud("core_gained"), "Gates may offer rares")
 	_t.check("06 the sounds stay on the rows", EventKinds.row("beacon_unsealed").sound == "stinger_unseal" and EventKinds.row("reward_offered").sound == "gates_open"
 		and EventKinds.row("boss_defeated").sound == "stinger_boss_defeated", "")
 

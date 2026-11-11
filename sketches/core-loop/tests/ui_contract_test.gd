@@ -134,7 +134,7 @@ func _check_prompt_parse() -> void:
 		and long["title"] == "Roll through the" and long["detail"] == "hoop for a part"
 	var fab: Dictionary = WorldPrompt.parse("Chain Arc\nArcs jump\nROLL THROUGH: 40 cogs")
 	ok = ok and gate["icon"] == "obj_gate" and vault["icon"] == "obj_vault" and fab["icon"] == "obj_fabricator" \
-		and Callouts.plain(EventKinds.UI_ROWS["callout_notes"]["hud"]) == "Hold Tab: notes"
+		and Callouts.plain(EventKinds.UI_ROWS["callout_notes"]["hud"]) == "Hold Tab for notes"
 	_report("prompt parse", ok, "gate %s; vault %s; long first line %s; fabricator icon %s" % [gate, vault, long, fab["icon"]])
 
 

@@ -12,7 +12,7 @@ const KEPT := "kept"
 const LOST := "lost"
 const NEITHER := ""
 # The header each group is drawn under, in the order the screen draws them.
-const HEADERS := [[KEPT, "KEPT IN YOUR TOTALS"], [LOST, "LOST WITH THIS RUN"], [NEITHER, ""]]
+const HEADERS := [[KEPT, "Kept in your totals"], [LOST, "Lost with this run"], [NEITHER, ""]]
 
 
 static func rows(s: Dictionary, stage_count: int) -> Array:
