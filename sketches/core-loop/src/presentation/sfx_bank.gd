@@ -106,7 +106,7 @@ const KEST_SOUNDS := ["cable_kest_fizz", "cable_kest_set", "cable_kest_blast", "
 # Per-cue trim in dB against the 0.9 peak every cue is normalized to. Rapid, small
 # facts sit low so a firefight never turns to mush; rare facts sit at the top.
 const TRIM_DB := {
-	"ui_tick": -14.0, "hop": -10.0, "boost_whoosh": -6.0, "dash_whoosh": -5.0,
+	"ui_tick": -14.0, "hop": -10.0, "boost_whoosh": -6.0, "dash_whoosh": -5.0, "carve_release": -8.0,
 	"land_thud": -6.0, "slam_boom": -1.0, "grapple_clink": -7.0, "grapple_release": -11.0,
 	"core_slam": -1.0, "ultimate_land": -1.0, "kest_demo_knock": -4.0, "rivet_skid_plate": -4.0,
 	"grown_sub": -4.0, "grown_crack": -7.0, "grown_tail": -10.0, "grown_rattle": -11.0,
@@ -837,6 +837,11 @@ static func _bake(id: String) -> PackedFloat32Array:
 			return _mix([[_tone(0.11, 380.0, 640.0, "sine", 28.0), 0, 1.0], [_noise(0.02, 3000.0, 3000.0, 200.0), 0, 0.3]])
 		"boost_whoosh":
 			return _mix([[_noise(0.42, 500.0, 3200.0, 7.0, 0.06), 0, 1.0], [_tone(0.12, 90.0, 55.0, "sine", 25.0), 0, 0.7]])
+		# The carve letting go: the grind's bright rasp falls away under a short rising saw, so the
+		# ride off a bank sounds like the shell springing free of the wall.
+		"carve_release":
+			return _mix([[_noise(0.18, 5200.0, 1600.0, 16.0, 0.004), 0, 0.9], [_tone(0.14, 220.0, 520.0, "saw", 18.0), Synth.seconds(0.03), 0.22],
+				[_tone(0.08, 140.0, 90.0, "sine", 30.0), 0, 0.5]])
 		"dash_whoosh":
 			return _mix([[_noise(0.28, 1400.0, 5200.0, 11.0, 0.02), 0, 1.0], [_tone(0.2, 300.0, 950.0, "saw", 14.0), 0, 0.18]])
 		"land_thud":

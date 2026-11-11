@@ -151,7 +151,12 @@ static func _read_parks_together(table) -> Dictionary:
 	var ids: Array = paths.keys()
 	var read := []
 	read.resize(ids.size())
-	var task := WorkerThreadPool.add_group_task(func(n: int): read[n] = ParkMap.new(paths[ids[n]]), ids.size(), -1, true, "park files")
+	# Godot 4.7.2 fills an untyped operator's cache the first time its line runs, and readers take no lock: two
+	# workers on the same cold line can call a half-written cache and crash (a rare SIGABRT at Game setup). The
+	# first stage's park reads here first, which runs every line the other parks share once before any worker
+	# does (a line coverage read of the six parks found no shared operator line left cold); the rest read at once.
+	read[0] = ParkMap.new(paths[ids[0]])
+	var task := WorkerThreadPool.add_group_task(func(n: int): read[n + 1] = ParkMap.new(paths[ids[n + 1]]), ids.size() - 1, -1, true, "park files")
 	WorkerThreadPool.wait_for_group_task_completion(task)
 	var parks := {}
 	for n in ids.size():

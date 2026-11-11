@@ -54,6 +54,10 @@ signal boosted(direction: Vector3)
 signal dashed(direction: Vector3)
 signal landed(impact: float)
 signal slammed(at: Vector3, strength: float, flatness: float)
+# A carve ended (rigid_ball.gd through the kit's facts): the ball rode banked ground steeper
+# than Tuning.CARVE_DOT at grip speed for `seconds`, and left it at `speed` m/s from `at`.
+# Carves shorter than RigidBall.CARVE_MIN_S (0.3 s) are seam hops and publish nothing.
+signal carved(at: Vector3, seconds: float, speed: float)
 # The slam's shockwave resolved (player_ball.gd): it threw hit_count enemies, or none.
 signal drop_landed(hit_count: int)
 signal missed_drop

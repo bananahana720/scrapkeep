@@ -3,7 +3,9 @@ extends Node
 const Companion := preload("res://src/core/companion.gd")
 const ScrapField := preload("res://src/build/scrap_field.gd")
 const RewardGates := preload("res://src/build/reward_gates.gd")
+const CalledShot := preload("res://src/build/called_shot.gd")
 const Fabricators := preload("res://src/build/fabricators.gd")
+const HullMark := preload("res://src/world/hull_mark.gd")
 const ElementField := preload("res://src/build/element_field.gd")
 const Elements := preload("res://src/build/elements.gd")
 const Accretion := preload("res://src/build/accretion.gd")
@@ -136,6 +138,9 @@ var panel_rng := RandomNumberGenerator.new()
 var scrap_rng := RandomNumberGenerator.new()
 # Vaults paid this stage: each names its own offer stream.
 var _vaults_paid := 0
+var _overtimes_paid := 0
+# Called Shot (called_shot.gd, behind --called-shot): the gate asks it for the pair's rarities.
+var called_shot: Node3D
 # Louvres the last recompute converted into the pilot's signature stat (Panels.OVERFLOW), and
 # the counts it folded after that conversion (what the build read's stat lines say).
 var panel_overflow := 0
@@ -256,6 +261,9 @@ func setup(ctx_ref) -> void:
 	gates.name = "RewardGates"
 	ctx.root.add_child(gates)
 	gates.setup(ctx.terrain)
+	called_shot = CalledShot.new()
+	ctx.root.add_child(called_shot)
+	called_shot.setup(ctx)
 	gates.mark_for = offer_mark
 	gates.active_row = _active_row
 	gates.chosen.connect(_on_gate_chosen)
@@ -305,6 +313,8 @@ func setup(ctx_ref) -> void:
 	_connect_triggers()
 	ctx.events.beacon_unsealed.connect(func(_stage: int): clock.warden_broken())
 	ctx.events.beacon_unsealed.connect(_on_warden_broken_hotwire)
+	# Marked hull: the Warden break lifts the mark a keeper's gamble put on max hull.
+	ctx.events.beacon_unsealed.connect(func(_stage: int): HullMark.lift(ctx.run))
 	ctx.events.enemy_struck.connect(_on_tread_struck)
 	ctx.events.player_died.connect(func(): shop.note_death(ctx.run.cogs))
 	makers.setup()
@@ -996,7 +1006,7 @@ func _on_scrap_collected(_amount: int, _at: Vector3, _total: int) -> void:
 	if mass_hp != _mass_hp:
 		sheet.max_hp_bonus += mass_hp - _mass_hp
 		_mass_hp = mass_hp
-		ctx.run.set_max_hp(ctx.run.base_max_hp() + sheet.max_hp_bonus)
+		ctx.run.set_max_hp(HullMark.ceiling(ctx.run, ctx.run.base_max_hp() + sheet.max_hp_bonus))
 	_redraw()
 
 
@@ -1064,6 +1074,7 @@ func _on_stage_entered(stage: int, retry: bool) -> void:
 	lanes.reset()
 	_offered = {}
 	_vaults_paid = 0
+	_overtimes_paid = 0
 	# A retry replays the same procs and panel drops: the seeds name the run and stage only.
 	loot_rng.seed = hash([LOOT_SEED, ctx.flow.run_key(), stage, "loot"])
 	panel_rng.seed = hash([ctx.run.run_seed, stage, "panels"])
@@ -1161,6 +1172,24 @@ func yard_cleared(at: Vector3) -> void:
 	if kill_log.size() < KILL_LOG_CAP:
 		kill_log.append([ctx.flow.stage(), "yard_clear", false, 1.0, false, true, false])
 	scrap.drop_panel(at, Panels.draw(panel_rng, _class_id()))
+
+
+# The overtime pot (overtime.gd, loops.md Spec 2), on top of the yard's own panel (ruling af
+# stays): one ring adds a panel, two add a rare (cobalt) part, three add a core and another rare.
+# Each payout rolls its own stream, like a vault's, so no other stream moves.
+func overtime_paid(at: Vector3, rings: int) -> void:
+	if scrapless() or rings <= 0:
+		return
+	_overtimes_paid += 1
+	var rng := _offer_rng("overtime_%d" % _overtimes_paid)
+	scrap.drop_panel(at, Panels.draw(rng, _class_id()))
+	var rares := (1 if rings >= 2 else 0) + (1 if rings >= 3 else 0)
+	for i in rares:
+		var picks: Array = Parts.roll(rng, Parts.SOURCE_RARITIES["vault"], _class_id(), ctx.run.parts, 1)
+		if not picks.is_empty():
+			ctx.run.add_part(picks[0], "overtime")
+	if rings >= 3:
+		ctx.run.add_core("overtime", at)
 
 
 # The rib multiplier at a kill: DROP.rib in an off-spine dead end, else 1.0. A stage with no
@@ -1286,7 +1315,8 @@ func _active_row(id: String) -> Dictionary:
 func _on_flow_changed(state: String) -> void:
 	if state != "gates" or gates.is_open():
 		return
-	var rarities := Parts.gate_rarities(ctx.run.gate_tier_bonus())
+	# The called shot settles here (called_shot.gd): a met call lifts the pair, a missed one costs a core.
+	var rarities: Array = called_shot.gate_rarities()
 	var gate_rng := _offer_rng("gates")
 	var picks: Array = Parts.roll_gate(gate_rng, rarities, _class_id(), ctx.run.parts, GATE_CHOICES, ctx.flow.stage(), _offered)
 	picks = Parts.floor_gate(gate_rng, picks, _class_id(), ctx.run.parts, _offered, GATE_CHOICES)

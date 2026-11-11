@@ -1,6 +1,7 @@
 extends Control
 
 const Palette := preload("res://src/core/palette.gd")
+const UiTokens := preload("res://src/ui/ui_tokens.gd")
 const Icons := preload("res://src/ui/icons.gd")
 const Keycap := preload("res://src/ui/keycap.gd")
 const UiFonts := preload("res://src/ui/ui_fonts.gd")
@@ -36,8 +37,8 @@ const ROW_H := 88.0
 const GAP := 6.0
 const CAP := 22.0
 const ICON := 30.0
-const FONT := 13
-const EXTRA_FONT := 12
+const FONT := UiTokens.CAPTION
+const EXTRA_FONT := UiTokens.CAPTION
 const MOUSE_GAP := 34.0
 const MOUSE_SIZE := Vector2(132.0, 206.0)
 const MOUSE_LABEL := 112.0

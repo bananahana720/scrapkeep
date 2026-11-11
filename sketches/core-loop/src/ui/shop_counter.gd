@@ -1,6 +1,7 @@
 extends Control
 
 const Palette := preload("res://src/core/palette.gd")
+const UiTokens := preload("res://src/ui/ui_tokens.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const RunState := preload("res://src/core/run_state.gd")
 const Parts := preload("res://src/build/parts.gd")
@@ -19,7 +20,8 @@ const ShopTile := preload("res://src/ui/shop_tile.gd")
 #
 # Two faces. Buy: the shelf's three parts, the reroll, a waiting upgrade pick, the
 # locked hook and a charge cell per ability that recharges. Sell: every held part at
-# its quote. The wallet row carries cogs and heft, because heft is what the hook asks
+# its quote, then Moss's scale when it is open (shop.weigh: one lump of mass for cogs, the
+# mass and the cogs shown on the plate before the press). The wallet row carries cogs and heft, because heft is what the hook asks
 # for. The line under the plates names the plate under the mouse or the keys.
 
 signal acted(fact: String, record: Dictionary)
@@ -34,7 +36,7 @@ const HOOK_TILE := Vector2(150.0, 124.0)
 const CELL_TILE := Vector2(96.0, 124.0)
 const SELL_TILE := Vector2(96.0, 110.0)
 const SELL_COLUMNS := 6
-const DETAIL_FONT := 18
+const DETAIL_FONT := UiTokens.BODY
 const FADE_IN := 0.22
 const FADE_OUT := 0.18
 const SLIDE := 40.0
@@ -69,7 +71,7 @@ class ScrapChip extends Control:
 	func _draw() -> void:
 		var mid := size.y * 0.5
 		draw_texture_rect(Icons.texture("res_scrap"), Rect2(Vector2(0.0, mid - 12.0), Vector2(24.0, 24.0)), false, Icons.tint("res_scrap", Palette.ARC))
-		UiDraw.text(self, 32.0, mid, str(amount), 22, Palette.SAND, true)
+		UiDraw.text(self, 32.0, mid, str(amount), UiTokens.LABEL, Palette.SAND, true)
 
 
 func _init() -> void:
@@ -98,16 +100,17 @@ func _init() -> void:
 		var b := Button.new()
 		b.icon = Icons.shape(String(EventKinds.LOOT_ROWS[f[1]]["shape"]))
 		b.expand_icon = true
-		b.custom_minimum_size = Vector2(46.0, 40.0)
+		b.custom_minimum_size = Vector2(UiTokens.TARGET, UiTokens.TARGET)
 		b.focus_mode = Control.FOCUS_ALL
 		b.toggle_mode = true
+		b.accessibility_name = String(f[0]).capitalize()
 		b.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 		b.add_theme_color_override("icon_normal_color", Color(EventKinds.LOOT_ROWS[f[1]]["color"], 0.6))
 		b.add_theme_color_override("icon_pressed_color", EventKinds.LOOT_ROWS[f[1]]["color"])
-		b.add_theme_color_override("icon_hover_color", Color.WHITE)
-		b.add_theme_color_override("icon_focus_color", Color.WHITE)
+		b.add_theme_color_override("icon_hover_color", UiTokens.TEXT)
+		b.add_theme_color_override("icon_focus_color", UiTokens.TEXT)
 		for state in ["normal", "hover", "pressed", "focus", "disabled"]:
-			b.add_theme_stylebox_override(state, ChoiceButton.plate(Palette.SAND if state in ["hover", "focus"] else Palette.VERDIGRIS, 3 if state == "focus" else 2, 8.0, state != "focus"))
+			b.add_theme_stylebox_override(state, ChoiceButton.plate(Palette.SAND if state in ["hover", "focus"] else UiTokens.LINE, 3 if state == "focus" else 2, 8.0, state != "focus"))
 		b.pressed.connect(set_face.bind(f[0]))
 		b.mouse_entered.connect(func(): b.grab_focus())
 		_wallet.add_child(b)
@@ -282,6 +285,12 @@ func _build_sell() -> void:
 			row = _row()
 		var quote: int = offer["quote"]
 		_tile(row, _part_rec("sell", offer["part_id"], quote, "ok" if quote >= 0 else "welded"), SELL_TILE)
+	if shop.scale_open():
+		var weigh: Dictionary = shop.weigh_quote()
+		if row.get_child_count() >= SELL_COLUMNS:
+			row = _row()
+		_tile(row, {"kind": "weigh", "name": "Weigh %d mass for %d cogs" % [weigh["mass"], weigh["cogs"]], "mass": weigh["mass"],
+			"price": weigh["cogs"], "color": EventKinds.color("heft_class_changed"), "state": "ok" if int(weigh["cogs"]) > 0 else "poor"}, SELL_TILE)
 
 
 func _part_rec(kind: String, part_id: String, price: int, state: String) -> Dictionary:
@@ -334,6 +343,9 @@ func press(tile) -> void:
 			fact = "shop_charge"
 		"sell":
 			result = shop.sell(String(rec["part_id"]))
+			fact = "shop_sold"
+		"weigh":
+			result = shop.weigh()
 			fact = "shop_sold"
 		"pick":
 			pick_wanted.emit()

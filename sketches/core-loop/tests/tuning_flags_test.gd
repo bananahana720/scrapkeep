@@ -9,6 +9,8 @@ const Threat := preload("res://src/combat/threat_grammar.gd")
 
 # flag -> [tuning key, valid value, invalid value, when]. Numbers have no invalid option.
 const EXPECTED := {
+	"marked-hull": ["marked_hull", "on", "bogus", "launch"],
+	"moss-scale": ["moss_scale", "on", "bogus", "launch"],
 	"scrap": ["scrap_mode", "armor", "bogus", "start"],
 	"wear": ["wear", "on", "bogus", "start"],
 	"route-seed": ["route_seed", "7", "seven", "start"],
@@ -27,6 +29,9 @@ const EXPECTED := {
 	"actives": ["actives", "on", "bogus", "launch"],
 	"profile": ["profile", "sitting", "bogus", "launch"],
 	"grip": ["grip", "off", "bogus", "launch"],
+	"heat": ["heat", "on", "bogus", "launch"],
+	"overtime": ["overtime", "on", "bogus", "launch"],
+	"called-shot": ["called_shot", "on", "bogus", "launch"],
 }
 
 # The lab's winners are the shipping defaults: a bare Tuning reports each one.

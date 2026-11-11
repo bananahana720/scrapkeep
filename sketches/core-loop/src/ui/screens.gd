@@ -1,6 +1,7 @@
 extends CanvasLayer
 
 const ResultsOdds := preload("res://src/ui/results_odds.gd")
+const UiTokens := preload("res://src/ui/ui_tokens.gd")
 
 const Palette := preload("res://src/core/palette.gd")
 const SummaryRows := preload("res://src/ui/summary_rows.gd")
@@ -49,7 +50,7 @@ const LEVEL_TRIES := 6
 # The actions' gap, between buttons and between rows. A row that would pass the narrowest
 # supported width (int_screen_layout_test's 1280) less SIDE each way wraps onto a second
 # centred row; no button is dropped or shrunk.
-const ACTION_GAP := 18
+const ACTION_GAP := UiTokens.GAP_M
 const NARROW_W := 1280.0
 const MENU_STATES := ["title", "class_select", "dead", "victory", "summary"]
 # The screens a run ends on.
@@ -75,17 +76,17 @@ const PILOT_LINE := "Loose cannons, all of them. Pick one."
 const COMIC_PAGE_PATH := "res://src/ui/comic_page.gd"
 const COMIC_HEIGHT := 0.5
 # The word under each of the summary's stats.
-const STAT_WORD_FONT := 13
+const STAT_WORD_FONT := UiTokens.CAPTION
 const COMIC_MAX_HEIGHT := 540.0
 const COMIC_BODY_LINES := 3
 const COMIC_MIN_HEIGHT := 240.0
 # RUN OVER's "next shift" note (core/death_tips.gd): an amber-edged plate taped up beside the comic page,
 # where the column has room; under the body it pushed the actions off a 900 px screen. Its words wrap at
 # TIP_WIDTH.
-const TIP_FONT := 20
-const TIP_HEAD_FONT := 16
+const TIP_FONT := UiTokens.BODY
+const TIP_HEAD_FONT := UiTokens.BODY
 const TIP_WIDTH := 300.0
-const TIP_GAP := 28
+const TIP_GAP := UiTokens.GAP_XL
 const TIP_SERIAL := 33
 # The summary's input latch (game.summary_latched) shuts every key while an input held at its opening is
 # still down. The cue names that input once the latch has held LATCH_CUE_AFTER seconds, or at once when a
@@ -94,8 +95,10 @@ const TIP_SERIAL := 33
 # moves nothing.
 const LATCH_CUE_AFTER := 0.5
 const LATCH_DIM := 0.12
-const PRIMARY_FONT := 26
+const PRIMARY_FONT := UiTokens.LABEL
 const PRIMARY_HEIGHT := 60.0
+# The widest a wrapped body line runs.
+const BODY_WIDTH := 1000.0
 
 var game
 var _victory_boss := {}
@@ -167,21 +170,21 @@ func setup(game_ref) -> void:
 	_content = VBoxContainer.new()
 	_content.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_content.alignment = BoxContainer.ALIGNMENT_CENTER
-	_content.add_theme_constant_override("separation", 26)
+	_content.add_theme_constant_override("separation", 24)
 	_content.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_content)
-	_title = _label(64)
+	_title = _label(UiTokens.DISPLAY)
 	_content.add_child(_title)
-	_mark = _label(44)
+	_mark = _label(UiTokens.HEADING)
 	_mark.add_theme_color_override("font_color", Palette.AMBER)
 	_mark.visible = false
 	_content.add_child(_mark)
-	_body = _label(22)
+	_body = _label(UiTokens.LABEL)
 	_body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_body.custom_minimum_size = Vector2(1000.0, 0.0)
+	_body.custom_minimum_size = Vector2(BODY_WIDTH, 0.0)
 	_body.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	_content.add_child(_body)
-	_stats = _row(30)
+	_stats = _row(UiTokens.GAP_XL)
 	_content.add_child(_stats)
 	_comic_row = _row(TIP_GAP)
 	_content.add_child(_comic_row)
@@ -194,7 +197,7 @@ func setup(game_ref) -> void:
 	_actions.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	_actions.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_content.add_child(_actions)
-	_refusal = _label(18)
+	_refusal = _label(UiTokens.BODY)
 	_refusal.add_theme_color_override("font_color", Palette.SAND)
 	_refusal.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_refusal.custom_minimum_size = Vector2(1000.0, 0.0)
@@ -256,12 +259,12 @@ func setup(game_ref) -> void:
 	_content.add_child(_radio)
 	_ending = VBoxContainer.new()
 	_ending.alignment = BoxContainer.ALIGNMENT_CENTER
-	_ending.add_theme_constant_override("separation", 26)
+	_ending.add_theme_constant_override("separation", 24)
 	_ending.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_ending.visible = false
-	_ending_title = _label(64)
+	_ending_title = _label(UiTokens.DISPLAY)
 	_ending.add_child(_ending_title)
-	_ending_body = _label(22)
+	_ending_body = _label(UiTokens.LABEL)
 	_ending_body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_ending_body.custom_minimum_size = Vector2(1000.0, 0.0)
 	_ending_body.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
@@ -1274,6 +1277,16 @@ func _show(title: String, color: Color, body: String) -> void:
 	_title.add_theme_color_override("font_color", color)
 	_body.text = body
 	_body.visible = body != ""
+	_balance(_body, BODY_WIDTH)
+
+
+# A wrapped line breaks into lines of even length, never one long line over a lone tail: the label
+# is as wide as half its words plus a margin, and never wider than the column.
+func _balance(label: Label, widest: float) -> void:
+	var font_size := label.get_theme_font_size("font_size")
+	var whole := UiFonts.bold().get_string_size(label.text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x
+	var lines := ceili(whole / widest)
+	label.custom_minimum_size.x = widest if lines <= 1 else minf(widest, whole / lines + font_size * 2.0)
 
 
 func _action(id: String, key: String, words: String) -> void:
@@ -1284,7 +1297,17 @@ func _action(id: String, key: String, words: String) -> void:
 		button.pressed.connect(_press.bind(key))
 	if id == "start":
 		_make_primary(button)
+	else:
+		_make_quiet(button)
 	_actions.add_child(button)
+
+
+# Every choice beside the primary one steps down a size: body words on a target-height plate, so
+# the eye lands on the filled primary first and reads the rest as a row of ways out.
+func _make_quiet(button: Button) -> void:
+	button.add_theme_font_size_override("font_size", UiTokens.BODY)
+	button.custom_minimum_size.y = UiTokens.TARGET
+	button.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 
 
 # The filled amber plate, charcoal words and a taller, larger face; the unfilled focus ring
@@ -1297,7 +1320,7 @@ func _make_primary(button: Button) -> void:
 		if state == "disabled":
 			box.bg_color = Color(Palette.AMBER, 0.5)
 		button.add_theme_stylebox_override(state, box)
-	button.add_theme_stylebox_override("focus", ChoiceButton.plate(Color.WHITE, 4, left, false))
+	button.add_theme_stylebox_override("focus", UiTokens.focus_ring(left))
 	for color in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color"]:
 		button.add_theme_color_override(color, Palette.CHARCOAL)
 	button.add_theme_font_size_override("font_size", PRIMARY_FONT)
@@ -1310,6 +1333,7 @@ func _make_primary(button: Button) -> void:
 func _companion_action() -> void:
 	var button := ChoiceButton.new("companion", "key_m", "Companion")
 	button.pressed.connect(func(): game.workshop().open_companion())
+	_make_quiet(button)
 	_actions.add_child(button)
 
 
@@ -1377,7 +1401,7 @@ func _show_tip(tip: String) -> void:
 	_tip.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	_tip.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var column := VBoxContainer.new()
-	column.add_theme_constant_override("separation", 6)
+	column.add_theme_constant_override("separation", 4)
 	column.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_tip.add_child(column)
 	var head := _label(TIP_HEAD_FONT)
@@ -1422,7 +1446,7 @@ static func summary_chips(s: Dictionary, stage_count: int) -> Array:
 func _summary_stats() -> void:
 	for block in SummaryRows.grouped(summary_chips(game.run.summary(), game.ctx.stages.COUNT)):
 		var group := VBoxContainer.new()
-		group.add_theme_constant_override("separation", 2)
+		group.add_theme_constant_override("separation", 4)
 		group.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		if block[0] != "":
 			var head := _label(STAT_WORD_FONT)
@@ -1430,7 +1454,7 @@ func _summary_stats() -> void:
 			head.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 			head.add_theme_color_override("font_color", Palette.AMBER)
 			group.add_child(head)
-		var cells := _row(30)
+		var cells := _row(UiTokens.GAP_XL)
 		for chip in block[1]:
 			cells.add_child(_stat_cell(chip))
 		group.add_child(cells)
@@ -1450,7 +1474,7 @@ func _stat_cell(chip: Array) -> VBoxContainer:
 	icon.custom_minimum_size = Vector2(30.0, 30.0)
 	icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	row.add_child(icon)
-	var value := _label(26)
+	var value := _label(UiTokens.LABEL)
 	value.add_theme_font_override("font", UiFonts.mono())
 	value.text = chip[1]
 	row.add_child(value)

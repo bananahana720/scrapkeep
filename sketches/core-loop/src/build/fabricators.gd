@@ -25,6 +25,10 @@ const WIDTH := 8.0
 const COG_PRICES := {
 	"part_base": 10.0, "part_tier": {1: 1.0, 2: 1.6, 3: 2.6}, "part_growth": 1.15,
 	"reroll_base": 12, "reroll_growth": 1.5, "cell_base": 20, "cell_growth": 1.6, "sell_share": 0.5,
+	# Moss's scale (shop.gd weigh, `--moss-scale=on`): placeholder rates until the economy pass
+	# (systems audit pass B) sets them. One press weighs up to weigh_lump mass; every
+	# mass_per_cog of it pays one cog, so a sale pays less than the scrap paid on the way in.
+	"weigh_lump": 25, "mass_per_cog": 4.0,
 }
 const RESTOCK := 2.5
 const AVOID_BEACON := 55.0
