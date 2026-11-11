@@ -1,6 +1,7 @@
 extends Control
 
 const Palette := preload("res://src/core/palette.gd")
+const UiTokens := preload("res://src/ui/ui_tokens.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const Icons := preload("res://src/ui/icons.gd")
 const UiFonts := preload("res://src/ui/ui_fonts.gd")
@@ -14,7 +15,7 @@ const ScrapFrame := preload("res://src/ui/scrap_frame.gd")
 
 const R := 44.0
 const ICON := 46.0
-const FONT := 19
+const FONT := UiTokens.BODY
 # id -> {at, icon, kind, words}; kind is the event_kinds row whose colour and shape it wears.
 const NODES := {
 	"scrap": {"at": Vector2(90.0, 84.0), "icon": "res_mass", "kind": "scrap_collected", "words": "roll scrap"},

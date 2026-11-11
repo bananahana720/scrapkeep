@@ -1,6 +1,7 @@
 extends VBoxContainer
 
 const Parts := preload("res://src/build/parts.gd")
+const UiTokens := preload("res://src/ui/ui_tokens.gd")
 const Build := preload("res://src/build/build.gd")
 const HotwireRules := preload("res://src/build/hotwire_rules.gd")
 const Palette := preload("res://src/core/palette.gd")
@@ -18,7 +19,7 @@ const UiFonts := preload("res://src/ui/ui_fonts.gd")
 
 const ICON_PX := 40.0
 const ROW_H := 48.0
-const FONT_PX := 22
+const FONT_PX := UiTokens.LABEL
 const GAP := 12.0
 
 var part_id := ""

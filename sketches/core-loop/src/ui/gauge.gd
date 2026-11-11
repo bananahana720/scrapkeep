@@ -1,6 +1,7 @@
 extends Control
 
 const EventKinds := preload("res://src/core/event_kinds.gd")
+const UiTokens := preload("res://src/ui/ui_tokens.gd")
 const Icons := preload("res://src/ui/icons.gd")
 const UiDraw := preload("res://src/ui/ui_draw.gd")
 
@@ -17,13 +18,13 @@ const UiDraw := preload("res://src/ui/ui_draw.gd")
 
 const ICON := 26.0
 const BAR_H := 12.0
-const FONT := 22
+const FONT := UiTokens.LABEL
 const GAP := 8.0
 const PULSE_HZ := 1.0
 const TICKS := 4
 const LOSS_HOLD := 0.35
 const LOSS_DRAIN := 0.45
-const CAPTION_FONT := 13
+const CAPTION_FONT := UiTokens.CAPTION
 const CAPTION_LINE := 13.0
 
 var icon_id := ""

@@ -1,6 +1,7 @@
 extends Control
 
 const EventKinds := preload("res://src/core/event_kinds.gd")
+const UiTokens := preload("res://src/ui/ui_tokens.gd")
 const Glyphs := preload("res://src/ui/glyphs.gd")
 const Keycap := preload("res://src/ui/keycap.gd")
 const UiFonts := preload("res://src/ui/ui_fonts.gd")
@@ -35,7 +36,7 @@ const SLAM_REACH := 8.0
 const BALL_OFFSET := Vector2(-24.0, -34.0)
 const KEY_H := 28.0
 const GAP := 6.0
-const WORD_SIZE := 16
+const WORD_SIZE := UiTokens.BODY
 
 var game
 var profile

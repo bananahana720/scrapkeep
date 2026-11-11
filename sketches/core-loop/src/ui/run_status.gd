@@ -1,6 +1,7 @@
 extends Control
 
 const EventKinds := preload("res://src/core/event_kinds.gd")
+const UiTokens := preload("res://src/ui/ui_tokens.gd")
 const Icons := preload("res://src/ui/icons.gd")
 const Palette := preload("res://src/core/palette.gd")
 const UiDraw := preload("res://src/ui/ui_draw.gd")
@@ -28,7 +29,7 @@ const STEP_FOOT := 0.35
 # The steps' own word, in the threat colour. With no word one of nine blind readers guessed
 # threat (most said signal, heat or speed); with it three of three read "how dangerous things are".
 const THREAT_WORD := "THREAT"
-const WORD_FONT := 13
+const WORD_FONT := UiTokens.CAPTION
 const WORD_GAP := 2.0
 # Room after the word for its outline, which touched the plate's border and rivet on the PC.
 const WORD_PAD := 6.0
@@ -108,7 +109,8 @@ func _draw() -> void:
 		var lit := threat_color if i < steps_lit() else UiDraw.TRACK
 		draw_colored_polygon(step, bright if i == steps_lit() - 1 else lit)
 		draw_polyline(ring, UiDraw.OUTLINE, 1.5, true)
-	UiDraw.text(self, word_left(), foot - STEP.y * 0.5, THREAT_WORD, WORD_FONT, bright)
+	# The word stays in the text colour: rust words hold only 3.5:1 on their outline (pass 4); the steps carry the rust.
+	UiDraw.text(self, word_left(), foot - STEP.y * 0.5, THREAT_WORD, WORD_FONT, Palette.SAND)
 
 
 static func word_left() -> float:

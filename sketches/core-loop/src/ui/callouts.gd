@@ -1,6 +1,7 @@
 extends HBoxContainer
 
 const EventKinds := preload("res://src/core/event_kinds.gd")
+const UiTokens := preload("res://src/ui/ui_tokens.gd")
 const Icons := preload("res://src/ui/icons.gd")
 const KeycapView := preload("res://src/ui/keycap_view.gd")
 const UiFonts := preload("res://src/ui/ui_fonts.gd")
@@ -40,7 +41,7 @@ func setup(game_ref, profile_ref) -> void:
 	profile = profile_ref
 	alignment = BoxContainer.ALIGNMENT_CENTER
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
-	add_theme_constant_override("separation", 10)
+	add_theme_constant_override("separation", 8)
 	modulate.a = 0.0
 	game.events.scrap_collected.connect(func(_amount: int, _at: Vector3, _total: int): offer("callout_scrap"))
 	game.events.warden_engaged.connect(func(_stage: int): offer("callout_warden"))
@@ -125,7 +126,7 @@ func _add_words(words: String, color: Color) -> void:
 	var label := Label.new()
 	label.text = words.strip_edges()
 	label.add_theme_font_override("font", UiFonts.bold())
-	label.add_theme_font_size_override("font_size", 20)
+	label.add_theme_font_size_override("font_size", UiTokens.BODY)
 	label.add_theme_color_override("font_color", color)
 	label.add_theme_color_override("font_outline_color", Color(0.0, 0.0, 0.0, 0.85))
 	label.add_theme_constant_override("outline_size", 6)
