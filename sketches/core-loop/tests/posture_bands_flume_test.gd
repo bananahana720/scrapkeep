@@ -94,9 +94,20 @@ const WALL_S := 1100.0
 # small [28.74, 30.88, 32.99, 31.49, 11.33] median 30.9 (per seed +2.3, +3.7, +11.0, +7.6, -8.2 s), grown
 # [22.44, 15.75, 14.33, 19.82, 6.86] median 15.8 (+7.3, -3.8, -3.4, -1.8, -2.2 s), after the clamp the same,
 # 0.8 s over the 15 s floor; every small and grown run breaks the Warden, campers never break.
-const EXPECT_SMALL_S := 30.9
-const EXPECT_GROWN_S := 15.8
-const EXPECT_GROWN_OPEN_S := 15.8
+# 2026-11-11 (wave 36 gate on f165fbb4, coordinator's call under ruling cu): re-pinned after the weir deck
+# fix and the line pay that answers it. The deck's rims stopped catching the ball (#748's ride-snag unit),
+# and seeds 0, 1 and 3, which cross the deck, broke the Warden sooner: small [21.22, 25.84, 32.99, 25.25,
+# 11.33] median 25.2, grown [12.83, 16.71, 7.13, 21.22, 8.88] median 12.8, under the 15 s floor. Controls:
+# the stack before the deck fix (8ded7160) and the head with only the three old weir_apron models both
+# replay the pins above exactly, so the deck alone moved the fight. warden_reactor.gd's LINE_PAY then came
+# down to make the fight harder, not the deck worse. At 0.8: small median 27.0, grown 19.4. At 0.7, one run
+# of this test on 58b57285 plus the fix: small [27.55, 34.48, 44.08, 33.06, 27.68] median 33.1, grown
+# [22.43, 22.46, 19.45, 26.79, 7.1] median 22.4, after the clamp the same, 7.4 s over the 15 s floor; every
+# small and grown run breaks the Warden, campers never break. Against the pins above, small seed 0 is 1.2 s
+# shorter and grown seed 4 is 1.8 s shorter; the other eight runs are as long or longer.
+const EXPECT_SMALL_S := 33.1
+const EXPECT_GROWN_S := 22.4
+const EXPECT_GROWN_OPEN_S := 22.4
 const TOLERANCE := 0.10
 
 

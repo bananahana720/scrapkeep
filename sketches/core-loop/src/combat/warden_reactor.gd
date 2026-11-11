@@ -85,10 +85,10 @@ class DamPosture extends "res://src/combat/boss_posture.gd":
 
 # The mounted flume's line fight (card FLUME-POSTURE, rulings FL1 to FL3; reactor.md:80). Hung 12 m over
 # the drum, the relic is out of ram reach, so the bolts a latched ball fires are the fight. A line bolt
-# pays the stage's other_base (other_base_charging while the relic charges) times its damage over the
+# pays the stage's other_base (other_base_charging while the relic charges) times LINE_PAY, times its damage over the
 # pilot's base weapon damage per second, times LINE_REFERENCE_WEAPON's over line_reference_damage(). So at the
 # reference heft every pilot's base kit fills the bar at the same posture per second (Rivet's under FL1,
-# 7.07), and a part that raises damage or fire rate still raises it. Plating does not enter: the generic rule's
+# 7.07 at a LINE_PAY of 1), and a part that raises damage or fire rate still raises it. Plating does not enter: the generic rule's
 # punch-over-plating paid a 7 to 10 punch bolt about 0.06 against plating 110, and the bar drained
 # between pulses (register row 747: never broken in 600 s). The pay is also scaled by the ball's heft
 # over LINE_REFERENCE_HEFT to the stage's own posture curve, as a ram's heft-scaled punch is: with no ram
@@ -114,6 +114,13 @@ static var _line_reference := -1.0
 const LINE_REFERENCE_HEFT := 1.5
 # The pilot whose FL1 posture per second FL3 keeps: Rivet's rapid_laser, 7 x 12 = 84 damage per second.
 const LINE_REFERENCE_WEAPON := "rapid_laser"
+# The share of the stage's pay a line bolt keeps. 11 Nov 2026, wave 36: the weir deck's rims stopped
+# catching the ball, and the same bots broke this Warden about a fifth sooner (grown median 15.8 to
+# 12.8 s, under its 15 s floor). The pay came down so the fight is harder, not the deck worse (ruling
+# cu). Measured medians, small and grown: 0.8 gave 27.0 and 19.4 s, 0.7 gave 33.1 and 22.4 s; 0.7 is the
+# first that puts both at or over the fight before the deck fix (30.9 and 15.8 s).
+# posture_bands_flume_test holds the fight's length.
+const LINE_PAY := 0.7
 
 var gates_opened := 0
 var rides := 0
@@ -487,6 +494,6 @@ func judge_line_bolt(warden, posture, hit: Dictionary, result: Dictionary) -> vo
 	var def = run.class_def if run != null else null
 	# Without a pilot the bolt is paid as the reference pilot's.
 	var pilot_dps := base_dps(def.weapon_id) if def != null and Weapons.BASE.has(def.weapon_id) else reference_dps
-	result["gain"] = pay * float(hit.get("punch", 0.0)) / pilot_dps * reference_dps / line_reference_damage() * share
+	result["gain"] = pay * LINE_PAY * float(hit.get("punch", 0.0)) / pilot_dps * reference_dps / line_reference_damage() * share
 	result["glance"] = false
 	result["full"] = true
