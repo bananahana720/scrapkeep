@@ -6,23 +6,23 @@ Heads and open PRs change by the hour, so read them live (`git ls-remote origin`
 
 | Fact | Value |
 | --- | --- |
-| Last promotion | wave 35, main 1b5221c0, #747 |
-| Open stage | stage/alpha-w36 |
-| Live board | #748 |
-| Red team | speedrunner |
-| Compare against | gate/w35-0e258a0e/ |
+| Last promotion | wave 36, main 47c79b49, #750 |
+| Open stage | stage/alpha-w37 |
+| Live board | #749 |
+| Red team | first-timer |
+| Compare against | gate/w36-fe7c68a0/ |
 
 The board is the GitHub issue in the table; the stage log (`git log origin/stage/alpha-w<N>`) is the stack queue. "Compare against" is the receipts folder the next full gate reads its base values from, under `~/scratch/` on the PC (under `/mnt/project-files/` while the project ran the gate). The Gate updates the table as its first commit on a new stage: `node scripts/wave-state.mjs --write --board <new board issue> --compare <receipts folder>` (the red team persona rotates by itself).
 
 **Priority (Andrew, 23 Oct 19:31Z).** World 1 first: a finished Spillway (dam, flume, Brindle, with the camp and title lead-in) and early progression, played at a world 1 sitting (10-15 min average run, about 30 min completionist, repeatable). Worlds 2 and 3 start nothing new (ruling at).
 
-**Now (11 Nov).** Wave 35 is on `main` (1b5221c0, #747): CLEAN on 0e258a0e with the first run of `scripts/gate/pc.mjs`, the weekly sweep carried from 10 Nov. Its receipts are on branch `scratch/gate-receipts-w35-0e258a0e` and under `~/scratch/gate/w35-0e258a0e/` on the PC, and they are the base the wave 36 gate compares against. Wave 36 is open, with its units built and accepted during the wave 35 gate; wave 37's difficulty units are being measured in their own session. The local session on the PC is coordinator and Gate, and Andrew ruled the sitting waits for world 1 fully polished (ruling cs).
+**Now (11 Nov).** Wave 36 is on `main` (47c79b49, #750): CLEAN on fe7c68a0 on the first wave gate (ruling cy), with bands B, bands C and the red team deferred to the release gate. Two receipt folders matter on the PC. `~/scratch/gate/w36-fe7c68a0/` (branch `scratch/gate-receipts-w36-fe7c68a0`) holds the tests, the bot blocks and bands A, and is the base for the wave 37 gate. `~/scratch/gate/w36-f165fbb4/` holds this sprint's last full read of bands B, bands C and the red team, and is the band base for the release gate. Wave 37 is open: one ride and the bugs, with polish in wave 38. The difficulty stack is built and parked on `claude/w37-difficulty` and lands last in the sprint, before the release gate. The local session on the PC is coordinator and Gate, and Andrew ruled the sitting waits for world 1 fully polished (ruling cs).
 
 **The world 1 polish program (ruling cs).** On 10 Nov Andrew added three directions: a map standard with a fast check for each point (ruling ct), harder and never easier (ruling cu), and one ride through a world (ruling cv). The program is five more waves, each with its own board and promotion: wave 35, words and first checks (kit pick cards, the run summary, item words, key prompts, the sound contract checks, three map checks and the PC gate command); wave 36, read the fight and build the instruments (danger marks, the HUD, the landmark beam, a snag sweep, the difficulty measurement, the hand-over test, the capture tools and a behaviour-preserving split of the Warden form out of `audio.gd`); wave 37, harder by movement (chasers that catch a stopped ball, the Warden pulse, regen only while rolling, terrain as cover, and the conductor link default off); wave 38, one ride (both stage cuts covered, heading carried, the Slag Bowl ahead of the flume launch, markers and breathers); wave 39, the sitting build (the Warden form on the synth band and on Brindle, the final gate and the install). The audits behind it are in [shared/world1/](shared/world1/). Done is counted: no major or minor row left in [PLAY-FINDINGS.tsv](PLAY-FINDINGS.tsv), a clean gate with a fresh weekly sweep, 4080 frames in budget, zero placeholders, and that build installed.
 
 **World 1 sitting.** Andrew played the dam on the wave 26 build on 30 Oct: fun, many invisible walls, models clipping. Every fix shipped in wave 29. He has not marked any area yet. The PC has the wave 32 build installed (main 8180ec6c, 9 Nov; boss smokes PASS; cold launch to menu 4386 ms, 0 errors); the wave 33 build (main 45691e94) is next to install, with wave 32 as its rollback. The sitting sheet is refreshed for the build he plays, once that build is promoted.
 
-**Promotions since wave 18.** w19 a4c5b963 (#511), w20 46245f69 (#555), w21 421c8244 (#562), w22 1a0516d1 (#567), w23 462ca7ef (#570), w24 65d34cdb (#580), w25 dc1da31a (#582), w26 83f02396 (#585), w27 a7151583 (#594), w28 1e172aee (#598), w29 556cca8e (#606), w30 98727408 (#614), w31 645893f3 (#626), w32 8180ec6c (#632), w33 45691e94 (#737), w34 bc4adc1a (#745), w35 1b5221c0 (#747). `git log --first-parent origin/main` is the source; this line is a convenience.
+**Promotions since wave 18.** w19 a4c5b963 (#511), w20 46245f69 (#555), w21 421c8244 (#562), w22 1a0516d1 (#567), w23 462ca7ef (#570), w24 65d34cdb (#580), w25 dc1da31a (#582), w26 83f02396 (#585), w27 a7151583 (#594), w28 1e172aee (#598), w29 556cca8e (#606), w30 98727408 (#614), w31 645893f3 (#626), w32 8180ec6c (#632), w33 45691e94 (#737), w34 bc4adc1a (#745), w35 1b5221c0 (#747), w36 47c79b49 (#750). `git log --first-parent origin/main` is the source; this line is a convenience.
 
 **After each promotion.** In this order: (1) the Gate cuts the next stage at the new main, opens its board and runs `node scripts/wave-state.mjs --write` as above, so the first PR on the new stage passes `check:docs`; (2) the deep-modules sweep runs on the promoted main ([DEEP-SWEEP.md](DEEP-SWEEP.md)); it never holds a promotion; (3) Andrew runs the PC branch-prune script from the prepared list (the cloud proxy refuses `git push --delete`).
 
