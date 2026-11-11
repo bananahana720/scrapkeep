@@ -1690,6 +1690,23 @@ register(
 )
 
 
+# ---- The radio take (1): the radio chip's knob, a ring with its needle -----------------------------
+# Purpose note: docs/art/reference/fx_ui/radio-take-icon.md. No backplate and a near-white glyph, so
+# the card tints it (the HUD modulates the texture) the way it tints the drawn shapes.
+def g_radio_take():
+    return [
+        ring(32, 32, 24, stroke=LEDGER_CREAM, width=PRIMARY),
+        dot(32, 32, 5, fill=LEDGER_CREAM),
+        line(32, 32, 46, 12, stroke=LEDGER_CREAM, width=PRIMARY),
+    ]
+
+
+register(
+    "radio_take", "A radio take",
+    "The radio chip's knob: a ring with its needle pointing up and right", plate_none, g_radio_take,
+)
+
+
 # --- Compose and write --------------------------------------------------------
 def compose(icon_id):
     spec = ICONS[icon_id]
