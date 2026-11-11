@@ -141,6 +141,9 @@ func _rare_stops() -> int:
 
 
 func _engage() -> void:
+	# The Warden break's hot-wired part would stand a third gate on the middle slot, where this
+	# test parks the ball, and end the run; the cards here are about finds, so it is spent.
+	_game.ctx.build._hotwire_spent = true
 	var combat = _game.ctx.spawner
 	combat.heft_override = 1.0
 	var force := 1.0

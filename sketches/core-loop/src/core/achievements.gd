@@ -135,14 +135,17 @@ const ROWS := {
 	# SG12 between-run options: one grant per meta_options.gd node, each a one-run accomplishment
 	# with a count of MetaOptions.MAX_GRANT_COUNT or below. The pocket key opens on a hidden
 	# pocket's discovery: cracked_cache.gd emits world_fact("cache_spent") when its chest opens.
+	# Each pays a paint (systems audit pass D, row 31, 11 Nov 2026): no screen shows a head start.
+	# The node rows and the meta page stay as code; MetaOptions.open_earned, which would open a
+	# node from its grant, has no caller today.
 	"ach_meta_spare_reroll": {"name": "Busy Hands", "text": "Finish three activities.", "on": "activity_done",
-		"count": 3, "reward": {"option": "spare_reroll"}},
+		"count": 3, "reward": {"cosmetic": "paint_any_shift"}},
 	"ach_meta_shelf_preview": {"name": "Wall Crumbler", "text": "Crumble two cracked walls.", "on": "world_fact",
-		"where": {"kind": "wall_crumbled"}, "count": 2, "reward": {"option": "shelf_preview"}},
+		"where": {"kind": "wall_crumbled"}, "count": 2, "reward": {"cosmetic": "paint_any_mortar"}},
 	"ach_meta_pocket_key": {"name": "Pocket Finder", "text": "Open the cache behind a cracked wall.", "on": "world_fact",
-		"where": {"kind": "cache_spent"}, "count": 1, "reward": {"option": "pocket_key"}},
+		"where": {"kind": "cache_spent"}, "count": 1, "reward": {"cosmetic": "paint_any_cache"}},
 	"ach_meta_pocket_tint": {"name": "Fresh Eyes", "text": "Discover three new synergies.", "on": "synergy_discovered",
-		"where": {"first_time": true}, "count": 3, "reward": {"option": "pocket_tint"}},
+		"where": {"first_time": true}, "count": 3, "reward": {"cosmetic": "paint_any_spark"}},
 	# w20 content-family records (WHATS-LEFT row 9): reward {} and RECORD_ONLY, so no paint or art is owed.
 	# special_broken: a kill-first special (Foreman, Dispatcher, Splitter, Linker) fell.
 	# w19 Spillway roster records (design-v3/SPILLWAY-ROSTER.md): one per Flow kind's speed answer, plus the wet read.

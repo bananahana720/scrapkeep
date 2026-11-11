@@ -30,7 +30,7 @@ const PICK_RARITIES := ["common", "rare"]
 const PEDESTALS := [Vector3(-4.0, 0.0, -3.0), Vector3(0.0, 0.0, -3.5), Vector3(4.0, 0.0, -3.0)]
 const PEDESTAL_REACH := 1.7
 # RL2: the chance a cache's last pedestal holds a relic for a slot the pilot has not
-# filled, instead of a part. Drawn from the device's own luck stream under another key,
+# filled (a part on the relic rung) instead of an ordinary part. Drawn from the device's own luck stream under another key,
 # so the parts roll above it consumes exactly what it did before relics.
 const RELIC_CHANCE := 0.2
 const LANE_OFFSET := 6.0
@@ -237,12 +237,11 @@ func fire() -> bool:
 		_inside.append(_on(p, ball))
 		if not shown:
 			continue
-		var is_relic := Relics.has(offers[i])
-		var d: Resource = Parts.def(Relics.part_of(offers[i]) if is_relic else offers[i])
+		var d: Resource = Parts.def(offers[i])
 		var rarity: String = d.rarity if d != null else "common"
 		p["gem"].material_override = Palette.solid(gem_color(rarity), 2.0)
 		p["gem"].material_override.vertex_color_use_as_albedo = true
-		var words := (Relics.name_of(offers[i]) if is_relic else Parts.display_name(offers[i])).split(" ", false)
+		var words := Parts.display_name(offers[i]).split(" ", false)
 		var icon: String = "cat_" + (d.icon_category if d != null and d.icon_category != "" else "utility")
 		p["label"].set_parts(" ".join(words.slice(0, WorldPrompt.TITLE_WORDS)), "", icon)
 	return true
@@ -254,11 +253,11 @@ static func gem_color(rarity: String) -> Color:
 	return ItemGen.RARITY[id if id != "" else "common"]["color"]
 
 
-# The relic this cache holds, or "". Only a relic of this stage's world the pilot can use
+# The relic part this cache holds, or "". Only a relic of this stage's world the pilot can use
 # for an empty slot.
 func _relic_offer() -> String:
 	var tree = ctx.player.tree if ctx.player != null else null
-	var pool := Relics.eligible(ctx.run.class_id(), ctx.run.relics, tree, ctx.stages.world_of(ctx.run.stage))
+	var pool := Relics.eligible(ctx.run.class_id(), Relics.held(ctx.run.parts), tree, ctx.stages.world_of(ctx.run.stage))
 	if pool.is_empty():
 		return ""
 	var rng: RandomNumberGenerator = system.luck(id + ":relic")
@@ -266,7 +265,7 @@ func _relic_offer() -> String:
 	var pick := rng.randi()
 	if not relic_guaranteed and roll >= relic_chance:
 		return ""
-	return pool[pick % pool.size()]
+	return Relics.part_of(pool[pick % pool.size()])
 
 
 func _on(p: Dictionary, ball: Vector3) -> bool:
@@ -292,10 +291,7 @@ func take(index: int) -> void:
 	spent = true
 	for p in _pedestals:
 		p["node"].visible = false
-	if Relics.has(taken):
-		ctx.run.add_relic(taken, "cache")
-	else:
-		ctx.run.add_part(taken, "cache")
+	ctx.run.add_part(taken, "cache")
 	ctx.events.world_fact.emit("cache_spent", global_position)
 
 

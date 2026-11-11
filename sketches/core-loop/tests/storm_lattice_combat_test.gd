@@ -27,7 +27,8 @@ func _physics_process(_delta: float) -> bool:
 	Measurement.prepare(_game)
 	var scenarios: Array = [{"id": "bare", "parts": []}]
 	for level in [1, 2]:
-		var held: Array = ["cross_split"]
+		# Storm Lattice wakes on two Redjaw pieces; Load Dividend pays only on burdens, none here.
+		var held: Array = ["cross_split", "load_dividend"]
 		for _copy in level:
 			held.append("chain_arc")
 		scenarios.append({"id": "lattice_%d" % level, "parts": held})
@@ -55,6 +56,7 @@ func _physics_process(_delta: float) -> bool:
 	_game.run.parts.clear()
 	_game.ctx.build.recompute()
 	_game.ctx.spawner._rebuild_patterns()
+	_game.run.add_part("load_dividend", "test")
 	_game.run.add_part("cross_split", "test")
 	_game.run.add_part("chain_arc", "test")
 	_report("first volley after part_gained", _game.ctx.spawner.pattern(Weapons.RAPID_LASER).chain_jumps == 2,
@@ -85,8 +87,8 @@ func _check_mounted_turret() -> void:
 	_game.player.kit.mounted = true
 	var rows := Measurement.measure(_game, [
 		{"id": "bare", "parts": []},
-		{"id": "turret_lattice", "parts": ["cross_split", "chain_arc"]},
-		{"id": "turret_control", "parts": ["cross_split", "chain_arc"], "no_lattice": true},
+		{"id": "turret_lattice", "parts": ["cross_split", "load_dividend", "chain_arc"]},
+		{"id": "turret_control", "parts": ["cross_split", "load_dividend", "chain_arc"], "no_lattice": true},
 	], [5.0], 4)
 	var enabled: Dictionary = rows[1]
 	var control: Dictionary = rows[2]

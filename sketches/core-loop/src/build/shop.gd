@@ -1,6 +1,7 @@
 extends RefCounted
 
 const Parts := preload("res://src/build/parts.gd")
+const Relics := preload("res://src/build/relics.gd")
 const Items := preload("res://src/build/items.gd")
 const Fabricators := preload("res://src/build/fabricators.gd")
 const ItemGen := preload("res://src/build/item_gen.gd")
@@ -41,6 +42,7 @@ const NO_REROLL := "no_reroll"
 const WELDED := "welded"
 const NOT_HELD := "not_held"
 const CLOSED := "closed"
+const TOO_LIGHT := "too_light"
 
 # The conversation's six beats (SOUND-STORY section 8, "The conversation loop"), with
 # the babble's root per beat and whether a refusal grumble sits under the first word.
@@ -293,6 +295,64 @@ func reroll() -> Dictionary:
 	return _result(true, OK, "moss.bark.reroll", "", cost)
 
 
+# ---- Moss's scale: mass for cogs (systems audit pass D, new mechanic 2) ----
+
+# Behind `--moss-scale=on` (Tuning "moss_scale", default off). A press weighs one lump of mass,
+# up to weigh_lump, and pays a cog for each mass_per_cog of it (Fabricators.COG_PRICES).
+# Arrive at the Warden heavy, or light with a better part: size never touches handling
+# (BIBLE.md section 6), so the trade is armour, heft and punch against the shelf.
+
+func scale_open() -> bool:
+	return ctx != null and ctx.tuning != null and ctx.tuning.option("moss_scale") == "on"
+
+
+# What one press would weigh and pay now: {mass, cogs}. Both 0 when the scale is shut or the
+# ball is too light to pay a cog.
+func weigh_quote() -> Dictionary:
+	if not scale_open():
+		return {"mass": 0, "cogs": 0}
+	var per := float(Fabricators.COG_PRICES["mass_per_cog"])
+	var cogs := int(floor(minf(float(Fabricators.COG_PRICES["weigh_lump"]), ctx.run.mass) / per))
+	return {"mass": int(ceil(cogs * per)), "cogs": cogs}
+
+
+func weigh() -> Dictionary:
+	if not inside:
+		return _result(false, CLOSED)
+	if not scale_open():
+		return _result(false, LOCKED)
+	var quote := weigh_quote()
+	if int(quote["cogs"]) <= 0:
+		return _result(false, TOO_LIGHT)
+	var taken: int = ctx.run.weigh_out(int(quote["mass"]))
+	var paid := int(floor(taken / float(Fabricators.COG_PRICES["mass_per_cog"])))
+	_refund(paid)
+	if build != null:
+		build.recompute()
+	var out := _result(true, OK, "", "", -paid)
+	out["mass"] = taken
+	return out
+
+
+# ---- Carry a core in SPIL-9 (systems audit pass D, new mechanic 3) ----
+
+# Behind `--carry-core=on` (Tuning "carry_core", default off). Moss seats one of this stage's
+# cores in a SPIL-9 socket; it rides to the next stage and counts at that stage's gate
+# (run_state.stow_core). SPIL-9's help here against a better gate there.
+func stow_open() -> bool:
+	return ctx != null and ctx.tuning != null and ctx.tuning.option("carry_core") == "on" and not ctx.run.companion.is_empty()
+
+
+func stow_core() -> Dictionary:
+	if not inside:
+		return _result(false, CLOSED)
+	if not stow_open():
+		return _result(false, LOCKED)
+	if not ctx.run.stow_core():
+		return _result(false, CAPPED if ctx.run.carried_core > 0 else CANT_AFFORD)
+	return _result(true, OK)
+
+
 # ---- Charge cells: the stockpile path ----
 
 # One record per ability slot that recharges (a slot with no cooldown has nothing to
@@ -468,8 +528,8 @@ func _variation(beat_id: String, ids: Array) -> String:
 
 func price(part_id: String) -> int:
 	if ActiveOffers.is_offer(part_id):
-		return int(round(ActiveOffers.price(_active_row(part_id), ctx.run.parts.size()) * _price_scale()))
-	return int(round(Fabricators.price(part_id, ctx.run.parts.size()) * _price_scale()))
+		return int(round(ActiveOffers.price(_active_row(part_id), Parts.priced_count(ctx.run.parts)) * _price_scale()))
+	return int(round(Fabricators.price(part_id, Parts.priced_count(ctx.run.parts)) * _price_scale()))
 
 
 func _price_scale() -> float:
@@ -578,8 +638,9 @@ func _cheapest_price() -> int:
 # Sell-back never sells a pattern part, since combat rebuilds its patterns
 # only on part_gained and would keep shooting the sold pattern until the next stage.
 func _can_remove(part_id: String) -> bool:
+	# A relic is the slot's kit rewrite, not stock: Moss never buys one back.
 	var d: Resource = Parts.def(part_id)
-	return d != null and d.patterns.is_empty()
+	return d != null and d.patterns.is_empty() and not Relics.is_relic(part_id)
 
 
 func _remove_part(part_id: String) -> void:

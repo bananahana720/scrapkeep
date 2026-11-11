@@ -2069,8 +2069,6 @@ func wire_optional() -> void:
 		ctx.build.shell_air_changed.connect(_on_shell_air)
 	# The hot-wired Fit / Recycle offer is build-local (no bus signal, no event row): one brass
 	# pair per offer, played by name.
-	if ctx.get("build") != null and ctx.build.has_signal("hotwire_offered") and not ctx.build.hotwire_offered.is_connected(_on_hotwire_offered):
-		ctx.build.hotwire_offered.connect(_on_hotwire_offered)
 	# v3 interact: each fact in its family's sound register (world/interactables.gd), so
 	# a bet's drum roll, clunk and crack and an altar's anvil and riser come from the row.
 	_listen_optional(events, "interact_armed", func(family: String, _id: String, _at: Vector3):
@@ -2419,10 +2417,6 @@ const SHELL_RETURN_SEMITONES := -5.0
 
 func _on_shell_air(_factor: float, rose: bool) -> void:
 	play("world_fact", 0.0, Harmony.ratio(SHELL_RISE_SEMITONES if rose else SHELL_RETURN_SEMITONES), "SFX", Rows.heard(EventKinds.world_row("shell_air_shift"), cue_context()))
-
-
-func _on_hotwire_offered(_part_id: String, _recycle: int) -> void:
-	play("hotwire_offer", 0.0, 1.0, "SFX", "hotwire_offer")
 
 
 # Stage seconds and transport samples meet at the advance that schedules the event.

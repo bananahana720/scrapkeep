@@ -6,15 +6,19 @@ const Parts := preload("res://src/build/parts.gd")
 const Synergies := preload("res://src/build/synergies.gd")
 const SpawnerDouble := preload("res://tests/doubles/spine_spawner_double.gd")
 
-# The slice table keeps five synergies; a synergy outside it is never live, offered, haloed
-# or carded. Every named synergy announces itself when armed and publishes cause_fired
+# The slice table keeps ten maker tricks (the five named synergies and the five former
+# three-part sets); a trick outside it is never live, offered, haloed or carded. Every trick
+# with a transformer announces itself when armed and publishes cause_fired
 # from the one place its effect resolves; the first firing of an activation is its
 # discovery. FIRING_SITES is the table of row id to the function that emits for it, and
 # each row is driven through its real trigger with the table filter off (the default table is
 # the alpha ruleset since 2026-10-04): a row with no case
 # here, or whose trigger never produces cause_fired, fails.
 
-const KEPT := ["wrecking_ball", "tesla_pylon", "pinwheel", "shrapnel_bloom", "lightning_rod"]
+const KEPT := ["wrecking_ball", "tesla_pylon", "pinwheel", "shrapnel_bloom", "lightning_rod",
+	"ballast_rig", "shatter_crew", "live_wire", "hair_trigger", "storm_front"]
+# Linked Spiral logs a find on each shot instead of cause_fired (build_behaviour_test drives it).
+const FIND_ONLY := ["linked_spiral"]
 const FIRING_SITES := {
 	"storm_lattice": "build.gd _on_shot_fired",
 	"thermal_shock": "build.gd _on_element_resolved",
@@ -88,27 +92,27 @@ func _physics_process(_delta: float) -> bool:
 	if _ticks == WARMUP:
 		if _phase == "slice":
 			_slice_cuts()
-			_queue = KEPT.duplicate()
+			_queue = KEPT.filter(func(id): return FIRING_SITES.has(id))
 		else:
 			# 2026-10-04: the default table now takes the alpha ruleset (it keeps five synergies), so the
 			# control for "every row fires" runs with the synergy filter off, the unfiltered rule.
 			Synergies.table = null  # the codex cards were declared under the alpha filter, so only the live rule is checked
 			_default_cuts()
-			_queue = Synergies.ROWS.keys()
+			_queue = FIRING_SITES.keys()
 		return false
 	return _drive()
 
 
-func _carrier(tag: String, skip: String) -> String:
-	for part_id in Parts.ids():
-		if part_id != skip and tag in Parts.tags_of(part_id) and Parts.def(part_id).class_id == "":
-			return part_id
-	return ""
-
-
+# Two parts of the trick's maker wake it: the pair its callout names, else two class-neutral pieces.
 func _hand(id: String) -> Array:
-	var row: Dictionary = Synergies.ROWS[id]
-	return [row["shown"], _carrier(row["tags"][1], row["shown"])]
+	var call := Synergies.callout(id)
+	if not call.is_empty():
+		return [call["a"], call["b"]]
+	var out: Array = []
+	for part_id in Parts.ids():
+		if out.size() < 2 and Parts.maker_of(part_id) == Synergies.ROWS[id]["maker"] and Parts.def(part_id).class_id == "":
+			out.append(part_id)
+	return out
 
 
 func _hold(parts: Array) -> void:
@@ -129,11 +133,11 @@ func _slice_cuts() -> void:
 	_hold(hand)
 	_report("slice cuts storm_lattice", not "storm_lattice" in _build.active_synergies() and not _build.has_transformer("storm_lattice")
 			and not _build.accretion.halo_visible("storm_lattice") and not "storm_lattice" in cards
-			and completes == "" and ingredient == "" and _armed.is_empty(),
+			and completes != "* completes Storm Lattice *" and ingredient == "" and not "storm_lattice" in _armed,
 		"holding %s is not live (%s), not carded (cards %s), offers read '%s' and '%s', armed %s" % [hand, _build.active_synergies(), cards, completes, ingredient, _armed])
-	_hold(["spiral_wave", "chain_arc"])
-	_report("slice drops the unnamed rule", _build.sheet.rules.is_empty() and not _build.has_transformer("linked_spiral"),
-		"spiral + chain tags give rules %s" % [_build.sheet.rules])
+	_hold(_hand("linked_spiral"))
+	_report("slice drops linked spiral", not "linked_spiral" in _build.active_synergies() and not _build.has_transformer("linked_spiral"),
+		"two Waking parts give tricks %s" % [_build.active_synergies()])
 	var kept_cards := cards.filter(func(id): return Synergies.ROWS.has(id))
 	kept_cards.sort()
 	var want := KEPT.duplicate()
@@ -152,7 +156,7 @@ func _default_cuts() -> void:
 	var completes: String = _build.offer_mark(hand[0])
 	_hold([])
 	var ingredient: String = _build.offer_mark(hand[0])
-	_report("unfiltered offers storm_lattice", completes == "* completes Storm Lattice *" and ingredient == "* ingredient: ??? *",
+	_report("unfiltered offers storm_lattice", completes.begins_with("* completes ") and "storm_lattice" in Synergies.of_maker("redjaw") and ingredient == "",
 		"with no table filter %s reads '%s' with its partner held and '%s' with nothing held" % [hand[0], completes, ingredient])
 	_hold([])
 
@@ -291,10 +295,11 @@ func _next_game() -> bool:
 		_start_game("")
 		return false
 	var missing: Array = []
-	for id in Synergies.ROWS:
+	var firing: Array = Synergies.ROWS.keys().filter(func(id): return not Synergies.told_on_wake(id) and not id in FIND_ONLY)
+	for id in firing:
 		if not FIRING_SITES.has(id):
 			missing.append(id)
-	_report("every row has an emitter", missing.is_empty() and FIRING_SITES.size() == Synergies.ROWS.size(),
+	_report("every row has an emitter", missing.is_empty() and FIRING_SITES.size() == firing.size(),
 		"%d rows, %d firing sites, rows without one %s" % [Synergies.ROWS.size(), FIRING_SITES.size(), missing])
 	_game.free()
 	print("synergy_slice_test: %s" % ("PASS" if _failures == 0 else "FAIL (%d)" % _failures))

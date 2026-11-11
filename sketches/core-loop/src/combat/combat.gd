@@ -275,6 +275,9 @@ var drivers: Dictionary = Companion.DRIVERS
 # mark}; companion_body.gd shows it. The gauge clears on run start and every attempt.
 signal companion_assisted(assist: Dictionary)
 signal companion_assist_full
+# A swung or thrown body (flail_hit) landed on `enemy`, whatever path the hit then takes: a
+# Warden's posture path never emits enemy_struck, so Called Shot reads BOWL from this.
+signal flung(enemy: Node3D)
 var assist_charge := 0.0
 var assists := 0
 var last_assist := {}
@@ -3207,6 +3210,7 @@ func _piece_hit(enemy: Node3D, damage: float, from: Vector3, knock: float) -> fl
 # A flail strike (flail.gd, POLES-FLAILS section 5): a swung or thrown body, not a weapon, so
 # the habit read never counts it. A Warden or a boss takes it through its posture like a volley.
 func flail_hit(enemy: Node3D, damage: float, from: Vector3, knock: float) -> void:
+	flung.emit(enemy)
 	if (enemy.has_method("_apply_posture") and enemy.has_method("staggered")) or _target_class(enemy) == "boss":
 		_ult_hit(enemy, "flail", damage, from, false)
 		return

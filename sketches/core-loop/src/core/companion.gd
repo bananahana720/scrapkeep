@@ -455,6 +455,39 @@ static func with_piece(doc: Dictionary, id: String) -> Dictionary:
 	return model.to_dict()
 
 
+# A carried core (run_state.stow_core, `--carry-core=on`; Andrew 11 Nov 2026 19:24Z: one core,
+# only into SPIL-9) takes a module socket while it rides. The run holds the ride, never this doc,
+# so every writer of run.companion (the panel, a found piece, the profile) sees a plain companion.
+# unseat() takes the last seated piece out of a full SPIL-9 (it stays owned) and returns
+# [doc, piece]; reseat() puts it back when the assembly rule allows, else leaves the doc as it is.
+static func unseat(doc: Dictionary) -> Array:
+	var out := doc.duplicate(true)
+	var seated: Array = out.get("sockets", [])
+	if seated.size() < SOCKETS:
+		return [out, ""]
+	var piece := String(seated[-1])
+	seated.remove_at(seated.size() - 1)
+	out["sockets"] = seated
+	return [out, piece]
+
+
+static func reseat(doc: Dictionary, piece: String) -> Dictionary:
+	if piece == "" or doc.is_empty():
+		return doc
+	var model = load("res://src/core/companion.gd").new()
+	if not model.from_dict(doc):
+		return doc
+	var ids: Array = model.sockets.duplicate()
+	if ids.has(piece):
+		return doc
+	ids.append(piece)
+	if model.assemble(ids) != "":
+		return doc
+	var out := doc.duplicate(true)
+	out["sockets"] = Array(model.sockets)
+	return out
+
+
 func to_dict() -> Dictionary:
 	return {"chassis": CHASSIS, "owned": owned.duplicate(), "sockets": sockets.duplicate(),
 		"escape_ready": not _escape_spent, "escape_spent": _escape_spent}

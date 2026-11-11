@@ -11,7 +11,11 @@ const UiDraw := preload("res://src/ui/ui_draw.gd")
 # lower corners, and the price as the cog icon and a number. The name and what it does
 # show in the counter's detail line for the tile under the mouse or the keys.
 #
-# kind   shelf | top | cell | reroll | sell | pick
+# kind   shelf | top | cell | reroll | sell | pick | weigh | stow
+# A stow plate is a core carried in SPIL-9 (shop.stow_core): the core glyph in a socket ring,
+# and under it the piece it unseats (seat_icon), struck through; nothing when a socket is free.
+# A weigh plate is Moss's scale (shop.gd weigh): the mass glyph with the mass one press
+# takes under it, and the cogs it pays as the price.
 # state  ok | poor (too few cogs) | sold | locked (heft) | capped | welded | spent
 # A poor tile keeps its price but dims and strikes it; a locked hook wears the heft
 # dial with a notch at the class it needs; a sold slot is an empty dashed plate.
@@ -61,6 +65,8 @@ func price_shown() -> bool:
 
 func drawn_words() -> PackedStringArray:
 	var out := PackedStringArray()
+	if String(rec.get("kind", "")) == "weigh":
+		out.append(str(int(rec.get("mass", 0))))
 	if price_shown():
 		out.append(str(int(rec["price"])))
 	if rec.has("key"):
@@ -99,6 +105,20 @@ func _draw() -> void:
 				var r := Rect2(centre + Vector2((i - 0.5) * ICON * 0.62 - ICON * 0.28, -ICON * 0.28), Vector2(ICON * 0.56, ICON * 0.56))
 				draw_texture_rect(Icons.texture(icons[i]), r, false, Icons.tint(icons[i], rec.get("color", Palette.SAND)))
 			draw_texture_rect(Icons.shape("diamond"), Rect2(centre + Vector2(-7.0, ICON * 0.3), Vector2(14.0, 14.0)), false, Palette.SAND)
+		"weigh":
+			draw_texture_rect(Icons.texture("res_mass"), icon_rect.grow(-10.0), false, Icons.tint("res_mass", Color(rec.get("color", Palette.SAND), dim)))
+			var mass := str(int(rec.get("mass", 0)))
+			UiDraw.text(self, centre.x - UiDraw.width(mass, PRICE_FONT, true) * 0.5, icon_rect.end.y + 6.0, mass, PRICE_FONT, Color(Palette.SAND, dim), true)
+		"stow":
+			draw_arc(centre, ICON * 0.42, 0.0, TAU, 32, Color(Palette.SAND, dim), 3.0)
+			draw_texture_rect(Icons.texture("res_core"), icon_rect.grow(-14.0), false, Icons.tint("res_core", Color(rec.get("color", Palette.SAND), dim)))
+			# The cost: the piece the core unseats, struck through, under the socket ring.
+			var seat := String(rec.get("seat_icon", ""))
+			if seat != "":
+				var side := 24.0
+				var at := Rect2(Vector2(centre.x - side * 0.5, icon_rect.end.y + 6.0), Vector2(side, side))
+				draw_texture_rect(Icons.texture(seat), at, false, Icons.tint(seat, Color(Palette.SAND, dim)))
+				draw_line(at.position + Vector2(0.0, side), at.position + Vector2(side, 0.0), Color(Palette.HAZARD, dim), 3.0, true)
 		"cell":
 			var icon_id := String(rec.get("icon", ""))
 			draw_texture_rect(Icons.texture(icon_id), icon_rect.grow(-8.0), false, Icons.tint(icon_id, Color(rec.get("color", Palette.SAND), dim)))

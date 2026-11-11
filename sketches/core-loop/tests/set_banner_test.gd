@@ -2,25 +2,25 @@ extends SceneTree
 
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
-const PartSets := preload("res://src/build/part_sets.gd")
+const Synergies := preload("res://src/build/synergies.gd")
 const UiProfile := preload("res://src/ui/ui_profile.gd")
 
-# Completing a part set says so (world 1 design pass, 9 Nov: "Finishing a part set shows nothing.
-# Named pairs already get a callout"). The third distinct member of a set, gained in play, raises
-# one "Set complete" banner with the set's name and its one line, edged in the colour of the
-# set's studs on the ball.
-# 1. Two members raise nothing; the third raises build.set_completed once, with the set's row.
+# Waking a told-on-wake maker trick says so (world 1 design pass, 9 Nov: "Finishing a part set
+# shows nothing"; the former three-part sets are maker tricks since systems audit pass D). The
+# second distinct piece of a maker, gained in play, raises one "Set complete" banner with the
+# trick's name and its one line, edged in the trick's colour.
+# 1. One piece raises nothing; the second raises build.set_completed once, with the trick's row.
 # 2. The banner shows that name, line, kicker and colour.
-# 3. A fourth member, and selling a member and taking it back, raise nothing: once per run.
-# 4. A recompute with no gain (a resume or a retry restoring a held set) raises nothing.
+# 3. A third piece, and selling a piece and taking it back, raise nothing: once per run.
+# 4. A recompute with no gain (a resume or a retry restoring a held trick) raises nothing.
 # 5. In cards mode the first showing ever is the card and the next run's is the small banner,
 #    with its line and the set's colour; an ordinary repeat discovery still shows nothing.
 # 6. The set's banner goes ahead of first-find cards still waiting.
 # smoke: timeout=180s
 
-# Live Wire without Arc Coil (part_sets_test's fixture), then a fourth member.
-const WIRE := ["live_line", "beacon_lamp", "echo_locator"]
-const FOURTH := "cap_relay"
+# Two Mind-glass pieces wake Live Wire (focus_lens stays out: with live_line it evolves), then a third.
+const WIRE := ["live_line", "galvanic_rounds"]
+const FOURTH := "chain_arc"
 const SET := "live_wire"
 const DIR := "user://set_banner_test/"
 
@@ -55,7 +55,7 @@ func _check() -> void:
 	var run = _game.run
 	var build = _game.ctx.build
 	var banner = _game.presentation.banner
-	var row: Dictionary = PartSets.SETS[SET]
+	var row: Dictionary = Synergies.ROWS[SET]
 	# A fresh profile, so the first showing is the first ever.
 	DirAccess.make_dir_recursive_absolute(DIR)
 	DirAccess.remove_absolute(DIR + UiProfile.FILE)
@@ -66,11 +66,10 @@ func _check() -> void:
 		_raised.append([set_id, title, text, color]))
 	var shown_before: int = banner.shown
 	run.add_part(WIRE[0], "test")
-	run.add_part(WIRE[1], "test")
-	_t.check("two members raise nothing", _raised.is_empty() and not banner._queue.any(func(item): return item[6] == "set:" + SET),
+	_t.check("one piece raises nothing", _raised.is_empty() and not banner._queue.any(func(item): return item[6] == "set:" + SET),
 		"raised %s" % [_raised])
-	run.add_part(WIRE[2], "test")
-	_t.check("the third member raises the set once, with its row", _raised == [[SET, row["name"], row["text"], row["color"]]],
+	run.add_part(WIRE[1], "test")
+	_t.check("the second piece raises the trick once, with its row", _raised == [[SET, row["name"], row["text"], row["color"]]],
 		"raised %s" % [_raised])
 	# One find card is up (the first part's, the piece that finished the set) and the rest wait. In the
 	# screen's one line (screen_busy.gd, wave 36 ruling) the set goes first among the waiting cards and
@@ -101,12 +100,11 @@ func _check() -> void:
 	run.add_part(FOURTH, "test")
 	build.shop._remove_part(WIRE[1])
 	run.add_part(WIRE[1], "test")
-	_t.check("a fourth member and a re-bought member raise nothing more", _raised.size() == 1, "raised %d" % _raised.size())
-	# A resume or retry: the ledger starts again and the held parts recompute with no gain.
-	build.set_ledger = PartSets.Ledger.new()
+	_t.check("a third piece and a re-bought piece raise nothing more", _raised.size() == 1, "raised %d" % _raised.size())
+	# A resume or retry: the woken list starts again and the held parts recompute with no gain.
+	build._woken.clear()
 	build.recompute()
-	_t.check("a recompute with no gain raises nothing", _raised.size() == 1 and build.set_ledger.found == [SET],
-		"raised %d, ledger %s" % [_raised.size(), build.set_ledger.found])
+	_t.check("a recompute with no gain raises nothing", _raised.size() == 1, "raised %d" % _raised.size())
 	# The next run completes the set again: the small banner, not nothing.
 	banner.dismiss(true)
 	var shown_mid: int = banner.shown

@@ -215,6 +215,8 @@ static func validate_doc(doc, entrance: int) -> String:
 			return "invalid trade timestamp: " + key
 	if not doc.get("seen") is Array or not doc.get("offers") is Dictionary or not doc.get("decisions") is Dictionary:
 		return "invalid trade history"
+	if not preload("res://src/world/hull_mark.gd").doc_ok(doc):
+		return "invalid hull mark"
 	var seen := {}
 	for offer in doc.seen:
 		if not _offer_ok(offer, entrance) or seen.has(int(offer.stage)):

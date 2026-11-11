@@ -5,7 +5,7 @@ const ActiveDefs := preload("res://src/combat/actives/active_defs.gd")
 const Palette := preload("res://src/core/palette.gd")
 
 # What a completed maker set does (maker_sets.gd counts the pieces). Build owns this: refresh()
-# recounts the run's parts, relics and racked active, step() runs the timed bonuses, and the bus
+# recounts the run's parts (relics among them) and racked active, step() runs the timed bonuses, and the bus
 # handlers and one damage-door hook run the rest. Every bonus strikes through build.item_hit (a
 # synergy strike that never procs an item) or combat's wear-trail bypass, so no bonus feeds
 # another in a loop. A set completing is announced once a run on the bus as cause_armed
@@ -102,15 +102,15 @@ func has(bonus_id: String) -> bool:
 	return bonus_id in live
 
 
-# Recounts the pieces when the parts, relics or racked active changed. Cheap when nothing did.
+# Recounts the pieces when the parts or the racked active changed. Cheap when nothing did.
 func refresh() -> void:
 	var active := _racked_maker()
 	# The parts themselves, not their count: a retry or a sale can swap one part for another.
-	var signature := "%d|%s|%s" % [ctx.run.parts.hash(), str(ctx.run.relics), active]
+	var signature := "%d|%s" % [ctx.run.parts.hash(), active]
 	if signature == _signature:
 		return
 	_signature = signature
-	counted = MakerSets.counts(ctx.run.parts, ctx.run.relics, [active] if active != "" else [])
+	counted = MakerSets.counts(ctx.run.parts, [active] if active != "" else [])
 	var was := live
 	live = MakerSets.live_bonuses(counted)
 	for bonus_id in live:
@@ -343,7 +343,7 @@ func _live_without(part_id: String, maker: String) -> bool:
 	var parts: Array = ctx.run.parts.duplicate()
 	parts.erase(part_id)
 	var active := _racked_maker()
-	var counted_before := MakerSets.counts(parts, ctx.run.relics, [active] if active != "" else [])
+	var counted_before := MakerSets.counts(parts, [active] if active != "" else [])
 	return int(counted_before.get(maker, 0)) >= int(MakerSets.SETS[maker]["pieces"])
 
 

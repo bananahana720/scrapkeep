@@ -42,6 +42,9 @@ var warn := false
 var warn_color := Color.WHITE
 # The share of the bar the reading can reach; 1.0 when nothing is welded off.
 var cap := 1.0
+# The plate's edge: the plate line, or the colour of what lifts the weld (the HUD's hull bar edges
+# a marked hull in the Warden's colour, because the Warden break lifts it).
+var cap_edge := UiTokens.LINE
 var _clock := 0.0
 # The share the bar stood at before its last drop, and the seconds its slice has left.
 var _lost_from := -1.0
@@ -75,11 +78,12 @@ func set_reading(value: float, tint: Color, text := "", warning := false, warnin
 	queue_redraw()
 
 
-func set_cap(share: float) -> void:
+func set_cap(share: float, edge := UiTokens.LINE) -> void:
 	share = clampf(share, 0.0, 1.0)
-	if share == cap:
+	if share == cap and edge == cap_edge:
 		return
 	cap = share
+	cap_edge = edge
 	queue_redraw()
 
 
@@ -163,6 +167,6 @@ func _draw_weld(bar: Rect2) -> void:
 	var at := bar.position.x + bar.size.x * cap
 	var plate := Rect2(Vector2(at, bar.position.y), Vector2(bar.end.x - at, BAR_H))
 	draw_rect(plate, UiTokens.INK)
-	draw_rect(plate, UiTokens.LINE, false, 1.5)
+	draw_rect(plate, cap_edge, false, 1.5)
 	var reach := 3.0
 	draw_rect(Rect2(Vector2(at - 2.0, bar.position.y - reach), Vector2(4.0, BAR_H + reach * 2.0)), UiTokens.ACCENT)

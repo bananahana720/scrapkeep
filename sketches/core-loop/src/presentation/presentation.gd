@@ -362,9 +362,10 @@ static func part_card(part_id: String) -> Dictionary:
 		"detail": String(row.get("text", Parts.token(part_id).get("verb", "")))}
 
 
-# The third part of a set landed: the set's name and what it changes, in the set's own colour (the
-# band of studs set_tell.gd draws on the ball), once per run. Like every find it waits for a calm
-# moment, so a set finished in a fight is told when the fight lets go.
+# A second part of one maker woke a trick that adds an element (Synergies.told_on_wake): its
+# name and what it changes, in its own colour (its halo on the ball, accretion.gd), once per run.
+# Like every find it waits for a calm moment, so a trick woken in a fight is told when the fight
+# lets go.
 func _on_set_completed(set_id: String, title: String, text: String, color: Color) -> void:
 	if auto_banner:
 		banner.show_discovery(title, "build", text, "Set complete", SET_KEY + set_id, "synergy_discovered", color, true)

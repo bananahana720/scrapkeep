@@ -94,13 +94,16 @@ func _rows() -> void:
 		var grant := String(row["grant"])
 		var granter := Achievements.row(grant)
 		_t.check("%s has its grant row %s" % [id, grant], not granter.is_empty(), grant)
-		_t.eq("%s's grant pays this node" % id, Achievements.reward_of(grant), {"option": id})
+		# Systems audit pass D (row 31, 11 Nov 2026): each grant pays a paint a player sees.
+		_t.check("%s's grant pays a paint" % id, String(Achievements.reward_of(grant).get("cosmetic", "")).begins_with("paint_"), str(Achievements.reward_of(grant)))
 		_t.check("%s's grant count is 10 or below" % id, int(granter.get("count", 0)) >= 1 and int(granter.get("count", 0)) <= MetaOptions.MAX_GRANT_COUNT, str(granter.get("count")))
 		_t.check("%s's grant adds no lifetime sum" % id, not granter.has("sum"), str(granter.get("sum", "")))
 	for kind in ["option", "discovery", "pocket_key"]:
 		_t.check("a %s node exists" % kind, kinds.has(kind), str(kinds.keys()))
-	var paying: Array = Achievements.ids().filter(func(a): return Achievements.reward_of(a).has("option"))
-	_t.eq("one grant per node", paying.size(), MetaOptions.ids().size())
+	var granting := {}
+	for id in MetaOptions.ids():
+		granting[String(MetaOptions.row(id)["grant"])] = true
+	_t.eq("one grant per node", granting.size(), MetaOptions.ids().size())
 	var pocket := MetaOptions.row("pocket_key")
 	var pocket_grant := Achievements.row(String(pocket.get("grant", "")))
 	_t.check("the pocket key opens on a hidden pocket's discovery (cracked cache opened)",
