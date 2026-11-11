@@ -8,9 +8,9 @@
 
 ## Which file stands in for which
 
-The brief names three files. Two exist; one does not.
+Andrew's request (11 Nov 2026, in the project thread "Audit and improve game systems"; its rules are restated once, in [BACKLOG.md's Systems audit section](../../BACKLOG.md#systems-audit-add-on-11-november-2026)) names three source files. Two exist; one does not.
 
-| Brief says | In the repo | Notes |
+| The request names | In the repo | Notes |
 | --- | --- | --- |
 | `BIBLE.md` | [BIBLE.md](../../BIBLE.md) exists. Its sections 1 (Pillars & Fantasy) and 6 (Core Systems) are read here. | The Bible is dated 6 Sep 2026 and harmonized in place up to 9 Nov. Where it and the Godot sketch differ, the newer word is the [Story map](../../sketches/core-loop/design-v3/STORY-MAP.md) section 4 (what each system means and plays like) and the rulings in [DECISIONS.md](../../project-guide/handoff/DECISIONS.md) (newest wins). |
 | `TECH_BIBLE.md` | Does not exist. BACKLOG.md says "TECH_BIBLE.md ... remain[s a] future output". | Stand-ins: ADRs → [adr/README.md](../../adr/README.md) (TADR-001 to TADR-011). Testing strategy → [ORCHESTRATOR.md](../../ORCHESTRATOR.md) tiered gate (its only owner), [GATE.md](../../project-guide/handoff/GATE.md) and [design-v3/TESTING.md](../../sketches/core-loop/design-v3/TESTING.md). Conventions → [CONTRIBUTING.md](../../CONTRIBUTING.md), AGENTS.md (deep modules, one home for every fact, no slop) and [sketches/core-loop/CONTRACTS.md](../../sketches/core-loop/CONTRACTS.md). |
@@ -65,7 +65,7 @@ Status: **playable** (in the world 1 build a player can reach it), **partial** (
 | 9 | Reactor Wardens: guard, break, weak points, the pulse | playable | `src/combat/warden.gd`, `warden_reactor.gd`, `boss/weak_points.gd` |
 | 10 | Admiral Brindle, three phases | playable | `src/boss/boss.gd`, `boss_rules.gd` |
 | 11 | Rogue mini-bosses (one per stage at most) | playable | `src/combat/rogue.gd`, `src/world/rogue_director.gd` |
-| 12 | Event director and stage events (flood, natural, industrial, weather, and the per-stage condition cards such as "Lean Haul" in `stage_modifier.gd`) | playable | `src/world/director.gd`, `event_director.gd`, `src/world/events/` |
+| 12 | Event director and stage events (flood, natural, industrial, weather, and the per-stage condition cards such as "Lean Haul" in `src/world/events/stage_modifier.gd`) | playable | `src/world/director.gd`, `event_director.gd`, `src/world/events/` |
 | 13 | Park stages and side spots: rib caches, cracked caches, bet crates, ambush altar, relay stake, rescue sites, surge course, radio caches | playable | `src/world/park/`, `src/world/*.gd` |
 | 14 | Scrap: pull, mass, heft class, size, armour, spill, wear | playable | `run_state.gd` HEFT_*, SPILL_*, WEAR_PER_MINUTE; `src/build/scrap_field.gd`, `accretion.gd` |
 | 15 | Cogs and Moss's counter: buy, reroll, cells, sell back | playable | `src/build/shop.gd`, `fabricators.gd` COG_PRICES |
@@ -96,10 +96,10 @@ Status: **playable** (in the world 1 build a player can reach it), **partial** (
 
 ## 3. The passes: run now, on paper, or later
 
-Brackets in Andrew's brief are filled from the repo:
+Andrew's request left two numbers in brackets for the repo to fill:
 
 - **First [15] minutes:** 15 minutes. Source: the world 1 sitting target, "10-15 min run, about 30 min completionist, repeatable" (STATE.md, priority of 23 Oct), and BIBLE.md "about 10 to 15 per world". Fifteen minutes covers the title, the camp, the dam, the flume and Brindle for a first-timer.
-- **Simulate [10] hours:** 10 hours of game time per player type. Running it literally is about 75 rusher runs (5.9 to 8.1 game minutes each, measured in pass A), about 57 completionist runs (10.4 to 10.5 minutes) and a similar count of min-maxer runs, roughly 7 hours of wall time on a 4-core box. Andrew asked on 11 Nov (18:42Z) that long wall-clock runs never stall the work, so pass B runs 24 world 1 runs per type (the project's 24-seed rule) and carries its per-minute rates to 10 hours; it runs the full count only if a rate is still moving at 24. In-run economy resets every run (BIBLE.md "Combat power is rebuilt each run"), so 10 hours mostly measures the per-run economy across many seeds, plus the meta unlock curve (shift board rungs, pilot marks, cosmetics, codex) across those runs.
+- **Simulate [10] hours:** 10 hours of game time per player type. Running it literally is about 75 rusher runs (5.9 to 8.1 game minutes each, measured in pass A), about 57 completionist runs (10.4 to 10.5 minutes) and a similar count of min-maxer runs, roughly 7 hours of wall time on a 4-core box. Andrew asked on 11 Nov (18:42Z) that long wall-clock runs never stall the work (ruling in [DECISIONS.md](../../project-guide/handoff/DECISIONS.md)), so pass B runs 24 world 1 runs per type (the project's 24-seed rule) and carries its per-minute rates to 10 hours; it runs the full count only if a rate is still moving at 24. In-run economy resets every run (BIBLE.md "Combat power is rebuilt each run"), so 10 hours mostly measures the per-run economy across many seeds, plus the meta unlock curve (shift board rungs, pilot marks, cosmetics, codex) across those runs.
 
 | Pass | Decision | Why |
 | --- | --- | --- |
@@ -139,7 +139,7 @@ So pass B and pass F are not blocked. Each starts by adding what it needs in its
 
 - A runs alone first (this thread). B, C and D start as parallel threads when A is merged; each owns different files (the fences are on each card). E waits for C and D. F runs last.
 - **Regression.** B and F run again at every sprint close, beside the release gate (ruling cy). Andrew's rule for this workstream: a new dominant strategy or a new high-severity break reopens the sprint, the same as a build that will not boot. That changes ORCHESTRATOR's tiered gate, which ORCHESTRATOR alone owns, so it goes to the coordinator as a change request (card SA-F). It does not change ruling cn: play findings still never hold a promotion.
-- **Gate per PR.** Focused tests plus `npm run sketch:fast -- --base origin/stage/alpha-w37` and one independent review (ORCHESTRATOR tiered gate). Docs-only PRs (A, D) use `npm run check:docs` and `npm run check:project`.
+- **Gate per PR.** The per-PR tier of [ORCHESTRATOR's tiered gate](../../ORCHESTRATOR.md#light-play-lane), its only owner. Docs-only PRs (A, D) use the scoped docs checks in AGENTS.md.
 - **Evidence.** Each DoD names an artifact. A pass with no artifact is not done. Numbers come only from receipts; band ratios need 24-seed medians (project measurement rule).
 - **NEEDS ANDREW** only for: cutting or merging a feature, a change that conflicts with a pillar, or a balance fix that needs a design change rather than a number change. Everything else is decided and logged as a one-line assumption he can overturn.
 - **Reporting.** Each pass ends with a per-system summary for the coordinator's "Systems health" digest: pass status, top open issue, last sim or bot result, what changed, and one finding in plain words.

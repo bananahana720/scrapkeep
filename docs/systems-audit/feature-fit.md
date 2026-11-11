@@ -1,61 +1,61 @@
 # Feature fit (pass D, world 1)
 
-**What this page says.** Of the 30 player-facing features in world 1, 22 earn their place as they are. Four should be merged into the item ladder so a player meets three build doors, not ten. One page (head starts) should be hidden until it can pay. Six are deferred: they are specs with nothing a player meets. Three new mechanics are proposed, each extending a rule already in the game, and each answers one of pass A's problems. The design thread's three mechanics (Heat, Reservoir, Called Shot) are already approved by Andrew and are logged, not re-judged. Every cut, merge and new mechanic here is a NEEDS ANDREW card in the thread; nothing is built by this pass.
+**What this page says.** Of the 30 player-facing features in world 1, 22 earn their place as they are. Four should be merged into the item ladder so a player meets three build systems, not ten. One page (head starts) should be hidden until it can pay. Six are deferred: they are specs with nothing a player meets. Three new mechanics are proposed, each extending a rule already in the game, and each answers one of pass A's problems. The design thread's three mechanics (Heat, Reservoir, Called Shot) are already approved by Andrew and are logged, not re-judged. Every cut, merge and new mechanic here is a NEEDS ANDREW card in the thread; nothing is built by this pass.
 
 **Read at.** `stage/alpha-w37` head `995f3dd2`, 11 Nov 2026, with pass A's map ([systems-map.md](systems-map.md)) and its eight world 1 bot runs. Card: [SA-D in BACKLOG.md](../../BACKLOG.md#sa-d).
 
-**How to read the table.** Pillar letters are BIBLE.md section 1's three: **M** joyful physical mastery, **B** scrap becomes your build, **W** a world worth crossing. *Cost to learn* is what a first-timer must hold in their head before the feature helps them: **low** (one look or one try), **medium** (a rule to remember), **high** (a rule plus a list). *Cost to maintain* is the code that carries it, counted in lines of GDScript on this head (the files are named, so the count can be rerun), plus anything that makes it expensive beyond its size. *Verdict* is keep, merge, cut or defer.
+**How to read the table.** Pillars are BIBLE.md section 1's three, by short word: **mastery** (joyful physical mastery), **build** (scrap becomes your build), **world** (a world worth crossing). *Cost to learn* is what a first-timer must hold in their head before the feature helps them: **low** (one look or one try), **medium** (a rule to remember), **high** (a rule plus a list). *Cost to maintain* is the code that carries it, counted in lines of GDScript on this head (the files are named, so the count can be rerun), plus anything that makes it expensive beyond its size. *Verdict* is keep, merge, cut or defer.
 
 ## The table
 
 | # | Feature | Pillar | Cost to learn | Cost to maintain | Verdict | Why |
 | --- | --- | --- | --- | --- | --- | --- |
-| 1 | Rolling ball, boost, jump, slam | M | low | high: the physics authority (`player_ball.gd` 1,690 lines, `rigid_ball.gd`) | keep | It is the game. |
-| 2 | Harpoon line: swing, fling, reel | M | medium | low: `harpoon.gd` 72 lines, with line code in the ball | keep | Everyone's mobility (Story map); the reel opens weak points. |
-| 3 | Carve | M, W | low | low | keep, wire | Add the game event so sound and the tricks book can hear it (pass C). |
-| 4 | Six pilots and kits | M | medium | high: six kits, `rivet_kit.gd` alone 1,718 lines | keep | Replay variety; each is a way of working (Story map). |
-| 5 | Rack actives (six) and the ultimate | M | medium | high: `src/combat/actives/` 1,715 lines, `ultimate.gd` 1,143 | keep | Low-cooldown choices while moving (BIBLE.md section 6). |
-| 6 | Reactor Wardens, Brindle, rogues | M, W | medium | high: `warden.gd`, `boss.gd`, `rogue.gd` | keep | The world's tests. |
-| 7 | Event director and stage events | W | low | high: `director.gd`, `event_director.gd`, `src/world/events/` | keep | "Chaos you can learn". |
-| 8 | Side spots (caches, relay, rescue, surge, radio) | W, B | low each | high together | keep | The things to explore; pass B makes them pay more than the main route (problem 2). |
-| 9 | Scrap: mass, heft, armour, spill | B | low | medium | keep | "You are made of what you broke." |
-| 10 | Cogs and Moss's counter | B | medium | high: shop and bay 2,177 lines | keep | Pass B fixes the rates (problem 4). |
-| 11 | Cores | B | high: they raise the next gate, buy a heal, ride a bet, and vanish at the stage end | low: about 50 lines in `run_state.gd` | keep, wire | 0 cores reached any of 8 bot runs. New mechanic 3 below gives a core a home. |
-| 12 | Grey panels | B | low per panel; high as a stack of percentage lines | low: 590 lines | keep | The flat-stat rung of the ladder. Pass C makes a panel read as a part on the ball, not a percentage. |
-| 13 | Mint and cobalt parts at gates | B | medium | high: `parts.gd` and item code 2,789 lines | keep | The heart of the ladder. |
-| 14 | Relics from cracked caches | B | medium: a separate kind with its own slot rule | medium: 684 lines | merge into the ladder | A relic is a part with a pilot-slot effect. Shown as a rung, it stops being an eleventh thing to learn. |
-| 15 | Hot-wire (Spark Tread) | B | medium: fit or recycle, a stripe, a wear rule | medium: 421 lines | merge into the ladder | One part with an extra offer screen. Make it a rare part offered at a gate like any other. |
-| 16 | Maker sets (three of one maker) | B, W | medium | medium: 475 lines | keep as the one set rule | It carries the world's makers (Story map: "Every find was made by someone for another job"). |
-| 17 | Named synergies | B | high: nine hidden pairings on top of maker sets | low: 239 lines | merge into maker sets | Two hidden set rules beside a visible one; a player cannot tell which is firing. |
-| 18 | Three-part sets | B | high: a third set list | low: 162 lines | merge into maker sets | Same as row 17. Keep the rule changes they make; move them onto maker tricks. |
-| 19 | Upgrade tree, depths 1 and 2 | B | medium | high: 1,961 lines with UI | keep | The Bible's Path. |
-| 20 | Start pick of three | B | low | low: 685 lines | keep | A small first decision; fold under Path in what the player reads. |
-| 21 | Trade spots: keeper's gamble, foreman's kindness | B, theme | medium | medium: 866 lines | keep, reprice | The theme's one choice (ruling ci). New mechanic 1 makes the hull price cost something. |
-| 22 | Bet crate | B | medium | low | keep | Rides on cores; lives once cores arrive. |
-| 23 | SPIL-9 companion, two sockets | M | medium | high: 1,540 lines | keep | The Crew door. |
-| 24 | Devices (charges, sentry, stakes) | M | low | medium: 651 lines | keep | Part of three pilots' kits. |
-| 25 | Element by material (ice on water, live water) | M, W | low to see, medium to plan | medium: 751 lines | keep | A world rule the player finds (TADR-009). |
-| 26 | Run tier (HARD ladder) | M | low | low: 146 lines | keep | Opens after the first win; "harder, never easier" (ruling cu). |
-| 27 | Death, fast restart, resume | M | low | high: persistence | keep | "A death is a fast restart, never a punishment." |
-| 28 | Camp: Moss, skee, trial, sandbox, bay | M, W | low | high: 2,168 lines | keep | Practice and the crew's home. |
-| 29 | Shift board, marks, cosmetics, codex, scrapbook | W | low | medium | keep | Unlocks that widen the game, never a stat. |
-| 30 | Achievements | W | low | medium: 644 lines | keep, wire | Eleven are record-only (`achievements.gd` `RECORD_ONLY`); each should pay a look, a tune or a scrapbook sticker. |
+| 1 | Rolling ball, boost, jump, slam | mastery | low | high: the physics authority (`player_ball.gd` 1,690 lines, `rigid_ball.gd`) | keep | It is the game. |
+| 2 | Harpoon line: swing, fling, reel | mastery | medium | low: `harpoon.gd` 72 lines, with line code in the ball | keep | Everyone's mobility (Story map); the reel opens weak points. |
+| 3 | Carve | mastery, world | low | low | keep, connect | Add the game event so sound and the tricks book can hear it (pass C). |
+| 4 | Six pilots and kits | mastery | medium | high: six kits, `rivet_kit.gd` alone 1,718 lines | keep | Replay variety; each is a way of working (Story map). |
+| 5 | Rack actives (six) and the ultimate | mastery | medium | high: `src/combat/actives/` 1,715 lines, `ultimate.gd` 1,143 | keep | Low-cooldown choices while moving (BIBLE.md section 6). |
+| 6 | Reactor Wardens, Brindle, rogues | mastery, world | medium | high: `warden.gd`, `boss.gd`, `rogue.gd` | keep | The world's tests. |
+| 7 | Event director and stage events | world | low | high: `director.gd`, `event_director.gd`, `src/world/events/` | keep | "Chaos you can learn". |
+| 8 | Side spots (caches, relay, rescue, surge, radio) | world, build | low each | high together | keep | The things to explore; pass B makes them pay more than the direct path (problem 2). |
+| 9 | Scrap: mass, heft, armour, spill | build | low | medium | keep | "You are made of what you broke." |
+| 10 | Cogs and Moss's counter | build | medium | high: shop and bay 2,177 lines | keep | Pass B fixes the rates (problem 4). |
+| 11 | Cores | build | high: they raise the next gate, buy a heal, ride a bet, and vanish at the stage end | low: about 50 lines in `run_state.gd` | keep, connect | 0 cores reached any of 8 bot runs. New mechanic 3 below gives a core a home. |
+| 12 | Grey panels | build | low per panel; high as a stack of percentage lines | low: 590 lines | keep | The flat-stat rung of the ladder. Pass C makes a panel read as a part on the ball, not a percentage. |
+| 13 | Mint and cobalt parts at gates | build | medium | high: `parts.gd` and item code 2,789 lines | keep | The heart of the ladder. |
+| 14 | Relics from cracked caches | build | medium: a separate kind with its own slot rule | medium: 684 lines | merge into the ladder | A relic is a part with a pilot-slot effect. Shown as a rung, it stops being an eleventh thing to learn. |
+| 15 | Hot-wire (Spark Tread) | build | medium: fit or recycle, a stripe, a wear rule | medium: 421 lines | merge into the ladder | One part with an extra offer screen. Make it a rare part offered at a gate like any other. |
+| 16 | Maker sets (three of one maker) | build, world | medium | medium: 475 lines | keep as the one set rule | It carries the world's makers (Story map: "Every find was made by someone for another job"). |
+| 17 | Named synergies | build | high: nine hidden pairings on top of maker sets | low: 239 lines | merge into maker sets | Two hidden set rules beside a visible one; a player cannot tell which is firing. |
+| 18 | Three-part sets | build | high: a third set list | low: 162 lines | merge into maker sets | Same as row 17. Keep the rule changes they make; move them onto maker tricks. |
+| 19 | Upgrade tree, depths 1 and 2 | build | medium | high: 1,961 lines with UI | keep | The Bible's Path. |
+| 20 | Start pick of three | build | low | low: 685 lines | keep | A small first decision; fold under Path in what the player reads. |
+| 21 | Trade spots: keeper's gamble, foreman's kindness | build, theme | medium | medium: 866 lines | keep, reprice | The theme's one choice (ruling ci). New mechanic 1 makes the hull price cost something. |
+| 22 | Bet crate | build | medium | low | keep | Rides on cores; lives once cores arrive. |
+| 23 | SPIL-9 companion, two sockets | mastery | medium | high: 1,540 lines | keep | The Crew door. |
+| 24 | Devices (charges, sentry, stakes) | mastery | low | medium: 651 lines | keep | Part of three pilots' kits. |
+| 25 | Element by material (ice on water, live water) | mastery, world | low to see, medium to plan | medium: 751 lines | keep | A world rule the player finds (TADR-009). |
+| 26 | Run tier (HARD ladder) | mastery | low | low: 146 lines | keep | Opens after the first win; "harder, never easier" (ruling cu). |
+| 27 | Death, fast restart, resume | mastery | low | high: persistence | keep | "A death is a fast restart, never a punishment." |
+| 28 | Camp: Moss, skee, trial, sandbox, bay | mastery, world | low | high: 2,168 lines | keep | Practice and the crew's home. |
+| 29 | Shift board, marks, cosmetics, codex, scrapbook | world | low | medium | keep | Unlocks that widen the game, never a stat. |
+| 30 | Achievements | world | low | medium: 644 lines | keep, connect | Eleven are record-only (`achievements.gd` `RECORD_ONLY`); each should pay a look, a tune or a scrapbook sticker. |
 | 31 | Head starts page | none today | low, but it reads as broken | low: 243 lines | cut the page until it fills | `open_earned` has no caller; the page shows "0 of 4" forever. Keep the code; hide the page. |
 
 ### Deferred (specs with nothing a player meets)
 
 | Feature | Pillar | Why defer |
 | --- | --- | --- |
-| Pearl and gold rungs, brass trophies | B | After the alpha (Story map). |
-| The Mind's offerings | B, theme | After the alpha (ruling of 23 Oct, Story map). |
-| Scrap-bot crew (TADR-011) | B | Not built; SPIL-9 stands in. See change request 1. |
-| Respec by a special opportunity | B | Not built. See change request 2. |
-| Stage variants and whole-run modifiers (night shift, backwash, overtime, short crew) | W | Four seeds on the shift board, read by nothing; already planned for after the sitting. |
+| Pearl and gold rungs, brass trophies | build | After the alpha (Story map). |
+| The Mind's offerings | build, theme | After the alpha (ruling of 23 Oct, Story map). |
+| Scrap-bot crew (TADR-011) | build | Not built; SPIL-9 stands in. See change request 1. |
+| Respec by a special opportunity | build | Not built. See change request 2. |
+| Stage variants and whole-run modifiers (night shift, backwash, overtime, short crew) | world | Four seeds on the shift board, read by nothing; already planned for after the sitting. |
 | Worlds 2 and 3 features | all | Parked (ruling at). |
 
 ## Already approved: the design thread's three mechanics
 
-Andrew accepted these on 11 Nov 2026 at 18:42Z and wants them in before the sitting. The thread "Design loops you can't put down" builds them behind flags and owns their files ([docs/design/loops.md](https://github.com/bananahana720/scrapkeep/pull/763) on pull request 763). Logged here, not re-judged:
+Andrew accepted these on 11 Nov 2026 at 18:42Z and wants them in before the sitting (ruling in [DECISIONS.md](../../project-guide/handoff/DECISIONS.md)). The thread "Design loops you can't put down" builds them behind flags and owns their files ([docs/design/loops.md](https://github.com/bananahana720/scrapkeep/pull/763) on pull request 763). Logged here, not re-judged:
 
 | Mechanic | Rule it extends | New decision | Pass A problem it touches |
 | --- | --- | --- | --- |
@@ -104,7 +104,7 @@ These go to the coordinator. This pass does not edit BIBLE.md or an ADR.
 
 Three cards in the thread, each with a recommended default and "none of these":
 
-1. Fold the build doors: merge relics and hot-wire into the part ladder, and named synergies and three-part sets into maker sets (rows 14, 15, 17, 18).
+1. Fold the build systems: merge relics and hot-wire into the part ladder, and named synergies and three-part sets into maker sets (rows 14, 15, 17, 18).
 2. Build the three new mechanics above: all three, Marked hull first, or none.
 3. Hide the head starts page until it can fill (row 31).
 
@@ -114,7 +114,7 @@ Their answers are recorded here when they come back.
 
 | System group | Pass status | Top open issue | Last result | What changed |
 | --- | --- | --- | --- | --- |
-| Build doors | D done; cards to Andrew | Ten doors where three would do | 31 features judged: 22 keep, 4 merge, 1 cut, 4 keep and wire | Nothing in the game |
+| Build systems | D done; cards to Andrew | Ten doors where three would do | 31 features judged: 22 keep, 4 merge, 1 cut, 4 keep and wire | Nothing in the game |
 | Resources | D done | Hull free, cogs piling, cores missing | Three mechanics proposed, one per problem | Nothing |
 | Spec-only systems | D done | Crew and respec in the Bible, not the game | Four change requests | Nothing |
 
