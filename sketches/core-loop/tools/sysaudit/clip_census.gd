@@ -73,7 +73,7 @@ func _finalize() -> void:
 	for r in _rumble_log:
 		var key := "%s %s" % [r[0], "sent" if r[4] else "held"]
 		rumbles[key] = int(rumbles.get(key, 0)) + 1
-	var seed := _seeds[maxi(_index, 0)]
+	var seed := _seeds[0] if not _seeds.is_empty() else 0
 	var f := FileAccess.open(_out.path_join("census-%d.json" % seed), FileAccess.WRITE)
 	if f != null:
 		f.store_string(JSON.stringify({"seed": seed, "policy": String(_settings.get("policy", "")), "outcome": _outcome,
