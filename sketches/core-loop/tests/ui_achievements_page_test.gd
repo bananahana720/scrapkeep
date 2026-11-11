@@ -217,6 +217,14 @@ func _reach_rows(page) -> void:
 		root.content_scale_size = resolution
 		await _frames(5)
 		_t.eq("viewport checks actual resolution", Vector2i(root.get_visible_rect().size), resolution)
+		var view := root.get_visible_rect()
+		var plate: Rect2 = page.list_rect()
+		var first: Rect2 = page.rows.values()[0].get_global_rect()
+		var second: Rect2 = page.rows.values()[1].get_global_rect()
+		_t.check("the list's plate sits inside the view at %s" % resolution, view.encloses(plate), "view %s plate %s" % [view, plate])
+		_t.check("the list is centred at %s" % resolution, absf(plate.get_center().x - view.get_center().x) <= 2.0, "view %s plate %s" % [view, plate])
+		_t.check("rows start inside the plate and off the screen edge at %s" % resolution, plate.position.x >= 8.0 and first.position.x >= plate.position.x + 8.0, "plate %s row %s" % [plate, first])
+		_t.check("both columns are one width at %s" % resolution, is_equal_approx(first.size.x, second.size.x), "%s against %s" % [first.size.x, second.size.x])
 		for pad in [false, true]:
 			page.rows.values()[0].grab_focus()
 			await _frames(3)
