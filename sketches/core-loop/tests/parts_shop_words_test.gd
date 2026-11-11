@@ -3,6 +3,10 @@ extends SceneTree
 const Parts := preload("res://src/build/parts.gd")
 const Relics := preload("res://src/build/relics.gd")
 const RewardCeremony := preload("res://src/presentation/reward_ceremony.gd")
+const RewardGates := preload("res://src/build/reward_gates.gd")
+const WorldPrompt := preload("res://src/ui/world_prompt.gd")
+const ItemGen := preload("res://src/build/item_gen.gd")
+const Synergies := preload("res://src/build/synergies.gd")
 
 # Ruling cx, wave 36 (unslop-parts): a reward card, a shop tile and the shop's detail line say what
 # the thing does in the words shown, and one thing has one name.
@@ -22,6 +26,10 @@ var _checked := 0
 
 func _initialize() -> void:
 	call_deferred("_run")
+
+
+func _origin_ok(text: String, synergy_name: String) -> bool:
+	return synergy_name != "" and text.ends_with("From %s." % synergy_name)
 
 
 func _report(label: String, ok: bool, detail: String) -> void:
@@ -67,13 +75,55 @@ func _numbers_in(text: String) -> Array:
 	return out
 
 
-# Numbers the part's text holds that its detail line leaves out.
+# Numbers the part's text holds that its detail line leaves out. Whole numbers: "4" is not found in "14".
 func _hidden_numbers(text: String, line: String) -> Array:
 	var out: Array = []
+	var have := _numbers_in(line)
 	for n in _numbers_in(text):
-		if not line.contains(n):
+		if have.has(n):
+			have.erase(n)
+		else:
 			out.append(n)
 	return out
+
+
+# The generator keeps a row's text whole only up to eight words and no cut mark.
+func _text_whole(text: String) -> bool:
+	return not text.ends_with("...") and ItemGen.word_count(text) <= ItemGen.MAX_WORDS
+
+
+# Problems with a reward-card line for a part whose verb is `verb`.
+func _card_problems(card: String, verb: String) -> Array:
+	var out: Array = []
+	if card == "":
+		out.append("empty")
+	if _words(card) > MAX_CARD_WORDS:
+		out.append("%d words" % _words(card))
+	if card != verb:
+		out.append("cut from \"%s\"" % verb)
+	return out
+
+
+# Problems with what a gate draws for a part: "+N punch" when it has punch, never the old "Punch +".
+func _gate_problems(drawn: String, punch: float) -> Array:
+	var out: Array = []
+	if drawn.contains("Punch +"):
+		out.append("old \"Punch +\" label")
+	if punch > 0.0 and not drawn.contains("+%d punch" % int(punch)):
+		out.append("no \"+%d punch\"" % int(punch))
+	return out
+
+
+func _gate_drawn(d: Resource, id: String) -> String:
+	var offer := {"name": Parts.display_name(id), "verb": d.verb, "punch": d.punch, "text": d.text, "mark": ""}
+	var parts: Dictionary = RewardGates.prompt_parts(offer)
+	var probe := WorldPrompt.new()
+	probe.set_parts(parts["title"], parts["detail"], parts["icon"])
+	probe.near = true
+	probe.visible = true
+	var drawn := " | ".join(probe.drawn_words())
+	probe.free()
+	return drawn
 
 
 func _words(line: String) -> int:
@@ -86,15 +136,34 @@ func _run() -> void:
 	_report("plant banned words", _banned_in(broken).size() >= 8, "the banned-word scan found %d hits in a planted row" % _banned_in(broken).size())
 	_report("plant hidden number", _hidden_numbers("+4 punch, +12% weapon damage", "Hot Rivets: Hit harder. Punch +4") == ["12"],
 		"the number check names %s when the line drops 12" % [_hidden_numbers("+4 punch, +12% weapon damage", "Hot Rivets: Hit harder. Punch +4")])
-	_report("plant cut text", ("a b c d e f g h i...").ends_with("...") and _words("one two three four five six seven eight nine") > 8,
-		"a planted nine-word text is over the generator's eight-word cut")
-	_report("plant long line", _words("Third bounce in four seconds strikes the nearest machine for double damage") > MAX_CARD_WORDS, "a planted ten-word line is over the limit")
+	_report("plant whole numbers", _hidden_numbers("+4 punch", "Name. +14 punch, +40% damage") == ["4"],
+		"4 is not found inside 14 or 40: %s" % [_hidden_numbers("+4 punch", "Name. +14 punch, +40% damage")])
+	var nine := "one two three four five six seven eight nine"
+	_report("plant cut text", not _text_whole(ItemGen.clip(nine)) and not _text_whole(nine) and _text_whole("one two three"),
+		"the generator's own cut of a nine-word text \"%s\" is refused" % ItemGen.clip(nine))
+	var ten := "Third bounce in four seconds strikes the nearest machine for double"
+	_report("plant long card line", _card_problems(ten, ten).size() == 1 and _card_problems("", "").size() >= 1,
+		"a ten-word card line: %s" % [_card_problems(ten, ten)])
+	var seven := "Post-smash knocked machines hit much harder now"
+	var cut := " ".join(seven.split(" ").slice(0, 6))
+	_report("plant cut card line", _card_problems(cut, seven).size() == 1, "a seven-word verb the reveal row cuts to six: %s" % [_card_problems(cut, seven)])
+	_report("plant old gate label", _gate_problems("Hit harder | Punch +4", 4.0).size() == 2 and _gate_problems("+12% damage, +4 punch", 4.0).is_empty(),
+		"a gate drawing the old label: %s" % [_gate_problems("Hit harder | Punch +4", 4.0)])
 
 	var rows: Dictionary = Parts.rows()
 	var ids: Array = rows.keys()
 	for key in Parts.EVOLVED:
 		ids.append(key)
 	_report("rows", rows.size() >= 100 and ids.size() >= 104, "%d rows walked (catalogue, items, cells, evolved)" % ids.size())
+
+	# An evolved part says which synergy it came from, by that synergy's own name (its first
+	# discovery card is the one screen that draws the whole text).
+	_report("plant origin", not _origin_ok("+8 punch, +35% weapon damage", "Wrecking Ball") and not _origin_ok("From Pinwheel.", "")
+		and _origin_ok("+8 punch. From Wrecking Ball.", "Wrecking Ball"), "the origin checker passes a text with no origin, or fails one that has it")
+	for key in Parts.EVOLVED:
+		var from_name := String(Synergies.ROWS.get(Synergies.evolution_of(key), {}).get("name", ""))
+		var said: String = Parts.def(key).text
+		_report(key + " origin", _origin_ok(said, from_name), "evolved from \"%s\", text \"%s\"" % [from_name, said])
 
 	var card_lines := {}
 	var checked_details := 0
@@ -114,16 +183,18 @@ func _run() -> void:
 			var hidden := _hidden_numbers(level_text, line)
 			_report(id + " L%d numbers" % level, hidden.is_empty(), "the detail line \"%s\" drops %s from \"%s\"" % [line, hidden, level_text])
 			if _has_shop_line():
+				var after := line.substr(Parts.display_name(id).length() + 2)
+				_report(id + " L%d sentence case" % level, after != "" and after.substr(0, 1) == after.substr(0, 1).to_upper(), "the detail line \"%s\" starts its sentence lowercase" % line)
 				_report(id + " L%d name first" % level, line.begins_with(Parts.display_name(id) + ". "), "the detail line \"%s\" does not open with the name and a full stop" % line)
 			checked_details += 1
 		var bad := _banned_in(shown)
 		_report(id + " words", bad.is_empty(), "%s" % [bad])
 		var card: String = shown[1]
-		_report(id + " text kept whole", not d.text.ends_with("...") and _words(d.text) <= 8,
+		_report(id + " text kept whole", _text_whole(d.text),
 			"the row text \"%s\" is %d words; past eight the generator cuts it and the number is lost" % [d.text, _words(d.text)])
-		_report(id + " card length", _words(card) <= MAX_CARD_WORDS, "\"%s\" is %d words" % [card, _words(card)])
-		_report(id + " card uncut", card == d.verb, "the reveal row cuts \"%s\" to \"%s\"" % [d.verb, card])
-		_report(id + " card line set", card != "", "an empty card line")
+		_report(id + " card line", _card_problems(card, d.verb).is_empty(), "\"%s\": %s" % [card, _card_problems(card, d.verb)])
+		var drawn := _gate_drawn(d, id)
+		_report(id + " gate prompt", _gate_problems(drawn, d.punch).is_empty(), "the gate draws \"%s\": %s" % [drawn, _gate_problems(drawn, d.punch)])
 		if card_lines.has(card):
 			_report(id + " card unique", false, "\"%s\" is also the line of %s" % [card, card_lines[card]])
 		card_lines[card] = id

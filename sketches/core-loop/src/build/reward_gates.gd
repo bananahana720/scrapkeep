@@ -312,15 +312,18 @@ static func glyph_ids(offer: Dictionary) -> Array:
 		.filter(func(id): return id != "")
 
 
-# The prompt's structured parts: the name (at most three words), and under it the verb with
-# its punch, the effect line and the star line.
+# The prompt's structured parts: the name (at most three words), and under it the effect line
+# (the row's text, with "+N punch" added when the text lacks it; the verb only when there is no
+# text, because verb and text said the same thing) and the star line.
 static func prompt_parts(offer: Dictionary) -> Dictionary:
 	var words: PackedStringArray = String(offer.get("name", "")).split(" ", false)
 	var title := " ".join(words.slice(0, WorldPrompt.TITLE_WORDS))
-	var first := String(offer.get("verb", ""))
-	if offer.get("punch", 0.0) > 0.0:
-		first += ". Punch +%d" % int(offer["punch"])
-	var lines := PackedStringArray([first, offer.get("text", "")])
+	var first := String(offer.get("text", ""))
+	if first == "":
+		first = String(offer.get("verb", ""))
+	if offer.get("punch", 0.0) > 0.0 and not "punch" in first.to_lower():
+		first += ", +%d punch" % int(offer["punch"])
+	var lines := PackedStringArray([first])
 	if offer.get("mark", "") != "":
 		lines.append(offer["mark"])
 	return {"title": title, "detail": "\n".join(lines), "icon": "obj_gate"}
