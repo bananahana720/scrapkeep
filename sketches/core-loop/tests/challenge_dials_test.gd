@@ -19,6 +19,10 @@ const W37_TUNED := [
 	"warden.pulse_cycle_by_stage",  # D6
 	"mobs.clock_tiers_by_stage",  # D3
 	"hazard.boil_stall_by_stage",  # D5
+	"hazard.shell_cover_by_stage",  # D4
+	"mobs.lobber_lead_by_stage",  # D4
+	"mobs.lobber_share_step_by_stage",  # D4
+	"pilot.regen_rolling_by_stage",  # D7
 ]
 const T := preload("res://tests/support/t.gd")
 
@@ -89,6 +93,9 @@ func _rules() -> void:
 			ident = float(d) == 1.0 or key == "brindle.combo" or key.ends_with(".combo") or key.ends_with(".weak_points")
 		if not ident:
 			_t.check("identity default " + key, false)
+	_t.eq("wave 37 D4: terrain stops shells on the dam and the flume only", ChallengeDials.value("hazard.shell_cover_by_stage"), [1.0, 1.0, 0.0, 0.0, 0.0, 0.0])
+	_t.eq("wave 37 D4: lobbers lead 0.75 on the dam and the flume, 0.5 after", ChallengeDials.value("mobs.lobber_lead_by_stage"), [0.75, 0.75, 0.5, 0.5, 0.5, 0.5])
+	_t.eq("wave 37 D4: the lobber share step is 0.12 on the dam and the flume, 0.07 after", ChallengeDials.value("mobs.lobber_share_step_by_stage"), [0.12, 0.12, 0.07, 0.07, 0.07, 0.07])
 	_t.eq("the dam's mob hits ship at x1.5, every other stage at identity", ChallengeDials.value("mobs.damage_by_stage"), [1.5, 1.0, 1.0, 1.0, 1.0, 1.0])
 	_t.eq("crews lead the roll by half on world 1, nowhere else", ChallengeDials.value("pack.lead_by_stage"), [0.5, 0.5, 0.0, 0.0, 0.0, 0.0])
 	_t.eq("chasers run at 9 m/s on world 1, their own speed after it", ChallengeDials.value("mobs.chaser_speed_by_stage"), [9.0, 9.0, 0.0, 0.0, 0.0, 0.0])
@@ -96,6 +103,7 @@ func _rules() -> void:
 	_t.eq("world 1 Wardens pulse on a x0.85 cycle, later ones at identity", ChallengeDials.value("warden.pulse_cycle_by_stage"), [0.85, 0.85, 1.0, 1.0, 1.0, 1.0])
 	_t.eq("the clock climbs three tiers on world 1, two after it", ChallengeDials.value("mobs.clock_tiers_by_stage"), [3.0, 3.0, 2.0, 2.0, 2.0, 2.0])
 	_t.eq("the boils read the stall on world 1, the loop after it", ChallengeDials.value("hazard.boil_stall_by_stage"), [1.0, 1.0, 0.0, 0.0, 0.0, 0.0])
+	_t.eq("the hull regenerates only while rolling on world 1, at any speed after it", ChallengeDials.value("pilot.regen_rolling_by_stage"), [1.0, 1.0, 0.0, 0.0, 0.0, 0.0])
 	_t.eq("weak points ship off on both bosses for wave 18", [ChallengeDials.value("waking.weak_points"), ChallengeDials.value("mind.weak_points")], [0.0, 0.0])
 	_t.near("default tell is the base", ChallengeDials.tell("brindle", Rules.CRANE_WARN), Rules.CRANE_WARN, 0.0)
 

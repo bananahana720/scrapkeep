@@ -86,6 +86,13 @@ const DEFAULTS := {
 	"mind.period_mult": 1.0, "mind.period_by_phase": [1.0, 1.0, 1.0, 1.0],
 	"mind.tell_mult": 1.0, "mind.punish_mult": 1.0, "mind.combo": 0.0,
 	"mind.phase_min_by_phase": [1.0, 1.0, 1.0, 1.0],
+	# Wave 37 unit D4, ruling cu call 2: terrain stops enemy shells, and lobbers lead more of them. shell_cover is 1
+	# where a lobber shell bursts on the first terrain or landform it meets (0 = it flies through, the game before
+	# this unit); lobber_lead is the share of the ball's FLIGHT travel a lobber aims ahead (0.5 is Lobber.LEAD);
+	# lobber_share_step is the lobber share added per effective clock tier (0.07 is the old step).
+	"hazard.shell_cover_by_stage": [1.0, 1.0, 0.0, 0.0, 0.0, 0.0],
+	"mobs.lobber_lead_by_stage": [0.75, 0.75, 0.5, 0.5, 0.5, 0.5],
+	"mobs.lobber_share_step_by_stage": [0.12, 0.12, 0.07, 0.07, 0.07, 0.07],
 	# Wardens (warden.gd): the pulse's damage and cycle, the meltdown slag's damage.
 	"warden.pulse_damage_mult": 1.0, "warden.pulse_cycle_mult": 1.0, "warden.slag_damage_mult": 1.0,
 	"warden.pulse_damage_by_stage": PULSE_DAMAGE_W1, "warden.pulse_cycle_by_stage": PULSE_CYCLE_W1, "warden.slag_damage_by_stage": ONES6,
