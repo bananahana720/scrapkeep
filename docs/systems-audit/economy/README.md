@@ -125,6 +125,8 @@ What this evidence does not show:
 - Worlds 2 and 3.
 - What a part's power is worth (see "Power the bots cannot see").
 - The probe misses a non-shop cog spend that lands on the same tick as a cog gain. None of these bots makes such a spend.
+- The probe reaches private members of the game (`run._start_pick_open`, `world._shop`, `world._bay_fact`) to drive the min-maxer. It is a lab tool, not game code, so a rename there breaks the probe, not the game.
+- Cog gains are sorted into sources by amount, so a burst and a pickup of the same size can land in the wrong row.
 
 ## Follow-ups (not built here)
 
