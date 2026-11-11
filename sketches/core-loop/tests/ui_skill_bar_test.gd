@@ -308,8 +308,16 @@ func _check_prompt() -> void:
 		"points": {}}
 	var profile = glyphs.profile
 	glyphs.new_run()
+	# A profile that has never fired the ultimate meets its prompt outside a fight (pass E): a live
+	# fight holds the first full meter's prompt, and the prompt shows once the fight lets go.
+	var unused: bool = profile.uses("ultimate") == 0
+	view["fight"] = true
+	glyphs.step(0.016, view)
+	var held: bool = not "ultimate" in glyphs.shown_verbs()
+	view.erase("fight")
 	glyphs.step(0.016, view)
 	var first: bool = "ultimate" in glyphs.shown_verbs()
+	_report("a first ultimate prompt waits out a fight", unused and held and first, "unused %s, held %s, after %s" % [unused, held, first])
 	var word: String = glyphs.shown[0]["word"] if first else ""
 	for i in KeyGlyphs.RETIRE_AFTER["ultimate"]:
 		profile.add_use("ultimate")

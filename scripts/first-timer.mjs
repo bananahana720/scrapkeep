@@ -103,7 +103,7 @@ export const MECHANICS = [
     needed: "optional",
     need: "grip_used",
     teach: ["prompt:tip_grip"],
-    note: "Optional because it is a bonus, not a gate: the run goes on without carving. Taught by the first-meet tip (ui/field_tips.gd), queued when the ball first carves a wall and counted once its toast has been on screen 0.4 s; another tip or toast up at the time delays it.",
+    note: "Optional because it is a bonus, not a gate: the run goes on without carving. Taught by the first-meet tip (ui/field_tips.gd), queued when the ball first ends a real carve (events.carved, 0.3 s or more on a wall, not a seam hop) and counted once its toast has been on screen 0.4 s; another tip or toast up at the time delays it.",
   },
   {
     id: "jam",
@@ -119,7 +119,7 @@ export const MECHANICS = [
     needed: "optional",
     need: "cast_started",
     teach: ["prompt:tip_cast"],
-    note: "Optional: only some slot abilities carry a cast time and the bot seldom picks them. Taught by the first-meet tip from the drop when the bar already holds a slot with a cast time (Tally's Gather Plate), else when a cast first starts. It waits behind any tip met now (the radio's, the grip's) and behind a Warden fight, so a cast-slot pilot can cast before the tip shows and the audit reads it late.",
+    note: "Optional: only some slot abilities carry a cast time and the bot seldom picks them. Taught by the first-meet tip when a cast first starts (not from the drop: pass E paces the opening to one tip in its first 20 s). It waits behind a Warden fight, so the audit can read it late.",
   },
   {
     id: "radio",
@@ -127,7 +127,7 @@ export const MECHANICS = [
     needed: "optional",
     need: "radio_live",
     teach: ["prompt:tip_radio"],
-    note: "Optional: the run goes on without touching the radio; the dial only changes the music. Taught by the first-meet tip, which waits for the drop's stage card to clear and then counts once its toast has been on screen 0.4 s, so it comes a few seconds after the dial's first frame and the audit reads it late.",
+    note: "Optional: the run goes on without touching the radio; the dial only changes the music. Taught by the first-meet tip once the run has cleared a stage (pass E: never needed in the opening); the dial draws its own keys while the tip is up. It counts once its toast has been on screen 0.4 s, so the audit reads it after the dial's first frame.",
   },
   {
     id: "stake",
@@ -151,7 +151,7 @@ export const MECHANICS = [
     needed: "optional",
     need: "active_racked",
     teach: ["prompt:tip_active"],
-    note: "Optional: a run starts with an active racked (the actives launch option is on by default, tuning.gd), but nothing needs one. Taught by the first-meet tip, queued when one is first racked, so it comes a few seconds after the drop.",
+    note: "Optional: a run starts with an active racked (the actives launch option is on by default, tuning.gd), but nothing needs one. Taught by the first-meet tip, queued when one is racked and the run has met a fight (a hit taken or a kill), so it comes in the first fight, not on the drop.",
   },
   {
     id: "scrap",
