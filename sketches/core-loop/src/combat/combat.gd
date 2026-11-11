@@ -606,6 +606,9 @@ func spawn_enemy(kind: String, at: Vector3, affix_id := "", perch := Vector3.INF
 				_pressure_chasers += 1
 				pressure["flanker"] = _pressure_chasers % 2 == 0
 			enemy_spec["pressure"] = pressure
+		# A chaser runs at its stage's speed (ChallengeDials mobs.chaser_speed_by_stage); boss adds keep their own.
+		if kind == "chaser" and ctx.flow.in_stage():
+			enemy_spec["run_speed"] = Chaser.stage_speed(int(ctx.run.stage))
 	enemy.setup(target, ground, ctx.root, Callable(ctx.flow, "in_play"), health_scale, enemy_spec)
 	# The vault and the Warden settle onto the ground or their landmark anchor in setup.
 	if enemy is CollisionObject3D and not enemy.global_position.is_equal_approx(at):
