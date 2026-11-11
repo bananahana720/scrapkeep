@@ -40,11 +40,16 @@ const MAX_TURN := 2.5
 # The ball's turn rate is smoothed over this many seconds; below MIN_TURN_SPEED it is not read.
 const TURN_SMOOTH_S := 0.3
 const MIN_TURN_SPEED := 3.0
+# A lead is for a ball that can be met. It is whole up to LEAD_FADE_FROM of the pilot's cruise speed and falls
+# to the stage's pack.lead_cruise_by_stage share of itself at cruise and above: 0 on world 1, so a ball at
+# cruise is aimed at where it is, as before wave 37, and 1 keeps the lead whole at any speed.
+const LEAD_FADE_FROM := 0.85
 
 static var _frame := -1
 static var _heading := 0.0
 static var _turn := 0.0
 static var _have_heading := false
+static var _cruise := 0.0
 
 
 # The dial overrides a --pack-pressure value names, as a --tune payload: "A", "A+D", "" for none. Unknown
@@ -67,9 +72,20 @@ static func tune_spec(value: String, unknown: Array = []) -> String:
 static func crew_row(stage: int) -> Dictionary:
 	return {
 		"lead": ChallengeDials.by_stage_or("pack.lead_by_stage", stage, 0.0),
+		"lead_cruise": ChallengeDials.by_stage_or("pack.lead_cruise_by_stage", stage, 1.0),
 		"rest": ChallengeDials.by_stage("pack.rest_by_stage", stage),
 		"flank": ChallengeDials.by_stage_or("pack.flank_by_stage", stage, 0.0),
 	}
+
+
+# The lead a crew row gives against `target` this tick: the row's lead, faded as the ball nears cruise.
+static func lead_now(pressure: Dictionary, target) -> float:
+	var lead := float(pressure.get("lead", 0.0))
+	var keep := float(pressure.get("lead_cruise", 1.0))
+	if lead <= 0.0 or keep >= 1.0 or _cruise <= 0.0:
+		return lead
+	var pace: float = target.planar_velocity().length() / _cruise
+	return lead * lerpf(1.0, keep, clampf((pace - LEAD_FADE_FROM) / (1.0 - LEAD_FADE_FROM), 0.0, 1.0))
 
 
 static func crew_extra(stage: int) -> int:
@@ -97,8 +113,9 @@ static func turn_rate() -> float:
 
 
 # Combat calls this once a physics tick with the player's own planar velocity (never a Sight's, which a
-# cloak blanks), so every crew reads the same turn rate.
-static func observe(v: Vector3) -> void:
+# cloak blanks) and cruise speed, so every crew reads the same turn rate and fades its lead on the same line.
+static func observe(v: Vector3, cruise := 0.0) -> void:
+	_cruise = cruise
 	var frame := Engine.get_physics_frames()
 	if frame == _frame:
 		return

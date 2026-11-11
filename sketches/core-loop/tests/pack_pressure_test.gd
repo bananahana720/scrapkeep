@@ -158,8 +158,8 @@ func _identity() -> void:
 		_t.eq("01 %s is at its default with no flag" % key, ChallengeDials.value(key), ChallengeDials.DEFAULTS[key])
 	_t.eq("01b silt boils ship on world 1 at strength 2, nowhere else", ChallengeDials.value("hazard.boil_by_stage"), [2.0, 2.0, 0.0, 0.0, 0.0, 0.0])
 	_t.eq("01c the lead ships at half on world 1, nowhere else (wave 37 unit D1)", ChallengeDials.value("pack.lead_by_stage"), [0.5, 0.5, 0.0, 0.0, 0.0, 0.0])
-	_t.eq("02 a dam crew reads the half lead and nothing else", PackPressure.crew_row(1), {"lead": 0.5, "rest": 1.0, "flank": 0.0})
-	_t.eq("02b a Dig crew reads the identity row", PackPressure.crew_row(3), {"lead": 0.0, "rest": 1.0, "flank": 0.0})
+	_t.eq("02 a dam crew reads the half lead, none of it kept at cruise, and nothing else", PackPressure.crew_row(1), {"lead": 0.5, "lead_cruise": 0.0, "rest": 1.0, "flank": 0.0})
+	_t.eq("02b a Dig crew reads the identity row", PackPressure.crew_row(3), {"lead": 0.0, "lead_cruise": 1.0, "rest": 1.0, "flank": 0.0})
 	_t.eq("03 no extra chasers", PackPressure.crew_extra(1), 0)
 
 
