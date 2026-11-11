@@ -16,6 +16,7 @@ extends RefCounted
 # needs no flag, because with the flag off nothing is ever marked.
 
 const KEY := "hull_mark"
+const FLOOR_SHARE := 0.1
 
 
 static func held(run) -> float:
@@ -24,8 +25,17 @@ static func held(run) -> float:
 	return float(run.trade_memory.get(KEY, 0.0))
 
 
-# Max hull with the mark taken off: what the build sheet sets.
+# Max hull with the mark taken off: what the build sheet sets. The mark never takes max hull
+# below FLOOR_SHARE of the unmarked max (stake_devices.gd's floor): when the unmarked max falls
+# (a heft class lost, a part sold) the mark is trimmed here, so max = unmarked - held always holds
+# and lift() returns exactly what the mark took.
 static func ceiling(run, unmarked: float) -> float:
+	var room := maxf(0.0, unmarked - maxf(1.0, ceilf(unmarked * FLOOR_SHARE)))
+	if held(run) > room:
+		if room > 0.0:
+			run.trade_memory[KEY] = room
+		else:
+			run.trade_memory.erase(KEY)
 	return unmarked - held(run)
 
 

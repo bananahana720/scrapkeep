@@ -5,6 +5,7 @@ const Intent := preload("res://src/movement/intent.gd")
 const StakeDevices := preload("res://src/world/stake_devices.gd")
 const HullMark := preload("res://src/world/hull_mark.gd")
 const TradePockets := preload("res://src/world/trade_pockets.gd")
+const Interactables := preload("res://src/world/interactables.gd")
 
 # Marked hull (docs/systems-audit/feature-fit.md, new mechanic 1), in the running game as Rivet
 # in calm:
@@ -12,7 +13,10 @@ const TradePockets := preload("res://src/world/trade_pockets.gd")
 #   - flag on: the device reads `--marked-hull=on`, the price says "max HP", paying lowers max
 #     hull by the price, regen fills only to the mark, and the build sheet keeps the mark when it
 #     re-applies;
-#   - a retry's rewind, the entrance doc and its validation carry the mark;
+#   - the HUD's hull bar spans the unmarked max and caps at the mark (gauge set_cap);
+#   - a retry's rewind, the entrance doc round trip and its validation carry the mark;
+#   - a heft or part change re-applies the sheet (build.gd on scrap) and keeps the mark;
+#   - the mark never takes max hull below the floor, and lifting returns exactly what it took;
 #   - the Warden break (beacon_unsealed) and a ward's heal lift it.
 
 const RIVET := 1
@@ -82,7 +86,9 @@ func _run_checks() -> void:
 	_check("flag on", tuning.option("marked_hull") == "on", "--marked-hull=on applies")
 	var o: Dictionary = StakeDevices.make_offer("trade_chest", 1, "health", run, _rng(), tuning.option("marked_hull") == "on")
 	var cost := float(o["cost"])
-	_check("on words", StakeDevices.offer_words(o).begins_with("Trade %d max HP" % int(cost)), StakeDevices.offer_words(o))
+	var words: String = StakeDevices.offer_words(o)
+	_check("on words", words.begins_with("Weld %d HP" % int(cost)) and words.split(" ", false).size() <= Interactables.PROMPT_WORDS,
+		"\"%s\", %d words of %d" % [words, words.split(" ", false).size(), Interactables.PROMPT_WORDS])
 	run.snapshot(Vector3.ZERO, Vector3.ZERO, 0.0)
 	var r: Dictionary = StakeDevices.take(o, run, Vector3.ZERO)
 	# A max-health part the chest pays may raise the sheet; the mark comes off whatever it is.
@@ -99,8 +105,33 @@ func _run_checks() -> void:
 	# The sheet re-applies without wiping the mark.
 	_game.build.sheet.apply(tuning, run)
 	_check("sheet keeps mark", is_equal_approx(run.max_hp, sheet_max - cost), "max %.1f after sheet.apply" % run.max_hp)
+	# Fresh scrap re-applies max hull through build.gd's scrap hook; the mark stays off it.
+	run.add_scrap(60, Vector3.ZERO)
+	var grown: float = run.base_max_hp() + _game.build.sheet.max_hp_bonus
+	_check("scrap keeps mark", is_equal_approx(HullMark.held(run), cost) and is_equal_approx(run.max_hp, grown - cost),
+		"after 60 scrap: max %.1f of unmarked %.1f, mark %.1f" % [run.max_hp, grown, HullMark.held(run)])
+	sheet_max = grown
 
-	# The entrance doc carries it and validates; a bad mark is refused.
+	# The hull bar: full is the unmarked max, and the cap sits at the marked max.
+	_game.hud._process(0.016)
+	var gauge = _game.hud._health
+	_check("bar caps at mark", is_equal_approx(gauge.cap, run.max_hp / (run.max_hp + cost)) and is_equal_approx(gauge.fraction, run.hp / (run.max_hp + cost)),
+		"cap %.3f, fill %.3f (max %.1f, mark %.1f)" % [gauge.cap, gauge.fraction, run.max_hp, cost])
+
+	# A retry rewinds the mark with the max hull it lowered (the stage start, taken before it).
+	run.restore()
+	_game.build.sheet.apply(tuning, run)
+	_check("retry rewinds", HullMark.held(run) == 0.0 and is_equal_approx(run.max_hp, run.base_max_hp() + _game.build.sheet.max_hp_bonus),
+		"after restore: mark %.1f, max %.1f" % [HullMark.held(run), run.max_hp])
+
+	# Stake again, then cross a stage entrance with the mark held.
+	var o2: Dictionary = StakeDevices.make_offer("trade_chest", 1, "health", run, _rng(), true)
+	StakeDevices.take(o2, run, Vector3.ZERO)
+	cost = float(o2["cost"])
+
+	# The entrance doc carries it and validates; a bad mark is refused. A doc is written at a stage
+	# entrance, so the mark rides in when it was staked before the cut: checkpoint it here.
+	run.snapshot(Vector3.ZERO, Vector3.ZERO, 0.0)
 	var doc: Dictionary = run.to_entrance_doc()
 	var trade_doc: Dictionary = TradePockets.to_doc(run.trade_memory)
 	_check("doc carries", is_equal_approx(float(trade_doc.get(HullMark.KEY, -1.0)), cost) and TradePockets.validate_doc(trade_doc, run.stage) == "",
@@ -109,12 +140,27 @@ func _run_checks() -> void:
 	bad[HullMark.KEY] = -5.0
 	_check("bad mark refused", TradePockets.validate_doc(bad, run.stage) != "", TradePockets.validate_doc(bad, run.stage))
 	_check("doc validates", run.validate_entrance_doc(doc) == "", "entrance doc: '%s'" % run.validate_entrance_doc(doc))
-
-	# A retry rewinds the mark with the max hull it lowered.
-	run.restore()
+	# Load the doc back: the mark and the marked max return together.
+	var marked_max: float = run.max_hp
+	run.trade_memory.erase(HullMark.KEY)
+	var loaded: bool = run.from_entrance_doc(JSON.parse_string(JSON.stringify(doc)))
+	_check("doc round trip", loaded and is_equal_approx(HullMark.held(run), cost) and is_equal_approx(run.max_hp, marked_max),
+		"loaded %s: mark %.1f, max %.1f of %.1f" % [loaded, HullMark.held(run), run.max_hp, marked_max])
 	_game.build.sheet.apply(tuning, run)
-	_check("retry rewinds", HullMark.held(run) == 0.0 and is_equal_approx(run.max_hp, run.base_max_hp() + _game.build.sheet.max_hp_bonus),
-		"after restore: mark %.1f, max %.1f" % [HullMark.held(run), run.max_hp])
+
+	# The floor: when the unmarked max falls under a big mark, the mark is trimmed, never the
+	# floor, and lifting returns exactly what it took.
+	_full(run)
+	var whole: float = run.max_hp
+	StakeDevices.take(StakeDevices.make_offer("trade_chest", 3, "health", run, _rng(), true), run, Vector3.ZERO)
+	var shrunk := whole * 0.5
+	var capped := HullMark.ceiling(run, shrunk)
+	run.set_max_hp(capped)
+	_check("floor", capped >= ceilf(shrunk * HullMark.FLOOR_SHARE) and is_equal_approx(capped + HullMark.held(run), shrunk),
+		"unmarked %.1f -> %.1f: max %.1f, mark %.1f" % [whole, shrunk, capped, HullMark.held(run)])
+	HullMark.lift(run)
+	_check("lift exact", is_equal_approx(run.max_hp, shrunk) and HullMark.held(run) == 0.0, "after lift: max %.1f of %.1f" % [run.max_hp, shrunk])
+	_game.build.sheet.apply(tuning, run)
 
 	# The Warden break lifts it, and the hull rises with the max like any max-hull gain.
 	_full(run)

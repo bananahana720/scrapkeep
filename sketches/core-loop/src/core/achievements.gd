@@ -135,8 +135,9 @@ const ROWS := {
 	# SG12 between-run options: one grant per meta_options.gd node, each a one-run accomplishment
 	# with a count of MetaOptions.MAX_GRANT_COUNT or below. The pocket key opens on a hidden
 	# pocket's discovery: cracked_cache.gd emits world_fact("cache_spent") when its chest opens.
-	# Each pays a paint (systems audit pass D, row 31, 11 Nov 2026): no screen shows a head start,
-	# so the node opens silently beside the paint (MetaOptions.unlock reads the grant, not the reward).
+	# Each pays a paint (systems audit pass D, row 31, 11 Nov 2026): no screen shows a head start.
+	# The node rows and the meta page stay as code; MetaOptions.open_earned, which would open a
+	# node from its grant, has no caller today.
 	"ach_meta_spare_reroll": {"name": "Busy Hands", "text": "Finish three activities.", "on": "activity_done",
 		"count": 3, "reward": {"cosmetic": "paint_any_shift"}},
 	"ach_meta_shelf_preview": {"name": "Wall Crumbler", "text": "Crumble two cracked walls.", "on": "world_fact",

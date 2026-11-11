@@ -36,6 +36,7 @@ const ChainCounter := preload("res://src/ui/chain_counter.gd")
 const DamageNumbers := preload("res://src/presentation/damage_numbers.gd")
 const HotwireScreen := preload("res://src/ui/hotwire_screen.gd")
 const Companion := preload("res://src/core/companion.gd")
+const HullMark := preload("res://src/world/hull_mark.gd")
 
 # The wallet readout: the brass cog and the cogs the run holds, the one number the HUD
 # shows because it is what the next roll through a hoop spends.
@@ -1316,7 +1317,11 @@ func _process(delta: float) -> void:
 	var has_boss: bool = game.boss != null and tbl.BOSS != "" and bool(flow.boss_row(world).get("built", false))
 	_status.set_status(tbl.local(run.stage), world_stages, has_boss, flow.in_arena, _threat)
 
-	var hp_share: float = clampf(run.hp / maxf(1.0, run.max_hp), 0.0, 1.0)
+	# Marked hull (hull_mark.gd): the bar spans the unmarked max, and the marked stretch is a
+	# welded plate edged in the Warden's colour, because the Warden break lifts it.
+	var full: float = maxf(1.0, run.max_hp + HullMark.held(run))
+	var hp_share: float = clampf(run.hp / full, 0.0, 1.0)
+	_health.set_cap(run.max_hp / full, EventKinds.color("warden_engaged"))
 	_health.set_reading(hp_share, Palette.SAND, "", hp_share <= LOW_HEALTH, EventKinds.color("player_hit"))
 	if run.armor_mode:
 		_armor_peak = maxf(_armor_peak, run.mass)

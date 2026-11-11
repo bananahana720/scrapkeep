@@ -109,7 +109,7 @@ static func validate(rows: Dictionary, grants: Dictionary) -> Array:
 			problems.append("%s: grant %s is not an achievement row" % [id, grant])
 			continue
 		# The grant may pay this node or, since no screen shows a node (systems audit pass D,
-		# row 31), something a player sees; it opens the node either way.
+		# row 31), one cosmetic a player sees; open_earned reads the grant, not the reward.
 		var reward = g.get("reward", {})
 		if reward != {"option": id} and not (reward is Dictionary and reward.size() == 1 and reward.has("cosmetic")):
 			problems.append("%s: grant %s must pay {\"option\": \"%s\"} or one cosmetic" % [id, grant, id])

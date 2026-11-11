@@ -31,8 +31,9 @@ const Parts := preload("res://src/build/parts.gd")
 # the device and the sweep in tests/stake_devices_test.gd read the same numbers.
 #
 # Marked hull (hull_mark.gd, `--marked-hull=on`): a health price also marks that much max
-# health until the next Warden break, and the offer says so ("marks": true, "max HP" in its
-# words). A ward's heal lifts any mark before it heals.
+# health until the next Warden break, and the offer says so ("marks": true, and the verb is
+# "Weld": the hull bar shows the mark as a welded plate edged in the Warden's colour). A ward's
+# heal lifts any mark before it heals.
 
 const KINDS := {
 	"trade_chest": {"verb": "Trade", "pays": ["health", "cogs"], "wins": "part"},
@@ -81,7 +82,10 @@ static func make_offer(device_kind: String, tier: int, pay: String, run, rng: Ra
 			o["cost_kind"] = "hp"
 			o["cost"] = int(round(run.max_hp * share))
 			if marks:
+				# The price welds a plate over the top of the hull bar (gauge.gd set_cap), so the
+				# verb names the weld and the words stay inside PROMPT_WORDS.
 				o["marks"] = true
+				o["verb"] = "Weld"
 		"cores":
 			o["cost_kind"] = "cores"
 			o["cost"] = tier
@@ -165,7 +169,7 @@ static func offer_words(o: Dictionary) -> String:
 	var price: String
 	match String(o["cost_kind"]):
 		"hp":
-			price = ("%d max HP" if o.get("marks", false) else "%d HP") % cost
+			price = "%d HP" % cost
 		"cogs":
 			price = "%d cogs" % cost
 		_:
