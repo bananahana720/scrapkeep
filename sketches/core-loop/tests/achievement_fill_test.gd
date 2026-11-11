@@ -76,7 +76,8 @@ func _tables() -> void:
 	# 2026-10-24 merge of #406 (world 1 unit 16, shift board: six brindle_mark_* rows, each paying
 	# one item) onto the w19 Spillway roster (five reward-free records): 56 + 5 + 6.
 	_t.eq("F1 sixty-seven achievements", PilotBlocks.shared(Achievements.ids(), "res://src/core/achievements.gd").size(), 67)
-	_t.eq("F1 forty-seven cosmetics", PilotBlocks.shared(Cosmetics.ids(), "res://src/core/cosmetics.gd").size(), 47)
+	# 2026-11-11 (systems audit pass D, row 31): four paints for the ach_meta_* grants; was 47.
+	_t.eq("F1 fifty-one cosmetics", PilotBlocks.shared(Cosmetics.ids(), "res://src/core/cosmetics.gd").size(), 51)
 	# A pilot's "or" rule row (class_def.gd unlock) pays that pilot through the class row, so its own reward is empty.
 	var or_rows := ClassDef.all().filter(func(d): return d.unlock.has("or")).map(func(d): return ClassDef.unlock_row(String(d.unlock["or"])))
 	var empty := Achievements.ids().filter(func(id): return Achievements.reward_of(id).is_empty() and not or_rows.has(id) and not Achievements.RECORD_ONLY.has(id))

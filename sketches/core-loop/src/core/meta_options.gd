@@ -108,8 +108,11 @@ static func validate(rows: Dictionary, grants: Dictionary) -> Array:
 		if not (g is Dictionary):
 			problems.append("%s: grant %s is not an achievement row" % [id, grant])
 			continue
-		if g.get("reward", {}) != {"option": id}:
-			problems.append("%s: grant %s must pay exactly {\"option\": \"%s\"}" % [id, grant, id])
+		# The grant may pay this node or, since no screen shows a node (systems audit pass D,
+		# row 31), something a player sees; it opens the node either way.
+		var reward = g.get("reward", {})
+		if reward != {"option": id} and not (reward is Dictionary and reward.size() == 1 and reward.has("cosmetic")):
+			problems.append("%s: grant %s must pay {\"option\": \"%s\"} or one cosmetic" % [id, grant, id])
 		if not (g.get("count", 0) is int) or int(g.get("count", 0)) < 1 or int(g["count"]) > MAX_GRANT_COUNT:
 			problems.append("%s: grant %s count must be 1 to %d" % [id, grant, MAX_GRANT_COUNT])
 		if g.has("sum"):

@@ -48,6 +48,12 @@ const ROWS := {
 	"paint_cannon_verdigris": {"slot": "paint", "pilot": "remembered_cannon", "name": "Old Verdigris", "starter": true, "tint": Color("4f7f7a")},
 	"paint_any_kelp": {"slot": "paint", "pilot": "", "name": "Kelp", "starter": false, "tint": Color("3f6b4f")},
 	"paint_any_cobalt": {"slot": "paint", "pilot": "", "name": "Cobalt", "starter": false, "tint": Color("2a4fd6")},
+	# Four paints for the activity and discovery grants that paid head starts no screen shows
+	# (systems audit pass D, row 31, 11 Nov 2026). Tint only, so no art is owed.
+	"paint_any_shift": {"slot": "paint", "pilot": "", "name": "Shift Denim", "starter": false, "tint": Color("4a6a8c")},
+	"paint_any_mortar": {"slot": "paint", "pilot": "", "name": "Mortar Dust", "starter": false, "tint": Color("b8ab95")},
+	"paint_any_cache": {"slot": "paint", "pilot": "", "name": "Cache Green", "starter": false, "tint": Color("4e8a6c")},
+	"paint_any_spark": {"slot": "paint", "pilot": "", "name": "Spark Teal", "starter": false, "tint": Color("39a8c9")},
 	"paint_any_brine": {"slot": "paint", "pilot": "", "name": "Brine", "starter": false, "tint": Color("7fb8c4")},
 	"paint_any_ink": {"slot": "paint", "pilot": "", "name": "Ink", "starter": false, "tint": Color("1c1f2b")},
 	"paint_any_sky": {"slot": "paint", "pilot": "", "name": "Highdraft Sky", "starter": false, "tint": Color("8fc4ec")},
