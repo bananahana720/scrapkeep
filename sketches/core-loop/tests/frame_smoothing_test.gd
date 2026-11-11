@@ -103,9 +103,9 @@ func _settings() -> void:
 	# FS-2: the Display row saves the wish and reads it back.
 	var page = _game.get_node("PauseMenu").settings_page()
 	_t.check("FS-2 the page lists a Frame smoothing row", page.row("frame_smoothing") != null, "rows")
-	_t.eq("FS-2 the row reads on", page.row("frame_smoothing").text, "Frame smoothing: on")
+	_t.eq("FS-2 the row reads on", page.read("frame_smoothing"), {"label": "Frame smoothing", "value": "", "pip": 1})
 	page.press("frame_smoothing")
-	_t.eq("FS-2 the row reads off", page.row("frame_smoothing").text, "Frame smoothing: off")
+	_t.eq("FS-2 the row reads off", page.read("frame_smoothing"), {"label": "Frame smoothing", "value": "", "pip": 0})
 	_t.check("FS-2 the store and the game hold it", not _game.settings_store().frame_smoothing() and not _game.frame_smoothing, "store")
 	_t.check("FS-2 off round-trips through save and load", not SettingsStore.new(dir).frame_smoothing(), "reloaded")
 	_game.frame_smoothing = true
