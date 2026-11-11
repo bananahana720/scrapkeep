@@ -6,6 +6,7 @@ const RewardCeremony := preload("res://src/presentation/reward_ceremony.gd")
 const RewardGates := preload("res://src/build/reward_gates.gd")
 const WorldPrompt := preload("res://src/ui/world_prompt.gd")
 const ItemGen := preload("res://src/build/item_gen.gd")
+const Synergies := preload("res://src/build/synergies.gd")
 
 # Ruling cx, wave 36 (unslop-parts): a reward card, a shop tile and the shop's detail line say what
 # the thing does in the words shown, and one thing has one name.
@@ -25,6 +26,10 @@ var _checked := 0
 
 func _initialize() -> void:
 	call_deferred("_run")
+
+
+func _origin_ok(text: String, synergy_name: String) -> bool:
+	return synergy_name != "" and text.ends_with("From %s." % synergy_name)
 
 
 func _report(label: String, ok: bool, detail: String) -> void:
@@ -150,6 +155,15 @@ func _run() -> void:
 	for key in Parts.EVOLVED:
 		ids.append(key)
 	_report("rows", rows.size() >= 100 and ids.size() >= 104, "%d rows walked (catalogue, items, cells, evolved)" % ids.size())
+
+	# An evolved part says which synergy it came from, by that synergy's own name (its first
+	# discovery card is the one screen that draws the whole text).
+	_report("plant origin", not _origin_ok("+8 punch, +35% weapon damage", "Wrecking Ball") and not _origin_ok("From Pinwheel.", "")
+		and _origin_ok("+8 punch. From Wrecking Ball.", "Wrecking Ball"), "the origin checker passes a text with no origin, or fails one that has it")
+	for key in Parts.EVOLVED:
+		var from_name := String(Synergies.ROWS.get(Synergies.evolution_of(key), {}).get("name", ""))
+		var said: String = Parts.def(key).text
+		_report(key + " origin", _origin_ok(said, from_name), "evolved from \"%s\", text \"%s\"" % [from_name, said])
 
 	var card_lines := {}
 	var checked_details := 0
