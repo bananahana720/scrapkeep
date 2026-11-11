@@ -7,6 +7,7 @@ const Density := preload("res://src/presentation/density.gd")
 const FxLibrary := preload("res://src/presentation/fx_library.gd")
 const FlashGuard := preload("res://src/presentation/flash_guard.gd")
 const Threat := preload("res://src/combat/threat_grammar.gd")
+const Redline := preload("res://src/combat/redline.gd")
 
 # The player-side effects vfx.gd does not draw (PLAYER-FX.md). Everything here answers a
 # committed fact or the ball's own motion and never decides an outcome (TADR-008).
@@ -68,6 +69,7 @@ const WORDS := {
 	"wham": {"text": "WHAM", "size": 1.0},
 	"strike": {"text": "STRIKE", "size": 1.1},
 	"beat": {"text": "BWAP", "size": 0.9},
+	"redline": {"text": "KA-BLAM", "size": 1.2},
 }
 # An on-beat hit's word is this much bigger (Andrew, Q10 "Sound only"): the hit's own word
 # when it has one, else BWAP over the sax stab.
@@ -476,6 +478,7 @@ func _wire() -> void:
 	events.enemy_killed.connect(_on_killed)
 	SignalWire.listen(events, "enemy_pinned", _on_pinned)
 	events.stage_entered.connect(func(_stage: int, _retry: bool): clear())
+	_wire_redline()
 
 
 func _pilot_id() -> String:
@@ -1281,11 +1284,17 @@ func _draw_overdrive(delta: float) -> void:
 		if vfx != null:
 			vfx.glyph("overdrive", back, 0.8, 4.0, 0.3, v, "ring", HEAT_COLOR)
 	var on := heat > 0.01
-	_rim.visible = on
+	# Heat on the shell (redline.gd) lights the same rim before overdrive does: mint at a quarter,
+	# amber when hot, white at redline. Overdrive's own heat wins when it is the brighter.
+	var shell := shell_heat()
+	var lit := maxf(heat, shell)
+	_rim.visible = lit > 0.01
 	var ball: Vector3 = player.shown_position()
-	if on:
+	if lit > 0.01:
 		_rim.global_position = ball
-		_rim_mat.set_shader_parameter("heat", heat)
+		_rim_mat.set_shader_parameter("heat", lit)
+		_rim_mat.set_shader_parameter("rim", OVERDRIVE_RIM if heat >= shell else shell_color(player.redline.value))
+	if on:
 		_rim_mat.set_shader_parameter("pilot", player.class_color())
 		if speed > 1.0:
 			var basis := Basis.looking_at(-v / speed, Vector3.UP if absf(v.y / speed) < 0.95 else Vector3.RIGHT)
@@ -1298,6 +1307,64 @@ func _draw_overdrive(delta: float) -> void:
 		FxLibrary.set_heat(_embers)
 		_flecks.emitting = on
 		_embers.emitting = on
+
+
+# --- Heat on the shell ------------------------------------------------------------------
+# The shell's heat (redline.gd) carries itself in colour, motion, sound and the pad, never a bar
+# (ruling cx): the rim warms mint, amber, white; a blast stamps its word and draws its true ring;
+# the pad buzzes while the shell waits at redline and thumps on the blast.
+const OVERDRIVE_RIM := Color(1.0, 0.62, 0.24)
+const SHELL_COLORS := [Color(0.45, 1.0, 0.75), Color(1.0, 0.72, 0.25), Color(1.0, 0.98, 0.92)]
+# The rim's brightness at full heat, under overdrive's 1.0 so the soft cap still reads above it.
+const SHELL_RIM := 0.7
+const BLAST_RING := Color(1.0, 0.97, 0.9)
+var _shell_band := 0
+
+
+# 0 to SHELL_RIM, how bright the rim burns for the shell's heat; 0 when the flag is not on.
+func shell_heat() -> float:
+	var redline = player.get("redline")
+	if redline == null or not redline.on() or redline.value < Redline.MAX * 0.25:
+		return 0.0
+	return SHELL_RIM * redline.value / Redline.MAX
+
+
+static func shell_color(value: float) -> Color:
+	if value >= Redline.MAX:
+		return SHELL_COLORS[2]
+	var t := clampf((value - Redline.MAX * 0.25) / (Redline.HOT_AT - Redline.MAX * 0.25), 0.0, 1.0)
+	return SHELL_COLORS[0].lerp(SHELL_COLORS[1], t)
+
+
+func _wire_redline() -> void:
+	var redline = player.get("redline")
+	if redline == null:
+		return
+	redline.detonated.connect(_on_redline_blast)
+	redline.cooked_off.connect(_on_redline_blast)
+	redline.skimmed.connect(func(_at: Vector3): rumble(0.6, 0.0, 0.06))
+	redline.redlined.connect(func(): rumble(0.25, 0.0, Redline.COOK_OFF_S))
+	redline.changed.connect(func(_value: float, band: int):
+		# The redline buzz stops when the shell leaves redline without a blast (a stage change).
+		if _shell_band == 3 and band < 3:
+			for pad in Input.get_connected_joypads():
+				Input.stop_joy_vibration(pad)
+		_shell_band = band)
+
+
+func _on_redline_blast(at: Vector3, _force: float) -> void:
+	spawned["redline_blast"] = spawned.get("redline_blast", 0) + 1
+	word("redline", at + Vector3.UP * 2.0)
+	impact_frame(at, 1.0)
+	if vfx != null:
+		vfx.glyph("redline_blast", at + Vector3.UP * 0.3, 1.0, Redline.BLAST_RADIUS, 0.35, Vector3.UP, "ring", BLAST_RING)
+	rumble(0.4, 1.0, 0.18)
+
+
+# The pad's two motors (weak: the high buzz, strong: the low thump) on every connected pad.
+static func rumble(weak: float, strong: float, seconds: float) -> void:
+	for pad in Input.get_connected_joypads():
+		Input.start_joy_vibration(pad, weak, strong, seconds)
 
 
 # --- Carve sparks ------------------------------------------------------------------------
