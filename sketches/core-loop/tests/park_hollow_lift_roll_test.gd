@@ -13,19 +13,26 @@ extends SceneTree
 #
 # Each run rolls a line through the plate's centre: the sweep's undecided lane (heading -z) and one square to it. While
 # the ball touches the lift it records where, in order, read from the lift's own collider:
-#   wall   the drum under the plate (a shape named Drum). Allowed: a pillar deflects a ball.
+#   wall   the drum under the plate (a shape named Drum) while the lift is off its rest. Allowed: a pillar deflects a ball.
+#          At rest (charging) a drum contact is the plate's rim and reads side, so a step at rest is judged.
 #   top    the plate, from above (the contact points down onto the plate within 45 degrees of vertical).
 #   under  the plate, from below (the plate bears down on the ball within 45 degrees of vertical).
 #   side   the plate, anything between (its rim or bevel).
 # The direction is the ball centre less the nearest point of the plate's profile (the collider's lathe outline in radius
-# and height, taken from its CylinderShape3D or ConvexPolygonShape3D), so the reading follows whatever plate is built.
+# and height, taken from its CylinderShape3D or ConvexPolygonShape3D), so the reading follows whatever plate is built. A
+# ball centre inside the outline (a fast plate overran it in one tick) reads by the plate's motion: top while it fires,
+# under while it sinks, the nearest face otherwise.
 # A run reads:
-#   lift   the ball was on the plate's top while it fired (riding it up or being thrown is the lift's job).
+#   lift   the plate met the ball while it fired and the ball then rose LIFTED_M over its height at the rim (riding it
+#          up or being thrown is the lift's job), measured from its lowest point while the firing plate touched it.
 #   catch  any under contact (the plate came down on the ball), or the plate kept it under CATCH of its speed.
 #   loss   the plate kept it under CLEAN.
 #   wall   it met the drum (and the plate cost it nothing before that).
 #   clean  it never touched the lift, or the plate kept at least CLEAN.
 # kept: the lowest planar speed while touching the plate, before any drum contact, over the speed BEFORE_M short of the rim.
+# Places: PHASES even points of the cycle, FINE points across the end of the sink (hollow_lift), and "fire": the ball's
+# front on the rim radius / cruise before the plate fires, so its centre is over the plate when it fires (both lifts).
+# The last two columns are the ball centre's and the plate top's height over the rim ground at the lowest point.
 # Controls: synthetic ball places read top, side and under against the flume plate's own profile (the under reader can
 # fire); on flat open ground near the flume lift the same roll with nothing in its way keeps at least OPEN_KEEP, and a
 # planted vertical 0.5 m step reads as a loss or a catch, so a clean table is the lift's and not a blind measure.
@@ -56,6 +63,7 @@ const TOUCH_SLACK := 0.08
 const FLAT_M := 0.1
 # Within 45 degrees of vertical, a contact is from above or below.
 const VERTICAL := 0.7071
+const LIFTED_M := 2.0
 
 var t := T.new("park_hollow_lift_roll_test")
 var game
@@ -136,8 +144,10 @@ func _lift_table(lift_id: String, stage: int, title: String, fine: bool) -> void
 	if fine:
 		for f: float in FINE:
 			places.append(f)
-	print("  | lift | lane | cycle s (wanted) | met | plate top over rim ground m | touched, in order | lifted | kept | lowest at m past rim | read |")
-	var worst := {"catch": 0, "loss": 0, "under": 0, "lift": 0}
+	var fire_at := places.size()
+	places.append(fposmod(period - radius / cruise, period))
+	print("  | lift | lane | cycle s (wanted) | met | plate top over rim ground m | touched, in order | lifted | kept | lowest at m past rim | read | ball, plate top over rim ground at lowest m |")
+	var worst := {"catch": 0, "loss": 0, "under": 0, "lift": 0, "fire_lift": 0, "fire_met": 0}
 	for lane: String in lanes:
 		var dir: Vector3 = lanes[lane]
 		var rim := flat + dir * -radius
@@ -148,9 +158,14 @@ func _lift_table(lift_id: String, stage: int, title: String, fine: bool) -> void
 				worst[read] += 1
 			if roll["touched"].has("under"):
 				worst["under"] += 1
-			print("  | %s | %s | %s%.2f | %.2f | %.2f | %s | %s | %.2f | %.1f | %s |" % [lift_id, lane, "" if i < PHASES else "fine ", places[i],
+			if i == fire_at and roll["fire_touch"]:
+				worst["fire_met"] += 1
+				if read == "lift":
+					worst["fire_lift"] += 1
+			print("  | %s | %s | %s%.2f | %.2f | %.2f | %s | %s | %.2f | %.1f | %s | %.2f, %.2f |" % [lift_id, lane,
+				"" if i < PHASES else ("fire " if i == fire_at else "fine "), places[i],
 				roll["met"], roll["plate_over"], ",".join(roll["touched"]) if not roll["touched"].is_empty() else "-",
-				"yes" if roll["lifted"] else "no", roll["kept"], roll["low_at"], read])
+				"yes" if roll["lifted"] else "no", roll["kept"], roll["low_at"], read, roll["ball_low"], roll["plate_low"]])
 	# The guard: no place in the cycle has the plate come down on a ball, or stop one at cruise.
 	t.check("%s: no place in the cycle has the plate bear down on a ball (an under contact)" % lift_id,
 		worst["under"] == 0, "%d runs with an under contact" % worst["under"])
@@ -158,7 +173,8 @@ func _lift_table(lift_id: String, stage: int, title: String, fine: bool) -> void
 		worst["catch"] == 0, "%d catches" % worst["catch"])
 	t.check("%s: no place in the cycle costs more than %.0f%% without a lift" % [lift_id, (1.0 - CLEAN) * 100.0],
 		worst["loss"] == 0, "%d losses" % worst["loss"])
-	t.check("%s: a ball on the plate when it fires is lifted (some lane reads lift)" % lift_id, worst["lift"] > 0, "%d lifts" % worst["lift"])
+	t.check("%s: a ball on the plate as it fires is lifted (a fire row reads lift)" % lift_id, worst["fire_lift"] > 0,
+		"%d of %d fire rows the firing plate met" % [worst["fire_lift"], worst["fire_met"]])
 	if fine:
 		await _ground_controls(centre, cruise, period)
 	await _drop_game()
@@ -216,7 +232,7 @@ func _drum() -> CollisionShape3D:
 
 
 # top, under or side, from the ball centre (radius, height in the lift's frame) less the nearest point of the plate outline.
-func _plate_reading(local: Vector2) -> String:
+func _plate_reading(local: Vector2, phase := -1) -> String:
 	var best := Vector2.INF
 	var best_d := INF
 	for i in hull.size():
@@ -227,6 +243,10 @@ func _plate_reading(local: Vector2) -> String:
 			best = p
 	var n := (local - best).normalized()
 	if Geometry2D.is_point_in_polygon(local, hull):
+		if phase == SteamCycle.FIRING:
+			return "top"
+		if phase == SteamCycle.RETURNING:
+			return "under"
 		n = -n
 	if n.y >= VERTICAL:
 		return "top"
@@ -360,7 +380,12 @@ func _roll(rim: Vector3, dir: Vector3, length: float, cruise: float, place: floa
 	var lifted := false
 	var walled := false
 	var plate_first := false
+	var fire_touch := false
+	var fire_low := INF
+	var y_met := 0.0
 	var low_at := 0.0
+	var ball_low := 0.0
+	var plate_low := 0.0
 	var limit := int((length + RUN_M * 2.0) / cruise * 2.5 * Engine.physics_ticks_per_second) + 90
 	for tick in limit:
 		game.camera.yaw = atan2(-dir.x, -dir.z)
@@ -374,25 +399,35 @@ func _roll(rim: Vector3, dir: Vector3, length: float, cruise: float, place: floa
 			before = speed
 		if met < 0.0 and s >= touch_in:
 			met = _cycle_at()
+			y_met = ball.y
 			plate_over = lift.global_position.y + _bounds_y(true) - rim_ground
 		if s >= touch_in and s <= RUN_M + length + PAST_M:
-			any_min = minf(any_min, speed)
 			var plate := false
-			for where: String in _touch(ball, other):
+			for found: String in _touch(ball, other):
+				var where := found
 				if not touched.has(where):
 					touched.append(where)
 				if where == "wall":
 					walled = true
 				else:
 					plate = true
-				# Lifted: on the plate's top while it fires up (its job: riding it up, or being thrown).
-				if where == "top" and other == null and cycle.phase == SteamCycle.FIRING:
-					lifted = true
+				if where != "wall" and other == null and cycle.phase == SteamCycle.FIRING:
+					fire_touch = true
+					fire_low = minf(fire_low, ball.y)
 			if plate and not walled:
 				plate_first = true
 				if speed < kept_min:
 					kept_min = speed
 					low_at = s - touch_in
+					ball_low = ball.y - rim_ground
+					plate_low = lift.global_position.y + _bounds_y(true) - rim_ground
+			elif not plate_first and speed < any_min:
+				ball_low = ball.y - rim_ground
+				plate_low = lift.global_position.y + _bounds_y(true) - rim_ground
+			any_min = minf(any_min, speed)
+		# Lifted: the plate met the ball as it fired and the ball rose LIFTED_M (its job: riding it up, or being thrown).
+		if fire_touch and met >= 0.0 and ball.y - fire_low >= LIFTED_M:
+			lifted = true
 		if s > RUN_M + length + PAST_M or lifted:
 			break
 	source.hold = {}
@@ -400,6 +435,7 @@ func _roll(rim: Vector3, dir: Vector3, length: float, cruise: float, place: floa
 	return {
 		"before": before, "met": met, "plate_over": plate_over, "lifted": lifted, "plate_first": plate_first or other != null,
 		"low_at": low_at, "touched": touched, "kept": low / before if before > 0.0 and low < INF else 0.0,
+		"ball_low": ball_low, "plate_low": plate_low, "fire_touch": fire_touch,
 	}
 
 
@@ -422,10 +458,12 @@ func _touch(ball: Vector3, other: Node3D) -> Array[String]:
 			out.append("side")
 			continue
 		var owner := lift.shape_owner_get_owner(lift.shape_find_owner(int(r["shape"])))
-		var where := "wall" if owner is Node and (owner as Node).name == "Drum" else ""
-		if where == "":
-			var local := ball - lift.global_position
-			where = _plate_reading(Vector2(Vector2(local.x, local.z).length(), local.y))
+		var local := ball - lift.global_position
+		var where := ""
+		if owner is Node and (owner as Node).name == "Drum":
+			where = "side" if cycle.phase == SteamCycle.CHARGING else "wall"
+		else:
+			where = _plate_reading(Vector2(Vector2(local.x, local.z).length(), local.y), cycle.phase)
 		if not out.has(where):
 			out.append(where)
 	return out

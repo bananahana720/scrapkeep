@@ -72,6 +72,24 @@ const SKINS := {
 const STYLE_RECIPE := {"cannon": "cannon", "trebuchet": "trebuchet", "geyser": "geyser_vent"}
 # The lift plate radius and the barge plan the GLBs are drawn at; the skin is scaled to the spec's radius and size in X and Z.
 const SKIN_LIFT_RADIUS := 4.5
+# A lift is a cap on a solid drum (wave 37 lift-drum), so nothing gets under a raised plate and a ball that meets a raised
+# lift glances off a pillar. LIFT_PROFILE is the cap's top outline at SKIN_LIFT_RADIUS, (radius, height) about the body,
+# scaled in X and Z with the skin: flat to 2.7, then 1 in 6 down to the rim at 4.5 (a ball crossing the plate at rest rolls
+# over the rim). The drum is the last point's radius from its height down, flush with the rim: no part of the lift is wider
+# than what is under it, so a sinking lift has no underside to come down on a ball. The cap reads by colour (the charcoal
+# collar under the rim). The collider, the code's drawn plate and drum, and tools/blender/park/contraptions/lift_platform.py's
+# skin all come from these numbers.
+const LIFT_PROFILE := [Vector2(0.0, 0.5), Vector2(2.7, 0.5), Vector2(4.5, 0.2)]
+const LIFT_SIDES := 32
+# The plate collider reaches LIFT_PLATE_FLOOR under the body origin, inside the drum, as deep as the plate always was: a fast
+# firing plate cannot carry a ball resting on it down through its cap into the drum in one tick.
+const LIFT_PLATE_FLOOR := -0.5
+# At rest the plate's top sits 0.05 m over the foot; at full rise the drum still reaches LIFT_DRUM_BELOW m under the foot.
+const LIFT_REST_SINK := 0.45
+const LIFT_DRUM_BELOW := 2.5
+# The drawn drum's charcoal bands: LIFT_BAND m tall every LIFT_BAND_EVERY m, and a collar twice as tall under the rim.
+const LIFT_BAND := 0.35
+const LIFT_BAND_EVERY := 2.5
 const SKIN_BARGE_SIDE := 14.0
 
 var map
@@ -630,37 +648,100 @@ func _build_lift(spec: Dictionary) -> Dictionary:
 	var body := AnimatableBody3D.new()
 	body.name = spec["id"]
 	body.sync_to_physics = true
-	var shape := CollisionShape3D.new()
-	var cyl := CylinderShape3D.new()
-	cyl.radius = spec["radius"]
-	cyl.height = 1.0
-	shape.shape = cyl
-	body.add_child(shape)
 	var skin_scale: float = float(spec["radius"]) / SKIN_LIFT_RADIUS
+	var outline: Array[Vector2] = []
+	for p: Vector2 in LIFT_PROFILE:
+		outline.append(Vector2(p.x * skin_scale, p.y))
+	var plate_points := PackedVector3Array()
+	for p: Vector2 in outline + [Vector2(outline[outline.size() - 1].x, LIFT_PLATE_FLOOR)]:
+		if p.x > 0.0:
+			for k in LIFT_SIDES:
+				var a := TAU * float(k) / float(LIFT_SIDES)
+				plate_points.append(Vector3(p.x * cos(a), p.y, p.x * sin(a)))
+	var plate_shape := CollisionShape3D.new()
+	plate_shape.name = "Plate"
+	var hull := ConvexPolygonShape3D.new()
+	hull.points = plate_points
+	plate_shape.shape = hull
+	body.add_child(plate_shape)
+	# The drum: the outline's last point, down to LIFT_DRUM_BELOW under the foot at full rise.
+	var drum_r: float = outline[outline.size() - 1].x
+	var drum_top: float = outline[outline.size() - 1].y
+	var drum_len := float(spec["rise"]) + LIFT_DRUM_BELOW - LIFT_REST_SINK + drum_top
+	var drum := CollisionShape3D.new()
+	drum.name = "Drum"
+	var cyl := CylinderShape3D.new()
+	cyl.radius = drum_r
+	cyl.height = drum_len
+	drum.shape = cyl
+	drum.position = Vector3.UP * (drum_top - drum_len * 0.5)
+	body.add_child(drum)
 	var skinned := _recipe_of(spec) == "lift_platform" and not _skin_views(spec, "lift_platform", body,
 		Transform3D(Basis.from_scale(Vector3(skin_scale, 1.0, skin_scale)), Vector3.ZERO)).is_empty()
 	if not skinned:
 		var plate := MeshInstance3D.new()
-		var pm := CylinderMesh.new()
-		pm.top_radius = spec["radius"]
-		pm.bottom_radius = spec["radius"]
-		pm.height = 1.0
-		plate.mesh = pm
+		var st := SurfaceTool.new()
+		st.begin(Mesh.PRIMITIVE_TRIANGLES)
+		_lathe(st, outline)
+		plate.mesh = st.commit()
 		plate.material_override = Palette.striped(Palette.COPPER, Palette.CHARCOAL)
 		body.add_child(plate)
-	var piston := MeshInstance3D.new()
-	var sm := CylinderMesh.new()
-	sm.top_radius = 1.2
-	sm.bottom_radius = 1.2
-	sm.height = float(spec["rise"]) + 1.0
-	piston.mesh = sm
-	piston.material_override = _copper_mat
-	piston.position = Vector3.DOWN * (float(spec["rise"]) * 0.5 + 0.5)
-	body.add_child(piston)
+	body.add_child(_drum_view(drum_r, drum_top, drum_len))
 	add_child(body)
-	var home := foot + Vector3.DOWN * 0.45
+	var home := foot + Vector3.DOWN * LIFT_REST_SINK
 	var needle := _dial(foot + Vector3(float(spec["radius"]) + 1.6, 0.0, 0.0), spec)
 	return {"spec": spec, "body": body, "home": home, "needle": needle, "cycle": null}
+
+
+# The drum as drawn: copper, a charcoal collar under the plate and a charcoal band every LIFT_BAND_EVERY m, flush with the
+# collider (two surfaces, the contraptions' own copper and charcoal).
+func _drum_view(r: float, top: float, length: float) -> MeshInstance3D:
+	var copper := SurfaceTool.new()
+	var charcoal := SurfaceTool.new()
+	copper.begin(Mesh.PRIMITIVE_TRIANGLES)
+	charcoal.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var y := top
+	var bottom := top - length
+	_lathe(charcoal, [Vector2(r, y), Vector2(r, y - LIFT_BAND * 2.0)])
+	y -= LIFT_BAND * 2.0
+	while y > bottom:
+		var y1 := maxf(y - (LIFT_BAND_EVERY - LIFT_BAND), bottom)
+		_lathe(copper, [Vector2(r, y), Vector2(r, y1)])
+		y = y1
+		if y > bottom:
+			y1 = maxf(y - LIFT_BAND, bottom)
+			_lathe(charcoal, [Vector2(r, y), Vector2(r, y1)])
+			y = y1
+	var mesh := copper.commit()
+	charcoal.commit(mesh)
+	var view := MeshInstance3D.new()
+	view.name = "DrumView"
+	view.mesh = mesh
+	view.set_surface_override_material(0, _copper_mat)
+	view.set_surface_override_material(1, _needle_mat)
+	return view
+
+
+# Turns an outline of (radius, height) points, top to bottom, round the Y axis in LIFT_SIDES steps: flat across each outline
+# segment, round the axis, faces out.
+static func _lathe(st: SurfaceTool, outline: Array) -> void:
+	for i in outline.size() - 1:
+		var p0: Vector2 = outline[i]
+		var p1: Vector2 = outline[i + 1]
+		var tangent := p1 - p0
+		if tangent.length() < 0.0001:
+			continue
+		var n := Vector2(-tangent.y, tangent.x).normalized()
+		for k in LIFT_SIDES:
+			var a0 := TAU * float(k) / float(LIFT_SIDES)
+			var a1 := TAU * float(k + 1) / float(LIFT_SIDES)
+			var quad := [Vector3(p0.x * cos(a0), p0.y, p0.x * sin(a0)), Vector3(p0.x * cos(a1), p0.y, p0.x * sin(a1)),
+				Vector3(p1.x * cos(a1), p1.y, p1.x * sin(a1)), Vector3(p1.x * cos(a0), p1.y, p1.x * sin(a0))]
+			var normals := [Vector3(n.x * cos(a0), n.y, n.x * sin(a0)), Vector3(n.x * cos(a1), n.y, n.x * sin(a1)),
+				Vector3(n.x * cos(a1), n.y, n.x * sin(a1)), Vector3(n.x * cos(a0), n.y, n.x * sin(a0))]
+			for j: int in [0, 2, 1, 0, 3, 2]:
+				st.set_normal(normals[j])
+				st.add_vertex(quad[j])
 
 
 func _place_lift(l: Dictionary) -> void:
