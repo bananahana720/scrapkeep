@@ -21,6 +21,7 @@ var _econ := ""
 var _emitted := 0
 var _visited := {}
 var _pick_rng := RandomNumberGenerator.new()
+var _keep_class := 0
 
 
 func _row(kind: String, extra := {}) -> void:
@@ -123,8 +124,8 @@ func _shop_visit(world) -> void:
 		return
 	var speed: float = _game.player.planar_velocity().length()
 	world._bay_fact({"kind": "entered", "banked": speed})
+	_keep_class = _game.run.heft_class()
 	_row("bay", {"heft": _game.run.heft_class()})
-	_weigh(shop)
 	var t: Dictionary = shop.top_shelf()
 	if not t.is_empty() and not t["sold"]:
 		var r: Dictionary = shop.buy_top()
@@ -139,7 +140,7 @@ func _shop_visit(world) -> void:
 	while bought:
 		bought = false
 		for o in shop.charge_offers():
-			if o["can"] and _game.run.cogs >= o["price"]:
+			if o["can"] and _afford(shop, int(o["price"])):
 				var r: Dictionary = shop.buy_charge(o["slot"])
 				if r.get("ok", false):
 					_row("buy", {"what": "cell", "item": o["part_id"], "price": r.get("price", 0)})
@@ -150,26 +151,22 @@ func _shop_visit(world) -> void:
 	world._bay_fact({"kind": "left", "velocity": _game.player.state.velocity})
 
 
-# Moss's scale (PR 768, `--moss-scale=on`): sell mass for cogs while the shelf holds a part the
-# wallet cannot reach, and stop at the first press that drops a heft class (the min-maxer keeps
-# its class: max hull, the hook lock and the tree's milestones ride it).
-func _weigh(shop) -> void:
+# Moss's scale (PR 768, `--moss-scale=on`): when the next buy is out of reach, sell mass for
+# cogs until it is not, and stop once a press has dropped the ball below its class on boarding (the min-maxer keeps
+# its class: max hull, the hook lock and the tree's milestones ride it). True when affordable.
+func _afford(shop, price: int) -> bool:
+	if _game.run.cogs >= price:
+		return true
 	if not shop.has_method("scale_open") or not shop.scale_open():
-		return
-	var want := 0
-	for o in shop.shelf_offers():
-		if not o.get("sold", false):
-			want += int(o.get("price", 0))
+		return false
 	var presses := 0
-	while _game.run.cogs < want and presses < 200:
-		var heft: int = _game.run.heft_class()
+	while _game.run.cogs < price and presses < 200 and _game.run.heft_class() >= _keep_class:
 		var r: Dictionary = shop.weigh()
 		if not r.get("ok", false):
 			break
 		presses += 1
 		_row("weigh", {"mass_sold": r.get("mass", 0), "paid": -int(r.get("price", 0))})
-		if _game.run.heft_class() < heft:
-			break
+	return _game.run.cogs >= price
 
 
 func _buy_shelf(shop) -> void:
@@ -178,7 +175,7 @@ func _buy_shelf(shop) -> void:
 	order.sort_custom(func(a, b): return int(offers[a].get("price", 0)) > int(offers[b].get("price", 0)))
 	for i in order:
 		var o: Dictionary = offers[i]
-		if o.get("sold", false) or _game.run.cogs < int(o.get("price", 0)):
+		if o.get("sold", false) or not _afford(shop, int(shop.shelf_offers()[i].get("price", 0))):
 			continue
 		var r: Dictionary = shop.buy(i)
 		if r.get("ok", false):
