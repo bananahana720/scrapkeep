@@ -105,7 +105,8 @@ const ACH_TOTAL := 3.0
 const ACH_TOP := 14.0
 const ACH_FONT := 21
 const ACH_DETAIL_FONT := 15
-# A jukebox record found in play shares the achievement plate, after any achievement waiting.
+# A jukebox record found in play shares the achievement plate, in the one line with every other card
+# (screen_busy.gd), oldest first.
 # A record found in play wears the drawn wave on amber. A radio take wears the radio chip's knob
 # (the radio_take icon, radio-take-icon.md), tinted by tier: mint for a take, slate for a B-side,
 # brass for a legend (the edge radio_page.gd gives a legend). The icon and tint say which card it
