@@ -25,5 +25,77 @@
   ],
   "L4": [
     "sketches/core-loop/tests/hotwire_cue_parallel.sh"
-  ]
+  ],
+  "W1": {
+    "sketches/core-loop/src/ui/hud.gd": 1
+  },
+  "W2": {},
+  "W4": {
+    "sketches/core-loop/src/combat/actives/active_defs.gd": 7,
+    "sketches/core-loop/src/combat/codex_entries.gd": 6,
+    "sketches/core-loop/src/core/trees/tarn.gd": 8,
+    "sketches/core-loop/src/ui/companion_panel.gd": 1,
+    "sketches/core-loop/src/ui/field_notes.gd": 2,
+    "sketches/core-loop/src/ui/field_tips.gd": 2
+  },
+  "W6": {
+    "sketches/core-loop/src/build/items.gd": 1,
+    "sketches/core-loop/src/build/parts.gd": 7,
+    "sketches/core-loop/src/build/synergies.gd": 3,
+    "sketches/core-loop/src/combat/actives/active_defs.gd": 6,
+    "sketches/core-loop/src/combat/codex_entries.gd": 17,
+    "sketches/core-loop/src/core/achievements.gd": 1,
+    "sketches/core-loop/src/core/alpha_defs.gd": 4,
+    "sketches/core-loop/src/core/death_tips.gd": 1,
+    "sketches/core-loop/src/core/event_kinds.gd": 5,
+    "sketches/core-loop/src/core/objectives.gd": 2,
+    "sketches/core-loop/src/core/park_defs.gd": 5,
+    "sketches/core-loop/src/core/shift_board.gd": 3,
+    "sketches/core-loop/src/core/trees/kest.gd": 1,
+    "sketches/core-loop/src/core/trees/tarn.gd": 8,
+    "sketches/core-loop/src/core/trees/world_one_cards.gd": 4,
+    "sketches/core-loop/src/core/worlds.gd": 1,
+    "sketches/core-loop/src/presentation/flourish_rows.gd": 4,
+    "sketches/core-loop/src/presentation/title_intros.gd": 21,
+    "sketches/core-loop/src/ui/achievements_page.gd": 1,
+    "sketches/core-loop/src/ui/build_readout.gd": 2,
+    "sketches/core-loop/src/ui/camp_menu.gd": 7,
+    "sketches/core-loop/src/ui/companion_panel.gd": 1,
+    "sketches/core-loop/src/ui/ending_sequence.gd": 1,
+    "sketches/core-loop/src/ui/field_notes.gd": 28,
+    "sketches/core-loop/src/ui/field_tips.gd": 7,
+    "sketches/core-loop/src/ui/hotwire_screen.gd": 3,
+    "sketches/core-loop/src/ui/pause_menu.gd": 5,
+    "sketches/core-loop/src/ui/radio_dial.gd": 1,
+    "sketches/core-loop/src/ui/screens.gd": 1,
+    "sketches/core-loop/src/ui/settings_pages.gd": 15,
+    "sketches/core-loop/src/ui/summary_rows.gd": 2,
+    "sketches/core-loop/src/ui/tree_card.gd": 1,
+    "sketches/core-loop/src/ui/tree_pick.gd": 1,
+    "sketches/core-loop/src/ui/why_callout.gd": 1,
+    "sketches/core-loop/src/world/codex_world.gd": 1
+  },
+  "W7": {
+    "sketches/core-loop/src/build/items.gd": 4,
+    "sketches/core-loop/src/build/lanes.gd": 1,
+    "sketches/core-loop/src/build/parts.gd": 2,
+    "sketches/core-loop/src/combat/codex_entries.gd": 9,
+    "sketches/core-loop/src/core/achievements.gd": 1,
+    "sketches/core-loop/src/core/class_def.gd": 1,
+    "sketches/core-loop/src/core/companion.gd": 1,
+    "sketches/core-loop/src/core/death_tips.gd": 2,
+    "sketches/core-loop/src/core/objectives.gd": 1,
+    "sketches/core-loop/src/core/trees/cannon.gd": 2,
+    "sketches/core-loop/src/core/trees/kest.gd": 2,
+    "sketches/core-loop/src/core/trees/rivet.gd": 2,
+    "sketches/core-loop/src/core/trees/sable.gd": 4,
+    "sketches/core-loop/src/core/trees/tally.gd": 5,
+    "sketches/core-loop/src/core/trees/tarn.gd": 1,
+    "sketches/core-loop/src/core/trees/world_one_cards.gd": 2,
+    "sketches/core-loop/src/ui/class_kit.gd": 2
+  },
+  "S8": {
+    "sketches/core-loop/src/ui/logbook_page.gd": 1,
+    "sketches/core-loop/src/ui/meta_page.gd": 1
+  }
 }
