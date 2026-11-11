@@ -88,11 +88,16 @@ function botJob(persona, pilot, seed, quick) {
   };
 }
 
+// A headless run has no sound device, so the game leaves its worker-thread audio warm-ups off and renders
+// each radio line and chord on the main thread the first time a bar asks: 70 to 130 ms a tick that a played
+// game never has (wave 36, PF-33). --warm-band=1 does what a played game does, and the seed replays the same.
+export const PLAYED_AUDIO = "--warm-band=1";
+
 export function botArgs(job, out) {
   return [
     "--headless", "--fixed-fps", "90", "--path", "sketches/core-loop", "--script", "res://tools/bot_run.gd", "--",
     "--out=" + out, "--policy=" + job.policy, "--seeds=" + job.seed, "--pilot=" + job.pilot,
-    "--bot-audit=1", "--bot-profile=1", ...job.args,
+    PLAYED_AUDIO, "--bot-audit=1", "--bot-profile=1", ...job.args,
   ];
 }
 
