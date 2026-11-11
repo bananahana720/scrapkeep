@@ -1293,7 +1293,7 @@ func _draw_overdrive(delta: float) -> void:
 	var on := heat > 0.01
 	# Heat on the shell (redline.gd) lights the same rim before overdrive does: mint at a quarter,
 	# amber when hot, white at redline. Overdrive's own heat wins when it is the brighter.
-	var shell := shell_heat()
+	var shell := shell_heat() if _shell_band > 0 else 0.0
 	var lit := maxf(heat, shell)
 	_rim.visible = lit > 0.01
 	var ball: Vector3 = player.shown_position()

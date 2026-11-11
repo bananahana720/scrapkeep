@@ -69,18 +69,27 @@ func _rows() -> void:
 		{"panels": 1, "rares": 1, "cores": 0}, {"panels": 1, "rares": 2, "cores": 1}])
 
 
-# Wins the yard where the ball stands, through stage_locks' own unlock.
+# Wins the dam yard for real: the ball grounds inside the lock circle, the yard shuts, and each
+# wave is struck down as it lands until the last crew down opens it (stage_locks.gd).
 func _win_yard(game) -> void:
 	var locks = game.flow.gate
-	var ball: Vector3 = game.player.ball_position()
-	locks.lock_centre = game.ctx.terrain.drop_point(ball.x, ball.z, 0.0)
-	locks._unlock(true)
+	var row: Dictionary = LockRows.row("park_dam")["lock"]
+	var beacon: Vector3 = game.flow.beacon.global_position
+	var spot := beacon + Vector3(0.0, 0.0, -float(row["within_m"]) + 20.0)
+	game.player.reset_to(game.ctx.terrain.drop_point(spot.x, spot.z, 1.0), Vector3.ZERO)
+	var ticks := 0
+	while locks.lock_state != "spent" and ticks < 60 * Engine.physics_ticks_per_second:
+		for enemy in locks.crew_alive():
+			game.ctx.spawner.strike(enemy, "ram", 1000000.0)
+		await physics_frame
+		ticks += 1
+	_t.check("the yard is won for real", locks.lock_state == "spent" and locks.lock_won, "%s after %d ticks" % [locks.lock_state, ticks])
 
 
 func _off() -> void:
 	var game = await _game(PackedStringArray())
 	_t.eq("flag off by default", game.player.tuning.option("overtime"), "off")
-	_win_yard(game)
+	await _win_yard(game)
 	_t.eq("a won yard offers nothing with the flag off", game.flow.gate.overtime.state, "")
 	_t.eq("and says nothing", _count("overtime_offered"), 0)
 	game.queue_free()
@@ -90,14 +99,15 @@ func _off() -> void:
 func _on() -> void:
 	var game = await _game(PackedStringArray(["--overtime=on"]))
 	var ot = game.flow.gate.overtime
-	_win_yard(game)
+	await _win_yard(game)
 	_t.eq("a won yard offers overtime", ot.state, "offered")
 	_t.eq("the offer is heard", _count("overtime_offered"), 1)
-	var bell: Node3D = ot._bell
-	_t.check("the bell, the pot and the sluice stand", bell != null and ot._pot != null and ot._wheel != null)
+	_t.check("the bell, the pot and the sluice stand",
+		[ot.prop_at("bell"), ot.prop_at("pot"), ot.prop_at("sluice")].all(func(p: Vector3): return p != Vector3.INF))
+	_t.check("an empty pot has nothing to cash", not ot.cash() and ot.state == "offered")
 
 	# A slow touch does not ring the bell; a ram at speed does.
-	var at := bell.global_position
+	var at: Vector3 = ot.prop_at("bell")
 	game.player.reset_to(at + Vector3.UP * 0.5, Vector3(2.0, 0.0, 0.0))
 	await _sim(0.1)
 	_t.eq("a slow touch leaves the bell alone", ot.rings, 0)
@@ -119,11 +129,13 @@ func _on() -> void:
 	game.player.reset_to(ot.centre + Vector3.UP * 0.5, Vector3.ZERO)
 	_t.check("the sluice opens", ot.open_sluice() and ot.sluice == "warning")
 	_t.check("one sluice a yard", not ot.open_sluice())
+	_t.eq("the warning shows the sheet's circle", ot.water_shown(), "warning")
 	await _sim(Overtime.SLUICE_WARN_S - 0.2)
 	_t.eq("it whistles first", ot.sluice, "warning")
 	await _sim(0.4)
 	_t.eq("then it runs", ot.sluice, "flooding")
 	_t.near("for the third rung's length", ot.flood_left, Overtime.FLOOD_S[3], 0.3)
+	_t.eq("the sheet shows full", ot.water_shown(), "flooding")
 	await _sim(0.6)
 	var soaked: Array = ot.crew_alive().filter(func(e): return e.wet())
 	_t.eq("the crew is soaked", soaked.size(), ot.crew_alive().size())
@@ -157,8 +169,14 @@ func _on() -> void:
 	var rolled := await _along(game, ot)
 	_t.check("the sheet carries the ball down the flow", carried > rolled + 1.0,
 		"from rest, 0.25 s: %.1f m/s along in the flood, %.1f dry" % [carried, rolled])
+	var still: Array = soaked.filter(func(e): return is_instance_valid(e) and not e.is_dead())
+	ot.clear()
+	await _sim(Overtime.WET_S)
+	_t.check("soaked machines dry on their own once the yard is gone", not still.is_empty()
+			and still.all(func(e): return not is_instance_valid(e) or not e.wet()), "%d machines" % still.size())
+	ot.offer(ot.centre, 0.0, LockRows.row("park_dam")["lock"])
 	game.events.flow_changed.emit("gates")
-	_t.check("leaving clears it", ot.state == "" and ot._props == null)
+	_t.check("leaving clears it", ot.state == "" and ot.prop_at("bell") == Vector3.INF and ot.water_shown() == "")
 	game.queue_free()
 	await process_frame
 

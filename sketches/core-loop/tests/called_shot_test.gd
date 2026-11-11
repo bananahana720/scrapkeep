@@ -105,7 +105,7 @@ func _on() -> void:
 	await _hold(game, 1.2)
 	_t.eq("letting go calls what shows", [shot.state, shot.called], ["called", "CHAIN"])
 	_t.eq("the call inks", _facts.count("shot_called"), 1)
-	_t.check("the stamp stands over the Warden", shot._stamp != null and shot._stamp.visible and shot._stamp.text == "CHAIN")
+	_t.eq("the stamp stands over the Warden", shot.stamp_text(), "CHAIN")
 	await _hold(game, 0.7)
 	_t.eq("one call a Warden", shot.called, "CHAIN")
 
@@ -140,5 +140,36 @@ func _on() -> void:
 	_t.eq("an unused window closes", shot.state, "closed")
 	_t.eq("no call leaves the gate as it was", shot.gate_rarities(), ["common", "rare"])
 	_t.eq("and the core stays", game.ctx.run.bonus_cores, 1)
+
+	# BOWL met by a flung body: a Warden takes it on its posture path, which strikes nothing.
+	shot.clear()
+	game.events.warden_engaged.emit(game.ctx.run.stage)
+	await _face_warden(game)
+	await _hold(game, 1.6)
+	_t.eq("a long hold calls BOWL", shot.called, "BOWL")
+	game.ctx.spawner.flail_hit(warden, 10.0, warden.global_position + Vector3(4.0, 0.0, 0.0), 1.0)
+	shot.gate_rarities()
+	_t.eq("a flung body meets BOWL", shot.verdict, "met")
+
+	# DUNK met through a real break: a dunk spent on the Warden, then the Warden broken, and the
+	# stage's own gate roll settles the call.
+	shot.clear()
+	var offered := []
+	game.events.reward_offered.connect(func(offers: Array): offered.append(offers.size()))
+	game.events.warden_engaged.emit(game.ctx.run.stage)
+	await _face_warden(game)
+	await _hold(game, 0.6)
+	_t.eq("a short hold calls DUNK again", shot.called, "DUNK")
+	game.player.dunk.store(5.0, "test", "test", Color.WHITE)
+	game.player.dunk.spend(warden)
+	# A posture Warden loses health only to what a shatter armed (int_arena_standdown_test's break).
+	warden._armed = warden.max_hp
+	game.ctx.spawner.strike(warden, "arc", 1000000.0)
+	var ticks := 0
+	while offered.is_empty() and ticks < 120:
+		await physics_frame
+		ticks += 1
+	_t.check("the break opens the gates", not offered.is_empty(), "%d ticks" % ticks)
+	_t.eq("the gate roll settles the call as met", shot.verdict, "met")
 	game.queue_free()
 	await process_frame

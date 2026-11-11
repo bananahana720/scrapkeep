@@ -50,6 +50,9 @@ func setup(ctx_ref) -> void:
 	ctx.events.stage_entered.connect(func(_stage: int, _retry: bool): clear())
 	ctx.events.enemy_struck.connect(_on_struck)
 	ctx.player.dunk.spent.connect(func(_record: Dictionary, enemy: Node3D): _note(enemy, "DUNK"))
+	if ctx.spawner != null and ctx.spawner.has_signal("flung"):
+		ctx.spawner.flung.connect(func(enemy: Node3D): _note(enemy, "BOWL"))
+	set_physics_process(false)
 
 
 func enabled() -> bool:
@@ -57,6 +60,7 @@ func enabled() -> bool:
 
 
 func clear() -> void:
+	set_physics_process(false)
 	state = ""
 	called = ""
 	verdict = ""
@@ -113,6 +117,7 @@ func _on_engaged(_stage: int) -> void:
 	if not is_instance_valid(_warden):
 		return
 	state = "window"
+	set_physics_process(true)
 	window_left = CALL_WINDOW_S
 	held_s = 0.0
 	ctx.events.world_fact.emit("call_window", _warden.global_position)
@@ -120,12 +125,13 @@ func _on_engaged(_stage: int) -> void:
 
 
 func _physics_process(delta: float) -> void:
-	if ctx == null or state == "":
-		return
 	_clock += delta
 	if state == "window":
 		_step_window(delta)
 	_follow()
+	# Only an open window or a standing call needs the clock; the rest of the stage costs nothing.
+	if state != "window" and state != "called":
+		set_physics_process(false)
 
 
 func _step_window(delta: float) -> void:
@@ -178,8 +184,13 @@ func _on_struck(enemy: Node3D, kind: String, _force: float) -> void:
 		return
 	if ctx.player.chain.combo >= CHAIN_COMBO:
 		_note(enemy, "CHAIN")
-	if kind == "flail" or (kind == "ram" and int(ctx.player.state.tier) >= SpeedTier.BLAZING):
+	if kind == "ram" and int(ctx.player.state.tier) >= SpeedTier.BLAZING:
 		_note(enemy, "BOWL")
+
+
+# The stamp's word while it shows, else "".
+func stamp_text() -> String:
+	return _stamp.text if _stamp != null and _stamp.visible else ""
 
 
 func _note(enemy: Node3D, verb: String) -> void:
@@ -208,8 +219,9 @@ func _show(verb: String, inked: bool) -> void:
 		_follow()
 	_stamp.visible = true
 	_stamp.text = verb
-	# An outline while it turns; ink once called.
-	_stamp.modulate = Palette.HAZARD if inked else Color(1.0, 1.0, 1.0, 0.0)
+	# An outline while it turns; ink in the pilot's own colour once called (hazard red is kept for
+	# what will hurt you, LEGIBILITY section 1).
+	_stamp.modulate = ctx.player.class_color() if inked else Color(1.0, 1.0, 1.0, 0.0)
 	_stamp.outline_modulate = Color(0.08, 0.08, 0.08, 1.0) if inked else Color(1.0, 1.0, 1.0, 0.9)
 
 

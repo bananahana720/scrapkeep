@@ -448,24 +448,20 @@ func plating_now() -> float:
 # ""): a Dig elite arrives with spec armour "plated".
 func armour_class() -> String:
 	var own := String(spec.get("armour", ""))
-	if own == "" and soaked_left > 0.0:
+	if own == "" and Engine.get_physics_frames() < _dry_at_frame:
 		return "wet"
 	return own
 
 
 # A flood soaks this machine for `seconds` (overtime.gd's sluice): with no armour of its own it
 # reads as wet, so arc hits it at the wet row (damage_families.gd) and the sluice's arc jump finds
-# it. The sluice counts the seconds down on its own physics clock (dry()), so a fixed-fps bot run
-# replays.
-var soaked_left := 0.0
+# it. It dries on the physics frame count, with no tick of its own, so a fixed-fps bot run replays
+# and a machine dries even after the sluice that soaked it is gone.
+var _dry_at_frame := 0
 
 
 func soak(seconds: float) -> void:
-	soaked_left = maxf(soaked_left, seconds)
-
-
-func dry(delta: float) -> void:
-	soaked_left = maxf(0.0, soaked_left - delta)
+	_dry_at_frame = maxi(_dry_at_frame, Engine.get_physics_frames() + ceili(seconds * Engine.physics_ticks_per_second))
 
 
 func wet() -> bool:

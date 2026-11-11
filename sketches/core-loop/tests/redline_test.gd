@@ -4,6 +4,8 @@ const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const Redline := preload("res://src/combat/redline.gd")
 const SpeedTier := preload("res://src/movement/speed_tier.gd")
+# A machine heavier than a fresh ball, so the ram rebounds.
+const HEAVY_KIND := "plated_brute"
 
 # Heat on the shell (src/combat/redline.gd, docs/design/loops.md Spec 1). The rule on its own
 # (fill, hold, drain, skim, spend, cook-off, the three modes), then the wiring in a real Game:
@@ -89,10 +91,10 @@ func _never() -> bool:
 	return false
 
 
-func _enemy(offset: Vector3) -> Node3D:
+func _enemy(offset: Vector3, kind := "chaser") -> Node3D:
 	var ball: Vector3 = _player.ball_position()
 	var at: Vector3 = _game.ctx.terrain.drop_point(ball.x + offset.x, ball.z + offset.z, 1.0)
-	var enemy: Node3D = _combat.spawn_enemy("chaser", at)
+	var enemy: Node3D = _combat.spawn_enemy(kind, at)
 	enemy.live = Callable(self, "_never")
 	enemy.hp = 100000.0
 	enemy.max_hp = 100000.0
@@ -116,10 +118,10 @@ func _start(flags: PackedStringArray) -> void:
 	await _sim(0.6)
 
 
-# The run log's last line after a write.
+# The run log's last line after the run ends in a death (run_log.gd writes it on player_died).
 func _log_line() -> Dictionary:
 	var log = _game.run_log
-	log._write("died")
+	_game.ctx.events.player_died.emit()
 	var lines := FileAccess.get_file_as_string(log.storage_dir.path_join(log.LOG_FILE)).strip_edges().split("\n")
 	var parsed = JSON.parse_string(lines[lines.size() - 1]) if lines.size() > 0 else null
 	return parsed if parsed is Dictionary else {}
@@ -147,7 +149,6 @@ func _run() -> void:
 	var skims := red.skims
 	_game.ctx.events.near_miss.emit("test", _player.ball_position())
 	_check("a near miss at speed skims", red.skims == skims + 1, "skims %d to %d" % [skims, red.skims])
-	_check("a heat-on log line has the counts", _log_line().has("redline"), "redline key")
 
 	# A real ram at redline detonates through the player's contact (a plain chaser, lighter than the ball).
 	var target := _enemy(Vector3(8.0, 0.0, 0.0))
@@ -158,6 +159,19 @@ func _run() -> void:
 	await _sim(1.0)
 	_check("a ram at redline detonates", red.detonations == before_det + 1, "detonations %d to %d, value %.1f" % [before_det, red.detonations, red.value])
 	target.queue_free()
+
+	# A ram into a body at least the ball's weight rebounds (player_ball _rebound) and still spends.
+	var heavy := _enemy(Vector3(8.0, 0.0, 0.0), HEAVY_KIND)
+	var rebounds := [0]
+	_game.ctx.events.enemy_rebounded.connect(func(_e: Node3D, _speed: float): rebounds[0] += 1)
+	start = _game.ctx.terrain.drop_point(heavy.global_position.x - 8.0, heavy.global_position.z, 1.0)
+	_player.reset_to(start, Vector3(blazing, 0.0, 0.0))
+	red.value = Redline.MAX
+	before_det = red.detonations
+	await _sim(1.0)
+	_check("a rebounding ram at redline detonates", rebounds[0] >= 1 and red.detonations == before_det + 1,
+		"rebounds %d, detonations %d to %d" % [rebounds[0], before_det, red.detonations])
+	heavy.queue_free()
 
 	_player.set_physics_process(false)
 	_game.ctx.events.player_hit.connect(func(amount: float, source: String): _hits.append([amount, source]))
@@ -196,5 +210,6 @@ func _run() -> void:
 
 	near.queue_free()
 	far.queue_free()
+	_check("a heat-on log line has the counts", _log_line().has("redline"), "redline key")
 	print("redline_test: %s (%d checks, %d failures)" % ["FAIL" if _failures > 0 else "PASS", _count, _failures])
 	quit(1 if _failures > 0 else 0)

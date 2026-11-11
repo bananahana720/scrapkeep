@@ -667,7 +667,8 @@ func _physics_process(delta: float) -> void:
 	_was_hooked = kit.hooked
 	_publish_line(delta)
 	dunk.tick(delta)
-	redline.tick(delta, state.tier, ball_position(), state.velocity.length())
+	if redline.mode != Redline.OFF:
+		redline.tick(delta, state.tier, ball_position(), state.velocity.length())
 	_tick_chain(delta)
 	_recheck_bow()
 	_tick_face_tags(delta)

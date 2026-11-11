@@ -1232,10 +1232,11 @@ const WORLD_ROWS := {
 	"overtime_rung": {"group": "event", "color": Palette.BRASS, "shape": "burst", "sound": "found_chime", "sound_next": "arena_unlock_bells", "hud": "", "objective": "", "priority": 2},
 	"overtime_paid": {"group": "event", "color": Palette.BRASS, "shape": "star", "sound": "found_chime", "sound_next": "warden_gate_release", "hud": "", "objective": "", "priority": 2},
 	"sluice_warning": {"group": "event", "color": Palette.HAZARD, "shape": "arrow", "sound": "threat_whistle", "sound_next": "arena_wave_whistle", "hud": "", "objective": "", "priority": 2},
-	# Called Shot (src/build/called_shot.gd, loops.md Spec 3): the window opens on the Warden's
-	# drum, the call inks with a clunk, a met call rings the gate's release, a miss drops dry.
-	"call_window": {"group": "event", "color": Palette.HAZARD, "shape": "square", "sound": "threat_whistle", "sound_next": "arena_wave_whistle", "hud": "", "objective": "", "priority": 1},
-	"shot_called": {"group": "event", "color": Palette.HAZARD, "shape": "square", "sound": "clank", "sound_next": "warden_gate_clunk", "hud": "", "objective": "", "priority": 2},
+	# Called Shot (src/build/called_shot.gd, loops.md Spec 3): the window opens on a pip (no hazard
+	# colour or threat sound: a call is the player's, LEGIBILITY section 1), the call inks with a
+	# clunk, a met call rings the gate's release, a miss drops dry.
+	"call_window": {"group": "event", "color": Palette.BRASS, "shape": "square", "sound": "found_chime", "sound_next": "warden_gate_pip", "hud": "", "objective": "", "priority": 1},
+	"shot_called": {"group": "event", "color": Palette.BRASS, "shape": "square", "sound": "clank", "sound_next": "warden_gate_clunk", "hud": "", "objective": "", "priority": 2},
 	"call_met": {"group": "event", "color": Palette.BRASS, "shape": "star", "sound": "found_chime", "sound_next": "warden_gate_release", "hud": "", "objective": "", "priority": 2},
 	"call_missed": {"group": "event", "color": Palette.CHARCOAL, "shape": "square", "sound": "clank", "sound_next": "warden_gate_clunk", "hud": "", "objective": "", "priority": 1},
 	"sluice_open": {"group": "event", "color": Palette.HAZARD, "shape": "ring", "sound": "slam_boom", "sound_next": "arena_lock_slam", "hud": "", "objective": "", "priority": 2},
