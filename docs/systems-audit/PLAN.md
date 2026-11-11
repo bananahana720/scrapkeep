@@ -16,7 +16,7 @@ The brief names three files. Two exist; one does not.
 | `TECH_BIBLE.md` | Does not exist. BACKLOG.md says "TECH_BIBLE.md ... remain[s a] future output". | Stand-ins: ADRs → [adr/README.md](../../adr/README.md) (TADR-001 to TADR-011). Testing strategy → [ORCHESTRATOR.md](../../ORCHESTRATOR.md) tiered gate (its only owner), [GATE.md](../../project-guide/handoff/GATE.md) and [design-v3/TESTING.md](../../sketches/core-loop/design-v3/TESTING.md). Conventions → [CONTRIBUTING.md](../../CONTRIBUTING.md), AGENTS.md (deep modules, one home for every fact, no slop) and [sketches/core-loop/CONTRACTS.md](../../sketches/core-loop/CONTRACTS.md). |
 | `TRACKING.md` | [TRACKING.md](../../TRACKING.md) exists but is the September foundation board. | Live execution is the wave board named in [STATE.md](../../project-guide/handoff/STATE.md) (issue 749 for wave 37). "The backlog" for this workstream is BACKLOG.md (task definitions, per AGENTS.md), with one line in [ROADMAP.md](../../project-guide/handoff/ROADMAP.md) and a claim on the wave board, in the format [COMMS.md](../../project-guide/handoff/COMMS.md) gives. |
 
-Earlier work this plan builds on, so it is not redone: the systems audit "Game systems: audit and plan" (Claude Doc https://claude.ai/artifact/GiVnd79hcp2tkx4UaWkAY7, 9 Nov, thread "Harmonise game systems like Isaac"), the [world 1 difficulty plan](../../project-guide/handoff/shared/world1/difficulty-plan.md) (10 Nov), and the bot balance re-measure (Library `handoff/balance-remeasure.md`, 10 Nov).
+Earlier work this plan builds on, so it is not redone: the systems audit "Game systems: audit and plan" (Claude Doc https://claude.ai/artifact/GiVnd79hcp2tkx4UaWkAY7, 9 Nov, thread "Harmonise game systems like Isaac"), the [world 1 difficulty plan](../../project-guide/handoff/shared/world1/difficulty-plan.md) (10 Nov), and the bot balance re-measure (10 Nov; `handoff/balance-remeasure.md` in the project's shared Library, outside the repo; its key finding, that band win counts at 24 seeds are not a balance sensor, is quoted where used).
 
 ## 1. Genre, engine and pillars, as the repo states them
 
@@ -65,14 +65,14 @@ Status: **playable** (in the world 1 build a player can reach it), **partial** (
 | 9 | Reactor Wardens: guard, break, weak points, the pulse | playable | `src/combat/warden.gd`, `warden_reactor.gd`, `boss/weak_points.gd` |
 | 10 | Admiral Brindle, three phases | playable | `src/boss/boss.gd`, `boss_rules.gd` |
 | 11 | Rogue mini-bosses (one per stage at most) | playable | `src/combat/rogue.gd`, `src/world/rogue_director.gd` |
-| 12 | Event director and stage events (flood, natural, industrial, weather, stage modifiers) | playable | `src/world/director.gd`, `event_director.gd`, `src/world/events/` |
+| 12 | Event director and stage events (flood, natural, industrial, weather, and the per-stage condition cards such as "Lean Haul" in `stage_modifier.gd`) | playable | `src/world/director.gd`, `event_director.gd`, `src/world/events/` |
 | 13 | Park stages and side spots: rib caches, cracked caches, bet crates, ambush altar, relay stake, rescue sites, surge course, radio caches | playable | `src/world/park/`, `src/world/*.gd` |
 | 14 | Scrap: pull, mass, heft class, size, armour, spill, wear | playable | `run_state.gd` HEFT_*, SPILL_*, WEAR_PER_MINUTE; `src/build/scrap_field.gd`, `accretion.gd` |
 | 15 | Cogs and Moss's counter: buy, reroll, cells, sell back | playable | `src/build/shop.gd`, `fabricators.gd` COG_PRICES |
 | 16 | Cores: zone-local, raise the next gate's offer, bet, burn for a heal | playable | `run_state.gd` add_core, burn_cores, gate_tier_bonus; `src/world/bet_crate.gd` |
 | 17 | Item ladder: grey panels, mint parts, cobalt parts | playable | `src/build/panels.gd`, `parts.gd`, `reward_gates.gd` (cobalt from Wardens, bosses, one shop slot: Story map) |
 | 18 | Pearl and gold items, brass trophies, the Mind's offerings | spec only, after the alpha | Story map section 4 |
-| 19 | Maker sets and synergies (three of one maker turn on its trick) | playable; maker is not tied to place | `src/build/maker_sets.gd`, `synergies.gd`; `parts.gd` maker nudge |
+| 19 | Maker sets, named synergies and three-part sets | playable; maker is not tied to place | `src/build/maker_sets.gd`, `synergies.gd`, `part_sets.gd`; `parts.gd` maker nudge |
 | 20 | Relics | playable (from cracked caches) | `src/build/relics.gd`, `src/world/cracked_cache.gd` |
 | 21 | Hot-wire (Spark Tread) | playable | `src/build/hotwire_rules.gd` |
 | 22 | Upgrade tree: one binary tree per pilot, depths 1 and 2 in world 1 | playable | `src/core/upgrade_tree.gd`, `src/core/trees/` |
@@ -88,7 +88,7 @@ Status: **playable** (in the world 1 build a player can reach it), **partial** (
 | 32 | Meta: profile, shift board rungs, pilot marks, cosmetics, codex, scrapbook, logbook | playable | `src/core/profile.gd`, `shift_board.gd`, `cosmetics.gd`, `codex.gd` |
 | 33 | Head starts (meta options) | partial: the page shows "0 of 4" and nothing opens one | `src/core/meta_options.gd` `open_earned` has no caller (re-checked 11 Nov) |
 | 34 | Achievements | partial: eleven are record-only | `src/core/achievements.gd` (Game systems audit, finding 5) |
-| 35 | Stage variants and run modifiers (dam night shift, flume backwash, overtime, short crew) | spec only: four seeds on the shift board, "Nothing reads these yet" | `src/core/shift_board.gd` SEEDS |
+| 35 | Stage variants and whole-run modifiers, which are not the per-stage condition cards of row 12 (dam night shift, flume backwash, overtime, short crew) | spec only: four seeds on the shift board, "Nothing reads these yet" | `src/core/shift_board.gd` SEEDS |
 | 36 | Camp: Moss, the skee lane, the trial, the sandbox, the bay | playable | `src/world/camp_hub.gd`, `camp_*.gd` |
 | 37 | HUD, objectives, danger marks, call-ins and radio, tips | playable (owned by "Rebuild game UI for clarity") | `src/ui/` |
 | 38 | Reactive music and sound | playable | `src/presentation/audio.gd`, `music_engine.gd` |
@@ -99,7 +99,7 @@ Status: **playable** (in the world 1 build a player can reach it), **partial** (
 Brackets in Andrew's brief are filled from the repo:
 
 - **First [15] minutes:** 15 minutes. Source: the world 1 sitting target, "10-15 min run, about 30 min completionist, repeatable" (STATE.md, priority of 23 Oct), and BIBLE.md "about 10 to 15 per world". Fifteen minutes covers the title, the camp, the dam, the flume and Brindle for a first-timer.
-- **Simulate [10] hours:** 10 hours of game time per player type. Running it literally is about 75 rusher runs (7 to 8 game minutes each, measured in pass A) and about 40 completionist and 40 min-maxer runs, roughly 6 hours of wall time on a 4-core box. Andrew asked on 11 Nov (18:42Z) that long wall-clock runs never stall the work, so pass B runs 24 world 1 runs per type (the project's 24-seed rule) and carries its per-minute rates to 10 hours; it runs the full count only if a rate is still moving at 24. In-run economy resets every run (BIBLE.md "Combat power is rebuilt each run"), so 10 hours mostly measures the per-run economy across many seeds, plus the meta unlock curve (shift board rungs, pilot marks, cosmetics, codex) across those runs.
+- **Simulate [10] hours:** 10 hours of game time per player type. Running it literally is about 75 rusher runs (5.9 to 8.1 game minutes each, measured in pass A), about 57 completionist runs (10.4 to 10.5 minutes) and a similar count of min-maxer runs, roughly 7 hours of wall time on a 4-core box. Andrew asked on 11 Nov (18:42Z) that long wall-clock runs never stall the work, so pass B runs 24 world 1 runs per type (the project's 24-seed rule) and carries its per-minute rates to 10 hours; it runs the full count only if a rate is still moving at 24. In-run economy resets every run (BIBLE.md "Combat power is rebuilt each run"), so 10 hours mostly measures the per-run economy across many seeds, plus the meta unlock curve (shift board rungs, pilot marks, cosmetics, codex) across those runs.
 
 | Pass | Decision | Why |
 | --- | --- | --- |
@@ -108,7 +108,7 @@ Brackets in Andrew's brief are filled from the repo:
 | C Mechanic feel | **Run now for world 1.** Frame sequences in the cloud through the existing capture tools; feel reads on the PC. | All world 1 mechanics are playable. Feel is a human read (AGENTS.md: "Automated play does not establish human feel"). |
 | D Feature fit | **Run on paper now**, using A's map and the existing receipts. It implements nothing. | Its output is a verdict table and three proposals. |
 | E First 15 minutes | **Run now for world 1 after C and D.** | Recording exists (`tools/eye_film.gd --film=whole`). |
-| F Break it | **Run now for world 1.** Needs a break bot, inside F's own files. | Crash, stall, item-fuzz, fling and snag hunts exist (`scripts/redteam`, `tools/item_fuzz.gd`, `collision_sweep.gd`). No bot today saves and loads mid-action or spams inputs. |
+| F Break it | **Run now for world 1.** Needs a break bot, inside F's own files. | Crash, stall, item-fuzz, fling and snag hunts exist (`scripts/redteam`, `tools/item_fuzz.gd`, `tools/qa/collision_sweep.gd`). No bot today saves and loads mid-action or spams inputs. |
 | Any pass, worlds 2 and 3 | **Defer** until world 2 is back in scope (ruling at). | Parked. |
 | Spec-only systems (rows 18, 26, 31, 35) | **On paper only**, in D. | Nothing to run. |
 
@@ -119,7 +119,7 @@ Brackets in Andrew's brief are filled from the repo:
 | Tool | What it does | Gap for this workstream |
 | --- | --- | --- |
 | `tools/bot_run.gd` + `tools/bot_driver.gd` | Plays whole runs with a policy: skipper, completionist, random, camper, traversal, orbit, terrain. Skill bands (Novice, Learner, Expert) through `tools/skill_band.gd`. `--fixed-fps 90` runs faster than real time and repeats exactly. | No shop, no start pick, tree offers off by default. Record has no cogs. Multi-seed runs fork children that run `bot_run.gd` itself, so a wrapper probe must run one seed per process (found 11 Nov). |
-| `scripts/challenge/run.mjs` (band table) | Novice, Learner, Expert win rates per Warden, boss and park, with Wilson intervals. | Band win counts are not a balance sensor at 24 seeds (balance re-measure finding 4). |
+| `scripts/challenge/run.mjs` (band table) | Novice, Learner, Expert win rates per Warden, boss and park, with Wilson intervals. | Band win counts are not a balance sensor at 24 seeds (the balance re-measure's finding 4: a harmless reseed swings a column by up to 4 wins of 24). |
 | `scripts/redteam/run.mjs` and `eye.mjs` | Per-wave red team: five personas, crash, stall, crowd, fuzz and frame playbooks; the player's-eye film and cold reader. Plays the park maps since PR 761 (11 Nov). | No save-and-load mid-action, no input spam. |
 | `tools/item_fuzz.gd`, `tools/build_sweep.gd`, `tools/matchup_lab.gd` | Random item stacks for 60 s with invariant checks; stack and compose arms; pilot against enemy kind. | Buffs only; debuffs (curse, wear, stage modifiers) are not stacked with them. |
 | `tools/first_timer.gd`, `tools/self_play.gd` | A first-timer probe; a launched game played by its own keys. | None for B; E uses them. |
