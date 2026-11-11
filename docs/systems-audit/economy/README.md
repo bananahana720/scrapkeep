@@ -66,7 +66,7 @@ The "before" hull row for the min-maxer counted only single-tick rises over 0.5 
 
 ## The value changes
 
-All of these are in [values.patch](values.patch), which applies cleanly on PR 768 at `d5f30a04` and at `e672da1d`. The coordinator passes it to that PR's writer.
+All of these are in [values.patch](values.patch), which applies cleanly on PR 768 at `d5f30a04` and at `e672da1d`. The marked hull thread lands it in its own price PR from the stage.
 
 | Value | Before | After | Why |
 | --- | --- | --- | --- |
@@ -88,7 +88,7 @@ The price PR from the marked hull thread does not raise these three. It keeps th
 Sent as recommendations only, on paper, because no bot visits a trade chest or a blood shrine:
 - **`HEALTH_SHARES` with Marked hull on:** 0.15, 0.30 and 0.45, in place of 0.25, 0.50 and 0.75. Marked hull lowers max hull until the next Warden. At 75%, a tier-3 trade would leave 25% of max hull for a stage that costs a median 30 to 60 hull before armour, which is a near-certain death, not a gamble.
 - **`SCRAP_PER_HP_PAID`:** 0.5 to 4.0, so a blood shrine pays about one sale at Moss's scale. A 15% stake on 110 hull is 66 scrap, about 33 cogs.
-- Both values also change the game with the flag off, so leave them alone until Marked hull is the default. That call belongs to PR 768's writer and the coordinator.
+- Both values also change the game with the flag off, so leave them alone until Marked hull is the default. That call belongs to the marked hull thread and the coordinator.
 
 The panel drop table (`panels.gd`) is unchanged. The sim shows 9 to 11 panels a run with no inflation or hoarding sign, because panels are kept, not spent. A panel change moves heft and the bands, which this pass avoids.
 
@@ -98,7 +98,7 @@ The rate behind free hull prices is regen (`run_state.gd` `REGEN_DELAY` 5 s, `RE
 
 ## Bands
 
-The world 1 bands were not rerun, on purpose. The band table plays saved builds made by completionist and skipper library runs. Its fight personas are the brawler (the completionist's fight profile), the camper and the skipper. None of them stops at Moss, so a shop price cannot reach a band run. The six replays above prove it for the two policies the library uses. So the Novice target (ruling cu) cannot get easier from this change. The 10 Nov re-measure also found that band win counts at 24 seeds are no balance sensor. My call, which the coordinator can overturn: if PR 768 makes Marked hull or Moss's scale the default, the band read belongs on that PR.
+The world 1 bands were not rerun, on purpose. The band table plays saved builds made by completionist and skipper library runs. Its fight personas are the brawler (the completionist's fight profile), the camper and the skipper. None of them stops at Moss, so a shop price cannot reach a band run. The six replays above prove it for the two policies the library uses. So the Novice target (ruling cu) cannot get easier from this change. The 10 Nov re-measure also found that band win counts at 24 seeds are no balance sensor. The board owner ruled on 11 Nov that the price PR gets a band read, and this page's PR does not, because it changes no game file.
 
 ## How to run it
 
