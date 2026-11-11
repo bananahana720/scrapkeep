@@ -96,6 +96,10 @@ func _pass(speed: float, overrides: Dictionary, head_on := false) -> Dictionary:
 	if head_on:
 		roller.at = enemy.global_position + Vector3(HEAD_ON_FROM, 0.0, HEAD_ON_SIDE)
 		roller.v = Vector3(-speed, 0.0, 0.0)
+		# The head-on roll is read on a chaser at its own SPEED, whatever the stage's chaser speed is (unit D2
+		# raises it), so the pass is the same geometry on every head of the stack. The fade is what differs.
+		if "run_speed" in enemy:
+			enemy.run_speed = Chaser.SPEED
 	enemy._rest = 0.0
 	var wound_at := -1
 	var wound_m := -1.0
