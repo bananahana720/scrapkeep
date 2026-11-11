@@ -332,6 +332,44 @@ func _no_free_speed() -> void:
 	b6.linear_velocity = up
 	htap.step(k6, air, Tune.new(), i6, b6)
 	_t.near("an air tap on the harpoon pays nothing", b6.linear_velocity.length(), 15.0, 0.001)
+	# Review of 771, third pass: only the sweep round the post counts. A jump right after an air
+	# bite turns the velocity, not the ball round its post.
+	_t.near("the sweep is measured round the post", TwinLines.turned(Vector3(0, -10, 0), Vector3(10, -10, 0)), 45.0, 0.001)
+	var jump = TwinLines.new()
+	var k7 := Kit.new()
+	k7.aim["point"] = Vector3(0, 30, 0)
+	var i7 := Intent.new()
+	var b7 := Body.new()
+	b7.linear_velocity = Vector3(15, 0, 0)
+	i7.twin_pressed = true
+	i7.twin_held = true
+	jump.step(k7, air, Tune.new(), i7, b7)
+	i7.twin_pressed = false
+	b7.linear_velocity = up
+	for i in 2:
+		jump.step(k7, air, Tune.new(), i7, b7)
+		b7.transform.origin += b7.linear_velocity * DT
+	i7.twin_held = false
+	i7.twin_released = true
+	b7.linear_velocity = up
+	jump.step(k7, air, Tune.new(), i7, b7)
+	_t.near("a jump just after an air bite pays nothing", b7.linear_velocity.length(), 15.0, 0.001)
+	# A real swing that lands, or goes slack, before the let-go pays nothing.
+	for case in ["landed", "slack"]:
+		var lit := _lit_swing()
+		var t2 = lit[0]
+		var b8: Body = lit[2]
+		var i8: Intent = lit[3]
+		var where := State.new()
+		if case == "landed":
+			where.grounded = true
+		else:
+			b8.transform.origin = t2.anchor + (b8.transform.origin - t2.anchor) * 0.5
+		var speed := b8.linear_velocity.length()
+		i8.twin_held = false
+		i8.twin_released = true
+		t2.step(lit[1], where, Tune.new(), i8, b8)
+		_t.near("a swung line that %s before the let-go pays nothing" % case, b8.linear_velocity.length(), speed, 0.001)
 	var forced = TwinLines.new()
 	var b4 := Body.new()
 	intent.twin_pressed = true
@@ -349,6 +387,23 @@ func _no_free_speed() -> void:
 	held.step(kit, air, Tune.new(), intent, b4)
 	_t.check("a mount lets go of the off line", not held.hooked)
 	kit.mounted = false
+
+
+# An off line swung until a release would pay in full: [twin, kit, body, intent].
+func _lit_swing() -> Array:
+	var twin = TwinLines.new()
+	var kit := Kit.new()
+	var intent := Intent.new()
+	var body := Body.new()
+	body.linear_velocity = Vector3(12, 0, 0)
+	kit.aim["point"] = Vector3(10, 10, 0)
+	intent.twin_pressed = true
+	intent.twin_held = true
+	for i in 400:
+		_tick(twin, kit, State.new(), intent, body)
+		if twin.pay >= 0.99:
+			break
+	return [twin, kit, body, intent]
 
 
 func _view() -> void:

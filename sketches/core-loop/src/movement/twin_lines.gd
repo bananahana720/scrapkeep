@@ -17,8 +17,8 @@ const Augments := preload("res://src/movement/augments.gd")
 # The off line has SHOTS bites per time in the air (the ground refills them) and frays after
 # HOLD_MAX seconds, so it swings and slings but never hangs the ball over a gap for free.
 #
-# Only a real swing pays: a taut line on an airborne ball whose path the rope has turned by
-# MIN_TURN degrees. A tap at a post is not a swing.
+# Only a real swing pays: a taut line on an airborne ball that has swept MIN_TURN degrees round
+# its post. A tap at a post is not a swing.
 #
 # One call from the ball (rigid_ball.gd, after the augments) runs the whole rule, and the view
 # draws itself from this object's state. Nothing else reads or writes it.
@@ -45,7 +45,7 @@ const SLING_GAP := 0.45
 const SPEED_CEILING := 48.0
 # How far inside its length the ball may hang and the line still count as taut.
 const TAUT_SLACK := 0.5
-# How far, in degrees, the rope must turn the ball's path before a release pays.
+# How far, in degrees, the ball must sweep round its post on a taut line before a release pays.
 const MIN_TURN := 25.0
 
 static var _on = null
@@ -127,6 +127,8 @@ func step(kit, state, tuning, intent, body_state, forced := false) -> void:
 	if Augments.holding(kit) or (forced and not intent.harpoon_released):
 		_drop()
 		_harpoon_swung = false
+		_harpoon_turn = 0.0
+		_harpoon_anchor = Vector3.INF
 		pay = 0.0
 		return
 	var dt: float = body_state.step
@@ -143,23 +145,23 @@ func step(kit, state, tuning, intent, body_state, forced := false) -> void:
 		v = _pay(v, swing_pay(v, origin, _harpoon_anchor))
 	if not harpoon_world or kit.anchor != _harpoon_anchor:
 		_harpoon_turn = 0.0
-		_harpoon_prev = v
+		_harpoon_prev = origin - kit.anchor
 	var harpoon_taut: bool = harpoon_world and airborne and swinging(origin, kit.anchor, kit.rope)
 	if harpoon_taut:
-		_harpoon_turn += turned(_harpoon_prev, v)
-	_harpoon_prev = v
+		_harpoon_turn += turned(_harpoon_prev, origin - kit.anchor)
+	_harpoon_prev = origin - kit.anchor
 	_harpoon_swung = harpoon_taut and _harpoon_turn >= MIN_TURN
 	_harpoon_anchor = kit.anchor
 
 	if intent.twin_pressed and not hooked:
 		_fire(kit, origin, tuning.f("rope_range"))
-		_prev = v
+		_prev = origin - anchor
 	elif hooked and (intent.twin_released or not intent.twin_held):
 		if not airborne:
 			pass
 		elif both:
 			v = _sling(v, sling_pay(v, origin, anchor, kit.anchor, tension))
-		elif _swung:
+		elif _swung and swinging(origin, anchor, rope):
 			v = _pay(v, swing_pay(v, origin, anchor))
 		_drop()
 	if hooked:
@@ -173,8 +175,8 @@ func step(kit, state, tuning, intent, body_state, forced := false) -> void:
 		v = _rope(v, origin, tuning, dt, reeling)
 		var taut := airborne and swinging(origin, anchor, rope)
 		if taut:
-			_turn += turned(_prev, v)
-		_prev = v
+			_turn += turned(_prev, origin - anchor)
+		_prev = origin - anchor
 		_swung = taut and _turn >= MIN_TURN
 		if both and airborne:
 			pay = sling_pay(v, origin, anchor, kit.anchor, tension) / SLING_SPEED
@@ -189,15 +191,17 @@ func step(kit, state, tuning, intent, body_state, forced := false) -> void:
 
 
 # A line swings when it is taut (the ball hangs at the rope's length, not inside it) and the
-# rope has turned the ball's path by MIN_TURN degrees since the bite. A tap at a post, slack or
-# taut, is not a swing and pays nothing.
+# ball has swept MIN_TURN degrees round its post, taut and in the air, since the bite. A tap at
+# a post, slack or taut, is not a swing and pays nothing.
 static func swinging(origin: Vector3, at: Vector3, length: float) -> bool:
 	return origin.distance_to(at) >= length - TAUT_SLACK
 
 
-# Degrees between two velocities, 0 when either is near rest.
+# Degrees the ball swept round its post between two ticks, from the post-to-ball offsets. A
+# jump, a recoil or a claw pull changes the velocity but not the angle round the post, so only
+# the swing itself counts.
 static func turned(before: Vector3, after: Vector3) -> float:
-	if before.length() < 0.5 or after.length() < 0.5:
+	if before.length() < 0.1 or after.length() < 0.1:
 		return 0.0
 	return rad_to_deg(before.angle_to(after))
 

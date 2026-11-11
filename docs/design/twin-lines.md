@@ -37,7 +37,7 @@ So the ball already swings on one line. What it lacks is a reason to time the le
 | --- | --- | --- | --- |
 | Fire the off line | Middle mouse or mouse back button; right stick click on a pad | Bites the world where the reticle aims. An enemy under the reticle is looked past along the same ray. | Picking a post that gives a good arc |
 | Swing | Hold it | A pendulum, the same rope rule as the harpoon's world line | Reading the arc |
-| Clean release | Let go of a swinging line, the off line or the harpoon's world line | Only a real swing pays: the line taut (the ball within 0.5 m of its full length), the ball in the air, and the rope has turned the ball's path by 25 degrees since the bite, so a quick tap at a post pays nothing. Inside the up-swing window (climbing 0 to 45 degrees, fading over 15 more, faster than 8 m/s, below the post) the ball keeps 18 % more speed. A let-go outside it pays nothing and costs nothing. | Timing: this is the core of the swing |
+| Clean release | Let go of a swinging line, the off line or the harpoon's world line | Only a real swing pays: the line taut (the ball within 0.5 m of its full length), the ball in the air, and the ball has swept 25 degrees round its post on that taut line since the bite, so a quick tap at a post pays nothing, and neither does a jump right after one. Inside the up-swing window (climbing 0 to 45 degrees, fading over 15 more, faster than 8 m/s, below the post) the ball keeps 18 % more speed. A let-go outside it pays nothing and costs nothing. | Timing: this is the core of the swing |
 | Sling | Both lines on the world, hold Ctrl | Ctrl already winches the harpoon; with the off line out it reels both. Tension fills over 0.7 s. Let go of the off line within the gap between the posts and the ball is thrown on by up to 16 m/s along its path. | Drawing it and letting go in the gap |
 | Two shots | | The off line has two bites per time in the air; touching ground refills them. | Choosing your two posts |
 | Fray | | The off line holds 3.5 s, flickering rust over its last 0.8 s, then snaps with no payment. | Never hang; keep moving |
@@ -129,7 +129,7 @@ Each is a call I made that Andrew can overturn.
 8. Live for "a release pays", sand for the off line at rest, rust for fraying, a plucked string for a paid release.
 9. Middle mouse or the back button, and the right stick click, for the prototype only.
 10. Names: "off line", "clean release", "sling". Plain words for what each does.
-11. Only a real swing pays: taut, in the air, and turned 25 degrees since the bite. A ride, launch, deflect, mount or plant lets go of the off line unpaid.
+11. Only a real swing pays: taut, in the air, and swept 25 degrees round its post since the bite. A ride, launch, deflect, mount or plant lets go of the off line unpaid.
 12. A clean harpoon release stacks on the harpoon's own fling knob when a pilot has it; that is a reward for a build, left as is.
 
 ## Where the code is
