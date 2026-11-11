@@ -653,6 +653,26 @@ func _save(doc: Dictionary) -> void:
 		warn_once("run_save_" + store_error, "flow: run not saved (%s): %s" % [store_error, store.last_error])
 
 
+# A broken Warden clears the stage (BIBLE section 6: completed levels keep the build), so the
+# gates and the launch move the saved run on to the next stage's entrance with what was earned
+# here; a quit or crash before the landing used to Continue at the cleared stage's start and
+# lose it (systems audit SA-F1). The gate reward still unpicked at a quit is forfeit. The stage
+# before a world boss keeps its entrance save: the arena is not a stage entrance.
+func _save_cleared() -> void:
+	if store == null or _entrance.is_empty():
+		return
+	var cleared: int = ctx.run.stage
+	if ctx.stages.is_run_last(cleared) or (ctx.stages.is_world_last(cleared) and _world_boss(ctx.stages.world_of(cleared)) != null):
+		return
+	var doc: Dictionary = ctx.run.to_entrance_doc(_tree())
+	doc["stage"] = cleared + 1
+	doc["world"] = ctx.stages.world_of(cleared + 1)
+	for key in ["entry_position", "entry_velocity", "camera_yaw"]:
+		doc[key] = _entrance[key]
+	_entrance = doc
+	_save(doc)
+
+
 # carried is the velocity the ball arrives with: its horizontal speed is kept exactly
 # and turned onto the stage's entry heading, its vertical part is kept as it was.
 func enter_stage(index: int, carried: Vector3, retry: bool) -> void:
@@ -1367,3 +1387,5 @@ func _set_state(next: int) -> void:
 		_drop_lap()
 	state = next
 	ctx.events.flow_changed.emit(NAMES[next])
+	if next == GATES or next == LAUNCH:
+		_save_cleared()
