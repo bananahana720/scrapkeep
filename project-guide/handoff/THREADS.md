@@ -16,7 +16,7 @@ Thread ids lived in the project coordinator's memory. The 22 Oct PC-coordinator 
 | Role | Where | What it does |
 | --- | --- | --- |
 | Coordinator | project chat | Talks to Andrew, starts threads, admits and merges gate-passed PRs, promotes stages, writes the register |
-| Gate | cloud thread | Cuts each `stage/alpha-w<N>`, opens the wave board, stacks green PRs, runs the full gate once per promotion. Doesn't write fixes |
+| Gate | cloud thread | Cuts each `stage/alpha-w<N>`, opens the wave board, stacks green PRs, runs the wave gate per promotion and the full release gate once per sprint (ruling cy). Doesn't write fixes |
 | Unit and lane threads | cloud threads | One unit or lane each; branch from the current stage, open a draft PR, post a claim and receipts on the wave board |
 | Pass lanes | cloud threads | The pre-sitting improvement pass (ruling bo): design, look and feel, technicals and performance, workflows, testing. Workflows owns the runner files and the gate recipe; testing owns the tests, the bots, the end-to-end checks and the play findings list (ruling cn) |
 | Domain threads | cloud threads | Systems, sight and sound (Andrew, 9 Nov): each owns its domain's direction and how its work is checked. Sound owns the sound bible and systems the level conductor; the two share one contract, `sketches/core-loop/design-v3/sound/INTEGRATION.md` |

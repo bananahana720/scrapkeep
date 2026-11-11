@@ -9,7 +9,7 @@ import { place, sortChanges, testsToRerun } from "./carry.mjs";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import { WEEKLY_HEADER, chunks, classifyFailure, errorCounts, gateLists, importOutcome, nearLimit, numbered, parseSmokeLog, parseWeekly, parseWindow, renderReceipt, retime, shardVerdict, soloEnvironment } from "./shard.mjs";
-import { WEEKLY_MAX_DAYS, checkTally, checkWeeklySweep, expectedShards, isPass, planHead, tallyRows } from "./tally.mjs";
+import { WEEKLY_MAX_DAYS, checkTally, checkWeeklySweep, expectedShards, isDeferred, isPass, planHead, tallyRows } from "./tally.mjs";
 import { WEEKLY_FILE, checkWeekly } from "./weekly.mjs";
 
 const repoRoot = fileURLToPath(new URL("../..", import.meta.url));
@@ -185,6 +185,30 @@ test("only the shard tables of a plan are read", () => {
 
 test("a full tally passes", () => {
   assert.deepEqual(checkTally(tallyRows(plan(full)), counts), []);
+});
+
+test("the wave gate needs every test window and the scoped row, and lets a release shard wait", () => {
+  const wave = { ...counts, scope: "wave" };
+  const tests = ["| tests 1-5 | PASS. Receipt tests-1-5.md |", "| tests 6-10 | PASS. Receipt tests-6-10.md |"];
+  const scoped = "| scoped | PASS 4/4: world1_run_test, posture_bands_flume_test, bot_run_end_test, session_test. Receipt scoped.md |";
+  assert.deepEqual(checkTally(tallyRows(plan([...tests, scoped])), wave), [], "no row at all for bots, bands or the red team");
+  const deferred = ["| bands B | DEFERRED to the release gate; last read PASS on f165fbb4, receipt w36-f165fbb4/bands-B |", "| red team | DEFERRED to the release gate; last read CLEAR on f165fbb4, receipt w36-f165fbb4/redteam |"];
+  assert.deepEqual(checkTally(tallyRows(plan([...tests, scoped, ...deferred])), wave), []);
+  assert.match(checkTally(tallyRows(plan(tests)), wave).join("\n"), /no row for "scoped"/);
+  assert.match(checkTally(tallyRows(plan([tests[0], scoped])), wave).join("\n"), /non-bot tests 6 to 10 have no row/);
+  assert.match(checkTally(tallyRows(plan([...tests, "| scoped | RED world1_run_test fell. Receipt scoped.md |"])), wave).join("\n"), /"scoped" does not open with PASS/);
+  assert.match(checkTally(tallyRows(plan([...tests, scoped, "| bands A | RED posture_bands_flume_test. Receipt bands-A.md |"])), wave).join("\n"), /"bands A" does not open with PASS/, "a release shard that was read and is red still blocks");
+  assert.match(checkTally(tallyRows(plan([...tests, scoped, "| bands B | DEFERRED to the release gate |"])), wave).join("\n"), /"bands B" names no receipt/);
+  assert.match(checkTally(tallyRows(plan(["| tests 1-5 | DEFERRED. Receipt old.md |", tests[1], scoped])), wave).join("\n"), /"tests 1-5" does not open with PASS/, "a test window is never deferred");
+  assert.match(checkTally(tallyRows(plan([...tests, "| scoped | DEFERRED. Receipt old.md |"])), wave).join("\n"), /"scoped" does not open with PASS/, "the scoped row is never deferred");
+});
+
+test("the release gate defers nothing", () => {
+  const rows = full.map((row) => (row.startsWith("| bands B") ? "| bands B | DEFERRED to the release gate; last read PASS, receipt bands-B.md |" : row));
+  assert.match(checkTally(tallyRows(plan(rows)), counts).join("\n"), /"bands B" does not open with PASS/);
+  assert.match(checkTally(tallyRows(plan(full.slice(0, 5))), counts).join("\n"), /no row for "bands B"/);
+  assert.equal(isDeferred("**DEFERRED** to the release gate"), true);
+  assert.equal(isDeferred("PASS, deferred nothing"), false);
 });
 
 test("an empty verdict, a missing shard, a gap in the tests and a missing receipt are each named", () => {
