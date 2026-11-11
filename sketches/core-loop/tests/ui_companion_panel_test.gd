@@ -207,6 +207,7 @@ func _run() -> void:
 	await _frames(2)
 	_t.eq("same family refused, the first stays seated", _game.run.companion, _doc(all, ["primer_coil"]))
 	_t.check("family refusal line shown", panel.screen_text().contains(panel.LINE_FAMILY), panel.message)
+	_t.check("no title and no socket text; two marks", not panel.screen_text().contains("COMPANION") and not panel.screen_text().contains("Socket") and panel.socket_icons().size() == 2, panel.screen_text())
 	_t.eq("only the first piece staged", panel.staged, ["primer_coil"] as Array[String])
 	Push.key(root, KEY_3)
 	await _frames(2)
