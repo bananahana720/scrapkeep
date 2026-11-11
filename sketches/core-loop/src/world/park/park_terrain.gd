@@ -52,6 +52,10 @@ extends Node3D
 
 signal built
 
+# False in headless bot runs (bot_options.gd): the four render regions are only ever drawn, so a
+# stage builds its collider tiles and heights alone. Nothing reads a region but Terrain3D's draw.
+static var draw_regions := true
+
 const MaterialSlots := preload("res://src/presentation/material_slots.gd")
 const Palette := preload("res://src/core/palette.gd")
 const PylonBite := preload("res://src/world/pylon_bite.gd")
@@ -468,8 +472,8 @@ static func ground_assets() -> Object:
 func start(id: String, map: RefCounted, threaded: bool, render: Node3D = null) -> void:
 	map_id = id
 	_map = map
-	terrain3d = render
-	if render != null:
+	terrain3d = render if draw_regions else null
+	if terrain3d != null:
 		dress_floor(render, id)
 	baked = has_bake(id)
 	name = "Ground"
@@ -797,7 +801,8 @@ static func _read_zstd(path: String, size: int) -> PackedByteArray:
 
 func _build_piece(p: int) -> void:
 	if p < REGION_COUNT:
-		_regions[p] = _build_region(REGIONS[p])
+		if draw_regions:
+			_regions[p] = _build_region(REGIONS[p])
 	else:
 		_faces[p - REGION_COUNT] = _build_tile(p - REGION_COUNT)
 	if OS.get_thread_caller_id() != OS.get_main_thread_id():
@@ -959,7 +964,8 @@ func _attach_step(deadline: int) -> void:
 		add_child(_tiles_root)
 		# Without a render node (a parent off the scene tree) the collider still stands.
 		if terrain3d == null or terrain3d.data == null:
-			push_warning("park_terrain: %s has no Terrain3D render node; collider only" % map_id)
+			if draw_regions:
+				push_warning("park_terrain: %s has no Terrain3D render node; collider only" % map_id)
 			terrain3d = null
 			_regions.fill(null)
 			_next_region = REGION_COUNT

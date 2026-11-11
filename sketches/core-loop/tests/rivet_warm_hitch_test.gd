@@ -4,7 +4,9 @@ extends "res://tests/rivet_kit_test.gd"
 # alone, the terrain warm-up rebuilt every placement each cycle: 100 to 175 ms physics ticks
 # every 0.5 s while Rivet stood still (the revert of 8e40be12). Keyed by shape and transform, a
 # standing Rivet's warm-up finds everything cached after the first cycle. Counts, not times, so
-# it holds on any machine. Expected: 8 checks, including the count assertion.
+# it holds on any machine. Expected: 11 checks, including the count assertion.
+# 2026-11-11 (speed pass): a park's convex wedges share point lists, so their faces are searched
+# once per point list; the kept faces equal a fresh search, and another wedge gets its own.
 
 const PLACEMENTS := 24
 const CYCLES := 10
@@ -14,7 +16,7 @@ const MISSES_PER_CYCLE_MAX := 1
 
 func _initialize() -> void:
 	_t = T.new("rivet_warm_hitch_test")
-	_expected_checks = 8
+	_expected_checks = 11
 	super._initialize()
 
 
@@ -68,4 +70,20 @@ func _run() -> void:
 	_t.check("control: one-placement keying rebuilds every cycle", int(thrash["later"]) > MISSES_PER_CYCLE_MAX * CYCLES, "%d builds in %d cycles" % [int(thrash["later"]), CYCLES])
 	_t.check("control: it rebuilds a park's worth a cycle", int(thrash["later"]) >= (PLACEMENTS - 1) * CYCLES, "%d builds" % int(thrash["later"]))
 	old.finish()
+	_wedge_faces()
 	_finish()
+
+
+func _wedge_faces() -> void:
+	var wedge := PackedVector3Array([Vector3(0, 0, 0), Vector3(4, 0, 0), Vector3(0, 0, 3), Vector3(4, 0, 3),
+		Vector3(0, 2, 0), Vector3(4, 2, 0)])
+	var other := PackedVector3Array(wedge)
+	other[4] = Vector3(0, 3, 0)
+	other[5] = Vector3(4, 3, 0)
+	var first: Array = _kit._convex_faces(wedge)
+	_t.check("a wedge's faces are searched once per point list", is_same(first, _kit._convex_faces(PackedVector3Array(wedge))))
+	_t.check("the kept faces equal a fresh search", var_to_str(first) == var_to_str(_kit._convex_faces_uncached(wedge)) and first.size() == 5,
+		"%d faces" % first.size())
+	var second: Array = _kit._convex_faces(other)
+	_t.check("another wedge gets its own faces", not is_same(first, second)
+		and var_to_str(second) == var_to_str(_kit._convex_faces_uncached(other)) and var_to_str(second) != var_to_str(first))
