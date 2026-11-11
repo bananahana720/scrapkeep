@@ -11,7 +11,9 @@ extends SceneTree
 #
 # One line per seam and check: `HANDOVER <seam> <check> <value> pass <line> PASS|FAIL|OWED`.
 #   kind     the exit kind and the arrival kind are a declared pair (ParkSchema.HANDOVER_PAIRS)
-#   heading  angle between the exit heading and the arrival heading, atlas frame, at most HEADING_MAX_DEG
+#   heading  angle between the exit heading and the arrival heading, atlas frame, at most HEADING_MAX_DEG; a launch exit
+#            turns ball and camera through it in flight (launch.gd aim), so for a launch it is the rail's turn, at most
+#            RAIL_TURN_MAX_DEG
 #   speed    arrival speed over exit speed, at least SPEED_MIN
 #   ahead    angle between the exit heading and the line from the exit point to the arrival point, at most AHEAD_MAX_DEG
 # Wave 36 measured; wave 37 placed the bowl ahead and the flume in the atlas. A seam under a line today is listed in OWED with its measured value: it
@@ -28,15 +30,17 @@ const Arena := preload("res://src/boss/arena.gd")
 
 const PARK_DIR := "res://src/world/park"
 const HEADING_MAX_DEG := 30.0
+# Wave 37 call (Andrew can overturn): a turn up to 45 degrees over the rail's 0.45 s reads as a carried curve, not a
+# snap. Today's turns: dam to flume 31, flume to bowl 25. This line trusts that the rail does turn: ride_aim_test is what
+# catches a launch that does not (a boss module with no arrival_heading, a ball too slow to turn), at under 5 at the cut.
+const RAIL_TURN_MAX_DEG := 45.0
 const SPEED_MIN := 0.8
 const AHEAD_MAX_DEG := 45.0
 const CHECKS := ["kind", "heading", "speed", "ahead"]
 
-# Seam under its line today: "<seam> <check>" -> {"value": measured, "why": text}. Measured on base 501b2821a; the
-# heading entry re-read on 803d342e2 (wave 37), where the rail turns the 31 degrees in flight but the rows still state
-# the gate's 0 and the spawn's 31.
+# Seam under its line today: "<seam> <check>" -> {"value": measured, "why": text}. Empty since wave 37: every world 1
+# seam meets its lines (the last entry, dam_to_flume heading at 31, now reads against the rail's turn line).
 const OWED := {
-	"dam_to_flume heading": {"value": 31.0, "why": "the dam launch leaves at 0 degrees and the flume spawn faces 31; the rail turns the ball and camera through it in flight (launch.gd aim), which no row states"},
 }
 
 var t := T.new("handover_rows_test")
@@ -94,12 +98,17 @@ static func measure(exit_row: Dictionary, exit_atlas: Dictionary, arrive_row: Di
 	}
 
 
-static func meets(check: String, value: float) -> bool:
+# The heading line for an exit of this kind: a launch's rail turns in flight, so it holds the turn's size.
+static func heading_max(exit_kind: String) -> float:
+	return RAIL_TURN_MAX_DEG if exit_kind == "launch" else HEADING_MAX_DEG
+
+
+static func meets(check: String, value: float, exit_kind: String) -> bool:
 	match check:
 		"kind":
 			return value >= 1.0
 		"heading":
-			return value <= HEADING_MAX_DEG
+			return value <= heading_max(exit_kind)
 		"speed":
 			return value >= SPEED_MIN
 		"ahead":
@@ -107,12 +116,12 @@ static func meets(check: String, value: float) -> bool:
 	return false
 
 
-static func line_of(check: String) -> String:
+static func line_of(check: String, exit_kind: String) -> String:
 	match check:
 		"kind":
 			return "pair"
 		"heading":
-			return "<=%.0f" % HEADING_MAX_DEG
+			return "<=%.0f" % heading_max(exit_kind)
 		"speed":
 			return ">=%.2f" % SPEED_MIN
 	return "<=%.0f" % AHEAD_MAX_DEG
@@ -122,15 +131,15 @@ func _seam(seam: String, exit_row: Dictionary, exit_atlas: Dictionary, arrive_ro
 	var m := measure(exit_row, exit_atlas, arrive_row, arrive_atlas)
 	for check in CHECKS:
 		var key := "%s %s" % [seam, check]
-		var ok := meets(check, m[check])
+		var ok := meets(check, m[check], str(exit_row["kind"]))
 		var owed := OWED.has(key)
 		var status := "PASS" if ok else ("OWED" if owed else "FAIL")
-		print("HANDOVER %s %s %.1f pass %s %s" % [seam, check, m[check], line_of(check), status])
+		print("HANDOVER %s %s %.1f pass %s %s" % [seam, check, m[check], line_of(check, str(exit_row["kind"])), status])
 		if owed:
 			t.check("%s OWED still under its line (prune the entry when it meets it)" % key, not ok, "%.1f, expected about %.1f: %s" % [m[check], float(OWED[key]["value"]), OWED[key]["why"]])
 			t.check("%s OWED reading is the one recorded" % key, absf(m[check] - float(OWED[key]["value"])) < 1.0, "%.1f vs %.1f" % [m[check], float(OWED[key]["value"])])
 		else:
-			t.check("%s meets its line %s" % [key, line_of(check)], ok, "%.1f" % m[check])
+			t.check("%s meets its line %s" % [key, line_of(check, str(exit_row["kind"]))], ok, "%.1f" % m[check])
 
 
 func _planted() -> void:
@@ -140,8 +149,9 @@ func _planted() -> void:
 	var base := measure(exit_row, atlas, clean, atlas)
 	var all_pass := true
 	for check in CHECKS:
-		all_pass = all_pass and meets(check, base[check])
+		all_pass = all_pass and meets(check, base[check], str(exit_row["kind"]))
 	t.check("control: a clean seam meets all four lines", all_pass, str(base))
+	t.check("planted: a 40 degree turn passes on a launch's rail and fails off one", meets("heading", 40.0, "launch") and not meets("heading", 40.0, "gate"), "launch <=%.0f, other <=%.0f" % [heading_max("launch"), heading_max("gate")])
 	var bent := {
 		"kind": {"kind": "slide"},
 		"heading": {"heading_deg": 90.0},
@@ -154,7 +164,7 @@ func _planted() -> void:
 		var m := measure(exit_row, atlas, row, atlas)
 		var failed := []
 		for check in CHECKS:
-			if not meets(check, m[check]):
+			if not meets(check, m[check], str(exit_row["kind"])):
 				failed.append(check)
 		print("PLANTED %s failed %s" % [planted, str(failed)])
 		t.check("planted: %s fails its own check and no other" % planted, failed == [planted], str(failed))
