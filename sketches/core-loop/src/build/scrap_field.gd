@@ -343,13 +343,9 @@ func panel_count() -> int:
 	return _panels.size()
 
 
-# A panel floats this far over the ground it was dropped on.
-const PANEL_LIFT := 1.2
-
-
 # One grey panel dropped at `at`, waiting for the ball like a gear.
 func drop_panel(at: Vector3, panel_id: String, jackpot := false, cache := false) -> void:
-	var item := _add(at + Vector3.UP * PANEL_LIFT, _panel_mesh, _panel_material)
+	var item := _add(at + Vector3.UP * 1.2, _panel_mesh, _panel_material)
 	var column := MeshInstance3D.new()
 	column.mesh = _cache_column if cache else _panel_column
 	column.material_override = _panel_column_material
