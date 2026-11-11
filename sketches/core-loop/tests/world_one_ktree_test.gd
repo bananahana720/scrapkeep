@@ -25,7 +25,7 @@ const WorldOneCards := preload("res://src/core/trees/world_one_cards.gd")
 
 const BASE_EFFECT := {
 	"k_trapper": "Charges wait longer; five can be live",
-	"k_ghost": "Cloaked, enemies only spot you up close",
+	"k_ghost": "Cloaked, machines only spot you up close",
 	"k_tripwire": "Charges trigger from two metres away",
 	"k_demo_expert": "Demo slams scatter five charges",
 	"k_smoke_trail": "Gliding keeps you cloaked",
@@ -33,8 +33,8 @@ const BASE_EFFECT := {
 }
 const CODEX := {
 	"k_trapper": "Charges wait longer. Five can wait at once.",
-	"k_ghost": "Cloaked, enemies spot you only up close.",
-	"k_tripwire": "Charges spring when enemies approach.",
+	"k_ghost": "Cloaked, machines spot you only up close.",
+	"k_tripwire": "Charges spring when machines approach.",
 	"k_demo_expert": "Smash scatters five payloads.",
 	"k_smoke_trail": "Glide cloaked. Heavy fins steer harder.",
 	"k_ambush": "Throw payloads without breaking cloak.",

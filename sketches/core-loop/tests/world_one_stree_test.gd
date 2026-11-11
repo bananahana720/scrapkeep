@@ -36,8 +36,8 @@ const BASE_EFFECT := {
 	"s_cannonball": "Vault kicks set off a small discharge",
 	"s_beachhead": "Plant a pylon from twice as far",
 	"s_coil_hook": "Letting go of the rope flings you",
-	"s_live_wire": "The gauge fills twice as fast airborne",
-	"s_arc_nest": "Turret arcs reach one more enemy",
+	"s_live_wire": "Discharge fills twice as fast airborne",
+	"s_arc_nest": "Turret arcs reach one more machine",
 	"s_bulwark": "Mounted, crowd control slides off you",
 }
 const CODEX := {
