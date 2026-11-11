@@ -25,5 +25,18 @@
   ],
   "L4": [
     "sketches/core-loop/tests/hotwire_cue_parallel.sh"
-  ]
+  ],
+  "W1": {},
+  "W2": {},
+  "W4": {},
+  "W6": {
+    "sketches/core-loop/src/core/alpha_defs.gd": 4,
+    "sketches/core-loop/src/presentation/title_intros.gd": 21,
+    "sketches/core-loop/src/ui/radio_dial.gd": 1,
+    "sketches/core-loop/src/ui/settings_pages.gd": 1
+  },
+  "W7": {
+    "sketches/core-loop/src/core/class_def.gd": 1
+  },
+  "S8": {}
 }

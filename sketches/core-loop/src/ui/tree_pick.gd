@@ -29,7 +29,7 @@ const HEADING := "Rig your kit. Pick one."
 # mid-fight does not read as a frozen picture.
 const HELD := "Paused"
 # The toast that names the kit once it is taken, through the HUD's existing toast row.
-const TAKEN_TOAST := "Kit: %s"
+const TAKEN_TOAST := "%s taken"
 
 var depth := 0
 var _veil: ColorRect
@@ -132,6 +132,7 @@ func open(class_id: String, pick_depth: int, nodes: Array, path: Array, color: C
 	_offered = nodes
 	if _hidden.is_empty():
 		_hidden = PickQuiet.hush(get_parent())
+		_quiet_host(true)
 	for child in _row.get_children():
 		_row.remove_child(child)
 		child.queue_free()
@@ -169,6 +170,21 @@ func _shell() -> bool:
 	return game.tuning != null and game.tuning.option("hotwire_shell") == "on"
 
 
+# Leaving the tree with the pick open (a run ended, a test freed it) gives the screen back.
+func _exit_tree() -> void:
+	if not _hidden.is_empty():
+		PickQuiet.restore(_hidden)
+		_hidden = []
+		_quiet_host(false)
+
+
+# Moss's line, which the workshop this screen sits under owns, goes quiet with the rest.
+func _quiet_host(on: bool) -> void:
+	var host = get_parent()
+	if host != null and host.has_method("quiet"):
+		host.quiet(on)
+
+
 # Closes. chosen_index lifts that card with the success pop while the rest leaves.
 func close(chosen_index := -1) -> void:
 	if not _open:
@@ -177,6 +193,7 @@ func close(chosen_index := -1) -> void:
 	_open = false
 	_set_live(false)
 	PickQuiet.restore(_hidden)
+	_quiet_host(false)
 	_hidden = []
 	_play_out(chosen_index)
 

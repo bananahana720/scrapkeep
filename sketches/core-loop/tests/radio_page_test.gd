@@ -58,7 +58,16 @@ func _run() -> void:
 	_game._screen_key(KEY_R)
 	_t.check("R opens the mixtapes", screens.radio_open() and not screens.walk_live())
 	var page = screens.radio_page()
-	_t.eq("it counts found takes", page._count.text, "Takes found: 2 of %d" % takes.size())
+	# The crate lists every found track (two takes and a roam record here), so the count is every track, as the tape header spaces it.
+	var listable: Array = []
+	for station in Radio.dial():
+		for id in RadioTakes.on_station(station):
+			if not id in listable:
+				listable.append(id)
+	for id in RadioTakes.all_ids():
+		if not id in listable:
+			listable.append(id)
+	_t.eq("it counts the crate's found tracks over every track it can list", page._count.text, "3 / %d" % listable.size())
 	_t.check("the crate holds found tracks", page.crate_row(a) != null and page.crate_row(b) != null and page.crate_row("roam-1-1") != null)
 	_t.check("and never an unfound one", page.crate_row(takes[2]) == null)
 	page.crate_row(b).grab_focus()
@@ -99,9 +108,9 @@ func _run() -> void:
 	var menu = _game.get_node("PauseMenu")
 	menu.open()
 	await _frames(1)
-	_t.eq("the pause menu shows the radio on", menu.row("radio").text, "Radio: on")
+	_t.eq("the pause menu shows the radio on", menu.read("radio"), {"label": "Radio", "value": "", "pip": 1})
 	menu.press("radio")
-	_t.eq("its Radio row turns it off", [radio.station, menu.row("radio").text], [Radio.OFF, "Radio: off"])
+	_t.eq("its Radio row turns it off", [radio.station, menu.read("radio")], [Radio.OFF, {"label": "Radio", "value": "", "pip": 0}])
 	menu.press("radio")
 	_t.eq("and back on to the tape", radio.station, Radio.MIXTAPE)
 	menu.close()

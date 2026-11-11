@@ -40,7 +40,9 @@ const GLB := "res://assets/models/bosses/boss_pickup.glb"
 # Re-pinned 2026-11-10 (w33 gate, stacking #709 onto #708): both changes in boss.gd together. Was 51880956 (#708) / 8cfc6e3b (#709).
 # Re-pinned 2026-11-10 (second first-timer film, PF-17): plate_targets names each thing it marks ({at, what});
 # pickup meshes unchanged. Was 2304483c.
-const BASE_LOGIC_SHA := "9165b6e4be07adf4c17258caf1653bad32f7bfb66eb02b478891019217f63624"
+# Re-pinned 2026-11-11 (w36 gate, arena fix 101d6001): a dropped lobber stops its physics tick when the
+# arena is left, so it never ticks against the removed bowl; pickup meshes unchanged. Was 9165b6e4.
+const BASE_LOGIC_SHA := "2381fc95e181c32c6ae7981029b66c31496aeb00e2fd5c4de60eff89d967e0dc"
 
 var failures := 0
 var game

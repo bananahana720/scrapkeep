@@ -120,6 +120,8 @@ func tick(delta: float, context: Dictionary) -> bool:
 	if _aired < AIRTIME:
 		return false
 	if _premiere_from != "":
+		if bool(context.get("boss", false)):
+			return false
 		var back := _premiere_from
 		_premiere_from = ""
 		tune(back)
@@ -174,10 +176,11 @@ func toggle_pin() -> bool:
 
 
 # A fresh find goes straight on air on its own station, for one airing, then the dial goes
-# back where it was. Off stays off.
-func premiere(id: String) -> bool:
+# back where it was. Off stays off. The dial holds still through a boss or Warden fight (context.boss),
+# so the take is filed but the radio does not move itself under the player.
+func premiere(id: String, context := {}) -> bool:
 	var home := RadioTakes.station_of(id)
-	if station == OFF or home == "" or not home in dial():
+	if station == OFF or home == "" or not home in dial() or bool(context.get("boss", false)):
 		return false
 	var back := station if _premiere_from == "" else _premiere_from
 	tune(home)

@@ -15,7 +15,7 @@ const Icons := preload("res://src/ui/icons.gd")
 # percentage-only; of 50 seeded gate pairs each holds a part that raises punch or
 # transforms a pattern; rarity follows source (gate tiers by bonus cores, fabricator
 # common, vault rare, milestone relic); a vault kill adds exactly one rare part
-# with source "vault"; and the gate label reads "{name}: {verb}. Punch +{n}".
+# with source "vault"; and the gate label reads "{name}: {verb}. +{n} punch".
 # Balance loop B4: the tag table is pinned (parts per tag, kinetic down from 8 to 6),
 # and over 50 seeds every stage-2 gate pair for a build with no pattern transformer
 # offers Spiral Wave, Cross Split or Chain Arc, while a build that holds one, or any
@@ -153,7 +153,7 @@ func _check_vault() -> void:
 func _check_label() -> void:
 	var line := Parts.headline("slag_rounds")
 	var plain := Parts.headline("loose_trigger")
-	_report("gate label", line == "Slag Rounds: Shots land heavy. Punch +10" and plain == "Loose Trigger: Fire faster.",
+	_report("gate label", line == "Slag Rounds: Hit much harder. +10 punch" and plain == "Loose Trigger: Fire faster.",
 		"'%s' and '%s'" % [line, plain])
 
 

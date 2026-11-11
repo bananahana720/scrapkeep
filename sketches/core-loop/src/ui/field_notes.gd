@@ -11,6 +11,7 @@ const ThreatSheet := preload("res://src/ui/threat_sheet.gd")
 const GrowthSheet := preload("res://src/ui/growth_sheet.gd")
 const ScrapFrame := preload("res://src/ui/scrap_frame.gd")
 const LoreRows := preload("res://src/core/lore_rows.gd")
+const Glyphs := preload("res://src/ui/glyphs.gd")
 
 # Tab's field notes are pictures (playtest entry 8: the old page was "a whole essay of
 # text"): the controls as a keyboard and mouse with your pilot's keys lit, what hurts
@@ -20,19 +21,19 @@ const LoreRows := preload("res://src/core/lore_rows.gd")
 # SCREEN_KEYS) and the legend are no longer drawn on Tab; README.md mirrors them.
 # What the run asks of you and why, in one line: the title screen shows it too. The why is the game's
 # one line (ruling cj, design-v3/STORY-MAP.md): a machine runs the world and calls it perfect (the quote marks are the crew's), and the crew takes it back.
-const OBJECTIVE := "A machine runs your world \"perfectly\". Take it back: grow, crack Warden guards, smash their cores. Rout Brindle, still the Waking, quiet the Mind."
+const OBJECTIVE := "A machine runs your world \"perfectly\". Take it back. Get heavy, break the Wardens, smash their cores."
 
 const TESTING := [
-	"One run: title, pilot, then two stages in each of three worlds, each sealed by a Warden at its beacon. Grow, crack its guard, smash its open core, then roll through a reward gate and launch into the next stage. Each world's last stage launches you into its boss arena: rout Admiral Brindle, still the Waking, quiet the Mind. Quieting the Mind ends the run.",
-	"Growth is heft: scrap you roll up becomes mass, parts add more, and heft multiplies your punch. The plate at the top of the screen is the Warden's guard: hits fill its bar, a full bar staggers the Warden and opens its core, and a hit on the open core shatters one of its chunks. A light ball fills the bar slowly, so grow and come back.",
+	"A run goes from the title and a pilot through two stages in each of three worlds, each sealed by a Warden at its beacon. Grow, crack its guard, smash its open core, then roll through a reward gate and launch into the next stage. Each world's last stage launches you into its boss arena, where you rout Admiral Brindle, still the Waking and quiet the Mind. Quieting the Mind ends the run.",
+	"Scrap you roll up becomes heft, parts add more, and heft multiplies your punch. The plate at the top of the screen is the Warden's guard. Hits fill its bar, a full bar staggers the Warden and opens its core, and a hit on the open core shatters one of its chunks. A light ball fills the bar slowly, so grow and come back.",
 	"Outweigh fodder and you roll straight through it with no speed lost. Events and vaults drop bonus cores (the diamonds beside the objective) that raise the gate tiers.",
-	"Sable's pylon banks the speed you plant with. Space slingshots you off along the face with it plus a boost; E drops off where you are. The camera goes to the shoulder while mounted.",
-	"Death ends the run; the next one starts from world 1: N starts a new run as the same pilot. The one second chance is a part you earn, the Spare Frame, which leaves you at 20% health once a run. Hold R in play to abandon the run and start a new one.",
+	"Sable's pylon banks the speed you plant with. While mounted, jump slingshots you off along the face with a boost added, and use drops you off where you are. The camera goes to the shoulder while mounted.",
+	"Death ends the run, and the next one starts from world 1 as the same pilot. The one second chance is a part you earn, the Spare Frame, which leaves you at 20% health once a run. Hold restart in play to abandon the run and start a new one.",
 ]
 
 const QUESTIONS := [
 	"Was the Warden a goal or a chore? Did growth feel like enough growth?",
-	"Does the loop read without instructions: where to go, what the beacon wants, what a gate gives?",
+	"Does the loop read without instructions? Do you know where to go, what the beacon wants and what a gate gives?",
 	"Does the launch into the next stage feel like momentum carried, or like a load screen?",
 	"Is the shoulder view while mounted enough to see what you are shooting?",
 	"Does dying and starting again feel quick enough that you want one more run?",
@@ -40,11 +41,11 @@ const QUESTIONS := [
 
 const TRY_FIRST := [
 	"Pick Sable, Rivet or Kest with a number key or a click. You drop in already rolling; the Warden is at the beacon you can see from the drop, and a chevron at the screen edge points to it when it is out of view.",
-	"Roll the scrap lines on the way down: scrap is your armour and your weight, and a heavier ball hits harder.",
-	"Break the Warden: the line at the top of the screen says what it wants next. At the dam, ride the water sheet up the face into its core; at the flume, latch your line onto it and fire. Its gates open when it breaks; roll through one to take its part.",
-	"As Sable, hit a steep face at speed, press E, fire with left mouse, then hold and release Space to slingshot off.",
-	"Get scrapped on purpose, then hold R: a new run, the same pilot, from world 1.",
-	"Against Brindle, read the line at the top of the screen: shoot the crane magnets in phase 1, slam the vent caps in phase 2, bait his charge into the rim wall in phase 3 and hit the open cockpit, then ram or stomp the scooter when he runs.",
+	"Roll up the scrap lines on the way down. Scrap is your heft, and a heavier ball hits harder.",
+	"Break the Warden. The line at the top of the screen says what it wants next. At the dam, ride the water sheet up the face into its core. At the flume, hook your line onto it and fire. Its gates open when it breaks, and rolling through one takes its part.",
+	"As Sable, hit a steep face at speed, plant a pylon, fire, then hold and release jump to slingshot off.",
+	"Get scrapped on purpose, then hold restart for a new run as the same pilot from world 1.",
+	"Against Brindle, read the line at the top of the screen. Shoot the crane magnets in phase 1 and slam the vent caps in phase 2. In phase 3, bait his charge into the rim wall and hit the open cockpit. Then ram or stomp the scooter when he runs.",
 ]
 
 # The key list. The ten verbs come first, their keys read from the bindings table; the rest
@@ -54,28 +55,28 @@ const TRY_FIRST := [
 const VERB_ROWS := [
 	["roll", "drive, relative to where the camera looks. At top speed walls and overhang lips count as ground", "drive"],
 	["look", "look", "look"],
-	["jump", "jump and double jump. Sable: vault kick at a steep face in the air; mounted, hold and release to slingshot. Kest: hold falling to glide; hold in your own blast to rocket jump", "jump"],
-	["fire", "left click fires the picked slot: the weapon unless you picked 2 or 3. Sable and Rivet fire while held; Kest holds to aim a sticky charge, releases to throw. A special fills while held and fires on release", "fire"],
-	["select", "1, 2, 3 pick what left click does: 1 the weapon, 2 the special, 3 the line skill. A cast, or 3 s without one, returns to 1", "pick"],
-	["harpoon", "the harpoon: press bites the aim point, hold keeps the line, release flings. During a charge it cancels. With a line skill loaded, the next bite carries it", "harpoon"],
-	["haul", "haul the line in: a smash on a body, a winch on the world. With no line: the brake on the ground, the slam in the air", "haul"],
-	["boost", "your go verb: Sable's boost, Rivet's sprint (hold), Kest's smoke blink", "boost"],
-	["ultimate", "Q when the ring round the crosshair is full: ride a line or a launch to where you aim; your tech fires on the way. Space bails out", "ultimate"],
-	["interact", "interact with the device you face within 18 m (the lock holds after you pass it): hold it for anything with a cost or a bet, press it for a cache; at a relay post each hold raises the stake one step (up to x4, one more clears it) until you roll into its ring; inside an amber lane it arms the ride. Sable, with nothing in reach: plant a pylon on a steep face or a close wall hook; again to drop off", "use / ride"],
+	["jump", "jump and double jump. Sable vault-kicks off a steep face in the air, and mounted she holds and releases to slingshot. Kest holds falling to glide, and holds in his own blast to rocket jump", "jump"],
+	["fire", "left click fires your pick, the weapon unless you picked 2 or 3. Sable and Rivet fire while held; Kest holds to aim a sticky charge, releases to throw. A special fills while held and fires on release", "fire"],
+	["select", "1, 2, 3 pick what left click does. 1 is the weapon, 2 the special and 3 the line skill. A cast, or 3 s without one, returns to 1", "pick"],
+	["harpoon", "the harpoon. Press hooks the aim point, hold keeps the line, release flings. During a charge it cancels. With a line skill loaded, the next hook carries it", "harpoon"],
+	["haul", "haul the line in. It smashes on a body and winches on the world. With no line it brakes on the ground and slams in the air", "haul"],
+	["boost", "your go verb, which is Sable's boost, Rivet's sprint (hold) and Kest's smoke blink", "boost"],
+	["ultimate", "your ultimate, when the ring round the crosshair is full. It rides a line or a launch to where you aim and your tech fires on the way. Jump bails out", "ultimate"],
+	["interact", "interact with the device you face within 18 m (the lock holds after you pass it). Hold it for anything with a cost or a bet, press it for a cache. At a relay mast each hold raises the bet one step (up to x4, one more clears it) until you roll into its ring. Inside an amber lane it arms the ride. Sable, with nothing in reach, plants a pylon on a steep face or a close wall hook, and again to drop off", "use / ride"],
 ]
 const MENU_ROWS := [
 	{"keys": "Tab (hold)", "does": "field notes and the codex; the game pauses while held; Q / E switch pages", "caps": ["key_tab"], "short": "notes"},
-	{"keys": ". , / ;", "does": "radio: . next station, , back, / skip the track, ; keep the track on through a boss"},
+	{"keys": ". , / ;", "does": "the radio, with . for the next station, , for back, / to skip the track and ; to keep the track on through a boss"},
 	{"keys": "F", "does": "fire the racked active, when actives are on (the D-pad down on a pad); nothing is racked otherwise"},
 	{"keys": "- / =", "does": "music volume down / up (also in the pause menu)"},
 	{"keys": "[ / ]", "does": "effects volume down / up (also in the pause menu)"},
 	{"keys": "M", "does": "mute or unmute"},
-	{"keys": "P / Esc", "does": "pause menu: resume, restart the run, field notes, music and effects volume; quit with X (hold)", "caps": ["key_p"], "short": "pause"},
-	{"keys": "R (hold)", "does": "restart the run: a new run as the same pilot, from world 1; release before holding again", "caps": ["key_r"], "short": "hold restart"},
-	{"keys": "F1", "does": "launched with --dev only: tuning panel (frees the mouse)"},
-	{"keys": "F3", "does": "launched with --dev only: frame smoothing on/off for this session (Settings, Display keeps it)"},
-	{"keys": "F4", "does": "launched with --dev only: save every tuning value to user://tuning-<time>.json"},
-	{"keys": "Esc", "does": "outside play: quit"},
+	{"keys": "P / Esc", "does": "opens the pause menu with resume, new run, field notes, music and effects volume, and quit with X (hold)", "caps": ["key_p"], "short": "pause"},
+	{"keys": "R (hold)", "does": "new run as the same pilot, from world 1. Release before holding again", "caps": ["key_r"], "short": "hold restart"},
+	{"keys": "F1", "does": "with --dev only, the tuning panel (frees the mouse)"},
+	{"keys": "F3", "does": "with --dev only, frame smoothing on or off for this session (Settings, Display keeps it)"},
+	{"keys": "F4", "does": "with --dev only, saves every tuning value to user://tuning-<time>.json"},
+	{"keys": "Esc", "does": "quit, outside play"},
 ]
 static var CONTROLS := controls()
 
@@ -87,20 +88,36 @@ static var CONTROLS := controls()
 # in play, when first met (field_tips.gd). A cast is a slot with a cast time: the Q variants and
 # Gather Plate (ability_state.gd VARIANT_CAST).
 const FIELD_RULES := [
-	{"id": "grip", "words": "Wall grip: stay fast, climb walls"},
-	{"id": "jam", "words": "Jam: mats lock slots 2, 3"},
-	{"id": "cast", "words": "Cast time: knocks drop casts"},
-	{"id": "radio", "words": "Radio: . next , back / skip"},
-	{"id": "stake", "words": "Stake: hold E at relay mast"},
-	{"id": "active", "words": "F: fire your active"},
+	{"id": "grip", "say": "Stay fast against a wall and you climb it."},
+	{"id": "radio", "say": "Radio", "keys": [["cl_radio_next", "next"], ["cl_radio_prev", "back"], ["cl_radio_skip", "skip"]]},
+	{"id": "stake", "say": "Hold", "verb": "interact", "then": "at a relay mast to raise the bet."},
+	{"id": "active", "verb": "active", "then": "fire your active"},
 ]
 
 const SCREEN_KEYS := [
-	{"keys": "Space", "does": "title: start; summary: choose a pilot (pad B on the summary)"},
-	{"keys": "H", "does": "title: how to play, and back"},
-	{"keys": "1, 2, ...", "does": "pilot select: one number per pilot card, left to right"},
-	{"keys": "N", "does": "summary: new run, same pilot (pad A on the summary)"},
+	{"keys": "Space", "does": "starts from the title and chooses a pilot on the summary (pad B on the summary)"},
+	{"keys": "H", "does": "how to play from the title, and back"},
+	{"keys": "1, 2, ...", "does": "one number per pilot card on pilot select, left to right"},
+	{"keys": "N", "does": "new run as the same pilot, on the summary (pad A on the summary)"},
 ]
+
+# A rule as credits_hint.gd parts: its words, with each key drawn as the keycap the bindings give now
+# (a rebind moves the cap), never a typed letter. The jam and cast rules are the picture pages' captions.
+static func rule_parts(rule: Dictionary) -> Array:
+	var parts := []
+	if rule.has("say"):
+		parts.append({"say": rule["say"]})
+	for pair in rule.get("keys", []):
+		var cap := Glyphs.of_action(pair[0], "key_" + OS.get_keycode_string(Bindings.EXTRA_ACTIONS[pair[0]]["keys"][0]).to_lower())
+		parts.append({"cap": cap, "say": Keycap.label(cap)})
+		parts.append({"say": pair[1]})
+	if rule.has("verb"):
+		var glyph := Glyphs.of(rule["verb"])
+		parts.append({"cap": glyph, "say": Keycap.label(glyph)})
+	if rule.has("then"):
+		parts.append({"say": rule["then"]})
+	return parts
+
 
 # The key list in display order: a row per verb with its table keys and caps, then the menu keys.
 static func controls() -> Array:
@@ -353,7 +370,7 @@ func render_page(page: String) -> int:
 	var head := Label.new()
 	head.add_theme_font_size_override("font_size", 20)
 	head.add_theme_color_override("font_color", style["color"])
-	head.text = "%s %s  ·  %d of %d found" % [SHAPE_GLYPHS.get(style["shape"], ""), style["label"],
+	head.text = "%s %s, %d of %d found" % [SHAPE_GLYPHS.get(style["shape"], ""), style["label"],
 		listed.filter(func(e): return e["known"]).size(), listed.size()]
 	_codex_page.add_child(head)
 	if listed.is_empty():
@@ -436,7 +453,8 @@ static func hint_card_text(glyph: String, hint: String, clue: String) -> String:
 	if hint != "":
 		lines.append(hint)
 	if clue != "" and not hint.contains(clue):
-		lines.append("clue: " + clue)
+		# A clue that opens with "+" carries on from its hint ("Knocked machines" / "+ three down").
+		lines.append(clue if clue.begins_with("+") else "Try " + clue)
 	return "\n".join(lines)
 
 

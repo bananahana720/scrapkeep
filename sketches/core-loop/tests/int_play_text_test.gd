@@ -70,8 +70,8 @@ func _check_words() -> void:
 	var title: String = _s["title"]
 	var notes := "\n".join(FieldNotes.TESTING)
 	var keys := FieldNotes.SCREEN_KEYS.map(func(k): return k["keys"])
-	_report("objective taught", title.contains(FieldNotes.OBJECTIVE) and FieldNotes.OBJECTIVE.contains("Warden")
-			and FieldNotes.OBJECTIVE.contains("guard") and not FieldNotes.OBJECTIVE.contains("plating") and FieldNotes.OBJECTIVE.contains("Brindle")
+	_report("objective taught", title.contains(FieldNotes.OBJECTIVE) and FieldNotes.OBJECTIVE.contains("Take it back") and FieldNotes.OBJECTIVE.contains("Wardens")
+			and not FieldNotes.OBJECTIVE.contains("plating")
 			and not title.contains("Charge each beacon") and notes.contains("Brindle") and not notes.contains("a summary after stage 3")
 			and "N" in keys and not ("T" in keys) and not notes.contains("T replays that world's last stage"),
 		"title reads \"%s\"; notes name Brindle %s and teach the arena's T %s; screen keys %s (N expected, T not)"

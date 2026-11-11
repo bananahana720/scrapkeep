@@ -132,7 +132,7 @@ func _run() -> void:
 		named[row["id"]] = row["name"]
 	_t.eq("00b the five names", [named.get("loaded_line"), named.get("set_piece"), named.get("set_piece_core"),
 		named.get("set_piece_cash_in"), named.get("set_piece_breakout")],
-		["Loaded Line", "Set Piece", "Curtain Call", "Cash In", "Breakout"])
+		["Loaded Line", "First Ultimate", "Curtain Call", "Cash In", "Breakout"])
 
 	# --- loaded_line -------------------------------------------------------------------------
 	await _home()
@@ -162,13 +162,13 @@ func _run() -> void:
 	_fill()
 	_ult.press(_aim_at(_ground(20.0, 0.5)))
 	await _ride_out()
-	_t.eq("05 the first landing opens Set Piece and nothing else", [_count("set_piece"), _count("set_piece_cash_in"),
+	_t.eq("05 the first landing opens First Ultimate and nothing else", [_count("set_piece"), _count("set_piece_cash_in"),
 		_count("set_piece_core"), _count("set_piece_breakout")], [1, 0, 0, 0])
 	await _home()
 	_fill()
 	_ult.press(_aim_at(_ground(20.0, 0.5)))
 	await _ride_out()
-	_t.eq("06 a second landing does not reopen Set Piece", _count("set_piece"), 1)
+	_t.eq("06 a second landing does not reopen First Ultimate", _count("set_piece"), 1)
 
 	# --- set_piece_cash_in -------------------------------------------------------------------
 	await _home()

@@ -32,7 +32,7 @@ func _init() -> void:
 	detail.add_theme_font_size_override("font_size", 20)
 	detail.add_theme_color_override("font_color", Palette.SAND)
 	add_child(detail)
-	back = ChoiceButton.new("back", "key_a", "Back")
+	back = ChoiceButton.new("back", "key_esc", "Back")
 	back.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	add_child(back)
 

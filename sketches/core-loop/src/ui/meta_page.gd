@@ -11,7 +11,7 @@ const ChoiceButton := preload("res://src/ui/choice_button.gd")
 # top, then one row per node. An opened node shows an amber star, its name and what it gives;
 # a closed one a slate ring, its name, what it gives and, as its note, the one-run thing that
 # opens it (its grant row's text). Nothing is bought here, so no row shows a price. Every word
-# is a table row. Back presses A. The achievements page's colours and shapes, so a star means
+# is a table row. Back sits on Esc. The achievements page's colours and shapes, so a star means
 # the same thing on both pages.
 
 const ROW_WIDTH := 640.0
@@ -38,7 +38,7 @@ func _init() -> void:
 	_list.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	_list.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_list)
-	back = ChoiceButton.new("back", "key_a", "Back")
+	back = ChoiceButton.new("back", "key_esc", "Back")
 	back.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	add_child(back)
 

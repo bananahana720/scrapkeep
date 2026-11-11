@@ -1,5 +1,8 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import path from "node:path";
 import test from "node:test";
+import { fileURLToPath } from "node:url";
 import {
   applyBaseline,
   baselineFrom,
@@ -17,6 +20,7 @@ import {
   lintL10,
   parseTuning,
 } from "./sketch-lint.mjs";
+import { SOURCES, lintFile, lintS8, lintS8Text, lintString, lintWords, parseBoundKeys, parseNames, readRows, readUi } from "./sketch-lint-words.mjs";
 
 test("L7 flags a game file that loads from tools/, and passes src paths and comments", () => {
   assert.equal(lintL7("a.gd", 'const P := preload("res://tools/park_graph.gd")\nvar s = load("res://tools/x.gd")\n').length, 2);
@@ -226,7 +230,7 @@ test("the baseline silences listed offenders and shrinks only", () => {
   assert.match(out[1].message, /remove from baseline/);
   assert.match(out[2].message, /file is gone/);
   assert.deepEqual(applyBaseline([{ rule: "L5", path: "q", line: 1, message: "m" }], { L5: ["q"] }, () => true).length, 1);
-  assert.deepEqual(baselineFrom(findings), { L1: ["a.gd", "new.gd"], L2: [], L3: [], L4: [] });
+  assert.deepEqual(baselineFrom(findings), { L1: ["a.gd", "new.gd"], L2: [], L3: [], L4: [], W1: {}, W2: {}, W4: {}, W6: {}, W7: {}, S8: {} });
 });
 
 const wardenDress = (light) => `func _dress_warden(warden) -> void:
@@ -260,4 +264,131 @@ test("L6 flags a stale owner entry", () => {
   const stale = lintL6Owners(new Set(), "s", owners);
   assert.equal(stale.length, 1);
   assert.match(stale[0].message, /remove the entry/);
+});
+
+// Ruling cx word rules (sketch-lint-words.mjs), checked against the real names table and bindings.
+const sketchDir = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "sketches", "core-loop");
+const realNames = readFileSync(path.join(sketchDir, "design-v3", "NAMES.md"), "utf8");
+const wordCtx = { bans: parseNames(realNames), keys: parseBoundKeys(readFileSync(path.join(sketchDir, "src", "core", "bindings.gd"), "utf8")) };
+const codesOf = (value, voice = false) => [...lintString("x.gd", 1, value, { ...wordCtx, voice }), ...lintS8Text("x.gd", 1, value)].map((item) => item.rule);
+
+test("words: a planted bad string for every rule is reported with its code", () => {
+  const planted = [
+    ["W1", "An epic blast that hits hard"],
+    ["W1", "Unleash the shot"],
+    ["W2", "Get ready"],
+    ["W2", "Are you sure?"],
+    ["W2", "Scrap is up. Good luck out there, pilot."],
+    ["W4", "Pick a class"],
+    ["W4", "Hold E to mount the pylon"],
+    ["W4", "F fires your active."],
+    ["W4", "Radio: [.] next station"],
+    ["W4", "U empties. Esc leaves."],
+    ["W6", "Roll fast — hit hard"],
+    ["W6", "Roll fast – hit hard"],
+    ["W6", "Jam field · Locks picks 2 and 3."],
+    ["W6", "Wait for it..."],
+    ["W6", "Wait for it…"],
+    ["W6", "Go now!"],
+    ["W6", "Press “go”"],
+    ["W6", "Cast time: a knock drops it"],
+    ["W6", "KEPT IN YOUR TOTALS"],
+    ["S8", "Esc to close"],
+  ];
+  for (const [code, value] of planted) {
+    assert.ok(codesOf(value).includes(code), `${code} not reported for "${value}": ${codesOf(value).join(",")}`);
+  }
+  const bans = wordCtx.bans.map((entry) => entry.ban);
+  assert.ok(bans.length >= 15, `NAMES.md Lint column parsed to ${bans.length} bans`);
+  for (const ban of bans) assert.ok(codesOf(`Now ${ban} works here`).includes("W7"), `W7 not reported for "${ban}"`);
+  assert.ok(!bans.includes("detonation"), "detonation is Kest's ability name and is not a safe plain ban");
+});
+
+test("words: S8 flags a Back button on another key or under another name, and passes Back on Esc", () => {
+  const rules = (line) => lintS8("x.gd", line).map((item) => item.rule);
+  assert.deepEqual(rules('\tback = ChoiceButton.new("back", "key_h", "Back")\n'), ["S8"]);
+  assert.deepEqual(rules('\tclose = ChoiceButton.new("close", "key_esc", "Close build")\n'), ["S8"]);
+  assert.deepEqual(rules('\tvar b := ChoiceButton.new("back", "key_esc", "Return")\n'), ["S8"]);
+  assert.deepEqual(rules('\tback = ChoiceButton.new("back", "key_esc", "Back")\n'), []);
+  assert.deepEqual(rules('\t_buttons.add_child(ChoiceButton.new("launch", "key_space", "Launch"))\n'), []);
+});
+
+test("words: the held-out clean set of accepted lines draws no finding", () => {
+  // Present text on the wave 36 base, or named accepted by the coordinator. A finding here means the rule is wrong.
+  const plain = [
+    "Gates offer better parts", "Hull not returned.", "New run", "Back", "Settings", "Continue", "Choose pilot",
+    "Replay stage %d", "Loose cannons, all of them. Pick one.", "No SPIL-9 pieces yet. They turn up in runs.",
+    "The saved run would not load. %s", "Scrap per machine", "Clocked out", "Find the Warden", "Keep playing.",
+    "MOSS'S JUKEBOX", "Third bounce in 4s strikes double", "Every 8s, next hit +60%", "Kills in cloak extend it 0.4s",
+    "%d:%02d", "3:42", "Ultimate becomes Ball Lightning.", "ULTIMATE", "Detonation line recharges 25% faster",
+    "Reactor Warden pulse", "A small efficiency fee. You're welcome.", "Rare pressing. Found in a cartridge slot.",
+    "Recorded at full speed. No refunds.", "Moss's copy. The label is a ration sticker.", "Esc", "P / Esc",
+  ];
+  const voice = [
+    "Tragic, right?", "This is the sad part.", "%s hull. Moss packed a spare.", "Meanwhile, at %s.", "SHIFT COMPLETE",
+    "THE WAKING STILLED", "ADMIRAL BRINDLE", "06:00", "Eyesight", "theoretical",
+    "Shift log, after hours: found the pump crew's break room behind the bench wash. Kettle still warm.",
+    "Mind: Welcome home, Kest. I kept your sky. Commit to staying.",
+    "Toe apron stencil: STAND CLEAR OF THE FACE.",
+  ];
+  assert.ok(plain.length + voice.length >= 25);
+  for (const value of plain) assert.deepEqual(codesOf(value), [], `flagged accepted "${value}"`);
+  for (const value of voice) assert.deepEqual(codesOf(value, true), [], `flagged accepted voice "${value}"`);
+});
+
+test("words: extraction reads player text and skips keys, node paths, signals, ids and debug prints", () => {
+  const fixture = [
+    "const Palette := preload(\"res://src/core/palette.gd\")",
+    "const TIPS := {\"grip_tip\": \"Fast balls cling to walls.\"}",
+    "signal opened(\"page_opened\")",
+    "func _ready() -> void:",
+    "\tvar node := get_node(\"Panel/VBox/Title\")",
+    "\t%Title.text = \"Roll up scrap\"",
+    "\tprint(\"debug: Title text set\")",
+    "\temit_signal(\"page_opened\")",
+    "\tvar row: Dictionary = ROWS.get(\"find_warden\", {})",
+    "\tlabel.text = String(row.get(\"words\", \"\"))",
+    "\t# label.text = \"A commented line\"",
+    "\tbutton = ChoiceButton.new(\"back\", \"key_esc\", \"Back\")",
+    "\tgame.hud.toast(\"Gate open\")",
+    "const NOTE_KEY := \"hud:note\"",
+    "const NOTE_WORDS := \"Note: read it\"",
+  ].join("\n");
+  assert.deepEqual(readUi(fixture).map((item) => item.value), ["Fast balls cling to walls.", "Roll up scrap", "Back", "Gate open", "Note: read it"]);
+  const rows = '{"id": "s_bulwark", "name": "Bulwark", "effect": "Mounted, crowd control slides off you", "key": "movement",\n\t"icon": "ab_sable_mount"}';
+  assert.deepEqual(readRows(rows, { fields: ["name", "effect"] }), [{ line: 1, value: "Bulwark" }, { line: 1, value: "Mounted, crowd control slides off you" }]);
+});
+
+test("words: the coverage floor fails an empty source list and a source that matches no file", () => {
+  const empty = lintWords({ sketchDir, prefix: "sketches/core-loop", names: realNames, bindings: readFileSync(path.join(sketchDir, "src", "core", "bindings.gd"), "utf8"), sources: [] });
+  assert.equal(empty.total, 0);
+  assert.deepEqual(empty.findings.map((item) => item.rule), ["COVERAGE"]);
+  assert.match(empty.findings[0].message, /under the floor of 2650/);
+  const missing = lintWords({ sketchDir, prefix: "p", names: realNames, bindings: readFileSync(path.join(sketchDir, "src", "core", "bindings.gd"), "utf8"), sources: [{ path: "src/ui/no_such_page.gd", read: "ui" }], floor: 0 });
+  assert.deepEqual(missing.findings.map((item) => `${item.rule} ${item.path}`), ["COVERAGE p/src/ui/no_such_page.gd"]);
+});
+
+test("words: a bad line planted in a real UI file is found by the same reader and rules", () => {
+  const rel = "src/ui/camp_menu.gd";
+  const text = readFileSync(path.join(sketchDir, rel), "utf8");
+  const source = SOURCES.find((entry) => entry.read === "ui");
+  const before = lintFile(rel, text, source, wordCtx);
+  const lines = text.split("\n");
+  const at = lines.findIndex((line) => line.startsWith("func "));
+  lines.splice(at + 1, 0, '\tgame.hud.toast("Get ready — epic loot!")');
+  const after = lintFile(rel, lines.join("\n"), source, wordCtx);
+  const added = after.findings.filter((item) => item.line === at + 2).map((item) => item.rule).sort();
+  assert.deepEqual(added, ["W1", "W2", "W6", "W6"]);
+  assert.equal(after.read, before.read + 1);
+});
+
+test("words: the count baseline holds a file at its count, fails it above, and asks to lower or drop it below", () => {
+  const hit = (path) => ({ rule: "W6", path, line: 1, message: "m" });
+  const baseline = { W6: { "a.gd": 2, "b.gd": 2, "c.gd": 1 } };
+  const out = applyBaseline([hit("a.gd"), hit("a.gd"), hit("b.gd"), hit("b.gd"), hit("b.gd"), hit("d.gd")], baseline, () => true);
+  assert.deepEqual(out.map((item) => `${item.rule} ${item.path}`).sort(), ["BASELINE c.gd", "W6 b.gd", "W6 b.gd", "W6 b.gd", "W6 d.gd"]);
+  assert.match(out.find((item) => item.path === "b.gd").message, /3 in this file, baseline 2/);
+  const lower = applyBaseline([hit("a.gd")], { W6: { "a.gd": 2 } }, () => true);
+  assert.match(lower[0].message, /W6 fell to 1 from 2: lower the baseline to 1/);
+  assert.deepEqual(baselineFrom([hit("a.gd"), hit("a.gd")]).W6, { "a.gd": 2 });
 });

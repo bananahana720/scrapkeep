@@ -9,6 +9,7 @@ const UiProfile := preload("res://src/ui/ui_profile.gd")
 const Threat := preload("res://src/combat/threat_grammar.gd")
 const Icons := preload("res://src/ui/icons.gd")
 const Parts := preload("res://src/build/parts.gd")
+const ScreenBusy := preload("res://src/ui/screen_busy.gd")
 
 # The callout that shows why a synergy fired, through the real game on the slice table. Every
 # CAUSE_ROWS id is fired and must draw a callout in its row's shape and colour with its two
@@ -61,6 +62,18 @@ func _steps(count: int) -> void:
 func _fresh() -> void:
 	_why.clear()
 	_why._calm_left = 0.0
+
+
+# The card's gate is the screen's quiet clock (screen_busy.gd, wave 36): it is stepped by hand with the
+# banner, so "3 s of calm" is counted on the same clock as before.
+func _card_step() -> void:
+	_game.ctx.screen_busy.step(DT)
+	_banner._process(DT)
+
+
+# The quiet clock already past the finds' hold, as the old banner clock set to zero was.
+func _card_calm() -> void:
+	_game.ctx.screen_busy.step(ScreenBusy.FIND_HOLD)
 
 
 func _threat() -> Node:
@@ -222,38 +235,39 @@ func _run() -> void:
 
 	_banner.dismiss(true)
 	_banner.set_process(false)
+	_game.ctx.screen_busy.set_process(false)
 	_banner.cards = true
 	_banner.profile = UiProfile.new(_game.storage_dir)
 	var hostile_two := _threat()
-	_banner._process(DT)
+	_card_step()
 	_banner.show_discovery("Held one", "build", "line", "New synergy", "wy2_a")
 	var held_in_fight: bool = _banner.held() and not _banner.showing()
 	hostile_two.free()
 	for i in 170:
-		_banner._process(DT)
+		_card_step()
 	var held_before_3s: bool = _banner.held() and not _banner.showing()
 	for i in 20:
-		_banner._process(DT)
+		_card_step()
 	_check("WY2-6 telegraph", held_in_fight and held_before_3s and _banner.showing() and _banner.last_style == "card",
 		"raised in a fight it was held (%s), still held 2.83 s after the telegraph ended (%s), on screen after 3.17 s (%s)" % [held_in_fight, held_before_3s, _banner.showing()])
 	_banner.dismiss(true)
-	_banner._process(DT)
+	_card_step()
 	events.player_hit.emit(1.0, "test")
 	_banner.show_discovery("Held two", "build", "line", "New synergy", "wy2_b")
 	var held_after_hit: bool = _banner.held()
 	for i in 170:
-		_banner._process(DT)
+		_card_step()
 	var held_before: bool = _banner.held()
 	for i in 20:
-		_banner._process(DT)
+		_card_step()
 	_check("WY2-6 damage", held_after_hit and held_before and _banner.showing(),
 		"raised just after damage it was held (%s), held at 2.83 s (%s), on screen at 3.17 s (%s)" % [held_after_hit, held_before, _banner.showing()])
 	_banner.dismiss(true)
 	for i in 200:
-		_banner._process(DT)
+		_card_step()
 	_banner.show_discovery("Calm one", "build", "line", "New synergy", "wy2_c")
 	var at_once: bool = _banner.showing()
-	_banner._process(DT)
+	_card_step()
 	_check("WY2-6 calm", at_once and _banner.showing(), "raised when calm it showed at once (%s) and on the next frame (%s)" % [at_once, _banner.showing()])
 	_banner.dismiss(true)
 	events.player_hit.emit(1.0, "test")
@@ -264,20 +278,20 @@ func _run() -> void:
 
 	# A retry rewinds the stage: a held card goes without being marked seen.
 	_banner.dismiss(true)
-	_banner._calm_left = 0.0
+	_card_calm()
 	events.player_hit.emit(1.0, "test")
 	_banner.show_discovery("Held retry", "build", "line", "New synergy", "wy2_retry")
 	var held_before_retry: bool = _banner.held()
 	events.stage_entered.emit(1, true)
 	var gone_after_retry: bool = not _banner.held() and _banner.queued() == 0 and not _banner.showing()
-	_banner._calm_left = 0.0
+	_card_calm()
 	for i in 5:
-		_banner._process(DT)
+		_card_step()
 	var never_shown: bool = not _banner.showing() and not _banner.profile.discovered("wy2_retry")
 	_check("WY2 retry drops a held card", held_before_retry and gone_after_retry and never_shown,
 		"held (%s), gone after a retry stage (%s), never shown or marked seen (%s)" % [held_before_retry, gone_after_retry, never_shown])
 	_banner.dismiss(true)
-	_banner._calm_left = 0.0
+	_card_calm()
 	events.player_hit.emit(1.0, "test")
 	_banner.show_discovery("Held next", "build", "line", "New synergy", "wy2_next")
 	events.stage_entered.emit(1, false)
@@ -285,24 +299,24 @@ func _run() -> void:
 	_banner.dismiss(true)
 
 	# A held card never shows while the tree is paused.
-	_banner._calm_left = 0.0
+	_card_calm()
 	paused = true
 	_banner.show_discovery("Paused one", "build", "line", "New synergy", "wy2_pause")
 	for i in 240:
-		_banner._process(DT)
+		_card_step()
 	var held_paused: bool = _banner.held() and not _banner.showing() and not _banner.profile.discovered("wy2_pause")
 	paused = false
-	_banner._process(DT)
+	_card_step()
 	_check("WY2 pause holds a card", held_paused and _banner.showing(),
 		"after 4 s of paused calm the card was held and unseen (%s); one frame after unpausing it showed (%s)" % [held_paused, _banner.showing()])
 	_banner.dismiss(true)
 
 	# One definition of calm: the callout's fight and the card's calm read the same fact.
-	_banner._calm_left = 0.0
+	_card_calm()
 	_fresh()
 	var live_threat := _threat()
 	_why.step(DT)
-	_banner._process(DT)
+	_card_step()
 	var agree_live: bool = _why.fight() and not _banner.calm()
 	live_threat.free()
 	var agree_after := true
@@ -311,7 +325,7 @@ func _run() -> void:
 	for frames in [30, 60, 60, 60]:
 		for i in frames:
 			_why.step(DT)
-			_banner._process(DT)
+			_card_step()
 		elapsed += frames * DT
 		if _why.fight() == _banner.calm():
 			agree_after = false
@@ -322,7 +336,7 @@ func _run() -> void:
 	_check("WY2 one calm", agree_live and agree_after and calm_at_end and agree_hit,
 		"live telegraph agrees (%s); after it ends (fight/calm) %s; calm 3.5 s on (%s); a hit agrees (%s)" % [agree_live, detail_calm, calm_at_end, agree_hit])
 	_fresh()
-	_banner._calm_left = 0.0
+	_card_calm()
 
 	var source := FileAccess.get_file_as_string("res://src/ui/why_callout.gd")
 	var literal := RegEx.create_from_string("Color\\(\\s*[-0-9.]+\\s*,\\s*[-0-9.]+\\s*,\\s*[-0-9.]+")

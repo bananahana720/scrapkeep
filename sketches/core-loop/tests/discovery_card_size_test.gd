@@ -16,7 +16,7 @@ const BossCodex := preload("res://src/boss/codex_entries.gd")
 
 const DIR := "user://discovery_card_size_test/"
 const LINE := "Ram fast and everything ahead of you breaks."
-const LONG_LINE := "Spillway crews come out of the channel soaked: arc hits them for 150% (ZZAP!). Everything else lands as normal."
+const LONG_LINE := "Spillway crews come out of the channel soaked. Arc does 150% to them and everything else lands as normal."
 # Line Drive's text before it was shortened: nine lines on the card, so the fit check can fail.
 const OVER_LINE := "Pick 3 and click with a line on a machine: the winch kicks force down the cable and throws it into whatever stands behind. On a wall, the winch hauls you in and nothing can hold you. With no line, the next bite carries it."
 const SCREEN := Vector2(1600.0, 900.0)

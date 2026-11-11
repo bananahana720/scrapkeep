@@ -159,6 +159,22 @@ static func tangent(angle: float) -> Vector3:
 	return Vector3(-sin(angle), 0.0, cos(angle))
 
 
+# How the bowl is entered and left (wave 36, ruling cv), in the bowl's own frame (origin at its centre), as ParkMap.handover()
+# states a park stage's. The bowl hangs above the finished stage's beacon (place()), so its atlas origin is that beacon.
+# The way out to world 2 is parked until after the sitting. The arrival speed is the share of cruise boss.gd
+# _place_ball sets: the carried speed, never under cruise.
+static func handover() -> Dictionary:
+	var angle := deg_to_rad(ENTRY_ANGLE)
+	var heading := tangent(angle)
+	return {
+		"stage": "slag_bowl",
+		"atlas": {"over": "beacon", "heading_deg": 0.0},
+		"exit": {"kind": "none", "why": "the way out to world 2 is parked"},
+		"arrives": {"kind": "land", "at": Vector2(cos(angle), sin(angle)) * ENTRY_R,
+			"heading_deg": rad_to_deg(atan2(heading.x, heading.z)), "speed_cruise": 1.0, "from": "flume gate"},
+	}
+
+
 func entry_point() -> Vector3:
 	return point_at(deg_to_rad(ENTRY_ANGLE), ENTRY_R, ENTRY_LIFT + 1.0)
 

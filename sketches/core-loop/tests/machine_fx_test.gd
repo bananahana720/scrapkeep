@@ -166,7 +166,11 @@ func _run() -> void:
 	fx.boss_phase("waking", ball + Vector3(0, 0, 20))
 	t.check("a boss phase fires its word", _moments(fx, "word").back()[2] == "KRAKK")
 	var start: float = fx._clock
+	# Brindle's rout says its word through the flourish row, so his fall queues no word of its own.
 	fx.boss_fall("brindle", ball + Vector3(0, 0, 30))
+	t.check("Brindle's fall queues its blasts and ring and no word", fx._queue.size() == MachineFx.FALL_BLASTS + 1 and not fx._queue.any(func(item): return item.has("word")))
+	fx._queue.clear()
+	fx.boss_fall("waking", ball + Vector3(0, 0, 30))
 	t.check("the fall queues its blasts, ring and wink", fx._queue.size() == MachineFx.FALL_BLASTS + 2)
 	var wink_at: float = fx._queue.back()["at"]
 	t.check("the wink waits one beat after the last blast", is_equal_approx(wink_at - start, MachineFx.FALL_GAP * MachineFx.FALL_BLASTS + MachineFx.WINK_DELAY))
@@ -174,7 +178,7 @@ func _run() -> void:
 	while not fx._queue.is_empty() and waited_frames < 600:
 		waited_frames += 1
 		await process_frame
-	t.check("the fall ends on END OF SHIFT", _moments(fx, "word").back()[2] == "END OF SHIFT")
+	t.check("the fall ends on its wink word", _moments(fx, "word").back()[2] == "BACK TO SLEEP")
 
 	# Pools: twenty wind-ups at once never error; the extras just skip.
 	var bodies: Array = []

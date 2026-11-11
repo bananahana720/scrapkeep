@@ -5,7 +5,7 @@ import path from "node:path";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 
 import { checkTally, expectedShards, tallyRows, planHead } from "./tally.mjs";
-import { challengeArgs, checkBands, compareBands, compareLines, compareRuns, gatePlan, loadBands, nodeSummary, planFileText, runPlan, sortedLines, stepEnv, worktreePool } from "./pc.mjs";
+import { challengeArgs, checkBands, compareBands, compareLines, compareRuns, gatePlan, loadBands, nodeSummary, planFileText, runPlan, sortedLines, spareWhileWaiting, stepEnv, worktreePool } from "./pc.mjs";
 
 const names = (count, prefix) => Array.from({ length: count }, (_, index) => `${prefix}${String(index).padStart(4, "0")}_test`);
 const lists = {
@@ -98,6 +98,55 @@ test("a scheduler that honours weights peaks at 14 on this input, and one that s
   assert.ok(naive.peak > 16, "the assertion can fail: starting everything breaks the budget");
 });
 
+test("spareWhileWaiting is the room a later step may take without ever delaying the waiting step", () => {
+  // The wave 35 gate: two windows at 6 running, the third at 6 waiting, budget 16. One finishing frees 6, the head needs 2.
+  assert.equal(spareWhileWaiting([6, 6], 6, 16), 4);
+  // With a 2 already in the gap the head needs 4; a 6 finishing still frees 6, so 2 more may start.
+  assert.equal(spareWhileWaiting([6, 6, 2], 6, 16), 2);
+  // The lightest set that frees enough decides: an 8 or the two 3s could finish first, and the 3s free exactly 6.
+  assert.equal(spareWhileWaiting([8, 3, 3], 8, 16), 0);
+  // A head that already fits has no gap to fill, and one nothing can free room for gets no company.
+  assert.equal(spareWhileWaiting([6], 6, 16), 0);
+  assert.equal(spareWhileWaiting([], 20, 16), 0);
+});
+
+// Start and end order with real waits, to see who got in and whether the waiting step was held back.
+function timeline(budget, steps) {
+  const events = [];
+  const start = async (step) => {
+    events.push(`+${step.id}`);
+    await new Promise((resolve) => setTimeout(resolve, step.ms));
+    events.push(`-${step.id}`);
+    return 0;
+  };
+  return { events, run: () => runPlan(steps, { budget, start }) };
+}
+
+test("a light step starts in the gap behind a waiting step, and the waiting step still starts the moment it fits", async () => {
+  const steps = [fake("t1", 6, { ms: 40 }), fake("t2", 6, { ms: 120 }), fake("t3", 6, { ms: 20 }), fake("bots", 8, { ms: 20 }), fake("node", 2, { ms: 200 })];
+  const { events, run } = timeline(16, steps);
+  await run();
+  assert.ok(events.indexOf("+node") < events.indexOf("-t1"), "node (2) starts while t1 and t2 run and t3 waits");
+  assert.equal(events[events.indexOf("-t1") + 1], "+t3", "t3 starts as soon as t1 ends, with node still running");
+  assert.ok(events.indexOf("+bots") > events.indexOf("-t1"), "bots (8) never fits the gap of 4");
+});
+
+test("a step that could delay the waiting step stays behind it, and nothing passes an exclusive step", async () => {
+  const held = timeline(16, [fake("a", 6, { ms: 30 }), fake("b", 6, { ms: 60 }), fake("c", 6, { ms: 10 }), fake("five", 5, { ms: 10 })]);
+  await held.run();
+  assert.ok(held.events.indexOf("+five") > held.events.indexOf("+c"), "a 5 does not fit the spare of 4, so it keeps its place");
+  const fenced = timeline(16, [fake("a", 6, { ms: 30 }), fake("b", 6, { ms: 30 }), fake("c", 6, { ms: 10 }), fake("x", 2, { ms: 10, exclusive: true }), fake("tiny", 1, { ms: 10 })]);
+  await fenced.run();
+  assert.ok(fenced.events.indexOf("+tiny") > fenced.events.indexOf("-x"), "tiny sits behind an exclusive step and waits for it");
+  // The case a scheduler that fills any gap that fits gets wrong: `six` fits the raw free room of 6, but with it
+  // running `c` (12) could not start when `a` ends. It must wait, and `c` must start the moment `a` ends.
+  assert.equal(spareWhileWaiting([6, 4], 12, 16), 0, "raw free room is 6, the safe spare is 0");
+  const tempting = timeline(16, [fake("a", 6, { ms: 30 }), fake("b", 4, { ms: 90 }), fake("c", 12, { ms: 10 }), fake("six", 6, { ms: 200 })]);
+  await tempting.run();
+  assert.equal(tempting.events[tempting.events.indexOf("-a") + 1], "+c", "c starts as soon as a ends");
+  assert.ok(tempting.events.indexOf("+six") > tempting.events.indexOf("+c"), "six would have held c back, so it waits");
+});
+
 test("a step added by onExit runs before the barrier steps, and a done step still reports its exit", async () => {
   const steps = [fake("shard", 6), fake("last", 0, { barrier: true })];
   const order = [];
@@ -122,6 +171,11 @@ test("compareRuns ignores wall time, the play watch and naming fields, and names
   assert.equal(compareRuns(base, base).code, 0);
   const noisy = [runLine({ wallS: 99, qa: { a: 2 }, key: "z", commit: "d", comic_page: 9, label: "x" }), runLine({ seed: 2 })].join("\n");
   assert.equal(compareRuns(base, noisy).code, 0);
+  // The fairness record is a measurement: adding or changing it is not a different run, a moved outcome beside it still is.
+  const plain = [runLine({ row: { outcome: "won" } }), runLine({ seed: 2 })].join("\n");
+  const measured = [runLine({ row: { outcome: "won", fairness: { telegraph_share: 0.9, stop_tax: 3, first_hit_s: 4 } } }), runLine({ seed: 2 })].join("\n");
+  assert.equal(compareRuns(plain, measured).code, 0);
+  assert.equal(compareRuns(plain, [runLine({ row: { outcome: "died", fairness: { stop_tax: 1 } } }), runLine({ seed: 2 })].join("\n")).code, 1);
   const moved = compareRuns(base, [runLine({ game_seconds: 101 }), runLine({ seed: 2 })].join("\n"));
   assert.equal(moved.code, 1);
   assert.equal(moved.differing, 1);

@@ -143,7 +143,7 @@ func _first_runs() -> void:
 	var listener := Progress.new()
 	listener.setup(bus, run, store, func(): return 1700000000.0)
 	var expect_next := ["clock_in", "first_warden", "rivet_freed", "rivet_freed", "lost_tape"]
-	var expect_line := ["", "You clocked in: your first shift is on the shift board.", "You marked off Warden Breaker on the shift board.",
+	var expect_line := ["", "You clocked in. Your first shift is on the shift board.", "You marked off Warden Breaker on the shift board.",
 		"Time card punched, 1 of 3.", "You marked off Rivet Freed, Brindle Routed and Sable's Mark on the shift board."]
 	var scripts := [
 		[],
@@ -227,7 +227,7 @@ func _time_card() -> void:
 		run.kills = 20
 		bus.run_ended.emit(false)
 		if i == holes - 1:
-			_t.check("the full card says what it pays", listener.board_line.begins_with("Time card full: First Card pays"), listener.board_line)
+			_t.check("the full card says what it pays", listener.board_line.begins_with("Time card full. First Card pays"), listener.board_line)
 	_t.eq("every finished run punched once", ShiftBoard.punches(store), holes * ShiftBoard.CARDS.size() + 1)
 	_t.eq("every card paid", ShiftBoard.cards_paid(store), ShiftBoard.CARDS.size())
 	_t.check("past the last card the line says so", listener.board_line.contains("Every card is paid"), listener.board_line)

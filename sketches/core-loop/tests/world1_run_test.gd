@@ -3,6 +3,7 @@ extends SceneTree
 
 const T := preload("res://tests/support/t.gd")
 const ChildRuns := preload("res://tests/trees/child_runs.gd")
+const QaWatch := preload("res://tools/qa_watch.gd")
 
 # The world 1 run, on the game a player launches: the main scene, the six parks (not the legacy
 # maps a test_mode game plays), real ticks, the workshop's pauses, its own save folder. A bot plays
@@ -110,6 +111,10 @@ func _initialize() -> void:
 		var wedged: Dictionary = planted.duplicate()
 		wedged["text"] = String(good["text"]).replace(" wedged=0 ", " wedged=1 ")
 		t.eq("control: a wedge on the first go is not hidden by the second", _failed(_judge(PILOTS[0], [wedged, good])), ["the ball never wedged at rest and never fell through"])
+		var spot := '{"at":[1.0,2.0,3.0],"kind":"wedged","stage":2}'
+		wedged["text"] = String(wedged["text"]) + "\n" + QaWatch.TOLD_PREFIX + spot + "\n"
+		var told: Array = _judge(PILOTS[0], [wedged, good]).filter(func(row): return row[0] == "the ball never wedged at rest and never fell through")
+		t.check("control: and the red row says where", told.size() == 1 and String(told[0][2]).contains(spot), String(told[0][2]) if told.size() == 1 else "no row")
 		var errored: Dictionary = planted.duplicate()
 		errored["text"] = String(planted["text"]) + "\nSCRIPT ERROR: planted\n"
 		t.eq("control: nor is an error line on the first go", _failed(_judge(PILOTS[0], [errored, good])), ["no script error or ERROR line"])
@@ -147,7 +152,7 @@ func _judge(pilot: String, goes: Array) -> Array:
 	var watches: Array = goes.map(func(go): return _pairs(go["text"], "self-play: watch ")).filter(func(w): return not w.is_empty())
 	rows.append(["the ball never wedged at rest and never fell through",
 		not watches.is_empty() and watches.all(func(w): return int(w.get("wedged", -1)) == 0 and int(w.get("fell", -1)) == 0),
-		"wedged %s, fell %s (stuck %s, hung %s, not judged)" % [_each(watches, "wedged"), _each(watches, "fell"), _each(watches, "stuck"), _each(watches, "hung")]])
+		"wedged %s, fell %s (stuck %s, hung %s, not judged)%s" % [_each(watches, "wedged"), _each(watches, "fell"), _each(watches, "stuck"), _each(watches, "hung"), _where(goes)]])
 	rows.append(["the objective plate is never empty for %d s of play" % int(PLATE_BLANK_S),
 		not watches.is_empty() and watches.all(func(w): return float(w.get("blank_max", INF)) < PLATE_BLANK_S),
 		"longest empty stretch %s s, %s plate changes" % [_each(watches, "blank_max"), _each(watches, "objectives")]])
@@ -182,6 +187,16 @@ func _pilot_args(pilot: String, run_seed: int) -> Array:
 
 
 # One watch value from every go, in order: "0" for one go, "0, 1" for two.
+# Where the watch saw each fall and wedge, from the rows the run printed (tools/qa_watch.gd).
+func _where(goes: Array) -> String:
+	var rows := []
+	for go in goes:
+		for line in String(go["text"]).split("\n"):
+			if line.begins_with(QaWatch.TOLD_PREFIX):
+				rows.append(line.trim_prefix(QaWatch.TOLD_PREFIX).strip_edges())
+	return "" if rows.is_empty() else "; " + "; ".join(rows)
+
+
 func _each(watches: Array, key: String) -> String:
 	return ", ".join(watches.map(func(w): return String(w.get(key, "?"))))
 

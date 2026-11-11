@@ -60,6 +60,9 @@ const FACTIONS := {
 
 # The Warden kinds, one ancient family per world, in world order (PARK.md section 7).
 const WARDEN_FAMILIES := [REACTOR, SWARM, MIND]
+# What a Warden is called on its plate and in the run summary: its family, and its variant when
+# the stage row sets one (stage 2's flume Warden is "meltdown", which its card names). The one owner.
+const WARDEN_NAMES := {REACTOR: {"": "Reactor Warden", "meltdown": "Meltdown Warden"}, SWARM: {"": "Hive Warden", "brood": "Brood Warden"}, MIND: {"": "Mind Warden", "choir": "Crown Warden"}}
 
 const T_INSTANT := Threat.Type.INSTANT
 const T_WAVE := Threat.Type.WAVE
@@ -76,7 +79,7 @@ const BASE_ROWS := {
 		"breaks": [], "tag": "", "tests": "weapon",
 		"job": "Was a leak plugger that threw bungs at a breach.",
 		"line": "Lobs a shell at where you will be; roll into it fast and you bat it home."},
-	"miniboss": {"faction": FLEET, "role": "punisher", "mechanic": "vented_window", "telegraph": T_INSTANT, "holds": false,
+	"miniboss": {"name": "Drop Hammer", "faction": FLEET, "role": "punisher", "mechanic": "vented_window", "telegraph": T_INSTANT, "holds": false,
 		"breaks": [], "tag": "", "tests": "contact",
 		"line": "Leaps and charges, then sticks vented with its plating off: dodge, then punish the window."},
 	"vault": {"faction": FLEET, "role": "cache", "mechanic": "next_stage_plating", "telegraph": -1, "holds": false,
@@ -283,6 +286,12 @@ static func row(id: String) -> Dictionary:
 # The name a screen shows: the row's own "name" (the Shift Boss, whose id stays foreman), else the id in words.
 static func name_of(id: String) -> String:
 	return String(row(id).get("name", id.replace("_", " ").capitalize()))
+
+
+# A Warden's name by family and variant; a variant with no name of its own reads as its family's.
+static func warden_name(family: String, variant := "") -> String:
+	var names: Dictionary = WARDEN_NAMES.get(family, {})
+	return String(names.get(variant, names.get("", "Warden")))
 
 
 # What the machine did before the works were turned on you; "" for a kind with no job written yet.

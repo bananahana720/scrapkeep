@@ -12,7 +12,7 @@ const KEPT := "kept"
 const LOST := "lost"
 const NEITHER := ""
 # The header each group is drawn under, in the order the screen draws them.
-const HEADERS := [[KEPT, "KEPT IN YOUR TOTALS"], [LOST, "LOST WITH THIS RUN"], [NEITHER, ""]]
+const HEADERS := [[KEPT, "Kept in your totals"], [LOST, "Lost with this run"], [NEITHER, ""]]
 
 
 static func rows(s: Dictionary, stage_count: int) -> Array:
@@ -21,7 +21,7 @@ static func rows(s: Dictionary, stage_count: int) -> Array:
 		["obj_beacon", "%d/%d" % [s["stages"], stage_count], "stages", KEPT],
 		["res_mass", str(s["scrap"]), "scrap", LOST],
 		["cat_transform", str((s["parts"] as Array).size()), "parts bolted on", LOST],
-		["thr_instant", str(s["kills"]), "kills", KEPT],
+		["thr_instant", str(s["kills"]), "clocked out", KEPT],
 	]
 	# A side job is a camp cleared or a relay held on the way; a zero says nothing, so it is left out.
 	if int(s["events_won"]) > 0:

@@ -181,6 +181,8 @@ func _place_ball(entry_velocity: Vector3) -> void:
 func exit_arena() -> void:
 	for lobber in _lobbers:
 		if is_instance_valid(lobber):
+			# Freed at the frame's end, and its ground is the bowl, which leaves the tree below.
+			lobber.set_physics_process(false)
 			lobber.queue_free()
 	_lobbers.clear()
 	if is_instance_valid(arena):

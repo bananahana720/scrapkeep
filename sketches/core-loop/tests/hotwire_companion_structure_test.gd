@@ -1,0 +1,159 @@
+extends SceneTree
+
+const Game := preload("res://src/game.gd")
+const Intent := preload("res://src/movement/intent.gd")
+const Companion := preload("res://src/core/companion.gd")
+const RewardView := preload("res://src/ui/reward_view.gd")
+const Push := preload("res://tests/workshop/push.gd")
+const T := preload("res://tests/support/t.gd")
+const Icons := preload("res://src/ui/icons.gd")
+
+# Ruling cx on the hot-wire offer and the companion panel: they say what they are by how they
+# look. The offer wears an amber stamp and no "HOT-WIRED" eyebrow, its Recycle choice is the
+# cog icon and the number ("Recycle +N", no colon, no word "cogs"). The companion panel has
+# no title, draws its two sockets as marks holding the piece icons (an empty ring when empty),
+# shows the empty key as a cap and refuses a
+# repeat kind with "One of each kind.".
+
+const HOTWIRE_BANNED := ["HOT-WIRED", "Recycle:", "cogs"]
+const PANEL_BANNED := ["COMPANION", "Socket 1", "Socket 2", "U empties", "Esc leaves", "family"]
+
+var _t := T.new("hotwire_companion_structure_test")
+var _game
+
+
+func _initialize() -> void:
+	_game = Game.new()
+	_game.test_mode = true
+	_game.bot_driven = false
+	root.add_child(_game)
+	_run.call_deferred()
+
+
+func _frames(n: int) -> void:
+	for i in n:
+		await process_frame
+
+
+# Every string a Label or Button under `node` draws.
+func _texts(node: Node) -> Array[String]:
+	var out: Array[String] = []
+	if node is Label:
+		out.append(node.text)
+	elif node is Button:
+		out.append(node.text)
+	for child in node.get_children():
+		out.append_array(_texts(child))
+	return out
+
+
+# The banned strings found in `texts`.
+func _hits(texts: Array[String], banned: Array) -> Array:
+	var found := []
+	for text in texts:
+		for word in banned:
+			if text.contains(word):
+				found.append(word)
+	return found
+
+
+func _doc(owned: Array, seated: Array) -> Dictionary:
+	var m := Companion.new()
+	for id in owned:
+		m.acquire(id)
+	if not seated.is_empty():
+		m.assemble(seated)
+	return m.to_dict()
+
+
+func _run() -> void:
+	while _game.flow == null:
+		await process_frame
+	await _frames(5)
+	_game.ctx.calm = true
+	_game.player.source = Intent.Scripted.new()
+	_scanner_control()
+	await _hotwire()
+	await _companion()
+	quit(_t.verdict())
+
+
+# The planted case: the scanner must flag a broken copy that still has the old labels.
+func _scanner_control() -> void:
+	var broken: Array[String] = ["HOT-WIRED", "Recycle: +4 cogs", "COMPANION", "Socket 1: empty", "Socket 2: Ram Prow", "U empties. Esc leaves.", "Two of one family will not fit."]
+	_t.check("planted: the scanner flags the old hot-wire labels", _hits(broken, HOTWIRE_BANNED).size() == 3, str(_hits(broken, HOTWIRE_BANNED)))
+	_t.check("planted: the scanner flags the old panel labels", _hits(broken, PANEL_BANNED).size() == 6, str(_hits(broken, PANEL_BANNED)))
+	_t.check("the scanner passes clean text", _hits(["Riveted Shell", "Recycle +4", "One of each kind."] as Array[String], HOTWIRE_BANNED + PANEL_BANNED).is_empty(), "")
+
+
+func _hotwire() -> void:
+	var screen = _game.hud.hotwire_screen
+	_game.flow.press_start()
+	_game.flow.choose_class(0)
+	await _frames(30)
+	Push.key(root, KEY_1)
+	await _frames(2)
+	_t.check("no offer, no stamp", not screen.stamp_shown(), "")
+	_game.build._on_run_started("")
+	_game.events.beacon_unsealed.emit(1)
+	await _frames(4)
+	_t.check("the offer is open", screen.is_open(), "")
+	var texts := _texts(screen)
+	_t.check("hot-wire offer draws none of the old labels", _hits(texts, HOTWIRE_BANNED).is_empty(), " | ".join(texts))
+	_t.check("the stamp stands on the hot-wire offer", screen.stamp_shown() and screen.find_child("HotwireStamp", true, false) != null, "")
+	var recycle: Button = screen.choice_button("recycle")
+	_t.check("Recycle is the verb, the number and the cog icon", recycle.text.begins_with("Recycle +") and recycle.icon != null, recycle.text)
+	# The cog is the wallet chip's own mark, an icon with art behind it, not a fallback glyph.
+	_t.check("the Recycle cog is the wallet chip's mark, drawn from its art file", recycle.icon == Icons.texture(_game.hud.CogChip.ICON)
+		and FileAccess.file_exists("res://assets/icons/%s.svg" % _game.hud.CogChip.ICON), _game.hud.CogChip.ICON)
+	_t.check("the price has no colon and no word cogs", not recycle.text.contains(":") and not recycle.text.to_lower().contains("cogs"), recycle.text)
+	# An ordinary part offer carries no stamp (the planted negative of the mark).
+	var ordinary := RewardView.new()
+	root.add_child(ordinary)
+	_t.check("an ordinary reward offer wears no hot-wire stamp", ordinary.find_child("HotwireStamp", true, false) == null, "")
+	ordinary.free()
+	Push.key(root, KEY_ESCAPE)
+	await _frames(3)
+	_t.check("closed, the stamp goes", not screen.stamp_shown(), "")
+	# Settle the offer so the companion half runs on a quiet game.
+	_game.events.flow_changed.emit("gates")
+	await _frames(3)
+	if screen.is_open():
+		screen.choose("fit")
+	await _frames(3)
+
+
+func _companion() -> void:
+	var ws = _game.get_node("Workshop")
+	var panel = ws.companion_panel
+	var all: Array = []
+	for p in Companion.PIECES:
+		all.append(p["id"])
+	ws.armed = true
+	_game.run.companion = _doc(all, [])
+	_t.check("the panel opens", panel.open(), "")
+	await _frames(3)
+	var texts := _texts(panel)
+	_t.check("panel draws none of the old labels", _hits(texts, PANEL_BANNED).is_empty(), " | ".join(texts))
+	var marks = panel.find_child("SocketMarks", true, false)
+	_t.check("one socket-marks control holds exactly two sockets", marks != null and panel.socket_icons().size() == 2, str(panel.socket_icons()))
+	_t.eq("both sockets empty at first", panel.socket_icons(), ["", ""] as Array[String])
+	panel.pick(0)
+	await _frames(2)
+	var icons: Array[String] = panel.socket_icons()
+	_t.check("one piece fitted: one mark holds its icon, the other is empty", icons[0] != "" and icons[1] == "", str(icons))
+	_t.eq("that icon is the piece's", icons[0], panel.PIECE_ICONS["primer_coil"])
+	panel.pick(1)
+	await _frames(2)
+	_t.eq("a second piece of the same kind is refused", panel.message, "One of each kind.")
+	_t.check("the refusal reads on screen without the word family", panel.screen_text().contains("One of each kind.") and not panel.screen_text().contains("family"), panel.screen_text())
+	_t.eq("the cap shows U on keys", panel.empty_cap(), "key_u")
+	Push.key(root, KEY_U)
+	await _frames(2)
+	_t.eq("U empties both sockets", panel.socket_icons(), ["", ""] as Array[String])
+	# Back stays on Esc.
+	var back := InputEventAction.new()
+	back.action = "ui_cancel"
+	back.pressed = true
+	_t.check("Esc (ui_cancel) is taken by the panel", panel.handle(back), "")
+	_t.check("Esc closes the panel and is_open reads false", not panel.is_open(), "")

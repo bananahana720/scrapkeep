@@ -313,12 +313,12 @@ func _check_driven_run() -> void:
 	var first: Resource = Parts.def("rivet_plating")
 	var card: Dictionary = offers[0] if offers.size() == 2 else {}
 	var fresh: Dictionary = offers[1] if offers.size() == 2 else {}
-	var punch_words := "Punch +%d" % int(next.punch)
+	var punch_words := "+%d punch" % int(next.punch)
 	_report("fabricator and shop cards show the level it would give", next.text in fab_text and punch_words in fab_text
 		and shelf.get("text", "") == next.text,
 		"holding two Hot Rivets: fabricator card %s; shop card %s (level 3: %s, %s)" % [[fab_text], [shelf.get("text", "")], next.text, punch_words])
 	_report("an offer card shows the level it would give", card.get("text", "") == next.text
-		and is_equal_approx(float(card.get("punch", 0.0)), next.punch) and ("Punch +%d" % int(next.punch)) in String(card.get("headline", ""))
+		and is_equal_approx(float(card.get("punch", 0.0)), next.punch) and ("+%d punch" % int(next.punch)) in String(card.get("headline", ""))
 		and fresh.get("text", "") == first.text,
 		"holding two Hot Rivets, its card reads %s / %s / punch %s (level 3: %s); an unheld Rivet Plating reads %s"
 			% [[card.get("headline", "")], [card.get("text", "")], card.get("punch", 0.0), next.text, [fresh.get("text", "")]])

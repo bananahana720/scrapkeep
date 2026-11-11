@@ -113,6 +113,8 @@ func _run() -> void:
 	# Sable is the only starter now: earn every non-starter but the second so only the second card is locked.
 	for i in range(2, flow.classes.size()):
 		_game.ctx.profile.unlock_pilot(flow.classes[i].id)
+	# A card draws its paint row only once the profile owns a paint beyond the starters (wave 36).
+	_game.ctx.profile.unlock_cosmetic("paint_any_night")
 	flow.open_class_select()
 	_game.screens._on_flow_changed("class_select")
 	await _settle(0.7)

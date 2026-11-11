@@ -4,7 +4,15 @@ const Palette := preload("res://src/core/palette.gd")
 const UiDraw := preload("res://src/ui/ui_draw.gd")
 const ChoiceButton := preload("res://src/ui/choice_button.gd")
 const HotwireChoice := preload("res://src/ui/hotwire_choice.gd")
+const Icons := preload("res://src/ui/icons.gd")
+const EventKinds := preload("res://src/core/event_kinds.gd")
 
+# The offer wears one amber stamp, a tilted plate with a bolt and no word, beside the part's
+# name. Amber is the colour law's "the world is offering" row (LEGIBILITY section 1); hazard
+# is reserved for what will hurt, and the cost here is a stated trade, not a hit. The stamp
+# carries "this is a hot-wired part"; an ordinary offer (reward_view) never draws it. The
+# Recycle choice shows its price as the cog icon and the number.
+#
 # The hot-wired Fit / Recycle choice, in play (BUILD-SYSTEMS.md, Two hot-wired parts). When
 # build emits hotwire_offered this screen opens over the paused sim with the part's name, the
 # HotwireChoice preview (upside, downside) and two keys:
@@ -30,7 +38,7 @@ const WIDTH := 520.0
 var game
 
 var _root: Control
-var _title: Label
+var _stamp: Control
 var _name: Label
 var _slot: VBoxContainer
 var _fit: ChoiceButton
@@ -67,11 +75,15 @@ func setup(game_ref) -> void:
 	column.add_theme_constant_override("separation", 14)
 	column.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_root.add_child(column)
-	_title = UiDraw.label(30, Palette.AMBER)
-	_title.text = "HOT-WIRED"
-	column.add_child(_title)
+	var head := HBoxContainer.new()
+	head.alignment = BoxContainer.ALIGNMENT_CENTER
+	head.add_theme_constant_override("separation", 22)
+	head.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	column.add_child(head)
 	_name = UiDraw.label(52, Palette.SAND)
-	column.add_child(_name)
+	head.add_child(_name)
+	_stamp = Stamp.new()
+	head.add_child(_stamp)
 	_slot = VBoxContainer.new()
 	_slot.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	_slot.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -82,6 +94,13 @@ func setup(game_ref) -> void:
 	_fit.pressed.connect(choose.bind("fit"))
 	column.add_child(_fit)
 	_recycle = ChoiceButton.new("recycle", "key_f", "Recycle")
+	# The wallet chip's own mark (hud.gd CogChip), so the button and the chip say cogs the same way.
+	_recycle.icon = Icons.texture("res_scrap")
+	_recycle.expand_icon = true
+	_recycle.add_theme_constant_override("icon_max_width", 24)
+	_recycle.add_theme_constant_override("h_separation", 10)
+	for tone in ["icon_normal_color", "icon_hover_color", "icon_pressed_color", "icon_focus_color", "icon_hover_pressed_color"]:
+		_recycle.add_theme_color_override(tone, Palette.AMBER)
 	_recycle.custom_minimum_size.x = WIDTH
 	_recycle.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	_recycle.pressed.connect(choose.bind("recycle"))
@@ -106,6 +125,11 @@ func is_open() -> bool:
 
 func part_id() -> String:
 	return _part_id
+
+
+# True while the hot-wired stamp stands on an open offer.
+func stamp_shown() -> bool:
+	return _open and _stamp.is_visible_in_tree()
 
 
 func choice_button(id: String) -> Button:
@@ -148,7 +172,7 @@ func open() -> void:
 	_open = true
 	_wanted = false
 	_name.text = copy["name"]
-	_recycle.text = "Recycle: +%d cogs" % int(copy["recycle"])
+	_recycle.text = "Recycle +%d" % int(copy["recycle"])
 	if _preview != null:
 		_slot.remove_child(_preview)
 		_preview.queue_free()
@@ -198,9 +222,9 @@ func _on_resolved(id: String, choice: String, cogs: int) -> void:
 	var copy := HotwireChoice.resolve(id)
 	var part_name: String = copy.get("name", id)
 	if choice == "fit":
-		game.hud.toast("%s fitted: take it at the gates" % part_name, Palette.BRASS, "diamond", 2)
+		game.hud.toast("%s fitted, take it at the gates" % part_name, Palette.BRASS, "diamond", 2)
 	else:
-		game.hud.toast("%s recycled: +%d cogs" % [part_name, cogs], Palette.BRASS, "diamond", 2)
+		game.hud.toast("%s recycled +%d" % [part_name, cogs], Palette.BRASS, EventKinds.row("cogs_collected").get("shape", "square"), 2)
 
 
 func _input(event: InputEvent) -> void:
@@ -243,3 +267,24 @@ func _set_live(live: bool) -> void:
 		button.mouse_filter = Control.MOUSE_FILTER_STOP if live else Control.MOUSE_FILTER_IGNORE
 		button.focus_mode = Control.FOCUS_ALL if live else Control.FOCUS_NONE
 		button.disabled = not live
+
+
+# The hot-wired stamp: a tilted amber plate with riveted corners and a charcoal bolt, no word.
+class Stamp extends Control:
+	const PLATE := Vector2(92.0, 52.0)
+
+	func _init() -> void:
+		name = "HotwireStamp"
+		custom_minimum_size = PLATE
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+	func _draw() -> void:
+		draw_set_transform(PLATE * 0.5, -0.08)
+		var r := Rect2(-PLATE * 0.5 + Vector2(3.0, 3.0), PLATE - Vector2(6.0, 6.0))
+		draw_rect(r, Palette.AMBER)
+		draw_rect(r, Palette.CHARCOAL, false, 2.5)
+		for corner in [r.position + Vector2(7.0, 7.0), Vector2(r.end.x - 7.0, r.position.y + 7.0), Vector2(r.position.x + 7.0, r.end.y - 7.0), r.end - Vector2(7.0, 7.0)]:
+			draw_circle(corner, 2.2, Palette.CHARCOAL)
+		# The bolt is the stamp's own mark, cut in charcoal: not an icon id, so no art file stands behind it.
+		draw_colored_polygon(PackedVector2Array([Vector2(3.0, -17.0), Vector2(-9.0, 2.0), Vector2(-1.0, 2.0), Vector2(-4.0, 17.0),
+			Vector2(9.0, -3.0), Vector2(1.0, -3.0)]), Palette.CHARCOAL)

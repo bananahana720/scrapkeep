@@ -131,7 +131,7 @@ func _run() -> void:
 	# Re-pinned 2026-10-10 (wave 13 unit B2, design-v3/SKILL-BAR.md section 6): the special's row
 	# retired; the pick's three keys and the ultimate each have a row.
 	_t.eq("S3-2 the page rows", page.rows.keys().filter(func(id): return not id.begins_with("pad_") and not id in ["stick_sensitivity", "invert_y", "stick_deadzone", "mouse_sensitivity", "aim_assist"]),
-		["fullscreen", "quality", "reduced_motion", "reduce_flashes", "frame_smoothing", "wide_picture", "jump", "fire", "harpoon", "haul", "boost", "select_1", "select_2", "select_3", "ultimate", "interact", "reset", "roll", "look", "back"])
+		["fullscreen", "quality", "reduced_motion", "reduce_flashes", "frame_smoothing", "wide_picture", "jump", "fire", "harpoon", "haul", "boost", "select_1", "select_2", "select_3", "ultimate", "interact", "reset", "roll", "look", "music", "effects", "shake", "hitstop", "ceremony", "back"])
 	_t.check("S3-2 roll and look are fixed", page.row("roll").disabled and page.row("look").disabled, "fixed")
 	_t.check("S3-2 the page holds the pause", paused and _game.pause_toggled(), "paused %s" % paused)
 	Push.key(root, KEY_S)
@@ -193,10 +193,10 @@ func _run() -> void:
 	# S3-6: quality and fullscreen.
 	var mode_before := DisplayServer.window_get_mode()
 	Push.click(root, page.row("quality"))
-	_t.check("S3-6 Low applies at once and is saved", GraphicsPreset.current == "low" and _saved().quality() == 1 and page.row("quality").text == "Quality: Low", "preset %s" % GraphicsPreset.current)
-	_t.check("S3-6 a fresh install wants fullscreen and stores nothing for it", _saved().fullscreen() and not _saved().comfort.has("fullscreen") and page.row("fullscreen").text == "Fullscreen: on", "%s" % [_saved().comfort])
+	_t.check("S3-6 Low applies at once and is saved", GraphicsPreset.current == "low" and _saved().quality() == 1 and page.read("quality")["value"] == "low", "preset %s" % GraphicsPreset.current)
+	_t.check("S3-6 a fresh install wants fullscreen and stores nothing for it", _saved().fullscreen() and not _saved().comfort.has("fullscreen") and page.read("fullscreen")["pip"] == 1, "%s" % [_saved().comfort])
 	Push.click(root, page.row("fullscreen"))
-	_t.check("S3-6 fullscreen off is saved and headless never changes the window mode", not _saved().fullscreen() and page.row("fullscreen").text == "Fullscreen: off" and DisplayServer.window_get_mode() == mode_before, "saved %s" % _saved().fullscreen())
+	_t.check("S3-6 fullscreen off is saved and headless never changes the window mode", not _saved().fullscreen() and page.read("fullscreen")["pip"] == 0 and DisplayServer.window_get_mode() == mode_before, "saved %s" % _saved().fullscreen())
 	_t.check("S3-6 the old settings keep their keys", _saved().comfort.has("fullscreen") and _saved().comfort.has("quality"), "%s" % [_saved().comfort])
 	# The launch rule (DECISIONS cb): a player's game follows the setting, a test or a bot's run
 	# keeps the window it was launched with, and --fullscreen=0 or =1 beats both for one launch.

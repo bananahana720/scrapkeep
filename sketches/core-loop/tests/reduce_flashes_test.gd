@@ -52,9 +52,9 @@ func _settings() -> void:
 	# RF-2: the Display page row turns it on, saves it and applies it at once.
 	var page = _game.get_node("PauseMenu").settings_page()
 	_t.check("RF-2 the page lists a Reduce flashes row", page.row("reduce_flashes") != null, "rows")
-	_t.eq("RF-2 the row reads off", page.row("reduce_flashes").text, "Reduce flashes: off")
+	_t.eq("RF-2 the row reads off", page.read("reduce_flashes"), {"label": "Fewer flashes", "value": "", "pip": 0})
 	page.press("reduce_flashes")
-	_t.eq("RF-2 the row reads on", page.row("reduce_flashes").text, "Reduce flashes: on")
+	_t.eq("RF-2 the row reads on", page.read("reduce_flashes"), {"label": "Fewer flashes", "value": "", "pip": 1})
 	_t.check("RF-2 the store holds it and the guard is on", _game.settings_store().reduce_flashes() and FlashGuard.on, "store")
 	_t.check("RF-2 reduced motion is untouched", not _game.settings_store().reduced_motion(), "separate setting")
 

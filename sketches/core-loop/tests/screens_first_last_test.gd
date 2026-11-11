@@ -51,19 +51,25 @@ func _run() -> void:
 	_t.check("UI1-1 Start is taller than the rest", others.all(func(b): return start.custom_minimum_size.y > b.custom_minimum_size.y))
 	_t.check("UI1-1 the title has no Breath button", screens.button_for("breath") == null)
 	screens.toggle_settings()
-	_t.check("UI1-1 the settings page has a Breath button", screens.button_for("breath") != null
-		and screens.button_for("breath").text == "Breath: %s" % game.tuning.option(Tuning.BREATH_KEY))
+	_t.check("UI1-1 the settings page has no Breath button outside --dev", screens.button_for("breath") == null)
+	screens.toggle_settings()
+	var was_dev: bool = game.dev
+	game.dev = true
+	screens.toggle_settings()
+	_t.check("UI1-1 with --dev the settings page has a Breath button", screens.button_for("breath") != null
+		and screens.button_for("breath").text == "Breath %s" % game.tuning.option(Tuning.BREATH_KEY))
 	screens.toggle_settings()
 	game.tuning.set_option(Tuning.MUSIC_KEY, "synth")
 	screens.toggle_settings()
 	_t.check("UI1-1 the synth hides the Breath button", screens.button_for("breath") == null)
 	screens.toggle_settings()
+	game.dev = was_dev
 
 	game.flow.press_start()
 	await _frames(4)
 	var cards: Array = screens.class_cards()
 	_t.eq("UI1-2 six cards", cards.size(), 6)
-	_t.eq("UI1-2 the footer says how to choose and start", screens._footer.text(), "1 to 6 choose · Enter start")
+	_t.eq("UI1-2 the footer is the Enter cap and start", screens._footer.text(), "Enter start")
 	_t.check("UI1-2 the footer shows", screens._footer.visible)
 	for row in [["name", func(c): return c.name_label()], ["role", func(c): return c.role_label()],
 			["words", func(c): return c.get_child(0).get_child(3)], ["keys", func(c): return c.key_cells()[0]]]:

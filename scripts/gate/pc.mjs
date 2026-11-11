@@ -94,7 +94,7 @@ export function gatePlan({ wave, head, lists, weekly = null, bands, persona = nu
 }
 
 export function formatPlan(steps, budget) {
-  const lines = [`Budget ${budget} Godot processes. Steps start in this order; a step waits until its weight fits.`];
+  const lines = [`Budget ${budget} Godot processes. Steps start in this order; a step waits until its weight fits, and a lighter step behind it may start in the gap when it cannot delay it.`];
   steps.forEach((step, index) => lines.push(`${String(index + 1).padStart(3)}  ${step.id.padEnd(18)} weight ${String(step.weight).padStart(2)}${step.exclusive ? "  exclusive: runs with nothing else" : step.barrier ? "  after every other step" : ""}`));
   lines.push("A retime step (exclusive, weight 2) is added at run time for each shard that comes back INCONCLUSIVE.");
   return lines.join("\n");
@@ -102,10 +102,29 @@ export function formatPlan(steps, budget) {
 
 // ---- scheduler ----
 
-// Starts steps in plan order, never above `budget` Godot processes. A step that does not fit blocks the
-// ones behind it, so none is starved. Exclusive and barrier steps run with nothing else; a step heavier
-// than the budget runs alone. `isDone(step)` returns a truthy value (or { exit }) for a finished step, which is skipped.
-// `onExit(step, exit)` may return steps to add before the first barrier. Returns a Map of step id to exit.
+// The spare weight a later step may take while `head` waits, without ever delaying it. The head starts once
+// some set of running steps has finished and freed `need`. A step started in the gap must leave room for
+// the head after ANY such set finishes, so the spare is the smallest freed total that reaches `need`, less `need`.
+// (Wave 35 gate, 10 Nov: two windows at 6 ran, the third at 6 waited, and a 2-weight step sat behind it with 4 idle.)
+export function spareWhileWaiting(runningWeights, headWeight, budget) {
+  const used = runningWeights.reduce((sum, weight) => sum + weight, 0);
+  const need = used + headWeight - budget;
+  if (need <= 0) return 0;
+  let least = Infinity;
+  for (let mask = 1; mask < 1 << runningWeights.length; mask++) {
+    let freed = 0;
+    for (let i = 0; i < runningWeights.length; i++) if (mask & (1 << i)) freed += runningWeights[i];
+    if (freed >= need && freed < least) least = freed;
+  }
+  return least === Infinity ? 0 : least - need;
+}
+
+// Starts steps in plan order, never above `budget` Godot processes. A step that does not fit waits at the
+// head of the queue; a later ordinary step may start in the gap only when it cannot delay that head
+// (`spareWhileWaiting`), so none is starved. Exclusive and barrier steps run with nothing else and nothing
+// passes them; a step heavier than the budget runs alone. `isDone(step)` returns a truthy value (or { exit })
+// for a finished step, which is skipped. `onExit(step, exit)` may return steps to add before the first barrier.
+// Returns a Map of step id to exit.
 export async function runPlan(steps, { budget, start, isDone = () => null, onExit = () => [] }) {
   const queue = [...steps];
   const exits = new Map();
@@ -119,9 +138,17 @@ export async function runPlan(steps, { budget, start, isDone = () => null, onExi
     queue.splice(at < 0 ? queue.length : at, 0, ...more);
   };
   const racers = new Map();
+  const solo = (step) => step.exclusive || step.barrier || step.weight > budget;
+  // The first ordinary step behind a waiting head that fits the spare. It never looks past a solo step.
+  const gapStep = (head) => {
+    const spare = spareWhileWaiting([...running].map((entry) => entry.weight), head.weight, budget);
+    for (let at = 1; at < queue.length && !solo(queue[at]); at++) if (queue[at].weight <= spare) return at;
+    return -1;
+  };
   while (queue.length > 0 || running.size > 0) {
     while (queue.length > 0) {
-      const step = queue[0];
+      let at = 0;
+      let step = queue[0];
       const done = await isDone(step);
       if (done) {
         queue.shift();
@@ -129,8 +156,20 @@ export async function runPlan(steps, { budget, start, isDone = () => null, onExi
         continue;
       }
       const soloStep = step.exclusive || step.barrier;
-      if (alone || (soloStep && running.size > 0) || (running.size > 0 && used + step.weight > budget)) break;
-      queue.shift();
+      if (alone || (soloStep && running.size > 0)) break;
+      if (running.size > 0 && used + step.weight > budget) {
+        if (solo(step)) break;
+        at = gapStep(step);
+        if (at < 0) break;
+        step = queue[at];
+        const stepDone = await isDone(step);
+        if (stepDone) {
+          queue.splice(at, 1);
+          finish(step, typeof stepDone === "object" && typeof stepDone.exit === "number" ? stepDone.exit : 0);
+          continue;
+        }
+      }
+      queue.splice(at, 1);
       running.add(step);
       used += step.weight;
       alone = soloStep || step.weight > budget;
@@ -157,7 +196,11 @@ export async function runPlan(steps, { budget, start, isDone = () => null, onExi
 
 // ---- compare ----
 
-const IGNORED = new Set(["wall_seconds", "wallS", "qa", "label", "commit", "key", "id", "log", "comic_page", "started_at", "ended_at", "rerun"]);
+// `fairness` (the bot record's F1 to F3 numbers, wave 36 unit measure) is a measurement, not an outcome: it reads what the
+// simulation already published and moves nothing, so a head that adds or refines it must not read as a differing run.
+// It is one key on purpose: its parts (`first_hit_s`, `stop_tax`, `telegraph_share`) would also hide the stage notes' own
+// `first_hit_s` if listed here, because the strip below is by name at any depth.
+const IGNORED = new Set(["fairness", "wall_seconds", "wallS", "qa", "label", "commit", "key", "id", "log", "comic_page", "started_at", "ended_at", "rerun"]);
 
 function strip(value) {
   if (Array.isArray(value)) return value.map(strip);

@@ -9,6 +9,7 @@ const Bank := preload("res://src/presentation/sfx_bank.gd")
 const T := preload("res://tests/support/t.gd")
 const AceStub := preload("res://tests/support/ace_stub.gd")
 const PartSets := preload("res://src/build/part_sets.gd")
+const ScreenBusy := preload("res://src/ui/screen_busy.gd")
 
 # The melodic payoff (AUDIO-V3 section 5), through the real game. A climb never leaves the reward
 # ladder: the chain bite and the multi-kill pop. The tune lands on the band's grid: a kill chain
@@ -312,11 +313,14 @@ func _set_chime(game: Node, audio) -> void:
 	var held: Dictionary = PartSets.SETS["hair_trigger"]
 	banner.dismiss(true)
 	audio.cue_log.clear()
-	banner._calm_left = 5.0
+	# The screen's one gate holds the card (screen_busy.gd, wave 36): a busy source stands in for the fight.
+	var fight := [true]
+	game.ctx.screen_busy.add_source(func(): return fight[0])
 	game.presentation._on_set_completed("hair_trigger", held["name"], held["text"], held["color"])
 	var early: int = _grid(audio, "synergy_discovered").size()
 	var was_showing: bool = banner.showing()
-	banner._calm_left = 0.0
+	fight[0] = false
+	game.ctx.screen_busy.step(ScreenBusy.FIND_HOLD)
 	banner._next()
 	t.check("set chime: a banner held for a calm moment holds its chime", not was_showing and early == 0 and banner.showing()
 		and banner.last_title == held["name"] and _grid(audio, "synergy_discovered").size() == 3,

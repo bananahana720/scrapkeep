@@ -198,7 +198,7 @@ func _check_prompts() -> void:
 	var gate_prompts: Array = _hud.prompt_rects.keys().filter(func(p): return p.get_parent() != _high)
 	var far: Array = gate_prompts.filter(func(p): return ball.distance_to(p.anchor_point()) > WorldPrompt.DETAIL_RANGE)
 	var high: Array = _hud.prompt_rects.keys().filter(func(p): return p.get_parent() == _high)
-	_report("gate prompts say what they give from range", not far.is_empty() and far.all(func(p): return p.near and p.shown_lines().size() >= 3)
+	_report("gate prompts say what they give from range", not far.is_empty() and far.all(func(p): return p.near and p.shown_lines().size() >= 2 and String(p.shown_lines()[1]).strip_edges() != "")
 			and high.all(func(p): return not p.near and is_equal_approx(p.detail_range, WorldPrompt.DETAIL_RANGE)),
 		"%d gate prompts, %d beyond %d m, their lines %s; the other prompt near %s"
 			% [gate_prompts.size(), far.size(), int(WorldPrompt.DETAIL_RANGE), far.map(func(p): return p.shown_lines()), high.map(func(p): return p.near)])

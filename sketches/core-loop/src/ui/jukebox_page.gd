@@ -90,7 +90,7 @@ func _init() -> void:
 		detent.focus_mode = Control.FOCUS_NONE
 		buttons.add_child(detent)
 		_detents.append(detent)
-	back = ChoiceButton.new("back", "key_j", "Back")
+	back = ChoiceButton.new("back", "key_esc", "Back")
 	buttons.add_child(back)
 
 
@@ -107,7 +107,7 @@ static func reading(profile, playing := "", detent := 2, sitting := false) -> Di
 		if has or not TuneRows.shut(id, profile, sitting):
 			shown.append(id)
 	return {"found": found, "shown": shown, "total": shown.size(), "playing": playing, "detent": detent,
-		"count": "Records found: %d of %d" % [found.size(), shown.size()]}
+		"count": "%d / %d" % [found.size(), shown.size()]}
 
 
 func refresh(profile, playing := "", detent := 2, sitting := false) -> void:

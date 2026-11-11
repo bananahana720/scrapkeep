@@ -55,7 +55,6 @@ const WORD_SIZE := 13
 const WORD_MIN := 9
 const SHAKE := 0.25
 const LOCK_DIM := 0.4
-const NO_PAINT := "No paint"
 const GREY := """shader_type canvas_item;
 uniform float level = 0.4;
 void fragment() {
@@ -356,7 +355,7 @@ func set_locked(is_locked: bool, hint := "") -> void:
 		preview.material = shade
 	else:
 		preview.material = null
-	_paint_row.visible = not locked and _profile != null
+	_paint_row.visible = not locked and owns_paint()
 	_apply()
 
 
@@ -365,7 +364,7 @@ func bind_profile(profile) -> void:
 	_profile = profile
 	if def == null:
 		return
-	_paint_row.visible = not locked and _profile != null
+	_paint_row.visible = not locked and owns_paint()
 	_show_paint()
 
 
@@ -378,6 +377,19 @@ func paint_options() -> Array:
 	return out
 
 
+# Whether the card draws a paint row: the profile owns a paint beyond the starters, or one is worn.
+# A fresh profile has nothing to choose here (the customize page still lists the starters).
+func owns_paint() -> bool:
+	if _profile == null or def == null:
+		return false
+	if paint_shown() != "":
+		return true
+	for id in Cosmetics.for_slot("paint", def.id):
+		if not Cosmetics.row(id)["starter"] and CosmeticWear.owns(_profile, id):
+			return true
+	return false
+
+
 # The equipped paint id, or "" when none or one this profile does not own.
 func paint_shown() -> String:
 	return CosmeticWear.worn(_profile, def.id, "paint")
@@ -385,7 +397,7 @@ func paint_shown() -> String:
 
 # The next owned paint (or none), equipped and saved.
 func cycle_paint() -> String:
-	if _profile == null or locked:
+	if locked or not owns_paint():
 		return ""
 	var options := paint_options()
 	var next: String = options[(options.find(paint_shown()) + 1) % options.size()]
@@ -401,11 +413,12 @@ func _show_paint() -> void:
 	if id == "":
 		_swatch.color = Color(Palette.SAND, 0.15)
 		_swatch.edge = Color(Palette.SAND, 0.7)
-		_paint_label.text = NO_PAINT
+		_paint_label.visible = false
 	else:
 		_swatch.color = Cosmetics.row(id)["tint"]
 		_swatch.edge = Palette.SAND
 		_paint_label.text = Cosmetics.row(id)["name"]
+		_paint_label.visible = true
 	_swatch.queue_redraw()
 
 

@@ -13,8 +13,6 @@
 //   4 chevron: tip at radius clip.z along ray CUSTOM0.xy, offset CUSTOM0.zw in the tip's
 //     (forward, side) frame; hidden past r_out (CUSTOM1.z)
 //   5 curtain: on ray CUSTOM0.xy at radius clip.w, height baked
-//   6 bracket: corner (sx, sz) = CUSTOM0.xy at gap clip.x, arm clip.y; CUSTOM0.z along the
-//     arm, CUSTOM0.w the side; CUSTOM1.z the arm's axis, CUSTOM1.w its half width
 // CUSTOM1.y = 1 scales the vertex alpha by alpha_scale (a wave's hot ramp, a lane going
 // live). `governed` fills also take the density governor's threat_fill_scale.
 render_mode blend_mix, depth_draw_opaque, cull_disabled, diffuse_burley, specular_schlick_ggx, unshaded, depth_test_disabled;
@@ -64,13 +62,6 @@ void vertex() {
 		}
 	} else if (drive == 5) {
 		VERTEX.xz = c + CUSTOM0.xy * clip.w;
-	} else if (drive == 6) {
-		vec2 corner = c + CUSTOM0.xy * clip.x;
-		if (CUSTOM1.z < 0.5) {
-			VERTEX.xz = corner + vec2(-CUSTOM0.x * clip.y * CUSTOM0.z, CUSTOM0.w * CUSTOM0.x * CUSTOM1.w);
-		} else {
-			VERTEX.xz = corner + vec2(-CUSTOM0.w * CUSTOM0.y * CUSTOM1.w, -CUSTOM0.y * clip.y * CUSTOM0.z);
-		}
 	}
 	vec3 world = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
 	offset = world.xz - c;

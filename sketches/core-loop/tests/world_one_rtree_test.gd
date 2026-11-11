@@ -32,18 +32,18 @@ const WorldOneCards := preload("res://src/core/trees/world_one_cards.gd")
 
 const BASE_EFFECT := {
 	"r_gunline": "The laser fires twin bolts",
-	"r_juggernaut": "Starting a sprint blasts enemies back",
+	"r_juggernaut": "Starting a sprint blasts machines back",
 	"r_tracer": "Laser hits hop to a neighbour",
 	"r_run_gun": "Firing while sprinting drains it half as fast",
-	"r_ram_fins": "Sprinting, you ram instead of rebound",
-	"r_second_wind": "Stockpile two sprint charges",
+	"r_ram_fins": "Sprinting, you ram instead of bouncing",
+	"r_second_wind": "Bank two sprint charges",
 }
 const CODEX := {
 	"r_gunline": "Your laser fires twin bolts.",
-	"r_juggernaut": "Starting a sprint blasts enemies back.",
+	"r_juggernaut": "Starting a sprint blasts machines back.",
 	"r_tracer": "Running fire jumps to a neighbour.",
 	"r_run_gun": "Sustain fire. Worn scrap sparks behind you.",
-	"r_ram_fins": "Sprint through bodies instead of rebounding.",
+	"r_ram_fins": "Sprint through bodies instead of bouncing.",
 	"r_second_wind": "Bank two sprints. Heavy fins open during sprint.",
 }
 const CLASS := "runner_gunner"

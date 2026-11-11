@@ -196,10 +196,10 @@ func _run() -> void:
 		if p["ready"]:
 			ready += 1
 	_t.eq("a fresh profile has the starters ready", ready, starters)
-	_t.eq("the headline counts them", read["lines"][0], "Pilots ready: %d of %d" % [starters, flow.classes.size()])
+	_t.eq("the headline counts them", read["lines"][0], "%d / %d pilots ready" % [starters, flow.classes.size()])
 	_t.check("a non-starter pilot exists", locked_def != null, "")
 	var hint := ClassCard.unlock_hint(locked_def, _game.progress)
-	var locked_line := _line_with(read["lines"], "%s: " % locked_def.display_name)
+	var locked_line := _line_with(read["lines"], "%s is " % locked_def.display_name)
 	_t.check("a locked pilot's line names how it unlocks", locked_line.contains(hint if hint != "" else "locked"), locked_line)
 	profile.unlock_pilot(locked_def.id)
 	_reopen(screens)
@@ -212,7 +212,7 @@ func _run() -> void:
 		if p["id"] == locked_def.id:
 			now_ready = p["ready"]
 	_t.check("an unlocked pilot reads ready and the count rises", now_ready and after == starters + 1
-		and camp.labels().has("%s: ready" % locked_def.display_name), "ready %s, %d of %d" % [now_ready, after, starters + 1])
+		and camp.labels().has("%s is ready" % locked_def.display_name), "ready %s, %d of %d" % [now_ready, after, starters + 1])
 	var still_locked = null
 	for def in flow.classes:
 		if not _game.pilot_unlocked(def):
@@ -220,7 +220,7 @@ func _run() -> void:
 			break
 	if still_locked != null:
 		var h := ClassCard.unlock_hint(still_locked, _game.progress)
-		var line := _line_with(read["lines"], "%s: " % still_locked.display_name)
+		var line := _line_with(read["lines"], "%s is " % still_locked.display_name)
 		_t.check("a still-locked pilot names its unlock", line.contains(h if h != "" else "locked"), line)
 
 	# Companion.
@@ -228,8 +228,8 @@ func _run() -> void:
 	_t.check("no Companion button without pieces", camp.button_for("companion") == null, "")
 	profile.set_companion(Companion.with_piece({}, "escape_vent"))
 	_reopen(screens)
-	_t.check("one piece reads 1 of the table", camp.labels().has("Companion pieces: 1 of %d" % Companion.PIECES.size()), "\n".join(camp.labels()))
-	_t.check("nothing seated reads none", camp.labels().has("Seated: none"), "")
+	_t.check("one piece reads 1 of the table", camp.labels().has("1 / %d companion pieces" % Companion.PIECES.size()), "\n".join(camp.labels()))
+	_t.check("nothing seated reads none", camp.labels().has("Nothing seated"), "")
 	var companion = camp.button_for("companion")
 	_t.check("the Companion button shows with a piece", companion != null, "")
 	_game._screen_key(KEY_M)
@@ -246,7 +246,7 @@ func _run() -> void:
 	# Achievements count.
 	profile.earn(Achievements.ids()[0], EARNED_AT)
 	_reopen(screens)
-	_t.check("an earn shows in the count", camp.labels().has("Achievements: 1 of %d earned" % Achievements.ids().filter(func(id): return not Secrets.shut_row(id, profile)).size()), "")
+	_t.check("an earn shows in the count", camp.labels().has("1 / %d achievements earned" % Achievements.ids().filter(func(id): return not Secrets.shut_row(id, profile)).size()), "")
 
 	# Pages from the camp: each opens from its station's zone and its Back returns to the walk.
 	_game._screen_key(KEY_A)

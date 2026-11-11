@@ -42,26 +42,26 @@ const CLUES := {
 const ROWS := {
 	"storm_lattice": {
 		"name": "Storm Lattice", "tags": ["chain", "split"], "shown": "chain_arc",
-		"text": "Split bolts chain: every fragment of a cross jumps to a neighbour.",
+		"text": "Every fragment of a cross split jumps to a neighbour.",
 		"transformers": ["storm_lattice"], "patterns": {"chain_arc": 1},
 		"callout": {"a": "chain_arc", "b": "cross_split", "words": "Bolts find neighbours"},
 	},
 	"thermal_shock": {
 		"name": "Thermal Shock", "tags": ["frost", "arc"], "shown": "frost_vane",
-		"text": "Slams release a thermal shock: the arc shatters nearby ice into a shard nova at double damage, then fresh ice freezes around you.",
+		"text": "A slam's arc shatters nearby ice into a shard nova at double damage, then fresh ice freezes around you.",
 		"transformers": ["thermal_shock"], "elements": {"slam": ["arc", "frost"]}, "dials": {"shatter_damage": 2.0},
 		"callout": {"a": "frost_vane", "b": "arc_coil", "words": "Ice cracks loud"},
 	},
 	"lightning_rod": {
 		"name": "Lightning Rod", "tags": ["arc", "mass"], "shown": "arc_coil",
-		"text": "Every piece of scrap you pick up sparks an arc at the nearest enemy.",
+		"text": "Every piece of scrap you pick up sparks an arc at the nearest machine.",
 		"transformers": ["lightning_rod"],
 		"callout": {"a": "arc_coil", "b": "drop_weight", "words": "Scrap sparks back"},
 		"evolution": {"parts": ["arc_coil", "drop_weight"], "into": "grounding_spike"},
 	},
 	"tesla_pylon": {
 		"name": "Tesla Pylon", "tags": ["anchor", "arc"], "shown": "focus_lens",
-		"text": "While mounted or hooked, arcs leap from you to the two nearest enemies twice a second.",
+		"text": "While mounted or hooked, arcs leap from you to the two nearest machines twice a second.",
 		"transformers": ["tesla_pylon"],
 		"callout": {"a": "focus_lens", "b": "live_line", "words": "Hooked means live"},
 		"evolution": {"parts": ["focus_lens", "live_line"], "into": "storm_mast"},
@@ -75,19 +75,19 @@ const ROWS := {
 	},
 	"shrapnel_bloom": {
 		"name": "Shrapnel Bloom", "tags": ["split", "kinetic"], "shown": "cross_split",
-		"text": "Kills burst into shrapnel that hits up to three enemies nearby.",
+		"text": "Kills burst into shrapnel that hits up to three machines nearby.",
 		"transformers": ["shrapnel_bloom"],
 		"callout": {"a": "cross_split", "b": "hot_rivets", "words": "Kills come apart"},
 	},
 	"glacier_hull": {
 		"name": "Glacier Hull", "tags": ["mass", "frost"], "shown": "slag_rounds",
-		"text": "Hard landings crack out a frost ring: it hits enemies near you and freezes water.",
+		"text": "Hard landings crack out a frost ring that hits machines near you and freezes water.",
 		"transformers": ["glacier_hull"],
 		"callout": {"a": "slag_rounds", "b": "frost_vane", "words": "Landings ring cold"},
 	},
 	"pinwheel": {
 		"name": "Pinwheel", "tags": ["spiral", "speed"], "shown": "spiral_wave",
-		"text": "At fast speed and above you spin a blade ring that cuts the enemies you pass.",
+		"text": "At fast speed and above you spin a blade ring that cuts the machines you pass.",
 		"transformers": ["pinwheel"],
 		"callout": {"a": "spiral_wave", "b": "loose_trigger", "words": "Speed grows blades"},
 		"evolution": {"parts": ["spiral_wave", "loose_trigger"], "into": "bladestorm_rotor"},

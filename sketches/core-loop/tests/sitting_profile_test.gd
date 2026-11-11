@@ -57,10 +57,10 @@ func _run() -> void:
 	_t.eq("sitting opens all six", _open_ids().size(), 6)
 	_game.flow.open_class_select()
 	_game.flow.show_title()
-	_t.check("title wears the SITTING tag", _title_text().contains("SITTING"), _title_text())
+	_t.check("the sitting title stays SCRAPKEEP (the log line records the profile)", _title_text() == "SCRAPKEEP", _title_text())
 	_game.screens.toggle_help()
 	_game.screens.toggle_help()
-	_t.check("tag survives Help and back", _title_text().contains("SITTING"), _title_text())
+	_t.check("the title survives Help and back", _title_text() == "SCRAPKEEP", _title_text())
 	_game.flow.open_class_select()
 	for i in classes.size():
 		_t.check("card %d is not locked" % i, not _game.screens._choices.get_child(i).locked, classes[i].id)

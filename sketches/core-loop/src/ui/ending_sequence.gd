@@ -37,7 +37,7 @@ const CRATER_CAM_FROM := Vector3(-160.0, 240.0, -300.0)
 const CRATER_CAM_TO := Vector3(-40.0, 95.0, -215.0)
 const CRATER_LOOK := Vector3(0.0, -20.0, 0.0)
 # TONE-READ: Credits. The thanks belongs to the person who made the return trip.
-const CREDITS := "SCRAPKEEP\n\nCreator and director\nAndrew\n\nMade with\nGodot · Blender\n\nMusic\nACE-Step\n\nAI collaborators\nClaude · Codex\n\nThank you for bringing the crew home."
+const CREDITS := "SCRAPKEEP\n\nCreator and director\nAndrew\n\nMade with\nGodot and Blender\n\nMusic\nACE-Step\n\nAI collaborators\nClaude and Codex\n\nThank you for bringing the crew home."
 
 var active := false
 var elapsed := 0.0

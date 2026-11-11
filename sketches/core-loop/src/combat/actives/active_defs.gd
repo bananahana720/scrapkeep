@@ -25,7 +25,7 @@ const SCRAP_ROCKET := "scrap_rocket"
 const ROWS := {
 	SCRAP_ROCKET: {
 		"name": "Scrap Rocket Rack", "maker": "spillway_works", "rarity": "rare",
-		"verb": "Rack homing scrap rockets", "text": "F: four rockets steer onto machines",
+		"verb": "Rack homing scrap rockets", "text": "Four rockets steer onto machines",
 		"max_charges": 2, "recharge": 9.0, "kill_charge": 0.15, "bonus_cap": 4, "windup": 0.0,
 		"kind": preload("res://src/combat/actives/scrap_rockets.gd"),
 	},
@@ -33,7 +33,7 @@ const ROWS := {
 	# --- Silo Battery (Fleet Surplus) ---
 	"silo_battery": {
 		"name": "Silo Battery", "maker": "fleet_surplus", "rarity": "relic",
-		"verb": "Call down a silo strike", "text": "F: rings mark the ground, then the sky answers",
+		"verb": "Call down a silo strike", "text": "Rings mark the ground, then the sky answers",
 		"max_charges": 1, "recharge": 14.0, "kill_charge": 0.1, "bonus_cap": 3, "windup": 0.5,
 		"kind": preload("res://src/combat/actives/silo_battery.gd"),
 	},
@@ -41,7 +41,7 @@ const ROWS := {
 	# --- Cutting Torch (Redjaw Workshops) ---
 	"cutting_torch": {
 		"name": "Cutting Torch", "maker": "redjaw", "rarity": "rare",
-		"verb": "Sweep a plate-cutting torch", "text": "F: a guide line, then a beam that burns through plating",
+		"verb": "Sweep a plate-cutting torch", "text": "A guide line, then a beam that burns through plating",
 		"max_charges": 1, "recharge": 11.0, "kill_charge": 0.12, "bonus_cap": 4, "windup": 0.3,
 		"kind": preload("res://src/combat/actives/cutting_torch.gd"),
 	},
@@ -49,7 +49,7 @@ const ROWS := {
 	# --- Lift Pulse (Highdraft Roosts) ---
 	"lift_pulse": {
 		"name": "Lift Pulse", "maker": "highdraft_roosts", "rarity": "rare",
-		"verb": "Pulse a lift fan", "text": "F: a fan cone shoves machines away, harder per heft class",
+		"verb": "Pulse a lift fan", "text": "A fan cone shoves machines away, harder per heft tier",
 		"max_charges": 2, "recharge": 7.0, "kill_charge": 0.15, "bonus_cap": 4, "windup": 0.0,
 		"kind": preload("res://src/combat/actives/lift_pulse.gd"),
 	},
@@ -57,7 +57,7 @@ const ROWS := {
 	# --- Quake Knock (Waking-made) ---
 	"quake_knock": {
 		"name": "Quake Knock", "maker": "waking", "rarity": "relic",
-		"verb": "Knock a quake ring into the floor", "text": "F: a ring of cracks draws itself, then the floor hits",
+		"verb": "Knock a quake ring into the floor", "text": "A ring of cracks draws itself, then the floor hits",
 		"max_charges": 1, "recharge": 11.0, "kill_charge": 0.12, "bonus_cap": 4, "windup": 0.5,
 		"kind": preload("res://src/combat/actives/quake_knock.gd"),
 	},
@@ -65,7 +65,7 @@ const ROWS := {
 	# --- Glass Lance (Mind-glass) ---
 	"glass_lance": {
 		"name": "Glass Lance", "maker": "mind_glass", "rarity": "relic",
-		"verb": "Throw a shard of the Mind", "text": "F: a glass lance pierces every machine in a line",
+		"verb": "Throw a shard of the Mind", "text": "A glass lance pierces every machine in a line",
 		"max_charges": 2, "recharge": 11.0, "kill_charge": 0.12, "bonus_cap": 3, "windup": 0.0,
 		"kind": preload("res://src/combat/actives/glass_lance.gd"),
 	},

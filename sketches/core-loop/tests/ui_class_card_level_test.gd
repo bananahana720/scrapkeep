@@ -9,9 +9,9 @@ const T := preload("res://tests/support/t.gd")
 # measured one letter wide, the row pinned that height, and every card's fantasy line and key
 # rows fell off the card's floor. Two ways in: a first Start, whose prologue hides the row until
 # it ends, and a plain open. For each, L1: every card's column fits its card. L2: the fantasy
-# line keeps a two-line height. L3: every key cell ends inside its card. L4: with the line under
-# the title (screens.PILOT_LINE, pinned here as LINE so new words are measured again) the title,
-# the line, the cards and the key hints row stack in that order without touching, all on the
+# line keeps a two-line height. L3: every key cell ends inside its card. L4: with the line as the heading
+# (the title row is hidden since wave 36; screens.PILOT_LINE, pinned here as LINE so new words are measured again) the line,
+# the cards and the key hints row stack in that order without touching, all on the
 # screen with a margin under the key row.
 
 const LINE_MAX := 90.0
@@ -99,7 +99,6 @@ func _check(way: String) -> void:
 	_t.check("%s: L2 the fantasy line keeps a two-line height" % way, tallest > 0.0 and tallest <= LINE_MAX, "tallest %.1f px" % tallest)
 	_t.check("%s: L3 every key cell ends inside its card" % way, inside and not cards.is_empty(), worst)
 	var screens = _game.screens
-	var title: Rect2 = screens._title.get_global_rect()
 	var line: Rect2 = screens._body.get_global_rect()
 	var keys: Rect2 = screens._footer.get_global_rect()
 	var top := INF
@@ -108,8 +107,8 @@ func _check(way: String) -> void:
 		top = minf(top, card.get_global_rect().position.y)
 		bottom = maxf(bottom, card.get_global_rect().end.y)
 	var floor_y: float = screens._screen().y - EDGE
-	var stacked: bool = screens._body.visible and screens._footer.visible and title.position.y >= 0.0 and title.end.y <= line.position.y
+	var stacked: bool = screens._body.visible and screens._footer.visible and not screens._title.visible and line.position.y >= 0.0
 	stacked = stacked and line.end.y <= top and bottom <= keys.position.y and keys.end.y <= floor_y
-	_t.check("%s: L4 title, line, cards and key hints stack on the screen" % way, stacked and not cards.is_empty(),
-		"title %.0f-%.0f, line %.0f-%.0f, cards %.0f-%.0f, keys %.0f-%.0f, floor %.0f" % [title.position.y, title.end.y, line.position.y, line.end.y, top, bottom,
+	_t.check("%s: L4 line, cards and key hints stack on the screen" % way, stacked and not cards.is_empty(),
+		"line %.0f-%.0f, cards %.0f-%.0f, keys %.0f-%.0f, floor %.0f" % [line.position.y, line.end.y, top, bottom,
 			keys.position.y, keys.end.y, floor_y])

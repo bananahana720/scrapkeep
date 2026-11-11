@@ -52,26 +52,26 @@ const ROWS := {
 					"Moss's shift note: nothing's out of place. Yet.", "Moss's shift note: very tidy out there. Boots on."]},
 			{"kind": "card", "at": 0.6, "for": 4.4, "slot": "left_top",
 				"card": ["PUMP CREW", "Card 0417 · Spillway shift", "Clocked in", "06:00", "Hands on shift", "all", "Runner", "not back yet"]},
-			{"kind": "stamp", "at": 1.4, "for": 2.0, "text": "CLOCKED IN", "colour": "HAZARD"},
+			{"kind": "stamp", "at": 1.4, "for": 2.0, "text": "CLOCKED IN", "colour": "AMBER"},
 			{"kind": "sfx_word", "at": 1.4, "for": 1.2, "text": "KA-CHUNK", "at_share": Vector2(0.62, 0.34)},
 			{"kind": "caption", "at": 4.2, "for": 1.4, "slot": "left_low",
 				"text": ["Moss packed a spare card.", "Moss packed a spare thermos.", "Moss packed two. Just in case.", "Moss packed a broom. For after."]},
 		],
 		"short": [
-			{"kind": "stamp", "at": 0.0, "for": 1.8, "text": "CLOCKED IN", "colour": "HAZARD"},
+			{"kind": "stamp", "at": 0.0, "for": 1.8, "text": "CLOCKED IN", "colour": "AMBER"},
 			{"kind": "sfx_word", "at": 0.0, "for": 1.0, "text": "KA-CHUNK", "at_share": Vector2(0.62, 0.34)},
 		]},
 	# Rivet's cage gives way (rescue_completed "rivet").
 	"rivet_freed": {"priority": 2,
 		"full": [
-			{"kind": "sfx_word", "at": 0.0, "for": 1.2, "text": "KLANG!", "anchor": "cage"},
+			{"kind": "sfx_word", "at": 0.0, "for": 1.2, "text": "KLANG", "anchor": "cage"},
 			{"kind": "panels", "at": 0.3, "for": 5.3,
 				"texts": ["The cage. Opened from inside.", ["They measured the bars. Twice.", "Visor up. Tiny proud eyes."],
 					["Moss packed spare lenses.", "Moss packed a spare visor.", "Moss had a feeling."]]},
 			{"kind": "stamp", "at": 1.8, "for": 2.2, "text": "BACK ON SHIFT", "colour": "ARC"},
 		],
 		"short": [
-			{"kind": "sfx_word", "at": 0.0, "for": 1.0, "text": "KLANG!", "anchor": "cage"},
+			{"kind": "sfx_word", "at": 0.0, "for": 1.0, "text": "KLANG", "anchor": "cage"},
 			{"kind": "stamp", "at": 0.2, "for": 1.4, "text": "BACK ON SHIFT", "colour": "ARC"},
 		]},
 	# The flume's meltdown Warden engages for the first time on a stage attempt.
@@ -105,14 +105,14 @@ const ROWS := {
 		"full": [
 			{"kind": "card", "at": 0.0, "for": 4.2, "slot": "left_top",
 				"card": ["SPILLWAY WORKS", "World one · shift log", "Pumps", "running", "Admiral", "routed (politely)", "Overtime", "logged, not paid"]},
-			{"kind": "stamp", "at": 0.4, "for": 2.4, "text": "SHIFT COMPLETE", "colour": "HAZARD"},
+			{"kind": "stamp", "at": 0.4, "for": 2.4, "text": "SHIFT COMPLETE", "colour": "AMBER"},
 			{"kind": "caption", "at": 2.4, "for": 3.0, "slot": "left_low", "text": [
 				"Shift log: seals checked. Admiral routed. Kettle still warm.",
 				"Shift log: dam held. Flume drained. One badger, filed under weather.",
 				"Shift log: pumps running. Nobody clocked the overtime."]},
 		],
 		"short": [
-			{"kind": "stamp", "at": 0.0, "for": 2.0, "text": "SHIFT COMPLETE", "colour": "HAZARD"},
+			{"kind": "stamp", "at": 0.0, "for": 2.0, "text": "SHIFT COMPLETE", "colour": "AMBER"},
 			{"kind": "caption", "at": 0.2, "for": 1.8, "slot": "left_low", "text": [
 				"Shift log: seals checked. Admiral routed. Kettle still warm.",
 				"Shift log: dam held. Flume drained. One badger, filed under weather.",
@@ -175,15 +175,13 @@ const ROWS := {
 		"world": {"full": [{"kind": "eject", "at": 0.0, "seconds": 1.8}], "short": [{"kind": "eject", "at": 0.0, "seconds": 1.1}]},
 		"full": [
 			{"kind": "sfx_word", "at": 0.0, "for": 0.9, "text": "FWOOMP", "anchor": "scooter"},
-			{"kind": "sfx_word", "at": 0.5, "for": 1.6, "text": ["WOOO!", "HOORAY!", "YEAH!"], "at_share": Vector2(0.40, 0.33)},
-			{"kind": "sfx_word", "at": 0.7, "for": 1.4, "text": ["SHIFT OVER!", "HOME TIME!", "CLOCK OUT!"], "at_share": Vector2(0.86, 0.50)},
-			{"kind": "stamp", "at": 0.9, "for": 1.5, "text": "ROUTED!", "colour": "HAZARD", "slot": "centre"},
+			{"kind": "stamp", "at": 0.9, "for": 1.5, "text": "ROUTED", "colour": "AMBER", "slot": "centre"},
 			{"kind": "caption", "at": 1.2, "for": 1.2, "slot": "left_low",
 				"text": ["A tactical withdrawal. (Rounded up.)", "Brindle: \"Noted.\"", "The Admiral departs. On schedule."]},
 		],
 		"short": [
 			{"kind": "sfx_word", "at": 0.0, "for": 0.8, "text": "FWOOMP", "anchor": "scooter"},
-			{"kind": "stamp", "at": 0.3, "for": 0.9, "text": "ROUTED!", "colour": "HAZARD", "slot": "centre"},
+			{"kind": "stamp", "at": 0.3, "for": 0.9, "text": "ROUTED", "colour": "AMBER", "slot": "centre"},
 		]},
 	# Tarn signs on the day Brindle falls (achievement brindle_routed pays Tarn). Plays once, over
 	# the victory card; the card is the walk-in, the stamp is the contract.
@@ -192,12 +190,12 @@ const ROWS := {
 			{"kind": "sfx_word", "at": 0.0, "for": 0.8, "text": "CLANK", "at_share": Vector2(0.50, 0.40)},
 			{"kind": "card", "at": 0.0, "for": 2.0, "slot": "left_top",
 				"card": ["TARN", "Tiger · claw bruiser", "Temperament", "gentle", "Machine", "is not", "Claws issued", "none"]},
-			{"kind": "stamp", "at": 0.7, "for": 1.3, "text": "HIRED", "colour": "HAZARD"},
+			{"kind": "stamp", "at": 0.7, "for": 1.3, "text": "HIRED", "colour": "AMBER"},
 			{"kind": "caption", "at": 0.9, "for": 1.1, "slot": "left_low", "text": ["Start date: today. Claw: own.", "Paperwork: one claw, unissued.", "Shift starts now. Gloves optional."]},
 		],
 		"short": [
 			{"kind": "card", "at": 0.0, "for": 1.6, "slot": "left_top", "card": ["TARN", "Signed on"]},
-			{"kind": "stamp", "at": 0.3, "for": 1.3, "text": "HIRED", "colour": "HAZARD"},
+			{"kind": "stamp", "at": 0.3, "for": 1.3, "text": "HIRED", "colour": "AMBER"},
 		]},
 }
 

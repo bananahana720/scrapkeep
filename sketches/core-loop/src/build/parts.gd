@@ -33,7 +33,7 @@ const BURDEN_PAYOUT_CAP := 0.75
 const BURDEN_PAYOUT_SLOPE := 0.25
 
 const CATALOGUE := {
-	"load_dividend": {"touches": "fire", "name": "Load Dividend", "verb": "Make burdens pay", "text": "Burden hit bonus; %d%% cap" % roundi(BURDEN_PAYOUT_CAP * 100.0),
+	"load_dividend": {"touches": "fire", "name": "Load Dividend", "verb": "Burdens add extra hit damage", "text": "Each burden adds hit damage, up to +%d%%" % roundi(BURDEN_PAYOUT_CAP * 100.0),
 		"rarity": "rare", "tier": 2, "family": "weapon", "tags": ["mass"], "icon": "damage",
 		"trigger": "on_hit", "stack": "hyperbolic", "cap": BURDEN_PAYOUT_CAP,
 		"effect": {"do": "burden_payout", "per": BURDEN_PAYOUT_SLOPE}},
@@ -50,19 +50,19 @@ const CATALOGUE := {
 	"long_barrel": {"touches": "fire", "name": "Long Barrel", "verb": "Shoot farther", "text": "+12% weapon range",
 		"rarity": "common", "tier": 1, "family": "weapon", "tags": ["anchor"],
 		"mods": {"weapon_range": 1.12}},
-	"long_spool": {"name": "Long Spool", "verb": "Grapple farther", "text": "+30% grapple range",
+	"long_spool": {"name": "Long Spool", "verb": "Harpoon reaches farther", "text": "+30% harpoon range",
 		"rarity": "common", "tier": 1, "family": "mobility", "tags": ["anchor"],
 		"mods": {"rope_range": 1.3}},
 	"tread_plating": {"name": "Tread Plating", "verb": "Roll faster", "text": "+8% cruise speed",
 		"rarity": "common", "tier": 1, "family": "mobility", "tags": ["speed"],
 		"mods": {"cruise": 1.08}},
-	"boost_coil": {"name": "Boost Coil", "verb": "Recharge boost sooner", "text": "boost and dash recharge 15% faster",
+	"boost_coil": {"name": "Boost Coil", "verb": "Boost and dash refill sooner", "text": "Boost and dash refill 15% sooner",
 		"rarity": "common", "tier": 1, "family": "mobility", "tags": ["speed"],
 		"cooldown_scale": 0.85},
 	"dash_vane": {"name": "Dash Vane", "verb": "Dash harder", "text": "+15% air dash",
 		"rarity": "common", "tier": 1, "family": "mobility", "tags": ["speed"],
 		"mods": {"dash_impulse": 1.15}},
-	"rivet_plating": {"touches": "roll", "name": "Rivet Plating", "verb": "Raise your max health", "text": "+15 max health",
+	"rivet_plating": {"touches": "roll", "name": "Rivet Hull", "verb": "Raise your max health", "text": "+15 max health",
 		"rarity": "common", "tier": 1, "family": "stat", "tags": ["mass"],
 		"max_hp_bonus": 15.0, "stack": "capped", "cap": 3, "levels": [
 			{"max_hp_bonus": 15.0, "text": "+15 max health"},
@@ -77,7 +77,7 @@ const CATALOGUE := {
 	# W13 SR9: a copy tightens the Hold the Relay ring and speeds its charge. The numbers
 	# under "relay" are read by hold_relay.gd tuned(); a capped stack of three copies. The
 	# seam keeps it out of every offer until the director wires the relay (follow-up).
-	"relay_convergence": {"name": "Relay Convergence", "verb": "Tighten on the relay", "pitch": "Ring pulls in, charge quickens",
+	"relay_convergence": {"name": "Relay Convergence", "verb": "Relay ring shrinks, charges faster", "pitch": "Ring pulls in, charge quickens",
 		"text": "Tighter relay ring, faster charge", "icon": "utility",
 		"rarity": "common", "tier": 1, "family": "stat", "tags": ["arc"], "needs": "relay.convergence",
 		"stack": "capped", "cap": 3, "relay": {"radius_div": 2.0, "charge_per": 0.3}},
@@ -91,16 +91,16 @@ const CATALOGUE := {
 	# second ingredients of two evolutions, and change what the verb does instead of how fast
 	# the ball moves: how wide the harpoon's lock cone opens (it targets more, the ball goes no
 # farther or faster), how hard a smash throws its pins (drop_weight's base row was slam_speed 1.15).
-	"grip_tread": {"name": "Grip Tread", "verb": "Bite the floor", "pitch": "Tread bites harder", "touches": "roll",
+	"grip_tread": {"name": "Grip Tread", "verb": "Accelerate faster", "pitch": "Tread bites harder", "touches": "roll",
 		"text": "+15% drive acceleration", "icon": "mobility",
 		"rarity": "common", "tier": 1, "family": "mobility", "class_id": "runner_gunner", "tags": ["anchor"],
 		"mods": {"drive_accel": 1.15}},
-	"live_line": {"name": "Live Line", "verb": "Wider lock on the line", "pitch": "Harpoon grabs wider", "touches": "harpoon",
+	"live_line": {"name": "Live Line", "verb": "Harpoon locks on wider", "pitch": "Harpoon grabs wider", "touches": "harpoon",
 		"text": "+25% harpoon lock cone", "icon": "mobility",
 		"rarity": "common", "tier": 2, "family": "mobility", "tags": ["arc"],
 		"mods": {"harpoon_lock_deg": 1.25}},
 	"vent_baffle": {"name": "Vent Baffle", "verb": "Boost again sooner", "pitch": "Boost breathes quicker", "touches": "boost",
-		"text": "boost recharges 12% faster", "icon": "mobility",
+		"text": "Boost refills 12% sooner", "icon": "mobility",
 		"rarity": "common", "tier": 1, "family": "mobility", "class_id": "tally", "tags": ["speed"],
 		"cooldown_scale": 0.88},
 	# 2026-10-15 (wave 14 SQ19b, BIBLE.md Mobility row): Tally's own winch. A trial with reel_speed
@@ -114,20 +114,20 @@ const CATALOGUE := {
 		"text": "+10% jump speed", "icon": "mobility",
 		"rarity": "common", "tier": 1, "family": "mobility", "class_id": "pylon_engineer", "tags": ["spiral"],
 		"mods": {"jump_speed": 1.1}},
-	"drop_weight": {"name": "Drop Weight", "verb": "Smash on ballast", "pitch": "Pins hit harder", "touches": "haul",
-		"text": "After a smash, pins hit 25% harder", "icon": "mobility",
+	"drop_weight": {"name": "Drop Weight", "verb": "Post-smash, knocked machines hit 25% harder", "pitch": "Knocks hit harder", "touches": "haul",
+		"text": "After a smash, knocked machines hit 25% harder", "icon": "mobility",
 		"rarity": "common", "tier": 1, "family": "mobility", "tags": ["mass"],
 		"trigger": "on_smash", "stack": "linear", "cap": 3,
 		"effect": {"do": "pin_bonus", "bonus": 0.25, "window": 1.5}},
 
 	# Uncommon: gates and fabricators. Punch, a pattern or an element on every row.
-	"slag_rounds": {"touches": "fire", "name": "Slag Rounds", "verb": "Shots land heavy", "text": "+10 punch, +25% weapon damage",
+	"slag_rounds": {"touches": "fire", "name": "Slag Rounds", "verb": "Hit much harder", "text": "+10 punch, +25% weapon damage",
 		"rarity": "common", "tier": 2, "family": "weapon", "tags": ["kinetic", "mass"], "punch": 10.0,
 		"mods": {"weapon_damage": 1.25}},
-	"double_feed": {"touches": "fire", "name": "Double Feed", "verb": "Feed two rounds a trigger", "text": "+3 punch, +25% fire rate",
+	"double_feed": {"touches": "fire", "name": "Double Feed", "verb": "Fire much faster", "text": "+3 punch, +25% fire rate",
 		"rarity": "common", "tier": 2, "family": "weapon", "tags": ["speed", "split"], "punch": 3.0,
 		"mods": {"weapon_rate": 1.25}},
-	"focus_lens": {"touches": "fire", "name": "Focus Lens", "verb": "Focus the beam", "text": "+6 punch, +25% weapon range",
+	"focus_lens": {"touches": "fire", "name": "Focus Lens", "verb": "Shoot much farther", "text": "+6 punch, +25% weapon range",
 		"rarity": "common", "tier": 2, "family": "weapon", "tags": ["anchor"], "punch": 6.0,
 		"mods": {"weapon_range": 1.25}},
 	# Pattern transformers. The part id is the pattern id, and each copy adds a level.
@@ -139,7 +139,7 @@ const CATALOGUE := {
 	"spiral_wave": {"maker": "waking", "touches": "fire", "name": "Spiral Wave", "verb": "Spiral shots out in a wave", "text": "shots corkscrew outward",
 		"rarity": "common", "tier": 2, "family": "pattern", "tags": ["spiral"],
 		"patterns": {"spiral_wave": 1}},
-	"chain_arc": {"maker": "mind_glass", "touches": "fire", "name": "Chain Arc", "verb": "Chain hits to a neighbour", "text": "a hit jumps to the nearest enemy",
+	"chain_arc": {"maker": "mind_glass", "touches": "fire", "name": "Chain Arc", "verb": "Chain hits to a neighbour", "text": "a hit jumps to the nearest machine",
 		"rarity": "common", "tier": 2, "family": "pattern", "tags": ["chain", "arc"],
 		"patterns": {"chain_arc": 1}},
 	"frost_vane": {"name": "Frost Vane", "verb": "Dash trails frost", "text": "air dash freezes water into road",
@@ -147,49 +147,49 @@ const CATALOGUE := {
 		"elements": {"dash": "frost"}, "mods": {"dash_impulse": 1.1}},
 	# Arc Coil and Runner Overclock carry one tag: kinetic was not their identity, and on
 	# them it put Wrecking Ball over the 60% discovery cap (balance loop, B4).
-	"arc_coil": {"touches": "haul", "name": "Arc Coil", "verb": "Slam discharges an arc", "text": "slams burst arc at everything near",
+	"arc_coil": {"touches": "haul", "name": "Arc Coil", "verb": "Slams burst arcs nearby", "text": "Slams burst arcs at everything near",
 		"element": "arc", "rarity": "common", "tier": 2, "family": "mobility", "tags": ["arc"],
 		"elements": {"slam": "arc"}},
 	# Class mods: offered only to their class.
 	"pylon_capacitor": {"touches": "jump", "name": "Pylon Capacitor", "verb": "Launch harder off pylons", "text": "+8 punch, slingshot +50% boost",
 		"icon": "mobility", "rarity": "common", "tier": 2, "family": "class", "class_id": "pylon_engineer", "tags": ["anchor", "arc"],
 		"punch": 8.0, "mods": {"slingshot_boost": 1.5, "slingshot_keep": 1.1, "turret_damage": 1.4}},
-	"runner_overclock": {"touches": "fire", "name": "Runner Overclock", "verb": "Overclock the gun on the run", "text": "+4 punch, +35% fire rate",
+	"runner_overclock": {"touches": "fire", "name": "Runner Overclock", "verb": "Fire faster, boost refills sooner", "text": "+35% fire rate, boost refills 20% sooner",
 		"icon": "damage", "rarity": "common", "tier": 2, "family": "class", "class_id": "runner_gunner", "tags": ["speed"],
 		"punch": 4.0, "mods": {"weapon_rate": 1.35}, "cooldown_scale": 0.8},
 
 	# Rare: vaults, and gates with one bonus core.
-	"sunforged_core": {"touches": "fire", "name": "Sunforged Core", "verb": "Forge every hit white-hot", "text": "+22 punch, +50% weapon damage",
+	"sunforged_core": {"touches": "fire", "name": "Sunforged Core", "verb": "Hit far harder", "text": "+22 punch, +50% weapon damage",
 		"rarity": "rare", "tier": 3, "family": "weapon", "tags": ["kinetic", "mass"], "punch": 22.0,
 		"mods": {"weapon_damage": 1.5}},
-	"gatling_heart": {"touches": "fire", "name": "Gatling Heart", "verb": "Spin up a gatling stream", "text": "+5 punch, +50% fire rate",
+	"gatling_heart": {"touches": "fire", "name": "Gatling Heart", "verb": "Fire far faster", "text": "+5 punch, +50% fire rate",
 		"rarity": "rare", "tier": 3, "family": "weapon", "tags": ["spiral", "speed"], "punch": 5.0,
 		"mods": {"weapon_rate": 1.5}},
-	"horizon_optic": {"touches": "fire", "name": "Horizon Optic", "verb": "Snipe to the horizon", "text": "+12 punch, +50% range",
+	"horizon_optic": {"touches": "fire", "name": "Horizon Optic", "verb": "Hit harder from much farther", "text": "+12 punch, +50% range, +15% weapon damage",
 		"rarity": "rare", "tier": 3, "family": "weapon", "tags": ["anchor", "kinetic"], "punch": 12.0,
 		"mods": {"weapon_range": 1.5, "weapon_damage": 1.15}},
-	"rime_rounds": {"touches": "fire", "name": "Rime Rounds", "verb": "Shots freeze what they hit", "text": "+6 punch; shots freeze water",
+	"rime_rounds": {"touches": "fire", "name": "Rime Rounds", "verb": "Shots freeze water", "text": "+6 punch. Shots freeze water.",
 		"element": "frost", "rarity": "rare", "tier": 3, "family": "weapon", "tags": ["frost", "kinetic"], "punch": 6.0,
 		"elements": {"shot": "frost"}},
-	"galvanic_rounds": {"touches": "fire", "name": "Galvanic Rounds", "verb": "Shots carry a live arc", "text": "+6 punch; shots electrify water",
+	"galvanic_rounds": {"touches": "fire", "name": "Galvanic Rounds", "verb": "Shots electrify water", "text": "+6 punch. Shots electrify water.",
 		"element": "arc", "rarity": "rare", "tier": 3, "family": "weapon", "tags": ["arc", "chain"], "punch": 6.0,
 		"elements": {"shot": "arc"}},
-	"ram_plow": {"touches": "roll", "name": "Ram Plow", "verb": "Plough through the line", "text": "+18 punch, +15 max health",
+	"ram_plow": {"touches": "roll", "name": "Ram Plow", "verb": "Hit harder, gain 15 max health", "text": "+18 punch, +15 max health",
 		"icon": "damage", "rarity": "rare", "tier": 3, "family": "stat", "tags": ["kinetic", "mass"], "punch": 18.0,
 		"max_hp_bonus": 15.0},
-	"spare_cell": {"name": "Spare Cell", "verb": "Stock one more special", "pitch": "One cell extra", "touches": "special",
+	"spare_cell": {"name": "Spare Cell", "verb": "One more special charge", "pitch": "One cell extra", "touches": "special",
 		"text": "+1 special charge", "icon": "charge",
 		"rarity": "rare", "tier": 3, "family": "stat", "tags": ["mass"],
 		"charges": {"special": 1}},
 
 	# Rare-plus: won events, and gates with two or more bonus cores.
-	"tempest_core": {"name": "Tempest Core", "verb": "Call a spiral storm", "text": "spiral +2, chain +1, +30% fire rate",
+	"tempest_core": {"name": "Tempest Core", "verb": "Levels up spiral and chain shots", "text": "spiral +2, chain +1, +30% fire rate",
 		"rarity": "relic", "tier": 3, "family": "milestone", "milestone_only": true, "tags": ["spiral", "chain"],
 		"patterns": {"spiral_wave": 2, "chain_arc": 1}, "mods": {"weapon_rate": 1.3}},
-	"rime_heart": {"name": "Rime Heart", "verb": "Freeze the water you roll on", "text": "water under you turns to ice",
+	"rime_heart": {"name": "Rime Heart", "verb": "Freeze the water you roll on", "text": "Water under you freezes, +10% cruise speed",
 		"icon": "mobility", "element": "frost", "rarity": "relic", "tier": 3, "family": "milestone", "milestone_only": true, "tags": ["frost", "mass"],
 		"elements": {"roll_on_water": "frost"}, "mods": {"cruise": 1.1}},
-	"scrap_gravity": {"name": "Scrap Gravity", "verb": "Drag the scrapfield in", "text": "+8 punch, magnet x2.5, double kill mass",
+	"scrap_gravity": {"name": "Scrap Gravity", "verb": "Pull scrap in, kills drop double", "text": "+8 punch, magnet x2.5, kills drop double scrap",
 		"icon": "utility", "rarity": "relic", "tier": 3, "family": "milestone", "milestone_only": true, "tags": ["mass"],
 		"punch": 8.0, "magnet": 2.5, "kill_scrap": 2.0},
 }
@@ -353,18 +353,18 @@ const HOTWIRED := {
 	# part's own row (row(), def() and has() find it there; rows() never lists it, so no shelf,
 	# gate or tree offer can roll it); "{hp}", "{scrap}" and "{magnet}" are resolved from that row
 	# by burden_cost(), so the words follow the numbers.
-	"cracked_plating": {"name": "Cracked Plating", "tags": ["mass"], "burden": true, "recycle_commons": 1,
-		"label": "Pure cost: {hp} max health.",
+	"cracked_plating": {"name": "Cracked Hull", "tags": ["mass"], "burden": true, "recycle_commons": 1,
+		"label": "Costs {hp} max health.",
 		"downside": {"icon": "cat_defense", "words": "−{hp} max health"},
-		"part": {"verb": "Carry the crack", "family": "stat", "max_hp_bonus": -BURDEN_HP}},
+		"part": {"verb": "Costs max health", "family": "stat", "max_hp_bonus": -BURDEN_HP}},
 	"thin_pickings": {"name": "Thin Pickings", "tags": ["anchor"], "burden": true, "recycle_commons": 1,
-		"label": "Pure cost: {scrap}% scrap per kill.",
+		"label": "Costs {scrap}% scrap per kill.",
 		"downside": {"icon": "cat_utility", "words": "−{scrap}% kill scrap"},
-		"part": {"verb": "Leave scraps behind", "family": "stat", "kill_scrap": 1.0 - BURDEN_SCRAP_LOSS}},
+		"part": {"verb": "Costs kill scrap", "family": "stat", "kill_scrap": 1.0 - BURDEN_SCRAP_LOSS}},
 	"slack_coil": {"name": "Slack Coil", "tags": ["arc"], "burden": true, "recycle_commons": 1,
-		"label": "Pure cost: {magnet}% magnet reach.",
+		"label": "Costs {magnet}% magnet reach.",
 		"downside": {"icon": "cat_utility", "words": "−{magnet}% magnet reach"},
-		"part": {"verb": "Let the pull go slack", "family": "stat", "magnet": 1.0 - BURDEN_MAGNET_LOSS}},
+		"part": {"verb": "Costs magnet reach", "family": "stat", "magnet": 1.0 - BURDEN_MAGNET_LOSS}},
 }
 # One common part's recycle value in cogs (design-v3/research/economy/ECONOMY.md, Cogs: recycling).
 const RECYCLE_COMMON := 10
@@ -373,16 +373,16 @@ const RECYCLE_COMMON := 10
 # enter rows(), ids(), offer_pool(), roll() or roll_gate(): build.gd grants one when both
 # ingredients are held (source "evolution"). Rarity evolved carries roll weight 0 too.
 const EVOLVED := {
-	"breaker_drive": {"name": "Breaker Drive", "verb": "Wreck what you ram", "text": "Wrecking Ball evolved: +8 punch, +35% weapon damage",
+	"breaker_drive": {"name": "Breaker Drive", "verb": "Hit 35% harder, +8 punch", "text": "+8 punch, +35% weapon damage. From Wrecking Ball.",
 		"rarity": "evolved", "tier": 3, "family": "weapon", "tags": ["kinetic", "speed"], "punch": 8.0,
 		"mods": {"weapon_damage": 1.35}},
-	"bladestorm_rotor": {"name": "Bladestorm Rotor", "verb": "Spin up a storm", "text": "Pinwheel evolved: spiral level +1, +20% fire rate",
+	"bladestorm_rotor": {"name": "Bladestorm Rotor", "verb": "Spiral level up, fire faster", "text": "Spiral level +1, +20% fire rate. From Pinwheel.",
 		"rarity": "evolved", "tier": 3, "family": "pattern", "tags": ["spiral", "speed"], "patterns": {"spiral_wave": 1},
 		"mods": {"weapon_rate": 1.2}},
-	"storm_mast": {"name": "Storm Mast", "verb": "Hook it, light it", "text": "Tesla Pylon evolved: +6 punch, +20% fire rate",
+	"storm_mast": {"name": "Storm Mast", "verb": "Fire 20% faster, +6 punch", "text": "+6 punch, +20% fire rate. From Tesla Pylon.",
 		"rarity": "evolved", "tier": 3, "family": "weapon", "tags": ["anchor", "arc"], "punch": 6.0,
 		"mods": {"weapon_rate": 1.2}},
-	"grounding_spike": {"name": "Grounding Spike", "verb": "Earth every slam", "text": "Lightning Rod evolved: +8 punch, +25% weapon damage",
+	"grounding_spike": {"name": "Grounding Spike", "verb": "Hit 25% harder, +8 punch", "text": "+8 punch, +25% weapon damage. From Lightning Rod.",
 		"rarity": "evolved", "tier": 3, "family": "weapon", "tags": ["arc", "mass"], "punch": 8.0,
 		"mods": {"weapon_damage": 1.25}},
 }
@@ -746,8 +746,25 @@ static func headline(part_id: String, level := 1) -> String:
 		return display_name(part_id)
 	var line := "%s: %s." % [d.display_name, d.verb]
 	if d.punch > 0.0:
-		line += " Punch +%d" % int(d.punch)
+		line += " +%d punch" % int(d.punch)
 	return line
+
+
+# The shop's detail line: the name, then the part's own effect sentence with its numbers, and the
+# punch when the sentence does not already carry it. No label before the sentence.
+static func shop_line(part_id: String, level := 1) -> String:
+	var d: Resource = def_at(part_id, level)
+	if d == null:
+		return display_name(part_id)
+	var line := "%s. %s" % [d.display_name, d.text.substr(0, 1).to_upper() + d.text.substr(1)]
+	if d.punch > 0.0 and not "punch" in d.text.to_lower():
+		line += ". +%d punch" % int(d.punch)
+	return line
+
+
+# shop_line for the level taking part_id now would give.
+static func offer_shop_line(part_id: String, held: Array) -> String:
+	return shop_line(part_id, next_level(part_id, held))
 
 
 static func milestone_ids() -> Array:

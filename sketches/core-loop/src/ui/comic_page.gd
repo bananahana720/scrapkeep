@@ -140,17 +140,34 @@ static func title_text(p: Dictionary) -> String:
 	if title != "":
 		return title.to_upper()
 	var who := String(p.get("pilot_name", ""))
-	return ("SCRAPKEEP: %s" % who).to_upper() if who != "" else "SCRAPKEEP"
+	return "SCRAPKEEP"
 
 
 static func subtitle_text(p: Dictionary) -> String:
-	var parts: Array = []
-	if String(p.get("pilot_name", "")) != "":
-		parts.append(String(p["pilot_name"]).to_upper())
-	if String(p.get("world_name", "")) != "":
-		parts.append(String(p["world_name"]).to_upper())
-	parts.append("RETURN ENTERED" if ScrapbookStore.is_won(p) else "HULL NOT RETURNED")
-	return "  |  ".join(parts)
+	# One plain sentence that always fits: who, where and, for a loss, how it ended. The loss card is
+	# dropped on a small page and the title shows the pilot only when it has no title of its own, so this
+	# line is where a small page says how the run went.
+	var who := String(p.get("pilot_name", ""))
+	var where := String(p.get("world_name", ""))
+	var line := who
+	if who != "" and where != "":
+		line = "%s in %s" % [who, where]
+	elif where != "":
+		line = where
+	line = line + "." if line != "" else ""
+	if not ScrapbookStore.is_won(p):
+		line = (line + " Hull not returned.").strip_edges()
+	return line
+
+
+# The subtitle's font size: its sentence shrinks until it fits `room`, never under 9 px.
+static func subtitle_font(p: Dictionary, room: float, k: float) -> int:
+	var font := UiFonts.bold()
+	var fs := maxi(9, int(19.0 * k))
+	var line := subtitle_text(p)
+	while fs > 9 and font.get_string_size(line, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x > room:
+		fs -= 1
+	return fs
 
 
 static func world_color(world: int) -> Color:
@@ -246,7 +263,7 @@ func _draw_title(r: Rect2, p: Dictionary, k: float) -> void:
 	while fs > 12 and font.get_string_size(title, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x > room:
 		fs -= 2
 	draw_string(font, r.position + Vector2(skew + 12.0 * k, r.size.y * 0.55), title, HORIZONTAL_ALIGNMENT_LEFT, room, fs, Palette.AMBER)
-	draw_string(font, r.position + Vector2(skew + 12.0 * k, r.size.y * 0.86), subtitle_text(p), HORIZONTAL_ALIGNMENT_LEFT, room, maxi(9, int(19.0 * k)), Palette.SAND)
+	draw_string(font, r.position + Vector2(skew + 12.0 * k, r.size.y * 0.86), subtitle_text(p), HORIZONTAL_ALIGNMENT_LEFT, room, subtitle_font(p, room, k), Palette.SAND)
 
 
 func _draw_panel(r: Rect2, row: Dictionary, index: int, k: float) -> void:

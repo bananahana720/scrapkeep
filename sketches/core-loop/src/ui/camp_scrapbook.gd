@@ -16,6 +16,7 @@ const UiFonts := preload("res://src/ui/ui_fonts.gd")
 const ComicPage := preload("res://src/ui/comic_page.gd")
 const CampLines := preload("res://src/core/camp_lines.gd")
 const ScrapbookStore := preload("res://src/core/scrapbook_store.gd")
+const CreditsHint := preload("res://src/ui/credits_hint.gd")
 
 const STATION_ID := "scrapbook"
 const STATION_KEY := "key_b"
@@ -27,6 +28,8 @@ const LINE_SECONDS := 5.0
 const LINE_GROUP := "camp_line"
 const LINE_FADE := 1.2
 const PAGE_H := 560.0
+# [Q] [E] turn, [Esc] back: the keys the book answers, drawn as caps.
+const HINT_PARTS := [{"cap": "key_q", "say": "Q"}, {"cap": "key_e", "say": "E"}, {"say": "turn"}, {"cap": "key_esc", "say": "Esc"}, {"say": "back"}]
 
 var pages: Array = []
 var index := 0
@@ -36,7 +39,7 @@ var store
 var _view: Control
 var _count: Label
 var _empty: Label
-var _hint: Label
+var _hint: Control
 var _holder: Control
 
 
@@ -58,11 +61,12 @@ func _init() -> void:
 	_count.offset_top = 22.0
 	_count.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	add_child(_count)
-	_hint = _label(16, Palette.SAND)
+	# The page-turn and way-out keys as keycaps (credits_hint.gd), never typed letters.
+	_hint = CreditsHint.new()
+	_hint.name = "Keys"
+	_hint.setup(HINT_PARTS)
 	_hint.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
 	_hint.offset_top = -52.0
-	_hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_hint.text = "Left / Right or Q / E to turn the page.  Esc to close."
 	add_child(_hint)
 	_empty = _label(26, Palette.SAND)
 	_empty.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -112,7 +116,7 @@ func _rebuild() -> void:
 		store.load_shots(pages[index])
 	_view = _page_view(pages[index])
 	_holder.add_child(_view)
-	_count.text = "Page %d of %d" % [index + 1, pages.size()]
+	_count.text = "%d / %d" % [index + 1, pages.size()]
 
 
 func _input(event: InputEvent) -> void:

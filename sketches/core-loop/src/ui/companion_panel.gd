@@ -4,24 +4,35 @@ const Palette := preload("res://src/core/palette.gd")
 const Companion := preload("res://src/core/companion.gd")
 const ChoiceButton := preload("res://src/ui/choice_button.gd")
 const UiDraw := preload("res://src/ui/ui_draw.gd")
+const Glyphs := preload("res://src/ui/glyphs.gd")
+const Icons := preload("res://src/ui/icons.gd")
+const Keycap := preload("res://src/ui/keycap.gd")
 
 # The companion assembly screen, a calm menu between attempts. It lists the pieces the run
 # owns, shows the two sockets and writes the result back to run.companion (the model's
 # to_dict) after every change. workshop.gd decides when it may open (never in play) and
 # routes the keys; this layer only shows and edits.
 #
-#   Pick a piece to put it in a socket; pick a seated piece to take it out, or press U
-#   (pad Y) to empty both. One piece works on its own and SPIL-9 wears it (COMPANION-GROWS).
-#   A third piece, or a second of one family, is refused with one line.
+#   Pick a piece to put it in a socket; pick a seated piece to take it out, or press the
+#   empty key (U, pad Y) to empty both. One piece works on its own and SPIL-9 wears it
+#   (COMPANION-GROWS). A third piece, or a second of one family, is refused with one line.
 #   Keys: W/S or the d-pad move, Enter or pad A picks, 1-6 pick directly, Esc or pad B
-#   leaves.
+#   leaves (the Back choice wears the Esc cap).
+#
+# No title and no socket text (ruling cx): the two sockets are drawn marks holding the
+# piece's icon, an empty socket an empty ring, and the cap beside them with the cross icon
+# empties both (U, pad Y: fixed keys, as before; the cap follows the device in hand).
 
 signal closed
 
 const LAYER := 6
 const MAX_ROWS := 6
 const LINE_FULL := "Both sockets are full."
-const LINE_FAMILY := "Two of one family will not fit."
+const LINE_FAMILY := "One of each kind."
+# One icon per piece, from the icon registry, so a socket mark says which piece sits in it.
+const PIECE_ICONS := {"primer_coil": "cmp_primer_coil", "primer_mesh": "cmp_primer_mesh",
+	"ram_prow": "cmp_ram_prow", "ram_spring": "cmp_ram_spring", "escape_vent": "cmp_escape_vent",
+	"escape_rail": "cmp_escape_rail"}
 const LINE_NONE := "No companion in this run."
 
 var game
@@ -34,12 +45,11 @@ var message := ""
 var _open := false
 var _veil: ColorRect
 var _column: VBoxContainer
-var _title: Label
-var _sockets: Array[Label] = []
+var _marks: Control
 var _rows: VBoxContainer
 var _effect: Label
 var _line: Label
-var _hint: Label
+var _back: ChoiceButton
 
 
 func setup(game_ref) -> void:
@@ -48,7 +58,8 @@ func setup(game_ref) -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	visible = false
 	_veil = ColorRect.new()
-	_veil.color = Color(Palette.CHARCOAL, 0.84)
+	# Near solid: the screen behind (the title, a summary) must not read through the panel.
+	_veil.color = Color(Palette.CHARCOAL, 0.96)
 	_veil.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_veil.mouse_filter = Control.MOUSE_FILTER_STOP
 	add_child(_veil)
@@ -58,13 +69,8 @@ func setup(game_ref) -> void:
 	_column.add_theme_constant_override("separation", 14)
 	_column.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_column)
-	_title = UiDraw.label(40, Palette.AMBER)
-	_title.text = "COMPANION"
-	_column.add_child(_title)
-	for i in Companion.SOCKETS:
-		var socket := UiDraw.label(24, Palette.SAND)
-		_sockets.append(socket)
-		_column.add_child(socket)
+	_marks = Marks.new(self)
+	_column.add_child(_marks)
 	_rows = VBoxContainer.new()
 	_rows.alignment = BoxContainer.ALIGNMENT_CENTER
 	_rows.add_theme_constant_override("separation", 8)
@@ -75,9 +81,11 @@ func setup(game_ref) -> void:
 	_column.add_child(_effect)
 	_line = UiDraw.label(20, Palette.AMBER)
 	_column.add_child(_line)
-	_hint = UiDraw.label(18, Color(Palette.SAND, 0.7))
-	_hint.text = "U empties. Esc leaves."
-	_column.add_child(_hint)
+	_back = ChoiceButton.new("back", "key_esc", "Back")
+	_back.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	_back.custom_minimum_size.x = 260.0
+	_back.pressed.connect(close)
+	_column.add_child(_back)
 
 
 func is_open() -> bool:
@@ -209,8 +217,7 @@ func step(direction: int) -> void:
 # ---- Drawing ----
 
 func _rebuild() -> void:
-	for i in Companion.SOCKETS:
-		_sockets[i].text = "Socket %d: %s" % [i + 1, _name_of(staged[i]) if i < staged.size() else "empty"]
+	_marks.queue_redraw()
 	for row in _rows.get_children():
 		_rows.remove_child(row)
 		row.queue_free()
@@ -218,6 +225,9 @@ func _rebuild() -> void:
 	for i in count:
 		var id: String = model.owned[i]
 		var row := ChoiceButton.new("piece", "key_%d" % (i + 1), _name_of(id))
+		row.icon = Icons.texture(PIECE_ICONS.get(id, "disc"))
+		row.add_theme_constant_override("icon_max_width", 24)
+		row.add_theme_constant_override("h_separation", 10)
 		row.pressed.connect(pick.bind(i))
 		row.mouse_entered.connect(func(): cursor = i)
 		_rows.add_child(row)
@@ -236,14 +246,72 @@ func _name_of(id: String) -> String:
 	return String(Companion._row(id).get("name", id))
 
 
+# The icon id in each socket, "" for an empty one: what the two marks show.
+func socket_icons() -> Array[String]:
+	var out: Array[String] = []
+	for i in Companion.SOCKETS:
+		out.append(String(PIECE_ICONS.get(staged[i], "disc")) if i < staged.size() else "")
+	return out
+
+
+# The key glyph id the empty cap shows now, for the device in hand.
+func empty_cap() -> String:
+	return "pad_y" if Glyphs.is_pad() else "key_u"
+
+
+# The pixels each row has for its icon beside the keycap and the name, for the layout checks.
+func icon_room() -> Array[float]:
+	var out: Array[float] = []
+	for row in _rows.get_children():
+		var words: float = row.get_theme_font("font").get_string_size(row.text, HORIZONTAL_ALIGNMENT_LEFT, -1, row.get_theme_font_size("font_size")).x
+		out.append(row.size.x - row.get_theme_stylebox("normal").get_minimum_size().x - words - float(row.get_theme_constant("h_separation")))
+	return out
+
+
 # The words on screen, one per line, for tests and the layout checks.
 func screen_text() -> String:
-	var lines := PackedStringArray([_title.text])
-	for socket in _sockets:
-		lines.append(socket.text)
+	var lines := PackedStringArray()
 	for row in _rows.get_children():
 		lines.append(row.text)
-	for label in [_effect, _line, _hint]:
+	for label in [_effect, _line]:
 		if label.text != "":
 			lines.append(label.text)
 	return "\n".join(lines)
+
+
+# The two sockets and the empty cap, drawn: a dark disc ringed in sand holding the piece's
+# icon (amber ring when filled), an empty ring when nothing sits there, then the cap with a
+# cross that empties both. Nothing here is a word.
+class Marks extends Control:
+	const RADIUS := 34.0
+	const GAP := 28.0
+	var panel
+
+	func _init(owner_panel) -> void:
+		panel = owner_panel
+		name = "SocketMarks"
+		custom_minimum_size = Vector2(0.0, RADIUS * 2.0 + 16.0)
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+	func _draw() -> void:
+		var icons: Array[String] = panel.socket_icons()
+		var cap: String = panel.empty_cap()
+		var cap_w := Keycap.size_of(cap, 30.0).x
+		var total := icons.size() * RADIUS * 2.0 + (icons.size() - 1) * GAP + GAP * 1.5 + cap_w + 34.0
+		var x := (size.x - total) * 0.5 + RADIUS
+		var y := size.y * 0.5
+		for icon in icons:
+			var at := Vector2(x, y)
+			if icon == "":
+				draw_arc(at, RADIUS, 0.0, TAU, 40, Color(Palette.SAND, 0.35), 3.0, true)
+			else:
+				draw_circle(at, RADIUS, Color(Palette.CHARCOAL.darkened(0.35), 0.96))
+				draw_arc(at, RADIUS, 0.0, TAU, 40, Palette.AMBER, 3.0, true)
+				var side := RADIUS * 1.3
+				draw_texture_rect(Icons.texture(icon), Rect2(at - Vector2(side, side) * 0.5, Vector2(side, side)), false, Icons.tint(icon, Palette.SAND))
+			x += RADIUS * 2.0 + GAP
+		x += GAP * 0.5 - RADIUS + cap_w * 0.5
+		Keycap.draw(self, Vector2(x, y), cap, Palette.SAND, 30.0)
+		x += cap_w * 0.5 + 8.0 + 13.0
+		var side2 := 26.0
+		draw_texture_rect(Icons.shape("cross"), Rect2(Vector2(x, y) - Vector2(side2, side2) * 0.5, Vector2(side2, side2)), false, Palette.SAND)

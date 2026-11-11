@@ -10,6 +10,9 @@ const Push := preload("res://tests/workshop/push.gd")
 const Profile := preload("res://src/core/profile.gd")
 const Progress := preload("res://src/core/progress.gd")
 const GameEvents := preload("res://src/core/game_events.gd")
+const ScreenBusy := preload("res://src/ui/screen_busy.gd")
+const Hud := preload("res://src/ui/hud.gd")
+const TuneRows := preload("res://src/core/tune_rows.gd")
 const T := preload("res://tests/support/t.gd")
 const PilotBlocks := preload("res://tests/support/pilot_blocks.gd")
 
@@ -50,6 +53,22 @@ func _settle(seconds: float) -> void:
 	while left > 0.0:
 		await process_frame
 		left -= _game.get_process_delta_time()
+
+
+# Waits for a card other than the last one returned to come up and returns it ([] at the bound). The
+# bound is the source's own constants plus 60 frames: the screen's quiet hold for the first card after a
+# fight (screen_busy.gd SETTLE), a card's life (hud.gd ACH_TOTAL) for each next, and the Warden's own earn, raised by the break itself,
+# may also need the quiet hold.
+var _last_toast: Array[String] = []
+
+
+func _next_toast(bound: float) -> Array[String]:
+	var limit := bound + 1.0
+	while (_game.hud.ach_toasts().is_empty() or _game.hud.ach_toasts() == _last_toast) and limit > 0.0:
+		await _settle(0.05)
+		limit -= 0.05
+	_last_toast = _game.hud.ach_toasts()
+	return _last_toast
 
 
 func _run() -> void:
@@ -121,6 +140,11 @@ func _run() -> void:
 	_game.flow.choose_class(0)
 	# The cold open has the floor first (plates wait for a flourish's reading matter); this is about the plates.
 	_game.presentation.flourish.stop_all()
+	# 2026-11-11 (wave 36): every card waits in one line, oldest first (screen_busy.gd), so a record the
+	# band's ear reports around the Warden's break could land ahead of the Warden's earn. This is about
+	# the achievements' order, so the ear already knows every tune and raises no record here.
+	for id in TuneRows.ids():
+		_game.audio().knows_tune(String(id))
 	await _settle(0.5)
 	var hud = _game.hud
 	_game.events.achievement_earned.emit("first_win")
@@ -135,6 +159,11 @@ func _run() -> void:
 	await _settle(0.5)
 	_t.check("P3-5 during a live Warden fight the toast waits", hud.ach_toasts().is_empty() and hud.ach_waiting() == [Achievements.toast_text("first_event"), Achievements.toast_text("full_rack")], "showing %s waiting %s" % [hud.ach_toasts(), hud.ach_waiting()])
 	_game.flow._unseal()
+	# The Warden's crowd is removed for real (its telegraphs would keep the screen loud), and the
+	# director spawns no next one, so the bounds below are the source's constants alone.
+	_game.ctx.calm = true
+	for node in _game.get_tree().get_nodes_in_group("enemy"):
+		node.queue_free()
 	await _settle(0.5)
 	# 2026-10-04 (fix round D): since HW2 the Warden's break offers a hot-wired part, and the
 	# Fit / Recycle screen opens over the paused tree as the gates open, freezing the HUD's
@@ -142,11 +171,15 @@ func _run() -> void:
 	if hud.hotwire_screen != null and hud.hotwire_screen.is_open():
 		hud.hotwire_screen.choose("recycle")
 		await _frames(3)
-	_t.eq("P3-5 after the fight the first shows", hud.ach_toasts(), [Achievements.toast_text("first_event")])
-	await _settle(3.4)
-	_t.eq("P3-5 then the next, in order", hud.ach_toasts(), [Achievements.toast_text("full_rack")])
-	await _settle(3.4)
-	_t.eq("P3-5 the Warden's own earn comes last", hud.ach_toasts(), [Achievements.toast_text("warden_broken")])
+	# 2026-11-11 (wave 36): a ball still rolling can pass a reward gate while the cards below come, and
+	# the gate's own crate and take then hold the one line. The gates close so the line is the earns alone.
+	_game.build.gates.close()
+	# The screen has to be quiet for two seconds after the fight (screen_busy.gd), then the cards come one
+	# at a time in the order earned: each is awaited, and a card that never shows fails the check.
+	_t.eq("P3-5 after the fight the first shows", await _next_toast(ScreenBusy.SETTLE), [Achievements.toast_text("first_event")])
+	_t.eq("P3-5 then the next, in order", await _next_toast(Hud.ACH_TOTAL), [Achievements.toast_text("full_rack")])
+	_t.eq("P3-5 the Warden's own earn comes last", await _next_toast(Hud.ACH_TOTAL + ScreenBusy.SETTLE), [Achievements.toast_text("warden_broken")])
+	_t.check("P3-5 no record card joined that line", hud.tune_waiting().is_empty(), "%s" % [hud.tune_waiting()])
 	# 2026-10-05 (wave 14, prog-G10): the page after a won run's bus facts, on its own bus.
 	var bus = GameEvents.new()
 	_game.add_child(bus)
@@ -194,6 +227,14 @@ func _reach_rows(page) -> void:
 		root.content_scale_size = resolution
 		await _frames(5)
 		_t.eq("viewport checks actual resolution", Vector2i(root.get_visible_rect().size), resolution)
+		var view := root.get_visible_rect()
+		var plate: Rect2 = page.list_rect()
+		var first: Rect2 = page.rows.values()[0].get_global_rect()
+		var second: Rect2 = page.rows.values()[1].get_global_rect()
+		_t.check("the list's plate sits inside the view at %s" % resolution, view.encloses(plate), "view %s plate %s" % [view, plate])
+		_t.check("the list is centred at %s" % resolution, absf(plate.get_center().x - view.get_center().x) <= 2.0, "view %s plate %s" % [view, plate])
+		_t.check("rows start inside the plate and off the screen edge at %s" % resolution, plate.position.x >= 8.0 and first.position.x >= plate.position.x + 8.0, "plate %s row %s" % [plate, first])
+		_t.check("both columns are one width at %s" % resolution, is_equal_approx(first.size.x, second.size.x), "%s against %s" % [first.size.x, second.size.x])
 		for pad in [false, true]:
 			page.rows.values()[0].grab_focus()
 			await _frames(3)

@@ -7,6 +7,11 @@ const ItemEffects := preload("res://src/build/item_effects.gd")
 const Palette := preload("res://src/core/palette.gd")
 const UiFonts := preload("res://src/ui/ui_fonts.gd")
 const Attachments := preload("res://src/build/attachments.gd")
+const ChoiceButton := preload("res://src/ui/choice_button.gd")
+const Icons := preload("res://src/ui/icons.gd")
+
+const PIP := 6.0
+const ROW_WORDS := 9
 
 const STAT_WORDS := {
 	"ability_charges": "Ability charges", "air_control": "Air steering", "air_jumps": "Air jumps",
@@ -22,22 +27,22 @@ const STAT_WORDS := {
 	"drive_accel": "Acceleration", "drone.chance": "Drone chance", "echo_release.chance": "Echo chance",
 	"elapsed_seconds": "Elapsed time", "extra_hit.chance": "Extra hit chance", "glide_gravity": "Glide fall rate",
 	"harpoon_lock_deg": "Harpoon lock cone", "heal_back.chance": "Healing chance", "hit_damage": "Hit damage", "hp": "Current health",
-	"hp_per_mass": "Health per scrap mass", "hp_per_mass.per": "Health per scrap mass", "impact_force": "Impact force",
-	"jump_speed": "Jump speed", "kill_count": "Kills", "kill_scrap": "Scrap per kill",
+	"hp_per_mass": "Health per heft", "hp_per_mass.per": "Health per heft", "impact_force": "Impact force",
+	"jump_speed": "Jump speed", "kill_count": "Clocked out", "kill_scrap": "Scrap per machine",
 	"last_word.bonus": "Low health hit damage", "magnet": "Scrap pickup reach", "magnet_reach": "Scrap pickup reach",
-	"mass": "Scrap mass", "max_hp": "Maximum health", "max_hp_bonus": "Extra maximum health",
+	"mass": "Heft", "max_hp": "Maximum health", "max_hp_bonus": "Extra maximum health",
 	"movement_charges": "Movement charges", "movement_cooldown": "Movement cooldown",
 	"overcharge.damage": "Overcharge damage", "part_count": "Fitted parts",
 	"pattern.chain_arc": "Chain arcs", "pattern.cross_split": "Cross splits", "pattern.fan_spread": "Fan spreads",
 	"pattern.helix_drill": "Helix drills", "pattern.spiral_wave": "Spiral waves",
-	"pin_bonus.bonus": "Extra pin damage", "pin_chain.count": "Extra pin links", "pin_count": "Pin links",
-	"pin_damage": "Pin damage", "pin_speed": "Pin speed", "planar_speed": "Rolling speed",
+	"pin_bonus.bonus": "Extra knocked machine damage", "pin_chain.count": "Extra machines knocked on", "pin_count": "Machines knocked on",
+	"pin_damage": "Knocked machine damage", "pin_speed": "Knocked machine speed", "planar_speed": "Rolling speed",
 	"price_scale": "Shop prices", "price_scale.per": "Shop discount", "proc_coefficient": "Trigger strength",
-	"punch": "Added hit damage", "ram_damage": "Ram damage", "rebound_count": "Rebounds",
-	"rebound_speed": "Rebound speed", "rebound_strike.mult": "Rebound hit damage", "reel_speed": "Reel speed",
+	"punch": "Added hit damage", "ram_damage": "Ram damage", "rebound_count": "Bounces",
+	"rebound_speed": "Bounce speed", "rebound_strike.mult": "Bounce hit damage", "reel_speed": "Reel speed",
 	"release_damage": "Release damage", "resistance": "Damage resistance", "return_arc.share": "Returned damage",
 	"roll_on_water_element": "Water roll element", "rope_range": "Harpoon reach",
-	"scrap_burst.chance": "Scrap burst chance", "scrap_mass": "Collected scrap mass", "shot_element": "Shot element",
+	"scrap_burst.chance": "Scrap burst chance", "scrap_mass": "Heft from scrap", "shot_element": "Shot element",
 	"slam_element": "Slam element", "slam_speed": "Slam speed", "slingshot_boost": "Slingshot speed",
 	"slingshot_keep": "Slingshot carry", "slot_cooldown.per": "Ability cooldown reduction",
 	"smash_charges": "Smash charges", "special_charges": "Special charges", "special_cooldown": "Special cooldown",
@@ -73,10 +78,12 @@ func _init() -> void:
 	_popup.add_child(panel)
 	var column := VBoxContainer.new()
 	panel.add_child(column)
-	var close := Button.new()
-	close.text = "Close build"
+	# Back with the Esc keycap, as the other pages do; the button keeps the mouse able to close.
+	var close := ChoiceButton.new("back", "key_esc", "Back")
+	close.name = "Back"
 	close.pressed.connect(_popup.hide)
 	column.add_child(close)
+	_popup.window_input.connect(close_on_key)
 	var scroll := ScrollContainer.new()
 	scroll.custom_minimum_size = Vector2(580.0, 400.0)
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -104,12 +111,20 @@ func popup_visible() -> bool:
 	return _popup.visible
 
 
+# Esc (ui_cancel) closes the popup; returns whether it did.
+func close_on_key(event: InputEvent) -> bool:
+	if _popup.visible and event.is_action_pressed("ui_cancel"):
+		_popup.hide()
+		return true
+	return false
+
+
 func snapshot() -> Dictionary:
 	return _data.duplicate(true)
 
 
 func visible_text() -> String:
-	return "\n".join(_rows.get_children().map(func(row): return row.text))
+	return "\n".join(_rows.find_children("*", "Label", true, false).map(func(label): return label.text))
 
 
 func show_build(held: Array, loadout := {}) -> void:
@@ -125,12 +140,16 @@ func show_build(held: Array, loadout := {}) -> void:
 		if words != "":
 			_line(words)
 	for row in _data["parts"]:
-		_line(row["text"])
+		_part_row(row)
 	if _data["parts"].is_empty():
 		_line("No parts fitted")
 
 
 func _line(words: String) -> void:
+	_rows.add_child(_label(words))
+
+
+func _label(words: String) -> Label:
 	var label := Label.new()
 	label.text = words
 	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -138,23 +157,78 @@ func _line(words: String) -> void:
 	label.add_theme_font_override("font", UiFonts.bold())
 	label.add_theme_font_size_override("font_size", 16)
 	label.add_theme_color_override("font_color", Palette.SAND)
-	_rows.add_child(label)
+	return label
 
 
-# SQ11: the weapon-local layer in words. The tier, how many attachments it holds out of its
-# range, each fitted attachment, and at the top tier the second mode. Tiers are words only.
+# One part as one row: its icon, its words, and pips where the part has a copy cap.
+func _part_row(row: Dictionary) -> void:
+	var box := HBoxContainer.new()
+	box.name = "Part_" + String(row["id"])
+	box.add_theme_constant_override("separation", 8)
+	box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_rows.add_child(box)
+	var icon_id := Parts.icon_of(String(row["id"]))
+	var icon := TextureRect.new()
+	icon.texture = Icons.texture(icon_id)
+	icon.custom_minimum_size = Vector2(24.0, 24.0)
+	icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	icon.modulate = Icons.tint(icon_id, Palette.SAND)
+	icon.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	box.add_child(icon)
+	box.add_child(_label(row["text"]))
+	if not row["pips"].is_empty():
+		var pips := PipRow.new(int(row["pips"]["filled"]), int(row["pips"]["total"]))
+		pips.name = "Pips"
+		box.add_child(pips)
+		# Copies past the cap: the full row, then how many more are held.
+		if int(row["over"]) > 0:
+			var extra := _label("+%d" % int(row["over"]))
+			extra.name = "Over"
+			extra.size_flags_horizontal = Control.SIZE_SHRINK_END
+			extra.add_theme_font_size_override("font_size", 14)
+			box.add_child(extra)
+	elif row["at_cap"]:
+		# A part with no copy count that has reached its ceiling: one filled pip, the full-row look.
+		var mark := PipRow.new(1, 1)
+		mark.name = "CapMark"
+		box.add_child(mark)
+
+
+# Filled and empty round pips: how many copies are held out of how many count.
+class PipRow extends Control:
+	var filled := 0
+	var total := 0
+
+	func _init(held := 0, cap := 0) -> void:
+		filled = held
+		total = cap
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+		size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		custom_minimum_size = Vector2(total * PIP * 2.6, PIP * 2.0)
+
+	func _draw() -> void:
+		for i in total:
+			var at := Vector2(PIP * 1.3 + i * PIP * 2.6, PIP)
+			if i < filled:
+				draw_circle(at, PIP, Palette.SAND)
+			else:
+				draw_arc(at, PIP - 1.0, 0.0, TAU, 20, Palette.SAND, 1.5)
+
+
+# SQ11: the weapon's attachments in words. How many it holds out of its most, each fitted
+# attachment, and at the top tier the second mode.
 static func describe_attachments(loadout: Dictionary) -> String:
 	var tier := int(loadout.get("tier", 1))
 	var limits: Array = Attachments.TIER_COUNT[tier]
 	var held: Array = loadout.get("attachments", [])
-	var words := "%s weapon-local · %s · %d attachments (%s)" % [_weapon_words(String(loadout.get("weapon", ""))),
-		Attachments.TIER_WORDS[tier], held.size(), _range_words(limits)]
+	var words := "%s: %d of %d attachments" % [_weapon_words(String(loadout.get("weapon", ""))), held.size(), int(limits[1])]
 	for id in held:
 		var row: Dictionary = Attachments.ROWS.get(id, {})
 		words += "\n%s: %s" % [row.get("name", id), row.get("text", "")]
 	var mode: Dictionary = Attachments.second_mode(loadout)
 	if not mode.is_empty():
-		words += "\nSecond mode: %s, %s" % [mode["name"], mode["text"]]
+		words += "\nSecond mode is %s, %s" % [mode["name"], mode["text"]]
 	return words
 
 
@@ -164,7 +238,7 @@ static func preview_tier(weapon_id: String, tier: int) -> String:
 	var words := "%s %s holds %s attachments" % [_weapon_words(weapon_id), Attachments.TIER_WORDS[clampi(tier, 1, Attachments.TOP_TIER)], _range_words(limits)]
 	var mode: Dictionary = Attachments.second_mode(Attachments.empty(weapon_id, tier))
 	if not mode.is_empty():
-		words += "\nSecond mode: %s, %s" % [mode["name"], mode["text"]]
+		words += "\nSecond mode is %s, %s" % [mode["name"], mode["text"]]
 	return words
 
 
@@ -217,7 +291,6 @@ static func describe(held: Array) -> Dictionary:
 		if d.effect.get("do", "") == "damage_reduction":
 			remaining_cap *= 1.0 - (d.stack_cap if d.stack_cap > 0.0 else 1.0)
 		var n: int = counts[id]
-		var cap := _cap(d)
 		var effect_key := ItemEffects.stack_key(String(d.effect.get("do", "")))
 		var at_cap: bool = d.stack_cap >= 1.0 and n >= int(d.stack_cap) if d.stack_rule in ["linear", "capped"] else false
 		if d.stack_rule == "hyperbolic" and effect_key != "" and d.stack_cap > 0.0:
@@ -225,39 +298,63 @@ static func describe(held: Array) -> Dictionary:
 		if d.stack_rule == "spike":
 			at_cap = is_equal_approx(d.stacked(1.0, n), _spike_cap(d))
 		var bonuses := _level_bonuses(d, id) if levelled else _bonuses(d, n)
-		var layer_name := "weapon-local" if d.layer == "local" else "player-global"
-		var words := "%s x%d · %s · %s%s" % [d.display_name, n, layer_name, cap, " (at cap)" if at_cap else ""]
-		if d.layer == "global":
-			words += "\nReads: " + ", ".join(d.reads.map(_stat_words))
-		words += "\n" + d.text
-		for bonus in bonuses:
-			words += "\n" + bonus["text"]
-		rows.append({"id": id, "copies": n, "layer": d.layer, "reads": d.reads.duplicate(),
-			"cap": d.stack_cap, "stack": d.stack_rule, "at_cap": at_cap, "bonuses": bonuses, "text": words})
+		var pips := {}
+		if d.stack_rule in ["linear", "capped"] and d.stack_cap >= 1.0:
+			pips = {"filled": mini(n, int(d.stack_cap)), "total": int(d.stack_cap)}
+		rows.append({"id": id, "copies": n, "layer": d.layer, "reads": d.reads.duplicate(), "icon": d.icon_category,
+			"cap": d.stack_cap, "stack": d.stack_rule, "at_cap": at_cap, "pips": pips,
+			"over": maxi(0, n - int(pips["total"])) if not pips.is_empty() else 0, "bonuses": bonuses,
+			"text": _part_words(d, n if pips.is_empty() else 1, bonuses)})
 	_pool(pools, "resistance", "multiplying remaining", effects.damage_reduction, 1.0 - remaining_cap)
 	return {"pools": pools, "parts": rows}
 
 
+# A pool row says only what changed, as the stat and its signed change ("Weapon damage +12%").
 static func _pool(out: Dictionary, key: String, pool: String, total: float, cap := -1.0) -> void:
-	var percent := key == "resistance" or key.ends_with(".chance") or pool == "multiplying remaining"
-	var shown := _pool_value(total, pool, percent)
-	var limit := _pool_value(cap, pool, percent)
-	var pool_words := "shrinks what is left" if pool == "multiplying remaining" else pool
-	var words := "%s · %s · total %s · %s" % [_stat_words(key), pool_words, shown,
-		"cap " + limit if cap >= 0.0 else "no cap"]
 	var neutral := 1.0 if pool == "multiplying" else 0.0
-	if is_equal_approx(total, neutral):
-		words = ""
-	out[key] = {"pool": pool, "total": total, "cap": cap, "text": words}
+	var change := "" if is_equal_approx(total, neutral) else _change(key, pool, total)
+	out[key] = {"key": key, "pool": pool, "total": total, "cap": cap, "change": change,
+		"text": "" if change == "" else "%s %s" % [_stat_words(key), change]}
 
 
-static func _pool_value(value: float, pool: String, percent: bool) -> String:
-	var words := String.num(value * 100.0, 2) + "%" if percent else String.num(value, 4)
+# The player's number for a total: a multiplier reads as its percent change, a share as a percent.
+static func _change(key: String, pool: String, total: float) -> String:
 	if pool == "multiplying":
-		return "x" + words
-	if pool == "additive" and value >= 0.0:
-		return "+" + words
-	return words
+		return _signed((total - 1.0) * 100.0, "%")
+	if key == "resistance" or key.ends_with(".chance") or pool == "multiplying remaining":
+		return _signed(total * 100.0, "%")
+	return _signed(total, "")
+
+
+static func _signed(value: float, unit: String) -> String:
+	var shown := "%.1f" % value if unit == "%" else "%.2f" % value
+	while "." in shown and (shown.ends_with("0") or shown.ends_with(".")):
+		shown = shown.left(-1)
+	if shown == "-0":
+		shown = "0"
+	return ("+" if value >= 0.0 else "") + shown + unit
+
+
+# One part, one plain row: its name, a count when above one and no pips carry it, then
+# what it gives, kept within ROW_WORDS words. A part with no number says its own line.
+static func _part_words(d: Resource, copies: int, bonuses: Array) -> String:
+	var head: String = d.display_name if copies <= 1 else "%s x%d" % [d.display_name, copies]
+	var given: Array = []
+	for bonus in bonuses:
+		if bonus["change"] == "":
+			continue
+		var stat := _stat_words(bonus["key"])
+		var phrase := "%s %s" % [bonus["change"], stat.substr(0, 1).to_lower() + stat.substr(1)]
+		var candidate := head + ": " + ", ".join(given + [phrase])
+		if not given.is_empty() and candidate.split(" ", false).size() > ROW_WORDS:
+			break
+		given.append(phrase)
+	if given.is_empty():
+		var own := "%s: %s" % [head, d.text]
+		if own.split(" ", false).size() > ROW_WORDS and d.verb != "":
+			own = "%s: %s" % [head, d.verb]
+		return own
+	return head + ": " + ", ".join(given)
 
 
 static func _stat_words(key: String) -> String:
@@ -265,14 +362,6 @@ static func _stat_words(key: String) -> String:
 		push_error("BuildReadout.STAT_WORDS missing key: %s" % key)
 		return "Unknown stat"
 	return STAT_WORDS[key]
-
-
-static func _cap(d: Resource) -> String:
-	if d.stack_rule == "spike":
-		return "spike cap %s x one copy" % String.num(_spike_cap(d), 2)
-	if d.stack_rule == "hyperbolic":
-		return "hyperbolic cap %s%%" % String.num(100.0 * (d.stack_cap if d.stack_cap > 0.0 else 1.0), 2)
-	return "%s, stops at %s copies" % [d.stack_rule, String.num(d.stacked(1.0, int(d.stack_cap)), 0)] if d.stack_cap >= 1.0 else "%s, no copy cap" % d.stack_rule
 
 
 static func _spike_cap(d: Resource) -> float:

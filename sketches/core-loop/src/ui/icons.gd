@@ -68,6 +68,12 @@ const EXTRA := {"ab_sable_reel": "reel", "res_mass": "heap", "ab_tarn_weapon": "
 	"ab_cannon_line": "lane",
 	"ab_cannon_ult": "burst_ring",
 	# --- end Cannon ---
+	# --- companion pieces: kept out of IDS because four tests pin its 70 canonical ids ---
+	"cmp_primer_coil": "bolt", "cmp_primer_mesh": "rings", "cmp_ram_prow": "double_chevron",
+	"cmp_ram_spring": "disc_ring", "cmp_escape_vent": "launch", "cmp_escape_rail": "arrow",
+	# --- end companion pieces ---
+	# The radio take's knob: the radio chip's dial, a ring with its needle (radio_dial.gd).
+	"radio_take": "knob",
 }
 
 # The event_kinds shapes as glyphs. These are drawn, never files: a toast wears its
@@ -208,6 +214,8 @@ static func distance(glyph: String, p: Vector2) -> float:
 			return maxf(band, absf(p.x) - 0.85)
 		"core":
 			return minf((absf(p.x) + absf(p.y)) - 0.42, _ring(p, Vector2.ZERO, 0.75, 0.09))
+		"knob":
+			return minf(minf(_ring(p, Vector2.ZERO, 0.75, 0.09), p.length() - 0.16), _seg(p, Vector2.ZERO, Vector2(0.44, 0.62), 0.09))
 		"plus":
 			return minf(_box(p, Vector2.ZERO, Vector2(0.7, 0.22)), _box(p, Vector2.ZERO, Vector2(0.22, 0.7)))
 		"arch":

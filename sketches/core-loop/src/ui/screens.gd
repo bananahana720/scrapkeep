@@ -31,8 +31,7 @@ const ScrapFrame := preload("res://src/ui/scrap_frame.gd")
 # death, victory and summary. Each is one glance and one key, and every choice is also
 # a button that presses that key through game._screen_key, so a click and a key can
 # never disagree. Starting and restarting take a second (principle 2). Screens fade in
-# and out with a tween; the fade never holds input or the ball, so play starts under a
-# fading veil.
+# and out with a tween that never holds input or the ball, so play starts under a veil.
 
 const FADE_IN := 0.3
 const FADE_OUT := 0.25
@@ -67,9 +66,8 @@ const STAMP_TILT := -6.0
 # it; after that Space, Enter, Esc or any pad button shows the summary beneath.
 const ENDING_HOLD := 1.0
 const PROLOGUE_TITLE := "FIRST SHIFT"
-# The one line under "Choose your pilot"; empty shows none. The screen has room for one line
-# (ui_class_card_level_test L4 pins it with the key row on screen). It is the game's one line
-# (STORY-MAP.md section 1) as the crew's board would say it.
+# The pilot select's heading, its one line (ui_class_card_level_test L4 pins it with the key row on screen):
+# the game's one line (STORY-MAP.md section 1) as the crew's board would say it.
 const PILOT_LINE := "Loose cannons, all of them. Pick one."
 # Start is the one filled button on the title: the primary action reads first and biggest.
 # The run-end comic page (run_moments.gd) on the summary, drawn by the camp's comic_page.gd
@@ -320,7 +318,6 @@ func _on_flow_changed(state: String) -> void:
 	_tip = null
 	_tip_said = ""
 	_latch_held = 0.0
-	_title.visible = true
 	_mark.visible = false
 	_unstamp()
 	_stats.visible = true
@@ -338,7 +335,7 @@ func _on_flow_changed(state: String) -> void:
 			# it; a saved file this build cannot use names its cause under the buttons and
 			# leaves New run, focused, as the next step.
 			game.flow.saved_run()
-			_show(_title_name(), Palette.AMBER, FieldNotes.OBJECTIVE)
+			_show(TITLE, Palette.AMBER, FieldNotes.OBJECTIVE)
 			# The title fills none of these rows; hidden, their gaps no longer push a wrapped
 			# action row below the stage line at 1280x720.
 			for row in [_stats, _comic_row, _choices]:
@@ -346,8 +343,7 @@ func _on_flow_changed(state: String) -> void:
 			if game.flow.continue_ready:
 				_action("continue", "key_c", "Continue")
 			# The main menu (decisions.tsv 2026-10-16 alpha-scope): Play to pilot select, then
-			# Camp, Settings, Help and Achievements, and Quit last, on the Esc the title already
-			# quits on.
+			# Camp, Settings, Help and Achievements, and Quit last. Esc only moves the focus to Quit.
 			var saved: bool = game.flow.continue_ready or game.flow.saved_run_cause != ""
 			_action("start", "key_space", "New run" if saved else "Play")
 			_action("camp", "key_k", "Camp")
@@ -360,10 +356,10 @@ func _on_flow_changed(state: String) -> void:
 			_stamp()
 			_announce_ready()
 			if game.flow.saved_run_cause != "":
-				_refusal.text = "Saved run not loaded (%s): %s" % [game.flow.saved_run_cause, continue_refusal()]
+				_refusal.text = "The saved run would not load. %s" % continue_refusal()
 				button_for("start").grab_focus()
 		"class_select":
-			_show("Choose your pilot", Palette.SAND, PILOT_LINE)
+			_show("", Palette.SAND, PILOT_LINE)
 			# Pilot select fills none of these rows; hidden, their gaps (26 px each) are room for
 			# the line under the title with the cards at full height and the key row on screen.
 			for row in [_stats, _comic_row, _actions]:
@@ -379,8 +375,7 @@ func _on_flow_changed(state: String) -> void:
 				card.bind_profile(game.ctx.profile)
 				card.set_locked(not game.pilot_unlocked(classes[i]), _unlock_hint(classes[i]))
 			_queue_level()
-			_footer.setup([{"cap": "key_1", "say": "1"}, {"say": "to"}, {"cap": "key_%d" % classes.size(), "say": str(classes.size())},
-				{"say": "choose"}, {"say": "·"}, {"cap": "key_enter", "say": "Enter"}, {"say": "start"}])
+			_footer.setup([{"cap": "key_enter", "say": "Enter"}, {"say": "start"}])
 			_footer.visible = true
 			if _prologue_due():
 				_begin_prologue()
@@ -432,8 +427,8 @@ func _on_flow_changed(state: String) -> void:
 			if not game.flow.run_won and game.flow.death_tip != "":
 				_show_tip(game.flow.death_tip)
 			_summary_stats()
-			_action("again", "key_n", "Run again")
-			_action("class", "key_space", "Choose pilot")
+			_action("again", "key_n", "New run")
+			_action("class", "key_c", "Choose pilot")
 			if not game.run.companion.is_empty():
 				_companion_action()
 			_action("camp", "key_k", "Camp")
@@ -566,7 +561,7 @@ func end_prologue() -> void:
 	for child in _actions.get_children():
 		_actions.remove_child(child)
 		child.queue_free()
-	_show("Choose your pilot", Palette.SAND, PILOT_LINE)
+	_show("", Palette.SAND, PILOT_LINE)
 	_actions.visible = false
 	_choices.visible = true
 	_footer.visible = true
@@ -574,8 +569,8 @@ func end_prologue() -> void:
 	_fade(true)
 
 
-# While the prologue shows, every key but Escape stays on it, so a number cannot pick a
-# pilot unseen. A click on its own button is the GUI's, not a skip.
+# While the prologue shows, every key stays on it (Esc too, which never quits), so a number cannot
+# pick a pilot unseen. A click on its own button is the GUI's, not a skip.
 func _prologue_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton:
 		var next := button_for("prologue_next")
@@ -583,12 +578,11 @@ func _prologue_input(event: InputEvent) -> void:
 			return
 	if event.is_action_pressed("cl_interact"):
 		advance_prologue()
-		get_viewport().set_input_as_handled()
 	elif event.is_action_pressed("cl_fire") or event.is_action_pressed("cl_harpoon"):
 		end_prologue()
-		get_viewport().set_input_as_handled()
-	elif event is InputEventKey and event.pressed and event.physical_keycode != KEY_ESCAPE:
-		get_viewport().set_input_as_handled()
+	elif not (event is InputEventKey and event.pressed):
+		return
+	get_viewport().set_input_as_handled()
 
 
 # H on the title swaps its body and actions for the how-to-play page, and back.
@@ -599,10 +593,10 @@ func toggle_help() -> void:
 	_help.visible = not _help.visible
 	_actions.visible = not _help.visible
 	if _help.visible:
-		_show("HOW TO PLAY", Palette.AMBER, "")
+		_show("", Palette.AMBER, "")
 		_help.page_button.grab_focus()
 	else:
-		_show(_title_name(), Palette.AMBER, FieldNotes.OBJECTIVE)
+		_show(TITLE, Palette.AMBER, FieldNotes.OBJECTIVE)
 		var help_button = button_for("help")
 		if help_button != null:
 			help_button.grab_focus()
@@ -622,9 +616,8 @@ func toggle_achievements() -> void:
 	_actions.visible = not _achievements.visible
 	if _achievements.visible:
 		_achievements.refresh(game.ctx.profile, game.progress, game.tuning != null and game.tuning.sitting())
-		# Over the camp walk A is the trophy wall's key, so Back shows the Esc that closes it.
-		_achievements.back.set_key("key_esc" if walking() else "key_a")
-		_show("ACHIEVEMENTS", Palette.AMBER, "")
+		_achievements.back.set_key("key_esc")
+		_show("", Palette.AMBER, "")
 		_sync_walk()
 	else:
 		_back_to_base()
@@ -641,7 +634,7 @@ func toggle_settings() -> void:
 	_actions.visible = not _settings.visible
 	if _settings.visible:
 		_settings.refresh()
-		_show("SETTINGS", Palette.AMBER, "")
+		_show("", Palette.AMBER, "")
 		_settings.focus("fullscreen")
 		refresh_lab_row()
 		_sync_walk()
@@ -684,7 +677,7 @@ func _end_walk() -> void:
 	_stop_walk()
 	_camp.visible = false
 	_actions.visible = true
-	_show(_title_name(), Palette.AMBER, FieldNotes.OBJECTIVE)
+	_show(TITLE, Palette.AMBER, FieldNotes.OBJECTIVE)
 	get_viewport().gui_release_focus()
 	_fade(true)
 
@@ -751,7 +744,7 @@ func _sync_walk() -> void:
 		card.visible = live
 	_camp.visible = live or customizing
 	_veil.visible = not live
-	_title.visible = not live
+	_title.visible = not live and _title.text != ""
 	_content.alignment = BoxContainer.ALIGNMENT_END if live else BoxContainer.ALIGNMENT_CENTER
 	_layout_backdrop()
 
@@ -763,7 +756,7 @@ func _back_to_base() -> void:
 		_show("CAMP", Palette.AMBER, "")
 		_sync_walk()
 	else:
-		_show(_title_name(), Palette.AMBER, FieldNotes.OBJECTIVE)
+		_show(TITLE, Palette.AMBER, FieldNotes.OBJECTIVE)
 
 
 # The one way a new page opens over the walk and returns to it: the page is shown over the veil, the ball is held,
@@ -778,7 +771,7 @@ func open_walk_page(page: Control, on_close := Callable()) -> void:
 	_walk_page = page
 	_walk_on_close = on_close
 	_actions.visible = false
-	_show("CAMP", Palette.AMBER, "")
+	_show("", Palette.AMBER, "")
 	_sync_walk()
 	_fade(true)
 
@@ -817,7 +810,7 @@ func walk_customize() -> void:
 		return
 	_camp.customize._open_from_camp()
 	if _camp.customize.visible:
-		_show("CAMP", Palette.AMBER, "")
+		_show("", Palette.AMBER, "")
 		_sync_walk()
 		_fade(true)
 
@@ -973,7 +966,7 @@ func toggle_radio() -> void:
 	_camp.visible = false
 	_radio.visible = true
 	_radio.refresh(game.ctx.profile, game.radio_deck.radio)
-	_show("MIXTAPES", Palette.AMBER, "")
+	_show("", Palette.AMBER, "")
 	_radio.focus_first()
 	_sync_walk()
 	_fade(true)
@@ -1072,11 +1065,11 @@ func _unlock_hint(def) -> String:
 	return hint if hint == "" or beat == "" else "%s\n%s" % [hint, beat]
 
 
-# With --music=ace the settings page's Breath button (B) cycles the Warden open's held
+# With --dev and --music=ace the settings page's Breath button (B) cycles the Warden open's held
 # breath and names what the next run plays; with the synth the button is hidden.
 func refresh_lab_row() -> void:
-	_breath_row.visible = _settings.visible and game.tuning.option(Tuning.MUSIC_KEY) == "ace"
-	_breath_row.text = "Breath: %s" % game.tuning.option(Tuning.BREATH_KEY)
+	_breath_row.visible = _settings.visible and game.dev and game.tuning.option(Tuning.MUSIC_KEY) == "ace"
+	_breath_row.text = "Breath %s" % game.tuning.option(Tuning.BREATH_KEY)
 
 
 func overlay_open() -> bool:
@@ -1186,9 +1179,7 @@ func _input(event: InputEvent) -> void:
 		_prologue_input(event)
 		return
 	if is_instance_valid(_walk_page):
-		var back: bool = event is InputEventJoypadButton and event.pressed and event.button_index == JOY_BUTTON_B
-		back = back or (event is InputEventKey and event.pressed and not event.echo and event.physical_keycode == KEY_ESCAPE)
-		if back:
+		if _backs(event):
 			close_walk_page()
 			get_viewport().set_input_as_handled()
 		return
@@ -1196,30 +1187,18 @@ func _input(event: InputEvent) -> void:
 		if _settings.handle(event):
 			get_viewport().set_input_as_handled()
 		return
-	if _radio.visible:
-		if event is InputEventJoypadButton and event.pressed and event.button_index == JOY_BUTTON_B:
-			toggle_radio()
-			get_viewport().set_input_as_handled()
-		elif event is InputEventKey and event.pressed and not event.echo and event.physical_keycode == KEY_ESCAPE:
-			toggle_radio()
-			get_viewport().set_input_as_handled()
-		return
-	if _jukebox.visible:
-		if event is InputEventJoypadButton and event.pressed and event.button_index == JOY_BUTTON_B:
-			toggle_jukebox()
-			get_viewport().set_input_as_handled()
-		elif event is InputEventKey and event.pressed and not event.echo and event.physical_keycode == KEY_ESCAPE:
-			toggle_jukebox()
+	if _radio.visible or _jukebox.visible:
+		if _backs(event):
+			if _radio.visible:
+				toggle_radio()
+			else:
+				toggle_jukebox()
 			get_viewport().set_input_as_handled()
 		return
 	if _camp.visible:
 		# Pad B boosts in the walk; Start (the pause button elsewhere) leaves the camp. Esc leaves on keys.
-		var leave: bool = event is InputEventJoypadButton and event.pressed and (event.button_index == JOY_BUTTON_START
-			or (event.button_index == JOY_BUTTON_B and not _walking))
-		if leave:
-			toggle_camp()
-			get_viewport().set_input_as_handled()
-		elif event is InputEventKey and event.pressed and not event.echo and event.physical_keycode == KEY_ESCAPE:
+		var start: bool = event is InputEventJoypadButton and event.pressed and event.button_index == JOY_BUTTON_START
+		if start or (_backs(event) and not (_walking and event is InputEventJoypadButton)):
 			toggle_camp()
 			get_viewport().set_input_as_handled()
 		return
@@ -1240,14 +1219,37 @@ func _input(event: InputEvent) -> void:
 	if _pad_enters_title(event):
 		get_viewport().set_input_as_handled()
 		return
-	if not (_help.visible or _achievements.visible) or not (event is InputEventKey) or not event.pressed or event.echo:
+	if not (event is InputEventKey) or not event.pressed or event.echo:
 		return
-	if event.physical_keycode == KEY_ESCAPE:
+	var code: int = event.physical_keycode
+	var quit := button_for("quit")
+	if code == KEY_C and _state == "summary":
+		if not game.workshop().companion_panel.is_open():
+			_press("key_c")
+	elif code == KEY_ESCAPE and (_help.visible or _achievements.visible):
 		if _help.visible:
 			toggle_help()
 		else:
 			toggle_achievements()
-		get_viewport().set_input_as_handled()
+	elif code == KEY_ESCAPE and _state == "title" and quit != null:
+		quit.grab_focus()
+	elif code == KEY_ESCAPE and _state in ["class_select", "dead", "victory"]:
+		if _state == "class_select":
+			game.flow.show_title()
+		elif _state == "dead":
+			open_camp_from_summary()
+	elif quit != null and quit.has_focus() and code in [KEY_ENTER, KEY_KP_ENTER, KEY_SPACE]:
+		quit.pressed.emit()
+	else:
+		return
+	get_viewport().set_input_as_handled()
+
+
+# Esc or pad B, the keys every page's Back answers to.
+func _backs(event: InputEvent) -> bool:
+	if event is InputEventJoypadButton:
+		return event.pressed and event.button_index == JOY_BUTTON_B
+	return event is InputEventKey and event.pressed and not event.echo and event.physical_keycode == KEY_ESCAPE
 
 
 # On the title with nothing focused, a pad's d-pad or stick lands on the first button so A
@@ -1266,13 +1268,9 @@ func _pad_enters_title(event: InputEvent) -> bool:
 	return false
 
 
-# The title's name, with the one-word SITTING tag while --profile=sitting is on.
-func _title_name() -> String:
-	return TITLE + " SITTING" if game.tuning != null and game.tuning.sitting() else TITLE
-
-
 func _show(title: String, color: Color, body: String) -> void:
 	_title.text = title
+	_title.visible = title != ""
 	_title.add_theme_color_override("font_color", color)
 	_body.text = body
 	_body.visible = body != ""
@@ -1281,7 +1279,7 @@ func _show(title: String, color: Color, body: String) -> void:
 func _action(id: String, key: String, words: String) -> void:
 	var button := ChoiceButton.new(id, key, words)
 	if id == "quit":
-		button.pressed.connect(func(): get_tree().quit())
+		button.pressed.connect(func(): if not game.test_mode: get_tree().quit())
 	else:
 		button.pressed.connect(_press.bind(key))
 	if id == "start":
@@ -1315,9 +1313,11 @@ func _companion_action() -> void:
 	_actions.add_child(button)
 
 
-# A button presses its key: the same route, the same guards, the same result.
+# A button presses its key: the same route, the same guards, the same result. On the summary C (Choose
+# pilot, as on the death screen) takes Space's route; Space is the jump, so it never wears the cap.
 func _press(key: String) -> void:
-	game._screen_key(OS.find_keycode_from_string(Keycap.label(key)))
+	var code := OS.find_keycode_from_string(Keycap.label(key))
+	game._screen_key(KEY_SPACE if _state == "summary" and code == KEY_C else code)
 
 
 # The boss row of the world the run is in: on the victory screen, the world whose boss was

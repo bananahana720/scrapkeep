@@ -10,6 +10,7 @@ const SettingsStore := preload("res://src/ui/settings_store.gd")
 const SafeStore := preload("res://src/core/safe_store.gd")
 const RewardView := preload("res://src/ui/reward_view.gd")
 const WhyCallout := preload("res://src/ui/why_callout.gd")
+const ScreenBusy := preload("res://src/ui/screen_busy.gd")
 
 # The reward ceremony (v3 W13, playtest entry 8 follow-up: "treasure find ceremony").
 # Every part_gained is presented at a tier, so a big find feels big and a small one stays
@@ -27,8 +28,8 @@ const WhyCallout := preload("res://src/ui/why_callout.gd")
 #             evolution: a crate shakes and cracks over a drum and bell build, bursts on
 #             a resolving chord and seats the part in a hull slot
 #
-# A card or a ceremony opens only when WhyCallout.find_may_speak says so (may_show_card):
-# calm, and no Warden engaged and alive. A first find that cannot yet is held, at most
+# A card or a ceremony opens only when the screen's one gate says so (may_show_card, through
+# screen_busy.gd): quiet for the finds' hold. A first find that cannot yet is held, at most
 # MAX_HELD of them, and opens in the order found; a part is seen when its card is shown, so a
 # dropped one is still unseen. A repeat find shows no card; the name at the ball is all it
 # says. A reveal card that is up when a Warden fight turns live closes at once; the part
@@ -79,9 +80,10 @@ var last_error := ""
 var _save_blocked := false
 var _queue: Array = []
 var _cards: Array = []
+# The screen_busy key of the reveal card now up (src/ui/screen_busy.gd), "" when none.
+var _slot := ""
 var _active := {}
 var _calm_since := -1
-var _calm_left := 0.0
 var _armed: Array = []
 var _paid := {}
 var _held_velocity := Vector3.ZERO
@@ -102,6 +104,8 @@ func setup(ctx_ref, audio_ref, juice_ref, vfx_ref) -> void:
 	short = float(SettingsStore.new(dir).comfort.get(SETTING, 1.0)) < 0.5
 	_seen_path = dir.path_join(SEEN_FILE)
 	_load_seen()
+	if _busy() != null:
+		_busy().add_source(active)
 	var layer := CanvasLayer.new()
 	layer.name = "RewardLayer"
 	layer.layer = 41
@@ -111,7 +115,6 @@ func setup(ctx_ref, audio_ref, juice_ref, vfx_ref) -> void:
 	layer.add_child(view)
 	var events = ctx.events
 	events.part_gained.connect(_on_part_gained)
-	events.player_hit.connect(func(_amount: float, _source: String): _calm_left = WhyCallout.CALM_SECONDS)
 	events.run_started.connect(func(_class_id: String): _reset(true))
 	events.player_died.connect(func(): _reset(false))
 	events.stage_entered.connect(func(_stage: int, retry: bool):
@@ -323,9 +326,9 @@ func _is_held(part_id: String) -> bool:
 	return not _active.is_empty() and _active["find"]["part"] == part_id
 
 
-# The shared gate: WhyCallout.find_may_speak with this node's own damage clock.
+# The shared gate: the screen is quiet (screen_busy.gd) for the finds' longer hold.
 func may_show_card() -> bool:
-	return WhyCallout.find_may_speak(_calm_left, get_tree() if is_inside_tree() else null, ctx.flow)
+	return _busy() == null or _busy().settled(ScreenBusy.FIND_HOLD)
 
 
 # A rung's own voice (EventKinds.REWARD_RUNG_CUES: cobalt's coil whine and click), played
@@ -361,14 +364,17 @@ func _demote(find: Dictionary) -> void:
 
 func _hold_card(find: Dictionary) -> void:
 	_cards.append(find)
+	if _busy() != null:
+		_busy().request("find:" + String(find["part"]))
 	if view.card.is_empty() or view.card.get("ceremony", false) and _active.is_empty():
 		_next_card()
 
 
 # The head of the held cards opens when the gate allows, and the part is seen only now.
 func _next_card() -> void:
+	_release_slot()
 	view.card = {}
-	if _cards.is_empty() or not may_show_card():
+	if _cards.is_empty() or not may_show_card() or not _take_slot(_cards[0]):
 		return
 	var find: Dictionary = _cards.pop_front()
 	_mark_seen(find["part"])
@@ -377,6 +383,27 @@ func _next_card() -> void:
 	if find["link"] == "lit":
 		audio.play("reward_reveal", -4.0, 1.0, "SFX", String(EventKinds.reward_row("reveal")["sound_snap"]))
 	_arm(find)
+
+
+func _busy():
+	return ctx.get("screen_busy") if ctx != null else null
+
+
+# A reveal card waits its turn with the other cards that can wait (screen_busy.gd): quiet screen, oldest first.
+func _take_slot(find: Dictionary) -> bool:
+	if _busy() == null:
+		return true
+	var key := "find:" + String(find["part"])
+	if not _busy().may_show(key, ScreenBusy.FIND_HOLD):
+		return false
+	_slot = key
+	return true
+
+
+func _release_slot() -> void:
+	if _slot != "" and _busy() != null:
+		_busy().done(_slot)
+	_slot = ""
 
 
 func card_state(find: Dictionary, start: int, in_ceremony: bool) -> Dictionary:
@@ -453,7 +480,6 @@ func phase() -> String:
 func _process(delta: float) -> void:
 	var now := int(now_ms.call())
 	view.now = now
-	_calm_left = WhyCallout.calm_left_after(_calm_left, delta, get_tree())
 	if not _active.is_empty():
 		_step_ceremony(now)
 	elif not _queue.is_empty():
@@ -461,6 +487,7 @@ func _process(delta: float) -> void:
 	if view.card.is_empty() and not _cards.is_empty() and _active.is_empty():
 		_next_card()
 	if not view.card.is_empty() and not view.card.get("ceremony", false) and WhyCallout.warden_fight_live(ctx.flow):
+		_release_slot()
 		view.card = {}
 	if not view.card.is_empty() and not view.card.get("ceremony", false):
 		var c: Dictionary = view.card
@@ -503,6 +530,10 @@ func _begin(find: Dictionary) -> void:
 		"class_color": _class_color(), "seed": absi(String(find["part"]).hash()), "hull": hull})
 	if not view.card.is_empty() and not view.card.get("ceremony", false):
 		_cards.push_front(view.card["find"])
+		# The card the crate pushed off keeps its place in line, first.
+		if _busy() != null and _slot != "":
+			_busy().give_back(_slot)
+		_slot = ""
 	_mark_seen(find["part"])
 	view.card = card_state(find, now, true)
 	audio.play("reward_ceremony")
@@ -720,6 +751,9 @@ func seen(part_id: String) -> bool:
 # lets go of the tree, and keeps the payoffs of parts the run still holds.
 func _reset(new_run: bool) -> void:
 	_queue.clear()
+	if _busy() != null:
+		for find in _cards:
+			_busy().done("find:" + String(find["part"]))
 	_cards.clear()
 	_calm_since = -1
 	if not _active.is_empty():
@@ -727,6 +761,7 @@ func _reset(new_run: bool) -> void:
 		_active = {}
 		audio.stop(String(EventKinds.reward_row("ceremony")["sound"]))
 	view.set_ceremony({})
+	_release_slot()
 	view.card = {}
 	if new_run:
 		_armed.clear()

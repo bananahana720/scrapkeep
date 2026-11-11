@@ -3,6 +3,7 @@ extends SceneTree
 const Game := preload("res://src/game.gd")
 const DeathTips := preload("res://src/core/death_tips.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
+const Roster := preload("res://src/combat/roster.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const Keycap := preload("res://src/ui/keycap.gd")
 const Screens := preload("res://src/ui/screens.gd")
@@ -23,7 +24,7 @@ const T := preload("res://tests/support/t.gd")
 #   (c) the latch cue: Space held through a death shuts the summary; the cue stays down for
 #       LATCH_CUE_AFTER, then names Space; a press the latch turns away shows it at once; it goes
 #       with the release and the screen takes keys.
-#   (d) the pause menu asks before Restart run and Quit: N arms the row and restarts nothing, N
+#   (d) the pause menu asks before New run and Quit: N arms the row and restarts nothing, N
 #       again inside ARM_GUARD is ignored, N after it restarts; the ask lapses after ARM_SECONDS
 #       and when the focus leaves; Quit asks on Enter and quits on the second; the X hold quits
 #       with no ask, and a tap of X answers a Quit row that is asking.
@@ -79,9 +80,9 @@ func _rules() -> void:
 	_t.eq("no source, no line", DeathTips.line(""), "")
 	var short := {"who": "the Warden", "punch": 37.0, "plating": 110.0}
 	_t.eq("a short build in a Warden fight reads the gap, whatever landed", DeathTips.line("chaser", "", short),
-		"Punch 37 met the Warden's plating 110. Roll more scrap first: heft is punch.")
+		"Punch 37 met the Warden's plating 110. Roll up more scrap for more punch.")
 	_t.eq("the gap names the boss it met", DeathTips.line("brindle_slag", "", {"who": "Admiral Brindle", "punch": 60.0, "plating": 110.0}),
-		"Punch 60 met Admiral Brindle's plating 110. Roll more scrap first: heft is punch.")
+		"Punch 60 met Admiral Brindle's plating 110. Roll up more scrap for more punch.")
 	_t.eq("the brute reads its own row, slam or hurl", DeathTips.line("plated_brute"), DeathTips.ROWS["plated_brute"])
 	_t.eq("a build at the ratio reads the killing hit", DeathTips.line("warden", "", {"punch": 77.0, "plating": 110.0}), DeathTips.ROWS["warden"])
 	_t.check("no plating is no gap", not DeathTips.short_build({"punch": 0.0, "plating": 0.0}) and not DeathTips.short_build({}))
@@ -103,6 +104,15 @@ func _rules() -> void:
 		if DeathTips.line(pair[0], pair[1]) == "":
 			silent.append("%s %s" % [pair[0], pair[1]])
 	_t.check("every world 1 damage source has a line", silent.is_empty(), ", ".join(silent))
+	# NAMES.md: name the machine. The cause line and the tip both say the roster's own name for the
+	# machine, and neither says "miniboss".
+	var unnamed := PackedStringArray()
+	for id in ["E03", "E04"]:
+		var machine := Roster.name_of(String(EventKinds.attack_row(id)["owner"])).to_lower()
+		for said in [String(EventKinds.attack_row(id)["label"]), String(DeathTips.ROWS[id])]:
+			if not said.to_lower().contains(machine) or said.to_lower().contains("miniboss"):
+				unnamed.append("%s: %s" % [id, said])
+	_t.check("the leap slam and the charge name their machine", unnamed.is_empty() and not Roster.name_of("miniboss").to_lower().contains("miniboss"), " | ".join(unnamed))
 
 
 func _start_run() -> void:
@@ -145,7 +155,7 @@ func _tag_on_summary() -> void:
 		for cell in group.get_child(group.get_child_count() - 1).get_children():
 			words.append((cell.get_child(1) as Label).text)
 	_t.check("each of the summary's stats has its word under its icon, and the word says what it counts",
-		words == ["TIME", "STAGES", "KILLS", "SCRAP", "PARTS BOLTED ON"], str(words))
+		words == ["TIME", "STAGES", "CLOCKED OUT", "SCRAP", "PARTS BOLTED ON"], str(words))
 	var saved: Dictionary = _game.run.summary()
 	saved["save_used"] = 1
 	var saved_words: Array = screens.summary_chips(saved, _game.ctx.stages.COUNT).map(func(chip): return String(chip[2]))
@@ -322,13 +332,13 @@ func _pause_asks() -> void:
 	var run_id: String = _game.run.run_id
 	menu.open()
 	_key(KEY_N)
-	_t.check("N arms Restart run and restarts nothing", menu.armed() == "restart" and menu.is_open() and _game.run.run_id == run_id
+	_t.check("N arms New run and restarts nothing", menu.armed() == "restart" and menu.is_open() and _game.run.run_id == run_id
 			and menu.row("restart").text == menu.ARM_WORDS["restart"] and menu.focused_id() == "restart",
 		"armed '%s', row '%s', focus '%s'" % [menu.armed(), menu.row("restart").text, menu.focused_id()])
 	_key(KEY_N)
 	_t.check("N again inside the guard is not the second press", menu.armed() == "restart" and _game.run.run_id == run_id, "armed '%s'" % menu.armed())
 	menu.step_arm(menu.ARM_SECONDS)
-	_t.check("the ask lapses and the row reads as before", menu.armed() == "" and menu.row("restart").text == "Restart run",
+	_t.check("the ask lapses and the row reads as before", menu.armed() == "" and menu.row("restart").text == "New run",
 		"armed '%s', row '%s'" % [menu.armed(), menu.row("restart").text])
 	_key(KEY_N)
 	_key(KEY_S)

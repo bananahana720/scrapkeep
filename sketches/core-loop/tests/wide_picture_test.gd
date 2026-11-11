@@ -43,9 +43,9 @@ func _run() -> void:
 	_t.check("WP-1 a test's window keeps the 16:9 picture", root.content_scale_aspect == Window.CONTENT_SCALE_ASPECT_KEEP, "aspect %d" % root.content_scale_aspect)
 
 	var page = _game.get_node("PauseMenu").settings_page()
-	_t.eq("WP-2 the Display row reads on", page.row("wide_picture").text, "Wide picture: on")
+	_t.eq("WP-2 the Display row reads on", page.read("wide_picture"), {"label": "Wide picture", "value": "", "pip": 1})
 	page.press("wide_picture")
-	_t.eq("WP-2 a press reads off", page.row("wide_picture").text, "Wide picture: off")
+	_t.eq("WP-2 a press reads off", page.read("wide_picture"), {"label": "Wide picture", "value": "", "pip": 0})
 	_t.check("WP-2 the store and the game hold it", not _game.settings_store().wide_picture() and not _game.wide_picture, "store")
 	_t.check("WP-2 off round-trips through save and load", not SettingsStore.new(dir).wide_picture(), "reloaded")
 	_game.wide_picture = true

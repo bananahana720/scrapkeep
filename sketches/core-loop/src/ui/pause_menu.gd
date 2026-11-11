@@ -3,7 +3,6 @@ extends CanvasLayer
 const Palette := preload("res://src/core/palette.gd")
 const UiFonts := preload("res://src/ui/ui_fonts.gd")
 const ChoiceButton := preload("res://src/ui/choice_button.gd")
-const VolumeRow := preload("res://src/ui/volume_row.gd")
 const SettingsStore := preload("res://src/ui/settings_store.gd")
 const Harmony := preload("res://src/presentation/harmony.gd")
 const Screens := preload("res://src/ui/screens.gd")
@@ -11,11 +10,12 @@ const Tuning := preload("res://src/movement/tuning.gd")
 const SettingsPages := preload("res://src/ui/settings_pages.gd")
 const Keycap := preload("res://src/ui/keycap.gd")
 const BuildRead := preload("res://src/ui/build_read.gd")
+const SettingRow := preload("res://src/ui/setting_row.gd")
 
 # The pause menu and its settings (DESIGN-V2 section 14.1). P, Esc or a pad's Start
-# opens it in play and closes it again. Each row is a ChoiceButton with its key's cap,
-# or a volume row, so the mouse, the keys and a pad reach every choice: W/S or the
-# arrows move the focus, A/D or left/right step a focused volume, Enter or Space takes
+# opens it in play and closes it again. The column is six rows, Resume, New run, Field
+# notes, Radio, Settings and Quit, each a ChoiceButton with its key's cap, so the mouse, the
+# keys and a pad reach every choice: W/S or the arrows move the focus, Enter or Space takes
 # the focused row. The field notes row pins the notes open until the next key or click.
 #
 # It pauses through game.toggle_pause() and never opens while the workshop holds the
@@ -23,14 +23,14 @@ const BuildRead := preload("res://src/ui/build_read.gd")
 # start card's tier choice also sets menu_held to keep the cursor free, but pause opens over
 # it, and closing leaves the cursor with the card.
 # Closing restores the tree pause the pick still holds. Volumes go to the mixer through
-# audio.set_volume() and are kept per viewer in settings.json (settings_store.gd). The
-# comfort rows (v3 W11) step the same way: Screen shake scales every camera shake, kick
-# and punch, Hit-stop every freeze, through juice.set_comfort(), saved beside the volumes.
-# With --music=ace the Breath row (B) flips the Warden open's held breath, raw, hard or
+# audio.set_volume() and are kept per viewer in settings.json (settings_store.gd). The volume
+# and comfort rows (Music, Effects, Screen shake, Hit-stop, Find cards) live on the Feel tab of
+# settings_pages.gd, which the title shows too; this menu only applies the saved levels at launch.
+# With --dev and --music=ace the Breath row (B) flips the Warden open's held breath, raw, hard or
 # gentle, and the open sounding now changes with it, so it can be judged mid-fight.
 # The Radio row (V) turns the pilot radio off and back on to its last station
 # (radio_deck.gd), the same stop as Off on the HUD dial; off silences the music alone.
-# The Settings row (O) swaps the column for settings_pages.gd (Display, Controls and Look
+# The Settings row (O) swaps the column for settings_pages.gd (Display, Controls, Look and Feel
 # pages, opening on the page last used) and Back, Esc or P returns to the column with
 # Settings focused.
 # A line under the title says why the game paused itself (auto_pause.gd: a dropped pad); it is
@@ -42,18 +42,15 @@ const FADE_OUT := 0.12
 const WIDTH := 500.0
 const ROWS := [
 	{"id": "resume", "key": "key_p", "words": "Resume"},
-	{"id": "restart", "key": "key_n", "words": "Restart run"},
+	{"id": "restart", "key": "key_n", "words": "New run"},
 	{"id": "notes", "key": "key_tab", "words": "Field notes"},
-	{"id": "music", "bus": "Music", "glyph": "music", "words": "Music"},
-	{"id": "effects", "bus": "SFX", "glyph": "effects", "words": "Effects"},
-	{"id": "radio", "key": "key_v", "words": "Radio: on"},
-	{"id": "shake", "comfort": "shake", "glyph": "shake", "words": "Screen shake"},
-	{"id": "hitstop", "comfort": "hitstop", "glyph": "hitstop", "words": "Hit-stop"},
-	{"id": "ceremony", "key": "key_c", "words": "Ceremonies: full"},
-	{"id": "breath", "key": "key_b", "words": "Breath: hard"},
+	{"id": "radio", "key": "key_v", "words": "Radio"},
+	{"id": "breath", "key": "key_b", "words": "Breath"},
 	{"id": "settings", "key": "key_o", "words": "Settings"},
 	{"id": "quit", "key": "key_x", "words": "Quit"},
 ]
+# The rows that carry a value: Radio wears a pip (filled on, ring off) and Breath its level as right-hand text.
+const VALUE_ROWS := ["radio", "breath"]
 # The keys that turn the notes a page while they are pinned; any other key unpins them.
 const NOTES_KEYS := [KEY_Q, KEY_E, KEY_TAB]
 # Quit is X held QUIT_HOLD seconds, with a ring filling round its keycap like the retry hold
@@ -62,7 +59,7 @@ const NOTES_KEYS := [KEY_Q, KEY_E, KEY_TAB]
 # Enter on it focused, asks first (ARM_WORDS); while it asks, a tap of X is the second press.
 const QUIT_KEY := KEY_X
 const QUIT_HOLD := 0.6
-# Restart run and Quit end the run in hand, so a press of either row (its key, a click, Enter or a pad's A)
+# New run and Quit end the run in hand, so a press of either row (its key, a click, Enter or a pad's A)
 # only arms it: the row asks in ARM_WORDS, worded in the hazard colour, and the same press again inside
 # ARM_SECONDS does it. Any other row, a focus move, the menu closing or the time running out disarms it.
 # ARM_GUARD keeps a double click from being both presses. The X hold is already a confirm and asks nothing;
@@ -148,17 +145,10 @@ func setup(game_ref) -> void:
 	_note.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_content.add_child(_note)
 	for spec in ROWS:
-		var row: Control
-		if spec.has("bus"):
-			row = VolumeRow.new(spec["bus"], spec["words"], spec["glyph"], WIDTH)
-			row.changed.connect(_on_volume.bind(spec["bus"]))
-		elif spec.has("comfort"):
-			row = VolumeRow.new(spec["comfort"], spec["words"], spec["glyph"], WIDTH)
-			row.changed.connect(_on_comfort.bind(spec["comfort"]))
-		else:
-			row = ChoiceButton.new(spec["id"], spec["key"], spec["words"])
-			row.custom_minimum_size.x = WIDTH
-			row.pressed.connect(press.bind(spec["id"]))
+		var row: ChoiceButton = SettingRow.new(spec["id"], spec["key"], spec["words"]) if spec["id"] in VALUE_ROWS \
+			else ChoiceButton.new(spec["id"], spec["key"], spec["words"])
+		row.custom_minimum_size.x = WIDTH
+		row.pressed.connect(press.bind(spec["id"]))
 		row.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 		_content.add_child(row)
 		_rows[spec["id"]] = row
@@ -177,6 +167,7 @@ func setup(game_ref) -> void:
 	_page.setup(game, "key_esc")
 	_page.back_requested.connect(_leave_settings.bind(true))
 	_content.add_child(_page)
+	_show_breath()
 	_set_live(false)
 	game.events.flow_changed.connect(func(_state: String):
 		if _open and not game.flow.in_play():
@@ -185,11 +176,7 @@ func setup(game_ref) -> void:
 
 # The viewer's saved levels go to the mixer at launch; a level never set keeps its default.
 func apply_saved() -> void:
-	store.load_saved()
-	for bus in store.volumes:
-		_set_bus(bus, store.volumes[bus])
-	for id in store.comfort:
-		_set_comfort(id, store.comfort[id])
+	SettingsPages.apply_saved(game)
 
 
 func is_open() -> bool:
@@ -250,9 +237,7 @@ func open() -> void:
 	if not game.pause_toggled():
 		game.toggle_pause()
 	game.capture_mouse(false)
-	_sync_levels()
 	_show_build()
-	_show_ceremony()
 	_show_radio()
 	_show_breath()
 	_set_live(true)
@@ -319,8 +304,6 @@ func confirm(id: String) -> void:
 			quit_chosen.emit()
 			if not game.test_mode:
 				get_tree().quit()
-		"ceremony":
-			_toggle_ceremony()
 		"radio":
 			if game.get("radio_deck") != null:
 				game.radio_deck.toggle_off()
@@ -390,7 +373,6 @@ func step_arm(delta: float) -> void:
 # The settings page takes the column's place; the first page's rows stay built, only hidden.
 func _enter_settings() -> void:
 	_in_settings = true
-	_title.text = "SETTINGS"
 	for id in _order:
 		_rows[id].visible = false
 	build_read.visible = false
@@ -403,7 +385,6 @@ func _leave_settings(focus_settings: bool) -> void:
 	if not _in_settings:
 		return
 	_in_settings = false
-	_title.text = "PAUSED"
 	_page.visible = false
 	for id in _order:
 		_rows[id].visible = true
@@ -411,17 +392,6 @@ func _leave_settings(focus_settings: bool) -> void:
 	_show_breath()
 	if focus_settings:
 		_rows["settings"].grab_focus()
-
-
-# v3 W13: C or the row flips reward ceremonies between full and short (every find at the
-# rare tier), saved in settings.json as the ceremony's comfort level (1 full, 0 short).
-func _toggle_ceremony() -> void:
-	var ceremony = game.presentation.get("ceremony") if game.presentation != null else null
-	if ceremony != null:
-		ceremony.short = not ceremony.short
-		store.set_comfort(ceremony.SETTING, 0.0 if ceremony.short else 1.0)
-	_show_ceremony()
-	_rows["ceremony"].grab_focus()
 
 
 func _show_build() -> void:
@@ -448,20 +418,24 @@ func column_width() -> float:
 	return width
 
 
+# What a value row shows, as data: its label, its right-hand text and its pip state (see SettingRow.data).
+func read(id: String) -> Dictionary:
+	var node = _rows.get(id)
+	if node is SettingRow:
+		return node.data()
+	return {"label": String(node.text) if node != null else "", "value": "", "pip": SettingRow.NONE}
+
+
 func _show_breath() -> void:
-	var row: Control = _rows["breath"]
-	row.visible = game.tuning.option(Tuning.MUSIC_KEY) == "ace"
-	row.text = "Breath: %s" % game.tuning.option(Tuning.BREATH_KEY)
+	var row: SettingRow = _rows["breath"]
+	row.visible = game.dev and game.tuning.option(Tuning.MUSIC_KEY) == "ace"
+	row.show_row("Breath", String(game.tuning.option(Tuning.BREATH_KEY)))
 
 
 func _show_radio() -> void:
 	var deck = game.get("radio_deck")
-	_rows["radio"].text = "Radio: off" if deck != null and deck.radio.station == "off" else "Radio: on"
-
-
-func _show_ceremony() -> void:
-	var ceremony = game.presentation.get("ceremony") if game.presentation != null else null
-	_rows["ceremony"].text = "Ceremonies: short" if ceremony != null and ceremony.short else "Ceremonies: full"
+	var off: bool = deck != null and deck.radio.station == "off"
+	_rows["radio"].show_row("Radio", "", SettingRow.OFF if off else SettingRow.ON)
 
 
 func _input(event: InputEvent) -> void:
@@ -565,13 +539,9 @@ func _unpins(event: InputEvent) -> bool:
 func _menu_key(event: InputEvent) -> bool:
 	if event is InputEventKey and event.pressed:
 		var repeatable := {KEY_W: -1, KEY_UP: -1, KEY_S: 1, KEY_DOWN: 1}
-		var sideways := {KEY_A: -1, KEY_LEFT: -1, KEY_D: 1, KEY_RIGHT: 1}
 		var code: int = event.physical_keycode
 		if repeatable.has(code):
 			_move(repeatable[code])
-			return true
-		if sideways.has(code):
-			_nudge(sideways[code])
 			return true
 		if event.echo:
 			return false
@@ -581,9 +551,6 @@ func _menu_key(event: InputEvent) -> bool:
 				return true
 			KEY_O:
 				press("settings")
-				return true
-			KEY_C:
-				press("ceremony")
 				return true
 			KEY_V:
 				press("radio")
@@ -598,10 +565,6 @@ func _menu_key(event: InputEvent) -> bool:
 	for pair in [["ui_up", -1], ["ui_down", 1]]:
 		if event.is_action_pressed(pair[0], true):
 			_move(pair[1])
-			return true
-	for pair in [["ui_left", -1], ["ui_right", 1]]:
-		if event.is_action_pressed(pair[0], true):
-			_nudge(pair[1])
 			return true
 	if event.is_action_pressed("ui_accept"):
 		_accept()
@@ -620,12 +583,6 @@ func _move(direction: int) -> void:
 	_rows[_order[index]].grab_focus()
 
 
-func _nudge(direction: int) -> void:
-	var focused := row(focused_id())
-	if focused is VolumeRow:
-		focused.step(direction)
-
-
 func _accept() -> void:
 	var id := focused_id()
 	if id != "":
@@ -639,54 +596,6 @@ func _unpin_notes() -> void:
 
 func _audio():
 	return game.audio() if game != null else null
-
-
-func _set_bus(bus: String, level: float) -> void:
-	var audio = _audio()
-	if audio != null and audio.has_method("set_volume"):
-		audio.set_volume(bus, level)
-
-
-func _on_volume(level: float, bus: String) -> void:
-	_set_bus(bus, level)
-	store.set_volume(bus, level)
-	_cue(Harmony.ratio(Harmony.pentatonic_step(int(level * 8.0))))
-
-
-func _juice():
-	var presentation = game.presentation if game != null else null
-	return presentation.get("juice") if presentation != null else null
-
-
-func _set_comfort(id: String, level: float) -> void:
-	var juice = _juice()
-	if juice != null and juice.has_method("set_comfort"):
-		juice.set_comfort(id, level)
-
-
-func _on_comfort(level: float, id: String) -> void:
-	_set_comfort(id, level)
-	store.set_comfort(id, level)
-	_cue(Harmony.ratio(Harmony.pentatonic_step(int(level * 8.0))))
-
-
-func _sync_levels() -> void:
-	var audio = _audio()
-	var juice = _juice()
-	for id in _order:
-		var spec: Dictionary = ROWS[_order.find(id)]
-		if spec.has("comfort"):
-			var feel: float = store.comfort.get(spec["comfort"], 1.0)
-			if juice != null and juice.has_method("comfort"):
-				feel = juice.comfort(spec["comfort"])
-			_rows[id].show_level(feel)
-			continue
-		if not spec.has("bus"):
-			continue
-		var level: float = store.volumes.get(spec["bus"], 1.0)
-		if audio != null and "volumes" in audio:
-			level = audio.volumes.get(spec["bus"], level)
-		_rows[id].show_level(level)
 
 
 # A short UI note: open on the root, close a fifth up, a volume step on its rung.
@@ -733,4 +642,3 @@ func _process(delta: float) -> void:
 	if _notes_pinned and not game.notes_held():
 		_notes_pinned = false
 	_root.visible = not game.notes_held()
-	_sync_levels()

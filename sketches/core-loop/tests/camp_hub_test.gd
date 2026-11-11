@@ -26,7 +26,7 @@ const STATIONS := [
 	{"id": "moss", "key": KEY_M, "label": "Companion"},
 	{"id": "jukebox", "key": KEY_J, "label": "Jukebox"},
 	{"id": "settings", "key": KEY_S, "label": "Settings"},
-	{"id": "radio", "key": KEY_R, "label": "Mixtapes"},
+	{"id": "radio", "key": KEY_R, "label": "Radio"},
 	{"id": "achieve", "key": KEY_A, "label": "Trophy wall"},
 ]
 

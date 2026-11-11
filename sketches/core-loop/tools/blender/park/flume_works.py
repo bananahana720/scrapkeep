@@ -25,7 +25,10 @@ A. Box pieces (registry origin "centre", never scaled). The -col mesh is exactly
 B. Wedge pieces (origin "centre", never scaled). The -col mesh is the grey-box drop wedge of park_recipes.gd
    _wedge(extent, -1): six corners, a triangular prism whose top slopes from y = H at z = -L/2 to y = 0 at z = +L/2, with a
    vertical end face at z = -L/2. The sloped top is the ride surface: it carries flush colour (cells, at most 0.012 m decals).
-     weir_apron, gap_work_deck, rim_road.
+     gap_work_deck, rim_road.
+     weir_apron                      the same wedge with its sides and high end bevelled 1 in APRON_BEVEL (still six
+                                     corners, see apron_planes): a ball rolls onto it from any side instead of meeting a
+                                     0.5 m step. Drawn cells and -col are cut from the same planes; --check holds them to it.
 C. Flume ride pieces (origin "entry_lip", +Z the ride): the trough cross-section is grind.py FLUME exactly (floor y 5, crests
    y 8, walls, bents every 12 m, hoop straps, rail empties "<id>-rail_NN" on the crest).
      flume_pour_spout                14 m, level; the last 2 m of floor curve down 1 m into a pour lip. It hangs from the relic
@@ -721,37 +724,130 @@ def edges_columns(edges, W):
     return list(zip(edges[:-1], edges[1:]))
 
 
+# The weir apron is the drop wedge with its rim bevelled (wave 36 ride-snag). As a plain wedge its 0.5 m high end and its
+# sides (0.5 m falling to 0) stood vertical, and a radius 1 ball met their top edge as a step: the snag sweep's ride
+# lanes lost 13.6 m/s down to 2.0 (high end) and 4.8 to 6.6 (sides), on the flat ground the deck sits on. Both sides and
+# the high end now fall 1 in APRON_BEVEL to the ground; the flush front stays a knife edge. The solid is the wedge cut by
+# those three planes, still six corners (the two high corners pulled in and forward to where the bevels meet the sloped
+# top), and the drawn cells and the -col mesh are cut from the same planes (apron_planes), so what is drawn collides.
+APRON = (44.0, 0.5, 30.0)
+APRON_BEVEL = 6.0
+
+
+def apron_planes(L, H, W):
+    """The apron solid as half-spaces (a, b, c, d): a x + b y + c z <= d, each (a, b, c) pointing out of the solid."""
+    k = APRON_BEVEL
+    return [(0.0, -1.0, 0.0, 0.0), (0.0, 1.0, H / L, H / 2), (1.0, k, 0.0, W / 2), (-1.0, k, 0.0, W / 2), (0.0, k, -1.0, L / 2)]
+
+
+def apron_h(L, H, W, x, z):
+    """The apron's top (drawn and collided) over plan point (x, z): the lowest of the sloped top and the three bevels."""
+    k = APRON_BEVEL
+    return max(0.0, min(wy(L, H, z), (W / 2 - abs(x)) / k, (z + L / 2) / k))
+
+
+def cut_vertices(planes):
+    """The corners of the convex solid a x + b y + c z <= d over planes: every feasible meeting point of three planes."""
+    out = []
+    n = len(planes)
+    for i in range(n):
+        for j in range(i + 1, n):
+            for m in range(j + 1, n):
+                a, b, c = planes[i], planes[j], planes[m]
+                det = (a[0] * (b[1] * c[2] - b[2] * c[1]) - a[1] * (b[0] * c[2] - b[2] * c[0]) + a[2] * (b[0] * c[1] - b[1] * c[0]))
+                if abs(det) < 1e-12:
+                    continue
+                cols = []
+                for col in range(3):
+                    rows = [list(p[:3]) for p in (a, b, c)]
+                    for r, p in enumerate((a, b, c)):
+                        rows[r][col] = p[3]
+                    cols.append(rows[0][0] * (rows[1][1] * rows[2][2] - rows[1][2] * rows[2][1])
+                                - rows[0][1] * (rows[1][0] * rows[2][2] - rows[1][2] * rows[2][0])
+                                + rows[0][2] * (rows[1][0] * rows[2][1] - rows[1][1] * rows[2][0]))
+                v = tuple(round(cc / det, 9) + 0.0 for cc in cols)
+                if all(p[0] * v[0] + p[1] * v[1] + p[2] * v[2] <= p[3] + 1e-7 for p in planes) and v not in out:
+                    out.append(v)
+    return sorted(out)
+
+
+def cut_solid(s, planes, color):
+    """Adds the convex solid over planes as one closed mesh: one polygon per plane it touches, wound outward."""
+    verts = cut_vertices(planes)
+    if len(verts) < 4:
+        return
+    faces = []
+    for a, b, c, d in planes:
+        on = [i for i, v in enumerate(verts) if abs(a * v[0] + b * v[1] + c * v[2] - d) < 1e-6]
+        if len(on) < 3:
+            continue
+        n = (a, b, c)
+        cx, cy, cz = (sum(verts[i][k] for i in on) / len(on) for k in range(3))
+        u = [verts[on[0]][0] - cx, verts[on[0]][1] - cy, verts[on[0]][2] - cz]
+        w = (n[1] * u[2] - n[2] * u[1], n[2] * u[0] - n[0] * u[2], n[0] * u[1] - n[1] * u[0])
+        ang = lambda i: math.atan2(sum((verts[i][k] - (cx, cy, cz)[k]) * w[k] for k in range(3)),
+                                   sum((verts[i][k] - (cx, cy, cz)[k]) * u[k] for k in range(3)))
+        faces.append(tuple(sorted(on, key=ang)))
+    s.add(verts, faces, color)
+
+
+def apron_cell(L, H, W, x0, x1, z0, z1):
+    return apron_planes(L, H, W) + [(-1.0, 0.0, 0.0, -x0), (1.0, 0.0, 0.0, x1), (0.0, 0.0, -1.0, -z0), (0.0, 0.0, 1.0, z1)]
+
+
+def apron_col(s):
+    L, H, W = APRON
+    cut_solid(s, apron_planes(L, H, W), DARK)
+
+
 def apron_body(s):
-    L, H, W = 44.0, 0.5, 30.0
+    L, H, W = APRON
     nx, nz = 6, 8
     for i in range(nx):
         for j in range(nz):
-            wedge_cell(s, W, L, H, -W / 2 + W * i / nx + 0.0, -W / 2 + W * (i + 1) / nx, -L / 2 + L * j / nz, -L / 2 + L * (j + 1) / nz,
-                       tone(CONCRETE, FORM, i * 5 + j * 3, 0.35))
+            cut_solid(s, apron_cell(L, H, W, -W / 2 + W * i / nx + 0.0, -W / 2 + W * (i + 1) / nx, -L / 2 + L * j / nz, -L / 2 + L * (j + 1) / nz),
+                      tone(CONCRETE, FORM, i * 5 + j * 3, 0.35))
 
 
 def apron_d1(s):
-    L, H, W = 44.0, 0.5, 30.0
+    L, H, W = APRON
+    k = APRON_BEVEL
+    e = 0.012
+    # Form joints across each side bevel, from its toe to where it meets the sloped top, 0.012 proud of the bevel.
     for j in range(1, 8):
         z = -L / 2 + L * j / 8
         for sg in (-1, 1):
-            side_poly(s, W, sg, [(z - 0.1, 0.0), (z + 0.1, 0.0), (z + 0.1, wy(L, H, z + 0.1)), (z - 0.1, wy(L, H, z - 0.1))], 0.0, 0.012, VARNISH)
+            nx_, ny_ = sg / math.hypot(1.0, k), k / math.hypot(1.0, k)
+            rings = []
+            for zz in (z - 0.1, z + 0.1):
+                top = wy(L, H, zz)
+                p0, p1 = (sg * W / 2, 0.0), (sg * (W / 2 - top * k), top)
+                rings.append([(p0[0], p0[1], zz), (p1[0], p1[1], zz), (p1[0] + nx_ * e, p1[1] + ny_ * e, zz), (p0[0] + nx_ * e, p0[1] + ny_ * e, zz)])
+            hull(s, rings[0], rings[1], VARNISH)
+    # Joint lines along the sloped top, starting past the high-end bevel so they lie on the top plane their whole length.
     for i in range(1, 6):
         x = -W / 2 + W * i / 6
-        z0, z1 = -L / 2 + 2.0, L / 2 - 2.0
-        pts = [(z0, wy(L, H, z0)), (z1, wy(L, H, z1)), (z1, wy(L, H, z1) + 0.012), (z0, wy(L, H, z0) + 0.012)]
+        z0, z1 = -L / 2 + 3.0, L / 2 - 2.0
+        pts = [(z0, wy(L, H, z0)), (z1, wy(L, H, z1)), (z1, wy(L, H, z1) + e), (z0, wy(L, H, z0) + e)]
         hull(s, [(x - 0.04, y, z) for z, y in pts], [(x + 0.04, y, z) for z, y in pts], VARNISH)
 
 
 def apron_d2(s):
-    L, H, W = 44.0, 0.5, 30.0
-    for k in range(18):
-        x = -W / 2 + 1.0 + (k * 13 % 28)
-        z = -L / 2 + 1.5 + (k * 7 % 39)
+    L, H, W = APRON
+    k = APRON_BEVEL
+    for n in range(18):
+        x = -W / 2 + 1.0 + (n * 13 % 28)
+        z = -L / 2 + 1.5 + (n * 7 % 39)
+        wide = 0.5 + 0.15 * (n % 3)
+        # Sand patches keep to the sloped top: in past the side bevels (widest at the patch's high end) and the high end's.
+        z = max(z, -L / 2 + H * k * L / (L + H * k) + 0.1)
+        reach = W / 2 - wy(L, H, z) * k - 0.1
+        x = min(max(x, -reach), reach - wide)
         pts = [(z, wy(L, H, z)), (z + 1.2, wy(L, H, z + 1.2)), (z + 1.2, wy(L, H, z + 1.2) + 0.01), (z, wy(L, H, z) + 0.01)]
-        hull(s, [(x, y, zz) for zz, y in pts], [(x + 0.5 + 0.15 * (k % 3), y, zz) for zz, y in pts], tone(SAND, VARNISH, k, 0.5))
-    for k in range(10):
-        stud(s, (-W / 2 + 0.03, 0.08, -L / 2 + 4.0 + k * 4.0), (-1, 0.5, 0), 0.05, 0.1, tone(SAGE, JUNIPER, k, 0.4), 3)
+        hull(s, [(x, y, zz) for zz, y in pts], [(x + wide, y, zz) for zz, y in pts], tone(SAND, VARNISH, n, 0.5))
+    # Weed tufts at the toe of the -x bevel, rooted on it.
+    for n in range(10):
+        stud(s, (-W / 2 + 0.5, 0.5 / k, -L / 2 + 4.0 + n * 4.0), (-1, 0.5, 0), 0.05, 0.1, tone(SAGE, JUNIPER, n, 0.4), 3)
 
 
 GAP = [272.9, 32.0, 24.0]
@@ -1259,6 +1355,7 @@ for _rid, _spec in RECIPES.items():
         _spec["col"] = (lambda s, sz=_spec["size"]: box_col(s, sz[2], sz[0], sz[1]))
     else:
         _spec["col"] = (lambda s, sz=_spec["size"]: wedge_col(s, sz[0], sz[1], sz[2]))
+RECIPES["weir_apron"]["col"] = apron_col
 
 
 # ------------------------------------------------------------------ D. liners (decoration only, conformed to the bake)
@@ -2972,6 +3069,8 @@ def corners_of(rid):
     hx, hz = W / 2, L / 2
     if spec["kind"] == "box":
         return {(x, y, z) for x in (-hx, hx) for y in (0.0, H) for z in (-hz, hz)}
+    if rid == "weir_apron":
+        return set(cut_vertices(apron_planes(L, H, W)))
     return {(-hx, 0.0, -hz), (hx, 0.0, -hz), (hx, 0.0, hz), (-hx, 0.0, hz), (-hx, H, -hz), (hx, H, -hz)}
 
 
@@ -2993,8 +3092,20 @@ def check(rid, out_dir):
         if uniq_pts != want:
             fails.append("%s: -col corners %s != %s" % (rid, sorted(uniq_pts), sorted(want)))
         lo, hi = bbox(pts)
-        if max(abs(lo[0] + W / 2), abs(hi[0] - W / 2), abs(lo[1]), abs(hi[1] - H), abs(lo[2] + L / 2), abs(hi[2] - L / 2)) > 0.001:
+        wlo, whi = bbox(list(corners_of(rid)))
+        if max(max(abs(lo[k] - wlo[k]), abs(hi[k] - whi[k])) for k in range(3)) > 0.001:
             fails.append("%s: -col bbox %s %s" % (rid, lo, hi))
+        if rid == "weir_apron":
+            # Drawn and collided agree: no base vertex above the bevelled top, no detail more than HOP proud of it.
+            for name, slack in ((rid, 1e-4), (rid + "_detail1", HOP), (rid + "_detail2", HOP)):
+                d, b = read_glb(Path(out_dir) / (name + ".glb"))
+                node = next(n for n in mesh_nodes(d) if not n.endswith("-col"))
+                worst = max(p[1] - apron_h(L, H, W, p[0], p[2]) for p in mesh_positions(d, b, node))
+                if worst > slack:
+                    fails.append("%s stands %.4f m over the apron's top (allowed %.4f)" % (name, worst, slack))
+            base_top = max(p[1] for p in mesh_positions(doc, binary, next(n for n in mesh_nodes(doc) if not n.endswith("-col"))))
+            if abs(base_top - whi[1]) > 0.001:
+                fails.append("%s: drawn top %.4f != collider top %.4f" % (rid, base_top, whi[1]))
         # Hugging: the drawn base and both shells stay within HOP outward (decals on a slope within 0.02) of the box.
         tops = {"box": 0.001, "wedge": 0.02}[spec["kind"]]
         for name in (rid, rid + "_detail1", rid + "_detail2"):
@@ -3152,7 +3263,9 @@ def registry_doc(pit=False, isles=False):
                 "id": name, "path": "res://assets/models/park/%s.glb" % name, "class": "landform" if base else "detail", "origin": origin,
                 "ships": True, "loader": "src/world/park/park_recipes.gd",
                 "provenance": {"recipe": "tools/blender/park/flume_works.py",
-                               "note": ("Procedural, authored in this repository from Blender bmesh solids; no external mesh. " + note + ". Collider identical to the grey box it replaces." if base and spec["kind"] not in ("flume", "intake")
+                               "note": ("Procedural, authored in this repository from Blender bmesh solids; no external mesh. " + note + (
+                                            ". Collider the grey-box wedge with its sides and high end bevelled 1 in 6, so a rolling ball climbs the rim; drawn and collided from the same planes." if rid == "weir_apron"
+                                            else ". Collider identical to the grey box it replaces.") if base and spec["kind"] not in ("flume", "intake")
                                         else "Procedural, authored in this repository from Blender bmesh solids; no external mesh. " + note + "." if base
                                         else "Detail shell %s of %s, drawn by range (the detail class), additive to the base." % (suffix[1], rid))},
             })

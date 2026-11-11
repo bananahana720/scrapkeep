@@ -19,6 +19,7 @@ const ChoiceButton := preload("res://src/ui/choice_button.gd")
 
 const COLUMNS := 2
 const ROW_WIDTH := 600.0
+const PLATE_PAD := 10.0
 const HIDDEN_NAME := "???"
 const HIDDEN_TEXT := "Keep playing."
 
@@ -26,6 +27,7 @@ var back: Button
 var rows := {}
 
 var _grid: GridContainer
+var _plate: PanelContainer
 var _scroll: ScrollContainer
 var _board: VBoxContainer
 
@@ -42,11 +44,27 @@ func _init() -> void:
 	_board.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	_board.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_board)
+	# The list stands on its own plate in the middle of the screen, as wide as its two columns, so
+	# the camp behind does not read through the words and the scroll bar sits beside the list.
+	_plate = PanelContainer.new()
+	_plate.name = "Plate"
+	_plate.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	_plate.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_plate.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var plate := StyleBoxFlat.new()
+	plate.bg_color = Color(Palette.CHARCOAL, 0.92)
+	plate.border_color = Palette.VERDIGRIS
+	plate.set_border_width_all(2)
+	plate.set_corner_radius_all(6)
+	plate.corner_detail = 1
+	plate.set_content_margin_all(PLATE_PAD)
+	_plate.add_theme_stylebox_override("panel", plate)
+	add_child(_plate)
 	_scroll = ScrollContainer.new()
 	_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	_scroll.follow_focus = true
-	add_child(_scroll)
+	_plate.add_child(_scroll)
 	_grid = GridContainer.new()
 	_grid.columns = COLUMNS
 	_grid.add_theme_constant_override("h_separation", 28)
@@ -54,7 +72,7 @@ func _init() -> void:
 	_grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_grid.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_scroll.add_child(_grid)
-	back = ChoiceButton.new("back", "key_a", "Back")
+	back = ChoiceButton.new("back", "key_esc", "Back")
 	back.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	add_child(back)
 	var bottom := Control.new()
@@ -85,7 +103,7 @@ static func board_lines(profile, sitting := false) -> PackedStringArray:
 	var out := PackedStringArray()
 	out.append("SHIFT BOARD  %d of %d stamped" % [read["stamped"], read["shown"]])
 	if read["next"] != "":
-		out.append("Next: %s. %s %s." % [read["next_name"], read["next_text"], read["next_pays"]])
+		out.append("Next is %s. %s %s." % [read["next_name"], read["next_text"], read["next_pays"]])
 	else:
 		out.append("Board full. Moss wants a bigger board.")
 	var holes := "".join(range(int(read["holes_max"])).map(func(i): return "●" if i < int(read["holes"]) else "○"))
@@ -174,6 +192,7 @@ func _row(id: String, profile, progress) -> Control:
 	box.focus_exited.connect(box.queue_redraw)
 	box.add_theme_constant_override("separation", 12)
 	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	box.add_child(_pad())
 	var star := TextureRect.new()
 	star.texture = Icons.shape("star" if earned else "ring")
 	star.modulate = Palette.AMBER if earned else Color(Palette.SLATE, 0.8)
@@ -190,14 +209,31 @@ func _row(id: String, profile, progress) -> Control:
 	box.add_child(words)
 	var shade := Palette.SAND if earned else Palette.SLATE
 	words.add_child(_label(read["name"], 24, Palette.AMBER if earned else shade))
-	words.add_child(_label(read["text"], 16, Color(shade, 0.9)))
+	# A long line wraps inside its row, so both columns keep one width and the list fits a 1280 window.
+	var text := _label(read["text"], 16, Color(shade, 0.9))
+	text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	words.add_child(text)
 	if read["note"] != "":
 		var note := _label(read["note"], 20, Palette.AMBER if earned else Palette.SAND)
 		note.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 		note.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		note.name = "Note"
 		box.add_child(note)
+	box.add_child(_pad())
 	return box
+
+
+# An empty first and last child, so the row's 12 px separation stands between its focus outline
+# and what the row holds.
+func _pad() -> Control:
+	var pad := Control.new()
+	pad.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	return pad
+
+
+# Where the list's plate sits on screen, for the layout checks.
+func list_rect() -> Rect2:
+	return _plate.get_global_rect()
 
 
 func _label(text: String, font_size: int, color: Color) -> Label:

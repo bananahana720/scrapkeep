@@ -547,7 +547,7 @@ func _build_stations() -> void:
 	var console: Node3D = _pieces.get("camp_settings_console")
 	if console != null:
 		# The radio mast stands at the console's back left corner (stations.py console()).
-		add_station("radio", console.global_transform * Vector3(-2.6, 1.0, -0.8), "Mixtapes", "key_r", 3.0, func(): screens.toggle_radio())
+		add_station("radio", console.global_transform * Vector3(-2.6, 1.0, -0.8), "Radio", "key_r", 3.0, func(): screens.toggle_radio())
 	var pen: Node3D = _pieces.get("camp_pet_pen")
 	if pen != null:
 		add_zone("pet", pen.global_transform * Vector3(0.0, 1.0, 2.0), 6.0, _pet_react)

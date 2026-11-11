@@ -7,20 +7,23 @@ const Weapons := preload("res://src/combat/weapons.gd")
 const Run := preload("res://src/core/run_state.gd")
 const Augments := preload("res://src/movement/augments.gd")
 const AbilityState := preload("res://src/core/ability_state.gd")
-const T := preload("res://tests/support/t.gd")
+const BossPosture := preload("res://src/combat/boss_posture.gd")
+const WardenReactor := preload("res://src/combat/warden_reactor.gd")
+const T:= preload("res://tests/support/t.gd")
 
 # The stage-2 park Warden (the flume mounting, hung 12 m over the drum floor) breaks from the harpoon
 # line (card FLUME-POSTURE, coordinator ruling FL1; design-v3/wardens/reactor.md:80). A ball latched on
 # the mounted Warden pays posture by each line bolt's damage: the pilot-average base weapon bolt (the
-# mean of the six pilots' rows in Weapons.BASE, computed here, not read from the driver) pays 1.5, or
-# 3.0 while the relic charges, at the reference heft 1.5 (the second heft class's floor); a heavier ball's
+# mean of the six pilots' rows in Weapons.BASE, computed here, not read from the driver) pays the stage
+# row's other_base, or its other_base_charging while the relic charges (the stock 1.5 and 3.0), times
+# the driver's LINE_PAY since 11 Nov 2026, at the reference heft 1.5 (the second heft class's floor); a heavier ball's
 # bolt pays its heft over 1.5 to the stage's posture curve (2.0) more. While the ball is engaged and latched the bar does not
 # drain, as on the dam. Unlatched, a bolt keeps the generic rule (punch over plating 110, curve 2.0),
 # and a ball that never hits leaves the bar at zero: the camper never breaks it.
 #
 # Ruling FL3 (2026-10-16): the pay is also divided by the pilot's base weapon damage per second and
 # multiplied by Rivet's, so at the reference heft every pilot's base kit fills the bar at Rivet's FL1
-# rate (7.07 posture per second), and a damage part still raises it in proportion.
+# rate (7.07 posture per second at the stock pay), and a damage part still raises it in proportion.
 #
 # Red at 6d7c7a0c (measured 2026-10-16): the reference bolt paid 0.06 and the latched bar drained.
 # Red at 390d9d4e for the FL3 checks: posture per second followed each weapon's damage per second.
@@ -69,10 +72,10 @@ func _run() -> void:
 	# The objective plate names the line fight on the real Warden in one row (core/objectives.gd),
 	# and the mark on the relic says which step is next: latch on, then shoot from the line. A shut
 	# clamp or a yard lock would hold the plate; calm stands neither.
-	var plate := ["line_fight", "Latch on, shoot, smash core"]
+	var plate := ["line_fight", "Hook, shoot, smash core"]
 	t.eq("unlatched: the mounting reads the flume", w.mount_driver.plate_reading(w), {"mount": "flume"})
 	t.eq("unlatched: the plate names the line fight", [game.hud.objective_reading()["id"], game.hud.objective_reading()["words"]], plate)
-	t.eq("unlatched: the mark on the relic says to latch on", _mark_tags(), ["LATCH ON"])
+	t.eq("unlatched: the mark on the relic says to hook it", _mark_tags(), ["HOOK"])
 	t.eq("unlatched: the row's first step is live", game.hud.objective_reading()["step"], 0)
 	_latch(w)
 	await physics_frame
@@ -82,12 +85,20 @@ func _run() -> void:
 
 	# Pay per bolt, latched, reference heft, Rivet's pilot (FL1's numbers, which FL3 keeps for Rivet).
 	var rivet = _def("runner_gunner")
-	t.near("latched, Rivet: the reference bolt pays 1.5", _pay(w, "runner", reference, false, rivet), 1.5, 0.01)
-	t.near("latched, Rivet: the reference bolt pays 3.0 while the relic charges", _pay(w, "runner", reference, true, rivet), 3.0, 0.02)
+	# The pay is the stage's stock pay times the line fight's share, never more than the stock pay.
+	var pay_base := BossPosture.OTHER_BASE * WardenReactor.LINE_PAY
+	var pay_charging := BossPosture.OTHER_BASE_CHARGING * WardenReactor.LINE_PAY
+	t.eq("the stage row keeps the stock bolt pay", [w._posture.other_base, w._posture.other_base_charging],
+		[BossPosture.OTHER_BASE, BossPosture.OTHER_BASE_CHARGING])
+	t.check("a line bolt keeps no more than the stock pay", WardenReactor.LINE_PAY > 0.0 and WardenReactor.LINE_PAY <= 1.0,
+		"share %.2f" % WardenReactor.LINE_PAY)
+	t.near("latched, Rivet: the reference bolt pays %.3f" % pay_base, _pay(w, "runner", reference, false, rivet), pay_base, 0.01)
+	t.near("latched, Rivet: the reference bolt pays %.3f while the relic charges" % pay_charging, _pay(w, "runner", reference, true, rivet), pay_charging, 0.02)
 	var rivet_rate := float(Weapons.BASE["rapid_laser"]["rate"])
 	var rivet_per_s := _pay(w, "runner", float(Weapons.BASE["rapid_laser"]["damage"]), false, rivet) * rivet_rate
+	var rivet_want := pay_base * float(Weapons.BASE["rapid_laser"]["damage"]) / reference * rivet_rate
 	t.near("latched, Rivet: the base kit fills %.3f posture per second, as under FL1" % rivet_per_s, rivet_per_s,
-		1.5 * float(Weapons.BASE["rapid_laser"]["damage"]) / reference * rivet_rate, 0.01)
+		rivet_want, 0.01)
 
 	# FL3: at the reference heft, every pilot's base kit fills the bar at Rivet's posture per second.
 	# A pressure weapon fires at its refill rate (ruling BL1), every other weapon at its row rate.
@@ -108,7 +119,7 @@ func _run() -> void:
 	var tally_per_s := _pay(w, String(Weapons.STRIKE_KIND.get(tally.weapon_id, "shot")), float(tally_row["damage"]), false, tally) \
 		/ Weapons.PRESSURE_ROLL_S
 	t.near("latched, Tally: one card per %.1f s fills %.2f posture per second" % [Weapons.PRESSURE_ROLL_S, rivet_per_s],
-		tally_per_s, 7.07, 0.0707)
+		tally_per_s, rivet_want, 0.01 * rivet_want)
 
 	# A planted +50 percent weapon-damage part raises the pilot's posture per second by 50 percent.
 	var pilot = game.run.class_def
@@ -161,8 +172,8 @@ func _run() -> void:
 	t.check("latched, heavier: the ball is past the reference heft", heavy_heft > Run.HEFT_CLASS_AT[REFERENCE] + 0.1,
 		"heft %.2f" % heavy_heft)
 	t.eq("the stage's posture curve is the heft exponent", w._posture.curve, HEFT_CURVE)
-	t.near("latched, heavier: the reference bolt pays 1.5 times its heft share", heavy_pay,
-		1.5 * pow(heavy_heft / Run.HEFT_CLASS_AT[REFERENCE], HEFT_CURVE), 0.02)
+	t.near("latched, heavier: the reference bolt pays %.3f times its heft share" % pay_base, heavy_pay,
+		pay_base * pow(heavy_heft / Run.HEFT_CLASS_AT[REFERENCE], HEFT_CURVE), 0.02)
 	quit(t.verdict())
 
 

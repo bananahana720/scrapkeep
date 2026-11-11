@@ -11,7 +11,7 @@ extends RefCounted
 # name   3 words or fewer, the stamp's caption
 # text   what to do, 12 words or fewer, shown while it is the next rung
 # when   exactly one of {"earned": achievements.gd row id} or {"tune": tune_rows.gd id}
-# stamp  the word inked on the board when it lands (HIRED for a pilot or a mark)
+# stamp  the word inked on the board when it lands (HIRED for a pilot, LOGGED for a mark or an item)
 # pays   what it opens, for the board's words only: {"pilot"|"cosmetic"|"item"|"tune"|"option": id}.
 #        The grant itself is the achievement row's reward, so the two must agree (validate).
 # pilot  optional: the pilot whose mark this is; the board shows it only once that pilot is open
@@ -43,17 +43,17 @@ const RUNGS := {
 	"brindle_routed": {"name": "Brindle Routed", "text": "Rout Admiral Brindle in the Slag Bowl.",
 		"when": {"earned": "brindle_routed"}, "stamp": "HIRED", "pays": {"pilot": "tarn"}},
 	"mark_sable": {"name": "Sable's Mark", "text": "Rout Brindle flying Sable.", "pilot": "pylon_engineer",
-		"when": {"earned": "brindle_mark_sable"}, "stamp": "HIRED", "pays": {"item": "strike_pocket"}},
+		"when": {"earned": "brindle_mark_sable"}, "stamp": "LOGGED", "pays": {"item": "strike_pocket"}},
 	"mark_rivet": {"name": "Rivet's Mark", "text": "Rout Brindle flying Rivet.", "pilot": "runner_gunner",
-		"when": {"earned": "brindle_mark_rivet"}, "stamp": "HIRED", "pays": {"item": "clean_break"}},
+		"when": {"earned": "brindle_mark_rivet"}, "stamp": "LOGGED", "pays": {"item": "clean_break"}},
 	"mark_tarn": {"name": "Tarn's Mark", "text": "Rout Brindle flying Tarn.", "pilot": "tarn",
-		"when": {"earned": "brindle_mark_tarn"}, "stamp": "HIRED", "pays": {"item": "warhead_slug"}},
+		"when": {"earned": "brindle_mark_tarn"}, "stamp": "LOGGED", "pays": {"item": "warhead_slug"}},
 	"mark_kest": {"name": "Kest's Mark", "text": "Rout Brindle flying Kest.", "pilot": "demolitions_caster",
-		"when": {"earned": "brindle_mark_kest"}, "stamp": "HIRED", "pays": {"item": "ring_wave"}},
+		"when": {"earned": "brindle_mark_kest"}, "stamp": "LOGGED", "pays": {"item": "ring_wave"}},
 	"mark_tally": {"name": "Tally's Mark", "text": "Rout Brindle flying Tally.", "pilot": "tally",
-		"when": {"earned": "brindle_mark_tally"}, "stamp": "HIRED", "pays": {"item": "salvage_drone"}},
+		"when": {"earned": "brindle_mark_tally"}, "stamp": "LOGGED", "pays": {"item": "salvage_drone"}},
 	"mark_cannon": {"name": "Cannon's Mark", "text": "Rout Brindle flying the Cannon.", "pilot": "remembered_cannon",
-		"when": {"earned": "brindle_mark_cannon"}, "stamp": "HIRED", "pays": {"item": "scrap_geyser"}},
+		"when": {"earned": "brindle_mark_cannon"}, "stamp": "LOGGED", "pays": {"item": "scrap_geyser"}},
 }
 
 # The time card. A finished run (won or lost, never abandoned) that stamps no rung and broke at
@@ -77,13 +77,13 @@ const CARDS := [
 const SEED_KINDS := ["stage_variant", "run_modifier"]
 const SEEDS := {
 	"dam_night_shift": {"kind": "stage_variant", "gate": "brindle_routed",
-		"text": "The dam after dark: floodlights, a fuller crew, one more cage."},
+		"text": "The dam at night has floodlights, a fuller crew, one more cage."},
 	"flume_backwash": {"kind": "stage_variant", "gate": "mark_rivet",
-		"text": "The flume runs backwards; the weir becomes the drop-in."},
+		"text": "The flume runs backwards, and the weir becomes the drop-in."},
 	"overtime": {"kind": "run_modifier", "gate": "first_warden",
-		"text": "Overtime: Wardens wake one tick early and pay one more panel."},
+		"text": "Overtime wakes Wardens one tick early and pays one more panel."},
 	"crew_short": {"kind": "run_modifier", "gate": "mark_sable",
-		"text": "Short crew: no shop on the dam, a cache in its place."},
+		"text": "Short crew means no dam shop and a cache instead."},
 }
 
 
@@ -178,11 +178,11 @@ static func run_line(before: Array, profile, punched: bool) -> String:
 	if punched:
 		var holes := int(TIME_CARD["holes"])
 		if cards_paid(profile) >= CARDS.size() and punches(profile) > holes * CARDS.size():
-			return "Time card punched. Every card is paid; the clerk punches it anyway."
+			return "Time card punched. Every card is paid, and the clerk punches it anyway."
 		var on_card := holes_on_card(profile)
 		if on_card == 0 or on_card == holes:
 			var card: Dictionary = CARDS[cards_paid(profile) - 1]
-			return "Time card full: %s pays %s next shift." % [String(card["name"]), item_name(String(card["pays"]["item"]))]
+			return "Time card full. %s pays %s next shift." % [String(card["name"]), item_name(String(card["pays"]["item"]))]
 		return "Time card punched, %d of %d." % [on_card, holes]
 	return ""
 
@@ -196,7 +196,7 @@ static func _deeds_sentence(ids: Array) -> String:
 			deeds.append(String(RUNGS[id]["name"]))
 	var clocked: bool = "clock_in" in ids
 	if deeds.is_empty():
-		return "You clocked in: your first shift is on the shift board."
+		return "You clocked in. Your first shift is on the shift board."
 	var list := deeds[0] if deeds.size() == 1 else "%s and %s" % [", ".join(deeds.slice(0, deeds.size() - 1)), deeds[deeds.size() - 1]]
 	return "You %smarked off %s on the shift board." % ["clocked in and " if clocked else "", list]
 
@@ -223,13 +223,13 @@ static func pays_words(pays: Dictionary) -> String:
 		var id := String(pays[kind])
 		match kind:
 			"item":
-				return "Opens %s in the pools" % item_name(id)
+				return "%s can turn up in runs" % item_name(id)
 			"pilot":
 				return "Signs on a pilot"
 			"cosmetic":
 				return "A new look"
 			"tune":
-				return "A tune for the jukebox"
+				return "A record for the jukebox"
 			"option":
 				return "A head start"
 	return ""

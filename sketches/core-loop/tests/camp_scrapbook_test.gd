@@ -109,7 +109,7 @@ func _initialize() -> void:
 	_t.check("B1 empty line shown", book._empty.visible and book._empty.text == CampScrapbook.EMPTY_LINE and not book.turn(1))
 	book.show_pages(store.load_all())
 	await process_frame
-	_t.check("B1 first page", book.index == 0 and book._count.text == "Page 1 of 60" and not book._empty.visible)
+	_t.check("B1 first page", book.index == 0 and book._count.text == "1 / 60" and not book._empty.visible)
 	_t.check("B1 turn older then stop", book.turn(1) and book.index == 1 and book.turn(-1) and not book.turn(-1))
 	book.turn(99)
 	_t.eq("B1 last page", book.index, 59)
@@ -121,8 +121,9 @@ func _initialize() -> void:
 	_t.check("O1 is_won on outcome alone", Store.is_won(only_won) and not Store.is_won(only_lost) and CampLines.is_won(only_won))
 	_t.eq("O1 melodrama is empty for outcome won", ComicPage.melodrama(only_won), "")
 	_t.check("O1 melodrama shows for outcome lost", ComicPage.melodrama(only_lost) != "")
-	_t.check("O1 subtitle reads outcome won", ComicPage.subtitle_text(only_won).contains("RETURN ENTERED"))
-	_t.check("O1 subtitle reads outcome lost", ComicPage.subtitle_text(only_lost).contains("HULL NOT RETURNED"))
+	# Ruling cx: one plain sentence with pilot, world and (for a loss) the outcome.
+	_t.eq("O1 subtitle reads outcome won", ComicPage.subtitle_text(only_won), "Rivet in Spillway.")
+	_t.eq("O1 subtitle reads outcome lost", ComicPage.subtitle_text(only_lost), "Hull not returned.")
 
 	# The light read decodes no picture; a page's shots load on request.
 	var light := store.summaries()

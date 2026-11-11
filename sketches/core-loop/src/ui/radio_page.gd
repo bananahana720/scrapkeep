@@ -42,8 +42,6 @@ func _init() -> void:
 	alignment = BoxContainer.ALIGNMENT_CENTER
 	add_theme_constant_override("separation", 14)
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_count = UiDraw.label(22, Palette.AMBER)
-	add_child(_count)
 	_tapes = HBoxContainer.new()
 	_tapes.alignment = BoxContainer.ALIGNMENT_CENTER
 	_tapes.add_theme_constant_override("separation", 10)
@@ -54,10 +52,11 @@ func _init() -> void:
 	body.add_theme_constant_override("separation", 24)
 	body.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(body)
-	_crate = _column(body, "THE CRATE")
-	var tape_column := _column(body, "")
-	_tape_name = tape_column.get_parent().get_parent().get_child(0)
-	_tape = tape_column
+	# Each column's header is a number beside what it counts: the crate's tracks found, the tape's length.
+	_crate = _column(body)
+	_count = _crate.get_parent().get_parent().get_child(0)
+	_tape = _column(body)
+	_tape_name = _tape.get_parent().get_parent().get_child(0)
 	_note = UiDraw.label(19, Palette.SAND)
 	_note.custom_minimum_size = Vector2(0.0, 28.0)
 	add_child(_note)
@@ -69,19 +68,19 @@ func _init() -> void:
 	new_button = ChoiceButton.new("new", "key_n", "New tape")
 	shuffle_button = ChoiceButton.new("shuffle", "key_x", "Shuffle")
 	tune_button = ChoiceButton.new("tune", "key_t", "Play on the radio")
-	back = ChoiceButton.new("back", "key_r", "Back")
+	back = ChoiceButton.new("back", "key_esc", "Back")
 	for b in [new_button, shuffle_button, tune_button, back]:
 		b.focus_mode = Control.FOCUS_NONE if b != back else Control.FOCUS_ALL
 		buttons.add_child(b)
 
 
-# A titled, scrolling column; returns the list inside it.
-func _column(parent: Control, title: String) -> VBoxContainer:
+# A scrolling column under a header label (a number beside what it counts); returns the list inside it.
+func _column(parent: Control) -> VBoxContainer:
 	var column := VBoxContainer.new()
 	column.add_theme_constant_override("separation", 8)
 	column.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	parent.add_child(column)
-	column.add_child(UiDraw.label(18, Palette.COPPER, title))
+	column.add_child(UiDraw.label(18, Palette.COPPER))
 	var scroll := ScrollContainer.new()
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	scroll.follow_focus = true
@@ -106,8 +105,17 @@ static func reading(profile, radio) -> Dictionary:
 		if profile != null and profile.has_tune(id) and not id in found:
 			found.append(id)
 	var takes := RadioTakes.take_ids().filter(func(id): return profile != null and profile.has_tune(id)).size()
+	# The crate lists every found track, so its count is every track, in the tape header's "n / N".
+	var every: Array = []
+	for station in Radio.dial():
+		for id in RadioTakes.on_station(station):
+			if not id in every:
+				every.append(id)
+	for id in RadioTakes.all_ids():
+		if not id in every:
+			every.append(id)
 	return {"found": found, "takes": takes, "tape": radio.mixtape, "ids": radio.current_mixtape()["ids"].duplicate(),
-		"count": "Takes found: %d of %d" % [takes, RadioTakes.takes().size()]}
+		"count": "%d / %d" % [found.size(), every.size()]}
 
 
 func refresh(profile, radio) -> void:

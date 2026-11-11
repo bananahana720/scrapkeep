@@ -15,7 +15,7 @@ const ROWS := {
 	"line_cutter": {"faction": "fleet", "role": "punisher", "mechanic": "line_cut", "telegraph": Threat.Type.PROJECTILE, "holds": false,
 		"breaks": ["glide"], "tag": "", "tests": "air", "script": "res://src/combat/line_cutter.gd", "world": 3,
 		"grown": "Every other throw lands on where you will touch down instead of your line.",
-		"line": "Throws a spinning cutter that severs your line over a gap; bite a fresh line within half a second and the swing keeps a kick."},
+		"line": "Throws a spinning cutter that severs your line over a gap. Hook a fresh line within half a second and the swing keeps a kick."},
 	"anchor_crew": {"faction": "fleet", "role": "controller", "mechanic": "deck_winch", "telegraph": Threat.Type.LANE, "holds": true,
 		"breaks": ["jump"], "tag": "", "tests": "heft", "script": "res://src/combat/anchor_crew.gd", "world": 3,
 		"line": "Hooks you down a cable lane and winches you onto its deck; jump to slip the hook before it cinches."},

@@ -58,6 +58,7 @@ var pick
 var brief: ColorRect
 var counter
 var bubble
+var _bubble_hid := false
 var companion_panel
 var talk: Button
 var _counter_ready := true
@@ -128,6 +129,8 @@ func setup(game_ref) -> void:
 	counter.acted.connect(_on_acted)
 	counter.pick_wanted.connect(open_pick)
 	counter.leave_wanted.connect(close_counter)
+	if game.ctx.get("screen_busy") != null:
+		game.ctx.screen_busy.add_source(func() -> bool: return pick.is_open() or briefing())
 	brief = ColorRect.new()
 	brief.color = Color(Palette.CHARCOAL, 0.72)
 	brief.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -386,6 +389,17 @@ func _enforce_hold() -> void:
 		game.capture_mouse(false)
 	if _paused and not get_tree().paused:
 		get_tree().paused = true
+
+
+# Moss's line goes quiet behind the kit pick and comes back after it (pick_quiet.gd, PF-30).
+func quiet(on: bool) -> void:
+	if on:
+		if bubble.visible:
+			bubble.visible = false
+			_bubble_hid = true
+	elif _bubble_hid:
+		bubble.visible = true
+		_bubble_hid = false
 
 
 # ---- The briefing ----

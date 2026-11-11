@@ -75,12 +75,12 @@ func _rows() -> void:
 	for chip in full:
 		by_word[String(chip[2]).to_upper()] = chip[3]
 	_t.check("two side jobs won show the row, in the lost group", by_word.get("SIDE JOBS WON", "?") == "lost", str(by_word))
-	_t.check("the run's tally is kept, what the ball carried is lost", by_word.get("TIME") == "kept" and by_word.get("STAGES") == "kept" and by_word.get("KILLS") == "kept"
+	_t.check("the run's tally is kept, what the ball carried is lost", by_word.get("TIME") == "kept" and by_word.get("STAGES") == "kept" and by_word.get("CLOCKED OUT") == "kept"
 			and by_word.get("SCRAP") == "lost" and by_word.get("PARTS BOLTED ON") == "lost", str(by_word))
 	_t.check("the earned save is neither kept nor lost", by_word.get("SAVE USED", "?") == "", str(by_word))
 	var blocks: Array = SummaryRows.grouped(full)
 	var heads: Array = blocks.map(func(block): return block[0])
-	_t.check("the blocks run kept, lost, then the save with no header", heads == ["KEPT IN YOUR TOTALS", "LOST WITH THIS RUN", ""], str(heads))
+	_t.check("the blocks run kept, lost, then the save with no header", heads == ["Kept in your totals", "Lost with this run", ""], str(heads))
 	_t.check("a run that used no save has two blocks", SummaryRows.grouped(chips).size() == 2, "")
 
 
@@ -105,8 +105,8 @@ func _shown() -> void:
 	var all_text := PackedStringArray()
 	_texts(screens._stats, all_text)
 	var joined := "\n".join(all_text)
-	_t.check("KEPT IN YOUR TOTALS is drawn exactly once", all_text.count("KEPT IN YOUR TOTALS") == 1, joined)
-	_t.check("LOST WITH THIS RUN is drawn exactly once", all_text.count("LOST WITH THIS RUN") == 1, joined)
+	_t.check("Kept in your totals is drawn exactly once", all_text.count("Kept in your totals") == 1, joined)
+	_t.check("Lost with this run is drawn exactly once", all_text.count("Lost with this run") == 1, joined)
 	_t.check("kept and lost appear nowhere else on the stats", joined.to_lower().count("kept in your totals") == 1 and joined.to_lower().count("lost with this run") == 1, joined)
 	var rows := 0
 	for group in screens._stats.get_children():
@@ -138,7 +138,7 @@ func _esc() -> void:
 func _all_captions() -> Dictionary:
 	var worlds: Array = Worlds.ROWS.map(func(row): return String(row["name"]))
 	var parts: Array = Parts.rows().values().map(func(row): return String(row.get("name", "")))
-	var bosses: Array = ["The Reactor Warden", "The Hive Warden", "The Mind Warden"]
+	var bosses: Array = ["The Reactor Warden", "The Meltdown Warden", "The Hive Warden", "The Brood Warden", "The Mind Warden", "The Crown Warden"]
 	for row in Worlds.ROWS:
 		bosses.append(String(Worlds.boss_of(int(row["id"])).get("name", "")))
 	var facts := {"opening": worlds, "key_item": parts, "boss_stagger": bosses, "biggest_hit": ["99999"],

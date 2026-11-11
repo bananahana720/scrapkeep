@@ -1585,6 +1585,128 @@ register(
 )
 
 
+# ---- Companion pieces (6): one backplate per family, so "one of each kind" reads from the marks ----
+# Conductive primer wears the circle, ram brace the rounded square, escape corridor the hex nut.
+# Purpose note: docs/art/reference/fx_ui/companion-piece-icons.md.
+# The family frame is a verdigris rim on the plate so the shape shows on a charcoal panel too.
+def plate_cmp_circle():
+    return [f'<circle cx="32" cy="32" r="28" fill="{CHARCOAL}" stroke="{OLD_VERDIGRIS}" stroke-width="3"/>']
+
+
+def plate_cmp_square():
+    return [rect(4, 4, 56, 56, fill=CHARCOAL, rx=8, stroke=OLD_VERDIGRIS, width=3)]
+
+
+def plate_cmp_hex():
+    return [poly(32, 32, 28, 6, fill=CHARCOAL, stroke=OLD_VERDIGRIS, width=3, start_deg=0)]
+
+
+def g_cmp_primer_coil():
+    return [
+        path("M10 40 C10 22 22 22 22 40 C22 22 34 22 34 40 C34 22 46 22 46 40", stroke=MINT, width=PRIMARY),
+        ring(47, 20, 6, stroke=BONE, width=DETAIL),
+        dot(47, 20, 2.5, fill=AMBER),
+    ]
+
+
+register(
+    "cmp_primer_coil", "Primer Coil",
+    "A three-loop coil beside a ringed target dot", plate_cmp_circle, g_cmp_primer_coil,
+)
+
+
+def g_cmp_primer_mesh():
+    els = [
+        line(14, 22, 42, 50, stroke=BONE, width=DETAIL), line(26, 14, 50, 38, stroke=BONE, width=DETAIL),
+        line(50, 26, 26, 50, stroke=BONE, width=DETAIL), line(38, 14, 14, 38, stroke=BONE, width=DETAIL),
+    ]
+    return els + [dot(32, 32, 5, fill=MINT), dot(20, 20, 4, fill=MINT), dot(44, 44, 4, fill=MINT)]
+
+
+register(
+    "cmp_primer_mesh", "Conductive Mesh",
+    "A diamond lattice with three lit nodes", plate_cmp_circle, g_cmp_primer_mesh,
+)
+
+
+def g_cmp_ram_prow():
+    return [
+        f'<polygon points="12,20 36,32 12,44" fill="{COPPER}"/>',
+        rect(44, 16, 6, 32, fill=BONE),
+        line(38, 24, 40, 24, stroke=BONE, width=DETAIL),
+        line(38, 40, 40, 40, stroke=BONE, width=DETAIL),
+    ]
+
+
+register(
+    "cmp_ram_prow", "Ram Prow",
+    "A solid wedge nose driving a standing bar, with shove ticks", plate_cmp_square, g_cmp_ram_prow,
+)
+
+
+def g_cmp_ram_spring():
+    return [
+        rect(10, 16, 6, 32, fill=BONE),
+        path("M16 32 H20 L24 22 L30 42 L36 22 L40 32", stroke=COPPER, width=PRIMARY),
+        rect(44, 20, 6, 24, fill=BONE),
+    ]
+
+
+register(
+    "cmp_ram_spring", "Brace Spring",
+    "A wall bar, a compressed zigzag spring and a pressed plate", plate_cmp_square, g_cmp_ram_spring,
+)
+
+
+def g_cmp_escape_vent():
+    return [
+        rect(15, 20, 16, 24, fill="none", stroke=BONE, width=DETAIL),
+        line(20, 28, 26, 28, stroke=BONE, width=DETAIL),
+        line(20, 36, 26, 36, stroke=BONE, width=DETAIL),
+        chevron(38, 32, 8, 14, stroke=ICE),
+        chevron(48, 32, 8, 14, stroke=ICE),
+    ]
+
+
+register(
+    "cmp_escape_vent", "Escape Vent",
+    "A slotted vent box with two chevrons pushing out", plate_cmp_hex, g_cmp_escape_vent,
+)
+
+
+def g_cmp_escape_rail():
+    return [
+        line(15, 25, 40, 25, stroke=BONE, width=DETAIL),
+        line(15, 39, 40, 39, stroke=BONE, width=DETAIL),
+        line(21, 21, 21, 43, stroke=BONE, width=3),
+        line(32, 21, 32, 43, stroke=BONE, width=3),
+        chevron(46, 32, 8, 16, stroke=ICE),
+    ]
+
+
+register(
+    "cmp_escape_rail", "Corridor Rail",
+    "Two rails with ties and one chevron at the far end", plate_cmp_hex, g_cmp_escape_rail,
+)
+
+
+# ---- The radio take (1): the radio chip's knob, a ring with its needle -----------------------------
+# Purpose note: docs/art/reference/fx_ui/radio-take-icon.md. No backplate and a near-white glyph, so
+# the card tints it (the HUD modulates the texture) the way it tints the drawn shapes.
+def g_radio_take():
+    return [
+        ring(32, 32, 24, stroke=LEDGER_CREAM, width=PRIMARY),
+        dot(32, 32, 5, fill=LEDGER_CREAM),
+        line(32, 32, 46, 12, stroke=LEDGER_CREAM, width=PRIMARY),
+    ]
+
+
+register(
+    "radio_take", "A radio take",
+    "The radio chip's knob: a ring with its needle pointing up and right", plate_none, g_radio_take,
+)
+
+
 # --- Compose and write --------------------------------------------------------
 def compose(icon_id):
     spec = ICONS[icon_id]

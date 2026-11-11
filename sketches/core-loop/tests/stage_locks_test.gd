@@ -144,7 +144,7 @@ func _gate() -> void:
 	_t.eq("shut clamp answers a hit", _count("warden_gate_refused"), 1)
 	_t.check("objective names the clamp once it is awake", game.flow.objective_text().contains("clamp"), game.flow.objective_text())
 	var plate: Dictionary = game.hud.objective_reading()
-	_t.eq("the plate says the clamp is shut while it holds", [plate["id"], plate["words"]], ["break_clamp_crews", "Clamp shut: break the crews"])
+	_t.eq("the plate says the clamp is shut while it holds", [plate["id"], plate["words"]], ["break_clamp_crews", "Break the clamp crews"])
 	_t.eq("its ring starts empty", plate["progress"], 0.0)
 	_t.eq("in slate, a locked thing", plate["color"], Palette.SLATE)
 	var at: Vector3 = warden.global_position
@@ -282,7 +282,7 @@ func _lock() -> void:
 	_t.check("objective names the yard", game.flow.objective_text().contains("Yard locked"), game.flow.objective_text())
 	game.hud._process(0.0)
 	_t.eq("the plate says the yard is locked", [game.hud.objective_reading()["id"], game.hud.objective_reading()["words"]],
-			["break_yard_crew", "Yard locked: break the crew"])
+			["break_yard_crew", "Break the yard crew"])
 	_t.eq("no edge marker points out past the wall", game.hud.edge_markers.targets(), [])
 	_t.check("the bot hand goes for the crew", locks.foe_for(game.player.ball_position()) in crew)
 	var logged: int = game.build.kill_log.size()

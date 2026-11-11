@@ -15,14 +15,14 @@ const TURKEY_STRIKES := 3
 const TURKEY_WINDOW := 4.0
 
 const ENTRIES := [
-	{"id": "strike", "category": "build", "name": "Strike", "hint": "A pin chain", "clue": "+ three down from one knock",
-		"text": "A knocked enemy took three down in one chain."},
-	{"id": "spare", "category": "build", "name": "Spare", "hint": "A rebound", "clue": "+ the one that bounced you",
+	{"id": "strike", "category": "build", "name": "Strike", "hint": "Knocked machines", "clue": "+ three down from one knock",
+		"text": "A knocked machine took three down in one chain."},
+	{"id": "spare", "category": "build", "name": "Spare", "hint": "A bounce", "clue": "+ the one that bounced you",
 		"text": "You bounced off a heavy one, then took it down."},
 	{"id": "turkey", "category": "build", "name": "Turkey", "hint": "Strike", "clue": "+ two more inside 4 s",
 		"text": "Three strikes inside four seconds."},
 	{"id": "too_heavy_for_you", "category": "build", "name": "Too heavy for you", "hint": "Moss's locked hook",
-		"clue": "+ come back heavier", "text": "Moss sells the top shelf once your heft reaches the next class."},
+		"clue": "+ come back heavier", "text": "Moss sells the top shelf once your heft reaches the next tier."},
 ]
 
 var clock := 0.0

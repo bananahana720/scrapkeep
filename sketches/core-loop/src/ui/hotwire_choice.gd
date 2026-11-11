@@ -12,7 +12,9 @@ const UiFonts := preload("res://src/ui/ui_fonts.gd")
 # are built by one function from one style, so neither can weigh more than the other. The
 # numbers come from Build and HotwireRules, never from typed text, so a tuning change moves
 # the words. The Fit / Recycle transaction is build.gd's (hotwire_fit, hotwire_recycle); this
-# shows both consequences and the recycle price before the choice. No cue, no equip.
+# shows both consequences and the recycle price before the choice. No cue, no equip. The
+# part's "label" sentence says what the two rows already say, so it is not shown anywhere
+# (a tooltip repeating the rows was one fact in two places).
 
 const ICON_PX := 40.0
 const ROW_H := 48.0
@@ -59,7 +61,6 @@ func _init(id := "") -> void:
 	var copy := resolve(id)
 	if copy.is_empty():
 		return
-	tooltip_text = copy["label"]
 	rows = [_row(copy["upside"], Palette.BRASS), _row(copy["downside"], Palette.RUST)]
 	for row in rows:
 		add_child(row)

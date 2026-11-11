@@ -26,14 +26,14 @@ const DeathCause := preload("res://src/core/death_cause.gd")
 const HEAD := "Next shift"
 const MAX_CHARS := 82
 const GAP_RATIO := 0.7
-const GAP := "Punch %d met %s's plating %d. Roll more scrap first: heft is punch."
+const GAP := "Punch %d met %s's plating %d. Roll up more scrap for more punch."
 const DRAWN := "Every hit is drawn on the floor first. Read the mark, then move."
 
 const ROWS := {
 	"E01": "Ram a chaser while it crouches to lunge. The lunge never comes.",
 	"E02": "A shell lands on the ring it draws ahead of you. Change line once it is down.",
-	"E03": "The miniboss lands on its ring. Roll out, then hit its core when it opens.",
-	"E04": "The miniboss charges down its lane. Step aside, then hit its open core.",
+	"E03": "The drop hammer lands on its ring. Roll out, then hit its core when it opens.",
+	"E04": "The drop hammer charges down its lane. Step aside, then hit its open core.",
 	"E26": "The Dispatcher's pod lands on its ring. Roll out, then go up the mast after it.",
 	"E34": "The hook swings down its lane and back. Step out, then hit the core when it opens.",
 	"E35": "The gate leaf falls where the crane marks. Roll clear, then hit its open core.",

@@ -238,10 +238,21 @@ func _physics_process(_delta: float) -> bool:
 	_t.check("O2 the panel gone, his line comes up", bubble.visible and bubble.text != "", "bubble '%s'" % bubble.text)
 	_to(player.length() + 0.1)
 	_frame()
+	# The arena is a fight from the moment it is entered (screen_busy.gd), so the record waits past the
+	# card, through the fight, and shows once Brindle is down and the screen has been quiet.
+	_game.ctx.screen_busy.step(2.5)
 	hud._step_ach(DT)
-	_t.check("O3 a record found meanwhile waited for the card", plate_held and hud.corner_rects().any(func(r): return r["name"] == "plate"), "held %s" % plate_held)
+	var held_in_fight: bool = not hud.corner_rects().any(func(r): return r["name"] == "plate")
+	_game.ctx.screen_busy.fight_over()
+	_game.ctx.screen_busy.step(2.5)
+	# The note was found first, so it takes the screen first (oldest first, one at a time); the record follows it.
 	hud._step_lore(DT)
-	_t.check("O5 a field note found meanwhile waited too", pill_held and hud._lore_panel.visible, "held %s, up %s" % [pill_held, hud._lore_panel.visible])
+	var pill_up: bool = hud._lore_panel.visible
+	hud._step_lore(3.1)
+	hud._step_ach(DT)
+	_t.check("O3 a record found meanwhile waited for the card, then for the fight, then showed", plate_held and held_in_fight and hud.corner_rects().any(func(r): return r["name"] == "plate"),
+		"held under the card %s, held through the fight %s" % [plate_held, held_in_fight])
+	_t.check("O5 a field note found meanwhile waited too", pill_held and pill_up, "held %s, up %s" % [pill_held, pill_up])
 	_t.check("H5 the arrival ends on its own at full speed", not player.playing and is_equal_approx(Engine.time_scale, 1.0)
 			and not _game.presentation.flourish_cues.is_processing(), "playing %s, scale %.2f" % [player.playing, Engine.time_scale])
 

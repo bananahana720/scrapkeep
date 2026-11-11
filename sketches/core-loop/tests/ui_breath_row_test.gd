@@ -60,6 +60,7 @@ func _process(delta: float) -> bool:
 		"boot":
 			_menu = _game.get_node("PauseMenu")
 			_audio = _game.presentation.audio
+			_game.dev = true  # the pause menu's Breath row is a --dev lab row since wave 36 (the column is six rows)
 			_game.ctx.calm = true
 			_game.player.source = Intent.Scripted.new()
 			_packaged = _audio.AceSequencer.new().ready()
@@ -74,7 +75,7 @@ func _process(delta: float) -> bool:
 			var before: String = button.text if button != null else ""
 			_game._screen_key(KEY_B)
 			var after: String = button.text if button != null else ""
-			_report("settings B", on_title and before == "Breath: hard" and after == "Breath: gentle" and _game.tuning.option(Tuning.BREATH_KEY) == "gentle",
+			_report("settings B", on_title and before == "Breath hard" and after == "Breath gentle" and _game.tuning.option(Tuning.BREATH_KEY) == "gentle",
 				"the title has no Breath button; with music ace the settings page shows %s; B made it %s" % [before, after])
 			_game.screens.toggle_settings()
 			Push.click(root, _game.screens.button_for("start"))
@@ -110,19 +111,19 @@ func _process(delta: float) -> bool:
 			_next("row")
 		"row":
 			var row: Button = _menu.row("breath")
-			var shown: bool = _menu.is_open() and row.visible and row.text == "Breath: gentle"
+			var shown: bool = _menu.is_open() and row.visible and _menu.read("breath")["value"] == "gentle"
 			var words: int = WordBudget.count(_menu)["hud"]
 			Push.key(root, KEY_B)
-			var by_b: String = row.text
+			var by_b: String = _menu.read("breath")["value"]
 			var ace_b: String = _audio.ace.breath if _audio.ace != null else "-"
 			Push.click(root, row)
-			var by_click: String = row.text
+			var by_click: String = _menu.read("breath")["value"]
 			var ace_click: String = _audio.ace.breath if _audio.ace != null else "-"
 			Push.key(root, KEY_B)
-			var back: String = row.text
+			var back: String = _menu.read("breath")["value"]
 			var ace_back: String = _audio.ace.breath if _audio.ace != null else "-"
-			_report("pause row cycles the style", shown and by_b == "Breath: raw" and ace_b == "raw" and by_click == "Breath: hard"
-					and ace_click == "hard" and back == "Breath: gentle" and ace_back == "gentle" and _game.tuning.option(Tuning.BREATH_KEY) == "gentle"
+			_report("pause row cycles the style", shown and by_b == "raw" and ace_b == "raw" and by_click == "hard"
+					and ace_click == "hard" and back == "gentle" and ace_back == "gentle" and _game.tuning.option(Tuning.BREATH_KEY) == "gentle"
 					and words <= CALM_BUDGET,
 				"open with the row shown %s (%d words, budget %d); B made it %s (sequencer %s), a click %s (sequencer %s), B again %s (sequencer %s)" % [
 				shown, words, CALM_BUDGET, by_b, ace_b, by_click, ace_click, back, ace_back])

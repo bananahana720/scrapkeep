@@ -29,11 +29,11 @@ func _process(_delta: float) -> bool:
 	var juice = _game.presentation.juice
 	var menu = _game.get_node("PauseMenu")
 	var full := _measure(juice)
-	menu.row("shake").set_level(0.5)
-	menu.row("hitstop").set_level(0.5)
+	menu.settings_page().row("shake").set_level(0.5)
+	menu.settings_page().row("hitstop").set_level(0.5)
 	var half := _measure(juice)
-	menu.row("shake").set_level(0.0)
-	menu.row("hitstop").set_level(0.0)
+	menu.settings_page().row("shake").set_level(0.0)
+	menu.settings_page().row("hitstop").set_level(0.0)
 	var none := _measure(juice)
 	_check("shake scales", is_equal_approx(half["shake"], full["shake"] * 0.5) and is_equal_approx(half["kick"], full["kick"] * 0.5)
 			and is_equal_approx(half["punch"], full["punch"] * 0.5) and none["shake"] == 0.0 and none["kick"] == 0.0 and none["punch"] == 0.0,

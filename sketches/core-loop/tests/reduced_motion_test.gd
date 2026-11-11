@@ -52,9 +52,9 @@ func _run() -> void:
 	# RM-2: the settings page toggle turns it on, saves it and applies it at once.
 	var page = _game.get_node("PauseMenu").settings_page()
 	_t.check("RM-2 the page lists a Reduced motion row", page.row("reduced_motion") != null, "rows")
-	_t.eq("RM-2 the row reads off", page.row("reduced_motion").text, "Reduced motion: off")
+	_t.eq("RM-2 the row reads off", page.read("reduced_motion"), {"label": "Less motion", "value": "", "pip": 0})
 	page.press("reduced_motion")
-	_t.eq("RM-2 the row reads on", page.row("reduced_motion").text, "Reduced motion: on")
+	_t.eq("RM-2 the row reads on", page.read("reduced_motion"), {"label": "Less motion", "value": "", "pip": 1})
 	_t.check("RM-2 the store holds it", _game.settings_store().reduced_motion(), "store")
 
 	# RM-3: round trip through the saved file.

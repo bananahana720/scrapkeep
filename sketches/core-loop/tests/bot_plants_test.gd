@@ -42,6 +42,7 @@ func _initialize() -> void:
 func _parse() -> void:
 	_t.eq("pack_damage parses", BotPlants.parse("pack_damage=4"), {"pack_damage": 4.0})
 	_t.eq("rut parses", BotPlants.parse("rut=1"), {"rut": 1.0})
+	_t.eq("the fairness plants parse", BotPlants.parse("drain=1,fast_tax=2,ringless=1"), {"drain": 1.0, "fast_tax": 2.0, "ringless": 1.0})
 	_t.eq("two plants", BotPlants.parse("damage=2,hide_pack_telegraphs=1"), {"damage": 2.0, "hide_pack_telegraphs": 1.0})
 	_t.check("an unknown name is refused", BotPlants.parse("nope=1").has("error"))
 	_t.check("a bad number is refused", BotPlants.parse("damage=x").has("error"))

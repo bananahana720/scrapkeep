@@ -24,21 +24,21 @@ const ENTRIES := [
 	},
 	{
 		"id": "chain", "name": "Chain",
-		"hint": "Why let go of the floor when the next enemy is right there?",
-		"clue": "a hooked enemy + a wall + another enemy, feet off the floor",
-		"text": "Hook an enemy, swing off a wall, hook another, and stay in the air. A smash pays the chain: 30% more per link past the first, up to six.",
+		"hint": "Why let go of the floor when the next machine is right there?",
+		"clue": "a hooked machine + a wall + another machine, feet off the floor",
+		"text": "Hook a machine, swing off a wall, hook another and stay in the air. A smash pays 30% more per link past the first, up to six links.",
 	},
 	{
 		"id": "crush_chain", "name": "Rolling Tide",
 		"hint": "Heavy enough, and they stop being obstacles.",
 		"clue": "heft + three rams in a heartbeat",
-		"text": "Crush three unplated enemies with rams inside one second, without breaking stride.",
+		"text": "Crush three unplated machines with rams inside one second, without breaking stride.",
 	},
 	{
 		"id": "parting_shot", "name": "Parting Shot",
 		"hint": "Leaving a pylon is a good time to be shooting.",
 		"clue": "a slingshot + a kill",
-		"text": "Kill an enemy within a second of slingshotting off a pylon.",
+		"text": "Kill a machine within a second of slingshotting off a pylon.",
 	},
 	# v2 W7 enemies: the counters' opportunities and the ancients' secrets.
 	{
@@ -50,14 +50,14 @@ const ENTRIES := [
 	{
 		"id": "shield_vault", "name": "Off the Dish",
 		"hint": "What throws you back can throw you up.",
-		"clue": "a deflector's rebound + a jump",
-		"text": "Jump the instant a deflector's dish throws you back and the rebound becomes a vault, whatever you pilot.",
+		"clue": "a deflector's bounce + a jump",
+		"text": "Jump the instant a deflector's dish throws you back and the bounce becomes a vault, whatever you pilot.",
 	},
 	{
 		"id": "awaiting_operator", "name": "Awaiting Operator",
 		"hint": "Scattered drones look for something to follow.",
-		"clue": "a scattered swarm + another enemy",
-		"text": "Bowl through a swarm and its drones follow you for two seconds. Lead them into another enemy and they hit it like pins. Fragment 5 reads: awaiting operator.",
+		"clue": "a scattered swarm + another machine",
+		"text": "Bowl through a swarm and its drones follow you for two seconds, seams dark. Lead them into another machine and they hit it like pins.",
 	},
 	{
 		"id": "plate_drop", "name": "Maintenance Crew",
@@ -111,8 +111,8 @@ const ENTRIES := [
 	{
 		"id": "hook_out", "name": "Hook Out",
 		"hint": "A tether holds you to one post. Any other post will do.",
-		"clue": "a hooker's tether + a harpoon bite on a post or a wall",
-		"text": "Bite another post while a hooker holds you and its line snaps, kicking you along your own.",
+		"clue": "a hooker's tether + a harpoon hook on a post or a wall",
+		"text": "Hook another post while a hooker holds you and its line snaps, kicking you along your own.",
 	},
 	{
 		"id": "boom_pop", "name": "Bowl Through",
@@ -121,7 +121,7 @@ const ENTRIES := [
 		"text": "Cross a boom tender's sweep at top speed and every float you touch bursts and pays scrap; slower, and the boom pins you to its hull.",
 	},
 	{
-		"id": "boom_strike", "name": "Strike!",
+		"id": "boom_strike", "name": "Strike",
 		"hint": "Five floats in a row, like pins.",
 		"clue": "a boom tender's fresh boom + all five floats in one pass",
 		"text": "Burst all five of a boom tender's floats in one sweep. The tug never refloats them.",
@@ -129,8 +129,8 @@ const ENTRIES := [
 	{
 		"id": "line_cut", "name": "Under the Cutter",
 		"hint": "A spinning blade leaves room beneath its arc.",
-		"clue": "a cutter crossing your line over a gap + a glide under it, or a fresh bite at once",
-		"text": "Throws a spinning cutter that severs your line over a gap; bite a fresh line within half a second and the swing keeps a kick.",
+		"clue": "a cutter crossing your line over a gap + a glide under it, or a fresh hook at once",
+		"text": "Throws a spinning cutter that severs your line over a gap. Hook a fresh line within half a second and the swing keeps a kick.",
 	},
 	{
 		"id": "deck_winch", "name": "Slip the Hook",
@@ -160,13 +160,13 @@ const ENTRIES := [
 		"id": "cable_cut", "name": "Cut the Line",
 		"hint": "A shield is only as good as what holds it up.",
 		"clue": "a Linker's taut cable + a cut",
-		"text": "Never attacks: it braces a dish over a partner on a taut cable, and the dish takes every hit it faces; cut the cable, come over the rim or round the back, or drop the Linker first.",
+		"text": "It never attacks. It braces a dish over a partner on a taut cable, and the dish takes every hit it faces. Cut the cable, come over the rim or round the back, or drop the Linker first.",
 	},
 	{
 		"id": "shift_over", "name": "Shift Over",
 		"hint": "Every crew has someone blowing the whistle.",
 		"clue": "a Shift Boss's horn + the Shift Boss down first",
-		"text": "Never attacks: it horns every 5 s and its crew's cracked plating closes up again; knock it out first and the whole crew clocks out for a breath.",
+		"text": "It never attacks. Every 5 s it horns and wipes the damage you have done to its crew's plating. Knock it out first and the whole crew holds its attacks for a breath.",
 	},
 	{
 		"id": "roof_drop", "name": "Bring Down the Roof",
@@ -178,13 +178,13 @@ const ENTRIES := [
 		"id": "split_pop", "name": "Clean Break",
 		"hint": "Some scrap comes apart the way you hit it.",
 		"clue": "a Splitter + a smash from above, or a shot from far off",
-		"text": "Chases you and keeps budding fuse pods that run at you and blow up; kill it to stop them, by a smash from above or a shot from 15 m, or a ram pops it into three more.",
+		"text": "Chases you and keeps budding fuse pods that run at you and blow up. Kill it to stop them, by a smash from above or a shot from 15 m. A ram pops it into three more.",
 	},
 	{
 		"id": "fuse_pod", "name": "Out of the Ring",
 		"hint": "A lit fuse is a promise, not a hit.",
 		"clue": "a Splitter pod + rolling out of its ring",
-		"text": "A torn-off Splitter pod: runs at you, lights a one-second fuse ring and blows up; roll out of the ring.",
+		"text": "A torn-off Splitter pod runs at you, lights a one-second fuse ring and blows up. Roll out of the ring.",
 	},
 	{
 		"id": "cup_break", "name": "Out of the Cup",
@@ -196,13 +196,13 @@ const ENTRIES := [
 		"id": "stream_cut", "name": "Cut the Stream",
 		"hint": "Ignore the chute and the chute never stops.",
 		"clue": "a Dispatcher's mast + a kill after it has dropped a chaser",
-		"text": "Perched on a mast, it never attacks but drops a chaser at you every 8 s; reach it by grapple, vault or a long gun and the stream stops.",
+		"text": "Perched on a mast, it never attacks but drops a chaser at you every 8 s. Reach it by harpoon, vault or a long gun and the stream stops.",
 	},
 	{
 		"id": "paddle_ride", "name": "Ride the Swat",
 		"hint": "A knock is only a shove if you let it be one.",
 		"clue": "a swatter's paddle + a boost while it has you",
-		"text": "The paddle never hurts: it bats you along its sweep. Boost inside the knock and the knock becomes your speed, or jump the low paddle.",
+		"text": "The paddle never hurts. It bats you along its sweep. Boost inside the knock and the knock becomes your speed, or jump the low paddle.",
 	},
 	# 2026-10-08 (wave 10, ST4): the rest of the roster that spawns: the alpha packs' and elite's
 	# Fleet crews, and the Warden with one entry per variant whose trick differs.
@@ -219,7 +219,7 @@ const ENTRIES := [
 		"text": "Its outer plate takes the first breaking hit whole and pops off; hit it hard again and the body cracks.",
 	},
 	{
-		"id": "cable_snap", "name": "Cut the Line",
+		"id": "cable_snap", "name": "Snap the Cable",
 		"hint": "A winch can only reel what stays on its cable.",
 		"clue": "a winch drone's cable + a jump, boost or smash",
 		"text": "Hovers out of ramming reach and winches you toward its pack; jump, boost or smash to snap the cable.",
@@ -253,73 +253,73 @@ const ENTRIES := [
 	{
 		"id": "loaded_line", "name": "Loaded Line",
 		"hint": "A skill can wait for the rope.",
-		"clue": "a cast with no line out + the next bite",
-		"text": "Cast your line skill with no line out, then bite something inside four seconds: the skill fires through the bite.",
+		"clue": "a cast with no line out + the next hook",
+		"text": "Cast your line skill with no line out, then hook something inside four seconds. The skill fires through the hook.",
 	},
 	{
-		"id": "set_piece", "name": "Set Piece",
+		"id": "set_piece", "name": "First Ultimate",
 		"hint": "A full meter is a stage direction.",
-		"clue": "a full ultimate meter + Q",
-		"text": "Fill the meter and press Q. The ball rides a drawn path and the landing strikes everything at its end.",
+		"clue": "a full ultimate meter",
+		"text": "Fill the meter and fire your ultimate. The ball rides a drawn path and the landing strikes everything at its end.",
 	},
 	{
 		"id": "set_piece_core", "name": "Curtain Call",
 		"hint": "An open core is an open door.",
-		"clue": "a Warden's open core + a set piece landing",
-		"text": "Stagger a Warden until its core opens, then land a set piece on it: the core shatters.",
+		"clue": "a Warden's open core + an ultimate landing",
+		"text": "Stagger a Warden until its core opens, then land an ultimate on it. The core shatters.",
 	},
 	{
 		"id": "set_piece_cash_in", "name": "Cash In",
 		"hint": "A long chain wants a bigger finish.",
-		"clue": "a chain of three or more + a set piece landing",
-		"text": "Land a set piece with three or more links on your chain: the landing pays the whole chain.",
+		"clue": "a chain of three or more + an ultimate landing",
+		"text": "Land an ultimate with three or more links on your chain. The landing pays the whole chain.",
 	},
 	{
 		"id": "set_piece_breakout", "name": "Breakout",
 		"hint": "Nothing holds a ball with a plan.",
-		"clue": "a hostile hold + Q",
-		"text": "Press Q while an enemy holds you: the hold breaks as the set piece starts.",
+		"clue": "a hostile hold + your ultimate",
+		"text": "Fire your ultimate while a machine holds you. The hold breaks as it starts.",
 	},
 	{
 		"id": "armour_plated", "name": "Plated",
 		"hint": "Some crews shrug off a plain hit.",
 		"clue": "any hit on a plated crew",
-		"text": "Plated crews take 60% from rams, smashes and weapon fire (DENT) and 150% from arc and your abilities (ZZAP!).",
+		"text": "Plated crews take 60% from rams, smashes and weapon fire. Arc and your abilities do 150%.",
 	},
 	{
 		"id": "armour_wet", "name": "Soaked",
 		"hint": "The Spillway crews work in the water. Water carries a spark.",
 		"clue": "an arc hit on a Spillway crew",
-		"text": "Spillway crews come out of the channel soaked: arc hits them for 150% (ZZAP!). Everything else lands as normal.",
+		"text": "Spillway crews come out of the channel soaked. Arc does 150% to them and everything else lands as normal.",
 	},
 	# --- P-C Sable entries ---
-	{"id": "bank_shot", "name": "Bank Shot", "hint": "The line can turn you as well as pull you.", "clue": "a standing line + slot 3", "text": "Pick 3 and click while a line stands: whip round the anchor and leave toward your aim, faster than you came."},
-	{"id": "cable_run", "name": "Cable Run", "hint": "Everything she drives into the air is somewhere to hook.", "clue": "a full ring + Q", "text": "Q rides a cable and drives a stake on every beat. The stakes hold a line for six seconds after landing."},
+	{"id": "bank_shot", "name": "Bank Shot", "hint": "The line can turn you as well as pull you.", "clue": "a standing line + pick 3", "text": "Pick 3 and click while a line stands. You whip round the anchor and leave toward your aim, faster than you came."},
+	{"id": "cable_run", "name": "Cable Run", "hint": "Everything she drives into the air is somewhere to hook.", "clue": "a full ring", "text": "Your ultimate rides a cable and drives a stake on every beat. The stakes hold a line for six seconds after landing."},
 	{"id": "switchback", "name": "Switchback", "hint": "Your own stakes hold a line as well as any wall.", "clue": "a standing stake + Bank Shot", "text": "Bank Shot off a stake your Cable Run left behind."},
 	{"id": "sable_cable_runs", "name": "Cable Runner", "hint": "A good route is worth repeating.", "clue": "three Cable Run landings in one run", "text": "Land three Cable Runs in one run to earn Cable Stitch."},
 	# --- end Sable ---
 	# --- P-C Rivet entries ---
 	{"id": "rivet_line_drive", "name": "Line Drive", "hint": "The cable carries more than you.",
-		"clue": "Rivet + slot 3 + a line on a machine", "text": "Pick 3 and click with a line on a machine: the winch throws it into whatever stands behind. On a wall it hauls you in and nothing holds you. With no line, the next bite carries it."},
+		"clue": "Rivet + pick 3 + a line on a machine", "text": "Pick 3 and click with a line on a machine. The winch throws it into whatever stands behind. On a wall it hauls you in and nothing holds you. With no line, the next hook carries it."},
 	{"id": "rivet_foundry_cutter", "name": "Foundry Cutter", "hint": "Measured twice. Firing once.",
-		"clue": "Rivet + a full ring + Q", "text": "Q drives you from here to where you aim. The lens cuts wherever you look, on every beat. The middle beat sweeps wide. The landing skids on, and you keep the speed."},
+		"clue": "Rivet + a full ring", "text": "Your ultimate drives you to where you aim. The lens cuts wherever you look, on every beat. The middle beat sweeps wide. The landing skids on, and you keep the speed."},
 	{"id": "rivet_line_true", "name": "Line True", "hint": "Ten straight answers.",
 		"clue": "ten Line Drive punches + one stage", "text": "Land ten Line Drive punches in one stage to earn the Swarf Curl."},
 	{"id": "rivet_shrugged", "name": "Shrugged Off", "hint": "Crowd control is fuel.",
 		"clue": "Rivet + thirty ignored holds and knocks + one run", "text": "Shrug off thirty holds and knocks in one run to earn the Welding Hood."},
 	# --- end Rivet ---
 	# --- P-C Kest entries ---
-	{"id": "kest_cable_charge", "name": "Cable Charge", "hint": "Your line can carry more than you.", "clue": "3 + a click while hooked, or just before the bite", "text": "Pick 3 and click: a charge runs down your line and sets on what the hook bit. Let go and it blows. With no line out, the next bite carries it."},
-	{"id": "kest_windhover", "name": "Windhover", "hint": "There. Give it a moment.", "clue": "a full ring + Q + open sky over where you aim", "text": "Q lobs you up over where you aim. You hang there for two beats while your mortar shells the ground below, then you stoop straight down onto it."},
-	{"id": "kest_blast_vault", "name": "Blast Vault", "hint": "The wall you blow can throw you.", "clue": "a Cable Charge on a wall + let go close + Space held", "text": "Charge a wall through your line, reel in, and let go within a few metres holding Space. The blast throws you up and away, and your chain keeps its grace."},
+	{"id": "kest_cable_charge", "name": "Cable Charge", "hint": "Your line can carry more than you.", "clue": "pick 3 + a click while hooked, or just before the hook", "text": "Pick 3 and click. A charge runs down your line and sets on what the hook caught. Let go and it blows. With no line out, the next hook carries it."},
+	{"id": "kest_windhover", "name": "Windhover", "hint": "There. Give it a moment.", "clue": "a full ring + open sky over where you aim", "text": "Your ultimate lobs you up over where you aim. You hang there for two beats while your mortar shells the ground below, then you stoop straight down onto it."},
+	{"id": "kest_blast_vault", "name": "Blast Vault", "hint": "The wall you blow can throw you.", "clue": "a Cable Charge on a wall + let go close + jump held", "text": "Charge a wall through your line, reel in, and let go within a few metres holding jump. The blast throws you up and away, and your chain keeps its grace."},
 	{"id": "kest_homecoming", "name": "Homecoming", "hint": "The wind knows your feathers.", "clue": "Kest + the Highdraft", "text": "Fly Kest into her home roosts in world three."},
 	{"id": "kest_tick_tick_boom", "name": "Tick, Tick, Boom", "hint": "Watch the whole pack before you commit.", "clue": "Windhover + eight different machines", "text": "Strike eight different machines with the charges and landing of one Windhover."},
 	# --- end Kest ---
 	# --- P-C Tarn entries ---
 	{"id": "tarn_claw_drag", "name": "Claw Drag", "hint": "Why go to them when the line can bring them?",
-		"clue": "a bitten enemy + 3 + a click", "text": "3 sends a claw down the cable. Light machines arrive clamped in claw reach. Too heavy, and you climb it instead. On a wall it rips a slab loose."},
+		"clue": "a hooked machine + pick 3 + a click", "text": "Pick 3 and click to send a claw down the cable. Light machines arrive clamped in claw reach. Too heavy, and you climb it instead. On a wall it rips a slab loose."},
 	{"id": "tarn_redjaw_rend", "name": "Redjaw Rend", "hint": "A full ring and a line to ride. Take company.",
-		"clue": "a full ring + Q + enemies near the line", "text": "Q climbs claw over claw, snatching and towing nearby machines. The catch lands with you, rent and clamped. A heavier ball tows heavier machines."},
+		"clue": "a full ring + machines near the line", "text": "Your ultimate climbs claw over claw, snatching and towing nearby machines. The catch lands with you, rent and clamped. A heavier ball tows heavier machines."},
 	{"id": "tarn_dragged", "name": "Ten in the Claws", "hint": "Bring the workshop to your teeth.",
 		"clue": "ten different machines + claw drag + one stage", "text": "Drag ten machines into claw reach in one stage to earn Claw Marks."},
 	{"id": "tarn_hold_still", "name": "Hold Still", "hint": "The machine, I mean.",
@@ -327,21 +327,21 @@ const ENTRIES := [
 	# --- end Tarn ---
 	# --- P-C Tally entries ---
 	{"id": "tally_skim", "name": "Skim", "hint": "The line takes its cut on the way in.",
-		"clue": "a harpoon bite + the ledger clip on three enemies", "text": "Cast the ledger clip on a standing line, or load it before the bite. It clips the target and two neighbours, a point of pressure each. Hit one clip and the rest take it too."},
+		"clue": "a harpoon hook + the ledger clip on three machines", "text": "Cast the ledger clip on a standing line, or load it before the hook. It clips the target and two neighbours, a point of pressure each. Hit one clip and the rest take it too."},
 	{"id": "tally_books_balanced", "name": "Books Balanced", "hint": "Every clip is a debt. Land and collect.",
-		"clue": "six clips + one Plate Return landing", "text": "Clip enemies on the ride in, then land. The landing settles every clip you made, wherever it ran, and your reader refills."},
+		"clue": "six clips + one Plate Return landing", "text": "Clip machines on the ride in, then land. The landing settles every clip you made, wherever it ran, and your reader refills."},
 	{"id": "tally_punch_tape", "name": "Punch Tape", "hint": "Keep the tape running.",
 		"clue": "the ledger clip + ten casts + one stage", "text": "Fire the ledger clip ten times in one stage to earn Punch Tape."},
 	{"id": "tally_eyeshade", "name": "Eyeshade", "hint": "Twenty debts, one ride at a time.",
 		"clue": "twenty settled clips + Plate Return + one run", "text": "Settle twenty clips with Plate Return in one run to earn the Eyeshade."},
 	# --- end Tally ---
 	# --- P-C Cannon entries ---
-	{"id": "cannon_lane_charge", "name": "Lane Charge", "hint": "The cable already shows where it goes.", "clue": "a standing line + 3", "text": "Press 3 while the harpoon holds something. The cable becomes a lane that fires through the enemy and twelve metres on, or out of a wall. Chains make it hit harder."},
-	{"id": "cannon_fire_mission", "name": "Fire Mission", "hint": "A gun can fire itself.", "clue": "a full ring + Q + open ground ahead", "text": "Q fires you along an arc. Each beat calls a family below you. Every call lands on the same beat as you."},
+	{"id": "cannon_lane_charge", "name": "Lane Charge", "hint": "The cable already shows where it goes.", "clue": "a standing line + pick 3", "text": "Pick 3 while the harpoon holds something. The cable becomes a lane that fires through the machine and twelve metres on, or out of a wall. Chains make it hit harder."},
+	{"id": "cannon_fire_mission", "name": "Fire Mission", "hint": "A gun can fire itself.", "clue": "a full ring + open ground ahead", "text": "Your ultimate fires you along an arc. Each beat calls a family below you. Every call lands on the same beat as you."},
 	{"id": "cannon_creeping_barrage", "name": "Creeping Barrage", "hint": "Some fire walks ahead of you.", "clue": "a line + the barrage", "text": "Ride a line. Every beat lays a lane across your path one beat before you reach it."},
-	{"id": "cannon_plate_mortar", "name": "Plate Mortar", "hint": "Brace them from above.", "clue": "a high lob + plates + the landing", "text": "The lob drops plates. Your slam landing hits every exposed enemy at 1.4 times."},
+	{"id": "cannon_plate_mortar", "name": "Plate Mortar", "hint": "Brace them from above.", "clue": "a high lob + plates + the landing", "text": "The lob drops plates. Your slam landing hits every exposed machine at 1.4 times."},
 	{"id": "cannon_recital", "name": "Recital", "hint": "The gun hums four notes when it is happy.", "clue": "lane, split, rush, plate", "text": "Land the four families in the order the Cannon hums them and the tune plays whole."},
-	{"id": "cannon_time_on_target", "name": "Time on Target", "hint": "Everything at once.", "clue": "Fire Mission + a crowd", "text": "Every shell you called landed on the same beat, on eight of them."},
+	{"id": "cannon_time_on_target", "name": "Time on Target", "hint": "Everything at once.", "clue": "Fire Mission + a crowd", "text": "Every shell you called landed on the same beat, on eight machines."},
 	{"id": "cannon_old_tune", "name": "Old Tune", "hint": "It got your tune wrong all fight.", "clue": "the Mind + its own gun", "text": "The Mind played your tune back wrong. Its own gun played it right."},
 	{"id": "mind_quiet_gun", "name": "The Quiet Gun", "hint": "One of its guns never fired.", "clue": "the Mind's rim, listening", "text": "A gun on the rim never fired. It learned one note each time the Mind showed a new attack."},
 	# --- end Cannon ---

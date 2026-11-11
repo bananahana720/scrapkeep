@@ -47,7 +47,7 @@ const QaWatch := preload("res://tools/qa_watch.gd")
 # --bot-no-visuals=1 skips selected unread idle callbacks only
 # on the headless display. Camera, HUD, hit-stop and collision work remain active.
 # --plant=name=value[,name=value] (test only, the anti-kiting gates' controls): pack_damage=K, damage=K, packs_passive=1,
-# hide_pack_telegraphs=1 (tools/bot_plants.gd). Absent, the run is unchanged. --policy=orbit|terrain are the gates' arms (bot_kite.gd).
+# hide_pack_telegraphs=1, rut=K, fast_tax=K, ringless=K (tools/bot_plants.gd). Absent, the run is unchanged. --policy=orbit|terrain are the gates' arms (bot_kite.gd).
 # --gate=1 enables all three switches, unless individually overridden with =0.
 # --chain-hand=0 turns off the explorer's two-hook hand (bot_driver's control switch).
 # --late-offer=take|skip (SG8) turns the tree's late_offer on, has the bot take a random branch at

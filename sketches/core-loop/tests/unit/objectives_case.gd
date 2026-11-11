@@ -135,7 +135,7 @@ func _done(t) -> void:
 	done.step(DT, "Find the Warden")
 	done.step(DT, "Find the Warden")
 	t.eq("still up while the goal under it holds", done.showing(), true)
-	done.step(DT, "Clamp shut: break the crews")
+	done.step(DT, "Break the clamp crews")
 	t.eq("the goal under it changes again: it gives way at once", done.showing(), false)
 	done.note("Relay lost", false)
 	t.eq("a lost goal shows as lost", [done.showing(), done.won], [true, false])

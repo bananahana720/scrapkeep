@@ -50,9 +50,9 @@ func _initialize() -> void:
 					tarn_node = n
 				break
 	t.eq("10 shipped ult_volley lines: Tarn rakes, the others read the shared line", volley,
-		{"tarn": "Q rakes wider or grabs more.", "remembered_cannon": "Q strikes one more each beat.", "demolitions_caster": "Q strikes one more each beat."})
+		{"tarn": "Ultimate rakes wider or grabs more.", "remembered_cannon": "Ultimate strikes one more each beat.", "demolitions_caster": "Ultimate strikes one more each beat."})
 	# The pick screen hands the card its pilot (tree_pick.gd open() passes class_id).
 	var card := TreeCard.new(tarn_node, "key_1", Color.WHITE, 4, false, false, Cards.SET_PIECE_LINES, "tarn")
-	t.eq("11 a Tarn card shows Tarn's own line", card.set_piece_text(), "Q rakes wider or grabs more.")
+	t.eq("11 a Tarn card shows Tarn's own line", card.set_piece_text(), "Ultimate rakes wider or grabs more.")
 	card.free()
 	quit(t.verdict())

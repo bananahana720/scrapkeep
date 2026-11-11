@@ -77,9 +77,9 @@ func _init(node_row := {}, key_id := "", class_color := Palette.SAND, node_depth
 	_skip_prompt.visible = offer_kind == UpgradeTree.OFFER_TAKE_OR_SKIP
 	box.add_child(_skip_prompt)
 	_depth_table = BuildReadout.new()
-	# The face says "Build" (the readout's own word); how deep the kit can go by each world, in the
+	# The face says "Build" (the readout's own word); how deep the picks go in each world, in the
 	# order the worlds are played, is the button's hover line, so the page keeps its word budget.
-	_depth_table.tooltip_text = "Kit depth by world: " + " · ".join(depth_rows().map(func(row): return str(row["depth"])))
+	_depth_table.tooltip_text = depth_sentence()
 	_depth_table.add_theme_font_override("font", UiFonts.bold())
 	_depth_table.add_theme_font_size_override("font_size", 14)
 	box.add_child(_depth_table)
@@ -150,6 +150,14 @@ static func depth_rows() -> Array:
 			break
 		world += 1
 	return rows
+
+
+# "Picks go 2 deep in world 1, 3 in world 2, 4 in world 3." One sentence, no label, from the rows.
+static func depth_sentence() -> String:
+	var parts: Array = []
+	for row in depth_rows():
+		parts.append(("%d deep in world %d" if parts.is_empty() else "%d in world %d") % [row["depth"], row["world"]])
+	return "Picks go " + ", ".join(parts) + "."
 
 
 func depth_text() -> String:
