@@ -347,7 +347,7 @@ func _on_part(part_id: String, _source: String) -> void:
 	if not auto_banner or not banner.cards:
 		return
 	var words := part_card(part_id)
-	banner.show_discovery(words["title"], "part", words["detail"], "Found", "part:" + part_id, "part_gained")
+	banner.show_discovery(words["title"], "part", words["detail"], "Found", RewardCeremony.FIND_CARD + part_id, "part_gained")
 
 
 # A part's banner card in words: its row's name and text, or a run token's (Parts.TOKENS).
