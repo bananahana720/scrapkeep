@@ -127,7 +127,7 @@ func _run() -> void:
 	# Dig's is the base; the ring charges the same PULSE_TELEGRAPH seconds everywhere, so no tell is shorter.
 	ChallengeDials.reset()
 	for stage in [1, 2, 3]:
-		var w1 := stage <= 2
+		var w1: bool = stage <= 2
 		_t.near("default stage %d pulse hit" % stage, _pulse_at(stage), Warden.PULSE_DAMAGE * (1.3 if w1 else 1.0), 0.001)
 		_t.near("default stage %d pulse cycle" % stage, Warden.pulse_cycle(stage), Warden.PULSE_CYCLE * (0.85 if w1 else 1.0), 0.001)
 		_t.near("default stage %d pulse telegraph is the whole PULSE_TELEGRAPH" % stage, Warden.pulse_telegraph(stage), Warden.PULSE_TELEGRAPH, 0.0)
