@@ -31,15 +31,15 @@ const Arena := preload("res://src/boss/arena.gd")
 const PARK_DIR := "res://src/world/park"
 const HEADING_MAX_DEG := 30.0
 # Wave 37 call (Andrew can overturn): a turn up to 45 degrees over the rail's 0.45 s reads as a carried curve, not a
-# snap; ride_aim_test holds the cut itself at under 5. Today's turns: dam to flume 31, flume to bowl 25.
+# snap. Today's turns: dam to flume 31, flume to bowl 25. This line trusts that the rail does turn: ride_aim_test is what
+# catches a launch that does not (a boss module with no arrival_heading, a ball too slow to turn), at under 5 at the cut.
 const RAIL_TURN_MAX_DEG := 45.0
 const SPEED_MIN := 0.8
 const AHEAD_MAX_DEG := 45.0
 const CHECKS := ["kind", "heading", "speed", "ahead"]
 
-# Seam under its line today: "<seam> <check>" -> {"value": measured, "why": text}. Measured on base 501b2821a; the
-# heading entry re-read on 803d342e2 (wave 37), where the rail turns the 31 degrees in flight but the rows still state
-# the gate's 0 and the spawn's 31.
+# Seam under its line today: "<seam> <check>" -> {"value": measured, "why": text}. Empty since wave 37: every world 1
+# seam meets its lines (the last entry, dam_to_flume heading at 31, now reads against the rail's turn line).
 const OWED := {
 }
 
