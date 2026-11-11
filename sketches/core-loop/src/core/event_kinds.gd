@@ -1222,6 +1222,20 @@ const WORLD_ROWS := {
 	"warden_gate_pip": {"group": "event", "color": Palette.BRASS, "shape": "square", "sound": "found_chime", "sound_next": "warden_gate_pip", "hud": "", "objective": "", "priority": 1},
 	"warden_gate_refused": {"group": "event", "color": Palette.HAZARD, "shape": "square", "sound": "clank", "sound_next": "warden_gate_clunk", "hud": "", "objective": "", "priority": 1},
 	"warden_gate_opened": {"group": "event", "color": Palette.BRASS, "shape": "burst", "sound": "found_chime", "sound_next": "warden_gate_release", "hud": "", "objective": "", "priority": 2},
+	# Reservoir (src/world/overtime.gd, docs/design/loops.md Spec 2): a won yard lights a keeper's bell; a
+	# ring calls overtime (its crew lands on arena_wave's whistle); the pot pays on the till; the sluice
+	# warns on the whistle for its whole lead, then the water comes down with the lock's slam.
+	"overtime_offered": {"group": "event", "color": Palette.BRASS, "shape": "ring", "sound": "found_chime", "sound_next": "warden_gate_pip", "hud": "", "objective": "", "priority": 1},
+	"overtime_rung": {"group": "event", "color": Palette.BRASS, "shape": "burst", "sound": "found_chime", "sound_next": "arena_unlock_bells", "hud": "", "objective": "", "priority": 2},
+	"overtime_paid": {"group": "event", "color": Palette.BRASS, "shape": "star", "sound": "found_chime", "sound_next": "warden_gate_release", "hud": "", "objective": "", "priority": 2},
+	"sluice_warning": {"group": "event", "color": Palette.HAZARD, "shape": "arrow", "sound": "threat_whistle", "sound_next": "arena_wave_whistle", "hud": "", "objective": "", "priority": 2},
+	# Called Shot (src/build/called_shot.gd, loops.md Spec 3): the window opens on the Warden's
+	# drum, the call inks with a clunk, a met call rings the gate's release, a miss drops dry.
+	"call_window": {"group": "event", "color": Palette.HAZARD, "shape": "square", "sound": "threat_whistle", "sound_next": "arena_wave_whistle", "hud": "", "objective": "", "priority": 1},
+	"shot_called": {"group": "event", "color": Palette.HAZARD, "shape": "square", "sound": "clank", "sound_next": "warden_gate_clunk", "hud": "", "objective": "", "priority": 2},
+	"call_met": {"group": "event", "color": Palette.BRASS, "shape": "star", "sound": "found_chime", "sound_next": "warden_gate_release", "hud": "", "objective": "", "priority": 2},
+	"call_missed": {"group": "event", "color": Palette.CHARCOAL, "shape": "square", "sound": "clank", "sound_next": "warden_gate_clunk", "hud": "", "objective": "", "priority": 1},
+	"sluice_open": {"group": "event", "color": Palette.HAZARD, "shape": "ring", "sound": "slam_boom", "sound_next": "arena_lock_slam", "hud": "", "objective": "", "priority": 2},
 }
 
 
