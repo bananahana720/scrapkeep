@@ -52,6 +52,14 @@ pieces, shape by shape; its floor, rim and wall are ground.
 Exit 0 done, 1 more than 20% of lanes skipped (the message names why, from `skipped_reasons`), 2 bad
 arguments or an unreadable file.
 
+## Moving pieces
+
+A lift, barge or other moving piece is met at whatever point of its cycle the lane's ball arrives, so one
+sweep pass neither clears nor convicts it. Judge a moving piece's row with a phase test that steps time to
+fixed points of its cycle and rolls each lane at each, as `tests/park_hollow_lift_roll_test.gd` does for the
+flume's hollow lift (wave 36: swept alone it showed 0 snags; at fixed phases the plate landing on a ball
+that rolled under it while raised stops the ball dead, cycle 2.5 to 3.4 s after firing).
+
 ## Limits
 
 Calm world, one ball at cruise, headless. It finds speed loss against a contact that faces the line of
