@@ -12,6 +12,8 @@ const HeftDial := preload("res://src/ui/heft_dial.gd")
 const ChoiceButton := preload("res://src/ui/choice_button.gd")
 const AbilitySlots := preload("res://src/ui/ability_slots.gd")
 const ShopTile := preload("res://src/ui/shop_tile.gd")
+const Companion := preload("res://src/core/companion.gd")
+const CompanionPanel := preload("res://src/ui/companion_panel.gd")
 
 # Moss's counter: the shop's verbs as stamped plates on one charcoal panel. It reads
 # the shop's records (CONTRACTS, Moss's shop) and calls its verbs; every answer goes out
@@ -273,7 +275,9 @@ func _build_buy() -> void:
 		slots[s["slot"]] = AbilitySlots.normalized(s, game.run.class_def)
 	if shop.stow_open():
 		var riding: bool = game.run.carried_core > 0
-		_tile(lower, {"kind": "stow", "name": "Stow a core in SPIL-9", "price": -1,
+		var seated: Array = game.run.companion.get("sockets", [])
+		var seat := "" if riding or seated.size() < Companion.SOCKETS else String(CompanionPanel.PIECE_ICONS.get(seated[-1], "disc"))
+		_tile(lower, {"kind": "stow", "name": "Stow a core in SPIL-9", "price": -1, "seat_icon": seat,
 			"color": EventKinds.color("core_gained"), "state": "spent" if riding else ("ok" if game.run.can_stow_core() else "poor")}, CELL_TILE)
 	for offer in shop.charge_offers():
 		var slot: Dictionary = slots.get(offer["slot"], {})

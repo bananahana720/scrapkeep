@@ -132,7 +132,7 @@ func pick(i: int) -> void:
 		staged.erase(id)
 		_seat_staged()
 		message = ""
-	elif staged.size() >= Companion.SOCKETS:
+	elif staged.size() >= game.run.companion_seats():
 		message = LINE_FULL
 	elif staged.size() == 1 and Companion.family_of(staged[0]) == Companion.family_of(id):
 		message = LINE_FAMILY
@@ -247,11 +247,16 @@ func _name_of(id: String) -> String:
 	return String(Companion._row(id).get("name", id))
 
 
-# The icon id in each socket, "" for an empty one: what the two marks show.
+# The icon id in each socket, "" for an empty one: what the two marks show. A core riding in
+# SPIL-9 (run_state.stow_core) holds the last socket and shows as the core.
 func socket_icons() -> Array[String]:
 	var out: Array[String] = []
+	var seats: int = game.run.companion_seats()
 	for i in Companion.SOCKETS:
-		out.append(String(PIECE_ICONS.get(staged[i], "disc")) if i < staged.size() else "")
+		if i >= seats:
+			out.append("res_core")
+		else:
+			out.append(String(PIECE_ICONS.get(staged[i], "disc")) if i < staged.size() else "")
 	return out
 
 
