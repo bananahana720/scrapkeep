@@ -220,6 +220,13 @@ func _check_each_goes_live() -> void:
 func _check_marks_and_discovery() -> void:
 	var run = _game.run
 	var mark_before: String = _build.offer_mark("pin_setter")
+	run.add_part("synergy_lens", "test")
+	_build.recompute()
+	var lens_starts: String = _build.offer_mark("pin_setter")
+	run.parts.erase("synergy_lens")
+	_build.recompute()
+	_report("lens names the trick a first piece starts", lens_starts == "* starts Shrapnel Bloom *",
+		"holding the lens and nothing of Redjaw, Pin Setter reads '%s'" % lens_starts)
 	run.add_part("cross_split", "test")
 	var completes: String = _build.offer_mark("pin_setter")
 	var ring_before: bool = _build.accretion.halo_visible("storm_lattice")

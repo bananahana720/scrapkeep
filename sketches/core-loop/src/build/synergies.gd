@@ -161,6 +161,14 @@ static func completed_by(counted: Dictionary, maker: String) -> String:
 	return tricks[0] if not tricks.is_empty() else ""
 
 
+# The first trick a first distinct piece of `maker` starts toward, or "" (the lens perk names it).
+static func started_by(counted: Dictionary, maker: String) -> String:
+	if maker == "" or int(counted.get(maker, 0)) != 0:
+		return ""
+	var tricks := of_maker(maker)
+	return tricks[0] if not tricks.is_empty() else ""
+
+
 # True for a trick that only adds elements to actions: told when it wakes, not when it fires.
 static func told_on_wake(trick_id: String) -> bool:
 	return ROWS.has(trick_id) and ROWS[trick_id].get("transformers", []).is_empty()

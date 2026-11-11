@@ -402,7 +402,8 @@ static func resolve(element_id: String, material_id: String) -> Dictionary:
 
 
 # The line an offer (gate or fabricator) adds under its name: "* completes X *" when
-# taking it wakes a maker trick, "* level N *" for a part already held, else "".
+# taking it wakes a maker trick, "* level N *" for a part already held, "* starts X *" for a
+# maker's first piece while the lens perk is held, else "".
 func offer_mark(part_id: String) -> String:
 	var held: Array = ctx.run.parts
 	var completes := Parts.completed_by(part_id, held)
@@ -411,6 +412,9 @@ func offer_mark(part_id: String) -> String:
 	var level := Parts.level_of(part_id, held)
 	if level > 0 and level < LEVEL_NAMES.size():
 		return "* level %s *" % LEVEL_NAMES[level]
+	var starts := Parts.started_by(part_id, held) if has_perk("lens") else ""
+	if starts != "":
+		return "* starts %s *" % Synergies.ROWS[starts]["name"]
 	return ""
 
 
