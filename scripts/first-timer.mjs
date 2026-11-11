@@ -103,7 +103,7 @@ export const MECHANICS = [
     needed: "optional",
     need: "grip_used",
     teach: ["prompt:tip_grip"],
-    note: "Optional because it is a bonus, not a gate: the run goes on without carving. Taught by the first-meet tip (ui/field_tips.gd), queued when the ball first ends a real carve (events.carved, 0.3 s or more on a wall, not a seam hop) and counted once its toast has been on screen 0.4 s; another tip or toast up at the time delays it.",
+    note: "Optional because it is a bonus, not a gate: the run goes on without carving. Taught by the first-meet tip (ui/field_tips.gd), queued when the ball first ends a real carve (events.carved, 0.3 s or more) that touched a wall face, not a dune or a seam hop, and counted once its toast has been on screen 0.4 s; another tip or toast up at the time delays it.",
   },
   {
     id: "jam",

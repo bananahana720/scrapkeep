@@ -15,8 +15,8 @@ const Palette := preload("res://src/core/palette.gd")
 # the drop owes no tip, though Tally's bar carries Gather Plate's cast time and the radio dial is
 # up; at most one tip goes up in a run's first OPENING seconds, so the dunk and the first cast met
 # there show one, then the other after OPENING; the radio waits for a cleared stage and hangs its
-# keys on the dial while its tip is up; the grip waits for a real carve (events.carved), not
-# state.carving; the active waits for a fight met in the run (a hit or a kill). The help page's rule lines name six of the
+# keys on the dial while its tip is up; the grip waits for a real carve (events.carved) that
+# touched a wall, so open ground and a dune face tell nothing; the active waits for a fight met in the run (a hit or a kill). The help page's rule lines name six of the
 # eight (field_notes.gd FIELD_RULES; SPIL-9 is the Pictures caption, the dunk has no rule line). The first-timer audit
 # reaches grip, radio and cast; the rest it cannot (a jammer, a relay, a seated companion and
 # actives are not on the bot's path), so this is their check. The dunk tip toasts on the first stored
@@ -109,6 +109,20 @@ func _advance(seconds: float) -> Array[String]:
 	return drawn
 
 
+# A carve of 0.5 s on a face with `normal`, ended as rigid_ball.gd ends one: the flag drops, then
+# events.carved.
+func _carve(normal: Vector3) -> void:
+	var state = _game.player.state
+	state.grounded = true
+	state.contact_normal = normal
+	state.carving = true
+	_advance(0.5)
+	state.carving = false
+	state.contact_normal = Vector3.UP
+	_game.events.carved.emit(_game.player.ball_position(), 0.5, 20.0)
+	_advance(1.0 / 60.0)
+
+
 func _fight(on: bool) -> void:
 	_game.flow._engaged = on
 	_game.flow.sealed = on
@@ -175,6 +189,12 @@ func _run() -> void:
 	_advance(3.0)
 	_game.player.abilities.casting = ""
 	_report("cast tip does not repeat when a cast starts", _prompts.count("tip_cast") == 1, "prompts %s" % [_prompts])
+	# Open ground: a carve on the flat, and one down a dune face (30 degrees, past CARVE_DOT but no
+	# wall), each end with events.carved and tell nothing (PC film 93d3fd86, frame 0016).
+	_carve(Vector3.UP)
+	_carve(Vector3(0.5, 0.866, 0.0))
+	_report("a carve on open ground or a dune is no grip lesson", not tips.pending.has("grip") and not tips.seen("grip")
+		and tips.showing != "grip", "pending %s, showing %s" % [tips.pending, tips.showing])
 	# A seam hop sets the carving flag for a moment: no tip. A real carve ends with events.carved.
 	_game.player.state.carving = true
 	_advance(1.0)
@@ -182,7 +202,7 @@ func _run() -> void:
 	_report("a seam hop is no grip lesson", not tips.pending.has("grip") and not tips.seen("grip"), "pending %s" % [tips.pending])
 	# A tip met in a fight waits, and is told when the fight lets go (the fight's word budget).
 	_fight(true)
-	_game.events.carved.emit(Vector3.ZERO, 0.5, 20.0)
+	_carve(Vector3(0.95, 0.1, 0.0).normalized())
 	_advance(1.0)
 	_report("a fight holds the grip tip", not tips.seen("grip") and tips.pending.has("grip") and _prompts.count("tip_grip") == 0
 		and not _game.hud.toast_texts().has(FieldTips.TIPS["grip"]), "pending %s, prompts %s" % [tips.pending, _prompts])
@@ -231,7 +251,7 @@ func _run() -> void:
 		"was up %s, pending %s, prompts %s" % [jam_up, tips.pending, _prompts])
 	_advance(6.0)
 	_report("the replaced tip is told after", tips.seen("jam") and _prompts.count("tip_jam") == 1, "prompts %s" % [_prompts])
-	_game.events.carved.emit(Vector3.ZERO, 0.5, 20.0)
+	_carve(Vector3(0.95, 0.1, 0.0).normalized())
 	_advance(3.0)
 	_report("grip tip does not repeat", _prompts.count("tip_grip") == 1, "prompts %s" % [_prompts])
 	var post := Post.new()
@@ -297,7 +317,7 @@ func _run() -> void:
 	_game.events.run_started.emit("pylon_engineer")
 	_game.combat.actives = rack
 	rack.active_id = "torch"
-	_game.events.carved.emit(Vector3.ZERO, 0.5, 20.0)
+	_carve(Vector3(0.95, 0.1, 0.0).normalized())
 	_game.events.player_hit.emit(5.0, "test")
 	_game.events.stage_cleared.emit(1)
 	_game.player.abilities.jam(0.5)
