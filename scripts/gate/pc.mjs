@@ -2,6 +2,10 @@
 //
 //   node scripts/gate/pc.mjs plan --wave 35 --head <sha> [--root <dir>] [--base <dir>] [--persona <id>] [--budget n] [--no-weekly]
 //   node scripts/gate/pc.mjs run  <the same flags> [--redo <step id>]... [--tally]
+//   add --scoped a_test,b_test for the wave gate (ruling cy): the node suite, the three test windows and one scoped
+//   shard of those bot-tier tests plus world1_run_test, run by name; the bot blocks, the weekly sweep, the bands and
+//   the red team wait for the release gate, and --tally runs tally.mjs --wave. --scoped-from <fast receipt.json> adds
+//   the bot shards a `sketch:fast` receipt for the stage diff names (selection.bot_shards).
 //
 // `plan` prints the steps in order with their Godot-process weights and creates nothing. `run` admits steps
 // against the budget, gives each its own worktree, slot pool and scratch data home, compares the band runs
@@ -17,7 +21,7 @@ import path from "node:path";
 import { isDeepStrictEqual } from "node:util";
 import { fileURLToPath } from "node:url";
 
-import { chunks, gateLists } from "./shard.mjs";
+import { chunks, gateLists, namedPool, testName } from "./shard.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 const SKETCH = "sketches/core-loop";
@@ -42,6 +46,28 @@ export const WEIGHTS = {
   compare: 0, // reads files
   "plan-file": 0, // reads files
 };
+
+// The wave gate's scoped shard always plays world 1 through (GATE.md, "The wave gate and the release gate", step 2).
+export const SCOPED_ALWAYS = ["world1_run_test"];
+
+// The bot shards a sketch:fast receipt names for its diff (scripts/sketch-fast.mjs, selection.bot_shards), as test names.
+export function receiptBotShards(receipt) {
+  const shards = receipt?.selection?.bot_shards;
+  if (!Array.isArray(shards)) throw new Error("the fast receipt has no selection.bot_shards list");
+  return shards.map(testName);
+}
+
+// The scoped shard's names: the asked ones and SCOPED_ALWAYS that are bot tests (on the bot list or the weekly bot
+// list, shard.mjs namedPool), in sorted order. A non-bot name is left out, because the three windows run the whole
+// non-bot list; a name on no list is refused.
+export function scopedNames(asked, lists) {
+  const bots = namedPool(lists, { bots: true, weekly: false });
+  const tests = new Set(namedPool(lists, { bots: false, weekly: false }));
+  const want = new Set([...asked, ...SCOPED_ALWAYS].map(testName).filter(Boolean));
+  const unknown = [...want].filter((name) => !bots.includes(name) && !tests.has(name));
+  if (unknown.length > 0) throw new Error(`--scoped names tests on no gate list: ${unknown.join(", ")}`);
+  return bots.filter((name) => want.has(name));
+}
 
 // ---- plan ----
 
@@ -70,7 +96,9 @@ const windowOf = (first, last) => `${first}-${last}`;
 
 // Ordered steps. `weekly` is the weekly lists or null. Exclusive steps come last among the Godot steps, then the
 // two barrier steps that read every receipt.
-export function gatePlan({ wave, head, lists, weekly = null, bands, persona = null }) {
+// With `scoped` (an array of bot test names) it is the wave gate: the windows, one scoped shard, the node suite and the
+// plan file, and nothing a release gate adds.
+export function gatePlan({ wave, head, lists, weekly = null, bands, persona = null, scoped = null }) {
   const head8 = head.slice(0, 8);
   const steps = [];
   const add = (id, kind, extra = {}) => steps.push({ id, kind, weight: WEIGHTS[kind === "shard" ? extra.weightKey : kind], exclusive: false, out: id, needsBase: false, ...extra });
@@ -79,12 +107,23 @@ export function gatePlan({ wave, head, lists, weekly = null, bands, persona = nu
     const last = Math.min(first + size - 1, lists.tests.length);
     add(`tests-${windowOf(first, last)}`, "shard", { weightKey: "tests", row: `tests ${windowOf(first, last)}`, args: ["--tests", windowOf(first, last)] });
   }
+  const addWeekly = () => {
+    if (weekly?.tests.length > 0) add("weekly-tests", "shard", { weightKey: "weekly-tests", row: "weekly sweep", args: ["--weekly", "--tests", windowOf(1, weekly.tests.length)] });
+    if (weekly?.bots.length > 0) add("weekly-bots", "shard", { weightKey: "weekly-bots", row: "weekly sweep", args: ["--weekly", "--bots", windowOf(1, weekly.bots.length)] });
+  };
+  if (scoped) {
+    const names = scopedNames(scoped, lists);
+    add("scoped", "shard", { weightKey: "bots", row: "scoped", args: ["--bots", names.join(",")], names });
+    addWeekly();
+    add("node", "node", { row: "node tests" });
+    add("plan-file", "plan-file", { barrier: true });
+    return steps.map((step) => ({ ...step, wave, head8 }));
+  }
   chunks(lists.bots, BOT_BLOCK).forEach((block, index) => {
     const first = index * BOT_BLOCK + 1;
     add(`bots-${index + 1}`, "shard", { weightKey: "bots", row: `bots ${index + 1}`, args: ["--bots", windowOf(first, first + block.length - 1)] });
   });
-  if (weekly?.tests.length > 0) add("weekly-tests", "shard", { weightKey: "weekly-tests", row: "weekly sweep", args: ["--weekly", "--tests", windowOf(1, weekly.tests.length)] });
-  if (weekly?.bots.length > 0) add("weekly-bots", "shard", { weightKey: "weekly-bots", row: "weekly sweep", args: ["--weekly", "--bots", windowOf(1, weekly.bots.length)] });
+  addWeekly();
   for (const band of ["A", "B", "C"]) add(`bands-${band}`, `bands-${band}`, { row: `bands ${band}`, needsBase: true, bands });
   add("node", "node", { row: "node tests" });
   if (persona) add("redteam", "redteam", { row: `red team ${persona}`, exclusive: true, persona });
@@ -95,7 +134,7 @@ export function gatePlan({ wave, head, lists, weekly = null, bands, persona = nu
 
 export function formatPlan(steps, budget) {
   const lines = [`Budget ${budget} Godot processes. Steps start in this order; a step waits until its weight fits, and a lighter step behind it may start in the gap when it cannot delay it.`];
-  steps.forEach((step, index) => lines.push(`${String(index + 1).padStart(3)}  ${step.id.padEnd(18)} weight ${String(step.weight).padStart(2)}${step.exclusive ? "  exclusive: runs with nothing else" : step.barrier ? "  after every other step" : ""}`));
+  steps.forEach((step, index) => lines.push(`${String(index + 1).padStart(3)}  ${step.id.padEnd(18)} weight ${String(step.weight).padStart(2)}${step.exclusive ? "  exclusive: runs with nothing else" : step.barrier ? "  after every other step" : ""}${step.names ? `  ${step.names.join(" ")}` : ""}`));
   lines.push("A retime step (exclusive, weight 2) is added at run time for each shard that comes back INCONCLUSIVE.");
   return lines.join("\n");
 }
@@ -367,7 +406,7 @@ export function planFileText({ wave, head, persona, base = null, results, compar
   const lines = [
     `# Gate plan: wave ${wave}, head ${head.slice(0, 8)}`,
     "",
-    `Written by \`scripts/gate/pc.mjs\` on ${day}. Base for the band comparison: ${base ?? "none"}. Check it with \`node scripts/gate/tally.mjs --plan <this file>\`.`,
+    `Written by \`scripts/gate/pc.mjs\` on ${day}. Base for the band comparison: ${base ?? "none"}. Check it with \`node scripts/gate/tally.mjs ${steps.some((step) => step.id === "scoped") ? "--wave " : ""}--plan <this file>\`.`,
     "",
     "## Gate-side",
     "",
@@ -595,7 +634,7 @@ function retimeFor(step, receipts) {
 }
 
 function parseArguments(argv) {
-  const options = { command: argv[0], wave: null, head: null, root: path.join(os.homedir(), "scratch", "gate"), base: null, persona: null, budget: Math.floor(os.availableParallelism() / 2), weekly: true, redo: [], tally: false };
+  const options = { command: argv[0], wave: null, head: null, root: path.join(os.homedir(), "scratch", "gate"), base: null, persona: null, budget: Math.floor(os.availableParallelism() / 2), weekly: true, redo: [], tally: false, scoped: null };
   for (let index = 1; index < argv.length; index++) {
     const argument = argv[index];
     const value = () => {
@@ -611,6 +650,8 @@ function parseArguments(argv) {
     else if (argument === "--no-weekly") options.weekly = false;
     else if (argument === "--redo") options.redo.push(value());
     else if (argument === "--tally") options.tally = true;
+    else if (argument === "--scoped") options.scoped = [...(options.scoped ?? []), ...value().split(",")];
+    else if (argument === "--scoped-from") options.scoped = [...(options.scoped ?? []), ...receiptBotShards(JSON.parse(readFileSync(value(), "utf8")))];
     else throw new Error(`unknown argument ${argument}`);
   }
   if (!["plan", "run"].includes(options.command)) throw new Error("the first argument is plan or run");
@@ -628,9 +669,9 @@ function git(...args) {
 
 function buildPlan(options) {
   const lists = gateLists(path.join(root, SKETCH));
-  const bands = loadBands(lists);
+  const bands = options.scoped ? null : loadBands(lists);
   const weekly = options.weekly && lists.weekly.tests.length + lists.weekly.bots.length > 0 ? lists.weekly : null;
-  const steps = gatePlan({ wave: options.wave, head: options.head, lists, weekly, bands, persona: options.persona });
+  const steps = gatePlan({ wave: options.wave, head: options.head, lists, weekly, bands, persona: options.persona, scoped: options.scoped });
   return { lists, steps };
 }
 
@@ -689,9 +730,10 @@ async function run(options) {
   const exits = await runPlan(steps, { budget: options.budget, start, isDone, onExit: (step) => (step.kind === "shard" ? retimeFor(step, receipts) : []) });
   console.log(`gate plan: ${planFile}`);
   const worst = [...exits.values()].some((exit) => exit !== 0);
-  console.log(`node scripts/gate/tally.mjs --plan ${planFile}`);
+  const tallyArgs = [...(options.scoped ? ["--wave"] : []), "--plan", planFile];
+  console.log(`node scripts/gate/tally.mjs ${tallyArgs.join(" ")}`);
   if (options.tally) {
-    const tally = spawnSync(process.execPath, ["scripts/gate/tally.mjs", "--plan", planFile], { cwd: root, stdio: "inherit" });
+    const tally = spawnSync(process.execPath, ["scripts/gate/tally.mjs", ...tallyArgs], { cwd: root, stdio: "inherit" });
     return tally.status ?? 1;
   }
   return worst ? 1 : 0;

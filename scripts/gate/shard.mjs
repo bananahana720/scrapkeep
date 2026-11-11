@@ -4,6 +4,7 @@
 //   node scripts/gate/shard.mjs list --bots          the numbered bot list
 //   node scripts/gate/shard.mjs run --tests 361-720 --out <folder>
 //   node scripts/gate/shard.mjs run --bots 16-20 --out <folder>
+//   node scripts/gate/shard.mjs run --bots a_test,b_test --out <folder>   named tests (the wave gate's scoped shard)
 //   node scripts/gate/shard.mjs retime --tests a_test,b_test --out <folder> [--runs 3] [--bots] [--max-load <n>]
 //   add --weekly to list or run the weekly names instead (WEEKLY.tsv, ruling ca)
 //
@@ -72,6 +73,33 @@ export function parseWindow(text, total) {
   const last = Number(match[2]);
   if (first < 1 || last < first || last > total) throw new Error(`window ${text} does not fit a list of ${total}`);
   return { first, last };
+}
+
+// A test's name as the lists hold it: no folder, no .gd.
+export const testName = (text) => text.trim().replace(/^tests\//, "").replace(/\.gd$/, "");
+
+// The bot or non-bot list a named window draws on: the promotion list and, unless the run is on the weekly list itself,
+// the weekly names too, because the wave gate's scoped shard runs what the diff reaches.
+export function namedPool(lists, { bots, weekly }) {
+  const from = weekly ? lists.weekly : lists;
+  const list = bots ? from.bots : from.tests;
+  return weekly ? list : [...list, ...(bots ? lists.weekly.bots : lists.weekly.tests)].sort();
+}
+
+// The tests a run window names: "361-720" (see parseWindow), or test names joined by commas, each on `list`, in the
+// list's order (the wave gate's scoped shard, ruling cy). `label` says which in the receipt.
+export function windowNames(text, list) {
+  if (/^\d+-\d+$/.test(text ?? "")) {
+    const { first, last } = parseWindow(text, list.length);
+    const names = list.slice(first - 1, last);
+    return { names, label: `${first} to ${last} of ${list.length} (${names[0]} to ${names[names.length - 1]})` };
+  }
+  const asked = new Set((text ?? "").split(",").map(testName).filter(Boolean));
+  if (asked.size === 0) throw new Error(`a window is written FIRST-LAST, such as 361-720, or as test names joined by commas; got "${text}"`);
+  const unknown = [...asked].filter((name) => !list.includes(name));
+  if (unknown.length > 0) throw new Error(`not on this list: ${unknown.join(", ")}`);
+  const names = list.filter((name) => asked.has(name));
+  return { names, label: `named, ${names.length} of ${list.length}: ${names.join(", ")}` };
 }
 
 export function chunks(names, size) {
@@ -228,7 +256,7 @@ function parseArguments(argv) {
     else throw new Error(`unknown argument ${argument}`);
   }
   if (!["list", "run", "retime"].includes(options.command)) throw new Error("the first argument is list, run or retime");
-  if (options.command === "run" && (!options.window || !options.out)) throw new Error("run needs --tests FIRST-LAST or --bots FIRST-LAST, and --out <folder>");
+  if (options.command === "run" && (!options.window || !options.out)) throw new Error("run needs --tests or --bots with FIRST-LAST or a_test,b_test, and --out <folder>");
   if (options.command === "retime" && (!options.window || !options.out)) throw new Error("retime needs --tests a_test,b_test and --out <folder>");
   if (options.maxLoad !== null && !(options.maxLoad >= 0)) throw new Error("--max-load takes a number from 0");
   for (const key of ["chunk", "solo", "runs"]) if (!Number.isSafeInteger(options[key]) || options[key] < 1) throw new Error(`--${key} takes a whole number from 1`);
@@ -385,8 +413,7 @@ function godotBinary() {
 
 async function runRetime(options) {
   const lists = gateLists(path.join(root, SKETCH));
-  const from = options.weekly ? lists.weekly : lists;
-  const known = options.bots ? from.bots : from.tests;
+  const known = namedPool(lists, options);
   const tests = options.window.split(",").filter(Boolean);
   const unknown = tests.filter((test) => !known.includes(test));
   if (unknown.length > 0) throw new Error(`not in the ${options.bots ? "bot" : "non-bot"} gate lists: ${unknown.join(", ")}`);
@@ -410,8 +437,7 @@ async function run(options) {
   const lists = gateLists(sketchDir);
   const from = options.weekly ? lists.weekly : lists;
   const list = options.bots ? from.bots : from.tests;
-  const { first, last } = parseWindow(options.window, list.length);
-  const names = list.slice(first - 1, last);
+  const { names, label } = windowNames(options.window, /^\d+-\d+$/.test(options.window) ? list : namedPool(lists, options));
   const godot = godotBinary();
   const scale = timeScale();
   const head = git("rev-parse", "HEAD");
@@ -508,7 +534,7 @@ async function run(options) {
     threads: state.threads,
     godot: path.basename(godot),
     scale,
-    window: `${options.weekly ? "weekly " : ""}${options.bots ? "bot" : "non-bot"} list ${first} to ${last} of ${list.length} (${names[0]} to ${names[names.length - 1]}), ${names.length} tests`,
+    window: `${options.weekly ? "weekly " : ""}${options.bots ? "bot" : "non-bot"} list ${label}, ${names.length} tests`,
     steps: state.steps,
     results,
     failures,
