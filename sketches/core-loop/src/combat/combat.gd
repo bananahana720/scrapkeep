@@ -4101,7 +4101,7 @@ func _on_player_hit(amount: float, shove: Vector3, source: String) -> void:
 func _on_lobber_fired(origin: Vector3, landing: Vector3, flight: float, lobber: Node3D) -> void:
 	var shell := Projectile.new()
 	ctx.root.add_child(shell)
-	var cover := ctx.flow.in_stage() and ChallengeDials.by_stage_or("hazard.shell_cover_by_stage", ctx.flow.stage(), 0.0) > 0.5
+	var cover: bool = ctx.flow.in_stage() and ChallengeDials.by_stage_or("hazard.shell_cover_by_stage", ctx.flow.stage(), 0.0) > 0.5
 	shell.setup(ctx.player, ground, ctx.root, Callable(ctx.flow, "in_play"), origin, landing, flight, lobber, cover)
 	shell.hit_player.connect(_on_player_hit.bind("lobber"))
 	shell.returned_landed.connect(_on_shell_returned)
