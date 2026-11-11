@@ -17,3 +17,7 @@ This branch holds the film only. It shares no history with the game.
 - `film-965e31f6/film/`: the frames, plus `film.ndjson`, which holds one row of the game's own state for each frame.
 - `film-965e31f6/judge/SHEET.md`: each frame beside the game's state.
 - `film-965e31f6/game.log`: the game's log.
+
+## Second film: stage head 93d3fd86, with PR 780 (the first-run tips paced)
+
+`film-93d3fd86/` was filmed the same way at 22:00Z, on the RTX 4080 with a fresh scratch profile (`w37pc-film93d3`). It exited 0 in 487 s wall. The run played 425 s of game time across stages 1 to 3 and kept 135 frames. The CPU was running the pass B economy jobs at the same time. The film's frame rate is fixed, so that load changed only the wall time.

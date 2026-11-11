@@ -1,0 +1,129 @@
+Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org
+Vulkan 1.4.351 - Forward+ - Using Device #0: NVIDIA - NVIDIA GeForce RTX 4080
+
+SCRAPKEEP_BUILD commit=93d3fd86a272579a506ea7eedb6d9c144d614571 dirty=false built=unknown source=checkout
+SCRAPKEEP_TITLE_INTERACTIVE ms=2571
+SCRAPKEEP_SHELL name=Scrapkeep splash_bg=#242a28 splash=res://assets/app/scrapkeep_splash.png icon=icon 256x256
+SCRAPKEEP_MENU_READY ms=15477 profile=default pilots=1/6
+self-play: skipper seed 1 until 3 started at 3.11 s
+self-play: prologue read with 3 presses at 13.18 s
+self-play: pilot 1 picked by key at 13.18 s
+self-play: pilot 1 picked by key at 13.69 s
+self-play: stage 1 entered at 13.93 s
+self-play: carry stage=1 hp=100.00 mass=0.00 cogs=0 parts= picks=
+self-play: in play by keys at 13.94 s
+SCRAPKEEP_FIRST_CONTROL ms=52912
+self-play: kit pick taken with 1 at 16.96 s
+self-play: start pick taken with 1 at 19.96 s
+self-play: kit pick taken with 1 at 188.88 s
+self-play: stage 1 exit taken at 197.85 s
+self-play: stage 2 entered at 197.85 s
+self-play: carry stage=2 hp=125.00 mass=475.00 cogs=621 parts=rivet_plating+impact_driver picks=s_cannonball+s_coil_hook
+self-play: stage 2 exit taken at 319.26 s
+self-play: boss arena entered at 319.26 s
+self-play: boss defeated at 408.78 s
+self-play: stage 3 entered at 420.12 s
+self-play: carry stage=3 hp=145.00 mass=1425.00 cogs=1704 parts=rivet_plating+impact_driver+galvanic_rounds+admirals_crest picks=s_cannonball+s_coil_hook
+self-play: done at 425.12 s
+self-play: watch stuck=0 hung=4 wedged=0 fell=0 objectives=16 blank_max=0.0 bar_off_max=0.0 stages=1,2,3
+self-play: skills slot2=38 slot3=9 set_pieces=4
+self-play: film 135 frames (1054 drawn) in /home/andrew/scratch/w37-pc/film93-out/film
+[Gamescope WSI] Application info:
+  pApplicationName: Scrapkeep
+  applicationVersion: 0
+  pEngineName: Godot Engine
+  engineVersion: 16805890
+  apiVersion: 4202496
+[Gamescope WSI] Executable name: Godot_v4.7.2-stable_linux.x86_64
+WARNING: Failed to create wd.xic as the input method or its xim server may not have started yet.
+     at: _create_xic (platform/linuxbsd/x11/display_server_x11.cpp:6347)
+[Gamescope WSI] Creating Gamescope surface: xid: 0x400002
+[Gamescope WSI] Atom of T was wrong type. Expected XCB_ATOM_CARDINAL.
+[Gamescope WSI] Made gamescope surface for xid: 0x400002
+[Gamescope WSI] Surface state:
+  steam app id:                  0
+  window xid:                    0x400002
+  wayland surface res id:        6
+  layer client flags:            0x0
+  server hdr output enabled:     false
+  hdr formats exposed to client: false
+[Gamescope WSI] Forcing on VK_EXT_swapchain_maintenance1.
+[Gamescope WSI] Creating swapchain for xid: 0x400002 - oldSwapchain: (nil) - provided minImageCount: 3 - minImageCount: 3 - format: VK_FORMAT_B8G8R8A8_UNORM - colorspace: VK_COLOR_SPACE_SRGB_NONLINEAR_KHR - flip: true
+[Gamescope WSI] Created swapchain for xid: 0x400002 swapchain: 0x2c8ce330 - imageCount: 3
+[Gamescope WSI] Destroying swapchain: 0x2c8ce330
+[Gamescope WSI] Destroyed swapchain: 0x2c8ce330
+WARNING: The requested V-Sync mode Disabled is not available. Falling back to V-Sync mode Enabled.
+     at: swap_chain_resize (drivers/vulkan/rendering_device_driver_vulkan.cpp:3767)
+[Gamescope WSI] Creating swapchain for xid: 0x400002 - oldSwapchain: (nil) - provided minImageCount: 3 - minImageCount: 3 - format: VK_FORMAT_B8G8R8A8_UNORM - colorspace: VK_COLOR_SPACE_SRGB_NONLINEAR_KHR - flip: true
+[Gamescope WSI] Created swapchain for xid: 0x400002 swapchain: 0x2c8ce330 - imageCount: 3
+WARNING: instance_reset_physics_interpolation() is deprecated.
+     at: _instance_reset_physics_interpolation_bind_compat_104269 (servers/rendering/rendering_server.compat.inc:62)
+     GDScript backtrace (most recent call first):
+         [0] make_render (res://src/world/park/park_terrain.gd:387)
+         [1] build (res://src/world/terrain.gd:208)
+         [2] setup (res://src/world/world.gd:124)
+         [3] _module (res://src/game.gd:548)
+         [4] _ready (res://src/game.gd:281)
+         [5] _add_game (res://src/boot/boot.gd:161)
+         [6] _poll (res://src/boot/boot.gd:117)
+         [7] _process (res://src/boot/boot.gd:107)
+[Gamescope WSI] Destroying swapchain: 0x2c8ce330
+[Gamescope WSI] Destroyed swapchain: 0x2c8ce330
+[Gamescope WSI] Creating swapchain for xid: 0x400002 - oldSwapchain: (nil) - provided minImageCount: 3 - minImageCount: 3 - format: VK_FORMAT_B8G8R8A8_UNORM - colorspace: VK_COLOR_SPACE_SRGB_NONLINEAR_KHR - flip: true
+[Gamescope WSI] Created swapchain for xid: 0x400002 swapchain: 0x2c8ce330 - imageCount: 3
+WARNING: ACE music: missing /home/andrew/scratch/w37-pc/film-93d3/sketches/core-loop/assets/music_ace/title/calm.drums.ogg; playing the synth engine instead
+     at: push_warning (core/variant/variant_utility.cpp:1033)
+     GDScript backtrace (most recent call first):
+         [0] ace_ready (res://src/presentation/audio.gd:1146)
+         [1] _ace_named (res://src/presentation/audio.gd:1552)
+         [2] _menu_home (res://src/presentation/audio.gd:1540)
+         [3] _flush_flow (res://src/presentation/audio.gd:4283)
+         [4] _process (res://src/presentation/audio.gd:873)
+WARNING: [Physics interpolation] Interpolated Camera3D triggered from outside physics process: "/root/Game/Screens/@VBoxContainer@321/@HBoxContainer@327/@Button@1482/@VBoxContainer@1430/@SubViewportContainer@1441/@SubViewport@1431/@Camera3D@1432" (possibly benign).
+     at: _notification (scene/3d/camera_3d.cpp:218)
+WARNING: ACE music: missing /home/andrew/scratch/w37-pc/film-93d3/sketches/core-loop/assets/music_ace/spillway/calm.drums.ogg; playing the synth engine instead
+     at: push_warning (core/variant/variant_utility.cpp:1033)
+     GDScript backtrace (most recent call first):
+         [0] ace_ready (res://src/presentation/audio.gd:1146)
+         [1] _ace_stage (res://src/presentation/audio.gd:1264)
+         [2] _flush_flow (res://src/presentation/audio.gd:4190)
+         [3] _process (res://src/presentation/audio.gd:873)
+WARNING: ACE music: missing /home/andrew/scratch/w37-pc/film-93d3/sketches/core-loop/assets/music_ace/cable_reach/calm.drums.ogg; playing the synth engine instead
+     at: push_warning (core/variant/variant_utility.cpp:1033)
+     GDScript backtrace (most recent call first):
+         [0] ace_ready (res://src/presentation/audio.gd:1146)
+         [1] _ace_stage (res://src/presentation/audio.gd:1264)
+         [2] _ace_return (res://src/presentation/audio.gd:1571)
+         [3] _pump (res://src/presentation/audio.gd:901)
+         [4] _process (res://src/presentation/audio.gd:887)
+WARNING: ACE music: missing /home/andrew/scratch/w37-pc/film-93d3/sketches/core-loop/assets/music_ace/brindle/calm.drums.ogg; playing the synth engine instead
+     at: push_warning (core/variant/variant_utility.cpp:1033)
+     GDScript backtrace (most recent call first):
+         [0] ace_ready (res://src/presentation/audio.gd:1146)
+         [1] _ace_named (res://src/presentation/audio.gd:1552)
+         [2] _begin_boss (res://src/presentation/audio.gd:3010)
+         [3] <anonymous lambda> (res://src/presentation/audio.gd:2113)
+         [4] _publish (res://src/boss/boss.gd:1665)
+         [5] enter_arena (res://src/boss/boss.gd:166)
+         [6] enter_boss (res://src/core/flow.gd:766)
+         [7] _finish_stage (res://src/core/flow.gd:1028)
+         [8] _cut_under_cover (res://src/core/flow.gd:1205)
+         [9] _cover (res://src/presentation/launch_take.gd:177)
+         [10] advance (res://src/presentation/launch_take.gd:156)
+         [11] _process (res://src/presentation/launch_take.gd:136)
+WARNING: ACE music: missing /home/andrew/scratch/w37-pc/film-93d3/sketches/core-loop/assets/music_ace/dig_upper/calm.drums.ogg; playing the synth engine instead
+     at: push_warning (core/variant/variant_utility.cpp:1033)
+     GDScript backtrace (most recent call first):
+         [0] ace_ready (res://src/presentation/audio.gd:1146)
+         [1] _ace_stage (res://src/presentation/audio.gd:1264)
+         [2] _flush_flow (res://src/presentation/audio.gd:4227)
+         [3] park_transport (res://src/presentation/audio.gd:2432)
+         [4] _physics_process (res://src/world/world.gd:444)
+ERROR: BUG, indexing did not unpair geometries from light.
+   at: instance_set_scenario (servers/rendering/renderer_scene_cull.cpp:844)
+ERROR: BUG, indexing did not unpair geometries from light.
+   at: instance_set_base (servers/rendering/renderer_scene_cull.cpp:616)
+[Gamescope WSI] Destroying swapchain: 0x2c8ce330
+[Gamescope WSI] Destroyed swapchain: 0x2c8ce330
+WARNING: 124 ObjectDB instances were leaked at exit (run with `--verbose` for details).
+   at: cleanup (core/object/object.cpp:2536)
