@@ -1,0 +1,16 @@
+{
+  "note": "The fairness pass lines and the lists the recorder (sketches/core-loop/tools/bot_fairness.gd) and the table (scripts/challenge/lib.mjs) both read. Difficulty-plan rows F1 to F3. Change a line here and nowhere else. A hit source on no list here, not in TelegraphRecord and not seen publishing a telegraph this run reads unknown.",
+  "tellS": 0.6,
+  "telegraphShare": 0.95,
+  "unknownMaxShare": 0.05,
+  "stopTax": 2.0,
+  "firstHitS": 3,
+  "contactM": 30,
+  "plantSources": ["rut_plant", "drain_plant", "fast_tax_plant", "ringless_plant"],
+  "contactSources": [],
+  "bossAttacks": {
+    "brindle_slag": ["slag_ring_"],
+    "brindle_charge": ["charge"]
+  },
+  "unownedSources": ["warden", "warden_counter", "vault", "silt_boil", "mind_hand"]
+}

@@ -14,6 +14,7 @@ const SkillBand := preload("res://tools/skill_band.gd")
 const BossRules := preload("res://src/boss/boss_rules.gd")
 const Requisition := preload("res://src/boss/requisition.gd")
 const BotKite := preload("res://tools/bot_kite.gd")
+const BotFairness := preload("res://tools/bot_fairness.gd")
 
 # One scripted player for the design feedback loop (DEMO-SPEC, "Bot runs"). It plays a
 # real Game through the same doors a person uses: an Intent.Scripted source for the
@@ -625,6 +626,8 @@ var _harpoon_commit := false
 var kite
 var _cruise_hold := false
 var hide_pack_telegraphs := false
+# The fairness record (tools/bot_fairness.gd): reads the game, steers nothing.
+var _fair := BotFairness.new()
 # Only the explorer changes hands: jump clear, bite, release at the apex, bite again, haul.
 # chain_hand_enabled = false keeps the one-bite hand, the control for the two-hook one.
 var chain_hand_enabled := true
@@ -759,6 +762,7 @@ func wire() -> void:
 	events.core_gained.connect(func(source_id: String, _at: Vector3, _n: int): _note_add("cores", source_id))
 	events.part_gained.connect(func(id: String, source_id: String): _note_add("parts", "%s:%s" % [source_id, id]))
 	events.player_hit.connect(_on_player_hit)
+	_fair.setup(game, Callable(self, "boss_hazards"))
 	events.enemy_struck.connect(_on_enemy_struck)
 	events.special_used.connect(func(_id: String, _at: Vector3): _count("specials"))
 	events.shot_fired.connect(func(_weapon: String, _from: Vector3, _to: Vector3):
@@ -890,6 +894,7 @@ func tick(delta: float) -> bool:
 	_harpoon_commit = false
 	_cruise_hold = false
 	_contact_scan()
+	_fair.tick(delta)
 	if flow.in_stage():
 		_content_scan()
 	_plant_cool -= delta
@@ -1187,6 +1192,7 @@ func _on_player_hit(amount: float, source_id: String) -> void:
 	_count("hull_lost", hull)
 	_count("hits")
 	_note_contact_hit(hull)
+	_fair.hit(source_id, hull)
 	if source_id == "brindle_charge":
 		_count("charge_hits")
 	var in_boss := _in_boss()
@@ -4737,6 +4743,11 @@ func _contact_scan() -> void:
 			return
 
 
+# Whether this stage's contact has opened (a pack within CONTACT_RADIUS, or a first hit). The ringless plant reads it.
+func contact_open() -> bool:
+	return not _note.is_empty() and _note.get("first_contact_s") != null
+
+
 # A hit on the stage: its first, and the hull it cost inside the contact window.
 func _note_contact_hit(hull: float) -> void:
 	if _in_boss() or _note.is_empty():
@@ -4759,6 +4770,12 @@ func _close_contact() -> void:
 	# circle_share: seconds on the ring over the window (first contact to its end or death), the anchor policies' measure.
 	if _note["alive_120s"] != null and float(_note["alive_120s"]) > 0.0:
 		_note["circle_share"] = snappedf(float(_note["circle_s"]) / float(_note["alive_120s"]), 0.001)
+
+
+# The boss's committed hazards, for the fairness recorder's read of every published telegraph.
+func boss_hazards() -> Array:
+	var boss = _boss() if game.flow.state_name() == "boss" else null
+	return boss.active_hazards() if boss != null and boss.has_method("active_hazards") else []
 
 
 # The test-only hide_pack_telegraphs plant: the committed telegraphs of every enemy but the Warden, and the shells a
@@ -4815,6 +4832,7 @@ func record(wall_seconds: float) -> Dictionary:
 		"wall_seconds": snappedf(wall_seconds, 0.01), "stages": stage_notes,
 		"boss": boss_note if not boss_note.is_empty() else null,
 		"reaction_s": _reaction(),
+		"fairness": _fair.record(outcome == "died" or outcome == "lost"),
 		"band": band.describe() if band else null,
 		"min_hp": snappedf(_min_hp, 0.1) if _min_hp != INF else null, "max_hp": game.run.max_hp,
 		# The skill bar (SKILL-BAR section 8): casts of slots 2 and 3, set pieces started, Q presses,
