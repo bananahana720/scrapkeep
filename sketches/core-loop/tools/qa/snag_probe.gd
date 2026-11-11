@@ -160,6 +160,11 @@ func lanes(piece: Dictionary) -> Array:
 	var yaw: float = piece.yaw
 	var axes := [Vector2(cos(yaw), -sin(yaw)), Vector2(sin(yaw), cos(yaw))]
 	if box.size.y <= RIDE_H:
+		# A low piece held up over the floor (the Slag Bowl's crossbars on their masts) is not ridden: a lane
+		# rolls on the floor, so it would pass under the piece and only meet what holds it up.
+		var below = _floor_under(Vector3(wc.x, box.position.y + 0.05, wc.z))
+		if below != null and box.position.y - float(below.y) > RIDE_H:
+			return out
 		for a in axes:
 			var perp := Vector2(-a.y, a.x)
 			var along_x: bool = a == axes[0]
@@ -199,6 +204,10 @@ func roll(piece: Dictionary, lane: Dictionary) -> Dictionary:
 	var dir2: Vector2 = lane.dir
 	var dir := Vector3(dir2.x, 0.0, dir2.y)
 	var top = _top(Vector3(from.x, 0.0, from.y), box.end.y + 4.0)
+	if top == null:
+		# A lane can start on ground higher than the piece's top (a lift at rest in a hollow): the ray then starts
+		# inside the ground and meets nothing, so drop again from over that ground.
+		top = _top(Vector3(from.x, 0.0, from.y), _game.ctx.terrain.height(from.x, from.y) + 4.0)
 	if top == null:
 		return {"skipped": "no_floor"}
 	var cruise: float = player.tuning.f("cruise")
@@ -241,7 +250,7 @@ func roll(piece: Dictionary, lane: Dictionary) -> Dictionary:
 				break
 		if before >= min_before * cruise and speed <= before * (1.0 - loss) and not seen.is_empty():
 			seen["piece"] = piece.path
-			seen["class"] = classify(String(piece.path), String(seen["hit"]), bool(seen["terrain"]))
+			seen["class"] = MOVING if bool(seen["moving"]) else classify(String(piece.path), String(seen["hit"]), bool(seen["terrain"]))
 			seen["lane"] = lane.kind
 			seen["dir"] = [snappedf(dir.x, 0.01), snappedf(dir.z, 0.01)]
 			seen["speed_before"] = snappedf(before, 0.1)
@@ -271,6 +280,9 @@ func _facing_contact(ball: Vector3, dir: Vector3, cos_max: float) -> Dictionary:
 		if (p - ball).dot(dir) <= 0.0 or flat.length() < MIN_FLAT or absf(flat.normalized().dot(dir)) < cos_max:
 			continue
 		var other = state.get_contact_collider_object(i)
+		# An enemy or a boss piece (anything that takes damage) is an actor, not the map.
+		if other is Object and (other as Object).has_method("take_damage"):
+			continue
 		var path := ""
 		var terrain := false
 		if other is Node:
@@ -283,7 +295,7 @@ func _facing_contact(ball: Vector3, dir: Vector3, cos_max: float) -> Dictionary:
 			var hit_shape := co.shape_owner_get_shape(owner_id, 0)
 			terrain = hit_shape is ConcavePolygonShape3D or hit_shape is HeightMapShape3D
 		contacts_seen += 1
-		return {"at": _v(p), "n": _v(nrm), "hit": path, "terrain": terrain, "visible": shown(p)}
+		return {"at": _v(p), "n": _v(nrm), "hit": path, "terrain": terrain, "moving": other is AnimatableBody3D, "visible": shown(p)}
 	return {}
 
 
@@ -295,6 +307,17 @@ func _top(at: Vector3, from_y: float):
 	return null if hit.is_empty() else hit.position
 
 
+# The first surface under `at` that faces up, seen from just inside a piece's base: a ray that starts inside a convex
+# shape passes out of it, and back faces are skipped so a trimesh piece's own underside is passed too.
+func _floor_under(at: Vector3):
+	var space: PhysicsDirectSpaceState3D = _game.player.body().get_world_3d().direct_space_state
+	var q := PhysicsRayQueryParameters3D.create(at, at + Vector3.DOWN * 400.0)
+	q.exclude = [_game.player.body().get_rid()]
+	q.hit_back_faces = false
+	var hit: Dictionary = space.intersect_ray(q)
+	return null if hit.is_empty() else hit.position
+
+
 static func _v(v: Vector3) -> Array:
 	return [snappedf(v.x, 0.01), snappedf(v.y, 0.01), snappedf(v.z, 0.01)]
 
@@ -302,6 +325,9 @@ static func _v(v: Vector3) -> Array:
 # --- Class, places, bounds, control lanes --------------------------------------------------------
 
 const HOLDERS := ["ParkRows", "Contraptions", "Activities", "Tiles"]
+# A snag on a moving body (a lift, a barge): the lane met it at an unknown point of its cycle, so the row is listed
+# under this class and judged by that piece's phase test (snag_sweep.md, "Moving pieces"), not counted as a catch.
+const MOVING := "moving"
 const PLACE_M := 2.0
 const CONTROL_STEP := 100.0
 const CONTROL_LEN := 60.0
