@@ -4,6 +4,7 @@ const Companion := preload("res://src/core/companion.gd")
 const ScrapField := preload("res://src/build/scrap_field.gd")
 const RewardGates := preload("res://src/build/reward_gates.gd")
 const Fabricators := preload("res://src/build/fabricators.gd")
+const HullMark := preload("res://src/world/hull_mark.gd")
 const ElementField := preload("res://src/build/element_field.gd")
 const Elements := preload("res://src/build/elements.gd")
 const Accretion := preload("res://src/build/accretion.gd")
@@ -311,6 +312,8 @@ func setup(ctx_ref) -> void:
 	_connect_triggers()
 	ctx.events.beacon_unsealed.connect(func(_stage: int): clock.warden_broken())
 	ctx.events.beacon_unsealed.connect(_on_warden_broken_hotwire)
+	# Marked hull: the Warden break lifts the mark a keeper's gamble put on max hull.
+	ctx.events.beacon_unsealed.connect(func(_stage: int): HullMark.lift(ctx.run))
 	ctx.events.enemy_struck.connect(_on_tread_struck)
 	ctx.events.player_died.connect(func(): shop.note_death(ctx.run.cogs))
 	makers.setup()
@@ -997,7 +1000,7 @@ func _on_scrap_collected(_amount: int, _at: Vector3, _total: int) -> void:
 	if mass_hp != _mass_hp:
 		sheet.max_hp_bonus += mass_hp - _mass_hp
 		_mass_hp = mass_hp
-		ctx.run.set_max_hp(ctx.run.base_max_hp() + sheet.max_hp_bonus)
+		ctx.run.set_max_hp(HullMark.ceiling(ctx.run, ctx.run.base_max_hp() + sheet.max_hp_bonus))
 	_redraw()
 
 

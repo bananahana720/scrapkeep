@@ -9,6 +9,7 @@ const Threat := preload("res://src/combat/threat_grammar.gd")
 
 # flag -> [tuning key, valid value, invalid value, when]. Numbers have no invalid option.
 const EXPECTED := {
+	"marked-hull": ["marked_hull", "on", "bogus", "launch"],
 	"scrap": ["scrap_mode", "armor", "bogus", "start"],
 	"wear": ["wear", "on", "bogus", "start"],
 	"route-seed": ["route_seed", "7", "seven", "start"],
