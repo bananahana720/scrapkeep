@@ -58,7 +58,16 @@ func _run() -> void:
 	_game._screen_key(KEY_R)
 	_t.check("R opens the mixtapes", screens.radio_open() and not screens.walk_live())
 	var page = screens.radio_page()
-	_t.eq("it counts found takes", page._count.text, "Takes found: 2 of %d" % takes.size())
+	# The crate lists every found track (two takes and a roam record here), so the count is every track, as the tape header spaces it.
+	var listable: Array = []
+	for station in Radio.dial():
+		for id in RadioTakes.on_station(station):
+			if not id in listable:
+				listable.append(id)
+	for id in RadioTakes.all_ids():
+		if not id in listable:
+			listable.append(id)
+	_t.eq("it counts the crate's found tracks over every track it can list", page._count.text, "3 / %d" % listable.size())
 	_t.check("the crate holds found tracks", page.crate_row(a) != null and page.crate_row(b) != null and page.crate_row("roam-1-1") != null)
 	_t.check("and never an unfound one", page.crate_row(takes[2]) == null)
 	page.crate_row(b).grab_focus()

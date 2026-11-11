@@ -21,7 +21,7 @@ static func rows(s: Dictionary, stage_count: int) -> Array:
 		["obj_beacon", "%d/%d" % [s["stages"], stage_count], "stages", KEPT],
 		["res_mass", str(s["scrap"]), "scrap", LOST],
 		["cat_transform", str((s["parts"] as Array).size()), "parts bolted on", LOST],
-		["thr_instant", str(s["kills"]), "kills", KEPT],
+		["thr_instant", str(s["kills"]), "clocked out", KEPT],
 	]
 	# A side job is a camp cleared or a relay held on the way; a zero says nothing, so it is left out.
 	if int(s["events_won"]) > 0:

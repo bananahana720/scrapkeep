@@ -54,7 +54,7 @@ func _init() -> void:
 	_grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_grid.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_scroll.add_child(_grid)
-	back = ChoiceButton.new("back", "key_a", "Back")
+	back = ChoiceButton.new("back", "key_esc", "Back")
 	back.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	add_child(back)
 	var bottom := Control.new()

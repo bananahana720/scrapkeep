@@ -19,6 +19,7 @@ func _init() -> void:
 	_t.check("a goal kinds exist", all_kinds)
 	_t.eq("b last step is the next world", goal[goal.size() - 1]["kind"], "world_entered")
 	var obj: String = FieldNotes.OBJECTIVE
-	_t.check("e objective names the bosses", obj.contains("Brindle") and obj.contains("Waking") and obj.contains("Mind"))
+	# Ruling cx: the title body is two sentences and still says what to do; the bosses are met, not listed.
+	_t.eq("e objective reads as written, with no colon", obj, "A machine runs your world \"perfectly\". Take it back. Get heavy, break the Wardens, smash their cores.")
 	_t.check("e objective within 24 words", WordBudget.words_in(obj) <= 24, str(WordBudget.words_in(obj)))
 	quit(_t.verdict())

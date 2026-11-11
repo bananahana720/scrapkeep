@@ -304,7 +304,7 @@ func _run() -> void:
 	_t.check("J opens the jukebox", screens.jukebox_open() and not screens.walk_live())
 	var page = screens.jukebox_page()
 	var shelved := TuneRows.ids().filter(func(id): return not TuneRows.shut(id, _game.ctx.profile)).size()
-	_t.eq("the jukebox counts found records", page._count.text, "Records found: 3 of %d" % shelved)
+	_t.eq("the jukebox counts found records", page._count.text, "3 / %d" % shelved)
 	_t.eq("a blank sleeve reads ???", page.sleeve("boss-mind").text, "???")
 	page.sleeve("boss-mind").grab_focus()
 	await _frames(1)

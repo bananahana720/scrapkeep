@@ -13,19 +13,23 @@ const CreditsHint := preload("res://src/ui/credits_hint.gd")
 # key-hint strip; the pilot lines, the pieces count and the button row stay built (reading() and labels() still
 # serve the tests) but hidden, since every station is a zone in the world that opens its page by its own key.
 
-const NO_PIECES := "Companion: no pieces yet. Pieces turn up during runs."
+const NO_PIECES := "No SPIL-9 pieces yet. They turn up in runs."
 # The walk's keys, as the keycap row every other screen draws (credits_hint.gd).
 const WALK_HINTS := [{"cap": "key_w", "say": "W"}, {"cap": "key_a", "say": "A"}, {"cap": "key_s", "say": "S"}, {"cap": "key_d", "say": "D"},
 	{"say": "roll"}, {"say": "·"}, {"cap": "key_space", "say": "Space"}, {"say": "jump"}, {"say": "·"}, {"say": "mouse to look"}, {"say": "·"},
 	{"cap": "key_k", "say": "K"}, {"say": "leave camp"}]
 # The row's plate lifts it off the screen's bottom edge and keeps it readable over the camp's pale ground.
 const STRIP_LIFT := 14
+# From the second walk on the strip keeps only the way out: the keys to roll, jump and look were met once (S5).
+const LEAVE_HINT := [{"cap": "key_k", "say": "K"}, {"say": "leave camp"}]
 const PAINT := "Paint: choose on each pilot's card after Launch."
 
 var back: Button
 # The camp walk (camp_hub.gd) shows only a key-hint strip over the 3D camp: the pilot lines and the button row stay
 # hidden, since every station is a zone in the world and opens its page by its own key.
 var walk := false
+# Set by the first walk; later walks show LEAVE_HINT alone.
+var walked := false
 var customize
 var customize_entry: Button
 
@@ -33,6 +37,7 @@ var _lines: VBoxContainer
 var _strip: HBoxContainer
 var _buttons: HBoxContainer
 var _companion: Button
+var _walk_keys: Control
 
 
 func _init() -> void:
@@ -54,8 +59,8 @@ func _init() -> void:
 	_buttons.add_child(ChoiceButton.new("achievements", "key_a", "Achievements"))
 	_buttons.add_child(ChoiceButton.new("settings", "key_s", "Settings"))
 	_buttons.add_child(ChoiceButton.new("jukebox", "key_j", "Jukebox"))
-	_buttons.add_child(ChoiceButton.new("radio", "key_r", "Mixtapes"))
-	back = ChoiceButton.new("back", "key_k", "Back")
+	_buttons.add_child(ChoiceButton.new("radio", "key_r", "Radio"))
+	back = ChoiceButton.new("back", "key_esc", "Back")
 	_buttons.add_child(back)
 	_strip = HBoxContainer.new()
 	_strip.name = "WalkStrip"
@@ -74,10 +79,10 @@ func _init() -> void:
 	box.content_margin_top = 4.0
 	box.content_margin_bottom = 4.0
 	plate.add_theme_stylebox_override("panel", box)
-	var keys := CreditsHint.new()
-	keys.name = "WalkKeys"
-	keys.setup(WALK_HINTS)
-	plate.add_child(keys)
+	_walk_keys = CreditsHint.new()
+	_walk_keys.name = "WalkKeys"
+	_walk_keys.setup(WALK_HINTS)
+	plate.add_child(_walk_keys)
 	var lifted := MarginContainer.new()
 	lifted.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	lifted.add_theme_constant_override("margin_bottom", STRIP_LIFT)
@@ -93,6 +98,9 @@ func walk_words() -> String:
 
 # Walk mode on or off: the strip replaces the lines and the button row.
 func set_walk(on: bool) -> void:
+	if on and not walk:
+		_walk_keys.setup(LEAVE_HINT if walked else WALK_HINTS)
+		walked = true
 	walk = on
 	_strip.visible = on
 	_lines.visible = not on

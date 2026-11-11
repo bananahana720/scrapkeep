@@ -11,7 +11,7 @@ extends RefCounted
 # name   3 words or fewer, the stamp's caption
 # text   what to do, 12 words or fewer, shown while it is the next rung
 # when   exactly one of {"earned": achievements.gd row id} or {"tune": tune_rows.gd id}
-# stamp  the word inked on the board when it lands (HIRED for a pilot or a mark)
+# stamp  the word inked on the board when it lands (HIRED for a pilot, LOGGED for a mark or an item)
 # pays   what it opens, for the board's words only: {"pilot"|"cosmetic"|"item"|"tune"|"option": id}.
 #        The grant itself is the achievement row's reward, so the two must agree (validate).
 # pilot  optional: the pilot whose mark this is; the board shows it only once that pilot is open
@@ -43,17 +43,17 @@ const RUNGS := {
 	"brindle_routed": {"name": "Brindle Routed", "text": "Rout Admiral Brindle in the Slag Bowl.",
 		"when": {"earned": "brindle_routed"}, "stamp": "HIRED", "pays": {"pilot": "tarn"}},
 	"mark_sable": {"name": "Sable's Mark", "text": "Rout Brindle flying Sable.", "pilot": "pylon_engineer",
-		"when": {"earned": "brindle_mark_sable"}, "stamp": "HIRED", "pays": {"item": "strike_pocket"}},
+		"when": {"earned": "brindle_mark_sable"}, "stamp": "LOGGED", "pays": {"item": "strike_pocket"}},
 	"mark_rivet": {"name": "Rivet's Mark", "text": "Rout Brindle flying Rivet.", "pilot": "runner_gunner",
-		"when": {"earned": "brindle_mark_rivet"}, "stamp": "HIRED", "pays": {"item": "clean_break"}},
+		"when": {"earned": "brindle_mark_rivet"}, "stamp": "LOGGED", "pays": {"item": "clean_break"}},
 	"mark_tarn": {"name": "Tarn's Mark", "text": "Rout Brindle flying Tarn.", "pilot": "tarn",
-		"when": {"earned": "brindle_mark_tarn"}, "stamp": "HIRED", "pays": {"item": "warhead_slug"}},
+		"when": {"earned": "brindle_mark_tarn"}, "stamp": "LOGGED", "pays": {"item": "warhead_slug"}},
 	"mark_kest": {"name": "Kest's Mark", "text": "Rout Brindle flying Kest.", "pilot": "demolitions_caster",
-		"when": {"earned": "brindle_mark_kest"}, "stamp": "HIRED", "pays": {"item": "ring_wave"}},
+		"when": {"earned": "brindle_mark_kest"}, "stamp": "LOGGED", "pays": {"item": "ring_wave"}},
 	"mark_tally": {"name": "Tally's Mark", "text": "Rout Brindle flying Tally.", "pilot": "tally",
-		"when": {"earned": "brindle_mark_tally"}, "stamp": "HIRED", "pays": {"item": "salvage_drone"}},
+		"when": {"earned": "brindle_mark_tally"}, "stamp": "LOGGED", "pays": {"item": "salvage_drone"}},
 	"mark_cannon": {"name": "Cannon's Mark", "text": "Rout Brindle flying the Cannon.", "pilot": "remembered_cannon",
-		"when": {"earned": "brindle_mark_cannon"}, "stamp": "HIRED", "pays": {"item": "scrap_geyser"}},
+		"when": {"earned": "brindle_mark_cannon"}, "stamp": "LOGGED", "pays": {"item": "scrap_geyser"}},
 }
 
 # The time card. A finished run (won or lost, never abandoned) that stamps no rung and broke at
@@ -223,7 +223,7 @@ static func pays_words(pays: Dictionary) -> String:
 		var id := String(pays[kind])
 		match kind:
 			"item":
-				return "Opens %s in the pools" % item_name(id)
+				return "%s can turn up in runs" % item_name(id)
 			"pilot":
 				return "Signs on a pilot"
 			"cosmetic":
