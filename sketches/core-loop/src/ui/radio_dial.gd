@@ -145,20 +145,20 @@ func _draw() -> void:
 		draw_set_transform(Vector2.ZERO)
 
 
-# The dial's keys under the plate, right-aligned to it, fading out over the last half second.
+# The dial's keys under the plate, from its left edge (the notes' Tab cap sits under its right),
+# each cap followed by its arrow, fading out over the last half second.
 func _draw_keys(color: Color) -> void:
 	var a := clampf(_teach / 0.5, 0.0, 1.0)
 	var y := size.y + 8.0 + TEACH_KEY_H * 0.5
-	var x := size.x
-	for i in range(TEACH_KEYS.size() - 1, -1, -1):
-		var row: Array = TEACH_KEYS[i]
+	var x := 2.0
+	for row in TEACH_KEYS:
 		var key := Glyphs.of_action(String(row[0]), String(row[1]))
-		var arrow := 14.0 if int(row[2]) != 2 else 20.0
-		x -= arrow
-		_draw_arrow(Vector2(x + arrow * 0.5, y), int(row[2]), Color(color, a))
 		var cap := Keycap.size_of(key, TEACH_KEY_H)
-		Keycap.draw(self, Vector2(x - 4.0 - cap.x * 0.5, y), key, Color(Palette.SAND, a), TEACH_KEY_H)
-		x -= cap.x + 16.0
+		Keycap.draw(self, Vector2(x + cap.x * 0.5, y), key, Color(Palette.SAND, a), TEACH_KEY_H)
+		x += cap.x + 6.0
+		var arrow := 14.0 if int(row[2]) != 2 else 22.0
+		_draw_arrow(Vector2(x + arrow * 0.5, y), int(row[2]), Color(color, a))
+		x += arrow + 14.0
 
 
 func _draw_arrow(at: Vector2, kind: int, color: Color) -> void:
