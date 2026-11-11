@@ -140,8 +140,10 @@ var stop_scale := 1.0
 var shake_scale := 1.0
 # Multi-kill groups this run: [size, msec] each time a group reached 2, 4 or 8.
 var multi_log: Array = []
-# Every pad rumble asked for: [fact, weak, strong, seconds, sent]. Tests and the census read it.
+# The last RUMBLE_LOG_CAP pad rumbles asked for: [fact, weak, strong, seconds, sent]. Tests and
+# the census read it.
 var rumble_log: Array = []
+const RUMBLE_LOG_CAP := 512
 
 var _squash := 0.0
 var _squash_velocity := 0.0
@@ -217,7 +219,6 @@ func wire_optional() -> void:
 	SignalWire.listen(events, "core_gained", _on_core)
 	SignalWire.listen(events, "harpoon_bit", _on_harpoon_bit)
 	SignalWire.listen(events, "carved", _on_carved)
-	SignalWire.listen(events, "landed", func(impact: float): rumble("landed", clampf((impact - 10.0) / 16.0, 0.0, 1.0)))
 
 
 func _on_harpoon_bit(_enemy: Node3D, _at: Vector3) -> void:
@@ -294,6 +295,7 @@ func pulse(amount: float) -> void:
 
 func _on_landed(impact: float) -> void:
 	squash(clampf(impact / 26.0, 0.0, 0.42), player.state.contact_normal)
+	rumble("landed", clampf((impact - 10.0) / 16.0, 0.0, 1.0))
 	if impact > 18.0:
 		_camera("kick", "landed", Vector3.DOWN, impact * 0.012)
 
@@ -791,8 +793,11 @@ func rumble(fact: String, share := 1.0) -> void:
 	var weak := float(row["weak"]) * scale
 	var strong := float(row["strong"]) * scale
 	var seconds := float(row["ms"]) / 1000.0
-	var now := SimClock.msec()
+	# The motors run on real time, so a hit-stop must not stretch the running window.
+	var now := Time.get_ticks_msec()
 	var running := now < _rumble_until
+	if rumble_log.size() >= RUMBLE_LOG_CAP:
+		rumble_log.pop_front()
 	var in_play: bool = ctx == null or ctx.flow == null or ctx.flow.in_play()
 	if not in_play or maxf(weak, strong) < RUMBLE_FLOOR or (running and weak <= _rumble_weak and strong <= _rumble_strong):
 		rumble_log.append([fact, weak, strong, seconds, false])

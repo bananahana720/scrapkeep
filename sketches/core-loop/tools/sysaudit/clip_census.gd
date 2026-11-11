@@ -14,6 +14,9 @@ var _carve_s := 0.0
 var _carves := 0
 var _was_carving := false
 var _done := false
+var _run_time := 0.0
+var _outcome := ""
+var _rumble_log: Array = []
 # The feel facts in order, for the timeline clip: [run seconds, kind, detail].
 const TIMELINE_KINDS := ["carved", "near_miss", "player_hit", "slammed", "harpoon_bit"]
 var _timeline: Array = []
@@ -41,7 +44,7 @@ func _physics_process(delta: float) -> bool:
 			var count := (func(n: String): _bump(n)).bind(name)
 			_game.events.connect(name, count.unbind(argc) if argc > 0 else count)
 		_game.events.carved.connect(func(_at: Vector3, seconds: float, speed: float):
-			if not _timeline.is_empty():
+			if not _timeline.is_empty() and _timeline.back()[1] == "carved":
 				_timeline.back().append({"seconds": snappedf(seconds, 0.01), "speed": snappedf(speed, 0.1)}))
 	if _census_game != null and _census_game.player != null:
 		var carving: bool = _census_game.player.state.carving
@@ -50,17 +53,30 @@ func _physics_process(delta: float) -> bool:
 		if carving and not _was_carving:
 			_carves += 1
 		_was_carving = carving
-	if over and not _done:
-		_done = true
-		var rumbles := {}
-		var juice = _census_game.presentation.get("juice") if _census_game != null and _census_game.presentation != null else null
+	if _census_game != null and _census_game.run != null:
+		_run_time = float(_census_game.run.run_time)
+		var juice = _census_game.presentation.get("juice") if _census_game.presentation != null else null
 		if juice != null and juice.get("rumble_log") != null:
-			for r in juice.rumble_log:
-				var key := "%s %s" % [r[0], "sent" if r[4] else "held"]
-				rumbles[key] = int(rumbles.get(key, 0)) + 1
-		var f := FileAccess.open(_out.path_join("census-%d.json" % _seeds[maxi(_index, 0)]), FileAccess.WRITE)
-		if f != null:
-			f.store_string(JSON.stringify({"seed": _seeds[maxi(_index, 0)], "policy": String(_settings.get("policy", "")),
-				"outcome": _driver.outcome if _driver != null else "", "run_time": _census_game.run.run_time if _census_game != null else 0.0,
-				"carve_seconds": snappedf(_carve_s, 0.01), "carves_started": _carves, "rumbles": rumbles, "timeline": _timeline, "events": _counts}, "\t"))
+			_rumble_log = juice.rumble_log
+		if _driver != null:
+			_outcome = String(_driver.outcome)
 	return over
+
+
+# bot_run quits the tree itself when the run ends, so the census writes on the way out.
+func _finalize() -> void:
+	# The game is freed by now, and a freed object compares equal to null, so the counts decide.
+	if _done or _counts.is_empty():
+		return
+	_done = true
+	var rumbles := {}
+	for r in _rumble_log:
+		var key := "%s %s" % [r[0], "sent" if r[4] else "held"]
+		rumbles[key] = int(rumbles.get(key, 0)) + 1
+	var seed := _seeds[maxi(_index, 0)]
+	var f := FileAccess.open(_out.path_join("census-%d.json" % seed), FileAccess.WRITE)
+	if f != null:
+		f.store_string(JSON.stringify({"seed": seed, "policy": String(_settings.get("policy", "")), "outcome": _outcome,
+			"run_time": snappedf(_run_time, 0.01), "carve_seconds": snappedf(_carve_s, 0.01), "carves_started": _carves,
+			"rumbles": rumbles, "timeline": _timeline, "events": _counts}, "\t"))
+		f.close()

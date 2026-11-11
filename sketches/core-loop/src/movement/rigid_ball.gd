@@ -85,6 +85,7 @@ func setup(tuning_ref, state_ref) -> void:
 
 func set_active(active: bool) -> void:
 	_active = active
+	_carve_s = 0.0
 	freeze = not active
 	set_collision_layer_value(2, active)
 	_probe.enabled = active
