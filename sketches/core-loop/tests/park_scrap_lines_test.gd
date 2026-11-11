@@ -9,9 +9,8 @@ extends SceneTree
 #                    take-off and the landing are where the skill is);
 #       a drop       a ground edge of the graph walkable one way only (a ledge) whose ends differ by DROP_M or more,
 #                    read as the segment between its ends.
-#   The pieces are the ones the game lays (scrap_field.gd trail_spots over park_map.gd scrap_trail), on the baked
-#   ground.bin height; the game reads terrain.height, which is the same ground plus event overlays, so a piece here
-#   can sit a few centimetres along the line from where the game lays it.
+#   The pieces are the ones the game lays (scrap_field.gd trail_spots over park_map.gd scrap_trail), on the park's
+#   baked ground with its holes (park_props.gd world_for); the game reads terrain.height, which adds event overlays.
 #
 # Output, one line per stage: `MAPCHECK <stage> scrap_on_lines <value> pass>=<line> PASS|FAIL`, plus `report INFO`
 # lines naming the marks the pieces stand by, so a lines.json edit can be aimed.
@@ -23,11 +22,9 @@ const T := preload("res://tests/support/t.gd")
 const ParkGraph := preload("res://src/world/park/park_graph.gd")
 const ParkMap := preload("res://src/world/park/park_map.gd")
 const ScrapField := preload("res://src/build/scrap_field.gd")
-const Tool := preload("res://tools/park_graph.gd")
-const Bowl := preload("res://tests/park_fight_bowl_test.gd")
+const ParkProps := preload("res://src/presentation/park_props.gd")
 
 const OUT_DIR := "res://assets/park"
-const PARK_DIR := "res://src/world/park"
 const WORLD1 := ["park_dam", "park_flume"]
 const REACH_M := 8.0
 const DROP_M := 4.0
@@ -42,14 +39,13 @@ func _initialize() -> void:
 
 func _run() -> void:
 	for map_id in WORLD1:
-		var map := ParkMap.new("%s/%s.json" % [PARK_DIR, map_id])
+		var world := ParkProps.world_for(map_id)
+		var map: ParkMap = world["map"]
 		var g = ParkGraph.read("%s/%s/graph.bin" % [OUT_DIR, map_id])
-		var bake: Dictionary = Tool.load_bake("%s/%s" % [OUT_DIR, map_id])
-		if not t.check("%s inputs load" % map_id, map.ok and g != null and bake["errors"].is_empty(), "map, graph, bake"):
+		if not t.check("%s inputs load" % map_id, map.ok and g != null, "map and graph"):
 			continue
-		var ground: PackedFloat32Array = bake["ground"]
-		var height := func(x: float, z: float) -> float: return Bowl.ground_height(ground, x, z)
-		var pieces := ScrapField.trail_spots(map.scrap_trail, height)
+		var at: Callable = world["ground"]
+		var pieces := ScrapField.trail_spots(map.scrap_trail, func(x: float, z: float) -> float: return at.call(x, z, 0.0).y)
 		if not t.check("%s has a scrap trail" % map_id, not pieces.is_empty(), "%d pieces" % pieces.size()):
 			continue
 		var r := measure(pieces, marks(g, _node_heights(g), true))
