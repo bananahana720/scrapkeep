@@ -7,6 +7,7 @@ const Items := preload("res://src/build/items.gd")
 const ItemGen := preload("res://src/build/item_gen.gd")
 const Nemesis := preload("res://src/combat/nemesis.gd")
 const Relics := preload("res://src/build/relics.gd")
+const HotwireRules := preload("res://src/build/hotwire_rules.gd")
 
 # The parts catalogue (TADR-008): one row per part, turned into typed PartDef resources
 # once and cached. Each row has a verb (what it makes you do), punch (flat per-hit
@@ -341,11 +342,11 @@ const BURDEN_MAGNET_LOSS := 0.10
 const HOTWIRE_CAP_WORLD_ONE := 1
 const HOTWIRE_CAP_LATER := 2
 const HOTWIRED := {
-	"riveted_shell": {"name": "Riveted Shell", "tags": ["mass"], "needs_armor": true, "recycle_commons": 2,
+	"riveted_shell": {"name": "Riveted Shell", "tags": ["mass"], "maker": "fleet_surplus", "needs_armor": true, "recycle_commons": 2,
 		"label": "{armor} armour. Air steering \u2212{steer}%.",
 		"upside": {"icon": "cat_defense", "words": "{armor_x}x armour"},
 		"downside": {"icon": "cat_mobility", "words": "Air steering \u2212{steer}%"}},
-	"spark_tread": {"name": "Spark Tread", "tags": ["kinetic", "arc"], "needs_armor": true, "recycle_commons": 3,
+	"spark_tread": {"name": "Spark Tread", "tags": ["kinetic", "arc"], "maker": "spillway_works", "needs_armor": true, "recycle_commons": 3,
 		"label": "Big signature hits. {wear} rolling wear.",
 		"upside": {"icon": "cat_damage", "words": "+{bonus}% signature hit"},
 		"downside": {"icon": "cat_defense", "words": "{wear_x}x rolling wear"}},
@@ -477,6 +478,8 @@ static func _base_row(part_id: String) -> Dictionary:
 		return _settled(_burden_spec(part_id))
 	if Relics.is_relic(part_id):
 		return Relics.part_row(part_id)
+	if HOTWIRED.has(part_id):
+		return _hotwired_spec(part_id)
 	var generated := ItemGen.generated_row(part_id)
 	return _settled(generated) if not generated.is_empty() else generated
 
@@ -622,7 +625,7 @@ static func def(part_id: String) -> Resource:
 
 
 static func has(part_id: String) -> bool:
-	return rows().has(part_id) or EVOLVED.has(part_id) or is_burden(part_id) or Relics.is_relic(part_id) or ItemGen.is_generated(part_id) and not ItemGen.parse(part_id).is_empty()
+	return rows().has(part_id) or EVOLVED.has(part_id) or HOTWIRED.has(part_id) or Relics.is_relic(part_id) or ItemGen.is_generated(part_id) and not ItemGen.parse(part_id).is_empty()
 
 
 # The authored pool, catalogue first. Generated recipes are unbounded and not listed.
@@ -695,6 +698,17 @@ static func _burden_spec(part_id: String) -> Dictionary:
 	spec["icon"] = String(hot["downside"]["icon"]).trim_prefix("cat_")
 	spec["text"] = _burden_fill(hot["label"], hot["part"])
 	return spec
+
+
+# A hot-wired part's row on the ladder: a rare, one copy, its maker, its label as the card line.
+# It carries no stat: build.gd reads the held id (shell_held, tread_fitted). Not in rows(), so
+# no shelf, pool or roll draws it; the Warden's gates put it up (build.gd).
+static func _hotwired_spec(part_id: String) -> Dictionary:
+	var hot: Dictionary = HOTWIRED[part_id]
+	var line := HotwireRules.fill(hot["label"])
+	return {"name": hot["name"], "verb": line, "text": line, "tags": hot["tags"], "maker": hot["maker"],
+		"rarity": "rare", "tier": 2, "family": "stat", "icon": String(hot["upside"]["icon"]).trim_prefix("cat_"),
+		"cap": 1, "stack": "capped"}
 
 
 # Cogs a hot-wired part recycles for; 0 for an id that is not hot-wired.

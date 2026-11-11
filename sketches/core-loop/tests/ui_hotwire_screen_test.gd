@@ -4,6 +4,7 @@ const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const HotwireChoice := preload("res://src/ui/hotwire_choice.gd")
 const HotwireRules := preload("res://src/build/hotwire_rules.gd")
+const Parts := preload("res://src/build/parts.gd")
 const Push := preload("res://tests/workshop/push.gd")
 
 # Unit HW2: the hot-wired Fit / Recycle screen in play, driven by real events pushed into the
@@ -52,10 +53,14 @@ func _pending() -> Dictionary:
 	return _game.build.hotwire_pending()
 
 
-# A fresh run and its Warden I break: the offer opens on build's own signal.
+# A fresh run and an offer on build's own signal. Since the fold (hotwire_rules.gd) the build
+# never opens this screen: a Warden break puts the part straight at the gates. The screen stays
+# until the UI thread removes it, so this test raises the old offer by hand to keep it honest.
 func _offer() -> void:
 	_game.build._on_run_started("")
-	_game.events.beacon_unsealed.emit(1)
+	_game.build._hotwire_id = "riveted_shell"
+	_game.build._hotwire_state = "open"
+	_game.build.hotwire_offered.emit("riveted_shell", Parts.hotwire_recycle("riveted_shell"))
 
 
 func _texts(node: Node) -> Array[String]:

@@ -51,15 +51,14 @@ const GATE_CHOICES := 2
 # shell_air_factor() only, so an inversion (S4, K5, R6) changes one return value later.
 const SHELL_SCRAP_PER_HP := 5.0
 const SHELL_AIR_FACTOR := 0.75
-# Hot-wired H1, Riveted Shell, the part a run holds after Fit (Parts.HOTWIRED). Until 9 Nov the
-# baseline above was all "the shell" did, so Fit changed nothing and Recycle's cogs always won.
-# Held, it now pays what its card says, measured from the baseline the player has been rolling
+# Hot-wired H1, Riveted Shell, a rare part a Warden's gate puts up (Parts.HOTWIRED). Until 9 Nov
+# the baseline above was all "the shell" did, so holding it changed nothing. Held, it now pays what its card says, measured from the baseline the player has been rolling
 # on: the armour goes RIVETED_ARMOUR times as far per scrap again, and airborne steering takes
 # RIVETED_AIR_FACTOR again. An inversion still lifts the factor to its own value, so the tree's
 # three shell nodes are worth more to a pilot who fits it.
 const RIVETED_SHELL := "riveted_shell"
-const RIVETED_ARMOUR := 2.0
-const RIVETED_AIR_FACTOR := 0.75
+const RIVETED_ARMOUR := HotwireRules.RIVETED_ARMOUR
+const RIVETED_AIR_FACTOR := HotwireRules.RIVETED_AIR_FACTOR
 # S4, Face Runner (--world-one-builds=on, node taken, shell fitted): for this many sim seconds
 # after a valid vault the shell's air factor is SHELL_AIR_FACTOR_VAULT instead.
 const SHELL_VAULT_WINDOW := 2.0
@@ -70,9 +69,10 @@ const SHELL_AIR_FACTOR_SPRINT := 1.0
 # The resolved shell factor moved between two fitted values: `rose` is true above the resting
 # factor (an inversion is live), false on the return to it. Presentation reads only this.
 signal shell_air_changed(factor: float, rose: bool)
-# The hot-wired Fit / Recycle choice (BUILD-SYSTEMS.md, Two hot-wired parts): offered once per
-# world, after its first Warden; resolved by hotwire_fit() ("fit") or hotwire_recycle() ("recycle", with
-# the cogs paid). Build-local like shell_air_changed, not a bus fact.
+# The old hot-wired Fit / Recycle choice. Since the fold (hotwire_rules.gd) the build never emits
+# hotwire_offered: the part goes straight to the gates. Both signals, hotwire_pending, hotwire_fit
+# and hotwire_recycle stay only while src/ui/hotwire_screen.gd (the UI thread's) still connects to
+# them; they go when that screen does.
 signal hotwire_offered(part_id: String, recycle: int)
 signal hotwire_resolved(part_id: String, choice: String, cogs: int)
 # A gained part completed a three-part set (part_sets.gd) for the first time this run. Build-local:
@@ -749,11 +749,11 @@ func shell_scrap_per_hp() -> float:
 	return SHELL_SCRAP_PER_HP / (RIVETED_ARMOUR if shell_held() else 1.0)
 
 
-# ---- Hot-wired offer (unit V's Fit / Recycle) and Spark Tread (H2) ----
+# ---- Hot-wired parts at the gates, and Spark Tread (H2) ----
 
-# The first Warden broken in each world offers the first part Parts.hotwire_offer allows;
-# later Wardens in that world offer nothing (the stage-2 discovery offer is
-# authored elsewhere).
+# The first Warden broken in each world puts up the first part Parts.hotwire_offer allows as a
+# striped rare gate beside the pair ("fit": it waits at the gates until taken). Later Wardens in
+# that world add nothing new (the stage-2 discovery offer is authored elsewhere).
 func _on_warden_broken_hotwire(_stage: int) -> void:
 	var world := maxi(ctx.run.world, 1)
 	if world != _hotwire_world:
@@ -769,9 +769,17 @@ func _on_warden_broken_hotwire(_stage: int) -> void:
 	if ids.is_empty():
 		return
 	_hotwire_id = ids[0]
-	_hotwire_state = "open"
+	_hotwire_state = "fit"
 	_hotwire_save()
-	hotwire_offered.emit(_hotwire_id, Parts.hotwire_recycle(_hotwire_id))
+	_hotwire_to_open_gates()
+
+
+# Gates already standing are put up again with the hot-wired part beside them.
+func _hotwire_to_open_gates() -> void:
+	if gates.is_open() and not _hotwire_id in gates.offers.map(func(offer): return offer["part_id"]):
+		var ids: Array = gates.offers.map(func(offer): return offer["part_id"])
+		ids.append(_hotwire_id)
+		ctx.events.reward_offered.emit(gates.open(ids, ctx.player.ball_position(), _heading(), ctx.run.parts))
 
 
 # The offer's fields ride the run's extra so the entrance doc carries them: resume_run
@@ -800,6 +808,11 @@ func _hotwire_restore(retry := false) -> void:
 	_hotwire_state = String(saved.get("state", ""))
 	_hotwire_spent = bool(saved.get("spent", false))
 	_hotwire_world = int(saved.get("world", 1))
+	# A save from before the fold can hold an offer still waiting on the Fit / Recycle screen
+	# ("open"). There is no screen now, so it goes to the gates like a fresh one.
+	if _hotwire_state == "open":
+		_hotwire_state = "fit"
+		_hotwire_save()
 
 
 # {part_id, state, recycle}; part_id "" when nothing was offered this run.
@@ -814,10 +827,7 @@ func hotwire_fit() -> bool:
 		return false
 	_hotwire_state = "fit"
 	_hotwire_save()
-	if gates.is_open():
-		var ids: Array = gates.offers.map(func(offer): return offer["part_id"])
-		ids.append(_hotwire_id)
-		ctx.events.reward_offered.emit(gates.open(ids, ctx.player.ball_position(), _heading(), ctx.run.parts))
+	_hotwire_to_open_gates()
 	hotwire_resolved.emit(_hotwire_id, "fit", 0)
 	return true
 
