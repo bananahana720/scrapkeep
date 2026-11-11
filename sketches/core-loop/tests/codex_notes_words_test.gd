@@ -98,6 +98,11 @@ func _codex() -> void:
 		t.check("codex %s: the name '%s' is on one card" % [id, card_name], not names.has(card_name), String(names.get(card_name, "")))
 		names[card_name] = id
 	t.check("read a full codex", rows >= 60, str(rows))
+	# A clue that opens with "+" follows its hint as it is; any other clue is led by "Try".
+	var plus_card := FieldNotes.hint_card_text("◆", "Knocked machines", "+ three down from one knock")
+	t.check("a plus clue is not led by Try", not plus_card.contains("Try +") and plus_card.ends_with("+ three down from one knock"), plus_card)
+	var plain_card := FieldNotes.hint_card_text("◆", "A hint", "a slingshot + a kill")
+	t.check("a plain clue is led by Try", plain_card.ends_with("Try a slingshot + a kill"), plain_card)
 
 
 func _notes() -> void:

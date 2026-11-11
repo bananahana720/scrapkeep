@@ -453,7 +453,8 @@ static func hint_card_text(glyph: String, hint: String, clue: String) -> String:
 	if hint != "":
 		lines.append(hint)
 	if clue != "" and not hint.contains(clue):
-		lines.append("Try " + clue)
+		# A clue that opens with "+" carries on from its hint ("Knocked machines" / "+ three down").
+		lines.append(clue if clue.begins_with("+") else "Try " + clue)
 	return "\n".join(lines)
 
 
