@@ -5,44 +5,10 @@ const Boss := preload("res://src/boss/boss.gd")
 const Palette := preload("res://src/core/palette.gd")
 const ScrapField := preload("res://src/build/scrap_field.gd")
 const GLB := "res://assets/models/bosses/boss_pickup.glb"
-# Re-pinned 2026-10-09 (BUGFIX-BOSS F001): _cancel_hazards now drips out scrap a magnet
-# still holds when phase 1 ends, which only phase 1 used to pay back; pickup meshes unchanged.
-# Re-pinned 2026-10-17 (boss phase moments): phase 3 entry passes enter_scuttle to cockpit_open,
-# so the model's shield flips with the clip before it hides; pickup meshes unchanged.
-# Re-pinned 2026-10-18 (#94 reduce flashes): the crane warning glow pulses at FlashGuard.rate,
-# so the Reduce flashes toggle slows it; pickup meshes unchanged. Was 5f85f822.
-# Re-pinned 2026-10-19 (Challenge C3a dials): Brindle's damage, cadence, tell, punish and combo read
-# ChallengeDials, identical at the defaults (run_tier_test); pickup meshes unchanged. Was 8ec6e239.
-# Re-pinned 2026-10-23 (boss phases, #391): the Furnace reprise, the Scuttle hook turn and the transition
-# beat (fight_phases.gd); pickup meshes unchanged. Was bdc7f158.
-# Re-pinned 2026-10-27 (world 1 hitches): enter_arena takes the bowl the beacon built ahead
-# (Arena.take_ahead) instead of building it on the entry frame; pickup meshes unchanged. Was 3b589a48.
-# Re-pinned 2026-10-28 (ruling aw): take_spill lands an armour hit's spill in the bowl as shed piles
-# through _spawn_pickup, paid back by recover_mass; pickup meshes unchanged. Was e6d147b7.
-# Re-pinned 2026-10-29 (bowl tail): pickups_left names each pile's source so the bot can tell shed
-# armour from the rest; pickup meshes unchanged. Was 36c7a9ba.
-# Re-pinned 2026-10-30 (w28 cautious red team): the slag and charge hits, and the hazard step after a
-# killing slag ring, return when their damage ended the run, so a death to Brindle reads no torn-down
-# arena; pickup meshes unchanged. Was e34f3fd2.
-# Re-pinned 2026-11-08 (state-machine audit, #616): drone pads clear at a phase turn and the phase 3
-# charge states are named constants with an unknown-state fallback; pickup meshes unchanged. Was acf817b9.
-# Re-pinned 2026-11-09 (objective plate): plate_reading hands the HUD the phase and whether the cockpit
-# is open, read-only; pickup meshes unchanged. Was 5121cd32.
-# Re-pinned 2026-11-09 (charge fling, #639): the hull turns onto a charge's heading through the tell instead
-# of snapping at the commit, and the Scuttle counts short tries for its hint; pickup meshes unchanged. Was 059a4a6d.
-# Re-pinned 2026-11-09 (ruling bs, held floor bank, #660): hits on a held hull bank toward the next phase's bar
-# (banking, bank_cap, _bank); pickup meshes unchanged. Was b8cc7630.
-# Re-pinned 2026-11-10 (first-timer film, PF-17 and PF-18): plate_reading no longer calls the cockpit open while a
-# Scuttle charge is committed (charge_coming), and plate_targets hands the HUD the places the plate's row
-# names; both read-only, no hit or warning changes; pickup meshes unchanged. Was 894f3522.
-# Re-pinned 2026-11-09 (one call places the ball): the intro and the rescue place the ball with reset_to
-# alone, no write to its body after; pickup meshes unchanged. Was 894f3522.
-# Re-pinned 2026-11-10 (w33 gate, stacking #709 onto #708): both changes in boss.gd together. Was 51880956 (#708) / 8cfc6e3b (#709).
-# Re-pinned 2026-11-10 (second first-timer film, PF-17): plate_targets names each thing it marks ({at, what});
-# pickup meshes unchanged. Was 2304483c.
-# Re-pinned 2026-11-11 (w36 gate, arena fix 101d6001): a dropped lobber stops its physics tick when the
-# arena is left, so it never ticks against the removed bowl; pickup meshes unchanged. Was 9165b6e4.
-const BASE_LOGIC_SHA := "2381fc95e181c32c6ae7981029b66c31496aeb00e2fd5c4de60eff89d967e0dc"
+# The pickup's logic, _spawn_pickup outside its mesh construction, is pinned so a mesh change cannot move it.
+# Until wave 37 the pin covered all of boss.gd and was re-recorded 18 times for fight changes, each with the pickup
+# meshes unchanged (git log -p of this file has them); scoping it to the pickup keeps the guard and drops the tax.
+const BASE_LOGIC_SHA := "0831b15b9fdd4b857a9fc3cf77901b309d5af617dd8485a13ceb6414e2085845"
 
 var failures := 0
 var game
@@ -193,8 +159,8 @@ func _run() -> void:
 	var start := source.find("func _spawn_pickup")
 	var mesh_start := source.find("\tvar node := Node3D.new()", start)
 	var mesh_end := source.find("\tvar canister_mesh := CylinderMesh.new()", mesh_start)
-	var logic := source.substr(0, mesh_start) + source.substr(mesh_end)
-	logic = logic.replace("static var _pickup_materials := {}\n", "")
+	var end := source.find("\nfunc ", mesh_end)
+	var logic := source.substr(start, mesh_start - start) + source.substr(mesh_end, end - mesh_end)
 	logic = logic.replace("\tnode.material_override = _pickup_materials[material_key]\n", "\tnode.material_override = Palette.solid(Palette.ARC, 2.0)\n")
-	_check(logic.sha256_text() == BASE_LOGIC_SHA, "entire boss source outside mesh construction unchanged")
+	_check(logic.sha256_text() == BASE_LOGIC_SHA, "pickup logic outside mesh construction unchanged")
 	_finish()
