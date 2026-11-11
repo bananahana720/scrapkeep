@@ -28,6 +28,7 @@ const WORDS := {
 	"silt_boil": "a silt boil",
 	"cinder_floor": "the cinder floor",
 	"pocket_veil": "a pocket veil",
+	"heat_cook_off": "your own shell, cooked off",
 }
 
 

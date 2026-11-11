@@ -447,7 +447,29 @@ func plating_now() -> float:
 # The armour row damage_families.gd reads (its armour_of falls through to the kind table on
 # ""): a Dig elite arrives with spec armour "plated".
 func armour_class() -> String:
-	return String(spec.get("armour", ""))
+	var own := String(spec.get("armour", ""))
+	if own == "" and soaked_left > 0.0:
+		return "wet"
+	return own
+
+
+# A flood soaks this machine for `seconds` (overtime.gd's sluice): with no armour of its own it
+# reads as wet, so arc hits it at the wet row (damage_families.gd) and the sluice's arc jump finds
+# it. The sluice counts the seconds down on its own physics clock (dry()), so a fixed-fps bot run
+# replays.
+var soaked_left := 0.0
+
+
+func soak(seconds: float) -> void:
+	soaked_left = maxf(soaked_left, seconds)
+
+
+func dry(delta: float) -> void:
+	soaked_left = maxf(0.0, soaked_left - delta)
+
+
+func wet() -> bool:
+	return armour_class() == "wet"
 
 
 # The plating one hit meets. `part` is "" for the body or a weak point id.
