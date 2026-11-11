@@ -1127,6 +1127,12 @@ func hull_shown() -> float:
 	return _health.fraction
 
 
+# Where the hull bar's weld starts, 0 to 1 (1.0 with nothing marked): a marked hull's max over the
+# unmarked max (hull_mark.gd).
+func hull_cap_shown() -> float:
+	return _health.cap
+
+
 # The objective for the flow's state: the row objectives.gd picks, with its glyph, its colour
 # and, while the Warden is still to be found, the metres to it.
 func objective_reading() -> Dictionary:

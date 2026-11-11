@@ -5,7 +5,8 @@ extends RefCounted
 # discovery or a pocket key that persists across runs; none adds combat power (BIBLE.md:475,
 # :586) and none is bought (BIBLE.md:513 bars invented prices), so a row carries no price,
 # cost or stat key. Each node opens when its one grant row in achievements.gd is earned; that
-# row pays {"option": <node id>} and asks for a one-run accomplishment with a count of
+# row pays {"option": <node id>} or, since no screen shows a node (systems audit pass D, row 31),
+# one cosmetic, and asks for a one-run accomplishment with a count of
 # MAX_GRANT_COUNT or below. The level is the number of nodes opened, so any short session that
 # meets one grant moves the bar.
 #

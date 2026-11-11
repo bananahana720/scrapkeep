@@ -114,9 +114,10 @@ func _run_checks() -> void:
 
 	# The hull bar: full is the unmarked max, and the cap sits at the marked max.
 	_game.hud._process(0.016)
-	var gauge = _game.hud._health
-	_check("bar caps at mark", is_equal_approx(gauge.cap, run.max_hp / (run.max_hp + cost)) and is_equal_approx(gauge.fraction, run.hp / (run.max_hp + cost)),
-		"cap %.3f, fill %.3f (max %.1f, mark %.1f)" % [gauge.cap, gauge.fraction, run.max_hp, cost])
+	var cap: float = _game.hud.hull_cap_shown()
+	var fill: float = _game.hud.hull_shown()
+	_check("bar caps at mark", is_equal_approx(cap, run.max_hp / (run.max_hp + cost)) and is_equal_approx(fill, run.hp / (run.max_hp + cost)),
+		"cap %.3f, fill %.3f (max %.1f, mark %.1f)" % [cap, fill, run.max_hp, cost])
 
 	# A retry rewinds the mark with the max hull it lowered (the stage start, taken before it).
 	run.restore()
