@@ -79,12 +79,19 @@ func _frames(count: int) -> void:
 		await physics_frame
 
 
+# Holds the ball still for `count` frames: the dam's slope would roll a ball that is only let go.
+func _park(count: int) -> void:
+	for i in count:
+		_game.player.set_velocity_now(Vector3.ZERO, "parked")
+		await physics_frame
+
+
 # The real game, a ball parked on the dam: hull gained over three seconds, the last hit long past.
 func _parked_gain() -> float:
 	_game.run.hp = _game.run.max_hp * 0.5
 	_game.run.since_damage = 99.0
 	var before: float = _game.run.hp
-	await _frames(3 * Engine.physics_ticks_per_second)
+	await _park(3 * Engine.physics_ticks_per_second)
 	return _game.run.hp - before
 
 
@@ -104,6 +111,7 @@ func _run() -> void:
 	await _frames(90)
 	for enemy in get_nodes_in_group("enemy"):
 		enemy.free()
+	await _park(30)
 	_t.check("13 the parked ball is below the cruise tier and the run is in stage 1", _game.player.speed_tier() < SpeedTier.CRUISE and _game.run.stage == 1 and _game.flow.in_play(),
 		"tier %d, stage %d, in play %s" % [_game.player.speed_tier(), _game.run.stage, _game.flow.in_play()])
 	var parked: float = await _parked_gain()
