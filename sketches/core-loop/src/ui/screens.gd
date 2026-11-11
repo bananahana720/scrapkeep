@@ -1065,11 +1065,11 @@ func _unlock_hint(def) -> String:
 	return hint if hint == "" or beat == "" else "%s\n%s" % [hint, beat]
 
 
-# With --music=ace the settings page's Breath button (B) cycles the Warden open's held
+# With --dev and --music=ace the settings page's Breath button (B) cycles the Warden open's held
 # breath and names what the next run plays; with the synth the button is hidden.
 func refresh_lab_row() -> void:
-	_breath_row.visible = _settings.visible and game.tuning.option(Tuning.MUSIC_KEY) == "ace"
-	_breath_row.text = "Breath: %s" % game.tuning.option(Tuning.BREATH_KEY)
+	_breath_row.visible = _settings.visible and game.dev and game.tuning.option(Tuning.MUSIC_KEY) == "ace"
+	_breath_row.text = "Breath %s" % game.tuning.option(Tuning.BREATH_KEY)
 
 
 func overlay_open() -> bool:
