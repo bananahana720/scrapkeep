@@ -46,7 +46,7 @@ Pillar at stake: a world worth crossing, and scrap becomes your build. Takes it:
 
 ## Before: how the systems connect today
 
-Pillar letters as defined at the top. Each arrow is a flow the code makes today. Dashed arrows are flows that exist but do not cost the player anything they care about. Four resources (hull, scrap, cogs, cores) each run one way, and the build has ten separate doors.
+Pillars as named at the top. Each arrow is a flow the code makes today. Dashed arrows are flows that exist but do not cost the player anything they care about. Four resources (hull, scrap, cogs, cores) each run one way, and the build has ten separate doors.
 
 ```mermaid
 flowchart LR
@@ -190,18 +190,18 @@ Every system feeds a pillar except the head starts page (row 33), which feeds no
 
 ## How the evidence was made
 
-Eight world 1 runs on the park table (the maps a launched game plays), from the title to the frame stage 3 opens after Brindle falls, at `--fixed-fps 90` (one frame is one physics tick, so a seed repeats). Three policies: skipper (the rusher), completionist, random (the first-timer persona). Seeds 2860 to 2862, so each policy flew the same three pilots: Tally (`tally`), the Cannon (`remembered_cannon`) and Sable (`pylon_engineer`). The completionist's third seed was stopped at 18:53Z to keep the run short, as Andrew asked on 11 Nov (ruling in [DECISIONS.md](../../project-guide/handoff/DECISIONS.md)); eight runs are enough to show the five problems, and pass B runs 24 seeds a type for rates.
+Eight world 1 runs on the park table (the maps a launched game plays), from the title to the frame stage 3 opens after Brindle falls, at `--fixed-fps 90` (one frame is one physics tick, so a seed repeats). Three policies: skipper (the rusher), completionist, random (the first-timer persona). Seeds 2860 to 2862, so each policy flew the same three pilots: Tally (`tally`), the Cannon (`remembered_cannon`) and Sable (`pylon_engineer`). The completionist's third seed was stopped at 18:53Z to keep the run short, as Andrew asked on 11 Nov (ruling db, [DECISIONS.md](../../project-guide/handoff/DECISIONS.md)); eight runs are enough to show the five problems, and pass B runs 24 seeds a type for rates.
 
 A wrapper over `tools/bot_run.gd` writes a resource ledger per run: every cog, part, core and panel gain, every scrap loss, every drop in cogs, and the state at each stage entry and at the end. It changes nothing in the game. The joined table is [evidence/pass-a/ledger.json](evidence/pass-a/ledger.json), with each run's `bots.ndjson` beside it. The probe source, the run script, the analysis script and the raw per-run ledgers are on the branch [scratch/systems-audit-pass-a](https://github.com/bananahana720/scrapkeep/tree/scratch/systems-audit-pass-a/docs/systems-audit/evidence/pass-a), not in the docs; a pass that keeps a probe moves it to `tools/qa/` with a header.
 
 ```bash
-# from the repo root, with branch scratch/systems-audit-pass-a checked out (it is stage/alpha-w37 at 995f3dd2 plus this pass), GODOT_BIN set (cloud: /opt/scrapkeep-toolchain/Godot_v4.7.2-stable_linux.x86_64)
+# in a scratch worktree of branch scratch/systems-audit-pass-a (never your working checkout: the scripts copy probes into sketches/core-loop/tools/), (it is stage/alpha-w37 at 995f3dd2 plus this pass), GODOT_BIN set (cloud: /opt/scrapkeep-toolchain/Godot_v4.7.2-stable_linux.x86_64)
 $GODOT_BIN --headless --import --path sketches/core-loop
 docs/systems-audit/evidence/pass-a/run.sh skipper 2860 2861 2862
 docs/systems-audit/evidence/pass-a/run.sh completionist 2860 2861 2862
 docs/systems-audit/evidence/pass-a/run.sh random 2860 2861 2862
 python3 -I docs/systems-audit/evidence/pass-a/ledger.py artifacts/local/sysaudit
-# the regen probe (copy it into tools/ first, as run.sh does for the ledger probe)
+# the regen probe, in the same scratch worktree
 cp docs/systems-audit/evidence/pass-a/regen_probe.gd sketches/core-loop/tools/zz_sysaudit_regen_probe.gd
 $GODOT_BIN --headless --path sketches/core-loop --script res://tools/zz_sysaudit_regen_probe.gd
 ```
@@ -229,7 +229,7 @@ Pass A is done when this page merges. B, C and D can start then.
 | --- | --- | --- | --- | --- |
 | Hull and regen | A mapped; B and D next | A hull price costs 9 to 18 s of not being hit | Regen probe: 75% back in 17.5 s; lowest hull 44.8 to 105 across 8 runs | Nothing in the game |
 | Route and detours | A mapped; B and E next | Skipping wins on time with no loss | 8 of 8 runs cleared world 1; skipper 5.9 to 8.1 min, completionist 10.4 to 10.5 | Nothing |
-| Build layers | A mapped; D and C next | Ten doors where the Bible names three | 3 to 6 parts and 7 to 15 panels a run | Nothing |
+| Build layers | A mapped; D and C next | Ten build systems where the Bible names three | 3 to 6 parts and 7 to 15 panels a run | Nothing |
 | Cogs and cores | A mapped; B next | 1,332 to 1,956 cogs unspent; 0 cores in 8 runs | Ledger, 8 runs | Nothing |
 | Meta and promises | A mapped; D next | Head starts page shows 0 of 4 forever | Code read on 995f3dd2 | Nothing |
 

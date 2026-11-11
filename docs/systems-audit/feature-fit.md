@@ -1,10 +1,10 @@
 # Feature fit (pass D, world 1)
 
-**What this page says.** Of the 31 player-facing features in world 1 judged here, 22 earn their place as they are. Four should be merged into the item ladder so a player meets three build systems, not ten. One page (head starts) should be hidden until it can pay. Six are deferred: they are specs with nothing a player meets. Three new mechanics are proposed, each extending a rule already in the game, and each answers one of pass A's problems. The design thread's three mechanics (Heat, Reservoir, Called Shot) are already approved by Andrew and are logged, not re-judged. Every cut, merge and new mechanic here is a NEEDS ANDREW card in the thread; nothing is built by this pass.
+**What this page says.** Of the 31 player-facing features in world 1 judged here, 26 stay (3 of them need connecting to the rest of the game and 1 needs a new price). Four should be merged into the item ladder so a player meets three build systems, not ten. One page (head starts) should be hidden until it can pay. Six are deferred: they are specs with nothing a player meets. Three new mechanics are proposed, each extending a rule already in the game, and each answers one of pass A's problems. The design thread's three mechanics (Heat, Reservoir, Called Shot) are already approved by Andrew and are logged, not re-judged. Every cut, merge and new mechanic here is a NEEDS ANDREW card in the thread; nothing is built by this pass.
 
 **Read at.** `stage/alpha-w37` head `995f3dd2`, 11 Nov 2026, with pass A's map ([systems-map.md](systems-map.md)) and its eight world 1 bot runs. Card: [SA-D in BACKLOG.md](../../BACKLOG.md#sa-d).
 
-**How to read the table.** Pillars are BIBLE.md section 1's three, by short word: **mastery** (joyful physical mastery), **build** (scrap becomes your build), **world** (a world worth crossing). *Cost to learn* is what a first-timer must hold in their head before the feature helps them: **low** (one look or one try), **medium** (a rule to remember), **high** (a rule plus a list). *Cost to maintain* is the code that carries it, counted in lines of GDScript on this head; the files behind each count are listed under "Where the line counts come from" so it can be rerun, plus anything that makes it expensive beyond its size. *Verdict* is keep, merge, cut or defer.
+**How to read the table.** Pillars are named as in [systems-map.md](systems-map.md) (top of the page). *Cost to learn* is what a first-timer must hold in their head before the feature helps them: **low** (one look or one try), **medium** (a rule to remember), **high** (a rule plus a list). *Cost to maintain* is the code that carries it, counted in lines of GDScript on this head; the files behind each count are listed under "Where the line counts come from" so it can be rerun, plus anything that makes it expensive beyond its size. *Verdict* is keep, merge, cut or defer.
 
 ## The table
 
@@ -32,7 +32,7 @@
 | 20 | Start pick of three | build | low | low: 685 lines | keep | A small first decision; fold under Path in what the player reads. |
 | 21 | Trade spots: keeper's gamble, foreman's kindness | build, theme | medium | medium: 474 lines | keep, reprice | The theme's one choice (ruling ci). New mechanic 1 makes the hull price cost something. |
 | 22 | Bet crate | build | medium | low: `bet_crate.gd` | keep | Rides on cores; lives once cores arrive. |
-| 23 | SPIL-9 companion, two sockets | mastery | medium | high: 1,540 lines | keep | The Crew door. |
+| 23 | SPIL-9 companion, two sockets | mastery | medium | high: 1,540 lines | keep | The Crew build system. |
 | 24 | Devices (charges, sentry, stakes) | mastery | low | low: 385 lines | keep | Part of three pilots' kits. |
 | 25 | Element by material (ice on water, live water) | mastery, world | low to see, medium to plan | medium: 751 lines | keep | A world rule the player finds (TADR-009). |
 | 26 | Run tier (HARD ladder) | mastery | low | low: 146 lines | keep | Opens after the first win; "harder, never easier" (ruling cu). |
@@ -59,7 +59,7 @@ Six systems from [systems-map.md](systems-map.md) have no row because they are t
 
 ## Already approved: the design thread's three mechanics
 
-Andrew accepted these on 11 Nov 2026 at 18:42Z and wants them in before the sitting (ruling in [DECISIONS.md](../../project-guide/handoff/DECISIONS.md)). The thread "Design loops you can't put down" builds them behind flags and owns their files ([docs/design/loops.md](https://github.com/bananahana720/scrapkeep/pull/763) on pull request 763). Logged here, not re-judged:
+Andrew accepted these on 11 Nov 2026 at 18:42Z and wants them in before the sitting (ruling da, [DECISIONS.md](../../project-guide/handoff/DECISIONS.md)). The thread "Design loops you can't put down" builds them behind flags and owns their files ([docs/design/loops.md](https://github.com/bananahana720/scrapkeep/pull/763) on pull request 763). Logged here, not re-judged:
 
 | Mechanic | Rule it extends | New decision | Pass A problem it touches |
 | --- | --- | --- | --- |
@@ -73,9 +73,9 @@ Each one extends a rule the game already has and answers one of pass A's five pr
 
 ### 1. Marked hull
 
-- **Rule it extends.** The trade chest's hull price (`stake_devices.gd`, 25, 50 or 75% of max hull) and free regen (`run_state.gd`, 6 hull a second after 5 s).
+- **Rule it extends.** The trade chest's hull price (`stake_devices.gd`, 25, 50 or 75% of max hull) and free regen ([systems-map.md](systems-map.md) problem 1).
 - **The change.** Paying hull at a keeper's gamble lowers **max** hull by that share until the next Warden break. Regen fills only to the marked line. The mark shows as a brass bracket on the hull bar and a welded plate on the ball; the Warden break pops the plate off with a clang. A heal at the foreman's kindness also lifts the mark.
-- **New decision.** A part now against a thinner bar through the next fight. Today the price is about 9 to 18 s of waiting (pass A regen probe), so there is no decision at all.
+- **New decision.** A part now against a thinner bar through the next fight. Today regen refunds the price in seconds ([systems-map.md](systems-map.md) problem 1), so there is no decision at all.
 - **Answers.** Problem 1. It also makes the foreman's kindness (a heal paid in cores, `trade_pockets.gd`) worth something, because a heal lifts a mark.
 - **Risk.** A low-hull player cannot afford the gamble at all. The existing floor (`FLOOR_SHARE` 10%) stays.
 
@@ -84,7 +84,7 @@ Each one extends a rule the game already has and answers one of pass A's five pr
 - **Rule it extends.** Scrap as size and armour (`run_state.gd` mass and spill) and Moss's counter (`shop.gd`). Proposed in the 9 Nov systems audit (the Claude Doc "Game systems: audit and plan", linked from [PLAN.md](PLAN.md)) as "Moss weighs your haul"; this page makes it a rule.
 - **The change.** At Moss's bay, the player may drop mass onto Moss's scale for cogs. Cogs from kills fall (pass B sets the number), so the shelf becomes a real choice again.
 - **New decision.** Arrive at the next Warden heavy (armour, punch from heft) or light with a better part. Today mass and cogs both rise together, one cog per scrap unit, and neither asks anything.
-- **Answers.** Problem 4 (cogs inflate and ask no decision) and problem 3 (it ties scrap to the Parts door instead of adding a door).
+- **Answers.** Problem 4 (cogs inflate and ask no decision) and problem 3 (it ties scrap to Parts instead of adding a new build system).
 - **Risk.** A player who sells all mass gets small and fragile. That is the trade; size never touches handling (BIBLE.md section 6).
 
 ### 3. Carry a core in SPIL-9
@@ -92,7 +92,7 @@ Each one extends a rule the game already has and answers one of pass A's five pr
 - **Rule it extends.** Cores raise the next gate's offer and vanish at the stage end (`run_state.gd` `enter_stage`, `bonus_cores = 0`); SPIL-9 has two module sockets (`companion.gd`).
 - **The change.** One core can be socketed in SPIL-9 and carried into the next stage. While it rides, it takes a module socket. At the next gate, the carried core counts toward the offer.
 - **New decision.** SPIL-9's help in this stage against a better gate in the next. Today a core that arrives must be used in its own stage or it is lost, and in 8 bot runs none arrived.
-- **Answers.** Problem 4 (cores never reach the player) and problem 3 (it puts cores under the Crew door instead of being their own thing).
+- **Answers.** Problem 4 (cores never reach the player) and problem 3 (it puts cores under Crew instead of being their own thing).
 - **Risk.** Needs cores to arrive at all; pass B checks the core sources first.
 - **Conflicts with the Bible.** BIBLE.md section 6 says cores stay zone-local, and STORY-MAP.md section 4 calls a core "good for one stage and then cold". Carrying one breaks that rule on purpose, so it needs change request 5 below.
 
@@ -114,11 +114,7 @@ Three cards in the project thread "Audit and improve game systems" (11 Nov 2026,
 2. Build the three new mechanics above: all three, Marked hull first, or none.
 3. Hide the head starts page until it can fill (row 31).
 
-Andrew's answers, 11 Nov 2026 at 19:08Z, each the recommended option:
-
-1. **Fold all four.** Relics and hot-wire become rungs of the part ladder; named synergies and three-part sets move onto maker sets. Change request 4 follows.
-2. **Build all three, Marked hull first.** Change request 5 follows for Carry a core.
-3. **Hide the head starts page** until something opens a head start; the code stays.
+Andrew chose the recommended option on all three on 11 Nov 2026 at 19:08Z; his answers are rulings dc, dd and de in [DECISIONS.md](../../project-guide/handoff/DECISIONS.md).
 
 Who builds them is the coordinator's call, because the files belong to other threads: the fold touches `src/build/` item code and the UI thread's screens, Marked hull touches `stake_devices.gd` and the hull bar, and Carry a core touches `run_state.gd`, which pull request 763 holds.
 
@@ -126,7 +122,7 @@ Who builds them is the coordinator's call, because the files belong to other thr
 
 | System group | Pass status | Top open issue | Last result | What changed |
 | --- | --- | --- | --- | --- |
-| Build systems | D done; Andrew chose all three | Ten doors where three would do | 31 features judged: 23 keep (3 of them need connecting, 1 a new price), 4 merge, 1 page hidden, 6 specs deferred | Nothing in the game |
+| Build systems | D done; Andrew chose all three | Ten build systems where three would do | 31 features judged: 26 keep (3 need connecting, 1 a new price), 4 merge, 1 page hidden; 6 specs deferred | Nothing in the game |
 | Resources | D done | Hull free, cogs piling, cores missing | Three mechanics proposed, one per problem | Nothing |
 | Spec-only systems | D done | Crew and respec in the Bible, not the game | Four change requests | Nothing |
 
