@@ -28,6 +28,7 @@ const EXPECTED := {
 	"profile": ["profile", "sitting", "bogus", "launch"],
 	"grip": ["grip", "off", "bogus", "launch"],
 	"heat": ["heat", "on", "bogus", "launch"],
+	"overtime": ["overtime", "on", "bogus", "launch"],
 }
 
 # The lab's winners are the shipping defaults: a bare Tuning reports each one.

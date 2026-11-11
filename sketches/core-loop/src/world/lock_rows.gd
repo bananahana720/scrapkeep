@@ -19,7 +19,9 @@ const ROWS := {
 	"park_dam": {
 		"gate": {"packs": 4, "also": ["enemy_camp"], "max_s": 75.0},
 		"lock": {"id": "apron_crew", "within_m": 200.0, "radius_m": 26.0, "ahead_m": 10.0, "max_s": 60.0, "wave_gap_s": 3.5,
-			"waves": [["chaser", "chaser", "lobber"], ["lobber", "lobber", "chaser"], ["chaser", "chaser", "chaser", "lobber"], ["lobber", "chaser", "chaser"], ["chaser", "chaser", "lobber", "lobber"]]},
+			"waves": [["chaser", "chaser", "lobber"], ["lobber", "lobber", "chaser"], ["chaser", "chaser", "chaser", "lobber"], ["lobber", "chaser", "chaser"], ["chaser", "chaser", "lobber", "lobber"]],
+			# Reservoir (overtime.gd): the sluice sheet runs down the apron (+z is downhill there).
+			"overtime": {"flow": [0.0, 0.0, 1.0]}},
 	},
 	"park_flume": {
 		"gate": {"packs": 1, "also": ["enemy_camp"], "max_s": 75.0},

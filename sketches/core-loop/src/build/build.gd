@@ -137,6 +137,7 @@ var panel_rng := RandomNumberGenerator.new()
 var scrap_rng := RandomNumberGenerator.new()
 # Vaults paid this stage: each names its own offer stream.
 var _vaults_paid := 0
+var _overtimes_paid := 0
 # Louvres the last recompute converted into the pilot's signature stat (Panels.OVERFLOW), and
 # the counts it folded after that conversion (what the build read's stat lines say).
 var panel_overflow := 0
@@ -1065,6 +1066,7 @@ func _on_stage_entered(stage: int, retry: bool) -> void:
 	lanes.reset()
 	_offered = {}
 	_vaults_paid = 0
+	_overtimes_paid = 0
 	# A retry replays the same procs and panel drops: the seeds name the run and stage only.
 	loot_rng.seed = hash([LOOT_SEED, ctx.flow.run_key(), stage, "loot"])
 	panel_rng.seed = hash([ctx.run.run_seed, stage, "panels"])
@@ -1162,6 +1164,24 @@ func yard_cleared(at: Vector3) -> void:
 	if kill_log.size() < KILL_LOG_CAP:
 		kill_log.append([ctx.flow.stage(), "yard_clear", false, 1.0, false, true, false])
 	scrap.drop_panel(at, Panels.draw(panel_rng, _class_id()))
+
+
+# The overtime pot (overtime.gd, loops.md Spec 2), on top of the yard's own panel (ruling af
+# stays): one ring adds a panel, two add a rare (cobalt) part, three add a core and another rare.
+# Each payout rolls its own stream, like a vault's, so no other stream moves.
+func overtime_paid(at: Vector3, rings: int) -> void:
+	if scrapless() or rings <= 0:
+		return
+	_overtimes_paid += 1
+	var rng := _offer_rng("overtime_%d" % _overtimes_paid)
+	scrap.drop_panel(at, Panels.draw(rng, _class_id()))
+	var rares := (1 if rings >= 2 else 0) + (1 if rings >= 3 else 0)
+	for i in rares:
+		var picks: Array = Parts.roll(rng, Parts.SOURCE_RARITIES["vault"], _class_id(), ctx.run.parts, 1)
+		if not picks.is_empty():
+			ctx.run.add_part(picks[0], "overtime")
+	if rings >= 3:
+		ctx.run.add_core("overtime", at)
 
 
 # The rib multiplier at a kill: DROP.rib in an off-spine dead end, else 1.0. A stage with no
