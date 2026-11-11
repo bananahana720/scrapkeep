@@ -10,7 +10,8 @@ extends Node3D
 # - rogue: the stage's rogue site while its machine still sleeps (world.gd rogue_plan). Works exhaust: a dark column
 #   that chugs in puffs that drift off the beat, the rogue's old work cycle (STORY-MAP section 3).
 #
-# A plume goes the moment its thing is done: the cache taken, the cage spent, the rogue woken. Secrets (field finds) keep
+# A plume fades out over LEAVE_S once its thing is done: the cache taken, the cage spent, the rogue woken (the rogue wakes
+# 63 m out, where its plume is at full strength). Leaving the stage takes every plume down at once. Secrets (field finds) keep
 # no sign by rule (activities.gd _dress_find), standing activities have their amber column, Signal caches their mast.
 # Smoke is drawn, not simulated: one camera-facing quad a site with a shader, no particles and no light. It is a sign
 # for the middle distance: gone inside GONE_M so it never stands over the thing it marks, full from FULL_M to
@@ -36,13 +37,19 @@ const FAR_GONE_M := 600.0
 # GROW_FROM_M for as long as it can: a sign, not scenery to scale (PC film of 79dcc01b: nothing read at 300 m).
 const GROW_FROM_M := 130.0
 const GROW_MAX := 2.5
-# The site list is read four times a second; the fade follows the camera every frame.
+# The site list is read four times a second; the fade follows the camera every frame it moves.
 const READ_EVERY := 0.25
+const LEAVE_S := 1.0
+# An eye that moved less than this since the last fade changes no plume enough to redraw it.
+const EYE_STILL_M := 0.25
 
 var ctx
 # key -> the plume's MeshInstance3D; each carries meta "kind".
 var views := {}
+# Plumes whose site is done, fading out; each carries meta "leave", its remaining share from 1 to 0.
+var leaving: Array[MeshInstance3D] = []
 var _clock := 0.0
+var _last_eye := Vector3.INF
 static var _materials := {}
 static var _meshes := {}
 
@@ -73,19 +80,20 @@ static func near_alpha(distance_m: float) -> float:
 
 
 # Every site that wants a plume now, as [{key, kind, at}] with at the plume's foot. world is the World node (its
-# rescue and rogue_plan), scrap the build's scrap field (its caches()), terrain answers height(x, z); any may be null.
+# rescue's waiting() and its rogue_plan), scrap the build's scrap field (its caches(), each with the foot under its
+# panel, which can be a deck over the baked ground), terrain answers height(x, z) for the rogue site; any may be null.
+# rogue_plan is World's public plan var, read as is: world.gd is another unit's this wave.
 static func sites(world, scrap, terrain) -> Array:
 	var out := []
 	if scrap != null and scrap.has_method("caches"):
 		for c in scrap.caches():
 			var item: Node3D = c["item"]
 			if is_instance_valid(item):
-				out.append({"key": "cache:%d" % item.get_instance_id(), "kind": "cache", "at": _ground(terrain, c["at"])})
+				out.append({"key": "cache:%d" % item.get_instance_id(), "kind": "cache", "at": c["foot"]})
 	var rescue = world.get("rescue") if world != null else null
 	if rescue != null:
-		for cage in rescue.cages:
-			if is_instance_valid(cage) and not cage.spent:
-				out.append({"key": "cage:" + String(cage.quest), "kind": "cage", "at": cage.global_position})
+		for cage in rescue.waiting():
+			out.append({"key": "cage:" + String(cage["quest"]), "kind": "cage", "at": cage["at"]})
 	var plan = world.get("rogue_plan") if world != null else null
 	if plan is Dictionary and not plan.is_empty():
 		var at: Vector2 = plan["at"]
@@ -99,17 +107,28 @@ static func _ground(terrain, at: Vector3) -> Vector3:
 	return Vector3(at.x, terrain.height(at.x, at.z), at.z)
 
 
-# Puts up a plume for each site in list that has none and takes down every plume whose site is gone.
-func sync(list: Array) -> void:
+# Puts up a plume for each site in list that has none and takes down every plume whose site is gone: faded out over
+# LEAVE_S when fade is true and the plume shows, else at once (with every plume still fading out).
+func sync(list: Array, fade := false) -> void:
 	var wanted := {}
 	for s in list:
 		wanted[s["key"]] = true
 		if not views.has(s["key"]):
 			views[s["key"]] = _plume(String(s["kind"]), s["at"], String(s["key"]))
+			_last_eye = Vector3.INF
 	for key in views.keys():
 		if not wanted.has(key):
-			views[key].queue_free()
+			var view: MeshInstance3D = views[key]
 			views.erase(key)
+			if fade and view.visible:
+				view.set_meta("leave", 1.0)
+				leaving.append(view)
+			else:
+				view.queue_free()
+	if not fade:
+		for view in leaving:
+			view.queue_free()
+		leaving.clear()
 
 
 func _plume(kind: String, at: Vector3, key: String) -> MeshInstance3D:
@@ -159,15 +178,37 @@ static func grow(distance_m: float) -> float:
 	return clampf(distance_m / GROW_FROM_M, 1.0, GROW_MAX)
 
 
-# Each plume's shown share and size for an eye; a plume with nothing to show is hidden, so it costs no draw.
+# Each plume's shown share and size for an eye; a plume with nothing to show is hidden, so it costs no draw. An eye
+# that has not moved since the last call changes nothing, unless a plume is fading out.
 func fade_for(eye: Vector3) -> void:
-	for view: MeshInstance3D in views.values():
-		var at := view.global_position
-		var distance := Vector2(at.x - eye.x, at.z - eye.z).length()
-		var share := near_alpha(distance)
-		view.visible = share > 0.0
-		view.scale = Vector3.ONE * grow(distance)
-		(view.material_override as ShaderMaterial).set_shader_parameter("near_alpha", share)
+	if leaving.is_empty() and eye.distance_squared_to(_last_eye) < EYE_STILL_M * EYE_STILL_M:
+		return
+	_last_eye = eye
+	for key in views:
+		_show(views[key], eye, 1.0)
+	for view in leaving:
+		_show(view, eye, float(view.get_meta("leave")))
+
+
+static func _show(view: MeshInstance3D, eye: Vector3, keep: float) -> void:
+	var at := view.global_position
+	var distance := Vector2(at.x - eye.x, at.z - eye.z).length()
+	var share := near_alpha(distance) * keep
+	view.visible = share > 0.0
+	view.scale = Vector3.ONE * grow(distance)
+	(view.material_override as ShaderMaterial).set_shader_parameter("near_alpha", share)
+
+
+# Runs each leaving plume's share down by delta / LEAVE_S and frees the ones that reach 0.
+func leave(delta: float) -> void:
+	for i in range(leaving.size() - 1, -1, -1):
+		var view := leaving[i]
+		var keep := float(view.get_meta("leave")) - delta / LEAVE_S
+		if keep > 0.0:
+			view.set_meta("leave", keep)
+		else:
+			view.queue_free()
+			leaving.remove_at(i)
 
 
 func _process(delta: float) -> void:
@@ -179,7 +220,8 @@ func _process(delta: float) -> void:
 		var root = ctx.get("root")
 		var world: Node = root.get_node_or_null("World") if root != null else null
 		var build = ctx.get("build")
-		sync(sites(world, build.get("scrap") if build != null else null, ctx.get("terrain")))
+		sync(sites(world, build.get("scrap") if build != null else null, ctx.get("terrain")), true)
+	leave(delta)
 	var viewport := get_viewport()
 	var camera := viewport.get_camera_3d() if viewport != null else null
 	if camera != null:
