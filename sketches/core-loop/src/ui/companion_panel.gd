@@ -304,4 +304,4 @@ class Marks extends Control:
 		Keycap.draw(self, Vector2(x, y), cap, Palette.SAND, 30.0)
 		x += cap_w * 0.5 + 8.0 + 13.0
 		var side2 := 26.0
-		draw_texture_rect(Icons.texture("cross"), Rect2(Vector2(x, y) - Vector2(side2, side2) * 0.5, Vector2(side2, side2)), false, Icons.tint("cross", Palette.SAND))
+		draw_texture_rect(Icons.shape("cross"), Rect2(Vector2(x, y) - Vector2(side2, side2) * 0.5, Vector2(side2, side2)), false, Palette.SAND)
