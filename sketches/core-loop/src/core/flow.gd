@@ -1165,6 +1165,7 @@ func _record_end(won: bool) -> void:
 		_save_profile("profile_ladder_save")
 	ctx.player.set_frozen(true)
 	_entrance = {}
+	ctx.run.end_ride()
 	_persist_companion()
 	# A save this build never owned (store refused it: newer_schema) is not ours to delete.
 	if store != null and store.refusal == "" and not store.clear():
@@ -1287,6 +1288,8 @@ func _on_player_died() -> void:
 	death_cause = DeathCause.line(_last_hit_source, _landed_attack(), DeathCause.phase_note(_boss_module()) if state == BOSS else "")
 	death_tip = DeathTips.line(_last_hit_source, _landed_attack(), _fight_gap())
 	ctx.player.set_frozen(true)
+	# The run is over: a core riding in SPIL-9 goes nowhere (run_state.end_ride).
+	ctx.run.end_ride()
 	if store != null:
 		_end_run(false)
 		return

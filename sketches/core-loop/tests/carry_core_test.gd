@@ -17,7 +17,8 @@ const CompanionPanel := preload("res://src/ui/companion_panel.gd")
 #   - a retry's rewind returns the core and reseats the piece;
 #   - the next stage entry turns the ride into one of that stage's cores (the gate counts it)
 #     and reseats the piece; that core cannot ride again, a Continue to that stage's entrance
-#     keeps it, and the stage after drops it.
+#     keeps it, and the stage after drops it;
+#   - a death ends the ride: from the title SPIL-9 has both sockets and no stale piece returns.
 
 const RIVET := 1
 
@@ -147,5 +148,28 @@ func _run_checks() -> void:
 	# The stage after, with nothing riding, starts with no core.
 	run.enter_stage(run.stage + 1)
 	_check("stage after", run.bonus_cores == 0 and run.arrived_core == 0, "stage %d: cores %d" % [run.stage, run.bonus_cores])
+
+	# Death with a core riding: the ride ends with the run, and SPIL-9 edits from the title
+	# with both sockets (the title loads the profile's companion into the run).
+	run.add_core("test", Vector3.ZERO)
+	shop.enter()
+	shop.stow_core()
+	var rode: bool = run.carried_core == 1
+	_check("cost on the run", run.stow_cost() == "" and rode, "riding: no further cost")
 	shop.leave()
 	counter.close()
+	var lone := Companion.new()
+	for id in ["primer_coil", "escape_vent", "ram_prow"]:
+		lone.acquire(id)
+	lone.assemble(["primer_coil"])
+	_game.ctx.profile.set_companion(lone.to_dict())
+	_game.ctx.events.player_died.emit()
+	_game.flow.show_title()
+	var title_panel = _game.workshop().companion_panel
+	var opened: bool = _game.workshop().open_companion()
+	title_panel.pick(title_panel.model.owned.find("ram_prow"))
+	var icons: Array = title_panel.socket_icons()
+	title_panel.close()
+	_check("ride ends with the run", rode and opened and run.carried_core == 0 and run.core_seat == "" and run.companion_seats() == Companion.SOCKETS
+		and not icons.has("res_core") and (run.companion.get("sockets", []) as Array) == ["primer_coil", "ram_prow"],
+		"after death: carried %d, seat '%s', icons %s, sockets %s" % [run.carried_core, run.core_seat, icons, run.companion.get("sockets")])

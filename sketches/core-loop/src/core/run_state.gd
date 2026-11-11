@@ -499,6 +499,14 @@ func stow_core() -> bool:
 	return true
 
 
+# The piece a stow would unseat now ("" when a socket is free or a core already rides): the
+# counter's stow plate shows it as the price.
+func stow_cost() -> String:
+	if carried_core > 0:
+		return ""
+	return String(Companion.unseat(companion)[1])
+
+
 # The sockets SPIL-9 can fill now: a riding core holds one (the companion panel asks).
 func companion_seats() -> int:
 	return Companion.SOCKETS - carried_core
@@ -510,7 +518,10 @@ func companion_whole() -> Dictionary:
 	return Companion.reseat(companion, core_seat)
 
 
-func _end_ride() -> void:
+# Ends a ride: the piece goes back in its socket and SPIL-9 has both sockets again. Flow calls it
+# when the run ends (won, or the ball's final death), so the title and pilot select never see a
+# ride from a run that is over.
+func end_ride() -> void:
 	companion = companion_whole()
 	core_seat = ""
 	carried_core = 0
@@ -883,7 +894,7 @@ func enter_stage(index: int) -> void:
 	# re-enters the same stage with the arrived core from the entrance doc, so it is kept.
 	if carried_core > 0:
 		arrived_core = carried_core
-		_end_ride()
+		end_ride()
 	elif index != stage:
 		arrived_core = 0
 	stage = index
@@ -982,7 +993,7 @@ func restore() -> void:
 	bonus_cores = _snapshot["bonus_cores"]
 	# A retry rewinds a stow made after the checkpoint: the core returns and the piece reseats.
 	if carried_core > int(_snapshot.get("carried_core", 0)):
-		_end_ride()
+		end_ride()
 	carried_core = int(_snapshot.get("carried_core", 0))
 	core_seat = String(_snapshot.get("core_seat", ""))
 	parts.assign(_snapshot["parts"])
