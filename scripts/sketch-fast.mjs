@@ -513,8 +513,14 @@ export function defaultWidth(cpus = os.cpus().length, load = os.loadavg()[0]) {
 // joins a batch only when it is a plain SceneTree script that no marker sends to its own process:
 // it times itself, warms or measures a first load, starts processes or sets the environment.
 const BATCH_SOLO = /get_ticks_|OS\.set_environment|ProjectSettings\.set|OS\.(execute|create_process|kill)|\b(warm|hitch|cold)\b|change_scene/;
+// Only short tests batch: compiling is about 7 s of a test, so a test past BATCH_TEST_MAX_MS gains
+// little, and a long batch holds its lane while the others sit idle at the end (a first try that
+// batched long tests took 222 and 231 s against 174 s one Godot each). The game also counts
+// frames for the whole process, so a long test that times cards by frame can read differently
+// after others; alone, it reads as it always has.
 export const BATCH_MAX_TESTS = 8;
-export const BATCH_MAX_MS = 120_000;
+export const BATCH_MAX_MS = 60_000;
+export const BATCH_TEST_MAX_MS = 15_000;
 
 export function batchable(source) {
   return /^extends SceneTree\r?$/m.test(source.split("\n", 1)[0]) && !isSolo(source) && !BATCH_SOLO.test(source);
@@ -975,7 +981,7 @@ async function main() {
   // A red in a warm batch is rerun alone before anything else sees it, and the alone run is the
   // verdict: a batch can save time but never adds a red of its own. Each such rerun is listed.
   receipt.batch = { on: options.batch, batches: 0, tests: 0, reruns: [] };
-  const canBatch = (row) => options.batch && !row.alone && batchable(sourceOf(sketchDir, row.test));
+  const canBatch = (row) => options.batch && !row.alone && row.ms <= BATCH_TEST_MAX_MS && batchable(sourceOf(sketchDir, row.test));
   async function runBatched(rows) {
     const tests = rows.map((row) => row.test);
     const timeoutMs = rows.reduce((sum, row) => sum + testTimeoutMs(sourceOf(sketchDir, row.test)), 0);
@@ -988,6 +994,7 @@ async function main() {
         await handle(run);
         continue;
       }
+      keepRed("batch")(run);
       log(`  ${run.test} red in a warm batch (${run.reason}); rerunning it alone`);
       const alone = await godot(sketchDir, run.test, testTimeoutMs(sourceOf(sketchDir, run.test)));
       receipt.batch.reruns.push({ test: run.test, batch_reason: run.reason, alone_ok: alone.ok });
