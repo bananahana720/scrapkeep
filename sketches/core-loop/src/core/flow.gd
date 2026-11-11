@@ -118,6 +118,8 @@ var _home_boss: Node = null
 var _world := 0
 var _launched := false
 var _flight := 0.0
+# The launch take (launch_take.gd) rides this launch: it closes during the flight and cuts to the next place under it.
+var _seam_take := false
 var _last_percent := -1
 
 # Run saves (RS3): game hands flow a RunStore in play. Every zone entrance is written to it,
@@ -993,7 +995,7 @@ func physics_step(delta: float) -> void:
 		LAUNCH:
 			if _launched:
 				_flight += delta
-				if _flight >= LAUNCH_FLIGHT:
+				if _flight >= LAUNCH_FLIGHT and not _seam_take:
 					_finish_stage()
 		BOSS:
 			# The arena is the boss module's geometry, not the world's terrain.
@@ -1162,6 +1164,32 @@ func _on_launched(_velocity: Vector3) -> void:
 		_set_state(LAUNCH)
 		_launched = true
 		_flight = 0.0
+		_seam_take = _play_seam_take()
+
+
+# A played game's stage launch runs under the comic swipe: the panel closes over the end of the flight, the cut to the next
+# place waits for the flight's end behind the full cover, and the reveal opens once its ground is drawn. Bots, tests and
+# headless runs cut at once as before. Returns true when the take plays.
+func _play_seam_take() -> bool:
+	var root = ctx.root
+	if root == null or not root.has_method("play_launch_take") or ctx.stages.is_run_last(ctx.run.stage):
+		return false
+	return root.play_launch_take(_cut_under_cover, _flight_over, _next_drawn, LAUNCH_FLIGHT)
+
+
+func _flight_over() -> bool:
+	return _flight >= LAUNCH_FLIGHT or not (state == LAUNCH and _launched)
+
+
+# A run that ended or restarted in the flight leaves the cover with nothing to cut to.
+func _cut_under_cover() -> void:
+	_seam_take = false
+	if state == LAUNCH and _launched:
+		_finish_stage()
+
+
+func _next_drawn() -> bool:
+	return not in_play() or ctx.terrain.is_ready(ctx.run.stage)
 
 
 # Breaking the Warden opens the gates wherever the ball is: the stage's MUST is done
