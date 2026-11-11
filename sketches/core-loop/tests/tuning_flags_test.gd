@@ -82,7 +82,7 @@ func _initialize() -> void:
 	var sit := Tuning.new()
 	sit.apply_args(PackedStringArray(["--profile=sitting", "--called-shot=off"]))
 	var sit_on: bool = sit.sitting() and sit.option("heat") == "on" and sit.option("overtime") == "on" \
-		and sit.option("marked_hull") == "on" and sit.option("called_shot") == "off" and sit.option("moss_scale") == "off"
+		and sit.option("marked_hull") == "on" and sit.option("carry_core") == "on" and sit.option("called_shot") == "off" and sit.option("moss_scale") == "off"
 	var plain := Tuning.new()
 	plain.apply_args(PackedStringArray(["--heat=watch"]))
 	_check("sitting set", sit_on and plain.option("overtime") == "off" and plain.option("heat") == "watch",
