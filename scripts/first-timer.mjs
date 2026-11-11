@@ -4,10 +4,12 @@
 // judges each probe and exits 1 when a needed mechanic comes before its lesson.
 //
 //   node scripts/first-timer.mjs [--pilots=all|id,id] [--seed=1] [--stages=2] [--jobs=3]
-//     [--out=artifacts/local/first-timer] [--from=<dir of probe-*.json>] [--scrap-at=<seconds>]
+//     [--out=artifacts/local/first-timer] [--from=<dir of probe-*.json>] [--scrap-at=<seconds>] [--table=park]
 //
 // --scrap-at ends each run with a death that many seconds into stage 1, the only way the
 // skipper reaches the retry row; the rows after it read "not reached" in that pass.
+// --table picks the stage table; it defaults to park, the maps a launched game plays (a test-mode
+// game with no --table plays the legacy default table, game.gd _chosen_table).
 // --from re-judges saved probes without running Godot. Writes report.json and report.md to --out.
 
 import { spawn } from "node:child_process";
@@ -70,8 +72,8 @@ export const MECHANICS = [
     name: "Stagger Brindle and smash the opening",
     needed: "required",
     need: "boss_staggered",
-    teach: ["objective:break_guard", "objective:smash_core"],
-    note: "Carried over from the Warden fights; Brindle's own plate says only \"Break Brindle's Requisition\".",
+    teach: ["objective:break_guard", "objective:smash_core", "objective:shoot_magnets", "objective:break_brindle"],
+    note: "On the park table Brindle's plate names each phase's loop from the arena's first frame (phase 1: \"Shoot magnets, then cockpit\", objectives.gd STEPS); the legacy table carried it over from the Warden fights.",
   },
   {
     id: "retry",
@@ -239,7 +241,7 @@ export function markdown(result, probes) {
 }
 
 export function parseArgs(argv) {
-  const args = { pilots: "all", seed: 1, stages: 2, jobs: 3, out: path.join(root, "artifacts", "local", "first-timer"), from: null, "scrap-at": null };
+  const args = { pilots: "all", seed: 1, stages: 2, jobs: 3, out: path.join(root, "artifacts", "local", "first-timer"), from: null, "scrap-at": null, table: "park" };
   for (const arg of argv) {
     const match = /^--([a-z-]+)=(.*)$/.exec(arg);
     if (!match || !(match[1] in args)) throw new Error(`first-timer: unknown argument ${arg}`);
@@ -254,7 +256,7 @@ export function parseArgs(argv) {
 function probe(pilot, args) {
   const out = path.join(args.out, `probe-${pilot}-${args.seed}.json`);
   const argv = ["--headless", "--fixed-fps", "90", "--path", sketch, "--script", "res://tools/first_timer.gd", "--",
-    `--out=${out}`, `--seed=${args.seed}`, `--pilot=${pilot}`, `--stages=${args.stages}`];
+    `--out=${out}`, `--seed=${args.seed}`, `--pilot=${pilot}`, `--stages=${args.stages}`, `--table=${args.table}`];
   if (args["scrap-at"] !== null) argv.push(`--scrap-at=${args["scrap-at"]}`);
   return new Promise((resolve, reject) => {
     const child = spawn(binary, argv, { stdio: ["ignore", "pipe", "pipe"] });
