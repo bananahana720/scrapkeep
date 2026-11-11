@@ -89,6 +89,12 @@ func set_alert(on: bool) -> void:
 	queue_redraw()
 
 
+# A refused input: the field reads Taken on the alert edge until set_alert(false) or a new text.
+func refuse() -> void:
+	text = "Taken"
+	set_alert(true)
+
+
 func _process(delta: float) -> void:
 	_dots += delta
 	queue_redraw()

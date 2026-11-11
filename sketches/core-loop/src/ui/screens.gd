@@ -50,7 +50,7 @@ const LEVEL_TRIES := 6
 # The actions' gap, between buttons and between rows. A row that would pass the narrowest
 # supported width (int_screen_layout_test's 1280) less SIDE each way wraps onto a second
 # centred row; no button is dropped or shrunk.
-const ACTION_GAP := 18
+const ACTION_GAP := UiTokens.GAP_M
 const NARROW_W := 1280.0
 const MENU_STATES := ["title", "class_select", "dead", "victory", "summary"]
 # The screens a run ends on.
@@ -86,7 +86,7 @@ const COMIC_MIN_HEIGHT := 240.0
 const TIP_FONT := UiTokens.BODY
 const TIP_HEAD_FONT := UiTokens.BODY
 const TIP_WIDTH := 300.0
-const TIP_GAP := 28
+const TIP_GAP := UiTokens.GAP_XL
 const TIP_SERIAL := 33
 # The summary's input latch (game.summary_latched) shuts every key while an input held at its opening is
 # still down. The cue names that input once the latch has held LATCH_CUE_AFTER seconds, or at once when a
@@ -184,7 +184,7 @@ func setup(game_ref) -> void:
 	_body.custom_minimum_size = Vector2(BODY_WIDTH, 0.0)
 	_body.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	_content.add_child(_body)
-	_stats = _row(30)
+	_stats = _row(UiTokens.GAP_XL)
 	_content.add_child(_stats)
 	_comic_row = _row(TIP_GAP)
 	_content.add_child(_comic_row)
@@ -1454,7 +1454,7 @@ func _summary_stats() -> void:
 			head.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 			head.add_theme_color_override("font_color", Palette.AMBER)
 			group.add_child(head)
-		var cells := _row(30)
+		var cells := _row(UiTokens.GAP_XL)
 		for chip in block[1]:
 			cells.add_child(_stat_cell(chip))
 		group.add_child(cells)

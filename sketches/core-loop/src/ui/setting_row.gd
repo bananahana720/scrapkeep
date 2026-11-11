@@ -70,7 +70,7 @@ func _plates() -> void:
 	add_theme_stylebox_override("normal", plate(UiTokens.LINE, 2, left))
 	add_theme_stylebox_override("hover", plate(Palette.SAND, 2, left))
 	add_theme_stylebox_override("pressed", plate(Palette.AMBER, 3, left))
-	add_theme_stylebox_override("focus", plate(Palette.SAND, 4, left, false))
+	add_theme_stylebox_override("focus", UiTokens.focus_ring(left))
 	add_theme_stylebox_override("disabled", plate(UiTokens.disabled(UiTokens.LINE), 2, left))
 
 
@@ -115,7 +115,7 @@ func _draw() -> void:
 			draw_arc(centre, PIP_R - 1.5, 0.0, TAU, 24, ink, 3.0)
 		return
 	var font := UiFonts.bold()
-	var baseline := size.y * 0.5 + (font.get_ascent(22) - font.get_descent(22)) * 0.5
+	var baseline := size.y * 0.5 + (font.get_ascent(UiTokens.LABEL) - font.get_descent(UiTokens.LABEL)) * 0.5
 	draw_string(font, Vector2(edge - UiFonts.width(value, UiTokens.LABEL), baseline), value, HORIZONTAL_ALIGNMENT_LEFT, -1, UiTokens.LABEL, ink)
 
 

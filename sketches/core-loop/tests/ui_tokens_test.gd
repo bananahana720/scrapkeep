@@ -5,7 +5,8 @@ const T := preload("res://tests/support/t.gd")
 
 # The UI's tokens (src/ui/ui_tokens.gd): one spacing scale, five type sizes and five colours.
 #   - the project theme file matches the tokens it is written from (tools/ui_theme_build.gd);
-#   - every font size and container gap a UI script sets in src/ui names a token or a step of the scale;
+#   - every literal font size and container gap a UI script writes in src/ui is a step of the scale
+#     (a size computed at run time is not read here);
 #   - no UI script draws a gradient;
 #   - the plate edge holds 3:1 on the plate and every word colour holds 4.5:1 (WCAG 2.2 AA, pass 4);
 #   - planted bad cases (a literal 13 px, a gap of 10, a Gradient) are caught by the same scans.

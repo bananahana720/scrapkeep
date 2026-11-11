@@ -72,7 +72,7 @@ func _init() -> void:
 	_labels = Node3D.new()
 	_pivot.add_child(_labels)
 	_list = VBoxContainer.new()
-	_list.add_theme_constant_override("separation", 4)
+	_list.add_theme_constant_override("separation", 0)
 	box.add_child(_list)
 
 

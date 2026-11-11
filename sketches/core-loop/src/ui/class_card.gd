@@ -53,7 +53,6 @@ const CHIP_ICON := 24.0
 const CHIP_CAP := 14.0
 const TRADEOFF_H := 42.0
 const WORD_SIZE := UiTokens.CAPTION
-const WORD_MIN := 9
 const SHAKE := 0.25
 const LOCK_DIM := 0.4
 const GREY := """shader_type canvas_item;
@@ -590,26 +589,13 @@ func _cell(record: Dictionary, color: Color, width: float, cap_scale := 1.0) -> 
 	var words: String = record["words"]
 	var gap := words.find(" ")
 	var label := _text(words if gap < 0 else words.left(gap) + "\n" + words.substr(gap + 1), WORD_SIZE, Palette.SAND)
-	# A word wider than its cell steps down to WORD_MIN, then clips at two lines, so a narrow
-	# cell cannot push the key row below the card's floor.
-	var cell_w := maxf(width, Keycap.size_of(record["key"], _cap_height(record["key"]) * cap_scale).x)
-	var word_size := WORD_SIZE
-	while word_size > WORD_MIN and _widest_word(words, word_size) > cell_w:
-		word_size -= 1
-	label.add_theme_font_size_override("font_size", word_size)
-	label.custom_minimum_size.y = UiFonts.bold().get_height(word_size) * 2.0
+	# The words hold the type scale's smallest step; a word wider than its cell wraps, clipped at two lines.
+	label.custom_minimum_size.y = UiFonts.bold().get_height(WORD_SIZE) * 2.0
 	label.max_lines_visible = 2
 	cell.add_child(label)
 	_details.append(label)
 	_cells.append({"key": record["key"], "icon": record["icon"], "words": words})
 	return cell
-
-
-func _widest_word(words: String, font_size: int) -> float:
-	var widest := 0.0
-	for word in words.split(" "):
-		widest = maxf(widest, UiFonts.bold().get_string_size(word, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x)
-	return widest
 
 
 func _text(value: String, font_size: int, color: Color) -> Label:

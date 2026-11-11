@@ -22,7 +22,7 @@ const Keycap := preload("res://src/ui/keycap.gd")
 # Hit-stop and Find cards). Feel is the one owner of those rows, so the title reaches the volume the
 # pause menu once held alone; Back sits under every page. A key cap waits for the next key or mouse
 # button, a pad cap for the next pad button (and a trigger for fire and harpoon); Esc or B
-# cancels; a press another verb already holds is refused with "Taken". Frame smoothing and Wide picture
+# cancels; a press another action already holds is refused with "Taken". Frame smoothing and Wide picture
 # show their one-line helper (SettingsStore.HELPERS) under the row while they have the focus. One column:
 # every row's label sits above its field (SettingRow.stack, VolumeRow.stack), a verb's key and pad caps
 # share one field under its name, and a page taller than PAGE_H scrolls down only, following the focus.
@@ -40,6 +40,9 @@ signal back_requested
 const VERBS := ["jump", "fire", "harpoon", "haul", "boost", "select_1", "select_2", "select_3", "ultimate", "interact"]
 const SELECT_ROW := "select_"
 const FIXED := ["roll", "look"]
+# The in-run keys with no row here, by the name the player meets them under.
+const EXTRA_WORDS := {"cl_retry": "Retry", "cl_pause": "Pause", "cl_radio_next": "Next track",
+	"cl_radio_prev": "Last track", "cl_radio_skip": "Skip track", "cl_radio_pin": "Keep track"}
 const PAGES := ["display", "controls", "look", "feel"]
 const PAGE_WORDS := {"display": "Display", "controls": "Controls", "look": "Look", "feel": "Feel"}
 # The Feel rows: a mixer bus or a comfort level each, stepped in tenths, then the Find cards toggle.
@@ -73,7 +76,6 @@ const WIDTH := 500.0
 const PAGE_H := 640.0
 # A key cap or a pad cap on the Controls tab, beside the verb's name.
 const CAP_W := 150.0
-const WORD_BUDGET := 70
 # Mouse buttons a press may bind: left, right, middle and the two side buttons. The wheel
 # is not a button press a player means.
 const MOUSE_OK := [MOUSE_BUTTON_LEFT, MOUSE_BUTTON_RIGHT, MOUSE_BUTTON_MIDDLE, MOUSE_BUTTON_XBUTTON1, MOUSE_BUTTON_XBUTTON2]
@@ -88,6 +90,7 @@ var rows := {}
 var _helper: Label
 # The line under a field that waits for a press or refused one.
 var _notice: Label
+var _scrolls := {}
 
 var _game
 var _back_key := "key_esc"
@@ -132,8 +135,15 @@ func setup(game_ref, back_key := "key_esc") -> void:
 		scroll.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 		scroll.custom_minimum_size.x = WIDTH + UiTokens.GAP_L
 		scroll.mouse_filter = Control.MOUSE_FILTER_PASS
-		scroll.add_child(box)
+		# The inset keeps a focused field's ring, drawn outside its plate, inside the scroll's clip.
+		var inset := MarginContainer.new()
+		for side in ["left", "right", "top", "bottom"]:
+			inset.add_theme_constant_override("margin_" + side, UiTokens.GAP_S)
+		inset.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		inset.add_child(box)
+		scroll.add_child(inset)
 		add_child(scroll)
+		_scrolls[PAGES[i]] = scroll
 		_boxes[PAGES[i]] = box
 		_page_ids[PAGES[i]] = []
 	_build_display()
@@ -357,7 +367,7 @@ func show_page(index: int) -> void:
 	for i in PAGES.size():
 		var id: String = PAGES[i]
 		_boxes[id].visible = i == _page_index
-		_boxes[id].get_parent().visible = i == _page_index
+		_scrolls[id].visible = i == _page_index
 		var tab: Button = _tabs[id]
 		var tint := Palette.AMBER if i == _page_index else Palette.SAND
 		tab.add_theme_color_override("font_color", tint)
@@ -375,10 +385,10 @@ func _hold_height() -> void:
 		var box: VBoxContainer = _boxes[id]
 		var shown := box.visible
 		box.visible = true
-		tallest = maxf(tallest, box.get_combined_minimum_size().y)
+		tallest = maxf(tallest, box.get_combined_minimum_size().y + UiTokens.GAP_S * 2)
 		box.visible = shown
 	for id in PAGES:
-		_boxes[id].get_parent().custom_minimum_size.y = minf(tallest, PAGE_H)
+		_scrolls[id].custom_minimum_size.y = minf(tallest, PAGE_H)
 
 
 func focused_id() -> String:
@@ -706,11 +716,19 @@ func _place_under(line: Label, id: String) -> void:
 		return
 	while node.get_parent() != box:
 		node = node.get_parent()
-	if line.get_parent() != box:
-		if line.get_parent() != null:
-			line.get_parent().remove_child(line)
-		box.add_child(line)
-	box.move_child(line, mini(node.get_index() + 1, box.get_child_count() - 1))
+	if line.get_parent() != null:
+		line.get_parent().remove_child(line)
+	box.add_child(line)
+	box.move_child(line, node.get_index() + 1)
+	_scroll_to.call_deferred(line, box)
+
+
+# A line placed below the fold scrolls into view, as the focus would.
+func _scroll_to(line: Control, box: Node) -> void:
+	if line.is_inside_tree() and line.visible:
+		for page in PAGES:
+			if _boxes[page] == box:
+				_scrolls[page].ensure_control_visible(line)
 
 
 # The verb or the pause action that already holds a press, in the words the page uses for it.
@@ -723,11 +741,20 @@ func _holder_words(row: String, event: InputEvent) -> String:
 			if (event is InputEventKey and held is InputEventKey and held.physical_keycode == event.physical_keycode) \
 					or (event is InputEventMouseButton and held is InputEventMouseButton and held.button_index == event.button_index) \
 					or (event is InputEventJoypadButton and held is InputEventJoypadButton and held.button_index == event.button_index):
-				for verb in VERBS:
-					if action_of(verb) == action:
-						return _caption(verb)
-				return String(action).trim_prefix("cl_").capitalize()
+				return _action_words(action)
 	return ""
+
+
+# The name a player knows an action by: a row's name on this page (Roll for any of its four
+# directions), or the in-run key it answers (Pause, Retry, a radio key).
+func _action_words(action: String) -> String:
+	for verb in VERBS:
+		if action_of(verb) == action:
+			return _caption(verb)
+	var verb := Bindings.verb_of_action(action)
+	if verb != "":
+		return verb.capitalize()
+	return EXTRA_WORDS.get(action, String(action).trim_prefix("cl_").capitalize())
 
 
 # Takes one input event from the host. True when the page used it; every key and pad
@@ -846,14 +873,13 @@ func _commit(id: String, event: InputEvent) -> void:
 	var verb := verb_of(id)
 	if _held_elsewhere(row_of(id), event):
 		_taken = id
-		rows[id].text = "Taken"
-		rows[id].set_alert(true)
+		rows[id].refuse()
 		var holder := _holder_words(row_of(id), event)
-		var kind := "button" if id.begins_with("pad_") else "key"
-		var fix := "Press %s again and pick another %s" % [_caption(id), kind]
+		var kind := "key" if event is InputEventKey else "button"
+		var line := "%s uses that %s. Press the cap again for another" % [holder, kind]
 		if VERBS.any(func(other): return _caption(other) == holder):
-			fix += ", or give %s a new one first" % holder
-		_say(id, "%s already uses that %s. %s." % [holder, kind, fix], true)
+			line += ", or move %s first" % holder
+		_say(id, line + ".", true)
 		return
 	var action := action_of(row_of(id))
 	if event is InputEventJoypadMotion:

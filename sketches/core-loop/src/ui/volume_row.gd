@@ -18,7 +18,7 @@ signal changed(level: float)
 const STEPS := 10
 const SEG_W := 12.0
 const SEG_GAP := 4.0
-const ARROW := 44.0
+const ARROW := 56.0
 const PAD := 14.0
 const GLYPH := 26.0
 const HEIGHT := UiTokens.TARGET
@@ -61,6 +61,7 @@ func show_level(value: float) -> void:
 	if is_equal_approx(value, level):
 		return
 	level = value
+	accessibility_description = "%d of %d" % [steps_filled(), STEPS]
 	queue_redraw()
 
 
