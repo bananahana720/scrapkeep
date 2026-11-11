@@ -204,14 +204,14 @@ func _check_footing(stage: int, cache, map, spot: Vector2, y: float) -> void:
 
 func _check_relic(stage: int, cache) -> void:
 	var world: int = _game.ctx.stages.world_of(stage)
-	var pool := Relics.eligible(_game.ctx.run.class_id(), _game.ctx.run.relics, _game.player.tree, world)
+	var pool := Relics.eligible(_game.ctx.run.class_id(), Relics.held(_game.ctx.run.parts), _game.player.tree, world)
 	_report("stage %d pool is world %d's" % [stage, world], pool.size() == 2 and pool.all(func(i): return int(Relics.row(i)["world"]) == world),
 		"pool %s" % [pool])
 	var id: String = cache.id
 	var picks := []
 	for k in DRAWS:
 		cache.id = "%s_%d" % [id, k]
-		picks.append(cache._relic_offer())
+		picks.append(Relics.relic_of(cache._relic_offer()))
 	cache.id = id
 	var ok: bool = picks.all(func(r): return Relics.has(r) and int(Relics.row(r)["world"]) == world and Relics.fits(r, PILOT))
 	_report("stage %d cache relic is world %d's" % [stage, world], ok, "%d draws %s" % [DRAWS, picks])

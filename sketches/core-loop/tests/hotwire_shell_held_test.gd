@@ -77,26 +77,20 @@ func _run() -> void:
 	build.shell_air_changed.connect(func(factor: float, rose: bool): _cues.append([snappedf(factor, 0.0001), rose]))
 	build.recompute()
 
-	# 1. Not held: the shipped baseline, through the offer and Recycle.
+	# 1. Not held: the shipped baseline.
 	_t.check("not held: the baseline every band was fit on", build.shell_fitted() and not build.shell_held()
 		and run.scrap_per_hp == Build.SHELL_SCRAP_PER_HP and is_equal_approx(_ratio(), Build.SHELL_AIR_FACTOR),
 		"cost %.1f, air x%.4f" % [run.scrap_per_hp, _ratio()])
-	var offered: Array = []
-	build.hotwire_offered.connect(func(part_id: String, cogs: int): offered.append([part_id, cogs]))
-	_game.events.beacon_unsealed.emit(1)
+	# 2. The Warden break puts the shell up as a rare gate part: no screen, no cogs, and nothing
+	# changes until the gate is taken.
 	var cogs_before: int = run.cogs
-	var paid: int = build.hotwire_recycle()
-	_t.check("Recycle pays its cogs and leaves the baseline", offered == [[SHELL, Parts.hotwire_recycle(SHELL)]] and paid > 0
-		and run.cogs == cogs_before + paid and not build.shell_held() and run.scrap_per_hp == Build.SHELL_SCRAP_PER_HP
-		and is_equal_approx(_ratio(), Build.SHELL_AIR_FACTOR) and build.hotwire_recycle() == 0,
-		"offered %s, paid %d, cost %.1f, air x%.4f" % [offered, paid, run.scrap_per_hp, _ratio()])
-
-	# 2. Fit: a fresh run's offer, fitted, then the gate taken.
-	build._hotwire_spent = false
 	_game.events.beacon_unsealed.emit(1)
-	var fitted: bool = build.hotwire_fit()
-	_t.check("Fit alone changes nothing until the gate is taken", fitted and not SHELL in run.parts and not build.shell_held()
-		and run.scrap_per_hp == Build.SHELL_SCRAP_PER_HP, "fit %s, parts %s, cost %.1f" % [fitted, run.parts, run.scrap_per_hp])
+	_t.check("the break puts the shell at the gates and changes nothing yet", build.hotwire_pending()["part_id"] == SHELL
+		and build.hotwire_pending()["state"] == "fit" and run.cogs == cogs_before
+		and not SHELL in run.parts and not build.shell_held() and run.scrap_per_hp == Build.SHELL_SCRAP_PER_HP
+		and is_equal_approx(_ratio(), Build.SHELL_AIR_FACTOR),
+		"pending %s, cogs %d to %d, parts %s, cost %.1f, air x%.4f" % [build.hotwire_pending(), cogs_before, run.cogs, run.parts,
+			run.scrap_per_hp, _ratio()])
 	run.grant_start_mass(200.0 - run.mass)
 	var before := {"mass": run.mass, "hp": run.hp, "max_hp": run.max_hp, "others": _others()}
 	_cues.clear()
@@ -125,9 +119,8 @@ func _run() -> void:
 	_t.check("a held shell is never offered again", Parts.hotwire_offer(true, run.parts, 1).is_empty(), "offer %s" % [Parts.hotwire_offer(true, run.parts, 1)])
 
 	# 3. The card says those two numbers.
-	var copy: Dictionary = load("res://src/ui/hotwire_choice.gd").resolve(SHELL)
-	_t.check("the card's words are the fitted numbers", "2x" in copy["upside"]["words"] and "25%" in copy["downside"]["words"],
-		"upside '%s', downside '%s'" % [copy["upside"]["words"], copy["downside"]["words"]])
+	var line := String(Parts.def(SHELL).verb)
+	_t.check("the card's words are the fitted numbers", "Double" in line and "25%" in line, "gate card line '%s'" % line)
 
 	# 4. An inversion lifts the held shell and drops back to its resting factor.
 	_game.tuning.set_option("world_one_builds", "on")

@@ -1,5 +1,7 @@
 extends SceneTree
 
+const Parts := preload("res://src/build/parts.gd")
+
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const Companion := preload("res://src/core/companion.gd")
@@ -86,41 +88,19 @@ func _scanner_control() -> void:
 	_t.check("the scanner passes clean text", _hits(["Riveted Shell", "Recycle +4", "One of each kind."] as Array[String], HOTWIRE_BANNED + PANEL_BANNED).is_empty(), "")
 
 
+# Since the pass D fold the hot-wired part is a rare gate part: its card line is the row's verb,
+# and the Fit / Recycle screen (with its stamp and Recycle price) is gone.
 func _hotwire() -> void:
-	var screen = _game.hud.hotwire_screen
 	_game.flow.press_start()
 	_game.flow.choose_class(0)
 	await _frames(30)
 	Push.key(root, KEY_1)
 	await _frames(2)
-	_t.check("no offer, no stamp", not screen.stamp_shown(), "")
-	_game.build._on_run_started("")
-	_game.events.beacon_unsealed.emit(1)
-	await _frames(4)
-	_t.check("the offer is open", screen.is_open(), "")
-	var texts := _texts(screen)
-	_t.check("hot-wire offer draws none of the old labels", _hits(texts, HOTWIRE_BANNED).is_empty(), " | ".join(texts))
-	_t.check("the stamp stands on the hot-wire offer", screen.stamp_shown() and screen.find_child("HotwireStamp", true, false) != null, "")
-	var recycle: Button = screen.choice_button("recycle")
-	_t.check("Recycle is the verb, the number and the cog icon", recycle.text.begins_with("Recycle +") and recycle.icon != null, recycle.text)
-	# The cog is the wallet chip's own mark, an icon with art behind it, not a fallback glyph.
-	_t.check("the Recycle cog is the wallet chip's mark, drawn from its art file", recycle.icon == Icons.texture(_game.hud.CogChip.ICON)
-		and FileAccess.file_exists("res://assets/icons/%s.svg" % _game.hud.CogChip.ICON), _game.hud.CogChip.ICON)
-	_t.check("the price has no colon and no word cogs", not recycle.text.contains(":") and not recycle.text.to_lower().contains("cogs"), recycle.text)
-	# An ordinary part offer carries no stamp (the planted negative of the mark).
-	var ordinary := RewardView.new()
-	root.add_child(ordinary)
-	_t.check("an ordinary reward offer wears no hot-wire stamp", ordinary.find_child("HotwireStamp", true, false) == null, "")
-	ordinary.free()
-	Push.key(root, KEY_ESCAPE)
-	await _frames(3)
-	_t.check("closed, the stamp goes", not screen.stamp_shown(), "")
-	# Settle the offer so the companion half runs on a quiet game.
-	_game.events.flow_changed.emit("gates")
-	await _frames(3)
-	if screen.is_open():
-		screen.choose("fit")
-	await _frames(3)
+	var lines: Array[String] = []
+	for id in ["riveted_shell", "spark_tread"]:
+		lines.append(Parts.def(id).display_name)
+		lines.append(Parts.def(id).verb)
+	_t.check("the hot-wired gate cards draw none of the old labels", _hits(lines, HOTWIRE_BANNED).is_empty(), " | ".join(lines))
 
 
 func _companion() -> void:

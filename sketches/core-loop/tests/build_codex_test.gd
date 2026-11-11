@@ -2,11 +2,12 @@ extends SceneTree
 
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
+const Synergies := preload("res://src/build/synergies.gd")
 
 # Build against the real codex and cores (DEMO-SPEC, CONTRACTS):
-#   - the eight build hint cards and the four callback cards are declared by the first
+#   - one build card per maker trick and the four callback cards are declared by the first
 #     tick of play;
-#   - a named synergy's first firing publishes synergy_discovered once (through the
+#   - a maker trick's first firing publishes synergy_discovered once (through the
 #     codex), with the treasure burst; activating it publishes nothing, and a retry that
 #     takes it back lets the next firing publish again;
 #   - an element result publishes element_resolved, and its first firing publishes
@@ -105,9 +106,12 @@ func _next() -> void:
 func _check_declared() -> void:
 	var cards: Array = _game.codex.entries("build")
 	var hints: Array = cards.map(func(c): return c["hint"])
-	# Eight synergy cards and v2 W4's four callback cards (Strike, Spare, Turkey, Too heavy for you).
-	_report("build cards declared", cards.size() == 12 and _build.codex_declarations().size() == 12 and "Chain Arc + something that splits" in hints,
-		"%d build entries in the codex after the first tick of play, e.g. %s" % [cards.size(), hints.slice(0, 2)])
+	# One card per maker trick and v2 W4's four callback cards (Strike, Spare, Turkey, Too heavy for you).
+	var want := Synergies.ROWS.keys().filter(func(id): return Synergies.in_play(id)).size() + 4
+	var lattice: Array = cards.filter(func(c): return c["id"] == "storm_lattice")
+	_report("build cards declared", cards.size() == want and _build.codex_declarations().size() == want
+			and not lattice.is_empty() and String(lattice[0]["hint"]).begins_with("Two ") and String(lattice[0]["hint"]).ends_with(" parts"),
+		"%d build entries in the codex after the first tick of play (want %d), e.g. %s" % [cards.size(), want, hints.slice(0, 2)])
 
 
 # Storm Lattice's effect resolves at a shot; the first one of an activation is the discovery.
@@ -120,7 +124,7 @@ func _check_discovery() -> void:
 	var run = _game.run
 	var scrap_before: int = run.scrap
 	run.add_part("cross_split", "test")
-	run.add_part("chain_arc", "test")
+	run.add_part("hairline_fracture", "test")
 	var facts_armed: Array = _facts.duplicate()
 	_fire_lattice()
 	var burst: int = run.scrap - scrap_before
@@ -128,7 +132,7 @@ func _check_discovery() -> void:
 	_game.flow.retry_stage()
 	var scrap_retry: int = run.scrap
 	run.add_part("cross_split", "test")
-	run.add_part("chain_arc", "test")
+	run.add_part("hairline_fracture", "test")
 	_fire_lattice()
 	var burst_again: int = run.scrap - scrap_retry
 	# The retry took the synergy back with its burst, so the codex lets it fire and pay
@@ -136,7 +140,7 @@ func _check_discovery() -> void:
 	_report("synergy discovered through the codex", facts_armed.is_empty() and facts_first.size() == 1 and facts_first[0][0] == "storm_lattice"
 			and facts_first[0][1] == "build" and burst == 20 * run.stage and _game.codex.known("storm_lattice")
 			and _facts.size() == 2 and burst_again == burst and "storm_lattice" in _game.codex.discovered_this_run(),
-		"Cross Split + Chain Arc published %s with a %d-scrap burst; after a retry and the same hand, %d fact(s) in total, a %d-scrap burst again, in the run's codex list %s"
+		"Cross Split + Hairline Fracture (two Redjaw parts) published %s with a %d-scrap burst; after a retry and the same hand, %d fact(s) in total, a %d-scrap burst again, in the run's codex list %s"
 			% [facts_first, burst, _facts.size(), burst_again, "storm_lattice" in _game.codex.discovered_this_run()])
 	_game.flow.retry_stage()
 
@@ -202,11 +206,12 @@ func _check_cores() -> void:
 func _check_gate_tier() -> void:
 	var run = _game.run
 	_game.events.flow_changed.emit("gates")
-	var high: Array = _offers.map(func(o): return o["rarity"])
+	# A racked active the gate stream also rolls rides its own rarity; the cores move the part picks.
+	var high: Array = _offers.filter(func(o): return not String(o["part_id"]).begins_with("active:")).map(func(o): return o["rarity"])
 	_build.gates.close()
 	_game.flow.retry_stage()
 	_game.events.flow_changed.emit("gates")
-	var low: Array = _offers.map(func(o): return o["rarity"])
+	var low: Array = _offers.filter(func(o): return not String(o["part_id"]).begins_with("active:")).map(func(o): return o["rarity"])
 	_build.gates.close()
 	# The cobalt floor (item ladder, wave 20) lifts one gate of a 0-core pair to rare; the other stays common.
 	_report("gate tier follows cores", high.all(func(r): return r in ["rare", "relic"])

@@ -91,9 +91,11 @@ func _card_up() -> bool:
 
 
 # A part nothing has found yet this run, so its vault or boss find is a crate and not a name at the ball.
+# Its maker is one not held yet, so it wakes no maker trick (whose banner would take the slot).
 func _fresh_part() -> String:
+	var makers: Dictionary = Parts.maker_counts(_game.run.parts)
 	for id in Parts.ids():
-		if not _used.has(id) and not _ceremony().seen(id) and not (_game.run.parts as Array).has(id):
+		if not _used.has(id) and not _ceremony().seen(id) and not (_game.run.parts as Array).has(id) and not makers.has(Parts.maker_of(id)):
 			_used[id] = true
 			return id
 	return ""

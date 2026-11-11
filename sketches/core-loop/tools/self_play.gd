@@ -429,9 +429,9 @@ func _answer_workshop() -> void:
 		workshop.choose(0)
 
 
-# Eyes mode: a screen that holds the game (the kit pick, the briefing's start pick, a hotwire
-# offer) stands for EYES_READ_S and is then answered with its first key; a pause menu the game
-# opened by itself is closed.
+# Eyes mode: a screen that holds the game (the kit pick, the briefing's start pick) stands for
+# EYES_READ_S and is then answered with its first key; a pause menu the game opened by itself is
+# closed.
 func _answer_held() -> void:
 	if not get_tree().paused or _menus:
 		_held_at = -1.0
@@ -444,7 +444,6 @@ func _answer_held() -> void:
 	_held_at = _now()
 	var workshop: Node = game.get_node_or_null("Workshop")
 	var menu: Node = game.get_node_or_null("PauseMenu")
-	var hotwire = game.hud.get("hotwire_screen") if game.hud != null else null
 	if menu != null and menu.is_open():
 		print("self-play: the game paused itself at %.2f s; closed with Esc" % _now())
 		_press(KEY_ESCAPE)
@@ -454,9 +453,6 @@ func _answer_held() -> void:
 	elif workshop != null and workshop.briefing():
 		print("self-play: start pick taken with 1 at %.2f s" % _now())
 		_press(KEY_1)
-	elif hotwire != null and hotwire.is_open():
-		print("self-play: hotwire offer fitted with E at %.2f s" % _now())
-		_press(KEY_E)
 
 
 # Print the verdict now, quit with its code once --self-play-min has passed.

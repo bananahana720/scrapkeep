@@ -15,18 +15,19 @@ const BOSS := ""
 
 const COUNT := 1
 
-# The named synergies this table keeps. Any other synergy and every unnamed tag rule is out.
-const SYNERGIES := ["wrecking_ball", "tesla_pylon", "pinwheel", "shrapnel_bloom", "lightning_rod"]
+# The maker tricks (synergies.gd) this table keeps: the five named synergies and the five
+# former three-part sets. Any other trick is out.
+const SYNERGIES := ["wrecking_ball", "tesla_pylon", "pinwheel", "shrapnel_bloom", "lightning_rod",
+	"ballast_rig", "shatter_crew", "live_wire", "hair_trigger", "storm_front"]
 
-# The twelve parts every source on this table offers, and the only ones. The five shown
-# parts of the kept synergies, one carrier of each hidden tag they need (kinetic, speed, mass;
-# arc comes from arc_coil, and the class mods carry it for the pylon pilot), the two class
-# mods, and three heavy hitters so the shelf has a rare tier. A synergy completes from this
-# list for every pilot (tests/slice_parts_test.gd). Generated recipes and milestone parts are out.
+# The twelve parts every source on this table offers, and the only ones: the two parts each of
+# the five named tricks' makers that its callout names (Fleet Surplus, Mind-glass, Highdraft,
+# Redjaw, Moss), so every named trick wakes from this list for every pilot, and two heavy
+# hitters so the shelf has a rare tier (tests/slice_parts_test.gd). Generated recipes and
+# milestone parts are out.
 const PARTS := [
-	"double_feed", "focus_lens", "spiral_wave", "cross_split", "arc_coil",
-	"hot_rivets", "loose_trigger", "rivet_plating",
-	"pylon_capacitor", "runner_overclock",
+	"double_feed", "hot_rivets", "focus_lens", "live_line", "loose_trigger", "long_barrel",
+	"cross_split", "pin_setter", "arc_coil", "drop_weight",
 	"sunforged_core", "gatling_heart",
 ]
 
