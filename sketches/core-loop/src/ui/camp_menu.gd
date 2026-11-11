@@ -1,6 +1,7 @@
 extends VBoxContainer
 
 const Secrets := preload("res://src/core/secrets.gd")
+const UiTokens := preload("res://src/ui/ui_tokens.gd")
 const Palette := preload("res://src/core/palette.gd")
 const Achievements := preload("res://src/core/achievements.gd")
 const Companion := preload("res://src/core/companion.gd")
@@ -43,7 +44,7 @@ var _walk_keys: Control
 func _init() -> void:
 	name = "CampMenu"
 	alignment = BoxContainer.ALIGNMENT_CENTER
-	add_theme_constant_override("separation", 22)
+	add_theme_constant_override("separation", 24)
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_lines = VBoxContainer.new()
 	_lines.alignment = BoxContainer.ALIGNMENT_CENTER
@@ -51,7 +52,7 @@ func _init() -> void:
 	add_child(_lines)
 	_buttons = HBoxContainer.new()
 	_buttons.alignment = BoxContainer.ALIGNMENT_CENTER
-	_buttons.add_theme_constant_override("separation", 18)
+	_buttons.add_theme_constant_override("separation", 16)
 	_buttons.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_buttons)
 	_buttons.add_child(ChoiceButton.new("launch", "key_space", "Launch"))
@@ -65,7 +66,7 @@ func _init() -> void:
 	_strip = HBoxContainer.new()
 	_strip.name = "WalkStrip"
 	_strip.alignment = BoxContainer.ALIGNMENT_CENTER
-	_strip.add_theme_constant_override("separation", 28)
+	_strip.add_theme_constant_override("separation", 24)
 	_strip.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_strip.visible = false
 	add_child(_strip)
@@ -201,7 +202,7 @@ func refresh(game) -> void:
 		var label := Label.new()
 		label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		label.add_theme_font_override("font", UiFonts.bold())
-		label.add_theme_font_size_override("font_size", 22)
+		label.add_theme_font_size_override("font_size", UiTokens.LABEL)
 		label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		var color: Color = Palette.AMBER
 		if i >= 1 and i <= pilots.size():

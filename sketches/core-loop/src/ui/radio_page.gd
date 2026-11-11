@@ -1,6 +1,7 @@
 extends VBoxContainer
 
 const Palette := preload("res://src/core/palette.gd")
+const UiTokens := preload("res://src/ui/ui_tokens.gd")
 const UiDraw := preload("res://src/ui/ui_draw.gd")
 const UiFonts := preload("res://src/ui/ui_fonts.gd")
 const ChoiceButton := preload("res://src/ui/choice_button.gd")
@@ -40,11 +41,11 @@ var _tape_buttons: Array[Button] = []
 func _init() -> void:
 	name = "RadioPage"
 	alignment = BoxContainer.ALIGNMENT_CENTER
-	add_theme_constant_override("separation", 14)
+	add_theme_constant_override("separation", 12)
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_tapes = HBoxContainer.new()
 	_tapes.alignment = BoxContainer.ALIGNMENT_CENTER
-	_tapes.add_theme_constant_override("separation", 10)
+	_tapes.add_theme_constant_override("separation", 8)
 	_tapes.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_tapes)
 	var body := HBoxContainer.new()
@@ -57,12 +58,12 @@ func _init() -> void:
 	_count = _crate.get_parent().get_parent().get_child(0)
 	_tape = _column(body)
 	_tape_name = _tape.get_parent().get_parent().get_child(0)
-	_note = UiDraw.label(19, Palette.SAND)
+	_note = UiDraw.label(UiTokens.BODY, Palette.SAND)
 	_note.custom_minimum_size = Vector2(0.0, 28.0)
 	add_child(_note)
 	var buttons := HBoxContainer.new()
 	buttons.alignment = BoxContainer.ALIGNMENT_CENTER
-	buttons.add_theme_constant_override("separation", 14)
+	buttons.add_theme_constant_override("separation", 12)
 	buttons.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(buttons)
 	new_button = ChoiceButton.new("new", "key_n", "New tape")
@@ -80,7 +81,7 @@ func _column(parent: Control) -> VBoxContainer:
 	column.add_theme_constant_override("separation", 8)
 	column.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	parent.add_child(column)
-	column.add_child(UiDraw.label(18, Palette.COPPER))
+	column.add_child(UiDraw.label(UiTokens.BODY, UiTokens.TEXT))
 	var scroll := ScrollContainer.new()
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	scroll.follow_focus = true
@@ -217,15 +218,15 @@ class TrackRow extends Button:
 		clip_text = true
 		text = "%s   %s" % [Radio.call_sign(station) if station != "" else "----", t.get("name", id)]
 		add_theme_font_override("font", UiFonts.bold())
-		add_theme_font_size_override("font_size", 17)
+		add_theme_font_size_override("font_size", UiTokens.BODY)
 		var edge: Color = Palette.BRASS if t.get("tier", "") == "legend" else Color(color, 0.7)
 		for state in ["normal", "hover", "pressed", "disabled"]:
 			var box := ChoiceButton.plate(edge.lightened(0.25) if state == "hover" else edge, 2, 14.0)
 			box.content_margin_top = 4.0
 			box.content_margin_bottom = 4.0
 			add_theme_stylebox_override(state, box)
-		add_theme_stylebox_override("focus", ChoiceButton.plate(Color.WHITE, 4, 14.0, false))
-		var words: Color = Color(Palette.SAND, 0.45) if taped else Palette.SAND
+		add_theme_stylebox_override("focus", ChoiceButton.plate(UiTokens.TEXT, 4, 14.0, false))
+		var words: Color = UiTokens.quiet() if taped else Palette.SAND
 		add_theme_color_override("font_color", words)
 		for key in ["font_hover_color", "font_pressed_color", "font_focus_color"]:
-			add_theme_color_override(key, Color.WHITE)
+			add_theme_color_override(key, UiTokens.TEXT)

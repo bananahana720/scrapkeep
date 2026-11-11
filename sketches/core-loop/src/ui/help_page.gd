@@ -1,6 +1,7 @@
 extends VBoxContainer
 
 const Palette := preload("res://src/core/palette.gd")
+const UiTokens := preload("res://src/ui/ui_tokens.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const FieldNotes := preload("res://src/ui/field_notes.gd")
 const Icons := preload("res://src/ui/icons.gd")
@@ -44,7 +45,7 @@ var _goal: HBoxContainer
 func _init() -> void:
 	name = "HelpPage"
 	alignment = BoxContainer.ALIGNMENT_CENTER
-	add_theme_constant_override("separation", 26)
+	add_theme_constant_override("separation", 24)
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_goal = _goal_row()
 	add_child(_goal)
@@ -140,7 +141,7 @@ func _mechanics_row(ids: Array) -> HBoxContainer:
 		# A picture the drawing already names (SPIL-9's sockets) has no caption slot.
 		var caption: Label = null
 		if MechanicsDiagram.CAPTIONS.has(id):
-			caption = _label(MechanicsDiagram.CAPTIONS[id], 16, Palette.SAND)
+			caption = _label(MechanicsDiagram.CAPTIONS[id], UiTokens.BODY, Palette.SAND)
 			caption.name = "Caption"
 			caption.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 			card.add_child(caption)
@@ -181,7 +182,7 @@ func _goal_row() -> HBoxContainer:
 		if i > 0:
 			row.add_child(_icon(Icons.shape("chevron"), Color(Palette.SAND, 0.6), 22.0))
 		row.add_child(_icon(Icons.texture(step["icon"]), Icons.tint(step["icon"], color), 36.0))
-		row.add_child(_label(step["words"], 28, color))
+		row.add_child(_label(step["words"], UiTokens.HEADING, color))
 	return row
 
 

@@ -1,6 +1,7 @@
 extends Control
 
 const EventKinds := preload("res://src/core/event_kinds.gd")
+const UiTokens := preload("res://src/ui/ui_tokens.gd")
 const Icons := preload("res://src/ui/icons.gd")
 const Parts := preload("res://src/build/parts.gd")
 const ScreenRegions := preload("res://src/ui/screen_regions.gd")
@@ -25,7 +26,7 @@ const SIZE := Vector2(176.0, 62.0)
 const RETICLE_CLEAR := 70.0
 const BESIDE := 34.0
 const GLYPH := 30.0
-const NAME_FONT := 15
+const NAME_FONT := UiTokens.CAPTION
 const USE_PREFIX := "why:"
 
 

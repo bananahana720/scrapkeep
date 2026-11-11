@@ -1,6 +1,7 @@
 extends VBoxContainer
 
 const Palette := preload("res://src/core/palette.gd")
+const UiTokens := preload("res://src/ui/ui_tokens.gd")
 const UiFonts := preload("res://src/ui/ui_fonts.gd")
 const ChoiceButton := preload("res://src/ui/choice_button.gd")
 const STATUS_TEXT := {"none": "", "unencountered": "Unencountered", "new": "New", "available": "Available"}
@@ -29,7 +30,7 @@ func _init() -> void:
 	detail = Label.new()
 	detail.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	detail.add_theme_font_override("font", UiFonts.bold())
-	detail.add_theme_font_size_override("font_size", 20)
+	detail.add_theme_font_size_override("font_size", UiTokens.BODY)
 	detail.add_theme_color_override("font_color", Palette.SAND)
 	add_child(detail)
 	back = ChoiceButton.new("back", "key_esc", "Back")
@@ -53,7 +54,7 @@ func refresh(codex, profile) -> void:
 		button.name = id
 		button.alignment = HORIZONTAL_ALIGNMENT_LEFT
 		button.add_theme_font_override("font", UiFonts.bold())
-		button.add_theme_font_size_override("font_size", 22)
+		button.add_theme_font_size_override("font_size", UiTokens.LABEL)
 		_list.add_child(button)
 		rows[id] = button
 		_read_row(id, entry)
@@ -78,4 +79,4 @@ func open_entry(id: String) -> void:
 func _read_row(id: String, entry: Dictionary) -> void:
 	var status: String = entry["status"]
 	rows[id].text = "%s  ·  %s" % [entry["name"], STATUS_TEXT[status]]
-	rows[id].add_theme_color_override("font_color", Palette.AMBER if status == "new" else Palette.SAND if entry["known"] else Palette.SLATE)
+	rows[id].add_theme_color_override("font_color", Palette.AMBER if status == "new" else Palette.SAND if entry["known"] else UiTokens.quiet())
