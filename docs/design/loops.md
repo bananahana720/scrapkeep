@@ -522,3 +522,27 @@ Each one is a call Andrew can overturn in one line.
 | 5   | Stamp It HIRED                           | Parked until after the alpha                                          |
 
 How this changes the prototype: the Heat "kill it if" line is read from the 24-seed bot pair and from Andrew's own play at the sitting, not from a separate five-minute session before it. The bot half of the kill line (time at blazing up 50% or more; at least one detonation a minute) is checked when the Heat PR lands.
+
+---
+
+## As built (prototypes on PR 763, 11 Nov 2026)
+
+All three are off by default, each behind its own launch flag, so a flag-off run plays the base game. Turn them on with `--heat=on`, `--overtime=on` and `--called-shot=on` (`--heat=watch` counts Heat without playing it).
+
+| Loop        | Where it lives                                                                         | Focused test                |
+| ----------- | -------------------------------------------------------------------------------------- | --------------------------- |
+| Heat        | `src/combat/redline.gd`, owned by the player; damage taken at `run_state.damage()`     | `tests/redline_test.gd`     |
+| Reservoir   | `src/world/overtime.gd`, owned by `stage_locks.gd`; pays through `build.overtime_paid` | `tests/overtime_test.gd`    |
+| Called Shot | `src/build/called_shot.gd`, owned by `build.gd`; settled at the gate roll              | `tests/called_shot_test.gd` |
+
+Where the build differs from the spec above, each as a one-line call Andrew can overturn:
+
+1. Heat is named Redline in code, because "heat" already names overdrive's rim.
+2. A cook-off at rest still blasts, at a floor of cruise speed, so its ring is never empty.
+3. Reservoir runs on the dam yard only (the only lock row with an `overtime` block). Its bell, pot and sluice wheel are code-built shapes with no collider: a ram is a touch at the yard's ram speed. Art and colliders come after the sitting.
+4. Overtime waves are the yard's last wave plus one plated brute; the pot pays a panel at one ring, a rare part more at two, and a rare part and a core more at three.
+5. The sluice sheet runs downhill on the apron (+z) and carries the ball toward 1.4 x cruise; the arc jump strikes each soaked machine within 8 m once, at 60% of the hit.
+6. The call input is holding haul (Ctrl, pad X) with no line out, looking at the Warden on the ground plane; holding haul also brakes, which is the price of calling.
+7. A missed call burns one of the stage's bonus cores; with none held it costs nothing more. A met call lifts both gate cards off the common rung.
+8. Called Shot's stamp is an inked word over the Warden; drum, ink and CALLED reuse existing sounds until the sound lane scores them.
+9. Pad rumble calls Godot directly with reduced motion respected; it moves to `juice.gd`'s rumble rows once the systems audit's pass C lands.
