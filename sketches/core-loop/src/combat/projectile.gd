@@ -30,6 +30,8 @@ const RETURN_FLIGHT := 0.9
 # terrain and landform bodies are on (Godot's default 1; the ball is alone on layer 2).
 const COVER_CLEAR_SECONDS := 0.15
 const COVER_MASK := 1
+# How far above its ring's seat a hit still counts as the landing ground, not cover (metres).
+const COVER_SEAT_BAND := 0.25
 # The batting cue (LEGIBILITY section 6): while the ball could reach the landing point before
 # the shell lands, the shell wears the will_break row's rim, and a rising ping sounds when the
 # rim first lights. The ping is SfxBank's "vault_rise", the breathy rising sweep. Visual and
@@ -174,6 +176,10 @@ func _burst_on_cover(from: Vector3) -> bool:
 		return false
 	var at: Vector3 = hit["position"]
 	if Vector2(at.x - landing.x, at.z - landing.z).length() <= BLAST_RADIUS:
+		return false
+	# Cover stands above the ground the ring is seated on. A hit no higher than that seat is the shell meeting
+	# its own landing ground (an arena floor raised over the aim point, say), so it flies on and lands.
+	if is_instance_valid(ring) and at.y <= ring.center.y + COVER_SEAT_BAND:
 		return false
 	exploded.emit(at, BLAST_RADIUS, false)
 	if is_instance_valid(ring):
