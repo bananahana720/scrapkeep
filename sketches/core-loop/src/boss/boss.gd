@@ -144,7 +144,7 @@ func active() -> bool:
 func enter_arena(entry_velocity: Vector3) -> void:
 	exit_arena()
 	arena = Arena.take_ahead()
-	arena.position = Arena.place(ctx.terrain, ctx.run.stage)
+	arena.position = Arena.place_ahead(ctx.terrain, ctx.run.stage)
 	ctx.root.add_child(arena)
 	ship = Requisition.new()
 	arena.add_child(ship)
@@ -175,6 +175,16 @@ func _place_ball(entry_velocity: Vector3) -> void:
 	var at: Vector3 = arena.entry_point()
 	ctx.player.reset_to(at, velocity)
 	ctx.camera.snap(heading)
+	# Ruling cv: the fall into the bowl is marked with landing rings and a pad, as a stage's arrival is.
+	var world = ctx.root.get("world") if ctx.root != null else null
+	if world != null and world.has_method("mark_arrival"):
+		var ground: RefCounted = arena.ground_query()
+		world.mark_arrival(at, velocity, Callable(ground, "height"))
+
+
+# The heading the ball enters the bowl on, for the launch into it to turn to in flight (flow.arrival_heading_after).
+func arrival_heading() -> Vector3:
+	return Arena.arrival_heading()
 
 
 # Frees everything the fight built. The ball, the run and the crest are left alone.

@@ -385,6 +385,9 @@ func _on_stage_content_cleared(_reason: String) -> void:
 func _mark_landing(stage: int, retry: bool) -> void:
 	launch.clear_landing()
 	launch.gravity = ctx.tuning.f("gravity")
+	# Ruling cv: this stage's launch turns in flight to the heading the place after it is entered on.
+	var next: Vector3 = ctx.flow.arrival_heading_after(stage) if ctx.flow != null and ctx.flow.has_method("arrival_heading_after") else Vector3.ZERO
+	launch.aim(next, ctx.camera)
 	var entry: Vector3
 	var velocity: Vector3
 	if retry:
@@ -398,6 +401,13 @@ func _mark_landing(stage: int, retry: bool) -> void:
 	else:
 		return
 	launch.mark_landing(entry, velocity, Callable(terrain, "height"))
+
+
+# Landing rings and a pad for an arrival that is not a stage entry (the Slag Bowl's), over its own ground.
+func mark_arrival(entry: Vector3, velocity: Vector3, height: Callable) -> void:
+	launch.clear_landing()
+	launch.gravity = ctx.tuning.f("gravity")
+	launch.mark_landing(entry, velocity, height)
 
 
 func _physics_process(delta: float) -> void:

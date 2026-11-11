@@ -23,6 +23,12 @@ const LANDING_STEP := 0.02
 const LANDING_LIMIT := 4.0
 # A ring goes this long after the ball's flight time through it (the rail's and the landing's).
 const THREADED := 0.05
+# Ruling cv: the rail turns the ball, and the camera with it, from the launch's heading to the heading the next
+# place is entered on (aim), over this long from the launch, inside flow's 0.6 s of flight, so the first frame
+# after the cut faces the way the last one before it did. The turn only rotates: the speed along the rail is kept.
+const TURN_TIME := 0.45
+# The rail's ring path is summed in this many steps per ring when it turns.
+const PATH_STEPS := 12
 
 var gravity := 26.0
 # Where the last landing mark says the ball will come down.
@@ -41,6 +47,13 @@ var _landing_due: Array[float] = []
 var _fall := 0.0
 var _pad: MeshInstance3D
 var _pad_time := 0.0
+# The heading the next place is entered on (flat, unit) and the camera the rail turns with it; zero is no turn.
+var _turn_to := Vector3.ZERO
+var _camera = null
+# This flight's turn of the ball and of the camera's yaw, in radians, and how much of the camera's is given.
+var _turn := 0.0
+var _view_turn := 0.0
+var _view_given := 0.0
 
 
 # Horizontal speed kept exactly, raised to a floor if slow, plus the lift. Pure, so a
@@ -92,20 +105,56 @@ static func rail_start(current: Vector3) -> Vector3:
 	return Vector3(current.x, 0.0, current.z) + Vector3.UP * LIFT
 
 
+# The next launch turns in flight to this heading, and turns the camera's yaw with it (ruling cv). Set on every stage
+# entry for the place after it; a zero heading switches the turn off.
+func aim(heading: Vector3, camera = null) -> void:
+	var flat := Vector3(heading.x, 0.0, heading.z)
+	_turn_to = flat.normalized() if flat.length() > 0.01 else Vector3.ZERO
+	_camera = camera
+
+
 # velocity is the launch (floor-raised); from is the ball's own start. The rail eases
-# the horizontal part from one to the other over FLOOR_RAMP.
+# the horizontal part from one to the other over FLOOR_RAMP, and turns it onto the aimed heading over TURN_TIME.
 func fire(origin: Vector3, velocity: Vector3, from := Vector3.INF) -> void:
 	_origin = origin
 	_velocity = velocity
 	_from = velocity if from == Vector3.INF else from
 	_flying = true
 	_time = 0.0
+	var flat := Vector3(velocity.x, 0.0, velocity.z)
+	_turn = flat.signed_angle_to(_turn_to, Vector3.UP) if _turn_to != Vector3.ZERO and flat.length() > 0.5 else 0.0
+	_view_turn = 0.0
+	_view_given = 0.0
+	if _turn_to != Vector3.ZERO and is_instance_valid(_camera):
+		_view_turn = angle_difference(float(_camera.yaw), atan2(-_turn_to.x, -_turn_to.z))
 	for i in RINGS:
 		var t := RING_FIRST + i * RING_STEP
-		_place_ring(_rings[i], arc_point(origin, velocity, gravity, t), velocity + Vector3.DOWN * gravity * t)
+		var turned := turned_flat(flat, _turn, t)
+		_place_ring(_rings[i], path_point(origin, velocity, gravity, _turn, t), turned + Vector3.UP * (velocity.y - gravity * t))
 
 
-# The velocity the rail holds the ball to this tick, or null once it lets go.
+# The share of the turn given by t seconds into the flight.
+static func turned_share(t: float) -> float:
+	return smoothstep(0.0, TURN_TIME, t)
+
+
+static func turned_flat(flat: Vector3, turn: float, t: float) -> Vector3:
+	return flat.rotated(Vector3.UP, turn * turned_share(t)) if turn != 0.0 else flat
+
+
+# Where a launch with this turn is t seconds in: the arc, with its horizontal part summed along the turn.
+static func path_point(origin: Vector3, velocity: Vector3, g: float, turn: float, t: float) -> Vector3:
+	if turn == 0.0:
+		return arc_point(origin, velocity, g, t)
+	var flat := Vector3(velocity.x, 0.0, velocity.z)
+	var at := origin
+	var step := t / PATH_STEPS
+	for k in PATH_STEPS:
+		at += turned_flat(flat, turn, (k + 0.5) * step) * step
+	return Vector3(at.x, origin.y + velocity.y * t - 0.5 * g * t * t, at.z)
+
+
+# The velocity the rail holds the ball to this tick, or null once it lets go. The camera turns by the same share.
 func rail(delta: float):
 	if not _flying:
 		return null
@@ -114,7 +163,11 @@ func rail(delta: float):
 		if _rings[i].visible and RING_FIRST + i * RING_STEP < _time - THREADED:
 			_rings[i].visible = false
 	var flat := Vector3(_from.x, 0.0, _from.z).lerp(Vector3(_velocity.x, 0.0, _velocity.z), smoothstep(0.0, FLOOR_RAMP, _time))
-	return flat + Vector3.UP * (_velocity.y - gravity * _time)
+	var share := turned_share(_time)
+	if _view_turn != 0.0 and is_instance_valid(_camera):
+		_camera.yaw += _view_turn * (share - _view_given)
+	_view_given = share
+	return turned_flat(flat, _turn, _time) + Vector3.UP * (_velocity.y - gravity * _time)
 
 
 func stop() -> void:
