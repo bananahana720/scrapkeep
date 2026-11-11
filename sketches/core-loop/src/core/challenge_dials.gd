@@ -37,11 +37,20 @@ const PULSE_DAMAGE_W1 := [1.3, 1.3, 1.0, 1.0, 1.0, 1.0]
 const PULSE_CYCLE_W1 := [0.85, 0.85, 1.0, 1.0, 1.0, 1.0]
 # Silt boils ship on world 1 at strength 2 (pack pressure E, 24 Oct ruling; DECISIONS section 5).
 const SILT_W1 := [2.0, 2.0, 0.0, 0.0, 0.0, 0.0]
+# Crews on world 1 lead the ball's roll by half (wave 37 unit D1, ruling cu call 4: chasers lead your line).
+# A crew steers to cut the roll off and a chaser lays its lunge lane halfway to where the roll will be, so a
+# ball that slows or holds a line it can be met on gets lunged, and a ball at cruise across it still slips.
+# The lane is committed at the wind-up as before and the wind-up is no shorter.
+const LEAD_W1 := [0.5, 0.5, 0.0, 0.0, 0.0, 0.0]
 # The dam (stage 1) takes mob hits at x1.5 (w19 world 1 bands, Andrew 26 Oct option 1, DECISIONS section 5).
 # 24 seeds on w1: Novice wins 33% (a measured miss of the <= 15% target: the dam Warden is world 1's
 # teaching Warden), Learner a5 67%, Expert 100% with the same fight time. Hit size, not crew aggression or
 # spawn rate: both of those slowed the Expert.
 const MOBS_DAMAGE_W1 := [1.5, 1.0, 1.0, 1.0, 1.0, 1.0]
+# Chasers on world 1 run at 9 m/s, up from 4.8 (wave 37 unit D2, ruling cu call 4: faster than walking pace,
+# slower than cruise). A ball that stops or dawdles is run down; a ball at cruise (14 m/s) is never caught by
+# running. The lunge, its lane and its wind-up are as they were.
+const CHASER_SPEED_W1 := [9.0, 9.0, 0.0, 0.0, 0.0, 0.0]
 const PackPressure := preload("res://src/combat/pack_pressure.gd")
 
 const DEFAULTS := {
@@ -91,11 +100,15 @@ const DEFAULTS := {
 	# caps and Director.HARD_CAP stay hard ceilings.
 	"mobs.damage_mult": 1.0, "mobs.pack_scale_mult": 1.0, "mobs.interval_scale_mult": 1.0, "mobs.elite_rate_mult": 1.0,
 	"mobs.damage_by_stage": MOBS_DAMAGE_W1, "mobs.pack_scale_by_stage": ONES6, "mobs.interval_scale_by_stage": ONES6, "mobs.elite_rate_by_stage": ONES6,
+	# A chaser's run speed in m/s per stage (chaser.gd stage_speed): 0 keeps the chaser's own SPEED, a value
+	# can only raise it, and it is held under Chaser.SPEED_CEILING, below the ball's cruise.
+	"mobs.chaser_speed_by_stage": CHASER_SPEED_W1,
 	# Pack pressure, the world 1 kiting experiments (combat/pack_pressure.gd; --pack-pressure=A|B|C|D|E presets).
-	# Absolute per-stage values, identity at defaults: lead 0 to 1 of the ball's predicted roll that crews steer
-	# and aim at; extra chasers per crew; a multiplier on the re-engage gap; 1 makes every second chaser a
-	# flanker; churned-silt drag strength (churn_ground.gd); silt boil damage, 0 off (silt_boil.gd).
-	"pack.lead_by_stage": ZEROS6, "pack.crew_extra_by_stage": ZEROS6, "pack.rest_by_stage": ONES6,
+	# Absolute per-stage values, identity at defaults but the lead and the boils: lead 0 to 1 of the ball's
+	# predicted roll that crews steer and aim at (LEAD_W1); extra chasers per crew; a multiplier on the re-engage
+	# gap; 1 makes every second chaser a flanker; churned-silt drag strength (churn_ground.gd); silt boil damage,
+	# 0 off (silt_boil.gd).
+	"pack.lead_by_stage": LEAD_W1, "pack.crew_extra_by_stage": ZEROS6, "pack.rest_by_stage": ONES6,
 	"pack.flank_by_stage": ZEROS6, "ground.churn_by_stage": ZEROS6, "hazard.boil_by_stage": SILT_W1,
 	# Pilot regen: not allowed as defaults or tunes (--tune-unruled only). The HARD ladder's top rungs cut it
 	# (run_tier.gd LADDER, Andrew 27 Oct option 3).
