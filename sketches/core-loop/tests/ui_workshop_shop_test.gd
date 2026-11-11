@@ -3,6 +3,7 @@ extends SceneTree
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const Shop := preload("res://src/build/shop.gd")
+const Parts := preload("res://src/build/parts.gd")
 const WordBudget := preload("res://src/ui/word_budget.gd")
 const Push := preload("res://tests/workshop/push.gd")
 
@@ -76,6 +77,12 @@ func _process(_delta: float) -> bool:
 				var part_id: String = tile.rec["part_id"]
 				var cogs: int = _game.run.cogs
 				var held: int = _game.run.part_count(part_id)
+				tile.grab_focus()
+				var detail: String = _ws.counter.detail_text()
+				var def: Resource = Parts.offer_def(part_id, _game.run.parts)
+				_report("detail line", detail == Parts.offer_shop_line(part_id, _game.run.parts) and detail.begins_with(def.display_name + ". ")
+						and not ": " in detail and not "; " in detail and def.text in detail,
+					"the focused shelf plate reads \"%s\" (name, a full stop, then the part's own text \"%s\")" % [detail, def.text])
 				Push.click(root, tile)
 				var record: Dictionary = _acted.back()[1] if not _acted.is_empty() else {}
 				_report("buy by click", record.get("ok", false) and _game.run.cogs == cogs - int(record["price"])

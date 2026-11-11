@@ -183,7 +183,7 @@ func _edges(id: String, d: Resource) -> void:
 
 
 func _card(id: String, d: Resource) -> void:
-	var cap_text := "%d%% cap" % roundi(d.stack_cap * 100.0)
+	var cap_text := "up to +%d%%" % roundi(d.stack_cap * 100.0)
 	var banner = CodexBanner.new()
 	root.add_child(banner)
 	banner.cards = true

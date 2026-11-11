@@ -7,11 +7,11 @@ const UiDraw := preload("res://src/ui/ui_draw.gd")
 
 # One stamped plate on Moss's counter. A tile is icons first: the part's family (cat_)
 # inside its rarity frame, its element (el_) and trigger (trg_) glyphs on the frame's
-# lower corners, and the price as the scrap cog and a number. The name and what it does
+# lower corners, and the price as the cog icon and a number. The name and what it does
 # show in the counter's detail line for the tile under the mouse or the keys.
 #
 # kind   shelf | top | cell | reroll | sell | pick
-# state  ok | poor (too little scrap) | sold | locked (heft) | capped | welded | spent
+# state  ok | poor (too few cogs) | sold | locked (heft) | capped | welded | spent
 # A poor tile keeps its price but dims and strikes it; a locked hook wears the heft
 # dial with a notch at the class it needs; a sold slot is an empty dashed plate.
 
@@ -136,7 +136,7 @@ func _framed(icon_rect: Rect2, dim: float) -> void:
 		draw_texture_rect(Icons.texture(c[0]), r, false, Icons.tint(c[0], Color(Palette.SAND, dim)))
 
 
-# The scrap cog and the price in mono digits; too poor dims it and strikes it through.
+# The cog icon and the price in mono digits; too poor dims it and strikes it through.
 func _price(at: Vector2, amount: int, poor: bool) -> void:
 	var digits := str(amount)
 	var w := COG + 5.0 + UiDraw.width(digits, PRICE_FONT, true)

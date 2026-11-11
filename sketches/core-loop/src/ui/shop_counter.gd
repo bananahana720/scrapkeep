@@ -19,7 +19,7 @@ const ShopTile := preload("res://src/ui/shop_tile.gd")
 #
 # Two faces. Buy: the shelf's three parts, the reroll, a waiting upgrade pick, the
 # locked hook and a charge cell per ability that recharges. Sell: every held part at
-# its quote. The wallet row carries scrap and heft, because heft is what the hook asks
+# its quote. The wallet row carries cogs and heft, because heft is what the hook asks
 # for. The line under the plates names the plate under the mouse or the keys.
 
 signal acted(fact: String, record: Dictionary)
@@ -415,9 +415,20 @@ func _update_detail() -> void:
 	if at.x >= 0:
 		var control = _grid()[at.x][at.y]
 		if control is ShopTile and control.rec.has("part_id"):
-			var own: String = control.rec.get("headline", "")
-			text = own if own != "" else Parts.headline(String(control.rec["part_id"]))
+			text = _detail_line(control.rec)
 	_detail.text = text
+
+
+# The line under the plates: the part's name, then its effect sentence with the numbers it holds.
+# A shelf part reads the level taking it now would give; the other plates read level one. A
+# record that is no catalogue part (a racked active) keeps its own line, its label colon a full stop.
+func _detail_line(rec: Dictionary) -> String:
+	var part_id := String(rec["part_id"])
+	if Parts.def(part_id) == null:
+		return String(rec.get("headline", "")).replace(": ", ". ")
+	if String(rec.get("kind", "")) == "shelf":
+		return Parts.offer_shop_line(part_id, game.run.parts)
+	return Parts.shop_line(part_id)
 
 
 func _set_live(live: bool) -> void:
