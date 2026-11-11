@@ -31,6 +31,11 @@ const FRAME_SMOOTHING := "frame_smoothing"
 # with a black bar each side (the PC check on the 3440x1440 monitor, 10 Nov 2026: +2.1% median
 # frame time, p99 at most 9.51 ms).
 const WIDE_PICTURE := "wide_picture"
+# The one line the settings page shows under a row while it has the focus (eight words at most).
+const HELPERS := {
+	FRAME_SMOOTHING: "Smoother motion, about 11 ms added input lag",
+	WIDE_PICTURE: "Fills ultrawide screens; off keeps black bars",
+}
 const STICK_SENSITIVITY := "stick_sensitivity"
 const INVERT_Y := "invert_y"
 const STICK_DEADZONE := "stick_deadzone"
