@@ -1616,7 +1616,7 @@ func _physics_process(delta: float) -> void:
 		_detonate(charge)
 	_step_devices(delta)
 	wear_trail.step(delta, enemies)
-	PackPressure.observe(ctx.player.planar_velocity())
+	PackPressure.observe(ctx.player.planar_velocity(), ctx.player.tuning.f("cruise"))
 	churn.step(delta)
 	boils.step(delta, enemies)
 	_pin_step(enemies)

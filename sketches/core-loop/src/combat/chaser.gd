@@ -143,10 +143,11 @@ func _physics_process(delta: float) -> void:
 	var to_ball := _flat_to_ball()
 	match state:
 		State.CHASE:
+			var lead := PackPressure.lead_now(pressure, target)
 			if pressure.get("flanker", false):
 				_flank(delta, to_ball)
-			elif float(pressure.get("lead", 0.0)) > 0.0:
-				_lead_chase(delta, to_ball, float(pressure.lead))
+			elif lead > 0.0:
+				_lead_chase(delta, to_ball, lead)
 			else:
 				var desired := Vector3.ZERO
 				if to_ball.length() > radius + 1.4:
