@@ -72,12 +72,13 @@ ground. A lane that meets no floor from over the piece now drops again from over
 
 ## Pieces that are not ridden
 
-A piece no taller than the ride height is ridden only if it stands on the floor. One held up more than the
-ride height over the floor under its centre gets no lanes: a lane rolls on the floor, so it would pass under
-the piece and meet only what holds it up. Until wave 37 the Slag Bowl's four crossbars, 19 m up their
+A piece no taller than the ride height is ridden unless the whole ball passes under it. One held up at least
+the ball's height (2 m) over the highest floor under its centre and corners gets no lanes: a lane rolls on the
+floor, so it would pass under the piece and meet only what holds it up. A piece hung lower keeps its lanes,
+because the ball can wedge under it. Until wave 37 the Slag Bowl's four crossbars, 19 m up their
 masts, were ridden this way and gave all 16 of the bowl's piece-lane snags, each a ball rolled into a mast;
 the flume's crew ledges, 6.5 m over the mesa rim, gave its 3 ride-lane ground snags. `snag_sweep_test`
-plants a bar 10 m over its floor and checks it gets no lanes.
+plants a bar 10 m over its floor (no lanes) and one 1.8 m over it (its lanes).
 
 ## Limits
 

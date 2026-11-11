@@ -39,6 +39,8 @@ var min_before := 0.5
 # How many times a contact faced the ball's line of travel, counted over every frame of every lane
 # rolled. The test reads it to tell a probe that saw the lip but missed the loss from a blind one.
 var contacts_seen := 0
+# How many facing contacts were left out because they were on an actor (the test reads it, as above).
+var actors_seen := 0
 
 var _tree: SceneTree
 var _game
@@ -161,9 +163,10 @@ func lanes(piece: Dictionary) -> Array:
 	var axes := [Vector2(cos(yaw), -sin(yaw)), Vector2(sin(yaw), cos(yaw))]
 	if box.size.y <= RIDE_H:
 		# A low piece held up over the floor (the Slag Bowl's crossbars on their masts) is not ridden: a lane
-		# rolls on the floor, so it would pass under the piece and only meet what holds it up.
-		var below = _floor_under(Vector3(wc.x, box.position.y + 0.05, wc.z))
-		if below != null and box.position.y - float(below.y) > RIDE_H:
+		# rolls on the floor, so it would pass under the piece and only meet what holds it up. Only a piece the
+		# whole ball passes under counts: its clearance over the highest floor under its centre and corners is at
+		# least the ball's height. Lower, the ball can wedge under it, and its lanes find that.
+		if _clearance(piece) >= 2.0 * Tuning.RADIUS:
 			return out
 		for a in axes:
 			var perp := Vector2(-a.y, a.x)
@@ -207,7 +210,9 @@ func roll(piece: Dictionary, lane: Dictionary) -> Dictionary:
 	if top == null:
 		# A lane can start on ground higher than the piece's top (a lift at rest in a hollow): the ray then starts
 		# inside the ground and meets nothing, so drop again from over that ground.
-		top = _top(Vector3(from.x, 0.0, from.y), _game.ctx.terrain.height(from.x, from.y) + 4.0)
+		var terrain = _game.ctx.terrain
+		if terrain != null:
+			top = _top(Vector3(from.x, 0.0, from.y), terrain.height(from.x, from.y) + 4.0)
 	if top == null:
 		return {"skipped": "no_floor"}
 	var cruise: float = player.tuning.f("cruise")
@@ -282,6 +287,7 @@ func _facing_contact(ball: Vector3, dir: Vector3, cos_max: float) -> Dictionary:
 		var other = state.get_contact_collider_object(i)
 		# An enemy or a boss piece (anything that takes damage) is an actor, not the map.
 		if other is Object and (other as Object).has_method("take_damage"):
+			actors_seen += 1
 			continue
 		var path := ""
 		var terrain := false
@@ -305,6 +311,19 @@ func _top(at: Vector3, from_y: float):
 	q.exclude = [_game.player.body().get_rid()]
 	var hit: Dictionary = space.intersect_ray(q)
 	return null if hit.is_empty() else hit.position
+
+
+# A piece's height over the highest floor under its centre and its four corners, INF when there is none under any.
+func _clearance(piece: Dictionary) -> float:
+	var box: AABB = piece.aabb
+	var turn := Basis(Vector3.UP, piece.yaw)
+	var highest := -INF
+	for local in [box.get_center(), box.position, Vector3(box.end.x, 0.0, box.position.z), Vector3(box.position.x, 0.0, box.end.z), box.end]:
+		var w: Vector3 = turn * local
+		var below = _floor_under(Vector3(w.x, box.position.y + 0.05, w.z))
+		if below != null:
+			highest = maxf(highest, float(below.y))
+	return INF if highest == -INF else box.position.y - highest
 
 
 # The first surface under `at` that faces up, seen from just inside a piece's base: a ray that starts inside a convex

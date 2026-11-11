@@ -10,7 +10,8 @@ const Probe := preload("res://tools/qa/snag_probe.gd")
 # the lip is gone, none along a flat wall (a graze slides off), and none for the lip when the loss
 # tolerance is set too loose to see it. Without the control a zero from the sweep means nothing.
 # The same lip on a moving body is classed moving, on an actor (it takes damage) is no snag, and a
-# low piece held 10 m over the floor gets no ride lanes (the Slag Bowl's crossbars, wave 37).
+# low piece held 10 m over the floor gets no ride lanes (the Slag Bowl's crossbars, wave 37), one
+# held 1.8 m over it, lower than the ball is tall, keeps them.
 #
 # Evidence limit: one fixture on a flat floor, calm world, not a run.
 
@@ -200,8 +201,10 @@ func _run() -> void:
 	var actor := _box(fixture, "ActorLip", LIP_SIZE, FLOOR_AT + Vector3(0, LIP_SIZE.y * 0.5, 0), actor_body)
 	await physics_frame
 	await physics_frame
+	probe.actors_seen = 0
 	var on_actor: Array = await _snags(probe, found["Lip"], lip_lanes)
 	t.eq("a lip that takes damage is an actor: no snag", _count(on_actor), 0)
+	t.check("the actor lip's facing contacts were met and left out", probe.actors_seen > 0, "%d contacts" % probe.actors_seen)
 	actor.queue_free()
 
 	# A low piece held up over the floor (a crossbar on a mast) gets no ride lanes: they would roll under it.
@@ -212,6 +215,14 @@ func _run() -> void:
 		if String(p.path).get_file() == "Crossbar":
 			bar = p
 	t.check("a low piece 10 m over the floor is a piece with no lanes", not bar.is_empty() and probe.lanes(bar).is_empty(), str(bar))
+	# One hung lower than the ball is tall still gets its lanes: the ball can wedge under it.
+	_box(fixture, "LowBar", LIP_SIZE, FLOOR_AT + Vector3(0, 1.8 + LIP_SIZE.y * 0.5, 30.0))
+	await physics_frame
+	var low := {}
+	for p in probe.pieces(fixture):
+		if String(p.path).get_file() == "LowBar":
+			low = p
+	t.check("a low piece 1.8 m over the floor (under the ball's height) keeps its ride lanes", not low.is_empty() and probe.lanes(low).size() == 4 * Probe.LANES, str(low))
 	game.queue_free()
 	await process_frame
 	quit(t.verdict())

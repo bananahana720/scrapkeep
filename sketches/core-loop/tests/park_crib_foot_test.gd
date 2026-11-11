@@ -78,6 +78,8 @@ func _run() -> void:
 	var plain: Array = game.find_children(PLAIN, "Node3D", true, false)
 	t.check("a row that is not a crib keeps its plain place", plain.size() == 1 and not (plain[0] as Node).has_meta("foot_stretch"), str(plain))
 
+	_check_foot_fit_math()
+
 	if coping != null:
 		var c: Vector3 = coping.global_position + coping.global_basis.x * 12.0
 		var g: float = terrain.height(c.x, c.z)
@@ -145,3 +147,20 @@ func _worst_gap(xf: Transform3D, box: AABB, terrain) -> Dictionary:
 			worst["gap"] = gap
 			worst["at"] = Vector3(w.x, bottom, w.z).snapped(Vector3.ONE * 0.1)
 	return worst
+
+
+# foot_fit on a 10 m tall box over planted ground: flat ground leaves it alone, ground 5 m lower under one corner
+# stretches it 1.5x about its top, and ground 30 m lower is capped at FOOT_STRETCH_MAX.
+func _check_foot_fit_math() -> void:
+	var faces := PackedVector3Array()
+	for v in [Vector3(-3, 0, -3), Vector3(3, 0, -3), Vector3(3, 10, 3), Vector3(-3, 10, 3)]:
+		faces.append(v)
+	var row := {"id": "planted", "recipe": "crib_pier_planted", "y": null}
+	var flat := ParkRecipes.foot_fit(row, faces, Transform3D.IDENTITY, func(_x, _z): return 0.0)
+	t.eq("foot fit: flat ground leaves the crib as authored", flat["stretch"], 1.0)
+	var corner := ParkRecipes.foot_fit(row, faces, Transform3D.IDENTITY, func(x, z): return -5.0 if x > 2.9 and z > 2.9 else 0.0)
+	t.check("foot fit: ground 5 m lower under a corner stretches 1.5x and keeps the top",
+		is_equal_approx(corner["stretch"], 1.5) and is_equal_approx((corner["basis"] * Vector3(0, 10, 0) + corner["shift"]).y, 10.0)
+		and is_equal_approx((corner["basis"] * Vector3.ZERO + corner["shift"]).y, -5.0), str(corner))
+	var deep := ParkRecipes.foot_fit(row, faces, Transform3D.IDENTITY, func(_x, _z): return -30.0)
+	t.eq("foot fit: ground 30 m lower is capped", deep["stretch"], ParkRecipes.FOOT_STRETCH_MAX)
