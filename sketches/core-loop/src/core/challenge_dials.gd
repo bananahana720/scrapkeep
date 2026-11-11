@@ -80,6 +80,11 @@ const DEFAULTS := {
 	"warden.counter_damage_by_stage": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
 	"warden.counter_telegraph_by_stage": [0.8, 0.8, 0.8, 0.8, 0.8, 0.8],
 	"warden.counter_delay_by_stage": [1.0, 1.0, 1.0, 1.0, 1.0, 1.0],
+	# The difficulty clock's last tier per stage (director.gd clock_tiers, build/run_clock.gd tiers): the clock
+	# rises one tier each Director.TIER_SECONDS up to this count. World 1 climbs a third tier, at 135 s (wave 37
+	# unit D3, ruling cu): staying longer means a bigger crowd, shorter gaps and more lobbers. Every rise is
+	# announced (threat_rose), as the first two are. Later worlds keep two.
+	"mobs.clock_tiers_by_stage": [3.0, 3.0, 2.0, 2.0, 2.0, 2.0],
 	# Mobs: enemy hits (after director.damage_scale(); Warden and vault sources excluded),
 	# the director's crowd cap and spawn interval, and the elite repeat chance. The attack_budget
 	# caps and Director.HARD_CAP stay hard ceilings.
