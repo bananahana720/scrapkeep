@@ -24,6 +24,7 @@ const GraphicsPreset := preload("res://src/presentation/graphics_preset.gd")
 const SetDressing := preload("res://src/presentation/set_dressing.gd")
 const ParkProps := preload("res://src/presentation/park_props.gd")
 const AmbientLife := preload("res://src/presentation/ambient_life.gd")
+const SiteMarkers := preload("res://src/presentation/site_markers.gd")
 const Parts := preload("res://src/build/parts.gd")
 const WindupRows := preload("res://src/presentation/windup_rows.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
@@ -76,6 +77,7 @@ var flourish_cues
 var set_dressing: Node3D
 var park_props: Node3D
 var ambient_life: Node3D
+var site_markers: Node3D
 var title_stage: Node
 var ui_hidden := false
 # Presentation shows the discovery banner itself. Set false if the HUD shows its own.
@@ -154,6 +156,9 @@ func setup(ctx_ref) -> void:
 	flourish_cues = FlourishCues.new()
 	add_child(flourish_cues)
 	flourish_cues.setup(ctx, flourish)
+	site_markers = SiteMarkers.new()
+	add_child(site_markers)
+	site_markers.setup(ctx)
 	wire_optional()
 	GraphicsPreset.register_dressing_host(self)
 	if not get_tree().node_added.is_connected(_on_node_added):
