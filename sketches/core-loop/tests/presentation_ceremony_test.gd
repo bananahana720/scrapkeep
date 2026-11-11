@@ -125,7 +125,10 @@ func _next(phase: String) -> void:
 const FIND_MS := int(ScreenBusy.FIND_HOLD * 1000.0) + 1000
 # The crate is still on screen for its out phase when this phase starts; the card it pushed off comes back after.
 var OUT_MS := int(float(EventKinds.reward_row("ceremony")["out_s"]) * 1000.0)
-const DRAIN_MS := FIND_MS + 3 * 4000
+# The held reveal cards drain one card's life each (the reveal row's in, hold and out) plus 60 frames, up to MAX_HELD.
+var REVEAL_MS := int((float(EventKinds.reward_row("reveal")["in_s"]) + float(EventKinds.reward_row("reveal")["hold_s"]) \
+		+ float(EventKinds.reward_row("reveal")["out_s"])) * 1000.0)
+var DRAIN_MS := FIND_MS + Ceremony.MAX_HELD * (REVEAL_MS + 1000)
 
 
 var _ahead_ms := 0
