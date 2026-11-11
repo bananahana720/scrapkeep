@@ -78,8 +78,10 @@ func _bad_file(label: String, text: String, cause: String) -> void:
 	var no_continue: bool = _game.screens.button_for("continue") == null
 	var start: Button = _game.screens.button_for("start")
 	_game._screen_key(KEY_C)
-	_report(label, no_continue and start != null and start.text == "New run" and body.contains(cause) and _game.flow.state_name() == "title",
-		"title reads \"%s\"; buttons %s; after C flow %s" % [body.get_slice("\n", 0), _buttons(), _game.flow.state_name()])
+	# The title says the run would not load in a sentence; the cause id stays data on the flow (wave 36).
+	_report(label, no_continue and start != null and start.text == "New run" and body.contains("The saved run would not load.")
+			and _game.flow.saved_run_cause == cause and _game.flow.state_name() == "title",
+		"title body \"%s\"; cause %s; buttons %s; after C flow %s" % [body.replace("\n", " | "), _game.flow.saved_run_cause, _buttons(), _game.flow.state_name()])
 
 
 func _run() -> void:

@@ -116,6 +116,16 @@ func _run() -> void:
 	profile.equip(sable.def.id, "paint", "paint_sable_violet")
 	sable.bind_profile(profile)
 	_t.check("P3-4 an equipped paint the profile does not own shows as none", sable.paint_shown() == "" and sable.preview.paint_id == "", "shown %s preview %s" % [sable.paint_shown(), sable.preview.paint_id])
+	# Wave 36: a profile with only the starter paints has nothing to choose, so the card draws no
+	# paint row and P cycles nothing. Owning one more paint brings the row and the cycle.
+	_t.check("P3-4 with only starter paints the card draws no paint row and cycles nothing",
+		not sable.owns_paint() and sable.cycle_paint() == "" and profile.equipped(sable.def.id, "paint") == "paint_sable_violet",
+		"owns %s equipped %s" % [sable.owns_paint(), profile.equipped(sable.def.id, "paint")])
+	profile.equip(sable.def.id, "paint", "")
+	profile.unlock_cosmetic("paint_sable_violet")
+	sable.bind_profile(profile)
+	_t.check("P3-4 an owned unlock joins the cycle", sable.owns_paint() and sable.paint_options() == starters + ["paint_sable_violet"]
+		and not sable.paint_options().has("paint_any_night"), "options %s" % [sable.paint_options()])
 	_t.check("P3-4 at rest the hidden swatch lets clicks through to the card", sable._swatch.mouse_filter == Control.MOUSE_FILTER_IGNORE, "filter %s" % sable._swatch.mouse_filter)
 	Push.hover(root, sable)
 	await _settle(0.7)
@@ -138,9 +148,10 @@ func _run() -> void:
 	_t.eq("P3-4 an equip is saved", reloaded.equipped(sable.def.id, "paint"), "paint_sable_lagoon")
 	Push.key(root, KEY_P)
 	await _frames(2)
+	_t.eq("P3-4 the owned unlock comes last in the cycle", profile.equipped(sable.def.id, "paint"), "paint_sable_violet")
+	Push.key(root, KEY_P)
+	await _frames(2)
 	_t.eq("P3-4 after the last owned paint the cycle returns to none", profile.equipped(sable.def.id, "paint"), "")
-	profile.unlock_cosmetic("paint_sable_violet")
-	_t.check("P3-4 an owned unlock joins the cycle", sable.paint_options().has("paint_sable_violet") and not sable.paint_options().has("paint_any_night"), "options %s" % [sable.paint_options()])
 	# Tarn's own paint, found by id since the chain may add cards.
 	var tarn = null
 	var offered_elsewhere: Array = []
@@ -152,6 +163,9 @@ func _run() -> void:
 	_t.check("P3-5 Tarn's card offers its own starter paint", tarn != null and tarn.paint_options().has("paint_tarn_ash"), "options %s" % [tarn.paint_options() if tarn != null else "no tarn card"])
 	_t.check("P3-5 no other pilot is offered Tarn's paint", offered_elsewhere.is_empty(), "offered to %s" % [offered_elsewhere])
 	if tarn != null:
+		# The card cycles paint only once the profile owns one beyond the starters (wave 36).
+		profile.unlock_cosmetic("paint_tarn_dig")
+		tarn.bind_profile(profile)
 		for i in tarn.paint_options().size():
 			if profile.equipped("tarn", "paint") == "paint_tarn_ash":
 				break

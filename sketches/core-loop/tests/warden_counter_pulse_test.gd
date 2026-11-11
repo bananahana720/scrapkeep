@@ -23,6 +23,8 @@ class FlowDouble extends RefCounted:
 class CtxDouble extends RefCounted:
 	var events
 	var flow := FlowDouble.new()
+	# The Warden reads the run's heft off its fleet's ctx; this fight has no run.
+	var run = null
 
 
 const DT := 1.0 / 90.0
