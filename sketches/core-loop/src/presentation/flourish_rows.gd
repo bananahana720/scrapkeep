@@ -64,14 +64,14 @@ const ROWS := {
 	# Rivet's cage gives way (rescue_completed "rivet").
 	"rivet_freed": {"priority": 2,
 		"full": [
-			{"kind": "sfx_word", "at": 0.0, "for": 1.2, "text": "KLANG!", "anchor": "cage"},
+			{"kind": "sfx_word", "at": 0.0, "for": 1.2, "text": "KLANG", "anchor": "cage"},
 			{"kind": "panels", "at": 0.3, "for": 5.3,
 				"texts": ["The cage. Opened from inside.", ["They measured the bars. Twice.", "Visor up. Tiny proud eyes."],
 					["Moss packed spare lenses.", "Moss packed a spare visor.", "Moss had a feeling."]]},
 			{"kind": "stamp", "at": 1.8, "for": 2.2, "text": "BACK ON SHIFT", "colour": "ARC"},
 		],
 		"short": [
-			{"kind": "sfx_word", "at": 0.0, "for": 1.0, "text": "KLANG!", "anchor": "cage"},
+			{"kind": "sfx_word", "at": 0.0, "for": 1.0, "text": "KLANG", "anchor": "cage"},
 			{"kind": "stamp", "at": 0.2, "for": 1.4, "text": "BACK ON SHIFT", "colour": "ARC"},
 		]},
 	# The flume's meltdown Warden engages for the first time on a stage attempt.
@@ -175,13 +175,13 @@ const ROWS := {
 		"world": {"full": [{"kind": "eject", "at": 0.0, "seconds": 1.8}], "short": [{"kind": "eject", "at": 0.0, "seconds": 1.1}]},
 		"full": [
 			{"kind": "sfx_word", "at": 0.0, "for": 0.9, "text": "FWOOMP", "anchor": "scooter"},
-			{"kind": "stamp", "at": 0.9, "for": 1.5, "text": "ROUTED!", "colour": "AMBER", "slot": "centre"},
+			{"kind": "stamp", "at": 0.9, "for": 1.5, "text": "ROUTED", "colour": "AMBER", "slot": "centre"},
 			{"kind": "caption", "at": 1.2, "for": 1.2, "slot": "left_low",
 				"text": ["A tactical withdrawal. (Rounded up.)", "Brindle: \"Noted.\"", "The Admiral departs. On schedule."]},
 		],
 		"short": [
 			{"kind": "sfx_word", "at": 0.0, "for": 0.8, "text": "FWOOMP", "anchor": "scooter"},
-			{"kind": "stamp", "at": 0.3, "for": 0.9, "text": "ROUTED!", "colour": "AMBER", "slot": "centre"},
+			{"kind": "stamp", "at": 0.3, "for": 0.9, "text": "ROUTED", "colour": "AMBER", "slot": "centre"},
 		]},
 	# Tarn signs on the day Brindle falls (achievement brindle_routed pays Tarn). Plays once, over
 	# the victory card; the card is the walk-in, the stamp is the contract.

@@ -20,8 +20,8 @@ extends RefCounted
 const ENTRIES := [
 	{"id": "live_wire_flood", "category": "world", "name": "Live Wire",
 		"hint": "Water carries a charge, and so do crowds that wade in.",
-		"clue": "Arc + flood water + enemies in it",
-		"text": "Enemies lured into the flood die when you electrify the water under them."},
+		"clue": "Arc + flood water + machines in it",
+		"text": "Machines lured into the flood die when you electrify the water under them."},
 	{"id": "surge_slingshot", "category": "world", "name": "Surge Slingshot",
 		"hint": "The surge is a tailwind if you stay ahead of it.",
 		"clue": "Surge Run gate + blazing speed",
@@ -54,7 +54,7 @@ const ENTRIES := [
 	{"id": "pit_stop_lap", "category": "world", "name": "Pit Stop",
 		"hint": "The barge's rim is a track. There is a par.",
 		"clue": "Moss's rim track under par",
-		"text": "A lap of the workshop barge's rim under par. The nomads build every camp as a marble run: streets banked, tiers joined by chutes."},
+		"text": "A lap of the workshop barge's rim under par. The nomads build every camp as a marble run, with streets banked and tiers joined by chutes."},
 	# The Reach's secret cache (SC2): map_reach.gd's valve spec carries this row.
 	{"id": "reach_pressure_cache", "category": "world", "name": "Pressure keeps the change",
 		"hint": "A cracked wheel beside a copper door.",
