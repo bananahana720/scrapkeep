@@ -396,6 +396,26 @@ export function meets(target, rate) {
   return true;
 }
 
+// Early stop (ruling dg): a column's ✓/✗ is settled when every way its unfinished seeds could
+// end, each a win or not, gives the mark the finished seeds already give. Returns that mark, or
+// null while it can still change. A column with no target, one already over the excluded share,
+// and a boss Learner column while the 45 s tell is still clean are never settled: they run every
+// seed. An unfinished seed that ends as an error or a kill makes the full read's column
+// incomplete at most, never the other mark.
+export function settledMark({ grades, left, target, tellOpen = false }) {
+  if (!target || tellOpen || left <= 0) return null;
+  const a = aggregate(grades);
+  if (a.incomplete || a.n === 0) return null;
+  const now = meets(target, a.rate);
+  for (let w = 0; w <= left; w++) if (meets(target, (a.wins + w) / (a.n + left)) !== now) return null;
+  return now;
+}
+
+// The target a cell's column is graded against, as buildTable grades it.
+export function columnTarget(cell, kind, column) {
+  return isChain(cell) || kind === "clear" ? null : targetFor(kind, column);
+}
+
 export function targetFor(kind, column) {
   return (kind === "world" ? TARGETS.world : TARGETS.fight)[column] ?? null;
 }
@@ -425,7 +445,7 @@ export function buildTable(runs, buckets = {}) {
     for (const col of COLUMNS) {
       if (!c.grades[col.id]) continue;
       const a = aggregate(c.grades[col.id]);
-      const target = isChain(c.cell) || c.kind === "clear" ? null : targetFor(c.kind, col.id);
+      const target = columnTarget(c.cell, c.kind, col.id);
       columns[col.id] = { ...a, target, ok: a.incomplete ? null : meets(target, a.rate) };
     }
     const ord = columns.expert?.medianFightS;

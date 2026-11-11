@@ -3,7 +3,7 @@
 // node scripts/challenge/run.mjs --library=<dir> [--cells=boss,warden,park,world] [--only=brindle,w1,park1]
 //     [--seeds=<n>: 24 fights, 16 parks and clears] (--only=w1clear: the whole of World 1 in one attempt, never in the default cells)
 //     [--seeds=<n>: 24 fights, 16 parks] [--bands=novice,learner1,learner5,expert] [--no-top] [--persona=brawler] [--warden-persona=skipper] [--park-persona=skipper]
-//     [--tune=<text passed whole to bot_run; the game's dials split key=value,key=value>] [--tune-unruled] [--tier=<n>] [--jobs=4] [--label=<name>] [--shard=i/n] [--dry-run] [--strict]
+//     [--tune=<text passed whole to bot_run; the game's dials split key=value,key=value>] [--tune-unruled] [--tier=<n>] [--jobs=4] [--label=<name>] [--shard=i/n] [--dry-run] [--strict] [--early-stop]
 // node scripts/challenge/run.mjs --library [--lib-shard=i/n]; --library-merge=<dir,dir> --label=<name>
 // node scripts/challenge/run.mjs --merge=<dir,dir>
 //
@@ -15,7 +15,7 @@ import { spawn, spawnSync } from "node:child_process";
 import { appendFileSync, copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { COLUMNS, MAX_RUN_TIER, fairnessByCell, PILOTS, botArgs, buildTable, cellVerdict, describeDoc, bucketInfo, checkMerge, dedupeBy, estimate, gradeRun, maxJobs, jobKey, playerReport, qaRows, renderPlayerReport, hashString, mergeLibraryIndexes, planHash, parseNdjson, pickBuilds, planCells, renderTable, shardJobs, wallStats } from "./lib.mjs";
+import { COLUMNS, MAX_RUN_TIER, fairnessByCell, PILOTS, botArgs, buildTable, cellVerdict, describeDoc, bucketInfo, checkMerge, dedupeBy, estimate, gradeRun, maxJobs, aggregate, columnTarget, settledMark, jobKey, playerReport, qaRows, renderPlayerReport, hashString, mergeLibraryIndexes, planHash, parseNdjson, pickBuilds, planCells, renderTable, shardJobs, wallStats } from "./lib.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const godot = process.env.GODOT_BIN;
@@ -25,7 +25,7 @@ const KIND_TIMEOUT_MS = 40 * 60_000;
 const opts = {
   library: null, buildLibrary: false, libSeeds: 4, libPilots: PILOTS, cells: ["boss", "warden", "park"], only: null, seeds: null, libShard: null, libraryMerge: null, wardenPersona: "skipper", tune: "", resume: false, allowMixed: false,
   bands: ["novice", "learner1", "learner5", "expert"], top: true, persona: "brawler", parkPersona: "skipper", jobs: 4, label: null,
-  shard: null, merge: null, dryRun: false, strict: false,
+  shard: null, merge: null, dryRun: false, strict: false, earlyStop: false,
 };
 for (const arg of process.argv.slice(2)) {
   const [k, v] = arg.replace(/^--/, "").split("=");
@@ -53,6 +53,7 @@ for (const arg of process.argv.slice(2)) {
   else if (k === "allow-mixed") opts.allowMixed = true;
   else if (k === "dry-run") opts.dryRun = true;
   else if (k === "strict") opts.strict = true;
+  else if (k === "early-stop") opts.earlyStop = true;  // ruling dg: skip a column's seeds once they cannot change its mark
   else die("unknown option " + arg);
 }
 
@@ -274,11 +275,36 @@ async function runTable() {
     // The entrance is kept relative to the library, so run folders from other machines merge as they are.
     const line = { ...job, key: keyOf(job), commit, plan_hash: plan, entrance: job.entrance && opts.library ? path.relative(opts.library, job.entrance) : job.entrance, row, grade, exit: p.exit, timedOut: p.timedOut, wallS: Math.round(p.wallS * 10) / 10, rerun, ...(qa ? { qa } : {}) };
     appendFileSync(runsFile, JSON.stringify(line) + "\n");
+    addFinal(job, grade);
     log(`done  ${job.id}: ${grade.result}${row ? " (" + row.outcome + ", " + row.game_seconds + " s game)" : ""}, ${p.wallS.toFixed(0)} s wall`);
+  };
+
+  // --early-stop (ruling dg): before a job starts, its column is checked against the rows already
+  // final for this plan and commit. Once the seeds left cannot change the column's mark, the rest
+  // of that column is skipped, and the table says how many of its seeds ran.
+  const colKey = (job) => job.cell + "|" + job.column;
+  const planned = new Map();
+  for (const job of jobs) planned.set(colKey(job), (planned.get(colKey(job)) ?? 0) + 1);
+  const finals = new Map();
+  const addFinal = (job, grade) => finals.set(colKey(job), [...(finals.get(colKey(job)) ?? []), grade]);
+  for (const r of dedupeBy(parseNdjson(read(runsFile)), "id")) if (done.has(r.key)) addFinal(r, r.grade);
+  const stopped = new Map();
+  const settled = (job) => {
+    if (!opts.earlyStop) return false;
+    if (stopped.has(colKey(job))) return true;
+    const grades = finals.get(colKey(job)) ?? [];
+    const learner = job.kind === "boss" && (job.column === "learner1" || job.column === "learner5");
+    const tellOpen = learner && ["learner1", "learner5"].every((c) => aggregate(finals.get(job.cell + "|" + c) ?? []).earlyDeaths === 0);
+    const mark = settledMark({ grades, left: planned.get(colKey(job)) - grades.length, target: columnTarget(job.cell, job.kind, job.column), tellOpen });
+    if (mark === null) return false;
+    stopped.set(colKey(job), { cell: job.cell, column: job.column, mark, planned: planned.get(colKey(job)) });
+    log(`early stop ${job.cell} ${job.column}: ${grades.length} of ${planned.get(colKey(job))} seeds are in and the rest cannot change ${mark ? "✓" : "✗"}`);
+    return true;
   };
 
   const failed = [];
   await pool(todo.map((job) => async () => {
+    if (settled(job)) return;
     log("start " + job.id);
     const r = await play(job, 1);
     if (r.ok) record(job, r, false);
@@ -289,7 +315,17 @@ async function runTable() {
     log(`rerun ${job.id} alone (first try: ${first.p.timedOut ? "timeout" : "exit " + first.p.exit})`);
     record(job, await play(job, 2), true);
   }
-  finish(dedupeBy(parseNdjson(read(runsFile)), "id"), outDir, { label, commit, plan_hash: plan, library: libraryLabel, buckets: meta.buckets, tune: meta.tune, tune_unruled: meta.tune_unruled, run_tier: meta.run_tier, shards: opts.shard ? [opts.shard] : null });
+  const runs = dedupeBy(parseNdjson(read(runsFile)), "id");
+  const earlyStop = [...stopped.values()].map((stop) => ({ ...stop, ran: runs.filter((r) => r.cell === stop.cell && r.column === stop.column).length }));
+  finish(runs, outDir, { label, commit, plan_hash: plan, library: libraryLabel, buckets: meta.buckets, tune: meta.tune, tune_unruled: meta.tune_unruled, run_tier: meta.run_tier, shards: opts.shard ? [opts.shard] : null, ...(opts.earlyStop ? { early_stop: earlyStop } : {}) });
+}
+
+// Ruling dg: a read that stopped early says, per column, how many of its planned seeds ran.
+function renderEarlyStop(stops) {
+  if (!stops) return "";
+  if (!stops.length) return "\nEarly stop was on (ruling dg); no column stopped, so every planned seed ran.\n";
+  const lines = stops.map((s) => `- ${s.cell} ${s.column}: ${s.ran} of ${s.planned} seeds ran; the seeds left could not change its ${s.mark ? "✓" : "✗"}`);
+  return ["", "## Stopped early (ruling dg)", "", ...lines, ""].join("\n") + "\n";
 }
 
 function finish(runs, outDir, meta) {
@@ -300,7 +336,7 @@ function finish(runs, outDir, meta) {
   const timing = wallStats(runs);
   const report = playerReport(runs);
   const fairness = fairnessByCell(runs);
-  const md = renderTable(table, { ...meta, fairness, when: new Date().toISOString().slice(0, 16) + "Z" }) + "\n" + renderPlayerReport(report);
+  const md = renderTable(table, { ...meta, fairness, when: new Date().toISOString().slice(0, 16) + "Z" }) + renderEarlyStop(meta.early_stop) + "\n" + renderPlayerReport(report);
   writeFileSync(path.join(outDir, "table.md"), md);
   writeFileSync(path.join(outDir, "table.json"), JSON.stringify({ ...meta, runs: runs.length, timing, table, fairness, player_report: report }, null, 1) + "\n");
   console.log(md);
