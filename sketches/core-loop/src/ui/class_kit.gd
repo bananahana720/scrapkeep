@@ -14,7 +14,7 @@ const Bindings := preload("res://src/core/bindings.gd")
 # (1 to 2 words).
 const WORDS := {
 	"arc_caster": "arc caster",
-	"grapple": "grapple hook",
+	"grapple": "harpoon",
 	"detonation_gauge": "arc discharge",
 	"arc_slam": "arc slam",
 	"crater_slam": "crater slam",
@@ -44,7 +44,7 @@ const WORDS := {
 	"cannon_plate": "cannon plate",
 	"cannon_rush": "rush ring",
 	"line_reel": "line reel",
-	"ult_default": "set piece",
+	"ult_default": "ultimate",
 	# The shared chips that are no ability row: the harpoon every pilot fires, and Sable's boost
 	# (her movement row is the grapple, which is the harpoon).
 	"harpoon": "harpoon line",
@@ -68,14 +68,14 @@ const WORDS := {
 	# --- end Tarn ---
 	# --- P-C Tally words ---
 	"plate_audit": "audit trail", "plate_flywheel": "flywheel throw",
-	"tradeoff_tally": "Linked payoff, needs pressure from rolling.",
+	"tradeoff_tally": "Big payoff, must keep rolling.",
 	# --- end Tally ---
 	# --- P-C Cannon words ---
 	"cannon_lane_charge": "lane charge",
 	"cannon_fire_mission": "fire mission",
 	"cannon_creeping_barrage": "creeping barrage",
 	"cannon_plate_mortar": "plate mortar",
-	"tradeoff_remembered_cannon": "Long lanes, needs enemies lined up.",
+	"tradeoff_remembered_cannon": "Long lanes, needs machines lined up.",
 	# --- end Cannon ---
 }
 
@@ -83,7 +83,7 @@ const WORDS := {
 # it rides. `card` marks the Space extras the class card shows beside the four slots.
 const EXTRAS := {
 	"vault": {"verb": "jump", "icon": "ab_sable_vault", "words": "vault kick", "card": true},
-	"glide": {"verb": "jump", "icon": "ab_kest_glide", "words": "glide + rocket", "card": true},
+	"glide": {"verb": "jump", "icon": "ab_kest_glide", "words": "glide, rocket", "card": true},
 	"pylon": {"verb": "interact", "icon": "ab_sable_mount", "words": "wall mount", "card": false},
 }
 # The verb each slot's key comes from (design-v3/SKILL-BAR.md sections 1 and 5): the numbered
@@ -97,7 +97,7 @@ const BAR_ROW := ["weapon", "special", "line", "ultimate"]
 # DESIGN-V2 section 2's Fantasy row, cut to fit a card.
 const FANTASY := {
 	"pylon_engineer": "Plant a beachhead, launch like a cannonball.",
-	"runner_gunner": "Unstoppable sprinter. Crowd control is fuel.",
+	"runner_gunner": "Sprint through anything. Fire as you go.",
 	"demolitions_caster": "Vanish in smoke. Light the line.",
 	"tarn": "Claw in close. Clamp, then rend.",
 	"tally": "Gather. Clip on the line. Make them pay.",
@@ -186,8 +186,10 @@ static func difficulty(def) -> int:
 	return DIFFICULTY.get(def.id, 2) if def != null else 0
 
 
+# The species alone: the fantasy line already says what the pilot does, so a role tag would repeat it.
 static func role_line(def) -> String:
-	return "%s · %s" % [def.role, def.species] if def.species != "" else String(def.role)
+	var species := String(def.species)
+	return species.left(1).to_upper() + species.substr(1) if species != "" else String(def.role)
 
 
 static func tradeoff(def) -> String:
