@@ -32,7 +32,7 @@ import { readLedger } from "./known-failing.mjs";
 // lane never replaces them. Bot-tier tests the diff reaches are listed for the bot shards.
 // Every test run that ends red keeps its log beside the receipt (failedRunLog), also when a rerun
 // then passes, so a flaky crash can still be read afterwards.
-// Run: node scripts/sketch-fast.mjs [--base origin/main] [--budget 900] [--dry-run] [--receipt <label>]
+// Run: node scripts/sketch-fast.mjs [--base origin/main] [--budget 900] [--width <lanes>] [--dry-run] [--receipt <label>]
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 export const SKETCH = "sketches/core-loop";
@@ -61,7 +61,7 @@ export const PATH_RULES = [
     // The map standard (ruling ct): a park change faces the checks that read the baked map.
     name: "map standard",
     match: /(^|\/)parks?\/|(^|\/)park_[^/]*$/,
-    tests: ["tests/park_landmark_sight_test.gd", "tests/site_markers_test.gd", "tests/park_fight_bowl_test.gd", "tests/park_feature_census_test.gd", "tests/park_breath_test.gd", "tests/park_rhythm_test.gd", "tests/handover_rows_test.gd"],
+    tests: ["tests/park_landmark_sight_test.gd", "tests/site_markers_test.gd", "tests/park_fight_bowl_test.gd", "tests/park_feature_census_test.gd", "tests/park_breath_test.gd", "tests/park_rhythm_test.gd", "tests/handover_rows_test.gd", "tests/park_scrap_lines_test.gd", "tests/park_scrap_trail_test.gd"],
   },
 ];
 // Long whole-run proofs a change class must face; they go to the bot shards even past the budget.
@@ -473,6 +473,13 @@ function stopRunning() {
   for (const child of running) stopChild(child);
 }
 
+// A headless Godot test uses about one core (1.06 measured on a world 1 bot run, 11 Nov), so the
+// lane takes one lane per idle core, at least 2 and at most 8. Width 2 left half of a 4 vCPU
+// cloud box idle; on a loaded PC the idle count keeps it at 2. --width overrides it.
+export function defaultWidth(cpus = os.cpus().length, load = os.loadavg()[0]) {
+  return Math.min(8, Math.max(2, Math.round(cpus - load)));
+}
+
 // Every Godot process the lane starts holds one of `width` lanes, so a confirm's head rerun and
 // base run never push one machine slot past its width (GRAPH caps a 4 vCPU box at 6 lanes).
 // A task holds one lane at a time and never waits for a second, so lanes cannot deadlock.
@@ -647,7 +654,7 @@ async function main() {
   const timings = readTimings();
   const selection = selectTests(index, changed.godot);
   if (changed.godot.length > 0) for (const test of canaries(index, timings)) if (!selection.picked.has(test)) selection.picked.set(test, { tier: 3, why: "canary" });
-  const width = options.width ?? 2;
+  const width = options.width ?? defaultWidth();
   const lanePlan = plan({
     picked: selection.picked,
     timings,

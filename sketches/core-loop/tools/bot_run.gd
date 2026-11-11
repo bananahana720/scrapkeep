@@ -44,8 +44,9 @@ const QaWatch := preload("res://tools/qa_watch.gd")
 # --bot-audit=1 writes full-precision committed bus events with stable object tokens.
 # --bot-no-mix=1 skips sample arithmetic while retaining music transport.
 # --bot-no-pilot-tracks=1 skips pilot bone sampling, retaining playback and signals.
-# --bot-no-visuals=1 skips selected unread idle callbacks only
-# on the headless display. Camera, HUD, hit-stop and collision work remain active.
+# --bot-no-visuals=1 skips selected unread idle callbacks and a park stage's render regions
+# (park_terrain.gd draw_regions), only on the headless display. Camera, HUD, hit-stop and
+# collision work remain active.
 # --plant=name=value[,name=value] (test only, the anti-kiting gates' controls): pack_damage=K, damage=K, packs_passive=1,
 # hide_pack_telegraphs=1, rut=K, fast_tax=K, ringless=K (tools/bot_plants.gd). Absent, the run is unchanged. --policy=orbit|terrain are the gates' arms (bot_kite.gd).
 # --gate=1 enables all three switches, unless individually overridden with =0.
