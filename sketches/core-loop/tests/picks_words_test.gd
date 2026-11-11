@@ -113,6 +113,8 @@ func _every_card() -> void:
 				t.check("%s world one %s: the tree has nodes" % [pilot, world_one], nodes.size() >= 6, str(nodes.size()))
 				for n in nodes:
 					var depth := 3 if n.has("swap") or n.has("knob") else 1
+					if shell == false and world_one == false and WordBudget.words_in(String(n.get("effect", ""))) > UpgradeTree.EFFECT_WORDS:
+						t.check("%s %s: the effect fits %d words" % [pilot, n["id"], UpgradeTree.EFFECT_WORDS], false, String(n["effect"]))
 					var card := TreeCard.new(n, "key_1", Color.WHITE, depth, world_one, shell, WorldOneCards.SET_PIECE_LINES, pilot)
 					for text in [String(n.get("name", "")), card.effect_text(), card.set_piece_text()]:
 						if text == "" or lines.has(text):

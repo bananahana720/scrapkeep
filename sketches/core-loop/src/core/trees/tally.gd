@@ -29,7 +29,7 @@ const NODES := [
 	{"id": "tl_carbon_copy", "name": "Carbon Copy", "effect": "Ultimate becomes Flywheel Throw. Bounces throw a shockwave.", "class_id": "tally", "stack_rule": "capped", "key": "weapon",
 		"icon": "ab_tally_ult", "tags": ["close", "burst"], "proc": [{"on": "enemy_rebounded", "do": "blast", "scale": 0.5, "gap": 1.0}],
 		"swap": {"ultimate": "plate_flywheel"}},
-	{"id": "tl_stamp_duty", "name": "Stamp Duty", "effect": "Ultimate becomes Audit Trail. Stamps refill your air jump.", "class_id": "tally", "stack_rule": "capped", "key": "smash",
+	{"id": "tl_stamp_duty", "name": "Stamp Duty", "effect": "Ultimate becomes Audit Trail. Stamps refill air jumps.", "class_id": "tally", "stack_rule": "capped", "key": "smash",
 		"icon": "ab_tally_ult", "tags": ["air", "mobility"], "proc": [{"on": "slammed", "do": "air", "scale": 1.0, "gap": 1.0}],
 		"swap": {"ultimate": "plate_audit"}},
 	{"id": "tl_reel_in", "name": "Reel In", "effect": "Ultimate becomes Flywheel Throw. Smashes refill a surge.", "class_id": "tally", "stack_rule": "capped", "key": "movement",
@@ -48,7 +48,7 @@ const NODES := [
 		"icon": "ab_tally_ult", "tags": ["close", "burst"], "proc": [{"on": "special_used", "do": "blast", "scale": 0.5, "gap": 1.0}],
 		"swap": {"ultimate": "plate_audit"}},
 
-	{"id": "tl_full_ledger", "name": "Full Ledger", "effect": "Hits refill your air jump; clips settle for more", "class_id": "tally", "stack_rule": "capped", "key": "weapon",
+	{"id": "tl_full_ledger", "name": "Full Ledger", "effect": "Hits refill air jumps; clips settle for more", "class_id": "tally", "stack_rule": "capped", "key": "weapon",
 		"icon": "ab_tally_ult", "tags": ["air", "close"], "proc": [{"on": "enemy_struck", "do": "air", "scale": 1.0, "gap": 1.5}],
 		"knob": {"ult_settle": 0.7}},
 	{"id": "tl_settled", "name": "Settled Account", "effect": "Kills wind surge; ultimate flies two beats longer", "class_id": "tally", "stack_rule": "capped", "key": "weapon",
