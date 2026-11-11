@@ -5,7 +5,9 @@ extends SceneTree
 # row on Contraptions/hollow_lift at (-209.0, 19.85, -55.7), 13.8 m/s down to 3.7, left undecided because the sweep met
 # the moving plate at one unknown point of its cycle). A lift is an AnimatableBody3D (contraptions.gd _build_lift) on a
 # periodic SteamCycle: it fires up `rise` m, holds, sinks back to rest with its top 0.05 m over the ground, then charges.
-# The flume's hollow_lift is read at every place; the dam's service_lift at the PHASES even places.
+# This file reads the flume's hollow_lift at every place; park_service_lift_roll_test.gd extends it and reads the dam's
+# service_lift at the PHASES even places. One lift per process: a second Game built in the same process met the lift at
+# a different physics state run to run, and a table that changes between runs is no receipt.
 #
 # Phase method: time is stepped, nothing is set. The test reads the lift's cycle (its public phase and clock, read
 # only) every physics tick and releases the ball, parked still RUN_M short of the rim, on the tick that makes its
@@ -47,8 +49,7 @@ const ParkRecipes := preload("res://src/world/park/park_recipes.gd")
 const SteamCycle := preload("res://src/world/steam_cycle.gd")
 const T := preload("res://tests/support/t.gd")
 
-# id, stage index on the park table, map title, whether the FINE places are read too.
-const LIFTS := [["hollow_lift", 2, "park_flume", true], ["service_lift", 1, "park_dam", false]]
+const LIFT := ["hollow_lift", 2, "park_flume", true]
 const PHASES := 8
 # Extra places across the end of the sink, where the plate's underside passes ball height (printed, judged alike).
 const FINE := [2.6, 2.8, 3.0, 3.2, 3.4]
@@ -65,7 +66,7 @@ const FLAT_M := 0.1
 const VERTICAL := 0.7071
 const LIFTED_M := 2.0
 
-var t := T.new("park_hollow_lift_roll_test")
+var t
 var game
 var source := Intent.Scripted.new()
 var lift: AnimatableBody3D
@@ -76,12 +77,22 @@ var exclude: Array[RID] = []
 
 
 func _initialize() -> void:
+	t = T.new(_test_name())
 	_run.call_deferred()
 
 
+func _test_name() -> String:
+	return "park_hollow_lift_roll_test"
+
+
+# id, stage index on the park table, map title, whether the FINE places are read too.
+func _lift() -> Array:
+	return LIFT
+
+
 func _run() -> void:
-	for row: Array in LIFTS:
-		await _lift_table(row[0], row[1], row[2], row[3])
+	var row := _lift()
+	await _lift_table(row[0], row[1], row[2], row[3])
 	quit(t.verdict())
 
 

@@ -6,6 +6,14 @@ rides" read, as the code's striped plate) round a copper hub, falling 1 in 6 to 
 flush with the rim, is the code's (contraptions.gd _build_lift; its length is the row's `rise`), so nothing of the skin
 hangs under the cap.
 
+Purpose note (wave 37 lift-drum, the art rule's three lines):
+  For: carrying the ball up the row's `rise`, or throwing it when it fires.
+  The player must read: a striped cap that rides, on a solid banded copper column that is a wall while raised.
+  Changed: the thin piston became the code's flush drum; the cap falls 1 in 6 to its rim; the collar, ribs, hoses and oxide
+  streaks that hung under the deck went, since they would sit inside the drum. No board under docs/art/reference draws this
+  column (the looping-workers board's maintenance lift is a cage on a rail beside a wall); only that board's palette strip,
+  copper b77843 and charcoal 242a28, backs the drum's colours.
+
 Origin at the plate's centre (the body's origin). The skin follows the plate collider's outline, contraptions.gd LIFT_PROFILE
 (FLAT and RIM_Y below; check_base fails a vertex outside it): the deck TOP is the collider top, y +0.5, flat to
 FLAT, with nothing above the deck line in the base (the shells stand 0.04 proud at most); radius 4.5, which the code scales to
