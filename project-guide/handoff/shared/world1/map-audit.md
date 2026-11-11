@@ -82,10 +82,10 @@ Data the checks read, all public today unless noted: stage graph `src/world/park
 | flume | rides climbing 10 m or more | 3 | 4 | OWED |
 | flume | hub zones reaching 3 bands | 5 | 1 | pass |
 | dam | riding-line nodes 60 m clear of every fight site (point 2) | 0.43 | 0.25 | pass |
-| flume | riding-line nodes 60 m clear of every fight site (point 2) | 0.18 | 0.25 | OWED: the flume reach and the wasteway chute fights lie along the lines; breather zones wait for PR 753 |
-| dam | floor line heavy/quiet switches at 20 m/s, quiet under 5 s folded (point 3) | 2 | 3 | OWED: domes then west wash, 46 s with a 1 s gap |
+| flume | riding-line nodes 60 m clear of every fight site (point 2) | 0.18 | 0.25 | OWED: the flume reach (drones and the trestle collapse face) and the wasteway chute fights lie along the lines; breather zones wait for PR 753 |
+| dam | floor line heavy/quiet switches at 20 m/s, quiet gaps under 5 s between fights folded (point 3) | 2 | 3 | OWED: domes then west wash, 46 s with a 1 s gap |
 | dam | longest heavy run on the floor line (point 3) | 46.2 s | 45 s | OWED |
-| flume | floor line switches; longest heavy run (point 3) | 8; 19.9 s | 3; 45 s | pass |
+| flume | floor line switches; longest heavy run (point 3) | 9; 15.0 s | 3; 45 s | pass |
 
 Points 2 and 3 read `ParkMap.fight_sites()` (homes, event sites, the Warden ring, the yard lock ring) in `tests/park_breath_test.gd` and `tests/park_rhythm_test.gd` (wave 37, run twice, identical, planted cases fire). Neither sees the director's timer packs.
 

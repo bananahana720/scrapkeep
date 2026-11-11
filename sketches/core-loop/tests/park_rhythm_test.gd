@@ -4,7 +4,7 @@ extends SceneTree
 # never one long press. Per world 1 park, the floor line (assets/park/<map>/lines.json "floor", drop-in to landmark) is
 # walked every STEP_M and each step is heavy when it stands within HEAVY_M flat of a fight site
 # (ParkMap.fight_sites(): crew homes, event sites, the Warden's engage ring and the yard lock's ring), else quiet.
-# Read at CRUISE_MPS, a quiet strip shorter than MIN_QUIET_S folds into the heavy run round it; then the strip must
+# Read at CRUISE_MPS, a quiet strip shorter than MIN_QUIET_S between two heavy runs folds into them; then the strip must
 # switch between heavy and quiet at least MIN_SWITCHES times, and its longest heavy run must last at most MAX_HEAVY_S.
 # Start values, set before calibration. The director's timer packs are not sites (see park_breath_test.gd).
 #
@@ -74,13 +74,13 @@ static func rhythm(sites: Array, line: PackedVector2Array) -> Dictionary:
 		for s in steps:
 			heavy.append(FightReach.nearest(sites, line[i - 1] + leg * (float(s) / steps)) <= HEAVY_M)
 	var raw := _runs(heavy)
-	# A quiet strip shorter than MIN_QUIET_S is no breath: it folds into the heavy run round it.
+	# A quiet strip shorter than MIN_QUIET_S between two heavy runs is no breath: it folds into them. The line's ends stay.
 	var k := 0
 	while k < heavy.size():
 		var j := k
 		while j < heavy.size() and heavy[j] == heavy[k]:
 			j += 1
-		if not heavy[k] and (j - k) * STEP_M / CRUISE_MPS < MIN_QUIET_S:
+		if not heavy[k] and k > 0 and j < heavy.size() and (j - k) * STEP_M / CRUISE_MPS < MIN_QUIET_S:
 			for q in range(k, j):
 				heavy[q] = true
 		k = j

@@ -10,6 +10,7 @@ const ParkSchema := preload("res://src/world/park/park_schema.gd")
 const ParkRecipes := preload("res://src/world/park/park_recipes.gd")
 const ParkGraph := preload("res://src/world/park/park_graph.gd")
 const LockRows := preload("res://src/world/lock_rows.gd")
+const NaturalFootprint := preload("res://src/world/events/natural_footprint.gd")
 
 # The line half-width the graph bakes (tools/park_graph.gd LINE_M), the reach of the lane mask.
 const LANE_REACH_M := 8.0
@@ -70,10 +71,11 @@ func warden_spec() -> Dictionary:
 
 # Where this stage's fights happen, as the game places them, for the map checks (map points 2 and 3). Each site is
 # {"id", "kind", "at": Vector2} plus its extent: a "home" (a crew's site row, director.gd _read_homes) and an "event"
-# (its site row, or its effect footprint_m, event_director.gd) carry the row's footprint as "half": Vector2 and "yaw_deg", as footprint_contains
+# (its site row, resolved by NaturalFootprint, half sizes from effect.footprint_m when set, event_director.gd _park_clear) carry the row's footprint as "half": Vector2 and "yaw_deg", as footprint_contains
 # reads it; the "warden" (the engage ring) and the "yard" lock (lock_rows.gd) carry "ring": Vector2(inner, outer), the
 # band of distance from `at` they cover. The yard lock shuts wherever the ball first crosses within_m of the beacon on
-# the ground, centred ahead_m inside it, so its ring is every place that circle can stand. Dormant homes count: an
+# the ground, centred ahead_m inside it, so its ring is every place that circle can stand for a ball that crosses
+# the line rolling (one landing from the air inside it shuts the yard nearer in). Dormant homes count: an
 # event wakes them. Director timer packs are not sites; they spawn ahead of the ball anywhere off the pilot lines.
 func fight_sites() -> Array:
 	if not ok:
@@ -87,6 +89,8 @@ func fight_sites() -> Array:
 			var site: Dictionary = rows.get(row["site"], {})
 			if site.is_empty():
 				continue
+			if table[1] == "event":
+				site = NaturalFootprint.resolve(row, site)
 			var half := footprint_half_extents(site)
 			var own = row.get("effect", {}).get("footprint_m")
 			if own is Array:
@@ -95,8 +99,8 @@ func fight_sites() -> Array:
 	out.append({"id": "warden", "kind": "warden", "at": beacon, "ring": Vector2(0.0, reach_m)})
 	var lock: Dictionary = LockRows.row(title).get("lock", {})
 	if not lock.is_empty():
-		var radius := float(lock["radius_m"])
-		var centre := float(lock["within_m"]) - minf(float(lock["ahead_m"]), radius * 0.5)
+		var radius := float(lock.get("radius_m", 26.0))
+		var centre := float(lock.get("within_m", 0.0)) - minf(float(lock.get("ahead_m", 0.0)), radius * 0.5)
 		out.append({"id": String(lock["id"]), "kind": "yard", "at": beacon, "ring": Vector2(maxf(0.0, centre - radius), centre + radius)})
 	return out
 

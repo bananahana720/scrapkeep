@@ -27,7 +27,7 @@ const QUIET_SHARE_MIN := 0.25
 
 # {"<stage>": {"value": measured share, "why": "..."}}
 const OWED := {
-	"park_flume": {"value": 0.18, "why": "the flume reach (trestle_drones on 373 m of grind, 122 line nodes) and the wasteway chute (its chasers and flash flood, 88) lie along the riding lines; breather zones in park_flume.json wait for PR 753"},
+	"park_flume": {"value": 0.18, "why": "the flume reach (trestle_drones on 373 m of grind and the trestle collapse face over it, 122 line nodes each) and the wasteway chute (its chasers and flash flood, 88) lie along the riding lines; breather zones in park_flume.json wait for PR 753"},
 }
 
 var t := T.new("park_breath_test")
