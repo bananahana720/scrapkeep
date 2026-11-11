@@ -113,6 +113,13 @@ func pay() -> Dictionary:
 	return {"mult": mult, "events": events}
 
 
+# The combo the last paid chain ended at (a smash's landing), or 0 when the last end was unpaid.
+func last_paid_combo() -> int:
+	if finished.is_empty() or not finished.back().get("paid", false):
+		return 0
+	return int(finished.back().get("combo", 0))
+
+
 # A new run starts clean.
 func reset() -> void:
 	combo = 0

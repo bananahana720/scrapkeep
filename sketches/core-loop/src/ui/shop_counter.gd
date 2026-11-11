@@ -12,6 +12,7 @@ const HeftDial := preload("res://src/ui/heft_dial.gd")
 const ChoiceButton := preload("res://src/ui/choice_button.gd")
 const AbilitySlots := preload("res://src/ui/ability_slots.gd")
 const ShopTile := preload("res://src/ui/shop_tile.gd")
+const CompanionPanel := preload("res://src/ui/companion_panel.gd")
 
 # Moss's counter: the shop's verbs as stamped plates on one charcoal panel. It reads
 # the shop's records (CONTRACTS, Moss's shop) and calls its verbs; every answer goes out
@@ -19,7 +20,8 @@ const ShopTile := preload("res://src/ui/shop_tile.gd")
 # and the sound is the row's. Nothing here invents a price, a state or a line.
 #
 # Two faces. Buy: the shelf's three parts, the reroll, a waiting upgrade pick, the
-# locked hook and a charge cell per ability that recharges. Sell: every held part at
+# locked hook, a charge cell per ability that recharges and, with --carry-core=on, the core
+# SPIL-9 can carry to the next stage (a spent plate once one rides). Sell: every held part at
 # its quote, then Moss's scale when it is open (shop.weigh: one lump of mass for cogs, the
 # mass and the cogs shown on the plate before the press). The wallet row carries cogs and heft, because heft is what the hook asks
 # for. The line under the plates names the plate under the mouse or the keys.
@@ -270,6 +272,12 @@ func _build_buy() -> void:
 	var slots := {}
 	for s in (game.player.abilities.slots() if game.player != null else []):
 		slots[s["slot"]] = AbilitySlots.normalized(s, game.run.class_def)
+	if shop.stow_open():
+		var riding: bool = game.run.carried_core > 0
+		var unseats: String = game.run.stow_cost()
+		var seat := "" if unseats == "" else String(CompanionPanel.PIECE_ICONS.get(unseats, "disc"))
+		_tile(lower, {"kind": "stow", "name": "Stow a core in SPIL-9", "price": -1, "seat_icon": seat,
+			"color": EventKinds.color("core_gained"), "state": "spent" if riding else ("ok" if game.run.can_stow_core() else "poor")}, CELL_TILE)
 	for offer in shop.charge_offers():
 		var slot: Dictionary = slots.get(offer["slot"], {})
 		var state := "capped" if not offer["can"] else ("ok" if game.run.cogs >= offer["price"] else "poor")
@@ -347,6 +355,9 @@ func press(tile) -> void:
 		"weigh":
 			result = shop.weigh()
 			fact = "shop_sold"
+		"stow":
+			result = shop.stow_core()
+			fact = "shop_charge"
 		"pick":
 			pick_wanted.emit()
 			return

@@ -11,6 +11,7 @@ const Threat := preload("res://src/combat/threat_grammar.gd")
 const EXPECTED := {
 	"marked-hull": ["marked_hull", "on", "bogus", "launch"],
 	"moss-scale": ["moss_scale", "on", "bogus", "launch"],
+	"carry-core": ["carry_core", "on", "bogus", "launch"],
 	"scrap": ["scrap_mode", "armor", "bogus", "start"],
 	"wear": ["wear", "on", "bogus", "start"],
 	"route-seed": ["route_seed", "7", "seven", "start"],

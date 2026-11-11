@@ -39,6 +39,8 @@ const ARC_JUMP_M := 8.0
 const ARC_JUMP_SHARE := 0.6
 const ELITE_KIND := "plated_brute"
 const OVERTIME_SEQ := 910000
+const WATER_ALPHA := 0.45
+const WARN_ALPHA := 0.15
 
 var ctx
 var state := ""
@@ -63,6 +65,9 @@ var _bell: Node3D
 var _pot: MeshInstance3D
 var _wheel: Node3D
 var _water: MeshInstance3D
+var _water_mat: StandardMaterial3D
+var _pot_next: MeshInstance3D
+var _bands: Array[MeshInstance3D] = []
 
 signal changed(state: String, rings: int)
 
@@ -71,6 +76,7 @@ func setup(ctx_ref) -> void:
 	ctx = ctx_ref
 	name = "Overtime"
 	ctx.events.enemy_struck.connect(_on_enemy_struck)
+	set_physics_process(false)
 
 
 func enabled() -> bool:
@@ -95,6 +101,7 @@ func offer(at: Vector3, facing: float, lock: Dictionary) -> void:
 	state = "offered"
 	rings = 0
 	sluice = "ready"
+	set_physics_process(true)
 	_build_props()
 	ctx.events.world_fact.emit("overtime_offered", _bell.global_position)
 	changed.emit(state, rings)
@@ -114,6 +121,9 @@ func clear() -> void:
 		_props.queue_free()
 	_props = null
 	_water = null
+	_pot_next = null
+	_bands.clear()
+	set_physics_process(false)
 
 
 # What the pot pays now: {panels, rares, cores}.
@@ -133,16 +143,19 @@ func ring() -> bool:
 	return true
 
 
+# The pot pays what the rings put in it; an empty pot has nothing to cash.
 func cash() -> bool:
-	if state != "offered":
+	if state != "offered" or rings <= 0:
 		return false
 	state = "spent"
 	cashed = true
-	if rings > 0 and ctx.get("build") != null and ctx.build.has_method("overtime_paid"):
+	if ctx.get("build") != null and ctx.build.has_method("overtime_paid"):
 		ctx.build.overtime_paid(_pot.global_position, rings)
 	ctx.events.world_fact.emit("overtime_paid", _pot.global_position)
 	if _pot != null:
 		_pot.visible = false
+	if _pot_next != null:
+		_pot_next.visible = false
 	changed.emit(state, rings)
 	return true
 
@@ -153,7 +166,21 @@ func open_sluice() -> bool:
 	sluice = "warning"
 	sluice_left = SLUICE_WARN_S
 	ctx.events.world_fact.emit("sluice_warning", _wheel.global_position)
+	_show_water(true)
 	return true
+
+
+# Where a prop stands ("bell", "pot" or "sluice"), or Vector3.INF when the yard offers none.
+func prop_at(id: String) -> Vector3:
+	var node: Node3D = {"bell": _bell, "pot": _pot, "sluice": _wheel}.get(id)
+	return node.global_position if _props != null and node != null and is_instance_valid(node) else Vector3.INF
+
+
+# What the sheet shows: "" (nothing), "warning" (a pale ring on the ground) or "flooding".
+func water_shown() -> String:
+	if _water == null or not _water.visible:
+		return ""
+	return "flooding" if sluice == "flooding" else "warning"
 
 
 func crew_alive() -> Array:
@@ -166,7 +193,6 @@ func _physics_process(delta: float) -> void:
 	_clock += delta
 	_step_touches()
 	_step_sluice(delta)
-	_dry(delta)
 
 
 func _step_touches() -> void:
@@ -227,13 +253,6 @@ func _carry(delta: float) -> void:
 			enemy.soak(WET_S)
 			if not _soaked.any(func(ref: WeakRef): return ref.get_ref() == enemy):
 				_soaked.append(weakref(enemy))
-
-
-func _dry(delta: float) -> void:
-	for ref in _soaked:
-		var enemy = ref.get_ref()
-		if _alive(enemy) and enemy.has_method("dry"):
-			enemy.dry(delta)
 
 
 # An arc hit on a soaked machine jumps once to every other soaked machine within ARC_JUMP_M,
@@ -305,6 +324,17 @@ func _build_props() -> void:
 	dome.material_override = Palette.unshaded(Palette.BRASS)
 	dome.position = Vector3.UP * 3.6
 	_bell.add_child(dome)
+	# The bell's price: one brass band a ring left, struck off as it rings.
+	for i in MAX_RINGS:
+		var band := MeshInstance3D.new()
+		var torus := TorusMesh.new()
+		torus.inner_radius = 0.28
+		torus.outer_radius = 0.42
+		band.mesh = torus
+		band.material_override = Palette.unshaded(Palette.BRASS)
+		band.position = Vector3.UP * (0.8 + 0.6 * i)
+		_bell.add_child(band)
+		_bands.append(band)
 	var pot_post := _post("PotPost", centre - side * PROP_SIDE_M, Palette.SANDSTONE)
 	_pot = MeshInstance3D.new()
 	_pot.name = "Pot"
@@ -315,6 +345,14 @@ func _build_props() -> void:
 	_pot.material_override = Palette.unshaded(Palette.SAND)
 	_pot.position = Vector3.UP * 3.4
 	pot_post.add_child(_pot)
+	# What the next ring would make the pot: a pale shell round it.
+	_pot_next = MeshInstance3D.new()
+	_pot_next.mesh = net
+	var ghost := Palette.unshaded(Color(Palette.SAND, 0.25))
+	ghost.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	_pot_next.material_override = ghost
+	_pot_next.position = _pot.position
+	pot_post.add_child(_pot_next)
 	_wheel = _post("Sluice", centre - flow_dir * SLUICE_UP_M, Palette.CHARCOAL)
 	var wheel := MeshInstance3D.new()
 	var rim := TorusMesh.new()
@@ -325,14 +363,17 @@ func _build_props() -> void:
 	wheel.position = Vector3.UP * 3.0
 	wheel.rotation = Vector3(PI * 0.5, 0.0, 0.0)
 	_wheel.add_child(wheel)
+	# The sheet is the circle it acts in (_carry): the same radius, drawn pale through the warning.
 	_water = MeshInstance3D.new()
 	_water.name = "SluiceWater"
-	var plane := PlaneMesh.new()
-	plane.size = Vector2(radius * 2.0, radius * 2.0)
-	_water.mesh = plane
-	var mat := Palette.unshaded(Color(Palette.ARC, 0.45))
-	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	_water.material_override = mat
+	var disc := CylinderMesh.new()
+	disc.top_radius = radius
+	disc.bottom_radius = radius
+	disc.height = 0.08
+	_water.mesh = disc
+	_water_mat = Palette.unshaded(Color(Palette.ARC, WATER_ALPHA))
+	_water_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	_water.material_override = _water_mat
 	_water.position = centre + Vector3.UP * 0.5
 	_water.visible = false
 	_props.add_child(_water)
@@ -360,8 +401,15 @@ func _post(id: String, at: Vector3, color: Color) -> Node3D:
 func _dress_pot() -> void:
 	if _pot != null:
 		_pot.scale = Vector3.ONE * (1.0 + 0.45 * rings)
+	if _pot_next != null:
+		_pot_next.visible = rings < MAX_RINGS
+		_pot_next.scale = Vector3.ONE * (1.0 + 0.45 * (rings + 1))
+	for i in _bands.size():
+		_bands[i].visible = i < MAX_RINGS - rings
 
 
 func _show_water(on: bool) -> void:
-	if _water != null:
-		_water.visible = on
+	if _water == null:
+		return
+	_water.visible = on
+	_water_mat.albedo_color.a = WATER_ALPHA if sluice == "flooding" else WARN_ALPHA
