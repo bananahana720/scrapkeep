@@ -3,7 +3,7 @@ extends RefCounted
 # The density governor (design-v3/FEEL-READABILITY.md §1.1 and §1.2, E1-DENSITY.md §2 to
 # §4). One scalar per frame, 0 to 1, from the threats, effects and enemies in view. It
 # thins P5 player effects and P6 hostile fills and never touches P0 to P3: the ball, every
-# hostile edge, front, bracket and rail, the reads and the player's own targeting.
+# hostile edge, front and rail, the reads and the player's own targeting.
 #
 # One Governor is live at a time (live()). Vfx steps it once per frame and publishes the
 # P6 fill scale as the global shader value threat_fill_scale; every other reader, bolts
@@ -47,10 +47,12 @@ const SHED_ENTER := 0.42
 const SHED_LEAVE := 0.36
 const SHED_STREAK_SCALE := 0.5
 
-# The priority class of every threat mark role (§1.1). P6 fills are governed; P1 never.
+# The priority class of every threat mark role (§1.1). P6 fills are governed; P1 never. A
+# shell's landing is an "edge" and a "pip" (P1, as its brackets were until wave 36) over a
+# "fill" (P6, the only part that fades in a crowd); its flight is a dashed "trace".
 const CLASS_OF_ROLE := {
 	"area": "P6", "fill": "P6", "swept": "P6", "run": "P6",
-	"edge": "P1", "front": "P1", "chevrons": "P1", "outline": "P1", "bracket": "P1", "pip": "P1",
+	"edge": "P1", "front": "P1", "chevrons": "P1", "outline": "P1", "pip": "P1",
 	"trace": "P1", "band": "P1", "band_top": "P1", "owner": "P1", "solid": "P1",
 }
 # Glyph kinds that are not P5 candy. Anything unlisted is a P5 player effect.
