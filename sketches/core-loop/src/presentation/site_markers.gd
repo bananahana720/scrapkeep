@@ -21,17 +21,21 @@ const Shade := preload("res://src/presentation/site_markers.gdshader")
 const CREW_SMOKE := Color("ece6d8")
 const WORKS_SMOKE := Color("262826")
 const KINDS := {
-	"cache": {"tint": CREW_SMOKE, "height": 30.0, "width": 12.0, "alpha": 0.95, "foot": 0.1, "crown": 0.7,
-		"sway": 0.35, "sway_hz": 0.12, "rise": 0.06, "grain": Vector2(3.0, 7.0), "puffs": 0.0, "stutter": 0.0},
-	"cage": {"tint": CREW_SMOKE, "height": 40.0, "width": 16.0, "alpha": 0.9, "foot": 0.14, "crown": 0.85,
+	"cache": {"tint": CREW_SMOKE, "height": 34.0, "width": 14.0, "alpha": 1.0, "foot": 0.1, "crown": 0.75, "rim_dark": 0.62,
+		"sway": 0.3, "sway_hz": 0.12, "rise": 0.06, "grain": Vector2(3.0, 7.0), "puffs": 0.0, "stutter": 0.0},
+	"cage": {"tint": CREW_SMOKE, "height": 44.0, "width": 18.0, "alpha": 1.0, "foot": 0.14, "crown": 0.85, "rim_dark": 0.62,
 		"sway": 0.12, "sway_hz": 0.1, "rise": 0.09, "grain": Vector2(2.5, 5.0), "puffs": 4.0, "stutter": 0.0},
-	"rogue": {"tint": WORKS_SMOKE, "height": 44.0, "width": 18.0, "alpha": 0.9, "foot": 0.2, "crown": 0.9,
+	"rogue": {"tint": WORKS_SMOKE, "height": 48.0, "width": 20.0, "alpha": 1.0, "foot": 0.2, "crown": 0.9, "rim_dark": 1.0,
 		"sway": 0.08, "sway_hz": 0.07, "rise": 0.07, "grain": Vector2(2.0, 4.0), "puffs": 6.0, "stutter": 0.8},
 }
 const GONE_M := 12.0
 const FULL_M := 40.0
 const FAR_FULL_M := 450.0
 const FAR_GONE_M := 600.0
+# Past GROW_FROM_M a plume grows with distance, up to GROW_MAX times its size, so it keeps the screen size it has at
+# GROW_FROM_M for as long as it can: a sign, not scenery to scale (PC film of 79dcc01b: nothing read at 300 m).
+const GROW_FROM_M := 130.0
+const GROW_MAX := 2.5
 # The site list is read four times a second; the fade follows the camera every frame.
 const READ_EVERY := 0.25
 
@@ -120,8 +124,8 @@ func _plume(kind: String, at: Vector3, key: String) -> MeshInstance3D:
 	material.set_shader_parameter("seed", float(absi(hash(key)) % 1000) / 1000.0)
 	view.material_override = material
 	view.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	# The quad turns about its axis in the shader, so its bounds must cover the turn.
-	view.extra_cull_margin = float(row["width"]) * 0.5
+	# The quad turns about its axis in the shader, so its bounds must cover the turn at its largest.
+	view.extra_cull_margin = float(row["width"]) * 0.5 * GROW_MAX
 	view.set_meta("kind", kind)
 	add_child(view)
 	view.global_position = at
@@ -144,18 +148,25 @@ static func _material(kind: String) -> ShaderMaterial:
 		var row: Dictionary = KINDS[kind]
 		var m := ShaderMaterial.new()
 		m.shader = Shade
-		for p in ["tint", "alpha", "foot", "crown", "sway", "sway_hz", "rise", "grain", "puffs", "stutter"]:
+		for p in ["tint", "alpha", "foot", "crown", "rim_dark", "sway", "sway_hz", "rise", "grain", "puffs", "stutter"]:
 			m.set_shader_parameter(p, row[p])
 		_materials[kind] = m
 	return _materials[kind]
 
 
-# Each plume's shown share for an eye; a plume with nothing to show is hidden, so it costs no draw.
+# The scale a plume takes for an eye distance_m away (horizontal): 1 near, growing past GROW_FROM_M to GROW_MAX.
+static func grow(distance_m: float) -> float:
+	return clampf(distance_m / GROW_FROM_M, 1.0, GROW_MAX)
+
+
+# Each plume's shown share and size for an eye; a plume with nothing to show is hidden, so it costs no draw.
 func fade_for(eye: Vector3) -> void:
 	for view: MeshInstance3D in views.values():
 		var at := view.global_position
-		var share := near_alpha(Vector2(at.x - eye.x, at.z - eye.z).length())
+		var distance := Vector2(at.x - eye.x, at.z - eye.z).length()
+		var share := near_alpha(distance)
 		view.visible = share > 0.0
+		view.scale = Vector3.ONE * grow(distance)
 		(view.material_override as ShaderMaterial).set_shader_parameter("near_alpha", share)
 
 

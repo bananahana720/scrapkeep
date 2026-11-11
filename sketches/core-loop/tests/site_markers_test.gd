@@ -157,6 +157,7 @@ func _which_sites() -> void:
 			t.check("an eye 4 m from the rogue site hides its plume", not view.visible)
 		if view.get_meta("kind") == "cache":
 			t.check("an eye 120 m from the cache shows its plume", view.visible)
+			t.eq("at 120 m a plume keeps its true size", view.scale, Vector3.ONE)
 	holder.queue_free()
 
 
@@ -172,6 +173,12 @@ func _distance_rule() -> void:
 	t.eq("full at FAR_FULL_M", SiteMarkers.near_alpha(SiteMarkers.FAR_FULL_M), 1.0)
 	t.eq("gone at FAR_GONE_M", SiteMarkers.near_alpha(SiteMarkers.FAR_GONE_M), 0.0)
 	t.check("gone before the 700 m far plane", SiteMarkers.FAR_GONE_M < 700.0)
+	t.eq("true size up to GROW_FROM_M", SiteMarkers.grow(100.0), 1.0)
+	t.near("grows with distance past it, keeping its screen size", SiteMarkers.grow(260.0), 2.0)
+	t.eq("never more than GROW_MAX", SiteMarkers.grow(590.0), SiteMarkers.GROW_MAX)
+	for kind in SiteMarkers.KINDS:
+		var row: Dictionary = SiteMarkers.KINDS[kind]
+		t.check("%s plume at its largest stays under the far plane's reach" % kind, float(row["height"]) * SiteMarkers.GROW_MAX < 150.0)
 	var last := 0.0
 	var rising := true
 	for d in range(int(SiteMarkers.GONE_M), int(SiteMarkers.FULL_M) + 1):

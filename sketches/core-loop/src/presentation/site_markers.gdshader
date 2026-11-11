@@ -21,6 +21,8 @@ uniform float puffs = 0.0;
 // 0 keeps the puffs evenly spaced; up to 1 bunches them into a stutter that drifts off the beat.
 uniform float stutter = 0.0;
 uniform float seed = 0.0;
+// How dark the plume's rim goes, as a share of its tint (1 is no rim).
+uniform float rim_dark = 1.0;
 
 float hash(vec2 p) {
 	return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
@@ -61,16 +63,20 @@ void fragment() {
 		phase += stutter * 0.35 * sin(phase * 2.1 + t * 0.7);
 		float puff = sin(fract(phase) * 3.14159);
 		half_w *= mix(0.4, 1.0, puff);
-		gap = mix(0.25, 1.0, smoothstep(0.15, 0.7, puff));
+		gap = mix(0.3, 1.0, smoothstep(0.0, 0.8, puff));
 	}
 	vec2 p = vec2(x * grain.x, (up - t * rise) * grain.y) + seed * 31.0;
 	float wisp = noise(p) * 0.65 + noise(p * 2.3 + 7.0) * 0.35;
 	// The noise eats the edge, not the middle, so the body stays whole and the outline billows.
 	float edge = abs(x) + (wisp - 0.5) * half_w * 0.9;
 	float density = (1.0 - smoothstep(half_w * 0.35, half_w, edge)) * mix(0.7, 1.0, wisp) * gap;
+	// Never a hard side: the smoke thins out before the quad's own edge, whatever the lean.
+	density *= 1.0 - smoothstep(0.8, 0.98, abs(UV.x - 0.5) * 2.0);
 	float ends = smoothstep(0.0, 0.05, up) * pow(1.0 - up, 0.9);
 	// Light from one side, so it reads as matter in the air and not as a beam of light.
 	float side = smoothstep(-half_w, half_w, x + (wisp - 0.5) * 0.4);
-	ALBEDO = tint.rgb * mix(0.68, 1.06, side * 0.7 + wisp * 0.3);
+	// A darker rim gives the plume an outline against a sky of its own shade (the flume's pale sky behind pale smoke).
+	float rim = smoothstep(half_w * 0.3, half_w * 0.95, edge);
+	ALBEDO = tint.rgb * mix(0.68, 1.06, side * 0.7 + wisp * 0.3) * mix(1.0, rim_dark, rim);
 	ALPHA = clamp(density * ends * alpha * near_alpha, 0.0, 1.0);
 }
