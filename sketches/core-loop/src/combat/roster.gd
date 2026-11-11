@@ -79,7 +79,7 @@ const BASE_ROWS := {
 		"breaks": [], "tag": "", "tests": "weapon",
 		"job": "Was a leak plugger that threw bungs at a breach.",
 		"line": "Lobs a shell at where you will be; roll into it fast and you bat it home."},
-	"miniboss": {"faction": FLEET, "role": "punisher", "mechanic": "vented_window", "telegraph": T_INSTANT, "holds": false,
+	"miniboss": {"name": "Drop Hammer", "faction": FLEET, "role": "punisher", "mechanic": "vented_window", "telegraph": T_INSTANT, "holds": false,
 		"breaks": [], "tag": "", "tests": "contact",
 		"line": "Leaps and charges, then sticks vented with its plating off: dodge, then punish the window."},
 	"vault": {"faction": FLEET, "role": "cache", "mechanic": "next_stage_plating", "telegraph": -1, "holds": false,
