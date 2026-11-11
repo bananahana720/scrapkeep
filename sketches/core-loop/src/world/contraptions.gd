@@ -694,8 +694,8 @@ func _build_lift(spec: Dictionary) -> Dictionary:
 
 
 # The drum as drawn: copper, a charcoal collar under the plate and a charcoal band every LIFT_BAND_EVERY m, flush with the
-# collider (two surfaces, the contraptions' own copper and charcoal).
-func _drum_view(r: float, top: float, length: float) -> MeshInstance3D:
+# collider (two meshes, in the contraptions' own copper and charcoal materials).
+func _drum_view(r: float, top: float, length: float) -> Node3D:
 	var copper := SurfaceTool.new()
 	var charcoal := SurfaceTool.new()
 	copper.begin(Mesh.PRIMITIVE_TRIANGLES)
@@ -712,13 +712,14 @@ func _drum_view(r: float, top: float, length: float) -> MeshInstance3D:
 			y1 = maxf(y - LIFT_BAND, bottom)
 			_lathe(charcoal, [Vector2(r, y), Vector2(r, y1)])
 			y = y1
-	var mesh := copper.commit()
-	charcoal.commit(mesh)
-	var view := MeshInstance3D.new()
+	var view := Node3D.new()
 	view.name = "DrumView"
-	view.mesh = mesh
-	view.set_surface_override_material(0, _copper_mat)
-	view.set_surface_override_material(1, _needle_mat)
+	for part: Array in [["Copper", copper, _copper_mat], ["Bands", charcoal, _needle_mat]]:
+		var mi := MeshInstance3D.new()
+		mi.name = part[0]
+		mi.mesh = (part[1] as SurfaceTool).commit()
+		mi.material_override = part[2]
+		view.add_child(mi)
 	return view
 
 
