@@ -42,8 +42,8 @@ const ROWS := {
 	},
 	"shatter_crew": {
 		"name": "Shatter Crew", "maker": "spillway_works", "tags": ["frost", "kinetic"], "color": Palette.COPPER,
-		"text": "Shots freeze water where they land; slam the ice to shatter it.",
-		"elements": {"shot": "frost"},
+		"text": "Shots freeze water where they land, and ice you shatter hits harder.",
+		"elements": {"shot": "frost"}, "dials": {"shatter_damage": 1.5},
 	},
 	# Fleet Surplus: heavy hull, hard rams.
 	"wrecking_ball": {
