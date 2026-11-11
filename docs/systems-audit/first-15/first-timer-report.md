@@ -23,7 +23,7 @@ Result: PASS. Runs: Sable seed 1 to stage 3, Rivet seed 1 to stage 3, Kest seed 
 | Buy from Moss with cogs | optional | Sable: not reached; Rivet: not reached; Kest: not reached; Tarn: not reached; Tally: not reached; Cannon: not reached |  | nothing  |
 | Camp between runs | optional | Sable: not reached; Rivet: not reached; Kest: not reached; Tarn: not reached; Tally: not reached; Cannon: not reached |  | nothing  |
 
-- Stagger Brindle and smash the opening: On the park table Brindle's plate names each phase's loop from the arena's first frame (phase 1: "Shoot magnets, then cockpit", objectives.gd STEPS); the legacy table carried it over from the Warden fights.
+- Stagger Brindle and smash the opening: On the park table Brindle's plate names each phase's loop from the arena's first frame (phase 1: "Shoot magnets, then cockpit", objectives.gd's boss rows); the legacy table carried it over from the Warden fights.
 - Run again after being scrapped: A death with no earned save ends the run (no free retry), so the lesson is RUN OVER itself: its line naming what scrapped you and its Run again key. A run with no death reads "not reached"; --scrap-at=<s> scraps each pilot that many seconds into stage 1 to measure it.
 - Wall grip: stay fast and walls hold: Optional because it is a bonus, not a gate: the run goes on without carving. Taught by the first-meet tip (ui/field_tips.gd), queued when the ball first carves a wall and counted once its toast has been on screen 0.4 s; another tip or toast up at the time delays it.
 - Jam fields lock slots 2 and 3: Optional: the jammer's mat sits in a Dig stage the two-stage bot run may not enter, and a fast ball slips its pulse. Taught by the first-meet tip, queued when a pulse first jams the ball.
@@ -31,7 +31,7 @@ Result: PASS. Runs: Sable seed 1 to stage 3, Rivet seed 1 to stage 3, Kest seed 
 - Radio dial: . next, , back, / skip: Optional: the run goes on without touching the radio; the dial only changes the music. Taught by the first-meet tip, which waits for the drop's stage card to clear and then counts once its toast has been on screen 0.4 s, so it comes a few seconds after the dial's first frame and the audit reads it late.
 - Relay stakes: hold E at the mast: Optional: a relay is a park site the bot does not seek out. Taught by the first-meet tip from 30 m of a stake post; the probe counts the post met at E's 18 m lock reach, which a fast ball can reach before the tip has been up 0.4 s.
 - SPIL-9: the next ram calls it in: Optional: the halo only charges with a companion seated, and a run starts without one. Taught by the first-meet tip, queued when the halo fills.
-- Actives on F: Optional by design: actives are off by default (--actives), so a default run never racks one. Taught by the first-meet tip, queued when one is first racked.
+- Actives on F: Optional: a run starts with an active racked (the actives launch option is on by default, tuning.gd), but nothing needs one. Taught by the first-meet tip, queued when one is first racked, so it comes a few seconds after the drop.
 - Scrap makes you heavier: The "Scrap = heft" first-run callout (ui/callouts.gd) was retired with the old HUD (design-v3/LEGIBILITY.md item 33) and nothing replaced it.
 - Buy from Moss with cogs: The bay is labelled "Moss's workshop"; nothing says what cogs buy or how to buy.
 - Camp between runs: Outside a run: the title page's Camp button (K). The probe does not reach it.

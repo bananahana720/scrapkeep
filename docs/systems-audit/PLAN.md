@@ -1,6 +1,6 @@
 # Game systems audit: plan
 
-**What this is.** An add-on workstream Andrew asked for on 11 November 2026: find and fix the weakest parts of Scrapkeep's systems, mechanics and features, with evidence from running the game. It runs beside the world 1 polish program and does not pause or re-scope wave 37. This page is Step 0 (intake). The six passes are cards SA-A to SA-F in [BACKLOG.md](../../BACKLOG.md#systems-audit-add-on-11-november-2026). Pass A's output is [systems-map.md](systems-map.md).
+**What this is.** An add-on workstream Andrew asked for on 11 November 2026: find and fix the weakest parts of Scrapkeep's systems, mechanics and features, with evidence from running the game. It runs beside the world 1 polish program and does not pause or re-scope wave 37. This page is Step 0 (intake). The six passes are cards SA-A to SA-F in [BACKLOG.md](../../BACKLOG.md#systems-audit-add-on-11-november-2026). Outputs: pass A [systems-map.md](systems-map.md), pass C [mechanics/](mechanics/README.md), pass D [feature-fit.md](feature-fit.md), pass E [first-15/](first-15/README.md); pass B writes `economy/`.
 
 **Scope.** World 1 first: the title, the camp, the dam, the flume and Brindle in the Slag Bowl, and early progression (STATE.md, priority of 23 Oct; ruling at). Worlds 2 and 3 are parked. Every pass below is scoped to world 1 unless it says otherwise.
 

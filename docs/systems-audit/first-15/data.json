@@ -2,7 +2,7 @@
  "rows": [
   {
    "minute": 0,
-   "new_things": 7,
+   "new_things": 7.7,
    "damage": 0,
    "hits": 0,
    "enemies": 5.3,
@@ -10,7 +10,7 @@
   },
   {
    "minute": 1,
-   "new_things": 3,
+   "new_things": 1.3,
    "damage": 10,
    "hits": 0.3,
    "enemies": 8.9,
@@ -18,7 +18,7 @@
   },
   {
    "minute": 2,
-   "new_things": 1.5,
+   "new_things": 3,
    "damage": 73.7,
    "hits": 3.3,
    "enemies": 11.2,
@@ -26,7 +26,7 @@
   },
   {
    "minute": 3,
-   "new_things": 1,
+   "new_things": 1.7,
    "damage": 12,
    "hits": 0.3,
    "enemies": 12.2,
@@ -34,7 +34,7 @@
   },
   {
    "minute": 4,
-   "new_things": 1,
+   "new_things": 2,
    "damage": 0.6,
    "hits": 0.3,
    "enemies": 11.1,
@@ -42,7 +42,7 @@
   },
   {
    "minute": 5,
-   "new_things": 2,
+   "new_things": 0.7,
    "damage": 30,
    "hits": 2,
    "enemies": 10.4,
@@ -50,7 +50,7 @@
   },
   {
    "minute": 6,
-   "new_things": 2.5,
+   "new_things": 3.3,
    "damage": 14.5,
    "hits": 0.7,
    "enemies": 12,
@@ -58,7 +58,7 @@
   },
   {
    "minute": 7,
-   "new_things": 1,
+   "new_things": 3,
    "damage": 20,
    "hits": 1.5,
    "enemies": 6.3,
@@ -66,204 +66,21 @@
   },
   {
    "minute": 8,
-   "new_things": 0,
+   "new_things": 1,
    "damage": 11.7,
    "hits": 0.5,
    "enemies": 6.5,
    "runs": 2
   }
  ],
- "pilots": [
+ "runs": [
   {
-   "pilot": "demolitions_caster",
-   "counts": [
-    7,
-    3,
-    0,
-    3,
-    1,
-    0,
-    2,
-    3,
-    2
-   ],
-   "items": [
-    [
-     "objective:find_warden",
-     "prompt:boost",
-     "prompt:harpoon",
-     "prompt:roll",
-     "prompt:tip_active",
-     "prompt:tip_grip",
-     "prompt:tip_radio"
-    ],
-    [
-     "objective:break_clamp_crews",
-     "objective:break_yard_crew",
-     "prompt:ultimate"
-    ],
-    [],
-    [
-     "objective:ride_sheet",
-     "objective:roll_gate",
-     "prompt:tip_jam"
-    ],
-    [
-     "prompt:tip_dunk"
-    ],
-    [],
-    [
-     "objective:line_fight",
-     "prompt:slam"
-    ],
-    [
-     "objective:hold_line",
-     "objective:shoot_magnets",
-     "objective:slam_caps"
-    ],
-    [
-     "objective:bait_charge",
-     "objective:ram_scooter"
-    ]
-   ],
-   "first10": [
-    [
-     "objective:find_warden",
-     0
-    ],
-    [
-     "prompt:boost",
-     0
-    ],
-    [
-     "prompt:roll",
-     0
-    ],
-    [
-     "prompt:tip_radio",
-     3.4
-    ],
-    [
-     "prompt:tip_active",
-     6.1
-    ],
-    [
-     "prompt:harpoon",
-     7.2
-    ],
-    [
-     "prompt:tip_grip",
-     10
-    ]
-   ],
-   "needs": [
-    [
-     "active_racked",
-     0
-    ],
-    [
-     "radio_live",
-     0
-    ],
-    [
-     "stage_entered",
-     0
-    ],
-    [
-     "scrap_collected",
-     0.9
-    ],
-    [
-     "grip_used",
-     9.6
-    ],
-    [
-     "harpoon_used",
-     81.5
-    ],
-    [
-     "slam_used",
-     81.8
-    ],
-    [
-     "warden_engaged",
-     117.5
-    ],
-    [
-     "jam_hit",
-     209.1
-    ],
-    [
-     "reward_offered",
-     237.1
-    ],
-    [
-     "warden_staggered",
-     377.4
-    ],
-    [
-     "boss_arena_entered",
-     438.8
-    ],
-    [
-     "boss_staggered",
-     448.7
-    ]
-   ]
-  },
-  {
-   "pilot": "pylon_engineer",
-   "counts": [
-    9,
-    4,
-    2,
-    2,
-    3,
-    2,
-    0,
-    0,
-    0
-   ],
-   "items": [
-    [
-     "objective:break_yard_crew",
-     "objective:find_warden",
-     "prompt:boost",
-     "prompt:harpoon",
-     "prompt:interact",
-     "prompt:roll",
-     "prompt:tip_active",
-     "prompt:tip_grip",
-     "prompt:tip_radio"
-    ],
-    [
-     "objective:break_clamp_crews",
-     "objective:ride_sheet",
-     "prompt:jump",
-     "prompt:ultimate"
-    ],
-    [
-     "objective:roll_gate",
-     "prompt:tip_dunk"
-    ],
-    [
-     "objective:line_fight",
-     "prompt:slam"
-    ],
-    [
-     "objective:hold_line",
-     "objective:shoot_magnets",
-     "objective:slam_caps"
-    ],
-    [
-     "objective:bait_charge",
-     "objective:ram_scooter"
-    ],
-    [],
-    [],
-    []
-   ],
-   "first10": [
+   "seed": 2860,
+   "seconds": 498,
+   "hp_max_first": 90,
+   "hp_max_last": 119,
+   "hp_lowest": 44.8,
+   "lessons_first_20s": [
     [
      "objective:find_warden",
      0
@@ -282,123 +99,151 @@
     ],
     [
      "prompt:harpoon",
-     5.9
+     5
     ],
     [
      "prompt:tip_active",
      6.1
-    ],
-    [
-     "prompt:interact",
-     7.2
     ],
     [
      "prompt:tip_grip",
      8.9
+    ],
+    [
+     "prompt:tip_cast",
+     11.6
     ]
    ],
-   "needs": [
-    [
-     "active_racked",
-     0
-    ],
-    [
-     "radio_live",
-     0
-    ],
-    [
-     "stage_entered",
-     0
-    ],
-    [
-     "scrap_collected",
-     0.9
-    ],
-    [
-     "grip_used",
-     7.2
-    ],
-    [
-     "harpoon_used",
-     54.9
-    ],
-    [
-     "slam_used",
-     66.6
-    ],
-    [
-     "warden_engaged",
-     75
-    ],
-    [
-     "reward_offered",
-     143.4
-    ],
-    [
-     "warden_staggered",
-     239.7
-    ],
-    [
-     "boss_arena_entered",
-     260.9
-    ],
-    [
-     "boss_staggered",
-     265.3
-    ]
-   ]
-  },
-  {
-   "pilot": "remembered_cannon",
-   "counts": [
-    7,
-    3,
-    4,
-    0,
-    0,
-    4,
-    3,
-    0,
-    0
-   ],
-   "items": [
+   "lessons": [
     [
      "objective:find_warden",
+     0,
+     1
+    ],
+    [
      "prompt:boost",
-     "prompt:harpoon",
+     0,
+     1
+    ],
+    [
      "prompt:roll",
+     0,
+     1
+    ],
+    [
+     "prompt:tip_radio",
+     3.4,
+     1
+    ],
+    [
+     "prompt:harpoon",
+     5,
+     1
+    ],
+    [
      "prompt:tip_active",
+     6.1,
+     1
+    ],
+    [
      "prompt:tip_grip",
-     "prompt:tip_radio"
+     8.9,
+     1
+    ],
+    [
+     "prompt:tip_cast",
+     11.6,
+     1
+    ],
+    [
+     "objective:break_yard_crew",
+     93.9,
+     1
+    ],
+    [
+     "prompt:tip_jam",
+     134.5,
+     1
     ],
     [
      "objective:break_clamp_crews",
-     "objective:break_yard_crew",
-     "prompt:ultimate"
+     163.3,
+     1
+    ],
+    [
+     "prompt:ultimate",
+     200,
+     1
     ],
     [
      "objective:ride_sheet",
-     "objective:roll_gate",
-     "prompt:tip_dunk",
-     "prompt:tip_jam"
+     200,
+     1
     ],
-    [],
-    [],
+    [
+     "objective:roll_gate",
+     248.5,
+     1
+    ],
+    [
+     "prompt:tip_dunk",
+     250.8,
+     1
+    ],
+    [
+     "prompt:letgo",
+     376.6,
+     2
+    ],
+    [
+     "objective:line_fight",
+     397,
+     2
+    ],
+    [
+     "prompt:slam",
+     399.6,
+     2
+    ],
     [
      "objective:hold_line",
-     "objective:line_fight",
+     417.9,
+     2
+    ],
+    [
      "objective:shoot_magnets",
-     "prompt:slam"
+     418.5,
+     2
+    ],
+    [
+     "objective:slam_caps",
+     446.5,
+     2
     ],
     [
      "objective:bait_charge",
+     470.5,
+     2
+    ],
+    [
+     "prompt:hint_wall_bait",
+     473.2,
+     2
+    ],
+    [
      "objective:ram_scooter",
-     "objective:slam_caps"
-    ],
-    [],
-    []
-   ],
-   "first10": [
+     492.5,
+     2
+    ]
+   ]
+  },
+  {
+   "seed": 2861,
+   "seconds": 497,
+   "hp_max_first": 105,
+   "hp_max_last": 140,
+   "hp_lowest": 80.8,
+   "lessons_first_20s": [
     [
      "objective:find_warden",
      0
@@ -420,255 +265,129 @@
      6.1
     ],
     [
-     "prompt:harpoon",
-     7.2
-    ],
-    [
      "prompt:tip_grip",
-     9.8
+     8.9
+    ],
+    [
+     "prompt:harpoon",
+     19.2
     ]
    ],
-   "needs": [
-    [
-     "active_racked",
-     0
-    ],
-    [
-     "radio_live",
-     0
-    ],
-    [
-     "stage_entered",
-     0
-    ],
-    [
-     "scrap_collected",
-     0.9
-    ],
-    [
-     "grip_used",
-     9.4
-    ],
-    [
-     "harpoon_used",
-     75.3
-    ],
-    [
-     "slam_used",
-     80.1
-    ],
-    [
-     "warden_engaged",
-     112.6
-    ],
-    [
-     "jam_hit",
-     120.6
-    ],
-    [
-     "reward_offered",
-     170
-    ],
-    [
-     "warden_staggered",
-     314.2
-    ],
-    [
-     "boss_arena_entered",
-     344.6
-    ],
-    [
-     "boss_staggered",
-     356.7
-    ]
-   ]
-  },
-  {
-   "pilot": "runner_gunner",
-   "counts": [
-    7,
-    3,
-    3,
-    0,
-    1,
-    4,
-    2,
-    1,
-    0
-   ],
-   "items": [
+   "lessons": [
     [
      "objective:find_warden",
+     0,
+     1
+    ],
+    [
      "prompt:boost",
-     "prompt:harpoon",
+     0,
+     1
+    ],
+    [
      "prompt:roll",
+     0,
+     1
+    ],
+    [
+     "prompt:tip_radio",
+     3.4,
+     1
+    ],
+    [
      "prompt:tip_active",
+     6.1,
+     1
+    ],
+    [
      "prompt:tip_grip",
-     "prompt:tip_radio"
+     8.9,
+     1
+    ],
+    [
+     "prompt:harpoon",
+     19.2,
+     1
+    ],
+    [
+     "objective:break_yard_crew",
+     84,
+     1
     ],
     [
      "objective:break_clamp_crews",
-     "objective:break_yard_crew",
-     "objective:ride_sheet"
+     154.8,
+     1
+    ],
+    [
+     "prompt:ultimate",
+     174,
+     1
+    ],
+    [
+     "objective:ride_sheet",
+     194.6,
+     1
     ],
     [
      "objective:roll_gate",
+     222,
+     1
+    ],
+    [
      "prompt:tip_dunk",
-     "prompt:ultimate"
+     224.3,
+     1
     ],
-    [],
     [
-     "prompt:letgo"
+     "objective:line_fight",
+     379,
+     2
+    ],
+    [
+     "prompt:slam",
+     384.2,
+     2
     ],
     [
      "objective:hold_line",
-     "objective:line_fight",
+     410.4,
+     2
+    ],
+    [
      "objective:shoot_magnets",
-     "prompt:slam"
+     411.1,
+     2
+    ],
+    [
+     "objective:slam_caps",
+     439,
+     2
     ],
     [
      "objective:bait_charge",
-     "objective:slam_caps"
+     465.8,
+     2
     ],
     [
-     "objective:ram_scooter"
-    ],
-    []
-   ],
-   "first10": [
-    [
-     "objective:find_warden",
-     0
+     "prompt:hint_wall_bait",
+     468.5,
+     2
     ],
     [
-     "prompt:boost",
-     0
-    ],
-    [
-     "prompt:roll",
-     0
-    ],
-    [
-     "prompt:tip_radio",
-     3.4
-    ],
-    [
-     "prompt:harpoon",
-     6
-    ],
-    [
-     "prompt:tip_active",
-     6.1
-    ]
-   ],
-   "needs": [
-    [
-     "active_racked",
-     0
-    ],
-    [
-     "radio_live",
-     0
-    ],
-    [
-     "stage_entered",
-     0
-    ],
-    [
-     "scrap_collected",
-     0.9
-    ],
-    [
-     "grip_used",
-     11.1
-    ],
-    [
-     "harpoon_used",
-     89.4
-    ],
-    [
-     "slam_used",
-     94.6
-    ],
-    [
-     "warden_engaged",
-     109.6
-    ],
-    [
-     "reward_offered",
-     173.6
-    ],
-    [
-     "grapple_used",
-     270.9
-    ],
-    [
-     "warden_staggered",
-     319.1
-    ],
-    [
-     "boss_arena_entered",
-     342.7
-    ],
-    [
-     "boss_staggered",
-     351.1
+     "objective:ram_scooter",
+     487.8,
+     2
     ]
    ]
   },
   {
-   "pilot": "tally",
-   "counts": [
-    8,
-    3,
-    1,
-    2,
-    0,
-    2,
-    4,
-    1,
-    0
-   ],
-   "items": [
-    [
-     "objective:find_warden",
-     "prompt:boost",
-     "prompt:harpoon",
-     "prompt:roll",
-     "prompt:tip_active",
-     "prompt:tip_cast",
-     "prompt:tip_grip",
-     "prompt:tip_radio"
-    ],
-    [
-     "objective:break_clamp_crews",
-     "objective:break_yard_crew",
-     "prompt:ultimate"
-    ],
-    [
-     "objective:ride_sheet"
-    ],
-    [
-     "objective:roll_gate",
-     "prompt:tip_dunk"
-    ],
-    [],
-    [
-     "objective:line_fight",
-     "prompt:slam"
-    ],
-    [
-     "objective:bait_charge",
-     "objective:hold_line",
-     "objective:shoot_magnets",
-     "objective:slam_caps"
-    ],
-    [
-     "objective:ram_scooter"
-    ],
-    []
-   ],
-   "first10": [
+   "seed": 2862,
+   "seconds": 381,
+   "hp_max_first": 100,
+   "hp_max_last": 155,
+   "hp_lowest": 100,
+   "lessons_first_20s": [
     [
      "objective:find_warden",
      0
@@ -691,197 +410,127 @@
     ],
     [
      "prompt:harpoon",
-     6.9
+     6.2
     ],
     [
-     "prompt:tip_cast",
-     8.9
-    ]
-   ],
-   "needs": [
-    [
-     "active_racked",
-     0
-    ],
-    [
-     "radio_live",
-     0
-    ],
-    [
-     "stage_entered",
-     0
-    ],
-    [
-     "scrap_collected",
-     0.9
-    ],
-    [
-     "cast_started",
-     7.9
-    ],
-    [
-     "grip_used",
-     9.2
-    ],
-    [
-     "harpoon_used",
-     79.6
-    ],
-    [
-     "slam_used",
-     80.1
-    ],
-    [
-     "warden_engaged",
-     112.5
-    ],
-    [
-     "reward_offered",
-     205.8
-    ],
-    [
-     "warden_staggered",
-     347.6
-    ],
-    [
-     "boss_arena_entered",
-     365.6
-    ],
-    [
-     "boss_staggered",
-     374.1
-    ]
-   ]
-  },
-  {
-   "pilot": "tarn",
-   "counts": [
-    7,
-    3,
-    1,
-    0,
-    2,
-    0,
-    4,
-    2,
-    1
-   ],
-   "items": [
-    [
-     "objective:find_warden",
-     "prompt:boost",
-     "prompt:harpoon",
-     "prompt:roll",
-     "prompt:tip_active",
-     "prompt:tip_grip",
-     "prompt:tip_radio"
-    ],
-    [
-     "objective:break_clamp_crews",
-     "objective:break_yard_crew",
-     "prompt:ultimate"
-    ],
-    [
-     "objective:ride_sheet"
-    ],
-    [],
-    [
-     "objective:roll_gate",
-     "prompt:tip_dunk"
-    ],
-    [],
-    [
-     "objective:hold_line",
-     "objective:line_fight",
-     "objective:shoot_magnets",
-     "prompt:slam"
-    ],
-    [
-     "objective:bait_charge",
-     "objective:slam_caps"
-    ],
-    [
-     "objective:ram_scooter"
-    ]
-   ],
-   "first10": [
-    [
-     "objective:find_warden",
-     0
-    ],
-    [
-     "prompt:boost",
-     0
-    ],
-    [
-     "prompt:roll",
-     0
-    ],
-    [
-     "prompt:tip_radio",
-     3.4
-    ],
-    [
-     "prompt:tip_active",
-     6.1
-    ],
-    [
-     "prompt:harpoon",
-     6.4
+     "prompt:interact",
+     6.5
     ],
     [
      "prompt:tip_grip",
      8.9
     ]
    ],
-   "needs": [
+   "lessons": [
     [
-     "active_racked",
-     0
+     "objective:find_warden",
+     0,
+     1
     ],
     [
-     "radio_live",
-     0
+     "prompt:boost",
+     0,
+     1
     ],
     [
-     "stage_entered",
-     0
+     "prompt:roll",
+     0,
+     1
     ],
     [
-     "scrap_collected",
-     0.9
+     "prompt:tip_radio",
+     3.4,
+     1
     ],
     [
-     "grip_used",
-     1.4
+     "prompt:tip_active",
+     6.1,
+     1
     ],
     [
-     "harpoon_used",
-     73.8
+     "prompt:harpoon",
+     6.2,
+     1
     ],
     [
-     "slam_used",
-     75.5
+     "prompt:interact",
+     6.5,
+     1
     ],
     [
-     "warden_engaged",
-     103.9
+     "prompt:tip_grip",
+     8.9,
+     1
     ],
     [
-     "reward_offered",
-     248.4
+     "objective:break_yard_crew",
+     66.1,
+     1
     ],
     [
-     "warden_staggered",
-     391.4
+     "prompt:jump",
+     74.2,
+     1
     ],
     [
-     "boss_arena_entered",
-     416.5
+     "objective:break_clamp_crews",
+     123.9,
+     1
     ],
     [
-     "boss_staggered",
-     424.2
+     "prompt:ultimate",
+     127.5,
+     1
+    ],
+    [
+     "objective:ride_sheet",
+     127.5,
+     1
+    ],
+    [
+     "objective:roll_gate",
+     166.4,
+     1
+    ],
+    [
+     "prompt:tip_dunk",
+     168.7,
+     1
+    ],
+    [
+     "objective:line_fight",
+     267.6,
+     2
+    ],
+    [
+     "prompt:slam",
+     273.8,
+     2
+    ],
+    [
+     "objective:hold_line",
+     297.7,
+     2
+    ],
+    [
+     "objective:shoot_magnets",
+     298.3,
+     2
+    ],
+    [
+     "objective:slam_caps",
+     326.3,
+     2
+    ],
+    [
+     "objective:bait_charge",
+     352.2,
+     2
+    ],
+    [
+     "objective:ram_scooter",
+     374.2,
+     2
     ]
    ]
   }

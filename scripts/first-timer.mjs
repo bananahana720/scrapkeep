@@ -72,8 +72,8 @@ export const MECHANICS = [
     name: "Stagger Brindle and smash the opening",
     needed: "required",
     need: "boss_staggered",
-    teach: ["objective:break_guard", "objective:smash_core", "objective:shoot_magnets", "objective:break_brindle"],
-    note: "On the park table Brindle's plate names each phase's loop from the arena's first frame (phase 1: \"Shoot magnets, then cockpit\", objectives.gd STEPS); the legacy table carried it over from the Warden fights.",
+    teach: ["objective:break_guard", "objective:smash_core", "objective:shoot_magnets"],
+    note: "On the park table Brindle's plate names each phase's loop from the arena's first frame (phase 1: \"Shoot magnets, then cockpit\", objectives.gd's boss rows); the legacy table carried it over from the Warden fights.",
   },
   {
     id: "retry",
@@ -151,7 +151,7 @@ export const MECHANICS = [
     needed: "optional",
     need: "active_racked",
     teach: ["prompt:tip_active"],
-    note: "Optional by design: actives are off by default (--actives), so a default run never racks one. Taught by the first-meet tip, queued when one is first racked.",
+    note: "Optional: a run starts with an active racked (the actives launch option is on by default, tuning.gd), but nothing needs one. Taught by the first-meet tip, queued when one is first racked, so it comes a few seconds after the drop.",
   },
   {
     id: "scrap",
