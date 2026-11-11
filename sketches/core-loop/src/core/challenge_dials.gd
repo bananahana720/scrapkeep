@@ -94,7 +94,15 @@ const DEFAULTS := {
 	# Pilot regen: not allowed as defaults or tunes (--tune-unruled only). The HARD ladder's top rungs cut it
 	# (run_tier.gd LADDER, Andrew 27 Oct option 3).
 	"pilot.regen_delay_mult": 1.0, "pilot.regen_rate_mult": 1.0,
+	# Hull regenerates only while the ball rolls in the cruise speed tier or above (run_state.gd advance; wave 37
+	# unit D7, ruling cu call 1: motion heals, camping does not). 1 on, 0 = the hull regenerates at any speed,
+	# the game before this unit. World 1 ships it on; later worlds stay off until their bands are read. Ruled, so
+	# unlike the two multipliers above it is a plain tune (RULED_PILOT).
+	"pilot.regen_rolling_by_stage": [1.0, 1.0, 0.0, 0.0, 0.0, 0.0],
 }
+
+# Pilot dials a ruling covers: tunable without --tune-unruled.
+const RULED_PILOT := ["pilot.regen_rolling_by_stage"]
 
 static var _overrides := {}
 # The HARD ladder rung's dials (run_tier.gd LADDER), set with the run tier (run_state.gd): each multiplies
@@ -141,7 +149,7 @@ static func set_overrides(d: Dictionary, allow_unruled := false) -> void:
 		if not DEFAULTS.has(k):
 			_unknown(k)
 			continue
-		if k.begins_with("pilot.") and not allow_unruled and not _unruled():
+		if k.begins_with("pilot.") and not k in RULED_PILOT and not allow_unruled and not _unruled():
 			_reject(k, "pilot dials are not allowed levers yet (no ruling)")
 			continue
 		var v: Variant = d[key]
@@ -189,7 +197,7 @@ static func parse(spec: String) -> Dictionary:
 		if not DEFAULTS.has(k):
 			_unknown(k)
 			continue
-		if k.begins_with("pilot.") and not _unruled():
+		if k.begins_with("pilot.") and not k in RULED_PILOT and not _unruled():
 			_reject(k, "pilot dials are not allowed levers yet (no ruling); add --tune-unruled to override")
 			continue
 		var raw := pair.substr(eq + 1).strip_edges()
