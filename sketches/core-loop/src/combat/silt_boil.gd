@@ -10,8 +10,9 @@ const DamageDoor := preload("res://src/combat/damage_door.gd")
 # Spillway's silt: while a fight is on (an enemy within FIGHT_RADIUS) and the ball has stalled, the silt boils
 # up where it is heading. Stalled (wave 37 unit D5, ruling cu call 3; hazard.boil_stall_by_stage 1) means every
 # spot the ball has been in the last LOOP_WINDOW seconds lies within STALL_SPREAD metres of their centre: it
-# stopped, it crawled, or it held a tight orbit. A ball that keeps covering ground, a wide curve round a pack
-# included, never boils. With that dial at 0 the test is the one the boils shipped with: at least LOOP_PATH
+# stopped, it crawled, or it held a tight orbit; or the ball averaged under the stage's crawl line
+# (hazard.boil_crawl_by_stage) across the window, a slow line however long. A ball that keeps covering ground
+# at speed, a wide curve round a pack included, never boils. With that dial at 0 the test is the one the boils shipped with: at least LOOP_PATH
 # metres rolled in the window, ending under LOOP_NET from where it started (a loop, the rut test), which
 # also boiled a wide kite and never a ball that stood still. A low rumble sounds and a ring is committed
 # on the ball's predicted roll WARN seconds ahead; the ring fills for WARN seconds, then erupts: a ball
@@ -34,6 +35,8 @@ const LOOP_NET := 36.0
 # The stall test's reach: wider than the 14 m ring (and its 3 m band) a ball orbits a pack on, so that orbit
 # still boils; a kite ring of 20 m or more is free.
 const STALL_SPREAD := 18.0
+# The crawl line's ceiling in m/s: under the cruise speed tier (55% of the 14 m/s cruise, 7.7 m/s).
+const CRAWL_CEILING := 7.0
 const SAMPLE_S := 0.5
 const WARN := 1.2
 const RADIUS := 4.5
@@ -152,8 +155,13 @@ func _stirring() -> bool:
 	return _looping()
 
 
-# Every sample of the window lies within STALL_SPREAD of the samples' centre.
+# Every sample of the window lies within STALL_SPREAD of the samples' centre, or the window is a crawl: the
+# ball averaged under the stage's crawl line (hazard.boil_crawl_by_stage, m/s; 0 = no crawl line) however
+# far that took it. The line is held under CRAWL_CEILING, so a ball in the cruise speed tier never crawls.
 func _stalled() -> bool:
+	var crawl := minf(ChallengeDials.by_stage_or("hazard.boil_crawl_by_stage", int(_ctx.run.stage), 0.0), CRAWL_CEILING)
+	if crawl > 0.0 and _path() < crawl * LOOP_WINDOW:
+		return true
 	var centre := Vector3.ZERO
 	for at in _samples:
 		centre += _flat(at)
@@ -165,10 +173,15 @@ func _stalled() -> bool:
 
 
 func _looping() -> bool:
+	return _path() >= LOOP_PATH and _flat(_samples[-1] - _samples[0]).length() < LOOP_NET
+
+
+# Metres rolled across the window's samples.
+func _path() -> float:
 	var path := 0.0
 	for i in range(1, _samples.size()):
 		path += _flat(_samples[i] - _samples[i - 1]).length()
-	return path >= LOOP_PATH and _flat(_samples[-1] - _samples[0]).length() < LOOP_NET
+	return path
 
 
 # The exit run (gates, launch) and an engaged, standing Warden's ring: no boil arms there, and none pending erupts.
