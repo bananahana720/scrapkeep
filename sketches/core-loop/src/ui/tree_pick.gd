@@ -1,6 +1,7 @@
 extends Control
 
 const Palette := preload("res://src/core/palette.gd")
+const UiTokens := preload("res://src/ui/ui_tokens.gd")
 const ChoiceButton := preload("res://src/ui/choice_button.gd")
 const TreeCard := preload("res://src/ui/tree_card.gd")
 const TreeCrumb := preload("res://src/ui/tree_crumb.gd")
@@ -63,14 +64,14 @@ func _init() -> void:
 	_column = VBoxContainer.new()
 	_column.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_column.alignment = BoxContainer.ALIGNMENT_CENTER
-	_column.add_theme_constant_override("separation", 22)
+	_column.add_theme_constant_override("separation", 24)
 	_column.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_column)
 	_heading = Label.new()
 	_heading.text = HEADING
 	_heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_heading.add_theme_font_override("font", UiFonts.bold())
-	_heading.add_theme_font_size_override("font_size", 30)
+	_heading.add_theme_font_size_override("font_size", UiTokens.HEADING)
 	_heading.add_theme_color_override("font_color", Palette.SAND)
 	_heading.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_column.add_child(_heading)
@@ -78,7 +79,7 @@ func _init() -> void:
 	_held_line.text = HELD
 	_held_line.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_held_line.add_theme_font_override("font", UiFonts.bold())
-	_held_line.add_theme_font_size_override("font_size", 18)
+	_held_line.add_theme_font_size_override("font_size", UiTokens.BODY)
 	_held_line.add_theme_color_override("font_color", Palette.AMBER)
 	_held_line.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_column.add_child(_held_line)

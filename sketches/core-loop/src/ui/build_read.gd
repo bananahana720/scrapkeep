@@ -1,6 +1,7 @@
 extends PanelContainer
 
 const Panels := preload("res://src/build/panels.gd")
+const UiTokens := preload("res://src/ui/ui_tokens.gd")
 const PanelShell := preload("res://src/build/panel_shell.gd")
 const Palette := preload("res://src/core/palette.gd")
 const UiFonts := preload("res://src/ui/ui_fonts.gd")
@@ -35,14 +36,8 @@ func _init() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	custom_minimum_size = Vector2(VIEW.x + 24, 0)
 	var box := VBoxContainer.new()
-	box.add_theme_constant_override("separation", 6)
+	box.add_theme_constant_override("separation", 4)
 	add_child(box)
-	var title := Label.new()
-	title.text = "BUILD"
-	title.add_theme_font_override("font", UiFonts.bold())
-	title.add_theme_font_size_override("font_size", 28)
-	title.add_theme_color_override("font_color", Palette.AMBER)
-	box.add_child(title)
 	var frame := SubViewportContainer.new()
 	frame.custom_minimum_size = Vector2(VIEW)
 	frame.stretch = true
@@ -77,7 +72,7 @@ func _init() -> void:
 	_labels = Node3D.new()
 	_pivot.add_child(_labels)
 	_list = VBoxContainer.new()
-	_list.add_theme_constant_override("separation", 2)
+	_list.add_theme_constant_override("separation", 4)
 	box.add_child(_list)
 
 
@@ -142,7 +137,7 @@ func layout(screen: Vector2, column_left: float) -> void:
 func _line(text: String) -> Label:
 	var label := Label.new()
 	label.text = text
-	label.add_theme_font_size_override("font_size", 16)
+	label.add_theme_font_size_override("font_size", UiTokens.BODY)
 	label.add_theme_color_override("font_color", Palette.SAND)
 	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	label.custom_minimum_size.x = VIEW.x

@@ -1,6 +1,7 @@
 extends Control
 
 const Palette := preload("res://src/core/palette.gd")
+const UiTokens := preload("res://src/ui/ui_tokens.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const RunState := preload("res://src/core/run_state.gd")
 const Parts := preload("res://src/build/parts.gd")
@@ -34,7 +35,7 @@ const HOOK_TILE := Vector2(150.0, 124.0)
 const CELL_TILE := Vector2(96.0, 124.0)
 const SELL_TILE := Vector2(96.0, 110.0)
 const SELL_COLUMNS := 6
-const DETAIL_FONT := 18
+const DETAIL_FONT := UiTokens.BODY
 const FADE_IN := 0.22
 const FADE_OUT := 0.18
 const SLIDE := 40.0
@@ -69,7 +70,7 @@ class ScrapChip extends Control:
 	func _draw() -> void:
 		var mid := size.y * 0.5
 		draw_texture_rect(Icons.texture("res_scrap"), Rect2(Vector2(0.0, mid - 12.0), Vector2(24.0, 24.0)), false, Icons.tint("res_scrap", Palette.ARC))
-		UiDraw.text(self, 32.0, mid, str(amount), 22, Palette.SAND, true)
+		UiDraw.text(self, 32.0, mid, str(amount), UiTokens.LABEL, Palette.SAND, true)
 
 
 func _init() -> void:
@@ -98,16 +99,17 @@ func _init() -> void:
 		var b := Button.new()
 		b.icon = Icons.shape(String(EventKinds.LOOT_ROWS[f[1]]["shape"]))
 		b.expand_icon = true
-		b.custom_minimum_size = Vector2(46.0, 40.0)
+		b.custom_minimum_size = Vector2(UiTokens.TARGET, UiTokens.TARGET)
 		b.focus_mode = Control.FOCUS_ALL
 		b.toggle_mode = true
+		b.accessibility_name = String(f[0]).capitalize()
 		b.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 		b.add_theme_color_override("icon_normal_color", Color(EventKinds.LOOT_ROWS[f[1]]["color"], 0.6))
 		b.add_theme_color_override("icon_pressed_color", EventKinds.LOOT_ROWS[f[1]]["color"])
 		b.add_theme_color_override("icon_hover_color", Color.WHITE)
 		b.add_theme_color_override("icon_focus_color", Color.WHITE)
 		for state in ["normal", "hover", "pressed", "focus", "disabled"]:
-			b.add_theme_stylebox_override(state, ChoiceButton.plate(Palette.SAND if state in ["hover", "focus"] else Palette.VERDIGRIS, 3 if state == "focus" else 2, 8.0, state != "focus"))
+			b.add_theme_stylebox_override(state, ChoiceButton.plate(Palette.SAND if state in ["hover", "focus"] else UiTokens.LINE, 3 if state == "focus" else 2, 8.0, state != "focus"))
 		b.pressed.connect(set_face.bind(f[0]))
 		b.mouse_entered.connect(func(): b.grab_focus())
 		_wallet.add_child(b)
