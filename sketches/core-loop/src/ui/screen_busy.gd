@@ -88,9 +88,15 @@ func settled(hold := SETTLE) -> bool:
 	return _quiet_for >= hold and not busy()
 
 
-# A card that wants the screen joins the line, oldest first.
-func request(key: String) -> void:
-	if key != "" and not key in _waiting and key != _holder:
+# A card that wants the screen joins the line, oldest first. A moment that matters more (a finished
+# set) asks `first`: it goes ahead of every card waiting, never off the one on screen.
+func request(key: String, first := false) -> void:
+	if key == "" or key == _holder:
+		return
+	if first:
+		_waiting.erase(key)
+		_waiting.insert(0, key)
+	elif not key in _waiting:
 		_waiting.append(key)
 
 

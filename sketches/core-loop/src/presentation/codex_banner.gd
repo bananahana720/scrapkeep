@@ -225,7 +225,7 @@ func show_discovery(title: String, category: String, detail := "", kicker := "Ne
 			at += 1
 	_queue.insert(at, item)
 	if _busy != null:
-		_busy.request(key)
+		_busy.request(key, every_time)
 	if not showing():
 		_next()
 
@@ -342,7 +342,11 @@ func _next() -> void:
 		_glyph_color = color
 	_icon.texture = CodexStyle.icon(item[1], item[7])
 	# The glyph, the colour and the name say what it is; the kicker is only the category, not a sentence.
+	# A moment of the run (a finished set) wears the synergy card's glyph, so its word stays until a
+	# mark of its own carries it (reported, wave 36 round 4).
 	_kicker.text = String(entry["label"]).to_upper()
+	if item[8]:
+		_kicker.text = "%s  ·  %s" % [String(item[3]).to_upper(), _kicker.text]
 	# The edge, icon and glyph wear a tint as given; the small kicker text is lifted so a dark
 	# tint (rust, slate) still reads on the panel.
 	_kicker.add_theme_color_override("font_color", color.lightened(TINT_KICKER_LIFT) if item[7] is Color else color)
