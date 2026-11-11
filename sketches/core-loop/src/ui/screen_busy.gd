@@ -4,7 +4,8 @@ const WhyCallout := preload("res://src/ui/why_callout.gd")
 const MixRows := preload("res://src/presentation/mix_rows.gd")
 
 # Is the screen busy? The one answer (PF-19), read by every card that can wait: a record, a
-# take, an achievement, a look, a field note, a synergy, a fleet grade find, and the crate. A
+# take, an achievement, a look, a field note, a synergy, a fleet grade find, and the crate (which
+# holds the slot like a card, and while it is up counts as busy through add_source). A
 # card asks may_show(key) each frame; it is told yes only when the screen has been quiet long
 # enough and the card is the oldest one ready, and then it holds the screen alone until it
 # calls done(key). Nothing a player must act on ever asks: those cards show when they are due.
@@ -130,6 +131,19 @@ func may_show(key: String, hold := SETTLE) -> bool:
 			break
 		if _clock - float(_asked.get(older, -1000.0)) <= ASK_WINDOW:
 			return false
+	_waiting.erase(key)
+	_holder = key
+	return true
+
+
+# A screen that does not wait for quiet (a boss's crate, opened as the boss falls) still waits for
+# the card on screen: it takes the slot ahead of the line the moment no card holds it.
+func take(key: String) -> bool:
+	_asked[key] = _clock
+	if key == _holder:
+		return true
+	if _holder != "":
+		return false
 	_waiting.erase(key)
 	_holder = key
 	return true

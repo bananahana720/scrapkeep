@@ -29,7 +29,8 @@ const ScreenBusy := preload("res://src/ui/screen_busy.gd")
 #             a resolving chord and seats the part in a hull slot
 #
 # A card or a ceremony opens only when the screen's one gate says so (may_show_card, through
-# screen_busy.gd): quiet for the finds' hold. A first find that cannot yet is held, at most
+# screen_busy.gd): quiet for the finds' hold, and the crate also takes the one slot like a card
+# (_take_crate_slot), so it never opens over a card and no card shows over it. A first find that cannot yet is held, at most
 # MAX_HELD of them, and opens in the order found; a part is seen when its card is shown, so a
 # dropped one is still unseen. A repeat find shows no card; the name at the ball is all it
 # says. A reveal card that is up when a Warden fight turns live closes at once; the part
@@ -55,6 +56,8 @@ const PAYOFF_FACTS := ["enemy_struck", "shot_fired", "dashed", "slammed", "eleme
 const PAYOFF_BY_MOD := {"weapon_rate": "shot_fired", "weapon_range": "shot_fired", "dash_impulse": "dashed",
 	"rope_range": "grapple_fired", "cruise": "boosted"}
 const MAX_HELD := 3
+# The key the banner's card for a found part waits under (presentation.gd, _on_part): a crate's find card.
+const FIND_CARD := "part:"
 const CLOSE_SCREENS := ["title", "class_select", "summary", "dead"]
 
 var ctx
@@ -499,6 +502,8 @@ func _process(delta: float) -> void:
 
 func _step_queue(now: int) -> void:
 	var row := EventKinds.reward_row("ceremony")
+	if _busy() != null:
+		_busy().request(crate_key(_queue[0]["part"]), true)
 	# A boss's own reward does not wait on the damage clock: its death ends the fight.
 	var gate: bool = String(_queue[0]["source"]) == "boss" or may_show_card()
 	if not gate or not calm():
@@ -506,9 +511,39 @@ func _step_queue(now: int) -> void:
 		return
 	if _calm_since < 0:
 		_calm_since = now
-	if now - _calm_since >= int(float(row["calm_hold_s"]) * 1000.0):
+	if now - _calm_since >= int(float(row["calm_hold_s"]) * 1000.0) and _take_crate_slot(_queue[0]):
 		_calm_since = -1
 		_begin(_queue.pop_front())
+
+
+# The crate's place in the screen's one line (screen_busy.gd); it asks first, ahead of cards waiting.
+static func crate_key(part_id: String) -> String:
+	return "crate:" + part_id
+
+
+# The crate takes the screen like a card: never over another card, and given back when it closes.
+# Its find card (the banner's card for the same part, FIND_CARD) is the same beat: when that card holds
+# the screen the crate opens beside it, and while it waits in line the crate lets it go up first. A
+# boss's crate does not wait for quiet, so it takes the slot at the front (ScreenBusy.take) and its
+# find card follows it. The wait is bounded by the holder's own life, a run end or a reset.
+func _take_crate_slot(find: Dictionary) -> bool:
+	var gate = _busy()
+	if gate == null:
+		return true
+	var beat: String = FIND_CARD + String(find["part"])
+	if gate.showing() == beat:
+		return true
+	var key := crate_key(find["part"])
+	if String(find["source"]) == "boss":
+		return gate.take(key)
+	if gate.waiting().has(beat):
+		return false
+	return gate.may_show(key, ScreenBusy.FIND_HOLD)
+
+
+func _release_crate(find: Dictionary) -> void:
+	if _busy() != null:
+		_busy().done(crate_key(find["part"]))
 
 
 func _begin(find: Dictionary) -> void:
@@ -555,6 +590,7 @@ func _step_ceremony(now: int) -> void:
 			if now >= int(_active["close"]) + int(float(EventKinds.reward_row("ceremony")["out_s"]) * 1000.0):
 				var find: Dictionary = _active["find"]
 				_active = {}
+				_release_crate(find)
 				view.set_ceremony({})
 				view.card = {}
 				_next_card()
@@ -750,6 +786,8 @@ func seen(part_id: String) -> bool:
 # A run start clears everything; a death, a retry or a screen drops what is waiting and
 # lets go of the tree, and keeps the payoffs of parts the run still holds.
 func _reset(new_run: bool) -> void:
+	for find in _queue:
+		_release_crate(find)
 	_queue.clear()
 	if _busy() != null:
 		for find in _cards:
@@ -757,6 +795,7 @@ func _reset(new_run: bool) -> void:
 	_cards.clear()
 	_calm_since = -1
 	if not _active.is_empty():
+		_release_crate(_active["find"])
 		_hold(false)
 		_active = {}
 		audio.stop(String(EventKinds.reward_row("ceremony")["sound"]))
