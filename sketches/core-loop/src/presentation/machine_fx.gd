@@ -88,7 +88,7 @@ const SPECIALS := {
 const BOSSES := {
 	"brindle": {"family": "fleet", "tint": Palette.BRASS, "reach": 8.0,
 		"phase": {"phase_ring": 64, "steam_puff": 10, "brass_spark": 16, "plate_chunks": 12}, "phase_word": "KA-CHUNK",
-		"eject_word": "EJECT", "fall_word": "END OF SHIFT"},
+		"eject_word": "EJECT"},
 	"waking": {"family": "ancient", "tint": Palette.ANCIENT, "reach": 5.0,
 		"phase": {"phase_ring": 64, "arc_fizz": 14, "shell_shards": 14, "seam_motes": 12}, "phase_word": "KRAKK",
 		"fall_word": "BACK TO SLEEP"},
@@ -786,7 +786,9 @@ func boss_fall(boss: String, at: Vector3) -> void:
 		_queue.append({"at": _clock + FALL_GAP * i, "effects": MOMENTS[family]["chunk"], "where": spot, "tint": row["tint"]})
 	var finale := FALL_GAP * FALL_BLASTS
 	_queue.append({"at": _clock + finale, "effects": row["phase"], "where": at + Vector3.UP * reach * 0.4, "tint": row["tint"]})
-	_queue.append({"at": _clock + finale + WINK_DELAY, "word": String(row["fall_word"]), "where": at + Vector3.UP * (reach + WORD_HEIGHT), "tint": row["tint"]})
+	# Brindle's rout says its one word through flourish_rows.gd; his fall stays a sight and a sound.
+	if row.has("fall_word"):
+		_queue.append({"at": _clock + finale + WINK_DELAY, "word": String(row["fall_word"]), "where": at + Vector3.UP * (reach + WORD_HEIGHT), "tint": row["tint"]})
 	_note("boss_fall", boss, at)
 
 

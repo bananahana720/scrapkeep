@@ -29,6 +29,7 @@ signal page_ready(page: Dictionary)
 
 const AppShell := preload("res://src/core/app_shell.gd")
 const Worlds := preload("res://src/core/worlds.gd")
+const Roster := preload("res://src/combat/roster.gd")
 const Parts := preload("res://src/build/parts.gd")
 const SafeStore := preload("res://src/core/safe_store.gd")
 
@@ -454,7 +455,10 @@ func _stagger_name(enemy: Node3D, boss: bool) -> String:
 	if boss:
 		return _boss_name()
 	var family = enemy.get("family")
-	return "The %s Warden" % String(family).capitalize() if family != null and String(family) != "" else "The Warden"
+	if family == null or String(family) == "":
+		return "The Warden"
+	var variant = enemy.get("variant")
+	return "The %s" % Roster.warden_name(String(family), String(variant) if variant != null else "")
 
 
 func _boss_name() -> String:

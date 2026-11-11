@@ -19,8 +19,6 @@ const UiDraw := preload("res://src/ui/ui_draw.gd")
 
 const SIZE := Vector2(420.0, 44.0)
 const GLANCE_SECONDS := 0.6
-const NAMES := {Roster.REACTOR: "Reactor Warden", Roster.SWARM: "Hive Warden", Roster.MIND: "Mind Warden"}
-const NAME_FALLBACK := "Warden"
 const TICKS := [0.25, 0.5, 0.75]
 const FONT := 17
 const MARGIN := 14.0
@@ -99,6 +97,19 @@ func drawn_words() -> Array:
 	return Array(plate_name().split(" ", false))
 
 
+# Whether the plate keeps its name off while the arrival card says it (one voice at a time). The
+# name is still plate_name(); only the drawing waits. The HUD above the plate owns the game.
+func name_held() -> bool:
+	var node := get_parent()
+	while node != null:
+		var game = node.get("game")
+		if game != null:
+			var presentation = game.get("presentation")
+			return presentation != null and presentation.names_boss()
+		node = node.get_parent()
+	return false
+
+
 func plate_name() -> String:
 	if not active():
 		return ""
@@ -109,7 +120,8 @@ func plate_name() -> String:
 		return String(_warden.get_meta("plate_name"))
 	if _warden.get("family") == null:
 		return String(EventKinds.hud("boss_arena_entered"))
-	return String(NAMES.get(_warden.family, NAME_FALLBACK))
+	var variant = _warden.get("variant")
+	return Roster.warden_name(String(_warden.family), String(variant) if variant != null else "")
 
 
 # Four pips, the first ones filled for each chunk left; the last filled one shows the
@@ -267,7 +279,8 @@ func _draw() -> void:
 	var neutral := EventKinds.role_color("neutral")
 	UiDraw.panel(self, Rect2(Vector2.ZERO, SIZE))
 	var mid := SIZE.y * 0.5
-	UiDraw.text(self, MARGIN, mid, plate_name(), FONT, neutral)
+	if not name_held():
+		UiDraw.text(self, MARGIN, mid, plate_name(), FONT, neutral)
 	var x := MARGIN + NAME_WIDTH
 	for pip in pips():
 		_draw_pip(Rect2(Vector2(x, mid - PIP * 0.5), Vector2(PIP, PIP)), pip, neutral)
