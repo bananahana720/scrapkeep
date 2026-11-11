@@ -126,7 +126,7 @@ const ROWS := {
 	"ach_d7_moth_grey": {"name": "Moth Grey", "text": "Discover ten distinct synergies.", "on": "synergy_discovered", "count": 10, "where": {"first_time": true}, "reward": {"cosmetic": "companion_paint_moth"}},
 	# Shared: the skill bar's three grants (CUSTOMIZE.md section 8). B6 kit code fires the discoveries.
 	# A grant on one named discovery never filters first_time, so a trick found before the row existed still pays.
-	"ach_any_set_piece": {"name": "Set Piece", "text": "Land your first ultimate.", "on": "synergy_discovered",
+	"ach_any_set_piece": {"name": "First Ultimate", "text": "Land your first ultimate.", "on": "synergy_discovered",
 		"where": {"synergy_id": "set_piece"}, "count": 1, "reward": {"cosmetic": "trail_any_downbeat"}},
 	"ach_any_curtain_call": {"name": "Curtain Call", "text": "Shatter an open Warden core with an ultimate landing.", "on": "synergy_discovered",
 		"where": {"synergy_id": "set_piece_core"}, "count": 1, "reward": {"cosmetic": "decal_curtain_call"}},
@@ -150,11 +150,11 @@ const ROWS := {
 		"where": {"synergy_id": "mat_slip"}, "count": 1, "reward": {}},
 	"ach_w19_flap_ride": {"name": "Ride the Flap", "text": "Ride a sluice flap instead of tumbling.", "on": "synergy_discovered",
 		"where": {"synergy_id": "flap_ride"}, "count": 1, "reward": {}},
-	"ach_w19_hook_out": {"name": "Hook Out", "text": "Snap a hooker's tether by biting another post.", "on": "synergy_discovered",
+	"ach_w19_hook_out": {"name": "Hook Out", "text": "Snap a hooker's tether by hooking another post.", "on": "synergy_discovered",
 		"where": {"synergy_id": "hook_out"}, "count": 1, "reward": {}},
 	"ach_w19_soaked": {"name": "Soaked", "text": "Hit a soaked Spillway crew with arc.", "on": "synergy_discovered",
 		"where": {"synergy_id": "armour_wet"}, "count": 1, "reward": {}},
-	"ach_w19_boom_strike": {"name": "Strike!", "text": "Burst all five of a boom tender's floats in one sweep.", "on": "synergy_discovered",
+	"ach_w19_boom_strike": {"name": "Strike", "text": "Burst all five of a boom tender's floats in one sweep.", "on": "synergy_discovered",
 		"where": {"synergy_id": "boom_strike"}, "count": 1, "reward": {}},
 	"ach_w20_kill_first": {"name": "Kill First", "text": "Break three kill-first specials across your runs.", "on": "special_broken",
 		"count": 3, "reward": {}},
@@ -205,7 +205,7 @@ const ROWS := {
 	# --- end tally ---
 	# --- remembered_cannon (the Cannon): P-C Cannon adds its grant rows here ---
 	"ach_cannon_recital": {"name": "Recital", "text": "Land the four families in the order the gun hums.", "on": "synergy_discovered", "where": {"synergy_id": "cannon_recital"}, "count": 1, "hidden": true, "reward": {"cosmetic": "trail_cannon_recital"}},
-	"ach_cannon_time_on_target": {"name": "Time on Target", "text": "Land a Fire Mission on eight enemies at once.", "on": "synergy_discovered", "where": {"synergy_id": "cannon_time_on_target"}, "count": 1, "reward": {"cosmetic": "paint_cannon_lens"}},
+	"ach_cannon_time_on_target": {"name": "Time on Target", "text": "Land a Fire Mission on eight machines at once.", "on": "synergy_discovered", "where": {"synergy_id": "cannon_time_on_target"}, "count": 1, "reward": {"cosmetic": "paint_cannon_lens"}},
 	"ach_cannon_old_tune": {"name": "Old Tune", "text": "Quiet the Mind with its own gun.", "on": "synergy_discovered", "where": {"synergy_id": "cannon_old_tune"}, "count": 1, "hidden": true, "reward": {"cosmetic": "shell_cannon_choir"}},
 	# --- end remembered_cannon ---
 	# First-win secrets (secrets.gd): the first won run opens one alternate paint per pilot. Hidden, so a

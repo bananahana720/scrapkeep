@@ -39,18 +39,18 @@ const ESCAPE_LANE_FLOOR := 7.0
 
 const PIECES := [
 	{"id": "primer_coil", "family": CONDUCTIVE_PRIMER, "name": "Primer Coil",
-		"effect": "Shots prime a foe; your next ram, slam or special on it hits half again as hard."},
+		"effect": "Shots prime a machine. Your next ram, slam or special on it hits half again as hard."},
 	{"id": "primer_mesh", "family": CONDUCTIVE_PRIMER, "name": "Conductive Mesh",
-		"effect": "Shots prime a foe; your next ram, slam or special on it arcs to two neighbours."},
+		"effect": "Shots prime a machine. Your next ram, slam or special on it arcs to two neighbours."},
 	{"id": "ram_prow", "family": RAM_BRACE, "name": "Ram Prow",
-		"effect": "Ram hits shove foes out of their wind-up."},
+		"effect": "Ram hits shove machines out of their wind-up."},
 	{"id": "ram_spring", "family": RAM_BRACE, "name": "Brace Spring",
 		"effect": "A landed ram makes your next shot hit harder."},
 	{"id": "escape_vent", "family": ESCAPE_CORRIDOR, "name": "Escape Vent",
-		"effect": "After a survived low-hull hit, vents once and shoves you clear of the hitter.",
+		"effect": "After a hit that leaves you at a quarter health or less, vents once and shoves you clear of the hitter.",
 		"escape": {"style": "shove", "seconds": ESCAPE_SECONDS}},
 	{"id": "escape_rail", "family": ESCAPE_CORRIDOR, "name": "Corridor Rail",
-		"effect": "After a survived low-hull hit, lays a short slick lane once for you to ride out on.",
+		"effect": "After a hit that leaves you at a quarter health or less, lays a short slick lane once for you to ride out on.",
 		"escape": {"style": "lane", "seconds": ESCAPE_SECONDS}},
 ]
 # Module drivers (SR7; comps/ror2/companions.md "Skill-driver list as the behavior model"):

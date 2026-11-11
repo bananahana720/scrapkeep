@@ -99,7 +99,7 @@ func _rule_toasts(table: Dictionary, kind: String) -> bool:
 
 # Celebration stamps drawn in the hazard colour, as "row form text", and how many were seen.
 func _hazard_celebrations(rows: Dictionary) -> Dictionary:
-	var celebrate := ["CLOCKED IN", "SHIFT COMPLETE", "ROUTED!", "HIRED"]
+	var celebrate := ["CLOCKED IN", "SHIFT COMPLETE", "ROUTED", "HIRED"]
 	var seen := 0
 	var bad: Array = []
 	for id in rows:
@@ -173,7 +173,7 @@ func _colours() -> void:
 		if piece.kind == "stamp":
 			piece["colour"] = "HAZARD"
 	var caught := _hazard_celebrations(planted)
-	_t.check("11 planted: a celebration stamp set back to hazard is reported", caught.bad == ["brindle_rout full ROUTED!"], str(caught.bad))
+	_t.check("11 planted: a celebration stamp set back to hazard is reported", caught.bad == ["brindle_rout full ROUTED"], str(caught.bad))
 
 
 # A minimal posture Warden: what the plate and the run summary read for its name.
