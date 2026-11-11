@@ -83,6 +83,8 @@ All of these are in [values.patch](values.patch), which applies cleanly on PR 76
 - Rack active offers on the shelf (`active_offers.gd`) rise by the same factor.
 - Fabricator hoops on the legacy maps (`build.gd`) rise by the same factor; park maps lay no hoops.
 
+The price PR from the marked hull thread does not raise these three. It keeps them on the old curve (`Fabricators.OFF_SHELF`: base 10, growth 1.15), so the new prices reach only Moss's shelf. That leaves a known gap: Moss buys a part back at half its shelf price, so a part from a tier-1 trade chest costs 10 cogs and sells for about 20. Each chest pays out once, so the loop is worth about 10 cogs a chest, under 2% of the dam wallet. Closing the gap would mean giving every part a record of where it came from, which is not worth it for that amount.
+
 Sent as recommendations only, on paper, because no bot visits a trade chest or a blood shrine:
 - **`HEALTH_SHARES` with Marked hull on:** 0.15, 0.30 and 0.45, in place of 0.25, 0.50 and 0.75. Marked hull lowers max hull until the next Warden. At 75%, a tier-3 trade would leave 25% of max hull for a stage that costs a median 30 to 60 hull before armour, which is a near-certain death, not a gamble.
 - **`SCRAP_PER_HP_PAID`:** 0.5 to 4.0, so a blood shrine pays about one sale at Moss's scale. A 15% stake on 110 hull is 66 scrap, about 33 cogs.
