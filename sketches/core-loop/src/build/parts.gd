@@ -331,9 +331,9 @@ const NEUTRAL_REPEAT_CAP := 2
 # enter rows(), ids(), offer_pool() or roll(): a hot-wired part is offered by authorship,
 # never drawn as loot. Each row names both consequences with an icon id and at most three
 # words; "{armor}", "{armor_x}", "{steer}", "{bonus}", "{wear}" and "{wear_x}" are resolved from
-# Build, RunState and HotwireRules by hotwire_choice.gd, so the words follow the tuning. Nothing
-# here equips a part: build.gd offers one after Warden I as a Fit / Recycle choice. Recycle pays
-# recycle_commons common-part recycle values (BUILD-SYSTEMS.md: two for H1, three for H2).
+# HotwireRules.fill, so the words follow the tuning; the label is the gate card's line
+# (_hotwired_spec). Nothing here equips a part: build.gd puts one at the gates after Warden I
+# (pass D fold; the Fit / Recycle choice is retired). recycle_commons is what a burden pays.
 # Spark Tread needs armour mode too: its cost is rolling wear, which only armour mode takes.
 # Burden start values (SG4; comps/gunfire/scrolls-and-synergies.md:86 sweep of 0 to 10 burdens,
 # survival bar in burden_parts_test): each burden is a small pure cost, so ten stay a felt

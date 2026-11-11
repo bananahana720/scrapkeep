@@ -402,14 +402,13 @@ func show_start_card() -> void:
 		host.sync_briefing()
 
 
-# A screen open over the card (the pause menu or the hotwire offer) owns the keys and the clicks:
+# A screen open over the card (the pause menu) owns the keys and the clicks:
 # the card takes nothing under it and a tier button pressed under it changes nothing. The briefing
 # holds both shut; a test game's card, shown without the hold, can still be covered.
 func _start_card_covered() -> bool:
 	var game = ctx.root
 	var menu = game.get_node_or_null("PauseMenu")
-	var offer = game.hud.hotwire_screen if game.get("hud") != null else null
-	return (menu != null and menu.is_open()) or (offer != null and offer.is_open())
+	return menu != null and menu.is_open()
 
 
 func take_start_pick(index: int) -> bool:

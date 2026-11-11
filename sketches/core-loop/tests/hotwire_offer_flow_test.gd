@@ -8,7 +8,7 @@ const HotwireRules := preload("res://src/build/hotwire_rules.gd")
 # Unit HW1, after the fold (systems audit pass D): a hot-wired part is a rare part the first
 # Warden of each world puts up at the gates, and Spark Tread (BUILD-SYSTEMS.md, H2), on the real Game.
 #   - Warden I puts the part up as a striped rare gate beside the pair, once per world, with no
-#     Fit / Recycle screen (hotwire_offered never fires); Warden II adds nothing.
+#     Fit / Recycle screen (retired with its signals); Warden II adds nothing.
 #   - run.parts changes only when the striped gate is taken; it waits at the gates until then.
 #   - World one holds one hot-wired part; world two puts up a second.
 #   - A retry rewinds a Warden break taken after the checkpoint; a save that still holds an
@@ -63,7 +63,6 @@ func _speed(share: float) -> void:
 func _offer_checks() -> void:
 	var build = _game.build
 	var run = _game.ctx.run
-	build.hotwire_offered.connect(func(_id: String, _cogs: int): _offers += 1)
 	_check("nothing before a warden", build.hotwire_pending()["state"] == "" and build._hotwire_gate_ids().is_empty(),
 		"state \"%s\"" % build.hotwire_pending()["state"])
 	build._on_flow_changed("gates")
@@ -92,7 +91,7 @@ func _offer_checks() -> void:
 	_game.events.beacon_unsealed.emit(1)
 	var reopened: Array = build.gates.offers.map(func(o): return o["part_id"])
 	_check("standing gates gain it", reopened.size() == 3 and reopened[-1] == "riveted_shell", "gates %s" % [reopened])
-	_check("the old screen never opens", _offers == 0, "hotwire_offered fired %d times" % _offers)
+	_check("the old screen is gone", not build.has_signal("hotwire_offered") and not build.has_method("hotwire_fit"), "build still has the Fit / Recycle hooks")
 	# Closed until the end: taking a gate launches the ball, which the tread checks must not see.
 	build.gates.close()
 
@@ -127,7 +126,7 @@ func _world_checks() -> void:
 	_game.events.beacon_unsealed.emit(1)
 	_check("world-two spent offer survives restore", build.hotwire_pending()["state"] == "fit"
 		and build._hotwire_gate_ids().is_empty(), "pending %s" % [build.hotwire_pending()])
-	_check("the old screen never opened", _offers == 0, "hotwire_offered fired %d times" % _offers)
+	_check("the old screen never opened", not _game.hud.has_method("hotwire_screen") and _game.hud.get("hotwire_screen") == null, "the HUD still holds a hot-wire screen")
 
 
 func _tread_setup() -> void:
@@ -230,7 +229,6 @@ func _resume_checks() -> void:
 	second.ctx.calm = true
 	second.player.source = Intent.Scripted.new()
 	var offers := [0]
-	second.build.hotwire_offered.connect(func(_id: String, _cogs: int): offers[0] += 1)
 	var resumed: bool = second.flow.resume_run()
 	for i in 3:
 		await process_frame

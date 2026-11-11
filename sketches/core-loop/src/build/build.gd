@@ -70,12 +70,6 @@ const SHELL_AIR_FACTOR_SPRINT := 1.0
 # The resolved shell factor moved between two fitted values: `rose` is true above the resting
 # factor (an inversion is live), false on the return to it. Presentation reads only this.
 signal shell_air_changed(factor: float, rose: bool)
-# The old hot-wired Fit / Recycle choice. Since the fold (hotwire_rules.gd) the build never emits
-# hotwire_offered: the part goes straight to the gates. Both signals, hotwire_pending, hotwire_fit
-# and hotwire_recycle stay only while src/ui/hotwire_screen.gd (the UI thread's) still connects to
-# them; they go when that screen does.
-signal hotwire_offered(part_id: String, recycle: int)
-signal hotwire_resolved(part_id: String, choice: String, cogs: int)
 # A gained part woke a maker trick that is told on waking (Synergies.told_on_wake: one that only
 # adds an element) for the first time this run. Build-local: presentation raises the banner from
 # it, with the trick's name, its one line and its colour. A resume or a retry that restores a held
@@ -815,34 +809,10 @@ func _hotwire_restore(retry := false) -> void:
 		_hotwire_save()
 
 
-# {part_id, state, recycle}; part_id "" when nothing was offered this run.
+# {part_id, state}: state "fit" while the Warden break's hot-wired part waits at the gates (an old
+# save may say "recycle", a choice the retired screen made); part_id "" when none was put up.
 func hotwire_pending() -> Dictionary:
-	return {"part_id": _hotwire_id, "state": _hotwire_state, "recycle": Parts.hotwire_recycle(_hotwire_id)}
-
-
-# Fit: the part becomes the held offer, standing as a striped gate the player rolls through
-# like any other; nothing is added to run.parts here. Open gates are put up again with it.
-func hotwire_fit() -> bool:
-	if _hotwire_state != "open":
-		return false
-	_hotwire_state = "fit"
-	_hotwire_save()
-	_hotwire_to_open_gates()
-	hotwire_resolved.emit(_hotwire_id, "fit", 0)
-	return true
-
-
-# Recycle: the offer pays its stated cogs once and is gone. Returns the cogs paid (0 when
-# there was nothing open to recycle).
-func hotwire_recycle() -> int:
-	if _hotwire_state != "open":
-		return 0
-	_hotwire_state = "recycle"
-	_hotwire_save()
-	var cogs := Parts.hotwire_recycle(_hotwire_id)
-	ctx.run.add_cogs(cogs)
-	hotwire_resolved.emit(_hotwire_id, "recycle", cogs)
-	return cogs
+	return {"part_id": _hotwire_id, "state": _hotwire_state}
 
 
 # The held hot-wired offer a gate opening adds after its rolled picks, until it is taken.

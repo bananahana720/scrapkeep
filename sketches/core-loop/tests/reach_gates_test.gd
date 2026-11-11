@@ -205,12 +205,6 @@ func _run_past() -> bool:
 				_game.ctx.build.gates.chosen.connect(func(id: String): _chosen.append(id))
 				_step = 4
 		4:
-			# 2026-10-04 (fix round D): since HW2 the Warden's break offers a hot-wired part and the
-			# Fit / Recycle screen pauses the tree as the gates open, so no gate is ever crossed.
-			# Recycle it first; the gate offers are unchanged.
-			var hotwire = _game.hud.hotwire_screen
-			if hotwire != null and hotwire.is_open():
-				hotwire.choose("recycle")
 			_park(Vector2(_slots[0]["at"].x, _slots[0]["at"].y + 2.0))
 			_step = 5
 		5:

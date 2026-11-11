@@ -44,7 +44,6 @@ const SCREENS := [
 	{"name": "hud-toast-card", "group": "run", "reach": "_reach_hud", "ready": "_ready_hud", "what": "The fight HUD with a toast and the kit card up"},
 	{"name": "build-readout", "group": "run", "reach": "_reach_readout", "ready": "_ready_readout", "what": "The Build popup listing three fitted parts"},
 	{"name": "pause-settings", "group": "run", "reach": "_reach_pause_settings", "ready": "_ready_pause_settings", "what": "Settings opened from the pause menu"},
-	{"name": "hotwire", "group": "run", "reach": "_reach_hotwire", "ready": "_ready_hotwire", "what": "The hot-wire Fit or Recycle offer"},
 	{"name": "shop", "group": "run", "reach": "_reach_shop", "ready": "_ready_shop", "what": "Moss's counter with a tile selected"},
 	{"name": "death", "group": "run", "reach": "_reach_death", "ready": "_ready_death", "what": "The death screen"},
 	{"name": "summary-loss", "group": "run", "reach": "_reach_summary_loss", "ready": "_ready_summary", "what": "The run summary after a loss"},
@@ -375,24 +374,6 @@ func _reach_pause_settings() -> void:
 
 func _ready_pause_settings() -> bool:
 	return _game.get_node("PauseMenu").settings_open()
-
-
-func _reach_hotwire() -> void:
-	var ws = _game.get_node("Workshop")
-	# The briefing (kit card, start card) holds the game; the offer opens only once nothing holds it.
-	ws.armed = false
-	ws.close_all()
-	_game.flow.start_card.hide_card()
-	await _frames(10)
-	# A test game counts as a bot, and the offer never opens for a bot; this one plays the human (game.gd bot_driven).
-	_game.bot_driven = false
-	_game.events.beacon_unsealed.emit(1)
-	await _frames(10)
-	_game.hud.hotwire_screen.open()
-
-
-func _ready_hotwire() -> bool:
-	return _game.hud.hotwire_screen.is_open()
 
 
 func _reach_shop() -> void:
