@@ -342,8 +342,6 @@ func _lock() -> void:
 	await process_frame
 
 
-# A yard that runs out its max_s lets its survivors out as plain enemies: no panel for the yard,
-# and a survivor killed on the open map rolls like any kill.
 func _lobbers(game) -> Array:
 	return game.get_tree().get_nodes_in_group("enemy").filter(func(e): return String(e.get("kind")) == "lobber" and not e.is_dead())
 
@@ -380,10 +378,23 @@ func _sentry() -> void:
 	for i in 6:
 		await physics_frame
 	_t.eq("it lands once", _lobbers(game).size(), lobbers.size())
+	# The yard shuts with the sentry outside the wall: it goes, and the crew lands as before.
+	var spot3 := beacon + Vector3(0.0, 0.0, -float(row["within_m"]) + 20.0)
+	game.player.reset_to(game.ctx.terrain.drop_point(spot3.x, spot3.z, 1.0), Vector3.ZERO)
+	var waited := 0
+	while locks.lock_state == "armed" and waited < 240:
+		await physics_frame
+		waited += 1
+	await physics_frame
+	_t.eq("the yard shuts", locks.lock_state, "locked")
+	_t.check("a sentry outside the wall leaves as the yard shuts", lobbers.size() == 1 and not is_instance_valid(lobbers[0]))
+	_t.eq("the crew is the first wave alone", locks.crew_alive().size(), (row["waves"][0] as Array).size())
 	game.free()
 	await process_frame
 
 
+# A yard that runs out its max_s lets its survivors out as plain enemies: no panel for the yard,
+# and a survivor killed on the open map rolls like any kill.
 func _timed_out() -> void:
 	var game = await _game()
 	var locks = game.flow.gate

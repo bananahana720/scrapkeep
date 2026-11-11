@@ -63,6 +63,7 @@ var _wave := 0
 var _wave_wait := -1.0
 var _facing := 0.0
 var _sentry_landed := false
+var _sentry: WeakRef = null
 var _also_done := false
 var _engaged_s := -1.0
 var _clock := 0.0
@@ -232,6 +233,7 @@ func _clear() -> void:
 	_packs.clear()
 	_crew.clear()
 	_sentry_landed = false
+	_sentry = null
 	_also_done = false
 	_engaged_s = -1.0
 	_refused_at = -INF
@@ -355,6 +357,7 @@ func _lock(ball: Vector3, beacon: Vector3) -> void:
 	lock_left = float(lock.get("max_s", 60.0))
 	lock_state = "locked"
 	_build_wall(radius)
+	_retire_sentry(radius)
 	ctx.events.world_fact.emit("arena_locked", lock_centre)
 	_facing = atan2(toward.z, toward.x)
 	_wave = 0
@@ -364,8 +367,7 @@ func _lock(ball: Vector3, beacon: Vector3) -> void:
 
 # The yard's sentry (the lock row's "sentry"): once, the first time the ball is on the ground inside
 # its circle, one enemy lands `ahead_m` up the ball's line to the beacon and `side_m` off it. It is
-# a plain enemy, no crew and no pack, so the yard's shells are met on the way in, and one left
-# standing keeps shelling the ring from outside the wall.
+# a plain enemy, no crew and no pack, so the yard's shells are met on the way in.
 func _land_sentry(ball: Vector3, beacon: Vector3) -> void:
 	var sentry: Dictionary = lock_row().get("sentry", {})
 	if _sentry_landed or sentry.is_empty() or _flat(ball, beacon) > float(sentry.get("within_m", 0.0)) or not ctx.can_spawn():
@@ -373,7 +375,19 @@ func _land_sentry(ball: Vector3, beacon: Vector3) -> void:
 	_sentry_landed = true
 	var toward := Vector3(beacon.x - ball.x, 0.0, beacon.z - ball.z).normalized()
 	var spot := ball + toward * float(sentry.get("ahead_m", 0.0)) + toward.cross(Vector3.UP) * float(sentry.get("side_m", 0.0))
-	ctx.spawner.spawn_enemy(String(sentry["kind"]), ctx.terrain.drop_point(spot.x, spot.z, 2.4))
+	var enemy = ctx.spawner.spawn_enemy(String(sentry["kind"]), ctx.terrain.drop_point(spot.x, spot.z, 2.4))
+	if enemy is Node3D:
+		_sentry = weakref(enemy)
+
+
+# The yard shuts: a sentry still standing outside the wall packs up and goes, since the ball cannot reach
+# it until the yard opens (and a lobber left there shelled the ring for the whole lock, so a light ball
+# reached the Warden lighter still: random seed 2864 stalled there). One inside the ring stays and fights.
+func _retire_sentry(radius: float) -> void:
+	var enemy = _sentry.get_ref() if _sentry != null else null
+	_sentry = null
+	if _alive(enemy) and _flat(enemy.global_position, lock_centre) > radius:
+		enemy.queue_free()
 
 
 func _waves() -> Array:
