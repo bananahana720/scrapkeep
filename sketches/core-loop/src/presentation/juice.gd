@@ -104,6 +104,14 @@ const RUMBLE := {
 	"boss_weak_point_hit": {"weak": 0.5, "strong": 0.65, "ms": 120},
 	"heft_class_changed": {"weak": 0.15, "strong": 0.5, "ms": 220},
 	"beacon_unsealed": {"weak": 0.3, "strong": 0.85, "ms": 320},
+	# The loops prototypes (docs/design/loops.md). Heat: a skim's tick, the redline buzz held
+	# through the cook-off wait (redline.gd COOK_OFF_S), the blast's thump. Called Shot: a firm tap
+	# at the call, a long thump on a met break.
+	"heat_skim": {"weak": 0.6, "strong": 0.0, "ms": 60},
+	"heat_redline": {"weak": 0.25, "strong": 0.0, "ms": 4000},
+	"heat_blast": {"weak": 0.4, "strong": 1.0, "ms": 180},
+	"shot_called": {"weak": 0.0, "strong": 0.5, "ms": 80},
+	"call_met": {"weak": 0.0, "strong": 1.0, "ms": 250},
 }
 # A request weaker than the one still running is dropped, so a crowd of small facts never
 # blurs the big one under them.
@@ -194,6 +202,7 @@ func setup(ctx_ref) -> void:
 			var argc := SignalWire.arg_count(events, signal_name)
 			events.connect(signal_name, _reset.unbind(argc) if argc > 0 else _reset)
 	events.run_started.connect(func(_class_id: String): _heft_class = 1)
+	_wire_loop_rumble(events)
 	if ctx.spawner != null and ctx.spawner.has_method("resolve"):
 		resolve_of = Callable(ctx.spawner, "resolve")
 	if ctx.spawner != null and ctx.spawner.has_method("plating_of"):
@@ -808,6 +817,19 @@ func rumble(fact: String, share := 1.0) -> void:
 	rumble_log.append([fact, weak, strong, seconds, true])
 	for device in Input.get_connected_joypads():
 		Input.start_joy_vibration(device, weak, strong, seconds)
+
+
+# The loops' pad facts (Heat on the shell, Called Shot), through the same rows as every other.
+func _wire_loop_rumble(events) -> void:
+	var redline = player.get("redline")
+	if redline != null:
+		redline.skimmed.connect(func(_at: Vector3): rumble("heat_skim"))
+		redline.redlined.connect(func(): rumble("heat_redline"))
+		redline.detonated.connect(func(_at: Vector3, _force: float): rumble("heat_blast"))
+		redline.cooked_off.connect(func(_at: Vector3, _force: float): rumble("heat_blast"))
+	events.world_fact.connect(func(kind: String, _at: Vector3):
+		if kind == "shot_called" or kind == "call_met":
+			rumble(kind))
 
 
 # The one way presentation asks the camera to shake, so every shake shares SHAKE_CAP. The

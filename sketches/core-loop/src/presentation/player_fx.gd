@@ -479,13 +479,10 @@ func _wire() -> void:
 	SignalWire.listen(events, "enemy_pinned", _on_pinned)
 	events.stage_entered.connect(func(_stage: int, _retry: bool): clear())
 	_wire_redline()
-	# Called Shot (build/called_shot.gd): a firm tap at the call; a met break holds the frame.
+	# Called Shot (build/called_shot.gd): a met break holds the frame (its pad thump is juice.gd's).
 	events.world_fact.connect(func(kind: String, at: Vector3):
-		if kind == "shot_called":
-			_rumble(0.0, 0.5, 0.08)
-		elif kind == "call_met":
-			impact_frame(at, 1.0)
-			_rumble(0.0, 1.0, 0.25))
+		if kind == "call_met":
+			impact_frame(at, 1.0))
 
 
 func _pilot_id() -> String:
@@ -1322,7 +1319,7 @@ func _draw_overdrive(delta: float) -> void:
 # --- Heat on the shell ------------------------------------------------------------------
 # The shell's heat (redline.gd) carries itself in colour, motion, sound and the pad, never a bar
 # (ruling cx): the rim warms mint, amber, white; a blast stamps its word and draws its true ring;
-# the pad buzzes while the shell waits at redline and thumps on the blast.
+# the pad (juice.gd heat_* rumble rows) buzzes while the shell waits at redline and thumps on the blast.
 const OVERDRIVE_RIM := Color(1.0, 0.62, 0.24)
 const SHELL_COLORS := [Color(0.45, 1.0, 0.75), Color(1.0, 0.72, 0.25), Color(1.0, 0.98, 0.92)]
 # The rim's brightness at full heat, under overdrive's 1.0 so the soft cap still reads above it.
@@ -1349,14 +1346,7 @@ func _wire_redline() -> void:
 		return
 	redline.detonated.connect(_on_redline_blast)
 	redline.cooked_off.connect(_on_redline_blast)
-	redline.skimmed.connect(func(_at: Vector3): _rumble(0.6, 0.0, 0.06))
-	redline.redlined.connect(func(): _rumble(0.25, 0.0, Redline.COOK_OFF_S))
-	redline.changed.connect(func(_value: float, band: int):
-		# The redline buzz stops when the shell leaves redline without a blast (a stage change).
-		if _shell_band == 3 and band < 3:
-			for pad in Input.get_connected_joypads():
-				Input.stop_joy_vibration(pad)
-		_shell_band = band)
+	redline.changed.connect(func(_value: float, band: int): _shell_band = band)
 
 
 func _on_redline_blast(at: Vector3, _force: float) -> void:
@@ -1365,16 +1355,6 @@ func _on_redline_blast(at: Vector3, _force: float) -> void:
 	impact_frame(at, 1.0)
 	if vfx != null:
 		vfx.glyph("redline_blast", at + Vector3.UP * 0.3, 1.0, Redline.BLAST_RADIUS, 0.35, Vector3.UP, "ring", BLAST_RING)
-	_rumble(0.4, 1.0, 0.18)
-
-
-# The pad's two motors (weak: the high buzz, strong: the low thump) on every connected pad;
-# reduced motion keeps the pad still. Moves to juice.gd's rumble rows once that lands.
-func _rumble(weak: float, strong: float, seconds: float) -> void:
-	if reduced_motion:
-		return
-	for pad in Input.get_connected_joypads():
-		Input.start_joy_vibration(pad, weak, strong, seconds)
 
 
 # --- Carve sparks ------------------------------------------------------------------------

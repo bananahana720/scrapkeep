@@ -105,6 +105,8 @@ func _on() -> void:
 	await _hold(game, 1.2)
 	_t.eq("letting go calls what shows", [shot.state, shot.called], ["called", "CHAIN"])
 	_t.eq("the call inks", _facts.count("shot_called"), 1)
+	_t.check("the call taps the pad through juice's row",
+		game.presentation.juice.rumble_log.any(func(r: Array): return r[0] == "shot_called"))
 	_t.eq("the stamp stands over the Warden", shot.stamp_text(), "CHAIN")
 	await _hold(game, 0.7)
 	_t.eq("one call a Warden", shot.called, "CHAIN")

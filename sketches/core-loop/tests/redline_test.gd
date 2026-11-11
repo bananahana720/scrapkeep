@@ -192,7 +192,10 @@ func _run() -> void:
 	red.value = Redline.MAX
 	# The ball stands where the test left it, perhaps in the air; the blast's centre is on the ground under it.
 	var centre := Vector3(_player.ball_position().x, near.global_position.y, _player.ball_position().z)
+	var pads: Array = _game.presentation.juice.rumble_log
+	pads.clear()
 	red.spend("ram", centre, 40.0)
+	_check("the blast thumps the pad through juice's row", pads.any(func(r: Array): return r[0] == "heat_blast"), str(pads))
 	_check("a spend blasts inside its radius only", near.hp < near_before and is_equal_approx(far.hp, far_before)
 			and red.value == 0.0 and red.detonations == before_det + 2,
 		"near lost %.1f, far lost %.1f, detonations %d" % [near_before - near.hp, far_before - far.hp, red.detonations])
