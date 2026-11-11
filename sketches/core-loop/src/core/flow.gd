@@ -15,7 +15,6 @@ const UpgradeTree := preload("res://src/core/upgrade_tree.gd")
 const StartPickCard := preload("res://src/ui/start_pick_card.gd")
 const VictoryLap := preload("res://src/world/victory_lap.gd")
 const SlagBowl := preload("res://src/boss/arena.gd")
-const AppShell := preload("res://src/core/app_shell.gd")
 
 # The run as one state machine: title, class select, then per stage roam, beacon,
 # gates and launch, and a summary after stage 3. Death is its own state with a
@@ -1172,14 +1171,10 @@ func _on_launched(_velocity: Vector3) -> void:
 # place waits for the flight's end behind the full cover, and the reveal opens once its ground is drawn. Bots, tests and
 # headless runs cut at once as before. Returns true when the take plays.
 func _play_seam_take() -> bool:
-	var take = ctx.root.get("launch_take") if ctx.root != null else null
-	if take == null or take.busy() or ctx.stages.is_run_last(ctx.run.stage):
-		return false
 	var root = ctx.root
-	take.live = take.force_live or (not bool(root.get("test_mode")) and not bool(root.get("bot_driven")) and not AppShell.headless())
-	if not take.live:
+	if root == null or not root.has_method("play_launch_take") or ctx.stages.is_run_last(ctx.run.stage):
 		return false
-	return take.play_over_flight(_cut_under_cover, _flight_over, _next_drawn)
+	return root.play_launch_take(_cut_under_cover, _flight_over, _next_drawn)
 
 
 func _flight_over() -> bool:
