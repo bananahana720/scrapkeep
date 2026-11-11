@@ -237,6 +237,12 @@ const FLAGS := {
 }
 
 
+# What --profile=sitting turns on beyond the defaults: the loops Andrew wants in the world 1
+# sitting (ruling da) and the marked hull (ruling dd). A flag on the same command line wins, and
+# bots and gate bands, which never pass the profile, still measure the base game.
+const SITTING_SET := {"heat": "on", "overtime": "on", "called-shot": "on", "marked-hull": "on"}
+
+
 # The one parse pass. `when` limits it to one phase ("start" or "launch"); empty applies
 # every row. Returns the flags it applied, name to value text.
 func apply_args(args: PackedStringArray, when := "") -> Dictionary:
@@ -261,6 +267,10 @@ func apply_args(args: PackedStringArray, when := "") -> Dictionary:
 			set_value(row[0], float(value))
 			_launch[row[0]] = _values[row[0]]
 			applied[flag] = value
+	if applied.get("profile") == "sitting":
+		for flag in SITTING_SET:
+			if not applied.has(flag) and set_option(FLAGS[flag][0], SITTING_SET[flag]):
+				_launch[FLAGS[flag][0]] = _values[FLAGS[flag][0]]
 	return applied
 
 
