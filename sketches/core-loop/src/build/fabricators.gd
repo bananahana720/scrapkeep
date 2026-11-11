@@ -19,11 +19,10 @@ const WorldPrompt := preload("res://src/ui/world_prompt.gd")
 const RING := 5.0
 const SINK := 1.5
 const WIDTH := 8.0
-# Every cog price in one table (CG1), so a retune is one edit. Provisional: the values
-# are the scrap prices they replace. A part costs part_base x part_tier[tier] x
-# part_growth^parts_held; the shop's reroll, charge cells and sell-back read the rest.
-# Values from the economy pass (systems audit pass B, docs/systems-audit/economy/README.md),
-# measured on Moss's shelf and his scale.
+# Every cog price in one table (CG1), so a retune is one edit. A shelf part costs part_base x
+# part_tier[tier] x part_growth^parts_held; the shop's reroll, charge cells and sell-back read
+# the rest. Values from the economy pass (systems audit pass B,
+# docs/systems-audit/economy/README.md), measured on Moss's shelf and his scale.
 const COG_PRICES := {
 	"part_base": 40.0, "part_tier": {1: 1.0, 2: 1.6, 3: 2.6}, "part_growth": 1.06,
 	"reroll_base": 30, "reroll_growth": 1.5, "cell_base": 40, "cell_growth": 1.6, "sell_share": 0.5,

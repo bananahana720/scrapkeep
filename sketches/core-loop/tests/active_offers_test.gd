@@ -216,10 +216,19 @@ func _run() -> void:
 			record["active"] == shelved and record["rarity"] == "rare" and record["maker"] == row.get("maker", "")
 				and record["price"] > 0 and String(record["headline"]).contains(ActiveOffers.maker_name(row)), str(record))
 		_game.ctx.run.add_cogs(record["price"] + 50)
+		var wallet_before: int = _game.ctx.run.cogs
 		var bought: Dictionary = shop.buy(at)
 		_t.check("25 buying it racks it and drops the old one", bought["ok"] and rack.active_id == shelved
 			and rack.dropped.any(func(e): return e["id"] == ActiveDefs.SCRAP_ROCKET), str(bought))
 		_t.eq("26 still no part gained", _game.ctx.run.parts, parts_before)
+		# Bought off the shelf curve, it can never sell back at the shelf's: a racked active is not
+		# a held part, so Moss's sell-back refuses it and the round trip pays nothing.
+		var sell_offer: Dictionary = shop.sell(shelf[at]["part_id"])
+		var sell_active: Dictionary = shop.sell(shelved)
+		_t.check("26b a bought active sold straight back nets nothing", not sell_offer["ok"] and not sell_active["ok"]
+			and shop.sell_quote(shelf[at]["part_id"]) < 0 and _game.ctx.run.cogs - wallet_before <= 0
+			and not shop.sell_offers().any(func(o): return o["part_id"] == shelf[at]["part_id"] or o["part_id"] == shelved),
+			"sell %s: %s, %s; net %d cogs" % [shelved, sell_offer["reason"], sell_active["reason"], _game.ctx.run.cogs - wallet_before])
 		shop.inside = false
 
 	# --- Clearing ---------------------------------------------------------------------------
