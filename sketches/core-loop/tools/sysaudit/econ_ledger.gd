@@ -127,7 +127,7 @@ func _shop_visit(world) -> void:
 	var t: Dictionary = shop.top_shelf()
 	if not t.is_empty() and not t["sold"]:
 		var r: Dictionary = shop.buy_top()
-		_row("buy" if r.get("ok", false) else "no_buy", {"what": "top", "item": t["part_id"], "price": t["price"], "why": r.get("reason", r.get("status", ""))})
+		_row("buy" if r.get("ok", false) else "no_buy", {"what": "top", "item": t["part_id"], "price": t["price"], "why": r.get("reason", "")})
 	_buy_shelf(shop)
 	if shop.rerolls_left > 0 and _game.run.cogs >= shop.reroll_price():
 		var price: int = shop.reroll_price()
@@ -138,9 +138,11 @@ func _shop_visit(world) -> void:
 	while bought:
 		bought = false
 		for o in shop.charge_offers():
-			if o["can"] and _game.run.cogs >= o["price"] and shop.buy_charge(o["slot"]).get("ok", false):
-				_row("buy", {"what": "cell", "item": o["part_id"], "price": o["price"]})
-				bought = true
+			if o["can"] and _game.run.cogs >= o["price"]:
+				var r: Dictionary = shop.buy_charge(o["slot"])
+				if r.get("ok", false):
+					_row("buy", {"what": "cell", "item": o["part_id"], "price": r.get("price", 0)})
+					bought = true
 	for o in shop.shelf_offers():
 		if not o.get("sold", false):
 			_row("no_buy", {"what": "shelf", "item": o.get("part_id", ""), "price": o.get("price", 0)})
@@ -155,5 +157,6 @@ func _buy_shelf(shop) -> void:
 		var o: Dictionary = offers[i]
 		if o.get("sold", false) or _game.run.cogs < int(o.get("price", 0)):
 			continue
-		if shop.buy(i).get("ok", false):
-			_row("buy", {"what": "shelf", "item": o.get("part_id", ""), "price": o.get("price", 0)})
+		var r: Dictionary = shop.buy(i)
+		if r.get("ok", false):
+			_row("buy", {"what": "shelf", "item": o.get("part_id", ""), "price": r.get("price", 0)})
