@@ -17,6 +17,8 @@ const Augments := preload("res://src/movement/augments.gd")
 # The off line has SHOTS bites per time in the air (the ground refills them) and frays after
 # HOLD_MAX seconds, so it swings and slings but never hangs the ball over a gap for free.
 #
+# Only a taut line on an airborne ball pays: a tap at a post from the ground is not a swing.
+#
 # One call from the ball (rigid_ball.gd, after the augments) runs the whole rule, and the view
 # draws itself from this object's state. Nothing else reads or writes it.
 
@@ -40,6 +42,8 @@ const TENSION_TIME := 0.7
 const SLING_SPEED := 16.0
 const SLING_GAP := 0.45
 const SPEED_CEILING := 48.0
+# How far inside its length the ball may hang and the line still count as taut.
+const TAUT_SLACK := 0.5
 
 static var _on = null
 
@@ -54,7 +58,9 @@ var pay := 0.0
 # The last release that paid: its gain as a fraction and the time it happened, for the view.
 var last_gain := 0.0
 var last_gain_at := -1000.0
-var _harpoon_world := false
+var _harpoon_swung := false
+var _harpoon_anchor := Vector3.ZERO
+var _swung := false
 var _ball: RigidBody3D
 var _view
 
@@ -105,43 +111,66 @@ static func _bind_action() -> void:
 
 
 # One physics tick: fire, hold, reel, pay a release. `kit` is the ball's augment kit (its
-# harpoon line and the shared aim record), `state` the ball state.
-func step(kit, state, tuning, intent, body_state) -> void:
+# harpoon line and the shared aim record), `state` the ball state. `forced` is true on a tick
+# whose velocity was set outright (a ride, a launch, a deflect): that lets go of the off line
+# unpaid, as it cuts the harpoon. A mount or a plant lets go of it too.
+func step(kit, state, tuning, intent, body_state, forced := false) -> void:
+	if Augments.holding(kit) or (forced and not intent.harpoon_released):
+		_drop()
+		_harpoon_swung = false
+		pay = 0.0
+		return
 	var dt: float = body_state.step
 	var v: Vector3 = body_state.linear_velocity
 	var origin: Vector3 = body_state.transform.origin
-	if state.grounded:
+	var airborne: bool = not state.grounded
+	if not airborne:
 		shots = SHOTS
 	var harpoon_world: bool = kit.hooked and not kit.on_body
 	var both := hooked and harpoon_world
 	# The harpoon's own let-go on a world line pays a clean release too (the up-swing window
-	# only; a sling is the off line's).
-	if intent.harpoon_released and _harpoon_world and not kit.hooked:
-		v = _pay(v, swing_pay(v, origin, kit.anchor))
-	_harpoon_world = harpoon_world
+	# only; a sling is the off line's), if it was swinging on the tick before.
+	if intent.harpoon_released and _harpoon_swung and not kit.hooked and airborne:
+		v = _pay(v, swing_pay(v, origin, _harpoon_anchor))
+	_harpoon_swung = harpoon_world and airborne and swinging(origin, kit.anchor, kit.rope)
+	_harpoon_anchor = kit.anchor
 
 	if intent.twin_pressed and not hooked:
 		_fire(kit, origin, tuning.f("rope_range"))
 	elif hooked and (intent.twin_released or not intent.twin_held):
-		if both:
+		if not airborne:
+			pass
+		elif both:
 			v = _sling(v, sling_pay(v, origin, anchor, kit.anchor, tension))
-		else:
+		elif _swung:
 			v = _pay(v, swing_pay(v, origin, anchor))
 		_drop()
 	if hooked:
 		held_for += dt
 		if held_for >= HOLD_MAX:
 			_drop()
+	pay = 0.0
 	if hooked:
 		var reeling: bool = both and kit.winching
 		tension = minf(1.0, tension + dt / TENSION_TIME) if reeling else maxf(0.0, tension - dt / TENSION_TIME)
 		v = _rope(v, origin, tuning, dt, reeling)
-		pay = sling_pay(v, origin, anchor, kit.anchor, tension) / SLING_SPEED if both \
-				else swing_pay(v, origin, anchor) / RELEASE_GAIN
+		_swung = airborne and swinging(origin, anchor, rope)
+		if both and airborne:
+			pay = sling_pay(v, origin, anchor, kit.anchor, tension) / SLING_SPEED
+		elif _swung:
+			pay = swing_pay(v, origin, anchor) / RELEASE_GAIN
 	else:
 		tension = 0.0
-		pay = swing_pay(v, origin, kit.anchor) / RELEASE_GAIN if harpoon_world else 0.0
+		_swung = false
+		if _harpoon_swung:
+			pay = swing_pay(v, origin, kit.anchor) / RELEASE_GAIN
 	body_state.linear_velocity = v
+
+
+# A line swings when it is taut: the ball hangs at the rope's length, not inside it. A tap at a
+# post with slack rope is not a swing and pays nothing.
+static func swinging(origin: Vector3, at: Vector3, length: float) -> bool:
+	return origin.distance_to(at) >= length - TAUT_SLACK
 
 
 func fraying() -> float:
@@ -151,7 +180,8 @@ func fraying() -> float:
 func clear() -> void:
 	_drop()
 	shots = SHOTS
-	_harpoon_world = false
+	_harpoon_swung = false
+	pay = 0.0
 
 
 func _fire(kit, origin: Vector3, reach: float) -> void:
@@ -188,6 +218,7 @@ func _world_point(kit, origin: Vector3, reach: float):
 
 func _drop() -> void:
 	hooked = false
+	_swung = false
 	held_for = 0.0
 	tension = 0.0
 

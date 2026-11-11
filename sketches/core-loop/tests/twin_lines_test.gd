@@ -6,6 +6,7 @@ const Augments := preload("res://src/movement/augments.gd")
 const TwinLines := preload("res://src/movement/twin_lines.gd")
 const TwinLineView := preload("res://src/presentation/twin_line_view.gd")
 const T := preload("res://tests/support/t.gd")
+const Palette := preload("res://src/core/palette.gd")
 
 # The twin lines prototype (docs/design/twin-lines.md). The rule runs on stand-ins for the
 # physics state, so the swing, the release window, the sling and the fray are checked tick by
@@ -24,7 +25,10 @@ class Body:
 
 
 class Kit:
+	var mounted := false
+	var plant_time := 0.0
 	var hooked := false
+	var rope := 0.0
 	var on_body := false
 	var anchor := Vector3.ZERO
 	var winching := false
@@ -47,6 +51,7 @@ func _initialize() -> void:
 	_swing()
 	_sling()
 	_fray_and_shots()
+	_no_free_speed()
 	_view()
 	_run()
 
@@ -142,6 +147,7 @@ func _sling() -> void:
 	var body := Body.new()
 	kit.hooked = true
 	kit.anchor = Vector3(-12, 12, 0)
+	kit.rope = kit.anchor.length()
 	kit.aim["point"] = Vector3(12, 12, 0)
 	intent.twin_pressed = true
 	intent.twin_held = true
@@ -170,6 +176,7 @@ func _sling() -> void:
 	var k2 := Kit.new()
 	k2.hooked = true
 	k2.anchor = Vector3(0, 10, 0)
+	k2.rope = 10.0
 	var b2 := Body.new()
 	var i2 := Intent.new()
 	b2.linear_velocity = Vector3(cos(deg_to_rad(20.0)), sin(deg_to_rad(20.0)), 0) * 15.0
@@ -221,9 +228,80 @@ func _fray_and_shots() -> void:
 	_t.check("no aim, no bite", not twin.hooked)
 
 
+# Review of 771: a tap at a post from the ground, or on a slack line, must not pay; a forced
+# velocity set or a mount lets go of the off line unpaid.
+func _no_free_speed() -> void:
+	var kit := Kit.new()
+	var intent := Intent.new()
+	var up := Vector3(cos(deg_to_rad(20.0)), sin(deg_to_rad(20.0)), 0) * 15.0
+	var grounded := State.new()
+	grounded.grounded = true
+	var twin = TwinLines.new()
+	var body := Body.new()
+	body.linear_velocity = up
+	kit.aim["point"] = Vector3(10, 10, 0)
+	intent.twin_pressed = true
+	intent.twin_held = true
+	twin.step(kit, grounded, Tune.new(), intent, body)
+	intent.twin_pressed = false
+	intent.twin_held = false
+	intent.twin_released = true
+	body.linear_velocity = up
+	twin.step(kit, grounded, Tune.new(), intent, body)
+	_t.near("a let-go on the ground pays nothing", body.linear_velocity.length(), 15.0, 0.001)
+	var air := State.new()
+	var slack = TwinLines.new()
+	var b2 := Body.new()
+	b2.linear_velocity = up
+	intent.twin_pressed = true
+	intent.twin_held = true
+	intent.twin_released = false
+	slack.step(kit, air, Tune.new(), intent, b2)
+	b2.transform.origin = Vector3(5, 3, 0)
+	intent.twin_pressed = false
+	slack.step(kit, air, Tune.new(), intent, b2)
+	_t.eq("a slack line shows no window", slack.pay, 0.0)
+	intent.twin_held = false
+	intent.twin_released = true
+	b2.linear_velocity = up
+	slack.step(kit, air, Tune.new(), intent, b2)
+	_t.near("a let-go on a slack line pays nothing", b2.linear_velocity.length(), 15.0, 0.001)
+	var k2 := Kit.new()
+	k2.hooked = true
+	k2.anchor = Vector3(0, 10, 0)
+	k2.rope = 10.0
+	var solo = TwinLines.new()
+	var i2 := Intent.new()
+	var b3 := Body.new()
+	b3.linear_velocity = up
+	solo.step(k2, grounded, Tune.new(), i2, b3)
+	k2.hooked = false
+	i2.harpoon_released = true
+	b3.linear_velocity = up
+	solo.step(k2, air, Tune.new(), i2, b3)
+	_t.near("a harpoon let-go after rolling under its post pays nothing", b3.linear_velocity.length(), 15.0, 0.001)
+	var forced = TwinLines.new()
+	var b4 := Body.new()
+	intent.twin_pressed = true
+	intent.twin_held = true
+	intent.twin_released = false
+	forced.step(kit, air, Tune.new(), intent, b4)
+	intent.twin_pressed = false
+	forced.step(kit, air, Tune.new(), intent, b4, true)
+	_t.check("a forced velocity set lets go of the off line", not forced.hooked)
+	var held = TwinLines.new()
+	intent.twin_pressed = true
+	held.step(kit, air, Tune.new(), intent, b4)
+	kit.mounted = true
+	intent.twin_pressed = false
+	held.step(kit, air, Tune.new(), intent, b4)
+	_t.check("a mount lets go of the off line", not held.hooked)
+	kit.mounted = false
+
+
 func _view() -> void:
 	_t.eq("cable is twine at rest", TwinLineView.colour(0.0, 0.0, 0.0), TwinLineView.TWINE)
-	_t.eq("cable is mint when a release pays in full", TwinLineView.colour(1.0, 0.0, 0.0), TwinLineView.MINT)
+	_t.eq("cable is live when a release pays in full", TwinLineView.colour(1.0, 0.0, 0.0), Palette.live())
 	var wav: AudioStreamWAV = TwinLineView.pluck(220.0)
 	_t.check("the pluck is a 16-bit mono clip", wav.format == AudioStreamWAV.FORMAT_16_BITS and not wav.stereo
 		and wav.data.size() == int(TwinLineView.RATE * TwinLineView.PLUCK_S) * 2)
@@ -262,12 +340,20 @@ func _run() -> void:
 	var twin = on.player.body().twin
 	_t.check("flag on: the ball has an off line", twin != null)
 	_t.check("flag on: the off-line action is bound", InputMap.has_action(TwinLines.ACTION))
-	source.press = {"twin_pressed": true}
+	# The live rope: a line stood on a post above the ball holds it to its length in the real
+	# physics step, and letting go drops it.
+	var ball: Vector3 = on.player.ball_position()
+	twin.hooked = true
+	twin.anchor = ball + Vector3(0, 14, 6)
+	twin.rope = ball.distance_to(twin.anchor)
 	source.hold = {"twin_held": true}
-	await _sim(0.5)
-	_t.check("live: the off line runs %s" % ("hooked" if twin.hooked else "dry, no aim"), true)
+	var worst := 0.0
+	for i in 60:
+		await physics_frame
+		worst = maxf(worst, on.player.ball_position().distance_to(twin.anchor) - twin.rope)
+	_t.check("live: the rope holds the ball to its length (%.2f m over)" % worst, twin.hooked and worst < 0.5)
 	source.hold = {}
-	await _sim(0.2)
+	await _sim(0.1)
 	_t.check("live: letting go drops the off line", not twin.hooked)
 	TwinLines.force(false)
 	quit(_t.verdict())

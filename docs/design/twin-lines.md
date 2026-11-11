@@ -2,7 +2,7 @@
 
 **Status: prototype, 11 Nov 2026. Built behind `--twin-lines=on`, off by default; with the flag off the game is unchanged.** Andrew's idea (11 Nov 19:35Z): grow the ball's harpoon into a swinging system with two grapple ends, taking the feel of pendulum web-swinging and of twin-anchor gear that reels in and slingshots between two points, and making it Scrapkeep's own. The two works he named are feel references only. Nothing here copies their names, moves, look or sound.
 
-**The short answer.** Keep the harpoon exactly as it is and bolt a second, hand-fitted line beside it: the **off line**. It bites the world only. Two things become skills: **let go at the right moment** of a swing (the line lights mint when a release would pay), and **the sling**: with both lines on the world, reel both, and let go of the off line as the ball crosses the gap between them, and the stored tension throws it on. That is built and playable. Every taste call I made is listed under [Assumptions](#assumptions) for Andrew to overturn.
+**The short answer.** Keep the harpoon exactly as it is and bolt a second, hand-fitted line beside it: the **off line**. It bites the world only. Two things become skills: **let go at the right moment** of a swing (the line turns the live colour when a release would pay), and **the sling**: with both lines on the world, reel both, and let go of the off line as the ball crosses the gap between them, and the stored tension throws it on. Only a taut line on a ball in the air pays, so tapping a post from the ground gives nothing. That is built and playable. Every taste call I made is listed under [Assumptions](#assumptions) for Andrew to overturn.
 
 ```
    one line: swing                         two lines: sling
@@ -11,7 +11,7 @@
           ●                                        \         /
           |\                                        \  ball /     Ctrl reels both;
           | \   let go here: the line                \  ◯  /      tension fills (0.7 s)
-          |  \  glows mint, +18 % speed               \ │ /
+          |  \  turns live, +18 % speed               \ │ /
           |   ◯ ─ ─ ─►                                  ▼          let go of the off line
           |  ╱                                     ─ ─ ◯ ─ ─ ─ ►   in the gap: + up to 16 m/s
    bottom ◯                                       (the gap)
@@ -23,7 +23,7 @@ Read from `stage/alpha-w37` at cf3953a9.
 
 | Part | Today | Where |
 | --- | --- | --- |
-| Aim | One aim record shared by the reticle, the world marker and the press. It locks an enemy inside a cone round the reticle, else takes the world under the centre ray. Walkable ground is refused. Reach 45 m. | `src/movement/harpoon.gd`, `game.gd aim_along` |
+| Aim | One aim record shared by the reticle, the world marker and the press. It locks an enemy inside a cone round the reticle; else the centre ray takes an enemy or the world, with an assist cone of probe rays. Walkable ground is refused. Reach 45 m. | `src/movement/harpoon.gd`, `game.gd aim_along` |
 | Fire and hold | Right mouse (left trigger on a pad) fires; holding keeps the line; release drops it, with the tree's fling knob on release. | `player_ball.gd _read_grammar` |
 | World line | A rope with no stretch: it cancels only the outward speed, so a fall turns into a pendulum. Ctrl winches it in (pull 45, top speed 16 m/s). | `augments.gd _grapple` |
 | Body line | Grip by weight: lighter than you is a flail, heavier is a pole you orbit, close is a reel. Ctrl commits the smash; a Warden opens to it only in its stagger. | `grip.gd`, `augments.gd` |
@@ -37,10 +37,11 @@ So the ball already swings on one line. What it lacks is a reason to time the le
 | --- | --- | --- | --- |
 | Fire the off line | Middle mouse or mouse back button; right stick click on a pad | Bites the world where the reticle aims. An enemy under the reticle is looked past along the same ray. | Picking a post that gives a good arc |
 | Swing | Hold it | A pendulum, the same rope rule as the harpoon's world line | Reading the arc |
-| Clean release | Let go of a swinging line, the off line or the harpoon's world line | Inside the up-swing window (climbing 0 to 45 degrees, fading over 15 more, faster than 8 m/s, below the post) the ball keeps 18 % more speed. A let-go outside it pays nothing and costs nothing. | Timing: this is the core of the swing |
+| Clean release | Let go of a swinging line, the off line or the harpoon's world line | The line must be taut (the ball within 0.5 m of its full length) and the ball in the air. Inside the up-swing window (climbing 0 to 45 degrees, fading over 15 more, faster than 8 m/s, below the post) the ball keeps 18 % more speed. A let-go outside it pays nothing and costs nothing. | Timing: this is the core of the swing |
 | Sling | Both lines on the world, hold Ctrl | Ctrl already winches the harpoon; with the off line out it reels both. Tension fills over 0.7 s. Let go of the off line within the gap between the posts and the ball is thrown on by up to 16 m/s along its path. | Drawing it and letting go in the gap |
 | Two shots | | The off line has two bites per time in the air; touching ground refills them. | Choosing your two posts |
 | Fray | | The off line holds 3.5 s, flickering rust over its last 0.8 s, then snaps with no payment. | Never hang; keep moving |
+| Let go by the world | | A ride, a launch, a deflect, a mount or a plant lets go of the off line unpaid, as each cuts the harpoon today. | |
 
 The harpoon keeps everything it does today: enemy bites, grip, chain, smash, dunk. The off line touches none of them.
 
@@ -58,10 +59,10 @@ The pad mapping is the prototype's weak point: the right stick click is awkward 
 
 Following ruling cx, the read is carried by colour, shape and sound, with no words.
 
-- **The off line is twine-coloured,** a warm off-white, so it never reads as the harpoon's line. It is a keeper's hand-fitted rope, and keepers are the mismatched, hand-made side of the four makers (Story map section 3).
-- **It lights mint while a let-go would pay,** brighter the more it would pay. Mint is the keepers' colour, so "glows mint" means "yours, take it". The read is one rule: let go when it lights.
-- **The harpoon gets the same read** through a thin mint halo round the ball while its world line is in the window, since its own line view belongs to `line_view.gd`.
-- **It flickers rust as it frays.**
+- **The off line is sand at rest,** the neutral ink of the colour law (`design-v3/LEGIBILITY.md`), so it never reads as the harpoon's live cable. It is a keeper's hand-fitted rope.
+- **It turns the live colour while a let-go would pay,** fuller the more it would pay. Live means "your verb works on this right now", which is exactly the window. The read is one rule: let go when it lights. While it is lit it matches the harpoon's cable; that is honest (both lines are live then), and the sand at rest is what tells them apart.
+- **The harpoon gets the same read** through a thin live halo round the ball while its world line is taut and in the window, since its own line view belongs to `line_view.gd`.
+- **It flickers rust as it frays,** rust being "you lose something".
 - **A paid release plays a plucked string,** a step up a pentatonic climb for a fuller payment, so a perfect release sounds higher than a near one. A keeper sound is a hand-made one, and a pluck is a rope letting go.
 
 Not in the prototype: rumble (it goes through `juice.rumble(fact, share)` once that lands), a word stamp, a camera kick, a shot counter on the ball, and a bus event for the run log. Each needs one small call in a file another thread holds, and none is needed to judge the feel.
@@ -109,7 +110,7 @@ I recommend **A**. It gives both feel references a home (the timed swing and the
 Launch: `npm run play -- core-loop --twin-lines=on`, pick any pilot, go to the dam.
 
 1. **The swing.** Fire the harpoon at a high wall post, swing, and let go when the halo lights. Does the extra speed feel earned, and does the light come early enough to act on?
-2. **The off line.** Middle mouse at a post, swing, let go when the twine turns mint. Is the twine easy to tell from the harpoon in a fight?
+2. **The off line.** Middle mouse at a post, swing, let go when the sand line lights. Is it easy to tell from the harpoon in a fight?
 3. **The sling.** Harpoon one post, off line another across a gap, hold Ctrl, let go of middle mouse as you pass between them. Does the draw-then-throw read, and is 16 m/s enough or too much?
 4. **The limits.** Do two shots and the fray feel like a rhythm or a nag?
 5. **The pluck.** Is a higher note for a better release readable, or noise?
@@ -125,7 +126,8 @@ Each is a call I made that Andrew can overturn.
 5. Two off-line shots per air time; the ground refills them.
 6. The off line frays after 3.5 s.
 7. The release pays on the harpoon's world line too, so the swing is a skill with one line.
-8. Mint for "a release pays", twine for the off line, rust for fraying, a plucked string for a paid release.
+8. Live for "a release pays", sand for the off line at rest, rust for fraying, a plucked string for a paid release.
+11. Only a taut line on a ball in the air pays; a ride, launch, deflect, mount or plant lets go of the off line unpaid.
 9. Middle mouse or the back button, and the right stick click, for the prototype only.
 10. Names: "off line", "clean release", "sling". Plain words for what each does.
 
@@ -135,7 +137,7 @@ Each is a call I made that Andrew can overturn.
 | --- | --- |
 | `sketches/core-loop/src/movement/twin_lines.gd` | The whole rule, the flag and the input binding |
 | `sketches/core-loop/src/presentation/twin_line_view.gd` | The cable, the post ring, the halo and the pluck |
-| `sketches/core-loop/src/movement/rigid_ball.gd` | The hook: one create in setup, one call after the augments, one clear on a teleport |
+| `sketches/core-loop/src/movement/rigid_ball.gd` | The hook: one create in setup, one call after the augments, one clear on a teleport or a freeze |
 | `sketches/core-loop/src/movement/intent.gd` | The off line's three input fields, filled only while the flag bound its action |
 | `sketches/core-loop/tests/twin_lines_test.gd` | The swing, the window, the sling, the fray, the shots, and the flag off |
 

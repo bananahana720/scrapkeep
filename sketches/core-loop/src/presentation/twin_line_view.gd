@@ -1,20 +1,23 @@
 extends Node3D
 
+const Palette := preload("res://src/core/palette.gd")
+
 # How the off line looks and sounds (twin_lines.gd; docs/design/twin-lines.md, "How it reads").
 # A prototype view: it draws itself from the twin's state and owns nothing else.
 #
-#   cable    twine-coloured, so it never reads as the harpoon's line; it lights mint while a
-#            release would pay, brighter the more it would pay, and flickers rust as it frays
+#   cable    sand at rest, so it never reads as the harpoon's live cable; it turns live while a
+#            release would pay, fuller the more it would pay, and flickers rust as it frays
 #   post     a small ring where the off line stands
 #   pluck    a short plucked string when a release pays, a step higher for a fuller payment
 #
-#   halo     a thin mint ring round the ball while the harpoon swings on the world with no off
+#   halo     a thin live ring round the ball while the harpoon swings on the world with no off
 #            line out and its release would pay, so the same read holds for the harpoon (its own
 #            line keeps its own view, line_view.gd)
 
-const TWINE := Color(0.86, 0.78, 0.62)
-const MINT := Color(0.55, 1.0, 0.82)
-const RUST := Color(0.85, 0.32, 0.18)
+# The colour law (design-v3/LEGIBILITY.md): sand is neutral ink, live is "your verb works on
+# this right now", rust is "you lost something".
+const TWINE := Palette.SAND
+const RUST := Palette.RUST
 const RADIUS := 0.07
 const RING := 0.6
 # A pentatonic climb, in semitones over the root, by how full the payment was.
@@ -60,7 +63,7 @@ func _ready() -> void:
 	_halo_material = StandardMaterial3D.new()
 	_halo_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	_halo_material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	_halo_material.albedo_color = MINT
+	_halo_material.albedo_color = Palette.live()
 	var halo := TorusMesh.new()
 	halo.inner_radius = 1.25
 	halo.outer_radius = 1.4
@@ -83,7 +86,7 @@ func _process(_delta: float) -> void:
 	_halo.visible = not twin.hooked and twin.pay > 0.0
 	if _halo.visible:
 		_halo.global_transform = Transform3D(Basis.IDENTITY, from)
-		_halo_material.albedo_color = Color(MINT, clampf(twin.pay, 0.0, 1.0))
+		_halo_material.albedo_color = Color(Palette.live(), clampf(twin.pay, 0.0, 1.0))
 	if not twin.hooked:
 		return
 	var to: Vector3 = twin.anchor
@@ -97,14 +100,15 @@ func _process(_delta: float) -> void:
 	side = side.normalized()
 	var basis := Basis(side, up, side.cross(up)).orthonormalized()
 	_cable.global_transform = Transform3D(basis.scaled_local(Vector3(1.0, span, 1.0)), (from + to) * 0.5)
-	_post.global_transform = Transform3D(Basis.looking_at(up), to)
+	var face := Basis.looking_at(up, Vector3.UP if absf(up.y) < 0.99 else Vector3.RIGHT)
+	_post.global_transform = Transform3D(face, to)
 	_material.albedo_color = colour(twin.pay, twin.fraying(), Time.get_ticks_msec() / 1000.0)
 
 
-# The cable's colour: twine, toward mint by what a release would pay, and a rust flicker
+# The cable's colour: sand, toward live by what a release would pay, and a rust flicker
 # over the last stretch before it frays.
 static func colour(pay: float, fray: float, now: float) -> Color:
-	var c := TWINE.lerp(MINT, clampf(pay, 0.0, 1.0))
+	var c := TWINE.lerp(Palette.live(), clampf(pay, 0.0, 1.0))
 	if fray > 0.0:
 		var flick := 0.5 + 0.5 * sin(now * TAU * (4.0 + 8.0 * fray))
 		c = c.lerp(RUST, fray * flick)
