@@ -36,8 +36,8 @@ def cog_source(r):
     if a == 1:
         return "kill and boss gears"
     if a == 20 * r.get("stage", 0):
-        return "discovery bursts"
-    return "other pickups"
+        return "discovery bursts (by amount)"
+    return "other pickups (folded gears, Brindle piles)"
 
 
 def one_run(d):
@@ -67,7 +67,10 @@ def one_run(d):
     for bay in bays:
         after = [r for r in buys if r["stage"] == bay["stage"]]
         unbought = [r for r in rows if r["kind"] == "no_buy" and r["what"] == "shelf" and r["stage"] == bay["stage"]]
+        sold = [r for r in rows if r["kind"] == "weigh" and r["stage"] == bay["stage"]]
         bay_visits.append({"stage": bay["stage"], "wallet": bay["cogs"], "spent": sum(r["price"] for r in after),
+            "presses": len(sold), "mass_sold": sum(r.get("mass_sold", 0) for r in sold), "scale_cogs": sum(r.get("paid", 0) for r in sold),
+            "heft_on_boarding": bay.get("heft"),
             "bought": len([r for r in after if r["what"] != "reroll"]), "left_on_shelf": len(unbought),
             "unbought_cost": sum(r.get("price", 0) for r in unbought),
             "hook": next((r.get("why", "") or "bought" for r in rows if r["kind"] in ("buy", "no_buy") and r.get("what") == "top" and r["stage"] == bay["stage"]), "")})
@@ -84,14 +87,18 @@ def one_run(d):
     for r in rows:
         if r["kind"] == "scrap-":
             lost[r.get("cause")] += r.get("amount", 0)
-    heal = sum(r.get("amount", 0) for r in rows if r["kind"] == "heal")
+    # Newer ledgers carry running totals: hp_healed (regen and heals, every tick) and max_hp_grown.
+    # Older ones only logged single-tick rises over 0.5 hull ("heal" rows), which miss regen.
+    heal = end.get("hp_healed")
+    big_heals = sum(r.get("amount", 0) for r in rows if r["kind"] == "heal")
+    weighs = [r for r in rows if r["kind"] == "weigh"]
     stages = b.get("stages", [])
     boss = b.get("boss") or {}
     wall_trace = [(r["t"], r["cogs"]) for r in rows]
     return {
         "run": name, "type": typ, "seed": int(seed), "pilot": b.get("class"), "outcome": b.get("outcome"),
         "stage_reached": b.get("stage_reached"), "won_world1": b.get("stage_reached", 0) >= 3,
-        "game_min": round(end["t"] / 60.0, 2), "min_hp": b.get("min_hp"),
+        "game_min": round(float(b.get("game_seconds") or end["t"]) / 60.0, 2), "min_hp": b.get("min_hp"),
         "hits": sum(s.get("hits", 0) or 0 for s in stages), "hp_lost": round(sum(s.get("hp_lost", 0) or 0 for s in stages), 1),
         "hull_lost": round(sum(s.get("hull_lost", 0) or 0 for s in stages), 1),
         "brindle_s": boss.get("defeated_s"), "brindle_hits": boss.get("hits"),
@@ -100,7 +107,9 @@ def one_run(d):
         "scrap_end": end["scrap"], "mass_end": end["mass"], "heft_end": end.get("heft"), "scrap_lost_by": dict(lost),
         "parts_end": end["parts"], "parts_by": dict(parts), "panels_end": end["panels"], "cores_by": dict(cores),
         "cores_gained": sum(cores.values()), "cores_wiped": cores_wiped, "tree_end": len([r for r in rows if r["kind"] == "tree+"]) or end.get("tree", 0),
-        "relics_end": end["relics"], "regen_and_heals_hp": round(heal, 1), "max_hp_end": end.get("max_hp"),
+        "relics_end": end["relics"], "regen_and_heals_hp": round(heal, 1) if heal is not None else None, "big_heals_hp": round(big_heals, 1),
+        "max_hp_grown": end.get("max_hp_grown"), "max_hp_end": end.get("max_hp"),
+        "presses": len(weighs), "mass_sold": sum(r.get("mass_sold", 0) for r in weighs), "scale_cogs": sum(r.get("paid", 0) for r in weighs),
         "start_pick": next((r["id"] for r in rows if r["kind"] == "start_pick"), ""),
         "rib_caches": sum(s.get("rib_caches_taken", 0) or 0 for s in stages),
         "rogues": sum(s.get("rogues_beaten", 0) or 0 for s in stages),
@@ -130,14 +139,15 @@ def summarise(runs):
             "game_min_range": rng([r["game_min"] for r in rs]), "game_hours_total": round(mins / 60.0, 2)}
         for k in ["cogs_earned", "cogs_spent", "cogs_end", "parts_end", "panels_end", "cores_gained", "cores_wiped", "tree_end",
                   "relics_end", "min_hp", "hits", "hp_lost", "hull_lost", "brindle_s", "scrap_end", "mass_end", "heft_end",
-                  "regen_and_heals_hp", "max_hp_end", "rib_caches", "rogues", "secrets"]:
+                  "regen_and_heals_hp", "big_heals_hp", "max_hp_grown", "max_hp_end", "rib_caches", "rogues", "secrets",
+                  "presses", "mass_sold", "scale_cogs"]:
             s[k] = med([r[k] for r in rs])
             s[k + "_range"] = rng([r[k] for r in rs])
         # Rates per game minute, pooled over every run of the type, then carried to 10 game hours.
         totals = collections.Counter()
         for r in rs:
             for k in ["cogs_earned", "cogs_spent", "parts_end", "panels_end", "cores_gained", "cores_wiped", "tree_end", "relics_end",
-                      "scrap_end", "hp_lost", "hull_lost", "regen_and_heals_hp"]:
+                      "scrap_end", "hp_lost", "hull_lost", "regen_and_heals_hp", "big_heals_hp", "max_hp_grown", "mass_sold", "scale_cogs"]:
                 totals[k] += r[k] or 0
             for src, n in r["parts_by"].items():
                 totals["parts:" + str(src)] += n
@@ -154,6 +164,9 @@ def summarise(runs):
                 "spent": med([v["spent"] for v in visits if v["stage"] == st]),
                 "spent_share": med([v["spent"] / v["wallet"] if v["wallet"] else 0 for v in visits if v["stage"] == st]),
                 "left_on_shelf": med([v["left_on_shelf"] for v in visits if v["stage"] == st]),
+                "presses": med([v["presses"] for v in visits if v["stage"] == st]),
+                "mass_sold": med([v["mass_sold"] for v in visits if v["stage"] == st]),
+                "hook_bought": sum(1 for v in visits if v["stage"] == st and v["hook"] == "bought"),
                 "bought_out": sum(1 for v in visits if v["stage"] == st and v["left_on_shelf"] == 0)}
                 for st in sorted({v["stage"] for v in visits})}
         s["start_picks"] = dict(collections.Counter(r["start_pick"] for r in rs if r["start_pick"]))
