@@ -146,6 +146,9 @@ var run_tier := 0:
 		run_tier = value
 		ChallengeDials.set_rung(RunTier.dials(value))
 var event_core_grants := 0
+# A core stowed in SPIL-9 (stow_core, `--carry-core=on`): 0 or 1. It leaves this stage's cores
+# and becomes a core of the next stage at enter_stage, so the next gate counts it.
+var carried_core := 0
 # True once enter_stage has run in this run. A pick opens only after flow's enter_stage(1),
 # because enter_stage zeroes bonus_cores and would wipe a Bonus Core taken before it.
 var _stage_entered := false
@@ -224,6 +227,7 @@ func begin(chosen_class: Resource) -> void:
 	scrap = 0
 	mass = 0.0
 	bonus_cores = 0
+	carried_core = 0
 	panels.clear()
 	_heft_class = 1
 	class_rewarded = 1
@@ -467,6 +471,23 @@ func add_event_core(at: Vector3) -> void:
 	var amount := floori(event_core_grants * multiplier) - before
 	for core in amount:
 		add_core("event", at)
+
+
+# Carry a core in SPIL-9 (docs/systems-audit/feature-fit.md, new mechanic 3; the Bible's
+# exception for one carried core, only into SPIL-9, Andrew 11 Nov 2026 19:24Z). One of this
+# stage's cores rides in a companion socket into the next stage. Refused with no SPIL-9, no core
+# or one already riding. The caller checks the launch flag.
+func can_stow_core() -> bool:
+	return carried_core == 0 and bonus_cores > 0 and not companion.is_empty()
+
+
+func stow_core() -> bool:
+	if not can_stow_core():
+		return false
+	bonus_cores -= 1
+	carried_core = 1
+	companion = Companion.stow(companion)
+	return true
 
 
 # A missed called shot (build/called_shot.gd) burns one of this stage's cores. Returns whether one burned.
@@ -834,6 +855,11 @@ func enter_stage(index: int) -> void:
 				preload("res://src/world/trade_pockets.gd").decide(trade_memory, offer, false)
 	stage = index
 	bonus_cores = 0
+	# A carried core arrives as one of this stage's cores and frees its socket.
+	if carried_core > 0:
+		bonus_cores = carried_core
+		carried_core = 0
+		companion = Companion.unstow(companion)
 	event_core_grants = 0
 	_stage_entered = true
 	_tier_closed = false
@@ -855,6 +881,7 @@ func snapshot(entry_position: Vector3, entry_velocity: Vector3, camera_yaw: floa
 		"heft_class": _heft_class,
 		"wear_accum": _wear_accum,
 		"bonus_cores": bonus_cores,
+		"carried_core": carried_core,
 		"parts": parts.duplicate(),
 		"panels": panels.duplicate(),
 		"relics": relics.duplicate(),
@@ -924,6 +951,11 @@ func restore() -> void:
 	cogs = int(_snapshot.get("cogs", 0))
 	mass = _snapshot["mass"]
 	bonus_cores = _snapshot["bonus_cores"]
+	# A retry rewinds a stow made after the checkpoint: the core returns and the piece reseats.
+	var carried_then := int(_snapshot.get("carried_core", 0))
+	if carried_core > carried_then:
+		companion = Companion.unstow(companion)
+	carried_core = carried_then
 	parts.assign(_snapshot["parts"])
 	panels.assign(_snapshot.get("panels", []))
 	relics = (_snapshot.get("relics", {}) as Dictionary).duplicate()
@@ -999,7 +1031,7 @@ const ENTRANCE_KEYS := {
 	"entry_position": "vec3", "entry_velocity": "vec3", "camera_yaw": "num",
 	"tree_picks": "strs", "tree_allowed": "int", "retries_spent": "dict",
 }
-const ENTRANCE_OPTIONAL := {"cogs": "int", "companion": "dict", "settled": "strs", "relics": "dict", "start_pick": "dict", "run_tier": "int", "event_core_grants": "int", "run_tallies": "dict", "seen_wardens": "strs", "trade_memory": "dict", "pocket_draw_cache": "dict", "tree_late_skipped": "bool", "death_save_spent": "bool", "panels": "strs"}
+const ENTRANCE_OPTIONAL := {"cogs": "int", "companion": "dict", "settled": "strs", "relics": "dict", "start_pick": "dict", "run_tier": "int", "event_core_grants": "int", "run_tallies": "dict", "seen_wardens": "strs", "trade_memory": "dict", "pocket_draw_cache": "dict", "tree_late_skipped": "bool", "death_save_spent": "bool", "panels": "strs", "carried_core": "int"}
 
 
 # `tree` is optional: when given, its picks and allowed count are read the way world.gd
@@ -1066,6 +1098,9 @@ func to_entrance_doc(tree = null) -> Dictionary:
 	# Written only once a panel is held, so a run with none keeps its old document bytes.
 	if not panels.is_empty():
 		doc["panels"] = Array(panels)
+	# Written only while a core rides in SPIL-9, so a run with none keeps its old bytes.
+	if carried_core > 0:
+		doc["carried_core"] = carried_core
 	if run_tier == 0:
 		doc.erase("run_tier")
 		doc.erase("event_core_grants")
@@ -1237,6 +1272,7 @@ func from_entrance_doc(doc) -> bool:
 		retries_spent[int(str(w))] = int(doc["retries_spent"][w])
 	cogs = int(doc.get("cogs", 0))
 	companion = preload("res://src/core/companion.gd").sanitize(doc["companion"])[0] if doc.has("companion") else {}
+	carried_core = clampi(int(doc.get("carried_core", 0)), 0, 1)
 	settled.assign(doc.get("settled", []))
 	start_pick = _start_pick_from(doc.get("start_pick", {}))
 	run_tier = int(doc.get("run_tier", 0))
