@@ -46,7 +46,11 @@ const LEAD_W1 := [0.5, 0.5, 0.0, 0.0, 0.0, 0.0]
 # 24 seeds on w1: Novice wins 33% (a measured miss of the <= 15% target: the dam Warden is world 1's
 # teaching Warden), Learner a5 67%, Expert 100% with the same fight time. Hit size, not crew aggression or
 # spawn rate: both of those slowed the Expert.
-const MOBS_DAMAGE_W1 := [1.5, 1.0, 1.0, 1.0, 1.0, 1.0]
+# Wave 37 (ruling cu, unit D5's payment): x2. With the boils on the stall test the dam eased for the Novice
+# (8 wins of 12 against the base's 4); at x2 with all seven units it reads 3 of 12, 7 deaths, 1.72 hits a
+# second before armour against the base's 1.47 and the same hull lost a run (178). Hit size again, for the
+# reason above. A stalled ball's boil now hits 40 (10 x strength 2 x 2).
+const MOBS_DAMAGE_W1 := [2.0, 1.0, 1.0, 1.0, 1.0, 1.0]
 # Chasers on world 1 run at 9 m/s, up from 4.8 (wave 37 unit D2, ruling cu call 4: faster than walking pace,
 # slower than cruise). A ball that stops or dawdles is run down; a ball at cruise (14 m/s) is never caught by
 # running. The lunge, its lane and its wind-up are as they were.
@@ -117,10 +121,10 @@ const DEFAULTS := {
 	"pack.flank_by_stage": ZEROS6, "ground.churn_by_stage": ZEROS6, "hazard.boil_by_stage": SILT_W1,
 	# What the silt boils under (silt_boil.gd): 1 = a ball that stalls in a fight (it stops, crawls or holds a
 	# tight orbit), 0 = the loop test they shipped with on 24 Oct, which also boils a wide kite round a pack and
-	# never a ball that stood still. The stall test (wave 37 unit D5, ruling cu call 3) is built and ships OFF:
-	# read with the other six units on the dam it eased the Novice (12 seeds: 8 wins against 4, boil hits on the
-	# ball 0.4 a run against 1.4), and two retunes did not pay for it. It waits for a pressure measured with it.
-	"hazard.boil_stall_by_stage": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+	# never a ball that stood still. World 1 ships the stall test (wave 37 unit D5, ruling cu call 3). On its own
+	# it eased the Novice on the dam (12 seeds: 8 wins against 4), so it ships with the dam's mob hits at x2
+	# (MOBS_DAMAGE_W1), read together: 3 wins of 12, and the Expert's kite no longer boils at cruise.
+	"hazard.boil_stall_by_stage": [1.0, 1.0, 0.0, 0.0, 0.0, 0.0],
 	# Pilot regen: not allowed as defaults or tunes (--tune-unruled only). The HARD ladder's top rungs cut it
 	# (run_tier.gd LADDER, Andrew 27 Oct option 3).
 	"pilot.regen_delay_mult": 1.0, "pilot.regen_rate_mult": 1.0,

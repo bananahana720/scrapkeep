@@ -15,7 +15,7 @@ const DamageDoor := preload("res://src/combat/damage_door.gd")
 # metres rolled in the window, ending under LOOP_NET from where it started (a loop, the rut test), which
 # also boiled a wide kite and never a ball that stood still. A low rumble sounds and a ring is committed
 # on the ball's predicted roll WARN seconds ahead; the ring fills for WARN seconds, then erupts: a ball
-# inside takes DAMAGE times the dial (then the stage mob dial, x1.5 on the dam, ChallengeDials MOBS_DAMAGE_W1) and a kick up, and every enemy inside is tossed and takes ENEMY_DAMAGE
+# inside takes DAMAGE times the dial (then the stage mob dial, x2 on the dam, ChallengeDials MOBS_DAMAGE_W1) and a kick up, and every enemy inside is tossed and takes ENEMY_DAMAGE
 # (bait a crew into it). After a boil the silt rests REST plus a seeded 0 to JITTER seconds. Seeded per run
 # and stage, so a seed replays the same boils for the same rolling.
 #

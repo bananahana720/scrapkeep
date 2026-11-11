@@ -53,9 +53,9 @@ func _rules() -> void:
 	_t.eq("a six-entry list parses", parsed["mobs.damage_by_stage"], [2.0, 1.0, 1.5, 1.0, 1.0, 0.5])
 	_t.eq("a short list parses as given", parsed["warden.pulse_cycle_by_stage"], [3.0])
 	for key in KEYS:
-		# The dam's mob hits ship at x1.5 (w19 world 1 bands); its own checks are below.
+		# The dam's mob hits ship at x2 (w19 world 1 bands x1.5, wave 37 unit D5's payment x2); its own checks are below.
 		if key == "mobs.damage_by_stage":
-			_t.eq("mobs.damage_by_stage ships x1.5 on the dam only", ChallengeDials.value(key), [1.5, 1.0, 1.0, 1.0, 1.0, 1.0])
+			_t.eq("mobs.damage_by_stage ships x2 on the dam only", ChallengeDials.value(key), [2.0, 1.0, 1.0, 1.0, 1.0, 1.0])
 			continue
 		# World 1's Wardens pulse x1.3 on a x0.85 cycle (wave 37 unit D6); their own checks are below.
 		if key == "warden.pulse_damage_by_stage":
@@ -107,22 +107,22 @@ func _run() -> void:
 	_game.run.max_hp = 100000.0
 	_game.run.hp = 100000.0
 	_game.ctx.events.player_hit.connect(func(amount: float, source: String): _hits.append([source, amount]))
-	# Mobs at the defaults: the dam (stage 1) takes x1.5, stage 2 the base.
+	# Mobs at the defaults: the dam (stage 1) takes x2, stage 2 the base.
 	ChallengeDials.reset()
 	for stage in [1, 2]:
 		_game.run.stage = stage
 		_hits.clear()
 		_game.combat._on_player_hit(10.0, Vector3.ZERO, "chaser")
 		var got := float(_hits[-1][1]) if not _hits.is_empty() else -1.0
-		_t.near("default stage %d chaser hit" % stage, got, 15.0 if stage == 1 else 10.0)
-	# Mobs: stage 1 doubles, stage 3 does not.
-	ChallengeDials.set_overrides({"mobs.damage_by_stage": [2, 1, 1, 1, 1, 1]})
+		_t.near("default stage %d chaser hit" % stage, got, 20.0 if stage == 1 else 10.0)
+	# Mobs: stage 1 triples, stage 3 does not.
+	ChallengeDials.set_overrides({"mobs.damage_by_stage": [3, 1, 1, 1, 1, 1]})
 	for stage in [1, 3]:
 		_game.run.stage = stage
 		_hits.clear()
 		_game.combat._on_player_hit(10.0, Vector3.ZERO, "chaser")
 		var got := float(_hits[-1][1]) if not _hits.is_empty() else -1.0
-		_t.near("stage %d chaser hit with mobs.damage_by_stage [2,1,..]" % stage, got, 20.0 if stage == 1 else 10.0)
+		_t.near("stage %d chaser hit with mobs.damage_by_stage [3,1,..]" % stage, got, 30.0 if stage == 1 else 10.0)
 	# Warden at the defaults (wave 37 unit D6): the dam's and the flume's pulse hits x1.3 on a 5.1 s cycle, the
 	# Dig's is the base; the ring charges the same PULSE_TELEGRAPH seconds everywhere, so no tell is shorter.
 	ChallengeDials.reset()
