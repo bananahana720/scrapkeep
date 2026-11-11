@@ -8,10 +8,13 @@ extends SceneTree
 # 2. The distance rule: nothing inside GONE_M (the plume never stands over what it marks) or past FAR_GONE_M (inside the
 #    700 m far plane), full between FULL_M and FAR_FULL_M. Planted: a rule with no near fade fails the 6 m line.
 # 3. The colour law (LEGIBILITY section 1): each smoke shade sits at least COLOUR_GAP (CIE76) from every colour that
-#    means something, and from every pickup's colour, so a plume can only read as neutral smoke. Planted: amber fails.
+#    means something, so a plume borrows no role. Sand and charcoal are the neutral inks (sand is the rib cache column's
+#    own colour, charcoal a machine's steel); the smoke sits near them on purpose and is told from a pickup's column by
+#    shape and motion, which the PC film judges. Planted: a smoke row tinted amber fails the same function.
 # 4. Sight (map standard point 10a, "sight share per marker top"): on each world 1 park, for each fixed marked site
 #    (both rogue sites and every cage), the open 25 m grid cells between FULL_M and FAR_FULL_M of the site that see
-#    the plume's top over the baked ground, at least SIGHT_MIN. Each prints `MAPCHECK <map> marker_sight <site> ...`.
+#    the plume's body (SIGHT_SHARE of its height, below the top where the smoke has thinned out) over the baked ground,
+#    at least SIGHT_MIN. Each prints `MAPCHECK <map> marker_sight <site> ...`.
 #    Planted: a plume sunk 400 m into the ground fails. Rib cache spots are drawn per run, so they are not in this read.
 # 5. In the game: the park table's stage 1 (park_dam) stands a plume over Rivet's cage and one over the drawn rogue
 #    site, and one over each rib cache the build placed; freeing the cage takes its plume down.
@@ -27,6 +30,7 @@ const DefenceBars := preload("res://src/core/defence_bars.gd")
 const WORLD1 := ["park_dam", "park_flume"]
 const COLOUR_GAP := 35.0
 const SIGHT_MIN := 0.5
+const SIGHT_SHARE := 0.6
 const CELL_M := 25.0
 const BAKE_CELLS := 800
 
@@ -178,22 +182,33 @@ func _distance_rule() -> void:
 	t.check("planted: no near fade fails the 6 m line", _no_near(6.0) != 0.0, "%.2f" % _no_near(6.0))
 
 
+const MEANING := {"amber": Palette.AMBER, "hazard": Palette.HAZARD, "slate": Palette.SLATE, "rust": Palette.RUST,
+	"brass": Palette.BRASS, "ancient": Palette.ANCIENT, "cobalt": Palette.COBALT}
+
+
+# [gap, nearest]: the CIE76 distance from tint to the nearest colour that means something (the live colour included).
+static func worst_gap(tint: Color) -> Array:
+	var worst := [INF, ""]
+	var meaning: Dictionary = MEANING.duplicate()
+	meaning["live"] = Palette.live()
+	for role in meaning:
+		var gap := DefenceBars.cie76(tint, meaning[role])
+		if gap < worst[0]:
+			worst = [gap, role]
+	return worst
+
+
 func _colour_law() -> void:
-	var meaning := {"amber": Palette.AMBER, "hazard": Palette.HAZARD, "live": Palette.live(), "slate": Palette.SLATE,
-		"rust": Palette.RUST, "brass": Palette.BRASS, "ancient": Palette.ANCIENT, "cobalt": Palette.COBALT}
 	for kind in SiteMarkers.KINDS:
 		var tint: Color = SiteMarkers.KINDS[kind]["tint"]
-		var worst := INF
-		var nearest := ""
-		for role in meaning:
-			var gap := DefenceBars.cie76(tint, meaning[role])
-			if gap < worst:
-				worst = gap
-				nearest = role
-		print("[colour] %s smoke %s nearest %s at %.1f" % [kind, tint.to_html(false), nearest, worst])
-		t.check("%s smoke sits >= %.0f from every colour that means something" % [kind, COLOUR_GAP], worst >= COLOUR_GAP,
-			"%s at %.1f" % [nearest, worst])
-	t.check("planted: amber smoke fails the colour law", DefenceBars.cie76(Palette.AMBER, meaning["amber"]) < COLOUR_GAP)
+		var w := worst_gap(tint)
+		print("[colour] %s smoke %s nearest %s at %.1f" % [kind, tint.to_html(false), w[1], w[0]])
+		t.check("%s smoke sits >= %.0f from every colour that means something" % [kind, COLOUR_GAP], w[0] >= COLOUR_GAP,
+			"%s at %.1f" % [w[1], w[0]])
+	var planted: Dictionary = SiteMarkers.KINDS["cache"].duplicate()
+	planted["tint"] = Palette.AMBER.lerp(Palette.SAND, 0.2)
+	var pw := worst_gap(planted["tint"])
+	t.check("planted: a cache row tinted near amber fails the colour law", pw[0] < COLOUR_GAP, "%s at %.1f" % [pw[1], pw[0]])
 	t.check("crew smoke and works smoke are far apart", DefenceBars.cie76(SiteMarkers.CREW_SMOKE, SiteMarkers.WORKS_SMOKE) >= 50.0)
 
 
@@ -243,11 +258,11 @@ func _sight() -> void:
 		var sites := fixed_sites(map_id, park)
 		t.check("%s has marked sites" % map_id, sites.size() >= 2, "%d" % sites.size())
 		for s in sites:
-			var h: float = SiteMarkers.KINDS[s["kind"]]["height"]
+			var h: float = float(SiteMarkers.KINDS[s["kind"]]["height"]) * SIGHT_SHARE
 			var r := marker_sight(bake["ground"], bake["holes"], s["at"], h)
 			var ok: bool = r["share"] >= SIGHT_MIN
 			print("MAPCHECK %s marker_sight %s %.4f pass>=%.2f %s (%d cells)" % [map_id, s["id"], r["share"], SIGHT_MIN, "PASS" if ok else "FAIL", r["counted"]])
-			t.check("%s %s plume top seen from >= %.2f of open cells in reach" % [map_id, s["id"], SIGHT_MIN], ok, "%.4f" % r["share"])
+			t.check("%s %s plume body seen from >= %.2f of open cells in reach" % [map_id, s["id"], SIGHT_MIN], ok, "%.4f" % r["share"])
 			if not planted_done:
 				planted_done = true
 				var sunk := marker_sight(bake["ground"], bake["holes"], s["at"], -400.0)
@@ -284,11 +299,15 @@ func _in_game() -> void:
 	print("[game] park_dam plumes %s, rib caches waiting %d, rogue %s" % [kinds, caches, game.world.rogue_plan.get("site", "")])
 	t.eq("park_dam stands one plume over Rivet's cage", int(kinds.get("cage", 0)), 1)
 	t.eq("park_dam stands one plume over the sleeping rogue's site", int(kinds.get("rogue", 0)), 1)
+	t.check("park_dam placed rib caches", caches > 0, "%d" % caches)
 	t.eq("park_dam stands one plume over each waiting rib cache", int(kinds.get("cache", 0)), caches)
 	var cage = game.world.rescue.cage("rivet")
-	if cage != null:
+	if t.check("park_dam has Rivet's cage", cage != null):
 		cage.spent = true
 		for i in 30:
 			await physics_frame
 		t.eq("a freed cage's plume comes down", int(_plume_kinds(markers).get("cage", 0)), 0)
+	# Leaving the stage for the arena takes every plume down on the same tick, not up to a read later.
+	game.events.stage_content_cleared.emit("test")
+	t.eq("clearing the stage's content takes every plume down at once", markers.views.size(), 0)
 	game.free()

@@ -46,6 +46,21 @@ static var _meshes := {}
 func setup(ctx_ref) -> void:
 	ctx = ctx_ref
 	name = "SiteMarkers"
+	var events = ctx.get("events")
+	if events != null:
+		# A new stage reads its sites on the next frame; leaving one takes every plume down at once.
+		events.stage_entered.connect(_on_stage_entered)
+		events.stage_content_cleared.connect(_on_cleared)
+
+
+func _on_stage_entered(_stage: int, _retry: bool) -> void:
+	sync([])
+	_clock = 0.0
+
+
+func _on_cleared(_reason: String) -> void:
+	sync([])
+	_clock = READ_EVERY
 
 
 # The share of a plume's alpha it shows for an eye distance_m away (horizontal): the one rule for distance.
