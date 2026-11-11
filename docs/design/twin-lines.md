@@ -2,7 +2,7 @@
 
 **Status: prototype, 11 Nov 2026. Built behind `--twin-lines=on`, off by default; with the flag off the game is unchanged.** Andrew's idea (11 Nov 19:35Z): grow the ball's harpoon into a swinging system with two grapple ends, taking the feel of pendulum web-swinging and of twin-anchor gear that reels in and slingshots between two points, and making it Scrapkeep's own. The two works he named are feel references only. Nothing here copies their names, moves, look or sound.
 
-**The short answer.** Keep the harpoon exactly as it is and bolt a second, hand-fitted line beside it: the **off line**. It bites the world only. Two things become skills: **let go at the right moment** of a swing (the line turns the live colour when a release would pay), and **the sling**: with both lines on the world, reel both, and let go of the off line as the ball crosses the gap between them, and the stored tension throws it on. Only a taut line on a ball in the air pays, so tapping a post from the ground gives nothing. That is built and playable. Every taste call I made is listed under [Assumptions](#assumptions) for Andrew to overturn.
+**The short answer.** Keep the harpoon exactly as it is and bolt a second, hand-fitted line beside it: the **off line**. It bites the world only. Two things become skills: **let go at the right moment** of a swing (the line turns the live colour when a release would pay), and **the sling**: with both lines on the world, reel both, and let go of the off line as the ball crosses the gap between them, and the stored tension throws it on. Only a real swing pays, so tapping a post gives nothing. That is built and playable. Every taste call I made is listed under [Assumptions](#assumptions) for Andrew to overturn.
 
 ```
    one line: swing                         two lines: sling
@@ -37,7 +37,7 @@ So the ball already swings on one line. What it lacks is a reason to time the le
 | --- | --- | --- | --- |
 | Fire the off line | Middle mouse or mouse back button; right stick click on a pad | Bites the world where the reticle aims. An enemy under the reticle is looked past along the same ray. | Picking a post that gives a good arc |
 | Swing | Hold it | A pendulum, the same rope rule as the harpoon's world line | Reading the arc |
-| Clean release | Let go of a swinging line, the off line or the harpoon's world line | The line must be taut (the ball within 0.5 m of its full length) and the ball in the air. Inside the up-swing window (climbing 0 to 45 degrees, fading over 15 more, faster than 8 m/s, below the post) the ball keeps 18 % more speed. A let-go outside it pays nothing and costs nothing. | Timing: this is the core of the swing |
+| Clean release | Let go of a swinging line, the off line or the harpoon's world line | Only a real swing pays: the line taut (the ball within 0.5 m of its full length), the ball in the air, and the rope has turned the ball's path by 25 degrees since the bite, so a quick tap at a post pays nothing. Inside the up-swing window (climbing 0 to 45 degrees, fading over 15 more, faster than 8 m/s, below the post) the ball keeps 18 % more speed. A let-go outside it pays nothing and costs nothing. | Timing: this is the core of the swing |
 | Sling | Both lines on the world, hold Ctrl | Ctrl already winches the harpoon; with the off line out it reels both. Tension fills over 0.7 s. Let go of the off line within the gap between the posts and the ball is thrown on by up to 16 m/s along its path. | Drawing it and letting go in the gap |
 | Two shots | | The off line has two bites per time in the air; touching ground refills them. | Choosing your two posts |
 | Fray | | The off line holds 3.5 s, flickering rust over its last 0.8 s, then snaps with no payment. | Never hang; keep moving |
@@ -127,9 +127,10 @@ Each is a call I made that Andrew can overturn.
 6. The off line frays after 3.5 s.
 7. The release pays on the harpoon's world line too, so the swing is a skill with one line.
 8. Live for "a release pays", sand for the off line at rest, rust for fraying, a plucked string for a paid release.
-11. Only a taut line on a ball in the air pays; a ride, launch, deflect, mount or plant lets go of the off line unpaid.
 9. Middle mouse or the back button, and the right stick click, for the prototype only.
 10. Names: "off line", "clean release", "sling". Plain words for what each does.
+11. Only a real swing pays: taut, in the air, and turned 25 degrees since the bite. A ride, launch, deflect, mount or plant lets go of the off line unpaid.
+12. A clean harpoon release stacks on the harpoon's own fling knob when a pilot has it; that is a reward for a build, left as is.
 
 ## Where the code is
 

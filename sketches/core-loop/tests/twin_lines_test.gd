@@ -171,22 +171,43 @@ func _sling() -> void:
 	intent.twin_released = true
 	twin.step(kit, state, Tune.new(), intent, body)
 	_t.near("the sling throws the ball on", body.linear_velocity.length(), 10.0 + TwinLines.SLING_SPEED, 0.01)
-	# The harpoon's own let-go on a world line pays the swing window too.
+	# The harpoon's own let-go on a world line pays the swing window too, once it has swung.
 	var solo = TwinLines.new()
 	var k2 := Kit.new()
 	k2.hooked = true
-	k2.anchor = Vector3(0, 10, 0)
-	k2.rope = 10.0
+	k2.anchor = Vector3(10, 10, 0)
+	k2.rope = k2.anchor.length()
 	var b2 := Body.new()
 	var i2 := Intent.new()
-	b2.linear_velocity = Vector3(cos(deg_to_rad(20.0)), sin(deg_to_rad(20.0)), 0) * 15.0
-	solo.step(k2, state, Tune.new(), i2, b2)
-	_t.near("a harpoon swing shows its window", solo.pay, 1.0, 0.001)
+	b2.linear_velocity = Vector3(12, 0, 0)
+	var lit := false
+	var before := 0.0
+	for i in 400:
+		_harpoon_rope(k2, b2)
+		_tick(solo, k2, state, i2, b2)
+		if solo.pay >= 0.99 and b2.transform.origin.x > 10.0:
+			lit = true
+			break
+	_t.check("a harpoon swing shows its window", lit)
 	k2.hooked = false
 	i2.harpoon_released = true
-	b2.linear_velocity = Vector3(cos(deg_to_rad(20.0)), sin(deg_to_rad(20.0)), 0) * 15.0
+	b2.linear_velocity += GRAVITY * DT
+	before = b2.linear_velocity.length()
 	solo.step(k2, state, Tune.new(), i2, b2)
-	_t.near("a clean harpoon release pays", b2.linear_velocity.length(), 15.0 * (1.0 + TwinLines.RELEASE_GAIN), 0.001)
+	_t.near("a clean harpoon release pays", b2.linear_velocity.length(), before * (1.0 + TwinLines.RELEASE_GAIN), 0.001)
+
+
+# The harpoon's world line as augments.gd _grapple holds it: no stretch outward.
+func _harpoon_rope(kit: Kit, body: Body) -> void:
+	var to := kit.anchor - body.transform.origin
+	var dist := to.length()
+	if dist <= kit.rope:
+		return
+	var dir := to / dist
+	var outward := -body.linear_velocity.dot(dir)
+	if outward > 0.0:
+		body.linear_velocity += dir * outward
+	body.linear_velocity += dir * (dist - kit.rope) * 12.0
 
 
 func _fray_and_shots() -> void:
@@ -280,6 +301,37 @@ func _no_free_speed() -> void:
 	b3.linear_velocity = up
 	solo.step(k2, air, Tune.new(), i2, b3)
 	_t.near("a harpoon let-go after rolling under its post pays nothing", b3.linear_velocity.length(), 15.0, 0.001)
+	# Review of 771, second pass: a bite in the air at a perfect climb, let go next tick, is a
+	# tap and not a swing.
+	var tap = TwinLines.new()
+	var b5 := Body.new()
+	var k5 := Kit.new()
+	k5.aim["point"] = Vector3(30, 30, 0)
+	var i5 := Intent.new()
+	i5.twin_pressed = true
+	i5.twin_held = true
+	b5.linear_velocity = up
+	tap.step(k5, air, Tune.new(), i5, b5)
+	i5.twin_pressed = false
+	i5.twin_held = false
+	i5.twin_released = true
+	b5.linear_velocity = up
+	tap.step(k5, air, Tune.new(), i5, b5)
+	_t.near("an air tap on the off line pays nothing", b5.linear_velocity.length(), 15.0, 0.001)
+	var htap = TwinLines.new()
+	var k6 := Kit.new()
+	k6.hooked = true
+	k6.anchor = Vector3(30, 30, 0)
+	k6.rope = k6.anchor.length()
+	var i6 := Intent.new()
+	var b6 := Body.new()
+	b6.linear_velocity = up
+	htap.step(k6, air, Tune.new(), i6, b6)
+	k6.hooked = false
+	i6.harpoon_released = true
+	b6.linear_velocity = up
+	htap.step(k6, air, Tune.new(), i6, b6)
+	_t.near("an air tap on the harpoon pays nothing", b6.linear_velocity.length(), 15.0, 0.001)
 	var forced = TwinLines.new()
 	var b4 := Body.new()
 	intent.twin_pressed = true

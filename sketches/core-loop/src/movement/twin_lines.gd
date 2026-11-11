@@ -17,7 +17,8 @@ const Augments := preload("res://src/movement/augments.gd")
 # The off line has SHOTS bites per time in the air (the ground refills them) and frays after
 # HOLD_MAX seconds, so it swings and slings but never hangs the ball over a gap for free.
 #
-# Only a taut line on an airborne ball pays: a tap at a post from the ground is not a swing.
+# Only a real swing pays: a taut line on an airborne ball whose path the rope has turned by
+# MIN_TURN degrees. A tap at a post is not a swing.
 #
 # One call from the ball (rigid_ball.gd, after the augments) runs the whole rule, and the view
 # draws itself from this object's state. Nothing else reads or writes it.
@@ -44,6 +45,8 @@ const SLING_GAP := 0.45
 const SPEED_CEILING := 48.0
 # How far inside its length the ball may hang and the line still count as taut.
 const TAUT_SLACK := 0.5
+# How far, in degrees, the rope must turn the ball's path before a release pays.
+const MIN_TURN := 25.0
 
 static var _on = null
 
@@ -59,8 +62,13 @@ var pay := 0.0
 var last_gain := 0.0
 var last_gain_at := -1000.0
 var _harpoon_swung := false
+var _harpoon_turn := 0.0
+var _harpoon_prev := Vector3.ZERO
+var _turn := 0.0
+var _prev := Vector3.ZERO
 var _harpoon_anchor := Vector3.ZERO
 var _swung := false
+var _space: PhysicsDirectSpaceState3D
 var _ball: RigidBody3D
 var _view
 
@@ -115,6 +123,7 @@ static func _bind_action() -> void:
 # whose velocity was set outright (a ride, a launch, a deflect): that lets go of the off line
 # unpaid, as it cuts the harpoon. A mount or a plant lets go of it too.
 func step(kit, state, tuning, intent, body_state, forced := false) -> void:
+	_space = body_state.get_space_state() if body_state.has_method("get_space_state") else null
 	if Augments.holding(kit) or (forced and not intent.harpoon_released):
 		_drop()
 		_harpoon_swung = false
@@ -132,11 +141,19 @@ func step(kit, state, tuning, intent, body_state, forced := false) -> void:
 	# only; a sling is the off line's), if it was swinging on the tick before.
 	if intent.harpoon_released and _harpoon_swung and not kit.hooked and airborne:
 		v = _pay(v, swing_pay(v, origin, _harpoon_anchor))
-	_harpoon_swung = harpoon_world and airborne and swinging(origin, kit.anchor, kit.rope)
+	if not harpoon_world or kit.anchor != _harpoon_anchor:
+		_harpoon_turn = 0.0
+		_harpoon_prev = v
+	var harpoon_taut: bool = harpoon_world and airborne and swinging(origin, kit.anchor, kit.rope)
+	if harpoon_taut:
+		_harpoon_turn += turned(_harpoon_prev, v)
+	_harpoon_prev = v
+	_harpoon_swung = harpoon_taut and _harpoon_turn >= MIN_TURN
 	_harpoon_anchor = kit.anchor
 
 	if intent.twin_pressed and not hooked:
 		_fire(kit, origin, tuning.f("rope_range"))
+		_prev = v
 	elif hooked and (intent.twin_released or not intent.twin_held):
 		if not airborne:
 			pass
@@ -154,7 +171,11 @@ func step(kit, state, tuning, intent, body_state, forced := false) -> void:
 		var reeling: bool = both and kit.winching
 		tension = minf(1.0, tension + dt / TENSION_TIME) if reeling else maxf(0.0, tension - dt / TENSION_TIME)
 		v = _rope(v, origin, tuning, dt, reeling)
-		_swung = airborne and swinging(origin, anchor, rope)
+		var taut := airborne and swinging(origin, anchor, rope)
+		if taut:
+			_turn += turned(_prev, v)
+		_prev = v
+		_swung = taut and _turn >= MIN_TURN
 		if both and airborne:
 			pay = sling_pay(v, origin, anchor, kit.anchor, tension) / SLING_SPEED
 		elif _swung:
@@ -167,10 +188,18 @@ func step(kit, state, tuning, intent, body_state, forced := false) -> void:
 	body_state.linear_velocity = v
 
 
-# A line swings when it is taut: the ball hangs at the rope's length, not inside it. A tap at a
-# post with slack rope is not a swing and pays nothing.
+# A line swings when it is taut (the ball hangs at the rope's length, not inside it) and the
+# rope has turned the ball's path by MIN_TURN degrees since the bite. A tap at a post, slack or
+# taut, is not a swing and pays nothing.
 static func swinging(origin: Vector3, at: Vector3, length: float) -> bool:
 	return origin.distance_to(at) >= length - TAUT_SLACK
+
+
+# Degrees between two velocities, 0 when either is near rest.
+static func turned(before: Vector3, after: Vector3) -> float:
+	if before.length() < 0.5 or after.length() < 0.5:
+		return 0.0
+	return rad_to_deg(before.angle_to(after))
 
 
 func fraying() -> float:
@@ -192,6 +221,7 @@ func _fire(kit, origin: Vector3, reach: float) -> void:
 		return
 	shots -= 1
 	hooked = true
+	_turn = 0.0
 	anchor = point
 	rope = maxf(MIN_ROPE, origin.distance_to(anchor))
 	held_for = 0.0
@@ -206,9 +236,11 @@ func _world_point(kit, origin: Vector3, reach: float):
 		return null
 	if kind != Augments.AIM_BODY:
 		return aim["point"]
+	if _space == null:
+		return null
 	var point: Vector3 = aim["point"]
 	var dir := (point - origin).normalized()
-	var space := _ball.get_world_3d().direct_space_state
+	var space := _space
 	var ray := PhysicsRayQueryParameters3D.create(origin, origin + dir * reach, Augments.WORLD_MASK)
 	var hit := space.intersect_ray(ray)
 	if hit.is_empty() or (hit["normal"] as Vector3).y >= Augments.WALKABLE_Y:
