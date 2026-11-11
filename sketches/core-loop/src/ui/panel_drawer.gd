@@ -1,6 +1,7 @@
 extends CanvasLayer
 
 const Panels := preload("res://src/build/panels.gd")
+const UiTokens := preload("res://src/ui/ui_tokens.gd")
 
 # The grey panels' debug drawer (IL-01 card section 8; dev only): it opens and closes with
 # the F1 tuning panel, grants any panel at the ball with one click, and sets the kill-drop
@@ -23,11 +24,11 @@ func setup(game_ref, tuning_panel_ref) -> void:
 	_root.position = Vector2(380.0, 96.0)
 	add_child(_root)
 	var box := VBoxContainer.new()
-	box.add_theme_constant_override("separation", 2)
+	box.add_theme_constant_override("separation", 4)
 	_root.add_child(box)
 	var title := Label.new()
 	title.text = "Panels (F1)"
-	title.add_theme_font_size_override("font_size", 18)
+	title.add_theme_font_size_override("font_size", UiTokens.BODY)
 	box.add_child(title)
 	var grid := GridContainer.new()
 	grid.columns = 2

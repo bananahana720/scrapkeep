@@ -1,6 +1,7 @@
 extends Label
 
 const ScreenRegions := preload("res://src/ui/screen_regions.gd")
+const UiTokens := preload("res://src/ui/ui_tokens.gd")
 const Icons := preload("res://src/ui/icons.gd")
 const UiFonts := preload("res://src/ui/ui_fonts.gd")
 const Keycap := preload("res://src/ui/keycap.gd")
@@ -18,8 +19,8 @@ const Keycap := preload("res://src/ui/keycap.gd")
 
 const DETAIL_RANGE := 12.0
 const TITLE_WORDS := 3
-const TITLE_SIZE := 19
-const DETAIL_SIZE := 15
+const TITLE_SIZE := UiTokens.BODY
+const DETAIL_SIZE := UiTokens.CAPTION
 const ICON := 24.0
 const ICON_GAP := 6.0
 const LINE_GAP := 2.0

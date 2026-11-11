@@ -1,6 +1,7 @@
 extends RefCounted
 
 const Palette := preload("res://src/core/palette.gd")
+const UiTokens := preload("res://src/ui/ui_tokens.gd")
 const UiFonts := preload("res://src/ui/ui_fonts.gd")
 
 # Text, bars and panels shared by the HUD's drawn readouts, so every number wears the
@@ -65,6 +66,6 @@ static func panel(canvas: CanvasItem, rect: Rect2) -> void:
 	for p in outline:
 		inner.append(p + (rect.get_center() - p).normalized() * 3.0)
 	inner.append(inner[0])
-	canvas.draw_polyline(inner, Palette.VERDIGRIS, 2.0)
+	canvas.draw_polyline(inner, UiTokens.LINE, 2.0)
 	for corner in [rect.position + Vector2(c, c), Vector2(rect.end.x - c, rect.position.y + c), rect.end - Vector2(c, c), Vector2(rect.position.x + c, rect.end.y - c)]:
 		canvas.draw_circle(corner, 2.0, Palette.SAND)
