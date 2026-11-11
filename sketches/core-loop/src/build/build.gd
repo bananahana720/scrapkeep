@@ -1527,7 +1527,7 @@ func _step_fabricators(ball: Vector3, delta: float) -> void:
 		# (tunes.json "fabricator"). No WORLD_ROWS row, so it plays no sound of its own.
 		ctx.events.world_fact.emit("fabricator_used", fab["at"])
 		var part_id: String = fab["part_id"]
-		if ctx.run.spend_cogs(Fabricators.price(part_id, Parts.priced_count(ctx.run.parts))):
+		if ctx.run.spend_cogs(Fabricators.hoop_price(part_id, Parts.priced_count(ctx.run.parts))):
 			fabricators.sold(fab)
 			ctx.run.add_part(part_id, "fabricator")
 

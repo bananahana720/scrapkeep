@@ -15,8 +15,8 @@ const RunTier := preload("res://src/core/run_tier.gd")
 const OFFERED := 3
 const REROLLS := 1
 const KINDS := ["part", "cogs", "core"]
-# Start value, not tuned: one and a half tier-1 fabricator parts (fabricators.gd part_base 10).
-const START_COGS := 15
+# One and a half tier-1 shelf parts at part_base 40 (economy pass B, docs/systems-audit/economy/README.md).
+const START_COGS := 60
 const SOURCE := "start_pick"
 # What a tile says its option does, under its name: a part's own verb (parts.gd), and these
 # for the two grants that are not parts. At most EFFECT_WORDS words.

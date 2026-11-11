@@ -78,8 +78,7 @@ static func gate_record(id: String, row: Dictionary) -> Dictionary:
 	}
 
 
-# Moss's price: a part of the active's tier at the run's part count.
+# Moss's price: a part of the active's tier at the run's part count, on the curve kept off the
+# shelf (Fabricators.OFF_SHELF; docs/systems-audit/economy/README.md).
 static func price(row: Dictionary, parts_held: int) -> int:
-	var tier: int = ItemGen.RARITY[rarity_of(row)]["tier"]
-	var c: Dictionary = Fabricators.COG_PRICES
-	return int(round(c["part_base"] * c["part_tier"].get(tier, 1.0) * pow(c["part_growth"], parts_held)))
+	return Fabricators.off_shelf_price(int(ItemGen.RARITY[rarity_of(row)]["tier"]), parts_held)
