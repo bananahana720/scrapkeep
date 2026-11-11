@@ -6,6 +6,8 @@ const UiFonts := preload("res://src/ui/ui_fonts.gd")
 const ScreenRegions := preload("res://src/ui/screen_regions.gd")
 const RadioTakes := preload("res://src/core/radio_takes.gd")
 const Radio := preload("res://src/core/radio.gd")
+const Glyphs := preload("res://src/ui/glyphs.gd")
+const Keycap := preload("res://src/ui/keycap.gd")
 
 # The pilot radio on the HUD, in the top band's right corner (screen_regions.gd): a knob whose
 # needle points at the station, the call sign in the station's colour, the track on air, and
@@ -14,6 +16,9 @@ const Radio := preload("res://src/core/radio.gd")
 # seconds with the station's name and blurb and stamps a drawn KSSHT on the turn (the tone
 # bible's comic-book pillar); then it settles back to a chip. Off draws the knob dark and the
 # bars flat. radio_deck.gd owns the state; this only reads deck.reading().
+# While the radio's first-meet tip is up (field_tips.gd calls teach), the dial hangs its own keys
+# under the plate for TEACH seconds: back, next and skip, each cap with a drawn arrow, read from
+# the InputMap so a rebinding shows. A toast cannot draw a keycap; the dial can.
 
 const CHIP := Vector2(320.0, 46.0)
 const SWOLLEN := Vector2(380.0, 98.0)
@@ -24,10 +29,15 @@ const WORD := "KSSHT!"
 # music_engine.gd's layer indices: kick, bass, keys, lead.
 const METER := [3, 5, 0, 6]
 const LAYERS := 4
+const TEACH := 4.0
+const TEACH_KEY_H := 24.0
+# [action, fallback glyph, arrow]: the arrow is drawn, -1 back, 1 next, 2 skip (a double arrow).
+const TEACH_KEYS := [["cl_radio_prev", "key_comma", -1], ["cl_radio_next", "key_period", 1], ["cl_radio_skip", "key_slash", 2]]
 
 var deck
 var _swell := 0.0
 var _stamp := 0.0
+var _teach := 0.0
 var _read := {}
 var _bars := PackedFloat32Array([0.0, 0.0, 0.0, 0.0])
 
@@ -40,6 +50,14 @@ func _init() -> void:
 func swell() -> void:
 	_swell = SWELL
 	_stamp = STAMP
+
+
+func teach() -> void:
+	_teach = TEACH
+
+
+func teaching() -> bool:
+	return _teach > 0.0
 
 
 func swollen() -> bool:
@@ -61,6 +79,7 @@ func _process(delta: float) -> void:
 		return
 	_swell = maxf(0.0, _swell - delta)
 	_stamp = maxf(0.0, _stamp - delta)
+	_teach = maxf(0.0, _teach - delta)
 	_read = deck.reading()
 	var engine = deck._audio.engine if deck._audio != null else null
 	for i in LAYERS:
@@ -116,9 +135,35 @@ func _draw() -> void:
 		draw_string(font, Vector2(12.0, 64.0), String(_read.get("name", "")), HORIZONTAL_ALIGNMENT_LEFT, size.x - 24.0, UiTokens.BODY, Color(color, a))
 		var blurb := String(RadioTakes.station(String(_read.get("station", ""))).get("blurb", ""))
 		draw_string(font, Vector2(12.0, 84.0), blurb, HORIZONTAL_ALIGNMENT_LEFT, size.x - 24.0, UiTokens.CAPTION, Color(Palette.SAND, 0.75 * a))
+	if teaching():
+		_draw_keys(color)
 	if _stamp > 0.0:
 		var s := clampf(_stamp / STAMP * 1.6, 0.0, 1.0)
 		draw_set_transform(Vector2(-86.0, 30.0), -0.14, Vector2.ONE * lerpf(1.0, 1.3, s))
 		draw_string(font, Vector2(2, 2), WORD, HORIZONTAL_ALIGNMENT_LEFT, -1, UiTokens.LABEL, Color(Palette.CHARCOAL, s))
 		draw_string(font, Vector2.ZERO, WORD, HORIZONTAL_ALIGNMENT_LEFT, -1, UiTokens.LABEL, Color(Palette.AMBER, s))
 		draw_set_transform(Vector2.ZERO)
+
+
+# The dial's keys under the plate, from its left edge (the notes' Tab cap sits under its right),
+# each cap followed by its arrow, fading out over the last half second.
+func _draw_keys(color: Color) -> void:
+	var a := clampf(_teach / 0.5, 0.0, 1.0)
+	var y := size.y + 8.0 + TEACH_KEY_H * 0.5
+	var x := 2.0
+	for row in TEACH_KEYS:
+		var key := Glyphs.of_action(String(row[0]), String(row[1]))
+		var cap := Keycap.size_of(key, TEACH_KEY_H)
+		Keycap.draw(self, Vector2(x + cap.x * 0.5, y), key, Color(Palette.SAND, a), TEACH_KEY_H)
+		x += cap.x + 6.0
+		var arrow := 14.0 if int(row[2]) != 2 else 22.0
+		_draw_arrow(Vector2(x + arrow * 0.5, y), int(row[2]), Color(color, a))
+		x += arrow + 14.0
+
+
+func _draw_arrow(at: Vector2, kind: int, color: Color) -> void:
+	var h := 6.0
+	var heads := [at] if kind != 2 else [at + Vector2(-4.0, 0.0), at + Vector2(4.0, 0.0)]
+	var dir := -1.0 if kind == -1 else 1.0
+	for c in heads:
+		draw_colored_polygon(PackedVector2Array([c + Vector2(dir * h, 0.0), c + Vector2(-dir * h * 0.6, -h), c + Vector2(-dir * h * 0.6, h)]), color)
