@@ -28,6 +28,7 @@ const HOLD_FRAMES := 300
 const OPEN_WITHIN := 60
 const CALM_WITHIN := 900
 const QUIET_FRAMES := 30
+const FIRST_FIGHT := ["settle", "hold", "repeat_fight", "open"]
 const STEP_S := 1.0 / 60.0
 const SliceDefs := preload("res://src/core/slice_defs.gd")
 const PLATING: float = SliceDefs.DEFS[0]["warden_plating"]
@@ -59,10 +60,6 @@ var _engaged_at := 0
 func _initialize() -> void:
 	_pick_parts()
 	_scan_sources()
-	# This scenario's frame counts were set with crews aiming at the ball itself. With the dam's half lead (wave
-	# 37 unit D1) the held card is still waiting 60 frames after the Warden's break, so the scenario keeps the
-	# lead off: it times the card, not the crews.
-	ChallengeDials.set_overrides({"pack.lead_by_stage": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]})
 	_game = Game.new()
 	_game.test_mode = true
 	_game.table = "slice"
@@ -152,6 +149,14 @@ func _physics_process(_delta: float) -> bool:
 	if _game.flow == null:
 		return false
 	_wait += 1
+	# The first fight times the gate, not the crews: a roaming machine that telegraphs at the inputless ball
+	# in the second before the Warden's break holds the card for the gate's own calm (WhyCallout.CALM_SECONDS),
+	# and how soon the first one arrives moves with every crew dial (wave 37: the lead, the chaser speed). So,
+	# as with the bounty brute, no roaming machine stands until the first card has opened.
+	if _phase in FIRST_FIGHT:
+		for enemy in get_nodes_in_group("enemy"):
+			if is_instance_valid(enemy) and enemy != _game.flow.warden and not enemy.is_queued_for_deletion():
+				enemy.queue_free()
 	match _phase:
 		"boot":
 			var source := Intent.Scripted.new()

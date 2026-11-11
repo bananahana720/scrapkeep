@@ -126,6 +126,10 @@ const DEFAULTS := {
 	# tight orbit), 0 = the loop test they shipped with on 24 Oct, which also boiled a wide kite round a pack and
 	# never boiled a ball that stood still. World 1 ships the stall test (wave 37 unit D5, ruling cu call 3).
 	"hazard.boil_stall_by_stage": [1.0, 1.0, 0.0, 0.0, 0.0, 0.0],
+	# The stall test's crawl line in m/s (silt_boil.gd _stalled): a ball that averaged under it across the boil
+	# window has stalled, however far the slow line took it. 0 = no crawl line (the stall test as unit D5 first
+	# built it). Held under SiltBoil.CRAWL_CEILING, below the cruise speed tier. Wave 37 unit D5, retune 1.
+	"hazard.boil_crawl_by_stage": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
 	# Pilot regen: not allowed as defaults or tunes (--tune-unruled only). The HARD ladder's top rungs cut it
 	# (run_tier.gd LADDER, Andrew 27 Oct option 3).
 	"pilot.regen_delay_mult": 1.0, "pilot.regen_rate_mult": 1.0,
