@@ -549,7 +549,7 @@
    "loader": "src/world/park/park_recipes.gd",
    "provenance": {
     "recipe": "tools/blender/park/flume_works.py",
-    "note": "Procedural, authored in this repository from Blender bmesh solids; no external mesh. concrete weir apron wedge with form joints as colour. Collider identical to the grey box it replaces."
+    "note": "Procedural, authored in this repository from Blender bmesh solids; no external mesh. concrete weir apron wedge with form joints as colour. Collider the grey-box wedge with its sides and high end bevelled 1 in 6, so a rolling ball climbs the rim; drawn and collided from the same planes."
    }
   },
   {
