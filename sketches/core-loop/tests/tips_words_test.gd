@@ -22,7 +22,7 @@ const Synergies := preload("res://src/build/synergies.gd")
 const Worlds := preload("res://src/core/worlds.gd")
 
 # Lower case, matched as whole words or phrases.
-const BANNED := ["stake", "miniboss", "latch on", "enemy", "enemies", "grow,", "rebound", "pin chain", "foes", "class",
+const BANNED := ["stake", "slot", "miniboss", "latch on", "enemy", "enemies", "grow,", "rebound", "pin chain", "foes", "class",
 	"set piece", "grapple", "the gauge", "locked:", "shut:"]
 # Key letters a rebindable key could carry; "A" and "I" are words.
 const KEY_LETTERS := ["Q", "E", "F", "V", "P", "R", "H", "J", "K", "X", "C", "Z", "Tab", "Esc"]

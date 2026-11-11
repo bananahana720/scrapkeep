@@ -37,9 +37,9 @@ const Palette := preload("res://src/core/palette.gd")
 const TIPS := {
 	"grip": "Stay fast against a wall and it holds you.",
 	"jam": "A pulse shuts picks 2 and 3. A fast, airborne or hooked ball slips it.",
-	"cast": "A slot with a cast time spends nothing if a knock or a second press stops it.",
+	"cast": "A pick with a cast time spends nothing if a knock or a second press stops it.",
 	"radio": "The radio changes station and skips takes. Its keys are in the notes.",
-	"stake": "Hold at the relay mast to raise the fight and the part rolls.",
+	"stake": "Hold at the relay mast for a bigger fight and more part rolls.",
 	"companion": "SPIL-9 is full. Your next ram calls it in.",
 	"active": "Press the active's key on the bar to fire it.",
 	"dunk": "An air slam stores its hit. Reel into a hooked body to cash it in.",
