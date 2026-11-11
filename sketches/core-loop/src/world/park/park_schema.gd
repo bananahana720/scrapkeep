@@ -144,6 +144,15 @@ const TOP_FIELDS := {
 	"home_rows": "a", "contraption_rows": "a", "weather_rows": "a", "activity_rows": "a",
 }
 const SPAWN_FIELDS := {"at": "v2", "heading_deg": "n"}
+# Optional at the top (wave 36, ruling cv): how the stage is left ("exit") and entered ("arrives"), and where its
+# own frame sits in the world 1 atlas. The exit's place and heading are the middle gate slot's, the arrival's are
+# the spawn's, so ParkMap.handover() reads each fact once. speed_cruise is a share of cruise speed. HANDOVER_PAIRS
+# says which arrival kind an exit kind pairs with (a launch lands, a slide is a slide).
+const HANDOVER_PAIRS := {"launch": "land", "slide": "slide", "door": "door", "drop": "drop"}
+const HANDOVER_OPENS := ["warden_broken", "boss_defeated"]
+const ATLAS_FIELDS := {"origin": "v2", "heading_deg": "n"}
+const EXIT_FIELDS := {"kind": ["launch", "slide", "door", "drop"], "speed_cruise": "n", "opens": HANDOVER_OPENS}
+const ARRIVES_FIELDS := {"kind": ["land", "slide", "door", "drop"], "speed_cruise": "n", "from": "s"}
 const PARK_FIELDS := {
 	"id": "s", "element": ELEMENTS, "landform": LANDFORMS, "society": SOCIETIES, "at": "v2", "y": "n?",
 	"size": "v3", "yaw_deg": "n", "verb": VERBS, "ride_fact": "s", "home": "s", "recipe": "s",
@@ -255,6 +264,9 @@ static func validate(park: Dictionary, ctx: Dictionary = {}) -> Array:
 	if ctx.is_empty():
 		_add(out, "map", "reference", "no stage row for map " + str(park["map"]))
 	_fields(out, "spawn", park["spawn"], SPAWN_FIELDS)
+	for key in ["atlas", "exit", "arrives"]:
+		if park.has(key):
+			_fields(out, key, park[key], {"atlas": ATLAS_FIELDS, "exit": EXIT_FIELDS, "arrives": ARRIVES_FIELDS}[key])
 
 	var rows := _rows(out, park, "park_rows", PARK_FIELDS)
 	var events := _rows(out, park, "event_rows", EVENT_FIELDS)

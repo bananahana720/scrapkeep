@@ -67,6 +67,26 @@ func warden_spec() -> Dictionary:
 	return park["landmark"]["warden"].duplicate(true) if ok else {}
 
 
+# How this stage is left and entered, each row in the stage's own frame, plus where that frame sits in the world 1 atlas:
+# {"stage", "atlas": {origin: Vector2, heading_deg}, "exit": {kind, at: Vector2, heading_deg, speed_cruise, opens},
+# "arrives": {kind, at: Vector2, heading_deg, speed_cruise, from}}. The exit is the middle gate slot and the arrival is
+# the spawn, so each place and heading is stated once in the file. Empty when the file declares no hand-over.
+func handover() -> Dictionary:
+	if not ok or not park.has("exit") or not park.has("arrives") or not park.has("atlas"):
+		return {}
+	var slots: Array = park["landmark"]["gate_slots"]
+	var gate: Dictionary = slots[slots.size() / 2]
+	var spawn: Dictionary = park["spawn"]
+	var out: Dictionary = park["exit"].duplicate()
+	out["at"] = _v2(gate["at"])
+	out["heading_deg"] = float(gate["facing_deg"])
+	var into: Dictionary = park["arrives"].duplicate()
+	into["at"] = _v2(spawn["at"])
+	into["heading_deg"] = float(spawn["heading_deg"])
+	var atlas: Dictionary = park["atlas"]
+	return {"stage": park["map"], "atlas": {"origin": _v2(atlas["origin"]), "heading_deg": float(atlas["heading_deg"])}, "exit": out, "arrives": into}
+
+
 func _fill() -> void:
 	title = String(park["map"])
 	time_of_day = String(park["time_of_day"])
