@@ -67,6 +67,8 @@ const ROWS := {
 	"dashed": {"group": "movement", "color": Palette.AMBER, "shape": "arrow", "sound": "dash_whoosh", "hud": "", "objective": "", "priority": 1},
 	"landed": {"group": "movement", "color": Palette.SANDSTONE, "shape": "ring", "sound": "land_thud", "hud": "", "objective": "", "priority": 1},
 	"slammed": {"group": "movement", "color": Palette.AMBER, "shape": "ring", "sound": "core_slam", "hud": "", "objective": "", "priority": 1},
+	# A carve's release: the grind lets go, so the ride off a bank is heard and felt, not just seen.
+	"carved": {"group": "movement", "color": Palette.AMBER, "shape": "arrow", "sound": "carve_release", "hud": "", "objective": "", "priority": 1},
 	"grapple_fired": {"group": "movement", "color": ClassDef.SABLE_COLOR, "shape": "diamond", "sound": "grapple_clink", "hud": "", "objective": "", "priority": 1},
 	"grapple_released": {"group": "movement", "color": Palette.SAND, "shape": "none", "sound": "grapple_release", "hud": "", "objective": "", "priority": 1},
 	"mounted": {"group": "movement", "color": Palette.AMBER, "shape": "square", "sound": "pylon_plant", "hud": "", "objective": "", "priority": 1},
@@ -434,6 +436,7 @@ const WEIGHT_EXEMPT := {
 	"scrap_collected": "Reward and economy ladders own the cue; rewards never stop time.",
 	"scrap_lost": "Reward and economy ladders own the cue; rewards never stop time.",
 	"shield_vaulted": "Ball motion preserves momentum; its existing camera and cue profile owns it.",
+	"carved": "Ball motion preserves momentum; its existing camera and cue profile owns it.",
 	"shot_fired": "The verb or ability grammar owns this cue; its landed strike is enemy_struck.",
 	"special_used": "The verb or ability grammar owns this cue; its landed strike is enemy_struck.",
 	"stage_cleared": "Run and stage lifecycle owns music and cleanup, not an impact.",
