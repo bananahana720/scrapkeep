@@ -41,6 +41,7 @@ const NO_REROLL := "no_reroll"
 const WELDED := "welded"
 const NOT_HELD := "not_held"
 const CLOSED := "closed"
+const TOO_LIGHT := "too_light"
 
 # The conversation's six beats (SOUND-STORY section 8, "The conversation loop"), with
 # the babble's root per beat and whether a refusal grumble sits under the first word.
@@ -291,6 +292,45 @@ func reroll() -> Dictionary:
 	rerolls_left -= 1
 	shelf = _stock()
 	return _result(true, OK, "moss.bark.reroll", "", cost)
+
+
+# ---- Moss's scale: mass for cogs (systems audit pass D, new mechanic 2) ----
+
+# Behind `--moss-scale=on` (Tuning "moss_scale", default off). A press weighs one lump of mass,
+# up to weigh_lump, and pays a cog for each mass_per_cog of it (Fabricators.COG_PRICES).
+# Arrive at the Warden heavy, or light with a better part: size never touches handling
+# (BIBLE.md section 6), so the trade is armour, heft and punch against the shelf.
+
+func scale_open() -> bool:
+	return ctx != null and ctx.tuning != null and ctx.tuning.option("moss_scale") == "on"
+
+
+# What one press would weigh and pay now: {mass, cogs}. Both 0 when the scale is shut or the
+# ball is too light to pay a cog.
+func weigh_quote() -> Dictionary:
+	if not scale_open():
+		return {"mass": 0, "cogs": 0}
+	var per := float(Fabricators.COG_PRICES["mass_per_cog"])
+	var cogs := int(floor(minf(float(Fabricators.COG_PRICES["weigh_lump"]), ctx.run.mass) / per))
+	return {"mass": int(ceil(cogs * per)), "cogs": cogs}
+
+
+func weigh() -> Dictionary:
+	if not inside:
+		return _result(false, CLOSED)
+	if not scale_open():
+		return _result(false, LOCKED)
+	var quote := weigh_quote()
+	if int(quote["cogs"]) <= 0:
+		return _result(false, TOO_LIGHT)
+	var taken: int = ctx.run.weigh_out(int(quote["mass"]))
+	var paid := int(floor(taken / float(Fabricators.COG_PRICES["mass_per_cog"])))
+	_refund(paid)
+	if build != null:
+		build.recompute()
+	var out := _result(true, OK, "", "", -paid)
+	out["mass"] = taken
+	return out
 
 
 # ---- Charge cells: the stockpile path ----
