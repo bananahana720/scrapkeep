@@ -1,6 +1,7 @@
 extends VBoxContainer
 
 const Palette := preload("res://src/core/palette.gd")
+const UiTokens := preload("res://src/ui/ui_tokens.gd")
 const UiDraw := preload("res://src/ui/ui_draw.gd")
 const UiFonts := preload("res://src/ui/ui_fonts.gd")
 const ChoiceButton := preload("res://src/ui/choice_button.gd")
@@ -18,7 +19,7 @@ const MET_PREFIX := "met."
 const ROW_SIZE := Vector2(250.0, 40.0)
 const COLUMNS := 3
 const LIST_H := 330.0
-const NOTE_FONT := 19
+const NOTE_FONT := UiTokens.BODY
 const NOTE_W := (ROW_SIZE.x + 10.0) * COLUMNS - 10.0
 const NOTE_OPEN := "Pick a crew to send to the grate. Four at a time; the box does not argue."
 
@@ -41,10 +42,10 @@ var _full := false
 func _init() -> void:
 	name = "CampEnemyPicker"
 	alignment = BoxContainer.ALIGNMENT_CENTER
-	add_theme_constant_override("separation", 14)
+	add_theme_constant_override("separation", 12)
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
-	add_child(UiDraw.label(26, Palette.AMBER, "Dispatch box"))
-	_count = UiDraw.label(20, Palette.SAND)
+	add_child(UiDraw.label(UiTokens.LABEL, Palette.AMBER, "Dispatch box"))
+	_count = UiDraw.label(UiTokens.BODY, Palette.SAND)
 	add_child(_count)
 	_live = YardPips.new()
 	_live.name = "YardPips"
@@ -57,7 +58,7 @@ func _init() -> void:
 	add_child(scroll)
 	_grid = GridContainer.new()
 	_grid.columns = COLUMNS
-	_grid.add_theme_constant_override("h_separation", 10)
+	_grid.add_theme_constant_override("h_separation", 8)
 	_grid.add_theme_constant_override("v_separation", 8)
 	scroll.add_child(_grid)
 	for kind in Sandbox.kinds():
@@ -76,7 +77,7 @@ func _init() -> void:
 	add_child(_note)
 	var buttons := HBoxContainer.new()
 	buttons.alignment = BoxContainer.ALIGNMENT_CENTER
-	buttons.add_theme_constant_override("separation", 14)
+	buttons.add_theme_constant_override("separation", 12)
 	buttons.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(buttons)
 	clear_button = ChoiceButton.new("clear", "key_c", "Clear yard")
@@ -278,7 +279,7 @@ class Row extends Button:
 		alignment = HORIZONTAL_ALIGNMENT_LEFT
 		clip_text = true
 		add_theme_font_override("font", UiFonts.bold())
-		add_theme_font_size_override("font_size", 18)
+		add_theme_font_size_override("font_size", UiTokens.BODY)
 		set_state(false, false)
 
 	func set_state(is_met: bool, is_full: bool) -> void:
@@ -287,18 +288,18 @@ class Row extends Button:
 		text = Sandbox.name_of(kind)
 		var edge: Color = Color(Palette.SLATE, 0.5)
 		if met:
-			edge = Palette.COPPER if full else Palette.VERDIGRIS
+			edge = Palette.COPPER if full else UiTokens.LINE
 		for state in ["normal", "hover", "pressed", "disabled"]:
 			var box := ChoiceButton.plate(edge.lightened(0.25) if state == "hover" else edge, 2, 38.0)
 			box.content_margin_top = 4.0
 			box.content_margin_bottom = 4.0
 			add_theme_stylebox_override(state, box)
-		add_theme_stylebox_override("focus", ChoiceButton.plate(Color.WHITE, 4, 38.0, false))
-		var words: Color = Palette.SAND if met else Color(Palette.SLATE, 0.8)
+		add_theme_stylebox_override("focus", ChoiceButton.plate(UiTokens.TEXT, 4, 38.0, false))
+		var words: Color = Palette.SAND if met else UiTokens.quiet()
 		if met and full:
-			words = Color(Palette.SAND, 0.6)
+			words = UiTokens.quiet()
 		for key in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color"]:
-			add_theme_color_override(key, Color.WHITE if key != "font_color" and met and not full else words)
+			add_theme_color_override(key, UiTokens.TEXT if key != "font_color" and met and not full else words)
 		queue_redraw()
 
 	func _draw() -> void:

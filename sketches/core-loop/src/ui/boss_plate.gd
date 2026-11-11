@@ -1,6 +1,7 @@
 extends Control
 
 const BossPosture := preload("res://src/combat/boss_posture.gd")
+const UiTokens := preload("res://src/ui/ui_tokens.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const Icons := preload("res://src/ui/icons.gd")
 const Roster := preload("res://src/combat/roster.gd")
@@ -20,8 +21,8 @@ const UiDraw := preload("res://src/ui/ui_draw.gd")
 const SIZE := Vector2(420.0, 44.0)
 const GLANCE_SECONDS := 0.6
 const TICKS := [0.25, 0.5, 0.75]
-const FONT := 17
-const MARGIN := 14.0
+const FONT := UiTokens.BODY
+const MARGIN := float(UiTokens.GAP_L)
 const NAME_WIDTH := 138.0
 const PIP := 16.0
 const PIP_GAP := 6.0

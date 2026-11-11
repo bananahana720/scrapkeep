@@ -1,6 +1,7 @@
 extends CanvasLayer
 
 const Palette := preload("res://src/core/palette.gd")
+const UiTokens := preload("res://src/ui/ui_tokens.gd")
 const Companion := preload("res://src/core/companion.gd")
 const ChoiceButton := preload("res://src/ui/choice_button.gd")
 const UiDraw := preload("res://src/ui/ui_draw.gd")
@@ -66,7 +67,7 @@ func setup(game_ref) -> void:
 	_column = VBoxContainer.new()
 	_column.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_column.alignment = BoxContainer.ALIGNMENT_CENTER
-	_column.add_theme_constant_override("separation", 14)
+	_column.add_theme_constant_override("separation", 12)
 	_column.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_column)
 	_marks = Marks.new(self)
@@ -77,9 +78,9 @@ func setup(game_ref) -> void:
 	_rows.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	_rows.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_column.add_child(_rows)
-	_effect = UiDraw.label(20, Palette.SAND)
+	_effect = UiDraw.label(UiTokens.BODY, Palette.SAND)
 	_column.add_child(_effect)
-	_line = UiDraw.label(20, Palette.AMBER)
+	_line = UiDraw.label(UiTokens.BODY, Palette.AMBER)
 	_column.add_child(_line)
 	_back = ChoiceButton.new("back", "key_esc", "Back")
 	_back.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
@@ -227,7 +228,7 @@ func _rebuild() -> void:
 		var row := ChoiceButton.new("piece", "key_%d" % (i + 1), _name_of(id))
 		row.icon = Icons.texture(PIECE_ICONS.get(id, "disc"))
 		row.add_theme_constant_override("icon_max_width", 24)
-		row.add_theme_constant_override("h_separation", 10)
+		row.add_theme_constant_override("h_separation", 8)
 		row.pressed.connect(pick.bind(i))
 		row.mouse_entered.connect(func(): cursor = i)
 		_rows.add_child(row)
