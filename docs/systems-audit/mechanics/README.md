@@ -2,7 +2,7 @@
 
 **What changed.** The game had no controller rumble anywhere, and carving was the one verb that published nothing, so nothing could answer it. This pass adds both: every hard moment now asks the pad for a short, sized rumble through one call in `juice.gd`, and a carve that ends publishes `carved`, answered by a new release sound and a tap. Everything else in the table below was read in code and counted in four world 1 bot runs; three mechanics ask no real decision today, and all three belong to other threads or passes (Heat on PR 763, passes B and D), so this pass names them and leaves them alone.
 
-**Read at.** `stage/alpha-w37` head `995f3dd2` with pass A's docs (PR 765), 11 Nov 2026. Card: [SA-C in BACKLOG.md](../../BACKLOG.md#sa-c). Scope: world 1 (the dam, the flume, Brindle).
+**Read at.** `stage/alpha-w37` head `995f3dd2` with pass A's docs (PR 765), 11 Nov 2026. Card: SA-C in [BACKLOG.md](../../BACKLOG.md) ("Systems audit add-on"). Scope: world 1 (the dam, the flume, Brindle).
 
 **Words used here.** "Anticipation, impact, recovery" are the three moments of feedback the brief asks for: before (the player can see it coming or set it up), on contact (it lands), after (the player can see what it cost and when it is ready again). "The census" is the event count in section 3.
 
