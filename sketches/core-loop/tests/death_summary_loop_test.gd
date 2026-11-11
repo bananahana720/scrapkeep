@@ -3,6 +3,7 @@ extends SceneTree
 const Game := preload("res://src/game.gd")
 const DeathTips := preload("res://src/core/death_tips.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
+const Roster := preload("res://src/combat/roster.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const Keycap := preload("res://src/ui/keycap.gd")
 const Screens := preload("res://src/ui/screens.gd")
@@ -103,6 +104,15 @@ func _rules() -> void:
 		if DeathTips.line(pair[0], pair[1]) == "":
 			silent.append("%s %s" % [pair[0], pair[1]])
 	_t.check("every world 1 damage source has a line", silent.is_empty(), ", ".join(silent))
+	# NAMES.md: name the machine. The cause line and the tip both say the roster's own name for the
+	# machine, and neither says "miniboss".
+	var unnamed := PackedStringArray()
+	for id in ["E03", "E04"]:
+		var machine := Roster.name_of(String(EventKinds.attack_row(id)["owner"])).to_lower()
+		for said in [String(EventKinds.attack_row(id)["label"]), String(DeathTips.ROWS[id])]:
+			if not said.to_lower().contains(machine) or said.to_lower().contains("miniboss"):
+				unnamed.append("%s: %s" % [id, said])
+	_t.check("the leap slam and the charge name their machine", unnamed.is_empty() and not Roster.name_of("miniboss").to_lower().contains("miniboss"), " | ".join(unnamed))
 
 
 func _start_run() -> void:
