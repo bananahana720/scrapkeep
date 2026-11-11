@@ -80,7 +80,7 @@ func _on_screen() -> Array:
 func _raise_all() -> void:
 	var hud = _game.hud
 	var look := _look_id()
-	_texts = {"Test Record\nOn Moss's jukebox at camp": "record", "Test Take\nOn the radio: KEEP Live": "b-side",
+	_texts = {"Test Record\nOn Moss's jukebox at camp": "record", "Test Take\nOn the radio at KEEP Live": "b-side",
 		Achievements.toast_text("first_win"): "achievement", Achievements.toast_text(look): "look"}
 	hud.tune_found("Test Record")
 	hud.take_found("Test Take", "KEEP Live", "b-side")

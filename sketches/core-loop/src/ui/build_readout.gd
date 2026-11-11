@@ -35,8 +35,8 @@ const STAT_WORDS := {
 	"overcharge.damage": "Overcharge damage", "part_count": "Fitted parts",
 	"pattern.chain_arc": "Chain arcs", "pattern.cross_split": "Cross splits", "pattern.fan_spread": "Fan spreads",
 	"pattern.helix_drill": "Helix drills", "pattern.spiral_wave": "Spiral waves",
-	"pin_bonus.bonus": "Extra pin damage", "pin_chain.count": "Extra pin links", "pin_count": "Pin links",
-	"pin_damage": "Pin damage", "pin_speed": "Pin speed", "planar_speed": "Rolling speed",
+	"pin_bonus.bonus": "Extra knocked machine damage", "pin_chain.count": "Extra machines knocked on", "pin_count": "Machines knocked on",
+	"pin_damage": "Knocked machine damage", "pin_speed": "Knocked machine speed", "planar_speed": "Rolling speed",
 	"price_scale": "Shop prices", "price_scale.per": "Shop discount", "proc_coefficient": "Trigger strength",
 	"punch": "Added hit damage", "ram_damage": "Ram damage", "rebound_count": "Bounces",
 	"rebound_speed": "Bounce speed", "rebound_strike.mult": "Bounce hit damage", "reel_speed": "Reel speed",
@@ -228,7 +228,7 @@ static func describe_attachments(loadout: Dictionary) -> String:
 		words += "\n%s: %s" % [row.get("name", id), row.get("text", "")]
 	var mode: Dictionary = Attachments.second_mode(loadout)
 	if not mode.is_empty():
-		words += "\nSecond mode: %s, %s" % [mode["name"], mode["text"]]
+		words += "\nSecond mode is %s, %s" % [mode["name"], mode["text"]]
 	return words
 
 
@@ -238,7 +238,7 @@ static func preview_tier(weapon_id: String, tier: int) -> String:
 	var words := "%s %s holds %s attachments" % [_weapon_words(weapon_id), Attachments.TIER_WORDS[clampi(tier, 1, Attachments.TOP_TIER)], _range_words(limits)]
 	var mode: Dictionary = Attachments.second_mode(Attachments.empty(weapon_id, tier))
 	if not mode.is_empty():
-		words += "\nSecond mode: %s, %s" % [mode["name"], mode["text"]]
+		words += "\nSecond mode is %s, %s" % [mode["name"], mode["text"]]
 	return words
 
 

@@ -93,6 +93,10 @@ const TOAST_OUT := 0.2
 const TOAST_HOLD := {3: 2.4, 2: 1.6}
 const TOAST_FONT := {3: 23, 2: 19}
 const TOAST_WORDS := 4
+# What the cores held do for the gates, by count (parts.gd gate_rarities reads min(count, RunState.CORE_TIER_CAP)):
+# one core lets a gate offer a rare, two make a gate offer rares or relics, and from a third the gates
+# are already at their best. Held cores still stake a bet, so the third is not called useless.
+const CORE_WORDS := ["", "Gates may offer rares", "Gates offer rares, relics", "Gates at their best"]
 # An earned achievement's toast: an amber star, "Achievement" and the row's name, 3 s in all
 # (in, hold, out). It sits at the top right, clear of the objective, above the menu screens (layer 8), so one earned as a run ends
 # still reads. While a Warden fight is live it waits, and the queue shows in order.
@@ -102,10 +106,16 @@ const ACH_TOP := 14.0
 const ACH_FONT := 21
 const ACH_DETAIL_FONT := 15
 # A jukebox record found in play shares the achievement plate, after any achievement waiting.
-# The record and take cards share one icon and frame (a wave on amber), so these words say which they are (NAMES.md).
-const TUNE_WORD := "Record"
-# A radio take found in play: the same plate, its own word, louder for a legend.
-const TAKE_WORDS := {"b-side": "B-side", "take": "Take", "legend": "Legendary take"}
+# A record found in play wears the drawn wave on amber. A radio take wears the radio chip's knob
+# (the radio_take icon, radio-take-icon.md), tinted by tier: mint for a take, slate for a B-side,
+# brass for a legend (the edge radio_page.gd gives a legend). The icon and tint say which card it
+# is, so only a B-side keeps a word: nothing but the name carries "the record's second version".
+const RECORD_MARK := {"shape": "wave", "tint": Palette.AMBER, "word": ""}
+const TAKE_ICON := "radio_take"
+const TAKE_MARKS := {"b-side": {"id": TAKE_ICON, "tint": Palette.SLATE, "word": "B-side"},
+	"take": {"id": TAKE_ICON, "tint": Palette.ARC, "word": ""},
+	"legend": {"id": TAKE_ICON, "tint": Palette.BRASS, "word": ""}}
+const ACHIEVEMENT_MARK := {"shape": "star", "tint": Palette.AMBER, "word": ""}
 # A new field note: the Tab cap and these words under the achievement slot, 3 s, faded in and out.
 const LORE_TOTAL := 3.0
 const LORE_TOP := 66.0
@@ -205,7 +215,7 @@ var _card_count := 0
 var _busy = null
 var _quiet := false
 var _quiet_hid: Array = []
-var _take_words := {}
+var _take_tiers := {}
 var _ach_word: Label
 var _ach_icon: TextureRect
 var _ach_entry := {}
@@ -612,9 +622,19 @@ func _free_slot(key: String) -> void:
 
 # A take found for the pilot radio: its name, then the station it airs on.
 func take_found(take_name: String, station_name: String, tier := "take") -> void:
-	var text := "%s\nOn the radio: %s" % [take_name, station_name]
-	_take_words[text] = TAKE_WORDS.get(tier, TAKE_WORDS["take"])
+	var text := "%s\nOn the radio at %s" % [take_name, station_name]
+	_take_tiers[text] = tier
 	_raise_card(text, true)
+
+
+# The mark a card wears, by what it is: {id or shape, tint, word}. An achievement is a star, a
+# record the wave, a take the knob; a take's tier ("" for a take found with no tier) picks the tint.
+static func card_mark(tune: bool, tier := "") -> Dictionary:
+	if not tune:
+		return ACHIEVEMENT_MARK
+	if tier == "":
+		return RECORD_MARK
+	return TAKE_MARKS.get(tier, TAKE_MARKS["take"])
 
 
 # The ending owns the screen: no achievement toast waits for it or shows over it.
@@ -657,9 +677,11 @@ func _step_ach(delta: float) -> void:
 		_ach_name.text = lines[0]
 		_ach_detail.text = lines[1] if lines.size() > 1 else ""
 		_ach_detail.visible = _ach_detail.text != ""
-		_ach_word.visible = tune
-		_ach_word.text = String(_take_words.get(_ach_entry["text"], TUNE_WORD)) if tune else ""
-		_ach_icon.texture = Icons.shape("wave" if tune else "star")
+		var mark := card_mark(tune, String(_take_tiers.get(_ach_entry["text"], "")))
+		_ach_word.text = String(mark["word"])
+		_ach_word.visible = _ach_word.text != ""
+		_ach_icon.texture = Icons.texture(String(mark["id"])) if mark.has("id") else Icons.shape(String(mark["shape"]))
+		_ach_icon.modulate = mark["tint"]
 		# A panel grows to its words by itself and never shrinks: a short entry after a long one resets it.
 		_ach_panel.reset_size()
 		_ach_panel.visible = true
@@ -695,6 +717,9 @@ func _connect_toasts(events) -> void:
 	for kind in toast_kinds():
 		if kind in ["boss_phase_changed", "event_ended", "event_announced"]:
 			continue
+		if kind == "core_gained":
+			events.connect(kind, _on_core_gained)
+			continue
 		var argc: int = SignalWire.arg_count(events, kind)
 		if FIELD_ARGS.has(kind):
 			events.connect(kind, _drop_args(_on_field_fact.bind(kind), argc - 1))
@@ -715,6 +740,15 @@ func _on_field_fact(value, kind: String) -> void:
 
 func _on_fact(kind: String) -> void:
 	toast_kind(kind)
+
+
+# The core toast names what the cores held do now, not one line for every core.
+func _on_core_gained(_source: String, _at: Vector3, count: int) -> void:
+	toast(core_words(count), EventKinds.color("core_gained"), EventKinds.row("core_gained").get("shape", "none"), mini(EventKinds.priority("core_gained"), 3))
+
+
+static func core_words(count: int) -> String:
+	return CORE_WORDS[clampi(count, 0, CORE_WORDS.size() - 1)]
 
 
 # A new engagement starts the struggle tally over; `engaged` is whether the Warden is awake.
