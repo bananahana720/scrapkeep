@@ -12,11 +12,11 @@ const WarningBound := preload("res://src/combat/warning_bound.gd")
 #
 # Shapes: a ring on the ground (a slam, a shell's blast or a wave's reach), a lane along
 # the ground (a lunge or a charge) or a wedge fanning out from a point (the Warden's
-# magnet pull). The attack type decides how it draws (threat_grammar.gd): an INSTANT
-# ring fills in place, a WAVE ring runs a front outward, a PROJECTILE ring is a reticle
-# under a flight trace, a LANE fills from its source. All reach `reach_up` metres above
-# the ground under the ball, so jumping or gliding over one dodges it: a read the player
-# can act on at speed.
+# magnet pull). The attack type decides how it draws (threat_grammar.gd): a WAVE ring runs
+# a front outward; every other ground hit fills from its centre out to its outline and is
+# full on the hit tick, a PROJECTILE's under a thin dashed flight arc. All reach `reach_up`
+# metres above the ground under the ball, so jumping or gliding over one dodges it: a read
+# the player can act on at speed.
 #
 # Readability: every telegraph draws in HAZARD, with no depth test, at a render priority
 # above every player effect (Bolts.PRIORITY, Effects.PRIORITY), so our own bolts, arcs
@@ -216,7 +216,7 @@ func step(delta: float) -> void:
 	set_progress(age / maxf(warn_seconds, 0.001))
 
 
-# PROJECTILE: the flight the reticle waits for, drawn as a dotted trace.
+# PROJECTILE: the flight the landing waits for, drawn as a thin dashed arc onto the landing.
 func set_flight(from: Vector3, arc_bump: float) -> void:
 	launch = from
 	bump = arc_bump
