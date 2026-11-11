@@ -139,7 +139,7 @@ func _run() -> void:
 	Push.key(root, KEY_ENTER)
 	_t.near("Enter steps stick speed from 2.6 to 3.25", _saved().stick_sensitivity(), 3.25)
 	_t.near("the camera takes it at once", camera.stick_sensitivity, 3.25)
-	_t.eq("the row reads 125 percent", _page.row("stick_sensitivity").text, "Stick speed: 125%")
+	_t.eq("the row reads 125 percent", _page.read("stick_sensitivity"), {"label": "Stick speed", "value": "125%", "pip": -1})
 	Push.pad(root, JOY_BUTTON_DPAD_RIGHT)
 	_t.near("d-pad right steps it up to 3.9", _saved().stick_sensitivity(), 3.9)
 	Push.pad(root, JOY_BUTTON_DPAD_RIGHT)
@@ -152,7 +152,7 @@ func _run() -> void:
 	Push.pad(root, JOY_BUTTON_DPAD_DOWN)
 	_t.eq("down moves to invert", _page.focused_id(), "invert_y")
 	Push.pad(root, JOY_BUTTON_A)
-	_t.check("A toggles invert Y", _saved().invert_y() and camera.invert_y and _page.row("invert_y").text == "Invert Y: on", "text %s" % _page.row("invert_y").text)
+	_t.check("A toggles invert Y", _saved().invert_y() and camera.invert_y and _page.read("invert_y") == {"label": "Invert Y", "value": "", "pip": 1}, "read %s" % _page.read("invert_y"))
 	Push.click(root, _page.row("mouse_sensitivity"))
 	_t.near("a click steps mouse speed", _saved().mouse_sensitivity(), 0.00275)
 	_t.near("the camera takes the mouse speed", camera.mouse_sensitivity, 0.00275)
@@ -162,7 +162,7 @@ func _run() -> void:
 	Push.click(root, _page.row("aim_assist"))
 	_t.near("a click steps aim assist from 0.5 to 0.75", _saved().aim_assist(), 0.75)
 	_t.near("the camera takes aim assist", camera.aim_assist, 0.75)
-	_t.eq("the row reads 75 percent", _page.row("aim_assist").text, "Aim assist: 75%")
+	_t.eq("the row reads 75 percent", _page.read("aim_assist"), {"label": "Aim assist", "value": "75%", "pip": -1})
 
 	# The page is remembered: close from Look, reopen on Look.
 	Push.key(root, KEY_ESCAPE)

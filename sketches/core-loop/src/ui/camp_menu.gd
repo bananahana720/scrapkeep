@@ -22,7 +22,7 @@ const WALK_HINTS := [{"cap": "key_w", "say": "W"}, {"cap": "key_a", "say": "A"},
 const STRIP_LIFT := 14
 # From the second walk on the strip keeps only the way out: the keys to roll, jump and look were met once (S5).
 const LEAVE_HINT := [{"cap": "key_k", "say": "K"}, {"say": "leave camp"}]
-const PAINT := "Paint: choose on each pilot's card after Launch."
+const PAINT := "Choose paint on each pilot's card after Launch."
 
 var back: Button
 # The camp walk (camp_hub.gd) shows only a key-hint strip over the 3D camp: the pilot lines and the button row stay
@@ -165,27 +165,27 @@ static func reading(game) -> Dictionary:
 		if profile != null and profile.earned(id):
 			earned += 1
 	var lines := PackedStringArray()
-	lines.append("Pilots ready: %d of %d" % [ready, pilots.size()])
+	lines.append("%d / %d pilots ready" % [ready, pilots.size()])
 	for p in pilots:
 		if p["ready"]:
-			lines.append("%s: ready" % p["name"])
+			lines.append("%s is ready" % p["name"])
 		else:
-			lines.append("%s: %s" % [p["name"], p["hint"] if p["hint"] != "" else "locked"])
+			lines.append(("%s is locked. %s" % [p["name"], p["hint"]]) if p["hint"] != "" else "%s is locked" % p["name"])
 	var pieces: int = model.owned.size()
 	if pieces > 0:
-		lines.append("Companion pieces: %d of %d" % [pieces, Companion.PIECES.size()])
-		lines.append("Seated: %s" % (" + ".join(PackedStringArray(seated)) if not seated.is_empty() else "none"))
+		lines.append("%d / %d companion pieces" % [pieces, Companion.PIECES.size()])
+		lines.append(("%s seated" % " + ".join(PackedStringArray(seated))) if not seated.is_empty() else "Nothing seated")
 	else:
 		lines.append(NO_PIECES)
 	lines.append(PAINT)
-	lines.append("Achievements: %d of %d earned" % [earned, ids.size()])
+	lines.append("%d / %d achievements earned" % [earned, ids.size()])
 	# Each world's secret count (secrets.gd WORLD_CODEX), read from the saved codex.
 	var codex = game.ctx.get("codex")
 	var secrets: Array = []
 	for world in Secrets.WORLD_CODEX:
 		var count := Secrets.world_count(world, func(id): return codex != null and codex.known(id))
 		secrets.append(count)
-		lines.append("%s secrets: %d of %d found" % [count["name"], count["found"], count["total"]])
+		lines.append("%d / %d %s secrets found" % [count["found"], count["total"], count["name"]])
 	return {"pilots": pilots, "pieces": pieces, "piece_total": Companion.PIECES.size(),
 		"seated": seated, "earned": earned, "achievement_total": ids.size(), "secrets": secrets, "lines": lines}
 

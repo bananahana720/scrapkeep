@@ -10,6 +10,7 @@ const Tuning := preload("res://src/movement/tuning.gd")
 const SettingsPages := preload("res://src/ui/settings_pages.gd")
 const Keycap := preload("res://src/ui/keycap.gd")
 const BuildRead := preload("res://src/ui/build_read.gd")
+const SettingRow := preload("res://src/ui/setting_row.gd")
 
 # The pause menu and its settings (DESIGN-V2 section 14.1). P, Esc or a pad's Start
 # opens it in play and closes it again. The column is six rows, Resume, New run, Field
@@ -43,11 +44,13 @@ const ROWS := [
 	{"id": "resume", "key": "key_p", "words": "Resume"},
 	{"id": "restart", "key": "key_n", "words": "New run"},
 	{"id": "notes", "key": "key_tab", "words": "Field notes"},
-	{"id": "radio", "key": "key_v", "words": "Radio: on"},
-	{"id": "breath", "key": "key_b", "words": "Breath: hard"},
+	{"id": "radio", "key": "key_v", "words": "Radio"},
+	{"id": "breath", "key": "key_b", "words": "Breath"},
 	{"id": "settings", "key": "key_o", "words": "Settings"},
 	{"id": "quit", "key": "key_x", "words": "Quit"},
 ]
+# The rows that carry a value: Radio wears a pip (filled on, ring off) and Breath its level as right-hand text.
+const VALUE_ROWS := ["radio", "breath"]
 # The keys that turn the notes a page while they are pinned; any other key unpins them.
 const NOTES_KEYS := [KEY_Q, KEY_E, KEY_TAB]
 # Quit is X held QUIT_HOLD seconds, with a ring filling round its keycap like the retry hold
@@ -142,7 +145,8 @@ func setup(game_ref) -> void:
 	_note.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_content.add_child(_note)
 	for spec in ROWS:
-		var row := ChoiceButton.new(spec["id"], spec["key"], spec["words"])
+		var row: ChoiceButton = SettingRow.new(spec["id"], spec["key"], spec["words"]) if spec["id"] in VALUE_ROWS \
+			else ChoiceButton.new(spec["id"], spec["key"], spec["words"])
 		row.custom_minimum_size.x = WIDTH
 		row.pressed.connect(press.bind(spec["id"]))
 		row.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
@@ -414,15 +418,24 @@ func column_width() -> float:
 	return width
 
 
+# What a value row shows, as data: its label, its right-hand text and its pip state (see SettingRow.data).
+func read(id: String) -> Dictionary:
+	var node = _rows.get(id)
+	if node is SettingRow:
+		return node.data()
+	return {"label": String(node.text) if node != null else "", "value": "", "pip": SettingRow.NONE}
+
+
 func _show_breath() -> void:
-	var row: Control = _rows["breath"]
+	var row: SettingRow = _rows["breath"]
 	row.visible = game.dev and game.tuning.option(Tuning.MUSIC_KEY) == "ace"
-	row.text = "Breath: %s" % game.tuning.option(Tuning.BREATH_KEY)
+	row.show_row("Breath", String(game.tuning.option(Tuning.BREATH_KEY)))
 
 
 func _show_radio() -> void:
 	var deck = game.get("radio_deck")
-	_rows["radio"].text = "Radio: off" if deck != null and deck.radio.station == "off" else "Radio: on"
+	var off: bool = deck != null and deck.radio.station == "off"
+	_rows["radio"].show_row("Radio", "", SettingRow.OFF if off else SettingRow.ON)
 
 
 func _input(event: InputEvent) -> void:
