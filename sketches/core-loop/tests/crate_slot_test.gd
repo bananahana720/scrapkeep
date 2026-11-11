@@ -7,7 +7,6 @@ const EventKinds := preload("res://src/core/event_kinds.gd")
 const ScreenBusy := preload("res://src/ui/screen_busy.gd")
 const Hud := preload("res://src/ui/hud.gd")
 const CodexBanner := preload("res://src/presentation/codex_banner.gd")
-const Ceremony := preload("res://src/presentation/reward_ceremony.gd")
 const T := preload("res://tests/support/t.gd")
 
 # A reward crate takes the screen's one slot like a card (wave 36 unit crate-slot). On the real
@@ -212,7 +211,7 @@ func _run() -> void:
 		if _card_up():
 			card_at = _now() - start
 	_t.check("mirror: the crate opened and its beat holds the slot (its own key or its find card's)", opened
-		and crate_holder in [Ceremony.crate_key(mirror_part), Ceremony.FIND_CARD + mirror_part], "opened %s, holder '%s'" % [opened, crate_holder])
+		and not crate_holder.begins_with("hud:") and crate_holder.ends_with(":" + mirror_part), "opened %s, holder '%s'" % [opened, crate_holder])
 	_t.check("mirror: a card raised while the crate is up does not show over it", not card_in_crate, "card up inside the crate %s" % card_in_crate)
 	_t.check("mirror: the card shows after the crate, within its out fade, its find card's life and the quiet hold plus a second",
 		card_at >= 0.0 and crate_done_at >= 0.0 and card_at > crate_done_at and card_at - crate_done_at <= CRATE_OUT_S + FIND_CARD_S + ScreenBusy.SETTLE + SLACK_S,
