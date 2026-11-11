@@ -81,7 +81,7 @@ On context loss, reconstruct authority from the board, card revision, actual wor
 
 ## Handoff and review
 
-A complete handoff contains:
+Write a handoff so it stands on its own for a reader who saw none of the work ([COMMS.md](project-guide/handoff/COMMS.md), ruling cz). A complete handoff contains:
 
 - Task/card revision, attempt and lease IDs; actual worker model/effort.
 - Base identity and candidate commit, or a complete content-hash manifest for a permitted prose staging copy.

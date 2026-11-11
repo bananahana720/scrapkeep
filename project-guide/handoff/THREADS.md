@@ -4,9 +4,10 @@ Since 10 Nov 2026 coordination runs from one local Claude Code session on Andrew
 
 | Role | Where | What it does |
 | --- | --- | --- |
-| Coordinator and Gate | the local session on the PC | Talks to Andrew, cuts each `stage/alpha-w<N>`, opens the wave board, stacks reviewed PRs, runs the full gate on the PC (shards as background scripts, receipts under `~/scratch/gate/`), promotes, writes the register. Writes sequential and shared-file changes itself |
+| Coordinator and Gate | the local session on the PC | Talks to Andrew, cuts each `stage/alpha-w<N>`, opens the wave board, stacks reviewed PRs, runs the wave gate per promotion and the release gate once per sprint on the PC (ruling cy; shards as background scripts, receipts under `~/scratch/gate/` and published on `scratch/gate-receipts-*` branches), promotes, writes the register. Writes sequential and shared-file changes itself |
 | Writers | project writer agents, each in its own worktree | One disjoint unit each, from a brief; a draft PR on the open stage with a focused test and the fast-lane receipt. Never review their own work |
 | Reviewers | read-only agents | One independent review per finished diff, naming the head it read |
+| Cloud sessions | Claude Code cloud sessions, when Andrew or the coordinator starts one | One unit or lane each, built from the open stage. A cloud session sees the repository, the pull requests and the wave board only, so it claims on the board, ends each unit as a draft pull request with a receipt, and raises a hand on the board ([COMMS.md](COMMS.md), ruling cz; [the lane brief](../coord/LANE-BRIEF.md)) |
 | PC timing and renders | the same session, queued | 4080 frame rows and films on an idle card, 3060 stills and music renders. Never while gate shards run |
 
 ## Project roles at the handoff (10 Nov)
