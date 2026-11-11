@@ -4,7 +4,9 @@ extends SceneTree
 # caged pilot not yet freed and the rogue site while its machine sleeps.
 #
 # 1. Which sites get a plume: a waiting cache, an unspent cage and an unwoken rogue do; a taken cache, a spent cage and a
-#    woken rogue (its plan emptied) do not. sync puts up and takes down plumes to match.
+#    woken rogue (its plan emptied) do not. sync puts up and takes down plumes to match; a plume whose site is done
+#    fades out over LEAVE_S (the rogue wakes 63 m out, at full strength) and goes, and a stage change takes every plume
+#    down at once, fading ones too. A cache plume stands on the ground under its panel, a deck if the panel is on one.
 # 2. The distance rule: nothing inside GONE_M (the plume never stands over what it marks) or past FAR_GONE_M (inside the
 #    700 m far plane), full between FULL_M and FAR_FULL_M. Planted: a rule with no near fade fails the 6 m line.
 # 3. The colour law (LEGIBILITY section 1): each smoke shade sits at least COLOUR_GAP (CIE76) from every colour that
@@ -45,6 +47,13 @@ class FakeCage extends Node3D:
 class FakeRescue extends RefCounted:
 	var cages: Array = []
 
+	func waiting() -> Array:
+		var out := []
+		for c in cages:
+			if not c.spent:
+				out.append({"quest": c.quest, "at": c.global_position})
+		return out
+
 
 class FakeWorld extends Node:
 	var rescue
@@ -57,13 +66,13 @@ class FakeScrap extends RefCounted:
 	func caches() -> Array:
 		var out := []
 		for item: Node3D in items:
-			out.append({"at": item.global_position, "id": "rib", "item": item})
+			out.append({"at": item.global_position, "foot": item.global_position + Vector3.DOWN * 1.2, "id": "rib", "item": item})
 		return out
 
 
 class FlatTerrain extends RefCounted:
-	func height(_x: float, _z: float) -> float:
-		return 5.0
+	func height(x: float, _z: float) -> float:
+		return 2.0 if x < 50.0 else 5.0
 
 
 func _initialize() -> void:
@@ -92,6 +101,7 @@ func _which_sites() -> void:
 	root.add_child(holder)
 	var item := Node3D.new()
 	holder.add_child(item)
+	# A panel on a deck at 5.0 over ground the terrain reads lower: the deck is what the plume stands on.
 	item.global_position = Vector3(10.0, 6.2, 20.0)
 	var scrap := FakeScrap.new()
 	scrap.items = [item]
@@ -117,7 +127,7 @@ func _which_sites() -> void:
 		if s["kind"] == "rogue":
 			t.eq("the rogue plume stands on the ground at its site", s["at"], Vector3(104.0, 5.0, 96.0))
 		if s["kind"] == "cache":
-			t.eq("the cache plume stands on the ground under the panel", s["at"], Vector3(10.0, 5.0, 20.0))
+			t.eq("the cache plume stands under its panel, on the deck it floats over and not the ground below", s["at"], Vector3(10.0, 5.0, 20.0))
 		if s["kind"] == "cage":
 			t.eq("the cage plume is the cage's own key", s["key"], "cage:rivet")
 	t.eq("nothing at all with no world, scrap or terrain", SiteMarkers.sites(null, null, null), [])
@@ -147,6 +157,7 @@ func _which_sites() -> void:
 	t.eq("a taken cache, a spent cage and a woken rogue want none", after, [])
 	markers.sync(after)
 	t.eq("sync takes every plume down", markers.views.size(), 0)
+	t.eq("a sync with no fade leaves nothing fading", markers.leaving.size(), 0)
 
 	# Each plume's foot is where it was asked to stand, and a near eye hides it.
 	markers.sync(list)
@@ -158,6 +169,50 @@ func _which_sites() -> void:
 		if view.get_meta("kind") == "cache":
 			t.check("an eye 120 m from the cache shows its plume", view.visible)
 			t.eq("at 120 m a plume keeps its true size", view.scale, Vector3.ONE)
+
+	# The rogue wakes with the eye 63 m out: its plume fades out over LEAVE_S, not in one frame.
+	var eye := Vector3(104.0, 5.0, 159.0)
+	markers.fade_for(eye)
+	var rogue: MeshInstance3D = markers.views["rogue:dam_mb_mid"]
+	world.rogue_plan = {}
+	markers.sync(SiteMarkers.sites(world, scrap, terrain), true)
+	t.check("a woken rogue's plume leaves the site list but keeps fading", not markers.views.has("rogue:dam_mb_mid") and markers.leaving.has(rogue))
+	markers.leave(SiteMarkers.LEAVE_S * 0.5)
+	markers.fade_for(eye)
+	var mid := float(rogue.material_override.get_shader_parameter("near_alpha"))
+	t.check("half way out it shows half its share", is_equal_approx(mid, 0.5 * SiteMarkers.near_alpha(63.0)), "%.3f" % mid)
+	markers.leave(SiteMarkers.LEAVE_S * 0.6)
+	t.check("past LEAVE_S it is gone", not markers.leaving.has(rogue) and rogue.is_queued_for_deletion())
+	# Planted: the same wake with no fade drops the plume in one frame.
+	markers.sync(list)
+	markers.fade_for(eye + Vector3.ONE)
+	world.rogue_plan = {}
+	markers.sync(SiteMarkers.sites(world, scrap, terrain))
+	t.check("planted: a sync with no fade drops the plume at once", markers.leaving.is_empty() and not markers.views.has("rogue:dam_mb_mid"))
+
+	# A new stage takes every plume down at once, fading ones too, and reads its own sites on the next frame.
+	world.rogue_plan = {"kind": "rogue_crane", "site": "dam_mb_mid", "at": Vector2(104.0, 96.0), "radius_m": 38.0, "trigger_m": 63.0}
+	markers.sync(SiteMarkers.sites(world, scrap, terrain))
+	markers.fade_for(eye + Vector3.ONE * 2.0)
+	world.rogue_plan = {}
+	markers.sync(SiteMarkers.sites(world, scrap, terrain), true)
+	markers._clock = SiteMarkers.READ_EVERY
+	markers._on_stage_entered(2, false)
+	t.check("entering a stage takes every plume down, fading ones too", markers.views.is_empty() and markers.leaving.is_empty())
+	t.eq("and reads the new stage's sites on the next frame", markers._clock, 0.0)
+
+	# An eye that has not moved redraws nothing; one that has, does.
+	markers.sync(list)
+	markers.fade_for(eye)
+	var cache_view: MeshInstance3D = null
+	for key in markers.views:
+		if String(key).begins_with("cache"):
+			cache_view = markers.views[key]
+	cache_view.material_override.set_shader_parameter("near_alpha", -1.0)
+	markers.fade_for(eye + Vector3(0.1, 0.0, 0.0))
+	t.eq("a still eye skips the redraw", float(cache_view.material_override.get_shader_parameter("near_alpha")), -1.0)
+	markers.fade_for(eye + Vector3(5.0, 0.0, 0.0))
+	t.check("a moved eye redraws", float(cache_view.material_override.get_shader_parameter("near_alpha")) >= 0.0)
 	holder.queue_free()
 
 

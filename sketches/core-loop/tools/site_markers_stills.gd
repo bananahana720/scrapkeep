@@ -8,6 +8,9 @@ extends SceneTree
 #   xvfb-run -s "-screen 0 1920x1080x24" <godot> --path sketches/core-loop --script res://tools/site_markers_stills.gd \
 #     -- --out=<absolute dir> [--stages=1,2]
 #
+# On Andrew's PC run it only through the scratch launch (the PC lane rule): it writes PNGs under --out and the game
+# writes its user:// test files, so both belong in the scratch folder and never in his saves.
+#
 # Each still is <stage>_<kind>_<site>_<distance>.png; one line a still goes to stills.txt. The eye stands on the side of
 # the site toward the stage's drop-in, the way a rider meets it, turned by up to 180 degrees in 30 degree steps until
 # the ground does not block the line from the eye to the plume's middle at that distance (PC film of 79dcc01b: four of
