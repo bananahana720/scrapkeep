@@ -28,8 +28,8 @@ const ScreenBusy := preload("res://src/ui/screen_busy.gd")
 #             evolution: a crate shakes and cracks over a drum and bell build, bursts on
 #             a resolving chord and seats the part in a hull slot
 #
-# A card or a ceremony opens only when WhyCallout.find_may_speak says so (may_show_card):
-# calm, and no Warden engaged and alive. A first find that cannot yet is held, at most
+# A card or a ceremony opens only when the screen's one gate says so (may_show_card, through
+# screen_busy.gd): quiet for the finds' hold. A first find that cannot yet is held, at most
 # MAX_HELD of them, and opens in the order found; a part is seen when its card is shown, so a
 # dropped one is still unseen. A repeat find shows no card; the name at the ball is all it
 # says. A reveal card that is up when a Warden fight turns live closes at once; the part

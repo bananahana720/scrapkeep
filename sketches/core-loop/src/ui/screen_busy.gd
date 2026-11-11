@@ -31,6 +31,7 @@ var _fights := {}
 # at a calm start showed at once before this gate, and still does).
 var _quiet_for := INF
 var _waiting: Array[String] = []
+var _firsts := {}
 var _holder := ""
 var _clock := 0.0
 var _asked := {}
@@ -50,6 +51,11 @@ func setup(ctx) -> void:
 	events.beacon_unsealed.connect(func(_stage: int): fight_over())
 	events.run_started.connect(func(_class_id: String): fight_over(); drop_all())
 	events.stage_entered.connect(func(_stage: int, _retry: bool): fight_over())
+	# The field's machines are freed without a kill when the arena opens or a lap turns: their
+	# named fights go with them. A retry inside the arena keeps the Warden's own fight.
+	events.stage_content_cleared.connect(func(reason: String):
+		if reason != "arena_retry":
+			_fights.clear())
 	events.run_ended.connect(func(_won: bool): drop_all())
 	events.player_hit.connect(func(_amount: float, _source: String): _quiet_for = 0.0)
 
@@ -89,13 +95,18 @@ func settled(hold := SETTLE) -> bool:
 
 
 # A card that wants the screen joins the line, oldest first. A moment that matters more (a finished
-# set) asks `first`: it goes ahead of every card waiting, never off the one on screen.
+# set) asks `first`: it goes ahead of every other card waiting and behind an earlier `first`,
+# never off the one on screen.
 func request(key: String, first := false) -> void:
-	if key == "" or key == _holder:
+	if key == "" or key == _holder or _firsts.has(key):
 		return
 	if first:
 		_waiting.erase(key)
-		_waiting.insert(0, key)
+		var at := 0
+		while at < _waiting.size() and _firsts.has(_waiting[at]):
+			at += 1
+		_waiting.insert(at, key)
+		_firsts[key] = true
 	elif not key in _waiting:
 		_waiting.append(key)
 
@@ -128,6 +139,7 @@ func may_show(key: String, hold := SETTLE) -> bool:
 func done(key: String) -> void:
 	_waiting.erase(key)
 	_asked.erase(key)
+	_firsts.erase(key)
 	if _holder == key:
 		_holder = ""
 
@@ -144,10 +156,16 @@ func waiting() -> Array[String]:
 	return _waiting.duplicate()
 
 
+# The card holding the screen, or "" when none does.
+func showing() -> String:
+	return _holder
+
+
 # A run ended: what still waits is not shown.
 func drop_all() -> void:
 	_waiting.clear()
 	_asked.clear()
+	_firsts.clear()
 	_holder = ""
 
 

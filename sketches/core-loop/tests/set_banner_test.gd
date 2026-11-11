@@ -78,14 +78,14 @@ func _check() -> void:
 	var busy = _game.ctx.screen_busy
 	var line: Array = busy.waiting()
 	var finds_after: bool = line.size() > 1 and line.slice(1).all(func(key: String): return key.begins_with("part:") or key.begins_with("find:"))
-	_t.check("the set goes ahead of the waiting part cards", busy._holder.ends_with(WIRE[0]) and not line.is_empty() and line[0] == "set:" + SET and finds_after
+	_t.check("the set goes ahead of the waiting part cards", busy.showing().ends_with(WIRE[0]) and not line.is_empty() and line[0] == "set:" + SET and finds_after
 		and banner._queue[0][6] == "set:" + SET,
-		"on screen %s, line %s, banner queue %s" % [busy._holder, line, banner._queue.map(func(item): return item[6])])
+		"on screen %s, line %s, banner queue %s" % [busy.showing(), line, banner._queue.map(func(item): return item[6])])
 	# The find card up ends (its turn is over); the set is next.
 	_game.presentation.ceremony.view.card = {}
 	_game.presentation.ceremony._release_slot()
 	banner.dismiss(false)
-	busy.done(busy._holder)
+	busy.done(busy.showing())
 	var guard := 0
 	while banner.last_title != row["name"] and guard < 8:
 		guard += 1
