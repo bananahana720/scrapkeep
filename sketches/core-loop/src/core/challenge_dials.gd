@@ -125,13 +125,11 @@ const DEFAULTS := {
 	"pack.lead_by_stage": LEAD_W1, "pack.crew_extra_by_stage": ZEROS6, "pack.rest_by_stage": ONES6,
 	"pack.flank_by_stage": ZEROS6, "ground.churn_by_stage": ZEROS6, "hazard.boil_by_stage": SILT_W1,
 	# What the silt boils under (silt_boil.gd): 1 = a ball that stalls in a fight (it stops, crawls or holds a
-	# tight orbit), 0 = the loop test they shipped with on 24 Oct, which also boiled a wide kite round a pack and
-	# never boiled a ball that stood still. World 1 ships the stall test (wave 37 unit D5, ruling cu call 3).
-	"hazard.boil_stall_by_stage": [1.0, 1.0, 0.0, 0.0, 0.0, 0.0],
-	# The stall test's crawl line in m/s (silt_boil.gd _stalled): a ball that averaged under it across the boil
-	# window has stalled, however far the slow line took it. 0 = no crawl line (the stall test as unit D5 first
-	# built it). Held under SiltBoil.CRAWL_CEILING, below the cruise speed tier. Wave 37 unit D5, retune 1.
-	"hazard.boil_crawl_by_stage": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+	# tight orbit), 0 = the loop test they shipped with on 24 Oct, which also boils a wide kite round a pack and
+	# never a ball that stood still. The stall test (wave 37 unit D5, ruling cu call 3) is built and ships OFF:
+	# read with the other six units on the dam it eased the Novice (12 seeds: 8 wins against 4, boil hits on the
+	# ball 0.4 a run against 1.4), and two retunes did not pay for it. It waits for a pressure measured with it.
+	"hazard.boil_stall_by_stage": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
 	# Pilot regen: not allowed as defaults or tunes (--tune-unruled only). The HARD ladder's top rungs cut it
 	# (run_tier.gd LADDER, Andrew 27 Oct option 3).
 	"pilot.regen_delay_mult": 1.0, "pilot.regen_rate_mult": 1.0,

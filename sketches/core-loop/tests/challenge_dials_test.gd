@@ -18,11 +18,10 @@ const W37_TUNED := [
 	"warden.pulse_damage_by_stage",  # D6
 	"warden.pulse_cycle_by_stage",  # D6
 	"mobs.clock_tiers_by_stage",  # D3
-	"hazard.boil_stall_by_stage",  # D5
-	"hazard.boil_crawl_by_stage",  # D5
+	"hazard.boil_stall_by_stage",  # D5: ships off, and its off value is 0
 	"hazard.shell_cover_by_stage",  # D4
 	"mobs.lobber_lead_by_stage",  # D4
-	"mobs.lobber_share_step_by_stage",  # D4
+	"mobs.lobber_share_step_by_stage",  # D4: ships at its old 0.07, which is not 1
 ]
 const T := preload("res://tests/support/t.gd")
 
@@ -102,8 +101,7 @@ func _rules() -> void:
 	_t.eq("world 1 Wardens pulse x1.3, later ones at identity", ChallengeDials.value("warden.pulse_damage_by_stage"), [1.3, 1.3, 1.0, 1.0, 1.0, 1.0])
 	_t.eq("world 1 Wardens pulse on a x0.85 cycle, later ones at identity", ChallengeDials.value("warden.pulse_cycle_by_stage"), [0.85, 0.85, 1.0, 1.0, 1.0, 1.0])
 	_t.eq("the clock climbs three tiers on world 1, two after it", ChallengeDials.value("mobs.clock_tiers_by_stage"), [3.0, 3.0, 2.0, 2.0, 2.0, 2.0])
-	_t.eq("the boils read the stall on world 1, the loop after it", ChallengeDials.value("hazard.boil_stall_by_stage"), [1.0, 1.0, 0.0, 0.0, 0.0, 0.0])
-	_t.eq("the stall's crawl line on world 1, none after it", ChallengeDials.value("hazard.boil_crawl_by_stage"), [0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
+	_t.eq("the boils' stall test is built and ships off on every stage", ChallengeDials.value("hazard.boil_stall_by_stage"), [0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
 	_t.eq("weak points ship off on both bosses for wave 18", [ChallengeDials.value("waking.weak_points"), ChallengeDials.value("mind.weak_points")], [0.0, 0.0])
 	_t.near("default tell is the base", ChallengeDials.tell("brindle", Rules.CRANE_WARN), Rules.CRANE_WARN, 0.0)
 
