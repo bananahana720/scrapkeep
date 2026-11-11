@@ -28,20 +28,21 @@ const Palette := preload("res://src/core/palette.gd")
 # toast replaced it, or a fight took it down) goes back to the front of `pending`.
 # A fight keeps its word budget (ui_word_budget_test): while fight_live() no tip goes up and a
 # tip still on screen is taken down. Words come from the game's own: the Warden's slots are
-# numbers, the dial's keys are . , / (bracketed, so they read as keys and not as stray marks).
+# numbers, and no tip types a key: a toast is a plain Label that cannot draw a keycap, so a tip that needs
+# a key points at the mark that draws it (the mast's prompt, the bar slot, the notes) and keys can be rebound.
 # A new run (events.run_started) clears the queue and takes down the tip on screen: each was
 # met in the old run's moment (its pilot's cast slot, a stake post, a rack, a halo), so it waits
 # to be met again rather than show out of context; nothing untold is marked seen.
 
 const TIPS := {
-	"grip": "Wall grip: stay fast and walls hold you.",
-	"jam": "Jammed: slots 2 and 3 shut. A fast ball slips the pulse.",
-	"cast": "Cast time: a knock or a second press drops it unspent.",
-	"radio": "Radio: [.] next station, [,] back, [/] skip the track.",
-	"stake": "Relay stake: hold E at the mast to raise the fight and the parts.",
-	"companion": "SPIL-9 is full: your next ram calls it in.",
-	"active": "F fires your active.",
-	"dunk": "Dunk: an air slam stores its hit; reel into a hooked body to cash it.",
+	"grip": "Stay fast against a wall and it holds you.",
+	"jam": "A pulse shuts picks 2 and 3. A fast, airborne or hooked ball slips it.",
+	"cast": "A pick with a cast time spends nothing if a knock or a second press stops it.",
+	"radio": "The radio changes station and skips takes. Its keys are in the notes.",
+	"stake": "Hold at the relay mast for a bigger fight and more part rolls.",
+	"companion": "SPIL-9 is full. Your next ram calls it in.",
+	"active": "Press the active's key on the bar to fire it.",
+	"dunk": "An air slam stores its hit. Reel into a hooked body to cash it in.",
 }
 const WAIT_FOR_PICK := ["radio", "active"]
 const STAKE_REACH := 30.0
