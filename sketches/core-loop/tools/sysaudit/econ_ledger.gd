@@ -124,6 +124,7 @@ func _shop_visit(world) -> void:
 	var speed: float = _game.player.planar_velocity().length()
 	world._bay_fact({"kind": "entered", "banked": speed})
 	_row("bay", {"heft": _game.run.heft_class()})
+	_weigh(shop)
 	var t: Dictionary = shop.top_shelf()
 	if not t.is_empty() and not t["sold"]:
 		var r: Dictionary = shop.buy_top()
@@ -147,6 +148,28 @@ func _shop_visit(world) -> void:
 		if not o.get("sold", false):
 			_row("no_buy", {"what": "shelf", "item": o.get("part_id", ""), "price": o.get("price", 0)})
 	world._bay_fact({"kind": "left", "velocity": _game.player.state.velocity})
+
+
+# Moss's scale (PR 768, `--moss-scale=on`): sell mass for cogs while the shelf holds a part the
+# wallet cannot reach, and stop at the first press that drops a heft class (the min-maxer keeps
+# its class: max hull, the hook lock and the tree's milestones ride it).
+func _weigh(shop) -> void:
+	if not shop.has_method("scale_open") or not shop.scale_open():
+		return
+	var want := 0
+	for o in shop.shelf_offers():
+		if not o.get("sold", false):
+			want += int(o.get("price", 0))
+	var presses := 0
+	while _game.run.cogs < want and presses < 200:
+		var heft: int = _game.run.heft_class()
+		var r: Dictionary = shop.weigh()
+		if not r.get("ok", false):
+			break
+		presses += 1
+		_row("weigh", {"mass_sold": r.get("mass", 0), "paid": -int(r.get("price", 0))})
+		if _game.run.heft_class() < heft:
+			break
 
 
 func _buy_shelf(shop) -> void:
