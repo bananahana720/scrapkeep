@@ -1,6 +1,7 @@
 extends VBoxContainer
 
 const Palette := preload("res://src/core/palette.gd")
+const UiTokens := preload("res://src/ui/ui_tokens.gd")
 const Bindings := preload("res://src/core/bindings.gd")
 const ChoiceButton := preload("res://src/ui/choice_button.gd")
 const SettingsStore := preload("res://src/ui/settings_store.gd")
@@ -10,6 +11,7 @@ const BuildStamp := preload("res://src/core/build_stamp.gd")
 const VolumeRow := preload("res://src/ui/volume_row.gd")
 const Harmony := preload("res://src/presentation/harmony.gd")
 const SettingRow := preload("res://src/ui/setting_row.gd")
+const Keycap := preload("res://src/ui/keycap.gd")
 
 # The settings page both hosts show: the pause menu in place of its first page, the title
 # through its Settings button. Three pages behind a tab strip, switched by LB and RB, Q and E
@@ -20,8 +22,12 @@ const SettingRow := preload("res://src/ui/setting_row.gd")
 # Hit-stop and Find cards). Feel is the one owner of those rows, so the title reaches the volume the
 # pause menu once held alone; Back sits under every page. A key cap waits for the next key or mouse
 # button, a pad cap for the next pad button (and a trigger for fire and harpoon); Esc or B
-# cancels; a press another verb already holds is refused with "Taken". Frame smoothing and Wide picture
-# show their one-line helper (SettingsStore.HELPERS) while they have the focus.
+# cancels; a press another action already holds is refused with "Taken". Frame smoothing and Wide picture
+# show their one-line helper (SettingsStore.HELPERS) under the row while they have the focus. One column:
+# every row's label sits above its field (SettingRow.stack, VolumeRow.stack), a verb's key and pad caps
+# share one field under its name, and a page taller than PAGE_H scrolls down only, following the focus.
+# A cap that waits for a press shows amber dots and a line under it saying what to press (Back's cap
+# cancels); a refused press turns the cap's edge red and the line says who holds that press and what to do.
 # A new binding goes to the store and to the InputMap at once (game.apply_binding, the same
 # call boot makes), so a later launch reads what play just used. The host feeds its input
 # events to handle(); the page never reads the keyboard itself. The build stamp (build_stamp.gd)
@@ -34,6 +40,9 @@ signal back_requested
 const VERBS := ["jump", "fire", "harpoon", "haul", "boost", "select_1", "select_2", "select_3", "ultimate", "interact"]
 const SELECT_ROW := "select_"
 const FIXED := ["roll", "look"]
+# The in-run keys with no row here, by the name the player meets them under.
+const EXTRA_WORDS := {"cl_retry": "Retry", "cl_pause": "Pause", "cl_radio_next": "Next track",
+	"cl_radio_prev": "Last track", "cl_radio_skip": "Skip track", "cl_radio_pin": "Keep track"}
 const PAGES := ["display", "controls", "look", "feel"]
 const PAGE_WORDS := {"display": "Display", "controls": "Controls", "look": "Look", "feel": "Feel"}
 # The Feel rows: a mixer bus or a comfort level each, stepped in tenths, then the Find cards toggle.
@@ -63,9 +72,10 @@ const LOOK := [
 	{"id": SettingsStore.AIM_ASSIST, "words": "Aim assist", "steps": [0.0, 0.25, 0.5, 0.75, 1.0], "per": 1.0},
 ]
 const WIDTH := 500.0
+# The tallest a page stands before it scrolls: the 900 px canvas less the tabs, Back and the stamp.
+const PAGE_H := 640.0
 # A key cap or a pad cap on the Controls tab, beside the verb's name.
 const CAP_W := 150.0
-const WORD_BUDGET := 70
 # Mouse buttons a press may bind: left, right, middle and the two side buttons. The wheel
 # is not a button press a player means.
 const MOUSE_OK := [MOUSE_BUTTON_LEFT, MOUSE_BUTTON_RIGHT, MOUSE_BUTTON_MIDDLE, MOUSE_BUTTON_XBUTTON1, MOUSE_BUTTON_XBUTTON2]
@@ -78,6 +88,9 @@ var stamp: Label
 var rows := {}
 
 var _helper: Label
+# The line under a field that waits for a press or refused one.
+var _notice: Label
+var _scrolls := {}
 
 var _game
 var _back_key := "key_esc"
@@ -111,18 +124,43 @@ func setup(game_ref, back_key := "key_esc") -> void:
 		strip.add_child(tab)
 		_tabs[PAGES[i]] = tab
 		var box := VBoxContainer.new()
-		box.alignment = BoxContainer.ALIGNMENT_CENTER
-		box.add_theme_constant_override("separation", 4)
+		box.alignment = BoxContainer.ALIGNMENT_BEGIN
+		box.add_theme_constant_override("separation", UiTokens.GAP_S)
 		box.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		add_child(box)
+		box.custom_minimum_size.x = WIDTH
+		var scroll := ScrollContainer.new()
+		scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+		scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
+		scroll.follow_focus = true
+		scroll.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+		scroll.custom_minimum_size.x = WIDTH + UiTokens.GAP_L
+		scroll.mouse_filter = Control.MOUSE_FILTER_PASS
+		# The inset keeps a focused field's ring, drawn outside its plate, inside the scroll's clip.
+		var inset := MarginContainer.new()
+		for side in ["left", "right", "top", "bottom"]:
+			inset.add_theme_constant_override("margin_" + side, UiTokens.GAP_S)
+		inset.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		inset.add_child(box)
+		scroll.add_child(inset)
+		add_child(scroll)
+		_scrolls[PAGES[i]] = scroll
 		_boxes[PAGES[i]] = box
 		_page_ids[PAGES[i]] = []
 	_build_display()
 	_build_controls()
 	_build_look()
 	_build_feel()
+	_notice = Label.new()
+	_notice.add_theme_font_override("font", UiFonts.bold())
+	_notice.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_notice.custom_minimum_size = Vector2(WIDTH, 0.0)
+	_notice.add_theme_font_size_override("font_size", UiTokens.BODY)
+	_notice.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_notice.visible = false
+	_notice.accessibility_live = AccessibilityServer.LIVE_ASSERTIVE
+	_boxes["controls"].add_child(_notice)
 	back = ChoiceButton.new("back", _back_key, "Back")
-	back.custom_minimum_size = Vector2(WIDTH, 40.0)
+	back.custom_minimum_size = Vector2(WIDTH, UiTokens.TARGET)
 	back.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	rows["back"] = back
 	add_child(back)
@@ -130,8 +168,8 @@ func setup(game_ref, back_key := "key_esc") -> void:
 	stamp = Label.new()
 	stamp.text = BuildStamp.label()
 	stamp.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	stamp.add_theme_font_size_override("font_size", 14)
-	stamp.add_theme_color_override("font_color", Color(Palette.SAND, 0.6))
+	stamp.add_theme_font_size_override("font_size", UiTokens.CAPTION)
+	stamp.add_theme_color_override("font_color", UiTokens.quiet())
 	stamp.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(stamp)
 	refresh()
@@ -144,41 +182,56 @@ func _build_display() -> void:
 			rows[id].focus_entered.connect(_show_helper.bind(String(SettingsStore.HELPERS[id])))
 			rows[id].focus_exited.connect(_show_helper.bind(""))
 	_helper = Label.new()
-	_helper.custom_minimum_size = Vector2(WIDTH, 22.0)
-	_helper.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_helper.add_theme_font_size_override("font_size", 16)
-	_helper.add_theme_color_override("font_color", Color(Palette.SAND, 0.8))
+	_helper.add_theme_font_override("font", UiFonts.bold())
+	_helper.custom_minimum_size = Vector2(WIDTH, 0.0)
+	_helper.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_helper.add_theme_font_size_override("font_size", UiTokens.BODY)
+	_helper.add_theme_color_override("font_color", UiTokens.TEXT)
 	_helper.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_helper.visible = false
 	_boxes["display"].add_child(_helper)
 
 
+# A focused row's helper line sits right under that row, and leaves with the focus.
 func _show_helper(words: String) -> void:
 	_helper.text = words
+	_helper.visible = words != ""
+	if words != "":
+		_place_under(_helper, focused_id())
 
 
 func helper_text() -> String:
 	return _helper.text
 
 
+# The line under a waiting or refused field, or "" while none shows.
+func notice_text() -> String:
+	return _notice.text if _notice.visible else ""
+
+
 func _build_controls() -> void:
 	for verb in VERBS:
-		var pair := HBoxContainer.new()
-		pair.alignment = BoxContainer.ALIGNMENT_CENTER
-		pair.add_theme_constant_override("separation", 4)
-		pair.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		_boxes["controls"].add_child(pair)
+		var group := VBoxContainer.new()
+		group.add_theme_constant_override("separation", 0)
+		group.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_boxes["controls"].add_child(group)
 		var name_label := Label.new()
 		name_label.text = _caption(verb)
-		name_label.custom_minimum_size = Vector2(WIDTH - 2.0 * CAP_W - 8.0, 40.0)
-		name_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		name_label.custom_minimum_size = Vector2(WIDTH, SettingRow.LABEL_H)
+		name_label.vertical_alignment = VERTICAL_ALIGNMENT_TOP
 		name_label.add_theme_font_override("font", UiFonts.bold())
-		name_label.add_theme_font_size_override("font_size", 22)
-		name_label.add_theme_color_override("font_color", Palette.SAND)
+		name_label.add_theme_font_size_override("font_size", UiTokens.BODY)
+		name_label.add_theme_color_override("font_color", UiTokens.TEXT)
 		name_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		pair.add_child(name_label)
+		group.add_child(name_label)
+		var pair := HBoxContainer.new()
+		pair.add_theme_constant_override("separation", UiTokens.GAP_S)
+		pair.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		group.add_child(pair)
 		for id in [verb, "pad_" + verb]:
 			var button := _bind_button(id)
-			button.custom_minimum_size = Vector2(CAP_W, 40.0)
+			button.custom_minimum_size = Vector2(CAP_W, UiTokens.TARGET)
+			button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 			rows[id] = button
 			_page_ids["controls"].append(id)
 			pair.add_child(button)
@@ -196,6 +249,7 @@ func _build_feel() -> void:
 	for spec in FEEL:
 		var row := VolumeRow.new(spec["bus"] if spec.has("bus") else spec["comfort"], spec["words"], spec["glyph"], WIDTH)
 		row.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+		row.stack(SettingRow.LABEL_H)
 		row.changed.connect(_on_feel.bind(spec))
 		rows[spec["id"]] = row
 		_page_ids["feel"].append(spec["id"])
@@ -278,11 +332,11 @@ func _tab_button(page: String) -> Button:
 	button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 	button.text = PAGE_WORDS[page]
 	button.add_theme_font_override("font", UiFonts.bold())
-	button.add_theme_font_size_override("font_size", 20)
-	button.add_theme_stylebox_override("normal", ChoiceButton.plate(Palette.VERDIGRIS, 2, ChoiceButton.PAD))
+	button.add_theme_font_size_override("font_size", UiTokens.BODY)
+	button.add_theme_stylebox_override("normal", ChoiceButton.plate(UiTokens.LINE, 2, ChoiceButton.PAD))
 	button.add_theme_stylebox_override("hover", ChoiceButton.plate(Palette.SAND, 2, ChoiceButton.PAD))
 	button.add_theme_stylebox_override("pressed", ChoiceButton.plate(Palette.AMBER, 3, ChoiceButton.PAD))
-	button.custom_minimum_size = Vector2(WIDTH / PAGES.size() - 3.0, 36.0)
+	button.custom_minimum_size = Vector2(WIDTH / PAGES.size() - 3.0, UiTokens.TARGET)
 	return button
 
 
@@ -312,17 +366,34 @@ func show_page(index: int) -> void:
 	_clear_notice()
 	_capture_end()
 	_helper.text = ""
+	_helper.visible = false
 	_page_index = posmod(index, PAGES.size())
 	last_page = _page_index
 	for i in PAGES.size():
 		var id: String = PAGES[i]
 		_boxes[id].visible = i == _page_index
+		_scrolls[id].visible = i == _page_index
 		var tab: Button = _tabs[id]
 		var tint := Palette.AMBER if i == _page_index else Palette.SAND
 		tab.add_theme_color_override("font_color", tint)
-		tab.add_theme_color_override("font_hover_color", Color.WHITE)
+		tab.add_theme_color_override("font_hover_color", UiTokens.TEXT)
 	_order = _page_ids[PAGES[_page_index]].duplicate()
 	_order.append("back")
+	_hold_height()
+
+
+# Every page is as tall as the tallest, up to PAGE_H, so the tab strip and Back stay put when the
+# page changes; a longer page scrolls down only, following the focus.
+func _hold_height() -> void:
+	var tallest := 0.0
+	for id in PAGES:
+		var box: VBoxContainer = _boxes[id]
+		var shown := box.visible
+		box.visible = true
+		tallest = maxf(tallest, box.get_combined_minimum_size().y + UiTokens.GAP_S * 2)
+		box.visible = shown
+	for id in PAGES:
+		_scrolls[id].custom_minimum_size.y = minf(tallest, PAGE_H)
 
 
 func focused_id() -> String:
@@ -443,9 +514,9 @@ func refresh() -> void:
 
 func _add_plain(id: String, page: String) -> void:
 	var button := SettingRow.new(id, "", "Reset keys" if id == "reset" else id.capitalize())
+	button.custom_minimum_size = Vector2(WIDTH, UiTokens.TARGET)
 	if id != "reset":
-		button.alignment = HORIZONTAL_ALIGNMENT_LEFT
-	button.custom_minimum_size = Vector2(WIDTH, 40.0)
+		button.stack()
 	button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	button.pressed.connect(press.bind(id))
 	rows[id] = button
@@ -458,20 +529,21 @@ func _bind_button(id: String) -> Button:
 	var row := row_of(id)
 	var glyph := pad_glyph_of(row) if id.begins_with("pad_") else glyph_of(row)
 	var button := ChoiceButton.new(id, glyph, "")
+	button.accessibility_name = "%s, %s %s" % [_caption(id), "pad" if id.begins_with("pad_") else "key", Keycap.label(glyph)]
 	button.pressed.connect(press.bind(id))
 	return button
 
 
 # A fixed verb shows its keys and takes no input.
 func _add_fixed(verb: String) -> void:
-	var button := SettingRow.new(verb, Bindings.glyph(verb), "")
-	button.alignment = HORIZONTAL_ALIGNMENT_LEFT
+	var button := SettingRow.new(verb, "", "")
 	button.show_row(verb.capitalize(), Bindings.label(verb))
 	button.disabled = true
 	button.focus_mode = Control.FOCUS_NONE
 	button.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	rows[verb] = button
-	button.custom_minimum_size = Vector2(WIDTH, 40.0)
+	button.custom_minimum_size = Vector2(WIDTH, UiTokens.TARGET)
+	button.stack()
 	button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	_boxes["controls"].add_child(button)
 
@@ -482,7 +554,8 @@ func _rebuild(id: String) -> void:
 	var had_focus := old.has_focus()
 	var parent := old.get_parent()
 	var fresh := _bind_button(id)
-	fresh.custom_minimum_size = Vector2(CAP_W, 40.0)
+	fresh.custom_minimum_size = Vector2(CAP_W, UiTokens.TARGET)
+	fresh.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	parent.add_child(fresh)
 	parent.move_child(fresh, old.get_index())
 	parent.remove_child(old)
@@ -592,7 +665,8 @@ func press(id: String) -> void:
 				_step_look(id, 1, true)
 			elif row_of(id) in VERBS:
 				_capturing = id
-				rows[id].text = "press"
+				rows[id].set_waiting(true)
+				_say(id, _ask_words(id), false)
 	focus(id)
 
 
@@ -607,12 +681,85 @@ func _clear_notice() -> void:
 		var id := _taken
 		_taken = ""
 		rows[id].text = ""
+		rows[id].set_alert(false)
+	_notice.visible = false
 
 
 func _capture_end() -> void:
 	if _capturing != "":
 		rows[_capturing].text = ""
+		rows[_capturing].set_waiting(false)
 		_capturing = ""
+		_notice.visible = false
+
+
+# What a waiting field asks for. Backing out is Back's own cap, under the page.
+func _ask_words(id: String) -> String:
+	if id.begins_with("pad_"):
+		return "Press a pad button for %s." % _caption(id)
+	return "Press a key or mouse button for %s." % _caption(id)
+
+
+# A line under a field: what it waits for (text colour) or why it refused and what to do (alert).
+func _say(id: String, words: String, refused: bool) -> void:
+	_notice.text = words
+	_notice.add_theme_color_override("font_color", UiTokens.ALERT if refused else UiTokens.TEXT)
+	_notice.visible = true
+	_place_under(_notice, id)
+
+
+# Moves a line to sit right under the field group that holds a row, on that row's page.
+func _place_under(line: Label, id: String) -> void:
+	var node: Node = rows.get(id)
+	if node == null:
+		return
+	var box: Node = null
+	for page in PAGES:
+		if _boxes[page].is_ancestor_of(node):
+			box = _boxes[page]
+	if box == null:
+		return
+	while node.get_parent() != box:
+		node = node.get_parent()
+	if line.get_parent() != null:
+		line.get_parent().remove_child(line)
+	box.add_child(line)
+	box.move_child(line, node.get_index() + 1)
+	_scroll_to.call_deferred(line, box)
+
+
+# A line placed below the fold scrolls into view, as the focus would.
+func _scroll_to(line: Control, box: Node) -> void:
+	if line.is_inside_tree() and line.visible:
+		for page in PAGES:
+			if _boxes[page] == box:
+				_scrolls[page].ensure_control_visible(line)
+
+
+# The verb or the pause action that already holds a press, in the words the page uses for it.
+func _holder_words(row: String, event: InputEvent) -> String:
+	var own := action_of(row)
+	for action in Bindings.actions():
+		if action == own:
+			continue
+		for held in InputMap.action_get_events(action):
+			if (event is InputEventKey and held is InputEventKey and held.physical_keycode == event.physical_keycode) \
+					or (event is InputEventMouseButton and held is InputEventMouseButton and held.button_index == event.button_index) \
+					or (event is InputEventJoypadButton and held is InputEventJoypadButton and held.button_index == event.button_index):
+				return _action_words(action)
+	return ""
+
+
+# The name a player knows an action by: a row's name on this page (Roll for any of its four
+# directions), or the in-run key it answers (Pause, Retry, a radio key).
+func _action_words(action: String) -> String:
+	for verb in VERBS:
+		if action_of(verb) == action:
+			return _caption(verb)
+	var verb := Bindings.verb_of_action(action)
+	if verb != "":
+		return verb.capitalize()
+	return EXTRA_WORDS.get(action, String(action).trim_prefix("cl_").capitalize())
 
 
 # Takes one input event from the host. True when the page used it; every key and pad
@@ -723,18 +870,7 @@ func _cancel() -> void:
 # InputMap, the pause and retry actions included. A trigger is never Taken: fire and harpoon
 # swap triggers instead (_commit_trigger).
 func _held_elsewhere(row: String, event: InputEvent) -> bool:
-	var own := action_of(row)
-	for action in Bindings.actions():
-		if action == own:
-			continue
-		for held in InputMap.action_get_events(action):
-			if event is InputEventKey and held is InputEventKey and held.physical_keycode == event.physical_keycode:
-				return true
-			if event is InputEventMouseButton and held is InputEventMouseButton and held.button_index == event.button_index:
-				return true
-			if event is InputEventJoypadButton and held is InputEventJoypadButton and held.button_index == event.button_index:
-				return true
-	return false
+	return _holder_words(row, event) != ""
 
 
 func _commit(id: String, event: InputEvent) -> void:
@@ -742,13 +878,20 @@ func _commit(id: String, event: InputEvent) -> void:
 	var verb := verb_of(id)
 	if _held_elsewhere(row_of(id), event):
 		_taken = id
-		rows[id].text = "Taken"
+		rows[id].refuse()
+		var holder := _holder_words(row_of(id), event)
+		var kind := "key" if event is InputEventKey else "button"
+		var line := "%s uses that %s. Press the cap again for another" % [holder, kind]
+		if VERBS.any(func(other): return _caption(other) == holder):
+			line += ", or move %s first" % holder
+		_say(id, line + ".", true)
 		return
 	var action := action_of(row_of(id))
 	if event is InputEventJoypadMotion:
 		_hand_over_trigger(verb, event.axis)
 	_store().merge_binding(action, [event])
 	_game.apply_binding(action, _store().binding_events(action))
+	_notice.visible = false
 	_rebuild(id)
 
 
@@ -776,8 +919,8 @@ func _hand_over_trigger(verb: String, axis: int) -> void:
 		_rebuild("pad_" + other)
 
 
+# Moving on leaves a refusal standing under its field until that field takes a new press.
 func _move(direction: int) -> void:
-	_clear_notice()
 	var index := _order.find(focused_id())
 	index = 0 if index < 0 else posmod(index + direction, _order.size())
 	rows[_order[index]].grab_focus()
@@ -785,7 +928,6 @@ func _move(direction: int) -> void:
 
 # Left and right step the focused look row down and up, stopping at the ends.
 func _nudge(direction: int) -> void:
-	_clear_notice()
 	var id := focused_id()
 	if not _look_spec(id).is_empty():
 		_step_look(id, direction, false)

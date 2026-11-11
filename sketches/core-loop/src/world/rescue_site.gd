@@ -350,6 +350,15 @@ func is_done(quest: String) -> bool:
 	return bool(_done.get(quest, false))
 
 
+# Every cage still holding its pilot, as [{quest, at}] with at the cage's foot.
+func waiting() -> Array:
+	var out := []
+	for c in cages:
+		if is_instance_valid(c) and not c.spent:
+			out.append({"quest": c.quest, "at": c.global_position})
+	return out
+
+
 func cage(quest: String):
 	for c in cages:
 		if c.quest == quest:

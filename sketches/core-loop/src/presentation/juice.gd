@@ -86,6 +86,31 @@ const MAX_SQUASH := 0.45
 const SPRING_STEP := 1.0 / 120.0
 const MAX_SPRING_STEPS := 64
 
+# Pad rumble (systems audit pass C; loops.md found no vibration call anywhere in src/). The
+# hands' half of a fact, one row per fact: the weak (fast, light) and strong (slow, heavy)
+# motor shares, 0 to 1, and how long. A row's strength scales by the caller's share (a ram by
+# its throw, a hit taken by its damage). Start values for a PC pad check, not a feel verdict.
+# Rumble follows the Screen shake comfort row until the settings form carries its own, so a
+# player who stills the screen stills the pad too.
+const RUMBLE := {
+	"near_miss": {"weak": 0.6, "strong": 0.0, "ms": 60},
+	"harpoon_bit": {"weak": 0.35, "strong": 0.1, "ms": 50},
+	"ram": {"weak": 0.25, "strong": 0.55, "ms": 100},
+	"slammed": {"weak": 0.2, "strong": 0.75, "ms": 150},
+	"landed": {"weak": 0.0, "strong": 0.4, "ms": 80},
+	"carved": {"weak": 0.35, "strong": 0.15, "ms": 70},
+	"player_hit": {"weak": 0.45, "strong": 0.7, "ms": 170},
+	"multi_kill": {"weak": 0.4, "strong": 0.3, "ms": 90},
+	"boss_weak_point_hit": {"weak": 0.5, "strong": 0.65, "ms": 120},
+	"heft_class_changed": {"weak": 0.15, "strong": 0.5, "ms": 220},
+	"beacon_unsealed": {"weak": 0.3, "strong": 0.85, "ms": 320},
+}
+# A request weaker than the one still running is dropped, so a crowd of small facts never
+# blurs the big one under them.
+const RUMBLE_FLOOR := 0.05
+# A carve's release plays at pitch 1 at the 14 m/s cruise, higher off a faster ride.
+const CARVE_PITCH_SPEED := 14.0
+
 var ctx
 var player
 var camera
@@ -115,6 +140,10 @@ var stop_scale := 1.0
 var shake_scale := 1.0
 # Multi-kill groups this run: [size, msec] each time a group reached 2, 4 or 8.
 var multi_log: Array = []
+# The last RUMBLE_LOG_CAP pad rumbles asked for: [fact, weak, strong, seconds, sent]. Tests and
+# the census read it.
+var rumble_log: Array = []
+const RUMBLE_LOG_CAP := 512
 
 var _squash := 0.0
 var _squash_velocity := 0.0
@@ -132,6 +161,9 @@ var _blasts: Array = []
 var _flush_queued := false
 var _multi_size := 0
 var _multi_last := -100000
+var _rumble_until := -1
+var _rumble_weak := 0.0
+var _rumble_strong := 0.0
 
 
 func setup(ctx_ref) -> void:
@@ -186,10 +218,21 @@ func wire_optional() -> void:
 	SignalWire.listen(events, "part_gained", _on_part)
 	SignalWire.listen(events, "core_gained", _on_core)
 	SignalWire.listen(events, "harpoon_bit", _on_harpoon_bit)
+	SignalWire.listen(events, "carved", _on_carved)
 
 
 func _on_harpoon_bit(_enemy: Node3D, _at: Vector3) -> void:
 	request_hit_stop(BITE_STOP_MS / 1000.0, "harpoon_bit")
+	rumble("harpoon_bit")
+
+
+# A carve let go: the grind's release in the ears and a tap in the hands, louder for a longer
+# ride. The sparks while it rides are player_fx's; this is the moment it ends.
+func _on_carved(_at: Vector3, seconds: float, speed: float) -> void:
+	var share := clampf(seconds / 1.2, 0.4, 1.0)
+	if audio != null:
+		audio.play("carved", lerpf(-4.0, 0.0, share), clampf(speed / CARVE_PITCH_SPEED, 0.85, 1.25))
+	rumble("carved", share)
 
 
 func _reset() -> void:
@@ -252,6 +295,7 @@ func pulse(amount: float) -> void:
 
 func _on_landed(impact: float) -> void:
 	squash(clampf(impact / 26.0, 0.0, 0.42), player.state.contact_normal)
+	rumble("landed", clampf((impact - 10.0) / 16.0, 0.0, 1.0))
 	if impact > 18.0:
 		_camera("kick", "landed", Vector3.DOWN, impact * 0.012)
 
@@ -264,6 +308,7 @@ func _on_slammed(_at: Vector3, strength: float, _flatness: float) -> void:
 	if strength < 0.05:
 		return
 	squash(0.3 + 0.2 * minf(strength, 1.0), player.state.contact_normal)
+	rumble("slammed", minf(strength, 1.0))
 	_camera("kick", "slammed", Vector3.DOWN, 0.35 + 0.35 * minf(strength, 1.5))
 	# A zoom-in thump: the world leans toward the impact for a beat.
 	_camera("punch_fov", "slammed", Vector3.ZERO, -4.0 * minf(strength, 1.5), 0.25)
@@ -496,6 +541,10 @@ func _flush_hits() -> void:
 		audio.play("enemy_struck", 0.0, 1.0, "SFX", String(row["crit"]["sound"]))
 	if heavy:
 		_thump(contact, float(row["heavy"]["kick"]), int(row["heavy"]["dust"]), "enemy_struck")
+		var throw_max := 0.0
+		for hit in _hits:
+			throw_max = maxf(throw_max, float(hit.get("throw", -1.0)))
+		rumble("ram", lerpf(0.45, 1.0, throw_share(throw_max)))
 	if camera != null and shake > 0.0:
 		request_shake(shake, 0.2, "enemy_struck")
 	_hits.clear()
@@ -526,12 +575,14 @@ func _on_rebounded(enemy: Node3D, _speed: float) -> void:
 # A weak point cracked: a crit's stop and a small kick.
 func _on_weak_point(_point_id: String) -> void:
 	_camera("kick", "boss_weak_point_hit", Vector3.DOWN, 0.25)
+	rumble("boss_weak_point_hit")
 	request_hit_stop(stop_ms_for(30.0, true) / 1000.0, "boss_weak_point_hit")
 
 
 func _on_unsealed(_stage: int) -> void:
 	var row := EventKinds.juice("beacon_unsealed")
 	_camera("punch_fov", "beacon_unsealed", Vector3.ZERO, float(row["punch_fov"]), 0.6)
+	rumble("beacon_unsealed")
 	request_hit_stop(float(row["stop_ms"]) / 1000.0, "beacon_unsealed")
 
 
@@ -559,6 +610,7 @@ func _flush_kills() -> void:
 		if before < mark and _multi_size >= mark:
 			multi_log.append([mark, now])
 			request_hit_stop(float(row["multi_stop_ms"]) / 1000.0, "multi_kill")
+			rumble("multi_kill", minf(0.5 + mark / 8.0, 1.0))
 			_camera("punch_fov", "multi_kill", Vector3.ZERO, -2.0 - mark * 0.5, 0.3)
 			if audio != null:
 				# The pop an octave up and more, on the reward ladder: F at 2, G at 4, D at 8.
@@ -614,6 +666,7 @@ func _on_near_miss(_kind: String, at: Vector3) -> void:
 	var row := EventKinds.juice("near_miss")
 	request_hit_stop(float(row["stop_ms"]) / 1000.0, "near_miss")
 	_camera("punch_fov", "near_miss", Vector3.ZERO, float(row["punch_fov"]), 0.25)
+	rumble("near_miss")
 	if vfx != null:
 		var travel: Vector3 = player.planar_velocity()
 		vfx.glyph("near_miss", at + Vector3.UP * 1.8, 0.6, 1.4, 0.35, travel if travel.length() > 0.5 else Vector3.ZERO, "", Color(0, 0, 0, 0), "P2")
@@ -625,6 +678,7 @@ func _on_player_hit(amount: float, source: String) -> void:
 	var row := EventKinds.juice("player_hit")
 	hook_log.append(["edge_flash", "player_hit"])
 	squash(float(row["squash"]), Vector3.ZERO)
+	rumble("player_hit", clampf(0.5 + amount / 30.0, 0.5, 1.0))
 	# The number and the flash keep the player_hit juice row's HAZARD for either source.
 	var team := DamageNumbers.team_of_source(source)
 	if number_sink.is_valid():
@@ -707,6 +761,7 @@ func _on_rocket_jumped(_at: Vector3, _speed: float) -> void:
 func _on_heft_class(heft_class: int, _heft: float) -> void:
 	if heft_class > _heft_class:
 		squash(0.32, Vector3.UP)
+		rumble("heft_class_changed")
 		hook_log.append(["class_up", "heft_class_changed"])
 	_heft_class = heft_class
 
@@ -724,6 +779,35 @@ func _camera(hook: String, fact: String, direction: Vector3, amount: float, time
 			camera.punch_fov(amount, time)
 		"kick":
 			camera.kick(direction, amount)
+
+
+# The one way presentation asks the pad to rumble: the fact's RUMBLE row at `share` of its
+# strength, scaled by the Screen shake comfort row, sent to every connected pad. A request no
+# stronger than the one still running is logged unsent. Outside play (a menu, a pause) it is
+# logged unsent too. With no pad connected it only logs.
+func rumble(fact: String, share := 1.0) -> void:
+	var row: Dictionary = RUMBLE.get(fact, {})
+	if row.is_empty():
+		return
+	var scale := clampf(share, 0.0, 1.0) * shake_scale
+	var weak := float(row["weak"]) * scale
+	var strong := float(row["strong"]) * scale
+	var seconds := float(row["ms"]) / 1000.0
+	# The motors run on real time, so a hit-stop must not stretch the running window.
+	var now := Time.get_ticks_msec()
+	var running := now < _rumble_until
+	if rumble_log.size() >= RUMBLE_LOG_CAP:
+		rumble_log.pop_front()
+	var in_play: bool = ctx == null or ctx.flow == null or ctx.flow.in_play()
+	if not in_play or maxf(weak, strong) < RUMBLE_FLOOR or (running and weak <= _rumble_weak and strong <= _rumble_strong):
+		rumble_log.append([fact, weak, strong, seconds, false])
+		return
+	_rumble_weak = weak
+	_rumble_strong = strong
+	_rumble_until = now + int(row["ms"])
+	rumble_log.append([fact, weak, strong, seconds, true])
+	for device in Input.get_connected_joypads():
+		Input.start_joy_vibration(device, weak, strong, seconds)
 
 
 # The one way presentation asks the camera to shake, so every shake shares SHAKE_CAP. The

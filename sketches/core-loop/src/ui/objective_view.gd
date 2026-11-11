@@ -1,6 +1,7 @@
 extends Control
 
 const Icons := preload("res://src/ui/icons.gd")
+const UiTokens := preload("res://src/ui/ui_tokens.gd")
 const UiDraw := preload("res://src/ui/ui_draw.gd")
 
 # The objective, top centre: its glyph (ringed by how much of the Warden is broken), at
@@ -9,7 +10,7 @@ const UiDraw := preload("res://src/ui/ui_draw.gd")
 # glyph was (a lost one with a cross), drawn here so it needs no glyph of its own.
 
 const ICON := 34.0
-const FONT := 19
+const FONT := UiTokens.BODY
 const GAP := 12.0
 const PLATE_PAD := 6.0
 const PAST_STEP := 0.4

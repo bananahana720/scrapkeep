@@ -3,6 +3,7 @@ extends Control
 signal finished
 
 const AppShell := preload("res://src/core/app_shell.gd")
+const UiTokens := preload("res://src/ui/ui_tokens.gd")
 const Worlds := preload("res://src/core/worlds.gd")
 const Palette := preload("res://src/core/palette.gd")
 const WorldLook := preload("res://src/presentation/world_look.gd")
@@ -159,11 +160,11 @@ func _build_view() -> void:
 	_scene.add_child(_sun)
 	_bar_top = _backing(0.0, 0.14, Palette.CHARCOAL)
 	_bar_bottom = _backing(0.73, 1.0, Palette.CHARCOAL)
-	_world_label = _label(26, Palette.SAND)
+	_world_label = _label(UiTokens.LABEL, Palette.SAND)
 	_world_label.set_anchors_and_offsets_preset(Control.PRESET_TOP_WIDE)
 	_world_label.offset_top = 28.0
 	_world_label.text = String(Worlds.ENDING.title)
-	_copy = _label(24, Palette.SAND)
+	_copy = _label(UiTokens.LABEL, Palette.SAND)
 	_copy.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
 	_copy.offset_left = 60.0
 	_copy.offset_right = -60.0
@@ -181,7 +182,7 @@ func _build_view() -> void:
 	_credits_clip.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_credits_clip.visible = false
 	add_child(_credits_clip)
-	_credits = _label(30, Palette.SAND)
+	_credits = _label(UiTokens.HEADING, Palette.SAND)
 	remove_child(_credits)
 	_credits_clip.add_child(_credits)
 	_credits.text = CREDITS

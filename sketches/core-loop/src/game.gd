@@ -26,6 +26,7 @@ const Grip := preload("res://src/movement/grip.gd")
 const Augments := preload("res://src/movement/augments.gd")
 const Hud := preload("res://src/ui/hud.gd")
 const Screens := preload("res://src/ui/screens.gd")
+const UiTokens := preload("res://src/ui/ui_tokens.gd")
 const FieldNotes := preload("res://src/ui/field_notes.gd")
 const TuningPanel := preload("res://src/ui/tuning_panel.gd")
 const World := preload("res://src/world/world.gd")
@@ -1115,6 +1116,7 @@ func set_reduced_motion(on: bool) -> void:
 	EnemyMotion.motion_scale = 0.0 if on else 1.0
 	HighdraftFx.preferred = on
 	AbilityBar.reduced_motion = on
+	UiTokens.reduced_motion = on
 	AimReticle.reduced_motion = on
 	RewardView.reduced_motion = on
 	MossBubble.reduced_motion = on

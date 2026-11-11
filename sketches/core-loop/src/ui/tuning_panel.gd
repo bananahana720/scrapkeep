@@ -1,6 +1,7 @@
 extends CanvasLayer
 
 const Tuning := preload("res://src/movement/tuning.gd")
+const UiTokens := preload("res://src/ui/ui_tokens.gd")
 
 var tuning
 
@@ -16,19 +17,19 @@ func setup(tuning_ref) -> void:
 	add_child(_root)
 
 	var box := VBoxContainer.new()
-	box.add_theme_constant_override("separation", 1)
+	box.add_theme_constant_override("separation", 0)
 	_root.add_child(box)
 
 	var title := Label.new()
 	title.text = "Tuning (F1)"
-	title.add_theme_font_size_override("font_size", 18)
+	title.add_theme_font_size_override("font_size", UiTokens.BODY)
 	box.add_child(title)
 
 	# Two columns: the v2 knobs took the table past what one column fits in 900 px.
 	var grid := GridContainer.new()
 	grid.columns = 2
-	grid.add_theme_constant_override("h_separation", 18)
-	grid.add_theme_constant_override("v_separation", 1)
+	grid.add_theme_constant_override("h_separation", 16)
+	grid.add_theme_constant_override("v_separation", 0)
 	box.add_child(grid)
 
 	for spec in Tuning.SPECS:
@@ -36,7 +37,7 @@ func setup(tuning_ref) -> void:
 		cell.add_theme_constant_override("separation", 0)
 		grid.add_child(cell)
 		var label := Label.new()
-		label.add_theme_font_size_override("font_size", 14)
+		label.add_theme_font_size_override("font_size", UiTokens.CAPTION)
 		cell.add_child(label)
 		var slider := HSlider.new()
 		slider.min_value = spec["min"]
