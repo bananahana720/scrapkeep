@@ -65,6 +65,10 @@ const SPECS := [
 	{"key": "pole_flail", "label": "Poles and flails", "min": 0.0, "max": 1.0, "step": 1.0, "value": 0.0, "options": ["off", "on"]},
 	{"key": "hotwire_shell", "label": "Hot-wired shell", "min": 0.0, "max": 1.0, "step": 1.0, "value": 1.0, "options": ["off", "on"]},
 	{"key": "hotwire_tread", "label": "Hot-wired tread", "min": 0.0, "max": 1.0, "step": 1.0, "value": 1.0, "options": ["off", "on"]},
+	# Heat on the shell (docs/design/loops.md Spec 1, src/combat/redline.gd): off by default so the
+	# game is unchanged; "watch" counts blazing seconds and skims without changing play (the A/B
+	# base), "on" plays it.
+	{"key": "heat", "label": "Heat", "min": 0.0, "max": 2.0, "step": 1.0, "value": 0.0, "options": ["off", "watch", "on"]},
 	# The harpoon (DESIGN-NOTES, "Harpoon and winch"): one mode for every pilot, locking on an enemy inside
 	# harpoon_lock_deg and flying the ball in.
 	{"key": "harpoon_smash_speed", "label": "Harpoon smash speed", "min": 10.0, "max": 45.0, "step": 1.0, "value": 24.0},
@@ -213,6 +217,7 @@ const FLAGS := {
 	"pole-flail": ["pole_flail", "option", "launch"],
 	"hotwire-shell": ["hotwire_shell", "option", "launch"],
 	"hotwire-tread": ["hotwire_tread", "option", "launch"],
+	"heat": ["heat", "option", "launch"],
 	"companion-stub": ["companion_stub", "option", "launch"],
 	"actives": ["actives", "option", "launch"],
 	"profile": ["profile", "option", "launch"],
