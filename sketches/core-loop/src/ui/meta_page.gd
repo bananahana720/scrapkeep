@@ -1,6 +1,7 @@
 extends VBoxContainer
 
 const Palette := preload("res://src/core/palette.gd")
+const UiTokens := preload("res://src/ui/ui_tokens.gd")
 const Achievements := preload("res://src/core/achievements.gd")
 const MetaOptions := preload("res://src/core/meta_options.gd")
 const Icons := preload("res://src/ui/icons.gd")
@@ -27,9 +28,9 @@ func _init() -> void:
 	name = "MetaPage"
 	alignment = BoxContainer.ALIGNMENT_CENTER
 	size_flags_vertical = Control.SIZE_EXPAND_FILL
-	add_theme_constant_override("separation", 22)
+	add_theme_constant_override("separation", 24)
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_level = _label("", 28, Palette.AMBER)
+	_level = _label("", UiTokens.HEADING, Palette.AMBER)
 	_level.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_level.name = "Level"
 	add_child(_level)
@@ -96,10 +97,10 @@ func _row(id: String, profile) -> Control:
 	words.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	box.add_child(words)
 	var shade := Palette.SAND if open else Palette.SLATE
-	words.add_child(_label(read["name"], 24, Palette.AMBER if open else shade))
-	words.add_child(_label(read["text"], 16, Color(shade, 0.9)))
+	words.add_child(_label(read["name"], UiTokens.LABEL, Palette.AMBER if open else shade))
+	words.add_child(_label(read["text"], UiTokens.BODY, Color(shade, 0.9)))
 	if read["note"] != "":
-		var note := _label(read["note"], 18, Palette.SAND)
+		var note := _label(read["note"], UiTokens.BODY, Palette.SAND)
 		note.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 		note.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		note.name = "Note"

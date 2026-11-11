@@ -1,0 +1,1664 @@
+{
+	"carve_seconds": 4.45,
+	"carves_started": 33,
+	"events": {
+		"achievement_earned": {
+			"1": 6,
+			"2": 8,
+			"3": 1
+		},
+		"attack_cued": {
+			"2": 8
+		},
+		"beacon_charge_changed": {
+			"1": 2,
+			"2": 5
+		},
+		"beacon_unsealed": {
+			"1": 1,
+			"2": 1
+		},
+		"boss_arena_entered": {
+			"2": 1
+		},
+		"boss_attack_telegraphed": {
+			"2": 31
+		},
+		"boss_defeated": {
+			"2": 1
+		},
+		"boss_phase_changed": {
+			"2": 4
+		},
+		"boss_weak_point_hit": {
+			"2": 22
+		},
+		"carved": {
+			"1": 1,
+			"2": 4
+		},
+		"cogs_collected": {
+			"1": 466,
+			"2": 478
+		},
+		"dashed": {
+			"1": 43,
+			"2": 65
+		},
+		"drop_landed": {
+			"1": 12,
+			"2": 48
+		},
+		"enemy_killed": {
+			"1": 34,
+			"2": 31
+		},
+		"enemy_rebounded": {
+			"1": 5,
+			"2": 5
+		},
+		"enemy_spawned": {
+			"1": 47,
+			"2": 46,
+			"3": 1
+		},
+		"enemy_struck": {
+			"1": 70,
+			"2": 342
+		},
+		"event_announced": {
+			"1": 10,
+			"2": 7,
+			"3": 1
+		},
+		"event_ended": {
+			"1": 5,
+			"2": 12
+		},
+		"event_started": {
+			"1": 10,
+			"2": 7
+		},
+		"fight_phase_changed": {
+			"2": 3
+		},
+		"flow_changed": {
+			"1": 3,
+			"2": 6,
+			"3": 1
+		},
+		"gauge_cancelled": {
+			"1": 8,
+			"2": 33
+		},
+		"gauge_charging": {
+			"1": 21,
+			"2": 56
+		},
+		"gauge_released": {
+			"1": 13,
+			"2": 23
+		},
+		"grapple_fired": {
+			"1": 18,
+			"2": 58
+		},
+		"grapple_released": {
+			"1": 18,
+			"2": 57
+		},
+		"harpoon_bit": {
+			"1": 18,
+			"2": 58
+		},
+		"harpoon_smashed": {
+			"1": 11,
+			"2": 27
+		},
+		"heft_class_changed": {
+			"1": 2,
+			"2": 5
+		},
+		"heft_class_dropped": {
+			"1": 1,
+			"2": 5
+		},
+		"hold_broken": {
+			"2": 1
+		},
+		"hold_ended": {
+			"1": 1
+		},
+		"hold_started": {
+			"1": 1,
+			"2": 1
+		},
+		"jumped": {
+			"2": 31
+		},
+		"landed": {
+			"1": 46,
+			"2": 66
+		},
+		"launched": {
+			"1": 1,
+			"2": 1
+		},
+		"line_skill_fired": {
+			"1": 4,
+			"2": 18
+		},
+		"line_state_changed": {
+			"1": 203,
+			"2": 555,
+			"3": 1
+		},
+		"missed_drop": {
+			"1": 7,
+			"2": 1
+		},
+		"near_miss": {
+			"1": 46,
+			"2": 40
+		},
+		"pack_arrived": {
+			"1": 4,
+			"2": 5
+		},
+		"panel_gained": {
+			"1": 7,
+			"2": 1
+		},
+		"part_gained": {
+			"1": 1,
+			"2": 2
+		},
+		"player_hit": {
+			"1": 10,
+			"2": 16
+		},
+		"posture_changed": {
+			"1": 4,
+			"2": 113
+		},
+		"pressure_changed": {
+			"1": 20,
+			"2": 16,
+			"3": 1
+		},
+		"prompt_shown": {
+			"1": 75,
+			"2": 89,
+			"3": 1
+		},
+		"radio_take_found": {
+			"1": 3,
+			"2": 3
+		},
+		"reward_chosen": {
+			"1": 1,
+			"2": 1
+		},
+		"reward_offered": {
+			"1": 1,
+			"2": 1
+		},
+		"scrap_collected": {
+			"1": 490,
+			"2": 550
+		},
+		"scrap_lost": {
+			"2": 3
+		},
+		"shot_fired": {
+			"1": 75,
+			"2": 207
+		},
+		"slammed": {
+			"1": 19,
+			"2": 49
+		},
+		"slot_cast": {
+			"1": 17,
+			"2": 41
+		},
+		"slot_selected": {
+			"1": 972,
+			"2": 290
+		},
+		"special_used": {
+			"1": 13,
+			"2": 23
+		},
+		"stage_cleared": {
+			"1": 1,
+			"2": 1
+		},
+		"stage_content_cleared": {
+			"2": 1
+		},
+		"stage_entered": {
+			"2": 1,
+			"3": 1
+		},
+		"strike_deflected": {
+			"1": 6,
+			"2": 224
+		},
+		"synergy_discovered": {
+			"1": 9,
+			"2": 5
+		},
+		"threat_rose": {
+			"1": 4,
+			"2": 4
+		},
+		"tree_exited": {
+			"3": 1
+		},
+		"tree_exiting": {
+			"3": 1
+		},
+		"tree_offered": {
+			"1": 1
+		},
+		"ultimate_landed": {
+			"1": 1,
+			"2": 3
+		},
+		"ultimate_peak": {
+			"1": 1,
+			"2": 2
+		},
+		"ultimate_ready": {
+			"1": 1,
+			"2": 3
+		},
+		"ultimate_started": {
+			"1": 1,
+			"2": 3
+		},
+		"vent_charging": {
+			"1": 9
+		},
+		"vent_erupted": {
+			"1": 9
+		},
+		"verb_failed": {
+			"1": 478,
+			"2": 212
+		},
+		"warden_engaged": {
+			"1": 1,
+			"2": 1
+		},
+		"warden_sighted": {
+			"1": 1,
+			"2": 1
+		},
+		"weak_point_opened": {
+			"2": 4
+		},
+		"world_entered": {
+			"3": 1
+		},
+		"world_fact": {
+			"1": 112,
+			"2": 82
+		}
+	},
+	"outcome": "",
+	"policy": "skipper",
+	"rumbles": {
+		"beacon_unsealed sent": 2,
+		"boss_weak_point_hit held": 9,
+		"boss_weak_point_hit sent": 13,
+		"carved held": 1,
+		"carved sent": 4,
+		"harpoon_bit held": 1,
+		"harpoon_bit sent": 75,
+		"heft_class_changed held": 1,
+		"heft_class_changed sent": 6,
+		"landed held": 84,
+		"landed sent": 28,
+		"multi_kill held": 2,
+		"multi_kill sent": 5,
+		"near_miss held": 3,
+		"near_miss sent": 83,
+		"player_hit held": 2,
+		"player_hit sent": 24,
+		"ram held": 14,
+		"ram sent": 69,
+		"slammed held": 3,
+		"slammed sent": 65
+	},
+	"run_time": 487.62,
+	"seed": 2860,
+	"timeline": [
+		[
+			7.38,
+			"near_miss",
+			1
+		],
+		[
+			77.7,
+			"harpoon_bit",
+			1
+		],
+		[
+			77.81,
+			"player_hit",
+			1
+		],
+		[
+			81.83,
+			"harpoon_bit",
+			1
+		],
+		[
+			82.63,
+			"slammed",
+			1
+		],
+		[
+			83.29,
+			"near_miss",
+			1
+		],
+		[
+			83.34,
+			"harpoon_bit",
+			1
+		],
+		[
+			83.78,
+			"harpoon_bit",
+			1
+		],
+		[
+			84.05,
+			"slammed",
+			1
+		],
+		[
+			84.25,
+			"harpoon_bit",
+			1
+		],
+		[
+			84.41,
+			"slammed",
+			1
+		],
+		[
+			84.84,
+			"harpoon_bit",
+			1
+		],
+		[
+			89.1,
+			"harpoon_bit",
+			1
+		],
+		[
+			89.58,
+			"slammed",
+			1
+		],
+		[
+			90.05,
+			"harpoon_bit",
+			1
+		],
+		[
+			90.62,
+			"slammed",
+			1
+		],
+		[
+			92.28,
+			"harpoon_bit",
+			1
+		],
+		[
+			94.14,
+			"near_miss",
+			1
+		],
+		[
+			96.53,
+			"harpoon_bit",
+			1
+		],
+		[
+			96.89,
+			"harpoon_bit",
+			1
+		],
+		[
+			97.04,
+			"slammed",
+			1
+		],
+		[
+			97.19,
+			"near_miss",
+			1
+		],
+		[
+			97.26,
+			"harpoon_bit",
+			1
+		],
+		[
+			97.52,
+			"slammed",
+			1
+		],
+		[
+			97.78,
+			"harpoon_bit",
+			1
+		],
+		[
+			97.9,
+			"harpoon_bit",
+			1
+		],
+		[
+			103.01,
+			"carved",
+			1,
+			{
+				"seconds": 0.52,
+				"speed": 19.3
+			}
+		],
+		[
+			104.55,
+			"near_miss",
+			1
+		],
+		[
+			104.87,
+			"near_miss",
+			1
+		],
+		[
+			114.24,
+			"near_miss",
+			1
+		],
+		[
+			114.93,
+			"near_miss",
+			1
+		],
+		[
+			117.1,
+			"harpoon_bit",
+			1
+		],
+		[
+			117.33,
+			"slammed",
+			1
+		],
+		[
+			118.34,
+			"harpoon_bit",
+			1
+		],
+		[
+			118.99,
+			"slammed",
+			1
+		],
+		[
+			119.91,
+			"near_miss",
+			1
+		],
+		[
+			120.0,
+			"harpoon_bit",
+			1
+		],
+		[
+			120.81,
+			"slammed",
+			1
+		],
+		[
+			120.82,
+			"harpoon_bit",
+			1
+		],
+		[
+			121.2,
+			"slammed",
+			1
+		],
+		[
+			128.26,
+			"near_miss",
+			1
+		],
+		[
+			134.92,
+			"near_miss",
+			1
+		],
+		[
+			135.93,
+			"player_hit",
+			1
+		],
+		[
+			136.07,
+			"near_miss",
+			1
+		],
+		[
+			138.52,
+			"near_miss",
+			1
+		],
+		[
+			142.14,
+			"near_miss",
+			1
+		],
+		[
+			142.84,
+			"player_hit",
+			1
+		],
+		[
+			143.37,
+			"near_miss",
+			1
+		],
+		[
+			153.4,
+			"slammed",
+			1
+		],
+		[
+			154.8,
+			"player_hit",
+			1
+		],
+		[
+			157.3,
+			"player_hit",
+			1
+		],
+		[
+			160.03,
+			"slammed",
+			1
+		],
+		[
+			163.11,
+			"near_miss",
+			1
+		],
+		[
+			163.21,
+			"near_miss",
+			1
+		],
+		[
+			163.21,
+			"near_miss",
+			1
+		],
+		[
+			164.13,
+			"near_miss",
+			1
+		],
+		[
+			164.21,
+			"near_miss",
+			1
+		],
+		[
+			167.45,
+			"slammed",
+			1
+		],
+		[
+			168.6,
+			"player_hit",
+			1
+		],
+		[
+			168.79,
+			"near_miss",
+			1
+		],
+		[
+			168.8,
+			"near_miss",
+			1
+		],
+		[
+			168.8,
+			"near_miss",
+			1
+		],
+		[
+			170.21,
+			"near_miss",
+			1
+		],
+		[
+			171.39,
+			"player_hit",
+			1
+		],
+		[
+			171.4,
+			"player_hit",
+			1
+		],
+		[
+			171.4,
+			"player_hit",
+			1
+		],
+		[
+			174.2,
+			"near_miss",
+			1
+		],
+		[
+			174.33,
+			"near_miss",
+			1
+		],
+		[
+			176.21,
+			"near_miss",
+			1
+		],
+		[
+			177.95,
+			"near_miss",
+			1
+		],
+		[
+			178.26,
+			"slammed",
+			1
+		],
+		[
+			181.42,
+			"near_miss",
+			1
+		],
+		[
+			181.56,
+			"near_miss",
+			1
+		],
+		[
+			184.28,
+			"slammed",
+			1
+		],
+		[
+			185.11,
+			"near_miss",
+			1
+		],
+		[
+			185.71,
+			"near_miss",
+			1
+		],
+		[
+			188.32,
+			"near_miss",
+			1
+		],
+		[
+			188.64,
+			"near_miss",
+			1
+		],
+		[
+			188.77,
+			"near_miss",
+			1
+		],
+		[
+			190.26,
+			"slammed",
+			1
+		],
+		[
+			190.73,
+			"player_hit",
+			1
+		],
+		[
+			191.88,
+			"near_miss",
+			1
+		],
+		[
+			192.23,
+			"near_miss",
+			1
+		],
+		[
+			192.36,
+			"near_miss",
+			1
+		],
+		[
+			195.83,
+			"near_miss",
+			1
+		],
+		[
+			195.96,
+			"near_miss",
+			1
+		],
+		[
+			196.13,
+			"slammed",
+			1
+		],
+		[
+			197.78,
+			"near_miss",
+			1
+		],
+		[
+			199.16,
+			"near_miss",
+			1
+		],
+		[
+			199.43,
+			"near_miss",
+			1
+		],
+		[
+			199.56,
+			"near_miss",
+			1
+		],
+		[
+			202.4,
+			"slammed",
+			1
+		],
+		[
+			206.65,
+			"near_miss",
+			1
+		],
+		[
+			206.78,
+			"near_miss",
+			1
+		],
+		[
+			232.78,
+			"carved",
+			2,
+			{
+				"seconds": 0.31,
+				"speed": 14.2
+			}
+		],
+		[
+			257.02,
+			"near_miss",
+			2
+		],
+		[
+			270.37,
+			"near_miss",
+			2
+		],
+		[
+			276.47,
+			"harpoon_bit",
+			2
+		],
+		[
+			276.65,
+			"slammed",
+			2
+		],
+		[
+			278.78,
+			"near_miss",
+			2
+		],
+		[
+			280.1,
+			"harpoon_bit",
+			2
+		],
+		[
+			280.36,
+			"slammed",
+			2
+		],
+		[
+			280.51,
+			"harpoon_bit",
+			2
+		],
+		[
+			281.24,
+			"near_miss",
+			2
+		],
+		[
+			283.7,
+			"near_miss",
+			2
+		],
+		[
+			284.81,
+			"harpoon_bit",
+			2
+		],
+		[
+			285.06,
+			"slammed",
+			2
+		],
+		[
+			285.3,
+			"harpoon_bit",
+			2
+		],
+		[
+			289.6,
+			"harpoon_bit",
+			2
+		],
+		[
+			290.11,
+			"harpoon_bit",
+			2
+		],
+		[
+			290.84,
+			"harpoon_bit",
+			2
+		],
+		[
+			291.21,
+			"slammed",
+			2
+		],
+		[
+			291.4,
+			"harpoon_bit",
+			2
+		],
+		[
+			291.67,
+			"slammed",
+			2
+		],
+		[
+			295.93,
+			"harpoon_bit",
+			2
+		],
+		[
+			296.32,
+			"slammed",
+			2
+		],
+		[
+			296.39,
+			"near_miss",
+			2
+		],
+		[
+			297.03,
+			"near_miss",
+			2
+		],
+		[
+			298.42,
+			"near_miss",
+			2
+		],
+		[
+			299.13,
+			"harpoon_bit",
+			2
+		],
+		[
+			299.34,
+			"slammed",
+			2
+		],
+		[
+			299.89,
+			"harpoon_bit",
+			2
+		],
+		[
+			300.02,
+			"carved",
+			2,
+			{
+				"seconds": 0.78,
+				"speed": 23.9
+			}
+		],
+		[
+			304.32,
+			"harpoon_bit",
+			2
+		],
+		[
+			304.55,
+			"slammed",
+			2
+		],
+		[
+			304.74,
+			"harpoon_bit",
+			2
+		],
+		[
+			304.87,
+			"harpoon_bit",
+			2
+		],
+		[
+			305.01,
+			"near_miss",
+			2
+		],
+		[
+			309.24,
+			"harpoon_bit",
+			2
+		],
+		[
+			310.39,
+			"near_miss",
+			2
+		],
+		[
+			310.42,
+			"harpoon_bit",
+			2
+		],
+		[
+			310.93,
+			"slammed",
+			2
+		],
+		[
+			311.09,
+			"harpoon_bit",
+			2
+		],
+		[
+			315.73,
+			"near_miss",
+			2
+		],
+		[
+			317.63,
+			"harpoon_bit",
+			2
+		],
+		[
+			318.89,
+			"harpoon_bit",
+			2
+		],
+		[
+			319.36,
+			"slammed",
+			2
+		],
+		[
+			319.59,
+			"harpoon_bit",
+			2
+		],
+		[
+			319.78,
+			"near_miss",
+			2
+		],
+		[
+			319.83,
+			"slammed",
+			2
+		],
+		[
+			320.26,
+			"carved",
+			2,
+			{
+				"seconds": 0.33,
+				"speed": 9.3
+			}
+		],
+		[
+			323.73,
+			"near_miss",
+			2
+		],
+		[
+			324.45,
+			"near_miss",
+			2
+		],
+		[
+			325.36,
+			"player_hit",
+			2
+		],
+		[
+			334.58,
+			"harpoon_bit",
+			2
+		],
+		[
+			337.08,
+			"near_miss",
+			2
+		],
+		[
+			338.53,
+			"slammed",
+			2
+		],
+		[
+			339.55,
+			"harpoon_bit",
+			2
+		],
+		[
+			341.1,
+			"slammed",
+			2
+		],
+		[
+			342.11,
+			"harpoon_bit",
+			2
+		],
+		[
+			345.65,
+			"harpoon_bit",
+			2
+		],
+		[
+			346.34,
+			"slammed",
+			2
+		],
+		[
+			347.36,
+			"harpoon_bit",
+			2
+		],
+		[
+			348.52,
+			"near_miss",
+			2
+		],
+		[
+			363.78,
+			"near_miss",
+			2
+		],
+		[
+			365.84,
+			"near_miss",
+			2
+		],
+		[
+			366.63,
+			"harpoon_bit",
+			2
+		],
+		[
+			366.74,
+			"slammed",
+			2
+		],
+		[
+			367.15,
+			"slammed",
+			2
+		],
+		[
+			367.64,
+			"slammed",
+			2
+		],
+		[
+			367.87,
+			"near_miss",
+			2
+		],
+		[
+			368.07,
+			"slammed",
+			2
+		],
+		[
+			368.37,
+			"harpoon_bit",
+			2
+		],
+		[
+			368.47,
+			"slammed",
+			2
+		],
+		[
+			369.66,
+			"harpoon_bit",
+			2
+		],
+		[
+			369.69,
+			"slammed",
+			2
+		],
+		[
+			371.98,
+			"near_miss",
+			2
+		],
+		[
+			374.02,
+			"near_miss",
+			2
+		],
+		[
+			375.38,
+			"harpoon_bit",
+			2
+		],
+		[
+			378.11,
+			"near_miss",
+			2
+		],
+		[
+			379.46,
+			"harpoon_bit",
+			2
+		],
+		[
+			380.36,
+			"slammed",
+			2
+		],
+		[
+			382.2,
+			"near_miss",
+			2
+		],
+		[
+			384.38,
+			"near_miss",
+			2
+		],
+		[
+			385.14,
+			"harpoon_bit",
+			2
+		],
+		[
+			385.73,
+			"slammed",
+			2
+		],
+		[
+			386.29,
+			"near_miss",
+			2
+		],
+		[
+			386.74,
+			"harpoon_bit",
+			2
+		],
+		[
+			386.97,
+			"slammed",
+			2
+		],
+		[
+			391.9,
+			"near_miss",
+			2
+		],
+		[
+			392.02,
+			"player_hit",
+			2
+		],
+		[
+			394.7,
+			"player_hit",
+			2
+		],
+		[
+			395.72,
+			"player_hit",
+			2
+		],
+		[
+			397.88,
+			"near_miss",
+			2
+		],
+		[
+			398.77,
+			"player_hit",
+			2
+		],
+		[
+			399.79,
+			"player_hit",
+			2
+		],
+		[
+			402.6,
+			"player_hit",
+			2
+		],
+		[
+			407.75,
+			"near_miss",
+			2
+		],
+		[
+			407.77,
+			"player_hit",
+			2
+		],
+		[
+			408.49,
+			"near_miss",
+			2
+		],
+		[
+			408.71,
+			"near_miss",
+			2
+		],
+		[
+			410.27,
+			"player_hit",
+			2
+		],
+		[
+			412.32,
+			"near_miss",
+			2
+		],
+		[
+			414.57,
+			"harpoon_bit",
+			2
+		],
+		[
+			414.94,
+			"player_hit",
+			2
+		],
+		[
+			416.66,
+			"player_hit",
+			2
+		],
+		[
+			419.31,
+			"near_miss",
+			2
+		],
+		[
+			419.54,
+			"near_miss",
+			2
+		],
+		[
+			419.81,
+			"harpoon_bit",
+			2
+		],
+		[
+			419.96,
+			"player_hit",
+			2
+		],
+		[
+			422.86,
+			"harpoon_bit",
+			2
+		],
+		[
+			423.13,
+			"near_miss",
+			2
+		],
+		[
+			423.71,
+			"harpoon_bit",
+			2
+		],
+		[
+			423.77,
+			"harpoon_bit",
+			2
+		],
+		[
+			423.97,
+			"slammed",
+			2
+		],
+		[
+			424.41,
+			"slammed",
+			2
+		],
+		[
+			424.87,
+			"slammed",
+			2
+		],
+		[
+			425.32,
+			"slammed",
+			2
+		],
+		[
+			425.81,
+			"slammed",
+			2
+		],
+		[
+			426.27,
+			"slammed",
+			2
+		],
+		[
+			426.72,
+			"slammed",
+			2
+		],
+		[
+			427.21,
+			"slammed",
+			2
+		],
+		[
+			427.7,
+			"slammed",
+			2
+		],
+		[
+			436.29,
+			"harpoon_bit",
+			2
+		],
+		[
+			436.53,
+			"harpoon_bit",
+			2
+		],
+		[
+			436.76,
+			"harpoon_bit",
+			2
+		],
+		[
+			437.75,
+			"harpoon_bit",
+			2
+		],
+		[
+			437.87,
+			"harpoon_bit",
+			2
+		],
+		[
+			438.06,
+			"slammed",
+			2
+		],
+		[
+			440.09,
+			"harpoon_bit",
+			2
+		],
+		[
+			440.26,
+			"harpoon_bit",
+			2
+		],
+		[
+			440.44,
+			"slammed",
+			2
+		],
+		[
+			440.89,
+			"slammed",
+			2
+		],
+		[
+			444.32,
+			"near_miss",
+			2
+		],
+		[
+			445.75,
+			"harpoon_bit",
+			2
+		],
+		[
+			446.42,
+			"player_hit",
+			2
+		],
+		[
+			450.01,
+			"harpoon_bit",
+			2
+		],
+		[
+			450.93,
+			"slammed",
+			2
+		],
+		[
+			451.37,
+			"player_hit",
+			2
+		],
+		[
+			453.39,
+			"harpoon_bit",
+			2
+		],
+		[
+			454.23,
+			"player_hit",
+			2
+		],
+		[
+			459.11,
+			"near_miss",
+			2
+		],
+		[
+			460.99,
+			"harpoon_bit",
+			2
+		],
+		[
+			461.56,
+			"slammed",
+			2
+		],
+		[
+			462.1,
+			"near_miss",
+			2
+		],
+		[
+			462.86,
+			"harpoon_bit",
+			2
+		],
+		[
+			462.98,
+			"slammed",
+			2
+		],
+		[
+			463.46,
+			"slammed",
+			2
+		],
+		[
+			463.94,
+			"slammed",
+			2
+		],
+		[
+			464.26,
+			"harpoon_bit",
+			2
+		],
+		[
+			464.41,
+			"slammed",
+			2
+		],
+		[
+			464.86,
+			"slammed",
+			2
+		],
+		[
+			465.2,
+			"slammed",
+			2
+		],
+		[
+			465.66,
+			"slammed",
+			2
+		],
+		[
+			466.1,
+			"slammed",
+			2
+		],
+		[
+			466.28,
+			"player_hit",
+			2
+		],
+		[
+			466.56,
+			"slammed",
+			2
+		],
+		[
+			467.01,
+			"slammed",
+			2
+		],
+		[
+			467.32,
+			"harpoon_bit",
+			2
+		],
+		[
+			468.11,
+			"near_miss",
+			2
+		],
+		[
+			472.21,
+			"near_miss",
+			2
+		],
+		[
+			473.99,
+			"near_miss",
+			2
+		],
+		[
+			474.9,
+			"harpoon_bit",
+			2
+		],
+		[
+			475.11,
+			"slammed",
+			2
+		],
+		[
+			476.12,
+			"harpoon_bit",
+			2
+		],
+		[
+			476.37,
+			"harpoon_bit",
+			2
+		],
+		[
+			476.59,
+			"harpoon_bit",
+			2
+		],
+		[
+			476.81,
+			"slammed",
+			2
+		],
+		[
+			486.25,
+			"harpoon_bit",
+			2
+		],
+		[
+			487.46,
+			"harpoon_bit",
+			2
+		],
+		[
+			487.62,
+			"carved",
+			2,
+			{
+				"seconds": 0.48,
+				"speed": 9.6
+			}
+		]
+	]
+}

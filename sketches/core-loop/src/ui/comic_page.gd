@@ -16,6 +16,7 @@ extends Control
 # Pure helpers (layout, words) are static so a test can read them without a tree.
 
 const Palette := preload("res://src/core/palette.gd")
+const UiTokens := preload("res://src/ui/ui_tokens.gd")
 const UiFonts := preload("res://src/ui/ui_fonts.gd")
 const ScrapbookStore := preload("res://src/core/scrapbook_store.gd")
 const ASPECT := 0.75
@@ -29,7 +30,7 @@ const TALL_WEIGHT := 1.3
 
 # No caption draws under this many px: at the summary's page size the scaled 15 px read as 9 px
 # (the project's floor for bold small type is 18 px, VISUAL-LANGUAGE.md).
-const CAPTION_MIN_FONT := 18
+const CAPTION_MIN_FONT := UiTokens.BODY
 const EMPTY_CAPTION := "Page left blank. The pen is in the log, under the kettle."
 
 const LOSS_CARDS := [

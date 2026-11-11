@@ -1,6 +1,7 @@
 extends Button
 
 const Palette := preload("res://src/core/palette.gd")
+const UiTokens := preload("res://src/ui/ui_tokens.gd")
 const Icons := preload("res://src/ui/icons.gd")
 const Keycap := preload("res://src/ui/keycap.gd")
 const UiDraw := preload("res://src/ui/ui_draw.gd")
@@ -17,7 +18,7 @@ const UiDraw := preload("res://src/ui/ui_draw.gd")
 
 const ICON := 56.0
 const GLYPH := 20.0
-const PRICE_FONT := 18
+const PRICE_FONT := UiTokens.BODY
 const COG := 16.0
 const RARITY := {
 	"common": {"color": Palette.ARC, "width": 2.0, "double": false, "notches": false},
@@ -46,6 +47,7 @@ func _init(record := {}, tile_size := Vector2(112.0, 124.0)) -> void:
 
 func set_record(record: Dictionary) -> void:
 	rec = record
+	accessibility_name = String(rec.get("name", rec.get("id", "")))
 	queue_redraw()
 
 
@@ -81,7 +83,7 @@ func _draw() -> void:
 	if has_focus() or is_hovered():
 		var ring := StyleBoxFlat.new()
 		ring.draw_center = false
-		ring.border_color = Color.WHITE if has_focus() else Palette.SAND
+		ring.border_color = UiTokens.TEXT if has_focus() else Palette.SAND
 		ring.set_border_width_all(3 if has_focus() else 2)
 		ring.set_corner_radius_all(6)
 		draw_style_box(ring, rect.grow(2.0))

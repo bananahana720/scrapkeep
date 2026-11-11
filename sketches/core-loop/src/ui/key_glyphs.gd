@@ -1,6 +1,7 @@
 extends Control
 
 const AbilityState := preload("res://src/core/ability_state.gd")
+const UiTokens := preload("res://src/ui/ui_tokens.gd")
 const Bindings := preload("res://src/core/bindings.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const Icons := preload("res://src/ui/icons.gd")
@@ -52,7 +53,7 @@ const KEY_H := 28.0
 const BALL_OFFSET := Vector2(52.0, -34.0)
 const AIM_OFFSET := Vector2(34.0, 24.0)
 const STACK := 36.0
-const WORD_SIZE := 16
+const WORD_SIZE := UiTokens.BODY
 
 var game
 var profile
