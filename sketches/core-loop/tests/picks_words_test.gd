@@ -134,8 +134,11 @@ func _every_card() -> void:
 	t.check("the ultimate swaps were read", swaps >= 30, "%d swap cards" % swaps)
 	# The hover is read on demand, not on the card face, so it is held to the plain-word checks and not the
 	# sentence limit.
-	t.check("the hover is plain", hits(TreeCard.depth_sentence()).is_empty(), TreeCard.depth_sentence())
-	t.check("the hover reads as one sentence", TreeCard.depth_sentence() == "Picks go 2 deep in world 1, 3 in world 2, 4 in world 3.", TreeCard.depth_sentence())
+	var probe := TreeCard.new(UpgradeTree.nodes("tarn")[0], "key_1", Color.WHITE, 2)
+	var hover := probe.depth_text()
+	probe.free()
+	t.check("the hover is plain", hits(hover).is_empty(), hover)
+	t.check("the hover reads as one sentence", hover == "Picks go 2 deep in world 1, 3 in world 2, 4 in world 3.", hover)
 	var toast := TreePick.TAKEN_TOAST % "Long Claw"
 	t.check("the taken toast is plain", hits(toast).is_empty() and toast == "Long Claw taken", toast)
 
