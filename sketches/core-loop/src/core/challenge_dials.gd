@@ -36,6 +36,10 @@ const SILT_W1 := [2.0, 2.0, 0.0, 0.0, 0.0, 0.0]
 # teaching Warden), Learner a5 67%, Expert 100% with the same fight time. Hit size, not crew aggression or
 # spawn rate: both of those slowed the Expert.
 const MOBS_DAMAGE_W1 := [1.5, 1.0, 1.0, 1.0, 1.0, 1.0]
+# Chasers on world 1 run at 9 m/s, up from 4.8 (wave 37 unit D2, ruling cu call 4: faster than walking pace,
+# slower than cruise). A ball that stops or dawdles is run down; a ball at cruise (14 m/s) is never caught by
+# running. The lunge, its lane and its wind-up are as they were.
+const CHASER_SPEED_W1 := [9.0, 9.0, 0.0, 0.0, 0.0, 0.0]
 const PackPressure := preload("res://src/combat/pack_pressure.gd")
 
 const DEFAULTS := {
@@ -85,6 +89,9 @@ const DEFAULTS := {
 	# caps and Director.HARD_CAP stay hard ceilings.
 	"mobs.damage_mult": 1.0, "mobs.pack_scale_mult": 1.0, "mobs.interval_scale_mult": 1.0, "mobs.elite_rate_mult": 1.0,
 	"mobs.damage_by_stage": MOBS_DAMAGE_W1, "mobs.pack_scale_by_stage": ONES6, "mobs.interval_scale_by_stage": ONES6, "mobs.elite_rate_by_stage": ONES6,
+	# A chaser's run speed in m/s per stage (chaser.gd stage_speed): 0 keeps the chaser's own SPEED, a value
+	# can only raise it, and it is held under Chaser.SPEED_CEILING, below the ball's cruise.
+	"mobs.chaser_speed_by_stage": CHASER_SPEED_W1,
 	# Pack pressure, the world 1 kiting experiments (combat/pack_pressure.gd; --pack-pressure=A|B|C|D|E presets).
 	# Absolute per-stage values, identity at defaults: lead 0 to 1 of the ball's predicted roll that crews steer
 	# and aim at; extra chasers per crew; a multiplier on the re-engage gap; 1 makes every second chaser a
