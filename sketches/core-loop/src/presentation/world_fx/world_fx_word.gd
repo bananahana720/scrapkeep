@@ -11,6 +11,11 @@ const LIFE := 0.75
 const LIFT_M := 2.6
 const FONT_PATH := "res://assets/fonts/NotoSans-Bold.ttf"
 
+# Hushed for a card that has the screen (pick_quiet.gd): the words up now stop drawing, and words
+# stamped meanwhile are born hidden. Nothing about their life changes.
+static var _hushed := false
+static var _live: Array = []
+
 var _age := 0.0
 var _drift := Vector3.ZERO
 
@@ -33,11 +38,23 @@ static func stamp(parent: Node, word: String, at: Vector3, fill := Palette.LEDGE
 	if ResourceLoader.exists(FONT_PATH):
 		w.font = load(FONT_PATH)
 	parent.add_child(w)
+	if _live.size() >= 32:
+		_live = _live.filter(func(old): return is_instance_valid(old))
+	_live.append(w)
+	w.visible = not _hushed
 	w.global_position = at + Vector3(0, LIFT_M, 0)
 	# Words alternate their exit diagonal so two in a row read as two.
 	w._drift = Vector3(1.4 if word.hash() % 2 == 0 else -1.4, 1.0, 0)
 	w.scale = Vector3.ONE * 0.01
 	return w
+
+
+# Hides every word up and holds new ones back, or gives back the ones this hid.
+static func quiet(on: bool) -> void:
+	_hushed = on
+	_live = _live.filter(func(w): return is_instance_valid(w) and not w.is_queued_for_deletion())
+	for w in _live:
+		w.visible = not on
 
 
 func _process(delta: float) -> void:

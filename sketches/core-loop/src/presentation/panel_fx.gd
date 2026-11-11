@@ -26,6 +26,12 @@ const POP_SIZE_REDUCED := 0.4
 # (0.48 m at POP_SIZE), which keeps the upper line under the hint line below the objective plate.
 const POP_LINE := 0.7
 const POP_ROWS := 2
+# A pop never shows later than POP_LIFE after its pickup sound (sight and sound of one event are
+# paired, PF-19). A line is held a frame's slack short of POP_LIFE so a waiting pop is up inside
+# that window, and at most POP_ROWS pops wait: a longer pile folds into the lines waiting, as
+# "+3 FIN" when they are one kind, "+3 PANELS" when they are not.
+const ROW_HOLD := POP_LIFE - 0.05
+const MIXED_NOUN := "PANELS"
 const STREAK_MS := 2000
 const PHRASE_LENGTH := 8
 # The phrase walks the reward pentatonic (Harmony.PENTATONIC rungs) from the tonic, a step
@@ -41,7 +47,8 @@ var _last_ms := -100000
 var _phrase_seed := -1
 # [id, rung, jackpot] per pickup, for tests and captures.
 var played: Array = []
-# Seconds each pop line is still held, and the pops waiting for a line: [panel_id, jackpot].
+# Seconds each pop line is still held, and the pops waiting for a line: [panel_id, jackpot, count].
+# A folded line of mixed kinds has the id "".
 var _row_left: Array = []
 var _waiting: Array = []
 
@@ -93,8 +100,37 @@ func _on_panel_gained(panel_id: String, _count: int, _at: Vector3, jackpot: bool
 		audio.play("panel_gained", 0.0, Harmony.ratio(Harmony.pentatonic_step(rung)), "SFX", "panel_note")
 		if jackpot:
 			audio.play("panel_gained", 0.0, 1.0, "SFX", "panel_jackpot")
-	_waiting.append([panel_id, jackpot])
+	_wait(panel_id, jackpot)
 	_release()
+
+
+# A pop joins the line of pops waiting for a row; past POP_ROWS it folds into one already waiting.
+func _wait(panel_id: String, jackpot: bool) -> void:
+	if _waiting.size() < POP_ROWS:
+		_waiting.append([panel_id, jackpot, 1])
+		return
+	var line: Array = _waiting.back()
+	for waiting in _waiting:
+		if waiting[0] == panel_id:
+			line = waiting
+			break
+	if line[0] != panel_id:
+		line[0] = ""
+	line[1] = bool(line[1]) or jackpot
+	line[2] = _count(line) + 1
+
+
+static func _count(pop: Array) -> int:
+	return int(pop[2]) if pop.size() > 2 else 1
+
+
+# The words of a waiting pop: its panel's own pop, or "+N NOUN" for a folded line.
+static func pop_words(pop: Array) -> String:
+	var n := _count(pop)
+	if n == 1:
+		return Panels.pop_text(pop[0])
+	var noun: String = String(Panels.row(pop[0]).get("noun", "")).to_upper() if pop[0] != "" else ""
+	return "+%d %s" % [n, noun if noun != "" else MIXED_NOUN]
 
 
 # Shows waiting pops while a line is free, oldest first.
@@ -107,7 +143,7 @@ func _release() -> void:
 		if machine_fx == null or ctx == null or ctx.player == null:
 			continue
 		var reduced: bool = machine_fx.reduced_motion
-		machine_fx.word(Panels.pop_text(pop[0]), ctx.player.shown_position() + Vector3.UP * (POP_HEIGHT + lift),
+		machine_fx.word(pop_words(pop), ctx.player.shown_position() + Vector3.UP * (POP_HEIGHT + lift),
 			Palette.AMBER if pop[1] else Palette.SAND, true, POP_LIFE, POP_SIZE_REDUCED if reduced else POP_SIZE)
 
 
@@ -119,7 +155,7 @@ func next_pop_lift() -> float:
 		_row_left.fill(0.0)
 	for row in POP_ROWS:
 		if float(_row_left[row]) <= 0.0:
-			_row_left[row] = POP_LIFE
+			_row_left[row] = ROW_HOLD
 			return row * POP_LINE
 	return -1.0
 

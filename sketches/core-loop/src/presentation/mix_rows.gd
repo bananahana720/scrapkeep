@@ -48,6 +48,16 @@ const STATES := {
 # it is roaming again (hysteresis, so a fight's edge does not flicker the mix).
 const COMBAT_ON := 0.4
 const COMBAT_OFF := 0.25
+
+
+# Whether the stage counts as a fight at `pressure`, given whether it did a moment ago: the one
+# hysteresis, read by the music's mix (audio.gd) and by the screen's busy gate (screen_busy.gd).
+static func combat_after(was: bool, pressure: float) -> bool:
+	if pressure >= COMBAT_ON:
+		return true
+	if pressure <= COMBAT_OFF:
+		return false
+	return was
 # How fast a bus glides to its state's level, in dB per second: down fast, up slow, so the mix
 # never jumps up under the player.
 const GLIDE_DOWN_DB_S := 30.0

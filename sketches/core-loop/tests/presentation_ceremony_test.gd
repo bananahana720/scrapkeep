@@ -3,6 +3,8 @@ extends SceneTree
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
+const Hud := preload("res://src/ui/hud.gd")
+const ScreenBusy := preload("res://src/ui/screen_busy.gd")
 const Parts := preload("res://src/build/parts.gd")
 const Ceremony := preload("res://src/presentation/reward_ceremony.gd")
 const WordBudget := preload("res://src/ui/word_budget.gd")
@@ -119,6 +121,19 @@ func _next(phase: String) -> void:
 	_since = int(_clock_ms)
 
 
+# The finds' quiet hold plus 60 frames, from the source's own constant; three held cards' lives for the drain.
+const FIND_MS := int(ScreenBusy.FIND_HOLD * 1000.0) + 1000
+# The crate is still on screen for its out phase when this phase starts; the card it pushed off comes back after.
+var OUT_MS := int(float(EventKinds.reward_row("ceremony")["out_s"]) * 1000.0)
+# The held reveal cards drain one card's life each (the reveal row's in, hold and out) plus 60 frames, up to MAX_HELD.
+var REVEAL_MS := int((float(EventKinds.reward_row("reveal")["in_s"]) + float(EventKinds.reward_row("reveal")["hold_s"]) \
+		+ float(EventKinds.reward_row("reveal")["out_s"])) * 1000.0)
+var DRAIN_MS := FIND_MS + Ceremony.MAX_HELD * (REVEAL_MS + 1000)
+
+
+var _ahead_ms := 0
+
+
 func _elapsed() -> int:
 	return int(_clock_ms) - _since
 
@@ -126,6 +141,8 @@ func _elapsed() -> int:
 func _physics_process(_delta: float) -> bool:
 	# Fixed simulation ticks continue through the ceremony's tree pause.
 	_clock_ms += 1000.0 / Engine.physics_ticks_per_second
+	# The screen's quiet seconds follow this test's own clock (screen_busy.gd).
+	_game.ctx.screen_busy.step(1.0 / Engine.physics_ticks_per_second)
 	if _game == null or _game.flow == null:
 		return false
 	if int(_clock_ms) > DEADLINE_MS:
@@ -186,14 +203,20 @@ func _physics_process(_delta: float) -> bool:
 				_card_after = true
 				_report("velocity kept", v1 == _v0 and s1 == _s0 and _v0.length() > 0.5,
 					"body %s -> %s, state %s -> %s" % [_v0, v1, _s0, s1])
+				# The HUD's own cards (a note, an achievement) go first, ACH_TOTAL each; one more for a note raised meanwhile.
+				var hud = _game.hud
+				_ahead_ms = int((hud.ach_waiting().size() + hud.tune_waiting().size() + (1 if hud._lore_due or hud._lore_left > 0.0 else 0) + (0 if hud._ach_entry.is_empty() else 1) + 1) * Hud.ACH_TOTAL * 1000.0)
 				_next("payoff")
 		"payoff":
-			if _card_after and _elapsed() > 400:
-				_card_after = false
+			# The card the crate pushed off comes back, oldest first, once the screen is quiet again: polled each
+			# frame (its life is short) and failed at the bound.
+			if _card_after:
 				var shown: Dictionary = _ceremony.view.card
-				_report("a card the crate interrupted comes back", shown.get("part", "") == "tempest_core" and not shown.get("ceremony", true),
-					"after the ceremony the card shows %s" % shown.get("part", "nothing"))
-			if _elapsed() > 600:
+				var back: bool = shown.get("part", "") == "tempest_core" and not shown.get("ceremony", true)
+				if back or _elapsed() > FIND_MS + OUT_MS + _ahead_ms:
+					_card_after = false
+					_report("a card the crate interrupted comes back", back, "after the ceremony the card shows %s (bound %d ms)" % [shown.get("part", "nothing"), FIND_MS + OUT_MS + _ahead_ms])
+			if _elapsed() > FIND_MS + OUT_MS + _ahead_ms and not _card_after:
 				var armed: Array = _ceremony.armed()
 				var ball: Vector3 = _game.player.ball_position()
 				var target: Node3D = _game.ctx.spawner.spawn_enemy("chaser", _game.ctx.terrain.drop_point(ball.x + 5.0, ball.z - 5.0, 1.0))
@@ -222,7 +245,7 @@ func _physics_process(_delta: float) -> bool:
 					"Brindle's crest reveals as %s · %s, \"%s\"" % [crest["stamp"], crest["name"], crest["verb"]])
 				_next("short")
 		"short":
-			if _elapsed() > 300:
+			if _elapsed() > FIND_MS:
 				_ceremony.short = true
 				_game.presentation.juice.reset_stops()
 				var before: int = _game.presentation.juice.hit_stop_log.size()
@@ -236,7 +259,11 @@ func _physics_process(_delta: float) -> bool:
 				_ceremony.short = false
 				_next("wait")
 		"wait":
-			if _elapsed() > 300:
+			# The reveal cards held so far take their turns first (a crate counts them against its cap).
+			if _elapsed() > DRAIN_MS and not _ceremony._cards.is_empty():
+				_report("never calm keeps waiting", false, "%d held reveal cards never took their turns within %d ms" % [_ceremony._cards.size(), DRAIN_MS])
+				return _finish()
+			if _elapsed() > 300 and _ceremony._cards.is_empty():
 				var ball: Vector3 = _game.player.ball_position()
 				_enemy = _game.ctx.spawner.spawn_enemy("chaser", _game.ctx.terrain.drop_point(ball.x - 6.0, ball.z + 6.0, 1.0))
 				_game.run.add_part("rime_heart", "cache")
