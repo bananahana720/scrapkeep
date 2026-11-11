@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 // node scripts/challenge/run.mjs --library [--lib-seeds=4] [--lib-pilots=a,b] [--label=<name>]
 // node scripts/challenge/run.mjs --library=<dir> [--cells=boss,warden,park,world] [--only=brindle,w1,park1]
+//     [--seeds=<n>: 24 fights, 16 parks and clears] (--only=w1clear: the whole of World 1 in one attempt, never in the default cells)
 //     [--seeds=<n>: 24 fights, 16 parks] [--bands=novice,learner1,learner5,expert] [--no-top] [--persona=brawler] [--warden-persona=skipper] [--park-persona=skipper]
 //     [--tune=<text passed whole to bot_run; the game's dials split key=value,key=value>] [--tune-unruled] [--tier=<n>] [--jobs=4] [--label=<name>] [--shard=i/n] [--dry-run] [--strict]
 // node scripts/challenge/run.mjs --library [--lib-shard=i/n]; --library-merge=<dir,dir> --label=<name>
@@ -14,7 +15,7 @@ import { spawn, spawnSync } from "node:child_process";
 import { appendFileSync, copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { COLUMNS, MAX_RUN_TIER, PILOTS, botArgs, buildTable, cellVerdict, describeDoc, bucketInfo, checkMerge, dedupeBy, estimate, gradeRun, jobKey, playerReport, qaRows, renderPlayerReport, hashString, mergeLibraryIndexes, planHash, parseNdjson, pickBuilds, planCells, renderTable, shardJobs, wallStats } from "./lib.mjs";
+import { COLUMNS, MAX_RUN_TIER, fairnessByCell, PILOTS, botArgs, buildTable, cellVerdict, describeDoc, bucketInfo, checkMerge, dedupeBy, estimate, gradeRun, jobKey, playerReport, qaRows, renderPlayerReport, hashString, mergeLibraryIndexes, planHash, parseNdjson, pickBuilds, planCells, renderTable, shardJobs, wallStats } from "./lib.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const godot = process.env.GODOT_BIN;
@@ -229,7 +230,7 @@ async function runTable() {
     die(`${missing.length} jobs need builds for stage(s) ${stages.join(", ")}; ${opts.library ? "the library has none there" : "pass --library=<dir>"}`);
   }
   const est = estimate(jobs, opts.jobs);
-  const byKind = Object.fromEntries(["boss", "warden", "world"].map((k) => [k, jobs.filter((j) => j.kind === k).length]));
+  const byKind = Object.fromEntries(["boss", "warden", "world", "clear"].map((k) => [k, jobs.filter((j) => j.kind === k).length]));
   console.log(`${jobs.length} jobs (${Object.entries(byKind).map(([k, n]) => `${k} ${n}`).join(", ")}); estimated ${(est.wallSeconds / 3600).toFixed(1)} h wall at ${opts.jobs} parallel`);
   if (opts.dryRun) return;
   needGodot();
@@ -297,9 +298,10 @@ function finish(runs, outDir, meta) {
   const table = buildTable(runs, meta.buckets ?? {});
   const timing = wallStats(runs);
   const report = playerReport(runs);
-  const md = renderTable(table, { ...meta, when: new Date().toISOString().slice(0, 16) + "Z" }) + "\n" + renderPlayerReport(report);
+  const fairness = fairnessByCell(runs);
+  const md = renderTable(table, { ...meta, fairness, when: new Date().toISOString().slice(0, 16) + "Z" }) + "\n" + renderPlayerReport(report);
   writeFileSync(path.join(outDir, "table.md"), md);
-  writeFileSync(path.join(outDir, "table.json"), JSON.stringify({ ...meta, runs: runs.length, timing, table, player_report: report }, null, 1) + "\n");
+  writeFileSync(path.join(outDir, "table.json"), JSON.stringify({ ...meta, runs: runs.length, timing, table, fairness, player_report: report }, null, 1) + "\n");
   console.log(md);
   console.log("Wall medians per job (re-estimate SECONDS_PER_JOB in lib.mjs from these):");
   for (const [k, t] of Object.entries(timing)) console.log(`  ${k}: ${t.jobs} jobs, median ${t.medianWallS?.toFixed(0)} s wall (max ${t.maxWallS.toFixed(0)}), median ${t.medianGameS?.toFixed(0)} s game`);
