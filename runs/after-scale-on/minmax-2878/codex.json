@@ -1,0 +1,47 @@
+{
+  "discovered": [
+    "lore.spillway.moss.spare",
+    "lore.spillway.crew.leak",
+    "lore.spillway.moss.yesterday",
+    "counter_ram",
+    "crush_chain",
+    "set_piece",
+    "shell_return",
+    "plate_peel",
+    "spare",
+    "tether_snap",
+    "warden_shatter",
+    "lore.park_dam.note.gate_log",
+    "pinwheel",
+    "lore.park_dam.note.plumb",
+    "lore.park_flume.crew.warm",
+    "lore.park_flume.moss.flask",
+    "lore.park_flume.crew.weir",
+    "wrecking_ball",
+    "lore.park_flume.note.weir",
+    "sprint_through",
+    "chain",
+    "lore.park_flume.note.bents",
+    "lore.park_flume.note.siphon",
+    "set_piece_core",
+    "lore.park_flume.note.milepost",
+    "lore.park_flume.note.boom",
+    "lore.park_flume.note.drum",
+    "lore.park_flume.note.fleet",
+    "lore.park_flume.note.wasteway",
+    "brindle_crane_drop",
+    "lore.park_flume.note.surge",
+    "lore.park_flume.note.penstocks",
+    "shrapnel_bloom",
+    "lore.park_flume.note.catwalk",
+    "lore.dig_entry.exchange.1",
+    "lore.dig_entry.exchange.2",
+    "lore.dig_entry.exchange.3"
+  ],
+  "found": [
+    "Frost meets a heavy hit: the chill grinds everything near. Elites and bosses take a tenth of the grind."
+  ],
+  "found_categories": {
+    "Frost meets a heavy hit: the chill grinds everything near. Elites and bosses take a tenth of the grind.": "build"
+  }
+}

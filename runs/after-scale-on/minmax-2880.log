@@ -1,0 +1,62 @@
+Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org
+
+WARNING: instance_reset_physics_interpolation() is deprecated.
+     at: _instance_reset_physics_interpolation_bind_compat_104269 (servers/rendering/rendering_server.compat.inc:62)
+     GDScript backtrace (most recent call first):
+         [0] make_render (res://src/world/park/park_terrain.gd:387)
+         [1] build (res://src/world/terrain.gd:203)
+         [2] setup (res://src/world/world.gd:124)
+         [3] _module (res://src/game.gd:547)
+         [4] _ready (res://src/game.gd:280)
+SCRAPKEEP_MENU_READY ms=14779 profile=default pilots=1/6
+WARNING: ACE music: missing /home/andrew/scratch/w37-pc/econ-7a21/sketches/core-loop/assets/music_ace/title/calm.drums.ogg; playing the synth engine instead
+     at: push_warning (core/variant/variant_utility.cpp:1033)
+     GDScript backtrace (most recent call first):
+         [0] ace_ready (res://src/presentation/audio.gd:1146)
+         [1] _ace_named (res://src/presentation/audio.gd:1552)
+         [2] _menu_home (res://src/presentation/audio.gd:1540)
+         [3] _flush_flow (res://src/presentation/audio.gd:4260)
+         [4] park_transport (res://src/presentation/audio.gd:2431)
+         [5] _physics_process (res://src/world/world.gd:444)
+WARNING: ACE music: missing /home/andrew/scratch/w37-pc/econ-7a21/sketches/core-loop/assets/music_ace/spillway/calm.drums.ogg; playing the synth engine instead
+     at: push_warning (core/variant/variant_utility.cpp:1033)
+     GDScript backtrace (most recent call first):
+         [0] ace_ready (res://src/presentation/audio.gd:1146)
+         [1] _ace_stage (res://src/presentation/audio.gd:1264)
+         [2] _flush_flow (res://src/presentation/audio.gd:4167)
+         [3] park_transport (res://src/presentation/audio.gd:2431)
+         [4] _physics_process (res://src/world/world.gd:444)
+WARNING: ACE music: missing /home/andrew/scratch/w37-pc/econ-7a21/sketches/core-loop/assets/music_ace/cable_reach/calm.drums.ogg; playing the synth engine instead
+     at: push_warning (core/variant/variant_utility.cpp:1033)
+     GDScript backtrace (most recent call first):
+         [0] ace_ready (res://src/presentation/audio.gd:1146)
+         [1] _ace_stage (res://src/presentation/audio.gd:1264)
+         [2] _ace_return (res://src/presentation/audio.gd:1571)
+         [3] _pump (res://src/presentation/audio.gd:901)
+         [4] _process (res://src/presentation/audio.gd:887)
+WARNING: ACE music: missing /home/andrew/scratch/w37-pc/econ-7a21/sketches/core-loop/assets/music_ace/brindle/calm.drums.ogg; playing the synth engine instead
+     at: push_warning (core/variant/variant_utility.cpp:1033)
+     GDScript backtrace (most recent call first):
+         [0] ace_ready (res://src/presentation/audio.gd:1146)
+         [1] _ace_named (res://src/presentation/audio.gd:1552)
+         [2] _begin_boss (res://src/presentation/audio.gd:3009)
+         [3] <anonymous lambda> (res://src/presentation/audio.gd:2112)
+         [4] _publish (res://src/boss/boss.gd:1665)
+         [5] enter_arena (res://src/boss/boss.gd:166)
+         [6] enter_boss (res://src/core/flow.gd:766)
+         [7] _finish_stage (res://src/core/flow.gd:1028)
+         [8] physics_step (res://src/core/flow.gd:1016)
+         [9] _physics_process (res://src/game.gd:611)
+WARNING: ACE music: missing /home/andrew/scratch/w37-pc/econ-7a21/sketches/core-loop/assets/music_ace/dig_upper/calm.drums.ogg; playing the synth engine instead
+     at: push_warning (core/variant/variant_utility.cpp:1033)
+     GDScript backtrace (most recent call first):
+         [0] ace_ready (res://src/presentation/audio.gd:1146)
+         [1] _ace_stage (res://src/presentation/audio.gd:1264)
+         [2] _flush_flow (res://src/presentation/audio.gd:4204)
+         [3] park_transport (res://src/presentation/audio.gd:2431)
+         [4] _physics_process (res://src/world/world.gd:444)
+bot_run: skipper seed 2880 (pylon_engineer) -> until at stage 3, 27167 ticks (301.9 s game), 271.5 s wall
+bot_run: 2008 cosmetic pilot tracks disabled; playback retained
+bot_run: 1 run(s) written to /home/andrew/scratch/w37-pc/econ-out/after-scale-on/minmax-2880, 271.5 s wall in runs
+WARNING: 134 ObjectDB instances were leaked at exit (run with `--verbose` for details).
+   at: cleanup (core/object/object.cpp:2536)

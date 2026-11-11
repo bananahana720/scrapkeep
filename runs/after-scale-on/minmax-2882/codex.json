@@ -1,0 +1,53 @@
+{
+  "discovered": [
+    "lore.spillway.moss.spare",
+    "lore.spillway.crew.leak",
+    "lore.spillway.moss.yesterday",
+    "counter_ram",
+    "kest_cable_charge",
+    "sluice_hammer",
+    "chain",
+    "set_piece",
+    "kest_windhover",
+    "plate_peel",
+    "spare",
+    "heavy_roll",
+    "warden_shatter",
+    "lore.park_dam.note.gate_log",
+    "lore.park_dam.note.plumb",
+    "lore.park_flume.crew.warm",
+    "lore.park_flume.moss.flask",
+    "lore.park_flume.crew.weir",
+    "pinwheel",
+    "lore.park_flume.note.weir",
+    "sprint_through",
+    "lore.park_flume.note.bents",
+    "set_piece_core",
+    "lore.park_flume.note.siphon",
+    "lore.park_flume.note.milepost",
+    "slag_hop",
+    "lore.park_flume.note.boom",
+    "lore.park_flume.note.drum",
+    "lore.park_flume.note.fleet",
+    "brindle_crane_drop",
+    "lore.park_flume.note.wasteway",
+    "lore.park_flume.note.surge",
+    "lore.park_flume.note.penstocks",
+    "crush_chain",
+    "lore.park_flume.note.catwalk",
+    "lore.park_flume.note.squall",
+    "lore.dig_entry.exchange.1",
+    "lore.dig_entry.exchange.2",
+    "lore.dig_entry.exchange.3"
+  ],
+  "found": [
+    "Storm Front: Every slam cracks out a frost ring that freezes water and lays ice.",
+    "Arc on water electrifies it: anything standing in it gets shocked.",
+    "Frost meets a heavy hit: the chill grinds everything near. Elites and bosses take a tenth of the grind."
+  ],
+  "found_categories": {
+    "Arc on water electrifies it: anything standing in it gets shocked.": "build",
+    "Frost meets a heavy hit: the chill grinds everything near. Elites and bosses take a tenth of the grind.": "build",
+    "Storm Front: Every slam cracks out a frost ring that freezes water and lays ice.": "build"
+  }
+}

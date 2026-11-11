@@ -1,0 +1,50 @@
+{
+  "discovered": [
+    "lore.spillway.moss.spare",
+    "lore.spillway.crew.leak",
+    "lore.spillway.moss.yesterday",
+    "counter_ram",
+    "set_piece",
+    "plate_peel",
+    "spare",
+    "sluice_hammer",
+    "mat_slip",
+    "warden_shatter",
+    "lore.park_dam.note.gate_log",
+    "heavy_roll",
+    "lore.park_dam.note.plumb",
+    "lore.park_flume.crew.warm",
+    "lore.park_flume.moss.flask",
+    "lore.park_flume.crew.weir",
+    "wrecking_ball",
+    "chain",
+    "lore.park_flume.note.weir",
+    "sprint_through",
+    "lore.park_flume.note.bents",
+    "lore.park_flume.note.siphon",
+    "lore.park_flume.note.milepost",
+    "lore.park_flume.note.boom",
+    "lore.park_flume.note.drum",
+    "lore.park_flume.note.fleet",
+    "set_piece_core",
+    "lore.park_flume.note.wasteway",
+    "lore.park_flume.note.surge",
+    "lore.park_flume.note.penstocks",
+    "brindle_crane_drop",
+    "lore.park_flume.note.catwalk",
+    "lore.park_flume.note.squall",
+    "crush_chain",
+    "shrapnel_bloom",
+    "lore.park_flume.note.zip",
+    "lore.park_flume.note.culvert",
+    "lore.dig_entry.exchange.1",
+    "lore.dig_entry.exchange.2",
+    "lore.dig_entry.exchange.3"
+  ],
+  "found": [
+    "Hair Trigger: Your dash trails arc that electrifies water."
+  ],
+  "found_categories": {
+    "Hair Trigger: Your dash trails arc that electrifies water.": "build"
+  }
+}

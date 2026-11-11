@@ -1,0 +1,267 @@
+{
+  "generation": 3,
+  "run": {
+    "bonus_cores": 0,
+    "camera_yaw": -2.879793250335259,
+    "class_id": "tally",
+    "class_rewarded": 4,
+    "cogs": 506,
+    "companion": {},
+    "death_save_spent": false,
+    "entry_position": [
+      -560.0,
+      66.34466552734375,
+      -770.0
+    ],
+    "entry_velocity": [
+      2.4096691608428955,
+      0.0,
+      8.993006706237793
+    ],
+    "events_won": [],
+    "heft_class": 4,
+    "hotwire": {
+      "id": "riveted_shell",
+      "spent": true,
+      "state": "recycle",
+      "world": 1
+    },
+    "hp": 129.0,
+    "kills": 62,
+    "mass": 1308.0,
+    "max_hp": 129.0,
+    "panels": [
+      "hull_tile",
+      "hull_tile",
+      "punch_rivet",
+      "range_sight",
+      "splash_skirt",
+      "punch_rivet",
+      "punch_rivet",
+      "vent_louvre",
+      "ratchet_collar",
+      "cell_bracket",
+      "ratchet_collar",
+      "hull_tile"
+    ],
+    "parts": [
+      "spiral_wave",
+      "impact_driver",
+      "loose_trigger",
+      "bladestorm_rotor",
+      "hot_rivets",
+      "sunforged_core",
+      "double_feed",
+      "breaker_drive",
+      "loose_trigger",
+      "cell_movement",
+      "cell_special",
+      "rime_rounds",
+      "horizon_optic",
+      "cross_split",
+      "cross_split",
+      "cross_split",
+      "admirals_crest"
+    ],
+    "pocket_draw_cache": {
+      "1": {
+        "sites": [
+          {
+            "at": [
+              144.0,
+              -368.0
+            ],
+            "interior": "valve_vault",
+            "node": 10972,
+            "turn": 3
+          }
+        ]
+      },
+      "2": {
+        "sites": [
+          {
+            "at": [
+              -328.0,
+              152.0
+            ],
+            "interior": "braced_yard",
+            "node": 23978,
+            "turn": 3
+          },
+          {
+            "at": [
+              -696.0,
+              -752.0
+            ],
+            "interior": "groove_vault",
+            "node": 1219,
+            "turn": 3
+          }
+        ]
+      },
+      "3": {
+        "sites": [
+          {
+            "at": [
+              384.0,
+              -16.0
+            ],
+            "interior": "bend_vault",
+            "node": 19846,
+            "turn": 1
+          },
+          {
+            "at": [
+              -8.0,
+              -680.0
+            ],
+            "interior": "elite_bay",
+            "node": 3114,
+            "turn": 0
+          },
+          {
+            "at": [
+              -720.0,
+              -536.0
+            ],
+            "interior": "dome_camp",
+            "node": 6643,
+            "turn": 3
+          },
+          {
+            "at": [
+              -560.0,
+              -360.0
+            ],
+            "interior": "rim_vault",
+            "node": 11085,
+            "turn": 3
+          }
+        ]
+      }
+    },
+    "relics": {},
+    "retries": 0,
+    "retries_spent": {},
+    "run_id": "bot-2878",
+    "run_tallies": {
+      "deaths": 0,
+      "kills": 62,
+      "stages_cleared": 2,
+      "time": 406.45333333352545,
+      "wardens_seen": 2
+    },
+    "run_time": 406.45333333352545,
+    "schema": 1,
+    "scrap": 1645,
+    "seed": 1598568432,
+    "seen_wardens": [
+      "1/1",
+      "1/2"
+    ],
+    "settled": [
+      "reward:ach_any_set_piece:cosmetic",
+      "reward:ach_any_set_piece:cosmetic:trail_any_downbeat",
+      "reward:ach_meta_pocket_tint:cosmetic",
+      "reward:ach_meta_pocket_tint:cosmetic:paint_any_spark",
+      "reward:ach_d7_moth_tuft:cosmetic",
+      "reward:ach_d7_moth_tuft:cosmetic:trail_moth_tuft",
+      "reward:warden_broken:cosmetic",
+      "reward:warden_broken:cosmetic:paint_any_night",
+      "reward:codex_keeper:cosmetic",
+      "reward:codex_keeper:cosmetic:paint_any_moth",
+      "reward:ach_d7_moth_grey:cosmetic",
+      "reward:ach_d7_moth_grey:cosmetic:companion_paint_moth",
+      "reward:ach_d7_thimble:cosmetic",
+      "reward:ach_d7_thimble:cosmetic:decal_thimble",
+      "reward:ach_any_curtain_call:cosmetic",
+      "reward:ach_any_curtain_call:cosmetic:decal_curtain_call",
+      "reward:ach_d7_ink_stitch:cosmetic",
+      "reward:ach_d7_ink_stitch:cosmetic:trail_ink_stitch",
+      "reward:ach_d7_plum_curl:cosmetic",
+      "reward:ach_d7_plum_curl:cosmetic:trail_plum_curl",
+      "reward:brindle_routed:pilot",
+      "reward:brindle_routed:pilot:tarn",
+      "reward:brindle_mark_tally:item",
+      "reward:brindle_mark_tally:item:salvage_drone",
+      "ledger.found.1",
+      "reward:ach_d7_mushroom:cosmetic",
+      "reward:ach_d7_mushroom:cosmetic:decal_mushroom"
+    ],
+    "stage": 3,
+    "start_pick": {
+      "options": [
+        "spiral_wave",
+        "loose_trigger",
+        "cogs"
+      ],
+      "rerolls_left": 1,
+      "taken": "spiral_wave"
+    },
+    "trade_memory": {
+      "decisions": {},
+      "last_appeared": 2,
+      "last_refused": -100,
+      "last_seen": -100,
+      "offers": {
+        "1": {
+          "at": [
+            -224.0,
+            -360.0
+          ],
+          "node": 11127,
+          "trade": {
+            "chance": 0.45,
+            "curse": true,
+            "family": "risk",
+            "full_health_bump": true,
+            "interior_id": "curse_counter",
+            "pool_floor": 0.2,
+            "recency": 1.0,
+            "refusal_weight": 1.0,
+            "sacrifice": false,
+            "sacrifice_chance": 0.39285714285714285,
+            "safe_share": 0.5,
+            "skip_time": 0.0,
+            "stage": 1,
+            "tier": 1
+          }
+        },
+        "2": {
+          "at": [
+            216.0,
+            -536.0
+          ],
+          "node": 6760,
+          "trade": {
+            "chance": 0.1125,
+            "curse": false,
+            "family": "risk",
+            "full_health_bump": true,
+            "interior_id": "sacrifice_counter",
+            "pool_floor": 0.0,
+            "recency": 0.25,
+            "refusal_weight": 1.0,
+            "sacrifice": true,
+            "sacrifice_chance": 0.39285714285714285,
+            "safe_share": 0.5,
+            "skip_time": 0.0,
+            "stage": 2,
+            "tier": 1
+          }
+        }
+      },
+      "risk_taken": false,
+      "seen": []
+    },
+    "tree_allowed": 2,
+    "tree_late_skipped": false,
+    "tree_picks": [
+      "tl_audit_stamp",
+      "tl_through_feed"
+    ],
+    "wear_accum": 0.6731106535594423,
+    "world": 2
+  },
+  "schema": 1
+}

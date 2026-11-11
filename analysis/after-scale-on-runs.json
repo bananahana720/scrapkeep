@@ -1,0 +1,1830 @@
+[
+ {
+  "run": "minmax-2860",
+  "type": "minmax",
+  "seed": 2860,
+  "pilot": "tally",
+  "outcome": "until",
+  "stage_reached": 3,
+  "won_world1": true,
+  "game_min": 7.15,
+  "min_hp": 90.0,
+  "hits": 10.0,
+  "hp_lost": 140.0,
+  "hull_lost": 8.0,
+  "brindle_s": 91.61,
+  "brindle_hits": 1.0,
+  "cogs_earned": 1579,
+  "cogs_earned_by": {
+   "discovery bursts": 340,
+   "kill and boss gears": 1011,
+   "activities, events, start pick": 20,
+   "other pickups": 208
+  },
+  "cogs_spent": 1144,
+  "cogs_spent_by": {
+   "shelf": 861,
+   "reroll": 75,
+   "cell": 208
+  },
+  "cogs_end": 585,
+  "bay_visits": [
+   {
+    "stage": 1,
+    "wallet": 582,
+    "spent": 624,
+    "bought": 9,
+    "left_on_shelf": 0,
+    "unbought_cost": 0,
+    "hook": "locked"
+   },
+   {
+    "stage": 2,
+    "wallet": 528,
+    "spent": 520,
+    "bought": 4,
+    "left_on_shelf": 3,
+    "unbought_cost": 590,
+    "hook": "locked"
+   }
+  ],
+  "scrap_end": 1256,
+  "mass_end": 960.0,
+  "heft_end": 4,
+  "scrap_lost_by": {
+   "crane": 240
+  },
+  "parts_end": 18,
+  "parts_by": {
+   "shop": 13,
+   "spare": 2,
+   "gate": 2,
+   "boss": 1
+  },
+  "panels_end": 10,
+  "cores_by": {
+   "start_pick": 1
+  },
+  "cores_gained": 1,
+  "cores_wiped": 1,
+  "tree_end": 2,
+  "relics_end": 0,
+  "regen_and_heals_hp": 0,
+  "max_hp_end": 149.0,
+  "start_pick": "core",
+  "rib_caches": 0,
+  "rogues": 0,
+  "secrets": 0
+ },
+ {
+  "run": "minmax-2861",
+  "type": "minmax",
+  "seed": 2861,
+  "pilot": "remembered_cannon",
+  "outcome": "until",
+  "stage_reached": 3,
+  "won_world1": true,
+  "game_min": 6.91,
+  "min_hp": 105.0,
+  "hits": 3.0,
+  "hp_lost": 39.6,
+  "hull_lost": 3.6,
+  "brindle_s": 85.28,
+  "brindle_hits": 3.0,
+  "cogs_earned": 1718,
+  "cogs_earned_by": {
+   "discovery bursts": 480,
+   "kill and boss gears": 1032,
+   "activities, events, start pick": 20,
+   "other pickups": 186
+  },
+  "cogs_spent": 1277,
+  "cogs_spent_by": {
+   "shelf": 1202,
+   "reroll": 75
+  },
+  "cogs_end": 516,
+  "bay_visits": [
+   {
+    "stage": 1,
+    "wallet": 579,
+    "spent": 558,
+    "bought": 5,
+    "left_on_shelf": 1,
+    "unbought_cost": 54,
+    "hook": "locked"
+   },
+   {
+    "stage": 2,
+    "wallet": 655,
+    "spent": 719,
+    "bought": 5,
+    "left_on_shelf": 1,
+    "unbought_cost": 72,
+    "hook": "locked"
+   }
+  ],
+  "scrap_end": 1591,
+  "mass_end": 1371.0,
+  "heft_end": 4,
+  "scrap_lost_by": {
+   "crane": 240
+  },
+  "parts_end": 12,
+  "parts_by": {
+   "start_pick": 1,
+   "shop": 8,
+   "gate": 2,
+   "boss": 1
+  },
+  "panels_end": 11,
+  "cores_by": {},
+  "cores_gained": 0,
+  "cores_wiped": 0,
+  "tree_end": 2,
+  "relics_end": 0,
+  "regen_and_heals_hp": 0,
+  "max_hp_end": 150.0,
+  "start_pick": "focus_lens",
+  "rib_caches": 0,
+  "rogues": 0,
+  "secrets": 0
+ },
+ {
+  "run": "minmax-2862",
+  "type": "minmax",
+  "seed": 2862,
+  "pilot": "pylon_engineer",
+  "outcome": "until",
+  "stage_reached": 3,
+  "won_world1": true,
+  "game_min": 5.61,
+  "min_hp": 115.0,
+  "hits": 2.0,
+  "hp_lost": 31.5,
+  "hull_lost": 0,
+  "brindle_s": 88.48,
+  "brindle_hits": 4.0,
+  "cogs_earned": 1580,
+  "cogs_earned_by": {
+   "discovery bursts": 300,
+   "kill and boss gears": 1112,
+   "activities, events, start pick": 20,
+   "other pickups": 148
+  },
+  "cogs_spent": 1144,
+  "cogs_spent_by": {
+   "shelf": 965,
+   "reroll": 75,
+   "cell": 104
+  },
+  "cogs_end": 486,
+  "bay_visits": [
+   {
+    "stage": 1,
+    "wallet": 579,
+    "spent": 558,
+    "bought": 7,
+    "left_on_shelf": 0,
+    "unbought_cost": 0,
+    "hook": "locked"
+   },
+   {
+    "stage": 2,
+    "wallet": 571,
+    "spent": 586,
+    "bought": 4,
+    "left_on_shelf": 3,
+    "unbought_cost": 547,
+    "hook": "locked"
+   }
+  ],
+  "scrap_end": 1478,
+  "mass_end": 1220.5,
+  "heft_end": 4,
+  "scrap_lost_by": {
+   "crane": 240
+  },
+  "parts_end": 14,
+  "parts_by": {
+   "start_pick": 1,
+   "shop": 10,
+   "gate": 2,
+   "boss": 1
+  },
+  "panels_end": 14,
+  "cores_by": {},
+  "cores_gained": 0,
+  "cores_wiped": 0,
+  "tree_end": 2,
+  "relics_end": 0,
+  "regen_and_heals_hp": 0,
+  "max_hp_end": 170.0,
+  "start_pick": "rivet_plating",
+  "rib_caches": 0,
+  "rogues": 0,
+  "secrets": 0
+ },
+ {
+  "run": "minmax-2863",
+  "type": "minmax",
+  "seed": 2863,
+  "pilot": "runner_gunner",
+  "outcome": "until",
+  "stage_reached": 3,
+  "won_world1": true,
+  "game_min": 6.99,
+  "min_hp": 115.0,
+  "hits": 4.0,
+  "hp_lost": 74.0,
+  "hull_lost": 24.0,
+  "brindle_s": 81.58,
+  "brindle_hits": 4.0,
+  "cogs_earned": 1430,
+  "cogs_earned_by": {
+   "kill and boss gears": 864,
+   "discovery bursts": 300,
+   "activities, events, start pick": 20,
+   "other pickups": 246
+  },
+  "cogs_spent": 912,
+  "cogs_spent_by": {
+   "shelf": 757,
+   "reroll": 75,
+   "cell": 80
+  },
+  "cogs_end": 593,
+  "bay_visits": [
+   {
+    "stage": 1,
+    "wallet": 439,
+    "spent": 479,
+    "bought": 5,
+    "left_on_shelf": 1,
+    "unbought_cost": 139,
+    "hook": "locked"
+   },
+   {
+    "stage": 2,
+    "wallet": 461,
+    "spent": 433,
+    "bought": 5,
+    "left_on_shelf": 3,
+    "unbought_cost": 627,
+    "hook": "locked"
+   }
+  ],
+  "scrap_end": 1245,
+  "mass_end": 900.0,
+  "heft_end": 3,
+  "scrap_lost_by": {
+   "crane": 120
+  },
+  "parts_end": 14,
+  "parts_by": {
+   "shop": 10,
+   "gate": 2,
+   "spare": 1,
+   "boss": 1
+  },
+  "panels_end": 5,
+  "cores_by": {
+   "start_pick": 1
+  },
+  "cores_gained": 1,
+  "cores_wiped": 1,
+  "tree_end": 2,
+  "relics_end": 0,
+  "regen_and_heals_hp": 0,
+  "max_hp_end": 159.0,
+  "start_pick": "core",
+  "rib_caches": 0,
+  "rogues": 0,
+  "secrets": 0
+ },
+ {
+  "run": "minmax-2864",
+  "type": "minmax",
+  "seed": 2864,
+  "pilot": "demolitions_caster",
+  "outcome": "until",
+  "stage_reached": 3,
+  "won_world1": true,
+  "game_min": 7.21,
+  "min_hp": 63.6,
+  "hits": 3.0,
+  "hp_lost": 49.5,
+  "hull_lost": 16.4,
+  "brindle_s": 92.59,
+  "brindle_hits": 3.0,
+  "cogs_earned": 1571,
+  "cogs_earned_by": {
+   "discovery bursts": 420,
+   "kill and boss gears": 982,
+   "activities, events, start pick": 20,
+   "other pickups": 149
+  },
+  "cogs_spent": 1281,
+  "cogs_spent_by": {
+   "shelf": 1003,
+   "reroll": 30,
+   "cell": 248
+  },
+  "cogs_end": 515,
+  "bay_visits": [
+   {
+    "stage": 1,
+    "wallet": 524,
+    "spent": 649,
+    "bought": 9,
+    "left_on_shelf": 0,
+    "unbought_cost": 0,
+    "hook": "locked"
+   },
+   {
+    "stage": 2,
+    "wallet": 539,
+    "spent": 632,
+    "bought": 5,
+    "left_on_shelf": 0,
+    "unbought_cost": 0,
+    "hook": "locked"
+   }
+  ],
+  "scrap_end": 995,
+  "mass_end": 755.5,
+  "heft_end": 3,
+  "scrap_lost_by": {
+   "crane": 480
+  },
+  "parts_end": 17,
+  "parts_by": {
+   "shop": 12,
+   "spare": 2,
+   "gate": 2,
+   "boss": 1
+  },
+  "panels_end": 7,
+  "cores_by": {
+   "start_pick": 1
+  },
+  "cores_gained": 1,
+  "cores_wiped": 1,
+  "tree_end": 2,
+  "relics_end": 0,
+  "regen_and_heals_hp": 0,
+  "max_hp_end": 94.0,
+  "start_pick": "core",
+  "rib_caches": 0,
+  "rogues": 0,
+  "secrets": 0
+ },
+ {
+  "run": "minmax-2865",
+  "type": "minmax",
+  "seed": 2865,
+  "pilot": "tarn",
+  "outcome": "until",
+  "stage_reached": 3,
+  "won_world1": true,
+  "game_min": 7.03,
+  "min_hp": 133.8,
+  "hits": 6.0,
+  "hp_lost": 127.0,
+  "hull_lost": 1.2,
+  "brindle_s": 82.32,
+  "brindle_hits": 2.0,
+  "cogs_earned": 1634,
+  "cogs_earned_by": {
+   "discovery bursts": 380,
+   "kill and boss gears": 1061,
+   "activities, events, start pick": 20,
+   "other pickups": 173
+  },
+  "cogs_spent": 1293,
+  "cogs_spent_by": {
+   "shelf": 1074,
+   "reroll": 75,
+   "cell": 144
+  },
+  "cogs_end": 541,
+  "bay_visits": [
+   {
+    "stage": 1,
+    "wallet": 608,
+    "spent": 666,
+    "bought": 8,
+    "left_on_shelf": 0,
+    "unbought_cost": 0,
+    "hook": "locked"
+   },
+   {
+    "stage": 2,
+    "wallet": 576,
+    "spent": 627,
+    "bought": 5,
+    "left_on_shelf": 2,
+    "unbought_cost": 498,
+    "hook": "locked"
+   }
+  ],
+  "scrap_end": 1244,
+  "mass_end": 826.0,
+  "heft_end": 3,
+  "scrap_lost_by": {
+   "crane": 300
+  },
+  "parts_end": 17,
+  "parts_by": {
+   "shop": 12,
+   "spare": 2,
+   "gate": 2,
+   "boss": 1
+  },
+  "panels_end": 12,
+  "cores_by": {
+   "start_pick": 1
+  },
+  "cores_gained": 1,
+  "cores_wiped": 1,
+  "tree_end": 2,
+  "relics_end": 0,
+  "regen_and_heals_hp": 0,
+  "max_hp_end": 190.0,
+  "start_pick": "core",
+  "rib_caches": 0,
+  "rogues": 0,
+  "secrets": 0
+ },
+ {
+  "run": "minmax-2866",
+  "type": "minmax",
+  "seed": 2866,
+  "pilot": "tally",
+  "outcome": "until",
+  "stage_reached": 3,
+  "won_world1": true,
+  "game_min": 7.6,
+  "min_hp": 90.0,
+  "hits": 7.0,
+  "hp_lost": 94.6,
+  "hull_lost": 3.6,
+  "brindle_s": 79.85,
+  "brindle_hits": 3.0,
+  "cogs_earned": 1809,
+  "cogs_earned_by": {
+   "discovery bursts": 440,
+   "kill and boss gears": 1116,
+   "activities, events, start pick": 20,
+   "other pickups": 233
+  },
+  "cogs_spent": 1310,
+  "cogs_spent_by": {
+   "shelf": 1102,
+   "reroll": 75,
+   "cell": 133
+  },
+  "cogs_end": 574,
+  "bay_visits": [
+   {
+    "stage": 1,
+    "wallet": 683,
+    "spent": 616,
+    "bought": 9,
+    "left_on_shelf": 0,
+    "unbought_cost": 0,
+    "hook": "locked"
+   },
+   {
+    "stage": 2,
+    "wallet": 641,
+    "spent": 694,
+    "bought": 4,
+    "left_on_shelf": 2,
+    "unbought_cost": 257,
+    "hook": "locked"
+   }
+  ],
+  "scrap_end": 1643,
+  "mass_end": 1372.0,
+  "heft_end": 4,
+  "scrap_lost_by": {
+   "crane": 300
+  },
+  "parts_end": 19,
+  "parts_by": {
+   "shop": 13,
+   "evolution": 1,
+   "spare": 2,
+   "gate": 2,
+   "boss": 1
+  },
+  "panels_end": 15,
+  "cores_by": {
+   "start_pick": 1
+  },
+  "cores_gained": 1,
+  "cores_wiped": 1,
+  "tree_end": 2,
+  "relics_end": 0,
+  "regen_and_heals_hp": 0,
+  "max_hp_end": 149.0,
+  "start_pick": "core",
+  "rib_caches": 0,
+  "rogues": 0,
+  "secrets": 0
+ },
+ {
+  "run": "minmax-2867",
+  "type": "minmax",
+  "seed": 2867,
+  "pilot": "remembered_cannon",
+  "outcome": "until",
+  "stage_reached": 3,
+  "won_world1": true,
+  "game_min": 6.94,
+  "min_hp": 105.0,
+  "hits": 1.0,
+  "hp_lost": 3.6,
+  "hull_lost": 3.6,
+  "brindle_s": 79.79,
+  "brindle_hits": 3.0,
+  "cogs_earned": 1433,
+  "cogs_earned_by": {
+   "discovery bursts": 360,
+   "kill and boss gears": 920,
+   "activities, events, start pick": 20,
+   "other pickups": 133
+  },
+  "cogs_spent": 1195,
+  "cogs_spent_by": {
+   "shelf": 1120,
+   "reroll": 75
+  },
+  "cogs_end": 438,
+  "bay_visits": [
+   {
+    "stage": 1,
+    "wallet": 452,
+    "spent": 529,
+    "bought": 5,
+    "left_on_shelf": 1,
+    "unbought_cost": 50,
+    "hook": "locked"
+   },
+   {
+    "stage": 2,
+    "wallet": 583,
+    "spent": 666,
+    "bought": 5,
+    "left_on_shelf": 1,
+    "unbought_cost": 115,
+    "hook": "locked"
+   }
+  ],
+  "scrap_end": 1056,
+  "mass_end": 879.0,
+  "heft_end": 3,
+  "scrap_lost_by": {
+   "crane": 240
+  },
+  "parts_end": 12,
+  "parts_by": {
+   "start_pick": 1,
+   "shop": 8,
+   "gate": 2,
+   "boss": 1
+  },
+  "panels_end": 9,
+  "cores_by": {},
+  "cores_gained": 0,
+  "cores_wiped": 0,
+  "tree_end": 2,
+  "relics_end": 0,
+  "regen_and_heals_hp": 0,
+  "max_hp_end": 185.0,
+  "start_pick": "slag_rounds",
+  "rib_caches": 1,
+  "rogues": 0,
+  "secrets": 0
+ },
+ {
+  "run": "minmax-2868",
+  "type": "minmax",
+  "seed": 2868,
+  "pilot": "pylon_engineer",
+  "outcome": "until",
+  "stage_reached": 3,
+  "won_world1": true,
+  "game_min": 5.95,
+  "min_hp": 100.0,
+  "hits": 5.0,
+  "hp_lost": 77.0,
+  "hull_lost": 12.0,
+  "brindle_s": 80.97,
+  "brindle_hits": 3.0,
+  "cogs_earned": 1846,
+  "cogs_earned_by": {
+   "discovery bursts": 560,
+   "kill and boss gears": 1090,
+   "activities, events, start pick": 20,
+   "other pickups": 176
+  },
+  "cogs_spent": 1340,
+  "cogs_spent_by": {
+   "shelf": 1161,
+   "reroll": 75,
+   "cell": 104
+  },
+  "cogs_end": 631,
+  "bay_visits": [
+   {
+    "stage": 1,
+    "wallet": 546,
+    "spent": 570,
+    "bought": 8,
+    "left_on_shelf": 0,
+    "unbought_cost": 0,
+    "hook": "locked"
+   },
+   {
+    "stage": 2,
+    "wallet": 766,
+    "spent": 770,
+    "bought": 5,
+    "left_on_shelf": 1,
+    "unbought_cost": 137,
+    "hook": "locked"
+   }
+  ],
+  "scrap_end": 1607,
+  "mass_end": 1227.0,
+  "heft_end": 4,
+  "scrap_lost_by": {
+   "crane": 180
+  },
+  "parts_end": 15,
+  "parts_by": {
+   "shop": 12,
+   "gate": 2,
+   "boss": 1
+  },
+  "panels_end": 14,
+  "cores_by": {
+   "start_pick": 1
+  },
+  "cores_gained": 1,
+  "cores_wiped": 1,
+  "tree_end": 2,
+  "relics_end": 0,
+  "regen_and_heals_hp": 0,
+  "max_hp_end": 160.0,
+  "start_pick": "core",
+  "rib_caches": 0,
+  "rogues": 0,
+  "secrets": 0
+ },
+ {
+  "run": "minmax-2869",
+  "type": "minmax",
+  "seed": 2869,
+  "pilot": "runner_gunner",
+  "outcome": "until",
+  "stage_reached": 3,
+  "won_world1": true,
+  "game_min": 6.76,
+  "min_hp": 102.3,
+  "hits": 2.0,
+  "hp_lost": 23.5,
+  "hull_lost": 12.7,
+  "brindle_s": 79.66,
+  "brindle_hits": 2.0,
+  "cogs_earned": 1344,
+  "cogs_earned_by": {
+   "kill and boss gears": 862,
+   "discovery bursts": 300,
+   "activities, events, start pick": 20,
+   "other pickups": 162
+  },
+  "cogs_spent": 880,
+  "cogs_spent_by": {
+   "shelf": 805,
+   "reroll": 75
+  },
+  "cogs_end": 539,
+  "bay_visits": [
+   {
+    "stage": 1,
+    "wallet": 336,
+    "spent": 329,
+    "bought": 3,
+    "left_on_shelf": 3,
+    "unbought_cost": 248,
+    "hook": "locked"
+   },
+   {
+    "stage": 2,
+    "wallet": 529,
+    "spent": 551,
+    "bought": 5,
+    "left_on_shelf": 1,
+    "unbought_cost": 94,
+    "hook": "locked"
+   }
+  ],
+  "scrap_end": 1258,
+  "mass_end": 1097.0,
+  "heft_end": 4,
+  "scrap_lost_by": {
+   "crane": 300
+  },
+  "parts_end": 10,
+  "parts_by": {
+   "start_pick": 1,
+   "shop": 6,
+   "gate": 2,
+   "boss": 1
+  },
+  "panels_end": 3,
+  "cores_by": {},
+  "cores_gained": 0,
+  "cores_wiped": 0,
+  "tree_end": 2,
+  "relics_end": 0,
+  "regen_and_heals_hp": 0,
+  "max_hp_end": 151.0,
+  "start_pick": "double_feed",
+  "rib_caches": 0,
+  "rogues": 0,
+  "secrets": 0
+ },
+ {
+  "run": "minmax-2870",
+  "type": "minmax",
+  "seed": 2870,
+  "pilot": "demolitions_caster",
+  "outcome": "until",
+  "stage_reached": 3,
+  "won_world1": true,
+  "game_min": 7.08,
+  "min_hp": 80.0,
+  "hits": 36.0,
+  "hp_lost": 348.6,
+  "hull_lost": 66.6,
+  "brindle_s": 87.81,
+  "brindle_hits": 3.0,
+  "cogs_earned": 1471,
+  "cogs_earned_by": {
+   "discovery bursts": 460,
+   "kill and boss gears": 878,
+   "activities, events, start pick": 20,
+   "other pickups": 113
+  },
+  "cogs_spent": 1232,
+  "cogs_spent_by": {
+   "shelf": 1040,
+   "reroll": 75,
+   "cell": 117
+  },
+  "cogs_end": 389,
+  "bay_visits": [
+   {
+    "stage": 1,
+    "wallet": 568,
+    "spent": 681,
+    "bought": 8,
+    "left_on_shelf": 0,
+    "unbought_cost": 0,
+    "hook": "locked"
+   },
+   {
+    "stage": 2,
+    "wallet": 532,
+    "spent": 551,
+    "bought": 5,
+    "left_on_shelf": 2,
+    "unbought_cost": 299,
+    "hook": "locked"
+   }
+  ],
+  "scrap_end": 1186,
+  "mass_end": 509.0,
+  "heft_end": 3,
+  "scrap_lost_by": {
+   "crane": 360
+  },
+  "parts_end": 16,
+  "parts_by": {
+   "shop": 11,
+   "evolution": 1,
+   "gate": 2,
+   "spare": 1,
+   "boss": 1
+  },
+  "panels_end": 11,
+  "cores_by": {
+   "start_pick": 1
+  },
+  "cores_gained": 1,
+  "cores_wiped": 1,
+  "tree_end": 2,
+  "relics_end": 0,
+  "regen_and_heals_hp": 0,
+  "max_hp_end": 94.0,
+  "start_pick": "core",
+  "rib_caches": 0,
+  "rogues": 0,
+  "secrets": 0
+ },
+ {
+  "run": "minmax-2871",
+  "type": "minmax",
+  "seed": 2871,
+  "pilot": "tarn",
+  "outcome": "until",
+  "stage_reached": 3,
+  "won_world1": true,
+  "game_min": 7.59,
+  "min_hp": 135.0,
+  "hits": 8.0,
+  "hp_lost": 116.5,
+  "hull_lost": 36.0,
+  "brindle_s": 83.61,
+  "brindle_hits": 2.0,
+  "cogs_earned": 1794,
+  "cogs_earned_by": {
+   "discovery bursts": 420,
+   "kill and boss gears": 1191,
+   "activities, events, start pick": 20,
+   "other pickups": 163
+  },
+  "cogs_spent": 1309,
+  "cogs_spent_by": {
+   "shelf": 1026,
+   "reroll": 75,
+   "cell": 208
+  },
+  "cogs_end": 585,
+  "bay_visits": [
+   {
+    "stage": 1,
+    "wallet": 796,
+    "spent": 720,
+    "bought": 10,
+    "left_on_shelf": 0,
+    "unbought_cost": 0,
+    "hook": "locked"
+   },
+   {
+    "stage": 2,
+    "wallet": 632,
+    "spent": 589,
+    "bought": 4,
+    "left_on_shelf": 2,
+    "unbought_cost": 560,
+    "hook": "locked"
+   }
+  ],
+  "scrap_end": 1518,
+  "mass_end": 1228.5,
+  "heft_end": 4,
+  "scrap_lost_by": {
+   "crane": 420
+  },
+  "parts_end": 19,
+  "parts_by": {
+   "shop": 14,
+   "spare": 2,
+   "gate": 2,
+   "boss": 1
+  },
+  "panels_end": 13,
+  "cores_by": {
+   "start_pick": 1
+  },
+  "cores_gained": 1,
+  "cores_wiped": 1,
+  "tree_end": 2,
+  "relics_end": 0,
+  "regen_and_heals_hp": 0,
+  "max_hp_end": 254.0,
+  "start_pick": "core",
+  "rib_caches": 0,
+  "rogues": 0,
+  "secrets": 0
+ },
+ {
+  "run": "minmax-2872",
+  "type": "minmax",
+  "seed": 2872,
+  "pilot": "tally",
+  "outcome": "until",
+  "stage_reached": 3,
+  "won_world1": true,
+  "game_min": 7.36,
+  "min_hp": 90.0,
+  "hits": 4.0,
+  "hp_lost": 57.0,
+  "hull_lost": 0,
+  "brindle_s": 109.3,
+  "brindle_hits": 10.0,
+  "cogs_earned": 1585,
+  "cogs_earned_by": {
+   "discovery bursts": 320,
+   "kill and boss gears": 1047,
+   "activities, events, start pick": 20,
+   "other pickups": 198
+  },
+  "cogs_spent": 1185,
+  "cogs_spent_by": {
+   "shelf": 976,
+   "reroll": 75,
+   "cell": 134
+  },
+  "cogs_end": 575,
+  "bay_visits": [
+   {
+    "stage": 1,
+    "wallet": 537,
+    "spent": 613,
+    "bought": 8,
+    "left_on_shelf": 0,
+    "unbought_cost": 0,
+    "hook": "locked"
+   },
+   {
+    "stage": 2,
+    "wallet": 540,
+    "spent": 572,
+    "bought": 5,
+    "left_on_shelf": 2,
+    "unbought_cost": 274,
+    "hook": "locked"
+   }
+  ],
+  "scrap_end": 1191,
+  "mass_end": 610.0,
+  "heft_end": 3,
+  "scrap_lost_by": {
+   "crane": 240
+  },
+  "parts_end": 18,
+  "parts_by": {
+   "shop": 12,
+   "evolution": 1,
+   "spare": 2,
+   "gate": 2,
+   "boss": 1
+  },
+  "panels_end": 10,
+  "cores_by": {
+   "start_pick": 1
+  },
+  "cores_gained": 1,
+  "cores_wiped": 1,
+  "tree_end": 2,
+  "relics_end": 0,
+  "regen_and_heals_hp": 0,
+  "max_hp_end": 161.0,
+  "start_pick": "core",
+  "rib_caches": 0,
+  "rogues": 0,
+  "secrets": 0
+ },
+ {
+  "run": "minmax-2873",
+  "type": "minmax",
+  "seed": 2873,
+  "pilot": "remembered_cannon",
+  "outcome": "until",
+  "stage_reached": 3,
+  "won_world1": true,
+  "game_min": 8.19,
+  "min_hp": 99.2,
+  "hits": 6.0,
+  "hp_lost": 75.2,
+  "hull_lost": 13.0,
+  "brindle_s": 101.13,
+  "brindle_hits": 8.0,
+  "cogs_earned": 1462,
+  "cogs_earned_by": {
+   "discovery bursts": 320,
+   "kill and boss gears": 948,
+   "activities, events, start pick": 20,
+   "other pickups": 174
+  },
+  "cogs_spent": 1222,
+  "cogs_spent_by": {
+   "shelf": 1003,
+   "reroll": 75,
+   "cell": 144
+  },
+  "cogs_end": 415,
+  "bay_visits": [
+   {
+    "stage": 1,
+    "wallet": 572,
+    "spent": 684,
+    "bought": 7,
+    "left_on_shelf": 0,
+    "unbought_cost": 0,
+    "hook": "locked"
+   },
+   {
+    "stage": 2,
+    "wallet": 490,
+    "spent": 538,
+    "bought": 5,
+    "left_on_shelf": 3,
+    "unbought_cost": 581,
+    "hook": "locked"
+   }
+  ],
+  "scrap_end": 1116,
+  "mass_end": 614.0,
+  "heft_end": 3,
+  "scrap_lost_by": {
+   "crane": 240
+  },
+  "parts_end": 15,
+  "parts_by": {
+   "start_pick": 1,
+   "shop": 11,
+   "gate": 2,
+   "boss": 1
+  },
+  "panels_end": 10,
+  "cores_by": {},
+  "cores_gained": 0,
+  "cores_wiped": 0,
+  "tree_end": 2,
+  "relics_end": 0,
+  "regen_and_heals_hp": 0,
+  "max_hp_end": 170.0,
+  "start_pick": "slag_rounds",
+  "rib_caches": 0,
+  "rogues": 0,
+  "secrets": 0
+ },
+ {
+  "run": "minmax-2874",
+  "type": "minmax",
+  "seed": 2874,
+  "pilot": "pylon_engineer",
+  "outcome": "until",
+  "stage_reached": 3,
+  "won_world1": true,
+  "game_min": 5.5,
+  "min_hp": 100.0,
+  "hits": 2.0,
+  "hp_lost": 40.0,
+  "hull_lost": 10.0,
+  "brindle_s": 89.14,
+  "brindle_hits": 1.0,
+  "cogs_earned": 1688,
+  "cogs_earned_by": {
+   "discovery bursts": 360,
+   "kill and boss gears": 1093,
+   "activities, events, start pick": 20,
+   "other pickups": 215
+  },
+  "cogs_spent": 1317,
+  "cogs_spent_by": {
+   "shelf": 1202,
+   "reroll": 75,
+   "cell": 40
+  },
+  "cogs_end": 471,
+  "bay_visits": [
+   {
+    "stage": 1,
+    "wallet": 600,
+    "spent": 595,
+    "bought": 7,
+    "left_on_shelf": 0,
+    "unbought_cost": 0,
+    "hook": "locked"
+   },
+   {
+    "stage": 2,
+    "wallet": 639,
+    "spent": 722,
+    "bought": 5,
+    "left_on_shelf": 1,
+    "unbought_cost": 108,
+    "hook": "locked"
+   }
+  ],
+  "scrap_end": 1471,
+  "mass_end": 1340.0,
+  "heft_end": 4,
+  "scrap_lost_by": {
+   "crane": 360
+  },
+  "parts_end": 11,
+  "parts_by": {
+   "shop": 8,
+   "gate": 2,
+   "boss": 1
+  },
+  "panels_end": 14,
+  "cores_by": {
+   "start_pick": 1
+  },
+  "cores_gained": 1,
+  "cores_wiped": 1,
+  "tree_end": 2,
+  "relics_end": 0,
+  "regen_and_heals_hp": 0,
+  "max_hp_end": 150.0,
+  "start_pick": "core",
+  "rib_caches": 1,
+  "rogues": 0,
+  "secrets": 0
+ },
+ {
+  "run": "minmax-2875",
+  "type": "minmax",
+  "seed": 2875,
+  "pilot": "runner_gunner",
+  "outcome": "until",
+  "stage_reached": 3,
+  "won_world1": true,
+  "game_min": 7.3,
+  "min_hp": 115.0,
+  "hits": 7.0,
+  "hp_lost": 127.5,
+  "hull_lost": 36.0,
+  "brindle_s": 81.63,
+  "brindle_hits": 6.0,
+  "cogs_earned": 1752,
+  "cogs_earned_by": {
+   "kill and boss gears": 1071,
+   "discovery bursts": 420,
+   "activities, events, start pick": 20,
+   "other pickups": 241
+  },
+  "cogs_spent": 1260,
+  "cogs_spent_by": {
+   "shelf": 1111,
+   "reroll": 75,
+   "cell": 74
+  },
+  "cogs_end": 667,
+  "bay_visits": [
+   {
+    "stage": 1,
+    "wallet": 512,
+    "spent": 534,
+    "bought": 7,
+    "left_on_shelf": 0,
+    "unbought_cost": 0,
+    "hook": "locked"
+   },
+   {
+    "stage": 2,
+    "wallet": 628,
+    "spent": 726,
+    "bought": 6,
+    "left_on_shelf": 1,
+    "unbought_cost": 83,
+    "hook": "locked"
+   }
+  ],
+  "scrap_end": 1307,
+  "mass_end": 812.5,
+  "heft_end": 3,
+  "scrap_lost_by": {
+   "crane": 240
+  },
+  "parts_end": 16,
+  "parts_by": {
+   "shop": 12,
+   "gate": 2,
+   "spare": 1,
+   "boss": 1
+  },
+  "panels_end": 8,
+  "cores_by": {
+   "start_pick": 1
+  },
+  "cores_gained": 1,
+  "cores_wiped": 1,
+  "tree_end": 2,
+  "relics_end": 0,
+  "regen_and_heals_hp": 0,
+  "max_hp_end": 149.0,
+  "start_pick": "core",
+  "rib_caches": 0,
+  "rogues": 0,
+  "secrets": 0
+ },
+ {
+  "run": "minmax-2876",
+  "type": "minmax",
+  "seed": 2876,
+  "pilot": "demolitions_caster",
+  "outcome": "until",
+  "stage_reached": 3,
+  "won_world1": true,
+  "game_min": 7.15,
+  "min_hp": 80.0,
+  "hits": 2.0,
+  "hp_lost": 38.0,
+  "hull_lost": 7.0,
+  "brindle_s": 86.67,
+  "brindle_hits": 3.0,
+  "cogs_earned": 1515,
+  "cogs_earned_by": {
+   "discovery bursts": 380,
+   "kill and boss gears": 923,
+   "activities, events, start pick": 20,
+   "other pickups": 192
+  },
+  "cogs_spent": 1408,
+  "cogs_spent_by": {
+   "shelf": 1149,
+   "reroll": 75,
+   "cell": 184
+  },
+  "cogs_end": 357,
+  "bay_visits": [
+   {
+    "stage": 1,
+    "wallet": 596,
+    "spent": 701,
+    "bought": 10,
+    "left_on_shelf": 0,
+    "unbought_cost": 0,
+    "hook": "locked"
+   },
+   {
+    "stage": 2,
+    "wallet": 613,
+    "spent": 707,
+    "bought": 4,
+    "left_on_shelf": 2,
+    "unbought_cost": 388,
+    "hook": "locked"
+   }
+  ],
+  "scrap_end": 1028,
+  "mass_end": 659.0,
+  "heft_end": 3,
+  "scrap_lost_by": {
+   "crane": 360
+  },
+  "parts_end": 19,
+  "parts_by": {
+   "shop": 14,
+   "spare": 2,
+   "gate": 2,
+   "boss": 1
+  },
+  "panels_end": 10,
+  "cores_by": {
+   "start_pick": 1
+  },
+  "cores_gained": 1,
+  "cores_wiped": 1,
+  "tree_end": 2,
+  "relics_end": 0,
+  "regen_and_heals_hp": 0,
+  "max_hp_end": 109.0,
+  "start_pick": "core",
+  "rib_caches": 0,
+  "rogues": 0,
+  "secrets": 0
+ },
+ {
+  "run": "minmax-2877",
+  "type": "minmax",
+  "seed": 2877,
+  "pilot": "tarn",
+  "outcome": "until",
+  "stage_reached": 3,
+  "won_world1": true,
+  "game_min": 7.11,
+  "min_hp": 135.0,
+  "hits": 6.0,
+  "hp_lost": 98.5,
+  "hull_lost": 15.0,
+  "brindle_s": 78.73,
+  "brindle_hits": 4.0,
+  "cogs_earned": 1599,
+  "cogs_earned_by": {
+   "discovery bursts": 380,
+   "kill and boss gears": 1016,
+   "activities, events, start pick": 20,
+   "other pickups": 183
+  },
+  "cogs_spent": 1263,
+  "cogs_spent_by": {
+   "shelf": 980,
+   "reroll": 75,
+   "cell": 208
+  },
+  "cogs_end": 511,
+  "bay_visits": [
+   {
+    "stage": 1,
+    "wallet": 604,
+    "spent": 693,
+    "bought": 9,
+    "left_on_shelf": 0,
+    "unbought_cost": 0,
+    "hook": "locked"
+   },
+   {
+    "stage": 2,
+    "wallet": 529,
+    "spent": 570,
+    "bought": 5,
+    "left_on_shelf": 2,
+    "unbought_cost": 498,
+    "hook": "locked"
+   }
+  ],
+  "scrap_end": 1167,
+  "mass_end": 849.5,
+  "heft_end": 3,
+  "scrap_lost_by": {
+   "crane": 420
+  },
+  "parts_end": 17,
+  "parts_by": {
+   "shop": 12,
+   "spare": 2,
+   "gate": 2,
+   "boss": 1
+  },
+  "panels_end": 10,
+  "cores_by": {
+   "start_pick": 1
+  },
+  "cores_gained": 1,
+  "cores_wiped": 1,
+  "tree_end": 2,
+  "relics_end": 0,
+  "regen_and_heals_hp": 0,
+  "max_hp_end": 195.0,
+  "start_pick": "core",
+  "rib_caches": 0,
+  "rogues": 0,
+  "secrets": 0
+ },
+ {
+  "run": "minmax-2878",
+  "type": "minmax",
+  "seed": 2878,
+  "pilot": "tally",
+  "outcome": "until",
+  "stage_reached": 3,
+  "won_world1": true,
+  "game_min": 6.82,
+  "min_hp": 90.0,
+  "hits": 1.0,
+  "hp_lost": 18.0,
+  "hull_lost": 0,
+  "brindle_s": 81.87,
+  "brindle_hits": 4.0,
+  "cogs_earned": 1680,
+  "cogs_earned_by": {
+   "discovery bursts": 420,
+   "kill and boss gears": 1027,
+   "activities, events, start pick": 20,
+   "other pickups": 213
+  },
+  "cogs_spent": 1244,
+  "cogs_spent_by": {
+   "shelf": 1025,
+   "reroll": 75,
+   "cell": 144
+  },
+  "cogs_end": 511,
+  "bay_visits": [
+   {
+    "stage": 1,
+    "wallet": 596,
+    "spent": 567,
+    "bought": 8,
+    "left_on_shelf": 0,
+    "unbought_cost": 0,
+    "hook": "locked"
+   },
+   {
+    "stage": 2,
+    "wallet": 646,
+    "spent": 677,
+    "bought": 4,
+    "left_on_shelf": 3,
+    "unbought_cost": 691,
+    "hook": "locked"
+   }
+  ],
+  "scrap_end": 1544,
+  "mass_end": 1325.0,
+  "heft_end": 4,
+  "scrap_lost_by": {
+   "crane": 300
+  },
+  "parts_end": 18,
+  "parts_by": {
+   "start_pick": 1,
+   "shop": 11,
+   "evolution": 2,
+   "gate": 2,
+   "spare": 1,
+   "boss": 1
+  },
+  "panels_end": 12,
+  "cores_by": {},
+  "cores_gained": 0,
+  "cores_wiped": 0,
+  "tree_end": 2,
+  "relics_end": 0,
+  "regen_and_heals_hp": 0,
+  "max_hp_end": 129.0,
+  "start_pick": "spiral_wave",
+  "rib_caches": 0,
+  "rogues": 0,
+  "secrets": 0
+ },
+ {
+  "run": "minmax-2879",
+  "type": "minmax",
+  "seed": 2879,
+  "pilot": "remembered_cannon",
+  "outcome": "until",
+  "stage_reached": 3,
+  "won_world1": true,
+  "game_min": 6.69,
+  "min_hp": 105.0,
+  "hits": 3.0,
+  "hp_lost": 31.8,
+  "hull_lost": 1.8,
+  "brindle_s": 78.21,
+  "brindle_hits": 2.0,
+  "cogs_earned": 1552,
+  "cogs_earned_by": {
+   "discovery bursts": 400,
+   "kill and boss gears": 1001,
+   "activities, events, start pick": 20,
+   "other pickups": 131
+  },
+  "cogs_spent": 1148,
+  "cogs_spent_by": {
+   "shelf": 1033,
+   "reroll": 75,
+   "cell": 40
+  },
+  "cogs_end": 454,
+  "bay_visits": [
+   {
+    "stage": 1,
+    "wallet": 540,
+    "spent": 507,
+    "bought": 5,
+    "left_on_shelf": 1,
+    "unbought_cost": 139,
+    "hook": "locked"
+   },
+   {
+    "stage": 2,
+    "wallet": 611,
+    "spent": 641,
+    "bought": 6,
+    "left_on_shelf": 1,
+    "unbought_cost": 209,
+    "hook": "locked"
+   }
+  ],
+  "scrap_end": 1424,
+  "mass_end": 1228.0,
+  "heft_end": 4,
+  "scrap_lost_by": {
+   "crane": 420
+  },
+  "parts_end": 14,
+  "parts_by": {
+   "start_pick": 1,
+   "shop": 10,
+   "gate": 2,
+   "boss": 1
+  },
+  "panels_end": 13,
+  "cores_by": {},
+  "cores_gained": 0,
+  "cores_wiped": 0,
+  "tree_end": 2,
+  "relics_end": 0,
+  "regen_and_heals_hp": 0,
+  "max_hp_end": 165.0,
+  "start_pick": "focus_lens",
+  "rib_caches": 0,
+  "rogues": 0,
+  "secrets": 0
+ },
+ {
+  "run": "minmax-2880",
+  "type": "minmax",
+  "seed": 2880,
+  "pilot": "pylon_engineer",
+  "outcome": "until",
+  "stage_reached": 3,
+  "won_world1": true,
+  "game_min": 4.88,
+  "min_hp": 100.0,
+  "hits": 0,
+  "hp_lost": 0,
+  "hull_lost": 0,
+  "brindle_s": 79.08,
+  "brindle_hits": 2.0,
+  "cogs_earned": 1743,
+  "cogs_earned_by": {
+   "discovery bursts": 460,
+   "kill and boss gears": 1115,
+   "activities, events, start pick": 20,
+   "other pickups": 148
+  },
+  "cogs_spent": 1329,
+  "cogs_spent_by": {
+   "shelf": 1254,
+   "reroll": 75
+  },
+  "cogs_end": 539,
+  "bay_visits": [
+   {
+    "stage": 1,
+    "wallet": 532,
+    "spent": 641,
+    "bought": 6,
+    "left_on_shelf": 0,
+    "unbought_cost": 0,
+    "hook": "locked"
+   },
+   {
+    "stage": 2,
+    "wallet": 720,
+    "spent": 688,
+    "bought": 5,
+    "left_on_shelf": 1,
+    "unbought_cost": 209,
+    "hook": "locked"
+   }
+  ],
+  "scrap_end": 1488,
+  "mass_end": 1359.0,
+  "heft_end": 4,
+  "scrap_lost_by": {
+   "crane": 120
+  },
+  "parts_end": 14,
+  "parts_by": {
+   "start_pick": 1,
+   "shop": 10,
+   "gate": 2,
+   "boss": 1
+  },
+  "panels_end": 11,
+  "cores_by": {},
+  "cores_gained": 0,
+  "cores_wiped": 0,
+  "tree_end": 2,
+  "relics_end": 0,
+  "regen_and_heals_hp": 0,
+  "max_hp_end": 150.0,
+  "start_pick": "chain_arc",
+  "rib_caches": 0,
+  "rogues": 0,
+  "secrets": 0
+ },
+ {
+  "run": "minmax-2881",
+  "type": "minmax",
+  "seed": 2881,
+  "pilot": "runner_gunner",
+  "outcome": "until",
+  "stage_reached": 3,
+  "won_world1": true,
+  "game_min": 6.67,
+  "min_hp": 115.0,
+  "hits": 2.0,
+  "hp_lost": 31.8,
+  "hull_lost": 13.8,
+  "brindle_s": 79.06,
+  "brindle_hits": 0,
+  "cogs_earned": 1488,
+  "cogs_earned_by": {
+   "kill and boss gears": 943,
+   "discovery bursts": 360,
+   "activities, events, start pick": 20,
+   "other pickups": 165
+  },
+  "cogs_spent": 1101,
+  "cogs_spent_by": {
+   "shelf": 989,
+   "reroll": 75,
+   "cell": 37
+  },
+  "cogs_end": 537,
+  "bay_visits": [
+   {
+    "stage": 1,
+    "wallet": 422,
+    "spent": 468,
+    "bought": 6,
+    "left_on_shelf": 0,
+    "unbought_cost": 0,
+    "hook": "locked"
+   },
+   {
+    "stage": 2,
+    "wallet": 546,
+    "spent": 633,
+    "bought": 6,
+    "left_on_shelf": 1,
+    "unbought_cost": 192,
+    "hook": "locked"
+   }
+  ],
+  "scrap_end": 1180,
+  "mass_end": 1018.0,
+  "heft_end": 4,
+  "scrap_lost_by": {
+   "crane": 240
+  },
+  "parts_end": 14,
+  "parts_by": {
+   "shop": 11,
+   "gate": 2,
+   "boss": 1
+  },
+  "panels_end": 6,
+  "cores_by": {
+   "start_pick": 1
+  },
+  "cores_gained": 1,
+  "cores_wiped": 1,
+  "tree_end": 2,
+  "relics_end": 0,
+  "regen_and_heals_hp": 0,
+  "max_hp_end": 171.0,
+  "start_pick": "core",
+  "rib_caches": 0,
+  "rogues": 0,
+  "secrets": 0
+ },
+ {
+  "run": "minmax-2882",
+  "type": "minmax",
+  "seed": 2882,
+  "pilot": "demolitions_caster",
+  "outcome": "until",
+  "stage_reached": 3,
+  "won_world1": true,
+  "game_min": 7.82,
+  "min_hp": 65.4,
+  "hits": 40.0,
+  "hp_lost": 410.1,
+  "hull_lost": 42.6,
+  "brindle_s": 92.43,
+  "brindle_hits": 5.0,
+  "cogs_earned": 1588,
+  "cogs_earned_by": {
+   "discovery bursts": 440,
+   "kill and boss gears": 940,
+   "activities, events, start pick": 20,
+   "other pickups": 188
+  },
+  "cogs_spent": 1266,
+  "cogs_spent_by": {
+   "shelf": 1092,
+   "reroll": 30,
+   "cell": 144
+  },
+  "cogs_end": 476,
+  "bay_visits": [
+   {
+    "stage": 1,
+    "wallet": 599,
+    "spent": 667,
+    "bought": 8,
+    "left_on_shelf": 0,
+    "unbought_cost": 0,
+    "hook": "locked"
+   },
+   {
+    "stage": 2,
+    "wallet": 554,
+    "spent": 599,
+    "bought": 4,
+    "left_on_shelf": 0,
+    "unbought_cost": 0,
+    "hook": "locked"
+   }
+  ],
+  "scrap_end": 1283,
+  "mass_end": 332.5,
+  "heft_end": 2,
+  "scrap_lost_by": {
+   "crane": 291
+  },
+  "parts_end": 17,
+  "parts_by": {
+   "start_pick": 1,
+   "shop": 11,
+   "spare": 2,
+   "gate": 2,
+   "boss": 1
+  },
+  "panels_end": 7,
+  "cores_by": {},
+  "cores_gained": 0,
+  "cores_wiped": 0,
+  "tree_end": 2,
+  "relics_end": 0,
+  "regen_and_heals_hp": 0,
+  "max_hp_end": 87.0,
+  "start_pick": "cross_split",
+  "rib_caches": 0,
+  "rogues": 0,
+  "secrets": 0
+ },
+ {
+  "run": "minmax-2883",
+  "type": "minmax",
+  "seed": 2883,
+  "pilot": "tarn",
+  "outcome": "until",
+  "stage_reached": 3,
+  "won_world1": true,
+  "game_min": 6.85,
+  "min_hp": 135.0,
+  "hits": 6.0,
+  "hp_lost": 111.0,
+  "hull_lost": 15.0,
+  "brindle_s": 84.39,
+  "brindle_hits": 1.0,
+  "cogs_earned": 1663,
+  "cogs_earned_by": {
+   "kill and boss gears": 1081,
+   "discovery bursts": 400,
+   "activities, events, start pick": 20,
+   "other pickups": 162
+  },
+  "cogs_spent": 1369,
+  "cogs_spent_by": {
+   "shelf": 1220,
+   "reroll": 75,
+   "cell": 74
+  },
+  "cogs_end": 519,
+  "bay_visits": [
+   {
+    "stage": 1,
+    "wallet": 616,
+    "spent": 712,
+    "bought": 8,
+    "left_on_shelf": 0,
+    "unbought_cost": 0,
+    "hook": "locked"
+   },
+   {
+    "stage": 2,
+    "wallet": 563,
+    "spent": 657,
+    "bought": 4,
+    "left_on_shelf": 2,
+    "unbought_cost": 337,
+    "hook": "locked"
+   }
+  ],
+  "scrap_end": 1236,
+  "mass_end": 945.0,
+  "heft_end": 4,
+  "scrap_lost_by": {
+   "crane": 360
+  },
+  "parts_end": 18,
+  "parts_by": {
+   "start_pick": 1,
+   "shop": 12,
+   "spare": 2,
+   "gate": 2,
+   "boss": 1
+  },
+  "panels_end": 11,
+  "cores_by": {},
+  "cores_gained": 0,
+  "cores_wiped": 0,
+  "tree_end": 2,
+  "relics_end": 0,
+  "regen_and_heals_hp": 0,
+  "max_hp_end": 230.0,
+  "start_pick": "hot_rivets",
+  "rib_caches": 0,
+  "rogues": 0,
+  "secrets": 0
+ }
+]

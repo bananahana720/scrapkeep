@@ -62,3 +62,19 @@ The min-maxer's shelf visits (the stage 1 and stage 2 shops):
 | after | 19 of 24, 117% (Moss's scale tops the wallet up) | 5 of 23, 108% |
 
 The flags are in the summary files. On both arms, the rusher and completionist hoard and spend 0 cogs, gain 0 cores, and win over 60%. In the after arm, the 3-seed rusher and completionist arms are replays, not rates.
+
+## PR 777 arms: scale on and scale off, at 7a210caa
+
+Both arms run the head of `scratch/sysaudit-econ-after` at 7a210caa. This probe stops the scale before a press would drop the boarding class, counts heals as regen, and writes the end row. Each arm ran 24 minmax runs, seeds 2860 to 2883. Both ran at once on the PC, from 21:55Z to 22:24Z, with a scratch data home (`env-pc.sh w37pc-econ7a21`). The run times were 1764 s for scale on and 1766 s for scale off.
+
+```sh
+JOBS=7 EXTRA=--moss-scale=on bash docs/systems-audit/economy/run.sh <out>/after-scale-on 2860 24 minmax
+JOBS=7 EXTRA=            bash docs/systems-audit/economy/run.sh <out>/after-scale-off 2860 24 minmax
+python3 -I docs/systems-audit/economy/analyse.py runs/after-scale-on analysis after-scale-on
+python3 -I docs/systems-audit/economy/analyse.py runs/after-scale-off analysis after-scale-off
+```
+
+| Arm | Wins | Cogs earned | Cogs spent | Cogs at end | Parts at end | Weighs (all runs) | Stage 1 shelf: bought out, share of wallet | Stage 2 shelf: bought out, share of wallet |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| scale on | 24/24 | 1586.5 | 1261.5 | 517.5 | 16 | 134 | 19 of 24, 109% | 2 of 24, 108% |
+| scale off | 24/24 | 1613.5 | 1115 | 499 | 13 | 0 | 13 of 24, 97% | 0 of 24, 97% |
