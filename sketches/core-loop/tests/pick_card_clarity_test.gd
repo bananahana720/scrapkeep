@@ -106,7 +106,7 @@ func _process(_delta: float) -> bool:
 				_report("taken card marked", cards[0].taken_text() == "Taken" and cards[1].taken_text() == "" and _ws.pick.visible,
 					"card 0 '%s', card 1 '%s', screen still up %s" % [cards[0].taken_text(), cards[1].taken_text(), _ws.pick.visible])
 				var toasts: Array = _game.hud.toast_texts()
-				_report("kit named once", toasts == ["Kit: " + name_of], "toast %s for %s" % [toasts, name_of])
+				_report("kit named once", toasts == [name_of + " taken"], "toast %s for %s" % [toasts, name_of])
 				_next("brief")
 		"brief":
 			if _wait == SETTLE:
