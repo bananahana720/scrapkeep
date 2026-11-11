@@ -42,6 +42,10 @@ const SILT_W1 := [2.0, 2.0, 0.0, 0.0, 0.0, 0.0]
 # ball that slows or holds a line it can be met on gets lunged, and a ball at cruise across it still slips.
 # The lane is committed at the wind-up as before and the wind-up is no shorter.
 const LEAD_W1 := [0.5, 0.5, 0.0, 0.0, 0.0, 0.0]
+# The share of that lead a crew keeps on a ball at cruise: none on world 1 (wave 37, the stop-tax line F2). The
+# lead is whole below 85% of cruise and gone at cruise (PackPressure.lead_now), so pressure lands on the ball
+# that slows and a ball that keeps its speed is aimed at where it is, as before wave 37. 1 keeps it whole.
+const LEAD_CRUISE_W1 := [0.0, 0.0, 1.0, 1.0, 1.0, 1.0]
 # The dam (stage 1) takes mob hits at x1.5 (w19 world 1 bands, Andrew 26 Oct option 1, DECISIONS section 5).
 # 24 seeds on w1: Novice wins 33% (a measured miss of the <= 15% target: the dam Warden is world 1's
 # teaching Warden), Learner a5 67%, Expert 100% with the same fight time. Hit size, not crew aggression or
@@ -123,10 +127,11 @@ const DEFAULTS := {
 	"mobs.chaser_speed_by_stage": CHASER_SPEED_W1,
 	# Pack pressure, the world 1 kiting experiments (combat/pack_pressure.gd; --pack-pressure=A|B|C|D|E presets).
 	# Absolute per-stage values, identity at defaults but the lead and the boils: lead 0 to 1 of the ball's
-	# predicted roll that crews steer and aim at (LEAD_W1); extra chasers per crew; a multiplier on the re-engage
+	# predicted roll that crews steer and aim at (LEAD_W1) and the share of it kept at cruise (LEAD_CRUISE_W1);
+	# extra chasers per crew; a multiplier on the re-engage
 	# gap; 1 makes every second chaser a flanker; churned-silt drag strength (churn_ground.gd); silt boil damage,
 	# 0 off (silt_boil.gd).
-	"pack.lead_by_stage": LEAD_W1, "pack.crew_extra_by_stage": ZEROS6, "pack.rest_by_stage": ONES6,
+	"pack.lead_by_stage": LEAD_W1, "pack.lead_cruise_by_stage": LEAD_CRUISE_W1, "pack.crew_extra_by_stage": ZEROS6, "pack.rest_by_stage": ONES6,
 	"pack.flank_by_stage": ZEROS6, "ground.churn_by_stage": ZEROS6, "hazard.boil_by_stage": SILT_W1,
 	# What the silt boils under (silt_boil.gd): 1 = a ball that stalls in a fight (it stops, crawls or holds a
 	# tight orbit), 0 = the loop test they shipped with on 24 Oct, which also boils a wide kite round a pack and
