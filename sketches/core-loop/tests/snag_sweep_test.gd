@@ -69,6 +69,42 @@ func _skipped(rows: Array) -> int:
 	return n
 
 
+func _row(hit: String, at: Array, cls: String, before := 13.0, after := 3.0, piece := "/r/Stage2/ParkRows/P/Collider") -> Dictionary:
+	return {"hit": hit, "at": at, "class": cls, "speed_before": before, "speed_after": after, "visible": false, "piece": piece}
+
+
+# Class and place joining on rows made by hand, each with a case that must come out the other way.
+func _check_classes_and_places() -> void:
+	var piece := "/root/a/Stage2/ParkRows/Park_x/Collider"
+	t.eq("class: the piece's own collider", Probe.classify(piece, piece), "piece")
+	t.eq("class: a part of the piece", Probe.classify("/root/a/Stage2/ParkRows/Park_x", piece), "piece")
+	t.eq("class: a sibling collider of one prop", Probe.classify(piece, "/root/a/Stage2/ParkRows/Park_x/Rail"), "piece")
+	t.eq("class: terrain tile", Probe.classify(piece, "/root/a/Stage2/Ground/Tiles/Tile6_7"), "ground")
+	t.eq("class: the bowl floor", Probe.classify(piece, "/root/a/SlagBowl/Bowl"), "ground")
+	t.eq("class: another prop's collider", Probe.classify(piece, "/root/a/Stage2/ParkRows/Park_y/Collider"), "other")
+	t.eq("class: a prop under the same holder is not this piece", Probe.classify("/root/a/Stage2/ParkRows/Collider", "/root/a/Stage2/ParkRows/Other"), "other")
+	t.eq("class: another shape of the piece's own body", Probe.classify("/root/a/SlagBowl/Bowl#4", "/root/a/SlagBowl/Bowl#9"), "other")
+	t.eq("class: the floor trimesh of the piece's own body", Probe.classify("/root/a/SlagBowl/Bowl#4", "/root/a/SlagBowl/Bowl#0", true), "ground")
+	t.eq("class: the piece's own shape", Probe.classify("/root/a/SlagBowl/Bowl#4", "/root/a/SlagBowl/Bowl#4"), "piece")
+	var rows := [
+		_row("/c/A", [0.0, 0.0, 0.0], "piece", 13.0, 5.0),
+		_row("/c/A", [1.5, 0.0, 0.0], "piece", 13.0, 2.0),
+		_row("/c/A", [3.4, 0.0, 0.0], "piece", 13.0, 6.0),
+		_row("/c/A", [30.0, 0.0, 0.0], "piece"),
+		_row("/c/B", [0.5, 0.0, 0.0], "ground"),
+		_row("/c/A", [0.5, 0.0, 0.0], "other"),
+	]
+	rows[1]["visible"] = true
+	var places := Probe.dedupe(rows)
+	t.eq("places: 6 snags join to 4 places", places.size(), 4)
+	var chain: Dictionary = {}
+	for p in places:
+		if p.hit == "/c/A" and p["class"] == "piece" and p.count == 3:
+			chain = p
+	t.check("places: snags 1.5 m and 1.9 m apart chain into one row with count, worst loss and drawn", not chain.is_empty() and chain.worst_loss == 0.85 and chain.drawn, str(places))
+	t.check("places: the worst place is listed first", places[0].worst_loss >= places[places.size() - 1].worst_loss)
+
+
 func _run() -> void:
 	var game = Game.new()
 	game.test_mode = true
@@ -110,10 +146,23 @@ func _run() -> void:
 			t.check("the snag is at the lip, on the lip's collider, and is drawn", absf(r.at[2] - FLOOR_AT.z) < 3.0 and String(r.hit).ends_with("Lip") and r.visible, str(r))
 			break
 
+	# The loose-tolerance case is only a control if the probe saw the lip: a blind probe also finds
+	# nothing at loss 0.99, so the lip's contacts are counted and must be there.
 	probe.loss = 0.99
+	probe.contacts_seen = 0
 	var loose: Array = await _snags(probe, found["Lip"], lip_lanes)
 	t.eq("loss tolerance set too loose: the lip is missed", _count(loose), 0)
+	t.check("loss tolerance set too loose: the probe still saw the lip's contacts", probe.contacts_seen > 0, "%d contacts" % probe.contacts_seen)
 	probe.loss = 0.5
+
+	var lipped := {}
+	for r in with_lip:
+		if r.has("piece"):
+			lipped = r
+			break
+	t.eq("the lip's snag is classed by what it hit: the piece itself", lipped.get("class", ""), "piece")
+	t.check("a loss is read from the snag's speeds", Probe.loss_of(lipped) >= 0.5 and Probe.loss_of(lipped) < 1.0, str(Probe.loss_of(lipped)))
+	_check_classes_and_places()
 
 	var wall: Array = await _snags(probe, found["Wall"], wall_lanes)
 	t.check("flat wall grazed: no snag", _count(wall) == 0 and _skipped(wall) < wall.size(), "%d snags, %d of %d lanes skipped" % [_count(wall), _skipped(wall), wall.size()])
