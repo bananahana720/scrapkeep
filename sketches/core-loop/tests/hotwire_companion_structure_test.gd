@@ -6,6 +6,7 @@ const Companion := preload("res://src/core/companion.gd")
 const RewardView := preload("res://src/ui/reward_view.gd")
 const Push := preload("res://tests/workshop/push.gd")
 const T := preload("res://tests/support/t.gd")
+const Icons := preload("res://src/ui/icons.gd")
 
 # Ruling cx on the hot-wire offer and the companion panel: they say what they are by how they
 # look. The offer wears an amber stamp and no "HOT-WIRED" eyebrow, its Recycle choice is the
@@ -102,6 +103,9 @@ func _hotwire() -> void:
 	_t.check("the stamp stands on the hot-wire offer", screen.stamp_shown() and screen.find_child("HotwireStamp", true, false) != null, "")
 	var recycle: Button = screen.choice_button("recycle")
 	_t.check("Recycle is the verb, the number and the cog icon", recycle.text.begins_with("Recycle +") and recycle.icon != null, recycle.text)
+	# The cog is the wallet chip's own mark, an icon with art behind it, not a fallback glyph.
+	_t.check("the Recycle cog is the wallet chip's mark, drawn from its art file", recycle.icon == Icons.texture(_game.hud.CogChip.ICON)
+		and FileAccess.file_exists("res://assets/icons/%s.svg" % _game.hud.CogChip.ICON), _game.hud.CogChip.ICON)
 	_t.check("the price has no colon and no word cogs", not recycle.text.contains(":") and not recycle.text.to_lower().contains("cogs"), recycle.text)
 	# An ordinary part offer carries no stamp (the planted negative of the mark).
 	var ordinary := RewardView.new()

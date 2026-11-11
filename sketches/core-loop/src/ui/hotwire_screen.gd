@@ -5,6 +5,7 @@ const UiDraw := preload("res://src/ui/ui_draw.gd")
 const ChoiceButton := preload("res://src/ui/choice_button.gd")
 const HotwireChoice := preload("res://src/ui/hotwire_choice.gd")
 const Icons := preload("res://src/ui/icons.gd")
+const EventKinds := preload("res://src/core/event_kinds.gd")
 
 # The offer wears one amber stamp, a tilted plate with a bolt and no word, beside the part's
 # name. Amber is the colour law's "the world is offering" row (LEGIBILITY section 1); hazard
@@ -93,7 +94,8 @@ func setup(game_ref) -> void:
 	_fit.pressed.connect(choose.bind("fit"))
 	column.add_child(_fit)
 	_recycle = ChoiceButton.new("recycle", "key_f", "Recycle")
-	_recycle.icon = Icons.texture("cog")
+	# The wallet chip's own mark (hud.gd CogChip), so the button and the chip say cogs the same way.
+	_recycle.icon = Icons.texture("res_scrap")
 	_recycle.expand_icon = true
 	_recycle.add_theme_constant_override("icon_max_width", 24)
 	_recycle.add_theme_constant_override("h_separation", 10)
@@ -222,7 +224,7 @@ func _on_resolved(id: String, choice: String, cogs: int) -> void:
 	if choice == "fit":
 		game.hud.toast("%s fitted, take it at the gates" % part_name, Palette.BRASS, "diamond", 2)
 	else:
-		game.hud.toast("%s recycled +%d" % [part_name, cogs], Palette.BRASS, "cog", 2)
+		game.hud.toast("%s recycled +%d" % [part_name, cogs], Palette.BRASS, EventKinds.row("cogs_collected").get("shape", "square"), 2)
 
 
 func _input(event: InputEvent) -> void:
@@ -283,5 +285,6 @@ class Stamp extends Control:
 		draw_rect(r, Palette.CHARCOAL, false, 2.5)
 		for corner in [r.position + Vector2(7.0, 7.0), Vector2(r.end.x - 7.0, r.position.y + 7.0), Vector2(r.position.x + 7.0, r.end.y - 7.0), r.end - Vector2(7.0, 7.0)]:
 			draw_circle(corner, 2.2, Palette.CHARCOAL)
-		var side := 34.0
-		draw_texture_rect(Icons.texture("bolt"), Rect2(-Vector2(side, side) * 0.5, Vector2(side, side)), false, Icons.tint("bolt", Palette.CHARCOAL))
+		# The bolt is the stamp's own mark, cut in charcoal: not an icon id, so no art file stands behind it.
+		draw_colored_polygon(PackedVector2Array([Vector2(3.0, -17.0), Vector2(-9.0, 2.0), Vector2(-1.0, 2.0), Vector2(-4.0, 17.0),
+			Vector2(9.0, -3.0), Vector2(1.0, -3.0)]), Palette.CHARCOAL)
