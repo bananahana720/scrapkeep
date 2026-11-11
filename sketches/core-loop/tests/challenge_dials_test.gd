@@ -70,7 +70,7 @@ func _rules() -> void:
 		# 23 Oct phase ruling sets them, fight_phases.gd).
 		# The silt boils ship on world 1 (pack pressure E, 24 Oct); the dam's mob hits ship at x1.5 (w19 bands).
 		# Crews lead the roll by half on world 1 (wave 37 unit D1).
-		if key in ["brindle.period_by_phase", "brindle.damage_by_phase", "brindle.follow_ups_by_phase", "hazard.boil_by_stage", "mobs.damage_by_stage", "pack.lead_by_stage"]:
+		if key in ["brindle.period_by_phase", "brindle.damage_by_phase", "brindle.follow_ups_by_phase", "hazard.boil_by_stage", "mobs.damage_by_stage", "pack.lead_by_stage", "pack.lead_cruise_by_stage"]:
 			continue
 		# Wave 37's other world 1 defaults, each pinned below: chasers run at 9 m/s (unit D2).
 		if key in W37_TUNED:
@@ -86,6 +86,7 @@ func _rules() -> void:
 		if not ident:
 			_t.check("identity default " + key, false)
 	_t.eq("the dam's mob hits ship at x1.5, every other stage at identity", ChallengeDials.value("mobs.damage_by_stage"), [1.5, 1.0, 1.0, 1.0, 1.0, 1.0])
+	_t.eq("and that lead is gone at cruise on world 1", ChallengeDials.value("pack.lead_cruise_by_stage"), [0.0, 0.0, 1.0, 1.0, 1.0, 1.0])
 	_t.eq("crews lead the roll by half on world 1, nowhere else", ChallengeDials.value("pack.lead_by_stage"), [0.5, 0.5, 0.0, 0.0, 0.0, 0.0])
 	_t.eq("chasers run at 9 m/s on world 1, their own speed after it", ChallengeDials.value("mobs.chaser_speed_by_stage"), [9.0, 9.0, 0.0, 0.0, 0.0, 0.0])
 	_t.eq("weak points ship off on both bosses for wave 18", [ChallengeDials.value("waking.weak_points"), ChallengeDials.value("mind.weak_points")], [0.0, 0.0])
