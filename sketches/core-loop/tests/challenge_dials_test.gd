@@ -12,6 +12,10 @@ const Director := preload("res://src/world/director.gd")
 const Rules := preload("res://src/boss/boss_rules.gd")
 const Threat := preload("res://src/combat/threat_grammar.gd")
 const PRESSURE_ZERO := ["pack.lead_by_stage", "pack.crew_extra_by_stage", "pack.flank_by_stage", "ground.churn_by_stage", "hazard.boil_by_stage"]
+# Dials whose default is tuned for world 1 by wave 37 (ruling cu), one line a unit; each value is pinned in _init.
+const W37_TUNED := [
+	"mobs.chaser_speed_by_stage",  # D2
+]
 const T := preload("res://tests/support/t.gd")
 
 # The difficulty dials (src/core/challenge_dials.gd): defaults, parsing, the 0.6 s tell floor, damage
@@ -68,6 +72,9 @@ func _rules() -> void:
 		# Crews lead the roll by half on world 1 (wave 37 unit D1).
 		if key in ["brindle.period_by_phase", "brindle.damage_by_phase", "brindle.follow_ups_by_phase", "hazard.boil_by_stage", "mobs.damage_by_stage", "pack.lead_by_stage"]:
 			continue
+		# Wave 37's other world 1 defaults, each pinned below: chasers run at 9 m/s (unit D2).
+		if key in W37_TUNED:
+			continue
 		var d: Variant = ChallengeDials.DEFAULTS[key]
 		var ident: bool = true
 		if d is Array:
@@ -80,6 +87,7 @@ func _rules() -> void:
 			_t.check("identity default " + key, false)
 	_t.eq("the dam's mob hits ship at x1.5, every other stage at identity", ChallengeDials.value("mobs.damage_by_stage"), [1.5, 1.0, 1.0, 1.0, 1.0, 1.0])
 	_t.eq("crews lead the roll by half on world 1, nowhere else", ChallengeDials.value("pack.lead_by_stage"), [0.5, 0.5, 0.0, 0.0, 0.0, 0.0])
+	_t.eq("chasers run at 9 m/s on world 1, their own speed after it", ChallengeDials.value("mobs.chaser_speed_by_stage"), [9.0, 9.0, 0.0, 0.0, 0.0, 0.0])
 	_t.eq("weak points ship off on both bosses for wave 18", [ChallengeDials.value("waking.weak_points"), ChallengeDials.value("mind.weak_points")], [0.0, 0.0])
 	_t.near("default tell is the base", ChallengeDials.tell("brindle", Rules.CRANE_WARN), Rules.CRANE_WARN, 0.0)
 
