@@ -8,6 +8,8 @@ extends Node
 #           stays, speed lines turning and FWOOSH! stamped, until ready_check() says the dam is drawn, HOLD_MIN_S to HOLD_MAX_S
 #   reveal  the panel sweeps on out through the top right, REVEAL_S, over the ball already dropping in
 # Reduced motion keeps the panel still (no lines turning, no camera move) and shortens the wind to nothing.
+# A stage launch (flow.gd, dam to flume and flume to the Slag Bowl) rides the same take with play_over_flight: the cannon
+# shot is the wind, so the panel closes during the flight and on_cover waits for cover_gate (the flight's end).
 #
 # Only a played game runs it: bots, tests and every headless run call on_cover at once (live is false), so run timing
 # and every run-start test stay as they were. A test sets live (and steps it with advance()) to drive the phases.
@@ -41,6 +43,7 @@ var shown_ms := 0
 var _t := 0.0
 var _on_cover := Callable()
 var _ready_check := Callable()
+var _cover_gate := Callable()
 var _layer: CanvasLayer
 var _panel: ColorRect
 var _word: Label
@@ -92,6 +95,16 @@ func busy() -> bool:
 # Runs wind (once, at the start), then the swipe, calling on_cover under full cover. ready_check() is polled through the hold.
 # Not live, on_cover runs now and nothing shows. Returns true when the take plays.
 func play(on_cover: Callable, wind := Callable(), ready_check := Callable()) -> bool:
+	return _begin(on_cover, wind, ready_check, Callable(), true)
+
+
+# The take over a cannon shot: no wind of its own, the panel closes at once while the ball flies, and on_cover waits
+# at full cover until cover_gate() says the flight is over. Then the same hold and reveal as play.
+func play_over_flight(on_cover: Callable, cover_gate: Callable, ready_check := Callable()) -> bool:
+	return _begin(on_cover, Callable(), ready_check, cover_gate, false)
+
+
+func _begin(on_cover: Callable, wind: Callable, ready_check: Callable, cover_gate: Callable, winds: bool) -> bool:
 	if busy():
 		return false
 	if not live:
@@ -101,11 +114,12 @@ func play(on_cover: Callable, wind := Callable(), ready_check := Callable()) -> 
 	reduced_motion = HighdraftFx.preferred
 	_on_cover = on_cover
 	_ready_check = ready_check
+	_cover_gate = cover_gate
 	_t = 0.0
 	_layer.visible = true
 	_set_progress(0.0)
 	_material.set_shader_parameter("lines", 0.0 if reduced_motion else 1.0)
-	phase = WIND
+	phase = WIND if winds else COVER
 	if wind.is_valid():
 		wind.call()
 	if reduced_motion:
@@ -133,7 +147,7 @@ func advance(delta: float) -> void:
 				_next(COVER)
 		COVER:
 			_set_progress(minf(1.0, _t / COVER_S))
-			if _t >= COVER_S:
+			if _t >= COVER_S and (not _cover_gate.is_valid() or bool(_cover_gate.call())):
 				_next(HOLD)
 				_cover()
 		HOLD:
@@ -164,6 +178,7 @@ func _cover() -> void:
 func _end() -> void:
 	phase = IDLE
 	_ready_check = Callable()
+	_cover_gate = Callable()
 	_layer.visible = false
 	_set_progress(0.0)
 	set_process(false)
