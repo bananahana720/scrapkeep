@@ -58,7 +58,8 @@ func setup(game_ref) -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	visible = false
 	_veil = ColorRect.new()
-	_veil.color = Color(Palette.CHARCOAL, 0.84)
+	# Near solid: the screen behind (the title, a summary) must not read through the panel.
+	_veil.color = Color(Palette.CHARCOAL, 0.96)
 	_veil.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_veil.mouse_filter = Control.MOUSE_FILTER_STOP
 	add_child(_veil)
@@ -225,7 +226,6 @@ func _rebuild() -> void:
 		var id: String = model.owned[i]
 		var row := ChoiceButton.new("piece", "key_%d" % (i + 1), _name_of(id))
 		row.icon = Icons.texture(PIECE_ICONS.get(id, "disc"))
-		row.expand_icon = true
 		row.add_theme_constant_override("icon_max_width", 24)
 		row.add_theme_constant_override("h_separation", 10)
 		row.pressed.connect(pick.bind(i))
@@ -257,6 +257,15 @@ func socket_icons() -> Array[String]:
 # The key glyph id the empty cap shows now, for the device in hand.
 func empty_cap() -> String:
 	return "pad_y" if Glyphs.is_pad() else "key_u"
+
+
+# The pixels each row has for its icon beside the keycap and the name, for the layout checks.
+func icon_room() -> Array[float]:
+	var out: Array[float] = []
+	for row in _rows.get_children():
+		var words: float = row.get_theme_font("font").get_string_size(row.text, HORIZONTAL_ALIGNMENT_LEFT, -1, row.get_theme_font_size("font_size")).x
+		out.append(row.size.x - row.get_theme_stylebox("normal").get_minimum_size().x - words - float(row.get_theme_constant("h_separation")))
+	return out
 
 
 # The words on screen, one per line, for tests and the layout checks.
