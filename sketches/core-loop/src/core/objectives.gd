@@ -12,18 +12,18 @@ const ROWS := {
 	"find_warden": {"glyph": "obj_warden", "words": "Find the Warden"},
 	"break_guard": {"glyph": "cat_defense", "words": "Break its guard"},
 	"smash_core": {"glyph": "cat_damage", "words": "Smash the core"},
-	"grow_return": {"glyph": "res_heft", "words": "Grow, then return"},
+	"grow_return": {"glyph": "res_heft", "words": "Get heavy, then return"},
 	"break_warden": {"glyph": "obj_warden", "words": "Break the Warden"},
 	"charge_beacon": {"glyph": "obj_beacon", "words": "Charge the beacon"},
 	"roll_gate": {"glyph": "obj_gate", "words": "Roll through a gate"},
 	"hold_line": {"glyph": "obj_gate", "words": "Hold your line"},
 	"break_brindle": {"glyph": "fac_fleet", "words": "Break Brindle's Requisition"},
-	"break_yard_crew": {"glyph": "cat_damage", "words": "Yard locked: break the crew"},
-	"break_clamp_crews": {"glyph": "cat_defense", "words": "Clamp shut: break the crews"},
+	"break_yard_crew": {"glyph": "cat_damage", "words": "Break the yard crew"},
+	"break_clamp_crews": {"glyph": "cat_defense", "words": "Break the clamp crews"},
 	# A mounted reactor Warden's own road to its core (warden_reactor.gd): the dam's sheet ram,
 	# the flume's line fight. They stand where "Break its guard" stands on any other Warden.
 	"ride_sheet": {"glyph": "cat_defense", "words": "Ride the water sheet up"},
-	"line_fight": {"glyph": "cat_defense", "words": "Latch on, shoot, smash core"},
+	"line_fight": {"glyph": "cat_defense", "words": "Hook, shoot, smash core"},
 	# Brindle's fight by phase (boss.gd plate_reading; objective_text() is the long readout). A phase's
 	# row names its whole loop and holds for the phase (see choose()).
 	"shoot_magnets": {"glyph": "fac_fleet", "words": "Shoot magnets, then cockpit"},
@@ -83,7 +83,7 @@ const TAGS := {
 	"scooter": "SCOOTER",
 	"sheet": "RIDE UP",
 	"sheet_soon": "WATER SOON",
-	"latch": "LATCH ON",
+	"latch": "HOOK",
 	"shoot": "SHOOT",
 	"core": "CORE",
 }

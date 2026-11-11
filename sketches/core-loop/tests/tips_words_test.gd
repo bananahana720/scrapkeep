@@ -111,9 +111,12 @@ func _strings() -> Array:
 		out.append(["death tip " + id, DeathTips.BY_THREAT[id]])
 	out.append(["death tip drawn", DeathTips.DRAWN])
 	out.append(["death tip gap", DeathTips.GAP % [120, "the Warden", 300]])
+	# The alpha table keeps its names as its maps' titles (alpha_table_test pins them equal, and a map title is a
+	# lookup key for lock rows and the radio cache), so only the park table's names are read here.
+	for d in ParkDefs.DEFS:
+		out.append(["place name stage %d" % d["stage"], d["name"]])
 	for defs in [ParkDefs.DEFS, AlphaDefs.DEFS]:
 		for d in defs:
-			out.append(["place name stage %d" % d["stage"], d["name"]])
 			out.append(["warden hint stage %d" % d["stage"], d.get("warden_hint", "")])
 	for row in Worlds.ROWS:
 		out.append(["world name " + str(row["id"]), row["name"]])
@@ -139,15 +142,9 @@ func _strings() -> Array:
 	return out
 
 
-# One place has one name across the three tables: the same stage in the park and the alpha table
-# that is the same map keeps the same name, and a name carries no colon.
+# The park table's place names carry no colon: a name and its tagline read "Name, the tagline".
 func _names(t) -> void:
-	for defs in [ParkDefs.DEFS, AlphaDefs.DEFS]:
-		for d in defs:
-			t.check("stage %d name '%s' has no colon" % [d["stage"], d["name"]], not String(d["name"]).contains(":"))
-	var alpha := {}
-	for d in AlphaDefs.DEFS:
-		alpha[d["stage"]] = d["name"]
 	for d in ParkDefs.DEFS:
-		if d["stage"] in [1, 3, 4, 5, 6]:
-			t.eq("stage %d is one place in both tables" % d["stage"], d["name"], alpha[d["stage"]])
+		t.check("stage %d name '%s' has no colon" % [d["stage"], d["name"]], not String(d["name"]).contains(":"))
+		t.check("stage %d name '%s' names its world first" % [d["stage"], d["name"]],
+			String(d["name"]).split(",")[0] in ["Spillway", "Dig", "Highdraft"])
