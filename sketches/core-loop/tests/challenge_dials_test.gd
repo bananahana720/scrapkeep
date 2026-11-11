@@ -95,7 +95,7 @@ func _rules() -> void:
 			_t.check("identity default " + key, false)
 	_t.eq("wave 37 D4: terrain stops shells on the dam and the flume only", ChallengeDials.value("hazard.shell_cover_by_stage"), [1.0, 1.0, 0.0, 0.0, 0.0, 0.0])
 	_t.eq("wave 37 D4: lobbers lead 0.75 on the dam and the flume, 0.5 after", ChallengeDials.value("mobs.lobber_lead_by_stage"), [0.75, 0.75, 0.5, 0.5, 0.5, 0.5])
-	_t.eq("wave 37 D4: the lobber share step is 0.12 on the dam and the flume, 0.07 after", ChallengeDials.value("mobs.lobber_share_step_by_stage"), [0.12, 0.12, 0.07, 0.07, 0.07, 0.07])
+	_t.eq("wave 37 D4: the lobber share step ships at the old 0.07 on every stage", ChallengeDials.value("mobs.lobber_share_step_by_stage"), [0.07, 0.07, 0.07, 0.07, 0.07, 0.07])
 	_t.eq("the dam's mob hits ship at x1.5, every other stage at identity", ChallengeDials.value("mobs.damage_by_stage"), [1.5, 1.0, 1.0, 1.0, 1.0, 1.0])
 	_t.eq("crews lead the roll by half on world 1, nowhere else", ChallengeDials.value("pack.lead_by_stage"), [0.5, 0.5, 0.0, 0.0, 0.0, 0.0])
 	_t.eq("chasers run at 9 m/s on world 1, their own speed after it", ChallengeDials.value("mobs.chaser_speed_by_stage"), [9.0, 9.0, 0.0, 0.0, 0.0, 0.0])

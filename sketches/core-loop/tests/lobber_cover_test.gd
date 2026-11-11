@@ -16,7 +16,7 @@ const T := preload("res://tests/support/t.gd")
 #     or the wall check says nothing about the dial;
 #   - a ball rolling a straight line at 7 m/s is inside the ring when the shell lands at the shipped 0.75 lead and
 #     outside it at the old 0.5 (the planted case); a ball at cruise (14 m/s) is outside either way;
-#   - the tells are as long as they were and the lobber share climbs faster per clock tier on the first two stages.
+#   - the tells are as long as they were; the lobber share step is a dial that ships at its old value.
 # The shell's target is the real player, held still at the ring's centre; the lead passes use a roller on rails.
 
 const GAP := 22.0
@@ -179,7 +179,7 @@ func _run() -> void:
 	ChallengeDials.reset()
 	_t.eq("01 terrain stops shells on the dam and the flume only", ChallengeDials.value("hazard.shell_cover_by_stage"), [1.0, 1.0, 0.0, 0.0, 0.0, 0.0])
 	_t.eq("02 lobbers lead 0.75 on the dam and the flume", ChallengeDials.value("mobs.lobber_lead_by_stage"), [0.75, 0.75, 0.5, 0.5, 0.5, 0.5])
-	_t.eq("03 the lobber share step is 0.12 on the dam and the flume", ChallengeDials.value("mobs.lobber_share_step_by_stage"), [0.12, 0.12, 0.07, 0.07, 0.07, 0.07])
+	_t.eq("03 the lobber share step ships at the old 0.07 on every stage", ChallengeDials.value("mobs.lobber_share_step_by_stage"), [0.07, 0.07, 0.07, 0.07, 0.07, 0.07])
 	_t.near("04 stage 3 reads the old lead", ChallengeDials.by_stage_or("mobs.lobber_lead_by_stage", 3, 0.5), Lobber.LEAD)
 	_t.near("05 stage 3 reads the old share step", ChallengeDials.by_stage_or("mobs.lobber_share_step_by_stage", 3, 0.0), 0.07)
 	_t.near("06 stage 3 has no cover", ChallengeDials.by_stage_or("hazard.shell_cover_by_stage", 3, 1.0), 0.0)
@@ -189,7 +189,10 @@ func _run() -> void:
 	var d1 := Director.new(1)
 	d1.dial_stage = 1
 	d1.stage_time = 2.0 * Director.TIER_SECONDS + 1.0
-	_t.near("10 the dam director at tier 2 shares 0.15 + 2 x 0.12", d1.lobber_share(), 0.15 + 2.0 * 0.12)
+	_t.near("10 the dam director at tier 2 shares 0.15 + 2 x 0.07", d1.lobber_share(), 0.15 + 2.0 * 0.07)
+	ChallengeDials.set_overrides({"mobs.lobber_share_step_by_stage": [0.12, 0.12, 0.07, 0.07, 0.07, 0.07]})
+	_t.near("10b dialled to 0.12 on the dam it shares 0.15 + 2 x 0.12", d1.lobber_share(), 0.15 + 2.0 * 0.12)
+	ChallengeDials.set_overrides({})
 	var d3 := Director.new(1)
 	d3.dial_stage = 3
 	d3.stage_time = 2.0 * Director.TIER_SECONDS + 1.0
