@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { FILMS, FILM_OF, FINDINGS_HEADER, PERSONAS, PILOTS, PLAYED_AUDIO, READERS, botArgs, replayCommand, sweepSeed, carryList, filmArgs, grade, hitches, judgeSheet, logErrors, overdueFindings, parseFindings, pileUps, planWave, readBotJob, readerBrief, readerPack, renderMarkdown } from "./lib.mjs";
+import { FILMS, FILM_OF, FINDINGS_HEADER, PERSONAS, PILOTS, PLAYED_AUDIO, PLAYED_TABLE, READERS, botArgs, replayCommand, sweepSeed, carryList, filmArgs, grade, hitches, judgeSheet, logErrors, overdueFindings, parseFindings, pileUps, planWave, readBotJob, readerBrief, readerPack, renderMarkdown } from "./lib.mjs";
 
 const job = (over = {}) => ({ id: "speedrunner-tarn-2500", kind: "bot", persona: "speedrunner", policy: "skipper", pilot: "tarn", seed: 2500, stages: null, args: [], ...over });
 const result = (over = {}) => ({ job: job(), exit: 0, timedOut: false, row: { outcome: "won", stage_reached: 7, game_seconds: 600, stages: [], beats: [] }, errors: [], piles: [], perf: { spikes: [], loads: 0, p99: 4 }, ...over });
@@ -99,6 +99,14 @@ test("every bot run, the hitch replays and the printed replay command warm the a
   const triage = botArgs({ ...job(), args: ["--ticks=9000", "--bot-no-mix=1"] }, "out");
   assert.ok(triage.includes(PLAYED_AUDIO) && triage.includes("--bot-no-mix=1"));
   assert.ok(replayCommand(job()).includes(PLAYED_AUDIO), "a replay without it shows stalls the pass did not see");
+});
+
+test("every bot run and its printed replay play the park table, the maps a launched game plays", () => {
+  assert.equal(PLAYED_TABLE, "--table=park");
+  const args = botArgs(job(), "out");
+  assert.ok(args.indexOf(PLAYED_TABLE) > args.indexOf("--"), "the flag belongs to bot_run.gd, after the separator");
+  assert.ok(botArgs({ ...job(), args: ["--from-stage=3", "--ticks=8100"] }, "out").includes(PLAYED_TABLE), "the line-rider rides a park stage");
+  assert.ok(replayCommand(job()).includes(PLAYED_TABLE), "a replay on the legacy maps shows stalls the pass did not see");
 });
 
 test("log errors group by message with numbers folded", () => {
