@@ -278,6 +278,7 @@ test("words: a planted bad string for every rule is reported with its code", () 
     ["W1", "Unleash the shot"],
     ["W2", "Get ready"],
     ["W2", "Are you sure?"],
+    ["W2", "Scrap is up. Good luck out there, pilot."],
     ["W4", "Pick a class"],
     ["W4", "Hold E to mount the pylon"],
     ["W4", "F fires your active."],

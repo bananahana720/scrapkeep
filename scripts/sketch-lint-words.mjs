@@ -222,9 +222,9 @@ export function parseBoundKeys(text) {
 }
 
 const W1_WORDS = ["epic", "powerful", "unleash", "unleashes", "master", "legendary"];
-// W2 is the filler form: the phrase opens a short line (four words or fewer). A voice line that uses the
-// word ("Welcome home, Kest. I kept your sky.", "You're welcome.") is the tone bible's, not filler.
-const W2_FILLER = /^(?:welcome|get ready|good luck|are you sure)\b/i;
+// W2 is the filler form: the phrase opens a sentence. Inside a sentence ("You're welcome.") it is a word, and
+// in a voice source ("Welcome home, Kest.", the Mind speaking) it is the tone bible's line, not filler.
+const W2_FILLER = /(?:^|[.!?]\s+)(?:welcome|get ready|good luck|are you sure)\b/i;
 const escape = (text) => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 const wordRe = (word) => new RegExp(`(?<![\\w'-])${escape(word).replace(/\\? /g, "\\s+")}(?![\\w'-])`, "i");
 
@@ -259,7 +259,7 @@ export function lintString(file, line, value, { bans, keys, voice = false }) {
   const out = [];
   const text = plain(value);
   for (const word of W1_WORDS) if (wordRe(word).test(text)) out.push(finding("W1", file, line, value, `"${word}" is puffery; name what it does`));
-  if (W2_FILLER.test(text.trim()) && (text.match(/[A-Za-z][\w']*/g) ?? []).length <= 4) out.push(finding("W2", file, line, value, "generic filler; cut it, or say what happens"));
+  if (!voice && W2_FILLER.test(text.trim())) out.push(finding("W2", file, line, value, "generic filler; cut it, or say what happens"));
   if (wordRe("class").test(text) || wordRe("classes").test(text)) out.push(finding("W4", file, line, value, '"class" reaches the player; say "pilot" or "tier"'));
   // A key is "typed in a sentence" only where the string has a lowercase word; a lone cap label ("Esc", "P / Esc") is not a sentence.
   const sentence = /\b[a-z]{2,}\b/.test(text);
