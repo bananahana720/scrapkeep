@@ -21,7 +21,7 @@ import path from "node:path";
 import { isDeepStrictEqual } from "node:util";
 import { fileURLToPath } from "node:url";
 
-import { chunks, gateLists } from "./shard.mjs";
+import { chunks, gateLists, namedPool, testName } from "./shard.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 const SKETCH = "sketches/core-loop";
@@ -54,16 +54,16 @@ export const SCOPED_ALWAYS = ["world1_run_test"];
 export function receiptBotShards(receipt) {
   const shards = receipt?.selection?.bot_shards;
   if (!Array.isArray(shards)) throw new Error("the fast receipt has no selection.bot_shards list");
-  return shards.map((file) => path.basename(file, ".gd"));
+  return shards.map(testName);
 }
 
 // The scoped shard's names: the asked ones and SCOPED_ALWAYS that are bot tests (on the bot list or the weekly bot
-// list), in sorted order. A non-bot name is left out, because the three windows run the whole non-bot list; a name on
-// no list is refused.
+// list, shard.mjs namedPool), in sorted order. A non-bot name is left out, because the three windows run the whole
+// non-bot list; a name on no list is refused.
 export function scopedNames(asked, lists) {
-  const bots = [...lists.bots, ...(lists.weekly?.bots ?? [])].sort();
-  const tests = new Set([...lists.tests, ...(lists.weekly?.tests ?? [])]);
-  const want = new Set([...asked, ...SCOPED_ALWAYS].map((name) => name.trim().replace(/\.gd$/, "")).filter(Boolean));
+  const bots = namedPool(lists, { bots: true, weekly: false });
+  const tests = new Set(namedPool(lists, { bots: false, weekly: false }));
+  const want = new Set([...asked, ...SCOPED_ALWAYS].map(testName).filter(Boolean));
   const unknown = [...want].filter((name) => !bots.includes(name) && !tests.has(name));
   if (unknown.length > 0) throw new Error(`--scoped names tests on no gate list: ${unknown.join(", ")}`);
   return bots.filter((name) => want.has(name));
@@ -107,8 +107,14 @@ export function gatePlan({ wave, head, lists, weekly = null, bands, persona = nu
     const last = Math.min(first + size - 1, lists.tests.length);
     add(`tests-${windowOf(first, last)}`, "shard", { weightKey: "tests", row: `tests ${windowOf(first, last)}`, args: ["--tests", windowOf(first, last)] });
   }
+  const addWeekly = () => {
+    if (weekly?.tests.length > 0) add("weekly-tests", "shard", { weightKey: "weekly-tests", row: "weekly sweep", args: ["--weekly", "--tests", windowOf(1, weekly.tests.length)] });
+    if (weekly?.bots.length > 0) add("weekly-bots", "shard", { weightKey: "weekly-bots", row: "weekly sweep", args: ["--weekly", "--bots", windowOf(1, weekly.bots.length)] });
+  };
   if (scoped) {
-    add("scoped", "shard", { weightKey: "bots", row: "scoped", args: ["--bots", scopedNames(scoped, lists).join(",")] });
+    const names = scopedNames(scoped, lists);
+    add("scoped", "shard", { weightKey: "bots", row: "scoped", args: ["--bots", names.join(",")], names });
+    addWeekly();
     add("node", "node", { row: "node tests" });
     add("plan-file", "plan-file", { barrier: true });
     return steps.map((step) => ({ ...step, wave, head8 }));
@@ -117,8 +123,7 @@ export function gatePlan({ wave, head, lists, weekly = null, bands, persona = nu
     const first = index * BOT_BLOCK + 1;
     add(`bots-${index + 1}`, "shard", { weightKey: "bots", row: `bots ${index + 1}`, args: ["--bots", windowOf(first, first + block.length - 1)] });
   });
-  if (weekly?.tests.length > 0) add("weekly-tests", "shard", { weightKey: "weekly-tests", row: "weekly sweep", args: ["--weekly", "--tests", windowOf(1, weekly.tests.length)] });
-  if (weekly?.bots.length > 0) add("weekly-bots", "shard", { weightKey: "weekly-bots", row: "weekly sweep", args: ["--weekly", "--bots", windowOf(1, weekly.bots.length)] });
+  addWeekly();
   for (const band of ["A", "B", "C"]) add(`bands-${band}`, `bands-${band}`, { row: `bands ${band}`, needsBase: true, bands });
   add("node", "node", { row: "node tests" });
   if (persona) add("redteam", "redteam", { row: `red team ${persona}`, exclusive: true, persona });
@@ -129,7 +134,7 @@ export function gatePlan({ wave, head, lists, weekly = null, bands, persona = nu
 
 export function formatPlan(steps, budget) {
   const lines = [`Budget ${budget} Godot processes. Steps start in this order; a step waits until its weight fits, and a lighter step behind it may start in the gap when it cannot delay it.`];
-  steps.forEach((step, index) => lines.push(`${String(index + 1).padStart(3)}  ${step.id.padEnd(18)} weight ${String(step.weight).padStart(2)}${step.exclusive ? "  exclusive: runs with nothing else" : step.barrier ? "  after every other step" : ""}${step.id === "scoped" ? `  ${step.args[1].split(",").join(" ")}` : ""}`));
+  steps.forEach((step, index) => lines.push(`${String(index + 1).padStart(3)}  ${step.id.padEnd(18)} weight ${String(step.weight).padStart(2)}${step.exclusive ? "  exclusive: runs with nothing else" : step.barrier ? "  after every other step" : ""}${step.names ? `  ${step.names.join(" ")}` : ""}`));
   lines.push("A retime step (exclusive, weight 2) is added at run time for each shard that comes back INCONCLUSIVE.");
   return lines.join("\n");
 }
@@ -401,7 +406,7 @@ export function planFileText({ wave, head, persona, base = null, results, compar
   const lines = [
     `# Gate plan: wave ${wave}, head ${head.slice(0, 8)}`,
     "",
-    `Written by \`scripts/gate/pc.mjs\` on ${day}. Base for the band comparison: ${base ?? "none"}. Check it with \`node scripts/gate/tally.mjs --plan <this file>\`.`,
+    `Written by \`scripts/gate/pc.mjs\` on ${day}. Base for the band comparison: ${base ?? "none"}. Check it with \`node scripts/gate/tally.mjs ${steps.some((step) => step.id === "scoped") ? "--wave " : ""}--plan <this file>\`.`,
     "",
     "## Gate-side",
     "",
@@ -665,7 +670,7 @@ function git(...args) {
 function buildPlan(options) {
   const lists = gateLists(path.join(root, SKETCH));
   const bands = options.scoped ? null : loadBands(lists);
-  const weekly = !options.scoped && options.weekly && lists.weekly.tests.length + lists.weekly.bots.length > 0 ? lists.weekly : null;
+  const weekly = options.weekly && lists.weekly.tests.length + lists.weekly.bots.length > 0 ? lists.weekly : null;
   const steps = gatePlan({ wave: options.wave, head: options.head, lists, weekly, bands, persona: options.persona, scoped: options.scoped });
   return { lists, steps };
 }

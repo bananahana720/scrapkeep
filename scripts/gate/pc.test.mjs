@@ -324,14 +324,15 @@ test("challenge arguments carry the label, jobs and resume the way the lane scri
 test("the wave gate plan (--scoped) is the three windows, one scoped shard by name, the node suite and the plan file", () => {
   const waveLists = { ...lists, bots: [...lists.bots, ...SCOPED_ALWAYS].sort() };
   const steps = gatePlan({ wave: 37, head, lists: waveLists, weekly: lists.weekly, bands: null, persona: "cautious", scoped: ["bot_c_test", "bot_a_test.gd", "w_bot_test", "a_one_test"] });
-  assert.deepEqual(steps.map((step) => step.id), ["tests-1-350", "tests-351-700", "tests-701-1049", "scoped", "node", "plan-file"]);
+  assert.deepEqual(steps.map((step) => step.id), ["tests-1-350", "tests-351-700", "tests-701-1049", "scoped", "weekly-tests", "weekly-bots", "node", "plan-file"]);
   assert.deepEqual(steps.find((step) => step.id === "scoped").args, ["--bots", "bot_a_test,bot_c_test,w_bot_test,world1_run_test"]);
   assert.throws(() => gatePlan({ wave: 37, head, lists: waveLists, bands: null, scoped: ["no_such_test"] }), /on no gate list: no_such_test/);
   assert.throws(() => gatePlan({ wave: 37, head, lists, bands: null, scoped: [] }), /on no gate list: world1_run_test/);
   const text = planFileText({ wave: 37, head, persona: null, base: null, results: allPass(steps), compare: null, steps, today });
   const rows = tallyRows(text);
-  assert.deepEqual(rows.map((row) => row.shard), ["tests 1-350", "tests 351-700", "tests 701-1049", "scoped"]);
-  assert.deepEqual(checkTally(rows, { testCount: 1049, botCount: waveLists.bots.length, today, scope: "wave" }), []);
+  assert.deepEqual(rows.map((row) => row.shard), ["tests 1-350", "tests 351-700", "tests 701-1049", "scoped", "weekly sweep"]);
+  assert.deepEqual(checkTally(rows, { testCount: 1049, botCount: waveLists.bots.length, weeklyCount: 2, today, scope: "wave" }), []);
+  assert.match(text, /tally\.mjs --wave --plan/);
   assert.notDeepEqual(checkTally(rows, { testCount: 1049, botCount: waveLists.bots.length, today }), [], "the release tally still wants every shard");
 });
 

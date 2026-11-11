@@ -8,7 +8,7 @@ import { parseLedger } from "../known-failing.mjs";
 import { place, sortChanges, testsToRerun } from "./carry.mjs";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
-import { WEEKLY_HEADER, chunks, classifyFailure, errorCounts, gateLists, importOutcome, nearLimit, numbered, parseSmokeLog, parseWeekly, parseWindow, renderReceipt, windowNames, retime, shardVerdict, soloEnvironment } from "./shard.mjs";
+import { WEEKLY_HEADER, chunks, classifyFailure, errorCounts, gateLists, importOutcome, nearLimit, numbered, parseSmokeLog, parseWeekly, parseWindow, renderReceipt, windowNames, namedPool, testName, retime, shardVerdict, soloEnvironment } from "./shard.mjs";
 import { WEEKLY_MAX_DAYS, checkTally, checkWeeklySweep, expectedShards, isDeferred, isPass, planHead, tallyRows } from "./tally.mjs";
 import { WEEKLY_FILE, checkWeekly } from "./weekly.mjs";
 
@@ -501,4 +501,12 @@ test("a run window is FIRST-LAST or test names joined by commas, in the list's o
   assert.throws(() => windowNames("b_test,x_test", list), /not on this list: x_test/);
   assert.throws(() => windowNames("", list), /FIRST-LAST/);
   assert.throws(() => windowNames("0-5", list), /does not fit/);
+});
+
+test("a named window draws on the promotion list and the weekly names; a weekly run on the weekly list alone", () => {
+  const lists = { tests: ["b_test"], bots: ["c_bot_test"], weekly: { tests: ["a_test"], bots: ["a_bot_test"] } };
+  assert.deepEqual(namedPool(lists, { bots: true, weekly: false }), ["a_bot_test", "c_bot_test"]);
+  assert.deepEqual(namedPool(lists, { bots: false, weekly: false }), ["a_test", "b_test"]);
+  assert.deepEqual(namedPool(lists, { bots: true, weekly: true }), ["a_bot_test"]);
+  assert.equal(testName(" tests/x_test.gd "), "x_test");
 });

@@ -75,6 +75,17 @@ export function parseWindow(text, total) {
   return { first, last };
 }
 
+// A test's name as the lists hold it: no folder, no .gd.
+export const testName = (text) => text.trim().replace(/^tests\//, "").replace(/\.gd$/, "");
+
+// The bot or non-bot list a named window draws on: the promotion list and, unless the run is on the weekly list itself,
+// the weekly names too, because the wave gate's scoped shard runs what the diff reaches.
+export function namedPool(lists, { bots, weekly }) {
+  const from = weekly ? lists.weekly : lists;
+  const list = bots ? from.bots : from.tests;
+  return weekly ? list : [...list, ...(bots ? lists.weekly.bots : lists.weekly.tests)].sort();
+}
+
 // The tests a run window names: "361-720" (see parseWindow), or test names joined by commas, each on `list`, in the
 // list's order (the wave gate's scoped shard, ruling cy). `label` says which in the receipt.
 export function windowNames(text, list) {
@@ -83,7 +94,7 @@ export function windowNames(text, list) {
     const names = list.slice(first - 1, last);
     return { names, label: `${first} to ${last} of ${list.length} (${names[0]} to ${names[names.length - 1]})` };
   }
-  const asked = new Set((text ?? "").split(",").map((name) => name.trim().replace(/\.gd$/, "")).filter(Boolean));
+  const asked = new Set((text ?? "").split(",").map(testName).filter(Boolean));
   if (asked.size === 0) throw new Error(`a window is written FIRST-LAST, such as 361-720, or as test names joined by commas; got "${text}"`);
   const unknown = [...asked].filter((name) => !list.includes(name));
   if (unknown.length > 0) throw new Error(`not on this list: ${unknown.join(", ")}`);
@@ -402,8 +413,7 @@ function godotBinary() {
 
 async function runRetime(options) {
   const lists = gateLists(path.join(root, SKETCH));
-  const from = options.weekly ? lists.weekly : lists;
-  const known = options.bots ? from.bots : from.tests;
+  const known = namedPool(lists, options);
   const tests = options.window.split(",").filter(Boolean);
   const unknown = tests.filter((test) => !known.includes(test));
   if (unknown.length > 0) throw new Error(`not in the ${options.bots ? "bot" : "non-bot"} gate lists: ${unknown.join(", ")}`);
@@ -427,9 +437,7 @@ async function run(options) {
   const lists = gateLists(sketchDir);
   const from = options.weekly ? lists.weekly : lists;
   const list = options.bots ? from.bots : from.tests;
-  // A named window may also name a weekly test: the wave gate's scoped shard runs what the diff reaches.
-  const pool = /^\d+-\d+$/.test(options.window) ? list : [...list, ...(options.weekly ? [] : options.bots ? lists.weekly.bots : lists.weekly.tests)].sort();
-  const { names, label } = windowNames(options.window, pool);
+  const { names, label } = windowNames(options.window, /^\d+-\d+$/.test(options.window) ? list : namedPool(lists, options));
   const godot = godotBinary();
   const scale = timeScale();
   const head = git("rev-parse", "HEAD");
