@@ -8,7 +8,7 @@ import { parseLedger } from "../known-failing.mjs";
 import { place, sortChanges, testsToRerun } from "./carry.mjs";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
-import { WEEKLY_HEADER, chunks, classifyFailure, errorCounts, gateLists, importOutcome, nearLimit, numbered, parseSmokeLog, parseWeekly, parseWindow, renderReceipt, retime, shardVerdict, soloEnvironment } from "./shard.mjs";
+import { WEEKLY_HEADER, chunks, classifyFailure, errorCounts, gateLists, importOutcome, nearLimit, numbered, parseSmokeLog, parseWeekly, parseWindow, renderReceipt, windowNames, retime, shardVerdict, soloEnvironment } from "./shard.mjs";
 import { WEEKLY_MAX_DAYS, checkTally, checkWeeklySweep, expectedShards, isDeferred, isPass, planHead, tallyRows } from "./tally.mjs";
 import { WEEKLY_FILE, checkWeekly } from "./weekly.mjs";
 
@@ -492,4 +492,13 @@ test("retime waits while the load is above the line, and gives up with exit 2 wh
   assert.equal(never.sleeps, 90);
   assert.equal(never.receipt, null);
   assert.match(never.logged.join("\n"), /the machine never went quiet/);
+});
+
+test("a run window is FIRST-LAST or test names joined by commas, in the list's order", () => {
+  const list = ["a_test", "b_test", "c_test", "d_test"];
+  assert.deepEqual(windowNames("2-3", list), { names: ["b_test", "c_test"], label: "2 to 3 of 4 (b_test to c_test)" });
+  assert.deepEqual(windowNames("d_test,b_test.gd", list), { names: ["b_test", "d_test"], label: "named, 2 of 4: b_test, d_test" });
+  assert.throws(() => windowNames("b_test,x_test", list), /not on this list: x_test/);
+  assert.throws(() => windowNames("", list), /FIRST-LAST/);
+  assert.throws(() => windowNames("0-5", list), /does not fit/);
 });

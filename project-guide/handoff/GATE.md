@@ -13,6 +13,8 @@ Since 11 November 2026 (ruling cy) a promotion runs the wave gate, and the full 
 3. The plan's tally has the test-window rows and one `scoped` row. A release shard may have a row that opens with DEFERRED and names the receipt of its last full read.
 4. `node scripts/gate/tally.mjs --wave --plan <plan>` must exit 0. Without `--wave` the tally is the release gate's and defers nothing.
 
+On the PC one command runs steps 1 to 4: `node scripts/gate/pc.mjs run --wave N --head <sha> --scoped-from <the stage's sketch:fast receipt.json> [--scoped a_test,b_test] --tally`. `--scoped-from` takes the bot shards that receipt names, `--scoped` adds more by name, and `world1_run_test` is always in. A non-bot name is left out, because the windows run the whole non-bot list. `plan` with the same flags prints the scoped names. The reason for each name still goes in the gate plan.
+
 ## What a full gate is
 
 One promotion, one full gate, on the frozen stage head. The Gate thread writes a plan at `/mnt/project-files/gate/w<N>-<head>-gate-plan.md` and the coordinator starts about 13 shard threads from one post:
