@@ -13,7 +13,10 @@ const T := preload("res://tests/support/t.gd")
 #     is laid halfway to where the roll will be, and that is close enough to a slow ball;
 #   - the same crawl with the lead off (the planted case, the game before this unit) is missed;
 #   - a ball crossing at cruise is missed with the lead on: rolling past a pack stays free;
-#   - the wind-up is as long as it was: the lane stands WINDUP seconds before the lunge, never under 0.6 s.
+#   - the wind-up is as long as it was: the lane stands WINDUP seconds before the lunge, never under 0.6 s;
+#   - the lead fades out as the ball reaches cruise (pack.lead_cruise_by_stage, 0 on world 1): a ball rolling
+#     straight at a chaser at FAST is past it before the lunge, as before wave 37, and with the fade off (the
+#     planted case) the chaser winds up early and meets it. The stop-tax line F2 is what this holds.
 # The ball is a roller on rails, so each pass is the same geometry: the chaser stands, the roller crosses GAP
 # metres off its nose. One lunge is read per pass; a chaser running a slow ball down from behind is not the lead.
 
@@ -21,6 +24,10 @@ const GAP := 7.0
 const SLOW := 2.6
 const CRUISE := 14.0
 const LEAD_OFF := {"pack.lead_by_stage": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]}
+const FAST := 20.0
+const HEAD_ON_FROM := 34.0
+const HEAD_ON_SIDE := 0.6
+const FADE_OFF := {"pack.lead_cruise_by_stage": [1.0, 1.0, 1.0, 1.0, 1.0, 1.0]}
 
 
 class Roller:
@@ -68,7 +75,8 @@ func _boot() -> void:
 
 # One pass: {"hit", "tell" (seconds the lane stood before the lunge, -1 with no lunge), "lead" (the row the
 # chaser was spawned with)}.
-func _pass(speed: float, overrides: Dictionary) -> Dictionary:
+# head_on: the roller starts HEAD_ON_FROM metres off and rolls straight at the chaser, HEAD_ON_SIDE off its centre.
+func _pass(speed: float, overrides: Dictionary, head_on := false) -> Dictionary:
 	ChallengeDials.set_overrides(overrides)
 	var enemy = _game.combat.spawn_enemy("chaser", _game.ctx.terrain.drop_point(-100.0, -90.0, 1.6))
 	ChallengeDials.set_overrides({})
@@ -85,8 +93,12 @@ func _pass(speed: float, overrides: Dictionary) -> Dictionary:
 	var dt := 1.0 / float(Engine.physics_ticks_per_second)
 	roller.at = enemy.global_position + Vector3(GAP, 0.0, 0.0)
 	roller.v = Vector3(0.0, 0.0, speed)
+	if head_on:
+		roller.at = enemy.global_position + Vector3(HEAD_ON_FROM, 0.0, HEAD_ON_SIDE)
+		roller.v = Vector3(-speed, 0.0, 0.0)
 	enemy._rest = 0.0
 	var wound_at := -1
+	var wound_m := -1.0
 	var lunged_at := -1
 	for i in 360:
 		roller.at += roller.v * dt
@@ -94,12 +106,13 @@ func _pass(speed: float, overrides: Dictionary) -> Dictionary:
 		await physics_frame
 		if enemy.state == enemy.State.WINDUP and wound_at < 0:
 			wound_at = i
+			wound_m = Vector2(roller.at.x - enemy.global_position.x, roller.at.z - enemy.global_position.z).length()
 		if enemy.state == enemy.State.LUNGE and lunged_at < 0:
 			lunged_at = i
 		if enemy.lunges >= 1 or (lunged_at >= 0 and enemy.state == enemy.State.RECOVER):
 			break
 	var out := {"hit": hits[0] > 0, "tell": float(lunged_at - wound_at) * dt if lunged_at >= 0 and wound_at >= 0 else -1.0,
-		"lead": float(enemy.pressure.get("lead", 0.0))}
+		"lead": float(enemy.pressure.get("lead", 0.0)), "wound_m": wound_m}
 	enemy.free()
 	await _frames(2)
 	return out
@@ -127,5 +140,26 @@ func _run() -> void:
 	# At cruise the led aim is out of lunge range before the chaser can wind up, so no lane is laid at all.
 	_t.check("11 a ball crossing at cruise is not hit with the lead on", not fast.hit, "%.0f m/s at %.0f m: hit %s, lane to lunge %.3f s (-1 is no lunge)" % [CRUISE, GAP, fast.hit, fast.tell])
 	_t.check("12 a lane laid for it, if any, stood the whole wind-up too", fast.tell < 0.0 or fast.tell >= Chaser.WINDUP - tick - 0.0001, "lane to lunge %.3f s" % fast.tell)
+	# The fade. The game's own cruise speed is what combat hands PackPressure each tick.
+	var cruise: float = _game.player.tuning.f("cruise")
+	_t.eq("13 the lead keeps none of itself at cruise on world 1, all of it after", ChallengeDials.value("pack.lead_cruise_by_stage"), [0.0, 0.0, 1.0, 1.0, 1.0, 1.0])
+	var row: Dictionary = PackPressure.crew_row(1)
+	var roller := Roller.new()
+	var read := []
+	for share in [0.0, 0.5, PackPressure.LEAD_FADE_FROM, 0.5 + PackPressure.LEAD_FADE_FROM * 0.5, 1.0, 1.5]:
+		roller.v = Vector3(cruise * share, 0.0, 0.0)
+		read.append(snappedf(PackPressure.lead_now(row, roller), 0.001))
+	_t.eq("14 a dam crew's lead is whole to %.2f of cruise, half way down at the midpoint and gone at cruise" % PackPressure.LEAD_FADE_FROM, read, [0.5, 0.5, 0.5, 0.25, 0.0, 0.0])
+	roller.v = Vector3(cruise * 1.5, 0.0, 0.0)
+	_t.near("15 a row that keeps its lead at cruise reads it whole at any speed", PackPressure.lead_now({"lead": 0.5, "lead_cruise": 1.0}, roller), 0.5)
+	var met: Dictionary = await _pass(FAST, {}, true)
+	_t.check("16 a ball rolling straight at a chaser at %.0f m/s is not hit" % FAST, not met.hit, "hit %s, lane laid with the ball %.1f m off (-1 is no lane)" % [met.hit, met.wound_m])
+	_t.check("17 and the chaser waits for its own lunge range before it winds up", met.wound_m < 0.0 or met.wound_m <= Chaser.LUNGE_RANGE + 0.5, "lane laid with the ball %.1f m off, range %.1f m" % [met.wound_m, Chaser.LUNGE_RANGE])
+	# The planted case: the same roll with the fade off is the lead as unit D1 first shipped it, and the chaser
+	# must wind up early and meet the ball, or checks 16 and 17 say nothing about the fade.
+	var early: Dictionary = await _pass(FAST, FADE_OFF, true)
+	_t.check("18 planted: with the fade off the chaser winds up beyond its lunge range", early.wound_m > Chaser.LUNGE_RANGE + 2.0, "lane laid with the ball %.1f m off, range %.1f m" % [early.wound_m, Chaser.LUNGE_RANGE])
+	_t.check("19 planted: and the same roll is hit", early.hit, "hit %s" % early.hit)
+	_t.check("20 planted: its lane still stood the whole wind-up", early.tell >= Chaser.WINDUP - tick - 0.0001, "lane to lunge %.3f s" % early.tell)
 	ChallengeDials.reset()
 	quit(_t.verdict())
