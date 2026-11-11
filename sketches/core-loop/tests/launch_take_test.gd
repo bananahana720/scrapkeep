@@ -204,7 +204,7 @@ func _seam_run(early := false) -> Dictionary:
 	flow._set_state(flow.GATES)
 	_game.events.reward_chosen.emit("seam")
 	_take.set_process(false)
-	var started: bool = _take.busy() and _take.phase == LaunchTake.COVER and flow.state_name() == "launch"
+	var started: bool = _take.busy() and _take.phase == LaunchTake.WIND and flow.state_name() == "launch"
 	var lines := float(_take._material.get_shader_parameter("lines"))
 	var steps := 0
 	var cut_step := -1
@@ -217,7 +217,7 @@ func _seam_run(early := false) -> Dictionary:
 		var cut: bool = _game.run.stage != from_stage or flow.state_name() == "boss"
 		if cut and cut_step < 0:
 			cut_step = steps
-		frames.append({"phase": _take.phase, "progress": _take.progress(), "cut": cut})
+		frames.append({"phase": _take.phase, "progress": _take.progress(), "cut": cut, "word": _take._word.visible})
 		if not _take.busy():
 			break
 	return {"started": started, "frames": frames, "steps": steps, "dt": dt, "cut_step": cut_step,
@@ -258,6 +258,19 @@ func _seam_checks(label: String, run: Dictionary, reduced: bool) -> void:
 		if reveal < 0 and f["phase"] == LaunchTake.REVEAL:
 			reveal = i + 1
 	var tick: float = run["dt"]
+	var closing := -1
+	var worded := 0
+	for i in run["frames"].size():
+		var f: Dictionary = run["frames"][i]
+		if closing < 0 and f["progress"] > 0.0:
+			closing = i + 1
+		if f["word"]:
+			worded += 1
+	var flight: float = _game.flow.LAUNCH_FLIGHT
+	_t.check("%s: the shot is on screen until the flight's last %.2f s" % [label, LaunchTake.COVER_S],
+		closing * tick >= flight - LaunchTake.COVER_S - 0.001, "%.2f s" % (closing * tick))
+	_t.check("%s: the cover is full as the flight ends" % label, full * tick >= flight - tick and full * tick <= flight + 3.0 * tick, "%.2f s" % (full * tick))
+	_t.check("%s: the take stamps no second word over the launch's own" % label, worded == 0, str(worded))
 	print("seam %s: %.2f s launch to the reveal's end; full cover at %.2f s, cut at %.2f s, reveal opens at %.2f s" % [label, seconds,
 		full * tick, run["cut_step"] * tick, reveal * tick])
 

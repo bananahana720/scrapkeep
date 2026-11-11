@@ -1167,14 +1167,14 @@ func _on_launched(_velocity: Vector3) -> void:
 		_seam_take = _play_seam_take()
 
 
-# A played game's stage launch runs under the comic swipe: the panel closes while the ball flies, the cut to the next
+# A played game's stage launch runs under the comic swipe: the panel closes over the end of the flight, the cut to the next
 # place waits for the flight's end behind the full cover, and the reveal opens once its ground is drawn. Bots, tests and
 # headless runs cut at once as before. Returns true when the take plays.
 func _play_seam_take() -> bool:
 	var root = ctx.root
 	if root == null or not root.has_method("play_launch_take") or ctx.stages.is_run_last(ctx.run.stage):
 		return false
-	return root.play_launch_take(_cut_under_cover, _flight_over, _next_drawn)
+	return root.play_launch_take(_cut_under_cover, _flight_over, _next_drawn, LAUNCH_FLIGHT)
 
 
 func _flight_over() -> bool:
