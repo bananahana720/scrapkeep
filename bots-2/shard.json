@@ -1,0 +1,102 @@
+{
+  "title": "Gate shard: bots 6-10 on fe7c68a0",
+  "head": "fe7c68a0441226600ae644789a0d6af235b371d1",
+  "box": "32 vCPU AMD Ryzen 9 5950X 16-Core Processor, 63 GB",
+  "threads": 32,
+  "godot": "Godot_v4.7.2-stable_linux.x86_64",
+  "scale": 1,
+  "window": "bot list 6 to 10 of 23 (bot_park_trace_repeat_test to matchup_lab_test), 5 tests",
+  "steps": {
+    "import-1": {
+      "exit": 0,
+      "seconds": 3,
+      "outcome": "ok",
+      "load_start": 15,
+      "load_end": 20.9
+    },
+    "import-2": {
+      "exit": 0,
+      "seconds": 3,
+      "outcome": "ok",
+      "load_start": 20.9,
+      "load_end": 20.3
+    },
+    "bot-bot_park_trace_repeat_test": {
+      "exit": 0,
+      "seconds": 623,
+      "load_start": 20.3,
+      "load_end": 14.2
+    },
+    "bot-bot_run_end_test": {
+      "exit": 0,
+      "seconds": 303,
+      "load_start": 14.2,
+      "load_end": 9.5
+    },
+    "bot-bot_six_pilots_test": {
+      "exit": 0,
+      "seconds": 302,
+      "load_start": 9.5,
+      "load_end": 8.2
+    },
+    "bot-bot_skill_bar_test": {
+      "exit": 0,
+      "seconds": 420,
+      "load_start": 8.2,
+      "load_end": 52.1
+    },
+    "bot-matchup_lab_test": {
+      "exit": 0,
+      "seconds": 339,
+      "load_start": 52.1,
+      "load_end": 18.1
+    }
+  },
+  "results": [
+    {
+      "test": "bot_park_trace_repeat_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 619.6
+    },
+    {
+      "test": "bot_run_end_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 300
+    },
+    {
+      "test": "bot_six_pilots_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 299.5
+    },
+    {
+      "test": "bot_skill_bar_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 416.6
+    },
+    {
+      "test": "matchup_lab_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 336.2
+    }
+  ],
+  "failures": [],
+  "counts": {
+    "error": 0,
+    "script_error": 0,
+    "in_use": 0,
+    "freed": 0,
+    "leaked_warning": 46
+  },
+  "slow": [],
+  "verdict": {
+    "ok": true,
+    "line": "PASS, no new red"
+  },
+  "startedAt": "2026-11-11T12:11:22.560Z",
+  "finishedAt": "2026-11-11T12:44:35.749Z"
+}

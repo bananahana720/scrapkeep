@@ -1,0 +1,14 @@
+{"category":"enemy","heft":1.02888888888889,"id":"counter_ram","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40307","stage":1,"stage_ticks":6319}
+{"category":"enemy","heft":1.12222222222222,"id":"cannon_lane_charge","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40307","stage":1,"stage_ticks":6813}
+{"category":"enemy","heft":1.38222222222222,"id":"crush_chain","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40307","stage":1,"stage_ticks":7945}
+{"category":"enemy","heft":1.60666666666667,"id":"cannon_recital","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40307","stage":1,"stage_ticks":9133}
+{"category":"enemy","heft":1.65111111111111,"id":"set_piece","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40307","stage":1,"stage_ticks":9133}
+{"category":"enemy","heft":1.53555555555556,"id":"tether_snap","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40307","stage":1,"stage_ticks":10963}
+{"category":"enemy","heft":1.73111111111111,"id":"chain","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40307","stage":1,"stage_ticks":11169}
+{"category":"enemy","heft":1.77555555555556,"id":"plate_peel","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40307","stage":1,"stage_ticks":11186}
+{"category":"build","heft":1.84,"id":"spare","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40307","stage":1,"stage_ticks":11187}
+{"category":"enemy","heft":2.16444444444444,"id":"shell_return","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40307","stage":1,"stage_ticks":17101}
+{"category":"enemy","heft":2.23333333333333,"id":"heavy_roll","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40307","stage":1,"stage_ticks":17348}
+{"category":"enemy","heft":2.22,"id":"boom_pop","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40307","stage":1,"stage_ticks":19736}
+{"category":"enemy","heft":2.40444444444444,"id":"warden_shatter","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40307","stage":1,"stage_ticks":19835}
+{"category":"enemy","heft":2.78888888888889,"id":"cannon_fire_mission","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40307","stage":1,"stage_ticks":20189}

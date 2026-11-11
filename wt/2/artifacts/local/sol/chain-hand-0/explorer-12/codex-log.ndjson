@@ -1,0 +1,2 @@
+{"category":"build","heft":1.43333333333333,"id":"spare","kind":"discovered","participants":["player"],"parts":["pylon_capacitor"],"run_id":"bot-12","stage":1,"stage_ticks":1876}
+{"category":"enemy","heft":1.94666666666667,"id":"armour_wet","kind":"discovered","participants":["player"],"parts":["pylon_capacitor","focus_lens"],"run_id":"bot-12","stage":1,"stage_ticks":2478}

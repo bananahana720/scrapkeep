@@ -1,0 +1,6 @@
+{"category":"enemy","heft":1.01333333333333,"id":"counter_ram","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40302","stage":1,"stage_ticks":3811}
+{"category":"enemy","heft":1.08444444444444,"id":"armour_wet","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40302","stage":1,"stage_ticks":3889}
+{"category":"enemy","heft":1.82777777777778,"id":"heavy_roll","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40302","stage":1,"stage_ticks":10329}
+{"category":"enemy","heft":1.1,"id":"shell_return","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40302","stage":1,"stage_ticks":11945}
+{"category":"build","heft":1.14444444444444,"id":"spare","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40302","stage":1,"stage_ticks":12878}
+{"category":"enemy","heft":1.16222222222222,"id":"mat_slip","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40302","stage":1,"stage_ticks":21587}

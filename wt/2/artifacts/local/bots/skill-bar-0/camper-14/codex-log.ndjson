@@ -1,0 +1,4 @@
+{"category":"enemy","heft":1.01555555555556,"id":"shell_return","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-14","stage":1,"stage_ticks":1576}
+{"category":"enemy","heft":1.14222222222222,"id":"tether_snap","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-14","stage":1,"stage_ticks":13113}
+{"category":"enemy","heft":1.08,"id":"crush_chain","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-14","stage":1,"stage_ticks":14966}
+{"category":"enemy","heft":1.08,"id":"heavy_roll","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-14","stage":1,"stage_ticks":16344}

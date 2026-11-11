@@ -1,0 +1,21 @@
+11:41:28Z start import-1 load=11.6
+11:41:30Z end import-1 exit=0 wall=3s load=11.6
+11:41:30Z start import-2 load=11.6
+11:41:33Z end import-2 exit=0 wall=3s load=11.2
+11:41:33Z start chunk00 load=11.2
+11:41:33Z start chunk01 load=11.2
+11:51:16Z end chunk00 exit=1 wall=583s load=18.4
+11:51:16Z start chunk02 load=18.4
+11:55:06Z end chunk01 exit=0 wall=813s load=20.6
+11:55:06Z start chunk03 load=20.6
+12:08:36Z end chunk02 exit=0 wall=1040s load=12.8
+12:08:36Z start chunk04 load=12.8
+12:13:14Z end chunk03 exit=0 wall=1088s load=16.9
+12:13:14Z start chunk05 load=16.9
+12:18:04Z end chunk04 exit=0 wall=567s load=13.1
+12:18:26Z end chunk05 exit=0 wall=312s load=12.2
+12:18:26Z start solo-posture_bands_reactor_test-1 load=12.2
+12:20:14Z end solo-posture_bands_reactor_test-1 exit=1 wall=108s load=14.7
+12:20:14Z start solo-posture_bands_reactor_test-2 load=14.7
+12:22:02Z end solo-posture_bands_reactor_test-2 exit=1 wall=107s load=13.5
+Gate shard: tests 721-1078 on fe7c68a0: PASS, no new red (1 carried on the ledger). Receipt: /home/andrew/scratch/gate/w36-fe7c68a0/tests-721-1078/receipt.md

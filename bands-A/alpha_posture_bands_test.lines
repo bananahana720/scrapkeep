@@ -1,0 +1,17 @@
+[Reach completionist is no slower than 1.25 times the skipper] completionist median 26.2 s of [26.03, 26.21], skipper 49.7 s -> PASS
+[Reach skipper breaks it in 35 to 80 s] median 49.7 s of [40.67, 49.66] -> PASS
+[Spillway skipper breaks it in 45 to 90 s] median 89.7 s of [54.59, 89.72] -> PASS
+[alpha bot run 0 ran] exit 0, timed out false -> PASS
+[alpha bot run 1 ran] exit 0, timed out false -> PASS
+[alpha bot run 2 ran] exit 0, timed out false -> PASS
+[alpha bot run 3 ran] exit 0, timed out false -> PASS
+[both alpha Wardens are posture rows] alpha rows -> PASS
+[completionist demolitions_caster plays demolitions_caster] got "demolitions_caster", want "demolitions_caster" -> PASS
+[completionist runner_gunner plays runner_gunner] got "runner_gunner", want "runner_gunner" -> PASS
+[every alpha fight broke its Warden] spillway [54.59, 89.72], reach [40.67, 49.66], reach completionist [26.03, 26.21] -> PASS
+[skipper demolitions_caster plays demolitions_caster] got "demolitions_caster", want "demolitions_caster" -> PASS
+[skipper runner_gunner plays runner_gunner] got "runner_gunner", want "runner_gunner" -> PASS
+bot_run: completionist seed 1 (runner_gunner) -> ticks_done at stage 2, 30000 ticks (333.3 s game), N s wall
+bot_run: completionist seed 2 (demolitions_caster) -> ticks_done at stage 2, 30000 ticks (333.3 s game), N s wall
+bot_run: skipper seed 1 (runner_gunner) -> ticks_done at stage 4, 30000 ticks (333.3 s game), N s wall
+bot_run: skipper seed 2 (demolitions_caster) -> ticks_done at stage 4, 30000 ticks (333.3 s game), N s wall

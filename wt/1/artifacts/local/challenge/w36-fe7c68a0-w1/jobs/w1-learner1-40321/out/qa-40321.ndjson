@@ -1,0 +1,3 @@
+{"at":[-146.9,156.5,-679.2],"clamp_shut":true,"flow":"stage","goal":"roll to spillway sheet","id":"find_warden","kind":"objective","s":1.0,"sealed":true,"stage":1,"words":"Find the Warden","yard_locked":false}
+{"at":[-11.2,16.5,386.3],"clamp_shut":true,"flow":"stage","goal":"fight chaser charge","id":"break_yard_crew","kind":"objective","s":79.0,"sealed":true,"stage":1,"words":"Break the yard crew","yard_locked":true}
+{"at":[-22.5,17.3,384.3],"clamp_shut":true,"flow":"stage","goal":"roll to spillway sheet","id":"find_warden","kind":"objective","s":105.6,"sealed":true,"stage":1,"words":"Find the Warden","yard_locked":false}

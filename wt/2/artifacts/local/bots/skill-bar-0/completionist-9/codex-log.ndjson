@@ -1,0 +1,8 @@
+{"category":"enemy","heft":1.0,"id":"counter_ram","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-9","stage":1,"stage_ticks":991}
+{"category":"enemy","heft":1.01372839506173,"id":"loaded_line","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-9","stage":1,"stage_ticks":1653}
+{"category":"enemy","heft":1.57101234567901,"id":"plate_peel","kind":"discovered","participants":["player"],"parts":["hot_rivets"],"run_id":"bot-9","stage":1,"stage_ticks":4242}
+{"category":"enemy","heft":1.73323456790123,"id":"mat_slip","kind":"discovered","participants":["player"],"parts":["hot_rivets"],"run_id":"bot-9","stage":1,"stage_ticks":5309}
+{"category":"enemy","heft":1.86434567901235,"id":"warden_shatter","kind":"discovered","participants":["player"],"parts":["hot_rivets"],"run_id":"bot-9","stage":1,"stage_ticks":6311}
+{"category":"enemy","heft":1.90434567901235,"id":"set_piece_core","kind":"discovered","participants":["player"],"parts":["hot_rivets"],"run_id":"bot-9","stage":1,"stage_ticks":6914}
+{"category":"enemy","heft":1.94879012345679,"id":"set_piece","kind":"discovered","participants":["player"],"parts":["hot_rivets"],"run_id":"bot-9","stage":1,"stage_ticks":6914}
+{"category":"build","heft":2.00656790123457,"id":"spare","kind":"discovered","participants":["player"],"parts":["hot_rivets"],"run_id":"bot-9","stage":1,"stage_ticks":7313}

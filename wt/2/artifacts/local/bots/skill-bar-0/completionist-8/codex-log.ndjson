@@ -1,0 +1,10 @@
+{"category":"enemy","heft":1.02666666666667,"id":"loaded_line","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-8","stage":1,"stage_ticks":1436}
+{"category":"enemy","heft":1.07111111111111,"id":"kest_cable_charge","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-8","stage":1,"stage_ticks":1436}
+{"category":"enemy","heft":1.13822222222222,"id":"counter_ram","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-8","stage":1,"stage_ticks":1538}
+{"category":"enemy","heft":1.78488888888889,"id":"heavy_roll","kind":"discovered","participants":["player"],"parts":["hot_rivets","static_burr"],"run_id":"bot-8","stage":1,"stage_ticks":4587}
+{"category":"enemy","heft":1.78266666666667,"id":"chain","kind":"discovered","participants":["player"],"parts":["hot_rivets","static_burr"],"run_id":"bot-8","stage":1,"stage_ticks":5424}
+{"category":"enemy","heft":1.82044444444444,"id":"warden_shatter","kind":"discovered","participants":["player"],"parts":["hot_rivets","static_burr"],"run_id":"bot-8","stage":1,"stage_ticks":6196}
+{"category":"enemy","heft":1.896,"id":"set_piece_core","kind":"discovered","participants":["player"],"parts":["hot_rivets","static_burr"],"run_id":"bot-8","stage":1,"stage_ticks":6513}
+{"category":"enemy","heft":1.94044444444444,"id":"set_piece","kind":"discovered","participants":["player"],"parts":["hot_rivets","static_burr"],"run_id":"bot-8","stage":1,"stage_ticks":6513}
+{"category":"enemy","heft":1.98488888888889,"id":"kest_windhover","kind":"discovered","participants":["player"],"parts":["hot_rivets","static_burr"],"run_id":"bot-8","stage":1,"stage_ticks":6514}
+{"category":"build","heft":2.11711111111111,"id":"spare","kind":"discovered","participants":["player"],"parts":["hot_rivets","static_burr"],"run_id":"bot-8","stage":1,"stage_ticks":7003}

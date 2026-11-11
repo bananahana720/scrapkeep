@@ -1,0 +1,8 @@
+{"category":"enemy","heft":1.0,"id":"counter_ram","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-5","stage":1,"stage_ticks":695}
+{"category":"enemy","heft":1.50804938271605,"id":"cannon_lane_charge","kind":"discovered","participants":["player"],"parts":["hot_rivets"],"run_id":"bot-5","stage":1,"stage_ticks":4648}
+{"category":"enemy","heft":1.54804938271605,"id":"chain","kind":"discovered","participants":["player"],"parts":["hot_rivets"],"run_id":"bot-5","stage":1,"stage_ticks":5068}
+{"category":"enemy","heft":1.59249382716049,"id":"warden_shatter","kind":"discovered","participants":["player"],"parts":["hot_rivets"],"run_id":"bot-5","stage":1,"stage_ticks":5105}
+{"category":"enemy","heft":1.65471604938272,"id":"set_piece_core","kind":"discovered","participants":["player"],"parts":["hot_rivets"],"run_id":"bot-5","stage":1,"stage_ticks":6394}
+{"category":"enemy","heft":1.69916049382716,"id":"set_piece","kind":"discovered","participants":["player"],"parts":["hot_rivets"],"run_id":"bot-5","stage":1,"stage_ticks":6394}
+{"category":"enemy","heft":1.74138271604938,"id":"shell_return","kind":"discovered","participants":["player"],"parts":["hot_rivets"],"run_id":"bot-5","stage":1,"stage_ticks":6505}
+{"category":"build","heft":1.84027160493827,"id":"spare","kind":"discovered","participants":["player"],"parts":["hot_rivets"],"run_id":"bot-5","stage":1,"stage_ticks":6873}

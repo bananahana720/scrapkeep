@@ -1,0 +1,2238 @@
+{
+  "title": "Gate shard: tests 361-720 on fe7c68a0",
+  "head": "fe7c68a0441226600ae644789a0d6af235b371d1",
+  "box": "32 vCPU AMD Ryzen 9 5950X 16-Core Processor, 63 GB",
+  "threads": 32,
+  "godot": "Godot_v4.7.2-stable_linux.x86_64",
+  "scale": 1,
+  "window": "non-bot list 361 to 720 of 1078 (enemy_line_cutter_test to pole_ride_test), 360 tests",
+  "steps": {
+    "import-1": {
+      "exit": 0,
+      "seconds": 123,
+      "outcome": "ok",
+      "load_start": 9.1,
+      "load_end": 11.9
+    },
+    "import-2": {
+      "exit": 0,
+      "seconds": 3,
+      "outcome": "ok",
+      "load_start": 11.9,
+      "load_end": 11.9
+    },
+    "chunk01": {
+      "exit": 0,
+      "seconds": 408,
+      "load_start": 11.9,
+      "load_end": 19.1
+    },
+    "chunk00": {
+      "exit": 0,
+      "seconds": 466,
+      "load_start": 11.9,
+      "load_end": 20.5
+    },
+    "chunk02": {
+      "exit": 0,
+      "seconds": 343,
+      "load_start": 19.1,
+      "load_end": 16.4
+    },
+    "chunk03": {
+      "exit": 0,
+      "seconds": 1112,
+      "load_start": 20.5,
+      "load_end": 12.5
+    },
+    "chunk04": {
+      "exit": 0,
+      "seconds": 1292,
+      "load_start": 16.4,
+      "load_end": 18.1
+    },
+    "chunk05": {
+      "exit": 0,
+      "seconds": 504,
+      "load_start": 12.5,
+      "load_end": 15.3
+    }
+  },
+  "results": [
+    {
+      "test": "enemy_line_cutter_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 17.6
+    },
+    {
+      "test": "enemy_linker_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 24
+    },
+    {
+      "test": "enemy_lobber_asset_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 9.2
+    },
+    {
+      "test": "enemy_mag_trapper_asset_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 9.2
+    },
+    {
+      "test": "enemy_lobber_windup_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 32.5
+    },
+    {
+      "test": "enemy_mag_trapper_windup_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 37.9
+    },
+    {
+      "test": "enemy_mind_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 20.1
+    },
+    {
+      "test": "enemy_miniboss_asset_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 9
+    },
+    {
+      "test": "enemy_netcaster_asset_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 9.4
+    },
+    {
+      "test": "enemy_motion_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 16.4
+    },
+    {
+      "test": "enemy_plated_brute_asset_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 8.9
+    },
+    {
+      "test": "enemy_plated_brute_windup_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 26.3
+    },
+    {
+      "test": "enemy_ramp_flipper_asset_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 0.7
+    },
+    {
+      "test": "enemy_prop_crew_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 20
+    },
+    {
+      "test": "enemy_reactor_asset_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 0.7
+    },
+    {
+      "test": "enemy_rivet_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 18.2
+    },
+    {
+      "test": "enemy_rogue_asset_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 8.9
+    },
+    {
+      "test": "enemy_roster_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 10.6
+    },
+    {
+      "test": "enemy_reactions_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 50
+    },
+    {
+      "test": "enemy_swarm_remnant_asset_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 9.4
+    },
+    {
+      "test": "enemy_swarm_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 16.5
+    },
+    {
+      "test": "enemy_splitter_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 41.5
+    },
+    {
+      "test": "enemy_swatter_asset_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 9.5
+    },
+    {
+      "test": "enemy_vault_asset_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 9.4
+    },
+    {
+      "test": "enemy_winch_drone_asset_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 9.9
+    },
+    {
+      "test": "enemy_tenacity_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 24.7
+    },
+    {
+      "test": "enemy_world_bodies_asset_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 0.3
+    },
+    {
+      "test": "entrance_closeup_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 30.4
+    },
+    {
+      "test": "entry_spread_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 2.3
+    },
+    {
+      "test": "enemy_winch_drone_windup_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 36.5
+    },
+    {
+      "test": "escape_corridor_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 11.1
+    },
+    {
+      "test": "evolution_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 15.8
+    },
+    {
+      "test": "field_tips_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 10.4
+    },
+    {
+      "test": "first_steps_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 10.5
+    },
+    {
+      "test": "first_warm_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 3.4
+    },
+    {
+      "test": "find_in_fight_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 43.3
+    },
+    {
+      "test": "flail_swing_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 13.8
+    },
+    {
+      "test": "flash_comfort_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 9.5
+    },
+    {
+      "test": "flat_pack_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 0.8
+    },
+    {
+      "test": "flourish_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 17.9
+    },
+    {
+      "test": "first_win_secrets_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 68.2
+    },
+    {
+      "test": "foley_audio_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 2.1
+    },
+    {
+      "test": "frame_smoothing_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 10.2
+    },
+    {
+      "test": "fua_boss_pickup_failure_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 0.8
+    },
+    {
+      "test": "fua_boss_pickup_material_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 0.9
+    },
+    {
+      "test": "flume_post_walls_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 15.4
+    },
+    {
+      "test": "fua_trail_transparency_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 0.4
+    },
+    {
+      "test": "fub_aerial_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 0.3
+    },
+    {
+      "test": "fub_anchor_reel_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 0.7
+    },
+    {
+      "test": "fub_arena_root_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 0.4
+    },
+    {
+      "test": "fub_cage_fallback_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 1
+    },
+    {
+      "test": "fub_companion_body_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 0.4
+    },
+    {
+      "test": "fub_companion_paint_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 0.5
+    },
+    {
+      "test": "fua_rescue_identifier_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 5.9
+    },
+    {
+      "test": "fub_ramp_flash_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 0.7
+    },
+    {
+      "test": "fub_enemy_materials_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 1.7
+    },
+    {
+      "test": "event_overlays_planned_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 13.5
+    },
+    {
+      "test": "fight_phases_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 11.4
+    },
+    {
+      "test": "flight_sites_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 16.9
+    },
+    {
+      "test": "flume_line_posture_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 38.2
+    },
+    {
+      "test": "fub_scrap_fallback_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 0.8
+    },
+    {
+      "test": "fx_library_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 0.7
+    },
+    {
+      "test": "fxd_side_read_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 0.5
+    },
+    {
+      "test": "fxh_net_read_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 0.5
+    },
+    {
+      "test": "fxh_thermal_read_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 0.5
+    },
+    {
+      "test": "gate_topper_names_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 1.2
+    },
+    {
+      "test": "fusion_pairing_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 13.5
+    },
+    {
+      "test": "grant_grammar_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 0.5
+    },
+    {
+      "test": "graphics_preset_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 0.4
+    },
+    {
+      "test": "glyph_device_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 10.7
+    },
+    {
+      "test": "ground_slump_game_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 25.1
+    },
+    {
+      "test": "ground_slump_record_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 1.2
+    },
+    {
+      "test": "ground_slump_clearance_game_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 34.2
+    },
+    {
+      "test": "ground_slump_site_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 15.5
+    },
+    {
+      "test": "handover_rows_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 1.2
+    },
+    {
+      "test": "growth_pays_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 16.1
+    },
+    {
+      "test": "hard_ladder_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 13.4
+    },
+    {
+      "test": "harpoon_line_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 17.4
+    },
+    {
+      "test": "harpoon_lock_collider_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 9.9
+    },
+    {
+      "test": "harpoon_mounted_body_line_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 12.9
+    },
+    {
+      "test": "harpoon_canon_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 51.6
+    },
+    {
+      "test": "harpoon_rebound_cut_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 12.8
+    },
+    {
+      "test": "heft_slam_bank_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 1.6
+    },
+    {
+      "test": "harpoon_shot_bite_range_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 13.5
+    },
+    {
+      "test": "help_page_alpha_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 0.6
+    },
+    {
+      "test": "help_mechanics_pictures_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 9.9
+    },
+    {
+      "test": "help_pictures_pad_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 10
+    },
+    {
+      "test": "hero_assets_missing_glb_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 9.5
+    },
+    {
+      "test": "hero_assets_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 10.7
+    },
+    {
+      "test": "hero_warden_assets_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 13.3
+    },
+    {
+      "test": "hit_stop_ticks_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 10.9
+    },
+    {
+      "test": "holds_hook_out_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 0.6
+    },
+    {
+      "test": "holds_priority_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 0.5
+    },
+    {
+      "test": "holds_hook_out_live_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 10.8
+    },
+    {
+      "test": "hook_chain_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 11
+    },
+    {
+      "test": "hotwire_companion_structure_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 10.9
+    },
+    {
+      "test": "hotwire_k5_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 21.9
+    },
+    {
+      "test": "hotwire_cue_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 37.9
+    },
+    {
+      "test": "hotwire_r6_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 13.3
+    },
+    {
+      "test": "hotwire_offer_flow_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 24.7
+    },
+    {
+      "test": "hotwire_shell_held_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 12.7
+    },
+    {
+      "test": "hotwire_shell_offer_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 1.6
+    },
+    {
+      "test": "hotwire_s4_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 21.9
+    },
+    {
+      "test": "hotwire_shell_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 10.5
+    },
+    {
+      "test": "hud_icon_distinct_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 10.2
+    },
+    {
+      "test": "hud_phase_read_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 12.5
+    },
+    {
+      "test": "hud_radio_hold_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 10.9
+    },
+    {
+      "test": "hud_words_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 21
+    },
+    {
+      "test": "hud_quiet_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 65.4
+    },
+    {
+      "test": "hunt_hl_registry_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 12.9
+    },
+    {
+      "test": "hunt_hl_preset_lighting_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 47.1
+    },
+    {
+      "test": "identity_value_lint_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 2.2
+    },
+    {
+      "test": "impact_frame_cost_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 2.4
+    },
+    {
+      "test": "hunt_hl_world_lighting_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 16
+    },
+    {
+      "test": "input_aim_assist_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 9
+    },
+    {
+      "test": "input_look_settings_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 9.1
+    },
+    {
+      "test": "input_pad_menus_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 13.4
+    },
+    {
+      "test": "input_pad_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 10.5
+    },
+    {
+      "test": "int_play_text_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 11
+    },
+    {
+      "test": "int_arena_standdown_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 34.6
+    },
+    {
+      "test": "interrupt_priority_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 0.8
+    },
+    {
+      "test": "int_screen_layout_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 10.4
+    },
+    {
+      "test": "invariant_guards_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 1.2
+    },
+    {
+      "test": "intro_lines_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 12.3
+    },
+    {
+      "test": "invariant_runtime_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 12.9
+    },
+    {
+      "test": "item_trigger_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 10.3
+    },
+    {
+      "test": "invisible_walls_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 27.2
+    },
+    {
+      "test": "jolt_layer_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 14.1
+    },
+    {
+      "test": "juice_budget_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 9.8
+    },
+    {
+      "test": "jukebox_show_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 8.7
+    },
+    {
+      "test": "kest_blink_solid_enemy_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 9.7
+    },
+    {
+      "test": "kest_kit_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 10
+    },
+    {
+      "test": "jukebox_tunes_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 30.7
+    },
+    {
+      "test": "keyline_floor_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 0.5
+    },
+    {
+      "test": "kest_set_piece_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 9.5
+    },
+    {
+      "test": "kit_cue_level_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 13.7
+    },
+    {
+      "test": "lab_pockets_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 8.4
+    },
+    {
+      "test": "kite_dive_stack_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 16.8
+    },
+    {
+      "test": "landmark_beam_near_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 0.3
+    },
+    {
+      "test": "landmark_impostor_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 1.5
+    },
+    {
+      "test": "lantern_beacon_clearance_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 9.9
+    },
+    {
+      "test": "landing_shockwave_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 12.5
+    },
+    {
+      "test": "late_offer_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 3.3
+    },
+    {
+      "test": "launch_table_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 5.6
+    },
+    {
+      "test": "launch_take_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 11.1
+    },
+    {
+      "test": "ledger_leaf_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 10.1
+    },
+    {
+      "test": "line_skill_hook_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 10.1
+    },
+    {
+      "test": "lighting_owner_lifetime_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 20.7
+    },
+    {
+      "test": "line_view_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 1.1
+    },
+    {
+      "test": "line_sound_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 19.1
+    },
+    {
+      "test": "look_after_warm_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 3.9
+    },
+    {
+      "test": "logbook_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 23.1
+    },
+    {
+      "test": "look_frames_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 9.9
+    },
+    {
+      "test": "look_harness_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 6
+    },
+    {
+      "test": "loop_bot_hang_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 13
+    },
+    {
+      "test": "loop_coherence_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 11.5
+    },
+    {
+      "test": "lore_rows_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 0.9
+    },
+    {
+      "test": "lore_sample_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 0.5
+    },
+    {
+      "test": "lore_unlock_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 10.7
+    },
+    {
+      "test": "maker_bonuses_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 19.2
+    },
+    {
+      "test": "mass_icon_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 0.3
+    },
+    {
+      "test": "matchup_lab_pocket_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 3.7
+    },
+    {
+      "test": "material_slots_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 0.4
+    },
+    {
+      "test": "loop_bot_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 61.2
+    },
+    {
+      "test": "menu_ground_behind_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 20.4
+    },
+    {
+      "test": "menu_modules_lazy_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 15.6
+    },
+    {
+      "test": "menu_ready_ahead_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 2.2
+    },
+    {
+      "test": "meta_options_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 0.5
+    },
+    {
+      "test": "menu_structure_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 10.8
+    },
+    {
+      "test": "mind_plate_reach_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 22.3
+    },
+    {
+      "test": "mind_quiet_gun_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 18.3
+    },
+    {
+      "test": "miniboss_phase_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 8.4
+    },
+    {
+      "test": "miniboss_pose_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 8.2
+    },
+    {
+      "test": "mix_rows_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 8.4
+    },
+    {
+      "test": "monster_heft_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 1
+    },
+    {
+      "test": "moment_voices_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 10.1
+    },
+    {
+      "test": "moss_shelter_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 8.9
+    },
+    {
+      "test": "keep_spin_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 4
+    },
+    {
+      "test": "light_lifetime_lint_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 17.8
+    },
+    {
+      "test": "machine_fx_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 10.8
+    },
+    {
+      "test": "movement_bughunt_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 3.6
+    },
+    {
+      "test": "music_params_retry_game_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 20.9
+    },
+    {
+      "test": "music_rows_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 0.9
+    },
+    {
+      "test": "music_track_entry_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 4.7
+    },
+    {
+      "test": "net_catch_ripple_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 0.5
+    },
+    {
+      "test": "music_brindle_release_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 36
+    },
+    {
+      "test": "net_deck_fall_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 9.7
+    },
+    {
+      "test": "outfit_art_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 1
+    },
+    {
+      "test": "on_beat_hit_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 18.9
+    },
+    {
+      "test": "overpowered_pays_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 21.8
+    },
+    {
+      "test": "page_structure_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 9.4
+    },
+    {
+      "test": "paint_mask_scan_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 1.1
+    },
+    {
+      "test": "panel_pop_sync_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 0.7
+    },
+    {
+      "test": "panels_drop_sim_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 5
+    },
+    {
+      "test": "pack_telegraph_record_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 24.4
+    },
+    {
+      "test": "panels_isolation_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 10.3
+    },
+    {
+      "test": "panels_stack_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 1.1
+    },
+    {
+      "test": "panels_rib_cache_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 12.9
+    },
+    {
+      "test": "park_anchor_span_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 2.3
+    },
+    {
+      "test": "park_anchor_stand_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 5.1
+    },
+    {
+      "test": "park_anchors_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 0.7
+    },
+    {
+      "test": "park_apron_rim_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 1.1
+    },
+    {
+      "test": "park_bake_fresh_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 6.2
+    },
+    {
+      "test": "park_bake_spike_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 4.6
+    },
+    {
+      "test": "park_cable_ends_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 1.4
+    },
+    {
+      "test": "park_anchor_corner_probe_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 29.4
+    },
+    {
+      "test": "park_cave_in_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 12.3
+    },
+    {
+      "test": "park_collider_parity_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 3.6
+    },
+    {
+      "test": "park_cue_forms_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 0.8
+    },
+    {
+      "test": "park_cue_late_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 1.4
+    },
+    {
+      "test": "park_cache_faces_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 37.8
+    },
+    {
+      "test": "park_dam_fin_foot_probe_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 189
+    },
+    {
+      "test": "park_day_light_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 0.4
+    },
+    {
+      "test": "park_dam_rim_roll_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 195.1
+    },
+    {
+      "test": "park_event_forms_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 1.1
+    },
+    {
+      "test": "park_events_ancient_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 2.6
+    },
+    {
+      "test": "park_events_fleet_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 1.2
+    },
+    {
+      "test": "park_density_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 60.2
+    },
+    {
+      "test": "park_events_industrial_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 2.8
+    },
+    {
+      "test": "park_events_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 1.9
+    },
+    {
+      "test": "park_feature_census_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 2.3
+    },
+    {
+      "test": "park_events_game_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 47.7
+    },
+    {
+      "test": "park_fight_bowl_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 1.4
+    },
+    {
+      "test": "park_field_posts_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 6.2
+    },
+    {
+      "test": "park_fin_chute_hide_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 22.4
+    },
+    {
+      "test": "park_flume_lip_notch_probe_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 27.1
+    },
+    {
+      "test": "park_graph_precision_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 0.3
+    },
+    {
+      "test": "park_graph_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 32.4
+    },
+    {
+      "test": "park_flume_rim_roll_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 46.1
+    },
+    {
+      "test": "park_ground_surface_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 9.6
+    },
+    {
+      "test": "park_ground_texture_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 9.3
+    },
+    {
+      "test": "park_ground_bite_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 28.6
+    },
+    {
+      "test": "music_params_ace_game_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 30.6
+    },
+    {
+      "test": "music_params_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 221.2
+    },
+    {
+      "test": "music_params_trace_game_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 210.8
+    },
+    {
+      "test": "natural_marks_planned_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 35.6
+    },
+    {
+      "test": "offer_weights_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 88.1
+    },
+    {
+      "test": "one_shot_guard_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 1
+    },
+    {
+      "test": "pack_pressure_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 4.6
+    },
+    {
+      "test": "park_dressing_pin_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 27.7
+    },
+    {
+      "test": "park_holes_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 3.5
+    },
+    {
+      "test": "park_landmark_sight_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 3.6
+    },
+    {
+      "test": "park_landmarks_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 2.6
+    },
+    {
+      "test": "park_map_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 1.6
+    },
+    {
+      "test": "park_horizon_boxes_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 12.4
+    },
+    {
+      "test": "park_mind_quote_once_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 2.2
+    },
+    {
+      "test": "park_music_cues_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 33.5
+    },
+    {
+      "test": "park_music_layers_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 1.1
+    },
+    {
+      "test": "park_music_multi_game_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 28.8
+    },
+    {
+      "test": "park_natural_cue_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 14.4
+    },
+    {
+      "test": "park_music_hold_game_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 83
+    },
+    {
+      "test": "park_natural_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 2.7
+    },
+    {
+      "test": "park_over_greybox_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 1.5
+    },
+    {
+      "test": "park_park_dam_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 10.1
+    },
+    {
+      "test": "park_natural_projection_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 49.1
+    },
+    {
+      "test": "park_place_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 6.6
+    },
+    {
+      "test": "park_park_flume_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 37.5
+    },
+    {
+      "test": "park_pockets_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 11.7
+    },
+    {
+      "test": "park_prepare_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 14.9
+    },
+    {
+      "test": "park_recipes_bowls_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 14.6
+    },
+    {
+      "test": "park_props_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 46.3
+    },
+    {
+      "test": "park_recipes_contraptions_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 1.8
+    },
+    {
+      "test": "park_recipes_crater_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 14.5
+    },
+    {
+      "test": "park_recipes_dam_dressing_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 2.8
+    },
+    {
+      "test": "park_recipes_caverns_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 60.6
+    },
+    {
+      "test": "park_recipes_grind_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 20.5
+    },
+    {
+      "test": "park_recipes_kickers_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 7.6
+    },
+    {
+      "test": "park_recipes_halfpipes_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 17.1
+    },
+    {
+      "test": "park_recipes_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 3.4
+    },
+    {
+      "test": "park_recipes_ledges_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 10.5
+    },
+    {
+      "test": "park_rescue_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 22.6
+    },
+    {
+      "test": "park_risk_sites_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 1.4
+    },
+    {
+      "test": "park_routes_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 3.1
+    },
+    {
+      "test": "park_recipes_tunnels_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 30.6
+    },
+    {
+      "test": "park_schema_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 1.6
+    },
+    {
+      "test": "park_seat_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 0.9
+    },
+    {
+      "test": "park_skill_lines_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 5.3
+    },
+    {
+      "test": "park_stinger_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 1.2
+    },
+    {
+      "test": "park_surface_layers_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 1.5
+    },
+    {
+      "test": "park_scrap_trail_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 14.8
+    },
+    {
+      "test": "park_swap_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 11.2
+    },
+    {
+      "test": "park_tile_attach_budget_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 0.5
+    },
+    {
+      "test": "park_table_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 11.5
+    },
+    {
+      "test": "park_permanent_capacity_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 264.8
+    },
+    {
+      "test": "park_reactor_bot_hand_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 18.3
+    },
+    {
+      "test": "park_reactor_contact_grace_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 12.4
+    },
+    {
+      "test": "park_reactor_entry_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 54.2
+    },
+    {
+      "test": "park_reactor_jump_release_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 11.5
+    },
+    {
+      "test": "park_reactor_launch_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 23.2
+    },
+    {
+      "test": "park_reactor_phase_quarters_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 0.9
+    },
+    {
+      "test": "park_reactor_prelaunch_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 11
+    },
+    {
+      "test": "park_reactor_repeat_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 91.8
+    },
+    {
+      "test": "park_reactor_rhythm_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 133.7
+    },
+    {
+      "test": "park_reactor_ride_clamp_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 1
+    },
+    {
+      "test": "park_reactor_sheet_bot_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 31.6
+    },
+    {
+      "test": "park_reactor_sheet_heft_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 99
+    },
+    {
+      "test": "park_reactor_sheet_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 14.8
+    },
+    {
+      "test": "park_reactor_stagger_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 0.9
+    },
+    {
+      "test": "park_reactor_window_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 35.5
+    },
+    {
+      "test": "park_sockets_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 168.3
+    },
+    {
+      "test": "park_tile_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 0.9
+    },
+    {
+      "test": "park_warden_hardpoints_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 1.5
+    },
+    {
+      "test": "park_wash_elbow_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 1.4
+    },
+    {
+      "test": "park_weather_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 1.8
+    },
+    {
+      "test": "park_trestle_under_rescue_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 15.9
+    },
+    {
+      "test": "part_levels_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 16.3
+    },
+    {
+      "test": "park_weir_deck_roll_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 32.9
+    },
+    {
+      "test": "parts_pool_movement_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 0.4
+    },
+    {
+      "test": "parts_shop_words_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 0.8
+    },
+    {
+      "test": "pattern_dps_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 30.9
+    },
+    {
+      "test": "part_sets_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 101
+    },
+    {
+      "test": "perch_ahead_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 65.1
+    },
+    {
+      "test": "persistence_truncation_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 1
+    },
+    {
+      "test": "perch_points_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 5.8
+    },
+    {
+      "test": "pick_card_clarity_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 9.3
+    },
+    {
+      "test": "phase_music_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 12.6
+    },
+    {
+      "test": "picks_words_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 1.4
+    },
+    {
+      "test": "pick_pace_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 9.4
+    },
+    {
+      "test": "pickup_look_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 8.4
+    },
+    {
+      "test": "pilot_baseline_ratio_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 1
+    },
+    {
+      "test": "pilot_cannon_asset_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 0.4
+    },
+    {
+      "test": "pilot_clip_contacts_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 0.9
+    },
+    {
+      "test": "pilot_clip_controls_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 0.3
+    },
+    {
+      "test": "pilot_antics_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 9.4
+    },
+    {
+      "test": "pilot_clip_shell_lookup_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 1.2
+    },
+    {
+      "test": "pilot_clip_runtime_lookup_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 11.7
+    },
+    {
+      "test": "pilot_clips_kest_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 9.4
+    },
+    {
+      "test": "pilot_clips_policy_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 9.1
+    },
+    {
+      "test": "pilot_clips_rivet_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 9.4
+    },
+    {
+      "test": "pilot_clips_tally_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 9.1
+    },
+    {
+      "test": "pilot_fallback_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 9.4
+    },
+    {
+      "test": "pilot_mask_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 1.5
+    },
+    {
+      "test": "pilot_pick_words_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 2
+    },
+    {
+      "test": "pilot_locks_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 9.2
+    },
+    {
+      "test": "pilot_reactions_slam_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 9.1
+    },
+    {
+      "test": "pilot_tally_asset_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 0.4
+    },
+    {
+      "test": "pilot_reactions_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 9
+    },
+    {
+      "test": "pilot_tarn_asset_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 0.9
+    },
+    {
+      "test": "pilot_uptime_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 0.4
+    },
+    {
+      "test": "plate_cue_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 8.6
+    },
+    {
+      "test": "play_watch_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 0.3
+    },
+    {
+      "test": "pipe_vault_wall_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 11.9
+    },
+    {
+      "test": "player_fx_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 9.2
+    },
+    {
+      "test": "pocket_collision_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 9.2
+    },
+    {
+      "test": "pocket_library_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 20.6
+    },
+    {
+      "test": "pocket_line_clear_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 9.7
+    },
+    {
+      "test": "pod_scale_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 9.4
+    },
+    {
+      "test": "pol_dk_cache_readability_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 0.3
+    },
+    {
+      "test": "pol_dk_pylon_readability_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 0.3
+    },
+    {
+      "test": "pocket_kinds_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 45.3
+    },
+    {
+      "test": "pol_ui_companion_colour_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 9.6
+    },
+    {
+      "test": "pol_dk_waking_readability_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 12.5
+    },
+    {
+      "test": "pol_ui_title_readability_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 8.9
+    },
+    {
+      "test": "pole_flail_grip_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 0.5
+    },
+    {
+      "test": "pole_ride_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 0.5
+    },
+    {
+      "test": "pol_ui_ending_framing_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 16.6
+    },
+    {
+      "test": "park_warden_wiring_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 78.4
+    },
+    {
+      "test": "park_world_scenery_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 34.1
+    },
+    {
+      "test": "park_zones_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 17.9
+    },
+    {
+      "test": "pocket_draw_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 70.1
+    }
+  ],
+  "failures": [],
+  "counts": {
+    "error": 0,
+    "script_error": 0,
+    "in_use": 0,
+    "freed": 0,
+    "leaked_warning": 206
+  },
+  "slow": [],
+  "verdict": {
+    "ok": true,
+    "line": "PASS, no new red"
+  },
+  "startedAt": "2026-11-11T11:12:05.383Z",
+  "finishedAt": "2026-11-11T11:48:54.974Z"
+}

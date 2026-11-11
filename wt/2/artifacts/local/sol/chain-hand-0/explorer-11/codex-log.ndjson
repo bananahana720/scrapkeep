@@ -1,0 +1,4 @@
+{"category":"enemy","heft":1.40666666666667,"id":"cannon_lane_charge","kind":"discovered","participants":["player"],"parts":["loose_trigger"],"run_id":"bot-11","stage":1,"stage_ticks":2109}
+{"category":"enemy","heft":1.45111111111111,"id":"chain","kind":"discovered","participants":["player"],"parts":["loose_trigger"],"run_id":"bot-11","stage":1,"stage_ticks":2143}
+{"category":"enemy","heft":1.49333333333333,"id":"plate_peel","kind":"discovered","participants":["player"],"parts":["loose_trigger"],"run_id":"bot-11","stage":1,"stage_ticks":2163}
+{"category":"build","heft":1.55777777777778,"id":"spare","kind":"discovered","participants":["player"],"parts":["loose_trigger"],"run_id":"bot-11","stage":1,"stage_ticks":2164}

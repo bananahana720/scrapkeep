@@ -1,0 +1,7 @@
+{"category":"enemy","heft":1.02444444444444,"id":"counter_ram","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40316","stage":1,"stage_ticks":6527}
+{"category":"enemy","heft":1.15333333333333,"id":"kest_cable_charge","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40316","stage":1,"stage_ticks":7347}
+{"category":"enemy","heft":1.54222222222222,"id":"set_piece","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40316","stage":1,"stage_ticks":9649}
+{"category":"enemy","heft":1.58666666666667,"id":"kest_windhover","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40316","stage":1,"stage_ticks":9650}
+{"category":"enemy","heft":1.73333333333333,"id":"tether_snap","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40316","stage":1,"stage_ticks":12611}
+{"category":"enemy","heft":1.80444444444444,"id":"mat_slip","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40316","stage":1,"stage_ticks":17585}
+{"category":"enemy","heft":1.77333333333333,"id":"heavy_roll","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40316","stage":1,"stage_ticks":20959}

@@ -1,0 +1,17 @@
+11:12:05Z start import-1 load=9.1
+11:14:08Z end import-1 exit=0 wall=123s load=11.9
+11:14:08Z start import-2 load=11.9
+11:14:11Z end import-2 exit=0 wall=3s load=11.9
+11:14:11Z start chunk00 load=11.9
+11:14:12Z start chunk01 load=11.9
+11:21:00Z end chunk01 exit=0 wall=408s load=19.1
+11:21:00Z start chunk02 load=19.1
+11:21:58Z end chunk00 exit=0 wall=466s load=20.5
+11:21:58Z start chunk03 load=20.5
+11:26:43Z end chunk02 exit=0 wall=343s load=16.4
+11:26:43Z start chunk04 load=16.4
+11:40:30Z end chunk03 exit=0 wall=1112s load=12.5
+11:40:30Z start chunk05 load=12.5
+11:48:15Z end chunk04 exit=0 wall=1292s load=18.1
+11:48:54Z end chunk05 exit=0 wall=504s load=15.3
+Gate shard: tests 361-720 on fe7c68a0: PASS, no new red. Receipt: /home/andrew/scratch/gate/w36-fe7c68a0/tests-361-720/receipt.md

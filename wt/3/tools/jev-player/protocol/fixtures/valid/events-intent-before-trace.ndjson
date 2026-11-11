@@ -1,0 +1,3 @@
+{"tick":0,"kind":"trace","pos":[0.1,0.5,-4],"vel":[0.2,0,-4],"tier":"walk","grounded":true}
+{"tick":26,"kind":"intent","seq":0,"intent":"push_objective"}
+{"tick":26,"kind":"trace","pos":[0.1,0.5,-4],"vel":[0.2,0,-4],"tier":"walk","grounded":true}

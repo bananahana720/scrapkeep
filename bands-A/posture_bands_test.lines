@@ -1,0 +1,14 @@
+[grown median within 10 percent of the sweep's] grown 25.8 s, sweep 25.8 s -> PASS
+[over the sweep seeds grown breaks it in 25 to 45 s] live grown median 25.8 s -> PASS
+[over the sweep seeds small takes at least 1.85 times grown's time] small 66.7 s, grown 25.8 s -> PASS
+[seed 0 plays pylon_engineer] got "pylon_engineer", want "pylon_engineer" -> PASS
+[seed 1 plays runner_gunner] got "runner_gunner", want "runner_gunner" -> PASS
+[seed 2 plays demolitions_caster] got "demolitions_caster", want "demolitions_caster" -> PASS
+[small breaks it in every run] got "24", want "24" -> PASS
+[small median within 10 percent of the sweep's] small 66.7 s, sweep 66.7 s -> PASS
+[the camper never breaks it] got "0", want "0" -> PASS
+[the row is the picked cell] row plating 110.0 curve 2.0 shatter false, pick { "plating": 110.0, "curve": 2.0, "ram_shatters": false } -> PASS
+[the saved table's grown median sits in 25 to 45 s] grown median 33.1 s -> PASS
+[the sweep ran] exit 0, timed out false -> PASS
+[the sweep ran] exit 0, timed out false -> PASS
+[the sweep table holds the picked cell and it passes every band] cell { "plating": "110.0", "curve": "2.0", "ram_shatters": "false", "small_median_s": "80.6", "small_min_s": "58.0", "small_max_s": "95.0", "small_broke": "3", "small_mass_median": "3.0", "small_heft_median": "1.007", "mid_median_s": "48.4", "mid_min_s": "34.6", "mid_max_s": "53.2", "mid_broke": "3", "mid_mass_median": "226.0", "mid_heft_median": "1.502", "grown_median_s": "33.1", "grown_min_s": "31.3", "grown_max_s": "39.2", "grown_broke": "3", "grown_mass_median": "542.0", "grown_heft_median": "2.204", "camper_median_s": "240.0", "camper_min_s": "240.0", "camper_max_s": "240.0", "camper_broke": "0", "camper_mass_median": "3.0", "camper_heft_median": "1.007", "small_to_grown": "2.43", "band_grown": "pass", "band_small": "pass", "band_mid": "pass", "band_camper": "pass", "pass": "pass" } -> PASS

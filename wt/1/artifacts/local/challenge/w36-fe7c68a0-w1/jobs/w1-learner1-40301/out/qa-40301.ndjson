@@ -1,0 +1,8 @@
+{"at":[-146.9,156.5,-679.2],"clamp_shut":true,"flow":"stage","goal":"roll to spillway sheet","id":"find_warden","kind":"objective","s":1.0,"sealed":true,"stage":1,"words":"Find the Warden","yard_locked":false}
+{"at":[-11.8,18.1,382.6],"clamp_shut":true,"flow":"stage","goal":"fight chaser charge","id":"break_yard_crew","kind":"objective","s":70.0,"sealed":true,"stage":1,"words":"Break the yard crew","yard_locked":true}
+{"at":[-21.9,21.6,374.4],"clamp_shut":true,"flow":"stage","goal":"roll to spillway sheet","id":"find_warden","kind":"objective","s":105.2,"sealed":true,"stage":1,"words":"Find the Warden","yard_locked":false}
+{"at":[-2.1,-2.2,545.8],"clamp_shut":true,"flow":"beacon","goal":"fight plated_brute charge","id":"break_clamp_crews","kind":"objective","s":116.2,"sealed":true,"stage":1,"words":"Break the clamp crews","yard_locked":false}
+{"at":[49.7,1.4,479.6],"clamp_shut":false,"flow":"beacon","goal":"roll to spillway sheet","id":"ride_sheet","kind":"objective","s":138.8,"sealed":true,"stage":1,"words":"Ride the water sheet up","yard_locked":false}
+{"at":[8.4,-0.3,567.4],"flow":"beacon","goal":"wait spillway sheet","grounded":true,"kind":"stuck","n":[0.0,1.0,0.0],"s":157.8,"stage":1,"v":[0.0,0.0,0.0]}
+{"at":[-1.5,27.4,593.8],"clamp_shut":false,"flow":"gates","goal":"gate 0","id":"roll_gate","kind":"objective","s":178.5,"sealed":false,"stage":1,"words":"Roll through a gate","yard_locked":false}
+{"at":[-15.2,5.9,524.0],"clamp_shut":false,"flow":"launch","goal":"gate 0","id":"","kind":"objective","s":184.5,"sealed":false,"stage":1,"words":"","yard_locked":false}

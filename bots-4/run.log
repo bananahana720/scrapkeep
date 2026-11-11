@@ -1,0 +1,15 @@
+12:44:35Z start import-1 load=18.1
+12:44:39Z end import-1 exit=0 wall=3s load=18.7
+12:44:39Z start import-2 load=18.7
+12:44:42Z end import-2 exit=0 wall=3s load=18.7
+12:44:42Z start bot-posture_bands_test load=18.7
+12:59:34Z end bot-posture_bands_test exit=0 wall=892s load=16.4
+12:59:34Z start bot-restart_latency_test load=16.4
+13:01:46Z end bot-restart_latency_test exit=0 wall=132s load=15.3
+13:01:46Z start bot-run_save_interrupt_test load=15.3
+13:04:07Z end bot-run_save_interrupt_test exit=0 wall=141s load=13.6
+13:04:07Z start bot-run_tier_test load=13.6
+13:09:01Z end bot-run_tier_test exit=0 wall=294s load=20.3
+13:09:01Z start bot-self_play_launch_test load=20.3
+13:14:32Z end bot-self_play_launch_test exit=0 wall=332s load=9.2
+Gate shard: bots 16-20 on fe7c68a0: PASS, no new red. Receipt: /home/andrew/scratch/gate/w36-fe7c68a0/bots-4/receipt.md

@@ -1,0 +1,68 @@
+[a banded row records its band] band { "attempt": 1.0, "kit": "full", "name": "expert", "reaction_s": 0.25, "read_chance": 1.0 } -> PASS
+[a tell's answer is stable and the stream replays]  -> PASS
+[an unknown band is refused with its name]  -> PASS
+[camper seed 1: expert row equals the unbanded row] differs in [] -> PASS
+[camper seed 2: expert row equals the unbanded row] differs in [] -> PASS
+[camper-1-expert ran] exit 0, timed out false -> PASS
+[camper-1-plain ran] exit 0, timed out false -> PASS
+[camper-2-expert ran] exit 0, timed out false -> PASS
+[camper-2-plain ran] exit 0, timed out false -> PASS
+[completionist seed 1: expert row equals the unbanded row] differs in [] -> PASS
+[completionist seed 2: expert row equals the unbanded row] differs in [] -> PASS
+[completionist-1-expert ran] exit 0, timed out false -> PASS
+[completionist-1-plain ran] exit 0, timed out false -> PASS
+[completionist-2-expert ran] exit 0, timed out false -> PASS
+[completionist-2-plain ran] exit 0, timed out false -> PASS
+[expert allows everything and times the ultimate]  -> PASS
+[expert reads every tell without touching its stream] state -6311040380611525220 -> -6311040380611525220 -> PASS
+[learner --attempt=5 reaches its last values] band { "attempt": 5.0, "kit": "base", "name": "learner", "reaction_s": 0.3, "read_chance": 0.92 } -> PASS
+[learner attempt 1 reaction] got 0.45, want 0.45 within 0.0001 -> PASS
+[learner attempt 1 read chance] got 0.65, want 0.65 within 0.0001 -> PASS
+[learner attempt 3 reaction] got 0.375, want 0.375 within 0.0001 -> PASS
+[learner attempt 3 read chance] got 0.785, want 0.785 within 0.0001 -> PASS
+[learner attempt 5 reaction] got 0.3, want 0.3 within 0.0001 -> PASS
+[learner attempt 5 read chance] got 0.92, want 0.92 within 0.0001 -> PASS
+[learner attempt 9 reaction] got 0.3, want 0.3 within 0.0001 -> PASS
+[learner attempt 9 read chance] got 0.92, want 0.92 within 0.0001 -> PASS
+[learner has the base kit, untimed ultimate, no actives or chain] kit base -> PASS
+[learner read rate matches its chance] rate 0.663, chance 0.650 -> PASS
+[learner records its band] got ["learner", 1], want ["learner", 1] -> PASS
+[novice allows none of the kit verbs] allowed [] -> PASS
+[skipper seed 1: expert row equals the unbanded row] differs in [] -> PASS
+[skipper seed 2: expert row equals the unbanded row] differs in [] -> PASS
+[skipper-1-expert ran] exit 0, timed out false -> PASS
+[skipper-1-learner ran] exit 0, timed out false -> PASS
+[skipper-1-learner5 ran] exit 0, timed out false -> PASS
+[skipper-1-novice ran] exit 0, timed out false -> PASS
+[skipper-1-novice records its band] got ["novice", 1], want ["novice", 1] -> PASS
+[skipper-1-novice uses no kit hands] casts { "line": 0.0, "special": 0.0 }, ult presses 0.0, bites 0 -> PASS
+[skipper-1-plain ran] exit 0, timed out false -> PASS
+[skipper-2-expert ran] exit 0, timed out false -> PASS
+[skipper-2-plain ran] exit 0, timed out false -> PASS
+[tally novice still throws cards] class tally, shots 50 -> PASS
+[tally seed 1: expert row equals the unbanded row] differs in [] -> PASS
+[tally-1-expert ran] exit 0, timed out false -> PASS
+[tally-1-novice ran] exit 0, timed out false -> PASS
+[tally-1-novice records its band] got ["novice", 1], want ["novice", 1] -> PASS
+[tally-1-novice uses no kit hands] casts { "line": 0.0, "special": 0.0 }, ult presses 0.0, bites 0 -> PASS
+[tally-1-plain ran] exit 0, timed out false -> PASS
+[the row's reaction_s is the band's] reaction_s 0.45 -> PASS
+[unknown band falls back to expert] got "expert", want "expert" -> PASS
+bot_run: camper seed 1 (runner_gunner) -> ticks_done at stage 1, 9000 ticks (100.0 s game), N s wall
+bot_run: camper seed 1 (runner_gunner) -> ticks_done at stage 1, 9000 ticks (100.0 s game), N s wall
+bot_run: camper seed 2 (demolitions_caster) -> ticks_done at stage 1, 9000 ticks (100.0 s game), N s wall
+bot_run: camper seed 2 (demolitions_caster) -> ticks_done at stage 1, 9000 ticks (100.0 s game), N s wall
+bot_run: completionist seed 1 (runner_gunner) -> ticks_done at stage 1, 9000 ticks (100.0 s game), N s wall
+bot_run: completionist seed 1 (runner_gunner) -> ticks_done at stage 1, 9000 ticks (100.0 s game), N s wall
+bot_run: completionist seed 2 (demolitions_caster) -> ticks_done at stage 1, 9000 ticks (100.0 s game), N s wall
+bot_run: completionist seed 2 (demolitions_caster) -> ticks_done at stage 1, 9000 ticks (100.0 s game), N s wall
+bot_run: skipper seed 1 (runner_gunner) -> ticks_done at stage 1, 9000 ticks (100.0 s game), N s wall
+bot_run: skipper seed 1 (runner_gunner) -> ticks_done at stage 1, 9000 ticks (100.0 s game), N s wall
+bot_run: skipper seed 1 (runner_gunner) -> ticks_done at stage 1, 9000 ticks (100.0 s game), N s wall
+bot_run: skipper seed 1 (runner_gunner) -> ticks_done at stage 1, 9000 ticks (100.0 s game), N s wall
+bot_run: skipper seed 1 (runner_gunner) -> ticks_done at stage 1, 9000 ticks (100.0 s game), N s wall
+bot_run: skipper seed 1 (tally) -> ticks_done at stage 1, 9000 ticks (100.0 s game), N s wall
+bot_run: skipper seed 1 (tally) -> ticks_done at stage 1, 9000 ticks (100.0 s game), N s wall
+bot_run: skipper seed 1 (tally) -> ticks_done at stage 1, 9000 ticks (100.0 s game), N s wall
+bot_run: skipper seed 2 (demolitions_caster) -> ticks_done at stage 1, 9000 ticks (100.0 s game), N s wall
+bot_run: skipper seed 2 (demolitions_caster) -> ticks_done at stage 1, 9000 ticks (100.0 s game), N s wall

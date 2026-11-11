@@ -1,0 +1,13 @@
+{"category":"enemy","heft":1.01333333333333,"id":"armour_wet","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40314","stage":1,"stage_ticks":3792}
+{"category":"enemy","heft":1.33777777777778,"id":"chain","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40314","stage":1,"stage_ticks":5388}
+{"category":"enemy","heft":1.42,"id":"parting_shot","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40314","stage":1,"stage_ticks":5905}
+{"category":"build","heft":1.76888888888889,"kind":"found","participants":["player"],"parts":[],"run_id":"bot-40314","stage":1,"stage_ticks":7965,"text":"Arc meets a heavy hit: the charge overloads in a burst. Elites and bosses take the full burst."}
+{"category":"build","heft":1.77555555555556,"id":"spare","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40314","stage":1,"stage_ticks":7972}
+{"category":"enemy","heft":2.01333333333333,"id":"shell_return","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40314","stage":1,"stage_ticks":9330}
+{"category":"enemy","heft":2.09777777777778,"id":"crush_chain","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40314","stage":1,"stage_ticks":9679}
+{"category":"enemy","heft":2.20888888888889,"id":"set_piece","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40314","stage":1,"stage_ticks":9853}
+{"category":"enemy","heft":2.27555555555556,"id":"counter_ram","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40314","stage":1,"stage_ticks":10966}
+{"category":"enemy","heft":2.26,"id":"heavy_roll","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40314","stage":1,"stage_ticks":12422}
+{"category":"enemy","heft":2.33111111111111,"id":"tether_snap","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40314","stage":1,"stage_ticks":12448}
+{"category":"enemy","heft":2.37555555555556,"id":"mat_slip","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40314","stage":1,"stage_ticks":12755}
+{"category":"enemy","heft":2.41777777777778,"id":"warden_shatter","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-40314","stage":1,"stage_ticks":13396}

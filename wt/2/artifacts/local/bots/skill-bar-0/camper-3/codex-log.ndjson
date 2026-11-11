@@ -1,0 +1,5 @@
+{"category":"enemy","heft":1.08666666666667,"id":"tether_snap","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-3","stage":1,"stage_ticks":3375}
+{"category":"enemy","heft":1.13111111111111,"id":"mat_slip","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-3","stage":1,"stage_ticks":3528}
+{"category":"enemy","heft":1.07555555555556,"id":"shell_return","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-3","stage":1,"stage_ticks":7604}
+{"category":"build","heft":1.14,"id":"spare","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-3","stage":1,"stage_ticks":10390}
+{"category":"enemy","heft":1.08888888888889,"id":"crush_chain","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-3","stage":1,"stage_ticks":11167}

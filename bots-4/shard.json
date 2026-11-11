@@ -1,0 +1,102 @@
+{
+  "title": "Gate shard: bots 16-20 on fe7c68a0",
+  "head": "fe7c68a0441226600ae644789a0d6af235b371d1",
+  "box": "32 vCPU AMD Ryzen 9 5950X 16-Core Processor, 63 GB",
+  "threads": 32,
+  "godot": "Godot_v4.7.2-stable_linux.x86_64",
+  "scale": 1,
+  "window": "bot list 16 to 20 of 23 (posture_bands_test to self_play_launch_test), 5 tests",
+  "steps": {
+    "import-1": {
+      "exit": 0,
+      "seconds": 3,
+      "outcome": "ok",
+      "load_start": 18.1,
+      "load_end": 18.7
+    },
+    "import-2": {
+      "exit": 0,
+      "seconds": 3,
+      "outcome": "ok",
+      "load_start": 18.7,
+      "load_end": 18.7
+    },
+    "bot-posture_bands_test": {
+      "exit": 0,
+      "seconds": 892,
+      "load_start": 18.7,
+      "load_end": 16.4
+    },
+    "bot-restart_latency_test": {
+      "exit": 0,
+      "seconds": 132,
+      "load_start": 16.4,
+      "load_end": 15.3
+    },
+    "bot-run_save_interrupt_test": {
+      "exit": 0,
+      "seconds": 141,
+      "load_start": 15.3,
+      "load_end": 13.6
+    },
+    "bot-run_tier_test": {
+      "exit": 0,
+      "seconds": 294,
+      "load_start": 13.6,
+      "load_end": 20.3
+    },
+    "bot-self_play_launch_test": {
+      "exit": 0,
+      "seconds": 332,
+      "load_start": 20.3,
+      "load_end": 9.2
+    }
+  },
+  "results": [
+    {
+      "test": "posture_bands_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 888.6
+    },
+    {
+      "test": "restart_latency_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 128.3
+    },
+    {
+      "test": "run_save_interrupt_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 137.8
+    },
+    {
+      "test": "run_tier_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 290.4
+    },
+    {
+      "test": "self_play_launch_test",
+      "ok": true,
+      "exit": "0",
+      "seconds": 328.7
+    }
+  ],
+  "failures": [],
+  "counts": {
+    "error": 0,
+    "script_error": 0,
+    "in_use": 0,
+    "freed": 0,
+    "leaked_warning": 77
+  },
+  "slow": [],
+  "verdict": {
+    "ok": true,
+    "line": "PASS, no new red"
+  },
+  "startedAt": "2026-11-11T12:44:35.852Z",
+  "finishedAt": "2026-11-11T13:14:32.844Z"
+}

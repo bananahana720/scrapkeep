@@ -1,0 +1,11 @@
+12:55:50Z start import-1 load=81.7
+12:55:53Z end import-1 exit=0 wall=3s load=76.3
+12:55:53Z start import-2 load=76.3
+12:55:56Z end import-2 exit=0 wall=3s load=76.3
+12:55:56Z start bot-session_test load=76.3
+12:59:46Z end bot-session_test exit=0 wall=229s load=15.9
+12:59:46Z start bot-skill_band_test load=15.9
+13:09:02Z end bot-skill_band_test exit=0 wall=556s load=20.3
+13:09:02Z start bot-world1_run_test load=20.3
+13:22:26Z end bot-world1_run_test exit=0 wall=804s load=14.8
+Gate shard: bots 21-23 on fe7c68a0: PASS, no new red. Receipt: /home/andrew/scratch/gate/w36-fe7c68a0/bots-5/receipt.md
