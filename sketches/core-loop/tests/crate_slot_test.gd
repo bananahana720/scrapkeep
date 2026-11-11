@@ -65,8 +65,17 @@ func _initialize() -> void:
 	_run.call_deferred()
 
 
+# Seconds of drawn frames, stepped by the game's own process delta (the ceremony's pause does not stop it).
+var _clock := 0.0
+
+
 func _now() -> float:
-	return Time.get_ticks_msec() / 1000.0
+	return _clock
+
+
+func _frame() -> void:
+	await process_frame
+	_clock += _game.get_process_delta_time()
 
 
 func _ceremony():
@@ -95,7 +104,7 @@ func _wait_until(cond: Callable, seconds: float) -> bool:
 	while _now() < until:
 		if cond.call():
 			return true
-		await process_frame
+		await _frame()
 	return cond.call()
 
 
@@ -104,7 +113,7 @@ func _quiet_screen() -> bool:
 	var calm_for := 0
 	var until := _now() + 30.0
 	while _now() < until:
-		await process_frame
+		await _frame()
 		var clear: bool = not _card_up() and _game.hud.ach_waiting().is_empty() and _busy().showing() == "" and _busy().waiting().is_empty() \
 			and not _ceremony().active() and _ceremony().queued() == 0 and _ceremony().view.card.is_empty()
 		calm_for = calm_for + 1 if clear and _ceremony().calm() else 0
@@ -121,7 +130,7 @@ func _watch(seconds: float) -> Dictionary:
 	var out := {"overlap": 0, "began": -1.0, "card_gone": -1.0}
 	var was_up := _card_up()
 	while _now() - start < seconds:
-		await process_frame
+		await _frame()
 		var up := _card_up()
 		if was_up and not up and float(out["card_gone"]) < 0.0:
 			out["card_gone"] = _now() - start
@@ -155,7 +164,7 @@ func _run() -> void:
 	while _game.flow == null:
 		await process_frame
 	for i in 5:
-		await process_frame
+		await _frame()
 	_game.ctx.calm = true
 	_game.player.source = Intent.Scripted.new()
 	_game.flow.press_start()
@@ -201,7 +210,7 @@ func _run() -> void:
 	var card_at := -1.0
 	var start := _now()
 	while _now() - start < 20.0 and card_at < 0.0:
-		await process_frame
+		await _frame()
 		if _ceremony().active():
 			card_in_crate = card_in_crate or _card_up()
 			if _ceremony().phase() == "build" or _ceremony().phase() == "reveal":
