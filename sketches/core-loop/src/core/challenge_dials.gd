@@ -29,6 +29,12 @@ const WARN_GAP := 0.2
 
 const ONES6 := [1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
 const ZEROS6 := [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+# World 1's Wardens pulse harder and sooner (wave 37 unit D6, ruling cu): the core ring hits x1.3 and the
+# cycle runs x0.85 (6.0 s to 5.1 s), the HARD ladder's rung 2 values, now the base on the dam and the flume.
+# The ring still charges Warden.PULSE_TELEGRAPH seconds, so the tell is no shorter; only the gap between
+# pulses is. A ladder rung multiplies on top of these.
+const PULSE_DAMAGE_W1 := [1.3, 1.3, 1.0, 1.0, 1.0, 1.0]
+const PULSE_CYCLE_W1 := [0.85, 0.85, 1.0, 1.0, 1.0, 1.0]
 # Silt boils ship on world 1 at strength 2 (pack pressure E, 24 Oct ruling; DECISIONS section 5).
 const SILT_W1 := [2.0, 2.0, 0.0, 0.0, 0.0, 0.0]
 # The dam (stage 1) takes mob hits at x1.5 (w19 world 1 bands, Andrew 26 Oct option 1, DECISIONS section 5).
@@ -73,7 +79,7 @@ const DEFAULTS := {
 	"mind.phase_min_by_phase": [1.0, 1.0, 1.0, 1.0],
 	# Wardens (warden.gd): the pulse's damage and cycle, the meltdown slag's damage.
 	"warden.pulse_damage_mult": 1.0, "warden.pulse_cycle_mult": 1.0, "warden.slag_damage_mult": 1.0,
-	"warden.pulse_damage_by_stage": ONES6, "warden.pulse_cycle_by_stage": ONES6, "warden.slag_damage_by_stage": ONES6,
+	"warden.pulse_damage_by_stage": PULSE_DAMAGE_W1, "warden.pulse_cycle_by_stage": PULSE_CYCLE_W1, "warden.slag_damage_by_stage": ONES6,
 	# The Warden's counter-pulse (warden.gd): a second core ring committed inside a stagger. Damage is an
 	# absolute value per stage (0 = off, the default: nothing is built or rolled); the telegraph is floored at
 	# TELL_FLOOR; the delay is seconds into the stagger before it starts charging.
