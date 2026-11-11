@@ -2,11 +2,14 @@ extends Node
 
 const AbilityState := preload("res://src/core/ability_state.gd")
 const Palette := preload("res://src/core/palette.gd")
+const Tuning := preload("res://src/movement/tuning.gd")
 
 # First-meet tips (HELP-REFRESH, alpha-status WHATS-LEFT row 8): the field rules no key prompt
 # carries, said once on a profile as a toast at the first calm moment after the player first
 # meets them: held while a fight is live and while another toast or tip holds the screen.
-#   grip       a real carve ends (events.carved: CARVE_MIN_S or more on a wall), not a seam hop
+#   grip       a real carve ends (events.carved, CARVE_MIN_S or more) that touched a wall: a
+#              face steeper than MAX_SLOPE_DOT. A carve is any slope past CARVE_DOT (about 25
+#              degrees), so a dune or a ramp carves too; neither is the wall the tip speaks of.
 #   jam        a field's pulse jams the special and line slots (abilities.jams)
 #   cast       a slot first starts casting (abilities.casting)
 #   radio      the dial is up and the run has cleared a stage (events.stage_cleared)
@@ -72,6 +75,9 @@ var _run_time := 0.0
 var _opening_tips := 0
 var _cleared := false
 var _fought := false
+# The carve under way has touched a wall (a contact normal at or below MAX_SLOPE_DOT).
+var _walled := false
+var _was_carving := false
 
 
 func setup(game_ref, profile_ref, hud_ref) -> void:
@@ -81,7 +87,7 @@ func setup(game_ref, profile_ref, hud_ref) -> void:
 	process_mode = Node.PROCESS_MODE_PAUSABLE
 	if game != null and game.get("events") != null:
 		game.events.run_started.connect(_on_run_started)
-		game.events.carved.connect(func(_at: Vector3, _seconds: float, _speed: float): meet("grip"))
+		game.events.carved.connect(_on_carved)
 		game.events.stage_cleared.connect(func(_stage: int): _cleared = true)
 		game.events.player_hit.connect(func(_amount: float, _source: String): _fought = true)
 		game.events.enemy_killed.connect(func(_kind: String, _at: Vector3, _scrap: int): _fought = true)
@@ -97,6 +103,7 @@ func _physics_process(delta: float) -> void:
 	_wire()
 	_run_time += delta
 	var player = game.player
+	_track_wall(player.state)
 	var abilities = player.abilities
 	if abilities.jams > _jams:
 		meet("jam")
@@ -141,6 +148,21 @@ static func start_card_up(game_ref) -> bool:
 	var card = game_ref.flow.get("start_card")
 	var take = game_ref.get("launch_take")
 	return (card != null and card.showing()) or (take != null and take.busy())
+
+
+# A new carve starts unwalled; any tick of it on a wall face marks it.
+func _track_wall(state) -> void:
+	if state.carving and not _was_carving:
+		_walled = false
+	if state.carving and state.contact_normal.y <= Tuning.MAX_SLOPE_DOT:
+		_walled = true
+	_was_carving = state.carving
+
+
+func _on_carved(_at: Vector3, _seconds: float, _speed: float) -> void:
+	if _walled:
+		meet("grip")
+	_walled = false
 
 
 # The opening has told its one tip (a tip taken down untold does not count): the next waits until OPENING seconds of play have passed.
