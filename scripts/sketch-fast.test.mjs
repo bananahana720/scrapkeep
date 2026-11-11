@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  defaultWidth,
   mergedBranch,
   carriedPrs,
   failingChecks,
@@ -511,4 +512,13 @@ test("a crash signal is named as a crash, and only a plain kill points at the me
   assert.match(signalReason("SIGSEGV"), /^ended on SIGSEGV /);
   assert.match(signalReason("SIGKILL"), /memory limit/);
   assert.match(signalReason(null), /memory limit/);
+});
+
+test("the default width is one lane per idle core, between 2 and 8", () => {
+  assert.equal(defaultWidth(4, 0.1), 4);
+  assert.equal(defaultWidth(4, 1.6), 2);
+  assert.equal(defaultWidth(4, 0), 4);
+  assert.equal(defaultWidth(32, 30), 2);
+  assert.equal(defaultWidth(32, 4), 8);
+  assert.equal(defaultWidth(2, 0), 2);
 });

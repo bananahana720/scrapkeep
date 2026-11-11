@@ -1,6 +1,7 @@
 extends RefCounted
 
 const BotDriver := preload("res://tools/bot_driver.gd")
+const ParkTerrain := preload("res://src/world/park/park_terrain.gd")
 
 const FAST_FLAGS := ["bot-no-mix", "bot-no-visuals", "bot-no-pilot-tracks"]
 const UNREAD_VISUALS := [
@@ -17,6 +18,8 @@ func _init(options: Dictionary = {}, tree: SceneTree = null) -> void:
 	configure(settings)
 	if tree != null:
 		tree.node_added.connect(_on_node_added)
+	# A park stage's render regions are drawn only; a headless bot run builds the collider alone.
+	ParkTerrain.draw_regions = not _enabled("bot-no-visuals")
 
 
 static func configure(settings: Dictionary) -> void:
