@@ -152,5 +152,5 @@ func _run() -> void:
 
 	near.queue_free()
 	far.queue_free()
-	print("redline_test: %d checks, %d failures" % [_count, _failures])
+	print("redline_test: %s (%d checks, %d failures)" % ["FAIL" if _failures > 0 else "PASS", _count, _failures])
 	quit(1 if _failures > 0 else 0)
