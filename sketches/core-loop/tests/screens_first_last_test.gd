@@ -51,13 +51,19 @@ func _run() -> void:
 	_t.check("UI1-1 Start is taller than the rest", others.all(func(b): return start.custom_minimum_size.y > b.custom_minimum_size.y))
 	_t.check("UI1-1 the title has no Breath button", screens.button_for("breath") == null)
 	screens.toggle_settings()
-	_t.check("UI1-1 the settings page has a Breath button", screens.button_for("breath") != null
-		and screens.button_for("breath").text == "Breath: %s" % game.tuning.option(Tuning.BREATH_KEY))
+	_t.check("UI1-1 the settings page has no Breath button outside --dev", screens.button_for("breath") == null)
+	screens.toggle_settings()
+	var was_dev: bool = game.dev
+	game.dev = true
+	screens.toggle_settings()
+	_t.check("UI1-1 with --dev the settings page has a Breath button", screens.button_for("breath") != null
+		and screens.button_for("breath").text == "Breath %s" % game.tuning.option(Tuning.BREATH_KEY))
 	screens.toggle_settings()
 	game.tuning.set_option(Tuning.MUSIC_KEY, "synth")
 	screens.toggle_settings()
 	_t.check("UI1-1 the synth hides the Breath button", screens.button_for("breath") == null)
 	screens.toggle_settings()
+	game.dev = was_dev
 
 	game.flow.press_start()
 	await _frames(4)

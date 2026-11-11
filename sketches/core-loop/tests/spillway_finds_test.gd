@@ -224,7 +224,7 @@ func _game() -> void:
 			_t.eq("%s rolls on its own stream" % id, luck, "cracked_cache:" + id)
 	var after: Dictionary = CampMenu.reading(game)["secrets"][0]
 	_t.eq("the camp counts every find broken", after["found"], broken)
-	_t.check("the camp shows the count", (CampMenu.reading(game)["lines"] as PackedStringArray).has("Spillway secrets: %d of %d found" % [broken, Secrets.WORLD_CODEX[1].size()]))
+	_t.check("the camp shows the count", (CampMenu.reading(game)["lines"] as PackedStringArray).has("%d / %d Spillway secrets found" % [broken, Secrets.WORLD_CODEX[1].size()]))
 	var disk := Codex.new()
 	root.add_child(disk)
 	disk.setup(game.events, game.run, game.flow, game.storage_dir)

@@ -170,7 +170,7 @@ func _gp5_3_labels() -> void:
 		if p["ready"]:
 			continue
 		var def = ClassDef.by_id(p["id"])
-		var line := "%s: %s" % [p["name"], ClassCard.unlock_hint(def, _game.progress)]
+		var line := "%s is locked. %s" % [p["name"], ClassCard.unlock_hint(def, _game.progress)]
 		_t.check("GP5-3 camp shows %s's label" % p["id"], (read["lines"] as PackedStringArray).has(line) and line.contains(String(def.unlock["label"])), line)
 
 

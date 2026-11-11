@@ -9,6 +9,7 @@ const Glyphs := preload("res://src/ui/glyphs.gd")
 const BuildStamp := preload("res://src/core/build_stamp.gd")
 const VolumeRow := preload("res://src/ui/volume_row.gd")
 const Harmony := preload("res://src/presentation/harmony.gd")
+const SettingRow := preload("res://src/ui/setting_row.gd")
 
 # The settings page both hosts show: the pause menu in place of its first page, the title
 # through its Settings button. Three pages behind a tab strip, switched by LB and RB, Q and E
@@ -43,6 +44,9 @@ const FEEL := [
 	{"id": "hitstop", "comfort": "hitstop", "words": "Hit-stop", "glyph": "hitstop"},
 ]
 const CARDS_ROW := "ceremony"
+# The Display rows' words; a pip shows each one's state, and Quality shows low or high beside its words.
+const TOGGLE_WORDS := {"fullscreen": "Fullscreen", "quality": "Quality", "reduced_motion": "Less motion",
+	"reduce_flashes": "Fewer flashes", "frame_smoothing": "Frame smoothing", "wide_picture": "Wide picture"}
 # The verbs a trigger can fire, and how far a trigger is pulled before it counts as a press.
 const TRIGGER_VERBS := ["fire", "harpoon"]
 const TRIGGER_PULL := 0.6
@@ -255,7 +259,7 @@ func _show_feel() -> void:
 				level = juice.comfort(spec["comfort"])
 		rows[spec["id"]].show_level(level)
 	var ceremony = _game.presentation.get("ceremony") if _game.presentation != null else null
-	rows[CARDS_ROW].text = "Find cards: short" if ceremony != null and ceremony.short else "Find cards: full"
+	rows[CARDS_ROW].show_row("Find cards", "short" if ceremony != null and ceremony.short else "full")
 
 
 # C once flipped this in the pause menu: every find at the rare tier ("short") or in full, saved as the
@@ -422,12 +426,12 @@ func refresh() -> void:
 	_taken = ""
 	stamp.text = BuildStamp.label() + (" · sitting" if _game.tuning != null and _game.tuning.sitting() else "")
 	var store = _store()
-	rows["fullscreen"].text = "Fullscreen: %s" % ("on" if store.fullscreen() else "off")
-	rows["quality"].text = "Quality: %s" % ("low" if store.quality() == 1 else "high")
-	rows["reduced_motion"].text = "Less motion: %s" % ("on" if store.reduced_motion() else "off")
-	rows["reduce_flashes"].text = "Fewer flashes: %s" % ("on" if store.reduce_flashes() else "off")
-	rows["frame_smoothing"].text = "Frame smoothing: %s" % ("on" if store.frame_smoothing() else "off")
-	rows["wide_picture"].text = "Wide picture: %s" % ("on" if store.wide_picture() else "off")
+	_show_toggle("fullscreen", store.fullscreen())
+	_show_quality(store.quality() == 1)
+	_show_toggle("reduced_motion", store.reduced_motion())
+	_show_toggle("reduce_flashes", store.reduce_flashes())
+	_show_toggle("frame_smoothing", store.frame_smoothing())
+	_show_toggle("wide_picture", store.wide_picture())
 	for verb in VERBS:
 		_rebuild(verb)
 		_rebuild("pad_" + verb)
@@ -438,23 +442,11 @@ func refresh() -> void:
 
 
 func _add_plain(id: String, page: String) -> void:
-	var button := Button.new()
-	button.focus_mode = Control.FOCUS_ALL
-	button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
-	button.add_theme_font_override("font", UiFonts.bold())
-	button.add_theme_font_size_override("font_size", 22)
-	button.add_theme_color_override("font_color", Palette.SAND)
-	button.add_theme_color_override("font_hover_color", Color.WHITE)
-	button.add_theme_color_override("font_pressed_color", Palette.AMBER)
-	button.add_theme_color_override("font_focus_color", Color.WHITE)
-	var left := ChoiceButton.PAD * 1.5
-	button.add_theme_stylebox_override("normal", ChoiceButton.plate(Palette.VERDIGRIS, 2, left))
-	button.add_theme_stylebox_override("hover", ChoiceButton.plate(Palette.SAND, 2, left))
-	button.add_theme_stylebox_override("pressed", ChoiceButton.plate(Palette.AMBER, 3, left))
-	button.add_theme_stylebox_override("focus", ChoiceButton.plate(Palette.SAND, 4, left, false))
+	var button := SettingRow.new(id, "", "Reset keys" if id == "reset" else id.capitalize())
+	if id != "reset":
+		button.alignment = HORIZONTAL_ALIGNMENT_LEFT
 	button.custom_minimum_size = Vector2(WIDTH, 40.0)
 	button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	button.text = "Reset keys" if id == "reset" else id.capitalize()
 	button.pressed.connect(press.bind(id))
 	rows[id] = button
 	_page_ids[page].append(id)
@@ -472,7 +464,9 @@ func _bind_button(id: String) -> Button:
 
 # A fixed verb shows its keys and takes no input.
 func _add_fixed(verb: String) -> void:
-	var button := ChoiceButton.new(verb, Bindings.glyph(verb), "%s: %s" % [verb.capitalize(), Bindings.label(verb)])
+	var button := SettingRow.new(verb, Bindings.glyph(verb), "")
+	button.alignment = HORIZONTAL_ALIGNMENT_LEFT
+	button.show_row(verb.capitalize(), Bindings.label(verb))
 	button.disabled = true
 	button.focus_mode = Control.FOCUS_NONE
 	button.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -505,14 +499,33 @@ func _look_spec(id: String) -> Dictionary:
 	return {}
 
 
+# An on-off row: its words and a pip that is filled when the setting is on and a ring when off.
+func _show_toggle(id: String, on: bool) -> void:
+	rows[id].show_row(TOGGLE_WORDS[id], "", SettingRow.ON if on else SettingRow.OFF)
+
+
+func _show_quality(low: bool) -> void:
+	rows["quality"].show_row(TOGGLE_WORDS["quality"], "low" if low else "high")
+
+
+# What a row shows, as data and never as a string to parse: its label, its right-hand value ("" for a
+# pip) and its pip state (-1 none, 0 off, 1 on). A Feel row's value is its filled steps of ten. Rows that
+# are not settings (a key cap, Back) answer an empty label.
+func read(id: String) -> Dictionary:
+	var node = rows.get(id)
+	if node is SettingRow:
+		return node.data()
+	if node is VolumeRow:
+		return {"label": node.words, "value": "%d" % node.steps_filled(), "pip": SettingRow.NONE}
+	return {"label": "", "value": "", "pip": SettingRow.NONE}
+
+
 func _show_look(spec: Dictionary) -> void:
 	var value := float(_store().look.get(spec["id"], SettingsStore.LOOK_DEFAULTS[spec["id"]]))
-	var shown := ""
 	if float(spec["per"]) <= 0.0:
-		shown = "on" if value >= 0.5 else "off"
+		rows[spec["id"]].show_row(spec["words"], "", SettingRow.ON if value >= 0.5 else SettingRow.OFF)
 	else:
-		shown = "%d%%" % roundi(value / float(spec["per"]) * 100.0)
-	rows[spec["id"]].text = "%s: %s" % [spec["words"], shown]
+		rows[spec["id"]].show_row(spec["words"], "%d%%" % roundi(value / float(spec["per"]) * 100.0))
 
 
 # Moves a look row to the next listed value near its current one: wrapping for a press,
@@ -540,32 +553,32 @@ func press(id: String) -> void:
 			var on: bool = not _store().fullscreen()
 			_store().set_comfort(SettingsStore.FULLSCREEN, 1.0 if on else 0.0)
 			_game.set_fullscreen(on)
-			rows["fullscreen"].text = "Fullscreen: %s" % ("on" if on else "off")
+			_show_toggle("fullscreen", on)
 		"quality":
 			var level: int = 1 - _store().quality()
 			_store().set_comfort(SettingsStore.QUALITY, float(level))
 			_game.set_quality(level)
-			rows["quality"].text = "Quality: %s" % ("low" if level == 1 else "high")
+			_show_quality(level == 1)
 		"reduced_motion":
 			var calm: bool = not _store().reduced_motion()
 			_store().set_comfort(SettingsStore.REDUCED_MOTION, 1.0 if calm else 0.0)
 			_game.set_reduced_motion(calm)
-			rows["reduced_motion"].text = "Less motion: %s" % ("on" if calm else "off")
+			_show_toggle("reduced_motion", calm)
 		"reduce_flashes":
 			var dim: bool = not _store().reduce_flashes()
 			_store().set_comfort(SettingsStore.REDUCE_FLASHES, 1.0 if dim else 0.0)
 			_game.set_reduce_flashes(dim)
-			rows["reduce_flashes"].text = "Fewer flashes: %s" % ("on" if dim else "off")
+			_show_toggle("reduce_flashes", dim)
 		"frame_smoothing":
 			var smooth: bool = not _store().frame_smoothing()
 			_store().set_comfort(SettingsStore.FRAME_SMOOTHING, 1.0 if smooth else 0.0)
 			_game.set_frame_smoothing(smooth)
-			rows["frame_smoothing"].text = "Frame smoothing: %s" % ("on" if smooth else "off")
+			_show_toggle("frame_smoothing", smooth)
 		"wide_picture":
 			var wide: bool = not _store().wide_picture()
 			_store().set_comfort(SettingsStore.WIDE_PICTURE, 1.0 if wide else 0.0)
 			_game.set_wide_picture(wide)
-			rows["wide_picture"].text = "Wide picture: %s" % ("on" if wide else "off")
+			_show_toggle("wide_picture", wide)
 		"reset":
 			_game.reset_bindings()
 			refresh()

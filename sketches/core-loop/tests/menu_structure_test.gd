@@ -206,7 +206,8 @@ func _run() -> void:
 	_t.check("the pick rows read Pick 1, not Slot 1", _holds(title_pages, "Pick 1") and not _holds(title_pages, "Slot 1"))
 	title_pages.show_page(0)
 	_t.check("Display wording: Less motion, Fewer flashes, lower-case quality",
-		_holds(title_pages, "Less motion: off") and _holds(title_pages, "Fewer flashes: off") and _holds(title_pages, "Quality: high"), str(_texts(title_pages)))
+		_holds(title_pages, "Less motion") and _holds(title_pages, "Fewer flashes") and title_pages.read("quality")["value"] == "high"
+		and title_pages.read("reduced_motion")["pip"] == 0 and title_pages.read("reduce_flashes")["pip"] == 0, str(_texts(title_pages)))
 
 	# A helper under Frame smoothing and Wide picture, only while the row is focused.
 	title_pages.show_page(0)
