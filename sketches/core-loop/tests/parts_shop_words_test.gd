@@ -86,6 +86,8 @@ func _run() -> void:
 	_report("plant banned words", _banned_in(broken).size() >= 8, "the banned-word scan found %d hits in a planted row" % _banned_in(broken).size())
 	_report("plant hidden number", _hidden_numbers("+4 punch, +12% weapon damage", "Hot Rivets: Hit harder. Punch +4") == ["12"],
 		"the number check names %s when the line drops 12" % [_hidden_numbers("+4 punch, +12% weapon damage", "Hot Rivets: Hit harder. Punch +4")])
+	_report("plant cut text", ("a b c d e f g h i...").ends_with("...") and _words("one two three four five six seven eight nine") > 8,
+		"a planted nine-word text is over the generator's eight-word cut")
 	_report("plant long line", _words("Third bounce in four seconds strikes the nearest machine for double damage") > MAX_CARD_WORDS, "a planted ten-word line is over the limit")
 
 	var rows: Dictionary = Parts.rows()
@@ -117,6 +119,8 @@ func _run() -> void:
 		var bad := _banned_in(shown)
 		_report(id + " words", bad.is_empty(), "%s" % [bad])
 		var card: String = shown[1]
+		_report(id + " text kept whole", not d.text.ends_with("...") and _words(d.text) <= 8,
+			"the row text \"%s\" is %d words; past eight the generator cuts it and the number is lost" % [d.text, _words(d.text)])
 		_report(id + " card length", _words(card) <= MAX_CARD_WORDS, "\"%s\" is %d words" % [card, _words(card)])
 		_report(id + " card uncut", card == d.verb, "the reveal row cuts \"%s\" to \"%s\"" % [d.verb, card])
 		_report(id + " card line set", card != "", "an empty card line")
