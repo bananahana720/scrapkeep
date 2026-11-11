@@ -48,6 +48,7 @@ func _process(_delta: float) -> bool:
 				var heard: Array = _game.presentation.audio.cue_log.filter(func(r: Array): return r[0] == "carved") if _game.presentation.audio != null else []
 				_check("juice answers carved with the release", heard.size() == 1 and heard[0][1] == "carve_release",
 					"audio cue log rows for carved: %s" % [heard])
+				print("feel_rumble_carve_test: %s" % ("PASS" if _failures == 0 else "FAIL (%d)" % _failures))
 				quit(0 if _failures == 0 else 1)
 				return true
 	return false
