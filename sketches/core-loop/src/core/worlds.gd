@@ -25,7 +25,7 @@ const BOSSES := {
 		"built": true, "victory": "The Spillway is ours again.", "epitaph": "Brindle, crane parked over the Slag Bowl. Anchors accounted for."},
 	"waking": {"name": "The Waking", "title": "THE WAKING STILLED", "script": "res://src/boss/waking.gd", "kind": "waking", "music": "waking",
 		"built": true, "victory": "The Waking is stilled.", "epitaph": "The Waking, stilled in the Dig. Fallen floors await pit inspection."},
-	"mind": {"name": "The Mind", "title": "THE MIND IS QUIET", "script": "res://src/boss/mind.gd", "kind": "mind", "music": "mind",
+	"mind": {"name": "The Mind", "title": "THE MIND QUIETED", "script": "res://src/boss/mind.gd", "kind": "mind", "music": "mind",
 		"built": true, "victory": "The Mind is quiet.", "stamp": "HIRED",
 		"epitaph": "The Mind, quieted in the Highdraft. Glove set by the empty place."},
 }

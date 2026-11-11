@@ -10,7 +10,7 @@ const WordBudget := preload("res://src/ui/word_budget.gd")
 # The objective board on the slice table (design-v3/LEGIBILITY.md, "A goal exists" and the
 # Warden fight). The plate and the edge marker read one row of objectives.gd in each state:
 # before the Warden "Find the Warden" with the metres, engaged "Break its guard", after ten
-# seconds of weak rams "Grow, then return", staggered "Smash the core" and at the gates
+# seconds of weak rams "Get heavy, then return", staggered "Smash the core" and at the gates
 # "Roll through a gate". The staggered Warden is driven through combat.strike(), the real
 # contact path, so the rule's own state moves. The HUD then carries no heft dial, bars, core
 # pips, clock or first-run callout and no part or heft toast; a part name rides the ball for
@@ -142,7 +142,7 @@ func _weak_rams() -> void:
 		"9.5 s into weak rams the posture is %.0f and the plate still reads \"%s\"" % [_warden.posture(), early["words"]])
 	await _seconds(1.0)
 	var struggling := _plate_state()
-	_report("struggling shows", struggling["words"] == "Grow, then return" and _warden.posture() < 50.0 and struggling["marker"] == struggling["icon"]
+	_report("struggling shows", struggling["words"] == "Get heavy, then return" and _warden.posture() < 50.0 and struggling["marker"] == struggling["icon"]
 			and struggling["icon"] != guard_icon,
 		"10.5 s of weak rams, posture %.0f: the plate reads \"%s\" with glyph %s against the guard's %s" % [_warden.posture(), struggling["words"], struggling["icon"], guard_icon])
 

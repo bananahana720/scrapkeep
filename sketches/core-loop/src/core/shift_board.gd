@@ -77,13 +77,13 @@ const CARDS := [
 const SEED_KINDS := ["stage_variant", "run_modifier"]
 const SEEDS := {
 	"dam_night_shift": {"kind": "stage_variant", "gate": "brindle_routed",
-		"text": "The dam after dark: floodlights, a fuller crew, one more cage."},
+		"text": "The dam at night has floodlights, a fuller crew, one more cage."},
 	"flume_backwash": {"kind": "stage_variant", "gate": "mark_rivet",
-		"text": "The flume runs backwards; the weir becomes the drop-in."},
+		"text": "The flume runs backwards, and the weir becomes the drop-in."},
 	"overtime": {"kind": "run_modifier", "gate": "first_warden",
-		"text": "Overtime: Wardens wake one tick early and pay one more panel."},
+		"text": "Overtime wakes Wardens one tick early and pays one more panel."},
 	"crew_short": {"kind": "run_modifier", "gate": "mark_sable",
-		"text": "Short crew: no shop on the dam, a cache in its place."},
+		"text": "Short crew means no dam shop and a cache instead."},
 }
 
 
@@ -178,11 +178,11 @@ static func run_line(before: Array, profile, punched: bool) -> String:
 	if punched:
 		var holes := int(TIME_CARD["holes"])
 		if cards_paid(profile) >= CARDS.size() and punches(profile) > holes * CARDS.size():
-			return "Time card punched. Every card is paid; the clerk punches it anyway."
+			return "Time card punched. Every card is paid, and the clerk punches it anyway."
 		var on_card := holes_on_card(profile)
 		if on_card == 0 or on_card == holes:
 			var card: Dictionary = CARDS[cards_paid(profile) - 1]
-			return "Time card full: %s pays %s next shift." % [String(card["name"]), item_name(String(card["pays"]["item"]))]
+			return "Time card full. %s pays %s next shift." % [String(card["name"]), item_name(String(card["pays"]["item"]))]
 		return "Time card punched, %d of %d." % [on_card, holes]
 	return ""
 
@@ -196,7 +196,7 @@ static func _deeds_sentence(ids: Array) -> String:
 			deeds.append(String(RUNGS[id]["name"]))
 	var clocked: bool = "clock_in" in ids
 	if deeds.is_empty():
-		return "You clocked in: your first shift is on the shift board."
+		return "You clocked in. Your first shift is on the shift board."
 	var list := deeds[0] if deeds.size() == 1 else "%s and %s" % [", ".join(deeds.slice(0, deeds.size() - 1)), deeds[deeds.size() - 1]]
 	return "You %smarked off %s on the shift board." % ["clocked in and " if clocked else "", list]
 
@@ -229,7 +229,7 @@ static func pays_words(pays: Dictionary) -> String:
 			"cosmetic":
 				return "A new look"
 			"tune":
-				return "A tune for the jukebox"
+				return "A record for the jukebox"
 			"option":
 				return "A head start"
 	return ""

@@ -79,9 +79,9 @@ func _rules() -> void:
 	_t.eq("no source, no line", DeathTips.line(""), "")
 	var short := {"who": "the Warden", "punch": 37.0, "plating": 110.0}
 	_t.eq("a short build in a Warden fight reads the gap, whatever landed", DeathTips.line("chaser", "", short),
-		"Punch 37 met the Warden's plating 110. Roll more scrap first: heft is punch.")
+		"Punch 37 met the Warden's plating 110. Roll up more scrap for more punch.")
 	_t.eq("the gap names the boss it met", DeathTips.line("brindle_slag", "", {"who": "Admiral Brindle", "punch": 60.0, "plating": 110.0}),
-		"Punch 60 met Admiral Brindle's plating 110. Roll more scrap first: heft is punch.")
+		"Punch 60 met Admiral Brindle's plating 110. Roll up more scrap for more punch.")
 	_t.eq("the brute reads its own row, slam or hurl", DeathTips.line("plated_brute"), DeathTips.ROWS["plated_brute"])
 	_t.eq("a build at the ratio reads the killing hit", DeathTips.line("warden", "", {"punch": 77.0, "plating": 110.0}), DeathTips.ROWS["warden"])
 	_t.check("no plating is no gap", not DeathTips.short_build({"punch": 0.0, "plating": 0.0}) and not DeathTips.short_build({}))
