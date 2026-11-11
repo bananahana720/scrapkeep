@@ -51,16 +51,19 @@ func _initialize() -> void:
 	for rule in rules:
 		if not contracts.contains(rule):
 			missing_rules.append(rule.left(40))
+	# A priority-3 fact needs a carrier: words on the HUD or the objective, or its own weighted
+	# beat (wave 36: Brindle's rout is carried by its climax beat, not a toast).
 	var toasts_without_words: Array[String] = []
 	for kind in names:
-		if EventKinds.priority(kind) >= 3 and EventKinds.row(kind).get("hud", "") == "" and EventKinds.row(kind).get("objective", "") == "":
+		if EventKinds.priority(kind) >= 3 and EventKinds.row(kind).get("hud", "") == "" and EventKinds.row(kind).get("objective", "") == "" \
+				and not EventKinds.WEIGHTED.has(kind):
 			toasts_without_words.append(kind)
 
 	var checks := [
 		["coverage", missing.is_empty(), "%d signals on the bus, %d without a row %s" % [names.size(), missing.size(), missing]],
 		["row shape", malformed.is_empty(), "%d rows missing a field or out of range %s" % [malformed.size(), malformed]],
 		["orphans", orphans.is_empty(), "%d rows naming no signal %s" % [orphans.size(), orphans]],
-		["critical wording", toasts_without_words.is_empty(), "%d priority-3 kinds with no HUD or objective wording %s" % [toasts_without_words.size(), toasts_without_words]],
+		["critical wording", toasts_without_words.is_empty(), "%d priority-3 kinds with no HUD or objective wording and no weighted beat %s" % [toasts_without_words.size(), toasts_without_words]],
 		["contract rules", missing_rules.is_empty(), "%d of %d required rules missing from CONTRACTS.md %s" % [missing_rules.size(), rules.size(), missing_rules]],
 		["no optional", optional.is_empty(), "%d objectives use the word optional %s" % [optional.size(), optional]],
 		["codex categories", categories_ok and EventKinds.CODEX_CATEGORIES.size() == 5, "%d codex categories, each with a colour, label and shape" % EventKinds.CODEX_CATEGORIES.size()],
