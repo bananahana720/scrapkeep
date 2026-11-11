@@ -41,10 +41,10 @@ const BASE_EFFECT := {
 	"s_bulwark": "Mounted, crowd control slides off you",
 }
 const CODEX := {
-	"s_cannonball": "Vault kicks zap what's near. A heavier ball launches farther.",
-	"s_beachhead": "Mount walls from twice as far. A heavier ball launches farther.",
-	"s_coil_hook": "Release the rope into a cannonball.",
-	"s_face_runner": "Vaults restore jumps. Heavy fins steer harder.",
+	"s_cannonball": "Kick off a wall to zap what's near. A heavier ball launches farther.",
+	"s_beachhead": "Grab a wall from twice as far.",
+	"s_coil_hook": "Let go of the rope to fling yourself.",
+	"s_face_runner": "Kick off a wall to jump again. A heavier shell steers sharper.",
 	"s_arc_nest": "Mounted bolts chain to another target.",
 	"s_bulwark": "Mounted, shrug off crowd control.",
 }

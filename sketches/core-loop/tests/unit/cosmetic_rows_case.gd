@@ -9,6 +9,8 @@ const Palette := preload("res://src/core/palette.gd")
 # item stat key, no tint is a hostile hue, and each rule is shown able to fail.
 
 const STAT_LITERALS := ["mods", "punch", "charges"]
+# An item row may carry its own display name (Scrap Bulk, wave 35). A name is not a stat, and cosmetics have names too.
+const ITEM_DISPLAY_KEYS := ["name"]
 
 
 func _pilots() -> Array:
@@ -23,7 +25,7 @@ func _stat_keys() -> Array:
 	for id in Items.TABLE:
 		var item: Dictionary = Items.TABLE[id]
 		for key in item:
-			if not keys.has(key):
+			if not keys.has(key) and not ITEM_DISPLAY_KEYS.has(key):
 				keys.append(key)
 		for nested in ["mods", "charges", "patterns"]:
 			if item.get(nested) is Dictionary:

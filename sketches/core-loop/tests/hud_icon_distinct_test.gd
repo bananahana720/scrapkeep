@@ -25,7 +25,8 @@ const WordBudget := preload("res://src/ui/word_budget.gd")
 # their word (ui/gauge.gd caption) and the difficulty steps theirs (ui/run_status.gd). Blind
 # readers took the difficulty bar for health, the armour bar for a resource and the steps for
 # a signal meter; the three words are what the reads asked for. The budget stays 25.
-const HUD_WORDS := 20
+# 21 since wave 35 (PF-03): the Shift prompt reads BOOST, because a key and an icon alone told a new player nothing.
+const HUD_WORDS := 21
 
 var _game
 var _frames := 0
@@ -63,8 +64,13 @@ func _process(_delta: float) -> bool:
 	var gauge = hud._armor
 	var chip = hud._cogs
 	var mass_color: Color = EventKinds.color("scrap_collected")
-	var words: int = WordBudget.count(hud)["hud"]
-	_report("no new HUD words", words == HUD_WORDS, "%d words, pinned %d" % [words, HUD_WORDS])
+	var counted: Dictionary = WordBudget.count(hud)
+	var words: int = counted["hud"]
+	var read: Array = []
+	for item in counted["items"]:
+		if item["kind"] == "hud":
+			read.append("%s: %s" % [item["node"], item["text"]])
+	_report("no new HUD words", words == HUD_WORDS, "%d words, pinned %d: %s" % [words, HUD_WORDS, read])
 	_report("each meter says what it holds", Array(hud._health.drawn_words()).has("HEALTH") and Array(gauge.drawn_words()).has("ARMOUR")
 			and Array(hud._status.drawn_words()).has("THREAT"),
 		"health %s, armour %s, plate %s" % [hud._health.drawn_words(), gauge.drawn_words(), hud._status.drawn_words()])

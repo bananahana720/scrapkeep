@@ -12,3 +12,6 @@ Reference copies that lanes read. The local coordinator owns them. Put a new fil
 | [ways-of-working/rieseberg-ambition-article.md](ways-of-working/rieseberg-ambition-article.md) | The article behind the ambition brief |
 | [tone/TONE-BIBLE.md](tone/TONE-BIBLE.md) | Pointer to the tone bible in `design-v3/` |
 | [music/SOUND-BIBLE.md](music/SOUND-BIBLE.md) | Pointer to the sound bible in `design-v3/` |
+| [world1/map-audit.md](world1/map-audit.md) | World 1 against the ten map points (ruling ct), and the check for each point |
+| [world1/difficulty-plan.md](world1/difficulty-plan.md) | Where each skill band stands, the levers that raise difficulty through movement (ruling cu), and how each is measured |
+| [world1/transitions-audit.md](world1/transitions-audit.md) | Every hand-over in a world 1 run (ruling cv): what the player leaves, what they arrive in, and the fix for each |

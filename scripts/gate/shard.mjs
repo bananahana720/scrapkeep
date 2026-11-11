@@ -4,7 +4,11 @@
 //   node scripts/gate/shard.mjs list --bots          the numbered bot list
 //   node scripts/gate/shard.mjs run --tests 361-720 --out <folder>
 //   node scripts/gate/shard.mjs run --bots 16-20 --out <folder>
+//   node scripts/gate/shard.mjs retime --tests a_test,b_test --out <folder> [--runs 3] [--bots] [--max-load <n>]
 //   add --weekly to list or run the weekly names instead (WEEKLY.tsv, ruling ca)
+//
+// Exit codes: 0 PASS, 1 RED, 2 INCONCLUSIVE (time-outs under load) or a refusal. `retime` waits for a quiet
+// machine, then runs the named tests alone, and says whether a time-out was the machine's.
 //
 // `run` imports the sketch twice (a third time when the second was not clean), runs its window of the sorted list (non-bot
 // tests in chunks, bot tests one at a time), reruns every failure alone, sorts
@@ -32,6 +36,10 @@ const IMPORT_TIMEOUT_MS = 900_000;
 const DEFAULT_CHUNK = 60;
 const DEFAULT_SOLO_RUNS = 2;
 const NEAR_LIMIT = 0.85;
+const DEFAULT_RETIME_RUNS = 3;
+const QUIET_FACTOR = 0.25;
+export const QUIET_POLL_MS = 20_000;
+export const QUIET_POLLS = 90;
 
 // The two gate lists: every top-level test, sorted as `LC_ALL=C sort` sorts
 // the file names, split by the "# smoke: bots" marker. Names carry no .gd.
@@ -93,13 +101,32 @@ export function errorCounts(text) {
   };
 }
 
+// A headless Godot test wants about two threads, so a run started above half the thread count was not alone.
+export const SUSPECT_LOAD_FACTOR = 0.5;
+
 // What one failed test means for the promotion.
-//   carried    it has a ledger row (a red that fails alone, or a known flake)
-//   mismatch   its row says flake and it failed every solo run: the run contradicts the
-//              ledger, so it blocks until someone reads it and re-lists or fixes it
-//   new-flake  no row, and every solo run passed: record a flake row, it does not block
-//   new-red    no row, and it failed alone: it blocks (ruling ai)
-export function classifyFailure(test, soloResults, ledgerRows) {
+//   carried       it has a ledger row (a red that fails alone, or a known flake)
+//   mismatch      its row says flake and it failed every solo run: the run contradicts the
+//                 ledger, so it blocks until someone reads it and re-lists or fixes it
+//   new-flake     no row, and every solo run passed: record a flake row, it does not block
+//   new-red       no row, and it failed alone: it blocks (ruling ai)
+//   suspect-load  would be new-red or mismatch, but every failed solo run timed out with no failing check
+//                 line and one started on an overloaded machine: it blocks, and is neither red nor pass
+// `evidence` is { threads, runs: [{ timedOut, failLines, load }] }, one run per entry of soloResults.
+export function classifyFailure(test, soloResults, ledgerRows, evidence = null) {
+  const call = callFailure(test, soloResults, ledgerRows);
+  if ((call.call === "new-red" || call.call === "mismatch") && evidence) {
+    const failed = evidence.runs.filter((_, index) => !soloResults[index]);
+    const line = evidence.threads * SUSPECT_LOAD_FACTOR;
+    if (failed.length > 0 && failed.every((run) => run.timedOut && run.failLines === 0) && failed.some((run) => run.load > line)) {
+      const peak = Math.max(...failed.map((run) => run.load));
+      return { ...call, call: "suspect-load", note: `${failed.length} solo run(s) timed out with no failing check, one at load ${peak} on ${evidence.threads} threads; rerun alone on a quiet machine with retime` };
+    }
+  }
+  return call;
+}
+
+function callFailure(test, soloResults, ledgerRows) {
   const soloPasses = soloResults.filter(Boolean).length;
   const row = judgeFailures([test], ledgerRows).listed[0] ?? null;
   const alone = `${soloPasses}/${soloResults.length} pass alone`;
@@ -119,7 +146,9 @@ export function shardVerdict(failures) {
   const blocking = [];
   if (count("new-red") > 0) blocking.push(`${count("new-red")} new red${count("new-red") === 1 ? "" : "s"} (${named("new-red")})`);
   if (count("mismatch") > 0) blocking.push(`${count("mismatch")} listed as a flake but red alone (${named("mismatch")})`);
-  if (blocking.length > 0) return { ok: false, line: `RED: ${blocking.join("; ")}` };
+  const suspect = count("suspect-load") > 0 ? `${count("suspect-load")} time-out(s) under load (${named("suspect-load")})` : null;
+  if (blocking.length > 0) return { ok: false, line: `RED: ${[...blocking, ...(suspect ? [suspect] : [])].join("; ")}` };
+  if (suspect) return { ok: false, inconclusive: true, line: `INCONCLUSIVE: ${suspect}; rerun alone on a quiet machine with "node scripts/gate/shard.mjs retime"` };
   const parts = [];
   if (count("carried") > 0) parts.push(`${count("carried")} carried on the ledger`);
   if (count("new-flake") > 0) parts.push(`${count("new-flake")} new load flake${count("new-flake") === 1 ? "" : "s"} to list`);
@@ -134,7 +163,10 @@ export function nearLimit(results, limitMsOf, threshold = NEAR_LIMIT) {
     .sort((a, b) => b.seconds / b.limit - a.seconds / a.limit);
 }
 
-export function renderReceipt({ title, head, box, godot, scale, window, steps, results, failures, counts, slow, verdict, startedAt, finishedAt }) {
+const loadCell = (step) => (step.load_start === undefined ? "-" : `${step.load_start} to ${step.load_end}`);
+const loadNow = () => Math.round(os.loadavg()[0] * 10) / 10;
+
+export function renderReceipt({ title, head, box, threads, godot, scale, window, steps, results, failures, counts, slow, verdict, startedAt, finishedAt }) {
   const passed = results.filter((result) => result.ok).length;
   const lines = [
     `# ${title}`,
@@ -142,12 +174,12 @@ export function renderReceipt({ title, head, box, godot, scale, window, steps, r
     `**Verdict: ${verdict.line}.** ${passed} of ${results.length} passed on the first run.`,
     "",
     `- Head: ${head}, a clean checkout, recorded before the first step and checked before each one.`,
-    `- Box: ${box}. Godot: ${godot}.`,
+    `- Box: ${box}. Godot: ${godot}.${threads ? ` Load is the 1-minute average, read against ${threads} threads.` : ""}`,
     `- Window: ${window}. Run ${startedAt} to ${finishedAt} by \`scripts/gate/shard.mjs\`; no runner patch, no commits, no pushes.`,
   ];
   if (scale !== 1) lines.push(`- Time limits scaled by ${scale} (SMOKE_TIME_SCALE). Compare against a base read with the same scale.`);
-  lines.push("", "## Steps", "", "| Step | Exit | Wall |", "| --- | --- | --- |");
-  for (const [name, step] of Object.entries(steps)) lines.push(`| ${name} | ${step.exit} | ${step.seconds} s |`);
+  lines.push("", "## Steps", "", "| Step | Exit | Wall | Load |", "| --- | --- | --- | --- |");
+  for (const [name, step] of Object.entries(steps)) lines.push(`| ${name} | ${step.exit} | ${step.seconds} s | ${loadCell(step)} |`);
   lines.push("", "## Failures", "");
   if (failures.length === 0) lines.push("None.");
   else {
@@ -175,7 +207,7 @@ export function renderReceipt({ title, head, box, godot, scale, window, steps, r
 }
 
 function parseArguments(argv) {
-  const options = { command: argv[0], bots: false, weekly: false, window: null, out: null, chunk: DEFAULT_CHUNK, lanes: null, solo: DEFAULT_SOLO_RUNS };
+  const options = { command: argv[0], bots: false, weekly: false, window: null, out: null, chunk: DEFAULT_CHUNK, lanes: null, solo: DEFAULT_SOLO_RUNS, runs: DEFAULT_RETIME_RUNS, maxLoad: null };
   for (let index = 1; index < argv.length; index++) {
     const argument = argv[index];
     const value = () => {
@@ -191,11 +223,15 @@ function parseArguments(argv) {
     else if (argument === "--chunk") options.chunk = Number(value());
     else if (argument === "--lanes") options.lanes = Number(value());
     else if (argument === "--solo") options.solo = Number(value());
+    else if (argument === "--runs") options.runs = Number(value());
+    else if (argument === "--max-load") options.maxLoad = Number(value());
     else throw new Error(`unknown argument ${argument}`);
   }
-  if (!["list", "run"].includes(options.command)) throw new Error("the first argument is list or run");
+  if (!["list", "run", "retime"].includes(options.command)) throw new Error("the first argument is list, run or retime");
   if (options.command === "run" && (!options.window || !options.out)) throw new Error("run needs --tests FIRST-LAST or --bots FIRST-LAST, and --out <folder>");
-  for (const key of ["chunk", "solo"]) if (!Number.isSafeInteger(options[key]) || options[key] < 1) throw new Error(`--${key} takes a whole number from 1`);
+  if (options.command === "retime" && (!options.window || !options.out)) throw new Error("retime needs --tests a_test,b_test and --out <folder>");
+  if (options.maxLoad !== null && !(options.maxLoad >= 0)) throw new Error("--max-load takes a number from 0");
+  for (const key of ["chunk", "solo", "runs"]) if (!Number.isSafeInteger(options[key]) || options[key] < 1) throw new Error(`--${key} takes a whole number from 1`);
   options.lanes ??= options.bots ? 1 : 2;
   if (!Number.isSafeInteger(options.lanes) || options.lanes < 1) throw new Error("--lanes takes a whole number from 1");
   return options;
@@ -233,6 +269,142 @@ function runToFile(command, args, file, env, timeoutMs) {
   });
 }
 
+// The solo pool lives in the lock folder, so a private folder makes "one slot" mean this shard's own slot.
+export function soloEnvironment(env, out, logDir) {
+  const locks = path.join(out, "solo-locks");
+  mkdirSync(locks, { recursive: true });
+  return { ...env, SMOKE_SLOTS: "1", SMOKE_LOG_DIR: path.join(out, logDir), SCRAPKEEP_LOCK_DIR: locks };
+}
+
+const smokeArgs = (bots, tests) => [path.join(root, "scripts", "sketch-smoke.mjs"), "--sketch", "core-loop", ...(bots ? ["--bots"] : []), ...tests.flatMap((test) => ["--test", test])];
+
+// What a solo run did, read from the runner's line and the test's own log.
+function soloOutcome(out, name, logDir, test) {
+  const parsed = parseSmokeLog(readFileSync(path.join(out, name + ".log"), "utf8")).find((result) => result.test === test);
+  const testLog = path.join(out, logDir, test + ".log");
+  const failLines = existsSync(testLog) ? (readFileSync(testLog, "utf8").match(/-> FAIL/g) ?? []).length : 0;
+  return { ok: Boolean(parsed?.ok), exit: parsed?.exit ?? "none", seconds: parsed?.seconds ?? 0, timedOut: parsed?.exit === "null", failLines };
+}
+
+// The lists are built from the files on disk, so an untracked test or list file changes
+// every window's numbering without changing the head. Checked before each step and once
+// more after the last one.
+function checkoutGuard(head) {
+  const problem = () => {
+    if (git("rev-parse", "HEAD") !== head) return "the checkout moved during the run";
+    if (git("status", "--porcelain", "--untracked-files=no")) return "the checkout has uncommitted changes; a gate shard runs a clean head";
+    const extra = git("status", "--porcelain", "--untracked-files=all", "--", `${SKETCH}/tests`, WEEKLY_FILE).split("\n").filter((line) => /^\?\? .*\.(gd|tsv)$/.test(line)).map((line) => line.slice(3));
+    if (extra.length > 0) return `untracked test or list files change the gate lists: ${extra.slice(0, 5).join(", ")}${extra.length > 5 ? ` and ${extra.length - 5} more` : ""}`;
+    return null;
+  };
+  return () => {
+    const found = problem();
+    if (found) throw new Error(found);
+  };
+}
+
+function stepper(state, save, refuse, load) {
+  return async (name, action) => {
+    if (state.steps[name]) return;
+    refuse();
+    const loadStart = load();
+    console.log(`${new Date().toISOString().slice(11, 19)}Z start ${name} load=${loadStart}`);
+    state.steps[name] = { ...(await action()), load_start: loadStart, load_end: load() };
+    save();
+    console.log(`${new Date().toISOString().slice(11, 19)}Z end ${name} exit=${state.steps[name].exit} wall=${state.steps[name].seconds}s load=${state.steps[name].load_end}`);
+  };
+}
+
+export function renderRetimeReceipt({ title, head, box, threads, maxLoad, rows, verdict, startedAt, finishedAt }) {
+  const lines = [
+    `# ${title}`,
+    "",
+    `**Verdict: ${verdict.line}.**`,
+    "",
+    `- Head: ${head}, a clean checkout, recorded before the first step and checked before each one.`,
+    `- Box: ${box}. Each run waited for the 1-minute load to be at or under ${maxLoad} (${threads} threads).`,
+    `- Run ${startedAt} to ${finishedAt} by \`scripts/gate/shard.mjs retime\`.`,
+    "",
+    "| Test | Run | Exit | Wall | Load at start | Timed out | Failing check lines |",
+    "| --- | --- | --- | --- | --- | --- | --- |",
+    ...rows.map((row) => `| ${row.test} | ${row.run} | ${row.exit} | ${row.seconds} s | ${row.load} | ${row.timedOut ? "yes" : "no"} | ${row.failLines} |`),
+    "",
+  ];
+  return lines.join("\n");
+}
+
+// Reruns the named tests alone, one at a time, each run starting only when the machine is quiet.
+// `runSolo(test, run)` returns { ok, exit, seconds, timedOut, failLines }; the caller owns the engine.
+export async function retime({ tests, known, runs, out, maxLoad, threads, bots, head, box = "", load, sleep, runSolo, refuse }) {
+  const unknown = tests.filter((test) => !known.includes(test));
+  if (unknown.length > 0) throw new Error(`not in the ${bots ? "bot" : "non-bot"} gate lists: ${unknown.join(", ")}`);
+  mkdirSync(out, { recursive: true });
+  const stateFile = path.join(out, "state.json");
+  const state = existsSync(stateFile) ? JSON.parse(readFileSync(stateFile, "utf8")) : { head, tests, bots, runs, max_load: maxLoad, threads, started_at: new Date().toISOString(), steps: {} };
+  if (state.head !== head) throw new Error(`${out} holds a run on ${state.head.slice(0, 8)} and the checkout is at ${head.slice(0, 8)}; use a new folder for a new head`);
+  if (state.tests.join(",") !== tests.join(",") || state.bots !== bots || state.runs !== runs) throw new Error(`${out} holds a different retime (${state.tests.join(",")}, ${state.runs} runs)`);
+  const save = () => writeFileSync(stateFile, JSON.stringify(state, null, 2) + "\n");
+  save();
+  const step = stepper(state, save, refuse, load);
+  for (const test of tests) {
+    for (let run = 1; run <= runs; run++) {
+      const name = `retime-${test}-${run}`;
+      if (!state.steps[name]) {
+        let polls = 0;
+        while (load() > maxLoad) {
+          if (++polls > QUIET_POLLS) {
+            console.log(`the machine never went quiet: load stayed above ${maxLoad} for ${(QUIET_POLLS * QUIET_POLL_MS) / 60_000} minutes before ${name}; nothing was run for it`);
+            return 2;
+          }
+          await sleep(QUIET_POLL_MS);
+        }
+      }
+      await step(name, () => runSolo(test, run));
+    }
+  }
+  refuse();
+  const rows = tests.flatMap((test) => Array.from({ length: runs }, (_, index) => {
+    const result = state.steps[`retime-${test}-${index + 1}`];
+    return { test, run: index + 1, exit: result.exit, seconds: result.seconds, load: result.load_start, ok: result.ok, timedOut: result.timedOut, failLines: result.failLines };
+  }));
+  const failed = rows.filter((row) => !row.ok);
+  const red = failed.filter((row) => row.failLines > 0 || !row.timedOut);
+  const names = (list) => [...new Set(list.map((row) => row.test))].join(", ");
+  const verdict = red.length > 0 ? { code: 1, line: `RED: ${names(red)} failed a check alone` } : failed.length > 0 ? { code: 2, line: `INCONCLUSIVE: ${failed.length} time-out(s) even on a quiet machine (${names(failed)}); read the logs` } : { code: 0, line: "PASS: every run passed alone on a quiet machine" };
+  const title = `Gate retime: ${tests.join(", ")} on ${head.slice(0, 8)}`;
+  writeFileSync(path.join(out, "receipt.md"), renderRetimeReceipt({ title, head, box, threads, maxLoad, rows, verdict, startedAt: state.started_at, finishedAt: new Date().toISOString() }));
+  console.log(`${title}: ${verdict.line}. Receipt: ${path.join(out, "receipt.md")}`);
+  return verdict.code;
+}
+
+function godotBinary() {
+  const godot = process.env.GODOT_BIN || (existsSync(CLOUD_GODOT) ? CLOUD_GODOT : null);
+  if (!godot || !existsSync(godot)) throw new Error("Godot not found; run `bash tools/cloud/setup.sh` or set GODOT_BIN");
+  return godot;
+}
+
+async function runRetime(options) {
+  const lists = gateLists(path.join(root, SKETCH));
+  const from = options.weekly ? lists.weekly : lists;
+  const known = options.bots ? from.bots : from.tests;
+  const tests = options.window.split(",").filter(Boolean);
+  const unknown = tests.filter((test) => !known.includes(test));
+  if (unknown.length > 0) throw new Error(`not in the ${options.bots ? "bot" : "non-bot"} gate lists: ${unknown.join(", ")}`);
+  const godot = godotBinary();
+  const head = git("rev-parse", "HEAD");
+  const refuse = checkoutGuard(head);
+  refuse();
+  const threads = os.availableParallelism();
+  const env = { ...process.env, GODOT_BIN: godot };
+  const runSolo = async (test, run) => {
+    const name = `retime-${test}-${run}`;
+    const logDir = `logs-${test}-${run}`;
+    await runToFile(process.execPath, smokeArgs(options.bots, [test]), path.join(options.out, name + ".log"), soloEnvironment(env, options.out, logDir));
+    return soloOutcome(options.out, name, logDir, test);
+  };
+  return retime({ tests, known, runs: options.runs, out: options.out, maxLoad: options.maxLoad ?? threads * QUIET_FACTOR, threads, bots: options.bots, head, box: boxLine(), load: loadNow, sleep: (ms) => new Promise((resolve) => setTimeout(resolve, ms)), runSolo, refuse });
+}
+
 async function run(options) {
   const sketchDir = path.join(root, SKETCH);
   const lists = gateLists(sketchDir);
@@ -240,24 +412,10 @@ async function run(options) {
   const list = options.bots ? from.bots : from.tests;
   const { first, last } = parseWindow(options.window, list.length);
   const names = list.slice(first - 1, last);
-  const godot = process.env.GODOT_BIN || (existsSync(CLOUD_GODOT) ? CLOUD_GODOT : null);
-  if (!godot || !existsSync(godot)) throw new Error("Godot not found; run `bash tools/cloud/setup.sh` or set GODOT_BIN");
+  const godot = godotBinary();
   const scale = timeScale();
   const head = git("rev-parse", "HEAD");
-  // The lists are built from the files on disk, so an untracked test or list file changes
-  // every window's numbering without changing the head. Checked before each step and once
-  // more after the last one.
-  const checkoutProblem = () => {
-    if (git("rev-parse", "HEAD") !== head) return "the checkout moved during the run";
-    if (git("status", "--porcelain", "--untracked-files=no")) return "the checkout has uncommitted changes; a gate shard runs a clean head";
-    const extra = git("status", "--porcelain", "--untracked-files=all", "--", `${SKETCH}/tests`, WEEKLY_FILE).split("\n").filter((line) => /^\?\? .*\.(gd|tsv)$/.test(line)).map((line) => line.slice(3));
-    if (extra.length > 0) return `untracked test or list files change the gate lists: ${extra.slice(0, 5).join(", ")}${extra.length > 5 ? ` and ${extra.length - 5} more` : ""}`;
-    return null;
-  };
-  const refuse = () => {
-    const problem = checkoutProblem();
-    if (problem) throw new Error(problem);
-  };
+  const refuse = checkoutGuard(head);
   refuse();
   // Read before the first step, so the calls below use the ledger of the gated head.
   const ledger = parseLedger(readFileSync(path.join(root, LEDGER_FILE), "utf8"));
@@ -275,16 +433,9 @@ async function run(options) {
   save();
 
   const env = { ...process.env, GODOT_BIN: godot, SMOKE_SLOTS: process.env.SMOKE_SLOTS ?? "3" };
-  const smoke = path.join(root, "scripts", "sketch-smoke.mjs");
-  const step = async (name, action) => {
-    if (state.steps[name]) return;
-    refuse();
-    console.log(`${new Date().toISOString().slice(11, 19)}Z start ${name}`);
-    state.steps[name] = await action();
-    save();
-    console.log(`${new Date().toISOString().slice(11, 19)}Z end ${name} exit=${state.steps[name].exit} wall=${state.steps[name].seconds}s`);
-  };
-  const smokeArgs = (tests) => [smoke, "--sketch", "core-loop", ...(options.bots ? ["--bots"] : []), ...tests.flatMap((test) => ["--test", test])];
+  const step = stepper(state, save, refuse, loadNow);
+  const threads = os.availableParallelism();
+  state.threads ??= threads;
 
   // Two imports always (the second is quick and is the one that counts), and a third when the
   // second was not clean. A crashed import is the engine's, so it is tried again; the shard stops
@@ -309,7 +460,7 @@ async function run(options) {
     Array.from({ length: Math.min(options.lanes, groups.length) }, async () => {
       while (next < groups.length) {
         const index = next++;
-        await step(groupName(index), () => runToFile(process.execPath, smokeArgs(groups[index]), path.join(options.out, groupName(index) + ".log"), firstEnv));
+        await step(groupName(index), () => runToFile(process.execPath, smokeArgs(options.bots, groups[index]), path.join(options.out, groupName(index) + ".log"), firstEnv));
       }
     }),
   );
@@ -320,25 +471,27 @@ async function run(options) {
   const failed = [...results.filter((result) => !result.ok).map((result) => result.test), ...missing];
 
   const solo = new Map(failed.map((test) => [test, []]));
+  const soloEvidence = new Map(failed.map((test) => [test, { threads: state.threads, runs: [] }]));
   const soloRun = async (test, attempt) => {
     const name = `solo-${test}-${attempt}`;
-    const soloEnv = { ...env, SMOKE_SLOTS: "1", SMOKE_LOG_DIR: path.join(options.out, `solo-logs-${attempt}`) };
-    await step(name, () => runToFile(process.execPath, smokeArgs([test]), path.join(options.out, name + ".log"), soloEnv));
-    const parsed = parseSmokeLog(readFileSync(path.join(options.out, name + ".log"), "utf8")).find((result) => result.test === test);
-    solo.get(test).push(Boolean(parsed?.ok));
+    const logDir = `solo-logs-${attempt}`;
+    await step(name, () => runToFile(process.execPath, smokeArgs(options.bots, [test]), path.join(options.out, name + ".log"), soloEnvironment(env, options.out, logDir)));
+    const outcome = soloOutcome(options.out, name, logDir, test);
+    solo.get(test).push(outcome.ok);
+    soloEvidence.get(test).runs.push({ timedOut: outcome.timedOut, failLines: outcome.failLines, load: state.steps[name].load_start ?? 0 });
   };
   for (const test of failed) {
     for (let attempt = 1; attempt <= options.solo; attempt++) await soloRun(test, attempt);
     // A listed flake that failed every solo run would block as a mismatch. Some flakes fail
     // alone one run in three, so it gets the same number of runs again before that call.
-    if (classifyFailure(test, solo.get(test), ledger.rows).call === "mismatch") {
+    if (classifyFailure(test, solo.get(test), ledger.rows, soloEvidence.get(test)).call === "mismatch") {
       for (let attempt = options.solo + 1; attempt <= options.solo * 2; attempt++) await soloRun(test, attempt);
     }
   }
   refuse();
 
   const failures = failed.map((test) => {
-    const failure = classifyFailure(test, solo.get(test), ledger.rows);
+    const failure = classifyFailure(test, solo.get(test), ledger.rows, soloEvidence.get(test));
     const lastFailed = solo.get(test).lastIndexOf(false) + 1;
     const soloLog = lastFailed > 0 ? path.join(options.out, `solo-logs-${lastFailed}`, test + ".log") : null;
     const lines = soloLog && existsSync(soloLog) ? failingLines(readFileSync(soloLog, "utf8"), 12) : [];
@@ -352,6 +505,7 @@ async function run(options) {
     title: `Gate shard: ${options.weekly ? "weekly " : ""}${options.bots ? "bots" : "tests"} ${options.window} on ${head.slice(0, 8)}`,
     head,
     box: boxLine(),
+    threads: state.threads,
     godot: path.basename(godot),
     scale,
     window: `${options.weekly ? "weekly " : ""}${options.bots ? "bot" : "non-bot"} list ${first} to ${last} of ${list.length} (${names[0]} to ${names[names.length - 1]}), ${names.length} tests`,
@@ -367,7 +521,7 @@ async function run(options) {
   writeFileSync(path.join(options.out, "shard.json"), JSON.stringify(summary, null, 2) + "\n");
   writeFileSync(path.join(options.out, "receipt.md"), renderReceipt(summary));
   console.log(`${summary.title}: ${verdict.line}. Receipt: ${path.join(options.out, "receipt.md")}`);
-  return verdict.ok ? 0 : 1;
+  return verdict.ok ? 0 : verdict.inconclusive ? 2 : 1;
 }
 
 async function main() {
@@ -378,6 +532,7 @@ async function main() {
     console.log(numbered(options.bots ? from.bots : from.tests));
     return 0;
   }
+  if (options.command === "retime") return runRetime(options);
   return run(options);
 }
 

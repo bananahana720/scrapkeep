@@ -4,7 +4,8 @@ const Icons := preload("res://src/ui/icons.gd")
 
 # The cog means money and nothing else: in the four UI files that once drew it for mass
 # too, res_scrap stands only where cogs are meant, res_mass stands where mass is meant,
-# and in the run summary no chip shares the cog's or the heap's glyph.
+# and in the run summary (summary_rows.gd, which shows the scrap and not the cogs) no chip
+# shares the cog's or the heap's glyph.
 
 # file: the lines that may name res_scrap (cogs) and the lines that must name res_mass.
 const FILES := {
@@ -20,9 +21,9 @@ const FILES := {
 		"cog": [],
 		"mass": ['"callout_scrap": {"before": ["res_mass"]'],
 	},
-	"res://src/ui/screens.gd": {
-		"cog": ['["res_scrap", str(s["cogs"]), "cogs left"]'],
-		"mass": ['["res_mass", str(s["scrap"]), "scrap held"]'],
+	"res://src/ui/summary_rows.gd": {
+		"cog": [],
+		"mass": ['["res_mass", str(s["scrap"]), "scrap", LOST]'],
 	},
 }
 
@@ -47,10 +48,10 @@ func _initialize() -> void:
 		_report("cog only for cogs: " + path.get_file(), text != "" and stray.is_empty() and missing.is_empty(),
 			"res_scrap outside a cog context %s; expected lines missing %s" % [stray, missing])
 
-	var screens := FileAccess.get_file_as_string("res://src/ui/screens.gd")
-	var start := screens.find("var chips := [")
-	# The whole of summary_chips(): the list and the save chip a run that used one adds after it.
-	var block := screens.substr(start, screens.find("return chips", start) - start) if start >= 0 else ""
+	var screens := FileAccess.get_file_as_string("res://src/ui/summary_rows.gd")
+	var start := screens.find("var out := [")
+	# The whole of rows(): the list and the side-job and save rows a run that earned one adds after it.
+	var block := screens.substr(start, screens.find("return out", start) - start) if start >= 0 else ""
 	var ids: Array[String] = []
 	for m in RegEx.create_from_string("\\[\"([a-z0-9_]+)\",").search_all(block):
 		ids.append(m.get_string(1))
@@ -58,7 +59,7 @@ func _initialize() -> void:
 	var apart := [Icons.glyph_of("res_scrap"), Icons.glyph_of("res_mass")]
 	var shared := ids.filter(func(id): return not id in ["res_scrap", "res_mass"] and Icons.glyph_of(id) in apart)
 	var unique := ids.filter(func(id): return ids.count(id) == 1).size() == ids.size()
-	_report("summary chips: cogs and mass apart", ids.size() >= 8 and unique and "res_scrap" in ids and "res_mass" in ids and shared.is_empty(),
+	_report("summary chips: cogs and mass apart", ids.size() >= 6 and unique and not "res_scrap" in ids and "res_mass" in ids and shared.is_empty(),
 		"chips %s; ids unique %s; sharing the cog or heap glyph %s" % [ids, unique, shared])
 
 	var mass := Icons.glyph_of("res_mass")
