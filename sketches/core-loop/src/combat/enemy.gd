@@ -448,24 +448,20 @@ func plating_now() -> float:
 # ""): a Dig elite arrives with spec armour "plated".
 func armour_class() -> String:
 	var own := String(spec.get("armour", ""))
-	if own == "" and soaked_left > 0.0:
+	if own == "" and _soaked_left > 0.0:
 		return "wet"
 	return own
 
 
 # A flood soaks this machine for `seconds` (overtime.gd's sluice): with no armour of its own it
 # reads as wet, so arc hits it at the wet row (damage_families.gd) and the sluice's arc jump finds
-# it. The sluice counts the seconds down on its own physics clock (dry()), so a fixed-fps bot run
-# replays.
-var soaked_left := 0.0
+# it. It dries on its own physics tick (so a pause holds it and a fixed-fps bot run replays), even
+# after the sluice that soaked it is gone.
+var _soaked_left := 0.0
 
 
 func soak(seconds: float) -> void:
-	soaked_left = maxf(soaked_left, seconds)
-
-
-func dry(delta: float) -> void:
-	soaked_left = maxf(0.0, soaked_left - delta)
+	_soaked_left = maxf(_soaked_left, seconds)
 
 
 func wet() -> bool:
@@ -850,6 +846,8 @@ func _notification(what: int) -> void:
 			_clips_tried = true
 			_clips = EnemyClips.seat(self)
 		_update_reaction(get_physics_process_delta_time())
+		if _soaked_left > 0.0:
+			_soaked_left = maxf(0.0, _soaked_left - get_physics_process_delta_time())
 		_facts_poll()
 		if tint_state == "amber" and _pulses():
 			_pulse_rim(get_physics_process_delta_time())

@@ -2,8 +2,10 @@ extends SceneTree
 
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
+const Augments := preload("res://src/movement/augments.gd")
 const CalledShot := preload("res://src/build/called_shot.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
+const StageLocks := preload("res://src/world/stage_locks.gd")
 const T := preload("res://tests/support/t.gd")
 
 # Called Shot (src/build/called_shot.gd, docs/design/loops.md Spec 3) at the real park_dam Warden:
@@ -11,7 +13,8 @@ const T := preload("res://tests/support/t.gd")
 # default and a woken Warden then opens no window; with --called-shot=on a held haul aimed at the
 # Warden calls what shows on release; a call met by its cause lifts the gate pair off the common
 # rung; a missed call burns a core and leaves the pair where the cores put it; no call changes
-# nothing. Evidence limit: the rule and its wiring, not a played break; whether players vary their
+# nothing. CHAIN is met through a real smash (bites, a haul and the ball's touch) and DUNK through a
+# real break by public calls. Evidence limit: the rule and its wiring, not a steered break; whether players vary their
 # call is the sitting's question.
 
 var _t := T.new("called_shot_test")
@@ -78,6 +81,22 @@ func _hold(game, seconds: float) -> void:
 	await _sim(0.05)
 
 
+# A smash through public calls with physics held still: `bites` harpoon bites on the Warden with a
+# let-go between them, the last line committed to a haul, then the ball touches the Warden.
+func _smash(game, warden: Node3D, bites: int) -> void:
+	var player = game.player
+	player.set_physics_process(false)
+	player.chain.reset()
+	player.state.grounded = false
+	for i in bites:
+		if i > 0:
+			player.release_grapple()
+		player.grapple_to(warden.global_position, Vector3.UP, warden)
+	player.kit.line_state = Augments.LINE_SMASH
+	player.touch_body(warden)
+	player.set_physics_process(true)
+
+
 func _off() -> void:
 	var game = await _game(PackedStringArray())
 	var shot = game.build.called_shot
@@ -105,14 +124,17 @@ func _on() -> void:
 	await _hold(game, 1.2)
 	_t.eq("letting go calls what shows", [shot.state, shot.called], ["called", "CHAIN"])
 	_t.eq("the call inks", _facts.count("shot_called"), 1)
-	_t.check("the stamp stands over the Warden", shot._stamp != null and shot._stamp.visible and shot._stamp.text == "CHAIN")
+	_t.check("the call taps the pad through juice's row",
+		game.presentation.juice.rumble_log.any(func(r: Array): return r[0] == "shot_called"))
+	_t.eq("the stamp stands over the Warden", shot.stamp_text(), "CHAIN")
 	await _hold(game, 0.7)
 	_t.eq("one call a Warden", shot.called, "CHAIN")
 
-	# Met: a hit while the chain stands at its threshold, then the gate.
-	game.player.chain.combo = CalledShot.CHAIN_COMBO
-	game.ctx.spawner.strike(warden, "ram", 10.0)
-	game.player.chain.combo = 0
+	# Met through a real smash: CHAIN_COMBO bites on the Warden, a committed haul, and the ball's
+	# contact with it, which pays the chain as the landing begins (player_ball _begin_landing).
+	_smash(game, warden, CalledShot.CHAIN_COMBO)
+	_t.check("the smash paid a chain at the threshold",
+		game.player.chain.last_paid_combo() >= CalledShot.CHAIN_COMBO, "paid at %d" % game.player.chain.last_paid_combo())
 	var met: Array = shot.gate_rarities()
 	_t.eq("the call is met", shot.verdict, "met")
 	_t.check("a met call lifts the pair off the common rung", not met.is_empty() and not "common" in met, str(met))
@@ -140,5 +162,47 @@ func _on() -> void:
 	_t.eq("an unused window closes", shot.state, "closed")
 	_t.eq("no call leaves the gate as it was", shot.gate_rarities(), ["common", "rare"])
 	_t.eq("and the core stays", game.ctx.run.bonus_cores, 1)
+
+	# BOWL met by a flung body: a Warden takes it on its posture path, which strikes nothing.
+	shot.clear()
+	game.events.warden_engaged.emit(game.ctx.run.stage)
+	await _face_warden(game)
+	await _hold(game, 1.6)
+	_t.eq("a long hold calls BOWL", shot.called, "BOWL")
+	game.ctx.spawner.flail_hit(warden, 10.0, warden.global_position + Vector3(4.0, 0.0, 0.0), 1.0)
+	shot.gate_rarities()
+	_t.eq("a flung body meets BOWL", shot.verdict, "met")
+
+	game.queue_free()
+	await process_frame
+
+	# DUNK met through a real break: a dunk spent on the Warden, then the Warden broken, and the
+	# stage's own gate roll settles the call. The park clamp is off (StageLocks.active, as bot_run
+	# --locks=0), so the Warden's posture alone decides the break.
+	StageLocks.active = false
+	game = await _game(PackedStringArray(["--called-shot=on"]))
+	StageLocks.active = true
+	shot = game.build.called_shot
+	warden = game.flow.warden
+	var offered := []
+	game.events.reward_offered.connect(func(offers: Array): offered.append(offers.size()))
+	game.events.warden_engaged.emit(game.ctx.run.stage)
+	await _face_warden(game)
+	await _hold(game, 0.6)
+	_t.eq("a short hold calls DUNK again", shot.called, "DUNK")
+	# Each frame a dunk is spent on the Warden and a slam lands with the ball's smash mark on it, as
+	# alpha_flow_run_test breaks one: only public calls, so the posture and the stage's gate decide.
+	var ticks := 0
+	while offered.is_empty() and ticks < 90 * 10:
+		if is_instance_valid(warden):
+			game.player.dunk.store(5.0, "test", "test", Color.WHITE)
+			game.player.dunk.spend(warden)
+			game.player.smash_landing = warden
+			game.ctx.spawner.strike(warden, "slam", 1.0e6)
+			game.player.smash_landing = null
+		await physics_frame
+		ticks += 1
+	_t.check("the break opens the gates", not offered.is_empty(), "%d ticks" % ticks)
+	_t.eq("the gate roll settles the call as met", shot.verdict, "met")
 	game.queue_free()
 	await process_frame
