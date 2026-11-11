@@ -469,6 +469,14 @@ func add_event_core(at: Vector3) -> void:
 		add_core("event", at)
 
 
+# A missed called shot (build/called_shot.gd) burns one of this stage's cores. Returns whether one burned.
+func lose_core() -> bool:
+	if bonus_cores <= 0:
+		return false
+	bonus_cores -= 1
+	return true
+
+
 # A lost risk bet burns this stage's cores (world/bet_crate.gd); its bet_resolved fact
 # reports the loss. Returns how many burned.
 func burn_cores() -> int:

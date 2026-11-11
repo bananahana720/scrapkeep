@@ -29,6 +29,7 @@ const EXPECTED := {
 	"grip": ["grip", "off", "bogus", "launch"],
 	"heat": ["heat", "on", "bogus", "launch"],
 	"overtime": ["overtime", "on", "bogus", "launch"],
+	"called-shot": ["called_shot", "on", "bogus", "launch"],
 }
 
 # The lab's winners are the shipping defaults: a bare Tuning reports each one.

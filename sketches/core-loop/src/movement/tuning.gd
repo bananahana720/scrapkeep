@@ -70,6 +70,7 @@ const SPECS := [
 	# base), "on" plays it.
 	{"key": "heat", "label": "Heat", "min": 0.0, "max": 2.0, "step": 1.0, "value": 0.0, "options": ["off", "watch", "on"]},
 	{"key": "overtime", "label": "Overtime", "min": 0.0, "max": 1.0, "step": 1.0, "value": 0.0, "options": ["off", "on"]},
+	{"key": "called_shot", "label": "Called shot", "min": 0.0, "max": 1.0, "step": 1.0, "value": 0.0, "options": ["off", "on"]},
 	# The harpoon (DESIGN-NOTES, "Harpoon and winch"): one mode for every pilot, locking on an enemy inside
 	# harpoon_lock_deg and flying the ball in.
 	{"key": "harpoon_smash_speed", "label": "Harpoon smash speed", "min": 10.0, "max": 45.0, "step": 1.0, "value": 24.0},
@@ -224,6 +225,7 @@ const FLAGS := {
 	"profile": ["profile", "option", "launch"],
 	"grip": ["grip", "option", "launch"],
 	"overtime": ["overtime", "option", "launch"],
+	"called-shot": ["called_shot", "option", "launch"],
 }
 
 

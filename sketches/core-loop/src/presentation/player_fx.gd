@@ -479,6 +479,13 @@ func _wire() -> void:
 	SignalWire.listen(events, "enemy_pinned", _on_pinned)
 	events.stage_entered.connect(func(_stage: int, _retry: bool): clear())
 	_wire_redline()
+	# Called Shot (build/called_shot.gd): a firm tap at the call; a met break holds the frame.
+	events.world_fact.connect(func(kind: String, at: Vector3):
+		if kind == "shot_called":
+			rumble(0.0, 0.5, 0.08)
+		elif kind == "call_met":
+			impact_frame(at, 1.0)
+			rumble(0.0, 1.0, 0.25))
 
 
 func _pilot_id() -> String:

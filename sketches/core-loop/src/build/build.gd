@@ -3,6 +3,7 @@ extends Node
 const Companion := preload("res://src/core/companion.gd")
 const ScrapField := preload("res://src/build/scrap_field.gd")
 const RewardGates := preload("res://src/build/reward_gates.gd")
+const CalledShot := preload("res://src/build/called_shot.gd")
 const Fabricators := preload("res://src/build/fabricators.gd")
 const ElementField := preload("res://src/build/element_field.gd")
 const Elements := preload("res://src/build/elements.gd")
@@ -138,6 +139,8 @@ var scrap_rng := RandomNumberGenerator.new()
 # Vaults paid this stage: each names its own offer stream.
 var _vaults_paid := 0
 var _overtimes_paid := 0
+# Called Shot (called_shot.gd, behind --called-shot): the gate asks it for the pair's rarities.
+var called_shot: Node3D
 # Louvres the last recompute converted into the pilot's signature stat (Panels.OVERFLOW), and
 # the counts it folded after that conversion (what the build read's stat lines say).
 var panel_overflow := 0
@@ -260,6 +263,9 @@ func setup(ctx_ref) -> void:
 	gates.name = "RewardGates"
 	ctx.root.add_child(gates)
 	gates.setup(ctx.terrain)
+	called_shot = CalledShot.new()
+	ctx.root.add_child(called_shot)
+	called_shot.setup(ctx)
 	gates.mark_for = offer_mark
 	gates.active_row = _active_row
 	gates.chosen.connect(_on_gate_chosen)
@@ -1307,7 +1313,8 @@ func _active_row(id: String) -> Dictionary:
 func _on_flow_changed(state: String) -> void:
 	if state != "gates" or gates.is_open():
 		return
-	var rarities := Parts.gate_rarities(ctx.run.gate_tier_bonus())
+	# The called shot settles here (called_shot.gd): a met call lifts the pair, a missed one costs a core.
+	var rarities: Array = called_shot.gate_rarities()
 	var gate_rng := _offer_rng("gates")
 	var picks: Array = Parts.roll_gate(gate_rng, rarities, _class_id(), ctx.run.parts, GATE_CHOICES, ctx.flow.stage(), _offered)
 	picks = Parts.floor_gate(gate_rng, picks, _class_id(), ctx.run.parts, _offered, GATE_CHOICES)
