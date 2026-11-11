@@ -21,8 +21,8 @@ const SOURCE := "start_pick"
 # What a tile says its option does, under its name: a part's own verb (parts.gd), and these
 # for the two grants that are not parts. At most EFFECT_WORDS words.
 const EFFECT_WORDS := 6
-const COGS_EFFECT := "Buy a part sooner"
-const CORE_EFFECT := "Better gate this stage"
+const COGS_EFFECT := "Spend at Moss's counter"
+const CORE_EFFECT := "Rarer parts this stage"
 
 # Pilot id to its list, in authored order. Each list holds OFFERED * (REROLLS + 1) rows, so
 # the first draw and the reroll never share an option. Parts lean on the pilot's kit.
