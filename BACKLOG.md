@@ -6414,3 +6414,121 @@ Andrew installed Risk of Rain 2, Gunfire Reborn, Roboquest and The Binding of Is
 **Definition of done:** stage anatomy as the lead note (handcrafted stages with branching exits, in-stage objectives and secrets, the basecamp between runs), movement feel with frame-counted values, class perks, production budgets by metadata, and the four-game map comparison completed against Scrapkeep's open-stage-with-pockets shape. Same six-section shape and bans as CS-01.
 
 **Verification and evidence:** as CS-01. **Boundary:** as CS-01; the pak reader is chosen at card start and built from source or a package registry.
+
+## Systems audit add-on (11 November 2026)
+
+Andrew asked on 11 November 2026 for an add-on workstream: find and fix the weakest parts of the game's systems, mechanics and features, with evidence from running the game. It runs beside the world 1 polish program and never pauses or re-scopes a wave. Step 0 is [docs/systems-audit/PLAN.md](docs/systems-audit/PLAN.md); it fills the brief's brackets (first 15 minutes; 10 hours of game time per player type), names which file stands in for the absent `TECH_BIBLE.md`, and records that a headless harness exists, so no harness card is filed. Scope is world 1 (the title, the camp, the dam, the flume and Brindle) and early progression; worlds 2 and 3 are parked (ruling at). Outputs go in `docs/systems-audit/`.
+
+Order and regression rule: [PLAN.md section 5](docs/systems-audit/PLAN.md#5-how-the-passes-run). Live state, including which files each open pull request holds, is on the wave board named in [STATE.md](project-guide/handoff/STATE.md), not here.
+
+Rules for every card: evidence, not claims ("it compiles" or "tests pass" closes nothing; a DoD without its artifact is rejected). A pass that shows the Bible is wrong files a change request and never edits BIBLE.md or an ADR. A pass stays in its own files; a file another thread or an open pull request holds waits or becomes a dependency note to its owner. NEEDS ANDREW only for a cut or merge of a feature, a change that conflicts with a pillar, or a balance fix that needs a design change rather than a number change; every other call is decided and logged as a one-line assumption he can overturn. Each pass ends with a per-system summary (pass status, top open issue, last sim or bot result, what changed, one finding in plain words) for the coordinator's "Systems health" digest. Gate per pull request: the per-PR tier of [ORCHESTRATOR's tiered gate](ORCHESTRATOR.md#light-play-lane), its only owner; docs-only cards use the scoped docs checks in AGENTS.md.
+
+Every card leaves alone the files another thread or an open pull request holds; the card checks the wave board's current fences at claim. Controls and input mapping (`src/core/bindings.gd`, `src/movement/intent.gd`) and the save format (`src/core/run_store.gd`, `profile.gd`, `safe_store.gd`) stay out of scope for the whole workstream.
+
+<a id="sa-a"></a>
+
+### SA-A: Systems map
+
+**Card revision:** 1 · **Owner:** Systems audit thread · **Size:** M · **Lane:** Systems audit (docs only)
+
+**Source and inputs:** BIBLE.md section 1 (Pillars & Fantasy) and section 6 (Core Systems); [STORY-MAP.md](sketches/core-loop/design-v3/STORY-MAP.md) section 4; adr/README.md (TADR-008, TADR-010, TADR-011) standing in for TECH_BIBLE.md; [PLAN.md](docs/systems-audit/PLAN.md) section 2; the 9 Nov "Game systems: audit and plan" doc; world 1 bot runs with a resource ledger.
+
+**Dependencies:** None. **Blocking questions:** None.
+
+**Files touched:** `docs/systems-audit/PLAN.md`, `docs/systems-audit/systems-map.md`, this section of BACKLOG.md, one line in `project-guide/handoff/ROADMAP.md`.
+
+**Definition of done:** `systems-map.md` holds every system's inputs, outputs and resources touched; the core loop in one sentence; the five biggest problems first (dominant strategies, dead mechanics, overlapping systems, choices with no tradeoff, feedback the player cannot read); every system tied to a pillar or marked for cut; a before diagram and a proposed after diagram. No code changes.
+
+**Verification and evidence:** the bot-run ledger the problems cite, with its exact command; `npm run check:docs`; `npm run check:project`; one independent review.
+
+**Boundary:** read-only for game code. Cuts and merges it proposes go to SA-D, then to Andrew.
+
+<a id="sa-b"></a>
+
+### SA-B: Economy balance (world 1)
+
+**Card revision:** 1 · **Owner:** a new thread · **Size:** M · **Lane:** Systems audit
+
+**Source and inputs:** BIBLE.md section 6, "Electromagnetic collection, recycling and growth" and "Four slots and milestone progression"; STORY-MAP.md section 4 rows Scrap, Cogs, Cores, Grey panels, Mint items, Cobalt items, the keeper's gamble and the foreman's kindness; TADR-010 ("stage time may scale threat, never gate progression"); [systems-map.md](docs/systems-audit/systems-map.md); the 10 Nov balance re-measure (`handoff/balance-remeasure.md` in the project's shared Library, outside the repo: band win counts at 24 seeds are not a balance sensor).
+
+**Dependencies:** [SA-A](#sa-a). **Blocking questions:** None.
+
+**Files touched:** new `docs/systems-audit/economy/**`; new `sketches/core-loop/tools/sysaudit/econ_*.gd` (a resource-ledger wrapper over `tools/bot_run.gd`, one seed per process, and a shopping-and-choosing policy that buys at Moss, takes the start pick and the tree offers, used for the min-maxer); value tables only in `src/build/fabricators.gd` (`COG_PRICES`, `RESTOCK`), `src/core/start_picks.gd` (the option lists), `src/world/stake_devices.gd` (`HEALTH_SHARES`, `SCRAP_PER_HP_PAID`) and `src/build/panels.gd` (drop table); `src/world/trade_pockets.gd` (odds) only after a fence check with the wave 37 board thread, which holds world scripts. A rate that lives in a held file (`flow.gd` `BURST_PER_STAGE`, `run_state.gd`, `scrap_field.gd` while pull request 758 is open) is a dependency note to its owner, not an edit.
+
+**Definition of done:** a table of every source and sink per resource (scrap, mass, cogs, cores, hull, panels, parts, relics, tree picks, meta unlocks) with rates per game minute; 10 hours of game time per player type (rusher = skipper, completionist = completionist, min-maxer = the new policy), reached as 24 world 1 runs per type (the project's 24-seed rule, about 3 to 4 game hours each) with per-minute rates carried to 10 hours, because Andrew asked on 11 Nov that long wall-clock runs never stall the work (ruling in [DECISIONS.md](project-guide/handoff/DECISIONS.md)); flags for inflation, hoarding, dead currencies and any strategy that wins over 60% of the time; before and after charts from real sim runs; the diff of changed values; the exact sim command.
+
+**Verification and evidence:** ledger files and charts under `docs/systems-audit/economy/`; world 1 bands before and after on 24 seeds (`scripts/challenge/run.mjs`, same seeds each arm); the w1 Novice target in the [difficulty plan](project-guide/handoff/shared/world1/difficulty-plan.md) must not get easier (ruling cu).
+
+**Boundary:** data and value tables only. A fix that needs a rule change, not a number, is NEEDS ANDREW.
+
+<a id="sa-c"></a>
+
+### SA-C: Mechanic depth and feel (world 1)
+
+**Card revision:** 1 · **Owner:** a new thread · **Size:** M · **Lane:** Systems audit
+
+**Source and inputs:** BIBLE.md section 1 "Joyful physical mastery" and section 6 "Movement, camera and active aim", "A committed attack means what it shows" and "Abilities, ultimates and combat rhythm"; TADR-008 (the ability contract); TADR-006 (physics as rates); [LEGIBILITY.md](sketches/core-loop/design-v3/LEGIBILITY.md) section 13; [systems-map.md](docs/systems-audit/systems-map.md).
+
+**Dependencies:** [SA-A](#sa-a). **Blocking questions:** None.
+
+**Files touched:** new `docs/systems-audit/mechanics/**`; new `sketches/core-loop/tools/sysaudit/clip_*.gd`; feedback and mechanic owners not held elsewhere: `src/movement/` except `intent.gd`, `src/combat/` except the files the parked difficulty stack on `claude/w37-difficulty` changes; until pull request 763 lands, also not the files its Heat build holds (`player_ball.gd`, `combat.gd`, `player_fx.gd`, `run_state.gd`, `run_log.gd`, `tuning.gd`, `audio.gd`, `lock_rows.gd`, `stage_locks.gd`) (confirm `warden*.gd` and `rogue.gd` with the wave 37 board thread at claim, as it holds boss and arena work), `src/combat/actives/`, `src/presentation/player_fx.gd` (after pull request 763 lands), `juice.gd`, `vfx.gd`, `machine_fx.gd`, `sfx_bank.gd`; `src/core/game_events.gd` for one new signal (carve). Never controls, input mapping or the save format.
+
+**Definition of done:** for each world 1 mechanic, the decision it asks, the counterplay, the risk and reward, and its feedback for anticipation, impact and recovery; mechanics that ask no decision fixed; feedback added where an action has none; a recorded clip or frame sequence per changed mechanic, reviewed, with a note on what was fixed after review.
+
+**Verification and evidence:** frame sequences from `tools/look_harness.gd` or `tools/eye_film.gd`; a PC film for anything that is a feel call; focused tests and the fast gate per pull request.
+
+**Boundary:** difficulty only gets harder, never easier, through movement (ruling cu).
+
+<a id="sa-d"></a>
+
+### SA-D: Feature fit
+
+**Card revision:** 1 · **Owner:** a new thread · **Size:** S · **Lane:** Systems audit (docs only)
+
+**Source and inputs:** BIBLE.md section 1 (the three pillars and their decision tests) and section 6; [BIBLE_DECISIONS.md](BIBLE_DECISIONS.md); TADR-007 (sketch promotion), TADR-011 (crew); STORY-MAP.md sections 4 and 5; [systems-map.md](docs/systems-audit/systems-map.md); [PLAN.md](docs/systems-audit/PLAN.md) section 2; the candidate mechanics from the thread "Design loops you can't put down" (Heat, Reservoir, Called Shot; `docs/design/loops.md` on draft pull request 763), judged beside this pass's own three. Andrew accepted those three on 11 Nov 2026 at 18:42Z and wants them in before the sitting (ruling in [DECISIONS.md](project-guide/handoff/DECISIONS.md)), so feature-fit.md logs them as Andrew-approved, not as NEEDS ANDREW; the loops thread builds them behind flags and owns their files.
+
+**Dependencies:** [SA-A](#sa-a). **Blocking questions:** None.
+
+**Files touched:** `docs/systems-audit/feature-fit.md` only.
+
+**Definition of done:** a table of feature, pillar served, player cost to learn, dev cost to maintain, verdict (keep, merge, cut, defer); three new mechanics that extend rules already in the game, each naming the rule it extends and the new decision it creates; every cut, merge and new mechanic sent to Andrew as NEEDS ANDREW; change requests for where the Bible and the game differ (the crew of TADR-011, the four slots, the respec opportunity).
+
+**Verification and evidence:** each verdict cites a file, a receipt or a ledger row; `npm run check:docs`.
+
+**Boundary:** implements nothing.
+
+<a id="sa-e"></a>
+
+### SA-E: The first 15 minutes (world 1)
+
+**Card revision:** 1 · **Owner:** a new thread · **Size:** M · **Lane:** Systems audit
+
+**Source and inputs:** BIBLE.md section 1 "A world worth crossing" and section 6 "Runs, regions, exits and saves"; TADR-010 (open stages and the event director) and [design-v3/TESTING.md](sketches/core-loop/design-v3/TESTING.md), standing in for TECH_BIBLE.md; [FIRST-HOUR.md](sketches/core-loop/design-v3/FIRST-HOUR.md); [STORY-MAP.md](sketches/core-loop/design-v3/STORY-MAP.md); the world 1 audits in [shared/world1/](project-guide/handoff/shared/world1/) (map standard, ruling ct; one ride, ruling cv); SA-C and SA-D outputs.
+
+**Dependencies:** [SA-C](#sa-c), [SA-D](#sa-d). **Blocking questions:** None.
+
+**Files touched:** new `docs/systems-audit/first-15/**`. Layout and tip files are named at claim time after a fence check, because the park JSON, lines and site markers have open pull requests today.
+
+**Definition of done:** world 1 mechanics in the order a first-timer meets them; each introduced alone, practised safely, tested, then combined with one earlier mechanic; no tutorial text over one line, teaching through layout; a chart of difficulty and new concepts per minute for the first 15 minutes, with spikes and flat stretches flagged; a playthrough recording; the list of changes. Story beats do not change.
+
+**Verification and evidence:** `tools/eye_film.gd --film=whole` and a first-timer film on the PC; `tools/first_timer.gd -- --table=park` probes.
+
+**Boundary:** no story beat changes; words on screen follow ruling cx.
+
+<a id="sa-f"></a>
+
+### SA-F: Break it (world 1)
+
+**Card revision:** 1 · **Owner:** a new thread · **Size:** M · **Lane:** Systems audit
+
+**Source and inputs:** BIBLE.md section 6 "Runs, regions, exits and saves" (reload never duplicates a reward, refills a death save or resurrects a run); TADR-004 (persistence); TADR-006; [BUG-BAR.md](sketches/core-loop/BUG-BAR.md); [scripts/redteam/README.md](scripts/redteam/README.md).
+
+**Dependencies:** [SA-E](#sa-e) for the first run; none for the sprint-close reruns. **Blocking questions:** None.
+
+**Files touched:** new `docs/systems-audit/break-it/**`; new `sketches/core-loop/tools/sysaudit/break_*.gd` (input spam, sequence breaks, save-and-quit mid-action then resume, every buff stacked with every debuff: curse, wear, stage modifiers, low hull); new `sketches/core-loop/tests/sysaudit_*_test.gd` for each fixed break. A fix inside a held file goes to its owner as a dependency.
+
+**Definition of done:** a table of issue, repro, severity (BUG-BAR), fix, verified (yes or no, with evidence) covering softlocks, infinite resource loops, unkillable states, out of bounds and lost progress; only severity high and above fixed; each unfixed issue a backlog row. A change request to the coordinator for the sprint-close rule (a new dominant strategy or high-severity break reopens the sprint), because ORCHESTRATOR owns the tiered gate.
+
+**Verification and evidence:** the break bot's logs and replay commands; a replay test per fix.
+
+**Boundary:** fixes severity high and above only.
