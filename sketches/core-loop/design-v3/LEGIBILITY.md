@@ -373,7 +373,7 @@ This section binds every screen, card, tip, toast, caption, prompt and menu in e
 | W8 | Passive or roundabout phrasing where a short imperative fits |
 | W9 | A sentence that could appear unchanged in another game |
 
-**How it is checked.** A review of any change a player can read or navigate cites this section by code. A lint over the player-facing strings and screen headings, with a planted bad case for each pattern it covers, is owed by wave 36; until it lands, the check is the review. The patterns a lint cannot judge (S6, S7, W3, W9) stay with the reviewer and with a blind read of a still.
+**How it is checked.** A review of any change a player can read or navigate cites this section by code. `npm run sketch:lint` checks W1, W2, W4, W6, W7 and S8 over the player strings its source list reads (`scripts/sketch-lint-words.mjs`, with a planted bad case for each), taking W7's banned names from [NAMES.md](NAMES.md), the one home for names; S1 to S5, S6, S7, W3, W5, W8 and W9 stay with the reviewer and with a blind read of a still.
 
 ## Changes to the plan
 

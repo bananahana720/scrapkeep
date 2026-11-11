@@ -1,6 +1,7 @@
 import { existsSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { WORD_RULES, lintWords } from "./sketch-lint-words.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const BASELINE_FILE = path.join(root, "scripts", "sketch-lint.baseline.json");
@@ -262,10 +263,20 @@ export function lintL10(file, rel, text, allowed = HAND_MOVED) {
 
 // The baseline only shrinks: offenders it lists stay quiet, a listed path that no longer
 // offends or no longer exists is itself a finding. exists(path) answers for the disk.
+// The word rules (ruling cx, sketch-lint-words.mjs) list a count per file instead of a path: a file
+// over its count fails with every offence it holds, a file under it must lower the count, and a
+// file at zero must leave the baseline.
 export function applyBaseline(findings, baseline, exists) {
   const kept = [];
   const offending = new Map();
+  const words = new Map();
   for (const item of findings) {
+    if (WORD_RULES.includes(item.rule)) {
+      const key = `${item.rule} ${item.path}`;
+      if (!words.has(key)) words.set(key, []);
+      words.get(key).push(item);
+      continue;
+    }
     const listed = baseline[item.rule] ?? [];
     if (BASELINED_RULES.includes(item.rule) && listed.includes(item.path)) {
       offending.set(`${item.rule} ${item.path}`, true);
@@ -279,6 +290,21 @@ export function applyBaseline(findings, baseline, exists) {
       kept.push(finding("BASELINE", file, 1, `${rule} no longer offends${exists(file) ? "" : " (file is gone)"}: remove from baseline`));
     }
   }
+  for (const rule of WORD_RULES) {
+    const listed = baseline[rule] ?? {};
+    for (const [key, items] of words) {
+      if (!key.startsWith(`${rule} `)) continue;
+      const allowed = listed[items[0].path] ?? 0;
+      if (items.length > allowed) {
+        kept.push(...items.map((item) => ({ ...item, message: `${item.message}${allowed > 0 ? ` (${items.length} in this file, baseline ${allowed})` : ""}` })));
+      }
+    }
+    for (const [file, allowed] of Object.entries(listed)) {
+      const now = words.get(`${rule} ${file}`)?.length ?? 0;
+      if (now === 0) kept.push(finding("BASELINE", file, 1, `${rule} no longer offends${exists(file) ? "" : " (file is gone)"}: remove from baseline`));
+      else if (now < allowed) kept.push(finding("BASELINE", file, 1, `${rule} fell to ${now} from ${allowed}: lower the baseline to ${now}`));
+    }
+  }
   return kept;
 }
 
@@ -286,6 +312,11 @@ export function baselineFrom(findings) {
   const baseline = {};
   for (const rule of BASELINED_RULES) {
     baseline[rule] = [...new Set(findings.filter((item) => item.rule === rule).map((item) => item.path))].sort();
+  }
+  for (const rule of WORD_RULES) {
+    const counts = {};
+    for (const item of findings.filter((entry) => entry.rule === rule)) counts[item.path] = (counts[item.path] ?? 0) + 1;
+    baseline[rule] = Object.fromEntries(Object.entries(counts).sort(([a], [b]) => a.localeCompare(b)));
   }
   return baseline;
 }
@@ -337,6 +368,17 @@ export function lintSketch(sketch) {
     findings.push(...lintL10(file.path, rel, file.text));
   }
   if (sketch === "core-loop") findings.push(...lintL6Owners(lit, relative));
+  // Ruling cx word rules: core-loop owns the names table and the source list.
+  if (sketch === "core-loop") {
+    const words = lintWords({
+      sketchDir: directory,
+      prefix: relative,
+      names: readFileSync(path.join(directory, "design-v3", "NAMES.md"), "utf8"),
+      bindings: readFileSync(path.join(directory, "src", "core", "bindings.gd"), "utf8"),
+    });
+    findings.push(...words.findings);
+    findings.words = { read: words.read, total: words.total };
+  }
   const lintSelf = new Set(["scripts/sketch-lint.mjs", "scripts/sketch-lint.test.mjs"]);
   const flagFiles = [
     ...testFiles,
@@ -366,6 +408,7 @@ function main() {
     const baseline = baselineFrom(raw);
     writeFileSync(BASELINE_FILE, JSON.stringify(baseline, null, 2) + "\n");
     for (const rule of BASELINED_RULES) console.log(`${rule} ${baseline[rule].length} baseline paths`);
+    for (const rule of WORD_RULES) console.log(`${rule} ${Object.values(baseline[rule]).reduce((a, b) => a + b, 0)} baseline offences in ${Object.keys(baseline[rule]).length} files`);
     return;
   }
   const baseline = existsSync(BASELINE_FILE) ? JSON.parse(readFileSync(BASELINE_FILE, "utf8")) : {};
@@ -376,7 +419,13 @@ function main() {
       console.log(`L6 open: sketches/core-loop/${rel} ${entry.sites} sites, ${entry.owner}`);
     }
   }
-  const baselined = BASELINED_RULES.map((rule) => `${rule}=${(baseline[rule] ?? []).length}`).join(" ");
+  if (raw.words) {
+    for (const entry of raw.words.read) console.log(`words read ${String(entry.count).padStart(4)} ${entry.source}`);
+    const byRule = WORD_RULES.map((rule) => `${rule}=${raw.filter((item) => item.rule === rule).length}`).join(" ");
+    console.log(`words: ${raw.words.total} player strings read; offences before baseline ${byRule}`);
+  }
+  const wordBaseline = WORD_RULES.map((rule) => `${rule}=${Object.values(baseline[rule] ?? {}).reduce((a, b) => a + b, 0)}`).join(" ");
+  const baselined = `${BASELINED_RULES.map((rule) => `${rule}=${(baseline[rule] ?? []).length}`).join(" ")} ${wordBaseline}`;
   console.log(`sketch-lint ${findings.length === 0 ? "pass" : "fail"}: ${findings.length} findings, baseline entries ${baselined}, ${Date.now() - started}ms`);
   process.exit(findings.length === 0 ? 0 : 1);
 }
