@@ -2,7 +2,7 @@
 
 The one place to check what Andrew has decided. Each row gives the ruling that stands now, when he made it, how (card tap or typed line), and what it replaced. Times are UTC. Newest ruling wins; replaced rulings sit in the last section.
 
-Owner: the coordinator, since 10 Nov the local Claude Code session on Andrew's PC (ruling cs). This file is the register. The Claude Doc [Scrapkeep decisions register](https://claude.ai/code/artifact/e209a132-0f39-416d-a116-3be4e9df8de9) and /mnt/project-files/project-guide/DECISIONS.md were the claude.ai project's copies and are frozen at ruling cr. A conflict with an older record (docs/decisions.tsv) that has no clear later ruling goes to Andrew as a card, not here.
+Owner: the coordinator, since 10 Nov the local Claude Code session on Andrew's PC (ruling cs). This file is the register. The Claude Doc [Scrapkeep decisions register](https://claude.ai/code/artifact/e209a132-0f39-416d-a116-3be4e9df8de9) and /mnt/project-files/project-guide/DECISIONS.md are reading copies: the nightly housekeeping routine brings them in step with this file (through ruling cz on 11 Nov), so they can be up to a day behind. A conflict with an older record (docs/decisions.tsv) that has no clear later ruling goes to Andrew as a card, not here.
 
 Sources: Andrew's typed lines and taps (project chat card taps until 18 Oct), the wave board issues (#241 in waves 18 to 21, then one board per wave; STATE.md names the current one) and, 18 to 23 Oct, the local coordinator session. The machine's own register is docs/decisions.tsv in the repo (1,000 rows since Sept; 55 rows added at wave 15 close).
 
