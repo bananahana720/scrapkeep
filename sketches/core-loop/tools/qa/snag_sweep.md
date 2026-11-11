@@ -52,6 +52,20 @@ pieces, shape by shape; its floor, rim and wall are ground.
 Exit 0 done, 1 more than 20% of lanes skipped (the message names why, from `skipped_reasons`), 2 bad
 arguments or an unreadable file.
 
+## Moving pieces
+
+A lift, barge or other moving piece is met at whatever point of its cycle the lane's ball arrives, so one
+sweep pass neither clears nor convicts it. Judge a moving piece's row with a phase test that steps time to
+fixed points of its cycle and rolls each lane at each, as `tests/park_hollow_lift_roll_test.gd` does for the
+flume's hollow lift and `tests/park_service_lift_roll_test.gd` for the dam's (wave 36: swept alone it showed
+0 snags; at fixed phases the plate landing on a ball that rolled under it while raised stops the ball dead,
+cycle 2.5 to 3.4 s after firing). Since wave 37 a lift is a cap on a solid drum and both tests pass.
+
+Sweep one piece alone with `--only=<path substring>`, e.g. `--map=park_flume --only=hollow_lift`. On the
+drum lift that reads 0 snags over 8 lanes but exits 1: 3 lanes skip with `no_floor at Stage2`, over the 20%
+limit. The plate lift before it skipped the same 3 of 12 and exited 1 too, so the skip is the probe's on this
+piece, not the drum's.
+
 ## Limits
 
 Calm world, one ball at cruise, headless. It finds speed loss against a contact that faces the line of
