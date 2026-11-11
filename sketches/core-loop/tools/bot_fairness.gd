@@ -8,11 +8,15 @@ const TelegraphRecord := preload("res://src/combat/telegraph_record.gd")
 # tick() once a physics tick, hit() on every player_hit and record() once into the run's row. The pass lines, the tell time and
 # the source lists live once, in scripts/challenge/fairness.json, which scripts/challenge/lib.mjs reads too.
 #
-# F1 splits hull lost by the hit's own source (hit(), classify()):
-#   telegraphed   a telegraph owned by the hit's source covered the ball, up for at least tellS before the hit
-#   untelegraphed the source publishes telegraphs and none of its own covered the ball in time
-#   contact       the source publishes no telegraph by design (body contact and ram): beside F1, outside its share
-#   unknown       an environment source, or none: no telegraph owner to match
+# F1 splits hull lost by the hit's own source (hit(), classify()). Each bucket has one positive condition; unknown is the rest:
+#   untelegraphed a planted source (plantSources), or a source with a telegraph owner and none of its own over the ball in time
+#   contact       a source on contactSources (body contact and ram, no telegraph by design): beside F1, outside its share
+#   telegraphed   a source with a telegraph owner, and a telegraph of its own covered the ball, up for at least tellS
+#   unknown       anything else: no telegraph owner to match, so F1 loses its mark when this is over unknownMaxShare
+# A source has a telegraph owner when it is a boss attack on bossAttacks (matched to hazards of that attack only), an
+# unownedSources name (matched to telegraphs nothing claims), a kind seen publishing this run, or a TelegraphRecord row.
+# Hit sources carry only the enemy kind, so two machines of one kind share one owner: a chaser hit under another chaser's
+# old lane reads telegraphed.
 # F1 = telegraphed / (telegraphed + untelegraphed). A telegraph's age is how long it has stood, so a lane entered late is judged
 # on the lane's age as it is now. Every published telegraph is read, the steering's own filters (amber, wider than the field
 # radius) do not apply here.
@@ -98,8 +102,9 @@ func _enemy_near() -> bool:
 	return false
 
 
-# Every published telegraph as {id, owner, age_s, covers}. owner is the enemy kind or "lobber" for a shell's ring, "boss" for a
-# boss hazard and "" for one nothing publishes an owner for. mark records first sightings (a hit's scan does not).
+# Every published telegraph as {id, owner, attack, age_s, covers}. owner is the enemy kind or "lobber" for a shell's ring,
+# "boss" for a boss hazard and "" for one nothing publishes an owner for; attack is a boss hazard's attack_id, else "".
+# mark records first sightings (a hit's scan does not).
 func _scan(mark: bool) -> Array:
 	var out: Array = []
 	var ids := {}
@@ -121,7 +126,7 @@ func _scan(mark: bool) -> Array:
 	if boss_hazards.is_valid():
 		for h in boss_hazards.call():
 			if is_instance_valid(h) and h.has_method("contains"):
-				_add(out, ids, h, "boss", ball, mark)
+				_add(out, ids, h, "boss", ball, mark, String(h.get("attack_id")))
 	if mark and _seen.size() > 64:
 		for id in _seen.keys():
 			if not ids.has(id):
@@ -129,7 +134,7 @@ func _scan(mark: bool) -> Array:
 	return out
 
 
-func _add(out: Array, ids: Dictionary, t: Object, owner: String, ball: Vector3, mark: bool) -> void:
+func _add(out: Array, ids: Dictionary, t: Object, owner: String, ball: Vector3, mark: bool, attack := "") -> void:
 	var id: int = t.get_instance_id()
 	if ids.has(id):
 		# An enemy's own telegraph is also a child of the game: the owner read first wins.
@@ -141,7 +146,7 @@ func _add(out: Array, ids: Dictionary, t: Object, owner: String, ball: Vector3, 
 		_seen[id] = _clock
 	if owner != "":
 		_published[owner] = true
-	out.append({"id": id, "owner": owner, "age_s": _clock - float(_seen[id]), "covers": t.has_method("contains") and t.contains(ball)})
+	out.append({"id": id, "owner": owner, "attack": attack, "age_s": _clock - float(_seen[id]), "covers": t.has_method("contains") and t.contains(ball)})
 
 
 # --- a hit ---------------------------------------------------------------------------------
@@ -166,31 +171,48 @@ func hit(source: String, hull: float) -> void:
 
 
 # The bucket for one hit. `now` and `before` are _scan() rows (this tick's read and the last tick's, because a telegraph can
-# free itself as it lands); `published` is the set of owners seen to publish a telegraph this run. Pure: the fixtures call it.
-static func classify(source: String, now: Array, before: Array, published: Dictionary) -> String:
-	var cfg := config()
-	var tell: float = float(cfg["tellS"])
+# free itself as it lands); `published` is the set of owners seen to publish a telegraph this run. `cfg` is the shared file's
+# lines unless a fixture passes its own. Pure: the fixtures call it. The order is the rule (see the file header):
+#   1. a planted source is untelegraphed
+#   2. a source on contactSources is contact
+#   3. a source with a telegraph owner is telegraphed when a row of its own covers the ball and is tellS old, else untelegraphed
+#   4. anything else is unknown
+static func classify(source: String, now: Array, before: Array, published: Dictionary, cfg := {}) -> String:
+	if cfg.is_empty():
+		cfg = config()
 	if source in cfg.get("plantSources", []):
 		return "untelegraphed"
-	if source in cfg.get("environmentSources", []) or source == "":
-		return "unknown"
-	var owner := _owner_of(source, cfg)
-	var publishes: bool = owner != "" or published.has(source) or source in cfg.get("unownedSources", []) or not TelegraphRecord.row_of(source).is_empty()
-	if not publishes:
+	if source in cfg.get("contactSources", []):
 		return "contact"
+	var mine := _owner_match(source, published, cfg)
+	if not mine.is_valid():
+		return "unknown"
+	var tell: float = float(cfg["tellS"])
 	for row in now + before:
-		var mine: bool = row["owner"] == owner if owner == "boss" else (row["owner"] == source or (row["owner"] == "" and source in cfg.get("unownedSources", [])))
-		if mine and bool(row["covers"]) and float(row["age_s"]) >= tell:
+		if mine.call(row) and bool(row["covers"]) and float(row["age_s"]) >= tell:
 			return "telegraphed"
 	return "untelegraphed"
 
 
-# "boss" when the source is one of a boss's own (the prefixes in the shared file), else "".
-static func _owner_of(source: String, cfg: Dictionary) -> String:
-	for prefix in cfg.get("bossPrefixes", []):
-		if source.begins_with(String(prefix)):
-			return "boss"
-	return ""
+# (row) -> bool: whether a _scan() row is the hit source's own telegraph, or an invalid Callable when the source has no
+# telegraph owner to match. A boss attack owns only hazards of that attack (bossAttacks: attack_id prefixes), an unowned
+# source owns the telegraphs nothing claims, and an enemy kind owns the rows published under its kind.
+static func _owner_match(source: String, published: Dictionary, cfg: Dictionary) -> Callable:
+	var attacks: Dictionary = cfg.get("bossAttacks", {})
+	if attacks.has(source):
+		var prefixes: Array = attacks[source]
+		return func(row: Dictionary) -> bool:
+			if row["owner"] != "boss":
+				return false
+			for prefix in prefixes:
+				if String(row.get("attack", "")).begins_with(String(prefix)):
+					return true
+			return false
+	if source in cfg.get("unownedSources", []):
+		return func(row: Dictionary) -> bool: return row["owner"] == ""
+	if source != "" and (published.has(source) or not TelegraphRecord.row_of(source).is_empty()):
+		return func(row: Dictionary) -> bool: return row["owner"] == source
+	return Callable()
 
 
 # --- the record ----------------------------------------------------------------------------

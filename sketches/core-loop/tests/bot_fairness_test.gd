@@ -3,13 +3,16 @@ extends SceneTree
 
 const ChildRuns := preload("res://tests/trees/child_runs.gd")
 const BotFairness := preload("res://tools/bot_fairness.gd")
+const TelegraphRecord := preload("res://src/combat/telegraph_record.gd")
 const T := preload("res://tests/support/t.gd")
 
 # The bot record's fairness numbers (tools/bot_fairness.gd) and their planted controls (tools/bot_plants.gd). The pass lines and
 # the tell time are scripts/challenge/fairness.json's, read here and nowhere else.
 #
-# Part 1, fixtures: the classifier on hand-made telegraph reads, so the cases a live seed does not make still run (a contact hit
-# in another enemy's old ring, a young shell ring inside an old ring of another source).
+# Part 1, fixtures: the classifier on hand-made telegraph reads, so the cases a live seed does not make still run (an unlisted
+# source reads unknown, a listed contact source in another enemy's old ring, a young charge lane under an older slag ring, a
+# young shell ring inside an old ring of another source). Each round 3 fixture also runs the frozen round 2 rule, which must
+# misread it.
 # Part 2, live: one seed on stage 1 (novice, which loses hull both moving and stopped), played unplanted and once per plant.
 # Unplanted, every number is measured and on the passing side. Each plant moves its own number under the line and leaves the
 # other two readings inside a stated tolerance of the unplanted run, so a plant proves its own reading and not the plumbing.
@@ -32,24 +35,68 @@ func _initialize() -> void:
 	_run.call_deferred()
 
 
-func _row(owner: String, age: float, covers: bool) -> Dictionary:
-	return {"id": 1, "owner": owner, "age_s": age, "covers": covers}
+func _row(owner: String, age: float, covers: bool, attack := "") -> Dictionary:
+	return {"id": 1, "owner": owner, "attack": attack, "age_s": age, "covers": covers}
+
+
+# The round 2 rule (tools/bot_fairness.gd at 09364d29), frozen with that commit's lists: the planted control. Every fixture
+# that the round 3 rule added must read differently here, so its pass cannot be true by construction.
+const R2_ENVIRONMENT := ["cinder_floor", "pocket_veil", "start_pick", "special"]
+const R2_BOSS_PREFIXES := ["brindle_", "waking_", "mind_"]
+
+
+func _round2_classify(source: String, now: Array, before: Array, published: Dictionary) -> String:
+	if source in _line.get("plantSources", []):
+		return "untelegraphed"
+	if source in R2_ENVIRONMENT or source == "":
+		return "unknown"
+	var owner := ""
+	for prefix in R2_BOSS_PREFIXES:
+		if source.begins_with(prefix):
+			owner = "boss"
+	var unowned: Array = _line.get("unownedSources", [])
+	var publishes: bool = owner != "" or published.has(source) or source in unowned or not TelegraphRecord.row_of(source).is_empty()
+	if not publishes:
+		return "contact"
+	for row in now + before:
+		var mine: bool = row["owner"] == owner if owner == "boss" else (row["owner"] == source or (row["owner"] == "" and source in unowned))
+		if mine and bool(row["covers"]) and float(row["age_s"]) >= float(_line["tellS"]):
+			return "telegraphed"
+	return "untelegraphed"
+
+
+# A round 3 fixture: the current rule must give `want`, and the frozen round 2 rule must not.
+func _new_case(name: String, source: String, now: Array, published: Dictionary, want: String, cfg := {}) -> void:
+	_t.eq(name, BotFairness.classify(source, now, [], published, cfg), want)
+	var old := _round2_classify(source, now, [], published)
+	_t.check("planted: the round 2 rule misreads '%s'" % name, old != want, "round 2 reads %s" % old)
 
 
 func _fixtures() -> void:
 	var tell := float(_line["tellS"])
-	_t.check("the shared lines loaded", not _line.is_empty() and _line.has("telegraphShare"), "%s" % [_line])
-	_t.eq("a contact hit in another enemy's old ring is contact", BotFairness.classify("bump", [_row("chaser", 5.0, true)], [], {"chaser": true}), "contact")
+	_t.check("the shared lines loaded", not _line.is_empty() and _line.has("telegraphShare") and _line.has("contactSources"), "%s" % [_line])
+	# Round 3: unknown is what is left; contact needs a listing; a boss hit is matched to its own attack's hazards.
+	var with_bump := _line.duplicate(true)
+	with_bump["contactSources"] = ["bump"]
+	_new_case("an unlisted source that matches nothing published is unknown, even in another enemy's old ring", "new_thing", [_row("chaser", 5.0, true)], {"chaser": true}, "unknown")
+	_new_case("a source on contactSources is contact inside another enemy's old ring", "bump", [_row("chaser", 5.0, true)], {"chaser": true, "bump": true}, "contact", with_bump)
+	_new_case("a charge whose own lane is younger than the tell is untelegraphed under an older slag ring", "brindle_charge", [_row("boss", tell - 0.2, true, "charge"), _row("boss", 3.0, true, "slag_ring_a")], {"boss": true}, "untelegraphed")
+	_new_case("a boss source with no attack on bossAttacks is unknown, not judged by another attack's hazard", "waking_bore", [_row("boss", 3.0, true, "slag_ring_b")], {"boss": true}, "unknown")
+	# Kept from round 2 under the round 3 rule.
 	_t.eq("a shell younger than the tell inside another source's older ring is untelegraphed", BotFairness.classify("lobber", [_row("lobber", tell - 0.2, true), _row("mag_trapper", 3.0, true)], [], {"lobber": true, "mag_trapper": true}), "untelegraphed")
 	_t.eq("the shell's own ring, old enough, is telegraphed", BotFairness.classify("lobber", [_row("lobber", tell + 0.4, true)], [], {"lobber": true}), "telegraphed")
 	_t.eq("a ring that freed itself as it landed still counts from the tick before", BotFairness.classify("lobber", [], [_row("lobber", tell + 0.4, true)], {"lobber": true}), "telegraphed")
 	_t.eq("a ring that does not cover the ball is not a tell", BotFairness.classify("chaser", [_row("chaser", 3.0, false)], [], {"chaser": true}), "untelegraphed")
-	_t.eq("a boss hit with an old hazard over the ball is telegraphed", BotFairness.classify("brindle_charge", [_row("boss", 2.0, true)], [], {}), "telegraphed")
-	_t.eq("a boss hit with a young hazard is untelegraphed", BotFairness.classify("brindle_charge", [_row("boss", 0.1, true)], [], {}), "untelegraphed")
+	# Replaces round 2's "a boss hit with an old hazard over the ball is telegraphed" (any boss row counted): only the
+	# landing attack's own hazard counts now.
+	_t.eq("a charge with its own old lane over the ball is telegraphed", BotFairness.classify("brindle_charge", [_row("boss", 2.0, true, "charge")], [], {"boss": true}), "telegraphed")
+	_t.eq("a slag hit with its own old ring over the ball is telegraphed", BotFairness.classify("brindle_slag", [_row("boss", 2.0, true, "slag_ring_b")], [], {"boss": true}), "telegraphed")
+	_t.eq("a charge with its own young lane is untelegraphed", BotFairness.classify("brindle_charge", [_row("boss", 0.1, true, "charge")], [], {"boss": true}), "untelegraphed")
 	_t.eq("an unowned ring is the Warden's own", BotFairness.classify("warden", [_row("", 2.0, true)], [], {}), "telegraphed")
 	_t.eq("an unowned ring is not a pack unit's", BotFairness.classify("chaser", [_row("", 2.0, true)], [], {"chaser": true}), "untelegraphed")
 	_t.eq("a planted drain is untelegraphed", BotFairness.classify("drain_plant", [_row("chaser", 5.0, true)], [], {}), "untelegraphed")
 	_t.eq("an environment source has no owner to match", BotFairness.classify("cinder_floor", [], [], {}), "unknown")
+	_t.eq("a chaser hit under another chaser's old lane reads telegraphed (sources carry only the kind)", BotFairness.classify("chaser", [_row("chaser", 2.0, true)], [], {"chaser": true}), "telegraphed")
 
 
 func _args(out: String, plant: String) -> Array:

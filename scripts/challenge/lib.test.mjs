@@ -537,6 +537,32 @@ test("F1 carries no mark while unknown hull is over the line, and prints contact
   assert.equal(clean.telegraphShare, 1, "contact is outside the share");
 });
 
+test("an unlisted source's hull lost F1's mark only once it reads unknown (round 3), not contact (round 2)", () => {
+  // One run: 57 hull telegraphed and 4 from a source on no list. Round 2's classifier filed the 4 as contact; round 3 files
+  // them as unknown. 4 of 61 is 6.6%, over unknownMaxShare.
+  const round2 = fairnessPool([fake("w1", "expert", { hull: hullOf(57, 0, 4, 0), first_hit: {} })]);
+  const round3 = fairnessPool([fake("w1", "expert", { hull: hullOf(57, 0, 0, 4), first_hit: {} })]);
+  assert.ok(4 / 61 > FAIRNESS.unknownMaxShare);
+  assert.equal(round2.shareMarked, true, "planted: as contact the hidden hull keeps the pass mark");
+  assert.equal(round3.shareMarked, false);
+  const line = renderFairness([{ cell: "w1", column: "expert", ...round3 }]).join("\n");
+  assert.match(line, /F1 100% of 57\.0 hull shown \(no mark: unknown hull over the line\)/);
+  assert.ok(!/✓/.test(line.split("\n").find((l) => l.startsWith("- w1")).split(";")[0]), "no pass mark on F1");
+  // at the line exactly the mark stays
+  const atLine = fairnessPool([fake("w1", "expert", { hull: hullOf(95, 0, 0, 5), first_hit: {} })]);
+  assert.equal(atLine.shareMarked, true);
+});
+
+test("F3 says 'no hit in half' at an even split and 'no hit in over half' past it", () => {
+  const even = fairnessPool([fake("w1", "expert", { hull: hullOf(1, 0), first_hit: { s1: seg(true, 4), s2: seg(false, null) } })]);
+  assert.deepEqual([even.firstHitN, even.noHit, even.firstHitS], [2, 1, Infinity]);
+  const evenText = renderFairness([{ cell: "w1", column: "expert", ...even }]).join("\n");
+  assert.match(evenText, /F3 first hit no hit in half median over 2 stage readings/);
+  assert.ok(!/over half/.test(evenText));
+  const over = fairnessPool([fake("w1", "expert", { hull: hullOf(1, 0), first_hit: { s1: seg(true, 4), s2: seg(false, null), boss: seg(false, null) } })]);
+  assert.match(renderFairness([{ cell: "w1", column: "expert", ...over }]).join("\n"), /F3 first hit no hit in over half median over 3 stage readings/);
+});
+
 test("F3: a hit that opened contact is its own case, and no-hit stages are counted and can move the line", () => {
   const p = fairnessPool([fake("w1", "expert", { hull: hullOf(1, 0), first_hit: { s1: seg(true, null, { opened_by_hit: true }), s2: seg(true, 1), boss: seg(false, null) } })]);
   assert.equal(p.openedByHit, 1);

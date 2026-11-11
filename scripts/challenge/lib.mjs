@@ -652,7 +652,9 @@ export function renderFairness(fair) {
   for (const p of fair) {
     const f1 = p.telegraphShare == null ? "F1 not measured" : `F1 ${pct(p.telegraphShare)} of ${fmt(p.hull.telegraphed + p.hull.untelegraphed)} hull shown${p.shareMarked ? mark(p.telegraphShare >= FAIRNESS.telegraphShare - 1e-9) : " (no mark: unknown hull over the line)"}, killing hits shown ${p.kills ? `${p.killsShown} of ${p.kills}${p.shareMarked ? mark(p.killsShown === p.kills) : ""}` : "none counted"}${p.killsOther ? ` (${p.killsOther} killed by contact or unknown)` : ""}; contact ${fmt(p.hull.contact)} hull, unknown ${fmt(p.hull.unknown)} hull (${p.unknownShare == null ? "-" : pct(p.unknownShare)} of hull)`;
     const f2 = p.stopTax == null ? `F2 not measured (${p.stopTaxNote})` : `F2 stop tax ${p.stopTax.toFixed(2)}${mark(p.stopTax >= FAIRNESS.stopTax - 1e-9)}, ${pct(p.fastShare)} of time at cruise`;
-    const f3 = p.firstHitS == null ? `F3 not measured (${p.openedByHit} opened by a hit)` : `F3 first hit ${Number.isFinite(p.firstHitS) ? fmt(p.firstHitS) + " s" : "no hit in over half"} median over ${p.firstHitN} stage readings${mark(p.firstHitS >= FAIRNESS.firstHitS - 1e-9)}, ${p.noHit} of ${p.firstHitN} took no hit${p.openedByHit ? `, ${p.openedByHit} opened by a hit` : ""}`;
+    // An infinite median means at least half the readings took no hit: exactly half on an even split, over half otherwise.
+    const noHitPart = p.noHit * 2 === p.firstHitN ? "no hit in half" : "no hit in over half";
+    const f3 = p.firstHitS == null ? `F3 not measured (${p.openedByHit} opened by a hit)` : `F3 first hit ${Number.isFinite(p.firstHitS) ? fmt(p.firstHitS) + " s" : noHitPart} median over ${p.firstHitN} stage readings${mark(p.firstHitS >= FAIRNESS.firstHitS - 1e-9)}, ${p.noHit} of ${p.firstHitN} took no hit${p.openedByHit ? `, ${p.openedByHit} opened by a hit` : ""}`;
     lines.push(`- ${p.cell} ${p.column} (${p.measured} of ${p.runs} runs measured): ${f1}; ${f2}; ${f3}.`);
   }
   lines.push("");
