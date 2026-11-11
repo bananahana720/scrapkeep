@@ -1,6 +1,7 @@
 extends Control
 
 const EventKinds := preload("res://src/core/event_kinds.gd")
+const UiTokens := preload("res://src/ui/ui_tokens.gd")
 const Icons := preload("res://src/ui/icons.gd")
 const Objectives := preload("res://src/core/objectives.gd")
 const Palette := preload("res://src/core/palette.gd")
@@ -70,7 +71,7 @@ const SIGHT_SLACK_M := 2.5
 const HIDDEN_ALPHA := 0.35
 const AVOID_GROW := 16.0
 # The tag: its font size, the padding of its chip, and the gap between the chip and the brackets.
-const TAG_FONT := 17
+const TAG_FONT := UiTokens.BODY
 const TAG_PAD := Vector2(8.0, 4.0)
 const TAG_GAP := 6.0
 # The rows of a mounted Warden's fight whose thing the driver names (warden_reactor.gd plate_targets).

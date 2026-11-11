@@ -44,6 +44,11 @@ var _settle_interpolation := 0
 # transform still points at the old spot, so whoever draws from the ball reads the raw one
 # (PlayerBall.shown_transform): a lens snapped in the same breath lands on the new spot.
 var placing := false
+# A carve shorter than this is a seam hop, not a ride, and publishes nothing (systems audit
+# pass C: carving was the one verb with no bus fact, so sound, the pad and the tricks book
+# could not answer it). A start value; the carve itself is ball_rules' state.carving.
+const CARVE_MIN_S := 0.3
+var _carve_s := 0.0
 
 
 func setup(tuning_ref, state_ref) -> void:
@@ -80,6 +85,7 @@ func setup(tuning_ref, state_ref) -> void:
 
 func set_active(active: bool) -> void:
 	_active = active
+	_carve_s = 0.0
 	freeze = not active
 	set_collision_layer_value(2, active)
 	_probe.enabled = active
@@ -101,6 +107,7 @@ func set_velocity_now(new_velocity: Vector3) -> void:
 
 func teleport(to: Vector3, new_velocity: Vector3) -> void:
 	teleporting.emit()
+	_carve_s = 0.0
 	new_velocity = _finite(new_velocity)
 	_pending_velocity = new_velocity
 	state.velocity = new_velocity
@@ -171,6 +178,7 @@ func _integrate_forces(body_state: PhysicsDirectBodyState3D) -> void:
 		take_speed = INF
 	Rules.probe_ground(_probe, state, Rules.ground_dot(state, tuning), take_speed)
 	Rules.grip_contact(state, tuning, body_state, take_speed)
+	_track_carve(origin, delta)
 
 	var spin = Rules.carve_spin(state, tuning)
 	if spin != null:
@@ -242,6 +250,16 @@ func _integrate_forces(body_state: PhysicsDirectBodyState3D) -> void:
 	_last_fall_speed = falling
 	state.velocity = body_state.linear_velocity
 	_remember(state.velocity)
+
+
+# A carve that ends leaves one fact on the kit, published with the kit's others this tick.
+func _track_carve(at: Vector3, delta: float) -> void:
+	if state.carving:
+		_carve_s += delta
+		return
+	if _carve_s >= CARVE_MIN_S and kit != null:
+		kit.facts.append(["carved", [at, _carve_s, state.velocity.length()]])
+	_carve_s = 0.0
 
 
 func _remember(velocity: Vector3) -> void:

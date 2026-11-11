@@ -582,6 +582,11 @@ func _write(outcome: String) -> void:
 	# The ultimate meter's points by source this run (SKILL-BAR section 7, meter_points).
 	var meter = player.abilities.get("meter") if player != null and player.get("abilities") != null else null
 	line["meter_points"] = (meter.sources as Dictionary).duplicate() if meter != null else {}
+	# Heat on the shell (redline.gd): its counts for the kill line (loops.md), present only when
+	# --heat is watch or on, so a flag-off line is byte-identical to the base.
+	var redline = player.get("redline") if player != null else null
+	if redline != null and redline.mode != "off":
+		line["redline"] = redline.summary()
 	# The durability prototype's per-run metrics (run_state.gd), present only in armour
 	# mode so a flag-off line is byte-identical to the base. reverse_seconds is an
 	# approximation: seconds with a spill live and the ball moving against the stage's

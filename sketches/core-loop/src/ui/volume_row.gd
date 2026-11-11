@@ -1,6 +1,7 @@
 extends Control
 
 const Palette := preload("res://src/core/palette.gd")
+const UiTokens := preload("res://src/ui/ui_tokens.gd")
 const UiFonts := preload("res://src/ui/ui_fonts.gd")
 const ChoiceButton := preload("res://src/ui/choice_button.gd")
 
@@ -17,10 +18,10 @@ signal changed(level: float)
 const STEPS := 10
 const SEG_W := 12.0
 const SEG_GAP := 4.0
-const ARROW := 28.0
-const PAD := 14.0
+const ARROW := 56.0
+const PAD := float(UiTokens.GAP_L)
 const GLYPH := 26.0
-const HEIGHT := 52.0
+const HEIGHT := UiTokens.TARGET
 
 var bus := ""
 var words := ""
@@ -28,6 +29,8 @@ var glyph := ""
 var level := 0.0
 var _hover := false
 var _dragging := false
+# The settings form's layout (stack): the word above, the field (glyph, arrows, bar) below it.
+var _top := 0.0
 
 
 func _init(bus_name := "", row_words := "", glyph_id := "", width := 420.0) -> void:
@@ -38,6 +41,7 @@ func _init(bus_name := "", row_words := "", glyph_id := "", width := 420.0) -> v
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 	custom_minimum_size = Vector2(width, HEIGHT)
+	accessibility_name = row_words
 	mouse_entered.connect(func():
 		_hover = true
 		queue_redraw())
@@ -57,6 +61,7 @@ func show_level(value: float) -> void:
 	if is_equal_approx(value, level):
 		return
 	level = value
+	accessibility_description = "%d of %d" % [steps_filled(), STEPS]
 	queue_redraw()
 
 
@@ -65,6 +70,7 @@ func set_level(value: float) -> void:
 	if is_equal_approx(next, level):
 		return
 	level = next
+	accessibility_description = "%d of %d" % [steps_filled(), STEPS]
 	queue_redraw()
 	changed.emit(level)
 
@@ -81,16 +87,27 @@ func _bar_width() -> float:
 	return STEPS * SEG_W + (STEPS - 1) * SEG_GAP
 
 
+# Puts the word above the field, as the settings form lays out every row; LABEL_H is SettingRow's.
+func stack(label_h: float) -> void:
+	_top = label_h
+	custom_minimum_size.y = label_h + HEIGHT
+	queue_redraw()
+
+
+func _field() -> Rect2:
+	return Rect2(0.0, _top, size.x, size.y - _top)
+
+
 func up_rect() -> Rect2:
-	return Rect2(size.x - PAD - ARROW, 0.0, ARROW, size.y)
+	return Rect2(size.x - PAD - ARROW, _top, ARROW, size.y - _top)
 
 
 func bar_rect() -> Rect2:
-	return Rect2(up_rect().position.x - SEG_GAP * 2.0 - _bar_width(), 0.0, _bar_width(), size.y)
+	return Rect2(up_rect().position.x - SEG_GAP * 2.0 - _bar_width(), _top, _bar_width(), size.y - _top)
 
 
 func down_rect() -> Rect2:
-	return Rect2(bar_rect().position.x - SEG_GAP * 2.0 - ARROW, 0.0, ARROW, size.y)
+	return Rect2(bar_rect().position.x - SEG_GAP * 2.0 - ARROW, _top, ARROW, size.y - _top)
 
 
 # The level a click at x on the segments asks for: the segment under it, filled.
@@ -111,9 +128,9 @@ func _gui_input(event: InputEvent) -> void:
 			MOUSE_BUTTON_LEFT:
 				grab_focus()
 				var x := button.position.x
-				if up_rect().has_point(Vector2(x, 1.0)):
+				if up_rect().has_point(Vector2(x, _top + 1.0)):
 					step(1)
-				elif down_rect().has_point(Vector2(x, 1.0)):
+				elif down_rect().has_point(Vector2(x, _top + 1.0)):
 					step(-1)
 				elif x >= bar_rect().position.x - SEG_GAP and x <= bar_rect().end.x + SEG_GAP:
 					_dragging = true
@@ -132,26 +149,32 @@ func _gui_input(event: InputEvent) -> void:
 
 func _draw() -> void:
 	var left := PAD + GLYPH + PAD
-	var edge := Palette.SAND if _hover else Palette.VERDIGRIS
-	draw_style_box(ChoiceButton.plate(edge, 2, left), Rect2(Vector2.ZERO, size))
+	var field := _field()
+	var mid := field.get_center().y
+	var edge := UiTokens.TEXT if _hover else UiTokens.LINE
+	draw_style_box(ChoiceButton.plate(edge, 2, left), field)
 	if has_focus():
-		draw_style_box(ChoiceButton.plate(Palette.SAND, 4, left, false), Rect2(Vector2.ZERO, size))
-	var ink := Color.WHITE if _hover or has_focus() else Palette.SAND
-	_draw_glyph(Vector2(PAD + GLYPH * 0.5, size.y * 0.5), ink)
+		draw_style_box(UiTokens.focus_ring(), field)
+	var ink := UiTokens.TEXT
+	_draw_glyph(Vector2(PAD + GLYPH * 0.5, mid), ink)
 	var font := UiFonts.bold()
-	var baseline := size.y * 0.5 + (font.get_ascent(22) - font.get_descent(22)) * 0.5
-	draw_string(font, Vector2(left, baseline), words, HORIZONTAL_ALIGNMENT_LEFT, -1, 22, ink)
+	if _top > 0.0:
+		var top_line := (font.get_ascent(UiTokens.BODY) - font.get_descent(UiTokens.BODY)) * 0.5 + (_top - UiTokens.GAP_S) * 0.5
+		draw_string(font, Vector2(0.0, top_line), words, HORIZONTAL_ALIGNMENT_LEFT, -1, UiTokens.BODY, ink)
+	else:
+		var baseline := mid + (font.get_ascent(UiTokens.LABEL) - font.get_descent(UiTokens.LABEL)) * 0.5
+		draw_string(font, Vector2(left, baseline), words, HORIZONTAL_ALIGNMENT_LEFT, -1, UiTokens.LABEL, ink)
 	_draw_arrow(down_rect(), -1.0, ink if level > 0.0 else Color(ink, 0.3))
 	_draw_arrow(up_rect(), 1.0, ink if level < 1.0 else Color(ink, 0.3))
 	var bar := bar_rect()
 	var filled := steps_filled()
 	for i in STEPS:
 		var h := 10.0 + 14.0 * float(i) / (STEPS - 1)
-		var seg := Rect2(bar.position.x + i * (SEG_W + SEG_GAP), size.y * 0.5 + 12.0 - h, SEG_W, h)
+		var seg := Rect2(bar.position.x + i * (SEG_W + SEG_GAP), mid + 12.0 - h, SEG_W, h)
 		if i < filled:
-			draw_rect(seg, Palette.AMBER if has_focus() else ink)
+			draw_rect(seg, UiTokens.ACCENT if has_focus() else ink)
 		else:
-			draw_rect(seg, Color(Palette.VERDIGRIS, 0.9), false, 2.0)
+			draw_rect(seg, UiTokens.LINE, false, 2.0)
 
 
 func _draw_arrow(rect: Rect2, direction: float, color: Color) -> void:

@@ -1,6 +1,7 @@
 extends CanvasLayer
 
 const Palette := preload("res://src/core/palette.gd")
+const UiTokens := preload("res://src/ui/ui_tokens.gd")
 const UiDraw := preload("res://src/ui/ui_draw.gd")
 const ChoiceButton := preload("res://src/ui/choice_button.gd")
 const HotwireChoice := preload("res://src/ui/hotwire_choice.gd")
@@ -72,15 +73,15 @@ func setup(game_ref) -> void:
 	var column := VBoxContainer.new()
 	column.set_anchors_preset(Control.PRESET_FULL_RECT)
 	column.alignment = BoxContainer.ALIGNMENT_CENTER
-	column.add_theme_constant_override("separation", 14)
+	column.add_theme_constant_override("separation", 12)
 	column.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_root.add_child(column)
 	var head := HBoxContainer.new()
 	head.alignment = BoxContainer.ALIGNMENT_CENTER
-	head.add_theme_constant_override("separation", 22)
+	head.add_theme_constant_override("separation", 24)
 	head.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	column.add_child(head)
-	_name = UiDraw.label(52, Palette.SAND)
+	_name = UiDraw.label(UiTokens.DISPLAY, Palette.SAND)
 	head.add_child(_name)
 	_stamp = Stamp.new()
 	head.add_child(_stamp)
@@ -98,7 +99,7 @@ func setup(game_ref) -> void:
 	_recycle.icon = Icons.texture("res_scrap")
 	_recycle.expand_icon = true
 	_recycle.add_theme_constant_override("icon_max_width", 24)
-	_recycle.add_theme_constant_override("h_separation", 10)
+	_recycle.add_theme_constant_override("h_separation", 8)
 	for tone in ["icon_normal_color", "icon_hover_color", "icon_pressed_color", "icon_focus_color", "icon_hover_pressed_color"]:
 		_recycle.add_theme_color_override(tone, Palette.AMBER)
 	_recycle.custom_minimum_size.x = WIDTH
