@@ -178,7 +178,8 @@ func _physics_process(_delta: float) -> bool:
 		d = _game.world.director
 		_legacy_ring(d, false)
 		d.stage_time = 1000.0
-		_check("legacy time tiers stay capped at two", d.tier() == 2, str(d.tier()))
+		# The dam's clock climbs three tiers (wave 37 unit D3); it was two.
+		_check("legacy time tiers stay capped, at the dam's three", d.tier() == 3, str(d.tier()))
 		_game.queue_free()
 		if _failures > 0:
 			print("director_homes_test failure count: %d" % _failures)
