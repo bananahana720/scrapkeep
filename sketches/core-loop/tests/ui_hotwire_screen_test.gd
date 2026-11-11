@@ -76,6 +76,7 @@ func _opened(label: String) -> void:
 	_check(label + " words", copy["name"] in texts and copy["upside"]["words"] in texts and copy["downside"]["words"] in texts
 		and ("+%d" % copy["recycle"]) in _screen().choice_button("recycle").text, shown)
 	_check(label + " sim paused", paused, "paused %s" % paused)
+	_check(label + " stamp, no eyebrow", _screen().stamp_shown() and not shown.contains("HOT-WIRED") and not shown.contains("cogs") and not shown.contains(":"), shown)
 
 
 func _resolved(label: String, choice: String) -> void:
