@@ -1,6 +1,6 @@
 # Economy balance (pass B, world 1)
 
-**Proposed change, measured and not yet in the game.** New prices at Moss's counter (the workshop barge that docks after each Warden) make the flume shelf a choice. A player who buys everything used to empty it in 12 of 24 runs; with the new prices that drops to 0 of 24, and to 2 of 24 with Moss's scale on. The dam shelf changes most in what it costs: emptying it used to take 48% of the cogs a player carried, and now takes 97%. A player still empties it in 13 of 24 runs, by spending every cog, or in 19 of 24 when the scale is on. Every run still clears world 1. The numbers are in [values.patch](values.patch): `COG_PRICES` in `fabricators.gd` and `START_COGS` in `start_picks.gd`. They go into PR 768 (Marked hull and Moss's scale), which holds `fabricators.gd`. This page's pull request carries the sim and the evidence and changes no game file.
+**Proposed change, measured and not yet in the game.** New prices at Moss's counter (the workshop barge that docks after each Warden) make the flume shelf a choice. A player who buys everything used to empty it in 12 of 24 runs; with the new prices that drops to 0 of 24, and to 2 of 24 with Moss's scale on. At the dam, a buy-everything visit used to spend a median 48% of the cogs the player carried, and now spends 97%. Both figures count everything bought there: the shelf, the reroll and the charge cells. The min-maxer still empties the dam shelf in 13 of 24 runs, spending 90 to 99% of its wallet to do it, or in 19 of 24 when the scale is on. Every min-maxer run still clears world 1. The numbers are in [values.patch](values.patch): `COG_PRICES` in `fabricators.gd` and `START_COGS` in `start_picks.gd`. The marked hull thread lands them in its own price PR from the stage, because PR 768 (Marked hull and Moss's scale) is already stacked. This page's pull request carries the sim and the evidence and changes no game file.
 
 **Words used here.**
 - **Player types.** The rusher is the skipper bot (the main route, no side spots). The completionist is the completionist bot (side spots first). The min-maxer is the new policy in [econ_ledger.gd](../../../sketches/core-loop/tools/sysaudit/econ_ledger.gd). It takes the skipper's route, takes the start pick (a core or a part, never the cogs), takes every upgrade-tree offer, and stops at Moss's counter at each stage. There it buys the shelf from the dearest part down, takes one reroll and buys again, then buys charge cells.
@@ -9,7 +9,7 @@
 - **The wallet** is the cogs a player carries on arrival at Moss's counter.
 - **An arm** is one set of 24 runs at one code version: before (`stage/alpha-w37` with PR 765, at `87784f5a`), after with the scale off, and after with the scale on (both are PR 768 plus `values.patch` at `7a210caa` on `scratch/sysaudit-econ-after`).
 
-Scope: world 1, meaning the dam, the flume and Brindle, on the park table.
+Scope: world 1, meaning the dam, the flume and Brindle, on the park table. The park table is the set of world 1 maps the game ships, which `bot_run.gd --table=park` loads.
 
 ## Before and after (the min-maxer, median of 24 runs)
 
@@ -30,7 +30,7 @@ Scope: world 1, meaning the dam, the flume and Brindle, on the park table.
 ![Min-maxer cogs: spent, held at the end, wallet at each visit](evidence/minmax-cogs-before-after.svg)
 ![Cogs held through world 1, before, one line per run](evidence/before-cogs-held.svg)
 
-The rusher and the completionist never stop at Moss, so no price reaches them. Six replays of the new code (3 rusher and 3 completionist, seeds 2860 to 2862) match the before arm on every seed, in game time, cogs, Brindle's time and lowest hull ([evidence/replays-runs.json](evidence/replays-runs.json)). Per-type medians and ranges are in `evidence/<arm>-summary.json`, and every run is in `evidence/<arm>-runs.json`.
+The rusher and the completionist never stop at Moss, so no price reaches them. Six replays on the new prices (3 rusher and 3 completionist, seeds 2860 to 2862, at `af3e49df` with `--moss-scale=on`) match the before arm on every seed, in game time, cogs, Brindle's time and lowest hull ([evidence/replays-runs.json](evidence/replays-runs.json)). Per-type medians and ranges are in `evidence/<arm>-summary.json`, and every run is in `evidence/<arm>-runs.json`.
 
 ## Every source and sink, per resource
 
@@ -55,7 +55,7 @@ The "before" hull row for the min-maxer counted only single-tick rises over 0.5 
 
 | Flag | Before | After | Verdict |
 | --- | --- | --- | --- |
-| Inflation: the shelf asks no choice | Dam shelf emptied 24 of 24 times with 48% of the wallet; flume 12 of 24 | Scale off: dam 13 of 24 at 97% of the wallet, flume 0 of 24. Scale on: dam 19 of 24, flume 2 of 24 | Fixed at the flume. Improved at the dam, but the flag still fires there: emptying it now takes the whole wallet, which leaves nothing for the flume. My call, which Andrew can overturn: keep `part_base` at 40. If the sitting finds the dam shelf too easy, raise it to 45 |
+| Inflation: the shelf asks no choice | Dam shelf emptied 24 of 24 times with 48% of the wallet; flume 12 of 24 | Scale off: dam 13 of 24, flume 0 of 24. The runs that emptied the dam shelf spent 90 to 99% of their wallet there, counting the reroll and cells. Scale on: dam 19 of 24, flume 2 of 24 | Fixed at the flume. Improved at the dam, but the flag still fires there: emptying it now takes nearly all the wallet, which leaves little for the flume. My call, which Andrew can overturn: keep `part_base` at 40. If the sitting finds the dam shelf too easy, raise it to 45 |
 | Hoarding | The rusher holds 1,559 cogs and the completionist 2,012, with 0 spent; the min-maxer holds 613 | The rusher and completionist are unchanged; the min-maxer holds 499 (scale off) or 518 (scale on) | Two causes, neither of them a price. (1) Neither bot policy stops at Moss, which is a bot gap. (2) Moss's counter is the only cog sink on the main route, and the cogs a run earns after the flume visit (from the flume gate and Brindle) have no shop until world 2. Deferred to a world 2 pass, because those cogs reach world 2's first shop |
 | Dead currency: cores | 0 cores for the rusher and the completionist. 14 of 24 min-maxer runs took a core at the start, and all 14 were wiped at the next stage entry | Same | Andrew approved "Carry a core" on 11 Nov 19:08Z (Bible change request 5); the thread "Build marked hull and resource sinks" builds it |
 | Dead option: the start pick's cogs | 15 cogs against a 576-cog wallet at the first shop | 60 cogs, about one and a half tier-1 parts at the new prices | Still the weakest of the three options. My call, which Andrew can overturn: make it a number that matters and leave the option list alone |
@@ -71,7 +71,7 @@ All of these are in [values.patch](values.patch), which applies cleanly on PR 76
 | Value | Before | After | Why |
 | --- | --- | --- | --- |
 | `COG_PRICES.part_base` | 10 | 40 | Each visit leaves a choice on the shelf |
-| `COG_PRICES.part_growth` (per part held) | 1.15 | 1.06 | At 1.15 the flume prices ran away as parts piled up. At 1.06 both visits cost about the same share of the wallet (97% in the scale-off arm) |
+| `COG_PRICES.part_growth` (per part held) | 1.15 | 1.06 | At 1.15 the flume prices ran away as parts piled up. At 1.06 a buy-everything visit spends about the same share of the wallet at both stops (a median 97% in the scale-off arm, counting the reroll and cells) |
 | `COG_PRICES.reroll_base` | 12 | 30 | A reroll costs about a tier-1 part, not a rounding error |
 | `COG_PRICES.cell_base` | 20 | 40 | Charge cells stay cheaper than a part, so they stay a top-up |
 | `COG_PRICES.weigh_lump` (Moss's scale) | 25 (placeholder) | 50 | One sale is a lump of 50 mass; the min-maxer made a median of 6 sales a run |
@@ -110,7 +110,7 @@ JOBS=16 docs/systems-audit/economy/run.sh $PWD/artifacts/local/econ/before 2860 
 # after arms (scratch/sysaudit-econ-after: PR 768 plus values.patch)
 JOBS=16 docs/systems-audit/economy/run.sh $PWD/artifacts/local/econ/after-scale-off 2860 24 minmax
 JOBS=16 EXTRA=--moss-scale=on docs/systems-audit/economy/run.sh $PWD/artifacts/local/econ/after-scale-on 2860 24 minmax
-JOBS=16 docs/systems-audit/economy/run.sh $PWD/artifacts/local/econ/replays 2860 3 rusher completionist
+JOBS=16 EXTRA=--moss-scale=on docs/systems-audit/economy/run.sh $PWD/artifacts/local/econ/replays 2860 3 rusher completionist
 # analysis and charts
 for arm in before after-scale-off after-scale-on replays; do
   python3 -I docs/systems-audit/economy/analyse.py artifacts/local/econ/$arm docs/systems-audit/economy/evidence $arm
@@ -118,7 +118,7 @@ done
 python3 -I docs/systems-audit/economy/compare.py docs/systems-audit/economy/evidence
 ```
 
-The evidence came from Andrew's PC (Ryzen 9 5950X, Godot 4.7.2, headless, CPU only) on 11 Nov 2026, between 20:23Z and 22:20Z. The before arm and the replays ran at the probe heads `87784f5a` and `af3e49df`. The two after arms ran at `7a210caa`, after the independent review found that the earlier scale rule gave up a heft class. Probe changes since the replays only add fields to the ledger; the game a bot plays is the same. The raw ledgers, one per run (122 of them), are on the branch `scratch/sysaudit-econ-results`, under `runs/`. A run is about 7 game minutes, and one core finishes it in about 6 wall-clock minutes. Every run uses `--fixed-fps 90`, so machine load changes wall time, not results. The same seed on another machine gives a different run: the cloud's min-maxer on seed 2860 ended at 434 s with 521 cogs, against the PC's 410 s with 647. So compare arms only on one machine, as bot_run's header says.
+The evidence came from Andrew's PC (Ryzen 9 5950X, Godot 4.7.2, headless, CPU only) on 11 Nov 2026. The before arm ran at `87784f5a`, and the replays at `af3e49df` (PR 768 plus `values.patch`, the first head of `scratch/sysaudit-econ-after`); both were committed to the results branch at 21:33Z. The two after arms ran at `7a210caa`, after the independent review found that the earlier scale rule gave up a heft class. Probe changes since the replays only add fields to the ledger; the game a bot plays is the same. The raw ledgers, one per run (122 of them), are on the branch `scratch/sysaudit-econ-results` at commit [`db9b981c`](https://github.com/bananahana720/scrapkeep/tree/db9b981c38bf4d7086a0d24a0d0836c2213c5c6f/runs), under `runs/`; the after arms were committed at 22:24Z. A run is about 7 game minutes, and one core finishes it in about 6 wall-clock minutes. Every run uses `--fixed-fps 90`, so machine load changes wall time, not results. The same seed on another machine gives a different run: the cloud's min-maxer on seed 2860 ended at 434 s with 521 cogs, against the PC's 410 s with 647. So compare arms only on one machine, as bot_run's header says.
 
 What this evidence does not show:
 - Feel, which needs a human read (AGENTS.md).
@@ -140,10 +140,10 @@ What this evidence does not show:
 
 | System | Pass status | Top open issue | Last sim result | What changed |
 | --- | --- | --- | --- | --- |
-| Cogs and Moss's shelf | B done; values go into PR 768 | Emptying the dam shelf is still possible, but only by spending the whole wallet | Scale off: dam emptied 13 of 24 at 97% of the wallet, flume 0 of 24 | `part_base` 10 to 40 and `part_growth` 1.15 to 1.06, plus reroll and cell prices (values.patch) |
+| Cogs and Moss's shelf | B done; values go into the marked hull thread's price PR | Emptying the dam shelf is still possible, but it takes 90 to 99% of the wallet | Scale off: dam emptied 13 of 24, flume 0 of 24; a median visit spends 97% of the wallet | `part_base` 10 to 40 and `part_growth` 1.15 to 1.06, plus reroll and cell prices (values.patch) |
 | Moss's scale | Rates set | None found | 6 sales and 300 mass a run for 150 cogs; heft class kept; 24 of 24 clear | `weigh_lump` 50, `mass_per_cog` 2.0 |
 | Cores | Waiting on Carry a core | Wiped at every stage entry | 14 of 14 start-pick cores wiped | Nothing yet |
 | Hull and trade chests | Marked hull approved | Hull prices are free with the flag off | No bot reaches a trade chest | Shares recommended for when the flag is on |
 | Panels, parts, tree | No change | Bots cannot see a part's power | 9 to 11 panels; 3 / 6 / 13 to 16 parts; 2 tree picks for the min-maxer | Nothing |
 
-**One finding in plain words.** Cogs come in at one per piece of scrap, about 220 a minute. Before this pass, Moss's first shelf cost less than half of what a player carried, so buying was a stop on the way, not a decision. With the proposed prices, a full shelf costs everything the player carries, so they choose between buying now and saving for the flume. With Moss's scale they have a third way to pay: sell part of the ball. That costs armour, because the ball's mass is its armour.
+**One finding in plain words.** Cogs come in at one per piece of scrap, about 220 a minute. Before this pass, Moss's first shelf cost less than half of what a player carried, so buying was a stop on the way, not a decision. With the proposed prices, a full shelf costs nearly everything the player carries, so they choose between buying now and saving for the flume. With Moss's scale they have a third way to pay: sell part of the ball. That costs armour, because the ball's mass is its armour.
