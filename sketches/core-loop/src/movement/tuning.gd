@@ -95,6 +95,9 @@ const SPECS := [
 	# Moss's scale (feature-fit.md, new mechanic 2; shop.gd weigh): sell mass for cogs at Moss's
 	# counter. Off keeps today's shop. Rates are placeholders until the economy pass sets them.
 	{"key": "moss_scale", "label": "Moss's scale", "min": 0.0, "max": 1.0, "step": 1.0, "value": 0.0, "options": ["off", "on"]},
+	# Carry a core (feature-fit.md, new mechanic 3; Andrew 11 Nov 19:24Z, one core, only into
+	# SPIL-9): Moss's counter stows one of this stage's cores in a SPIL-9 socket for the next stage.
+	{"key": "carry_core", "label": "Carry a core", "min": 0.0, "max": 1.0, "step": 1.0, "value": 0.0, "options": ["off", "on"]},
 ]
 
 # The option rows other modules read by name.
@@ -232,6 +235,7 @@ const FLAGS := {
 	"grip": ["grip", "option", "launch"],
 	"marked-hull": ["marked_hull", "option", "launch"],
 	"moss-scale": ["moss_scale", "option", "launch"],
+	"carry-core": ["carry_core", "option", "launch"],
 	"overtime": ["overtime", "option", "launch"],
 	"called-shot": ["called_shot", "option", "launch"],
 }
