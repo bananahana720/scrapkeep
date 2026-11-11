@@ -70,6 +70,17 @@ func _setting(store, id: String) -> bool:
 	return bool(store.call(TOGGLES[id]))
 
 
+# Every tab of a visible settings page: no drawn text holds a colon, and the scan reads rows.
+func _scan(host: String, page) -> void:
+	page.refresh()
+	for index in page.PAGES.size():
+		page.show_page(index)
+		await _frames(1)
+		var found := _texts(page)
+		_t.eq("%s, %s tab: no drawn text holds a colon" % [host, page.PAGES[index]], _colons(found), [])
+		_t.check("%s, %s tab: the scan reads rows (%d texts)" % [host, page.PAGES[index], found.size()], found.size() >= 3)
+
+
 func _run() -> void:
 	root.size = Vector2i(1600, 900)
 	_game = Game.new()
@@ -104,15 +115,18 @@ func _run() -> void:
 	screens.toggle_settings()
 	await _frames(2)
 	var hosts := {"title": screens._settings, "pause": menu.settings_page()}
-	for host in hosts:
-		var page = hosts[host]
-		page.refresh()
-		for index in page.PAGES.size():
-			page.show_page(index)
-			await _frames(1)
-			var found := _texts(page)
-			_t.eq("%s, %s tab: no drawn text holds a colon" % [host, page.PAGES[index]], _colons(found), [])
-			_t.check("%s, %s tab: the scan reads rows (%d texts)" % [host, page.PAGES[index], found.size()], found.size() >= 3)
+	await _scan("title", screens._settings)
+	screens.toggle_settings()
+	_game.flow.press_start()
+	_game.flow.choose_class(0)
+	await _frames(4)
+	menu.open()
+	await _frames(1)
+	menu.press("settings")
+	await _frames(1)
+	await _scan("pause", menu.settings_page())
+	menu.close()
+	await _frames(1)
 
 	# An on-off row's pip equals the setting and a press changes both.
 	for host in hosts:
@@ -162,12 +176,8 @@ func _run() -> void:
 		# Music: the bar's filled steps are the value.
 		page.row("music").set_level(0.4)
 		_t.eq("%s: Music reads four steps of ten" % host, _read(page, "music")["value"], "4")
-	screens.toggle_settings()
 
 	# The pause column: Radio wears a pip, Breath shows its level as text.
-	_game.flow.press_start()
-	_game.flow.choose_class(0)
-	await _frames(4)
 	menu.open()
 	await _frames(1)
 	var radio = _game.radio_deck.radio
