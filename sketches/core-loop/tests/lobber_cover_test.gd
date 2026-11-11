@@ -122,7 +122,7 @@ func _shot(overrides: Dictionary, wall: bool) -> Dictionary:
 		out.at = at
 		out.burst = not h)
 	var n := 0
-	while not done[0] and n < 160:
+	while not done[0] and n < 260:
 		await physics_frame
 		n += 1
 	out.ticks = n
