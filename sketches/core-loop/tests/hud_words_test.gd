@@ -9,8 +9,8 @@ extends SceneTree
 #   - no string the HUD owns holds a label colon, a typed key letter or a capitals sentence;
 #   - the stat labels carry the player's word for a knocked machine, not "pin".
 # Every check runs first on a planted broken copy and must flag it, or its zero means nothing.
-# Kept on purpose, so not checked here: the ability rows' "F:" (active_defs.gd; the text reaches
-# plain labels, no cap can be drawn), "KSSHT!" (radio_dial.gd, a drawn stamp) and the settings
+# An active's text types no key: the bar slot draws the cap once the active is racked.
+# Kept on purpose, so not checked here: "KSSHT!" (radio_dial.gd, a drawn stamp) and the settings
 # Breath row (mirrors pause_menu.gd).
 
 const Game := preload("res://src/game.gd")
@@ -200,6 +200,7 @@ func _strings() -> void:
 		owned["take word %s" % kind] = String(Hud.card_mark(true, kind)["word"])
 	for id in ActiveDefs.ROWS:
 		owned["active %s name" % id] = String(ActiveDefs.ROWS[id]["name"])
+		owned["active %s text" % id] = String(ActiveDefs.ROWS[id]["text"])
 	for label in owned:
 		var hits := _hits(String(owned[label]).replace("{key_tab}", "Tab"))
 		_t.check("%s carries no label colon, typed key or capitals sentence" % label, hits.is_empty(), "\"%s\" %s" % [owned[label], hits])
