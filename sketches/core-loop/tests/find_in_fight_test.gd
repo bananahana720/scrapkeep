@@ -59,6 +59,10 @@ var _engaged_at := 0
 func _initialize() -> void:
 	_pick_parts()
 	_scan_sources()
+	# This scenario's frame counts were set with crews aiming at the ball itself. With the dam's half lead (wave
+	# 37 unit D1) the held card is still waiting 60 frames after the Warden's break, so the scenario keeps the
+	# lead off: it times the card, not the crews.
+	ChallengeDials.set_overrides({"pack.lead_by_stage": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]})
 	_game = Game.new()
 	_game.test_mode = true
 	_game.table = "slice"
