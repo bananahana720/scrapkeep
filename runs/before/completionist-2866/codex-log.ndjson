@@ -1,0 +1,8 @@
+{"category":"enemy","heft":1.0,"id":"counter_ram","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-2866","stage":1,"stage_ticks":10041}
+{"category":"enemy","heft":1.78740740740741,"id":"loaded_line","kind":"discovered","participants":["player"],"parts":["brace_frame"],"run_id":"bot-2866","stage":1,"stage_ticks":16278}
+{"category":"enemy","heft":1.9562962962963,"id":"chain","kind":"discovered","participants":["player"],"parts":["brace_frame"],"run_id":"bot-2866","stage":1,"stage_ticks":17435}
+{"category":"enemy","heft":1.94740740740741,"id":"tether_snap","kind":"discovered","participants":["player"],"parts":["brace_frame"],"run_id":"bot-2866","stage":1,"stage_ticks":20067}
+{"category":"enemy","heft":2.00407407407407,"id":"set_piece","kind":"discovered","participants":["player"],"parts":["brace_frame"],"run_id":"bot-2866","stage":1,"stage_ticks":22101}
+{"category":"enemy","heft":1.98407407407407,"id":"plate_peel","kind":"discovered","participants":["player"],"parts":["brace_frame"],"run_id":"bot-2866","stage":1,"stage_ticks":22744}
+{"category":"enemy","heft":1.97962962962963,"id":"boom_pop","kind":"discovered","participants":["player"],"parts":["brace_frame"],"run_id":"bot-2866","stage":1,"stage_ticks":23180}
+{"category":"build","heft":2.08296296296296,"id":"spare","kind":"discovered","participants":["player"],"parts":["brace_frame"],"run_id":"bot-2866","stage":1,"stage_ticks":24270}

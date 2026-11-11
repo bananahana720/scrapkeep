@@ -1,0 +1,193 @@
+{
+  "generation": 3,
+  "run": {
+    "bonus_cores": 0,
+    "camera_yaw": -2.879793250335259,
+    "class_id": "runner_gunner",
+    "class_rewarded": 4,
+    "cogs": 1561,
+    "companion": {},
+    "death_save_spent": false,
+    "entry_position": [
+      -560.0,
+      66.34466552734375,
+      -770.0
+    ],
+    "entry_velocity": [
+      3.276494026184082,
+      0.5599254965782166,
+      12.22804069519043
+    ],
+    "events_won": [],
+    "heft_class": 4,
+    "hotwire": {
+      "id": "riveted_shell",
+      "spent": true,
+      "state": "recycle",
+      "world": 1
+    },
+    "hp": 151.0,
+    "kills": 62,
+    "mass": 1351.0,
+    "max_hp": 151.0,
+    "panels": [
+      "range_sight",
+      "range_sight",
+      "range_sight",
+      "punch_rivet",
+      "dunk_tank",
+      "winch_drum",
+      "ram_bumper",
+      "vent_louvre"
+    ],
+    "parts": [
+      "sunforged_core",
+      "spare_cell",
+      "admirals_crest"
+    ],
+    "pocket_draw_cache": {
+      "1": {
+        "sites": [
+          {
+            "at": [
+              -400.0,
+              -600.0
+            ],
+            "interior": "braced_yard",
+            "node": 5075,
+            "turn": 3
+          }
+        ]
+      },
+      "2": {
+        "sites": [
+          {
+            "at": [
+              176.0,
+              168.0
+            ],
+            "interior": "round_foundry",
+            "node": 24443,
+            "turn": 2
+          }
+        ]
+      },
+      "3": {
+        "sites": [
+          {
+            "at": [
+              384.0,
+              -16.0
+            ],
+            "interior": "pipe_vault",
+            "node": 19846,
+            "turn": 1
+          },
+          {
+            "at": [
+              -8.0,
+              -680.0
+            ],
+            "interior": "elite_bay",
+            "node": 3114,
+            "turn": 0
+          }
+        ]
+      }
+    },
+    "relics": {},
+    "retries": 0,
+    "retries_spent": {},
+    "run_id": "bot-2869",
+    "run_tallies": {
+      "deaths": 0,
+      "kills": 62,
+      "stages_cleared": 2,
+      "time": 405.5383333335264,
+      "wardens_seen": 2
+    },
+    "run_time": 405.5383333335264,
+    "schema": 1,
+    "scrap": 1540,
+    "seed": 1598568400,
+    "seen_wardens": [
+      "1/1",
+      "1/2"
+    ],
+    "settled": [
+      "reward:ach_meta_pocket_tint:option",
+      "reward:ach_meta_pocket_tint:option:pocket_tint",
+      "reward:warden_broken:cosmetic",
+      "reward:warden_broken:cosmetic:paint_any_night",
+      "reward:ach_d7_moth_tuft:cosmetic",
+      "reward:ach_d7_moth_tuft:cosmetic:trail_moth_tuft",
+      "reward:ach_any_set_piece:cosmetic",
+      "reward:ach_any_set_piece:cosmetic:trail_any_downbeat",
+      "reward:ach_d7_thimble:cosmetic",
+      "reward:ach_d7_thimble:cosmetic:decal_thimble",
+      "reward:codex_keeper:cosmetic",
+      "reward:codex_keeper:cosmetic:paint_any_moth",
+      "reward:ach_d7_moth_grey:cosmetic",
+      "reward:ach_d7_moth_grey:cosmetic:companion_paint_moth",
+      "reward:ach_rivet_full_breach:cosmetic",
+      "reward:ach_rivet_full_breach:cosmetic:shell_rivet_calibrated",
+      "reward:brindle_routed:pilot",
+      "reward:brindle_routed:pilot:tarn",
+      "reward:brindle_mark_rivet:item",
+      "reward:brindle_mark_rivet:item:clean_break",
+      "ledger.found.1",
+      "reward:ach_d7_mushroom:cosmetic",
+      "reward:ach_d7_mushroom:cosmetic:decal_mushroom"
+    ],
+    "stage": 3,
+    "start_pick": {
+      "options": [
+        "double_feed",
+        "loose_trigger",
+        "focus_lens"
+      ],
+      "rerolls_left": 1,
+      "taken": ""
+    },
+    "trade_memory": {
+      "decisions": {},
+      "last_appeared": 1,
+      "last_refused": -100,
+      "last_seen": -100,
+      "offers": {
+        "1": {
+          "at": [
+            680.0,
+            -64.0
+          ],
+          "node": 18677,
+          "trade": {
+            "chance": 0.45,
+            "curse": false,
+            "family": "risk",
+            "full_health_bump": true,
+            "interior_id": "scrap_counter",
+            "pool_floor": 0.0,
+            "recency": 1.0,
+            "refusal_weight": 1.0,
+            "sacrifice": false,
+            "sacrifice_chance": 0.39285714285714285,
+            "safe_share": 0.5,
+            "skip_time": 0.0,
+            "stage": 1,
+            "tier": 1
+          }
+        },
+        "2": {}
+      },
+      "risk_taken": false,
+      "seen": []
+    },
+    "tree_allowed": 2,
+    "tree_late_skipped": false,
+    "tree_picks": [],
+    "wear_accum": 0.12251886382430406,
+    "world": 2
+  },
+  "schema": 1
+}

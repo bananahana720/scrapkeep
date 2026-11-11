@@ -1,0 +1,15 @@
+{"category":"enemy","heft":1.09333333333333,"id":"counter_ram","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-2877","stage":1,"stage_ticks":14412}
+{"category":"enemy","heft":1.25777777777778,"id":"loaded_line","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-2877","stage":1,"stage_ticks":15055}
+{"category":"enemy","heft":1.44888888888889,"id":"tarn_claw_drag","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-2877","stage":1,"stage_ticks":16000}
+{"category":"enemy","heft":1.61111111111111,"id":"set_piece","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-2877","stage":1,"stage_ticks":16815}
+{"category":"enemy","heft":1.79555555555556,"id":"heavy_roll","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-2877","stage":1,"stage_ticks":19223}
+{"category":"enemy","heft":1.93666666666667,"id":"warden_shatter","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-2877","stage":1,"stage_ticks":23940}
+{"category":"build","heft":2.64777777777778,"id":"wrecking_ball","kind":"discovered","participants":["player"],"parts":["impact_driver","double_feed"],"run_id":"bot-2877","stage":2,"stage_ticks":5044}
+{"category":"enemy","heft":3.15888888888889,"id":"plate_peel","kind":"discovered","participants":["player"],"parts":["impact_driver","double_feed","cross_split"],"run_id":"bot-2877","stage":2,"stage_ticks":11431}
+{"category":"build","heft":3.26333333333333,"id":"shrapnel_bloom","kind":"discovered","participants":["player"],"parts":["impact_driver","double_feed","cross_split"],"run_id":"bot-2877","stage":2,"stage_ticks":11432}
+{"category":"world","heft":3.76629629629631,"id":"sprint_through","kind":"discovered","participants":["player"],"parts":["impact_driver","double_feed","cross_split","rivet_plating"],"run_id":"bot-2877","stage":2,"stage_ticks":13653}
+{"category":"enemy","heft":4.13518518518519,"id":"crush_chain","kind":"discovered","participants":["player"],"parts":["impact_driver","double_feed","cross_split","rivet_plating"],"run_id":"bot-2877","stage":2,"stage_ticks":15403}
+{"category":"enemy","heft":4.35074074074075,"id":"tarn_redjaw_rend","kind":"discovered","participants":["player"],"parts":["impact_driver","double_feed","cross_split","rivet_plating"],"run_id":"bot-2877","stage":2,"stage_ticks":16908}
+{"category":"enemy","heft":4.81074074074075,"id":"set_piece_core","kind":"discovered","participants":["player"],"parts":["impact_driver","double_feed","cross_split","rivet_plating"],"run_id":"bot-2877","stage":2,"stage_ticks":20756}
+{"category":"build","heft":4.98629629629631,"id":"spare","kind":"discovered","participants":["player"],"parts":["impact_driver","double_feed","cross_split","rivet_plating"],"run_id":"bot-2877","stage":2,"stage_ticks":21150}
+{"category":"enemy","heft":5.65962962962964,"id":"chain","kind":"discovered","participants":["player"],"parts":["impact_driver","double_feed","cross_split","rivet_plating","impact_driver"],"run_id":"bot-2877","stage":2,"stage_ticks":3794}

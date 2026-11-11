@@ -1,0 +1,53 @@
+{
+  "discovered": [
+    "lore.spillway.moss.spare",
+    "lore.spillway.crew.leak",
+    "lore.spillway.moss.yesterday",
+    "lore.park_dam.note.gate_log",
+    "counter_ram",
+    "kest_cable_charge",
+    "chain",
+    "loaded_line",
+    "plate_peel",
+    "spare",
+    "mat_slip",
+    "set_piece",
+    "kest_windhover",
+    "warden_shatter",
+    "lore.park_dam.note.plumb",
+    "lore.park_dam.note.slot",
+    "lore.park_flume.crew.warm",
+    "lore.park_flume.moss.flask",
+    "lore.park_flume.crew.weir",
+    "lore.park_flume.note.weir",
+    "heavy_roll",
+    "lore.park_flume.note.bents",
+    "lore.park_flume.note.siphon",
+    "sprint_through",
+    "lore.park_flume.note.milepost",
+    "set_piece_core",
+    "lore.park_flume.note.boom",
+    "lore.park_flume.note.drum",
+    "lore.park_flume.note.fleet",
+    "lore.park_flume.note.wasteway",
+    "sluice_hammer",
+    "lore.park_flume.note.surge",
+    "lore.park_flume.note.penstocks",
+    "brindle_crane_drop",
+    "lore.park_flume.note.catwalk",
+    "lore.park_flume.note.squall",
+    "lore.park_flume.note.zip",
+    "lore.park_flume.note.culvert",
+    "lore.park_flume.note.shadows",
+    "lore.park_flume.note.gap",
+    "lore.dig_entry.exchange.1",
+    "lore.dig_entry.exchange.2",
+    "lore.dig_entry.exchange.3"
+  ],
+  "found": [
+    "Frost meets a heavy hit: the chill grinds everything near. Elites and bosses take a tenth of the grind."
+  ],
+  "found_categories": {
+    "Frost meets a heavy hit: the chill grinds everything near. Elites and bosses take a tenth of the grind.": "build"
+  }
+}

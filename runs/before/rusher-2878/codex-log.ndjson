@@ -1,0 +1,12 @@
+{"category":"enemy","heft":1.02666666666667,"id":"counter_ram","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-2878","stage":1,"stage_ticks":6184}
+{"category":"enemy","heft":1.33555555555556,"id":"crush_chain","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-2878","stage":1,"stage_ticks":7524}
+{"category":"enemy","heft":1.70444444444444,"id":"plate_peel","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-2878","stage":1,"stage_ticks":10605}
+{"category":"build","heft":1.76888888888889,"id":"spare","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-2878","stage":1,"stage_ticks":10755}
+{"category":"enemy","heft":1.95555555555556,"id":"shell_return","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-2878","stage":1,"stage_ticks":11621}
+{"category":"world","heft":2.04,"id":"sluice_hammer","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-2878","stage":1,"stage_ticks":12009}
+{"category":"enemy","heft":2.17111111111111,"id":"set_piece","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-2878","stage":1,"stage_ticks":13977}
+{"category":"enemy","heft":2.29444444444444,"id":"heavy_roll","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-2878","stage":1,"stage_ticks":14818}
+{"category":"enemy","heft":2.36111111111111,"id":"warden_shatter","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-2878","stage":1,"stage_ticks":15729}
+{"category":"world","heft":2.59888888888889,"id":"sprint_through","kind":"discovered","participants":["player"],"parts":["rime_rounds"],"run_id":"bot-2878","stage":2,"stage_ticks":7547}
+{"category":"enemy","heft":2.79222222222222,"id":"chain","kind":"discovered","participants":["player"],"parts":["rime_rounds"],"run_id":"bot-2878","stage":2,"stage_ticks":8054}
+{"category":"build","heft":3.21,"kind":"found","participants":["player"],"parts":["rime_rounds"],"run_id":"bot-2878","stage":2,"stage_ticks":13574,"text":"Frost meets a heavy hit: the chill grinds everything near. Elites and bosses take a tenth of the grind."}

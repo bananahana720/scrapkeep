@@ -1,0 +1,157 @@
+{
+  "generation": 2,
+  "run": {
+    "bonus_cores": 0,
+    "camera_yaw": -2.6005405885279096,
+    "class_id": "runner_gunner",
+    "class_rewarded": 2,
+    "cogs": 339,
+    "companion": {},
+    "death_save_spent": false,
+    "entry_position": [
+      -460.0,
+      125.0,
+      -650.0
+    ],
+    "entry_velocity": [
+      10.363927841186523,
+      8.399566650390625,
+      17.248472213745117
+    ],
+    "events_won": [],
+    "heft_class": 2,
+    "hotwire": {
+      "id": "riveted_shell",
+      "spent": true,
+      "state": "recycle",
+      "world": 1
+    },
+    "hp": 147.0,
+    "kills": 34,
+    "mass": 429.0,
+    "max_hp": 147.0,
+    "panels": [
+      "punch_rivet",
+      "hull_tile",
+      "fin_plate",
+      "vent_louvre",
+      "fin_plate"
+    ],
+    "parts": [
+      "ram_plow",
+      "fast_hands",
+      "load_dividend",
+      "runner_overclock",
+      "magnet_spool",
+      "cell_movement",
+      "cell_special",
+      "cell_special",
+      "cell_movement",
+      "rime_rounds"
+    ],
+    "pocket_draw_cache": {
+      "1": {
+        "sites": [
+          {
+            "at": [
+              240.0,
+              -456.0
+            ],
+            "interior": "round_foundry",
+            "node": 8773,
+            "turn": 1
+          }
+        ]
+      },
+      "2": {
+        "sites": [
+          {
+            "at": [
+              -320.0,
+              176.0
+            ],
+            "interior": "boiler_vault",
+            "node": 24582,
+            "turn": 3
+          }
+        ]
+      }
+    },
+    "relics": {},
+    "retries": 0,
+    "retries_spent": {},
+    "run_id": "bot-2881",
+    "run_tallies": {
+      "deaths": 0,
+      "kills": 34,
+      "stages_cleared": 1,
+      "time": 166.94277777778535,
+      "wardens_seen": 1
+    },
+    "run_time": 166.94277777778535,
+    "schema": 1,
+    "scrap": 538,
+    "seed": 1598568458,
+    "seen_wardens": [
+      "1/1"
+    ],
+    "settled": [
+      "reward:ach_meta_pocket_tint:option",
+      "reward:ach_meta_pocket_tint:option:pocket_tint",
+      "reward:warden_broken:cosmetic",
+      "reward:warden_broken:cosmetic:paint_any_night"
+    ],
+    "stage": 2,
+    "start_pick": {
+      "options": [
+        "core",
+        "hot_rivets",
+        "cogs"
+      ],
+      "rerolls_left": 1,
+      "taken": "core"
+    },
+    "trade_memory": {
+      "decisions": {},
+      "last_appeared": 1,
+      "last_refused": -100,
+      "last_seen": -100,
+      "offers": {
+        "1": {
+          "at": [
+            688.0,
+            -376.0
+          ],
+          "node": 10839,
+          "trade": {
+            "chance": 0.45,
+            "curse": false,
+            "family": "risk",
+            "full_health_bump": true,
+            "interior_id": "sacrifice_counter",
+            "pool_floor": 0.0,
+            "recency": 1.0,
+            "refusal_weight": 1.0,
+            "sacrifice": true,
+            "sacrifice_chance": 0.39285714285714285,
+            "safe_share": 0.5,
+            "skip_time": 0.0,
+            "stage": 1,
+            "tier": 1
+          }
+        }
+      },
+      "risk_taken": false,
+      "seen": []
+    },
+    "tree_allowed": 2,
+    "tree_late_skipped": false,
+    "tree_picks": [
+      "r_juggernaut",
+      "r_ram_fins"
+    ],
+    "wear_accum": 0.44239264866363703,
+    "world": 1
+  },
+  "schema": 1
+}

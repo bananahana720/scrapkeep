@@ -1,0 +1,11 @@
+{"category":"world","heft":1.0,"id":"sprint_through","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-2883","stage":1,"stage_ticks":7913}
+{"category":"enemy","heft":1.12222222222222,"id":"counter_ram","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-2883","stage":1,"stage_ticks":14755}
+{"category":"enemy","heft":1.25111111111111,"id":"loaded_line","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-2883","stage":1,"stage_ticks":15494}
+{"category":"enemy","heft":1.47777777777778,"id":"tarn_claw_drag","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-2883","stage":1,"stage_ticks":16374}
+{"category":"enemy","heft":1.79333333333333,"id":"set_piece","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-2883","stage":1,"stage_ticks":19315}
+{"category":"enemy","heft":2.18,"id":"warden_shatter","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-2883","stage":1,"stage_ticks":26943}
+{"category":"enemy","heft":3.27555555555556,"id":"tarn_redjaw_rend","kind":"discovered","participants":["player"],"parts":["sunforged_core","rivet_seam"],"run_id":"bot-2883","stage":2,"stage_ticks":20168}
+{"category":"build","heft":3.42888888888889,"id":"spare","kind":"discovered","participants":["player"],"parts":["sunforged_core","rivet_seam"],"run_id":"bot-2883","stage":2,"stage_ticks":23043}
+{"category":"enemy","heft":4.05111111111111,"id":"shell_return","kind":"discovered","participants":["player"],"parts":["sunforged_core","rivet_seam"],"run_id":"bot-2883","stage":2,"stage_ticks":23154}
+{"category":"enemy","heft":4.00444444444444,"id":"brindle_crane_drop","kind":"discovered","participants":["player"],"parts":["sunforged_core","rivet_seam","cross_split"],"run_id":"bot-2883","stage":2,"stage_ticks":812}
+{"category":"build","heft":4.39333333333333,"id":"shrapnel_bloom","kind":"discovered","participants":["player"],"parts":["sunforged_core","rivet_seam","cross_split"],"run_id":"bot-2883","stage":2,"stage_ticks":4989}

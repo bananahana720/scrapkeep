@@ -1,0 +1,86 @@
+{
+  "generation": 1,
+  "run": {
+    "bonus_cores": 0,
+    "camera_yaw": -2.792526791682346,
+    "class_id": "tally",
+    "class_rewarded": 1,
+    "cogs": 0,
+    "companion": {},
+    "death_save_spent": false,
+    "entry_position": [
+      -150.0,
+      169.36473083496094,
+      -690.0
+    ],
+    "entry_velocity": [
+      3.8306260108947754,
+      0.0,
+      10.524558067321777
+    ],
+    "events_won": [],
+    "heft_class": 1,
+    "hp": 90.0,
+    "kills": 0,
+    "mass": 0.0,
+    "max_hp": 90.0,
+    "parts": [],
+    "pocket_draw_cache": {
+      "1": {
+        "sites": [
+          {
+            "at": [
+              144.0,
+              -256.0
+            ],
+            "interior": "pipe_vault",
+            "node": 13786,
+            "turn": 0
+          }
+        ]
+      }
+    },
+    "relics": {},
+    "retries": 0,
+    "retries_spent": {},
+    "run_id": "bot-2866",
+    "run_tallies": {
+      "deaths": 0,
+      "kills": 0,
+      "stages_cleared": 0,
+      "time": 0.0,
+      "wardens_seen": 0
+    },
+    "run_time": 0.0,
+    "schema": 1,
+    "scrap": 0,
+    "seed": 1598568397,
+    "seen_wardens": [],
+    "settled": [],
+    "stage": 1,
+    "start_pick": {
+      "options": [
+        "core",
+        "spiral_wave",
+        "cogs"
+      ],
+      "rerolls_left": 1,
+      "taken": ""
+    },
+    "trade_memory": {
+      "decisions": {},
+      "last_appeared": -100,
+      "last_refused": -100,
+      "last_seen": -100,
+      "offers": {},
+      "risk_taken": false,
+      "seen": []
+    },
+    "tree_allowed": 1,
+    "tree_late_skipped": false,
+    "tree_picks": [],
+    "wear_accum": 0.0,
+    "world": 1
+  },
+  "schema": 1
+}

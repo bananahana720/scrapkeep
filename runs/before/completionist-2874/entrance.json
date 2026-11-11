@@ -1,0 +1,192 @@
+{
+  "generation": 3,
+  "run": {
+    "bonus_cores": 0,
+    "camera_yaw": -2.879793250335259,
+    "class_id": "pylon_engineer",
+    "class_rewarded": 5,
+    "cogs": 2392,
+    "companion": {
+      "chassis": "spil9",
+      "escape_ready": true,
+      "escape_spent": false,
+      "owned": [
+        "escape_vent",
+        "ram_prow"
+      ],
+      "sockets": []
+    },
+    "death_save_spent": false,
+    "entry_position": [
+      -560.0,
+      66.34466552734375,
+      -770.0
+    ],
+    "entry_velocity": [
+      1.753768801689148,
+      0.0,
+      6.545153617858887
+    ],
+    "events_won": [],
+    "heft_class": 5,
+    "hotwire": {
+      "id": "riveted_shell",
+      "spent": true,
+      "state": "fit",
+      "world": 1
+    },
+    "hp": 145.0,
+    "kills": 65,
+    "mass": 1666.222222222243,
+    "max_hp": 145.0,
+    "panels": [
+      "ratchet_collar",
+      "ram_bumper",
+      "punch_rivet",
+      "punch_rivet",
+      "ram_bumper",
+      "punch_rivet",
+      "hull_tile",
+      "rope_spool",
+      "splash_skirt",
+      "ram_bumper",
+      "dunk_tank",
+      "vent_louvre"
+    ],
+    "parts": [
+      "grapple_coil",
+      "load_dividend",
+      "arc_coil",
+      "focus_lens",
+      "arc_coil",
+      "spare_cell",
+      "admirals_crest"
+    ],
+    "pocket_draw_cache": {
+      "1": {
+        "sites": [
+          {
+            "at": [
+              144.0,
+              -256.0
+            ],
+            "interior": "pipe_vault",
+            "node": 13786,
+            "turn": 0
+          }
+        ]
+      },
+      "2": {
+        "sites": [
+          {
+            "at": [
+              -328.0,
+              144.0
+            ],
+            "interior": "boiler_vault",
+            "node": 23777,
+            "turn": 2
+          }
+        ]
+      },
+      "3": {
+        "sites": [
+          {
+            "at": [
+              376.0,
+              0.0
+            ],
+            "interior": "boiler_vault",
+            "node": 20247,
+            "turn": 2
+          },
+          {
+            "at": [
+              -8.0,
+              -680.0
+            ],
+            "interior": "siphon_camp",
+            "node": 3114,
+            "turn": 0
+          }
+        ]
+      }
+    },
+    "relics": {},
+    "retries": 0,
+    "retries_spent": {},
+    "run_id": "bot-2874",
+    "run_tallies": {
+      "deaths": 0,
+      "kills": 65,
+      "stages_cleared": 2,
+      "time": 543.1550000001433,
+      "wardens_seen": 2
+    },
+    "run_time": 543.1550000001433,
+    "schema": 1,
+    "scrap": 2448,
+    "seed": 1598568428,
+    "seen_wardens": [
+      "1/1",
+      "1/2"
+    ],
+    "settled": [
+      "reward:ach_any_set_piece:cosmetic",
+      "reward:ach_any_set_piece:cosmetic:trail_any_downbeat",
+      "reward:ach_meta_pocket_tint:option",
+      "reward:ach_meta_pocket_tint:option:pocket_tint",
+      "reward:warden_broken:cosmetic",
+      "reward:warden_broken:cosmetic:paint_any_night",
+      "reward:ach_meta_spare_reroll:option",
+      "reward:ach_meta_spare_reroll:option:spare_reroll",
+      "reward:ach_d7_moth_tuft:cosmetic",
+      "reward:ach_d7_moth_tuft:cosmetic:trail_moth_tuft",
+      "reward:ach_d7_thimble:cosmetic",
+      "reward:ach_d7_thimble:cosmetic:decal_thimble",
+      "reward:ach_any_curtain_call:cosmetic",
+      "reward:ach_any_curtain_call:cosmetic:decal_curtain_call",
+      "reward:codex_keeper:cosmetic",
+      "reward:codex_keeper:cosmetic:paint_any_moth",
+      "reward:ach_d7_moth_grey:cosmetic",
+      "reward:ach_d7_moth_grey:cosmetic:companion_paint_moth",
+      "reward:ach_sable_cable_runs:cosmetic",
+      "reward:ach_sable_cable_runs:cosmetic:trail_sable_cable",
+      "reward:brindle_routed:pilot",
+      "reward:brindle_routed:pilot:tarn",
+      "reward:brindle_mark_sable:item",
+      "reward:brindle_mark_sable:item:strike_pocket",
+      "ledger.found.1",
+      "reward:ach_d7_mushroom:cosmetic",
+      "reward:ach_d7_mushroom:cosmetic:decal_mushroom"
+    ],
+    "stage": 3,
+    "start_pick": {
+      "options": [
+        "hot_rivets",
+        "rivet_plating",
+        "core"
+      ],
+      "rerolls_left": 1,
+      "taken": ""
+    },
+    "trade_memory": {
+      "decisions": {},
+      "last_appeared": -100,
+      "last_refused": -100,
+      "last_seen": -100,
+      "offers": {
+        "1": {},
+        "2": {}
+      },
+      "risk_taken": false,
+      "seen": []
+    },
+    "tree_allowed": 2,
+    "tree_late_skipped": false,
+    "tree_picks": [],
+    "wear_accum": 0.8088443876611676,
+    "world": 2
+  },
+  "schema": 1
+}

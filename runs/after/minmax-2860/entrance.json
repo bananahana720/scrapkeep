@@ -1,0 +1,145 @@
+{
+  "generation": 2,
+  "run": {
+    "bonus_cores": 0,
+    "camera_yaw": -2.6005405885279096,
+    "class_id": "tally",
+    "class_rewarded": 2,
+    "cogs": 91,
+    "companion": {},
+    "death_save_spent": false,
+    "entry_position": [
+      -460.0,
+      125.0,
+      -650.0
+    ],
+    "entry_velocity": [
+      7.963362216949463,
+      8.399946212768555,
+      13.253260612487793
+    ],
+    "events_won": [],
+    "heft_class": 2,
+    "hotwire": {
+      "id": "riveted_shell",
+      "spent": true,
+      "state": "recycle",
+      "world": 1
+    },
+    "hp": 118.0,
+    "kills": 33,
+    "mass": 206.0,
+    "max_hp": 118.0,
+    "panels": [
+      "vent_louvre",
+      "punch_rivet",
+      "cell_bracket",
+      "hull_tile",
+      "punch_rivet",
+      "cell_bracket",
+      "ram_bumper",
+      "splash_skirt",
+      "ram_bumper"
+    ],
+    "parts": [
+      "gatling_heart",
+      "long_barrel",
+      "hot_rivets",
+      "ram_plow",
+      "barrage_spring",
+      "deflect_plate",
+      "cell_movement",
+      "cell_special",
+      "cell_movement",
+      "cell_movement",
+      "cell_special",
+      "load_dividend"
+    ],
+    "pocket_draw_cache": {
+      "1": {
+        "sites": [
+          {
+            "at": [
+              -400.0,
+              -600.0
+            ],
+            "interior": "round_foundry",
+            "node": 5075,
+            "turn": 3
+          }
+        ]
+      },
+      "2": {
+        "sites": [
+          {
+            "at": [
+              -336.0,
+              136.0
+            ],
+            "interior": "elite_bay",
+            "node": 23575,
+            "turn": 3
+          }
+        ]
+      }
+    },
+    "relics": {},
+    "retries": 0,
+    "retries_spent": {},
+    "run_id": "bot-2860",
+    "run_tallies": {
+      "deaths": 0,
+      "kills": 33,
+      "stages_cleared": 1,
+      "time": 179.22111111112835,
+      "wardens_seen": 1
+    },
+    "run_time": 179.22111111112835,
+    "schema": 1,
+    "scrap": 411,
+    "seed": 1598568391,
+    "seen_wardens": [
+      "1/1"
+    ],
+    "settled": [
+      "reward:ach_meta_pocket_tint:cosmetic",
+      "reward:ach_meta_pocket_tint:cosmetic:paint_any_spark",
+      "reward:ach_d7_moth_tuft:cosmetic",
+      "reward:ach_d7_moth_tuft:cosmetic:trail_moth_tuft",
+      "reward:ach_any_set_piece:cosmetic",
+      "reward:ach_any_set_piece:cosmetic:trail_any_downbeat",
+      "reward:warden_broken:cosmetic",
+      "reward:warden_broken:cosmetic:paint_any_night"
+    ],
+    "stage": 2,
+    "start_pick": {
+      "options": [
+        "chain_arc",
+        "core",
+        "spiral_wave"
+      ],
+      "rerolls_left": 1,
+      "taken": "core"
+    },
+    "trade_memory": {
+      "decisions": {},
+      "last_appeared": -100,
+      "last_refused": -100,
+      "last_seen": -100,
+      "offers": {
+        "1": {}
+      },
+      "risk_taken": false,
+      "seen": []
+    },
+    "tree_allowed": 2,
+    "tree_late_skipped": false,
+    "tree_picks": [
+      "tl_audit_stamp",
+      "tl_line_feed"
+    ],
+    "wear_accum": 0.4117288572157377,
+    "world": 1
+  },
+  "schema": 1
+}

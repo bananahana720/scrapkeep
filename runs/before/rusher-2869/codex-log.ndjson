@@ -1,0 +1,11 @@
+{"category":"enemy","heft":1.29777777777778,"id":"counter_ram","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-2869","stage":1,"stage_ticks":8970}
+{"category":"enemy","heft":1.62444444444444,"id":"chain","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-2869","stage":1,"stage_ticks":11991}
+{"category":"enemy","heft":1.83111111111111,"id":"heavy_roll","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-2869","stage":1,"stage_ticks":13554}
+{"category":"enemy","heft":1.87333333333333,"id":"warden_shatter","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-2869","stage":1,"stage_ticks":14287}
+{"category":"world","heft":2.28222222222222,"id":"sprint_through","kind":"discovered","participants":["player"],"parts":["sunforged_core"],"run_id":"bot-2869","stage":2,"stage_ticks":8054}
+{"category":"enemy","heft":2.67333333333333,"id":"set_piece","kind":"discovered","participants":["player"],"parts":["sunforged_core"],"run_id":"bot-2869","stage":2,"stage_ticks":10407}
+{"category":"enemy","heft":2.86,"id":"tether_snap","kind":"discovered","participants":["player"],"parts":["sunforged_core"],"run_id":"bot-2869","stage":2,"stage_ticks":10750}
+{"category":"build","heft":3.02666666666667,"id":"spare","kind":"discovered","participants":["player"],"parts":["sunforged_core"],"run_id":"bot-2869","stage":2,"stage_ticks":13356}
+{"category":"world","heft":3.53777777777778,"id":"sluice_hammer","kind":"discovered","participants":["player"],"parts":["sunforged_core"],"run_id":"bot-2869","stage":2,"stage_ticks":14191}
+{"category":"enemy","heft":3.52444444444444,"id":"rivet_foundry_cutter","kind":"discovered","participants":["player"],"parts":["sunforged_core","spare_cell"],"run_id":"bot-2869","stage":2,"stage_ticks":477}
+{"category":"enemy","heft":3.61333333333333,"id":"brindle_crane_drop","kind":"discovered","participants":["player"],"parts":["sunforged_core","spare_cell"],"run_id":"bot-2869","stage":2,"stage_ticks":501}

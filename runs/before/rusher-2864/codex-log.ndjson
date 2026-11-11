@@ -1,0 +1,14 @@
+{"category":"enemy","heft":1.02222222222222,"id":"counter_ram","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-2864","stage":1,"stage_ticks":6541}
+{"category":"enemy","heft":1.22,"id":"kest_cable_charge","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-2864","stage":1,"stage_ticks":7345}
+{"category":"enemy","heft":1.66,"id":"plate_peel","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-2864","stage":1,"stage_ticks":10765}
+{"category":"build","heft":1.74888888888889,"id":"spare","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-2864","stage":1,"stage_ticks":10766}
+{"category":"world","heft":1.85333333333333,"id":"sluice_hammer","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-2864","stage":1,"stage_ticks":11345}
+{"category":"enemy","heft":1.94444444444444,"id":"set_piece","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-2864","stage":1,"stage_ticks":12031}
+{"category":"enemy","heft":1.98888888888889,"id":"kest_windhover","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-2864","stage":1,"stage_ticks":12031}
+{"category":"enemy","heft":2.16333333333333,"id":"warden_shatter","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-2864","stage":1,"stage_ticks":15625}
+{"category":"world","heft":2.48777777777778,"id":"sprint_through","kind":"discovered","participants":["player"],"parts":["spiral_wave"],"run_id":"bot-2864","stage":2,"stage_ticks":6487}
+{"category":"enemy","heft":3.21444444444444,"id":"chain","kind":"discovered","participants":["player"],"parts":["spiral_wave"],"run_id":"bot-2864","stage":2,"stage_ticks":12724}
+{"category":"enemy","heft":3.30111111111111,"id":"set_piece_core","kind":"discovered","participants":["player"],"parts":["spiral_wave"],"run_id":"bot-2864","stage":2,"stage_ticks":14004}
+{"category":"enemy","heft":3.83888888888889,"id":"brindle_crane_drop","kind":"discovered","participants":["player"],"parts":["spiral_wave","gatling_heart"],"run_id":"bot-2864","stage":2,"stage_ticks":582}
+{"category":"build","heft":3.99,"id":"pinwheel","kind":"discovered","participants":["player"],"parts":["spiral_wave","gatling_heart"],"run_id":"bot-2864","stage":2,"stage_ticks":1125}
+{"category":"enemy","heft":4.12777777777778,"id":"loaded_line","kind":"discovered","participants":["player"],"parts":["spiral_wave","gatling_heart"],"run_id":"bot-2864","stage":2,"stage_ticks":5657}

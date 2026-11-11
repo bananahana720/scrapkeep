@@ -1,0 +1,48 @@
+{
+  "discovered": [
+    "lore.spillway.moss.spare",
+    "lore.spillway.crew.leak",
+    "lore.spillway.moss.yesterday",
+    "armour_wet",
+    "chain",
+    "parting_shot",
+    "spare",
+    "tether_snap",
+    "set_piece",
+    "warden_shatter",
+    "lore.park_dam.note.gate_log",
+    "lore.park_dam.note.plumb",
+    "lore.park_flume.crew.warm",
+    "lore.park_flume.moss.flask",
+    "lore.park_flume.crew.weir",
+    "lore.park_flume.note.weir",
+    "set_piece_core",
+    "cable_run",
+    "lore.park_flume.note.bents",
+    "lore.park_flume.note.siphon",
+    "lore.park_flume.note.milepost",
+    "lore.park_flume.note.boom",
+    "lore.park_flume.note.drum",
+    "lore.park_flume.note.fleet",
+    "lore.park_flume.note.wasteway",
+    "sable_cable_runs",
+    "brindle_crane_drop",
+    "lore.park_flume.note.surge",
+    "shell_return",
+    "lore.park_flume.note.penstocks",
+    "lore.park_flume.note.catwalk",
+    "lore.dig_entry.exchange.1",
+    "lore.dig_entry.exchange.2",
+    "lore.dig_entry.exchange.3"
+  ],
+  "found": [
+    "Arc meets a heavy hit: the charge overloads in a burst. Elites and bosses take the full burst.",
+    "Arc meets frost: everything near locks in place. Elites and bosses never lock.",
+    "Live Wire: Every slam bursts an arc, and shots spark where they land."
+  ],
+  "found_categories": {
+    "Arc meets a heavy hit: the charge overloads in a burst. Elites and bosses take the full burst.": "build",
+    "Arc meets frost: everything near locks in place. Elites and bosses never lock.": "build",
+    "Live Wire: Every slam bursts an arc, and shots spark where they land.": "build"
+  }
+}

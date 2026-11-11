@@ -1,0 +1,102 @@
+{
+  "ended_unix": 1794430758.323114,
+  "outcome": "lost",
+  "panels": [
+    {
+      "caption": "Our story begins at Spillway Works. Again.",
+      "facts": {},
+      "kind": "opening",
+      "sfx": "",
+      "shot": "",
+      "size": "wide",
+      "stage": 1,
+      "t": 1.51,
+      "world": 1,
+      "world_name": "Spillway Works"
+    },
+    {
+      "caption": "39.0 m/s. Over the posted limit.",
+      "facts": {
+        "speed": 39.0
+      },
+      "kind": "top_speed",
+      "sfx": "FWOOSH",
+      "shot": "",
+      "size": "square",
+      "stage": 1,
+      "t": 71.41,
+      "world": 1,
+      "world_name": "Spillway Works"
+    },
+    {
+      "caption": "86 units of opinion.",
+      "facts": {
+        "force": 86,
+        "strike": "ultimate"
+      },
+      "kind": "biggest_hit",
+      "sfx": "KLANG!",
+      "shot": "",
+      "size": "square",
+      "stage": 1,
+      "t": 138.48,
+      "world": 1,
+      "world_name": "Spillway Works"
+    },
+    {
+      "caption": "Galvanic Rounds acquired. It fit. Mostly.",
+      "facts": {
+        "evolved": false,
+        "name": "Galvanic Rounds",
+        "part": "galvanic_rounds",
+        "tier": 3
+      },
+      "kind": "key_item",
+      "sfx": "KA-CHUNK",
+      "shot": "",
+      "size": "square",
+      "stage": 1,
+      "t": 191.62,
+      "world": 1,
+      "world_name": "Spillway Works"
+    },
+    {
+      "caption": "The Meltdown Warden, briefly reconsidering.",
+      "facts": {
+        "boss": false,
+        "who": "The Meltdown Warden"
+      },
+      "kind": "boss_stagger",
+      "sfx": "WOBBLE",
+      "shot": "",
+      "size": "tall",
+      "stage": 2,
+      "t": 329.02,
+      "world": 1,
+      "world_name": "Spillway Works"
+    },
+    {
+      "caption": "Tragic, right?",
+      "facts": {
+        "hull": 0
+      },
+      "kind": "finale",
+      "sfx": "fzzt",
+      "shot": "",
+      "size": "wide",
+      "stage": 2,
+      "t": 346.88,
+      "world": 1,
+      "world_name": "Spillway Works"
+    }
+  ],
+  "pilot": "demolitions_caster",
+  "pilot_name": "Kest",
+  "run_id": "bot-2882",
+  "schema": 1,
+  "stage_reached": 2,
+  "title": "SCRAPKEEP #16: TROUBLE AT SPILLWAY WORKS",
+  "won": false,
+  "world": 1,
+  "world_name": "Spillway Works"
+}

@@ -1,0 +1,16 @@
+{"category":"enemy","heft":1.10888888888889,"id":"counter_ram","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-2860","stage":1,"stage_ticks":14785}
+{"category":"enemy","heft":1.27111111111111,"id":"chain","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-2860","stage":1,"stage_ticks":15526}
+{"category":"enemy","heft":1.53555555555556,"id":"loaded_line","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-2860","stage":1,"stage_ticks":17345}
+{"category":"enemy","heft":1.75333333333333,"id":"set_piece","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-2860","stage":1,"stage_ticks":19213}
+{"category":"enemy","heft":1.84,"id":"plate_peel","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-2860","stage":1,"stage_ticks":20654}
+{"category":"enemy","heft":2.04222222222222,"id":"warden_shatter","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-2860","stage":1,"stage_ticks":25010}
+{"category":"enemy","heft":2.63333333333333,"id":"armour_wet","kind":"discovered","participants":["player"],"parts":["load_dividend","arc_coil"],"run_id":"bot-2860","stage":2,"stage_ticks":5625}
+{"category":"build","heft":2.72222222222222,"id":"lightning_rod","kind":"discovered","participants":["player"],"parts":["load_dividend","arc_coil"],"run_id":"bot-2860","stage":2,"stage_ticks":5625}
+{"category":"enemy","heft":3.33555555555556,"id":"shell_return","kind":"discovered","participants":["player"],"parts":["load_dividend","arc_coil","focus_lens"],"run_id":"bot-2860","stage":2,"stage_ticks":16634}
+{"category":"build","heft":3.38888888888889,"id":"tesla_pylon","kind":"discovered","participants":["player"],"parts":["load_dividend","arc_coil","focus_lens"],"run_id":"bot-2860","stage":2,"stage_ticks":18410}
+{"category":"enemy","heft":3.78444444444444,"id":"slag_hop","kind":"discovered","participants":["player"],"parts":["load_dividend","arc_coil","focus_lens"],"run_id":"bot-2860","stage":2,"stage_ticks":21317}
+{"category":"build","heft":3.95555555555556,"kind":"found","participants":["player"],"parts":["load_dividend","arc_coil","focus_lens"],"run_id":"bot-2860","stage":2,"stage_ticks":21932,"text":"Arc meets a heavy hit: the charge overloads in a burst. Elites and bosses take the full burst."}
+{"category":"build","heft":3.95111111111111,"id":"spare","kind":"discovered","participants":["player"],"parts":["load_dividend","arc_coil","focus_lens"],"run_id":"bot-2860","stage":2,"stage_ticks":23104}
+{"category":"enemy","heft":4.56666666666667,"id":"tally_skim","kind":"discovered","participants":["player"],"parts":["load_dividend","arc_coil","focus_lens","galvanic_rounds"],"run_id":"bot-2860","stage":2,"stage_ticks":652}
+{"category":"enemy","heft":4.41111111111111,"id":"brindle_crane_drop","kind":"discovered","participants":["player"],"parts":["load_dividend","arc_coil","focus_lens","galvanic_rounds"],"run_id":"bot-2860","stage":2,"stage_ticks":792}
+{"category":"enemy","heft":4.74444444444444,"id":"tally_punch_tape","kind":"discovered","participants":["player"],"parts":["load_dividend","arc_coil","focus_lens","galvanic_rounds"],"run_id":"bot-2860","stage":2,"stage_ticks":4715}

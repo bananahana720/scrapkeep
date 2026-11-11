@@ -1,0 +1,44 @@
+{
+  "discovered": [
+    "lore.spillway.moss.spare",
+    "lore.spillway.crew.leak",
+    "lore.spillway.moss.yesterday",
+    "counter_ram",
+    "set_piece",
+    "warden_shatter",
+    "lore.park_dam.note.gate_log",
+    "wrecking_ball",
+    "lore.park_dam.note.plumb",
+    "lore.park_flume.crew.warm",
+    "lore.park_flume.moss.flask",
+    "lore.park_flume.crew.weir",
+    "lore.park_flume.note.weir",
+    "sprint_through",
+    "chain",
+    "lore.park_flume.note.bents",
+    "lore.park_flume.note.siphon",
+    "lore.park_flume.note.milepost",
+    "lore.park_flume.note.boom",
+    "lore.park_flume.note.drum",
+    "lore.park_flume.note.fleet",
+    "lore.park_flume.note.wasteway",
+    "spare",
+    "sluice_hammer",
+    "lore.park_flume.note.surge",
+    "lore.park_flume.note.penstocks",
+    "brindle_crane_drop",
+    "shell_return",
+    "shrapnel_bloom",
+    "lore.park_flume.note.catwalk",
+    "lore.park_flume.note.squall",
+    "lore.dig_entry.exchange.1",
+    "lore.dig_entry.exchange.2",
+    "lore.dig_entry.exchange.3"
+  ],
+  "found": [
+    "Hair Trigger: Your dash trails arc that electrifies water."
+  ],
+  "found_categories": {
+    "Hair Trigger: Your dash trails arc that electrifies water.": "build"
+  }
+}

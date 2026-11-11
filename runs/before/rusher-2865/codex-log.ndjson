@@ -1,0 +1,13 @@
+{"category":"enemy","heft":1.03777777777778,"id":"counter_ram","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-2865","stage":1,"stage_ticks":5603}
+{"category":"enemy","heft":1.50888888888889,"id":"set_piece","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-2865","stage":1,"stage_ticks":9089}
+{"category":"enemy","heft":1.55333333333333,"id":"mat_slip","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-2865","stage":1,"stage_ticks":9099}
+{"category":"enemy","heft":1.64,"id":"plate_peel","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-2865","stage":1,"stage_ticks":9752}
+{"category":"build","heft":1.71111111111111,"id":"spare","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-2865","stage":1,"stage_ticks":9888}
+{"category":"enemy","heft":1.98222222222222,"id":"crush_chain","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-2865","stage":1,"stage_ticks":11081}
+{"category":"enemy","heft":2.00555555555556,"id":"tether_snap","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-2865","stage":1,"stage_ticks":12729}
+{"category":"enemy","heft":2.18333333333333,"id":"heavy_roll","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-2865","stage":1,"stage_ticks":14277}
+{"category":"enemy","heft":2.22777777777778,"id":"warden_shatter","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-2865","stage":1,"stage_ticks":14539}
+{"category":"world","heft":2.38555555555556,"id":"sprint_through","kind":"discovered","participants":["player"],"parts":["impact_driver"],"run_id":"bot-2865","stage":2,"stage_ticks":6007}
+{"category":"enemy","heft":3.01888888888889,"id":"tarn_redjaw_rend","kind":"discovered","participants":["player"],"parts":["impact_driver"],"run_id":"bot-2865","stage":2,"stage_ticks":9683}
+{"category":"enemy","heft":3.18555555555556,"id":"set_piece_core","kind":"discovered","participants":["player"],"parts":["impact_driver"],"run_id":"bot-2865","stage":2,"stage_ticks":12829}
+{"category":"world","heft":3.67222222222222,"id":"sluice_hammer","kind":"discovered","participants":["player"],"parts":["impact_driver"],"run_id":"bot-2865","stage":2,"stage_ticks":13395}

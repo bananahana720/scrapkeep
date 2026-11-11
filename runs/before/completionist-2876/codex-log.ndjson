@@ -1,0 +1,10 @@
+{"category":"enemy","heft":1.00666666666667,"id":"counter_ram","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-2876","stage":1,"stage_ticks":10440}
+{"category":"enemy","heft":1.16444444444444,"id":"loaded_line","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-2876","stage":1,"stage_ticks":15350}
+{"category":"enemy","heft":1.20888888888889,"id":"kest_cable_charge","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-2876","stage":1,"stage_ticks":15350}
+{"category":"enemy","heft":1.69111111111111,"id":"set_piece","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-2876","stage":1,"stage_ticks":22079}
+{"category":"enemy","heft":1.73555555555556,"id":"kest_windhover","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-2876","stage":1,"stage_ticks":22080}
+{"category":"enemy","heft":1.78333333333333,"id":"warden_shatter","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-2876","stage":1,"stage_ticks":24750}
+{"category":"build","heft":2.44777777777778,"id":"pinwheel","kind":"discovered","participants":["player"],"parts":["gatling_heart","spiral_wave"],"run_id":"bot-2876","stage":2,"stage_ticks":5489}
+{"category":"enemy","heft":3.99222222222222,"id":"set_piece_core","kind":"discovered","participants":["player"],"parts":["gatling_heart","spiral_wave","glide_vane","chain_arc"],"run_id":"bot-2876","stage":2,"stage_ticks":21544}
+{"category":"build","heft":4.13444444444444,"id":"spare","kind":"discovered","participants":["player"],"parts":["gatling_heart","spiral_wave","glide_vane","chain_arc"],"run_id":"bot-2876","stage":2,"stage_ticks":22830}
+{"category":"enemy","heft":4.50777777777778,"id":"brindle_crane_drop","kind":"discovered","participants":["player"],"parts":["gatling_heart","spiral_wave","glide_vane","chain_arc","gatling_heart"],"run_id":"bot-2876","stage":2,"stage_ticks":672}

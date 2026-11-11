@@ -1,0 +1,14 @@
+{"category":"enemy","heft":1.00666666666667,"id":"counter_ram","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-2878","stage":1,"stage_ticks":10318}
+{"category":"enemy","heft":1.69222222222222,"id":"loaded_line","kind":"discovered","participants":["player"],"parts":["barrage_spring"],"run_id":"bot-2878","stage":1,"stage_ticks":15373}
+{"category":"enemy","heft":1.80333333333333,"id":"chain","kind":"discovered","participants":["player"],"parts":["barrage_spring"],"run_id":"bot-2878","stage":1,"stage_ticks":15439}
+{"category":"enemy","heft":2.10333333333333,"id":"set_piece","kind":"discovered","participants":["player"],"parts":["barrage_spring"],"run_id":"bot-2878","stage":1,"stage_ticks":19967}
+{"category":"enemy","heft":2.14333333333333,"id":"warden_shatter","kind":"discovered","participants":["player"],"parts":["barrage_spring"],"run_id":"bot-2878","stage":1,"stage_ticks":20967}
+{"category":"enemy","heft":2.50555555555556,"id":"shell_return","kind":"discovered","participants":["player"],"parts":["barrage_spring","gatling_heart","rivet_plating"],"run_id":"bot-2878","stage":2,"stage_ticks":17510}
+{"category":"enemy","heft":2.77,"id":"slag_hop","kind":"discovered","participants":["player"],"parts":["barrage_spring","gatling_heart","rivet_plating"],"run_id":"bot-2878","stage":2,"stage_ticks":23607}
+{"category":"enemy","heft":2.87444444444444,"id":"shift_over","kind":"discovered","participants":["player"],"parts":["barrage_spring","gatling_heart","rivet_plating"],"run_id":"bot-2878","stage":2,"stage_ticks":24365}
+{"category":"world","heft":2.96333333333333,"id":"sluice_hammer","kind":"discovered","participants":["player"],"parts":["barrage_spring","gatling_heart","rivet_plating"],"run_id":"bot-2878","stage":2,"stage_ticks":24365}
+{"category":"enemy","heft":3.11888888888889,"id":"plate_peel","kind":"discovered","participants":["player"],"parts":["barrage_spring","gatling_heart","rivet_plating"],"run_id":"bot-2878","stage":2,"stage_ticks":24486}
+{"category":"enemy","heft":3.29,"id":"set_piece_core","kind":"discovered","participants":["player"],"parts":["barrage_spring","gatling_heart","rivet_plating"],"run_id":"bot-2878","stage":2,"stage_ticks":25512}
+{"category":"enemy","heft":3.56333333333333,"id":"heavy_roll","kind":"discovered","participants":["player"],"parts":["barrage_spring","gatling_heart","rivet_plating"],"run_id":"bot-2878","stage":2,"stage_ticks":25667}
+{"category":"enemy","heft":3.64777777777778,"id":"tally_skim","kind":"discovered","participants":["player"],"parts":["barrage_spring","gatling_heart","rivet_plating","ram_plow"],"run_id":"bot-2878","stage":2,"stage_ticks":653}
+{"category":"enemy","heft":3.45888888888889,"id":"tally_punch_tape","kind":"discovered","participants":["player"],"parts":["barrage_spring","gatling_heart","rivet_plating","ram_plow"],"run_id":"bot-2878","stage":2,"stage_ticks":4506}

@@ -1,0 +1,238 @@
+{
+  "generation": 3,
+  "run": {
+    "bonus_cores": 0,
+    "camera_yaw": -2.879793250335259,
+    "class_id": "pylon_engineer",
+    "class_rewarded": 5,
+    "cogs": 2453,
+    "companion": {
+      "chassis": "spil9",
+      "escape_ready": true,
+      "escape_spent": false,
+      "owned": [
+        "escape_vent",
+        "ram_prow"
+      ],
+      "sockets": []
+    },
+    "death_save_spent": false,
+    "entry_position": [
+      -560.0,
+      66.34466552734375,
+      -770.0
+    ],
+    "entry_velocity": [
+      0.6091199517250061,
+      -0.017066877335309982,
+      2.273266315460205
+    ],
+    "events_won": [],
+    "heft_class": 4,
+    "hotwire": {
+      "id": "riveted_shell",
+      "spent": true,
+      "state": "fit",
+      "world": 1
+    },
+    "hp": 140.0,
+    "kills": 60,
+    "mass": 1547.8333333334094,
+    "max_hp": 140.0,
+    "panels": [
+      "hull_tile",
+      "ram_bumper",
+      "cell_bracket",
+      "rope_spool",
+      "range_sight",
+      "hull_tile",
+      "winch_drum"
+    ],
+    "parts": [
+      "spring_shims",
+      "horizon_optic",
+      "cap_relay",
+      "double_feed",
+      "horizon_optic",
+      "focus_lens",
+      "spiral_wave",
+      "admirals_crest"
+    ],
+    "pocket_draw_cache": {
+      "1": {
+        "sites": [
+          {
+            "at": [
+              144.0,
+              -256.0
+            ],
+            "interior": "valve_vault",
+            "node": 13786,
+            "turn": 0
+          }
+        ]
+      },
+      "2": {
+        "sites": [
+          {
+            "at": [
+              -336.0,
+              136.0
+            ],
+            "interior": "relay_vault",
+            "node": 23575,
+            "turn": 3
+          }
+        ]
+      },
+      "3": {
+        "sites": [
+          {
+            "at": [
+              384.0,
+              0.0
+            ],
+            "interior": "braced_yard",
+            "node": 20248,
+            "turn": 1
+          },
+          {
+            "at": [
+              -8.0,
+              -680.0
+            ],
+            "interior": "runner_yard",
+            "node": 3114,
+            "turn": 0
+          }
+        ]
+      }
+    },
+    "relics": {},
+    "retries": 0,
+    "retries_spent": {},
+    "run_id": "bot-2880",
+    "run_tallies": {
+      "deaths": 0,
+      "kills": 60,
+      "stages_cleared": 2,
+      "time": 562.5066666667263,
+      "wardens_seen": 2
+    },
+    "run_time": 562.5066666667263,
+    "schema": 1,
+    "scrap": 2549,
+    "seed": 1598568457,
+    "seen_wardens": [
+      "1/1",
+      "1/2"
+    ],
+    "settled": [
+      "reward:ach_any_set_piece:cosmetic",
+      "reward:ach_any_set_piece:cosmetic:trail_any_downbeat",
+      "reward:ach_meta_pocket_tint:option",
+      "reward:ach_meta_pocket_tint:option:pocket_tint",
+      "reward:warden_broken:cosmetic",
+      "reward:warden_broken:cosmetic:paint_any_night",
+      "reward:ach_d7_moth_tuft:cosmetic",
+      "reward:ach_d7_moth_tuft:cosmetic:trail_moth_tuft",
+      "reward:ach_meta_spare_reroll:option",
+      "reward:ach_meta_spare_reroll:option:spare_reroll",
+      "reward:ach_meta_shelf_preview:option",
+      "reward:ach_meta_shelf_preview:option:shelf_preview",
+      "reward:codex_keeper:cosmetic",
+      "reward:codex_keeper:cosmetic:paint_any_moth",
+      "reward:ach_d7_moth_grey:cosmetic",
+      "reward:ach_d7_moth_grey:cosmetic:companion_paint_moth",
+      "reward:ach_sable_parting_shot:cosmetic",
+      "reward:ach_sable_parting_shot:cosmetic:decal_sable_spool",
+      "reward:ach_d7_thimble:cosmetic",
+      "reward:ach_d7_thimble:cosmetic:decal_thimble",
+      "reward:ach_any_curtain_call:cosmetic",
+      "reward:ach_any_curtain_call:cosmetic:decal_curtain_call",
+      "reward:ach_sable_cable_runs:cosmetic",
+      "reward:ach_sable_cable_runs:cosmetic:trail_sable_cable",
+      "reward:ach_d7_ink_stitch:cosmetic",
+      "reward:ach_d7_ink_stitch:cosmetic:trail_ink_stitch",
+      "reward:brindle_routed:pilot",
+      "reward:brindle_routed:pilot:tarn",
+      "reward:brindle_mark_sable:item",
+      "reward:brindle_mark_sable:item:strike_pocket",
+      "ledger.found.1",
+      "reward:ach_d7_mushroom:cosmetic",
+      "reward:ach_d7_mushroom:cosmetic:decal_mushroom"
+    ],
+    "stage": 3,
+    "start_pick": {
+      "options": [
+        "chain_arc",
+        "rivet_plating",
+        "hot_rivets"
+      ],
+      "rerolls_left": 1,
+      "taken": ""
+    },
+    "trade_memory": {
+      "decisions": {},
+      "last_appeared": 2,
+      "last_refused": -100,
+      "last_seen": -100,
+      "offers": {
+        "1": {
+          "at": [
+            -104.0,
+            288.0
+          ],
+          "node": 27423,
+          "trade": {
+            "chance": 0.45,
+            "curse": false,
+            "family": "risk",
+            "full_health_bump": true,
+            "interior_id": "scrap_counter",
+            "pool_floor": 0.0,
+            "recency": 1.0,
+            "refusal_weight": 1.0,
+            "sacrifice": false,
+            "sacrifice_chance": 0.39285714285714285,
+            "safe_share": 0.5,
+            "skip_time": 0.0,
+            "stage": 1,
+            "tier": 1
+          }
+        },
+        "2": {
+          "at": [
+            128.0,
+            -296.0
+          ],
+          "node": 12779,
+          "trade": {
+            "chance": 0.1125,
+            "curse": false,
+            "family": "risk",
+            "full_health_bump": true,
+            "interior_id": "sacrifice_counter",
+            "pool_floor": 0.0,
+            "recency": 0.25,
+            "refusal_weight": 1.0,
+            "sacrifice": true,
+            "sacrifice_chance": 0.39285714285714285,
+            "safe_share": 0.5,
+            "skip_time": 0.0,
+            "stage": 2,
+            "tier": 1
+          }
+        }
+      },
+      "risk_taken": false,
+      "seen": []
+    },
+    "tree_allowed": 2,
+    "tree_late_skipped": false,
+    "tree_picks": [],
+    "wear_accum": 0.6270615597289182,
+    "world": 2
+  },
+  "schema": 1
+}

@@ -1,0 +1,15 @@
+{"category":"enemy","heft":1.02444444444444,"id":"counter_ram","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-2882","stage":1,"stage_ticks":6614}
+{"category":"enemy","heft":1.11777777777778,"id":"kest_cable_charge","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-2882","stage":1,"stage_ticks":7093}
+{"category":"enemy","heft":1.32666666666667,"id":"chain","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-2882","stage":1,"stage_ticks":8193}
+{"category":"world","heft":1.39555555555556,"id":"sluice_hammer","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-2882","stage":1,"stage_ticks":8286}
+{"category":"enemy","heft":1.44444444444444,"id":"set_piece","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-2882","stage":1,"stage_ticks":11295}
+{"category":"enemy","heft":1.48888888888889,"id":"kest_windhover","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-2882","stage":1,"stage_ticks":11295}
+{"category":"enemy","heft":1.59555555555556,"id":"plate_peel","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-2882","stage":1,"stage_ticks":11354}
+{"category":"build","heft":1.66222222222222,"id":"spare","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-2882","stage":1,"stage_ticks":11356}
+{"category":"build","heft":1.93555555555556,"id":"strike","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-2882","stage":1,"stage_ticks":12063}
+{"category":"enemy","heft":2.05777777777778,"id":"heavy_roll","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-2882","stage":1,"stage_ticks":14756}
+{"category":"enemy","heft":2.10222222222222,"id":"warden_shatter","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-2882","stage":1,"stage_ticks":15001}
+{"category":"world","heft":2.62444444444444,"id":"sprint_through","kind":"discovered","participants":["player"],"parts":["gatling_heart"],"run_id":"bot-2882","stage":2,"stage_ticks":7684}
+{"category":"build","heft":3.42444444444444,"kind":"found","participants":["player"],"parts":["gatling_heart","rime_rounds"],"run_id":"bot-2882","stage":2,"stage_ticks":967,"text":"Frost meets a heavy hit: the chill grinds everything near. Elites and bosses take a tenth of the grind."}
+{"category":"enemy","heft":3.30222222222222,"id":"brindle_crane_drop","kind":"discovered","participants":["player"],"parts":["gatling_heart","rime_rounds"],"run_id":"bot-2882","stage":2,"stage_ticks":1914}
+{"category":"enemy","heft":3.46888888888889,"id":"shell_return","kind":"discovered","participants":["player"],"parts":["gatling_heart","rime_rounds"],"run_id":"bot-2882","stage":2,"stage_ticks":4161}

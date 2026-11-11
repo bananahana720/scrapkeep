@@ -1,0 +1,48 @@
+{
+  "discovered": [
+    "lore.spillway.moss.spare",
+    "lore.spillway.crew.leak",
+    "lore.spillway.moss.yesterday",
+    "counter_ram",
+    "crush_chain",
+    "set_piece",
+    "mat_slip",
+    "tether_snap",
+    "shell_return",
+    "warden_shatter",
+    "lore.park_dam.note.gate_log",
+    "lore.park_dam.note.plumb",
+    "lore.park_flume.crew.warm",
+    "lore.park_flume.moss.flask",
+    "lore.park_flume.crew.weir",
+    "lore.park_flume.note.weir",
+    "sprint_through",
+    "tarn_redjaw_rend",
+    "lore.park_flume.note.bents",
+    "lore.park_flume.note.siphon",
+    "lore.park_flume.note.milepost",
+    "lore.park_flume.note.boom",
+    "lore.park_flume.note.drum",
+    "sluice_hammer",
+    "lore.park_flume.note.fleet",
+    "lore.park_flume.note.wasteway",
+    "brindle_crane_drop",
+    "chain",
+    "lore.park_flume.note.surge",
+    "lore.park_flume.note.penstocks",
+    "lore.park_flume.note.catwalk",
+    "loaded_line",
+    "tarn_claw_drag",
+    "lore.dig_entry.exchange.1",
+    "lore.dig_entry.exchange.2",
+    "lore.dig_entry.exchange.3"
+  ],
+  "found": [
+    "Shatter Crew: Shots freeze water where they land; slam the ice to shatter it.",
+    "Frost meets a heavy hit: the chill grinds everything near. Elites and bosses take a tenth of the grind."
+  ],
+  "found_categories": {
+    "Frost meets a heavy hit: the chill grinds everything near. Elites and bosses take a tenth of the grind.": "build",
+    "Shatter Crew: Shots freeze water where they land; slam the ice to shatter it.": "build"
+  }
+}

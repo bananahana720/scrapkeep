@@ -1,0 +1,52 @@
+{
+  "discovered": [
+    "lore.spillway.moss.spare",
+    "lore.spillway.crew.leak",
+    "lore.spillway.moss.yesterday",
+    "armour_wet",
+    "chain",
+    "plate_peel",
+    "sluice_hammer",
+    "spare",
+    "set_piece",
+    "tether_snap",
+    "warden_shatter",
+    "lore.park_dam.note.gate_log",
+    "shell_return",
+    "lore.park_dam.note.plumb",
+    "lore.park_flume.crew.warm",
+    "lore.park_flume.moss.flask",
+    "lore.park_flume.crew.weir",
+    "lore.park_flume.note.weir",
+    "sprint_through",
+    "counter_ram",
+    "parting_shot",
+    "lore.park_flume.note.bents",
+    "set_piece_core",
+    "cable_run",
+    "lore.park_flume.note.siphon",
+    "lore.park_flume.note.milepost",
+    "lore.park_flume.note.boom",
+    "lore.park_flume.note.drum",
+    "lore.park_flume.note.fleet",
+    "lore.park_flume.note.wasteway",
+    "lore.park_flume.note.surge",
+    "sable_cable_runs",
+    "lore.park_flume.note.penstocks",
+    "brindle_crane_drop",
+    "lore.park_flume.note.catwalk",
+    "lore.park_flume.note.squall",
+    "lore.park_flume.note.zip",
+    "brindle_wall_bait",
+    "lore.park_flume.note.culvert",
+    "lore.dig_entry.exchange.1",
+    "lore.dig_entry.exchange.2",
+    "lore.dig_entry.exchange.3"
+  ],
+  "found": [
+    "Arc meets a heavy hit: the charge overloads in a burst. Elites and bosses take the full burst."
+  ],
+  "found_categories": {
+    "Arc meets a heavy hit: the charge overloads in a burst. Elites and bosses take the full burst.": "build"
+  }
+}

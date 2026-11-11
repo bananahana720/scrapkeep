@@ -1,0 +1,16 @@
+{"category":"enemy","heft":1.02666666666667,"id":"counter_ram","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-2876","stage":1,"stage_ticks":6536}
+{"category":"enemy","heft":1.12888888888889,"id":"kest_cable_charge","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-2876","stage":1,"stage_ticks":7022}
+{"category":"enemy","heft":1.35333333333333,"id":"crush_chain","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-2876","stage":1,"stage_ticks":8179}
+{"category":"world","heft":1.65111111111111,"id":"steam_thermal","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-2876","stage":1,"stage_ticks":10580}
+{"category":"enemy","heft":1.69555555555556,"id":"set_piece","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-2876","stage":1,"stage_ticks":11054}
+{"category":"enemy","heft":1.74,"id":"kest_windhover","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-2876","stage":1,"stage_ticks":11055}
+{"category":"enemy","heft":2.02222222222222,"id":"plate_peel","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-2876","stage":1,"stage_ticks":11658}
+{"category":"build","heft":2.08,"id":"spare","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-2876","stage":1,"stage_ticks":11659}
+{"category":"enemy","heft":2.19333333333333,"id":"shell_return","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-2876","stage":1,"stage_ticks":12060}
+{"category":"enemy","heft":2.23888888888889,"id":"heavy_roll","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-2876","stage":1,"stage_ticks":15479}
+{"category":"enemy","heft":2.28333333333333,"id":"warden_shatter","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-2876","stage":1,"stage_ticks":15619}
+{"category":"world","heft":2.55888888888889,"id":"sprint_through","kind":"discovered","participants":["player"],"parts":["gatling_heart"],"run_id":"bot-2876","stage":2,"stage_ticks":6922}
+{"category":"enemy","heft":3.30111111111111,"id":"chain","kind":"discovered","participants":["player"],"parts":["gatling_heart"],"run_id":"bot-2876","stage":2,"stage_ticks":12996}
+{"category":"enemy","heft":3.39,"id":"slag_hop","kind":"discovered","participants":["player"],"parts":["gatling_heart"],"run_id":"bot-2876","stage":2,"stage_ticks":13103}
+{"category":"build","heft":3.94333333333333,"id":"pinwheel","kind":"discovered","participants":["player"],"parts":["gatling_heart","spiral_wave"],"run_id":"bot-2876","stage":2,"stage_ticks":329}
+{"category":"enemy","heft":3.79888888888889,"id":"brindle_crane_drop","kind":"discovered","participants":["player"],"parts":["gatling_heart","spiral_wave"],"run_id":"bot-2876","stage":2,"stage_ticks":940}

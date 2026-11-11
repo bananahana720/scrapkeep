@@ -1,0 +1,193 @@
+{
+  "generation": 3,
+  "run": {
+    "bonus_cores": 0,
+    "camera_yaw": -2.879793250335259,
+    "class_id": "demolitions_caster",
+    "class_rewarded": 5,
+    "cogs": 1930,
+    "companion": {
+      "chassis": "spil9",
+      "escape_ready": true,
+      "escape_spent": false,
+      "owned": [
+        "escape_vent",
+        "ram_prow"
+      ],
+      "sockets": []
+    },
+    "death_save_spent": false,
+    "entry_position": [
+      -560.0,
+      66.34466552734375,
+      -770.0
+    ],
+    "entry_velocity": [
+      1.6708260774612427,
+      0.0,
+      6.235607147216797
+    ],
+    "events_won": [],
+    "heft_class": 4,
+    "hotwire": {
+      "id": "riveted_shell",
+      "spent": true,
+      "state": "fit",
+      "world": 1
+    },
+    "hp": 111.0,
+    "kills": 62,
+    "mass": 1508.5,
+    "max_hp": 111.0,
+    "panels": [
+      "dunk_tank",
+      "cell_bracket",
+      "hull_tile",
+      "splash_skirt",
+      "splash_skirt",
+      "punch_rivet",
+      "hull_tile",
+      "fin_plate",
+      "ratchet_collar",
+      "dunk_tank",
+      "dunk_tank",
+      "range_sight"
+    ],
+    "parts": [
+      "gatling_heart",
+      "spiral_wave",
+      "glide_vane",
+      "chain_arc",
+      "gatling_heart",
+      "admirals_crest"
+    ],
+    "pocket_draw_cache": {
+      "1": {
+        "sites": [
+          {
+            "at": [
+              232.0,
+              -456.0
+            ],
+            "interior": "groove_vault",
+            "node": 8772,
+            "turn": 1
+          }
+        ]
+      },
+      "2": {
+        "sites": [
+          {
+            "at": [
+              176.0,
+              168.0
+            ],
+            "interior": "braced_yard",
+            "node": 24443,
+            "turn": 2
+          }
+        ]
+      },
+      "3": {
+        "sites": [
+          {
+            "at": [
+              384.0,
+              0.0
+            ],
+            "interior": "round_foundry",
+            "node": 20248,
+            "turn": 1
+          },
+          {
+            "at": [
+              -8.0,
+              -680.0
+            ],
+            "interior": "dome_camp",
+            "node": 3114,
+            "turn": 0
+          }
+        ]
+      }
+    },
+    "relics": {},
+    "retries": 0,
+    "retries_spent": {},
+    "run_id": "bot-2876",
+    "run_tallies": {
+      "deaths": 0,
+      "kills": 62,
+      "stages_cleared": 2,
+      "time": 624.1966666664732,
+      "wardens_seen": 2
+    },
+    "run_time": 624.1966666664732,
+    "schema": 1,
+    "scrap": 1961,
+    "seed": 1598568430,
+    "seen_wardens": [
+      "1/1",
+      "1/2"
+    ],
+    "settled": [
+      "reward:ach_meta_pocket_tint:option",
+      "reward:ach_meta_pocket_tint:option:pocket_tint",
+      "reward:ach_any_set_piece:cosmetic",
+      "reward:ach_any_set_piece:cosmetic:trail_any_downbeat",
+      "reward:ach_d7_moth_tuft:cosmetic",
+      "reward:ach_d7_moth_tuft:cosmetic:trail_moth_tuft",
+      "reward:warden_broken:cosmetic",
+      "reward:warden_broken:cosmetic:paint_any_night",
+      "reward:ach_meta_spare_reroll:option",
+      "reward:ach_meta_spare_reroll:option:spare_reroll",
+      "reward:ach_d7_thimble:cosmetic",
+      "reward:ach_d7_thimble:cosmetic:decal_thimble",
+      "reward:ach_any_curtain_call:cosmetic",
+      "reward:ach_any_curtain_call:cosmetic:decal_curtain_call",
+      "reward:codex_keeper:cosmetic",
+      "reward:codex_keeper:cosmetic:paint_any_moth",
+      "reward:ach_d7_moth_grey:cosmetic",
+      "reward:ach_d7_moth_grey:cosmetic:companion_paint_moth",
+      "reward:ach_d7_ink_stitch:cosmetic",
+      "reward:ach_d7_ink_stitch:cosmetic:trail_ink_stitch",
+      "reward:ach_d7_plum_curl:cosmetic",
+      "reward:ach_d7_plum_curl:cosmetic:trail_plum_curl",
+      "reward:brindle_routed:pilot",
+      "reward:brindle_routed:pilot:tarn",
+      "reward:brindle_mark_kest:item",
+      "reward:brindle_mark_kest:item:ring_wave",
+      "ledger.found.1",
+      "reward:ach_d7_mushroom:cosmetic",
+      "reward:ach_d7_mushroom:cosmetic:decal_mushroom"
+    ],
+    "stage": 3,
+    "start_pick": {
+      "options": [
+        "magnet_spool",
+        "cogs",
+        "core"
+      ],
+      "rerolls_left": 1,
+      "taken": ""
+    },
+    "trade_memory": {
+      "decisions": {},
+      "last_appeared": -100,
+      "last_refused": -100,
+      "last_seen": -100,
+      "offers": {
+        "1": {},
+        "2": {}
+      },
+      "risk_taken": false,
+      "seen": []
+    },
+    "tree_allowed": 2,
+    "tree_late_skipped": false,
+    "tree_picks": [],
+    "wear_accum": 0.40974078802945313,
+    "world": 2
+  },
+  "schema": 1
+}

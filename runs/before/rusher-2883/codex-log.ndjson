@@ -1,0 +1,15 @@
+{"category":"enemy","heft":1.06,"id":"counter_ram","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-2883","stage":1,"stage_ticks":5636}
+{"category":"enemy","heft":1.37111111111111,"id":"crush_chain","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-2883","stage":1,"stage_ticks":7197}
+{"category":"enemy","heft":1.65777777777778,"id":"set_piece","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-2883","stage":1,"stage_ticks":9021}
+{"category":"enemy","heft":1.70222222222222,"id":"mat_slip","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-2883","stage":1,"stage_ticks":9047}
+{"category":"enemy","heft":1.77777777777778,"id":"plate_peel","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-2883","stage":1,"stage_ticks":10740}
+{"category":"build","heft":1.83777777777778,"id":"spare","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-2883","stage":1,"stage_ticks":10741}
+{"category":"build","heft":2.01555555555556,"id":"strike","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-2883","stage":1,"stage_ticks":11242}
+{"category":"enemy","heft":2.21111111111111,"id":"warden_shatter","kind":"discovered","participants":["player"],"parts":[],"run_id":"bot-2883","stage":1,"stage_ticks":13908}
+{"category":"enemy","heft":2.66,"id":"chain","kind":"discovered","participants":["player"],"parts":["sunforged_core"],"run_id":"bot-2883","stage":2,"stage_ticks":6906}
+{"category":"world","heft":2.75111111111111,"id":"sprint_through","kind":"discovered","participants":["player"],"parts":["sunforged_core"],"run_id":"bot-2883","stage":2,"stage_ticks":6929}
+{"category":"enemy","heft":3.15777777777778,"id":"tarn_redjaw_rend","kind":"discovered","participants":["player"],"parts":["sunforged_core"],"run_id":"bot-2883","stage":2,"stage_ticks":9439}
+{"category":"enemy","heft":3.32444444444444,"id":"set_piece_core","kind":"discovered","participants":["player"],"parts":["sunforged_core"],"run_id":"bot-2883","stage":2,"stage_ticks":13269}
+{"category":"enemy","heft":3.60444444444444,"id":"brindle_crane_drop","kind":"discovered","participants":["player"],"parts":["sunforged_core","horizon_optic"],"run_id":"bot-2883","stage":2,"stage_ticks":811}
+{"category":"enemy","heft":3.81555555555556,"id":"loaded_line","kind":"discovered","participants":["player"],"parts":["sunforged_core","horizon_optic"],"run_id":"bot-2883","stage":2,"stage_ticks":817}
+{"category":"enemy","heft":3.90444444444444,"id":"tarn_claw_drag","kind":"discovered","participants":["player"],"parts":["sunforged_core","horizon_optic"],"run_id":"bot-2883","stage":2,"stage_ticks":818}

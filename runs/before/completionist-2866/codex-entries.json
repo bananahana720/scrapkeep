@@ -1,0 +1,692 @@
+[
+  {
+    "category": "world",
+    "clue": "",
+    "id": "spillway_gallery_cache",
+    "name": "Spillway gallery cache"
+  },
+  {
+    "category": "world",
+    "clue": "Arc + flood water + machines in it",
+    "id": "live_wire_flood",
+    "name": "Live Wire"
+  },
+  {
+    "category": "world",
+    "clue": "Surge Run gate + blazing speed",
+    "id": "surge_slingshot",
+    "name": "Surge Slingshot"
+  },
+  {
+    "category": "world",
+    "clue": "Kicker + slam",
+    "id": "sluice_hammer",
+    "name": "Sluice Hammer"
+  },
+  {
+    "category": "world",
+    "clue": "Dust squall at your back + a jump",
+    "id": "squall_sail",
+    "name": "Squall Sail"
+  },
+  {
+    "category": "world",
+    "clue": "Frost + flood water + rolling across",
+    "id": "ice_bridge",
+    "name": "Ice Bridge"
+  },
+  {
+    "category": "world",
+    "clue": "Glide + steam vent",
+    "id": "steam_thermal",
+    "name": "Thermal"
+  },
+  {
+    "category": "world",
+    "clue": "Overdrive sprint + cracked wall",
+    "id": "sprint_through",
+    "name": "Through the Crack"
+  },
+  {
+    "category": "world",
+    "clue": "Pressure valve + reactor vent, from outside its ring",
+    "id": "do_not_open_until_clear",
+    "name": "Do Not Open Until Clear"
+  },
+  {
+    "category": "world",
+    "clue": "Moss's rim track under par",
+    "id": "pit_stop_lap",
+    "name": "Pit Stop"
+  },
+  {
+    "category": "world",
+    "clue": "Ram the valve on the Reach's west shelf + the copper door",
+    "id": "reach_pressure_cache",
+    "name": "Pressure keeps the change"
+  },
+  {
+    "category": "world",
+    "clue": "The Dig's marked breach plate + a slam through to the floor below",
+    "id": "breach_plate",
+    "name": "Down Payment"
+  },
+  {
+    "category": "world",
+    "clue": "A fall from a Highdraft island + landing on the net deck",
+    "id": "net_deck",
+    "name": "The Safety Net"
+  },
+  {
+    "category": "world",
+    "clue": "Ride a Highdraft thermal + reach an island above",
+    "id": "thermal_lift",
+    "name": "Updraft Fare"
+  },
+  {
+    "category": "world",
+    "clue": "Board a moving Highdraft island + ride it to a crossing",
+    "id": "moving_island",
+    "name": "All Aboard"
+  },
+  {
+    "category": "enemy",
+    "clue": "a lobber's shell + something that meets it in the air",
+    "id": "shell_return",
+    "name": "Return to Sender"
+  },
+  {
+    "category": "enemy",
+    "clue": "a chaser's wind-up + a ram",
+    "id": "counter_ram",
+    "name": "Counter-ram"
+  },
+  {
+    "category": "enemy",
+    "clue": "a hooked machine + a wall + another machine, feet off the floor",
+    "id": "chain",
+    "name": "Chain"
+  },
+  {
+    "category": "enemy",
+    "clue": "heft + three rams in a heartbeat",
+    "id": "crush_chain",
+    "name": "Rolling Tide"
+  },
+  {
+    "category": "enemy",
+    "clue": "a slingshot + a kill",
+    "id": "parting_shot",
+    "name": "Parting Shot"
+  },
+  {
+    "category": "enemy",
+    "clue": "a hooker's tether + more speed than it can take",
+    "id": "tether_snap",
+    "name": "Slingshot Snap"
+  },
+  {
+    "category": "enemy",
+    "clue": "a deflector's bounce + a jump",
+    "id": "shield_vault",
+    "name": "Off the Dish"
+  },
+  {
+    "category": "enemy",
+    "clue": "a scattered swarm + another machine",
+    "id": "awaiting_operator",
+    "name": "Awaiting Operator"
+  },
+  {
+    "category": "enemy",
+    "clue": "a fitter at a hatch + a reel impact",
+    "id": "plate_drop",
+    "name": "Maintenance Crew"
+  },
+  {
+    "category": "enemy",
+    "clue": "one of the Mind's hands + your favourite move",
+    "id": "what_it_learned",
+    "name": "What It Learned"
+  },
+  {
+    "category": "enemy",
+    "clue": "a burrower's swelling ring + a wall or a jump",
+    "id": "burrow_lane",
+    "name": "Off the Floor"
+  },
+  {
+    "category": "enemy",
+    "clue": "a drill crew mid-bore + a smash",
+    "id": "bore_breach",
+    "name": "Stop the Bore"
+  },
+  {
+    "category": "enemy",
+    "clue": "a lamp swarm's blooming ring + a straight boost",
+    "id": "lure_bloom",
+    "name": "Through the Light"
+  },
+  {
+    "category": "enemy",
+    "clue": "a pit jaw's open ring + a slam from above",
+    "id": "jaw_slam",
+    "name": "Shut Its Mouth"
+  },
+  {
+    "category": "enemy",
+    "clue": "a jolt layer's live mat + speed, the air or a line as it pulses",
+    "id": "mat_slip",
+    "name": "Slip the Mat"
+  },
+  {
+    "category": "enemy",
+    "clue": "a ramp flipper's tilting flap + top speed, or a jump on the tilt",
+    "id": "flap_ride",
+    "name": "Ride the Flap"
+  },
+  {
+    "category": "enemy",
+    "clue": "a hooker's tether + a harpoon hook on a post or a wall",
+    "id": "hook_out",
+    "name": "Hook Out"
+  },
+  {
+    "category": "enemy",
+    "clue": "a boom tender's sweep + top speed through its floats",
+    "id": "boom_pop",
+    "name": "Bowl Through"
+  },
+  {
+    "category": "enemy",
+    "clue": "a boom tender's fresh boom + all five floats in one pass",
+    "id": "boom_strike",
+    "name": "Strike"
+  },
+  {
+    "category": "enemy",
+    "clue": "a cutter crossing your line over a gap + a glide under it, or a fresh hook at once",
+    "id": "line_cut",
+    "name": "Under the Cutter"
+  },
+  {
+    "category": "enemy",
+    "clue": "an anchor crew's cable lane + a jump before the cinch",
+    "id": "deck_winch",
+    "name": "Slip the Hook"
+  },
+  {
+    "category": "enemy",
+    "clue": "a circling kite + an air ram off its thermal, or a dive mark + a roll away",
+    "id": "thermal_dive",
+    "name": "Leave the Mark"
+  },
+  {
+    "category": "enemy",
+    "clue": "a ballast heavy on the rim + a ram while it braces",
+    "id": "ring_out",
+    "name": "Over the Edge"
+  },
+  {
+    "category": "enemy",
+    "clue": "a live net across a gap + a crossing at full swing",
+    "id": "gap_sling",
+    "name": "Faster Than the Net"
+  },
+  {
+    "category": "enemy",
+    "clue": "a Linker's taut cable + a cut",
+    "id": "cable_cut",
+    "name": "Cut the Line"
+  },
+  {
+    "category": "enemy",
+    "clue": "a Shift Boss's horn + the Shift Boss down first",
+    "id": "shift_over",
+    "name": "Shift Over"
+  },
+  {
+    "category": "enemy",
+    "clue": "a prop crew's shored roof + a ram from the wall",
+    "id": "roof_drop",
+    "name": "Bring Down the Roof"
+  },
+  {
+    "category": "enemy",
+    "clue": "a Splitter + a smash from above, or a shot from far off",
+    "id": "split_pop",
+    "name": "Clean Break"
+  },
+  {
+    "category": "enemy",
+    "clue": "a Splitter pod + rolling out of its ring",
+    "id": "fuse_pod",
+    "name": "Out of the Ring"
+  },
+  {
+    "category": "enemy",
+    "clue": "a catch trap's cup + a boost or smash out of it",
+    "id": "cup_break",
+    "name": "Out of the Cup"
+  },
+  {
+    "category": "enemy",
+    "clue": "a Dispatcher's mast + a kill after it has dropped a chaser",
+    "id": "stream_cut",
+    "name": "Cut the Stream"
+  },
+  {
+    "category": "enemy",
+    "clue": "a swatter's paddle + a boost while it has you",
+    "id": "paddle_ride",
+    "name": "Ride the Swat"
+  },
+  {
+    "category": "enemy",
+    "clue": "a mag trapper's pit + heft past its rating, or a jump",
+    "id": "heavy_roll",
+    "name": "Too Heavy to Hold"
+  },
+  {
+    "category": "enemy",
+    "clue": "a plated brute's outer plate + a second breaking hit",
+    "id": "plate_peel",
+    "name": "Second Coat"
+  },
+  {
+    "category": "enemy",
+    "clue": "a winch drone's cable + a jump, boost or smash",
+    "id": "cable_snap",
+    "name": "Snap the Cable"
+  },
+  {
+    "category": "enemy",
+    "clue": "a Warden's full posture bar + a hit on the open core",
+    "id": "warden_shatter",
+    "name": "Crack the Clamp"
+  },
+  {
+    "category": "enemy",
+    "clue": "a meltdown Warden's slag lane + a jump across it",
+    "id": "slag_hop",
+    "name": "Over the Slag"
+  },
+  {
+    "category": "enemy",
+    "clue": "a brood Warden's lamp guard + every lamp down",
+    "id": "brood_dark",
+    "name": "Lights Out"
+  },
+  {
+    "category": "enemy",
+    "clue": "a choir Warden's open lens + a move it has not braced",
+    "id": "choir_switch",
+    "name": "Change the Tune"
+  },
+  {
+    "category": "enemy",
+    "clue": "a cast with no line out + the next hook",
+    "id": "loaded_line",
+    "name": "Loaded Line"
+  },
+  {
+    "category": "enemy",
+    "clue": "a full ultimate meter",
+    "id": "set_piece",
+    "name": "First Ultimate"
+  },
+  {
+    "category": "enemy",
+    "clue": "a Warden's open core + an ultimate landing",
+    "id": "set_piece_core",
+    "name": "Curtain Call"
+  },
+  {
+    "category": "enemy",
+    "clue": "a chain of three or more + an ultimate landing",
+    "id": "set_piece_cash_in",
+    "name": "Cash In"
+  },
+  {
+    "category": "enemy",
+    "clue": "a hostile hold + your ultimate",
+    "id": "set_piece_breakout",
+    "name": "Breakout"
+  },
+  {
+    "category": "enemy",
+    "clue": "any hit on a plated crew",
+    "id": "armour_plated",
+    "name": "Plated"
+  },
+  {
+    "category": "enemy",
+    "clue": "an arc hit on a Spillway crew",
+    "id": "armour_wet",
+    "name": "Soaked"
+  },
+  {
+    "category": "enemy",
+    "clue": "a standing line + pick 3",
+    "id": "bank_shot",
+    "name": "Bank Shot"
+  },
+  {
+    "category": "enemy",
+    "clue": "a full ring",
+    "id": "cable_run",
+    "name": "Cable Run"
+  },
+  {
+    "category": "enemy",
+    "clue": "a standing stake + Bank Shot",
+    "id": "switchback",
+    "name": "Switchback"
+  },
+  {
+    "category": "enemy",
+    "clue": "three Cable Run landings in one run",
+    "id": "sable_cable_runs",
+    "name": "Cable Runner"
+  },
+  {
+    "category": "enemy",
+    "clue": "Rivet + pick 3 + a line on a machine",
+    "id": "rivet_line_drive",
+    "name": "Line Drive"
+  },
+  {
+    "category": "enemy",
+    "clue": "Rivet + a full ring",
+    "id": "rivet_foundry_cutter",
+    "name": "Foundry Cutter"
+  },
+  {
+    "category": "enemy",
+    "clue": "ten Line Drive punches + one stage",
+    "id": "rivet_line_true",
+    "name": "Line True"
+  },
+  {
+    "category": "enemy",
+    "clue": "Rivet + thirty ignored holds and knocks + one run",
+    "id": "rivet_shrugged",
+    "name": "Shrugged Off"
+  },
+  {
+    "category": "enemy",
+    "clue": "pick 3 + a click while hooked, or just before the hook",
+    "id": "kest_cable_charge",
+    "name": "Cable Charge"
+  },
+  {
+    "category": "enemy",
+    "clue": "a full ring + open sky over where you aim",
+    "id": "kest_windhover",
+    "name": "Windhover"
+  },
+  {
+    "category": "enemy",
+    "clue": "a Cable Charge on a wall + let go close + jump held",
+    "id": "kest_blast_vault",
+    "name": "Blast Vault"
+  },
+  {
+    "category": "enemy",
+    "clue": "Kest + the Highdraft",
+    "id": "kest_homecoming",
+    "name": "Homecoming"
+  },
+  {
+    "category": "enemy",
+    "clue": "Windhover + eight different machines",
+    "id": "kest_tick_tick_boom",
+    "name": "Tick, Tick, Boom"
+  },
+  {
+    "category": "enemy",
+    "clue": "a hooked machine + pick 3 + a click",
+    "id": "tarn_claw_drag",
+    "name": "Claw Drag"
+  },
+  {
+    "category": "enemy",
+    "clue": "a full ring + machines near the line",
+    "id": "tarn_redjaw_rend",
+    "name": "Redjaw Rend"
+  },
+  {
+    "category": "enemy",
+    "clue": "ten different machines + claw drag + one stage",
+    "id": "tarn_dragged",
+    "name": "Ten in the Claws"
+  },
+  {
+    "category": "enemy",
+    "clue": "three hostile holds + Redjaw Rend + one run",
+    "id": "tarn_hold_still",
+    "name": "Hold Still"
+  },
+  {
+    "category": "enemy",
+    "clue": "a harpoon hook + the ledger clip on three machines",
+    "id": "tally_skim",
+    "name": "Skim"
+  },
+  {
+    "category": "enemy",
+    "clue": "six clips + one Plate Return landing",
+    "id": "tally_books_balanced",
+    "name": "Books Balanced"
+  },
+  {
+    "category": "enemy",
+    "clue": "the ledger clip + ten casts + one stage",
+    "id": "tally_punch_tape",
+    "name": "Punch Tape"
+  },
+  {
+    "category": "enemy",
+    "clue": "twenty settled clips + Plate Return + one run",
+    "id": "tally_eyeshade",
+    "name": "Eyeshade"
+  },
+  {
+    "category": "enemy",
+    "clue": "a standing line + pick 3",
+    "id": "cannon_lane_charge",
+    "name": "Lane Charge"
+  },
+  {
+    "category": "enemy",
+    "clue": "a full ring + open ground ahead",
+    "id": "cannon_fire_mission",
+    "name": "Fire Mission"
+  },
+  {
+    "category": "enemy",
+    "clue": "a line + the barrage",
+    "id": "cannon_creeping_barrage",
+    "name": "Creeping Barrage"
+  },
+  {
+    "category": "enemy",
+    "clue": "a high lob + plates + the landing",
+    "id": "cannon_plate_mortar",
+    "name": "Plate Mortar"
+  },
+  {
+    "category": "enemy",
+    "clue": "lane, split, rush, plate",
+    "id": "cannon_recital",
+    "name": "Recital"
+  },
+  {
+    "category": "enemy",
+    "clue": "Fire Mission + a crowd",
+    "id": "cannon_time_on_target",
+    "name": "Time on Target"
+  },
+  {
+    "category": "enemy",
+    "clue": "the Mind + its own gun",
+    "id": "cannon_old_tune",
+    "name": "Old Tune"
+  },
+  {
+    "category": "enemy",
+    "clue": "the Mind's rim, listening",
+    "id": "mind_quiet_gun",
+    "name": "The Quiet Gun"
+  },
+  {
+    "category": "enemy",
+    "clue": "a crane holding your scrap + a shot",
+    "id": "brindle_crane_drop",
+    "name": "Requisition Denied"
+  },
+  {
+    "category": "enemy",
+    "clue": "a charge lane + the rim wall behind you",
+    "id": "brindle_wall_bait",
+    "name": "Rim Shot"
+  },
+  {
+    "category": "enemy",
+    "clue": "a rim water vent + live slag",
+    "id": "brindle_quench_ride",
+    "name": "Cold Crossing"
+  },
+  {
+    "category": "enemy",
+    "clue": "the eject scooter + a fall from above",
+    "id": "brindle_scooter_stomp",
+    "name": "Boarding Party"
+  },
+  {
+    "category": "enemy",
+    "clue": "a Waking damage chunk + the next floor down",
+    "id": "waking_floor_drop",
+    "name": "Going Down"
+  },
+  {
+    "category": "enemy",
+    "clue": "a dropped floor + a slam on the Waking within two seconds",
+    "id": "waking_breach_slam",
+    "name": "Knock Downstairs"
+  },
+  {
+    "category": "enemy",
+    "clue": "breach slams on two different Waking floors",
+    "id": "waking_floor_chain",
+    "name": "Repeat Descent"
+  },
+  {
+    "category": "enemy",
+    "clue": "the Waking's final floor + the finishing hit",
+    "id": "waking_final_floor",
+    "name": "Rock Bottom"
+  },
+  {
+    "category": "enemy",
+    "clue": "a jammed bore drill + a slam straight off a carve",
+    "id": "waking_lip_drop",
+    "name": "Off the Lip"
+  },
+  {
+    "category": "enemy",
+    "clue": "a burrow lane, a cave-in and a bore breach + carving through each",
+    "id": "waking_wall_home",
+    "name": "The Wall Is Home"
+  },
+  {
+    "category": "enemy",
+    "clue": "the Mind's lane + a sidestep outside it before release",
+    "id": "mind_lane",
+    "name": "A Different Line"
+  },
+  {
+    "category": "enemy",
+    "clue": "the Mind's split_lane + an escape outside both lanes",
+    "id": "mind_split_lane",
+    "name": "Third Opinion"
+  },
+  {
+    "category": "enemy",
+    "clue": "the Mind's rush ring + move inward or outward before release",
+    "id": "mind_rush",
+    "name": "Change of Radius"
+  },
+  {
+    "category": "enemy",
+    "clue": "the Mind's plate + a different contact verb on its staggered Warden",
+    "id": "mind_plate",
+    "name": "Second Tool"
+  },
+  {
+    "category": "world",
+    "clue": "A seeping, dripping cracked face on the west rim bench or the powerhouse deck + a ram at speed",
+    "id": "spillway_turbine_seep",
+    "name": "Where the Water Got In"
+  },
+  {
+    "category": "world",
+    "clue": "A tune through a cracked wall on the east rim bench or at the north tip of the far slot fin + a ram at speed",
+    "id": "spillway_shift_radio",
+    "name": "Still On Air"
+  },
+  {
+    "category": "build",
+    "clue": "something heavy",
+    "id": "lightning_rod",
+    "name": "Lightning Rod"
+  },
+  {
+    "category": "build",
+    "clue": "something that sparks",
+    "id": "tesla_pylon",
+    "name": "Tesla Pylon"
+  },
+  {
+    "category": "build",
+    "clue": "something that hits hard",
+    "id": "wrecking_ball",
+    "name": "Wrecking Ball"
+  },
+  {
+    "category": "build",
+    "clue": "something that hits hard",
+    "id": "shrapnel_bloom",
+    "name": "Shrapnel Bloom"
+  },
+  {
+    "category": "build",
+    "clue": "something fast",
+    "id": "pinwheel",
+    "name": "Pinwheel"
+  },
+  {
+    "category": "build",
+    "clue": "+ three down from one knock",
+    "id": "strike",
+    "name": "Strike"
+  },
+  {
+    "category": "build",
+    "clue": "+ the one that bounced you",
+    "id": "spare",
+    "name": "Spare"
+  },
+  {
+    "category": "build",
+    "clue": "+ two more inside 4 s",
+    "id": "turkey",
+    "name": "Turkey"
+  },
+  {
+    "category": "build",
+    "clue": "+ come back heavier",
+    "id": "too_heavy_for_you",
+    "name": "Too heavy for you"
+  }
+]
