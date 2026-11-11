@@ -12,7 +12,7 @@ const UiFonts := preload("res://src/ui/ui_fonts.gd")
 
 const CAP_H := 24.0
 const FONT := UiTokens.BODY
-const GAP := 10.0
+const GAP := float(UiTokens.GAP_S)
 
 var parts: Array = []
 

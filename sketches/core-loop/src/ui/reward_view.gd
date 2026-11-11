@@ -176,9 +176,9 @@ func _draw_card(base: Transform2D, t: float, alpha: float) -> void:
 		draw_texture_rect(Icons.texture(e), Rect2(own + Vector2(12.0, 10.0), Vector2(22.0, 22.0)), false, _faded(Icons.tint(e, Palette.SAND), alpha))
 	var link := String(card.get("link", ""))
 	var text_w := CARD.x - 92.0 - (52.0 if link != "" else 16.0)
-	var name_size := 22 if UiFonts.width(String(card["name"]), UiTokens.LABEL) <= text_w else 17
-	_text(Vector2(92.0, 40.0), String(card["name"]), name_size, _faded(Color.WHITE, alpha), text_w)
-	_text(Vector2(92.0, 68.0), String(card["verb"]), 16 if UiFonts.width(String(card["verb"]), UiTokens.BODY) <= text_w else 13, _faded(Palette.SAND, alpha * 0.9), text_w)
+	var name_size := UiTokens.LABEL if UiFonts.width(String(card["name"]), UiTokens.LABEL) <= text_w else UiTokens.BODY
+	_text(Vector2(92.0, 40.0), String(card["name"]), name_size, _faded(UiTokens.TEXT, alpha), text_w)
+	_text(Vector2(92.0, 68.0), String(card["verb"]), UiTokens.BODY if UiFonts.width(String(card["verb"]), UiTokens.BODY) <= text_w else UiTokens.CAPTION, _faded(Palette.SAND, alpha * 0.9), text_w)
 	if link != "":
 		_draw_link(own, t, alpha, yours, tint, link == "lit")
 	_stamp(base, Vector2(CARD.x - 8.0, -8.0), String(card.get("stamp", "")), tint, alpha)

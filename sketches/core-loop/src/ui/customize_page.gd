@@ -320,8 +320,8 @@ func _slot_row() -> Button:
 	row.add_theme_font_override("font", UiFonts.bold())
 	row.add_theme_font_size_override("font_size", UiTokens.BODY)
 	row.add_theme_color_override("font_color", Palette.SAND)
-	row.add_theme_color_override("font_hover_color", Color.WHITE)
-	row.add_theme_color_override("font_focus_color", Color.WHITE)
+	row.add_theme_color_override("font_hover_color", UiTokens.TEXT)
+	row.add_theme_color_override("font_focus_color", UiTokens.TEXT)
 	for pair in [["normal", UiTokens.LINE, 2, true], ["hover", Palette.SAND, 2, true], ["pressed", Palette.AMBER, 3, true], ["focus", Palette.SAND, 4, false]]:
 		var box: StyleBoxFlat = ChoiceButton.plate(pair[1], pair[2], 14.0, pair[3])
 		box.content_margin_top = 4.0

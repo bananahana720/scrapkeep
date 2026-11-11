@@ -33,7 +33,7 @@ const WORD_FONT := UiTokens.CAPTION
 const WORD_GAP := 2.0
 # Room after the word for its outline, which touched the plate's border and rivet on the PC.
 const WORD_PAD := 6.0
-# A step that has just lit blinks with its word for this long, at this rate, so the eye finds
+# A step that has just lit blinks for this long, at this rate, so the eye finds
 # the meter the moment the threat rises: no toast says so (the rise is below the toast line).
 const RISE_BLINK := 1.5
 const RISE_HZ := 3.0
@@ -99,7 +99,7 @@ func _draw() -> void:
 
 	var threat_color := EventKinds.color("threat_rose")
 	var foot := size.y - 1.0
-	# The newest step and the word, bone on the blink's beat while a rise is fresh.
+	# The newest step, bone on the blink's beat while a rise is fresh.
 	var bright := Palette.SAND if rising() and fmod(_rise_left * RISE_HZ, 1.0) >= 0.5 else threat_color
 	draw_texture_rect(Icons.texture("res_difficulty"), Rect2(Vector2(4.0, foot - 12.0), Vector2(14.0, 14.0)), false, Icons.tint("res_difficulty", threat_color))
 	for i in steps():

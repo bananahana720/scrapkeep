@@ -19,7 +19,7 @@ const STEPS := 10
 const SEG_W := 12.0
 const SEG_GAP := 4.0
 const ARROW := 56.0
-const PAD := 14.0
+const PAD := float(UiTokens.GAP_L)
 const GLYPH := 26.0
 const HEIGHT := UiTokens.TARGET
 

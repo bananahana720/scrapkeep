@@ -509,7 +509,7 @@ func _draw_ladder() -> void:
 	var selected: int = _run.selected_run_tier()
 	var looked := _looked_tier()
 	var top := RunTier.top_unlocked(_profile)
-	UiDraw.text(self, _pip_centre(0).x - RUNG * 0.5 - GAP - UiDraw.width(TIER_WORD, UiTokens.BODY), row_y, TIER_WORD, 20, Palette.SAND)
+	UiDraw.text(self, _pip_centre(0).x - RUNG * 0.5 - GAP - UiDraw.width(TIER_WORD, UiTokens.BODY), row_y, TIER_WORD, UiTokens.BODY, Palette.SAND)
 	for tier in RunTier.TOP + 1:
 		var at := _pip_centre(tier)
 		var numeral := str(tier) if tier == selected or tier == looked else ""

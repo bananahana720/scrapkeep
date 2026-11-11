@@ -204,6 +204,11 @@ func helper_text() -> String:
 	return _helper.text
 
 
+# The line under a waiting or refused field, or "" while none shows.
+func notice_text() -> String:
+	return _notice.text if _notice.visible else ""
+
+
 func _build_controls() -> void:
 	for verb in VERBS:
 		var group := VBoxContainer.new()

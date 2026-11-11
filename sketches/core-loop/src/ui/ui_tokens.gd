@@ -1,11 +1,10 @@
 extends RefCounted
 
 const Palette := preload("res://src/core/palette.gd")
-const UiTokens := preload("res://src/ui/ui_tokens.gd")
 const UiFonts := preload("res://src/ui/ui_fonts.gd")
 
 # The menu and HUD tokens: one spacing scale, one type scale and five colours. Every size and
-# gap the UI sets comes from here, and every plate, word, edge and ring the menus draw wears
+# gap the UI sets names one of these (ui_tokens_test scans the literal ones), and every plate, word, edge and ring the menus draw wears
 # one of the five colours (an alpha of one counts as that colour). No gradients.
 #
 # The colour law (design-v3/LEGIBILITY.md section 1) and the item tiers (grey, mint, cobalt,
@@ -15,7 +14,6 @@ const UiFonts := preload("res://src/ui/ui_fonts.gd")
 # Sizes are at the project's 1600x900 canvas; the canvas stretch scales them with the window.
 
 # Spacing scale, in px. Gaps, padding and separations take one of these.
-const SPACE := [0, 4, 8, 12, 16, 24, 32, 48]
 const GAP_XS := 4
 const GAP_S := 8
 const GAP_M := 12
@@ -23,6 +21,8 @@ const GAP_L := 16
 const GAP_XL := 24
 const GAP_XXL := 32
 const GAP_XXXL := 48
+# The scale as one list, for a check that a size sits on it.
+const SPACE := [0, GAP_XS, GAP_S, GAP_M, GAP_L, GAP_XL, GAP_XXL, GAP_XXXL]
 
 # Type scale, in px. Five steps; nothing smaller than CAPTION.
 const CAPTION := 14

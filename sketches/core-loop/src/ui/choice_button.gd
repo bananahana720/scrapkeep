@@ -11,7 +11,7 @@ const UiFonts := preload("res://src/ui/ui_fonts.gd")
 # choice for the mouse.
 
 const KEY_H := 26.0
-const PAD := 14.0
+const PAD := float(UiTokens.GAP_L)
 
 var key := ""
 var action := ""
@@ -36,6 +36,11 @@ func _init(action_id := "", key_id := "", words := "") -> void:
 	_plates()
 	custom_minimum_size = Vector2(0.0, UiTokens.TARGET)
 	_name_for_readers()
+
+
+# Godot turns processing on for a script with _process; the dots need it only while waiting.
+func _ready() -> void:
+	set_process(waiting)
 
 
 # A screen reader hears the choice's words, or the cap's name on a cap-only button.
@@ -117,18 +122,11 @@ func _plates() -> void:
 	add_theme_stylebox_override("disabled", plate(UiTokens.disabled(UiTokens.LINE), 2, left))
 
 
+# The tokens' plate, inset on the left for the key's cap.
 static func plate(edge: Color, width: int, left: float, fill := true) -> StyleBoxFlat:
-	var box := StyleBoxFlat.new()
-	box.draw_center = fill
-	box.bg_color = Color(Palette.CHARCOAL, 0.9)
-	box.border_color = edge
-	box.set_border_width_all(width)
-	box.set_corner_radius_all(6)
-	box.corner_detail = 1
+	var box := UiTokens.plate(edge, width, fill)
 	box.content_margin_left = left
 	box.content_margin_right = PAD * 1.5
-	box.content_margin_top = 8.0
-	box.content_margin_bottom = 8.0
 	return box
 
 

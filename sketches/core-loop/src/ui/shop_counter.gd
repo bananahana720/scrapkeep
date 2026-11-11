@@ -106,8 +106,8 @@ func _init() -> void:
 		b.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 		b.add_theme_color_override("icon_normal_color", Color(EventKinds.LOOT_ROWS[f[1]]["color"], 0.6))
 		b.add_theme_color_override("icon_pressed_color", EventKinds.LOOT_ROWS[f[1]]["color"])
-		b.add_theme_color_override("icon_hover_color", Color.WHITE)
-		b.add_theme_color_override("icon_focus_color", Color.WHITE)
+		b.add_theme_color_override("icon_hover_color", UiTokens.TEXT)
+		b.add_theme_color_override("icon_focus_color", UiTokens.TEXT)
 		for state in ["normal", "hover", "pressed", "focus", "disabled"]:
 			b.add_theme_stylebox_override(state, ChoiceButton.plate(Palette.SAND if state in ["hover", "focus"] else UiTokens.LINE, 3 if state == "focus" else 2, 8.0, state != "focus"))
 		b.pressed.connect(set_face.bind(f[0]))

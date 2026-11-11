@@ -101,7 +101,7 @@ func _draw() -> void:
 	draw_string(font, Vector2(x, 21.0), String(_read.get("call", "")), HORIZONTAL_ALIGNMENT_LEFT, -1, UiTokens.BODY, edge)
 	var dial_words := String(_read.get("dial", ""))
 	if dial_words != "":
-		draw_string(font, Vector2(x + UiFonts.width(String(_read.get("call", "")), 19) + 8.0, 21.0), dial_words, HORIZONTAL_ALIGNMENT_LEFT, -1, UiTokens.CAPTION, UiTokens.quiet())
+		draw_string(font, Vector2(x + UiFonts.width(String(_read.get("call", "")), UiTokens.BODY) + 8.0, 21.0), dial_words, HORIZONTAL_ALIGNMENT_LEFT, -1, UiTokens.CAPTION, UiTokens.quiet())
 	var meter_w := 4.0 * 7.0
 	var line_w := size.x - x - meter_w - 18.0
 	draw_string(font, Vector2(x, 39.0), String(_read.get("line", "")), HORIZONTAL_ALIGNMENT_LEFT, line_w, UiTokens.CAPTION, UiTokens.quiet() if off else Palette.SAND)
