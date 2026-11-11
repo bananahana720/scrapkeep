@@ -76,10 +76,110 @@
  "runs": [
   {
    "seed": 2860,
+   "pilot": "tally",
    "seconds": 498,
    "hp_max_first": 90,
    "hp_max_last": 119,
    "hp_lowest": 44.8,
+   "hp_lowest_at": 155,
+   "hp_max_at_lowest": 90,
+   "minutes": [
+    {
+     "minute": 0,
+     "stage": 1,
+     "lessons": [
+      "objective:find_warden",
+      "prompt:boost",
+      "prompt:roll",
+      "prompt:tip_radio",
+      "prompt:harpoon",
+      "prompt:tip_active",
+      "prompt:tip_grip",
+      "prompt:tip_cast"
+     ],
+     "damage": 0,
+     "hp_max": 90
+    },
+    {
+     "minute": 1,
+     "stage": 1,
+     "lessons": [
+      "objective:break_yard_crew"
+     ],
+     "damage": 0,
+     "hp_max": 90
+    },
+    {
+     "minute": 2,
+     "stage": 1,
+     "lessons": [
+      "prompt:tip_jam",
+      "objective:break_clamp_crews"
+     ],
+     "damage": 121.5,
+     "hp_max": 98
+    },
+    {
+     "minute": 3,
+     "stage": 1,
+     "lessons": [
+      "prompt:ultimate",
+      "objective:ride_sheet"
+     ],
+     "damage": 36,
+     "hp_max": 103
+    },
+    {
+     "minute": 4,
+     "stage": 2,
+     "lessons": [
+      "objective:roll_gate",
+      "prompt:tip_dunk"
+     ],
+     "damage": 0,
+     "hp_max": 103
+    },
+    {
+     "minute": 5,
+     "stage": 2,
+     "lessons": [],
+     "damage": 9,
+     "hp_max": 103
+    },
+    {
+     "minute": 6,
+     "stage": 2,
+     "lessons": [
+      "prompt:letgo",
+      "objective:line_fight",
+      "prompt:slam",
+      "objective:hold_line",
+      "objective:shoot_magnets"
+     ],
+     "damage": 0,
+     "hp_max": 111
+    },
+    {
+     "minute": 7,
+     "stage": 2,
+     "lessons": [
+      "objective:slam_caps",
+      "objective:bait_charge",
+      "prompt:hint_wall_bait"
+     ],
+     "damage": 16.7,
+     "hp_max": 119
+    },
+    {
+     "minute": 8,
+     "stage": 2,
+     "lessons": [
+      "objective:ram_scooter"
+     ],
+     "damage": 23.4,
+     "hp_max": 119
+    }
+   ],
    "lessons_first_20s": [
     [
      "objective:find_warden",
@@ -239,10 +339,106 @@
   },
   {
    "seed": 2861,
+   "pilot": "remembered_cannon",
    "seconds": 497,
    "hp_max_first": 105,
    "hp_max_last": 140,
    "hp_lowest": 80.8,
+   "hp_lowest_at": 101,
+   "hp_max_at_lowest": 105,
+   "minutes": [
+    {
+     "minute": 0,
+     "stage": 1,
+     "lessons": [
+      "objective:find_warden",
+      "prompt:boost",
+      "prompt:roll",
+      "prompt:tip_radio",
+      "prompt:tip_active",
+      "prompt:tip_grip",
+      "prompt:harpoon"
+     ],
+     "damage": 0,
+     "hp_max": 105
+    },
+    {
+     "minute": 1,
+     "stage": 1,
+     "lessons": [
+      "objective:break_yard_crew"
+     ],
+     "damage": 30,
+     "hp_max": 105
+    },
+    {
+     "minute": 2,
+     "stage": 1,
+     "lessons": [
+      "objective:break_clamp_crews",
+      "prompt:ultimate"
+     ],
+     "damage": 43.5,
+     "hp_max": 115
+    },
+    {
+     "minute": 3,
+     "stage": 2,
+     "lessons": [
+      "objective:ride_sheet",
+      "objective:roll_gate",
+      "prompt:tip_dunk"
+     ],
+     "damage": 0,
+     "hp_max": 115
+    },
+    {
+     "minute": 4,
+     "stage": 2,
+     "lessons": [],
+     "damage": 0,
+     "hp_max": 115
+    },
+    {
+     "minute": 5,
+     "stage": 2,
+     "lessons": [],
+     "damage": 9,
+     "hp_max": 125
+    },
+    {
+     "minute": 6,
+     "stage": 2,
+     "lessons": [
+      "objective:line_fight",
+      "prompt:slam",
+      "objective:hold_line",
+      "objective:shoot_magnets"
+     ],
+     "damage": 20,
+     "hp_max": 130
+    },
+    {
+     "minute": 7,
+     "stage": 2,
+     "lessons": [
+      "objective:slam_caps",
+      "objective:bait_charge",
+      "prompt:hint_wall_bait"
+     ],
+     "damage": 23.4,
+     "hp_max": 140
+    },
+    {
+     "minute": 8,
+     "stage": 2,
+     "lessons": [
+      "objective:ram_scooter"
+     ],
+     "damage": 0,
+     "hp_max": 140
+    }
+   ],
    "lessons_first_20s": [
     [
      "objective:find_warden",
@@ -383,10 +579,92 @@
   },
   {
    "seed": 2862,
+   "pilot": "pylon_engineer",
    "seconds": 381,
    "hp_max_first": 100,
    "hp_max_last": 155,
    "hp_lowest": 100,
+   "hp_lowest_at": 1,
+   "hp_max_at_lowest": 100,
+   "minutes": [
+    {
+     "minute": 0,
+     "stage": 1,
+     "lessons": [
+      "objective:find_warden",
+      "prompt:boost",
+      "prompt:roll",
+      "prompt:tip_radio",
+      "prompt:tip_active",
+      "prompt:harpoon",
+      "prompt:interact",
+      "prompt:tip_grip"
+     ],
+     "damage": 0,
+     "hp_max": 100
+    },
+    {
+     "minute": 1,
+     "stage": 1,
+     "lessons": [
+      "objective:break_yard_crew",
+      "prompt:jump"
+     ],
+     "damage": 0,
+     "hp_max": 110
+    },
+    {
+     "minute": 2,
+     "stage": 2,
+     "lessons": [
+      "objective:break_clamp_crews",
+      "prompt:ultimate",
+      "objective:ride_sheet",
+      "objective:roll_gate",
+      "prompt:tip_dunk"
+     ],
+     "damage": 56,
+     "hp_max": 130
+    },
+    {
+     "minute": 3,
+     "stage": 2,
+     "lessons": [],
+     "damage": 0,
+     "hp_max": 140
+    },
+    {
+     "minute": 4,
+     "stage": 2,
+     "lessons": [
+      "objective:line_fight",
+      "prompt:slam",
+      "objective:hold_line",
+      "objective:shoot_magnets"
+     ],
+     "damage": 1.8,
+     "hp_max": 155
+    },
+    {
+     "minute": 5,
+     "stage": 2,
+     "lessons": [
+      "objective:slam_caps",
+      "objective:bait_charge"
+     ],
+     "damage": 72,
+     "hp_max": 155
+    },
+    {
+     "minute": 6,
+     "stage": 2,
+     "lessons": [
+      "objective:ram_scooter"
+     ],
+     "damage": 23.4,
+     "hp_max": 155
+    }
+   ],
    "lessons_first_20s": [
     [
      "objective:find_warden",

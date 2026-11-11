@@ -8,7 +8,7 @@
 // lesson row: the first time a key prompt, a first-meet tip or an objective row showed. Per game minute,
 // the mean over the runs of lessons, hull damage taken, hits and live enemies. Writes data.json (the
 // minute rows and one summary row per run) and chart.svg.
-import { readdirSync, readFileSync, statSync, writeFileSync, mkdirSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, statSync, writeFileSync, mkdirSync } from "node:fs";
 import path from "node:path";
 
 const opts = {};
@@ -27,7 +27,10 @@ const walk = (dir) => readdirSync(dir).flatMap((f) => {
 });
 const runs = walk(opts.pace).filter((f) => /pace-\d+\.ndjson$/.test(path.basename(f))).sort().map((f) => {
   const rows = readFileSync(f, "utf8").trim().split("\n").map((l) => JSON.parse(l));
-  return { seed: Number(/pace-(\d+)/.exec(f)[1]), seconds: rows.filter((r) => r.kind === "second"), lessons: rows.filter((r) => r.kind === "lesson") };
+  // bot_run writes bots.ndjson beside the pace rows; its "class" names the pilot.
+  const bots = path.join(path.dirname(f), "bots.ndjson");
+  const pilot = existsSync(bots) ? String(JSON.parse(readFileSync(bots, "utf8").trim().split("\n")[0]).class || "") : "";
+  return { seed: Number(/pace-(\d+)/.exec(f)[1]), pilot, seconds: rows.filter((r) => r.kind === "second"), lessons: rows.filter((r) => r.kind === "lesson") };
 });
 
 const minutes = Math.max(...runs.map((r) => Math.ceil(r.seconds.at(-1).t / 60)));
@@ -45,15 +48,29 @@ for (let m = 0; m < minutes; m++) {
     runs: live.length,
   });
 }
-const summary = runs.map((r) => ({
+const summary = runs.map((r) => {
+  const low = r.seconds.reduce((a, x) => (x.hp < a.hp ? x : a), r.seconds[0]);
+  const perMinute = [];
+  for (let m = 0; m * 60 < r.seconds.at(-1).t; m++) {
+    const s = inMinute(r.seconds, m);
+    perMinute.push({ minute: m, stage: s.length ? s.at(-1).stage : 0,
+      lessons: r.lessons.filter((x) => (m === 0 ? x.t <= 60 : x.t > m * 60 && x.t <= (m + 1) * 60)).map((x) => x.id),
+      damage: +s.reduce((a, x) => a + x.damage, 0).toFixed(1), hp_max: s.length ? s.at(-1).hp_max : 0 });
+  }
+  return {
   seed: r.seed,
+  pilot: r.pilot,
   seconds: r.seconds.at(-1).t,
   hp_max_first: r.seconds[0].hp_max,
   hp_max_last: r.seconds.at(-1).hp_max,
-  hp_lowest: Math.min(...r.seconds.map((x) => x.hp)),
+  hp_lowest: low.hp,
+  hp_lowest_at: low.t,
+  hp_max_at_lowest: low.hp_max,
+  minutes: perMinute,
   lessons_first_20s: r.lessons.filter((x) => x.t <= 20).map((x) => [x.id, x.t]),
   lessons: r.lessons.map((x) => [x.id, x.t, x.stage]),
-}));
+  };
+});
 mkdirSync(opts.out, { recursive: true });
 writeFileSync(path.join(opts.out, "data.json"), JSON.stringify({ rows, runs: summary }, null, 1) + "\n");
 
@@ -68,7 +85,7 @@ const bars = rows.map((r, i) => {
   return `<rect x="${x.toFixed(1)}" y="${top(r.new_things).toFixed(1)}" width="${w.toFixed(1)}" height="${(150 - top(r.new_things)).toFixed(1)}" fill="#3b7dd8"/>` +
     `<text x="${(x + w / 2).toFixed(1)}" y="${(top(r.new_things) - 4).toFixed(1)}" font-size="11" text-anchor="middle">${r.new_things}</text>` +
     `<rect x="${x.toFixed(1)}" y="${bot(r.damage).toFixed(1)}" width="${w.toFixed(1)}" height="${(320 - bot(r.damage)).toFixed(1)}" fill="#d8573b"/>` +
-    `<text x="${(x + w / 2).toFixed(1)}" y="${(bot(r.damage) - 4).toFixed(1)}" font-size="11" text-anchor="middle">${Math.round(r.damage)}</text>` +
+    `<text x="${(x + w / 2).toFixed(1)}" y="${(bot(r.damage) - 4).toFixed(1)}" font-size="11" text-anchor="middle">${r.damage}</text>` +
     `<text x="${(x + w / 2).toFixed(1)}" y="340" font-size="11" text-anchor="middle">${r.minute}</text>`;
 }).join("");
 const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" font-family="sans-serif">` +

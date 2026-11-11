@@ -13,7 +13,7 @@ const Interactables := preload("res://src/world/interactables.gd")
 # table and fails a mechanic that is needed before it is taught.
 #
 #   godot --headless --fixed-fps 90 --path sketches/core-loop --script res://tools/first_timer.gd \
-#     -- --out=<file.json> [--seed=1] [--pilot=<class id>] [--stages=2] [--scrap-at=<seconds>] --table=park
+#     -- --out=<file.json> [--seed=1] [--pilot=<class id>] [--stages=2] [--scrap-at=<seconds>] [--table=park]
 #
 # --stages=2 ends the run as it leaves world 1 (both Spillway stages and Brindle). --scrap-at
 # scraps the ball (a chaser's hit, twice past the full-hull guard) that many stage seconds into
