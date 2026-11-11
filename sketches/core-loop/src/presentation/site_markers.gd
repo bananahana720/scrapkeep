@@ -21,9 +21,9 @@ const Shade := preload("res://src/presentation/site_markers.gdshader")
 const CREW_SMOKE := Color("ece6d8")
 const WORKS_SMOKE := Color("262826")
 const KINDS := {
-	"cache": {"tint": CREW_SMOKE, "height": 34.0, "width": 14.0, "alpha": 1.0, "foot": 0.1, "crown": 0.75, "rim_dark": 0.62,
+	"cache": {"tint": CREW_SMOKE, "height": 34.0, "width": 14.0, "alpha": 1.0, "foot": 0.12, "crown": 0.85, "rim_dark": 0.45,
 		"sway": 0.3, "sway_hz": 0.12, "rise": 0.06, "grain": Vector2(3.0, 7.0), "puffs": 0.0, "stutter": 0.0},
-	"cage": {"tint": CREW_SMOKE, "height": 44.0, "width": 18.0, "alpha": 1.0, "foot": 0.14, "crown": 0.85, "rim_dark": 0.62,
+	"cage": {"tint": CREW_SMOKE, "height": 44.0, "width": 18.0, "alpha": 1.0, "foot": 0.14, "crown": 0.85, "rim_dark": 0.5,
 		"sway": 0.12, "sway_hz": 0.1, "rise": 0.09, "grain": Vector2(2.5, 5.0), "puffs": 4.0, "stutter": 0.0},
 	"rogue": {"tint": WORKS_SMOKE, "height": 48.0, "width": 20.0, "alpha": 1.0, "foot": 0.2, "crown": 0.9, "rim_dark": 1.0,
 		"sway": 0.08, "sway_hz": 0.07, "rise": 0.07, "grain": Vector2(2.0, 4.0), "puffs": 6.0, "stutter": 0.8},

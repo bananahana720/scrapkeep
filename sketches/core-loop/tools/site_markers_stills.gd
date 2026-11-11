@@ -101,7 +101,16 @@ func _clear_way(foot: Vector3, toward: Vector2, d: float, look: Vector3) -> Vect
 	return toward
 
 
+# Clear when neither the ground nor any collider stands between eye and look. The ray runs both ways and counts a hit
+# from inside, so an eye standing inside a building is never clear (PC film of fa8c5090).
 func _sees(eye: Vector3, look: Vector3) -> bool:
+	var space := root.get_world_3d().direct_space_state
+	for pair in [[eye, look], [look, eye]]:
+		var ray := PhysicsRayQueryParameters3D.create(pair[0], pair[1])
+		ray.hit_from_inside = true
+		ray.hit_back_faces = true
+		if not space.intersect_ray(ray).is_empty():
+			return false
 	var terrain = game.ctx.terrain
 	var span := Vector2(look.x - eye.x, look.z - eye.z).length()
 	var steps := maxi(1, int(span / 2.0))
