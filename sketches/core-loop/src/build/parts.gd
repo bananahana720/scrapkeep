@@ -353,7 +353,7 @@ const HOTWIRED := {
 	# part's own row (row(), def() and has() find it there; rows() never lists it, so no shelf,
 	# gate or tree offer can roll it); "{hp}", "{scrap}" and "{magnet}" are resolved from that row
 	# by burden_cost(), so the words follow the numbers.
-	"cracked_plating": {"name": "Cracked Plating", "tags": ["mass"], "burden": true, "recycle_commons": 1,
+	"cracked_plating": {"name": "Cracked Hull", "tags": ["mass"], "burden": true, "recycle_commons": 1,
 		"label": "Costs {hp} max health.",
 		"downside": {"icon": "cat_defense", "words": "−{hp} max health"},
 		"part": {"verb": "Costs max health", "family": "stat", "max_hp_bonus": -BURDEN_HP}},
@@ -373,16 +373,16 @@ const RECYCLE_COMMON := 10
 # enter rows(), ids(), offer_pool(), roll() or roll_gate(): build.gd grants one when both
 # ingredients are held (source "evolution"). Rarity evolved carries roll weight 0 too.
 const EVOLVED := {
-	"breaker_drive": {"name": "Breaker Drive", "verb": "Hit 35% harder, +8 punch", "text": "+8 punch, +35% weapon damage",
+	"breaker_drive": {"name": "Breaker Drive", "verb": "Hit 35% harder, +8 punch", "text": "+8 punch, +35% weapon damage. From Wrecking Ball.",
 		"rarity": "evolved", "tier": 3, "family": "weapon", "tags": ["kinetic", "speed"], "punch": 8.0,
 		"mods": {"weapon_damage": 1.35}},
-	"bladestorm_rotor": {"name": "Bladestorm Rotor", "verb": "Spiral level up, fire faster", "text": "Spiral level +1, +20% fire rate",
+	"bladestorm_rotor": {"name": "Bladestorm Rotor", "verb": "Spiral level up, fire faster", "text": "Spiral level +1, +20% fire rate. From Pinwheel.",
 		"rarity": "evolved", "tier": 3, "family": "pattern", "tags": ["spiral", "speed"], "patterns": {"spiral_wave": 1},
 		"mods": {"weapon_rate": 1.2}},
-	"storm_mast": {"name": "Storm Mast", "verb": "Fire 20% faster, +6 punch", "text": "+6 punch, +20% fire rate",
+	"storm_mast": {"name": "Storm Mast", "verb": "Fire 20% faster, +6 punch", "text": "+6 punch, +20% fire rate. From Tesla Pylon.",
 		"rarity": "evolved", "tier": 3, "family": "weapon", "tags": ["anchor", "arc"], "punch": 6.0,
 		"mods": {"weapon_rate": 1.2}},
-	"grounding_spike": {"name": "Grounding Spike", "verb": "Hit 25% harder, +8 punch", "text": "+8 punch, +25% weapon damage",
+	"grounding_spike": {"name": "Grounding Spike", "verb": "Hit 25% harder, +8 punch", "text": "+8 punch, +25% weapon damage. From Lightning Rod.",
 		"rarity": "evolved", "tier": 3, "family": "weapon", "tags": ["arc", "mass"], "punch": 8.0,
 		"mods": {"weapon_damage": 1.25}},
 }
@@ -756,7 +756,7 @@ static func shop_line(part_id: String, level := 1) -> String:
 	var d: Resource = def_at(part_id, level)
 	if d == null:
 		return display_name(part_id)
-	var line := "%s. %s" % [d.display_name, d.text]
+	var line := "%s. %s" % [d.display_name, d.text.substr(0, 1).to_upper() + d.text.substr(1)]
 	if d.punch > 0.0 and not "punch" in d.text.to_lower():
 		line += ". +%d punch" % int(d.punch)
 	return line
