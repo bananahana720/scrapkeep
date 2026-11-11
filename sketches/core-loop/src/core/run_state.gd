@@ -514,6 +514,20 @@ func spend_scrap(amount: int) -> bool:
 	return true
 
 
+# Moss's scale (shop.gd weigh, docs/systems-audit/feature-fit.md new mechanic 2): mass sold on
+# purpose. Mass and the wallet drop by the amount, not below zero, and the heft class follows
+# as on a theft, but it is a sale, not a loss: no scrap_lost, so nothing reads it as a theft.
+# Returns the mass taken.
+func weigh_out(amount: int) -> int:
+	if amount <= 0 or not alive():
+		return 0
+	var taken := int(minf(float(amount), mass))
+	mass = maxf(0.0, mass - taken)
+	scrap -= mini(taken, scrap)
+	_publish_heft_class()
+	return taken
+
+
 func add_part(part_id: String, source: String) -> void:
 	if RunTier.is_variant_id(part_id):
 		return

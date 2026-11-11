@@ -5,6 +5,7 @@ const Synergies := preload("res://src/build/synergies.gd")
 const PartSets := preload("res://src/build/part_sets.gd")
 const Weapons := preload("res://src/combat/weapons.gd")
 const Pattern := preload("res://src/combat/pattern.gd")
+const HullMark := preload("res://src/world/hull_mark.gd")
 
 # The derived build: every held part and live synergy folded into one sheet. It is a
 # pure function of the part list, so a retry that restores the list restores the build
@@ -124,8 +125,10 @@ func apply(tuning, run) -> void:
 	for key in adds:
 		tuning.set_add(key, adds[key])
 	tuning.boost_cooldown_scale = cooldown_scale
-	if run != null and not is_equal_approx(run.max_hp, run.base_max_hp() + max_hp_bonus):
-		run.set_max_hp(run.base_max_hp() + max_hp_bonus)
+	if run != null:
+		var ceiling: float = HullMark.ceiling(run, run.base_max_hp() + max_hp_bonus)
+		if not is_equal_approx(run.max_hp, ceiling):
+			run.set_max_hp(ceiling)
 
 
 func mod(knob: String) -> float:

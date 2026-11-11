@@ -20,7 +20,8 @@ const ShopTile := preload("res://src/ui/shop_tile.gd")
 #
 # Two faces. Buy: the shelf's three parts, the reroll, a waiting upgrade pick, the
 # locked hook and a charge cell per ability that recharges. Sell: every held part at
-# its quote. The wallet row carries cogs and heft, because heft is what the hook asks
+# its quote, then Moss's scale when it is open (shop.weigh: one lump of mass for cogs, the
+# mass and the cogs shown on the plate before the press). The wallet row carries cogs and heft, because heft is what the hook asks
 # for. The line under the plates names the plate under the mouse or the keys.
 
 signal acted(fact: String, record: Dictionary)
@@ -284,6 +285,12 @@ func _build_sell() -> void:
 			row = _row()
 		var quote: int = offer["quote"]
 		_tile(row, _part_rec("sell", offer["part_id"], quote, "ok" if quote >= 0 else "welded"), SELL_TILE)
+	if shop.scale_open():
+		var weigh: Dictionary = shop.weigh_quote()
+		if row.get_child_count() >= SELL_COLUMNS:
+			row = _row()
+		_tile(row, {"kind": "weigh", "name": "Weigh %d mass for %d cogs" % [weigh["mass"], weigh["cogs"]], "mass": weigh["mass"],
+			"price": weigh["cogs"], "color": EventKinds.color("heft_class_changed"), "state": "ok" if int(weigh["cogs"]) > 0 else "poor"}, SELL_TILE)
 
 
 func _part_rec(kind: String, part_id: String, price: int, state: String) -> Dictionary:
@@ -336,6 +343,9 @@ func press(tile) -> void:
 			fact = "shop_charge"
 		"sell":
 			result = shop.sell(String(rec["part_id"]))
+			fact = "shop_sold"
+		"weigh":
+			result = shop.weigh()
 			fact = "shop_sold"
 		"pick":
 			pick_wanted.emit()

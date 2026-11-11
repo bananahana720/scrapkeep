@@ -89,6 +89,12 @@ const SPECS := [
 	# Wall grip (ENEMY-PRIORITY.md 3a; Andrew's "Speed holds", 2026-10-17): at the fast tier
 	# walls and the first part of an overhang count as ground. `--grip=off` for the sitting.
 	{"key": "grip", "label": "Wall grip", "min": 0.0, "max": 1.0, "step": 1.0, "value": 1.0, "options": ["off", "on"]},
+	# Marked hull (docs/systems-audit/feature-fit.md, new mechanic 1; src/world/hull_mark.gd): hull
+	# paid at a keeper's gamble lowers max hull until the next Warden break. Off keeps today's price.
+	{"key": "marked_hull", "label": "Marked hull", "min": 0.0, "max": 1.0, "step": 1.0, "value": 0.0, "options": ["off", "on"]},
+	# Moss's scale (feature-fit.md, new mechanic 2; shop.gd weigh): sell mass for cogs at Moss's
+	# counter. Off keeps today's shop. Rates are placeholders until the economy pass sets them.
+	{"key": "moss_scale", "label": "Moss's scale", "min": 0.0, "max": 1.0, "step": 1.0, "value": 0.0, "options": ["off", "on"]},
 ]
 
 # The option rows other modules read by name.
@@ -224,6 +230,8 @@ const FLAGS := {
 	"actives": ["actives", "option", "launch"],
 	"profile": ["profile", "option", "launch"],
 	"grip": ["grip", "option", "launch"],
+	"marked-hull": ["marked_hull", "option", "launch"],
+	"moss-scale": ["moss_scale", "option", "launch"],
 	"overtime": ["overtime", "option", "launch"],
 	"called-shot": ["called_shot", "option", "launch"],
 }
