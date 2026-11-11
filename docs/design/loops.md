@@ -545,4 +545,4 @@ Where the build differs from the spec above, each as a one-line call Andrew can 
 6. The call input is holding haul (Ctrl, pad X) with no line out, looking at the Warden on the ground plane; holding haul also brakes, which is the price of calling.
 7. A missed call burns one of the stage's bonus cores; with none held it costs nothing more. A met call lifts both gate cards off the common rung.
 8. Called Shot's stamp is an inked word over the Warden; drum, ink and CALLED reuse existing sounds until the sound lane scores them.
-9. Pad rumble calls Godot directly with reduced motion respected; it moves to `juice.gd`'s rumble rows once the systems audit's pass C lands.
+9. Pad rumble plays through `juice.gd`'s rumble rows (`heat_skim`, `heat_redline`, `heat_blast`, `shot_called`, `call_met`) and scales with the Screen shake setting, like every other rumble; the reduced-motion setting does not touch it. The redline buzz lasts `Redline.COOK_OFF_S` and stops as soon as redline ends without a blast.

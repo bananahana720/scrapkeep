@@ -185,6 +185,20 @@ func _run() -> void:
 		"cool hit %s, hot hit %s, hits while hot %d" % [str(_hits[0]) if _hits.size() > 0 else "-",
 			str(_hits[1]) if _hits.size() > 1 else "-", red.hits_hot])
 
+	# The redline buzz runs for COOK_OFF_S, and stops when redline ends without a blast (a stage
+	# change or a death clears the shell).
+	var juice = _game.presentation.juice
+	var wait := 0
+	while juice.rumbling() != "" and wait < 2000:
+		await physics_frame
+		wait += 1
+	red.value = Redline.MAX
+	juice.rumble("heat_redline")
+	var buzzing: String = juice.rumbling()
+	red.clear()
+	_check("the redline buzz stops when redline ends", buzzing == "heat_redline" and juice.rumbling() == "",
+		"buzzing %s, after clear %s" % [buzzing, juice.rumbling()])
+
 	var near := _enemy(Vector3(3.0, 0.0, 0.0))
 	var far := _enemy(Vector3(0.0, 0.0, Redline.BLAST_RADIUS + 4.0))
 	var near_before: float = near.hp

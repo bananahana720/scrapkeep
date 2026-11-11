@@ -14,8 +14,8 @@ const SpeedTier := preload("res://src/movement/speed_tier.gd")
 #   camera looks at the Warden shows a stamp over it after CYCLE_S, and turns to the next every
 #   CYCLE_S: DUNK, CHAIN, BOWL. Letting go calls the one showing; a tap shorter than CYCLE_S calls
 #   nothing. One call a Warden.
-# - The break. DUNK is met by a dunk spent on the Warden; CHAIN by a hit on it while the chain
-#   stands at CHAIN_COMBO or more; BOWL by a ram at blazing or a flung body. A cause counts for
+# - The break. DUNK is met by a dunk spent on the Warden; CHAIN by a smash whose landing pays a
+#   chain of CHAIN_COMBO or more on it; BOWL by a ram at blazing or a flung body. A cause counts for
 #   CAUSE_S, so the hit that breaks it and the cause it carries need not land in the same frame.
 # - The pay. Met: both gate cards cobalt or better (no common rung). Missed: one of this stage's
 #   bonus cores burns, so the gate drops a rung (assumption: with none held it costs nothing more;
@@ -28,6 +28,9 @@ const AIM_DOT := 0.8
 const CHAIN_COMBO := 4
 const CAUSE_S := 0.4
 const STAMP_UP_M := 7.0
+# Paper white with an ink outline: no pilot or warning colour, so the call never reads as a threat
+# (LEGIBILITY section 1) and every pilot's call looks the same.
+const STAMP_INK := Color(0.97, 0.95, 0.9)
 
 var ctx
 var state := ""
@@ -49,6 +52,7 @@ func setup(ctx_ref) -> void:
 	ctx.events.warden_engaged.connect(_on_engaged)
 	ctx.events.stage_entered.connect(func(_stage: int, _retry: bool): clear())
 	ctx.events.enemy_struck.connect(_on_struck)
+	ctx.events.line_state_changed.connect(_on_line_state)
 	ctx.player.dunk.spent.connect(func(_record: Dictionary, enemy: Node3D): _note(enemy, "DUNK"))
 	if ctx.spawner != null and ctx.spawner.has_signal("flung"):
 		ctx.spawner.flung.connect(func(enemy: Node3D): _note(enemy, "BOWL"))
@@ -182,8 +186,6 @@ func _aiming() -> bool:
 func _on_struck(enemy: Node3D, kind: String, _force: float) -> void:
 	if state != "called" or enemy != _warden:
 		return
-	if ctx.player.chain.combo >= CHAIN_COMBO:
-		_note(enemy, "CHAIN")
 	if kind == "ram" and int(ctx.player.state.tier) >= SpeedTier.BLAZING:
 		_note(enemy, "BOWL")
 
@@ -191,6 +193,13 @@ func _on_struck(enemy: Node3D, kind: String, _force: float) -> void:
 # The stamp's word while it shows, else "".
 func stamp_text() -> String:
 	return _stamp.text if _stamp != null and _stamp.visible else ""
+
+
+# A smash pays the chain as its landing begins, before the contact strikes the Warden
+# (player_ball _begin_landing): the paid end names the Warden and carries the combo it paid at.
+func _on_line_state(id: String, target: Node3D, _at: Vector3, cause: String) -> void:
+	if state == "called" and id == "chain_end" and cause == "paid" and ctx.player.chain.last_paid_combo() >= CHAIN_COMBO:
+		_note(target, "CHAIN")
 
 
 func _note(enemy: Node3D, verb: String) -> void:
@@ -219,9 +228,8 @@ func _show(verb: String, inked: bool) -> void:
 		_follow()
 	_stamp.visible = true
 	_stamp.text = verb
-	# An outline while it turns; ink in the pilot's own colour once called (hazard red is kept for
-	# what will hurt you, LEGIBILITY section 1).
-	_stamp.modulate = ctx.player.class_color() if inked else Color(1.0, 1.0, 1.0, 0.0)
+	# An outline while it turns; STAMP_INK once called.
+	_stamp.modulate = STAMP_INK if inked else Color(1.0, 1.0, 1.0, 0.0)
 	_stamp.outline_modulate = Color(0.08, 0.08, 0.08, 1.0) if inked else Color(1.0, 1.0, 1.0, 0.9)
 
 
