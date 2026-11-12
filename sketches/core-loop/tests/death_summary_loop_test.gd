@@ -2,6 +2,7 @@ extends SceneTree
 
 const Game := preload("res://src/game.gd")
 const DeathTips := preload("res://src/core/death_tips.gd")
+const DeathCause := preload("res://src/core/death_cause.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const Roster := preload("res://src/combat/roster.gd")
 const Intent := preload("res://src/movement/intent.gd")
@@ -149,6 +150,10 @@ func _tag_on_summary() -> void:
 	var body: PackedStringArray = screens.body_text().split("\n")
 	_t.check("the screen reads pilot, cause, and the note before the choices", body.size() > 2 and body[1] == "Scrapped by the Warden."
 			and body.find(screens.tip_text()) > 1 and body.find(screens.tip_text()) < body.find(""), " | ".join(body))
+	# W1-75: the Foreman logs the loss under the cause, and the crew's note still comes after it.
+	var memo: String = DeathCause.memo(_game.run.run_seed, _game.run.stage)
+	_t.check("the Foreman's loss memo follows the cause, before the crew's note", body.size() > 2 and body[2] == memo
+			and DeathCause.LOSS_MEMOS.any(func(m): return memo.ends_with(m)) and body.find(memo) < body.find(screens.tip_text()), " | ".join(body))
 	await _frames(3)
 	var words: Array = []
 	for group in screens._stats.get_children():

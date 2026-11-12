@@ -1,6 +1,7 @@
 extends RefCounted
 
 const EventKinds := preload("res://src/core/event_kinds.gd")
+const LoreRows := preload("res://src/core/lore_rows.gd")
 const Rogue := preload("res://src/combat/rogue.gd")
 
 # The RUN OVER line that names what scrapped you (wave 27 first-timer red team, note 2):
@@ -120,3 +121,23 @@ static func _without_owner(what: String, who: String) -> String:
 
 static func _article(what: String) -> String:
 	return ("an " if what.substr(0, 1) in ["a", "e", "i", "o", "u"] else "a ") + what
+
+
+# The Foreman logs your loss (W1-75; STORY-MAP, "The Foreman's voice": in world 1 it shows up as
+# memos, and "your loss being logged" is one). It is said straight and grateful, about the books and
+# never about the player, and it goes under the cause and above the crew's "next shift" tip, so the
+# run's last word stays the crew's. The seed and the stage pick the line, the same one on a replay.
+const LOSS_MEMOS := [
+	"We are sunsetting this pilot. Thank you for your contributions.",
+	"Asset loss logged. A replacement shift has been scheduled.",
+	"Loss recorded. Scrap recovered at full value. Thank you.",
+	"This incident has been added to the quarterly highlights.",
+	"Downtime logged. Your next shift starts immediately. You're welcome.",
+	"Hull loss entered as forecast. Everything is going to plan.",
+]
+
+
+# The memo as the screen shows it, its sender first (the name a call card gives the Foreman).
+static func memo(run_seed: int, stage: int) -> String:
+	var line := String(LOSS_MEMOS[absi(hash([run_seed, stage, "loss_memo"])) % LOSS_MEMOS.size()])
+	return "%s: %s" % [LoreRows.SPEAKERS["mind"], line]

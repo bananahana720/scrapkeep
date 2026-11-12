@@ -26,6 +26,7 @@ const EndingSequence := preload("res://src/ui/ending_sequence.gd")
 const PrologueRows := preload("res://src/core/prologue_rows.gd")
 const CreditsHint := preload("res://src/ui/credits_hint.gd")
 const DeathTips := preload("res://src/core/death_tips.gd")
+const DeathCause := preload("res://src/core/death_cause.gd")
 const ScrapFrame := preload("res://src/ui/scrap_frame.gd")
 
 # The screens outside play: title (with its how-to-play page on H), class select,
@@ -387,6 +388,9 @@ func _on_flow_changed(state: String) -> void:
 		"dead":
 			# The store-less flow's end screen says what RUN OVER says: who, then what to try (death_tips.gd).
 			var said: String = game.flow.death_cause
+			# The Foreman logs the loss under the cause; the crew's tip after it has the last word.
+			if said != "":
+				said += "\n" + DeathCause.memo(game.run.run_seed, game.run.stage)
 			if game.flow.death_tip != "":
 				said += "\n" + DeathTips.shown(game.flow.death_tip)
 			_show("SCRAPPED", EventKinds.color("player_died"), said.strip_edges())
@@ -410,6 +414,7 @@ func _on_flow_changed(state: String) -> void:
 			# What scrapped you, under the pilot (core/death_cause.gd): a won run has none.
 			if not game.flow.run_won and game.flow.death_cause != "":
 				body += "\n" + game.flow.death_cause
+				body += "\n" + DeathCause.memo(game.run.run_seed, game.run.stage)
 			# The trade pockets' odds are a tuning readout (recency, safe share, refusal weight), so
 			# only a --dev launch prints them; a played run's summary keeps to the run.
 			var trade_lines := ResultsOdds.text(game.run.summary().trade_pockets) if game.ctx.dev else ""

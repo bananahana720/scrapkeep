@@ -30,37 +30,39 @@ const SITE_CREWS := {"1-1": "pump_crew", "1-2": "flume_crew"}
 #   world     the world it belongs to
 #   speaker   a SPEAKERS id. A pilot's row names their class under `pilot`: it is said only by a
 #             freed pilot who is not the one flying, and one pilot's line on a cause is the run's
+#   text      the line, or a list of ways to say it: the run seed picks one (call_text), so the
+#             same seed hears the same words and run five does not sound like run one
 const CALLS := [
 	{"id": "call.spillway.camp", "on": "activity_done", "arg": [0, "enemy_camp"], "world": 1, "speaker": "pump_crew",
-		"text": "Camp's quiet. We logged it quiet last week too."},
+		"text": ["Camp's quiet. We logged it quiet last week too.", "Camp's down. We'll log it down. In pencil, in case.", "Camp's clear. Their kettle's still warm. We'll mind it."]},
 	{"id": "call.spillway.relay", "on": "activity_done", "arg": [0, "hold_the_relay"], "world": 1, "speaker": "signal_crew",
-		"text": "Relay's back. It never stopped sending. Nobody says to whom."},
+		"text": ["Relay's back. It never stopped sending. Nobody says to whom.", "Relay's up. Signal's clean. Cleaner than we ever got it.", "Relay's ours again. Still sending somewhere. We're listening."]},
 	{"id": "call.spillway.surge", "on": "activity_done", "arg": [0, "surge_run"], "world": 1, "speaker": "flume_crew",
-		"text": "Sluice shut behind you. We never opened it."},
+		"text": ["Sluice shut behind you. We never opened it.", "You beat the surge. The sluice shut itself. Polite of it.", "Surge spent. We'll mark the water line. Lower, for once."]},
 	{"id": "call.spillway.gamble", "on": "trade_taken", "arg": [0, "trade_risk"], "world": 1, "speaker": "moss",
-		"text": "Keeper's gamble, was it? I packed for either way."},
+		"text": ["Keeper's gamble, was it? I packed for either way.", "Shook on it? I packed bandages. And a cake.", "A gamble. My grandmother took those. Mostly won."]},
 	{"id": "call.spillway.kindness", "on": "trade_taken", "arg": [0, "trade_safe"], "world": 1, "speaker": "mind",
-		"text": "A sensible choice. It has been added to your schedule."},
+		"text": ["A sensible choice. It has been added to your schedule.", "Thank you for choosing certainty. Your feedback has been pre-recorded.", "Wonderful. Your judgement has been freed up for other priorities."]},
 	{"id": "call.spillway.dam_warden", "on": "beacon_unsealed", "arg": [0, 1], "world": 1, "speaker": "pump_crew",
-		"text": "Gates open on our count now. We count on fingers."},
+		"text": ["Gates open on our count now. We count on fingers.", "Warden's down. Gates answer to us again. Mostly.", "That's the Warden off shift. We'll take the gates from here."]},
 	{"id": "call.spillway.evolved", "on": "evolution_fired", "world": 1, "speaker": "moss",
-		"text": "I didn't pack it like that. Keep it like that."},
+		"text": ["I didn't pack it like that. Keep it like that.", "That's not how it came out of the box. Better.", "Never seen it bolt up that way. I'm writing that down."]},
 	{"id": "call.spillway.heft", "on": "heft_class_changed", "world": 1, "speaker": "moss",
-		"text": "You're riding low. Good ballast, that scrap. Bad brakes."},
+		"text": ["You're riding low. Good ballast, that scrap. Bad brakes.", "Heavy now. The ground will notice before you do.", "Sitting low. Hits harder, stops later. Plan the corners."]},
 	{"id": "call.spillway.low_hull", "on": "player_hit", "when": "low_hull", "world": 1, "speaker": "moss",
-		"text": "That spare seal I packed. Left pocket. About now."},
+		"text": ["That spare seal I packed. Left pocket. About now.", "Hull's thin. Breathe, back off, then go again.", "Spare patch, under the seat. I tape it there every morning."]},
 	{"id": "call.spillway.drop.sable", "on": "drop_landed", "at_least": [0, 3], "world": 1, "speaker": "sable", "pilot": "pylon_engineer",
-		"text": "Nice drop. I'd have gone from higher."},
+		"text": ["Nice drop. I'd have gone from higher.", "Ooh. Do it again, but faster."]},
 	{"id": "call.spillway.drop.rivet", "on": "drop_landed", "at_least": [0, 3], "world": 1, "speaker": "rivet", "pilot": "runner_gunner",
-		"text": "Nice drop. I'd be at the next one already."},
+		"text": ["Nice drop. I'd be at the next one already.", "Heard that from here. Didn't see it. Never do."]},
 	{"id": "call.spillway.drop.kest", "on": "drop_landed", "at_least": [0, 3], "world": 1, "speaker": "kest", "pilot": "demolitions_caster",
-		"text": "You dropped early. Worked anyway. Annoying."},
+		"text": ["You dropped early. Worked anyway. Annoying.", "I'd still be measuring that one. You just went."]},
 	{"id": "call.spillway.drop.tarn", "on": "drop_landed", "at_least": [0, 3], "world": 1, "speaker": "tarn", "pilot": "tarn",
-		"text": "All of them at once. I'd have said sorry first."},
+		"text": ["All of them at once. I'd have said sorry first.", "That was a lot of them. Gently, next time. Maybe."]},
 	{"id": "call.spillway.drop.tally", "on": "drop_landed", "at_least": [0, 3], "world": 1, "speaker": "tally", "pilot": "tally",
-		"text": "One drop, several down. Logged as several. Honest work."},
+		"text": ["One drop, several down. Logged as several. Honest work.", "Entered as one drop, many results. The ledger likes you."]},
 	{"id": "call.spillway.drop.cannon", "on": "drop_landed", "at_least": [0, 3], "world": 1, "speaker": "cannon", "pilot": "remembered_cannon",
-		"text": "Efficient. Sorry. Old habit."},
+		"text": ["Efficient. Sorry. Old habit.", "Clean grouping. Forget I said that."]},
 ]
 
 
@@ -96,6 +98,16 @@ static func spoken(row: Dictionary) -> String:
 	var text := String(row.get("text", ""))
 	var named := text.get_slice(": ", 0)
 	return text.trim_prefix(named + ": ") if SPEAKERS.find_key(named) != null else text
+
+
+# The words a call says this run: its one line, or the one its list gives this seed. The pick is
+# salted by the row's id, so two rows on one seed do not all take the same place in their lists.
+static func call_text(row: Dictionary, run_seed: int) -> String:
+	var text = row.get("text", "")
+	if not text is Array:
+		return String(text)
+	var options: Array = text
+	return "" if options.is_empty() else String(options[absi(hash([run_seed, String(row.get("id", ""))])) % options.size()])
 
 
 # The signals any call listens to, once each.
