@@ -602,8 +602,11 @@ class Kit:
         assert abs(shift) <= RESEAT_MAX, "LOD re-seat of %.3f m exceeds %.2f m" % (shift, RESEAT_MAX)
         for v in mesh.vertices:
             v.co.z += shift
+        # Smooth, with LOD0's hard creases taken again from the collapsed shape: smoothing every edge let a fold (a drum
+        # flange, a rope coil) average its vertex normals against its faces, so far meshes drew lit inside out (W1-29).
         for poly in mesh.polygons:
             poly.use_smooth = True
+        mesh.set_sharp_from_angle(angle=math.radians(polish.options()["sharp_angle"]))
         if mesh.color_attributes.get("Color") is not None:
             mesh.color_attributes.active_color = mesh.color_attributes["Color"]
             mesh.color_attributes.render_color_index = mesh.color_attributes.active_color_index

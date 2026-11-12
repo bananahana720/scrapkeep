@@ -28,17 +28,11 @@ static func path(id: String) -> String:
 	return DIR + id + ".wav"
 
 
-# The id's stream, or null with no file. The imported resource when there is one, else the
-# raw 16-bit RIFF (a headless run with no import cache).
+# The id's stream, or null with no file (wav below).
 static func stream(id: String) -> AudioStreamWAV:
 	if _streams.has(id):
 		return _streams[id]
-	var p := path(id)
-	var out: AudioStreamWAV = null
-	if ResourceLoader.exists(p):
-		out = load(p) as AudioStreamWAV
-	elif FileAccess.file_exists(p):
-		out = _from_riff(FileAccess.get_file_as_bytes(p))
+	var out := wav(path(id))
 	if out != null and id in LOOPS:
 		out = out.duplicate()
 		out.loop_mode = AudioStreamWAV.LOOP_FORWARD
@@ -48,19 +42,30 @@ static func stream(id: String) -> AudioStreamWAV:
 	return out
 
 
+# The WAV at p: the imported resource when there is one, else the raw 16-bit RIFF (a headless run
+# with no import cache), else null. raw reads the file's own PCM even when imported (the mix tools
+# decode it). The world's sounds load through it too (world_fx_sound.gd).
+static func wav(p: String, raw := false) -> AudioStreamWAV:
+	if not raw and ResourceLoader.exists(p):
+		return load(p) as AudioStreamWAV
+	if FileAccess.file_exists(p):
+		return _from_riff(FileAccess.get_file_as_bytes(p))
+	return null
+
+
 static func _from_riff(bytes: PackedByteArray) -> AudioStreamWAV:
-	var wav := AudioStreamWAV.new()
-	wav.format = AudioStreamWAV.FORMAT_16_BITS
+	var out := AudioStreamWAV.new()
+	out.format = AudioStreamWAV.FORMAT_16_BITS
 	var at := 12
 	while at + 8 <= bytes.size():
 		var tag := bytes.slice(at, at + 4).get_string_from_ascii()
 		var size := bytes.decode_u32(at + 4)
 		if tag == "fmt ":
-			wav.stereo = bytes.decode_u16(at + 10) == 2
-			wav.mix_rate = bytes.decode_u32(at + 12)
+			out.stereo = bytes.decode_u16(at + 10) == 2
+			out.mix_rate = bytes.decode_u32(at + 12)
 		elif tag == "data":
-			wav.data = bytes.slice(at + 8, at + 8 + size)
-			return wav
+			out.data = bytes.slice(at + 8, at + 8 + size)
+			return out
 		at += 8 + size + (size & 1)
 	return null
 
