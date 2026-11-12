@@ -6648,7 +6648,7 @@ Read from the code on `stage/alpha-w38` (48f62bf9), 12 November 2026. Adding a w
 
 ### World 1 effects critique rows (12 November 2026)
 
-From the effects silo of Andrew's 12 November design critique. The evidence, stills and ranking are in [effects-critique.md](project-guide/handoff/shared/world1/effects-critique.md); finding E1 there is row FX-01 here, and so on. Rows follow this section's rules above. A row that touches a file the board thread owns (boss, flow, arena, world) is claimed on the wave board before it is built.
+From the effects silo of Andrew's 12 November design critique. The evidence, stills and ranking are in [effects-critique.md](project-guide/handoff/shared/world1/effects-critique.md); finding E1 there is row FX-01 here, and so on. Rows follow this section's rules above. The ready rows stand as GitHub issues: FX-01 872, FX-02 873, FX-03 874, FX-04 875, FX-06 876, FX-07 877, FX-08 878, FX-20 879, FX-21 880, FX-22 881, FX-25 882. A row that touches a file the board thread owns (boss, flow, arena, world) is claimed on the wave board before it is built.
 
 | ID | What the player gets | Files | Size | Proof | Source |
 | --- | --- | --- | --- | --- | --- |
