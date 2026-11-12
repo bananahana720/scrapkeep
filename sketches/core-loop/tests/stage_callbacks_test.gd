@@ -98,6 +98,16 @@ func _physics_process(delta: float) -> bool:
 				_probe["sable"] = _game.player.planar_velocity().length()
 				_report("the cracked wall holds against Sable", not wall["broken"] and _probe["sable"] < 4.0,
 					"rolled at it at %.0f m/s without a sprint: broken %s, speed after %.1f m/s" % [SPEED, wall["broken"], _probe["sable"]])
+				var body: StaticBody3D = wall["body"]
+				var views := body.find_children("*", "MeshInstance3D", true, false)
+				var box: Vector3 = (body.get_child(0).shape as BoxShape3D).size
+				var bounds := AABB()
+				for v: MeshInstance3D in views:
+					var b: AABB = v.transform * v.mesh.get_aabb()
+					bounds = b if bounds.size == Vector3.ZERO else bounds.merge(b)
+				_report("the cracked wall wears the fracture panel on both faces", views.size() == 2
+					and views.all(func(v): return not v.mesh is PrimitiveMesh) and bounds.size.is_equal_approx(box)
+					and bounds.get_center().is_equal_approx(Vector3.ZERO), "%d views, bounds %s against collider %s" % [views.size(), bounds, box])
 				_phase = "rivet_wall"
 				_clock = 0.0
 		"rivet_wall":

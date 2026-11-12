@@ -7,6 +7,7 @@ const Activities := preload("res://src/world/activities.gd")
 const RecipeProps := preload("res://src/presentation/recipe_props.gd")
 const ParkRecipes := preload("res://src/world/park/park_recipes.gd")
 const ModelKit := preload("res://src/world/model_kit.gd")
+const CrackedCache := preload("res://src/world/cracked_cache.gd")
 
 # The gorge's contraptions, built from the map's specs and run from world's physics
 # tick (DESIGN-V2 section 9, VISUAL-LANGUAGE section 11). Every one is a momentum tool
@@ -1026,6 +1027,22 @@ func _build_wall(spec: Dictionary) -> Dictionary:
 	box.size = size
 	shape.shape = box
 	body.add_child(shape)
+	# Two of the cracked cache's fracture panels (CrackedCache: a slab with its charcoal fault line) back to
+	# back, each fitted to half the collider's depth, so the wall reads cracked from either approach; the
+	# striped box with three cracks stays as the fallback.
+	var panel := CrackedCache.model_part("CacheWall", body)
+	if panel != null:
+		var aabb := panel.mesh.get_aabb()
+		var fit := size / aabb.size * Vector3(1.0, 1.0, 0.5)
+		var back := CrackedCache.model_part("CacheWall", body)
+		back.name = "CacheWallBack"
+		for face in [[panel, 0.0], [back, PI]]:
+			var turn := Basis(Vector3.UP, face[1])
+			face[0].transform = Transform3D(turn * Basis.from_scale(fit), turn * (-aabb.get_center() * fit + Vector3(0.0, 0.0, size.z * 0.25)))
+		body.position = foot + Vector3.UP * (size.y * 0.5 - 0.6)
+		body.rotation.y = spec["turn"]
+		add_child(body)
+		return {"spec": spec, "body": body, "home": body.position, "broken": false}
 	var mesh := MeshInstance3D.new()
 	var bm := BoxMesh.new()
 	bm.size = size
