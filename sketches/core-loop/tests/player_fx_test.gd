@@ -110,9 +110,13 @@ func _run() -> void:
 	var warn_own: Array[Rect2] = [Rect2(650, 320, 40, 40)]
 	var warn_both: Array[Rect2] = [Rect2(450, 320, 240, 40)]
 	var warn_none: Array[Rect2] = [Rect2(50, 50, 40, 40)]
-	t.eq("a word clear of warnings keeps its spot", PlayerFx.word_spot(own, other, warn_none), 0)
-	t.eq("planted: a word on a warning takes the ball's other side", PlayerFx.word_spot(own, other, warn_own), 1)
-	t.eq("a word with a warning on both sides stays unsaid", PlayerFx.word_spot(own, other, warn_both), -1)
+	var above := Rect2(500, 200, 120, 50)
+	var spots: Array[Rect2] = [own, other, above]
+	var foe_box: Array[Rect2] = [Rect2(380, 280, 360, 90)]
+	t.eq("a word clear of warnings keeps its spot", PlayerFx.word_spot(spots, warn_none), 0)
+	t.eq("planted: a word on a warning takes the ball's other side", PlayerFx.word_spot(spots, warn_own), 1)
+	t.eq("a word with its foe on both sides goes above the foe", PlayerFx.word_spot(spots, foe_box), 2)
+	t.eq("a word with every spot covered stays unsaid", PlayerFx.word_spot(spots, [Rect2(0, 0, 1000, 1000)] as Array[Rect2]), -1)
 	var wcam: Camera3D = fx.camera.cam
 	# A ring on the ground under each side's spot: the word has nowhere to go.
 	var at: Vector3 = fx.clear_of_lane(ball + Vector3(3, 2, 0))
@@ -130,6 +134,26 @@ func _run() -> void:
 	fx._last_word = -1.0e9
 	fx._word_seen.clear()
 	var held: int = fx.spawned.get("word_held", 0)
+	# The foe a word names is avoided like a warning: a box mesh where the word would go.
+	var foe := Node3D.new()
+	var shape := MeshInstance3D.new()
+	var box := BoxMesh.new()
+	box.size = Vector3(1.5, 1.5, 1.5)
+	shape.mesh = box
+	foe.add_child(shape)
+	_game.add_child(foe)
+	foe.global_position = ball + Vector3(3, 2, 0)
+	var foe_px := PlayerFx.foe_rect(foe, wcam)
+	t.check("the foe has a screen rect", foe_px.has_area(), str(foe_px))
+	t.check("a word naming its foe never lands on it", fx.word("smash", ball + Vector3(3, 2, 0), Color.TRANSPARENT, foe)
+		and not PlayerFx._word_rect(wcam, fx._words_by_id("smash")["at"], float(fx._words_by_id("smash")["away"]) > 0.0, float(fx._words_by_id("smash")["width_px"]),
+			float(fx._words_by_id("smash")["size"]), 0.01).intersects(foe_px), "foe %s" % foe_px)
+	foe.free()
+	for w in fx._words:
+		w["t"] = 1.0
+	fx._last_word = -1.0e9
+	fx._word_seen.clear()
+	held = fx.spawned.get("word_held", 0)
 	t.check("a warning under both sides holds the word", not PlayerFx.warning_rects(root.get_tree(), wcam, 0.0).is_empty()
 		and not fx.word("slam", ball + Vector3(3, 2, 0)) and fx.spawned.get("word_held", 0) == held + 1,
 		"rects %s" % [PlayerFx.warning_rects(root.get_tree(), wcam, 0.0)])

@@ -19,7 +19,8 @@ const Redline := preload("res://src/combat/redline.gd")
 #              each hit and stretch into streamers once the build is grown
 #   boon       a hit throws a second spark burst in the build's dominant element colour
 #   words      comic sound words (KLANG, WHUMP) stamped beside big moments, never ahead of
-#              the ball (TONE-BIBLE pillar 2), never on a hostile warning; an ordinary hit
+#              the ball (TONE-BIBLE pillar 2), never on a hostile warning or the foe they
+#              name (beside it, else above it, else unsaid); an ordinary hit
 #              says only BWAP, beside the ball, when it lands on the beat (PF-26)
 #   overdrive  past SOFT_CAP_MPS the ball burns: white-hot rim, flame flecks and a
 #              hanging ember trail, so "my contact hurts now" reads at a glance
@@ -517,7 +518,7 @@ func _on_evolution(part_id: String) -> void:
 func _on_struck(enemy: Node3D, kind: String, _force: float) -> void:
 	_mote_flare = 1.0
 	if kind in LAUNCH_KINDS and _tier() >= SpeedTier.BLAZING and is_instance_valid(enemy) and enemy.is_inside_tree():
-		word("wham", enemy.global_position + Vector3.UP * 1.8)
+		word("wham", enemy.global_position + Vector3.UP * 1.8, Color.TRANSPARENT, enemy)
 		impact_frame(enemy.global_position, clampf(0.6 + 0.4 * might, 0.0, 1.0))
 	elif kind in CONTACT_KINDS and might_tier(might) >= 2 and is_instance_valid(enemy) and enemy.is_inside_tree():
 		# Grown builds earn the edge ink on every contact hit, not only the biggest.
@@ -561,9 +562,9 @@ static func boon_count(value: float) -> int:
 	return int(round(BOON * clampf(value, 0.0, 1.0)))
 
 
-func _on_smashed(_enemy: Node3D, at: Vector3, speed: float) -> void:
+func _on_smashed(enemy: Node3D, at: Vector3, speed: float) -> void:
 	if speed >= lerpf(SMASH_WORD_MPS[0], SMASH_WORD_MPS[1], might):
-		word("smash", at + Vector3.UP * 1.8)
+		word("smash", at + Vector3.UP * 1.8, Color.TRANSPARENT, enemy)
 	if speed >= lerpf(SMASH_FRAME_MPS[0], SMASH_FRAME_MPS[1], might):
 		impact_frame(at, clampf(0.6 + might * 0.4, 0.0, 1.0))
 
@@ -574,7 +575,7 @@ func _on_pinned(victim: Node3D, _damage: float) -> void:
 	while not _pin_times.is_empty() and _clock - float(_pin_times[0]) > STRIKE_WINDOW_S:
 		_pin_times.pop_front()
 	if _pin_times.size() == STRIKE_PINS and is_instance_valid(victim) and victim.is_inside_tree():
-		word("strike", victim.global_position + Vector3.UP * 2.0, Palette.BRASS)
+		word("strike", victim.global_position + Vector3.UP * 2.0, Palette.BRASS, victim)
 		impact_frame(victim.global_position, 0.8)
 
 
@@ -592,14 +593,15 @@ func _on_beat_word(enemy, _kind: String, at_clock: float) -> void:
 	for w in _words:
 		if w["t"] < 1.0 and float(w.get("born", -1.0)) >= at_clock:
 			# The hit's own word grows, unless the bigger word would reach a warning.
-			if camera == null or camera.cam == null or word_spot(_word_rect(camera.cam, w["at"], float(w["away"]) > 0.0,
-					float(w["width_px"]), float(w["size"]) * ONBEAT_GROW, w["node"].pixel_size), Rect2(), _warnings()) == 0:
+			var grown: Array[Rect2] = [] if camera == null or camera.cam == null else [_word_rect(camera.cam, w["at"], float(w["away"]) > 0.0,
+					float(w["width_px"]), float(w["size"]) * ONBEAT_GROW, w["node"].pixel_size)]
+			if grown.is_empty() or word_spot(grown, _warnings()) == 0:
 				w["size"] = float(w["size"]) * ONBEAT_GROW
 			return
 	if not is_instance_valid(enemy) or not enemy.is_inside_tree():
 		return
 	# Beside the ball, not over the foe: an ordinary hit's word never covers what is being hit.
-	if word("beat", _beside_ball()):
+	if word("beat", _beside_ball(), Color.TRANSPARENT, enemy):
 		_words_by_id("beat")["size"] *= ONBEAT_GROW
 
 
@@ -675,7 +677,7 @@ func words_alive() -> int:
 # Stamps a sound word at `at`, pushed off the line ahead of the ball. Refused inside the
 # gap since the last word, inside a word's own repeat window, with two alive, or in the
 # densest band, where only the reads may speak.
-func word(id: String, at: Vector3, color := Color.TRANSPARENT) -> bool:
+func word(id: String, at: Vector3, color := Color.TRANSPARENT, foe: Node3D = null) -> bool:
 	if not WORDS.has(id) or root == null or not root.is_inside_tree():
 		return false
 	var repeat := BEAT_REPEAT_S if id == "beat" else WORD_REPEAT_S
@@ -694,7 +696,8 @@ func word(id: String, at: Vector3, color := Color.TRANSPARENT) -> bool:
 	var width_px := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, label.font_size).x
 	var size := float(WORDS[id]["size"]) * (1.0 + 0.8 * might)
 	# The word grows away from the ball, so a long one never covers it, and never lands on a
-	# hostile warning: it takes the ball's other side, or stays unsaid (PF-26).
+	# hostile warning or on the foe it names: it takes the ball's other side, or the space just
+	# above the foe, or stays unsaid (PF-26).
 	var placed := clear_of_lane(at)
 	var right_of_ball := true
 	if camera != null and camera.cam != null:
@@ -703,15 +706,24 @@ func word(id: String, at: Vector3, color := Color.TRANSPARENT) -> bool:
 		var rel: Vector3 = placed - player.shown_position()
 		right_of_ball = rel.dot(side) >= 0.0
 		var grow := ONBEAT_GROW if id == "beat" else 1.0
-		var mirrored: Vector3 = placed - side * 2.0 * rel.dot(side)
-		var pick := word_spot(_word_rect(cam, placed, right_of_ball, width_px, size * grow, label.pixel_size),
-			_word_rect(cam, mirrored, not right_of_ball, width_px, size * grow, label.pixel_size), _warnings())
+		var spots: Array = [[placed, right_of_ball], [placed - side * 2.0 * rel.dot(side), not right_of_ball]]
+		var avoid := _warnings().duplicate()
+		var body := foe_rect(foe, cam)
+		if body.has_area():
+			avoid.append(body.grow(WORD_WARNING_GAP))
+			var tall := size * grow * WORD_SCREEN * cam.get_viewport().get_visible_rect().size.y
+			var p := cam.unproject_position(placed)
+			var depth := -(cam.global_transform.affine_inverse() * placed).z
+			spots.append([cam.project_position(Vector2(p.x, body.position.y - WORD_WARNING_GAP - tall * 0.6), maxf(depth, cam.near + 0.1)), right_of_ball])
+		var rects: Array[Rect2] = []
+		for s in spots:
+			rects.append(_word_rect(cam, s[0], s[1], width_px, size * grow, label.pixel_size))
+		var pick := word_spot(rects, avoid)
 		if pick < 0:
 			spawned["word_held"] = spawned.get("word_held", 0) + 1
 			return false
-		if pick == 1:
-			placed = mirrored
-			right_of_ball = not right_of_ball
+		placed = spots[pick][0]
+		right_of_ball = spots[pick][1]
 	_last_word = _clock
 	_word_seen[id] = _clock
 	label.text = text
@@ -741,14 +753,26 @@ func _warnings() -> Array[Rect2]:
 	return _warn_rects
 
 
-# Which spot a word takes: 0 its own, 1 the ball's other side, -1 none, when both cover a
-# hostile warning's screen rect.
-static func word_spot(own: Rect2, other: Rect2, warnings: Array[Rect2]) -> int:
-	if not warnings.any(func(r): return r.intersects(own)):
-		return 0
-	if not warnings.any(func(r): return r.intersects(other)):
-		return 1
+# Which spot a word takes: the first of `spots` (its own, the ball's other side, above the
+# foe) that covers none of `avoid`, or -1 when every one does.
+static func word_spot(spots: Array[Rect2], avoid: Array[Rect2]) -> int:
+	for i in spots.size():
+		if spots[i].has_area() and not avoid.any(func(r): return r.intersects(spots[i])):
+			return i
 	return -1
+
+
+# The screen rect of `foe`'s visible meshes, or an empty rect without one in view.
+static func foe_rect(foe: Node3D, cam: Camera3D) -> Rect2:
+	if foe == null or not is_instance_valid(foe) or not foe.is_inside_tree() or cam == null:
+		return Rect2()
+	var merged := [AABB(), false]
+	_merge_meshes(foe, merged)
+	if not merged[1]:
+		return Rect2()
+	var span := [Vector2(INF, INF), Vector2(-INF, -INF)]
+	_project_box(merged[0], cam, span)
+	return Rect2(span[0], span[1] - span[0]) if span[0].x <= span[1].x else Rect2()
 
 
 # The screen rect a word of `width_px` at `size` covers when its near end sits at `at` and it
