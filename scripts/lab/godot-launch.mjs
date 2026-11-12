@@ -79,7 +79,7 @@ export function godotLaunch({
   }
   const name = path.basename(sketch);
   const engine =
-    watch === null ? ["--headless", "--fixed-fps", String(TIMING.tick_hz)] : [];
+    watch === null ? ["--headless", "--fixed-fps", String(TIMING.tick_hz)] : ["--audio-driver", "Dummy"];
   const watchArgs = (io) => {
     if (watch === null) return [];
     const paths = watchPaths(io, watch.marks);

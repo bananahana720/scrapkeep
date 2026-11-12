@@ -31,10 +31,7 @@ const MIN_SWITCHES := 3
 const MAX_HEAVY_S := 45.0
 
 # {"<stage> <measure>": {"value": measured, "why": "..."}}
-const OWED := {
-	"park_dam rhythm_switches": {"value": 2, "why": "the slickrock domes (dome_lightning, 260 x 240 m) cover the drop-in and the 397 m west wash (culvert_chasers and its flash flood) follows 1 s later, so the first breath comes 46 s in; then the apron yard and the Warden"},
-	"park_dam longest_heavy_s": {"value": 46.2, "why": "the same domes-then-west-wash run, 46 s at cruise before the first quiet strip"},
-}
+const OWED := {}
 
 var t := T.new("park_rhythm_test")
 

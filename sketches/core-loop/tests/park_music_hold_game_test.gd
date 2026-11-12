@@ -45,7 +45,7 @@ func _run() -> void:
 	game.player.set_frozen(true)
 	var audio = game.presentation.audio
 	audio.bake_now()
-	game.events.event_announced.connect(func(id, seconds):
+	game.events.event_announced.connect(func(id, seconds, _at):
 		if id == "plunge_pool_flood":
 			lead = seconds
 			due = audio.engine.clock + roundi(seconds * Harmony.RATE)
@@ -98,7 +98,7 @@ func _warning_through_hold() -> void:
 	var audio = game.presentation.audio
 	audio.bake_now()
 	var warning := []
-	game.events.event_announced.connect(func(id, seconds):
+	game.events.event_announced.connect(func(id, seconds, _at):
 		if id == "plunge_pool_flood":
 			warning.append({"at": audio.engine.clock, "lead": roundi(seconds * Harmony.RATE)}))
 	game.world.director.stage_time = game.world.director.TIER_SECONDS
@@ -155,7 +155,7 @@ func _recovery(before_deadline: bool, direct_live := false) -> void:
 	root.add_child(probe)
 	var announcement := []
 	var landed := []
-	game.events.event_announced.connect(func(id, seconds):
+	game.events.event_announced.connect(func(id, seconds, _at):
 		if id == "plunge_pool_flood":
 			announcement.append({"sample": audio.engine.clock + roundi(seconds * Harmony.RATE), "stage": game.world.events.stage_time + seconds}))
 	game.events.event_started.connect(func(id):

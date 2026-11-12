@@ -124,6 +124,30 @@ func crew_alive() -> Array:
 	return _crew.map(func(ref: WeakRef): return ref.get_ref()).filter(func(enemy): return _alive(enemy))
 
 
+# How much of the shut yard's crew is down, 0 to 1, over every wave's members (0 while the yard
+# is open): the yard row's bar on the plate. The row said "Break the yard crew" with no count of
+# what was left (w37 film 020-022, PF-39).
+func yard_fraction() -> float:
+	if not lock_active():
+		return 0.0
+	var waves := _waves()
+	var total := 0
+	var down := 0
+	for i in waves.size():
+		var size: int = waves[i].size()
+		total += size
+		if i < _wave:
+			down += size
+		elif i == _wave:
+			down += maxi(0, size - crew_alive().size())
+	return clampf(float(down) / float(total), 0.0, 1.0) if total > 0 else 0.0
+
+
+# The living member of the shut yard's crew nearest the ball, or null: the yard row's edge marker.
+func yard_crew(ball: Vector3) -> Node3D:
+	return _nearest(crew_alive(), ball, INF) if lock_active() else null
+
+
 # What a hand that reads the tells goes for: the yard's crew while it is shut; while the clamp is
 # shut, its crew (clamp_crew), as a player reads the pips and finishes a crew rather than hitting
 # whatever is nearest; with no crew that can still count, the nearest enemy inside reach; else null.

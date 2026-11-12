@@ -1,4 +1,4 @@
-# smoke: solo timeout=360s (one fixed-90-fps child; a skipper bot fights Brindle's Furnace and Scuttle with a bare ball; reads simulated time against caps)
+# smoke: solo timeout=360s (four fixed-90-fps children side by side; a skipper bot fights Brindle's Furnace and Scuttle with a bare ball; reads simulated time against caps)
 extends SceneTree
 
 const Game := preload("res://src/game.gd")
@@ -15,10 +15,16 @@ const SimClock := preload("res://src/core/sim_clock.gd")
 # stage 2, enters the arena and jumps to the phase; the bot must take the phase's chunk inside
 # the cap, and the hull's physics body must stand where its node stands.
 #
-# Evidence limit: one seed and one pilot per phase, entered with a placed ball; it says a bare
-# ball can break the phase, not how a full run reaches it or how it feels.
+# The claim is that a bare ball CAN break each phase, so each pilot plays SEEDS side by side and the phase passes when
+# any seed takes the chunk inside the cap; every seed must keep the hull's body on its node and stay a bare ball. One
+# seed was a pin on chaos: the bowl entry's move from 210 to 245 degrees (PR 753) flipped seed 2 from a take to a
+# death, while across seeds 1 to 6 the new entry took 7 of 12 phases and the old one 2 of 12, with the first hit no
+# earlier (12 Nov). A hull the ball cannot touch takes no chunk on any seed.
+#
+# Evidence limit: four seeds and one pilot per phase, entered with a placed ball; it says a bare ball can break the
+# phase, not how often, how a full run reaches it or how it feels.
 
-const SEED := 2
+const SEEDS := [1, 2, 3, 4]
 const JUMP_STAGE := 2
 const HEFT_MAX := 1.3
 # Float tolerance on the 1.30 limit, not a looser rule (the phase 2 tally peak printed 1.30 when the
@@ -38,19 +44,34 @@ var _ticks := 0
 var _chunks := 0
 var _heft := 0.0
 var _drift := 0.0
+var _seed := 0
 
 
 func _initialize() -> void:
 	# The phases run in a fixed-90-fps child with hit-stop on the tick count, as bot_run.gd plays:
 	# on the wall clock the phase 2 peak heft moved with CPU load (1.12 to 1.30 on one commit).
 	if not OS.get_cmdline_user_args().has("--child"):
-		var results := ChildRuns.run([{"script": "res://tests/bot_brindle_short_test.gd", "args": ["--child"]}], 300.0)
-		var result: Dictionary = results[0]
-		print(result["log"])
-		_t.check("child ran clean", result["code"] == 0 and not result["timed_out"] and ChildRuns.summary(result)["errors"].is_empty(),
-			"exit %s, timed out %s" % [result["code"], result["timed_out"]])
+		var jobs: Array = SEEDS.map(func(s): return {"script": "res://tests/bot_brindle_short_test.gd", "args": ["--child", "--seed=%d" % s]})
+		var results := ChildRuns.run(jobs, 300.0)
+		var took := {}
+		for i in results.size():
+			var result: Dictionary = results[i]
+			print(result["log"])
+			_t.check("seed %d ran clean" % SEEDS[i], result["code"] == 0 and not result["timed_out"] and ChildRuns.summary(result)["errors"].is_empty(),
+				"exit %s, timed out %s" % [result["code"], result["timed_out"]])
+			for line in String(result["log"]).split("\n"):
+				if line.begins_with("CHUNK "):
+					var parts := line.split(" ")
+					took[parts[1]] = int(took.get(parts[1], 0)) + (1 if parts[3] == "took" else 0)
+		for c in CASES:
+			var key := "phase%d" % c["phase"]
+			_t.check("phase %d %s takes the chunk on some seed" % [c["phase"], c["pilot"]], int(took.get(key, 0)) > 0,
+				"%d of %d seeds" % [int(took.get(key, 0)), SEEDS.size()])
 		quit(_t.verdict())
 		return
+	for arg in OS.get_cmdline_user_args():
+		if arg.begins_with("--seed="):
+			_seed = int(arg.substr(7))
 	SimClock.ticks = true
 	seed(1)
 	_start()
@@ -72,8 +93,8 @@ func _physics_process(delta: float) -> bool:
 		return false
 	var c: Dictionary = CASES[_case]
 	if _driver == null:
-		_driver = BotDriver.new(_game, "skipper", SEED)
-		_driver.class_index = BotDriver.class_index_for(SEED, String(c["pilot"]))
+		_driver = BotDriver.new(_game, "skipper", _seed)
+		_driver.class_index = BotDriver.class_index_for(_seed, String(c["pilot"]))
 		_driver.start()
 		return false
 	if _boss == null:
@@ -104,11 +125,11 @@ func _physics_process(delta: float) -> bool:
 	var seconds := float(_ticks) / float(Engine.physics_ticks_per_second)
 	if not (took or over or seconds > float(c["cap_s"])):
 		return false
-	var label := "phase %d %s" % [c["phase"], c["pilot"]]
+	var label := "phase %d %s seed %d" % [c["phase"], c["pilot"], _seed]
 	_t.check("%s hull body follows the hull" % label, _drift < 0.5, "largest body-to-node gap %.2f m" % _drift)
 	_t.check("%s stays a bare ball" % label, _heft <= HEFT_MAX + HEFT_EPS, "peak heft %.2f, want <= %.2f" % [_heft, HEFT_MAX])
-	_t.check("%s takes the chunk" % label, took, "%.1f s of a %.0f s cap, chunks %d -> %d, bot outcome '%s'"
-		% [seconds, c["cap_s"], _chunks, _boss.chunks_left(), _driver.outcome])
+	print("CHUNK phase%d %d %s %.1f s of a %.0f s cap, chunks %d -> %d, bot outcome '%s'"
+		% [c["phase"], _seed, "took" if took else "missed", seconds, c["cap_s"], _chunks, _boss.chunks_left(), _driver.outcome])
 	_game.free()
 	_case += 1
 	if _case >= CASES.size():

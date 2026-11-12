@@ -77,7 +77,8 @@ func _run() -> void:
 		for key in markers.views.keys():
 			var view: MeshInstance3D = markers.views[key]
 			var kind := String(view.get_meta("kind"))
-			var foot := view.global_position
+			# Its site, not where it is drawn: a far kind is drawn pulled in along the eye's ray (site_markers.gd pull).
+			var foot: Vector3 = view.get_meta("at")
 			var toward := Vector2(drop.x - foot.x, drop.z - foot.z)
 			toward = toward.normalized() if toward.length() > 1.0 else Vector2(0.0, 1.0)
 			var look := foot + Vector3.UP * float(markers.KINDS[kind]["height"]) * 0.4

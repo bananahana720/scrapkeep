@@ -112,7 +112,7 @@ func _physics_process(delta: float) -> bool:
 			_game.ctx.calm = true
 			_game.player.source = Intent.Scripted.new()
 			var bus = _game.events
-			bus.event_announced.connect(func(id: String, s: float): _log.append(["announced", id, _sim, s]); _announced_tick[id] = _sim)
+			bus.event_announced.connect(func(id: String, s: float, _at: Vector3): _log.append(["announced", id, _sim, s]); _announced_tick[id] = _sim)
 			bus.event_started.connect(func(id: String): _log.append(["started", id, _sim]); _started_tick[id] = _sim)
 			bus.milestone_won.connect(func(id: String): _log.append(["milestone", id, _sim]))
 			bus.world_fact.connect(func(kind: String, _at: Vector3): _log.append(["fact", kind, _sim]))

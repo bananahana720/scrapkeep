@@ -113,7 +113,7 @@ func _physics_process(delta: float) -> bool:
 		_game.presentation.audio.bake_now()
 		_driver.start()
 		_game.flow.enter_stage(_stage, Vector3.ZERO, false)
-		_game.events.event_announced.connect(func(id, _lead): _facts.announced.append(String(id)))
+		_game.events.event_announced.connect(func(id, _lead, _at): _facts.announced.append(String(id)))
 		_game.events.event_started.connect(func(id): _facts.started.append(String(id)))
 		_game.events.world_fact.connect(func(kind, _at): if not _facts.forms.has(String(kind)): _facts.forms.append(String(kind)))
 		return false

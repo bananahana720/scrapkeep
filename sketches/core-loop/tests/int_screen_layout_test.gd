@@ -202,3 +202,14 @@ func _check_prompts() -> void:
 			and high.all(func(p): return not p.near and is_equal_approx(p.detail_range, WorldPrompt.DETAIL_RANGE)),
 		"%d gate prompts, %d beyond %d m, their lines %s; the other prompt near %s"
 			% [gate_prompts.size(), far.size(), int(WorldPrompt.DETAIL_RANGE), far.map(func(p): return p.shown_lines()), high.map(func(p): return p.near)])
+	# PF-22: each gate's name aims its leader at its own gate (the leader draws when the gate stands
+	# above the name, prompt_leader_test); a prompt that is not a gate's offer has none.
+	var cam: Camera3D = _game.camera.cam
+	var room := Rect2(0.0, ScreenRegions.rect("toasts", size).end.y, size.x, ScreenRegions.rect("prompts", size).position.y - ScreenRegions.rect("toasts", size).end.y)
+	var own := true
+	for p in gate_prompts:
+		var aimed: bool = not p.aim.is_finite() or p.aim_cut or p.aim.distance_to(cam.unproject_position(p.anchor_point())) < 1.0
+		var in_view: bool = not p.leader_end().is_finite() or (p.position + p.leader_end()).y >= room.position.y - 0.5
+		own = own and p.leader and aimed and in_view
+	_report("gate names aim at their own gates", not gate_prompts.is_empty() and own and high.all(func(p): return not p.leader and not p.leader_end().is_finite()),
+		"%d gate prompts aiming at their own gates %s; the other prompt has a leader %s" % [gate_prompts.size(), own, high.map(func(p): return p.leader)])
