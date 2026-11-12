@@ -52,6 +52,11 @@ var slot_pick := -1
 var ultimate_pressed := false
 # F this tick: fire the racked active.
 var active_pressed := false
+# The off line (twin_lines.gd), a prototype behind --twin-lines=on: middle mouse or the right
+# stick click. The keyboard fills it only while that flag has bound the action.
+var twin_pressed := false
+var twin_held := false
+var twin_released := false
 
 
 func clear() -> void:
@@ -85,6 +90,9 @@ func clear() -> void:
 	slot_pick = -1
 	ultimate_pressed = false
 	active_pressed = false
+	twin_pressed = false
+	twin_held = false
+	twin_released = false
 
 
 # A source lets the headless test drive the same player with no input at all.
@@ -142,6 +150,10 @@ class Keyboard:
 		out.harpoon_released = Input.is_action_just_released("cl_harpoon")
 		out.ultimate_pressed = Input.is_action_just_pressed("cl_ultimate")
 		out.active_pressed = Input.is_action_just_pressed("cl_active")
+		if InputMap.has_action("cl_twin"):
+			out.twin_pressed = Input.is_action_just_pressed("cl_twin")
+			out.twin_held = Input.is_action_pressed("cl_twin")
+			out.twin_released = Input.is_action_just_released("cl_twin")
 		var picks := ["cl_bay_1", "cl_bay_2", "cl_bay_3"]
 		for i in picks.size():
 			if Input.is_action_just_pressed(picks[i]):
@@ -155,5 +167,8 @@ class Keyboard:
 			out.harpoon_pressed = false
 			out.harpoon_held = false
 			out.harpoon_released = false
+			out.twin_pressed = false
+			out.twin_held = false
+			out.twin_released = false
 			out.ultimate_pressed = false
 			out.slot_pick = -1

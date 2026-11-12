@@ -4,6 +4,7 @@ const Tuning := preload("res://src/movement/tuning.gd")
 const Rules := preload("res://src/movement/ball_rules.gd")
 const Augments := preload("res://src/movement/augments.gd")
 const Contact := preload("res://src/movement/contact.gd")
+const TwinLines := preload("res://src/movement/twin_lines.gd")
 
 signal enemy_touched(enemy: Node3D, normal: Vector3)
 signal slammed(at: Vector3, speed: float, flatness: float)
@@ -25,6 +26,8 @@ signal velocity_setting
 signal teleporting
 var intent
 var kit
+# The off line, a prototype; null unless --twin-lines=on (twin_lines.gd).
+var twin
 # Pushes from the world (the flood's drag and current), an acceleration in m/s^2. The
 # owner adds to it every physics tick and the ball spends and clears it once per step.
 var external_accel := Vector3.ZERO
@@ -81,6 +84,7 @@ func setup(tuning_ref, state_ref) -> void:
 	_probe = Rules.make_probe(self)
 	add_child(_probe)
 	body_entered.connect(_on_body_entered)
+	twin = TwinLines.create(self)
 
 
 func set_active(active: bool) -> void:
@@ -90,6 +94,8 @@ func set_active(active: bool) -> void:
 	set_collision_layer_value(2, active)
 	_probe.enabled = active
 	sleeping = false
+	if twin != null and not active:
+		twin.clear()
 
 
 # A shove divided by a zero physics delta, or any other NaN, must never reach the body: once
@@ -115,6 +121,8 @@ func teleport(to: Vector3, new_velocity: Vector3) -> void:
 		push_warning("rigid_ball: teleport to a non-finite point refused")
 		return
 	_pending_position = to
+	if twin != null:
+		twin.clear()
 	# The body takes its new place and speed now, so whoever reads the ball back in the same breath
 	# (a lens snap, a rescue check, a ride that catches it) finds it there, moving as placed. A
 	# frozen ball is a static body, which would read a speed as a conveyor's, so it waits for the
@@ -152,6 +160,7 @@ func _integrate_forces(body_state: PhysicsDirectBodyState3D) -> void:
 	if not body_state.linear_velocity.is_finite():
 		body_state.linear_velocity = Vector3.ZERO
 		body_state.angular_velocity = Vector3.ZERO
+	var forced: bool = _pending_velocity != null
 	if _pending_velocity != null:
 		body_state.linear_velocity = _pending_velocity
 		var axis := Rules.roll_axis(_pending_velocity, Vector3.UP)
@@ -220,6 +229,8 @@ func _integrate_forces(body_state: PhysicsDirectBodyState3D) -> void:
 	# The augments run before jump and boost so a pylon jump or a vault kick can claim
 	# the same key without the base rule firing as well.
 	Augments.apply(kit, state, tuning, intent, drive_basis, body_state)
+	if twin != null and kit != null:
+		twin.step(kit, state, tuning, intent, body_state, forced)
 	# The augments write the body's velocity directly; one that went non-finite reads as rest
 	# here, as the entry check above does, so the state never carries NaN for a tick.
 	if not body_state.linear_velocity.is_finite():
