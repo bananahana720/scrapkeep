@@ -225,7 +225,7 @@ Rules that hold at every setting: pitch clamp −1.25 to 0.55 rad (exists), roll
 
 ### 3.3 Per-weapon feedback profiles
 
-One table of numbers, the contract W11's implementation must meet and Audio's cue set pairs with. Ordinary hits get no hit-stop (VL §8: momentum is sacred). Knockback is the enemy's, in m/s at heft I, scaling ×1.3 per heft class. The ball's own recoil is a squash, never a velocity change, except the bomb's rocket jump.
+One table of numbers, the contract W11's implementation must meet and Audio's cue set pairs with. Hit-stop belongs to the player's own strike: an ordinary hit stops 12 to 40 ms by its damage, and the ball's motion, a dodge and damage taken get none (VL §8; the rows in `event_kinds.gd` own the numbers). Knockback is the enemy's, in m/s at heft I, scaling ×1.3 per heft class. The ball's own recoil is a squash, never a velocity change, except the bomb's rocket jump.
 
 | Weapon | Hit-stop | Camera kick | FOV punch | Shake | Enemy knockback | Ball squash | Hit shape | Instrument (Audio) |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
