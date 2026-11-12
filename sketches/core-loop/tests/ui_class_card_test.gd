@@ -16,8 +16,9 @@ const Achievements := preload("res://src/core/achievements.gd")
 # select, driven by pushed mouse and key events:
 #   - every card shows its class row's bar (1, 2, 3, Q) over its chips (RMB, Shift, Ctrl) with
 #     the rows' ability icons, plus its Space extra, and wears the row's colour;
-#   - at rest the whole screen reads in 75 words or fewer: the keycaps are the same on every
-#     card, so they read on the open card only (re-pinned 2026-10-10, unit B2);
+#   - the whole screen reads in 75 words or fewer, as it opens (on the first card, PF-40) and with
+#     any one card open: the keycaps are the same on every card, so they read on the open card
+#     only (re-pinned 2026-10-10, unit B2);
 #   - hovering a card opens that card alone: it lifts, its words fade in, its preview
 #     plays and moves, the others step back; the extra words all belong to it;
 #   - with nothing focused, Right opens the first card, Right again the second, and
@@ -77,13 +78,22 @@ func _process(delta: float) -> bool:
 			for def in _game.flow.classes:
 				_game.ctx.profile.unlock_pilot(def.id)
 			_game.flow.press_start()
+			_next("first_open")
+		"first_open":
+			# Pilot select opens on the first pilot (PF-40); the calm count is the row with every card shut.
+			_report("pilot select opens on the first card", cards[0].is_open() and cards.slice(1).all(func(c): return not c.is_open()),
+				"open %s" % [cards.map(func(c): return c.is_open())])
+			var first := _words("first words")
+			_report("the screen as it opens reads within the budget", first > 0 and first <= CALM_BUDGET,
+				"%d words with the first card open (budget %d)" % [first, CALM_BUDGET])
+			root.gui_release_focus()
 			_next("rows")
 		"rows":
 			_check_rows(cards)
 			_calm = _words("calm words")
 			_calm_cards = cards.map(func(c): return WordBudget.count(c)["hud"])
 			_report("calm budget", _calm > 0 and _calm <= CALM_BUDGET and cards.all(func(c): return not c.is_open()),
-				"%d words with no card open (budget %d)" % [_calm, CALM_BUDGET])
+				"%d words with every card shut (budget %d)" % [_calm, CALM_BUDGET])
 			Push.hover(root, cards[1])
 			_next("hovered")
 		"hovered":
@@ -98,9 +108,9 @@ func _process(delta: float) -> bool:
 					% [open, cards[1].openness, cards[1].scale.x, cards[0].scale.x, cards[1].preview.playing(), _travel])
 			var open_words := _words("open words")
 			var now: Array = cards.map(func(c): return WordBudget.count(c)["hud"])
-			_report("open words", open_words > _calm and range(now.size()).all(func(j): return j == 1 or now[j] == _calm_cards[j])
+			_report("open words", open_words > _calm and open_words <= CALM_BUDGET and range(now.size()).all(func(j): return j == 1 or now[j] == _calm_cards[j])
 					and open_words - _calm == now[1] - _calm_cards[1],
-				"%d words with Rivet open (%d at rest); per card %s at rest, %s now" % [open_words, _calm, _calm_cards, now])
+				"%d words with Rivet open (budget %d, %d shut); per card %s at rest, %s now" % [open_words, CALM_BUDGET, _calm, _calm_cards, now])
 			var away := InputEventMouseMotion.new()
 			away.position = Vector2(4.0, 4.0)
 			away.global_position = away.position
