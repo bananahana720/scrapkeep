@@ -202,7 +202,8 @@ func _wiring(entries: Array) -> void:
 		game.ctx.terrain.stage = int(definition.stage)
 		acts._on_stage_entered(game.run.stage, false)
 		for i in map.activity_sites.size():
-			var spec: Dictionary = map.activity_sites[i]
+			# The site this run built: the row, or the alt its seed drew (W1-70), which keeps the row's interior.
+			var spec: Dictionary = Activities.variant(map.activity_sites[i], hash([game.ctx.rng.seed, game.ctx.run.run_seed, "site_variants"]))
 			if not spec.id in ARENAS and spec.id != "cracked_cache":
 				continue
 			var row_id: String = spec.get("row", spec.id)
