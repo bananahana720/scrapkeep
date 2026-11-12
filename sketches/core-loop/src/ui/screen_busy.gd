@@ -5,15 +5,15 @@ const MixRows := preload("res://src/presentation/mix_rows.gd")
 
 # Is the screen busy? The one answer (PF-19), read by every card that can wait: a record, a
 # take, an achievement, a look, a field note, a synergy, a fleet grade find, and the crate (which
-# holds the slot like a card, and while it is up counts as busy through add_source). A
-# card asks may_show(key) each frame; it is told yes only when the screen has been quiet long
-# enough and the card is the oldest one ready, and then it holds the screen alone until it
-# calls done(key). Nothing a player must act on ever asks: those cards show when they are due.
+# holds the slot like a card, and while it is up counts as busy through add_source, as the
+# prologue does). A card asks may_show(key) each frame; it is told yes only when the screen has
+# been quiet long enough and the card is the oldest one ready, and then it holds the screen alone
+# until it calls done(key). Nothing a player must act on ever asks: those cards show when they are due.
 #
 # Quiet means none of these in the last `hold` seconds of game time: a fight (the stage's
 # pressure through MixRows.combat_after, the one hysteresis the music uses too; a named fight
 # that has entered a phase and whose enemy has not died; the Warden), a screen that registered
-# itself with add_source (the kit pick, the briefing card, the crate), damage to the player, a
+# itself with add_source (the kit pick, the briefing card, the crate, the prologue's story cards), damage to the player, a
 # live telegraph. SETTLE is the usual hold; a kind that must wait longer on purpose passes it.
 # A card still waiting when the run ends is dropped. Whether the fact survives is up to the
 # card's owner; the achievements page keeps an achievement.
@@ -77,7 +77,7 @@ func fighting() -> bool:
 	return _combat or not _fights.is_empty() or WhyCallout.warden_fight_live(_flow)
 
 
-# A fight is on, or a pick, briefing or crate is up.
+# A fight is on, or a pick, briefing, crate or the prologue is up.
 func busy() -> bool:
 	if fighting():
 		return true

@@ -34,8 +34,11 @@ const DangerMark := preload("res://src/ui/danger_mark.gd")
 const BossPlate := preload("res://src/ui/boss_plate.gd")
 const ChainCounter := preload("res://src/ui/chain_counter.gd")
 const DamageNumbers := preload("res://src/presentation/damage_numbers.gd")
+const PickupLines := preload("res://src/ui/pickup_lines.gd")
+const PanelFx := preload("res://src/presentation/panel_fx.gd")
 const Companion := preload("res://src/core/companion.gd")
 const HullMark := preload("res://src/world/hull_mark.gd")
+const Interactables := preload("res://src/world/interactables.gd")
 
 # The wallet readout: the brass cog and the cogs the run holds, the one number the HUD
 # shows because it is what the next roll through a hoop spends.
@@ -257,6 +260,8 @@ var _cogs: CogChip
 var chain_counter: Control
 # SR6: floating damage numbers, one layer over the world (presentation/damage_numbers.gd).
 var damage_numbers: Control
+# Grey panel pickup lines at the HUD's edge, off the fight (ui/pickup_lines.gd, PF-14).
+var pickup_lines: Control
 var _armor_flash := 0.0
 var _armor_peak := ARMOR_PEAK_FLOOR
 # The companion pip, left of the armour gauge: the escape charge read from run.companion,
@@ -340,6 +345,11 @@ func setup(game_ref) -> void:
 	damage_numbers = DamageNumbers.new()
 	damage_numbers.project = _project_to_screen
 	add_child(damage_numbers)
+	pickup_lines = PickupLines.new()
+	add_child(pickup_lines)
+	var panel_fx = game.presentation.get("panel_fx") if game.get("presentation") != null else null
+	if panel_fx != null:
+		panel_fx.popped.connect(pickup_lines.show_line)
 	# Juice raises the numbers from the hits it draws, so a number and its effect agree.
 	if game.presentation != null and game.presentation.get("juice") != null:
 		game.presentation.juice.number_sink = Callable(damage_numbers, "add")
@@ -1022,6 +1032,7 @@ func layout(size: Vector2) -> void:
 	_companion.position = Vector2(_armor.position.x - BOTTOM_GAP - _companion.size.x, slot_mid - _companion.size.y * 0.5)
 	_speed.position = Vector2(MARGIN, slot_mid - _speed.size.y * 0.5)
 	_cogs.position = Vector2(_speed.position.x + _speed.size.x + BOTTOM_GAP, slot_mid - _cogs.size.y * 0.5)
+	pickup_lines.layout(size, PanelFx.POP_ROWS)
 	chain_counter.position = Vector2(ability_bar.position.x + bar_size.x + BOTTOM_GAP, slot_mid - chain_counter.size.y * 0.5)
 
 
@@ -1190,6 +1201,37 @@ func objective_reading() -> Dictionary:
 		"step": Objectives.live_step(id, String(asked[0]["what"]) if not asked.is_empty() else "")}
 
 
+# The plate's detour row under the goal (objectives.gd detour_shown): the stage's caged pilot while
+# one waits, else the nearest side site not yet started, each with its metres (as the goal row's) and in its own
+# marker's colour and glyph, so the row and the chevron at the edge read as one thing. {} for none.
+func detour_reading(goal: Dictionary) -> Dictionary:
+	if not Objectives.detour_shown(String(goal.get("id", ""))) or game.world == null:
+		return {}
+	var ball: Vector3 = game.player.shown_position()
+	var rescue = game.world.get("rescue")
+	if rescue != null:
+		for waiting in rescue.waiting():
+			var cage = rescue.cage(String(waiting["quest"]))
+			return {"what": "cage", "icon": Interactables.row("ally")["icon"], "color": Interactables.color("ally"),
+				"words": Objectives.cage_words(cage.terms() if cage != null else ""),
+				"distance": int(ball.distance_to(waiting["at"]))}
+	var best = null
+	var best_m := INF
+	for site in edge_markers.unfinished_sites():
+		if site.started or site.failed:
+			continue
+		var m := ball.distance_to(site.global_position)
+		if m < best_m:
+			best = site
+			best_m = m
+	if best == null:
+		return {}
+	var kind := String(best.id)
+	return {"what": kind, "icon": Objectives.glyph("find_activity"),
+		"color": EdgeMarkers.marker_color({"activity": String(best.rule.get("cue", {}).get("view", kind))}),
+		"words": Objectives.activity_words(kind, game.world.activities.called(kind)), "distance": int(best_m)}
+
+
 # What the plate shows: the objective, or for Objectives.Done.SECONDS after a goal is finished
 # (or lost) that goal ticked (crossed), in the objective's own place.
 func plate_shown(reading := {}) -> Dictionary:
@@ -1228,12 +1270,16 @@ func place_prompts(size: Vector2, playing: bool) -> void:
 	near.sort_custom(func(a, b): return a[0] < b[0])
 	var band := ScreenRegions.rect("prompts", size)
 	var placed: Array[Rect2] = []
+	# The pickup lines rise over the band's lower left; a prompt stands clear of them while they show.
+	var taken: Array[Rect2] = []
+	if pickup_lines.rect().has_area():
+		taken.append(pickup_lines.rect())
 	for entry in near:
 		if placed.size() >= ScreenRegions.MAX_PROMPTS:
 			break
 		var prompt: Label = entry[1]
 		prompt.near = ball.distance_to(entry[2]) <= prompt.detail_range
-		var spot := prompt_spot(prompt, cam.unproject_position(entry[2]), size, placed, band)
+		var spot := prompt_spot(prompt, cam.unproject_position(entry[2]), size, taken, band)
 		if spot.size == Vector2.ZERO:
 			continue
 		prompt.position = spot.position
@@ -1241,6 +1287,7 @@ func place_prompts(size: Vector2, playing: bool) -> void:
 		prompt.aim_at(cam.unproject_position(entry[2]), _leader_room(size))
 		prompt.visible = true
 		placed.append(spot)
+		taken.append(spot)
 		prompt_rects[prompt] = spot
 	# A gate's leader that would cross another prompt's words is not drawn: the column says it.
 	for prompt in prompt_rects:
@@ -1316,13 +1363,14 @@ func _process(delta: float) -> void:
 	_step_toast(delta)
 	_step_curse()
 	damage_numbers.step(delta)
+	pickup_lines.step(delta)
 	_step_ach(delta)
 	_step_lore(delta)
 
 	var flow = game.flow
 	var playing: bool = flow.in_play()
 	place_prompts(size, playing)
-	for piece in [_objective, _status, _toasts, ability_bar, _health, _speed, _cogs, reticle, key_glyphs, first_steps, edge_markers, why_callout, damage_numbers]:
+	for piece in [_objective, _status, _toasts, ability_bar, _health, _speed, _cogs, reticle, key_glyphs, first_steps, edge_markers, why_callout, damage_numbers, pickup_lines]:
 		piece.visible = playing
 	if _plate != null:
 		_plate.visible = playing
@@ -1345,6 +1393,8 @@ func _process(delta: float) -> void:
 	var goal := objective_reading()
 	var reading := plate_shown(goal)
 	_objective.set_objective(reading["icon"], reading["words"], reading["color"], reading["progress"], reading["distance"], reading.get("done", ""), reading["step"])
+	var detour := detour_reading(goal)
+	_objective.set_detour(detour.get("icon", ""), detour.get("words", ""), detour.get("color", Color.WHITE), detour.get("distance", -1))
 	edge_markers.objective_id = goal["id"]
 	edge_markers.objective_icon = goal["icon"]
 	edge_markers.engaged = _engaged
