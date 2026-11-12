@@ -303,6 +303,16 @@ func _final_world_cleared() -> bool:
 	return ctx.stages.is_run_last(ctx.run.stage) and bool(boss_row(world).get("built", false)) and boss_table
 
 
+# The run ends won after this stage: the table's last, or the last of the world the launch names
+# as final (tuning final_world; the world 1 sitting ends at Brindle, W1-60). Such a win opens the
+# summary, its stamps and the next HARD rung, but not the all-worlds ending page (won_final).
+func run_ends_after(stage: int) -> bool:
+	if ctx.stages.is_run_last(stage):
+		return true
+	var final_world: int = ctx.tuning.final_world() if ctx.tuning != null else 0
+	return final_world > 0 and ctx.stages.world_of(stage) == final_world and ctx.stages.is_world_last(stage)
+
+
 # The run ends at Meteor Crater only after the Mind: the final world's boss row plays the Mind's music.
 func _ending_due() -> bool:
 	return _final_world_cleared() and String(boss_row(ctx.stages.world_of(ctx.run.stage)).get("music", "")) == "mind"
@@ -1053,7 +1063,7 @@ func _finish_stage(velocity = null) -> void:
 # The next stage after a cleared one, which is the next world's first when the cleared
 # stage closed a world; the run ends won after the last world.
 func _advance_from(cleared: int, velocity = null) -> void:
-	if ctx.stages.is_run_last(cleared):
+	if run_ends_after(cleared):
 		_end_run_won()
 		return
 	enter_stage(cleared + 1, ctx.player.state.velocity if velocity == null else velocity, false)
