@@ -37280,6 +37280,23 @@
    }
   },
   {
+   "id": "valve_door",
+   "path": "res://assets/models/world_one/valve_door.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/world/contraptions.gd",
+   "provenance": {
+    "recipe": "tools/blender/world_one/valve_door.py",
+    "note": "Procedural vertex-coloured valve door (W1-23): a riveted copper sluice gate with stiffeners, a gate plate and lifting lugs, scaled to each door's size."
+   },
+   "exception": {
+    "tris": 1200,
+    "verts": 2400,
+    "draws": 1
+   },
+   "exception_why": "One riveted gate panel, one draw, readable from both faces at 10 to 12 m wide. Limits asserted by the recipe."
+  },
+  {
    "path": "res://assets/models/world_one/water_edges.glb",
    "class": "scenery",
    "ships": true,
@@ -39261,6 +39278,7 @@
   "tube_mouth_lip",
   "tube_mouth_lip_detail1",
   "tube_mouth_lip_detail2",
+  "valve_door",
   "valve_wheel_band",
   "valve_wheel_detail1",
   "valve_wheel_detail1m",

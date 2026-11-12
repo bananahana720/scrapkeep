@@ -6,6 +6,7 @@ const RideRail := preload("res://src/world/ride_rail.gd")
 const Activities := preload("res://src/world/activities.gd")
 const RecipeProps := preload("res://src/presentation/recipe_props.gd")
 const ParkRecipes := preload("res://src/world/park/park_recipes.gd")
+const ModelKit := preload("res://src/world/model_kit.gd")
 
 # The gorge's contraptions, built from the map's specs and run from world's physics
 # tick (DESIGN-V2 section 9, VISUAL-LANGUAGE section 11). Every one is a momentum tool
@@ -32,6 +33,9 @@ const WALL_REACH := 3.6
 const WALL_SPEED := 8.0
 const DOOR_SINK := 6.5
 const DOOR_SECONDS := 0.6
+# The valve door model (tools/blender/world_one/valve_door.py), built 12 by 6 by 1 m and scaled to each door.
+const DOOR_MODEL := "res://assets/models/world_one/valve_door.glb"
+const DOOR_MODEL_SIZE := Vector3(12.0, 6.0, 1.0)
 const CABLE_REST := 1.0
 const PUFF_SECONDS := 0.7
 # How hard a ball the player is not steering keeps station on a barge, per second of
@@ -942,12 +946,16 @@ func _build_valve(spec: Dictionary) -> Dictionary:
 	box.size = size
 	shape.shape = box
 	door.add_child(shape)
-	var mesh := MeshInstance3D.new()
-	var bm := BoxMesh.new()
-	bm.size = size
-	mesh.mesh = bm
-	mesh.material_override = Palette.striped(Palette.COPPER, Palette.CHARCOAL)
-	door.add_child(mesh)
+	var view := ModelKit.part(DOOR_MODEL, ["ValveDoor"], "ValveDoor", door)
+	if view != null:
+		view.scale = size / DOOR_MODEL_SIZE
+	else:
+		var mesh := MeshInstance3D.new()
+		var bm := BoxMesh.new()
+		bm.size = size
+		mesh.mesh = bm
+		mesh.material_override = Palette.striped(Palette.COPPER, Palette.CHARCOAL)
+		door.add_child(mesh)
 	door.position = door_foot + Vector3.UP * (size.y * 0.5 - 0.5)
 	door.rotation.y = d["turn"]
 	add_child(door)

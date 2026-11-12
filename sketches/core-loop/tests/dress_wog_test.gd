@@ -146,8 +146,10 @@ func _signals(stage_root: Node3D, stage: int) -> void:
 		if mat != null:
 			_require(mat.get_shader_parameter("base_color") != Palette.HAZARD, "harmless Reach devices do not acquire hostile red")
 	var door: StaticBody3D = devices.valves[0].door
-	_finish(door.get_child(1), "cache door", Palette.COPPER, Palette.CHARCOAL)
-	_require(door.get_child(1).get_meta("spillway_finish", "") == "shutter", "cache door has shutter ribs")
+	# W1-23: the cache door is the valve door model, whose own ribs the greybox finish leaves alone.
+	var door_view := door.get_child(1) as MeshInstance3D
+	_require(door_view.name == "ValveDoor" and not door_view.mesh is PrimitiveMesh and not door_view.has_meta("spillway_finish"),
+		"cache door is the riveted valve door model, left to its own finish")
 	var wall: StaticBody3D = devices.walls[0].body
 	_finish(wall.get_child(1), "breakable wall", Palette.SANDSTONE, Palette.VERDIGRIS)
 	print("wog device counts: grates=%d safety=%d cracks=%d plumes=%d" % [grates, safety, dark_cracks, plumes])
