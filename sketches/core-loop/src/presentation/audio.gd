@@ -4808,6 +4808,7 @@ func _set_busy() -> bool:
 # The room as the director reads it for the bar at transport sample at.
 func set_room(at: int) -> Dictionary:
 	var room := sample_run_parameters()
+	room["sample"] = at
 	# Hanging on means armour lost to hits, not a shell still empty at the start of a run.
 	if _hull_seen <= 0.0:
 		room.erase("armour")

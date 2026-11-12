@@ -106,7 +106,8 @@ var _last_answer := ""
 var _breath_owed := false
 var _swap_armed := true
 var _landing_swapped := false
-# Every plan of the run, kept across band changes up to PLANS_KEPT, for the recorder and the tests: [bar, mood, move, answer].
+# Every plan of the run, kept across band changes up to PLANS_KEPT, for the recorder and the tests:
+# [bar, mood, move, answer, transport sample of the bar or -1, why a turnaround held or ""].
 var plans: Array = []
 
 
@@ -200,8 +201,12 @@ func read(room: Dictionary) -> Dictionary:
 		plan.trims = {"other": LEAD_SPACE}
 	if plan.answer != "":
 		_last_answer = plan.answer
+	# Why a turnaround passed without an answer, for the listening reads.
+	var held := ""
+	if turnaround and plan.answer == "":
+		held = "warning" if bool(room.get("warning", false)) else "busy" if bool(room.get("busy", false)) else fight if fight in LEAD_OWNED else plan.move
 	if plans.size() < PLANS_KEPT:
-		plans.append([bar, mood, plan.move, plan.answer])
+		plans.append([bar, mood, plan.move, plan.answer, int(room.get("sample", -1)), held])
 	return plan
 
 

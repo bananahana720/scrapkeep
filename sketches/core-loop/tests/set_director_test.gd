@@ -136,6 +136,8 @@ func _deterministic() -> void:
 		a.read(room)
 		b.read(room)
 	t.eq("the same rooms give the same set", a.plans, b.plans)
+	var helds := a.plans.filter(func(p): return p[0] % SetDirector.PHRASE_BARS == SetDirector.PHRASE_BARS - 1 and p[3] == "").map(func(p): return p[5])
+	t.check("a turnaround with no answer says why", not helds.is_empty() and not "" in helds, str(helds))
 	a.reset()
 	t.eq("reset starts the set again and keeps the run's plans", [a.bar, a.mood, a.plans.size()], [-1, "lull", 64])
 
@@ -239,6 +241,8 @@ func _in_game() -> void:
 			t.eq("an answer starts on the band's bar line", posmod(int(e[3]) - audio.ace.origin, audio.ace.grid_bar), 0)
 			t.check("an answer is booked ahead of its bar", int(e[3]) > from)
 		t.eq("every plan is one bar apart", _bar_steps(audio.set_director.plans), [1])
+		var off_grid: Array = audio.set_director.plans.filter(func(p): return posmod(int(p[4]) - audio.ace.origin, audio.ace.grid_bar) != 0)
+		t.eq("every plan carries its bar line's sample", off_grid, [])
 		audio._gates["call_in"] = audio.clock + 1.0
 		t.check("a caller talking keeps June out", audio._set_busy())
 		audio._gates["call_in"] = audio.clock - 0.1
