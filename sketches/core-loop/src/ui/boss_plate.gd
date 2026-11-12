@@ -112,8 +112,11 @@ func name_held() -> bool:
 
 
 func plate_name() -> String:
-	if not active():
-		return ""
+	return _name() if active() else ""
+
+
+# The bound body's name, whether or not its posture fight is live yet (the plate's width is set at bind).
+func _name() -> String:
 	# A stub boss names its Warden after the world's boss row ("plate_name" meta); a stage
 	# Warden names itself by family; any other posture body (Brindle's hull) is the boss
 	# arena's own row.
@@ -246,9 +249,17 @@ func advance(delta: float) -> void:
 	_seen_phase = now
 
 
-# The plate grows by the diamonds' drop only while it sets them.
+# The width the name takes before the pips: NAME_WIDTH, or the name and a GAP when the name is longer
+# ("Meltdown Warden" ran under its pips at NAME_WIDTH, PF-34).
+func name_width() -> float:
+	return maxf(NAME_WIDTH, UiDraw.width(_name(), FONT) + GAP) if is_instance_valid(_warden) else NAME_WIDTH
+
+
+# The plate grows by the diamonds' drop only while it sets them, and wider by what a long name needs,
+# so the bar keeps its length.
 func _fit() -> void:
 	var want := SIZE + (Vector2(0.0, PHASE_DROP) if _phases != null and phase_count() > 1 else Vector2.ZERO)
+	want.x += name_width() - NAME_WIDTH
 	custom_minimum_size = want
 	size = want
 
@@ -278,11 +289,11 @@ func _draw() -> void:
 	if not active():
 		return
 	var neutral := EventKinds.role_color("neutral")
-	UiDraw.panel(self, Rect2(Vector2.ZERO, SIZE))
+	UiDraw.panel(self, Rect2(Vector2.ZERO, Vector2(size.x, SIZE.y)))
 	var mid := SIZE.y * 0.5
 	if not name_held():
 		UiDraw.text(self, MARGIN, mid, plate_name(), FONT, neutral)
-	var x := MARGIN + NAME_WIDTH
+	var x := MARGIN + name_width()
 	for pip in pips():
 		_draw_pip(Rect2(Vector2(x, mid - PIP * 0.5), Vector2(PIP, PIP)), pip, neutral)
 		x += PIP + PIP_GAP
@@ -326,7 +337,7 @@ func _draw_phases() -> void:
 	if pips.is_empty():
 		return
 	var span := pips.size() * PHASE + (pips.size() - 1) * PHASE_GAP
-	var x := (SIZE.x - span) * 0.5 + PHASE * 0.5
+	var x := (size.x - span) * 0.5 + PHASE * 0.5
 	var neutral := EventKinds.role_color("neutral")
 	var cracking := _turn_age >= 0.0
 	var t := _turn_age / CRACK_SECONDS if cracking else 1.0

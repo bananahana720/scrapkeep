@@ -178,7 +178,10 @@ func _draw_card(base: Transform2D, t: float, alpha: float) -> void:
 	var text_w := CARD.x - 92.0 - (52.0 if link != "" else 16.0)
 	var name_size := UiTokens.LABEL if UiFonts.width(String(card["name"]), UiTokens.LABEL) <= text_w else UiTokens.BODY
 	_text(Vector2(92.0, 40.0), String(card["name"]), name_size, _faded(UiTokens.TEXT, alpha), text_w)
-	_text(Vector2(92.0, 68.0), String(card["verb"]), UiTokens.BODY if UiFonts.width(String(card["verb"]), UiTokens.BODY) <= text_w else UiTokens.CAPTION, _faded(Palette.SAND, alpha * 0.9), text_w)
+	var verb := verb_fit(String(card["verb"]), text_w)
+	var lines: Array = verb["lines"]
+	for i in lines.size():
+		_text(Vector2(92.0, (68.0 if lines.size() == 1 else 64.0) + 22.0 * i), lines[i], verb["size"], _faded(Palette.SAND, alpha * 0.9), text_w)
 	if link != "":
 		_draw_link(own, t, alpha, yours, tint, link == "lit")
 	_stamp(base, Vector2(CARD.x - 8.0, -8.0), String(card.get("stamp", "")), tint, alpha)
@@ -269,6 +272,34 @@ func _stamp(base: Transform2D, at: Vector2, text: String, tint: Color, alpha: fl
 	draw_circle(Vector2(-w + 4.0, 10.0), 1.8, _faded(Palette.CHARCOAL, alpha))
 	draw_string(font, Vector2(-w + 8.0, 15.0), text, HORIZONTAL_ALIGNMENT_LEFT, -1, UiTokens.CAPTION, _faded(Palette.CHARCOAL, alpha))
 	draw_set_transform_matrix(base)
+
+
+# The card's verb line: {size, lines}. One line at BODY when it fits `width`, else broken at a word onto two
+# lines, at BODY when both fit and at CAPTION when not (a verb cut off mid-word, "Bounces hit machines like
+# a sh", read as broken: PF-34).
+static func verb_fit(verb: String, width: float) -> Dictionary:
+	if UiFonts.width(verb, UiTokens.BODY) <= width:
+		return {"size": UiTokens.BODY, "lines": [verb]}
+	for font_size in [UiTokens.BODY, UiTokens.CAPTION]:
+		var lines := _two_lines(verb, width, font_size)
+		if lines.all(func(line): return UiFonts.width(line, font_size) <= width):
+			return {"size": font_size, "lines": lines}
+	return {"size": UiTokens.CAPTION, "lines": _two_lines(verb, width, UiTokens.CAPTION)}
+
+
+# The verb broken after the most words that fit `width` at `font_size`; the rest is the second line.
+static func _two_lines(verb: String, width: float, font_size: int) -> Array:
+	var words := verb.split(" ", false)
+	var first := ""
+	var i := 0
+	while i < words.size():
+		var next := words[i] if first == "" else first + " " + words[i]
+		if first != "" and UiFonts.width(next, font_size) > width:
+			break
+		first = next
+		i += 1
+	var rest := " ".join(words.slice(i))
+	return [first] if rest == "" else [first, rest]
 
 
 func _text(at: Vector2, value: String, font_size: int, color: Color, width: float) -> void:
