@@ -10,7 +10,7 @@ const T := preload("res://tests/support/t.gd")
 #   - no UI script draws a gradient;
 #   - every literal corner radius in src/ui is RADIUS, and no plate is charcoal at a hand-set alpha (W1-27);
 #   - the HUD in play (HUD_FILES) sets every gap const on the spacing scale, and its marks draw the
-#     five colours by their token names, never the palette's sand, charcoal, amber or hazard or a literal colour;
+#     five colours by their token names, never the palette's sand, charcoal or amber or a literal colour;
 #   - the plate edge holds 3:1 on the plate and every word colour holds 4.5:1 (WCAG 2.2 AA, pass 4);
 #   - planted bad cases (a literal 13 px, a gap of 10, a Gradient, radius 8, a 0.94 plate, a 14 px gap
 #     const, a palette sand mark) are caught by the same scans.
@@ -21,7 +21,8 @@ const RADIUS_LITERAL := "set_corner_radius_all\\((\\d+)\\)"
 # A plate filled by hand: a StyleBox or frame whose fill is charcoal at its own alpha.
 const PLATE_LITERAL := "bg_color :?= Color\\(Palette\\.CHARCOAL, \\d*\\.\\d+\\)"
 const GAP_CONST := "const \\w*GAP\\w* := (\\d+(?:\\.\\d+)?)\\b"
-const MARK_COLOR := "Palette\\.(?:SAND|CHARCOAL|AMBER|HAZARD)\\b|Color\\(\\d"
+# Hazard stays: on the danger mark it is the world's warning colour, a meaning.
+const MARK_COLOR := "Palette\\.(?:SAND|CHARCOAL|AMBER)\\b|Color\\(\\d"
 # The HUD a player reads in play (W1-27): the skill bar, aim reticle, speed glyph, danger mark,
 # restart meter, the HUD's own layout and the pause menu's build read.
 const HUD_FILES := ["ability_bar.gd", "aim_reticle.gd", "speed_glyph.gd", "danger_mark.gd", "restart_meter.gd", "hud.gd", "build_read.gd"]
@@ -104,7 +105,7 @@ func _scans() -> void:
 	_t.eq("every literal gap in src/ui is a step of the spacing scale", gap_bad, [])
 	_t.eq("no UI script draws a gradient", gradient_bad, [])
 	_t.eq("every literal corner radius in src/ui is RADIUS", radius_bad, [])
-	_t.eq("no plate in src/ui is charcoal at a hand-set alpha", plate_bad, [])
+	_t.eq("no StyleBox or frame fill in src/ui is charcoal at a hand-set alpha", plate_bad, [])
 	_t.eq("every gap const in the HUD is a step of the spacing scale", hud_gap_bad, [])
 	_t.eq("the HUD's marks name the token colours", mark_bad, [])
 

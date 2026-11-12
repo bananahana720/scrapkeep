@@ -538,6 +538,7 @@ func fit_worn_into(ball: Node3D, player: Node, rec := {}) -> Dictionary:
 	var look := [id, variant, tint]
 	if not rec.is_empty() and rec.get("worn") == look and is_instance_valid(rec.core):
 		set_heft_class(rec, _run_heft_class(), false)
+		_glow_rec(rec, _ready_glow)
 		return rec
 	for key in ["core", "pod"]:
 		var old = rec.get(key)

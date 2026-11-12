@@ -1,6 +1,8 @@
 extends Control
 
 const UiTokens := preload("res://src/ui/ui_tokens.gd")
+# The diamond is the world's hazard warning (meaning, not chrome); its keyline and bang are chrome.
+const Palette := preload("res://src/core/palette.gd")
 
 # The mark over the ball while it stands where a hit will land: a hazard diamond with a
 # bang, filling from its foot with the warning's own progress, so it is all but full as
@@ -97,12 +99,12 @@ func _draw() -> void:
 	draw_set_transform(_at)
 	draw_colored_polygon(_diamond(HALF + KEYLINE + RIM), UiTokens.TEXT)
 	draw_colored_polygon(_diamond(HALF + KEYLINE), UiTokens.INK)
-	draw_colored_polygon(_diamond(HALF), UiTokens.ALERT)
+	draw_colored_polygon(_diamond(HALF), Palette.HAZARD)
 	var inner := HALF - EDGE
-	draw_colored_polygon(_diamond(inner), UiTokens.ALERT.lerp(UiTokens.INK, EMPTY_SHADE))
+	draw_colored_polygon(_diamond(inner), Palette.HAZARD.lerp(UiTokens.INK, EMPTY_SHADE))
 	var filled := fill_points(inner, run)
 	if filled.size() >= 3:
-		draw_colored_polygon(filled, UiTokens.ALERT)
+		draw_colored_polygon(filled, Palette.HAZARD)
 	draw_rect(Rect2(-BANG_HALF, BANG_TOP, BANG_HALF * 2.0, BANG_FOOT - BANG_TOP), UiTokens.TEXT)
 	draw_rect(Rect2(-DOT_SIZE * 0.5, DOT_TOP, DOT_SIZE, DOT_SIZE), UiTokens.TEXT)
 	draw_set_transform(Vector2.ZERO)
