@@ -70,7 +70,16 @@ func _run() -> void:
 		t.check("%s draws on its look's mesh, not a primitive ball or box" % id,
 			not (e.draw_pass_1 is SphereMesh) and not (e.draw_pass_1 is BoxMesh))
 		e.free()
-	t.check("every look in use: puff, glow, streak, chunk, bead", looks.size() == 5, str(looks.keys()))
+	t.check("every look in use: puff, glow, streak, chunk, bead, star", looks.size() == 6, str(looks.keys()))
+	# FX-02: hits and stuns read on sand. The solid hit and crit sparks wear a charcoal rim, the
+	# additive ones stay pure light, and a stun is a ring of solid inked stars twice the old glow's size.
+	t.check("a solid spark wears an ink rim", FxLibrary.look("spark_core") == "streak"
+		and FxLibrary.look_material("streak", "mix").shader.code.contains("vec3(0.141, 0.165, 0.157)"))
+	t.check("an additive spark stays pure light", not FxLibrary.look_material("streak", "add").shader.code.contains("vec3(0.141, 0.165, 0.157)"))
+	t.check("the stun halo is solid inked stars", looks["star"] == ["daze_halo"] and FxLibrary.spec("daze_halo")["blend"] == "mix"
+		and FxLibrary.look_material("star").shader.code.contains("vec3(0.141, 0.165, 0.157)"))
+	t.check("the stun stars are twice the old glow's size", is_equal_approx(float(FxLibrary.spec("daze_halo")["size"]), 0.6))
+	t.check("ink stars never flash", FxLibrary.HEAT["star"] == 0.0)
 	t.check("dust and steam are puffs", "slam_dust" in looks["puff"] and "steam_puff" in looks["puff"])
 	t.check("debris is lit chunks", "crack_debris" in looks["chunk"] and not FxLibrary.look_material("chunk").shader.code.contains("unshaded"))
 	var spark := FxLibrary.build("spark_halo")
