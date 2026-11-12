@@ -54,7 +54,7 @@ func _physics_process(_delta: float) -> bool:
 	elif _frame == 170:
 		_game.player.reset_to(_game.player.ball_position(), Vector3.ZERO)
 		_shot("before")
-		_game.ctx.spawner.strike(_dummy, "arc", 14.0)
+		_game.ctx.spawner.strike(_dummy, "ram", 2.0)
 		_glanced_at = _frame
 	elif _glanced_at > 0:
 		_game.player.reset_to(_game.player.ball_position(), Vector3.ZERO)

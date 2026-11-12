@@ -66,6 +66,8 @@ var _drive_done := false
 var _was_drawn := {}
 # The plating lesson's last glance: {target, short (0 to 1 of the plating the punch missed), left, age}.
 var _glance := {}
+# The ball contact enemy_struck just announced: {id, hit (combat's settled resolve record)}.
+var _contact := {}
 # The lesson has shown this session, so the next strike that beats plating retires it.
 var _plate_shown := false
 
@@ -135,12 +137,18 @@ func step(delta: float) -> void:
 	_was_drawn = drawn_now
 
 
-# A glance off a slate rim (the tint combat._tint() keeps) starts or restarts the plating lesson.
-# A Warden's guard wears no tint, so its deflections teach nothing here.
+# A ball contact glancing off a slate rim (the tint combat._tint() keeps) starts or restarts the
+# plating lesson: a contact's punch is the ball's speed, so more speed is the answer. A weapon's
+# glance, a Warden's untinted guard and a dish guard no speed beats (combat's "guarded") teach
+# nothing here.
 func _on_glanced(enemy: Node3D, _kind: String, punch: float, plating: float) -> void:
 	if game == null or not game.flow.in_play() or retired("plate") or not is_instance_valid(enemy):
 		return
 	if enemy.get("tint_state") != "slate":
+		return
+	# combat announces enemy_struck just before strike_deflected: _on_struck kept this hit.
+	var hit: Dictionary = _contact.get("hit", {}) if _contact.get("id", 0) == enemy.get_instance_id() else {}
+	if hit.is_empty() or bool(hit.get("guarded", false)):
 		return
 	if enemy.has_method("flare_glance"):
 		enemy.flare_glance()
@@ -149,17 +157,26 @@ func _on_glanced(enemy: Node3D, _kind: String, punch: float, plating: float) -> 
 		"age": 0.0 if _glance.is_empty() else minf(float(_glance["age"]), STREAK_GROW)}
 
 
-# Asked inside the strike's own announce, combat's resolve() answers with the settled hit.
 func _on_struck(enemy: Node3D, kind: String, force: float) -> void:
-	if not _plate_shown or retired("plate") or not is_instance_valid(enemy):
+	_contact = {}
+	if game == null or retired("plate") or not is_instance_valid(enemy):
 		return
-	var spawner = game.ctx.spawner if game.get("ctx") != null else null
-	if spawner == null or not spawner.has_method("resolve"):
+	var hit := _settled(enemy, kind, force)
+	if hit.is_empty():
 		return
-	var hit: Dictionary = spawner.resolve(enemy, kind, force)
-	if bool(hit.get("full", false)) and float(hit.get("plating", 0.0)) > 0.0:
+	_contact = {"id": enemy.get_instance_id(), "hit": hit}
+	if _plate_shown and bool(hit.get("full", false)) and float(hit.get("plating", 0.0)) > 0.0 and not bool(hit.get("absorbed", false)):
 		profile.add_use("plate")
 		_glance = {}
+
+
+# A ball contact's settled hit, or {} for any other strike. Asked inside the strike's own
+# announce, combat's resolve() answers with that hit; `force` is the bus's figure for it.
+func _settled(enemy: Node3D, kind: String, force: float) -> Dictionary:
+	var spawner = game.ctx.spawner if game.get("ctx") != null else null
+	if spawner == null or not spawner.has_method("resolve") or not kind in spawner.CONTACT_KINDS:
+		return {}
+	return spawner.resolve(enemy, kind, force)
 
 
 # The three speed lines' screen geometry.
@@ -243,7 +260,9 @@ func _placements() -> Array:
 		if cam.is_position_behind(lesson["world"]):
 			continue
 		if lesson["align"] == "streak":
-			out.append(_streak(cam, lesson["world"]))
+			# _process can run between physics ticks: the glance may have ended or its target gone.
+			if not _glance.is_empty() and is_instance_valid(_glance["target"]):
+				out.append(_streak(cam, lesson["world"]))
 			continue
 		var at: Vector2 = cam.unproject_position(lesson["world"]) + lesson["offset"]
 		at.x -= row_width(lesson["parts"]) * (1.0 if lesson["align"] == "end" else 0.5)

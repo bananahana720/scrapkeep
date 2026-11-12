@@ -797,9 +797,10 @@ func _pulse_rim(delta: float) -> void:
 
 
 # The strike just glanced: the slate rim beats so the miss reads on the target. Nothing on a
-# target that is not slate right now.
+# target that is not slate right now, and a beat already running finishes first, so rapid
+# glances never strobe the rim (FlashGuard's 3 Hz).
 func flare_glance() -> void:
-	if tint_state == "slate" and not _tint_materials.is_empty():
+	if tint_state == "slate" and not _tint_materials.is_empty() and _glance_left <= 0.0:
 		_glance_left = GLANCE_SECONDS
 
 

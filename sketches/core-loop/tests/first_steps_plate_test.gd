@@ -6,7 +6,9 @@ const UiProfile := preload("res://src/ui/ui_profile.gd")
 
 # The plating lesson (ui/first_steps.gd "plate", W1-68) on a fresh profile, with a plated brute
 # at plating 30 in front of the ball:
-#   - a bolt that glances off its slate rim beats the rim (enemy.flare_glance) and stretches three
+#   - a ram that beats the plating before any glance retires nothing, and a weapon bolt's glance
+#     teaches nothing (its punch is not the ball's speed);
+#   - a slow ram that glances off its slate rim beats the rim (enemy.flare_glance) and stretches three
 #     speed lines from the ball, pointing away from the target, with no word on screen;
 #   - the lines are longer for a hit that fell further short, and go after PLATE_SHOW seconds;
 #   - a deflection off a target with no tint (a Warden's guard) teaches nothing;
@@ -24,6 +26,7 @@ var _failures := 0
 var _step := 0
 var _prompts: Array[String] = []
 var _dummy: Node3D
+var _peak := 0.0
 
 
 func _initialize() -> void:
@@ -69,6 +72,7 @@ func _physics_process(_delta: float) -> bool:
 		return false
 	# The rim's beat runs on the enemy's own physics ticks: let a second of them pass.
 	if _step < 6 + Engine.physics_ticks_per_second:
+		_peak = maxf(_peak, _dummy._tint_materials[0].emission_energy_multiplier)
 		return false
 	_check_after()
 	print("first_steps_plate_test: %s" % ("PASS" if _failures == 0 else "FAIL (%d)" % _failures))
@@ -102,13 +106,20 @@ func _check() -> void:
 	_report("a guard with no tint teaches nothing", not "plate" in lessons.shown_ids(), "shown %s" % [lessons.shown_ids()])
 	ghost.queue_free()
 
+	_combat.strike(_dummy, "ram", 14.0)
 	_combat.strike(_dummy, "arc", 14.0)
+	lessons.step(0.016)
+	_report("no lesson from a full ram first or a weapon's glance", not "plate" in lessons.shown_ids()
+		and profile.uses("plate") == 0 and _dummy._glance_left == 0.0,
+		"ram punch 32.2 then a 14 bolt on plating 30: shown %s, plate uses %d" % [lessons.shown_ids(), profile.uses("plate")])
+
+	_combat.strike(_dummy, "ram", 2.0)
 	var flaring: bool = _dummy._glance_left > 0.0
 	lessons.step(0.016)
 	var words_now := Array(lessons.drawn_words())
 	_report("a glance shows the lesson, with no word", "plate" in lessons.shown_ids() and "plate" in _prompts and words_now == words_before,
 		"shown %s, prompts %s, words %s (the drive row's alone: %s)" % [lessons.shown_ids(), _prompts, words_now, words_before])
-	_report("the slate rim beats", flaring, "glance left %.2f s after the bolt" % _dummy._glance_left)
+	_report("the slate rim beat starts", flaring, "glance left %.2f s after the ram" % _dummy._glance_left)
 	for i in int(ceil(lessons.STREAK_GROW / 0.05)) + 1:
 		lessons.step(0.05)
 	var streak := _streak(lessons)
@@ -121,12 +132,12 @@ func _check() -> void:
 		"streak %s, away %s" % [streak, away])
 	var long_len := float(streak.get("length", 0.0))
 
-	_combat.strike(_dummy, "arc", 28.0)
+	_combat.strike(_dummy, "ram", 10.0)
 	for i in int(ceil(lessons.STREAK_GROW / 0.05)) + 1:
 		lessons.step(0.05)
 	var near_len := float(_streak(lessons).get("length", 0.0))
 	_report("a nearer miss draws shorter lines", near_len > 0.0 and near_len < long_len,
-		"14 on plating 30: %.0f px; 28 on plating 30: %.0f px" % [long_len, near_len])
+		"ram punch 16.6 on plating 30: %.0f px; 27 on plating 30: %.0f px" % [long_len, near_len])
 
 	for i in int(ceil(lessons.PLATE_SHOW / 0.1)) + 1:
 		lessons.step(0.1)
@@ -137,14 +148,16 @@ func _check() -> void:
 func _check_after() -> void:
 	var lessons = _game.hud.first_steps
 	var profile = _game.hud.profile
+	_report("the slate rim beats brighter", _peak > _dummy.PLATE_GLOW_SLATE * 2.0,
+		"rim peak %.2f over its resting %.2f" % [_peak, _dummy.PLATE_GLOW_SLATE])
 	_report("the rim holds slate again", _dummy._glance_left == 0.0 and _dummy.tint_state == "slate"
 		and is_equal_approx(_dummy._tint_materials[0].emission_energy_multiplier, _dummy.PLATE_GLOW_SLATE),
 		"glance left %.2f, tint %s, rim energy %.2f" % [_dummy._glance_left, _dummy.tint_state, _dummy._tint_materials[0].emission_energy_multiplier])
 
 	_combat.strike(_dummy, "ram", 14.0)
 	_report("beating the plating retires it", lessons.retired("plate") and profile.uses("plate") == 1,
-		"ram punch 32.2 on plating 30: plate uses %d" % profile.uses("plate"))
-	_combat.strike(_dummy, "arc", 14.0)
+		"after the lesson showed, ram punch 32.2 on plating 30: plate uses %d" % profile.uses("plate"))
+	_combat.strike(_dummy, "ram", 2.0)
 	lessons.step(0.016)
 	_report("a later glance shows nothing", not "plate" in lessons.shown_ids() and _dummy._glance_left == 0.0,
 		"shown %s, glance left %.2f" % [lessons.shown_ids(), _dummy._glance_left])
