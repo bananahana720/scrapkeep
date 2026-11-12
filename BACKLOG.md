@@ -14,6 +14,7 @@ The initial authorization covered preparation documents. Andrew subsequently aut
 
 - [Proposed first sprint](#proposed-first-sprint)
 - [Task catalogue](#task-catalogue) and individual cards, including the [asset production cards](#asset-production-cards-16-september-2026)
+- [World 1 and scaling backlog](#world-1-and-scaling-backlog-12-november-2026): the buildable rows for world 1 now and the groundwork for more stages, worlds and features
 - [Open questions](#open-questions)
 - [Source dispositions and inventory](docs/project/SOURCE-DISPOSITIONS.md)
 
@@ -6542,3 +6543,105 @@ Every card leaves alone the files another thread or an open pull request holds; 
 | SA-F3 | One stuck row fighting a plated brute in the flume (seed 2877) | Minor, watch | the red team sweep | no repeat in two sweeps, or three on one stage becomes a finding |
 | SA-F4 | Quitting during a rendered launch (under the comic swipe) is untested; headless skips the swipe | Coverage gap | the PC lane | one quit in the swipe on a rendered build, Continue checked |
 | SA-F5 | A quit at the open gates replays the cleared stage from its start, by design after PR 790 (re-entering a cleared stage would pay its loot twice) | Minor | after the sitting, if players quit there | save the cleared stage at the break with its loot marked as paid; seed 2884 `--quit-in=gates:3` keeps its 661 cogs |
+
+## World 1 and scaling backlog (12 November 2026)
+
+Andrew asked on 12 November 2026 for as many buildable items as possible: for world 1 now, and for the groundwork that lets the game scale later to more stages, more worlds and deeper features. This section is that list. Each row is one unit: one branch from the open stage, one pull request against it, focused tests plus `npm run sketch:fast`, one independent review, then the board thread stacks it ([ORCHESTRATOR's tiered gate](ORCHESTRATOR.md#light-play-lane) owns the gate). Live state, who holds which file and what is stacked stay on the wave board named in [STATE.md](project-guide/handoff/STATE.md); the order of the alpha stays in [ROADMAP.md](project-guide/handoff/ROADMAP.md). Rows were gathered from the open play findings ([PLAY-FINDINGS.tsv](project-guide/handoff/PLAY-FINDINGS.tsv)), the systems audit ([docs/systems-audit/](docs/systems-audit/PLAN.md)), the world 1 audits ([shared/world1/](project-guide/handoff/shared/world1/)), the wave 38 board (issue 814) and the sound gaps the music thread found on 12 November (`music/soundcheck/sound-gaps-2026-11-12.md` in the project Library).
+
+**How to pull a row.** Read the row's source, check the wave board's fences for its files, claim it with one board comment, and build it. World 1 rows rank ahead of scaling rows (ruling at, ruling cs). A row marked "owned" belongs to the named thread: it is listed so nothing is lost, and another thread does not build it. Mechanics and tuning taste are decided by the builder and logged as one-line assumptions Andrew can overturn. Words a player reads follow ruling cx and [LEGIBILITY.md](sketches/core-loop/design-v3/LEGIBILITY.md) section 13.
+
+**The rule for scaling rows.** A scaling row may not change what the world 1 sitting plays. Each one proves that with a check named in its row: the same bot record on fixed seeds before and after, a content hash that does not move, or a flag that is off by default. If that proof cannot be had, the row waits until after the sitting.
+
+### World 1 now: ready to build
+
+| ID | What the player gets | Files | Size | Proof | Source |
+| --- | --- | --- | --- | --- | --- |
+| W1-01 | Moss's scale (sell mass for cogs) is on in the sitting launch, like the other two resource mechanics of ruling dd. Today `SITTING_SET` turns on marked hull and carry a core but not the scale, so the sitting would miss one of the three. Taste call: on | `src/movement/tuning.gd` `SITTING_SET`, `tests/tuning_flags_test.gd` | S | `tuning_flags_test`; bots and bands never pass the profile, so no band moves | ruling dd; [economy README](docs/systems-audit/economy/README.md) (scale arm measured). Built 12 Nov on branch `claude/project-thread-cnftmf` |
+| W1-02 | The eleven record-only achievements pay something: each gives a paint (a colour row, no new art), so finding a Signal cache or riding a sluice flap is worth chasing in a completionist run | `src/core/achievements.gd`, `src/core/cosmetics.gd`, `src/core/content_registry.gd` (re-pin), `tests/achievement_fill_test.gd` | S | `achievement_fill_test` with `RECORD_ONLY` empty; the cosmetics and content-registry tests | [feature-fit.md](docs/systems-audit/feature-fit.md) row 30. Built 12 Nov on branch `claude/project-thread-cnftmf` |
+| W1-03 | Each reward gate carries its own part name and line on the gate, not in small blue text by the ball, so a player can tell which gate gives what (PF-22, major) | `src/ui/world_prompt.gd`, the gate's presentation | M | first-timer reader pass; cloud film stills of both gate scenes; word budget test | PF-22 |
+| W1-04 | An event warning points at its place: the "incoming" line gets an edge arrow or ground ring at the spot, not the event's name alone (PF-16, the warning half) | event warning UI, `src/world/events/` presentation only | M | film stills of four events; first-timer reader | PF-16 |
+| W1-05 | A danger zone shows its safe side: Brindle's ram and the yard telegraphs draw where to go, not only where the hit lands (PF-16, the telegraph half) | telegraph presentation (`src/presentation/`), boss telegraph rows | M | film stills at the ram's 0.7 s mark; `telegraph` tests | PF-16; [map-audit.md](project-guide/handoff/shared/world1/map-audit.md) unit 2 |
+| W1-06 | The ability row explains itself: a greyed slot shows why (cooldown sweep or empty charge), the "2" stack count reads as a count, and the arc gauge by the ball is named once in the notes (PF-21) | ability bar UI (`src/ui/`), `field_notes.gd` | M | film stills 014, 022, 059, 071 re-shot; word budget test | PF-21 |
+| W1-07 | Pop-ups never land on story cards: music toasts wait for the prologue's cards to close, and the radio panel folds away after its swell (PF-19) | toast queue in `src/ui/`, the radio dial | S | `screens_prologue_test` extended; film of the prologue | PF-19 |
+| W1-08 | Warning lines and toasts reach full contrast fast enough to read ("Bench Dropship incoming" faint at film 068) (PF-20) | toast and warning fade timings (`ui_tokens.gd` only for values) | S | film stills; a timing check in the toast test | PF-20 |
+| W1-09 | A lobber's shell trace and landing box read as danger, not as a goal (PF-25) | shell trace presentation (`projectile.gd` look only, or its fx module) | S | first-timer reader on film 090-091 | PF-25 |
+| W1-10 | Brindle's target tags sit on the boss part they name, never over the player's ball (PF-35) | boss target tag UI | S | film stills 081-103; a placement check | PF-35 |
+| W1-11 | Pickup stat lines stay off the fight: they rise at the HUD edge, not over enemies or the gates' feet (PF-14) | pickup line UI | S | film stills 025, 044 | PF-14 |
+| W1-12 | Fewer see-through shapes over the view: arrival rings, the orange frame and the red cage lines thin out once read (PF-27) | the owning fx modules | S | film stills 048, 059, 090; PC still | PF-27 |
+| W1-13 | The light cone over the dam yard and the flume Warden fight no longer washes out the middle of the view (PF-07) | the cone's material | S | PC stills against the 12-21% washout measure | PF-07 |
+| W1-14 | The camera keeps the ball out of the lens and walls out of half the view in tight fights (PF-06) | camera rig | M | PC film of Brindle's pillars and the dam Warden hit; feel goes on the sitting watch list | PF-06 |
+| W1-15 | The radio tip stops sending the player to the notes: the dial draws its own keys the first time it shows (first 15 minutes, change 3) | `src/ui/field_tips.gd`, the radio dial | S | `field_tips` tests; film of the first stage | [first-15 README](docs/systems-audit/first-15/README.md) section 5 |
+| W1-16 | The dam Warden's lessons split: the lobber's shell is met on the yard crew's ground before the Warden, and the ultimate prompt gets its own moment when the meter first fills outside a fight (first 15 minutes, change 4; harder sooner, ruling cu) | park dam sites or director rows, `field_tips.gd` | M | 24-seed w1 band read (must not get easier); first-timer probes | first-15 README section 5 |
+| W1-17 | More to find on the flume: two or three more side spots (caches on the skill lines, a cracked wall), toward the 30-minute completionist run (the flume has 3 cache spots, the dam many more) | `assets/park/park_flume/` sites and lines | M | map checks; 24-seed band read; completionist bot minutes before and after | map-audit.md "Flume"; ROADMAP completionist re-read (ruling ag) |
+| W1-18 | A power read: a lab run where a bot plays the parts' abilities and buys toward a maker pair, to say whether 16 parts beat 3 and whether a maker pair is worth chasing | `tools/sysaudit/` (lab only, no game code) | M | the run's ledger and its exact command in `docs/systems-audit/economy/` | economy README "Follow-ups" |
+| W1-19 | Quit during a launch on a rendered build (under the comic swipe) and Continue: proven, not assumed (SA-F4) | PC lane run only | S | one rendered quit, Continue checked, receipt on the board | [SA-F](#sa-f) row SA-F4 |
+| W1-20 | The two dense-fight frame findings re-measured alone on an idle PC: the 107 s stage 1 hitch and the dense-fight CPU p99 (PF-44, PF-45) | PC lane run only | S | MangoHud or the frame probe on an idle 4080, medians of 3 | PF-44, PF-45 |
+
+### World 1 now: owned by another thread (listed, not built here)
+
+| ID | What | Owner |
+| --- | --- | --- |
+| W1-30 | Re-land the difficulty stack with its three behaviour reds fixed: pocket entry fairness in five pockets, the ultimate firing one short of its crowd, the flume small-ball band (board 814, 15:02Z) | "Tune dam yard and Brindle pressure" |
+| W1-31 | w1 Novice to 15% or less from 35%; Brindle's worst minute at least the dam Warden's share of max hull; the flume's opening not a rest ([difficulty plan](project-guide/handoff/shared/world1/difficulty-plan.md), first-15 change 5) | "Tune dam yard and Brindle pressure" |
+| W1-32 | Overtime sounds like a risk, not the arena's safety bells (sound gap 3) | "Make music follow game states" |
+| W1-33 | Heat's own sounds: rises, cooling and a hot hit (sound gap 5) | "Make music follow game states" |
+| W1-34 | Danger cues join the threat register so they get the bass dip and warning focus (sound gap 6) | "Make music follow game states" |
+| W1-35 | Brindle's five attacks each get their own telegraph sound (sound gap 7) | "Make music follow game states" |
+| W1-36 | The flume's head-gate siren stops sharing the beacon hum (sound gap 8) | "Make music follow game states" |
+| W1-37 | Ride and set-piece sounds made for the `sound_next` stand-ins, movement first (sound gap 9) | "Make music follow game states" |
+| W1-38 | The camp jukebox gets a real record-on sound, then the rest of camp (sound gap 10) | "Make music follow game states" |
+| W1-39 | Menu move, confirm and back sounds on every page under a pad (sound gap 11) | "Make music follow game states" |
+| W1-40 | A ready ultimate, a found item and a failure stop sharing the same generic sounds (sound gap 12) | "Make music follow game states" |
+| W1-41 | The sound fallback test reads every row kind and `sound_next`, and flags two facts sharing one heard sound (sound gap 13) | "Make music follow game states" |
+| W1-42 | Sounds for the silent fight states and the facts with no listener: guard about to break, beacon opening, missed drop, drop landed, evolution (sound gaps 14, 15) | "Make music follow game states" |
+| W1-43 | The recorded band keeps its lead at a run's start (sound gap 16; a one-line call) | "Make music follow game states" |
+| W1-44 | Pilot select opens on the first pilot the profile can take (PF-40, PR 816 for wave 39) | "Close the remaining world 1 gaps", then the board thread |
+| W1-45 | The twin-line grapple prototype (PR 771) waits on Andrew's feel check | the board thread |
+
+### World 1 after the sitting (already ruled to wait)
+
+| ID | What | Source |
+| --- | --- | --- |
+| W1-50 | A quit at the open gates keeps the cleared stage: save at the break with its loot marked paid (SA-F5) | [SA-F](#sa-f) |
+| W1-51 | After Brindle's rout, a rim kicker launches the ball out of the Slag Bowl toward the Dig under the swipe (T7) | [transitions-audit.md](project-guide/handoff/shared/world1/transitions-audit.md) |
+| W1-52 | The dam launch rides up the face and over the crest with the reservoir in view (T8) | transitions-audit.md |
+| W1-53 | An authored concave Warden yard with a berm rim in place of the half bowl | map-audit.md unit 8 |
+| W1-54 | A reactive works lever: a valve that drains a lobber ledge | map-audit.md unit 9 |
+| W1-55 | Dam perf remainders: the f4045 riser, the Warden break and engage spikes, the seed 3 f14k swing | [STATE.md](project-guide/handoff/STATE.md) "Parked" |
+| W1-56 | Type the four audio files worker threads run and add a cold two-thread stress test | issue 593 |
+| W1-57 | Arrivals on the musical grid | difficulty-plan.md "Arrivals on the grid" |
+| W1-58 | A second cog sink on the main route for a player who skips Moss | economy README "Follow-ups" |
+
+### Scaling groundwork: ready now, world 1 unchanged
+
+Read from the code on `stage/alpha-w38` (48f62bf9), 12 November 2026. Adding a world today touches about 25 places in about 20 files that name a world, stage or map in code (`world == 1`, `world == 3`, `for world_id in [1, 2, 3]`, map id literals), plus about 60 lines of per-map data written as code. A new enemy kind touches nine places beside its roster row. Each row below removes one of those costs and keeps every world 1 value as it is. [ALPHA-PLAN.md](sketches/core-loop/design-v3/ALPHA-PLAN.md) ("New worlds ... enter through registered tables") and [SOUND-BIBLE.md](sketches/core-loop/design-v3/SOUND-BIBLE.md) "Adding a world" already set this direction; these rows close the gap between that text and the code.
+
+| ID | What it makes cheaper | Files | Size | Proof that world 1 is unchanged | Notes |
+| --- | --- | --- | --- | --- | --- |
+| SG-01 | A test that walks every place a world or stage is named in code, using a four-world test double. It reports today's sites as a list (not a red) and turns each one green as the rows below land, so "how many places does a new world touch" becomes a number on every gate | `tests/doubles/two_world_defs.gd` (extended or a sibling), new `tests/world_sites_test.gd` | S-M | test only | do first: it is the yardstick for SG-02 to SG-07 |
+| SG-02 | Each world row owns its own facts: `final` (the run ends after its boss), `scenery` (its scenery hook), `world_one_rules`, `ending_log`. `flow.gd` stops asking whether the boss music is "mind", `game.gd` stops naming three scenery hooks, `screens.gd` stops looping over `[1, 2, 3]` | `src/core/worlds.gd`, `flow.gd`, `game.gd`, `ui/screens.gd`, `ui/ending_sequence.gd` | M | same bot record on fixed seeds; `world_table_test`, ending and flow tests | `flow.gd` and `game.gd` are the board thread's files: claim through the board |
+| SG-03 | One home for the stage tables' shared helpers and pack constants: `alpha_defs.gd`, `park_defs.gd` and `slice_defs.gd` keep only their rows and real differences | `src/core/alpha_defs.gd`, `park_defs.gd`, `slice_defs.gd`, a new shared module | S-M | `stage_table_test`, `alpha_table_test`, row digests unchanged | |
+| SG-04 | The park schema reads which map is which stage from the stage table, and the pocket draw reads `ctx.stages` instead of preloading the park table | `src/world/park/park_schema.gd` (`MAP_STAGE`, `PARKS`), `src/world/pockets/pocket_draw.gd` | S | the same pocket draw on every map for fixed seeds; `pocket_library_test`, `park_schema_test` | |
+| SG-05 | A new enemy kind needs one roster row, and a test names anything it is missing: the director's kind list is built from the roster in its frozen order, and one test checks every built kind has a director card, a windup row, a telegraph record, an attack row, a codex entry and a chassis | `src/world/director.gd` (`KIND_NAMES`), `src/combat/roster.gd`, new `tests/kind_wiring_test.gd` | S | `KIND_NAMES` equal to today's list, element by element | `spillway_roster_test.gd:92` already checks part of this for world 1 kinds |
+| SG-06 | Pockets per world: the pocket library reads `pockets/w<N>/` (or a `worlds` key) instead of `w1/` only, defaulting to world 1 | `src/world/pockets/pocket_library.gd`, `pocket_draw.gd` | S | the same draw on all six maps for fixed seeds | trade pockets and stage modifiers are world-agnostic code tables; a `worlds` column for them is a follow-up |
+| SG-07 | Per-world numbers live in world columns, not code branches: the hot-wire cap (`world <= 1`) and the panel drop table by world | `src/build/parts.gd`, `src/build/panels.gd`, `src/core/worlds.gd` | S | values identical per world; parts and panels tests | a content hash may re-pin for the move alone; say so in the commit |
+| SG-08 | Per-map data written as code moves beside its map: world effects specs and ambient kinds keyed by map id | `src/presentation/world_fx/world_fx_specs.gd`, `src/core/ambient_kinds.gd`, park JSON or one row file per map | M | identical specs read back per map; a film still of the dam unchanged | |
+| SG-09 | The content registry also checks the stage tables, the roster, the pockets and the world rows (schema, references, a minimum row count, a golden hash), so a broken row fails at admission instead of in a run | `src/core/content_registry.gd`, `tests/content_registry_reach_test.gd` | M | new checks pass on today's rows | |
+| SG-10 | Adding a part is one row: the alpha part whitelist that park reuses is derived or retired, after checking why it exists | `src/core/alpha_defs.gd` (`PARTS`), `src/build/parts.gd` | S-M | the same offer pool per stage on fixed seeds | read the whitelist's history first; if it is deliberate, write the reason in its comment and close the row |
+| SG-11 | One checklist for adding a stage, a world, an enemy kind, a pocket and an item, naming each file it touches, kept true by SG-01 and SG-05 | the "registered tables" paragraph of `design-v3/ALPHA-PLAN.md` (updated in place, ruling bz) | S | docs checks | update it as each SG row lands |
+| SG-12 | World 2 findings carry the right label: PF-42 and PF-43 say "World 1 stage 3" and "stage 4", but stages 3 and 4 are the Dig (world 2), so neither holds the world 1 sitting | `project-guide/handoff/PLAY-FINDINGS.tsv` | S | `check:docs` | done with this section |
+
+### Scaling: feature depth (built behind a flag, or after the sitting)
+
+| ID | What the player gets later | Files | Size | When | Source |
+| --- | --- | --- | --- | --- | --- |
+| FD-01 | Run modifiers become real: a module builds the shift board's open seeds behind `--run-modifiers=on` (off by default), starting with "short crew" (no dam shop, a cache instead) as the cheapest. Before it ships, the seed named "overtime" gets a new name, because Overtime is already the Reservoir mechanic (one name for one thing, ruling cx) | `src/core/shift_board.gd` `SEEDS`, a new module, a new test | M | behind the flag now; on after the sitting (ROADMAP phase 2, item 2) | shift_board.gd "Seeds for the layered variation" |
+| FD-02 | Stage variants: the dam night shift (floodlights, a fuller crew, one more cage) and the flume backwash, as park JSON variants a run can draw | `assets/park/park_dam/`, `park_flume/`, `stage_modifier.gd` | L, split per variant | after the sitting (map-audit.md says no variants before it) | shift_board.gd seeds; map-audit.md unit 10 |
+| FD-03 | Unlock-gated anticipation: the shift board's punch cards run past three, each new card opens an item into the pool, and the board shows the next one coming | `src/core/shift_board.gd` `CARDS`, items | M | after the sitting (moves the offer pool, so a band read) | ROADMAP phase 2, item 2 |
+| FD-04 | Item rungs above cobalt can be written as rows: the rarity table accepts pearl and gold rows with zero drop weight, validated, with no content yet | `src/build/item_gen.gd` `RARITY`, content registry | S | now, if the drop tables stay identical; content after the alpha (ruling bn) | ROADMAP phase 3 |
+| FD-05 | The Mind's offerings (purple): a temporary buff, then a permanent item, then more | spec first | M | after the alpha | queued-cards ITEM DEALS, 23 Oct |
+| FD-06 | Three-phase Waking and Mind fights with their anthem phase covers, and two-phase mini-bosses in worlds 2 and 3 | `src/boss/waking.gd`, `mind.gd`, `fight_phases.gd` | L, split per boss | phase 2, when ruling at lifts | ROADMAP phase 2, item 3 |
+| FD-07 | Staged story beats in worlds 2 and 3, as world 1 has (cold open, Rivet, the reveal, the clear card) | story rows, `design-v3/STORY-MAP.md` | M per world | phase 2 | ROADMAP phase 2, item 3 |
+| FD-08 | World 2 stuck spots fixed before world 2 is played: the sinkhole pin (PF-41), the Dig Warden that never breaks (PF-42) and the broken Warden with no exit gate (PF-43), each replayed first | world 2 maps and bots | M each | phase 2 | PF-41 to PF-43 |
+| FD-09 | The set director's sections and the boss phase tracks per world: folding `phase_music.gd`'s per-boss dictionaries and the engine's per-boss sections into music rows, so a world's music is rows and recordings | `src/presentation/phase_music.gd`, `music_engine.gd`, `music_rows.gd` | M | owned by "Make music follow game states" | SOUND-BIBLE "Adding a world" |
+| FD-10 | Bible questions to settle before world 2: the scrap-bot crew of TADR-011 (defer or schedule), and a respec opportunity (a world 2 rescue reward) | change requests 1 and 2 in feature-fit.md | S each | NEEDS ANDREW, after the sitting | feature-fit.md "Change requests" |

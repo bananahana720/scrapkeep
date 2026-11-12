@@ -30,6 +30,7 @@ Parked until after the sitting: dam perf remainders (the f4045 riser, the Warden
 
 ### Engineering hygiene that rides along (never holds a promotion)
 
+- The world 1 and scaling backlog (Andrew, 12 Nov): every buildable row for world 1 now, the rows other threads own, and the groundwork for more stages, worlds and features, in [BACKLOG.md](../../BACKLOG.md#world-1-and-scaling-backlog-12-november-2026). World 1 rows rank first; a scaling row may not change what the sitting plays.
 - Deep-modules batch 2 from the queued list ([DEEP-SWEEP.md](DEEP-SWEEP.md)).
 - The systems audit add-on (Andrew, 11 Nov): six passes, world 1 first, defined as cards SA-A to SA-F in [BACKLOG.md](../../BACKLOG.md#systems-audit-add-on-11-november-2026), plan in [docs/systems-audit/PLAN.md](../../docs/systems-audit/PLAN.md). Passes A to D are done, E and F are open. The economy and break-it passes rerun at every sprint close.
 - Watches on the live board, and the carried reds in [KNOWN-FAILING.tsv](KNOWN-FAILING.tsv) (ruling bq).
