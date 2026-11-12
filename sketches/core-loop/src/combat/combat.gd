@@ -25,6 +25,7 @@ const MindAttacks := preload("res://src/boss/mind_attacks.gd")
 const Sticky := preload("res://src/combat/sticky.gd")
 const Devices := preload("res://src/core/devices.gd")
 const NearMiss := preload("res://src/combat/near_miss.gd")
+const WayOutPaint := preload("res://src/presentation/way_out_paint.gd")
 const Redline := preload("res://src/combat/redline.gd")
 const Flail := preload("res://src/combat/flail.gd")
 const Augments := preload("res://src/movement/augments.gd")
@@ -409,6 +410,10 @@ func setup(ctx_ref) -> void:
 	add_child(flail)
 	flail.setup(ctx, self)
 	near_miss.setup(ctx.events, Callable(ctx.player, "ball_position"))
+	# The way out of the warning the ball stands in, painted on the floor (W1-05).
+	var way_out := WayOutPaint.new()
+	near_miss.add_child(way_out)
+	way_out.setup(near_miss, Callable(ctx.player, "ball_position"), Callable(ground, "height"))
 	_wire_redline()
 	_specials = {
 		"detonation_gauge": {"geometry": _discharge_geometry, "fire": _fire_discharge},

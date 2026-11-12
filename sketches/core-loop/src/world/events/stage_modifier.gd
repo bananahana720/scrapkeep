@@ -35,6 +35,18 @@ const ROWS := [
 	{"id": "blackout", "word": "Blackout", "line": "Lighting, right-sized. Beacons read near.", "fx": "hidden", "sight_scale": 0.5},
 	{"id": "far_haul", "word": "Far Haul", "line": "Value was relocated to the edges.", "far": true},
 ]
+# A stage with no modifier still gets the Foreman's memo, so it shows up on every card (W1-75):
+# the same voice with nothing to announce, which is its own small joke. No word goes before it,
+# because there is no condition to name; a card with a word on it is a stage that plays different.
+# The seed and the stage pick one, from a stream of its own (memo), so the draw never moves.
+const NOMINAL := [
+	"Conditions nominal. Morale is optional.",
+	"Nothing to report. That is the report.",
+	"No changes. Stability is our product.",
+	"Everything is aligned. Proceed as scheduled.",
+	"This stage is fully optimised. You're welcome.",
+	"Conditions nominal. Gratitude is appreciated in advance.",
+]
 
 
 static func valid(row: Dictionary) -> bool:
@@ -96,14 +108,22 @@ static func pick(run_seed: int, stage: int, authored: int) -> Dictionary:
 
 # The modifier for a stage of a terrain's table: only park maps draw pockets.
 static func for_stage(run, terrain, stage: int) -> Dictionary:
-	if run == null or terrain == null or not terrain.has_method("map_for") or not "maps" in terrain:
-		return {}
-	if stage < 1 or stage > terrain.maps.size():
-		return {}
-	var map = terrain.map_for(stage)
-	if map == null or not "park" in map or map.park.is_empty() or not "activity_sites" in map:
+	var map = _park_map(terrain, stage)
+	if run == null or map == null:
 		return {}
 	return pick(int(run.run_seed), stage, authored(map))
+
+
+# The stage's park map, or null when the stage has none (nothing to draw, no modifier, no memo).
+static func _park_map(terrain, stage: int):
+	if terrain == null or not terrain.has_method("map_for") or not "maps" in terrain:
+		return null
+	if stage < 1 or stage > terrain.maps.size():
+		return null
+	var map = terrain.map_for(stage)
+	if map == null or not "park" in map or map.park.is_empty() or not "activity_sites" in map:
+		return null
+	return map
 
 
 # The farthest anchors a Far Haul draw may use, farthest first.
@@ -118,6 +138,13 @@ static func caption(row: Dictionary) -> String:
 	return "" if row.is_empty() else "%s: %s" % [row.word, row.line]
 
 
+# The Foreman's memo on a stage card: the modifier's caption when one rolled, else a nominal line.
+static func memo(run_seed: int, stage: int, row: Dictionary) -> String:
+	if not row.is_empty():
+		return caption(row)
+	return String(NOMINAL[absi(hash([run_seed, stage, "memo"])) % NOMINAL.size()])
+
+
 # The run-long cursed state shares the card: its own card when the deal is taken, then a line
 # on every later stage card beside the stage's modifier. The deal was a keeper's gamble, so the
 # line is the crew's, the door sign's "Nobody makes you." come due (trade_pockets.gd DOOR_WORDS).
@@ -128,9 +155,8 @@ static func card_line(run, terrain, stage: int) -> String:
 	var lines := []
 	if run != null and run.cursed():
 		lines.append(caption(CURSE))
-	var own := caption(for_stage(run, terrain, stage))
-	if not own.is_empty():
-		lines.append(own)
+	if run != null and _park_map(terrain, stage) != null:
+		lines.append(memo(int(run.run_seed), stage, for_stage(run, terrain, stage)))
 	return "  /  ".join(lines)
 
 

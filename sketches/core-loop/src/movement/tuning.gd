@@ -88,7 +88,9 @@ const SPECS := [
 	{"key": "actives", "label": "Active slot", "min": 0.0, "max": 1.0, "step": 1.0, "value": 1.0, "options": ["off", "on"]},
 	# --profile=sitting: every pilot opens on the title for a sitting. It only answers
 	# Game.pilot_unlocked; the saved profile is never read or written differently.
-	{"key": "profile", "label": "Launch set", "min": 0.0, "max": 1.0, "step": 1.0, "value": 0.0, "options": ["default", "sitting"]},
+	# --profile=sitting-earned (W1-78): the sitting's loops on a profile of its own that opens
+	# nothing in advance and keeps what it earns, so the sitting can judge the first unlock.
+	{"key": "profile", "label": "Launch set", "min": 0.0, "max": 2.0, "step": 1.0, "value": 0.0, "options": ["default", "sitting", "sitting-earned"]},
 	{"key": "harpoon_rewind", "label": "Harpoon rewind (s)", "min": 0.0, "max": 3.0, "step": 0.1, "value": 1.0},
 	# Wall grip (ENEMY-PRIORITY.md 3a; Andrew's "Speed holds", 2026-10-17): at the fast tier
 	# walls and the first part of an overhang count as ground. `--grip=off` for the sitting.
@@ -279,7 +281,7 @@ func apply_args(args: PackedStringArray, when := "") -> Dictionary:
 			set_value(row[0], float(value))
 			_launch[row[0]] = _values[row[0]]
 			applied[flag] = value
-	if applied.get("profile") == "sitting":
+	if applied.get("profile") in ["sitting", "sitting-earned"]:
 		for flag in SITTING_SET:
 			if not applied.has(flag) and set_option(FLAGS[flag][0], SITTING_SET[flag]):
 				_launch[FLAGS[flag][0]] = _values[FLAGS[flag][0]]
@@ -292,8 +294,14 @@ func apply_cmdline(when := "") -> Dictionary:
 	return apply_args(args, when)
 
 
+# Everything opened for the sitting: every pilot, secret and first-win find, and no saving.
 func sitting() -> bool:
 	return option("profile") == "sitting"
+
+
+# The sitting's loops on a fresh profile that earns its unlocks and keeps them (W1-78).
+func sitting_earned() -> bool:
+	return option("profile") == "sitting-earned"
 
 
 func world_one() -> bool:

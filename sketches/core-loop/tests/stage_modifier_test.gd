@@ -98,6 +98,21 @@ func _rows() -> void:
 		var pair_w: float = UiDraw.width(pair, LaunchCard.LINE_FONT)
 		t.check("%s line fits the card beside the cursed line" % row.id, pair_w <= 1600.0 * 0.85, "%.0f px: %s" % [pair_w, pair])
 	t.check("the cursed line fits the card too", String(Modifier.CURSE.line).split(" ", false).size() <= 8)
+	# W1-75: a stage with no modifier carries a nominal Foreman memo, never a blank card. Each fits
+	# beside the cursed line, names no condition (no "Word:" before it), and the seed picks it.
+	var nominal := {}
+	for line in Modifier.NOMINAL:
+		t.check("nominal memo '%s' fits in 8 words" % line, String(line).split(" ", false).size() <= 8)
+		t.check("nominal memo '%s' names no condition" % line, not Modifier.ROWS.any(func(r): return String(line).begins_with(String(r.word))))
+		var with_curse: String = Modifier.caption(Modifier.CURSE) + "  /  " + String(line)
+		t.check("nominal memo '%s' fits beside the cursed line" % line, UiDraw.width(with_curse, LaunchCard.LINE_FONT) <= 1600.0 * 0.85)
+	for seed_n in 64:
+		for stage in range(1, 7):
+			nominal[Modifier.memo(seed_n, stage, {})] = true
+	t.check("every nominal memo comes from the list", nominal.keys().all(func(m): return Modifier.NOMINAL.has(m)), str(nominal.keys()))
+	t.eq("64 seeds over six stages show every nominal memo", nominal.size(), Modifier.NOMINAL.size())
+	t.check("the same seed and stage keep the same memo", Modifier.memo(7, 2, {}) == Modifier.memo(7, 2, {}))
+	t.check("a rolled modifier's memo is its caption", Modifier.memo(7, 2, Modifier.ROWS[0]) == Modifier.caption(Modifier.ROWS[0]))
 	t.eq("row ids are unique", ids.size(), Modifier.ROWS.size())
 	t.check("world-effect overlays name WORLD-FX.md kinds", Modifier.ROWS.all(func(row): return String(row.get("fx", "")) in ["", "plenty", "scarce", "hidden"]))
 	var planted := {"id": "slick", "word": "Slick", "line": "x", "friction": 0.1}
@@ -270,8 +285,8 @@ func _step(row: Dictionary, map, prepared: Dictionary) -> Dictionary:
 
 
 # A park game enters stages 1 to 6 for three run seeds. On every entry the activities' applied row
-# equals the pick, the stage card shows its caption (no line when there is none), and the card
-# shown at launch for the next stage in the world carries the same caption. A retry keeps the row.
+# equals the pick, the stage card shows its memo (the caption, or a nominal Foreman line when none
+# rolled), and the card shown at launch for the next stage in the world carries the same memo. A retry keeps the row.
 func _runtime() -> void:
 	var Game = load("res://src/game.gd")
 	var game = Game.new()
@@ -312,7 +327,7 @@ func _runtime() -> void:
 			await physics_frame
 			# A new world shows its world card first and the stage card a beat later.
 			if hud.launch_card.title != game.ctx.stages.of(stage)["name"]:
-				world_ok = world_ok and hud.launch_card.line == Modifier.caption(expected)
+				world_ok = world_ok and hud.launch_card.line == Modifier.memo(s, stage, expected)
 				world_cards += 1
 				for frame in 600:
 					if hud.launch_card.title == game.ctx.stages.of(stage)["name"]:
@@ -320,7 +335,7 @@ func _runtime() -> void:
 					await process_frame
 			entries += 1
 			var card_line: String = hud.launch_card.line if hud.launch_card.showing() else "<no card>"
-			var ok: bool = acts.stage_modifier == expected and card_line == Modifier.caption(acts.stage_modifier)
+			var ok: bool = acts.stage_modifier == expected and card_line == Modifier.memo(s, stage, acts.stage_modifier)
 			shown_ok += int(ok)
 			if not ok:
 				print("seed %d stage %d: applied %s, expected %s, card %s / %s" % [s, stage, str(acts.stage_modifier.get("id", "")), str(expected.get("id", "")), hud.launch_card.title, card_line])
@@ -333,7 +348,7 @@ func _runtime() -> void:
 			if next <= game.ctx.stages.last_of(game.ctx.stages.world_of(stage)):
 				hud.launch_card.visible = false
 				hud._on_launched(Vector3.ZERO)
-				launch_ok = launch_ok and hud.launch_card.line == Modifier.caption(Modifier.pick(s, next, 3))
+				launch_ok = launch_ok and hud.launch_card.line == Modifier.memo(s, next, Modifier.pick(s, next, 3))
 	t.eq("every stage entry shows the applied modifier on its card", shown_ok, entries)
 	t.check("the runtime saw modifiers applied", applied > 0, "%d of %d entries" % [applied, entries])
 	t.check("the launch card for the next stage carries its modifier", launch_ok)

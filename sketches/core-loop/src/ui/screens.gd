@@ -26,7 +26,9 @@ const EndingSequence := preload("res://src/ui/ending_sequence.gd")
 const PrologueRows := preload("res://src/core/prologue_rows.gd")
 const CreditsHint := preload("res://src/ui/credits_hint.gd")
 const DeathTips := preload("res://src/core/death_tips.gd")
+const DeathCause := preload("res://src/core/death_cause.gd")
 const ScrapFrame := preload("res://src/ui/scrap_frame.gd")
+const ChasePlate := preload("res://src/ui/chase_plate.gd")
 
 # The screens outside play: title (with its how-to-play page on H), class select,
 # death, victory and summary. Each is one glance and one key, and every choice is also
@@ -115,6 +117,8 @@ var _body: Label
 # The summary's "next shift" note, in the comic row; null when the screen has none.
 var _tip: Control
 var _tip_said := ""
+# The summary's "what to chase" plate (chase_plate.gd), left of the comic page; null when the screen has none.
+var _chase: Control
 var _latch_cue
 var _latch_held := 0.0
 var _latch_glyph := ""
@@ -209,6 +213,10 @@ func setup(game_ref) -> void:
 	_footer.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	_content.add_child(_footer)
 	prologue_enabled = not game.bot_driven
+	# A card that can wait (a record heard, a take found) waits for the story cards to close: the
+	# menu's own record used to land its card on the prologue's first line (PF-19).
+	if game.ctx.screen_busy != null:
+		game.ctx.screen_busy.add_source(prologue_showing)
 	_help = HelpPage.new()
 	_help.tuning = game.tuning
 	_help.visible = false
@@ -320,6 +328,7 @@ func _on_flow_changed(state: String) -> void:
 	_refusal.text = ""
 	_tip = null
 	_tip_said = ""
+	_chase = null
 	_latch_held = 0.0
 	_mark.visible = false
 	_unstamp()
@@ -387,6 +396,10 @@ func _on_flow_changed(state: String) -> void:
 		"dead":
 			# The store-less flow's end screen says what RUN OVER says: who, then what to try (death_tips.gd).
 			var said: String = game.flow.death_cause
+			# The Foreman logs the loss under the cause, only when the crew's tip follows: the crew
+			# has the run's last word (STORY-MAP, "Call-ins").
+			if said != "" and game.flow.death_tip != "":
+				said += "\n" + DeathCause.memo(game.run.run_seed, game.run.stage)
 			if game.flow.death_tip != "":
 				said += "\n" + DeathTips.shown(game.flow.death_tip)
 			_show("SCRAPPED", EventKinds.color("player_died"), said.strip_edges())
@@ -410,6 +423,8 @@ func _on_flow_changed(state: String) -> void:
 			# What scrapped you, under the pilot (core/death_cause.gd): a won run has none.
 			if not game.flow.run_won and game.flow.death_cause != "":
 				body += "\n" + game.flow.death_cause
+				if game.flow.death_tip != "":
+					body += "\n" + DeathCause.memo(game.run.run_seed, game.run.stage)
 			# The trade pockets' odds are a tuning readout (recency, safe share, refusal weight), so
 			# only a --dev launch prints them; a played run's summary keeps to the run.
 			var trade_lines := ResultsOdds.text(game.run.summary().trade_pockets) if game.ctx.dev else ""
@@ -431,6 +446,7 @@ func _on_flow_changed(state: String) -> void:
 			# What to try next shift (core/death_tips.gd): only a lost run has one.
 			if not game.flow.run_won and game.flow.death_tip != "":
 				_show_tip(game.flow.death_tip)
+			_show_chase()
 			_summary_stats()
 			_action("again", "key_n", "New run")
 			_action("class", "key_c", "Choose pilot")
@@ -1378,6 +1394,8 @@ func _show_comic_page(page: Dictionary) -> void:
 	comic.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_comic_row.add_child(comic)
 	_comic_row.move_child(comic, 0)
+	if is_instance_valid(_chase):
+		_comic_row.move_child(_chase, 0)
 	_fit_comic()
 	comic.show_page(page)
 
@@ -1402,7 +1420,7 @@ static func comic_height(screen_h: float, body_lines: int, line_h: float) -> flo
 
 func comic_page() -> Control:
 	for child in _comic_row.get_children():
-		if child != _tip:
+		if child != _tip and child != _chase:
 			return child
 	return null
 
@@ -1435,6 +1453,37 @@ func _show_tip(tip: String) -> void:
 	column.add_child(words)
 	_tip_said = DeathTips.shown(tip)
 	_comic_row.add_child(_tip)
+
+
+# What to chase next shift (chase_plate.gd): the shift board's next rung and the run's world's secrets,
+# left of the comic page. The summary opens before run_ended reaches progress, which closes the shift
+# (a first run's Clocked In stamps then), so the plate is drawn again once run_ended has gone round. The
+# one-shot connection re-arms on each draw; outside the summary it does nothing.
+func _show_chase() -> void:
+	if is_instance_valid(_chase):
+		_comic_row.remove_child(_chase)
+		_chase.queue_free()
+	_chase = null
+	var codex = game.ctx.get("codex")
+	var sitting: bool = game.tuning != null and game.tuning.sitting()
+	var read := ChasePlate.reading(game.ctx.profile, game.ctx.stages.world_of(game.run.stage),
+		func(id): return codex != null and codex.known(id), sitting)
+	if ChasePlate.shows(read):
+		_chase = ChasePlate.new(read)
+		_comic_row.add_child(_chase)
+		_comic_row.move_child(_chase, 0)
+	if not game.events.run_ended.is_connected(_on_run_ended_chase):
+		game.events.run_ended.connect(_on_run_ended_chase, CONNECT_ONE_SHOT | CONNECT_DEFERRED)
+
+
+func _on_run_ended_chase(_won: bool) -> void:
+	if _state == "summary":
+		_show_chase()
+
+
+# The chase plate as it reads (ChasePlate.said); "" when the screen has none.
+func chase_text() -> String:
+	return _chase.text() if is_instance_valid(_chase) and _chase.visible else ""
 
 
 # What the run did to the shift board (progress.gd board_line). A lost run's summary is built before
@@ -1536,7 +1585,7 @@ func _announce_ready() -> void:
 
 func ready_line(ms: int) -> String:
 	var open: int = game.flow.classes.filter(func(def): return game.pilot_unlocked(def)).size()
-	var launch_set := "sitting" if game.tuning != null and game.tuning.sitting() else "default"
+	var launch_set: String = game.tuning.option("profile") if game.tuning != null else "default"
 	return "SCRAPKEEP_MENU_READY ms=%d profile=%s pilots=%d/%d" % [ms, launch_set, open, game.flow.classes.size()]
 
 
