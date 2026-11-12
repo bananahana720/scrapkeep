@@ -35,7 +35,7 @@ const LINES_PER_TIER := [0, 0, 10, 20]
 # v3 W11 bursts: pooled one-shot CPU particles, one shared mesh and material per kind;
 # each burst sets only its emitter's colour, place and count. pool emitters x max count
 # is the ceiling a dense fight can hold alive at once (DESIGN-NOTES v3 W11).
-#   pop       a kill: a quick round puff
+#   pop       a kill under the "plain" kill look (before FX-01): a quick round puff
 #   debris    a kill or a blast: chunks thrown up under gravity
 #   dust      a ram, a rebound or a blast: soft puffs rolling out along the ground
 #   fountain  a part or a core: a column that rises and falls around the drop
@@ -98,7 +98,7 @@ var heat := 0.0
 const HEAT_GLYPH := Color(1.0, 0.5, 0.12)
 # False skips the ball trail and speed lines; tools/perf_bench.gd --no-trails sets it.
 var trails := true
-# Every kill's starburst, pop and debris pass through this gate (kill_pop).
+# Every kill's mark, shards and debris pass through this gate (kill_pop).
 var pops := PopGate.new()
 # A kill's own mark (FX-01); its candidate comes from the launch option kill_look.
 var kill_mark: KillMark
@@ -175,8 +175,6 @@ func setup(ctx_ref) -> void:
 	_build_bursts()
 	_build_fx()
 	_build_pips()
-	if ctx.get("tuning") != null:
-		kill_mark.choose(ctx.tuning.option(Tuning.KILL_LOOK_KEY))
 	var layer := CanvasLayer.new()
 	layer.name = "EdgeFlashLayer"
 	layer.layer = 4
@@ -955,16 +953,24 @@ func _emit_pops() -> void:
 # `pilot` overrides the pilot's colour (a capture with no ball).
 func kill_look(at: Vector3, scale: float, pilot := Color.TRANSPARENT) -> void:
 	var row := EventKinds.juice("enemy_killed")
+	# Read each pop, so the F1 panel's Kill look row takes effect on the next kill.
+	if ctx != null and ctx.get("tuning") != null:
+		kill_mark.choose(ctx.tuning.option(Tuning.KILL_LOOK_KEY))
 	scale *= 1.0 + MIGHT_GLYPH * might
 	if not kill_mark.inked():
 		glyph("enemy_killed", at + Vector3.UP * 0.8, 0.6 * scale, 1.8 * scale, 0.3, Vector3.ZERO, "", _hot("enemy_killed"))
 		burst("pop", at + Vector3.UP * 0.8, EventKinds.color("enemy_killed").lerp(HEAT_GLYPH, heat), int(ceil(float(row["pop"]) * scale)))
 		burst("debris", at + Vector3.UP * 0.5, EventKinds.color("scrap_lost"), int(ceil(float(row["debris"]) * scale)))
 		return
+	if root == null or not root.is_inside_tree():
+		return
 	var tint := (pilot if pilot.a > 0.0 else kill_tint()).lerp(HEAT_GLYPH, heat)
-	var governed := Density.live().apply(Density.class_of_kind("enemy_killed"), 1.0, 1.0, 1.0)
-	kill_mark.fire(at + Vector3.UP * 0.8, KILL_MARK_M * scale * governed.y, tint)
-	_fire_fx("kill_shards", "enemy_killed", int(ceil(float(row["shards"]) * scale)), at + Vector3.UP * 0.6, tint)
+	kill_mark.reduced_motion = camera != null and camera.get("reduced_motion") == true
+	kill_mark.fire(at + Vector3.UP * 0.8, KILL_MARK_M * scale, tint,
+		Density.live().apply(Density.class_of_kind("enemy_killed"), 1.0, 1.0, 1.0))
+	var fx := FxLibrary.effects("enemy_killed")
+	for id in fx:
+		_fire_fx(id, "enemy_killed", int(ceil(float(fx[id]) * scale)), at + Vector3.UP * 0.6, tint)
 	burst("debris", at + Vector3.UP * 0.5, Palette.CHARCOAL, int(ceil(float(row["debris"]) * scale)))
 	spawned["enemy_killed"] = spawned.get("enemy_killed", 0) + 1
 

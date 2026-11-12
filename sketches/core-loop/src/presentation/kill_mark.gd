@@ -15,8 +15,12 @@ const FlashGuard := preload("res://src/presentation/flash_guard.gd")
 #          steam sigh, in place of the CLOCKED OUT word (MachineFx asks card())
 #   plain  the look before FX-01: the copper hit star, larger, with a puff and rust debris
 #
-# The mark is a camera-facing quad drawn in its own shader, transparent and below the hostile
-# warnings' render priority (threat_grammar.gd PRIORITY), so it never covers a warning.
+# The mark is a camera-facing quad drawn in its own shader, transparent, depth-sorted with the
+# other player glyphs and far below the hostile warnings' render priority (threat_grammar.gd
+# PRIORITY), so it never covers a warning. It is a player effect (FEEL-READABILITY section 1.1,
+# P5): the density governor caps its alpha and life like any glyph's, Reduce flashes keeps only
+# FlashGuard's information share of its alpha and cools its white start, and Reduced motion drops
+# the overshoot and the card's slam.
 
 const CANDIDATES := ["ink", "card", "plain"]
 const POOL := 4
@@ -27,7 +31,7 @@ const POP := 0.16
 const OVERSHOOT := 1.2
 const SPIN := 1.6
 const CARD_TILT := 0.21
-const RENDER_PRIORITY := 10
+const RENDER_PRIORITY := 0
 # How hot the burst starts, before FlashGuard.whiten.
 const HEAT := 0.8
 
@@ -39,10 +43,10 @@ uniform float alpha = 1.0;
 uniform float heat = 0.0;
 uniform float turn = 0.0;
 uniform int mode = 0;
-const vec3 INK = vec3(0.141, 0.165, 0.157);
-// Palette CHARCOAL, LEDGER and RUST.
-const vec3 LEDGER = vec3(0.902, 0.851, 0.722);
-const vec3 RUST = vec3(0.608, 0.318, 0.227);
+// Palette CHARCOAL, LEDGER and RUST, set from GDScript so the engine converts them to linear light.
+uniform vec3 INK : source_color;
+uniform vec3 LEDGER : source_color;
+uniform vec3 RUST : source_color;
 
 float hash(float n) {
 	return fract(sin(n * 91.345) * 47453.5453);
@@ -97,6 +101,7 @@ void fragment() {
 """
 
 var candidate := "ink"
+var reduced_motion := false
 # Marks fired since the run began, by mode, for the tests and notes.
 var spawned := {"burst": 0, "card": 0}
 
@@ -116,12 +121,17 @@ func _init() -> void:
 		var mat := ShaderMaterial.new()
 		mat.shader = shader
 		mat.render_priority = RENDER_PRIORITY
+		mat.set_shader_parameter("INK", Palette.CHARCOAL)
+		mat.set_shader_parameter("LEDGER", Palette.LEDGER)
+		mat.set_shader_parameter("RUST", Palette.RUST)
 		node.material_override = mat
 		node.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		node.top_level = true
+		# The quad turns to face the camera in its shader, so its flat box is not where it draws.
+		node.extra_cull_margin = 2.0
 		node.visible = false
 		add_child(node)
-		_slots.append({"node": node, "mat": mat, "t": 1.0, "life": LIFE, "size": 1.0, "mode": 0, "seed": 0.0})
+		_slots.append({"node": node, "mat": mat, "t": 1.0, "life": LIFE, "size": 1.0, "mode": 0, "seed": 0.0, "alpha": 1.0})
 
 
 # Sets the candidate from the launch option; an unknown name keeps "ink".
@@ -133,13 +143,14 @@ func inked() -> bool:
 	return candidate != "plain"
 
 
-# One kill's burst at `at`, `size` metres across its longest point, in `tint`.
-func fire(at: Vector3, size: float, tint: Color) -> void:
+# One kill's burst at `at`, `size` metres across its longest point, in `tint`. `governed` is
+# the density governor's (alpha cap, size, life) for a player effect, as Density.apply returns it.
+func fire(at: Vector3, size: float, tint: Color, governed := Vector3.ONE) -> void:
 	if not inked():
 		return
 	var slot: Dictionary = _slots[_next]
 	_next = (_next + 1) % POOL
-	_start(slot, at, size, tint, LIFE, 0)
+	_start(slot, at, size * governed.y, tint, LIFE * governed.z, 0, governed.x)
 	spawned["burst"] += 1
 
 
@@ -148,17 +159,9 @@ func fire(at: Vector3, size: float, tint: Color) -> void:
 func card(at: Vector3, size := 1.6) -> bool:
 	if candidate != "card":
 		return false
-	_start(_slots[POOL], at, size, Palette.LEDGER, CARD_LIFE, 1)
+	_start(_slots[POOL], at, size, Palette.LEDGER, CARD_LIFE, 1, 1.0)
 	spawned["card"] += 1
 	return true
-
-
-func live() -> int:
-	var count := 0
-	for slot in _slots:
-		if slot["t"] < 1.0:
-			count += 1
-	return count
 
 
 func clear() -> void:
@@ -167,8 +170,9 @@ func clear() -> void:
 		slot["node"].visible = false
 
 
-func _start(slot: Dictionary, at: Vector3, size: float, tint: Color, life: float, mode: int) -> void:
+func _start(slot: Dictionary, at: Vector3, size: float, tint: Color, life: float, mode: int, alpha: float) -> void:
 	slot["t"] = 0.0
+	slot["alpha"] = FlashGuard.info(alpha)
 	slot["life"] = life
 	slot["size"] = size * 0.5
 	slot["mode"] = mode
@@ -198,11 +202,13 @@ func step(delta: float) -> void:
 
 
 # The size, turn, heat and alpha at the slot's point in its life.
-static func shape_at(t: float, mode: int) -> Dictionary:
-	var grow := OVERSHOOT * ease(t / POP, 0.4) if t < POP else lerpf(OVERSHOOT, 1.0, ease((t - POP) / (1.0 - POP), 0.5))
+# Under `still` (Reduced motion) the mark grows straight to full size and the card does not slam.
+static func shape_at(t: float, mode: int, still := false) -> Dictionary:
+	var top := 1.0 if still else OVERSHOOT
+	var grow := top * ease(t / POP, 0.4) if t < POP else lerpf(top, 1.0, ease((t - POP) / (1.0 - POP), 0.5))
 	if mode == 1:
 		# The card slams down from big to its size and holds still, then fades out late.
-		grow = lerpf(1.6, 1.0, minf(t / 0.12, 1.0))
+		grow = 1.0 if still else lerpf(1.6, 1.0, minf(t / 0.12, 1.0))
 		return {"scale": grow, "heat": 0.0, "alpha": 1.0 if t < 0.7 else 1.0 - (t - 0.7) / 0.3}
 	return {"scale": grow, "heat": FlashGuard.whiten(HEAT) * maxf(0.0, 1.0 - t / POP),
 		"alpha": 1.0 if t < 0.45 else 1.0 - (t - 0.45) / 0.55}
@@ -211,10 +217,10 @@ static func shape_at(t: float, mode: int) -> Dictionary:
 func _draw(slot: Dictionary) -> void:
 	var t: float = slot["t"]
 	var mode: int = slot["mode"]
-	var look := shape_at(t, mode)
+	var look := shape_at(t, mode, reduced_motion)
 	var node: MeshInstance3D = slot["node"]
 	node.basis = Basis.IDENTITY.scaled(Vector3.ONE * slot["size"] * float(look["scale"]))
 	var mat: ShaderMaterial = slot["mat"]
 	mat.set_shader_parameter("heat", look["heat"])
-	mat.set_shader_parameter("alpha", look["alpha"])
+	mat.set_shader_parameter("alpha", float(look["alpha"]) * float(slot["alpha"]))
 	mat.set_shader_parameter("turn", (CARD_TILT if mode == 1 else slot["seed"] + SPIN * t))

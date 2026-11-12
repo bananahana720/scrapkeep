@@ -50,7 +50,7 @@ func _palette_values() -> Array:
 func _pure_checks() -> void:
 	# FX-02: every figure wears an ink outline three tenths of its size, so copper reads on sand.
 	_report("a figure's ink outline grows with it and never thins under the floor",
-		DamageNumbers.outline_px(DamageNumbers.FONT) == DamageNumbers.OUTLINE_MIN
+		DamageNumbers.outline_px(8) == DamageNumbers.OUTLINE_MIN and DamageNumbers.outline_px(DamageNumbers.FONT) == 7
 		and DamageNumbers.outline_px(DamageNumbers.MEGA_FONT) == 18,
 		"%d at %d pt, %d at %d pt" % [DamageNumbers.outline_px(DamageNumbers.FONT), DamageNumbers.FONT,
 			DamageNumbers.outline_px(DamageNumbers.MEGA_FONT), DamageNumbers.MEGA_FONT])

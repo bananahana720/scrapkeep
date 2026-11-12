@@ -219,7 +219,6 @@ func _moment_shot(vfx, id: String) -> void:
 		if g["t"] < 1.0:
 			g["t"] = freeze
 			vfx._draw_glyph(g)
-	vfx.kill_mark.step(0.0)
 	for slot in vfx.kill_mark._slots:
 		if slot["t"] < 1.0:
 			slot["t"] = freeze

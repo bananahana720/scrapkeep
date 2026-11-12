@@ -129,11 +129,11 @@ func _check_juice_path() -> void:
 	Density.live().force(0.0)
 	_vfx.pops.clear()
 	_vfx._clock += 10.0
-	var before: int = _vfx.spawned.get("burst_pop", 0)
+	var before: int = _vfx.spawned.get("burst_debris", 0)
 	for i in 10:
 		_game.events.enemy_killed.emit("chaser", _kill_at(i), 1)
 	_game.presentation.juice.flush()
-	var popped: int = _vfx.spawned.get("burst_pop", 0) - before
+	var popped: int = _vfx.spawned.get("burst_debris", 0) - before
 	_check("juice uses the gate", popped == Density.KILL_POPS_PER_WINDOW and _vfx.pops.pending.size() == Density.KILL_POPS_PER_WINDOW,
 		"ten kills through GameEvents and juice pop %d now and hold %d clusters for the next window" % [popped, _vfx.pops.pending.size()])
 	_vfx.pops.clear()

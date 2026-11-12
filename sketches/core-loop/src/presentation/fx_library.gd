@@ -91,7 +91,7 @@ const SPECS := {
 		"size": 0.16, "colour": "ANCIENT", "attach": "world", "blend": "add", "shape": "ring", "ring_m": 0.8, "glow": 1.8, "owner": "machine"},
 	# A stun is a ring of inked comic stars circling the head (FX-02): solid, so it reads on sand and
 	# concrete alike, where the old additive amber glow drew a few dozen pixels.
-	"daze_halo": {"pool": 6, "max": 6, "life": 0.6, "speed": [0.0, 0.0], "spread": 0.0, "gravity": 0.0, "local": true, "scale": [0.9, 1.1],
+	"daze_halo": {"pool": 6, "max": 6, "life": 1.2, "speed": [0.0, 0.0], "spread": 0.0, "gravity": 0.0, "local": true, "scale": [0.9, 1.1],
 		"size": 0.6, "colour": "AMBER", "attach": "persist", "blend": "mix", "shape": "ring", "ring_m": 0.8, "look": "star", "owner": "machine"},
 	"fuse_sputter": {"pool": 4, "max": 6, "life": 0.3, "speed": [1.5, 3.5], "spread": 50.0, "gravity": -6.0,
 		"size": 0.08, "colour": "AMBER", "attach": "persist", "blend": "add", "shape": "point", "glow": 2.0, "owner": "machine"},
@@ -119,6 +119,8 @@ render_mode %s;
 instance uniform vec4 tint : source_color = vec4(1.0);
 // How far a hot particle starts toward white; it cools over its life (FlashGuard.whiten scales it).
 instance uniform float heat = 0.0;
+// Palette.CHARCOAL, set from GDScript so the engine converts it to linear light (a literal would not be).
+uniform vec3 ink : source_color;
 varying float v_life;
 varying float v_seed;
 float seed_of(int id) {
@@ -202,7 +204,7 @@ void fragment() {
 	}
 	vec3 base = tint.rgb * COLOR.rgb;
 	vec3 fill = mix(base, mix(base, vec3(1.0), 0.45), step(r, edge * 0.32));
-	ALBEDO = mix(fill, vec3(0.141, 0.165, 0.157), step(edge - 0.2, r));
+	ALBEDO = mix(fill, ink, step(edge - 0.2, r));
 	ALPHA = tint.a * COLOR.a;
 }
 """],
@@ -323,13 +325,14 @@ static func look_material(kind: String, blend := "mix") -> ShaderMaterial:
 		var body: String = row[2]
 		if kind == "streak":
 			modes = modes % ("blend_add, depth_draw_never" if blend == "add" else "blend_mix, depth_draw_opaque")
-			var ink := "\n\tALBEDO = mix(ALBEDO, vec3(0.141, 0.165, 0.157), smoothstep(w * 0.5, w * 0.62, across));"
+			var ink := "\n\tALBEDO = mix(ALBEDO, ink, smoothstep(w * 0.5, w * 0.62, across));"
 			body = body % (["min(COLOR.rgb, vec3(1.0))", "", " * (1.0 - smoothstep(0.0, 1.0, across)) * 0.7"] if blend == "add" else ["COLOR.rgb", ink, ""])
 		var vertex: String = {"billboard": _BILLBOARD, "streak": _STREAK_VERTEX, "chunk": _CHUNK_VERTEX}[row[1]]
 		var shader := Shader.new()
 		shader.code = (_HEAD % modes) + vertex + body
 		var mat := ShaderMaterial.new()
 		mat.shader = shader
+		mat.set_shader_parameter("ink", Palette.CHARCOAL)
 		_shaders[key] = mat
 	return _shaders[key]
 
