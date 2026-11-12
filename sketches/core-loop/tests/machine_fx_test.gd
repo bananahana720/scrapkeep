@@ -165,6 +165,10 @@ func _run() -> void:
 	# A boss phase, then the fall: blasts first, the wink one beat after the last.
 	fx.boss_phase("waking", ball + Vector3(0, 0, 20))
 	t.check("a boss phase fires its word", _moments(fx, "word").back()[2] == "KRAKK")
+	# Brindle's turn is read from his plates and the glance, so no word stands over him (w37 film PF-26).
+	var brindle_words := _moments(fx, "word").size()
+	fx.boss_phase("brindle", ball + Vector3(0, 0, 20))
+	t.eq("Brindle's phase fires its burst and no word", _moments(fx, "word").size(), brindle_words)
 	var start: float = fx._clock
 	# Brindle's rout says its word through the flourish row, so his fall queues no word of its own.
 	fx.boss_fall("brindle", ball + Vector3(0, 0, 30))

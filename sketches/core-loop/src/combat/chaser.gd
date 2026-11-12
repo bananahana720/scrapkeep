@@ -14,9 +14,6 @@ const PackPressure := preload("res://src/combat/pack_pressure.gd")
 # gets one.
 
 const SPEED := 4.8
-# No dial runs a chaser this fast or faster: under the ball's 14 m/s cruise (movement/tuning.gd), so a ball
-# that keeps rolling is never caught by running (ruling cu; chaser_speed_test holds the two numbers apart).
-const SPEED_CEILING := 12.0
 const LUNGE_RANGE := 10.0
 const WINDUP := 0.6
 const LUNGE_TIME := 0.34
@@ -55,8 +52,6 @@ const FLANK_CALL_S := 1.1
 
 var state := State.CHASE
 var lunges := 0
-# This chaser's run speed (m/s): SPEED unless its spawn handed it the stage's (spec "run_speed", stage_speed()).
-var run_speed := SPEED
 
 var _clock := 0.0
 var _rest := 0.0
@@ -85,7 +80,6 @@ func setup(target_ref, terrain_ref, root_ref, live_ref: Callable, threat: float,
 	radius = 1.0
 	half_height = 1.5
 	pressure = spec_ref.get("pressure", {})
-	run_speed = clampf(float(spec_ref.get("run_speed", SPEED)), SPEED, SPEED_CEILING)
 	# _add_capsule still lays the collider and the flashing material; its capsule mesh is
 	# replaced by the C10 wedge (enemy_chaser.glb): plough wedge, shoulder shield, raked fin
 	# and braced haunches, with the lit visor as the glb's brass surface.
@@ -134,13 +128,6 @@ static func _parts() -> Array:
 	return _shared
 
 
-# What a chaser spawned on `stage` runs at (ChallengeDials mobs.chaser_speed_by_stage, m/s; 0 keeps SPEED):
-# never slower than SPEED, never as fast as SPEED_CEILING. Combat hands it to the spawn as spec "run_speed".
-static func stage_speed(stage: int) -> float:
-	var dial := ChallengeDials.by_stage_or("mobs.chaser_speed_by_stage", stage, 0.0)
-	return clampf(dial, SPEED, SPEED_CEILING) if dial > 0.0 else SPEED
-
-
 func state_name() -> String:
 	return ["chase", "windup", "lunge", "recover", "call"][state]
 
@@ -156,15 +143,14 @@ func _physics_process(delta: float) -> void:
 	var to_ball := _flat_to_ball()
 	match state:
 		State.CHASE:
-			var lead := PackPressure.lead_now(pressure, target)
 			if pressure.get("flanker", false):
 				_flank(delta, to_ball)
-			elif lead > 0.0:
-				_lead_chase(delta, to_ball, lead)
+			elif float(pressure.get("lead", 0.0)) > 0.0:
+				_lead_chase(delta, to_ball, float(pressure.lead))
 			else:
 				var desired := Vector3.ZERO
 				if to_ball.length() > radius + 1.4:
-					desired = to_ball.normalized() * run_speed
+					desired = to_ball.normalized() * SPEED
 				_move(delta, desired)
 				if _rest <= 0.0 and to_ball.length() < LUNGE_RANGE and is_on_floor() and _knocked_speed() < 1.0:
 					if AttackBudget.ask(self):
@@ -261,14 +247,14 @@ func _led_aim(lead: float) -> Vector3:
 
 
 # The earliest point of the ball's predicted roll (within MAX_LEAD_S) this chaser can get within lunge
-# range of at its run speed; the farthest look when none.
+# range of at SPEED; the farthest look when none.
 func _intercept(lead: float) -> Vector3:
 	var steps := 10
 	var best := PackPressure.predict(target, PackPressure.MAX_LEAD_S * lead)
 	for i in range(steps + 1):
 		var t := PackPressure.MAX_LEAD_S * lead * float(i) / steps
 		var at := PackPressure.predict(target, t)
-		if _flat(at - global_position).length() - run_speed * t <= LUNGE_RANGE * 0.8:
+		if _flat(at - global_position).length() - SPEED * t <= LUNGE_RANGE * 0.8:
 			best = at
 			break
 	return _flat(best - global_position)
@@ -279,7 +265,7 @@ static func _flat(v: Vector3) -> Vector3:
 
 
 func _toward(offset: Vector3) -> Vector3:
-	return offset.normalized() * run_speed if offset.length() > radius + 1.4 else Vector3.ZERO
+	return offset.normalized() * SPEED if offset.length() > radius + 1.4 else Vector3.ZERO
 
 
 func _begin_windup(to_ball: Vector3) -> void:
