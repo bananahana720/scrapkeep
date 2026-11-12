@@ -18,6 +18,7 @@ import bpy
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 import common
+import crew
 import polish
 from common import Part
 
@@ -33,10 +34,9 @@ root = common.empty("RampFlipper")
 b = Part("RampBody")
 b.cyl("fleet_paint", .55, .63, .95, segs=10, loc=g(0, -.34, 0))
 b.cyl("fleet_paint", .63, .49, .74, segs=10, loc=g(0, .505, 0))
-b.uv("fleet_paint", .30, u=10, v=6, loc=g(0, 1.16, .03))
-b.box("paint", (.23, .22, .15), loc=g(0, 1.10, .31), color="charcoal")
+crew.animal_head(b, g(0, 1.16, .03), .30, snout=((.23, .22, .15), g(0, 1.10, .31)),
+                 ears=(.10, .30, [g(side * .18, 1.56, .03) for side in (-1, 1)]))
 for side in (-1, 1):
-    b.cyl("paint", .10, 0, .30, segs=6, loc=g(side * .18, 1.56, .03), color="charcoal")
     b.rod("paint", g(side * .44, .62, -.14), g(side * .48, 1.12, -.35), .075,
           segs=6, color=common.mix("oxide", "charcoal", .35))
     b.cyl("paint", .18, .18, .15, segs=10, loc=g(side * .60, -.92, .04),
