@@ -17,7 +17,7 @@ const GAP := 12.0
 const PLATE_PAD := 6.0
 const PAST_STEP := 0.4
 const DETOUR_ICON := 24.0
-const DETOUR_GAP := 6.0
+const DETOUR_GAP := float(UiTokens.GAP_S)
 
 var icon_id := ""
 var words := ""
@@ -138,9 +138,14 @@ func _draw() -> void:
 		UiDraw.text(self, x, mid, distance_text(), FONT, color, true)
 
 
+# The detour row's ink: its colour stepped back to QUIET_ALPHA, so it reads as on offer, not as the goal.
+func detour_ink() -> Color:
+	return Color(detour_color, detour_color.a * UiTokens.QUIET_ALPHA)
+
+
 # The detour row at `top`, centred under the goal and quieter than it.
 func _draw_detour(top: float) -> void:
-	var quiet := Color(detour_color, detour_color.a * UiTokens.QUIET_ALPHA)
+	var quiet := detour_ink()
 	var x := (size.x - _detour_width()) * 0.5
 	var mid := top + DETOUR_ICON * 0.5
 	draw_texture_rect(Icons.texture(detour_icon), Rect2(Vector2(x, top), Vector2(DETOUR_ICON, DETOUR_ICON)).grow(-3.0), false, Icons.tint(detour_icon, quiet))

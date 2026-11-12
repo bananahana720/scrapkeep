@@ -5,6 +5,7 @@ const Objectives := preload("res://src/core/objectives.gd")
 const Interactables := preload("res://src/world/interactables.gd")
 const RescueSites := preload("res://src/world/rescue_site.gd")
 const WordBudget := preload("res://src/ui/word_budget.gd")
+const UiTokens := preload("res://src/ui/ui_tokens.gd")
 
 # The plate's detour row on the park dam (gameplay critique finding 8, W1-69): from the drop the
 # goal row is "Find the Warden" and under it a quieter row names Rivet's cage by its own prompt, with
@@ -70,6 +71,7 @@ func _run() -> void:
 		[Interactables.color("ally"), Interactables.row("ally")["icon"]])
 	var drawn: PackedStringArray = view.drawn_words()
 	_t.check("the plate draws the goal and the detour", drawn.has(Objectives.words("find_warden")) and drawn.has("Free the runner"), str(drawn))
+	_t.near("the detour row is drawn dim, at the quiet alpha", view.detour_ink().a, Interactables.color("ally").a * UiTokens.QUIET_ALPHA, 0.001)
 	_t.check("the plate grows by the detour row", view.extent().y > view.ICON, str(view.extent()))
 	var targets := _cage_targets()
 	_t.check("the cage has an edge target at its foot in its ally colour", targets.size() == 1 \
