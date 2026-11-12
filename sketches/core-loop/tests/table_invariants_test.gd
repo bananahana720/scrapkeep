@@ -128,7 +128,7 @@ func _rogues_are_bosses() -> void:
 		_t.check("rogue %s counts as a boss for elements" % id, id in Elements.BOSS_KINDS)
 
 
-# The camp's "Spillway secrets: N of 7" counts WORLD_CODEX[1]; each id needs something in world 1
+# The camp's "Spillway secrets: N of 8" counts WORLD_CODEX[1]; each id needs something in world 1
 # that files it (a field find, the clock door, or a park contraption's codex row).
 func _world_one_secrets() -> void:
 	var filed := {}

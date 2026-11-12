@@ -206,10 +206,16 @@ func finish() -> void:
 	reset()
 
 
+# The devices that seal a cache room: a valve whose door sinks, or a cracked wall that crumbles
+# across the room's open face. Either one files its codex row when it opens the room.
+func _sealed() -> Array:
+	return (valves + walls).filter(func(d): return d["spec"].has("cache"))
+
+
 # World attaches this owner beneath a stage root. Only cache-bearing specs need the
 # game's existing context; standalone contraption geometry keeps its four-argument API.
 func _setup_caches() -> void:
-	if not valves.any(func(v): return v["spec"].has("cache")):
+	if _sealed().is_empty():
 		return
 	var owner_node := get_parent()
 	while owner_node != null and not "ctx" in owner_node:
@@ -220,9 +226,9 @@ func _setup_caches() -> void:
 	_cache_rules.ctx = owner_node.get("ctx")
 	_cache_rules.set_physics_process(false)
 	add_child(_cache_rules)
-	for v in valves:
-		if v["spec"].has("cache") and v["spec"].has("codex"):
-			_cache_rules.ctx.codex.declare(v["spec"]["codex"])
+	for d in _sealed():
+		if d["spec"].has("codex"):
+			_cache_rules.ctx.codex.declare(d["spec"]["codex"])
 
 
 # Back to the stage start: cycles on their seeded offsets, doors shut, walls whole.
@@ -245,33 +251,55 @@ func reset() -> void:
 		v["sink"] = 0.0
 		v["door"].position = v["door_home"]
 		v["wheel"].rotation.z = 0.0
-		if _cache_rules != null and v["spec"].has("cache"):
-			if is_instance_valid(v.get("cache_site")):
-				v["cache_site"].free()
-			v.erase("cache_site")
-			# Activities builds on the active terrain. A parked zone must not put
-			# its pocket's colliders on the currently active zone's ground.
-			if _cache_rules.ctx.terrain.map() != map:
-				continue
-			var s = _cache_rules._build("cracked_cache", v["spec"]["cache"]["at"])
-			# The valve's door is this pocket's face. Keep the cache's side walls,
-			# pedestal, seeded part roll and pickup rule, without an activity prompt.
-			s.wall.free()
-			s.wall = null
-			s.view.hide()
-			v["cache_site"] = s
 		if v["plume"] != null:
 			v["plume"].visible = false
 	for w in walls:
 		w["broken"] = false
 		w["body"].position = w["home"]
 		w["body"].visible = true
+	for d in _sealed():
+		_seal_cache(d)
 	_slams.clear()
 	_thermal_quiet = 0.0
 	_glaze_quiet = 0.0
 	# Cache side walls are rebuilt by reset; finish them along with this zone's devices.
 	if map.get_script().resource_path == "res://src/world/map_reach.gd":
 		load("res://src/presentation/spillway_scenery.gd").dress_props(self)
+
+
+# A sealing device's cache room, rebuilt shut. The device is this room's face: the valve's door, or
+# the cracked wall standing across the room's mouth (cache "face", out of the room, as a park
+# cracked_cache row's). The room keeps its side walls, pedestal, seeded part roll and pickup rule,
+# without an activity prompt or marker.
+func _seal_cache(d: Dictionary) -> void:
+	if _cache_rules == null:
+		return
+	if is_instance_valid(d.get("cache_site")):
+		d["cache_site"].free()
+	d.erase("cache_site")
+	# Activities builds on the active terrain. A parked zone must not put
+	# its pocket's colliders on the currently active zone's ground.
+	if _cache_rules.ctx.terrain.map() != map:
+		return
+	var cache: Dictionary = d["spec"]["cache"]
+	var room := {}
+	if cache.has("face"):
+		room["face"] = cache["face"]
+	var s = _cache_rules._build("cracked_cache", cache["at"], room)
+	s.wall.free()
+	s.wall = null
+	s.view.hide()
+	d["cache_site"] = s
+
+
+# The device opened its cache room: the part goes on the pedestal and the codex row is filed.
+func _open_cache(d: Dictionary, at: Vector3, facts: Array) -> void:
+	if _cache_rules == null or not d.has("cache_site"):
+		return
+	var s = d["cache_site"]
+	_cache_rules._finish(s, s.pedestal)
+	if d["spec"].has("codex"):
+		facts.append({"kind": "codex", "id": d["spec"]["codex"]["id"], "at": at})
 
 
 func note_slam(at: Vector3) -> void:
@@ -990,11 +1018,7 @@ func _step_valve(v: Dictionary, delta: float, ball: Vector3, planar: float, fact
 	v["wheel"].rotation.z = 0.8
 	facts.append({"kind": "fact", "fact": "valve_smashed", "at": at})
 	facts.append({"kind": "fact", "fact": "route_opened", "at": v["door_home"]})
-	if _cache_rules != null and v.has("cache_site"):
-		var s = v["cache_site"]
-		_cache_rules._finish(s, s.pedestal)
-		if v["spec"].has("codex"):
-			facts.append({"kind": "codex", "id": v["spec"]["codex"]["id"], "at": at})
+	_open_cache(v, at, facts)
 	_puff(at, 5.0)
 	var vent = v["spec"].get("vent")
 	if vent != null:
@@ -1044,7 +1068,11 @@ func _build_wall(spec: Dictionary) -> Dictionary:
 # spec sets "break_at_cruise" crumbles for any ball at 0.85 x cruise or faster (the cracked face's
 # bar, Activities.RAM_MIN_PER_CRUISE, so a held roll at full speed counts).
 func _step_wall(w: Dictionary, ball: Vector3, velocity: Vector3, kit, facts: Array) -> void:
-	if w["broken"] or kit == null:
+	if w["broken"]:
+		if _cache_rules != null and w.has("cache_site"):
+			_cache_rules._watch_pickup(w["cache_site"], ball)
+		return
+	if kit == null:
 		return
 	var flat := Vector2(velocity.x, velocity.z).length()
 	if not kit.sprinting and not (w["spec"].get("break_at_cruise", false) and flat >= cruise * Activities.RAM_MIN_PER_CRUISE):
@@ -1063,6 +1091,7 @@ func _step_wall(w: Dictionary, ball: Vector3, velocity: Vector3, kit, facts: Arr
 	facts.append({"kind": "fact", "fact": "wall_crumbled", "at": centre})
 	facts.append({"kind": "fact", "fact": "route_opened", "at": centre})
 	facts.append({"kind": "codex", "id": "sprint_through", "at": centre})
+	_open_cache(w, centre, facts)
 	for k in 5:
 		_puff(centre + Vector3(_puff_rng.randf_range(-3.0, 3.0), _puff_rng.randf_range(-1.5, 2.0), _puff_rng.randf_range(-1.0, 1.0)), 2.5)
 
