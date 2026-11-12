@@ -1,6 +1,7 @@
 extends Control
 
 const AbilityState := preload("res://src/core/ability_state.gd")
+const UiTokens := preload("res://src/ui/ui_tokens.gd")
 const Bindings := preload("res://src/core/bindings.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const Icons := preload("res://src/ui/icons.gd")
@@ -30,9 +31,13 @@ const UiDraw := preload("res://src/ui/ui_draw.gd")
 # at the reticle, on ticks the meter is full and a press would start the set piece; it follows
 # the same retire and return rules (its first availability in a run is the run's first full
 # meter) and wears ULTIMATE until the profile has used it RETIRE_AFTER["ultimate"] times. While it
-# shows, the reticle leaves its own Q off.
+# shows, the reticle leaves its own Q off. Until the profile has used the ultimate once, its prompt
+# waits out a live fight (field_tips.gd fight_live, the view's "fight"): the dam Warden already
+# teaches the clamp crews and the water-sheet ride, so the ultimate gets its own moment, the first
+# full meter outside a fight (systems audit pass E). The reticle's own Q still shows meanwhile.
 
 const AimReticle := preload("res://src/ui/aim_reticle.gd")
+const FieldTips := preload("res://src/ui/field_tips.gd")
 
 const PROMPT_VERBS := ["haul", "interact", "jump", "harpoon", "boost", "ultimate"]
 const BALL_VERBS := ["boost", "interact", "jump"]
@@ -52,7 +57,7 @@ const KEY_H := 28.0
 const BALL_OFFSET := Vector2(52.0, -34.0)
 const AIM_OFFSET := Vector2(34.0, 24.0)
 const STACK := 36.0
-const WORD_SIZE := 16
+const WORD_SIZE := UiTokens.BODY
 
 var game
 var profile
@@ -243,6 +248,8 @@ func step(delta: float, view: Dictionary) -> void:
 	for verb in PROMPT_VERBS:
 		if not ready.has(verb):
 			ready[verb] = false
+	if view.get("fight", false) and profile.uses("ultimate") == 0:
+		ready["ultimate"] = false
 	var vault_open: bool = _vault != Vector3.INF and view.get("jump_possible", true)
 	var vault_only: bool = vault_open and not ready["jump"]
 	if vault_open:
@@ -390,7 +397,9 @@ func _physics_process(delta: float) -> void:
 	if not game.flow.in_play():
 		shown = []
 		return
-	step(delta, view_of(game.player))
+	var view := view_of(game.player)
+	view["fight"] = FieldTips.fight_live(game.flow)
+	step(delta, view)
 
 
 # Where each shown prompt sits on screen: [{verb, at, word, glyph, icon}]. Redraw only when it changes.

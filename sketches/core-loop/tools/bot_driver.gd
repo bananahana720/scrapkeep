@@ -917,7 +917,6 @@ func tick(delta: float) -> bool:
 			print("    posture %.1f stagger %s; hull=%s distance=%.1f; line=%s hooked=%s on_body=%s" % [boss.posture(), boss.staggered(),
 				boss.ship.hull.global_position, _flat(b, boss.ship.hull.global_position), game.player.kit.line_state,
 				game.player.kit.hooked, game.player.kit.on_body])
-	_answer_hotwire()
 	match state:
 		"stage", "beacon":
 			_roam(delta)
@@ -989,18 +988,6 @@ func _lock_held_s() -> float:
 		var until := float(open_at) if open_at != null else float(game.run.stage_time)
 		held += clampf(until - float(engaged), 0.0, float(gate.gate_row().get("max_s", 0.0)))
 	return held
-
-
-# A pending hot-wire offer is answered the tick it is seen, by one rule: the completionist
-# fits the part (it takes every optional thing), every other policy recycles it for cogs.
-func _answer_hotwire() -> void:
-	var build = game.build
-	if build == null or build.hotwire_pending().get("state", "") != "open":
-		return
-	if policy == "completionist":
-		build.hotwire_fit()
-	else:
-		build.hotwire_recycle()
 
 
 # The fight clock starts at the later of the bot's turn to the Warden and the Warden's

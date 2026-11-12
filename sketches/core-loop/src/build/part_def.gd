@@ -33,6 +33,8 @@ const TAGS := ["frost", "arc", "kinetic", "split", "spiral", "chain", "anchor", 
 @export var family := "stat"
 # Only this class is offered the part; "" means any class.
 @export var class_id := ""
+# The maker whose set this part counts toward (maker_sets.gd); "" for none.
+@export var maker := ""
 # A won event grants it (milestone_won). Only a gate overcharged by two or more bonus
 # cores may also offer it; fabricators and vaults never do.
 @export var milestone_only := false
@@ -148,6 +150,7 @@ static func from_row(row_id: String, row: Dictionary) -> Resource:
 	def.tier = row.get("tier", 1)
 	def.family = row.get("family", "stat")
 	def.class_id = row.get("class_id", "")
+	def.maker = row.get("maker", "")
 	def.milestone_only = row.get("milestone_only", false)
 	def.mods = row.get("mods", {})
 	def.cooldown_scale = row.get("cooldown_scale", 1.0)
@@ -216,8 +219,8 @@ func _read_stats() -> Array:
 	return unique
 
 
-# The sheet categories build_sheet.gd folds this part into. synergy covers the tag sets,
-# the named synergies whose shown part this is and the evolutions it feeds or completes.
+# The sheet categories build_sheet.gd folds this part into. synergy covers the maker counts
+# (the tricks a maker wakes) and the evolutions a part feeds or completes.
 func _stat_touches() -> Array:
 	var out: Array = []
 	if not mods.is_empty():
@@ -236,20 +239,13 @@ func _stat_touches() -> Array:
 		out.append("max_hp")
 	if punch != 0.0:
 		out.append("punch")
-	if not tags.is_empty() or _in_synergy_rows():
+	if _in_synergy_rows():
 		out.append("synergy")
 	return out
 
 
 func _in_synergy_rows() -> bool:
-	for key in Synergies.ROWS:
-		var row: Dictionary = Synergies.ROWS[key]
-		if row.get("shown", "") == id:
-			return true
-		var evo: Dictionary = row.get("evolution", {})
-		if evo.get("into", "") == id or id in evo.get("parts", []):
-			return true
-	return false
+	return maker != "" or Synergies.in_evolution(id)
 
 
 # True when the part only scales numbers: no punch, pattern, element or behaviour. Only

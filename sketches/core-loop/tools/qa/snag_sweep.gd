@@ -202,7 +202,7 @@ static func _report(meta: Dictionary, snags: Array, controls: Array) -> Dictiona
 
 
 static func _by_class(rows: Array) -> Dictionary:
-	var c := {"piece": 0, "ground": 0, "other": 0}
+	var c := {"piece": 0, "ground": 0, "other": 0, Probe.MOVING: 0}
 	for r in rows:
 		c[r["class"]] += 1
 	return c

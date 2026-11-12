@@ -4,7 +4,7 @@ The local coordinator fills the bracketed fields and starts each cloud lane with
 
 ## Read first
 
-1. [GRAPH.md](GRAPH.md): ownership, your units, their dependencies and the test gates.
+1. [START-HERE.md](../handoff/START-HERE.md), then the wave board that [STATE.md](../handoff/STATE.md) names: ownership, your units and their dependencies. [GRAPH.md](GRAPH.md) is the wave 18 board, kept as history.
 2. [DECISIONS.md](../handoff/DECISIONS.md): Andrew's rulings, newest wins. Don't re-ask one without new information.
 3. [LESSONS.md](../handoff/LESSONS.md): how this project works.
 4. [AMBITION-BRIEF.md](AMBITION-BRIEF.md): Andrew's 19 Oct goals, reframed through [the ambition article](../handoff/shared/ways-of-working/rieseberg-ambition-article.md). It covers the outcome, the hard targets with their instruments and outside checks, and the practices (by verb) your units use. Name the verb and the practice in every PR body.
@@ -12,11 +12,11 @@ The local coordinator fills the bracketed fields and starts each cloud lane with
 
 ## Fields
 
-- **Lane:** [a cloud lane or a PC lane named in GRAPH.md and THREADS.md]
+- **Lane:** [a cloud lane or a PC lane named on the wave board and in THREADS.md]
 - **Wave and stage:** wave [N], base `stage/alpha-w[N]`
 - **Goal:** [one sentence end state]
-- **Units:** [from GRAPH.md, with depends-on]
-- **Acceptance:** each unit's checks from GRAPH.md "Test gates" (focused tests on the feature plus `npm run sketch:fast`; the full gate runs once per promotion), plus [unit criteria]
+- **Units:** [from the wave board, with depends-on]
+- **Acceptance:** each unit's checks (focused tests on the feature plus `npm run sketch:fast`; the wave gate runs per promotion and the release gate once per sprint, ruling cy), plus [unit criteria]
 
 ## Ownership
 
@@ -24,12 +24,12 @@ Write only your units' files. Shared fold files (`registry.json`, attack ids, ro
 
 ## Model routing
 
-Writers on Sonnet 5.5, gates on Opus 5.5, consequential review on Fable 5.1, through the project agent definitions in `.claude/agents/`. Nothing above high effort. No thread grades its own work.
+By tier, through the project agent definitions in `.claude/agents/` (ruling bp, in AGENTS.md): the fast tier for search and well-specified mechanical writing, the mid tier for routine review and the acceptance gate, the top tier at high for judgement and consequential review. Nothing above high effort. No thread grades its own work.
 
 ## Receipts and the bus
 
-You cannot message other sessions. GitHub is the bus.
-- Each unit ends as a PR against `stage/alpha-w[N]` with a receipt comment: `VERDICT <PASS|PASS+NOTES|FAIL|BLOCKED> head <sha>`, the commands run, nonzero test counts, and the reviewer's verdict.
+You cannot message other sessions. GitHub is the bus. The reader of every post has seen none of your work and cannot see your disk, so write each one to stand on its own, as [COMMS.md](../handoff/COMMS.md) sets out (ruling cz).
+- Each unit ends as a PR against `stage/alpha-w[N]` with a receipt comment: `VERDICT <PASS|PASS+NOTES|FAIL|BLOCKED> head <sha>`, one sentence on what a player or the next engineer now gets, the commands run, nonzero test counts, what was not checked, and the reviewer's verdict.
 - The Gate lane stacks PRs whose receipt is on their current head.
 - Raise a hand on Wave board issue #[issue]: `NEEDS: coordinator|gpu|andrew`, one line of context, options and your recommendation. Keep building on the recommendation; the coordinator answers there at least every 30 minutes.
 - GPU proofs (frame times, menu-ready, Vulkan, the real export) are requests on the Wave board tagged `NEEDS: gpu`; cloud perf numbers never count.

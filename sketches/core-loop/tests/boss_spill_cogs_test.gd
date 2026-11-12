@@ -69,8 +69,9 @@ func _run() -> void:
 	_report("spill pays mass and cogs", spill[3] == 1 and spill[1] == spill[0] and spill[2] == spill[0],
 		"value %d: scrap +%d, cogs +%d, %d taken" % spill)
 
-	# Kill: a lobber dies in the arena and drops its scrap where it died.
-	var spot: Vector3 = Harness.ground_spot(_boss, 0.5, 14.0)
+	# Kill: a lobber dies in the arena and drops its scrap where it died, across the bowl from the ship, so the
+	# spill ring the ship just dropped is out of the ball's reach wherever the entry puts the ship.
+	var spot: Vector3 = Harness.ground_spot(_boss, _boss._ship_angle + PI, 14.0)
 	_game.events.enemy_killed.emit("lobber", spot, 5)
 	var kill: Array = _roll_over_last()
 	_report("kill pays mass and cogs", kill[3] == 1 and kill[0] == 5 and kill[1] == 5 and kill[2] == 5,

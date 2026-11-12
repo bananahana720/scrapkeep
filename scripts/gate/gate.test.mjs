@@ -8,8 +8,8 @@ import { parseLedger } from "../known-failing.mjs";
 import { place, sortChanges, testsToRerun } from "./carry.mjs";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
-import { WEEKLY_HEADER, chunks, classifyFailure, errorCounts, gateLists, importOutcome, nearLimit, numbered, parseSmokeLog, parseWeekly, parseWindow, renderReceipt, retime, shardVerdict, soloEnvironment } from "./shard.mjs";
-import { WEEKLY_MAX_DAYS, checkTally, checkWeeklySweep, expectedShards, isPass, planHead, tallyRows } from "./tally.mjs";
+import { WEEKLY_HEADER, chunks, classifyFailure, errorCounts, gateLists, importOutcome, nearLimit, numbered, parseSmokeLog, parseWeekly, parseWindow, renderReceipt, windowNames, namedPool, testName, retime, shardVerdict, soloEnvironment } from "./shard.mjs";
+import { WEEKLY_MAX_DAYS, checkTally, checkWeeklySweep, expectedShards, isDeferred, isPass, planHead, tallyRows } from "./tally.mjs";
 import { WEEKLY_FILE, checkWeekly } from "./weekly.mjs";
 
 const repoRoot = fileURLToPath(new URL("../..", import.meta.url));
@@ -185,6 +185,30 @@ test("only the shard tables of a plan are read", () => {
 
 test("a full tally passes", () => {
   assert.deepEqual(checkTally(tallyRows(plan(full)), counts), []);
+});
+
+test("the wave gate needs every test window and the scoped row, and lets a release shard wait", () => {
+  const wave = { ...counts, scope: "wave" };
+  const tests = ["| tests 1-5 | PASS. Receipt tests-1-5.md |", "| tests 6-10 | PASS. Receipt tests-6-10.md |"];
+  const scoped = "| scoped | PASS 4/4: world1_run_test, posture_bands_flume_test, bot_run_end_test, session_test. Receipt scoped.md |";
+  assert.deepEqual(checkTally(tallyRows(plan([...tests, scoped])), wave), [], "no row at all for bots, bands or the red team");
+  const deferred = ["| bands B | DEFERRED to the release gate; last read PASS on f165fbb4, receipt w36-f165fbb4/bands-B |", "| red team | DEFERRED to the release gate; last read CLEAR on f165fbb4, receipt w36-f165fbb4/redteam |"];
+  assert.deepEqual(checkTally(tallyRows(plan([...tests, scoped, ...deferred])), wave), []);
+  assert.match(checkTally(tallyRows(plan(tests)), wave).join("\n"), /no row for "scoped"/);
+  assert.match(checkTally(tallyRows(plan([tests[0], scoped])), wave).join("\n"), /non-bot tests 6 to 10 have no row/);
+  assert.match(checkTally(tallyRows(plan([...tests, "| scoped | RED world1_run_test fell. Receipt scoped.md |"])), wave).join("\n"), /"scoped" does not open with PASS/);
+  assert.match(checkTally(tallyRows(plan([...tests, scoped, "| bands A | RED posture_bands_flume_test. Receipt bands-A.md |"])), wave).join("\n"), /"bands A" does not open with PASS/, "a release shard that was read and is red still blocks");
+  assert.match(checkTally(tallyRows(plan([...tests, scoped, "| bands B | DEFERRED to the release gate |"])), wave).join("\n"), /"bands B" names no receipt/);
+  assert.match(checkTally(tallyRows(plan(["| tests 1-5 | DEFERRED. Receipt old.md |", tests[1], scoped])), wave).join("\n"), /"tests 1-5" does not open with PASS/, "a test window is never deferred");
+  assert.match(checkTally(tallyRows(plan([...tests, "| scoped | DEFERRED. Receipt old.md |"])), wave).join("\n"), /"scoped" does not open with PASS/, "the scoped row is never deferred");
+});
+
+test("the release gate defers nothing", () => {
+  const rows = full.map((row) => (row.startsWith("| bands B") ? "| bands B | DEFERRED to the release gate; last read PASS, receipt bands-B.md |" : row));
+  assert.match(checkTally(tallyRows(plan(rows)), counts).join("\n"), /"bands B" does not open with PASS/);
+  assert.match(checkTally(tallyRows(plan(full.slice(0, 5))), counts).join("\n"), /no row for "bands B"/);
+  assert.equal(isDeferred("**DEFERRED** to the release gate"), true);
+  assert.equal(isDeferred("PASS, deferred nothing"), false);
 });
 
 test("an empty verdict, a missing shard, a gap in the tests and a missing receipt are each named", () => {
@@ -468,4 +492,21 @@ test("retime waits while the load is above the line, and gives up with exit 2 wh
   assert.equal(never.sleeps, 90);
   assert.equal(never.receipt, null);
   assert.match(never.logged.join("\n"), /the machine never went quiet/);
+});
+
+test("a run window is FIRST-LAST or test names joined by commas, in the list's order", () => {
+  const list = ["a_test", "b_test", "c_test", "d_test"];
+  assert.deepEqual(windowNames("2-3", list), { names: ["b_test", "c_test"], label: "2 to 3 of 4 (b_test to c_test)" });
+  assert.deepEqual(windowNames("d_test,b_test.gd", list), { names: ["b_test", "d_test"], label: "named, 2 of 4: b_test, d_test" });
+  assert.throws(() => windowNames("b_test,x_test", list), /not on this list: x_test/);
+  assert.throws(() => windowNames("", list), /FIRST-LAST/);
+  assert.throws(() => windowNames("0-5", list), /does not fit/);
+});
+
+test("a named window draws on the promotion list and the weekly names; a weekly run on the weekly list alone", () => {
+  const lists = { tests: ["b_test"], bots: ["c_bot_test"], weekly: { tests: ["a_test"], bots: ["a_bot_test"] } };
+  assert.deepEqual(namedPool(lists, { bots: true, weekly: false }), ["a_bot_test", "c_bot_test"]);
+  assert.deepEqual(namedPool(lists, { bots: false, weekly: false }), ["a_test", "b_test"]);
+  assert.deepEqual(namedPool(lists, { bots: true, weekly: true }), ["a_bot_test"]);
+  assert.equal(testName(" tests/x_test.gd "), "x_test");
 });

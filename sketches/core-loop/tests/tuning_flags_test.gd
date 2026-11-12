@@ -9,6 +9,9 @@ const Threat := preload("res://src/combat/threat_grammar.gd")
 
 # flag -> [tuning key, valid value, invalid value, when]. Numbers have no invalid option.
 const EXPECTED := {
+	"marked-hull": ["marked_hull", "on", "bogus", "launch"],
+	"moss-scale": ["moss_scale", "on", "bogus", "launch"],
+	"carry-core": ["carry_core", "on", "bogus", "launch"],
 	"scrap": ["scrap_mode", "armor", "bogus", "start"],
 	"wear": ["wear", "on", "bogus", "start"],
 	"route-seed": ["route_seed", "7", "seven", "start"],
@@ -27,6 +30,9 @@ const EXPECTED := {
 	"actives": ["actives", "on", "bogus", "launch"],
 	"profile": ["profile", "sitting", "bogus", "launch"],
 	"grip": ["grip", "off", "bogus", "launch"],
+	"heat": ["heat", "on", "bogus", "launch"],
+	"overtime": ["overtime", "on", "bogus", "launch"],
+	"called-shot": ["called_shot", "on", "bogus", "launch"],
 }
 
 # The lab's winners are the shipping defaults: a bare Tuning reports each one.
@@ -73,6 +79,14 @@ func _initialize() -> void:
 			off_default.append("%s=%s" % [key, bare.option(key)])
 	_check("winning defaults", off_default.is_empty() and bare.armor() and bare.wear_on() and bare.world_one(),
 		"a bare Tuning reports all %d winners; off default: %s" % [DEFAULTS.size(), off_default])
+	var sit := Tuning.new()
+	sit.apply_args(PackedStringArray(["--profile=sitting", "--called-shot=off"]))
+	var sit_on: bool = sit.sitting() and sit.option("heat") == "on" and sit.option("overtime") == "on" \
+		and sit.option("marked_hull") == "on" and sit.option("carry_core") == "on" and sit.option("called_shot") == "off" and sit.option("moss_scale") == "off"
+	var plain := Tuning.new()
+	plain.apply_args(PackedStringArray(["--heat=watch"]))
+	_check("sitting set", sit_on and plain.option("overtime") == "off" and plain.option("heat") == "watch",
+		"--profile=sitting turns on %s unless the line names the flag; without it the loops stay off" % [Tuning.SITTING_SET])
 	print("tuning_flags_test: %s" % ("PASS" if _failures == 0 else "FAIL (%d)" % _failures))
 	quit(0 if _failures == 0 else 1)
 

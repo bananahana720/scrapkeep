@@ -65,6 +65,12 @@ const SPECS := [
 	{"key": "pole_flail", "label": "Poles and flails", "min": 0.0, "max": 1.0, "step": 1.0, "value": 0.0, "options": ["off", "on"]},
 	{"key": "hotwire_shell", "label": "Hot-wired shell", "min": 0.0, "max": 1.0, "step": 1.0, "value": 1.0, "options": ["off", "on"]},
 	{"key": "hotwire_tread", "label": "Hot-wired tread", "min": 0.0, "max": 1.0, "step": 1.0, "value": 1.0, "options": ["off", "on"]},
+	# Heat on the shell (docs/design/loops.md Spec 1, src/combat/redline.gd): off by default so the
+	# game is unchanged; "watch" counts blazing seconds and skims without changing play (the A/B
+	# base), "on" plays it.
+	{"key": "heat", "label": "Heat", "min": 0.0, "max": 2.0, "step": 1.0, "value": 0.0, "options": ["off", "watch", "on"]},
+	{"key": "overtime", "label": "Overtime", "min": 0.0, "max": 1.0, "step": 1.0, "value": 0.0, "options": ["off", "on"]},
+	{"key": "called_shot", "label": "Called shot", "min": 0.0, "max": 1.0, "step": 1.0, "value": 0.0, "options": ["off", "on"]},
 	# The harpoon (DESIGN-NOTES, "Harpoon and winch"): one mode for every pilot, locking on an enemy inside
 	# harpoon_lock_deg and flying the ball in.
 	{"key": "harpoon_smash_speed", "label": "Harpoon smash speed", "min": 10.0, "max": 45.0, "step": 1.0, "value": 24.0},
@@ -83,6 +89,15 @@ const SPECS := [
 	# Wall grip (ENEMY-PRIORITY.md 3a; Andrew's "Speed holds", 2026-10-17): at the fast tier
 	# walls and the first part of an overhang count as ground. `--grip=off` for the sitting.
 	{"key": "grip", "label": "Wall grip", "min": 0.0, "max": 1.0, "step": 1.0, "value": 1.0, "options": ["off", "on"]},
+	# Marked hull (docs/systems-audit/feature-fit.md, new mechanic 1; src/world/hull_mark.gd): hull
+	# paid at a keeper's gamble lowers max hull until the next Warden break. Off keeps today's price.
+	{"key": "marked_hull", "label": "Marked hull", "min": 0.0, "max": 1.0, "step": 1.0, "value": 0.0, "options": ["off", "on"]},
+	# Moss's scale (feature-fit.md, new mechanic 2; shop.gd weigh): sell mass for cogs at Moss's
+	# counter. Off keeps today's shop. Rates are placeholders until the economy pass sets them.
+	{"key": "moss_scale", "label": "Moss's scale", "min": 0.0, "max": 1.0, "step": 1.0, "value": 0.0, "options": ["off", "on"]},
+	# Carry a core (feature-fit.md, new mechanic 3; Andrew 11 Nov 19:24Z, one core, only into
+	# SPIL-9): Moss's counter stows one of this stage's cores in a SPIL-9 socket for the next stage.
+	{"key": "carry_core", "label": "Carry a core", "min": 0.0, "max": 1.0, "step": 1.0, "value": 0.0, "options": ["off", "on"]},
 ]
 
 # The option rows other modules read by name.
@@ -213,11 +228,23 @@ const FLAGS := {
 	"pole-flail": ["pole_flail", "option", "launch"],
 	"hotwire-shell": ["hotwire_shell", "option", "launch"],
 	"hotwire-tread": ["hotwire_tread", "option", "launch"],
+	"heat": ["heat", "option", "launch"],
 	"companion-stub": ["companion_stub", "option", "launch"],
 	"actives": ["actives", "option", "launch"],
 	"profile": ["profile", "option", "launch"],
 	"grip": ["grip", "option", "launch"],
+	"marked-hull": ["marked_hull", "option", "launch"],
+	"moss-scale": ["moss_scale", "option", "launch"],
+	"carry-core": ["carry_core", "option", "launch"],
+	"overtime": ["overtime", "option", "launch"],
+	"called-shot": ["called_shot", "option", "launch"],
 }
+
+
+# What --profile=sitting turns on beyond the defaults: the loops Andrew wants in the world 1
+# sitting (ruling da), the marked hull (ruling dd) and carry a core (ruling df). A flag on the same
+# command line wins, and bots and gate bands, which never pass the profile, still measure the base game.
+const SITTING_SET := {"heat": "on", "overtime": "on", "called-shot": "on", "marked-hull": "on", "carry-core": "on"}
 
 
 # The one parse pass. `when` limits it to one phase ("start" or "launch"); empty applies
@@ -244,6 +271,10 @@ func apply_args(args: PackedStringArray, when := "") -> Dictionary:
 			set_value(row[0], float(value))
 			_launch[row[0]] = _values[row[0]]
 			applied[flag] = value
+	if applied.get("profile") == "sitting":
+		for flag in SITTING_SET:
+			if not applied.has(flag) and set_option(FLAGS[flag][0], SITTING_SET[flag]):
+				_launch[FLAGS[flag][0]] = _values[FLAGS[flag][0]]
 	return applied
 
 

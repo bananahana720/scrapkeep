@@ -3,6 +3,7 @@ extends Node3D
 const LockRows := preload("res://src/world/lock_rows.gd")
 const ParkDefs := preload("res://src/core/park_defs.gd")
 const Palette := preload("res://src/core/palette.gd")
+const Overtime := preload("res://src/world/overtime.gd")
 
 # The Spillway's pacing locks (lock_rows.gd): the park Warden's gate and the yard's arena lock.
 # Both are rows; a map with no row is untouched, and so is every table but the park table.
@@ -72,6 +73,8 @@ var _collar: Node3D
 var _pips: Array[MeshInstance3D] = []
 var _pip_lit: StandardMaterial3D
 var _pip_dark: StandardMaterial3D
+# Reservoir: a won yard's bell, pot and sluice (overtime.gd, behind --overtime).
+var overtime: Node3D
 
 
 func setup(ctx_ref) -> void:
@@ -85,6 +88,9 @@ func setup(ctx_ref) -> void:
 	ctx.events.flow_changed.connect(_on_flow_changed)
 	_pip_lit = Palette.unshaded(Palette.BRASS)
 	_pip_dark = Palette.unshaded(Palette.CHARCOAL)
+	overtime = Overtime.new()
+	add_child(overtime)
+	overtime.setup(ctx)
 
 
 # The park Warden's posture_gate: true while its clamp holds the guard shut.
@@ -235,6 +241,7 @@ func _clear() -> void:
 	_refused_at = -INF
 	_drop_wall()
 	_drop_collar()
+	overtime.clear()
 
 
 func _on_flow_changed(state: String) -> void:
@@ -245,6 +252,7 @@ func _on_flow_changed(state: String) -> void:
 				enemy.remove_meta("yard_crew")
 			_drop_wall()
 		_drop_collar()
+		overtime.clear()
 
 
 func _on_activity_done(id: String, _at: Vector3) -> void:
@@ -392,6 +400,8 @@ func _unlock(won: bool) -> void:
 	# The whole crew broken pays one panel (build.gd yard_cleared), and is one of the clamp's packs.
 	if won and ctx.get("build") != null and ctx.build.has_method("yard_cleared"):
 		ctx.build.yard_cleared(lock_centre)
+	if won:
+		overtime.offer(lock_centre, _facing, lock_row())
 	if won and not gate_open:
 		cleared += 1
 		ctx.events.world_fact.emit("warden_gate_pip", ctx.player.ball_position())

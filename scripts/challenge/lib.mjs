@@ -3,6 +3,7 @@
 // here starts Godot. The skill bands themselves (Novice, Learner, Expert) live in
 // sketches/core-loop/tools/skill_band.gd.
 
+import os from "node:os";
 import fairnessLines from "./fairness.json" with { type: "json" };
 
 export const PILOTS = ["pylon_engineer", "runner_gunner", "demolitions_caster", "tarn", "tally", "remembered_cannon"];
@@ -395,6 +396,26 @@ export function meets(target, rate) {
   return true;
 }
 
+// Early stop (ruling dg): a column's ✓/✗ is settled when every way its unfinished seeds could
+// end, each a win or not, gives the mark the finished seeds already give. Returns that mark, or
+// null while it can still change. A column with no target, one already over the excluded share,
+// and a boss Learner column while the 45 s tell is still clean are never settled: they run every
+// seed. An unfinished seed that ends as an error or a kill makes the full read's column
+// incomplete at most, never the other mark.
+export function settledMark({ grades, left, target, tellOpen = false }) {
+  if (!target || tellOpen || left <= 0) return null;
+  const a = aggregate(grades);
+  if (a.incomplete || a.n === 0) return null;
+  const now = meets(target, a.rate);
+  for (let w = 0; w <= left; w++) if (meets(target, (a.wins + w) / (a.n + left)) !== now) return null;
+  return now;
+}
+
+// The target a cell's column is graded against, as buildTable grades it.
+export function columnTarget(cell, kind, column) {
+  return isChain(cell) || kind === "clear" ? null : targetFor(kind, column);
+}
+
 export function targetFor(kind, column) {
   return (kind === "world" ? TARGETS.world : TARGETS.fight)[column] ?? null;
 }
@@ -424,7 +445,7 @@ export function buildTable(runs, buckets = {}) {
     for (const col of COLUMNS) {
       if (!c.grades[col.id]) continue;
       const a = aggregate(c.grades[col.id]);
-      const target = isChain(c.cell) || c.kind === "clear" ? null : targetFor(c.kind, col.id);
+      const target = columnTarget(c.cell, c.kind, col.id);
       columns[col.id] = { ...a, target, ok: a.incomplete ? null : meets(target, a.rate) };
     }
     const ord = columns.expert?.medianFightS;
@@ -676,6 +697,12 @@ export function parseNdjson(text) {
 
 // Estimated wall seconds per job by kind (measured on the 4-vCPU box; see README), for --dry-run.
 export const SECONDS_PER_JOB = { boss: 335, warden: 330, world: 330, clear: 300 }; // wall s per job at 4 parallel on the 4-vCPU box, smoke medians; world is a guess (no sample before 19 Oct)
+
+// The most Godot processes a sweep may run at once: one per core and 2 GiB of memory each
+// (a world 1 park bot run to stage 2 peaked at 0.85 GiB; the rest is headroom), never below the old fixed cap of 6.
+export function maxJobs(cpus = os.cpus().length, memBytes = os.totalmem()) {
+  return Math.max(6, Math.min(cpus, Math.floor(memBytes / 2 ** 31)));
+}
 
 export function estimate(jobs, parallel = 4, perKind = SECONDS_PER_JOB) {
   const total = jobs.reduce((s, j) => s + (perKind[j.kind] ?? 120), 0);

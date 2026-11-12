@@ -12,6 +12,7 @@ extends Control
 # The drawing is one hook, _page_view(page) -> Control; the default is the comic page.
 
 const Palette := preload("res://src/core/palette.gd")
+const UiTokens := preload("res://src/ui/ui_tokens.gd")
 const UiFonts := preload("res://src/ui/ui_fonts.gd")
 const ComicPage := preload("res://src/ui/comic_page.gd")
 const CampLines := preload("res://src/core/camp_lines.gd")
@@ -56,7 +57,7 @@ func _init() -> void:
 	_holder.offset_bottom = -64.0
 	_holder.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_holder)
-	_count = _label(22, Palette.AMBER)
+	_count = _label(UiTokens.LABEL, Palette.AMBER)
 	_count.set_anchors_preset(Control.PRESET_TOP_WIDE)
 	_count.offset_top = 22.0
 	_count.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -68,7 +69,7 @@ func _init() -> void:
 	_hint.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
 	_hint.offset_top = -52.0
 	add_child(_hint)
-	_empty = _label(26, Palette.SAND)
+	_empty = _label(UiTokens.LABEL, Palette.SAND)
 	_empty.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_empty.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_empty.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
@@ -207,7 +208,7 @@ static func show_line(layer: Node, text: String) -> Control:
 	label.custom_minimum_size.x = 420.0
 	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	label.add_theme_font_override("font", UiFonts.bold())
-	label.add_theme_font_size_override("font_size", 16)
+	label.add_theme_font_size_override("font_size", UiTokens.BODY)
 	label.add_theme_color_override("font_color", Palette.CHARCOAL)
 	card.add_child(label)
 	card.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)

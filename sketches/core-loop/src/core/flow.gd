@@ -118,9 +118,11 @@ var _home_boss: Node = null
 var _world := 0
 var _launched := false
 var _flight := 0.0
+# The launch take (launch_take.gd) rides this launch: it closes during the flight and cuts to the next place under it.
+var _seam_take := false
 var _last_percent := -1
 
-# Run saves (RS3): game hands flow a RunStore in play. Every zone entrance is written to it,
+# Run saves (RS3): game hands flow a RunStore in play. Every zone entrance and stage launch is written to it,
 # a death ends the run (there is no free retry; the earned save, a part, is the only second
 # chance and run_state spends it before player_died). A flow with no store (the tests and bots
 # that do not opt in) keeps the dead screen and unlimited stage retries.
@@ -400,14 +402,13 @@ func show_start_card() -> void:
 		host.sync_briefing()
 
 
-# A screen open over the card (the pause menu or the hotwire offer) owns the keys and the clicks:
+# A screen open over the card (the pause menu) owns the keys and the clicks:
 # the card takes nothing under it and a tier button pressed under it changes nothing. The briefing
 # holds both shut; a test game's card, shown without the hold, can still be covered.
 func _start_card_covered() -> bool:
 	var game = ctx.root
 	var menu = game.get_node_or_null("PauseMenu")
-	var offer = game.hud.hotwire_screen if game.get("hud") != null else null
-	return (menu != null and menu.is_open()) or (offer != null and offer.is_open())
+	return menu != null and menu.is_open()
 
 
 func take_start_pick(index: int) -> bool:
@@ -554,7 +555,14 @@ func resume_run() -> bool:
 		ctx.progress.reconcile_settled()
 	_apply_tree_picks()
 	var p: Array = doc["entry_velocity"]
-	enter_stage(ctx.run.stage, Vector3(p[0], p[1], p[2]), false)
+	# A cleared stage (SA-F1) lands its flight: the stage's clear and its owed pick, then the next
+	# entrance or the world's boss arena, as the launch would have.
+	if ctx.run.cleared:
+		# The loaded doc stays the one the earned save's spend rewrites (the boss arena writes none).
+		_entrance = doc
+		_finish_stage(Vector3(p[0], p[1], p[2]))
+	else:
+		enter_stage(ctx.run.stage, Vector3(p[0], p[1], p[2]), false)
 	show_start_card()
 	return true
 
@@ -630,9 +638,12 @@ func _persist_companion() -> void:
 	# Compared with the profile's companion as this build reads it: a piece this build does not
 	# know (a newer build's save) is not a reason to write, so it is never dropped from the file
 	# unless the run actually changed the companion.
-	if ctx.profile == null or ctx.run.companion.is_empty() or profile_companion() == ctx.run.companion:
+	# A core riding in SPIL-9 (run_state.stow_core) is run state: the profile keeps the whole
+	# companion, with the piece it unseated back in its socket.
+	var whole: Dictionary = ctx.run.companion_whole()
+	if ctx.profile == null or whole.is_empty() or profile_companion() == whole:
 		return
-	ctx.profile.set_companion(ctx.run.companion)
+	ctx.profile.set_companion(whole)
 	if ctx.profile.can_save and not ctx.profile.save():
 		warn_once("profile_companion_save", "flow: companion not saved to the profile: %s" % ctx.profile.last_error)
 
@@ -881,6 +892,23 @@ func build_punch() -> float:
 	return punch
 
 
+# The heading the place after `stage` is entered on (ruling cv; world.gd turns that stage's launch to it): the next
+# stage's spawn heading, or the arrival heading of the boss that closes the world. A boss module not yet set up, or one
+# that states none, gives zero (no turn), so nothing is loaded early for it.
+func arrival_heading_after(stage: int) -> Vector3:
+	if ctx.stages.is_world_last(stage) and ctx.stages.BOSS != "":
+		var row: Dictionary = boss_row(ctx.stages.world_of(stage))
+		if bool(row.get("built", false)):
+			var path := String(row.get("script", SCENE_BOSS))
+			var boss = _scene_boss() if path == SCENE_BOSS else _row_modules.get(path)
+			if is_instance_valid(boss) and boss.has_method("arrival_heading"):
+				return boss.arrival_heading()
+			return Vector3.ZERO
+	if ctx.stages.is_run_last(stage):
+		return Vector3.ZERO
+	return ctx.terrain.entry_heading(stage + 1)
+
+
 func _place_ball(at: Vector3, velocity: Vector3, heading: Vector3) -> void:
 	ctx.player.set_frozen(false)
 	ctx.player.reset_to(at, velocity)
@@ -993,7 +1021,7 @@ func physics_step(delta: float) -> void:
 		LAUNCH:
 			if _launched:
 				_flight += delta
-				if _flight >= LAUNCH_FLIGHT:
+				if _flight >= LAUNCH_FLIGHT and not _seam_take:
 					_finish_stage()
 		BOSS:
 			# The arena is the boss module's geometry, not the world's terrain.
@@ -1002,22 +1030,33 @@ func physics_step(delta: float) -> void:
 	_rescue_if_fallen(ball)
 
 
-func _finish_stage() -> void:
+# velocity is the ball's as it lands; a Continue from a cleared stage passes the saved launch's.
+func _finish_stage(velocity = null) -> void:
+	var carried: Vector3 = ctx.player.state.velocity if velocity == null else velocity
 	var cleared: int = ctx.run.stage
-	ctx.events.stage_cleared.emit(cleared)
-	if ctx.stages.is_world_last(cleared) and _world_boss(ctx.stages.world_of(cleared)) != null:
-		enter_boss(ctx.player.state.velocity)
+	if not ctx.run.landed:
+		ctx.events.stage_cleared.emit(cleared)
+	var world: int = ctx.stages.world_of(cleared)
+	if ctx.stages.is_world_last(cleared) and _world_boss(world) != null:
+		# From the title no stage entry named the world yet.
+		if world != _world:
+			_world = world
+			ctx.events.world_entered.emit(world)
+		# The arena is no entrance: the save marks the clear as landed, with the pick it opened.
+		ctx.run.landed = true
+		_save_cleared(carried)
+		enter_boss(carried)
 		return
-	_advance_from(cleared)
+	_advance_from(cleared, carried)
 
 
 # The next stage after a cleared one, which is the next world's first when the cleared
 # stage closed a world; the run ends won after the last world.
-func _advance_from(cleared: int) -> void:
+func _advance_from(cleared: int, velocity = null) -> void:
 	if ctx.stages.is_run_last(cleared):
 		_end_run_won()
 		return
-	enter_stage(cleared + 1, ctx.player.state.velocity, false)
+	enter_stage(cleared + 1, ctx.player.state.velocity if velocity == null else velocity, false)
 
 
 func _on_boss_defeated() -> void:
@@ -1143,6 +1182,7 @@ func _record_end(won: bool) -> void:
 		_save_profile("profile_ladder_save")
 	ctx.player.set_frozen(true)
 	_entrance = {}
+	ctx.run.end_ride()
 	_persist_companion()
 	# A save this build never owned (store refused it: newer_schema) is not ours to delete.
 	if store != null and store.refusal == "" and not store.clear():
@@ -1157,11 +1197,49 @@ func _on_reward_chosen(_part_id: String) -> void:
 
 # World may launch from inside its own reward_chosen handler, before flow has heard
 # reward_chosen, so a launch during GATES counts as the gate being taken too.
-func _on_launched(_velocity: Vector3) -> void:
+func _on_launched(velocity: Vector3) -> void:
 	if state == GATES or state == LAUNCH:
 		_set_state(LAUNCH)
 		_launched = true
 		_flight = 0.0
+		_save_cleared(velocity)
+		_seam_take = _play_seam_take()
+
+
+# The launch takes the stage's exit: the save moves from the stage's entrance to the cleared
+# stage, so a quit or crash in the flight, or in the boss arena after a world's last stage,
+# continues past it with what the stage earned (systems audit SA-F1). A quit at the gates is
+# before the exit and replays the entrance (BIBLE section 6), so the stage's pickups never pay twice.
+func _save_cleared(velocity: Vector3) -> void:
+	if store == null or ctx.run.over:
+		return
+	_entrance = ctx.run.to_cleared_doc(_tree(), velocity)
+	_save(_entrance)
+
+
+# A played game's stage launch runs under the comic swipe: the panel closes over the end of the flight, the cut to the next
+# place waits for the flight's end behind the full cover, and the reveal opens once its ground is drawn. Bots, tests and
+# headless runs cut at once as before. Returns true when the take plays.
+func _play_seam_take() -> bool:
+	var root = ctx.root
+	if root == null or not root.has_method("play_launch_take") or ctx.stages.is_run_last(ctx.run.stage):
+		return false
+	return root.play_launch_take(_cut_under_cover, _flight_over, _next_drawn, LAUNCH_FLIGHT)
+
+
+func _flight_over() -> bool:
+	return _flight >= LAUNCH_FLIGHT or not (state == LAUNCH and _launched)
+
+
+# A run that ended or restarted in the flight leaves the cover with nothing to cut to.
+func _cut_under_cover() -> void:
+	_seam_take = false
+	if state == LAUNCH and _launched:
+		_finish_stage()
+
+
+func _next_drawn() -> bool:
+	return not in_play() or ctx.terrain.is_ready(ctx.run.stage)
 
 
 # Breaking the Warden opens the gates wherever the ball is: the stage's MUST is done
@@ -1239,6 +1317,8 @@ func _on_player_died() -> void:
 	death_cause = DeathCause.line(_last_hit_source, _landed_attack(), DeathCause.phase_note(_boss_module()) if state == BOSS else "")
 	death_tip = DeathTips.line(_last_hit_source, _landed_attack(), _fight_gap())
 	ctx.player.set_frozen(true)
+	# The run is over: a core riding in SPIL-9 goes nowhere (run_state.end_ride).
+	ctx.run.end_ride()
 	if store != null:
 		_end_run(false)
 		return

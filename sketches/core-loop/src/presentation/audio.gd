@@ -1971,6 +1971,7 @@ func _connect_all(events) -> void:
 	events.landed.connect(_on_landed)
 	events.slammed.connect(_on_slammed)
 	_connect_dunk()
+	_connect_redline()
 	events.mounted.connect(func(_at: Vector3, banked: float): play("mounted", 0.0, Harmony.ratio(minf(banked / 4.0, 7.0))))
 	events.dismounted.connect(_on_dismounted)
 	events.enemy_spawned.connect(_on_enemy_spawned)
@@ -2068,8 +2069,6 @@ func wire_optional() -> void:
 		ctx.build.shell_air_changed.connect(_on_shell_air)
 	# The hot-wired Fit / Recycle offer is build-local (no bus signal, no event row): one brass
 	# pair per offer, played by name.
-	if ctx.get("build") != null and ctx.build.has_signal("hotwire_offered") and not ctx.build.hotwire_offered.is_connected(_on_hotwire_offered):
-		ctx.build.hotwire_offered.connect(_on_hotwire_offered)
 	# v3 interact: each fact in its family's sound register (world/interactables.gd), so
 	# a bet's drum roll, clunk and crack and an altar's anvil and riser come from the row.
 	_listen_optional(events, "interact_armed", func(family: String, _id: String, _at: Vector3):
@@ -2418,10 +2417,6 @@ const SHELL_RETURN_SEMITONES := -5.0
 
 func _on_shell_air(_factor: float, rose: bool) -> void:
 	play("world_fact", 0.0, Harmony.ratio(SHELL_RISE_SEMITONES if rose else SHELL_RETURN_SEMITONES), "SFX", Rows.heard(EventKinds.world_row("shell_air_shift"), cue_context()))
-
-
-func _on_hotwire_offered(_part_id: String, _recycle: int) -> void:
-	play("hotwire_offer", 0.0, 1.0, "SFX", "hotwire_offer")
 
 
 # Stage seconds and transport samples meet at the advance that schedules the event.
@@ -3983,6 +3978,28 @@ func _connect_dunk() -> void:
 	dunk.spent.connect(func(_record: Dictionary, _enemy: Node3D):
 		if play("slammed", 0.0, 1.0, "SFX", "smash_crack"):
 			_note_at("slammed", DUNK_VOICE, DUNK_SPENT_MIDI, next_grid(4)))
+
+
+# Heat on the shell (redline.gd) cues: each band it climbs into is a whistle a pentatonic rung
+# higher (a quarter on D's second, hot on the fifth, redline on the sixth), and a blast or a
+# cook-off is the slam's crack pitched down a fourth. They borrow the slammed row and existing
+# sound ids, like the dunk's, so the event table stays as it is.
+const REDLINE_RUNGS := [0.0, 2.0, 7.0, 9.0]
+var _redline_band := 0
+
+
+func _connect_redline() -> void:
+	var redline = ctx.player.get("redline") if ctx != null and ctx.get("player") != null else null
+	if redline == null:
+		return
+	redline.changed.connect(func(_value: float, band: int):
+		if band > _redline_band:
+			play("slammed", -6.0, Harmony.ratio(REDLINE_RUNGS[band]), "SFX", "smash_whistle")
+		_redline_band = band)
+	redline.detonated.connect(func(_at: Vector3, _force: float):
+		play("slammed", 2.0, Harmony.ratio(-5.0), "SFX", "smash_crack"))
+	redline.cooked_off.connect(func(_at: Vector3, _force: float):
+		play("slammed", 0.0, Harmony.ratio(-7.0), "SFX", "smash_crack"))
 
 
 # Each active sounds its own launch ("active_" + id) when the bank has it, else the row's.

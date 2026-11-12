@@ -4,7 +4,6 @@ const BuildSheet := preload("res://src/build/build_sheet.gd")
 const Parts := preload("res://src/build/parts.gd")
 const PartDef := preload("res://src/build/part_def.gd")
 const Synergies := preload("res://src/build/synergies.gd")
-const PartSets := preload("res://src/build/part_sets.gd")
 
 # SI5 stat cache (W13-INTEGRATION-3 SI5; comps/isaac/items-and-synergies.md). The build's
 # derived sheet, kept between part-list changes. Each part declares the sheet categories
@@ -27,7 +26,7 @@ const ROW_FED := ["mods", "patterns", "elements"]
 var recomputes := 0
 var last_dirty: Array = []
 var _sheet: RefCounted
-# The live synergy keys in from_parts order, consumed ones appended.
+# The awake maker tricks, in from_parts order.
 var _live: Array = []
 var _held: Array = []
 var _tier := -1
@@ -53,11 +52,12 @@ func sync(held: Array) -> RefCounted:
 	_primed = true
 	_tier = tier
 	_table = Synergies.table
+	var before: Array = _held
 	_held = held.duplicate()
 	_sheet.parts = held.duplicate()
 	last_dirty = []
 	if "synergy" in dirty:
-		_refold_synergy(held, dirty)
+		_refold_synergy(held, dirty, before)
 	var pending: Array = CATEGORIES.filter(func(category): return category in dirty and not category in last_dirty)
 	if not pending.is_empty():
 		var counted := _counted(held)
@@ -90,21 +90,14 @@ static func _touching(held: Array, category: String) -> Array:
 	return out
 
 
-# Synergies, consumed evolutions, tag rules and sets, then their transformers and dials. A held
-# Evolved part counts only while its pair is consumed, so a consumed change refolds its
-# categories; a changed row set refolds the categories rows feed.
-func _refold_synergy(held: Array, dirty: Array) -> void:
-	var old_consumed: Array = _sheet.consumed
-	var old_rows := _row_keys()
-	_sheet.consumed = Synergies.consumed(held)
-	var sets := Parts.tag_sets(held)
-	_live = Synergies.active(held, sets)
-	for key in _sheet.consumed:
-		if not key in _live:
-			_live.append(key)
-	_sheet.synergies = _live.filter(func(key): return not key in _sheet.consumed)
-	_sheet.rules = Synergies.active_rules(sets)
-	_sheet.sets = PartSets.complete(held)
+# The awake maker tricks, then their transformers and dials. A held Evolved part counts only
+# while both its ingredients are held, so a change in which ones count refolds their categories;
+# a changed trick list refolds the categories rows feed.
+func _refold_synergy(held: Array, dirty: Array, before: Array) -> void:
+	var old_rows: Array = _live.duplicate()
+	var old_evolved := _evolved_live(before)
+	_live = Synergies.active(Parts.maker_counts(held))
+	_sheet.synergies = _live.duplicate()
 	_sheet.transformers = []
 	_sheet.dials = {}
 	for row in _rows():
@@ -115,40 +108,29 @@ func _refold_synergy(held: Array, dirty: Array) -> void:
 		for dial in row_dials:
 			_sheet.dials[dial] = _sheet.dials.get(dial, 1.0) * row_dials[dial]
 	last_dirty.append("synergy")
-	if old_rows != _row_keys():
+	if old_rows != _live:
 		for category in ROW_FED:
 			if not category in dirty:
 				dirty.append(category)
-	if old_consumed != _sheet.consumed:
-		for part_id in held:
-			var d: Resource = Parts.def(part_id)
-			if d == null or d.rarity != "evolved":
-				continue
-			var key := Synergies.evolution_of(part_id)
-			if (key in old_consumed) != (key in _sheet.consumed):
-				for category in d.stat_touches:
-					if not category in dirty:
-						dirty.append(category)
+	var now_evolved := _evolved_live(held)
+	for part_id in Synergies.EVOLUTIONS:
+		if (part_id in old_evolved) != (part_id in now_evolved) and part_id in held:
+			for category in Parts.def(part_id).stat_touches:
+				if not category in dirty:
+					dirty.append(category)
 
 
-# The row keys from_parts folds: live synergies (consumed appended), tag rules, then sets.
-func _row_keys() -> Array:
-	return _live + _sheet.rules + _sheet.sets.map(func(key): return PartSets.row_key(key))
+# The held Evolved parts whose ingredients are both held.
+static func _evolved_live(held: Array) -> Array:
+	return Synergies.EVOLUTIONS.keys().filter(func(part_id): return part_id in held and Synergies.evolution_live(part_id, held))
 
 
-# The synergy, tag-rule and set rows, in from_parts order.
+# The trick rows from_parts folds, in its order.
 func _rows() -> Array:
-	var rows: Array = []
-	for key in _live:
-		rows.append(Synergies.ROWS[key])
-	for key in _sheet.rules:
-		rows.append(Synergies.TAG_RULES[key])
-	for key in _sheet.sets:
-		rows.append(PartSets.row(key))
-	return rows
+	return _live.map(func(key): return Synergies.ROWS[key])
 
 
-# The defs from_parts folds, in held order: an Evolved part only while consumed, no copy
+# The defs from_parts folds, in held order: an Evolved part only while its pair is held, no copy
 # past a linear or capped row's stack_cap, and a levelled row once at its held level.
 func _counted(held: Array) -> Array:
 	var out: Array = []
@@ -157,7 +139,7 @@ func _counted(held: Array) -> Array:
 		var d: Resource = Parts.def(part_id)
 		if d == null:
 			continue
-		if d.rarity == "evolved" and not Synergies.evolution_of(part_id) in _sheet.consumed:
+		if not Synergies.evolution_live(part_id, held):
 			continue
 		copies[part_id] = copies.get(part_id, 0) + 1
 		if not d.levels.is_empty():

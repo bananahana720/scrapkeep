@@ -4,10 +4,12 @@
 // judges each probe and exits 1 when a needed mechanic comes before its lesson.
 //
 //   node scripts/first-timer.mjs [--pilots=all|id,id] [--seed=1] [--stages=2] [--jobs=3]
-//     [--out=artifacts/local/first-timer] [--from=<dir of probe-*.json>] [--scrap-at=<seconds>]
+//     [--out=artifacts/local/first-timer] [--from=<dir of probe-*.json>] [--scrap-at=<seconds>] [--table=park]
 //
 // --scrap-at ends each run with a death that many seconds into stage 1, the only way the
 // skipper reaches the retry row; the rows after it read "not reached" in that pass.
+// --table picks the stage table; it defaults to park, the maps a launched game plays (a test-mode
+// game with no --table plays the legacy default table, game.gd _chosen_table).
 // --from re-judges saved probes without running Godot. Writes report.json and report.md to --out.
 
 import { spawn } from "node:child_process";
@@ -70,8 +72,8 @@ export const MECHANICS = [
     name: "Stagger Brindle and smash the opening",
     needed: "required",
     need: "boss_staggered",
-    teach: ["objective:break_guard", "objective:smash_core"],
-    note: "Carried over from the Warden fights; Brindle's own plate says only \"Break Brindle's Requisition\".",
+    teach: ["objective:break_guard", "objective:smash_core", "objective:shoot_magnets"],
+    note: "On the park table Brindle's plate names each phase's loop from the arena's first frame (phase 1: \"Shoot magnets, then cockpit\", objectives.gd's boss rows); the legacy table carried it over from the Warden fights.",
   },
   {
     id: "retry",
@@ -101,7 +103,7 @@ export const MECHANICS = [
     needed: "optional",
     need: "grip_used",
     teach: ["prompt:tip_grip"],
-    note: "Optional because it is a bonus, not a gate: the run goes on without carving. Taught by the first-meet tip (ui/field_tips.gd), queued when the ball first carves a wall and counted once its toast has been on screen 0.4 s; another tip or toast up at the time delays it.",
+    note: "Optional because it is a bonus, not a gate: the run goes on without carving. Taught by the first-meet tip (ui/field_tips.gd), queued when the ball first ends a real carve (events.carved, 0.3 s or more) that touched a wall face, not a dune or a seam hop, and counted once its toast has been on screen 0.4 s; another tip or toast up at the time delays it.",
   },
   {
     id: "jam",
@@ -117,7 +119,7 @@ export const MECHANICS = [
     needed: "optional",
     need: "cast_started",
     teach: ["prompt:tip_cast"],
-    note: "Optional: only some slot abilities carry a cast time and the bot seldom picks them. Taught by the first-meet tip from the drop when the bar already holds a slot with a cast time (Tally's Gather Plate), else when a cast first starts. It waits behind any tip met now (the radio's, the grip's) and behind a Warden fight, so a cast-slot pilot can cast before the tip shows and the audit reads it late.",
+    note: "Optional: only some slot abilities carry a cast time and the bot seldom picks them. Taught by the first-meet tip when a cast first starts (not from the drop: pass E paces the opening to one tip in its first 20 s). It waits behind a Warden fight, so the audit can read it late.",
   },
   {
     id: "radio",
@@ -125,7 +127,7 @@ export const MECHANICS = [
     needed: "optional",
     need: "radio_live",
     teach: ["prompt:tip_radio"],
-    note: "Optional: the run goes on without touching the radio; the dial only changes the music. Taught by the first-meet tip, which waits for the drop's stage card to clear and then counts once its toast has been on screen 0.4 s, so it comes a few seconds after the dial's first frame and the audit reads it late.",
+    note: "Optional: the run goes on without touching the radio; the dial only changes the music. Taught by the first-meet tip once the run has cleared a stage (pass E: never needed in the opening); the dial draws its own keys while the tip is up. It counts once its toast has been on screen 0.4 s, so the audit reads it after the dial's first frame.",
   },
   {
     id: "stake",
@@ -149,7 +151,7 @@ export const MECHANICS = [
     needed: "optional",
     need: "active_racked",
     teach: ["prompt:tip_active"],
-    note: "Optional by design: actives are off by default (--actives), so a default run never racks one. Taught by the first-meet tip, queued when one is first racked.",
+    note: "Optional: a run starts with an active racked (the actives launch option is on by default, tuning.gd), but nothing needs one. Taught by the first-meet tip, queued when one is racked and the run has met a fight (a hit taken or a kill), so it comes in the first fight, not on the drop.",
   },
   {
     id: "scrap",
@@ -239,7 +241,7 @@ export function markdown(result, probes) {
 }
 
 export function parseArgs(argv) {
-  const args = { pilots: "all", seed: 1, stages: 2, jobs: 3, out: path.join(root, "artifacts", "local", "first-timer"), from: null, "scrap-at": null };
+  const args = { pilots: "all", seed: 1, stages: 2, jobs: 3, out: path.join(root, "artifacts", "local", "first-timer"), from: null, "scrap-at": null, table: "park" };
   for (const arg of argv) {
     const match = /^--([a-z-]+)=(.*)$/.exec(arg);
     if (!match || !(match[1] in args)) throw new Error(`first-timer: unknown argument ${arg}`);
@@ -254,7 +256,7 @@ export function parseArgs(argv) {
 function probe(pilot, args) {
   const out = path.join(args.out, `probe-${pilot}-${args.seed}.json`);
   const argv = ["--headless", "--fixed-fps", "90", "--path", sketch, "--script", "res://tools/first_timer.gd", "--",
-    `--out=${out}`, `--seed=${args.seed}`, `--pilot=${pilot}`, `--stages=${args.stages}`];
+    `--out=${out}`, `--seed=${args.seed}`, `--pilot=${pilot}`, `--stages=${args.stages}`, `--table=${args.table}`];
   if (args["scrap-at"] !== null) argv.push(`--scrap-at=${args["scrap-at"]}`);
   return new Promise((resolve, reject) => {
     const child = spawn(binary, argv, { stdio: ["ignore", "pipe", "pipe"] });

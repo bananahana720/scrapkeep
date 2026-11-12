@@ -4,6 +4,17 @@ How the full gate runs, step by step, with the tools checked in. [ORCHESTRATOR.m
 
 The stage, the board and the receipts folder to compare against are in the Wave facts table of [STATE.md](STATE.md).
 
+## The wave gate and the release gate
+
+Since 11 November 2026 (ruling cy) a promotion runs the wave gate, and the full gate below is the release gate, run once at the end of a sprint on the head a sitting build is cut from. [ORCHESTRATOR.md](../../ORCHESTRATOR.md) has the rule. The wave gate's method:
+
+1. The node suite and the three test windows, as below.
+2. The scoped set, one shard run by name: the bot-tier tests and posture-band proofs the fast lane's receipt names for the stage diff, `world1_run_test`, and any fight, stage or bot run the diff plainly touches. Write the list and the reason for each name in the gate plan.
+3. The plan's tally has the test-window rows and one `scoped` row. A release shard may have a row that opens with DEFERRED and names the receipt of its last full read.
+4. `node scripts/gate/tally.mjs --wave --plan <plan>` must exit 0. Without `--wave` the tally is the release gate's and defers nothing.
+
+On the PC one command runs steps 1 to 4: `node scripts/gate/pc.mjs run --wave N --head <sha> --scoped-from <the stage's sketch:fast receipt.json> [--scoped a_test,b_test] --tally`. `--scoped-from` takes the bot shards that receipt names, `--scoped` adds more by name, and `world1_run_test` is always in. A non-bot name is left out, because the windows run the whole non-bot list. The weekly sweep runs as in a release gate (ruling ca), because the tally holds a wave gate to it too. `plan` with the same flags prints the scoped names. The reason for each name still goes in the gate plan.
+
 ## What a full gate is
 
 One promotion, one full gate, on the frozen stage head. The Gate thread writes a plan at `/mnt/project-files/gate/w<N>-<head>-gate-plan.md` and the coordinator starts about 13 shard threads from one post:
@@ -71,9 +82,9 @@ Cloud boxes differ by about a third in speed. On a slow one, export `SMOKE_TIME_
 The band shards read numbers, not only pass or fail, so they keep their own lane scripts: copy the last wave's from the receipts folder (`bands-A-logs/`, `bands-B-logs/`, `bands-C-logs/`) and change the label.
 
 - **Bands A**: each test alone through the runner with `--sketch core-loop` (`--bots` only for the tests on the bot list). The lane script is copied from the last wave, so first strike every name that `node scripts/gate/shard.mjs list --weekly` and `list --weekly --bots` print (on 9 Nov: `posture_bands_mind_test`, `alpha_posture_bands_w23_test`, `bot_isle_stage5_test`); those run in the weekly sweep. Sort the `->` lines (`LC_ALL=C sort`) and strip wall seconds before comparing with the last head; they print in completion order.
-- **Bands B**: `node scripts/challenge/run.mjs --only=w1 --seeds=24 --no-top --jobs=4 --label=w<N>-<head>-w1`. Every job is the stage 1 Warden, so Brindle changes never show here. Compare `runs.ndjson` seed for seed with the last head.
+- **Bands B**: `node scripts/challenge/run.mjs --only=w1 --seeds=24 --no-top --jobs=12 --label=w<N>-<head>-w1`. Every job is the stage 1 Warden, so Brindle changes never show here. Compare `runs.ndjson` seed for seed with the last head.
 - **Bands B and C, what a player would report**: every `scripts/challenge/run.mjs` job plays with the play watch on (`--qa-log=1`), and `table.md` ends with "What a player would report": wedged, fell, blank, bar, stuck and hung rows gathered by place. It is information, not a verdict: copy the section into the shard receipt, and name any wedged, fell, blank or bar place on the board for its owner. The watch only reads the game (8 of 8 sample runs were identical with it on and off, 9 Nov), but each run's line gains a `qa` field and each bot row a `qa` count, so the first comparison against a head without them compares `row` less `qa` and `wall_seconds`.
-- **Bands C**: `run_tier_dials_test`, `posture_bands_swarm_camper_test`, `posture_bands_swarm_test` and `run_tier_test`, each alone; then the HARD rungs, `node scripts/challenge/run.mjs --only=w1 --seeds=S --bands=expert --no-top --jobs=4 --tier=N --label=w<N>-<head>-C-tN`, with S 24 for rungs 1 to 4 and 48 for rung 5.
+- **Bands C**: `run_tier_dials_test`, `posture_bands_swarm_camper_test`, `posture_bands_swarm_test` and `run_tier_test`, each alone; then the HARD rungs, `node scripts/challenge/run.mjs --only=w1 --seeds=S --bands=expert --no-top --jobs=12 --tier=N --label=w<N>-<head>-C-tN`, with S 24 for rungs 1 to 4 and 48 for rung 5.
 - A band sweep starts many child runs. A child that reads 300 s, or goes missing, on a 4-core box is suspect: rerun it alone before calling a red. Wait on a process by its PID (`kill -0`), never with `pgrep -f` or `pkill -f`, which match the waiting shell itself.
 - A `bot_driver` change moves every bot stream: rerun all bot shards and bands, and put `posture_bands_test` and `posture_bands_reactor_test` in that pull request's focused set.
 

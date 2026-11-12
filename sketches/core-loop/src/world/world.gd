@@ -385,6 +385,9 @@ func _on_stage_content_cleared(_reason: String) -> void:
 func _mark_landing(stage: int, retry: bool) -> void:
 	launch.clear_landing()
 	launch.gravity = ctx.tuning.f("gravity")
+	# Ruling cv: this stage's launch turns in flight to the heading the place after it is entered on.
+	var next: Vector3 = ctx.flow.arrival_heading_after(stage) if ctx.flow != null and ctx.flow.has_method("arrival_heading_after") else Vector3.ZERO
+	launch.aim(next, ctx.camera)
 	var entry: Vector3
 	var velocity: Vector3
 	if retry:
@@ -398,6 +401,13 @@ func _mark_landing(stage: int, retry: bool) -> void:
 	else:
 		return
 	launch.mark_landing(entry, velocity, Callable(terrain, "height"))
+
+
+# Landing rings and a pad for an arrival that is not a stage entry (the Slag Bowl's), over its own ground.
+func mark_arrival(entry: Vector3, velocity: Vector3, height: Callable) -> void:
+	launch.clear_landing()
+	launch.gravity = ctx.tuning.f("gravity")
+	launch.mark_landing(entry, velocity, height)
 
 
 func _physics_process(delta: float) -> void:
@@ -880,7 +890,8 @@ func _open_pick(stage: int) -> void:
 		return
 	tree.max_depth = UpgradeTree.depth_cap(ctx.stages.world_of(ctx.run.stage)) if ctx.tuning.world_one() else UpgradeTree.DEPTHS
 	tree.world_one = ctx.tuning.world_one() and ctx.stages.world_of(ctx.run.stage) == 1
-	if _picks_opened.has(stage):
+	# A Continue from a cleared stage (SA-F1) whose pick opened before the launch.
+	if _picks_opened.has(stage) or (ctx.run.pick_opened and stage == ctx.run.stage):
 		return
 	if ctx.tuning.world_one():
 		# One stage-checkpoint pick per world, at its first stage; the cap itself is
@@ -894,6 +905,7 @@ func _open_pick(stage: int) -> void:
 		_picks_waiting.append(stage)
 		return
 	tree.open_checkpoint()
+	ctx.run.pick_opened = ctx.run.pick_opened or stage == ctx.run.stage
 
 
 func _first_of_world(stage: int) -> bool:
@@ -934,6 +946,7 @@ func _deliver_waiting_picks() -> void:
 	if _picks_waiting.is_empty() or not _pick_calm():
 		return
 	var tree = ctx.player.tree
-	for _stage in _picks_waiting:
+	for stage in _picks_waiting:
 		tree.open_checkpoint()
+		ctx.run.pick_opened = ctx.run.pick_opened or stage == ctx.run.stage
 	_picks_waiting.clear()

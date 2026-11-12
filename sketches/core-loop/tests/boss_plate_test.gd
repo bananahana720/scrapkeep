@@ -1,6 +1,7 @@
 extends SceneTree
 
 const BossPlate := preload("res://src/ui/boss_plate.gd")
+const UiDraw := preload("res://src/ui/ui_draw.gd")
 const BossPosture := preload("res://src/combat/boss_posture.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const Game := preload("res://src/game.gd")
@@ -206,6 +207,19 @@ func _words_and_pips() -> void:
 	var name: String = Roster.warden_name(_warden.family, _warden.variant)
 	_t.eq("it reports exactly the name's words", _plate.drawn_words(), Array(name.split(" ")))
 	_t.check("the name is two words or fewer", _plate.drawn_words().size() <= 2)
+	# PF-34: every Warden's name ends before the pips start, and a long name widens the plate, not shortens the bar.
+	var widest := ""
+	for family in Roster.WARDEN_NAMES:
+		for variant in Roster.WARDEN_NAMES[family]:
+			var each := String(Roster.WARDEN_NAMES[family][variant])
+			if UiDraw.width(each, BossPlate.FONT) > UiDraw.width(widest, BossPlate.FONT):
+				widest = each
+	_t.check("planted: the widest Warden name (%s) is wider than the old fixed name column" % widest,
+		UiDraw.width(widest, BossPlate.FONT) > BossPlate.NAME_WIDTH, "%.0f px" % UiDraw.width(widest, BossPlate.FONT))
+	_t.check("this Warden's name ends a gap before its first pip", UiDraw.width(name, BossPlate.FONT) + BossPlate.GAP <= _plate.name_width(),
+		"%.0f + %.0f vs %.0f" % [UiDraw.width(name, BossPlate.FONT), BossPlate.GAP, _plate.name_width()])
+	_t.check("and the plate is wider by what the name needs, so the bar keeps its length",
+		is_equal_approx(_plate.size.x, BossPlate.SIZE.x + _plate.name_width() - BossPlate.NAME_WIDTH) and _plate.size == _plate.rest_size(), "%.0f" % _plate.size.x)
 	_t.eq("four pips", _plate.pips().size(), BossPosture.CHUNKS)
 	_t.eq("all four filled at the start", _filled(), 4)
 	_t.check("no crack mark yet", _plate.pips().all(func(pip): return not pip["cracked"]))

@@ -59,6 +59,7 @@ var _words_in_hold := 0
 var _name_up := false
 var _clock_ms := 0
 var _calm_run := 0
+var _boss_holder := ""
 # Drawn frames. The card closes in the ceremony's _process, and under load several physics
 # ticks can run back to back before the next one, so a close is read after a drawn frame.
 var _drawn := 0
@@ -140,6 +141,9 @@ func _rare_stops() -> int:
 
 
 func _engage() -> void:
+	# The Warden break's hot-wired part would stand a third gate on the middle slot, where this
+	# test parks the ball, and end the run; the cards here are about finds, so it is spent.
+	_game.ctx.build._hotwire_spent = true
 	var combat = _game.ctx.spawner
 	combat.heft_override = 1.0
 	var force := 1.0
@@ -342,6 +346,10 @@ func _physics_process(_delta: float) -> bool:
 				_game.presentation.ceremony.set_process(false)
 				_game.presentation.ceremony.pause_armed = true
 				_game.presentation.ceremony.now_ms = func() -> int: return _clock_ms
+				# A card on screen holds even a boss's crate back (crate_slot_test); this checks the damage clock
+				# alone, so the HUD's cards are cleared as the ending clears them and the screen is free at the find.
+				_game.hud.clear_achievement_toasts()
+				_boss_holder = _game.ctx.screen_busy.showing()
 				_game.events.player_hit.emit(1.0, "test")
 				_game.run.add_part(_boss_part, "boss")
 				_report("a boss reward is queued", _ceremony().queued() == 1 and _ceremony().presented.back()[2] == "boss" and _ceremony().calm(),
@@ -356,8 +364,9 @@ func _physics_process(_delta: float) -> bool:
 				_report("a boss reward ignores the damage clock", true, "opened %.2f s after the find, within the %.1f s victory roll" % [_wait * STEP_S, Flow.VICTORY_SECONDS])
 				return _finish()
 			if _wait * STEP_S >= Flow.VICTORY_SECONDS:
-				_report("a boss reward ignores the damage clock", false, "no ceremony within %.1f s of frames with a hit 0.5 s before the find (queued %d, calm %s, state %s, ball %s, grounded %s)"
-					% [Flow.VICTORY_SECONDS, _ceremony().queued(), _ceremony().calm(), _game.flow.state_name(), _game.player.ball_position(), _game.player.state.grounded])
+				_report("a boss reward ignores the damage clock", false, "no ceremony within %.1f s of frames with a hit 0.5 s before the find (queued %d, calm %s, state %s, ball %s, grounded %s, screen held by '%s' at the find and '%s' now)"
+					% [Flow.VICTORY_SECONDS, _ceremony().queued(), _ceremony().calm(), _game.flow.state_name(), _game.player.ball_position(), _game.player.state.grounded,
+						_boss_holder, _game.ctx.screen_busy.showing()])
 				return _finish()
 	return false
 

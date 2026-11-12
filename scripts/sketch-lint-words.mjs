@@ -39,7 +39,6 @@ export const SOURCES = [
   { path: "src/build/relics.gd", read: "rows", fields: ["name", "text"] },
   { path: "src/build/attachments.gd", read: "rows", fields: ["name", "text"] },
   { path: "src/build/maker_sets.gd", read: "rows", fields: ["name", "text", "bonus_name"] },
-  { path: "src/build/part_sets.gd", read: "rows", fields: ["name", "text"] },
   { path: "src/build/panels.gd", read: "rows", fields: ["name", "words"] },
   { path: "src/build/lanes.gd", read: "rows", fields: ["name", "text", "hint"] },
   { path: "src/combat/actives/active_defs.gd", read: "rows", fields: ["name", "verb", "text"] },

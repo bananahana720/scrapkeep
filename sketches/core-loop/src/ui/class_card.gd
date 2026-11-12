@@ -1,6 +1,7 @@
 extends Button
 
 const Palette := preload("res://src/core/palette.gd")
+const UiTokens := preload("res://src/ui/ui_tokens.gd")
 const Icons := preload("res://src/ui/icons.gd")
 const Keycap := preload("res://src/ui/keycap.gd")
 const KeycapView := preload("res://src/ui/keycap_view.gd")
@@ -48,11 +49,10 @@ const CELL_ICON := 40.0
 const CELL_CAP := 26.0
 const MOUSE_CAP := 36.0
 const PIP := 9.0
-const CHIP_ICON := 18.0
+const CHIP_ICON := 24.0
 const CHIP_CAP := 14.0
-const TRADEOFF_H := 42.0
-const WORD_SIZE := 13
-const WORD_MIN := 9
+const TRADEOFF_H := 44.0
+const WORD_SIZE := UiTokens.CAPTION
 const SHAKE := 0.25
 const LOCK_DIM := 0.4
 const GREY := """shader_type canvas_item;
@@ -105,7 +105,7 @@ var _cells: Array = []
 var _keys_row: VBoxContainer
 var _rows_shown: Array = []
 var _box: VBoxContainer
-var _fade_rect: TextureRect
+var _fade_rect: ColorRect
 var _preview_h := PREVIEW_H
 var _name_label: Label
 var _role_label: Label
@@ -132,6 +132,7 @@ func _init(class_def: Resource = null, key_id := "", width := 420.0) -> void:
 	mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 	custom_minimum_size = Vector2(width, HEIGHT)
 	size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	accessibility_name = String(def.display_name) if def != null else ""
 	var color: Color = def.color if def != null else Palette.SAND
 	_serial = hash(def.id) if def != null else 0
 	add_theme_stylebox_override("normal", _frame(Color(color, 0.6), 2))
@@ -159,7 +160,7 @@ func _init(class_def: Resource = null, key_id := "", width := 420.0) -> void:
 	add_child(_fade_rect)
 	_build_overlay(width, color)
 	box.add_child(_name_row(color, width))
-	var role := _tagged(_text(ClassKit.role_line(def), 15, Color(Palette.SAND, 0.8)), color, _serial + 1)
+	var role := _tagged(_text(ClassKit.role_line(def), UiTokens.CAPTION, Color(Palette.SAND, 0.8)), color, _serial + 1)
 	# A tag wider than the card wraps at the card's inner width instead of widening the column.
 	if role.get_combined_minimum_size().x > width - 2.0 * PAD:
 		role.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -167,7 +168,7 @@ func _init(class_def: Resource = null, key_id := "", width := 420.0) -> void:
 	_role_label = role
 	box.add_child(role)
 	_details.append(role)
-	var line := _text(ClassKit.fantasy(def), 18, Palette.SAND)
+	var line := _text(ClassKit.fantasy(def), UiTokens.BODY, Palette.SAND)
 	# Two lines tall on every card, so the key rows line up across the three.
 	line.custom_minimum_size = Vector2(0.0, 58.0)
 	line.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
@@ -191,7 +192,7 @@ func _init(class_def: Resource = null, key_id := "", width := 420.0) -> void:
 	# the pilot at rest.
 	var keys := VBoxContainer.new()
 	keys.alignment = BoxContainer.ALIGNMENT_BEGIN
-	keys.add_theme_constant_override("separation", 2)
+	keys.add_theme_constant_override("separation", 4)
 	keys.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	keys.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	box.add_child(keys)
@@ -278,8 +279,7 @@ func shrink_preview(by: float) -> void:
 	var top := PAD + KEY_H + 8.0 + _preview_h - 40.0
 	_hint.position.y = top
 	_paint_row.position.y = top
-	_fade_rect.position.y = PAD + KEY_H + 8.0 + _preview_h * 0.62
-	_fade_rect.size.y = _preview_h * 0.38 + 2.0
+	_fade_rect.position.y = PAD + KEY_H + 8.0 + _preview_h - UiTokens.EDGE
 	queue_redraw()
 
 
@@ -296,7 +296,7 @@ func words() -> String:
 func _build_overlay(width: float, color: Color) -> void:
 	var top := PAD + KEY_H + 8.0 + PREVIEW_H - 40.0
 	var span := Vector2(width - 2.0 * PAD, 34.0)
-	_hint = _text("", 15, Color(Palette.SAND, 0.9))
+	_hint = _text("", UiTokens.CAPTION, Color(Palette.SAND, 0.9))
 	_hint.position = Vector2(PAD, top)
 	_hint.size = span
 	_hint.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
@@ -305,7 +305,7 @@ func _build_overlay(width: float, color: Color) -> void:
 	_details.append(_hint)
 	_paint_row = HBoxContainer.new()
 	_paint_row.alignment = BoxContainer.ALIGNMENT_CENTER
-	_paint_row.add_theme_constant_override("separation", 10)
+	_paint_row.add_theme_constant_override("separation", 8)
 	_paint_row.position = Vector2(PAD, top)
 	_paint_row.size = span
 	_paint_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -317,7 +317,7 @@ func _build_overlay(width: float, color: Color) -> void:
 	_swatch.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 	_swatch.clicked.connect(func(): if openness > 0.5: cycle_paint())
 	_paint_row.add_child(_swatch)
-	_paint_label = _text("", 17, Palette.SAND)
+	_paint_label = _text("", UiTokens.BODY, Palette.SAND)
 	_paint_label.autowrap_mode = TextServer.AUTOWRAP_OFF
 	_paint_row.add_child(_paint_label)
 	_details.append(_paint_row)
@@ -487,7 +487,7 @@ func _look_input(event: InputEvent) -> bool:
 func _name_row(color: Color, width: float) -> HBoxContainer:
 	var row := HBoxContainer.new()
 	row.alignment = BoxContainer.ALIGNMENT_CENTER
-	row.add_theme_constant_override("separation", 10)
+	row.add_theme_constant_override("separation", 8)
 	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var glyph := TextureRect.new()
 	_glyph = glyph
@@ -506,10 +506,11 @@ func _name_row(color: Color, width: float) -> HBoxContainer:
 	_lock.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_lock.visible = false
 	row.add_child(_lock)
-	# The name never wraps: it steps down by 2 from 30 until it fits beside the 28 px glyph and gap.
-	var font_size := 30
-	while font_size > 20 and UiFonts.bold().get_string_size(def.display_name, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x + 38.0 > width - 2.0 * PAD:
-		font_size -= 2
+	# The name never wraps: it takes the heading step, or the label step when that does not fit
+	# beside the 28 px glyph and gap.
+	var font_size := UiTokens.HEADING
+	if UiFonts.bold().get_string_size(def.display_name, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x + 38.0 > width - 2.0 * PAD:
+		font_size = UiTokens.LABEL
 	var name_label := _text(def.display_name, font_size, color)
 	name_label.autowrap_mode = TextServer.AUTOWRAP_OFF
 	_name_label = name_label
@@ -545,7 +546,7 @@ func _cap_height(key_name: String) -> float:
 # shared grammar (harpoon, go verb, smash); the field notes' Keys page names them in words.
 func _chip(record: Dictionary, color: Color, _cap_scale: float) -> VBoxContainer:
 	var cell := VBoxContainer.new()
-	cell.add_theme_constant_override("separation", 1)
+	cell.add_theme_constant_override("separation", 0)
 	cell.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var icon := TextureRect.new()
 	icon.texture = Icons.texture(record["icon"])
@@ -588,26 +589,13 @@ func _cell(record: Dictionary, color: Color, width: float, cap_scale := 1.0) -> 
 	var words: String = record["words"]
 	var gap := words.find(" ")
 	var label := _text(words if gap < 0 else words.left(gap) + "\n" + words.substr(gap + 1), WORD_SIZE, Palette.SAND)
-	# A word wider than its cell steps down to WORD_MIN, then clips at two lines, so a narrow
-	# cell cannot push the key row below the card's floor.
-	var cell_w := maxf(width, Keycap.size_of(record["key"], _cap_height(record["key"]) * cap_scale).x)
-	var word_size := WORD_SIZE
-	while word_size > WORD_MIN and _widest_word(words, word_size) > cell_w:
-		word_size -= 1
-	label.add_theme_font_size_override("font_size", word_size)
-	label.custom_minimum_size.y = UiFonts.bold().get_height(word_size) * 2.0
+	# The words hold the type scale's smallest step; a word wider than its cell wraps, clipped at two lines.
+	label.custom_minimum_size.y = UiFonts.bold().get_height(WORD_SIZE) * 2.0
 	label.max_lines_visible = 2
 	cell.add_child(label)
 	_details.append(label)
 	_cells.append({"key": record["key"], "icon": record["icon"], "words": words})
 	return cell
-
-
-func _widest_word(words: String, font_size: int) -> float:
-	var widest := 0.0
-	for word in words.split(" "):
-		widest = maxf(widest, UiFonts.bold().get_string_size(word, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x)
-	return widest
 
 
 func _text(value: String, font_size: int, color: Color) -> Label:
@@ -622,40 +610,27 @@ func _text(value: String, font_size: int, color: Color) -> Label:
 	return label
 
 
-# The preview's lower edge sinks into the card, so the words sit on a quiet floor.
-func _fade(width: float) -> TextureRect:
-	var gradient := Gradient.new()
-	gradient.set_color(0, Color(Palette.CHARCOAL, 0.0))
-	gradient.set_color(1, Color(Palette.CHARCOAL, 0.94))
-	var texture := GradientTexture2D.new()
-	texture.gradient = gradient
-	texture.fill_from = Vector2(0.0, 0.0)
-	texture.fill_to = Vector2(0.0, 1.0)
-	var fade := TextureRect.new()
-	fade.texture = texture
-	fade.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	fade.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	fade.position = Vector2(PAD, PAD + KEY_H + 8.0 + PREVIEW_H * 0.62)
-	fade.size = Vector2(width - 2.0 * PAD, PREVIEW_H * 0.38 + 2.0)
-	return fade
+# The preview ends on a flat rule in the plate's line colour (no gradients), so the words below sit
+# on the card's own ground.
+func _fade(width: float) -> ColorRect:
+	var rule := ColorRect.new()
+	rule.color = UiTokens.LINE
+	rule.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	rule.position = Vector2(PAD, PAD + KEY_H + 8.0 + PREVIEW_H - UiTokens.EDGE)
+	rule.size = Vector2(width - 2.0 * PAD, UiTokens.EDGE)
+	return rule
 
 
-# The key art's sky: a lit upper half behind the sphere that fades into the card's dark
-# lower region, where the words sit.
+# The key art's sky: two flat bands behind the sphere, a lit sky over a warm floor tinted by the
+# pilot's colour. Flat fills only (no gradients); the opened card lifts the floor's tint.
 func _backdrop(tint: Color) -> void:
 	var top := PAD + KEY_H + 8.0
 	var rect := Rect2(Vector2(PAD, top), Vector2(size.x - 2.0 * PAD, _preview_h))
 	var sky := Palette.VERDIGRIS.lerp(Palette.SAND, 0.35)
-	var warm := Palette.SANDSTONE.darkened(0.45).lerp(tint, 0.15)
-	var floor_color := Color(Palette.CHARCOAL, 0.0)
-	var mid := rect.position.y + rect.size.y * 0.55
-	draw_polygon(PackedVector2Array([rect.position, Vector2(rect.end.x, rect.position.y), Vector2(rect.end.x, mid), Vector2(rect.position.x, mid)]),
-		PackedColorArray([sky, sky, warm, warm]))
-	draw_polygon(PackedVector2Array([Vector2(rect.position.x, mid), Vector2(rect.end.x, mid), rect.end, Vector2(rect.position.x, rect.end.y)]),
-		PackedColorArray([warm, warm, floor_color, floor_color]))
-	var glow := rect.position + rect.size * Vector2(0.5, 0.4)
-	for i in 6:
-		draw_circle(glow, _preview_h * (0.45 - 0.06 * i), Color(tint, 0.03 + 0.04 * openness))
+	var warm := Palette.SANDSTONE.darkened(0.45).lerp(tint, 0.15 + 0.1 * openness)
+	var mid := rect.size.y * 0.55
+	draw_rect(Rect2(rect.position, Vector2(rect.size.x, mid)), sky)
+	draw_rect(Rect2(rect.position + Vector2(0.0, mid), Vector2(rect.size.x, rect.size.y - mid)), warm)
 
 
 # Every state shares the card's serial, so the plate keeps its cuts, rivets and tape

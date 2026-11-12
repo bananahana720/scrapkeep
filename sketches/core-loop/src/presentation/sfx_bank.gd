@@ -91,7 +91,7 @@ const KEYED_SOUNDS := ["panel_note", "panel_jackpot", "line_claw_drag", "armor_r
 	# v3 AU2 bank: every pitched cue named in design-v3/AUDIO-V3.md sections 4, 5, 8.
 	"bet_clunk", "bet_crack", "bet_refusal", "sunken_bell", "ally_hum_sable", "ally_hum_rivet", "ally_hum_kest",
 	"ally_wake", "fight_arm_stamp", "near_miss_whip_sable", "near_miss_whip_rivet", "near_miss_whip_kest",
-	"kill_chain_tier", "drop_landing", "return_launch_arpeggio", "crater_hold", "shell_spring", "hotwire_offer",
+	"kill_chain_tier", "drop_landing", "return_launch_arpeggio", "crater_hold", "shell_spring",
 	"core_slam", "ultimate_land", "kest_demo_knock", "rivet_skid_plate",
 	"active_cutting_torch",
 	# --- P-C Tally keyed sounds ---
@@ -106,7 +106,7 @@ const KEST_SOUNDS := ["cable_kest_fizz", "cable_kest_set", "cable_kest_blast", "
 # Per-cue trim in dB against the 0.9 peak every cue is normalized to. Rapid, small
 # facts sit low so a firefight never turns to mush; rare facts sit at the top.
 const TRIM_DB := {
-	"ui_tick": -14.0, "hop": -10.0, "boost_whoosh": -6.0, "dash_whoosh": -5.0,
+	"ui_tick": -14.0, "hop": -10.0, "boost_whoosh": -6.0, "dash_whoosh": -5.0, "carve_release": -8.0,
 	"land_thud": -6.0, "slam_boom": -1.0, "grapple_clink": -7.0, "grapple_release": -11.0,
 	"core_slam": -1.0, "ultimate_land": -1.0, "kest_demo_knock": -4.0, "rivet_skid_plate": -4.0,
 	"grown_sub": -4.0, "grown_crack": -7.0, "grown_tail": -10.0, "grown_rattle": -11.0,
@@ -184,8 +184,6 @@ const TRIM_DB := {
 	"shell_spring": -9.0,
 	# The escape charge re-arms (a rising mallet pair) or is spent (a falling one).
 	"companion_chirp_ready": -8.0, "companion_chirp_spent": -9.0,
-	# The hot-wired offer: two rising brass notes, under 0.4 s (audio.gd, Build.hotwire_offered).
-	"hotwire_offer": -6.0,
 	# The harpoon line's states (design-v3/LEGIBILITY.md section 3), its hum, and one refusal per
 	# verb. The bite (line_bite, -7) is the reference: the dry tick sits 14 dB under it by RMS, the
 	# lock tick and the refusals under that, the world clunk under the bite.
@@ -837,6 +835,11 @@ static func _bake(id: String) -> PackedFloat32Array:
 			return _mix([[_tone(0.11, 380.0, 640.0, "sine", 28.0), 0, 1.0], [_noise(0.02, 3000.0, 3000.0, 200.0), 0, 0.3]])
 		"boost_whoosh":
 			return _mix([[_noise(0.42, 500.0, 3200.0, 7.0, 0.06), 0, 1.0], [_tone(0.12, 90.0, 55.0, "sine", 25.0), 0, 0.7]])
+		# The carve letting go: the grind's bright rasp falls away under a short rising saw, so the
+		# ride off a bank sounds like the shell springing free of the wall.
+		"carve_release":
+			return _mix([[_noise(0.18, 5200.0, 1600.0, 16.0, 0.004), 0, 0.9], [_tone(0.14, 220.0, 520.0, "saw", 18.0), Synth.seconds(0.03), 0.22],
+				[_tone(0.08, 140.0, 90.0, "sine", 30.0), 0, 0.5]])
 		"dash_whoosh":
 			return _mix([[_noise(0.28, 1400.0, 5200.0, 11.0, 0.02), 0, 1.0], [_tone(0.2, 300.0, 950.0, "saw", 14.0), 0, 0.18]])
 		"land_thud":
@@ -983,8 +986,6 @@ static func _bake(id: String) -> PackedFloat32Array:
 			return _sputter()
 		"shell_spring":
 			return _shell_spring()
-		"hotwire_offer":
-			return _hotwire_offer()
 		"death":
 			return _death()
 		"scrap_tick":
@@ -2585,12 +2586,6 @@ static func _drop_landing() -> PackedFloat32Array:
 static func _shell_spring() -> PackedFloat32Array:
 	return _mix([[_tone(0.16, 240.0, 620.0, "sine", 14.0), 0, 0.9], [_tone(0.22, 620.0, 410.0, "sine", 16.0), Synth.seconds(0.05), 0.6],
 		[_noise(0.02, 4500.0, 3000.0, 200.0), 0, 0.3]])
-
-
-# The hot-wired offer: two brass notes a fifth apart, D4 to A4, the second riding the first's tail.
-static func _hotwire_offer() -> PackedFloat32Array:
-	return _mix([[_cut(_n("brass", 62), 0.14), 0, 0.8], [_cut(_n("brass", 69), 0.22, Synth.seconds(0.05)), Synth.seconds(0.12), 0.95],
-		[_noise(0.012, 4500.0, 3000.0, 250.0), 0, 0.2]])
 
 
 # The held-door ready pulse, class-independent: a bright blip on the next sixteenth, so

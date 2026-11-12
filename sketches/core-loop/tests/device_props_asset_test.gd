@@ -251,7 +251,8 @@ func _check_gameplay_sources() -> void:
 const SOURCE_PINS := {
 	# 2026-10-08: re-pinned for crumble()'s fired light becoming an emission change (Forward+ crash fix).
 	# 2026-10-09: re-pinned for take() publishing the cache_spent world fact (wave 12 vx-ground, VX-FX's ember keys on it).
-	"cracked_cache": ["stand_down()", "96511ad181820bbfe16d54ac220827a0bb395aa40ebadf549566ae68474f0c5b"],
+	# 2026-11-11: re-pinned for the relic offer becoming a relic-rung part (systems audit pass D fold).
+	"cracked_cache": ["stand_down()", "afa79eb2e425b4415c9477f78adaf49acc068f180839767e943dec1dd62dd45f"],
 	"bet_crate": ["reach_point()", "dc1b7b8203b6c2018894e88689885c366ed5edd5d928cae60f6370082acb2e16"],
 	"ambush_altar": ["reach_point()", "7a1a73f6c7f2d8fc8645eb7565f763f0fb95d0d7701598998f46905bc9aa6db3"],
 }

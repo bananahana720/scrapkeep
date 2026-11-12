@@ -24,6 +24,7 @@ const GraphicsPreset := preload("res://src/presentation/graphics_preset.gd")
 const SetDressing := preload("res://src/presentation/set_dressing.gd")
 const ParkProps := preload("res://src/presentation/park_props.gd")
 const AmbientLife := preload("res://src/presentation/ambient_life.gd")
+const SiteMarkers := preload("res://src/presentation/site_markers.gd")
 const Parts := preload("res://src/build/parts.gd")
 const WindupRows := preload("res://src/presentation/windup_rows.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
@@ -76,6 +77,7 @@ var flourish_cues
 var set_dressing: Node3D
 var park_props: Node3D
 var ambient_life: Node3D
+var site_markers: Node3D
 var title_stage: Node
 var ui_hidden := false
 # Presentation shows the discovery banner itself. Set false if the HUD shows its own.
@@ -154,6 +156,9 @@ func setup(ctx_ref) -> void:
 	flourish_cues = FlourishCues.new()
 	add_child(flourish_cues)
 	flourish_cues.setup(ctx, flourish)
+	site_markers = SiteMarkers.new()
+	add_child(site_markers)
+	site_markers.setup(ctx)
 	wire_optional()
 	GraphicsPreset.register_dressing_host(self)
 	if not get_tree().node_added.is_connected(_on_node_added):
@@ -347,7 +352,7 @@ func _on_part(part_id: String, _source: String) -> void:
 	if not auto_banner or not banner.cards:
 		return
 	var words := part_card(part_id)
-	banner.show_discovery(words["title"], "part", words["detail"], "Found", "part:" + part_id, "part_gained")
+	banner.show_discovery(words["title"], "part", words["detail"], "Found", RewardCeremony.FIND_CARD + part_id, "part_gained")
 
 
 # A part's banner card in words: its row's name and text, or a run token's (Parts.TOKENS).
@@ -357,9 +362,10 @@ static func part_card(part_id: String) -> Dictionary:
 		"detail": String(row.get("text", Parts.token(part_id).get("verb", "")))}
 
 
-# The third part of a set landed: the set's name and what it changes, in the set's own colour (the
-# band of studs set_tell.gd draws on the ball), once per run. Like every find it waits for a calm
-# moment, so a set finished in a fight is told when the fight lets go.
+# A second part of one maker woke a trick that adds an element (Synergies.told_on_wake): its
+# name and what it changes, in its own colour (its halo on the ball, accretion.gd), once per run.
+# Like every find it waits for a calm moment, so a trick woken in a fight is told when the fight
+# lets go.
 func _on_set_completed(set_id: String, title: String, text: String, color: Color) -> void:
 	if auto_banner:
 		banner.show_discovery(title, "build", text, "Set complete", SET_KEY + set_id, "synergy_discovered", color, true)

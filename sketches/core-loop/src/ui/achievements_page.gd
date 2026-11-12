@@ -1,6 +1,7 @@
 extends VBoxContainer
 
 const Secrets := preload("res://src/core/secrets.gd")
+const UiTokens := preload("res://src/ui/ui_tokens.gd")
 const ShiftBoard := preload("res://src/core/shift_board.gd")
 const Palette := preload("res://src/core/palette.gd")
 const Achievements := preload("res://src/core/achievements.gd")
@@ -36,11 +37,11 @@ func _init() -> void:
 	name = "AchievementsPage"
 	alignment = BoxContainer.ALIGNMENT_CENTER
 	size_flags_vertical = Control.SIZE_EXPAND_FILL
-	add_theme_constant_override("separation", 22)
+	add_theme_constant_override("separation", 24)
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_board = VBoxContainer.new()
 	_board.name = "ShiftBoard"
-	_board.add_theme_constant_override("separation", 2)
+	_board.add_theme_constant_override("separation", 4)
 	_board.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	_board.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_board)
@@ -53,7 +54,7 @@ func _init() -> void:
 	_plate.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var plate := StyleBoxFlat.new()
 	plate.bg_color = Color(Palette.CHARCOAL, 0.92)
-	plate.border_color = Palette.VERDIGRIS
+	plate.border_color = UiTokens.LINE
 	plate.set_border_width_all(2)
 	plate.set_corner_radius_all(6)
 	plate.corner_detail = 1
@@ -67,7 +68,7 @@ func _init() -> void:
 	_plate.add_child(_scroll)
 	_grid = GridContainer.new()
 	_grid.columns = COLUMNS
-	_grid.add_theme_constant_override("h_separation", 28)
+	_grid.add_theme_constant_override("h_separation", 24)
 	_grid.add_theme_constant_override("v_separation", 12)
 	_grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_grid.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -208,13 +209,13 @@ func _row(id: String, profile, progress) -> Control:
 	words.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	box.add_child(words)
 	var shade := Palette.SAND if earned else Palette.SLATE
-	words.add_child(_label(read["name"], 24, Palette.AMBER if earned else shade))
+	words.add_child(_label(read["name"], UiTokens.LABEL, Palette.AMBER if earned else shade))
 	# A long line wraps inside its row, so both columns keep one width and the list fits a 1280 window.
-	var text := _label(read["text"], 16, Color(shade, 0.9))
+	var text := _label(read["text"], UiTokens.BODY, Color(shade, 0.9))
 	text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	words.add_child(text)
 	if read["note"] != "":
-		var note := _label(read["note"], 20, Palette.AMBER if earned else Palette.SAND)
+		var note := _label(read["note"], UiTokens.BODY, Palette.AMBER if earned else Palette.SAND)
 		note.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 		note.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		note.name = "Note"

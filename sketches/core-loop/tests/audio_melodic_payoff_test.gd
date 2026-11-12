@@ -8,7 +8,7 @@ const EventKinds := preload("res://src/core/event_kinds.gd")
 const Bank := preload("res://src/presentation/sfx_bank.gd")
 const T := preload("res://tests/support/t.gd")
 const AceStub := preload("res://tests/support/ace_stub.gd")
-const PartSets := preload("res://src/build/part_sets.gd")
+const Synergies := preload("res://src/build/synergies.gd")
 const ScreenBusy := preload("res://src/ui/screen_busy.gd")
 
 # The melodic payoff (AUDIO-V3 section 5), through the real game. A climb never leaves the reward
@@ -288,7 +288,7 @@ func _set_chime(game: Node, audio) -> void:
 	var eighth: int = engine.beat_len() / 2
 	var lead := int(audio.SET_CHIME_LEAD_S * Harmony.RATE)
 	for case in [["live_wire", "clav"], ["storm_front", "bell"]]:
-		var row: Dictionary = PartSets.SETS[case[0]]
+		var row: Dictionary = Synergies.ROWS[case[0]]
 		_pump_to(audio, engine.clock + 3000)
 		banner.dismiss(true)
 		audio.cue_log.clear()
@@ -310,7 +310,7 @@ func _set_chime(game: Node, audio) -> void:
 			"banner '%s' showing %s, notes %s at %s, sounded at %s, play head %d, eighth %d, lead %d, band dipped %s" % [banner.last_title, banner.showing(),
 				ids, times, started, head, eighth, lead, ducked])
 	# A set finished in a fight: the banner is held, and the chime with it.
-	var held: Dictionary = PartSets.SETS["hair_trigger"]
+	var held: Dictionary = Synergies.ROWS["hair_trigger"]
 	banner.dismiss(true)
 	audio.cue_log.clear()
 	# The screen's one gate holds the card (screen_busy.gd, wave 36): a busy source stands in for the fight.

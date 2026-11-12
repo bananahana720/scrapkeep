@@ -1,6 +1,7 @@
 extends Control
 
 const Icons := preload("res://src/ui/icons.gd")
+const UiTokens := preload("res://src/ui/ui_tokens.gd")
 const UiDraw := preload("res://src/ui/ui_draw.gd")
 const UiFonts := preload("res://src/ui/ui_fonts.gd")
 
@@ -9,8 +10,8 @@ const UiFonts := preload("res://src/ui/ui_fonts.gd")
 # every bit of the speed it launched with (principle 1).
 
 const ICON := 44.0
-const FONT := 32
-const LINE_FONT := 20
+const FONT := UiTokens.HEADING
+const LINE_FONT := UiTokens.BODY
 const LINE_GAP := 8.0
 const GAP := 14.0
 const FADE_IN := 0.25

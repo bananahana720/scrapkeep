@@ -15,6 +15,7 @@ Live coordination material for the alpha. The coordinator owns it: since 10 Nov 
 | [WEEKLY.tsv](WEEKLY.tsv) | Tests the promotion gate leaves to the weekly sweep (ruling ca): parked worlds, old-map bot proofs and long tests that caught no planted fault, each with why and when it returns |
 | [DEEP-SWEEP.md](DEEP-SWEEP.md) | The deep-modules sweep run after every promotion |
 | [THREADS.md](THREADS.md) | Threads and sessions, and who owns what |
+| [COMMS.md](COMMS.md) | How we write to each other: the rules for every board post, receipt, brief, report and hand-off, and what a cloud session cannot see (ruling cz) |
 | [DEVICES.md](DEVICES.md) | The PC's GPUs, its rules, and what the cloud box can't do |
 | [ART-MISTAKES.md](ART-MISTAKES.md) | Append-only log of art mistakes |
 | [shared/](shared/INDEX.md) | Reference files lanes rely on |

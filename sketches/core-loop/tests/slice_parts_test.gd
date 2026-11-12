@@ -133,12 +133,6 @@ func _list() -> void:
 		_t.check("at least two %s" % rarity, at.size() >= 2, "%s: %s" % [rarity, at])
 	for pilot in ClassDef.all():
 		var pool: Array = Parts.offer_pool(pilot.id, ["common", "rare", "relic"])
-		for synergy in SliceDefs.SYNERGIES:
-			var row: Dictionary = Synergies.ROWS[synergy]
-			var done := false
-			if row["shown"] in pool:
-				for carrier in pool:
-					if carrier != row["shown"] and Synergies.named_live([row["shown"], carrier], Parts.tag_sets([row["shown"], carrier]), synergy):
-						done = true
-						break
-			_t.check("%s completes for %s" % [synergy, pilot.id], done, "pool of %d for this pilot" % pool.size())
+		var awake: Array = Synergies.active(Parts.maker_counts(pool))
+		for synergy in SliceDefs.SYNERGIES.filter(func(id): return not Synergies.told_on_wake(id)):
+			_t.check("%s completes for %s" % [synergy, pilot.id], synergy in awake, "pool of %d for this pilot wakes %s" % [pool.size(), awake])

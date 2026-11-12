@@ -2,6 +2,7 @@ extends "res://src/world/device.gd"
 
 const Altar := preload("res://src/world/ambush_altar.gd")
 const Fabricators := preload("res://src/build/fabricators.gd")
+const HullMark := preload("res://src/world/hull_mark.gd")
 const ItemGen := preload("res://src/build/item_gen.gd")
 const Parts := preload("res://src/build/parts.gd")
 
@@ -12,8 +13,8 @@ const Parts := preload("res://src/build/parts.gd")
 # by side, so every device is one readable trade a rolling ball can take with a hold.
 #
 #   trade_chest   pays a part of power tier 1, 2 or 3 for 25, 50 or 75% of max health, or
-#                 for the fabricator's cogs price of that tier (Fabricators.COG_PRICES
-#                 part_base x part_tier, without the held-parts growth).
+#                 for the off-shelf cogs price of that tier (Fabricators.off_shelf_price,
+#                 without the held-parts growth).
 #   blood_shrine  pays scrap for 25, 50 or 75% of max health at SCRAP_PER_HP_PAID.
 #   healing_ward  pays 1, 2 or 3 bonus cores for a heal of 25, 50 or 75% of max health,
 #                 its ring wider at each tier.
@@ -28,6 +29,11 @@ const Parts := preload("res://src/build/parts.gd")
 #
 # The offer is a plain Dictionary the static model below builds, checks and settles, so
 # the device and the sweep in tests/stake_devices_test.gd read the same numbers.
+#
+# Marked hull (hull_mark.gd, `--marked-hull=on`): a health price also marks that much max
+# health until the next Warden break, and the offer says so ("marks": true, and the verb is
+# "Weld": the hull bar shows the mark as a welded plate edged in the Warden's colour). A ward's
+# heal lifts any mark before it heals.
 
 const KINDS := {
 	"trade_chest": {"verb": "Trade", "pays": ["health", "cogs"], "wins": "part"},
@@ -63,7 +69,7 @@ static func floor_hp(run) -> float:
 
 # The one trade a device of this kind and tier makes, before commitment. `rng` is the
 # device's luck stream; only a chest draws from it.
-static func make_offer(device_kind: String, tier: int, pay: String, run, rng: RandomNumberGenerator) -> Dictionary:
+static func make_offer(device_kind: String, tier: int, pay: String, run, rng: RandomNumberGenerator, marks := false) -> Dictionary:
 	var row: Dictionary = KINDS[device_kind]
 	tier = clampi(tier, TIERS[0], TIERS[-1])
 	if not pay in row["pays"]:
@@ -75,6 +81,11 @@ static func make_offer(device_kind: String, tier: int, pay: String, run, rng: Ra
 		"health":
 			o["cost_kind"] = "hp"
 			o["cost"] = int(round(run.max_hp * share))
+			if marks:
+				# The price welds a plate over the top of the hull bar (gauge.gd set_cap), so the
+				# verb names the weld and the words stay inside PROMPT_WORDS.
+				o["marks"] = true
+				o["verb"] = "Weld"
 		"cores":
 			o["cost_kind"] = "cores"
 			o["cost"] = tier
@@ -84,7 +95,8 @@ static func make_offer(device_kind: String, tier: int, pay: String, run, rng: Ra
 			o["part_tier"] = tier
 			if pay == "cogs":
 				o["cost_kind"] = "cogs"
-				o["cost"] = int(round(Fabricators.COG_PRICES["part_base"] * Fabricators.COG_PRICES["part_tier"].get(tier, 1.0)))
+				# Off the shelf: 10, 16 and 26 cogs (Fabricators.OFF_SHELF; docs/systems-audit/economy/README.md).
+				o["cost"] = Fabricators.off_shelf_price(tier, 0)
 		"scrap":
 			o["win"] = int(round(float(o["cost"]) * SCRAP_PER_HP_PAID))
 		"heal":
@@ -134,6 +146,8 @@ static func take(o: Dictionary, run, at: Vector3) -> Dictionary:
 			run.hp -= float(cost)
 			# Paid health waits out the regen delay like a hit, so regen does not refund it at once.
 			run.since_damage = 0.0
+			if o.get("marks", false):
+				HullMark.stake(run, float(cost))
 		"cogs":
 			if not run.spend_cogs(cost):
 				return {"ok": false, "charged": 0}
@@ -145,6 +159,7 @@ static func take(o: Dictionary, run, at: Vector3) -> Dictionary:
 		"scrap":
 			run.add_scrap(int(o["win"]), at)
 		"heal":
+			HullMark.lift(run)
 			run.heal(float(o["win"]))
 	return {"ok": true, "charged": cost, "won": o["win"]}
 
@@ -181,7 +196,8 @@ func setup(ctx_ref, system_ref, spec_ref: Dictionary) -> void:
 		kind = "trade_chest"
 	var device_id := String(spec_ref.get("id", kind))
 	var rng: RandomNumberGenerator = system_ref.luck(device_id)
-	offer = make_offer(kind, int(spec_ref.get("tier", 1)), String(spec_ref.get("pay", pays(kind)[0])), ctx_ref.run, rng)
+	var marks: bool = ctx_ref.tuning != null and ctx_ref.tuning.option("marked_hull") == "on"
+	offer = make_offer(kind, int(spec_ref.get("tier", 1)), String(spec_ref.get("pay", pays(kind)[0])), ctx_ref.run, rng, marks)
 	super.setup(ctx_ref, system_ref, spec_ref)
 
 

@@ -5,6 +5,7 @@ signal reroll_requested
 signal tier_requested(tier: int)
 
 const RunTier := preload("res://src/core/run_tier.gd")
+const UiTokens := preload("res://src/ui/ui_tokens.gd")
 const StartPicks := preload("res://src/core/start_picks.gd")
 const Icons := preload("res://src/ui/icons.gd")
 const UiDraw := preload("res://src/ui/ui_draw.gd")
@@ -17,10 +18,10 @@ const Palette := preload("res://src/core/palette.gd")
 
 const ICON := 40.0
 const KEY := 26.0
-const FONT := 24
+const FONT := UiTokens.LABEL
 # The effect line under a tile's name (StartPicks row "effect"), and how far each line sits
 # from the tile's middle.
-const EFFECT_FONT := 15
+const EFFECT_FONT := UiTokens.CAPTION
 const NAME_RISE := 10.0
 const EFFECT_DROP := 15.0
 const GAP := 10.0
@@ -42,15 +43,15 @@ const UNLOCK_WORDS := "A win opens harder runs"
 const TIER_WORD := "Tier"
 const RUNG := 34.0
 const RUNG_GAP := 10.0
-const RUNG_FONT := 18
+const RUNG_FONT := UiTokens.BODY
 const LADDER_ROW := 26.0
 const METER_ROW := 80.0
-const METER_FONT := 17
+const METER_FONT := UiTokens.BODY
 const METER_BAR := Vector2(110.0, 12.0)
 const METER_GAP := 24.0
 const CONTRACT_ROW := 108.0
 const CONTRACT_STEP := 21.0
-const CONTRACT_FONT := 15
+const CONTRACT_FONT := UiTokens.CAPTION
 # The interactive card's height under the tiles: the words and the reroll, or the ladder with room
 # for a looked-at rung's contract.
 const CONTROLS_H := 120.0
@@ -285,7 +286,7 @@ func ladder_shown() -> bool:
 
 # The ladder row, left to right: the word, the pips, then the reroll with its key cap.
 func _ladder_width() -> float:
-	return UiDraw.width(TIER_WORD, 20) + GAP + _pips_width() + 40.0 + KEY + GAP + REROLL_SIZE.x
+	return UiDraw.width(TIER_WORD, UiTokens.BODY) + GAP + _pips_width() + 40.0 + KEY + GAP + REROLL_SIZE.x
 
 
 func _pips_width() -> float:
@@ -293,7 +294,7 @@ func _pips_width() -> float:
 
 
 func _pip_centre(tier: int) -> Vector2:
-	var left := (size.x - _ladder_width()) * 0.5 + UiDraw.width(TIER_WORD, 20) + GAP
+	var left := (size.x - _ladder_width()) * 0.5 + UiDraw.width(TIER_WORD, UiTokens.BODY) + GAP
 	return Vector2(left + RUNG * 0.5 + tier * (RUNG + RUNG_GAP), _controls_top() + LADDER_ROW)
 
 
@@ -313,7 +314,7 @@ func _label(words: String, y: float) -> void:
 	label.position = Vector2(0.0, y)
 	label.size = Vector2(size.x, 28.0)
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	label.add_theme_font_size_override("font_size", 20)
+	label.add_theme_font_size_override("font_size", UiTokens.BODY)
 	add_child(label)
 
 
@@ -508,7 +509,7 @@ func _draw_ladder() -> void:
 	var selected: int = _run.selected_run_tier()
 	var looked := _looked_tier()
 	var top := RunTier.top_unlocked(_profile)
-	UiDraw.text(self, _pip_centre(0).x - RUNG * 0.5 - GAP - UiDraw.width(TIER_WORD, 20), row_y, TIER_WORD, 20, Palette.SAND)
+	UiDraw.text(self, _pip_centre(0).x - RUNG * 0.5 - GAP - UiDraw.width(TIER_WORD, UiTokens.BODY), row_y, TIER_WORD, UiTokens.BODY, Palette.SAND)
 	for tier in RunTier.TOP + 1:
 		var at := _pip_centre(tier)
 		var numeral := str(tier) if tier == selected or tier == looked else ""

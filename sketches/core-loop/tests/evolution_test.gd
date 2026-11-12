@@ -6,20 +6,18 @@ const Parts := preload("res://src/build/parts.gd")
 const ItemGen := preload("res://src/build/item_gen.gd")
 const Synergies := preload("res://src/build/synergies.gd")
 
-# Four evolutions. Wave 6: Wrecking Ball (Double Feed + Hot Rivets) becomes Breaker Drive,
-# Pinwheel (Spiral Wave + Loose Trigger) becomes Bladestorm Rotor. Wave 11 GP2: Tesla Pylon
-# (Focus Lens + Live Line) becomes Storm Mast, Lightning Rod (Arc Coil + Drop Weight) becomes
-# Grounding Spike; each pair is live as its synergy before it evolves. Holding one ingredient
-# does nothing; holding both gains the Evolved part once, announced as part_gained with
-# source "evolution" at rarity evolved; the pair synergy reads consumed (folded once, never
-# live twice); the Evolved effect is measurable; the part list holds it, so a restore keeps
-# it; a missing ingredient puts it dormant; and no pool or roll ever offers an Evolved part.
+# Four evolutions: part pairs (Synergies.EVOLUTIONS) that become an Evolved part, the top rung
+# of the ladder. Since the systems audit fold (11 Nov 2026) an evolution is its own rule, apart
+# from the maker tricks. Holding one ingredient does nothing; holding both gains the Evolved part
+# once, announced as part_gained with source "evolution" at rarity evolved; the Evolved effect is
+# measurable; the part list holds it, so a restore keeps it; a missing ingredient puts it
+# dormant; and no pool or roll ever offers an Evolved part.
 
 const CASES := [
-	{"synergy": "wrecking_ball", "into": "breaker_drive", "parts": ["double_feed", "hot_rivets"]},
-	{"synergy": "pinwheel", "into": "bladestorm_rotor", "parts": ["spiral_wave", "loose_trigger"]},
-	{"synergy": "tesla_pylon", "into": "storm_mast", "parts": ["focus_lens", "live_line"]},
-	{"synergy": "lightning_rod", "into": "grounding_spike", "parts": ["arc_coil", "drop_weight"]},
+	{"into": "breaker_drive", "parts": ["double_feed", "hot_rivets"]},
+	{"into": "bladestorm_rotor", "parts": ["spiral_wave", "loose_trigger"]},
+	{"into": "storm_mast", "parts": ["focus_lens", "live_line"]},
+	{"into": "grounding_spike", "parts": ["arc_coil", "drop_weight"]},
 ]
 
 var _game
@@ -66,16 +64,15 @@ func _report(label: String, ok: bool, detail: String) -> void:
 
 
 func _check_table() -> void:
-	var ids: Array = Synergies.evolution_ids()
-	var kept := ids.size() == CASES.size() and ids.all(func(key): return Synergies.in_play(key))
+	var ids: Array = Synergies.EVOLUTIONS.keys()
+	var kept := ids.size() == CASES.size()
 	var rows_ok := true
 	for c in CASES:
 		var d: Resource = Parts.def(c["into"])
 		rows_ok = rows_ok and d != null and d.rarity == "evolved" and ItemGen.RARITY["evolved"]["weight"] == 0.0 \
-			and not d.percentage_only() and Synergies.evolution_of(c["into"]) == c["synergy"] \
-			and Parts.has(c["into"]) and not c["into"] in Parts.ids() \
-			and c["synergy"] in Synergies.active(c["parts"], Parts.tag_sets(c["parts"]))
-	_report("table", kept and rows_ok, "evolutions %s, all in play, each pair live as its synergy, rows rarity evolved, weight 0, outside ids(); ok %s" % [ids, rows_ok])
+			and not d.percentage_only() and Synergies.EVOLUTIONS.get(c["into"], []) == c["parts"] \
+			and Parts.has(c["into"]) and not c["into"] in Parts.ids()
+	_report("table", kept and rows_ok, "evolutions %s, each from its pair, rows rarity evolved, weight 0, outside ids(); ok %s" % [ids, rows_ok])
 
 
 func _fresh() -> void:
@@ -92,10 +89,9 @@ func _evolved_gains(into: String) -> Array:
 func _check_case(c: Dictionary) -> void:
 	var run = _game.run
 	var into: String = c["into"]
-	var syn: String = c["synergy"]
 	_fresh()
 	run.add_part(c["parts"][0], "test")
-	_report(into + " one ingredient", not into in run.parts and _evolved_gains(into).is_empty() and _build.consumed_synergies().is_empty(),
+	_report(into + " one ingredient", not into in run.parts and _evolved_gains(into).is_empty(),
 		"holding %s alone: parts %s" % [c["parts"][0], run.parts])
 	var before: float = _build.weapon_mod("weapon_damage") * _build.weapon_mod("weapon_rate") + float(_build.pattern_level("spiral_wave"))
 	var punch_before: float = _build.punch_bonus()
@@ -104,10 +100,6 @@ func _check_case(c: Dictionary) -> void:
 	var d: Resource = Parts.def(into)
 	_report(into + " gained once", run.parts.count(into) == 1 and gains.size() == 1 and gains[0][1] == "evolution" and d.rarity == "evolved",
 		"gains %s, held %d, rarity %s" % [gains, run.parts.count(into), d.rarity])
-	_report(into + " pair consumed", syn in _build.consumed_synergies() and not syn in _build.active_synergies()
-			and _build.sheet.transformers.count(syn) == 1,
-		"consumed %s, live %s, %s transformer folded %d time(s)" % [_build.consumed_synergies(), _build.active_synergies(), syn, _build.sheet.transformers.count(syn)])
-	_check_not_rediscovered(c)
 	var after: float = _build.weapon_mod("weapon_damage") * _build.weapon_mod("weapon_rate") + float(_build.pattern_level("spiral_wave"))
 	_report(into + " effect measurable", after > before + 0.1 or _build.punch_bonus() > punch_before + 1.0,
 		"knob product plus spiral level %.3f to %.3f, punch %.1f to %.1f" % [before, after, punch_before, _build.punch_bonus()])
@@ -115,44 +107,22 @@ func _check_case(c: Dictionary) -> void:
 	_report(into + " not granted twice", run.parts.count(into) == 1 and _evolved_gains(into).size() == 1, "after another part, held %d" % run.parts.count(into))
 	# A restore puts the part list back, and the sheet derived from it with the evolved state.
 	run.snapshot(Vector3.ZERO, Vector3.ZERO, 0.0)
-	var sheet_before: Dictionary = {"mods": _build.sheet.mods.duplicate(), "patterns": _build.sheet.patterns.duplicate(), "consumed": _build.sheet.consumed.duplicate(), "punch": _build.sheet.punch}
+	var sheet_before: Dictionary = {"mods": _build.sheet.mods.duplicate(), "patterns": _build.sheet.patterns.duplicate(), "punch": _build.sheet.punch}
 	run.add_part("magnet_spool", "test")
 	run.restore()
 	_build.recompute()
-	var sheet_after: Dictionary = {"mods": _build.sheet.mods, "patterns": _build.sheet.patterns, "consumed": _build.sheet.consumed, "punch": _build.sheet.punch}
+	var sheet_after: Dictionary = {"mods": _build.sheet.mods, "patterns": _build.sheet.patterns, "punch": _build.sheet.punch}
 	_report(into + " retry keeps it", run.parts.count(into) == 1 and sheet_before == sheet_after and _evolved_gains(into).size() == 1,
 		"after restore and recompute held %d, sheet equal %s, still one evolution gain" % [run.parts.count(into), sheet_before == sheet_after])
 	# Rule: an Evolved part stays in the list but is dormant while an ingredient is missing;
-	# the pair synergy is no longer consumed. Regaining the ingredient wakes it without a second grant.
+	# regaining the ingredient wakes it without a second grant.
 	run.parts.erase(c["parts"][1])
 	_build.recompute()
-	var dormant: bool = not syn in _build.consumed_synergies() and _build.sheet.punch < sheet_before["punch"] + 0.01 and into in run.parts
+	var dormant: bool = _build.sheet.punch < sheet_before["punch"] + 0.01 and into in run.parts
 	var dormant_mods_lower: bool = _build.weapon_mod("weapon_damage") * _build.weapon_mod("weapon_rate") + float(_build.pattern_level("spiral_wave")) < after - 0.01
 	run.add_part(c["parts"][1], "test")
-	_report(into + " dropped ingredient", dormant and dormant_mods_lower and run.parts.count(into) == 1 and syn in _build.consumed_synergies(),
-		"dormant %s (effect lower %s); regained: held %d, consumed %s" % [dormant, dormant_mods_lower, run.parts.count(into), _build.consumed_synergies()])
-
-
-# A consumed pair still acts: its fired flag survives the next recompute (so the codex is not
-# told it was discovered again), and the HUD synergy read keeps it, naming the evolved part.
-func _check_not_rediscovered(c: Dictionary) -> void:
-	var syn: String = c["synergy"]
-	var into: String = c["into"]
-	var found := []
-	var count := func(id: String, _category: String, _first: bool): found.append(id)
-	_game.events.synergy_discovered.connect(count)
-	_build._fire(syn, null, Vector3.ZERO)
-	var after_first: int = found.count(syn)
-	_build.recompute()
-	var kept: bool = _build._fired.has(syn)
-	_build._fire(syn, null, Vector3.ZERO)
-	_game.events.synergy_discovered.disconnect(count)
-	_report(syn + " not rediscovered", kept and found.count(syn) == after_first, "fired flag kept %s, discoveries %d then %d" % [kept, after_first, found.count(syn)])
-	var read: Array = _build.synergy_read()
-	var row := read.filter(func(r): return r["id"] == syn)
-	var name_of_into: String = Parts.def(into).display_name
-	_report(syn + " HUD read names the evolved part", row.size() == 1 and row[0]["into"] == into and name_of_into in String(row[0]["text"]) and _build.accretion.halo_visible(syn),
-		"read %s, halo %s" % [row, _build.accretion.halo_visible(syn)])
+	_report(into + " dropped ingredient", dormant and dormant_mods_lower and run.parts.count(into) == 1,
+		"dormant %s (effect lower %s); regained: held %d" % [dormant, dormant_mods_lower, run.parts.count(into)])
 
 
 func _check_never_rolls() -> void:

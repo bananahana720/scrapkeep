@@ -38,9 +38,15 @@ const WEDGE_FRAME := "wedge_frame"
 const VENT_ANGLES := [60.0, 120.0, 240.0, 300.0]
 const VENT_R := 43.0
 const VENT_SPAN := 0.4363323  # 25 degrees either side of the vent
-const ENTRY_ANGLE := 210.0
+# Ruling cv: the entry's tangent faces 115, 25 degrees off the flume gate's 90 (the rail turns the rest in flight).
+# A bearing in 240 to 300 keeps it inside the hand-over's 30; 245 is the one there whose straight run onto the bank
+# passes outside the 270 kicker and away from the 240 and 300 vent pads, as the old 210 did.
+const ENTRY_ANGLE := 245.0
 const ENTRY_R := 41.0
 const ENTRY_LIFT := 3.0
+# The bowl's entry point lies this far past the finished stage's exit gate, along its facing: about where the
+# launch's 0.6 s flight carries a ball at 20 m/s.
+const ENTRY_AHEAD := 12.0
 # The rescue puts the ball on the bank here: past the slag channels and the floor.
 const RESCUE_R := 50.0
 # The bowl floats this far above the highest ground under it.
@@ -57,8 +63,33 @@ static func place(terrain, stage: int) -> Vector3:
 	var at := Vector3.ZERO
 	if terrain != null and terrain.has_method("beacon_point"):
 		at = terrain.beacon_point(stage)
+	return _settle(terrain, Vector2(at.x, at.z))
+
+
+# Brindle's bowl (ruling cv): ahead of the finished stage's exit gate, so the launch out of it lands where it aimed,
+# on the entry's tangent. A map that states no exit row keeps the bowl over its beacon (place()).
+static func place_ahead(terrain, stage: int) -> Vector3:
+	var rows := {}
+	if terrain != null and terrain.has_method("map_for"):
+		var map = terrain.map_for(stage)
+		if map != null and map.has_method("handover"):
+			rows = map.handover()
+	if not rows.has("exit"):
+		return place(terrain, stage)
+	return _settle(terrain, centre_ahead(rows["exit"]))
+
+
+# The bowl's centre in the finished stage's frame (x, z) that puts its entry point ENTRY_AHEAD along the exit row's
+# heading (ParkMap.handover()). Pure, so the hand-over test reads the same placement.
+static func centre_ahead(exit: Dictionary) -> Vector2:
+	var heading := deg_to_rad(float(exit["heading_deg"]))
+	var entry: Vector2 = Vector2(exit["at"]) + Vector2(sin(heading), cos(heading)) * ENTRY_AHEAD
+	var angle := deg_to_rad(ENTRY_ANGLE)
+	return entry - Vector2(cos(angle), sin(angle)) * ENTRY_R
+
+
+static func _settle(terrain, flat: Vector2) -> Vector3:
 	var reach := BANK_R + WALL_THICK + 2.0
-	var flat := Vector2(at.x, at.z)
 	for _i in 20:
 		if _inside(terrain, flat, reach):
 			break
@@ -160,7 +191,8 @@ static func tangent(angle: float) -> Vector3:
 
 
 # How the bowl is entered and left (wave 36, ruling cv), in the bowl's own frame (origin at its centre), as ParkMap.handover()
-# states a park stage's. The bowl hangs above the finished stage's beacon (place()), so its atlas origin is that beacon.
+# states a park stage's. The bowl hangs ahead of the finished stage's exit gate (place_ahead()), so its atlas origin is
+# centre_ahead() of that stage's exit row.
 # The way out to world 2 is parked until after the sitting. The arrival speed is the share of cruise boss.gd
 # _place_ball sets: the carried speed, never under cruise.
 static func handover() -> Dictionary:
@@ -168,7 +200,7 @@ static func handover() -> Dictionary:
 	var heading := tangent(angle)
 	return {
 		"stage": "slag_bowl",
-		"atlas": {"over": "beacon", "heading_deg": 0.0},
+		"atlas": {"over": "exit", "ahead_m": ENTRY_AHEAD, "heading_deg": 0.0},
 		"exit": {"kind": "none", "why": "the way out to world 2 is parked"},
 		"arrives": {"kind": "land", "at": Vector2(cos(angle), sin(angle)) * ENTRY_R,
 			"heading_deg": rad_to_deg(atan2(heading.x, heading.z)), "speed_cruise": 1.0, "from": "flume gate"},
@@ -180,6 +212,11 @@ func entry_point() -> Vector3:
 
 
 func entry_heading() -> Vector3:
+	return arrival_heading()
+
+
+# The heading a ball enters the bowl on, wherever it is placed: the launch into it turns to this in flight.
+static func arrival_heading() -> Vector3:
 	return tangent(deg_to_rad(ENTRY_ANGLE))
 
 

@@ -193,7 +193,7 @@ func _start_fabricator() -> void:
 
 func _check_fabricator() -> void:
 	var r = _game.run
-	var price := Fabricators.price(PART, _before["parts"])
+	var price := Fabricators.hoop_price(PART, _before["parts"])
 	_report("fabricator spends cogs", _gained == [[PART, "fabricator"]] and r.cogs == _before["cogs"] - price
 			and is_equal_approx(r.mass, _before["mass"]),
 		"price %d: part_gained %s, cogs %d -> %d, mass %.1f -> %.1f"

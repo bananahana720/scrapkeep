@@ -4,14 +4,15 @@ const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const Parts := preload("res://src/build/parts.gd")
 const HotwireRules := preload("res://src/build/hotwire_rules.gd")
-const HotwireChoice := preload("res://src/ui/hotwire_choice.gd")
 
-# Unit HW1: the hot-wired Fit / Recycle offer after Warden I and Spark Tread (BUILD-SYSTEMS.md,
-# Two hot-wired parts, H2), on the real Game.
-#   - The offer opens once per world, on the first beacon_unsealed, not on Warden II.
-#   - Recycle pays the stated cogs once; a second Recycle and a later Fit do nothing.
-#   - Fit adds a striped gate holding the part and changes run.parts only when that gate is
-#     taken; a second Fit does nothing.
+# Unit HW1, after the fold (systems audit pass D): a hot-wired part is a rare part the first
+# Warden of each world puts up at the gates, and Spark Tread (BUILD-SYSTEMS.md, H2), on the real Game.
+#   - Warden I puts the part up as a striped rare gate beside the pair, once per world, with no
+#     Fit / Recycle screen (retired with its signals); Warden II adds nothing.
+#   - run.parts changes only when the striped gate is taken; it waits at the gates until then.
+#   - World one holds one hot-wired part; world two puts up a second.
+#   - A retry rewinds a Warden break taken after the checkpoint; a save that still holds an
+#     offer waiting on the old screen ("open") resumes with the part at the gates.
 #   - Spark Tread: one activation per eligible attack after a 3 s recovery (both targets of
 #     one attack share it), none inside the window, none at zero mass or below half cruise;
 #     the bonus lands as 75% of the attack's punch in the next physics step.
@@ -62,44 +63,35 @@ func _speed(share: float) -> void:
 func _offer_checks() -> void:
 	var build = _game.build
 	var run = _game.ctx.run
-	build.hotwire_offered.connect(func(_id: String, _cogs: int): _offers += 1)
-	_check("nothing before a warden", build.hotwire_pending()["state"] == "" and _offers == 0,
-		"state \"%s\", offers %d" % [build.hotwire_pending()["state"], _offers])
-	_game.events.beacon_unsealed.emit(1)
-	var pending: Dictionary = build.hotwire_pending()
-	_check("offer after warden I", _offers == 1 and pending["state"] == "open" and pending["part_id"] == "riveted_shell",
-		"offers %d, %s" % [_offers, pending])
-	_game.events.beacon_unsealed.emit(2)
-	_check("none after warden II", _offers == 1, "offers %d after the second warden" % _offers)
-	var price: int = Parts.hotwire_recycle("riveted_shell")
-	_check("stated price", price == 20 and HotwireChoice.resolve("riveted_shell")["recycle"] == price
-		and Parts.hotwire_recycle("spark_tread") == 30,
-		"shell %d (choice shows %d), tread %d" % [price, HotwireChoice.resolve("riveted_shell")["recycle"], Parts.hotwire_recycle("spark_tread")])
-	var cogs_before: int = run.cogs
-	var paid: int = build.hotwire_recycle()
-	_check("recycle pays once", paid == price and run.cogs == cogs_before + price,
-		"paid %d, cogs %d -> %d" % [paid, cogs_before, run.cogs])
-	var again: int = build.hotwire_recycle()
-	var fit_after: bool = build.hotwire_fit()
-	_check("second recycle nothing", again == 0 and not fit_after and run.cogs == cogs_before + price,
-		"second recycle %d, fit after recycle %s, cogs %d" % [again, fit_after, run.cogs])
-	# A fresh run: the offer comes again, and this time it is fitted.
-	build._on_run_started("")
-	_game.events.beacon_unsealed.emit(1)
-	_check("new run offers again", _offers == 2 and build.hotwire_pending()["state"] == "open", "offers %d" % _offers)
+	_check("nothing before a warden", build.hotwire_pending()["state"] == "" and build._hotwire_gate_ids().is_empty(),
+		"state \"%s\"" % build.hotwire_pending()["state"])
 	build._on_flow_changed("gates")
 	var rolled: Array = build.gates.offers.map(func(o): return o["part_id"])
+	build.gates.close()
 	var parts_before: Array = run.parts.duplicate()
-	_check("gates without fit", not "riveted_shell" in rolled and rolled.size() == 2, "rolled %s" % [rolled])
-	var cogs_fit: int = run.cogs
-	var fitted: bool = build.hotwire_fit()
+	var cogs_before: int = run.cogs
+	_game.events.beacon_unsealed.emit(1)
+	_check("warden I puts the part at the gates", _offers == 0 and build.hotwire_pending()["state"] == "fit"
+		and build._hotwire_gate_ids() == ["riveted_shell"], "screen offers %d, %s" % [_offers, build.hotwire_pending()])
+	_game.events.beacon_unsealed.emit(2)
+	_check("nothing new after warden II", build._hotwire_gate_ids() == ["riveted_shell"], "gates %s" % [build._hotwire_gate_ids()])
+	_check("a rare part on the ladder", Parts.has("riveted_shell") and Parts.rung_of("riveted_shell") == 1
+		and Parts.def("riveted_shell").verb == HotwireRules.fill(Parts.hotwired("riveted_shell")["label"])
+		and not "riveted_shell" in Parts.ids(), "rung %d, verb '%s'" % [Parts.rung_of("riveted_shell"), Parts.def("riveted_shell").verb])
+	build._on_flow_changed("gates")
 	var offered: Array = build.gates.offers.map(func(o): return o["part_id"])
 	var striped: Array = build.gates.offers.filter(func(o): return o["hotwired"]).map(func(o): return o["part_id"])
-	_check("fit holds the offer", fitted and offered == rolled + ["riveted_shell"] and striped == ["riveted_shell"]
-		and run.parts == parts_before and run.cogs == cogs_fit,
+	var shell: Array = build.gates.offers.filter(func(o): return o["part_id"] == "riveted_shell")
+	_check("the gates hold it beside the pair", offered == rolled + ["riveted_shell"] and striped == ["riveted_shell"]
+		and shell.size() == 1 and shell[0]["rarity"] == "rare" and run.parts == parts_before and run.cogs == cogs_before,
 		"gates %s, striped %s, parts unchanged %s, cogs %d" % [offered, striped, run.parts == parts_before, run.cogs])
-	_check("second fit nothing", not build.hotwire_fit() and build.hotwire_recycle() == 0 and run.cogs == cogs_fit,
-		"second fit and a recycle after fit change nothing")
+	# Gates already standing when the Warden breaks are put up again with it.
+	build._on_run_started("")
+	build._on_flow_changed("gates")
+	_game.events.beacon_unsealed.emit(1)
+	var reopened: Array = build.gates.offers.map(func(o): return o["part_id"])
+	_check("standing gates gain it", reopened.size() == 3 and reopened[-1] == "riveted_shell", "gates %s" % [reopened])
+	_check("the old screen is gone", not build.has_signal("hotwire_offered") and not build.has_method("hotwire_fit"), "build still has the Fit / Recycle hooks")
 	# Closed until the end: taking a gate launches the ball, which the tread checks must not see.
 	build.gates.close()
 
@@ -120,27 +112,21 @@ func _world_checks() -> void:
 	run.parts.erase("spark_tread")
 	_check("world-one fixture holds one hot-wired part", run.world == 1 and run.parts.has("riveted_shell")
 		and not run.parts.has("spark_tread"), "world %d, parts %s" % [run.world, run.parts])
-	var before: int = _offers
 	_game.events.beacon_unsealed.emit(1)
-	_check("world one cannot offer a second hot-wired part", _offers == before, "offers %d" % _offers)
+	_check("world one cannot put up a second hot-wired part", build._hotwire_gate_ids().is_empty(), "gates %s" % [build._hotwire_gate_ids()])
 	run.world = 2
 	_game.events.beacon_unsealed.emit(1)
-	var pending: Dictionary = build.hotwire_pending()
-	_check("world two offers a second hot-wired part", _offers == before + 1 and pending["state"] == "open"
-		and pending["part_id"] == "spark_tread", "world %d, offers %d, pending %s" % [run.world, _offers, pending])
-	var fitted: bool = build.hotwire_fit()
-	_check("world-two fit waits for the gate", fitted and build._hotwire_gate_ids() == ["spark_tread"]
-		and not run.parts.has("spark_tread"), "fitted %s, gates %s, parts %s" % [fitted, build._hotwire_gate_ids(), run.parts])
+	_check("world two puts up a second hot-wired part", build._hotwire_gate_ids() == ["spark_tread"]
+		and not run.parts.has("spark_tread"), "world %d, gates %s, parts %s" % [run.world, build._hotwire_gate_ids(), run.parts])
 	build.gates.chosen.emit("spark_tread")
 	_check("world two takes both hot-wired parts through gates", run.parts.count("riveted_shell") == 1
 		and run.parts.count("spark_tread") == 1 and build._hotwire_gate_ids().is_empty(), "parts %s" % [run.parts])
-	_game.events.beacon_unsealed.emit(2)
-	_check("world two offers only once", _offers == before + 1, "offers %d" % _offers)
 	build._on_run_started("")
 	build._hotwire_restore()
 	_game.events.beacon_unsealed.emit(1)
-	_check("world-two spent offer survives restore", _offers == before + 1
-		and build.hotwire_pending()["state"] == "fit", "offers %d, pending %s" % [_offers, build.hotwire_pending()])
+	_check("world-two spent offer survives restore", build.hotwire_pending()["state"] == "fit"
+		and build._hotwire_gate_ids().is_empty(), "pending %s" % [build.hotwire_pending()])
+	_check("the old screen never opened", not _game.hud.has_method("hotwire_screen") and _game.hud.get("hotwire_screen") == null, "the HUD still holds a hot-wire screen")
 
 
 func _tread_setup() -> void:
@@ -177,9 +163,8 @@ func _wear_checks() -> void:
 		"10 s grounded at cruise: wear %.0f unfitted, %.0f fitted" % [losses[0], losses[1]])
 
 
-# Wave 6 fix: a Recycle taken after the stage checkpoint pays cogs the retry rolls back, so the
-# offer rolls back with them. The checkpoint holds the offer pending; a retry after Recycle puts
-# the cogs and the open offer back and the choice can be made again (and pays once).
+# A Warden break after the checkpoint is rewound by a retry with the rest of the stage: the
+# part leaves the gates, and the next Warden I puts it up again.
 func _retry_checks() -> void:
 	_game.free()
 	var game := Game.new()
@@ -195,26 +180,22 @@ func _retry_checks() -> void:
 		await process_frame
 	var build = game.build
 	var run = game.run
-	game.events.beacon_unsealed.emit(1)
 	run.snapshot(Vector3.ZERO, Vector3.ZERO, 0.0)
-	var cogs_snap: int = run.cogs
-	var paid: int = build.hotwire_recycle()
-	_check("recycle paid before the retry", paid > 0 and run.cogs == cogs_snap + paid and build.hotwire_pending()["state"] == "recycle",
-		"paid %d, cogs %d, state %s" % [paid, run.cogs, build.hotwire_pending()["state"]])
+	game.events.beacon_unsealed.emit(1)
+	_check("at the gates before the retry", build._hotwire_gate_ids() == ["riveted_shell"], "gates %s" % [build._hotwire_gate_ids()])
 	game.flow.retry_stage()
 	for i in 3:
 		await process_frame
-	var pending: Dictionary = build.hotwire_pending()
-	_check("retry returns the cogs and the pending offer", run.cogs == cogs_snap and pending["state"] == "open" and pending["part_id"] == "riveted_shell"
-		and build._hotwire_spent and run.extra["hotwire"]["state"] == "open",
-		"cogs %d against snapshot %d, offer %s" % [run.cogs, cogs_snap, pending])
-	var again: int = build.hotwire_recycle()
-	_check("the choice pays once after the retry", again == paid and run.cogs == cogs_snap + paid, "paid %d, cogs %d" % [again, run.cogs])
+	_check("retry rewinds the warden's offer", build._hotwire_gate_ids().is_empty() and not build._hotwire_spent,
+		"pending %s" % [build.hotwire_pending()])
+	game.events.beacon_unsealed.emit(1)
+	_check("warden I puts it up again", build._hotwire_gate_ids() == ["riveted_shell"], "gates %s" % [build._hotwire_gate_ids()])
 	_resume_checks.call_deferred()
 
 
-# 2026-10-04: a resolved Recycle survives Continue. resume_run emits run_started, which
-# clears the offer's fields; the saved ones come back so Warden I does not offer twice.
+# A save carries the offer through Continue. resume_run emits run_started, which clears the
+# offer's fields; the saved ones come back. A save from before the fold that holds an offer
+# still waiting on the old Fit / Recycle screen ("open") resumes with the part at the gates.
 func _resume_checks() -> void:
 	var dir := "user://hotwire_offer_flow_test/"
 	DirAccess.make_dir_recursive_absolute(dir)
@@ -234,9 +215,10 @@ func _resume_checks() -> void:
 	for i in 5:
 		await process_frame
 	first.events.beacon_unsealed.emit(1)
-	var paid: int = first.build.hotwire_recycle()
+	# Write the offer the way a save from before the fold held it: waiting on the screen.
+	first.build._hotwire_state = "open"
+	first.build._hotwire_save()
 	first.flow.enter_stage(2, Vector3(0.0, 0.0, 14.0), false)
-	var cogs_saved: int = first.run.cogs
 	first.free()
 	var second := Game.new()
 	second.test_mode = true
@@ -247,16 +229,15 @@ func _resume_checks() -> void:
 	second.ctx.calm = true
 	second.player.source = Intent.Scripted.new()
 	var offers := [0]
-	second.build.hotwire_offered.connect(func(_id: String, _cogs: int): offers[0] += 1)
 	var resumed: bool = second.flow.resume_run()
 	for i in 3:
 		await process_frame
 	var pending: Dictionary = second.build.hotwire_pending()
 	second.events.beacon_unsealed.emit(1)
 	second.events.beacon_unsealed.emit(2)
-	_check("recycle survives continue", paid > 0 and resumed and offers[0] == 0 and pending["state"] == "recycle"
-		and second.build.hotwire_pending()["state"] == "recycle" and second.run.cogs == cogs_saved,
-		"paid %d, resumed %s, offers after resume %d, state %s, cogs %d against saved %d" % [paid, resumed, offers[0], pending["state"], second.run.cogs, cogs_saved])
+	_check("an old open offer resumes at the gates", resumed and offers[0] == 0 and pending["state"] == "fit"
+		and second.build._hotwire_gate_ids() == ["riveted_shell"] and second.run.extra["hotwire"]["state"] == "fit",
+		"resumed %s, screen offers %d, state %s, gates %s" % [resumed, offers[0], pending["state"], second.build._hotwire_gate_ids()])
 	second.free()
 	for name in DirAccess.get_files_at(dir):
 		DirAccess.remove_absolute(dir + name)

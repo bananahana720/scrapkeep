@@ -114,6 +114,10 @@ var death_save_spent := false
 # is knocked loose. The one choke point every hit passes, so a boss's direct hit obeys it too.
 var defend_hook := Callable()
 var ride_hook := Callable()
+# Heat on the shell (combat/redline.gd): Callable(source) -> the multiplier on a hit, 1.0 when
+# the shell is cool. It runs first, at the one choke point, so every hit (a boss's included)
+# lands harder on a hot shell before any defence reads it.
+var taken_hook := Callable()
 # Whole wear units owed but not yet taken from the mass.
 var _wear_accum := 0.0
 # The armour metrics the run log carries; a retry adds to them, they are never restored.
@@ -142,6 +146,23 @@ var run_tier := 0:
 		run_tier = value
 		ChallengeDials.set_rung(RunTier.dials(value))
 var event_core_grants := 0
+# A core stowed in SPIL-9 (stow_core, `--carry-core=on`): 0 or 1. It leaves this stage's cores
+# and becomes a core of the next stage at enter_stage, so the next gate counts it. core_seat is
+# the piece it unseated ("" when a socket was free). arrived_core is the core that arrived in this
+# stage: it cannot ride again, and a Continue to this stage's entrance gets it back.
+var carried_core := 0
+var core_seat := ""
+var arrived_core := 0
+# SA-F1 (systems audit pass F): the stage's exit is taken. Flow saves the cleared doc
+# (to_cleared_doc) at the launch, so a quit or crash in the flight or in the boss arena that
+# follows continues at the next entrance with what the stage earned (BIBLE section 6: completed
+# stages keep the build and resolved rewards, with resume at the next entrance). pick_opened
+# says the stage's workshop pick has opened (world.gd), so the Continue does not open it twice.
+var cleared := false
+var pick_opened := false
+# The cleared stage's flight has landed in its world's boss arena: stage_cleared has fired, so a
+# Continue re-enters the fight without clearing the stage (and its codex note) a second time.
+var landed := false
 # True once enter_stage has run in this run. A pick opens only after flow's enter_stage(1),
 # because enter_stage zeroes bonus_cores and would wipe a Bonus Core taken before it.
 var _stage_entered := false
@@ -220,6 +241,12 @@ func begin(chosen_class: Resource) -> void:
 	scrap = 0
 	mass = 0.0
 	bonus_cores = 0
+	carried_core = 0
+	core_seat = ""
+	arrived_core = 0
+	cleared = false
+	pick_opened = false
+	landed = false
 	panels.clear()
 	_heft_class = 1
 	class_rewarded = 1
@@ -465,6 +492,62 @@ func add_event_core(at: Vector3) -> void:
 		add_core("event", at)
 
 
+# Carry a core in SPIL-9 (docs/systems-audit/feature-fit.md, new mechanic 3; the Bible's
+# exception for one carried core, only into SPIL-9, Andrew 11 Nov 2026 19:24Z). One of this
+# stage's cores rides in a companion socket into the next stage. Refused with no SPIL-9, no core
+# of this stage's own (one that arrived rides once), or one already riding. The caller checks
+# the launch flag.
+func can_stow_core() -> bool:
+	return carried_core == 0 and bonus_cores > arrived_core and not companion.is_empty()
+
+
+func stow_core() -> bool:
+	if not can_stow_core():
+		return false
+	bonus_cores -= 1
+	carried_core = 1
+	var out: Array = Companion.unseat(companion)
+	companion = out[0]
+	core_seat = out[1]
+	return true
+
+
+# The piece a stow would unseat now ("" when a socket is free or a core already rides): the
+# counter's stow plate shows it as the price.
+func stow_cost() -> String:
+	if carried_core > 0:
+		return ""
+	return String(Companion.unseat(companion)[1])
+
+
+# The sockets SPIL-9 can fill now: a riding core holds one (the companion panel asks).
+func companion_seats() -> int:
+	return Companion.SOCKETS - carried_core
+
+
+# The companion with no core riding: the piece the core unseated back in its socket. This is
+# what the profile keeps, so a stow never reaches the save.
+func companion_whole() -> Dictionary:
+	return Companion.reseat(companion, core_seat)
+
+
+# Ends a ride: the piece goes back in its socket and SPIL-9 has both sockets again. Flow calls it
+# when the run ends (won, or the ball's final death), so the title and pilot select never see a
+# ride from a run that is over.
+func end_ride() -> void:
+	companion = companion_whole()
+	core_seat = ""
+	carried_core = 0
+
+
+# A missed called shot (build/called_shot.gd) burns one of this stage's cores. Returns whether one burned.
+func lose_core() -> bool:
+	if bonus_cores <= 0:
+		return false
+	bonus_cores -= 1
+	return true
+
+
 # A lost risk bet burns this stage's cores (world/bet_crate.gd); its bet_resolved fact
 # reports the loss. Returns how many burned.
 func burn_cores() -> int:
@@ -500,6 +583,20 @@ func spend_scrap(amount: int) -> bool:
 		return false
 	scrap -= amount
 	return true
+
+
+# Moss's scale (shop.gd weigh, docs/systems-audit/feature-fit.md new mechanic 2): mass sold on
+# purpose. Mass and the wallet drop by the amount, not below zero, and the heft class follows
+# as on a theft, but it is a sale, not a loss: no scrap_lost, so nothing reads it as a theft.
+# Returns the mass taken.
+func weigh_out(amount: int) -> int:
+	if amount <= 0 or not alive():
+		return 0
+	var taken := int(minf(float(amount), mass))
+	mass = maxf(0.0, mass - taken)
+	scrap -= mini(taken, scrap)
+	_publish_heft_class()
+	return taken
 
 
 func add_part(part_id: String, source: String) -> void:
@@ -608,6 +705,8 @@ func heal(amount: float) -> void:
 func damage(amount: float, source: String) -> void:
 	if not alive() or amount <= 0.0:
 		return
+	if taken_hook.is_valid():
+		amount *= float(taken_hook.call(source))
 	if defend_hook.is_valid():
 		amount = float(defend_hook.call(amount, hp))
 	if armor_mode:
@@ -804,8 +903,18 @@ func enter_stage(index: int) -> void:
 		for offer in trade_memory.seen:
 			if int(offer.stage) == stage and not trade_memory.decisions.has(str(stage)):
 				preload("res://src/world/trade_pockets.gd").decide(trade_memory, offer, false)
+	# A carried core arrives as one of this stage's cores and frees its socket. A Continue
+	# re-enters the same stage with the arrived core from the entrance doc, so it is kept.
+	if carried_core > 0:
+		arrived_core = carried_core
+		end_ride()
+	elif index != stage:
+		arrived_core = 0
 	stage = index
-	bonus_cores = 0
+	cleared = false
+	pick_opened = false
+	landed = false
+	bonus_cores = arrived_core
 	event_core_grants = 0
 	_stage_entered = true
 	_tier_closed = false
@@ -827,6 +936,8 @@ func snapshot(entry_position: Vector3, entry_velocity: Vector3, camera_yaw: floa
 		"heft_class": _heft_class,
 		"wear_accum": _wear_accum,
 		"bonus_cores": bonus_cores,
+		"carried_core": carried_core,
+		"core_seat": core_seat,
 		"parts": parts.duplicate(),
 		"panels": panels.duplicate(),
 		"relics": relics.duplicate(),
@@ -886,6 +997,8 @@ func snapshot_value(key: String):
 
 func restore() -> void:
 	escape_window_left = 0.0
+	cleared = false
+	landed = false
 	_tier_closed = false
 	pocket_draw_cache = (_snapshot.get("pocket_draw_cache", pocket_draw_cache) as Dictionary).duplicate(true)
 	trade_memory = (_snapshot.get("trade_memory", preload("res://src/world/trade_pockets.gd").memory()) as Dictionary).duplicate(true)
@@ -896,6 +1009,11 @@ func restore() -> void:
 	cogs = int(_snapshot.get("cogs", 0))
 	mass = _snapshot["mass"]
 	bonus_cores = _snapshot["bonus_cores"]
+	# A retry rewinds a stow made after the checkpoint: the core returns and the piece reseats.
+	if carried_core > int(_snapshot.get("carried_core", 0)):
+		end_ride()
+	carried_core = int(_snapshot.get("carried_core", 0))
+	core_seat = String(_snapshot.get("core_seat", ""))
 	parts.assign(_snapshot["parts"])
 	panels.assign(_snapshot.get("panels", []))
 	relics = (_snapshot.get("relics", {}) as Dictionary).duplicate()
@@ -971,7 +1089,7 @@ const ENTRANCE_KEYS := {
 	"entry_position": "vec3", "entry_velocity": "vec3", "camera_yaw": "num",
 	"tree_picks": "strs", "tree_allowed": "int", "retries_spent": "dict",
 }
-const ENTRANCE_OPTIONAL := {"cogs": "int", "companion": "dict", "settled": "strs", "relics": "dict", "start_pick": "dict", "run_tier": "int", "event_core_grants": "int", "run_tallies": "dict", "seen_wardens": "strs", "trade_memory": "dict", "pocket_draw_cache": "dict", "tree_late_skipped": "bool", "death_save_spent": "bool", "panels": "strs"}
+const ENTRANCE_OPTIONAL := {"cogs": "int", "companion": "dict", "settled": "strs", "relics": "dict", "start_pick": "dict", "run_tier": "int", "event_core_grants": "int", "run_tallies": "dict", "seen_wardens": "strs", "trade_memory": "dict", "pocket_draw_cache": "dict", "tree_late_skipped": "bool", "death_save_spent": "bool", "panels": "strs", "arrived_core": "int", "cleared": "bool", "pick_opened": "bool", "landed": "bool", "carried_core": "int", "core_seat": "str"}
 
 
 # `tree` is optional: when given, its picks and allowed count are read the way world.gd
@@ -1038,9 +1156,33 @@ func to_entrance_doc(tree = null) -> Dictionary:
 	# Written only once a panel is held, so a run with none keeps its old document bytes.
 	if not panels.is_empty():
 		doc["panels"] = Array(panels)
+	# Flow writes this doc as a stage begins, after enter_stage ends any ride, so a ride never
+	# needs a key; the core that arrived does. Written only then, so other runs keep their bytes.
+	if arrived_core > 0:
+		doc["arrived_core"] = arrived_core
 	if run_tier == 0:
 		doc.erase("run_tier")
 		doc.erase("event_core_grants")
+	return doc
+
+
+# The doc Flow saves as a cleared stage's launch commits (SA-F1): the entrance doc's fields with
+# the run as it stands at the launch, not as the stage began, so the stage's cogs, parts, gate
+# pick, trades (seen, decisions, risk and the hull mark the break lifted) and a stowed core ride
+# the save. entry_velocity is the launch's, which the Continue carries into the next place.
+func to_cleared_doc(tree, launch_velocity: Vector3) -> Dictionary:
+	cleared = true
+	var doc := to_entrance_doc(tree)
+	doc["cleared"] = true
+	doc["entry_velocity"] = [launch_velocity.x, launch_velocity.y, launch_velocity.z]
+	doc["trade_memory"] = preload("res://src/world/trade_pockets.gd").to_doc(trade_memory)
+	if pick_opened:
+		doc["pick_opened"] = true
+	if landed:
+		doc["landed"] = true
+	if carried_core > 0:
+		doc["carried_core"] = carried_core
+		doc["core_seat"] = core_seat
 	return doc
 
 
@@ -1158,6 +1300,11 @@ static func _entrance_range_error(doc: Dictionary) -> String:
 	for key in ["mass", "scrap", "kills", "retries", "bonus_cores", "class_rewarded", "tree_allowed", "run_time", "wear_accum"]:
 		if float(doc[key]) < 0.0:
 			return "%s %s is negative" % [key, doc[key]]
+	if doc.has("carried_core") and (int(doc["carried_core"]) < 0 or int(doc["carried_core"]) > 1):
+		return "carried_core %d is outside 0..1" % int(doc["carried_core"])
+	for key in ["pick_opened", "landed", "carried_core", "core_seat"]:
+		if doc.has(key) and not bool(doc.get("cleared", false)):
+			return "%s belongs to a cleared stage" % key
 	if doc.has("cogs") and int(doc["cogs"]) < 0:
 		return "cogs %d is negative" % int(doc["cogs"])
 	for w in doc["retries_spent"]:
@@ -1209,6 +1356,12 @@ func from_entrance_doc(doc) -> bool:
 		retries_spent[int(str(w))] = int(doc["retries_spent"][w])
 	cogs = int(doc.get("cogs", 0))
 	companion = preload("res://src/core/companion.gd").sanitize(doc["companion"])[0] if doc.has("companion") else {}
+	carried_core = int(doc.get("carried_core", 0))
+	core_seat = String(doc.get("core_seat", ""))
+	arrived_core = clampi(int(doc.get("arrived_core", 0)), 0, 1)
+	cleared = bool(doc.get("cleared", false))
+	pick_opened = bool(doc.get("pick_opened", false))
+	landed = bool(doc.get("landed", false))
 	settled.assign(doc.get("settled", []))
 	start_pick = _start_pick_from(doc.get("start_pick", {}))
 	run_tier = int(doc.get("run_tier", 0))

@@ -20,6 +20,7 @@ const UpgradeTree := preload("res://src/core/upgrade_tree.gd")
 const SimClock := preload("res://src/core/sim_clock.gd")
 const ChainState := preload("res://src/combat/chain.gd")
 const Dunk := preload("res://src/combat/dunk.gd")
+const Redline := preload("res://src/combat/redline.gd")
 const CombatRules := preload("res://src/combat/combat.gd")
 const ExceptionHold := preload("res://src/movement/exception_hold.gd")
 
@@ -114,6 +115,10 @@ var chain := ChainState.new()
 # The dunk charge (dunk.gd): this player stores it from an air slam and ticks its clock; combat
 # spends it on a reel impact; the glow and the cue read its signals.
 var dunk := Dunk.new()
+# Heat on the shell (redline.gd, behind --heat): this player fills it from speed and skims and
+# spends it on its own contacts; combat reads its taken scale; the shell, the sound and the pad
+# read its signals.
+var redline := Redline.new()
 # The chain's multiplier while a smash landing resolves; 1.0 otherwise.
 var _landing_mult := 1.0
 # The skill bar's router (design-v3/SKILL-BAR.md section 1). set_piece_phase answers the
@@ -214,10 +219,17 @@ func setup(tuning_ref, events_ref, spawn: Vector3) -> void:
 	events.player_died.connect(func(): kit.drop_line("reset"))
 	events.player_died.connect(func(): dunk.clear("reset"))
 	events.stage_content_cleared.connect(func(_reason: String): dunk.clear("reset"))
+	events.player_died.connect(func(): redline.clear())
+	events.stage_entered.connect(func(_stage: int, _retry: bool): redline.clear())
+	events.near_miss.connect(func(_kind: String, at: Vector3): redline.skim(state.tier, at))
+	redline.cooked_off.connect(_redline_blast)
+	redline.detonated.connect(_redline_blast)
 	_smashes = {"arc": _smash_arc, "skid": _smash_skid, "demo": _smash_demo, "rend": _smash_rend, "stamp": _smash_stamp}
 	events.run_started.connect(func(class_id: String):
 		fit_class(ClassDef.by_id(class_id))
 		chain.reset()
+		redline.set_mode(tuning.option("heat"))
+		redline.reset_counts()
 		tree.open_checkpoint())
 	# The workshop visits after stages 1 to 3 each open one more pick: world's bay opens
 	# it on entry, or at the stage's clear when the bay was skipped (world.gd).
@@ -655,6 +667,8 @@ func _physics_process(delta: float) -> void:
 	_was_hooked = kit.hooked
 	_publish_line(delta)
 	dunk.tick(delta)
+	if redline.mode != Redline.OFF:
+		redline.tick(delta, state.tier, ball_position(), state.velocity.length())
 	_tick_chain(delta)
 	_recheck_bow()
 	_tick_face_tags(delta)
@@ -1401,6 +1415,7 @@ func _on_slammed(at: Vector3, speed: float, flatness: float) -> void:
 		var hits := _push_enemies(at, slam_radius(), Augments.SLAM_KNOCK * strength, SLAM, Contact.heft_knock(heft()))
 		if hits > 0:
 			events.drop_landed.emit(hits)
+			redline.spend(SLAM, at, Augments.SLAM_KNOCK * strength)
 		else:
 			events.missed_drop.emit()
 	if _smashes.has(kit.smash_flavour):
@@ -1533,6 +1548,16 @@ func _on_pylon_planted(at: Vector3, banked_speed: float) -> void:
 	_push_enemies(at, Augments.MOUNT_REPEL_RADIUS, Augments.MOUNT_REPEL_KNOCK * tree.knob("plant_repel"), "")
 
 
+# A redline shell's blast (redline.gd detonated and cooked_off): every enemy inside its radius
+# takes a slam at `force` with the slam's falloff, through the same push and strike path, so the
+# ring drawn, the knock and the damage are one shape.
+func _redline_blast(at: Vector3, force: float) -> void:
+	if force <= 0.0:
+		return
+	shockwave.emit(at, 1.0)
+	_push_enemies(at, Redline.BLAST_RADIUS, force, SLAM, Contact.heft_knock(heft()))
+
+
 # knock_mult scales the shove only; the strike keeps force, so damage is unchanged.
 func _push_enemies(at: Vector3, radius: float, force: float, kind: String, knock_mult := 1.0) -> int:
 	var hits := 0
@@ -1600,6 +1625,7 @@ func _on_enemy_touched(enemy: Node3D, normal: Vector3) -> void:
 		enemy.knock(away * 0.6 + Vector3.DOWN * 0.2, 7.0 * _landing_mult)
 		shockwave.emit(enemy.global_position, 0.6)
 		struck.emit(enemy, STOMP, _landing_force(STOMP, -before.y))
+		redline.spend(STOMP, ball_position(), _landing_force(STOMP, -before.y))
 	elif _rebounds_off(enemy) and before.dot(normal) < -Contact.MIN_CLOSING:
 		_rebound(enemy, normal, before, planar, away)
 	elif SpeedTier.of(planar, tuning.tier_cruise()) >= SpeedTier.CRUISE:
@@ -1611,6 +1637,7 @@ func _on_enemy_touched(enemy: Node3D, normal: Vector3) -> void:
 		# Planar speed, the same measure punch_now and the crush check use (one query).
 		struck.emit(enemy, RAM, _landing_force(RAM, planar))
 		_bowl_if_killed(enemy, away, shove)
+		redline.spend(RAM, ball_position(), _landing_force(RAM, planar))
 	if landing:
 		_finish_landing(enemy, closing)
 	smash_landing = null
@@ -1687,4 +1714,5 @@ func _rebound(enemy: Node3D, normal: Vector3, before: Vector3, planar: float, aw
 	if SpeedTier.of(planar, tuning.tier_cruise()) >= SpeedTier.CRUISE:
 		struck.emit(enemy, RAM, _landing_force(RAM, planar))
 		_bowl_if_killed(enemy, away, Contact.ram_knock(Augments.RAM_KNOCK, planar, heft(), _landing_mult))
+		redline.spend(RAM, ball_position(), _landing_force(RAM, planar))
 	events.enemy_rebounded.emit(enemy, out.length())

@@ -57,7 +57,7 @@ const CLASS_OF_ROLE := {
 }
 # Glyph kinds that are not P5 candy. Anything unlisted is a P5 player effect.
 const CLASS_OF_KIND := {
-	"near_miss": "P2", "interact_armed": "P2", "interact_fired": "P2",
+	"near_miss": "P2", "redline_blast": "P2", "interact_armed": "P2", "interact_fired": "P2",
 	"part_gained": "P4", "milestone_won": "P4", "core_gained": "P4", "reward_rare": "P4",
 	"reward_payoff": "P4", "beacon_unsealed": "P4", "bet_resolved": "P4", "ambush_ended": "P4", "interaction_found": "P4",
 }

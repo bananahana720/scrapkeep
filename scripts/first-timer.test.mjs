@@ -84,6 +84,19 @@ test("parseArgs rejects an unknown pilot", () => {
   assert.deepEqual(parseArgs(["--pilots=tarn,tally"]).pilots, ["tarn", "tally"]);
 });
 
+test("probes play the park table by default, the maps a launched game plays", () => {
+  assert.equal(parseArgs([]).table, "park");
+  assert.equal(parseArgs(["--table=default"]).table, "default");
+});
+
+test("Brindle's park plate teaches the stagger: its phase 1 row is up from the arena's first frame", () => {
+  const p = probe(
+    { "objective:shoot_magnets": { tick: 39490, stage: 2 } },
+    { boss_arena_entered: { tick: 39490, stage: 2 }, boss_staggered: { tick: 40383, stage: 2 } },
+  );
+  assert.equal(judge(mechanic("boss"), p).verdict, "ok");
+});
+
 // HELP-REFRESH (WHATS-LEFT row 8): the seven verbs the help page names each have a row, taught by
 // the first-meet tip, and a row that is optional says why.
 const HELP_VERBS = { grip: "grip_used", jam: "jam_hit", cast: "cast_started", radio: "radio_live", stake: "relay_met", companion: "companion_full", active: "active_racked" };

@@ -88,6 +88,16 @@ const FIT_DRAPE := "drape"
 const TILE_MIN := 2
 const TILE_MATCH_M := 0.25
 const TILE_SLICE_IN_M := 0.05
+# The foot fit (wave 37, PF-31): a solid crib pier or wall set on the ground at its centre floats over ground that
+# falls away under its footprint, and a ball rolls in under the floating edge and wedges there (the siphon turn coping:
+# 2.4 m over the ground at its low end; a park-table bot sat stuck under it). Such a recipe reaches down to the lowest
+# ground under its footprint, as a crib is built down to its footing: its views and collider stretch along their own y
+# about the top, so the top, the width and the plan stay as authored, at most FOOT_STRETCH_MAX. FOOT_SAMPLE_M spaces
+# the ground samples over the footprint.
+const FOOTED := ["crib_wall_", "crib_pier_"]
+const FOOT_MIN_M := 0.05
+const FOOT_SAMPLE_M := 2.0
+const FOOT_STRETCH_MAX := 2.0
 
 # The registry: every starting recipe id of section 4 and the six hero landmarks, with its family and budget class.
 # park_schema.gd RECIPES names the same ids until the coordinator folds the GLBs into assets/registry.json.
@@ -471,6 +481,39 @@ static func fits_tile(row: Dictionary) -> bool:
 	return String(row.get("fit", "")) == FIT_TILE
 
 
+# Whether a row takes the foot fit (header): a FOOTED recipe set on the ground at its centre, with no other fit.
+static func footed(row: Dictionary) -> bool:
+	var recipe := String(row.get("recipe", ""))
+	return row.get("y") == null and String(row.get("fit", "")) == "" and FOOTED.any(func(k): return recipe.begins_with(k))
+
+
+# The foot fit of a row whose collider faces (GLB space, centre origin) stand at place: {"stretch", "basis", "shift"},
+# the vertical scale about the collider's top that takes its bottom to the lowest ground under its footprint, 1.0 when
+# that ground is within FOOT_MIN_M of the bottom or higher.
+static func foot_fit(row: Dictionary, faces: PackedVector3Array, place: Transform3D, ground: Callable) -> Dictionary:
+	var none := {"stretch": 1.0, "basis": Basis.IDENTITY, "shift": Vector3.ZERO}
+	if faces.is_empty():
+		return none
+	var box := AABB(faces[0], Vector3.ZERO)
+	for v in faces:
+		box = box.expand(v)
+	var lowest := INF
+	var nx := maxi(1, ceili(box.size.x / FOOT_SAMPLE_M))
+	var nz := maxi(1, ceili(box.size.z / FOOT_SAMPLE_M))
+	for i in nx + 1:
+		for k in nz + 1:
+			var w := place * Vector3(box.position.x + box.size.x * i / nx, 0.0, box.position.z + box.size.z * k / nz)
+			lowest = minf(lowest, float(ground.call(w.x, w.z)) - place.origin.y)
+	var bottom := box.position.y
+	var top := box.end.y
+	if bottom - lowest <= FOOT_MIN_M or top - bottom <= 0.0:
+		return none
+	var stretch := minf((top - lowest) / (top - bottom), FOOT_STRETCH_MAX)
+	if stretch * (top - bottom) < top - lowest:
+		push_warning("park_recipes: %s foot fit capped at %.2f, %.2f m over its lowest ground" % [row.get("id", ""), FOOT_STRETCH_MAX, (top - lowest) - stretch * (top - bottom)])
+	return {"stretch": stretch, "basis": Basis.from_scale(Vector3(1.0, stretch, 1.0)), "shift": Vector3.UP * top * (1.0 - stretch)}
+
+
 # Every -col mesh's trimesh faces of a recipe scene, in the scene's own space.
 static func col_faces(scene: Node) -> PackedVector3Array:
 	var out := PackedVector3Array()
@@ -764,6 +807,12 @@ static func place_parts(row: Dictionary, parts: Dictionary, parent: Node3D, grou
 			baked = true
 			node.set_meta("seat_fit", at_origin)
 			node.set_meta("seat_stretch", fit["stretch"])
+	if not baked and footed(row) and ground.is_valid() and not (parts.get("base", []) as Array).is_empty():
+		var foot := foot_fit(row, col_faces(parts["base"][0]), node.transform * at_origin, ground)
+		if foot["stretch"] > 1.0:
+			at_origin = Transform3D(foot["basis"], at_origin.origin + foot["shift"])
+			baked = true
+			node.set_meta("foot_stretch", foot["stretch"])
 	# Each placement of the parts: [GLB-to-node transform, view name suffix, drawn lift]. One, except for a tile fit's
 	# copies. A tile copy draws on its collider: an odd copy lifted over its joints left the deck between them over the
 	# collider the ball rides (park_park_flume_test intact top).
