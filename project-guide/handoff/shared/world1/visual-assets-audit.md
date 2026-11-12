@@ -59,11 +59,11 @@ Two of these have finished models that the park path never loads. That is the ch
 
 One result to check before it becomes a row: in the census run the flume's reward gates drew their code posts and toppers (tick 23,340) while the dam's gates were dressed. `hero_assets.gd` `_dress_gate` gives up silently when it cannot match a gate to an offer (`:2058`). The PC film's flume gates (still 0107) are too far away to tell. W1-22's builder checks it with the census before and after.
 
-### 2. Twelve Spillway crew kinds share one body (W1-24, Andrew decides when)
+### 2. Twelve Spillway crew kinds share one body (W1-24, before the sitting)
 
 The PC close-ups show it at once (still 01): the bola thrower, catch trap, gyro jammer, hooker, jolt layer, mag trapper, netcaster, swatter and winch drone are one rust barrel with two ear cones and a snout, told apart by a thin tool. In the blind outline read of 10 November, five readers named the job of 11 of 24 kinds; the brute read as crates, the deflector as a mushroom, the netcaster as a gong and the bola thrower as a bottle ([SIGHT-PERSONA.md](../../../../sketches/core-loop/design-v3/SIGHT-PERSONA.md) section 7). The fix is sized: a head per kind from its old job, a cast number and HIRED on each. It ranks second because the comic direction needs a crew a player remembers by face and pose, and today the crew is the least characterful thing on screen. SG-14 makes it cheap.
 
-### 3. The dam, world 1's namesake, is flat slabs (W1-25, Andrew decides when)
+### 3. The dam, world 1's namesake, is flat slabs (W1-25, before the sitting)
 
 `landmark_dam` is the only dam the park draws (one row in `park_dam.json`). On the PC it is a wall of flat beige planes behind the launch (still 02, 10 Nov build; the model is unchanged). Its mid and far meshes are the same slab. It is the largest object in the first stage and the backdrop of the Warden yard, and it shows none of a dam's parts or its crew: no gate bays, buttresses, penstocks, catwalks, stains or wear. The penstock tower and the flume trestle beside it read far better. The flume's piers and walls (film 0083 to 0098) are a lesser case of the same thing: designed shapes with flat faces and no 2010 finish. The 31 plain banks and drops in the dam map are terrain by ruling and are not counted.
 
@@ -81,11 +81,11 @@ Measured with the Machado matrices in CIELAB: relic amber against evolved green 
 
 BRASS is reserved for Brindle and the Fleet's requisition tags ([VISUAL-LANGUAGE.md](../../../../sketches/core-loop/VISUAL-LANGUAGE.md) palette table). The cogs (`scrap_field.gd:121`) and the HUD wallet (`src/ui/hud.gd:44`) are brass, and to a deuteranope brass and the relic's amber are the same colour. W1-21's cog takes worn steel with a bone rim. Assumption Andrew can overturn.
 
-### 6. The title has no art of its own (W1-47, Andrew decides when)
+### 6. The title has no art of its own (W1-47, before the sitting)
 
 The first screen is plain orange type over a plank deck built from code boxes, floating on teal (still 03). For a melodramatic comic game the title is the poster, and today it reads as a debug view. The sight persona's typeset-signs and 2010 gig-poster lettering already point the way. It needs a taste page (ruling cq) with two or three candidates and a PC check.
 
-### 7. Brindle's armour panels are blank slabs up close (W1-48, Andrew decides when)
+### 7. Brindle's armour panels are blank slabs up close (W1-48, before the sitting)
 
 The boss's plating is the part the player hits most, and at ram distance it fills the screen as flat panels with a few lines (still 05, film 0124, where they also draw near white). They need edge bevels, stencils and the bolt pattern the persona gives keepers' gear, and the whiteness needs a cause first (a hit flash or the plating tint is the likely one; passed to effects).
 
@@ -107,7 +107,7 @@ From the fault scan of 10 November, still true: 94 of 286 park prop far meshes c
 
 ### Taste calls
 
-One question goes to Andrew: whether the four look rebuilds (crew heads W1-24, the dam W1-25, the title W1-47, Brindle's plates W1-48) come before the sitting, since ruling cs holds the sitting until world 1 is fully polished. The stand-ins (W1-21 to W1-23, W1-46) are not part of that question: the sitting's zero-placeholders bar already needs them. Brindle's petrol hull is already on the sitting watch list with a charcoal alternative mocked. The dam and the title each start from a taste page (ruling cq). The cog's steel colour (W1-21) is an assumption he can overturn.
+Andrew answered on 12 November 2026: the four look rebuilds (crew heads W1-24, the dam W1-25, the title W1-47, Brindle's plates W1-48) all land before the sitting. The stand-ins (W1-21 to W1-23, W1-46) were never part of that question, because the sitting's zero-placeholders bar already needs them. Brindle's petrol hull is already on the sitting watch list with a charcoal alternative mocked. The dam and the title each start from a taste page (ruling cq). The cog's steel colour (W1-21) is an assumption he can overturn.
 
 ## Passed to other threads
 

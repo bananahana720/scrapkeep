@@ -6606,16 +6606,16 @@ Andrew asked on 12 November 2026 for as many buildable items as possible: for wo
 | W1-44 | Pilot select opens on the first pilot the profile can take (PF-40, PR 816 for wave 39) | "Close the remaining world 1 gaps", then the board thread |
 | W1-45 | The twin-line grapple prototype (PR 771) waits on Andrew's feel check | the board thread |
 
-### World 1 look rebuilds: Andrew decides before or after the sitting
+### World 1 look rebuilds: before the sitting
 
-Ruling cs holds the sitting until world 1 is fully polished, and none of these is a placeholder, so whether they come before the sitting is Andrew's call (asked 12 Nov in the thread "Critique world 1 visual assets"). None changes a fight.
+Andrew chose on 12 November 2026 that all four land before the world 1 sitting (decision card in the thread "Critique world 1 visual assets"; ruling cs holds the sitting until world 1 is fully polished). None is a placeholder and none changes a fight. W1-24 waits on SG-14. W1-25 and W1-47 start from a taste page that Andrew picks from (ruling cq). W1-48 is ready now.
 
 | ID | What | Size | Source |
 | --- | --- | --- | --- |
-| W1-24 | Spillway crew heads: each of the 12 crew kinds swaps the shared barrel head for one from its old job, with a cast number and HIRED (body, tool, tag and size stay) | M, four kinds per pull request; SG-14 first | [visual-assets-audit.md](project-guide/handoff/shared/world1/visual-assets-audit.md) finding 2 |
-| W1-25 | The dam landmark is rebuilt as a dam (gate bays, buttresses, penstocks, catwalks, wear), with its mid and far meshes, from a taste page (ruling cq) | L | [visual-assets-audit.md](project-guide/handoff/shared/world1/visual-assets-audit.md) finding 3 |
-| W1-47 | The title gets art of its own: a wordmark and a scene built from models, from a taste page (ruling cq) | M | [visual-assets-audit.md](project-guide/handoff/shared/world1/visual-assets-audit.md) finding 6 |
-| W1-48 | Brindle's armour panels get bevels, stencils and a bolt pattern; first find why they draw near white at ram distance (film 0124) | M | [visual-assets-audit.md](project-guide/handoff/shared/world1/visual-assets-audit.md) finding 7 |
+| W1-24 | Spillway crew heads: each of the 12 crew kinds swaps the shared barrel head for one from its old job, with a cast number and HIRED (body, tool, tag and size stay) | M, four kinds per pull request; SG-14 first | [visual-assets-audit.md](project-guide/handoff/shared/world1/visual-assets-audit.md) finding 2; issue 906 |
+| W1-25 | The dam landmark is rebuilt as a dam (gate bays, buttresses, penstocks, catwalks, wear), with its mid and far meshes, from a taste page (ruling cq) | L | [visual-assets-audit.md](project-guide/handoff/shared/world1/visual-assets-audit.md) finding 3; issue 907 |
+| W1-47 | The title gets art of its own: a wordmark and a scene built from models, from a taste page (ruling cq) | M | [visual-assets-audit.md](project-guide/handoff/shared/world1/visual-assets-audit.md) finding 6; issue 908 |
+| W1-48 | Brindle's armour panels get bevels, stencils and a bolt pattern; first find why they draw near white at ram distance (film 0124) | M | [visual-assets-audit.md](project-guide/handoff/shared/world1/visual-assets-audit.md) finding 7; issue 909 |
 
 ### World 1 after the sitting (already ruled to wait)
 
