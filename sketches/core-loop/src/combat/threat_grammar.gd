@@ -904,6 +904,8 @@ static func _edge_tris(d: Dictionary, grow: float) -> PackedVector3Array:
 
 static func _dashed_outline(d: Dictionary, grow: float) -> PackedVector3Array:
 	var w := edge_width(d) * 0.5
+	if d["form"] == "lane":
+		return _dashed_lane(d, w + grow)
 	var r_in: float = d["r_in"]
 	var r_out: float = d["r_out"]
 	var a0: float = d["a0"]
@@ -919,6 +921,25 @@ static func _dashed_outline(d: Dictionary, grow: float) -> PackedVector3Array:
 				var s0 := lerpf(r_in, r_out, (i + 0.225) / count)
 				var s1 := lerpf(r_in, r_out, (i + 0.775) / count)
 				_seg(tris, _at(c, a, s0), _at(c, a, s1), w + grow)
+	return tris
+
+
+# A harmless lane (a phase preview, boss.gd FX-03): dashes down both rails from the back to the
+# far end and across the far cap, the radial outline's DASH spacing.
+static func _dashed_lane(d: Dictionary, half: float) -> PackedVector3Array:
+	var tris := PackedVector3Array()
+	var back: float = d["back"]
+	var length: float = d["length"]
+	var width: float = d["half_width"]
+	var count := maxi(2, int(round((length + back) / DASH)))
+	for side in [-1.0, 1.0]:
+		for i in count:
+			_seg(tris, _lane_at(d, lerpf(-back, length, (i + 0.225) / count), side * width),
+				_lane_at(d, lerpf(-back, length, (i + 0.775) / count), side * width), half)
+	var across := maxi(1, int(round(2.0 * width / DASH)))
+	for i in across:
+		_seg(tris, _lane_at(d, length, lerpf(-width, width, (i + 0.225) / across)),
+			_lane_at(d, length, lerpf(-width, width, (i + 0.775) / across)), half)
 	return tris
 
 
