@@ -253,6 +253,16 @@ func _ready() -> void:
 		# that folder, so a second launch finds the first one's save (quit, then Continue).
 		storage_dir = "user://self-play-%s" % _self_play_save()
 		DirAccess.make_dir_recursive_absolute(storage_dir)
+	elif tuning != null and tuning.sitting_earned():
+		# The earned sitting plays on a profile of its own, so the player's saves stay as they are
+		# and the first unlock is earned, and kept, as a new player would earn it (W1-78).
+		storage_dir = "user://sitting-earned"
+		DirAccess.make_dir_recursive_absolute(storage_dir)
+		# It starts from the player's own keys, look and volume: a copy, made once, so a change
+		# made in the sitting stays in the sitting.
+		var settings := storage_dir.path_join(SettingsStore.FILE)
+		if not FileAccess.file_exists(settings) and FileAccess.file_exists("user://".path_join(SettingsStore.FILE)):
+			DirAccess.copy_absolute("user://".path_join(SettingsStore.FILE), settings)
 	apply_saved_bindings()
 	camera.apply_look_settings(settings_store())
 	codex = Codex.new()
