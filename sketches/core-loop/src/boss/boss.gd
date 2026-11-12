@@ -927,6 +927,8 @@ func _commit_charge(ball: Vector3, cued := false) -> void:
 	var warn := FightPhases.CUED_WARN if cued else ChallengeDials.tell("brindle", Rules.CHARGE_WARN, Hazard.MIN_WARN)
 	h.commit_lane("charge", Hazard.Threat.Type.LANE, from, heading, half, length + half, Requisition.HULL.x * 0.5 + 1.0,
 		Requisition.HULL.y + 0.5, warn, length / Rules.CHARGE_SPEED + 0.2)
+	# Only the hull's nose hurts once the lane is live, and it starts at the ship.
+	h.lane_front = half
 	_add_hazard(h)
 	# The hull keeps its heading at the commit: _brace_turn owns the turn onto this one.
 	ship.cue("charge_warn", h.get_instance_id())
@@ -953,6 +955,7 @@ func _run_charge(delta: float, ball: Vector3) -> void:
 	var at: Vector3 = _charge["from"] + _charge["heading"] * _charge["travelled"]
 	ship.move_to(Vector3(at.x, arena.ground(at), at.z), _charge["heading"])
 	var front: float = _charge["travelled"] + half
+	h.lane_front = front
 	if h.contains(ball) and clock >= _grace.get(h.get_instance_id(), -1.0):
 		var along: float = h.lane_along(ball)
 		if along >= front_before - 1.0 and along <= front + 1.5:

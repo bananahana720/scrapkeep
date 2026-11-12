@@ -145,7 +145,17 @@ static func _landed(node: Node, at: Vector3, d := {}) -> bool:
 		d = node.descriptor()
 	if _front_wave(node, d):
 		return node.is_spent() or node.front_radius() - Threat.WAVE_EDGE > _flat_from(node, at, d)
+	# A lane with a running front (Brindle's charge) lands for the ball once its front has
+	# reached the ball, not when it goes live: the mark over the ball stays up until the hull arrives.
+	if d.has("front_m") and bool(d.get("live", false)):
+		return float(d["front_m"]) >= _lane_along(at, d)
 	return bool(d.get("live", false)) or float(d.get("progress", 0.0)) >= 1.0
+
+
+static func _lane_along(at: Vector3, d: Dictionary) -> float:
+	var dir: Vector3 = d.get("dir", Vector3.FORWARD)
+	var c: Vector3 = d["centre"]
+	return Vector3(at.x - c.x, 0.0, at.z - c.z).dot(Vector3(dir.x, 0.0, dir.z).normalized())
 
 
 # A WAVE telegraph (telegraph.gd) hurts only on its running front, so contains() is false
