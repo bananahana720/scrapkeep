@@ -87,6 +87,10 @@ var engaged := false
 # its wall then, so none shows until it opens.
 var yard_locked := false
 var gate_points: Array[Vector3] = []
+# What a mark's tag must stay off, in screen space, set by the HUD each frame: the ball and the
+# readouts that ride on it. A part behind the ball is still marked (its brackets tell the truth),
+# but its name over the ball read as if the ball were the target (w37 film 081-082, PF-35).
+var keep_clear: Array[Rect2] = []
 # Pocket doors the player has had in view inside POCKET_RANGE (pocket_doors' key to true). A door
 # is discovered once and stays so for the run; an undiscovered door never gets a marker.
 var discovered := {}
@@ -342,8 +346,8 @@ func markers(size: Vector2) -> Array[Dictionary]:
 			continue
 		var tag: String = group["tag"]
 		var under := false
-		if tag != "" and not _free(mark_rect(box, tag), room, taken):
-			under = _free(mark_rect(box, tag, true), room, taken)
+		if tag != "" and not tag_free(box, tag, false, room, taken, keep_clear):
+			under = tag_free(box, tag, true, room, taken, keep_clear)
 			tag = tag if under else ""
 		if tag == "" and not _free(mark_rect(box, ""), room, taken):
 			if group["seen"]:
@@ -429,6 +433,13 @@ func drawn_words() -> PackedStringArray:
 
 
 # Whether a mark may take this screen: inside the room and over no mark already placed.
+# Whether a mark with its tag over (or under) its brackets has room, and the tag's chip stays off
+# everything in `clear`; the brackets themselves may stand over the ball.
+static func tag_free(box: Rect2, tag: String, under: bool, room: Rect2, taken: Array[Rect2], clear: Array[Rect2]) -> bool:
+	var chip := tag_rect(box, tag, under)
+	return _free(mark_rect(box, tag, under), room, taken) and not clear.any(func(other: Rect2): return other.intersects(chip))
+
+
 static func _free(rect: Rect2, room: Rect2, taken: Array[Rect2]) -> bool:
 	return room.encloses(rect) and not taken.any(func(other: Rect2): return other.intersects(rect))
 
