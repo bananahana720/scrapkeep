@@ -78,7 +78,9 @@ func _physics_process(_delta: float) -> bool:
 
 func _crew(offset: float) -> Node3D:
 	var terrain = _game.ctx.terrain
-	var at: Vector3 = terrain.spawn_point(1) + Vector3(offset, 0.0, 14.0)
+	# Ahead of the start, in the camera's view: a read word stands beside its foe on screen, and
+	# waits for a later hit while the foe is out of view (player_fx.read_word).
+	var at: Vector3 = terrain.spawn_point(1) + Vector3(offset, 0.0, -14.0)
 	var crew: Node3D = _game.ctx.spawner.spawn_enemy("drill_crew", terrain.drop_point(at.x, at.z, 1.5))
 	crew.set_process(false)
 	crew.set_physics_process(false)
@@ -117,11 +119,7 @@ func _live() -> void:
 	_t.check("a hit short of the plating only chips, unread", String(d.get_meta("armour_read", "x")) == "" and chip < 10.0 * 0.6,
 		"chip %.2f" % chip)
 	_loss(a, "test_bolt", PUNCH, "weapon")
-	var texts: Array = []
-	if marks != null:
-		for w in marks.words:
-			texts.append((w["label"] as Label3D).text)
-	_t.eq("DENT and ZZAP! stamp once each per run", texts, ["DENT", "ZZAP!"])
+	_t.eq("DENT and ZZAP! stamp once each per run", Array(marks.stamped) if marks != null else [], ["DENT", "ZZAP!"])
 	var f := _crew(32.0)
 	f.plates = 0
 	f.plating = 0.0

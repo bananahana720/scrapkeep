@@ -2,6 +2,7 @@ extends SceneTree
 
 const Game := preload("res://src/game.gd")
 const SettingsStore := preload("res://src/ui/settings_store.gd")
+const EdgeFlash := preload("res://src/presentation/edge_flash.gd")
 const FlashGuard := preload("res://src/presentation/flash_guard.gd")
 const T := preload("res://tests/support/t.gd")
 
@@ -85,6 +86,7 @@ func _sites() -> void:
 	edge.flash(Vector2.LEFT, Color.RED, 0.8, 0.4)
 	_t.check("RF-4 with reduced motion too, the lower share wins and the hit still reads", absf(edge.alpha - full * SettingsStore.REDUCED_FLASH) < 0.001 and edge.alpha > 0.1, "%f" % edge.alpha)
 	_game.set_reduced_motion(false)
+	_notch(edge)
 
 	# RF-5: a pop glyph drops to the decorative share, a reach ring to the information share.
 	_game.set_reduce_flashes(false)
@@ -166,3 +168,34 @@ func _distance(a: Color, b: Color) -> float:
 func _finish() -> void:
 	_game.set_reduce_flashes(false)
 	quit(_t.verdict())
+
+
+# RF-4b (FX-06): the flash dims, but a hit from a known side also gets a steady ink notch on that
+# edge, the same NOTCH_S in every mode, inside the screen with its tip on the edge toward the
+# source. An unknown source flashes every edge and draws no notch.
+func _notch(edge) -> void:
+	var shown := []
+	for mode in [[false, false], [true, false], [false, true], [true, true]]:
+		_game.set_reduce_flashes(mode[0])
+		_game.set_reduced_motion(mode[1])
+		edge.flash(Vector2.LEFT, Color.RED, 0.3, 0.4)
+		edge._process(EdgeFlash.NOTCH_S - 0.05)
+		var held: bool = edge.notch_shown()
+		edge._process(0.06)
+		shown.append([held, edge.notch_shown()])
+	_game.set_reduce_flashes(false)
+	_game.set_reduced_motion(false)
+	_t.eq("RF-4b the notch holds NOTCH_S in every mode, then clears", shown, [[true, false], [true, false], [true, false], [true, false]])
+	edge.flash(Vector2.ZERO, Color.RED, 0.3, 0.4)
+	_t.check("RF-4b an unknown source draws no notch", not edge.notch_shown())
+	var view := Vector2(1600, 900)
+	var inside := Rect2(Vector2.ZERO, view)
+	var placed := true
+	for toward in [Vector2.LEFT, Vector2.RIGHT, Vector2.UP, Vector2.DOWN, Vector2(1, -1), Vector2(-3, 1), Vector2(0.2, 1)]:
+		var wedge: PackedVector2Array = EdgeFlash.notch_points(toward, view)
+		var tip := wedge[0]
+		var on_edge := minf(minf(tip.x, view.x - tip.x), minf(tip.y, view.y - tip.y)) <= EdgeFlash.NOTCH_INSET + 0.5
+		var facing := (tip - view * 0.5).normalized().dot(toward.normalized()) > 0.7
+		placed = placed and on_edge and facing and Array(wedge).all(func(p): return inside.grow(0.5).has_point(p))
+	_t.check("RF-4b the notch's tip sits on the edge toward the source, the wedge on screen", placed)
+

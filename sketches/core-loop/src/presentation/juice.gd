@@ -276,8 +276,9 @@ func set_comfort(id: String, level: float) -> void:
 			stop_scale = level
 
 
-# Reduced motion: the camera holds still and the hit-edge flash drops to a quarter. Telegraph
-# motion is not read here, so it keeps its timing.
+# Reduced motion: the camera holds still and the hit-edge flash drops to a quarter; its notch
+# toward the source stays at full strength (edge_flash.gd), so the direction still reads.
+# Telegraph motion is not read here, so it keeps its timing.
 func set_reduced_motion(on: bool) -> void:
 	if camera != null:
 		camera.reduced_motion = on

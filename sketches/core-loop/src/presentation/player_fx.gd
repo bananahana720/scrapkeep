@@ -76,6 +76,10 @@ const WORDS := {
 # An on-beat hit's word is this much bigger (Andrew, Q10 "Sound only"): the hit's own word
 # when it has one, else BWAP over the sax stab.
 const ONBEAT_GROW := 1.4
+# A read word's size (read_word: DENT, ZZAP!), on the same screen-share scale; it is the foe's,
+# so the build's might never grows it.
+const READ_SIZE := 0.8
+const WORD_FONT_PATH := "res://assets/fonts/NotoSans-Bold.ttf"
 # Word size is screen height share: "size" 1.0 is WORD_SCREEN of the screen's height,
 # whatever the distance, so a word near the camera never swallows the ball.
 const WORD_SCREEN := 0.075
@@ -192,8 +196,7 @@ func setup(ctx_ref, vfx_ref = null) -> void:
 	root = Node3D.new()
 	root.name = "PlayerFxRoot"
 	ctx.root.add_child(root)
-	if ResourceLoader.exists("res://assets/fonts/NotoSans-Bold.ttf"):
-		_font = load("res://assets/fonts/NotoSans-Bold.ttf")
+	_font = word_font()
 	for i in WORD_POOL:
 		_words.append(_make_word())
 	_build_aura()
@@ -640,6 +643,14 @@ func clear() -> void:
 # --- Sound words -------------------------------------------------------------------------
 
 func _make_word() -> Dictionary:
+	var label := word_label(_font)
+	label.visible = false
+	root.add_child(label)
+	return {"node": label, "t": 1.0, "id": "", "tilt": 0.0, "size": 1.0, "at": Vector3.ZERO}
+
+
+# A pooled word's label, as every word wears it (BakeWarm stands one per read word at stage entry).
+static func word_label(font: Font = null) -> Label3D:
 	var label := Label3D.new()
 	label.name = "SoundWord"
 	label.billboard = BaseMaterial3D.BILLBOARD_DISABLED
@@ -656,11 +667,13 @@ func _make_word() -> Dictionary:
 	label.no_depth_test = true
 	label.render_priority = RENDER_PRIORITY
 	label.outline_render_priority = RENDER_PRIORITY - 1
-	if _font != null:
-		label.font = _font
-	label.visible = false
-	root.add_child(label)
-	return {"node": label, "t": 1.0, "id": "", "tilt": 0.0, "size": 1.0, "at": Vector3.ZERO}
+	if font != null:
+		label.font = font
+	return label
+
+
+static func word_font() -> Font:
+	return load(WORD_FONT_PATH) if ResourceLoader.exists(WORD_FONT_PATH) else null
 
 
 func word_text(id: String) -> String:
@@ -688,15 +701,10 @@ func word(id: String, at: Vector3, color := Color.TRANSPARENT, foe = null) -> bo
 		return false
 	if words_alive() >= WORDS_ALIVE or Density.live().band()["max"] > 0.7:
 		return false
-	var slot: Dictionary = _words[0]
-	for w in _words:
-		if w["t"] >= 1.0:
-			slot = w
-			break
+	var slot := _free_slot()
 	var label: Label3D = slot["node"]
 	var text := word_text(id)
-	var font: Font = label.font if label.font != null else ThemeDB.fallback_font
-	var width_px := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, label.font_size).x
+	var width_px := _text_px(label, text)
 	var size := float(WORDS[id]["size"]) * (1.0 + 0.8 * might)
 	# The word grows away from the ball, so a long one never covers it, and never lands on a
 	# hostile warning or on the foe it names: it takes the ball's other side, or the space just
@@ -719,39 +727,95 @@ func word(id: String, at: Vector3, color := Color.TRANSPARENT, foe = null) -> bo
 			var depth := -(cam.global_transform.affine_inverse() * placed).z
 			# A pixel past the gap: placed flush on the grown body's edge, float rounding put it on the foe one run in four.
 			spots.append([cam.project_position(Vector2(p.x, body.position.y - WORD_WARNING_GAP - tall * 0.6 - 1.0), maxf(depth, cam.near + 0.1)), right_of_ball])
-		var rects: Array[Rect2] = []
-		for s in spots:
-			rects.append(_word_rect(cam, s[0], s[1], width_px, size * grow, label.pixel_size))
-		# A spot is taken only where the word already stands inside the safe area, so the draw's pull
-		# never drags it back onto what it avoided.
-		var view := cam.get_viewport().get_visible_rect().size
-		var safe := Rect2(view * 0.5 * (Vector2.ONE - WORD_SAFE), view * WORD_SAFE)
-		for i in rects.size():
-			if not safe.encloses(rects[i]):
-				rects[i] = Rect2()
-		var pick := word_spot(rects, avoid)
+		var pick := _pick_spot(cam, spots, width_px, size * grow, label.pixel_size, avoid)
 		if pick < 0:
 			spawned["word_held"] = spawned.get("word_held", 0) + 1
 			return false
 		placed = spots[pick][0]
 		right_of_ball = spots[pick][1]
-	_last_word = _clock
 	_word_seen[id] = _clock
+	_stamp_word(slot, id, text, placed, right_of_ball, width_px, size, color if color.a > 0.0 else heat_tint(_word_color(id)))
+	return true
+
+
+# A read word (DENT, ZZAP!): an armour class answering its first hit (armour_marks.gd). A read
+# teaches, so it speaks past the sound words' budget (the gap, the repeat window, the alive cap,
+# the densest band), but it keeps their placement: screen-share size, the safe area, the warning
+# gap, render priority, and the foe's body kept clear. It stands beside the foe it names at
+# mid-body, either side, else just above everything stacked on it; false when every spot is
+# covered or the foe is out of view, so the caller asks again on the next hit.
+func read_word(text: String, foe: Node3D, color: Color) -> bool:
+	if text == "" or root == null or not root.is_inside_tree() or camera == null or camera.cam == null:
+		return false
+	var cam: Camera3D = camera.cam
+	var body := foe_rect(foe, cam)
+	if not body.has_area():
+		return false
+	var slot := _free_slot()
+	var label: Label3D = slot["node"]
+	var width_px := _text_px(label, text)
+	var tall := READ_SIZE * WORD_SCREEN * cam.get_viewport().get_visible_rect().size.y
+	var wide := width_px * label.pixel_size * tall / 0.7
+	# A pixel past the gap, as word() does: flush on the grown body's edge, rounding can touch it.
+	var gap := WORD_WARNING_GAP + 1.0
+	var mid := body.get_center()
+	var depth := maxf(-(cam.global_transform.affine_inverse() * foe.global_position).z, cam.near + 0.1)
+	var spots: Array = []
+	for s in [[Vector2(body.end.x + gap, mid.y), true], [Vector2(body.position.x - gap, mid.y), false],
+			[Vector2(mid.x - wide * 0.5, body.position.y - gap - tall * 0.6), true]]:
+		spots.append([cam.project_position(s[0], depth), s[1]])
+	var avoid := _warnings().duplicate()
+	avoid.append(body.grow(WORD_WARNING_GAP))
+	var pick := _pick_spot(cam, spots, width_px, READ_SIZE, label.pixel_size, avoid)
+	if pick < 0:
+		spawned["word_held"] = spawned.get("word_held", 0) + 1
+		return false
+	_stamp_word(slot, "read", text, spots[pick][0], spots[pick][1], width_px, READ_SIZE, color)
+	return true
+
+
+# A pooled word that is not showing, else the first of the pool.
+func _free_slot() -> Dictionary:
+	for w in _words:
+		if w["t"] >= 1.0:
+			return w
+	return _words[0]
+
+
+static func _text_px(label: Label3D, text: String) -> float:
+	var font: Font = label.font if label.font != null else ThemeDB.fallback_font
+	return font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, label.font_size).x
+
+
+# Which of `spots` ([at, runs right]) a word takes: the first whose rect stands inside the safe
+# area and covers none of `avoid`, else -1. Inside the safe area already, so the draw's pull never
+# drags it back onto what it avoided.
+static func _pick_spot(cam: Camera3D, spots: Array, width_px: float, size: float, pixel_size: float, avoid: Array[Rect2]) -> int:
+	var view := cam.get_viewport().get_visible_rect().size
+	var safe := Rect2(view * 0.5 * (Vector2.ONE - WORD_SAFE), view * WORD_SAFE)
+	var rects: Array[Rect2] = []
+	for s in spots:
+		var r := _word_rect(cam, s[0], s[1], width_px, size, pixel_size)
+		rects.append(r if safe.encloses(r) else Rect2())
+	return word_spot(rects, avoid)
+
+
+func _stamp_word(slot: Dictionary, id: String, text: String, at: Vector3, right: bool, width_px: float, size: float, tint: Color) -> void:
+	var label: Label3D = slot["node"]
+	_last_word = _clock
 	label.text = text
-	slot["away"] = 1.0 if right_of_ball else -1.0
-	slot["width_px"] = width_px
-	var tint: Color = color if color.a > 0.0 else heat_tint(_word_color(id))
 	label.modulate = tint
+	slot["away"] = 1.0 if right else -1.0
+	slot["width_px"] = width_px
 	slot["t"] = 0.0
 	slot["id"] = id
-	slot["at"] = placed
+	slot["at"] = at
 	slot["tilt"] = _rng.randf_range(-0.2, 0.2)
 	slot["size"] = size
 	slot["born"] = _clock
 	label.visible = true
 	_draw_word(slot)
 	spawned["word_" + id] = spawned.get("word_" + id, 0) + 1
-	return true
 
 
 # The hostile warnings' screen rects, grown by WORD_WARNING_GAP, read once a frame: a ram
