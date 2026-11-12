@@ -242,7 +242,8 @@ func _finish() -> void:
 	for row in sections:
 		row.pop_back()
 	var info := {"wav": out, "seconds": snappedf(_now(), 0.1), "mix_rate": AudioServer.get_mix_rate(), "driver": AudioServer.get_driver_name(),
-		"music": _game.tuning.option("music"), "breath": _game.tuning.option("breath"),
+		"music": _game.tuning.option("music"), "breath": _game.tuning.option("breath"), "set_director": _game.tuning.option("set_director"),
+		"set_plans": audio.set_director.plans.duplicate(),
 		"policy": _driver.policy, "outcome": _driver.outcome, "stage": _game.run.stage, "tail": _tail,
 		"ace_loaded": ace != null, "ace_missing": audio.ace_missing, "only": String(_settings.get("only", "")),
 		"music_skips": _skips(audio) - _skips_before if audio._music_pb != null else -1, "music_skips_before": _skips_before, "music_skip_rows": _skip_rows,
