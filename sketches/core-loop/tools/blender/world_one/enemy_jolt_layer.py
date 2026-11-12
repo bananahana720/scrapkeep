@@ -22,6 +22,7 @@ import bmesh
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 import common
+import crew
 import polish
 from common import Part
 
@@ -45,10 +46,8 @@ def g(x, y, z):
 b = Part("JoltBody")
 b.cyl("fleet_paint", 0.54, 0.62, 1.0, segs=10, loc=g(0, -0.60, 0))
 b.cyl("fleet_paint", 0.62, 0.50, 0.8, segs=10, loc=g(0, 0.3, -0.04))
-b.uv("fleet_paint", 0.30, u=10, v=6, loc=g(0, 1.02, 0.13))
-b.box("paint", (0.22, 0.20, 0.16), loc=g(0, 0.97, 0.40), color=CHAR)
+crew.insulator_head(b, g(0, 1.02, 0.13), 0.30)
 for s in (-1, 1):
-    b.cyl("paint", 0.10, 0.0, 0.28, segs=6, loc=g(s * 0.17, 1.38, 0.10), color=CHAR)
     b.box("paint", (0.07, 0.50, 0.40), loc=g(s * 0.59, 0.27, -0.03), color=PLATE)
     b.box("paint", (0.075, 0.38, 0.045), loc=g(s * 0.59, 0.48, -0.03), color=WORN)
     b.rod("paint", g(s * 0.42, 0.6, 0.16), g(s * 0.23, 0.3, 0.38), 0.08, segs=6, color=IRON)
@@ -66,6 +65,9 @@ b.cyl("paint", 0.07, 0.07, 0.9, segs=6, loc=g(*AXLE), rot=(0, math.pi / 2, 0), c
 cable = [(0.12, 1.6, -0.62), (0.18, 0.8, -0.85), (0.10, -0.2, -1.0), (0.0, -1.05, -1.25), (-0.2, -1.08, -1.7)]
 for a, c in zip(cable, cable[1:]):
     b.rod("paint", g(*a), g(*c), 0.05, segs=5, color=CHAR)
+# The old works' two marks, cast in under the Fleet's paint: the crew number and HIRED.
+crew.cast_number(b, "paint", "16", (0, -0.54, 0.52), (0, -1, 0), 0.2)
+crew.hired(b, "paint", (0, 0.58, -0.6), (0, 1, 0), 0.1)
 bmesh.ops.recalc_face_normals(b.bm, faces=b.bm.faces[:])
 body = b.to_object(parent=root)
 

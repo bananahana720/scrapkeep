@@ -25,11 +25,12 @@ import sys
 
 import bmesh
 import bpy
-from mathutils import Matrix, Vector
+from mathutils import Vector
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, ".."))
 import common
+import crew
 import polish
 from common import Part
 
@@ -121,37 +122,6 @@ def add_shell(part, src, slot, paint):
                 loop[part.col] = c
             nf.smooth = True
     src.free()
-
-
-def stencil(part, slot, text, loc, normal, height, color, depth=0.02, resolution=2):
-    """Raised stencil letters on a face whose outward normal is `normal`."""
-    curve = bpy.data.curves.new("stencil", "FONT")
-    curve.body = text
-    curve.align_x = "CENTER"
-    curve.align_y = "CENTER"
-    curve.extrude = depth / 2
-    curve.resolution_u = resolution
-    curve.size = height / 0.72
-    obj = bpy.data.objects.new("stencil", curve)
-    bpy.context.scene.collection.objects.link(obj)
-    dg = bpy.context.evaluated_depsgraph_get()
-    mesh = bpy.data.meshes.new_from_object(obj.evaluated_get(dg))
-    bpy.data.objects.remove(obj, do_unlink=True)
-    bpy.data.curves.remove(curve)
-    n = Vector(normal).normalized()
-    up = Vector((0, 0, 1)) if abs(n.z) < 0.9 else Vector((0, 1, 0))
-    x = up.cross(n).normalized()
-    y = n.cross(x)
-    m = Matrix.Translation(Vector(loc) + n * (depth / 2)) @ Matrix((x, y, n)).transposed().to_4x4()
-    tmp = bmesh.new()
-    tmp.from_mesh(mesh)
-    bpy.data.meshes.remove(mesh)
-    bmesh.ops.transform(tmp, matrix=m, verts=tmp.verts[:])
-    with part.region(bevel=0, subsurf=0, detail=1):
-        vmap = {v: part.bm.verts.new(v.co) for v in tmp.verts}
-        faces = [part.bm.faces.new([vmap[v] for v in f.verts]) for f in tmp.faces]
-        part.paint(faces, slot, color)
-    tmp.free()
 
 
 def lathe(part, slot, profile, centre, axis="y", segs=16, color=None):
@@ -247,9 +217,12 @@ for s in (-1, 1):
 # Stack collar, crew number both sides, one HIRED by the 22 (left) and one on the reel housing.
 hull.cyl("fleet_paint", 0.125, 0.125, 0.05, segs=10, loc=(-0.92, -1.35, 1.62), color="brass")
 for s in (-1, 1):
-    stencil(hull, "fleet_paint", "22", (s * 1.2, 0.3, 0.8), (s, 0, 0), 0.42, "bone", resolution=1)
-stencil(hull, "fleet_paint", "HIRED", (-1.2, 0.95, 0.8), (-1, 0, 0), 0.09, "bone", resolution=1)
-stencil(hull, "fleet_paint", "HIRED", (-0.85, AXLE.y + 0.32, AXLE.z - 0.12), (-1, 0, 0), 0.05, "bone", resolution=1)
+    crew.stencil(hull, "fleet_paint", "22", (s * 1.2, 0.3, 0.8), (s, 0, 0), 0.42, "bone",
+                 depth=0.02, resolution=1)
+crew.stencil(hull, "fleet_paint", "HIRED", (-1.2, 0.95, 0.8), (-1, 0, 0), 0.09, "bone",
+             depth=0.02, resolution=1)
+crew.stencil(hull, "fleet_paint", "HIRED", (-0.85, AXLE.y + 0.32, AXLE.z - 0.12), (-1, 0, 0), 0.05, "bone",
+             depth=0.02, resolution=1)
 # Paid-out cable from the drum's upper tangent to the fairlead's rear rollers.
 feed = Vector((0, 1.27, LINE_Z))
 d = AXLE - feed
