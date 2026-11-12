@@ -2,8 +2,10 @@
 # salvaged box sections with angle-iron corners, an I-beam lintel with rarity trim, a
 # diamond keystone with a mint field core, a gantry that hangs the trigger and element
 # glyph plates, and one rarity topper per rarity whose shape matches the section 5
-# frames (common a bar, rare a bold-rimmed diamond, relic a tall double-outlined star
-# with four bolt notches and a mint heart, evolved a taller double-outlined crown).
+# frames and src/build/tier_mark.gd (common a bar, rare a bold-rimmed diamond, relic a
+# double-outlined four-point star with bolt heads and a mint heart, evolved a double-outlined
+# crown of five points). 2026-11-12 (W1-26 follow-up): relic was a five-point star and
+# evolved a taller copy of it; both now match the pedestal gems and the ball's part feet.
 # Provenance: authored procedurally here from Blender primitives and bmesh operators;
 # no external assets. Measured tris, arch plus three plates plus one topper: common
 # 1848, rare 1828, relic 2288, evolved 2048 (target 1500 to 2500).
@@ -127,6 +129,11 @@ def star(n, outer, inner):
              (outer if k % 2 == 0 else inner) * math.cos(k * math.pi / n)) for k in range(2 * n)]
 
 
+# The evolved crown's outline (x, z about the topper centre): a band and five points.
+CROWN = [(-1.1, -0.6), (1.1, -0.6), (1.1, 0.7), (0.825, 0.05), (0.55, 0.95), (0.275, 0.05), (0.0, 1.2),
+         (-0.275, 0.05), (-0.55, 0.95), (-0.825, 0.05), (-1.1, 0.7)]
+
+
 def topper(rarity):
     t = Part("Topper_" + rarity)
     c = Vector((0, 0, TOPPER_Z))
@@ -140,20 +147,24 @@ def topper(rarity):
         diamond(t, "rarity", (0.8, 0.25, 1.0), c)
         rim = [(0.95, 0.0), (0.0, 1.18), (-0.95, 0.0), (0.0, -1.18)]
         outline_loop(t, rim, 0.18)
-    else:
-        tall = 1.55 if rarity == "relic" else 2.0
-        pts = [(x, y * tall) for x, y in star(5, 1.0, 0.45)]
+    elif rarity == "relic":
+        # A four-point star with the gauge bezel's bolts and a mint heart (src/build/tier_mark.gd).
+        tall = 1.3
+        pts = [(x, y * tall) for x, y in star(4, 1.0, 0.36)]
         t.prism("rarity", pts, 0.34, matrix=upright)
-        outline_loop(t, star(5, 1.14, 0.53), 0.07, tall)
-        outline_loop(t, star(5, 1.3, 0.62), 0.07, tall)
-        if rarity == "relic":
-            for k in range(4):
-                a = math.pi / 4 + k * math.pi / 2
-                t.bolt(c + Vector((0.75 * math.cos(a), -0.19, 0.75 * math.sin(a) * tall * 0.8)), (0, -1, 0),
+        outline_loop(t, star(4, 1.16, 0.44), 0.07, tall)
+        outline_loop(t, star(4, 1.32, 0.52), 0.07, tall)
+        for k in range(4):
+            a = math.pi / 4 + k * math.pi / 2
+            for sy in (-1, 1):
+                t.bolt(c + Vector((0.3 * math.cos(a), sy * 0.19, 0.3 * math.sin(a) * tall)), (0, sy, 0),
                        r=0.08, h=0.06)
-                t.bolt(c + Vector((0.75 * math.cos(a), 0.19, 0.75 * math.sin(a) * tall * 0.8)), (0, 1, 0),
-                       r=0.08, h=0.06)
-            t.ico("field", 0.36, 2, loc=c, scale=(1, 0.75, 1))
+        t.ico("field", 0.36, 2, loc=c, scale=(1, 0.75, 1))
+    else:
+        # Evolved: a crown, a band with five points (src/build/tier_mark.gd).
+        t.prism("rarity", CROWN, 0.34, matrix=upright)
+        outline_loop(t, [(x * 1.12, z * 1.12 + 0.03) for x, z in CROWN], 0.07)
+        outline_loop(t, [(x * 1.24, z * 1.24 + 0.06) for x, z in CROWN], 0.07)
     return t, c
 
 
