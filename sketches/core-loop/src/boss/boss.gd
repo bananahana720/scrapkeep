@@ -5,6 +5,9 @@ const Arena := preload("res://src/boss/arena.gd")
 const Requisition := preload("res://src/boss/requisition.gd")
 const Target := preload("res://src/boss/boss_target.gd")
 const Hazard := preload("res://src/boss/hazard.gd")
+# How far ahead of the hull's nose the ram still hits; the lane publishes its front this far
+# out, so the dodge watch lands the ram where the damage does.
+const CHARGE_REACH := 1.5
 const CodexEntries := preload("res://src/boss/codex_entries.gd")
 const Palette := preload("res://src/core/palette.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
@@ -928,7 +931,7 @@ func _commit_charge(ball: Vector3, cued := false) -> void:
 	h.commit_lane("charge", Hazard.Threat.Type.LANE, from, heading, half, length + half, Requisition.HULL.x * 0.5 + 1.0,
 		Requisition.HULL.y + 0.5, warn, length / Rules.CHARGE_SPEED + 0.2)
 	# Only the hull's nose hurts once the lane is live, and it starts at the ship.
-	h.lane_front = half
+	h.lane_front = half + CHARGE_REACH
 	_add_hazard(h)
 	# The hull keeps its heading at the commit: _brace_turn owns the turn onto this one.
 	ship.cue("charge_warn", h.get_instance_id())
@@ -955,10 +958,10 @@ func _run_charge(delta: float, ball: Vector3) -> void:
 	var at: Vector3 = _charge["from"] + _charge["heading"] * _charge["travelled"]
 	ship.move_to(Vector3(at.x, arena.ground(at), at.z), _charge["heading"])
 	var front: float = _charge["travelled"] + half
-	h.lane_front = front
+	h.lane_front = front + CHARGE_REACH
 	if h.contains(ball) and clock >= _grace.get(h.get_instance_id(), -1.0):
 		var along: float = h.lane_along(ball)
-		if along >= front_before - 1.0 and along <= front + 1.5:
+		if along >= front_before - 1.0 and along <= front + CHARGE_REACH:
 			_charge_hit(h, ball)
 			if not ctx.flow.in_play():
 				return

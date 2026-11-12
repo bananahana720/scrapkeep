@@ -50,7 +50,7 @@ func _boot() -> void:
 	_game.ctx.rng.seed = SEED
 	_game.player.source = Intent.Scripted.new()
 	for sig in ["event_announced", "event_started", "event_ended", "event_progress"]:
-		_game.events.connect(sig, func(a = null, b = null): _log.append([sig, a, b]))
+		_game.events.connect(sig, func(a = null, b = null, _c = null): _log.append([sig, a, b]))
 	_game.flow.press_start()
 	_game.flow.choose_class(0)
 	_game.run.set_max_hp(99999.0)

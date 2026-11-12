@@ -14,6 +14,11 @@ const T := preload("res://tests/support/t.gd")
 var _t := T.new("ram_warning_test")
 
 
+class _Bus:
+	signal player_hit(amount: float, source: String)
+	signal near_miss(kind: String, at: Vector3)
+
+
 func _lane(front: float) -> Node:
 	var h := Hazard.new()
 	h.commit_lane("charge", Threat.Type.LANE, Vector3.ZERO, Vector3(0, 0, -1), 3.0, 40.0, 4.0, 5.0, 1.0, 2.0)
@@ -38,4 +43,61 @@ func _initialize() -> void:
 	_t.check("the committed lane is the same shape with or without a front", ram.contains(ball) == plain.contains(ball) and ram.contains(Vector3(0, 0, -39.0)) and not ram.contains(Vector3(5.0, 0, -20.0)))
 	plain.free()
 	ram.free()
+	_watched.call_deferred()
+
+
+# The dodge watch reads threats in the tree, which takes them only once _initialize returns.
+func _watched() -> void:
+	_hit_then_shoved()
+	_dodged()
 	quit(_t.verdict())
+
+
+# The ram hits a little ahead of the nose and shoves the ball aside, out of the lane, before the
+# front reaches where the ball stood: that hit closes the watch, so no near miss is paid.
+func _hit_then_shoved() -> void:
+	var at := [Vector3(0.0, 0.0, -20.0)]
+	var bus := _Bus.new()
+	var watch := NearMiss.new()
+	var fired := []
+	bus.near_miss.connect(func(_k, _a): fired.append(1))
+	watch.setup(bus, func(): return at[0])
+	root.add_child(watch)
+	var ram := _lane(3.0)
+	ram.add_to_group(Threat.GROUP)
+	root.add_child(ram)
+	watch.step(1.0 / 60.0)
+	_t.check("in the ram's path: the mark is up", watch.standing_in() >= 0.0)
+	ram.lane_front = 19.0
+	bus.player_hit.emit(10.0, "charge")
+	at[0] = Vector3(8.0, 0.0, -20.0)
+	for i in 30:
+		ram.lane_front += 0.4
+		watch.step(1.0 / 60.0)
+	_t.eq("a rammed ball shoved clear gets no near miss", fired.size(), 0)
+	ram.free()
+	watch.free()
+
+
+# The same ram dodged: the ball leaves the lane before the front arrives and is never hit.
+func _dodged() -> void:
+	var at := [Vector3(0.0, 0.0, -20.0)]
+	var bus := _Bus.new()
+	var watch := NearMiss.new()
+	var fired := []
+	bus.near_miss.connect(func(_k, _a): fired.append(1))
+	watch.setup(bus, func(): return at[0])
+	root.add_child(watch)
+	var ram := _lane(3.0)
+	ram.add_to_group(Threat.GROUP)
+	root.add_child(ram)
+	watch.step(1.0 / 60.0)
+	ram.lane_front = 18.0
+	watch.step(1.0 / 60.0)
+	at[0] = Vector3(8.0, 0.0, -20.0)
+	ram.lane_front = 21.0
+	for i in 5:
+		watch.step(1.0 / 60.0)
+	_t.eq("a ram dodged just ahead of the nose pays its near miss", fired.size(), 1)
+	ram.free()
+	watch.free()
