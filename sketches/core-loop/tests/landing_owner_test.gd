@@ -67,9 +67,10 @@ func _run() -> void:
 	await _boot()
 	for kind in ["bola_thrower", "line_cutter"]:
 		var landed := await _attack(kind, 600, func(unit): return unit.phase == unit.Phase.ROAM and _flashes > 0)
-		t.check("%s lands" % kind, landed >= 1, "%d landings from one throw" % landed)
+		t.check("%s lands once" % kind, landed == 1, "%d landings from one throw" % landed)
+	# The mat lands once as its warning ends (set_progress), then once per pulse.
 	var pulses := await _attack("jolt_layer", 900, func(unit): return unit.field != null and unit.field.pulses >= 2)
-	t.check("jolt layer lands per pulse", pulses >= 2, "%d landings from two pulses" % pulses)
+	t.check("jolt layer lands per pulse", pulses == 3, "%d landings for the warning's end and two pulses (want 3)" % pulses)
 	await _mag_discs()
 	game.free()
 	quit(t.verdict())
@@ -84,6 +85,10 @@ func _check_land() -> void:
 	ring.land()
 	ring.land()
 	t.check("land at any progress", world.get_child_count() == before + 2, "two calls at 40 percent, %d landings" % (world.get_child_count() - before))
+	ring.set_progress(1.0)
+	before = world.get_child_count()
+	ring.set_progress(1.0)
+	t.check("set_progress lands once", world.get_child_count() == before, "a second live tick leaves no landing")
 	var field: Node3D = Telegraph.ring(world, FlatGround.new(), Threat.Type.INSTANT, Vector3(30.0, 0.0, 0.0), 4.0, 3.5, Palette.SAND)
 	before = world.get_child_count()
 	field.land()
@@ -134,4 +139,11 @@ func _mag_discs() -> void:
 		unit._update_flash(1.0 / 90.0)
 	var rest := disc != null and disc.albedo_color.is_equal_approx(Color.WHITE) and not disc.emission_enabled
 	t.check("mag trapper discs flash", lit and rest, "HAZARD on the strike %s, plain white after %s" % [lit, rest])
+	unit._facts_phase(unit.PHASE_RECOVER)
+	unit._atk["phase"] = unit.PHASE_WINDUP
+	unit._facts_phase(unit.PHASE_STRIKE)
+	unit.flash()
+	unit._update_flash(1.0 / 90.0)
+	var hit: bool = disc.emission != Palette.HAZARD and not unit.strike_flashing()
+	t.check("hit flash wins on the discs", hit, "a hit during the strike keeps the hit's look")
 	unit.free()
