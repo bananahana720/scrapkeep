@@ -63,8 +63,6 @@ var _crew: Array = []
 var _wave := 0
 var _wave_wait := -1.0
 var _facing := 0.0
-var _sentry_landed := false
-var _sentry: WeakRef = null
 var _also_done := false
 var _engaged_s := -1.0
 var _clock := 0.0
@@ -124,6 +122,30 @@ func lock_active() -> bool:
 # The live crew of the shut yard.
 func crew_alive() -> Array:
 	return _crew.map(func(ref: WeakRef): return ref.get_ref()).filter(func(enemy): return _alive(enemy))
+
+
+# How much of the shut yard's crew is down, 0 to 1, over every wave's members (0 while the yard
+# is open): the yard row's bar on the plate. The row said "Break the yard crew" with no count of
+# what was left (w37 film 020-022, PF-39).
+func yard_fraction() -> float:
+	if not lock_active():
+		return 0.0
+	var waves := _waves()
+	var total := 0
+	var down := 0
+	for i in waves.size():
+		var size: int = waves[i].size()
+		total += size
+		if i < _wave:
+			down += size
+		elif i == _wave:
+			down += maxi(0, size - crew_alive().size())
+	return clampf(float(down) / float(total), 0.0, 1.0) if total > 0 else 0.0
+
+
+# The living member of the shut yard's crew nearest the ball, or null: the yard row's edge marker.
+func yard_crew(ball: Vector3) -> Node3D:
+	return _nearest(crew_alive(), ball, INF) if lock_active() else null
 
 
 # What a hand that reads the tells goes for: the yard's crew while it is shut; while the clamp is
@@ -238,8 +260,6 @@ func _clear() -> void:
 	lock_left = 0.0
 	_packs.clear()
 	_crew.clear()
-	_sentry_landed = false
-	_sentry = null
 	_also_done = false
 	_engaged_s = -1.0
 	_refused_at = -INF
@@ -330,10 +350,7 @@ func _step_lock(delta: float) -> void:
 				return
 			var ball: Vector3 = ctx.player.ball_position()
 			var beacon: Vector3 = ctx.flow.beacon.global_position
-			if not ctx.player.state.grounded:
-				return
-			_land_sentry(ball, beacon)
-			if _flat(ball, beacon) <= float(lock_row().get("within_m", 0.0)):
+			if ctx.player.state.grounded and _flat(ball, beacon) <= float(lock_row().get("within_m", 0.0)):
 				_lock(ball, beacon)
 		"locked":
 			lock_left -= delta
@@ -365,37 +382,11 @@ func _lock(ball: Vector3, beacon: Vector3) -> void:
 	lock_left = float(lock.get("max_s", 60.0))
 	lock_state = "locked"
 	_build_wall(radius)
-	_retire_sentry(radius)
 	ctx.events.world_fact.emit("arena_locked", lock_centre)
 	_facing = atan2(toward.z, toward.x)
 	_wave = 0
 	_wave_wait = -1.0
 	_land_wave()
-
-
-# The yard's sentry (the lock row's "sentry"): once, the first time the ball is on the ground inside
-# its circle, one enemy lands `ahead_m` up the ball's line to the beacon and `side_m` off it. It is
-# a plain enemy, no crew and no pack, so the yard's shells are met on the way in.
-func _land_sentry(ball: Vector3, beacon: Vector3) -> void:
-	var sentry: Dictionary = lock_row().get("sentry", {})
-	if _sentry_landed or sentry.is_empty() or _flat(ball, beacon) > float(sentry.get("within_m", 0.0)) or not ctx.can_spawn():
-		return
-	_sentry_landed = true
-	var toward := Vector3(beacon.x - ball.x, 0.0, beacon.z - ball.z).normalized()
-	var spot := ball + toward * float(sentry.get("ahead_m", 0.0)) + toward.cross(Vector3.UP) * float(sentry.get("side_m", 0.0))
-	var enemy = ctx.spawner.spawn_enemy(String(sentry["kind"]), ctx.terrain.drop_point(spot.x, spot.z, 2.4))
-	if enemy is Node3D:
-		_sentry = weakref(enemy)
-
-
-# The yard shuts: a sentry still standing outside the wall packs up and goes, since the ball cannot reach
-# it until the yard opens (and a lobber left there shelled the ring for the whole lock, so a light ball
-# reached the Warden lighter still: random seed 2864 stalled there). One inside the ring stays and fights.
-func _retire_sentry(radius: float) -> void:
-	var enemy = _sentry.get_ref() if _sentry != null else null
-	_sentry = null
-	if _alive(enemy) and _flat(enemy.global_position, lock_centre) > radius:
-		enemy.queue_free()
 
 
 func _waves() -> Array:

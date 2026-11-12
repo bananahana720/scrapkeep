@@ -90,7 +90,7 @@ func advance(delta: float, ball: Vector3, velocity: Vector3) -> Array:
 				phase = ANNOUNCED
 				timer = lead
 				announced_at = clock
-				facts.append({"kind": "announced", "id": id, "seconds": lead})
+				facts.append({"kind": "announced", "id": id, "seconds": lead, "at": _at3()})
 				facts.append({"kind": "world", "fact": "cave_in_crumble" if id == "cave_in" else "impact_incoming", "at": _at3()})
 		ANNOUNCED:
 			timer -= delta

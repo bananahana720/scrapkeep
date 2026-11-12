@@ -143,7 +143,7 @@ Lead times as the systems thread read them on stage 14709f17 and checked again o
 | Crowd and pack bodies | none yet (`pack_arrived` fires as they land) | every body shows a ground ring for 1.0 s | yes |
 | The next spawn slot | private | 1.5 to 6.5 s | no: it can be skipped, and its contents are drawn when it fires |
 | Clock tier rise | `threat_rose(tier)` | stage second 45 and 90, known from stage entry | yes |
-| Offers | `event_announced(id, seconds_until)` | 4.0 s | yes |
+| Offers | `event_announced(id, seconds_until, at)` | 4.0 s | yes |
 | Squall, flood | `event_announced` | 6.0 s | yes |
 | Park set pieces | `event_announced` | 5 to 10 s; rows marked `on_bar` already wait for the band's next bar | yes |
 | Warden pulse | `vent_charging(at, seconds)` | 2.0 s, every 6.0 s | yes |

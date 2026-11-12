@@ -26,6 +26,12 @@ const UiFonts := preload("res://src/ui/ui_fonts.gd")
 # PARK.md:265 sets the range at 240 m (sight_ok), never the comps note's 60 m (memo 2, row 29a).
 # It is a pointer, not a map: no panel, no list, and no marker once the door is open.
 #
+# An event on its way to one place (a park event's site, a terrain change, an offer's ring)
+# points the same way through its lead, in the warning colour with the event glyph, so the
+# warning says where as well as what (PF-16: "Dome Lightning incoming" named the event and not
+# its place). The world publishes the place with the announcement; the marker goes when the
+# event starts, ends or its lead runs out. The weather and the flood have no one place and get none.
+#
 # In a fight whose row names a thing (Brindle's arena, the Spillway's two mounted Wardens) the
 # markers point at that thing (boss.gd and warden_reactor.gd plate_targets: the crane magnets, the
 # vent caps, the open cockpit, the scooter, the water sheet's foot, the relic to latch). Nothing
@@ -74,6 +80,11 @@ const AVOID_GROW := 16.0
 const TAG_FONT := UiTokens.BODY
 const TAG_PAD := Vector2(8.0, 4.0)
 const TAG_GAP := 6.0
+# How far a tag's chip may slide along off the ball, as a share of its own width: its stem still
+# meets the brackets' column.
+const TAG_SLIDE := 0.45
+# The gap a slid chip keeps from what it slid off, so rounding never leaves it touching.
+const TAG_CLEAR := 2.0
 # The rows of a mounted Warden's fight whose thing the driver names (warden_reactor.gd plate_targets).
 const MOUNT_ROWS := ["ride_sheet", "line_fight"]
 
@@ -84,13 +95,19 @@ var objective_icon := ""
 # Whether the Warden fight is engaged, set by the HUD each frame; activity markers hide while it is.
 var engaged := false
 # Whether the yard lock holds the ball, set by the HUD each frame; every stage marker points past
-# its wall then, so none shows until it opens.
+# its wall then, so only the nearest yard crew member gets a marker until it opens.
 var yard_locked := false
 var gate_points: Array[Vector3] = []
+# What a mark's tag must stay off, in screen space, set by the HUD each frame: the ball and the
+# readouts that ride on it. A part behind the ball is still marked (its brackets tell the truth),
+# but its name over the ball read as if the ball were the target (w37 film 081-082, PF-35).
+var keep_clear: Array[Rect2] = []
 # Pocket doors the player has had in view inside POCKET_RANGE (pocket_doors' key to true). A door
 # is discovered once and stays so for the run; an undiscovered door never gets a marker.
 var discovered := {}
 var _shown: Array[Dictionary] = []
+# Events announced with a place and not started: {event_id: {at, left}}, left in seconds.
+var _incoming := {}
 
 
 func setup(game_ref) -> void:
@@ -107,7 +124,36 @@ func setup(game_ref) -> void:
 		if state != "gates":
 			gate_points.clear())
 	# Door keys repeat across runs, so a new run forgets what the last one found.
-	game.events.run_started.connect(func(_class_id: String): discovered.clear())
+	game.events.run_started.connect(func(_class_id: String):
+		discovered.clear()
+		_incoming.clear())
+	game.events.event_announced.connect(note_incoming)
+	# A retry or a new stage ends what was announced without an end for each event.
+	game.events.stage_entered.connect(func(_stage: int, _retry: bool): _incoming.clear())
+	game.events.event_started.connect(func(id: String): _incoming.erase(id))
+	game.events.event_ended.connect(func(id: String, _outcome: String): _incoming.erase(id))
+
+
+# An event announced `seconds` ahead of landing at `at`; one with no lead or no place is not marked.
+func note_incoming(event_id: String, seconds: float, at: Vector3) -> void:
+	if seconds > 0.0 and at.is_finite():
+		_incoming[event_id] = {"at": at, "left": seconds}
+	else:
+		_incoming.erase(event_id)
+
+
+func step_incoming(delta: float) -> void:
+	for id in _incoming.keys():
+		_incoming[id]["left"] -= delta
+		if _incoming[id]["left"] <= 0.0:
+			_incoming.erase(id)
+
+
+func incoming_targets() -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	for id in _incoming:
+		out.append({"at": _incoming[id]["at"], "kind": "event_announced", "icon": "obj_event"})
+	return out
 
 
 # What the markers point at now: {at, kind, icon}, kind naming the event_kinds row and
@@ -118,6 +164,11 @@ func targets() -> Array[Dictionary]:
 	match flow.state_name():
 		"stage", "beacon":
 			if yard_locked:
+				# The yard's wall holds the ball: every stage marker points past it, so only the crew
+				# member nearest is marked, off screen behind the ball (PF-39).
+				var member = _yard_crew()
+				if member != null:
+					out.append({"at": member.global_position, "kind": "pack_arrived", "icon": Objectives.glyph("break_yard_crew")})
 				return out
 			var marks := _mount_marks()
 			out.append_array(marks)
@@ -128,6 +179,7 @@ func targets() -> Array[Dictionary]:
 				out.append({"at": flow.warden.global_position, "kind": "warden_engaged", "icon": _glyph("obj_warden")})
 			elif game.beacon != null:
 				out.append({"at": game.beacon.global_position, "kind": "beacon_charge_changed", "state": game.beacon.state_id(), "icon": _glyph("obj_beacon")})
+			out.append_array(incoming_targets())
 			var crew = _clamp_crew()
 			if crew != null:
 				out.append({"at": crew.global_position, "kind": "pack_arrived", "icon": Objectives.glyph(CLAMP_ROW)})
@@ -291,6 +343,13 @@ func _clamp_crew() -> Node3D:
 	return gate.clamp_crew(game.player.shown_position())
 
 
+func _yard_crew() -> Node3D:
+	var gate = game.flow.get("gate")
+	if gate == null or not gate.has_method("yard_crew") or game.player == null:
+		return null
+	return gate.yard_crew(game.player.shown_position())
+
+
 # The play view markers stay inside: clear of the top, toast and bottom bands.
 static func view_rect(size: Vector2) -> Rect2:
 	var top := ScreenRegions.rect("toasts", size).end.y + BAND_CLEARANCE
@@ -342,15 +401,18 @@ func markers(size: Vector2) -> Array[Dictionary]:
 			continue
 		var tag: String = group["tag"]
 		var under := false
-		if tag != "" and not _free(mark_rect(box, tag), room, taken):
-			under = _free(mark_rect(box, tag, true), room, taken)
-			tag = tag if under else ""
+		var shift := 0.0
+		if tag != "":
+			var place := tag_place(box, tag, room, taken, keep_clear)
+			under = place.get("under", false)
+			shift = place.get("shift", 0.0)
+			tag = tag if not place.is_empty() else ""
 		if tag == "" and not _free(mark_rect(box, ""), room, taken):
 			if group["seen"]:
 				away.append_array(group["targets"])
 			continue
-		taken.append(mark_rect(box, tag, under))
-		out.append({"box": box, "color": group["color"], "tag": tag, "under": under})
+		taken.append(mark_rect(box, tag, under, shift))
+		out.append({"box": box, "color": group["color"], "tag": tag, "under": under, "shift": shift})
 	var view := view_rect(size)
 	var ball: Vector3 = game.player.shown_position()
 	for target in away:
@@ -428,6 +490,33 @@ func drawn_words() -> PackedStringArray:
 	return out
 
 
+# Where a mark's tag goes: {under, shift}, or {} for no tag. Over the brackets, else under them;
+# on either side the chip slides along by the least that keeps it off everything in `clear` (the
+# ball and its readouts; the brackets themselves may stand over the ball), up to TAG_SLIDE of its
+# own width, so its stem still meets the brackets' column.
+static func tag_place(box: Rect2, tag: String, room: Rect2, taken: Array[Rect2], clear: Array[Rect2]) -> Dictionary:
+	for under in [false, true]:
+		var chip := tag_rect(box, tag, under)
+		var shifts: Array[float] = [0.0]
+		for other in clear:
+			shifts.append(other.position.x - chip.end.x - TAG_CLEAR)
+			shifts.append(other.end.x - chip.position.x + TAG_CLEAR)
+		shifts.sort_custom(func(a: float, b: float): return absf(a) < absf(b))
+		for shift in shifts:
+			if absf(shift) > chip.size.x * TAG_SLIDE:
+				break
+			if tag_free(box, tag, under, room, taken, clear, shift):
+				return {"under": under, "shift": shift}
+	return {}
+
+
+# Whether a mark with its tag over (or under) its brackets, slid along by `shift`, has room, and
+# the tag's chip stays off everything in `clear`.
+static func tag_free(box: Rect2, tag: String, under: bool, room: Rect2, taken: Array[Rect2], clear: Array[Rect2], shift := 0.0) -> bool:
+	var chip := tag_rect(box, tag, under, shift)
+	return _free(mark_rect(box, tag, under, shift), room, taken) and not clear.any(func(other: Rect2): return other.intersects(chip))
+
+
 # Whether a mark may take this screen: inside the room and over no mark already placed.
 static func _free(rect: Rect2, room: Rect2, taken: Array[Rect2]) -> bool:
 	return room.encloses(rect) and not taken.any(func(other: Rect2): return other.intersects(rect))
@@ -446,17 +535,17 @@ static func _slid(box: Rect2, room: Rect2) -> Rect2:
 
 # The screen a mark takes: its brackets at their widest, and its tag's chip over them (under
 # them when the room over them is taken).
-static func mark_rect(box: Rect2, tag: String, under := false) -> Rect2:
+static func mark_rect(box: Rect2, tag: String, under := false, shift := 0.0) -> Rect2:
 	var out := box.grow(maxf(box.size.x, box.size.y) * 0.5 * MARK_PULSE + MARK_STROKE)
-	return out.merge(tag_rect(box, tag, under)) if tag != "" else out
+	return out.merge(tag_rect(box, tag, under, shift)) if tag != "" else out
 
 
-# The tag's chip: centred over the brackets, or under them.
-static func tag_rect(box: Rect2, tag: String, under := false) -> Rect2:
+# The tag's chip: centred over the brackets, or under them, slid along by `shift`.
+static func tag_rect(box: Rect2, tag: String, under := false, shift := 0.0) -> Rect2:
 	var chip := Vector2(UiDraw.width(tag, TAG_FONT), UiFonts.bold().get_height(TAG_FONT)) + TAG_PAD * 2.0
 	var off := maxf(box.size.x, box.size.y) * 0.5 * MARK_PULSE + MARK_STROKE + TAG_GAP
 	var top := box.end.y + off if under else box.position.y - off - chip.y
-	return Rect2(Vector2(box.get_center().x - chip.x * 0.5, top), chip)
+	return Rect2(Vector2(box.get_center().x - chip.x * 0.5 + shift, top), chip)
 
 
 static func marker_color(target: Dictionary) -> Color:
@@ -480,9 +569,10 @@ static func _on_edge(view: Rect2, centre: Vector2, dir: Vector2) -> Vector2:
 	return centre + dir * reach
 
 
-func _process(_delta: float) -> void:
+func _process(delta: float) -> void:
 	if game == null:
 		return
+	step_incoming(delta)
 	note_pockets(get_viewport_rect().size)
 	var now := markers(get_viewport_rect().size)
 	# A mark breathes, so it is drawn every frame while one is up.
@@ -528,8 +618,10 @@ func _draw_mark(marker: Dictionary) -> void:
 	if tag == "":
 		return
 	var under: bool = marker.get("under", false)
-	var chip := tag_rect(rest, tag, under)
-	var stem := Vector2(chip.get_center().x, chip.position.y if under else chip.end.y)
+	var chip := tag_rect(rest, tag, under, float(marker.get("shift", 0.0)))
+	# The stem leaves the chip as near the brackets' middle as the chip reaches.
+	var stem_x := clampf(rest.get_center().x, chip.position.x + 8.0, chip.end.x - 8.0)
+	var stem := Vector2(stem_x, chip.position.y if under else chip.end.y)
 	var point := -1.0 if under else 1.0
 	draw_colored_polygon(PackedVector2Array([stem + Vector2(-6.0, -point), stem + Vector2(6.0, -point), stem + Vector2(0.0, (TAG_GAP + 2.0) * point)]), Color(Palette.CHARCOAL, 0.92))
 	draw_rect(chip, Color(Palette.CHARCOAL, 0.92))

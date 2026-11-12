@@ -87,7 +87,7 @@ const SPECIALS := {
 # blasts across the body, then one ring), and the wink word lands one beat after it.
 const BOSSES := {
 	"brindle": {"family": "fleet", "tint": Palette.BRASS, "reach": 8.0,
-		"phase": {"phase_ring": 64, "steam_puff": 10, "brass_spark": 16, "plate_chunks": 12}, "phase_word": "KA-CHUNK",
+		"phase": {"phase_ring": 64, "steam_puff": 10, "brass_spark": 16, "plate_chunks": 12}, "phase_word": "",
 		"eject_word": "EJECT"},
 	"waking": {"family": "ancient", "tint": Palette.ANCIENT, "reach": 5.0,
 		"phase": {"phase_ring": 64, "arc_fizz": 14, "shell_shards": 14, "seam_motes": 12}, "phase_word": "KRAKK",
@@ -748,7 +748,7 @@ func _on_boss_phase(phase: int, phase_name := "") -> void:
 
 
 # A boss changes phase: a ring out to its reach, its family's chunk of armour or shell,
-# and the phase word, big.
+# and the phase word, big, for a boss that has one.
 func boss_phase(boss: String, at: Vector3) -> void:
 	var row: Dictionary = BOSSES.get(boss, {})
 	if row.is_empty():
@@ -756,7 +756,9 @@ func boss_phase(boss: String, at: Vector3) -> void:
 	_boss_at = at
 	var lift: Vector3 = Vector3.UP * (float(row["reach"]) * 0.4)
 	fire(row["phase"], at + lift, row["tint"], "P1")
-	word(String(row["phase_word"]), at + lift + Vector3.UP * (WORD_HEIGHT + 2.0), row["tint"], true, 1.1, 1.6)
+	# Brindle's turn is read from his plates and the glance, not a word over him (flourish_rows.gd brindle_phase_2).
+	if String(row["phase_word"]) != "":
+		word(String(row["phase_word"]), at + lift + Vector3.UP * (WORD_HEIGHT + 2.0), row["tint"], true, 1.1, 1.6)
 	_note("boss_phase", boss, at)
 
 

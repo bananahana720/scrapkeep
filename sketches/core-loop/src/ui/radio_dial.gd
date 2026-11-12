@@ -21,7 +21,13 @@ const Keycap := preload("res://src/ui/keycap.gd")
 # the InputMap so a rebinding shows. A toast cannot draw a keycap; the dial can.
 
 const CHIP := Vector2(320.0, 46.0)
-const SWOLLEN := Vector2(380.0, 98.0)
+# Swollen, the plate holds the station's name and its blurb on up to BLURB_LINES lines, wrapped
+# at a word: a blurb stopped mid-word read as broken (w37 film 012, "played however th"). The
+# plate still ends inside the top band (screen_regions.gd) at 900 px high.
+const SWOLLEN := Vector2(380.0, 110.0)
+const BLURB_LINES := 2
+const NAME_Y := 60.0
+const BLURB_Y := 80.0
 const MARGIN := 18.0
 const SWELL := 2.6
 const STAMP := 0.5
@@ -58,6 +64,12 @@ func teach() -> void:
 
 func teaching() -> bool:
 	return _teach > 0.0
+
+
+# How many lines `blurb` takes on the swollen plate, wrapped at a word.
+static func blurb_lines(blurb: String) -> int:
+	var font := UiFonts.bold()
+	return roundi(font.get_multiline_string_size(blurb, HORIZONTAL_ALIGNMENT_LEFT, SWOLLEN.x - 24.0, UiTokens.CAPTION).y / font.get_height(UiTokens.CAPTION))
 
 
 func swollen() -> bool:
@@ -132,9 +144,9 @@ func _draw() -> void:
 		draw_rect(Rect2(bx, 40.0 - h, 5.0, h), Color(color, 0.35 + 0.65 * _bars[i]) if not off else Color(Palette.SLATE, 0.4))
 	if swollen() and size.y > 70.0:
 		var a := clampf(_swell / 0.4, 0.0, 1.0)
-		draw_string(font, Vector2(12.0, 64.0), String(_read.get("name", "")), HORIZONTAL_ALIGNMENT_LEFT, size.x - 24.0, UiTokens.BODY, Color(color, a))
+		draw_string(font, Vector2(12.0, NAME_Y), String(_read.get("name", "")), HORIZONTAL_ALIGNMENT_LEFT, size.x - 24.0, UiTokens.BODY, Color(color, a))
 		var blurb := String(RadioTakes.station(String(_read.get("station", ""))).get("blurb", ""))
-		draw_string(font, Vector2(12.0, 84.0), blurb, HORIZONTAL_ALIGNMENT_LEFT, size.x - 24.0, UiTokens.CAPTION, Color(Palette.SAND, 0.75 * a))
+		draw_multiline_string(font, Vector2(12.0, BLURB_Y), blurb, HORIZONTAL_ALIGNMENT_LEFT, size.x - 24.0, UiTokens.CAPTION, BLURB_LINES, Color(Palette.SAND, 0.75 * a))
 	if teaching():
 		_draw_keys(color)
 	if _stamp > 0.0:

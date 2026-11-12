@@ -106,6 +106,8 @@ func _run() -> void:
 					drawn.append(String(row[key]))
 	for id in Panels.ids():
 		drawn.append(Panels.pop_text(id))
+	# A row with no word ("" , Brindle's phase since PF-26) draws nothing.
+	drawn = drawn.filter(func(w: String): return w != "")
 	var missing := drawn.filter(func(w: String): return Array(w.to_upper().replace(" ", "").split("")).any(func(c): return c not in MachineFx.WARM_GLYPHS))
 	t.check("every machine word's glyphs are in the warm label", not drawn.is_empty() and missing.is_empty(), str(missing))
 	t.check("the materials the views drew are held", BakeWarm._kept.size() == 3 and BakeWarm._kept.all(func(m): return is_instance_valid(m)))

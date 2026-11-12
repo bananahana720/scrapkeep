@@ -27,9 +27,7 @@ const QUIET_M := 60.0
 const QUIET_SHARE_MIN := 0.25
 
 # {"<stage>": {"value": measured share, "why": "..."}}
-const OWED := {
-	"park_flume": {"value": 0.18, "why": "the flume reach (trestle_drones on 373 m of grind and the trestle collapse face over it, 122 line nodes each) and the wasteway chute (its chasers and flash flood, 88) lie along the riding lines; the landing breather (breather_rows.gd) holds the timer packs, not these authored fights"},
-}
+const OWED := {}
 
 var t := T.new("park_breath_test")
 
@@ -73,6 +71,22 @@ func _stage(map_id: String) -> void:
 	var points := line_points(g)
 	if not t.check("%s has fight sites and line nodes" % map_id, sites.size() > 0 and points.size() > 0, "%d sites, %d line nodes" % [sites.size(), points.size()]):
 		return
+	# A lightning row is its strike disc, not the landform it sits on, and a fighting activity (a camp, an altar, a
+	# relay) is a fight site of its own (park_map.gd fight_sites).
+	var by_id := {}
+	for s in sites:
+		by_id[String(s["id"])] = s
+	for row in map.park["event_rows"]:
+		if row["kind"] == "lightning":
+			var bolt: Dictionary = by_id.get(String(row["id"]), {})
+			t.check("%s: lightning %s is a fight site the size of its strike" % [map_id, row["id"]],
+				bolt.get("ring", Vector2.INF) == Vector2(0.0, float(row["effect"]["strike_m"])), "%s" % [bolt])
+	for row in map.park["event_rows"]:
+		if row["kind"] in ParkMap.NOT_FIGHTS:
+			t.check("%s: %s, which never hurts, is not a fight site" % [map_id, row["id"]], not by_id.has(String(row["id"])), "%s" % [by_id.keys()])
+	for row in map.park.get("activity_rows", []):
+		if not row.get("pack", []).is_empty():
+			t.check("%s: activity %s, which fights, is a fight site" % [map_id, row["id"]], by_id.has(String(row["id"])), "%s" % [by_id.keys()])
 	var share := quiet_share(sites, points)
 	var kinds := {}
 	for s in sites:

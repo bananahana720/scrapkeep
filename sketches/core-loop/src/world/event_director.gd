@@ -233,7 +233,7 @@ func _advance_offer(offer: Dictionary, delta: float, ball: Vector3, velocity: Ve
 			if offer["timer"] <= 0.0:
 				offer["phase"] = ANNOUNCED
 				offer["timer"] = OFFER_LEAD
-				facts.append({"kind": "announced", "id": offer["id"], "seconds": OFFER_LEAD})
+				facts.append({"kind": "announced", "id": offer["id"], "seconds": OFFER_LEAD, "at": model.ring})
 		ANNOUNCED:
 			offer["timer"] -= delta
 			if offer["timer"] <= 0.0:
