@@ -600,8 +600,8 @@ func on_beat_hit(enemy: Node3D, kind: String) -> void:
 func _on_beat_word(enemy, _kind: String, at_clock: float) -> void:
 	spawned["on_beat"] = spawned.get("on_beat", 0) + 1
 	for w in _words:
-		if w["t"] < 1.0 and float(w.get("born", -1.0)) >= at_clock:
-			# The hit's own word grows, unless the bigger word would reach a warning.
+		if w["t"] < 1.0 and float(w.get("born", -1.0)) >= at_clock and w["id"] != "read":
+			# The hit's own word grows (a read word is the foe's, never the beat's), unless the bigger word would reach a warning.
 			var grown: Array[Rect2] = []
 			if camera != null and camera.cam != null:
 				grown.append(_word_rect(camera.cam, w["at"], float(w["away"]) > 0.0, float(w["width_px"]),
@@ -687,10 +687,11 @@ func word_text(id: String) -> String:
 	return String(own.get(id, WORDS[id]["text"]))
 
 
+# The sound words showing; a read word (read_word) stands outside their budget.
 func words_alive() -> int:
 	var n := 0
 	for w in _words:
-		if w["t"] < 1.0:
+		if w["t"] < 1.0 and w["id"] != "read":
 			n += 1
 	return n
 
