@@ -2,7 +2,7 @@ extends RefCounted
 
 const Library := preload("res://src/world/pockets/pocket_library.gd")
 const Graph := preload("res://src/world/park/park_graph.gd")
-const Park := preload("res://src/core/park_defs.gd")
+const Schema := preload("res://src/world/park/park_schema.gd")
 const Trade := preload("res://src/world/trade_pockets.gd")
 const Placement := preload("res://src/world/park/park_placement.gd")
 const Modifier := preload("res://src/world/events/stage_modifier.gd")
@@ -203,9 +203,9 @@ static func _common_pay(entry: Dictionary) -> bool:
 	return not Placement._within(Placement._pay(pay).rarities, Placement.PAY_FAR)
 
 # modifier is the stage's SI3 row (stage_modifier.gd), {} for none; {} draws exactly as before.
-static func draw(prepared: Dictionary, map, stage: int, rng: RandomNumberGenerator, trade := {}, anchors: Array = [], modifier := {}) -> Dictionary:
+static func draw(prepared: Dictionary, map, stage: int, rng: RandomNumberGenerator, trade := {}, anchors: Array = [], modifier := {}, stages = null) -> Dictionary:
 	var result := {"sites": [], "metrics": {"initial_credits": CREDITS, "remaining_credits": CREDITS, "failed_placements": 0, "refunded_credits": 0, "chance_opportunities": 0, "chance_hits": 0, "anchors": prepared.anchors.size()}}
-	if stage < 1 or stage > Park.COUNT or map.park.map != Park.of(stage).map:
+	if not Schema.is_stage_map(String(map.park.map), stage, stages):
 		return result
 	var slots := Modifier.slots(modifier, stage, Modifier.authored(map))
 	if slots == 0:
@@ -298,8 +298,8 @@ static func draw(prepared: Dictionary, map, stage: int, rng: RandomNumberGenerat
 	result.sites.sort_custom(func(a, b): return cost(a.interior) > cost(b.interior) or (cost(a.interior) == cost(b.interior) and a.interior.id < b.interior.id))
 	return result
 
-static func stage_sites(graph, map, run, layout_seed: int, trade := {}, prepared := {}, modifier := {}) -> Array:
-	if graph == null or map == null or map.park.is_empty() or run.stage < 1 or run.stage > Park.COUNT or map.park.map != Park.of(run.stage).map:
+static func stage_sites(graph, map, run, layout_seed: int, trade := {}, prepared := {}, modifier := {}, stages = null) -> Array:
+	if graph == null or map == null or map.park.is_empty() or not Schema.is_stage_map(String(map.park.map), run.stage, stages):
 		return []
 	var key := str(run.stage)
 	if run.pocket_draw_cache.has(key):
@@ -309,7 +309,7 @@ static func stage_sites(graph, map, run, layout_seed: int, trade := {}, prepared
 	var layout: Dictionary = prepared
 	if layout.is_empty():
 		layout = prepare(graph, map)
-	var result := draw(layout, map, run.stage, rng, trade, [], modifier)
+	var result := draw(layout, map, run.stage, rng, trade, [], modifier, stages)
 	run.pocket_draw_cache[key] = {"sites": result.sites.duplicate(true)}
 	return result.sites
 
@@ -342,15 +342,16 @@ static func from_doc(doc: Dictionary) -> Dictionary:
 static func _integer(value) -> bool:
 	return (typeof(value) == TYPE_INT or typeof(value) == TYPE_FLOAT) and is_finite(value) and value == floorf(value)
 
-static func validate_doc(doc, entrance: int) -> String:
+static func validate_doc(doc, entrance: int, stages = null) -> String:
 	if not doc is Dictionary:
 		return "invalid pocket draw cache"
+	var table = Schema.stage_table(stages)
 	var library := {}
 	for entry in Library.rows():
 		if entry.kind != "trade":
 			library[entry.id] = entry
 	for key in doc:
-		if not key is String or not key.is_valid_int() or key != str(int(key)) or int(key) < 1 or int(key) > mini(entrance, Park.COUNT):
+		if not key is String or not key.is_valid_int() or key != str(int(key)) or int(key) < 1 or int(key) > mini(entrance, int(table.COUNT)):
 			return "invalid pocket draw stage"
 		var row = doc[key]
 		if not row is Dictionary or not row.get("sites") is Array or row.sites.size() > Modifier.max_slots(int(key), 3):
@@ -361,7 +362,7 @@ static func validate_doc(doc, entrance: int) -> String:
 			if not spec is Dictionary or not spec.get("interior") is String or not library.has(spec.interior) or seen.has(spec.interior):
 				return "invalid pocket draw interior"
 			var entry: Dictionary = library[spec.interior]
-			if entry.get("assigned", {}).get("map", "") == Park.of(int(key)).map:
+			if entry.get("assigned", {}).get("map", "") == table.of(int(key)).map:
 				return "assigned pocket draw interior"
 			seen[spec.interior] = true
 			spent += cost(entry)

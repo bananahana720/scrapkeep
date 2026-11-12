@@ -12,6 +12,7 @@ const ClassDef := preload("res://src/core/class_def.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const Director := preload("res://src/world/director.gd")
 const Rogue := preload("res://src/combat/rogue.gd")
+const Park := preload("res://src/core/park_defs.gd")
 
 const SCHEMA := "scrapkeep-park/1"
 
@@ -123,11 +124,10 @@ const MOUNTINGS := {
 	"swarm": ["headframe", "sinkhole"],
 	"mind": ["under_island", "spires"],
 }
-# The stage each park map replaces (section 6); the fixture borrows stage 1's row.
-const MAP_STAGE := {
-	"park_dam": 1, "park_flume": 2, "park_pit": 3, "park_sinkhole": 4, "park_islands": 5, "park_crown": 6,
-	"park_test": 1,
-}
+# The stage each park map replaces (section 6), read from the park stage table so a new stage row
+# needs no second entry here. The fixture borrows stage 1's row.
+const FIXTURE_STAGES := {"park_test": 1}
+static var MAP_STAGE: Dictionary = _map_stage(Park)
 
 const DROP_IN := "drop_in"
 const LANDMARK := "landmark"
@@ -202,6 +202,26 @@ const ROUTE_FIELDS := {"id": "s", "from": "s", "to": "s", "via": "a"}
 
 static var _registry_ids: Dictionary = {}
 static var _registry_read := false
+
+
+# The stage table a caller names (ctx.stages), the park table when it names none.
+static func stage_table(stages = null):
+	return stages if stages != null else Park
+
+
+# Map id to stage, one entry per row of the stage table, then the fixtures.
+static func _map_stage(stages) -> Dictionary:
+	var out := {}
+	for stage in range(1, int(stages.COUNT) + 1):
+		out[String(stages.of(stage).map)] = stage
+	out.merge(FIXTURE_STAGES)
+	return out
+
+
+# True when the table's row for this stage is this map; a stage outside the table is no stage.
+static func is_stage_map(map_id: String, stage: int, stages = null) -> bool:
+	var table = stage_table(stages)
+	return stage >= 1 and stage <= int(table.COUNT) and String(table.of(stage).map) == map_id
 
 
 # The stage row facts the park cross-checks: stage, world, Warden kind, and the world's pack ids.

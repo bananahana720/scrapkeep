@@ -35,7 +35,7 @@ const PATTERNS := {
 	"map_id": "\"(park_dam|park_flume|park_pit|park_sinkhole|park_islands|park_crown|spillway|gorge)\"",
 	"legacy_map_cmp": "(==|!=)\\s*\"(reach|dig|dig_deep|highdraft|highdraft_crown)\"|\"(reach|dig|dig_deep|highdraft|highdraft_crown)\"\\s*(==|!=|in\\b)|\\[\\s*\"(reach|dig|dig_deep|highdraft|highdraft_crown)\"\\s*,",
 }
-# Counted on stage/alpha-w39 de79a4e6, 12 Nov 2026: 109 sites in 32 files.
+# Counted on stage/alpha-w39 de79a4e6, 12 Nov 2026: 109 sites in 32 files. SG-04 took park_schema.gd out (103 in 31).
 const PINS := {
 	"res://src/build/parts.gd": 1,
 	"res://src/combat/kest_kit.gd": 1,
@@ -63,7 +63,6 @@ const PINS := {
 	"res://src/world/events/natural.gd": 2,
 	"res://src/world/interactables.gd": 1,
 	"res://src/world/lock_rows.gd": 2,
-	"res://src/world/park/park_schema.gd": 6,
 	"res://src/world/park/park_terrain.gd": 1,
 	"res://src/world/pockets/pocket_draw.gd": 2,
 	"res://src/world/pylon_bite.gd": 1,
