@@ -375,14 +375,13 @@ func advance(delta: float, alive_count: int, ball := Vector2.ZERO, velocity := V
 
 
 # One timer tick's pack: an authored arrival, or a pack or a single at spawn_spot. alive is every enemy up or falling
-# due this tick. False only when the room is full, so a banked tick waits for room; a tick with no spot is spent, as
-# the timer always spent one.
+# due this tick. False only when the room cannot take the pack (full, or short of an authored pack's whole size), so a
+# banked tick waits for room; a tick with no spot is spent, as the timer always spent one.
 func _timer_pack(alive: int, ball: Vector2, velocity: Vector2, forward: Vector2) -> bool:
 	if alive + arrivals.size() >= cap():
 		return false
 	if not authored.is_empty():
-		_authored_arrival(cap() - (alive + arrivals.size()), ball, velocity, forward)
-		return true
+		return _authored_arrival(cap() - (alive + arrivals.size()), ball, velocity, forward)
 	var at := spawn_spot(ball, velocity, forward)
 	if at == Vector2.INF:
 		return true
@@ -575,25 +574,27 @@ func rim_spot(spot: Vector2, ball: Vector2) -> Vector2:
 	return spot
 
 
-# An authored arrival: the pack due next waits until the cap has room for all of it.
-func _authored_arrival(room: int, ball: Vector2, velocity: Vector2, forward: Vector2) -> void:
+# An authored arrival: the pack due next waits until the cap has room for all of it. False while it waits (no room);
+# true once the tick is used, placed or with no spot found.
+func _authored_arrival(room: int, ball: Vector2, velocity: Vector2, forward: Vector2) -> bool:
 	if _next_pack.is_empty():
 		_next_pack = _draw_authored()
 	var kinds: Array = _next_pack["kinds"]
 	if room < kinds.size():
-		return
+		return false
 	var at := spawn_spot(ball, velocity, forward)
 	if at == Vector2.INF:
-		return
+		return true
 	var queued := _place_pack(at, kinds, ball, _next_pack == elite, room)
 	if _park_map != null and queued == 0:
-		return
+		return true
 	packs.append({"id": _next_pack["id"], "kinds": kinds.duplicate(), "tests": ""})
 	_last_was_elite = _next_pack == elite
 	if not _last_was_elite:
 		_last_pack_id = _next_pack["id"]
 	_next_pack = {}
 	_arrivals_made += 1
+	return true
 
 
 func _draw_authored() -> Dictionary:
