@@ -823,7 +823,8 @@ register(
 
 # ---- Line skills and ultimates (12): ab_<pilot>_line (slot 3) and ab_<pilot>_ult (Q) -------
 # SKILL-BAR.md sections 3 and 4. Same rules as the rest of the bar: rounded-square plate, bone
-# glyph, one accent region in the pilot's own colour, strokes 6 and 4.
+# glyph, one accent region in the pilot's own colour, strokes 6 and 4. A mirrored or repeated
+# accent shape (two jaws, two chevrons) counts as one region, as ab_tarn_special already does.
 
 
 def g_ab_sable_line():
@@ -895,9 +896,9 @@ def g_ab_kest_line():
         path("M10 13 H33 V24", stroke=BONE, width=DETAIL),
         path("M27 19 L33 25 L39 19", stroke=BONE, width=DETAIL),
         ring(33, 41, 9, stroke=AMBER, width=PRIMARY),
-        line(46, 31, 51, 26, stroke=BONE, width=DETAIL),
-        line(48, 42, 54, 42, stroke=BONE, width=DETAIL),
-        line(45, 52, 49, 55, stroke=BONE, width=DETAIL),
+        line(45, 31, 52, 24, stroke=BONE, width=DETAIL),
+        line(47, 41, 55, 41, stroke=BONE, width=DETAIL),
+        line(44, 51, 50, 56, stroke=BONE, width=DETAIL),
     ]
 
 
@@ -928,8 +929,8 @@ register(
 def g_ab_tarn_line():
     return [
         path("M47 12 V36 L33 50 L19 36 V27", stroke=IRON_OXIDE, width=PRIMARY),
-        line(10, 14, 32, 14, stroke=BONE, width=DETAIL),
-        line(10, 22, 26, 22, stroke=BONE, width=DETAIL),
+        line(10, 12, 32, 12, stroke=BONE, width=DETAIL),
+        line(10, 20, 26, 20, stroke=BONE, width=DETAIL),
     ]
 
 
@@ -942,8 +943,8 @@ register(
 
 def g_ab_tarn_ult():
     return [
-        path("M10 13 L22 17 L28 28 L20 34", stroke=IRON_OXIDE, width=PRIMARY),
-        path("M54 13 L42 17 L36 28 L44 34", stroke=IRON_OXIDE, width=PRIMARY),
+        path("M10 13 L21 17 L26 28 L18 34", stroke=IRON_OXIDE, width=PRIMARY),
+        path("M54 13 L43 17 L38 28 L46 34", stroke=IRON_OXIDE, width=PRIMARY),
         line(32, 12, 32, 40, stroke=BONE, width=DETAIL),
         path("M25 33 L32 40 L39 33", stroke=BONE, width=DETAIL),
         path("M17 44 L32 54 L47 44", stroke=BONE, width=DETAIL),
@@ -961,7 +962,7 @@ def g_ab_tally_line():
     return [
         line(10, 10, 25, 25, stroke=BONE, width=DETAIL),
         path("M25 18 L26 26 L18 25", stroke=BONE, width=DETAIL),
-        path("M34 30 L20 52 H50 Z", stroke=LEDGER, width=PRIMARY, dash="3 7"),
+        path("M34 30 L20 52 H50 Z", stroke=LEDGER, width=PRIMARY, dash="2 10"),
         rect(29, 25, 10, 9, fill=BONE, rx=2),
         rect(15, 47, 10, 9, fill=BONE, rx=2),
         rect(45, 47, 10, 9, fill=BONE, rx=2),
@@ -993,8 +994,8 @@ register(
 
 def g_ab_cannon_line():
     return [
-        line(10, 20, 54, 20, stroke=BONE, width=DETAIL, dash="4 5"),
-        line(10, 44, 54, 44, stroke=BONE, width=DETAIL, dash="4 5"),
+        line(10, 20, 54, 20, stroke=BONE, width=DETAIL, dash="3 8"),
+        line(10, 44, 54, 44, stroke=BONE, width=DETAIL, dash="3 8"),
         line(12, 26, 12, 38, stroke=BONE, width=DETAIL),
         line(14, 32, 44, 32, stroke=ANCIENT, width=PRIMARY),
         chevron(44, 32, 9, 18, stroke=ANCIENT),
@@ -1013,7 +1014,7 @@ def g_ab_cannon_ult():
         path("M12 42 Q24 6 44 34", stroke=BONE, width=DETAIL),
         path("M37 32 L44 35 L46 27", stroke=BONE, width=DETAIL),
         ring(44, 44, 8, stroke=ANCIENT, width=PRIMARY),
-        line(10, 54, 54, 54, stroke=BONE, width=DETAIL, dash="4 5"),
+        line(10, 54, 54, 54, stroke=BONE, width=DETAIL, dash="3 8"),
     ]
 
 
