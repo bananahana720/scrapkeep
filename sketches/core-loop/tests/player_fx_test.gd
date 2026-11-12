@@ -105,6 +105,20 @@ func _run() -> void:
 	t.check("planted: past a big word's repeat window, BWAP still waits", not fx.word("beat", ball + Vector3(3, 2, 0)))
 	fx._word_seen["beat"] = fx._clock - PlayerFx.BEAT_REPEAT_S - 0.1
 	t.check("past its own window BWAP stamps again", fx.word("beat", ball + Vector3(3, 2, 0)))
+	# A hit's own word grows on the beat (on_beat_hit): the growth's warning check builds a typed rect list, which once
+	# raised a script error and left the word its plain size.
+	for w in fx._words:
+		w["t"] = 1.0
+	fx._last_word = -1.0e9
+	fx._word_seen.clear()
+	t.check("KLANG stamps for the beat to grow", fx.word("smash", ball + Vector3(3, 2, 0)))
+	var plain: float = float(fx._words_by_id("smash")["size"])
+	fx._on_beat_word(null, "smash", fx._clock)
+	t.near("and the beat grows it", float(fx._words_by_id("smash")["size"]), plain * PlayerFx.ONBEAT_GROW)
+	for w in fx._words:
+		w["t"] = 1.0
+	fx._last_word = -1.0e9
+	fx._word_seen.clear()
 	var own := Rect2(600, 300, 120, 50)
 	var other := Rect2(400, 300, 120, 50)
 	var warn_own: Array[Rect2] = [Rect2(650, 320, 40, 40)]
