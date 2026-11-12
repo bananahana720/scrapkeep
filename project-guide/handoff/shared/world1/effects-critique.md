@@ -21,6 +21,7 @@ Below those sit colour overloads (amber, mint and ancient green each carry sever
 | Code on the stage, read by four read-only inventory agents (one per bucket), then the key claims re-read by hand | what draws, when, in which colour, and with which sound | how it looks |
 | Cloud stills on the stage head: `tools/fx_capture.gd` at 0.1, 0.35, 0.6 and 0.85 of life, and at 0.35 with Reduce flashes | size, placement, presence over time, and the `drawn_px` and `contrast` numbers relative to each other on one machine | final colour, glow and frame cost (llvmpipe, Compatibility renderer) |
 | The wave 37 first-timer film (cand/w37 ca6daa8b, cloud) | clutter and layout as a stranger met it | anything fixed since (PF-26 hit words, PR 796) |
+| The GPU first-timer film of cand/w40 6b9cb42e on the 4080 at 1080p (the visual critique's PC job) | look and placement in play | sound, and the effect strips over life |
 | PC strips, reel and Brindle stills, queued on the board thread for the same head | look, glow, frame time | see "Owed" |
 
 One inventory claim was wrong and is not a finding: a near miss sends no hit-stop on purpose, because the ball's motion keeps its momentum (`juice.gd:42-48`, `event_kinds.gd:425`). Its unused `stop_ms` row (`event_kinds.gd:258`) is dead data.
@@ -63,6 +64,8 @@ Direction. The 2010 comic finish is ink: give hit sparks a dark ink core under t
 
 Phase two and three now carry one caption each (`flourish_rows.gd:151-168`), a joke in Brindle's voice. The PF-26 fix rightly removed FURNACE LIT, ARMOUR OFF and KA-CHUNK, and named the plates, ring and melt as the carriers of the turn. Those carriers say "something changed", not "what to do now": the slag rings and the charge lane appear for the first time as live attacks. The turn into the scooter chase (`boss.gd:1103`, phase 4) has no flourish row, only an EJECT word and a chunk burst (`machine_fx.gd:743-745`), though the goal flips from hitting the hull to catching the scooter. The TONE-BIBLE asks for a one-second comic panel at each phase turn.
 
+The PC film confirms it ([stills](effects-critique/pc-brindle-w40.jpg); GPU first-timer film of cand/w40 6b9cb42e, RTX 4080, 1080p, pictures 120, 125 and 144). At phase two the screen shows BWAP, a target tag and the caption, and nothing of the slag rings to come. At the chase turn the camera looks into the ship's dark hull: the goal line says "Ram the Admiral's scooter", and the scooter is not on screen.
+
 Direction, by ruling cx's carrier order (shape and motion before words). In the 2.0 s phase beat, while no attack can commit (`src/combat/fight_phases.gd:28`, `boss.gd:331`, `:722`), the next phase's signature mark draws once as a harmless preview: the slag ring as a bone dashed outline where it will stand, the charge lane as a dashed lane from the ship's nose. The chase gets its own beat: a short glance that follows the scooter's arc and a target tag on it. Shape lives in `threat_grammar.gd`'s harmless style, which exists (`threat_grammar.gd:34`, `:208-213`, `:345`), so no new look is invented; any motion added to the preview (a fill or a sweep) would be a new mark and goes through LEGIBILITY review.
 
 ### E4. The rout's blasts go off at the empty ship (clarity and delight, minor)
@@ -91,7 +94,7 @@ Damage taken never shakes the camera (ruled), so the edge flash is the hit's onl
 
 ### E8. Words come from six stampers with six rules (clarity, minor; scaling)
 
-Player sound words (`player_fx.gd`) keep a screen-share size, a warning gap of 24 px and a repeat budget. Armour words DENT and ZZAP! (`armour_marks.gd:67-140`) each stamp once per armour class per run, so they are rare, but they have none of the placement rules: a fixed 0.86 m world size, no clamp, no warning avoidance, no render priority, stacked with the stagger word, the interrupted star and the armour icon inside about one metre above the enemy. KRNK and EJECT (`machine_fx.gd`), the panel pop (`panel_fx.gd`), the flourish words (`flourish_player.gd`) and the damage numbers each place themselves, and two of them test "dense" differently (`player_fx.gd:689` max > 0.7, `machine_fx.gd:351` value >= 0.7). PF-26 was this problem seen from the player's chair. Direction: one module owns placement, size, priority, warning avoidance and the word budget; the others ask it for a slot (deep module, one small call).
+Player sound words (`player_fx.gd`) keep a screen-share size, a warning gap of 24 px and a repeat budget. Armour words DENT and ZZAP! (`armour_marks.gd:67-140`) each stamp once per armour class per run, so they are rare, but they have none of the placement rules: a fixed 0.86 m world size, no clamp, no warning avoidance, no render priority, stacked with the stagger word, the interrupted star and the armour icon inside about one metre above the enemy. KRNK and EJECT (`machine_fx.gd`), the panel pop (`panel_fx.gd`), the flourish words (`flourish_player.gd`) and the damage numbers each place themselves, and two of them test "dense" differently (`player_fx.gd:689` max > 0.7, `machine_fx.gd:351` value >= 0.7). PF-26 was this problem seen from the player's chair, and the PC film still shows it at the rout: the flourish's FWOOMP stamps across the player's WHUMP (picture 147, in [the stills](effects-critique/pc-brindle-w40.jpg)). Direction: one module owns placement, size, priority, warning avoidance and the word budget; the others ask it for a slot (deep module, one small call).
 
 ### E9. The rout is named four times in ten seconds (words, minor)
 
@@ -133,5 +136,4 @@ One pick is real taste: what a kill looks like (E1). It goes to Andrew as one pa
 ## Owed
 
 - PC strips over life, the flash peaks, the sight reel at 60 fps, Brindle's beats and phase stills, and the stress frame times on an idle 4080 for the same head (queued on the board thread; outputs on branch `scratch/fx-critique-w38`). The E1 and E2 numbers above are cloud and relative; the PC strip replaces them when it lands.
-- The GPU first-timer film of cand/w40 (asked for by the visual assets critique) for E5 and E10 in motion.
 - A live human film only Andrew can give; the sitting watch list carries the feel questions.
