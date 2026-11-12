@@ -16,6 +16,9 @@ const SLATE := Color("5d6b78")
 # information) survives steady fire. A white flash at 1.5 drew all four plates near white
 # under the ball's bolts (W1-48, PC film 0124).
 const HIT_GLOW := 0.7
+# A piece with no plating tint (a vent cap is charcoal) keeps the white pop; its own colour
+# would not show.
+const HIT_POP := 1.5
 
 var boss
 var role := "hull"
@@ -41,6 +44,10 @@ var plating: float:
 
 var _tint_materials: Array = []
 var _flash := 0.0
+# The glow the piece wears between hits (an open vent cap's hazard glow); a hit lifts over
+# it and hands it back, so the first hit never switches a weak point dark.
+var _rest_glow := Color.BLACK
+var _rest_energy := 0.0
 var _struck_seen := false
 var _last_full := true
 var _last_part := ""
@@ -201,13 +208,32 @@ func telegraph() -> Node3D:
 	return null
 
 
+# The glow between hits; 0 energy is none. Shown at once unless a hit is lit.
+func set_rest_glow(color: Color, energy: float) -> void:
+	_rest_glow = color
+	_rest_energy = energy
+	if _flash <= 0.0:
+		_show_rest()
+
+
+func _show_rest() -> void:
+	for mat in _tint_materials:
+		var m := mat as StandardMaterial3D
+		m.emission_enabled = _rest_energy > 0.0
+		m.emission = _rest_glow
+		m.emission_energy_multiplier = _rest_energy
+
+
 func _process(delta: float) -> void:
 	if _flash <= 0.0:
 		return
 	_flash -= delta
-	var lit := _flash > 0.0
+	if _flash <= 0.0:
+		_show_rest()
+		return
+	var tinted := tint_state != ""
 	for mat in _tint_materials:
 		var m := mat as StandardMaterial3D
-		m.emission_enabled = lit
-		m.emission = m.albedo_color
-		m.emission_energy_multiplier = FlashGuard.spike(0.0, HIT_GLOW)
+		m.emission_enabled = true
+		m.emission = m.albedo_color if tinted else Color.WHITE
+		m.emission_energy_multiplier = FlashGuard.spike(0.0, HIT_GLOW if tinted else HIT_POP)

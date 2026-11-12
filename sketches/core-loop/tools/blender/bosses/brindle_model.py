@@ -235,8 +235,8 @@ def armour(parent):
             for dz in (-.29, .29):
                 rod(p, (face + side * .095, 3.4, tag_z + dz), (face + side * .125, 3.4, tag_z + dz), .04,
                     "charcoal", JOINT, 4)
-            # Scrapes to bare steel where the ball strikes most, low on the panel: lighter than
-            # either tint, never the warning red.
+            # Scrapes to bare steel where the ball strikes most, low on the panel: a mid grey
+            # that shows on slate and on amber, never the warning red.
             rng = random.Random("brindle:scuffs%d" % k)
             for y, dz, width, height in ((1.95, -1.7, 1.1, .16), (2.2, .6, 1.4, .12), (3.1, -.2, .7, .1)):
                 dz += rng.uniform(-.3, .3)

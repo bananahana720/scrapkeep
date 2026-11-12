@@ -3,6 +3,8 @@ extends SceneTree
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const Harness := preload("res://tests/doubles/boss_harness.gd")
+const FlashGuard := preload("res://src/presentation/flash_guard.gd")
+const Palette := preload("res://src/core/palette.gd")
 
 # Brindle's armour plates (W1-48, visual-assets-audit.md finding 7). Two pins:
 #
@@ -11,6 +13,8 @@ const Harness := preload("res://tests/doubles/boss_harness.gd")
 #    blank slab of slate or amber.
 # 2. A hit lifts the plates in their own tint. The old flash drew every plate near white
 #    under steady fire (PC film 0124), so slate and amber, the plating read, looked the same.
+# 3. A vent cap has no tint, so its hit stays a white pop, and an open cap's hazard glow
+#    comes back after the hit (it used to go dark on the first hit).
 #
 # Evidence limit: materials and vertex colours are read through the nodes, not pixels. The
 # look itself is judged from stills (the PR) and a PC still under fire.
@@ -82,10 +86,33 @@ func _run() -> void:
 		var lit: Color = mat.albedo_color + mat.emission * mat.emission_energy_multiplier
 		var hue_kept := mat.emission.is_equal_approx(mat.albedo_color)
 		var reads := (lit.b > lit.r) if state == "slate" else (lit.r > lit.b * 1.5)
-		_report("a hit keeps the %s read" % state, mat.emission_enabled and hue_kept and mat.emission_energy_multiplier <= 1.0 and reads,
+		_report("a hit keeps the %s read" % state, mat.emission_enabled and hue_kept and mat.emission_energy_multiplier > 0.0
+			and mat.emission_energy_multiplier <= 1.0 and reads,
 			"albedo %s, emission %s x %.2f, lit %s" % [mat.albedo_color.to_html(false), mat.emission.to_html(false),
 				mat.emission_energy_multiplier, lit.to_html(false)])
 		for _i in 20:
 			await process_frame
+	# Reduce flashes keeps a smaller lift in the same hue.
+	FlashGuard.on = true
+	hull.set_tint("slate")
+	hull.flash()
+	hull._process(0.01)
+	var calm := (plates[0] as MeshInstance3D).get_surface_override_material(0) as StandardMaterial3D
+	_report("reduce flashes keeps a hit in the tint", calm.emission_enabled and calm.emission.is_equal_approx(calm.albedo_color)
+		and calm.emission_energy_multiplier > 0.0 and calm.emission_energy_multiplier < 0.7, "energy %.2f" % calm.emission_energy_multiplier)
+	FlashGuard.on = false
+	hull._process(1.0)
+	var cap = ship.caps[0]
+	ship.open_caps(true)
+	var cap_mat := cap._tint_materials[0] as StandardMaterial3D
+	cap.flash()
+	cap._process(0.01)
+	var popped := cap_mat.emission_enabled and cap_mat.emission == Color.WHITE and cap_mat.emission_energy_multiplier >= 1.0
+	cap._process(1.0)
+	var back := cap_mat.emission_enabled and cap_mat.emission == Palette.HAZARD and is_equal_approx(cap_mat.emission_energy_multiplier, 1.2)
+	_report("a cap pops white and an open cap keeps its glow", popped and back,
+		"popped %s, after %s x %.2f on %s" % [popped, cap_mat.emission.to_html(false), cap_mat.emission_energy_multiplier, cap_mat.emission_enabled])
+	ship.open_caps(false)
+	_report("a shut cap goes dark", not cap_mat.emission_enabled, "emission %s" % cap_mat.emission_enabled)
 	print("brindle_plates_read_test: %s" % ("PASS" if _failures == 0 else "FAIL (%d)" % _failures))
 	quit(0 if _failures == 0 else 1)
