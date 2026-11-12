@@ -29,8 +29,10 @@ const UiFonts := preload("res://src/ui/ui_fonts.gd")
 # An event on its way to one place (a park event's site, a terrain change, an offer's ring)
 # points the same way through its lead, in the warning colour with the event glyph, so the
 # warning says where as well as what (PF-16: "Dome Lightning incoming" named the event and not
-# its place). The world publishes the place with the announcement; the marker goes when the
-# event starts, ends or its lead runs out. The weather and the flood have no one place and get none.
+# its place). Once the place is in view it wears brackets in the same colour instead, with no tag:
+# the warning line names it, the brackets say where (W1-04). The world publishes the place with the
+# announcement; the mark goes when the event starts, ends or its lead runs out. The weather and the
+# flood have no one place and get none.
 #
 # In a fight whose row names a thing (Brindle's arena, the Spillway's two mounted Wardens) the
 # markers point at that thing (boss.gd and warden_reactor.gd plate_targets: the crane magnets, the
@@ -152,7 +154,7 @@ func step_incoming(delta: float) -> void:
 func incoming_targets() -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
 	for id in _incoming:
-		out.append({"at": _incoming[id]["at"], "kind": "event_announced", "icon": "obj_event"})
+		out.append({"at": _incoming[id]["at"], "kind": "event_announced", "icon": "obj_event", "mark": true})
 	return out
 
 
