@@ -68,6 +68,10 @@ func _run() -> void:
 	game.flow.press_start()
 	await _frames(4)
 	var cards: Array = screens.class_cards()
+	# The first unlocked card opens (PF-40); the baselines below are the cards at rest.
+	root.gui_release_focus()
+	for i in 40:
+		await process_frame
 	_t.eq("UI1-2 six cards", cards.size(), 6)
 	_t.eq("UI1-2 the footer is the Enter cap and start", screens._footer.text(), "Enter start")
 	_t.check("UI1-2 the footer shows", screens._footer.visible)
