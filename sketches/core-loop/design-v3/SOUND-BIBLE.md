@@ -63,9 +63,9 @@ Andrew, 12 November 2026: "I want it to feel like there is a backend dj that mix
 
 | Move | When | What you hear |
 | --- | --- | --- |
-| Answer | The last bar of each 8-bar phrase, when nothing else owns the melody | The recorded lead steps back to about a third, and June plays one bar from her phrase book in the room's colour or mood: lazy and low in a lull, climbing in a build, the hook an octave up at the peak, a run up the ladder when hot, a brass call on Overtime, a fall that winks (a bell after it) when hanging on |
+| Answer | The last bar of each 8-bar phrase, counted from when the band starts (the director's own count, so it can sit off the record's phrase after a re-entry), when nothing else owns the melody; taken back if a fight section, warning, caller or quote arrives after it is booked | The recorded lead steps back to about a third, and June plays one bar from her phrase book in the room's colour or mood: lazy and low in a lull, climbing in a build, the hook an octave up at the peak, a run up the ladder when hot, a brass call on Overtime, a fall that winks (a bell after it) when hanging on |
 | Home | The first bar of a release | A cadence home to D |
-| Bass swap | The bar before a peak or an announced set piece | The bass steps out for one bar and slams back on the downbeat |
+| Bass swap | The bar before a peak or an announced set piece; once per climb and once per announcement | The bass steps out for one bar and slams back on the downbeat |
 | Breath | Every third phrase spent in one lull or build | The drums step out for the turnaround bar |
 | Hold | Anything else | Nothing changes |
 

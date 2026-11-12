@@ -2548,8 +2548,6 @@ func _park_event_row(event_id: String) -> Dictionary:
 
 
 func _on_event_announced(event_id: String, seconds: float, _at: Vector3) -> void:
-	if seconds > 0.0:
-		_set_incoming_at = clock + seconds
 	var state := _park_event_state(event_id)
 	var row := _park_event_row(event_id)
 	if row.is_empty():
@@ -2572,6 +2570,8 @@ func _on_event_announced(event_id: String, seconds: float, _at: Vector3) -> void
 		var fact: Dictionary = _park_director()._park_fact(state, "announced")
 		landing_s = float(fact.landing_s)
 		lead = roundi((landing_s - float(fact.time_s)) * Harmony.RATE)
+	# The set director's set piece: one with a row, landing where its cue lands.
+	_set_incoming_at = clock + float(lead) / Harmony.RATE
 	_park_cues[event_id] = {"row": row, "options": options, "due": engine.clock + lead,
 		"landing_s": landing_s, "booked": true, "transport": _park_transport_snapshot.duplicate()}
 	if landing_s >= 0.0 and not _park_transport_snapshot.is_empty():
@@ -2726,6 +2726,7 @@ func mix_state() -> String:
 func _on_stage_entered(stage: int, retry: bool) -> void:
 	_stage_now = stage
 	_set_overtime = false
+	_set_incoming_at = -1.0
 	_champions.clear()
 	_champion_euro.clear()
 	_champion_hyped = false
@@ -4740,6 +4741,9 @@ var set_director := SetDirector.new()
 var _set_bar_at := -1
 var _set_overtime := false
 var _set_incoming_at := -1.0
+var _set_answer := ""
+var _set_answer_at := -1
+const SET_ANSWER_YIELDS := ["open", "drop", "break"]
 
 
 func set_director_on() -> bool:
@@ -4749,25 +4753,55 @@ func set_director_on() -> bool:
 
 func _tend_set() -> void:
 	if not ace_playing() or not ace.mode in ["level", "warden", "piece"] or ace.section == "" or not set_director_on():
+		_drop_set_answer()
 		if _set_bar_at >= 0:
 			_set_bar_at = -1
 			set_director.reset()
 		return
+	if _set_answer != "" and _set_answer_spoiled():
+		_drop_set_answer()
+		ace.trim_at(maxi(ace.clock, _set_answer_at - grid_unit(4)), {}, grid_unit(4))
 	var at: int = ace.next_bar()
 	if at == _set_bar_at or at - ace.clock > ace.grid_bar / 2:
 		return
 	_set_bar_at = at
+	_set_answer = ""
 	var plan := set_director.read(set_room(at))
 	var ramp := grid_unit(4)
 	if not plan.trims.is_empty():
-		ace.trim_at(at, plan.trims, ramp)
-		ace.trim_at(at + ace.grid_bar, {}, ramp)
+		ace.trim_bar(at, plan.trims, ace.grid_bar, ramp)
 	if plan.answer != "":
-		var id: String = SfxBank.SET_ANSWER + plan.answer
-		engine.schedule_stinger_at(id, at, PRIORITY_DB[1], false, ramp)
-		cue_log.append(["set_answer", id, "grid", at, 1.0])
+		_set_answer = SfxBank.SET_ANSWER + plan.answer
+		_set_answer_at = at
+		engine.schedule_stinger_at(_set_answer, at, PRIORITY_DB[1], false, ramp)
+		cue_log.append(["set_answer", _set_answer, "grid", at, 1.0])
 	if plan.move != "hold":
 		cue_log.append(["set_move", plan.move, plan.mood, at, 1.0])
+
+
+# June's booked answer gives way when the bar it was booked for turns into a fight section,
+# a warning, a caller or a pilot quote after it was booked, through to the end of its bar.
+func _set_answer_spoiled() -> bool:
+	if ace.clock >= _set_answer_at + ace.grid_bar:
+		_set_answer = ""
+		return false
+	var next := String(ace.pending.get("section", ""))
+	if ace.mode == "piece" or ace.section in SET_ANSWER_YIELDS or next in SET_ANSWER_YIELDS:
+		return true
+	return clock < _focus_until or _warden_charging or _set_busy()
+
+
+func _drop_set_answer() -> void:
+	if _set_answer != "":
+		engine.cancel_stinger(_set_answer)
+		cue_log.append(["set_answer_dropped", _set_answer, "grid", ace.clock, 1.0])
+		_set_answer = ""
+
+
+# Another melodic cue owns the bar: a caller still talking, or a pilot quote inside two bars.
+func _set_busy() -> bool:
+	var quoted := float(_gates.get("pilot_quote", -1000.0)) - pilot_quote_gap()
+	return clock < float(_gates.get("call_in", -1000.0)) or clock - quoted < 2.0 * float(ace.grid_bar) / Harmony.RATE
 
 
 # The room as the director reads it for the bar at transport sample at.
@@ -4779,14 +4813,16 @@ func set_room(at: int) -> Dictionary:
 	room["pressure"] = _pressure
 	room["heat"] = _redline_band
 	room["overtime"] = _set_overtime
+	# A flat pack (a miniboss, Brindle or a moment tune plays one "main" section) is a directed piece.
+	if ace.section == "main":
+		room["fight"] = "piece"
 	match ace.mode:
 		"piece":
 			room["fight"] = "piece"
 		"warden":
 			room["fight"] = ace.section if ace.section in ["open", "drop"] else ace.warden_state
 	room["warning"] = clock < _focus_until or _warden_charging
-	var quoted := float(_gates.get("pilot_quote", -1000.0)) - pilot_quote_gap()
-	room["busy"] = _calling != "" or clock - quoted < 2.0 * float(ace.grid_bar) / Harmony.RATE
+	room["busy"] = _set_busy()
 	if _set_incoming_at > clock:
 		var bar_s := float(ace.grid_bar) / Harmony.RATE
 		var lands_s := _set_incoming_at - clock - float(at - ace.clock) / Harmony.RATE

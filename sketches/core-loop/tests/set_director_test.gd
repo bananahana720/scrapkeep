@@ -34,6 +34,7 @@ func _run_all() -> void:
 	_band_trims()
 	t.eq("the switch is off by default", Tuning.new().option(Tuning.SET_DIRECTOR_KEY), "off")
 	await _in_game()
+	_trims_on_joins()
 	quit(t.verdict())
 
 
@@ -100,6 +101,16 @@ func _swap_and_breath() -> void:
 	var swap := d.read({"pressure": 0.56})
 	t.eq("rising toward the peak, the bass steps out", [swap.move, swap.trims], ["bass_swap", {"bass": 0.0}])
 	t.eq("then the peak slams it back", d.read({"pressure": 0.7}).trims, {})
+	var c := SetDirector.new()
+	c.read({"pressure": 0.35})
+	c.read({"pressure": 0.45})
+	var climb := [0.53, 0.55, 0.57, 0.59, 0.6, 0.61].map(func(p): return c.read({"pressure": p}).move)
+	t.eq("a long climb swaps the bass once", climb.count("bass_swap"), 1)
+	c.read({"pressure": 0.45})
+	t.eq("falling back re-arms the swap", c.read({"pressure": 0.56}).move, "bass_swap")
+	var l := SetDirector.new()
+	var landing := [1, 1, 1].map(func(n): return l.read({"pressure": 0.1, "incoming_bars": n}).move)
+	t.eq("one swap per announcement", landing.count("bass_swap"), 1)
 	var e := SetDirector.new()
 	t.eq("a set piece one bar out swaps the bass", e.read({"pressure": 0.1, "incoming_bars": 1}).move, "bass_swap")
 	t.eq("not inside a fight", SetDirector.new().read({"fight": "closed", "incoming_bars": 1}).move, "hold")
@@ -155,6 +166,37 @@ func _band_trims() -> void:
 	t.eq("stopping the band clears its trims", ace.trims, {})
 
 
+# A trim or its lift that fires inside a section change levels the voices by the section they
+# belong to: a begun join's incoming section, and a join not yet begun by its own.
+func _trims_on_joins() -> void:
+	var ace := AceSequencer.new()
+	if not t.check("the stage's band loads", ace.ready(), ace.missing):
+		return
+	ace.mode = "level"
+	ace.section = "travel"
+	var bass := AceSequencer.Voice.new()
+	bass.stem = "bass"
+	ace.voices = [bass]
+	ace.pending = {"section": "pivot", "begun": true, "voices": [bass], "serial": 1}
+	ace._run({"type": "trim", "trims": {"bass": 0.0}, "frames": 10})
+	t.check("a cut on the pivot's entry leaves its bass up", bass.target > 0.0, str(bass.target))
+	var opened := AceSequencer.Voice.new()
+	opened.stem = "bass"
+	ace.pending = {"section": "build", "begun": false, "voices": [opened], "serial": 2}
+	ace._run({"type": "trim", "trims": {"bass": 0.0}, "frames": 10})
+	t.eq("a voice opened for a coming build takes the cut", opened.target, 0.0)
+	ace._run({"type": "trim", "trims": {}, "frames": 10})
+	t.check("and comes back with the lift", opened.target > 0.0, str(opened.target))
+	var drums := AceSequencer.Voice.new()
+	drums.stem = "drums"
+	drums.target = 0.25
+	drums.step = 0.001
+	ace.pending = {}
+	ace.voices = [drums]
+	ace._run({"type": "trim", "trims": {"bass": 0.0}, "frames": 10})
+	t.eq("a trim leaves an untouched stem's ramp alone", [drums.target, drums.step], [0.25, 0.001])
+
+
 # Through the real game on the stage's recorded band (the stub tone in the cloud): off, the
 # director books nothing; on, every plan lands on the band's bar line, June's answers sound on
 # the stinger lane at the bar, and the lead's trim is booked and lifted a bar later.
@@ -185,6 +227,17 @@ func _in_game() -> void:
 			t.eq("an answer starts on the band's bar line", posmod(int(e[3]) - audio.ace.origin, audio.ace.grid_bar), 0)
 			t.check("an answer is booked ahead of its bar", int(e[3]) > from)
 		t.eq("every plan is one bar apart", _bar_steps(audio.set_director.plans), [1])
+		audio._gates["call_in"] = audio.clock + 1.0
+		t.check("a caller talking keeps June out", audio._set_busy())
+		audio._gates["call_in"] = audio.clock - 0.1
+		t.check("a caller who finished does not", not audio._set_busy())
+		audio._set_answer = "set_answer_build_0"
+		audio._set_answer_at = audio.ace.next_bar()
+		audio._focus_until = audio.clock + 1.0
+		audio._tend_set()
+		t.eq("a warning after the booking takes June's answer back", audio._set_answer, "")
+		t.check("and logs it", _set_log(audio).any(func(e): return e[0] == "set_answer_dropped"))
+		audio._focus_until = audio.clock
 		game.ctx.tuning.set_option(Tuning.SET_DIRECTOR_KEY, "off")
 		_bars(audio, 1)
 		t.eq("switched off again, the director rests", audio.set_director.bar, -1)

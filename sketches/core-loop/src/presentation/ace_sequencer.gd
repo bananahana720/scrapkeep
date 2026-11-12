@@ -362,6 +362,21 @@ func trim_at(at: int, next: Dictionary, frames: int) -> void:
 	_add({"at": maxi(at, clock), "type": "trim", "trims": next.duplicate(), "frames": maxi(frames, 1)})
 
 
+# One bar of trims: the cut is full on bar line at, the stems are back on the next, each ramp
+# ending on its edge so the downbeat sounds at its own level.
+func trim_bar(at: int, next: Dictionary, bar: int, ramp: int) -> void:
+	trim_at(at - ramp, next, ramp)
+	trim_at(at + bar - ramp, {}, ramp)
+
+
+# Only the stems a trim changes move; a fall or breath ramp in flight on another stem keeps its pace.
+func _trim_voices(list: Array, name: String, stems: Array, frames: int) -> void:
+	var gains := _profile(name)
+	for v: Voice in list:
+		if v.stem in stems and gains.has(v.stem):
+			_ramp_to(v, _gain_of(gains[v.stem], v.stem, name), frames)
+
+
 func trim_of(stem: String, at := "") -> float:
 	var name := section if at == "" else at
 	if mode == "piece" or name in PROTECTED or name in LEAD_WHOLE:
@@ -1094,12 +1109,19 @@ func _run(action: Dictionary) -> void:
 		"follow":
 			_follow()
 		"trim":
+			var stems: Array = trims.keys()
 			trims = action.trims
-			if section != "":
-				var gains := _profile(section)
-				for v: Voice in voices:
-					if gains.has(v.stem):
-						_ramp_to(v, _gain_of(gains[v.stem], v.stem), int(action.frames))
+			for stem in trims:
+				if not stem in stems:
+					stems.append(stem)
+			# Inside a begun join the live voices already belong to the incoming section, and
+			# voices opened for a join not yet begun are levelled by their own section's rules.
+			var begun := bool(pending.get("begun", false))
+			var live := String(pending["section"]) if begun else section
+			if live != "":
+				_trim_voices(voices, live, stems, int(action.frames))
+			if not pending.is_empty() and not begun:
+				_trim_voices(pending["voices"], String(pending["section"]), stems, int(action.frames))
 		"stop":
 			stop(int(action["ramp"]))
 

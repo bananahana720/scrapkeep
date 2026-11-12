@@ -102,6 +102,8 @@ var _same_mood_phrases := 0
 var _turns := {}
 var _last_answer := ""
 var _breath_owed := false
+var _swap_armed := true
+var _landing_swapped := false
 # Every plan, for the recorder and the tests: [bar, mood, move, answer].
 var plans: Array = []
 
@@ -117,6 +119,8 @@ func reset() -> void:
 	_turns = {}
 	_last_answer = ""
 	_breath_owed = false
+	_swap_armed = true
+	_landing_swapped = false
 	plans.clear()
 
 
@@ -169,7 +173,16 @@ func read(room: Dictionary) -> Dictionary:
 	var incoming := int(room.get("incoming_bars", 0))
 	# The bass swap: the bar before the room peaks (or a set piece lands) the bass steps out,
 	# and the next bar slams it back. Never inside a fight section, which has its own form.
-	if fight == "" and mood != "peak" and ((mood == "build" and _rising and e >= PEAK_UP - PEAK_NEAR) or incoming == 1):
+	# One swap per climb, re-armed when the room falls back or leaves build; one per announcement.
+	if mood != "build" or e < PEAK_UP - PEAK_NEAR:
+		_swap_armed = true
+	var climb := _swap_armed and mood == "build" and _rising and e >= PEAK_UP - PEAK_NEAR
+	var landing := incoming == 1 and not _landing_swapped
+	if incoming != 1:
+		_landing_swapped = false
+	if fight == "" and mood != "peak" and (climb or landing):
+		_swap_armed = false
+		_landing_swapped = incoming == 1
 		plan.move = "bass_swap"
 		plan.trims = {"bass": 0.0}
 	elif turnaround and _answer_allowed(room, fight):
