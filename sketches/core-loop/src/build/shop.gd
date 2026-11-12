@@ -199,6 +199,7 @@ func enter() -> Dictionary:
 # on to the next stage's stock at the class it asked for (W1-79), so growing into it is a goal
 # the HUD can pin (hook_goal), not a lock that moves up with the ball.
 func _stock_stage(here: Array) -> void:
+	var carried := _carried_hook() if not stocked_for.is_empty() and stocked_for != here else {}
 	stocked_for = here
 	stocks += 1
 	rerolls_left = REROLLS_PER_VISIT
@@ -206,14 +207,15 @@ func _stock_stage(here: Array) -> void:
 	# the bay never picks a later stage's shelf, and a Continue (which starts the count again)
 	# stocks the shelf the first sitting saw.
 	_rng.seed = hash([SEED, ctx.flow.run_key() if ctx.flow != null else ctx.run.run_seed, ctx.run.world, ctx.run.stage, "shelf"])
-	var carried := _carried_hook()
-	shelf = _stock(carried.get("part_id", ""))
-	if not carried.is_empty():
+	# The shelf and the hook draw as they always have, so a Continue (which carries no hook)
+	# stocks the shelf the first sitting saw; a carried hook then takes the drawn hook's place
+	# unless the shelf drew the same part.
+	shelf = _stock()
+	var lock_class: int = mini(TOP_CLASS_MAX, ctx.run.heft_class() + 1)
+	var hook := _roll_hook(shelf.map(func(entry): return entry["part_id"]))
+	top = {"part_id": hook["part_id"], "table": hook["table"], "lock_class": lock_class, "sold": false} if hook["part_id"] != "" else {}
+	if not carried.is_empty() and not shelf.any(func(entry): return entry["part_id"] == carried["part_id"]):
 		top = carried
-	else:
-		var lock_class: int = mini(TOP_CLASS_MAX, ctx.run.heft_class() + 1)
-		var hook := _roll_hook(shelf.map(func(entry): return entry["part_id"]))
-		top = {"part_id": hook["part_id"], "table": hook["table"], "lock_class": lock_class, "sold": false} if hook["part_id"] != "" else {}
 	_stage_stocks[str(here)] = {"shelf": shelf.duplicate(true), "top": top.duplicate(true), "rng": _rng.state}
 
 
@@ -616,16 +618,15 @@ func _result(ok: bool, reason: String, line_id := "", part_id := "", cost := 0) 
 # the pilot's nemesis (Parts.ANSWERS, Nemesis.OFFER_WEIGHT) is stocked more often by the same lean the
 # gates get. It moves weight inside a part's offer bucket only, so the shelf's mix of buckets and its
 # rarities, and every price, stay as they were (answer_weights_test).
-func _stock(hook_id := "") -> Array:
-	var hook_out: Array = [hook_id] if hook_id != "" else []
+func _stock() -> Array:
 	# The last call's first slot is the nearest maker set's missing piece (set_piece) in place of the
 	# cobalt rung's draw; elsewhere, and when no set is started, the rung as before.
-	var set_pick: String = _set_pick(hook_out) if last_call() else ""
+	var set_pick: String = _set_pick() if last_call() else ""
 	# The cobalt rung (item ladder, wave 20): the first slot draws from FLOOR_RARITIES, so it is
 	# always a rare or better, and the other slots from the shelf's table.
-	var floor_pick: Array = [set_pick] if set_pick != "" else Parts.roll(_rng, FLOOR_RARITIES, ctx.run.class_id(), ctx.run.parts, 1, hook_out)
+	var floor_pick: Array = [set_pick] if set_pick != "" else Parts.roll(_rng, FLOOR_RARITIES, ctx.run.class_id(), ctx.run.parts, 1)
 	var picks: Array = Parts.roll(_rng, SHELF_RARITIES, ctx.run.class_id(), ctx.run.parts,
-		SHELF_SIZE - floor_pick.size(), floor_pick + hook_out)
+		SHELF_SIZE - floor_pick.size(), floor_pick)
 	var out: Array = []
 	# Each record carries the odds of the table it was drawn from (SG13), read from the same
 	# rarities and weight row its roll reads. The set piece is no draw, so it shows none.
@@ -669,11 +670,11 @@ func set_piece() -> Dictionary:
 	return best
 
 
-func _set_pick(exclude: Array) -> String:
+func _set_pick() -> String:
 	var target := set_piece()
 	if target.is_empty():
 		return ""
-	var pool := _set_pool(String(target["maker"]), exclude)
+	var pool := _set_pool(String(target["maker"]), [])
 	return pool[_rng.randi_range(0, pool.size() - 1)] if not pool.is_empty() else ""
 
 
