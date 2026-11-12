@@ -51,9 +51,13 @@ func _settle(seconds: float) -> void:
 		left -= _game.get_process_delta_time()
 
 
+# Pilot select opens on the first pilot the profile can take (PF-40); these checks read the cards at rest, so the
+# focus is let go first.
 func _open_select() -> void:
 	_game.flow.open_class_select()
 	_game.screens._on_flow_changed("class_select")
+	await _settle(0.7)
+	root.gui_release_focus()
 	await _settle(0.7)
 
 
