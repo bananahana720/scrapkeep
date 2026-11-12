@@ -10,7 +10,8 @@ extends RefCounted
 # log's own records (runs.ndjson), so it needs no new save file.
 
 # The director's schedule (world/director.gd TIER_SECONDS and MAX_TIME_TIERS). Build
-# may not load world's files; build_clock_test fails if these two drift from it.
+# may not load world's files; build_clock_test fails if these two drift from it. The last tier
+# is per stage: tiers() reads the dial the director reads (ChallengeDials mobs.clock_tiers_by_stage).
 const DIFFICULTY_TICK := 45.0
 const DIFFICULTY_TIERS := 2
 const SCRAPLESS := "scrapless"
@@ -78,13 +79,19 @@ func on(modifier: String) -> bool:
 	return modifiers.has(modifier)
 
 
+# This stage's last tier: the director's own count (Director.clock_tiers), DIFFICULTY_TIERS where the dial is silent.
+func tiers() -> int:
+	return maxi(0, roundi(ChallengeDials.by_stage_or("mobs.clock_tiers_by_stage", stage, DIFFICULTY_TIERS)))
+
+
 # The filling bar: 0 at a stage's start, 1 at the last tier.
 func difficulty_fraction() -> float:
-	return clampf(difficulty_seconds / (DIFFICULTY_TICK * DIFFICULTY_TIERS), 0.0, 1.0)
+	var last := tiers()
+	return clampf(difficulty_seconds / (DIFFICULTY_TICK * last), 0.0, 1.0) if last > 0 else 1.0
 
 
 func difficulty_tier() -> int:
-	return mini(int(difficulty_seconds / DIFFICULTY_TICK), DIFFICULTY_TIERS)
+	return mini(int(difficulty_seconds / DIFFICULTY_TICK), tiers())
 
 
 # W1's clock record. par.split is negative while ahead of the ghost; it freezes at the
@@ -96,7 +103,7 @@ func record(par_chip := false) -> Dictionary:
 	return {
 		"run_seconds": run_seconds,
 		"stage_seconds": stage_seconds,
-		"difficulty": {"fraction": difficulty_fraction(), "tier": difficulty_tier(), "tiers": DIFFICULTY_TIERS,
+		"difficulty": {"fraction": difficulty_fraction(), "tier": difficulty_tier(), "tiers": tiers(),
 			"paused": paused, "icon": "res_difficulty"},
 		"timer_icon": "res_timer",
 		"par": {"on": showing, "best": ghost, "split": at - float(ghost) if showing and ghost != null else null,
