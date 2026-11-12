@@ -1,0 +1,11 @@
+import exit=0 21:55:33
+fx-0.1 exit=0 secs=13
+fx-0.35 exit=0 secs=9
+fx-0.6 exit=0 secs=9
+fx-0.85 exit=0 secs=9
+fx-0.1-reduce exit=0 secs=8
+fx-0.35-tint-8bf0d3 exit=0 secs=9
+fx-0.35-tint-e6d9b8 exit=0 secs=9
+reel exit=0 secs=88
+stress exit=0 secs=79
+done 2026-11-12T21:59:26Z

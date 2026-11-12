@@ -1,0 +1,332 @@
+{
+	"adapter": "NVIDIA GeForce RTX 4080",
+	"first_scene_s": 12.89,
+	"fixed_fps": true,
+	"frame_s": [
+		0.0167,
+		0.0167
+	],
+	"hit_word_shown": false,
+	"kinds": [
+		{
+			"beats": {
+				"death": 21.93,
+				"hit": 20.91
+			},
+			"clips": true,
+			"cuts": [
+				{
+					"beside": 0.7,
+					"clip": "windup",
+					"frames": 1,
+					"part": "ChaserBody",
+					"reel_s": 13.78,
+					"speed": 4.3,
+					"unit": "m/s"
+				},
+				{
+					"beside": 50.5,
+					"clip": "windup",
+					"frames": 1,
+					"part": "ChaserFin",
+					"reel_s": 13.78,
+					"speed": 736.6,
+					"unit": "deg/s"
+				},
+				{
+					"beside": 2.4,
+					"clip": "attack",
+					"frames": 1,
+					"part": "ChaserClaws",
+					"reel_s": 14.38,
+					"speed": 2620.7,
+					"unit": "deg/s"
+				},
+				{
+					"beside": 0.0,
+					"clip": "attack",
+					"frames": 1,
+					"part": "ChaserClaws",
+					"reel_s": 14.38,
+					"speed": 7.3,
+					"unit": "m/s"
+				},
+				{
+					"beside": 164.1,
+					"clip": "attack",
+					"frames": 1,
+					"part": "ChaserFin",
+					"reel_s": 14.38,
+					"speed": 1140.6,
+					"unit": "deg/s"
+				},
+				{
+					"beside": 4.9,
+					"clip": "attack",
+					"frames": 1,
+					"part": "ChaserFin",
+					"reel_s": 14.38,
+					"speed": 28.9,
+					"unit": "m/s"
+				},
+				{
+					"beside": 0.6,
+					"clip": "move",
+					"frames": 1,
+					"part": "ChaserBody",
+					"reel_s": 14.73,
+					"speed": 16.9,
+					"unit": "m/s"
+				},
+				{
+					"beside": 2.4,
+					"clip": "attack",
+					"frames": 1,
+					"part": "ChaserClaws",
+					"reel_s": 16.14,
+					"speed": 2621.4,
+					"unit": "deg/s"
+				},
+				{
+					"beside": 0.0,
+					"clip": "attack",
+					"frames": 1,
+					"part": "ChaserClaws",
+					"reel_s": 16.14,
+					"speed": 7.3,
+					"unit": "m/s"
+				},
+				{
+					"beside": 164.0,
+					"clip": "attack",
+					"frames": 1,
+					"part": "ChaserFin",
+					"reel_s": 16.14,
+					"speed": 1139.9,
+					"unit": "deg/s"
+				},
+				{
+					"beside": 4.9,
+					"clip": "attack",
+					"frames": 1,
+					"part": "ChaserFin",
+					"reel_s": 16.14,
+					"speed": 28.9,
+					"unit": "m/s"
+				},
+				{
+					"beside": 0.6,
+					"clip": "move",
+					"frames": 1,
+					"part": "ChaserBody",
+					"reel_s": 16.49,
+					"speed": 16.8,
+					"unit": "m/s"
+				},
+				{
+					"beside": 3.4,
+					"clip": "move",
+					"frames": 2,
+					"part": "ChaserFin",
+					"reel_s": 16.49,
+					"speed": 29.8,
+					"unit": "m/s"
+				},
+				{
+					"beside": 2.4,
+					"clip": "attack",
+					"frames": 1,
+					"part": "ChaserClaws",
+					"reel_s": 17.91,
+					"speed": 2620.7,
+					"unit": "deg/s"
+				},
+				{
+					"beside": 0.0,
+					"clip": "attack",
+					"frames": 1,
+					"part": "ChaserClaws",
+					"reel_s": 17.91,
+					"speed": 7.3,
+					"unit": "m/s"
+				},
+				{
+					"beside": 164.0,
+					"clip": "attack",
+					"frames": 1,
+					"part": "ChaserFin",
+					"reel_s": 17.91,
+					"speed": 1140.6,
+					"unit": "deg/s"
+				},
+				{
+					"beside": 4.9,
+					"clip": "attack",
+					"frames": 1,
+					"part": "ChaserFin",
+					"reel_s": 17.91,
+					"speed": 28.9,
+					"unit": "m/s"
+				},
+				{
+					"beside": 0.6,
+					"clip": "move",
+					"frames": 1,
+					"part": "ChaserBody",
+					"reel_s": 18.26,
+					"speed": 16.9,
+					"unit": "m/s"
+				},
+				{
+					"beside": 0.0,
+					"clip": "attack",
+					"frames": 1,
+					"part": "ChaserClaws",
+					"reel_s": 19.68,
+					"speed": 2621.4,
+					"unit": "deg/s"
+				},
+				{
+					"beside": 0.0,
+					"clip": "attack",
+					"frames": 1,
+					"part": "ChaserClaws",
+					"reel_s": 19.68,
+					"speed": 7.3,
+					"unit": "m/s"
+				},
+				{
+					"beside": 164.1,
+					"clip": "attack",
+					"frames": 1,
+					"part": "ChaserFin",
+					"reel_s": 19.68,
+					"speed": 1139.9,
+					"unit": "deg/s"
+				},
+				{
+					"beside": 4.9,
+					"clip": "attack",
+					"frames": 1,
+					"part": "ChaserFin",
+					"reel_s": 19.68,
+					"speed": 28.9,
+					"unit": "m/s"
+				},
+				{
+					"beside": 0.6,
+					"clip": "move",
+					"frames": 1,
+					"part": "ChaserBody",
+					"reel_s": 20.03,
+					"speed": 16.7,
+					"unit": "m/s"
+				},
+				{
+					"beside": 3.4,
+					"clip": "move",
+					"frames": 2,
+					"part": "ChaserFin",
+					"reel_s": 20.03,
+					"speed": 29.3,
+					"unit": "m/s"
+				},
+				{
+					"beside": 242.5,
+					"clip": "windup",
+					"frames": 2,
+					"part": "ReactionPivot",
+					"reel_s": 20.94,
+					"speed": 1091.3,
+					"unit": "deg/s"
+				},
+				{
+					"beside": 242.5,
+					"clip": "windup",
+					"frames": 2,
+					"part": "ChaserBody",
+					"reel_s": 20.94,
+					"speed": 1091.3,
+					"unit": "deg/s"
+				},
+				{
+					"beside": 279.0,
+					"clip": "windup",
+					"frames": 2,
+					"part": "ChaserBody",
+					"reel_s": 20.94,
+					"speed": 1177.6,
+					"unit": "deg/s"
+				},
+				{
+					"beside": 0.0,
+					"clip": "attack",
+					"frames": 1,
+					"part": "ChaserClaws",
+					"reel_s": 21.44,
+					"speed": 2620.7,
+					"unit": "deg/s"
+				},
+				{
+					"beside": 0.0,
+					"clip": "attack",
+					"frames": 1,
+					"part": "ChaserClaws",
+					"reel_s": 21.44,
+					"speed": 7.3,
+					"unit": "m/s"
+				},
+				{
+					"beside": 164.1,
+					"clip": "attack",
+					"frames": 1,
+					"part": "ChaserFin",
+					"reel_s": 21.44,
+					"speed": 1140.6,
+					"unit": "deg/s"
+				},
+				{
+					"beside": 4.9,
+					"clip": "attack",
+					"frames": 1,
+					"part": "ChaserFin",
+					"reel_s": 21.44,
+					"speed": 28.9,
+					"unit": "m/s"
+				},
+				{
+					"beside": 0.5,
+					"clip": "move",
+					"frames": 1,
+					"part": "ChaserBody",
+					"reel_s": 21.79,
+					"speed": 16.6,
+					"unit": "m/s"
+				}
+			],
+			"end_s": 24.44,
+			"frames": 571,
+			"hull_left": 1.0,
+			"in_clip": 0,
+			"kind": "chaser",
+			"measured": true,
+			"parts": 5,
+			"snaps": [],
+			"start_s": 12.89
+		}
+	],
+	"limits": "One of each kind against a ball that stands still, so no pack, no chase and no knock. Parts only, not skinned bones. The count is the game's motion and compares between runs at the same fixed frame rate; the look is the film's, and only on the PC.",
+	"pop": [],
+	"seconds": 24.96,
+	"size": [
+		1600.0,
+		900.0
+	],
+	"snap": {
+		"deg_s": 360.0,
+		"m_s": 3.0,
+		"ratio": 4.0
+	},
+	"table": "park",
+	"tool": "sight_reel.gd"
+}

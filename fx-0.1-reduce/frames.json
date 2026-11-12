@@ -1,0 +1,60 @@
+{
+	"adapter": "NVIDIA GeForce RTX 4080",
+	"frames": [
+		{
+			"contrast": 69,
+			"drawn_px": 1468,
+			"id": "spark_core",
+			"sha256": "6f67b35653e2fbfa2c815963d309147c192d0852d7f7844d9eadc7e5850e2d64"
+		},
+		{
+			"contrast": 70,
+			"drawn_px": 3160,
+			"id": "crit_core",
+			"sha256": "4d757226245c0766e098690769f6fef477022d910bef2ba8819a17dae7eb807e"
+		},
+		{
+			"contrast": 110,
+			"drawn_px": 378,
+			"id": "daze_halo",
+			"sha256": "712ec34327f0e465d68e134e5f159abea435b9746f6d408d811dab38393cf32b"
+		},
+		{
+			"contrast": 68,
+			"drawn_px": 853,
+			"id": "moment_hit",
+			"sha256": "b3a4bd3385e9bb9ac76a60722d2d1e10e65c7dcfe26d947122f9d4a430888d59"
+		},
+		{
+			"contrast": 62,
+			"drawn_px": 3464,
+			"id": "moment_crit",
+			"sha256": "65a4fa7f229150a3897f13bd33a87387dbcfb0bb1446ca4b71fe000e0443e41a"
+		},
+		{
+			"contrast": 44,
+			"drawn_px": 5312,
+			"id": "moment_kill_ink",
+			"sha256": "9b50c88677d646763292ea8bf98359908c8d22d31ce43d317e75672c4a34bca7"
+		},
+		{
+			"contrast": 40,
+			"drawn_px": 10938,
+			"id": "moment_kill_card",
+			"sha256": "678ab2fda405a3284681a59ecfe551341fad58c5744b83b5fe3615fa1bbe3936"
+		},
+		{
+			"contrast": 28,
+			"drawn_px": 1101,
+			"id": "moment_kill_plain",
+			"sha256": "ffab3194bedcb4b1ac646b58073c2b991f14089baf66a5f8d336a060342fb637"
+		}
+	],
+	"freeze": 0.1,
+	"reduce_flashes": true,
+	"size": [
+		640,
+		400
+	],
+	"world": 1
+}
