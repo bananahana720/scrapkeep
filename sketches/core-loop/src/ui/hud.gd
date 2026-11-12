@@ -1218,6 +1218,7 @@ func place_prompts(size: Vector2, playing: bool) -> void:
 			continue
 		prompt.position = spot.position
 		prompt.size = spot.size
+		prompt.aim = cam.unproject_position(entry[2])
 		prompt.visible = true
 		placed.append(spot)
 		prompt_rects[prompt] = spot

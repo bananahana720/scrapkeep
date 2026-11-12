@@ -29,6 +29,11 @@ const LINE_GAP := 2.0
 const TITLE_ICONS := {"vault": "obj_vault", "fabricating...": "obj_fabricator"}
 const PRICE_WORD := " cogs"
 const DEFAULT_ICON := "obj_gate"
+# A leader shorter than this, or one whose anchor is not above the prompt, is not drawn: the
+# column already says whose name it is.
+const LEADER_MIN := 24.0
+const LEADER_WIDTH := 2.0
+const LEADER_DOT := 3.5
 
 # The node the prompt follows, the offset above it, and how far away it still shows.
 var anchor: Node3D
@@ -39,6 +44,11 @@ var reach := 60.0
 var detail_range := DETAIL_RANGE
 # Set by the HUD each frame: the ball is within detail_range of the anchor.
 var near := false
+# A prompt the band places far below its anchor (a reward gate's offer, named under a gate across
+# the yard) draws a leader from its name up to the anchor, so the line says which gate gives it
+# (PF-22). `aim` is where the anchor projects on screen, set by the HUD with the prompt's place.
+var leader := false
+var aim := Vector2.INF
 
 var _structured := false
 var _parts := {"title": "", "detail": "", "icon": DEFAULT_ICON}
@@ -153,6 +163,20 @@ func shown_extent() -> Vector2:
 	return Vector2(minf(width + 8.0, ScreenRegions.PROMPT_WIDTH), height)
 
 
+# The leader's far end in the prompt's own space, or Vector2.INF when it draws none.
+func leader_end() -> Vector2:
+	if not leader or not aim.is_finite():
+		return Vector2.INF
+	var end := aim - position
+	var start := _leader_start()
+	return end if end.y < start.y and start.distance_to(end) >= LEADER_MIN else Vector2.INF
+
+
+# The leader leaves from the top of the name, over its middle.
+func _leader_start() -> Vector2:
+	return Vector2(shown_extent().x * 0.5, 0.0)
+
+
 func _process(_delta: float) -> void:
 	if visible:
 		queue_redraw()
@@ -166,6 +190,13 @@ func _draw() -> void:
 	var outline := get_theme_color("font_outline_color")
 	var lines := shown_lines()
 	var extent := shown_extent()
+	var end := leader_end()
+	if end.is_finite():
+		var start := _leader_start()
+		draw_line(start, end, Color(outline, 0.6), LEADER_WIDTH + 3.0, true)
+		draw_circle(end, LEADER_DOT + 1.5, Color(outline, 0.6))
+		draw_line(start, end, Color(color, 0.85), LEADER_WIDTH, true)
+		draw_circle(end, LEADER_DOT, color)
 	var title_w := font.get_string_size(lines[0], HORIZONTAL_ALIGNMENT_LEFT, -1, TITLE_SIZE).x
 	var row_h := maxf(ICON, font.get_height(TITLE_SIZE))
 	var x := (extent.x - (_cap_width() + ICON + ICON_GAP + title_w)) * 0.5
