@@ -38,6 +38,7 @@ const PickupLines := preload("res://src/ui/pickup_lines.gd")
 const PanelFx := preload("res://src/presentation/panel_fx.gd")
 const Companion := preload("res://src/core/companion.gd")
 const HullMark := preload("res://src/world/hull_mark.gd")
+const Interactables := preload("res://src/world/interactables.gd")
 
 # The wallet readout: the brass cog and the cogs the run holds, the one number the HUD
 # shows because it is what the next roll through a hoop spends.
@@ -1200,6 +1201,37 @@ func objective_reading() -> Dictionary:
 		"step": Objectives.live_step(id, String(asked[0]["what"]) if not asked.is_empty() else "")}
 
 
+# The plate's detour row under the goal (objectives.gd detour_shown): the stage's caged pilot while
+# one waits, else the nearest side site not yet started, each with its metres (as the goal row's) and in its own
+# marker's colour and glyph, so the row and the chevron at the edge read as one thing. {} for none.
+func detour_reading(goal: Dictionary) -> Dictionary:
+	if not Objectives.detour_shown(String(goal.get("id", ""))) or game.world == null:
+		return {}
+	var ball: Vector3 = game.player.shown_position()
+	var rescue = game.world.get("rescue")
+	if rescue != null:
+		for waiting in rescue.waiting():
+			var cage = rescue.cage(String(waiting["quest"]))
+			return {"what": "cage", "icon": Interactables.row("ally")["icon"], "color": Interactables.color("ally"),
+				"words": Objectives.cage_words(cage.terms() if cage != null else ""),
+				"distance": int(ball.distance_to(waiting["at"]))}
+	var best = null
+	var best_m := INF
+	for site in edge_markers.unfinished_sites():
+		if site.started or site.failed:
+			continue
+		var m := ball.distance_to(site.global_position)
+		if m < best_m:
+			best = site
+			best_m = m
+	if best == null:
+		return {}
+	var kind := String(best.id)
+	return {"what": kind, "icon": Objectives.glyph("find_activity"),
+		"color": EdgeMarkers.marker_color({"activity": String(best.rule.get("cue", {}).get("view", kind))}),
+		"words": Objectives.activity_words(kind, game.world.activities.called(kind)), "distance": int(best_m)}
+
+
 # What the plate shows: the objective, or for Objectives.Done.SECONDS after a goal is finished
 # (or lost) that goal ticked (crossed), in the objective's own place.
 func plate_shown(reading := {}) -> Dictionary:
@@ -1361,6 +1393,8 @@ func _process(delta: float) -> void:
 	var goal := objective_reading()
 	var reading := plate_shown(goal)
 	_objective.set_objective(reading["icon"], reading["words"], reading["color"], reading["progress"], reading["distance"], reading.get("done", ""), reading["step"])
+	var detour := detour_reading(goal)
+	_objective.set_detour(detour.get("icon", ""), detour.get("words", ""), detour.get("color", Color.WHITE), detour.get("distance", -1))
 	edge_markers.objective_id = goal["id"]
 	edge_markers.objective_icon = goal["icon"]
 	edge_markers.engaged = _engaged
