@@ -998,6 +998,7 @@ func snapshot_value(key: String):
 func restore() -> void:
 	escape_window_left = 0.0
 	cleared = false
+	landed = false
 	_tier_closed = false
 	pocket_draw_cache = (_snapshot.get("pocket_draw_cache", pocket_draw_cache) as Dictionary).duplicate(true)
 	trade_memory = (_snapshot.get("trade_memory", preload("res://src/world/trade_pockets.gd").memory()) as Dictionary).duplicate(true)
