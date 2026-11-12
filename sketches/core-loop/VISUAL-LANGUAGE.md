@@ -155,6 +155,9 @@ Every committed hostile attack draws the declared geometry damage will use, and 
 | Common (field kit) | Thin 2 px outline | Mint |
 | Rare (fleet grade) | Double outline, two 3 px lines with a 3 px gap | Cobalt |
 | Relic (gold; was rare_plus) | Double outline with four bolt-head notches at 45°, like a gauge bezel | Amber outer, mint inner |
+| Evolved | Double outline, the outer cut into the ancients' dashed seam, with diamond points at the corners | ANCIENT outer, mint inner |
+
+**Rarity shapes in the world.** The same rungs have one 3D shape each, owned by `src/build/tier_mark.gd` and matching the reward gate's toppers: common a bar, rare a diamond, relic a four-point star with a mint heart, evolved a crown. A pedestal gem is the upright shape. A part piece on the ball stands on the flat version (none for common, which stays bare copper hardware). `tools/tier_still.gd` and `tools/tier_cvd.py` render the four tiers and check they still differ under deuteranopia (W1-26).
 
 **Category backplates.**
 
