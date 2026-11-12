@@ -1076,6 +1076,8 @@ func _on_stage_entered(stage: int, retry: bool) -> void:
 func _on_stage_content_cleared(reason: String) -> void:
 	if reason == "arena_retry":
 		_fired.clear()
+	# A Continue into the arena (SA-F1) reaches it with no stage_entered, so the relics are put on the kit here.
+	sync_relics()
 	scrap.clear()
 	fabricators.clear()
 	gates.close()

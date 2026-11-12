@@ -122,7 +122,7 @@ var _flight := 0.0
 var _seam_take := false
 var _last_percent := -1
 
-# Run saves (RS3): game hands flow a RunStore in play. Every zone entrance is written to it,
+# Run saves (RS3): game hands flow a RunStore in play. Every zone entrance and stage launch is written to it,
 # a death ends the run (there is no free retry; the earned save, a part, is the only second
 # chance and run_state spends it before player_died). A flow with no store (the tests and bots
 # that do not opt in) keeps the dead screen and unlimited stage retries.
@@ -555,7 +555,14 @@ func resume_run() -> bool:
 		ctx.progress.reconcile_settled()
 	_apply_tree_picks()
 	var p: Array = doc["entry_velocity"]
-	enter_stage(ctx.run.stage, Vector3(p[0], p[1], p[2]), false)
+	# A cleared stage (SA-F1) lands its flight: the stage's clear and its owed pick, then the next
+	# entrance or the world's boss arena, as the launch would have.
+	if ctx.run.cleared:
+		# The loaded doc stays the one the earned save's spend rewrites (the boss arena writes none).
+		_entrance = doc
+		_finish_stage(Vector3(p[0], p[1], p[2]))
+	else:
+		enter_stage(ctx.run.stage, Vector3(p[0], p[1], p[2]), false)
 	show_start_card()
 	return true
 
@@ -1023,22 +1030,33 @@ func physics_step(delta: float) -> void:
 	_rescue_if_fallen(ball)
 
 
-func _finish_stage() -> void:
+# velocity is the ball's as it lands; a Continue from a cleared stage passes the saved launch's.
+func _finish_stage(velocity = null) -> void:
+	var carried: Vector3 = ctx.player.state.velocity if velocity == null else velocity
 	var cleared: int = ctx.run.stage
-	ctx.events.stage_cleared.emit(cleared)
-	if ctx.stages.is_world_last(cleared) and _world_boss(ctx.stages.world_of(cleared)) != null:
-		enter_boss(ctx.player.state.velocity)
+	if not ctx.run.landed:
+		ctx.events.stage_cleared.emit(cleared)
+	var world: int = ctx.stages.world_of(cleared)
+	if ctx.stages.is_world_last(cleared) and _world_boss(world) != null:
+		# From the title no stage entry named the world yet.
+		if world != _world:
+			_world = world
+			ctx.events.world_entered.emit(world)
+		# The arena is no entrance: the save marks the clear as landed, with the pick it opened.
+		ctx.run.landed = true
+		_save_cleared(carried)
+		enter_boss(carried)
 		return
-	_advance_from(cleared)
+	_advance_from(cleared, carried)
 
 
 # The next stage after a cleared one, which is the next world's first when the cleared
 # stage closed a world; the run ends won after the last world.
-func _advance_from(cleared: int) -> void:
+func _advance_from(cleared: int, velocity = null) -> void:
 	if ctx.stages.is_run_last(cleared):
 		_end_run_won()
 		return
-	enter_stage(cleared + 1, ctx.player.state.velocity, false)
+	enter_stage(cleared + 1, ctx.player.state.velocity if velocity == null else velocity, false)
 
 
 func _on_boss_defeated() -> void:
@@ -1179,12 +1197,24 @@ func _on_reward_chosen(_part_id: String) -> void:
 
 # World may launch from inside its own reward_chosen handler, before flow has heard
 # reward_chosen, so a launch during GATES counts as the gate being taken too.
-func _on_launched(_velocity: Vector3) -> void:
+func _on_launched(velocity: Vector3) -> void:
 	if state == GATES or state == LAUNCH:
 		_set_state(LAUNCH)
 		_launched = true
 		_flight = 0.0
+		_save_cleared(velocity)
 		_seam_take = _play_seam_take()
+
+
+# The launch takes the stage's exit: the save moves from the stage's entrance to the cleared
+# stage, so a quit or crash in the flight, or in the boss arena after a world's last stage,
+# continues past it with what the stage earned (systems audit SA-F1). A quit at the gates is
+# before the exit and replays the entrance (BIBLE section 6), so the stage's pickups never pay twice.
+func _save_cleared(velocity: Vector3) -> void:
+	if store == null or ctx.run.over:
+		return
+	_entrance = ctx.run.to_cleared_doc(_tree(), velocity)
+	_save(_entrance)
 
 
 # A played game's stage launch runs under the comic swipe: the panel closes over the end of the flight, the cut to the next

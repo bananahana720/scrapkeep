@@ -153,6 +153,16 @@ var event_core_grants := 0
 var carried_core := 0
 var core_seat := ""
 var arrived_core := 0
+# SA-F1 (systems audit pass F): the stage's exit is taken. Flow saves the cleared doc
+# (to_cleared_doc) at the launch, so a quit or crash in the flight or in the boss arena that
+# follows continues at the next entrance with what the stage earned (BIBLE section 6: completed
+# stages keep the build and resolved rewards, with resume at the next entrance). pick_opened
+# says the stage's workshop pick has opened (world.gd), so the Continue does not open it twice.
+var cleared := false
+var pick_opened := false
+# The cleared stage's flight has landed in its world's boss arena: stage_cleared has fired, so a
+# Continue re-enters the fight without clearing the stage (and its codex note) a second time.
+var landed := false
 # True once enter_stage has run in this run. A pick opens only after flow's enter_stage(1),
 # because enter_stage zeroes bonus_cores and would wipe a Bonus Core taken before it.
 var _stage_entered := false
@@ -234,6 +244,9 @@ func begin(chosen_class: Resource) -> void:
 	carried_core = 0
 	core_seat = ""
 	arrived_core = 0
+	cleared = false
+	pick_opened = false
+	landed = false
 	panels.clear()
 	_heft_class = 1
 	class_rewarded = 1
@@ -898,6 +911,9 @@ func enter_stage(index: int) -> void:
 	elif index != stage:
 		arrived_core = 0
 	stage = index
+	cleared = false
+	pick_opened = false
+	landed = false
 	bonus_cores = arrived_core
 	event_core_grants = 0
 	_stage_entered = true
@@ -981,6 +997,8 @@ func snapshot_value(key: String):
 
 func restore() -> void:
 	escape_window_left = 0.0
+	cleared = false
+	landed = false
 	_tier_closed = false
 	pocket_draw_cache = (_snapshot.get("pocket_draw_cache", pocket_draw_cache) as Dictionary).duplicate(true)
 	trade_memory = (_snapshot.get("trade_memory", preload("res://src/world/trade_pockets.gd").memory()) as Dictionary).duplicate(true)
@@ -1071,7 +1089,7 @@ const ENTRANCE_KEYS := {
 	"entry_position": "vec3", "entry_velocity": "vec3", "camera_yaw": "num",
 	"tree_picks": "strs", "tree_allowed": "int", "retries_spent": "dict",
 }
-const ENTRANCE_OPTIONAL := {"cogs": "int", "companion": "dict", "settled": "strs", "relics": "dict", "start_pick": "dict", "run_tier": "int", "event_core_grants": "int", "run_tallies": "dict", "seen_wardens": "strs", "trade_memory": "dict", "pocket_draw_cache": "dict", "tree_late_skipped": "bool", "death_save_spent": "bool", "panels": "strs", "arrived_core": "int"}
+const ENTRANCE_OPTIONAL := {"cogs": "int", "companion": "dict", "settled": "strs", "relics": "dict", "start_pick": "dict", "run_tier": "int", "event_core_grants": "int", "run_tallies": "dict", "seen_wardens": "strs", "trade_memory": "dict", "pocket_draw_cache": "dict", "tree_late_skipped": "bool", "death_save_spent": "bool", "panels": "strs", "arrived_core": "int", "cleared": "bool", "pick_opened": "bool", "landed": "bool", "carried_core": "int", "core_seat": "str"}
 
 
 # `tree` is optional: when given, its picks and allowed count are read the way world.gd
@@ -1145,6 +1163,26 @@ func to_entrance_doc(tree = null) -> Dictionary:
 	if run_tier == 0:
 		doc.erase("run_tier")
 		doc.erase("event_core_grants")
+	return doc
+
+
+# The doc Flow saves as a cleared stage's launch commits (SA-F1): the entrance doc's fields with
+# the run as it stands at the launch, not as the stage began, so the stage's cogs, parts, gate
+# pick, trades (seen, decisions, risk and the hull mark the break lifted) and a stowed core ride
+# the save. entry_velocity is the launch's, which the Continue carries into the next place.
+func to_cleared_doc(tree, launch_velocity: Vector3) -> Dictionary:
+	cleared = true
+	var doc := to_entrance_doc(tree)
+	doc["cleared"] = true
+	doc["entry_velocity"] = [launch_velocity.x, launch_velocity.y, launch_velocity.z]
+	doc["trade_memory"] = preload("res://src/world/trade_pockets.gd").to_doc(trade_memory)
+	if pick_opened:
+		doc["pick_opened"] = true
+	if landed:
+		doc["landed"] = true
+	if carried_core > 0:
+		doc["carried_core"] = carried_core
+		doc["core_seat"] = core_seat
 	return doc
 
 
@@ -1262,6 +1300,11 @@ static func _entrance_range_error(doc: Dictionary) -> String:
 	for key in ["mass", "scrap", "kills", "retries", "bonus_cores", "class_rewarded", "tree_allowed", "run_time", "wear_accum"]:
 		if float(doc[key]) < 0.0:
 			return "%s %s is negative" % [key, doc[key]]
+	if doc.has("carried_core") and (int(doc["carried_core"]) < 0 or int(doc["carried_core"]) > 1):
+		return "carried_core %d is outside 0..1" % int(doc["carried_core"])
+	for key in ["pick_opened", "landed", "carried_core", "core_seat"]:
+		if doc.has(key) and not bool(doc.get("cleared", false)):
+			return "%s belongs to a cleared stage" % key
 	if doc.has("cogs") and int(doc["cogs"]) < 0:
 		return "cogs %d is negative" % int(doc["cogs"])
 	for w in doc["retries_spent"]:
@@ -1313,9 +1356,12 @@ func from_entrance_doc(doc) -> bool:
 		retries_spent[int(str(w))] = int(doc["retries_spent"][w])
 	cogs = int(doc.get("cogs", 0))
 	companion = preload("res://src/core/companion.gd").sanitize(doc["companion"])[0] if doc.has("companion") else {}
-	carried_core = 0
-	core_seat = ""
+	carried_core = int(doc.get("carried_core", 0))
+	core_seat = String(doc.get("core_seat", ""))
 	arrived_core = clampi(int(doc.get("arrived_core", 0)), 0, 1)
+	cleared = bool(doc.get("cleared", false))
+	pick_opened = bool(doc.get("pick_opened", false))
+	landed = bool(doc.get("landed", false))
 	settled.assign(doc.get("settled", []))
 	start_pick = _start_pick_from(doc.get("start_pick", {}))
 	run_tier = int(doc.get("run_tier", 0))
