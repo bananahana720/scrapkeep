@@ -40,6 +40,12 @@ func _run() -> void:
 	var quit: Button = screens.button_for("quit")
 	_t.check("Quit is on Esc", quit != null and quit.key == "key_esc" and quit.text == "Quit")
 	_t.eq("the title reads SCRAPKEEP", screens._title.text, Screens.TITLE)
+	# W1-47: the name is drawn art laid inside the label, which keeps the word for screen readers.
+	_t.check("the title shows the drawn wordmark", screens._wordmark.visible and screens._wordmark.texture != null
+		and screens._wordmark.get_parent() == screens._title)
+	_t.eq("the label draws no glyphs of its own", screens._title.get_theme_color("font_color"), Color.TRANSPARENT)
+	_t.check("the band starts below the wordmark", screens._veil.anchor_top > 0.0 and screens._veil.anchor_top < 0.5,
+		str(screens._veil.anchor_top))
 	_t.eq("the ready line names the launch set and the open pilots", screens.ready_line(1234),
 		"SCRAPKEEP_MENU_READY ms=1234 profile=default pilots=1/6")
 

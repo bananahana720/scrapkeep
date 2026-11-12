@@ -5,7 +5,8 @@ Dot Marrow's lettering is gig poster and record sleeve: thick ink, halftone, sta
 (SIGHT-PERSONA.md section 5). Each letter is one chamfered polygon on a 70 x 100 cell with
 24-unit strokes; the ink outline is drawn under the fill so joins never show.
 
-  python3 tools/wordmark/generate_wordmark.py --out assets/ui [--look poster|plate|splash]
+  python3 tools/wordmark/generate_wordmark.py --file assets/ui/wordmark.svg --look poster   (the game's wordmark)
+  python3 tools/wordmark/generate_wordmark.py --out <dir>                                   (all three looks)
 """
 import argparse
 import math
@@ -178,9 +179,14 @@ def svg(look):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--out", required=True)
+    ap.add_argument("--out")
+    ap.add_argument("--file")
     ap.add_argument("--look", choices=sorted(LOOKS), action="append")
     args = ap.parse_args()
+    if args.file:
+        Path(args.file).write_text(svg((args.look or ["poster"])[0]))
+        print("wrote", args.file)
+        return
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
     for look in args.look or sorted(LOOKS):

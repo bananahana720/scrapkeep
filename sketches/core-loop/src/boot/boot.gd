@@ -28,6 +28,9 @@ extends Node
 # nothing, so the card stays as light as the note above asks.
 const AppShell := preload("res://src/core/app_shell.gd")
 const BuildStamp := preload("res://src/core/build_stamp.gd")
+# The drawn name (src/ui/wordmark.gd preloads nothing), so the card stamps the same name as the title.
+const Wordmark := preload("res://src/ui/wordmark.gd")
+const WORDMARK_H := 132.0
 const GAME_SCENE := "res://main.tscn"
 const FONT_PATH := "res://assets/fonts/NotoSans-Bold.ttf"
 # Palette.CHARCOAL and Palette.AMBER, copied: palette.gd pulls the material table with it.
@@ -330,6 +333,13 @@ func _build_card() -> void:
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	title.add_theme_font_size_override("font_size", 64)
 	title.add_theme_color_override("font_color", AMBER)
+	# The drawn name (W1-47) when it loads; the plain word stays only as its fallback.
+	if Wordmark.texture() != null:
+		title.add_theme_color_override("font_color", Color.TRANSPARENT)
+		var mark := Wordmark.view(WORDMARK_H)
+		title.custom_minimum_size = mark.custom_minimum_size
+		mark.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		title.add_child(mark)
 	_play = Button.new()
 	_play.text = "Play"
 	_play.custom_minimum_size = Vector2(240.0, 56.0)
