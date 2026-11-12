@@ -2,6 +2,7 @@ extends SceneTree
 
 const Game := preload("res://src/game.gd")
 const DeathTips := preload("res://src/core/death_tips.gd")
+const DeathCause := preload("res://src/core/death_cause.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const Roster := preload("res://src/combat/roster.gd")
 const Intent := preload("res://src/movement/intent.gd")
@@ -149,6 +150,10 @@ func _tag_on_summary() -> void:
 	var body: PackedStringArray = screens.body_text().split("\n")
 	_t.check("the screen reads pilot, cause, and the note before the choices", body.size() > 2 and body[1] == "Scrapped by the Warden."
 			and body.find(screens.tip_text()) > 1 and body.find(screens.tip_text()) < body.find(""), " | ".join(body))
+	# W1-75: the Foreman logs the loss under the cause, and the crew's note still comes after it.
+	var memo: String = DeathCause.memo(_game.run.run_seed, _game.run.stage)
+	_t.check("the Foreman's loss memo follows the cause, before the crew's note", body.size() > 2 and body[2] == memo
+			and DeathCause.LOSS_MEMOS.any(func(m): return memo.ends_with(m)) and body.find(memo) < body.find(screens.tip_text()), " | ".join(body))
 	await _frames(3)
 	var words: Array = []
 	for group in screens._stats.get_children():
@@ -173,11 +178,11 @@ func _tag_on_summary() -> void:
 	# with every stamp at once), and the page gives up the height so the buttons stay on screen.
 	var short_page: float = comic.custom_minimum_size.y
 	var body_before: String = screens._body.text
-	screens._body.text = "Sable\nScrapped by the Warden.\nThe Fleet filed it as weather.\nShift board: CLOCKED IN Clocked In. LOGGED First Warden. HIRED Rivet, Tarn. FOUND the Lost Tape, in the wall."
+	screens._body.text = "Sable\nScrapped by the Warden.\n" + DeathCause.memo(0, 1) + "\nThe Fleet filed it as weather.\nShift board: CLOCKED IN Clocked In. LOGGED First Warden. HIRED Rivet, Tarn. FOUND the Lost Tape, in the wall."
 	screens._fit_comic()
 	await _frames(3)
 	var long_lines: int = screens._body.get_line_count()
-	_t.check("a long body shrinks the page it shares the column with, and the buttons stay on the screen", long_lines >= 5
+	_t.check("a long body shrinks the page it shares the column with, and the buttons stay on the screen", long_lines >= 6
 			and comic.custom_minimum_size.y < short_page and screens._actions.get_global_rect().end.y <= floor_y and screens._title.get_global_rect().position.y >= 0.0,
 		"%d lines, page %.0f from %.0f, buttons to %.0f of %.0f" % [long_lines, comic.custom_minimum_size.y, short_page, screens._actions.get_global_rect().end.y, floor_y])
 	screens._body.text = body_before
@@ -200,6 +205,14 @@ func _tag_on_summary() -> void:
 	_t.eq("a grown build the fight stripped still reads the Warden's row", _game.flow.death_tip, DeathTips.ROWS["warden"])
 	await _die_to_warden(0.05, 400.0)
 	_t.check("a build that met the fight short reads the gap, whatever it weighed at the end", _game.flow.death_tip.begins_with("Punch "), _game.flow.death_tip)
+	# A hazard with no tip row: no crew note follows, so the Foreman logs nothing (the crew keeps the last word).
+	_game.flow.new_run()
+	await _frames(5)
+	_game.run.damage(9999.0, "pocket_veil")
+	await _frames(3)
+	_t.check("a death with no crew note carries no Foreman memo", _game.flow.state_name() == "summary" and _game.flow.death_tip == ""
+			and _game.screens.body_text().contains(_game.flow.death_cause) and not _game.screens.body_text().contains("The Foreman: "),
+		"%s | cause '%s' | %s" % [_game.flow.state_name(), _game.flow.death_cause, _game.screens.body_text()])
 	await _stripped_by_the_fight()
 	await _die_to_the_boss()
 	_game.flow.new_run()

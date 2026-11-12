@@ -42,7 +42,7 @@ func _row(id: String) -> Dictionary:
 
 func _said(id: String) -> bool:
 	var row := _row(id)
-	return _bubble.visible and _bubble.text == "%s: %s" % [LoreRows.SPEAKERS[row["speaker"]], row["text"]]
+	return _bubble.visible and _bubble.text == "%s: %s" % [LoreRows.SPEAKERS[row["speaker"]], LoreRows.call_text(row, _game.run.run_seed)]
 
 
 # A stand-in for the sound's two calls, with their rule (one caller at a time; ending is nothing
