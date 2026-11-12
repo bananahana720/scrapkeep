@@ -78,9 +78,11 @@ static func _view(ready: Array, line := "", airborne := false, winching := false
 # prompts are not held meanwhile.
 static func _boost_waits_for_fast(t, glyphs, profile) -> void:
 	_fresh(glyphs, profile)
-	var slow := _view(["boost", "harpoon"])
+	var slow := _view(["boost"])
 	slow["tier"] = SpeedTier.CRUISE
-	glyphs.step(DT, slow)
+	var slow_with_hook := _view(["boost", "harpoon"])
+	slow_with_hook["tier"] = SpeedTier.CRUISE
+	glyphs.step(DT, slow_with_hook)
 	t.eq("the boost prompt waits while the ball is below the fast tier", glyphs.shown_verbs(), ["harpoon"])
 	var fast := _view(["boost"])
 	fast["tier"] = SpeedTier.FAST
