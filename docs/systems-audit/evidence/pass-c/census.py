@@ -12,8 +12,9 @@ import sys
 from PIL import Image, ImageDraw
 
 FACTS = ["carved", "near_miss", "player_hit", "slammed", "landed", "harpoon_bit", "harpoon_smashed",
-         "enemy_struck", "strike_deflected", "boosted", "jumped", "boss_weak_point_hit", "heft_class_changed",
-         "maker_set_completed", "escape_window", "ultimate_ready", "enemy_killed"]
+         "enemy_struck", "strike_deflected", "boosted", "dashed", "jumped", "boss_weak_point_hit", "heft_class_changed",
+         "maker_set_completed", "escape_window", "ultimate_ready", "ultimate_started", "ultimate_landed",
+         "enemy_killed"]
 COLOURS = {"carved": (240, 170, 40), "near_miss": (80, 200, 255), "player_hit": (230, 60, 50),
            "slammed": (180, 120, 255), "harpoon_bit": (120, 230, 120)}
 
@@ -40,6 +41,12 @@ def table(runs):
     rows.append("| carves started | " + " | ".join(str(r["carves_started"]) for r in runs) + " |")
     for k in FACTS:
         rows.append("| `%s` | " % k + " | ".join(str(total(r, k)) for r in runs) + " |")
+    chains = lambda r: r.get("chains", {})
+    paid = lambda r, lo: sum(v for k, v in chains(r).get("paid_by_combo", {}).items() if int(k) >= lo)
+    rows.append("| chains (all) | " + " | ".join(str(chains(r).get("total", "-")) for r in runs) + " |")
+    rows.append("| best combo | " + " | ".join(str(chains(r).get("best_combo", "-")) for r in runs) + " |")
+    rows.append("| paid chains, combo 1-2 / 3+ | " + " | ".join(
+        "%d / %d" % (paid(r, 1) - paid(r, 3), paid(r, 3)) for r in runs) + " |")
     sent = lambda r: sum(v for k, v in r["rumbles"].items() if k.endswith(" sent"))
     held = lambda r: sum(v for k, v in r["rumbles"].items() if k.endswith(" held"))
     rows.append("| rumbles sent / held | " + " | ".join("%d / %d" % (sent(r), held(r)) for r in runs) + " |")
