@@ -306,6 +306,7 @@ func setup(ctx_ref) -> void:
 	ctx.events.heft_class_changed.connect(func(_c: int, _h: float): _redraw())
 	_connect_triggers()
 	ctx.events.beacon_unsealed.connect(func(_stage: int): clock.warden_broken())
+	ctx.events.warden_engaged.connect(func(_stage: int): clock.warden_engaged())
 	ctx.events.beacon_unsealed.connect(_on_warden_broken_hotwire)
 	# Marked hull: the Warden break lifts the mark a keeper's gamble put on max hull.
 	ctx.events.beacon_unsealed.connect(func(_stage: int): HullMark.lift(ctx.run))
@@ -1287,7 +1288,8 @@ func _active_row(id: String) -> Dictionary:
 # The gates open when flow enters its gates state, never on the charge reading: a
 # sealed beacon's shown charge can reach 1.0 a tick before the Warden's kill is
 # recorded, and gates opened then would be ignored by flow and soft-lock the stage.
-# Stage 2's pair carries the pattern guarantee (Parts.roll_gate).
+# Stage 2's pair carries the pattern guarantee (Parts.roll_gate). A quick break (RunClock) rolls
+# one more arch, drawn after the floored pair so the pair itself never moves with it.
 func _on_flow_changed(state: String) -> void:
 	if state != "gates" or gates.is_open():
 		return
@@ -1296,6 +1298,8 @@ func _on_flow_changed(state: String) -> void:
 	var gate_rng := _offer_rng("gates")
 	var picks: Array = Parts.roll_gate(gate_rng, rarities, _class_id(), ctx.run.parts, GATE_CHOICES, ctx.flow.stage(), _offered)
 	picks = Parts.floor_gate(gate_rng, picks, _class_id(), ctx.run.parts, _offered, GATE_CHOICES)
+	if clock.quick_break():
+		picks += Parts.roll(_offer_rng("quick_break"), rarities, _class_id(), ctx.run.parts, 1, picks, _offered)
 	for part_id in picks:
 		_offered[part_id] = _offered.get(part_id, 0) + 1
 	picks += _hotwire_gate_ids()
