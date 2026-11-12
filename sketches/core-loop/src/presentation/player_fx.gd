@@ -717,7 +717,8 @@ func word(id: String, at: Vector3, color := Color.TRANSPARENT, foe = null) -> bo
 			var tall := size * grow * WORD_SCREEN * cam.get_viewport().get_visible_rect().size.y
 			var p := cam.unproject_position(placed)
 			var depth := -(cam.global_transform.affine_inverse() * placed).z
-			spots.append([cam.project_position(Vector2(p.x, body.position.y - WORD_WARNING_GAP - tall * 0.6), maxf(depth, cam.near + 0.1)), right_of_ball])
+			# A pixel past the gap: placed flush on the grown body's edge, float rounding put it on the foe one run in four.
+			spots.append([cam.project_position(Vector2(p.x, body.position.y - WORD_WARNING_GAP - tall * 0.6 - 1.0), maxf(depth, cam.near + 0.1)), right_of_ball])
 		var rects: Array[Rect2] = []
 		for s in spots:
 			rects.append(_word_rect(cam, s[0], s[1], width_px, size * grow, label.pixel_size))
