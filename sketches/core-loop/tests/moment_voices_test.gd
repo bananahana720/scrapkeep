@@ -17,7 +17,7 @@ const T := preload("res://tests/support/t.gd")
 # own event in a real game and the word carriers it puts up are counted: toasts, stamps, captions,
 # cards, world words (a flourish's sound word or a machine's) and the boss plate's name.
 #   warden break   no toast; the plate tick and the next objective stay
-#   phase change   one stamp, one caption, one world word, never two of a kind at once
+#   phase change   Brindle: one caption, no stamp and no world word (PF-26); never two of a kind at once
 #   arrival        one card, one world word at a time, and the plate keeps its name off meanwhile
 #   rout           no toast; at most one of each kind and three carriers in the two seconds after
 #   colour         no celebration stamp is drawn in the hazard colour
