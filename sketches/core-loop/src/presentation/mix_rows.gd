@@ -16,9 +16,9 @@ extends RefCounted
 # at a time (ace_bounce --only, skipper seed 1, 150 s): the effects alone were level with the
 # music (-22.7 against -22.3 LUFS), so SFX sits 3.5 dB lower than it did, and the music row is
 # 1 dB higher with every non-fight state 1 dB deeper, so only the fights lift. The band now leads
-# by about 4 LU in a Warden fight and 5 in Brindle's, and the whole mix stays at -20.4 LUFS. The effects' level is spread over warnings, slams and
-# stingers, not the rapid hits (hit_thwack, weapon_zap and clank together are about 6% of it),
-# so the bus is the lever, not a per-cue trim.
+# by about 4 LU in a Warden fight and 5 in Brindle's, and the whole mix stays at -20.4 LUFS.
+# The effects' level is spread over warnings, slams and stingers, not the rapid hits (hit_thwack,
+# weapon_zap and clank together are about 6% of it), so the bus is the lever, not a per-cue trim.
 const BUS_DB := {"Music": -3.0, "SFX": -5.0, "UI": -8.0, "Ambient": -7.0}
 
 # Glue on the effects bus: catches a pile-up before the master has to.
@@ -72,8 +72,8 @@ const GLIDE_UP_DB_S := 6.0
 
 # The telegraph focus: a danger sound or a threat row (audio.gd _is_telegraph), now or on the beat, drops the music and the ambience for hold_s,
 # then they come back at GLIDE_UP_DB_S. A Warden fight sounds a warning about twice a second, so
-# the focus held the music down for a third of a measured run; 2 dB keeps the warning on top
-# without hollowing the band (12 Nov).
+# the focus held the music down for a third of a measured run, so it dips 2 dB (12 Nov); the
+# band's own duck on every priority 2 cue (audio.gd play) still opens the room for the warning.
 const FOCUS := {"Music": -2.0, "Ambient": -8.0, "hold_s": 0.4}
 
 # Room for the Warden form's drop (tuning drop_room, off by default): offsets in dB that hold from
