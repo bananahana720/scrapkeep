@@ -43,8 +43,40 @@ So the score is one set, and the player is the room the DJ is reading. Every mov
 | Pull the room down for a held moment | The world slows for a close-up (Brindle's entrance): a falling sweep in, the music and the ambience held under it, a rising sweep out | Plays today, for a hand on the controls |
 | Mix the next record in on the bar | Zone, fight and moment changes enter on a bar or a beat | Plays today |
 | Mix in key | Each world has one key (D, E, G) and each pack declares it | Declared; not checked when a pack is swapped |
+| Answer the phrase: the lead steps back and June plays a bar | The room's mood and colour, on each phrase's last bar | The set director, behind `--set-director=on` |
+| Swap the bass out the bar before a peak | The room rising toward the peak; a set piece announced to land next bar | The set director, behind `--set-director=on` |
 | Ride the filter into a drop, pump the chords against the kick, tape stop, switch-hit | A set piece's lead time, a kill chain, the last phase | After the world 1 sitting |
 | Cue the next record before the room needs it | The conductor's warning of what is coming | After the world 1 sitting |
+
+### The DJ at the decks: the set director
+
+Andrew, 12 November 2026: "I want it to feel like there is a backend dj that mixes things and orchestrated things perfectly with the players experience", and "I want a dj club vibe. I love house and a jazz-house crossover dj persona" (ruling di). So the 2010 band plays as a club set: **Arlo is the DJ behind the decks, playing a jazz-house crossover set, and June sits in on alto.** The tunes, the year, the keys and the grid are unchanged.
+
+`src/presentation/set_director.gd` is Arlo. Half a bar before each bar line of the recorded band, `audio.gd` hands it one read of the room and books the plan it returns on that bar. The director never moves game time, never touches the synth band and never decides a fight section: the Warden form keeps those. It is behind the launch switch `--set-director=on`, off by default until Andrew has heard it on and off (ruling cq).
+
+| It reads | Into |
+| --- | --- |
+| Pressure, threat, the chain, the approach, rolling speed, Heat's band, Overtime, the fight word | One energy, 0 to 1, and a mood: lull, build, peak, release. A mood climbs on the next bar; it falls only after two bars low, and a peak falls through two bars of release |
+| Low armour, Overtime, Heat at hot or redline | The colour June answers in, in that order |
+| A warning sounding, another melodic cue in the last two bars, a fight section that owns the lead | No answer this phrase |
+| A set piece announced to land within the next bar; the room rising toward the peak line | The bass swap, or a filter roll inside a fight |
+| The fight word: the guard holding or cracking, a flat pack's anthem (a miniboss, Brindle, a set-piece tune) | Turnaround moves in place of June: she stays out of an anthem, and out of any bar under a warning |
+
+| Move | When | What you hear |
+| --- | --- | --- |
+| Answer | The last bar of each 8-bar phrase, counted from when the band starts (the director's own count, so it can sit off the record's phrase after a re-entry), when nothing else owns the melody; taken back if a fight section, warning, caller or quote arrives after it is booked | The recorded lead steps back to about a third, and June plays one bar from her phrase book in the room's colour or mood: lazy and low in a lull, climbing in a build, the hook an octave up at the peak, a run up the ladder when hot, a brass call on Overtime, a fall that winks (a bell after it) when hanging on |
+| Home | The first bar of a release | A cadence home to D |
+| Bass swap | The bar before a peak or an announced set piece; once per climb and once per announcement | The bass steps out for one bar and slams back on the downbeat |
+| Filter roll | A turnaround June does not take, in order with the dub and the breakdown across the run (in a fight or a rising room also at the half phrase, every four bars); a climb or a landing inside a fight | The band rolls under a low-pass across the bar and opens on the downbeat |
+| Dub | The next such turnaround | The lead drops out for the bar: bass and drums alone |
+| Breakdown | The next one | The drums step out for the bar |
+| Hold | Anything else, and always inside the band's own directed sections (a pivot, the Warden's breath, drop, break, return and home, a directed piece), which are their own moves | Nothing changes |
+
+The move rate (assumption, 12 November 2026, after the first PC run heard one answer and one bass swap in four minutes): a player hears at least one move in every 8-bar phrase the band plays outside a directed section, in fights and under warnings too, and one every four bars in a fight or a rising room (the first PC measure, 12 November, met the target in anthems and missed it in the Warden's guard and in explore, where records change before a phrase ends). The turnaround moves only take sound away, so none can mask a warning; June, who adds a melody, still never plays over one. `tests/set_director_test.gd` holds the rate on a scripted stretch of play, and the bounce receipt's `set_plans` rows carry the time, the fight word and why a turnaround held, so the PC can measure it on real runs.
+
+How her melody progresses: each book (lull, build, peak, release, hot, overtime, hanging) is four or two one-bar phrases written as statement, variation, development and home, and each is walked in order, so successive answers tell a short story and land where they began. An answer never repeats the one before it. Every note is in D Dorian or a C# leading home, never on Eb, Ab or Bb, the threat notes, so an answer is never heard as a warning (the test checks every phrase). Trims and the low-pass only take sound away and are gone by the next bar; the directed sections and the Warden's breath and drop ignore them.
+
+What it borrows, as principles only (research notes in [sound/DIRECTOR-RESEARCH.md](sound/DIRECTOR-RESEARCH.md)): Left 4 Dead's one intensity number with a held peak and a forced relax; Metal: Hellsinger's best layer saved as the reward; Elias's rule that the melody moves slower than the drums; Hades's thin-out after a fight; Celeste's silence before a confrontation (the bass swap); and Roboquest's drive and its boss music that shifts at a phase. Nothing is copied: no melody, stem or sample from any of them.
 
 ### Who has the melody
 
@@ -92,6 +124,9 @@ He gave the threads their own judgement on mechanics and tuning for this build-o
 - Slow motion is marked at both ends, quietly and above 200 Hz, and the music neither slows nor filters: it is held 3 dB under, as it is for a warning. A tape stop on the band itself waits for after the sitting.
 - The Cannon keeps its bent chime and has no mouth: it is a machine on the crew's side.
 - Moss sounds the same at his bench as on a call.
+- The set director's numbers (12 November 2026): an 8-bar phrase, a mood held two bars before it falls, two bars of release, the lead at 0.35 under an answer, the filter roll at 0.85 wet of a 420 Hz low-pass, answers 2 dB under the pilot's quote. All are constants at the top of `set_director.gd`, and the low-pass's in `ace_sequencer.gd`.
+- June answers in the room's colour before its mood: low armour first, then Overtime, then Heat at hot or redline. Low armour already strips the recorded lead, so her winking fall is the only melody there; it plays at the end of each phrase, not throughout.
+- The director stays out of the fight's sections: it adds June's answer while the guard holds, never in the breath, the drop or the break, and never trims a directed section.
 - Kest's kick reads a tenth of a decibel over the peak line after its trim. It is left alone: the limiter holds it, and lowering it would change how loud it is.
 
 ## Tone: a game that loves having fun

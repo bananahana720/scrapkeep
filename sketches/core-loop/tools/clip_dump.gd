@@ -94,7 +94,7 @@ func _run() -> void:
 			game.flow.enter_stage(stage, Vector3.ZERO, false)
 		var terrain = game.ctx.terrain
 		var waited := 0
-		while waited < 3000 and not (terrain.rows_ready(stage) and terrain.is_ready(stage) and game.presentation.set_dressing != null and game.flow.state_name() == "stage"):
+		while waited < 3000 and not (terrain.rows_ready(stage) and terrain.is_ready(stage) and game.presentation.set_dressing != null and game.presentation.set_dressing.get_child_count() > 0 and game.flow.state_name() == "stage"):
 			await process_frame
 			waited += 1
 		if game.presentation.park_props != null:

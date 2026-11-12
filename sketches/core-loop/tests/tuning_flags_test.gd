@@ -20,6 +20,7 @@ const EXPECTED := {
 	"breath": ["breath", "gentle", "bogus", "launch"],
 	"warden-form": ["warden_form", "loop", "bogus", "launch"],
 	"drop-room": ["drop_room", "duck", "bogus", "launch"],
+	"set-director": ["set_director", "on", "bogus", "launch"],
 	"discovery": ["discovery", "cards", "bogus", "launch"],
 	"telegraph": ["telegraph", "haze", "bogus", "launch"],
 	"world-one-builds": ["world_one_builds", "on", "bogus", "launch"],
@@ -82,10 +83,11 @@ func _initialize() -> void:
 	var sit := Tuning.new()
 	sit.apply_args(PackedStringArray(["--profile=sitting", "--called-shot=off"]))
 	var sit_on: bool = sit.sitting() and sit.option("heat") == "on" and sit.option("overtime") == "on" \
-		and sit.option("marked_hull") == "on" and sit.option("carry_core") == "on" and sit.option("called_shot") == "off" and sit.option("moss_scale") == "off"
+		and sit.option("marked_hull") == "on" and sit.option("carry_core") == "on" and sit.option("called_shot") == "off" and sit.option("moss_scale") == "on"
 	var plain := Tuning.new()
 	plain.apply_args(PackedStringArray(["--heat=watch"]))
-	_check("sitting set", sit_on and plain.option("overtime") == "off" and plain.option("heat") == "watch",
+	_check("sitting set", sit_on and plain.option("overtime") == "off" and plain.option("heat") == "watch" \
+		and plain.option("moss_scale") == "off",
 		"--profile=sitting turns on %s unless the line names the flag; without it the loops stay off" % [Tuning.SITTING_SET])
 	print("tuning_flags_test: %s" % ("PASS" if _failures == 0 else "FAIL (%d)" % _failures))
 	quit(0 if _failures == 0 else 1)

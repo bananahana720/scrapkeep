@@ -126,7 +126,10 @@ func _run() -> void:
 	sable.bind_profile(profile)
 	_t.check("P3-4 an owned unlock joins the cycle", sable.owns_paint() and sable.paint_options() == starters + ["paint_sable_violet"]
 		and not sable.paint_options().has("paint_any_night"), "options %s" % [sable.paint_options()])
-	_t.check("P3-4 at rest the hidden swatch lets clicks through to the card", sable._swatch.mouse_filter == Control.MOUSE_FILTER_IGNORE, "filter %s" % sable._swatch.mouse_filter)
+	# Pilot select opens on the first card (PF-40); shut it to read a closed card's swatch.
+	root.gui_release_focus()
+	await _settle(0.7)
+	_t.check("P3-4 on a closed card the hidden swatch lets clicks through to the card", sable._swatch.mouse_filter == Control.MOUSE_FILTER_IGNORE, "filter %s" % sable._swatch.mouse_filter)
 	Push.hover(root, sable)
 	await _settle(0.7)
 	_t.check("P3-4 on the open card the swatch takes clicks", sable._swatch.mouse_filter == Control.MOUSE_FILTER_STOP, "filter %s" % sable._swatch.mouse_filter)

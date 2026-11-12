@@ -689,7 +689,8 @@ func _process(delta: float) -> void:
 func _apply() -> void:
 	var k := smoothstep(0.0, 1.0, openness)
 	var rival := _rival_open()
-	pivot_offset = Vector2(size.x * 0.5, size.y)
+	# From the middle, so an open card grows by half its lift into each gap: from the foot it rose into the pilot line.
+	pivot_offset = size * 0.5
 	scale = Vector2.ONE * (1.0 + LIFT * k - (BACK if rival else 0.0))
 	modulate = Color(0.62, 0.62, 0.62) if rival else Color.WHITE
 	for item in _details:

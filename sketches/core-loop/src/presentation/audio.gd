@@ -29,6 +29,7 @@ const Companion := preload("res://src/core/companion.gd")
 const SpillwayStory := preload("res://src/presentation/spillway_story.gd")
 const TuneRows := preload("res://src/core/tune_rows.gd")
 const TuneEar := preload("res://src/presentation/tune_ear.gd")
+const SetDirector := preload("res://src/presentation/set_director.gd")
 # SR7: the shortest gap between two chirps of one companion cue (start value, comps
 # ror2/companions.md "Lab measure": at most once per trigger within a cooldown).
 const CHIRP_COOLDOWN := 0.75
@@ -877,10 +878,12 @@ func _process(delta: float) -> void:
 	_tend_tally()
 	_tend_hum()
 	_tend_specials()
+	_tend_kettle()
 	_tend_champions()
 	_tend_moments()
 	_follow_warden()
 	_follow_escalation()
+	_tend_set()
 	_tend_ear(delta)
 	if _launch_armed and _landing_theme >= 0 and SimClock.msec() - _entered_ms > LANDING_FALLBACK_MS:
 		_land_drop()
@@ -1664,7 +1667,7 @@ func _duck(amount: float, hold_seconds: float) -> void:
 
 # Plays a cue now. Returns false if it was gated by the voice limit or the gap. With no
 # override the kind's row decides, resolved for the run's class.
-func play(kind: String, db := 0.0, pitch := 1.0, bus := "SFX", sound_override := "") -> bool:
+func play(kind: String, db := 0.0, pitch := 1.0, bus := "SFX", sound_override := "", priority_override := -1) -> bool:
 	var sound: String = sound_override if sound_override != "" else Rows.sound(kind, cue_context())
 	if not _admit(kind, sound, pitch):
 		return false
@@ -1673,7 +1676,7 @@ func play(kind: String, db := 0.0, pitch := 1.0, bus := "SFX", sound_override :=
 	# The cue log keeps the pitch the caller asked for, so the ladder stays readable there.
 	var tier := SfxBank.resolve(sound, pitch)
 	db += story_duck_db(kind)
-	var priority := Rows.priority(kind)
+	var priority := Rows.priority(kind) if priority_override < 0 else priority_override
 	if _is_telegraph(kind, sound):
 		_focus()
 	elif priority < 2 and bus == "SFX" and sound in MixRows.CROWD_SOUNDS:
@@ -1929,6 +1932,7 @@ func _connect_all(events) -> void:
 	_wire_cannon(events)
 	events.run_started.connect(func(class_id: String):
 		_ready_for_run()
+		_set_overtime = false
 		_heft_class = 1
 		_hull_seen = 0.0
 		_fired_this_run.clear()
@@ -2058,7 +2062,11 @@ func wire_optional() -> void:
 	# v2 W6 world: one row per world_fact kind (event_kinds.gd WORLD_ROWS); a kind with
 	# no row plays nothing, since play() already skips an empty sound override.
 	_listen_optional(events, "world_fact", func(kind: String, _at: Vector3):
-		play("world_fact", 0.0, 1.0, "SFX", Rows.heard(EventKinds.world_row(kind), cue_context()))
+		# A world row's own priority, not the bare world_fact kind's 0: the Overtime ring, the sluice and
+		# the Called Shot results were 6 dB under a pickup and never dipped the band (sound-gaps 12 Nov).
+		var row := EventKinds.world_row(kind)
+		play("world_fact", 0.0, 1.0, "SFX", Rows.heard(row, cue_context()), int(row.get("priority", 0)))
+		_set_world_fact(kind)
 		if kind == "bay_jukebox":
 			jukebox_flipped()
 		elif kind == "fabricator_used":
@@ -2562,6 +2570,8 @@ func _on_event_announced(event_id: String, seconds: float, _at: Vector3) -> void
 		var fact: Dictionary = _park_director()._park_fact(state, "announced")
 		landing_s = float(fact.landing_s)
 		lead = roundi((landing_s - float(fact.time_s)) * Harmony.RATE)
+	# The set director's set piece: one with a row, landing where its cue lands.
+	_set_incoming_at = clock + float(lead) / Harmony.RATE
 	_park_cues[event_id] = {"row": row, "options": options, "due": engine.clock + lead,
 		"landing_s": landing_s, "booked": true, "transport": _park_transport_snapshot.duplicate()}
 	if landing_s >= 0.0 and not _park_transport_snapshot.is_empty():
@@ -2715,6 +2725,8 @@ func mix_state() -> String:
 
 func _on_stage_entered(stage: int, retry: bool) -> void:
 	_stage_now = stage
+	_set_overtime = false
+	_set_incoming_at = -1.0
 	_champions.clear()
 	_champion_euro.clear()
 	_champion_hyped = false
@@ -4002,6 +4014,25 @@ func _connect_redline() -> void:
 		play("slammed", 0.0, Harmony.ratio(-7.0), "SFX", "smash_crack"))
 
 
+# The cook-off's warning (loops.md Spec 1): over the last KETTLE_S of a shell held at redline the
+# kettle whistles, climbing to the tritone; it stops the moment the heat is spent, cooks off or falls.
+const KETTLE_S := 2.0
+var _kettle_on := false
+
+
+func _tend_kettle() -> void:
+	var redline = ctx.player.get("redline") if ctx != null and ctx.get("player") != null else null
+	var left: float = redline.fuse_left() if redline != null else -1.0
+	var due := left > 0.0 and left <= KETTLE_S
+	# A pause or slow motion can outlast the 2 s whistle on a game-time fuse: whistle again.
+	var sounding: bool = _kettle_on and _sfx != null and Array(_voices.get("heat_kettle", [])).any(func(id: int): return _sfx.is_stream_playing(id))
+	if due and not sounding:
+		_kettle_on = play("slammed", 0.0, 1.0, "SFX", "heat_kettle")
+	elif not due and _kettle_on and left <= 0.0:
+		_kettle_on = false
+		stop("heat_kettle")
+
+
 # Each active sounds its own launch ("active_" + id) when the bank has it, else the row's.
 func _on_active_fired(active_id: String, _at: Vector3, _count: int) -> void:
 	var sound := "active_" + active_id
@@ -4700,3 +4731,113 @@ func _tally_play(note: Array) -> void:
 		_tally_streams[key] = Synth.to_wav(SfxBank.tally_recipe(sound, int(note[3]), bool(note[4])))
 	_start(kind, sound, _tally_streams[key], SfxBank.trim_db(sound) + PRIORITY_DB[Rows.priority(kind)], pitch, "SFX")
 # --- end Tally ---
+
+
+# --- The set director ----------------------------------------------------------------------
+
+# The DJ behind the recorded band (set_director.gd, SOUND-BIBLE "The set"), behind the launch
+# switch set_director. Half a bar before each bar line of the sounding band it reads the room
+# and books that bar's plan: stem trims on the bar, and June's answer as a stinger on the bar.
+# It never moves game time and never touches the synth band.
+var set_director := SetDirector.new()
+var _set_bar_at := -1
+var _set_overtime := false
+var _set_incoming_at := -1.0
+var _set_answer := ""
+var _set_answer_at := -1
+const SET_ANSWER_YIELDS := ["open", "drop", "break"]
+
+
+func set_director_on() -> bool:
+	var tuning = ctx.get("tuning") if ctx != null else null
+	return tuning != null and tuning.option(Tuning.SET_DIRECTOR_KEY) == "on"
+
+
+func _tend_set() -> void:
+	if not ace_playing() or not ace.mode in ["level", "warden", "piece"] or ace.section == "" or not set_director_on():
+		_drop_set_answer()
+		if _set_bar_at >= 0:
+			_set_bar_at = -1
+			set_director.reset()
+		return
+	if _set_answer != "" and _set_answer_spoiled():
+		_drop_set_answer()
+		ace.trim_at(maxi(ace.clock, _set_answer_at - grid_unit(4)), {}, grid_unit(4))
+	var at: int = ace.next_bar()
+	if at == _set_bar_at or at - ace.clock > ace.grid_bar / 2:
+		return
+	_set_bar_at = at
+	var plan := set_director.read(set_room(at))
+	var ramp := grid_unit(4)
+	if not plan.trims.is_empty() or plan.sweep > 0.0:
+		ace.trim_bar(at, plan.trims, ace.grid_bar, ramp, plan.sweep)
+	if plan.answer != "":
+		_set_answer = SfxBank.SET_ANSWER + plan.answer
+		_set_answer_at = at
+		engine.schedule_stinger_at(_set_answer, at, PRIORITY_DB[1], false, ramp)
+		cue_log.append(["set_answer", _set_answer, "grid", at, 1.0, PRIORITY_DB[1] + SfxBank.trim_db(_set_answer)])
+	if plan.move != "hold":
+		cue_log.append(["set_move", plan.move, plan.mood, at, 1.0])
+
+
+# June's booked answer gives way when the bar it was booked for turns into a fight section,
+# a warning, a caller or a pilot quote after it was booked, through to the end of its bar.
+func _set_answer_spoiled() -> bool:
+	if ace.clock >= _set_answer_at + ace.grid_bar:
+		_set_answer = ""
+		return false
+	var next := String(ace.pending.get("section", ""))
+	if ace.mode == "piece" or ace.section in SET_ANSWER_YIELDS or next in SET_ANSWER_YIELDS:
+		return true
+	return clock < _focus_until or _warden_charging or _set_busy()
+
+
+func _drop_set_answer() -> void:
+	if _set_answer != "":
+		engine.cancel_stinger(_set_answer)
+		cue_log.append(["set_answer_dropped", _set_answer, "grid", ace.clock, 1.0])
+		_set_answer = ""
+
+
+# Another melodic cue owns the bar: a caller still talking, or a pilot quote inside two bars.
+func _set_busy() -> bool:
+	var quoted := float(_gates.get("pilot_quote", -1000.0)) - pilot_quote_gap()
+	return clock < float(_gates.get("call_in", -1000.0)) or clock - quoted < 2.0 * float(ace.grid_bar) / Harmony.RATE
+
+
+# The room as the director reads it for the bar at transport sample at.
+func set_room(at: int) -> Dictionary:
+	var room := sample_run_parameters()
+	room["sample"] = at
+	# Hanging on means armour lost to hits, not a shell still empty at the start of a run.
+	if _hull_seen <= 0.0:
+		room.erase("armour")
+	room["pressure"] = _pressure
+	room["heat"] = _redline_band
+	room["overtime"] = _set_overtime
+	match ace.mode:
+		"piece":
+			room["fight"] = "piece"
+		"warden":
+			room["fight"] = ace.section if ace.section in ["open", "drop"] else ace.warden_state
+	# A section the band directs itself (a pivot, the Warden's break, return and home) is its own move.
+	if ace.section in ace.PROTECTED:
+		room["fight"] = "directed"
+	# A flat pack (a miniboss, Brindle or a moment tune plays one "main" section) is an anthem:
+	# June stays out, the turnaround moves still play.
+	if ace.section == "main" and ace.mode != "piece":
+		room["fight"] = "anthem"
+	room["warning"] = clock < _focus_until or _warden_charging
+	room["busy"] = _set_busy()
+	if _set_incoming_at > clock:
+		var bar_s := float(ace.grid_bar) / Harmony.RATE
+		var lands_s := _set_incoming_at - clock - float(at - ace.clock) / Harmony.RATE
+		room["incoming_bars"] = maxi(1, ceili(lands_s / bar_s)) if lands_s > 0.0 else 0
+	return room
+
+
+func _set_world_fact(kind: String) -> void:
+	if kind == "overtime_rung":
+		_set_overtime = true
+	elif kind == "overtime_paid":
+		_set_overtime = false

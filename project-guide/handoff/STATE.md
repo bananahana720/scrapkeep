@@ -6,17 +6,17 @@ Heads and open pull requests change by the hour, so read them live (`git ls-remo
 
 | Fact | Value |
 | --- | --- |
-| Last promotion | wave 37, main b190dd26, #812 |
-| Open stage | stage/alpha-w38 |
-| Live board | #814 |
-| Red team | cautious |
-| Compare against | gate/w37-d929c154/ |
+| Last promotion | wave 38, main 8f0ce028, #847 |
+| Open stage | stage/alpha-w39 |
+| Live board | #848 |
+| Red team | greedy |
+| Compare against | gate/w38-48f62bf9/ |
 
 The board is the GitHub issue in the table. It also holds the file fences of the open pull requests. The stage log (`git log --first-parent origin/stage/alpha-w<N>`) is the stack queue. "Compare against" names the receipts the next full gate reads its base values from, published on a `scratch/gate-receipts-<folder>` branch. The Gate updates the table as its first commit on a new stage: `node scripts/wave-state.mjs --write --board <new board issue> --compare <receipts folder>` (the red team persona rotates by itself).
 
 ## Now (12 Nov 2026)
 
-Wave 37 is on `main` (b190dd26, pull request 812): PASS+NOTES on d929c154 plus one ledger row (26421cc5); the receipt is on the wave 37 board. `stage/alpha-w38` is cut at 528d9aec, whose tree equals `cand/w38` 6ff3d6aa, and the wave 38 gate runs on that tree on the PC (receipts will be published as `scratch/gate-receipts-w38-6ff3d6aa`). The stage holds the wave 38 polish units and the difficulty stack (ruling cu), re-landed with pull request 805, so its band read is the harder-by-movement read. The loop mechanics Heat, Overtime, Called Shot, marked hull and carry a core are on in the "Scrapkeep sitting" launch and off for bots and tests (rulings da, dd, df). The coordinator is this claude.ai project (ruling dh); the board thread owns the wave board and the PC session. The board's latest comments say what is stacked, what is fenced and what the gate has found.
+Wave 38 is on `main` (8f0ce028, pull request 847): CLEAN on 48f62bf9 plus docs, receipt on the wave 38 board. The difficulty stack is backed out again: its re-land showed three behaviour reds (idle entry safety in five pockets, the ultimate count, the flume band pin), and its owner thread fixes them and re-lands it last in the sprint. `stage/alpha-w39` is cut at 5c80d7a3, whose tree equals `cand/w39` 87fb3a5a; it holds the set director (off by default), the pilot card opening on the first pilot, set dressing planned off the main thread and Moss's scale in the sitting. The wave 39 gate runs on the PC. The loop mechanics Heat, Overtime, Called Shot, marked hull and carry a core are on in the "Scrapkeep sitting" launch and off for bots and tests (rulings da, dd, df). The coordinator is this claude.ai project (ruling dh); the board thread owns the wave board and the PC session, and every automated PC job runs silent. The board's latest comments say what is stacked, what is fenced and what the gate has found.
 
 Done for the sitting is counted: no major or minor row left in [PLAY-FINDINGS.tsv](PLAY-FINDINGS.tsv), a clean release gate, 4080 frames in budget, zero placeholders, and that build installed on the PC. Andrew has played only the dam (wave 26 build, 30 Oct) and has marked no area yet.
 

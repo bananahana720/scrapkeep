@@ -113,6 +113,13 @@ func redline() -> bool:
 	return on() and value >= MAX
 
 
+# Seconds until a shell held at redline cooks off, or -1 when it is not counting down.
+func fuse_left() -> float:
+	if not redline():
+		return -1.0
+	return maxf(COOK_OFF_S - waited, 0.0)
+
+
 # What a hit on the ball is multiplied by right now.
 func taken_scale() -> float:
 	return HOT_DAMAGE_TAKEN if hot() else 1.0
