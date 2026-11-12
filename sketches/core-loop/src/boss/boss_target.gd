@@ -12,6 +12,10 @@ const FlashGuard := preload("res://src/presentation/flash_guard.gd")
 # boss's one posture bar and four chunks.
 
 const SLATE := Color("5d6b78")
+# A hit lifts each plated piece in its own tint, slate or amber, so the plating read (fight
+# information) survives steady fire. A white flash at 1.5 drew all four plates near white
+# under the ball's bolts (W1-48, PC film 0124).
+const HIT_GLOW := 0.7
 
 var boss
 var role := "hull"
@@ -205,5 +209,5 @@ func _process(delta: float) -> void:
 	for mat in _tint_materials:
 		var m := mat as StandardMaterial3D
 		m.emission_enabled = lit
-		m.emission = Color.WHITE
-		m.emission_energy_multiplier = FlashGuard.spike(0.0, 1.5)
+		m.emission = m.albedo_color
+		m.emission_energy_multiplier = FlashGuard.spike(0.0, HIT_GLOW)
