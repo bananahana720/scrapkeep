@@ -108,6 +108,11 @@ func _swap_and_breath() -> void:
 	t.eq("a long climb swaps the bass once", climb.count("bass_swap"), 1)
 	c.read({"pressure": 0.45})
 	t.eq("falling back re-arms the swap", c.read({"pressure": 0.56}).move, "bass_swap")
+	var h := SetDirector.new()
+	h.read({"pressure": 0.35})
+	h.read({"pressure": 0.45})
+	var hover := [0.53, 0.51, 0.53, 0.51, 0.53].map(func(p): return h.read({"pressure": p}).move)
+	t.eq("hovering under the peak line swaps once", hover.count("bass_swap"), 1)
 	var l := SetDirector.new()
 	var landing := [1, 1, 1].map(func(n): return l.read({"pressure": 0.1, "incoming_bars": n}).move)
 	t.eq("one swap per announcement", landing.count("bass_swap"), 1)
@@ -176,17 +181,24 @@ func _trims_on_joins() -> void:
 	ace.section = "travel"
 	var bass := AceSequencer.Voice.new()
 	bass.stem = "bass"
+	var pivot_bass: float = ace._gain_of(ace._profile("pivot")["bass"], "bass", "pivot")
+	bass.target = pivot_bass
+	bass.step = 0.002
 	ace.voices = [bass]
 	ace.pending = {"section": "pivot", "begun": true, "voices": [bass], "serial": 1}
 	ace._run({"type": "trim", "trims": {"bass": 0.0}, "frames": 10})
-	t.check("a cut on the pivot's entry leaves its bass up", bass.target > 0.0, str(bass.target))
+	t.eq("a cut on the pivot's entry leaves its bass and its ramp alone", [bass.target, bass.step], [pivot_bass, 0.002])
+	var step := bass.step
+	ace._run({"type": "trim", "trims": {}, "frames": 10})
+	t.eq("the pivot's own entry ramp keeps its pace through the lift", bass.step, step)
 	var opened := AceSequencer.Voice.new()
 	opened.stem = "bass"
-	ace.pending = {"section": "build", "begun": false, "voices": [opened], "serial": 2}
+	ace.pending = {"section": "build", "begun": false, "voices": [opened], "serial": 2, "ramp": 441}
 	ace._run({"type": "trim", "trims": {"bass": 0.0}, "frames": 10})
 	t.eq("a voice opened for a coming build takes the cut", opened.target, 0.0)
 	ace._run({"type": "trim", "trims": {}, "frames": 10})
 	t.check("and comes back with the lift", opened.target > 0.0, str(opened.target))
+	t.check("at the join's own pace", is_equal_approx(opened.step, opened.target / 441.0), str(opened.step))
 	var drums := AceSequencer.Voice.new()
 	drums.stem = "drums"
 	drums.target = 0.25
@@ -238,6 +250,12 @@ func _in_game() -> void:
 		t.eq("a warning after the booking takes June's answer back", audio._set_answer, "")
 		t.check("and logs it", _set_log(audio).any(func(e): return e[0] == "set_answer_dropped"))
 		audio._focus_until = audio.clock
+		audio._set_answer = "set_answer_build_0"
+		audio._set_answer_at = audio.ace.clock - audio.ace.grid_bar / 4
+		audio._gates["call_in"] = audio.clock + 1.0
+		audio._tend_set()
+		t.eq("a caller in the second half of June's bar takes her answer back too", audio._set_answer, "")
+		audio._gates["call_in"] = audio.clock - 0.1
 		game.ctx.tuning.set_option(Tuning.SET_DIRECTOR_KEY, "off")
 		_bars(audio, 1)
 		t.eq("switched off again, the director rests", audio.set_director.bar, -1)

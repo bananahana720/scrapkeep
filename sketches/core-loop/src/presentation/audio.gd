@@ -4024,7 +4024,9 @@ func _tend_kettle() -> void:
 	var redline = ctx.player.get("redline") if ctx != null and ctx.get("player") != null else null
 	var left: float = redline.fuse_left() if redline != null else -1.0
 	var due := left > 0.0 and left <= KETTLE_S
-	if due and not _kettle_on:
+	# A pause or slow motion can outlast the 2 s whistle on a game-time fuse: whistle again.
+	var sounding: bool = _kettle_on and _sfx != null and Array(_voices.get("heat_kettle", [])).any(func(id: int): return _sfx.is_stream_playing(id))
+	if due and not sounding:
 		_kettle_on = play("slammed", 0.0, 1.0, "SFX", "heat_kettle")
 	elif not due and _kettle_on and left <= 0.0:
 		_kettle_on = false
@@ -4765,7 +4767,6 @@ func _tend_set() -> void:
 	if at == _set_bar_at or at - ace.clock > ace.grid_bar / 2:
 		return
 	_set_bar_at = at
-	_set_answer = ""
 	var plan := set_director.read(set_room(at))
 	var ramp := grid_unit(4)
 	if not plan.trims.is_empty():
@@ -4813,14 +4814,14 @@ func set_room(at: int) -> Dictionary:
 	room["pressure"] = _pressure
 	room["heat"] = _redline_band
 	room["overtime"] = _set_overtime
-	# A flat pack (a miniboss, Brindle or a moment tune plays one "main" section) is a directed piece.
-	if ace.section == "main":
-		room["fight"] = "piece"
 	match ace.mode:
 		"piece":
 			room["fight"] = "piece"
 		"warden":
 			room["fight"] = ace.section if ace.section in ["open", "drop"] else ace.warden_state
+	# A flat pack (a miniboss, Brindle or a moment tune plays one "main" section) is a directed piece.
+	if ace.section == "main":
+		room["fight"] = "piece"
 	room["warning"] = clock < _focus_until or _warden_charging
 	room["busy"] = _set_busy()
 	if _set_incoming_at > clock:

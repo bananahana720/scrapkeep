@@ -369,12 +369,15 @@ func trim_bar(at: int, next: Dictionary, bar: int, ramp: int) -> void:
 	trim_at(at + bar - ramp, {}, ramp)
 
 
-# Only the stems a trim changes move; a fall or breath ramp in flight on another stem keeps its pace.
+# Only the stems a trim changes move, and only when their level changes; a fall, breath or join
+# ramp in flight keeps its pace. Voices waiting on a join ramp at the join's own pace.
 func _trim_voices(list: Array, name: String, stems: Array, frames: int) -> void:
 	var gains := _profile(name)
 	for v: Voice in list:
 		if v.stem in stems and gains.has(v.stem):
-			_ramp_to(v, _gain_of(gains[v.stem], v.stem, name), frames)
+			var g := _gain_of(gains[v.stem], v.stem, name)
+			if not is_equal_approx(g, v.target):
+				_ramp_to(v, g, frames)
 
 
 func trim_of(stem: String, at := "") -> float:
@@ -1121,7 +1124,7 @@ func _run(action: Dictionary) -> void:
 			if live != "":
 				_trim_voices(voices, live, stems, int(action.frames))
 			if not pending.is_empty() and not begun:
-				_trim_voices(pending["voices"], String(pending["section"]), stems, int(action.frames))
+				_trim_voices(pending["voices"], String(pending["section"]), stems, int(pending["ramp"]))
 		"stop":
 			stop(int(action["ramp"]))
 

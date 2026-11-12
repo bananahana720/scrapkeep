@@ -173,8 +173,8 @@ func read(room: Dictionary) -> Dictionary:
 	var incoming := int(room.get("incoming_bars", 0))
 	# The bass swap: the bar before the room peaks (or a set piece lands) the bass steps out,
 	# and the next bar slams it back. Never inside a fight section, which has its own form.
-	# One swap per climb, re-armed when the room falls back or leaves build; one per announcement.
-	if mood != "build" or e < PEAK_UP - PEAK_NEAR:
+	# One swap per climb, re-armed when the room falls under the peak's fall line or leaves build; one per announcement.
+	if mood != "build" or e < PEAK_DOWN:
 		_swap_armed = true
 	var climb := _swap_armed and mood == "build" and _rising and e >= PEAK_UP - PEAK_NEAR
 	var landing := incoming == 1 and not _landing_swapped
