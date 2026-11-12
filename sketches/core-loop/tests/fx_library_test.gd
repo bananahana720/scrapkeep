@@ -75,13 +75,13 @@ func _run() -> void:
 	# FX-02: hits and stuns read on sand. The solid hit and crit sparks wear a charcoal rim, the
 	# additive ones stay pure light, and a stun is a ring of solid inked stars twice the old glow's size.
 	t.check("a solid spark wears an ink rim", FxLibrary.look("spark_core") == "streak"
-		and FxLibrary.look_material("streak", "mix").shader.code.contains("ALBEDO = mix(ALBEDO, ink,"))
-	t.check("an additive spark stays pure light", not FxLibrary.look_material("streak", "add").shader.code.contains("ALBEDO = mix(ALBEDO, ink,"))
+		and FxLibrary.look_material("streak", "mix").shader.code.contains("ALBEDO = mix(ALBEDO, ink_colour,"))
+	t.check("an additive spark stays pure light", not FxLibrary.look_material("streak", "add").shader.code.contains("ALBEDO = mix(ALBEDO, ink_colour,"))
 	t.check("the ink is the palette's charcoal, handed over as a colour so it converts to linear light",
-		FxLibrary.look_material("star").get_shader_parameter("ink") == Palette.CHARCOAL
-		and FxLibrary.look_material("star").shader.code.contains("uniform vec3 ink : source_color"))
+		FxLibrary.look_material("star").get_shader_parameter("ink_colour") == Palette.CHARCOAL
+		and FxLibrary.look_material("star").shader.code.contains("uniform vec3 ink_colour : source_color"))
 	t.check("the stun halo is solid inked stars", looks["star"] == ["daze_halo"] and FxLibrary.spec("daze_halo")["blend"] == "mix"
-		and FxLibrary.look_material("star").shader.code.contains("mix(fill, ink,"))
+		and FxLibrary.look_material("star").shader.code.contains("mix(fill, ink_colour,"))
 	t.check("the stun stars are twice the old glow's size", is_equal_approx(float(FxLibrary.spec("daze_halo")["size"]), 0.6))
 	t.check("ink stars never flash", FxLibrary.HEAT["star"] == 0.0)
 	t.check("dust and steam are puffs", "slam_dust" in looks["puff"] and "steam_puff" in looks["puff"])

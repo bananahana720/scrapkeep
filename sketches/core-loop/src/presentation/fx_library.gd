@@ -120,7 +120,7 @@ instance uniform vec4 tint : source_color = vec4(1.0);
 // How far a hot particle starts toward white; it cools over its life (FlashGuard.whiten scales it).
 instance uniform float heat = 0.0;
 // Palette.CHARCOAL, set from GDScript so the engine converts it to linear light (a literal would not be).
-uniform vec3 ink : source_color;
+uniform vec3 ink_colour : source_color;
 varying float v_life;
 varying float v_seed;
 float seed_of(int id) {
@@ -204,7 +204,7 @@ void fragment() {
 	}
 	vec3 base = tint.rgb * COLOR.rgb;
 	vec3 fill = mix(base, mix(base, vec3(1.0), 0.45), step(r, edge * 0.32));
-	ALBEDO = mix(fill, ink, step(edge - 0.2, r));
+	ALBEDO = mix(fill, ink_colour, step(edge - 0.2, r));
 	ALPHA = tint.a * COLOR.a;
 }
 """],
@@ -325,14 +325,14 @@ static func look_material(kind: String, blend := "mix") -> ShaderMaterial:
 		var body: String = row[2]
 		if kind == "streak":
 			modes = modes % ("blend_add, depth_draw_never" if blend == "add" else "blend_mix, depth_draw_opaque")
-			var ink := "\n\tALBEDO = mix(ALBEDO, ink, smoothstep(w * 0.5, w * 0.62, across));"
+			var ink := "\n\tALBEDO = mix(ALBEDO, ink_colour, smoothstep(w * 0.5, w * 0.62, across));"
 			body = body % (["min(COLOR.rgb, vec3(1.0))", "", " * (1.0 - smoothstep(0.0, 1.0, across)) * 0.7"] if blend == "add" else ["COLOR.rgb", ink, ""])
 		var vertex: String = {"billboard": _BILLBOARD, "streak": _STREAK_VERTEX, "chunk": _CHUNK_VERTEX}[row[1]]
 		var shader := Shader.new()
 		shader.code = (_HEAD % modes) + vertex + body
 		var mat := ShaderMaterial.new()
 		mat.shader = shader
-		mat.set_shader_parameter("ink", Palette.CHARCOAL)
+		mat.set_shader_parameter("ink_colour", Palette.CHARCOAL)
 		_shaders[key] = mat
 	return _shaders[key]
 
