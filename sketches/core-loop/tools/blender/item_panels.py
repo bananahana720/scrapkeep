@@ -30,15 +30,16 @@ from mathutils import Matrix, Vector
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import common
+import palette_gd
 import cycles_device
 import polish
 from common import Part
 
 FACE = "panel_face"
 HARD = "panel_hardware"
-BONE = "d2c5a5"
-STEEL = "9aa0a0"
-CHARCOAL = "242a28"
+BONE = common.HEX["bone"]
+STEEL = palette_gd.HEX["STEEL"]
+CHARCOAL = common.HEX["charcoal"]
 ROPE = "b8a77f"  # bone in shade: rope reads apart from the plate it sits on
 TOP = 0.03       # the plate's face height above its back
 TRIS_CAP = 1200  # 128 drawn plates stay near 150k triangles at the worst mix
