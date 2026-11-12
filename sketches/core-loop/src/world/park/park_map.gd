@@ -71,12 +71,19 @@ func warden_spec() -> Dictionary:
 
 # Where this stage's fights happen, as the game places them, for the map checks (map points 2 and 3). Each site is
 # {"id", "kind", "at": Vector2} plus its extent: a "home" (a crew's site row, director.gd _read_homes) and an "event"
-# (its site row, resolved by NaturalFootprint, half sizes from effect.footprint_m when set, event_director.gd _park_clear) carry the row's footprint as "half": Vector2 and "yaw_deg", as footprint_contains
+# (its site row, resolved by NaturalFootprint, half sizes from effect.footprint_m when set, event_director.gd _park_clear; a
+# lightning row is its strike disc, a "ring" of 0 to strike_m at the site's centre) carry the row's footprint as "half": Vector2 and "yaw_deg", as footprint_contains
 # reads it; the "warden" (the engage ring) and the "yard" lock (lock_rows.gd) carry "ring": Vector2(inner, outer), the
 # band of distance from `at` they cover. The yard lock shuts wherever the ball first crosses within_m of the beacon on
 # the ground, centred ahead_m inside it, so its ring is every place that circle can stand for a ball that crosses
-# the line rolling (one landing from the air inside it shuts the yard nearer in). Dormant homes count: an
+# the line rolling (one landing from the air inside it shuts the yard nearer in). An "activity" that fights (a camp, an
+# ambush altar, a relay) carries its rule's ring at the row's spot. Dormant homes count: an
 # event wakes them. Director timer packs are not sites; they spawn ahead of the ball anywhere off the pilot lines.
+# An event that commits no hazard and sends no foe is not a fight: the sluice surge is the surge run's water front,
+# which only pushes the ball on and never hurts (events/industrial.gd handle, activities.gd surge_run).
+const NOT_FIGHTS := ["sluice_surge"]
+
+
 func fight_sites() -> Array:
 	if not ok:
 		return []
@@ -90,12 +97,26 @@ func fight_sites() -> Array:
 			if site.is_empty():
 				continue
 			if table[1] == "event":
+				if row.get("kind", "") in NOT_FIGHTS:
+					continue
+				# A lightning row strikes one strike_m disc at its site's centre (natural.gd plan and _hazard): the disc
+				# is its fight, not the landform it sits on.
+				if row.get("kind", "") == "lightning":
+					out.append({"id": row["id"], "kind": "event", "at": _v2(site["at"]), "ring": Vector2(0.0, float(row.get("effect", {}).get("strike_m", 0.0)))})
+					continue
 				site = NaturalFootprint.resolve(row, site)
 			var half := footprint_half_extents(site)
 			var own = row.get("effect", {}).get("footprint_m")
 			if own is Array:
 				half = _v2(own).abs() * 0.5
 			out.append({"id": row["id"], "kind": table[1], "at": _v2(site["at"]), "half": half, "yaw_deg": float(site["yaw_deg"])})
+	# An activity that fights (its rule has a pack: a camp, an ambush altar, a relay) is a ring of its rule's radius at
+	# the row's own spot. Loaded here, not preloaded: only the map checks ask, and activities.gd pulls in half the game.
+	var rules: Dictionary = load("res://src/world/activities.gd").RULES
+	for row in park.get("activity_rows", []):
+		var rule: Dictionary = rules.get(String(row.get("activity", "")), {})
+		if rule.has("pack") and row.has("at"):
+			out.append({"id": row["id"], "kind": "activity", "at": _v2(row["at"]), "ring": Vector2(0.0, float(rule.get("ring", 0.0)))})
 	out.append({"id": "warden", "kind": "warden", "at": beacon, "ring": Vector2(0.0, reach_m)})
 	var lock: Dictionary = LockRows.row(title).get("lock", {})
 	if not lock.is_empty():
