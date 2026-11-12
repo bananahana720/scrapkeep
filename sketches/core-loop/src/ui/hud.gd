@@ -1119,6 +1119,25 @@ func hull_cap_shown() -> float:
 	return _health.cap
 
 
+# The ball on screen and what rides on it (the part name, the danger mark, the prompts beside it
+# such as a boss part's readout), for the marks' tags to stay off.
+func _ball_readouts() -> Array[Rect2]:
+	var out: Array[Rect2] = []
+	for rect in prompt_rects.values():
+		out.append(rect)
+	var cam: Camera3D = game.camera.cam
+	var at: Vector3 = game.player.shown_position()
+	if cam == null or cam.is_position_behind(at):
+		return out
+	var centre := cam.unproject_position(at)
+	var half := centre.distance_to(cam.unproject_position(at + cam.global_basis.x * Tuning.RADIUS))
+	out.append(Rect2(centre - Vector2(half, half), Vector2(half, half) * 2.0))
+	for rect in [part_name.rect(), danger_mark.rect()]:
+		if rect.has_area():
+			out.append(rect)
+	return out
+
+
 # The objective for the flow's state: the row objectives.gd picks, with its glyph, its colour
 # and, while the Warden is still to be found, the metres to it.
 func objective_reading() -> Dictionary:
@@ -1329,6 +1348,7 @@ func _process(delta: float) -> void:
 	edge_markers.objective_icon = goal["icon"]
 	edge_markers.engaged = _engaged
 	edge_markers.yard_locked = reading["id"] == "break_yard_crew"
+	edge_markers.keep_clear = _ball_readouts()
 	var tbl = game.ctx.stages
 	var world: int = tbl.world_of(run.stage)
 	var world_stages: int = tbl.last_of(world) - tbl.first_of(world) + 1
