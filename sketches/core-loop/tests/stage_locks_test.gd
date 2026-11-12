@@ -25,8 +25,6 @@ const Palette := preload("res://src/core/palette.gd")
 # - lock: on the ground inside within_m of the beacon the yard shuts round the ball with its crew,
 #   the wall turns an escaping ball back, the last crew member down opens it, and the crew counts
 #   toward the gate; its kills roll no panel and the cleared yard pays one (ruling af); the Warden already awake leaves it unfired;
-# - sentry (systems audit pass E): on the dam one lobber lands up the ball's line once, inside the sentry's
-#   circle and before the yard shuts, as a plain enemy that is no crew;
 # - plate (w22 first-timer red team): while the yard holds, the objective plate says so and no edge
 #   marker points past its wall; while the clamp is shut on an awake Warden, the plate says so and its
 #   ring fills with the pips, an edge marker with the plate's glyph points at the crew nearest a pip
@@ -63,7 +61,6 @@ func _run() -> void:
 	await _gate()
 	await _riders()
 	await _lock()
-	await _sentry()
 	await _timed_out()
 	await _skipped_when_engaged()
 	await _off()
@@ -336,67 +333,8 @@ func _lock() -> void:
 	_t.eq("every crew kill is logged as the yard's", crew_kills.size(), crew_size)
 	_t.check("no crew kill drops a panel", crew_kills.all(func(k: Array): return not bool(k[5])))
 	_t.eq("the cleared yard pays one panel", since.filter(func(k: Array): return String(k[1]) == "yard_clear" and bool(k[5])).size(), 1)
-	# Pity moves only on kills outside the crew. A director chaser or lobber can still meet the ball
-	# while the yard holds (the escaping ball above runs out past the wall at 20 m/s), and on a loaded
-	# box more game time passes, so replay the pity count over those kills rather than expecting none.
-	var outside := since.filter(func(k: Array): return not (k.size() > 6 and bool(k[6])) and String(k[1]) != "yard_clear")
-	var want := dry
-	for k: Array in outside:
-		want = 0 if bool(k[5]) else want + 1
-	_t.check("the yard leaves pity alone", game.build.dropper.dry == want,
-			"got %d, want %d; kills outside the crew: %s" % [game.build.dropper.dry, want, str(outside)])
+	_t.eq("the yard leaves pity alone", game.build.dropper.dry, dry)
 	_t.eq("its panel lies in the field", game.build.scrap.panel_count(), panels + 1)
-	game.free()
-	await process_frame
-
-
-func _lobbers(game) -> Array:
-	return game.get_tree().get_nodes_in_group("enemy").filter(func(e): return String(e.get("kind")) == "lobber" and not e.is_dead())
-
-
-func _sentry() -> void:
-	var game = await _game()
-	var locks = game.flow.gate
-	var row: Dictionary = LockRows.row("park_dam")["lock"]
-	var sentry: Dictionary = row["sentry"]
-	_t.eq("the dam's sentry is a lobber", sentry["kind"], "lobber")
-	_t.check("the sentry lands before the yard shuts", float(sentry["within_m"]) > float(row["within_m"]))
-	for enemy in game.get_tree().get_nodes_in_group("enemy"):
-		if String(enemy.get("kind")) not in ["warden", "vault", ""]:
-			enemy.queue_free()
-	await physics_frame
-	var beacon: Vector3 = game.flow.beacon.global_position
-	var spot := beacon + Vector3(0.0, 0.0, -float(sentry["within_m"]) + 10.0)
-	var ground: Vector3 = game.ctx.terrain.drop_point(spot.x, spot.z, 1.0)
-	game.player.reset_to(ground, Vector3.ZERO)
-	for i in 6:
-		await physics_frame
-	var lobbers := _lobbers(game)
-	_t.eq("one lobber lands", lobbers.size(), 1)
-	_t.eq("the yard is still armed", locks.lock_state, "armed")
-	if lobbers.size() == 1:
-		var at: Vector3 = lobbers[0].global_position
-		var ball: Vector3 = game.player.ball_position()
-		var ahead := Vector3(beacon.x - ball.x, 0.0, beacon.z - ball.z).normalized().dot(Vector3(at.x - ball.x, 0.0, at.z - ball.z))
-		_t.near("it stands ahead_m up the line to the beacon", ahead, float(sentry["ahead_m"]), 3.0)
-		_t.check("it is in shell range of the ball", Vector2(at.x - ball.x, at.z - ball.z).length() < 75.0)
-		_t.check("it is no crew", not lobbers[0].has_meta("yard_crew"))
-	var spot2 := beacon + Vector3(0.0, 0.0, -float(sentry["within_m"]) + 30.0)
-	game.player.reset_to(game.ctx.terrain.drop_point(spot2.x, spot2.z, 1.0), Vector3.ZERO)
-	for i in 6:
-		await physics_frame
-	_t.eq("it lands once", _lobbers(game).size(), lobbers.size())
-	# The yard shuts with the sentry outside the wall: it goes, and the crew lands as before.
-	var spot3 := beacon + Vector3(0.0, 0.0, -float(row["within_m"]) + 20.0)
-	game.player.reset_to(game.ctx.terrain.drop_point(spot3.x, spot3.z, 1.0), Vector3.ZERO)
-	var waited := 0
-	while locks.lock_state == "armed" and waited < 240:
-		await physics_frame
-		waited += 1
-	await physics_frame
-	_t.eq("the yard shuts", locks.lock_state, "locked")
-	_t.check("a sentry outside the wall leaves as the yard shuts", lobbers.size() == 1 and not is_instance_valid(lobbers[0]))
-	_t.eq("the crew is the first wave alone", locks.crew_alive().size(), (row["waves"][0] as Array).size())
 	game.free()
 	await process_frame
 
