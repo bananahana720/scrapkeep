@@ -79,6 +79,9 @@ const ONBEAT_GROW := 1.4
 # A read word's size (read_word: DENT, ZZAP!), on the same screen-share scale; it is the foe's,
 # so the build's might never grows it.
 const READ_SIZE := 0.8
+# How high over a foe its marks stack (machine_fx's stagger word at 3.2 m, the class icon at
+# 3.1 m, the interrupted star at 2.4 m), with room for the stagger word's own height.
+const STACK_TOP := 4.0
 const WORD_FONT_PATH := "res://assets/fonts/NotoSans-Bold.ttf"
 # Word size is screen height share: "size" 1.0 is WORD_SCREEN of the screen's height,
 # whatever the distance, so a word near the camera never swallows the ball.
@@ -733,17 +736,18 @@ func word(id: String, at: Vector3, color := Color.TRANSPARENT, foe = null) -> bo
 			return false
 		placed = spots[pick][0]
 		right_of_ball = spots[pick][1]
+	_last_word = _clock
 	_word_seen[id] = _clock
 	_stamp_word(slot, id, text, placed, right_of_ball, width_px, size, color if color.a > 0.0 else heat_tint(_word_color(id)))
 	return true
 
 
 # A read word (DENT, ZZAP!): an armour class answering its first hit (armour_marks.gd). A read
-# teaches, so it speaks past the sound words' budget (the gap, the repeat window, the alive cap,
-# the densest band), but it keeps their placement: screen-share size, the safe area, the warning
+# teaches, so it speaks past the sound words' budget (the gap, the repeat window, the densest
+# band; it takes only a free slot and leaves the gap alone), but it keeps their placement: screen-share size, the safe area, the warning
 # gap, render priority, and the foe's body kept clear. It stands beside the foe it names at
-# mid-body, either side, else just above everything stacked on it; false when every spot is
-# covered or the foe is out of view, so the caller asks again on the next hit.
+# mid-body, either side, else above the column of marks stacked on it; false when every spot is
+# covered, every slot is showing or the foe is out of view, so the caller asks again next hit.
 func read_word(text: String, foe: Node3D, color: Color) -> bool:
 	if text == "" or root == null or not root.is_inside_tree() or camera == null or camera.cam == null:
 		return false
@@ -752,16 +756,24 @@ func read_word(text: String, foe: Node3D, color: Color) -> bool:
 	if not body.has_area():
 		return false
 	var slot := _free_slot()
+	if slot["t"] < 1.0:
+		return false
 	var label: Label3D = slot["node"]
 	var width_px := _text_px(label, text)
 	var tall := READ_SIZE * WORD_SCREEN * cam.get_viewport().get_visible_rect().size.y
 	var wide := width_px * label.pixel_size * tall / 0.7
 	# A pixel past the gap, as word() does: flush on the grown body's edge, rounding can touch it.
 	var gap := WORD_WARNING_GAP + 1.0
+	# The column over the foe is taken too: its class icon, the interrupted star and the stagger
+	# word stand there (STACK_TOP), and none of them is part of its body.
+	var beside := body.get_center().y
+	var top := foe.global_position + Vector3.UP * STACK_TOP
+	if not cam.is_position_behind(top):
+		body = body.expand(cam.unproject_position(top))
 	var mid := body.get_center()
 	var depth := maxf(-(cam.global_transform.affine_inverse() * foe.global_position).z, cam.near + 0.1)
 	var spots: Array = []
-	for s in [[Vector2(body.end.x + gap, mid.y), true], [Vector2(body.position.x - gap, mid.y), false],
+	for s in [[Vector2(body.end.x + gap, beside), true], [Vector2(body.position.x - gap, beside), false],
 			[Vector2(mid.x - wide * 0.5, body.position.y - gap - tall * 0.6), true]]:
 		spots.append([cam.project_position(s[0], depth), s[1]])
 	var avoid := _warnings().duplicate()
@@ -802,7 +814,6 @@ static func _pick_spot(cam: Camera3D, spots: Array, width_px: float, size: float
 
 func _stamp_word(slot: Dictionary, id: String, text: String, at: Vector3, right: bool, width_px: float, size: float, tint: Color) -> void:
 	var label: Label3D = slot["node"]
-	_last_word = _clock
 	label.text = text
 	label.modulate = tint
 	slot["away"] = 1.0 if right else -1.0

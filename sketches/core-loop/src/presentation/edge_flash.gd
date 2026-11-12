@@ -70,7 +70,7 @@ func _process(delta: float) -> void:
 
 # The notch's three corners for a `view` sized screen: its tip where the ray from the centre
 # toward the source meets the edge (inset, and slid along the edge so the whole wedge stays on
-# screen), its base back toward the centre.
+# screen), pointing straight out through that edge, its base toward the centre.
 static func notch_points(toward: Vector2, view: Vector2) -> PackedVector2Array:
 	var dir := toward.normalized()
 	var half := view * 0.5 - Vector2.ONE * NOTCH_INSET
@@ -78,12 +78,14 @@ static func notch_points(toward: Vector2, view: Vector2) -> PackedVector2Array:
 	var to_top := half.y / absf(dir.y) if absf(dir.y) > 0.001 else INF
 	var tip := view * 0.5 + dir * minf(to_side, to_top)
 	var keep := NOTCH_INSET + NOTCH_WIDE * 0.5
+	var out := Vector2(signf(dir.x), 0.0)
 	if to_side <= to_top:
 		tip.y = clampf(tip.y, keep, view.y - keep)
 	else:
 		tip.x = clampf(tip.x, keep, view.x - keep)
-	var base := tip - dir * NOTCH_DEEP
-	var side := Vector2(-dir.y, dir.x) * NOTCH_WIDE * 0.5
+		out = Vector2(0.0, signf(dir.y))
+	var base := tip - out * NOTCH_DEEP
+	var side := Vector2(-out.y, out.x) * NOTCH_WIDE * 0.5
 	return PackedVector2Array([tip, base + side, base - side])
 
 

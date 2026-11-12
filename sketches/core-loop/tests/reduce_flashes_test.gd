@@ -191,11 +191,12 @@ func _notch(edge) -> void:
 	var view := Vector2(1600, 900)
 	var inside := Rect2(Vector2.ZERO, view)
 	var placed := true
-	for toward in [Vector2.LEFT, Vector2.RIGHT, Vector2.UP, Vector2.DOWN, Vector2(1, -1), Vector2(-3, 1), Vector2(0.2, 1)]:
+	for i in 720:
+		var toward := Vector2.from_angle(TAU * i / 720.0)
 		var wedge: PackedVector2Array = EdgeFlash.notch_points(toward, view)
 		var tip := wedge[0]
 		var on_edge := minf(minf(tip.x, view.x - tip.x), minf(tip.y, view.y - tip.y)) <= EdgeFlash.NOTCH_INSET + 0.5
 		var facing := (tip - view * 0.5).normalized().dot(toward.normalized()) > 0.7
-		placed = placed and on_edge and facing and Array(wedge).all(func(p): return inside.grow(0.5).has_point(p))
+		placed = placed and on_edge and facing and Array(wedge).all(func(p): return inside.has_point(p))
 	_t.check("RF-4b the notch's tip sits on the edge toward the source, the wedge on screen", placed)
 

@@ -204,15 +204,15 @@ func _run() -> void:
 		w["t"] = 1.0
 	fx._last_word = -1.0e9
 	fx._word_seen.clear()
-	var body := PlayerFx.foe_rect(foe, wcam)
+	var body := PlayerFx.foe_rect(foe, wcam).expand(wcam.unproject_position(foe.global_position + Vector3.UP * PlayerFx.STACK_TOP))
 	fx._last_word = fx._clock
 	var gap_said: bool = not fx.word("vault", ball + Vector3(-3, 2, 0))
 	var read_said: bool = fx.read_word("DENT", foe, Color.WHITE)
 	var read: Dictionary = fx._words_by_id("read")
 	var read_rect := Rect2() if read.is_empty() else PlayerFx._word_rect(wcam, read["at"], float(read["away"]) > 0.0, float(read["width_px"]), float(read["size"]), 0.01)
-	t.check("a read word speaks inside the gap, beside its foe, clear of it and inside the safe area",
+	t.check("a read word speaks inside the gap, beside its foe, clear of it and the marks stacked over it, inside the safe area",
 		gap_said and read_said and read_rect.has_area() and not read_rect.intersects(body.grow(PlayerFx.WORD_WARNING_GAP)) and safe.encloses(read_rect)
-		and is_equal_approx(float(read["size"]), PlayerFx.READ_SIZE) and (read["node"] as Label3D).render_priority == PlayerFx.RENDER_PRIORITY,
+		and is_equal_approx(float(read["size"]), PlayerFx.READ_SIZE) and is_equal_approx(fx._last_word, fx._clock) and (read["node"] as Label3D).render_priority == PlayerFx.RENDER_PRIORITY,
 		"said %s/%s at %s foe %s" % [gap_said, read_said, read_rect, body])
 	shape.visible = false
 	t.check("a read word for a foe out of view stays unsaid, so the next hit asks again", not fx.read_word("ZZAP!", foe, Color.WHITE))
