@@ -677,7 +677,8 @@ func words_alive() -> int:
 # Stamps a sound word at `at`, pushed off the line ahead of the ball. Refused inside the
 # gap since the last word, inside a word's own repeat window, with two alive, or in the
 # densest band, where only the reads may speak.
-func word(id: String, at: Vector3, color := Color.TRANSPARENT, foe: Node3D = null) -> bool:
+# `foe` is untyped: a freed foe cannot pass a typed parameter (see _on_beat_word).
+func word(id: String, at: Vector3, color := Color.TRANSPARENT, foe = null) -> bool:
 	if not WORDS.has(id) or root == null or not root.is_inside_tree():
 		return false
 	var repeat := BEAT_REPEAT_S if id == "beat" else WORD_REPEAT_S
@@ -718,6 +719,13 @@ func word(id: String, at: Vector3, color := Color.TRANSPARENT, foe: Node3D = nul
 		var rects: Array[Rect2] = []
 		for s in spots:
 			rects.append(_word_rect(cam, s[0], s[1], width_px, size * grow, label.pixel_size))
+		# A spot is taken only where the word already stands inside the safe area, so the draw's pull
+		# never drags it back onto what it avoided.
+		var view := cam.get_viewport().get_visible_rect().size
+		var safe := Rect2(view * 0.5 * (Vector2.ONE - WORD_SAFE), view * WORD_SAFE)
+		for i in rects.size():
+			if not safe.encloses(rects[i]):
+				rects[i] = Rect2()
 		var pick := word_spot(rects, avoid)
 		if pick < 0:
 			spawned["word_held"] = spawned.get("word_held", 0) + 1
@@ -763,7 +771,7 @@ static func word_spot(spots: Array[Rect2], avoid: Array[Rect2]) -> int:
 
 
 # The screen rect of `foe`'s visible meshes, or an empty rect without one in view.
-static func foe_rect(foe: Node3D, cam: Camera3D) -> Rect2:
+static func foe_rect(foe, cam: Camera3D) -> Rect2:
 	if foe == null or not is_instance_valid(foe) or not foe.is_inside_tree() or cam == null:
 		return Rect2()
 	var merged := [AABB(), false]

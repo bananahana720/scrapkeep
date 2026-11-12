@@ -148,6 +148,23 @@ func _run() -> void:
 	t.check("a word naming its foe never lands on it", fx.word("smash", ball + Vector3(3, 2, 0), Color.TRANSPARENT, foe)
 		and not PlayerFx._word_rect(wcam, fx._words_by_id("smash")["at"], float(fx._words_by_id("smash")["away"]) > 0.0, float(fx._words_by_id("smash")["width_px"]),
 			float(fx._words_by_id("smash")["size"]), 0.01).intersects(foe_px), "foe %s" % foe_px)
+	# A foe filling the top of the view: the spot above it is off screen, so the word stays clear
+	# of it or unsaid, never pulled back onto it.
+	foe.global_position = ball + Vector3(3, 6, 0)
+	(shape.mesh as BoxMesh).size = Vector3(8, 8, 1.5)
+	await _frames(1)
+	for w in fx._words:
+		w["t"] = 1.0
+	fx._last_word = -1.0e9
+	fx._word_seen.clear()
+	var big := PlayerFx.foe_rect(foe, wcam)
+	var said: bool = fx.word("smash", ball + Vector3(3, 2, 0), Color.TRANSPARENT, foe)
+	var vsize := wcam.get_viewport().get_visible_rect().size
+	var safe := Rect2(vsize * 0.5 * (Vector2.ONE - PlayerFx.WORD_SAFE), vsize * PlayerFx.WORD_SAFE)
+	var took := Rect2() if not said else PlayerFx._word_rect(wcam, fx._words_by_id("smash")["at"], float(fx._words_by_id("smash")["away"]) > 0.0,
+		float(fx._words_by_id("smash")["width_px"]), float(fx._words_by_id("smash")["size"]), 0.01)
+	t.check("planted: a word by a big foe never ends up on it, nor off the safe area", not said or (safe.encloses(took) and not took.intersects(big)),
+		"said %s at %s foe %s" % [said, took, big])
 	foe.free()
 	for w in fx._words:
 		w["t"] = 1.0
