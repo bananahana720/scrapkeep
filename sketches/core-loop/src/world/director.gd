@@ -7,7 +7,7 @@ extends RefCounted
 # Honesty rules (demo spec, Director honesty):
 # - Enemy HP comes from stage threat only, at every run tier (ruling al). The opt-in run
 #   tier adds capped per-world damage and rest dials; the clock never toughens an enemy.
-# - The clock's tier is clamped at +2, and every rise, the beacon spike included, is
+# - The clock's tier is clamped at the stage's last tier (+2; +3 on world 1, clock_tiers()), and every rise, the beacon spike included, is
 #   recorded for the world to announce with threat_rose. Nothing rises silently.
 # - 60% of spawns land ahead of the ball, within 35 degrees of where it is rolling,
 #   60 to 90 m out; the rest on the flanks. None lands within 25 m of the ball, and
@@ -262,7 +262,13 @@ func run_tier() -> int:
 
 
 func tier() -> int:
-	return mini(int(stage_time / TIER_SECONDS), MAX_TIME_TIERS)
+	return mini(int(stage_time / TIER_SECONDS), clock_tiers(dial_stage))
+
+
+# The clock's last tier on a stage: ChallengeDials mobs.clock_tiers_by_stage, MAX_TIME_TIERS for a director
+# with no stage row. World 1 climbs to +3 (wave 37 unit D3); the run clock (build/run_clock.gd) reads the same dial.
+static func clock_tiers(stage: int) -> int:
+	return maxi(0, roundi(ChallengeDials.by_stage_or("mobs.clock_tiers_by_stage", stage, MAX_TIME_TIERS)))
 
 
 func effective_tier() -> int:
@@ -301,7 +307,7 @@ func interval() -> float:
 
 
 func lobber_share() -> float:
-	return clampf(0.15 + effective_tier() * 0.07, 0.0, 0.5)
+	return clampf(0.15 + effective_tier() * ChallengeDials.by_stage_or("mobs.lobber_share_step_by_stage", dial_stage, 0.07), 0.0, 0.5)
 
 
 # 0 with nothing alive and nothing coming, 1 at the cap during a beacon spike.
