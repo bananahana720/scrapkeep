@@ -4,7 +4,8 @@ extends RefCounted
 # It only reads the game, so a seeded bot run replays tick for tick with it on or off. Two users:
 # a bot's run (tools/qa_watch.gd, rows to a file with the bot's goal) and a person's sitting
 # (src/core/sitting_notes.gd).
-#   stuck   within STUCK_M of one point for STUCK_S of play, boss fights included (not frozen, not on a line)
+#   stuck   within STUCK_M of one point for STUCK_S of play, boss fights included (not frozen, not on a line,
+#           not mounted on a pylon: a mount is a chosen rest in the air)
 #   hung    at rest off the ground for HUNG_S (an ungrounded rest, ruling aa)
 #   wedged  at rest on the ground pressed into a wall-steep contact for HUNG_S
 #   fell    the fall rescue: the ball moved over TELEPORT_M in one tick from under the floor or off
@@ -107,7 +108,7 @@ func step(delta: float) -> void:
 			_emit("fell", _last, state, {"to": _v(ball)})
 	_last = ball
 	_was_in_play = in_play
-	var playing: bool = in_play and not player.frozen() and not player.kit.hooked
+	var playing: bool = in_play and not player.frozen() and not player.kit.hooked and not player.kit.mounted
 	if not playing:
 		_anchor = ball
 		_anchor_s = 0.0
