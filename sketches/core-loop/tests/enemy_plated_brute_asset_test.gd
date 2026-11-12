@@ -260,4 +260,4 @@ func _check_rig(scene: Node) -> void:
 			normalized = normalized and absf(total - 1.0) < 0.0001
 	_check(normalized and not weighted.has(0) and blended[0] > 0 and blended[1] > 0,
 		"each part has normalized skin weights, both arms blend torso to pad: weighted %s; blended %s" % [weighted, blended])
-	_check(is_equal_approx(float(_measure(scene)["tris"]), 4888.0), "4888 polished triangles (arms and sleeves stay unsubdivided so the pad and shoulder rings are exact at rest; 5232 when they were polished)")
+	_check(is_equal_approx(float(_measure(scene)["tris"]), 5308.0), "5308 polished triangles (arms and sleeves stay unsubdivided so the pad and shoulder rings are exact at rest; 4888 before the W1-24 stoplog-grab head, cast number and HIRED)")
