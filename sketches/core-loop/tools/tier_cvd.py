@@ -3,9 +3,12 @@
 
 Applies the Machado, Oliveira and Fernandes (2009) deuteranopia matrix at severity 1.0 in
 linear RGB, writes normal and deuteranopia side by side, and checks that the four tiers
-still differ by shape: in each row (gems, ball pieces, shop frames) it cuts each tier's
-silhouette from the simulated image, drops what all four share (the bare ball), and reports the largest overlap (IoU) between any two
-tiers. A row passes below 0.8, where two silhouettes are clearly different shapes.
+still differ by shape. In each row (gems, ball pieces, shop frames) it cuts each tier's
+silhouette from the simulated image: a gem or a frame is every pixel off the background, and
+a ball piece every pixel that differs from the bare twin still (<tiers>-bare.png, the pieces
+hidden), so the ball under it does not count. Every pair of tiers is compared by the pixels
+where one has shape and the other does not (XOR). A row passes when its closest pair differs
+by MIN_PX or more. Each row also reports its highest IoU, for reference only.
 
   python3 tools/tier_cvd.py <tiers.png> <out.png>   (reads <tiers>-bare.png beside it)
 """
@@ -24,6 +27,11 @@ COLUMNS = [800 + (i - 1.5) * 334 for i in range(4)]  # tier_still.gd COLUMN_PX
 HALF_W = 150
 ROWS = {"gems": (130, 345), "pieces": (370, 520), "shop": (700, 800)}
 TIERS = ["common", "rare", "relic", "evolved"]
+# Set before the first run (12 Nov), not tuned to it: 300 px is about a 17 px square on the
+# 1600x900 still, a little more than one 16 px icon (VISUAL-LANGUAGE section 5's smallest
+# glyph), so the closest pair differs by at least one icon's worth of shape. The shop row
+# failed it first (165 px) and passed only after the frames changed (333 px); the threshold
+# stayed put.
 MIN_PX = 300
 
 
