@@ -18,6 +18,8 @@ const FONT := UiTokens.HEADING
 const ROW := 40.0
 const RISE := float(UiTokens.GAP_M)
 const SLAM := 0.08
+# The slam's swell stays under ROW, so a slamming line never reaches the row above.
+const SWELL := 1.15
 const FADE := 0.25
 const OUTLINE := 6
 # The column's width: the longest pop at FONT ("LOUVRE +5% FIRE RATE"), with room.
@@ -59,9 +61,15 @@ func showing() -> bool:
 	return not lines.is_empty()
 
 
-# The column's screen rect while a line shows, else an empty rect.
+# The screen rect the lines on show cover (as wide as the widest), else an empty rect.
 func rect() -> Rect2:
-	return Rect2(position, size) if visible and showing() else Rect2()
+	if not visible or not showing():
+		return Rect2()
+	var font := UiFonts.bold()
+	var wide := 0.0
+	for line in lines:
+		wide = maxf(wide, font.get_string_size(String(line[0]), HORIZONTAL_ALIGNMENT_LEFT, -1, FONT).x * SWELL)
+	return Rect2(position, Vector2(maxf(size.x, wide + OUTLINE), size.y))
 
 
 func drawn_words() -> PackedStringArray:
@@ -79,7 +87,7 @@ func _draw() -> void:
 		var life: float = line[4]
 		var t := clampf(age / life, 0.0, 1.0)
 		var leave := clampf((age - (life - FADE)) / FADE, 0.0, 1.0)
-		var scale_now := 1.0 if UiTokens.reduced_motion or age >= SLAM else lerpf(1.3, 1.0, age / SLAM)
+		var scale_now := 1.0 if UiTokens.reduced_motion or age >= SLAM else lerpf(SWELL, 1.0, age / SLAM)
 		var lift := 0.0 if UiTokens.reduced_motion else RISE * t
 		var base := size.y - ROW * int(line[2]) - lift - font.get_descent(FONT)
 		var px := int(round(FONT * scale_now))
