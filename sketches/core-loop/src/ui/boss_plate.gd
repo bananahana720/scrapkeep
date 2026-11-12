@@ -255,11 +255,14 @@ func name_width() -> float:
 	return maxf(NAME_WIDTH, UiDraw.width(_name(), FONT) + GAP) if is_instance_valid(_warden) else NAME_WIDTH
 
 
-# The plate grows by the diamonds' drop only while it sets them, and wider by what a long name needs,
-# so the bar keeps its length.
+# The plate's size before any phase row: SIZE, wider by what this Warden's name needs, so the bar keeps its length.
+func rest_size() -> Vector2:
+	return SIZE + Vector2(name_width() - NAME_WIDTH, 0.0)
+
+
+# The plate grows by the diamonds' drop only while it sets them.
 func _fit() -> void:
-	var want := SIZE + (Vector2(0.0, PHASE_DROP) if _phases != null and phase_count() > 1 else Vector2.ZERO)
-	want.x += name_width() - NAME_WIDTH
+	var want := rest_size() + (Vector2(0.0, PHASE_DROP) if _phases != null and phase_count() > 1 else Vector2.ZERO)
 	custom_minimum_size = want
 	size = want
 

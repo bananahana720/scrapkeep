@@ -103,11 +103,11 @@ func _unit_checks() -> void:
 	var plate := BossPlate.new()
 	plate.set_process(false)
 	plate.bind(warden)
-	_t.check("P1 no phases: no diamonds, plate size unchanged", plate.phase_pips().is_empty() and plate.size == BossPlate.SIZE, "%s %s" % [plate.phase_pips(), plate.size])
+	_t.check("P1 no phases: no diamonds, plate size unchanged", plate.phase_pips().is_empty() and plate.size == plate.rest_size(), "%s %s" % [plate.phase_pips(), plate.size])
 	var phases := FakePhases.new()
 	plate.bind(warden, phases)
 	_t.eq("P2 phase 0 before the fight: nothing lit", plate.phase_pips(), ["ahead", "ahead", "ahead"])
-	_t.eq("P2 the plate grows by the drop", plate.size, BossPlate.SIZE + Vector2(0.0, BossPlate.PHASE_DROP))
+	_t.eq("P2 the plate grows by the drop", plate.size, plate.rest_size() + Vector2(0.0, BossPlate.PHASE_DROP))
 	phases.phase = 1
 	plate.advance(0.016)
 	_t.eq("P2 phase one lit", plate.phase_pips(), ["live", "ahead", "ahead"])

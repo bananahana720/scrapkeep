@@ -219,7 +219,7 @@ func _words_and_pips() -> void:
 	_t.check("this Warden's name ends a gap before its first pip", UiDraw.width(name, BossPlate.FONT) + BossPlate.GAP <= _plate.name_width(),
 		"%.0f + %.0f vs %.0f" % [UiDraw.width(name, BossPlate.FONT), BossPlate.GAP, _plate.name_width()])
 	_t.check("and the plate is wider by what the name needs, so the bar keeps its length",
-		is_equal_approx(_plate.size.x, BossPlate.SIZE.x + _plate.name_width() - BossPlate.NAME_WIDTH), "%.0f" % _plate.size.x)
+		is_equal_approx(_plate.size.x, BossPlate.SIZE.x + _plate.name_width() - BossPlate.NAME_WIDTH) and _plate.size == _plate.rest_size(), "%.0f" % _plate.size.x)
 	_t.eq("four pips", _plate.pips().size(), BossPosture.CHUNKS)
 	_t.eq("all four filled at the start", _filled(), 4)
 	_t.check("no crack mark yet", _plate.pips().all(func(pip): return not pip["cracked"]))
