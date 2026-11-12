@@ -118,6 +118,11 @@ func targets() -> Array[Dictionary]:
 	match flow.state_name():
 		"stage", "beacon":
 			if yard_locked:
+				# The yard's wall holds the ball: every stage marker points past it, so only the crew
+				# member nearest is marked, off screen behind the ball (PF-39).
+				var member = _yard_crew()
+				if member != null:
+					out.append({"at": member.global_position, "kind": "pack_arrived", "icon": Objectives.glyph("break_yard_crew")})
 				return out
 			var marks := _mount_marks()
 			out.append_array(marks)
@@ -289,6 +294,13 @@ func _clamp_crew() -> Node3D:
 	if objective_id != CLAMP_ROW or gate == null or not gate.has_method("clamp_crew") or game.player == null:
 		return null
 	return gate.clamp_crew(game.player.shown_position())
+
+
+func _yard_crew() -> Node3D:
+	var gate = game.flow.get("gate")
+	if gate == null or not gate.has_method("yard_crew") or game.player == null:
+		return null
+	return gate.yard_crew(game.player.shown_position())
 
 
 # The play view markers stay inside: clear of the top, toast and bottom bands.
