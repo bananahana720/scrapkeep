@@ -157,7 +157,9 @@ func _identity() -> void:
 	for key in ["pack.lead_by_stage", "pack.crew_extra_by_stage", "pack.rest_by_stage", "pack.flank_by_stage", "ground.churn_by_stage", "hazard.boil_by_stage"]:
 		_t.eq("01 %s is at its default with no flag" % key, ChallengeDials.value(key), ChallengeDials.DEFAULTS[key])
 	_t.eq("01b silt boils ship on world 1 at strength 2, nowhere else", ChallengeDials.value("hazard.boil_by_stage"), [2.0, 2.0, 0.0, 0.0, 0.0, 0.0])
-	_t.eq("02 a crew reads the identity row", PackPressure.crew_row(1), {"lead": 0.0, "rest": 1.0, "flank": 0.0})
+	_t.eq("01c the lead ships at half on world 1, nowhere else (wave 37 unit D1)", ChallengeDials.value("pack.lead_by_stage"), [0.5, 0.5, 0.0, 0.0, 0.0, 0.0])
+	_t.eq("02 a dam crew reads the half lead, none of it kept at cruise, and nothing else", PackPressure.crew_row(1), {"lead": 0.5, "lead_cruise": 0.0, "rest": 1.0, "flank": 0.0})
+	_t.eq("02b a Dig crew reads the identity row", PackPressure.crew_row(3), {"lead": 0.0, "lead_cruise": 1.0, "rest": 1.0, "flank": 0.0})
 	_t.eq("03 no extra chasers", PackPressure.crew_extra(1), 0)
 
 
@@ -314,6 +316,7 @@ func _boils() -> void:
 	_t.eq("26d a roaming pack still is", _loop_boils(boils, ctx, enemy, func(): pass), 1)
 	_t.eq("26g the exit run (gates, launch) never boils", _loop_boils(boils, ctx, enemy, func(): ctx.flow.state = "gates"), 0)
 	ctx.flow.state = "stage"
+	_stall(boils, ctx, enemy)
 	_quelled(boils, ctx, enemy, dealt, beacon)
 	ChallengeDials.set_overrides({})
 	ctx.root.queue_free()
@@ -333,6 +336,59 @@ func _loop_boils(boils, ctx, enemy, arrange: Callable) -> int:
 		angle += w * dt
 		ctx.player.at = Vector3(cos(angle), 0.0, sin(angle)) * RING
 		ctx.player.v = Vector3(-sin(angle), 0.0, cos(angle)) * CRUISE
+		boils.step(dt, [enemy])
+		if boils.boils > 0:
+			break
+	return boils.boils
+
+
+# Wave 37 unit D5 (ruling cu call 3): the boils punish the stall, not the wide kite. Each path runs for 20 s
+# against a roaming pack that stays in reach; the planted cases run the same paths with the stall dial off,
+# the loop test the boils shipped with, and must read the other way, or the checks say nothing about the rule.
+const WIDE := 24.0
+const LOOP_TEST := {"hazard.boil_stall_by_stage": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0], "hazard.boil_by_stage": [2.0, 2.0, 0.0, 0.0, 0.0, 0.0]}
+
+
+func _stall(boils, ctx, enemy) -> void:
+	_t.eq("31 the stall test ships on world 1", ChallengeDials.DEFAULTS["hazard.boil_stall_by_stage"], [1.0, 1.0, 0.0, 0.0, 0.0, 0.0])
+	var stall_on: Dictionary = ChallengeDials.parse(PackPressure.tune_spec("E"))
+	stall_on["hazard.boil_stall_by_stage"] = [1.0, 1.0, 0.0, 0.0, 0.0, 0.0]
+	ChallengeDials.set_overrides(stall_on)
+	_t.check("31b a tight orbit ring is inside the stall reach, a wide kite ring outside", RING + 3.0 < SiltBoil.STALL_SPREAD and WIDE > SiltBoil.STALL_SPREAD,
+		"orbit %.0f m (+3 m band), reach %.0f m, kite %.0f m" % [RING, SiltBoil.STALL_SPREAD, WIDE])
+	var parked := func(_t_s: float) -> Array: return [Vector3(8.0, 0.0, 0.0), Vector3.ZERO]
+	var crawl := func(t_s: float) -> Array: return [Vector3(-10.0 + 2.0 * t_s, 0.0, 6.0), Vector3(2.0, 0.0, 0.0)]
+	var kite := func(t_s: float) -> Array:
+		var a := CRUISE / WIDE * t_s
+		return [Vector3(cos(a), 0.0, sin(a)) * WIDE, Vector3(-sin(a), 0.0, cos(a)) * CRUISE]
+	var orbit := func(t_s: float) -> Array:
+		var a := CRUISE / RING * t_s
+		return [Vector3(cos(a), 0.0, sin(a)) * RING, Vector3(-sin(a), 0.0, cos(a)) * CRUISE]
+	var run := func(t_s: float) -> Array: return [Vector3(CRUISE * t_s, 0.0, 0.0), Vector3(CRUISE, 0.0, 0.0)]
+	_t.eq("32 a ball that stops in a fight boils", _path_boils(boils, ctx, enemy, parked, false), 1)
+	_t.eq("33 a ball that crawls through a fight boils", _path_boils(boils, ctx, enemy, crawl, false), 1)
+	_t.eq("34 a tight orbit at cruise still boils", _path_boils(boils, ctx, enemy, orbit, false), 1)
+	_t.eq("35 a wide kite round the pack at cruise never boils", _path_boils(boils, ctx, enemy, kite, false), 0)
+	_t.eq("36 a straight run at cruise with the pack on its tail never boils", _path_boils(boils, ctx, enemy, run, true), 0)
+	ChallengeDials.set_overrides(LOOP_TEST)
+	_t.eq("37 planted: the loop test never boiled a ball that stopped", _path_boils(boils, ctx, enemy, parked, false), 0)
+	_t.eq("38 planted: nor one that crawled", _path_boils(boils, ctx, enemy, crawl, false), 0)
+	_t.eq("39 planted: and it boiled the wide kite", _path_boils(boils, ctx, enemy, kite, false), 1)
+	ChallengeDials.set_overrides(ChallengeDials.parse(PackPressure.tune_spec("E")))
+
+
+# Moves the ball along `path` (seconds to [position, velocity]) for up to 20 s from a fresh stage entry; the
+# boils raised. With `tail` the pack keeps 10 m behind the ball, else it stands at the origin.
+func _path_boils(boils, ctx, enemy, path: Callable, tail: bool) -> int:
+	boils.reset(true)
+	enemy.global_position = Vector3(0.0, 1.5, 0.0)
+	var dt := 1.0 / 90.0
+	for i in 90 * 20:
+		var row: Array = path.call(i * dt)
+		ctx.player.at = row[0]
+		ctx.player.v = row[1]
+		if tail:
+			enemy.global_position = row[0] - Vector3(10.0, -1.5, 0.0)
 		boils.step(dt, [enemy])
 		if boils.boils > 0:
 			break
