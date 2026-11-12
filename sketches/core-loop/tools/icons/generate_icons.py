@@ -7,8 +7,7 @@ sketches/core-loop/assets/icons/<id>.svg and an index README next to them.
 Run: python3 sketches/core-loop/tools/icons/generate_icons.py
 Check, writing nothing: python3 sketches/core-loop/tools/icons/generate_icons.py --check
 (exits 1 and names every icon whose committed file is not what this script draws).
-The line and ultimate cards (ab_<pilot>_line, ab_<pilot>_ult) and res_mass are drawn by hand
-and are not this script's.
+Every SVG in assets/icons is this script's; none is drawn by hand.
 """
 import math
 import os
@@ -822,6 +821,209 @@ register(
 )
 
 
+# ---- Line skills and ultimates (12): ab_<pilot>_line (slot 3) and ab_<pilot>_ult (Q) -------
+# SKILL-BAR.md sections 3 and 4. Same rules as the rest of the bar: rounded-square plate, bone
+# glyph, one accent region in the pilot's own colour, strokes 6 and 4.
+
+
+def g_ab_sable_line():
+    return [
+        path("M16 48 C10 26 22 14 31 20 C41 27 33 39 24 34", stroke=BONE, width=DETAIL),
+        line(24, 34, 48, 21, stroke=MINT, width=PRIMARY),
+        path("M38 18 L48 21 L45 31", stroke=MINT, width=PRIMARY),
+    ]
+
+
+register(
+    "ab_sable_line", "Bank shot (3)",
+    "A bone rope looping off the ball and a mint arrow banking away up and right",
+    plate_rounded_square, g_ab_sable_line,
+)
+
+
+def g_ab_sable_ult():
+    return [
+        line(10, 50, 54, 50, stroke=BONE, width=DETAIL),
+        line(17, 50, 17, 33, stroke=BONE, width=DETAIL),
+        line(30, 50, 30, 24, stroke=BONE, width=DETAIL),
+        line(44, 50, 44, 21, stroke=BONE, width=DETAIL),
+        path("M10 40 Q28 6 54 24", stroke=MINT, width=PRIMARY),
+    ]
+
+
+register(
+    "ab_sable_ult", "Cable run (Q)",
+    "A mint cable arcing over three bone pylons on a ground line",
+    plate_rounded_square, g_ab_sable_ult,
+)
+
+
+def g_ab_rivet_line():
+    return [
+        line(10, 32, 38, 32, stroke=BONE, width=DETAIL),
+        chevron(26, 32, 9, 16, stroke=COPPER),
+        chevron(46, 32, 12, 24, stroke=COPPER),
+    ]
+
+
+register(
+    "ab_rivet_line", "Line drive (3)",
+    "A bone line driven right by a small and a large copper chevron",
+    plate_rounded_square, g_ab_rivet_line,
+)
+
+
+def g_ab_rivet_ult():
+    return [
+        path("M10 23 L22 32 L10 41 Z", stroke=COPPER, width=DETAIL, fill=COPPER),
+        line(22, 32, 54, 32, stroke=COPPER, width=PRIMARY),
+        ring(42, 32, 10, stroke=BONE, width=DETAIL),
+        line(42, 14, 42, 20, stroke=BONE, width=DETAIL),
+        line(42, 44, 42, 50, stroke=BONE, width=DETAIL),
+    ]
+
+
+register(
+    "ab_rivet_ult", "Foundry cutter (Q)",
+    "A copper nozzle firing a beam through a bone reticle",
+    plate_rounded_square, g_ab_rivet_ult,
+)
+
+
+def g_ab_kest_line():
+    return [
+        path("M10 13 H33 V24", stroke=BONE, width=DETAIL),
+        path("M27 19 L33 25 L39 19", stroke=BONE, width=DETAIL),
+        ring(33, 41, 9, stroke=AMBER, width=PRIMARY),
+        line(46, 31, 51, 26, stroke=BONE, width=DETAIL),
+        line(48, 42, 54, 42, stroke=BONE, width=DETAIL),
+        line(45, 52, 49, 55, stroke=BONE, width=DETAIL),
+    ]
+
+
+register(
+    "ab_kest_line", "Cable charge (3)",
+    "A bone line running down to an amber charge, three sparks at its side",
+    plate_rounded_square, g_ab_kest_line,
+)
+
+
+def g_ab_kest_ult():
+    return [
+        path("M10 34 Q12 13 30 14", stroke=BONE, width=DETAIL),
+        path("M23 9 L30 14 L24 20", stroke=BONE, width=DETAIL),
+        line(10, 52, 54, 52, stroke=BONE, width=DETAIL),
+        line(40, 14, 40, 42, stroke=AMBER, width=PRIMARY),
+        path("M31 34 L40 43 L49 34", stroke=AMBER, width=PRIMARY),
+    ]
+
+
+register(
+    "ab_kest_ult", "Windhover (Q)",
+    "A bone swoop rising to a hover, then an amber dive straight down onto a ground line",
+    plate_rounded_square, g_ab_kest_ult,
+)
+
+
+def g_ab_tarn_line():
+    return [
+        path("M47 12 V36 L33 50 L19 36 V27", stroke=IRON_OXIDE, width=PRIMARY),
+        line(10, 14, 32, 14, stroke=BONE, width=DETAIL),
+        line(10, 22, 26, 22, stroke=BONE, width=DETAIL),
+    ]
+
+
+register(
+    "ab_tarn_line", "Claw drag (3)",
+    "A rust-red hooked claw dragging two bone speed lines behind it",
+    plate_rounded_square, g_ab_tarn_line,
+)
+
+
+def g_ab_tarn_ult():
+    return [
+        path("M10 13 L22 17 L28 28 L20 34", stroke=IRON_OXIDE, width=PRIMARY),
+        path("M54 13 L42 17 L36 28 L44 34", stroke=IRON_OXIDE, width=PRIMARY),
+        line(32, 12, 32, 40, stroke=BONE, width=DETAIL),
+        path("M25 33 L32 40 L39 33", stroke=BONE, width=DETAIL),
+        path("M17 44 L32 54 L47 44", stroke=BONE, width=DETAIL),
+    ]
+
+
+register(
+    "ab_tarn_ult", "Redjaw rend (Q)",
+    "Two rust-red jaws opening over a bone strike arrow and the bite it leaves",
+    plate_rounded_square, g_ab_tarn_ult,
+)
+
+
+def g_ab_tally_line():
+    return [
+        line(10, 10, 25, 25, stroke=BONE, width=DETAIL),
+        path("M25 18 L26 26 L18 25", stroke=BONE, width=DETAIL),
+        path("M34 30 L20 52 H50 Z", stroke=LEDGER, width=PRIMARY, dash="3 7"),
+        rect(29, 25, 10, 9, fill=BONE, rx=2),
+        rect(15, 47, 10, 9, fill=BONE, rx=2),
+        rect(45, 47, 10, 9, fill=BONE, rx=2),
+    ]
+
+
+register(
+    "ab_tally_line", "Ledger clip (3)",
+    "A bone harpoon line landing on three bone clips tied by a dashed ledger triangle",
+    plate_rounded_square, g_ab_tally_line,
+)
+
+
+def g_ab_tally_ult():
+    return [
+        ring(32, 32, 22, stroke=LEDGER, width=PRIMARY, dash="10 6"),
+        rect(21, 17, 16, 11, fill="none", rx=3, stroke=BONE, width=DETAIL),
+        path("M26 31 Q23 46 39 43", stroke=BONE, width=DETAIL),
+        path("M34 37 L40 43 L33 48", stroke=BONE, width=DETAIL),
+    ]
+
+
+register(
+    "ab_tally_ult", "Plate return (Q)",
+    "A dashed ledger ring around a bone plate and its curved return arrow",
+    plate_rounded_square, g_ab_tally_ult,
+)
+
+
+def g_ab_cannon_line():
+    return [
+        line(10, 20, 54, 20, stroke=BONE, width=DETAIL, dash="4 5"),
+        line(10, 44, 54, 44, stroke=BONE, width=DETAIL, dash="4 5"),
+        line(12, 26, 12, 38, stroke=BONE, width=DETAIL),
+        line(14, 32, 44, 32, stroke=ANCIENT, width=PRIMARY),
+        chevron(44, 32, 9, 18, stroke=ANCIENT),
+    ]
+
+
+register(
+    "ab_cannon_line", "Lane charge (3)",
+    "An ancient-green arrow charging down a lane between two dashed bone edges",
+    plate_rounded_square, g_ab_cannon_line,
+)
+
+
+def g_ab_cannon_ult():
+    return [
+        path("M12 42 Q24 6 44 34", stroke=BONE, width=DETAIL),
+        path("M37 32 L44 35 L46 27", stroke=BONE, width=DETAIL),
+        ring(44, 44, 8, stroke=ANCIENT, width=PRIMARY),
+        line(10, 54, 54, 54, stroke=BONE, width=DETAIL, dash="4 5"),
+    ]
+
+
+register(
+    "ab_cannon_ult", "Fire mission (Q)",
+    "A bone shell arc dropping into an ancient-green impact ring on a dashed ground line",
+    plate_rounded_square, g_ab_cannon_ult,
+)
+
+
 # ---- Key glyphs (10) ---------------------------------------------------------
 
 
@@ -1508,6 +1710,14 @@ def g_res_difficulty():
 
 register(
     "res_difficulty", "Difficulty", "A bar with rising sawtooth notches", plate_none, g_res_difficulty,
+)
+
+def g_res_mass():
+    return [ring(x, y, 8, stroke=BONE, width=PRIMARY) for x, y in ((20, 44), (44, 44), (32, 23))]
+
+
+register(
+    "res_mass", "Mass", "Three ringed scrap balls in a heap: scrap carried as mass", plate_none, g_res_mass,
 )
 
 # ---- Factions (4) ---------------------------------------------------------------
