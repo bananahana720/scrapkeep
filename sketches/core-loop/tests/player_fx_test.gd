@@ -115,6 +115,10 @@ func _run() -> void:
 	var plain: float = float(fx._words_by_id("smash")["size"])
 	fx._on_beat_word(null, "smash", fx._clock)
 	t.near("and the beat grows it", float(fx._words_by_id("smash")["size"]), plain * PlayerFx.ONBEAT_GROW)
+	for w in fx._words:
+		w["t"] = 1.0
+	fx._last_word = -1.0e9
+	fx._word_seen.clear()
 	var own := Rect2(600, 300, 120, 50)
 	var other := Rect2(400, 300, 120, 50)
 	var warn_own: Array[Rect2] = [Rect2(650, 320, 40, 40)]
