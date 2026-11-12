@@ -8,7 +8,7 @@ Read at `stage/alpha-w38` 46de0578 and re-checked on `stage/alpha-w39` 7811fa5d 
 
 The warning language is the strongest part of the game's effects. Hostile marks are one red, drawn above everything the player makes, and no player effect can cover them (`threat_grammar.gd:57-66`, `player_fx.gd:29-31`). The rest has three real weaknesses for the sitting.
 
-1. **A kill is quieter than a hit.** The kill uses the same copper star as an ordinary hit, a little larger, and its particle pop is nearly invisible. The game's most frequent payoff has no punctuation of its own.
+1. **A kill looks like a bigger hit.** The kill uses the same copper star as an ordinary hit, a ninth larger than a hard hit's, and its particle pop is nearly invisible. The game's most frequent payoff has no punctuation of its own.
 2. **Hit and stun feedback disappear on the Spillway's sand.** Copper sparks on sandstone have little contrast, and the stun halo, the only sign a pack enemy is stunned, draws a few dozen pixels.
 3. **Brindle's phase turns do not show the new rule.** The words were rightly cut (PF-26), but nothing took over their job, and the last turn, to the scooter chase, has no beat at all. The rout's blasts go off at the empty ship, not at the scooter the player just caught.
 
@@ -27,7 +27,7 @@ One inventory claim was wrong and is not a finding: a near miss sends no hit-sto
 
 ## Inventory
 
-The full tables are long, so they are summarised by family here; every row names its file and line in the agents' notes, kept with the stills in the Library (`art-direction/fx-critique-w38/`).
+The tables are summarised by family here. The findings below cite file and line for each effect they judge.
 
 | Family | Effects | Owner files | Paired sound |
 | --- | --- | --- | --- |
@@ -45,25 +45,25 @@ The full tables are long, so they are summarised by family here; every row names
 
 ### E1. A kill has no punctuation of its own (clarity and delight, major)
 
-What the code does. A hit draws a copper `burst` star of 0.4 to 1.6 m for 0.14 s (`vfx.gd:602-607`). A kill draws the same copper `burst` star of 0.6 to 1.8 m for 0.3 s, a pop and debris (`vfx.gd:924-931`); the two rows share colour and shape (`event_kinds.gd:57`, `:77`). A hard hit's star is nine tenths the size of a kill's. The kill debris uses the colour of lost scrap (`vfx.gd:931`), so a win is drawn in the loss colour. Under a dense fight the pop waits 120 or 200 ms while its sound plays at once (`density.gd:32-39`, `audio.gd:3322`). The star is copper for every pilot, though VISUAL-LANGUAGE.md section 3 says a kill pop takes the class colour.
+What the code does. A hit draws a copper `burst` star of 0.4 to 1.6 m for 0.14 s (`vfx.gd:602-607`). A kill draws the same copper `burst` star of 0.6 to 1.8 m for 0.3 s, a pop and debris (`vfx.gd:924-931`); the two rows share colour and shape (`event_kinds.gd:57`, `:77`). A hard hit's star is nine tenths the size of a kill's. The kill debris uses the colour of lost scrap (`vfx.gd:931`), so a win is drawn in the loss colour. Under a dense fight, kills within 120 or 200 ms merge into one pop on purpose (`density.gd:32-39`, FEEL-READABILITY.md section 1.2), but each kill's sound plays at once (`audio.gd:3334`), so the sound can land before its pop. The star is copper for every pilot, though VISUAL-LANGUAGE.md section 2 says a kill pop takes the class colour.
 
-What the stills show. On the sand, at 0.1 of life, the kill's pop draws 63 changed pixels and by 0.35 it draws 2; an ordinary hit's core and halo draw 3,614 and the crit 8,778 (cloud `fx_capture`, same machine, same ground; see [the strip](effects-critique/kill-vs-hit.jpg)). Only the debris (1,684 px) is seen, and it reads as small orange crumbs.
+What the stills show, and what they do not. `tools/fx_capture.gd` shoots the particle layers, not the star glyphs. On the sand, at 0.1 of life, the kill's pop draws 63 changed pixels and by 0.35 it draws 2; an ordinary hit's core and halo draw 3,614 and the crit 8,778 (cloud, same machine, same ground; see [the strip](effects-critique/kill-vs-hit.jpg)). The tool fires 24 hit sparks where the game fires 16 (`fx_capture.gd:150`, `event_kinds.gd:233`), so the game's hit is about a third smaller than the strip, still well above the kill's pop. Of the kill's particles only the debris (1,684 px) is seen, as small orange crumbs. The star itself is not in the strip; the PC sight reel's death clips show it in play.
 
 Why it matters. Killing is the beat the run repeats most. The TONE-BIBLE gives a downed machine a "shift over" gag, and the mission promises Isaac-style payoff. Today a kill is told apart from a hit by the enemy's own death clip and a sound, not by the effect layer.
 
-Direction. A kill-only shape and timing, owned by `vfx.gd`'s kill pop: an ink-outlined comic burst (a different silhouette from the hit star), a one-frame white body flash, then the body's own shards (`shell_shards`, already the strongest-reading spec at contrast 117), in the class colour, with the sound held to the same frame as the pop. This is a taste pick with candidates (see "For Andrew").
+Direction. A kill-only look and timing, owned by `vfx.gd`'s kill pop: still a starburst (VISUAL-LANGUAGE.md section 3 gives the kill pop that shape), but ink-outlined and two-tone so it does not read as the hit star, a one-frame white body flash, then the body's own shards (`shell_shards`, already the strongest-reading spec at contrast 117), in the class colour. Merging stays; the kill sound waits for its merged pop, so sight and sound land together. This is a taste pick with candidates (see "For Andrew").
 
 ### E2. Hit sparks and the stun halo vanish on the Spillway's ground (clarity, major)
 
-Hit sparks are copper (`b77843`) on sandstone (`c6a274`). On the cloud strip the hit core draws 748 px at contrast 62 at 0.35 of life; the stun halo (`daze_halo`, `fx_library.gd:88`) draws 40 px at contrast 35, and the fuse sputter 9 px. The sight lane measured the same on the PC on 10 November (`daze_halo` 23 px, `fuse_sputter` 4 of 256,000) and left it for after the sitting. The halo is the only sign a pack enemy is stunned, and a stun is a window the player is meant to spend. Damage numbers are copper too, with a 1.5 px shadow and no outline (`damage_numbers.gd:159`); VISUAL-LANGUAGE.md section 3 already says copper text needs bold 18 px or a lighter tint.
+Kinetic hit sparks, the commonest kind, are copper (`b77843`) on sandstone (`c6a274`) (`juice.gd:546`). On the cloud strip the hit core draws 748 px at contrast 62 at 0.35 of life; the stun halo (`daze_halo`, `fx_library.gd:88`) draws 40 px at contrast 35, and the fuse sputter 9 px. The sight thread's PC effect strips of 10 November (method in `design-v3/SIGHT-PERSONA.md` section 7) measured the same: `daze_halo` 23 px and `fuse_sputter` 4 of 256,000. It was left for after the sitting. The halo is the only sign a pack enemy is stunned, and a stun is a window the player is meant to spend. Damage numbers are copper too, with a 1.5 px shadow and no outline (`damage_numbers.gd:159`); VISUAL-LANGUAGE.md section 2 already says copper text on charcoal needs bold 18 px or a lighter tint; on sand it has less contrast still.
 
-Direction. The 2010 comic finish is ink: give hit sparks a dark ink core under the bright one so they read on pale and dark ground alike, make the stun a ring of ink stars at about twice the size circling the head, and give damage numbers an ink outline. Pass line: on the PC strip at 0.35, the stun halo draws at least as many pixels as the hit core, and the hit core keeps contrast 60 or more on sand and on dam concrete.
+Direction. The 2010 comic finish is ink: give hit sparks a dark ink core under the bright one so they read on pale and dark ground alike, make the stun a ring of ink stars at about twice the size circling the head, and give damage numbers an ink outline. Pass line: on the PC strip at 0.35, the stun halo draws at least four times today's pixels and the hit core keeps contrast 60 or more on sand; the sight reel shows both on the dam's concrete.
 
 ### E3. Brindle's phase turns do not show the new rule; the chase has no turn at all (clarity, major)
 
 Phase two and three now carry one caption each (`flourish_rows.gd:151-168`), a joke in Brindle's voice. The PF-26 fix rightly removed FURNACE LIT, ARMOUR OFF and KA-CHUNK, and named the plates, ring and melt as the carriers of the turn. Those carriers say "something changed", not "what to do now": the slag rings and the charge lane appear for the first time as live attacks. The turn into the scooter chase (`boss.gd:1103`, phase 4) has no flourish row, only an EJECT word and a chunk burst (`machine_fx.gd:743-745`), though the goal flips from hitting the hull to catching the scooter. The TONE-BIBLE asks for a one-second comic panel at each phase turn.
 
-Direction, by ruling cx's carrier order (shape and motion before words). In the 2.0 s phase beat, while no attack can commit (`boss.gd:327`), the next phase's signature mark draws once as a harmless preview: the slag ring as a bone dashed outline that fills and drains, the charge lane as a dashed lane that sweeps once from the ship's nose. The chase gets its own beat: a short glance that follows the scooter's arc and a target tag on it. Shape lives in `threat_grammar.gd`'s harmless style, which exists (`threat_grammar.gd:58`, `:345`), so no new look is invented.
+Direction, by ruling cx's carrier order (shape and motion before words). In the 2.0 s phase beat, while no attack can commit (`src/combat/fight_phases.gd:28`, `boss.gd:331`, `:722`), the next phase's signature mark draws once as a harmless preview: the slag ring as a bone dashed outline that fills and drains, the charge lane as a dashed lane that sweeps once from the ship's nose. The chase gets its own beat: a short glance that follows the scooter's arc and a target tag on it. Shape lives in `threat_grammar.gd`'s harmless style, which exists (`threat_grammar.gd:34`, `:208-213`, `:345`), so no new look is invented.
 
 ### E4. The rout's blasts go off at the empty ship (clarity and delight, minor)
 
@@ -71,7 +71,7 @@ Direction, by ruling cx's carrier order (shape and motion before words). In the 
 
 ### E5. A hostile landing does not land (clarity, minor)
 
-When a ring or lane goes live, it flashes a flat fill for 0.22 s and leaves a scorch (`threat_grammar.gd:76`, `:151-152`, `:1334-1359`). There is no ink crack, dust kick or kick on the attacker, so a hit taken has no visible cause at its moment; PF-16's reader could not say what hit them on the dam. Wind-ups are mild: at most a 32 degree yaw and a 0.80 to 1.14 squash (`windup_poses.gd:12-35`). Direction: a short ink crack ring and dust kick at the mark's edge when it goes live, and a one-frame hazard flash on the attacker's body at release, so cause and effect sit on the object (the September principle "every mechanic shows its cause on the object before you act and its effect when it lands"). This feeds the safe-side work in "Show safe side on yard telegraphs" (W1-05); it does not repeat it.
+When a ring or lane goes live, it flashes a flat fill for 0.22 s and leaves a scorch (`threat_grammar.gd:76`, `:151-152`, `:1334-1359`). There is no ink crack, dust kick or kick on the attacker, so a hit taken has no visible cause at its moment; PF-16's reader could not say what hit them on the dam. Wind-ups are mild: at most a 32 degree yaw, a 0.80 to 1.14 squash in the wind-up and 1.18 at release (`windup_poses.gd:12-35`). Direction: a short ink crack ring and dust kick at the mark's edge when it goes live, and a one-frame hazard flash on the attacker's body at release, so cause and effect sit on the object, as DECISIONS.md's standing rule asks: "Every mechanic shows its cause on the object before you act and its effect when it lands." This feeds the safe-side work in "Show safe side on yard telegraphs" (W1-05); it does not repeat it.
 
 ### E6. One colour, several meanings (clarity, minor)
 
@@ -91,7 +91,7 @@ Damage taken never shakes the camera (ruled), so the edge flash is the hit's onl
 
 ### E8. Words come from six stampers with six rules (clarity, minor; scaling)
 
-Player sound words (`player_fx.gd`) keep a screen-share size, a warning gap of 24 px and a repeat budget. Armour words DENT and ZZAP! (`armour_marks.gd:67-140`) have none of that: a fixed 0.86 m world size, no clamp, no warning avoidance, no render priority, stacked with the stagger word, the interrupted star and the armour icon inside about one metre above the enemy. KRNK and EJECT (`machine_fx.gd`), the panel pop (`panel_fx.gd`), the flourish words (`flourish_player.gd`) and the damage numbers each place themselves, and two of them test "dense" differently (`player_fx.gd:689` max > 0.7, `machine_fx.gd:351` value >= 0.7). PF-26 was this problem seen from the player's chair. Direction: one module owns placement, size, priority, warning avoidance and the word budget; the others ask it for a slot (deep module, one small call).
+Player sound words (`player_fx.gd`) keep a screen-share size, a warning gap of 24 px and a repeat budget. Armour words DENT and ZZAP! (`armour_marks.gd:67-140`) stamp only once per armour class per run, so they are rare, but they have none of the placement rules: a fixed 0.86 m world size, no clamp, no warning avoidance, no render priority, stacked with the stagger word, the interrupted star and the armour icon inside about one metre above the enemy. KRNK and EJECT (`machine_fx.gd`), the panel pop (`panel_fx.gd`), the flourish words (`flourish_player.gd`) and the damage numbers each place themselves, and two of them test "dense" differently (`player_fx.gd:689` max > 0.7, `machine_fx.gd:351` value >= 0.7). PF-26 was this problem seen from the player's chair. Direction: one module owns placement, size, priority, warning avoidance and the word budget; the others ask it for a slot (deep module, one small call).
 
 ### E9. The rout is named four times in ten seconds (words, minor)
 
@@ -100,6 +100,10 @@ The ROUTED stamp (`flourish_rows.gd:175`), the BRINDLE ROUTED card (`worlds.gd:2
 ### E10. The world's effects are silent and the water is still (delight, after the sitting)
 
 No splash, falls, steam, vent or flood foam has a sound (the SPLOSH word is drawn, not heard). The water shader takes no time input, so the spill sheets do not move (`spill_water.gdshader`). Spillway steam is alpha 0.85 up to 6.3 m and its anchors skip the 7 m clear zone around the ball (`world_fx_specs.gd:164`). Midges are near-black specks at ball height at full alpha (`world_fx_specs.gd:54`), which could read as a pickup or a mine; that one needs the PC still. Direction: the sounds go to the sound thread as gaps; moving water and the steam's clear zone are one row after the sitting, with a PC cost read first.
+
+### Looks the gameplay critique needs
+
+The gameplay critique ([gameplay-critique.md](gameplay-critique.md), draft PR 856) has three rows whose look belongs here, and they should be built with these carriers rather than new ones. W1-61 (Brindle reels and sheds scrap when a chunk breaks early) uses the phase-turn burst and the dropped-scrap trail Brindle already has. W1-68 (the plating lesson on the first deflected strike) needs the glance to read apart from a hit: today a glance is a slate `burst`, the hit's shape, for 0.15 s (`vfx.gd:297-301`), so FX-01's rule (hit, glance and kill each get their own silhouette) covers it. W1-74 (a paid chain of three or more drops a scrap burst stepped by combo) rides the kill-chain pips and the scrap sparkle (`vfx.gd:991-1017`, `:641`), which use amber and so join FX-20's colour table.
 
 ### Checked and fine
 
@@ -120,11 +124,11 @@ No splash, falls, steam, vent or flood foam has a sound (the SPLOSH word is draw
 | Only Brindle has in-run flourish rows; the Waking and the Mind have none | each boss needs rows and its own phase preview (E3) |
 | Six word stampers (E8) | each new word source repeats placement rules |
 
-The scaling rows (FX-20 to FX-25) fold the two world files onto the one table, put every ceiling in one budget table with a test, encode the colour meanings, and make the phase preview a property of `fight_phases.gd` so every boss gets it from rows.
+The scaling rows (FX-20 to FX-25) fold the two world files onto the one table, put every ceiling in one budget table with a test, encode the colour meanings, and make the phase preview a property of `src/combat/fight_phases.gd` so every boss gets it from rows.
 
 ## For Andrew (taste picks)
 
-One pick is real taste: what a kill looks like (E1). It goes to Andrew as one page with candidates, a measured pass line and a PC check (ruling cq), built by the E1 row's thread, with the recommended default first: (A) ink burst plus white body flash plus shards in the class colour; (B) the same with a short drawn word on elites only ("SHIFT OVER" stamp, after the TONE-BIBLE's downed-machine gag); (C) keep today's look; or none of these. Everything else here is clarity, decided by the builder within the rulings and logged as an overturnable assumption.
+One pick is real taste: what a kill looks like (E1). It goes to Andrew as one page with candidates, a measured pass line and a PC check (ruling cq), built by the E1 row's thread, with the recommended default first: (A) ink-outlined starburst plus white body flash plus shards in the class colour; (B) the same plus, on elites only, the TONE-BIBLE's downed-machine gag drawn as a clock-out card stamp and a sigh of steam, with no word (ruling cx, LEGIBILITY pattern S6); (C) keep today's look; or none of these. Everything else here is clarity, decided by the builder within the rulings and logged as an overturnable assumption.
 
 ## Owed
 
