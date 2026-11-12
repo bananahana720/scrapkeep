@@ -5,6 +5,7 @@ const Kit := preload("res://src/presentation/world_fx/world_fx_kit.gd")
 const Anchor := preload("res://src/presentation/world_fx/world_fx_anchor.gd")
 const Word := preload("res://src/presentation/world_fx/world_fx_word.gd")
 const Grain := preload("res://src/presentation/world_fx/world_fx_grain.gd")
+const WorldSound := preload("res://src/presentation/world_fx/world_fx_sound.gd")
 
 # World and event effects (WORLD-FX.md): the runtime. The game installs one (hook) that swaps its
 # air to each stage's world on stage entry and rests it on the title, summary and death screens.
@@ -14,7 +15,10 @@ const Grain := preload("res://src/presentation/world_fx/world_fx_grain.gd")
 #   fx.set_overlay("storm_build")                         # a weather sky or modifier kind adds air
 # Ambient emitters follow the camera (or the ball) with an identity basis, so the wind keeps its
 # direction while the view turns. Anchors (WorldFxAnchor) register themselves; every RANK_SECONDS
-# the nearest ANCHOR_SLOTS inside their lod_m emit and the rest rest or show an impostor.
+# the nearest ANCHOR_SLOTS inside their lod_m emit and the rest rest or show an impostor. The same
+# ranking hands each sounding set (Specs.SOUNDS, world_fx_sound.gd) to its nearest emitting anchor
+# alone, so four foam pieces on one flood are one voice; a hook with a sound plays it once, and the
+# wake's churn follows the ball. Resting silences all of it.
 const RANK_SECONDS := 0.25
 const BURST_POOL := 2
 # Flow states with no stage on screen: the air rests there.
@@ -32,6 +36,10 @@ const WAKE_FULL := 16.0
 const SPLASH_SPEED := 7.0
 const SPLASH_DROP := 4.0
 const SPLASH_COOL := 0.5
+# A set's voice moves to a nearer anchor only when the holder is farther than this share of the
+# nearest's distance plus this many metres.
+const VOICE_KEEP := 1.25
+const VOICE_KEEP_M := 5.0
 
 static var current: Node3D
 # The saved reduced-motion setting, read on install; Game.set_reduced_motion keeps it current.
@@ -57,6 +65,10 @@ var _ctx
 var _wake_wait := 0.0
 var _last_ball := Vector3.INF
 var _splash_cool := 0.0
+var wake_sound: AudioStreamPlayer3D
+# Which anchor holds each sounding set's voice (set id -> anchor).
+var _voice_of := {}
+var _wake_heard := 0.0
 
 
 static func install(parent: Node, world_index: int, is_low := false, is_reduced := false) -> Node3D:
@@ -106,6 +118,10 @@ func _ready() -> void:
 	_build_ambient()
 	for id in Specs.SETS[WAKE_SET]:
 		wake.append(_add(id))
+	var spot := Node3D.new()
+	spot.name = "WakeSound"
+	add_child(spot)
+	wake_sound = WorldSound.voice(WAKE_SET, spot)
 
 
 func _build_ambient() -> void:
@@ -129,6 +145,7 @@ func enter_world(world_index: int) -> void:
 
 func _on_stage_entered(stage: int, _retry: bool, ctx) -> void:
 	_ctx = ctx
+	WorldSound.audio = ctx.root.call("audio") if ctx.get("root") != null and ctx.root.has_method("audio") else null
 	_last_ball = Vector3.INF
 	set_run_seed(int(ctx.run.run_seed) if ctx.get("run") != null else 0)
 	enter_world(ctx.stages.world_of(stage))
@@ -183,6 +200,8 @@ func set_resting(on: bool) -> void:
 			p.emitting = false
 		wet = false
 		_last_ball = Vector3.INF
+		_hush_wake()
+	_rank()
 
 
 # GraphicsPreset calls this on bind and on every preset change.
@@ -288,6 +307,8 @@ func play(hook: String, at: Vector3, tint := Color.TRANSPARENT, size := 1.0) -> 
 		p.emitting = true
 	if row["word"] != "" and not reduced_motion:
 		Word.stamp(self, row["word"], at)
+	if WorldSound.row(hook).get("play", "") == "once" and not resting:
+		WorldSound.one_shot(hook, self, at, linear_to_db(size))
 
 
 # Live particles this WorldFx can hold at once: ambient plus overlay plus the slotted anchors.
@@ -383,12 +404,32 @@ func _rank() -> void:
 			rows.append([a.global_position.distance_to(eye), a])
 	rows.sort_custom(func(x, y): return x[0] < y[0])
 	var slots := Specs.ANCHOR_SLOTS
+	# Each sounding set's nearest emitting anchor, and how far the anchor holding its voice now is.
+	var nearest := {}
+	var holder_at := {}
 	for row in rows:
 		var a = row[1]
 		var within: bool = row[0] <= a.lod_m()
 		a.set_range(row[0], within and slots > 0)
 		if within:
 			slots -= 1
+		if a.has_voice() and a.slotted and not resting:
+			if not nearest.has(a.set_id):
+				nearest[a.set_id] = [row[0], a]
+			if _voice_of.get(a.set_id) == a:
+				holder_at[a.set_id] = row[0]
+	# The voice stays where it is until another anchor is clearly nearer, so a view between two foam
+	# pieces does not hop the loop back and forth.
+	for id in nearest:
+		if not holder_at.has(id) or float(holder_at[id]) > float(nearest[id][0]) * VOICE_KEEP + VOICE_KEEP_M:
+			_voice_of[id] = nearest[id][1]
+	for id in _voice_of.keys():
+		if not nearest.has(id):
+			_voice_of.erase(id)
+	for ref in Anchor.live:
+		var a: Node3D = ref.get_ref()
+		if a.has_voice():
+			a.set_voiced(_voice_of.get(a.set_id) == a)
 
 
 # The ball's wake, read WAKE_EVERY from the terrain's material under the ball (water where a flood
@@ -403,6 +444,7 @@ func _step_wake(delta: float) -> void:
 	_wake_wait = WAKE_EVERY
 	if resting or not is_instance_valid(_ball) or _ctx == null or _ctx.get("terrain") == null or not _ctx.terrain.has_method("material_at"):
 		_last_ball = Vector3.INF
+		_hush_wake()
 		return
 	var ball := _ball_place()
 	var under: Dictionary = _ctx.terrain.material_at(ball)
@@ -432,3 +474,29 @@ func steer_wake(ball: Vector3, water: float, velocity: Vector3) -> void:
 			(p.process_material as ParticleProcessMaterial).direction = (back + Vector3.UP * 0.8).normalized()
 			p.amount_ratio = Grain.share(p, low, reduced_motion) * clampf(speed / WAKE_FULL, 0.3, 1.0)
 		p.emitting = on and p.amount_ratio > 0.0
+	_steer_wake_sound(on, Vector3(ball.x, water, ball.z), speed)
+
+
+# The churn of the ball through water: louder with speed, logged once round its loop for the mix tools.
+func _steer_wake_sound(on: bool, at: Vector3, speed: float) -> void:
+	if wake_sound == null:
+		return
+	if not on:
+		_hush_wake()
+		return
+	var spot := wake_sound.get_parent() as Node3D
+	spot.global_position = at
+	WorldSound.tend(wake_sound, float(WorldSound.row(WAKE_SET)["db"]) + linear_to_db(clampf(speed / WAKE_FULL, 0.3, 1.0)))
+	# steer_wake runs every WAKE_EVERY: count the loop's length down in those steps.
+	_wake_heard -= WAKE_EVERY
+	if not wake_sound.playing:
+		wake_sound.play()
+		_wake_heard = 0.0
+	if _wake_heard <= 0.0:
+		_wake_heard = wake_sound.stream.get_length()
+		WorldSound.heard(WAKE_SET, wake_sound)
+
+
+func _hush_wake() -> void:
+	if wake_sound != null and wake_sound.playing:
+		wake_sound.stop()

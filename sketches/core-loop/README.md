@@ -39,7 +39,7 @@ A locked pilot's card names what unlocks it, and a pilot you earn is selectable 
 5. **Warden.** One Warden clamps each beacon. Breaking it is the stage's one must, and the gates open wherever you are when it breaks.
 6. **Reward gates and Moss's bay.** Roll through one of two arches to take its part. A hover barge, Moss's workshop bay, docks behind the gate row when it finds room: an opt-in pit stop with a shop and a practice yard.
 7. **Launch.** Taking a gate launches you into the next stage at the speed you were going.
-8. **Boss.** The last stage of a world launches you into that world's boss arena. Beat the boss to rout it. A victory screen naming the rout (BRINDLE ROUTED, for one) follows, and the run continues into the next world's first stage; the last world's boss ends the run.
+8. **Boss.** The last stage of a world launches you into that world's boss arena. Beat the boss to rout it. A victory screen naming what was won (SPILLWAY RECLAIMED, for one) follows, and the run continues into the next world's first stage; the last world's boss ends the run.
 9. **Summary.** The summary reads RUN COMPLETE or RUN OVER, with time, stages, scrap, parts, kills, events won and whether the earned save was used. N runs again as the same pilot. Anything you were holding when the summary opened (Space, the fire button, a pad button) is ignored until you let go; the next fresh press works at once, with no wait.
 
 If you are scrapped, a death ends the run as RUN OVER: there is no free stage retry. Press N for a new run as the same pilot, or Space to choose a pilot. An earned save (an item, once a run, if you carry it) catches one lethal hit instead; once spent it stays spent for the run. M opens the companion panel from the summary when the run holds pieces.

@@ -69,6 +69,9 @@ func _process(_delta: float) -> bool:
 		_watch("ability_bar", hud.ability_bar)
 		_watch("key_glyphs", hud.key_glyphs)
 		_watch("edge_markers", hud.edge_markers)
+		# A chevron follows the camera, which still settles on the dam, so the idle scene keeps
+		# nothing for one to point at: calm stands no sites, and the dam's cage is taken down.
+		_game.world.rescue.clear()
 		# A prompt that is shown follows the ball or aim point, so it legitimately redraws
 		# as they move; retire them all and spend their first availability to test the idle case.
 		for use in hud.key_glyphs.RETIRE_AFTER:
