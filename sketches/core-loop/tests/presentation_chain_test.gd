@@ -144,8 +144,9 @@ func _physics_process(_delta: float) -> bool:
 	_check("pickup streak climbs", climbing and swelling,
 		"six pieces 60 ms apart tick at %s semitones; each swells the shell by %s" % [steps, swells.map(func(v: float): return snappedf(v, 0.01))])
 	var bursts: Dictionary = _vfx.spawned
-	_check("kill bursts", bursts.get("burst_pop", 0) >= 9 and bursts.get("burst_debris", 0) >= 9,
-		"%d pops and %d debris bursts for 9 kills" % [bursts.get("burst_pop", 0), bursts.get("burst_debris", 0)])
+	# FX-01: a kill pops as its own mark (Vfx.kill_look counts it as enemy_killed), shards and debris.
+	_check("kill bursts", bursts.get("enemy_killed", 0) >= 9 and bursts.get("burst_debris", 0) >= 9,
+		"%d kill marks and %d debris bursts for 9 kills" % [bursts.get("enemy_killed", 0), bursts.get("burst_debris", 0)])
 	print("presentation_chain_test: %s" % ("PASS" if _failures == 0 else "FAIL (%d)" % _failures))
 	_game.free()
 	quit(0 if _failures == 0 else 1)

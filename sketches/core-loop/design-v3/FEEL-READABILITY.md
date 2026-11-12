@@ -26,7 +26,7 @@ Every drawn thing belongs to one priority class. The class decides draw order (f
 | P2 | The three reads and the exits | The window beam; the safe-resolution chevrons; the return contraption's lane and gauge; kicker lips; the reach ring's dashed bone | never | yes | priority 39, depth-tested; short occlusion marker only |
 | P3 | Player committed geometry | Skill-shot indicators, the charge gauge ring, the grapple reticle | never | yes | priority 38 |
 | P4 | Rewards and pickups | Scrap squares in flight, cores, gate toppers, hoops, interactable glyphs | thinned only past density 0.8 | yes on the topper, none on scrap | priority 30 |
-| P5 | Player effects | Hit sparks, kill pops, chain bursts, trails, speed lines, slam rings' afterglow, synergy shockwaves | yes | **never** | priority 20, additive |
+| P5 | Player effects | Hit sparks, kill pops, chain bursts, trails, speed lines, slam rings' afterglow, synergy shockwaves | yes | **never** the keyline band; the solid hit spark, the kill mark and the stun stars wear a thin comic ink rim inside their own shape (FX-01, FX-02, 12 Nov 2026, an assumption Andrew can overturn) | priority 20, additive |
 | P6 | Hostile area fills and swept ground | The striped 35% fill inside an edge, a wave's 15% swept stripes, a lane's run fill | unioned past 4 overlapping areas (§1.3) | n/a | priority 10 |
 | P7 | Ambient | Dust, steam, sparks off the fins, heat shimmer, idle loops | first to go | never | world |
 
