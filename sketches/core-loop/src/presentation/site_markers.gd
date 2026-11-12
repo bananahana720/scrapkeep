@@ -9,6 +9,11 @@ extends Node3D
 # - cage: a caged pilot not yet freed (rescue_site.gd). A smoke signal: pale puffs rising in an even beat.
 # - rogue: the stage's rogue site while its machine still sleeps (world.gd rogue_plan). Works exhaust: a dark column
 #   that chugs in puffs that drift off the beat, the rogue's old work cycle (STORY-MAP section 3).
+# - furnace: Brindle's Slag Bowl, ahead of the world's last stage's exit gate where its launch lands (Arena.place_ahead).
+#   A tall works column lit from below by the furnace (hand-overs audit T6, ruling cv: the next place is in view before
+#   you leave). It is a horizon sign: it shows from the drop-in, so it has no far fade, and past PULL_M it is drawn
+#   pulled in along the eye's ray and shrunk by the same share (landmark_impostor.gd's method), so it covers the pixels
+#   it would at its true distance while staying inside the far plane. It stands from the stage's start until the launch.
 #
 # A plume fades out over LEAVE_S once its thing is done: the cache taken, the cage spent, the rogue woken (the rogue wakes
 # 63 m out, where its plume is at full strength). Leaving the stage takes every plume down at once. Secrets (field finds) keep
@@ -18,9 +23,14 @@ extends Node3D
 # FAR_FULL_M, and gone again by FAR_GONE_M, inside the chase camera's 700 m far plane.
 
 const Shade := preload("res://src/presentation/site_markers.gdshader")
+const Arena := preload("res://src/boss/arena.gd")
+const Yard := preload("res://src/presentation/arena_bowl_yard.gd")
 
 const CREW_SMOKE := Color("ece6d8")
 const WORKS_SMOKE := Color("262826")
+# The furnace's light on the foot of its column: the bowl's own melt at its working heat (arena_bowl_yard.gd MELT), on
+# the gold side of MELT_MIN_HUE as the melt is, so it never reads as the live slag's or HAZARD's red-orange.
+const FURNACE_GLOW: Color = Yard.MELT[2]["color"]
 const KINDS := {
 	"cache": {"tint": CREW_SMOKE, "height": 34.0, "width": 14.0, "alpha": 1.0, "foot": 0.12, "crown": 0.85, "rim_dark": 0.45,
 		"sway": 0.3, "sway_hz": 0.12, "rise": 0.06, "grain": Vector2(3.0, 7.0), "puffs": 0.0, "stutter": 0.0},
@@ -28,7 +38,14 @@ const KINDS := {
 		"sway": 0.12, "sway_hz": 0.1, "rise": 0.09, "grain": Vector2(2.5, 5.0), "puffs": 4.0, "stutter": 0.0},
 	"rogue": {"tint": WORKS_SMOKE, "height": 48.0, "width": 20.0, "alpha": 1.0, "foot": 0.2, "crown": 0.9, "rim_dark": 1.0,
 		"sway": 0.08, "sway_hz": 0.07, "rise": 0.07, "grain": Vector2(2.0, 4.0), "puffs": 6.0, "stutter": 0.8},
+	"furnace": {"tint": WORKS_SMOKE, "height": 170.0, "width": 80.0, "alpha": 1.8, "foot": 0.3, "crown": 0.95, "rim_dark": 0.7,
+		"sway": 0.06, "sway_hz": 0.05, "rise": 0.035, "grain": Vector2(2.0, 3.5), "puffs": 0.0, "stutter": 0.0,
+		"glow": Color(FURNACE_GLOW, 0.85), "far": true},
 }
+# The boss whose bowl stands a furnace column, by Worlds' boss kind.
+const FURNACE_BOSS := "brindle"
+# A far kind past this distance is drawn pulled in to it: chase_camera.gd's 700 m far plane, less the column's reach.
+const PULL_M := 520.0
 const GONE_M := 12.0
 const FULL_M := 40.0
 const FAR_FULL_M := 450.0
@@ -50,6 +67,8 @@ var views := {}
 var leaving: Array[MeshInstance3D] = []
 var _clock := 0.0
 var _last_eye := Vector3.INF
+# The furnace column's foot for the stage it was read on: [stage, foot], foot null for none. Read once a stage.
+var _furnace: Array = [0, null]
 static var _materials := {}
 static var _meshes := {}
 
@@ -66,6 +85,7 @@ func setup(ctx_ref) -> void:
 
 func _on_stage_entered(_stage: int, _retry: bool) -> void:
 	sync([])
+	_furnace = [0, null]
 	_clock = 0.0
 
 
@@ -74,9 +94,29 @@ func _on_cleared(_reason: String) -> void:
 	_clock = READ_EVERY
 
 
-# The share of a plume's alpha it shows for an eye distance_m away (horizontal): the one rule for distance.
-static func near_alpha(distance_m: float) -> float:
-	return smoothstep(GONE_M, FULL_M, distance_m) * (1.0 - smoothstep(FAR_FULL_M, FAR_GONE_M, distance_m))
+# The share of a plume's alpha it shows for an eye distance_m away (horizontal): the one rule for distance. A far kind
+# keeps the near fade and has no far one.
+static func near_alpha(distance_m: float, far := false) -> float:
+	var near := smoothstep(GONE_M, FULL_M, distance_m)
+	return near if far else near * (1.0 - smoothstep(FAR_FULL_M, FAR_GONE_M, distance_m))
+
+
+# The furnace column's site while it stands, else {}: on the last stage of a world whose boss is FURNACE_BOSS, from the
+# stage's start until its launch, at the foot of the bowl the launch lands in. boss_kind is that world's boss kind,
+# showing tells whether the run is still on the stage (not in the boss, the summary or a menu), foot is the ground under
+# the bowl's centre (furnace_foot).
+static func furnace_site(world_last: bool, boss_kind: String, showing: bool, foot) -> Dictionary:
+	if not world_last or boss_kind != FURNACE_BOSS or not showing or not foot is Vector3:
+		return {}
+	return {"key": "furnace", "kind": "furnace", "at": foot}
+
+
+# The ground under the bowl Arena.place_ahead puts past stage's exit gate, or null when there is no terrain to read.
+static func furnace_foot(terrain, stage: int):
+	if terrain == null or not terrain.has_method("height"):
+		return null
+	var bowl: Vector3 = Arena.place_ahead(terrain, stage)
+	return _ground(terrain, Vector3(bowl.x, 0.0, bowl.z))
 
 
 # Every site that wants a plume now, as [{key, kind, at}] with at the plume's foot. world is the World node (its
@@ -148,6 +188,8 @@ func _plume(kind: String, at: Vector3, key: String) -> MeshInstance3D:
 	# The quad turns about its axis in the shader, so its bounds must cover the turn at its largest.
 	view.extra_cull_margin = float(row["width"]) * 0.5 * GROW_MAX
 	view.set_meta("kind", kind)
+	view.set_meta("at", at)
+	view.set_meta("far", bool(row.get("far", false)))
 	add_child(view)
 	view.global_position = at
 	view.visible = false
@@ -171,6 +213,7 @@ static func _material(kind: String) -> ShaderMaterial:
 		m.shader = Shade
 		for p in ["tint", "alpha", "foot", "crown", "rim_dark", "sway", "sway_hz", "rise", "grain", "puffs", "stutter"]:
 			m.set_shader_parameter(p, row[p])
+		m.set_shader_parameter("glow", row.get("glow", Color(0.0, 0.0, 0.0, 0.0)))
 		_materials[kind] = m
 	return _materials[kind]
 
@@ -178,6 +221,12 @@ static func _material(kind: String) -> ShaderMaterial:
 # The scale a plume takes for an eye distance_m away (horizontal): 1 near, growing past GROW_FROM_M to GROW_MAX.
 static func grow(distance_m: float) -> float:
 	return clampf(distance_m / GROW_FROM_M, 1.0, GROW_MAX)
+
+
+# The share a far kind is drawn at for an eye distance_m away (horizontal): 1 inside PULL_M, then PULL_M / distance, so
+# it is drawn at PULL_M along the eye's ray at the size that covers the same pixels.
+static func pull(distance_m: float) -> float:
+	return minf(1.0, PULL_M / maxf(distance_m, 0.001))
 
 
 # Each plume's shown share and size for an eye; a plume with nothing to show is hidden, so it costs no draw. An eye
@@ -193,11 +242,17 @@ func fade_for(eye: Vector3) -> void:
 
 
 static func _show(view: MeshInstance3D, eye: Vector3, keep: float) -> void:
-	var at := view.global_position
+	var at: Vector3 = view.get_meta("at")
 	var distance := Vector2(at.x - eye.x, at.z - eye.z).length()
-	var share := near_alpha(distance) * keep
+	var far: bool = view.get_meta("far")
+	var share := near_alpha(distance, far) * keep
 	view.visible = share > 0.0
-	view.scale = Vector3.ONE * grow(distance)
+	if far:
+		var k := pull(distance)
+		view.global_position = eye + (at - eye) * k
+		view.scale = Vector3.ONE * k
+	else:
+		view.scale = Vector3.ONE * grow(distance)
 	(view.material_override as ShaderMaterial).set_shader_parameter("near_alpha", share)
 
 
@@ -222,9 +277,29 @@ func _process(delta: float) -> void:
 		var root = ctx.get("root")
 		var world: Node = root.get_node_or_null("World") if root != null else null
 		var build = ctx.get("build")
-		sync(sites(world, build.get("scrap") if build != null else null, ctx.get("terrain")), true)
+		var list := sites(world, build.get("scrap") if build != null else null, ctx.get("terrain"))
+		var furnace := _furnace_now()
+		if not furnace.is_empty():
+			list.append(furnace)
+		sync(list, true)
 	leave(delta)
 	var viewport := get_viewport()
 	var camera := viewport.get_camera_3d() if viewport != null else null
 	if camera != null:
 		fade_for(camera.global_position)
+
+
+# The furnace column's site for the run's stage now (furnace_site), reading the bowl's foot once a stage.
+func _furnace_now() -> Dictionary:
+	var flow = ctx.get("flow")
+	var run = ctx.get("run")
+	var stages = ctx.get("stages")
+	if flow == null or run == null or stages == null or not flow.has_method("boss_row"):
+		return {}
+	var stage: int = run.stage
+	var world_last: bool = stages.is_world_last(stage)
+	var kind := String(flow.boss_row(stages.world_of(stage)).get("kind", "")) if world_last else ""
+	var showing: bool = flow.state in [flow.STAGE, flow.BEACON, flow.GATES, flow.LAUNCH]
+	if world_last and kind == FURNACE_BOSS and showing and int(_furnace[0]) != stage:
+		_furnace = [stage, furnace_foot(ctx.get("terrain"), stage)]
+	return furnace_site(world_last, kind, showing, _furnace[1] if int(_furnace[0]) == stage else null)

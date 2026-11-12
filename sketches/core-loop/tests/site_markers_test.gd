@@ -18,6 +18,10 @@ extends SceneTree
 #    the plume's body (SIGHT_SHARE of its height, below the top where the smoke has thinned out) over the baked ground,
 #    at least SIGHT_MIN. Each prints `MAPCHECK <map> marker_sight <site> ...`.
 #    Planted: a plume sunk 400 m into the ground fails. Rib cache spots are drawn per run, so they are not in this read.
+# 6. The furnace column (hand-overs audit T6): Brindle's bowl stands one on the world's last stage until its launch, and
+#    no other boss, stage or state does. It has no far fade and past PULL_M is drawn pulled in along the eye's ray at the
+#    share that keeps its pixels. Its glow is the bowl melt's colour, held to the melt's hue line. In the game it stands on park_flume, past the exit
+#    gate where the launch lands, and not on park_dam. Planted: a far column left unpulled stands past the far plane.
 # 5. In the game: the park table's stage 1 (park_dam) stands a plume over Rivet's cage and one over the drawn rogue
 #    site, and one over each rib cache the build placed; freeing the cage takes its plume down.
 
@@ -26,6 +30,7 @@ const SiteMarkers := preload("res://src/presentation/site_markers.gd")
 const Sight := preload("res://tests/park_landmark_sight_test.gd")
 const RogueDirector := preload("res://src/world/rogue_director.gd")
 const Palette := preload("res://src/core/palette.gd")
+const Yard := preload("res://src/presentation/arena_bowl_yard.gd")
 const Game := preload("res://src/game.gd")
 const DefenceBars := preload("res://src/core/defence_bars.gd")
 
@@ -84,6 +89,7 @@ func _run() -> void:
 	_distance_rule()
 	_colour_law()
 	_sight()
+	_furnace()
 	await _in_game()
 	quit(t.verdict())
 
@@ -233,7 +239,10 @@ func _distance_rule() -> void:
 	t.eq("never more than GROW_MAX", SiteMarkers.grow(590.0), SiteMarkers.GROW_MAX)
 	for kind in SiteMarkers.KINDS:
 		var row: Dictionary = SiteMarkers.KINDS[kind]
-		t.check("%s plume at its largest stays under the far plane's reach" % kind, float(row["height"]) * SiteMarkers.GROW_MAX < 150.0)
+		if row.get("far", false):
+			t.check("%s column drawn at PULL_M stays inside the 700 m far plane" % kind, SiteMarkers.PULL_M + float(row["height"]) < 700.0)
+		else:
+			t.check("%s plume at its largest stays under the far plane's reach" % kind, float(row["height"]) * SiteMarkers.GROW_MAX < 150.0)
 	var last := 0.0
 	var rising := true
 	for d in range(int(SiteMarkers.GONE_M), int(SiteMarkers.FULL_M) + 1):
@@ -271,7 +280,43 @@ func _colour_law() -> void:
 	planted["tint"] = Palette.AMBER.lerp(Palette.SAND, 0.2)
 	var pw := worst_gap(planted["tint"])
 	t.check("planted: a cache row tinted near amber fails the colour law", pw[0] < COLOUR_GAP, "%s at %.1f" % [pw[1], pw[0]])
+	# The furnace glow is slag light, held to the bowl melt's own rule (arena_bowl_yard.gd): gold of MELT_MIN_HUE, so it
+	# never takes the live slag's or HAZARD's red-orange. Planted: HAZARD fails it.
+	var hue := SiteMarkers.FURNACE_GLOW.h * 360.0
+	t.check("the furnace glow sits on the gold side of the melt's hue line", hue >= Yard.MELT_MIN_HUE and hue < 60.0, "%.1f" % hue)
+	t.check("planted: HAZARD fails the melt's hue line", Palette.HAZARD.h * 360.0 < Yard.MELT_MIN_HUE)
 	t.check("crew smoke and works smoke are far apart", DefenceBars.cie76(SiteMarkers.CREW_SMOKE, SiteMarkers.WORKS_SMOKE) >= 50.0)
+
+
+func _furnace() -> void:
+	var foot := Vector3(10.0, 4.0, 20.0)
+	t.eq("the furnace stands on Brindle's world's last stage", SiteMarkers.furnace_site(true, "brindle", true, foot),
+		{"key": "furnace", "kind": "furnace", "at": foot})
+	t.eq("none before the world's last stage", SiteMarkers.furnace_site(false, "brindle", true, foot), {})
+	t.eq("none for another boss", SiteMarkers.furnace_site(true, "waking", true, foot), {})
+	t.eq("none once the run has left the stage", SiteMarkers.furnace_site(true, "brindle", false, foot), {})
+	t.eq("none with no bowl read", SiteMarkers.furnace_site(true, "brindle", true, null), {})
+	t.eq("no far fade at 2 km", SiteMarkers.near_alpha(2000.0, true), 1.0)
+	t.eq("the near fade still holds for a far kind", SiteMarkers.near_alpha(6.0, true), 0.0)
+	t.eq("drawn true inside PULL_M", SiteMarkers.pull(300.0), 1.0)
+	t.near("pulled to half at twice PULL_M", SiteMarkers.pull(SiteMarkers.PULL_M * 2.0), 0.5)
+	var holder := Node3D.new()
+	root.add_child(holder)
+	var markers = SiteMarkers.new()
+	holder.add_child(markers)
+	var at := Vector3(SiteMarkers.PULL_M * 2.0, 0.0, 0.0)
+	markers.sync([{"key": "furnace", "kind": "furnace", "at": at}])
+	var eye := Vector3(0.0, 30.0, 0.0)
+	markers.fade_for(eye)
+	var view: MeshInstance3D = markers.views["furnace"]
+	t.check("a far column shows", view.visible)
+	t.check("drawn at PULL_M on the eye's ray", view.global_position.distance_to(eye + (at - eye) * 0.5) < 0.01, str(view.global_position))
+	t.near("at half its size, so it covers the same pixels", view.scale.x, 0.5)
+	var planted := Vector2(at.x - eye.x, at.z - eye.z).length()
+	t.check("planted: an unpulled column would stand past the far plane", planted > 700.0, "%.0f" % planted)
+	markers.fade_for(Vector3(SiteMarkers.PULL_M * 2.0 - 100.0, 30.0, 0.0))
+	t.check("close in it stands at its own foot", view.global_position.distance_to(at) < 0.01 and is_equal_approx(view.scale.x, 1.0))
+	holder.free()
 
 
 # The fixed marked sites of a park: [{id, kind, at: Vector2}].
@@ -369,6 +414,23 @@ func _in_game() -> void:
 		for i in 30:
 			await physics_frame
 		t.eq("a freed cage's plume comes down", int(_plume_kinds(markers).get("cage", 0)), 0)
+	t.eq("park_dam stands no furnace column", int(kinds.get("furnace", 0)), 0)
+	game.flow.enter_stage(2, Vector3.ZERO, false)
+	for i in 30:
+		game.player.set_velocity_now(Vector3.ZERO)
+		await physics_frame
+	t.eq("stage 2 is park_flume", String(game.ctx.terrain.map().title), "park_flume")
+	var furnace = markers.views.get("furnace")
+	if t.check("park_flume stands the furnace column", furnace != null, str(_plume_kinds(markers))):
+		var foot: Vector3 = furnace.get_meta("at")
+		var exit: Dictionary = game.ctx.terrain.map_for(2).handover()["exit"]
+		var gate: Vector2 = exit["at"]
+		var heading := deg_to_rad(float(exit["heading_deg"]))
+		var to_foot := Vector2(foot.x, foot.z) - gate
+		print("[game] furnace foot %s, %.0f m from the exit gate" % [foot, to_foot.length()])
+		t.check("it stands within 80 m of the flume's exit gate", to_foot.length() < 80.0, "%.0f" % to_foot.length())
+		t.check("it stands ahead of the gate, where the launch aims", to_foot.dot(Vector2(sin(heading), cos(heading))) > 0.0)
+		t.near("on the ground under the bowl", foot.y, game.ctx.terrain.height(foot.x, foot.z))
 	# Leaving the stage for the arena takes every plume down on the same tick, not up to a read later.
 	game.events.stage_content_cleared.emit("test")
 	t.eq("clearing the stage's content takes every plume down at once", markers.views.size(), 0)
