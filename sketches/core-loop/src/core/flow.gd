@@ -313,6 +313,14 @@ func run_ends_after(stage: int) -> bool:
 	return final_world > 0 and ctx.stages.world_of(stage) == final_world and ctx.stages.is_world_last(stage)
 
 
+# The stages this launch's run holds: the table's, or up to the end of the final world, so a won
+# sitting reads 2/2 on its summary, not 2/6.
+func run_stage_count() -> int:
+	var final_world: int = ctx.tuning.final_world() if ctx.tuning != null else 0
+	var last: int = ctx.stages.last_of(final_world) if final_world > 0 else 0
+	return last if last > 0 else int(ctx.stages.COUNT)
+
+
 # The run ends at Meteor Crater only after the Mind: the final world's boss row plays the Mind's music.
 func _ending_due() -> bool:
 	return _final_world_cleared() and String(boss_row(ctx.stages.world_of(ctx.run.stage)).get("music", "")) == "mind"

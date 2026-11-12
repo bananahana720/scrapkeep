@@ -1512,7 +1512,7 @@ static func summary_chips(s: Dictionary, stage_count: int) -> Array:
 
 
 func _summary_stats() -> void:
-	for block in SummaryRows.grouped(summary_chips(game.run.summary(), game.ctx.stages.COUNT)):
+	for block in SummaryRows.grouped(summary_chips(game.run.summary(), game.flow.run_stage_count())):
 		var group := VBoxContainer.new()
 		group.add_theme_constant_override("separation", 4)
 		group.mouse_filter = Control.MOUSE_FILTER_IGNORE

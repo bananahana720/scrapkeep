@@ -68,11 +68,15 @@ func _run() -> void:
 	var sitting := Tuning.new()
 	sitting.apply_args(PackedStringArray(["--profile=sitting"]))
 	_t.eq("the sitting launch names world 1 as final", sitting.final_world(), 1)
+	var earned := Tuning.new()
+	earned.apply_args(PackedStringArray(["--profile=sitting-earned"]))
+	_t.eq("the earned sitting launch names world 1 too", earned.final_world(), 1)
 	_t.eq("a plain launch names none", Tuning.new().final_world(), 0)
 
 	# Flag off: today's run into world 2.
 	_t.check("flag off: world 1's end does not end the run", not flow.run_ends_after(stages.last_of(1)), "")
 	_t.check("flag off: the table's last stage still does", flow.run_ends_after(stages.COUNT), "")
+	_t.eq("flag off: the summary counts the whole table", flow.run_stage_count(), stages.COUNT)
 	_start_run()
 	_beat_world_one_boss()
 	_t.eq("flag off: the run goes on into world 2", stages.world_of(_game.ctx.run.stage), 2)
@@ -91,5 +95,6 @@ func _run() -> void:
 	_t.check("flag on: the run is won", flow.run_won and _ended == [true], str(_ended))
 	_t.check("flag on: no all-worlds ending page", not flow.won_final(), "")
 	_t.check("flag on: the win opens HARD rung 1", RunTier.unlocked(_game.ctx.profile, RunTier.HARD), "")
+	_t.eq("flag on: the summary counts world 1's stages", flow.run_stage_count(), stages.last_of(1))
 	_t.check("flag on: the run is over for good", _game.ctx.run.over, "")
 	_game.tuning.set_option("final_world", "last")
