@@ -12,7 +12,8 @@ const T := preload("res://tests/support/t.gd")
 # - land() draws a landing at any progress, once per call, and nothing for a mark that is not
 #   hostile; set_progress still lands once.
 # - In a live game a bola thrower's and a line cutter's throw each leave a landing as the
-#   bola or disc arrives, and a jolt layer's held field leaves one per pulse.
+#   bola or disc arrives, and a jolt layer's held field leaves one per pulse and none as its
+#   warning ends (it cannot jolt then).
 # - The mag trapper's discs go HAZARD with its body on the strike and settle to white after.
 # Evidence limit: node counts and material state in a headless run, not a rendered still.
 
@@ -68,9 +69,9 @@ func _run() -> void:
 	for kind in ["bola_thrower", "line_cutter"]:
 		var landed := await _attack(kind, 600, func(unit): return unit.phase == unit.Phase.ROAM and _flashes > 0)
 		t.check("%s lands once" % kind, landed == 1, "%d landings from one throw" % landed)
-	# The mat lands once as its warning ends (set_progress), then once per pulse.
+	# The mat cannot jolt as its warning ends, so only its pulses land.
 	var pulses := await _attack("jolt_layer", 900, func(unit): return unit.field != null and unit.field.pulses >= 2)
-	t.check("jolt layer lands per pulse", pulses == 3, "%d landings for the warning's end and two pulses (want 3)" % pulses)
+	t.check("jolt layer lands per pulse only", pulses == 2, "%d landings for two pulses (want 2, none at the warning's end)" % pulses)
 	await _mag_discs()
 	game.free()
 	quit(t.verdict())

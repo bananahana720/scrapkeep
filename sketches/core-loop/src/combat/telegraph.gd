@@ -65,6 +65,10 @@ var mechanic_tag := ""
 
 var _painter
 var _flashed := false
+# Whether the warning's end is the hit (FX-05). An owner whose hits come later sets it false and
+# calls land() at each hit itself (the jolt layer's pulses), so no landing marks a moment that
+# cannot hurt.
+var lands_on_live := true
 # Driven: the motion marks were built once and each frame only moves them (E1). Every type
 # except a wave is driven; a wave is driven only when it is full and its area layer is not
 # "motion" (Threat.can_drive), so a partial wave or a motion wave is repainted instead.
@@ -234,7 +238,8 @@ func set_progress(value: float) -> void:
 		went_live.emit()
 	if progress >= 1.0 and not _flashed:
 		_flashed = true
-		land()
+		if lands_on_live:
+			land()
 
 
 # The landing now (Threat.flash): an INSTANT's solid flash, and the ink crack ring and dust kick of
