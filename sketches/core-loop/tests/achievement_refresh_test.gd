@@ -165,9 +165,6 @@ func _relay() -> void:
 	_t.check("51 an unstaked win (stake 0) earns nothing", not _profile.earned("ach_w20_relay_stake"), str(seen))
 	seen.clear()
 	s.relay.set_stakes(1)
-	# The ball holds still on the pad for the whole charge: world 1's crews hit twice as hard on the dam since
-	# wave 37 (ChallengeDials.MOBS_DAMAGE_W1, ruling cu), enough to end the run first. This row is the payout.
-	_game.run.set_max_hp(99999.0)
 	for frame in int(CHARGE_SECONDS * Engine.physics_ticks_per_second):
 		_game.player.reset_to(at, Vector3.ZERO)
 		_game.player.set_velocity_now(Vector3.ZERO)
