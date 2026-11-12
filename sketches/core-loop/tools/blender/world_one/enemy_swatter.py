@@ -1,7 +1,7 @@
 # C20 Swatter: an oxide animal crew behind a long charcoal shaft and a flat welded paddle.
 # The paddle's two broad oxide faces have dark inset panel seams, rubbed corner patches and
 # a narrow hostile-orange top edge. The shaft and blade form one continuous thin YZ plane.
-# No spikes, rings, dish, gate, rotor or extra reach. The crew has charcoal ears, snout, straps
+# No spikes, rings, dish, gate, rotor or extra reach. The crew has charcoal straps
 # and gloves, and one brass requisition tag. Paint is rough, with dark recesses and small wear.
 #
 # Coordinates use Godot metres, converted by g(): Blender +Z is up, -Y exports to Godot +Z.
@@ -51,7 +51,7 @@ for side in (-1, 1):
     b.rod("paint", g(side * 0.42, 0.36, 0.14), g(side * 0.20, -0.45, 0.42), 0.10, segs=6, color=PLATE)
     b.box("paint", (0.18, 0.26, 0.20), loc=g(side * 0.13, -0.53, 0.50), color=CHAR)
 # The old works' two marks, cast in under the Fleet's paint: the crew number and HIRED.
-crew.cast_number(b, "paint", "29", (0, -0.54, 0.58), (0, -1, 0), 0.18)
+crew.cast_number(b, "paint", "29", (0, -0.527, 0.58), (0, -1, 0), 0.18)
 crew.hired(b, "paint", (0, 0.725, 0.16), (0, 1, 0), 0.08)
 bmesh.ops.recalc_face_normals(b.bm, faces=b.bm.faces[:])
 body = b.to_object(parent=root)

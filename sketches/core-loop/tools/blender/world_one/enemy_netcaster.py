@@ -50,7 +50,7 @@ HALF_PI = math.pi / 2
 CREW_Y = -0.35  # Godot z +0.35: in front of the net plane
 
 b = Part("NetcasterBody")
-# Crew: a barrel torso (rust, flashes at runtime), a round head, a charcoal snout and ears.
+# Crew: a barrel torso (rust, flashes at runtime), a cast head from its old job (crew.py), its number and HIRED.
 b.cyl("fleet_paint", 0.40, 0.46, 1.0, segs=10, loc=(0, CREW_Y, -0.6))
 b.cyl("fleet_paint", 0.46, 0.40, 0.9, segs=10, loc=(0, CREW_Y, 0.35))
 crew.screen_head(b, (0, CREW_Y, 1.0), 0.32)
@@ -77,8 +77,8 @@ b.box("paint", (2.64, 0.16, 0.16), loc=(0, MAST_Y, TOP), color=CHAR)
 # Ground sill between the mast feet, below the net's bottom edge (Godot y 0.8).
 b.box("paint", (2.40, 0.14, 0.10), loc=(0, MAST_Y, GROUND + 0.05), color=WORN)
 # The old works' two marks, cast in under the Fleet's paint: the crew number and HIRED.
-crew.cast_number(b, "paint", "19", (0, CREW_Y - 0.43, 0.45), (0, -1, 0), 0.18)
-crew.hired(b, "paint", (0, CREW_Y + 0.44, -0.5), (0, 1, 0), 0.08)
+crew.cast_number(b, "paint", "19", (0, CREW_Y - 0.419, 0.45), (0, -1, 0), 0.18)
+crew.hired(b, "paint", (0, CREW_Y + 0.425, -0.5), (0, 1, 0), 0.08)
 body = b.to_object(parent=root)
 bpy.context.view_layer.update()
 

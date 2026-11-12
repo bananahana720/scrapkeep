@@ -44,6 +44,19 @@ Andrew ruled that ordinary enemies are the old works' machines still on the job,
 | Linker (special) | Shield tender: held the weather screen over a weld until it cooled | A dish on an arm | Weather |
 | Shift Boss (special; code name `foreman`; Andrew named it on 9 Nov, ruling ck) | Shift horn: called the patch crews, and every machine in earshot re-sealed | A horn on a mast | The reason for the horn |
 
+Six kinds had no job when their heads were built (W1-24, 12 Nov 2026). The crew heads thread gave them these working calls so each could wear a head from its job; Andrew can strike any, and the systems thread owns whether they become `job` lines in `roster.gd`:
+
+| Kind | Old job | Head (`tools/blender/crew.py`) | To it, you are |
+| --- | --- | --- | --- |
+| Bola thrower | Heaving-line thrower: whirled a weighted line out to boats coming into the lock | A signal lantern | A boat to bring in |
+| Netcaster | Trash screen: hung the screen that caught drift at the intake | The screen rack | Drift |
+| Deflector | Outlet guard: turned the outlet jet off the bank so it would not scour | A flip-bucket nozzle | The jet |
+| Gyro jammer | Current meter: hung in the stream and spun to read the flow | A cup rotor | The current to be read |
+| Swatter | Screen sweeper: knocked weed off the intake screens | A brush | Weed on the screen |
+| Winch drone | Buoy lifter: winched channel buoys up for paint | A channel buoy | A buoy |
+
+Every crew kind's head now comes from its job, with its cast crew number and HIRED (W1-24); the numbers are in each recipe.
+
 Two things follow for play, both after the sitting. The pig launcher and the pipe pig are one job in two bodies, so a Dispatcher's chasers can wear its number. And a kind's counter is the way that job fails: a pig jams on a harder plug (ram it in the wind-up), a bung comes back (bat the shell home), a magnet drops what is over its rating.
 
 ## Packs

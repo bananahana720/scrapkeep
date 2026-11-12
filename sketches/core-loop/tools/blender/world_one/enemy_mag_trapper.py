@@ -6,7 +6,7 @@
 #
 # Three meshes, six surfaces after WG splits the top disc; no alpha or added geometry:
 #   MagTrapperBody  static: fleet_paint (crew body and head, flashes with the enemy) and
-#                   paint (vertex colour: cart, wheels, ears, strap, the brass chest tag).
+#                   paint (vertex colour: cart, wheels, strap, the brass chest tag).
 #   MagStack/MagDiscs  the remaining stack, pivot at the cart bed: paint (vertex colour:
 #                   two charcoal discs and spacers; the runtime gives it its own material
 #                   so it flashes on a hit) and class_accent (the hazard cores; the runtime
@@ -45,7 +45,7 @@ HALF_PI = math.pi / 2
 
 # --- Body: crew, cart, wheels -------------------------------------------------------
 b = Part("MagTrapperBody")
-# Crew: a barrel torso (rust, flashes at runtime), a round head, a charcoal snout and ears.
+# Crew: a barrel torso (rust, flashes at runtime), a cast head from its old job (crew.py), its number and HIRED.
 b.cyl("fleet_paint", 0.66, 0.80, 1.1, segs=10, loc=(0, 0, -0.55))
 b.cyl("fleet_paint", 0.80, 0.70, 1.1, segs=10, loc=(0, 0, 0.55))
 crew.gauge_head(b, (0, 0, 1.3), 0.38)
@@ -65,8 +65,8 @@ for s in (-1, 1):
 b.rod("paint", (-1.24, cy, GROUND + 0.56), (1.24, cy, GROUND + 0.56), 0.08, segs=6, color=WORN)
 b.box("paint", (0.20, 0.60, 0.14), loc=(0, 0.98, PIVOT[2] - 0.20), color=CART)  # hitch
 # The old works' two marks, cast in under the Fleet's paint: the crew number and HIRED.
-crew.cast_number(b, "paint", "18", (0, -0.74, 0.74), (0, -1, 0), 0.26)
-crew.hired(b, "paint", (0, 0.77, -0.3), (0, 1, 0), 0.11)
+crew.cast_number(b, "paint", "18", (0, -0.715, 0.74), (0, -1, 0), 0.26)
+crew.hired(b, "paint", (0, -0.745, -0.3), (0, -1, 0), 0.11)
 body = b.to_object(parent=root)
 
 # --- Stack: two stored discs and one independently hoisted disc ---------------------------------

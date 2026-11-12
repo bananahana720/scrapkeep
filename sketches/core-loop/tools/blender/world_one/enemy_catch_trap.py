@@ -2,7 +2,7 @@
 # The cup has a dark empty well, oxide tapered walls, a worn grey lip and one red
 # hostile latch tab. A side spring stack, pivot pin and long release paddle stand
 # outside the well. They travel with the cup; the runtime has no jaw or lever pose.
-# The crew has charcoal ears, snout, boots, belt and pack, with one brass chest tag.
+# The crew has charcoal boots, belt and pack, with one brass chest tag.
 #
 # Two meshes / three opaque surfaces: CatchBody (fleet_paint + vertex paint) and
 # CatchCup (vertex paint). CatchCup's origin is its centre; catch_trap.gd supplies
@@ -54,7 +54,7 @@ b.cyl("paint", 0.37, 0.37, 0.09, segs=10, loc=g(0, -0.05, 0.08), color=CHAR)
 b.box("paint", (0.40, 0.20, 0.45), loc=g(0, 0.10, -0.31), color=CHAR)
 b.box("paint", (0.22, 0.04, 0.14), loc=g(0, 0.20, 0.405), color="brass")
 # The old works' two marks, cast in under the Fleet's paint: the crew number and HIRED, one on
-# each cheek of the hoist block (the cup hides the body).
+# each cheek of the hoist block, the part of it that stands clear of the cup.
 crew.cast_number(b, "paint", "05", (0.185, -0.18, 0.80), (1, 0, 0), 0.15)
 crew.hired(b, "paint", (-0.185, -0.18, 0.80), (-1, 0, 0), 0.05)
 bmesh.ops.recalc_face_normals(b.bm, faces=b.bm.faces[:])
