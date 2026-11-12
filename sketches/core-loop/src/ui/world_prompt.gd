@@ -46,9 +46,11 @@ var detail_range := DETAIL_RANGE
 var near := false
 # A prompt the band places far below its anchor (a reward gate's offer, named under a gate across
 # the yard) draws a leader from its name up to the anchor, so the line says which gate gives it
-# (PF-22). `aim` is where the anchor projects on screen, set by the HUD with the prompt's place.
+# (PF-22). `aim` is where the line ends on screen, set by the HUD with aim_at; `aim_cut` is true
+# when the gate stands above the play view and the line stops at the view's top edge.
 var leader := false
 var aim := Vector2.INF
+var aim_cut := false
 
 var _structured := false
 var _parts := {"title": "", "detail": "", "icon": DEFAULT_ICON}
@@ -163,6 +165,20 @@ func shown_extent() -> Vector2:
 	return Vector2(minf(width + 8.0, ScreenRegions.PROMPT_WIDTH), height)
 
 
+# Points the leader at `point` (where the anchor projects), stopping where it would leave `room`
+# through the top: nothing drawn in one band reaches another (CONTRACTS.md, UI regions).
+# Vector2.INF clears it.
+func aim_at(point: Vector2, room: Rect2) -> void:
+	aim_cut = false
+	aim = point
+	if not leader or not point.is_finite():
+		return
+	var start := position + _leader_start()
+	if point.y < room.position.y and start.y > room.position.y:
+		aim = start.lerp(point, (start.y - room.position.y) / (start.y - point.y))
+		aim_cut = true
+
+
 # The leader's far end in the prompt's own space, or Vector2.INF when it draws none.
 func leader_end() -> Vector2:
 	if not leader or not aim.is_finite():
@@ -194,9 +210,10 @@ func _draw() -> void:
 	if end.is_finite():
 		var start := _leader_start()
 		draw_line(start, end, Color(outline, 0.6), LEADER_WIDTH + 3.0, true)
-		draw_circle(end, LEADER_DOT + 1.5, Color(outline, 0.6))
 		draw_line(start, end, Color(color, 0.85), LEADER_WIDTH, true)
-		draw_circle(end, LEADER_DOT, color)
+		if not aim_cut:
+			draw_circle(end, LEADER_DOT + 1.5, Color(outline, 0.6))
+			draw_circle(end, LEADER_DOT, color)
 	var title_w := font.get_string_size(lines[0], HORIZONTAL_ALIGNMENT_LEFT, -1, TITLE_SIZE).x
 	var row_h := maxf(ICON, font.get_height(TITLE_SIZE))
 	var x := (extent.x - (_cap_width() + ICON + ICON_GAP + title_w)) * 0.5

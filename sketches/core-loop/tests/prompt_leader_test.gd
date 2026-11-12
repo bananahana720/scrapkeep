@@ -25,5 +25,18 @@ func _initialize() -> void:
 	_t.eq("no leader shorter than LEADER_MIN", p.leader_end(), Vector2.INF)
 	p.aim = Vector2.INF
 	_t.eq("no leader before the HUD has placed it", p.leader_end(), Vector2.INF)
+	# The gate's sign above the play view: the line stops at the view's top edge, with no dot.
+	var room := Rect2(0.0, 261.0, 1600.0, 297.0)
+	p.aim_at(Vector2(520.0, 40.0), room)
+	_t.check("planted: a sign above the view cuts the line at the view's top edge", p.aim_cut and is_equal_approx((p.position + p.leader_end()).y, room.position.y),
+		"%s cut %s" % [p.position + p.leader_end(), p.aim_cut])
+	p.aim_at(Vector2(520.0, 300.0), room)
+	_t.check("a sign inside the view keeps the whole line and its dot", not p.aim_cut and p.position + p.leader_end() == Vector2(520.0, 300.0))
+	var Hud := load("res://src/ui/hud.gd")
+	var other := WorldPrompt.new()
+	var rects := {p: Rect2(p.position, Vector2(200, 40)), other: Rect2(600, 360, 120, 40)}
+	_t.check("a line through another prompt crosses it", Hud.crosses(Vector2(500, 460), Vector2(660, 300), rects, p))
+	_t.check("a line clear of the other prompt does not", not Hud.crosses(Vector2(500, 460), Vector2(520, 300), rects, p))
+	other.free()
 	p.free()
 	quit(_t.verdict())
