@@ -76,18 +76,24 @@ export function parseCards(text) {
   return cards;
 }
 
+// The proof column has more than one name across the tables ("Proof",
+// "Proof that world 1 is unchanged").
+function proofOf(card) {
+  return Object.entries(card).filter(([key]) => key.startsWith("proof")).map(([, value]) => value).join(" ");
+}
+
 // Why an unattended run may not take this card, or null when it may.
 export function refusal(card) {
   const files = card.files ?? "";
-  const source = card.source ?? "";
-  if (/\bBuilt\b/.test(source)) return "already built on a branch (see its Source)";
+  const proof = proofOf(card);
+  const everything = Object.values(card).join(" ");
+  if (/\b(built|fenced|board-owned|owned)\b/i.test(everything)) return "built, fenced or owned by another thread (see its row)";
   if (/PC lane run only/i.test(files)) return "PC lane run: GPU timing or a rendered build, not a writer card";
-  if (/\bPC (still|film)\b/i.test(card.proof ?? "")) return "proof needs a PC still or film; the Gate's PC session owns that";
-  if (/sitting watch list|feel/i.test(card.proof ?? "")) return "proof is a feel call for Andrew, not a check";
+  if (/\bPC (stills?|films?|strips?)\b|\bfilm\b/i.test(proof)) return "proof needs a film or PC capture; the Gate's PC session owns that";
+  if (/sitting watch list|feel|taste pick/i.test(proof)) return "proof is a feel or taste call for Andrew, not a check";
+  if (/24-seed|band read/i.test(proof)) return "proof is a band read; that belongs to the wave gate";
+  if (/\b(after|waits on|with) (PR \d+|[A-Z][A-Z0-9]*-\d+)/i.test(everything)) return "waits on another pull request or card";
   if (!BUDGETS[card.size]) return `size ${card.size || "unknown"} has no unattended budget (S and M only)`;
-  if (/24-seed|band read/i.test(card.proof ?? "") && !/unchanged/i.test(card.proof ?? "")) return "proof is a 24-seed band read; that belongs to the wave gate";
-  if (/\bAfter PR \d+/i.test(card.proof ?? "")) return "waits on another pull request";
-  if (/^owned/i.test(card.section) || /owned by another thread/i.test(card.section)) return "owned by another thread";
   return null;
 }
 
@@ -104,7 +110,7 @@ export function liveBoard(stateText) {
 // Card ids named anywhere in this text: pull request titles and bodies, board
 // comments. A named card is claimed or built, so the runner leaves it alone.
 export function takenIds(text) {
-  return new Set(String(text).match(/\b[A-Z][A-Z0-9]*-[0-9]+[a-z]?\b/g) ?? []);
+  return new Set(String(text).toUpperCase().match(/\b[A-Z][A-Z0-9]*-[0-9]+[a-z]?\b/g) ?? []);
 }
 
 function cardLines(card) {
@@ -148,7 +154,7 @@ export function planCard(card, { stage, board }) {
         step: "write",
         run:
           `cd ${worktree} && timeout -k 60 ${budget.minutes}m claude -p ${shellQuote(writerPrompt(card, stage))} ` +
-          `--agent scrapkeep-writer --permission-mode auto --disallowedTools 'Bash(git push:*)' --max-budget-usd ${budget.usd} --output-format json`,
+          `--agent scrapkeep-writer --permission-mode auto --disallowedTools 'Bash(git push:*)' 'Bash(gh:*)' --max-budget-usd ${budget.usd} --output-format json`,
       },
       { step: "gate", run: `cd ${worktree} && npm run sketch:fast -- --base origin/${stage} --budget 600` },
       { step: "review", run: `claude -p <card + diff> --agent scrapkeep-reviewer-medium --max-budget-usd ${REVIEW_USD}; the last line is VERDICT: PASS or FAIL` },
@@ -158,26 +164,23 @@ export function planCard(card, { stage, board }) {
   };
 }
 
-export function selectCards(cards, { ids, section, limit }) {
-  let chosen = cards;
-  if (ids?.length) chosen = ids.map((id) => cards.find((card) => card.id === id) ?? { id, missing: true });
-  else if (section) chosen = cards.filter((card) => card.section === section);
-  return limit ? chosen.slice(0, limit) : chosen;
+export function selectCards(cards, { ids, section }) {
+  if (ids?.length) return ids.map((id) => cards.find((card) => card.id === id) ?? { id, missing: true });
+  return section ? cards.filter((card) => card.section === section) : cards;
 }
 
 export function plan({ backlog, state, ids, section, limit, taken = new Set() }) {
   const stage = openStage(state);
   const board = liveBoard(state);
-  const cards = selectCards(parseCards(backlog), { ids, section, limit });
-  return {
-    stage,
-    board,
-    cards: cards.map((card) => {
-      if (card.missing) return { id: card.id, skip: "no such card in BACKLOG.md" };
-      const why = taken.has(card.id) ? "already claimed or in a pull request" : refusal(card);
-      return why ? { id: card.id, skip: why } : planCard(card, { stage, board });
-    }),
-  };
+  let runnable = 0;
+  const planned = selectCards(parseCards(backlog), { ids, section }).map((card) => {
+    if (card.missing) return { id: card.id, skip: "no such card in BACKLOG.md" };
+    const why = taken.has(card.id) ? "already claimed or in a pull request" : refusal(card);
+    if (why) return { id: card.id, skip: why };
+    runnable += 1;
+    return limit && runnable > limit ? { id: card.id, skip: `past --limit ${limit}` } : planCard(card, { stage, board });
+  });
+  return { stage, board, cards: planned };
 }
 
 export function render(result) {
@@ -202,12 +205,15 @@ function sh(command, args, { cwd, timeoutMinutes, input } = {}) {
   return { status: result.status, stdout: result.stdout ?? "", stderr: result.stderr ?? "" };
 }
 
-function claudeJson(stdout) {
+// A run cut off by `timeout` prints no JSON and so no cost; it is charged its
+// whole cap, so the queue's spend never undercounts the runs that overshoot.
+export function claudeJson(stdout, capUsd) {
   try {
     const parsed = JSON.parse(stdout.trim().split("\n").pop());
-    return { cost: Number(parsed.total_cost_usd) || 0, text: String(parsed.result ?? ""), error: Boolean(parsed.is_error) };
+    const cost = Number(parsed.total_cost_usd);
+    return { cost: Number.isFinite(cost) ? cost : capUsd, text: String(parsed.result ?? ""), error: Boolean(parsed.is_error) };
   } catch {
-    return { cost: 0, text: stdout.slice(-2000), error: true };
+    return { cost: capUsd, text: stdout.slice(-2000), error: true };
   }
 }
 
@@ -238,20 +244,22 @@ function runCard(card, planned, { stage, cardsRoot, receipts }) {
     return receipt;
   };
 
-  sh("git", ["fetch", "-q", "origin", stage]);
+  sh("git", ["fetch", "-q", "origin", stage], { timeoutMinutes: 5 });
   const base = sh("git", ["worktree", "add", "-q", "-b", planned.branch, worktree, `origin/${stage}`]);
   note("base", base.status === 0, base.stderr || sh("git", ["-C", worktree, "rev-parse", "HEAD"]).stdout.trim());
   if (base.status !== 0) return finish("stopped at base");
   const baseHead = sh("git", ["-C", worktree, "rev-parse", "HEAD"]).stdout.trim();
 
   const write = sh("claude", ["-p", writerPrompt(card, stage), "--agent", "scrapkeep-writer", "--permission-mode", "auto",
-    "--disallowedTools", "Bash(git push:*)", "--max-budget-usd", String(planned.budget.usd), "--output-format", "json"],
+    "--disallowedTools", "Bash(git push:*)", "Bash(gh:*)", "--max-budget-usd", String(planned.budget.usd), "--output-format", "json"],
   { cwd: worktree, timeoutMinutes: planned.budget.minutes });
-  const writer = claudeJson(write.stdout);
+  const writer = claudeJson(write.stdout, planned.budget.usd);
   receipt.cost += writer.cost;
   receipt.writer = writer.text.slice(-3000);
   const head = sh("git", ["-C", worktree, "rev-parse", "HEAD"]).stdout.trim();
+  const onBranch = sh("git", ["-C", worktree, "branch", "--show-current"]).stdout.trim() === planned.branch;
   note("write", write.status === 0 && head !== baseHead, `exit ${write.status}, $${writer.cost.toFixed(2)}, head ${head}`);
+  if (!onBranch) return finish("writer left its branch; nothing pushed");
   if (head === baseHead) return finish(write.status === 124 ? "writer ran out of time with no commit" : "writer made no commit");
   receipt.head = head;
 
@@ -264,14 +272,14 @@ function runCard(card, planned, { stage, cardsRoot, receipts }) {
   const diff = sh("git", ["-C", worktree, "diff", `origin/${stage}...HEAD`]).stdout;
   const review = sh("claude", ["-p", reviewPrompt(card, diff), "--agent", "scrapkeep-reviewer-medium", "--max-budget-usd", String(REVIEW_USD), "--output-format", "json"],
     { cwd: worktree, timeoutMinutes: 20 });
-  const reviewer = claudeJson(review.stdout);
+  const reviewer = claudeJson(review.stdout, REVIEW_USD);
   receipt.cost += reviewer.cost;
   receipt.review = reviewer.text.slice(-3000);
-  const verdict = reviewVerdict(reviewer.text);
+  const verdict = reviewer.error ? "NONE" : reviewVerdict(reviewer.text);
   note("review", verdict === "PASS", `${verdict}, $${reviewer.cost.toFixed(2)}`);
   if (verdict !== "PASS") return finish("review did not pass; branch kept local");
 
-  const push = sh("git", ["-C", worktree, "push", "-q", "-u", "origin", planned.branch]);
+  const push = sh("git", ["-C", worktree, "push", "-q", "-u", "origin", `HEAD:refs/heads/${planned.branch}`], { timeoutMinutes: 5 });
   note("push", push.status === 0, push.stderr || planned.branch);
   return finish(push.status === 0 ? "pushed; caller opens the draft PR and posts READY" : "push failed");
 }
@@ -311,6 +319,7 @@ function parseArgs(argv) {
     else throw new Error(`unknown option ${arg}`);
   }
   if (!options.ids && !options.section) throw new Error("name --cards or --section");
+  if (options.maxTotalUsd !== undefined && !(options.maxTotalUsd > 0)) throw new Error("--max-total-usd takes a positive number");
   return options;
 }
 
