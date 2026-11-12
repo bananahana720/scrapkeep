@@ -168,11 +168,11 @@ func _recorded() -> void:
 	rec.allow = false
 	warden._pulse_clock = 0.0
 	rec.charges.clear()
-	for i in _seconds(warden.PULSE_CYCLE - warden.PULSE_TELEGRAPH + 1.0):
+	for i in _seconds(warden.pulse_cycle(warden.stage) - warden.PULSE_TELEGRAPH + 1.0):
 		_hold_ball(warden)
 		await physics_frame
 	_t.check("charge_allowed false starts no charge while the clock runs", rec.charges.is_empty() and not warden._charging
-			and warden._pulse_clock >= warden.PULSE_CYCLE - warden.PULSE_TELEGRAPH,
+			and warden._pulse_clock >= warden.pulse_cycle(warden.stage) - warden.PULSE_TELEGRAPH,
 		"charges %d, charging %s, pulse clock %.2f s" % [rec.charges.size(), warden._charging, warden._pulse_clock])
 	var gated_at: int = Engine.get_physics_frames()
 	rec.allow = true
@@ -183,8 +183,8 @@ func _recorded() -> void:
 	# Two full cycles: one charge and one pulse each, lifted while the ball is in the reach ring.
 	rec.charges.clear()
 	rec.pulses.clear()
-	# From the charge's start: pulses at 2 and 8 s, charges at 6 and 12 s.
-	for i in _seconds(2.0 * warden.PULSE_CYCLE + 0.5):
+	# From the charge's start: a pulse 2 s in and one a stage cycle later (world 1 runs its Wardens 0.85 fast).
+	for i in _seconds(2.0 * warden.pulse_cycle(warden.stage) + 0.5):
 		_hold_ball(warden)
 		await physics_frame
 	var lifted := rec.pulses.all(func(p): return p[1] == true)
@@ -254,7 +254,7 @@ func _drop(warden: Node3D) -> bool:
 func _bare() -> void:
 	var warden := _spawn({"harpoon_anchor": true, "mount_driver": Bare.new()}, AWAY)
 	_sit_ball(warden)
-	warden._pulse_clock = warden.PULSE_CYCLE - warden.PULSE_TELEGRAPH
+	warden._pulse_clock = warden.pulse_cycle(warden.stage) - warden.PULSE_TELEGRAPH
 	await _frames(_seconds(warden.PULSE_TELEGRAPH + 0.2))
 	var pulsed: int = warden.pulses
 	var opened := await _stagger(warden)
