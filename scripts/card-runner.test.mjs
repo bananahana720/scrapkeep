@@ -53,7 +53,7 @@ test("plans a capped writer, the fast lane, and a push only when green", () => {
   assert.deepEqual(card.budget, BUDGETS.S);
   const steps = Object.fromEntries(card.steps.map(({ step, run }) => [step, run]));
   assert.match(steps.base, /git worktree add -b card\/w1-07 .* origin\/stage\/alpha-w39/);
-  assert.match(steps.write, /timeout --kill-after=60 30m claude -p /);
+  assert.match(steps.write, /timeout -k 60 30m claude -p /);
   assert.match(steps.write, /--max-budget-usd 4 /);
   assert.match(steps.gate, /sketch:fast -- --base origin\/stage\/alpha-w39 --budget 600/);
   assert.match(steps["land if green"], /draft PR/);

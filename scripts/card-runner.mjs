@@ -128,7 +128,7 @@ export function planCard(card, { stage, board }) {
       {
         step: "write",
         run:
-          `cd ${worktree} && timeout --kill-after=60 ${budget.minutes}m claude -p ${shellQuote(writerPrompt(card, stage))} ` +
+          `cd ${worktree} && timeout -k 60 ${budget.minutes}m claude -p ${shellQuote(writerPrompt(card, stage))} ` +
           `--max-budget-usd ${budget.usd} --permission-mode acceptEdits --output-format json > ${receipt}`,
       },
       { step: "gate", run: `cd ${worktree} && npm run sketch:fast -- --base origin/${stage} --budget 600` },
