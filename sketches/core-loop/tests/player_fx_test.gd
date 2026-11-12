@@ -96,6 +96,7 @@ func _run() -> void:
 		w["t"] = 1.0
 	fx._last_word = -1.0e9
 	fx._word_seen.clear()
+	t.check("an on-beat BWAP stands no taller than a plain KLANG", PlayerFx.WORDS["beat"]["size"] * PlayerFx.ONBEAT_GROW <= PlayerFx.WORDS["smash"]["size"] + 0.001)
 	t.check("BWAP stamps", fx.word("beat", ball + Vector3(3, 2, 0)))
 	for w in fx._words:
 		w["t"] = 1.0

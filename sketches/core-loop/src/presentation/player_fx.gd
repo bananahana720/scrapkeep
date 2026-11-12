@@ -18,8 +18,9 @@ const Redline := preload("res://src/combat/redline.gd")
 #   aura       one mote per part orbits the ball in its element's colour; motes flare on
 #              each hit and stretch into streamers once the build is grown
 #   boon       a hit throws a second spark burst in the build's dominant element colour
-#   words      comic sound words (KLANG, WHUMP) stamped beside big moments, never on
-#              ordinary hits, never ahead of the ball (TONE-BIBLE pillar 2)
+#   words      comic sound words (KLANG, WHUMP) stamped beside big moments, never ahead of
+#              the ball (TONE-BIBLE pillar 2), never on a hostile warning; an ordinary hit
+#              says only BWAP, beside the ball, when it lands on the beat (PF-26)
 #   overdrive  past SOFT_CAP_MPS the ball burns: white-hot rim, flame flecks and a
 #              hanging ember trail, so "my contact hurts now" reads at a glance
 #   carve      grinding sparks while the ball rides banked ground at speed
@@ -68,7 +69,7 @@ const WORDS := {
 	"paid": {"text": "PAID", "size": 0.9},
 	"wham": {"text": "WHAM", "size": 1.0},
 	"strike": {"text": "STRIKE", "size": 1.1},
-	"beat": {"text": "BWAP", "size": 0.9},
+	"beat": {"text": "BWAP", "size": 0.64},
 	"redline": {"text": "KA-BLAM", "size": 1.2},
 }
 # An on-beat hit's word is this much bigger (Andrew, Q10 "Sound only"): the hit's own word
@@ -104,7 +105,8 @@ const WORD_REPEAT_S := 1.2
 # hit words cover the fight).
 const BEAT_REPEAT_S := 4.0
 # A word keeps this far, in px, off any hostile warning on screen.
-const WORD_WARNING_GAP := 8.0
+# 24 covers the word's ink outline and its tilt at the ends, which _word_rect leaves out.
+const WORD_WARNING_GAP := 24.0
 const WORD_LIFE := 0.6
 const WORD_STAMP_S := 0.1
 const WORD_EXIT_S := 0.2
@@ -144,6 +146,8 @@ var overdrive := false
 var heat := 0.0
 var _evolutions := 0
 var _clock := 0.0
+var _warn_frame := -1
+var _warn_rects: Array[Rect2] = []
 var _rng := RandomNumberGenerator.new()
 var _font: Font
 var _words: Array = []
@@ -587,11 +591,15 @@ func _on_beat_word(enemy, _kind: String, at_clock: float) -> void:
 	spawned["on_beat"] = spawned.get("on_beat", 0) + 1
 	for w in _words:
 		if w["t"] < 1.0 and float(w.get("born", -1.0)) >= at_clock:
-			w["size"] = float(w["size"]) * ONBEAT_GROW
+			# The hit's own word grows, unless the bigger word would reach a warning.
+			if camera == null or camera.cam == null or word_spot(_word_rect(camera.cam, w["at"], float(w["away"]) > 0.0,
+					float(w["width_px"]), float(w["size"]) * ONBEAT_GROW, w["node"].pixel_size), Rect2(), _warnings()) == 0:
+				w["size"] = float(w["size"]) * ONBEAT_GROW
 			return
 	if not is_instance_valid(enemy) or not enemy.is_inside_tree():
 		return
-	if word("beat", enemy.global_position + Vector3.UP * 1.8):
+	# Beside the ball, not over the foe: an ordinary hit's word never covers what is being hit.
+	if word("beat", _beside_ball()):
 		_words_by_id("beat")["size"] *= ONBEAT_GROW
 
 
@@ -697,7 +705,7 @@ func word(id: String, at: Vector3, color := Color.TRANSPARENT) -> bool:
 		var grow := ONBEAT_GROW if id == "beat" else 1.0
 		var mirrored: Vector3 = placed - side * 2.0 * rel.dot(side)
 		var pick := word_spot(_word_rect(cam, placed, right_of_ball, width_px, size * grow, label.pixel_size),
-			_word_rect(cam, mirrored, not right_of_ball, width_px, size * grow, label.pixel_size), warning_rects(get_tree(), cam, WORD_WARNING_GAP))
+			_word_rect(cam, mirrored, not right_of_ball, width_px, size * grow, label.pixel_size), _warnings())
 		if pick < 0:
 			spawned["word_held"] = spawned.get("word_held", 0) + 1
 			return false
@@ -721,6 +729,16 @@ func word(id: String, at: Vector3, color := Color.TRANSPARENT) -> bool:
 	_draw_word(slot)
 	spawned["word_" + id] = spawned.get("word_" + id, 0) + 1
 	return true
+
+
+# The hostile warnings' screen rects, grown by WORD_WARNING_GAP, read once a frame: a ram
+# through a pack asks for a word per foe.
+func _warnings() -> Array[Rect2]:
+	var frame := Engine.get_process_frames()
+	if frame != _warn_frame:
+		_warn_frame = frame
+		_warn_rects = warning_rects(get_tree(), camera.cam if camera != null else null, WORD_WARNING_GAP)
+	return _warn_rects
 
 
 # Which spot a word takes: 0 its own, 1 the ball's other side, -1 none, when both cover a
