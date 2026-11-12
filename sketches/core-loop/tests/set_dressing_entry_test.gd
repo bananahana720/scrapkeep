@@ -66,6 +66,7 @@ func _run() -> void:
 	var new_run_ms: float = dressing.last_entry_usec / 1000.0
 	_t.eq("New run is back on stage 1", _game.flow.stage(), 1)
 	_t.check("New run: the dressing's entry within %.0f ms" % NEW_DRESSING_MS, new_run_ms <= NEW_DRESSING_MS, "%.1f ms" % new_run_ms)
+	_t.check("New run: stage 1 builds at once from the plan the dressing kept", not dressing.entry_deferred and dressing.get_child_count() > 0)
 	var frames := await _dressed(dressing)
 	_t.check("New run: stage 1 is dressed", frames >= 0 and dressing.map_id == String(_game.ctx.stages.of(1).map), "%d frames, map %s" % [frames, dressing.map_id])
 

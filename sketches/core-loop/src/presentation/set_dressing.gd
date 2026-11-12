@@ -121,12 +121,15 @@ func _build_stage(defer := false) -> void:
 		_dress_when_planned = true
 		entry_deferred = true
 		return
+	# A worker's plan is taken even when it came back empty (a stopped or failed draw), so a
+	# deferred entry never starts a new worker every frame.
+	var from_worker: bool = not _prep.is_empty() and _prep.key == key
 	var planned := _take_plan(key)
-	built_from_worker = not planned.is_empty()
-	if planned.is_empty():
+	built_from_worker = from_worker
+	if not from_worker:
 		planned = _kept.get(key, {})
 	_clear_children()
-	if planned.is_empty() and defer:
+	if planned.is_empty() and defer and not from_worker:
 		_built_for = []
 		_dress_when_planned = true
 		entry_deferred = true
@@ -135,7 +138,7 @@ func _build_stage(defer := false) -> void:
 	map_id = ctx.stages.of(stage).map
 	seed_value = map_id.hash()
 	_ground = ctx.terrain.ground_callable(stage)
-	if planned.is_empty():
+	if planned.is_empty() and not from_worker:
 		var map = ctx.terrain.map_for(stage)
 		planned = plan(map_rows(map), keepouts(map, stage), _ground, seed_value, _flags())
 	_keep(key, planned)
