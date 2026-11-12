@@ -26,9 +26,7 @@ const QUIET_M := 60.0
 const QUIET_SHARE_MIN := 0.25
 
 # {"<stage>": {"value": measured share, "why": "..."}}
-const OWED := {
-	"park_flume": {"value": 0.18, "why": "the flume reach (trestle_drones on 373 m of grind and the trestle collapse face over it, 122 line nodes each) and the wasteway chute (its chasers and flash flood, 88) lie along the riding lines; breather zones in park_flume.json wait for PR 753"},
-}
+const OWED := {}
 
 var t := T.new("park_breath_test")
 
@@ -82,6 +80,9 @@ func _stage(map_id: String) -> void:
 			var bolt: Dictionary = by_id.get(String(row["id"]), {})
 			t.check("%s: lightning %s is a fight site the size of its strike" % [map_id, row["id"]],
 				bolt.get("ring", Vector2.INF) == Vector2(0.0, float(row["effect"]["strike_m"])), "%s" % [bolt])
+	for row in map.park["event_rows"]:
+		if row["kind"] in ParkMap.NOT_FIGHTS:
+			t.check("%s: %s, which never hurts, is not a fight site" % [map_id, row["id"]], not by_id.has(String(row["id"])), "%s" % [by_id.keys()])
 	for row in map.park.get("activity_rows", []):
 		if not row.get("pack", []).is_empty():
 			t.check("%s: activity %s, which fights, is a fight site" % [map_id, row["id"]], by_id.has(String(row["id"])), "%s" % [by_id.keys()])

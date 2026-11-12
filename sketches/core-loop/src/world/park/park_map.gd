@@ -79,6 +79,11 @@ func warden_spec() -> Dictionary:
 # the line rolling (one landing from the air inside it shuts the yard nearer in). An "activity" that fights (a camp, an
 # ambush altar, a relay) carries its rule's ring at the row's spot. Dormant homes count: an
 # event wakes them. Director timer packs are not sites; they spawn ahead of the ball anywhere off the pilot lines.
+# An event that commits no hazard and sends no foe is not a fight: the sluice surge is the surge run's water front,
+# which only pushes the ball on and never hurts (events/industrial.gd handle, activities.gd surge_run).
+const NOT_FIGHTS := ["sluice_surge"]
+
+
 func fight_sites() -> Array:
 	if not ok:
 		return []
@@ -92,6 +97,8 @@ func fight_sites() -> Array:
 			if site.is_empty():
 				continue
 			if table[1] == "event":
+				if row.get("kind", "") in NOT_FIGHTS:
+					continue
 				# A lightning row strikes one strike_m disc at its site's centre (natural.gd plan and _hazard): the disc
 				# is its fight, not the landform it sits on.
 				if row.get("kind", "") == "lightning":
