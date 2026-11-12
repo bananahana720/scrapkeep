@@ -321,6 +321,8 @@ static func validate(park: Dictionary, ctx: Dictionary = {}) -> Array:
 			_add(out, id, "type", "face %s is not a nonzero [x, z]" % str(activities[id]["face"]))
 		if activities[id].has("extra") and activities[id]["extra"] != "card_2":
 			_add(out, id, "type", "extra %s is not card_2" % str(activities[id]["extra"]))
+		if activities[id].has("alts"):
+			_activity_alts(out, id, activities[id])
 	for id in rescues:
 		_site(out, id, rescues[id], rows)
 		if String(rescues[id]["quest"]) == "":
@@ -521,6 +523,42 @@ static func _lead_floor(row: Dictionary) -> float:
 # combat.gd spawn_enemy turns an unknown kind into a chaser with only a warning, and an enemy camp
 # with an empty pack never starts, so its pay is unreachable.
 const SET_PIECE_KINDS := ["miniboss", "warden", "vault"]
+
+
+# W1-70: an activity row may list alternatives, one drawn per run (activities.gd variant). An alternative names
+# its own activity, pack and pay and keeps the row's place, site and pocket role (PARK.md 2.12), so every map
+# check that reads the row holds whichever is drawn: a camp stays a camp, a risk stays a risk.
+static func _activity_alts(out: Array, id: String, row: Dictionary) -> void:
+	var alts = row["alts"]
+	if not (alts is Array and not (alts as Array).is_empty()):
+		_add(out, id, "type", "alts %s is not a nonempty array" % str(alts))
+		return
+	var role := _alt_role(String(row["activity"]))
+	if role == "":
+		_add(out, id, "enum", "a %s row cannot list alts" % row["activity"])
+		return
+	var n := 0
+	for alt in alts:
+		var label := "%s alts[%d]" % [id, n]
+		n += 1
+		if not _fields(out, label, alt, {"activity": ACTIVITY_KINDS, "pack": "a", "pay": "o"}):
+			continue
+		for key in alt:
+			if not key in ["activity", "pack", "pay"]:
+				_add(out, label, "type", "an alt sets only activity, pack and pay, not %s" % key)
+		if _alt_role(String(alt["activity"])) != role:
+			_add(out, label, "enum", "a %s alt changes the row's role from %s" % [alt["activity"], role])
+		_activity_pack(out, label, alt)
+
+
+# The pocket role an alternative must keep (park_placement.gd's kinds, not preloaded: it preloads this file), "" for a
+# kind that cannot vary: a cache has an assigned interior, a surge course its route and sluice, a relay its stake post.
+static func _alt_role(kind: String) -> String:
+	if kind == "enemy_camp":
+		return "online"
+	if kind in ["ambush_altar", "hauler_bounty"]:
+		return "risk"
+	return ""
 
 
 static func _activity_pack(out: Array, id: String, row: Dictionary) -> void:

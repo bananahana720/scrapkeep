@@ -194,7 +194,7 @@ Wind that pushes the ball is never weather. A visible wind lane is a `thermal` c
 
 `routes` is the route graph the nav proof walks: `[{"id": "main", "from": "drop_in", "to": "landmark", "via": [park row ids]}]`. A route is open unless a live event closed it. The rule "a route always open" is tested on this graph (section 5).
 
-`activity_rows`: `{"id", "activity", "site", "at", ...}` where `activity` is one of the `ACTIVITY_ROWS` kinds (`enemy_camp`, `surge_run`, `ambush_altar`, `cracked_cache`, `hauler_bounty`, `event_kinds.gd:616`) and the remaining keys are the ones `activity_sites` carries today (`pack`, `pay`; `src/world/map_spillway.gd:98`). Three per stage, signposted from the drop-in.
+`activity_rows`: `{"id", "activity", "site", "at", ...}` where `activity` is one of the `ACTIVITY_ROWS` kinds (`enemy_camp`, `surge_run`, `ambush_altar`, `cracked_cache`, `hauler_bounty`, `event_kinds.gd:616`) and the remaining keys are the ones `activity_sites` carries today (`pack`, `pay`; `src/world/map_spillway.gd:98`). Three per stage, signposted from the drop-in. A row may list `alts`, each `{"activity", "pack", "pay"}`, and each run draws one of the row and its alts from its seed (activities.gd `variant`, W1-70). An alt keeps the row's place, site and pocket role (section 2.12): a camp stays a camp, an altar or bounty stays a risk; a cache, surge course or relay row lists none (park_schema.gd `_activity_alts`). Every map check reads the row, so each alt is checked in its place.
 
 `waymarks`: 3 to 5 ids in order, the first `drop_in`, the last `landmark`, the middle ones park row ids or activity row ids (start: two middle waymarks, one of them an activity).
 
