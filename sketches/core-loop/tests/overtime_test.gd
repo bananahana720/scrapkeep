@@ -143,9 +143,16 @@ func _on() -> void:
 	_t.check("a soaked lobber reads wet", not lobbers.is_empty() and lobbers[0].armour_class() == "wet")
 	var carried := await _along(game, ot)
 
-	# Arc on a soaked machine jumps once to the soaked machines near it.
-	var a = soaked[0]
-	var b = soaked[1]
+	# Arc on a soaked machine jumps once to the soaked machines near it. Pick two the crew still
+	# has: the harder crew can lose a member to the ball while it rolls along the flow.
+	var standing: Array = soaked.filter(func(e): return is_instance_valid(e) and not e.is_dead())
+	_t.check("two soaked machines still stand", standing.size() >= 2, "%d standing" % standing.size())
+	if standing.size() < 2:
+		game.queue_free()
+		await process_frame
+		return
+	var a = standing[0]
+	var b = standing[1]
 	for e in [a, b]:
 		e.live = Callable(self, "_never")
 		e.hp = 100000.0
