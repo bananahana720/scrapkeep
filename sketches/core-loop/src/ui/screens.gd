@@ -209,6 +209,10 @@ func setup(game_ref) -> void:
 	_footer.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	_content.add_child(_footer)
 	prologue_enabled = not game.bot_driven
+	# A card that can wait (a record heard, a take found) waits for the story cards to close: the
+	# menu's own record used to land its card on the prologue's first line (PF-19).
+	if game.ctx.screen_busy != null:
+		game.ctx.screen_busy.add_source(prologue_showing)
 	_help = HelpPage.new()
 	_help.tuning = game.tuning
 	_help.visible = false
