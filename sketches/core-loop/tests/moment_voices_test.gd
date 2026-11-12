@@ -317,8 +317,9 @@ func _phases() -> void:
 				worst[kind] = maxi(int(worst.get(kind, 0)), int(live[kind]))
 			t += DT
 		var machine: int = fx.moments.filter(func(m): return m[1] == "word").size() - before
-		_t.check("51 phase %d: one stamp, one caption, one machine word, nothing else on its own" % phase,
-			kinds.get("stamp", 0) == 1 and kinds.get("caption", 0) == 1 and not kinds.has("sfx_word") and not kinds.has("card") and machine == 1 and _worst(worst) <= 1,
+		# PF-26: the boss's own change carries a phase turn, so Brindle's turns draw no stamp and no machine word over the fight.
+		_t.check("51 phase %d: one caption and no word over the fight, nothing else on its own" % phase,
+			kinds.get("caption", 0) == 1 and not kinds.has("stamp") and not kinds.has("sfx_word") and not kinds.has("card") and machine == 0 and _worst(worst) <= 1,
 			"row %s, machine words %d, live %s" % [kinds, machine, worst])
 		var owed: Array = [Hud.toast_text("boss_phase_changed", {"name": _phase_name.capitalize()})] if PHASE_TOAST_OWED else []
 		_t.check("52 phase %d: the toasts over the window are exactly the phase name the HUD still owes" % phase, toasts == owed, "toasts %s, owed %s" % [toasts, owed])
