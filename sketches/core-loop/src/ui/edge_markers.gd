@@ -84,7 +84,7 @@ var objective_icon := ""
 # Whether the Warden fight is engaged, set by the HUD each frame; activity markers hide while it is.
 var engaged := false
 # Whether the yard lock holds the ball, set by the HUD each frame; every stage marker points past
-# its wall then, so none shows until it opens.
+# its wall then, so only the nearest yard crew member gets a marker until it opens.
 var yard_locked := false
 var gate_points: Array[Vector3] = []
 # Pocket doors the player has had in view inside POCKET_RANGE (pocket_doors' key to true). A door
