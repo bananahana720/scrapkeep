@@ -99,6 +99,12 @@ const WORD_POOL := 4
 const WORDS_ALIVE := 2
 const WORD_GAP_S := 0.35
 const WORD_REPEAT_S := 1.2
+# BWAP rides an ordinary hit that lands on the beat, the commonest hit in a fight, so it
+# repeats far less often than a big moment's word (PF-26: the w37 film's readers said the
+# hit words cover the fight).
+const BEAT_REPEAT_S := 4.0
+# A word keeps this far, in px, off any hostile warning on screen.
+const WORD_WARNING_GAP := 8.0
 const WORD_LIFE := 0.6
 const WORD_STAMP_S := 0.1
 const WORD_EXIT_S := 0.2
@@ -664,7 +670,8 @@ func words_alive() -> int:
 func word(id: String, at: Vector3, color := Color.TRANSPARENT) -> bool:
 	if not WORDS.has(id) or root == null or not root.is_inside_tree():
 		return false
-	if _clock - _last_word < WORD_GAP_S or _clock - float(_word_seen.get(id, -1.0e9)) < WORD_REPEAT_S:
+	var repeat := BEAT_REPEAT_S if id == "beat" else WORD_REPEAT_S
+	if _clock - _last_word < WORD_GAP_S or _clock - float(_word_seen.get(id, -1.0e9)) < repeat:
 		return false
 	if words_alive() >= WORDS_ALIVE or Density.live().band()["max"] > 0.7:
 		return false
@@ -673,30 +680,70 @@ func word(id: String, at: Vector3, color := Color.TRANSPARENT) -> bool:
 		if w["t"] >= 1.0:
 			slot = w
 			break
-	_last_word = _clock
-	_word_seen[id] = _clock
 	var label: Label3D = slot["node"]
-	label.text = word_text(id)
-	# The word grows away from the ball, so a long one never covers it.
+	var text := word_text(id)
+	var font: Font = label.font if label.font != null else ThemeDB.fallback_font
+	var width_px := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, label.font_size).x
+	var size := float(WORDS[id]["size"]) * (1.0 + 0.8 * might)
+	# The word grows away from the ball, so a long one never covers it, and never lands on a
+	# hostile warning: it takes the ball's other side, or stays unsaid (PF-26).
 	var placed := clear_of_lane(at)
 	var right_of_ball := true
 	if camera != null and camera.cam != null:
-		right_of_ball = (placed - player.shown_position()).dot(camera.cam.global_basis.x) >= 0.0
+		var cam: Camera3D = camera.cam
+		var side: Vector3 = cam.global_basis.x
+		var rel: Vector3 = placed - player.shown_position()
+		right_of_ball = rel.dot(side) >= 0.0
+		var grow := ONBEAT_GROW if id == "beat" else 1.0
+		var mirrored: Vector3 = placed - side * 2.0 * rel.dot(side)
+		var pick := word_spot(_word_rect(cam, placed, right_of_ball, width_px, size * grow, label.pixel_size),
+			_word_rect(cam, mirrored, not right_of_ball, width_px, size * grow, label.pixel_size), warning_rects(get_tree(), cam, WORD_WARNING_GAP))
+		if pick < 0:
+			spawned["word_held"] = spawned.get("word_held", 0) + 1
+			return false
+		if pick == 1:
+			placed = mirrored
+			right_of_ball = not right_of_ball
+	_last_word = _clock
+	_word_seen[id] = _clock
+	label.text = text
 	slot["away"] = 1.0 if right_of_ball else -1.0
-	var font: Font = label.font if label.font != null else ThemeDB.fallback_font
-	slot["width_px"] = font.get_string_size(label.text, HORIZONTAL_ALIGNMENT_LEFT, -1, label.font_size).x
+	slot["width_px"] = width_px
 	var tint: Color = color if color.a > 0.0 else heat_tint(_word_color(id))
 	label.modulate = tint
 	slot["t"] = 0.0
 	slot["id"] = id
 	slot["at"] = placed
 	slot["tilt"] = _rng.randf_range(-0.2, 0.2)
-	slot["size"] = float(WORDS[id]["size"]) * (1.0 + 0.8 * might)
+	slot["size"] = size
 	slot["born"] = _clock
 	label.visible = true
 	_draw_word(slot)
 	spawned["word_" + id] = spawned.get("word_" + id, 0) + 1
 	return true
+
+
+# Which spot a word takes: 0 its own, 1 the ball's other side, -1 none, when both cover a
+# hostile warning's screen rect.
+static func word_spot(own: Rect2, other: Rect2, warnings: Array[Rect2]) -> int:
+	if not warnings.any(func(r): return r.intersects(own)):
+		return 0
+	if not warnings.any(func(r): return r.intersects(other)):
+		return 1
+	return -1
+
+
+# The screen rect a word of `width_px` at `size` covers when its near end sits at `at` and it
+# runs away from the ball (_draw_word's sizing, before the safe-area pull and the stamp's
+# overshoot).
+static func _word_rect(cam: Camera3D, at: Vector3, right: bool, width_px: float, size: float, pixel_size: float) -> Rect2:
+	if cam.is_position_behind(at):
+		return Rect2()
+	var view_h := cam.get_viewport().get_visible_rect().size.y
+	var tall := size * WORD_SCREEN * view_h
+	var wide := width_px * pixel_size * tall / 0.7
+	var p := cam.unproject_position(at)
+	return Rect2(Vector2(p.x if right else p.x - wide, p.y - tall * 0.6), Vector2(wide, tall * 1.2))
 
 
 func _word_color(id: String) -> Color:
