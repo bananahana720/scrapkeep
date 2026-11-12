@@ -48,8 +48,8 @@ const TIPS := {
 	"radio": "Turn the radio or skip a take with the keys on its dial.",
 	"stake": "Hold at the relay mast for a bigger fight and more part rolls.",
 	"companion": "SPIL-9 is full. Your next ram calls it in.",
-	"active": "Press the active's key on the bar to fire it.",
-	"dunk": "An air slam stores its hit. Reel into a hooked body to cash it in.",
+	"active": "Your new part waits on the bar. Press the key under it to fire.",
+	"dunk": "Slam in the air, then reel into what you hooked to land the slam on it.",
 }
 const WAIT_FOR_PICK := ["radio", "active"]
 const STAKE_REACH := 30.0
