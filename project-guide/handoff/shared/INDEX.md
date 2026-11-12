@@ -15,3 +15,4 @@ Reference copies that lanes read. The local coordinator owns them. Put a new fil
 | [world1/map-audit.md](world1/map-audit.md) | World 1 against the ten map points (ruling ct), and the check for each point |
 | [world1/difficulty-plan.md](world1/difficulty-plan.md) | Where each skill band stands, the levers that raise difficulty through movement (ruling cu), and how each is measured |
 | [world1/transitions-audit.md](world1/transitions-audit.md) | Every hand-over in a world 1 run (ruling cv): what the player leaves, what they arrive in, and the fix for each |
+| [world1/effects-critique.md](world1/effects-critique.md) | World 1 effects judged clarity first, then delight: inventory, ranked findings with stills, and how effects scale to worlds 2 and 3 (rows FX-01 to FX-25 in BACKLOG.md) |
