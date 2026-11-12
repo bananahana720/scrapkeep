@@ -11,8 +11,8 @@ const FlashGuard := preload("res://src/presentation/flash_guard.gd")
 # (weapon, special, line skill), then CHIP_GAP to the right the two chips (Shift and Ctrl) at
 # CHIP_SCALE with no number, one per published slot record (ability_slots.gd), key glyph under
 # each, charge pips under the key. Each state reads by more than colour: ready is a bright
-# solid frame, cooling is a petrol wedge that uncovers the icon clockwise from twelve over a
-# dimmed icon, active is a doubled frame, a 3 px lift and the class tint, unavailable is a
+# solid frame, cooling is a petrol wedge that shrinks clockwise from twelve under a
+# dimmed icon and a sand hand, active is a doubled frame, a 3 px lift and the class tint, unavailable is a
 # faded icon struck through. A slot whose cooldown ends swells once, with a rim flash and its
 # class shape flaring in the class colour. State colours come from event_kinds' v2 W1 UI rows;
 # the icon's accent is the class colour (VISUAL-LANGUAGE.md section 7). A slot whose key a
@@ -73,6 +73,8 @@ var line_loaded := false:
 # The set piece runs: the bar dims, since every key on it is swallowed.
 var set_piece := false:
 	set(value):
+		if value == set_piece:
+			return
 		set_piece = value
 		self_modulate.a = SET_PIECE_ALPHA if value else 1.0
 		_plates.visible = value
@@ -202,7 +204,8 @@ func update_slots(list: Array, class_tint: Color, class_shape := "ring") -> void
 		custom_minimum_size = bar_size(list.size())
 		size = custom_minimum_size
 		_plates.size = size
-		_plates.queue_redraw()
+		if _plates.visible:
+			_plates.queue_redraw()
 		queue_redraw()
 
 
@@ -507,8 +510,8 @@ func _draw_glyph() -> void:
 		draw_line(Vector2(x - w * 0.5, y), Vector2(x - w * 0.5 + w * share, y), Palette.SAND, UNDERLINE)
 
 
-# The remaining cooldown as a petrol wedge: it covers the part of the slot still to come
-# back, so the icon is uncovered clockwise from twelve, linearly, as the ability returns.
+# The remaining cooldown as a petrol wedge: it fills the part of the slot still to come back
+# and shrinks clockwise from twelve, linearly, as the ability returns; the icon draws over it.
 func _draw_sweep(rect: Rect2, frac: float) -> void:
 	# A sliver under one degree has no area to triangulate, and a full wedge's first and
 	# last edge points coincide, so both ends are handled without building a polygon.

@@ -198,7 +198,7 @@ func _meter_arc(spot: Rect2, tone: Color, icon: String) -> void:
 		draw_arc(centre, AimReticle.RING * ARC_R / AimReticle.meter_radius(), 0.0, TAU, 24, tone, 2.0)
 
 
-# The key that wears the meter arc: the ultimate's, wherever it is bound.
+# The key that wears the meter arc: the ultimate's default key, as the diagram's other caps are.
 static func arc_key() -> String:
 	return Bindings.glyph("ultimate")
 
