@@ -2539,7 +2539,7 @@ func _park_event_row(event_id: String) -> Dictionary:
 	return {}
 
 
-func _on_event_announced(event_id: String, seconds: float) -> void:
+func _on_event_announced(event_id: String, seconds: float, _at: Vector3) -> void:
 	var state := _park_event_state(event_id)
 	var row := _park_event_row(event_id)
 	if row.is_empty():

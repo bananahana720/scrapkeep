@@ -186,6 +186,12 @@ func _open_segments() -> Array[bool]:
 	return open
 
 
+# LANE: how far along the lane, from its start, the thing that hurts has run while live (Brindle's
+# hull nose), or -1 for a lane that hurts all along at once. Only the drawing and the dodge watch
+# read it; contains() keeps the whole committed lane.
+var lane_front := -1.0
+
+
 func is_live() -> bool:
 	return state == LIVE
 
@@ -287,6 +293,8 @@ func descriptor() -> Dictionary:
 				"live_tone": color.lerp(MOLTEN, 0.5)})
 		Shape.LANE:
 			d.merge({"form": "lane", "dir": heading, "back": back, "length": length, "half_width": half_width})
+			if lane_front >= 0.0:
+				d["front_m"] = lane_front
 	if color == Palette.BRASS:
 		d["owner"] = Palette.BRASS
 	if type == Threat.Type.WAVE:

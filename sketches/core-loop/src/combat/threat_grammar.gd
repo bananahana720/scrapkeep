@@ -286,7 +286,15 @@ static func fill_end(d: Dictionary) -> float:
 # A live LANE's band, as before wave 36: LIVE_LANE of the half width along the full length, or
 # a radial one from r_in to r_out.
 static func _live_lane(d: Dictionary) -> bool:
-	return int(d["type"]) == Type.LANE and d.get("live", false)
+	return int(d["type"]) == Type.LANE and live_band(d)
+
+
+# Whether a live mark draws its dense live band. A lane with a running front (`front_m`, Brindle's
+# charge: only the hull's nose hurts) keeps its pending look, a light full fill inside strong
+# rails, so a camera inside it still sees the floor, the ball and the edges (PF-16: the live band
+# turned the lower screen flat orange before the hull arrived).
+static func live_band(d: Dictionary) -> bool:
+	return d.get("live", false) and not d.has("front_m")
 
 
 # The fill now, along the grow axis (a live lane's band: _live_lane): from the centre (a disc from r 0, a band from
@@ -417,8 +425,9 @@ static func drive(d: Dictionary) -> Dictionary:
 			# No "live" key: a live INSTANT keeps its fill class, under the scorch tint (as base).
 			out[_area_layer(d, true)] = _span_clip(d, 1.0)
 		Type.LANE:
-			var entry := _span_clip(d, LIVE_ALPHA / RUN_ALPHA if live else 1.0)
-			entry["live"] = live
+			var band := live_band(d)
+			var entry := _span_clip(d, LIVE_ALPHA / RUN_ALPHA if band else 1.0)
+			entry["live"] = band
 			out[_area_layer(d, true)] = entry
 		Type.WAVE:
 			var r_in: float = d["r_in"]
@@ -652,8 +661,7 @@ static func _projectile(d: Dictionary, motion: bool, out: Array) -> void:
 
 static func _lane(d: Dictionary, motion: bool, out: Array) -> void:
 	var tone: Color = d["tone"]
-	var live: bool = d.get("live", false)
-	var run_tone := _area_tone(d, LIVE_ALPHA if live else RUN_ALPHA)
+	var run_tone := _area_tone(d, LIVE_ALPHA if live_band(d) else RUN_ALPHA)
 	var run_layer := _area_layer(d, true)
 	if d["form"] == "lane":
 		var length: float = d["length"]

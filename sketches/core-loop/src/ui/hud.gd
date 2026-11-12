@@ -798,7 +798,7 @@ func _on_posture(enemy: Node3D, posture: float, staggered: bool) -> void:
 
 # "incoming" warns of something still on its way. An announcement with no lead is already here
 # (a stage's resting weather starts with the stage: "Dawn Still"), so it warns of nothing.
-func _on_event_announced(event_id: String, seconds_until: float) -> void:
+func _on_event_announced(event_id: String, seconds_until: float, _at: Vector3) -> void:
 	if seconds_until > 0.0:
 		_on_field_fact(event_id, "event_announced")
 

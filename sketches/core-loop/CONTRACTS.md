@@ -175,7 +175,7 @@ Every signal has a row in `event_kinds.gd` keyed by its name. `spine_event_kinds
 | `reward_offered` | `offers: Array` | B | gates are open or moved; offer records below |
 | `reward_chosen` | `part_id: String` | B | a gate was taken, after `run.add_part`; an active offer's id (`active:` + active id, `src/combat/actives/active_offers.gd`, --actives on) is racked instead and never added as a part |
 | `element_resolved` | `element_id: String, material_id: String, behaviour: String, at: Vector3` | B | an element met a material (TADR-009); C picks the sound by behaviour (freeze, electrify, shatter) |
-| `event_announced` | `event_id: String, seconds_until: float` | D | a stage event is coming |
+| `event_announced` | `event_id: String, seconds_until: float, at: Vector3` | D | a stage event is coming; `at` is where it lands, `Vector3.INF` for one with no single place |
 | `event_started` | `event_id: String` | D | it is live |
 | `event_ended` | `event_id: String, outcome: String` | D | outcome is `won`, `lost` or `passed` (for ambient events) |
 | `event_progress` | `event_id: String, fraction: float` | D | a live participatory event's own progress, 0 to 1, from its model (Hold the Relay: share held; Surge Run: gates taken; Scrap Stampede: hits on the hauler); published on its first live tick, then whenever it has moved at least 0.01, and on reaching 1, before its `event_ended`; quiet, priority 0 (presentation drives the event's music from it and plays no cue) |
