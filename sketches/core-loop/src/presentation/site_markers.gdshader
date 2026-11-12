@@ -23,6 +23,8 @@ uniform float stutter = 0.0;
 uniform float seed = 0.0;
 // How dark the plume's rim goes, as a share of its tint (1 is no rim).
 uniform float rim_dark = 1.0;
+// A fire's light on the plume's foot (the furnace kind): its colour, and in alpha its strength; 0 is none.
+uniform vec4 glow : source_color = vec4(0.0);
 
 float hash(vec2 p) {
 	return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
@@ -78,5 +80,8 @@ void fragment() {
 	// A darker rim gives the plume an outline against a sky of its own shade (the flume's pale sky behind pale smoke).
 	float rim = smoothstep(half_w * 0.3, half_w * 0.95, edge);
 	ALBEDO = tint.rgb * mix(0.68, 1.06, side * 0.7 + wisp * 0.3) * mix(1.0, rim_dark, rim);
+	// The furnace lights the column from below: strongest at the foot, gone a fifth of the way up, with a slow flicker.
+	float lit = glow.a * pow(1.0 - up, 8.0) * (0.85 + 0.15 * sin(t * 2.3 + wisp * 6.0));
+	ALBEDO = mix(ALBEDO, glow.rgb * 1.3, clamp(lit, 0.0, 1.0));
 	ALPHA = clamp(density * ends * alpha * near_alpha, 0.0, 1.0);
 }

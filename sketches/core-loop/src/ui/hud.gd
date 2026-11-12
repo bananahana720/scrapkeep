@@ -798,7 +798,7 @@ func _on_posture(enemy: Node3D, posture: float, staggered: bool) -> void:
 
 # "incoming" warns of something still on its way. An announcement with no lead is already here
 # (a stage's resting weather starts with the stage: "Dawn Still"), so it warns of nothing.
-func _on_event_announced(event_id: String, seconds_until: float) -> void:
+func _on_event_announced(event_id: String, seconds_until: float, _at: Vector3) -> void:
 	if seconds_until > 0.0:
 		_on_field_fact(event_id, "event_announced")
 
@@ -1119,6 +1119,25 @@ func hull_cap_shown() -> float:
 	return _health.cap
 
 
+# The ball on screen and what rides on it (the part name, the danger mark, the prompts beside it
+# such as a boss part's readout), for the marks' tags to stay off.
+func _ball_readouts() -> Array[Rect2]:
+	var out: Array[Rect2] = []
+	for rect in prompt_rects.values():
+		out.append(rect)
+	var cam: Camera3D = game.camera.cam
+	var at: Vector3 = game.player.shown_position()
+	if cam == null or cam.is_position_behind(at):
+		return out
+	var centre := cam.unproject_position(at)
+	var half := centre.distance_to(cam.unproject_position(at + cam.global_basis.x * Tuning.RADIUS))
+	out.append(Rect2(centre - Vector2(half, half), Vector2(half, half) * 2.0))
+	for rect in [part_name.rect(), danger_mark.rect()]:
+		if rect.has_area():
+			out.append(rect)
+	return out
+
+
 # The objective for the flow's state: the row objectives.gd picks, with its glyph, its colour
 # and, while the Warden is still to be found, the metres to it.
 func objective_reading() -> Dictionary:
@@ -1165,7 +1184,8 @@ func objective_reading() -> Dictionary:
 		# The cockpit is open: the row's words hold and its glyph turns to the cockpit row's.
 		icon = Objectives.COCKPIT_GLYPH
 	return {"id": id, "icon": icon, "words": words, "color": row_color(id),
-		"progress": _clamp_fraction(gate) if id == "break_clamp_crews" else game.beacon.fraction() if id in RING_ROWS else -1.0,
+		"progress": _clamp_fraction(gate) if id == "break_clamp_crews" else gate.yard_fraction() if id == "break_yard_crew" \
+			else game.beacon.fraction() if id in RING_ROWS else -1.0,
 		"distance": int(distance) if id == "find_warden" and distance < INF else -1,
 		"step": Objectives.live_step(id, String(asked[0]["what"]) if not asked.is_empty() else "")}
 
@@ -1218,9 +1238,35 @@ func place_prompts(size: Vector2, playing: bool) -> void:
 			continue
 		prompt.position = spot.position
 		prompt.size = spot.size
+		prompt.aim_at(cam.unproject_position(entry[2]), _leader_room(size))
 		prompt.visible = true
 		placed.append(spot)
 		prompt_rects[prompt] = spot
+	# A gate's leader that would cross another prompt's words is not drawn: the column says it.
+	for prompt in prompt_rects:
+		if prompt.leader_end().is_finite() and crosses(prompt.position + prompt.leader_end(), prompt.position + Vector2(prompt.size.x * 0.5, 0.0), prompt_rects, prompt):
+			prompt.aim_at(Vector2.INF, Rect2())
+
+
+# The play view between the toasts band and the prompts band: a gate's leader stays inside it.
+static func _leader_room(size: Vector2) -> Rect2:
+	var top := ScreenRegions.rect("toasts", size).end.y
+	return Rect2(0.0, top, size.x, ScreenRegions.rect("prompts", size).position.y - top)
+
+
+# Whether the segment from `a` to `b` runs through any placed prompt but `own`.
+static func crosses(a: Vector2, b: Vector2, rects: Dictionary, own) -> bool:
+	for other in rects:
+		if other == own:
+			continue
+		var r: Rect2 = rects[other]
+		if r.has_point(a) or r.has_point(b):
+			return true
+		var corners := [r.position, Vector2(r.end.x, r.position.y), r.end, Vector2(r.position.x, r.end.y)]
+		for i in 4:
+			if Geometry2D.segment_intersects_segment(a, b, corners[i], corners[(i + 1) % 4]) != null:
+				return true
+	return false
 
 
 # The spot for a prompt whose anchor projects to `at`. A prompt showing its detail that finds no
@@ -1303,6 +1349,7 @@ func _process(delta: float) -> void:
 	edge_markers.objective_icon = goal["icon"]
 	edge_markers.engaged = _engaged
 	edge_markers.yard_locked = reading["id"] == "break_yard_crew"
+	edge_markers.keep_clear = _ball_readouts()
 	var tbl = game.ctx.stages
 	var world: int = tbl.world_of(run.stage)
 	var world_stages: int = tbl.last_of(world) - tbl.first_of(world) + 1

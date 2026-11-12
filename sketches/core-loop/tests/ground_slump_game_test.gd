@@ -33,7 +33,7 @@ func _run() -> void:
 	game.ctx.calm = true
 	game.flow.force_warden = false
 	game.player.source = Intent.Scripted.new()
-	game.events.event_announced.connect(func(id, _lead):
+	game.events.event_announced.connect(func(id, _lead, _at):
 		announced.append(id)
 		if id == "tailings_slump":
 			announced_s = game.world.events.stage_time
