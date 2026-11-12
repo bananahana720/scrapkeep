@@ -1837,6 +1837,13 @@ func _start(kind: String, sound: String, stream: AudioStream, volume: float, pit
 	cue_log.append([kind, sound, "now", engine.clock, pitch if _logged_pitch < 0.0 else _logged_pitch, volume])
 
 
+# A start of a sound played outside this director (the world's water and steam, world_fx_sound.gd),
+# logged like _start's rows so the mix tools hear it: volume is its level relative to the SFX bus.
+func note_cue(kind: String, sound: String, volume: float) -> void:
+	if engine != null:
+		cue_log.append([kind, sound, "now", engine.clock, 1.0, volume])
+
+
 # Cuts every voice of a sound on the SFX bus at once: a ceremony skipped mid-build drops
 # its drum roll so the burst lands clean.
 func stop(sound: String) -> void:

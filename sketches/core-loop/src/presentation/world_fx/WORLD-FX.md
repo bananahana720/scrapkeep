@@ -11,6 +11,7 @@ The air, landmarks, events and ceremonies of Scrapkeep, as one data table and fo
 | `world_fx_anchor.gd` | A drop-in effect for dressing: landmarks, camp, relay, secrets |
 | `world_fx_cable.gd` | A swaying cable on a catenary (shader sway, no script cost) |
 | `world_fx_word.gd` | The drawn sound word (SPLOSH, KA-CHUNK, OOH, PAID) |
+| `world_fx_sound.gd` | The heard side of the world's water and steam (`SOUNDS` in the table): files, 3D distances, the Ambient bus, the cue log line |
 
 Stills: `tools/world_fx_capture.gd` renders every set on greybox stand-ins (command in its header). Checks: `tests/world_fx_test.gd`.
 
@@ -40,6 +41,22 @@ Each rolled emitter also takes its own particle seed, so the scatter differs too
 `spillway_fx.gd` stands world 1's anchor sets from `SPILL_PLACES` when a Spillway park's scenery builds: the powerhouse and weir gatehouse steam on their roofs (`spill_powerhouse`), the weir apron's falls (`spill_falls`), the dam's spray curtain and foot mist at its gate leaves (`landmark_dam`, once the landmark has built) and the penstock tower's vent (`landmark_penstock_tower`). They rank into `ANCHOR_SLOTS` like every anchor.
 
 Water (the Spillway only, `WAKE_WORLDS` and `natural.gd` `FOAM_PARKS`): `WorldFx` reads the terrain's material under the ball 15 times a second. Rolling through standing water throws the wake (`spill_wake`: spray thrown back off the ball, foam rings), thicker with speed; a fast entry or a drop fires `ball_splash` once. A rising flood carries foam (`spill_flood`, hung by `natural.gd` on the water in up to four pieces along its footprint, each on its own surface height), thick while it climbs and calmer once full. `tests/spillway_fx_test.gd` checks the placements in both parks; `tools/spillway_fx_capture.gd` renders stills.
+
+## Sound (FX-09)
+
+The Spillway's water and steam are heard where they are drawn. `SOUNDS` in `world_fx_specs.gd` holds one row per set or hook; `tools/ace/world_sfx.py` makes the files under `assets/audio/world/` (synthesized, deterministic, in the ambience register: one-shots peak at -6.1 dBFS, loops sit at -26 dBFS RMS, every hiss low-passed, no rising sweep, nothing on the beat grid).
+
+| Row | Sound | Plays |
+| --- | --- | --- |
+| `ball_splash` | `spill_splash`: a hollow plop, a slap of spray, droplets on D, A and E | once per splash, louder for a harder entry |
+| `spill_wake` | `spill_wake`: a churn of small waves | while the ball rolls through water, louder with speed |
+| `spill_falls` | `spill_falls`: a near roar with the pool's patter | loop while the weir's falls emit |
+| `landmark_dam` | `dam_curtain`: a deep, wide, slow-rolling roar, voiced at the dam's foot | loop while the curtain emits |
+| `spill_powerhouse` | `steam_breath`: a valve thunk and a soft plume | once as each steam puff starts |
+| `landmark_penstock_tower` | `penstock_vent`: a low chuff and a firmer jet | once as each vent puff starts |
+| `spill_flood` | `flood_foam`: bubbles fizzing over a low wash | loop on a flood's foam, quieter as it calms |
+
+Rules: everything rides the Ambient bus, so a fight, a Warden and a boss pull it down and a warning's focus clears it (`mix_rows.gd`). Each set has one voice, on its nearest emitting anchor (`WorldFx._rank`), so a flood's four foam pieces are one loop and the two steaming roofs never breathe together; a hidden anchor and a resting world are silent, and an anchor with no WorldFx installed stays silent. Each start goes into the game's cue log (`audio.note_cue`) at the level the player hears against the effects bus, so `tools/mix/mixsim.py` weighs it. Mist, midges, soot, the water surface and the landmark beam stay silent on purpose: air has no sound, and a buzz at the ball would read as the swarm enemy's. Checks: `tests/world_fx_sound_test.gd`.
 
 ## Hooks for other systems
 
