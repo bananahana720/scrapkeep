@@ -10,6 +10,7 @@ const ParkSchema := preload("res://src/world/park/park_schema.gd")
 const ParkRecipes := preload("res://src/world/park/park_recipes.gd")
 const ParkGraph := preload("res://src/world/park/park_graph.gd")
 const LockRows := preload("res://src/world/lock_rows.gd")
+const BreatherRows := preload("res://src/world/breather_rows.gd")
 const NaturalFootprint := preload("res://src/world/events/natural_footprint.gd")
 
 # The line half-width the graph bakes (tools/park_graph.gd LINE_M), the reach of the lane mask.
@@ -65,13 +66,9 @@ func _init(park_path := FIXTURE) -> void:
 	ok = true
 
 
-# The stage's breathers (park breather_rows, map audit unit 7): [{"id", "at": Vector2, "radius_m"}], [] for none.
+# The stage's breathers (breather_rows.gd, map audit unit 7): [{"id", "at": Vector2, "radius_m"}], [] for none.
 func breathers() -> Array:
-	var out := []
-	if ok:
-		for row in park.get("breather_rows", []):
-			out.append({"id": String(row["id"]), "at": _v2(row["at"]), "radius_m": float(row["radius_m"])})
-	return out
+	return BreatherRows.rows(title).duplicate(true) if ok else []
 
 
 func warden_spec() -> Dictionary:

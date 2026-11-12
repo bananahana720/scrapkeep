@@ -1,6 +1,6 @@
 extends SceneTree
 
-# Breathers (map audit unit 7, map points 2, 3 and 9; park breather_rows, ParkMap.breathers(), director.gd):
+# Breathers (map audit unit 7, map points 2, 3 and 9; breather_rows.gd, ParkMap.breathers(), director.gd):
 # 1. Data: park_dam has two breathers and park_flume one. Each stands on the riding lines (at least LINE_MIN line nodes
 #    inside it) and clear of every fight site (its edge at least CLEAR_M from the nearest one), so no authored fight
 #    is moved by it. Planted: a breather on the Warden's beacon fails the clearance line.
@@ -10,13 +10,13 @@ extends SceneTree
 #    30 s stretch (inside the bank), a stage with no breather places as many packs as one with a breather, give or
 #    take one tick; past the bank, a parked ball stores no more than BANK_MAX.
 #    Credit income keeps accruing inside, so the credit path is paid back the same way.
-# 4. Schema: a breather radius outside BREATHER_RADIUS is refused.
+# 4. Rows: every breather's radius sits inside breather_rows.gd RADIUS, and a map with no row has none.
 
 const T := preload("res://tests/support/t.gd")
 const Director := preload("res://src/world/director.gd")
 const ParkMap := preload("res://src/world/park/park_map.gd")
 const ParkGraph := preload("res://src/world/park/park_graph.gd")
-const ParkSchema := preload("res://src/world/park/park_schema.gd")
+const BreatherRows := preload("res://src/world/breather_rows.gd")
 const FightReach := preload("res://tests/support/fight_reach.gd")
 const Breath := preload("res://tests/park_breath_test.gd")
 
@@ -124,8 +124,9 @@ func _credit_keeps_accruing() -> void:
 
 
 func _schema() -> void:
-	var park: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://src/world/park/park_flume.json"))
-	t.eq("park_flume passes the schema with its breather", ParkSchema.validate(park), [])
-	park["breather_rows"][0]["radius_m"] = 400.0
-	var errors := ParkSchema.validate(park)
-	t.check("a breather radius past BREATHER_RADIUS is refused", errors.any(func(e) -> bool: return String(e.get("rule", "")) == "range"), str(errors))
+	for map_id in BreatherRows.ROWS:
+		for b in BreatherRows.rows(map_id):
+			var r := float(b["radius_m"])
+			t.check("%s %s radius inside RADIUS" % [map_id, b["id"]], r >= BreatherRows.RADIUS.x and r <= BreatherRows.RADIUS.y, "%.0f" % r)
+	t.check("planted: a 400 m breather is outside RADIUS", 400.0 > BreatherRows.RADIUS.y)
+	t.eq("a map with no row has no breathers", BreatherRows.rows("park_crown"), [])

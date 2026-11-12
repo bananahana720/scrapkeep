@@ -183,7 +183,7 @@ var elite_arrival := 0
 var unknown_kinds := {}
 
 var _timer := FIRST_SPAWN
-# Breathers (map audit unit 7; park breather_rows through ParkMap.breathers()): circles on the riding lines where no
+# Breathers (map audit unit 7; breather_rows.gd through ParkMap.breathers()): circles on the riding lines where no
 # pack is placed. While the ball is inside one, with no crew home in the window, the timer's packs are banked, up to BANK_MAX, and all fall due the
 # moment it leaves (cap() still holds them to the room); credit income keeps accruing. A breather moves pressure later,
 # never away (ruling cu). BANK_MAX only stops a ball parked in one from storing a stage's worth: crossing a 120 m
