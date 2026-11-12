@@ -53,6 +53,10 @@ const SPECS := [
 	# for Andrew's ear under ruling cq, off by default so the game is unchanged. "duck" steps the
 	# effects back for the drop's first two bars, "lift" raises the band for them.
 	{"key": "drop_room", "label": "Drop room", "min": 0.0, "max": 2.0, "step": 1.0, "value": 0.0, "options": ["off", "duck", "lift"]},
+	# The set director (presentation/set_director.gd): a DJ who reads the room each bar and mixes
+	# the recorded band to it, with June's sax answering each phrase. Off by default until Andrew
+	# has heard it on and off (ruling cq); `--set-director=on` turns it on.
+	{"key": "set_director", "label": "Set director", "min": 0.0, "max": 1.0, "step": 1.0, "value": 0.0, "options": ["off", "on"]},
 	{"key": "discovery", "label": "Discovery", "min": 0.0, "max": 1.0, "step": 1.0, "value": 1.0, "options": ["banner", "cards"]},
 	{"key": "telegraph", "label": "Telegraph", "min": 0.0, "max": 1.0, "step": 1.0, "value": 1.0, "options": ["classic", "haze"]},
 	# World-one builds (design-v3/research/build-systems/BUILD-SYSTEMS.md, unit G): the master
@@ -105,6 +109,7 @@ const MUSIC_KEY := "music"
 const BREATH_KEY := "breath"
 const WARDEN_FORM_KEY := "warden_form"
 const DROP_ROOM_KEY := "drop_room"
+const SET_DIRECTOR_KEY := "set_director"
 const DISCOVERY_KEY := "discovery"
 const TELEGRAPH_KEY := "telegraph"
 
@@ -222,6 +227,7 @@ const FLAGS := {
 	"breath": ["breath", "option", "launch"],
 	"warden-form": ["warden_form", "option", "launch"],
 	"drop-room": ["drop_room", "option", "launch"],
+	"set-director": ["set_director", "option", "launch"],
 	"discovery": ["discovery", "option", "launch"],
 	"telegraph": ["telegraph", "option", "launch"],
 	"world-one-builds": ["world_one_builds", "option", "launch"],

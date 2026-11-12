@@ -118,6 +118,7 @@ var events_log: Array = []
 var short_reads := 0
 var misses := 0
 var render_usec := 0
+var trims := {}
 var rendered := 0
 # Stem voices opened and the time opening them took: each one seeks its recording on the
 # frame that asks for the section, so a call that opens more than one section's stems shows here.
@@ -288,6 +289,7 @@ func start_level(at: int, fight := false) -> void:
 		voices.clear()
 		earliest = clock + _ramp_frames(float(manifest.get("join_ms", 10.0)))
 	section = ""
+	trims = {}
 	mode = "level"
 	built = false
 	lead_returned = false
@@ -316,6 +318,7 @@ func stop(ramp := STOP_RAMP) -> void:
 		fading.append(v)
 	voices.clear()
 	section = ""
+	trims = {}
 	events_log.append(["stop", clock, ""])
 
 
@@ -349,6 +352,39 @@ func stop_at(at: int, ramp := STOP_RAMP) -> void:
 	if mode == "off":
 		return
 	_add({"at": maxi(at, clock), "type": "stop", "ramp": ramp})
+
+
+# The set director's trims (set_director.gd): one gain per stem, at or under 1, on top of the
+# section's profile and the faders, from transport sample at over frames. An empty dict puts every
+# stem back. The directed sections (PROTECTED) and the Warden's breath and drop ignore them, so the
+# director can never thin a payoff. Starting or stopping the band clears them.
+func trim_at(at: int, next: Dictionary, frames: int) -> void:
+	_add({"at": maxi(at, clock), "type": "trim", "trims": next.duplicate(), "frames": maxi(frames, 1)})
+
+
+# One bar of trims: the cut is full on bar line at, the stems are back on the next, each ramp
+# ending on its edge so the downbeat sounds at its own level.
+func trim_bar(at: int, next: Dictionary, bar: int, ramp: int) -> void:
+	trim_at(at - ramp, next, ramp)
+	trim_at(at + bar - ramp, {}, ramp)
+
+
+# Only the stems a trim changes move, and only when their level changes; a fall, breath or join
+# ramp in flight keeps its pace. Voices waiting on a join ramp at the join's own pace.
+func _trim_voices(list: Array, name: String, stems: Array, frames: int) -> void:
+	var gains := _profile(name)
+	for v: Voice in list:
+		if v.stem in stems and gains.has(v.stem):
+			var g := _gain_of(gains[v.stem], v.stem, name)
+			if not is_equal_approx(g, v.target):
+				_ramp_to(v, g, frames)
+
+
+func trim_of(stem: String, at := "") -> float:
+	var name := section if at == "" else at
+	if mode == "piece" or name in PROTECTED or name in LEAD_WHOLE:
+		return 1.0
+	return clampf(float(trims.get(stem, 1.0)), 0.0, 1.0)
 
 
 func set_pressure(value: float) -> void:
@@ -938,7 +974,7 @@ func _open(clip: Dictionary, stem: String, from: int, gains: Dictionary, ramp: i
 
 func _gain_of(stem_row: Dictionary, stem := "", at := "") -> float:
 	var db := float(stem_row["volume_db"])
-	return 0.0 if db <= float(manifest.get("silent_db", -80.0)) else db_to_linear(db) * parameter_gain(stem, at)
+	return 0.0 if db <= float(manifest.get("silent_db", -80.0)) else db_to_linear(db) * parameter_gain(stem, at) * trim_of(stem, at)
 
 
 func _ramp_to(v: Voice, g: float, frames: int) -> void:
@@ -1075,6 +1111,20 @@ func _run(action: Dictionary) -> void:
 				_follow()
 		"follow":
 			_follow()
+		"trim":
+			var stems: Array = trims.keys()
+			trims = action.trims
+			for stem in trims:
+				if not stem in stems:
+					stems.append(stem)
+			# Inside a begun join the live voices already belong to the incoming section, and
+			# voices opened for a join not yet begun are levelled by their own section's rules.
+			var begun := bool(pending.get("begun", false))
+			var live := String(pending["section"]) if begun else section
+			if live != "":
+				_trim_voices(voices, live, stems, int(action.frames))
+			if not pending.is_empty() and not begun:
+				_trim_voices(pending["voices"], String(pending["section"]), stems, int(pending["ramp"]))
 		"stop":
 			stop(int(action["ramp"]))
 
