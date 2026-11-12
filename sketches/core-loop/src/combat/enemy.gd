@@ -75,6 +75,11 @@ signal attack_phase(facts: Dictionary)
 
 const PHASE_WINDUP := "windup"
 const PHASE_STRIKE := "strike"
+# The release flash (_show_strike): frames held, the share of the way to HAZARD, the glow.
+const STRIKE_FRAMES := 2
+const STRIKE_DONE := -1
+const STRIKE_TINT := 0.85
+const STRIKE_GLOW := 1.6
 const PHASE_RECOVER := "recover"
 const PHASE_CANCELLED := "cancelled"
 # Enemies whose attack has no clean owner among these files, so they publish nothing.
@@ -126,6 +131,9 @@ var knocks := 0
 
 var _knock := Vector3.ZERO
 var _flash := 0.0
+# The attack's release flash (FX-05): physics frames of the HAZARD tint still to show, or
+# STRIKE_DONE when the last has shown and the rest look is owed.
+var _strike_frames := 0
 var _dead := false
 var _material: StandardMaterial3D
 var _base_color := Palette.RUST
@@ -695,6 +703,32 @@ func _update_flash(delta: float) -> void:
 		_material.emission_energy_multiplier = FlashGuard.spike(0.0, _flash * 2.0)
 		if _flash <= 0.0:
 			_apply_rest_look()
+	if _strike_frames > 0:
+		_strike_frames -= 1
+		if _flash <= 0.0:
+			_show_strike()
+		if _strike_frames == 0:
+			_strike_frames = STRIKE_DONE
+	elif _strike_frames == STRIKE_DONE:
+		_strike_frames = 0
+		if _flash <= 0.0:
+			_apply_rest_look()
+
+
+# The release flash (FX-05, effects critique E5): on the strike, the body goes HAZARD for
+# STRIKE_FRAMES physics frames, so the attacker wears the hit's colour at the moment its mark
+# lands. A hit flash wins over it. Reduce flashes keeps the tint at its information share and
+# cuts the glow's rise.
+func _show_strike() -> void:
+	_material.albedo_color = _base_color.lerp(Palette.HAZARD, FlashGuard.info(STRIKE_TINT))
+	_material.emission_enabled = true
+	_material.emission = Palette.HAZARD
+	_material.emission_energy_multiplier = FlashGuard.spike(0.0, STRIKE_GLOW)
+
+
+# Whether the body wears the release flash right now (tests and captures).
+func strike_flashing() -> bool:
+	return _flash <= 0.0 and (_strike_frames == STRIKE_DONE or (_strike_frames > 0 and _strike_frames < STRIKE_FRAMES))
 
 
 # The resting look: the base colour and no glow. The plating cue is on the plate's rim.
@@ -969,6 +1003,8 @@ func _facts_phase(phase: String) -> void:
 		return
 	_facts_refresh()
 	_atk["phase"] = phase
+	if phase == PHASE_STRIKE and not _dead:
+		_strike_frames = STRIKE_FRAMES
 	attack_phase.emit(_facts_dict(phase))
 
 
