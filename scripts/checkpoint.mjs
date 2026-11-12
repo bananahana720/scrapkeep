@@ -639,6 +639,8 @@ async function runPerf(outDir) {
   const out = path.join(outDir, "perf.json");
   const args = [
     GODOT,
+    "--audio-driver",
+    "Dummy",
     "--path",
     sketch,
     "--resolution",
