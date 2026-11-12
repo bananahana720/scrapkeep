@@ -126,11 +126,12 @@ func _check_edges() -> void:
 	var off := 0
 	for p in Threat.landing(lane)[1]["puffs"]:
 		var at: Vector3 = p[0]
-		var on_rail := absf(absf(at.z) - 1.5) < EPS and at.x >= -EPS and at.x <= 10.0 + EPS
-		var on_cap := absf(at.x - 10.0) < EPS and absf(at.z) <= 1.5 + EPS
+		var past := Threat.RAIL + Threat.UNDERLAY
+		var on_rail := absf(absf(at.z) - 1.5 - past) < EPS and at.x >= -EPS and at.x <= 10.0 + EPS
+		var on_cap := absf(at.x - 10.0 - past) < EPS and absf(at.z) <= 1.5 + EPS
 		if not (on_rail or on_cap):
 			off += 1
-	t.check("lane cracks on rails and cap", off == 0, "%d lane cracks off the rails and far cap" % off)
+	t.check("lane cracks on rails and cap", off == 0, "%d lane cracks not just outside the rails' and far cap's keyline" % off)
 
 
 func _check_dust() -> void:

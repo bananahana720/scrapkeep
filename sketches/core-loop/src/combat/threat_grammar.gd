@@ -1459,10 +1459,13 @@ static func landing(d: Dictionary) -> Array:
 	for line in _boundary(d):
 		_jagged(tris, line, rng)
 	var edge := _edge_points(d, rng)
+	# A lane's rails and their keyline stay drawn while it runs live, so its cracks start at the
+	# keyline's outer face; a ring's edge sits inside r_out, so its cracks start on it.
+	var from := RAIL + UNDERLAY if d["form"] == "lane" else 0.0
 	var puffs: Array = []
 	for e in edge:
-		var p: Vector3 = e[0]
 		var out: Vector3 = e[1]
+		var p: Vector3 = e[0] + out * from
 		var side := Vector3.UP.cross(out)
 		var long := reach * rng.randf_range(0.7, 1.15)
 		var bend := side * long * CRACK_JAG * (1.0 if rng.randf() < 0.5 else -1.0)
