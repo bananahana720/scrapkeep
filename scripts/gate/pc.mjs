@@ -38,8 +38,8 @@ export const WEIGHTS = {
   "weekly-tests": 6, // the same shard, on the weekly list
   "weekly-bots": 8, // the same bot shard, on the weekly list
   "bands-A": 8, // one test at a time, but its bot tests start up to 8 children
-  "bands-B": 6, // challenge --jobs=6
-  "bands-C": 8, // bot smoke tests start up to 8 children, then the rungs at --jobs=6
+  "bands-B": 12, // challenge --jobs=12 (PR 786 PC timing: 642 s against 1075 s at 6, same verdicts)
+  "bands-C": 12, // bot smoke tests start up to 8 children, then the rungs at --jobs=12
   node: 2, // the node suite starts a few Godot tests at a time
   redteam: 8, // --slots=8; exclusive, because its frame-time readings need a quiet machine
   retime: 2, // one test at a time; exclusive, because a retime needs a quiet machine
@@ -495,7 +495,7 @@ function runLogged(command, args, { cwd, env, log }) {
   });
 }
 
-export function challengeArgs({ only, seeds, bands = null, tier = null, jobs = 6, label, resume }) {
+export function challengeArgs({ only, seeds, bands = null, tier = null, jobs = 12, label, resume }) {
   return ["scripts/challenge/run.mjs", `--only=${only}`, `--seeds=${seeds}`, ...(bands ? [`--bands=${bands}`] : []), ...(tier ? [`--tier=${tier}`] : []), "--no-top", `--jobs=${jobs}`, `--label=${label}`, ...(resume ? ["--resume"] : [])];
 }
 
