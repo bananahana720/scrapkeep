@@ -148,11 +148,13 @@ func _run() -> void:
 	var burst_reels := _reels
 	_advance(Rules.REEL_GAP + 0.05)
 	await _hit(hull, "arc", 1.0e6)
+	var shot_reels := _reels
+	await _hit(hull, "ram", RAM_FORCE)
 	_report("each gapped hull hit sheds scrap and fills the ultimate", burst_reels == 1 and burst_pickups.size() == Rules.REEL_PICKUPS
-			and burst_scrap == Rules.REEL_SCRAP and _reels == 2 and _reel_pickups().size() == 2 * Rules.REEL_PICKUPS
+			and burst_scrap == Rules.REEL_SCRAP and shot_reels == 1 and _reels == 2 and _reel_pickups().size() == 2 * Rules.REEL_PICKUPS
 			and is_equal_approx(_reel_points() - meter_before, 2.0 * float(UltimateMeter.WEIGHTS["reel"])),
-		"four hits in one gap: %d reel event, %d pickups worth %d; a shot after the gap made %d events; meter paid %.1f"
-			% [burst_reels, burst_pickups.size(), burst_scrap, _reels, _reel_points() - meter_before])
+		"four rams in one gap: %d reel event, %d pickups worth %d; a weapon shot after the gap left %d, a ram made %d; meter paid %.1f"
+			% [burst_reels, burst_pickups.size(), burst_scrap, shot_reels, _reels, _reel_points() - meter_before])
 
 	# The pickups lie between the hull and the ball, on the floor, and pay scrap and cogs.
 	var p0: Dictionary = _reel_pickups()[0]
@@ -190,11 +192,18 @@ func _run() -> void:
 	_advance(FightPhases.TRANSITION_SECONDS + 0.05)
 	await _break_chunk(hull)
 	var scuttle_reel: bool = _boss.phase == 3 and _boss.chunks_left() == 1 and _boss.reeling()
-	_advance(minf(6.0, Rules.PHASE_MIN_SECONDS[2] - _boss.phase_clock - 0.5))
-	var charge_state: String = _boss._charge.get("state", "")
-	var charge_live: bool = _boss._charge.has("hazard") and is_instance_valid(_boss._charge["hazard"]) and not _boss._charge["hazard"].is_done()
-	_report("the Scuttle's reel commits no charge", scuttle_reel and not charge_live and charge_state in ["rest", "recover", "stun"],
-		"reeling %s; charge %s, live lane %s" % [scuttle_reel, charge_state, charge_live])
+	# A charge already drawn when the chunk broke plays out; no new lane, not even a hook turn, is drawn.
+	var drawn := _hazard_ids()
+	var lanes := 0
+	for _i in int(ceil(minf(8.0, Rules.PHASE_MIN_SECONDS[2] - _boss.phase_clock - 0.5) / DT)):
+		_above()
+		_boss.advance(DT)
+		for h in _boss.active_hazards():
+			if not h.get_instance_id() in drawn:
+				drawn.append(h.get_instance_id())
+				lanes += 1
+	_report("the Scuttle's reel commits no charge", scuttle_reel and lanes == 0 and _boss.reeling(),
+		"reeling %s; %d new hazards drawn over the reel" % [scuttle_reel, lanes])
 
 	print("brindle_reel_test: %s" % ("PASS" if _failures == 0 else "FAIL (%d)" % _failures))
 	quit(0 if _failures == 0 else 1)

@@ -310,7 +310,7 @@ func reeling() -> bool:
 	return _held() and not _in_transition()
 
 
-# A hull hit in the reel: at most one per Rules.REEL_GAP and Rules.REEL_HITS a phase sheds
+# A ball contact on the hull in the reel (weapon fire sheds nothing): at most one per Rules.REEL_GAP and Rules.REEL_HITS a phase sheds
 # Rules.REEL_SCRAP as pickups between the hull and the ball and publishes boss_reeled, which
 # the ultimate meter pays.
 func _reel_hit() -> void:
@@ -1010,7 +1010,7 @@ func _run_charge(delta: float, ball: Vector3) -> void:
 		if _charge["into_wall"]:
 			_stun(ChallengeDials.punish("brindle", Rules.WALL_STUN))
 			_discover(CodexEntries.WALL_BAIT, ship.global_position)
-		elif not _charge.get("cued", false) and _follow_ups() > 0:
+		elif not _charge.get("cued", false) and _follow_ups() > 0 and not reeling():
 			_note_missed_charge()
 			# The hook turn: the cue sounds as the hull digs in, the lane draws CUE_LEAD later.
 			_phases.cue("charge")
@@ -1439,7 +1439,7 @@ func on_struck(target, kind: String, part: String, result: Dictionary) -> void:
 		_stun(ChallengeDials.punish("brindle", Rules.CLASH_STUN))
 	if state != FIGHT:
 		return
-	if target.role == "hull":
+	if target.role == "hull" and kind in Rules.CONTACT_KINDS:
 		_reel_hit()
 	_note_glance(target, part, result)
 	if target.role == "hull" and result.has("gain"):
