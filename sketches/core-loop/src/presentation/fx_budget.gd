@@ -5,8 +5,8 @@ extends RefCounted
 # ceilings; it sets none. A row's number stays where it is tuned and pinned (world_fx_test,
 # fx_library_test, machine_fx_test); fx_budget_test checks the table still reads them all.
 #
-# Units are kept apart because they cost differently: "particles" are live GPU particles at the
-# high preset, "nodes" are pooled glyph and word nodes, "draws" are transparent meshes (each a
+# Units are kept apart because they cost differently: "particles" are live particles at the
+# high preset (GPU and CPU particles alike), "nodes" are pooled glyph and word nodes, "draws" are transparent meshes (each a
 # draw call and its overdraw). What each unit costs in frame time is a PC measurement (4080,
 # idle card), not a cloud one: cloud reads overstate shader cost 2 to 3 times.
 
