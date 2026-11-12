@@ -17,6 +17,9 @@ const SPEED := 4.8
 # No dial runs a chaser this fast or faster: under the ball's 14 m/s cruise (movement/tuning.gd), so a ball
 # that keeps rolling is never caught by running (ruling cu; chaser_speed_test holds the two numbers apart).
 const SPEED_CEILING := 12.0
+# A chaser runs at SPEED for its first ENTRY_GRACE_S alive, then at its stage's pace. A pocket's crew spawns as the
+# ball enters, and an idle entry stays safe for its first two seconds (pocket_entry_test) however fast the stage runs.
+const ENTRY_GRACE_S := 2.0
 const LUNGE_RANGE := 10.0
 const WINDUP := 0.6
 const LUNGE_TIME := 0.34
@@ -57,6 +60,7 @@ var state := State.CHASE
 var lunges := 0
 # This chaser's run speed (m/s): SPEED unless its spawn handed it the stage's (spec "run_speed", stage_speed()).
 var run_speed := SPEED
+var _age := 0.0
 
 var _clock := 0.0
 var _rest := 0.0
@@ -141,6 +145,11 @@ static func stage_speed(stage: int) -> float:
 	return clampf(dial, SPEED, SPEED_CEILING) if dial > 0.0 else SPEED
 
 
+# This tick's run speed: SPEED through the entry grace, run_speed after it.
+func _pace() -> float:
+	return SPEED if _age < ENTRY_GRACE_S else run_speed
+
+
 func state_name() -> String:
 	return ["chase", "windup", "lunge", "recover", "call"][state]
 
@@ -152,6 +161,7 @@ func _physics_process(delta: float) -> void:
 		_move(delta, Vector3.ZERO)
 		return
 	_clock += delta
+	_age += delta
 	_rest = maxf(0.0, _rest - delta)
 	var to_ball := _flat_to_ball()
 	match state:
@@ -164,7 +174,7 @@ func _physics_process(delta: float) -> void:
 			else:
 				var desired := Vector3.ZERO
 				if to_ball.length() > radius + 1.4:
-					desired = to_ball.normalized() * run_speed
+					desired = to_ball.normalized() * _pace()
 				_move(delta, desired)
 				if _rest <= 0.0 and to_ball.length() < LUNGE_RANGE and is_on_floor() and _knocked_speed() < 1.0:
 					if AttackBudget.ask(self):
@@ -268,7 +278,7 @@ func _intercept(lead: float) -> Vector3:
 	for i in range(steps + 1):
 		var t := PackPressure.MAX_LEAD_S * lead * float(i) / steps
 		var at := PackPressure.predict(target, t)
-		if _flat(at - global_position).length() - run_speed * t <= LUNGE_RANGE * 0.8:
+		if _flat(at - global_position).length() - _pace() * t <= LUNGE_RANGE * 0.8:
 			best = at
 			break
 	return _flat(best - global_position)
@@ -279,7 +289,7 @@ static func _flat(v: Vector3) -> Vector3:
 
 
 func _toward(offset: Vector3) -> Vector3:
-	return offset.normalized() * run_speed if offset.length() > radius + 1.4 else Vector3.ZERO
+	return offset.normalized() * _pace() if offset.length() > radius + 1.4 else Vector3.ZERO
 
 
 func _begin_windup(to_ball: Vector3) -> void:

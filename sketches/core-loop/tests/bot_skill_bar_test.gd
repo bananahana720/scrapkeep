@@ -269,6 +269,17 @@ func _ultimate_cases() -> void:
 		body.add_to_group("enemy")
 		root.add_child(body)
 		near.append(body)
+	# The crowd rule alone. The earlier cases cast beside the stage Warden, whose open core is the other reason Q
+	# goes (_core_open): its posture can stand staggered here, more often since world 1's Wardens pulse on 5.1 s
+	# (wave 37). The ball stands out of the core's reach first.
+	var warden = _game.flow.warden
+	if is_instance_valid(warden):
+		var away: Vector3 = player.ball_position() - warden.global_position
+		away.y = 0.0
+		if away.length() < 0.1:
+			away = Vector3.RIGHT
+		var clear: Vector3 = warden.global_position + away.normalized() * (float(_const("ULT_CORE_REACH", 45.0)) + 15.0)
+		player.reset_to(_game.ctx.terrain.drop_point(clear.x, clear.z, 1.05))
 	var ball: Vector3 = player.ball_position()
 	for i in near.size():
 		near[i].global_position = ball + Vector3(6.0 + 2.0 * i, 0.0, 0.0)
