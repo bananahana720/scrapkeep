@@ -222,6 +222,13 @@ func _rest() -> void:
 	_game.player.kit.mounted = false
 	_step(second)
 	_t.check("and off the mount, at rest in the air, is hung again", _count("hung") == 1, "%d rows" % _count("hung"))
+	# The mount's seconds count nothing toward stuck: off it and rolling on the spot, stuck waits its full time.
+	_fresh()
+	_game.player.kit.mounted = true
+	_step(int(PlayWatch.STUCK_S / TICK) + 2)
+	_game.player.kit.mounted = false
+	_step(int(PlayWatch.STUCK_S / TICK) - 90)
+	_t.check("a dismounted ball starts its stuck time afresh", _count("stuck") == 0, "%d rows" % _count("stuck"))
 
 
 func _stuck() -> void:
