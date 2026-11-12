@@ -19,7 +19,8 @@
    "speed": 50.77978515625
   },
   "qa": {},
-  "script_errors": 0
+  "script_errors": 0,
+  "tool": "before review"
  },
  {
   "run": "calm-2873",
@@ -41,7 +42,8 @@
    "speed": 49.8171119689941
   },
   "qa": {},
-  "script_errors": 0
+  "script_errors": 0,
+  "tool": "before review"
  },
  {
   "run": "calm-2875",
@@ -63,7 +65,8 @@
    "speed": 92.8144378662109
   },
   "qa": {},
-  "script_errors": 0
+  "script_errors": 0,
+  "tool": "before review"
  },
  {
   "run": "calm-2880",
@@ -87,7 +90,8 @@
   "qa": {
    "hung": 1
   },
-  "script_errors": 0
+  "script_errors": 0,
+  "tool": "before review"
  },
  {
   "run": "death-2885",
@@ -111,7 +115,8 @@
    "speed": 48.4042663574219
   },
   "qa": {},
-  "script_errors": 0
+  "script_errors": 0,
+  "tool": "before review"
  },
  {
   "run": "plain-2870",
@@ -126,10 +131,11 @@
   "resume_wrong": null,
   "peaks": null,
   "qa": {},
-  "script_errors": 0
+  "script_errors": 0,
+  "tool": "before review"
  },
  {
-  "run": "quit-2876",
+  "run": "quit-2876-v1",
   "seed": 2876,
   "policy": "skipper",
   "pilot": "demolitions_caster",
@@ -151,10 +157,43 @@
    "speed": 47.5366821289062
   },
   "qa": {},
-  "script_errors": 0
+  "script_errors": 0,
+  "tool": "before review",
+  "quits": [
+   {
+    "quit_in": "gates",
+    "stage": 1,
+    "held_at_quit": {
+     "cogs": 728,
+     "parts": 0
+    },
+    "after_continue": {
+     "stage": 1,
+     "state": "stage",
+     "cogs": 0,
+     "parts": 0
+    },
+    "cleared_stage_lost": true
+   },
+   {
+    "quit_in": "stage",
+    "stage": 1,
+    "held_at_quit": {
+     "cogs": 0,
+     "parts": 0
+    },
+    "after_continue": {
+     "stage": 1,
+     "state": "stage",
+     "cogs": 0,
+     "parts": 0
+    },
+    "cleared_stage_lost": false
+   }
+  ]
  },
  {
-  "run": "quit-2877",
+  "run": "quit-2877-v1",
   "seed": 2877,
   "policy": "completionist",
   "pilot": "tarn",
@@ -178,7 +217,40 @@
   "qa": {
    "stuck": 1
   },
-  "script_errors": 0
+  "script_errors": 0,
+  "tool": "before review",
+  "quits": [
+   {
+    "quit_in": "stage",
+    "stage": 1,
+    "held_at_quit": {
+     "cogs": 172,
+     "parts": 0
+    },
+    "after_continue": {
+     "stage": 1,
+     "state": "stage",
+     "cogs": 0,
+     "parts": 0
+    },
+    "cleared_stage_lost": false
+   },
+   {
+    "quit_in": "stage",
+    "stage": 1,
+    "held_at_quit": {
+     "cogs": 0,
+     "parts": 0
+    },
+    "after_continue": {
+     "stage": 1,
+     "state": "stage",
+     "cogs": 0,
+     "parts": 0
+    },
+    "cleared_stage_lost": false
+   }
+  ]
  },
  {
   "run": "quit-beacon-2881",
@@ -203,7 +275,25 @@
    "speed": 46.2585868835449
   },
   "qa": {},
-  "script_errors": 0
+  "script_errors": 0,
+  "tool": "before review",
+  "quits": [
+   {
+    "quit_in": "beacon",
+    "stage": 1,
+    "held_at_quit": {
+     "cogs": 322,
+     "parts": 0
+    },
+    "after_continue": {
+     "stage": 1,
+     "state": "stage",
+     "cogs": 0,
+     "parts": 0
+    },
+    "cleared_stage_lost": false
+   }
+  ]
  },
  {
   "run": "quit-boss-2883",
@@ -232,7 +322,25 @@
    "speed": 47.5114440917969
   },
   "qa": {},
-  "script_errors": 0
+  "script_errors": 0,
+  "tool": "after review",
+  "quits": [
+   {
+    "quit_in": "boss",
+    "stage": 2,
+    "held_at_quit": {
+     "cogs": 1377,
+     "parts": 2
+    },
+    "after_continue": {
+     "stage": 2,
+     "state": "stage",
+     "cogs": 633,
+     "parts": 1
+    },
+    "cleared_stage_lost": true
+   }
+  ]
  },
  {
   "run": "quit-boss-2883-v1",
@@ -257,7 +365,25 @@
    "speed": 47.5114440917969
   },
   "qa": {},
-  "script_errors": 0
+  "script_errors": 0,
+  "tool": "before review",
+  "quits": [
+   {
+    "quit_in": "boss",
+    "stage": 2,
+    "held_at_quit": {
+     "cogs": 1397,
+     "parts": 2
+    },
+    "after_continue": {
+     "stage": 2,
+     "state": "stage",
+     "cogs": 653,
+     "parts": 1
+    },
+    "cleared_stage_lost": true
+   }
+  ]
  },
  {
   "run": "quit-gates-2884",
@@ -286,7 +412,25 @@
    "speed": 46.8809967041016
   },
   "qa": {},
-  "script_errors": 0
+  "script_errors": 0,
+  "tool": "after review",
+  "quits": [
+   {
+    "quit_in": "gates",
+    "stage": 1,
+    "held_at_quit": {
+     "cogs": 661,
+     "parts": 1
+    },
+    "after_continue": {
+     "stage": 1,
+     "state": "stage",
+     "cogs": 0,
+     "parts": 0
+    },
+    "cleared_stage_lost": true
+   }
+  ]
  },
  {
   "run": "quit-gates-2884-v1",
@@ -311,7 +455,25 @@
    "speed": 46.8809967041016
   },
   "qa": {},
-  "script_errors": 0
+  "script_errors": 0,
+  "tool": "before review",
+  "quits": [
+   {
+    "quit_in": "gates",
+    "stage": 1,
+    "held_at_quit": {
+     "cogs": 661,
+     "parts": 1
+    },
+    "after_continue": {
+     "stage": 1,
+     "state": "stage",
+     "cogs": 0,
+     "parts": 0
+    },
+    "cleared_stage_lost": true
+   }
+  ]
  },
  {
   "run": "quit-launch-2882",
@@ -340,7 +502,25 @@
    "speed": 49.3172569274902
   },
   "qa": {},
-  "script_errors": 0
+  "script_errors": 0,
+  "tool": "after review",
+  "quits": [
+   {
+    "quit_in": "launch",
+    "stage": 1,
+    "held_at_quit": {
+     "cogs": 716,
+     "parts": 1
+    },
+    "after_continue": {
+     "stage": 1,
+     "state": "stage",
+     "cogs": 0,
+     "parts": 0
+    },
+    "cleared_stage_lost": true
+   }
+  ]
  },
  {
   "run": "quit-launch-2882-v1",
@@ -362,7 +542,8 @@
    "speed": 49.3172569274902
   },
   "qa": {},
-  "script_errors": 0
+  "script_errors": 0,
+  "tool": "before review"
  },
  {
   "run": "rep-2880",
@@ -386,7 +567,8 @@
   "qa": {
    "hung": 1
   },
-  "script_errors": 0
+  "script_errors": 0,
+  "tool": "before review"
  },
  {
   "run": "spam-2870",
@@ -408,7 +590,8 @@
    "speed": 50.77978515625
   },
   "qa": {},
-  "script_errors": 0
+  "script_errors": 0,
+  "tool": "before review"
  },
  {
   "run": "spam-2873",
@@ -430,7 +613,8 @@
    "speed": 49.8171119689941
   },
   "qa": {},
-  "script_errors": 0
+  "script_errors": 0,
+  "tool": "before review"
  },
  {
   "run": "spam-2874",
@@ -452,7 +636,8 @@
    "speed": 67.7537612915039
   },
   "qa": {},
-  "script_errors": 0
+  "script_errors": 0,
+  "tool": "before review"
  },
  {
   "run": "spam-2875",
@@ -474,7 +659,8 @@
    "speed": 92.8144378662109
   },
   "qa": {},
-  "script_errors": 0
+  "script_errors": 0,
+  "tool": "before review"
  },
  {
   "run": "spam-2880",
@@ -498,7 +684,8 @@
   "qa": {
    "hung": 1
   },
-  "script_errors": 0
+  "script_errors": 0,
+  "tool": "before review"
  },
  {
   "run": "stack-2872",
@@ -523,7 +710,8 @@
    "speed": 96.9293060302734
   },
   "qa": {},
-  "script_errors": 0
+  "script_errors": 0,
+  "tool": "before review"
  },
  {
   "run": "stack-2879",
@@ -548,7 +736,8 @@
    "speed": 47.7812232971191
   },
   "qa": {},
-  "script_errors": 0
+  "script_errors": 0,
+  "tool": "before review"
  },
  {
   "run": "stack-2886",
@@ -573,6 +762,7 @@
    "speed": 58.2622985839844
   },
   "qa": {},
-  "script_errors": 0
+  "script_errors": 0,
+  "tool": "before review"
  }
 ]

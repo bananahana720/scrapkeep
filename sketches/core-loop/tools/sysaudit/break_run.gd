@@ -11,11 +11,12 @@ const StageModifier := preload("res://src/world/events/stage_modifier.gd")
 #     -- --out=<abs dir> --policy=skipper --seeds=<n> --table=park --until=2 --qa-log=1 --break=spam
 #
 # --break picks the attack (each is seeded from the run seed, so a row's command replays it):
-#   spam   on top of the policy's own input, mashes every key a pad or keyboard has: jump, the go verb
+#   spam   on top of the policy's own input, mashes each play input the ball reads: jump, the go verb
 #          (Sable's boost, Rivet's sprint, Kest's blink), interact, fire, harpoon press and release, cancel,
-#          slot picks, the ultimate, the racked active, short holds of each, a random stick now and
-#          then, and pause pressed and lifted a few ticks later. It keeps mashing through launches,
-#          cards and the boss, so an input taken in the wrong state (a sequence break) shows up.
+#          slot picks, the ultimate, the racked active; short holds of six of them (HOLDS), a random
+#          stick now and then, and the pause toggle pressed and lifted a few ticks later. It keeps
+#          mashing through launches, the gates and the boss, so an input taken in the wrong state (a
+#          sequence break) shows up. A test-mode game ignores key events, so screen keys are not reached.
 #          --spam-until=<s> stops the mash at that run second: a stall that clears once the mash stops
 #          was the bot's hands, not a broken game.
 #   quit   quits the game at seeded moments without a save, as a closed window or a crash does, and
@@ -35,7 +36,7 @@ const StageModifier := preload("res://src/world/events/stage_modifier.gd")
 #   abyss      ball below ABYSS_Y or over FAR_M from the origin (the fall rescue is play_watch's "fell")
 #   negative   scrap, cogs or bonus cores below zero
 #   surge      cogs or scrap up by more than SURGE_* within one game second
-#   frozen     the flow sat in one state outside play (title, pilot select; not the summary) for FROZEN_S of ticks
+#   frozen     the flow sat in one state outside play (title, pilot select; not the death screen or the summary) for FROZEN_S of ticks
 #   paused     the tree left paused for PAUSED_S of ticks after the bot lifted its pause
 #   resume     (quit) the continued run differs from the saved entrance, holds more than it held
 #              at the quit, or restarts a stage the quit came after clearing ("cleared_stage_lost")
@@ -252,13 +253,14 @@ func _spam() -> void:
 		if _rng.randf() < HOLD_CHANCE:
 			_holds[key] = _rng.randi_range(5, 90)
 	for key in _holds.keys():
-		source.hold[key] = true
 		_holds[key] -= 1
-		if _holds[key] <= 0:
+		if _holds[key] < 0:
 			_holds.erase(key)
-			# A real key sends its release on the tick it comes up.
+			# A real key sends its release on the first tick it is no longer held.
 			if key in RELEASES:
 				source.press[RELEASES[key]] = true
+		else:
+			source.hold[key] = true
 	if _stick_left <= 0 and _rng.randf() < STICK_CHANCE:
 		_stick = Vector2.from_angle(_rng.randf() * TAU)
 		_stick_left = _rng.randi_range(9, 45)
@@ -332,8 +334,10 @@ func _check_resume() -> void:
 	if bool(_before["death_save_spent"]) and not run.death_save_spent and run.stage == int(_before["stage"]):
 		wrong.append("death_save_refilled")
 	# Quit after the stage was cleared (its Warden broken: the gates, the launch, the boss after a
-	# world's last stage) and continued at that same stage's start: the cleared stage is replayed.
-	if String(_before["state"]) in ["gates", "launch", "boss", "victory"] and run.stage == int(_before["stage"]):
+	# world's last stage) and continued back at that stage's start with less than was held: the
+	# cleared stage is replayed. A Continue that resumes at the gates or the boss is not this.
+	if String(_before["state"]) in ["gates", "launch", "boss", "victory"] and run.stage == int(_before["stage"]) \
+			and _game.flow.state_name() == "stage" and (run.cogs < int(_before["cogs"]) or run.parts.size() < int(_before["parts"])):
 		wrong.append("cleared_stage_lost")
 	_row("resume", {"ok": wrong.is_empty(), "wrong": wrong, "now": now, "saved": want, "before": _before})
 
