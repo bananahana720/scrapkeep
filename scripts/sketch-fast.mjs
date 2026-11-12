@@ -70,7 +70,9 @@ export const PATH_RULES = [
 // Node checks a sketch change must face though no script path reaches them.
 export const NODE_PATH_RULES = [
   // SG-16: a park prop recipe or file faces the far-mesh fault check.
-  { name: "park prop far meshes", match: /(^|\/)park\/props\//, tests: ["scripts/far-faults.test.mjs"] },
+  { name: "park prop far meshes", match: /(^|\/)park\/props\/|^tools\/model_audit\.py$/, tests: ["scripts/far-faults.test.mjs"] },
+  // SG-15: the palette, the kit's mirror of it, its reader and the icon generator stay in step.
+  { name: "palette", match: /^(src\/core\/palette\.gd|tools\/blender\/common\.py|tools\/palette_gd\.py|tools\/icons\/)/, tests: ["scripts/palette-gd.test.mjs"] },
 ];
 
 export function nodeTestsForPaths(paths, rules = NODE_PATH_RULES) {
