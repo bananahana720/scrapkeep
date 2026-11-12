@@ -76,7 +76,8 @@ func warden_spec() -> Dictionary:
 # reads it; the "warden" (the engage ring) and the "yard" lock (lock_rows.gd) carry "ring": Vector2(inner, outer), the
 # band of distance from `at` they cover. The yard lock shuts wherever the ball first crosses within_m of the beacon on
 # the ground, centred ahead_m inside it, so its ring is every place that circle can stand for a ball that crosses
-# the line rolling (one landing from the air inside it shuts the yard nearer in). Dormant homes count: an
+# the line rolling (one landing from the air inside it shuts the yard nearer in). An "activity" that fights (a camp, an
+# ambush altar, a relay) carries its rule's ring at the row's spot. Dormant homes count: an
 # event wakes them. Director timer packs are not sites; they spawn ahead of the ball anywhere off the pilot lines.
 func fight_sites() -> Array:
 	if not ok:
@@ -91,8 +92,8 @@ func fight_sites() -> Array:
 			if site.is_empty():
 				continue
 			if table[1] == "event":
-				# A lightning row strikes one strike_m disc at its site's centre and the director holds no box for it
-				# (natural.gd plan, park_props.gd's telegraph zones): the disc is its fight, not the landform it sits on.
+				# A lightning row strikes one strike_m disc at its site's centre (natural.gd plan and _hazard): the disc
+				# is its fight, not the landform it sits on.
 				if row.get("kind", "") == "lightning":
 					out.append({"id": row["id"], "kind": "event", "at": _v2(site["at"]), "ring": Vector2(0.0, float(row.get("effect", {}).get("strike_m", 0.0)))})
 					continue
@@ -102,6 +103,13 @@ func fight_sites() -> Array:
 			if own is Array:
 				half = _v2(own).abs() * 0.5
 			out.append({"id": row["id"], "kind": table[1], "at": _v2(site["at"]), "half": half, "yaw_deg": float(site["yaw_deg"])})
+	# An activity that fights (its rule has a pack: a camp, an ambush altar, a relay) is a ring of its rule's radius at
+	# the row's own spot. Loaded here, not preloaded: only the map checks ask, and activities.gd pulls in half the game.
+	var rules: Dictionary = load("res://src/world/activities.gd").RULES
+	for row in park.get("activity_rows", []):
+		var rule: Dictionary = rules.get(String(row.get("activity", "")), {})
+		if rule.has("pack") and row.has("at"):
+			out.append({"id": row["id"], "kind": "activity", "at": _v2(row["at"]), "ring": Vector2(0.0, float(rule.get("ring", 0.0)))})
 	out.append({"id": "warden", "kind": "warden", "at": beacon, "ring": Vector2(0.0, reach_m)})
 	var lock: Dictionary = LockRows.row(title).get("lock", {})
 	if not lock.is_empty():

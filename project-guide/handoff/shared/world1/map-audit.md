@@ -81,11 +81,13 @@ Data the checks read, all public today unless noted: stage graph `src/world/park
 | flume | height bands in use | 3 (48.8% / 38.8% / 12.4%) | 3 | pass |
 | flume | rides climbing 10 m or more | 3 | 4 | OWED |
 | flume | hub zones reaching 3 bands | 5 | 1 | pass |
-| dam | riding-line nodes 60 m clear of every fight site (point 2) | 0.67 | 0.25 | pass (0.43 before the dome lightning was read as its 6 m strike disc, 12 Nov) |
+| dam | riding-line nodes 60 m clear of every fight site (point 2) | 0.57 | 0.25 | pass (0.43 before 12 Nov; see the note under this table) |
 | flume | riding-line nodes 60 m clear of every fight site (point 2) | 0.18 | 0.25 | OWED: the flume reach (drones and the trestle collapse face) and the wasteway chute fights lie along the lines; breather zones wait for PR 753 |
-| dam | floor line heavy/quiet switches at 20 m/s, quiet gaps under 5 s between fights folded (point 3) | 5 | 3 | pass since 12 Nov: the check read the dome lightning as the whole 260 x 240 m dome field, but it strikes one 6 m disc at the domes' centre and the director holds no box for it (`natural.gd`); read as the disc, the drop-in is quiet for 7 s. Was 2, OWED |
-| dam | longest heavy run on the floor line (point 3) | 24.0 s | 45 s | pass since 12 Nov (the same reading; was 46.2 s, OWED) |
+| dam | floor line heavy/quiet switches at 20 m/s, quiet gaps under 5 s between fights folded (point 3) | 3 | 3 | pass since 12 Nov, no margin (was 2, OWED; see the note under this table). The drop-in is quiet for 7 s, then the domes camp, the dome lightning and the west wash run 42 s heavy |
+| dam | longest heavy run on the floor line (point 3) | 41.8 s | 45 s | pass since 12 Nov (was 46.2 s, OWED) |
 | flume | floor line switches; longest heavy run (point 3) | 9; 15.0 s | 3; 45 s | pass |
+
+**12 Nov 2026 re-read (branch `claude/w38-fight-sites`, `park_breath_test` and `park_rhythm_test`, one run each; the tests read files only, so a run replays exactly).** `fight_sites()` had two errors that cancelled out on the dam. It counted a lightning row's whole landform (the dam's 260 x 240 m slickrock domes) as a fight, but the game strikes one `strike_m` disc at the site's centre (`natural.gd` plan and `_hazard`). And it left out the activities that fight (an enemy camp, an ambush altar, a relay), such as the three-chaser `domes_camp` that sits on the dam's floor line. Both are fixed. The dam's rhythm now passes with no margin (3 switches, longest heavy run 41.8 s) and its OWED entries are pruned. The flume's breathing is unchanged at 0.18, still OWED.
 
 Points 2 and 3 read `ParkMap.fight_sites()` (homes, event sites, the Warden ring, the yard lock ring) in `tests/park_breath_test.gd` and `tests/park_rhythm_test.gd` (wave 37, run twice, identical, planted cases fire). Neither sees the director's timer packs.
 

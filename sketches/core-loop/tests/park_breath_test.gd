@@ -72,10 +72,19 @@ func _stage(map_id: String) -> void:
 	var points := line_points(g)
 	if not t.check("%s has fight sites and line nodes" % map_id, sites.size() > 0 and points.size() > 0, "%d sites, %d line nodes" % [sites.size(), points.size()]):
 		return
-	# A lightning row is its strike disc, not the landform it sits on (park_map.gd fight_sites).
+	# A lightning row is its strike disc, not the landform it sits on, and a fighting activity (a camp, an altar, a
+	# relay) is a fight site of its own (park_map.gd fight_sites).
+	var by_id := {}
 	for s in sites:
-		if String(s["id"]) == "dome_lightning":
-			t.check("%s: the dome lightning is a fight site the size of its strike" % map_id, s.has("ring") and s["ring"] == Vector2(0.0, 6.0), "%s" % [s])
+		by_id[String(s["id"])] = s
+	for row in map.park["event_rows"]:
+		if row["kind"] == "lightning":
+			var bolt: Dictionary = by_id.get(String(row["id"]), {})
+			t.check("%s: lightning %s is a fight site the size of its strike" % [map_id, row["id"]],
+				bolt.get("ring", Vector2.INF) == Vector2(0.0, float(row["effect"]["strike_m"])), "%s" % [bolt])
+	for row in map.park.get("activity_rows", []):
+		if not row.get("pack", []).is_empty():
+			t.check("%s: activity %s, which fights, is a fight site" % [map_id, row["id"]], by_id.has(String(row["id"])), "%s" % [by_id.keys()])
 	var share := quiet_share(sites, points)
 	var kinds := {}
 	for s in sites:
