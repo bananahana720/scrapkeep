@@ -6,6 +6,8 @@ const MakerSets := preload("res://src/build/maker_sets.gd")
 const UltimateMeter := preload("res://src/core/ultimate_meter.gd")
 const ShopCounter := preload("res://src/ui/shop_counter.gd")
 const T := preload("res://tests/support/t.gd")
+const RunStateRef := preload("res://src/core/run_state.gd")
+const Parts := preload("res://src/build/parts.gd")
 
 # Moss's last call (W1-73) and the hook with a goal (W1-79), on a two-world table whose world 1
 # ends at a boss (stages 1 to 3):
@@ -81,16 +83,30 @@ func _hook_checks() -> void:
 	shop.top["sold"] = true
 	_t.check("a sold hook does not carry", shop._carried_hook().is_empty(), "")
 	shop.top["sold"] = false
+	# A hook part the run already holds at its stack cap is never carried.
+	var held_hook := String(hook.get("part_id", ""))
+	var copies := 0
+	while not Parts.stacked_out(held_hook, run.parts) and copies < 5:
+		run.parts.append(held_hook)
+		copies += 1
+	_t.check("a stacked-out hook does not carry", shop._carried_hook().is_empty(), held_hook)
+	for i in copies:
+		run.parts.erase(held_hook)
 	_t.check("stage 2 is no last call either", stages.is_world_last(3) and not stages.is_world_last(2), "")
 
 
 func _last_call_checks() -> void:
 	var run = _game.run
 	var shop = _shop()
-	# Two distinct pieces of one 3-piece maker set, so that set is the nearest to waking.
-	var maker := MakerSets.SPILLWAY
-	var pool: Array = shop._set_pool(maker, [])
-	_t.check("the table stocks spillway pieces", pool.size() >= 3, str(pool))
+	# Two distinct pieces of a 3-piece maker set nothing held counts yet (the racked active counts
+	# as a piece, as the set bonuses count it), so that set is the nearest to waking.
+	var counts: Dictionary = _game.ctx.build.maker_counts()
+	var maker := ""
+	for m in MakerSets.SETS:
+		if maker == "" and int(counts.get(m, 0)) == 0 and int(MakerSets.SETS[m]["pieces"]) == 3 and shop._set_pool(m, []).size() >= 3:
+			maker = m
+	var pool: Array = shop._set_pool(maker, []) if maker != "" else []
+	_t.check("the table stocks pieces of an unstarted set", pool.size() >= 3, "%s %s (held %s)" % [maker, pool, counts])
 	if pool.size() < 3:
 		return
 	run.add_part(pool[0], "test")
@@ -108,7 +124,8 @@ func _last_call_checks() -> void:
 	_t.check("a reroll is made", shop.reroll().get("ok", false), "")
 	_t.check("a reroll keeps the set slot", MakerSets.maker_of(shop.shelf[0]["part_id"]) == maker, str(shop.shelf[0]))
 
-	# The kettle.
+	# The kettle. The stage's checkpoint is taken before any pour, as a stage entry takes it.
+	run.snapshot(Vector3.ZERO, Vector3.ZERO, 0.0)
 	var cogs0: int = run.cogs
 	var paid := 0
 	for pour in Shop.BREW_PRICES.size():
@@ -119,7 +136,11 @@ func _last_call_checks() -> void:
 		paid += int(r.get("price", 0))
 	_t.eq("the cogs paid are the pours' prices", cogs0 - run.cogs, paid)
 	_t.eq("a fourth pour is refused", shop.buy_brew().get("reason"), Shop.CAPPED)
-	_t.check("the counter shows the kettle", _counter_has("brew"), "")
+	_t.check("the counter shows the kettle with the pilot's ultimate glyph", _counter_has("brew"), "")
+	# A Continue into the arena keeps the pours the cogs bought: they ride the cleared save.
+	var doc: Dictionary = run.to_cleared_doc(_game.player.get("tree"), Vector3.ZERO)
+	_t.eq("the cleared save holds the pours", int(doc.get("brew", 0)), 3)
+	_t.eq("the cleared save is valid", RunStateRef.validate_entrance_doc(JSON.parse_string(JSON.stringify(doc))), "")
 	shop.leave()
 
 	var meter = _game.player.abilities.meter
@@ -131,7 +152,11 @@ func _last_call_checks() -> void:
 	_t.check("an arena retry pours it again", meter.full(), "meter %.1f" % meter.value)
 
 	shop.rewind_stage()
+	run.restore()
 	_t.eq("a stage retry gives the pours back", shop.brew_offer().get("pours"), 0)
+	run.from_entrance_doc(JSON.parse_string(JSON.stringify(doc)))
+	_t.eq("a Continue reads the pours back", shop.brew_offer().get("pours"), 3)
+
 	shop.inside = true
 	shop.buy_brew()
 	shop.inside = false
@@ -145,6 +170,8 @@ func _counter_has(kind: String) -> bool:
 	counter.setup(_game)
 	_game.hud.add_child(counter)
 	counter.open(_shop(), 0.0)
-	var found: bool = counter.tile_for(kind) != null
+	var tile = counter.tile_for(kind)
+	var found: bool = tile != null and (kind != "brew" or String(tile.rec.get("icon", "")).ends_with("_ult") \
+		and preload("res://src/ui/icons.gd").EXTRA.has(String(tile.rec["icon"])))
 	counter.queue_free()
 	return found

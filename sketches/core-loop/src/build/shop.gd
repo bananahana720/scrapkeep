@@ -143,10 +143,6 @@ var _stage_stocks := {}
 var _rng := RandomNumberGenerator.new()
 var _left_empty := false
 var _cheapest_left := 0
-# Pours of Moss's kettle bought for the coming boss fight (W1-73), and the stage they were bought on:
-# every arrival in that stage's arena, a retry's included, gets them; no other stage's arena does.
-var brew := 0
-var brew_stage := 0
 
 
 func _init(ctx_ref = null, build_ref = null) -> void:
@@ -164,8 +160,6 @@ func reset_run() -> void:
 	_stage_stocks = {}
 	neglected = false
 	_left_empty = false
-	brew = 0
-	brew_stage = 0
 	talks = {"beat": -1, "used": {}, "loops": 0, "relented": false}
 
 
@@ -224,7 +218,7 @@ func _stock_stage(here: Array) -> void:
 func _carried_hook() -> Dictionary:
 	if top.is_empty() or top["sold"] or ctx.run.heft_class() >= int(top["lock_class"]):
 		return {}
-	if top["part_id"] in ctx.run.parts and Parts.maxed(top["part_id"], ctx.run.parts):
+	if Parts.stacked_out(top["part_id"], ctx.run.parts):
 		return {}
 	var out := top.duplicate(true)
 	out["carried"] = true
@@ -250,8 +244,6 @@ func rewind_stage() -> void:
 		return
 	stocked_for = here
 	rerolls_left = REROLLS_PER_VISIT
-	# The retry gives back the cogs the kettle took, so it gives back the kettle too.
-	brew = 0
 	shelf = kept["shelf"].duplicate(true)
 	top = kept["top"].duplicate(true)
 	# The draws after the stock come back too, so a retry's reroll is the first attempt's reroll.
@@ -305,7 +297,7 @@ func shelf_offers() -> Array:
 		if shelf[i].has("set"):
 			var maker := String(shelf[i]["set"])
 			offer["set"] = maker
-			offer["set_held"] = int(MakerSets.counts(ctx.run.parts).get(maker, 0))
+			offer["set_held"] = int(_set_counts().get(maker, 0))
 			offer["set_pieces"] = int(MakerSets.SETS.get(maker, {}).get("pieces", 0))
 		out.append(offer)
 	return out
@@ -658,7 +650,7 @@ func last_call() -> bool:
 # The maker set nearest to waking: {maker, held, pieces}, fewest pieces missing first, then SETS
 # order; {} when no set is started or every started set is whole.
 func set_piece() -> Dictionary:
-	var counted: Dictionary = MakerSets.counts(ctx.run.parts)
+	var counted: Dictionary = _set_counts()
 	var best := {}
 	for maker in MakerSets.SETS:
 		var held := int(counted.get(maker, 0))
@@ -668,6 +660,11 @@ func set_piece() -> Dictionary:
 		if best.is_empty() or pieces - held < int(best["pieces"]) - int(best["held"]):
 			best = {"maker": maker, "held": held, "pieces": pieces}
 	return best
+
+
+# Pieces held per maker as the set bonuses count them, the racked active's included.
+func _set_counts() -> Dictionary:
+	return build.maker_counts() if build != null and build.has_method("maker_counts") else MakerSets.counts(ctx.run.parts)
 
 
 func _set_pick() -> String:
@@ -695,9 +692,10 @@ func brew_offer() -> Dictionary:
 		"price": -1 if pours >= BREW_PRICES.size() else int(round(BREW_PRICES[pours] * _price_scale()))}
 
 
-# The pours bought on this stage; a brew from another stage is spent already.
+# The pours bought on this stage (run_state.gd keeps them with the run, so a retry and a
+# Continue rewind them with the cogs); a brew from another stage is spent already.
 func _pours() -> int:
-	return brew if brew_stage == ctx.run.stage else 0
+	return ctx.run.brew if ctx.run.brew_stage == ctx.run.stage else 0
 
 
 func buy_brew() -> Dictionary:
@@ -710,8 +708,8 @@ func buy_brew() -> Dictionary:
 		return _result(false, CAPPED)
 	if not ctx.run.spend_cogs(int(offer["price"])):
 		return _result(false, CANT_AFFORD, "moss.bark.cant_afford", "", int(offer["price"]))
-	brew = _pours() + 1
-	brew_stage = ctx.run.stage
+	ctx.run.brew = _pours() + 1
+	ctx.run.brew_stage = ctx.run.stage
 	bought_this_visit += 1
 	return _result(true, OK, "", "", int(offer["price"]))
 

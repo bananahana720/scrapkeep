@@ -282,7 +282,7 @@ func _build_buy() -> void:
 	# Moss's last-call kettle (shop.brew_offer): the pilot's ultimate glyph, a pip per pour.
 	var brew: Dictionary = shop.brew_offer()
 	if not brew.is_empty():
-		var ult := "ab_%s_ult" % game.run.class_id()
+		var ult := "ab_%s_ult" % AbilitySlots.pilot_of(game.run.class_def)
 		var price := int(brew["price"])
 		_tile(lower, {"kind": "brew", "icon": ult, "color": _class_color(), "cells": brew["pours"], "cap": brew["cap"],
 			"price": price, "state": "capped" if price < 0 else ("ok" if game.run.cogs >= price else "poor")}, CELL_TILE)
