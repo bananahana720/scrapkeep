@@ -253,6 +253,11 @@ func _ready() -> void:
 		# that folder, so a second launch finds the first one's save (quit, then Continue).
 		storage_dir = "user://self-play-%s" % _self_play_save()
 		DirAccess.make_dir_recursive_absolute(storage_dir)
+	elif tuning != null and tuning.sitting_earned():
+		# The earned sitting plays on a profile of its own, so the player's saves stay as they are
+		# and the first unlock is earned, and kept, as a new player would earn it (W1-78).
+		storage_dir = "user://sitting-earned"
+		DirAccess.make_dir_recursive_absolute(storage_dir)
 	apply_saved_bindings()
 	camera.apply_look_settings(settings_store())
 	codex = Codex.new()

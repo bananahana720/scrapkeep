@@ -89,6 +89,11 @@ func _initialize() -> void:
 	_check("sitting set", sit_on and plain.option("overtime") == "off" and plain.option("heat") == "watch" \
 		and plain.option("moss_scale") == "off",
 		"--profile=sitting turns on %s unless the line names the flag; without it the loops stay off" % [Tuning.SITTING_SET])
+	var earned := Tuning.new()
+	earned.apply_args(PackedStringArray(["--profile=sitting-earned"]))
+	_check("earned sitting set (W1-78)", earned.sitting_earned() and not earned.sitting() and earned.option("heat") == "on" \
+		and earned.option("carry_core") == "on" and not sit.sitting_earned(),
+		"--profile=sitting-earned turns the sitting's loops on and opens nothing in advance")
 	print("tuning_flags_test: %s" % ("PASS" if _failures == 0 else "FAIL (%d)" % _failures))
 	quit(0 if _failures == 0 else 1)
 
