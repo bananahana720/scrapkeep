@@ -96,10 +96,10 @@ class TalkButton extends Button:
 		var at := Vector2(cap.x + 8.0, size.y * 0.5 - 9.0)
 		var bubble_rect := Rect2(at, Vector2(24.0, 16.0))
 		var box := StyleBoxFlat.new()
-		box.bg_color = Color(Palette.CHARCOAL, 0.9)
+		box.bg_color = Color(UiTokens.INK, UiTokens.PLATE_ALPHA)
 		box.border_color = tint
 		box.set_border_width_all(2)
-		box.set_corner_radius_all(6)
+		box.set_corner_radius_all(UiTokens.RADIUS)
 		draw_style_box(box, bubble_rect)
 		draw_colored_polygon(PackedVector2Array([at + Vector2(4.0, 15.0), at + Vector2(-2.0, 22.0), at + Vector2(11.0, 15.0)]), tint)
 

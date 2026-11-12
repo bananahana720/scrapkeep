@@ -143,10 +143,10 @@ class Card:
 		mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 		pivot_offset = Vector2(66.0, 66.0)
 		var plate := StyleBoxFlat.new()
-		plate.bg_color = Color(Palette.CHARCOAL, 0.95)
+		plate.bg_color = Color(UiTokens.INK, UiTokens.PLATE_ALPHA)
 		plate.border_color = UiTokens.LINE
-		plate.set_border_width_all(2)
-		plate.set_corner_radius_all(8)
+		plate.set_border_width_all(UiTokens.EDGE)
+		plate.set_corner_radius_all(UiTokens.RADIUS)
 		add_theme_stylebox_override("normal", plate)
 		var lit := plate.duplicate() as StyleBoxFlat
 		lit.border_color = Palette.SAND

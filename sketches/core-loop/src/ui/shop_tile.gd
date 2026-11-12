@@ -91,7 +91,7 @@ func _draw() -> void:
 		ring.draw_center = false
 		ring.border_color = UiTokens.TEXT if has_focus() else Palette.SAND
 		ring.set_border_width_all(3 if has_focus() else 2)
-		ring.set_corner_radius_all(6)
+		ring.set_corner_radius_all(UiTokens.RADIUS)
 		draw_style_box(ring, rect.grow(2.0))
 	var dim := 0.45 if s in ["poor", "capped", "welded"] else 1.0
 	var centre := Vector2(size.x * 0.5, 12.0 + ICON * 0.5 - 4.0 * _lift)
