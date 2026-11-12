@@ -22,6 +22,9 @@ func _initialize() -> void:
 	_t.check("a ball at the over-tag's edge slides it along, still over", not slid.is_empty() and not slid["under"] and slid["shift"] > 0.0
 		and not nudge[0].intersects(EdgeMarkers.tag_rect(box, "MAGNET", false, slid["shift"])), str(slid))
 	_t.check("and its stem still meets the brackets' column", not slid.is_empty() and EdgeMarkers.tag_rect(box, "MAGNET", false, slid["shift"]).position.x + 8.0 <= box.end.x, str(slid))
+	var odd: Array[Rect2] = [Rect2(over.position.x - 40.3, over.position.y + 0.7, 50.17, over.size.y)]
+	var odd_place := EdgeMarkers.tag_place(box, "MAGNET", room, none, odd)
+	_t.check("off whole pixels the slide still clears, over", not odd_place.is_empty() and not odd_place["under"], str(odd_place))
 	# A ball wider than the chip right over the brackets: no slide clears it, so the tag goes under.
 	var wide: Array[Rect2] = [over.grow(40.0)]
 	_t.eq("a ball covering the over-tag sends it under", EdgeMarkers.tag_place(box, "MAGNET", room, none, wide), {"under": true, "shift": 0.0})

@@ -77,6 +77,8 @@ const TAG_GAP := 6.0
 # How far a tag's chip may slide along off the ball, as a share of its own width: its stem still
 # meets the brackets' column.
 const TAG_SLIDE := 0.45
+# The gap a slid chip keeps from what it slid off, so rounding never leaves it touching.
+const TAG_CLEAR := 2.0
 # The rows of a mounted Warden's fight whose thing the driver names (warden_reactor.gd plate_targets).
 const MOUNT_ROWS := ["ride_sheet", "line_fight"]
 
@@ -447,8 +449,8 @@ static func tag_place(box: Rect2, tag: String, room: Rect2, taken: Array[Rect2],
 		var chip := tag_rect(box, tag, under)
 		var shifts: Array[float] = [0.0]
 		for other in clear:
-			shifts.append(other.position.x - chip.end.x)
-			shifts.append(other.end.x - chip.position.x)
+			shifts.append(other.position.x - chip.end.x - TAG_CLEAR)
+			shifts.append(other.end.x - chip.position.x + TAG_CLEAR)
 		shifts.sort_custom(func(a: float, b: float): return absf(a) < absf(b))
 		for shift in shifts:
 			if absf(shift) > chip.size.x * TAG_SLIDE:
