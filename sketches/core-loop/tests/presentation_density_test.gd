@@ -68,7 +68,7 @@ func _kill_at(i: int) -> Vector3:
 # Steps the vfx clock by hand, sends the kills on schedule through `send`, and returns the
 # most of each kill visual that landed in any 250 ms window.
 func _run(send: Callable) -> Dictionary:
-	var kinds := ["enemy_killed", "burst_pop", "burst_debris"]
+	var kinds := ["enemy_killed", "fx_kill_shards", "burst_debris"]
 	var events: Array = []
 	var sent := 0
 	var clock := 0.0
@@ -118,9 +118,7 @@ func _check_raw_control() -> void:
 	Density.live().force(0.0)
 	var color := Color.WHITE
 	var worst := _run(func(at: Vector3):
-		_vfx.glyph("enemy_killed", at + Vector3.UP * 0.8, 0.6, 1.8, 0.3)
-		_vfx.burst("pop", at + Vector3.UP * 0.8, color, 6)
-		_vfx.burst("debris", at + Vector3.UP * 0.5, color, 6))
+		_vfx.kill_look(at, 1.0, color))
 	_check("raw control", worst.values().min() > Density.KILL_POPS_PER_WINDOW,
 		"the same kills sent to the raw calls put %s in one 250 ms, so the counter sees an ungated flood" % [worst])
 

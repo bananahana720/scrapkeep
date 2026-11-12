@@ -2,8 +2,8 @@ extends SceneTree
 
 # FX-01: a kill has its own punctuation, so it never reads as a bigger hit. The kill mark is a
 # filled inked burst in the pilot's colour (kill_mark.gd), thrown with the body's shards and
-# ink debris; the hit keeps its thin copper star. "plain" keeps the look before FX-01 for
-# Andrew's side-by-side, and "card" adds the elite's clock-out card. Headless: this pins the
+# ink debris; the hit keeps its thin copper star.
+# Andrew picked this look on 12 Nov 2026, with the elite's clock-out card. Headless: this pins the
 # composition and the timing curve, not the pixels (tools/fx_capture.gd measures those).
 const T := preload("res://tests/support/t.gd")
 const Vfx := preload("res://src/presentation/vfx.gd")
@@ -38,17 +38,11 @@ func _vfx() -> Vfx:
 func _run() -> void:
 	var mark := KillMark.new()
 	root.add_child(mark)
-	t.check("ink is the default kill look", mark.candidate == "ink" and Tuning.new().option(Tuning.KILL_LOOK_KEY) == "ink")
-	mark.choose("bogus")
-	t.check("an unknown look keeps ink", mark.candidate == "ink")
-	t.check("the launch option lists every candidate", _options() == KillMark.CANDIDATES)
 	t.check("the mark draws below every hostile warning", KillMark.RENDER_PRIORITY < Threat.LINE_UNDER_PRIORITY)
-	t.check("only the card look stamps a card", not mark.card(Vector3.ZERO))
-	mark.choose("card")
-	t.check("the card look stamps a card on an elite", mark.card(Vector3.ZERO) and mark.spawned["card"] == 1)
-	mark.choose("plain")
-	mark.fire(Vector3.ZERO, 3.0, Palette.COPPER)
-	t.check("the plain look draws no mark", not mark.inked() and mark.spawned["burst"] == 0)
+	mark.card(Vector3.ZERO)
+	t.check("an elite's clock-out card stamps on its own slot", mark.spawned["card"] == 1 and mark._slots[KillMark.POOL]["t"] < 1.0
+		and int(mark._slots[KillMark.POOL]["mode"]) == 1)
+	t.check("the kill look has no launch switch left (Andrew picked it)", not Tuning.FLAGS.has("kill-look"))
 	var peak := KillMark.shape_at(KillMark.POP, 0)
 	t.check("the mark pops past full size, then settles", is_equal_approx(float(peak["scale"]), KillMark.OVERSHOOT)
 		and is_equal_approx(float(KillMark.shape_at(0.999, 0)["scale"]), 1.0) and float(KillMark.shape_at(0.05, 0)["scale"]) < KillMark.OVERSHOOT)
@@ -85,23 +79,13 @@ func _run() -> void:
 	vfx.kill_mark.spawned = {"burst": 0, "card": 0}
 	vfx.kill_look(Vector3.ZERO, 1.0, sable)
 	t.check("the mark stands clear of a crit's star", float(slot["size"]) * 2.0 >= Vfx.KILL_MARK_M - 0.001 and Vfx.KILL_MARK_M > 1.6)
-	t.check("an ink kill throws the body's shards, not the puff", vfx.spawned.get("fx_kill_shards", 0) == 1 and vfx.spawned.get("burst_pop", 0) == 0)
+	t.check("a kill throws the body's shards, and the old puff is gone", vfx.spawned.get("fx_kill_shards", 0) == 1 and not Vfx.BURSTS.has("pop"))
 	var debris: CPUParticles3D = vfx._bursts["debris"][0]
 	t.check("kill debris is ink, never the lost-scrap colour", debris.color == Palette.CHARCOAL and debris.color != EventKinds.color("scrap_lost"))
 	t.check("the shards are their own matter", FxLibrary.look("kill_shards") == "chunk" and FxLibrary.spec("kill_shards")["colour"] == "row")
 	t.check("the shards are the kill row's own effect", FxLibrary.effects("enemy_killed").has("kill_shards")
 		and not FxLibrary.effects("enemy_struck").has("kill_shards"))
-	vfx.kill_mark.choose("plain")
-	vfx.kill_look(Vector3.ZERO, 1.0)
-	t.check("the plain kill keeps the look before FX-01", vfx.spawned.get("burst_pop", 0) == 1 and vfx.kill_mark.spawned["burst"] == 1 and _live_glyphs(vfx) == 1)
 	quit(t.verdict())
-
-
-func _options() -> Array:
-	for row in Tuning.SPECS:
-		if row["key"] == Tuning.KILL_LOOK_KEY:
-			return row["options"]
-	return []
 
 
 func _live_glyphs(vfx: Vfx) -> int:

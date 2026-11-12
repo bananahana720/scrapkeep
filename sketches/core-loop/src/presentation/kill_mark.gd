@@ -7,13 +7,10 @@ const FlashGuard := preload("res://src/presentation/flash_guard.gd")
 # hit draws thin copper spokes (vfx.gd "burst"); a kill draws a filled comic burst with ten
 # uneven points, an ink outline and a ledger-cream heart, in the pilot's colour. It pops past full size
 # in its first frames, starts white-hot (FlashGuard.whiten, so Reduce flashes keeps it cool) and
-# fades. One call per merged kill pop: Vfx's pop gate decides when and how big.
-#
-# Candidates for Andrew's pick (ruling cq), chosen at launch by --kill-look (Tuning "kill_look"):
-#   ink    the burst, with the body's shards in the pilot's colour and ink debris (Vfx)
-#   card   ink, and an elite or miniboss also gets a clock-out card stamped over it with a
-#          steam sigh, in place of the CLOCKED OUT word (MachineFx asks card())
-#   plain  the look before FX-01: the copper hit star, larger, with a puff and rust debris
+# fades. One call per merged kill pop: Vfx's pop gate decides when and how big. Vfx throws the
+# body's shards in the pilot's colour and ink debris with it. A downed elite or miniboss also
+# gets a clock-out card stamped over it with a steam sigh (MachineFx calls card()), in place of
+# a word. Andrew picked this look from three candidates on 12 Nov 2026 (ruling cq).
 #
 # The mark is a camera-facing quad drawn in its own shader, transparent, depth-sorted with the
 # other player glyphs and far below the hostile warnings' render priority (threat_grammar.gd
@@ -22,7 +19,6 @@ const FlashGuard := preload("res://src/presentation/flash_guard.gd")
 # FlashGuard's information share of its alpha and cools its white start, and Reduced motion drops
 # the overshoot and the card's slam.
 
-const CANDIDATES := ["ink", "card", "plain"]
 const POOL := 4
 const LIFE := 0.34
 const CARD_LIFE := 0.9
@@ -100,7 +96,6 @@ void fragment() {
 }
 """
 
-var candidate := "ink"
 var reduced_motion := false
 # Marks fired since the run began, by mode, for the tests and notes.
 var spawned := {"burst": 0, "card": 0}
@@ -134,34 +129,19 @@ func _init() -> void:
 		_slots.append({"node": node, "mat": mat, "t": 1.0, "life": LIFE, "size": 1.0, "mode": 0, "seed": 0.0, "alpha": 1.0})
 
 
-# Sets the candidate from the launch option; an unknown name keeps "ink".
-func choose(name_: String) -> void:
-	candidate = name_ if name_ in CANDIDATES else "ink"
-
-
-func inked() -> bool:
-	return candidate != "plain"
-
-
 # One kill's burst at `at`, `size` metres across its longest point, in `tint`. `governed` is
 # the density governor's (alpha cap, size, life) for a player effect, as Density.apply returns it.
 func fire(at: Vector3, size: float, tint: Color, governed := Vector3.ONE) -> void:
-	if not inked():
-		return
 	var slot: Dictionary = _slots[_next]
 	_next = (_next + 1) % POOL
 	_start(slot, at, size * governed.y, tint, LIFE * governed.z, 0, governed.x)
 	spawned["burst"] += 1
 
 
-# A clock-out card stamped over a downed elite, under the "card" candidate. False when the
-# candidate draws no card, so the caller keeps its own elite moment.
-func card(at: Vector3, size := 1.6) -> bool:
-	if candidate != "card":
-		return false
+# A clock-out card stamped over a downed elite.
+func card(at: Vector3, size := 1.6) -> void:
 	_start(_slots[POOL], at, size, Palette.LEDGER, CARD_LIFE, 1, 1.0)
 	spawned["card"] += 1
-	return true
 
 
 func clear() -> void:

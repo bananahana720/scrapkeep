@@ -14,7 +14,6 @@ const Synergies := preload("res://src/build/synergies.gd")
 const FxLibrary := preload("res://src/presentation/fx_library.gd")
 const FlashGuard := preload("res://src/presentation/flash_guard.gd")
 const KillMark := preload("res://src/presentation/kill_mark.gd")
-const Tuning := preload("res://src/movement/tuning.gd")
 
 # World-space effects. Each glyph takes its colour and silhouette from the fact's
 # event_kinds row, so a slam ring, a kill burst and a scrap square read the same way
@@ -35,17 +34,15 @@ const LINES_PER_TIER := [0, 0, 10, 20]
 # v3 W11 bursts: pooled one-shot CPU particles, one shared mesh and material per kind;
 # each burst sets only its emitter's colour, place and count. pool emitters x max count
 # is the ceiling a dense fight can hold alive at once (DESIGN-NOTES v3 W11).
-#   pop       a kill under the "plain" kill look (before FX-01): a quick round puff
 #   debris    a kill or a blast: chunks thrown up under gravity
 #   dust      a ram, a rebound or a blast: soft puffs rolling out along the ground
 #   fountain  a part or a core: a column that rises and falls around the drop
 const BURSTS := {
-	"pop": {"pool": 6, "max": 14, "life": 0.32, "speed": [3.0, 7.0], "spread": 180.0, "gravity": -3.0, "size": Vector3.ONE * 0.16},
 	"debris": {"pool": 6, "max": 12, "life": 0.7, "speed": [4.0, 9.0], "spread": 55.0, "gravity": -26.0, "size": Vector3.ONE * 0.24},
 	"dust": {"pool": 4, "max": 14, "life": 0.5, "speed": [2.0, 5.0], "spread": 85.0, "gravity": 1.5, "size": Vector3.ONE * 0.4, "soft": true},
 	"fountain": {"pool": 3, "max": 24, "life": 0.9, "speed": [6.0, 10.0], "spread": 22.0, "gravity": -18.0, "size": Vector3.ONE * 0.18},
 }
-const BURST_LOOKS := {"pop": "puff", "debris": "chunk", "dust": "puff", "fountain": "bead"}
+const BURST_LOOKS := {"debris": "chunk", "dust": "puff", "fountain": "bead"}
 # The kill chain: a pip per kill in the run over the ball, from 2 up.
 const PIPS := 8
 const PIP_RADIUS := 0.9
@@ -100,7 +97,7 @@ const HEAT_GLYPH := Color(1.0, 0.5, 0.12)
 var trails := true
 # Every kill's mark, shards and debris pass through this gate (kill_pop).
 var pops := PopGate.new()
-# A kill's own mark (FX-01); its candidate comes from the launch option kill_look.
+# A kill's own mark (FX-01, Andrew's pick 12 Nov 2026: the ink burst, and a time card on elites).
 var kill_mark: KillMark
 var _fill_scale := 1.0
 # What the governor steers toward, recounted every 1 / Density.SAMPLE_HZ seconds.
@@ -947,21 +944,12 @@ func _emit_pops() -> void:
 		kill_look(cluster["at"], cluster["scale"])
 
 
-# One merged kill pop at `at`, `scale` from its kill count (FX-01). Inked candidates draw the
-# kill mark, throw the body's shards in the pilot's colour and ink debris; "plain" keeps the
-# look before FX-01 (the hit star larger, a puff, rust debris) for Andrew's side-by-side.
-# `pilot` overrides the pilot's colour (a capture with no ball).
+# One merged kill pop at `at`, `scale` from its kill count (FX-01): the kill mark, the body's
+# shards in the pilot's colour and ink debris. `pilot` overrides the pilot's colour (a capture
+# with no ball).
 func kill_look(at: Vector3, scale: float, pilot := Color.TRANSPARENT) -> void:
 	var row := EventKinds.juice("enemy_killed")
-	# Read each pop, so the F1 panel's Kill look row takes effect on the next kill.
-	if ctx != null and ctx.get("tuning") != null:
-		kill_mark.choose(ctx.tuning.option(Tuning.KILL_LOOK_KEY))
 	scale *= 1.0 + MIGHT_GLYPH * might
-	if not kill_mark.inked():
-		glyph("enemy_killed", at + Vector3.UP * 0.8, 0.6 * scale, 1.8 * scale, 0.3, Vector3.ZERO, "", _hot("enemy_killed"))
-		burst("pop", at + Vector3.UP * 0.8, EventKinds.color("enemy_killed").lerp(HEAT_GLYPH, heat), int(ceil(float(row["pop"]) * scale)))
-		burst("debris", at + Vector3.UP * 0.5, EventKinds.color("scrap_lost"), int(ceil(float(row["debris"]) * scale)))
-		return
 	if root == null or not root.is_inside_tree():
 		return
 	var tint := (pilot if pilot.a > 0.0 else kill_tint()).lerp(HEAT_GLYPH, heat)

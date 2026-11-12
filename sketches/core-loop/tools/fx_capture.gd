@@ -20,9 +20,8 @@ const WorldLook := preload("res://src/presentation/world_look.gd")
 # and over). An effect nobody could see reads 0 or a handful; a pale effect on pale sand reads a low contrast. Compare them on the machine that
 # renders the real look (the PC), not across machines.
 # After the particles it shoots the moments as the game composes them (FX-01): "moment_hit" (the hit
-# star and sparks), "moment_crit", and the kill under each kill look, "moment_kill_ink",
-# "moment_kill_card" (ink plus the elite's clock-out card) and "moment_kill_plain" (the look before
-# FX-01). --tint=<hex> sets the pilot colour the kill wears (default the copper row colour).
+# star and sparks), "moment_crit", the kill "moment_kill" and an elite's kill with its clock-out card
+# "moment_kill_elite". --tint=<hex> sets the pilot colour the kill wears (default the copper row colour).
 
 const SIZE := Vector2i(640, 400)
 const FREEZE := 0.35
@@ -151,7 +150,7 @@ func _run() -> void:
 	vfx.camera.cam = camera
 	vfx._build_glyphs()
 	vfx._build_fx()
-	for id in ["moment_hit", "moment_crit", "moment_kill_ink", "moment_kill_card", "moment_kill_plain"]:
+	for id in ["moment_hit", "moment_crit", "moment_kill", "moment_kill_elite"]:
 		if only.is_empty() or id in only:
 			await _moment_shot(vfx, id)
 	var file := FileAccess.open(out.path_join("frames.json"), FileAccess.WRITE)
@@ -209,10 +208,9 @@ func _moment_shot(vfx, id: String) -> void:
 			var colour: Color = EventKinds.juice(ROW_KIND)["crit"]["color"] if crit else copper
 			vfx.play_fx(ROW_KIND, at, colour, "crit" if crit else "")
 		_:
-			vfx.kill_mark.choose(id.trim_prefix("moment_kill_"))
 			var shown: Color = tint if tint.a > 0.0 else copper
 			vfx.kill_look(at - Vector3.UP * 0.6, 1.0, shown)
-			if id == "moment_kill_card":
+			if id == "moment_kill_elite":
 				vfx.kill_mark.card(at + Vector3.UP * 2.0)
 	await process_frame
 	for g in vfx._glyphs:
