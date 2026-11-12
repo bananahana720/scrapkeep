@@ -22,7 +22,7 @@ const T := preload("res://tests/support/t.gd")
 # Evidence limit: headless rules and layout rectangles, not how it reads at the sitting.
 
 const SEED := 23
-const WORLD_ONE := ["cold_open", "rivet_freed", "flume_warden_reveal", "bowl_handoff", "spillway_clear"]
+const WORLD_ONE := ["cold_open", "rivet_freed", "flume_warden_reveal", "bowl_handoff", "spillway_clear", "brindle_chase"]
 
 var _t := T.new("flourish_test")
 var _game

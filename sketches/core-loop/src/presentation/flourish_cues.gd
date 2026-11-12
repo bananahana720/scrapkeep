@@ -258,15 +258,16 @@ func _world_beat(id: String, beat: Dictionary) -> void:
 		"eject":
 			_eject(float(beat.get("at", 0.0)), float(beat.get("seconds", 1.6)))
 		"glance":
-			_glance(String(beat.get("anchor", "ship")), float(beat.get("seconds", 0.9)), float(beat.get("at", 0.0)))
+			_glance(String(beat.get("anchor", "ship")), float(beat.get("seconds", 0.9)), float(beat.get("at", 0.0)), id)
 
 
 # The camera turns to the beat's subject, so the entrance is on screen (chase_camera.glance_at;
 # the player's look ends it). A hand on the controls only: a bot's run keeps its own heading,
 # so its stream is the one the bands were measured on.
 # A beat's `at` waits that long first, on the paused-aware tree clock, so a glance can catch a
-# subject that is in view as the beat starts and leaves it (the scooter's arc over the hull).
-func _glance(anchor: String, seconds: float, at := 0.0) -> void:
+# subject that is in view as the beat starts and leaves it (the scooter's arc over the hull). The
+# wait is dropped if its row has ended by then (skipped, a death, the title) or motion was reduced.
+func _glance(anchor: String, seconds: float, at := 0.0, id := "") -> void:
 	if ctx.camera == null or not ctx.camera.has_method("glance_at"):
 		return
 	if not _hands_on():
@@ -278,7 +279,7 @@ func _glance(anchor: String, seconds: float, at := 0.0) -> void:
 		ctx.camera.glance_at(subject, seconds)
 		return
 	get_tree().create_timer(at, false).timeout.connect(func():
-		if is_instance_valid(subject) and subject.is_inside_tree() and ctx.camera != null:
+		if _playing.has(id) and not _reduced_motion() and is_instance_valid(subject) and subject.is_inside_tree() and ctx.camera != null:
 			ctx.camera.glance_at(subject, seconds))
 
 

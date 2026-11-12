@@ -168,19 +168,13 @@ const ROWS := {
 		]},
 	# The chase (FX-03): the goal flips from the hull to the scooter, so the camera follows the
 	# scooter's arc off the deck (a glance that waits until it has left the hull behind) and its
-	# target tag carries the new goal (boss.gd plate_targets). One caption in his voice, as the
-	# phase rows have; no stamp or word over the fight (PF-26).
+	# target tag carries the new goal (boss.gd plate_targets). No caption: the EJECT word, the
+	# chase toast and the objective line already speak (ruling cx), so the row adds motion only.
 	"brindle_chase": {"priority": 3, "on": "phase", "boss": "brindle", "phases": [4],
 		"world": {"full": [{"kind": "glance", "anchor": "scooter", "at": 0.6, "seconds": 1.6}],
 			"short": [{"kind": "glance", "anchor": "scooter", "at": 0.6, "seconds": 1.2}]},
-		"full": [
-			{"kind": "caption", "at": 0.0, "for": 1.8, "slot": "left_low",
-				"text": ["The Admiral leaves by the side door.", "Brindle relocates. Briskly.", "Brindle keeps a scooter. For emergencies."]},
-		],
-		"short": [
-			{"kind": "caption", "at": 0.0, "for": 1.2, "slot": "left_low",
-				"text": ["The Admiral leaves by the side door.", "Brindle relocates. Briskly.", "Brindle keeps a scooter. For emergencies."]},
-		]},
+		"full": [{"kind": "speed_lines", "at": 0.0, "for": 1.0}],
+		"short": [{"kind": "speed_lines", "at": 0.0, "for": 0.8}]},
 	# The catch: the scooter sails over the rim in slow motion while the crew cheer. The victory
 	# card waits for it, then stamps BRINDLE ROUTED.
 	"brindle_rout": {"priority": 3, "on": "rout", "boss": "brindle",
