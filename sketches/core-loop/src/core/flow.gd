@@ -558,6 +558,8 @@ func resume_run() -> bool:
 	# A cleared stage (SA-F1) lands its flight: the stage's clear and its owed pick, then the next
 	# entrance or the world's boss arena, as the launch would have.
 	if ctx.run.cleared:
+		# The loaded doc stays the one the earned save's spend rewrites (the boss arena writes none).
+		_entrance = doc
 		_finish_stage(Vector3(p[0], p[1], p[2]))
 	else:
 		enter_stage(ctx.run.stage, Vector3(p[0], p[1], p[2]), false)

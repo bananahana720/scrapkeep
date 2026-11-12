@@ -18,11 +18,13 @@ const SpawnerDouble := preload("res://tests/doubles/spine_spawner_double.gd")
 #       stage_cleared fires once, and a pick the bay already opened is not opened again;
 #   (c) a Warden that vanishes, launched with no bay visit: the Continue opens the owed pick;
 #   (d) after the world's last stage, a quit in the boss fight continues in the arena with that
-#       stage's earnings.
+#       stage's earnings, a held relic on the kit, and an earned save spent there stays spent.
 
 const DIR := "user://run_resume_cleared_test/"
 const PATH := DIR + "run.json"
 const FLIGHT := Vector3(0.0, 6.0, 30.0)
+# Rivet's special-slot relic.
+const RELIC := "relic:muzzle_heart"
 
 
 class TwoWorldGame extends "res://src/game.gd":
@@ -197,6 +199,7 @@ func _run() -> void:
 
 	# (d) Stage 3 closes world one: a quit in the boss fight continues in the arena.
 	run.add_cogs(77)
+	run.add_part(RELIC, "test")
 	_break(_game)
 	await _frames(3)
 	_game.events.launched.emit(FLIGHT)
@@ -213,6 +216,13 @@ func _run() -> void:
 		and _game.flow.state_name() == "boss" and run.cogs == cogs_three and _cleared_count == 1,
 		"arena before the quit %s; resumed %s at stage %d, arena %s, flow %s, cogs %d (earned %d), stage_cleared %d" % [in_arena,
 			resumed, run.stage, _game.flow.in_arena, _game.flow.state_name(), run.cogs, cogs_three, _cleared_count])
+	var relic_on: bool = not _game.build._relic_fx.is_empty()
+	run.death_saved.emit(run.hp)
+	_game.free()
+	resumed = await _resume()
+	_report("the resumed arena fits the relic and keeps a spent earned save spent", relic_on and resumed and _game.run.death_save_spent
+		and _game.flow.in_arena,
+		"relic on the kit %s; after a second Continue resumed %s, save spent %s, arena %s" % [relic_on, resumed, _game.run.death_save_spent, _game.flow.in_arena])
 	_game.free()
 
 	for name in DirAccess.get_files_at(DIR):
