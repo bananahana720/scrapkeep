@@ -4,11 +4,12 @@ extends SceneTree
 # kind is missing, so adding one is a list to finish, not a hunt (BACKLOG.md "World 1 and
 # scaling backlog", SG-05). Every director kind (Director.KIND_NAMES) must be a built roster
 # row with a chassis row, a director card and a windup row, and a telegraph record unless its
-# roster row says it never attacks (telegraph -1). Every built roster kind must be a director
-# kind, apart from the kinds that never arrive in a pack.
+# roster row says it never attacks (telegraph -1; a row with no telegraph field needs a record).
+# Every built roster kind must be a director kind, apart from the kinds that never arrive in a pack.
 #
-# KIND_NAMES stays a hand-kept list: arrivals store a kind as its index in it, so its order is
-# frozen and a list derived from the roster could reorder it.
+# KIND_NAMES stays a hand-kept list for now: the director's kind enum (CHASER, LOBBER) and
+# tests/director_rows_test.gd read positions in it, so a list derived from the roster would have
+# to keep today's order.
 
 const T := preload("res://tests/support/t.gd")
 const Director := preload("res://src/world/director.gd")
@@ -44,7 +45,7 @@ func _initialize() -> void:
 			gaps.append("%s/card" % kind)
 		if not WindupRows.ROWS.has(kind):
 			gaps.append("%s/windup" % kind)
-		if int(Roster.row(kind).get("telegraph", -1)) >= 0 and TelegraphRecord.id_of(kind) == "":
+		if int(Roster.row(kind).get("telegraph", 0)) >= 0 and TelegraphRecord.id_of(kind) == "":
 			gaps.append("%s/telegraph" % kind)
 	var new_gaps := gaps.filter(func(g): return not KNOWN_GAPS.has(g))
 	var filled := KNOWN_GAPS.filter(func(g): return not gaps.has(g))
