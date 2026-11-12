@@ -13,8 +13,8 @@ const Parts := preload("res://src/build/parts.gd")
 # by side, so every device is one readable trade a rolling ball can take with a hold.
 #
 #   trade_chest   pays a part of power tier 1, 2 or 3 for 25, 50 or 75% of max health, or
-#                 for the fabricator's cogs price of that tier (Fabricators.COG_PRICES
-#                 part_base x part_tier, without the held-parts growth).
+#                 for the off-shelf cogs price of that tier (Fabricators.off_shelf_price,
+#                 without the held-parts growth).
 #   blood_shrine  pays scrap for 25, 50 or 75% of max health at SCRAP_PER_HP_PAID.
 #   healing_ward  pays 1, 2 or 3 bonus cores for a heal of 25, 50 or 75% of max health,
 #                 its ring wider at each tier.
@@ -95,7 +95,8 @@ static func make_offer(device_kind: String, tier: int, pay: String, run, rng: Ra
 			o["part_tier"] = tier
 			if pay == "cogs":
 				o["cost_kind"] = "cogs"
-				o["cost"] = int(round(Fabricators.COG_PRICES["part_base"] * Fabricators.COG_PRICES["part_tier"].get(tier, 1.0)))
+				# Off the shelf: 10, 16 and 26 cogs (Fabricators.OFF_SHELF; docs/systems-audit/economy/README.md).
+				o["cost"] = Fabricators.off_shelf_price(tier, 0)
 		"scrap":
 			o["win"] = int(round(float(o["cost"]) * SCRAP_PER_HP_PAID))
 		"heal":
