@@ -138,7 +138,7 @@ func _start_rich_pass() -> void:
 
 
 func _check_rich() -> void:
-	var price := Fabricators.price(PART, 0)
+	var price := Fabricators.hoop_price(PART, 0)
 	var granted: bool = _gained.size() == 1 and _gained[0] == [PART, "fabricator"]
 	_report("fabricator grants", granted and _game.run.parts.has(PART),
 		"rolled through the %s hoop with %d cogs: part_gained %s, run parts %s" % [PART, _cogs_before, _gained, _game.run.parts])
@@ -172,7 +172,7 @@ func _check_poor() -> void:
 	var before: float = _poor.get("before", 0.0)
 	var after: float = _poor.get("after", 0.0)
 	_report("short of cogs", _gained.is_empty() and _game.run.parts.size() == _poor["parts_before"],
-		"rolled through with %d cogs against a price of %d: part_gained %s" % [_game.run.cogs, Fabricators.price("hot_rivets", _poor["parts_before"]), _gained])
+		"rolled through with %d cogs against a price of %d: part_gained %s" % [_game.run.cogs, Fabricators.hoop_price("hot_rivets", _poor["parts_before"]), _gained])
 	_report("short of cogs still a pass", _used.size() == 1, "fabricator_used facts %s" % [_used])
 	_report("short of cogs momentum", _kept(before, after),
 		"%.2f m/s before, %.2f m/s after (within %d%%)" % [before, after, int(TOLERANCE * 100.0)])

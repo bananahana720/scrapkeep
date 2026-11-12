@@ -408,8 +408,9 @@ func sell_quote(part_id: String) -> int:
 	if not _can_remove(part_id):
 		return -1
 	# Priced at the parts held when this copy came in (its place in the run's list), never at
-	# the count held now: the curve rises 1.15x per part held, so a part kept while seven more
-	# arrived sold back for more than it cost (invariants pass, 2026-11-08).
+	# the count held now: the curve rises part_growth per part held, so a part kept while more
+	# arrived sold back for more than it cost (invariants pass, 2026-11-08). A rack active is
+	# never a held part (active_rack.take), so it has no quote and cannot be sold back.
 	var held: int = mini(ctx.run.parts.size() - 1, ctx.run.parts.find(part_id))
 	var now: float = Fabricators.price(part_id, held) * _price_scale()
 	if part_id in Items.CELLS_FOR.values():

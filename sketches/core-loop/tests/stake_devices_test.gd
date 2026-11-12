@@ -14,7 +14,7 @@ const Parts := preload("res://src/build/parts.gd")
 # id), every device kind, every way it may be paid and every tier, each tier taken once:
 #   - the cost shown (the offer and its prompt words) equals the cost charged, 100%;
 #   - payout tier is monotone with cost: health shares 25/50/75% of max health or a cogs
-#     price read from Fabricators.COG_PRICES, never a scrap price;
+#     price read from Fabricators.off_shelf_price, never a scrap price;
 #   - no option can kill: a health price is refused unless the hull keeps the stated floor;
 #   - an offer is a pure function of the device's luck stream (Interact.luck_seed), so a
 #     stage restart replays it.
@@ -156,7 +156,7 @@ func _sweep() -> void:
 					if String(o.get("cost_kind", "")) == "cogs":
 						cog_offers += 1
 						var tier_of: int = Parts.def(String(o["win"])).tier if Parts.def(String(o["win"])) != null else -1
-						var table := int(round(Fabricators.COG_PRICES["part_base"] * Fabricators.COG_PRICES["part_tier"].get(tier_of, -1.0)))
+						var table := Fabricators.off_shelf_price(tier_of, 0)
 						if int(o["cost"]) == table:
 							priced_from_table += 1
 					ladder.append(o)
@@ -245,7 +245,7 @@ func _sweep() -> void:
 	_report("no option can kill", floor_cases > 0 and floor_ok == floor_cases and stated_floor > 0,
 		"%d of %d short-hull or short-wallet cases refused, exact cost plus floor %d HP leaves the floor" % [floor_ok, floor_cases, stated_floor])
 	_report("no scrap price", scrap_priced == 0, "%d offers priced in scrap" % scrap_priced)
-	_report("cogs prices from COG_PRICES", cog_offers > 0 and priced_from_table == cog_offers, "%d of %d cogs prices equal part_base x part_tier" % [priced_from_table, cog_offers])
+	_report("cogs prices off the shelf", cog_offers > 0 and priced_from_table == cog_offers, "%d of %d cogs prices equal Fabricators.off_shelf_price" % [priced_from_table, cog_offers])
 	_report("an offer replays from its stream", replay_ok == takes and parts_seen.size() >= 2,
 		"%d of %d offers rebuilt identically from the same seed; %d distinct parts across seeds" % [replay_ok, takes, parts_seen.size()])
 

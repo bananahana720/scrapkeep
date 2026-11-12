@@ -7,7 +7,7 @@ const Fabricators := preload("res://src/build/fabricators.gd")
 const ShopCounter := preload("res://src/ui/shop_counter.gd")
 
 # Moss's scale (docs/systems-audit/feature-fit.md, new mechanic 2), in the running game as
-# Rivet in calm, at placeholder rates (Fabricators.COG_PRICES weigh_lump, mass_per_cog):
+# Rivet in calm, at the economy pass's rates (Fabricators.COG_PRICES weigh_lump, mass_per_cog):
 #   - flag off: the scale is shut and a press changes nothing;
 #   - flag on: a press weighs one lump, pays a cog per mass_per_cog, and the quote equals the sale;
 #   - the sale is not a theft: no scrap_lost, and the heft class follows the lighter ball;
