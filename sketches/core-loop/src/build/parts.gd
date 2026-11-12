@@ -182,7 +182,7 @@ const CATALOGUE := {
 	"ram_plow": {"maker": "fleet_surplus", "touches": "roll", "name": "Ram Plow", "verb": "Hit harder, gain 15 max health", "text": "+18 punch, +15 max health",
 		"icon": "damage", "rarity": "rare", "tier": 3, "family": "stat", "tags": ["kinetic", "mass"], "punch": 18.0,
 		"max_hp_bonus": 15.0},
-	"spare_cell": {"maker": "moss", "name": "Spare Cell", "verb": "Kills refill your special", "pitch": "One cell extra", "touches": "special",
+	"spare_cell": {"maker": "moss", "name": "Spare Cell", "verb": "Kills refill your special", "touches": "special",
 		"text": "+1 special charge. Kills refill it, 12s apart.", "icon": "charge",
 		"rarity": "rare", "tier": 3, "family": "stat", "tags": ["mass"],
 		"charges": {"special": 1}, "trigger": "on_kill", "stack": "capped", "cap": 1,
