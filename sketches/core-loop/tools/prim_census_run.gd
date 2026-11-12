@@ -21,14 +21,14 @@ var _planted := false
 
 func _physics_process(delta: float) -> bool:
 	var out := super._physics_process(delta)
-	if _game == null or _ticks % int(_settings.get("census-every", "30")) != 0:
+	if _game == null or _ticks % maxi(1, int(_settings.get("census-every", "30"))) != 0:
 		return out
 	if _settings.get("prim-plant", "0") == "1" and not _planted:
 		_plant()
 	var stage := int(_game.run.stage) if _game.get("run") != null else 0
 	for row in _census.scan(root, _ticks, stage):
 		var p := PrimCensus.pin_for(row, _pin)
-		var verdict := "NEW" if p.is_empty() else ("code" if p.kind == "code" else "stand-in:" + String(p.row))
+		var verdict := "NEW" if p.is_empty() else ("code" if p.kind == "code" else "%s:%s" % [p.kind, p.row])
 		print("PRIM\t%d\t%d\t%s\t%s\t%s\t%s\t%s" % [row.tick, row.stage, verdict, row.owner, row.mesh, row.shape, row.path])
 	return out
 

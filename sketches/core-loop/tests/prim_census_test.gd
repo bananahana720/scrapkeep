@@ -14,8 +14,11 @@ const T := preload("res://tests/support/t.gd")
 #            or pin it as code with the reason it is meant to be a shape (a mark, a ring, an effect)
 #   stand-in an object still waiting for its model (the pin's BACKLOG row owes it) passes as a skip;
 #            with SCRAPKEEP_RELEASE_GATE=1 each one fails, the switch release_gate_placeholder_test reads
-#   stale    a stand-in row that matched nothing fails: its model landed, so drop the row and the pin
-#            falls. W1-21 to W1-23 and W1-46 land that way
+#   stale    a stand-in row (built with its stage) that matched nothing fails: its model landed, so
+#            drop the row and the pin falls. W1-21 to W1-23 and W1-46 land that way. A stand-in-live
+#            row (an object only play spawns: cogs, an elite's crate, a reward gate) is never stale
+# Keys are one per owner, mesh and shape: a second primitive under a key already pinned is not seen.
+# The test is bot tier, so sketch:fast sends it to the bot shards and the wave gate runs it.
 # Control: the child hangs a BoxMesh on the first park activity (--prim-plant=1); the census must
 # call it new, so the test can fail.
 #
@@ -75,6 +78,7 @@ func _judge_rules() -> void:
 		{"owner": "beacon.gd", "mesh": "*", "shape": "*/Beacon/*", "kind": "code", "row": "-", "why": "x", "line": 1},
 		{"owner": "activities.gd", "mesh": "BoxMesh", "shape": "Activity_ambush_altar/*", "kind": "stand-in", "row": "W1-22", "why": "x", "line": 2},
 		{"owner": "radio_cache.gd", "mesh": "*", "shape": "*", "kind": "stand-in", "row": "W1-23", "why": "x", "line": 3},
+		{"owner": "scrap_field.gd", "mesh": "*", "shape": "*", "kind": "stand-in-live", "row": "W1-21", "why": "x", "line": 4},
 	]
 	var rows: Array[Dictionary] = [
 		{"key": "a", "owner": "beacon.gd", "mesh": "TorusMesh", "shape": "Node3D/Beacon/MeshInstance3D"},
@@ -84,7 +88,7 @@ func _judge_rules() -> void:
 	var verdict := PrimCensus.judge(rows, pin)
 	_t.check("judge: a pinned code row passes, a stand-in is listed, an unpinned row is new",
 		verdict.unlisted.map(func(r): return r.key) == ["c"] and verdict.stand_ins.map(func(r): return r.key) == ["b"])
-	_t.check("judge: a stand-in row that matched nothing is stale", verdict.stale.map(func(p): return p.line) == [3])
+	_t.check("judge: a stand-in row that matched nothing is stale, a stand-in-live row is not", verdict.stale.map(func(p): return p.line) == [3])
 	_t.check("shape: engine names keep their class, given names lose their digits",
 		PrimCensus.shape_of("@Node3D@2/Activities/Find_dam_shift_radio/@StaticBody3D@1954/@MeshInstance3D@1953")
 			== "Find_dam_shift_radio/StaticBody3D/MeshInstance3D" and PrimCensus.shape_of("Chunk0_0/Pip12") == "Chunk_/Pip")

@@ -15,14 +15,16 @@ extends RefCounted
 #
 # The pin (PIN_PATH, tab separated: owner, mesh, shape glob, kind, row, why) lists every key that
 # may be drawn. kind "code" is a mark, ring, fallback or effect meant to be code; kind "stand-in"
-# is an object a player meets that still waits for its model, with the BACKLOG row that owes it.
+# is an object a player meets, built with its stage, that still waits for its model, with the
+# BACKLOG row that owes it; "stand-in-live" is the same for an object only play spawns (a drop).
 # judge() sorts a census into keys no pin row covers (a new primitive: fails), stand-ins still
-# drawn, and stand-in rows that matched nothing (the model landed: drop the row, the pin falls).
+# drawn, and "stand-in" rows that matched nothing (the model landed: drop the row, the pin falls).
+# A "stand-in-live" row is never stale: a run may simply not spawn it.
 #
 # tools/prim_census_run.gd runs it over a bot run; tests/prim_census_test.gd holds world 1 to it.
 
 const PIN_PATH := "res://tools/prim_census_pin.tsv"
-const KINDS := ["code", "stand-in"]
+const KINDS := ["code", "stand-in", "stand-in-live"]
 
 var rows: Array[Dictionary] = []
 var _seen := {}
@@ -87,8 +89,8 @@ static func load_pin(path := PIN_PATH) -> Array[Dictionary]:
 		if line.strip_edges() == "" or line.begins_with("#"):
 			continue
 		var cells := line.split("\t")
-		if cells.size() != 6 or not cells[3] in KINDS or (cells[3] == "stand-in" and cells[4] == "-") or cells[5].strip_edges() == "":
-			out.append({"line": line_no, "error": "want owner, mesh, shape, kind (code or stand-in), row (a BACKLOG row for a stand-in), why: %s" % line})
+		if cells.size() != 6 or not cells[3] in KINDS or (cells[3] != "code" and cells[4] == "-") or cells[5].strip_edges() == "":
+			out.append({"line": line_no, "error": "want owner, mesh, shape, kind (code, stand-in or stand-in-live), row (a BACKLOG row for a stand-in), why: %s" % line})
 			continue
 		out.append({"owner": cells[0], "mesh": cells[1], "shape": cells[2], "kind": cells[3], "row": cells[4], "why": cells[5], "line": line_no})
 	return out
@@ -117,7 +119,7 @@ static func judge(census: Array[Dictionary], pin: Array[Dictionary]) -> Dictiona
 			out.unlisted.append(row)
 			continue
 		used[p.line] = true
-		if p.kind == "stand-in":
+		if p.kind != "code":
 			var hit := row.duplicate()
 			hit.merge({"row": p.row, "why": p.why})
 			out.stand_ins.append(hit)

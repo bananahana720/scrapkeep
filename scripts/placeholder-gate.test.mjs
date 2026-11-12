@@ -328,9 +328,9 @@ test("primStandIns counts the census pin's stand-in rows by BACKLOG row and skip
     mkdirSync(path.join(dir, "tools"));
     writeFileSync(
       path.join(dir, "tools/prim_census_pin.tsv"),
-      ["# owner\tmesh\tshape\tkind\trow\twhy", "beacon.gd\t*\tBeacon/*\tcode\t-\tthe beacon", "radio_cache.gd\t*\t*\tstand-in\tW1-23\tradio", "none\tBoxMesh\tFind_*\tstand-in\tW1-22\tfinds", "x\ty\tz\tstand-in\tW1-22\tcache"].join("\n"),
+      ["# owner\tmesh\tshape\tkind\trow\twhy", "beacon.gd\t*\tBeacon/*\tcode\t-\tthe beacon", "radio_cache.gd\t*\t*\tstand-in\tW1-23\tradio", "none\tBoxMesh\tFind_*\tstand-in\tW1-22\tfinds", "x\ty\tz\tstand-in\tW1-22\tcache", "scrap_field.gd\t*\tScrap/*\tstand-in-live\tW1-21\tcogs"].join("\n"),
     );
-    assert.deepEqual(primStandIns(dir), { "W1-23": 1, "W1-22": 2 });
+    assert.deepEqual(primStandIns(dir), { "W1-23": 1, "W1-22": 2, "W1-21": 1 });
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }

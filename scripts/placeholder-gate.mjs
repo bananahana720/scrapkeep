@@ -420,7 +420,7 @@ export function primStandIns(project) {
   const out = {};
   for (const line of readFileSync(file, "utf8").split("\n")) {
     const cells = line.split("\t");
-    if (line.startsWith("#") || cells.length !== 6 || cells[3] !== "stand-in") continue;
+    if (line.startsWith("#") || cells.length !== 6 || !cells[3].startsWith("stand-in")) continue;
     out[cells[4]] = (out[cells[4]] ?? 0) + 1;
   }
   return out;
