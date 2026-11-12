@@ -644,7 +644,8 @@ func _stock() -> Array:
 
 # This stage's bay is the world's last till: its launch lands in the world boss's arena.
 func last_call() -> bool:
-	return ctx != null and ctx.stages != null and ctx.stages.BOSS != "" and ctx.stages.is_world_last(ctx.run.stage)
+	var stages = ctx.get("stages") if ctx != null else null
+	return stages != null and stages.BOSS != "" and stages.is_world_last(ctx.run.stage)
 
 
 # The maker set nearest to waking: {maker, held, pieces}, fewest pieces missing first, then SETS
