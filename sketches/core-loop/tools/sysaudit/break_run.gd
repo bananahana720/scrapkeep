@@ -8,7 +8,7 @@ const StageModifier := preload("res://src/world/events/stage_modifier.gd")
 # are bot_run's. One seed per process (bot_run forks children that run bot_run.gd itself):
 #
 #   godot --headless --fixed-fps 90 --path sketches/core-loop --script res://tools/sysaudit/break_run.gd \
-#     -- --out=<abs dir> --policy=skipper --seeds=<n> --table=park --until=6 --qa-log=1 --break=spam
+#     -- --out=<abs dir> --policy=skipper --seeds=<n> --table=park --until=2 --qa-log=1 --break=spam
 #
 # --break picks the attack (each is seeded from the run seed, so a row's command replays it):
 #   spam   on top of the policy's own input, mashes every key a pad or keyboard has: jump, the go verb
@@ -22,7 +22,8 @@ const StageModifier := preload("res://src/world/events/stage_modifier.gd")
 #          continues from the title's Continue (flow.resume_run) in a fresh Game. The row checks
 #          the resumed run is the saved entrance and never more: cogs, parts, cores, the death save, hull.
 #          --quit-in=<state>:<s> quits once after s seconds in a flow state (beacon is the Warden
-#          fight, gates the open gates after a break, launch the flight, boss the boss arena).
+#          fight, gates the open gates after a break, launch the flight, boss the boss arena; the
+#          seconds may be a decimal, and launch lasts 0.6 s headless). A run that is over is never quit.
 #   stack  stacks every buff with every debuff: a random legal build of 6 to 14 parts (item_fuzz's
 #          draft), a curse deal taken, scrap wear on (the default), and the hull set to 15% at each
 #          new stage. Stage modifiers are the run seed's own; a "modifier" row names each stage's.
@@ -34,12 +35,15 @@ const StageModifier := preload("res://src/world/events/stage_modifier.gd")
 #   abyss      ball below ABYSS_Y or over FAR_M from the origin (the fall rescue is play_watch's "fell")
 #   negative   scrap, cogs or bonus cores below zero
 #   surge      cogs or scrap up by more than SURGE_* within one game second
-#   frozen     the flow sat in one state outside play (title, cards, summary) for FROZEN_S of ticks
+#   frozen     the flow sat in one state outside play (title, pilot select; not the summary) for FROZEN_S of ticks
 #   paused     the tree left paused for PAUSED_S of ticks after the bot lifted its pause
-#   resume     (quit) the continued run differs from the saved entrance, or holds more than it
+#   resume     (quit) the continued run differs from the saved entrance, holds more than it held
+#              at the quit, or restarts a stage the quit came after clearing ("cleared_stage_lost")
 #   resurrect  (quit) a run that ended (death or the summary) still offers a Continue; a "terminal"
 #              row records each check
-# and a "summary" row at the end with the peaks and the counts by kind. bot_run's qa-<seed>.ndjson
+# Quit timers and the pause watch count bot_run ticks, which --frame-log=1 resets each frame, so
+# do not combine the two. A row carries the seed and mode; the rest of its command is the run's.
+# Each run also ends with a "summary" row with the peaks and the counts by kind. bot_run's qa-<seed>.ndjson
 # (--qa-log=1) has stuck, hung, wedged and fell.
 
 const UNDYING_S := 1.0
@@ -58,6 +62,7 @@ const PAUSE_CHANCE := 0.002
 const PRESSES := ["jump_pressed", "shift_pressed", "mount_pressed", "interact_pressed", "fire_pressed",
 	"harpoon_pressed", "harpoon_released", "cancel_pressed", "ultimate_pressed", "active_pressed", "slot_pick"]
 const HOLDS := ["jump_held", "shift_held", "brake_held", "fire_held", "harpoon_held", "mount_held"]
+const RELEASES := {"harpoon_held": "harpoon_released", "fire_held": "fire_released", "shift_held": "shift_released"}
 const QUITS := 2
 # A quit waits this long after the last Continue, so each continued run plays before the next quit.
 const QUIT_GAP_S := 30.0
@@ -165,7 +170,7 @@ func _hook() -> void:
 
 func _row(kind: String, data := {}) -> void:
 	_counts[kind] = int(_counts.get(kind, 0)) + 1
-	# One row a kind a stage is enough to place it; the count keeps the rest.
+	# Three rows of a kind are enough to place it; the count keeps the rest.
 	if int(_counts[kind]) > 3 and kind != "resume":
 		return
 	var ball: Vector3 = _game.player.ball_position()
@@ -251,8 +256,9 @@ func _spam() -> void:
 		_holds[key] -= 1
 		if _holds[key] <= 0:
 			_holds.erase(key)
-			if key == "harpoon_held":
-				source.press["harpoon_released"] = true
+			# A real key sends its release on the tick it comes up.
+			if key in RELEASES:
+				source.press[RELEASES[key]] = true
 	if _stick_left <= 0 and _rng.randf() < STICK_CHANCE:
 		_stick = Vector2.from_angle(_rng.randf() * TAU)
 		_stick_left = _rng.randi_range(9, 45)
@@ -311,7 +317,8 @@ func _check_resume() -> void:
 	var now := {"stage": run.stage, "cogs": run.cogs, "parts": run.parts.size(), "cores": run.bonus_cores,
 		"death_save_spent": run.death_save_spent, "hp": snappedf(run.hp, 0.01), "state": _game.flow.state_name()}
 	var want := {"stage": int(_saved.get("stage", 0)), "cogs": int(_saved.get("cogs", 0)),
-		"parts": (_saved.get("parts", []) as Array).size(), "death_save_spent": bool(_saved.get("death_save_spent", false)),
+		"parts": (_saved.get("parts", []) as Array).size(), "cores": int(_saved.get("bonus_cores", 0)),
+		"death_save_spent": bool(_saved.get("death_save_spent", false)),
 		"hp": snappedf(float(_saved.get("hp", 0.0)), 0.01)}
 	var wrong := []
 	for key in want:
@@ -322,9 +329,12 @@ func _check_resume() -> void:
 		wrong.append("cogs_above_quit")
 	if run.parts.size() > int(_before["parts"]) and run.stage == int(_before["stage"]):
 		wrong.append("parts_above_quit")
-	if bool(_before["death_save_spent"]) and not run.death_save_spent and run.stage == int(_before["stage"]) \
-			and bool(_saved.get("death_save_spent", false)):
+	if bool(_before["death_save_spent"]) and not run.death_save_spent and run.stage == int(_before["stage"]):
 		wrong.append("death_save_refilled")
+	# Quit after the stage was cleared (its Warden broken: the gates, the launch, the boss after a
+	# world's last stage) and continued at that same stage's start: the cleared stage is replayed.
+	if String(_before["state"]) in ["gates", "launch", "boss", "victory"] and run.stage == int(_before["stage"]):
+		wrong.append("cleared_stage_lost")
 	_row("resume", {"ok": wrong.is_empty(), "wrong": wrong, "now": now, "saved": want, "before": _before})
 
 
