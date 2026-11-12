@@ -25,12 +25,17 @@ func _physics_process(delta: float) -> bool:
 		return out
 	if _settings.get("prim-plant", "0") == "1" and not _planted:
 		_plant()
-	var stage := int(_game.run.stage) if _game.get("run") != null else 0
-	for row in _census.scan(root, _ticks, stage):
+	# Deferred, so it runs after the dressing this tick queued (hero_assets dresses a reward gate by
+	# call_deferred from node_added): scanning at once listed gates as plain on their first tick.
+	_scan.call_deferred(_ticks, int(_game.run.stage) if _game.get("run") != null else 0)
+	return out
+
+
+func _scan(tick: int, stage: int) -> void:
+	for row in _census.scan(root, tick, stage):
 		var p := PrimCensus.pin_for(row, _pin)
 		var verdict := "NEW" if p.is_empty() else ("code" if p.kind == "code" else "%s:%s" % [p.kind, p.row])
 		print("PRIM\t%d\t%d\t%s\t%s\t%s\t%s\t%s" % [row.tick, row.stage, verdict, row.owner, row.mesh, row.shape, row.path])
-	return out
 
 
 func _plant() -> void:
