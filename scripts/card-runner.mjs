@@ -255,7 +255,7 @@ function runCard(card, planned, { stage, cardsRoot, receipts }) {
   { cwd: worktree, timeoutMinutes: planned.budget.minutes });
   const writer = claudeJson(write.stdout, planned.budget.usd);
   receipt.cost += writer.cost;
-  receipt.writer = writer.text.slice(-3000);
+  receipt.writer = writer.text;
   const head = sh("git", ["-C", worktree, "rev-parse", "HEAD"]).stdout.trim();
   const onBranch = sh("git", ["-C", worktree, "branch", "--show-current"]).stdout.trim() === planned.branch;
   note("write", write.status === 0 && head !== baseHead, `exit ${write.status}, $${writer.cost.toFixed(2)}, head ${head}`);
@@ -274,7 +274,7 @@ function runCard(card, planned, { stage, cardsRoot, receipts }) {
     { cwd: worktree, timeoutMinutes: 20 });
   const reviewer = claudeJson(review.stdout, REVIEW_USD);
   receipt.cost += reviewer.cost;
-  receipt.review = reviewer.text.slice(-3000);
+  receipt.review = reviewer.text;
   const verdict = reviewer.error ? "NONE" : reviewVerdict(reviewer.text);
   note("review", verdict === "PASS", `${verdict}, $${reviewer.cost.toFixed(2)}`);
   if (verdict !== "PASS") return finish("review did not pass; branch kept local");
