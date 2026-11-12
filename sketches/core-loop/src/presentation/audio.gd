@@ -878,6 +878,7 @@ func _process(delta: float) -> void:
 	_tend_tally()
 	_tend_hum()
 	_tend_specials()
+	_tend_kettle()
 	_tend_champions()
 	_tend_moments()
 	_follow_warden()
@@ -1666,7 +1667,7 @@ func _duck(amount: float, hold_seconds: float) -> void:
 
 # Plays a cue now. Returns false if it was gated by the voice limit or the gap. With no
 # override the kind's row decides, resolved for the run's class.
-func play(kind: String, db := 0.0, pitch := 1.0, bus := "SFX", sound_override := "") -> bool:
+func play(kind: String, db := 0.0, pitch := 1.0, bus := "SFX", sound_override := "", priority_override := -1) -> bool:
 	var sound: String = sound_override if sound_override != "" else Rows.sound(kind, cue_context())
 	if not _admit(kind, sound, pitch):
 		return false
@@ -1675,7 +1676,7 @@ func play(kind: String, db := 0.0, pitch := 1.0, bus := "SFX", sound_override :=
 	# The cue log keeps the pitch the caller asked for, so the ladder stays readable there.
 	var tier := SfxBank.resolve(sound, pitch)
 	db += story_duck_db(kind)
-	var priority := Rows.priority(kind)
+	var priority := Rows.priority(kind) if priority_override < 0 else priority_override
 	if _is_telegraph(kind, sound):
 		_focus()
 	elif priority < 2 and bus == "SFX" and sound in MixRows.CROWD_SOUNDS:
@@ -2061,7 +2062,10 @@ func wire_optional() -> void:
 	# v2 W6 world: one row per world_fact kind (event_kinds.gd WORLD_ROWS); a kind with
 	# no row plays nothing, since play() already skips an empty sound override.
 	_listen_optional(events, "world_fact", func(kind: String, _at: Vector3):
-		play("world_fact", 0.0, 1.0, "SFX", Rows.heard(EventKinds.world_row(kind), cue_context()))
+		# A world row's own priority, not the bare world_fact kind's 0: the Overtime ring, the sluice and
+		# the Called Shot results were 6 dB under a pickup and never dipped the band (sound-gaps 12 Nov).
+		var row := EventKinds.world_row(kind)
+		play("world_fact", 0.0, 1.0, "SFX", Rows.heard(row, cue_context()), int(row.get("priority", 0)))
 		_set_world_fact(kind)
 		if kind == "bay_jukebox":
 			jukebox_flipped()
@@ -4007,6 +4011,23 @@ func _connect_redline() -> void:
 		play("slammed", 2.0, Harmony.ratio(-5.0), "SFX", "smash_crack"))
 	redline.cooked_off.connect(func(_at: Vector3, _force: float):
 		play("slammed", 0.0, Harmony.ratio(-7.0), "SFX", "smash_crack"))
+
+
+# The cook-off's warning (loops.md Spec 1): over the last KETTLE_S of a shell held at redline the
+# kettle whistles, climbing to the tritone; it stops the moment the heat is spent, cooks off or falls.
+const KETTLE_S := 2.0
+var _kettle_on := false
+
+
+func _tend_kettle() -> void:
+	var redline = ctx.player.get("redline") if ctx != null and ctx.get("player") != null else null
+	var left: float = redline.fuse_left() if redline != null else -1.0
+	var due := left > 0.0 and left <= KETTLE_S
+	if due and not _kettle_on:
+		_kettle_on = play("slammed", 0.0, 1.0, "SFX", "heat_kettle")
+	elif not due and _kettle_on and left <= 0.0:
+		_kettle_on = false
+		stop("heat_kettle")
 
 
 # Each active sounds its own launch ("active_" + id) when the bank has it, else the row's.

@@ -78,7 +78,7 @@ const VOICE_LIMIT := MixRows.VOICE_LIMIT
 const MIN_GAP_MS := MixRows.MIN_GAP_MS
 # Danger sounds pull the bass down so the low end never masks a warning.
 const DANGER_SOUNDS := ["hurt", "enemy_arrive", "boss_telegraph", "ratchet_cue", "klaxon", "threat_up", "death",
-	"threat_tick", "threat_whoosh", "threat_whistle", "threat_hum", "threat_tear", "hold_pit", "hold_bola", "hold_tether", "hold_net"]
+	"threat_tick", "threat_whoosh", "threat_whistle", "threat_hum", "threat_tear", "hold_pit", "hold_bola", "hold_tether", "hold_net", "heat_kettle"]
 # Pitched cues that follow the live key (a lifted Warden plays its chimes in Eb).
 const KEYED_SOUNDS := ["panel_note", "panel_jackpot", "line_claw_drag", "armor_reclaim", "scrap_tick", "cog_tick", "kill_pop", "part_get", "core_socket", "found_chime", "gate_through",
 	"rivet_line_punch", "rivet_line_arrive",
@@ -175,6 +175,9 @@ const TRIM_DB := {
 	# springs open, the Warden's clamp counts a crew, refuses a hit, and lets go.
 	"arena_lock_slam": -2.0, "arena_wave_whistle": -6.0, "arena_unlock_bells": -4.0, "warden_gate_pip": -7.0,
 	"warden_gate_clunk": -10.0, "warden_gate_release": -3.0,
+	# Called Shot (loops.md Spec 3) and Heat (Spec 1), each its own sound (sound-gaps 12 Nov): the call
+	# inks with a stamp that climbs, a miss drops dry, and a shell about to cook off whistles like a kettle.
+	"call_ink": -6.0, "call_drop": -8.0, "heat_kettle": -9.0,
 	# Durability prototype: the plate shed in three sizes and the reclaim chime.
 	"armor_shed_small": -6.0, "armor_shed": -5.0, "armor_shed_big": -4.0, "armor_reclaim": -7.0,
 	"armor_deflect": -10.0,
@@ -1311,6 +1314,12 @@ static func _bake(id: String) -> PackedFloat32Array:
 			return _warden_gate_clunk()
 		"warden_gate_release":
 			return _warden_gate_release()
+		"call_ink":
+			return _call_ink()
+		"call_drop":
+			return _call_drop()
+		"heat_kettle":
+			return _heat_kettle()
 	if id.begins_with(CAUSE_NOTE):
 		return _mix([[_cut(_n("mallet", int(id.trim_prefix(CAUSE_NOTE))), 0.6), 0, 1.0]])
 	if id.begins_with(GRID_NOTE):
@@ -2658,6 +2667,33 @@ static func _warden_gate_release() -> PackedFloat32Array:
 	var chord := [[0, 62, 6, "keys", 0.45], [0, 66, 6, "keys", 0.4], [0, 69, 6, "keys", 0.4], [0, 74, 6, "bell", 0.6], [0, 38, 6, "sub", 0.6]]
 	parts.append([Synth.render_score(chord, 0.05), Synth.seconds(0.3), 1.0])
 	return _mix(parts)
+
+
+# A Called Shot is inked: a stamp thumps, then two brass notes climb D to A, a promise made. It
+# shares nothing with the gate's dull clank, so placing a bet never sounds like being refused.
+static func _call_ink() -> PackedFloat32Array:
+	var score := [[0, 62, 1, "brass", 0.6], [1, 69, 3, "brass", 0.75]]
+	return _mix([[_noise(0.06, 900.0, 500.0, 45.0), 0, 0.7], [_tone(0.08, _hz(38), _hz(36), "sine", 30.0), 0, 0.6],
+		[Synth.render_score(score, 0.05), Synth.seconds(0.03), 1.0]])
+
+
+# The call missed: one muted note sags from A down to E and stops dead, no ring and no chord, so a
+# lost bet is heard as a let-down and never as a warning.
+static func _call_drop() -> PackedFloat32Array:
+	return _mix([[_tone(0.34, _hz(57), _hz(52), "square_dark", 9.0), 0, 0.8], [_noise(0.05, 600.0, 300.0, 50.0), 0, 0.3]])
+
+
+# The shell at redline is about to cook off: a kettle whistle that climbs from D to the tritone
+# above over two seconds and swells as it goes, so the last two seconds of the fuse are heard.
+static func _heat_kettle() -> PackedFloat32Array:
+	var n := Synth.seconds(2.0)
+	var whistle := _tone(2.0, _hz(86), _hz(92), "sine", 0.0)
+	var breath := _noise(2.0, 5200.0, 7400.0, 0.0, 0.3)
+	for i in n:
+		var swell := 0.25 + 0.75 * float(i) / n
+		whistle[i] *= swell
+		breath[i] *= swell
+	return _mix([[whistle, 0, 0.8], [breath, 0, 0.18]])
 
 
 static func _lift_hiss() -> PackedFloat32Array:
