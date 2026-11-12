@@ -178,11 +178,11 @@ func _tag_on_summary() -> void:
 	# with every stamp at once), and the page gives up the height so the buttons stay on screen.
 	var short_page: float = comic.custom_minimum_size.y
 	var body_before: String = screens._body.text
-	screens._body.text = "Sable\nScrapped by the Warden.\nThe Fleet filed it as weather.\nShift board: CLOCKED IN Clocked In. LOGGED First Warden. HIRED Rivet, Tarn. FOUND the Lost Tape, in the wall."
+	screens._body.text = "Sable\nScrapped by the Warden.\n" + DeathCause.memo(0, 1) + "\nThe Fleet filed it as weather.\nShift board: CLOCKED IN Clocked In. LOGGED First Warden. HIRED Rivet, Tarn. FOUND the Lost Tape, in the wall."
 	screens._fit_comic()
 	await _frames(3)
 	var long_lines: int = screens._body.get_line_count()
-	_t.check("a long body shrinks the page it shares the column with, and the buttons stay on the screen", long_lines >= 5
+	_t.check("a long body shrinks the page it shares the column with, and the buttons stay on the screen", long_lines >= 6
 			and comic.custom_minimum_size.y < short_page and screens._actions.get_global_rect().end.y <= floor_y and screens._title.get_global_rect().position.y >= 0.0,
 		"%d lines, page %.0f from %.0f, buttons to %.0f of %.0f" % [long_lines, comic.custom_minimum_size.y, short_page, screens._actions.get_global_rect().end.y, floor_y])
 	screens._body.text = body_before
