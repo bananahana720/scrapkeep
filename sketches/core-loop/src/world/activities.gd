@@ -20,6 +20,7 @@ const PocketDraw := preload("res://src/world/pockets/pocket_draw.gd")
 const PocketLibrary := preload("res://src/world/pockets/pocket_library.gd")
 const Secrets := preload("res://src/core/secrets.gd")
 const SfxBank := preload("res://src/presentation/sfx_bank.gd")
+const SpeedTier := preload("res://src/movement/speed_tier.gd")
 const WorldFx := preload("res://src/presentation/world_fx/world_fx.gd")
 const WorldFxAnchor := preload("res://src/presentation/world_fx/world_fx_anchor.gd")
 const StageModifier := preload("res://src/world/events/stage_modifier.gd")
@@ -167,6 +168,10 @@ const SLAM_MIN_PER_CRUISE := 1.0
 # so with the bar at cruise itself only the speed bank's roll start or a burst broke the wall: a player
 # already rolling at full speed bumped the face (cautious red team, 26 Oct). A nudge stays under it.
 const RAM_MIN_PER_CRUISE := 0.85
+# A park row's `bar` raises a cache wall to a speed tier (W1-76, Shift's job in world 1): only a ram at
+# that tier of the unmodded cruise breaks it, the tier the ball's streaks show, and a slam never does.
+# Under the bar the refused cue still answers, so the face reads as "faster".
+const BARS := {"blazing": SpeedTier.BLAZING}
 const PEDESTAL_BACK := 4.0
 const CACHE_LANE_OFFSET := 6.0
 # The first-win room's log line on the back wall, on a dark crew board of its own: the fired wall
@@ -822,6 +827,9 @@ func _build_site(id: String, at: Vector2, spec: Dictionary) -> Site:
 	# A field find faces out of its dead end (secrets.gd FINDS spots); a park row may set its own face.
 	if spec.has("face"):
 		s.rule["face"] = spec["face"]
+	if BARS.has(spec.get("bar", "")):
+		s.rule = s.rule.duplicate(true)
+		s.rule["bar_tier"] = BARS[spec["bar"]]
 	s.name = "Activity_" + id
 	(_site_parent if _site_parent != null else self).add_child(s)
 	s.global_position = ctx.terrain.drop_point(at.x, at.y, 0.0)
@@ -1884,8 +1892,7 @@ func _watch_wall(s: Site, ball: Vector3) -> void:
 	var ahead := local.z - 0.5
 	if ahead < -1.0 or ahead > WALL_REACH + maxf(0.0, toward) / 30.0 or absf(local.x) > WALL_HALF_W + 1.0 or local.y > WALL_HEIGHT + 2.0:
 		return
-	var bar: float = ctx.tuning.f("cruise") * RAM_MIN_PER_CRUISE
-	if toward >= bar:
+	if toward >= ram_bar(s):
 		_break_wall(s)
 	elif ahead <= WALL_CONTACT and local.y < WALL_HEIGHT:
 		_refuse_ram(s, toward)
@@ -1905,11 +1912,18 @@ func _refuse_ram(s: Site, toward: float) -> void:
 	ctx.events.verb_failed.emit("roll", "under_bar", ctx.player.ball_position())
 
 
+# The speed into a cache's face that breaks its wall: RAM_MIN_PER_CRUISE x cruise, or a row bar's tier.
+func ram_bar(s: Site) -> float:
+	if s.rule.has("bar_tier"):
+		return ctx.tuning.tier_cruise() * SpeedTier.MULTIPLES[int(s.rule["bar_tier"])]
+	return ctx.tuning.f("cruise") * RAM_MIN_PER_CRUISE
+
+
 func _slammed(at: Vector3, strength: float) -> void:
 	if strength < ctx.player.slam_strength(ctx.tuning.f("cruise")) * SLAM_MIN_PER_CRUISE:
 		return
 	for s in sites:
-		if s.wall == null or s.done:
+		if s.wall == null or s.done or s.rule.has("bar_tier"):
 			continue
 		var local: Vector3 = s.to_local(at)
 		if local.z > 0.5 and local.z < 0.5 + SLAM_REACH and absf(local.x) <= WALL_HALF_W + 1.0:

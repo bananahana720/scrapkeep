@@ -1933,6 +1933,10 @@ func _activity_goal(delta: float) -> bool:
 		for c in activities.sites:
 			if not is_instance_valid(c) or not _activity_open(c):
 				continue
+			# A cache whose row raises its wall to a speed tier (activities.gd BARS, W1-76) asks for a line
+			# the bot does not plan; ramming it at the bot's speed would only loop the refused cue.
+			if c.rule.has("bar_tier"):
+				continue
 			var level := roundf(c.global_position.y / LEVEL_BAND)
 			# The alpha maps' camp comes after the slice's standing sites, wherever it stands:
 			# on the reach its shelf pulled the explorer off the cache into a wall it cannot pass.

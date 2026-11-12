@@ -1352,7 +1352,6 @@ func _on_dashed(_direction: Vector3) -> void:
 		_trail_ticks = 0
 
 
-# Every slam carries kinetic, so a slam on ice shatters it whatever you hold.
 # A paid chain of 3 or more bursts scrap at its landing (W1-74), scaled as a kill's scrap is.
 # Scrap only: the wallet already outruns the shop by Brindle (gameplay critique finding 11).
 func _on_line_state(id: String, _target: Node3D, at: Vector3, cause: String) -> void:
@@ -1364,6 +1363,7 @@ func _on_line_state(id: String, _target: Node3D, at: Vector3, cause: String) -> 
 		scrap.drop(at, amount, chain_rng)
 
 
+# Every slam carries kinetic, so a slam on ice shatters it whatever you hold.
 func _on_slammed(at: Vector3, strength: float, _flatness: float) -> void:
 	_slams.append({"at": at, "strength": clampf(strength, 0.3, 1.6)})
 

@@ -43,10 +43,11 @@ def table(runs):
         rows.append("| `%s` | " % k + " | ".join(str(total(r, k)) for r in runs) + " |")
     chains = lambda r: r.get("chains", {})
     paid = lambda r, lo: sum(v for k, v in chains(r).get("paid_by_combo", {}).items() if int(k) >= lo)
+    # A pivot-only chain pays at combo 0, so "under 3" counts from 0; a census without chains shows "-".
     rows.append("| chains (all) | " + " | ".join(str(chains(r).get("total", "-")) for r in runs) + " |")
     rows.append("| best combo | " + " | ".join(str(chains(r).get("best_combo", "-")) for r in runs) + " |")
-    rows.append("| paid chains, combo 1-2 / 3+ | " + " | ".join(
-        "%d / %d" % (paid(r, 1) - paid(r, 3), paid(r, 3)) for r in runs) + " |")
+    rows.append("| paid chains, combo 0-2 / 3+ | " + " | ".join(
+        "%d / %d" % (paid(r, 0) - paid(r, 3), paid(r, 3)) if "chains" in r else "-" for r in runs) + " |")
     sent = lambda r: sum(v for k, v in r["rumbles"].items() if k.endswith(" sent"))
     held = lambda r: sum(v for k, v in r["rumbles"].items() if k.endswith(" held"))
     rows.append("| rumbles sent / held | " + " | ".join("%d / %d" % (sent(r), held(r)) for r in runs) + " |")
