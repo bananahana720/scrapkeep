@@ -8,6 +8,8 @@ const UiFonts := preload("res://src/ui/ui_fonts.gd")
 const FieldNotes := preload("res://src/ui/field_notes.gd")
 const ClassKit := preload("res://src/ui/class_kit.gd")
 const ScrapFrame := preload("res://src/ui/scrap_frame.gd")
+const AimReticle := preload("res://src/ui/aim_reticle.gd")
+const Bindings := preload("res://src/core/bindings.gd")
 
 # The controls as a picture: the left half of a keyboard and a mouse, every key the
 # game uses drawn in place with its cap, and the rest left blank so the shape reads as
@@ -16,6 +18,9 @@ const ScrapFrame := preload("res://src/ui/scrap_frame.gd")
 # in its class colour and wear their ability icon and two words. Tab's first page and
 # the title's Help page both draw this. The board is scrap (scrap_frame.gd): each key a
 # cut plate, its cap from a mismatched set, the mouse taped together, its words on tags.
+# The ultimate's key wears the crosshair's meter arc in its picture corner, full, gap at six
+# o'clock, so the arc a player sees round the crosshair is named here once, by its key and its
+# word, with no new word (PF-21, w37 film 071).
 
 # The number row carries the pick keys 1, 2 and 3 (design-v3/SKILL-BAR.md section 5).
 const ROWS := [
@@ -42,6 +47,8 @@ const EXTRA_FONT := UiTokens.CAPTION
 const MOUSE_GAP := 34.0
 const MOUSE_SIZE := Vector2(132.0, 206.0)
 const MOUSE_LABEL := 112.0
+const ARC_R := 17.0
+const ARC_W := 4.0
 
 var def: Resource
 var _keys := {}
@@ -153,7 +160,9 @@ func _key(key: String, rect: Rect2) -> void:
 	var cap := Keycap.size_of(key, CAP)
 	Keycap.draw(self, rect.position + Vector2(6.0 + cap.x * 0.5, 6.0 + CAP * 0.5), key, ScrapFrame.wear(tone, key.hash()), CAP)
 	var icon_rect := Rect2(Vector2(rect.end.x - 6.0 - ICON, rect.position.y + 4.0), Vector2(ICON, ICON))
-	if entry["icon"] != "":
+	if key == arc_key():
+		_meter_arc(icon_rect, tone, entry["icon"])
+	elif entry["icon"] != "":
 		draw_texture_rect(Icons.texture(entry["icon"]), icon_rect, false, Icons.tint(entry["icon"], tone))
 	elif ARROWS.has(key):
 		_arrow(icon_rect.get_center(), ARROWS[key], tone)
@@ -174,6 +183,24 @@ func _key(key: String, rect: Rect2) -> void:
 	draw_texture_rect(Icons.texture(entry["extra_icon"]), Rect2(side.get_center() - Vector2(ICON * 0.5, 30.0), Vector2(ICON, ICON)), false,
 		Icons.tint(entry["extra_icon"], tone))
 	_words(entry["extra"], _label_rect(side, half), tone)
+
+
+# The crosshair's meter as the reticle draws it, full: a 270-degree arc with its gap at six
+# o'clock round the small aim ring, or round the pilot's ultimate picture when there is one.
+func _meter_arc(spot: Rect2, tone: Color, icon: String) -> void:
+	var centre := spot.get_center() + Vector2(0.0, 2.0)
+	var span := AimReticle.meter_span(1.0)
+	draw_arc(centre, ARC_R, span.x, span.y, 32, AimReticle.meter_fill_color(tone), ARC_W)
+	if icon != "":
+		var inner := Rect2(centre - Vector2(ARC_R, ARC_R) * 0.6, Vector2(ARC_R, ARC_R) * 1.2)
+		draw_texture_rect(Icons.texture(icon), inner, false, Icons.tint(icon, tone))
+	else:
+		draw_arc(centre, AimReticle.RING * ARC_R / AimReticle.meter_radius(), 0.0, TAU, 24, tone, 2.0)
+
+
+# The key that wears the meter arc: the ultimate's, wherever it is bound.
+static func arc_key() -> String:
+	return Bindings.glyph("ultimate")
 
 
 # The words sit under the cap and icon, in the tile's lower half.

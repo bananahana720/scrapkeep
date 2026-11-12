@@ -400,16 +400,19 @@ func _q_drawn(seen: Dictionary) -> int:
 
 func _check_set_piece() -> void:
 	var meter = _game.player.abilities.meter
-	var before: float = _bar().modulate.a
+	var before: float = _bar().self_modulate.a
 	meter.locked = true
 	_refresh()
-	var during: float = _bar().modulate.a
+	var during: float = _bar().self_modulate.a
 	meter.locked = false
 	meter.value = 0.0
 	_refresh()
-	var after: float = _bar().modulate.a
-	_report("set piece dims", is_equal_approx(before, 1.0) and is_equal_approx(during, 0.4) and is_equal_approx(after, 1.0),
-		"bar alpha %.2f before, %.2f during the set piece, %.2f after" % [before, during, after])
+	var after: float = _bar().self_modulate.a
+	# Re-pinned 2026-11-12 (W1-06, PF-21, w37 film 059): the marks dim through self_modulate and solid
+	# plates stay behind them, so the row never fades out. Was the whole bar's modulate at 0.4.
+	_report("set piece dims", is_equal_approx(before, 1.0) and is_equal_approx(during, 0.4) and is_equal_approx(after, 1.0)
+			and is_equal_approx(_bar().modulate.a, 1.0),
+		"bar marks alpha %.2f before, %.2f during the set piece, %.2f after" % [before, during, after])
 	_game.player.abilities.meter = null
 	_refresh()
 

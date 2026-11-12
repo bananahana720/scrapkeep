@@ -802,6 +802,9 @@ func slot_key(name: String) -> String:
 # W1's Ability slots contract: one record per slot, in SLOTS order. cooldown_frac is the
 # share of the recharging charge still to go, 0 when every charge is in. number is 1 to 3 on
 # the bar and 0 for a chip; group is bar or chip; selected and select_left are the pick.
+# pool is the slot whose charges this one spends (itself unless the row names another), and
+# refill says how that pool comes back: "time" for a cooldown, "contact" for pressure that
+# only rolling and contact refill, so the bar can show an empty charge instead of a clock.
 func slots() -> Array:
 	var out := []
 	for name in SLOTS:
@@ -814,5 +817,6 @@ func slots() -> Array:
 			"charges": s.charges, "max_charges": s.max_charges, "state": state_of(name),
 			"gauge": s.gauge.fraction() if s.gauge != null else (cast_fraction() if name == casting else 0.0),
 			"number": int(NUMBER.get(name, 0)), "group": "bar" if name in BAR else "chip",
-			"selected": name == selected, "select_left": select_left() if name == selected else 0.0})
+			"selected": name == selected, "select_left": select_left() if name == selected else 0.0,
+			"pool": pool_of(name), "refill": "contact" if ABILITIES.get(id_of(pool_of(name)), {}).has("pressure") else "time"})
 	return out
