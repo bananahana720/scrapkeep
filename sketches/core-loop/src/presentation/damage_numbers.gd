@@ -38,6 +38,7 @@ const BIG_FROM := 40.0
 const BIG_STEP := 6.0
 const MEGA_FONT := 60
 const RISE := 46.0
+const OUTLINE_MIN := 6
 const FADE_FROM := 0.6
 
 var project: Callable
@@ -74,6 +75,11 @@ static func is_crit(result: Dictionary, body_plating: float) -> bool:
 	var dealt := float(result.get("base_dealt", result.get("dealt", 0.0)))
 	var weak := String(result.get("part", "")) != "" and float(result.get("plating", 0.0)) < body_plating
 	return weak or dealt > float(result.get("punch", dealt)) * 1.01
+
+
+# The ink outline's width for a figure of `size` points: three tenths of the size, never under OUTLINE_MIN.
+static func outline_px(size: int) -> int:
+	return maxi(OUTLINE_MIN, roundi(size * 0.3))
 
 
 static func font_size(value: float, crit := false) -> int:
@@ -154,7 +160,8 @@ func _draw() -> void:
 		var text := str(maxi(1, roundi(number["value"])))
 		var font := UiFonts.mono()
 		var spot: Vector2 = p + Vector2(-font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, size).x * 0.5, -RISE * t)
-		var shade := Palette.CHARCOAL
-		shade.a = colour.a
-		draw_string(font, spot + Vector2(1.5, 1.5), text, HORIZONTAL_ALIGNMENT_LEFT, -1, size, shade)
+		# An ink outline under the figure (FX-02), so a copper number reads on pale sand as on charcoal.
+		var ink := Palette.CHARCOAL
+		ink.a = colour.a
+		draw_string_outline(font, spot, text, HORIZONTAL_ALIGNMENT_LEFT, -1, size, outline_px(size), ink)
 		draw_string(font, spot, text, HORIZONTAL_ALIGNMENT_LEFT, -1, size, colour)

@@ -6,6 +6,8 @@ const Rows := preload("res://src/presentation/flourish_rows.gd")
 const FlourishPlayer := preload("res://src/presentation/flourish_player.gd")
 const ScreenRegions := preload("res://src/ui/screen_regions.gd")
 const T := preload("res://tests/support/t.gd")
+const Worlds := preload("res://src/core/worlds.gd")
+const TitleIntros := preload("res://src/presentation/title_intros.gd")
 
 # World 1's stage beats (unit 4) and the shared flourish player.
 #   rows     every row's full form is 6 s or less and its short form 2.5 s or less; piece kinds and
@@ -17,6 +19,9 @@ const T := preload("res://tests/support/t.gd")
 #            nothing, one after ends it and is not consumed; a paused tree hides it and stops its
 #            clock; the run's "flourishes" meta records it; a second run plays the short form
 #   order    a higher row ends a lower one; an equal or lower one waits and plays after
+#   once     Brindle's rout is named once (ruling cx, FX-08): only the rout row's stamp says
+#            ROUTED; the victory heading, the shift log after it and its lines never name the rout or
+#            the Admiral; the arrival card shares no stat with the title reel's card
 #   hooks    rescue_completed("rivet"), the meltdown Warden's engage, world 1's last unseal and
 #            world 2's entry each start their row, and the title screen ends a row and its queue
 # Evidence limit: headless rules and layout rectangles, not how it reads at the sitting.
@@ -39,6 +44,7 @@ func _frames(count: int) -> void:
 
 func _run() -> void:
 	_rows()
+	_named_once()
 	_seeds()
 	_budget()
 	_game = Game.new()
@@ -87,6 +93,20 @@ func _rows() -> void:
 
 func _in_piece(piece: Dictionary, line: String) -> bool:
 	return str(piece.get("text", "")).contains(line) or str(piece.get("texts", "")).contains(line) or str(piece.get("card", "")).contains(line)
+
+
+func _named_once() -> void:
+	var boss: Dictionary = Worlds.BOSSES["brindle"]
+	var stamps := Rows.pieces("brindle_rout", false).filter(func(p): return p.kind == "stamp")
+	_t.eq("23 the rout row stamps ROUTED", stamps.map(func(p): return p.text), ["ROUTED"])
+	var after := [String(boss.title), String(boss.victory)]
+	after.append_array(Rows.lines("spillway_clear"))
+	var named := after.filter(func(line): return String(line).to_lower().contains("rout") or String(line).to_lower().contains("admiral"))
+	_t.eq("24 the victory card and the shift log never name the rout again", named, [])
+	var title_card: Array = TitleIntros.row("brindle").card
+	var arrival: Array = Rows.pieces("brindle_arrival", false).filter(func(p): return p.kind == "card")[0].card
+	var shared := arrival.slice(2).filter(func(field): return field in title_card.slice(2))
+	_t.eq("25 the arrival card's stats are not the title reel's", shared, [])
 
 
 func _seeds() -> void:

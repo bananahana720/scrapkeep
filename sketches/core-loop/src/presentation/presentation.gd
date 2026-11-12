@@ -105,6 +105,7 @@ func setup(ctx_ref) -> void:
 	machine_fx = MachineFx.new()
 	add_child(machine_fx)
 	machine_fx.setup(ctx)
+	machine_fx.kill_mark = vfx.kill_mark
 	player_fx = PlayerFx.new()
 	add_child(player_fx)
 	player_fx.setup(ctx, vfx)

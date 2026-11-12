@@ -146,6 +146,26 @@ static func tag(what: String) -> String:
 	return String(TAGS.get(what, ""))
 
 
+# The detour row: a dim second row under the goal that names a detour the run pays for, so the
+# plate never reads as a hallway to the Warden (gameplay critique finding 8). It names the stage's
+# caged pilot while one waits, by the cage's own prompt, else the nearest side site not yet started,
+# by what finishes it (activity_words); its edge marker is the cage's or the site's own. It stands
+# only under the rows in DETOUR_UNDER: once the Warden is engaged the fight's plate takes the room.
+const DETOUR_UNDER := ["find_warden"]
+const CAGE_WORDS := "Free the caged pilot"
+
+
+static func detour_shown(id: String) -> bool:
+	return id in DETOUR_UNDER
+
+
+# The cage's row, from the prompt its own label shows ("free the runner"), capitalised.
+static func cage_words(prompt: String) -> String:
+	if prompt == "" or prompt.split(" ", false).size() > MAX_WORDS:
+		return CAGE_WORDS
+	return prompt.left(1).to_upper() + prompt.substr(1)
+
+
 # The row id the plate shows for this reading, or "" when it shows nothing.
 static func choose(reading: Dictionary) -> String:
 	var r: Dictionary = EMPTY_READING.duplicate()

@@ -25,6 +25,7 @@ import bpy
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 import common
+import crew
 import polish
 from common import Part
 
@@ -47,10 +48,7 @@ b = Part("MagTrapperBody")
 # Crew: a barrel torso (rust, flashes at runtime), a round head, a charcoal snout and ears.
 b.cyl("fleet_paint", 0.66, 0.80, 1.1, segs=10, loc=(0, 0, -0.55))
 b.cyl("fleet_paint", 0.80, 0.70, 1.1, segs=10, loc=(0, 0, 0.55))
-b.uv("fleet_paint", 0.38, u=10, v=6, loc=(0, 0, 1.3))
-b.box("paint", (0.26, 0.30, 0.22), loc=(0, -0.38, 1.22), color=CHAR)
-for s in (-1, 1):
-    b.cyl("paint", 0.13, 0.0, 0.34, segs=6, loc=(s * 0.2, 0, 1.62), color=CHAR)
+crew.gauge_head(b, (0, 0, 1.3), 0.38)
 b.cyl("paint", 0.81, 0.81, 0.12, segs=10, loc=(0, 0, 0.1), color=CHAR)  # strap
 b.box("paint", (0.36, 0.06, 0.24), loc=(0, -0.79, 0.3), color=BRASS)  # the one brass tag
 # Cart: bed, four boards, hitch, axle and two big wheels, all under the discs' footprint.
@@ -66,6 +64,9 @@ for s in (-1, 1):
           rot=(0, HALF_PI, 0), color=WORN)
 b.rod("paint", (-1.24, cy, GROUND + 0.56), (1.24, cy, GROUND + 0.56), 0.08, segs=6, color=WORN)
 b.box("paint", (0.20, 0.60, 0.14), loc=(0, 0.98, PIVOT[2] - 0.20), color=CART)  # hitch
+# The old works' two marks, cast in under the Fleet's paint: the crew number and HIRED.
+crew.cast_number(b, "paint", "18", (0, -0.74, 0.74), (0, -1, 0), 0.26)
+crew.hired(b, "paint", (0, 0.77, -0.3), (0, 1, 0), 0.11)
 body = b.to_object(parent=root)
 
 # --- Stack: two stored discs and one independently hoisted disc ---------------------------------
