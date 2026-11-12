@@ -36280,7 +36280,7 @@
    "exception": {
     "tris": 1100,
     "verts": 2100,
-    "draws": 3
+    "draws": 4
    },
    "exception_why": "Opt-in device with independently controlled state parts; existing prop class covers one small static mesh. Limits asserted by device_props_asset_test."
   },
@@ -36419,7 +36419,7 @@
    "exception": {
     "tris": 1100,
     "verts": 2100,
-    "draws": 5
+    "draws": 6
    },
    "exception_why": "Opt-in device with independently controlled state parts; existing prop class covers one small static mesh. Limits asserted by device_props_asset_test."
   },

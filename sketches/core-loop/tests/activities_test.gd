@@ -196,6 +196,7 @@ func _lit() -> void:
 	var cap = _site("ambush_altar").cap
 	_t.check("the altar cap is brass", cap != null and _rgb(cap.material_override.albedo_color) == _rgb(Palette.BRASS),
 		"cap %s" % [cap.material_override.albedo_color if cap != null else null])
+	_check_site_models()
 	# Views of one row share their meshes and materials (the stage entry frame built them per view); a
 	# stage modifier's sight scale stretches only its own column.
 	var view_a := ActivityView.new()
@@ -232,6 +233,50 @@ func _lit() -> void:
 	bet.free()
 
 
+# W1-22: the park's altar and cracked pocket draw their models, not primitives, over the colliders
+# they always had, and the pocket's shell fits its colliders (its inner back face on the back wall's).
+func _check_site_models() -> void:
+	var altar: Node3D = _site("ambush_altar")
+	_t.check("the altar wears its model", altar.find_child("AltarPost", false, false) != null
+		and altar.find_child("AltarBand", false, false) != null and altar.cap.name == "AltarCap" and _primitives(altar, altar.view) == 0,
+		"primitives %d" % _primitives(altar, altar.view))
+	var cache: Node3D = _site("cracked_cache")
+	var shell: MeshInstance3D = cache.find_child("CacheShell", false, false)
+	_t.check("the cache wears its model", shell != null and cache.wall.find_child("CacheWall", false, false) != null
+		and cache.find_child("CachePedestal", false, false) != null and cache.find_child("CacheRoof", true, false) == null
+		and _primitives(cache, cache.view) == 0, "primitives %d" % _primitives(cache, cache.view))
+	var boxes := []
+	for shape: CollisionShape3D in cache.find_children("*", "CollisionShape3D", true, false):
+		boxes.append([(shape.shape as BoxShape3D).size, (cache.global_transform.affine_inverse() * shape.global_transform).origin])
+	var tall := Activities.WALL_HEIGHT + Activities.WALL_SINK
+	var mid := tall * 0.5 - Activities.WALL_SINK
+	var expected := [
+		[Vector3(12, tall, 1), Vector3(0, mid, 0)],
+		[Vector3(1, tall, Activities.WALL_DEPTH), Vector3(-6.5, mid, -Activities.WALL_DEPTH * 0.5)],
+		[Vector3(1, tall, Activities.WALL_DEPTH), Vector3(6.5, mid, -Activities.WALL_DEPTH * 0.5)],
+		[Vector3(14, tall, 1), Vector3(0, mid, -Activities.WALL_DEPTH - 0.5)],
+	]
+	var same := boxes.size() == expected.size()
+	for i in mini(boxes.size(), expected.size()):
+		same = same and boxes[i][0].is_equal_approx(expected[i][0]) and boxes[i][1].is_equal_approx(expected[i][1])
+	_t.check("the cache keeps its four wall colliders as built", same, "%s" % [boxes])
+	if shell != null:
+		var box: AABB = shell.transform * shell.mesh.get_aabb()
+		_t.check("the cache's shell fits its colliders", absf(box.position.y + Activities.WALL_SINK) < 0.05
+			and absf(box.end.y - Activities.WALL_HEIGHT) < 0.05 and absf(box.position.x + 7.0) < 0.15
+			and box.position.z > -Activities.WALL_DEPTH - 1.0 and box.position.z < -Activities.WALL_DEPTH - 0.5 and box.end.z > 0.0 and box.end.z < 0.6,
+			"shell %s" % [box])
+
+
+# Primitive meshes the site draws, less its beacon view and a pocket interior (W1-23's family).
+func _primitives(node: Node, skip: Node) -> int:
+	var n := 0
+	for view: MeshInstance3D in node.find_children("*", "MeshInstance3D", true, false):
+		if view.mesh is PrimitiveMesh and not skip.is_ancestor_of(view) and not String(node.get_path_to(view)).begins_with("Interior_"):
+			n += 1
+	return n
+
+
 func _no_hazard_surface(node: Node) -> bool:
 	for view: MeshInstance3D in node.find_children("*", "MeshInstance3D", true, false):
 		if view.material_override is BaseMaterial3D:
@@ -244,7 +289,7 @@ func _no_hazard_surface(node: Node) -> bool:
 
 func _has_bone_band(node: Node) -> bool:
 	for view: MeshInstance3D in node.find_children("*", "MeshInstance3D", true, false):
-		if view.mesh is BoxMesh and (view.mesh as BoxMesh).size == Vector3(1.42, 0.12, 1.42):
+		if view.name == "AltarBand" or view.mesh is BoxMesh and (view.mesh as BoxMesh).size == Vector3(1.42, 0.12, 1.42):
 			return view.material_override is StandardMaterial3D \
 				and view.material_override.resource_name == "altar_bone_band" \
 				and _rgb(view.material_override.albedo_color) == _rgb(Palette.SAND)

@@ -8,14 +8,13 @@ const Bet := preload("res://src/world/bet_crate.gd")
 const Altar := preload("res://src/world/ambush_altar.gd")
 const Palette := preload("res://src/core/palette.gd")
 const ASSETS := [
-	[Cache, "cracked_cache", ["CacheShell", "CacheWall", "CacheChest", "CacheLid", "CachePedestal"], 5],
+	[Cache, "cracked_cache", ["CacheShell", "CacheRoof", "CacheWall", "CacheChest", "CacheLid", "CachePedestal"], 6],
 	[Bet, "bet_crate", ["BetHousing", "OddsDial", "OddsNeedle"], 3],
-	[Altar, "ambush_altar", ["AltarPost", "AltarCap", "AltarRing"], 3],
+	[Altar, "ambush_altar", ["AltarPost", "AltarCap", "AltarBand", "AltarRing"], 4],
 ]
 # VX8: only an attack wears hazard stripes, so the altar keeps no floor ring. The GLB still ships
-# the part; the runtime leaves it out. The bone band is the one box the dressed altar may carry.
+# the part; the runtime leaves it out. The bone band is the model's own (W1-22, 12 Nov 2026).
 const UNUSED_RUNTIME := {"ambush_altar": ["AltarRing"]}
-const ALTAR_BAND := Vector3(1.42, 0.12, 1.42)
 var failures := 0
 var game
 
@@ -121,7 +120,7 @@ func _run() -> void:
 		_check(device.find_children("*", "CollisionObject3D", true, false).size() == (5 if device is Cache else 0), row[1] + " physics body count unchanged")
 		var boxes := 0
 		for view: MeshInstance3D in device.find_children("*", "MeshInstance3D", true, false):
-			if view.mesh is BoxMesh and not (row[1] == "ambush_altar" and (view.mesh as BoxMesh).size == ALTAR_BAND):
+			if view.mesh is BoxMesh:
 				boxes += 1
 		_check(boxes == 0, row[1] + " builds no greybox boxes")
 		for part_name in row[2]:

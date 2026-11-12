@@ -58,7 +58,7 @@ var _roof: GeometryInstance3D
 var _pedestals: Array = []
 var _inside: Array = []
 const MODEL := "res://assets/models/world_one/cracked_cache.glb"
-const REQUIRED := ["CacheShell", "CacheWall", "CacheChest", "CacheLid", "CachePedestal"]
+const REQUIRED := ["CacheShell", "CacheRoof", "CacheWall", "CacheChest", "CacheLid", "CachePedestal"]
 static var _shared: Array = []
 # VX3: the shell and chest wear the workshop finish (concrete and painted metal), whose
 # chipped edges give the pocket a lighter rim. The finish multiplies the vertex colours, so the
@@ -130,7 +130,7 @@ func _build_pedestals(parts: Array) -> void:
 		if parts.is_empty():
 			cylinder(0.8, 0.6, Vector3.UP * 0.3, Palette.solid(Palette.CHARCOAL), pedestal)
 		else:
-			_model_part(parts, "CachePedestal", pedestal)
+			_attach(parts, "CachePedestal", pedestal)
 		var gem := MeshInstance3D.new()
 		var sm := SphereMesh.new()
 		sm.radius = 0.45
@@ -315,14 +315,15 @@ func _build_model(parts: Array) -> void:
 		_collision_box(Vector3(1.0, tall, HALF_D * 2.0 + 2.0), Vector3(s * (HALF_W + 0.5), mid, 0.0))
 	_collision_box(Vector3(HALF_W * 2.0 + 2.0, 1.0, HALF_D * 2.0 + 2.0), Vector3(0.0, HEIGHT + 0.5, 0.0))
 	_wall = _collision_box(Vector3(HALF_W * 2.0, tall, 1.0), Vector3(0.0, mid, HALF_D + 0.5))
-	var panel := _model_part(parts, "CacheWall", _wall)
+	var panel := _attach(parts, "CacheWall", _wall)
 	panel.position = Vector3.ZERO
-	_model_part(parts, "CacheShell")
+	_attach(parts, "CacheShell", self)
+	_attach(parts, "CacheRoof", self)
 	var chest := Vector3(0.0, 0.0, -HALF_D + 1.2)
 	chest.y = ground_y(chest)
-	var body := _model_part(parts, "CacheChest")
+	var body := _attach(parts, "CacheChest", self)
 	body.position = chest
-	_lid = _model_part(parts, "CacheLid")
+	_lid = _attach(parts, "CacheLid", self)
 	_lid.position = chest + Vector3.UP * 1.35
 
 
@@ -427,7 +428,13 @@ static func _parts() -> Array:
 	return _shared
 
 
-func _model_part(parts: Array, part_name: String, parent: Node3D = self) -> MeshInstance3D:
+# One named part of the model on parent, or null when the model is missing. The park's cracked
+# pockets (activities.gd) wear the shell, wall and pedestal over colliders of their own.
+static func model_part(part_name: String, parent: Node3D) -> MeshInstance3D:
+	return _attach(_parts(), part_name, parent)
+
+
+static func _attach(parts: Array, part_name: String, parent: Node3D) -> MeshInstance3D:
 	for part in parts:
 		if part.name == part_name:
 			var view := MeshInstance3D.new()

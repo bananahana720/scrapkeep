@@ -19,6 +19,8 @@ const StakeDevices := preload("res://src/world/stake_devices.gd")
 const PocketDraw := preload("res://src/world/pockets/pocket_draw.gd")
 const PocketLibrary := preload("res://src/world/pockets/pocket_library.gd")
 const Secrets := preload("res://src/core/secrets.gd")
+const AmbushAltar := preload("res://src/world/ambush_altar.gd")
+const CrackedCache := preload("res://src/world/cracked_cache.gd")
 const SfxBank := preload("res://src/presentation/sfx_bank.gd")
 const WorldFx := preload("res://src/presentation/world_fx/world_fx.gd")
 const WorldFxAnchor := preload("res://src/presentation/world_fx/world_fx_anchor.gd")
@@ -934,6 +936,9 @@ func _activate_interior_collision(s: Site) -> void:
 
 
 func _build_altar(s: Site) -> void:
+	s.cap = AmbushAltar.dress(s)
+	if s.cap != null:
+		return
 	_mesh_cylinder(s, 0.45, 3.2, Vector3.UP * 1.6, _solid(Palette.VERDIGRIS))
 	s.cap = _mesh_box(s, Vector3(1.4, 0.6, 1.4), Vector3.UP * 3.5, _solid(Palette.BRASS))
 	_mesh_box(s, Vector3(1.42, 0.12, 1.42), Vector3.UP * 3.22, _solid(Palette.SAND))
@@ -945,6 +950,44 @@ func _build_cache(s: Site) -> void:
 		s.rotation.y = atan2(face.x, face.y)
 		s.global_position += s.global_basis.z * CACHE_LANE_OFFSET
 		s.global_position.y = ctx.terrain.height(s.global_position.x, s.global_position.z)
+	var local := Vector3(0.0, 0.0, -PEDESTAL_BACK)
+	s.pedestal = s.to_global(local)
+	s.pedestal.y = ctx.terrain.height(s.pedestal.x, s.pedestal.z)
+	s.fired_glow = StandardMaterial3D.new()
+	s.fired_glow.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
+	s.fired_glow.albedo_color = Color.BLACK
+	s.fired_glow.specular_mode = BaseMaterial3D.SPECULAR_DISABLED
+	if not _model_cache(s):
+		_greybox_cache(s)
+
+
+# The pocket wears the cracked cache's model over colliders of its own, as built: the shell without
+# its roof, stretched to this pocket's sink and depth (its inner back face on the back collider's),
+# the fracture panel on the wall's body and the model's pedestal. False, with nothing built, when the
+# model is missing.
+func _model_cache(s: Site) -> bool:
+	var shell := CrackedCache.model_part("CacheShell", s)
+	if shell == null:
+		return false
+	var tall := WALL_HEIGHT + WALL_SINK
+	var mid := tall * 0.5 - WALL_SINK
+	var rise := tall / (CrackedCache.HEIGHT + CrackedCache.SINK)
+	var deep := WALL_DEPTH / (CrackedCache.HALF_D * 2.0 + 0.5)
+	var front := CrackedCache.HALF_D + 0.5
+	shell.transform = Transform3D(Basis.from_scale(Vector3(1.0, rise, deep)),
+		Vector3(0.0, WALL_HEIGHT - CrackedCache.HEIGHT * rise, -front * deep)) * shell.transform
+	shell.material_overlay = s.fired_glow
+	s.wall = _wall_body(s, Vector3(WALL_HALF_W * 2.0, tall, 1.0), Vector3(0.0, mid, 0.0))
+	var panel := CrackedCache.model_part("CacheWall", s.wall)
+	panel.transform = Transform3D(Basis.from_scale(Vector3(1.0, rise, 1.0)) * panel.basis, Vector3.ZERO)
+	for side in [-1.0, 1.0]:
+		_wall_body(s, Vector3(1.0, tall, WALL_DEPTH), Vector3(side * (WALL_HALF_W + 0.5), mid, -WALL_DEPTH * 0.5))
+	_wall_body(s, Vector3(WALL_HALF_W * 2.0 + 2.0, tall, 1.0), Vector3(0.0, mid, -WALL_DEPTH - 0.5))
+	CrackedCache.model_part("CachePedestal", s).position = s.to_local(s.pedestal)
+	return true
+
+
+func _greybox_cache(s: Site) -> void:
 	var concrete := Palette.striped(Palette.VERDIGRIS, Palette.CHARCOAL)
 	var tall := WALL_HEIGHT + WALL_SINK
 	var mid := tall * 0.5 - WALL_SINK
@@ -957,18 +1000,11 @@ func _build_cache(s: Site) -> void:
 	for side in [-1.0, 1.0]:
 		_mesh_box(s, Vector3(1.0, tall, WALL_DEPTH), Vector3(side * (WALL_HALF_W + 0.5), mid, -WALL_DEPTH * 0.5), concrete, true)
 	var back := _mesh_box(s, Vector3(WALL_HALF_W * 2.0 + 2.0, tall, 1.0), Vector3(0.0, mid, -WALL_DEPTH - 0.5), concrete, true)
-	var local := Vector3(0.0, 0.0, -PEDESTAL_BACK)
-	s.pedestal = s.to_global(local)
-	s.pedestal.y = ctx.terrain.height(s.pedestal.x, s.pedestal.z)
 	_mesh_cylinder(s, 0.8, 0.6, s.to_local(s.pedestal) + Vector3.UP * 0.3, _solid(Palette.CHARCOAL))
 	# Finish only: the same workshop materials the Spillway props wear; colliders stay as built.
 	load("res://src/presentation/spillway_scenery.gd").dress_props(s, s.view)
 	# The dressed finish shader carries no emission, so the glow is this site's own additive
-	# overlay on its back wall, dark until the wall is fired.
-	s.fired_glow = StandardMaterial3D.new()
-	s.fired_glow.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
-	s.fired_glow.albedo_color = Color.BLACK
-	s.fired_glow.specular_mode = BaseMaterial3D.SPECULAR_DISABLED
+	# overlay on its back wall (the model's: its shell), dark until the wall is fired.
 	(back.get_child(1) as GeometryInstance3D).material_overlay = s.fired_glow
 
 
@@ -1161,6 +1197,13 @@ func _mesh_box(parent: Node3D, size: Vector3, at: Vector3, mat: Material, solid 
 		mesh.position = at
 		parent.add_child(mesh)
 		return mesh
+	var body := _wall_body(parent, size, at)
+	body.add_child(mesh)
+	return body
+
+
+# A bare wall collider: the box shape is its first child, any drawn face comes after.
+func _wall_body(parent: Node3D, size: Vector3, at: Vector3) -> StaticBody3D:
 	var body := StaticBody3D.new()
 	var shape := CollisionShape3D.new()
 	var bs := BoxShape3D.new()
@@ -1168,7 +1211,6 @@ func _mesh_box(parent: Node3D, size: Vector3, at: Vector3, mat: Material, solid 
 	shape.shape = bs
 	body.physics_material_override = _wall_material()
 	body.add_child(shape)
-	body.add_child(mesh)
 	body.position = at
 	parent.add_child(body)
 	return body
