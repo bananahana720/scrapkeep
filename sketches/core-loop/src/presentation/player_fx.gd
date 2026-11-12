@@ -79,9 +79,12 @@ const ONBEAT_GROW := 1.4
 # A read word's size (read_word: DENT, ZZAP!), on the same screen-share scale; it is the foe's,
 # so the build's might never grows it.
 const READ_SIZE := 0.8
-# How high over a foe its marks stack (machine_fx's stagger word at 3.2 m, the class icon at
-# 3.1 m, the interrupted star at 2.4 m), with room for the stagger word's own height.
-const STACK_TOP := 4.0
+# Where a foe's marks stack over its feet (stack_rect): the interrupted star at 2.4 m, the class
+# icon at 3.1 m and machine_fx's stagger word at 3.2 m, with room for that word's height (about
+# 1.1 m) and half its width.
+const STACK_LOW := 1.8
+const STACK_TOP := 3.8
+const STACK_HALF := 1.8
 const WORD_FONT_PATH := "res://assets/fonts/NotoSans-Bold.ttf"
 # Word size is screen height share: "size" 1.0 is WORD_SCREEN of the screen's height,
 # whatever the distance, so a word near the camera never swallows the ball.
@@ -764,26 +767,38 @@ func read_word(text: String, foe: Node3D, color: Color) -> bool:
 	var wide := width_px * label.pixel_size * tall / 0.7
 	# A pixel past the gap, as word() does: flush on the grown body's edge, rounding can touch it.
 	var gap := WORD_WARNING_GAP + 1.0
-	# The column over the foe is taken too: its class icon, the interrupted star and the stagger
-	# word stand there (STACK_TOP), and none of them is part of its body.
-	var beside := body.get_center().y
-	var top := foe.global_position + Vector3.UP * STACK_TOP
-	if not cam.is_position_behind(top):
-		body = body.expand(cam.unproject_position(top))
-	var mid := body.get_center()
 	var depth := maxf(-(cam.global_transform.affine_inverse() * foe.global_position).z, cam.near + 0.1)
+	var stack := stack_rect(foe, cam)
+	var whole := body.merge(stack) if stack.has_area() else body
 	var spots: Array = []
-	for s in [[Vector2(body.end.x + gap, beside), true], [Vector2(body.position.x - gap, beside), false],
-			[Vector2(mid.x - wide * 0.5, body.position.y - gap - tall * 0.6), true]]:
+	for s in [[Vector2(body.end.x + gap, body.get_center().y), true], [Vector2(body.position.x - gap, body.get_center().y), false],
+			[Vector2(whole.get_center().x - wide * 0.5, whole.position.y - gap - tall * 0.6), true]]:
 		spots.append([cam.project_position(s[0], depth), s[1]])
 	var avoid := _warnings().duplicate()
 	avoid.append(body.grow(WORD_WARNING_GAP))
+	if stack.has_area():
+		avoid.append(stack.grow(WORD_WARNING_GAP))
 	var pick := _pick_spot(cam, spots, width_px, READ_SIZE, label.pixel_size, avoid)
 	if pick < 0:
 		spawned["word_held"] = spawned.get("word_held", 0) + 1
 		return false
 	_stamp_word(slot, "read", text, spots[pick][0], spots[pick][1], width_px, READ_SIZE, color)
 	return true
+
+
+# The screen rect of the marks that stack over a foe and are not part of its body: the
+# interrupted star, the class icon and the stagger word, STACK_LOW to STACK_TOP over its feet and
+# STACK_HALF either side (the stagger word is the widest). Empty when it is behind the camera.
+static func stack_rect(foe: Node3D, cam: Camera3D) -> Rect2:
+	var low := foe.global_position + Vector3.UP * STACK_LOW
+	var high := foe.global_position + Vector3.UP * STACK_TOP
+	if cam.is_position_behind(low) or cam.is_position_behind(high):
+		return Rect2()
+	var side := cam.global_basis.x * STACK_HALF
+	var span := Rect2(cam.unproject_position(low), Vector2.ZERO)
+	for p in [low - side, low + side, high - side, high + side]:
+		span = span.expand(cam.unproject_position(p))
+	return span
 
 
 # A pooled word that is not showing, else the first of the pool.

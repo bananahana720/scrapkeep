@@ -204,16 +204,27 @@ func _run() -> void:
 		w["t"] = 1.0
 	fx._last_word = -1.0e9
 	fx._word_seen.clear()
-	var body := PlayerFx.foe_rect(foe, wcam).expand(wcam.unproject_position(foe.global_position + Vector3.UP * PlayerFx.STACK_TOP))
+	var body := PlayerFx.foe_rect(foe, wcam)
+	var stack := PlayerFx.stack_rect(foe, wcam)
 	fx._last_word = fx._clock
 	var gap_said: bool = not fx.word("vault", ball + Vector3(-3, 2, 0))
 	var read_said: bool = fx.read_word("DENT", foe, Color.WHITE)
 	var read: Dictionary = fx._words_by_id("read")
 	var read_rect := Rect2() if read.is_empty() else PlayerFx._word_rect(wcam, read["at"], float(read["away"]) > 0.0, float(read["width_px"]), float(read["size"]), 0.01)
 	t.check("a read word speaks inside the gap, beside its foe, clear of it and the marks stacked over it, inside the safe area",
-		gap_said and read_said and read_rect.has_area() and not read_rect.intersects(body.grow(PlayerFx.WORD_WARNING_GAP)) and safe.encloses(read_rect)
+		gap_said and read_said and read_rect.has_area() and not read_rect.intersects(body.grow(PlayerFx.WORD_WARNING_GAP))
+		and stack.has_area() and not read_rect.intersects(stack.grow(PlayerFx.WORD_WARNING_GAP)) and safe.encloses(read_rect)
 		and is_equal_approx(float(read["size"]), PlayerFx.READ_SIZE) and is_equal_approx(fx._last_word, fx._clock) and (read["node"] as Label3D).render_priority == PlayerFx.RENDER_PRIORITY,
 		"said %s/%s at %s foe %s" % [gap_said, read_said, read_rect, body])
+	# Every pooled slot showing: the read waits rather than cut a live word short.
+	var live: Array = []
+	for w in fx._words:
+		live.append(w["t"])
+		w["t"] = 0.5
+	var busy_said: bool = fx.read_word("ZZAP!", foe, Color.WHITE)
+	t.check("a read word with every slot showing waits and cuts no word short", not busy_said and fx._words.all(func(w): return w["t"] == 0.5))
+	for i in fx._words.size():
+		fx._words[i]["t"] = live[i]
 	shape.visible = false
 	t.check("a read word for a foe out of view stays unsaid, so the next hit asks again", not fx.read_word("ZZAP!", foe, Color.WHITE))
 	foe.free()

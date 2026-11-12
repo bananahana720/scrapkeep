@@ -90,13 +90,17 @@ static func notch_points(toward: Vector2, view: Vector2) -> PackedVector2Array:
 
 
 func _draw() -> void:
+	if alpha > 0.001:
+		_draw_bands()
+	# Over the bands, so the flash never washes it.
 	if _notch_left > 0.0:
 		var wedge := notch_points(direction, size)
 		draw_colored_polygon(wedge, UiTokens.INK)
 		wedge.append(wedge[0])
 		draw_polyline(wedge, Color(color, 1.0), UiTokens.FOCUS_EDGE, true)
-	if alpha <= 0.001:
-		return
+
+
+func _draw_bands() -> void:
 	var w := size.x
 	var h := size.y
 	var band := minf(w, h) * BAND
