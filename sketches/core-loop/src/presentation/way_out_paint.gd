@@ -18,8 +18,9 @@ const Threat := preload("res://src/combat/threat_grammar.gd")
 # areas), over a charcoal keyline so it holds on sand, and it draws above the warning's own fill
 # and rails (Threat.LINE_PRIORITY), with no depth test, like every telegraph.
 
-# The first chevron's distance from the ball's centre, so none sits under the ball.
-const START_M := 1.3
+# Where the first chevron's tip may first show, from the ball's centre: past the ball's radius
+# (1 m) and the chevron's own sweep, so no chevron is drawn over the ball.
+const START_M := 1.9
 # Chevron spacing along the way, their half-span, how far their arms sweep back, and the stroke.
 const SPACING_M := 1.7
 const HALF_SPAN_M := 0.75
@@ -73,6 +74,7 @@ func setup(watch, ball_ref: Callable, ground_ref: Callable) -> void:
 
 func _process(delta: float) -> void:
 	if _watch == null or not ball.is_valid():
+		paint({}, Vector3.ZERO)
 		return
 	_clock += delta
 	paint(_watch.escape(), ball.call())
@@ -89,11 +91,19 @@ func paint(escape: Dictionary, at: Vector3) -> void:
 	visible = true
 	_mesh.clear_surfaces()
 	var strokes := strokes_for(at, dir, float(escape.get("metres", 0.0)), _clock)
+	# The keylines first, then the bone over them; each stroke's ground is read once, at its
+	# keyline's corners, and the bone lies on the same heights.
+	var fills: Array = []
 	_mesh.surface_begin(Mesh.PRIMITIVE_TRIANGLES)
-	for keyline in [true, false]:
-		for stroke in strokes:
-			_quad(stroke["from"], stroke["to"], stroke["width"] + (KEYLINE_M * 2.0 if keyline else 0.0),
-				Color(Palette.CHARCOAL if keyline else Palette.SAND, stroke["alpha"]), KEYLINE_M if keyline else 0.0)
+	for stroke in strokes:
+		var keyline := _corners(stroke["from"], stroke["to"], stroke["width"] + KEYLINE_M * 2.0, KEYLINE_M)
+		var heights: Array[float] = []
+		for p in keyline:
+			heights.append(_height(p) + LIFT_M)
+		_tri(keyline, heights, Color(Palette.CHARCOAL, stroke["alpha"]))
+		fills.append([_corners(stroke["from"], stroke["to"], stroke["width"], 0.0), heights, Color(Palette.SAND, stroke["alpha"])])
+	for fill in fills:
+		_tri(fill[0], fill[1], fill[2])
 	_mesh.surface_end()
 
 
@@ -108,8 +118,8 @@ static func strokes_for(at: Vector3, dir: Vector3, metres: float, clock: float) 
 	var shift := fposmod(clock * MARCH_MPS, SPACING_M)
 	var reach := START_M - SPACING_M + shift
 	while reach <= metres:
-		if reach >= START_M - SPACING_M * FADE:
-			var fade_in := clampf((reach - (START_M - SPACING_M * FADE)) / (SPACING_M * FADE), 0.0, 1.0)
+		if reach >= START_M:
+			var fade_in := clampf((reach - START_M) / (SPACING_M * FADE), 0.0, 1.0)
 			var fade_out := clampf((metres - reach) / (SPACING_M * FADE), 0.0, 1.0)
 			var alpha := minf(fade_in, fade_out)
 			if alpha > 0.0:
@@ -122,19 +132,20 @@ static func strokes_for(at: Vector3, dir: Vector3, metres: float, clock: float) 
 	return out
 
 
-# One flat stroke as a quad on the ground, `width` wide, its ends pushed out by `cap`.
-func _quad(from: Vector3, to: Vector3, width: float, color: Color, cap: float) -> void:
+# One flat stroke's four corners on the ground plane, `width` wide, its ends pushed out by `cap`.
+static func _corners(from: Vector3, to: Vector3, width: float, cap: float) -> Array[Vector3]:
 	var along := (to - from).normalized()
 	from -= along * cap
 	to += along * cap
 	var across := Vector3(-along.z, 0.0, along.x) * width * 0.5
-	var corners := [from - across, from + across, to + across, to - across]
-	for i in corners.size():
-		var p: Vector3 = corners[i]
-		corners[i] = Vector3(p.x, _height(p) + LIFT_M, p.z)
+	return [from - across, from + across, to + across, to - across]
+
+
+func _tri(corners: Array[Vector3], heights: Array[float], color: Color) -> void:
 	for index in [0, 1, 2, 0, 2, 3]:
+		var p: Vector3 = corners[index]
 		_mesh.surface_set_color(color)
-		_mesh.surface_add_vertex(corners[index])
+		_mesh.surface_add_vertex(Vector3(p.x, heights[index], p.z))
 
 
 func _height(p: Vector3) -> float:

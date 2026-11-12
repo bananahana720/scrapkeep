@@ -83,12 +83,17 @@ static func way_out_reach(d: Dictionary, at: Vector3) -> Dictionary:
 			var a1 := float(d.get("a1", TAU))
 			if a1 - a0 < TAU - 0.01 and r > 0.01:
 				var angle := atan2(flat.z, flat.x)
+				# Across a side: straight at the side's edge line, the shortest way over it, while the
+				# ball is within a right angle of that side (a wide sector's far side is no way out).
 				for edge in [a0, a1]:
-					var across := r * absf(sin(wrapf(angle - edge, -PI, PI)))
+					var off := wrapf(angle - edge, -PI, PI)
+					if absf(off) >= PI * 0.5:
+						continue
+					var across := r * absf(sin(off))
 					if across < best:
 						best = across
-						var side := Vector3(-out.z, 0.0, out.x)
-						way = side if wrapf(edge - angle, -PI, PI) > 0.0 else -side
+						var normal := Vector3(-sin(edge), 0.0, cos(edge))
+						way = normal if off < 0.0 else -normal
 		"lane":
 			var dir: Vector3 = d.get("dir", Vector3.FORWARD)
 			dir = Vector3(dir.x, 0.0, dir.z).normalized()
