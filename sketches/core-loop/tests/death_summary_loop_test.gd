@@ -183,9 +183,11 @@ func _tag_on_summary() -> void:
 	screens._body.text = body_before
 	screens._fit_comic()
 	await _frames(2)
-	_t.check("the comic page is still the row's first, the note beside it", comic != null and comic != screens._tip and comic.get_index() == 0
-			and screens._tip.get_index() == 1 and screens._tip.global_position.x >= comic.global_position.x + comic.size.x,
-		"comic %s, note at %.0f" % [comic, screens._tip.global_position.x])
+	var chase: Control = screens._chase
+	_t.check("the comic page stands between the chase plate and the note", comic != null and comic != screens._tip and comic != chase
+			and chase != null and chase.get_index() == 0 and comic.get_index() == 1 and screens._tip.get_index() == 2
+			and chase.global_position.x + chase.size.x <= comic.global_position.x and screens._tip.global_position.x >= comic.global_position.x + comic.size.x,
+		"chase %s, comic %s, note at %.0f" % [chase, comic, screens._tip.global_position.x])
 	var room: Vector2 = screens._screen()
 	var last: Control = screens.button_for("camp")
 	_t.check("the column still ends on the screen", screens._title.global_position.y >= 0.0 and last.global_position.y + last.size.y <= room.y,
