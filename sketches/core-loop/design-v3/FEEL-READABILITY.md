@@ -205,7 +205,7 @@ What the rig does today (`chase_camera.gd`): FOV 65→82 with speed fraction, ar
 | **In the bowl** (r < `BOWL_OUT`) | A soft look assist toward the mast: when the mouse has been still 0.5 s, yaw blends 25% toward the Warden at 2/s; any mouse input cancels it for 1 s | setting `camera_assist`, default off; optional bowl-only trial | "where is it" while circling; the Warden is the room's landmark |
 | **Riding the return** | The launch profile (exists: +16 FOV, kick 0.6) with the punch clamp above | | a ride that feels like a ride |
 | **In chaos** (density ≥ 0.6) | Shake sum capped at 0.6, kicks at 0.4, no roll from impacts; hit-stop obeys §3.4 across every source | | the camera must not add noise to a full screen |
-| **Damage taken** | Never shake (VL §8). W11's read is the hull crack, an iron-oxide vignette 0.25 s and a squash | | shake on being hit is the one thing that makes "did I dodge" unanswerable |
+| **Damage taken** | Never shake (VL §8). The read is a hazard-red edge flash toward the source for 0.4 s, the damage number and a squash (the `player_hit` row in `event_kinds.gd`, drawn by `edge_flash.gd`) | | shake on being hit is the one thing that makes "did I dodge" unanswerable |
 
 ### 3.2 Motion comfort and settings
 
@@ -225,7 +225,7 @@ Rules that hold at every setting: pitch clamp −1.25 to 0.55 rad (exists), roll
 
 ### 3.3 Per-weapon feedback profiles
 
-One table of numbers, the contract W11's implementation must meet and Audio's cue set pairs with. Ordinary hits get no hit-stop (VL §8: momentum is sacred). Knockback is the enemy's, in m/s at heft I, scaling ×1.3 per heft class. The ball's own recoil is a squash, never a velocity change, except the bomb's rocket jump.
+One table of numbers, the contract W11's implementation must meet and Audio's cue set pairs with. Hit-stop belongs to the player's own strike: an ordinary hit stops 12 to 40 ms by its damage, and the ball's motion, a dodge and damage taken get none (VL §8; the rows in `event_kinds.gd` own the numbers). Knockback is the enemy's, in m/s at heft I, scaling ×1.3 per heft class. The ball's own recoil is a squash, never a velocity change, except the bomb's rocket jump.
 
 | Weapon | Hit-stop | Camera kick | FOV punch | Shake | Enemy knockback | Ball squash | Hit shape | Instrument (Audio) |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |

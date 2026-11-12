@@ -13,22 +13,26 @@ import math
 import os
 import sys
 
-# --- Palette (VISUAL-LANGUAGE.md section 2) ---------------------------------
-CHARCOAL = "#242a28"
-BONE = "#d2c5a5"
-MINT = "#8bf0d3"
-AMBER = "#e5a044"
-COPPER = "#b77843"
-IRON_OXIDE = "#9b513a"
-PETROL = "#365754"
-HAZARD = "#ff5a3c"
-BRASS = "#d9b44a"
-ICE = "#c8f0ff"
-ANCIENT = "#9dff3c"  # ancient green (Palette.ANCIENT); the old Cherenkov blue is the cobalt rung now
-REDJAW_ASH = "#5e5a54"
-LEDGER_CREAM = "#f7f1e3"
-LEDGER = "#e6d9b8"  # Tally's own colour (Palette.LEDGER): her ability cards are drawn in it
-OLD_VERDIGRIS = "#4f7f7a"
+# --- Palette: src/core/palette.gd, read by tools/palette_gd.py --------------
+sys.path.insert(0, os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..")))
+import palette_gd  # noqa: E402
+
+_P = {name: "#" + value for name, value in palette_gd.HEX.items()}
+CHARCOAL = _P["CHARCOAL"]
+BONE = _P["SAND"]
+MINT = _P["ARC"]
+AMBER = _P["AMBER"]
+COPPER = _P["COPPER"]
+IRON_OXIDE = _P["RUST"]
+PETROL = _P["VERDIGRIS"]
+HAZARD = _P["HAZARD"]
+BRASS = _P["BRASS"]
+ICE = _P["ICE"]
+ANCIENT = _P["ANCIENT"]
+REDJAW_ASH = _P["REDJAW_ASH"]
+LEDGER_CREAM = _P["LEDGER_CREAM"]
+LEDGER = _P["LEDGER"]  # Tally's own colour: her ability cards are drawn in it
+OLD_VERDIGRIS = _P["OLD_VERDIGRIS"]
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ICON_DIR = os.path.normpath(os.path.join(HERE, "..", "..", "assets", "icons"))
