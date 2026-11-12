@@ -1,0 +1,155 @@
+# The primitive census pin (tools/prim_census.gd reads it; tests/prim_census_test.gd holds world 1 to it).
+# Columns, tab separated: owner script, mesh class (or *), shape glob (the last three path names, tools/prim_census.gd shape_of),
+# kind, the BACKLOG row that owes a stand-in (- for code), why. Kinds: code, a mark, ring, fallback or effect meant to be a shape;
+# stand-in, an object built with its stage that waits for its model (the test fails on a stale one: the model landed, drop the row);
+# stand-in-live, the same for an object only play spawns (a drop, an elite's crate), never judged stale because a run may not spawn it.
+# A glob covers only one owner's own subtree: game.gd owns every unscripted node under the game root, so its rows are exact.
+# Seeded 12 Nov 2026 from the census of cand/w40 243794e0 (seed 40317, pylon_engineer, park table, through Brindle).
+# Stand-in rows come first: the first row that covers a surface judges it, so a code glob cannot hide a stand-in.
+activities.gd	BoxMesh	Activities/Activity_ambush_altar/MeshInstance3D	stand-in	W1-22	ambush altar: a cylinder with a box cap (ambush_altar.glb exists, park path never loads it)
+activities.gd	BoxMesh	Activities/Find_dam_shift_radio/FindAerial	stand-in	W1-22	field find on the cracked-cache wall: wall, pedestal, notice board, aerial, seep
+activities.gd	BoxMesh	Activities/Find_dam_shift_radio/RoomBoard	stand-in	W1-22	field find on the cracked-cache wall: wall, pedestal, notice board, aerial, seep
+activities.gd	BoxMesh	Activities/Find_dam_shift_radio/RoomBoardFrame	stand-in	W1-22	field find on the cracked-cache wall: wall, pedestal, notice board, aerial, seep
+activities.gd	BoxMesh	Activities/Find_dam_turbine_hall/RoomBoard	stand-in	W1-22	field find on the cracked-cache wall: wall, pedestal, notice board, aerial, seep
+activities.gd	BoxMesh	Activities/Find_dam_turbine_hall/RoomBoardFrame	stand-in	W1-22	field find on the cracked-cache wall: wall, pedestal, notice board, aerial, seep
+activities.gd	BoxMesh	Activities/Find_flume_crew_radio/FindAerial	stand-in	W1-22	field find on the cracked-cache wall: wall, pedestal, notice board, aerial, seep
+activities.gd	BoxMesh	Activities/Find_flume_crew_radio/RoomBoard	stand-in	W1-22	field find on the cracked-cache wall: wall, pedestal, notice board, aerial, seep
+activities.gd	BoxMesh	Activities/Find_flume_crew_radio/RoomBoardFrame	stand-in	W1-22	field find on the cracked-cache wall: wall, pedestal, notice board, aerial, seep
+activities.gd	BoxMesh	Activities/Find_flume_trestle_seep/RoomBoard	stand-in	W1-22	field find on the cracked-cache wall: wall, pedestal, notice board, aerial, seep
+activities.gd	BoxMesh	Activities/Find_flume_trestle_seep/RoomBoardFrame	stand-in	W1-22	field find on the cracked-cache wall: wall, pedestal, notice board, aerial, seep
+activities.gd	BoxMesh	Activities/Node3D/MeshInstance3D	stand-in	W1-22	unnamed altar cap (flume) and cache pedestal (dam): the same pieces as above
+activities.gd	BoxMesh	Activity_cracked_cache/Interior_rim_vault/MeshInstance3D	stand-in	W1-23	pocket interior: striped blocks
+activities.gd	BoxMesh	Activity_cracked_cache/StaticBody3D/MeshInstance3D	stand-in	W1-22	cracked cache: box wall and cylinder pedestal (cracked_cache.glb exists, park path never loads it)
+activities.gd	BoxMesh	Activity_elite_arena/Interior_elite_bay/MeshInstance3D	stand-in	W1-23	pocket interior: striped blocks
+activities.gd	BoxMesh	Activity_enemy_camp/Interior_dome_camp/MeshInstance3D	stand-in	W1-23	pocket interior: striped blocks
+activities.gd	BoxMesh	Find_dam_shift_radio/StaticBody3D/MeshInstance3D	stand-in	W1-22	field find on the cracked-cache wall: wall, pedestal, notice board, aerial, seep
+activities.gd	BoxMesh	Find_dam_turbine_hall/StaticBody3D/FindSeep	stand-in	W1-22	field find on the cracked-cache wall: wall, pedestal, notice board, aerial, seep
+activities.gd	BoxMesh	Find_dam_turbine_hall/StaticBody3D/MeshInstance3D	stand-in	W1-22	field find on the cracked-cache wall: wall, pedestal, notice board, aerial, seep
+activities.gd	BoxMesh	Find_flume_crew_radio/StaticBody3D/MeshInstance3D	stand-in	W1-22	field find on the cracked-cache wall: wall, pedestal, notice board, aerial, seep
+activities.gd	BoxMesh	Find_flume_trestle_seep/StaticBody3D/FindSeep	stand-in	W1-22	field find on the cracked-cache wall: wall, pedestal, notice board, aerial, seep
+activities.gd	BoxMesh	Find_flume_trestle_seep/StaticBody3D/MeshInstance3D	stand-in	W1-22	field find on the cracked-cache wall: wall, pedestal, notice board, aerial, seep
+activities.gd	BoxMesh	Node3D/Interior_bend_vault/MeshInstance3D	stand-in	W1-23	pocket interior: striped blocks
+activities.gd	BoxMesh	Node3D/Interior_boiler_vault/MeshInstance3D	stand-in	W1-23	pocket interior: striped blocks
+activities.gd	BoxMesh	Node3D/Interior_siphon_camp/MeshInstance3D	stand-in	W1-23	pocket interior: striped blocks
+activities.gd	BoxMesh	Node3D/StaticBody3D/MeshInstance3D	stand-in	W1-22	cracked cache: box wall and cylinder pedestal (cracked_cache.glb exists, park path never loads it)
+activities.gd	CylinderMesh	Activities/Activity_ambush_altar/MeshInstance3D	stand-in	W1-22	ambush altar: a cylinder with a box cap (ambush_altar.glb exists, park path never loads it)
+activities.gd	CylinderMesh	Activities/Activity_cracked_cache/MeshInstance3D	stand-in	W1-22	cracked cache: box wall and cylinder pedestal (cracked_cache.glb exists, park path never loads it)
+activities.gd	CylinderMesh	Activities/Find_dam_shift_radio/MeshInstance3D	stand-in	W1-22	field find on the cracked-cache wall: wall, pedestal, notice board, aerial, seep
+activities.gd	CylinderMesh	Activities/Find_dam_turbine_hall/MeshInstance3D	stand-in	W1-22	field find on the cracked-cache wall: wall, pedestal, notice board, aerial, seep
+activities.gd	CylinderMesh	Activities/Find_flume_crew_radio/MeshInstance3D	stand-in	W1-22	field find on the cracked-cache wall: wall, pedestal, notice board, aerial, seep
+activities.gd	CylinderMesh	Activities/Find_flume_trestle_seep/MeshInstance3D	stand-in	W1-22	field find on the cracked-cache wall: wall, pedestal, notice board, aerial, seep
+activities.gd	CylinderMesh	Activities/Node3D/MeshInstance3D	stand-in	W1-22	unnamed altar cap (flume) and cache pedestal (dam): the same pieces as above
+activities.gd	CylinderMesh	Node3D/Activity_cracked_cache/MeshInstance3D	stand-in	W1-22	cracked cache: box wall and cylinder pedestal (cracked_cache.glb exists, park path never loads it)
+arena.gd	BoxMesh	Node3D/SlagBowl/MeshInstance3D	stand-in	W1-23	Slag Bowl crane mast, boom and rim vent
+arena.gd	CylinderMesh	Node3D/SlagBowl/MeshInstance3D	stand-in	W1-23	Slag Bowl crane mast, boom and rim vent
+arena.gd	CylinderMesh	Node3D/SlagBowl/WaterVent	stand-in	W1-23	Slag Bowl crane mast, boom and rim vent
+bay.gd	BoxMesh	Barge/YardWall/MeshInstance3D	stand-in	W1-23	Moss's bay: yard wall, pins, cradle and barge fittings in code (found by the census, not in the audit table; W1-23 confirms or re-pins as code)
+bay.gd	BoxMesh	MossBay/Barge/MeshInstance3D	stand-in	W1-23	Moss's bay: yard wall, pins, cradle and barge fittings in code (found by the census, not in the audit table; W1-23 confirms or re-pins as code)
+bay.gd	CylinderMesh	Barge/Pin/MeshInstance3D	stand-in	W1-23	Moss's bay: yard wall, pins, cradle and barge fittings in code (found by the census, not in the audit table; W1-23 confirms or re-pins as code)
+bay.gd	CylinderMesh	Barge/StaticBody3D/MeshInstance3D	stand-in	W1-23	Moss's bay: yard wall, pins, cradle and barge fittings in code (found by the census, not in the audit table; W1-23 confirms or re-pins as code)
+bay.gd	CylinderMesh	MossBay/Barge/MeshInstance3D	stand-in	W1-23	Moss's bay: yard wall, pins, cradle and barge fittings in code (found by the census, not in the audit table; W1-23 confirms or re-pins as code)
+bay.gd	CylinderMesh	MossBay/Cradle/MeshInstance3D	stand-in	W1-23	Moss's bay: yard wall, pins, cradle and barge fittings in code (found by the census, not in the audit table; W1-23 confirms or re-pins as code)
+bay.gd	QuadMesh	MossBay/Barge/BakedLamplight	stand-in	W1-23	Moss's bay: yard wall, pins, cradle and barge fittings in code (found by the census, not in the audit table; W1-23 confirms or re-pins as code)
+bay.gd	SphereMesh	MossBay/Barge/MeshInstance3D	stand-in	W1-23	Moss's bay: yard wall, pins, cradle and barge fittings in code (found by the census, not in the audit table; W1-23 confirms or re-pins as code)
+bay.gd	TorusMesh	MossBay/Barge/MeshInstance3D	stand-in	W1-23	Moss's bay: yard wall, pins, cradle and barge fittings in code (found by the census, not in the audit table; W1-23 confirms or re-pins as code)
+bay.gd	TorusMesh	MossBay/Cradle/MeshInstance3D	stand-in	W1-23	Moss's bay: yard wall, pins, cradle and barge fittings in code (found by the census, not in the audit table; W1-23 confirms or re-pins as code)
+build_read.gd	SphereMesh	SubViewport/Node3D/MeshInstance3D	stand-in	W1-46	pause build preview: a grey sphere where the ball should be
+contraptions.gd	BoxMesh	Contraptions/culvert_wall/MeshInstance3D	stand-in	W1-23	valve door or bulkhead: a 12 by 6 m box
+contraptions.gd	BoxMesh	Contraptions/gallery_valve_door/MeshInstance3D	stand-in	W1-23	valve door or bulkhead: a 12 by 6 m box
+contraptions.gd	BoxMesh	Contraptions/slot_bulkhead/MeshInstance3D	stand-in	W1-23	valve door or bulkhead: a 12 by 6 m box
+contraptions.gd	BoxMesh	Contraptions/weir_valve_door/MeshInstance3D	stand-in	W1-23	valve door or bulkhead: a 12 by 6 m box
+contraptions.gd	CylinderMesh	Contraptions/forecourt_geyser/MeshInstance3D	stand-in	W1-23	geyser base
+contraptions.gd	CylinderMesh	Contraptions/pool_geyser/MeshInstance3D	stand-in	W1-23	geyser base
+game.gd	TorusMesh	GroundScatter/Chunk_/Scatter_cable	stand-in	W1-23	ground scatter cable coil drawn as a torus (found by the census, not in the audit table)
+plated_brute.gd	BoxMesh	Node3D/CharacterBody3D/BountyCrate	stand-in-live	W1-23	bounty crate on the elite brute (found by the census, not in the audit table)
+radio_cache.gd	CylinderMesh	Node3D/RadioCache_take-cable-reach-liquid/MeshInstance3D	stand-in	W1-23	signal radio cache: pole, half sphere, bulb, ring
+radio_cache.gd	CylinderMesh	Node3D/RadioCache_take-dam-breaks/MeshInstance3D	stand-in	W1-23	signal radio cache: pole, half sphere, bulb, ring
+radio_cache.gd	CylinderMesh	Node3D/RadioCache_take-flume-gauge-house/MeshInstance3D	stand-in	W1-23	signal radio cache: pole, half sphere, bulb, ring
+radio_cache.gd	CylinderMesh	Node3D/RadioCache_take-piston-flip/MeshInstance3D	stand-in	W1-23	signal radio cache: pole, half sphere, bulb, ring
+radio_cache.gd	CylinderMesh	Node3D/RadioCache_take-top-shelf-trio/MeshInstance3D	stand-in	W1-23	signal radio cache: pole, half sphere, bulb, ring
+radio_cache.gd	SphereMesh	Node3D/RadioCache_take-cable-reach-liquid/MeshInstance3D	stand-in	W1-23	signal radio cache: pole, half sphere, bulb, ring
+radio_cache.gd	SphereMesh	Node3D/RadioCache_take-dam-breaks/MeshInstance3D	stand-in	W1-23	signal radio cache: pole, half sphere, bulb, ring
+radio_cache.gd	SphereMesh	Node3D/RadioCache_take-flume-gauge-house/MeshInstance3D	stand-in	W1-23	signal radio cache: pole, half sphere, bulb, ring
+radio_cache.gd	SphereMesh	Node3D/RadioCache_take-piston-flip/MeshInstance3D	stand-in	W1-23	signal radio cache: pole, half sphere, bulb, ring
+radio_cache.gd	SphereMesh	Node3D/RadioCache_take-top-shelf-trio/MeshInstance3D	stand-in	W1-23	signal radio cache: pole, half sphere, bulb, ring
+radio_cache.gd	TorusMesh	Node3D/RadioCache_take-cable-reach-liquid/MeshInstance3D	stand-in	W1-23	signal radio cache: pole, half sphere, bulb, ring
+radio_cache.gd	TorusMesh	Node3D/RadioCache_take-dam-breaks/MeshInstance3D	stand-in	W1-23	signal radio cache: pole, half sphere, bulb, ring
+radio_cache.gd	TorusMesh	Node3D/RadioCache_take-flume-gauge-house/MeshInstance3D	stand-in	W1-23	signal radio cache: pole, half sphere, bulb, ring
+radio_cache.gd	TorusMesh	Node3D/RadioCache_take-piston-flip/MeshInstance3D	stand-in	W1-23	signal radio cache: pole, half sphere, bulb, ring
+radio_cache.gd	TorusMesh	Node3D/RadioCache_take-top-shelf-trio/MeshInstance3D	stand-in	W1-23	signal radio cache: pole, half sphere, bulb, ring
+rescue_site.gd	BoxMesh	rivet_cage/Node3D/MeshInstance3D	stand-in	W1-23	rescue cage part (found by the census, not in the audit table)
+reward_gates.gd	BoxMesh	Node3D/Topper/Stripe	stand-in-live	W1-22	flume reward gate drawn as code posts and toppers (hero_assets _dress_gate gave up); W1-22 checks it
+reward_gates.gd	BoxMesh	RewardGates/Node3D/MeshInstance3D	stand-in-live	W1-22	flume reward gate drawn as code posts and toppers (hero_assets _dress_gate gave up); W1-22 checks it
+reward_gates.gd	BoxMesh	RewardGates/Node3D/Topper	stand-in-live	W1-22	flume reward gate drawn as code posts and toppers (hero_assets _dress_gate gave up); W1-22 checks it
+reward_gates.gd	PrismMesh	RewardGates/Node3D/Topper	stand-in-live	W1-22	flume reward gate drawn as code posts and toppers (hero_assets _dress_gate gave up); W1-22 checks it
+scrap_field.gd	BoxMesh	Node3D/Scrap/MeshInstance3D	stand-in-live	W1-21	cogs and dropped panels: a brass disc, a slate box under a bone column
+scrap_field.gd	CylinderMesh	Node3D/Scrap/MeshInstance3D	stand-in-live	W1-21	cogs and dropped panels: a brass disc, a slate box under a bone column
+scrap_field.gd	CylinderMesh	Scrap/MeshInstance3D/MeshInstance3D	stand-in-live	W1-21	cogs and dropped panels: a brass disc, a slate box under a bone column
+stakes.gd	CylinderMesh	SableStakes/Stake/MeshInstance3D	stand-in	W1-23	trade spot body (ruling ci: after the sitting)
+stakes.gd	TorusMesh	SableStakes/Stake/MeshInstance3D	stand-in	W1-23	trade spot body (ruling ci: after the sitting)
+game.gd	BoxMesh	Node3D/MeshInstance3D	stand-in-live	W1-23	an unnamed 24 x 0.3 x 16 m box hung straight on the game root at tick 9570 (not identified yet; W1-23 names it and models it or re-pins it as code)
+accretion.gd	BoxMesh	Accretion/*/MeshInstance3D	code	-	part pieces on the ball (tier read is W1-26)
+accretion.gd	CylinderMesh	Accretion/*/MeshInstance3D	code	-	part pieces on the ball (tier read is W1-26)
+activity_view.gd	BoxMesh	*/View_*/Column	code	-	activity column, glyph and ring: marks
+activity_view.gd	BoxMesh	View_*/Glyph/MeshInstance3D	code	-	activity column, glyph and ring: marks
+activity_view.gd	BoxMesh	View_*/Ring/MeshInstance3D	code	-	activity column, glyph and ring: marks
+activity_view.gd	SphereMesh	View_*/Glyph/MeshInstance3D	code	-	activity column, glyph and ring: marks
+arena.gd	CylinderMesh	BrindleReward/RewardCanister/BoneBand	code	-	bone band on the reward canister model
+arena.gd	CylinderMesh	Node3D/RewardCanister/BoneBand	code	-	bone band on the reward canister model
+beacon.gd	SphereMesh	Node3D/Beacon/MeshInstance3D	code	-	beacon light and ring
+beacon.gd	TorusMesh	Node3D/Beacon/MeshInstance3D	code	-	beacon light and ring
+bolts.gd	BoxMesh	Node3D/Bolts/MultiMeshInstance3D	code	-	shot bolts, an effect
+boom_tender.gd	BoxMesh	BoomTenderBody/Boom/BoomLamps	code	-	lamps and armour icon: marks
+boom_tender.gd	BoxMesh	Node3D/CharacterBody3D/ArmourIcon	code	-	lamps and armour icon: marks
+chaser.gd	BoxMesh	Node3D/CharacterBody3D/ArmourIcon	code	-	armour icon
+contraptions.gd	BoxMesh	Stage/Contraptions/MeshInstance3D	code	-	launcher ring, grapple cable and hook, steam plume: marks and lines
+contraptions.gd	CylinderMesh	Stage/Contraptions/MeshInstance3D	code	-	launcher ring, grapple cable and hook, steam plume: marks and lines
+contraptions.gd	SphereMesh	Stage/Contraptions/MeshInstance3D	code	-	launcher ring, grapple cable and hook, steam plume: marks and lines
+contraptions.gd	TorusMesh	Contraptions/crest_trebuchet/MeshInstance3D	code	-	launcher ring, grapple cable and hook, steam plume: marks and lines
+contraptions.gd	TorusMesh	Contraptions/domes_cannon/MeshInstance3D	code	-	launcher ring, grapple cable and hook, steam plume: marks and lines
+contraptions.gd	TorusMesh	Contraptions/flume_trebuchet/MeshInstance3D	code	-	launcher ring, grapple cable and hook, steam plume: marks and lines
+contraptions.gd	TorusMesh	Contraptions/forecourt_geyser/MeshInstance3D	code	-	launcher ring, grapple cable and hook, steam plume: marks and lines
+contraptions.gd	TorusMesh	Contraptions/pool_geyser/MeshInstance3D	code	-	launcher ring, grapple cable and hook, steam plume: marks and lines
+contraptions.gd	TorusMesh	Stage/Contraptions/MeshInstance3D	code	-	launcher ring, grapple cable and hook, steam plume: marks and lines
+customize_page.gd	CylinderMesh	LivePreview/SubViewport/MeshInstance3D	code	-	preview turntable in a menu
+element_field.gd	TorusMesh	Node3D/ElementField/MeshInstance3D	code	-	element field ring
+enemy_motion.gd	BoxMesh	Node3D/DeathScatter/MeshInstance3D	code	-	death scatter, an effect
+enemy_motion.gd	BoxMesh	Node3D/Node3D/MeshInstance3D	code	-	death debris piece
+enemy_motion.gd	CylinderMesh	Node3D/DeathScatter/MeshInstance3D	code	-	death scatter, an effect
+enemy_motion.gd	TorusMesh	Node3D/DeathScatter/MeshInstance3D	code	-	death scatter, an effect
+event_view.gd	TorusMesh	Node3D/StageEvents/MeshInstance3D	code	-	stage event ring
+game.gd	BoxMesh	Node3D/PresentationFx/*	code	-	player and presentation effects
+game.gd	CylinderMesh	Node3D/PylonEject/MeshInstance3D	code	-	player and presentation effects
+game.gd	PrismMesh	Node3D/PresentationFx/*	code	-	player and presentation effects
+game.gd	QuadMesh	MouseViewport/MouseCamera/MouseQuad	code	-	player and presentation effects
+game.gd	SphereMesh	DunkGlow/Pip/Ink	code	-	player and presentation effects
+game.gd	SphereMesh	Node3D/PlayerFxRoot/*	code	-	player and presentation effects
+game.gd	SphereMesh	Node3D/PresentationFx/*	code	-	player and presentation effects
+game.gd	SphereMesh	PlayerFxRoot/DunkGlow/*	code	-	player and presentation effects
+game.gd	TorusMesh	Node3D/PresentationFx/*	code	-	player and presentation effects
+hooker.gd	BoxMesh	Node3D/CharacterBody3D/ArmourIcon	code	-	armour icon
+landmark_beam.gd	CylinderMesh	AncientBeam/Column/Core	code	-	ancient light column, an effect
+landmark_beam.gd	CylinderMesh	AncientBeam/Column/Veil	code	-	ancient light column, an effect
+launch.gd	CylinderMesh	Node3D/Launch/MeshInstance3D	code	-	launch pad ring and disc
+launch.gd	TorusMesh	Node3D/Launch/MeshInstance3D	code	-	launch pad ring and disc
+line_view.gd	BoxMesh	Presentation/LineView/Barb	code	-	grapple barb
+mag_trapper.gd	CylinderMesh	MagTrapperBody/MagStack/MagTopLink	code	-	small link on the modelled body
+plated_brute.gd	BoxMesh	BrutePlates/PlateCrack/MeshInstance3D	code	-	plate crack mark
+player_ball.gd	CylinderMesh	Player/Pylon/MeshInstance3D	code	-	ball fittings and juice rings
+player_ball.gd	CylinderMesh	RollMount/AdmiralsCrest/MeshInstance3D	code	-	ball fittings and juice rings
+player_ball.gd	TorusMesh	Visual/Juice/MeshInstance3D	code	-	ball fittings and juice rings
+player_ball.gd	TorusMesh	Visual/Juice/SynergyRing	code	-	ball fittings and juice rings
+projectile.gd	QuadMesh	Node3D/Node3D/BatRim	code	-	projectile, an effect
+projectile.gd	SphereMesh	Node3D/Node3D/MeshInstance3D	code	-	projectile, an effect
+ramp_flipper.gd	BoxMesh	Node3D/CharacterBody3D/ArmourIcon	code	-	armour icon
+set_dressing.gd	QuadMesh	Presentation/TargetSetDressing/DustMotes	code	-	dust and sand cards
+set_dressing.gd	QuadMesh	Presentation/TargetSetDressing/SandStreaks	code	-	dust and sand cards
+site_markers.gd	QuadMesh	Presentation/SiteMarkers/Plume_*	code	-	site plumes: marks
+stage_locks.gd	BoxMesh	StageLocks/WardenGateCollar/MeshInstance3D	code	-	arena lock wall and gate collar: marks
+stage_locks.gd	CylinderMesh	StageLocks/ArenaLockWall/MeshInstance3D	code	-	arena lock wall and gate collar: marks
+stage_locks.gd	TorusMesh	StageLocks/ArenaLockWall/MeshInstance3D	code	-	arena lock wall and gate collar: marks
+stage_locks.gd	TorusMesh	StageLocks/WardenGateCollar/MeshInstance3D	code	-	arena lock wall and gate collar: marks
+warden_look.gd	QuadMesh	WardenLook/Badge/MeshInstance3D	code	-	warden badge and core glow
+warden_look.gd	SphereMesh	CharacterBody3D/WardenLook/MeshInstance3D	code	-	warden badge and core glow
+world_fx_anchor.gd	QuadMesh	*/WorldFx_*/Extra_*	code	-	mist and steam cards
+world_fx_anchor.gd	QuadMesh	*/WorldFx_*/Impostor_*	code	-	mist and steam cards

@@ -48,13 +48,15 @@ BRASS = "brass"
 b = Part("BolaThrowerBody")
 b.cyl("fleet_paint", 0.62, 0.72, 1.0, segs=10, loc=(0, 0, -0.6))
 b.cyl("fleet_paint", 0.74, 0.54, 0.95, segs=10, loc=(0, 0, 0.37))
-crew.animal_head(b, (0, 0, 1.13), 0.36, snout=((0.26, 0.30, 0.22), (0, -0.36, 1.06)),
-                 ears=(0.13, 0.34, [(s * 0.2, 0, 1.5) for s in (-1, 1)]))
+crew.lantern_head(b, (0, 0, 1.13), 0.36)
 b.cyl("paint", 0.76, 0.76, 0.12, segs=10, loc=(0, 0, 0.0), color=CHAR)  # strap
 b.box("paint", (0.36, 0.06, 0.24), loc=(0, -0.72, 0.28), color=BRASS)  # the one brass tag
 # The throwing arm rises beside the head to a glove under the loop's hub.
 b.rod("fleet_paint", (0.60, 0.0, 0.55), (0.14, 0.0, 1.95), 0.11, segs=6)
 b.uv("paint", 0.17, u=8, v=5, loc=(0.14, 0.0, 2.0), color=CHAR)
+# The old works' two marks, cast in under the Fleet's paint: the crew number and HIRED.
+crew.cast_number(b, "paint", "03", (0, -0.59, 0.62), (0, -1, 0), 0.2)
+crew.hired(b, "paint", (0, 0.69, -0.4), (0, 1, 0), 0.1)
 body = b.to_object(parent=root)
 
 # --- Loop: an open hoop with a weighted end on each side --------------------------------

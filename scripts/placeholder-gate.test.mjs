@@ -21,6 +21,7 @@ import {
   isMesaEdge,
   parseArgs,
   pendingEntries,
+  primStandIns,
   report,
   scan,
   sceneText,
@@ -317,5 +318,20 @@ test("scan passes a finished project and fails each kind of placeholder", () => 
     assert.deepEqual(kinds, ["ability", "attack", "cosmetic", "icon", "park", "pending", "registry", "text"]);
   } finally {
     rmSync(bad, { recursive: true, force: true });
+  }
+});
+
+test("primStandIns counts the census pin's stand-in rows by BACKLOG row and skips code rows", () => {
+  const dir = mkdtempSync(path.join(os.tmpdir(), "prim-pin-"));
+  try {
+    assert.deepEqual(primStandIns(dir), {});
+    mkdirSync(path.join(dir, "tools"));
+    writeFileSync(
+      path.join(dir, "tools/prim_census_pin.tsv"),
+      ["# owner\tmesh\tshape\tkind\trow\twhy", "beacon.gd\t*\tBeacon/*\tcode\t-\tthe beacon", "radio_cache.gd\t*\t*\tstand-in\tW1-23\tradio", "none\tBoxMesh\tFind_*\tstand-in\tW1-22\tfinds", "x\ty\tz\tstand-in\tW1-22\tcache", "scrap_field.gd\t*\tScrap/*\tstand-in-live\tW1-21\tcogs"].join("\n"),
+    );
+    assert.deepEqual(primStandIns(dir), { "W1-23": 1, "W1-22": 2, "W1-21": 1 });
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
   }
 });

@@ -53,8 +53,7 @@ b = Part("HookerBody")
 # Crew: a barrel torso (rust, flashes at runtime), a round head, a charcoal snout and ears.
 b.cyl("fleet_paint", 0.66, 0.80, 1.1, segs=10, loc=(0, 0, -0.55))
 b.cyl("fleet_paint", 0.80, 0.70, 1.1, segs=10, loc=(0, 0, 0.55))
-crew.animal_head(b, (0, 0, 1.3), 0.38, snout=((0.26, 0.30, 0.22), (0, -0.38, 1.22)),
-                 ears=(0.13, 0.34, [(s * 0.2, 0, 1.62) for s in (-1, 1)]))
+crew.bollard_head(b, (0, 0, 1.3), 0.38)
 b.cyl("paint", 0.81, 0.81, 0.12, segs=10, loc=(0, 0, 0.1), color=CHAR)  # strap
 b.box("paint", (0.36, 0.06, 0.24), loc=(0, -0.79, 0.3), color=BRASS)  # the one brass tag
 # Yoke arm: a level bar tying the crew's back to the post, so the post reads as worn, not planted.
@@ -80,6 +79,9 @@ for sx in (-1, 1):
     b.rod("paint", (POST_X + sx * 0.60, 0, HEAD_Z + 0.42), (POST_X + sx * 0.66, 0, HEAD_Z + 0.78), 0.075, segs=5,
           color=CHAR, r2=0.02)
 b.ring("paint", 0.13, 0.22, 0.10, segs=10, loc=(POST_X, 0, HEAD_Z + 0.62), rot=(HALF_PI, 0, 0), color=IRON)
+# The old works' two marks, cast in under the Fleet's paint: the crew number and HIRED.
+crew.cast_number(b, "paint", "12", (0, -0.74, 0.74), (0, -1, 0), 0.26)
+crew.hired(b, "paint", (0, 0.77, -0.3), (0, 1, 0), 0.11)
 body = b.to_object(parent=root)
 
 # --- Harpoon: long level shaft, hazard barbed head, tail ring ------------------------

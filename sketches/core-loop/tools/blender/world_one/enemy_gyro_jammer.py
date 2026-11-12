@@ -50,8 +50,7 @@ def g(x, y, z):
 b = Part("GyroBody")
 b.cyl("fleet_paint", 0.54, 0.62, 1.0, segs=10, loc=g(0, -0.60, 0))
 b.cyl("fleet_paint", 0.62, 0.50, 0.8, segs=10, loc=g(0, 0.3, -0.04))
-crew.animal_head(b, g(0, 1.02, 0.13), 0.30, snout=((0.22, 0.20, 0.16), g(0, 0.97, 0.40)),
-                 ears=(0.10, 0.28, [g(s * 0.17, 1.38, 0.10) for s in (-1, 1)]))
+crew.current_meter_head(b, g(0, 1.02, 0.13), 0.30)
 for s in (-1, 1):
     b.box("paint", (0.07, 0.50, 0.40), loc=g(s * 0.59, 0.27, -0.03), color=PLATE)
     b.box("paint", (0.075, 0.38, 0.045), loc=g(s * 0.59, 0.48, -0.03), color=WORN)
@@ -66,6 +65,9 @@ b.cyl("paint", 0.16, 0.20, 0.32, segs=8, loc=g(0, 1.0, -0.2), color=PLATE)
 for s in (-1, 1):
     b.rod("paint", g(s * 0.42, 0.52, -0.23), g(0, 1.5, -0.2), 0.045, segs=5, color=IRON)
 b.cyl("paint", 0.105, 0.105, 0.16, segs=8, loc=g(*CENTER), color=CHAR)
+# The old works' two marks, cast in under the Fleet's paint: the crew number and HIRED.
+crew.cast_number(b, "paint", "11", (0, -0.54, 0.52), (0, -1, 0), 0.2)
+crew.hired(b, "paint", (0, 0.745, 0.25), (0, 1, 0), 0.08)
 bmesh.ops.recalc_face_normals(b.bm, faces=b.bm.faces[:])
 body = b.to_object(parent=root)
 

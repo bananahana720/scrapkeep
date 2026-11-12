@@ -29,21 +29,22 @@ const FlashGuard := preload("res://src/presentation/flash_guard.gd")
 #   grow     a puff that swells as it fades (steam), instead of shrinking
 #   alpha    the spec colour's opacity (steam is thin, not a solid ball)
 #   local    particles ride the emitter, so turning the emitter turns them (a daze halo)
+#   look     names the draw look outright instead of deriving it from blend, size and colour (see look())
 # Emitters use a fixed seed, so a capture at a fixed tick repeats. No lights.
 const SEED := 731
 # Pool x max over the "vfx" specs; fx_library_test pins it.
-const CEILING := 752
+const CEILING := 800
 # Pool x max over the "machine" specs; machine_fx_test pins it.
 const MACHINE_CEILING := 876
 const SPECS := {
 	"roll_dust": {"pool": 1, "max": 64, "life": 0.7, "speed": [0.4, 1.4], "spread": 75.0, "gravity": 0.6,
 		"size": 0.42, "colour": "SANDSTONE", "attach": "ball", "blend": "mix", "shape": "point"},
 	"spark_core": {"pool": 4, "max": 24, "life": 0.3, "speed": [8.0, 16.0], "spread": 180.0, "gravity": -12.0,
-		"size": Vector3(0.07, 0.07, 0.5), "colour": "row", "attach": "world", "blend": "mix", "shape": "point", "align": true},
+		"size": Vector3(0.1, 0.1, 0.5), "colour": "row", "attach": "world", "blend": "mix", "shape": "point", "align": true},
 	"spark_halo": {"pool": 4, "max": 24, "life": 0.3, "speed": [8.0, 16.0], "spread": 180.0, "gravity": -12.0,
 		"size": Vector3(0.18, 0.18, 0.7), "colour": "row", "attach": "world", "blend": "add", "shape": "point", "align": true, "glow": 2.0},
 	"crit_core": {"pool": 2, "max": 24, "life": 0.4, "speed": [9.0, 19.0], "spread": 180.0, "gravity": -12.0,
-		"size": Vector3(0.12, 0.12, 0.8), "colour": "row", "attach": "world", "blend": "mix", "shape": "point", "align": true},
+		"size": Vector3(0.17, 0.17, 0.8), "colour": "row", "attach": "world", "blend": "mix", "shape": "point", "align": true},
 	"crit_halo": {"pool": 2, "max": 24, "life": 0.4, "speed": [9.0, 19.0], "spread": 180.0, "gravity": -12.0,
 		"size": Vector3(0.3, 0.3, 1.1), "colour": "row", "attach": "world", "blend": "add", "shape": "point", "align": true, "glow": 2.5},
 	"slam_ring": {"pool": 2, "max": 48, "life": 0.42, "speed": [0.0, 0.0], "radial": [11.0, 12.0], "spread": 0.0, "gravity": 0.0,
@@ -56,6 +57,9 @@ const SPECS := {
 		"size": 0.9, "colour": "row", "attach": "world", "blend": "add", "shape": "ring", "ring_m": 1.2, "glow": 2.0},
 	"latch_pulse": {"pool": 2, "max": 16, "life": 0.12, "speed": [9.0, 10.5], "spread": 1.0, "gravity": 0.0, "explosive": 0.6,
 		"size": 0.34, "colour": "row", "attach": "world", "blend": "mix", "shape": "point", "forward": true, "glow": 1.8},
+	# A kill's body shards (FX-01), tinted the pilot's colour: the kill's own matter, not the hit's light.
+	"kill_shards": {"pool": 3, "max": 16, "life": 0.8, "speed": [5.0, 11.0], "spread": 70.0, "gravity": -24.0, "spin": 600.0,
+		"size": Vector3(0.3, 0.07, 0.24), "colour": "row", "attach": "world", "blend": "mix", "shape": "point"},
 	"crack_debris": {"pool": 2, "max": 32, "life": 1.0, "speed": [4.0, 9.0], "spread": 50.0, "gravity": -24.0,
 		"size": Vector3(0.28, 0.2, 0.24), "colour": "CHARCOAL", "attach": "world", "blend": "mix", "shape": "point", "spin": 540.0},
 	"cache_ember": {"pool": 2, "max": 24, "life": 1.2, "speed": [1.0, 2.6], "spread": 60.0, "gravity": 0.3,
@@ -85,8 +89,10 @@ const SPECS := {
 		"size": 0.18, "colour": "ANCIENT", "attach": "persist", "blend": "add", "shape": "ring", "ring_m": 1.1, "glow": 1.8, "owner": "machine"},
 	"seam_motes": {"pool": 6, "max": 12, "life": 0.9, "speed": [1.0, 3.0], "spread": 25.0, "gravity": 2.5,
 		"size": 0.16, "colour": "ANCIENT", "attach": "world", "blend": "add", "shape": "ring", "ring_m": 0.8, "glow": 1.8, "owner": "machine"},
-	"daze_halo": {"pool": 6, "max": 6, "life": 0.6, "speed": [0.0, 0.0], "spread": 0.0, "gravity": 0.0, "local": true,
-		"size": 0.3, "colour": "AMBER", "attach": "persist", "blend": "add", "shape": "ring", "ring_m": 0.7, "glow": 1.0, "owner": "machine"},
+	# A stun is a ring of inked comic stars circling the head (FX-02): solid, so it reads on sand and
+	# concrete alike, where the old additive amber glow drew a few dozen pixels.
+	"daze_halo": {"pool": 6, "max": 6, "life": 1.2, "speed": [0.0, 0.0], "spread": 0.0, "gravity": 0.0, "local": true, "scale": [0.9, 1.1],
+		"size": 0.6, "colour": "AMBER", "attach": "persist", "blend": "mix", "shape": "ring", "ring_m": 0.8, "look": "star", "owner": "machine"},
 	"fuse_sputter": {"pool": 4, "max": 6, "life": 0.3, "speed": [1.5, 3.5], "spread": 50.0, "gravity": -6.0,
 		"size": 0.08, "colour": "AMBER", "attach": "persist", "blend": "add", "shape": "point", "glow": 2.0, "owner": "machine"},
 	"phase_ring": {"pool": 2, "max": 64, "life": 0.6, "speed": [0.0, 0.0], "radial": [16.0, 18.0], "spread": 0.0, "gravity": 0.0,
@@ -104,12 +110,17 @@ const SPECS := {
 #   streak  a camera-facing streak along the particle's velocity, fat hot head, thin cooling tail
 #   chunk   a chipped lit shard with flat facets, each particle a shade off the next (debris)
 #   bead    a solid disc in the row colour with a charcoal keyline, so it reads on sand (latch, phase)
+#   star    a solid five-point comic star with a charcoal keyline (the daze halo)
+#   A solid streak (blend mix) wears a charcoal rim around its bright body, so a hit spark reads on pale
+#   sand and dark concrete alike; an additive streak stays pure light.
 const _HEAD := """
 shader_type spatial;
 render_mode %s;
 instance uniform vec4 tint : source_color = vec4(1.0);
 // How far a hot particle starts toward white; it cools over its life (FlashGuard.whiten scales it).
 instance uniform float heat = 0.0;
+// Palette.CHARCOAL, set from GDScript so the engine converts it to linear light (a literal would not be).
+uniform vec3 ink_colour : source_color;
 varying float v_life;
 varying float v_seed;
 float seed_of(int id) {
@@ -169,7 +180,7 @@ void fragment() {
 	float tip = 1.0 - smoothstep(0.85, 1.0, 1.0 - along);
 	float core = (1.0 - smoothstep(0.0, w * 0.45, across)) * (1.0 - along);
 	float hot = clamp(heat * (1.0 - v_life) * core * 1.6, 0.0, 1.0);
-	ALBEDO = mix(tint.rgb * %s, vec3(1.0), hot);
+	ALBEDO = mix(tint.rgb * %s, vec3(1.0), hot);%s
 	ALPHA = tint.a * COLOR.a * body * tip%s;
 }
 """],
@@ -179,6 +190,22 @@ void fragment() {
 	ROUGHNESS = 0.9;
 	RIM = 0.25;
 	RIM_TINT = 0.6;
+}
+"""],
+	"star": ["unshaded, cull_disabled, blend_mix, depth_draw_opaque", "billboard", """
+void fragment() {
+	vec2 p = vec2(UV.x * 2.0 - 1.0, 1.0 - UV.y * 2.0);
+	float r = length(p);
+	// Five points, one straight up: 1 at a tip, 0 in a notch.
+	float tip = pow(0.5 + 0.5 * cos(5.0 * (atan(p.y, p.x) - 1.5708)), 2.0);
+	float edge = mix(0.46, 0.97, tip);
+	if (r > edge) {
+		discard;
+	}
+	vec3 base = tint.rgb * COLOR.rgb;
+	vec3 fill = mix(base, mix(base, vec3(1.0), 0.45), step(r, edge * 0.32));
+	ALBEDO = mix(fill, ink_colour, step(edge - 0.2, r));
+	ALPHA = tint.a * COLOR.a;
 }
 """],
 	"bead": ["unshaded, cull_disabled, blend_mix, depth_draw_opaque", "billboard", """
@@ -228,7 +255,7 @@ void vertex() {
 """
 # How hot each look starts (before FlashGuard.whiten): sparks and beads flash toward white and
 # cool to their tint; puffs and chunks are matter and never glow.
-const HEAT := {"glow": 0.55, "streak": 0.7, "bead": 0.35, "puff": 0.0, "chunk": 0.0}
+const HEAT := {"glow": 0.55, "streak": 0.7, "bead": 0.35, "puff": 0.0, "chunk": 0.0, "star": 0.0}
 
 static var _shaders := {}
 static var _meshes := {}
@@ -271,6 +298,8 @@ static func look(id: String) -> String:
 	var s := spec(id)
 	if s.is_empty():
 		return ""
+	if s.has("look"):
+		return s["look"]
 	if s["size"] is Vector3:
 		if s.get("align", false):
 			return "streak"
@@ -296,12 +325,14 @@ static func look_material(kind: String, blend := "mix") -> ShaderMaterial:
 		var body: String = row[2]
 		if kind == "streak":
 			modes = modes % ("blend_add, depth_draw_never" if blend == "add" else "blend_mix, depth_draw_opaque")
-			body = body % (["min(COLOR.rgb, vec3(1.0))", " * (1.0 - smoothstep(0.0, 1.0, across)) * 0.7"] if blend == "add" else ["COLOR.rgb", ""])
+			var ink := "\n\tALBEDO = mix(ALBEDO, ink_colour, smoothstep(w * 0.5, w * 0.62, across));"
+			body = body % (["min(COLOR.rgb, vec3(1.0))", "", " * (1.0 - smoothstep(0.0, 1.0, across)) * 0.7"] if blend == "add" else ["COLOR.rgb", ink, ""])
 		var vertex: String = {"billboard": _BILLBOARD, "streak": _STREAK_VERTEX, "chunk": _CHUNK_VERTEX}[row[1]]
 		var shader := Shader.new()
 		shader.code = (_HEAD % modes) + vertex + body
 		var mat := ShaderMaterial.new()
 		mat.shader = shader
+		mat.set_shader_parameter("ink_colour", Palette.CHARCOAL)
 		_shaders[key] = mat
 	return _shaders[key]
 
@@ -455,7 +486,7 @@ static func build(id: String) -> GPUParticles3D:
 	p.process_material = pm
 	p.draw_pass_1 = mesh
 	p.set_meta("fx_look", kind)
-	if kind == "puff" or kind == "bead":
+	if kind == "puff" or kind == "bead" or kind == "star":
 		p.draw_order = GPUParticles3D.DRAW_ORDER_VIEW_DEPTH
 	p.amount = int(s["max"])
 	p.lifetime = s["life"]
