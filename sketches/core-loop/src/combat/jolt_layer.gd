@@ -95,6 +95,8 @@ func _live(delta: float) -> bool:
 		_cue("tell")
 	if not pulsed:
 		return true
+	# The lead fill restarts on every pulse and never reaches its end, so each pulse lands here.
+	tele.land()
 	var player = _player()
 	if player == null:
 		return true
