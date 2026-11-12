@@ -6600,7 +6600,7 @@ Andrew asked on 12 November 2026 for as many buildable items as possible: for wo
 
 ### World 1 now: from the gameplay critique (12 November 2026)
 
-Rows from the [world 1 gameplay critique](project-guide/handoff/shared/world1/gameplay-critique.md), which says why each one matters and what it was measured or read on (stage/alpha-w39 618dfc9b9). Ranked by how much they change the sitting. "Fence" names a file the board thread holds; claim it there first. Rows marked "after PR 845" touch files the difficulty stack changes and start once it stacks.
+Rows from the [world 1 gameplay critique](project-guide/handoff/shared/world1/gameplay-critique.md), which says why each one matters and what it was measured or read on (stage/alpha-w39 618dfc9b9). Ranked by how much they change the sitting. The rows stand as GitHub issues 857 to 871, labelled "world 1 now" (W1-71 and W1-75, W1-73 and W1-79, W1-74 and W1-76 share one issue each; W1-60 and W1-78 wait on a decision). "Fence" names a file the board thread holds; claim it there first. Rows marked "after PR 845" touch files the difficulty stack changes and start once it stacks.
 
 | ID | What the player gets | Files | Size | Proof | Source |
 | --- | --- | --- | --- | --- | --- |
