@@ -290,10 +290,10 @@
   {"id": "dust_squall", "kind": "dust_squall", "trigger": {"on": "clock_tier", "value": 2}, "lead_s": 15.0, "live_s": 60.0, "gap_s": 90.0, "fog": {"density": 0.003, "color": "#c8a878"}, "sky": "dust", "sound": "squall_hiss", "music_layer": "squall_shaker", "event_odds": {"hollow_trestle_collapse": 1.5, "wasteway_flash_flood": 0.5}, "handling": "none"}
  ],
  "activity_rows": [
-  {"id": "siphon_camp", "activity": "enemy_camp", "site": "the_siphon", "at": [-26, 174], "pack": ["lobber", "lobber", "lobber"], "pay": {"rarities": ["common"]}, "alts": [{"activity": "enemy_camp", "pack": ["lobber", "winch_drone", "lobber"], "pay": {"rarities": ["common"]}}]},
+  {"id": "siphon_camp", "activity": "enemy_camp", "site": "the_siphon", "at": [-26, 174], "pack": ["lobber", "lobber", "lobber"], "pay": {"rarities": ["common"]}, "alts": [{"activity": "enemy_camp", "pack": ["lobber", "winch_drone", "lobber"]}]},
   {"id": "bend_cache", "activity": "cracked_cache", "site": "bend_rim_ledge", "at": [42, -96], "face": [0, 1], "pack": [], "pay": {"rarities": ["rare"]}},
   {"id": "trestle_cache", "activity": "cracked_cache", "site": "canal_country_low", "at": [-258, -426], "face": [0, 1], "pack": [], "pay": {"rarities": ["common", "rare"]}, "extra": "card_2"},
-  {"id": "bench_bounty", "activity": "hauler_bounty", "site": "south_bench", "at": [-119, 332], "pack": [], "pay": {"rarities": ["common", "rare"]}, "alts": [{"activity": "ambush_altar", "pack": [], "pay": {"rarities": ["common", "rare"]}}]},
+  {"id": "bench_bounty", "activity": "hauler_bounty", "site": "south_bench", "at": [-119, 332], "pack": [], "pay": {"rarities": ["common", "rare"]}, "alts": [{"activity": "ambush_altar", "pack": ["chaser", "lobber", "lobber"]}]},
   {"id": "weir_surge", "activity": "surge_run", "site": "weir_mesa", "at": [-427, -563], "pack": [], "pay": {"rarities": ["common", "rare"]}, "extra": "card_2", "route": "flume_upper"},
   {"id": "canal_altar", "activity": "ambush_altar", "site": "main_canal", "at": [-475, -206], "pack": [], "pay": {"rarities": ["common", "rare"]}, "extra": "card_2"}
  ]

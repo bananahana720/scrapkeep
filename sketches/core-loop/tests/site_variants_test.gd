@@ -1,18 +1,20 @@
 extends SceneTree
 
 # W1-70 (critique finding 9): an authored activity row may list alternatives, and each run draws one per site
-# from its seed, so run five does not meet run one's sites. An alternative brings its own activity, pack and pay
-# and keeps the row's place, site and pocket role (PARK.md 2.12), so every map check on the row holds for each.
+# from its seed, so run five does not meet run one's sites. An alternative brings its own activity and pack and
+# keeps the row's place, site, pay and pocket role (PARK.md 2.12), so every map check on the row holds for each.
 #   dam    domes_camp   three chasers | a trapper camp (chaser, mag_trapper, chaser)
 #          bench_altar  ambush altar | a hauler bounty on the rim bench
 #   flume  siphon_camp  three lobbers | a winch camp (lobber, winch_drone, lobber)
-#          bench_bounty hauler bounty | an ambush altar on the south bench
+#          bench_bounty hauler bounty | an ambush altar on the south bench (chaser, lobber, lobber)
 # Checks:
 #   (a) both parks validate; the four rows carry their alts on the map's sites.
 #   (b) the draw: one seed always draws the same site; over 24 seeds every row shows each of its options; an
-#       alt keeps the row's place and row id and takes its own kind, pack and pay.
-#   (c) in the game: entering the flume builds, at each row's place, the kind and pack its seed draws.
-# Planted: an alt that turns a camp into an altar, an alt that moves the place, and alts on a cache each fail (a).
+#       alt keeps the row's place, row id and pay and takes its own kind and pack.
+#   (c) in the game: entering the flume builds, at each row's place, the kind and pack its seed draws, and a
+#       retry builds the same.
+# Planted: an alt that turns a camp into an altar, an alt that moves the place or sets its own pay, and alts on a
+# cache each fail (a).
 
 const T := preload("res://tests/support/t.gd")
 const Game := preload("res://src/game.gd")
@@ -53,13 +55,14 @@ func _run() -> void:
 			for seed in SEEDS:
 				var drawn := Activities.variant(site, seed)
 				seen[JSON.stringify([drawn["id"], drawn.get("pack", [])])] = true
-				kept = kept and drawn["at"] == site["at"] and drawn["row"] == row_id and drawn.has("alts") == (drawn == site)
+				kept = kept and drawn["at"] == site["at"] and drawn["row"] == row_id and drawn.get("pay") == site.get("pay") and drawn.has("alts") == (drawn == site)
 			_t.eq("%s %s: %d seeds show every option" % [map_id, row_id, SEEDS], seen.size(), 1 + site["alts"].size())
 			_t.check("%s %s: every draw keeps the row's place" % [map_id, row_id], kept)
 
-	_t.check("planted: a camp alt that is an altar fails", _breaks(flume_park, "siphon_camp", {"activity": "ambush_altar", "pack": [], "pay": {}}))
-	_t.check("planted: an alt that moves the place fails", _breaks(flume_park, "bench_bounty", {"activity": "ambush_altar", "pack": [], "pay": {}, "at": [0, 0]}))
-	_t.check("planted: alts on a cache fail", _breaks(flume_park, "bend_cache", {"activity": "cracked_cache", "pack": [], "pay": {}}))
+	_t.check("planted: a camp alt that is an altar fails", _breaks(flume_park, "siphon_camp", {"activity": "ambush_altar", "pack": []}))
+	_t.check("planted: an alt that moves the place fails", _breaks(flume_park, "bench_bounty", {"activity": "ambush_altar", "pack": [], "at": [0, 0]}))
+	_t.check("planted: an alt with its own pay fails", _breaks(flume_park, "bench_bounty", {"activity": "ambush_altar", "pack": [], "pay": {"rarities": ["rare"]}}))
+	_t.check("planted: alts on a cache fail", _breaks(flume_park, "bend_cache", {"activity": "cracked_cache", "pack": []}))
 
 	var game = Game.new()
 	game.test_mode = true
@@ -79,11 +82,10 @@ func _run() -> void:
 	var want := {}
 	for k in 64:
 		game.ctx.run.run_seed = 1000 + k
-		var key := hash([game.ctx.rng.seed, game.ctx.run.run_seed, "site_variants"])
 		want = {}
 		for row_id in PARKS["park_flume"]:
 			var authored := _site(map, row_id)
-			var drawn := Activities.variant(authored, key)
+			var drawn: Dictionary = game.world.activities.drawn(authored)
 			if drawn != authored:
 				want[row_id] = drawn
 		if want.size() == PARKS["park_flume"].size():
@@ -95,17 +97,25 @@ func _run() -> void:
 	await physics_frame
 	await physics_frame
 	for row_id in want:
-		var at: Vector2 = want[row_id]["at"]
-		var built = null
-		for s in game.world.activities.sites:
-			if is_instance_valid(s) and not s.drawn and Vector2(s.global_position.x, s.global_position.z).distance_to(at) <= AT_EPS_M:
-				built = s
-		var kind := String(built.id) if built != null else "nothing"
-		_t.eq("%s builds the drawn kind" % row_id, kind, String(want[row_id]["id"]))
-		if built != null and want[row_id].has("pack"):
+		var built = _built_at(game, want[row_id]["at"])
+		_t.eq("%s builds the drawn kind" % row_id, String(built.id) if built != null else "nothing", String(want[row_id]["id"]))
+		if built != null:
 			_t.eq("%s builds the drawn pack" % row_id, built.rule.get("pack", []), want[row_id]["pack"])
-	_t.eq("expected check count", _t.checks + 1, 26)
+	game.flow.enter_stage(stage, Vector3.ZERO, true)
+	await physics_frame
+	await physics_frame
+	for row_id in want:
+		var again = _built_at(game, want[row_id]["at"])
+		_t.eq("a retry builds %s's drawn kind again" % row_id, String(again.id) if again != null else "nothing", String(want[row_id]["id"]))
+	_t.eq("expected check count", _t.checks + 1, 30)
 	quit(_t.verdict())
+
+
+func _built_at(game, at: Vector2):
+	for s in game.world.activities.sites:
+		if is_instance_valid(s) and not s.drawn and Vector2(s.global_position.x, s.global_position.z).distance_to(at) <= AT_EPS_M:
+			return s
+	return null
 
 
 func _site(map, row_id: String) -> Dictionary:

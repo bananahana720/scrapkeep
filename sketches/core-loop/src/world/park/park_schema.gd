@@ -525,9 +525,9 @@ static func _lead_floor(row: Dictionary) -> float:
 const SET_PIECE_KINDS := ["miniboss", "warden", "vault"]
 
 
-# W1-70: an activity row may list alternatives, one drawn per run (activities.gd variant). An alternative names
-# its own activity, pack and pay and keeps the row's place, site and pocket role (PARK.md 2.12), so every map
-# check that reads the row holds whichever is drawn: a camp stays a camp, a risk stays a risk.
+# W1-70: an activity row may list alternatives, one drawn per run (activities.gd drawn). An alternative names its
+# own activity and pack and keeps the row's place, site, pay and pocket role (PARK.md 2.12), so every map check
+# that reads the row holds whichever is drawn: a camp stays a camp, a risk stays a risk, the pay ladder stands.
 static func _activity_alts(out: Array, id: String, row: Dictionary) -> void:
 	var alts = row["alts"]
 	if not (alts is Array and not (alts as Array).is_empty()):
@@ -541,11 +541,11 @@ static func _activity_alts(out: Array, id: String, row: Dictionary) -> void:
 	for alt in alts:
 		var label := "%s alts[%d]" % [id, n]
 		n += 1
-		if not _fields(out, label, alt, {"activity": ACTIVITY_KINDS, "pack": "a", "pay": "o"}):
+		if not _fields(out, label, alt, {"activity": ACTIVITY_KINDS, "pack": "a"}):
 			continue
 		for key in alt:
-			if not key in ["activity", "pack", "pay"]:
-				_add(out, label, "type", "an alt sets only activity, pack and pay, not %s" % key)
+			if not key in ["activity", "pack"]:
+				_add(out, label, "type", "an alt sets only activity and pack, not %s" % key)
 		if _alt_role(String(alt["activity"])) != role:
 			_add(out, label, "enum", "a %s alt changes the row's role from %s" % [alt["activity"], role])
 		_activity_pack(out, label, alt)

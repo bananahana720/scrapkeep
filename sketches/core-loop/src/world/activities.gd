@@ -528,7 +528,7 @@ func _plan(map, entry_data: Dictionary) -> Dictionary:
 	var out := []
 	var modifier := {}
 	for authored in map.activity_sites:
-		var spec := variant(authored, hash([ctx.rng.seed, ctx.run.run_seed, "site_variants"]))
+		var spec := drawn(authored)
 		var id := String(spec["id"])
 		if not RULES.has(id):
 			continue
@@ -574,17 +574,20 @@ func _plan(map, entry_data: Dictionary) -> Dictionary:
 	return {"sites": out, "modifier": modifier}
 
 
-# The site a run builds for an authored spec (W1-70): the spec itself, or one of its alts (park_map.gd), drawn from
-# the run's seed and the row, so a replay draws the same and the next run may not. An alt brings its own kind, pack
-# and pay; the place, row and the rest stay the spec's.
+# The site this run builds for an authored spec (W1-70): the spec itself, or one of its alts (park_map.gd), drawn
+# from the run's seed and the row, so a replay or a retry draws the same and the next run may not.
+func drawn(spec: Dictionary) -> Dictionary:
+	return variant(spec, hash([ctx.rng.seed, ctx.run.run_seed, "site_variants"]))
+
+
+# drawn for a given seed. An alt brings its own kind and pack; the place, row, pay and the rest stay the spec's.
 static func variant(spec: Dictionary, seed: int) -> Dictionary:
 	var alts: Array = spec.get("alts", [])
 	var pick := posmod(hash([seed, String(spec.get("row", ""))]), alts.size() + 1)
 	if pick == 0:
 		return spec
 	var out := spec.duplicate(true)
-	for key in ["pack", "pay"]:
-		out.erase(key)
+	out.erase("pack")
 	out.erase("alts")
 	out.merge(alts[pick - 1].duplicate(true), true)
 	return out

@@ -201,9 +201,9 @@ func _fill() -> void:
 		# Optional: a card 2 extra (the completionist card's added activities) stands beside the pocket draw.
 		if row.get("extra", "") == "card_2":
 			site["extra"] = "card_2"
-		# Optional (W1-70): the row's other activities, one drawn per run in its place (activities.gd variant).
+		# Optional (W1-70): the row's other activities, one drawn per run in its place and on its pay (activities.gd drawn).
 		if row.has("alts"):
-			site["alts"] = (row["alts"] as Array).map(_variant)
+			site["alts"] = (row["alts"] as Array).map(func(alt: Dictionary) -> Dictionary: return _variant(alt.merged({"pay": {}})))
 		activity_sites.append(site)
 
 	rescue_sites = []
@@ -229,7 +229,7 @@ func _fill() -> void:
 	# of its chunk jobs (lane_mask_for), so a ParkMap stays cheap to make and the boot path never touches the graph.
 
 
-# An activity row's (or one of its alts') kind, pack and pay as a site spec: {"id", "pack"?, "pay"?}.
+# An activity row's kind, pack and pay (an alt's kind and pack) as a site spec: {"id", "pack"?, "pay"?}.
 static func _variant(row: Dictionary) -> Dictionary:
 	var out := {"id": row["activity"]}
 	if not (row["pack"] as Array).is_empty():
