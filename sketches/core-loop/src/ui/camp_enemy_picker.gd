@@ -20,7 +20,9 @@ const ROW_SIZE := Vector2(250.0, 40.0)
 const COLUMNS := 3
 const LIST_H := 330.0
 const NOTE_FONT := UiTokens.BODY
-const NOTE_W := (ROW_SIZE.x + 10.0) * COLUMNS - 10.0
+const ROW_GAP := 8
+# The note spans the grid exactly: three rows and the two gaps between them.
+const NOTE_W := (ROW_SIZE.x + ROW_GAP) * COLUMNS - ROW_GAP
 const NOTE_OPEN := "Pick a crew to send to the grate. Four at a time; the box does not argue."
 
 signal kind_chosen(kind: String)
@@ -58,8 +60,8 @@ func _init() -> void:
 	add_child(scroll)
 	_grid = GridContainer.new()
 	_grid.columns = COLUMNS
-	_grid.add_theme_constant_override("h_separation", 8)
-	_grid.add_theme_constant_override("v_separation", 8)
+	_grid.add_theme_constant_override("h_separation", ROW_GAP)
+	_grid.add_theme_constant_override("v_separation", ROW_GAP)
 	scroll.add_child(_grid)
 	for kind in Sandbox.kinds():
 		var row := Row.new(kind)
