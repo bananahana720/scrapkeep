@@ -21,6 +21,7 @@ func _initialize() -> void:
 	_rows()
 	_every_pool_has_a_row()
 	_beam()
+	_counted_in_source()
 	_worlds()
 	quit(_t.verdict())
 
@@ -63,6 +64,30 @@ func _beam() -> void:
 	parent.free()
 
 
+# The counts the owners build in code: the sparkle cap is the top of vfx.gd's clampi on the scrap
+# sparkle, a thermal builds THERMAL_VIEWS multimeshes, and each scenery build batches one WaterMist.
+func _counted_in_source() -> void:
+	var vfx := FileAccess.get_file_as_string("res://src/presentation/vfx.gd")
+	var re := RegEx.new()
+	re.compile("p\\.amount = clampi\\(6 \\+ amount \\* 2, 6, (\\d+)\\)")
+	var m := re.search(vfx)
+	_t.check("vfx.gd caps a sparkle at SPARKLE_MAX", m != null and int(m.get_string(1)) == Budget.SPARKLE_MAX, m.get_string(1) if m != null else "not found")
+	var hd := FileAccess.get_file_as_string("res://src/presentation/highdraft_fx.gd")
+	_t.check("a thermal builds THERMAL_VIEWS multimeshes", hd.contains("for kind in %d:" % Budget.THERMAL_VIEWS) and hd.contains("MultiMeshInstance3D.new()"), "highdraft_fx.gd _thermal")
+	var scenery := FileAccess.get_file_as_string("res://src/presentation/spillway_scenery.gd")
+	var builds := 0
+	var most := 0
+	for part in scenery.split("\nstatic func "):
+		var n := part.count("\"WaterMist\", puff")
+		most = maxi(most, n)
+		builds += n
+	_t.check("each scenery build batches at most one WaterMist", most == 1 and builds >= 1, "%d batches, at most %d per build" % [builds, most])
+	# Every world_fx burst hook effect is a burst spec, so BURST_POOL covers it.
+	for hook in Specs.HOOKS:
+		for fx_id in Specs.HOOKS[hook].effects:
+			_t.check("hook %s effect %s is a spec" % [hook, fx_id], Specs.SPECS.has(fx_id), fx_id)
+
+
 func _worlds() -> void:
 	for world in Specs.WORLD_SETS:
 		var worst: Dictionary = Budget.worst_case(world)
@@ -70,10 +95,10 @@ func _worlds() -> void:
 		for id in Budget.ROWS:
 			if Budget.in_world(id, world):
 				rows.append("%s %d" % [id, Budget.ceiling(id)])
-		print("world %d worst case: %s (%s)" % [world, worst, ", ".join(rows)])
+		print("world %d worst case: %s (%s); per placed thing %s" % [world, worst, ", ".join(rows), Budget.per_thing(world)])
 		_t.check("world %d has a worst case" % world, int(worst.particles) > 0 and int(worst.nodes) > 0 and int(worst.draws) > 0, str(worst))
 	var shared := 0
-	for id in ["world_air", "anchors", "hits_and_kills", "machines"]:
+	for id in ["world_air", "anchors", "hits_and_kills", "machines", "player_layer", "kill_bursts"]:
 		shared += Budget.ceiling(id)
 	for world in Specs.WORLD_SETS:
 		_t.check("world %d particles at least the shared ceilings" % world, int(Budget.worst_case(world).particles) >= shared,
