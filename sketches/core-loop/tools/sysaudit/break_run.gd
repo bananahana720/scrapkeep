@@ -28,6 +28,8 @@ const StageModifier := preload("res://src/world/events/stage_modifier.gd")
 #          --live-swipe=1 plays the comic launch swipe under the bot (launch_take.force_live), as a played
 #          game does, so a quit can land inside it (SA-F4); run it rendered. The quit row's take_phase
 #          names the swipe phase at the quit (0 idle, 1 wind, 2 cover, 3 hold, 4 reveal).
+#          --film-resume=<s> saves the drawn frame ten times a second for s seconds after each Continue,
+#          as <out>/film-resume-<n>/<frame>.png (rendered runs only).
 #   stack  stacks every buff with every debuff: a random legal build of 6 to 14 parts (item_fuzz's
 #          draft), a curse deal taken, scrap wear on (the default), and the hull set to 15% at each
 #          new stage. Stage modifiers are the run seed's own; a "modifier" row names each stage's.
@@ -108,6 +110,10 @@ var _resumed_tick := 0
 var _quit_state := ""
 var _quit_state_s := 0.0
 var _live_swipe := false
+var _film_s := 0.0
+var _film_left := 0
+var _film_dir := ""
+var _film_frame := 0
 # stack
 var _drafted := false
 var _stacked_stages := {}
@@ -121,6 +127,8 @@ func _initialize() -> void:
 			var parts := arg.substr(10).split(":")
 			_quit_state = parts[0]
 			_quit_state_s = float(parts[1]) if parts.size() > 1 else 1.0
+		elif arg.begins_with("--film-resume="):
+			_film_s = float(arg.substr(14))
 		elif arg == "--live-swipe=1":
 			_live_swipe = true
 		elif arg.begins_with("--spam-until="):
@@ -141,6 +149,7 @@ func _physics_process(delta: float) -> bool:
 	if _game.get_instance_id() != _hooked_id:
 		_hook()
 	_watch(delta)
+	_film()
 	match _mode:
 		"spam":
 			if _spam_until <= 0.0 or _game.run.run_time < _spam_until:
@@ -353,7 +362,23 @@ func _check_resume() -> void:
 	if String(_before["state"]) in ["gates", "launch", "boss", "victory"] and run.stage == int(_before["stage"]) \
 			and _game.flow.state_name() == "stage" and (run.cogs < int(_before["cogs"]) or run.parts.size() < int(_before["parts"])):
 		wrong.append("cleared_stage_lost")
+	if _film_s > 0.0 and DisplayServer.get_name() != "headless":
+		_film_dir = _out.path_join("film-resume-%d" % _quits)
+		DirAccess.make_dir_recursive_absolute(_film_dir)
+		_film_left = int(_film_s * TICK_HZ)
+		_film_frame = 0
 	_row("resume", {"ok": wrong.is_empty(), "wrong": wrong, "now": now, "saved": want, "before": _before})
+
+
+func _film() -> void:
+	if _film_left <= 0 or _game == null:
+		return
+	if _film_left % 9 == 0:
+		var picture: Image = _game.get_viewport().get_texture().get_image()
+		if picture != null:
+			picture.save_png(_film_dir.path_join("%05d.png" % _film_frame))
+			_film_frame += 1
+	_film_left -= 1
 
 
 func _row_dead(kind: String, data: Dictionary) -> void:
