@@ -8,6 +8,7 @@ const Icons := preload("res://src/ui/icons.gd")
 const Keycap := preload("res://src/ui/keycap.gd")
 const Glyphs := preload("res://src/ui/glyphs.gd")
 const UiDraw := preload("res://src/ui/ui_draw.gd")
+const SpeedTier := preload("res://src/movement/speed_tier.gd")
 
 # The prompt (design-v3/LEGIBILITY.md sections 2, 3 and 5): a sand keycap about 28 px tall plus
 # the verb's icon in the live colour, drawn at the thing the verb acts on and only on ticks
@@ -35,6 +36,9 @@ const UiDraw := preload("res://src/ui/ui_draw.gd")
 # waits out a live fight (field_tips.gd fight_live, the view's "fight"): the dam Warden already
 # teaches the clamp crews and the water-sheet ride, so the ultimate gets its own moment, the first
 # full meter outside a fight (systems audit pass E). The reticle's own Q still shows meanwhile.
+# The boost prompt waits for the ball to reach the fast tier once in the run (W1-77): the first
+# seconds hold one voice, and a ball still crawling off the drop has nothing to boost. A view that
+# carries no "tier" (a scripted one) is not held.
 
 const AimReticle := preload("res://src/ui/aim_reticle.gd")
 const FieldTips := preload("res://src/ui/field_tips.gd")
@@ -70,6 +74,8 @@ var _first := {}
 var _free := {}
 var _letgo_latch := 0
 var _stood := 0.0
+# The ball has reached the fast tier in this run: the boost prompt may show.
+var _fast_seen := false
 var _winch_held := false
 var _line := ""
 var _points := {}
@@ -108,6 +114,7 @@ func new_run() -> void:
 		_first[verb] = true
 		_free[verb] = 0.0
 	_stood = 0.0
+	_fast_seen = false
 	_winch_held = false
 	_letgo_latch = 0
 	shown = []
@@ -217,6 +224,7 @@ static func view_of(player) -> Dictionary:
 		"line": "" if not kit.hooked else ("body" if kit.on_body else "world"),
 		"charging": (special != null and special.charging) or kit.slingshot.charging,
 		"mounted": kit.mounted,
+		"tier": player.speed_tier(),
 		"airborne": not player.state.grounded,
 		"winching": kit.winching,
 		"points": {"harpoon": kit.aim.get("point", Vector3.INF), "haul": kit.anchor, "boost": player.shown_position(),
@@ -250,6 +258,10 @@ func step(delta: float, view: Dictionary) -> void:
 			ready[verb] = false
 	if view.get("fight", false) and profile.uses("ultimate") == 0:
 		ready["ultimate"] = false
+	if int(view.get("tier", SpeedTier.FAST)) >= SpeedTier.FAST:
+		_fast_seen = true
+	if not _fast_seen:
+		ready["boost"] = false
 	var vault_open: bool = _vault != Vector3.INF and view.get("jump_possible", true)
 	var vault_only: bool = vault_open and not ready["jump"]
 	if vault_open:

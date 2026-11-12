@@ -6,6 +6,7 @@ const Icons := preload("res://src/ui/icons.gd")
 const UiProfile := preload("res://src/ui/ui_profile.gd")
 const GameEvents := preload("res://src/core/game_events.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
+const SpeedTier := preload("res://src/movement/speed_tier.gd")
 
 # The prompt rules of design-v3/LEGIBILITY.md section 5 over a scripted view of the ball: a
 # prompt shows only on a tick its verb is ready, two at most and the higher ball state first,
@@ -55,6 +56,7 @@ func run(t) -> void:
 	_returns_count_ready_ticks(t, glyphs, profile)
 	_icons_and_ball_verbs(t, glyphs)
 	_let_go(t, glyphs, profile, game)
+	_boost_waits_for_fast(t, glyphs, profile)
 
 	glyphs.free()
 	game.events.free()
@@ -69,6 +71,28 @@ static func _view(ready: Array, line := "", airborne := false, winching := false
 		flags[verb] = verb in ready
 	return {"ready": flags, "line": line, "charging": false, "mounted": false, "airborne": airborne, "winching": winching,
 		"points": {"harpoon": Vector3.ONE, "haul": Vector3.ONE, "boost": Vector3.ONE}}
+
+
+# W1-77: the boost prompt stays off until the ball first reaches the fast tier in a run, then
+# shows as ever (and stays even if the ball slows again); a new run holds it again. Other
+# prompts are not held meanwhile.
+static func _boost_waits_for_fast(t, glyphs, profile) -> void:
+	_fresh(glyphs, profile)
+	var slow := _view(["boost", "harpoon"])
+	slow["tier"] = SpeedTier.CRUISE
+	glyphs.step(DT, slow)
+	t.eq("the boost prompt waits while the ball is below the fast tier", glyphs.shown_verbs(), ["harpoon"])
+	var fast := _view(["boost"])
+	fast["tier"] = SpeedTier.FAST
+	glyphs.step(DT, fast)
+	t.eq("the boost prompt shows once the ball is fast", glyphs.shown_verbs(), ["boost"])
+	glyphs.step(DT, slow)
+	t.eq("the boost prompt stays after the ball slows", glyphs.shown_verbs(), ["boost"])
+	glyphs.new_run()
+	glyphs.step(DT, slow)
+	t.eq("a new run holds the boost prompt again", glyphs.shown_verbs(), [])
+	glyphs.step(DT, _view(["boost"]))
+	t.eq("a view with no tier is not held", glyphs.shown_verbs(), ["boost"])
 
 
 static func _fresh(glyphs, profile) -> void:
