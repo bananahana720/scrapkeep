@@ -301,9 +301,9 @@ static func quad(shape: String, size: Vector2, colour: Color, blend := "mix", al
 
 # The share of a spec's particles that emit: the low preset keeps its `low` share, reduced motion
 # drops a `motion: false` spec (strobes and fast sparks) and halves the rest.
-static func share(s: Dictionary, low: bool, reduced_motion: bool) -> float:
+static func share(s: Dictionary, low: bool, reduced: bool) -> float:
 	var r := float(s.get("low", 0.5)) if low else 1.0
-	if reduced_motion:
+	if reduced:
 		r = 0.0 if not s.get("motion", true) else r * 0.5
 	return r
 
@@ -311,8 +311,10 @@ static func share(s: Dictionary, low: bool, reduced_motion: bool) -> float:
 # The one place a world's effects read quality. The graphics preset is GraphicsPreset.current; the
 # reduced-motion setting lives here (WorldFx.preferred and HighdraftFx.preferred read and write it,
 # and Game.set_reduced_motion sets it). A world's own dressing (Specs.DRESSING rows) asks for its
-# share, visibility and colour below and registers once with follow_quality, so a new world writes
-# rows and behaviour, never its own preset hookup, low-quality cut or reduced-motion branch.
+# share, visibility and colour below and registers once with follow_quality, so a new world's
+# dressing writes rows and behaviour, not its own low-quality cut, reduced-motion branch or colours.
+# Not yet folded: game.gd still pushes reduced motion into live HighdraftFx nodes, and the Dig's
+# burst counts take fx_library.gd's own low row.
 static var reduced_motion := false
 
 
@@ -355,5 +357,5 @@ static func follow_quality(host: Node) -> void:
 
 
 # Live particles a spec costs at a preset.
-static func cost(id: String, low := false, reduced_motion := false) -> int:
-	return int(round(float(Specs.SPECS[id]["max"]) * share(Specs.SPECS[id], low, reduced_motion)))
+static func cost(id: String, low := false, reduced := false) -> int:
+	return int(round(float(Specs.SPECS[id]["max"]) * share(Specs.SPECS[id], low, reduced)))

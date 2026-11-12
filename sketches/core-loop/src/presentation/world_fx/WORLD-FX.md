@@ -4,7 +4,7 @@ The air, landmarks, events and ceremonies of Scrapkeep, as one data table and fo
 
 | File | Owns |
 | --- | --- |
-| `world_fx_specs.gd` | Every effect (`SPECS`), what each place plays (`SETS`), weather and modifier air (`OVERLAYS`), game moments (`HOOKS`), run grain (`GRAIN`), the Spillway's placements (`SPILL_PLACES`), budgets |
+| `world_fx_specs.gd` | Every effect (`SPECS`), what each place plays (`SETS`), weather and modifier air (`OVERLAYS`), game moments (`HOOKS`), run grain (`GRAIN`), the Spillway's placements (`SPILL_PLACES`), world dressing quality and colours (`DRESSING`), budgets |
 | `world_fx_grain.gd` | Run grain: each run rolls every effect's dials once from the run seed |
 | `world_fx_kit.gd` | Builds an emitter from a spec; the one shader (soft puff, streak, paper, ring, glint, rainbow); the clear zone |
 | `world_fx.gd` | The runtime: a world's ambient air, overlays, hooks, anchor ranking |
@@ -12,14 +12,14 @@ The air, landmarks, events and ceremonies of Scrapkeep, as one data table and fo
 | `world_fx_cable.gd` | A swaying cable on a catenary (shader sway, no script cost) |
 | `world_fx_word.gd` | The drawn sound word (SPLOSH, KA-CHUNK, OOH, PAID) |
 
-Stills: `tools/world_fx_capture.gd` renders every set on greybox stand-ins (command in its header). Checks: `tests/world_fx_test.gd`.
+Stills: `tools/world_fx_capture.gd` renders every set on greybox stand-ins (command in its header). Checks: `tests/world_fx_test.gd`, and `tests/world_fx_dressing_test.gd` for the `DRESSING` rows.
 
 ## Rules the table keeps
 
 1. **Air never hides a threat.** Every effect that follows the camera or the ball is `ambient` (the ball's `wake` is the one exception: it is the ball's own feedback, sits at the waterline and stays translucent): it fades out within 7 m of the ball (`CLEAR_RADIUS`) and near the lens, stays translucent, and never wears `HAZARD`, `ARC` or `ANCIENT`. The test fails any ambient spec that breaks this.
 2. **Soft world, inked comic.** In-world effects have no outline. Ceremony and comic effects (title slam, summaries, the modifier announce, a secret's find) carry an ink rim, so the comic book sits on top of the world (tone bible, pillar 2).
 3. **Budget.** A world's air plus its heaviest overlay stays under `AMBIENT_CEILING` (330 particles). Only the six nearest anchors inside their range emit at once. Past `lod_m` an anchor rests and shows its impostor, one soft quad that keeps a landmark's plume visible across the park for one draw call. The low preset keeps each spec's `low` share; reduced motion drops strobes and fast sparks, halves the rest, stills cables and skips words.
-4. **One quality reader.** A world's own shader and multimesh dressing (the Dig's lamps, grit and breach covers; the Highdraft's thermals, net and clouds) keeps its behaviour in its file, but its low-preset share, reduced-motion share, preset flag and colours are rows in `DRESSING` (`world_fx_specs.gd`), read through `WorldFxKit.dressing_share`, `dressing_count`, `dressing_shown`, `dressing_colour` and `dressing_alpha`; it joins the preset with one `WorldFxKit.follow_quality(self)`. The reduced-motion setting has one store, `WorldFxKit.reduced_motion` (`WorldFx.preferred` and `HighdraftFx.preferred` read and write it). A new world's dressing adds rows, not a quality hookup.
+4. **One quality reader.** A world's own shader and multimesh dressing (the Dig's lamps, grit and breach covers; the Highdraft's thermals, net and clouds) keeps its behaviour in its file, but its low-preset share, reduced-motion share, preset flag and colours are rows in `DRESSING` (`world_fx_specs.gd`), read through `WorldFxKit.dressing_share`, `dressing_count`, `dressing_shown`, `dressing_colour` and `dressing_alpha`; it joins the preset with one `WorldFxKit.follow_quality(self)`. The reduced-motion setting has one store, `WorldFxKit.reduced_motion` (`WorldFx.preferred` and `HighdraftFx.preferred` read and write it). A new world's dressing adds rows, not its own quality cuts or colours. Not yet folded: `game.gd` still pushes reduced motion into live `HighdraftFx` nodes, the Dig's burst counts take `fx_library.gd`'s low row, and two Highdraft tints come from `event_kinds.gd` and `highdraft_finishes.gd`.
 5. **Deterministic.** Fixed seed per run (the kit's seed off a run), no lights, no shadows, 30 fps particle step.
 
 ## Run grain (principle 21)

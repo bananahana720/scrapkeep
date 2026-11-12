@@ -75,6 +75,7 @@ func _rows_and_readers() -> void:
 	for path in READERS:
 		var text := FileAccess.get_file_as_string(path)
 		_t.check("%s reads quality only through the kit" % path, not text.contains(".current ==") and not text.contains("register_dressing_host"), path)
+		_t.check("%s takes no palette colour of its own" % path, not text.contains("Palette."), path)
 
 
 func _one_store() -> void:
