@@ -7,10 +7,9 @@
 # crown of five points). 2026-11-12 (W1-26 follow-up): relic was a five-point star and
 # evolved a taller copy of it; both now match the pedestal gems and the ball's part feet.
 # Provenance: authored procedurally here from Blender primitives and bmesh operators;
-# no external assets. Measured tris, arch plus three plates plus one topper: common
-# 1848, rare 1828, relic 2288, evolved 2048 (target 1500 to 2500).
-# 2026-10-04: new rarity names; evolved raises the star prism and both outlines to
-# 2.0x height, without relic's bolts/heart, keeping the file at 2,696 tris (cap 2,700).
+# no external assets. Measured tris, arch plus three plates plus one topper (2026-11-12,
+# after the polish pass and the tier shapes): common 2,832, rare 2,832, relic 3,472,
+# evolved 3,436, inside BAND below.
 #
 # Frame: matches reward_gates.gd, ground centre at the origin, posts at x = +-WIDTH/2
 # (8 m apart), lintel at HEIGHT (7 m), topper centre at HEIGHT + 1.2, glyph row at
@@ -31,7 +30,7 @@ from common import Part, Vector  # noqa: E402
 
 # Polish (POLISH.md): 3 cm bevels on every edge longer than 30 cm (posts, lintel, gantry, plates), hard bolts,
 # smooth shading and the AO/wear bake. rarity and field slots are not vertex-coloured, so the bake leaves the
-# rarity trim bright. File total 4,564 tris of the 6,000 gate cap.
+# rarity trim bright. The file holds every topper; assets/asset_budgets.json caps it at 6,000 tris.
 polish.enable(detail=1, bevel=0.03, bevel_min=0.3)
 
 HEIGHT = 7.0
@@ -130,8 +129,30 @@ def star(n, outer, inner):
 
 
 # The evolved crown's outline (x, z about the topper centre): a band and five points.
-CROWN = [(-1.1, -0.6), (1.1, -0.6), (1.1, 0.7), (0.825, 0.05), (0.55, 0.95), (0.275, 0.05), (0.0, 1.2),
-         (-0.275, 0.05), (-0.55, 0.95), (-0.825, 0.05), (-1.1, 0.7)]
+# Clockwise, like star(), so the prism's faces point the same way as the star's.
+CROWN = [(-1.1, -0.6), (-1.1, 0.7), (-0.825, 0.05), (-0.55, 0.95), (-0.275, 0.05), (0.0, 1.2), (0.275, 0.05),
+         (0.55, 0.95), (0.825, 0.05), (1.1, 0.7), (1.1, -0.6)]
+
+
+def offset(pts, d):
+    """The outline pushed d outward along each edge's normal (mitred, a sharp point capped at 3d)."""
+    n = len(pts)
+    area = sum(pts[i][0] * pts[(i + 1) % n][1] - pts[(i + 1) % n][0] * pts[i][1] for i in range(n))
+    sgn = 1.0 if area > 0 else -1.0
+    normals = []
+    for i in range(n):
+        (ax, ay), (bx, by) = pts[i], pts[(i + 1) % n]
+        length = math.hypot(bx - ax, by - ay)
+        normals.append((sgn * (by - ay) / length, -sgn * (bx - ax) / length))
+    out = []
+    for i in range(n):
+        n1, n2 = normals[i - 1], normals[i]
+        mx, my = n1[0] + n2[0], n1[1] + n2[1]
+        ml = math.hypot(mx, my)
+        mx, my = mx / ml, my / ml
+        reach = min(d / max(mx * n1[0] + my * n1[1], 1e-6), 3.0 * d)
+        out.append((pts[i][0] + mx * reach, pts[i][1] + my * reach))
+    return out
 
 
 def topper(rarity):
@@ -157,14 +178,14 @@ def topper(rarity):
         for k in range(4):
             a = math.pi / 4 + k * math.pi / 2
             for sy in (-1, 1):
-                t.bolt(c + Vector((0.3 * math.cos(a), sy * 0.19, 0.3 * math.sin(a) * tall)), (0, sy, 0),
-                       r=0.08, h=0.06)
+                t.bolt(c + Vector((0.22 * math.cos(a), sy * 0.19, 0.22 * math.sin(a) * tall)), (0, sy, 0),
+                       r=0.07, h=0.06, slot="field")
         t.ico("field", 0.36, 2, loc=c, scale=(1, 0.75, 1))
     else:
         # Evolved: a crown, a band with five points (src/build/tier_mark.gd).
         t.prism("rarity", CROWN, 0.34, matrix=upright)
-        outline_loop(t, [(x * 1.12, z * 1.12 + 0.03) for x, z in CROWN], 0.07)
-        outline_loop(t, [(x * 1.24, z * 1.24 + 0.06) for x, z in CROWN], 0.07)
+        outline_loop(t, offset(CROWN, 0.14), 0.07)
+        outline_loop(t, offset(CROWN, 0.3), 0.07)
     return t, c
 
 
