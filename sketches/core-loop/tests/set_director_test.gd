@@ -126,16 +126,21 @@ func _swap_and_breath() -> void:
 	t.eq("inside a fight the band rolls under the filter instead", [roll.move, roll.sweep, roll.trims], ["filter_roll", SetDirector.SWEEP_DEPTH, {}])
 	var g := SetDirector.new()
 	var guard := [0.45, 0.53, 0.47, 0.53, 0.46, 0.53, 0.47, 0.53].map(func(p): return g.read({"fight": "closed", "pressure": p}).move)
-	t.eq("a guard flickering near the peak line rolls once", guard.count("filter_roll"), 1)
+	var climbs := range(guard.size()).filter(func(i): return not i in [3, 7] and guard[i] == "filter_roll")
+	t.eq("a guard flickering near the peak line rolls once on the climb", climbs.size(), 1)
 	t.eq("the band's own directed sections hold", SetDirector.new().read({"fight": "directed", "incoming_bars": 1}).move, "hold")
 	t.eq("the Warden's breath is its own move", SetDirector.new().read({"fight": "open", "incoming_bars": 1}).move, "hold")
 	# Every phrase ends on a move: with June held out by a warning, the turnarounds walk the moves.
 	var b := SetDirector.new()
 	var plans := _run(b, {"pressure": 0.5, "fight": "closed", "warning": true}, SetDirector.PHRASE_BARS * 4)
 	var turns := plans.filter(func(p): return p.bar % SetDirector.PHRASE_BARS == SetDirector.PHRASE_BARS - 1)
-	t.eq("under a warning the turnarounds walk the moves", turns.map(func(p): return p.move), ["filter_roll", "dub", "breakdown", "filter_roll"])
-	t.eq("each takes sound away", turns.map(func(p): return [p.trims, p.sweep]),
-		[[{}, SetDirector.SWEEP_DEPTH], [{"other": 0.0}, 0.0], [{"drums": 0.0}, 0.0], [{}, SetDirector.SWEEP_DEPTH]])
+	t.eq("under a warning the turnarounds walk the moves", turns.map(func(p): return p.move), ["dub", "filter_roll", "breakdown", "dub"])
+	var halves := plans.filter(func(p): return p.bar % SetDirector.PHRASE_BARS == SetDirector.PHRASE_BARS / 2 - 1)
+	t.eq("in a fight the band turns at the half phrase too", halves.map(func(p): return p.move), ["filter_roll", "breakdown", "dub", "filter_roll"])
+	var moved := plans.filter(func(p): return p.move != "hold")
+	t.check("each takes sound away", moved.all(func(p): return p.answer == "" and (p.sweep > 0.0 or p.trims.values().all(func(g): return g < 1.0)) and not p.trims.is_empty() != (p.sweep > 0.0)), str(moved))
+	var quiet := SetDirector.new()
+	t.eq("a lull turns only at the phrase's end", _run(quiet, {"pressure": 0.0, "busy": true}, 8).map(func(p): return p.move).count("hold"), 7)
 	t.check("never an answer under a warning", plans.all(func(p): return p.answer == ""))
 
 

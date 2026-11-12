@@ -180,6 +180,9 @@ func read(room: Dictionary) -> Dictionary:
 	var plan := {"bar": bar, "mood": mood, "move": "hold", "trims": {}, "answer": "", "sweep": 0.0}
 	var fight := String(room.get("fight", ""))
 	var turnaround := at == PHRASE_BARS - 1
+	# In a fight or a rising room the band also turns at the half phrase (bar 4 of 8): records
+	# change often there, and a move every four bars is the pace a club DJ works a busy floor.
+	var half := at == PHRASE_BARS / 2 - 1
 	var incoming := int(room.get("incoming_bars", 0))
 	# The rise into a peak or a set piece: one per climb, re-armed when the room falls under the
 	# peak's fall line (so a guard holding near it never rolls twice) or leaves build, and one per announcement. Outside a fight the bass steps
@@ -203,7 +206,7 @@ func read(room: Dictionary) -> Dictionary:
 		plan.move = "answer"
 		plan.answer = _pick(_book_for(room))
 		plan.trims = {"other": LEAD_SPACE}
-	elif turnaround and not fight in OWN_FORM:
+	elif (turnaround or (half and (fight != "" or mood in ["build", "peak"]))) and not fight in OWN_FORM:
 		_turn(plan)
 	elif mood == "release" and was != "release" and not bool(room.get("warning", false)) and not bool(room.get("busy", false)) and not fight in LEAD_OWNED:
 		plan.move = "home"
