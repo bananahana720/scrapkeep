@@ -10,10 +10,15 @@ extends SceneTree
 # the yardstick the scaling rows SG-02 to SG-08 bring down.
 #
 # What counts as a site, on code (comments are skipped):
-#   world_cmp   a world number compared with a literal: world == 1, world_id <= 2
-#   world_list  a loop over the world numbers written out: in [1, 2, 3]
-#   boss_cmp    a world boss id compared with a literal: == "mind"
-#   map_id      a park or legacy map id written as a string: "park_dam", "spillway"
+#   world_cmp       a world number compared with a world literal: world == 1, world_id <= 2
+#                   (a "has a world" guard such as world > 0 or world >= 1 is not a site)
+#   world_list      a loop over the world numbers written out: in [1, 2, 3]
+#   world_match     a match on a world number
+#   world_map       a world number keyed to a map or theme: {1: "spillway", 2: "dig"}
+#   boss_cmp        a world boss id compared with a literal: == "mind"
+#   map_id          a park map id, or the legacy "spillway" and "gorge", written as a string
+#   legacy_map_cmp  a legacy map id compared, or listed to compare: == "dig", in ["dig", "dig_deep"]
+#                   (these ids are also quest and key names, so only a comparison counts)
 
 const T := preload("res://tests/support/t.gd")
 
@@ -22,22 +27,23 @@ const ROOT := "res://src"
 const HOMES := ["res://src/core/worlds.gd", "res://src/core/alpha_defs.gd", "res://src/core/park_defs.gd",
 	"res://src/core/slice_defs.gd", "res://src/core/stage_defs.gd"]
 const PATTERNS := {
-	"world_cmp": "\\b\\w*world\\w*\\s*(==|!=|<=|>=|<|>)\\s*\\d\\b|\\b\\d\\s*(==|!=|<=|>=|<|>)\\s*\\w*world\\w*\\b",
+	"world_cmp": "\\b_?world(_id|_index|_n)?\\s*((==|!=|<=|>)\\s*[1-9]|(>=|<)\\s*[2-9])\\b",
 	"world_list": "in\\s*\\[\\s*1\\s*,\\s*2\\s*,\\s*3\\s*\\]",
+	"world_match": "\\bmatch\\s+\\w*world\\w*\\s*:",
+	"world_map": "\\b[1-9]\\s*:\\s*\"(spillway|reach|dig|highdraft)\"",
 	"boss_cmp": "(==|!=)\\s*\"(mind|brindle|waking)\"|\"(mind|brindle|waking)\"\\s*(==|!=)",
 	"map_id": "\"(park_dam|park_flume|park_pit|park_sinkhole|park_islands|park_crown|spillway|gorge)\"",
+	"legacy_map_cmp": "(==|!=)\\s*\"(reach|dig|dig_deep|highdraft|highdraft_crown)\"|\"(reach|dig|dig_deep|highdraft|highdraft_crown)\"\\s*(==|!=|in\\b)|\\[\\s*\"(reach|dig|dig_deep|highdraft|highdraft_crown)\"\\s*,",
 }
-# Counted on stage/alpha-w39 de79a4e6, 12 Nov 2026: 106 sites in 35 files.
+# Counted on stage/alpha-w39 de79a4e6, 12 Nov 2026: 109 sites in 32 files.
 const PINS := {
 	"res://src/build/parts.gd": 1,
-	"res://src/build/relics.gd": 1,
 	"res://src/combat/kest_kit.gd": 1,
 	"res://src/core/ambient_kinds.gd": 22,
 	"res://src/core/flow.gd": 2,
-	"res://src/core/progress.gd": 1,
-	"res://src/core/radio.gd": 1,
 	"res://src/core/secrets.gd": 8,
 	"res://src/game.gd": 1,
+	"res://src/presentation/dig_scenery.gd": 3,
 	"res://src/presentation/harmony.gd": 1,
 	"res://src/presentation/hero_assets.gd": 3,
 	"res://src/presentation/machine_fx.gd": 3,
@@ -47,13 +53,12 @@ const PINS := {
 	"res://src/presentation/phase_music.gd": 2,
 	"res://src/presentation/title_intro_player.gd": 4,
 	"res://src/presentation/title_intros.gd": 1,
-	"res://src/presentation/world_fx/world_fx_specs.gd": 12,
+	"res://src/presentation/world_fx/world_fx_specs.gd": 15,
 	"res://src/presentation/world_look.gd": 1,
-	"res://src/ui/ending_sequence.gd": 7,
-	"res://src/ui/hud.gd": 2,
+	"res://src/ui/comic_page.gd": 1,
+	"res://src/ui/ending_sequence.gd": 9,
 	"res://src/ui/screens.gd": 1,
 	"res://src/world/breather_rows.gd": 2,
-	"res://src/world/camp_sandbox.gd": 1,
 	"res://src/world/director.gd": 1,
 	"res://src/world/events/natural.gd": 2,
 	"res://src/world/interactables.gd": 1,
