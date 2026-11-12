@@ -29,11 +29,12 @@ const SPARKLE_POOL := 6
 # Trail seconds and width per speed tier: nothing at a walk, a comet when blazing.
 const TRAIL_SECONDS := [0.0, 0.12, 0.22, 0.36]
 const TRAIL_WIDTH := [0.0, 0.28, 0.48, 0.72]
-# The trail fades with its distance from the lens: gone at TRAIL_LENS.x metres, whole at .y. After a
-# drop at full speed it lay back up over the camera and its last metres filled the middle of the view
-# as a pale cone (PF-07, w37 film 019 and 070: read as a light from above). The ball rides at the
-# arm's 8 m, or 4.2 m on a mount, so the trail at the ball stays whole.
-const TRAIL_LENS := Vector2(2.5, 6.0)
+# A trail point nearer the eye than the ball fades out: gone at TRAIL_NEAR.x of the ball's distance
+# from the eye, whole at .y. After a drop at full speed the trail lay back up over the camera and its
+# last metres filled the middle of the view as a pale cone (PF-07, w37 film 019 and 070: read as a
+# light from above). Shares of the ball's distance, so the trail at the ball stays whole on the 8 m
+# arm and the 4.2 m mount alike.
+const TRAIL_NEAR := Vector2(0.4, 0.8)
 const LINES_PER_TIER := [0, 0, 10, 20]
 # v3 W11 bursts: pooled one-shot CPU particles, one shared mesh and material per kind;
 # each burst sets only its emitter's colour, place and count. pool emitters x max count
@@ -667,15 +668,6 @@ func _on_scrap(amount: int, at: Vector3, _total: int) -> void:
 
 # --- Trail and speed lines -----------------------------------------------------------------
 
-# The trail's own copy of the juice material, faded near the lens (TRAIL_LENS).
-static func trail_material(juice: StandardMaterial3D) -> StandardMaterial3D:
-	var mat := juice.duplicate() as StandardMaterial3D
-	mat.distance_fade_mode = BaseMaterial3D.DISTANCE_FADE_PIXEL_ALPHA
-	mat.distance_fade_min_distance = TRAIL_LENS.x
-	mat.distance_fade_max_distance = TRAIL_LENS.y
-	return mat
-
-
 func _build_trail() -> void:
 	var mat := StandardMaterial3D.new()
 	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
@@ -689,7 +681,7 @@ func _build_trail() -> void:
 	_trail = MeshInstance3D.new()
 	_trail.name = "Trail"
 	_trail.mesh = ImmediateMesh.new()
-	_trail.material_override = trail_material(mat)
+	_trail.material_override = mat
 	_trail.top_level = true
 	_trail.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	juice.add_child(_trail)
@@ -734,6 +726,11 @@ func _process(delta: float) -> void:
 	_roll_dust()
 
 
+# How much of a trail point at `point_m` from the eye is drawn when the ball is `ball_m` away.
+static func trail_near(point_m: float, ball_m: float) -> float:
+	return smoothstep(ball_m * TRAIL_NEAR.x, ball_m * TRAIL_NEAR.y, point_m)
+
+
 func _draw_trail(tier: int) -> void:
 	var mesh: ImmediateMesh = _trail.mesh
 	mesh.clear_surfaces()
@@ -755,7 +752,7 @@ func _draw_trail(tier: int) -> void:
 		if along.length_squared() < 0.000001:
 			along = Vector3.FORWARD
 		var side := along.cross(eye - p).normalized() * width * (1.0 - float(i) / count)
-		var fade := (1.0 - float(i) / count) * 0.55
+		var fade := (1.0 - float(i) / count) * 0.55 * trail_near(eye.distance_to(p), eye.distance_to(at))
 		mesh.surface_set_color(Color(color.r, color.g, color.b, fade))
 		mesh.surface_add_vertex(p + side)
 		mesh.surface_set_color(Color(color.r, color.g, color.b, fade))

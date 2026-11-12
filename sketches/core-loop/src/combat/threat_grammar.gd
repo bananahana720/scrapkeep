@@ -124,10 +124,10 @@ const SPIKE_ALPHA := 0.7
 const SHELL_AREA_ALPHA := 0.24
 # Every mark fades with its distance from the lens: gone at LENS_CLEAR metres, whole at LENS_FULL.
 # Marks draw with no depth test, so a lane or fence passing by the camera stood over half the view
-# as flat orange slabs (PF-27, film 059 and 090). The ball rides further out than LENS_FULL, so
-# nothing at the ball or past it fades. The same numbers as the aim mark's (indicator.gd).
-const LENS_CLEAR := 1.5
-const LENS_FULL := 4.0
+# as flat orange slabs (PF-27, film 059 and 090). The ball rides at the arm's 8 m, or 4.2 m on a
+# mount, so a mark at the ball stays whole unless a wall pulls the arm in past LENS_FULL.
+const LENS_CLEAR := 1.0
+const LENS_FULL := 3.0
 const RAIL_ALPHA := 0.7
 const OWNER_STEP := PI / 6.0
 const OWNER_SPACING := 4.0
@@ -205,7 +205,7 @@ const CURTAIN_STEPS := 48
 # in one class must share an alpha, or the overlap shows whichever drew first and flips
 # with camera depth, so a class exists per alpha:
 #   area   INSTANT and LANE footprints (AREA_ALPHA)
-#   reach  a PROJECTILE's footprint (AREA_ALPHA * 1.4), its own class since fix round 2
+#   reach  a PROJECTILE's footprint (SHELL_AREA_ALPHA), its own class since fix round 2
 #   fill, swept, run  the INSTANT fill, a WAVE's swept ground, a pending LANE's run
 #   live   a LANE that is damaging (LIVE_ALPHA). It renders one priority above the other
 #          fills (LIVE_PRIORITY), so its band draws over a pending run, a fill and a swept
@@ -769,10 +769,11 @@ static func _spikes(lines: Array, reach: float) -> PackedVector3Array:
 	var tris := PackedVector3Array()
 	for line in lines:
 		var run := 0.0
+		var closed: bool = line.size() > 2 and (line[0] as Vector3).is_equal_approx(line[-1])
 		for i in line.size():
 			if i > 0:
 				run += (line[i] as Vector3).distance_to(line[i - 1])
-			if i > 0 and run < POST_SPACING:
+			if (i > 0 and run < POST_SPACING) or (closed and i == line.size() - 1):
 				continue
 			run = 0.0
 			var at := Vector3((line[i] as Vector3).x, 0.0, (line[i] as Vector3).z)
