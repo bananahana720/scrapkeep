@@ -15,7 +15,7 @@ const RAM_FRAMES := 150
 const UNDER := 0.9
 const OVER := 1.08
 
-var _t := T.new()
+var _t := T.new("blazing_cache_test")
 var _game
 var _refused := 0
 var _done: Array = []
