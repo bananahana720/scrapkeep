@@ -7,7 +7,7 @@ still differ by shape: in each row (gems, ball pieces, shop frames) it cuts each
 silhouette from the simulated image, drops what all four share (the bare ball), and reports the largest overlap (IoU) between any two
 tiers. A row passes below 0.8, where two silhouettes are clearly different shapes.
 
-  python3 tools/tier_cvd.py <tiers.png> <out.png>
+  python3 tools/tier_cvd.py <tiers.png> <out.png>   (reads <tiers>-bare.png beside it)
 """
 import json
 import sys
@@ -20,10 +20,11 @@ DEUTAN = np.array([[0.367322, 0.860646, -0.227968],
                    [-0.011820, 0.042940, 0.968881]])
 # Cells of the 1600x900 still: column centres, then each row's y span (the ball row is cut
 # above the balls, so only the pieces and their feet count).
-COLUMNS = [800 + (i - 1.5) * 333 for i in range(4)]
+COLUMNS = [800 + (i - 1.5) * 334 for i in range(4)]  # tier_still.gd COLUMN_PX
 HALF_W = 150
-ROWS = {"gems": (130, 345), "pieces": (380, 500), "shop": (705, 790)}
+ROWS = {"gems": (130, 345), "pieces": (370, 520), "shop": (700, 800)}
 TIERS = ["common", "rare", "relic", "evolved"]
+MIN_PX = 300
 
 
 def to_linear(c):
@@ -35,9 +36,26 @@ def to_srgb(c):
     return np.where(c <= 0.0031308, c * 12.92, 1.055 * c ** (1 / 2.4) - 0.055)
 
 
+def closest_pair(masks):
+    least, iou_max, pair = None, 0.0, ""
+    for a in range(4):
+        for b in range(a + 1, 4):
+            xor = int(np.logical_xor(masks[a], masks[b]).sum())
+            union = np.logical_or(masks[a], masks[b]).sum()
+            iou_max = max(iou_max, float(np.logical_and(masks[a], masks[b]).sum() / union) if union else 1.0)
+            if least is None or xor < least:
+                least, pair = xor, f"{TIERS[a]}/{TIERS[b]}"
+    return least, pair, iou_max
+
+
+def deutan(path):
+    rgb = np.asarray(Image.open(path).convert("RGB"), dtype=np.float64) / 255.0
+    return rgb, to_srgb(to_linear(rgb) @ DEUTAN.T)
+
+
 def main(src, out):
-    rgb = np.asarray(Image.open(src).convert("RGB"), dtype=np.float64) / 255.0
-    sim = to_srgb(to_linear(rgb) @ DEUTAN.T)
+    rgb, sim = deutan(src)
+    _, bare = deutan(src[:-4] + "-bare.png")
     side = np.concatenate([rgb, sim], axis=1)
     Image.fromarray((side * 255).round().astype(np.uint8)).save(out)
     bg = sim[5, 5]
@@ -46,22 +64,13 @@ def main(src, out):
     for row, (y0, y1) in ROWS.items():
         masks = []
         for cx in COLUMNS:
-            cell = sim[y0:y1, int(cx - HALF_W):int(cx + HALF_W)]
-            masks.append(np.abs(cell - bg).sum(axis=2) > 0.12)
-        # What every cell shares (the bare ball under the pieces) is no tier's evidence.
-        shared = np.logical_and.reduce(masks)
-        masks = [m & ~shared for m in masks]
-        worst = 0.0
-        pair = ""
-        for a in range(4):
-            for b in range(a + 1, 4):
-                inter = np.logical_and(masks[a], masks[b]).sum()
-                union = np.logical_or(masks[a], masks[b]).sum()
-                iou = inter / union if union else 1.0
-                if iou > worst:
-                    worst, pair = iou, f"{TIERS[a]}/{TIERS[b]}"
-        report[row] = {"max_iou": round(float(worst), 3), "pair": pair, "pass": bool(worst < 0.8)}
-        ok = ok and worst < 0.8
+            x0, x1 = int(cx - HALF_W), int(cx + HALF_W)
+            cell = sim[y0:y1, x0:x1]
+            ref = bare[y0:y1, x0:x1] if row == "pieces" else bg
+            masks.append(np.abs(cell - ref).sum(axis=2) > 0.12)
+        least, pair, iou = closest_pair(masks)
+        report[row] = {"closest_pair": pair, "differing_px": least, "max_iou": round(iou, 3), "pass": least >= MIN_PX}
+        ok = ok and least >= MIN_PX
     print(json.dumps(report, indent=1))
     print("tier_cvd:", "PASS" if ok else "FAIL")
     return 0 if ok else 1

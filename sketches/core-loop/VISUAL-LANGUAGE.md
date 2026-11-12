@@ -154,10 +154,10 @@ Every committed hostile attack draws the declared geometry damage will use, and 
 | --- | --- | --- |
 | Common (field kit) | Thin 2 px outline | Mint |
 | Rare (fleet grade) | Double outline, two 3 px lines with a 3 px gap | Cobalt |
-| Relic (gold; was rare_plus) | Double outline with four bolt-head notches at 45°, like a gauge bezel | Amber outer, mint inner |
-| Evolved | Double outline, the outer cut into the ancients' dashed seam, with diamond points at the corners | ANCIENT outer, mint inner |
+| Relic (gold; was rare_plus) | Double outline with bolt heads round it, like a gauge bezel: at the four corners (45°) and the edge midpoints, so they still read where the element and trigger badges cover the lower corners | Amber outer, mint inner |
+| Evolved | Double outline, the outer cut into the ancients' dashed seam, with diamond points where relic has bolts | ANCIENT outer, mint inner |
 
-**Rarity shapes in the world.** The same rungs have one 3D shape each, owned by `src/build/tier_mark.gd` and matching the reward gate's toppers: common a bar, rare a diamond, relic a four-point star with a mint heart, evolved a crown. A pedestal gem is the upright shape. A part piece on the ball stands on the flat version (none for common, which stays bare copper hardware). `tools/tier_still.gd` and `tools/tier_cvd.py` render the four tiers and check they still differ under deuteranopia (W1-26).
+**Rarity shapes in the world.** The same rungs have one 3D shape each, owned by `src/build/tier_mark.gd`: common a bar, rare a diamond, relic a four-point star with a mint heart, evolved a crown. Common, rare and relic follow the reward gate's toppers; the gate's evolved topper is still a taller copy of the relic star, so a gate and a pedestal disagree on evolved until the gate takes the crown. A pedestal gem is the upright shape. A part piece on the ball stands on the flat version (none for common, which stays bare copper hardware). `tools/tier_still.gd` and `tools/tier_cvd.py` render the four tiers and check they still differ under deuteranopia (W1-26).
 
 **Category backplates.**
 

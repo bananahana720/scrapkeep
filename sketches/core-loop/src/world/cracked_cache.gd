@@ -245,7 +245,11 @@ static func _set_gem(holder: Node3D, rarity: String) -> void:
 	for child in holder.get_children():
 		holder.remove_child(child)
 		child.queue_free()
-	holder.add_child(TierMark.mark(rarity, Palette.solid(gem_color(rarity), 2.0)))
+	var mark := TierMark.mark(rarity, Palette.solid(gem_color(rarity), 2.0))
+	# Device surfaces take colour from the mesh (device_props_asset_test); primitives read white.
+	for m: MeshInstance3D in mark.find_children("*", "MeshInstance3D", true, false):
+		m.material_override.vertex_color_use_as_albedo = true
+	holder.add_child(mark)
 
 
 # A pedestal gem wears its rarity's rung of the item ladder, the colour the reward card uses.

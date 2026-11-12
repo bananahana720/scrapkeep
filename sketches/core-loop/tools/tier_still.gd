@@ -13,13 +13,21 @@ const Parts := preload("res://src/build/parts.gd")
 # shop frames. tools/tier_cvd.py then applies the Machado deuteranopia matrix to it.
 #
 #   xvfb-run -a godot --rendering-driver opengl3 --path sketches/core-loop \
-#     --script res://tools/tier_still.gd -- --out=<png> [--part=<id per tier, comma list>]
+#     --script res://tools/tier_still.gd -- --out=<png>
+#
+# The pieces are all weapon-family parts, so only the tier changes along the row. The
+# shop tiles carry element and trigger badges, as shelf tiles do in play.
+# Writes <out> and <out>-bare.png (the pieces hidden).
 
 const SIZE := Vector2i(1600, 900)
-const PIECES := ["hot_rivets", "load_dividend", "tempest_core", "breaker_drive"]
+const PIECES := ["hot_rivets", "load_dividend", "ten_pin", "grounding_spike"]
+# One column per tier: 2.6 m in the world, the same 334 px on screen (tier_cvd.py COLUMNS).
+const COLUMN_M := 2.6
+const COLUMN_PX := 334.0
 
 var _out := "user://tier_still.png"
 var _frames := 0
+var _pieces: Array = []
 
 
 func _initialize() -> void:
@@ -48,7 +56,7 @@ func _initialize() -> void:
 	var acc := Accretion.new()
 	for i in ItemGen.RARITIES.size():
 		var rarity: String = ItemGen.RARITIES[i]
-		var x := (i - 1.5) * 2.6
+		var x := (i - 1.5) * COLUMN_M
 		var gem := TierMark.mark(rarity, Palette.solid(CrackedCache.gem_color(rarity), 2.0))
 		gem.position = Vector3(x, 2.4, 0.0)
 		world.add_child(gem)
@@ -64,21 +72,27 @@ func _initialize() -> void:
 		piece.position = Vector3(0.0, 0.92, 0.0)
 		piece.rotation_degrees = Vector3(25.0, 0.0, 0.0)
 		ball.add_child(piece)
+		_pieces.append(piece)
 	acc.free()
 	var ui := CanvasLayer.new()
 	root.add_child(ui)
 	for i in ItemGen.RARITIES.size():
-		var tile := ShopTile.new({"kind": "shelf", "rarity": ItemGen.RARITIES[i], "icon": "cat_utility"})
-		tile.position = Vector2(SIZE.x * 0.5 + (i - 1.5) * 330.0 - 56.0, SIZE.y - 190.0)
+		var tile := ShopTile.new({"kind": "shelf", "rarity": ItemGen.RARITIES[i], "icon": "cat_utility",
+			"element_icon": "el_arc", "trigger_icon": "trg_on_hit"})
+		tile.position = Vector2(SIZE.x * 0.5 + (i - 1.5) * COLUMN_PX - 56.0, SIZE.y - 190.0)
 		ui.add_child(tile)
 	process_frame.connect(_tick)
 
 
+# Two stills: the tiers, then the same frame with the pieces hidden (<out>-bare.png), so
+# tier_cvd.py can cut each piece's silhouette off its ball.
 func _tick() -> void:
 	_frames += 1
-	if _frames < 20:
-		return
-	var img := root.get_texture().get_image()
-	img.save_png(_out)
-	print("tier_still: wrote %s" % _out)
-	quit(0)
+	if _frames == 20:
+		root.get_texture().get_image().save_png(_out)
+		for piece in _pieces:
+			piece.visible = false
+	elif _frames == 26:
+		root.get_texture().get_image().save_png(_out.get_basename() + "-bare.png")
+		print("tier_still: wrote %s and its -bare twin" % _out)
+		quit(0)

@@ -25,16 +25,16 @@ const GLYPH := 20.0
 const PRICE_FONT := UiTokens.BODY
 const COG := 16.0
 # The rarity frames (VISUAL-LANGUAGE section 5): each rung differs by shape, not colour alone.
-# Common one line, rare two, relic two with round bolt heads at the corners, evolved two with
-# its outer line cut into the ancients' dashed seam and diamond points at the corners.
+# Common one line, rare two, relic two with round bolt heads round the bezel, evolved two with
+# its outer line cut into the ancients' dashed seam and diamond points in the bolts' places.
 const RARITY := {
 	"common": {"color": Palette.ARC, "width": 2.0, "double": false, "notches": "", "dashed": false},
 	"rare": {"color": Palette.COBALT, "width": 3.0, "double": true, "notches": "", "dashed": false},
 	"relic": {"color": Palette.AMBER, "width": 3.0, "double": true, "notches": "bolt", "dashed": false},
 	"evolved": {"color": Palette.ANCIENT, "width": 3.0, "double": true, "notches": "diamond", "dashed": true},
 }
-const NOTCH := 4.0
-const DASH := 6.0
+const NOTCH := 5.5
+const DASH := 9.0
 
 var rec := {}
 var index := -1
@@ -153,7 +153,12 @@ func _framed(icon_rect: Rect2, dim: float) -> void:
 		draw_rect(outer, tint, false, frame["width"])
 	if frame["double"]:
 		draw_rect(outer.grow(-6.0), Color(Palette.ARC, dim) if frame["notches"] != "" else tint, false, frame["width"])
-	for corner in rim:
+	# Corners and edge midpoints, so the bolts still read where the element and trigger
+	# badges cover the lower corners.
+	var bolts := rim.duplicate()
+	for k in 4:
+		bolts.append((rim[k] + rim[(k + 1) % 4]) * 0.5)
+	for corner in bolts:
 		match frame["notches"]:
 			"bolt":
 				draw_circle(corner, NOTCH, tint)
