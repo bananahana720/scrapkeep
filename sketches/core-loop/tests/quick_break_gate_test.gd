@@ -9,7 +9,8 @@ const T := preload("res://tests/support/t.gd")
 # engagement adds one part roll to its gate. The clock counts the fight from the attempt's
 # engagement to the first break, and a stage with no limit (0) never pays. In a booted run the
 # gates open with the pair after a fight over the limit, and with the pair and one more arch
-# after a fight under it.
+# after a fight under it. With the hot-wired arch beside them, four arches stand on the dam's
+# three-slot row, centred and at the slots' spacing, never off the row.
 # smoke: timeout=120s
 
 var _game
@@ -77,6 +78,7 @@ func _physics_process(_delta: float) -> bool:
 	var quick := _arches(RunClock.QUICK_BREAK_SECONDS[0] - 5.0)
 	_t.check("a slow break opens the pair", slow >= 2, "%d arches" % slow)
 	_t.eq("a quick break opens one more arch", quick, slow + 1)
+	_four_on_slots()
 	quit(_t.verdict())
 	return true
 
@@ -93,3 +95,41 @@ func _arches(fight: float) -> int:
 	var count: int = _build.gates.offers.size()
 	_build.gates.close()
 	return count
+
+
+# The dam's three slots (park_dam.json), on flat ground or on an island whose ground falls away
+# past the row.
+class SlotMap:
+	var gate_slots: Array = [{"at": Vector2(-16, 528), "facing": Vector3.FORWARD},
+		{"at": Vector2(0, 528), "facing": Vector3.FORWARD}, {"at": Vector2(16, 528), "facing": Vector3.FORWARD}]
+
+
+class SlotGround:
+	var edge := INF
+	var _map := SlotMap.new()
+
+	func map():
+		return _map
+
+	func height(x: float, _z: float) -> float:
+		return 0.0 if absf(x) <= edge else -20.0
+
+	func drop_point(x: float, z: float, _lift: float) -> Vector3:
+		return Vector3(x, height(x, z), z)
+
+
+func _four_on_slots() -> void:
+	var Gates := load("res://src/build/reward_gates.gd")
+	var gates = Gates.new()
+	var ground := SlotGround.new()
+	gates.setup(ground)
+	gates._ids = ["a", "b", "c", "d"]
+	var plan: Dictionary = gates.choose_placement(Vector3.ZERO, Vector3.FORWARD)
+	var xs: Array = plan.get("spots", []).map(func(p: Vector3): return p.x)
+	var zs: Array = plan.get("spots", []).map(func(p: Vector3): return p.z)
+	_t.eq("four arches stand on the dam's three-slot row, centred at its spacing", xs, [-24.0, -8.0, 8.0, 24.0])
+	_t.check("on the row", zs.all(func(z): return z == 528.0) and plan.get("fixed", false), str(zs))
+	ground.edge = 17.0
+	_t.check("a row past an island's edge takes the ordinary placement", not gates._slot_plan(4).get("fixed", false),
+		str(gates._slot_plan(4)))
+	gates.free()
