@@ -74,6 +74,9 @@ const AVOID_GROW := 16.0
 const TAG_FONT := UiTokens.BODY
 const TAG_PAD := Vector2(8.0, 4.0)
 const TAG_GAP := 6.0
+# How far a tag's chip may slide along off the ball, as a share of its own width: its stem still
+# meets the brackets' column.
+const TAG_SLIDE := 0.45
 # The rows of a mounted Warden's fight whose thing the driver names (warden_reactor.gd plate_targets).
 const MOUNT_ROWS := ["ride_sheet", "line_fight"]
 
@@ -346,15 +349,18 @@ func markers(size: Vector2) -> Array[Dictionary]:
 			continue
 		var tag: String = group["tag"]
 		var under := false
-		if tag != "" and not tag_free(box, tag, false, room, taken, keep_clear):
-			under = tag_free(box, tag, true, room, taken, keep_clear)
-			tag = tag if under else ""
+		var shift := 0.0
+		if tag != "":
+			var place := tag_place(box, tag, room, taken, keep_clear)
+			under = place.get("under", false)
+			shift = place.get("shift", 0.0)
+			tag = tag if not place.is_empty() else ""
 		if tag == "" and not _free(mark_rect(box, ""), room, taken):
 			if group["seen"]:
 				away.append_array(group["targets"])
 			continue
-		taken.append(mark_rect(box, tag, under))
-		out.append({"box": box, "color": group["color"], "tag": tag, "under": under})
+		taken.append(mark_rect(box, tag, under, shift))
+		out.append({"box": box, "color": group["color"], "tag": tag, "under": under, "shift": shift})
 	var view := view_rect(size)
 	var ball: Vector3 = game.player.shown_position()
 	for target in away:
@@ -432,14 +438,34 @@ func drawn_words() -> PackedStringArray:
 	return out
 
 
+# Where a mark's tag goes: {under, shift}, or {} for no tag. Over the brackets, else under them;
+# on either side the chip slides along by the least that keeps it off everything in `clear` (the
+# ball and its readouts; the brackets themselves may stand over the ball), up to TAG_SLIDE of its
+# own width, so its stem still meets the brackets' column.
+static func tag_place(box: Rect2, tag: String, room: Rect2, taken: Array[Rect2], clear: Array[Rect2]) -> Dictionary:
+	for under in [false, true]:
+		var chip := tag_rect(box, tag, under)
+		var shifts: Array[float] = [0.0]
+		for other in clear:
+			shifts.append(other.position.x - chip.end.x)
+			shifts.append(other.end.x - chip.position.x)
+		shifts.sort_custom(func(a: float, b: float): return absf(a) < absf(b))
+		for shift in shifts:
+			if absf(shift) > chip.size.x * TAG_SLIDE:
+				break
+			if tag_free(box, tag, under, room, taken, clear, shift):
+				return {"under": under, "shift": shift}
+	return {}
+
+
+# Whether a mark with its tag over (or under) its brackets, slid along by `shift`, has room, and
+# the tag's chip stays off everything in `clear`.
+static func tag_free(box: Rect2, tag: String, under: bool, room: Rect2, taken: Array[Rect2], clear: Array[Rect2], shift := 0.0) -> bool:
+	var chip := tag_rect(box, tag, under, shift)
+	return _free(mark_rect(box, tag, under, shift), room, taken) and not clear.any(func(other: Rect2): return other.intersects(chip))
+
+
 # Whether a mark may take this screen: inside the room and over no mark already placed.
-# Whether a mark with its tag over (or under) its brackets has room, and the tag's chip stays off
-# everything in `clear`; the brackets themselves may stand over the ball.
-static func tag_free(box: Rect2, tag: String, under: bool, room: Rect2, taken: Array[Rect2], clear: Array[Rect2]) -> bool:
-	var chip := tag_rect(box, tag, under)
-	return _free(mark_rect(box, tag, under), room, taken) and not clear.any(func(other: Rect2): return other.intersects(chip))
-
-
 static func _free(rect: Rect2, room: Rect2, taken: Array[Rect2]) -> bool:
 	return room.encloses(rect) and not taken.any(func(other: Rect2): return other.intersects(rect))
 
@@ -457,17 +483,17 @@ static func _slid(box: Rect2, room: Rect2) -> Rect2:
 
 # The screen a mark takes: its brackets at their widest, and its tag's chip over them (under
 # them when the room over them is taken).
-static func mark_rect(box: Rect2, tag: String, under := false) -> Rect2:
+static func mark_rect(box: Rect2, tag: String, under := false, shift := 0.0) -> Rect2:
 	var out := box.grow(maxf(box.size.x, box.size.y) * 0.5 * MARK_PULSE + MARK_STROKE)
-	return out.merge(tag_rect(box, tag, under)) if tag != "" else out
+	return out.merge(tag_rect(box, tag, under, shift)) if tag != "" else out
 
 
-# The tag's chip: centred over the brackets, or under them.
-static func tag_rect(box: Rect2, tag: String, under := false) -> Rect2:
+# The tag's chip: centred over the brackets, or under them, slid along by `shift`.
+static func tag_rect(box: Rect2, tag: String, under := false, shift := 0.0) -> Rect2:
 	var chip := Vector2(UiDraw.width(tag, TAG_FONT), UiFonts.bold().get_height(TAG_FONT)) + TAG_PAD * 2.0
 	var off := maxf(box.size.x, box.size.y) * 0.5 * MARK_PULSE + MARK_STROKE + TAG_GAP
 	var top := box.end.y + off if under else box.position.y - off - chip.y
-	return Rect2(Vector2(box.get_center().x - chip.x * 0.5, top), chip)
+	return Rect2(Vector2(box.get_center().x - chip.x * 0.5 + shift, top), chip)
 
 
 static func marker_color(target: Dictionary) -> Color:
@@ -539,8 +565,10 @@ func _draw_mark(marker: Dictionary) -> void:
 	if tag == "":
 		return
 	var under: bool = marker.get("under", false)
-	var chip := tag_rect(rest, tag, under)
-	var stem := Vector2(chip.get_center().x, chip.position.y if under else chip.end.y)
+	var chip := tag_rect(rest, tag, under, float(marker.get("shift", 0.0)))
+	# The stem leaves the chip as near the brackets' middle as the chip reaches.
+	var stem_x := clampf(rest.get_center().x, chip.position.x + 8.0, chip.end.x - 8.0)
+	var stem := Vector2(stem_x, chip.position.y if under else chip.end.y)
 	var point := -1.0 if under else 1.0
 	draw_colored_polygon(PackedVector2Array([stem + Vector2(-6.0, -point), stem + Vector2(6.0, -point), stem + Vector2(0.0, (TAG_GAP + 2.0) * point)]), Color(Palette.CHARCOAL, 0.92))
 	draw_rect(chip, Color(Palette.CHARCOAL, 0.92))

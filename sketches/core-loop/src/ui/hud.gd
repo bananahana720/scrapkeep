@@ -1119,12 +1119,12 @@ func hull_cap_shown() -> float:
 	return _health.cap
 
 
-# The objective for the flow's state: the row objectives.gd picks, with its glyph, its colour
-# and, while the Warden is still to be found, the metres to it.
-# The ball on screen and what rides on it (the part name, the danger mark), for the marks' tags to
-# stay off; empty while the ball is behind the camera.
+# The ball on screen and what rides on it (the part name, the danger mark, the prompts beside it
+# such as a boss part's readout), for the marks' tags to stay off.
 func _ball_readouts() -> Array[Rect2]:
 	var out: Array[Rect2] = []
+	for rect in prompt_rects.values():
+		out.append(rect)
 	var cam: Camera3D = game.camera.cam
 	var at: Vector3 = game.player.shown_position()
 	if cam == null or cam.is_position_behind(at):
@@ -1138,6 +1138,8 @@ func _ball_readouts() -> Array[Rect2]:
 	return out
 
 
+# The objective for the flow's state: the row objectives.gd picks, with its glyph, its colour
+# and, while the Warden is still to be found, the metres to it.
 func objective_reading() -> Dictionary:
 	var flow = game.flow
 	var warden = flow.warden if is_instance_valid(flow.warden) else null
