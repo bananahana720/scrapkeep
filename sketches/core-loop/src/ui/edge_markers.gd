@@ -10,6 +10,7 @@ const Hitscan := preload("res://src/combat/hitscan.gd")
 const ScreenRegions := preload("res://src/ui/screen_regions.gd")
 const UiDraw := preload("res://src/ui/ui_draw.gd")
 const UiFonts := preload("res://src/ui/ui_fonts.gd")
+const Interactables := preload("res://src/world/interactables.gd")
 
 # Edge markers: while the Warden (or the beacon, once it has no Warden) or an open
 # reward gate is off screen, a chevron on the edge of the play view points at it, with
@@ -186,6 +187,7 @@ func targets() -> Array[Dictionary]:
 			if not engaged:
 				for site in unfinished_sites():
 					out.append({"at": site.global_position, "kind": site.id, "activity": String(site.rule.get("cue", {}).get("view", site.id)), "icon": Objectives.glyph("find_activity")})
+				out.append_array(cage_targets())
 				out.append_array(_pocket_targets_now())
 		"gates":
 			for at in gate_points:
@@ -223,6 +225,19 @@ func unfinished_sites() -> Array:
 	for site in game.world.activities.sites:
 		if is_instance_valid(site) and not site.done and not site.has_meta("find"):
 			out.append(site)
+	return out
+
+
+# Each caged pilot still waiting (rescue_site.gd waiting()), in the cage's own ally colour and glyph: the
+# plate's detour row names the cage first, and this is where it is.
+func cage_targets() -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	var rescue = game.world.get("rescue") if game != null and game.world != null else null
+	if rescue == null:
+		return out
+	var ally := Interactables.row("ally")
+	for cage in rescue.waiting():
+		out.append({"at": cage["at"], "kind": "rescue_completed", "color": ally["color"], "icon": ally["icon"]})
 	return out
 
 
