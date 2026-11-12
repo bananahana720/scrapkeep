@@ -2,7 +2,7 @@ extends Node3D
 
 # Site markers (map audit unit 4, map standard point 1: "smaller signs mark caches and objectives, never a HUD arrow"):
 # a thin smoke plume over each place worth a detour that has nothing tall of its own, so a player on the line can see
-# it from a distance and choose to go. Three kinds, told apart by shape and motion first and by shade second, so none
+# it from a distance and choose to go. Three site kinds and the furnace's horizon column, told apart by shape and motion first and by shade second, so none
 # borrows a pickup's glow, an enemy's paint or a colour-law row (LEGIBILITY section 1). One exemption: the furnace's
 # glow is the bowl melt's own colour, near amber, because it is the bowl's light seen from afar; its place under a dark
 # column on the horizon, not its hue, tells it from an offer:

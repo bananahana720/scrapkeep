@@ -336,7 +336,6 @@ func _furnace() -> void:
 	var near: Vector2 = SiteMarkers.KINDS["furnace"]["near"]
 	t.eq("gone by the gate in front of it", SiteMarkers.near_alpha(near.x, true, near), 0.0)
 	t.eq("full again past its near range", SiteMarkers.near_alpha(near.y, true, near), 1.0)
-	t.check("its near fade ends before the 47 m from the flume gate to it", near.x > 47.0)
 	view.set_meta("far", false)
 	markers.fade_for(Vector3(-1.0, 30.0, 0.0))
 	t.check("planted: drawn as a near kind it shows nothing from the drop-in", not view.visible)
@@ -473,6 +472,8 @@ func _in_game() -> void:
 		var to_foot := Vector2(foot.x, foot.z) - gate
 		print("[game] furnace foot %s, %.0f m from the exit gate" % [foot, to_foot.length()])
 		t.check("it stands within 80 m of the flume's exit gate", to_foot.length() < 80.0, "%.0f" % to_foot.length())
+		var near: Vector2 = SiteMarkers.KINDS["furnace"]["near"]
+		t.check("its near fade is done before the gate in front of it", to_foot.length() < near.x, "%.0f m vs %.0f" % [to_foot.length(), near.x])
 		t.check("it stands ahead of the gate, where the launch aims", to_foot.dot(Vector2(sin(heading), cos(heading))) > 0.0)
 		t.near("on the ground under the bowl", foot.y, game.ctx.terrain.height(foot.x, foot.z))
 		_furnace_sight(Vector2(foot.x, foot.z))
