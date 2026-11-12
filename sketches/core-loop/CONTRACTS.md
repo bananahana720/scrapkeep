@@ -347,6 +347,7 @@ During play the screen is four horizontal bands, as shares of the visible height
 - The middle between `toasts` and `prompts` is the play view and the reticle.
 - A toast whose words are already showing is not repeated; the showing one stays up for another full beat.
 - A module that labels something in the world uses `src/ui/world_prompt.gd` (a `Label`), sets its text and colour, and calls `attach(anchor, offset, reach)`. It never uses a `Label3D` for words. The HUD places every prompt each frame: nearest first, at most 3, under its anchor's column where there is room, clamped inside `prompts`, never overlapping another prompt.
+- Grey panel pickup lines (`src/ui/pickup_lines.gd`) rise from the top edge of `bottom` at its left, over the speed and cogs readouts, in at most two rows; `presentation/panel_fx.gd` says what each line says and when (its `popped` signal), and a prompt stands clear of the lines while they show (PF-14).
 - Screens (title, class select, death, summary), the field notes and the tuning panel draw only while flow is out of play or the game is paused, when the HUD bands are hidden.
 - Presentation's discovery banner follows the same rule: it belongs in `toasts` or in the middle view, never in `top` or `prompts`.
 
