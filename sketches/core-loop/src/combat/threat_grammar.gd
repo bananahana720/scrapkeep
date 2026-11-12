@@ -5,6 +5,7 @@ const EventKinds := preload("res://src/core/event_kinds.gd")
 const Density := preload("res://src/presentation/density.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
 const FlashGuard := preload("res://src/presentation/flash_guard.gd")
+const EnemyMotion := preload("res://src/presentation/enemy_motion.gd")
 
 # One grammar for every enemy threat, drawn by combat's telegraph.gd and the boss's
 # hazard.gd. The attack type decides how a threat draws; its committed geometry decides
@@ -74,6 +75,36 @@ const RUN_ALPHA := 0.35
 const LIVE_ALPHA := 0.8
 const FLASH_ALPHA := 0.9
 const FLASH_SECONDS := 0.22
+# The landing (FX-05, effects critique E5): when a hostile ground mark goes live, an ink crack
+# ring and a dust kick at its edge put the hit's cause on the floor at its moment, after the
+# telegraph that drew the edge is gone. The ring is the edge redrawn as a jagged charcoal line
+# with short cracks running out of it; the dust is bone puffs thrown outward from the edge.
+# Ink, not light, so Reduce flashes leaves it whole; Reduced motion keeps the puffs in place.
+# Crack: one per CRACK_STEP metres of edge (CRACK_MIN to CRACK_MAX), each CRACK_LENGTH of the
+# mark's size long (clamped), held CRACK_HOLD seconds and gone by CRACK_SECONDS.
+const CRACK_SECONDS := 0.5
+const CRACK_HOLD := 0.2
+const CRACK_ALPHA := 0.95
+const CRACK_HALF := 0.07
+const CRACK_RING_HALF := 0.06
+const CRACK_STEP := 2.2
+const CRACK_MIN := 6
+const CRACK_MAX := 28
+const CRACK_LENGTH := 0.18
+const CRACK_SHORT := 0.5
+const CRACK_LONG := 1.2
+# The crack's zigzag: its middle steps sideways this share of its length; the ring's corners
+# step in or out by up to CRACK_RING_JAG metres.
+const CRACK_JAG := 0.3
+const CRACK_RING_JAG := 0.12
+# Dust: one puff per crack, DUST_SIZE across at the edge, thrown DUST_KICK metres out and
+# swelling by DUST_SWELL while it fades over DUST_SECONDS.
+const DUST_SECONDS := 0.35
+const DUST_ALPHA := 0.75
+const DUST_SIZE := 0.45
+const DUST_KICK := 1.1
+const DUST_SWELL := 0.8
+const DUST_TONE := Color("ece3cc")
 const EDGE_MIN := 0.35
 const EDGE_PER_METRE := 0.04
 # The widest an outline is drawn, metres: a 30 m ring's edge was 1.2 m of solid line.
@@ -1287,6 +1318,8 @@ class Painter:
 		instance.sorting_offset = FILL_SORT.get(fill_class, 0.0)
 
 	static func _priority(layer: String) -> int:
+		if layer == "crack":
+			return LINE_PRIORITY
 		if layer.ends_with("under"):
 			return LINE_UNDER_PRIORITY
 		if layer == "base" or layer == "motion":
@@ -1329,25 +1362,161 @@ class Painter:
 		return instance
 
 
-# The solid flash an INSTANT threat leaves where it landed; it outlives the telegraph
-# its owner frees on the landing tick, then fades.
+# What a hostile mark leaves where it lands, on the tick it goes live: an INSTANT's solid flash
+# over its footprint, and for every ground mark but a wave (its running front is its landing)
+# the ink crack ring and dust kick at its edge (landing()). It outlives the telegraph its owner
+# frees on the landing tick, then fades.
 class Flash:
 	extends Painter
 
 	var _age := 0.0
 	var _tone := Color.WHITE
+	var _fill := false
+	var _crack := false
+	var _dust := Callable()
+	var _life := 0.0
+	var _crack_alpha := Callable()
 
-	func start(fill: Array, tone: Color) -> void:
+	# fill: the INSTANT's solid marks; crack: the ink marks; crack_alpha(age) their alpha;
+	# dust(age): the dust mark at that age, or unset with no dust. The painter's own code
+	# cannot call the grammar's statics, so Threat.flash hands them in.
+	func start(fill: Array, tone: Color, crack: Array, crack_alpha: Callable, dust: Callable, life: float) -> void:
 		_tone = tone
-		paint(fill, ["fill"])
-		tint("fill", Color(_tone, FlashGuard.info(FLASH_ALPHA)))
+		_fill = not fill.is_empty()
+		_crack = not crack.is_empty()
+		_crack_alpha = crack_alpha
+		_dust = dust
+		_life = life
+		var layers: Array = []
+		if _fill:
+			layers.append("fill")
+		if _crack:
+			layers.append("crack")
+		paint(fill + crack, layers)
+		_show(0.0)
 
 	func _process(delta: float) -> void:
 		_age += delta
-		if _age >= FLASH_SECONDS:
+		if _age >= _life:
 			queue_free()
 			return
-		tint("fill", Color(_tone, FlashGuard.info(FLASH_ALPHA) * (1.0 - _age / FLASH_SECONDS)))
+		_show(_age)
+
+	func _show(age: float) -> void:
+		if _fill:
+			tint("fill", Color(_tone, FlashGuard.info(FLASH_ALPHA) * maxf(0.0, 1.0 - age / FLASH_SECONDS)))
+		if _crack:
+			tint("crack", Color(1.0, 1.0, 1.0, _crack_alpha.call(age)))
+		if _dust.is_valid():
+			var dust: Dictionary = _dust.call(age)
+			paint([dust], ["dust"])
+			tint("dust", Color(1.0, 1.0, 1.0, dust["alpha"]))
+
+
+# The crack ring's alpha at `age` seconds after the landing: held, then gone by CRACK_SECONDS.
+static func crack_alpha(age: float) -> float:
+	if age <= CRACK_HOLD:
+		return CRACK_ALPHA
+	return CRACK_ALPHA * clampf(1.0 - (age - CRACK_HOLD) / (CRACK_SECONDS - CRACK_HOLD), 0.0, 1.0)
+
+
+# Whether a descriptor leaves the landing marks when it goes live: a hostile mark on the
+# ground. A wave's landing is its running front; an air-only net and an aerial ring hit the
+# ball in the air, where a floor crack would point the wrong way.
+static func lands(d: Dictionary) -> bool:
+	return stance(d["tone"]) == "hostile" and int(d["type"]) != Type.WAVE \
+		and not d.get("air", false) and not d.get("aerial", false)
+
+
+# The landing's marks from the committed descriptor: "crack" (the ink ring and its cracks, on
+# the crack layer) and "dust" (no tris; its "puffs" are [edge point, outward] pairs the Flash
+# throws each frame through dust_tris). Seeded by the mark's centre, so a landing draws the
+# same every time. Empty when the mark does not land (lands()).
+static func landing(d: Dictionary) -> Array:
+	if not lands(d):
+		return []
+	var rng := RandomNumberGenerator.new()
+	var c: Vector3 = d["centre"]
+	rng.seed = hash(Vector3i((c * 10.0).round()))
+	var size: float = d["r_out"] if d["form"] == "radial" else float(d["half_width"]) * 2.0
+	var reach := clampf(size * CRACK_LENGTH, CRACK_SHORT, CRACK_LONG)
+	var tris := PackedVector3Array()
+	for line in _boundary(d):
+		_jagged(tris, line, rng)
+	var edge := _edge_points(d, rng)
+	var puffs: Array = []
+	for e in edge:
+		var p: Vector3 = e[0]
+		var out: Vector3 = e[1]
+		var side := Vector3.UP.cross(out)
+		var long := reach * rng.randf_range(0.7, 1.15)
+		var bend := side * long * CRACK_JAG * (1.0 if rng.randf() < 0.5 else -1.0)
+		var mid := p + out * long * 0.5 + bend
+		var tip := p + out * long + side * long * rng.randf_range(-0.15, 0.15)
+		_seg(tris, p - out * CRACK_HALF * 2.0, mid, CRACK_HALF)
+		_seg(tris, mid, tip, CRACK_HALF * 0.7)
+		if rng.randf() < 0.5:
+			_seg(tris, mid, mid + (out - bend.normalized() * 0.8).normalized() * long * 0.45, CRACK_HALF * 0.6)
+		puffs.append([p, out])
+	return [_mark("crack", "crack", Palette.CHARCOAL, tris, {"cracks": edge.size()}),
+		_mark("dust", "dust", DUST_TONE, PackedVector3Array(), {"puffs": puffs})]
+
+
+# The dust puffs `throw` (0 to 1) of the way out and `t` (0 to 1) through their life: a
+# diamond per puff, DUST_SIZE across at the edge, swelling by DUST_SWELL.
+static func dust_tris(puffs: Array, throw: float, t: float) -> PackedVector3Array:
+	var tris := PackedVector3Array()
+	var half := DUST_SIZE * 0.5 * (1.0 + DUST_SWELL * t)
+	for puff in puffs:
+		var out: Vector3 = puff[1]
+		var at: Vector3 = puff[0] + out * (DUST_KICK * throw + half)
+		var side := Vector3.UP.cross(out)
+		_quad(tris, at - out * half, at + side * half, at + out * half, at - side * half)
+	return tris
+
+
+# The edge redrawn in ink: each boundary step split at a midpoint stepped in or out.
+static func _jagged(tris: PackedVector3Array, line: Array, rng: RandomNumberGenerator) -> void:
+	for i in line.size() - 1:
+		var p: Vector3 = line[i]
+		var q: Vector3 = line[i + 1]
+		var side := Vector3.UP.cross(q - p).normalized()
+		var mid := (p + q) * 0.5 + side * rng.randf_range(-CRACK_RING_JAG, CRACK_RING_JAG)
+		_seg(tris, p, mid, CRACK_RING_HALF)
+		_seg(tris, mid, q, CRACK_RING_HALF)
+
+
+# Where the cracks and puffs leave the edge, as [point, outward] pairs: spaced about
+# CRACK_STEP along a radial mark's rim (skipping its open gaps) or a lane's rails and far cap.
+static func _edge_points(d: Dictionary, rng: RandomNumberGenerator) -> Array:
+	var out: Array = []
+	if d["form"] == "lane":
+		var back: float = d["back"]
+		var length: float = d["length"]
+		var half: float = d["half_width"]
+		var dir: Vector3 = Vector3(d["dir"].x, 0.0, d["dir"].z).normalized()
+		var right := Vector3.UP.cross(dir).normalized()
+		var per_side := clampi(int(round((length + back) / CRACK_STEP)), CRACK_MIN / 2, CRACK_MAX / 2)
+		for s in [-1.0, 1.0]:
+			for i in per_side:
+				var along := lerpf(-back, length, (i + rng.randf_range(0.3, 0.7)) / per_side)
+				out.append([_lane_at(d, along, s * half), right * s])
+		var cap := maxi(1, int(round(half * 2.0 / CRACK_STEP)))
+		for i in cap:
+			out.append([_lane_at(d, length, lerpf(-half, half, (i + 0.5) / cap)), dir])
+		return out
+	var c: Vector3 = d["centre"]
+	var r: float = d["r_out"]
+	var a0: float = d["a0"]
+	var a1: float = d["a1"]
+	var open: Array = d.get("open", [])
+	var count := clampi(int(round(absf(a1 - a0) * r / CRACK_STEP)), CRACK_MIN, CRACK_MAX)
+	for i in count:
+		var a := lerpf(a0, a1, (i + rng.randf_range(0.3, 0.7)) / count)
+		if _is_open(open, a):
+			continue
+		out.append([_at(c, a, r), Vector3(cos(a), 0.0, sin(a))])
+	return out
 
 
 static func flash(parent: Node, d: Dictionary, floor_y: float, lift: float) -> Node3D:
@@ -1355,5 +1524,30 @@ static func flash(parent: Node, d: Dictionary, floor_y: float, lift: float) -> N
 	node.floor_y = floor_y
 	node.lift = lift
 	parent.add_child(node)
-	node.start(marks(d, false).filter(func(m): return m["layer"] == "fill"), d["tone"])
+	var fill := marks(d, false).filter(func(m): return m["layer"] == "fill")
+	var landed := landing(d)
+	var crack := landed.filter(func(m): return m["layer"] == "crack")
+	var puffs: Array = landed[1]["puffs"] if landed.size() > 1 else []
+	var dust := Callable()
+	if not puffs.is_empty():
+		dust = func(age: float) -> Dictionary: return dust_at(puffs, age)
+	node.start(fill, d["tone"], crack, crack_alpha, dust, flash_life(not fill.is_empty(), not crack.is_empty(), not puffs.is_empty()))
 	return node
+
+
+# How long a landing's Flash lives: the longest of its parts.
+static func flash_life(fill: bool, crack: bool, dust: bool) -> float:
+	var out := FLASH_SECONDS if fill else 0.0
+	if crack:
+		out = maxf(out, CRACK_SECONDS)
+	if dust:
+		out = maxf(out, DUST_SECONDS)
+	return out
+
+
+# The dust mark `age` seconds after the landing, with its layer alpha: thrown out on an
+# ease-out (not at all under Reduced motion) and fading over DUST_SECONDS.
+static func dust_at(puffs: Array, age: float) -> Dictionary:
+	var t := clampf(age / DUST_SECONDS, 0.0, 1.0)
+	var throw := (1.0 - (1.0 - t) * (1.0 - t)) * EnemyMotion.motion_scale
+	return _mark("dust", "dust", DUST_TONE, dust_tris(puffs, throw, t), {"alpha": DUST_ALPHA * (1.0 - t)})

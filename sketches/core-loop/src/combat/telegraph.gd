@@ -232,9 +232,13 @@ func set_progress(value: float) -> void:
 	_repaint()
 	if armed and progress >= 1.0:
 		went_live.emit()
-	if type == Threat.Type.INSTANT and progress >= 1.0 and not _flashed and is_inside_tree() and is_hostile():
+	# The landing: an INSTANT's solid flash, and the ink crack ring and dust kick of any ground
+	# mark but a wave (Threat.landing, FX-05), once, on the tick it goes live.
+	if progress >= 1.0 and not _flashed and is_inside_tree() and is_hostile():
 		_flashed = true
-		Threat.flash(get_parent(), descriptor(), center.y, LIFT)
+		var d := descriptor()
+		if type == Threat.Type.INSTANT or Threat.lands(d):
+			Threat.flash(get_parent(), d, center.y, LIFT)
 
 
 # The committed numbers the drawing reads: the same fields contains() reads.
