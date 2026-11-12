@@ -38,19 +38,26 @@ const PickupLines := preload("res://src/ui/pickup_lines.gd")
 const PanelFx := preload("res://src/presentation/panel_fx.gd")
 const Companion := preload("res://src/core/companion.gd")
 const HullMark := preload("res://src/world/hull_mark.gd")
+const RunState := preload("res://src/core/run_state.gd")
 const Interactables := preload("res://src/world/interactables.gd")
 
 # The wallet readout: the steel cog and the cogs the run holds, the one number the HUD
 # shows because it is what the next roll through a hoop spends. The icon wears the cog's steel.
+# While Moss's hook waits locked on a class the ball has not reached (shop.hook_goal, W1-79),
+# the chip pins that goal after the number: the heft weight in amber and the class numeral.
 class CogChip extends Control:
 	const ICON := "res_scrap"
 	const COLOR := Palette.STEEL
+	const HOOK_ICON := "res_heft"
+	const WIDTH := 72.0
+	const PIN_WIDTH := 56.0
 
 	var amount := 0
+	var hook_class := 0
 
 	func _init() -> void:
 		mouse_filter = Control.MOUSE_FILTER_IGNORE
-		custom_minimum_size = Vector2(72.0, 24.0)
+		custom_minimum_size = Vector2(WIDTH, 24.0)
 		size = custom_minimum_size
 
 	func set_amount(value: int) -> void:
@@ -58,13 +65,27 @@ class CogChip extends Control:
 			amount = value
 			queue_redraw()
 
+	func set_hook(heft_class: int) -> void:
+		if heft_class == hook_class:
+			return
+		hook_class = heft_class
+		custom_minimum_size.x = WIDTH + (PIN_WIDTH if hook_class > 0 else 0.0)
+		size = custom_minimum_size
+		queue_redraw()
+
 	func drawn_words() -> PackedStringArray:
-		return PackedStringArray([str(amount)])
+		var out := PackedStringArray([str(amount)])
+		if hook_class > 0:
+			out.append(RunState.roman(hook_class))
+		return out
 
 	func _draw() -> void:
 		var mid := size.y * 0.5
 		UiDraw.icon(self, Icons.texture(ICON), Rect2(Vector2(0.0, mid - 10.0), Vector2(20.0, 20.0)), Icons.tint(ICON, COLOR))
 		UiDraw.text(self, 26.0, mid, str(amount), UiTokens.BODY, Palette.SAND, true)
+		if hook_class > 0:
+			UiDraw.icon(self, Icons.texture(HOOK_ICON), Rect2(Vector2(WIDTH, mid - 10.0), Vector2(20.0, 20.0)), Icons.tint(HOOK_ICON, Palette.AMBER))
+			UiDraw.text(self, WIDTH + 24.0, mid, RunState.roman(hook_class), UiTokens.BODY, Palette.AMBER, true)
 
 
 # The field-notes key drawn small: the cap Tab opens the notes with.
@@ -1419,6 +1440,8 @@ func _process(delta: float) -> void:
 			"", _armor_flash > 0.0, Palette.AMBER)
 	_speed.set_tier(game.player.state.tier)
 	_cogs.set_amount(run.cogs)
+	var shop = game.build.get("shop") if game.build != null else null
+	_cogs.set_hook(shop.hook_goal() if shop != null and not flow.in_arena else 0)
 
 	var tint: Color = run.class_def.color if run.class_def != null else Palette.SAND
 	var shape: String = run.class_def.shape if run.class_def != null else "ring"

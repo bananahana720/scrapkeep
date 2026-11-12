@@ -11,7 +11,11 @@ const UiDraw := preload("res://src/ui/ui_draw.gd")
 # lower corners, and the price as the cog icon and a number. The name and what it does
 # show in the counter's detail line for the tile under the mouse or the keys.
 #
-# kind   shelf | top | cell | reroll | sell | pick | weigh | stow
+# kind   shelf | top | cell | reroll | sell | pick | weigh | stow | brew
+# A brew plate is Moss's last-call kettle (shop.brew_offer): the pilot's ultimate glyph with a
+# pip per pour, each pour a third of the meter at the boss fight's start.
+# A shelf plate with set_pieces is the last call's set piece: a pip per piece of its maker's set
+# under the frame, the held ones filled and the one this plate adds outlined in amber.
 # A stow plate is a core carried in SPIL-9 (shop.stow_core): the core glyph in a socket ring,
 # and under it the piece it unseats (seat_icon), struck through; nothing when a socket is free.
 # A weigh plate is Moss's scale (shop.gd weigh): the mass glyph with the mass one press
@@ -119,12 +123,14 @@ func _draw() -> void:
 				var at := Rect2(Vector2(centre.x - side * 0.5, icon_rect.end.y + 6.0), Vector2(side, side))
 				draw_texture_rect(Icons.texture(seat), at, false, Icons.tint(seat, Color(Palette.SAND, dim)))
 				draw_line(at.position + Vector2(0.0, side), at.position + Vector2(side, 0.0), Color(Palette.HAZARD, dim), 3.0, true)
-		"cell":
+		"cell", "brew":
 			var icon_id := String(rec.get("icon", ""))
 			draw_texture_rect(Icons.texture(icon_id), icon_rect.grow(-8.0), false, Icons.tint(icon_id, Color(rec.get("color", Palette.SAND), dim)))
 			_pips(Vector2(centre.x, icon_rect.end.y + 2.0), int(rec.get("cells", 0)), int(rec.get("cap", 2)), dim)
 		_:
 			_framed(icon_rect, dim)
+			if int(rec.get("set_pieces", 0)) > 0:
+				_set_pips(Vector2(centre.x, icon_rect.end.y + 20.0), int(rec.get("set_held", 0)), int(rec["set_pieces"]), dim)
 	if rec.has("key"):
 		Keycap.draw(self, Vector2(Keycap.size_of(String(rec["key"]), 20.0).x * 0.5 + 6.0, 16.0), String(rec["key"]), Palette.SAND, 20.0)
 	if s == "locked":
@@ -187,6 +193,14 @@ func _lock_dial(hub: Vector2) -> void:
 	var angle := PI + PI * clampf((now - 1) / float(classes - 1), 0.0, 1.0)
 	draw_line(hub, hub + Vector2(cos(angle), sin(angle)) * (radius - 2.0), Palette.SAND, 2.0)
 	draw_circle(hub, 2.5, Palette.SAND)
+
+
+# The maker set this piece belongs to: held pieces filled, this piece's place ringed in amber.
+func _set_pips(at: Vector2, held: int, pieces: int, dim: float) -> void:
+	_pips(at, held, pieces, dim)
+	if held < pieces:
+		var x := at.x + (float(held) - (pieces - 1) * 0.5) * 14.0
+		draw_arc(Vector2(x, at.y), 8.0, 0.0, TAU, 16, Color(Palette.AMBER, dim), 2.0)
 
 
 func _pips(at: Vector2, filled: int, cap: int, dim: float) -> void:
