@@ -336,10 +336,8 @@ func _build_card() -> void:
 	# The drawn name (W1-47) when it loads; the plain word stays only as its fallback.
 	if Wordmark.texture() != null:
 		title.add_theme_color_override("font_color", Color.TRANSPARENT)
-		var mark := Wordmark.view(WORDMARK_H)
-		title.custom_minimum_size = mark.custom_minimum_size
-		mark.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-		title.add_child(mark)
+		title.custom_minimum_size = Vector2(WORDMARK_H * Wordmark.ASPECT, WORDMARK_H)
+		Wordmark.dress(title)
 	_play = Button.new()
 	_play.text = "Play"
 	_play.custom_minimum_size = Vector2(240.0, 56.0)

@@ -436,7 +436,7 @@ func _build_lights() -> void:
 	stage.add_child(lamp)
 
 
-# The deck (W1-47, the gig poster look Andrew picked from the taste page): the crew on Moss's
+# The deck (W1-47, the gig poster look recommended on the taste page): the crew on Moss's
 # barge at dusk while Brindle's ship hangs over them, all from the game's finished models. Each
 # row: name, model, position, yaw, scale. A model that fails to load is left out, never stood in.
 const DECK := [
@@ -562,7 +562,7 @@ func _freeze_visual(model: Node) -> void:
 func _warn(path: String) -> void:
 	if not _warned.has(path):
 		_warned[path] = true
-		push_warning("title_stage: '%s' unavailable or malformed; keeping a simple display body" % path)
+		push_warning("title_stage: '%s' unavailable or malformed; left out or kept as a simple display body" % path)
 
 
 func _box(label: String, dimensions: Vector3, at: Vector3, color: Color, parent: Node3D = null) -> MeshInstance3D:

@@ -189,10 +189,8 @@ func setup(game_ref) -> void:
 	add_child(_content)
 	_title = _label(UiTokens.DISPLAY)
 	_content.add_child(_title)
-	_wordmark = Wordmark.view(WORDMARK_H)
-	_wordmark.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_wordmark = Wordmark.dress(_title)
 	_wordmark.visible = false
-	_title.add_child(_wordmark)
 	_content.sort_children.connect(_fit_band)
 	get_viewport().size_changed.connect(_fit_name)
 	_mark = _label(UiTokens.HEADING)

@@ -44,6 +44,8 @@ func _run() -> void:
 	_t.check("the title shows the drawn wordmark", screens._wordmark.visible and screens._wordmark.texture != null
 		and screens._wordmark.get_parent() == screens._title)
 	_t.eq("the label draws no glyphs of its own", screens._title.get_theme_color("font_color"), Color.TRANSPARENT)
+	_t.check("the wordmark stays inside the label", screens._title.get_global_rect().encloses(screens._wordmark.get_global_rect()),
+		"%s in %s" % [screens._wordmark.get_global_rect(), screens._title.get_global_rect()])
 	_t.check("the band starts below the wordmark", screens._veil.anchor_top > 0.0 and screens._veil.anchor_top < 0.5,
 		str(screens._veil.anchor_top))
 	_t.eq("the ready line names the launch set and the open pilots", screens.ready_line(1234),
