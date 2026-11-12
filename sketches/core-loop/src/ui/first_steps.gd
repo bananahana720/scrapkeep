@@ -6,17 +6,24 @@ const Glyphs := preload("res://src/ui/glyphs.gd")
 const Keycap := preload("res://src/ui/keycap.gd")
 const UiFonts := preload("res://src/ui/ui_fonts.gd")
 const UiDraw := preload("res://src/ui/ui_draw.gd")
+const Tuning := preload("res://src/movement/tuning.gd")
 
-# The two lessons no verb prompt carries (FIRST-TIMER audit, scripts/first-timer.mjs): the drive
-# keys at the ball on a new save's first drops, and the slam on a Warden's open core. Each wears
-# the key glyph's sand cap and the live colour like ui/key_glyphs.gd and retires the same way,
-# after RETIRE_AFTER uses on the profile (ui_profile.gd glyph_uses).
+# The lessons no verb prompt carries (FIRST-TIMER audit, scripts/first-timer.mjs): the drive
+# keys at the ball on a new save's first drops, the slam on a Warden's open core, and the
+# plating read. The first two wear the key glyph's sand cap and the live colour like
+# ui/key_glyphs.gd; all three retire the same way, after RETIRE_AFTER uses on the profile
+# (ui_profile.gd glyph_uses).
 #
 #   roll  W A S D (the stick on a pad) and DRIVE beside the ball, from the drop until the run has
 #         DRIVE_LEARNED seconds of steering; a run that gets there is one use. It never shows once
 #         the stage's Warden is engaged, so a fight keeps its word budget (ui_word_budget_test).
 #   slam  while the Warden is staggered: Space Ctrl SLAM over the core on the ground (jump, then
 #         slam), Ctrl SLAM alone in the air. A slam within SLAM_REACH of the open core is one use.
+#   plate no words (ruling cx; gameplay critique finding 7, W1-68). A strike that glances off a
+#         slate rim makes that rim beat (the target's flare_glance()) and stretches three speed
+#         lines in the live colour from the ball, away from the target, longer the further the
+#         punch fell short: come back faster. Each glance shows it for PLATE_SHOW seconds; the
+#         first strike that beats plating once it has shown is its one use.
 #
 # The drive row ends left of the ball so the ball verbs' prompts (key_glyphs BALL_OFFSET, to the
 # right) stay clear; the slam row is centred over the core. Rules run on the physics tick, the
@@ -24,7 +31,7 @@ const UiDraw := preload("res://src/ui/ui_draw.gd")
 #
 # Each lesson emits events.prompt_shown on its rising edge, as the verb prompts do.
 
-const RETIRE_AFTER := {"roll": 3, "slam": 3}
+const RETIRE_AFTER := {"roll": 3, "slam": 3, "plate": 1}
 const DRIVE_LEARNED := 1.5
 const STEER_DEADZONE := 0.3
 const DRIVE_ACTIONS := ["cl_forward", "cl_left", "cl_back", "cl_right"]
@@ -37,6 +44,17 @@ const BALL_OFFSET := Vector2(-24.0, -34.0)
 const KEY_H := 28.0
 const GAP := 6.0
 const WORD_SIZE := UiTokens.BODY
+const PLATE_SHOW := 1.4
+const STREAK_GROW := 0.18
+const STREAK_FADE := 0.35
+# The middle line's length from a near miss to a hit with no speed in it; the outer two are shorter.
+const STREAK_SHORT := UiTokens.TARGET
+const STREAK_LONG := UiTokens.TARGET * 2.5
+const STREAK_SPREAD := UiTokens.GAP_S
+# Where the lines start: this far outside the ball's edge on screen.
+const STREAK_LEAD := UiTokens.GAP_S
+# Each line's width at its head; it tapers to a point at its tail.
+const STREAK_WIDTH := UiTokens.GAP_S
 
 var game
 var profile
@@ -46,6 +64,10 @@ var _placed: Array = []
 var _steered := 0.0
 var _drive_done := false
 var _was_drawn := {}
+# The plating lesson's last glance: {target, short (0 to 1 of the plating the punch missed), left, age}.
+var _glance := {}
+# The lesson has shown this session, so the next strike that beats plating retires it.
+var _plate_shown := false
 
 
 func setup(game_ref, profile_ref) -> void:
@@ -57,6 +79,8 @@ func setup(game_ref, profile_ref) -> void:
 	game.events.slammed.connect(func(at: Vector3, _strength: float, _flatness: float):
 		if game.flow.in_play() and core_open() and at.distance_to(game.flow.warden.global_position) <= SLAM_REACH:
 			profile.add_use("slam"))
+	game.events.strike_deflected.connect(_on_glanced)
+	game.events.enemy_struck.connect(_on_struck)
 
 
 func new_run() -> void:
@@ -64,6 +88,7 @@ func new_run() -> void:
 	_drive_done = false
 	shown = []
 	_was_drawn = {}
+	_glance = {}
 
 
 func retired(id: String) -> bool:
@@ -95,12 +120,66 @@ func step(delta: float) -> void:
 		if player.state.grounded:
 			parts.push_front({"key": Glyphs.of("jump")})
 		_add("slam", game.flow.warden.global_position + CORE_LIFT, Vector2.ZERO, "centre", parts)
+	if not _glance.is_empty():
+		_glance["left"] = float(_glance["left"]) - delta
+		_glance["age"] = float(_glance["age"]) + delta
+		if retired("plate") or float(_glance["left"]) <= 0.0 or not is_instance_valid(_glance["target"]):
+			_glance = {}
+		else:
+			_add("plate", player.shown_position(), Vector2.ZERO, "streak", [])
 	var drawn_now := {}
 	for lesson in shown:
 		drawn_now[lesson["id"]] = true
 		if not _was_drawn.has(lesson["id"]):
 			game.events.prompt_shown.emit(lesson["id"])
 	_was_drawn = drawn_now
+
+
+# A glance off a slate rim (the tint combat._tint() keeps) starts or restarts the plating lesson.
+# A Warden's guard wears no tint, so its deflections teach nothing here.
+func _on_glanced(enemy: Node3D, _kind: String, punch: float, plating: float) -> void:
+	if game == null or not game.flow.in_play() or retired("plate") or not is_instance_valid(enemy):
+		return
+	if enemy.get("tint_state") != "slate":
+		return
+	if enemy.has_method("flare_glance"):
+		enemy.flare_glance()
+	_plate_shown = true
+	_glance = {"target": enemy, "short": clampf(1.0 - punch / maxf(plating, 1.0), 0.0, 1.0), "left": PLATE_SHOW,
+		"age": 0.0 if _glance.is_empty() else minf(float(_glance["age"]), STREAK_GROW)}
+
+
+# Asked inside the strike's own announce, combat's resolve() answers with the settled hit.
+func _on_struck(enemy: Node3D, kind: String, force: float) -> void:
+	if not _plate_shown or retired("plate") or not is_instance_valid(enemy):
+		return
+	var spawner = game.ctx.spawner if game.get("ctx") != null else null
+	if spawner == null or not spawner.has_method("resolve"):
+		return
+	var hit: Dictionary = spawner.resolve(enemy, kind, force)
+	if bool(hit.get("full", false)) and float(hit.get("plating", 0.0)) > 0.0:
+		profile.add_use("plate")
+		_glance = {}
+
+
+# The three speed lines' screen geometry.
+func _streak(cam: Camera3D, ball_world: Vector3) -> Dictionary:
+	var target: Node3D = _glance["target"]
+	var ball := cam.unproject_position(ball_world)
+	var radius := ball.distance_to(cam.unproject_position(ball_world + cam.global_basis.x * Tuning.RADIUS))
+	# Away from the target along the ground, then onto the screen: the run-up a faster hit needs.
+	var ground := ball_world - target.global_position
+	ground.y = 0.0
+	var away := Vector2.DOWN
+	if ground.length() > 0.01:
+		var back := ball_world + ground.normalized() * Tuning.RADIUS
+		if not cam.is_position_behind(back) and cam.unproject_position(back).distance_to(ball) >= 1.0:
+			away = cam.unproject_position(back) - ball
+	var age := float(_glance["age"])
+	var grow := clampf(age / STREAK_GROW, 0.0, 1.0)
+	var fade := clampf(float(_glance["left"]) / STREAK_FADE, 0.0, 1.0)
+	return {"at": ball.round(), "lead": round(radius) + STREAK_LEAD, "dir": away.normalized(), "length": lerpf(STREAK_SHORT, STREAK_LONG, float(_glance["short"])) * ease(grow, 0.4),
+		"alpha": fade}
 
 
 # The four drive keys as bound on the keyboard, or the one stick glyph on a pad.
@@ -163,6 +242,9 @@ func _placements() -> Array:
 	for lesson in shown:
 		if cam.is_position_behind(lesson["world"]):
 			continue
+		if lesson["align"] == "streak":
+			out.append(_streak(cam, lesson["world"]))
+			continue
 		var at: Vector2 = cam.unproject_position(lesson["world"]) + lesson["offset"]
 		at.x -= row_width(lesson["parts"]) * (1.0 if lesson["align"] == "end" else 0.5)
 		out.append({"at": at.round(), "parts": lesson["parts"]})
@@ -180,6 +262,9 @@ func _draw() -> void:
 	var cap_color: Color = EventKinds.UI_ROWS["key_glyph"]["color"]
 	var live := EventKinds.role_color("live")
 	for lesson in _placed:
+		if lesson.has("dir"):
+			_draw_streak(lesson, live)
+			continue
 		var x: float = lesson["at"].x
 		var y: float = lesson["at"].y
 		for part in lesson["parts"]:
@@ -191,3 +276,16 @@ func _draw() -> void:
 				var word: String = part["word"]
 				UiDraw.text(self, x, y, word, WORD_SIZE, live)
 				x += UiFonts.width(word, WORD_SIZE) + GAP * 2.0
+
+
+# Comic speed lines trailing the ball: the middle one longest, each tapering to nothing at its tail.
+func _draw_streak(streak: Dictionary, live: Color) -> void:
+	var dir: Vector2 = streak["dir"]
+	var side := dir.orthogonal()
+	for i in [-1, 0, 1]:
+		var length: float = float(streak["length"]) * (1.0 if i == 0 else 0.6)
+		var head: Vector2 = streak["at"] + dir * float(streak["lead"]) + side * STREAK_SPREAD * 1.5 * i
+		var tail := head + dir * length
+		var color := Color(live, float(streak["alpha"]))
+		draw_polygon(PackedVector2Array([head + side * STREAK_WIDTH * 0.5, tail, head - side * STREAK_WIDTH * 0.5]),
+			PackedColorArray([color, Color(color, 0.0), color]))
