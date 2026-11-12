@@ -222,7 +222,9 @@ static func _pickup_meshes() -> Array[Mesh]:
 				var cog := scene.find_child(COG_PART, true, false) as MeshInstance3D
 				_cog_model = cog.mesh if _valid_pickup(cog) else null
 			scene.free()
-	if _pickup_mesh_cache.is_empty() or _cog_model == null:
+	if _cog_model == null:
+		push_warning("scrap field: missing or malformed cog model; using cog disc fallback")
+	if _pickup_mesh_cache.is_empty():
 		push_warning("scrap field: missing or malformed model; using scrap box fallback")
 	else:
 		for mesh in _pickup_mesh_cache:
