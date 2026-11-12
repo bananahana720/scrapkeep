@@ -20,9 +20,8 @@ extends RefCounted
 #     the melody progresses, and the same answer never plays twice in a row;
 #   - every phrase ends on a move a player hears (coordinator steer, 12 November 2026: the DJ
 #     mixes through fights too): June's answer when the lead is free, else a filter roll, a dub
-#     bar or a breakdown, which only take sound away and so never mask a warning; a new record
-#     blends in out of the filter; the Warden's breath and drop and a directed piece are their
-#     own moves and the director holds there;
+#     bar or a breakdown in turn across the run, which only take sound away and so never mask a
+#     warning; the band's own directed sections are their own moves and the director holds there;
 #   - no randomness: the same rooms give the same set, in bots and in play.
 
 const PHRASE_BARS := 8
@@ -44,9 +43,10 @@ const SWEEP_DEPTH := 0.85
 # for a dub bar, or the drums step out for a breakdown. Each only takes sound away, so none
 # can mask a warning; they run in fights and under warnings too.
 const TURNS := ["filter_roll", "dub", "breakdown"]
-# Fight words whose own form is the move (the Warden's breath and drop, a directed piece):
+# Fight words whose own form is the move (the Warden's breath and drop, a directed piece, and
+# "directed", any section the band directs itself: its pivot, break, return and home):
 # the director holds there.
-const OWN_FORM := ["open", "drop", "piece"]
+const OWN_FORM := ["open", "drop", "piece", "directed"]
 # Heat's band (redline.gd: 0 cool, 1 a quarter, 2 hot, 3 redline) from which answers run hot.
 const HOT_BAND := 2
 # Armour fraction under which the room is hanging on (the band strips its lead there too).
@@ -131,7 +131,6 @@ func reset() -> void:
 	_low_bars = 0
 	_release_left = 0
 	_rising = false
-	_turn_move = 0
 	_turns = {}
 	_last_answer = ""
 	_swap_armed = true
@@ -166,7 +165,7 @@ static func colour(room: Dictionary) -> String:
 
 # Reads the room for the coming bar and returns its plan:
 #   {bar, mood, move, trims: {stem: gain}, answer: phrase id or "", sweep: low-pass depth the
-#   band rolls to across the bar, blend: the record opens out of the filter across the bar}.
+#   band rolls to across the bar}.
 # room may also carry warning (a danger or telegraph cue is sounding or due inside the bar),
 # busy (another melodic cue owns the bar) and incoming_bars (bars until a set piece the
 # conductor has announced, 0 when none).
@@ -178,24 +177,20 @@ func read(room: Dictionary) -> Dictionary:
 	energy = e
 	mood = _next_mood(room, e)
 	var at := bar % PHRASE_BARS
-	var plan := {"bar": bar, "mood": mood, "move": "hold", "trims": {}, "answer": "", "sweep": 0.0, "blend": false}
+	var plan := {"bar": bar, "mood": mood, "move": "hold", "trims": {}, "answer": "", "sweep": 0.0}
 	var fight := String(room.get("fight", ""))
 	var turnaround := at == PHRASE_BARS - 1
 	var incoming := int(room.get("incoming_bars", 0))
 	# The rise into a peak or a set piece: one per climb, re-armed when the room falls under the
-	# peak's fall line or leaves build, and one per announcement. Outside a fight the bass steps
+	# peak's fall line (so a guard holding near it never rolls twice) or leaves build, and one per announcement. Outside a fight the bass steps
 	# out for the bar and slams back on the downbeat; in a fight the band rolls under the filter.
-	if mood != "build" or e < PEAK_DOWN:
+	if mood != "build" or e < PEAK_DOWN - PEAK_NEAR:
 		_swap_armed = true
 	var climb := _swap_armed and mood == "build" and _rising and e >= PEAK_UP - PEAK_NEAR
 	var landing := incoming == 1 and not _landing_swapped
 	if incoming != 1:
 		_landing_swapped = false
-	if bar == 0 and not fight in OWN_FORM:
-		# A new record comes in under the filter and opens across its first bar.
-		plan.move = "blend_in"
-		plan.blend = true
-	elif not fight in OWN_FORM and mood != "peak" and (climb or landing):
+	if not fight in OWN_FORM and mood != "peak" and (climb or landing):
 		_swap_armed = false
 		_landing_swapped = incoming == 1
 		if fight == "":

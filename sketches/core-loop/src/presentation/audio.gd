@@ -4769,8 +4769,8 @@ func _tend_set() -> void:
 	_set_bar_at = at
 	var plan := set_director.read(set_room(at))
 	var ramp := grid_unit(4)
-	if not plan.trims.is_empty() or plan.sweep > 0.0 or plan.blend:
-		ace.trim_bar(at, plan.trims, ace.grid_bar, ramp, plan.sweep, plan.blend)
+	if not plan.trims.is_empty() or plan.sweep > 0.0:
+		ace.trim_bar(at, plan.trims, ace.grid_bar, ramp, plan.sweep)
 	if plan.answer != "":
 		_set_answer = SfxBank.SET_ANSWER + plan.answer
 		_set_answer_at = at
@@ -4820,6 +4820,9 @@ func set_room(at: int) -> Dictionary:
 			room["fight"] = "piece"
 		"warden":
 			room["fight"] = ace.section if ace.section in ["open", "drop"] else ace.warden_state
+	# A section the band directs itself (a pivot, the Warden's break, return and home) is its own move.
+	if ace.section in ace.PROTECTED:
+		room["fight"] = "directed"
 	# A flat pack (a miniboss, Brindle or a moment tune plays one "main" section) is an anthem:
 	# June stays out, the turnaround moves still play.
 	if ace.section == "main" and ace.mode != "piece":

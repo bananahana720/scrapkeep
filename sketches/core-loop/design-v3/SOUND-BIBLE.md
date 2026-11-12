@@ -67,11 +67,10 @@ Andrew, 12 November 2026: "I want it to feel like there is a backend dj that mix
 | Answer | The last bar of each 8-bar phrase, counted from when the band starts (the director's own count, so it can sit off the record's phrase after a re-entry), when nothing else owns the melody; taken back if a fight section, warning, caller or quote arrives after it is booked | The recorded lead steps back to about a third, and June plays one bar from her phrase book in the room's colour or mood: lazy and low in a lull, climbing in a build, the hook an octave up at the peak, a run up the ladder when hot, a brass call on Overtime, a fall that winks (a bell after it) when hanging on |
 | Home | The first bar of a release | A cadence home to D |
 | Bass swap | The bar before a peak or an announced set piece; once per climb and once per announcement | The bass steps out for one bar and slams back on the downbeat |
-| Filter roll | A turnaround June does not take, in order with the dub and the breakdown; a climb or a landing inside a fight | The band rolls under a low-pass across the bar and opens on the downbeat |
+| Filter roll | A turnaround June does not take, in order with the dub and the breakdown across the run; a climb or a landing inside a fight | The band rolls under a low-pass across the bar and opens on the downbeat |
 | Dub | The next such turnaround | The lead drops out for the bar: bass and drums alone |
 | Breakdown | The next one | The drums step out for the bar |
-| Blend in | The first bar of every new record (a stage, a fight, a boss phase) | The record comes in under the low-pass and opens across its first bar |
-| Hold | Anything else, and always inside the Warden's breath, its drop and a directed piece, which are their own moves | Nothing changes |
+| Hold | Anything else, and always inside the band's own directed sections (a pivot, the Warden's breath, drop, break, return and home, a directed piece), which are their own moves | Nothing changes |
 
 The move rate (assumption, 12 November 2026, after the first PC run heard one answer and one bass swap in four minutes): a player hears at least one move in every 8-bar phrase the band plays outside a directed section, in fights and under warnings too. The turnaround moves only take sound away, so none can mask a warning; June, who adds a melody, still never plays over one. `tests/set_director_test.gd` holds the rate on a scripted stretch of play, and the bounce receipt's `set_plans` rows carry the time, the fight word and why a turnaround held, so the PC can measure it on real runs.
 

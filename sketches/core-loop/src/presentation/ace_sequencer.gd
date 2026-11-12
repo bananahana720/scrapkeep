@@ -123,8 +123,6 @@ var trims := {}
 # no low-pass of its own, in the sections trims reach.
 var sweep := 0.0
 const SWEEP_HZ := 420.0
-# Where a record blending in starts under the low-pass.
-const SWEEP_DEPTH_IN := 0.85
 var rendered := 0
 # Stem voices opened and the time opening them took: each one seeks its recording on the
 # frame that asks for the section, so a call that opens more than one section's stems shows here.
@@ -372,20 +370,17 @@ func trim_at(at: int, next: Dictionary, frames: int) -> void:
 
 # One bar of trims: the cut is full on bar line at, the stems are back on the next, each ramp
 # ending on its edge so the downbeat sounds at its own level.
-# depth rolls the band under the low-pass across the bar; blend starts the bar under it and
-# opens it across the bar. Both are gone by the next bar line.
-func trim_bar(at: int, next: Dictionary, bar: int, ramp: int, depth := 0.0, blend := false) -> void:
+# depth rolls the band under the low-pass across the bar; it is gone by the next bar line.
+func trim_bar(at: int, next: Dictionary, bar: int, ramp: int, depth := 0.0) -> void:
 	if not next.is_empty():
 		trim_at(at - ramp, next, ramp)
-	if blend:
-		_add({"at": maxi(at, clock), "type": "sweep", "depth": 0.0, "from": SWEEP_DEPTH_IN, "frames": maxi(bar - ramp, 1)})
-	elif depth > 0.0:
+	if depth > 0.0:
 		_add({"at": maxi(at, clock), "type": "sweep", "depth": depth, "frames": maxi(bar - ramp, 1)})
 	_add({"at": maxi(at + bar - ramp, clock), "type": "trim", "trims": {}, "frames": maxi(ramp, 1), "sweep": 0.0})
 
 
-# The live voices move toward a sweep depth over frames; from, when given, starts them there.
-func _sweep_to(depth: float, frames: int, from := -1.0) -> void:
+# The live voices move toward a sweep depth over frames.
+func _sweep_to(depth: float, frames: int) -> void:
 	sweep = depth
 	var begun := bool(pending.get("begun", false))
 	var live := String(pending["section"]) if begun else section
@@ -398,11 +393,7 @@ func _sweep_to(depth: float, frames: int, from := -1.0) -> void:
 		if row.get("lowpass_hz") != null:
 			continue
 		var want := depth if reach else 0.0
-		if from >= 0.0 and reach:
-			v.lp = lowpass_coeffs(SWEEP_HZ)
-			v.z = PackedFloat64Array([0, 0, 0, 0, 0, 0, 0, 0])
-			v.wet = from
-		elif want > 0.0 and v.wet <= 0.0 and v.wet_target <= 0.0:
+		if want > 0.0 and v.wet <= 0.0 and v.wet_target <= 0.0:
 			v.lp = lowpass_coeffs(SWEEP_HZ)
 			v.z = PackedFloat64Array([0, 0, 0, 0, 0, 0, 0, 0])
 		v.wet_target = want
@@ -1031,16 +1022,19 @@ func _retarget(frames: int) -> void:
 		var row: Dictionary = gains[v.stem]
 		_ramp_to(v, _gain_of(row, v.stem), frames)
 		var hz = row.get("lowpass_hz")
+		var want := 0.0
 		if hz != null:
 			if v.lp.is_empty() or v.wet_target == 0.0:
 				v.lp = lowpass_coeffs(float(hz))
 				v.z = PackedFloat64Array([0, 0, 0, 0, 0, 0, 0, 0])
 				v.wet = 0.0
-			v.wet_target = 1.0
-		else:
-			var swept := not v.lp.is_empty() and mode != "piece" and not section in PROTECTED and not section in LEAD_WHOLE
-			v.wet_target = sweep if swept else 0.0
-		v.wet_step = 1.0 / maxf(frames, 1)
+			want = 1.0
+		elif not v.lp.is_empty() and mode != "piece" and not section in PROTECTED and not section in LEAD_WHOLE:
+			want = sweep
+		# A target that holds keeps its pace: a filter roll in flight still runs across its bar.
+		if want != v.wet_target:
+			v.wet_target = want
+			v.wet_step = 1.0 / maxf(frames, 1)
 
 
 # The momentum faders rise over one beat and fall over two bars, so one bump of speed or
@@ -1153,7 +1147,7 @@ func _run(action: Dictionary) -> void:
 		"follow":
 			_follow()
 		"sweep":
-			_sweep_to(float(action.depth), int(action.frames), float(action.get("from", -1.0)))
+			_sweep_to(float(action.depth), int(action.frames))
 		"trim":
 			if action.has("sweep"):
 				_sweep_to(0.0, int(action.frames))
