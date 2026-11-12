@@ -67,7 +67,7 @@ export function command({ binary, pilot, depth, out, render }) {
   const user = ["--", `--pilot=${pilot}`, `--depth=${depth}`, `--out=${out}`];
   const tool = ["--path", sketch, "--fixed-fps", "60", "--script", "res://tools/power_read.gd"];
   if (render === "none") return { cmd: binary, argv: ["--headless", ...tool, ...user, "--render=0"] };
-  const view = ["--resolution", SIZE, ...tool, ...user];
+  const view = ["--audio-driver", "Dummy", "--resolution", SIZE, ...tool, ...user];
   if (render === "native") return { cmd: binary, argv: view };
   return { cmd: "xvfb-run", argv: ["-a", "-s", `-screen 0 ${SIZE}x24`, binary, "--rendering-driver", "opengl3", ...view] };
 }
