@@ -3,7 +3,9 @@ extends Node3D
 # Site markers (map audit unit 4, map standard point 1: "smaller signs mark caches and objectives, never a HUD arrow"):
 # a thin smoke plume over each place worth a detour that has nothing tall of its own, so a player on the line can see
 # it from a distance and choose to go. Three kinds, told apart by shape and motion first and by shade second, so none
-# borrows a pickup's glow, an enemy's paint or a colour-law row (LEGIBILITY section 1):
+# borrows a pickup's glow, an enemy's paint or a colour-law row (LEGIBILITY section 1). One exemption: the furnace's
+# glow is the bowl melt's own colour, near amber, because it is the bowl's light seen from afar; its place under a dark
+# column on the horizon, not its hue, tells it from an offer:
 #
 # - cache: a rib cache still waiting (scrap_field.gd caches()). A keeper's brew fire: one pale wisp that leans and curls.
 # - cage: a caged pilot not yet freed (rescue_site.gd). A smoke signal: pale puffs rising in an even beat.
@@ -40,7 +42,7 @@ const KINDS := {
 		"sway": 0.08, "sway_hz": 0.07, "rise": 0.07, "grain": Vector2(2.0, 4.0), "puffs": 6.0, "stutter": 0.8},
 	"furnace": {"tint": WORKS_SMOKE, "height": 170.0, "width": 80.0, "alpha": 1.8, "foot": 0.3, "crown": 0.95, "rim_dark": 0.7,
 		"sway": 0.06, "sway_hz": 0.05, "rise": 0.035, "grain": Vector2(2.0, 3.5), "puffs": 0.0, "stutter": 0.0,
-		"glow": Color(FURNACE_GLOW, 0.85), "far": true},
+		"glow": Color(FURNACE_GLOW, 0.85), "far": true, "near": Vector2(60.0, 140.0)},
 }
 # The boss whose bowl stands a furnace column, by Worlds' boss kind.
 const FURNACE_BOSS := "brindle"
@@ -95,25 +97,30 @@ func _on_cleared(_reason: String) -> void:
 
 
 # The share of a plume's alpha it shows for an eye distance_m away (horizontal): the one rule for distance. A far kind
-# keeps the near fade and has no far one.
-static func near_alpha(distance_m: float, far := false) -> float:
-	var near := smoothstep(GONE_M, FULL_M, distance_m)
-	return near if far else near * (1.0 - smoothstep(FAR_FULL_M, FAR_GONE_M, distance_m))
+# has no far fade, and its own near fade (its row's "near", [gone, full]): the furnace has thinned out by the time the
+# ball rolls up to the gate in front of it, so the stage's clear at the launch takes nothing still showing.
+static func near_alpha(distance_m: float, far := false, near := Vector2(GONE_M, FULL_M)) -> float:
+	var share := smoothstep(near.x, near.y, distance_m)
+	return share if far else share * (1.0 - smoothstep(FAR_FULL_M, FAR_GONE_M, distance_m))
 
 
 # The furnace column's site while it stands, else {}: on the last stage of a world whose boss is FURNACE_BOSS, from the
-# stage's start until its launch, at the foot of the bowl the launch lands in. boss_kind is that world's boss kind,
-# showing tells whether the run is still on the stage (not in the boss, the summary or a menu), foot is the ground under
-# the bowl's centre (furnace_foot).
+# stage's start until its launch, at the foot of the bowl the launch lands in. boss_kind is the boss that will run after
+# the stage ("" when the table runs none or its row is not built), showing tells whether the run is still on the stage
+# (not in the boss, the summary or a menu), foot is the ground under the bowl's centre (furnace_foot).
 static func furnace_site(world_last: bool, boss_kind: String, showing: bool, foot) -> Dictionary:
 	if not world_last or boss_kind != FURNACE_BOSS or not showing or not foot is Vector3:
 		return {}
 	return {"key": "furnace", "kind": "furnace", "at": foot}
 
 
-# The ground under the bowl Arena.place_ahead puts past stage's exit gate, or null when there is no terrain to read.
+# The ground under the bowl Arena.place_ahead puts past stage's exit gate, or null when there is no terrain to read or
+# the stage's map states no exit row: the bowl then falls back over the beacon, not ahead of a launch (arena.gd).
 static func furnace_foot(terrain, stage: int):
-	if terrain == null or not terrain.has_method("height"):
+	if terrain == null or not terrain.has_method("height") or not terrain.has_method("map_for"):
+		return null
+	var map = terrain.map_for(stage)
+	if map == null or not map.has_method("handover") or not map.handover().has("exit"):
 		return null
 	var bowl: Vector3 = Arena.place_ahead(terrain, stage)
 	return _ground(terrain, Vector3(bowl.x, 0.0, bowl.z))
@@ -190,6 +197,7 @@ func _plume(kind: String, at: Vector3, key: String) -> MeshInstance3D:
 	view.set_meta("kind", kind)
 	view.set_meta("at", at)
 	view.set_meta("far", bool(row.get("far", false)))
+	view.set_meta("near", row.get("near", Vector2(GONE_M, FULL_M)))
 	add_child(view)
 	view.global_position = at
 	view.visible = false
@@ -245,7 +253,7 @@ static func _show(view: MeshInstance3D, eye: Vector3, keep: float) -> void:
 	var at: Vector3 = view.get_meta("at")
 	var distance := Vector2(at.x - eye.x, at.z - eye.z).length()
 	var far: bool = view.get_meta("far")
-	var share := near_alpha(distance, far) * keep
+	var share := near_alpha(distance, far, view.get_meta("near")) * keep
 	view.visible = share > 0.0
 	if far:
 		var k := pull(distance)
@@ -298,7 +306,10 @@ func _furnace_now() -> Dictionary:
 		return {}
 	var stage: int = run.stage
 	var world_last: bool = stages.is_world_last(stage)
-	var kind := String(flow.boss_row(stages.world_of(stage)).get("kind", "")) if world_last else ""
+	var kind := ""
+	if world_last and String(stages.BOSS) != "":
+		var row: Dictionary = flow.boss_row(stages.world_of(stage))
+		kind = String(row.get("kind", "")) if bool(row.get("built", false)) else ""
 	var showing: bool = flow.state in [flow.STAGE, flow.BEACON, flow.GATES, flow.LAUNCH]
 	if world_last and kind == FURNACE_BOSS and showing and int(_furnace[0]) != stage:
 		_furnace = [stage, furnace_foot(ctx.get("terrain"), stage)]
