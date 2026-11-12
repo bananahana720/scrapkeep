@@ -1184,7 +1184,8 @@ func objective_reading() -> Dictionary:
 		# The cockpit is open: the row's words hold and its glyph turns to the cockpit row's.
 		icon = Objectives.COCKPIT_GLYPH
 	return {"id": id, "icon": icon, "words": words, "color": row_color(id),
-		"progress": _clamp_fraction(gate) if id == "break_clamp_crews" else game.beacon.fraction() if id in RING_ROWS else -1.0,
+		"progress": _clamp_fraction(gate) if id == "break_clamp_crews" else gate.yard_fraction() if id == "break_yard_crew" \
+			else game.beacon.fraction() if id in RING_ROWS else -1.0,
 		"distance": int(distance) if id == "find_warden" and distance < INF else -1,
 		"step": Objectives.live_step(id, String(asked[0]["what"]) if not asked.is_empty() else "")}
 
