@@ -146,5 +146,7 @@ func _make_room() -> void:
 	_check("the vent's boom steps under the hit", is_equal_approx(audio._room_offset("reactor_erupt"), float(row["db"])))
 	_check("a warning keeps its level", audio._room_offset("threat_hum") == 0.0 and audio._room_offset("boss_telegraph") == 0.0)
 	_check("the hit keeps its own level", audio._room_offset("hurt") == 0.0)
-	audio.clock += float(row["hold_s"]) + 0.01
+	var left: int = audio._room_until_ms - Time.get_ticks_msec()
+	_check("the hold runs on the wall clock", left > 0 and left <= int(float(row["hold_s"]) * 1000.0), "%d ms left" % left)
+	audio._room_until_ms = Time.get_ticks_msec() - 1
 	_check("the room ends after its hold", audio._room_offset("reactor_erupt") == 0.0)

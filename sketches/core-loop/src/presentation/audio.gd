@@ -1668,17 +1668,18 @@ func _duck(amount: float, hold_seconds: float) -> void:
 
 # Room for a cue the player must hear (MixRows.MAKE_ROOM): while it holds, every other effect
 # voice but a warning sits room_db under the level it started at. _voice_db keeps each SFX
-# voice's [sound, start level] for the way back; _roomed holds the ones pushed down.
+# voice's [sound, start level] for the way back; _roomed holds the ones pushed down. The hold
+# runs on the wall clock, so slow motion does not stretch it.
 var _voice_db := {}
 var _roomed := {}
 var _room_for := ""
-var _room_until := -1.0
+var _room_until_ms := -1
 
 
 func _make_room(kind: String, sound: String) -> void:
 	var hold := float(MixRows.MAKE_ROOM[sound]["hold_s"])
 	_room_for = sound
-	_room_until = clock + hold
+	_room_until_ms = Time.get_ticks_msec() + int(hold * 1000.0)
 	cue_log.append([kind, sound, "room", engine.clock, hold, float(MixRows.MAKE_ROOM[sound]["db"])])
 	if _sfx == null:
 		return
@@ -1692,7 +1693,7 @@ func _make_room(kind: String, sound: String) -> void:
 
 # What a voice of sound takes now: the held room's offset, or 0.
 func _room_offset(sound: String) -> float:
-	if clock >= _room_until:
+	if Time.get_ticks_msec() >= _room_until_ms:
 		return 0.0
 	return MixRows.room_db(_room_for, sound, sound in DANGER_SOUNDS)
 
@@ -1700,7 +1701,7 @@ func _room_offset(sound: String) -> float:
 # The room ends: the voices it pushed down come back to their own level, and the record of
 # finished voices is cleared.
 func _tend_room() -> void:
-	if clock < _room_until or _sfx == null:
+	if Time.get_ticks_msec() < _room_until_ms or _sfx == null:
 		return
 	for id in _roomed:
 		if _sfx.is_stream_playing(id):
