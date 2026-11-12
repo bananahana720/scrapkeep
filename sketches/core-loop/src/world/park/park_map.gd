@@ -65,6 +65,15 @@ func _init(park_path := FIXTURE) -> void:
 	ok = true
 
 
+# The stage's breathers (park breather_rows, map audit unit 7): [{"id", "at": Vector2, "radius_m"}], [] for none.
+func breathers() -> Array:
+	var out := []
+	if ok:
+		for row in park.get("breather_rows", []):
+			out.append({"id": String(row["id"]), "at": _v2(row["at"]), "radius_m": float(row["radius_m"])})
+	return out
+
+
 func warden_spec() -> Dictionary:
 	return park["landmark"]["warden"].duplicate(true) if ok else {}
 

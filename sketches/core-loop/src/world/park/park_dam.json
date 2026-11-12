@@ -210,5 +210,9 @@
  ],
  "rescue_rows": [
   {"id": "rivet_cage", "site": "dome_7", "at": [60, -594], "face": [-1, 0], "quest": "rivet", "pilot": "runner_gunner", "prompt": "free the runner"}
+ ],
+ "breather_rows": [
+  {"id": "low_wash_breather", "at": [-16, -272], "radius_m": 60, "why": "The wash between the drop-in fights and the shelf: the riding lines run 118 m clear of every fight site."},
+  {"id": "mid_apron_breather", "at": [-8, 240], "radius_m": 60, "why": "The apron below the dam face, the last quiet stretch before the Warden: the lines run 112 m clear of every fight site."}
  ]
 }

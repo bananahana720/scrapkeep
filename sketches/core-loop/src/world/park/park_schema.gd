@@ -169,6 +169,10 @@ const FITS := ["seat", "tile", "drape"]
 const MUSIC_LAYER_PREFIX := "layer_"
 # Optional at the top: "rescue_rows", the stage's caged pilots (rescue_site.gd). pilot is the ClassDef id sitting in
 # the cage, so who is rescued is data; quest is what rescue_completed carries (the achievement rows key on it).
+# Optional (map audit unit 7, map points 2, 3 and 9): a breather is a circle on the riding lines where the director
+# places no pack; radius_m stays within BREATHER_RADIUS so one cannot swallow a stage.
+const BREATHER_FIELDS := {"id": "s", "at": "v2", "radius_m": "n", "why": "s"}
+const BREATHER_RADIUS := Vector2(20.0, 120.0)
 const RESCUE_FIELDS := {"id": "s", "site": "s", "at": "v2", "face": "v2", "quest": "s", "pilot": "s", "prompt": "s"}
 const LANDMARK_FIELDS := {
 	"id": "s", "kind": LANDMARK_KINDS, "at": "v2", "size": "v3", "yaw_deg": "n", "recipe": "s",
@@ -276,6 +280,11 @@ static func validate(park: Dictionary, ctx: Dictionary = {}) -> Array:
 	var activities := _rows(out, park, "activity_rows", ACTIVITY_FIELDS)
 	var routes := _rows(out, park, "routes", ROUTE_FIELDS)
 	var rescues := _rows(out, park, "rescue_rows", RESCUE_FIELDS) if park.has("rescue_rows") else {}
+	var breathers := _rows(out, park, "breather_rows", BREATHER_FIELDS) if park.has("breather_rows") else {}
+	for id in breathers:
+		var radius := float(breathers[id]["radius_m"])
+		if radius < BREATHER_RADIUS.x or radius > BREATHER_RADIUS.y:
+			_add(out, id, "range", "breather radius_m %.0f outside %.0f to %.0f" % [radius, BREATHER_RADIUS.x, BREATHER_RADIUS.y])
 
 	var landmark: Dictionary = park["landmark"]
 	_landmark(out, landmark, ctx)

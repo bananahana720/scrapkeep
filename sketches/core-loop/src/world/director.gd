@@ -183,6 +183,14 @@ var elite_arrival := 0
 var unknown_kinds := {}
 
 var _timer := FIRST_SPAWN
+# Breathers (map audit unit 7; park breather_rows through ParkMap.breathers()): circles on the riding lines where no
+# pack is placed. While the ball is inside one, with no crew home in the window, the timer's packs are banked, up to BANK_MAX, and all fall due the
+# moment it leaves (cap() still holds them to the room); credit income keeps accruing. A breather moves pressure later,
+# never away (ruling cu). BANK_MAX only stops a ball parked in one from storing a stage's worth: crossing a 120 m
+# breather at cruise takes about 6 s, one to four ticks.
+const BANK_MAX := 6
+var breathers: Array = []
+var banked := 0
 var _rng := RandomNumberGenerator.new()
 var _last_tier := 0
 var _rises: Array[int] = []
@@ -346,28 +354,42 @@ func advance(delta: float, alive_count: int, ball := Vector2.ZERO, velocity := V
 		_credit_advance(delta, alive_count + due.size(), ball, velocity, forward)
 		return due
 	_timer -= delta
+	var ticks := 0
 	while _timer <= 0.0:
 		_timer += interval()
-		if alive_count + arrivals.size() + due.size() >= cap():
-			continue
-		if not authored.is_empty():
-			_authored_arrival(cap() - (alive_count + arrivals.size() + due.size()), ball, velocity, forward)
-			continue
-		var at := spawn_spot(ball, velocity, forward)
-		if at == Vector2.INF:
-			continue
-		var room := cap() - (alive_count + arrivals.size() + due.size())
-		var weight := reinforcement_weight()
-		var pack := compose() if weight > 0.0 and room >= 2 and _rng.randf() < weight else []
-		if pack.is_empty():
-			var kind := LOBBER if _rng.randf() < lobber_share() else CHASER
-			if _park_map == null:
-				arrivals.append({"kind": kind, "at": at, "left": ARRIVAL})
-			else:
-				_place_pack(at, [KIND_NAMES[kind]], ball)
-			continue
-		_place_pack(at, pack, ball, false, room)
+		ticks += 1
+	if _breathing(ball):
+		banked = mini(banked + ticks, BANK_MAX)
+		return due
+	ticks += banked
+	banked = 0
+	for _i in ticks:
+		_timer_pack(alive_count + due.size(), ball, velocity, forward)
 	return due
+
+
+# One timer tick's pack, unless the room is full: an authored arrival, or a pack or a single at spawn_spot. alive is
+# every enemy up or falling due this tick.
+func _timer_pack(alive: int, ball: Vector2, velocity: Vector2, forward: Vector2) -> void:
+	if alive + arrivals.size() >= cap():
+		return
+	if not authored.is_empty():
+		_authored_arrival(cap() - (alive + arrivals.size()), ball, velocity, forward)
+		return
+	var at := spawn_spot(ball, velocity, forward)
+	if at == Vector2.INF:
+		return
+	var room := cap() - (alive + arrivals.size())
+	var weight := reinforcement_weight()
+	var pack := compose() if weight > 0.0 and room >= 2 and _rng.randf() < weight else []
+	if pack.is_empty():
+		var kind := LOBBER if _rng.randf() < lobber_share() else CHASER
+		if _park_map == null:
+			arrivals.append({"kind": kind, "at": at, "left": ARRIVAL})
+		else:
+			_place_pack(at, [KIND_NAMES[kind]], ball)
+		return
+	_place_pack(at, pack, ball, false, room)
 
 
 func income_per_second() -> float:
@@ -385,6 +407,8 @@ func _credit_advance(delta: float, alive_count: int, ball: Vector2, velocity: Ve
 	var income := delta * income_per_second()
 	credits += income
 	credits_accrued += income
+	if _breathing(ball):
+		return
 	if _next_pack.is_empty():
 		_next_pack = _draw_credit()
 	if _next_pack.is_empty() or _next_pack.kinds.size() > room:
@@ -625,6 +649,7 @@ func _read_homes(map_id: String) -> void:
 	_stopped_kinds.clear()
 	_forward_homes.clear()
 	_park_map = null
+	breathers = []
 	_park_graph = null
 	_corridors = null
 	_graph_path = ""
@@ -633,6 +658,7 @@ func _read_homes(map_id: String) -> void:
 		return
 	var map = park.map
 	_park_map = map
+	breathers = map.breathers()
 	for row in map.park.park_rows:
 		_home_sites[row.id] = row
 	for row in map.park.home_rows:
@@ -966,7 +992,23 @@ func _home_spot(home: Dictionary, ball: Vector2, preferred := Vector2.ZERO, assi
 	return Vector2.INF
 
 
+# Whether the ball's free packs wait: it is inside a breather and no live crew home is in the window ahead. A crew home
+# is an authored fight the map places (and park_breath_test measures); a breather quiets only the director's own packs.
+func _breathing(ball: Vector2) -> bool:
+	return in_breather(ball) and (_park_map == null or _window_homes(ball).is_empty())
+
+
+# Whether `p` stands inside one of the stage's breathers.
+func in_breather(p: Vector2) -> bool:
+	for b in breathers:
+		if p.distance_to(b["at"]) <= float(b["radius_m"]):
+			return true
+	return false
+
+
 func _park_safe(spot: Vector2) -> bool:
+	if in_breather(spot):
+		return false
 	for line in _corridors._park_pilot_lines:
 		for i in range(1, line.size()):
 			# A point footprint uses ParkMap's same segment/margin predicate as KE1.
