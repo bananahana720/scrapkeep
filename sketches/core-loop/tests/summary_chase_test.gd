@@ -111,10 +111,10 @@ func _on_summary() -> void:
 	var profile = _game.ctx.profile
 	var sitting: bool = _game.tuning != null and _game.tuning.sitting()
 	var expect := ChasePlate.reading(profile, _game.ctx.stages.world_of(_game.run.stage), func(id): return codex.known(id), sitting)
-	_t.check("the shift has closed, so the plate chases a rung not yet stamped", expect["next"] == "" or not ShiftBoard.stamped(String(expect["next"]), profile),
-		str(expect))
+	_t.check("the shift has closed: the first run clocked in, and the plate chases the rung after it",
+		ShiftBoard.stamped("clock_in", profile) and expect["next"] == "first_warden", str(expect))
 	_t.eq("the summary's plate reads the board and the codex as they stand", screens.chase_text(), ChasePlate.said(expect))
-	_t.check("it names the next rung", expect["next"] == "" or screens.chase_text().begins_with(String(expect["name"]) + "."), screens.chase_text())
+	_t.check("it names the next rung", screens.chase_text().begins_with("Warden Breaker."), screens.chase_text())
 	var chase: Control = screens._chase
 	var comic: Control = screens.comic_page()
 	_t.check("the plate stands left of the comic page, the note right of it", chase != null and comic != null and chase.get_index() == 0

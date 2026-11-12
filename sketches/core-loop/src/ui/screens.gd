@@ -1445,8 +1445,9 @@ func _show_tip(tip: String) -> void:
 
 
 # What to chase next shift (chase_plate.gd): the shift board's next rung and the run's world's secrets,
-# left of the comic page. A lost run's summary opens before progress closes the shift (a first run's
-# Clocked In stamps then), so the plate is drawn again once run_ended has gone round.
+# left of the comic page. The summary opens before run_ended reaches progress, which closes the shift
+# (a first run's Clocked In stamps then), so the plate is drawn again once run_ended has gone round. The
+# one-shot connection re-arms on each draw; outside the summary it does nothing.
 func _show_chase() -> void:
 	if is_instance_valid(_chase):
 		_comic_row.remove_child(_chase)

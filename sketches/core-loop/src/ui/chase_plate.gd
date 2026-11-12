@@ -17,7 +17,7 @@ const Palette := preload("res://src/core/palette.gd")
 const WIDTH := 300.0
 const SERIAL := 34
 const ICON := 26.0
-const PIP := 18.0
+const PIP := float(UiTokens.BODY)
 
 var _said := ""
 
@@ -52,11 +52,8 @@ static func said(read: Dictionary) -> String:
 func _init(read: Dictionary) -> void:
 	name = "ChasePlate"
 	_said = said(read)
-	var plate := ScrapFrame.plate(UiTokens.LINE, SERIAL, Color(Palette.CHARCOAL, 0.94), 2.0, 0.5)
-	plate.content_margin_left = 16.0
-	plate.content_margin_right = 16.0
-	plate.content_margin_top = 16.0
-	plate.content_margin_bottom = 14.0
+	var plate := ScrapFrame.plate(UiTokens.LINE, SERIAL, Color(UiTokens.INK, UiTokens.PLATE_ALPHA), float(UiTokens.EDGE), 0.5)
+	plate.set_content_margin_all(UiTokens.GAP_L)
 	add_theme_stylebox_override("panel", plate)
 	size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -67,12 +64,12 @@ func _init(read: Dictionary) -> void:
 	if String(read["next"]) != "":
 		var head := _line(column)
 		head.add_child(_icon("ring", Color(Palette.SLATE, 0.8), ICON))
-		head.add_child(_label(String(read["name"]), UiTokens.LABEL, Palette.AMBER))
-		var text := _label(String(read["text"]), UiTokens.BODY, Palette.SAND)
+		head.add_child(_label(String(read["name"]), UiTokens.LABEL, UiTokens.ACCENT))
+		var text := _label(String(read["text"]), UiTokens.BODY, UiTokens.TEXT)
 		text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		text.custom_minimum_size.x = WIDTH
 		column.add_child(text)
-		column.add_child(_label(String(read["pays"]), UiTokens.CAPTION, Color(Palette.SAND, UiTokens.QUIET_ALPHA)))
+		column.add_child(_label(String(read["pays"]), UiTokens.CAPTION, UiTokens.quiet(UiTokens.TEXT)))
 	var count: Dictionary = read["secrets"]
 	if not count.is_empty():
 		if String(read["next"]) != "":
@@ -80,12 +77,12 @@ func _init(read: Dictionary) -> void:
 			gap.custom_minimum_size.y = UiTokens.GAP_S
 			gap.mouse_filter = Control.MOUSE_FILTER_IGNORE
 			column.add_child(gap)
-		column.add_child(_label("%s secrets" % count["name"], UiTokens.BODY, Palette.SAND))
+		column.add_child(_label("%s secrets" % count["name"], UiTokens.BODY, UiTokens.TEXT))
 		var pips := _line(column)
 		pips.name = "Pips"
 		for i in int(count["total"]):
 			var found := i < int(count["found"])
-			pips.add_child(_icon("star" if found else "ring", Palette.AMBER if found else Color(Palette.SLATE, 0.8), PIP))
+			pips.add_child(_icon("star" if found else "ring", UiTokens.ACCENT if found else Color(Palette.SLATE, 0.8), PIP))
 
 
 func text() -> String:
