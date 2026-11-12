@@ -4769,13 +4769,13 @@ func _tend_set() -> void:
 	_set_bar_at = at
 	var plan := set_director.read(set_room(at))
 	var ramp := grid_unit(4)
-	if not plan.trims.is_empty():
-		ace.trim_bar(at, plan.trims, ace.grid_bar, ramp)
+	if not plan.trims.is_empty() or plan.sweep > 0.0:
+		ace.trim_bar(at, plan.trims, ace.grid_bar, ramp, plan.sweep)
 	if plan.answer != "":
 		_set_answer = SfxBank.SET_ANSWER + plan.answer
 		_set_answer_at = at
 		engine.schedule_stinger_at(_set_answer, at, PRIORITY_DB[1], false, ramp)
-		cue_log.append(["set_answer", _set_answer, "grid", at, 1.0])
+		cue_log.append(["set_answer", _set_answer, "grid", at, 1.0, PRIORITY_DB[1] + SfxBank.trim_db(_set_answer)])
 	if plan.move != "hold":
 		cue_log.append(["set_move", plan.move, plan.mood, at, 1.0])
 
@@ -4808,6 +4808,7 @@ func _set_busy() -> bool:
 # The room as the director reads it for the bar at transport sample at.
 func set_room(at: int) -> Dictionary:
 	var room := sample_run_parameters()
+	room["sample"] = at
 	# Hanging on means armour lost to hits, not a shell still empty at the start of a run.
 	if _hull_seen <= 0.0:
 		room.erase("armour")
@@ -4819,9 +4820,13 @@ func set_room(at: int) -> Dictionary:
 			room["fight"] = "piece"
 		"warden":
 			room["fight"] = ace.section if ace.section in ["open", "drop"] else ace.warden_state
-	# A flat pack (a miniboss, Brindle or a moment tune plays one "main" section) is a directed piece.
-	if ace.section == "main":
-		room["fight"] = "piece"
+	# A section the band directs itself (a pivot, the Warden's break, return and home) is its own move.
+	if ace.section in ace.PROTECTED:
+		room["fight"] = "directed"
+	# A flat pack (a miniboss, Brindle or a moment tune plays one "main" section) is an anthem:
+	# June stays out, the turnaround moves still play.
+	if ace.section == "main" and ace.mode != "piece":
+		room["fight"] = "anthem"
 	room["warning"] = clock < _focus_until or _warden_charging
 	room["busy"] = _set_busy()
 	if _set_incoming_at > clock:

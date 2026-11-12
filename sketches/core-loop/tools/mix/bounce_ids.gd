@@ -10,6 +10,7 @@ const Harmony := preload("res://src/presentation/harmony.gd")
 func _initialize() -> void:
 	var args := OS.get_cmdline_user_args()
 	var run: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(args[0]))
+	DirAccess.make_dir_recursive_absolute(args[1])
 	var ids := {}
 	for row in run["cue_rows"]:
 		ids[String(row[2])] = true

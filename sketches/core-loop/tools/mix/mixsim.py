@@ -61,7 +61,9 @@ for row in run["cue_rows"]:
     if how == "stop" and t >= 0:
         stops.append((t, sound))
         continue
-    if how != "now" or t < 0:
+    # June's answers (the set director) are booked on the grid and log the level they play at.
+    placed = how == "now" or (kind == "set_answer" and len(row) > 5 and row[5] is not None)
+    if not placed or t < 0:
         if t >= 0:
             other[how] += 1
         continue

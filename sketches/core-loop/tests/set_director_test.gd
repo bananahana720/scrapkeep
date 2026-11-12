@@ -29,6 +29,7 @@ func _run_all() -> void:
 	_gates()
 	_colours()
 	_swap_and_breath()
+	_move_rate()
 	_deterministic()
 	_book()
 	_band_trims()
@@ -77,7 +78,7 @@ func _answers() -> void:
 
 
 func _gates() -> void:
-	for room in [{"pressure": 0.35, "warning": true}, {"pressure": 0.35, "busy": true}, {"fight": "open"}, {"fight": "drop"}, {"fight": "piece"}]:
+	for room in [{"pressure": 0.35, "warning": true}, {"pressure": 0.35, "busy": true}, {"fight": "open"}, {"fight": "drop"}, {"fight": "piece"}, {"fight": "anthem"}]:
 		var plans := _run(SetDirector.new(), room, 8)
 		t.eq("no answer over %s" % [room], plans[7].answer, "")
 	t.check("the guard holding still gets an answer", _run(SetDirector.new(), {"fight": "closed"}, 8)[7].answer.begins_with("build"))
@@ -106,8 +107,8 @@ func _swap_and_breath() -> void:
 	c.read({"pressure": 0.45})
 	var climb := [0.53, 0.55, 0.57, 0.59, 0.6, 0.61].map(func(p): return c.read({"pressure": p}).move)
 	t.eq("a long climb swaps the bass once", climb.count("bass_swap"), 1)
-	c.read({"pressure": 0.45})
-	t.eq("falling back re-arms the swap", c.read({"pressure": 0.56}).move, "bass_swap")
+	c.read({"pressure": 0.35})
+	t.eq("falling well back re-arms the swap", c.read({"pressure": 0.56}).move, "bass_swap")
 	var h := SetDirector.new()
 	h.read({"pressure": 0.35})
 	h.read({"pressure": 0.45})
@@ -117,13 +118,53 @@ func _swap_and_breath() -> void:
 	var landing := [1, 1, 1].map(func(n): return l.read({"pressure": 0.1, "incoming_bars": n}).move)
 	t.eq("one swap per announcement", landing.count("bass_swap"), 1)
 	var e := SetDirector.new()
+	e.read({"pressure": 0.1})
 	t.eq("a set piece one bar out swaps the bass", e.read({"pressure": 0.1, "incoming_bars": 1}).move, "bass_swap")
-	t.eq("not inside a fight", SetDirector.new().read({"fight": "closed", "incoming_bars": 1}).move, "hold")
+	var f := SetDirector.new()
+	f.read({"fight": "closed"})
+	var roll := f.read({"fight": "closed", "incoming_bars": 1})
+	t.eq("inside a fight the band rolls under the filter instead", [roll.move, roll.sweep, roll.trims], ["filter_roll", SetDirector.SWEEP_DEPTH, {}])
+	var g := SetDirector.new()
+	var guard := [0.45, 0.53, 0.47, 0.53, 0.46, 0.53, 0.47, 0.53].map(func(p): return g.read({"fight": "closed", "pressure": p}).move)
+	t.eq("a guard flickering near the peak line rolls once", guard.count("filter_roll"), 1)
+	t.eq("the band's own directed sections hold", SetDirector.new().read({"fight": "directed", "incoming_bars": 1}).move, "hold")
+	t.eq("the Warden's breath is its own move", SetDirector.new().read({"fight": "open", "incoming_bars": 1}).move, "hold")
+	# Every phrase ends on a move: with June held out by a warning, the turnarounds walk the moves.
 	var b := SetDirector.new()
-	var plans := _run(b, {"pressure": 0.0, "warning": true}, SetDirector.PHRASE_BARS * (SetDirector.BREATH_PHRASES + 1))
-	var breaths := plans.filter(func(p): return p.move == "breath")
-	t.eq("a long lull takes one breath on a turnaround", breaths.map(func(p): return [p.bar % SetDirector.PHRASE_BARS, p.trims]),
-		[[SetDirector.PHRASE_BARS - 1, {"drums": 0.0}]])
+	var plans := _run(b, {"pressure": 0.5, "fight": "closed", "warning": true}, SetDirector.PHRASE_BARS * 4)
+	var turns := plans.filter(func(p): return p.bar % SetDirector.PHRASE_BARS == SetDirector.PHRASE_BARS - 1)
+	t.eq("under a warning the turnarounds walk the moves", turns.map(func(p): return p.move), ["filter_roll", "dub", "breakdown", "filter_roll"])
+	t.eq("each takes sound away", turns.map(func(p): return [p.trims, p.sweep]),
+		[[{}, SetDirector.SWEEP_DEPTH], [{"other": 0.0}, 0.0], [{"drums": 0.0}, 0.0], [{}, SetDirector.SWEEP_DEPTH]])
+	t.check("never an answer under a warning", plans.all(func(p): return p.answer == ""))
+
+
+# The move rate (assumption, 12 November 2026): a player hears at least one DJ move in every
+# phrase the band plays outside a directed section. A scripted stretch of play: explore, a
+# climb, a Warden fight under warnings, its breath and drop, then a boss anthem.
+func _move_rate() -> void:
+	var d := SetDirector.new()
+	var stretch: Array = []
+	for i in 24:
+		stretch.append({"pressure": 0.1 + 0.02 * i})
+	for i in 32:
+		stretch.append({"fight": "closed", "pressure": 0.5, "warning": i % 3 == 0})
+	for i in 4:
+		stretch.append({"fight": "open"})
+	for i in 2:
+		stretch.append({"fight": "drop"})
+	for i in 34:
+		stretch.append({"fight": "anthem", "pressure": 0.7, "warning": i % 2 == 0})
+	var plans := stretch.map(func(room): return d.read(room))
+	var quiet := []
+	for start in range(0, plans.size() - SetDirector.PHRASE_BARS + 1, SetDirector.PHRASE_BARS):
+		var phrase: Array = plans.slice(start, start + SetDirector.PHRASE_BARS)
+		var free := phrase.filter(func(p): return not String(d.plans[p.bar][6]) in SetDirector.OWN_FORM)
+		if free.size() == SetDirector.PHRASE_BARS and free.all(func(p): return p.move == "hold"):
+			quiet.append(start)
+	t.eq("every phrase outside a directed section has a move", quiet, [])
+	var heard := plans.filter(func(p): return p.move != "hold").size()
+	t.check("about one move a phrase or more", heard >= plans.size() / SetDirector.PHRASE_BARS, "%d moves in %d bars" % [heard, plans.size()])
 
 
 func _deterministic() -> void:
@@ -136,8 +177,10 @@ func _deterministic() -> void:
 		a.read(room)
 		b.read(room)
 	t.eq("the same rooms give the same set", a.plans, b.plans)
+	var helds := a.plans.filter(func(p): return p[0] % SetDirector.PHRASE_BARS == SetDirector.PHRASE_BARS - 1 and p[3] == "").map(func(p): return p[5])
+	t.check("a turnaround with no answer says why", not helds.is_empty() and not "" in helds, str(helds))
 	a.reset()
-	t.eq("reset starts the set again", [a.bar, a.mood, a.plans.size()], [-1, "lull", 0])
+	t.eq("reset starts the set again and keeps the run's plans", [a.bar, a.mood, a.plans.size()], [-1, "lull", 64])
 
 
 func _book() -> void:
@@ -207,6 +250,25 @@ func _trims_on_joins() -> void:
 	ace.voices = [drums]
 	ace._run({"type": "trim", "trims": {"bass": 0.0}, "frames": 10})
 	t.eq("a trim leaves an untouched stem's ramp alone", [drums.target, drums.step], [0.25, 0.001])
+	var lead := AceSequencer.Voice.new()
+	lead.stem = "other"
+	ace.voices = [lead]
+	ace._run({"type": "sweep", "depth": 0.85, "frames": 100})
+	t.eq("a filter roll sweeps the voice under the low-pass", [lead.wet_target, lead.lp.is_empty()], [0.85, false])
+	ace._run({"type": "trim", "trims": {}, "frames": 10, "sweep": 0.0})
+	t.eq("and the bar line lifts it", [lead.wet_target, ace.sweep], [0.0, 0.0])
+	ace._run({"type": "sweep", "depth": 0.85, "frames": 100})
+	var pace := lead.wet_step
+	ace._retarget(441)
+	t.eq("a retarget mid-roll keeps the roll's pace", [lead.wet_target, lead.wet_step], [0.85, pace])
+	ace._run({"type": "trim", "trims": {}, "frames": 10, "sweep": 0.0})
+	ace.section = "pivot"
+	ace._run({"type": "sweep", "depth": 0.85, "frames": 100})
+	t.eq("a directed section is never swept", lead.wet_target, 0.0)
+	ace.section = "travel"
+	ace.trim_bar(ace.clock + 1000, {}, 400, 20, 0.85)
+	t.eq("a roll books its sweep on the bar and its lift a sixteenth before the next", ace.actions.slice(-2).map(func(a): return [a.type, a.at - ace.clock]),
+		[["sweep", 1000], ["trim", 1380]])
 
 
 # Through the real game on the stage's recorded band (the stub tone in the cloud): off, the
@@ -239,6 +301,8 @@ func _in_game() -> void:
 			t.eq("an answer starts on the band's bar line", posmod(int(e[3]) - audio.ace.origin, audio.ace.grid_bar), 0)
 			t.check("an answer is booked ahead of its bar", int(e[3]) > from)
 		t.eq("every plan is one bar apart", _bar_steps(audio.set_director.plans), [1])
+		var off_grid: Array = audio.set_director.plans.filter(func(p): return posmod(int(p[4]) - audio.ace.origin, audio.ace.grid_bar) != 0)
+		t.eq("every plan carries its bar line's sample", off_grid, [])
 		audio._gates["call_in"] = audio.clock + 1.0
 		t.check("a caller talking keeps June out", audio._set_busy())
 		audio._gates["call_in"] = audio.clock - 0.1
