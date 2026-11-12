@@ -242,9 +242,11 @@ const FLAGS := {
 
 
 # What --profile=sitting turns on beyond the defaults: the loops Andrew wants in the world 1
-# sitting (ruling da), the marked hull (ruling dd) and carry a core (ruling df). A flag on the same
-# command line wins, and bots and gate bands, which never pass the profile, still measure the base game.
-const SITTING_SET := {"heat": "on", "overtime": "on", "called-shot": "on", "marked-hull": "on", "carry-core": "on"}
+# sitting (ruling da), the marked hull and Moss's scale (ruling dd) and carry a core (ruling df).
+# A flag on the same command line wins, and bots and gate bands, which never pass the profile,
+# still measure the base game.
+const SITTING_SET := {"heat": "on", "overtime": "on", "called-shot": "on", "marked-hull": "on", "moss-scale": "on",
+	"carry-core": "on"}
 
 
 # The one parse pass. `when` limits it to one phase ("start" or "launch"); empty applies
