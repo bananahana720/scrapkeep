@@ -99,9 +99,12 @@ static func doors(map) -> Array:
 	var out := []
 	for row in map.park.activity_rows:
 		out.append({"id": String(row.id), "at": Vector2(row.at[0], row.at[1])})
+	# A sealed cache's door: a valve's sinking door, or the cracked wall that stands across the room's mouth.
 	for row in map.park.contraption_rows:
 		if row.has("door"):
 			out.append({"id": String(row.id), "at": Vector2(row.door.at[0], row.door.at[1])})
+		elif row.has("cache"):
+			out.append({"id": String(row.id), "at": Vector2(row.at[0], row.at[1])})
 	return out
 
 static func candidates(graph, map) -> PackedInt32Array:

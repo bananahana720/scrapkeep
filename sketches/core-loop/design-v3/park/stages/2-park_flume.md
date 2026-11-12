@@ -58,6 +58,7 @@ World 1 unit 11 gives the completionist something to do on the flume beyond the 
 - **Sluice Surge** (`weir_surge`, activity `surge_run`, site `weir_mesa`, ring [-427, -563], 22 m to the side of the line into the weir intake, route `flume_upper`). An opt-in race: open the head gate and a water front follows you down the weir reach, the gap work deck and the 40 m drop into the canal country. The gates stand on the riding surface (row top, then a downward ray once the colliders are up), and the front starts 40 m back up the route from its head and moves at cruise speed. Pay common or rare. A course that ends while its sluice is still announced ends the sluice too, so it never lands late. Its event row `head_gate_sluice` (industrial `sluice_surge`, 4 s `sluice_siren` on the bar, 45 s live) is what you hear: the siren is the warning, as sound is the fairness channel. The graph gives it the event role beside hold_the_relay (PARK.md 2.12).
 - **The head-gate crew** (props spot flume_c01, 43 m from the ring). Their lines are the ring's word: "Head gate: wheel turning. Stay ahead of the water." on opening, "Head gate log: wheel shut. One ball through, flume dry." on a win, "Head gate: winding the wheel back." on a loss.
 - **Canal altar** (`canal_altar`, `ambush_altar`, site `main_canal`, [-475, -206]), the card 2 extra activity and the park's second risk pocket. Detour 194 m; every distance rule holds.
+- **Trestle cache** (`trestle_cache`, `cracked_cache`, site `canal_country_low`, [-236, -432], face south, pocket interior `sump_vault`; W1-17, 12 Nov 2026), a card 2 extra and the park's second reward pocket, on the low canal country under the trestle's turn, so it reads from the flume grind above. Detour 185 m, 220 m from the weir valve's door; every distance rule holds. Pays common or rare on its own part stream (activities.gd `_luck_id`), so it never repeats the bend cache's part. The Overtime Locker (`grade_wall`, section 8) is its hidden partner on the canal grade.
 - **Spill leap** (`spill_leap_kicker` on the mesa rim at [-388, -700], and `spill_butte` at [-342, -700]). A second skill pocket off the grind line: at 22 m/s or more the kicker lands you on the butte top (97 m); at 18 to 20 m/s you stay on the mesa.
 - **Dressing**: vignette parity with the Dig, 166 spots (the Dig 167); see the dressing page.
 - **Rogue sites** for the roster's miniboss (`assets/park/park_flume/sites.json`, `weir_flats_rogue` and `plain_rogue`), read once the roster's loader stacks.
@@ -614,7 +615,7 @@ Every route, opened or not, is connected on the stage graph (`assets/park/park_f
 
 The winch drone is the flume's natural enemy: it is the one kind whose threat is a held line, and the flume is the longest held line in world 1.
 
-## 8. `contraption_rows` (8 rows), weather and time of day
+## 8. `contraption_rows` (9 rows), weather and time of day
 
 | Row | Kind, skin | Where | What it does for the line |
 | --- | --- | --- | --- |
@@ -624,6 +625,7 @@ The winch drone is the flume's natural enemy: it is the one kind whose threat is
 | `hollow_lift` | lift, `lift_platform` | trestle hollow [-210, -60] | Lifts 30 m to the trestle catwalk, inside harpoon range of the flume (45 m) |
 | `bend_zip` | cable | bend overlook, [50, 55, -170] to [120, 40, -40] | A 150 m zip along the bend's rim; the Cannon's line rides it (`ride_grapple_line` measured) |
 | `squall_lane` | thermal | bluff rim [120, 260] | The dust squall's visible wind lane, 50 m |
+| `grade_wall` | cracked_wall sealing a cache | the canal grade west of the trestle hollow; wall [-267.8, 187.8] across the mouth of a cache room at [-272, 192] facing north-east | A second hidden cache, the Overtime Locker (W1-17, 12 Nov 2026): no marker; a ram at 0.85 x cruise crumbles the wall, puts a part on the pedestal and files codex id `flume_grade_cache` (camp count 8). The graph tool reads only the first sealed row as the hidden pocket, so `flume_side_spots_test` holds this one's spacing |
 | `culvert_wall` | cracked_wall | beside the wasteway [117, 311], off its footprint (ruling R3) | Breaks at cruise into a culvert shortcut |
 | `forecourt_geyser` | launcher, `geyser_vent` | forecourt [140, 400] | Lobs you over the brute ring and the drum wall onto the drum floor beside the relic, target [222, -12, 462] (2 m over the floor at -14) |
 

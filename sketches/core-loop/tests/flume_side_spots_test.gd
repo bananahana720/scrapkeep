@@ -15,10 +15,10 @@ extends SceneTree
 #       activity and contraption, and LINE_CLEAR_M from every authored line leg (six pilots and the floor
 #       line), so no line rides into a room.
 #   (c) the sealed room opens onto reachable ground: level within RUN_M of its mouth, no ledge behind.
-#   (d) in the game: the room is built shut and unmarked, a bump under the ram's bar leaves the wall,
+#   (d) in the game: the flume's four cache rooms roll four part streams; the room is built shut and unmarked, a bump under the ram's bar leaves the wall,
 #       a ram at cruise crumbles it and files flume_grade_cache, the ball takes the part, and a stage
 #       retry seals the room again.
-# Planted: the wall moved 3 m off the mouth fails (a); a spot moved onto Tarn's line fails (b).
+# Planted: the wall moved 3 m off the mouth fails (a); a spot on Tarn's line, or beside the bend cache, fails (b).
 
 const T := preload("res://tests/support/t.gd")
 const Game := preload("res://src/game.gd")
@@ -72,6 +72,7 @@ func _run() -> void:
 		_t.eq("%s keeps clear of every line" % id, _on_lines(park, lines, spots[id]), [])
 	var tarn: Array = lines["pilots"]["tarn"]["waypoints"]
 	_t.check("planted: a spot on Tarn's line fails", not _on_lines(park, lines, _v(tarn[10])).is_empty())
+	_t.check("planted: a spot beside the bend cache is crowded", not _crowded(map, park, "trestle_cache", Vector2(42, -60)).is_empty())
 
 	var game = Game.new()
 	game.test_mode = true
@@ -111,6 +112,16 @@ func _run() -> void:
 	var back := _back_rise(game, mouth, face)
 	_t.check("the room stands clear of a ledge above", back <= RISE_M, "ground rises %.1f m within %.0f m behind" % [back, BACK_M])
 
+	var acts = game.world.activities
+	var streams := {}
+	for s in acts.sites:
+		if is_instance_valid(s) and s.id == "cracked_cache" and not s.drawn and not s.has_meta("find"):
+			streams[acts._luck_id(s)] = true
+	for d in devices.valves + devices.walls:
+		if is_instance_valid(d.get("cache_site")):
+			streams[acts._luck_id(d["cache_site"])] = true
+	_t.check("the flume's four cache rooms roll four streams", streams.size() == 4, str(streams.keys()))
+
 	var kit := Kit.new()
 	var body: StaticBody3D = w["body"]
 	var y: float = game.ctx.terrain.height(mouth.x, mouth.y) + 1.0
@@ -120,7 +131,8 @@ func _run() -> void:
 	_t.check("a bump under the ram's bar leaves the wall", not w["broken"] and body.visible, str(slow))
 	var facts: Array = devices.step(1.0 / 90.0, ball, inward * devices.cruise, kit, false)
 	_t.check("a ram at cruise crumbles the wall", w["broken"])
-	_t.check("the ram files flume_grade_cache", facts.any(func(f): return f["kind"] == "codex" and f["id"] == "flume_grade_cache"), str(facts))
+	_t.check("the ram files flume_grade_cache and no tunnel row", facts.any(func(f): return f["kind"] == "codex" and f["id"] == "flume_grade_cache")
+		and not facts.any(func(f): return f["kind"] == "codex" and f["id"] == "sprint_through"), str(facts))
 	_t.eq("the codex knows the row before it is found", game.ctx.codex.name_of("flume_grade_cache"), "Overtime Locker")
 	_t.check("the part waits on the pedestal", room.done and room.pickup != null)
 	var parts_before: int = game.ctx.run.parts.size()
@@ -132,7 +144,7 @@ func _run() -> void:
 	await physics_frame
 	_t.check("a retry seals the room again", not w["broken"] and body.visible and is_instance_valid(w.get("cache_site")) and not w["cache_site"].done,
 		"broken %s visible %s room %s" % [w["broken"], body.visible, is_instance_valid(w.get("cache_site"))])
-	_t.eq("expected check count", _t.checks + 1, 24)
+	_t.eq("expected check count", _t.checks + 1, 26)
 	quit(_t.verdict())
 
 
@@ -222,13 +234,16 @@ func _resolve(park: Dictionary, wp):
 	return null
 
 
-# The lowest ground within RUN_M out of the mouth, below the floor at the mouth.
+# The lowest ground within RUN_M out of the mouth, below the floor at the mouth, on the centre and both
+# side lanes (a cross-fall would open a gap under the wall's 0.6 m sink).
 func _drop(game, at: Vector2, face: Vector2) -> float:
 	var y0: float = game.ctx.terrain.height(at.x, at.y)
+	var side := Vector2(-face.y, face.x)
 	var low := 0.0
-	for d in [2.0, 4.0, 8.0, 12.0, RUN_M]:
-		var p: Vector2 = at + face * d
-		low = maxf(low, y0 - game.ctx.terrain.height(p.x, p.y))
+	for lane in [-Activities.WALL_HALF_W, 0.0, Activities.WALL_HALF_W]:
+		for d in [0.0, 2.0, 4.0, 8.0, 12.0, RUN_M]:
+			var p: Vector2 = at + face * d + side * lane
+			low = maxf(low, absf(y0 - game.ctx.terrain.height(p.x, p.y)) if d == 0.0 else y0 - game.ctx.terrain.height(p.x, p.y))
 	return low
 
 

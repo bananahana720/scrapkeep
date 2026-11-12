@@ -289,6 +289,7 @@ func _seal_cache(d: Dictionary) -> void:
 	s.wall.free()
 	s.wall = null
 	s.view.hide()
+	s.set_meta("sealed", String(d["spec"]["id"]))
 	d["cache_site"] = s
 
 
@@ -1090,8 +1091,11 @@ func _step_wall(w: Dictionary, ball: Vector3, velocity: Vector3, kit, facts: Arr
 	body.visible = false
 	facts.append({"kind": "fact", "fact": "wall_crumbled", "at": centre})
 	facts.append({"kind": "fact", "fact": "route_opened", "at": centre})
-	facts.append({"kind": "codex", "id": "sprint_through", "at": centre})
-	_open_cache(w, centre, facts)
+	# A wall that seals a cache room opens a dead end, not a tunnel: it files the room's row, not sprint_through.
+	if w["spec"].has("cache"):
+		_open_cache(w, centre, facts)
+	else:
+		facts.append({"kind": "codex", "id": "sprint_through", "at": centre})
 	for k in 5:
 		_puff(centre + Vector3(_puff_rng.randf_range(-3.0, 3.0), _puff_rng.randf_range(-1.5, 2.0), _puff_rng.randf_range(-1.0, 1.0)), 2.5)
 
