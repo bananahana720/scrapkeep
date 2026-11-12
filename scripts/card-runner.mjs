@@ -87,12 +87,13 @@ export function refusal(card) {
   const files = card.files ?? "";
   const proof = proofOf(card);
   const everything = Object.values(card).join(" ");
-  if (/\b(built|fenced|board-owned|owned)\b/i.test(everything)) return "built, fenced or owned by another thread (see its row)";
+  if (/\b(built|done|fenced?|board-owned|owned|board thread's|waits on Andrew)\b/i.test(everything)) return "built, done, fenced or owned elsewhere (see its row)";
   if (/PC lane run only/i.test(files)) return "PC lane run: GPU timing or a rendered build, not a writer card";
-  if (/\bPC (stills?|films?|strips?)\b|\bfilm\b/i.test(proof)) return "proof needs a film or PC capture; the Gate's PC session owns that";
+  if (/\b(stills?|films?|strips?|capture)\b/i.test(proof)) return "proof needs a film or PC capture; the Gate's PC session owns that";
   if (/sitting watch list|feel|taste pick/i.test(proof)) return "proof is a feel or taste call for Andrew, not a check";
   if (/24-seed|band read/i.test(proof)) return "proof is a band read; that belongs to the wave gate";
   if (/\b(after|waits on|with) (PR \d+|[A-Z][A-Z0-9]*-\d+)/i.test(everything)) return "waits on another pull request or card";
+  if (!/\btests?\b|_test\b|check:docs|docs checks?/i.test(proof)) return "proof names no test the runner can check";
   if (!BUDGETS[card.size]) return `size ${card.size || "unknown"} has no unattended budget (S and M only)`;
   return null;
 }
@@ -110,7 +111,7 @@ export function liveBoard(stateText) {
 // Card ids named anywhere in this text: pull request titles and bodies, board
 // comments. A named card is claimed or built, so the runner leaves it alone.
 export function takenIds(text) {
-  return new Set(String(text).toUpperCase().match(/\b[A-Z][A-Z0-9]*-[0-9]+[a-z]?\b/g) ?? []);
+  return new Set((String(text).match(/\b[A-Za-z][A-Za-z0-9]*-[0-9]+[a-z]?\b/g) ?? []).map((id) => id.toUpperCase()));
 }
 
 function cardLines(card) {
@@ -175,7 +176,7 @@ export function plan({ backlog, state, ids, section, limit, taken = new Set() })
   let runnable = 0;
   const planned = selectCards(parseCards(backlog), { ids, section }).map((card) => {
     if (card.missing) return { id: card.id, skip: "no such card in BACKLOG.md" };
-    const why = taken.has(card.id) ? "already claimed or in a pull request" : refusal(card);
+    const why = taken.has(card.id.toUpperCase()) ? "already claimed or in a pull request" : refusal(card);
     if (why) return { id: card.id, skip: why };
     runnable += 1;
     return limit && runnable > limit ? { id: card.id, skip: `past --limit ${limit}` } : planCard(card, { stage, board });
@@ -244,7 +245,11 @@ function runCard(card, planned, { stage, cardsRoot, receipts }) {
     return receipt;
   };
 
-  sh("git", ["fetch", "-q", "origin", stage], { timeoutMinutes: 5 });
+  const fetched = sh("git", ["fetch", "-q", "origin", stage], { timeoutMinutes: 5 });
+  if (fetched.status !== 0) {
+    note("base", false, `fetch failed: ${fetched.stderr}`);
+    return finish("stopped: could not fetch the stage");
+  }
   const base = sh("git", ["worktree", "add", "-q", "-b", planned.branch, worktree, `origin/${stage}`]);
   note("base", base.status === 0, base.stderr || sh("git", ["-C", worktree, "rev-parse", "HEAD"]).stdout.trim());
   if (base.status !== 0) return finish("stopped at base");
@@ -319,6 +324,7 @@ function parseArgs(argv) {
     else throw new Error(`unknown option ${arg}`);
   }
   if (!options.ids && !options.section) throw new Error("name --cards or --section");
+  if (options.limit !== undefined && !(Number.isInteger(options.limit) && options.limit > 0)) throw new Error("--limit takes a positive whole number");
   if (options.maxTotalUsd !== undefined && !(options.maxTotalUsd > 0)) throw new Error("--max-total-usd takes a positive number");
   return options;
 }

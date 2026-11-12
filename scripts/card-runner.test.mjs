@@ -13,18 +13,21 @@ const BACKLOG = `# Backlog
 | W1-07 | Pop-ups wait | toast queue | S | prologue test | PF-19 |
 | W1-14 | Camera | camera rig | M | PC film of Brindle; feel goes on the sitting watch list | PF-06 |
 | W1-19 | Quit under swipe | PC lane run only | S | one rendered quit | SA-F |
-| W1-30 | Big | many | L | bands | x |
+| W1-30 | Big | many | L | a pin test | x |
 | W1-65 | Lessons | lock_rows.gd | S | 24-seed w1 band read; lock ring tests. After PR 845 | y |
 | W1-13 | Cone | material | S | PC stills against the washout | PF-07 |
 | W1-62 | Break pays | gates.gd | S | gate test; band read unchanged for the Novice | z |
-| FX-05 | Path | fx.gd | S | stills | Build after W1-05 lands |
+| FX-05 | Path | fx.gd | S | fx test | Build after W1-05 lands |
 | FX-09 | Boss | boss.gd (board-owned) | S | test | not built here |
 
 ### Elsewhere
 
 | ID | What it does | Files | Size | Proof that world 1 is unchanged | Notes |
 | --- | --- | --- | --- | --- | --- |
-| SC-01 | Flag | a.gd | M | hash | y |
+| SC-01 | Flag | a.gd | M | the same hash; schema test | y |
+| SC-04 | Label | b.tsv | S | check:docs | done with this section |
+| SC-05 | Notch | c.gd | S | a still of the notch | |
+| SC-06 | Hook | d.gd | S | a probe | |
 | SC-02 | Move | b.gd | S | a film still of the dam | Built 12 Nov |
 | SC-03 | Move | c.gd | S | a film still of the dam | |
 `;
@@ -33,7 +36,7 @@ const STATE = `| Open stage | stage/alpha-w39 |\n| Live board | #848 |\n`;
 
 test("parses card rows under their section with header keys", () => {
   const cards = parseCards(BACKLOG);
-  assert.deepEqual(cards.map((card) => card.id), ["W1-01", "W1-07", "W1-14", "W1-19", "W1-30", "W1-65", "W1-13", "W1-62", "FX-05", "FX-09", "SC-01", "SC-02", "SC-03"]);
+  assert.deepEqual(cards.map((card) => card.id), ["W1-01", "W1-07", "W1-14", "W1-19", "W1-30", "W1-65", "W1-13", "W1-62", "FX-05", "FX-09", "SC-01", "SC-04", "SC-05", "SC-06", "SC-02", "SC-03"]);
   assert.equal(cards[1].section, "World 1 now: ready to build");
   assert.equal(cards[1]["what the player gets"], "Pop-ups wait");
   assert.equal(cards[10].section, "Elsewhere");
@@ -54,6 +57,9 @@ test("refuses built, PC-only, feel-proof and oversize cards", () => {
   assert.match(refusal(byId["SC-02"]), /built/);
   assert.match(refusal(byId["SC-03"]), /film/);
   assert.equal(refusal(byId["SC-01"]), null);
+  assert.match(refusal(byId["SC-04"]), /done/);
+  assert.match(refusal(byId["SC-05"]), /film or PC capture/);
+  assert.match(refusal(byId["SC-06"]), /names no test/);
 });
 
 test("reads the open stage and board from STATE.md", () => {
@@ -87,8 +93,8 @@ test("a run cut off with no JSON is charged its whole cap", () => {
 });
 
 test("cards named in pull requests or board comments are skipped", () => {
-  const taken = takenIds("CLAIM W1-07 (#858); PR 851 built branch card/w1-08");
-  assert.ok(taken.has("W1-07") && taken.has("W1-08"));
+  const taken = takenIds("CLAIM W1-07 (#858); PR 851 built branch card/w1-08 and W1-12a");
+  assert.ok(taken.has("W1-07") && taken.has("W1-08") && taken.has("W1-12A"));
   const result = plan({ backlog: BACKLOG, state: STATE, ids: ["W1-07"], taken });
   assert.equal(result.cards[0].skip, "already claimed or in a pull request");
 });
