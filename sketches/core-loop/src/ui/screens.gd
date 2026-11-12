@@ -382,6 +382,8 @@ func _on_flow_changed(state: String) -> void:
 			_footer.visible = true
 			if _prologue_due():
 				_begin_prologue()
+			else:
+				_open_first_pilot()
 		"dead":
 			# The store-less flow's end screen says what RUN OVER says: who, then what to try (death_tips.gd).
 			var said: String = game.flow.death_cause
@@ -570,6 +572,7 @@ func end_prologue() -> void:
 	_footer.visible = true
 	_queue_level()
 	_fade(true)
+	_open_first_pilot()
 
 
 # While the prologue shows, every key stays on it (Esc too, which never quits), so a number cannot
@@ -1058,6 +1061,22 @@ func achievements_open() -> bool:
 
 func achievements_page():
 	return _achievements
+
+
+# Pilot select opens on the first pilot the profile can take (w37 film PF-40), on arrival and when the prologue ends: an
+# open card names each key's icon and the role, so the closed cards' icon rows read by example, and the arrows walk to a
+# locked card's unlock words. The focus waits a frame, for the cards to be in the row.
+func _open_first_pilot() -> void:
+	for card in class_cards():
+		if not card.locked:
+			_focus_card.call_deferred(card)
+			return
+
+
+# A screen change in the same frame can take the card away first; a card no longer shown takes no focus.
+func _focus_card(card: Control) -> void:
+	if is_instance_valid(card) and card.is_inside_tree() and card.is_visible_in_tree() and get_viewport().gui_get_focus_owner() == null:
+		card.grab_focus()
 
 
 # The words on a locked pilot's card: the pilot's reward row text and lifetime count, then
