@@ -38,6 +38,7 @@ One home for every fact (ruling bz, Andrew, 9 Nov): update the page, doc or reco
 | Wanting something deleted or archived | `/mnt/project-files/housekeeping/pending-deletes.md`, to see it is not already listed | One row there with the reason; Andrew or the owner named decides. A thread deletes nothing itself, and merged branches go only through Andrew's prune script |
 | Just after a promotion | "After each promotion" in [STATE.md](STATE.md) | The Wave facts table, the fast-lane timings, the deep sweep report |
 | Changing a world 1 map, its difficulty or a hand-over between stages | The audit for it in [shared/world1/](shared/world1/): [the map audit](shared/world1/map-audit.md) (ruling ct), [the difficulty plan](shared/world1/difficulty-plan.md) (ruling cu), [the transitions audit](shared/world1/transitions-audit.md) (ruling cv) | The check the audit names for the point you touched, with its planted failing case; a new measurement goes back into the audit |
+| Changing how a world 1 model, material, pickup, icon or HUD piece looks | [The visual assets critique](shared/world1/visual-assets-audit.md) and the sight persona, `sketches/core-loop/design-v3/SIGHT-PERSONA.md` | The primitive census for anything drawn in code, a PC still at play distance, and the row's own proof in BACKLOG.md |
 
 What matters most right now: world 1 fully polished before Andrew plays it (ruling cs). [ROADMAP.md](ROADMAP.md) has the order of what is left and [STATE.md](STATE.md) where the open wave stands. Worlds 2 and 3 start nothing new (ruling at).
 
