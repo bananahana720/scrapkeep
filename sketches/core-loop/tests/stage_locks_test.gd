@@ -336,7 +336,15 @@ func _lock() -> void:
 	_t.eq("every crew kill is logged as the yard's", crew_kills.size(), crew_size)
 	_t.check("no crew kill drops a panel", crew_kills.all(func(k: Array): return not bool(k[5])))
 	_t.eq("the cleared yard pays one panel", since.filter(func(k: Array): return String(k[1]) == "yard_clear" and bool(k[5])).size(), 1)
-	_t.eq("the yard leaves pity alone", game.build.dropper.dry, dry)
+	# Pity moves only on kills outside the crew. A director chaser or lobber can still meet the ball
+	# while the yard holds (the escaping ball above runs out past the wall at 20 m/s), and on a loaded
+	# box more game time passes, so replay the pity count over those kills rather than expecting none.
+	var outside := since.filter(func(k: Array): return not (k.size() > 6 and bool(k[6])) and String(k[1]) != "yard_clear")
+	var want := dry
+	for k: Array in outside:
+		want = 0 if bool(k[5]) else want + 1
+	_t.check("the yard leaves pity alone", game.build.dropper.dry == want,
+			"got %d, want %d; kills outside the crew: %s" % [game.build.dropper.dry, want, str(outside)])
 	_t.eq("its panel lies in the field", game.build.scrap.panel_count(), panels + 1)
 	game.free()
 	await process_frame
