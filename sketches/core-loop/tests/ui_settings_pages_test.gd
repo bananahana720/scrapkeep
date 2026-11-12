@@ -178,7 +178,7 @@ func _run() -> void:
 		page.press("jump")
 		Push.key(root, taken[1])
 		_t.check("S3-4 %s is held by pause or retry, so jump reads Taken and keeps G" % taken[0], page.row("jump").text.contains("Taken") and _has_key("cl_jump", KEY_G) and not _has_key("cl_jump", taken[1]), "text %s" % page.row("jump").text)
-		_t.check("S3-4 the line names %s by the word the player knows" % taken[0], page.notice_text().begins_with("Pause uses" if taken[0] == "P" else "Retry uses"), page.notice_text())
+		_t.check("S3-4 the line names %s by the word the player knows" % taken[0], page.notice_text().begins_with("Pause uses" if taken[0] == "P" else "New run uses"), page.notice_text())
 		page.press("jump")
 		Push.key(root, KEY_ESCAPE)
 	page.press("harpoon")
