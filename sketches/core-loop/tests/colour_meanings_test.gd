@@ -109,7 +109,7 @@ func _scan(scripts: Array, domains: Dictionary) -> void:
 			overloads += 1
 	print("reserved colours in forbidden domains: %d sites; known rows %d (%d overloads to burn down)" % [found.size(), Meanings.KNOWN.size(), overloads])
 	_t.check("no reserved colour outside its meaning", stray.is_empty(),
-		"use ColourMeanings.of(<meaning>) or add a KNOWN row with its reason: %s" % [stray])
+		"draw the meaning this code owns, or add a KNOWN row in colour_meanings.gd with its reason: %s" % [stray])
 	_t.check("the scan sees the known overloads", found.size() > 0, "%d sites" % found.size())
 
 
@@ -130,12 +130,20 @@ func _colours_in(path: String, colours: Array) -> Array:
 	for colour in colours:
 		var hex: String = (_palette[colour] as Color).to_html(false).to_lower()
 		var hit := code.to_lower().contains(hex) or code.contains("\"%s\"" % colour)
+		# Asking by meaning is drawing the colour too: of("danger") in player code is still danger red.
+		for meaning in Meanings.MEANINGS:
+			if Meanings.MEANINGS[meaning] == colour and code.contains(".of(\"%s\"" % meaning):
+				hit = true
 		for alias in aliases:
 			if hit:
 				break
 			var re := RegEx.new()
 			re.compile("\\b%s\\.%s\\b" % [alias, colour])
 			hit = re.search(code) != null
+			# Palette.live() is mint today (palette.gd).
+			if not hit and colour == "ARC":
+				re.compile("\\b%s\\.live\\(" % alias)
+				hit = re.search(code) != null
 		if hit:
 			out.append(colour)
 	return out

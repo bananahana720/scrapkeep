@@ -44,22 +44,28 @@ const DOMAINS := {
 		"dirs": ["res://src/combat/actives/"],
 		"files": ["res://src/combat/ultimate.gd", "res://src/combat/rivet_kit.gd", "res://src/combat/tarn_claw.gd",
 			"res://src/presentation/player_fx.gd", "res://src/presentation/damage_numbers.gd",
-			"res://src/presentation/pilot_antics.gd"],
+			"res://src/presentation/pilot_antics.gd", "res://src/build/maker_bonuses.gd", "res://src/build/called_shot.gd",
+			"res://src/build/shot_bits.gd", "res://src/build/element_field.gd", "res://src/build/item_effects.gd",
+			"res://src/build/synergies.gd"],
 	},
 	"enemy": {
-		"extends": ["res://src/combat/enemy.gd"],
+		"extends": ["res://src/combat/enemy.gd", "res://src/boss/stub_boss.gd"],
 		"dirs": [],
-		"files": ["res://src/combat/enemy.gd"],
+		"files": ["res://src/combat/enemy.gd", "res://src/boss/boss.gd", "res://src/boss/boss_model.gd",
+			"res://src/boss/stub_boss.gd", "res://src/boss/requisition.gd", "res://src/boss/weak_part.gd",
+			"res://src/boss/boss_target.gd"],
 	},
 	"reward": {
 		"extends": [],
-		"dirs": ["res://src/build/"],
-		"files": ["res://src/ui/reward_view.gd", "res://src/ui/shop_tile.gd", "res://src/ui/shop_counter.gd",
+		"dirs": [],
+		"files": ["res://src/build/reward_gates.gd", "res://src/build/item_gen.gd", "res://src/build/items.gd",
+			"res://src/build/parts.gd", "res://src/build/relics.gd", "res://src/build/shop.gd", "res://src/build/accretion.gd",
+			"res://src/ui/reward_view.gd", "res://src/ui/shop_tile.gd", "res://src/ui/shop_counter.gd",
 			"res://src/presentation/reward_ceremony.gd"],
 	},
 }
 
-# Today's overloads, counted on cand/w40 f4e04867 (12 Nov 2026; effects-critique.md E6).
+# Today's overloads, counted on cand/w40 f4e04867 and widened by review (12 Nov 2026; effects-critique.md E6).
 # kind "overload" is a row to burn down: fixing the file means deleting its row, and the test
 # fails a row whose file no longer uses the colour. kind "ruled" is a standing exception with
 # its source. Rows for AMBER and COPPER are listed overloads the domain scan cannot see (those
@@ -87,6 +93,18 @@ const KNOWN := [
 		"why": "heft up, fused and STRIKE words and the growth column are boss brass"},
 	{"path": "res://src/combat/jolt_layer.gd", "colour": "ARC", "kind": "overload",
 		"why": "the jolt layer's cable coil, an enemy part, is mint"},
+	{"path": "res://src/build/maker_bonuses.gd", "colour": "BRASS", "kind": "overload",
+		"why": "a maker set's rings around the ball are boss brass"},
+	{"path": "res://src/build/called_shot.gd", "colour": "BRASS", "kind": "overload",
+		"why": "the called shot's stamp is boss brass"},
+	{"path": "res://src/build/shot_bits.gd", "colour": "BRASS", "kind": "overload",
+		"why": "the split shot bit is boss brass"},
+	{"path": "res://src/boss/requisition.gd", "colour": "ARC", "kind": "overload",
+		"why": "Brindle's cockpit glass is mint, on an enemy part"},
+	{"path": "res://src/combat/rogue.gd", "colour": "ARC", "kind": "ruled",
+		"why": "Palette.live() on the open weak point: live means your verb works on this now"},
+	{"path": "res://src/combat/miniboss.gd", "colour": "ARC", "kind": "ruled",
+		"why": "Palette.live() on the open core, as rogue.gd"},
 	{"path": "res://src/combat/enemy.gd", "colour": "ARC", "kind": "ruled",
 		"why": "rim_color's default before a run sets the pilot's class colour (identity only)"},
 	{"path": "res://src/core/event_kinds.gd", "colour": "COPPER", "kind": "overload",
@@ -112,7 +130,9 @@ static func of(meaning: String, class_def = null) -> Color:
 
 
 static func rung(rung_id: String) -> Color:
-	return _constant(REWARD_RUNGS.get(rung_id, "SAND"))
+	var constant: String = REWARD_RUNGS.get(rung_id, "")
+	assert(constant != "", "colour_meanings: unknown reward rung " + rung_id)
+	return _constant(constant)
 
 
 static func _constant(name: String) -> Color:
