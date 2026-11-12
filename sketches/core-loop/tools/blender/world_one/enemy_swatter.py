@@ -42,8 +42,7 @@ def g(x, y, z):
 b = Part("SwatterBody")
 b.cyl("fleet_paint", 0.57, 0.65, 1.0, segs=10, loc=g(0, -0.60, 0))
 b.cyl("fleet_paint", 0.65, 0.51, 0.85, segs=10, loc=g(0, 0.325, 0))
-crew.animal_head(b, g(0, 1.10, 0.08), 0.33, snout=((0.24, 0.18, 0.15), g(0, 1.04, 0.40)),
-                 ears=(0.12, 0.32, [g(side * 0.18, 1.55, 0.06) for side in (-1, 1)]))
+crew.brush_head(b, g(0, 1.10, 0.08), 0.33)
 b.cyl("paint", 0.66, 0.66, 0.12, segs=10, loc=g(0, -0.12, 0), color=CHAR)
 b.box("paint", (0.46, 0.20, 0.52), loc=g(0, 0.16, -0.62), color=CHAR)
 b.box("paint", (0.28, 0.05, 0.18), loc=g(0, 0.28, 0.55), color="brass")
@@ -51,6 +50,9 @@ b.box("paint", (0.28, 0.05, 0.18), loc=g(0, 0.28, 0.55), color="brass")
 for side in (-1, 1):
     b.rod("paint", g(side * 0.42, 0.36, 0.14), g(side * 0.20, -0.45, 0.42), 0.10, segs=6, color=PLATE)
     b.box("paint", (0.18, 0.26, 0.20), loc=g(side * 0.13, -0.53, 0.50), color=CHAR)
+# The old works' two marks, cast in under the Fleet's paint: the crew number and HIRED.
+crew.cast_number(b, "paint", "29", (0, -0.54, 0.58), (0, -1, 0), 0.18)
+crew.hired(b, "paint", (0, 0.725, 0.16), (0, 1, 0), 0.08)
 bmesh.ops.recalc_face_normals(b.bm, faces=b.bm.faces[:])
 body = b.to_object(parent=root)
 

@@ -160,6 +160,68 @@ def screen_head(part, loc, radius):
         part.box("paint", (w * 0.92, r * 0.18, r * 0.08), loc=frame + Vector((0, -r * 0.02, -r * 0.35)), color="bone")
 
 
+def diver_head(part, loc, radius):
+    """Gate diver (deflector): the cast dive helmet it reseated the gate seals in, a dome
+    with one round bone port in a charcoal rim, on a charcoal collar."""
+    with part.region(subsurf=0, detail=1):  # cast: filleted, not subdivided
+        c, r = Vector(loc), radius
+        part.cyl("paint", r * 1.0, r * 0.95, r * 0.3, segs=12, loc=c + Vector((0, 0, -r * 0.75)), color=CHAR)
+        part.uv("fleet_paint", r * 1.05, u=12, v=8, loc=c + Vector((0, 0, r * 0.05)))
+        port = c + Vector((0, -r * 0.92, r * 0.05))
+        part.cyl("paint", r * 0.55, r * 0.55, r * 0.22, segs=12, loc=port, rot=(HALF_PI, 0, 0), color=CHAR)
+        part.cyl("paint", r * 0.4, r * 0.4, r * 0.24, segs=12, loc=port + Vector((0, -0.01, 0)),
+                 rot=(HALF_PI, 0, 0), color="bone")
+        part.cyl("paint", r * 0.2, r * 0.2, r * 0.3, segs=8, loc=c + Vector((0, 0, r * 1.1)), color=CHAR)
+
+
+def current_meter_head(part, loc, radius):
+    """Current meter (gyro jammer): the cup rotor that spun in the stream to read its flow,
+    three charcoal arms with a bone cup each, on a cast bearing."""
+    with part.region(subsurf=0, detail=1):  # cast: filleted, not subdivided
+        c, r = Vector(loc), radius
+        part.cyl("fleet_paint", r * 0.55, r * 0.4, r * 1.0, segs=10, loc=c + Vector((0, 0, -r * 0.2)))
+        hub = c + Vector((0, 0, r * 0.45))
+        part.cyl("paint", r * 0.25, r * 0.25, r * 0.35, segs=8, loc=hub, color=CHAR)
+        for deg in (30, 150, 270):
+            a = math.radians(deg)
+            d = Vector((math.cos(a), math.sin(a), 0))
+            tip = hub + d * r * 0.95
+            part.rod("paint", tuple(hub), tuple(tip), r * 0.07, segs=4, color=CHAR)
+            side = Vector((-d.y, d.x, 0))
+            part.cyl("paint", r * 0.32, r * 0.12, r * 0.4, segs=8, loc=tip,
+                     rot=Vector((0, 0, 1)).rotation_difference(side).to_euler(), color="bone")
+
+
+def brush_head(part, loc, radius):
+    """Screen sweeper (swatter): the sweep's brush, a cast stock across the head with a row
+    of charcoal bristle tufts standing up from it."""
+    with part.region(subsurf=0, detail=1):  # cast: filleted, not subdivided
+        c, r = Vector(loc), radius
+        part.cyl("fleet_paint", r * 0.6, r * 0.5, r * 0.9, segs=10, loc=c + Vector((0, 0, -r * 0.3)))
+        stock = c + Vector((0, 0, r * 0.3))
+        part.box("fleet_paint", (r * 0.6, r * 2.0, r * 0.4), loc=stock)
+        for k in range(5):
+            y = -r * 0.8 + k * r * 0.4
+            part.cyl("paint", r * 0.17, r * 0.1, r * 0.75, segs=6, loc=stock + Vector((0, y, r * 0.55)), color=CHAR)
+
+
+def buoy_head(part, loc, radius):
+    """Buoy lifter (winch drone): a channel buoy, a cast float with a bone day band under a
+    charcoal cone and its lamp cage."""
+    with part.region(subsurf=0, detail=1):  # cast: filleted, not subdivided
+        c, r = Vector(loc), radius
+        part.cyl("fleet_paint", r * 0.7, r * 0.8, r * 0.9, segs=12, loc=c + Vector((0, 0, -r * 0.3)))
+        part.cyl("paint", r * 0.82, r * 0.82, r * 0.25, segs=12, loc=c + Vector((0, 0, -r * 0.25)), color="bone")
+        part.cyl("paint", r * 0.72, r * 0.12, r * 0.8, segs=12, loc=c + Vector((0, 0, r * 0.55)), color=CHAR)
+        lamp = c + Vector((0, 0, r * 1.1))
+        part.uv("paint", r * 0.18, u=8, v=5, loc=lamp, color="bone")
+        for k in range(3):
+            a = k * math.tau / 3
+            d = Vector((math.cos(a), math.sin(a), 0)) * r * 0.24
+            part.rod("paint", tuple(lamp + d + Vector((0, 0, -r * 0.22))), tuple(lamp + d + Vector((0, 0, r * 0.22))),
+                     r * 0.035, segs=4, color=CHAR)
+
+
 def stencil(part, slot, text, loc, normal, height, color, depth=0.03, resolution=3):
     """Raised stencil letters (the crew number, HIRED) on a face whose outward normal is
     `normal`, centred at `loc`, `height` metres tall."""
