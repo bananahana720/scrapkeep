@@ -34,8 +34,13 @@ const SPLASH_DROP := 4.0
 const SPLASH_COOL := 0.5
 
 static var current: Node3D
-# The saved reduced-motion setting, read on install; Game.set_reduced_motion keeps it current.
-static var preferred := false
+# The saved reduced-motion setting, read on install; Game.set_reduced_motion keeps it current. It is
+# the kit's one store (WorldFxKit.reduced_motion), so every world's effects read the same value.
+static var preferred: bool:
+	get:
+		return Kit.reduced_motion
+	set(on):
+		Kit.reduced_motion = on
 
 var world := -1
 var low := false

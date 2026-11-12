@@ -308,6 +308,52 @@ static func share(s: Dictionary, low: bool, reduced_motion: bool) -> float:
 	return r
 
 
+# The one place a world's effects read quality. The graphics preset is GraphicsPreset.current; the
+# reduced-motion setting lives here (WorldFx.preferred and HighdraftFx.preferred read and write it,
+# and Game.set_reduced_motion sets it). A world's own dressing (Specs.DRESSING rows) asks for its
+# share, visibility and colour below and registers once with follow_quality, so a new world writes
+# rows and behaviour, never its own preset hookup, low-quality cut or reduced-motion branch.
+static var reduced_motion := false
+
+
+static func low_preset() -> bool:
+	return String(load("res://src/presentation/graphics_preset.gd").current) == "low"
+
+
+# The share of a dressing effect that plays: its `low` share on the low preset, times its `reduced`
+# share under reduced motion. A count takes floored_share; a rate or a switch reads it directly.
+static func dressing_share(id: String, low := false, reduced := false) -> float:
+	var row: Dictionary = Specs.DRESSING[id]
+	return (float(row.get("low", 1.0)) if low else 1.0) * (float(row.get("reduced", 1.0)) if reduced else 1.0)
+
+
+static func dressing_count(id: String, full: int, low := false, reduced := false) -> int:
+	return int(floor(full * dressing_share(id, low, reduced) + 0.000001))
+
+
+# False when the current preset row turns the effect's `preset` flag off.
+static func dressing_shown(id: String) -> bool:
+	var flag := String(Specs.DRESSING[id].get("preset", ""))
+	if flag == "":
+		return true
+	var preset = load("res://src/presentation/graphics_preset.gd")
+	return bool(preset.PRESETS[preset.current].get(flag, true))
+
+
+static func dressing_colour(id: String) -> Color:
+	return Specs.colour(String(Specs.DRESSING[id].get("colour", "SAND")))
+
+
+static func dressing_alpha(id: String) -> float:
+	return float(Specs.DRESSING[id].get("alpha", 1.0))
+
+
+# A world's dressing node follows the preset: GraphicsPreset calls host._sync_dressing() now and on
+# every change.
+static func follow_quality(host: Node) -> void:
+	load("res://src/presentation/graphics_preset.gd").register_dressing_host(host)
+
+
 # Live particles a spec costs at a preset.
 static func cost(id: String, low := false, reduced_motion := false) -> int:
 	return int(round(float(Specs.SPECS[id]["max"]) * share(Specs.SPECS[id], low, reduced_motion)))
