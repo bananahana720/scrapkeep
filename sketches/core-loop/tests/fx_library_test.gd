@@ -8,6 +8,7 @@ const T := preload("res://tests/support/t.gd")
 const FxLibrary := preload("res://src/presentation/fx_library.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const FlashGuard := preload("res://src/presentation/flash_guard.gd")
+const Palette := preload("res://src/core/palette.gd")
 
 var t := T.new("fx_library_test")
 
@@ -35,7 +36,7 @@ func _run() -> void:
 		FxLibrary.fire(e, id, "enemy_struck", 4, Vector3(1, 2, 3))
 		t.check("%s emitting right after restart" % id, e.emitting and e.global_position.is_equal_approx(Vector3(1, 2, 3)))
 		e.free()
-	t.check("ceiling at most the pinned 752 (FX-FIX: latch halo, ember pool, wisp; was 648)", FxLibrary.ceiling() <= FxLibrary.CEILING and FxLibrary.CEILING == 752, str(FxLibrary.ceiling()))
+	t.check("ceiling at most the pinned 800 (FX-01: the kill's body shards, 3 x 16; was 752 after FX-FIX's latch halo, ember pool, wisp; was 648)", FxLibrary.ceiling() <= FxLibrary.CEILING and FxLibrary.CEILING == 800, str(FxLibrary.ceiling()))
 	var struck := FxLibrary.effects("enemy_struck")
 	var crit := FxLibrary.effects("enemy_struck", "crit")
 	t.check("a crit differs in count and size, not only tint", crit["crit_core"] > struck["spark_core"]
@@ -70,7 +71,19 @@ func _run() -> void:
 		t.check("%s draws on its look's mesh, not a primitive ball or box" % id,
 			not (e.draw_pass_1 is SphereMesh) and not (e.draw_pass_1 is BoxMesh))
 		e.free()
-	t.check("every look in use: puff, glow, streak, chunk, bead", looks.size() == 5, str(looks.keys()))
+	t.check("every look in use: puff, glow, streak, chunk, bead, star", looks.size() == 6, str(looks.keys()))
+	# FX-02: hits and stuns read on sand. The solid hit and crit sparks wear a charcoal rim, the
+	# additive ones stay pure light, and a stun is a ring of solid inked stars twice the old glow's size.
+	t.check("a solid spark wears an ink rim", FxLibrary.look("spark_core") == "streak"
+		and FxLibrary.look_material("streak", "mix").shader.code.contains("ALBEDO = mix(ALBEDO, ink_colour,"))
+	t.check("an additive spark stays pure light", not FxLibrary.look_material("streak", "add").shader.code.contains("ALBEDO = mix(ALBEDO, ink_colour,"))
+	t.check("the ink is the palette's charcoal, handed over as a colour so it converts to linear light",
+		FxLibrary.look_material("star").get_shader_parameter("ink_colour") == Palette.CHARCOAL
+		and FxLibrary.look_material("star").shader.code.contains("uniform vec3 ink_colour : source_color"))
+	t.check("the stun halo is solid inked stars", looks["star"] == ["daze_halo"] and FxLibrary.spec("daze_halo")["blend"] == "mix"
+		and FxLibrary.look_material("star").shader.code.contains("mix(fill, ink_colour,"))
+	t.check("the stun stars are twice the old glow's size", is_equal_approx(float(FxLibrary.spec("daze_halo")["size"]), 0.6))
+	t.check("ink stars never flash", FxLibrary.HEAT["star"] == 0.0)
 	t.check("dust and steam are puffs", "slam_dust" in looks["puff"] and "steam_puff" in looks["puff"])
 	t.check("debris is lit chunks", "crack_debris" in looks["chunk"] and not FxLibrary.look_material("chunk").shader.code.contains("unshaded"))
 	var spark := FxLibrary.build("spark_halo")
