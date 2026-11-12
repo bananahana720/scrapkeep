@@ -91,7 +91,8 @@ func _ride(x: float) -> void:
 	_t.check("x %d: the ball never turns back up the incline" % x, turned_at == INF, "turned at z %.1f" % turned_at)
 	_t.check("x %d: it keeps 2 x cruise through the foot" % x, foot_speed >= 2.0 * cruise,
 		"%.2f x cruise" % (foot_speed / cruise))
-	_t.check("x %d: the yard shuts past the foot" % x, locked_at >= FOOT_Z, "locked at z %.1f" % locked_at)
+	_t.check("x %d: the yard shuts past the foot, before the ride leaves it" % x, locked_at >= FOOT_Z and locked_at < INF,
+		"locked at z %.1f" % locked_at)
 	if locks.lock_state == "locked":
 		var c: Vector3 = locks.lock_centre
 		var rise: float = absf(game.ctx.terrain.height(c.x, c.z + 4.0) - game.ctx.terrain.height(c.x, c.z - 4.0)) / 8.0
