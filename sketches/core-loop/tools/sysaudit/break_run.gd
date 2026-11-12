@@ -322,6 +322,10 @@ func _check_resume() -> void:
 		"parts": (_saved.get("parts", []) as Array).size(), "cores": int(_saved.get("bonus_cores", 0)),
 		"death_save_spent": bool(_saved.get("death_save_spent", false)),
 		"hp": snappedf(float(_saved.get("hp", 0.0)), 0.01)}
+	# A save taken at a cleared stage's launch (SA-F1) continues past that stage: at the next
+	# entrance, or in the world's boss arena on the same stage number.
+	if bool(_saved.get("cleared", false)) and (now["stage"] == want["stage"] + 1 or now["state"] == "boss"):
+		want["stage"] = now["stage"]
 	var wrong := []
 	for key in want:
 		if now[key] != want[key]:
