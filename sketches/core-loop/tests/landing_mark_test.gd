@@ -28,6 +28,11 @@ class FlatGround:
 	func height(_x: float, _z: float) -> float:
 		return 0.0
 
+
+class Slope:
+	func height(x: float, _z: float) -> float:
+		return x * 0.2
+
 var t := T.new("landing_mark_test")
 var _world: Node3D
 var _ground := FlatGround.new()
@@ -43,6 +48,7 @@ func _run() -> void:
 	_check_kinds()
 	_check_edges()
 	_check_dust()
+	_check_slope()
 	await _check_life()
 	_check_strike()
 	quit(t.verdict())
@@ -142,6 +148,24 @@ func _check_dust() -> void:
 		"far edge %.2f m with Reduced motion" % still)
 
 
+# On a slope the ink and the dust follow the ground under them, not the centre's height.
+func _check_slope() -> void:
+	var slope := Slope.new()
+	var lane: Node3D = Telegraph.lane(_world, slope, Threat.Type.LANE, Vector3(0.0, 0.0, 600.0), Vector3(1.0, 0.0, 0.0), 14.0, 3.0)
+	var flash := _land(lane)
+	var worst := 0.0
+	var mesh: ArrayMesh = flash._layers["crack"].mesh if flash != null else null
+	if mesh != null:
+		for v in mesh.surface_get_arrays(0)[Mesh.ARRAY_VERTEX]:
+			worst = maxf(worst, absf(v.y - (v.x * 0.2 + Telegraph.LIFT)))
+	var dust: Dictionary = flash._dust.call(0.0) if flash != null else {}
+	var dust_off := 0.0
+	for v in dust.get("tris", PackedVector3Array()):
+		dust_off = maxf(dust_off, absf(v.y - (v.x * 0.2 + Telegraph.LIFT)))
+	t.check("follows the slope", mesh != null and worst < 0.4 and dust_off < 0.4,
+		"crack ink at most %.2f m and dust %.2f m off a 1 in 5 slope" % [worst, dust_off])
+
+
 func _far_x(tris: PackedVector3Array) -> float:
 	var out := -INF
 	for v in tris:
@@ -156,12 +180,12 @@ func _check_life() -> void:
 	t.near("flash life", life, maxf(Threat.CRACK_SECONDS, Threat.DUST_SECONDS))
 	t.check("crack holds then fades", is_equal_approx(Threat.crack_alpha(0.0), Threat.CRACK_ALPHA) and is_equal_approx(Threat.crack_alpha(Threat.CRACK_HOLD), Threat.CRACK_ALPHA)
 		and is_zero_approx(Threat.crack_alpha(Threat.CRACK_SECONDS)), "alpha %.2f held, %.2f at the end" % [Threat.crack_alpha(0.0), Threat.crack_alpha(Threat.CRACK_SECONDS)])
-	var waited := 0.0
-	while is_instance_valid(flash) and waited < life + 0.5:
-		await process_frame
-		waited += 1.0 / 60.0
+	flash._process(life)
 	await process_frame
-	t.check("flash frees itself", not is_instance_valid(flash), "gone after about %.2f s" % waited)
+	t.check("flash frees itself", not is_instance_valid(flash), "gone once %.2f s have passed" % life)
+	var before := _world.get_child_count()
+	ring.set_progress(1.0)
+	t.check("lands once", _world.get_child_count() == before, "a second live tick leaves no second landing")
 
 
 func _body() -> Node:

@@ -457,6 +457,8 @@ Every enemy threat is a committed telegraph (`src/combat/telegraph.gd`) or boss 
 
 Instant, projectile and lane also draw their height band as posts and a rail at `reach`.
 
+The landing (FX-05): on the tick a hostile enemy telegraph goes live, an instant, projectile or lane on the ground leaves an ink crack ring and a dust kick at its committed edge for half a second (`Threat.flash`, `Threat.landing`), and the attacker's body wears HAZARD for two physics frames on its strike (`enemy.gd` `_show_strike`). A wave, an air-only net, an aerial ring, a harmless field and the player's own marks leave no crack. Display only: nothing reads it for damage.
+
 Every type's warning sound plays on the frame the threat is declared (`audio.gd` `_warn_threat`). A LANE also has a release half: both nodes emit `went_live` when the warning ends (`Hazard.step` reaching `warn_seconds`, `Telegraph.set_progress` reaching 1), and on that frame the held hum stops and `threat_tear` plays. The tear is fire time (SOUND-STORY section 7), so it lands on the tick the charge, lunge or beam starts, at any warning length.
 
 The type is a required argument everywhere; no factory defaults it, and a node committed without one pushes an error.

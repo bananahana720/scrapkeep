@@ -83,6 +83,8 @@ const FLASH_SECONDS := 0.22
 # Crack: one per CRACK_STEP metres of edge (CRACK_MIN to CRACK_MAX), each CRACK_LENGTH of the
 # mark's size long (clamped), held CRACK_HOLD seconds and gone by CRACK_SECONDS.
 const CRACK_SECONDS := 0.5
+# The crack layer's sorting offset inside LINE_PRIORITY: drawn before the hot lines there.
+const CRACK_SORT := -1000.0
 const CRACK_HOLD := 0.2
 const CRACK_ALPHA := 0.95
 const CRACK_HALF := 0.07
@@ -104,7 +106,8 @@ const DUST_ALPHA := 0.75
 const DUST_SIZE := 0.45
 const DUST_KICK := 1.1
 const DUST_SWELL := 0.8
-const DUST_TONE := Color("ece3cc")
+# Bone dust, lighter than the sand it kicks off (SAND toward white).
+const DUST_TONE := Color(0.902, 0.871, 0.792)
 const EDGE_MIN := 0.35
 const EDGE_PER_METRE := 0.04
 # The widest an outline is drawn, metres: a 30 m ring's edge was 1.2 m of solid line.
@@ -1357,6 +1360,10 @@ class Painter:
 		if not _held_looks.has(look):
 			_held_looks[look] = mat
 		instance.material_override = mat
+		# The landing's crack ink sits over every fill and live band but under every hot line
+		# (LINE_PRIORITY, sorted first), so a lane still live after its landing keeps its rails.
+		if layer == "crack":
+			instance.sorting_offset = CRACK_SORT
 		add_child(instance)
 		_layers[layer] = instance
 		return instance
@@ -1404,10 +1411,18 @@ class Flash:
 
 	func _show(age: float) -> void:
 		if _fill:
-			tint("fill", Color(_tone, FlashGuard.info(FLASH_ALPHA) * maxf(0.0, 1.0 - age / FLASH_SECONDS)))
+			if age >= FLASH_SECONDS:
+				_fill = false
+				_layer("fill").visible = false
+			else:
+				tint("fill", Color(_tone, FlashGuard.info(FLASH_ALPHA) * (1.0 - age / FLASH_SECONDS)))
 		if _crack:
 			tint("crack", Color(1.0, 1.0, 1.0, _crack_alpha.call(age)))
 		if _dust.is_valid():
+			if age >= DUST_SECONDS:
+				_dust = Callable()
+				_layer("dust").visible = false
+				return
 			var dust: Dictionary = _dust.call(age)
 			paint([dust], ["dust"])
 			tint("dust", Color(1.0, 1.0, 1.0, dust["alpha"]))
@@ -1470,6 +1485,7 @@ static func dust_tris(puffs: Array, throw: float, t: float) -> PackedVector3Arra
 	for puff in puffs:
 		var out: Vector3 = puff[1]
 		var at: Vector3 = puff[0] + out * (DUST_KICK * throw + half)
+		at.y = float(puff[2]) if puff.size() > 2 else 0.0
 		var side := Vector3.UP.cross(out)
 		_quad(tris, at - out * half, at + side * half, at + out * half, at - side * half)
 	return tris
@@ -1519,15 +1535,27 @@ static func _edge_points(d: Dictionary, rng: RandomNumberGenerator) -> Array:
 	return out
 
 
-static func flash(parent: Node, d: Dictionary, floor_y: float, lift: float) -> Node3D:
+# The landing a mark leaves on the tick it goes live (Flash), or null when it leaves none: an
+# INSTANT's solid flash and, when it lands(), the crack ring and dust kick. `ground` is the
+# mark's own ground under a point (unset draws flat at floor_y); the crack follows it, and each
+# puff reads it once here, so the dust's per-frame repaint asks the ground nothing.
+static func flash(parent: Node, d: Dictionary, floor_y: float, lift: float, ground := Callable(), ground_many := Callable()) -> Node3D:
+	var instant := int(d["type"]) == Type.INSTANT
+	var landed := landing(d)
+	if not instant and landed.is_empty():
+		return null
 	var node := Flash.new()
 	node.floor_y = floor_y
 	node.lift = lift
+	node.ground = ground
+	node.ground_many = ground_many
 	parent.add_child(node)
-	var fill := marks(d, false).filter(func(m): return m["layer"] == "fill")
-	var landed := landing(d)
+	var fill := marks(d, false).filter(func(m): return m["layer"] == "fill") if instant else []
 	var crack := landed.filter(func(m): return m["layer"] == "crack")
 	var puffs: Array = landed[1]["puffs"] if landed.size() > 1 else []
+	for puff in puffs:
+		var at: Vector3 = puff[0]
+		puff.append((ground.call(Vector3(at.x, floor_y, at.z)) if ground.is_valid() else floor_y) + lift)
 	var dust := Callable()
 	if not puffs.is_empty():
 		dust = func(age: float) -> Dictionary: return dust_at(puffs, age)
@@ -1550,4 +1578,5 @@ static func flash_life(fill: bool, crack: bool, dust: bool) -> float:
 static func dust_at(puffs: Array, age: float) -> Dictionary:
 	var t := clampf(age / DUST_SECONDS, 0.0, 1.0)
 	var throw := (1.0 - (1.0 - t) * (1.0 - t)) * EnemyMotion.motion_scale
-	return _mark("dust", "dust", DUST_TONE, dust_tris(puffs, throw, t), {"alpha": DUST_ALPHA * (1.0 - t)})
+	var grounded: bool = not puffs.is_empty() and (puffs[0] as Array).size() > 2
+	return _mark("dust", "dust", DUST_TONE, dust_tris(puffs, throw, t), {"alpha": DUST_ALPHA * (1.0 - t), "abs": grounded})
