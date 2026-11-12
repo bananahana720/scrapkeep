@@ -137,7 +137,7 @@ func _deterministic() -> void:
 		b.read(room)
 	t.eq("the same rooms give the same set", a.plans, b.plans)
 	a.reset()
-	t.eq("reset starts the set again", [a.bar, a.mood, a.plans.size()], [-1, "lull", 0])
+	t.eq("reset starts the set again and keeps the run's plans", [a.bar, a.mood, a.plans.size()], [-1, "lull", 64])
 
 
 func _book() -> void:

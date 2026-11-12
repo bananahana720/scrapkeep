@@ -38,6 +38,8 @@ const BREATH_PHRASES := 3
 const HOT_BAND := 2
 # Armour fraction under which the room is hanging on (the band strips its lead there too).
 const HANGING := 0.3
+# Plans kept for a recording across every band of a run (about 25 minutes of bars).
+const PLANS_KEPT := 1024
 
 # The room's floor in each fight word (INTEGRATION section 7): the guard holding is a build,
 # the guard cracking and the drop are the peak, the breath and the break are release.
@@ -104,7 +106,7 @@ var _last_answer := ""
 var _breath_owed := false
 var _swap_armed := true
 var _landing_swapped := false
-# Every plan, for the recorder and the tests: [bar, mood, move, answer].
+# Every plan of the run, kept across band changes up to PLANS_KEPT, for the recorder and the tests: [bar, mood, move, answer].
 var plans: Array = []
 
 
@@ -121,7 +123,6 @@ func reset() -> void:
 	_breath_owed = false
 	_swap_armed = true
 	_landing_swapped = false
-	plans.clear()
 
 
 # The room's energy, 0 to 1, from the read audio.gd gathers (every key optional):
@@ -199,7 +200,8 @@ func read(room: Dictionary) -> Dictionary:
 		plan.trims = {"other": LEAD_SPACE}
 	if plan.answer != "":
 		_last_answer = plan.answer
-	plans.append([bar, mood, plan.move, plan.answer])
+	if plans.size() < PLANS_KEPT:
+		plans.append([bar, mood, plan.move, plan.answer])
 	return plan
 
 

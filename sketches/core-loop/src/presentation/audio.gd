@@ -4775,7 +4775,7 @@ func _tend_set() -> void:
 		_set_answer = SfxBank.SET_ANSWER + plan.answer
 		_set_answer_at = at
 		engine.schedule_stinger_at(_set_answer, at, PRIORITY_DB[1], false, ramp)
-		cue_log.append(["set_answer", _set_answer, "grid", at, 1.0])
+		cue_log.append(["set_answer", _set_answer, "grid", at, 1.0, PRIORITY_DB[1] + SfxBank.trim_db(_set_answer)])
 	if plan.move != "hold":
 		cue_log.append(["set_move", plan.move, plan.mood, at, 1.0])
 
