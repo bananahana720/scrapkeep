@@ -207,7 +207,7 @@
   {"id": "rim_cache", "activity": "cracked_cache", "site": "west_rim_bench", "at": [-210, 400], "pack": [], "pay": {"rarities": ["rare"]}},
   {"id": "bench_altar", "activity": "ambush_altar", "site": "east_rim_bench", "at": [206, 250], "pack": [], "pay": {"rarities": ["common", "rare"]}},
   {"id": "shelf_relay", "activity": "hold_the_relay", "site": "shelf_rise", "at": [-155, -385], "pack": [], "pay": {"rarities": ["common", "rare"]}},
-  {"id": "haul_road_cache", "activity": "cracked_cache", "site": "east_haul_road", "at": [165, 465], "pack": [], "pay": {"rarities": ["rare"]}, "bar": "blazing"}
+  {"id": "incline_cache", "activity": "cracked_cache", "site": "construction_incline", "at": [-20, 255], "pack": [], "pay": {"rarities": ["rare"]}, "bar": "blazing"}
  ],
  "rescue_rows": [
   {"id": "rivet_cage", "site": "dome_7", "at": [60, -594], "face": [-1, 0], "quest": "rivet", "pilot": "runner_gunner", "prompt": "free the runner"}

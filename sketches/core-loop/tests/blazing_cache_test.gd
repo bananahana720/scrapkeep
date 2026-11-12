@@ -4,16 +4,19 @@ const Game := preload("res://src/game.gd")
 const Activities := preload("res://src/world/activities.gd")
 const SpeedTier := preload("res://src/movement/speed_tier.gd")
 const T := preload("res://tests/support/t.gd")
+const Augments := preload("res://src/movement/augments.gd")
 
 # W1-76, the dam's blazing cache: the park row's `bar: "blazing"` raises the cracked cache's wall to
 # a ram at the blazing tier of the unmodded cruise (activities.gd BARS and ram_bar, read here, not
 # copied). On the live dam: the bar is that tier and every other cache keeps the ordinary bar; a slam well
 # over cruise's strength leaves the wall; a ram just under the bar leaves it and plays the roll's
-# refused cue; a ram just over breaks it and one part waits on the pedestal.
+# refused cue. On the line itself, a roll from the incline's top at cruise is refused and the same roll
+# after a surge breaks it, and one part waits on the pedestal.
 
 const RAM_FRAMES := 150
 const UNDER := 0.9
-const OVER := 1.08
+const ROLL_M := 50.0
+const ROLL_FRAMES := 90 * 5
 
 var _t := T.new("blazing_cache_test")
 var _game
@@ -71,13 +74,21 @@ func _run() -> void:
 	acts._slammed(slam_at, _game.player.slam_strength(cruise) * Activities.SLAM_MIN_PER_CRUISE * 1.5)
 	await _frames(2)
 	_t.check("a slam does not break it", not s.done and s.wall.visible, "done %s" % s.done)
-	var refused_before := _refused
 	await _ram(s, _ground(s.global_position + back * 16.0), heading * bar * UNDER)
 	_t.check("a ram just under the bar leaves it", not s.done and s.wall.visible, "ram %.1f m/s against %.1f" % [bar * UNDER, bar])
-	_t.check("and answers with the refused cue", _refused > refused_before, "%d cues" % (_refused - refused_before))
-	await _ram(s, _ground(s.global_position + back * 16.0), heading * bar * OVER)
-	_t.check("a ram over the bar breaks it", s.done and not s.wall.visible and _done.count("cracked_cache") == 1,
-		"ram %.1f m/s: done %s" % [bar * OVER, s.done])
+	# The line itself (W1-76): the cache stands ROLL_M down the construction incline. A ball that tops the
+	# incline at cruise and rolls with no input meets the face under the bar and hears the refused cue; the
+	# same roll after a Shift's surge breaks it.
+	var tier: float = _game.ctx.tuning.tier_cruise()
+	var refused_before := _refused
+	await _roll(s, back, tier)
+	_t.check("a roll down the incline at cruise is refused", not s.done and s.wall.visible and _refused > refused_before,
+		"done %s, %d cues" % [s.done, _refused - refused_before])
+	# A Shift's surge leaves the ball at the dash floor times SURGE_SCALE (augments.gd), 20.8 m/s at base.
+	var surge: float = _game.ctx.tuning.f("dash_impulse") * Augments.SURGE_SCALE
+	await _roll(s, back, surge)
+	_t.check("the same roll after a surge breaks it", s.done and not s.wall.visible and _done.count("cracked_cache") == 1,
+		"start %.1f m/s: done %s" % [surge, s.done])
 	_t.check("one part waits on the pedestal", s.pickup != null, "pickup %s" % [s.pickup])
 	quit(_t.verdict())
 
@@ -101,4 +112,14 @@ func _ram(s, start: Vector3, velocity: Vector3) -> void:
 		await physics_frame
 		var l: Vector3 = s.to_local(_game.player.ball_position())
 		if l.z < -1.0 or s.done:
+			break
+
+
+# A roll from ROLL_M up the line at `speed`, then no input until the wall breaks or the ball stops.
+func _roll(s, back: Vector3, speed: float) -> void:
+	var dir := Vector3(-back.x, 0.0, -back.z).normalized()
+	_put(_ground(s.global_position + back * ROLL_M), dir * speed)
+	for i in ROLL_FRAMES:
+		await physics_frame
+		if s.done or (i > 30 and _game.player.planar_velocity().length() < 1.0):
 			break

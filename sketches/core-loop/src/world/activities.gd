@@ -168,8 +168,9 @@ const SLAM_MIN_PER_CRUISE := 1.0
 # so with the bar at cruise itself only the speed bank's roll start or a burst broke the wall: a player
 # already rolling at full speed bumped the face (cautious red team, 26 Oct). A nudge stays under it.
 const RAM_MIN_PER_CRUISE := 0.85
-# A park row's `bar` raises a cache wall to a speed tier (W1-76, Shift's job in world 1): only a ram at
-# that tier of the unmodded cruise breaks it, the tier the ball's streaks show, and a slam never does.
+# A park row's `bar` raises a cache wall to a speed tier (W1-76, Shift's job in world 1): only a ram into
+# the face at that tier of the unmodded cruise breaks it, and a slam never does. The streaks read the
+# modded cruise, so a cruise item can break the wall before they turn (overpowered pays, 24 Oct ruling).
 # Under the bar the refused cue still answers, so the face reads as "faster".
 const BARS := {"blazing": SpeedTier.BLAZING}
 const PEDESTAL_BACK := 4.0

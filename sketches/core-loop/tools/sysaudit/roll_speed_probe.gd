@@ -5,12 +5,14 @@ const SimClock := preload("res://src/core/sim_clock.gd")
 
 # W1-76 probe: how fast a ball gets rolling down a line of the dam with no input after a start at
 # cruise. Prints the speed every half second and the peak, as multiples of the unmodded cruise.
-#   ... --script res://tools/sysaudit/roll_speed_probe.gd -- --from=x,z --to=x,z [--seconds=12]
+#   ... --script res://tools/sysaudit/roll_speed_probe.gd -- --from=x,z --to=x,z [--seconds=12] [--start=1.0]
 var _game
 var _ticks := 0
 var _from := Vector2.ZERO
 var _to := Vector2.ZERO
 var _seconds := 12.0
+# The start speed as a multiple of cruise (1.49 is a surge's 20.8 m/s).
+var _start := 1.0
 var _t := 0
 var _started := false
 var _peak := 0.0
@@ -27,6 +29,7 @@ func _initialize() -> void:
 			"from": _from = Vector2(float(xy[0]), float(xy[1]))
 			"to": _to = Vector2(float(xy[0]), float(xy[1]))
 			"seconds": _seconds = float(kv[1])
+			"start": _start = float(kv[1])
 	SimClock.ticks = true
 	seed(1)
 	node_added.connect(func(node: Node):
@@ -56,7 +59,7 @@ func _physics_process(_delta: float) -> bool:
 		_game.events.verb_failed.connect(func(verb: String, reason: String, at: Vector3): print("verb_failed %s %s t %.2f" % [verb, reason, _t / 90.0]))
 		var dir := (_to - _from).normalized()
 		_game.player.body().global_position = _game.ctx.terrain.drop_point(_from.x, _from.y, 1.0)
-		_game.player.set_velocity_now(Vector3(dir.x, 0.0, dir.y) * cruise, "probe")
+		_game.player.set_velocity_now(Vector3(dir.x, 0.0, dir.y) * cruise * _start, "probe")
 		return false
 	_t += 1
 	var ball: Vector3 = _game.player.ball_position()
