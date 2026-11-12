@@ -1,0 +1,204 @@
+{
+	"adapter": "NVIDIA GeForce RTX 4080",
+	"frames": [
+		{
+			"contrast": 29,
+			"drawn_px": 812,
+			"id": "roll_dust",
+			"sha256": "b7a65abf470a3f67e0c6e018cd55245e52a520149709509a6023a1c2d0aeaed2"
+		},
+		{
+			"contrast": 52,
+			"drawn_px": 323,
+			"id": "spark_core",
+			"sha256": "d513e56969984bacb14891f2df77b6e5248ee2155fed71b1989bfcde88052e3e"
+		},
+		{
+			"contrast": 37,
+			"drawn_px": 83,
+			"id": "spark_halo",
+			"sha256": "c7bd7f3707c5b80cdad2f6f9518aaa856bd12e01fca213b74638dea97550efdf"
+		},
+		{
+			"contrast": 58,
+			"drawn_px": 1034,
+			"id": "crit_core",
+			"sha256": "720a5e227d2fd1c56bec4e21109d25a06089ceb9c1fd072a5920d3fed58f278d"
+		},
+		{
+			"contrast": 29,
+			"drawn_px": 682,
+			"id": "crit_halo",
+			"sha256": "83c4654c7fc916f38f76683705d10d3ac66626f0249536887eccfee72fa92eb4"
+		},
+		{
+			"contrast": 27,
+			"drawn_px": 113,
+			"id": "slam_ring",
+			"sha256": "33dc39f30e4737d2f8a7a1b486ecb7043ccfbf4e78a69fa9483c17e79858d0d7"
+		},
+		{
+			"contrast": 40,
+			"drawn_px": 11673,
+			"id": "slam_dust",
+			"sha256": "d1a3e300f10b9c5d54b768ed301420ba6c0677df590394989ffaee08b9b4db9c"
+		},
+		{
+			"contrast": 103,
+			"drawn_px": 140,
+			"id": "latch_ring",
+			"sha256": "a8cdff0801be70fb6f25bc2bb5cbab1bba445d2e249838c34e571dcd5fe48573"
+		},
+		{
+			"contrast": 43,
+			"drawn_px": 91,
+			"id": "latch_halo",
+			"sha256": "5922b214075c17fcb2f4e6c64b1bd0651623531577553d2850e5f613d5d7a1d6"
+		},
+		{
+			"contrast": 71,
+			"drawn_px": 274,
+			"id": "latch_pulse",
+			"sha256": "3bd9395a1a8aaf5775014baaa783e5f36acc1c8caeef6ce6baf3ae519b75c70c"
+		},
+		{
+			"contrast": 135,
+			"drawn_px": 2134,
+			"id": "crack_debris",
+			"sha256": "86bec009371369d3028bd0035fd4d930de786d86b827de44efb0c229f9a8baef"
+		},
+		{
+			"contrast": 34,
+			"drawn_px": 118,
+			"id": "cache_ember",
+			"sha256": "728cf25d835e51e7147483012ce0b068c97b967d336700cea96340f25829dc61"
+		},
+		{
+			"contrast": 186,
+			"drawn_px": 2732,
+			"id": "cache_wisp",
+			"sha256": "2ce6adc8531ce939f73cdf6f50b180bf5be10079492553630493e90929fdd297"
+		},
+		{
+			"contrast": 79,
+			"drawn_px": 3571,
+			"id": "dig_debris",
+			"sha256": "bcd51dda6378ec39fa277704bea43fb44f14f81ed58e36127aa82389212f6648"
+		},
+		{
+			"contrast": 43,
+			"drawn_px": 17245,
+			"id": "dig_dust",
+			"sha256": "58333e957999f218f308329b6bc91b5eb8765f27af31dfe063ec7e0870aef2e2"
+		},
+		{
+			"contrast": 0,
+			"drawn_px": 0,
+			"id": "dig_grit",
+			"sha256": "6a5e502635f8f459f52ef2d8790dc5e7aacf8e0fb5d7b05f79ff10d6f7d25bf6"
+		},
+		{
+			"contrast": 29,
+			"drawn_px": 3365,
+			"id": "net_dust",
+			"sha256": "aaca417a6814d7074aff2eaca706861079398fda434c0f63ad014e61c4d32ace"
+		},
+		{
+			"contrast": 45,
+			"drawn_px": 2164,
+			"id": "steam_puff",
+			"sha256": "4870c23b88d32ca3b6f627caba111ce69599e3e668b66643554f8864ba1c45f4"
+		},
+		{
+			"contrast": 39,
+			"drawn_px": 2178,
+			"id": "steam_jet",
+			"sha256": "770c55fe40defa182c92a1a8626d0efe83acbc5c5066a0f0cf47ebda26d6865d"
+		},
+		{
+			"contrast": 53,
+			"drawn_px": 94,
+			"id": "brass_spark",
+			"sha256": "d54d47112ccb5a90cda286dbc691e2076972fe205581d4d6d1e70549de6702d7"
+		},
+		{
+			"contrast": 0,
+			"drawn_px": 0,
+			"id": "arc_fizz",
+			"sha256": "2db8a77ebbe28caf1146710c5428c0241bdc6d65babf68df47e21c5fb7ac9d44"
+		},
+		{
+			"contrast": 32,
+			"drawn_px": 152,
+			"id": "arc_crawl",
+			"sha256": "ff6ab84bf4f3943d64909f1ffefc053b9230f05c43e5163376466ba4e2bc09b1"
+		},
+		{
+			"contrast": 25,
+			"drawn_px": 96,
+			"id": "seam_motes",
+			"sha256": "3f6cc215dd1d60fcfe6e6445392cf4a4c10a559dce4e3515180da89821627bf0"
+		},
+		{
+			"contrast": 33,
+			"drawn_px": 11,
+			"id": "daze_halo",
+			"sha256": "73ef7c7bc4cc51468154d622c7a03f3e5fc0121a76a935b9c2f80c95c2618964"
+		},
+		{
+			"contrast": 28,
+			"drawn_px": 4,
+			"id": "fuse_sputter",
+			"sha256": "a345c69fc98784c70b1304aca1a90360148f4e3ef7a9585193b0ffe586ab1522"
+		},
+		{
+			"contrast": 80,
+			"drawn_px": 1503,
+			"id": "phase_ring",
+			"sha256": "9a8e09d16388728d189161a8eaebe001db8d6678148cc59936d56ecf89213d2b"
+		},
+		{
+			"contrast": 113,
+			"drawn_px": 993,
+			"id": "shell_shards",
+			"sha256": "fafbb2984430ae12db5e8977c9138d5dbc862e02d7581a392ddf6c93071756ab"
+		},
+		{
+			"contrast": 60,
+			"drawn_px": 1444,
+			"id": "plate_chunks",
+			"sha256": "217a1e6aac7979dfcb837bcbdfb36c1201964d383dab9cf0b9e6837f6e719146"
+		},
+		{
+			"contrast": 0,
+			"drawn_px": 0,
+			"id": "burst_pop",
+			"sha256": "e9335d8f99a61151fb92e2d983f9924d7ca0f553839ac17ae8ca539466c3948e"
+		},
+		{
+			"contrast": 52,
+			"drawn_px": 1017,
+			"id": "burst_debris",
+			"sha256": "449369a45718f4f4cfd4ec0d950fb5e7f4e8603f92f120e07a205f22aa23c1a8"
+		},
+		{
+			"contrast": 27,
+			"drawn_px": 1695,
+			"id": "burst_dust",
+			"sha256": "18ac7e7eb0f5a3ec06ba6b7aa3050dea0479a802450c01bd3b96bedd3c309357"
+		},
+		{
+			"contrast": 60,
+			"drawn_px": 894,
+			"id": "burst_fountain",
+			"sha256": "ec50051f45d35727f392772dfc638b6dd9cd005181206059d5f94676511a2a9d"
+		}
+	],
+	"freeze": 0.35,
+	"reduce_flashes": false,
+	"size": [
+		640,
+		400
+	],
+	"world": 1
+}

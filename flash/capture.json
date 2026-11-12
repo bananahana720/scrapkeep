@@ -1,0 +1,125 @@
+{
+  "adapter": "NVIDIA GeForce RTX 4080",
+  "shots": [
+    {
+      "file": "edge-off-rest.png",
+      "frame": 133,
+      "guard": false
+    },
+    {
+      "file": "edge-off-peak.png",
+      "frame": 136,
+      "guard": false
+    },
+    {
+      "file": "pop_glyph-off-rest.png",
+      "frame": 149,
+      "guard": false
+    },
+    {
+      "file": "pop_glyph-off-peak.png",
+      "frame": 152,
+      "guard": false
+    },
+    {
+      "file": "ring_glyph-off-rest.png",
+      "frame": 165,
+      "guard": false
+    },
+    {
+      "file": "ring_glyph-off-peak.png",
+      "frame": 168,
+      "guard": false
+    },
+    {
+      "file": "enemy_hit-off-rest.png",
+      "frame": 181,
+      "guard": false
+    },
+    {
+      "file": "enemy_hit-off-peak.png",
+      "frame": 184,
+      "guard": false
+    },
+    {
+      "file": "word-off-rest.png",
+      "frame": 197,
+      "guard": false
+    },
+    {
+      "file": "word-off-peak.png",
+      "frame": 200,
+      "guard": false
+    },
+    {
+      "file": "edge-on-rest.png",
+      "frame": 214,
+      "guard": true
+    },
+    {
+      "file": "edge-on-peak.png",
+      "frame": 217,
+      "guard": true
+    },
+    {
+      "file": "pop_glyph-on-rest.png",
+      "frame": 230,
+      "guard": true
+    },
+    {
+      "file": "pop_glyph-on-peak.png",
+      "frame": 233,
+      "guard": true
+    },
+    {
+      "file": "ring_glyph-on-rest.png",
+      "frame": 246,
+      "guard": true
+    },
+    {
+      "file": "ring_glyph-on-peak.png",
+      "frame": 249,
+      "guard": true
+    },
+    {
+      "file": "enemy_hit-on-rest.png",
+      "frame": 262,
+      "guard": true
+    },
+    {
+      "file": "enemy_hit-on-peak.png",
+      "frame": 265,
+      "guard": true
+    },
+    {
+      "file": "word-on-rest.png",
+      "frame": 278,
+      "guard": true
+    },
+    {
+      "file": "word-on-peak.png",
+      "frame": 281,
+      "guard": true
+    },
+    {
+      "file": "burst-off-rest.png",
+      "frame": 524,
+      "guard": false
+    },
+    {
+      "file": "burst-off-peak.png",
+      "frame": 525,
+      "guard": false
+    },
+    {
+      "file": "burst-on-rest.png",
+      "frame": 989,
+      "guard": true
+    },
+    {
+      "file": "burst-on-peak.png",
+      "frame": 990,
+      "guard": true
+    }
+  ]
+}

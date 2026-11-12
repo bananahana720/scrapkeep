@@ -1,0 +1,1274 @@
+{
+	"adapter": "NVIDIA GeForce RTX 4080",
+	"first_scene_s": 12.89,
+	"fixed_fps": true,
+	"frame_s": [
+		0.0167,
+		0.0167
+	],
+	"hit_word_shown": true,
+	"kinds": [
+		{
+			"beats": {
+				"death": 29.11,
+				"hit": 28.09
+			},
+			"clips": true,
+			"cuts": [
+				{
+					"beside": 0.6,
+					"clip": "windup",
+					"frames": 1,
+					"part": "ChaserBody",
+					"reel_s": 20.94,
+					"speed": 4.2,
+					"unit": "m/s"
+				},
+				{
+					"beside": 42.1,
+					"clip": "windup",
+					"frames": 1,
+					"part": "ChaserFin",
+					"reel_s": 20.94,
+					"speed": 775.7,
+					"unit": "deg/s"
+				},
+				{
+					"beside": 0.0,
+					"clip": "attack",
+					"frames": 1,
+					"part": "ChaserClaws",
+					"reel_s": 21.56,
+					"speed": 2621.1,
+					"unit": "deg/s"
+				},
+				{
+					"beside": 0.0,
+					"clip": "attack",
+					"frames": 1,
+					"part": "ChaserClaws",
+					"reel_s": 21.56,
+					"speed": 7.3,
+					"unit": "m/s"
+				},
+				{
+					"beside": 0.3,
+					"clip": "idle",
+					"frames": 1,
+					"part": "ChaserBody",
+					"reel_s": 21.91,
+					"speed": 16.9,
+					"unit": "m/s"
+				},
+				{
+					"beside": 0.0,
+					"clip": "attack",
+					"frames": 1,
+					"part": "ChaserClaws",
+					"reel_s": 23.33,
+					"speed": 2621.1,
+					"unit": "deg/s"
+				},
+				{
+					"beside": 0.0,
+					"clip": "attack",
+					"frames": 1,
+					"part": "ChaserClaws",
+					"reel_s": 23.33,
+					"speed": 7.3,
+					"unit": "m/s"
+				},
+				{
+					"beside": 0.3,
+					"clip": "idle",
+					"frames": 1,
+					"part": "ChaserBody",
+					"reel_s": 23.68,
+					"speed": 16.6,
+					"unit": "m/s"
+				},
+				{
+					"beside": 3.4,
+					"clip": "idle",
+					"frames": 1,
+					"part": "ChaserFin",
+					"reel_s": 23.68,
+					"speed": 33.3,
+					"unit": "m/s"
+				},
+				{
+					"beside": 104.3,
+					"clip": "windup",
+					"frames": 1,
+					"part": "ChaserClaws",
+					"reel_s": 24.48,
+					"speed": 439.1,
+					"unit": "deg/s"
+				},
+				{
+					"beside": 0.0,
+					"clip": "attack",
+					"frames": 1,
+					"part": "ChaserClaws",
+					"reel_s": 25.09,
+					"speed": 2621.1,
+					"unit": "deg/s"
+				},
+				{
+					"beside": 0.0,
+					"clip": "attack",
+					"frames": 1,
+					"part": "ChaserClaws",
+					"reel_s": 25.09,
+					"speed": 7.3,
+					"unit": "m/s"
+				},
+				{
+					"beside": 0.3,
+					"clip": "idle",
+					"frames": 1,
+					"part": "ChaserBody",
+					"reel_s": 25.44,
+					"speed": 16.8,
+					"unit": "m/s"
+				},
+				{
+					"beside": 0.0,
+					"clip": "attack",
+					"frames": 1,
+					"part": "ChaserClaws",
+					"reel_s": 26.86,
+					"speed": 2621.1,
+					"unit": "deg/s"
+				},
+				{
+					"beside": 0.0,
+					"clip": "attack",
+					"frames": 1,
+					"part": "ChaserClaws",
+					"reel_s": 26.86,
+					"speed": 7.3,
+					"unit": "m/s"
+				},
+				{
+					"beside": 0.3,
+					"clip": "idle",
+					"frames": 1,
+					"part": "ChaserBody",
+					"reel_s": 27.21,
+					"speed": 16.6,
+					"unit": "m/s"
+				},
+				{
+					"beside": 4.8,
+					"clip": "idle",
+					"frames": 1,
+					"part": "ChaserFin",
+					"reel_s": 27.21,
+					"speed": 33.9,
+					"unit": "m/s"
+				},
+				{
+					"beside": 2.4,
+					"clip": "attack",
+					"frames": 1,
+					"part": "ChaserClaws",
+					"reel_s": 28.63,
+					"speed": 2621.1,
+					"unit": "deg/s"
+				},
+				{
+					"beside": 0.0,
+					"clip": "attack",
+					"frames": 1,
+					"part": "ChaserClaws",
+					"reel_s": 28.63,
+					"speed": 7.3,
+					"unit": "m/s"
+				},
+				{
+					"beside": 0.2,
+					"clip": "idle",
+					"frames": 1,
+					"part": "ChaserBody",
+					"reel_s": 28.98,
+					"speed": 16.6,
+					"unit": "m/s"
+				}
+			],
+			"end_s": 31.63,
+			"frames": 571,
+			"hull_left": 1.0,
+			"in_clip": 0,
+			"kind": "chaser",
+			"measured": true,
+			"parts": 5,
+			"snaps": [],
+			"start_s": 20.08
+		},
+		{
+			"beats": {
+				"death": 41.18,
+				"hit": 40.16
+			},
+			"clips": true,
+			"cuts": [
+				{
+					"beside": 2.5,
+					"clip": "attack",
+					"frames": 2,
+					"part": "LobberBody",
+					"reel_s": 35.76,
+					"speed": 14.3,
+					"unit": "m/s"
+				},
+				{
+					"beside": 70.1,
+					"clip": "attack",
+					"frames": 1,
+					"part": "LobberBarrel",
+					"reel_s": 35.76,
+					"speed": 363.2,
+					"unit": "deg/s"
+				},
+				{
+					"beside": 3.8,
+					"clip": "attack",
+					"frames": 1,
+					"part": "LobberBarrel",
+					"reel_s": 35.76,
+					"speed": 25.2,
+					"unit": "m/s"
+				},
+				{
+					"beside": 2.5,
+					"clip": "attack",
+					"frames": 2,
+					"part": "LobberBody",
+					"reel_s": 35.76,
+					"speed": 14.3,
+					"unit": "m/s"
+				},
+				{
+					"beside": 2.7,
+					"clip": "attack",
+					"frames": 1,
+					"part": "LobberBody",
+					"reel_s": 39.38,
+					"speed": 13.0,
+					"unit": "m/s"
+				},
+				{
+					"beside": 0.8,
+					"clip": "attack",
+					"frames": 1,
+					"part": "LobberBarrel",
+					"reel_s": 39.38,
+					"speed": 23.9,
+					"unit": "m/s"
+				},
+				{
+					"beside": 2.7,
+					"clip": "attack",
+					"frames": 1,
+					"part": "LobberBody",
+					"reel_s": 39.38,
+					"speed": 13.0,
+					"unit": "m/s"
+				}
+			],
+			"end_s": 43.69,
+			"frames": 571,
+			"hull_left": 1.0,
+			"in_clip": 0,
+			"kind": "lobber",
+			"measured": true,
+			"parts": 5,
+			"snaps": [],
+			"start_s": 32.14
+		},
+		{
+			"beats": {
+				"death": 55.26,
+				"hit": 52.23,
+				"stun": 53.24
+			},
+			"clips": true,
+			"cuts": [
+				{
+					"beside": 25.1,
+					"clip": "attack",
+					"frames": 1,
+					"part": "Cart",
+					"reel_s": 46.84,
+					"speed": 1175.6,
+					"unit": "deg/s"
+				},
+				{
+					"beside": 0.4,
+					"clip": "attack",
+					"frames": 1,
+					"part": "Cart",
+					"reel_s": 46.84,
+					"speed": 11.1,
+					"unit": "m/s"
+				},
+				{
+					"beside": 23.9,
+					"clip": "attack",
+					"frames": 1,
+					"part": "MagStack",
+					"reel_s": 46.84,
+					"speed": 502.0,
+					"unit": "deg/s"
+				},
+				{
+					"beside": 1.0,
+					"clip": "attack",
+					"frames": 1,
+					"part": "MagStack",
+					"reel_s": 46.84,
+					"speed": 28.8,
+					"unit": "m/s"
+				},
+				{
+					"beside": 23.9,
+					"clip": "attack",
+					"frames": 1,
+					"part": "MagDiscs",
+					"reel_s": 46.84,
+					"speed": 502.0,
+					"unit": "deg/s"
+				},
+				{
+					"beside": 1.0,
+					"clip": "attack",
+					"frames": 1,
+					"part": "MagDiscs",
+					"reel_s": 46.84,
+					"speed": 28.8,
+					"unit": "m/s"
+				},
+				{
+					"beside": 15.7,
+					"clip": "windup",
+					"frames": 1,
+					"part": "MagStack",
+					"reel_s": 55.26,
+					"speed": 1057.8,
+					"unit": "deg/s"
+				},
+				{
+					"beside": 15.7,
+					"clip": "windup",
+					"frames": 1,
+					"part": "MagDiscs",
+					"reel_s": 55.26,
+					"speed": 1057.8,
+					"unit": "deg/s"
+				},
+				{
+					"beside": 15.7,
+					"clip": "windup",
+					"frames": 1,
+					"part": "MagTopDisc",
+					"reel_s": 55.26,
+					"speed": 1057.8,
+					"unit": "deg/s"
+				},
+				{
+					"beside": 15.7,
+					"clip": "windup",
+					"frames": 1,
+					"part": "MagTopLink",
+					"reel_s": 55.26,
+					"speed": 1057.8,
+					"unit": "deg/s"
+				}
+			],
+			"end_s": 57.78,
+			"frames": 692,
+			"hull_left": 1.0,
+			"in_clip": 0,
+			"kind": "mag_trapper",
+			"measured": true,
+			"parts": 7,
+			"snaps": [],
+			"start_s": 44.21
+		},
+		{
+			"beats": {
+				"death": 69.34,
+				"hit": 66.31,
+				"stun": 67.33
+			},
+			"clips": true,
+			"cuts": [
+				{
+					"beside": 0.3,
+					"clip": "windup",
+					"frames": 1,
+					"part": "JoltCoil",
+					"reel_s": 59.81,
+					"speed": 8.0,
+					"unit": "m/s"
+				},
+				{
+					"beside": 1.3,
+					"clip": "attack",
+					"frames": 1,
+					"part": "JoltBody",
+					"reel_s": 60.81,
+					"speed": 9.3,
+					"unit": "m/s"
+				},
+				{
+					"beside": 2.9,
+					"clip": "attack",
+					"frames": 1,
+					"part": "JoltCoil",
+					"reel_s": 60.81,
+					"speed": 16.5,
+					"unit": "m/s"
+				},
+				{
+					"beside": 212.0,
+					"clip": "hit",
+					"frames": 2,
+					"part": "ReactionPivot",
+					"reel_s": 66.34,
+					"speed": 1032.4,
+					"unit": "deg/s"
+				},
+				{
+					"beside": 95.1,
+					"clip": "hit",
+					"frames": 2,
+					"part": "JoltCoil",
+					"reel_s": 66.34,
+					"speed": 1032.4,
+					"unit": "deg/s"
+				}
+			],
+			"end_s": 71.86,
+			"frames": 692,
+			"hull_left": 1.0,
+			"in_clip": 0,
+			"kind": "jolt_layer",
+			"measured": true,
+			"parts": 4,
+			"snaps": [],
+			"start_s": 58.29
+		},
+		{
+			"beats": {
+				"death": 83.43,
+				"hit": 80.39,
+				"stun": 81.41
+			},
+			"clips": false,
+			"cuts": [],
+			"end_s": 85.94,
+			"frames": 663,
+			"hull_left": 1.0,
+			"in_clip": 3,
+			"kind": "catch_trap",
+			"measured": true,
+			"parts": 3,
+			"snaps": [
+				{
+					"beside": 0.0,
+					"clip": "",
+					"frames": 1,
+					"part": "CatchCup",
+					"reel_s": 73.89,
+					"speed": 829.6,
+					"unit": "m/s"
+				},
+				{
+					"beside": 7.7,
+					"clip": "",
+					"frames": 1,
+					"part": "CatchCup",
+					"reel_s": 76.91,
+					"speed": 826.3,
+					"unit": "m/s"
+				},
+				{
+					"beside": 0.0,
+					"clip": "",
+					"frames": 1,
+					"part": "CatchCup",
+					"reel_s": 80.93,
+					"speed": 837.0,
+					"unit": "m/s"
+				}
+			],
+			"start_s": 72.38
+		},
+		{
+			"beats": {
+				"death": 97.51,
+				"hit": 94.48,
+				"stun": 95.49
+			},
+			"clips": true,
+			"cuts": [
+				{
+					"beside": 0.3,
+					"clip": "windup",
+					"frames": 1,
+					"part": "HookerHarpoon",
+					"reel_s": 87.98,
+					"speed": 7.8,
+					"unit": "m/s"
+				},
+				{
+					"beside": 8.2,
+					"clip": "attack",
+					"frames": 1,
+					"part": "Body",
+					"reel_s": 88.98,
+					"speed": 420.0,
+					"unit": "deg/s"
+				},
+				{
+					"beside": 0.3,
+					"clip": "attack",
+					"frames": 1,
+					"part": "Body",
+					"reel_s": 88.98,
+					"speed": 10.0,
+					"unit": "m/s"
+				},
+				{
+					"beside": 42.6,
+					"clip": "attack",
+					"frames": 1,
+					"part": "HookerHarpoon",
+					"reel_s": 88.98,
+					"speed": 537.3,
+					"unit": "deg/s"
+				},
+				{
+					"beside": 1.1,
+					"clip": "attack",
+					"frames": 1,
+					"part": "HookerHarpoon",
+					"reel_s": 88.98,
+					"speed": 64.5,
+					"unit": "m/s"
+				},
+				{
+					"beside": 11.6,
+					"clip": "hit",
+					"frames": 2,
+					"part": "HookerHarpoon",
+					"reel_s": 94.51,
+					"speed": 47.6,
+					"unit": "m/s"
+				},
+				{
+					"beside": 8.2,
+					"clip": "attack",
+					"frames": 1,
+					"part": "Body",
+					"reel_s": 95.81,
+					"speed": 420.0,
+					"unit": "deg/s"
+				},
+				{
+					"beside": 0.3,
+					"clip": "attack",
+					"frames": 1,
+					"part": "Body",
+					"reel_s": 95.81,
+					"speed": 10.0,
+					"unit": "m/s"
+				},
+				{
+					"beside": 42.6,
+					"clip": "attack",
+					"frames": 1,
+					"part": "HookerHarpoon",
+					"reel_s": 95.81,
+					"speed": 537.3,
+					"unit": "deg/s"
+				},
+				{
+					"beside": 1.1,
+					"clip": "attack",
+					"frames": 1,
+					"part": "HookerHarpoon",
+					"reel_s": 95.81,
+					"speed": 64.5,
+					"unit": "m/s"
+				}
+			],
+			"end_s": 100.03,
+			"frames": 692,
+			"hull_left": 1.0,
+			"in_clip": 2,
+			"kind": "hooker",
+			"measured": true,
+			"parts": 4,
+			"snaps": [
+				{
+					"beside": 1.5,
+					"clip": "windup",
+					"frames": 2,
+					"part": "HookerHarpoon",
+					"reel_s": 88.86,
+					"speed": 8.5,
+					"unit": "m/s"
+				},
+				{
+					"beside": 1.5,
+					"clip": "windup",
+					"frames": 2,
+					"part": "HookerHarpoon",
+					"reel_s": 95.69,
+					"speed": 8.5,
+					"unit": "m/s"
+				}
+			],
+			"start_s": 86.46
+		},
+		{
+			"beats": {
+				"death": 111.59,
+				"hit": 108.56,
+				"stun": 109.58
+			},
+			"clips": true,
+			"cuts": [
+				{
+					"beside": 0.3,
+					"clip": "windup",
+					"frames": 1,
+					"part": "RampBody",
+					"reel_s": 102.06,
+					"speed": 3.1,
+					"unit": "m/s"
+				},
+				{
+					"beside": 0.1,
+					"clip": "windup",
+					"frames": 1,
+					"part": "RampPlate",
+					"reel_s": 102.06,
+					"speed": 825.2,
+					"unit": "m/s"
+				},
+				{
+					"beside": 0.8,
+					"clip": "attack",
+					"frames": 1,
+					"part": "RampBody",
+					"reel_s": 103.08,
+					"speed": 11.3,
+					"unit": "m/s"
+				},
+				{
+					"beside": 13.0,
+					"clip": "attack",
+					"frames": 1,
+					"part": "RampPlate",
+					"reel_s": 103.08,
+					"speed": 849.9,
+					"unit": "m/s"
+				},
+				{
+					"beside": 0.5,
+					"clip": "windup",
+					"frames": 1,
+					"part": "RampBody",
+					"reel_s": 106.09,
+					"speed": 3.2,
+					"unit": "m/s"
+				},
+				{
+					"beside": 0.1,
+					"clip": "windup",
+					"frames": 1,
+					"part": "RampPlate",
+					"reel_s": 106.09,
+					"speed": 830.5,
+					"unit": "m/s"
+				},
+				{
+					"beside": 0.7,
+					"clip": "attack",
+					"frames": 1,
+					"part": "RampBody",
+					"reel_s": 107.11,
+					"speed": 11.1,
+					"unit": "m/s"
+				},
+				{
+					"beside": 12.9,
+					"clip": "attack",
+					"frames": 1,
+					"part": "RampPlate",
+					"reel_s": 107.11,
+					"speed": 851.8,
+					"unit": "m/s"
+				},
+				{
+					"beside": 0.1,
+					"clip": "windup",
+					"frames": 1,
+					"part": "RampPlate",
+					"reel_s": 111.59,
+					"speed": 836.6,
+					"unit": "m/s"
+				}
+			],
+			"end_s": 114.11,
+			"frames": 692,
+			"hull_left": 1.0,
+			"in_clip": 0,
+			"kind": "ramp_flipper",
+			"measured": true,
+			"parts": 3,
+			"snaps": [],
+			"start_s": 100.54
+		},
+		{
+			"beats": {
+				"death": 125.68,
+				"hit": 122.64,
+				"stun": 123.66
+			},
+			"clips": true,
+			"cuts": [
+				{
+					"beside": 19.4,
+					"clip": "attack",
+					"frames": 1,
+					"part": "TenderHull",
+					"reel_s": 117.24,
+					"speed": 404.6,
+					"unit": "deg/s"
+				},
+				{
+					"beside": 0.6,
+					"clip": "attack",
+					"frames": 1,
+					"part": "TenderReel",
+					"reel_s": 117.24,
+					"speed": 16.4,
+					"unit": "m/s"
+				},
+				{
+					"beside": 3.4,
+					"clip": "windup",
+					"frames": 2,
+					"part": "BoomTenderBody",
+					"reel_s": 122.68,
+					"speed": 16.5,
+					"unit": "m/s"
+				},
+				{
+					"beside": 4.7,
+					"clip": "windup",
+					"frames": 2,
+					"part": "Boom",
+					"reel_s": 122.68,
+					"speed": 22.9,
+					"unit": "m/s"
+				},
+				{
+					"beside": 4.7,
+					"clip": "windup",
+					"frames": 2,
+					"part": "BoomFloats",
+					"reel_s": 122.68,
+					"speed": 22.9,
+					"unit": "m/s"
+				},
+				{
+					"beside": 4.7,
+					"clip": "windup",
+					"frames": 2,
+					"part": "BoomLamps",
+					"reel_s": 122.68,
+					"speed": 22.9,
+					"unit": "m/s"
+				},
+				{
+					"beside": 3.4,
+					"clip": "windup",
+					"frames": 2,
+					"part": "TenderHull",
+					"reel_s": 122.68,
+					"speed": 16.5,
+					"unit": "m/s"
+				},
+				{
+					"beside": 0.8,
+					"clip": "attack",
+					"frames": 1,
+					"part": "TenderReel",
+					"reel_s": 122.98,
+					"speed": 15.6,
+					"unit": "m/s"
+				}
+			],
+			"end_s": 128.18,
+			"frames": 692,
+			"hull_left": 1.0,
+			"in_clip": 0,
+			"kind": "boom_tender",
+			"measured": true,
+			"parts": 7,
+			"snaps": [],
+			"start_s": 114.63
+		},
+		{
+			"beats": {
+				"death": 139.68,
+				"hit": 136.68,
+				"stun": 137.68
+			},
+			"clips": true,
+			"cuts": [
+				{
+					"beside": 0.2,
+					"clip": "windup",
+					"frames": 1,
+					"part": "BruteBody",
+					"reel_s": 131.08,
+					"speed": 4.1,
+					"unit": "m/s"
+				},
+				{
+					"beside": 0.2,
+					"clip": "windup",
+					"frames": 1,
+					"part": "BrutePlates",
+					"reel_s": 131.08,
+					"speed": 4.1,
+					"unit": "m/s"
+				},
+				{
+					"beside": 2.2,
+					"clip": "attack",
+					"frames": 1,
+					"part": "BruteBody",
+					"reel_s": 132.18,
+					"speed": 25.0,
+					"unit": "m/s"
+				},
+				{
+					"beside": 2.2,
+					"clip": "attack",
+					"frames": 1,
+					"part": "BrutePlates",
+					"reel_s": 132.18,
+					"speed": 25.0,
+					"unit": "m/s"
+				},
+				{
+					"beside": 4.5,
+					"clip": "attack",
+					"frames": 1,
+					"part": "BruteBody",
+					"reel_s": 136.26,
+					"speed": 25.1,
+					"unit": "m/s"
+				},
+				{
+					"beside": 4.5,
+					"clip": "attack",
+					"frames": 1,
+					"part": "BrutePlates",
+					"reel_s": 136.26,
+					"speed": 25.1,
+					"unit": "m/s"
+				}
+			],
+			"end_s": 142.18,
+			"frames": 689,
+			"hull_left": 1.0,
+			"in_clip": 0,
+			"kind": "plated_brute",
+			"measured": true,
+			"parts": 6,
+			"snaps": [],
+			"start_s": 128.68
+		},
+		{
+			"beats": {
+				"death": 153.68,
+				"hit": 150.68,
+				"stun": 151.68
+			},
+			"clips": false,
+			"cuts": [
+				{
+					"beside": 3.8,
+					"clip": "",
+					"frames": 2,
+					"part": "FuseLamp",
+					"reel_s": 150.71,
+					"speed": 18.4,
+					"unit": "m/s"
+				},
+				{
+					"beside": 3.3,
+					"clip": "",
+					"frames": 2,
+					"part": "snout_b",
+					"reel_s": 150.71,
+					"speed": 16.5,
+					"unit": "m/s"
+				},
+				{
+					"beside": 3.8,
+					"clip": "",
+					"frames": 2,
+					"part": "snout_c",
+					"reel_s": 150.71,
+					"speed": 18.3,
+					"unit": "m/s"
+				}
+			],
+			"end_s": 156.18,
+			"frames": 660,
+			"hull_left": 1.0,
+			"in_clip": 0,
+			"kind": "splitter",
+			"measured": true,
+			"parts": 16,
+			"snaps": [],
+			"start_s": 142.68
+		},
+		{
+			"beats": {
+				"death": 167.68,
+				"hit": 164.68,
+				"stun": 165.68
+			},
+			"clips": false,
+			"cuts": [
+				{
+					"beside": 8.0,
+					"clip": "",
+					"frames": 2,
+					"part": "boom_tip",
+					"reel_s": 164.71,
+					"speed": 39.1,
+					"unit": "m/s"
+				},
+				{
+					"beside": 2.3,
+					"clip": "",
+					"frames": 2,
+					"part": "cable_cut",
+					"reel_s": 164.71,
+					"speed": 11.0,
+					"unit": "m/s"
+				},
+				{
+					"beside": 3.2,
+					"clip": "",
+					"frames": 2,
+					"part": "LinkerCab",
+					"reel_s": 164.71,
+					"speed": 15.7,
+					"unit": "m/s"
+				},
+				{
+					"beside": 7.9,
+					"clip": "",
+					"frames": 2,
+					"part": "LinkerHinge",
+					"reel_s": 164.71,
+					"speed": 38.4,
+					"unit": "m/s"
+				},
+				{
+					"beside": 7.9,
+					"clip": "",
+					"frames": 2,
+					"part": "DishAim",
+					"reel_s": 164.71,
+					"speed": 38.5,
+					"unit": "m/s"
+				},
+				{
+					"beside": 4.6,
+					"clip": "",
+					"frames": 2,
+					"part": "cable_dish",
+					"reel_s": 164.71,
+					"speed": 22.4,
+					"unit": "m/s"
+				},
+				{
+					"beside": 3.1,
+					"clip": "",
+					"frames": 2,
+					"part": "partner_spot",
+					"reel_s": 164.71,
+					"speed": 14.9,
+					"unit": "m/s"
+				}
+			],
+			"end_s": 170.18,
+			"frames": 660,
+			"hull_left": 1.0,
+			"in_clip": 0,
+			"kind": "linker",
+			"measured": true,
+			"parts": 18,
+			"snaps": [],
+			"start_s": 156.68
+		},
+		{
+			"beats": {
+				"death": 179.68,
+				"hit": 178.68
+			},
+			"clips": false,
+			"cuts": [
+				{
+					"beside": 5.0,
+					"clip": "",
+					"frames": 2,
+					"part": "ClockFace",
+					"reel_s": 178.71,
+					"speed": 24.1,
+					"unit": "m/s"
+				},
+				{
+					"beside": 11.9,
+					"clip": "",
+					"frames": 2,
+					"part": "HornMouth",
+					"reel_s": 178.71,
+					"speed": 58.1,
+					"unit": "m/s"
+				},
+				{
+					"beside": 9.2,
+					"clip": "",
+					"frames": 2,
+					"part": "SteamValve",
+					"reel_s": 178.71,
+					"speed": 45.0,
+					"unit": "m/s"
+				},
+				{
+					"beside": 3.9,
+					"clip": "",
+					"frames": 2,
+					"part": "tether_a",
+					"reel_s": 178.71,
+					"speed": 19.1,
+					"unit": "m/s"
+				},
+				{
+					"beside": 3.9,
+					"clip": "",
+					"frames": 2,
+					"part": "tether_b",
+					"reel_s": 178.71,
+					"speed": 19.1,
+					"unit": "m/s"
+				},
+				{
+					"beside": 3.9,
+					"clip": "",
+					"frames": 2,
+					"part": "tether_c",
+					"reel_s": 178.71,
+					"speed": 19.1,
+					"unit": "m/s"
+				},
+				{
+					"beside": 3.9,
+					"clip": "",
+					"frames": 2,
+					"part": "tether_d",
+					"reel_s": 178.71,
+					"speed": 19.1,
+					"unit": "m/s"
+				}
+			],
+			"end_s": 182.18,
+			"frames": 540,
+			"hull_left": 1.0,
+			"in_clip": 0,
+			"kind": "foreman",
+			"measured": true,
+			"parts": 18,
+			"snaps": [],
+			"start_s": 170.68
+		},
+		{
+			"beats": {
+				"death": 193.68,
+				"hit": 190.68,
+				"stun": 191.68
+			},
+			"clips": false,
+			"cuts": [
+				{
+					"beside": 5.7,
+					"clip": "",
+					"frames": 2,
+					"part": "Beacon",
+					"reel_s": 190.71,
+					"speed": 27.6,
+					"unit": "m/s"
+				},
+				{
+					"beside": 6.5,
+					"clip": "",
+					"frames": 2,
+					"part": "drop_mouth",
+					"reel_s": 190.71,
+					"speed": 31.5,
+					"unit": "m/s"
+				},
+				{
+					"beside": 2.8,
+					"clip": "",
+					"frames": 2,
+					"part": "perch_foot",
+					"reel_s": 190.71,
+					"speed": 13.5,
+					"unit": "m/s"
+				},
+				{
+					"beside": 4.5,
+					"clip": "",
+					"frames": 2,
+					"part": "RadarPivot",
+					"reel_s": 190.71,
+					"speed": 21.6,
+					"unit": "m/s"
+				},
+				{
+					"beside": 2.9,
+					"clip": "",
+					"frames": 2,
+					"part": "TicketSlot",
+					"reel_s": 190.71,
+					"speed": 14.0,
+					"unit": "m/s"
+				}
+			],
+			"end_s": 196.18,
+			"frames": 660,
+			"hull_left": 1.0,
+			"in_clip": 0,
+			"kind": "dispatcher",
+			"measured": true,
+			"parts": 41,
+			"snaps": [],
+			"start_s": 182.68
+		},
+		{
+			"beats": {
+				"death": 205.68,
+				"hit": 204.68
+			},
+			"clips": false,
+			"cuts": [],
+			"end_s": 208.18,
+			"frames": 540,
+			"hull_left": 1.0,
+			"in_clip": 5,
+			"kind": "miniboss",
+			"measured": true,
+			"parts": 6,
+			"snaps": [
+				{
+					"beside": 7.9,
+					"clip": "",
+					"frames": 1,
+					"part": "MinibossCore",
+					"reel_s": 198.81,
+					"speed": 1441.5,
+					"unit": "deg/s"
+				},
+				{
+					"beside": 1.3,
+					"clip": "",
+					"frames": 1,
+					"part": "MinibossCore",
+					"reel_s": 198.81,
+					"speed": 21.2,
+					"unit": "m/s"
+				},
+				{
+					"beside": 35.4,
+					"clip": "",
+					"frames": 1,
+					"part": "MinibossCore",
+					"reel_s": 199.71,
+					"speed": 1654.1,
+					"unit": "deg/s"
+				},
+				{
+					"beside": 2.0,
+					"clip": "",
+					"frames": 1,
+					"part": "MinibossCore",
+					"reel_s": 199.71,
+					"speed": 18.9,
+					"unit": "m/s"
+				},
+				{
+					"beside": 0.1,
+					"clip": "",
+					"frames": 1,
+					"part": "MinibossCore",
+					"reel_s": 202.13,
+					"speed": 18.0,
+					"unit": "m/s"
+				}
+			],
+			"start_s": 196.68
+		}
+	],
+	"limits": "One of each kind against a ball that stands still, so no pack, no chase and no knock. Parts only, not skinned bones. The count is the game's motion and compares between runs at the same fixed frame rate; the look is the film's, and only on the PC.",
+	"pop": [
+		{
+			"letters_of_height": 0.0456,
+			"reel_s": 13.38,
+			"scale": 0.5,
+			"text": "TILE +5 MAX HULL",
+			"width_of_view": 0.315
+		},
+		{
+			"letters_of_height": 0.0456,
+			"reel_s": 15.09,
+			"scale": 0.5,
+			"text": "BUMPER +5% RAM FORCE",
+			"width_of_view": 0.442
+		},
+		{
+			"letters_of_height": 0.0334,
+			"reel_s": 16.81,
+			"scale": 0.366,
+			"text": "SKIRT +0.35 M SLAM AND BURST RADIUS",
+			"width_of_view": 0.506
+		}
+	],
+	"seconds": 208.68,
+	"size": [
+		1600.0,
+		900.0
+	],
+	"snap": {
+		"deg_s": 360.0,
+		"m_s": 3.0,
+		"ratio": 4.0
+	},
+	"table": "park",
+	"tool": "sight_reel.gd"
+}

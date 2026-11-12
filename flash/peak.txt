@@ -1,0 +1,60 @@
+== burst-off
+Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org
+
+peak rise mean=0.0726 p99=0.4563 max=0.7708 bright_share=0.0107
+exit=0
+== burst-on
+Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org
+
+peak rise mean=0.0438 p99=0.5211 max=0.7708 bright_share=0.0068
+exit=0
+== edge-off
+Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org
+
+peak rise mean=0.0328 p99=0.1228 max=0.1669 bright_share=0.0108
+exit=0
+== edge-on
+Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org
+
+peak rise mean=0.0174 p99=0.0629 max=0.0862 bright_share=0.0000
+exit=0
+== enemy_hit-off
+Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org
+
+peak rise mean=0.2899 p99=0.6570 max=0.6597 bright_share=0.0028
+exit=0
+== enemy_hit-on
+Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org
+
+peak rise mean=0.1246 p99=0.3490 max=0.3527 bright_share=0.0034
+exit=0
+== pop_glyph-off
+Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org
+
+peak rise mean=0.0147 p99=0.5040 max=0.5265 bright_share=0.0006
+exit=0
+== pop_glyph-on
+Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org
+
+peak rise mean=0.1106 p99=0.2772 max=0.2786 bright_share=0.0024
+exit=0
+== ring_glyph-off
+Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org
+
+peak rise mean=0.0985 p99=0.5307 max=0.7534 bright_share=0.0014
+exit=0
+== ring_glyph-on
+Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org
+
+peak rise mean=0.2097 p99=0.5412 max=0.5459 bright_share=0.0050
+exit=0
+== word-off
+Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org
+
+peak rise mean=0.1062 p99=0.4984 max=0.5017 bright_share=0.0028
+exit=0
+== word-on
+Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org
+
+peak rise mean=0.0417 p99=0.2102 max=0.3240 bright_share=0.0030
+exit=0

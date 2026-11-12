@@ -1,0 +1,9 @@
+fx-0.1 exit=0 secs=21
+fx-0.35 exit=0 secs=12
+fx-0.6 exit=0 secs=11
+fx-0.85 exit=0 secs=11
+fx-0.35-reduce exit=0 secs=11
+flash exit=0 secs=65
+reel exit=0 secs=582
+brindle exit=0 secs=31
+phase exit=0 secs=27
