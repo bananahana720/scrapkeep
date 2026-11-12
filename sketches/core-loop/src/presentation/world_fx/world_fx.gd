@@ -36,6 +36,10 @@ const WAKE_FULL := 16.0
 const SPLASH_SPEED := 7.0
 const SPLASH_DROP := 4.0
 const SPLASH_COOL := 0.5
+# A set's voice moves to a nearer anchor only when the holder is farther than this share of the
+# nearest's distance plus this many metres.
+const VOICE_KEEP := 1.25
+const VOICE_KEEP_M := 5.0
 
 static var current: Node3D
 # The saved reduced-motion setting, read on install; Game.set_reduced_motion keeps it current.
@@ -62,6 +66,8 @@ var _wake_wait := 0.0
 var _last_ball := Vector3.INF
 var _splash_cool := 0.0
 var wake_sound: AudioStreamPlayer3D
+# Which anchor holds each sounding set's voice (set id -> anchor).
+var _voice_of := {}
 var _wake_heard := 0.0
 
 
@@ -398,21 +404,32 @@ func _rank() -> void:
 			rows.append([a.global_position.distance_to(eye), a])
 	rows.sort_custom(func(x, y): return x[0] < y[0])
 	var slots := Specs.ANCHOR_SLOTS
-	var voiced := {}
-	for ref in Anchor.live:
-		var a: Node3D = ref.get_ref()
-		if not a.is_visible_in_tree():
-			a.set_voiced(false)
+	# Each sounding set's nearest emitting anchor, and how far the anchor holding its voice now is.
+	var nearest := {}
+	var holder_at := {}
 	for row in rows:
 		var a = row[1]
 		var within: bool = row[0] <= a.lod_m()
 		a.set_range(row[0], within and slots > 0)
 		if within:
 			slots -= 1
-		var speaks: bool = a.sound != null and a.slotted and not resting and not voiced.has(a.set_id)
-		if speaks:
-			voiced[a.set_id] = true
-		a.set_voiced(speaks)
+		if a.has_voice() and a.slotted and not resting:
+			if not nearest.has(a.set_id):
+				nearest[a.set_id] = [row[0], a]
+			if _voice_of.get(a.set_id) == a:
+				holder_at[a.set_id] = row[0]
+	# The voice stays where it is until another anchor is clearly nearer, so a view between two foam
+	# pieces does not hop the loop back and forth.
+	for id in nearest:
+		if not holder_at.has(id) or float(holder_at[id]) > float(nearest[id][0]) * VOICE_KEEP + VOICE_KEEP_M:
+			_voice_of[id] = nearest[id][1]
+	for id in _voice_of.keys():
+		if not nearest.has(id):
+			_voice_of.erase(id)
+	for ref in Anchor.live:
+		var a: Node3D = ref.get_ref()
+		if a.has_voice():
+			a.set_voiced(_voice_of.get(a.set_id) == a)
 
 
 # The ball's wake, read WAKE_EVERY from the terrain's material under the ball (water where a flood
@@ -427,6 +444,7 @@ func _step_wake(delta: float) -> void:
 	_wake_wait = WAKE_EVERY
 	if resting or not is_instance_valid(_ball) or _ctx == null or _ctx.get("terrain") == null or not _ctx.terrain.has_method("material_at"):
 		_last_ball = Vector3.INF
+		_hush_wake()
 		return
 	var ball := _ball_place()
 	var under: Dictionary = _ctx.terrain.material_at(ball)
@@ -468,7 +486,7 @@ func _steer_wake_sound(on: bool, at: Vector3, speed: float) -> void:
 		return
 	var spot := wake_sound.get_parent() as Node3D
 	spot.global_position = at
-	wake_sound.volume_db = float(WorldSound.row(WAKE_SET)["db"]) + linear_to_db(clampf(speed / WAKE_FULL, 0.3, 1.0))
+	WorldSound.tend(wake_sound, float(WorldSound.row(WAKE_SET)["db"]) + linear_to_db(clampf(speed / WAKE_FULL, 0.3, 1.0)))
 	# steer_wake runs every WAKE_EVERY: count the loop's length down in those steps.
 	_wake_heard -= WAKE_EVERY
 	if not wake_sound.playing:

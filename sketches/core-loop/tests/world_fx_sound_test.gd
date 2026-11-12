@@ -26,8 +26,10 @@ class FakeAudio:
 	var mix_db := {"Ambient": -5.0, "SFX": 0.0}
 	var rows: Array = []
 
-	func note_cue(kind: String, sound: String, volume: float) -> void:
-		rows.append([kind, sound, volume])
+	# As audio.gd note_cue: the voice's level plus its bus against the effects bus.
+	func note_cue(kind: String, sound: String, volume: float, bus := "SFX") -> void:
+		rows.append([kind, sound, volume + float(MixRows.BUS_DB.get(bus, 0.0)) + float(mix_db.get(bus, 0.0))
+			- float(MixRows.BUS_DB["SFX"]) - float(mix_db["SFX"]), bus])
 
 	func count(sound: String) -> int:
 		return rows.filter(func(r): return r[1] == sound).size()
@@ -100,19 +102,20 @@ func _falloff() -> void:
 func _runtime() -> void:
 	var fake := FakeAudio.new()
 	WorldSound.audio = fake
-	# The game's buses (audio.gd makes them): the world rides Ambient.
-	for bus in ["SFX", "Ambient"]:
-		if AudioServer.get_bus_index(bus) < 0:
-			AudioServer.add_bus()
-			AudioServer.set_bus_name(AudioServer.bus_count - 1, bus)
-	t.eq("the world rides the Ambient bus", WorldSound.bus(), "Ambient")
 	var stage := Node3D.new()
 	root.add_child(stage)
 	var cam := Camera3D.new()
 	stage.add_child(cam)
 	cam.current = true
+	# The game installs WorldFx before audio.gd makes its buses: the wake still names Ambient.
 	var fx := WorldFx.install(stage, 1)
 	fx.bind(cam, cam)
+	for bus in ["SFX", "Ambient"]:
+		if AudioServer.get_bus_index(bus) < 0:
+			AudioServer.add_bus()
+			AudioServer.set_bus_name(AudioServer.bus_count - 1, bus)
+	# Godot reads a missing bus back as Master; the name it was given stands once the bus exists.
+	t.eq("the wake made before the buses rides Ambient once they exist", fx.wake_sound.bus, &"Ambient")
 	await process_frame
 
 	# One flood in two foam pieces, and the weir's falls: two sets, two voices.
@@ -130,6 +133,8 @@ func _runtime() -> void:
 	t.check("the nearer foam piece takes the flood's voice", near_foam.voiced and near_foam.sound.playing)
 	t.check("the farther foam piece stays silent", not far_foam.voiced and not far_foam.sound.playing)
 	t.check("the falls sound beside the flood", falls.voiced and falls.sound.playing)
+	t.check("no voice plays over its row's trim", near_foam.sound.volume_db <= float(Specs.SOUNDS["spill_flood"]["db"]) + 0.001
+		and falls.sound.volume_db <= float(Specs.SOUNDS["spill_falls"]["db"]) + 0.001)
 	t.check("the loops reach the cue log", fake.count("flood_foam") >= 1 and fake.count("spill_falls") >= 1)
 	var logged: Array = fake.rows.filter(func(r): return r[1] == "spill_falls")[0]
 	var want := float(Specs.SOUNDS["spill_falls"]["db"]) + WorldSound.falloff_db(cam.global_position.distance_to(falls.global_position), 12.0, 110.0) \
@@ -143,6 +148,18 @@ func _runtime() -> void:
 	near_foam.set_level(0.0)
 	await process_frame
 	t.check("a calming flood's foam drops toward its quiet trim", near_foam.sound.volume_db < loud - 5.0, "%.1f -> %.1f" % [loud, near_foam.sound.volume_db])
+
+	# The voice stays put while the other piece is only a little nearer, and moves once it is clearly nearer.
+	far_foam.position = Vector3(0, 0, -9)
+	fx._rank()
+	t.check("a piece a little nearer does not take the voice", near_foam.voiced and not far_foam.voiced)
+	far_foam.position = Vector3(0, 0, -3)
+	fx._rank()
+	await process_frame
+	t.check("a piece clearly nearer takes the voice", far_foam.voiced and far_foam.sound.playing and not near_foam.sound.playing)
+	far_foam.position = Vector3(0, 0, -30)
+	fx._rank()
+	t.check("the voice comes back when it is clearly nearer again", near_foam.voiced and not far_foam.voiced)
 
 	# Drained water hides its foam: the voice moves to the next piece.
 	near_foam.visible = false

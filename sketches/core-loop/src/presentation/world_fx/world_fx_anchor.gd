@@ -129,6 +129,10 @@ func set_range(distance: float, has_slot: bool) -> void:
 	_apply()
 
 
+func has_voice() -> bool:
+	return sound != null
+
+
 # WorldFx hands the set's one voice to the nearest emitting anchor of the set (and takes it back).
 func set_voiced(on: bool) -> void:
 	voiced = on
@@ -145,7 +149,8 @@ func _process(delta: float) -> void:
 			var on := fmod(_clock, float(beat[0])) < float(beat[1])
 			p.emitting = on and _wants(p)
 			if p.get_meta("world_fx") == pulse_of:
-				if on and not _puffing and voiced and p.emitting:
+				if on and not _puffing and voiced and p.emitting and is_visible_in_tree():
+					WorldSound.tend(sound, float(WorldSound.row(set_id)["db"]))
 					sound.play()
 					WorldSound.heard(set_id, sound)
 				_puffing = on
@@ -163,7 +168,7 @@ func _tend_sound(delta: float) -> void:
 			sound.stop()
 		return
 	var r := WorldSound.row(set_id)
-	sound.volume_db = lerpf(float(r.get("quiet_db", r["db"])), float(r["db"]), level)
+	WorldSound.tend(sound, lerpf(float(r.get("quiet_db", r["db"])), float(r["db"]), level))
 	_loop_wait -= delta
 	if not sound.playing:
 		sound.play()
