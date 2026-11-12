@@ -55,6 +55,10 @@ func _physics_process(delta: float) -> bool:
 	# downhill, and the partner then walks after it faster than a Linker can seat.
 	if _step > 0:
 		_game.player.reset_to(_held)
+		# Picking up scrap rebuilds the hull ceiling from the class (build.gd _on_scrap_collected), which drops the
+		# test's deep hull back to 100, and the dam's chasers hit twice as hard since wave 37 (MOBS_DAMAGE_W1).
+		if _game.run.max_hp < 99999.0:
+			_game.run.set_max_hp(99999.0)
 	if is_instance_valid(_linker) and (_linker.telegraph() != null or _linker.warned > 0):
 		_warned_ever = true
 	match _step:
