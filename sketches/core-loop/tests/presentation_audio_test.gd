@@ -71,11 +71,11 @@ func _process(_delta: float) -> bool:
 			var played := shots.filter(func(c: Array): return c[2] == "now").size()
 			_check("voice limit", played == 1 and shots.size() == 10, "ten shots in one frame play %d; the rest are gated so fire never turns to mush" % played)
 			# A stage's resting weather is announced with no lead and then starts: no alarm.
-			_game.events.event_announced.emit("dawn_still", 0.0)
+			_game.events.event_announced.emit("dawn_still", 0.0, Vector3.INF)
 			_game.events.event_started.emit("dawn_still")
 			_check("calm weather is no alarm", _cues("event_announced").is_empty() and _cues("event_started").is_empty(),
 				"an announcement with no lead plays no klaxon and no start cue: %s" % [_cues("event_announced") + _cues("event_started")])
-			_game.events.event_announced.emit("flood", 5.0)
+			_game.events.event_announced.emit("flood", 5.0, Vector3.INF)
 			var klaxon := _cues("event_announced")
 			_check("klaxon on beat", klaxon.size() == 1 and klaxon[0][2] == "beat" and int(klaxon[0][3]) % Harmony.BEAT == 0 and int(klaxon[0][3]) >= engine.clock, "the klaxon waits for the next beat (sample %d, play head %d)" % [int(klaxon[0][3]) if klaxon.size() > 0 else -1, engine.clock])
 			_check_pressure(engine)

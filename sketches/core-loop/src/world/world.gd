@@ -496,7 +496,7 @@ func _publish(facts: Array) -> void:
 	for fact in facts:
 		match fact["kind"]:
 			"announced":
-				bus.event_announced.emit(fact["id"], fact["seconds"])
+				bus.event_announced.emit(fact["id"], fact["seconds"], _announced_at(fact))
 			"started":
 				bus.event_started.emit(fact["id"])
 			"ended":
@@ -520,6 +520,18 @@ func _publish(facts: Array) -> void:
 				_swap(fact["id"])
 			"world":
 				bus.world_fact.emit(fact["fact"], fact["at"])
+
+
+# Where an announced event lands, on the ground: the park row's site, the terrain change's
+# centre or the offer's ring, or Vector3.INF for one with no single place (the weather, the
+# flood, a squall).
+func _announced_at(fact: Dictionary) -> Vector3:
+	if not fact.has("at") or fact.get("family", "") == "weather":
+		return Vector3.INF
+	var at = fact["at"]
+	if at is Vector2:
+		return terrain.drop_point(at.x, at.y, 0.0)
+	return at
 
 
 # The miniboss arrives where the director's seeded stream put it, on the ground and

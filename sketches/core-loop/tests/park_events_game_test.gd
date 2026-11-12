@@ -9,6 +9,7 @@ const ParkSchema := preload("res://src/world/park/park_schema.gd")
 var t := T.new("park_events_game_test")
 var game
 var announced := []
+var places := {}
 var started := []
 var ended := []
 var forms := []
@@ -106,7 +107,9 @@ func _run() -> void:
 	game.ctx.calm = true
 	game.flow.force_warden = true
 	game.player.source = Intent.Scripted.new()
-	game.events.event_announced.connect(func(id, _lead): announced.append(id))
+	game.events.event_announced.connect(func(id, _lead, at):
+		announced.append(id)
+		places[id] = at)
 	game.events.event_started.connect(func(id): started.append(id))
 	game.events.event_ended.connect(func(id, _outcome): ended.append(id))
 	game.events.world_fact.connect(func(kind, _at): forms.append(kind))
@@ -124,6 +127,10 @@ func _run() -> void:
 			break
 	Engine.time_scale = 1.0
 	t.check("clock_tier flood telegraphs through the game loop", announced.has("plunge_pool_flood") and forms.has("flood_rising"), str(announced))
+	# The announcement carries where the event lands (PF-16), so the edge marker can point there.
+	var flood_at: Vector3 = places.get("plunge_pool_flood", Vector3.INF)
+	t.check("the flood's announcement carries its place", flood_at.is_finite()
+		and game.ctx.terrain.map().play_rect.has_point(Vector2(flood_at.x, flood_at.z)), str(flood_at))
 	t.check("clock_tier flood lands through the game loop", started.has("plunge_pool_flood") and forms.has("flood_landed"), str(started))
 	t.check("clock_tier flood ends through the game loop", ended.has("plunge_pool_flood"), str(ended))
 	t.check("real flood uses a live water surface", flood_surface_seen)

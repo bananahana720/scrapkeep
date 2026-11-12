@@ -26,6 +26,12 @@ const UiFonts := preload("res://src/ui/ui_fonts.gd")
 # PARK.md:265 sets the range at 240 m (sight_ok), never the comps note's 60 m (memo 2, row 29a).
 # It is a pointer, not a map: no panel, no list, and no marker once the door is open.
 #
+# An event on its way to one place (a park event's site, a terrain change, an offer's ring)
+# points the same way through its lead, in the warning colour with the event glyph, so the
+# warning says where as well as what (PF-16: "Dome Lightning incoming" named the event and not
+# its place). The world publishes the place with the announcement; the marker goes when the
+# event starts, ends or its lead runs out. The weather and the flood have no one place and get none.
+#
 # In a fight whose row names a thing (Brindle's arena, the Spillway's two mounted Wardens) the
 # markers point at that thing (boss.gd and warden_reactor.gd plate_targets: the crane magnets, the
 # vent caps, the open cockpit, the scooter, the water sheet's foot, the relic to latch). Nothing
@@ -91,6 +97,8 @@ var gate_points: Array[Vector3] = []
 # is discovered once and stays so for the run; an undiscovered door never gets a marker.
 var discovered := {}
 var _shown: Array[Dictionary] = []
+# Events announced with a place and not started: {event_id: {at, left}}, left in seconds.
+var _incoming := {}
 
 
 func setup(game_ref) -> void:
@@ -107,7 +115,34 @@ func setup(game_ref) -> void:
 		if state != "gates":
 			gate_points.clear())
 	# Door keys repeat across runs, so a new run forgets what the last one found.
-	game.events.run_started.connect(func(_class_id: String): discovered.clear())
+	game.events.run_started.connect(func(_class_id: String):
+		discovered.clear()
+		_incoming.clear())
+	game.events.event_announced.connect(note_incoming)
+	game.events.event_started.connect(func(id: String): _incoming.erase(id))
+	game.events.event_ended.connect(func(id: String, _outcome: String): _incoming.erase(id))
+
+
+# An event announced `seconds` ahead of landing at `at`; one with no lead or no place is not marked.
+func note_incoming(event_id: String, seconds: float, at: Vector3) -> void:
+	if seconds > 0.0 and at.is_finite():
+		_incoming[event_id] = {"at": at, "left": seconds}
+	else:
+		_incoming.erase(event_id)
+
+
+func step_incoming(delta: float) -> void:
+	for id in _incoming.keys():
+		_incoming[id]["left"] -= delta
+		if _incoming[id]["left"] <= 0.0:
+			_incoming.erase(id)
+
+
+func incoming_targets() -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	for id in _incoming:
+		out.append({"at": _incoming[id]["at"], "kind": "event_announced", "icon": "obj_event"})
+	return out
 
 
 # What the markers point at now: {at, kind, icon}, kind naming the event_kinds row and
@@ -128,6 +163,7 @@ func targets() -> Array[Dictionary]:
 				out.append({"at": flow.warden.global_position, "kind": "warden_engaged", "icon": _glyph("obj_warden")})
 			elif game.beacon != null:
 				out.append({"at": game.beacon.global_position, "kind": "beacon_charge_changed", "state": game.beacon.state_id(), "icon": _glyph("obj_beacon")})
+			out.append_array(incoming_targets())
 			var crew = _clamp_crew()
 			if crew != null:
 				out.append({"at": crew.global_position, "kind": "pack_arrived", "icon": Objectives.glyph(CLAMP_ROW)})
@@ -480,9 +516,10 @@ static func _on_edge(view: Rect2, centre: Vector2, dir: Vector2) -> Vector2:
 	return centre + dir * reach
 
 
-func _process(_delta: float) -> void:
+func _process(delta: float) -> void:
 	if game == null:
 		return
+	step_incoming(delta)
 	note_pockets(get_viewport_rect().size)
 	var now := markers(get_viewport_rect().size)
 	# A mark breathes, so it is drawn every frame while one is up.
