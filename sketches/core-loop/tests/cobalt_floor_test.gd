@@ -10,7 +10,8 @@ const T := preload("res://tests/support/t.gd")
 # guarantee still lands, and a pair that already holds a cobalt is left as rolled. A planted
 # all-common pair is lifted, and the lifted pick is never one the pair already offers.
 # W1-64: the floor's cobalt changes behaviour (a trigger, a pattern or an element), so a pair
-# whose only rare is a stat line has that rare replaced, keeping the pair's harder hitter.
+# whose only rare is a stat line has that rare replaced, keeping the pair's harder hitter. A relic
+# outranks the floor and is never traded down.
 # smoke: timeout=120s
 
 const PILOTS := ["pylon_engineer", "runner_gunner", "demolitions_caster", "tarn", "tally", "remembered_cannon"]
@@ -46,14 +47,14 @@ func _pairs() -> void:
 					rows += 1
 					if not floored.any(func(key): return Parts.rung_of(key) >= Parts.RUNG_FLOOR):
 						dry.append("%s %d cores stage %d seed %d %s" % [pilot, cores, stage, s, floored])
-					if not floored.any(func(key): return Parts.rung_of(key) >= Parts.RUNG_FLOOR and Parts.changes_behaviour(key)):
+					if not floored.any(func(key): return Parts.rung_of(key) > Parts.RUNG_FLOOR or Parts.rung_of(key) == Parts.RUNG_FLOOR and Parts.changes_behaviour(key)):
 						flat.append("%s %d cores stage %d seed %d %s" % [pilot, cores, stage, s, floored])
 					if picks.any(func(key): return Parts.def(key).hits_harder()) and not floored.any(func(key): return Parts.def(key).hits_harder()):
 						no_hitter.append("%s stage %d seed %d %s to %s" % [pilot, stage, s, picks, floored])
 					if had_pattern and not floored.any(func(key): return key in Parts.PATTERN_PARTS):
 						lost_pattern.append("%s stage %d seed %d" % [pilot, stage, s])
 	_t.check("every gate pair holds a cobalt or better", dry.is_empty(), "%d pairs, dry %s" % [rows, dry.slice(0, 3)])
-	_t.check("every gate pair holds a behaviour cobalt", flat.is_empty(), "%d pairs, flat %s" % [rows, flat.slice(0, 3)])
+	_t.check("every gate pair holds a behaviour cobalt or a relic", flat.is_empty(), "%d pairs, flat %s" % [rows, flat.slice(0, 3)])
 	_t.check("the floor keeps a pair's harder hitter", no_hitter.is_empty(), str(no_hitter.slice(0, 3)))
 	_t.check("the floor never takes stage 2's pattern", lost_pattern.is_empty(), str(lost_pattern.slice(0, 3)))
 
@@ -75,6 +76,10 @@ func _planted() -> void:
 	var lone_hitter: Array = Parts.floor_gate(rng, ["grip_tread", "ram_plow"], "tarn", [])
 	_t.check("the stat cobalt's replacement hits harder when it was the pair's only hitter",
 		Parts.def(lone_hitter[1]).hits_harder() and Parts.changes_behaviour(lone_hitter[1]), str(lone_hitter))
+	var relic: Array = Parts.floor_gate(rng, ["spare_frame", "gatling_heart"], "tarn", [])
+	_t.check("a relic in the pair is never traded down", relic[0] == "spare_frame" and Parts.changes_behaviour(relic[1]), str(relic))
+	var relic_pattern: Array = Parts.floor_gate(rng, ["spare_frame", "cross_split"], "tarn", [])
+	_t.eq("a relic beside a pattern pair stays as rolled", relic_pattern, ["spare_frame", "cross_split"])
 	for row in ["sunforged_core", "spare_cell"]:
 		_t.check("%s changes behaviour" % row, Parts.changes_behaviour(row), row)
 	_t.eq("an empty pair stays empty", Parts.floor_gate(rng, [], "tarn", []), [])

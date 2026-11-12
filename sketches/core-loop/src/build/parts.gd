@@ -162,8 +162,9 @@ const CATALOGUE := {
 
 	# Rare: vaults, and gates with one bonus core.
 	# W1-64: Sunforged Core and Spare Cell each carry a trigger, so a Warden gate's cobalt changes
-	# how a fight plays. Sunforged keeps its numbers and adds a doubled hit every 6 s.
-	"sunforged_core": {"maker": "waking", "touches": "fire", "name": "Sunforged Core", "verb": "Hit far harder, doubled every 6s", "text": "+22 punch, +50% damage, doubled hit every 6s",
+	# how a fight plays. Sunforged keeps its numbers and arms a power hit every 6 s (arm_hit: the
+	# next hit lands again at its full weapon-scaled amount).
+	"sunforged_core": {"maker": "waking", "touches": "fire", "name": "Sunforged Core", "verb": "Hit harder, power hit every 6s", "text": "+22 punch, +50% weapon damage, 6s power hit",
 		"rarity": "rare", "tier": 3, "family": "weapon", "tags": ["kinetic", "mass"], "punch": 22.0,
 		"mods": {"weapon_damage": 1.5}, "trigger": "timed",
 		"effect": {"do": "arm_hit", "every": 6.0, "bonus": 1.0}},
@@ -185,7 +186,7 @@ const CATALOGUE := {
 	"spare_cell": {"maker": "moss", "name": "Spare Cell", "verb": "Kills refill your special", "touches": "special",
 		"text": "+1 special charge. Kills refill it, 12s apart.", "icon": "charge",
 		"rarity": "rare", "tier": 3, "family": "stat", "tags": ["mass"],
-		"charges": {"special": 1}, "trigger": "on_kill", "stack": "capped", "cap": 1,
+		"charges": {"special": 1}, "trigger": "on_kill",
 		"effect": {"do": "grant_charge", "slot": "special", "every": 12.0}},
 
 	# Rare-plus: won events, and gates with two or more bonus cores.
@@ -881,8 +882,9 @@ static func completing_part(held: Array, pool: Array) -> String:
 # number. When the roll brought no such part, a behaviour rare drawn the same way takes the slot
 # of a stat-only rare in the pair, else its first pick that is not a pattern part (stage 2's
 # guarantee); cores still lift the other. When the slot held the pair's only harder hitter, the
-# rare drawn hits harder too. A pair short of count (the pool ran dry) gains the rare instead,
-# and a pair of patterns keeps its first. With no behaviour rare left any rare stands in.
+# rare drawn hits harder too. A relic is never traded for it. A pair short of count (the pool ran
+# dry) gains the rare instead, and a pair of patterns keeps its first. With no behaviour rare left
+# any rare stands in, still keeping the hitter.
 # Callers outside the Warden's gates (tests that read common shares, the tools) never pass
 # through it.
 static func floor_gate(rng: RandomNumberGenerator, picks: Array, class_id: String, held: Array,
@@ -890,15 +892,27 @@ static func floor_gate(rng: RandomNumberGenerator, picks: Array, class_id: Strin
 	if picks.is_empty() or picks.any(func(key): return rung_of(key) >= RUNG_FLOOR and changes_behaviour(key)):
 		return picks
 	var out := picks.duplicate()
+	# A relic or better is never traded down: the slot is a stat-only rare, else a common that is
+	# not a pattern part, else (no room left) the last common pattern.
 	var slot := -1
 	for i in out.size():
-		if rung_of(out[i]) >= RUNG_FLOOR:
+		if rung_of(out[i]) == RUNG_FLOOR:
 			slot = i
 			break
 	if slot < 0:
 		slot = 0
-		while slot < out.size() and out[slot] in PATTERN_PARTS:
+		while slot < out.size() and (out[slot] in PATTERN_PARTS or rung_of(out[slot]) > RUNG_FLOOR):
 			slot += 1
+	if slot >= out.size() and out.size() >= count:
+		if out.any(func(key): return rung_of(key) > RUNG_FLOOR):
+			return picks
+		slot = out.size()
+		for i in range(out.size() - 1, -1, -1):
+			if rung_of(out[i]) < RUNG_FLOOR:
+				slot = i
+				break
+		if slot >= out.size():
+			return picks
 	var others: Array = out.filter(func(key): return key != out[slot]) if slot < out.size() else out
 	var needs_hitter: bool = slot < out.size() and def(out[slot]) != null and def(out[slot]).hits_harder() \
 		and not others.any(func(key): return def(key) != null and def(key).hits_harder())
@@ -906,15 +920,14 @@ static func floor_gate(rng: RandomNumberGenerator, picks: Array, class_id: Strin
 		or (needs_hitter and not def(key).hits_harder()))
 	var cobalt: Array = roll(rng, ["rare"], class_id, held, 1, picks + plain, offered)
 	if cobalt.is_empty():
-		cobalt = roll(rng, ["rare"], class_id, held, 1, picks, offered)
+		var soft: Array = offer_pool(class_id, ["rare"]).filter(func(key): return needs_hitter and not def(key).hits_harder())
+		cobalt = roll(rng, ["rare"], class_id, held, 1, picks + soft, offered)
 	if cobalt.is_empty():
 		return picks
 	if slot < out.size():
 		out[slot] = cobalt[0]
-	elif out.size() < count:
-		out.append(cobalt[0])
 	else:
-		out[-1] = cobalt[0]
+		out.append(cobalt[0])
 	return out
 
 
