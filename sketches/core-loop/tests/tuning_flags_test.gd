@@ -20,6 +20,7 @@ const EXPECTED := {
 	"breath": ["breath", "gentle", "bogus", "launch"],
 	"warden-form": ["warden_form", "loop", "bogus", "launch"],
 	"drop-room": ["drop_room", "duck", "bogus", "launch"],
+	"set-director": ["set_director", "on", "bogus", "launch"],
 	"discovery": ["discovery", "cards", "bogus", "launch"],
 	"telegraph": ["telegraph", "haze", "bogus", "launch"],
 	"world-one-builds": ["world_one_builds", "on", "bogus", "launch"],

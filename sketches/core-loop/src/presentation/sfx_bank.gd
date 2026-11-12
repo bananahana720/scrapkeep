@@ -3,6 +3,7 @@ extends RefCounted
 const Harmony := preload("res://src/presentation/harmony.gd")
 const Synth := preload("res://src/presentation/synth.gd")
 const MixRows := preload("res://src/presentation/mix_rows.gd")
+const SetDirector := preload("res://src/presentation/set_director.gd")
 
 # One baked sound per event_kinds `sound` id. Each recipe is built from the shared
 # rack in synth.gd and pitched from harmony.gd, so the families mean something:
@@ -275,6 +276,11 @@ const PILOT_QUOTE := "pilot_quote_"
 const PILOT_QUOTE_DB := -6.0
 # A motif whose top note is under A4 (Kest's toms, Tarn's bass) goes up an octave so the sax sings it.
 const PILOT_QUOTE_FLOOR := 69
+# June's answer at the end of a phrase (set_director.gd, SOUND-BIBLE "The set"): set_answer_<phrase id>,
+# one bar from the director's phrase book on the sax, made for the sounding band's step and key
+# like the quote, and 2 dB under it so the quote stays the bigger moment.
+const SET_ANSWER := "set_answer_"
+const SET_ANSWER_DB := -8.0
 const DEATH_FALL_DB := -6.0
 # The note each climbing cue rings on, where its ladder starts (Harmony.ladder_ratio): the kill
 # pop's bell is D6 and the line's bite A5, in the recipes here and in the event-set files.
@@ -386,6 +392,7 @@ static func break_midis(variant := 0) -> Array:
 
 static func has_recipe(id: String) -> bool:
 	return (TRIM_DB.has(id) or id.begins_with(CAUSE_NOTE) or id.begins_with(GRID_NOTE) or id.begins_with(PILOT_QUOTE) or id.begins_with(SAY)
+		or (id.begins_with(SET_ANSWER) and SetDirector.has_answer(id.trim_prefix(SET_ANSWER)))
 		or _assist_parts(id).size() > 0 or id in EVENT_CUES)
 
 
@@ -396,6 +403,8 @@ static func trim_db(id: String) -> float:
 		return GRID_NOTE_DB
 	if id.begins_with(PILOT_QUOTE):
 		return PILOT_QUOTE_DB
+	if id.begins_with(SET_ANSWER):
+		return SET_ANSWER_DB
 	if id.begins_with(SAY):
 		return TRIM_DB["babble"] + float(_caller(_said(id)[0]).get("db", 0.0))
 	if id == "babble":
@@ -764,7 +773,7 @@ static func _key_at(id: String, step: int, shift: int, theme: int) -> String:
 # A sound written on the grid is made again for each step it sounds at: the listed stingers, and
 # a pilot's quote, and a line from a caller who talks on the grid.
 static func _gridded(id: String) -> bool:
-	return STINGER_BEATS.has(id) or id.begins_with(PILOT_QUOTE) or (id.begins_with(SAY) and caller_on_grid(_said(id)[0]))
+	return STINGER_BEATS.has(id) or id.begins_with(PILOT_QUOTE) or id.begins_with(SET_ANSWER) or (id.begins_with(SAY) and caller_on_grid(_said(id)[0]))
 
 
 # Every tonal recipe reads pitches through these, so a keyed bake transposes it whole.
@@ -1309,6 +1318,8 @@ static func _bake(id: String) -> PackedFloat32Array:
 		return _mix([[_cut(_n(bits[0], int(bits[1])), GRID_NOTE_SECONDS), 0, 1.0]])
 	if id.begins_with(PILOT_QUOTE):
 		return Synth.render_score(pilot_quote_score(id.trim_prefix(PILOT_QUOTE)), 0.5)
+	if id.begins_with(SET_ANSWER):
+		return Synth.render_score(SetDirector.answer_score(id.trim_prefix(SET_ANSWER)), 0.5)
 	if id.begins_with(SAY):
 		return _say(_said(id)[0], _said(id)[1])
 	if _assist_parts(id).size() > 0:

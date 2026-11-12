@@ -185,7 +185,7 @@ After, each behind a switch and read on bot bands with the switch off and on, on
 
 ### Before and after the world 1 sitting
 
-Before: the conductor's timing does not change, and the band reads only the names above. The band's one change is the Warden form on the recorded band, behind its switch.
+Before: the conductor's timing does not change, and the band reads only the names above. The band's one change is the Warden form on the recorded band, behind its switch. The set director (ruling di, SOUND-BIBLE "The DJ at the decks") reads only names already listed here (pressure, the faders, `event_announced`, the fight word) plus the Heat band and the Overtime facts the band already hears, and changes only what the band plays, behind `--set-director=on`.
 
 After, in order:
 
