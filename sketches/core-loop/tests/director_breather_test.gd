@@ -175,7 +175,9 @@ func _full_room_keeps_bank() -> void:
 	a.author(ParkDefs.DEFS[0], ParkDefs)
 	_run(a, 6.0, Vector2.ZERO)
 	var held := a.banked
-	var size: int = a._draw_authored()["kinds"].size() if a._next_pack.is_empty() else a._next_pack["kinds"].size()
+	if a._next_pack.is_empty():
+		a._next_pack = a._draw_authored()
+	var size: int = a._next_pack["kinds"].size()
 	for i in 30:
 		a.advance(1.0 / 60.0, a.cap() - size + 1, Vector2(500.0, 0.0), Vector2(0.0, 10.0), Vector2(0.0, 1.0))
 	t.check("an authored pack the room is short of keeps the bank", held > 0 and a.banked >= held, "%d then %d" % [held, a.banked])

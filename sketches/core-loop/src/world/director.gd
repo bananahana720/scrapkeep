@@ -187,8 +187,9 @@ var _timer := FIRST_SPAWN
 # pack is placed. While the ball is inside one, with no crew home in the window, the timer's ticks are banked and credit
 # income keeps accruing. Each breather gives BREATH_S of quiet a stage, about the 6 s a ball at cruise takes to cross
 # 120 m; past that, or once the ball leaves, packs come as before and the bank pays out one tick every RELEASE_GAP, a
-# tick the room cannot take staying banked. A breather moves pressure later, never away (ruling cu), and a ball
-# parked in one gets BREATH_S of quiet, not a stage's.
+# tick the room cannot take staying banked. A breather moves pressure later, not away (ruling cu); the one loss is a
+# tick on the approach that finds no spot outside it, as any tick with no spot is spent. A ball parked in one gets
+# BREATH_S of quiet, not a stage's.
 const BREATH_S := 8.0
 const RELEASE_GAP := 0.25
 var breathers: Array = []
