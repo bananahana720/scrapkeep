@@ -12,7 +12,14 @@ extends RefCounted
 
 # Fixed bus levels in dB, under the player's volume sliders (settings_store volumes, 0 to 1).
 # Ambient carries the parks' life (ambient_life.gd) and sends to Master beside the effects.
-const BUS_DB := {"Music": -4.0, "SFX": -1.5, "UI": -8.0, "Ambient": -7.0}
+# The band leads the effects (Andrew, 12 Nov: the effects drowned the music). Measured one side
+# at a time (ace_bounce --only, skipper seed 1, 150 s): the effects alone were level with the
+# music (-22.7 against -22.3 LUFS), so SFX sits 3.5 dB lower than it did, and the music row is
+# 1 dB higher with every non-fight state 1 dB deeper, so only the fights lift. The band now leads
+# by about 4 LU in a Warden fight and 5 in Brindle's, and the whole mix stays at -20.4 LUFS. The effects' level is spread over warnings, slams and
+# stingers, not the rapid hits (hit_thwack, weapon_zap and clank together are about 6% of it),
+# so the bus is the lever, not a per-cue trim.
+const BUS_DB := {"Music": -3.0, "SFX": -5.0, "UI": -8.0, "Ambient": -7.0}
 
 # Glue on the effects bus: catches a pile-up before the master has to.
 const SFX_COMP := {"threshold_db": -16.0, "ratio": 3.0, "attack_us": 3000.0, "release_ms": 120.0, "gain_db": 0.0}
@@ -33,16 +40,16 @@ const MASTER_CEILING_DB := -1.5
 # No state moves the SFX bus: the stinger lane rides it, so a death, a victory or a run's first
 # stinger always lands at full level.
 const STATES := {
-	"menu": {"Music": -3.0, "Ambient": -14.0},
-	"camp": {"Music": -5.0, "Ambient": -6.0},
-	"roam": {"Music": -2.0},
+	"menu": {"Music": -4.0, "Ambient": -14.0},
+	"camp": {"Music": -6.0, "Ambient": -6.0},
+	"roam": {"Music": -3.0},
 	"combat": {"Music": -1.5, "Ambient": -5.0},
-	"shop": {"Music": -5.0, "Ambient": -6.0},
+	"shop": {"Music": -6.0, "Ambient": -6.0},
 	"miniboss": {"Ambient": -10.0},
 	"boss_1": {"Music": -1.0, "Ambient": -14.0},
 	"boss_2": {"Music": -0.5, "Ambient": -14.0},
 	"boss_3": {"Ambient": -16.0},
-	"run_over": {"Music": -4.0, "Ambient": -16.0},
+	"run_over": {"Music": -5.0, "Ambient": -16.0},
 }
 # The systemic pressure (pressure_changed) at which a stage counts as a fight, and below which
 # it is roaming again (hysteresis, so a fight's edge does not flicker the mix).
@@ -64,8 +71,10 @@ const GLIDE_DOWN_DB_S := 30.0
 const GLIDE_UP_DB_S := 6.0
 
 # The telegraph focus: a danger sound or a threat row (audio.gd _is_telegraph), now or on the beat, drops the music and the ambience for hold_s,
-# then they come back at GLIDE_UP_DB_S.
-const FOCUS := {"Music": -3.0, "Ambient": -8.0, "hold_s": 0.4}
+# then they come back at GLIDE_UP_DB_S. A Warden fight sounds a warning about twice a second, so
+# the focus held the music down for a third of a measured run; 2 dB keeps the warning on top
+# without hollowing the band (12 Nov).
+const FOCUS := {"Music": -2.0, "Ambient": -8.0, "hold_s": 0.4}
 
 # Room for the Warden form's drop (tuning drop_room, off by default): offsets in dB that hold from
 # just before the drop's beat for DROP_ROOM_BARS bars of the band's grid, gliding in at
