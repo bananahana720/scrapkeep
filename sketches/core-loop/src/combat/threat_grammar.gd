@@ -20,6 +20,8 @@ const FlashGuard := preload("res://src/presentation/flash_guard.gd")
 #               its height band, and 15% stripes over the ground it has swept.
 #   PROJECTILE  a thin dashed flight arc from the launcher that ends on the landing point,
 #               eaten as the shell flies, over an edge and a fill that grows from the centre.
+#               Its height band stands as spikes, not a fenced box, and it wears no centre
+#               cross: a cage with a cross in it read as a goal to reach (PF-25).
 #   LANE        rails along the strip, and a striped fill that grows from its centre line.
 #
 # The pending fill (wave 36, PF-16): every ground hit but a wave fills from the shape's
@@ -33,8 +35,8 @@ const FlashGuard := preload("res://src/presentation/flash_guard.gd")
 # tick every 30 degrees on the rim. AMBER is the player's own: clean fills, no stripes,
 # no warn sound. Bone (Palette.SAND) is a harmless field: a dashed ring and nothing else.
 # Every line sits on a charcoal keyline, because HAZARD on sandstone is only 1.3:1.
-# Instant, projectile and lane draw their height band (RR-02) as posts and a top rail at
-# `reach`; a wave draws it as a curtain on its front.
+# Instant and lane draw their height band (RR-02) as posts and a top rail at `reach`, a
+# projectile as spikes whose points stand at `reach`; a wave draws it as a curtain on its front.
 #
 # A descriptor is a Dictionary:
 #   type      Type
@@ -115,6 +117,17 @@ const STRIPE_PITCH := 0.5
 const POST_SPACING := 4.0
 const POST_HALF := 0.06
 const POST_ALPHA := 0.35
+# A shell's landing: its spikes' half-width at the foot, their alpha, and the static area's alpha
+# (a striped hostile floor that reads as the place not to be, PF-25).
+const SPIKE_HALF := 0.22
+const SPIKE_ALPHA := 0.7
+const SHELL_AREA_ALPHA := 0.24
+# Every mark fades with its distance from the lens: gone at LENS_CLEAR metres, whole at LENS_FULL.
+# Marks draw with no depth test, so a lane or fence passing by the camera stood over half the view
+# as flat orange slabs (PF-27, film 059 and 090). The ball rides further out than LENS_FULL, so
+# nothing at the ball or past it fades. The same numbers as the aim mark's (indicator.gd).
+const LENS_CLEAR := 1.5
+const LENS_FULL := 4.0
 const RAIL_ALPHA := 0.7
 const OWNER_STEP := PI / 6.0
 const OWNER_SPACING := 4.0
@@ -229,6 +242,12 @@ static func row(type: int) -> Dictionary:
 
 static func bright(tone: Color) -> Color:
 	return tone.lightened(0.35)
+
+
+# A shell's flight line: a hostile shell's in full HAZARD, the colour of every other danger (its
+# lightened salmon read as a friendly guide, PF-25); the player's own batted shell keeps its bright.
+static func trace_tone(tone: Color) -> Color:
+	return Color(tone if stance(tone) == "hostile" else bright(tone), TRACE_ALPHA)
 
 
 # A lob with a fixed flight time is a straight line plus a parabola: projectile.gd's
@@ -534,7 +553,7 @@ static func _driven_projectile(d: Dictionary, out: Array) -> void:
 	under["abs"] = true
 	under["c0"] = arc["shares"]
 	out.append(under)
-	var trace := _driven(_mark("trace", "motion", Color(bright(d["tone"]), TRACE_ALPHA), arc["tris"], {"points": arc["points"]}), Drive.DOTS)
+	var trace := _driven(_mark("trace", "motion", trace_tone(d["tone"]), arc["tris"], {"points": arc["points"]}), Drive.DOTS)
 	trace["abs"] = true
 	trace["c0"] = arc["shares"]
 	out.append(trace)
@@ -640,11 +659,10 @@ static func _projectile(d: Dictionary, motion: bool, out: Array) -> void:
 	var c: Vector3 = d["centre"]
 	var r: float = d["r_out"]
 	if not motion:
-		out.append(_mark("area", _area_layer(d, false), _area_tone(d, AREA_ALPHA * 1.4), _footprint(d)))
+		out.append(_mark("area", _area_layer(d, false), _area_tone(d, SHELL_AREA_ALPHA), _footprint(d)))
 		var w := outline_width(d)
 		_lined(out, "edge", false, Color(tone, EDGE_ALPHA * 0.8), func(grow: float): return _arc(d, r - w - grow, r + grow, 0.0, TAU),
-			{"r_out": r})
-		_lined(out, "pip", false, Color(tone, EDGE_ALPHA), func(grow: float): return _pip(c, grow), {"centre": c})
+			{"r_out": r, "centre": c})
 		return
 	if stance(tone) == "hostile":
 		out.append(_grown_fill(d, "fill", _area_tone(d, FILL_ALPHA)))
@@ -654,7 +672,7 @@ static func _projectile(d: Dictionary, motion: bool, out: Array) -> void:
 			_flight_arc(d, UNDERLAY * 0.25, float(d["progress"]))["tris"])
 		under["abs"] = true
 		out.append(under)
-		var trace := _mark("trace", "motion", Color(bright(tone), TRACE_ALPHA), arc["tris"], {"points": arc["points"]})
+		var trace := _mark("trace", "motion", trace_tone(tone), arc["tris"], {"points": arc["points"]})
 		trace["abs"] = true
 		out.append(trace)
 
@@ -726,6 +744,9 @@ static func _fence(out: Array, d: Dictionary) -> void:
 		return
 	var tone: Color = d["tone"]
 	var lines := _boundary(d)
+	if int(d["type"]) == Type.PROJECTILE:
+		out.append(_mark("band", "base", Color(tone, SPIKE_ALPHA), _spikes(lines, reach), {"height": reach}))
+		return
 	var posts := PackedVector3Array()
 	for line in lines:
 		var run := 0.0
@@ -739,6 +760,25 @@ static func _fence(out: Array, d: Dictionary) -> void:
 				_wall(posts, at + Vector3(0.0, 0.0, -POST_HALF), at + Vector3(0.0, 0.0, POST_HALF), 0.0, reach)
 	out.append(_mark("band", "base", Color(tone, POST_ALPHA), posts, {"height": reach}))
 	_lined(out, "band_top", false, Color(tone, RAIL_ALPHA), func(grow: float): return _rail(lines, reach, BAND_TOP + grow), {"height": reach})
+
+
+# A shell's height band: a spike every POST_SPACING metres round the landing, SPIKE_HALF wide at
+# the foot and pointed at `reach`, two crossed blades so it reads from any camera. No rail joins
+# them, so the band never draws as a box.
+static func _spikes(lines: Array, reach: float) -> PackedVector3Array:
+	var tris := PackedVector3Array()
+	for line in lines:
+		var run := 0.0
+		for i in line.size():
+			if i > 0:
+				run += (line[i] as Vector3).distance_to(line[i - 1])
+			if i > 0 and run < POST_SPACING:
+				continue
+			run = 0.0
+			var at := Vector3((line[i] as Vector3).x, 0.0, (line[i] as Vector3).z)
+			for side in [Vector3(SPIKE_HALF, 0.0, 0.0), Vector3(0.0, 0.0, SPIKE_HALF)]:
+				tris.append_array(PackedVector3Array([at - side, Vector3(at.x, reach, at.z), at + side]))
+	return tris
 
 
 static func _rail(lines: Array, h: float, half: float) -> PackedVector3Array:
@@ -833,13 +873,6 @@ static func _line_chevrons(c: Vector3, angle: float, r_in: float, r_out: float, 
 static func _spoke(c: Vector3, angle: float, r0: float, r1: float, half: float) -> PackedVector3Array:
 	var tris := PackedVector3Array()
 	_seg(tris, _at(c, angle, r0), _at(c, angle, r1), half)
-	return tris
-
-
-static func _pip(c: Vector3, grow: float) -> PackedVector3Array:
-	var tris := PackedVector3Array()
-	_seg(tris, c + Vector3(-0.7, 0.0, 0.0), c + Vector3(0.7, 0.0, 0.0), 0.12 + grow)
-	_seg(tris, c + Vector3(0.0, 0.0, -0.7), c + Vector3(0.0, 0.0, 0.7), 0.12 + grow)
 	return tris
 
 
@@ -1072,6 +1105,7 @@ class Painter:
 		mat.shader = shader
 		mat.render_priority = priority
 		mat.set_shader_parameter("governed", 1.0 if governed else 0.0)
+		mat.set_shader_parameter("lens", Vector2(LENS_CLEAR, LENS_FULL))
 		if stripes:
 			mat.set_shader_parameter("texture_albedo", stripe_texture())
 			mat.set_shader_parameter("uv1_scale", Vector3.ONE / (STRIPE_PITCH * sqrt(2.0)))
@@ -1315,6 +1349,9 @@ class Painter:
 		mat.vertex_color_use_as_albedo = true
 		mat.vertex_color_is_srgb = true
 		mat.render_priority = _priority(layer)
+		mat.distance_fade_mode = BaseMaterial3D.DISTANCE_FADE_PIXEL_ALPHA
+		mat.distance_fade_min_distance = LENS_CLEAR
+		mat.distance_fade_max_distance = LENS_FULL
 		if layer.begins_with("stripe") and not haze_on():
 			mat.albedo_texture = stripe_texture()
 			mat.uv1_triplanar = true

@@ -29,6 +29,11 @@ const SPARKLE_POOL := 6
 # Trail seconds and width per speed tier: nothing at a walk, a comet when blazing.
 const TRAIL_SECONDS := [0.0, 0.12, 0.22, 0.36]
 const TRAIL_WIDTH := [0.0, 0.28, 0.48, 0.72]
+# The trail fades with its distance from the lens: gone at TRAIL_LENS.x metres, whole at .y. After a
+# drop at full speed it lay back up over the camera and its last metres filled the middle of the view
+# as a pale cone (PF-07, w37 film 019 and 070: read as a light from above). The ball rides at the
+# arm's 8 m, or 4.2 m on a mount, so the trail at the ball stays whole.
+const TRAIL_LENS := Vector2(2.5, 6.0)
 const LINES_PER_TIER := [0, 0, 10, 20]
 # v3 W11 bursts: pooled one-shot CPU particles, one shared mesh and material per kind;
 # each burst sets only its emitter's colour, place and count. pool emitters x max count
@@ -354,6 +359,13 @@ func _on_element(_element: String, _material: String, behaviour: String, at: Vec
 
 
 const MAX_RINGS := 4
+# A ring shows whole for RING_READ seconds after its discovery, then settles over RING_SETTLE to
+# RING_REST of its alpha for the rest of the run: four bright rings round the ball stood over the
+# view all run (PF-27, film 048). Once read, it is the build's mark, not news.
+const RING_ALPHA := 0.8
+const RING_REST := 0.3
+const RING_READ := 2.5
+const RING_SETTLE := 1.0
 
 
 func add_ring(id: String, tint: Color) -> void:
@@ -361,7 +373,12 @@ func add_ring(id: String, tint: Color) -> void:
 		return
 	var ring := ring_view(_rings.size(), tint)
 	player.juice_node().add_child(ring)
-	_rings[id] = {"node": ring, "tilt": 0.5 + 0.35 * _rings.size(), "speed": 1.4 + 0.5 * _rings.size()}
+	_rings[id] = {"node": ring, "tilt": 0.5 + 0.35 * _rings.size(), "speed": 1.4 + 0.5 * _rings.size(), "born": _clock}
+
+
+# A ring's alpha `age` seconds after its discovery: whole while it is news, then settled.
+static func ring_alpha(age: float) -> float:
+	return lerpf(RING_ALPHA, RING_ALPHA * RING_REST, smoothstep(RING_READ, RING_READ + RING_SETTLE, age))
 
 
 # The index-th synergy ring as add_ring draws it (BakeWarm builds one at stage entry).
@@ -375,7 +392,7 @@ static func ring_view(index: int, tint: Color) -> MeshInstance3D:
 	ring.mesh = torus
 	var mat := StandardMaterial3D.new()
 	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	mat.albedo_color = Color(tint.r, tint.g, tint.b, 0.8)
+	mat.albedo_color = Color(tint.r, tint.g, tint.b, RING_ALPHA)
 	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	mat.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
 	ring.material_override = mat
@@ -650,6 +667,15 @@ func _on_scrap(amount: int, at: Vector3, _total: int) -> void:
 
 # --- Trail and speed lines -----------------------------------------------------------------
 
+# The trail's own copy of the juice material, faded near the lens (TRAIL_LENS).
+static func trail_material(juice: StandardMaterial3D) -> StandardMaterial3D:
+	var mat := juice.duplicate() as StandardMaterial3D
+	mat.distance_fade_mode = BaseMaterial3D.DISTANCE_FADE_PIXEL_ALPHA
+	mat.distance_fade_min_distance = TRAIL_LENS.x
+	mat.distance_fade_max_distance = TRAIL_LENS.y
+	return mat
+
+
 func _build_trail() -> void:
 	var mat := StandardMaterial3D.new()
 	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
@@ -663,7 +689,7 @@ func _build_trail() -> void:
 	_trail = MeshInstance3D.new()
 	_trail.name = "Trail"
 	_trail.mesh = ImmediateMesh.new()
-	_trail.material_override = mat
+	_trail.material_override = trail_material(mat)
 	_trail.top_level = true
 	_trail.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	juice.add_child(_trail)
@@ -693,6 +719,9 @@ func _process(delta: float) -> void:
 		var node: Node3D = entry["node"]
 		if is_instance_valid(node):
 			node.basis = Basis(Vector3.UP, _clock * entry["speed"]) * Basis(Vector3.RIGHT, entry["tilt"])
+			var mat := (node as MeshInstance3D).material_override as StandardMaterial3D
+			if mat != null:
+				mat.albedo_color.a = ring_alpha(_clock - float(entry["born"]))
 	_draw_pips(delta)
 	_govern(delta)
 	_emit_pops()
