@@ -64,15 +64,16 @@ func _rules() -> void:
 	_t.eq("default damage_by_phase", ChallengeDials.value("waking.damage_by_phase"), [1.0, 1.0, 1.0, 1.0])
 	_t.near("default damage is the base", ChallengeDials.damage("mind", 10.0, 2), 10.0, 0.0)
 	# Brindle ships tuned (Spillway PR): the per-phase lists carry the band-swept values, every other key is identity.
-	_t.eq("brindle tuned period_by_phase", ChallengeDials.value("brindle.period_by_phase"), [0.6, 0.5, 1.0, 1.0])
-	_t.eq("brindle tuned damage_by_phase", ChallengeDials.value("brindle.damage_by_phase"), [1.0, 2.0, 1.3, 1.0])
+	_t.eq("brindle tuned period_by_phase", ChallengeDials.value("brindle.period_by_phase"), [0.6, 0.35, 0.5, 1.0])
+	_t.eq("brindle tuned damage_by_phase", ChallengeDials.value("brindle.damage_by_phase"), [1.0, 3.0, 2.0, 1.0])
 	_t.near("tuned Requisition period", ChallengeDials.period("brindle", Rules.CRANE_PERIOD, 1), Rules.CRANE_PERIOD * 0.6, 1e-6)
-	_t.near("tuned Furnace period", ChallengeDials.period("brindle", 2.0, 2), 1.0, 1e-6)
-	_t.near("Scuttle and chase periods are the base", ChallengeDials.period("brindle", 2.0, 3), 2.0, 0.0)
-	_t.near("tuned Furnace damage", ChallengeDials.damage("brindle", 10.0, 2), 20.0, 1e-6)
+	_t.near("tuned Furnace period", ChallengeDials.period("brindle", 2.0, 2), 0.7, 1e-6)
+	_t.near("tuned Scuttle period", ChallengeDials.period("brindle", 2.0, 3), 1.0, 1e-6)
+	_t.near("the chase period is the base", ChallengeDials.period("brindle", 2.0, 4), 2.0, 0.0)
+	_t.near("tuned Furnace damage", ChallengeDials.damage("brindle", 10.0, 2), 30.0, 1e-6)
 	_t.near("chase damage is the base", ChallengeDials.damage("brindle", 10.0, 4), 10.0, 0.0)
 	_t.eq("a --tune/override REPLACES the tuned list: 1/1/1/1 is the raw identity", _raw_identity(), 3.4)
-	_t.eq("and the tuned default returns after reset", ChallengeDials.value("brindle.period_by_phase"), [0.6, 0.5, 1.0, 1.0])
+	_t.eq("and the tuned default returns after reset", ChallengeDials.value("brindle.period_by_phase"), [0.6, 0.35, 0.5, 1.0])
 	for key in ChallengeDials.DEFAULTS:
 		# The tuned lists, and the fight-phase follow-up counts (a count, not a multiplier; Andrew's
 		# 23 Oct phase ruling sets them, fight_phases.gd).

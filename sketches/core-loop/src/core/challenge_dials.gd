@@ -64,13 +64,16 @@ const PackPressure := preload("res://src/combat/pack_pressure.gd")
 const DEFAULTS := {
 	# Per boss: hazard damage to the pilot, attack cadence, warn seconds, punish windows,
 	# and the number of extra follow-up attacks queued right after an attack.
-	# Brindle (world 1 boss) is tuned: phases Requisition, Furnace, Scuttle, chase. Band table: sweep
-	# tbr-k, 12 seeds, scratch/challenge-tune-tbr-k 2a45b9c2: Novice 0%, Learner a5 100%, Expert 100%,
-	# Top 100%, no Learner death under 45 s, largest hit 30% (brindle_slag). Learner a1 100% is reported,
-	# not graded (NEEDS 6267672032). Requisition (phase 1) deals no damage, so its damage entry stays 1.0;
-	# the tbr-k sweep ran it at 1.5 with the same result.
-	"brindle.damage_mult": 1.0, "brindle.damage_by_phase": [1.0, 2.0, 1.3, 1.0],
-	"brindle.period_mult": 1.0, "brindle.period_by_phase": [0.6, 0.5, 1.0, 1.0],
+	# Brindle (world 1 boss): phases Requisition, Furnace, Scuttle, chase. Requisition (phase 1) deals no damage,
+	# so its damage entry stays 1.0. The band sweep tbr-k (12 seeds, 2a45b9c2) was read at the old 2.0 and 1.3 hit
+	# sizes and the 0.5 and 1.0 periods; nobody has swept the values below.
+	# Wave 37 (ruling cu; systems audit pass E, change 5): world 1 kept getting easier after the dam, so Brindle's
+	# Furnace slag hits x3 (36) on a 0.35 gap and his Scuttle charge x2 (36) on half the rest. One hit is 36, about
+	# 30% of a 120 hull, and the fight asks for more dodges, not one-shot luck. Eight random-policy runs a side
+	# (seeds 2860 to 2867, PR 787): the worst minute at Brindle took a median 40% of max hull before and 71% after,
+	# against 76% to 79% at the dam Warden. Every run that reached Brindle cleared it.
+	"brindle.damage_mult": 1.0, "brindle.damage_by_phase": [1.0, 3.0, 2.0, 1.0],
+	"brindle.period_mult": 1.0, "brindle.period_by_phase": [0.6, 0.35, 0.5, 1.0],
 	"brindle.tell_mult": 1.0, "brindle.punish_mult": 1.0, "brindle.combo": 0.0,
 	# Fight phases (fight_phases.gd, Andrew 23 Oct 19:02Z): cued follow-ups after each lead attack, per
 	# phase. Brindle's Furnace answers a slag ring with the other ring, his Scuttle answers a charge with a
