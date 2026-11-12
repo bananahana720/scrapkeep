@@ -99,11 +99,12 @@ static func doors(map) -> Array:
 	var out := []
 	for row in map.park.activity_rows:
 		out.append({"id": String(row.id), "at": Vector2(row.at[0], row.at[1])})
-	# A sealed cache's door: a valve's sinking door, or the cracked wall that stands across the room's mouth.
+	# A sealed cache's door: a valve's sinking door, or the cracked wall that stands across the room's mouth
+	# (contraptions.gd sealed_wall; not preloaded here, as activities.gd preloads this file).
 	for row in map.park.contraption_rows:
 		if row.has("door"):
 			out.append({"id": String(row.id), "at": Vector2(row.door.at[0], row.door.at[1])})
-		elif row.has("cache"):
+		elif row.get("cache") is Dictionary and row.cache.has("face"):
 			out.append({"id": String(row.id), "at": Vector2(row.at[0], row.at[1])})
 	return out
 

@@ -207,9 +207,15 @@ func finish() -> void:
 
 
 # The devices that seal a cache room: a valve whose door sinks, or a cracked wall that crumbles
-# across the room's open face. Either one files its codex row when it opens the room.
+# across the room's open face. Either one files its codex row when it opens the room. A wall seals
+# its room only when the cache names the face it opens through (sealed_wall): the islands' older
+# saddle_seam row carries a cache with no face and is still a plain wall (its world 3 pass is owed).
 func _sealed() -> Array:
-	return (valves + walls).filter(func(d): return d["spec"].has("cache"))
+	return valves.filter(func(d): return d["spec"].has("cache")) + walls.filter(func(d): return sealed_wall(d["spec"]))
+
+
+static func sealed_wall(spec: Dictionary) -> bool:
+	return spec.get("cache") is Dictionary and spec["cache"].has("face")
 
 
 # World attaches this owner beneath a stage root. Only cache-bearing specs need the
@@ -1092,7 +1098,7 @@ func _step_wall(w: Dictionary, ball: Vector3, velocity: Vector3, kit, facts: Arr
 	facts.append({"kind": "fact", "fact": "wall_crumbled", "at": centre})
 	facts.append({"kind": "fact", "fact": "route_opened", "at": centre})
 	# A wall that seals a cache room opens a dead end, not a tunnel: it files the room's row, not sprint_through.
-	if w["spec"].has("cache"):
+	if sealed_wall(w["spec"]):
 		_open_cache(w, centre, facts)
 	else:
 		facts.append({"kind": "codex", "id": "sprint_through", "at": centre})

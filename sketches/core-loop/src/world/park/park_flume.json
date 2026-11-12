@@ -292,7 +292,7 @@
  "activity_rows": [
   {"id": "siphon_camp", "activity": "enemy_camp", "site": "the_siphon", "at": [-26, 174], "pack": ["lobber", "lobber", "lobber"], "pay": {"rarities": ["common"]}},
   {"id": "bend_cache", "activity": "cracked_cache", "site": "bend_rim_ledge", "at": [42, -96], "face": [0, 1], "pack": [], "pay": {"rarities": ["rare"]}},
-  {"id": "trestle_cache", "activity": "cracked_cache", "site": "canal_country_low", "at": [-236, -432], "face": [0, 1], "pack": [], "pay": {"rarities": ["common", "rare"]}, "extra": "card_2"},
+  {"id": "trestle_cache", "activity": "cracked_cache", "site": "canal_country_low", "at": [-258, -426], "face": [0, 1], "pack": [], "pay": {"rarities": ["common", "rare"]}, "extra": "card_2"},
   {"id": "bench_bounty", "activity": "hauler_bounty", "site": "south_bench", "at": [-119, 332], "pack": [], "pay": {"rarities": ["common", "rare"]}},
   {"id": "weir_surge", "activity": "surge_run", "site": "weir_mesa", "at": [-427, -563], "pack": [], "pay": {"rarities": ["common", "rare"]}, "extra": "card_2", "route": "flume_upper"},
   {"id": "canal_altar", "activity": "ambush_altar", "site": "main_canal", "at": [-475, -206], "pack": [], "pay": {"rarities": ["common", "rare"]}, "extra": "card_2"}
