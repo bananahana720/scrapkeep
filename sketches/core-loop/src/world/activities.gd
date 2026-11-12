@@ -21,6 +21,7 @@ const PocketLibrary := preload("res://src/world/pockets/pocket_library.gd")
 const Secrets := preload("res://src/core/secrets.gd")
 const AmbushAltar := preload("res://src/world/ambush_altar.gd")
 const CrackedCache := preload("res://src/world/cracked_cache.gd")
+const FindKit := preload("res://src/world/find_kit.gd")
 const SfxBank := preload("res://src/presentation/sfx_bank.gd")
 const WorldFx := preload("res://src/presentation/world_fx/world_fx.gd")
 const WorldFxAnchor := preload("res://src/presentation/world_fx/world_fx_anchor.gd")
@@ -1032,7 +1033,12 @@ func _seep_tell(s: Site) -> void:
 	var wet := _find_wet
 	for k in FIND_SEEP_STREAKS.size():
 		var streak: Vector3 = FIND_SEEP_STREAKS[k]
-		var mark := _mesh_box(s.wall, Vector3(streak.z, WALL_HEIGHT * 0.8, 0.04), Vector3(streak.x, streak.y, 0.52), wet)
+		var mark: Node3D = FindKit.part("FindSeep", s.wall)
+		if mark != null:
+			mark.position = Vector3(streak.x, streak.y, 0.52)
+			mark.scale = Vector3(streak.z, WALL_HEIGHT * 0.8, 1.0)
+		else:
+			mark = _mesh_box(s.wall, Vector3(streak.z, WALL_HEIGHT * 0.8, 0.04), Vector3(streak.x, streak.y, 0.52), wet)
 		mark.name = "FindSeep%d" % k
 	var glint: Node3D = WorldFxAnchor.make("secret")
 	glint.name = "FindGlint"
@@ -1068,8 +1074,13 @@ func _dress_door(s: Site) -> void:
 # The radio's tell: a short whip aerial over the roof line and the tune through the wall, heard from
 # Secrets.RADIO_HEAR_M. The aerial stays; the sound goes with the face.
 func _radio_tell(s: Site) -> void:
-	var aerial := _mesh_box(s, Vector3(0.12, FIND_AERIAL_M, 0.12), Vector3(WALL_HALF_W - 1.0, WALL_HEIGHT + FIND_AERIAL_M * 0.5, -1.0),
-		_solid(Palette.BRASS))
+	# The model's aerial is clamped to the side wall's top; the plain one stood inside the pocket's rim.
+	var aerial: Node3D = FindKit.part("FindAerial", s)
+	if aerial != null:
+		aerial.position = Vector3(WALL_HALF_W + 0.5, WALL_HEIGHT, -1.0)
+	else:
+		aerial = _mesh_box(s, Vector3(0.12, FIND_AERIAL_M, 0.12), Vector3(WALL_HALF_W - 1.0, WALL_HEIGHT + FIND_AERIAL_M * 0.5, -1.0),
+			_solid(Palette.BRASS))
 	aerial.name = "FindAerial"
 	s.wall.add_child(_find_sound("find_radio", Secrets.RADIO_HEAR_M))
 
@@ -1100,11 +1111,20 @@ func _hang_room_log(s: Site, room_id: String) -> void:
 func _hang_board(s: Site, site_name: String, title: String, text: String) -> void:
 	s.name = site_name
 	var board_z := -WALL_DEPTH + 0.06
-	var frame := _mesh_box(s, Vector3(ROOM_BOARD_SIZE.x + 0.3, ROOM_BOARD_SIZE.y + 0.3, 0.08),
-		Vector3(0.0, ROOM_LOG_HEIGHT, board_z), _solid(Palette.BRASS))
+	# The model's frame and plate stand on the back wall: their back face on its origin, the plate's
+	# face where the plain plate's was. The plate is painted one flat dark under the log line.
+	var frame: Node3D = FindKit.part("FindBoardFrame", s)
+	var board: Node3D = FindKit.part("FindBoard", s)
+	if frame != null and board != null:
+		frame.position = Vector3(0.0, ROOM_LOG_HEIGHT, board_z - 0.04)
+		board.position = frame.position
+		(board as MeshInstance3D).material_override = _solid(Palette.CHARCOAL)
+	else:
+		frame = _mesh_box(s, Vector3(ROOM_BOARD_SIZE.x + 0.3, ROOM_BOARD_SIZE.y + 0.3, 0.08),
+			Vector3(0.0, ROOM_LOG_HEIGHT, board_z), _solid(Palette.BRASS))
+		board = _mesh_box(s, Vector3(ROOM_BOARD_SIZE.x, ROOM_BOARD_SIZE.y, 0.08),
+			Vector3(0.0, ROOM_LOG_HEIGHT, board_z + 0.04), _solid(Palette.CHARCOAL))
 	frame.name = "RoomBoardFrame"
-	var board := _mesh_box(s, Vector3(ROOM_BOARD_SIZE.x, ROOM_BOARD_SIZE.y, 0.08),
-		Vector3(0.0, ROOM_LOG_HEIGHT, board_z + 0.04), _solid(Palette.CHARCOAL))
 	board.name = "RoomBoard"
 	var label := Label3D.new()
 	label.name = "RoomLog"

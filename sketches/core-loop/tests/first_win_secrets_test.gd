@@ -310,16 +310,18 @@ func _room_reads(label: String, id: String, room) -> void:
 	if log_label == null or board == null:
 		_t.check("%s: %s has its crew board" % [label, id], false)
 		return
-	var bm: BoxMesh = (board as MeshInstance3D).mesh
+	# The board's own box, the model's plate (W1-22) or the plain one, in the site's frame.
+	var bm: AABB = (board as MeshInstance3D).mesh.get_aabb()
+	bm.position += board.position
 	var plate: Color = (board as MeshInstance3D).material_override.albedo_color
 	var ratio := _contrast(log_label.modulate, plate)
 	_t.check("%s: %s log contrast on its board >= 7:1" % [label, id], ratio >= 7.0, "%.1f:1" % ratio)
-	_t.check("%s: %s log stands in front of its board" % [label, id], log_label.position.z > board.position.z + bm.size.z * 0.5)
+	_t.check("%s: %s log stands in front of its board" % [label, id], log_label.position.z > bm.end.z)
 	var box: AABB = log_label.get_aabb()
 	_t.check("%s: %s log fits its board" % [label, id], box.size.x > 0.0 and box.size.x <= bm.size.x and box.size.y <= bm.size.y,
 		"%.2f x %.2f m on %.2f x %.2f" % [box.size.x, box.size.y, bm.size.x, bm.size.y])
-	var low := board.position.y - bm.size.y * 0.5
-	_t.check("%s: %s board clears the ball's eye line" % [label, id], low >= 3.6 and board.position.y + bm.size.y * 0.5 <= 6.0, "%.2f m" % low)
+	var low := bm.position.y
+	_t.check("%s: %s board clears the ball's eye line" % [label, id], low >= 3.6 and bm.end.y <= 6.0, "%.2f m" % low)
 	var tally: Node3D = room.wall.get_node_or_null("RoomTally")
 	_t.check("%s: %s has a chalk tally on its face" % [label, id], tally != null and tally.get_child_count() == 5 and tally.position.z > 0.5)
 	var glove: Node3D = room.wall.get_node_or_null("RoomGlove")
