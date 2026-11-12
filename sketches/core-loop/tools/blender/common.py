@@ -27,11 +27,23 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 SKETCH = os.path.normpath(os.path.join(HERE, "..", ".."))
 MODELS = os.path.join(SKETCH, "assets", "models")
 
-# The game's palette under the kit's paint names, read from src/core/palette.gd (tools/palette_gd.py).
-sys.path.insert(0, os.path.normpath(os.path.join(HERE, "..")))
-import palette_gd  # noqa: E402
-
-HEX = palette_gd.recipe("bone", "sandstone", "oxide", "copper", "charcoal", "petrol", "amber", "mint", "hazard", "brass", "ice", "ancient")
+# Mirror of src/core/palette.gd under the kit's paint names (tools/palette_gd.py ALIASES), kept as a
+# literal because tools/asset-forge reads it with ast inside a sandbox that sees only this folder.
+# tools/palette_gd.py --check (scripts/palette-gd.test.mjs) fails when it drifts from palette.gd.
+HEX = {
+    "bone": "d2c5a5",
+    "sandstone": "c6a274",
+    "oxide": "9b513a",
+    "copper": "b77843",
+    "charcoal": "242a28",
+    "petrol": "365754",
+    "amber": "e5a044",
+    "mint": "8bf0d3",
+    "hazard": "ff5a3c",
+    "brass": "d9b44a",
+    "ice": "c8f0ff",
+    "ancient": "9dff3c",
+}
 
 # The section 9 slot names, exactly. `vc` slots take their colour from vertex colours.
 SLOTS = {

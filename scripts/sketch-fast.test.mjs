@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import {
+import { nodeTestsForPaths,
   defaultWidth,
   mergedBranch,
   carriedPrs,
@@ -553,4 +553,10 @@ test("splitBatch gives each test its own output and names a cut-off test", () =>
   assert.deepEqual(split.done, [{ test: "tests/a.gd", exit: 0, ms: 5, output: "x -> PASS\na: PASS" }]);
   assert.equal(split.cut, "tests/b.gd");
   assert.deepEqual(split.rest, ["tests/c.gd"]);
+});
+
+test("nodeTestsForPaths: a park prop recipe or file faces the far-mesh fault check, other sketch paths do not", () => {
+  assert.deepEqual(nodeTestsForPaths(["assets/models/park/props/dam/cable_drum_a_lod2.glb"]), ["scripts/far-faults.test.mjs"]);
+  assert.deepEqual(nodeTestsForPaths(["tools/blender/park/props/kit.py", "src/game.gd"]), ["scripts/far-faults.test.mjs"]);
+  assert.deepEqual(nodeTestsForPaths(["src/world/park/park_dam.json", "assets/models/world_one/ambush_altar.glb"]), []);
 });

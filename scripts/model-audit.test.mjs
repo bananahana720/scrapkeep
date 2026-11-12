@@ -5,7 +5,6 @@ import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
-import { judge, readCeilings, record, scanFaults } from "./far-faults.mjs";
 
 const script = fileURLToPath(new URL("../sketches/core-loop/tools/model_audit.py", import.meta.url));
 const has = (module) => spawnSync("python3", ["-c", `import ${module}`]).status === 0;
@@ -309,25 +308,4 @@ test("usage: an unknown mode, no files and outlines without --out all exit 2", {
   assert.equal(f.run("nonsense").status, 2);
   assert.equal(f.run("faults").status, 2);
   assert.equal(f.run("outlines", f.write("a.glb", glb(box(1, 1, 1)))).status, 2);
-});
-
-// SG-16: the far-mesh fault check on every park prop (scripts/far-faults.mjs).
-test("far faults: every park prop's far mesh stays under its inside-out ceiling", { skip: !numpy && "python3 has no numpy" }, () => {
-  const rows = scanFaults();
-  assert.ok(rows.length >= 280, `${rows.length} far meshes scanned`);
-  const { over } = judge(rows, readCeilings());
-  assert.deepEqual(over, [], over.map((o) => `${o.file} ${(o.share * 100).toFixed(2)}% > ${(o.ceiling * 100).toFixed(2)}%`).join("; "));
-});
-
-test("far faults: a planted flipped far mesh fails, and recording never raises a ceiling", { skip: !numpy && "python3 has no numpy" }, (t) => {
-  const f = fixture(t);
-  const sound = f.faults(f.write("sound_lod2.glb", glb(box(1, 1, 1)))).rows[0];
-  const flipped = f.faults(f.write("flipped_lod2.glb", glb([...box(1, 1, 1).slice(0, 10), reversed(3, UP), reversed(4, UP)]))).rows[0];
-  const name = "assets/models/park/props/dam/planted_lod2.glb";
-  assert.deepEqual(judge([{ ...sound, file: name }], {}).over, []);
-  const { over } = judge([{ ...flipped, file: name }], {});
-  assert.equal(over.length, 1, "the flipped far mesh is over the new-file cap");
-  assert.equal(judge([{ ...flipped, file: name }], { [name]: 1 }).over.length, 0, "a ceiling row lets a known file stand");
-  assert.deepEqual(record([{ ...flipped, file: name }], { [name]: 0.01 }), { [name]: 0.01 }, "recording keeps the lower row");
-  assert.deepEqual(record([{ ...sound, file: name }], { [name]: 0.5 }), {}, "a fixed file drops its row");
 });

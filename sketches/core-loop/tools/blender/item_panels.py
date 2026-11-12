@@ -30,7 +30,9 @@ from mathutils import Matrix, Vector
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import common
-import palette_gd
+
+sys.path.insert(0, os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..")))
+import palette_gd  # noqa: E402
 import cycles_device
 import polish
 from common import Part
