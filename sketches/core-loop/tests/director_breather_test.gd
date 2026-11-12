@@ -2,15 +2,16 @@ extends SceneTree
 
 # Breathers (map audit unit 7, map points 2, 3 and 9; breather_rows.gd, ParkMap.breathers(), director.gd):
 # 1. Data: park_dam has two breathers and park_flume one. Each stands on the riding lines (at least LINE_MIN line nodes
-#    inside it) and clear of every fight site (its edge at least CLEAR_M from the nearest one), so no authored fight
-#    is moved by it. Planted: a breather on the Warden's beacon fails the clearance line.
-# 2. The director places no pack inside a breather: a spot inside one is refused.
-# 3. While the ball is inside one, the timer's packs are banked (up to BANK_MAX), not placed and not dropped. All of
-#    them fall due on the first tick after it leaves (ruling cu: a breather moves pressure later, never away). Over a
-#    30 s stretch (inside the bank), a stage with no breather places as many packs as one with a breather, give or
-#    take one tick; past the bank, a parked ball stores no more than BANK_MAX.
-#    Credit income keeps accruing inside, so the credit path is paid back the same way.
-# 4. Rows: every breather's radius sits inside breather_rows.gd RADIUS, and a map with no row has none.
+#    inside it) and its edge keeps CLEAR_M from every fight site, and its radius sits inside breather_rows.gd RADIUS.
+#    Planted: a breather on the Warden's beacon fails the clearance line, a 400 m one the radius line.
+# 2. Live wiring, on a director given park_dam's stage row (use_row): it reads the map's breathers, refuses a pack
+#    spot inside one, banks its ticks while the ball is inside one with no crew home in the window, and does not
+#    bank where a crew home is in the window.
+# 3. Pressure (ruling cu): while the ball is inside, ticks bank, not place and not drop. Once it leaves, the bank pays
+#    out one tick every RELEASE_GAP, so a breather crossed in its BREATH_S places as many arrivals over the stretch as
+#    no breather. A ball parked in one gets BREATH_S of quiet and then packs come as before. A tick the room cannot
+#    take stays banked. Credit income keeps accruing inside.
+#    Planted: with the breather gone, packs are placed inside.
 
 const T := preload("res://tests/support/t.gd")
 const Director := preload("res://src/world/director.gd")
@@ -20,9 +21,12 @@ const BreatherRows := preload("res://src/world/breather_rows.gd")
 const FightReach := preload("res://tests/support/fight_reach.gd")
 const Breath := preload("res://tests/park_breath_test.gd")
 
-const WANT := {"park_dam": 2, "park_flume": 1}
+const WANT := {"park_dam": 1, "park_flume": 1}
+# Line nodes inside a breather with no crew home in the window: where the director's own packs would land.
+const FREE_MIN := 10
 const LINE_MIN := 10
 const CLEAR_M := 25.0
+const ParkDefs := preload("res://src/core/park_defs.gd")
 
 var t := T.new("director_breather_test")
 
@@ -30,7 +34,10 @@ var t := T.new("director_breather_test")
 func _initialize() -> void:
 	_data()
 	_refuses_spots()
+	_live_wiring()
 	_banks_and_pays_back()
+	_parked_ball()
+	_full_room_keeps_bank()
 	_credit_keeps_accruing()
 	_schema()
 	quit(t.verdict())
@@ -88,45 +95,89 @@ static func _run(d: Director, seconds: float, ball: Vector2) -> int:
 	return landed + d.arrivals.size() - before
 
 
+func _live_wiring() -> void:
+	for i in [0, 1]:
+		var row: Dictionary = ParkDefs.DEFS[i]
+		var d := Director.new(7)
+		d.use_row(row)
+		t.eq("%s's stage row gives the director its breather" % row.map, d.breathers.size(), int(WANT[row.map]))
+		if d.breathers.is_empty():
+			continue
+		var b: Dictionary = d.breathers[0]
+		t.check("%s: the director refuses a pack spot inside it" % row.map, not d._park_safe(b["at"]))
+		var points := Breath.line_points(ParkGraph.read("res://assets/park/%s/graph.bin" % row.map))
+		var free := func(c: Vector2, r: float) -> int:
+			return points.filter(func(p: Vector2) -> bool: return p.distance_to(c) <= r and d._window_homes(p).is_empty()).size()
+		var n: int = free.call(b["at"], float(b["radius_m"]))
+		print("[breather] %s %s: %d line nodes inside with no crew home in the window" % [row.map, b["id"], n])
+		t.check("%s: it covers line nodes where the director's own packs land" % row.map, n >= FREE_MIN, "%d" % n)
+		_run(d, 4.0, b["at"])
+		t.check("%s: with the ball at its centre, ticks bank" % row.map, d.banked > 0 or d._timer > 0.0 and d.breath_used.get(b["id"], 0.0) > 0.0, "%d banked, %.1f s used" % [d.banked, float(d.breath_used.get(b["id"], 0.0))])
+		if i == 0:
+			# Planted: the apron below the dam face is quiet but a crew home is always in its window, so it would bank nothing.
+			var apron: int = free.call(Vector2(-8.0, 240.0), 60.0)
+			t.check("planted: a quiet circle with a crew home always ahead covers no free line node", apron < FREE_MIN, "%d" % apron)
+			var d2 := Director.new(7)
+			d2.use_row(row)
+			d2.breathers = [{"id": "apron", "at": Vector2(-8.0, 240.0), "radius_m": 60.0}]
+			_run(d2, 4.0, Vector2(-8.0, 240.0))
+			t.eq("and a ball there banks nothing: the crew home keeps its fight", d2.banked, 0)
+
+
 func _banks_and_pays_back() -> void:
-	var d := _director(true)
-	var inside := _run(d, 80.0, Vector2.ZERO)
-	t.eq("no pack is placed while the ball is inside", inside, 0)
-	t.eq("the timer's packs are banked, up to BANK_MAX", d.banked, Director.BANK_MAX)
 	var out := Vector2(500.0, 0.0)
-	var paid := _run(d, 1.0 / 60.0, out)
-	# A tick queues a single or a pack of two, so BANK_MAX ticks queue at least BANK_MAX arrivals.
-	t.check("every banked tick falls due on the first tick out", paid >= Director.BANK_MAX, "%d arrivals" % paid)
-	t.eq("the bank is empty after", d.banked, 0)
-	# The same stretch with no breather: the breather moved packs later, not away (within one tick of the timer).
-	var plain := _director(false)
-	var plain_made := _run(plain, 30.0, Vector2.ZERO) + _run(plain, 1.0 / 60.0, out)
+	# A crossing inside BREATH_S, then the stretch after it: the bank pays out and the stretch places as many as none.
 	var held := _director(true)
-	paid = _run(held, 30.0, Vector2.ZERO) + _run(held, 1.0 / 60.0, out)
-	print("[breather] 30 s inside then out: %d arrivals with a breather (BANK_MAX %d), %d without" % [paid, Director.BANK_MAX, plain_made])
-	t.check("a breather inside the bank keeps every pack of the stretch, within one tick", absi(plain_made - paid) <= 1, "%d vs %d" % [paid, plain_made])
-	var short := _director(true)
-	var plain_short := _director(false)
-	var a := _run(short, 9.0, Vector2.ZERO) + _run(short, 1.0 / 60.0, out)
-	var b := _run(plain_short, 9.0, Vector2.ZERO) + _run(plain_short, 1.0 / 60.0, out)
-	t.eq("a breather shorter than the bank costs no pack", a, b)
+	var inside := _run(held, 6.0, Vector2.ZERO)
+	t.eq("no pack is placed while the ball is inside", inside, 0)
+	t.check("the timer's ticks are banked", held.banked > 0, "%d" % held.banked)
+	var banked := held.banked
+	var first := _run(held, 1.0 / 60.0, out)
+	t.check("the first tick out pays a banked tick", first >= 1 and held.banked == banked - 1, "%d arrivals, %d left" % [first, held.banked])
+	var paid := inside + first + _run(held, 20.0, out)
+	t.eq("the bank is empty after", held.banked, 0)
+	var plain := _director(false)
+	var plain_made := _run(plain, 6.0, Vector2.ZERO) + _run(plain, 1.0 / 60.0, out) + _run(plain, 20.0, out)
+	print("[breather] 6 s inside then 20 s out: %d arrivals with a breather, %d without" % [paid, plain_made])
+	t.check("a breather crossed in BREATH_S places as many over the stretch as none, within one tick", absi(plain_made - paid) <= 2, "%d vs %d" % [paid, plain_made])
 	var planted := _director(true)
 	planted.breathers = []
 	t.check("planted: with the breather gone, packs are placed inside", _run(planted, 40.0, Vector2.ZERO) > 0)
 
 
+func _parked_ball() -> void:
+	var d := _director(true)
+	_run(d, Director.BREATH_S - 0.1, Vector2.ZERO)
+	t.eq("quiet for BREATH_S", d.arrivals.size(), 0)
+	var later := _run(d, 30.0, Vector2.ZERO)
+	t.check("a ball parked past BREATH_S meets packs again", later > 0, "%d" % later)
+	t.near("its breather's quiet is spent", float(d.breath_used["test"]), Director.BREATH_S, 0.05)
+
+
+func _full_room_keeps_bank() -> void:
+	var d := _director(true)
+	_run(d, 6.0, Vector2.ZERO)
+	var banked := d.banked
+	for i in 30:
+		d.advance(1.0 / 60.0, d.cap(), Vector2(500.0, 0.0), Vector2(0.0, 10.0), Vector2(0.0, 1.0))
+	t.eq("a full room keeps the bank", d.banked, banked)
+
+
 func _credit_keeps_accruing() -> void:
 	var d := _director(true)
 	d.mode = "credit"
-	_run(d, 20.0, Vector2.ZERO)
+	_run(d, Director.BREATH_S - 1.0, Vector2.ZERO)
 	t.eq("credit path: no pack placed inside", d.arrivals.size(), 0)
 	t.check("credit path: income keeps accruing inside", d.credits > 0.0 and is_equal_approx(d.credits, d.credits_accrued), "%.2f" % d.credits)
+
+
+static func radius_ok(r: float) -> bool:
+	return r >= BreatherRows.RADIUS.x and r <= BreatherRows.RADIUS.y
 
 
 func _schema() -> void:
 	for map_id in BreatherRows.ROWS:
 		for b in BreatherRows.rows(map_id):
-			var r := float(b["radius_m"])
-			t.check("%s %s radius inside RADIUS" % [map_id, b["id"]], r >= BreatherRows.RADIUS.x and r <= BreatherRows.RADIUS.y, "%.0f" % r)
-	t.check("planted: a 400 m breather is outside RADIUS", 400.0 > BreatherRows.RADIUS.y)
+			t.check("%s %s radius inside RADIUS" % [map_id, b["id"]], radius_ok(float(b["radius_m"])), "%.0f" % float(b["radius_m"]))
+	t.check("planted: a 400 m breather fails the radius line", not radius_ok(400.0))
 	t.eq("a map with no row has no breathers", BreatherRows.rows("park_crown"), [])

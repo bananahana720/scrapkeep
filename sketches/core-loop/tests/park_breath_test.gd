@@ -6,8 +6,9 @@ extends SceneTree
 # ring) must be at least QUIET_SHARE_MIN. The line is a start value, set before calibration.
 #
 # Blind spot: the director's timer packs spawn 60-90 m ahead of the ball anywhere off the pilot corridors, so no line
-# node is quiet from them. This check reads only the authored sites until breather zones (a tagged area where the
-# director places no pack, map-audit unit 7) give it something to read.
+# node is quiet from them. This check reads only the authored sites; breather zones (src/world/breather_rows.gd, where
+# the director places no pack of its own, map-audit unit 7) cover the timer packs and are checked in
+# director_breather_test.gd.
 #
 # Output: `MAPCHECK <stage> line_quiet_share <value> pass>=<line> PASS|FAIL|OWED`. OWED lists the stages under the line
 # today; the test fails if an OWED stage now meets it (prune the entry) and if an unlisted stage is under it.
@@ -27,7 +28,7 @@ const QUIET_SHARE_MIN := 0.25
 
 # {"<stage>": {"value": measured share, "why": "..."}}
 const OWED := {
-	"park_flume": {"value": 0.18, "why": "the flume reach (trestle_drones on 373 m of grind and the trestle collapse face over it, 122 line nodes each) and the wasteway chute (its chasers and flash flood, 88) lie along the riding lines; breather zones in park_flume.json wait for PR 753"},
+	"park_flume": {"value": 0.18, "why": "the flume reach (trestle_drones on 373 m of grind and the trestle collapse face over it, 122 line nodes each) and the wasteway chute (its chasers and flash flood, 88) lie along the riding lines; the landing breather (breather_rows.gd) holds the timer packs, not these authored fights"},
 }
 
 var t := T.new("park_breath_test")

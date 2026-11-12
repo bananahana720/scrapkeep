@@ -48,7 +48,7 @@ Data the checks read, all public today unless noted: stage graph `src/world/park
 |---|---|---|---|---|
 | 1 Signposts | CODE gate | open-cell sight share (exists) and LINE-node SIGHT_OK share, each >= 0.85 | extend `tests/park_landmark_sight_test.gd` (2.9 s) | exists (300 m wall, `:15,148-159`); add: clear SIGHT_OK on line nodes |
 | 1 picture | PICTURE | 8 fixed chase-camera poses on the lines, beam at 50 m, 150 m, drop-in; "point at the landmark", "light or wall?" | new `tools/map_sheet_capture.gd`, one sheet a stage | control still with the beam hidden |
-| 2 Breathing | CODE | share of LINE nodes > 60 m from every home, event footprint, yard ring: >= 0.25 (start value) | `tests/park_breath_test.gd`, needs `fight_sites()` | a home on every line segment gives 0. Blind to timer packs until breather zones exist |
+| 2 Breathing | CODE | share of LINE nodes > 60 m from every home, event footprint, yard ring: >= 0.25 (start value) | `tests/park_breath_test.gd`, needs `fight_sites()` | a home on every line segment gives 0. Blind to timer packs; breather zones (`src/world/breather_rows.gd`, checked in `tests/director_breather_test.gd`) hold those |
 | 3 Rhythm | CODE | fight/quiet strip along the floor line at 20 m/s: >= 3 switches, longest heavy run <= 45 s | `tests/park_rhythm_test.gd` | all homes in the last 300 m gives 1 switch |
 | 4 Hybrid | CODE | 50 seeds a stage: >= 10 distinct (pockets, rogue site, modifier) sets | `tests/park_variety_test.gd`, data only | modifier chance 0 and a one-entry library give 1 set |
 | 5 Cover and reading | PICTURE gate | danger marks with the ball inside and outside; blind read "where is safe" | exists: `tools/danger_read_capture.gd`, `scripts/redteam/` | control still with the yard wall in HAZARD stripes |
@@ -82,7 +82,7 @@ Data the checks read, all public today unless noted: stage graph `src/world/park
 | flume | rides climbing 10 m or more | 3 | 4 | OWED |
 | flume | hub zones reaching 3 bands | 5 | 1 | pass |
 | dam | riding-line nodes 60 m clear of every fight site (point 2) | 0.43 | 0.25 | pass |
-| flume | riding-line nodes 60 m clear of every fight site (point 2) | 0.18 | 0.25 | OWED: the flume reach (drones and the trestle collapse face) and the wasteway chute fights lie along the lines; breather zones wait for PR 753 |
+| flume | riding-line nodes 60 m clear of every fight site (point 2) | 0.18 | 0.25 | OWED: the flume reach (drones and the trestle collapse face) and the wasteway chute fights lie along the lines; the landing breather holds only timer packs, not these fights |
 | dam | floor line heavy/quiet switches at 20 m/s, quiet gaps under 5 s between fights folded (point 3) | 2 | 3 | OWED: domes then west wash, 46 s with a 1 s gap |
 | dam | longest heavy run on the floor line (point 3) | 46.2 s | 45 s | OWED |
 | flume | floor line switches; longest heavy run (point 3) | 9; 15.0 s | 3; 45 s | pass |
