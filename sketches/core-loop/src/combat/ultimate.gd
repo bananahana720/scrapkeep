@@ -186,6 +186,7 @@ func setup(ctx_ref, combat_ref) -> void:
 	ev.near_miss.connect(func(_kind: String, _at: Vector3): _feed("near_miss"))
 	ev.enemy_killed.connect(func(_kind: String, _at: Vector3, _scrap: int): _feed("kill"))
 	ev.posture_changed.connect(_on_posture)
+	ev.boss_reeled.connect(func(_at: Vector3, _scrap: int): _feed("reel"))
 	ev.run_started.connect(func(_class_id: String):
 		_abort("stage")
 		meter.reset()
