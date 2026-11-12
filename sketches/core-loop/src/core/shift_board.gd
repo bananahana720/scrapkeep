@@ -71,6 +71,8 @@ const CARDS := [
 # variants, run modifiers and unlock-gated anticipation in the spirit of Isaac's variant floors).
 # Nothing reads these yet: a variant or modifier system asks open_seeds() which are open and
 # builds only those. Each names the rung that opens it, so the player sees it coming on the board.
+# A seed shows to the player only once its variant or modifier is built (Andrew, 12 Nov 2026, card on
+# W1-72): a teaser for something stamping the rung would not deliver is a broken promise.
 # kind   stage_variant or run_modifier
 # gate   the rung id that opens it
 # text   what it would be, 12 words or fewer

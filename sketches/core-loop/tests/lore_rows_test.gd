@@ -142,11 +142,24 @@ func _calls() -> void:
 		var id := String(row.get("id", ""))
 		_report("call id", id.begins_with("call.") and not ids.has(id), id)
 		ids[id] = true
-		var text := String(row.get("text", ""))
-		var words := WordBudget.words_in(text)
-		_report(id + " words", words > 0 and words <= LoreRows.CALL_LINE_WORD_CAP, "%d / %d words" % [words, LoreRows.CALL_LINE_WORD_CAP])
-		for marker in FORBIDDEN_TEXT:
-			_report(id + " final text", not text.to_lower().contains(marker), "no " + marker)
+		# W1-71: a world 1 call has two or three ways to say it, each its own line within the cap.
+		var lines: Array = row.get("text", []) if row.get("text") is Array else [row.get("text", "")]
+		_report(id + " variants", lines.size() >= 2 and lines.size() <= 3, "%d lines" % lines.size())
+		var distinct := {}
+		for line in lines:
+			var text := String(line)
+			distinct[text] = true
+			var words := WordBudget.words_in(text)
+			_report(id + " words", words > 0 and words <= LoreRows.CALL_LINE_WORD_CAP, "%d / %d words: %s" % [words, LoreRows.CALL_LINE_WORD_CAP, text])
+			for marker in FORBIDDEN_TEXT:
+				_report(id + " final text", not text.to_lower().contains(marker), "no " + marker)
+		_report(id + " variants differ", distinct.size() == lines.size(), str(lines))
+		# The seed picks one line, the same one every time, and enough seeds hear every line.
+		var heard := {}
+		for seed_n in 64:
+			heard[LoreRows.call_text(row, seed_n)] = true
+		_report(id + " seed picks a line", LoreRows.call_text(row, 41) == LoreRows.call_text(row, 41) and heard.keys().all(func(h): return distinct.has(h)), str(heard.keys()))
+		_report(id + " every line is heard", heard.size() == lines.size(), "%d of %d over 64 seeds" % [heard.size(), lines.size()])
 		_report(id + " speaker", LoreRows.SPEAKERS.has(row.get("speaker", "")), String(row.get("speaker", "")))
 		_report(id + " world", int(row.get("world", 0)) == 1, "world 1 only until the sitting")
 		var on := String(row.get("on", ""))
@@ -184,6 +197,13 @@ func _calls() -> void:
 		str(voices["lore.spillway.intro.brindle"]))
 	_report("an unlisted caller has no voice", LoreRows.voice_of({"kind": "exchange", "speaker": "Deck crew", "text": "x"}) == ""
 			and LoreRows.voice_of({"kind": "intro", "zone": "2-1", "subject": "warden", "text": "Pit Warden. x"}) == "", "Deck crew and the pit Warden's line stay silent")
+	_report("a single-line call reads as itself", LoreRows.call_text({"id": "call.x", "text": "One line."}, 9) == "One line.", "string text")
+	# Two rows on one seed do not all take the same place in their lists (the pick is salted by id).
+	var places := {}
+	for row in LoreRows.CALLS:
+		var lines: Array = row["text"]
+		places[lines.find(LoreRows.call_text(row, 5))] = true
+	_report("rows on one seed spread over their lists", places.size() > 1, str(places.keys()))
 	var signals: Array = LoreRows.call_signals()
 	_report("call signals", signals.size() == 7 and signals.all(func(s): return signals.count(s) == 1 and LoreRows.CALLS.any(func(r): return r["on"] == s)),
 		str(signals))

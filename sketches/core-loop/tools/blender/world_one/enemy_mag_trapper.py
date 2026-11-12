@@ -25,6 +25,7 @@ import bpy
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 import common
+import crew
 import polish
 from common import Part
 
@@ -47,10 +48,8 @@ b = Part("MagTrapperBody")
 # Crew: a barrel torso (rust, flashes at runtime), a round head, a charcoal snout and ears.
 b.cyl("fleet_paint", 0.66, 0.80, 1.1, segs=10, loc=(0, 0, -0.55))
 b.cyl("fleet_paint", 0.80, 0.70, 1.1, segs=10, loc=(0, 0, 0.55))
-b.uv("fleet_paint", 0.38, u=10, v=6, loc=(0, 0, 1.3))
-b.box("paint", (0.26, 0.30, 0.22), loc=(0, -0.38, 1.22), color=CHAR)
-for s in (-1, 1):
-    b.cyl("paint", 0.13, 0.0, 0.34, segs=6, loc=(s * 0.2, 0, 1.62), color=CHAR)
+crew.animal_head(b, (0, 0, 1.3), 0.38, snout=((0.26, 0.30, 0.22), (0, -0.38, 1.22)),
+                 ears=(0.13, 0.34, [(s * 0.2, 0, 1.62) for s in (-1, 1)]))
 b.cyl("paint", 0.81, 0.81, 0.12, segs=10, loc=(0, 0, 0.1), color=CHAR)  # strap
 b.box("paint", (0.36, 0.06, 0.24), loc=(0, -0.79, 0.3), color=BRASS)  # the one brass tag
 # Cart: bed, four boards, hitch, axle and two big wheels, all under the discs' footprint.

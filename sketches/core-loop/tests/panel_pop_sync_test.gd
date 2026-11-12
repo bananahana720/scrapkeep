@@ -16,17 +16,11 @@ var _t := T.new("panel_pop_sync_test")
 
 
 class Stub:
-	var reduced_motion := false
 	var shown: Array = []
 	var clock := 0.0
-	var player = self
 
-	func shown_position() -> Vector3:
-		return Vector3.ZERO
-
-	func word(text: String, _at: Vector3, _tint: Color, _force := false, _life := 1.0, _size := 1.0) -> bool:
+	func show_line(text: String, _tint: Color, _row: int, _life: float) -> void:
 		shown.append([text, clock])
-		return true
 
 	func play(_id: String, _a := 0.0, _b := 1.0, _bus := "SFX", _c := "") -> void:
 		pass
@@ -42,11 +36,10 @@ class Ctx:
 func _pile(ids: Array, fold: bool) -> Array:
 	var stub := Stub.new()
 	var ctx := Ctx.new()
-	ctx.player = stub
 	var fx = PanelFx.new()
 	fx.ctx = ctx
 	fx.audio = stub
-	fx.machine_fx = stub
+	fx.popped.connect(stub.show_line)
 	for id in ids:
 		if fold:
 			fx._on_panel_gained(id, 1, Vector3.ZERO, false)

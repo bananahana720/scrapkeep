@@ -27,6 +27,7 @@ import bpy
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 import common
+import crew
 import polish
 from common import Part
 
@@ -47,10 +48,8 @@ BRASS = "brass"
 b = Part("BolaThrowerBody")
 b.cyl("fleet_paint", 0.62, 0.72, 1.0, segs=10, loc=(0, 0, -0.6))
 b.cyl("fleet_paint", 0.74, 0.54, 0.95, segs=10, loc=(0, 0, 0.37))
-b.uv("fleet_paint", 0.36, u=10, v=6, loc=(0, 0, 1.13))
-b.box("paint", (0.26, 0.30, 0.22), loc=(0, -0.36, 1.06), color=CHAR)  # snout
-for s in (-1, 1):
-    b.cyl("paint", 0.13, 0.0, 0.34, segs=6, loc=(s * 0.2, 0, 1.5), color=CHAR)  # ears
+crew.animal_head(b, (0, 0, 1.13), 0.36, snout=((0.26, 0.30, 0.22), (0, -0.36, 1.06)),
+                 ears=(0.13, 0.34, [(s * 0.2, 0, 1.5) for s in (-1, 1)]))
 b.cyl("paint", 0.76, 0.76, 0.12, segs=10, loc=(0, 0, 0.0), color=CHAR)  # strap
 b.box("paint", (0.36, 0.06, 0.24), loc=(0, -0.72, 0.28), color=BRASS)  # the one brass tag
 # The throwing arm rises beside the head to a glove under the loop's hub.

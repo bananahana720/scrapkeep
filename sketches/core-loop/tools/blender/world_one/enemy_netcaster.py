@@ -27,6 +27,7 @@ import bpy
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 import common
+import crew
 import polish
 from common import Part
 
@@ -52,10 +53,8 @@ b = Part("NetcasterBody")
 # Crew: a barrel torso (rust, flashes at runtime), a round head, a charcoal snout and ears.
 b.cyl("fleet_paint", 0.40, 0.46, 1.0, segs=10, loc=(0, CREW_Y, -0.6))
 b.cyl("fleet_paint", 0.46, 0.40, 0.9, segs=10, loc=(0, CREW_Y, 0.35))
-b.uv("fleet_paint", 0.32, u=10, v=6, loc=(0, CREW_Y, 1.0))
-b.box("paint", (0.22, 0.26, 0.18), loc=(0, CREW_Y - 0.3, 0.94), color=CHAR)
-for s in (-1, 1):
-    b.cyl("paint", 0.12, 0.0, 0.30, segs=6, loc=(s * 0.17, CREW_Y, 1.36), color=CHAR)
+crew.animal_head(b, (0, CREW_Y, 1.0), 0.32, snout=((0.22, 0.26, 0.18), (0, CREW_Y - 0.3, 0.94)),
+                 ears=(0.12, 0.30, [(s * 0.17, CREW_Y, 1.36) for s in (-1, 1)]))
 b.cyl("paint", 0.47, 0.47, 0.10, segs=10, loc=(0, CREW_Y, -0.05), color=CHAR)  # strap
 b.box("paint", (0.30, 0.05, 0.20), loc=(0, CREW_Y - 0.46, 0.05), color=BRASS)  # the one brass tag
 # Cable spool on the crew's back, feeding the masts.

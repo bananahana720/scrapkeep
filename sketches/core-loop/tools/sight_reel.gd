@@ -42,8 +42,9 @@ const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const Telegraph := preload("res://src/combat/telegraph.gd")
 const EnemyClips := preload("res://src/presentation/enemy_clips.gd")
-const MachineFx := preload("res://src/presentation/machine_fx.gd")
 const PanelFx := preload("res://src/presentation/panel_fx.gd")
+const PickupLines := preload("res://src/ui/pickup_lines.gd")
+const UiFonts := preload("res://src/ui/ui_fonts.gd")
 const Panels := preload("res://src/build/panels.gd")
 const Palette := preload("res://src/core/palette.gd")
 const MossBubble := preload("res://src/ui/moss_bubble.gd")
@@ -253,38 +254,31 @@ func _run() -> void:
 	quit(0)
 
 
-# The panel pickup's pop as panel_fx.gd stamps it, for the shortest, the middle and the longest
-# line a panel has, each for its whole life, then one of the player's own words beside the ball.
+# The panel pickup's pop as the HUD draws it at its edge (ui/pickup_lines.gd, PF-14), for the
+# shortest, the middle and the longest line a panel has, each for its whole life, then one of the
+# player's own words beside the ball.
 func _pop() -> void:
-	var fx = game.presentation.machine_fx
-	var label := MachineFx.word_label()
-	var font := label.font if label.font != null else ThemeDB.fallback_font
+	var font := UiFonts.bold()
 	var lines := []
 	for id in Panels.ids():
 		var text := Panels.pop_text(id)
-		lines.append([font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, label.font_size).x, text])
-	label.free()
+		lines.append([font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, PickupLines.FONT).x, text])
 	if lines.is_empty():
 		return
 	lines.sort_custom(func(a, b): return a[0] < b[0])
 	var view := root.get_visible_rect().size
+	var shown: Control = game.hud.pickup_lines
 	for line in [lines[0], lines[lines.size() / 2], lines[-1]]:
 		var text: String = line[1]
 		_say("pickup pop  %s" % text)
-		var before := _newest(fx)
-		fx.word(text, game.player.shown_position() + Vector3.UP * PanelFx.POP_HEIGHT, Palette.SAND, true, PanelFx.POP_LIFE, PanelFx.POP_SIZE)
-		var slot := _newest(fx)
-		if slot.is_empty() or slot == before:
-			return _fail("the pop did not stamp")
+		shown.show_line(text, Palette.SAND, 0, PanelFx.POP_LIFE)
 		await _seconds(PanelFx.POP_LIFE * 0.4)
-		var word: Label3D = slot["node"]
-		var cam := root.get_camera_3d()
-		var at: Vector3 = slot["at"]
-		var px_per_m := cam.unproject_position(at + cam.global_basis.x).distance_to(cam.unproject_position(at))
-		var metres: float = word.pixel_size * word.scale.x
-		pops.append({"text": text, "reel_s": snappedf(clock, 0.01), "scale": snappedf(word.scale.x, 0.001),
-			"width_of_view": snappedf(float(slot["width_px"]) * metres * px_per_m / view.x, 0.001),
-			"letters_of_height": snappedf(word.font_size * CAP * metres * px_per_m / view.y, 0.0001)})
+		if not text in shown.drawn_words():
+			return _fail("the pop did not show")
+		var scale := shown.get_global_transform_with_canvas().get_scale().y
+		pops.append({"text": text, "reel_s": snappedf(clock, 0.01), "scale": snappedf(scale, 0.001),
+			"width_of_view": snappedf(float(line[0]) * scale / view.x, 0.001),
+			"letters_of_height": snappedf(PickupLines.FONT * CAP * scale / view.y, 0.0001)})
 		await _seconds(PanelFx.POP_LIFE * 0.6 + GAP)
 	# The player's word may be refused (its own gap and density rules); the count says so.
 	hit_word = game.presentation.player_fx.word("wham", game.player.shown_position() + Vector3.UP * 1.8)
@@ -292,12 +286,6 @@ func _pop() -> void:
 	await _seconds(1.5)
 	_say("")
 	await _seconds(GAP)
-
-
-# The word slot machine_fx stamped last (its pool is a ring).
-static func _newest(fx) -> Dictionary:
-	var words: Array = fx._words
-	return words[posmod(int(fx._word_next) - 1, words.size())] if not words.is_empty() else {}
 
 
 # One step of the count, every drawn frame: each part against the body, and a snap named once
