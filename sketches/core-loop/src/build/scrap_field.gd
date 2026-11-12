@@ -2,10 +2,15 @@ extends Node3D
 
 const Palette := preload("res://src/core/palette.gd")
 const SfxBank := preload("res://src/presentation/sfx_bank.gd")
+const Panels := preload("res://src/build/panels.gd")
+const PanelShell := preload("res://src/build/panel_shell.gd")
 const PICKUP_GLB := "res://assets/models/world_one/scrap_pickups.glb"
 const PICKUP_VARIANTS := ["BentPlate", "GearSegment", "PipeStub", "BoltCluster"]
+# The money, in the same kit: a worn steel cog with bone teeth (W1-21).
+const COG_PART := "Cog"
 static var _pickup_mesh_cache: Array[Mesh] = []
 static var _recovery_mesh_cache: Array[Mesh] = []
+static var _cog_model: Mesh = null
 static var model_path := PICKUP_GLB
 static var _pickup_assets := {}
 
@@ -65,7 +70,7 @@ signal recovered(value: int)
 var recovered_values: Array[int] = []
 var expired_values: Array[int] = []
 
-# Cogs (CG1): the spend wallet's pickups, brass gears that share the magnet and the arc
+# Cogs (CG1): the spend wallet's pickups, steel gears that share the magnet and the arc
 # pull but never add mass. A scrap line lays one gear worth COG_LINE_VALUE beside every
 # COG_LINE_EVERY-th piece, and a kill drops one 1-cog gear per scrap unit it drops, so a
 # run earns about the cogs it once earned as wallet scrap from lines and kills. Gears are
@@ -76,7 +81,9 @@ const COG_LINE_SIDE := 1.5
 const COG_RING := 1.8
 # What the last step() collected as cogs, one value per gear.
 var cog_values: Array[int] = []
-# Grey panel pickups (build/panels.gd): item -> {id, jackpot}. They never fold or expire; what
+# Grey panel pickups (build/panels.gd): item -> {id, jackpot}. A panel on the ground is its own kit plate from
+# the ball (panel_shell.gd), lying flat at GROUND_PLATE times the plate's size so it reads from the gameplay
+# camera. They never fold or expire; what
 # the last step() took is in panel_takes, one {id, jackpot, at} per panel.
 var _panels := {}
 var panel_takes: Array[Dictionary] = []
@@ -84,6 +91,8 @@ var _panel_mesh: BoxMesh
 var _panel_material: Material
 var _panel_column: CylinderMesh
 var _panel_column_material: Material
+const GROUND_PLATE := 2.0
+static var _ground_plates := {}
 # Rib caches (panels waiting at the end of a dead end): a tall thin column that clears the
 # route's skyline, and a two-note chime loop heard from CACHE_HEAR metres.
 # Each maps the panel to the ground it was dropped on.
@@ -99,8 +108,8 @@ var _age := {}
 var _cogs := {}
 # Units a folded piece carries beyond its own one (plain pieces only; gears fold into _cogs).
 var _units := {}
-var _cog_material: StandardMaterial3D
-var _cog_mesh: CylinderMesh
+var _cog_material: Material
+var _cog_mesh: Mesh
 var _cluster_material: Material
 var _cluster_mesh: BoxMesh
 var _items: Array[MeshInstance3D] = []
@@ -118,7 +127,7 @@ func setup() -> void:
 	_cluster_material = Palette.solid(Palette.AMBER, 2.2)
 	_cluster_mesh = BoxMesh.new()
 	_cluster_mesh.size = Vector3(1.4, 1.4, 1.4)
-	_cog_material = Palette.solid(Palette.BRASS, 1.8)
+	_cog_material = Palette.solid(Palette.STEEL, 1.8)
 	_cog_mesh = CylinderMesh.new()
 	_cog_mesh.top_radius = 0.45
 	_cog_mesh.bottom_radius = 0.45
@@ -145,6 +154,9 @@ func setup() -> void:
 		_cluster_material = _pickup_material(Palette.AMBER)
 		_material.resource_name = "field"
 		_cluster_material.resource_name = "field"
+	if _cog_model != null:
+		_cog_mesh = _cog_model
+		_cog_material = _cog_glow()
 
 
 static func _pickup_material(color: Color) -> ShaderMaterial:
@@ -157,7 +169,15 @@ static func _pickup_material(color: Color) -> ShaderMaterial:
 	return material
 
 
-# A field piece and a recovery cluster as _add draws them, each pickup variant once (BakeWarm builds
+# The cog's glow: the pickup shader's rim in bone over the steel, softer than the mint field's.
+static func _cog_glow() -> ShaderMaterial:
+	var material := _pickup_material(Palette.SAND)
+	material.set_shader_parameter("rim_energy", 0.9)
+	material.set_shader_parameter("emission_ceiling", 1.0)
+	return material
+
+
+# A field piece, a recovery cluster and a cog as _add draws them, each pickup variant once (BakeWarm builds
 # them at stage entry, so the run's first kill draws no pickup surface for the first time).
 static func warm_views() -> Array[Node3D]:
 	var views: Array[Node3D] = []
@@ -170,6 +190,11 @@ static func warm_views() -> Array[Node3D]:
 		view.mesh = mesh
 		view.material_override = material
 		views.append(view)
+	if _cog_model != null:
+		var cog := MeshInstance3D.new()
+		cog.mesh = _cog_model
+		cog.material_override = _cog_glow()
+		views.append(cog)
 	return views
 
 
@@ -177,23 +202,27 @@ static func _pickup_meshes() -> Array[Mesh]:
 	if _pickup_assets.has(model_path):
 		_pickup_mesh_cache = _pickup_assets[model_path]["meshes"]
 		_recovery_mesh_cache = _pickup_assets[model_path]["recovery"]
+		_cog_model = _pickup_assets[model_path]["cog"]
 		return _pickup_mesh_cache
 	_pickup_mesh_cache = []
 	_recovery_mesh_cache = []
+	_cog_model = null
 	var packed := load(model_path) as PackedScene if ResourceLoader.exists(model_path) else null
 	if packed != null:
 		var scene := packed.instantiate()
 		if scene != null:
 			var parts := scene.find_children("*", "MeshInstance3D", true, false)
-			if parts.size() == PICKUP_VARIANTS.size():
+			if parts.size() == PICKUP_VARIANTS.size() + 1:
 				for variant in PICKUP_VARIANTS:
 					var part := scene.find_child(variant, true, false) as MeshInstance3D
 					if not _valid_pickup(part):
 						_pickup_mesh_cache.clear()
 						break
 					_pickup_mesh_cache.append(part.mesh)
+				var cog := scene.find_child(COG_PART, true, false) as MeshInstance3D
+				_cog_model = cog.mesh if _valid_pickup(cog) else null
 			scene.free()
-	if _pickup_mesh_cache.is_empty():
+	if _pickup_mesh_cache.is_empty() or _cog_model == null:
 		push_warning("scrap field: missing or malformed model; using scrap box fallback")
 	else:
 		for mesh in _pickup_mesh_cache:
@@ -206,7 +235,7 @@ static func _pickup_meshes() -> Array[Mesh]:
 			cluster.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
 			cluster.surface_set_material(0, mesh.surface_get_material(0))
 			_recovery_mesh_cache.append(cluster)
-	_pickup_assets[model_path] = {"meshes": _pickup_mesh_cache, "recovery": _recovery_mesh_cache}
+	_pickup_assets[model_path] = {"meshes": _pickup_mesh_cache, "recovery": _recovery_mesh_cache, "cog": _cog_model}
 	return _pickup_mesh_cache
 
 
@@ -343,9 +372,12 @@ func panel_count() -> int:
 	return _panels.size()
 
 
-# One grey panel dropped at `at`, waiting for the ball like a gear.
+# One grey panel dropped at `at`, waiting for the ball like a gear: the panel's own kit plate, lying flat.
 func drop_panel(at: Vector3, panel_id: String, jackpot := false, cache := false) -> void:
-	var item := _add(at + Vector3.UP * 1.2, _panel_mesh, _panel_material)
+	var plate := ground_plate(panel_id)
+	var item := _add(at + Vector3.UP * 1.2, plate if plate != null else _panel_mesh, _panel_material)
+	if plate != null:
+		item.material_override = null
 	var column := MeshInstance3D.new()
 	column.mesh = _cache_column if cache else _panel_column
 	column.material_override = _panel_column_material
@@ -364,6 +396,28 @@ func drop_panel(at: Vector3, panel_id: String, jackpot := false, cache := false)
 		chime.max_distance = CACHE_HEAR
 		chime.autoplay = true
 		item.add_child(chime)
+
+
+# The kit plate panel_shell.gd bolts onto the ball for this panel, GROUND_PLATE times larger with its own two
+# materials; null when the plate does not load (panel_shell reports that), and the field draws its slate box.
+static func ground_plate(panel_id: String) -> Mesh:
+	var silhouette: String = Panels.ROWS[panel_id]["silhouette"] if Panels.ROWS.has(panel_id) else "tile"
+	if _ground_plates.has(silhouette):
+		return _ground_plates[silhouette]
+	var source := PanelShell.plate_mesh(silhouette)
+	if source == null:
+		return null
+	var plate := ArrayMesh.new()
+	for surface in source.get_surface_count():
+		var arrays := source.surface_get_arrays(surface)
+		var vertices: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+		for i in vertices.size():
+			vertices[i] *= GROUND_PLATE
+		arrays[Mesh.ARRAY_VERTEX] = vertices
+		plate.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+		plate.surface_set_material(surface, source.surface_get_material(surface))
+	_ground_plates[silhouette] = plate
+	return plate
 
 
 # The rib caches still waiting on the ground.

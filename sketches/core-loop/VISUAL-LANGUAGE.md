@@ -46,7 +46,8 @@ The eight AD-02 colours carry every role. Four extensions already live in code a
 | Field mint | `#8bf0d3` | The shared collection field (scrap, beacon, core), **Sable**, the arc element, common rarity (the field-kit rung) on cards, gates and shop frames | Enemy parts; ambient decoration away from a working device |
 | Fleet cobalt (extension) | `#3d8bff` | Rare rarity: the fleet-grade rung, on cards, gates, shop frames and the ball's rare part pieces | Hostile marks, the ancients' light |
 | HAZARD (extension) | `#ff5a3c` | Hostile danger areas and nothing else | Any reward, any player effect |
-| BRASS (extension) | `#d9b44a` | Admiral Brindle and the Fleet's requisition tags | Player effects |
+| BRASS (extension) | `#d9b44a` | Admiral Brindle and the Fleet's requisition tags | Player effects, the money |
+| Worn steel (extension, W1-21, 12 Nov 2026) | `#9aa0a0` | The cog (the money) with bone-worn teeth, the HUD wallet chip, the grey panels' hardware (`Palette.STEEL`). Chosen off brass because a deuteranope reads brass as the relic's amber; an assumption Andrew can overturn | Not-yet states (slate's job), hostile marks |
 | ICE (extension) | `#c8f0ff` | The frost element | Anything that is not frost |
 | ANCIENT | `#9dff3c` (candidate B, chosen by Andrew 2026-10-09; seams carry the pattern cue) | Light seams on awakened ancient machines, the focal landmark's beacon | The Fleet, the player, rewards, danger areas |
 | Life lilac (extension, proposed 2026-10-19) | hue 250°–300°, saturation 0.15–0.55, for example `#8f84b3` | Ambient critters and locals: harmless and alive. Measured: no enemy, Warden or boss GLB has a saturated colour in 240°–330° (`tests/ambient_palette_test.gd` re-measures every run). See [AMBIENT-LIFE.md](AMBIENT-LIFE.md) | Enemy parts, telegraphs, rewards, pickups, targets, any emissive light |

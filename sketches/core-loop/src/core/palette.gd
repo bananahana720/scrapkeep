@@ -26,6 +26,9 @@ const BRASS := Color("d9b44a")
 const LEDGER := Color("e6d9b8")
 # "Not yet": out of range, a glancing hit, a locked thing. Cool, so no warm colour shares it.
 const SLATE := Color("6f7f8f")
+# Worn steel: the cog, the money, and the grey panels' hardware (W1-21). Neutral and light, so it is
+# neither Brindle's brass nor the relic's amber to any eye, nor slate's cool "not yet".
+const STEEL := Color("9aa0a0")
 
 
 # The colour of "your verb works on this right now". Mint for every pilot until a swatch

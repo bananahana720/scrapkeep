@@ -39,11 +39,11 @@ const PanelFx := preload("res://src/presentation/panel_fx.gd")
 const Companion := preload("res://src/core/companion.gd")
 const HullMark := preload("res://src/world/hull_mark.gd")
 
-# The wallet readout: the brass cog and the cogs the run holds, the one number the HUD
-# shows because it is what the next roll through a hoop spends.
+# The wallet readout: the steel cog and the cogs the run holds, the one number the HUD
+# shows because it is what the next roll through a hoop spends. The icon wears the cog's steel.
 class CogChip extends Control:
 	const ICON := "res_scrap"
-	const COLOR := Palette.BRASS
+	const COLOR := Palette.STEEL
 
 	var amount := 0
 
