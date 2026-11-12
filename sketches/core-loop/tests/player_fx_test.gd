@@ -30,12 +30,24 @@ func _frames(n: int) -> void:
 		await process_frame
 
 
+# Waits `seconds` of game time, however many frames that takes.
+func _settle(seconds: float) -> void:
+	var left := seconds
+	while left > 0.0:
+		await process_frame
+		left -= _game.get_process_delta_time()
+
+
 func _run() -> void:
 	await _frames(2)
 	_game.ctx.calm = true
 	_game.flow.press_start()
 	_game.flow.choose_class(0)
 	await _frames(5)
+	# The ball holds still: on a free-running clock a loaded machine drops physics ticks, so a rolling ball ends up
+	# somewhere else on the slope each run, and the camera with it, and the word spots this test reads move off the
+	# safe area. The checks set the ball's state (velocity, contact) where they need motion.
+	_game.player.set_frozen(true)
 	var fx = _game.presentation.player_fx
 	t.check("player fx is built by presentation", fx != null and fx.root != null and fx.root.is_inside_tree())
 	Density.live().reset()
@@ -112,9 +124,9 @@ func _run() -> void:
 	fx._last_word = -1.0e9
 	fx._word_seen.clear()
 	t.check("KLANG stamps for the beat to grow", fx.word("smash", ball + Vector3(3, 2, 0)))
-	var plain: float = float(fx._words_by_id("smash")["size"])
+	var plain: float = float(fx._words_by_id("smash").get("size", 0.0))
 	fx._on_beat_word(null, "smash", fx._clock)
-	t.near("and the beat grows it", float(fx._words_by_id("smash")["size"]), plain * PlayerFx.ONBEAT_GROW)
+	t.near("and the beat grows it", float(fx._words_by_id("smash").get("size", -1.0)), plain * PlayerFx.ONBEAT_GROW)
 	for w in fx._words:
 		w["t"] = 1.0
 	fx._last_word = -1.0e9
@@ -131,6 +143,10 @@ func _run() -> void:
 	t.eq("planted: a word on a warning takes the ball's other side", PlayerFx.word_spot(spots, warn_own), 1)
 	t.eq("a word with its foe on both sides goes above the foe", PlayerFx.word_spot(spots, foe_box), 2)
 	t.eq("a word with every spot covered stays unsaid", PlayerFx.word_spot(spots, [Rect2(0, 0, 1000, 1000)] as Array[Rect2]), -1)
+	# The camera eases its arm and field of view toward the ball's speed (chase_camera.gd), and the checks above set the
+	# ball's velocity, so the placement checks below wait until it has settled by game time, not by frame count: a
+	# loaded machine runs fewer, longer frames, and the view then sat a pixel or two elsewhere each run.
+	await _settle(4.0)
 	var wcam: Camera3D = fx.camera.cam
 	# A ring on the ground under each side's spot: the word has nowhere to go.
 	var at: Vector3 = fx.clear_of_lane(ball + Vector3(3, 2, 0))
@@ -196,7 +212,7 @@ func _run() -> void:
 	# the window stamp STRIKE.
 	var dummy := Node3D.new()
 	_game.add_child(dummy)
-	dummy.global_position = ball + Vector3(4, 0, 0)
+	dummy.global_position = ball + Vector3(3, 2, 0)
 	for w in fx._words:
 		w["t"] = 1.0
 	fx._last_word = -1.0e9
