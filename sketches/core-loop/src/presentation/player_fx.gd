@@ -1477,11 +1477,12 @@ func carving() -> bool:
 
 
 func _draw_carve() -> void:
-	var on := carving()
+	var v: Vector3 = _velocity()
+	var speed := v.length()
+	# A carve needs a heading: a ball at rest on a steep face (the pose's speed tier can lag a stop) has none.
+	var on := carving() and speed > 0.01
 	if on:
-		var v: Vector3 = _velocity()
-		var speed := v.length()
-		var back: Vector3 = -v / maxf(speed, 0.01)
+		var back: Vector3 = -v / speed
 		var normal := _normal()
 		var up: Vector3 = normal
 		if absf(back.dot(up)) > 0.95:
