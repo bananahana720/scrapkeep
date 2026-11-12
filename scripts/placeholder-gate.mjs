@@ -21,7 +21,9 @@ import { cueFindings } from "./audio-gate.mjs";
 //   audio      a special-enemy or boss cue from INTEGRATION.md the game cannot play (audio-gate.mjs,
 //              which also measures loudness and loop seams)
 // What it cannot see: a runtime fallback (a capsule, a missing material) that only a running
-// build shows; tests/dress_coverage_test.gd and release_gate_placeholder_test.gd own those.
+// build shows; tests/dress_coverage_test.gd and release_gate_placeholder_test.gd own those. Nor a
+// mesh the game builds from a Godot primitive: tests/prim_census_test.gd runs a bot through world 1
+// and fails on one not in tools/prim_census_pin.tsv; this prints how many stand-ins that pin still owes.
 // Run: node scripts/placeholder-gate.mjs [--project <dir>] [--json] [--limit <n per group>]
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -408,6 +410,22 @@ export function terrainRows(project) {
   return total;
 }
 
+export const PRIM_PIN_FILE = "tools/prim_census_pin.tsv";
+
+// The code-built stand-ins tools/prim_census_pin.tsv still owes, by BACKLOG row: {row: pin lines}.
+// The census test, not this file, judges what the game draws; this only reads the pin for the note.
+export function primStandIns(project) {
+  const file = path.join(project, PRIM_PIN_FILE);
+  if (!existsSync(file)) return {};
+  const out = {};
+  for (const line of readFileSync(file, "utf8").split("\n")) {
+    const cells = line.split("\t");
+    if (line.startsWith("#") || cells.length !== 6 || cells[3] !== "stand-in") continue;
+    out[cells[4]] = (out[cells[4]] ?? 0) + 1;
+  }
+  return out;
+}
+
 function main() {
   const args = parseArgs(process.argv.slice(2));
   const findings = scan(args.project);
@@ -415,6 +433,9 @@ function main() {
   if (!args.json) {
     const terrain = terrainRows(args.project);
     if (terrain > 0) console.log(`note: ${terrain} stamped plain slope(s) and mesa edge(s) counted as terrain, not placeholders (PLAIN_SLOPES, isMesaEdge)`);
+    const owed = Object.entries(primStandIns(args.project));
+    if (owed.length > 0)
+      console.log(`note: ${owed.reduce((sum, [, n]) => sum + n, 0)} code-built stand-in pin row(s) still owed (${owed.map(([row, n]) => `${row} ${n}`).join(", ")}); tests/prim_census_test.gd judges them, and fails each under SCRAPKEEP_RELEASE_GATE=1`);
   }
   process.exitCode = findings.length === 0 ? 0 : 1;
 }
