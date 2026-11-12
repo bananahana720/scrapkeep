@@ -1,9 +1,9 @@
 """The crew kit: the parts every Fleet animal crew figure and hired machine shares.
 
 A crew figure is a body the kind owns (barrel, tool, pack) plus parts from here: the
-head with its snout and ears, the cast number and the HIRED stencil. A kind's recipe
-builds its own body and tool and calls these, so a new crew kind in any world is its
-body plus a few lines, and a head swap is one call.
+head with its snout and ears, the cast number and the HIRED stamp (and a keeper's
+number plate). A kind's recipe builds its own body and tool and calls these, so a new
+crew kind in any world is its body plus a few lines, and a head swap is one call.
 
 Space is the recipes' Blender space: +Z up, the crew faces -Y (the exporter turns +Y
 into Godot -Z). Recipes that author in Godot space pass points through their own g().
@@ -58,9 +58,10 @@ def stencil(part, slot, text, loc, normal, height, color, depth=0.03, resolution
     return faces
 
 
-def number_plate(part, slot, text, loc, normal, height, plate="brass", ink="charcoal"):
-    """The cast number: a thin plate standing proud of the face whose outward normal is
-    `normal`, with the number raised on it. `height` is the plate's height."""
+def number_plate(part, slot, text, loc, normal, height, plate="bone", ink="charcoal"):
+    """A keeper's hand-stamped number plate (SIGHT-PERSONA.md section 3): a thin plate
+    standing proud of the face whose outward normal is `normal`, the number raised on it.
+    `height` is the plate's height. An old-works casting takes cast_number() instead."""
     n = Vector(normal).normalized()
     width = height * (0.45 + 0.42 * len(text))
     thick = 0.03
@@ -70,8 +71,14 @@ def number_plate(part, slot, text, loc, normal, height, plate="brass", ink="char
     return stencil(part, slot, text, face + n * (thick / 2), n, height * 0.62, ink, depth=0.02)
 
 
+def cast_number(part, slot, text, loc, normal, height, color="bone"):
+    """The crew number cast into an old-works shell, raised straight off the face."""
+    return stencil(part, slot, text, loc, normal, height, color)
+
+
 def hired(part, slot, loc, normal, height, color="bone"):
-    """The HIRED stencil a freed crew wears over its old Fleet issue."""
+    """The HIRED stamp cast in beside the number on a requisitioned old-works machine
+    (SIGHT-PERSONA.md section 3: an ordinary enemy carries two marks)."""
     return stencil(part, slot, "HIRED", loc, normal, height, color, resolution=1)
 
 
