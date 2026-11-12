@@ -157,7 +157,7 @@ func _physics_process(delta: float) -> void:
 		return
 	_clock = 0.0
 	_show_charge(0.0)
-	var lead: Vector3 = target.planar_velocity() * FLIGHT * clampf(float(spec.get("lead", LEAD)), 0.0, 1.0)
+	var lead: Vector3 = target.planar_velocity() * FLIGHT * LEAD
 	var aim: Vector3 = _ball() + lead
 	var landing := Vector3(aim.x, Telegraph.ground_under(terrain, aim), aim.z)
 	shots += 1

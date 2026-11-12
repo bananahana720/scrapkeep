@@ -35,7 +35,7 @@ Contract for the behaviour units (waves 17 to 19): a special body declares `sign
 
 | Boss | Phase change | Fall (straight, then the wink one beat later at 129 BPM) |
 | --- | --- | --- |
-| Brindle | brass ring, steam, sparks, plate chunks, **KA-CHUNK**; the eject stamps **EJECT** | five blasts walk across the hull 0.22 s apart, a last ring, then **END OF SHIFT** |
+| Brindle | brass ring, steam, sparks, plate chunks, no word (PF-26: it covered him); the eject stamps **EJECT** | five blasts walk across the hull 0.22 s apart, a last ring, then **END OF SHIFT** |
 | The Waking | each lost chunk: green ring, shell shards, arcs, motes, **KRAKK** | the same walk in seam light, then **BACK TO SLEEP** |
 | The Mind | each lost chunk, same, **RECALIBRATING** | then **SIGNAL LOST** |
 

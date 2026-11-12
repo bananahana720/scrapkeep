@@ -593,8 +593,10 @@ func _on_beat_word(enemy, _kind: String, at_clock: float) -> void:
 	for w in _words:
 		if w["t"] < 1.0 and float(w.get("born", -1.0)) >= at_clock:
 			# The hit's own word grows, unless the bigger word would reach a warning.
-			var grown: Array[Rect2] = [] if camera == null or camera.cam == null else [_word_rect(camera.cam, w["at"], float(w["away"]) > 0.0,
-					float(w["width_px"]), float(w["size"]) * ONBEAT_GROW, w["node"].pixel_size)]
+			var grown: Array[Rect2] = []
+			if camera != null and camera.cam != null:
+				grown.append(_word_rect(camera.cam, w["at"], float(w["away"]) > 0.0, float(w["width_px"]),
+					float(w["size"]) * ONBEAT_GROW, w["node"].pixel_size))
 			if grown.is_empty() or word_spot(grown, _warnings()) == 0:
 				w["size"] = float(w["size"]) * ONBEAT_GROW
 			return

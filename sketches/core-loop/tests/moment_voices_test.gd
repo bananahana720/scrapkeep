@@ -17,7 +17,7 @@ const T := preload("res://tests/support/t.gd")
 # own event in a real game and the word carriers it puts up are counted: toasts, stamps, captions,
 # cards, world words (a flourish's sound word or a machine's) and the boss plate's name.
 #   warden break   no toast; the plate tick and the next objective stay
-#   phase change   one stamp, one caption, one world word, never two of a kind at once
+#   phase change   Brindle: one caption, no stamp and no world word (PF-26); never two of a kind at once
 #   arrival        one card, one world word at a time, and the plate keeps its name off meanwhile
 #   rout           no toast; at most one of each kind and three carriers in the two seconds after
 #   colour         no celebration stamp is drawn in the hazard colour
@@ -317,8 +317,9 @@ func _phases() -> void:
 				worst[kind] = maxi(int(worst.get(kind, 0)), int(live[kind]))
 			t += DT
 		var machine: int = fx.moments.filter(func(m): return m[1] == "word").size() - before
-		_t.check("51 phase %d: one stamp, one caption, one machine word, nothing else on its own" % phase,
-			kinds.get("stamp", 0) == 1 and kinds.get("caption", 0) == 1 and not kinds.has("sfx_word") and not kinds.has("card") and machine == 1 and _worst(worst) <= 1,
+		# PF-26: the boss's own change carries a phase turn, so Brindle's turns draw no stamp and no machine word over the fight.
+		_t.check("51 phase %d: one caption and no word over the fight, nothing else on its own" % phase,
+			kinds.get("caption", 0) == 1 and not kinds.has("stamp") and not kinds.has("sfx_word") and not kinds.has("card") and machine == 0 and _worst(worst) <= 1,
 			"row %s, machine words %d, live %s" % [kinds, machine, worst])
 		var owed: Array = [Hud.toast_text("boss_phase_changed", {"name": _phase_name.capitalize()})] if PHASE_TOAST_OWED else []
 		_t.check("52 phase %d: the toasts over the window are exactly the phase name the HUD still owes" % phase, toasts == owed, "toasts %s, owed %s" % [toasts, owed])

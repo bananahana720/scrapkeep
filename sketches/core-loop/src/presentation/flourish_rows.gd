@@ -144,30 +144,27 @@ const ROWS := {
 			{"kind": "sfx_word", "at": 0.0, "for": 0.9, "text": "HONK", "anchor": "ship"},
 			{"kind": "card", "at": 0.1, "for": 1.3, "slot": "left_low", "card": ["ADMIRAL BRINDLE", "Back. On schedule."]},
 		]},
-	# Phases two and three: one comic panel each, a beat shorter than the transition beat. The
-	# stamp goes centre, clear of a taunt bubble up the column: the transition beat (#391) commits
-	# no attack while it shows.
+	# Phases two and three: one caption each, a beat shorter than the transition beat (#391), under
+	# the glance at the ship. No stamp and no world word (w37 film PF-26: FURNACE LIT, ARMOUR OFF and
+	# KA-CHUNK covered Brindle and his target tags): the plates flying off, the ring and the melt
+	# stepping hotter (arena_bowl_yard.gd) carry the turn, and the caption keeps his voice.
 	"brindle_phase_2": {"priority": 3, "on": "phase", "boss": "brindle", "phases": [2],
 		"world": {"full": [{"kind": "glance", "anchor": "ship", "seconds": 0.7}], "short": [{"kind": "glance", "anchor": "ship", "seconds": 0.6}]},
 		"full": [
 			{"kind": "caption", "at": 0.0, "for": 1.5, "slot": "left_low",
 				"text": ["Brindle revises the arithmetic.", "Brindle carries the one.", "The figures were optimistic."]},
-			{"kind": "stamp", "at": 0.1, "for": 1.4, "text": "FURNACE LIT", "colour": "AMBER", "slot": "centre"},
 		],
 		"short": [
 			{"kind": "caption", "at": 0.0, "for": 1.2, "slot": "left_low", "text": ["Brindle revises the arithmetic.", "Brindle carries the one.", "The figures were optimistic."]},
-			{"kind": "stamp", "at": 0.1, "for": 1.1, "text": "FURNACE LIT", "colour": "AMBER", "slot": "centre"},
 		]},
 	"brindle_phase_3": {"priority": 3, "on": "phase", "boss": "brindle", "phases": [3],
 		"world": {"full": [{"kind": "glance", "anchor": "ship", "seconds": 0.7}], "short": [{"kind": "glance", "anchor": "ship", "seconds": 0.6}]},
 		"full": [
 			{"kind": "caption", "at": 0.0, "for": 1.5, "slot": "left_low",
 				"text": ["Dignity: optional.", "Brindle rounds down. Once.", "Plan C. There was no plan B."]},
-			{"kind": "stamp", "at": 0.1, "for": 1.4, "text": "ARMOUR OFF", "colour": "AMBER", "slot": "centre"},
 		],
 		"short": [
 			{"kind": "caption", "at": 0.0, "for": 1.2, "slot": "left_low", "text": ["Dignity: optional.", "Brindle rounds down. Once.", "Plan C. There was no plan B."]},
-			{"kind": "stamp", "at": 0.1, "for": 1.1, "text": "ARMOUR OFF", "colour": "AMBER", "slot": "centre"},
 		]},
 	# The catch: the scooter sails over the rim in slow motion while the crew cheer. The victory
 	# card waits for it, then stamps BRINDLE ROUTED.
