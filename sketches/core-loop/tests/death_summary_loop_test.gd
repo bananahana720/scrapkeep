@@ -203,6 +203,14 @@ func _tag_on_summary() -> void:
 	_t.eq("a grown build the fight stripped still reads the Warden's row", _game.flow.death_tip, DeathTips.ROWS["warden"])
 	await _die_to_warden(0.05, 400.0)
 	_t.check("a build that met the fight short reads the gap, whatever it weighed at the end", _game.flow.death_tip.begins_with("Punch "), _game.flow.death_tip)
+	# A hazard with no tip row: no crew note follows, so the Foreman logs nothing (the crew keeps the last word).
+	_game.flow.new_run()
+	await _frames(5)
+	_game.run.damage(9999.0, "pocket_veil")
+	await _frames(3)
+	_t.check("a death with no crew note carries no Foreman memo", _game.flow.state_name() == "summary" and _game.flow.death_tip == ""
+			and _game.screens.body_text().contains(_game.flow.death_cause) and not _game.screens.body_text().contains("The Foreman: "),
+		"%s | cause '%s' | %s" % [_game.flow.state_name(), _game.flow.death_cause, _game.screens.body_text()])
 	await _stripped_by_the_fight()
 	await _die_to_the_boss()
 	_game.flow.new_run()

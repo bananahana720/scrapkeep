@@ -55,7 +55,7 @@ export const SOURCES = [
   { path: "src/core/start_picks.gd", read: "rows", fields: [], consts: ["COGS_EFFECT", "CORE_EFFECT"] },
   { path: "src/core/meta_options.gd", read: "rows", fields: ["name", "text"] },
   { path: "src/core/event_kinds.gd", read: "rows", fields: ["hud", "objective"] },
-  { path: "src/core/lore_rows.gd", read: "rows", fields: ["text"], consts: ["SPEAKERS"], voice: true },
+  { path: "src/core/lore_rows.gd", read: "rows", fields: ["text"], consts: ["SPEAKERS", "CALLS"], voice: true },
   { path: "src/core/prologue_rows.gd", read: "rows", fields: ["text"], voice: true },
   { path: "src/core/tune_rows.gd", read: "rows", fields: ["name", "where"] },
   { path: "src/core/tune_rows.gd", read: "rows", fields: ["sleeve"], voice: true },

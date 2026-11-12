@@ -45,7 +45,7 @@ const NOMINAL := [
 	"No changes. Stability is our product.",
 	"Everything is aligned. Proceed as scheduled.",
 	"This stage is fully optimised. You're welcome.",
-	"Conditions nominal. Feedback has been pre-approved.",
+	"Conditions nominal. Gratitude is appreciated in advance.",
 ]
 
 

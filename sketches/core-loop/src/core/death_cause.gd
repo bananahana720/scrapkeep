@@ -132,8 +132,8 @@ const LOSS_MEMOS := [
 	"Asset loss logged. A replacement shift has been scheduled.",
 	"Loss recorded. Scrap recovered at full value. Thank you.",
 	"This incident has been added to the quarterly highlights.",
-	"Downtime logged. Your next shift starts immediately. You're welcome.",
-	"Hull loss entered as forecast. Everything is going to plan.",
+	"Downtime logged. Your next shift starts immediately.",
+	"Hull returned to inventory. Thank you for your service.",
 ]
 
 
