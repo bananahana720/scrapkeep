@@ -183,6 +183,20 @@ var elite_arrival := 0
 var unknown_kinds := {}
 
 var _timer := FIRST_SPAWN
+# Breathers (map audit unit 7; breather_rows.gd through ParkMap.breathers()): circles on the riding lines where no
+# pack is placed. While the ball is inside one, with no crew home in the window, the timer's ticks are banked and credit
+# income keeps accruing. Each breather gives BREATH_S of quiet a stage, about the 6 s a ball at cruise takes to cross
+# 120 m; past that, or once the ball leaves, packs come as before and the bank pays out one tick every RELEASE_GAP, a
+# tick the room cannot take staying banked. A breather moves pressure later, not away (ruling cu); the one loss is a
+# tick on the approach that finds no spot outside it, as any tick with no spot is spent. A ball parked in one gets
+# BREATH_S of quiet, not a stage's.
+const BREATH_S := 8.0
+const RELEASE_GAP := 0.25
+var breathers: Array = []
+var banked := 0
+# Seconds of quiet each breather has given this stage, by id.
+var breath_used := {}
+var _release := 0.0
 var _rng := RandomNumberGenerator.new()
 var _last_tier := 0
 var _rises: Array[int] = []
@@ -342,32 +356,54 @@ func advance(delta: float, alive_count: int, ball := Vector2.ZERO, velocity := V
 				due.append(spawn)
 	if paused:
 		return due
+	var quiet := _breathe(delta, ball)
 	if mode == "credit":
-		_credit_advance(delta, alive_count + due.size(), ball, velocity, forward)
+		if not quiet:
+			_credit_advance(delta, alive_count + due.size(), ball, velocity, forward)
+		else:
+			_accrue(delta)
 		return due
 	_timer -= delta
+	var ticks := 0
 	while _timer <= 0.0:
 		_timer += interval()
-		if alive_count + arrivals.size() + due.size() >= cap():
-			continue
-		if not authored.is_empty():
-			_authored_arrival(cap() - (alive_count + arrivals.size() + due.size()), ball, velocity, forward)
-			continue
-		var at := spawn_spot(ball, velocity, forward)
-		if at == Vector2.INF:
-			continue
-		var room := cap() - (alive_count + arrivals.size() + due.size())
-		var weight := reinforcement_weight()
-		var pack := compose() if weight > 0.0 and room >= 2 and _rng.randf() < weight else []
-		if pack.is_empty():
-			var kind := LOBBER if _rng.randf() < lobber_share() else CHASER
-			if _park_map == null:
-				arrivals.append({"kind": kind, "at": at, "left": ARRIVAL})
-			else:
-				_place_pack(at, [KIND_NAMES[kind]], ball)
-			continue
-		_place_pack(at, pack, ball, false, room)
+		ticks += 1
+	if quiet:
+		banked += ticks
+		return due
+	for _i in ticks:
+		_timer_pack(alive_count + due.size(), ball, velocity, forward)
+	if banked > 0:
+		_release -= delta
+		if _release <= 0.0 and _timer_pack(alive_count + due.size(), ball, velocity, forward):
+			banked -= 1
+			_release = RELEASE_GAP
 	return due
+
+
+# One timer tick's pack: an authored arrival, or a pack or a single at spawn_spot. alive is every enemy up or falling
+# due this tick. False only when the room cannot take the pack (full, or short of an authored pack's whole size), so a
+# banked tick waits for room; a tick with no spot is spent, as the timer always spent one.
+func _timer_pack(alive: int, ball: Vector2, velocity: Vector2, forward: Vector2) -> bool:
+	if alive + arrivals.size() >= cap():
+		return false
+	if not authored.is_empty():
+		return _authored_arrival(cap() - (alive + arrivals.size()), ball, velocity, forward)
+	var at := spawn_spot(ball, velocity, forward)
+	if at == Vector2.INF:
+		return true
+	var room := cap() - (alive + arrivals.size())
+	var weight := reinforcement_weight()
+	var pack := compose() if weight > 0.0 and room >= 2 and _rng.randf() < weight else []
+	if pack.is_empty():
+		var kind := LOBBER if _rng.randf() < lobber_share() else CHASER
+		if _park_map == null:
+			arrivals.append({"kind": kind, "at": at, "left": ARRIVAL})
+		else:
+			_place_pack(at, [KIND_NAMES[kind]], ball)
+		return true
+	_place_pack(at, pack, ball, false, room)
+	return true
 
 
 func income_per_second() -> float:
@@ -378,13 +414,17 @@ func credit_pack_cost(kinds: Array, is_elite := false) -> float:
 	return Cards.cost(kinds, is_elite)
 
 
+func _accrue(delta: float) -> void:
+	var income := delta * income_per_second()
+	credits += income
+	credits_accrued += income
+
+
 func _credit_advance(delta: float, alive_count: int, ball: Vector2, velocity: Vector2, forward: Vector2) -> void:
 	var room := cap() - alive_count - arrivals.size()
 	if room <= 0:
 		return
-	var income := delta * income_per_second()
-	credits += income
-	credits_accrued += income
+	_accrue(delta)
 	if _next_pack.is_empty():
 		_next_pack = _draw_credit()
 	if _next_pack.is_empty() or _next_pack.kinds.size() > room:
@@ -541,25 +581,27 @@ func rim_spot(spot: Vector2, ball: Vector2) -> Vector2:
 	return spot
 
 
-# An authored arrival: the pack due next waits until the cap has room for all of it.
-func _authored_arrival(room: int, ball: Vector2, velocity: Vector2, forward: Vector2) -> void:
+# An authored arrival: the pack due next waits until the cap has room for all of it. False while it waits (no room);
+# true once the tick is used, placed or with no spot found.
+func _authored_arrival(room: int, ball: Vector2, velocity: Vector2, forward: Vector2) -> bool:
 	if _next_pack.is_empty():
 		_next_pack = _draw_authored()
 	var kinds: Array = _next_pack["kinds"]
 	if room < kinds.size():
-		return
+		return false
 	var at := spawn_spot(ball, velocity, forward)
 	if at == Vector2.INF:
-		return
+		return true
 	var queued := _place_pack(at, kinds, ball, _next_pack == elite, room)
 	if _park_map != null and queued == 0:
-		return
+		return true
 	packs.append({"id": _next_pack["id"], "kinds": kinds.duplicate(), "tests": ""})
 	_last_was_elite = _next_pack == elite
 	if not _last_was_elite:
 		_last_pack_id = _next_pack["id"]
 	_next_pack = {}
 	_arrivals_made += 1
+	return true
 
 
 func _draw_authored() -> Dictionary:
@@ -625,6 +667,7 @@ func _read_homes(map_id: String) -> void:
 	_stopped_kinds.clear()
 	_forward_homes.clear()
 	_park_map = null
+	breathers = []
 	_park_graph = null
 	_corridors = null
 	_graph_path = ""
@@ -633,6 +676,7 @@ func _read_homes(map_id: String) -> void:
 		return
 	var map = park.map
 	_park_map = map
+	breathers = map.breathers()
 	for row in map.park.park_rows:
 		_home_sites[row.id] = row
 	for row in map.park.home_rows:
@@ -966,7 +1010,35 @@ func _home_spot(home: Dictionary, ball: Vector2, preferred := Vector2.ZERO, assi
 	return Vector2.INF
 
 
+# Whether the ball's free packs wait this tick, spending delta of its breather's BREATH_S: it is inside a breather with
+# quiet left and no live crew home is in the window ahead. A crew home is an authored fight the map places (and
+# park_breath_test measures); a breather quiets only the director's own packs.
+func _breathe(delta: float, ball: Vector2) -> bool:
+	var id := breather_at(ball)
+	if id == "" or float(breath_used.get(id, 0.0)) >= BREATH_S:
+		return false
+	if _park_map != null and not _window_homes(ball).is_empty():
+		return false
+	breath_used[id] = float(breath_used.get(id, 0.0)) + delta
+	return true
+
+
+# The id of the breather `p` stands in, "" for none.
+func breather_at(p: Vector2) -> String:
+	for b in breathers:
+		if p.distance_to(b["at"]) <= float(b["radius_m"]):
+			return String(b["id"])
+	return ""
+
+
+# Whether `p` stands inside one of the stage's breathers.
+func in_breather(p: Vector2) -> bool:
+	return breather_at(p) != ""
+
+
 func _park_safe(spot: Vector2) -> bool:
+	if in_breather(spot):
+		return false
 	for line in _corridors._park_pilot_lines:
 		for i in range(1, line.size()):
 			# A point footprint uses ParkMap's same segment/margin predicate as KE1.

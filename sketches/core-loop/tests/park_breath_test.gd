@@ -6,8 +6,9 @@ extends SceneTree
 # ring) must be at least QUIET_SHARE_MIN. The line is a start value, set before calibration.
 #
 # Blind spot: the director's timer packs spawn 60-90 m ahead of the ball anywhere off the pilot corridors, so no line
-# node is quiet from them. This check reads only the authored sites until breather zones (a tagged area where the
-# director places no pack, map-audit unit 7) give it something to read.
+# node is quiet from them. This check reads only the authored sites; breather zones (src/world/breather_rows.gd, where
+# the director places no pack of its own, map-audit unit 7) cover the timer packs and are checked in
+# director_breather_test.gd.
 #
 # Output: `MAPCHECK <stage> line_quiet_share <value> pass>=<line> PASS|FAIL|OWED`. OWED lists the stages under the line
 # today; the test fails if an OWED stage now meets it (prune the entry) and if an unlisted stage is under it.
