@@ -96,6 +96,70 @@ def sheave_head(part, loc, radius):
         part.cyl("paint", r * 0.22, r * 0.22, r * 1.6, segs=8, loc=hub, rot=(0, HALF_PI, 0), color=CHAR)
 
 
+def lifting_beam_head(part, loc, radius):
+    """Stoplog setter: the stoplog grab, a cast lifting beam across the shoulders with a
+    charcoal hook dropping at each end, on a short neck."""
+    with part.region(subsurf=0, detail=1):  # cast: filleted, not subdivided
+        c, r = Vector(loc), radius
+        part.cyl("fleet_paint", r * 0.5, r * 0.55, r * 0.8, segs=8, loc=c + Vector((0, 0, -r * 0.3)))
+        beam = c + Vector((0, 0, r * 0.35))
+        part.box("fleet_paint", (r * 3.0, r * 0.7, r * 0.55), loc=beam)
+        for side in (-1, 1):
+            end = beam + Vector((side * r * 1.3, 0, 0))
+            part.rod("paint", tuple(end), tuple(end + Vector((0, 0, -r * 0.75))), r * 0.09, segs=5, color=CHAR)
+            part.ring("paint", r * 0.12, r * 0.3, r * 0.14, segs=10, loc=end + Vector((0, 0, -r * 0.9)),
+                      rot=(HALF_PI, 0, 0), arc=(0.0, 4.4), color=CHAR)
+        part.ring("paint", r * 0.14, r * 0.32, r * 0.14, segs=10, loc=beam + Vector((0, 0, r * 0.5)),
+                  rot=(HALF_PI, 0, 0), color=CHAR)
+
+
+def handwheel_head(part, loc, radius):
+    """Flap tender: the gate valve, a cast bonnet with a spoked charcoal handwheel lying on
+    top, a bone stripe on the rim where hands turned it."""
+    with part.region(subsurf=0, detail=1):  # cast: filleted, not subdivided
+        c, r = Vector(loc), radius
+        part.cyl("fleet_paint", r * 0.75, r * 0.45, r * 1.0, segs=8, loc=c + Vector((0, 0, -r * 0.1)))
+        part.cyl("paint", r * 0.14, r * 0.14, r * 0.6, segs=6, loc=c + Vector((0, 0, r * 0.6)), color=CHAR)
+        hub = c + Vector((0, 0, r * 0.85))
+        part.ring("paint", r * 1.05, r * 1.3, r * 0.18, segs=16, loc=hub, color=CHAR)
+        for k in range(3):
+            a = k * math.pi / 3
+            d = Vector((math.cos(a), math.sin(a), 0)) * r * 1.1
+            part.rod("paint", tuple(hub - d), tuple(hub + d), r * 0.07, segs=4, color=CHAR)
+        part.ring("paint", r * 1.04, r * 1.31, r * 0.19, segs=16, loc=hub, arc=(-0.5, 0.5), color="bone")
+
+
+def lantern_head(part, loc, radius):
+    """Heaving-line thrower: the lock keeper's signal lantern, a cast lamp housing with a bone
+    lens behind three charcoal guard bars, under a charcoal cowl and its carry ring."""
+    with part.region(subsurf=0, detail=1):  # cast: filleted, not subdivided
+        c, r = Vector(loc), radius
+        part.cyl("fleet_paint", r * 0.8, r * 0.7, r * 1.2, segs=10, loc=c)
+        part.cyl("paint", r * 0.62, r * 0.62, r * 0.7, segs=10, loc=c + Vector((0, -r * 0.18, 0)), color="bone")
+        for a in (-0.7, 0.0, 0.7):
+            x, y = r * 0.82 * math.sin(a), -r * 0.82 * math.cos(a)
+            part.box("paint", (r * 0.12, r * 0.12, r * 1.0), loc=c + Vector((x, y, 0)), color=CHAR)
+        part.cyl("paint", r * 1.0, r * 0.35, r * 0.45, segs=10, loc=c + Vector((0, 0, r * 0.82)), color=CHAR)
+        part.ring("paint", r * 0.2, r * 0.36, r * 0.12, segs=10, loc=c + Vector((0, 0, r * 1.2)),
+                  rot=(HALF_PI, 0, 0), color=CHAR)
+
+
+def screen_head(part, loc, radius):
+    """Trash screen: the intake rack, a square cast frame of charcoal bars standing on edge
+    and facing forward, a bone wear line where the drift caught."""
+    with part.region(subsurf=0, detail=1):  # cast: filleted, not subdivided
+        c, r = Vector(loc), radius
+        part.cyl("fleet_paint", r * 0.45, r * 0.5, r * 0.7, segs=8, loc=c + Vector((0, 0, -r * 0.5)))
+        frame = c + Vector((0, 0, r * 0.45))
+        w = r * 2.2
+        for sz in (-1, 1):
+            part.box("fleet_paint", (w, r * 0.35, r * 0.22), loc=frame + Vector((0, 0, sz * r * 0.8)))
+        for k in range(5):
+            x = -w / 2 + r * 0.11 + k * (w - r * 0.22) / 4
+            part.box("paint", (r * 0.1, r * 0.16, r * 1.5), loc=frame + Vector((x, 0, 0)), color=CHAR)
+        part.box("paint", (w * 0.92, r * 0.18, r * 0.08), loc=frame + Vector((0, -r * 0.02, -r * 0.35)), color="bone")
+
+
 def stencil(part, slot, text, loc, normal, height, color, depth=0.03, resolution=3):
     """Raised stencil letters (the crew number, HIRED) on a face whose outward normal is
     `normal`, centred at `loc`, `height` metres tall."""
