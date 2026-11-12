@@ -77,6 +77,12 @@ func _process(delta: float) -> bool:
 			for def in _game.flow.classes:
 				_game.ctx.profile.unlock_pilot(def.id)
 			_game.flow.press_start()
+			_next("first_open")
+		"first_open":
+			# Pilot select opens on the first pilot (PF-40); the calm count is the row with every card shut.
+			_report("pilot select opens on the first card", cards[0].is_open() and cards.slice(1).all(func(c): return not c.is_open()),
+				"open %s" % [cards.map(func(c): return c.is_open())])
+			root.gui_release_focus()
 			_next("rows")
 		"rows":
 			_check_rows(cards)
