@@ -1034,13 +1034,17 @@ func physics_step(delta: float) -> void:
 func _finish_stage(velocity = null) -> void:
 	var carried: Vector3 = ctx.player.state.velocity if velocity == null else velocity
 	var cleared: int = ctx.run.stage
-	ctx.events.stage_cleared.emit(cleared)
+	if not ctx.run.landed:
+		ctx.events.stage_cleared.emit(cleared)
 	var world: int = ctx.stages.world_of(cleared)
 	if ctx.stages.is_world_last(cleared) and _world_boss(world) != null:
 		# From the title no stage entry named the world yet.
 		if world != _world:
 			_world = world
 			ctx.events.world_entered.emit(world)
+		# The arena is no entrance: the save marks the clear as landed, with the pick it opened.
+		ctx.run.landed = true
+		_save_cleared(carried)
 		enter_boss(carried)
 		return
 	_advance_from(cleared, carried)

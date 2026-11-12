@@ -18,7 +18,8 @@ const SpawnerDouble := preload("res://tests/doubles/spine_spawner_double.gd")
 #       stage_cleared fires once, and a pick the bay already opened is not opened again;
 #   (c) a Warden that vanishes, launched with no bay visit: the Continue opens the owed pick;
 #   (d) after the world's last stage, a quit in the boss fight continues in the arena with that
-#       stage's earnings, a held relic on the kit, and an earned save spent there stays spent.
+#       stage's earnings, a held relic on the kit, and an earned save spent there stays spent;
+#       the stage was cleared as the flight landed, so no Continue clears it (or its codex note) again.
 
 const DIR := "user://run_resume_cleared_test/"
 const PATH := DIR + "run.json"
@@ -213,7 +214,7 @@ func _run() -> void:
 	resumed = await _resume()
 	run = _game.run
 	_report("a quit in the boss fight continues in the arena", in_arena and resumed and run.stage == 3 and _game.flow.in_arena
-		and _game.flow.state_name() == "boss" and run.cogs == cogs_three and _cleared_count == 1,
+		and _game.flow.state_name() == "boss" and run.cogs == cogs_three and _cleared_count == 0,
 		"arena before the quit %s; resumed %s at stage %d, arena %s, flow %s, cogs %d (earned %d), stage_cleared %d" % [in_arena,
 			resumed, run.stage, _game.flow.in_arena, _game.flow.state_name(), run.cogs, cogs_three, _cleared_count])
 	var relic_on: bool = not _game.build._relic_fx.is_empty()
@@ -221,8 +222,9 @@ func _run() -> void:
 	_game.free()
 	resumed = await _resume()
 	_report("the resumed arena fits the relic and keeps a spent earned save spent", relic_on and resumed and _game.run.death_save_spent
-		and _game.flow.in_arena,
-		"relic on the kit %s; after a second Continue resumed %s, save spent %s, arena %s" % [relic_on, resumed, _game.run.death_save_spent, _game.flow.in_arena])
+		and _game.flow.in_arena and _cleared_count == 0,
+		"relic on the kit %s; after a second Continue resumed %s, save spent %s, arena %s, stage_cleared %d" % [relic_on, resumed,
+			_game.run.death_save_spent, _game.flow.in_arena, _cleared_count])
 	_game.free()
 
 	for name in DirAccess.get_files_at(DIR):
