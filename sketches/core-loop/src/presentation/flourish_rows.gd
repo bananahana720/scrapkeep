@@ -108,16 +108,16 @@ const ROWS := {
 				"card": ["SPILLWAY WORKS", "World one · shift log", "Pumps", "running", "Seals", "holding", "Overtime", "logged, not paid"]},
 			{"kind": "stamp", "at": 0.4, "for": 2.4, "text": "SHIFT COMPLETE", "colour": "AMBER"},
 			{"kind": "caption", "at": 2.4, "for": 3.0, "slot": "left_low", "text": [
-				"Shift log: seals checked. Kettle still warm.",
+				"Shift log: seals checked. Gauges agree, for once.",
 				"Shift log: dam held. Flume drained. Weather blamed.",
-				"Shift log: pumps running. Nobody clocked the overtime."]},
+				"Shift log: pumps running. The river kept its side of it."]},
 		],
 		"short": [
 			{"kind": "stamp", "at": 0.0, "for": 2.0, "text": "SHIFT COMPLETE", "colour": "AMBER"},
 			{"kind": "caption", "at": 0.2, "for": 1.8, "slot": "left_low", "text": [
-				"Shift log: seals checked. Kettle still warm.",
+				"Shift log: seals checked. Gauges agree, for once.",
 				"Shift log: dam held. Flume drained. Weather blamed.",
-				"Shift log: pumps running. Nobody clocked the overtime."]},
+				"Shift log: pumps running. The river kept its side of it."]},
 		]},
 	# --- Brindle's beats (world 1 plan, unit 3). flourish_cues.gd starts them from the trigger
 	# fields on, boss, phases and earned, and runs their "world" beats in the bowl. Arrival plays
