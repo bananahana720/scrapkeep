@@ -1,6 +1,6 @@
-# Wave state: the live board, holds and carried reds (9 Nov 2026)
+# Wave state: the live board, the open wave and carried reds
 
-Heads and open PRs change by the hour, so read them live (`git ls-remote origin`, the GitHub MCP tools for open PRs). This page keeps what a head listing cannot show. The table below is the one place in the repo that names the live board; every other page points here. `npm run check:docs` compares the table with git history and fails when a promotion has landed that the table does not record, so it cannot go stale silently. The roadmap is [ROADMAP.md](ROADMAP.md). Rewritten 2026-11-09 by the workflows pass; older versions are in git history.
+Heads and open pull requests change by the hour, so read them live (`git ls-remote origin`, the open pull requests, the board's latest comments). This page keeps what a head listing cannot show. The table below is the one place in the repo that names the live board; every other page points here. `npm run check:docs` compares the table with git history and fails when a promotion has landed that the table does not record. The order of what is left is [ROADMAP.md](ROADMAP.md).
 
 ## Wave facts
 
@@ -12,19 +12,15 @@ Heads and open PRs change by the hour, so read them live (`git ls-remote origin`
 | Red team | cautious |
 | Compare against | gate/w37-d929c154/ |
 
-The board is the GitHub issue in the table; the stage log (`git log origin/stage/alpha-w<N>`) is the stack queue. "Compare against" is the receipts folder the next full gate reads its base values from, under `~/scratch/` on the PC (under `/mnt/project-files/` while the project ran the gate). The Gate updates the table as its first commit on a new stage: `node scripts/wave-state.mjs --write --board <new board issue> --compare <receipts folder>` (the red team persona rotates by itself).
+The board is the GitHub issue in the table. It also holds the file fences of the open pull requests. The stage log (`git log --first-parent origin/stage/alpha-w<N>`) is the stack queue. "Compare against" names the receipts the next full gate reads its base values from, published on a `scratch/gate-receipts-<folder>` branch. The Gate updates the table as its first commit on a new stage: `node scripts/wave-state.mjs --write --board <new board issue> --compare <receipts folder>` (the red team persona rotates by itself).
 
-**Priority (Andrew, 23 Oct 19:31Z).** World 1 first: a finished Spillway (dam, flume, Brindle, with the camp and title lead-in) and early progression, played at a world 1 sitting (10-15 min average run, about 30 min completionist, repeatable). Worlds 2 and 3 start nothing new (ruling at).
+## Now (12 Nov 2026)
 
-**Now (12 Nov).** Wave 37 is on `main` (b190dd26, #812): PASS+NOTES on d929c154 plus one ledger row (26421cc5), receipt on the wave 37 board. `stage/alpha-w38` is cut at 528d9aec, whose tree equals `cand/w38` 6ff3d6aa, and the wave 38 gate has run on that tree since 12:26Z on the PC (unit `w38gate-6ff3`, receipts `~/scratch/gate/w38-6ff3d6aa/`). The stage holds the wave 38 polish units and the difficulty stack, re-landed with #805, so its band read is the harder-by-movement read. The coordinator is this claude.ai project (ruling dh); the thread "Drive the wave 37 board" owns the wave board and the PC session. The PC is loaded at full use while Andrew is away, every automated run silent.
+Wave 37 is on `main` (b190dd26, pull request 812): PASS+NOTES on d929c154 plus one ledger row (26421cc5); the receipt is on the wave 37 board. `stage/alpha-w38` is cut at 528d9aec, whose tree equals `cand/w38` 6ff3d6aa, and the wave 38 gate runs on that tree on the PC (receipts will be published as `scratch/gate-receipts-w38-6ff3d6aa`). The stage holds the wave 38 polish units and the difficulty stack (ruling cu), re-landed with pull request 805, so its band read is the harder-by-movement read. The loop mechanics Heat, Overtime, Called Shot, marked hull and carry a core are on in the "Scrapkeep sitting" launch and off for bots and tests (rulings da, dd, df). The coordinator is this claude.ai project (ruling dh); the board thread owns the wave board and the PC session. The board's latest comments say what is stacked, what is fenced and what the gate has found.
 
-**The world 1 polish program (ruling cs).** On 10 Nov Andrew added three directions: a map standard with a fast check for each point (ruling ct), harder and never easier (ruling cu), and one ride through a world (ruling cv). The program is five more waves, each with its own board and promotion: wave 35, words and first checks (kit pick cards, the run summary, item words, key prompts, the sound contract checks, three map checks and the PC gate command); wave 36, read the fight and build the instruments (danger marks, the HUD, the landmark beam, a snag sweep, the difficulty measurement, the hand-over test, the capture tools and a behaviour-preserving split of the Warden form out of `audio.gd`); wave 37, harder by movement (chasers that catch a stopped ball, the Warden pulse, regen only while rolling, terrain as cover, and the conductor link default off); wave 38, one ride (both stage cuts covered, heading carried, the Slag Bowl ahead of the flume launch, markers and breathers); wave 39, the sitting build (the Warden form on the synth band and on Brindle, the final gate and the install). The audits behind it are in [shared/world1/](shared/world1/). Done is counted: no major or minor row left in [PLAY-FINDINGS.tsv](PLAY-FINDINGS.tsv), a clean gate with a fresh weekly sweep, 4080 frames in budget, zero placeholders, and that build installed.
+Done for the sitting is counted: no major or minor row left in [PLAY-FINDINGS.tsv](PLAY-FINDINGS.tsv), a clean release gate, 4080 frames in budget, zero placeholders, and that build installed on the PC. Andrew has played only the dam (wave 26 build, 30 Oct) and has marked no area yet.
 
-**World 1 sitting.** Andrew played the dam on the wave 26 build on 30 Oct: fun, many invisible walls, models clipping. Every fix shipped in wave 29. He has not marked any area yet. The PC has the wave 32 build installed (main 8180ec6c, 9 Nov; boss smokes PASS; cold launch to menu 4386 ms, 0 errors); the wave 33 build (main 45691e94) is next to install, with wave 32 as its rollback. The sitting sheet is refreshed for the build he plays, once that build is promoted.
-
-**Promotions since wave 18.** w19 a4c5b963 (#511), w20 46245f69 (#555), w21 421c8244 (#562), w22 1a0516d1 (#567), w23 462ca7ef (#570), w24 65d34cdb (#580), w25 dc1da31a (#582), w26 83f02396 (#585), w27 a7151583 (#594), w28 1e172aee (#598), w29 556cca8e (#606), w30 98727408 (#614), w31 645893f3 (#626), w32 8180ec6c (#632), w33 45691e94 (#737), w34 bc4adc1a (#745), w35 1b5221c0 (#747), w36 47c79b49 (#750). `git log --first-parent origin/main` is the source; this line is a convenience.
-
-**After each promotion.** In this order: (1) the Gate cuts the next stage at the new main, opens its board and runs `node scripts/wave-state.mjs --write` as above, so the first PR on the new stage passes `check:docs`; (2) the deep-modules sweep runs on the promoted main ([DEEP-SWEEP.md](DEEP-SWEEP.md)); it never holds a promotion; (3) Andrew runs the PC branch-prune script from the prepared list (the cloud proxy refuses `git push --delete`).
+**After each promotion,** in this order: (1) the Gate cuts the next stage at the new main, opens its board and runs `node scripts/wave-state.mjs --write` as above, so the first pull request on the new stage passes `check:docs`; (2) the deep-modules sweep runs on the promoted main ([DEEP-SWEEP.md](DEEP-SWEEP.md)) and never holds a promotion; (3) the merged-branch list goes to Andrew's PC prune script (the cloud proxy refuses `git push --delete`). Past promotions: `git log --first-parent origin/main`.
 
 ## Carried reds
 
@@ -43,15 +39,4 @@ Two things a test ledger cannot hold:
 
 ## Parked until after the sitting
 
-- Perf: sinkhole Dispatcher 265-277 ms; EventFamilies.build 69 ms at stage 5; Dig pit beacon bursts; Jolt shape build on the main thread. Dig and world 2 perf is out of scope (ruling at). Dam perf left: f4045 riser, Warden break and engage remainders, seed 3 f14k swing, the over-16 engage spike (a real game spike; its old watch issue is closed, so post perf receipts on the live board).
-- Brindle cobalt pick (ruling ap); flume length levers (ruling ax); HARD rung 5 re-read (rulings aq, bc, be); w1 Novice ceiling re-read (ruling bk).
-
-## PC capture rules
-
-- Frame-time captures run only on an idle 4080 (device 0) through headless gamescope; the 3060 takes throughput work. A capture is void if Andrew plays or another process touches the card during it. Run the stems sync first. Power caps: 4080 280 W, 3060 140 W (#446).
-- The live wallpaper pauses only for a process named exactly `godot`, so launch captures through a `godot` link and count `mpvpaper` as foreign (#446).
-- Cloud perf numbers never count, and the cloud ratio differs by kind of work (LESSONS 55-58).
-
-## Promote-fast flow
-
-The flow and its gates are in [ORCHESTRATOR.md](../../ORCHESTRATOR.md) (the tiered gate is its only owner); the per-PR test pace is in [DECISIONS.md](DECISIONS.md) section 10.
+[ROADMAP.md](ROADMAP.md) lists what is parked and what is ruled to be re-read after the sitting. PC capture rules are in [DEVICES.md](DEVICES.md). The promotion flow and its gates are in [ORCHESTRATOR.md](../../ORCHESTRATOR.md), the tiered gate's only owner.
