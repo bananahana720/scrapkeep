@@ -7,19 +7,15 @@ const Roster := preload("res://src/combat/roster.gd")
 const DamageDoor := preload("res://src/combat/damage_door.gd")
 
 # Pack pressure E, silt boils (pack_pressure.gd; idle while hazard.boil_by_stage reads 0). The ball stirs the
-# Spillway's silt: while a fight is on (an enemy within FIGHT_RADIUS) and the ball has stalled, the silt boils
-# up where it is heading. Stalled (wave 37 unit D5, ruling cu call 3; hazard.boil_stall_by_stage 1) means every
-# spot the ball has been in the last LOOP_WINDOW seconds lies within STALL_SPREAD metres of their centre: it
-# stopped, it crawled, or it held a tight orbit. A ball that keeps covering ground, a wide curve round a pack
-# included, never boils. With that dial at 0 the test is the one the boils shipped with: at least LOOP_PATH
-# metres rolled in the window, ending under LOOP_NET from where it started (a loop, the rut test), which
-# also boiled a wide kite and never a ball that stood still. A low rumble sounds and a ring is committed
+# Spillway's silt: while a fight is on (an enemy within FIGHT_RADIUS) and the ball has rolled at least
+# LOOP_PATH metres in the last LOOP_WINDOW seconds but ended under LOOP_NET from where it started (a loop, the
+# rut test), the silt boils up where its loop is carrying it. A low rumble sounds and a ring is committed
 # on the ball's predicted roll WARN seconds ahead; the ring fills for WARN seconds, then erupts: a ball
-# inside takes DAMAGE times the dial (then the stage mob dial, x2 on the dam, ChallengeDials MOBS_DAMAGE_W1) and a kick up, and every enemy inside is tossed and takes ENEMY_DAMAGE
+# inside takes DAMAGE times the dial (then the stage mob dial, x1.5 on the dam, ChallengeDials MOBS_DAMAGE_W1) and a kick up, and every enemy inside is tossed and takes ENEMY_DAMAGE
 # (bait a crew into it). After a boil the silt rests REST plus a seeded 0 to JITTER seconds. Seeded per run
 # and stage, so a seed replays the same boils for the same rolling.
 #
-# The silt prices standing your ground against a roaming pack, not the loops the game asks for: nothing boils inside the ring of an engaged,
+# The silt prices kiting, not the loops the game asks for: nothing boils inside the ring of an engaged,
 # standing Warden (the fight holds the ball there), and an activity's own crew (an event pack, a camp
 # brute, a relay's minibosses) is no fight while it stays within SITE_LEASH of its site. Only roaming packs,
 # or a crew dragged off its site, start a boil, and only while the stage is in play before its exit: the
@@ -31,9 +27,6 @@ const FIGHT_RADIUS := 30.0
 const LOOP_WINDOW := 10.0
 const LOOP_PATH := 60.0
 const LOOP_NET := 36.0
-# The stall test's reach: wider than the 14 m ring (and its 3 m band) a ball orbits a pack on, so that orbit
-# still boils; a kite ring of 20 m or more is free.
-const STALL_SPREAD := 18.0
 const SAMPLE_S := 0.5
 const WARN := 1.2
 const RADIUS := 4.5
@@ -133,7 +126,7 @@ func step(delta: float, enemies: Array) -> void:
 			_erupt(k, enemies)
 		return
 	_rest -= delta
-	if _rest > 0.0 or not _stirring() or not _fighting(ball, enemies):
+	if _rest > 0.0 or not _looping() or not _fighting(ball, enemies):
 		return
 	var at := PackPressure.predict(_ctx.player, WARN)
 	_ring = Telegraph.ring(_ctx.root, _terrain, Threat.Type.INSTANT, at, RADIUS)
@@ -142,29 +135,9 @@ func step(delta: float, enemies: Array) -> void:
 	rumbled.emit(at, WARN)
 
 
-# Whether the ball's last LOOP_WINDOW seconds stir the silt: the stall test where the stage's dial is on, the
-# loop test where it is off. Neither reads before the window is full.
-func _stirring() -> bool:
+func _looping() -> bool:
 	if _samples.size() < int(LOOP_WINDOW / SAMPLE_S) + 1:
 		return false
-	if ChallengeDials.by_stage_or("hazard.boil_stall_by_stage", int(_ctx.run.stage), 0.0) > 0.0:
-		return _stalled()
-	return _looping()
-
-
-# Every sample of the window lies within STALL_SPREAD of the samples' centre.
-func _stalled() -> bool:
-	var centre := Vector3.ZERO
-	for at in _samples:
-		centre += _flat(at)
-	centre /= float(_samples.size())
-	for at in _samples:
-		if (_flat(at) - centre).length() > STALL_SPREAD:
-			return false
-	return true
-
-
-func _looping() -> bool:
 	var path := 0.0
 	for i in range(1, _samples.size()):
 		path += _flat(_samples[i] - _samples[i - 1]).length()

@@ -277,7 +277,7 @@ func _run() -> void:
 	await _sim(0.1)
 	# Set right before the hit: the hull regenerates between ticks.
 	run.hp = 50.0
-	# The hit door at identity: the dam (stage 1) ships mob hits at x2 (ChallengeDials MOBS_DAMAGE_W1).
+	# The hit door at identity: the dam (stage 1) ships mob hits at x1.5 (ChallengeDials MOBS_DAMAGE_W1).
 	ChallengeDials.set_overrides({"mobs.damage_by_stage": ChallengeDials.ONES6})
 	_combat._on_player_hit(20.0, Vector3.ZERO, "test")
 	var after_small: float = run.hp
