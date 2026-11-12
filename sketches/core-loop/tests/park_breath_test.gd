@@ -72,6 +72,10 @@ func _stage(map_id: String) -> void:
 	var points := line_points(g)
 	if not t.check("%s has fight sites and line nodes" % map_id, sites.size() > 0 and points.size() > 0, "%d sites, %d line nodes" % [sites.size(), points.size()]):
 		return
+	# A lightning row is its strike disc, not the landform it sits on (park_map.gd fight_sites).
+	for s in sites:
+		if String(s["id"]) == "dome_lightning":
+			t.check("%s: the dome lightning is a fight site the size of its strike" % map_id, s.has("ring") and s["ring"] == Vector2(0.0, 6.0), "%s" % [s])
 	var share := quiet_share(sites, points)
 	var kinds := {}
 	for s in sites:

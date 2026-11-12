@@ -81,10 +81,10 @@ Data the checks read, all public today unless noted: stage graph `src/world/park
 | flume | height bands in use | 3 (48.8% / 38.8% / 12.4%) | 3 | pass |
 | flume | rides climbing 10 m or more | 3 | 4 | OWED |
 | flume | hub zones reaching 3 bands | 5 | 1 | pass |
-| dam | riding-line nodes 60 m clear of every fight site (point 2) | 0.43 | 0.25 | pass |
+| dam | riding-line nodes 60 m clear of every fight site (point 2) | 0.67 | 0.25 | pass (0.43 before the dome lightning was read as its 6 m strike disc, 12 Nov) |
 | flume | riding-line nodes 60 m clear of every fight site (point 2) | 0.18 | 0.25 | OWED: the flume reach (drones and the trestle collapse face) and the wasteway chute fights lie along the lines; breather zones wait for PR 753 |
-| dam | floor line heavy/quiet switches at 20 m/s, quiet gaps under 5 s between fights folded (point 3) | 2 | 3 | OWED: domes then west wash, 46 s with a 1 s gap |
-| dam | longest heavy run on the floor line (point 3) | 46.2 s | 45 s | OWED |
+| dam | floor line heavy/quiet switches at 20 m/s, quiet gaps under 5 s between fights folded (point 3) | 5 | 3 | pass since 12 Nov: the check read the dome lightning as the whole 260 x 240 m dome field, but it strikes one 6 m disc at the domes' centre and the director holds no box for it (`natural.gd`); read as the disc, the drop-in is quiet for 7 s. Was 2, OWED |
+| dam | longest heavy run on the floor line (point 3) | 24.0 s | 45 s | pass since 12 Nov (the same reading; was 46.2 s, OWED) |
 | flume | floor line switches; longest heavy run (point 3) | 9; 15.0 s | 3; 45 s | pass |
 
 Points 2 and 3 read `ParkMap.fight_sites()` (homes, event sites, the Warden ring, the yard lock ring) in `tests/park_breath_test.gd` and `tests/park_rhythm_test.gd` (wave 37, run twice, identical, planted cases fire). Neither sees the director's timer packs.

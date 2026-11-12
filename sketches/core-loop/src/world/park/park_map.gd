@@ -71,7 +71,8 @@ func warden_spec() -> Dictionary:
 
 # Where this stage's fights happen, as the game places them, for the map checks (map points 2 and 3). Each site is
 # {"id", "kind", "at": Vector2} plus its extent: a "home" (a crew's site row, director.gd _read_homes) and an "event"
-# (its site row, resolved by NaturalFootprint, half sizes from effect.footprint_m when set, event_director.gd _park_clear) carry the row's footprint as "half": Vector2 and "yaw_deg", as footprint_contains
+# (its site row, resolved by NaturalFootprint, half sizes from effect.footprint_m when set, event_director.gd _park_clear; a
+# lightning row is its strike disc, a "ring" of 0 to strike_m at the site's centre) carry the row's footprint as "half": Vector2 and "yaw_deg", as footprint_contains
 # reads it; the "warden" (the engage ring) and the "yard" lock (lock_rows.gd) carry "ring": Vector2(inner, outer), the
 # band of distance from `at` they cover. The yard lock shuts wherever the ball first crosses within_m of the beacon on
 # the ground, centred ahead_m inside it, so its ring is every place that circle can stand for a ball that crosses
@@ -90,6 +91,11 @@ func fight_sites() -> Array:
 			if site.is_empty():
 				continue
 			if table[1] == "event":
+				# A lightning row strikes one strike_m disc at its site's centre and the director holds no box for it
+				# (natural.gd plan, park_props.gd's telegraph zones): the disc is its fight, not the landform it sits on.
+				if row.get("kind", "") == "lightning":
+					out.append({"id": row["id"], "kind": "event", "at": _v2(site["at"]), "ring": Vector2(0.0, float(row.get("effect", {}).get("strike_m", 0.0)))})
+					continue
 				site = NaturalFootprint.resolve(row, site)
 			var half := footprint_half_extents(site)
 			var own = row.get("effect", {}).get("footprint_m")
