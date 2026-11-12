@@ -42,6 +42,7 @@ from mathutils import Vector
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 import common
+import crew
 import polish
 from common import Part
 
@@ -78,10 +79,8 @@ b = Part("WinchBody")
 # --- The crew: an oxide barrel, chest and head, small under the rotor ------------------
 b.cyl("fleet_paint", 0.50, 0.62, 0.70, segs=10, loc=g(0, -0.40, 0))  # lower barrel, tapering toward the hanger
 b.cyl("fleet_paint", 0.62, 0.56, 0.60, segs=10, loc=g(0, 0.25, 0))  # chest
-b.uv("fleet_paint", 0.32, u=10, v=6, loc=g(0, 0.85, 0.20))  # head, forward of the mast
-b.box("paint", (0.18, 0.16, 0.22), loc=g(0, 0.80, 0.50), color=CHAR)  # snout
-for s in (-1, 1):
-    b.cyl("paint", 0.10, 0.0, 0.28, segs=6, loc=g(s * 0.17, 1.24, 0.16), color=CHAR)  # ears
+crew.animal_head(b, g(0, 0.85, 0.20), 0.32, snout=((0.18, 0.16, 0.22), g(0, 0.80, 0.50)),
+                 ears=(0.10, 0.28, [g(s * 0.17, 1.24, 0.16) for s in (-1, 1)]))
 b.cyl("paint", 0.64, 0.64, 0.10, segs=10, loc=g(0, -0.02, 0), color=CHAR)  # strap round the waist
 b.box("paint", (0.50, 0.55, 0.30), loc=g(0, 0.15, -0.62), color=CHAR)  # battery pack behind the crew
 b.box("paint", (0.28, 0.18, 0.05), loc=g(0, 0.20, 0.60), color=BRASS)  # the one brass requisition tag

@@ -20,6 +20,7 @@ from mathutils import Vector
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 import common
+import crew
 import polish
 from common import Part
 
@@ -41,10 +42,8 @@ def g(x, y, z):
 b = Part("SwatterBody")
 b.cyl("fleet_paint", 0.57, 0.65, 1.0, segs=10, loc=g(0, -0.60, 0))
 b.cyl("fleet_paint", 0.65, 0.51, 0.85, segs=10, loc=g(0, 0.325, 0))
-b.uv("fleet_paint", 0.33, u=10, v=6, loc=g(0, 1.10, 0.08))
-b.box("paint", (0.24, 0.18, 0.15), loc=g(0, 1.04, 0.40), color=CHAR)
-for side in (-1, 1):
-    b.cyl("paint", 0.12, 0.0, 0.32, segs=6, loc=g(side * 0.18, 1.55, 0.06), color=CHAR)
+crew.animal_head(b, g(0, 1.10, 0.08), 0.33, snout=((0.24, 0.18, 0.15), g(0, 1.04, 0.40)),
+                 ears=(0.12, 0.32, [g(side * 0.18, 1.55, 0.06) for side in (-1, 1)]))
 b.cyl("paint", 0.66, 0.66, 0.12, segs=10, loc=g(0, -0.12, 0), color=CHAR)
 b.box("paint", (0.46, 0.20, 0.52), loc=g(0, 0.16, -0.62), color=CHAR)
 b.box("paint", (0.28, 0.05, 0.18), loc=g(0, 0.28, 0.55), color="brass")
