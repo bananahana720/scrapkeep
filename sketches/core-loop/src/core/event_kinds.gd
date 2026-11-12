@@ -232,7 +232,7 @@ const JUICE := {
 			"fx": {"crit_core": 24, "crit_halo": 24}},
 		"heavy": {"stop_add_ms": 10.0, "kick": 0.45, "dust": 12}, "fx": {"spark_core": 16, "spark_halo": 16}},
 	"enemy_rebounded": {"kick": 0.55, "shake": 0.35, "dust": 14},
-	"enemy_killed": {"pop": 14, "debris": 10, "chain_ms": 1500, "chain_cap": 7, "multi_ms": 90, "multi_stop_ms": 30.0, "pips": 8},
+	"enemy_killed": {"pop": 14, "debris": 10, "shards": 16, "chain_ms": 1500, "chain_cap": 7, "multi_ms": 90, "multi_stop_ms": 30.0, "pips": 8},
 	# A scrap trail's pieces are 9.8 m apart (ruling cd), 700 ms at the 14 m/s cruise: the window holds the run down to
 	# about 10 m/s, and a trail's rest (four empty beats, 2.8 s at cruise) still ends it.
 	"scrap_collected": {"chain_ms": 1000, "chain_cap": 9, "pulse": 0.05, "pulse_cap": 0.16},

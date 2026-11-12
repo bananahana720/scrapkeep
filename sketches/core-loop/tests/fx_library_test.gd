@@ -35,7 +35,7 @@ func _run() -> void:
 		FxLibrary.fire(e, id, "enemy_struck", 4, Vector3(1, 2, 3))
 		t.check("%s emitting right after restart" % id, e.emitting and e.global_position.is_equal_approx(Vector3(1, 2, 3)))
 		e.free()
-	t.check("ceiling at most the pinned 752 (FX-FIX: latch halo, ember pool, wisp; was 648)", FxLibrary.ceiling() <= FxLibrary.CEILING and FxLibrary.CEILING == 752, str(FxLibrary.ceiling()))
+	t.check("ceiling at most the pinned 800 (FX-01: the kill's body shards, 3 x 16; was 752 after FX-FIX's latch halo, ember pool, wisp; was 648)", FxLibrary.ceiling() <= FxLibrary.CEILING and FxLibrary.CEILING == 800, str(FxLibrary.ceiling()))
 	var struck := FxLibrary.effects("enemy_struck")
 	var crit := FxLibrary.effects("enemy_struck", "crit")
 	t.check("a crit differs in count and size, not only tint", crit["crit_core"] > struck["spark_core"]

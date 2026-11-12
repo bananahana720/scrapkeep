@@ -33,7 +33,7 @@ const FlashGuard := preload("res://src/presentation/flash_guard.gd")
 # Emitters use a fixed seed, so a capture at a fixed tick repeats. No lights.
 const SEED := 731
 # Pool x max over the "vfx" specs; fx_library_test pins it.
-const CEILING := 752
+const CEILING := 800
 # Pool x max over the "machine" specs; machine_fx_test pins it.
 const MACHINE_CEILING := 876
 const SPECS := {
@@ -57,6 +57,9 @@ const SPECS := {
 		"size": 0.9, "colour": "row", "attach": "world", "blend": "add", "shape": "ring", "ring_m": 1.2, "glow": 2.0},
 	"latch_pulse": {"pool": 2, "max": 16, "life": 0.12, "speed": [9.0, 10.5], "spread": 1.0, "gravity": 0.0, "explosive": 0.6,
 		"size": 0.34, "colour": "row", "attach": "world", "blend": "mix", "shape": "point", "forward": true, "glow": 1.8},
+	# A kill's body shards (FX-01), tinted the pilot's colour: the kill's own matter, not the hit's light.
+	"kill_shards": {"pool": 3, "max": 16, "life": 0.8, "speed": [5.0, 11.0], "spread": 70.0, "gravity": -24.0, "spin": 600.0,
+		"size": Vector3(0.3, 0.07, 0.24), "colour": "row", "attach": "world", "blend": "mix", "shape": "point"},
 	"crack_debris": {"pool": 2, "max": 32, "life": 1.0, "speed": [4.0, 9.0], "spread": 50.0, "gravity": -24.0,
 		"size": Vector3(0.28, 0.2, 0.24), "colour": "CHARCOAL", "attach": "world", "blend": "mix", "shape": "point", "spin": 540.0},
 	"cache_ember": {"pool": 2, "max": 24, "life": 1.2, "speed": [1.0, 2.6], "spread": 60.0, "gravity": 0.3,

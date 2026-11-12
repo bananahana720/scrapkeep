@@ -21,6 +21,7 @@ const EXPECTED := {
 	"warden-form": ["warden_form", "loop", "bogus", "launch"],
 	"drop-room": ["drop_room", "duck", "bogus", "launch"],
 	"set-director": ["set_director", "on", "bogus", "launch"],
+	"kill-look": ["kill_look", "card", "bogus", "launch"],
 	"discovery": ["discovery", "cards", "bogus", "launch"],
 	"telegraph": ["telegraph", "haze", "bogus", "launch"],
 	"world-one-builds": ["world_one_builds", "on", "bogus", "launch"],

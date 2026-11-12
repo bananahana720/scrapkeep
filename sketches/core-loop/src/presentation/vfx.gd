@@ -13,6 +13,8 @@ const Threat := preload("res://src/combat/threat_grammar.gd")
 const Synergies := preload("res://src/build/synergies.gd")
 const FxLibrary := preload("res://src/presentation/fx_library.gd")
 const FlashGuard := preload("res://src/presentation/flash_guard.gd")
+const KillMark := preload("res://src/presentation/kill_mark.gd")
+const Tuning := preload("res://src/movement/tuning.gd")
 
 # World-space effects. Each glyph takes its colour and silhouette from the fact's
 # event_kinds row, so a slam ring, a kill burst and a scrap square read the same way
@@ -48,6 +50,9 @@ const BURST_LOOKS := {"pop": "puff", "debris": "chunk", "dust": "puff", "fountai
 const PIPS := 8
 const PIP_RADIUS := 0.9
 const PIP_HEIGHT := 2.5
+# The kill mark's width across its longest points, before the merged pop's scale: a crit's
+# star reaches 1.6 m, so a single kill's mark stands clear of it.
+const KILL_MARK_M := 3.0
 
 var ctx
 var player
@@ -95,6 +100,8 @@ const HEAT_GLYPH := Color(1.0, 0.5, 0.12)
 var trails := true
 # Every kill's starburst, pop and debris pass through this gate (kill_pop).
 var pops := PopGate.new()
+# A kill's own mark (FX-01); its candidate comes from the launch option kill_look.
+var kill_mark: KillMark
 var _fill_scale := 1.0
 # What the governor steers toward, recounted every 1 / Density.SAMPLE_HZ seconds.
 var _density_target := 0.0
@@ -162,25 +169,14 @@ func setup(ctx_ref) -> void:
 	root = Node3D.new()
 	root.name = "PresentationFx"
 	ctx.root.add_child(root)
-	_build_meshes()
-	for i in POOL:
-		var glyph := MeshInstance3D.new()
-		var mat := StandardMaterial3D.new()
-		mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-		mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-		mat.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
-		mat.cull_mode = BaseMaterial3D.CULL_DISABLED
-		mat.no_depth_test = false
-		glyph.material_override = mat
-		glyph.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-		glyph.visible = false
-		root.add_child(glyph)
-		_glyphs.append({"node": glyph, "mat": mat, "t": 1.0, "life": 1.0, "from": 1.0, "to": 1.0, "color": Color.WHITE})
+	_build_glyphs()
 	for i in SPARKLE_POOL:
 		_sparkles.append(_make_sparkle())
 	_build_bursts()
 	_build_fx()
 	_build_pips()
+	if ctx.get("tuning") != null:
+		kill_mark.choose(ctx.tuning.option(Tuning.KILL_LOOK_KEY))
 	var layer := CanvasLayer.new()
 	layer.name = "EdgeFlashLayer"
 	layer.layer = 4
@@ -403,6 +399,8 @@ func clear() -> void:
 		for p in _bursts[kind]:
 			p.emitting = false
 	_chain = 0
+	if kill_mark != null:
+		kill_mark.clear()
 	_trail_points.clear()
 	_streaks.clear()
 	pops.clear()
@@ -415,6 +413,26 @@ func clear() -> void:
 
 
 # --- Glyphs ---------------------------------------------------------------------------
+
+# The glyph pool and the kill mark, under root.
+func _build_glyphs() -> void:
+	_build_meshes()
+	for i in POOL:
+		var glyph := MeshInstance3D.new()
+		var mat := StandardMaterial3D.new()
+		mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		mat.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
+		mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+		mat.no_depth_test = false
+		glyph.material_override = mat
+		glyph.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		glyph.visible = false
+		root.add_child(glyph)
+		_glyphs.append({"node": glyph, "mat": mat, "t": 1.0, "life": 1.0, "from": 1.0, "to": 1.0, "color": Color.WHITE})
+	kill_mark = KillMark.new()
+	root.add_child(kill_mark)
+
 
 func _build_meshes() -> void:
 	var ring := TorusMesh.new()
@@ -874,11 +892,16 @@ func play_fx(kind: String, at: Vector3, tint := Color.TRANSPARENT, variant := ""
 	for id in effects:
 		if not _fx.has(id) or FxLibrary.SPECS[id]["attach"] == "ball":
 			continue
-		var pool: Array = _fx[id]
-		var p: GPUParticles3D = pool[_fx_next[id]]
-		_fx_next[id] = (_fx_next[id] + 1) % pool.size()
-		FxLibrary.fire(p, id, kind, int(effects[id]), at, tint, toward)
-		spawned["fx_" + id] = spawned.get("fx_" + id, 0) + 1
+		_fire_fx(id, kind, int(effects[id]), at, tint, toward)
+
+
+# The oldest emitter of one "vfx" spec restarts at `at`.
+func _fire_fx(id: String, kind: String, count: int, at: Vector3, tint := Color.TRANSPARENT, toward := Vector3.ZERO) -> void:
+	var pool: Array = _fx[id]
+	var p: GPUParticles3D = pool[_fx_next[id]]
+	_fx_next[id] = (_fx_next[id] + 1) % pool.size()
+	FxLibrary.fire(p, id, kind, count, at, tint, toward)
+	spawned["fx_" + id] = spawned.get("fx_" + id, 0) + 1
 
 
 func _on_world_fact_fx(kind: String, at: Vector3) -> void:
@@ -912,7 +935,7 @@ func _roll_dust() -> void:
 			spawned["fx_roll_dust"] = spawned.get("fx_roll_dust", 0) + 1
 
 
-# A kill's starburst, pop and debris, through the kill-pop gate: one call per kill.
+# A kill's mark, shards and debris, through the kill-pop gate: one call per kill.
 func kill_pop(at: Vector3) -> void:
 	var governor := Density.live()
 	pops.add(_clock, at, governor.coalesce_metres())
@@ -922,13 +945,33 @@ func kill_pop(at: Vector3) -> void:
 func _emit_pops() -> void:
 	if pops.pending.is_empty():
 		return
-	var row := EventKinds.juice("enemy_killed")
 	for cluster in pops.ready(_clock, Density.live().coalesce_seconds()):
-		var at: Vector3 = cluster["at"]
-		var scale: float = cluster["scale"] * (1.0 + MIGHT_GLYPH * might)
+		kill_look(cluster["at"], cluster["scale"])
+
+
+# One merged kill pop at `at`, `scale` from its kill count (FX-01). Inked candidates draw the
+# kill mark, throw the body's shards in the pilot's colour and ink debris; "plain" keeps the
+# look before FX-01 (the hit star larger, a puff, rust debris) for Andrew's side-by-side.
+# `pilot` overrides the pilot's colour (a capture with no ball).
+func kill_look(at: Vector3, scale: float, pilot := Color.TRANSPARENT) -> void:
+	var row := EventKinds.juice("enemy_killed")
+	scale *= 1.0 + MIGHT_GLYPH * might
+	if not kill_mark.inked():
 		glyph("enemy_killed", at + Vector3.UP * 0.8, 0.6 * scale, 1.8 * scale, 0.3, Vector3.ZERO, "", _hot("enemy_killed"))
 		burst("pop", at + Vector3.UP * 0.8, EventKinds.color("enemy_killed").lerp(HEAT_GLYPH, heat), int(ceil(float(row["pop"]) * scale)))
 		burst("debris", at + Vector3.UP * 0.5, EventKinds.color("scrap_lost"), int(ceil(float(row["debris"]) * scale)))
+		return
+	var tint := (pilot if pilot.a > 0.0 else kill_tint()).lerp(HEAT_GLYPH, heat)
+	var governed := Density.live().apply(Density.class_of_kind("enemy_killed"), 1.0, 1.0, 1.0)
+	kill_mark.fire(at + Vector3.UP * 0.8, KILL_MARK_M * scale * governed.y, tint)
+	_fire_fx("kill_shards", "enemy_killed", int(ceil(float(row["shards"]) * scale)), at + Vector3.UP * 0.6, tint)
+	burst("debris", at + Vector3.UP * 0.5, Palette.CHARCOAL, int(ceil(float(row["debris"]) * scale)))
+	spawned["enemy_killed"] = spawned.get("enemy_killed", 0) + 1
+
+
+# The pilot's colour: "you did this" (VISUAL-LANGUAGE section 2); the row's copper without a pilot.
+func kill_tint() -> Color:
+	return player.class_color() if player != null and player.has_method("class_color") else EventKinds.color("enemy_killed")
 
 
 # One density per frame from what is in view (FEEL-READABILITY.md §1.2); the P6 fill

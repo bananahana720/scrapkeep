@@ -57,6 +57,10 @@ const SPECS := [
 	# the recorded band to it, with June's sax answering each phrase. Off by default until Andrew
 	# has heard it on and off (ruling cq); `--set-director=on` turns it on.
 	{"key": "set_director", "label": "Set director", "min": 0.0, "max": 1.0, "step": 1.0, "value": 0.0, "options": ["off", "on"]},
+	# A kill's look (presentation/kill_mark.gd, FX-01): candidates for Andrew's pick under ruling cq.
+	# "ink" (the default) is the inked burst with shards, "card" adds a clock-out card on elites,
+	# "plain" is the look before FX-01. `--kill-look=card` picks one at launch.
+	{"key": "kill_look", "label": "Kill look", "min": 0.0, "max": 2.0, "step": 1.0, "value": 0.0, "options": ["ink", "card", "plain"]},
 	{"key": "discovery", "label": "Discovery", "min": 0.0, "max": 1.0, "step": 1.0, "value": 1.0, "options": ["banner", "cards"]},
 	{"key": "telegraph", "label": "Telegraph", "min": 0.0, "max": 1.0, "step": 1.0, "value": 1.0, "options": ["classic", "haze"]},
 	# World-one builds (design-v3/research/build-systems/BUILD-SYSTEMS.md, unit G): the master
@@ -110,6 +114,7 @@ const BREATH_KEY := "breath"
 const WARDEN_FORM_KEY := "warden_form"
 const DROP_ROOM_KEY := "drop_room"
 const SET_DIRECTOR_KEY := "set_director"
+const KILL_LOOK_KEY := "kill_look"
 const DISCOVERY_KEY := "discovery"
 const TELEGRAPH_KEY := "telegraph"
 
@@ -228,6 +233,7 @@ const FLAGS := {
 	"warden-form": ["warden_form", "option", "launch"],
 	"drop-room": ["drop_room", "option", "launch"],
 	"set-director": ["set_director", "option", "launch"],
+	"kill-look": ["kill_look", "option", "launch"],
 	"discovery": ["discovery", "option", "launch"],
 	"telegraph": ["telegraph", "option", "launch"],
 	"world-one-builds": ["world_one_builds", "option", "launch"],
