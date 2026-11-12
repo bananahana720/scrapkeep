@@ -368,7 +368,7 @@ This section makes "legible workshop instrumentation" concrete (AD-08, AC-15).
 ## 8. Motion and timing
 
 - **Easing follows function.** Anything that measures time or distance moves linearly: cooldown sweeps, gauge fills, telegraph fills, a wave's leading edge. Arrivals ease out (cubic). Departures ease in. A back-out overshoot (1.2) is reserved for player-owned success (ready pulse, pickup, synergy), so bounce means good news.
-- **Hit-stop.** Momentum is sacred, so ordinary hits get none. Smash-through gets 40 ms, a pin chain 50 ms, a Warden break 70 ms, and the boss routed 90 ms. There is at most one hit-stop per 250 ms, and never one on damage taken.
+- **Hit-stop.** Hit-stop belongs to the player's own strike, and the ball's motion never stops: a roll, a dodge, a reward or a beacon asks for none, and damage taken never gets one (`juice.gd` `STRIKE_STOP_FACTS`). An ordinary hit stops 12 to 40 ms by its damage (the `enemy_struck` row in `event_kinds.gd`), and a heavier impact profile stops longer, up to the 60 ms cap (`juice.gd` `SPINE_CAP_MS`). Stops keep a 90 ms gap and share a 60 ms budget per 300 ms and 100 ms per second (`event_kinds.gd` `STOP_*`). Those rows own the numbers; this line only names the rule.
 - **One bold animation per event.** Each event row owns one hero motion that matches its shape, such as the arc slam's ring or Kest's line of starbursts. Everything else in that event runs at 30% or less of its scale and brightness. Two events in one frame play by priority from `event_kinds`, and the lower one drops to its sound.
 - **Reduced motion (RR-11).** Motion that measures time or position is information and stays. Motion that celebrates is cosmetic and goes.
 

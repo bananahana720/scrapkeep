@@ -21,7 +21,7 @@ This layer adds the player-side effects the tone bible (TONE-BIBLE.md, project f
 
 ### On the beat
 
-Andrew, Q10 "Sound only" (17 Oct 22:12Z): a hit within 80 ms of a beat the player hears pays in sound and look only. `audio.gd` adds the sax stab `onbeat_sax_stab` over the hit, at most once a beat. It plays once the music session's render is at `res://assets/audio/sfx/onbeat_sax_stab.wav` (in the home key; it is pitched to the live key); until then the cue log says "absent". The hit's own sound plays first, on the hit's frame. `player_fx.gd` then makes that hit's word 1.4x bigger, or stamps BWAP when the hit earned no word. Damage never reads the beat. Test: `tests/on_beat_hit_test.gd`.
+Andrew, Q10 "Sound only" (17 Oct 22:12Z): a hit within 80 ms of a beat the player hears pays in sound and look only. `audio.gd` adds the sax stab `onbeat_sax_stab` over the hit, at most once a beat. The render is at `res://assets/audio/sfx/onbeat_sax_stab.wav` (in the home key; it is pitched to the live key). If the file is ever missing, the cue log says "absent". The hit's own sound plays first, on the hit's frame. `player_fx.gd` then makes that hit's word 1.4x bigger, or stamps BWAP when the hit earned no word. Damage never reads the beat. Test: `tests/on_beat_hit_test.gd`.
 
 ### Pilot voices
 
