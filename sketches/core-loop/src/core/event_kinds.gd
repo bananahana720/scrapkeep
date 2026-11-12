@@ -45,6 +45,9 @@ const ROWS := {
 	"warden_engaged": {"group": "flow", "color": Palette.HAZARD, "shape": "cross", "sound": "warden_theme_in", "hud": "The Warden wakes", "objective": "", "priority": 2},
 	"stage_content_cleared": {"group": "flow", "color": Palette.SAND, "shape": "none", "sound": "stage_fade", "hud": "", "objective": "", "priority": 0},
 	"beacon_unsealed": {"group": "flow", "color": Palette.AMBER, "shape": "star", "sound": "stinger_unseal", "hud": "", "objective": "Charge the beacon", "priority": 3},
+	# W1-62: the quick break's extra arch rises with the find chime and an amber fountain from its top, so
+	# the third arch reads as paid for by speed. No words (ruling cx).
+	"quick_break": {"group": "economy", "color": Palette.AMBER, "shape": "star", "sound": "found_chime", "hud": "", "objective": "", "priority": 1},
 	"scrap_collected": {"group": "economy", "color": Palette.AMBER, "shape": "square", "sound": "scrap_tick", "hud": "", "objective": "", "priority": 1},
 	"cogs_collected": {"group": "economy", "color": Palette.AMBER, "shape": "square", "sound": "cog_tick", "hud": "", "objective": "", "priority": 1},
 	"part_gained": {"group": "economy", "color": Palette.AMBER, "shape": "diamond", "sound": "part_get", "hud": "+ {part}", "objective": "", "priority": 2},
@@ -259,6 +262,8 @@ const JUICE := {
 	"player_hit": {"edge_s": 0.4, "edge_alpha": 0.65, "squash": 0.18, "color": Palette.HAZARD},
 	"scrap_lost": {"pulse": -0.22},
 	"beacon_unsealed": {"stop_ms": 50.0, "punch_fov": 9.0},
+	# The quick-break arch: a fountain this many sparks from its crossbar (reward_gates.gd HEIGHT).
+	"quick_break": {"fountain": 28, "rise": 7.0},
 	# W12 VX-FX: GPU effects (presentation/fx_library.gd SPECS). "fx" is {spec id: particles};
 	# rolling plays continuously while the ball rolls at speed, its count per second. A
 	# "low" sub-dict gives the low preset's counts; "motes" and "streaks" are [idle, occupied].

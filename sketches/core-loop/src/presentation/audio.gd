@@ -2158,6 +2158,7 @@ func wire_optional() -> void:
 		if not Activities.RULES.get(id, {}).has("bundle"):
 			play("activity_done", 0.0, 1.0, "SFX", Rows.heard(EventKinds.activity_row(id), cue_context())))
 	_listen_optional(events, "core_gained", _on_core)
+	_listen_optional(events, "quick_break", func(_stage: int, _seconds: float, _at: Vector3): play("quick_break"))
 	_listen_optional(events, "near_miss", _on_near_miss)
 	_listen_optional(events, "synergy_discovered", _on_synergy)
 	_listen_optional(events, "line_state_changed", _on_line_state)

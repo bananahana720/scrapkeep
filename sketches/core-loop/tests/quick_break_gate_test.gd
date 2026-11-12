@@ -4,18 +4,21 @@ const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const RunClock := preload("res://src/build/run_clock.gd")
 const T := preload("res://tests/support/t.gd")
+const EventKinds := preload("res://src/core/event_kinds.gd")
 
 # W1-62, a quick Warden break pays: a Warden broken within RunClock.QUICK_BREAK_SECONDS of its
 # engagement adds one part roll to its gate. The clock counts the fight from the attempt's
 # engagement to the first break, and a stage with no limit (0) never pays. In a booted run the
 # gates open with the pair after a fight over the limit, and with the pair and one more arch
 # after a fight under it. With the hot-wired arch beside them, four arches stand on the dam's
-# three-slot row, centred and at the slots' spacing, never off the row.
+# three-slot row, centred and at the slots' spacing, never off the row. The quick break says so once,
+# at its own arch (events.quick_break, the presentation's cue), and a slow break says nothing.
 # smoke: timeout=120s
 
 var _game
 var _build
 var _ticks := 0
+var _cues: Array = []
 var _t := T.new("quick_break_gate_test")
 
 
@@ -24,6 +27,10 @@ func _initialize() -> void:
 	_game = Game.new()
 	_game.test_mode = true
 	root.add_child(_game)
+
+
+func _on_quick_break(_stage: int, seconds: float, at: Vector3) -> void:
+	_cues.append({"seconds": seconds, "at": at})
 
 
 func _clock_rules() -> void:
@@ -69,15 +76,22 @@ func _physics_process(_delta: float) -> bool:
 		_game.ctx.calm = true
 		_game.player.source = Intent.Scripted.new()
 		_build = _game.ctx.build
+		_game.events.quick_break.connect(_on_quick_break)
 		_game.flow.press_start()
 		_game.flow.choose_class(0)
 		return false
 	if _ticks < 12:
 		return false
 	var slow := _arches(RunClock.QUICK_BREAK_SECONDS[0] + 5.0)
+	var slow_cues := _cues.size()
 	var quick := _arches(RunClock.QUICK_BREAK_SECONDS[0] - 5.0)
 	_t.check("a slow break opens the pair", slow >= 2, "%d arches" % slow)
 	_t.eq("a quick break opens one more arch", quick, slow + 1)
+	_t.eq("a slow break says nothing", slow_cues, 0)
+	_t.check("a quick break says so once, at its own arch, with the fight's seconds", _cues.size() == 1
+		and _cues[0]["at_arch"] and is_equal_approx(float(_cues[0]["seconds"]), RunClock.QUICK_BREAK_SECONDS[0] - 5.0), str(_cues))
+	_t.eq("its cue is a row: amber star, the find chime", [EventKinds.row("quick_break")["shape"], EventKinds.row("quick_break")["sound"]],
+		["star", "found_chime"])
 	_four_on_slots()
 	quit(_t.verdict())
 	return true
@@ -93,6 +107,9 @@ func _arches(fight: float) -> int:
 	clock.warden_broken()
 	_game.events.flow_changed.emit("gates")
 	var count: int = _build.gates.offers.size()
+	for cue in _cues:
+		if not cue.has("at_arch"):
+			cue["at_arch"] = _build.gates.offers.slice(2).any(func(o): return (o["at"] as Vector3).is_equal_approx(cue["at"]))
 	_build.gates.close()
 	return count
 

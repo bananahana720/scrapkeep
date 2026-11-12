@@ -21,6 +21,9 @@ signal beacon_unsealed(stage: int)
 # engaged: the moment before the fight, when intro lines and reveal cards play (flow.gd).
 signal warden_sighted(stage: int)
 signal warden_engaged(stage: int)
+# A Warden broke within its quick-break limit (run_clock.gd, W1-62): its gate stands one more arch,
+# at `at`, and this is the moment that says why. seconds is the fight, engagement to break.
+signal quick_break(stage: int, seconds: float, at: Vector3)
 signal stage_content_cleared(reason: String)
 
 # Run state (spine; emitted by run_state.gd's mutators, called by the modules).

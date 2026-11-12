@@ -228,6 +228,7 @@ func wire_optional() -> void:
 	SignalWire.listen(events, "rocket_jumped", _on_rocket_jumped)
 	SignalWire.listen(events, "part_gained", _on_part)
 	SignalWire.listen(events, "core_gained", _on_core)
+	SignalWire.listen(events, "quick_break", _on_quick_break)
 	SignalWire.listen(events, "harpoon_bit", _on_harpoon_bit)
 	SignalWire.listen(events, "carved", _on_carved)
 
@@ -668,6 +669,14 @@ static func part_tint(part_id: String) -> Color:
 func _on_core(_source: String, at: Vector3, _count: int) -> void:
 	if vfx != null:
 		vfx.burst("fountain", at + Vector3.UP * 0.6, EventKinds.color("core_gained"), int(EventKinds.juice("core_gained")["fountain"]))
+
+
+# A quick Warden break's extra arch: an amber fountain from its crossbar and a pulse of the shell.
+func _on_quick_break(_stage: int, _seconds: float, at: Vector3) -> void:
+	pulse(0.12)
+	if vfx != null:
+		var row := EventKinds.juice("quick_break")
+		vfx.burst("fountain", at + Vector3.UP * float(row["rise"]), EventKinds.color("quick_break"), int(row["fountain"]))
 
 
 # --- Dodges and hits taken ------------------------------------------------------------

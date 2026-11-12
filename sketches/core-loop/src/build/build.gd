@@ -1298,15 +1298,21 @@ func _on_flow_changed(state: String) -> void:
 	var gate_rng := _offer_rng("gates")
 	var picks: Array = Parts.roll_gate(gate_rng, rarities, _class_id(), ctx.run.parts, GATE_CHOICES, ctx.flow.stage(), _offered)
 	picks = Parts.floor_gate(gate_rng, picks, _class_id(), ctx.run.parts, _offered, GATE_CHOICES)
+	var quick: Array = []
 	if clock.quick_break():
-		picks += Parts.roll(_offer_rng("quick_break"), rarities, _class_id(), ctx.run.parts, 1, picks, _offered)
+		quick = Parts.roll(_offer_rng("quick_break"), rarities, _class_id(), ctx.run.parts, 1, picks, _offered)
+		picks += quick
 	for part_id in picks:
 		_offered[part_id] = _offered.get(part_id, 0) + 1
 	picks += _hotwire_gate_ids()
 	var active := active_offer("gate", rarities, gate_rng)
 	if active != "":
 		picks.append(active)
-	ctx.events.reward_offered.emit(gates.open(picks, ctx.player.ball_position(), _heading(), ctx.run.parts))
+	var offers: Array = gates.open(picks, ctx.player.ball_position(), _heading(), ctx.run.parts)
+	ctx.events.reward_offered.emit(offers)
+	for offer in offers:
+		if offer["part_id"] in quick:
+			ctx.events.quick_break.emit(ctx.flow.stage(), clock.fight_seconds(), offer["at"])
 
 
 # A reward's own stream, named by the run, the stage and the source: the gate pair and a vault's
