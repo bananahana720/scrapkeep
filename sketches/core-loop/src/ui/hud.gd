@@ -1218,9 +1218,35 @@ func place_prompts(size: Vector2, playing: bool) -> void:
 			continue
 		prompt.position = spot.position
 		prompt.size = spot.size
+		prompt.aim_at(cam.unproject_position(entry[2]), _leader_room(size))
 		prompt.visible = true
 		placed.append(spot)
 		prompt_rects[prompt] = spot
+	# A gate's leader that would cross another prompt's words is not drawn: the column says it.
+	for prompt in prompt_rects:
+		if prompt.leader_end().is_finite() and crosses(prompt.position + prompt.leader_end(), prompt.position + Vector2(prompt.size.x * 0.5, 0.0), prompt_rects, prompt):
+			prompt.aim_at(Vector2.INF, Rect2())
+
+
+# The play view between the toasts band and the prompts band: a gate's leader stays inside it.
+static func _leader_room(size: Vector2) -> Rect2:
+	var top := ScreenRegions.rect("toasts", size).end.y
+	return Rect2(0.0, top, size.x, ScreenRegions.rect("prompts", size).position.y - top)
+
+
+# Whether the segment from `a` to `b` runs through any placed prompt but `own`.
+static func crosses(a: Vector2, b: Vector2, rects: Dictionary, own) -> bool:
+	for other in rects:
+		if other == own:
+			continue
+		var r: Rect2 = rects[other]
+		if r.has_point(a) or r.has_point(b):
+			return true
+		var corners := [r.position, Vector2(r.end.x, r.position.y), r.end, Vector2(r.position.x, r.end.y)]
+		for i in 4:
+			if Geometry2D.segment_intersects_segment(a, b, corners[i], corners[(i + 1) % 4]) != null:
+				return true
+	return false
 
 
 # The spot for a prompt whose anchor projects to `at`. A prompt showing its detail that finds no
