@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { readFileSync } from "node:fs";
-import { BOSSES, COLUMNS, TARGETS, aggregate, buildTable, cellVerdict, describeDoc, estimate, gradeRun, mergeLibraryIndexes, wallStats, checkMerge, planHash, jobKey, dedupeBy, bucketInfo, fightStart, median, meets, pickBuilds, planCells, renderTable, shardJobs, wilson, MAX_RUN_TIER, botArgs, qaRows, playerReport, renderPlayerReport, QA_KINDS, FAIRNESS, fairnessOf, fairnessPool, fairnessByCell, renderFairness } from "./lib.mjs";
+import { BOSSES, COLUMNS, TARGETS, aggregate, buildTable, cellVerdict, describeDoc, estimate, gradeRun, mergeLibraryIndexes, wallStats, checkMerge, planHash, jobKey, dedupeBy, bucketInfo, fightStart, median, meets, pickBuilds, planCells, renderTable, shardJobs, wilson, maxJobs, settledMark, columnTarget, MAX_RUN_TIER, botArgs, qaRows, playerReport, renderPlayerReport, QA_KINDS, FAIRNESS, fairnessOf, fairnessPool, fairnessByCell, renderFairness } from "./lib.mjs";
 
 const docs = (n, stage = 2) => Array.from({ length: n }, (_, i) => ({ file: `s${stage}/d${i}.json`, stage, mass: 100 + i * 10, parts: i % 5, pilot: "tarn" }));
 const builds = () => Object.fromEntries([2, 3, 4, 5, 6].map((s) => [s, pickBuilds(docs(24, s))]));
@@ -586,4 +586,28 @@ test("the table gains one fairness line per cell and arm", () => {
   // the two summary sentences are scoped so a fairness ✗ never sits beside "No cell has a ✗"
   assert.match(text, /(No cell has a ✗|Cells with a ✗) against a win-rate target/);
   assert.match(text, /Fairness lines with a ✗: w1 (novice|expert) F[123]/);
+});
+
+test("the job cap follows cores and memory, never below 6", () => {
+  const gib = 2 ** 30;
+  assert.equal(maxJobs(4, 15 * gib), 6); // the cloud box keeps the old cap
+  assert.equal(maxJobs(32, 64 * gib), 32); // one a core when memory allows
+  assert.equal(maxJobs(32, 40 * gib), 20); // memory binds at 2 GiB a job
+  assert.equal(maxJobs(2, 4 * gib), 6);
+});
+
+test("early stop settles a column only when the seeds left cannot change its mark (ruling dg)", () => {
+  const g = (wins, losses, errors = 0) => [...Array(wins).fill({ result: "win" }), ...Array(losses).fill({ result: "loss" }), ...Array(errors).fill({ result: "error" })];
+  const expert = { min: 0.85 };
+  assert.equal(settledMark({ grades: g(1, 5), left: 18, target: expert }), false); // 19 of 24 at best: 79%
+  assert.equal(settledMark({ grades: g(20, 0), left: 4, target: expert }), null); // 20 of 24 at worst: 83%
+  assert.equal(settledMark({ grades: g(21, 0), left: 3, target: expert }), true); // 21 of 24 at worst: 87.5%
+  assert.equal(settledMark({ grades: g(4, 6), left: 14, target: { max: 0.15 } }), false); // 4 of 24 at best: 17%
+  assert.equal(settledMark({ grades: g(0, 10), left: 14, target: { max: 0.15 } }), null); // 14 of 24 still possible
+  assert.equal(settledMark({ grades: g(5, 0), left: 19, target: null }), null); // no target: every seed runs
+  assert.equal(settledMark({ grades: g(1, 5), left: 18, target: expert, tellOpen: true }), null); // the 45 s tell is still clean
+  assert.equal(settledMark({ grades: g(1, 5, 1), left: 17, target: expert }), null); // over the excluded share
+  assert.equal(settledMark({ grades: g(3, 0), left: 0, target: expert }), null); // nothing left to skip
+  assert.equal(columnTarget("w1", "warden", "expert")?.min, 0.85);
+  assert.equal(columnTarget("w1clear", "clear", "expert"), null);
 });

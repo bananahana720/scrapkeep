@@ -314,8 +314,8 @@ test("the worktree pool reuses a free worktree, prefers the one a step used, and
 });
 
 test("challenge arguments carry the label, jobs and resume the way the lane scripts did", () => {
-  assert.deepEqual(challengeArgs({ only: "w1", seeds: 24, label: "w34-75099fa7-w1", resume: false }), ["scripts/challenge/run.mjs", "--only=w1", "--seeds=24", "--no-top", "--jobs=6", "--label=w34-75099fa7-w1"]);
-  assert.deepEqual(challengeArgs({ only: "w1", seeds: 48, bands: "expert", tier: 5, label: "l", resume: true }).slice(2), ["--seeds=48", "--bands=expert", "--tier=5", "--no-top", "--jobs=6", "--label=l", "--resume"]);
+  assert.deepEqual(challengeArgs({ only: "w1", seeds: 24, label: "w34-75099fa7-w1", resume: false }), ["scripts/challenge/run.mjs", "--only=w1", "--seeds=24", "--no-top", "--jobs=12", "--label=w34-75099fa7-w1"]);
+  assert.deepEqual(challengeArgs({ only: "w1", seeds: 48, bands: "expert", tier: 5, label: "l", resume: true }).slice(2), ["--seeds=48", "--bands=expert", "--tier=5", "--no-top", "--jobs=12", "--label=l", "--resume"]);
   assert.equal(nodeSummary("ℹ tests 1049\nℹ pass 1049\nℹ fail 0\n").tests, 1049);
   assert.equal(nodeSummary("# tests 3\n# fail 1\n").fail, 1);
   assert.ok(Number.isNaN(nodeSummary("nothing").tests), "a missing summary is not zero failures");

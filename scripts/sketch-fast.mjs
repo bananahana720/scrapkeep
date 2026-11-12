@@ -75,7 +75,7 @@ export const SHARD_RULES = [
 const TEXT_EXTENSIONS = new Set([".gd", ".tscn", ".tres", ".godot", ".cfg", ".json", ".gdshader"]);
 
 export function parseArgs(argv) {
-  const options = { base: "origin/main", budgetS: 900, dryRun: false, receipt: "fast", width: null, baseCheck: true, pre: [] };
+  const options = { base: "origin/main", budgetS: 900, dryRun: false, receipt: "fast", width: null, baseCheck: true, batch: true, pre: [] };
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
     if (arg === "--base" && argv[i + 1]) options.base = argv[++i];
@@ -84,6 +84,7 @@ export function parseArgs(argv) {
     else if (arg === "--receipt" && argv[i + 1]) options.receipt = argv[++i];
     else if (arg === "--width" && argv[i + 1]) options.width = Number(argv[++i]);
     else if (arg === "--no-base-check") options.baseCheck = false;
+    else if (arg === "--no-batch") options.batch = false;
     else if (arg === "--pre" && argv[i + 1]) options.pre.push(argv[++i].replace(/^#/, ""));
   }
   if (!Number.isFinite(options.budgetS) || options.budgetS <= 0) throw new Error("--budget needs seconds above zero");
@@ -464,6 +465,30 @@ function runGodot(sketchDir, test, timeoutMs, onChild = () => {}) {
   });
 }
 
+function runBatch(sketchDir, tests, timeoutMs, onChild = () => {}) {
+  return new Promise((resolve) => {
+    const dataHome = mkdtempSync(path.join(os.tmpdir(), "sketch-fast-"));
+    const child = spawn(binary, ["--headless", "--path", sketchDir, "--script", "res://tools/test_batch.gd"], { env: { ...process.env, XDG_DATA_HOME: dataHome, SCRAPKEEP_TEST_BATCH: tests.join(",") } });
+    running.add(child);
+    onChild(child);
+    let output = "";
+    child.stdout.on("data", (chunk) => (output += chunk));
+    child.stderr.on("data", (chunk) => (output += chunk));
+    const timer = setTimeout(() => child.kill("SIGKILL"), timeoutMs);
+    child.on("close", () => {
+      clearTimeout(timer);
+      running.delete(child);
+      rmSync(dataHome, { recursive: true, force: true });
+      const { done, cut, rest } = splitBatch(output, tests);
+      const runs = done.map((row) => {
+        const verdict = judge({ test: "res://" + row.test, status: row.exit, output: row.output });
+        return { test: row.test, ok: verdict.ok, exit: row.exit, signal: null, ms: row.ms, reason: verdict.reason, checks: failingChecks(row.output), passes: countChecks(row.output).passes, tail: row.output.split("\n").slice(-30).join("\n"), killed: false, timedOut: false, output: row.output, batched: true };
+      });
+      resolve({ runs, unfinished: cut ? [cut, ...rest] : rest, killed: child.killedByLane === true });
+    });
+  });
+}
+
 function stopChild(child) {
   child.killedByLane = true;
   child.kill("SIGKILL");
@@ -483,6 +508,58 @@ export function defaultWidth(cpus = os.cpus().length, load = os.loadavg()[0]) {
 // Every Godot process the lane starts holds one of `width` lanes, so a confirm's head rerun and
 // base run never push one machine slot past its width (GRAPH caps a 4 vCPU box at 6 lanes).
 // A task holds one lane at a time and never waits for a second, so lanes cannot deadlock.
+// A warm batch runs several game tests one after another in one Godot (tools/test_batch.gd), so
+// the game's scripts compile once per batch instead of once per test (about 7 s each). A test
+// joins a batch only when it is a plain SceneTree script that no marker sends to its own process:
+// it times itself, warms or measures a first load, starts processes or sets the environment.
+const BATCH_SOLO = /get_ticks_|OS\.set_environment|ProjectSettings\.set|OS\.(execute|create_process|kill)|\b(warm|hitch|cold)\b|change_scene/;
+// Only short tests batch: compiling is about 7 s of a test, so a test past BATCH_TEST_MAX_MS gains
+// little, and a long batch holds its lane while the others sit idle at the end (a first try that
+// batched long tests took 222 and 231 s against 174 s one Godot each). The game also counts
+// frames for the whole process, so a long test that times cards by frame can read differently
+// after others; alone, it reads as it always has.
+export const BATCH_MAX_TESTS = 8;
+export const BATCH_MAX_MS = 60_000;
+export const BATCH_TEST_MAX_MS = 15_000;
+
+export function batchable(source) {
+  return /^extends SceneTree\r?$/m.test(source.split("\n", 1)[0]) && !isSolo(source) && !BATCH_SOLO.test(source);
+}
+
+// Takes the batch for one lane from the front of the queue: consecutive batchable rows, at most
+// BATCH_MAX_TESTS and about BATCH_MAX_MS of measured time. A row that cannot batch goes alone.
+export function takeBatch(queue, canBatch, maxTests = BATCH_MAX_TESTS, maxMs = BATCH_MAX_MS) {
+  const batch = [];
+  let ms = 0;
+  while (queue.length > 0 && batch.length < maxTests && canBatch(queue[0]) && (batch.length === 0 || ms + queue[0].ms <= maxMs)) {
+    ms += queue[0].ms;
+    batch.push(queue.shift());
+  }
+  return batch;
+}
+
+// Splits a batch's output into each test's own output by its BATCH START and BATCH END lines.
+// A test that started and never ended was cut off (a crash or the time limit); the tests after
+// it never started.
+export function splitBatch(output, tests) {
+  const done = [];
+  let open = null;
+  let lines = [];
+  for (const line of output.split("\n")) {
+    const start = /^BATCH START (\S+)/.exec(line);
+    const end = /^BATCH END (\S+) exit=(-?\d+) ms=(\d+)/.exec(line);
+    if (start) {
+      open = start[1];
+      lines = [];
+    } else if (end && open === end[1]) {
+      done.push({ test: open, exit: Number(end[2]), ms: Number(end[3]), output: lines.join("\n") });
+      open = null;
+    } else if (open) lines.push(line);
+  }
+  const ended = new Set(done.map((row) => row.test));
+  return { done, cut: open, rest: tests.filter((test) => !ended.has(test) && test !== open) };
+}
+
 export function lanePool(width) {
   let free = width;
   const waiters = [];
@@ -901,9 +978,38 @@ async function main() {
   }
 
   const queue = [...lanePlan.parallel];
+  // A red in a warm batch is rerun alone before anything else sees it, and the alone run is the
+  // verdict: a batch can save time but never adds a red of its own. Each such rerun is listed.
+  receipt.batch = { on: options.batch, batches: 0, tests: 0, reruns: [] };
+  const canBatch = (row) => options.batch && !row.alone && row.ms <= BATCH_TEST_MAX_MS && batchable(sourceOf(sketchDir, row.test));
+  async function runBatched(rows) {
+    const tests = rows.map((row) => row.test);
+    const timeoutMs = rows.reduce((sum, row) => sum + testTimeoutMs(sourceOf(sketchDir, row.test)), 0);
+    const batch = await inLane(() => (prRed ? { runs: [], unfinished: [], killed: true } : runBatch(sketchDir, tests, timeoutMs)));
+    receipt.batch.batches++;
+    receipt.batch.tests += batch.runs.length;
+    for (const run of batch.runs) {
+      if (prRed) return;
+      if (run.ok) {
+        await handle(run);
+        continue;
+      }
+      keepRed("batch")(run);
+      log(`  ${run.test} red in a warm batch (${run.reason}); rerunning it alone`);
+      const alone = await godot(sketchDir, run.test, testTimeoutMs(sourceOf(sketchDir, run.test)));
+      receipt.batch.reruns.push({ test: run.test, batch_reason: run.reason, alone_ok: alone.ok });
+      await handle(alone);
+    }
+    if (!batch.killed) for (const test of batch.unfinished.reverse()) queue.unshift({ ...rows.find((row) => row.test === test), alone: true });
+  }
   async function worker() {
     while (queue.length > 0 && !prRed) {
-      const row = queue.shift();
+      const rows = takeBatch(queue, canBatch);
+      if (rows.length > 1) {
+        await runBatched(rows);
+        continue;
+      }
+      const row = rows[0] ?? queue.shift();
       const result = await godot(sketchDir, row.test, testTimeoutMs(sourceOf(sketchDir, row.test)));
       await handle(result);
     }
