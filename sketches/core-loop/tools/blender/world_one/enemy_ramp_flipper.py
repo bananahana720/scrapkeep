@@ -34,8 +34,7 @@ root = common.empty("RampFlipper")
 b = Part("RampBody")
 b.cyl("fleet_paint", .55, .63, .95, segs=10, loc=g(0, -.34, 0))
 b.cyl("fleet_paint", .63, .49, .74, segs=10, loc=g(0, .505, 0))
-crew.animal_head(b, g(0, 1.16, .03), .30, snout=((.23, .22, .15), g(0, 1.10, .31)),
-                 ears=(.10, .30, [g(side * .18, 1.56, .03) for side in (-1, 1)]))
+crew.handwheel_head(b, g(0, 1.16, .03), .30)
 for side in (-1, 1):
     b.rod("paint", g(side * .44, .62, -.14), g(side * .48, 1.12, -.35), .075,
           segs=6, color=common.mix("oxide", "charcoal", .35))
@@ -46,6 +45,9 @@ for side in (-1, 1):
 b.box("paint", (1.05, .65, .15), loc=g(0, -.88, 0), color="charcoal")
 b.cyl("paint", .635, .635, .10, segs=10, loc=g(0, .02, 0), color="charcoal")
 b.box("paint", (.28, .05, .18), loc=g(0, .43, .60), color="brass")
+# The old works' two marks, cast in under the Fleet's paint: the crew number and HIRED.
+crew.cast_number(b, "paint", "27", (0, -0.53, 0.70), (0, -1, 0), 0.16)
+crew.hired(b, "paint", (0, 0.6, 0.3), (0, 1, 0), 0.08)
 bmesh.ops.recalc_face_normals(b.bm, faces=b.bm.faces[:])
 b.to_object(parent=root)
 

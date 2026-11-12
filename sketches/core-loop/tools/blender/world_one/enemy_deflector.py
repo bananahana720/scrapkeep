@@ -81,12 +81,14 @@ bm = b.bm
 # --- The crew, behind the dish ---------------------------------------------------------
 b.cyl("fleet_paint", 0.62, 0.72, 1.05, segs=10, loc=(0, 0, -0.575))
 b.cyl("fleet_paint", 0.72, 0.58, 0.90, segs=10, loc=(0, 0, 0.42))
-crew.animal_head(b, (0, -0.05, 1.12), 0.34, snout=((0.20, 0.24, 0.16), (0, -0.34, 1.06)),
-                 ears=(0.11, 0.30, [(s * 0.19, -0.02, 1.50) for s in (-1, 1)]))
+crew.diver_head(b, (0, -0.05, 1.12), 0.34)
 b.cyl("paint", 0.73, 0.73, 0.10, segs=10, loc=(0, 0, -0.05), color=CHAR)  # strap
 b.box("paint", (0.56, 0.22, 0.56), loc=(0, 0.72, 0.30), color=CHAR)  # pack on the back
 b.box("paint", (0.28, 0.05, 0.18), loc=(0, 0.855, 0.30), color=BRASS)  # the one brass tag
 
+# The old works' two marks, cast in under the Fleet's paint: the crew number and HIRED.
+crew.cast_number(b, "paint", "09", (0, -0.62, 0.6), (0, -1, 0), 0.2)
+crew.hired(b, "paint", (-0.67, 0, 0.3), (-1, 0, 0), 0.1)
 body = b.to_object(parent=root)
 b = Part("DishWall")
 b.subsurf = 0
