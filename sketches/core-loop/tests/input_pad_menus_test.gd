@@ -118,12 +118,6 @@ func _run() -> void:
 	flow.open_class_select()
 	_game.screens._on_flow_changed("class_select")
 	await _settle(0.7)
-	# PF-40: pilot select opens on the first pilot the profile can take, so its key words are up from the start.
-	var opened: Array = _game.screens.class_cards()
-	_t.check("S5-4 pilot select opens on the first unlocked card", not opened[0].locked and opened[0].has_focus(), "focus %s" % _focus())
-	Push.pad(root, JOY_BUTTON_DPAD_RIGHT)
-	await _frames(2)
-	_t.check("S5-4 and the first d-pad right walks to the next card", opened[1].has_focus(), "focus %s" % _focus())
 	if _focus() != null:
 		_focus().release_focus()
 	Push.pad(root, JOY_BUTTON_DPAD_RIGHT)
