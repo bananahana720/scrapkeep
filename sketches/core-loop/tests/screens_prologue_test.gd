@@ -65,6 +65,10 @@ func _run() -> void:
 	await _frames(2)
 	_t.check("E after the last line shows the cards", not _game.screens.prologue_showing() and _cards_shown()
 			and _game.flow.state_name() == "class_select", "showing %s; cards %s" % [_game.screens.prologue_showing(), _cards_shown()])
+	await _frames(1)
+	var first = _game.screens.class_cards().filter(func(c): return not c.locked).front()
+	_t.check("and opens the first pilot the profile can take (PF-40)", first != null and first.has_focus(),
+		"focus %s" % root.gui_get_focus_owner())
 	_t.check("the profile records it", _game.hud.profile.seen(PrologueRows.ID) and UiProfile.new(_game.storage_dir).seen(PrologueRows.ID), "")
 
 	_game.flow.show_title()

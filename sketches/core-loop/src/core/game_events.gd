@@ -83,7 +83,9 @@ signal reward_chosen(part_id: String)
 signal element_resolved(element_id: String, material_id: String, behaviour: String, at: Vector3)
 
 # World (writer D).
-signal event_announced(event_id: String, seconds_until: float)
+# `at` is where the event lands, on the ground, or Vector3.INF for one with no single place
+# (the weather, the flood, a squall).
+signal event_announced(event_id: String, seconds_until: float, at: Vector3)
 signal event_started(event_id: String)
 signal event_ended(event_id: String, outcome: String)
 signal event_progress(event_id: String, fraction: float)

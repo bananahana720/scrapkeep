@@ -51,7 +51,7 @@ func _two_events(band: String) -> void:
 	else:
 		t.check(band + " selected band active", audio.ace_playing() if band == "ace" else not audio.ace_playing(), str(audio.ace_missing))
 	var announcements := {}
-	game.events.event_announced.connect(func(id, seconds):
+	game.events.event_announced.connect(func(id, seconds, _at):
 		if id in IDS:
 			var bar: int = audio.engine.step_len * Harmony.STEPS_PER_BAR
 			var origin: int = audio.engine.bar_origin

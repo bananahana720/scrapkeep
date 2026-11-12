@@ -70,6 +70,10 @@ func _static_checks() -> void:
 	for id in ["brindle_phase_2", "brindle_phase_3"]:
 		var full := Rows.length(id, false)
 		_t.check("02 %s fits the transition beat" % id, full > 0.0 and full < TRANSITION_SECONDS, "%.2f s" % full)
+		# w37 film PF-26: a stamp or a drawn word over the turn covered Brindle and his target tags; the caption stays.
+		for form in ["full", "short"]:
+			var kinds := (Rows.ROWS[id][form] as Array).map(func(p: Dictionary) -> String: return String(p["kind"]))
+			_t.check("02b %s %s draws no word over the fight, only its caption" % [id, form], not kinds.has("stamp") and not kinds.has("sfx_word") and kinds.has("caption"), str(kinds))
 	var first := Rows.length("brindle_rout", false) + Rows.length("tarn_sign_on", false)
 	_t.check("03 a first rout and sign-on need no more than the cap past the window", first - Flow.VICTORY_SECONDS <= Cues.HOLD_CAP,
 		"%.2f s against %.1f + %.1f" % [first, Flow.VICTORY_SECONDS, Cues.HOLD_CAP])

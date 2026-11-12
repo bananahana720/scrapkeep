@@ -391,6 +391,7 @@ func _build_gate(at: Vector3, facing: Vector3, offer: Dictionary) -> Node3D:
 	# A gate is chosen by steering at it, long before the ball is beside it, so what each gives
 	# shows as far as its name does.
 	label.detail_range = PROMPT_REACH
+	label.leader = true
 	gate.add_child(label)
 	return gate
 

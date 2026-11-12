@@ -80,7 +80,7 @@ func _start() -> void:
 	_started = true
 	_world = _game.world
 	var ev = _game.events
-	ev.event_announced.connect(func(id: String, s: float): _bus.append(["announced", id, s]))
+	ev.event_announced.connect(func(id: String, s: float, _at: Vector3): _bus.append(["announced", id, s]))
 	ev.event_started.connect(func(id: String): _bus.append(["started", id]))
 	ev.event_ended.connect(func(id: String, outcome: String): _bus.append(["ended", id, outcome]))
 	ev.milestone_won.connect(func(id: String): _bus.append(["milestone", id]))

@@ -76,7 +76,7 @@ func _boot(table: String) -> void:
 	_game.events.verb_failed.connect(func(verb: String, _reason: String, _at: Vector3):
 		if verb == "roll":
 			_refused += 1)
-	_game.events.event_announced.connect(func(_id: String, _seconds: float): _event_facts += 1)
+	_game.events.event_announced.connect(func(_id: String, _seconds: float, _at: Vector3): _event_facts += 1)
 	_game.events.event_started.connect(func(_id: String): _event_facts += 1)
 	_game.events.event_ended.connect(func(_id: String, _outcome: String): _event_facts += 1)
 	_game.events.event_progress.connect(func(_id: String, _fraction: float): _event_facts += 1)
