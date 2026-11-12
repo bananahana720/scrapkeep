@@ -297,7 +297,7 @@ func _build_sell() -> void:
 		var weigh: Dictionary = shop.weigh_quote()
 		if row.get_child_count() >= SELL_COLUMNS:
 			row = _row()
-		_tile(row, {"kind": "weigh", "name": "Weigh %d mass for %d cogs" % [weigh["mass"], weigh["cogs"]], "mass": weigh["mass"],
+		_tile(row, {"kind": "weigh", "name": ("Weigh %d mass for %d cogs" % [weigh["mass"], weigh["cogs"]]) if int(weigh["cogs"]) > 0 else "Weigh", "mass": weigh["mass"],
 			"price": weigh["cogs"], "color": EventKinds.color("heft_class_changed"), "state": "ok" if int(weigh["cogs"]) > 0 else "poor"}, SELL_TILE)
 
 
