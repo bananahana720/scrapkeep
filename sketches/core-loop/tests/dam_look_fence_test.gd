@@ -5,6 +5,8 @@ extends SceneTree
 # hp_0 to hp_2, the gate hinges) stay exactly as the 10 Nov build placed them, so no route, line or posture band moves.
 # The pins are the 10 Nov build's numbers, read from assets/models/park/landmark_dam.glb on stage/alpha-w40 20c3c03f. A change
 # that means to move one of them is a layout change: it re-measures stage 1 and re-pins here.
+# The collider node and both gate leaves are pinned by their own geometry digest too, so a gate of a new radius or width
+# with the same corner count still fails.
 # The face stays drawn: the base keeps its six draws and at least the 10 Nov triangle count.
 
 const T := preload("res://tests/support/t.gd")
@@ -12,6 +14,7 @@ const PATH := "res://assets/models/park/landmark_dam.glb"
 const COL_POINTS := 1980
 const COL_HASH := "9e6fb364"
 const GATE_POINTS := 1740
+const GATE_HASH := "65f9b27c"
 const EMPTIES := {
 	"sight_top": Vector3(0, 141, -20), "beam_root": Vector3(0, 22, 30), "warden_anchor": Vector3(0, 22, 30),
 	"hp_0": Vector3(0, 23.6, 30), "hp_1": Vector3(10, 22, 30), "hp_2": Vector3(-10, 22, 30),
@@ -68,7 +71,9 @@ func _run() -> void:
 	for gate in ["gate_l", "gate_r"]:
 		var mesh: ImporterMesh = meshes.get(gate)
 		if t.check("%s is its own mesh" % gate, mesh != null):
-			t.eq("%s corner count" % gate, _points(mesh).size(), GATE_POINTS)
+			var pts := _points(mesh)
+			t.eq("%s corner count" % gate, pts.size(), GATE_POINTS)
+			t.eq("%s geometry" % gate, _digest(pts), GATE_HASH)
 	for name: String in EMPTIES:
 		var node: GLTFNode = nodes.get(name)
 		if t.check("%s is placed" % name, node != null):
