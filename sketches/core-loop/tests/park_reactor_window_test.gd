@@ -83,7 +83,6 @@ func _run() -> void:
 	for i in ceili(Warden.PULSE_CYCLE * 2.0 / tick):
 		if sheet.gates_opened > cycle: break
 		await physics_frame
-	# The stage's own cycle: world 1's Wardens pulse on 5.1 s since wave 37 (ChallengeDials.PULSE_CYCLE_W1, ruling cu).
-	t.near("stationary pulse lifecycle keeps the stage's rhythm", game.run.stage_time - steady_start, Warden.pulse_cycle(game.run.stage), 2.0 * tick)
+	t.near("stationary pulse lifecycle keeps six-second rhythm", game.run.stage_time - steady_start, 6.0, 2.0 * tick)
 	game.free()
 	quit(t.verdict())

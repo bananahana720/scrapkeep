@@ -222,7 +222,7 @@ func _sweeps() -> void:
 							live.erase(death)
 					# All rings here are valid future enemies, including arrivals due this step.
 					var reserved: int = live.size() + d.arrivals.size()
-					var dial := mini(int((time + H) / Director.TIER_SECONDS), Director.clock_tiers(d.dial_stage)) + Director.SPIKE_TIERS
+					var dial := mini(int((time + H) / Director.TIER_SECONDS), Director.MAX_TIME_TIERS) + Director.SPIKE_TIERS
 					var capacity: int = mini(24, int(round((6 + dial * 2) * row.threat * row.pressure.pack_scale)) + Director.HEFT_CAP_STEP * (50 - 1))
 					if mode == "credit" and not d.paused and reserved < capacity:
 						integral += H * cards.I0 * (1.0 + cards.K * dial)
@@ -260,7 +260,7 @@ func _cap_income_sweep() -> void:
 				if death <= time:
 					live.erase(death)
 			var reserved: int = live.size() + d.arrivals.size()
-			var dial := mini(int((time + H) / Director.TIER_SECONDS), Director.clock_tiers(d.dial_stage)) + Director.SPIKE_TIERS
+			var dial := mini(int((time + H) / Director.TIER_SECONDS), Director.MAX_TIME_TIERS) + Director.SPIKE_TIERS
 			if reserved < 24:
 				integral += H * Cards.I0 * (1.0 + Cards.K * dial)
 			for _spawn in d.advance(H, live.size()):
@@ -301,7 +301,7 @@ func _held_crowd_sweep() -> void:
 					if death <= time:
 						live.erase(death)
 				var reserved: int = live.size() + d.arrivals.size()
-				var dial := mini(int((time + H) / Director.TIER_SECONDS), Director.clock_tiers(d.dial_stage)) + Director.SPIKE_TIERS
+				var dial := mini(int((time + H) / Director.TIER_SECONDS), Director.MAX_TIME_TIERS) + Director.SPIKE_TIERS
 				if reserved < 24:
 					integral += H * Cards.I0 * (1.0 + Cards.K * dial)
 				var due: Array = d.advance(H, live.size())

@@ -23,7 +23,6 @@ var _failures := 0
 var _step := 0
 var _clock := 0.0
 var _ball_at := Vector3.ZERO
-var _held := Vector3.ZERO
 var _brute: Node3D
 var _lobber: Node3D
 var _linker: Node3D
@@ -50,15 +49,6 @@ func _physics_process(delta: float) -> bool:
 	if _game.flow == null:
 		return false
 	_clock += delta
-	# The ball stays at rest where the test put it: world 1's chasers run 9 m/s since wave 37
-	# (ChallengeDials.CHASER_SPEED_W1, ruling cu), so a chaser reaches a still ball and lunges it
-	# downhill, and the partner then walks after it faster than a Linker can seat.
-	if _step > 0:
-		_game.player.reset_to(_held)
-		# Picking up scrap rebuilds the hull ceiling from the class (build.gd _on_scrap_collected), which drops the
-		# test's deep hull back to 100, and the dam's chasers hit twice as hard since wave 37 (MOBS_DAMAGE_W1).
-		if _game.run.max_hp < 99999.0:
-			_game.run.set_max_hp(99999.0)
 	if is_instance_valid(_linker) and (_linker.telegraph() != null or _linker.warned > 0):
 		_warned_ever = true
 	match _step:
@@ -108,7 +98,7 @@ func _setup() -> void:
 	_game.run.set_max_hp(99999.0)
 	_combat = ctx.spawner
 	_ball_at = ctx.terrain.drop_point(ctx.terrain.spawn_point(1).x, ctx.terrain.spawn_point(1).z, 1.05)
-	_place(_ball_at)
+	_game.player.reset_to(_ball_at)
 	_brute = _spawn("plated_brute", Vector3(10.0, 0.0, 0.0))
 	_spawn("chaser", Vector3(8.0, 0.0, -9.0))
 	_linker = _spawn("linker", Vector3(16.0, 0.0, 5.0))
@@ -119,11 +109,6 @@ func _setup() -> void:
 	_report("linker row", Roster.has("linker") and Roster.built("linker") and _combat.fleet.makes("linker")
 		and Roster.chassis_problems(Roster.row("linker")).is_empty(), "roster row built, chassis %s" % [Roster.chassis_problems(Roster.row("linker"))])
 	_next()
-
-
-func _place(at: Vector3) -> void:
-	_held = at
-	_game.player.reset_to(at)
 
 
 func _spawn(kind: String, offset: Vector3) -> Node3D:
@@ -152,7 +137,7 @@ func _strike(enemy: Node3D, kind: String, force: float, part := "") -> float:
 
 
 func _check_guard() -> void:
-	_place(_ball_at)
+	_game.player.reset_to(_ball_at)
 	var deflected := _deflected
 	var bolt := _strike(_brute, "bolt", 40.0)
 	var ram := _strike(_brute, "ram", 20.0)
@@ -167,7 +152,7 @@ func _check_guard() -> void:
 	_report("over the top lands", stomp > 0.0 or _brute.plates < plates,
 		"stomp removed %.1f, plates %d to %d" % [stomp, plates, _brute.plates])
 	var behind: Vector3 = _brute.global_position + (_brute.global_position - _ball_at).normalized() * 9.0
-	_place(_game.ctx.terrain.drop_point(behind.x, behind.z, 1.05))
+	_game.player.reset_to(_game.ctx.terrain.drop_point(behind.x, behind.z, 1.05))
 	_next()
 
 
@@ -197,7 +182,7 @@ func _check_cut() -> void:
 		"cut %s by %s, partner took %.1f, linker hp %.0f to %.0f" % [_linker.cut, _linker.cut_by, dealt, linker_hp, _linker.hp])
 	_report("cable has a weak point until cut", _linker.weak_points().is_empty(), "%d weak points after the cut" % _linker.weak_points().size())
 	_linker.take_damage(99999.0)
-	_place(_ball_at)
+	_game.player.reset_to(_ball_at)
 	_lobber = _spawn("lobber", Vector3(-12.0, 0.0, 4.0))
 	_linker = _spawn("linker", Vector3(-18.0, 0.0, 7.0))
 	_tells = []
@@ -226,7 +211,7 @@ func _check_relink() -> void:
 		"%d guards left" % _combat._guards.size())
 	_report("never warns or attacks", not _warned_ever, "a telegraph seen: %s" % _warned_ever)
 	# Two Linkers beside one heavy partner and one light one: only one may hold the heavy one.
-	_place(_ball_at)
+	_game.player.reset_to(_ball_at)
 	_drill = _spawn("plated_brute", Vector3(0.0, 0.0, 12.0))
 	_spawn("chaser", Vector3(6.0, 0.0, 14.0))
 	_linker = _spawn("linker", Vector3(3.0, 0.0, 16.0))

@@ -115,12 +115,10 @@ func _cycles(heft: float, label: String) -> Dictionary:
 	result.seconds = game.run.stage_time - started
 	t.check(label + " sheet rams came from aligned solver contacts", not solved.is_empty() and contacts.all(func(row): return row[1].distance_to(core_at) <= Warden.FAMILY_POINT_RADIUS + Tuning.RADIUS + 0.01), str(contacts))
 	t.near(label + " cycles have no live-sheet regeneration", live_drain, 0.0)
-	# The stage's own cycle: world 1's Wardens pulse on 5.1 s since wave 37 (ChallengeDials.PULSE_CYCLE_W1, ruling cu).
-	var cycle: float = Warden.pulse_cycle(game.run.stage)
 	var rhythm_ok := pulse_times.size() >= 3
 	for i in range(1, pulse_times.size()):
-		rhythm_ok = rhythm_ok and absf(pulse_times[i] - pulse_times[i-1] - cycle) <= 1.0 / Engine.physics_ticks_per_second + 0.0001
-	t.check(label + " pulses keep the stage's rhythm (%.2f s)" % cycle, rhythm_ok, str(pulse_times))
+		rhythm_ok = rhythm_ok and absf(pulse_times[i] - pulse_times[i-1] - Warden.PULSE_CYCLE) <= 1.0 / Engine.physics_ticks_per_second + 0.0001
+	t.check(label + " pulses keep six-second rhythm", rhythm_ok, str(pulse_times))
 	game.free()
 	await physics_frame
 	return result
