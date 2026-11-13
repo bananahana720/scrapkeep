@@ -61,6 +61,18 @@ uniform float enamel_take = 0.0;
 // The level part keeps what sits inside the ball (seat, controls): only what stands farther
 // from the centre than this, in the model's own units, is cut.
 uniform float keep_within = 0.0;
+// ...except behind the pilot's back above the seat (the level part's own +Z and +Y past these),
+// where only brackets and backrests stand: those count as outer kit at any distance.
+// What stands inside the ball is judged by the tube of sight the window opens (the plating's
+// radius, in the model's units), not by its angle from the centre, which a rod near the centre
+// never reaches.
+uniform float tube = 0.0;
+uniform bool back_is_kit = false;
+// A small pilot's seat back is lowered to this height (the level part's own Y): every vertex of
+// the seat back's slab above it is pressed down to it, so the back stays a closed box.
+uniform float seat_back_top = 9.0;
+uniform float back_above = -0.08;
+uniform float back_behind = 0.05;
 // hero_assets' plate map, laid on by the three axes as its own materials lay it.
 uniform bool plated = false;
 uniform sampler2D plate : source_color, filter_linear_mipmap_anisotropic, repeat_enable;
@@ -72,6 +84,9 @@ varying vec3 from_centre;
 varying vec3 to_camera;
 varying vec3 to_eye;
 void vertex() {
+	if (VERTEX.y > seat_back_top && VERTEX.y < -0.05 && abs(VERTEX.x) < 0.26 && VERTEX.z > 0.13 && VERTEX.z < 0.27) {
+		VERTEX.y = seat_back_top;
+	}
 	local_pos = VERTEX;
 	local_normal = NORMAL;
 	model_scale = length(MODEL_MATRIX[0].xyz);
@@ -82,7 +97,19 @@ void vertex() {
 }
 void fragment() {
 	float facing = dot(normalize(from_centre), normalize(to_camera));
-	if (length(from_centre) < keep_within * model_scale) {
+	float reach = length(from_centre) / model_scale;
+	if (tube > 0.0 && reach < tube) {
+		vec3 axis = normalize(to_camera);
+		float along = dot(from_centre, axis) / model_scale;
+		float across = length(from_centre / model_scale - axis * along);
+		facing = along > 0.0 ? sqrt(max(0.0, 1.0 - (across / tube) * (across / tube))) : -1.0;
+	}
+	vec3 seat_pos = local_pos - centre_local;
+	bool cockpit = length(from_centre) < keep_within * model_scale;
+	if (cockpit && back_is_kit && seat_pos.y > back_above && seat_pos.z > back_behind) {
+		cockpit = false;
+	}
+	if (cockpit) {
 		facing = -1.0;
 	} else if (IN_SHADOW_PASS) {
 		// In a light's pass the eye is the light. The half toward it is left out, so the sun
@@ -272,7 +299,7 @@ static func dress(look: String, shell: Dictionary) -> void:
 		return
 	if look == "cutaway":
 		_cut(shell.core)
-		_cut_kit(shell.pod)
+		_cut_kit(shell.pod, String(shell.get("pilot", "")))
 	elif look == "bell":
 		for view in (shell.pod as Node).find_children("*", "MeshInstance3D", true, false):
 			for i in view.mesh.get_surface_count():
@@ -348,8 +375,12 @@ static func _takes_window(was: Material) -> bool:
 # where it comes between the camera and the pilot; the cockpit inside the ball is never cut.
 # _takes_window says which surfaces are swapped.
 const KIT_KEEP_WITHIN := 0.93
+const PLATING_RADIUS := 0.965
+# Pilots too small for the shared seat back (shell_base.py: seat top -0.30, back top -0.10), and
+# the height their back is lowered to.
+const LOW_SEAT_BACK := {"runner_gunner": -0.24}
 
-static func _cut_kit(pod: Node) -> void:
+static func _cut_kit(pod: Node, pilot: String) -> void:
 	var cuts := {}
 	var dome := pod.find_child("Dome", true, false)
 	for view in _views(pod):
@@ -360,10 +391,14 @@ static func _cut_kit(pod: Node) -> void:
 			var was: Material = view.get_active_material(i)
 			if not _takes_window(was):
 				continue
-			var key := [was, centre]
+			var seat: float = LOW_SEAT_BACK.get(pilot, 9.0) if view == pod else 9.0
+			var key := [was, centre, seat]
 			if not cuts.has(key):
 				var cut := _windowed(was)
 				cut.set_shader_parameter("keep_within", KIT_KEEP_WITHIN)
+				cut.set_shader_parameter("back_is_kit", true)
+				cut.set_shader_parameter("tube", PLATING_RADIUS)
+				cut.set_shader_parameter("seat_back_top", seat)
 				cut.set_shader_parameter("centre_local", centre)
 				cuts[key] = cut
 			_wear(view, i, cuts[key])

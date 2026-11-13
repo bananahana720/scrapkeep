@@ -73,6 +73,7 @@ const RewardGates := preload("res://src/build/reward_gates.gd")
 const PilotReactions := preload("res://src/presentation/pilot_reactions.gd")
 const MechaMotion := preload("res://src/presentation/mecha_motion.gd")
 const BallLooks := preload("res://src/presentation/ball_looks.gd")
+const PilotGlance := preload("res://src/presentation/pilot_glance.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
 # One pose table per pilot (PILOT-CLIPS section 4.2), by the PILOTS glb stem.
 # Pilot return-to-rest clip built at runtime for GLBs with no idle loop, and the blend an impact
@@ -132,6 +133,8 @@ const CHUNK_BANDS := [[12, "small"], [24, "medium"], [Accretion.MAX_CHUNKS, "lar
 const TUCK_FROM := -0.15
 const TUCK_GONE := 0.30
 const POD_TURN_RATE := 10.0
+# Below this speed the ball counts as still for the pilot's glance back at the camera.
+const GLANCE_STILL_SPEED := 0.6
 const POD_TURN_SPEED := 1.5
 const VANE_RATE := 8.0
 # Hoberman weapon ring yaw toward the aim (PILOT-CLIPS section 5, start value).
@@ -678,6 +681,9 @@ func _steer_pod(rec: Dictionary, player, delta: float) -> void:
 		gyro.rotate_object_local(Vector3.RIGHT, v.length() * delta / 0.98)
 	sync_lattice(core, player.roll_node())
 	BallLooks.ride(ball_look(), player.roll_node())
+	var glance = rec.get("glance")
+	if glance != null and is_instance_valid(glance) and ctx != null and ctx.get("camera") != null:
+		glance.observe(_at_rest(rec, v.length()), ctx.camera.global_position, delta)
 	var open := 1.0 if player.kit.gliding else 0.0
 	var kest := {}
 	if rec["class"] == "demolitions_caster" and ctx != null and ctx.spawner != null and ctx.spawner.get("ultimate") != null:
@@ -1294,7 +1300,7 @@ func fit_shell_into(ball: Node3D, pilot: String, variant: String, heft_class: in
 	core.name = "HeroCore"
 	pod.name = "HeroPod"
 	BallLooks.replate(ball_look(), core)
-	var rec := {"core": core, "pod": pod, "layers": {}, "variant": variant, "heft": 1, "shown": {}, "tints": tints}
+	var rec := {"core": core, "pod": pod, "layers": {}, "pilot": pilot, "variant": variant, "heft": 1, "shown": {}, "tints": tints}
 	var ring_holders: Array = []
 	for i in HEFT_LAYERS.size():
 		var n: int = HEFT_LAYERS[i]
@@ -1664,6 +1670,11 @@ func fit_companion_skin(model: Node3D, id: String) -> Array:
 # while the set piece holds the ride) instead of a bone reset. A GLB without idle_loop keeps
 # the old stop and reset and warns once per pilot. Code moves the mecha (mecha_motion.gd).
 
+# Whether the pilot is free to glance back: the ball sits still and no reaction clip plays.
+func _at_rest(rec: Dictionary, speed: float) -> bool:
+	return speed < GLANCE_STILL_SPEED and rec.get("reaction", "") == ""
+
+
 func _fit_pilot(rec: Dictionary) -> void:
 	rec["mecha"] = MechaMotion.new(rec.pod, rec.core, rec["class"], Array(_pilot_table(rec["class"]).get("machinery", [])))
 	var fitted := fit_pilot_into(rec.pod, rec["class"], rec.player.class_color())
@@ -1673,6 +1684,8 @@ func _fit_pilot(rec: Dictionary) -> void:
 	var animator = fitted.get("animator")
 	rec["animator"] = animator
 	rec["pilot"] = pilot
+	# The window shows the pilot's back, so under a plated look the pilot glances back at rest.
+	rec["glance"] = PilotGlance.seat(pilot) if BallLooks.PLATED.has(ball_look()) else null
 	rec["reaction"] = ""
 	rec["priority"] = -1
 	rec["cooldowns"] = {}

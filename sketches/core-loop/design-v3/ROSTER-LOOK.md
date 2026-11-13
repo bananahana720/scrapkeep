@@ -25,25 +25,27 @@ The gyro and the bell remain one shared shell each, as Andrew saw them. The cuta
 | --- | --- |
 | Rolling part (Core) | The lattice mesh becomes plating: gores in the pilot's own enamel (the mean colour of the lattice it replaces), darker gores between, a bone belt, oxide caps, tread pads. The hub mounts stay, so scrap still clamps on. |
 | Heft classes II to V | The lattice's gap panels sit inside the ball's radius and would float beside the pilot, so they are hidden. The plating grows instead: II copper hoops, III armour over the dark gores, IV tread cleats on the belt, V copper caps with a stud crown. Kit that stands outside the ball (hoods, drums, hooks) still arrives with its class. |
-| Window | 40 degrees about the line from the ball's centre to the camera, with an ink line and a halftone fringe. It cuts the plating, each pilot's outer kit where it stands farther than 0.93 from the centre (the weapon ring's near arc), and everything that rides the ball: scrap chunks, part hardware, panel plates. The cockpit inside the ball is never cut. |
+| Window | 40 degrees about the line from the ball's centre to the camera, with an ink line and a halftone fringe. It cuts the plating, and everything that rides the ball: scrap chunks, part hardware, panel plates. On the level part it cuts kit that stands farther than 0.93 from the centre (the weapon ring's near arc), and anything behind the pilot's back above the seat (brackets, backrests), judged by the tube of sight the window opens. The seat, controls and everything in front of the pilot are never cut. |
+| Seat back | A pilot too small for the shared seat back has it lowered (`LOW_SEAT_BACK`: Rivet, to 0.06 above the seat). |
+| Glance | At rest for three seconds, the pilot turns chest, neck and head over a shoulder to look at the camera, holds 1.2 seconds, turns back, and repeats about every eight seconds; the pilot faces front again within a third of a second of the ball moving or a reaction clip starting (`src/presentation/pilot_glance.gd`, laid over the playing clip). |
 | Equipped paint | Takes the enamel gores; the dark gores, belt and caps keep the pattern. |
-| Outfits | Unchanged: `CosmeticWear` and `fit_outfit` already mount an outfit on the pilot's bones, and the window is what lets the player see it. |
+| Outfits | Unchanged: the `outfit` slot, the customize page and `fit_outfit` already mount an outfit on the pilot's bones (three exist: Rivet's Welding Hood, Tarn's Steady Cap, Tally's Eyeshade), and the window is what lets the player see it in play. A new outfit is a `Cosmetics` row and a GLB whose parts are named for the rig's bones. |
 | Not cut | Glass, class accents (the ready glow swaps those materials by identity), Kest's live band and fuse materials, and unshaded or see-through riders such as synergy halos keep their own materials. An equipped decal shows on the weapon ring's band only (its other home, the gap panels, is hidden), and that band is then not cut. |
 
 **Receipts** (`tools/ball_look_capture.gd`; cloud numbers are the compatibility renderer, the PC's are on branch `scratch/w40-ball-look-capture`). Share of the pilot the play camera sees, median of 24 spins at rest (the worst spin and the speed view are within one point), heft class I, cloud:
 
 | Pilot | Cutaway | Ball triangles | Surfaces |
 | --- | --- | --- | --- |
-| Sable | 87% | 13,812 | 20 |
-| Rivet | 70% | 14,416 | 17 |
+| Sable | 90% | 13,812 | 20 |
+| Rivet | 88% | 14,416 | 17 |
 | Kest | 79% | 14,680 | 19 |
-| Tarn | 80% | 15,174 | 21 |
+| Tarn | 81% | 15,174 | 21 |
 | Tally | 78% | 14,633 | 13 |
 | Cannon | 77% | 9,566 | 15 |
 
 Today's shell shows 52% of Sable (PC: 54%, against the cutaway blockout's 85%). Heft class V adds 5 to 8 surfaces and about 1,300 to 2,100 triangles and hides no more of the pilot. A late run's ball (Sable, class III, scrap chunks and 40 panel plates) shows 86% of the pilot under the cutaway; today's shell with the same load showed 21%, 6% on the worst spin. No surface blends. The pilot is about 9,800 of each ball's triangles.
 
-**Still open.** The class card and customize previews build a painter with no tuning, so they show today's shells. Rivet's pilot is the least visible because Rivet's own seat back and cage rods, which are inside the ball and never cut, cover a small pilot; a lower seat back in `shell_rivet` is the fix and is not in this change. The default stays `today` until Andrew has seen the finished cutaway on his PC.
+**Still open.** The class card and customize previews build a painter with no tuning, so they show today's shells. The default stays `today` until Andrew has seen the finished cutaway on his PC.
 
 ## 0. Direction change, 2026-10-10 evening: the Hoberman mecha
 
