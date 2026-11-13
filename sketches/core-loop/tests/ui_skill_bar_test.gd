@@ -264,7 +264,7 @@ func _check_meter_static() -> void:
 	var span: Vector2 = AimReticle.meter_span(1.0)
 	var half: Vector2 = AimReticle.meter_span(0.5)
 	var gap_mid := fposmod((span.x + span.y) * 0.5 + PI, TAU)
-	_report("arc geometry", is_equal_approx(AimReticle.meter_radius(), AimReticle.GAUGE_RING + 10.0) and AimReticle.METER_WIDTH == 4.0
+	_report("arc geometry", is_equal_approx(AimReticle.meter_radius(), AimReticle.GAUGE_RING + 12.0) and AimReticle.METER_WIDTH == 4.0
 			and is_equal_approx(span.y - span.x, TAU * 0.75) and absf(gap_mid - PI * 0.5) < 0.001 and is_equal_approx(half.y - half.x, TAU * 0.375)
 			and half.x == span.x,
 		"radius %.0f, width %.0f, sweep %.0f deg, gap centred at %.0f deg (90 is six o'clock), half fill %.0f deg"

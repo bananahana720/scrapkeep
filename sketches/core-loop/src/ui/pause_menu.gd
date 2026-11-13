@@ -388,6 +388,8 @@ func _show_build() -> void:
 	var build = game.get("build")
 	build_read.refresh(game.run, int(build.panel_overflow) if build != null else 0, game.run.class_id() if game.run != null else "",
 		build.panel_effective if build != null else {})
+	var presentation = game.get("presentation")
+	build_read.wear(presentation.hero_assets if presentation != null else null, game.get("player"))
 	_lay_build()
 
 

@@ -35,6 +35,7 @@ const T := preload("res://tests/support/t.gd")
 #   R1  the pause build read with all twelve panels held (a long list) sits on screen, left of
 #       the pause column and clear of it, at 1280x720 and 1920x1080, and so does the empty read;
 #       on a short screen the turning view shrinks (to VIEW_MIN at least) and the read stays on screen.
+#   R2  the read's turning view wears the pilot's own shell, not the grey stand-in sphere (W1-46).
 # The plate's clock is stepped by hand, never read from the wall.
 
 const SIZES := [Vector2(1280.0, 720.0), Vector2(1920.0, 1080.0)]
@@ -389,6 +390,10 @@ func _pause_checks() -> void:
 				_game.run.panels.append(String(id))
 		menu._show_build()
 		var label := "all twelve panels" if held.size() > 0 else "no panels"
+		# W1-46: the pilot's own shell turns in the view, never the grey stand-in sphere.
+		_t.check("R2 %s: the view wears the pilot's shell" % label, not read._worn.is_empty() and read._worn.core.is_inside_tree() and not read._ball.visible, str(read._worn.keys()))
+		var cores: Array = read._pivot.get_children().filter(func(n): return n.name == "HeroCore" and not n.is_queued_for_deletion())
+		_t.eq("R2 %s: one shell, never a pile of them" % label, cores.size(), 1)
 		_t.eq("R1 %s: one stat line each" % label, read.lines.size(), maxi(1, held.size()))
 		for size in SIZES:
 			menu.lay_build(size)

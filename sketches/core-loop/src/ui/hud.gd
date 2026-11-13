@@ -126,7 +126,7 @@ const LORE_TOTAL := 3.0
 const LORE_TOP := 66.0
 # The top-right corner is one column: the radio chip, the unlock plate, the field note pill.
 # Each sits under whichever of the others is showing, this far apart, so none covers another.
-const CORNER_GAP := 4.0
+const CORNER_GAP := float(UiTokens.GAP_XS)
 const CORNER_SLIDE := 480.0
 const OBJECTIVE_WORDS := Objectives.MAX_WORDS
 const TOAST_ICON := 26.0
@@ -162,10 +162,10 @@ const OPEN_ROWS := ["shoot_magnets", "slam_caps", "bait_charge"]
 # The gaps of the top slot when a plate is mounted: from the band's top to the plate, and
 # from the plate to the objective plate under it.
 const PLATE_TOP := 6.0
-const PLATE_GAP := 10.0
+const PLATE_GAP := float(UiTokens.GAP_M)
 const TOAST_WIDTH := 800.0
 const MARGIN := 18.0
-const BOTTOM_GAP := 20.0
+const BOTTOM_GAP := float(UiTokens.GAP_L)
 const HEALTH_BAR := 190.0
 # The word under each bar (ui/gauge.gd caption): the game's own words for them, as the perk
 # rows say "max health" and the wear stamp says "ARMOUR OFF".
@@ -432,15 +432,10 @@ func _build_ach_toast() -> void:
 	_ach_panel = PanelContainer.new()
 	_ach_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_ach_panel.visible = false
-	var plate := StyleBoxFlat.new()
-	plate.bg_color = Color(Palette.CHARCOAL, 0.94)
-	plate.border_color = Palette.AMBER
-	plate.set_border_width_all(2)
-	plate.set_corner_radius_all(8)
-	plate.content_margin_left = 16.0
-	plate.content_margin_right = 20.0
-	plate.content_margin_top = 5.0
-	plate.content_margin_bottom = 5.0
+	# A plate in the accent colour; thin top and bottom so two lines fit the band under the chip.
+	var plate := UiTokens.plate(UiTokens.ACCENT)
+	plate.content_margin_top = UiTokens.GAP_XS
+	plate.content_margin_bottom = UiTokens.GAP_XS
 	_ach_panel.add_theme_stylebox_override("panel", plate)
 	layer_node.add_child(_ach_panel)
 	var row := HBoxContainer.new()
@@ -449,7 +444,7 @@ func _build_ach_toast() -> void:
 	_ach_panel.add_child(row)
 	var star := TextureRect.new()
 	star.texture = Icons.shape("star")
-	star.modulate = Palette.AMBER
+	star.modulate = UiTokens.ACCENT
 	star.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	star.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	star.custom_minimum_size = Vector2(TOAST_ICON, TOAST_ICON)
@@ -459,7 +454,7 @@ func _build_ach_toast() -> void:
 	_ach_icon = star
 	# A record or take says which it is here; an achievement's star and amber frame already do.
 	var word := _label(UiTokens.BODY)
-	word.add_theme_color_override("font_color", Palette.AMBER)
+	word.add_theme_color_override("font_color", UiTokens.ACCENT)
 	word.visible = false
 	row.add_child(word)
 	_ach_word = word
@@ -470,10 +465,10 @@ func _build_ach_toast() -> void:
 	words.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	row.add_child(words)
 	_ach_name = _label(ACH_FONT)
-	_ach_name.add_theme_color_override("font_color", Palette.SAND)
+	_ach_name.add_theme_color_override("font_color", UiTokens.TEXT)
 	words.add_child(_ach_name)
 	_ach_detail = _label(ACH_DETAIL_FONT)
-	_ach_detail.add_theme_color_override("font_color", Color(Palette.SAND, 0.78))
+	_ach_detail.add_theme_color_override("font_color", UiTokens.quiet())
 	words.add_child(_ach_detail)
 
 
@@ -484,15 +479,10 @@ func _build_lore_pulse() -> void:
 	_lore_panel = PanelContainer.new()
 	_lore_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_lore_panel.visible = false
-	var plate := StyleBoxFlat.new()
-	plate.bg_color = Color(Palette.CHARCOAL, 0.94)
-	plate.border_color = Palette.SAND
-	plate.set_border_width_all(2)
-	plate.set_corner_radius_all(8)
-	plate.content_margin_left = 12.0
-	plate.content_margin_right = 16.0
-	plate.content_margin_top = 6.0
-	plate.content_margin_bottom = 6.0
+	var plate := UiTokens.plate(UiTokens.TEXT)
+	plate.content_margin_left = UiTokens.GAP_M
+	plate.content_margin_top = UiTokens.GAP_XS
+	plate.content_margin_bottom = UiTokens.GAP_XS
 	_lore_panel.add_theme_stylebox_override("panel", plate)
 	layer_node.add_child(_lore_panel)
 	var row := HBoxContainer.new()
