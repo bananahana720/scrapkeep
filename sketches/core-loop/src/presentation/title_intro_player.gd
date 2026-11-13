@@ -251,7 +251,7 @@ func _build_set() -> void:
 		up.position = Vector3(8.0, 30.0, -60.0)
 		up.visible = false
 	for i in 3:
-		var chaser := _model(CHASER, "Chaser%d" % i, 2.4)
+		var chaser := _model(ModelVariants.path(CHASER), "Chaser%d" % i, 2.4)
 		if chaser != null:
 			chaser.position = Vector3(-2.5 + i * 2.6, 0.9, 1.4 - i * 1.3) * _subject_size
 			chaser.rotation = Vector3(0.4 * (i - 1), 0.7 + i, 0.6 * (i - 1))
