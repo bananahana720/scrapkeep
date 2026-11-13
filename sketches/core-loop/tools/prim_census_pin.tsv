@@ -83,6 +83,7 @@ stakes.gd	TorusMesh	SableStakes/Stake/MeshInstance3D	stand-in	W1-23	trade spot b
 game.gd	BoxMesh	Node3D/MeshInstance3D	stand-in-live	W1-23	an unnamed 24 x 0.3 x 16 m box hung straight on the game root at tick 9570 (not identified yet; W1-23 names it and models it or re-pins it as code)
 accretion.gd	BoxMesh	Accretion/*/MeshInstance3D	code	-	part pieces on the ball (tier read is W1-26)
 accretion.gd	CylinderMesh	Accretion/*/MeshInstance3D	code	-	part pieces on the ball (tier read is W1-26)
+accretion.gd	CylinderMesh	*/Foot_*/MeshInstance3D	code	-	tier foot under a part (W1-26 tier mark: the shape is the read)
 activity_view.gd	BoxMesh	*/View_*/Column	code	-	activity column, glyph and ring: marks
 activity_view.gd	BoxMesh	View_*/Glyph/MeshInstance3D	code	-	activity column, glyph and ring: marks
 activity_view.gd	BoxMesh	View_*/Ring/MeshInstance3D	code	-	activity column, glyph and ring: marks
