@@ -9,7 +9,8 @@ Families share one record so a sound's kind is audible without looking:
 - boss: brass stabs and the versus fanfare
 - stinger: short ii-V-I cadences that land on D
 - ui: tiny Rhodes and wood
-Ladders (kill chain, scrap) climb D Dorian degree by degree, so a chain is a melody.
+The scrap ladder climbs D Dorian degree by degree. The combat feedback cues (impact family, the kill chain)
+are written by feedback_set.py as unpitched percussion; their makers here are kept only for the shared seed.
 Writes 48 kHz mono 16-bit WAVs, peak -1 dBFS, plus manifest.json with each cue's family.
 """
 

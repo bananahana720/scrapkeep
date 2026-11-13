@@ -74,7 +74,7 @@ const WORDS := {
 	"redline": {"text": "KA-BLAM", "size": 1.2},
 }
 # An on-beat hit's word is this much bigger (Andrew, Q10 "Sound only"): the hit's own word
-# when it has one, else BWAP over the sax stab.
+# when it has one, else BWAP over the on-beat clap.
 const ONBEAT_GROW := 1.4
 # Word size is screen height share: "size" 1.0 is WORD_SCREEN of the screen's height,
 # whatever the distance, so a word near the camera never swallows the ball.

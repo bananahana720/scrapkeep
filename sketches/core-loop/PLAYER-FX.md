@@ -21,7 +21,7 @@ This layer adds the player-side effects the tone bible (TONE-BIBLE.md, project f
 
 ### On the beat
 
-Andrew, Q10 "Sound only" (17 Oct 22:12Z): a hit within 80 ms of a beat the player hears pays in sound and look only. `audio.gd` adds a clap, `onbeat_clap`, over the hit, at most once a beat, 8 dB under the hit's level. It was a sax stab until 13 November 2026, when Andrew heard the feedback fighting the melody; the clap joins the band's drums and carries no pitch (SOUND-BIBLE rule 7). The render is at `res://assets/audio/sfx/onbeat_clap.wav`, made by `design-v3/sound/feedback_set.py`. If the file is ever missing, the cue log says "absent". The hit's own sound plays first, on the hit's frame. `player_fx.gd` then makes that hit's word 1.4x bigger, or stamps BWAP when the hit earned no word. Damage never reads the beat. Test: `tests/on_beat_hit_test.gd`.
+Andrew, Q10 "Sound only" (17 Oct 22:12Z): a hit within 80 ms of a beat the player hears pays in sound and look only. `audio.gd` adds a clap, `onbeat_clap`, over the hit, at most once a beat, about at a ranged hit's level, 8 dB under where the sax stab sat. It was a sax stab until 13 November 2026, when Andrew heard the feedback fighting the melody; the clap joins the band's drums and carries no pitch (SOUND-BIBLE rule 7). The render is at `res://assets/audio/sfx/onbeat_clap.wav`, made by `design-v3/sound/feedback_set.py`. If the file is ever missing, the cue log says "absent". The hit's own sound plays first, on the hit's frame. `player_fx.gd` then makes that hit's word 1.4x bigger, or stamps BWAP when the hit earned no word. Damage never reads the beat. Test: `tests/on_beat_hit_test.gd`.
 
 ### Pilot voices
 

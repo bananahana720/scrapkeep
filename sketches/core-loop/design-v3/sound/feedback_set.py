@@ -153,7 +153,7 @@ def kill_pop():
 
 def kill_chain_tier(tier):
     """Each link racks one more click and rises a little further: heavier, never a higher note."""
-    seconds = 0.12 + 0.035 * tier
+    seconds = 0.12 + 0.035 * tier + (0.12 if tier >= 3 else 0.0)  # room for the boom's tail
     out = mix(seconds, (sweep_noise(seconds, 1800, 1800 + 900 * tier, 0.35 + 0.05 * tier), 0))
     for i in range(tier):
         place(out, band_noise(0.014, 2500, 8000, 0.0025, 0.9), 0.004 + 0.032 * i)

@@ -15,7 +15,7 @@ const SetDirector := preload("res://src/presentation/set_director.gd")
 
 const RATE := Harmony.RATE
 
-# The 49 event-set WAVs (design-v3/sound/INTEGRATION.md section 7, item 2; renders in
+# The 51 event-set WAVs (49, and feedback_set.py's shot and deflect) (design-v3/sound/INTEGRATION.md section 7, item 2; renders in
 # RENDERS.md), registered under their cue keys. A file cue replaces the recipe of the
 # same key. The file is decoded to the bank's rate at bake time, so stingers, streams and
 # the keyed bakes read it like any other cue. Peak -1 dBFS, like the recipes' 0.9.
@@ -81,11 +81,12 @@ const MIN_GAP_MS := MixRows.MIN_GAP_MS
 # Danger sounds pull the bass down so the low end never masks a warning.
 const DANGER_SOUNDS := ["hurt", "enemy_arrive", "boss_telegraph", "ratchet_cue", "klaxon", "threat_up", "death",
 	"threat_tick", "threat_whoosh", "threat_whistle", "threat_hum", "threat_tear", "hold_pit", "hold_bola", "hold_tether", "hold_net", "heat_kettle"]
-# Pitched cues that follow the live key (a lifted Warden plays its chimes in Eb).
-const KEYED_SOUNDS := ["panel_note", "panel_jackpot", "line_claw_drag", "armor_reclaim", "scrap_tick", "cog_tick", "kill_pop", "part_get", "core_socket", "found_chime", "gate_through",
+# Pitched cues that follow the live key (a lifted Warden plays its chimes in Eb). The combat
+# feedback percussion (feedback_set.py) has no key, so it is not here.
+const KEYED_SOUNDS := ["panel_note", "panel_jackpot", "line_claw_drag", "armor_reclaim", "scrap_tick", "cog_tick", "part_get", "core_socket", "found_chime", "gate_through",
 	"rivet_line_punch", "rivet_line_arrive",
-	"grapple_clink", "grapple_release", "pylon_plant", "beacon_hum", "clank", "hit_thwack", "hurt",
-	"enemy_arrive", "boss_weak_hit", "ui_tick", "element_resolved", "ice_form", "vault_rise", "synergy_hit",
+	"grapple_clink", "grapple_release", "pylon_plant", "beacon_hum", 
+	"enemy_arrive", "element_resolved", "ice_form", "vault_rise", "synergy_hit",
 	"sable_arpeggio", "rivet_hihat_roll", "kest_low_thump", "tarn_latch_tear", "tally_balance_due", "cannon_recall", "sable_ready", "rivet_ready", "kest_ready", "tarn_ready", "tally_ready", "cannon_ready",
 	"sable_break", "rivet_break", "kest_break", "tarn_break", "tally_break", "cannon_break", "fleet_motif", "reactor_erupt", "swarm_buzz", "swarm_lock",
 	"swarm_scatter", "mind_sable", "mind_rivet", "mind_kest", "mind_tarn", "mind_tally", "mind_cannon", "hold_pit", "hold_bola", "hold_tether", "hold_net",
@@ -94,7 +95,7 @@ const KEYED_SOUNDS := ["panel_note", "panel_jackpot", "line_claw_drag", "armor_r
 	# v3 AU2 bank: every pitched cue named in design-v3/AUDIO-V3.md sections 4, 5, 8.
 	"bet_clunk", "bet_crack", "bet_refusal", "sunken_bell", "ally_hum_sable", "ally_hum_rivet", "ally_hum_kest",
 	"ally_wake", "fight_arm_stamp", "near_miss_whip_sable", "near_miss_whip_rivet", "near_miss_whip_kest",
-	"kill_chain_tier", "drop_landing", "return_launch_arpeggio", "crater_hold", "shell_spring",
+	"drop_landing", "return_launch_arpeggio", "crater_hold", "shell_spring",
 	"core_slam", "ultimate_land", "kest_demo_knock", "rivet_skid_plate",
 	"active_cutting_torch",
 	# --- P-C Tally keyed sounds ---
