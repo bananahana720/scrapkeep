@@ -189,6 +189,13 @@ func _warn_progress() -> float:
 	return _t / warn_seconds
 
 
+# How far the wind-up has run, 0 to 1, on its own clock; -1 outside a warning. The telegraph's
+# fill is _warn_progress, which a kind may hold (the bola's reticle stays open); the body's
+# wind-up pose reads this instead.
+func windup_run() -> float:
+	return clampf(_t / maxf(warn_seconds, 0.001), 0.0, 1.0) if phase == Phase.WARN else -1.0
+
+
 func _live(_delta: float) -> bool:
 	return true
 
