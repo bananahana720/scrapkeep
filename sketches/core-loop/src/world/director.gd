@@ -133,6 +133,12 @@ const RIM_SEEK := 24.0
 const SLOW := 3.0
 const TRIES := 8
 const HOME_WINDOW := Vector2(60.0, 250.0)
+# Routes with a fight on them (13 Nov 2026): a crew home is in the window only while it lies within HOME_CONE of the
+# ball's heading, so a crew on a route the ball did not take no longer draws every pack there. A free pack ahead lands
+# beside the riding line the ball is on: a line point LINE_AHEAD m ahead inside AHEAD_CONE, LINE_SIDE m off it.
+const HOME_CONE := 0.8726646  # 50 degrees
+const LINE_AHEAD := Vector2(60.0, 100.0)
+const LINE_SIDE := Vector2(12.0, 20.0)
 # Past the stage's elite arrival, the chance at elite_rate 1.0 that an authored arrival is the
 # elite pack again; never two elites in a row.
 const ELITE_REPEAT := 0.1
@@ -931,12 +937,40 @@ func _ahead(at: Vector2, ball: Vector2) -> bool:
 	return is_finite(ahead) and ahead >= HOME_WINDOW.x and ahead <= HOME_WINDOW.y
 
 
-func _window_homes(ball: Vector2) -> Array[Dictionary]:
+func _window_homes(ball: Vector2, heading := Vector2.ZERO) -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
 	for home in homes:
-		if home_live(home.id) and not _stopped_kinds.has(home.enemy) and _ahead(_home_at(home), ball):
+		if home_live(home.id) and not _stopped_kinds.has(home.enemy) and _ahead(_home_at(home), ball) \
+				and facing(heading, _home_at(home) - ball, HOME_CONE):
 			out.append(home)
 	return out
+
+
+# Whether `to` lies within `cone` radians of `heading`; true with no heading.
+static func facing(heading: Vector2, to: Vector2, cone: float) -> bool:
+	return heading == Vector2.ZERO or to == Vector2.ZERO or absf(heading.angle_to(to)) <= cone
+
+
+# A spot beside the riding line ahead of the ball, or INF: a pilot line point LINE_AHEAD away inside AHEAD_CONE of
+# `heading`, moved LINE_SIDE to one side, and safe (off every corridor, out of breathers).
+func _line_spot(ball: Vector2, heading: Vector2) -> Vector2:
+	var ahead: Array[Vector2] = []
+	for line in _corridors._park_pilot_lines:
+		for i in range(1, line.size()):
+			var p: Vector2 = line[i]
+			var d := p.distance_to(ball)
+			if d >= LINE_AHEAD.x and d <= LINE_AHEAD.y and facing(heading, p - ball, AHEAD_CONE):
+				ahead.append(p)
+	if ahead.is_empty():
+		return Vector2.INF
+	for _i in TRIES:
+		var k := _rng.randi_range(0, ahead.size() - 1)
+		var along := heading if heading != Vector2.ZERO else (ahead[k] - ball).normalized()
+		var side := Vector2(-along.y, along.x) * (1.0 if _rng.randf() < 0.5 else -1.0)
+		var spot: Vector2 = ahead[k] + side * _rng.randf_range(LINE_SIDE.x, LINE_SIDE.y)
+		if play_rect.has_point(spot) and spot.distance_to(ball) >= MIN_GAP and _park_safe(spot):
+			return spot
+	return Vector2.INF
 
 
 
@@ -1180,16 +1214,20 @@ func compose() -> Array:
 
 
 func spawn_spot(ball: Vector2, velocity: Vector2, forward: Vector2) -> Vector2:
+	var heading := velocity.normalized() if velocity.length() > SLOW else forward.normalized()
 	if _park_map != null:
-		_forward_homes = _window_homes(ball)
+		_forward_homes = _window_homes(ball, heading)
 		if not _forward_homes.is_empty():
 			for home in _forward_homes:
 				var at := _home_spot(home, ball)
 				if at != Vector2.INF:
 					return at
 			return Vector2.INF
-	var heading := velocity.normalized() if velocity.length() > SLOW else forward.normalized()
 	var ahead := _rng.randf() < AHEAD_SHARE
+	if ahead and _park_map != null and _corridors != null:
+		var by_line := _line_spot(ball, heading)
+		if by_line != Vector2.INF:
+			return by_line
 	for i in TRIES:
 		var angle: float
 		var dist: float
