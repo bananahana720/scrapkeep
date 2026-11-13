@@ -82,6 +82,7 @@ func run(t) -> void:
 	_fights(t)
 	_mount_reading(t)
 	_struggle(t)
+	_detour(t)
 
 
 # What the mounting hands the plate (WardenReactor.plate_reading): the dam and the flume by
@@ -387,3 +388,23 @@ func _struggle(t) -> void:
 	t.eq("seconds with no gain at all never count", [tally.struggling, tally.tally], [false, 0.0])
 	tally.begin()
 	t.eq("a retry clears a standing struggle", tally.struggling, false)
+
+
+# The detour row (Objectives.detour_shown): it stands under "Find the Warden" and nothing else, so
+# it is up on the road from the drop and gone once the Warden is engaged, a lock holds or a side
+# site has the row. The cage's row is its own prompt, capitalised, within the plate's word cap.
+func _detour(t) -> void:
+	var under := []
+	for id in CASES:
+		if Objectives.detour_shown(Objectives.choose(CASES[id])):
+			under.append(id)
+	t.eq("the detour row stands only under the road to the Warden", under, ["find_warden"])
+	var road: Dictionary = CASES["find_warden"]
+	for key in ["engaged", "yard_locked", "site_at_hand"]:
+		var reading := road.duplicate()
+		reading[key] = true
+		t.eq("the detour row goes once %s" % key, Objectives.detour_shown(Objectives.choose(reading)), false)
+	t.eq("the cage's row is its prompt, capitalised", Objectives.cage_words("free the runner"), "Free the runner")
+	t.eq("a cage with no prompt is the caged pilot", Objectives.cage_words(""), Objectives.CAGE_WORDS)
+	t.eq("a prompt over the word cap falls back", Objectives.cage_words("free the one runner in the cage"), Objectives.CAGE_WORDS)
+	t.eq("the fallback fits the plate", Objectives.CAGE_WORDS.split(" ").size() <= Objectives.MAX_WORDS, true)

@@ -18,10 +18,10 @@ extends RefCounted
 #     back for her bar;
 #   - her answers walk a phrase book in order (statement, variation, development, home), so
 #     the melody progresses, and the same answer never plays twice in a row;
-#   - every phrase ends on a move a player hears (coordinator steer, 12 November 2026: the DJ
-#     mixes through fights too): June's answer when the lead is free, else a filter roll, a dub
-#     bar or a breakdown in turn across the run, which only take sound away and so never mask a
-#     warning; the band's own directed sections are their own moves and the director holds there;
+#   - melody first: at least MIN_GAP_BARS between any two moves, so the song carries and each
+#     move is an event (about two a minute at most, fights included); a phrase June does not
+#     answer may end on a breakdown, which keeps the melody; the band's own directed sections
+#     and boss and set-piece songs play as written;
 #   - no randomness: the same rooms give the same set, in bots and in play.
 
 const PHRASE_BARS := 8
@@ -38,15 +38,18 @@ const PEAK_NEAR := 0.1
 const LEAD_SPACE := 0.35
 # How deep a filter roll sweeps the band (the low-pass's wet share at the end of its bar).
 const SWEEP_DEPTH := 0.85
-# The turnaround moves when June is not answering, walked in order, so every phrase ends on a
-# move a player hears: the band rolls under a low-pass into the downbeat, the lead drops out
-# for a dub bar, or the drums step out for a breakdown. Each only takes sound away, so none
-# can mask a warning; they run in fights and under warnings too.
-const TURNS := ["filter_roll", "dub", "breakdown"]
-# Fight words whose own form is the move (the Warden's breath and drop, a directed piece, and
-# "directed", any section the band directs itself: its pivot, break, return and home):
-# the director holds there.
-const OWN_FORM := ["open", "drop", "piece", "directed"]
+# Melody first (Andrew, 13 November 2026, on the whole-stretch page: "it sounds really chaotic
+# and I can't really follow the song"): at least MIN_GAP_BARS between any two moves, across
+# records, so the song carries and a move is an event. About two moves a minute at most.
+const MIN_GAP_BARS := 16
+# The turnaround move when June is not answering: the drums step out for a breakdown, which
+# keeps the melody and only takes sound away, so it never masks a warning. The filter roll is
+# kept for a real change (a climb into the peak, a set piece landing) and the lead never drops.
+const TURNS := ["breakdown"]
+# Fight words whose own form is the move, where the director holds: the Warden's breath and
+# drop, a directed piece, "directed" (a section the band directs itself: its pivot, break,
+# return and home) and "anthem" (a boss or set-piece song, which plays as written).
+const OWN_FORM := ["open", "drop", "piece", "directed", "anthem"]
 # Heat's band (redline.gd: 0 cool, 1 a quarter, 2 hot, 3 redline) from which answers run hot.
 const HOT_BAND := 2
 # Armour fraction under which the room is hanging on (the band strips its lead there too).
@@ -115,6 +118,8 @@ var _low_bars := 0
 var _release_left := 0
 var _rising := false
 var _turn_move := 0
+# Bars since the last move, kept across records so a change of record never doubles a move.
+var _since_move := MIN_GAP_BARS
 var _turns := {}
 var _last_answer := ""
 var _swap_armed := true
@@ -180,6 +185,8 @@ func read(room: Dictionary) -> Dictionary:
 	var plan := {"bar": bar, "mood": mood, "move": "hold", "trims": {}, "answer": "", "sweep": 0.0}
 	var fight := String(room.get("fight", ""))
 	var turnaround := at == PHRASE_BARS - 1
+	_since_move += 1
+	var free := _since_move >= MIN_GAP_BARS
 	var incoming := int(room.get("incoming_bars", 0))
 	# The rise into a peak or a set piece: one per climb, re-armed when the room falls under the
 	# peak's fall line (so a guard holding near it never rolls twice) or leaves build, and one per announcement. Outside a fight the bass steps
@@ -190,7 +197,7 @@ func read(room: Dictionary) -> Dictionary:
 	var landing := incoming == 1 and not _landing_swapped
 	if incoming != 1:
 		_landing_swapped = false
-	if not fight in OWN_FORM and mood != "peak" and (climb or landing):
+	if free and not fight in OWN_FORM and mood != "peak" and (climb or landing):
 		_swap_armed = false
 		_landing_swapped = incoming == 1
 		if fight == "":
@@ -199,22 +206,24 @@ func read(room: Dictionary) -> Dictionary:
 		else:
 			plan.move = "filter_roll"
 			plan.sweep = SWEEP_DEPTH
-	elif turnaround and _answer_allowed(room, fight):
+	elif free and turnaround and _answer_allowed(room, fight):
 		plan.move = "answer"
 		plan.answer = _pick(_book_for(room))
 		plan.trims = {"other": LEAD_SPACE}
-	elif turnaround and not fight in OWN_FORM:
+	elif free and turnaround and not fight in OWN_FORM:
 		_turn(plan)
-	elif mood == "release" and was != "release" and not bool(room.get("warning", false)) and not bool(room.get("busy", false)) and not fight in LEAD_OWNED:
+	elif free and mood == "release" and was != "release" and not bool(room.get("warning", false)) and not bool(room.get("busy", false)) and not fight in LEAD_OWNED:
 		plan.move = "home"
 		plan.answer = _pick("release")
 		plan.trims = {"other": LEAD_SPACE}
 	if plan.answer != "":
 		_last_answer = plan.answer
+	if plan.move != "hold":
+		_since_move = 0
 	# Why a turnaround passed without an answer, for the listening reads.
 	var held := ""
 	if turnaround and plan.answer == "":
-		held = "warning" if bool(room.get("warning", false)) else "busy" if bool(room.get("busy", false)) else fight if fight in LEAD_OWNED else plan.move
+		held = "gap" if not free else "warning" if bool(room.get("warning", false)) else "busy" if bool(room.get("busy", false)) else fight if fight in LEAD_OWNED else plan.move
 	if plans.size() < PLANS_KEPT:
 		plans.append([bar, mood, plan.move, plan.answer, int(room.get("sample", -1)), held, fight])
 	return plan
@@ -267,7 +276,7 @@ static func _rank(name: String) -> int:
 
 
 func _answer_allowed(room: Dictionary, fight: String) -> bool:
-	return not bool(room.get("warning", false)) and not bool(room.get("busy", false)) and not fight in LEAD_OWNED
+	return not bool(room.get("warning", false)) and not bool(room.get("busy", false)) and not fight in LEAD_OWNED and not fight in OWN_FORM
 
 
 func _book_for(room: Dictionary) -> String:

@@ -7,7 +7,8 @@ extends RefCounted
 #   director packs of two or more have been broken this attempt, or one activity in `also` is done.
 #   Isaac's locked boss door: the Warden asks for the verbs before the fight. `max_s` after the Warden
 #   is first engaged the clamp lets go anyway, so a dry spawner can never hold a run.
-# lock: the first time the ball comes within `within_m` of the beacon on the ground, the yard
+# lock: the first time the ball stands on level ground within `within_m` of the beacon (on any ground
+#   within the inner share of it, stage_locks.gd lock_arms), the yard
 #   ring-locks round it (`radius_m`, centred `ahead_m` toward the beacon) and its crew lands round the
 #   ring in `waves`, each `wave_gap_s` after the last is down (Isaac's room waves: a world 1 pack dies
 #   in seconds, so the minutes are in the waves, never in health). The last wave down opens it, or

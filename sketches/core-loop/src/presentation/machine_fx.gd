@@ -58,6 +58,8 @@ const MOMENTS := {
 const WORDS := {"fleet_heavy": "KLANG", "ancient_heavy": "KRZZT", "stagger": "KRNK", "elite": "CLOCKED OUT"}
 # Every glyph the uppercase words draw (WORDS, SPECIALS, BOSSES, the fall words and the panel pops).
 const WARM_GLYPHS := "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!?.,'+-%"
+# The steam sigh under an elite's clock-out card.
+const ELITE_SIGH := {"steam_puff": 8}
 const WORD_TINT := {"fleet": Palette.BRASS, "ancient": Palette.ANCIENT}
 
 # The four kill-first specials (ENEMY-PRIORITY.md 4, 4a; SOUND-BIBLE specials). Each
@@ -151,6 +153,9 @@ var _clock := 0.0
 var _sample := 0.0
 var _boss_at := Vector3.ZERO
 var director_ref = null
+# Vfx's kill mark (kill_mark.gd): a downed elite gets its clock-out card stamp and a steam sigh.
+# Null (a MachineFx without Presentation, in a tool or test) stamps the word instead.
+var kill_mark = null
 
 
 func setup(ctx_ref) -> void:
@@ -522,7 +527,12 @@ func _on_died(at: Vector3, _scrap: int, enemy: Node3D, kind: String, family: Str
 	var elite := kind == "miniboss" or String(enemy.get_meta("elite_affix", "")) != ""
 	if elite:
 		fire(MOMENTS[family]["chunk"], lifted, Color.TRANSPARENT, "P1")
-		word(WORDS["elite"], at + Vector3.UP * WORD_HEIGHT, WORD_TINT[family], true)
+		if kill_mark != null:
+			kill_mark.card(at + Vector3.UP * WORD_HEIGHT * 0.8)
+			fire(ELITE_SIGH, at + Vector3.UP * WORD_HEIGHT * 0.5, Color.TRANSPARENT, "P1")
+			_note("clock_out", family, at)
+		else:
+			word(WORDS["elite"], at + Vector3.UP * WORD_HEIGHT, WORD_TINT[family], true)
 
 
 # A posture body (a Warden or a boss's): the stagger vents for its whole window under a

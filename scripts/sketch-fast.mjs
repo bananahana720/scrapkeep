@@ -48,8 +48,11 @@ export const UNKNOWN_BOT_NAME = /^(bot_.*|.*_sweep_.*)\.gd$/;
 export const HUB_TESTS = 25;
 export const CANARY_COUNT = 4;
 // Content pins (music rows, attack rows, world digest, scatter rows) live in unit_suite, which no
-// res:// path reaches from most diffs, so it always runs (cloud gate, 18 Oct).
-export const ALWAYS = ["tests/unit_suite_test.gd"];
+// res:// path reaches from most diffs, so it always runs (cloud gate, 18 Oct). new_world_cost
+// scans every src/ script for a world, map or boss named outright, so no single path reaches it
+// either; it takes about a second (BACKLOG.md SG-01, 12 Nov). colour_meanings scans every src/
+// script for a reserved colour outside its meaning the same way (BACKLOG.md FX-20).
+export const ALWAYS = ["tests/unit_suite_test.gd", "tests/new_world_cost_test.gd", "tests/colour_meanings_test.gd"];
 // Some couplings have no res:// path: one park's recipe change moves other parks' bake hashes.
 export const PATH_RULES = [
   {
@@ -64,6 +67,18 @@ export const PATH_RULES = [
     tests: ["tests/park_landmark_sight_test.gd", "tests/site_markers_test.gd", "tests/park_fight_bowl_test.gd", "tests/park_feature_census_test.gd", "tests/park_breath_test.gd", "tests/park_rhythm_test.gd", "tests/handover_rows_test.gd", "tests/park_scrap_lines_test.gd", "tests/park_scrap_trail_test.gd"],
   },
 ];
+// Node checks a sketch change must face though no script path reaches them.
+export const NODE_PATH_RULES = [
+  // SG-16: a park prop recipe or file faces the far-mesh fault check.
+  { name: "park prop far meshes", match: /(^|\/)park\/props\/|^tools\/model_audit\.py$/, tests: ["scripts/far-faults.test.mjs"] },
+  // SG-15: the palette, the kit's mirror of it, its reader and the icon generator stay in step.
+  { name: "palette", match: /^(src\/core\/palette\.gd|tools\/blender\/common\.py|tools\/palette_gd\.py|tools\/icons\/)/, tests: ["scripts/palette-gd.test.mjs"] },
+];
+
+export function nodeTestsForPaths(paths, rules = NODE_PATH_RULES) {
+  return [...new Set(rules.filter((rule) => paths.some((file) => rule.match.test(file))).flatMap((rule) => rule.tests))].sort();
+}
+
 // Long whole-run proofs a change class must face; they go to the bot shards even past the budget.
 export const SHARD_RULES = [
   {
@@ -299,6 +314,9 @@ export function failingChecks(output) {
 
 // Added files must not be symlinks, root files or new top-level folders (#104 committed a
 // node_modules symlink, which broke every merge into a tree that has node_modules).
+// .mcp.json is the one root file a tool requires there: Claude Code reads project MCP servers
+// only from the repo root (the Godot MCP, Andrew 12 Nov 2026).
+export const ROOT_FILES_ALLOWED = new Set([".mcp.json"]);
 export function hygieneFindings(rawLines, baseTopLevel) {
   const findings = [];
   for (const line of rawLines) {
@@ -306,10 +324,17 @@ export function hygieneFindings(rawLines, baseTopLevel) {
     if (!match) continue;
     const [, , mode, file] = match;
     if (mode === "120000") findings.push(`symlink added: ${file}`);
+    else if (ROOT_FILES_ALLOWED.has(file)) continue;
     else if (!file.includes("/")) findings.push(`root file added: ${file}`);
     else if (!baseTopLevel.has(file.split("/")[0])) findings.push(`new top-level folder: ${file}`);
   }
   return findings;
+}
+
+// The Godot MCP adds an McpBridge autoload to project.godot while the game runs and removes it
+// on stop; a commit made mid-session, or after a killed session, would ship it.
+export function bridgeFindings(projectGodot) {
+  return /McpBridge/.test(projectGodot) ? ["project.godot carries the Godot MCP's McpBridge autoload: call stop_project, then commit"] : [];
 }
 
 // Merge commits on the PR's first-parent path each carry another branch. A carried PR that has
@@ -695,7 +720,10 @@ async function main() {
 
   // Stage 0: what the head is made of. Hygiene, then any stale branch it carries.
   const baseTop = new Set(git(["ls-tree", "--name-only", diffBase]).split("\n").filter(Boolean));
-  const hygiene = hygieneFindings(git(["diff", "--raw", "--no-abbrev", "--diff-filter=A", diffBase, "HEAD"]).split("\n"), baseTop);
+  const hygiene = [
+    ...hygieneFindings(git(["diff", "--raw", "--no-abbrev", "--diff-filter=A", diffBase, "HEAD"]).split("\n"), baseTop),
+    ...bridgeFindings(spawnSync("git", ["-C", root, "show", "HEAD:sketches/core-loop/project.godot"], { encoding: "utf8" }).stdout ?? ""),
+  ];
   if (!stage("tree hygiene", hygiene.length === 0, { note: hygiene.length ? hygiene.slice(0, 5).join("; ") : "no symlink, root file or new top-level folder", findings: hygiene }) && !options.dryRun) finish();
   const merges = git(["rev-list", "--first-parent", "--merges", "--parents", `${mergeBase}..HEAD`]).split("\n").filter(Boolean)
     .map((line) => line.split(" "))
@@ -776,9 +804,10 @@ async function main() {
       finish();
     }
   }
-  if (changed.node.length > 0) {
+  const pathNodeTests = nodeTestsForPaths(changed.godot);
+  if (changed.node.length > 0 || pathNodeTests.length > 0) {
     const all = git(["ls-files", "*.test.mjs", "*.test.js"]).split("\n").filter((file) => file && !file.startsWith(SKETCH) && !file.includes("node_modules"));
-    const nodeTests = nodeTestsFor(changed.node, all, (file) => readFileSync(path.join(root, file), "utf8"));
+    const nodeTests = [...new Set([...nodeTestsFor(changed.node, all, (file) => readFileSync(path.join(root, file), "utf8")), ...pathNodeTests])].sort();
     if (nodeTests.length > 0) {
       const node = spawnSync(process.execPath, ["--test", ...nodeTests], { cwd: root, encoding: "utf8", maxBuffer: 64 << 20 });
       if (!stage("node tests", node.status === 0, { note: nodeTests.join(" "), tests: nodeTests })) {

@@ -53,10 +53,10 @@ func _init() -> void:
 	_plate.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_plate.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var plate := StyleBoxFlat.new()
-	plate.bg_color = Color(Palette.CHARCOAL, 0.92)
+	plate.bg_color = Color(UiTokens.INK, UiTokens.PLATE_ALPHA)
 	plate.border_color = UiTokens.LINE
 	plate.set_border_width_all(2)
-	plate.set_corner_radius_all(6)
+	plate.set_corner_radius_all(UiTokens.RADIUS)
 	plate.corner_detail = 1
 	plate.set_content_margin_all(PLATE_PAD)
 	_plate.add_theme_stylebox_override("panel", plate)

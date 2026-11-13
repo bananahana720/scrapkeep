@@ -92,15 +92,29 @@ const VOICE_LIMIT := SfxBank.VOICE_LIMIT
 const MIN_GAP_MS := SfxBank.MIN_GAP_MS
 const PRIORITY_DB := [-6.0, -3.0, 0.0, 0.0]
 # Hitting on the beat pays in sound and look only (Andrew, Q10 "Sound only", 17 Oct 22:12Z):
-# a hit within ONBEAT_WINDOW_S of a beat the player hears adds the sax stab, rendered by the
-# music session in the home key, and fires hit_on_beat for the comic word. At most once a
+# a hit within ONBEAT_WINDOW_S of a beat the player hears adds a clap (ONBEAT_SOUND), and fires
+# hit_on_beat for the comic word. At most once a
 # beat. Damage never reads it.
 signal hit_on_beat(enemy: Node3D, kind: String)
 const ONBEAT_WINDOW_S := 0.08
-const ONBEAT_SOUND := "onbeat_sax_stab"
+# A hit on the beat claps with the band's drums (design-v3/sound/feedback_set.py): percussion, so it
+# never sits on the melody. ONBEAT_DB puts it about at a ranged hit's level, 8 dB under the sax stab it replaced.
+const ONBEAT_SOUND := "onbeat_clap"
+const ONBEAT_DB := -8.0
 # Tests set this to stand in for the beat clock: it returns the signed offset in seconds.
 var beat_offset_hook := Callable()
 var _onbeat_at := -(1 << 40)
+# A pilot's skill cast on the beat is answered by the band (Andrew, 13 Nov 02:17Z to 02:19Z): the skill's own
+# sound plays when pressed, never moved to the grid; inside ONBEAT_WINDOW_S the pilot's motif joins on
+# the next sixteenths in its own voice. A hidden reward, sound and look only like the on-beat hit
+# (Q10). SKILL_ANSWER_NOTES of the motif's cells, all of them against an elite, a miniboss, the
+# Warden, or anything in a live boss fight, with the last note doubled in the motif's band voice. Only
+# a line skill names its foe (at its bite); a special or gauge release counts as big only in a boss
+# fight. Cooldowns stop a skill from repeating it, so the gate only keeps two cues of one cast
+# (a gauge release and its special) or two skills on one beat from stacking.
+signal skill_on_beat(kind: String, big: bool)
+const SKILL_ANSWER_NOTES := 2
+var _skill_answer_at := -(1 << 40)
 # Weak-point hits inside this window climb like a kill chain. Pickups and kills climb by
 # their streaks, whose windows are in EventKinds.JUICE.
 const KILL_COMBO_WINDOW_MS := 1500
@@ -631,6 +645,8 @@ func _exit_tree() -> void:
 		if child is AudioStreamPlayer:
 			child.stop()
 	_sfx = null
+	_voice_db.clear()
+	_roomed.clear()
 	_ui = null
 	_music_pb = null
 	_stinger_pb = null
@@ -871,6 +887,7 @@ func _process(delta: float) -> void:
 	# The mix glides in real time: under slow motion the frame's delta is scaled down, and the
 	# hold that marks it would arrive late by the same factor.
 	_tend_mix(delta / maxf(Engine.time_scale, 0.05))
+	_tend_room()
 	_flush_flow()
 	_tend_kill_streak()
 	_warm_grid_key()
@@ -1663,6 +1680,53 @@ func _duck(amount: float, hold_seconds: float) -> void:
 		ace.duck(amount, hold_seconds)
 
 
+# Room for a cue the player must hear (MixRows.MAKE_ROOM): while it holds, every other effect
+# voice but a warning sits room_db under the level it started at. _voice_db keeps each SFX
+# voice's [sound, start level] for the way back; _roomed holds the ones pushed down. The hold
+# runs on the wall clock, so slow motion does not stretch it.
+var _voice_db := {}
+var _roomed := {}
+var _room_for := ""
+var _room_until_ms := -1
+
+
+func _make_room(kind: String, sound: String) -> void:
+	var hold := float(MixRows.MAKE_ROOM[sound]["hold_s"])
+	_room_for = sound
+	_room_until_ms = Time.get_ticks_msec() + int(hold * 1000.0)
+	cue_log.append([kind, sound, "room", engine.clock, hold, float(MixRows.MAKE_ROOM[sound]["db"])])
+	if _sfx == null:
+		return
+	for id in _voice_db:
+		var row: Array = _voice_db[id]
+		var room := _room_offset(row[0])
+		if room != 0.0 and not _roomed.has(id) and _sfx.is_stream_playing(id):
+			_roomed[id] = row[1]
+			_sfx.set_stream_volume(id, float(row[1]) + room)
+
+
+# What a voice of sound takes now: the held room's offset, or 0.
+func _room_offset(sound: String) -> float:
+	if Time.get_ticks_msec() >= _room_until_ms:
+		return 0.0
+	return MixRows.room_db(_room_for, sound, sound in DANGER_SOUNDS)
+
+
+# The room ends: the voices it pushed down come back to their own level, and the record of
+# finished voices is cleared.
+func _tend_room() -> void:
+	if Time.get_ticks_msec() < _room_until_ms or _sfx == null:
+		return
+	for id in _roomed:
+		if _sfx.is_stream_playing(id):
+			_sfx.set_stream_volume(id, float(_roomed[id]))
+	_roomed.clear()
+	if _voice_db.size() > 64:
+		for id in _voice_db.keys():
+			if not _sfx.is_stream_playing(id):
+				_voice_db.erase(id)
+
+
 # --- Playing a cue ------------------------------------------------------------------
 
 # Plays a cue now. Returns false if it was gated by the voice limit or the gap. With no
@@ -1691,6 +1755,8 @@ func play(kind: String, db := 0.0, pitch := 1.0, bus := "SFX", sound_override :=
 	_logged_pitch = -1.0
 	if bus == "SFX":
 		_live_sfx += 1
+		if MixRows.MAKE_ROOM.has(sound):
+			_make_room(kind, sound)
 	if priority >= 2:
 		_duck(0.55, 0.35)
 	if sound in DANGER_SOUNDS:
@@ -1829,12 +1895,27 @@ func _start(kind: String, sound: String, stream: AudioStream, volume: float, pit
 		live = live.filter(func(id: int): return playback.is_stream_playing(id))
 		if live.size() >= int(VOICE_LIMIT.get(sound, MixRows.VOICE_DEFAULT)):
 			playback.stop_stream(live.pop_front())
-		var id := playback.play_stream(stream, 0.0, volume, pitch, AudioServer.PLAYBACK_TYPE_DEFAULT, bus)
+		var room := _room_offset(sound) if playback == _sfx else 0.0
+		var id := playback.play_stream(stream, 0.0, volume + room, pitch, AudioServer.PLAYBACK_TYPE_DEFAULT, bus)
 		if id != AudioStreamPlaybackPolyphonic.INVALID_ID:
 			live.append(id)
+			if playback == _sfx:
+				_voice_db[id] = [sound, volume]
+				if room != 0.0:
+					_roomed[id] = volume
 		_voices[sound] = live
 	last_play_frame = Engine.get_process_frames()
 	cue_log.append([kind, sound, "now", engine.clock, pitch if _logged_pitch < 0.0 else _logged_pitch, volume])
+
+
+# A start of a sound played outside this director on bus (the world's water and steam,
+# world_fx_sound.gd), logged like _start's rows so the mix tools hear it. The mix tools give every
+# effect one gain, so the row carries the voice's level plus its bus against the effects bus now.
+func note_cue(kind: String, sound: String, volume: float, bus := "SFX") -> void:
+	if engine == null:
+		return
+	var against := float(BUSES.get(bus, 0.0)) + float(mix_db.get(bus, 0.0)) - float(BUSES["SFX"]) - float(mix_db.get("SFX", 0.0))
+	cue_log.append([kind, sound, "now", engine.clock, 1.0, volume + against])
 
 
 # Cuts every voice of a sound on the SFX bus at once: a ceremony skipped mid-build drops
@@ -1981,7 +2062,12 @@ func _connect_all(events) -> void:
 	events.enemy_spawned.connect(_on_enemy_spawned)
 	events.enemy_struck.connect(_on_struck)
 	events.shot_fired.connect(_on_shot)
-	events.special_used.connect(func(_special: String, _at: Vector3): play("special_used"))
+	events.special_used.connect(func(_special: String, _at: Vector3):
+		play("special_used")
+		skill_answer("special_used", null))
+	events.gauge_released.connect(func(_id: String, _fraction: float): skill_answer("gauge_released", null))
+	events.line_skill_fired.connect(func(_id: String, target: Node3D, _at: Vector3, _on: String):
+		skill_answer("line_skill_fired", target))
 	events.active_fired.connect(_on_active_fired)
 	events.active_heat.connect(_on_active_heat)
 	events.reward_offered.connect(_on_offered)
@@ -2127,6 +2213,8 @@ func wire_optional() -> void:
 	_listen_optional(events, "attack_cued", _on_attack_cued)
 	_listen_optional(events, "fight_phase_changed", _on_fight_phase)
 	_listen_optional(events, "boss_weak_point_hit", _on_weak_point)
+	# The Brindle reel (W1-61): each paid hit sheds scrap with its row's scrap tick.
+	_listen_optional(events, "boss_reeled", func(_at: Vector3, _scrap: int): play("boss_reeled"))
 	_listen_optional(events, "event_progress", _on_event_progress)
 	# The stage's content leaves before the arena: a soft fade, and any launch build
 	# resolves into the arena music instead of a landing.
@@ -3331,7 +3419,8 @@ func _on_kill(_kind: String, _at: Vector3, _value: int) -> void:
 		# A small drop, on the moment the vault breaks.
 		play("enemy_killed", 2.0, 1.0, "SFX", VAULT_KILL_SOUND)
 	var rung: int = kill_streak.bump(Time.get_ticks_msec())
-	play("enemy_killed", 0.0, Harmony.ratio(Harmony.pentatonic_step(rung)))
+	# The pop is percussion (SOUND-BIBLE rule 7): the chain grows by its tier layer, not by pitch.
+	play("enemy_killed")
 	if rung >= STREAK_LAND_RUNG:
 		_warm_landing(rung)
 	# Each link past the first adds its tier's stab (INTEGRATION section 3), five rungs.
@@ -3343,6 +3432,45 @@ func _on_kill(_kind: String, _at: Vector3, _value: int) -> void:
 # True while the recorded band's grid is the one the player hears.
 func _on_ace_grid() -> bool:
 	return ace != null and engine.grid == ace and ace.mode != "off" and ace.section != ""
+
+
+# The band answers a skill cast on the beat (SKILL_ANSWER_NOTES above). Returns the notes booked,
+# empty off the beat. target is the foe the skill named, or null.
+func skill_answer(kind: String, target: Node3D) -> Array:
+	if absf(beat_offset_s()) > ONBEAT_WINDOW_S or engine.clock - _skill_answer_at < engine.beat_len() / 2:
+		return []
+	_skill_answer_at = engine.clock
+	var big := big_foe(target)
+	var motif := Harmony.motif_or_first(_motif if _motif != "" else Harmony.CLASS_MOTIFS[0])
+	var cells: Array = motif["cells"]
+	if not big:
+		cells = cells.slice(0, SKILL_ANSWER_NOTES)
+	var unit := grid_unit(4)
+	var start := next_grid(4)
+	var booked := []
+	for cell in cells:
+		var at := start + int(cell[0]) * unit
+		_note_at("skill_on_beat", String(motif["voice"]), int(cell[1]), at)
+		booked.append([String(motif["voice"]), int(cell[1]), at])
+	if big and motif.has("band"):
+		var last: Array = cells[cells.size() - 1]
+		var midi := int(last[1]) + int(motif.get("band_octave", 0))
+		var at := start + int(last[0]) * unit
+		_note_at("skill_on_beat", String(motif["band"]), midi, at, SfxBank.GRID_UNDER_DB)
+		booked.append([String(motif["band"]), midi, at])
+	skill_on_beat.emit(kind, big)
+	return booked
+
+
+# A foe that earns the band's whole answer: an elite pack's member, a miniboss, the Warden, or
+# anything while a boss fight is live.
+func big_foe(target: Node3D) -> bool:
+	if ctx != null and "boss" in ctx and ctx.boss != null and ctx.boss.has_method("active") and ctx.boss.active():
+		return true
+	if not is_instance_valid(target):
+		return false
+	return target.has_meta("elite_pack") or target == _miniboss or target.get("boss") != null \
+			or (ctx != null and ctx.flow != null and ctx.flow.get("warden") == target)
 
 
 # One division of the sounding band's beat in samples: per_beat 4 is a sixteenth, 2 an eighth.
@@ -3400,6 +3528,13 @@ func _warm_grid_key() -> void:
 	for id in [SfxBank.grid_note_id(whip[0], whip[1]), SfxBank.grid_note_id(whip[0], whip[2]),
 			SfxBank.grid_note_id(DUNK_VOICE, DUNK_STORED_MIDI), SfxBank.grid_note_id(DUNK_VOICE, DUNK_SPENT_MIDI)]:
 		engine.warm_stinger(id, engine.clock)
+	# A skill's answer starts a sixteenth after the cast, too soon to make its notes then.
+	var row := Harmony.motif_or_first(motif)
+	for cell in row["cells"]:
+		engine.warm_stinger(SfxBank.grid_note_id(String(row["voice"]), int(cell[1])), engine.clock)
+	if row.has("band") and not row["cells"].is_empty():
+		var last: Array = row["cells"][row["cells"].size() - 1]
+		engine.warm_stinger(SfxBank.grid_note_id(String(row["band"]), int(last[1]) + int(row.get("band_octave", 0))), engine.clock)
 
 
 # The kill chain's window has closed: a chain worth hearing lands, once.
@@ -3835,7 +3970,7 @@ func _pay_beat(enemy: Node3D, kind: String) -> void:
 	_onbeat_at = engine.clock
 	var stab := SfxBank.rendered(ONBEAT_SOUND)
 	if stab != null:
-		_start("hit_on_beat", ONBEAT_SOUND, stab, PRIORITY_DB[Rows.priority("enemy_struck")], Harmony.ratio(live_key()), "SFX")
+		_start("hit_on_beat", ONBEAT_SOUND, stab, PRIORITY_DB[Rows.priority("enemy_struck")] + ONBEAT_DB, 1.0, "SFX")
 	else:
 		cue_log.append(["hit_on_beat", ONBEAT_SOUND, "absent", engine.clock, 1.0])
 	hit_on_beat.emit(enemy, kind)

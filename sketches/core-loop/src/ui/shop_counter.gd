@@ -251,7 +251,8 @@ func _build_buy() -> void:
 		var state := "sold" if offer["sold"] else ("ok" if offer["affordable"] else "poor")
 		_tile(shelf, {"kind": "shelf", "index": offer["index"], "part_id": offer["part_id"], "icon": offer["icon"],
 			"rarity": offer["rarity"], "element_icon": offer["element_icon"], "trigger_icon": offer["trigger_icon"],
-			"price": offer["price"], "state": state, "headline": offer.get("headline", "")}, SHELF_TILE)
+			"price": offer["price"], "state": state, "headline": offer.get("headline", ""),
+			"set_held": offer.get("set_held", 0), "set_pieces": offer.get("set_pieces", 0)}, SHELF_TILE)
 	var cost: int = shop.reroll_price()
 	_tile(shelf, {"kind": "reroll", "price": cost,
 		"state": "spent" if shop.rerolls_left <= 0 else ("ok" if game.run.cogs >= cost else "poor")}, SHELF_TILE)
@@ -278,6 +279,13 @@ func _build_buy() -> void:
 		var seat := "" if unseats == "" else String(CompanionPanel.PIECE_ICONS.get(unseats, "disc"))
 		_tile(lower, {"kind": "stow", "name": "Stow a core in SPIL-9", "price": -1, "seat_icon": seat,
 			"color": EventKinds.color("core_gained"), "state": "spent" if riding else ("ok" if game.run.can_stow_core() else "poor")}, CELL_TILE)
+	# Moss's last-call kettle (shop.brew_offer): the pilot's ultimate glyph, a pip per pour.
+	var brew: Dictionary = shop.brew_offer()
+	if not brew.is_empty():
+		var ult := "ab_%s_ult" % AbilitySlots.pilot_of(game.run.class_def)
+		var price := int(brew["price"])
+		_tile(lower, {"kind": "brew", "icon": ult, "color": _class_color(), "cells": brew["pours"], "cap": brew["cap"],
+			"price": price, "state": "capped" if price < 0 else ("ok" if game.run.cogs >= price else "poor")}, CELL_TILE)
 	for offer in shop.charge_offers():
 		var slot: Dictionary = slots.get(offer["slot"], {})
 		var state := "capped" if not offer["can"] else ("ok" if game.run.cogs >= offer["price"] else "poor")
@@ -297,7 +305,7 @@ func _build_sell() -> void:
 		var weigh: Dictionary = shop.weigh_quote()
 		if row.get_child_count() >= SELL_COLUMNS:
 			row = _row()
-		_tile(row, {"kind": "weigh", "name": "Weigh %d mass for %d cogs" % [weigh["mass"], weigh["cogs"]], "mass": weigh["mass"],
+		_tile(row, {"kind": "weigh", "name": ("Weigh %d mass for %d cogs" % [weigh["mass"], weigh["cogs"]]) if int(weigh["cogs"]) > 0 else "Weigh", "mass": weigh["mass"],
 			"price": weigh["cogs"], "color": EventKinds.color("heft_class_changed"), "state": "ok" if int(weigh["cogs"]) > 0 else "poor"}, SELL_TILE)
 
 
@@ -357,6 +365,9 @@ func press(tile) -> void:
 			fact = "shop_sold"
 		"stow":
 			result = shop.stow_core()
+			fact = "shop_charge"
+		"brew":
+			result = shop.buy_brew()
 			fact = "shop_charge"
 		"pick":
 			pick_wanted.emit()

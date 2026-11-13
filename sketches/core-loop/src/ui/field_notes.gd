@@ -430,7 +430,7 @@ func _card(entry: Dictionary, style: Dictionary) -> Control:
 	box.bg_color = Color(0.10, 0.11, 0.14, 0.96)
 	box.border_color = style["color"] if entry["known"] else Color(style["color"], 0.35)
 	box.set_border_width_all(2)
-	box.set_corner_radius_all(6)
+	box.set_corner_radius_all(UiTokens.RADIUS)
 	box.set_content_margin_all(12.0)
 	card.add_theme_stylebox_override("panel", box)
 	var text := Label.new()

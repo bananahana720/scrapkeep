@@ -11,7 +11,7 @@
 #
 # Two meshes, three surfaces (three colour-pass draws), no alpha:
 #   HookerBody      static: fleet_paint (crew body and head, flashes with the enemy) and
-#                   paint (vertex colour: post, spool, anchor crown, cradle, ears, the brass tag).
+#                   paint (vertex colour: post, spool, anchor crown, cradle, the brass tag).
 #   HookerHarpoon   the harpoon on a pivot at the cradle: one paint surface (vertex colour:
 #                   charcoal shaft, hazard head). hooker.gd slides it along its own axis in the
 #                   existing warn phase; the anchor and tether endpoint do not move.
@@ -28,6 +28,7 @@ import bpy
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 import common
+import crew
 import polish
 from common import Part
 
@@ -49,13 +50,10 @@ HALF_PI = math.pi / 2
 
 # --- Body: crew, post, spool, anchor crown ------------------------------------------
 b = Part("HookerBody")
-# Crew: a barrel torso (rust, flashes at runtime), a round head, a charcoal snout and ears.
+# Crew: a barrel torso (rust, flashes at runtime), a cast head from its old job (crew.py), its number and HIRED.
 b.cyl("fleet_paint", 0.66, 0.80, 1.1, segs=10, loc=(0, 0, -0.55))
 b.cyl("fleet_paint", 0.80, 0.70, 1.1, segs=10, loc=(0, 0, 0.55))
-b.uv("fleet_paint", 0.38, u=10, v=6, loc=(0, 0, 1.3))
-b.box("paint", (0.26, 0.30, 0.22), loc=(0, -0.38, 1.22), color=CHAR)
-for s in (-1, 1):
-    b.cyl("paint", 0.13, 0.0, 0.34, segs=6, loc=(s * 0.2, 0, 1.62), color=CHAR)
+crew.bollard_head(b, (0, 0, 1.3), 0.38)
 b.cyl("paint", 0.81, 0.81, 0.12, segs=10, loc=(0, 0, 0.1), color=CHAR)  # strap
 b.box("paint", (0.36, 0.06, 0.24), loc=(0, -0.79, 0.3), color=BRASS)  # the one brass tag
 # Yoke arm: a level bar tying the crew's back to the post, so the post reads as worn, not planted.
@@ -81,6 +79,9 @@ for sx in (-1, 1):
     b.rod("paint", (POST_X + sx * 0.60, 0, HEAD_Z + 0.42), (POST_X + sx * 0.66, 0, HEAD_Z + 0.78), 0.075, segs=5,
           color=CHAR, r2=0.02)
 b.ring("paint", 0.13, 0.22, 0.10, segs=10, loc=(POST_X, 0, HEAD_Z + 0.62), rot=(HALF_PI, 0, 0), color=IRON)
+# The old works' two marks, cast in under the Fleet's paint: the crew number and HIRED.
+crew.cast_number(b, "paint", "12", (0, -0.715, 0.74), (0, -1, 0), 0.26)
+crew.hired(b, "paint", (0, 0.745, -0.3), (0, 1, 0), 0.11)
 body = b.to_object(parent=root)
 
 # --- Harpoon: long level shaft, hazard barbed head, tail ring ------------------------

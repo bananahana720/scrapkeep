@@ -14,7 +14,7 @@
 # SlamPadLeft/SlamPadRight. The arms blend from torso to pad at the shoulder;
 # the existing rigid arm/fist pads and the plate group keep their geometry.
 #   BruteBody    fleet_paint (torso, head, hump, shoulders, arms, legs; flashes with the enemy)
-#                and paint (vertex colour: snout, ears, fists, feet, strap, the one brass tag,
+#                and paint (vertex colour: fists, feet, strap, the one brass tag,
 #                worn on the chest so the plate hides it until it pops).
 #   BrutePlates  one surface, bare_metal (the runtime gives it the enemy's tinted plate material
 #                and hides the whole node when the last plate pops). Front slab centred on the
@@ -34,6 +34,7 @@ from mathutils import Vector
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 import common
+import crew
 import polish
 from common import Part
 
@@ -100,11 +101,12 @@ for s in (-1, 1):
             b.paint(sleeve, "fleet_paint")
     b.uv("paint", 0.19, u=6, v=4, loc=(s * 0.5, -0.12, -0.44), color=CHAR)  # fist
     bind_new(2 if s < 0 else 3)
-b.uv("fleet_paint", 0.38, u=8, v=5, loc=(0, -0.12, 1.0))  # head
-b.box("paint", (0.30, 0.30, 0.22), loc=(0, -0.48, 0.92), color=CHAR)  # snout
-for s in (-1, 1):
-    b.cyl("paint", 0.13, 0.0, 0.30, segs=6, loc=(s * 0.26, -0.05, 1.4), color=CHAR)  # ears
+crew.lifting_beam_head(b, (0, -0.12, 1.0), 0.38)
 b.box("paint", (0.36, 0.06, 0.24), loc=(0, -0.72, 0.22), color=BRASS)  # the one brass tag
+# The old works' two marks, cast in under the Fleet's paint: the crew number and HIRED. The
+# plates cover both until they pop, so the marks are part of what the strip reveals.
+crew.cast_number(b, "paint", "24", (0, -0.75, 0.5), (0, -1, 0), 0.22)
+crew.hired(b, "paint", (0, 0.66, -0.3), (0, 1, 0), 0.1)
 bind_new(1)
 body = b.to_object(parent=root)
 # The blended arms and rigid pads share the body's two material surfaces.

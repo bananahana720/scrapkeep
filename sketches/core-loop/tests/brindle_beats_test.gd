@@ -80,7 +80,18 @@ func _static_checks() -> void:
 	_t.check("04 a repeat rout fits the window", Rows.length("brindle_rout", true) <= Flow.VICTORY_SECONDS, "%.2f s" % Rows.length("brindle_rout", true))
 	var triggers := {"arrival": Cues.matching("arrival", "brindle"), "rout": Cues.matching("rout", "brindle"),
 		"sign_on": Cues.matching("sign_on", "brindle"), "phase": Cues.matching("phase", "brindle")}
-	_t.check("05 one row per moment, two phase panels", triggers.arrival.size() == 1 and triggers.rout.size() == 1 and triggers.sign_on.size() == 1 and triggers.phase.size() == 2, str(triggers))
+	_t.check("05 one row per moment, three phase panels (two phases and the chase)", triggers.arrival.size() == 1 and triggers.rout.size() == 1 and triggers.sign_on.size() == 1 and triggers.phase.size() == 3, str(triggers))
+	# FX-03: the chase turn has its own beat, a glance that waits for the scooter to leave the hull.
+	for short in [false, true]:
+		var chase: Array = Cues.world_beats("brindle_chase", short).filter(func(b): return b.get("kind") == "glance")
+		_t.check("06 the chase turn glances along the scooter's arc (%s)" % ("short" if short else "full"),
+			chase.size() == 1 and chase[0]["anchor"] == "scooter" and float(chase[0]["at"]) > 0.0
+				and float(chase[0]["at"]) + float(chase[0]["seconds"]) <= Rules.EJECT_FLIGHT, str(chase))
+		# The glance waits inside the row, so a row that has ended (a death, a skip) drops it.
+		var words := (Rows.ROWS["brindle_chase"]["short" if short else "full"] as Array).map(func(p: Dictionary) -> String: return String(p["kind"]))
+		_t.check("06b the chase row adds no words and outlasts its glance's wait (%s)" % ("short" if short else "full"),
+			not words.has("caption") and not words.has("stamp") and not words.has("sfx_word")
+				and Rows.length("brindle_chase", short) > float(chase[0]["at"]), str(words))
 
 
 func _to_arena() -> void:

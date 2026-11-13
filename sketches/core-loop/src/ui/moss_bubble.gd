@@ -476,7 +476,8 @@ func _tick_call(delta: float) -> void:
 			if other["id"] == row["id"] or (row.has("pilot") and other.has("pilot") and other["on"] == row["on"]):
 				_calls_played[other["id"]] = true
 		_call_quiet = 0.0
-		_present(String(row["speaker"]), String(row["text"]), _voice(String(row["speaker"]), String(row["text"])))
+		var words := LoreRows.call_text(row, _game.run.run_seed)
+		_present(String(row["speaker"]), words, _voice(String(row["speaker"]), words))
 		return
 	_call_fresh -= delta
 	if _call_fresh <= 0.0:

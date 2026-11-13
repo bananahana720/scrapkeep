@@ -5,6 +5,7 @@ const Augments := preload("res://src/movement/augments.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const Keycap := preload("res://src/ui/keycap.gd")
 const Glyphs := preload("res://src/ui/glyphs.gd")
+const UiTokens := preload("res://src/ui/ui_tokens.gd")
 
 const RING := 13.0
 const DIAMOND := 15.0
@@ -20,7 +21,9 @@ const SHAKE_HZ := 40.0
 # The ultimate meter (design-v3/SKILL-BAR.md section 5): an arc METER_GAP outside the gauge
 # ring, METER_WIDTH thick, sweeping METER_SWEEP clockwise round a gap centred on six o'clock,
 # where the Q keycap (METER_Q_H tall) sits once the meter is full.
-const METER_GAP := 10.0
+# The dark under an unfilled gauge or meter: ink at this alpha, so the field shows through.
+const BACKING_ALPHA := 0.55
+const METER_GAP := float(UiTokens.GAP_M)
 const METER_WIDTH := 4.0
 const METER_SWEEP := TAU * 0.75
 const METER_Q_H := 20.0
@@ -101,7 +104,7 @@ static func meter_fill_color(class_color: Color) -> Color:
 
 # The rim turns live mint at full ("your verb works now"); below full it is a dark track.
 static func meter_rim(full: bool) -> Color:
-	return EventKinds.role_color("live") if full else Color(0.0, 0.0, 0.0, 0.55)
+	return EventKinds.role_color("live") if full else Color(UiTokens.INK, BACKING_ALPHA)
 
 
 # The full meter's width scale at `t` seconds into the breath: one breath a second.
@@ -177,7 +180,7 @@ func _draw() -> void:
 		draw_arc(centre, HARPOON_RING, 0.0, TAU, 48, Color(ready, 0.25), HARPOON_WIDTH)
 		draw_arc(centre, HARPOON_RING, -PI * 0.5, -PI * 0.5 + TAU * harpoon_fill, 48, ready, HARPOON_WIDTH)
 	if gauge > 0.0:
-		draw_arc(centre, GAUGE_RING, 0.0, TAU, 48, Color(0.0, 0.0, 0.0, 0.55), GAUGE_WIDTH + 2.0)
+		draw_arc(centre, GAUGE_RING, 0.0, TAU, 48, Color(UiTokens.INK, BACKING_ALPHA), GAUGE_WIDTH + UiTokens.EDGE)
 		draw_arc(centre, GAUGE_RING, -PI * 0.5, -PI * 0.5 + TAU * clampf(gauge, 0.0, 1.0), 48, gauge_color,
 			GAUGE_WIDTH + (1.5 if gauge >= 1.0 else 0.0))
 	_draw_meter(centre)

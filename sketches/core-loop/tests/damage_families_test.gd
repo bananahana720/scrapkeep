@@ -17,7 +17,7 @@ const T := preload("res://tests/support/t.gd")
 #   above the interrupted star and far off the ground telegraphs, on a crew spawned later too.
 
 const PUNCH := 30.0
-const EXPECTED_CHECKS := 18
+const EXPECTED_CHECKS := 20
 
 var _t := T.new("damage_families_test")
 var _game
@@ -76,9 +76,11 @@ func _physics_process(_delta: float) -> bool:
 	return true
 
 
-func _crew(offset: float) -> Node3D:
+# Ahead of the start, in the camera's view, unless `behind`: a read word stands beside its foe on
+# screen and waits for a later hit while the foe is out of view (player_fx.read_word).
+func _crew(offset: float, behind := false) -> Node3D:
 	var terrain = _game.ctx.terrain
-	var at: Vector3 = terrain.spawn_point(1) + Vector3(offset, 0.0, 14.0)
+	var at: Vector3 = terrain.spawn_point(1) + Vector3(offset, 0.0, 14.0 if behind else -14.0)
 	var crew: Node3D = _game.ctx.spawner.spawn_enemy("drill_crew", terrain.drop_point(at.x, at.z, 1.5))
 	crew.set_process(false)
 	crew.set_physics_process(false)
@@ -98,9 +100,14 @@ func _live() -> void:
 	_t.check("the codex does not know plating yet", codex != null and not codex.known("armour_plated"))
 	# The drill crew's own plate takes the first breaking hit whole (drill_crew.gd); popped
 	# here, so the losses compare the families alone.
+	var hidden := _crew(-8.0, true)
+	hidden.plates = 0
+	_loss(hidden, "test_bolt", PUNCH, "weapon")
+	_t.check("a first read on a crew out of view is not spent", marks != null and marks.stamped.is_empty(), str(marks.stamped if marks != null else null))
 	var a := _crew(-8.0)
 	a.plates = 0
 	var lost_kinetic := _loss(a, "test_bolt", PUNCH, "weapon")
+	_t.eq("the next resisted hit, in view, stamps DENT", Array(marks.stamped) if marks != null else [], ["DENT"])
 	_t.eq("a kinetic bolt reads resisted", String(a.get_meta("armour_read", "")), "resisted")
 	_t.check("the first read discovers the codex entry and badges the crew", codex.known("armour_plated") and a.has_node("ArmourIcon"),
 		"known %s" % codex.known("armour_plated"))
@@ -117,11 +124,7 @@ func _live() -> void:
 	_t.check("a hit short of the plating only chips, unread", String(d.get_meta("armour_read", "x")) == "" and chip < 10.0 * 0.6,
 		"chip %.2f" % chip)
 	_loss(a, "test_bolt", PUNCH, "weapon")
-	var texts: Array = []
-	if marks != null:
-		for w in marks.words:
-			texts.append((w["label"] as Label3D).text)
-	_t.eq("DENT and ZZAP! stamp once each per run", texts, ["DENT", "ZZAP!"])
+	_t.eq("DENT and ZZAP! stamp once each per run", Array(marks.stamped) if marks != null else [], ["DENT", "ZZAP!"])
 	var f := _crew(32.0)
 	f.plates = 0
 	f.plating = 0.0

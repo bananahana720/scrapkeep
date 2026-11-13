@@ -220,7 +220,11 @@ func hit() -> void:
 # Takes the dying body's look with it: the pivot moves to a holder in the world that plays
 # the death clip, then breaks up as before (EnemyMotion.scatter) and frees. False when the
 # kind has no death clip, so the caller scatters at once.
-func die(direction: Vector3) -> bool:
+var _land := Callable()
+
+
+func die(direction: Vector3, land := Callable()) -> bool:
+	_land = land
 	var pivot := get_parent() as Node3D
 	var world := enemy.get_parent() if enemy != null else null
 	if _dying or not lib.anims.has("death") or pivot == null or world == null:
@@ -245,7 +249,7 @@ func _physics_process(delta: float) -> void:
 		_sample("death", _death_age, 1.0)
 		_death_age += delta
 		if _death_age >= float(lib.anims.death.length):
-			EnemyMotion.scatter(_holder, kind, _death_direction)
+			EnemyMotion.scatter(_holder, kind, _death_direction, _land)
 			_holder.queue_free()
 			set_physics_process(false)
 		return

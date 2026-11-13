@@ -6,17 +6,17 @@ Heads and open pull requests change by the hour, so read them live (`git ls-remo
 
 | Fact | Value |
 | --- | --- |
-| Last promotion | wave 37, main b190dd26, #812 |
-| Open stage | stage/alpha-w38 |
-| Live board | #814 |
-| Red team | cautious |
-| Compare against | gate/w37-d929c154/ |
+| Last promotion | wave 39, main cd095277, #933 |
+| Open stage | stage/alpha-w40 |
+| Live board | #934 |
+| Red team | line-rider |
+| Compare against | gate/w39-bfa6cc0c/ |
 
 The board is the GitHub issue in the table. It also holds the file fences of the open pull requests. The stage log (`git log --first-parent origin/stage/alpha-w<N>`) is the stack queue. "Compare against" names the receipts the next full gate reads its base values from, published on a `scratch/gate-receipts-<folder>` branch. The Gate updates the table as its first commit on a new stage: `node scripts/wave-state.mjs --write --board <new board issue> --compare <receipts folder>` (the red team persona rotates by itself).
 
 ## Now (12 Nov 2026)
 
-Wave 37 is on `main` (b190dd26, pull request 812): PASS+NOTES on d929c154 plus one ledger row (26421cc5); the receipt is on the wave 37 board. `stage/alpha-w38` is cut at 528d9aec, whose tree equals `cand/w38` 6ff3d6aa, and the wave 38 gate runs on that tree on the PC (receipts will be published as `scratch/gate-receipts-w38-6ff3d6aa`). The stage holds the wave 38 polish units and the difficulty stack (ruling cu), re-landed with pull request 805, so its band read is the harder-by-movement read. The loop mechanics Heat, Overtime, Called Shot, marked hull and carry a core are on in the "Scrapkeep sitting" launch and off for bots and tests (rulings da, dd, df). The coordinator is this claude.ai project (ruling dh); the board thread owns the wave board and the PC session. The board's latest comments say what is stacked, what is fenced and what the gate has found.
+Wave 39 is on `main` (cd095277, pull request 933): CLEAN on bfa6cc0c after two load timeouts passed 3 of 3 alone; the receipt is on the wave 39 board. Its red team filed three stage 3 Warden blocker candidates and four majors as findings (ruling cn); the replays run on the PC and each one that reproduces becomes a PLAY-FINDINGS row. `stage/alpha-w40` is cut at ef3bd72e, whose tree equals `cand/w40` f1291acd: the first build wave from the three world 1 critiques (UI reads, kill and hit looks, sounds, crew heads, models, the earned sitting launch set). Waiting on paired PC band reads before they stack: the Brindle reel, chain pay with the blazing cache, and the dam incline fix. The difficulty stack still lands last in the sprint. Rulings dj (the four look rebuilds before the sitting) and dk (the sitting run ends won at Brindle) were added on 12 Nov.
 
 Done for the sitting is counted: no major or minor row left in [PLAY-FINDINGS.tsv](PLAY-FINDINGS.tsv), a clean release gate, 4080 frames in budget, zero placeholders, and that build installed on the PC. Andrew has played only the dam (wave 26 build, 30 Oct) and has marked no area yet.
 

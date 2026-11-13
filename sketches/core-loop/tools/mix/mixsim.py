@@ -27,6 +27,10 @@ VOICE_LIMIT = {"weapon_zap": 3, "scrap_tick": 3, "cog_tick": 3, "hit_thwack": 3,
                "beacon_hum": 1, "hop": 2, "land_thud": 2, "hurt": 2, "babble": 1, "rarity_tick": 2, "panel_note": 3,
                "clank": 2, "grapple_clink": 2, "swarm_buzz": 2, "kill_chain_tier": 1, "achievement_chime": 1,
                "rescue_fanfare": 1}
+# audio.gd DANGER_SOUNDS (sfx_bank.gd): warnings keep their level under a room row.
+DANGER_SOUNDS = {"hurt", "enemy_arrive", "boss_telegraph", "ratchet_cue", "klaxon", "threat_up", "death",
+                 "threat_tick", "threat_whoosh", "threat_whistle", "threat_hum", "threat_tear", "hold_pit", "hold_bola",
+                 "hold_tether", "hold_net", "heat_kettle"}
 VOICE_DEFAULT = int(os.environ.get("VOICE_DEFAULT", "3"))
 WIN = int(0.15 * RATE)
 
@@ -56,10 +60,15 @@ missing = Counter()
 unlevelled = Counter()
 other = Counter()
 stops = []
+rooms = []
 for row in run["cue_rows"]:
     t, kind, sound, how = row[0], row[1], row[2], row[3]
     if how == "stop" and t >= 0:
         stops.append((t, sound))
+        continue
+    if how == "room" and t >= 0:
+        # [t, kind, sound, "room", hold seconds, dB]: the game's MixRows.MAKE_ROOM.
+        rooms.append((t, sound, float(row[4]), float(row[5])))
         continue
     # June's answers (the set director) are booked on the grid and log the level they play at.
     placed = how == "now" or (kind == "set_answer" and len(row) > 5 and row[5] is not None)
@@ -105,6 +114,17 @@ for t, sound in stops:
             c["cut"] = at - c["a"]
             c["stolen"] = True
             c["stopped"] = True
+# A room row: every voice but the asking sound's own and a warning sits db lower for the hold
+# (audio.gd _make_room), voices already sounding and ones starting inside it alike.
+for t, owner, hold, db in rooms:
+    r0, r1 = int(t * RATE), int((t + hold) * RATE)
+    g = 10 ** (db / 20)
+    for c in cues:
+        if c["sound"] == owner or c["sound"] in DANGER_SOUNDS:
+            continue
+        s0, s1 = max(r0 - c["a"], 0), min(r1 - c["a"], len(c["x"]))
+        if s0 < s1:
+            c["x"][s0:s1] *= g
 for c in cues:
     x = c["x"][:c["cut"]].copy()
     if c.get("stolen") and len(x) > 64:

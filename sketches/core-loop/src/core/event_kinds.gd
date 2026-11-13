@@ -95,6 +95,7 @@ const ROWS := {
 	"fight_phase_changed": {"group": "event", "color": Palette.BRASS, "shape": "none", "sound": "ui_tick", "hud": "", "objective": "", "priority": 0},
 	"attack_cued": {"group": "combat", "color": Palette.BRASS, "shape": "wave", "sound": "ratchet_cue", "hud": "", "objective": "", "priority": 2},
 	"boss_weak_point_hit": {"group": "combat", "color": Palette.BRASS, "shape": "burst", "sound": "boss_weak_hit", "hud": "", "objective": "", "priority": 1},
+	"boss_reeled": {"group": "economy", "color": Palette.AMBER, "shape": "square", "sound": "scrap_tick", "hud": "", "objective": "", "priority": 1},
 	"boss_defeated": {"group": "flow", "color": Palette.BRASS, "shape": "star", "sound": "stinger_boss_defeated", "hud": "", "objective": "", "priority": 3},
 	"threat_rose": {"group": "event", "color": Palette.RUST, "shape": "chevron", "sound": "threat_up", "hud": "Threat rising", "objective": "", "priority": 2},
 	# v2 W3 characters. A class's own facts wear its colour and shape from class_def.gd;
@@ -232,7 +233,7 @@ const JUICE := {
 			"fx": {"crit_core": 24, "crit_halo": 24}},
 		"heavy": {"stop_add_ms": 10.0, "kick": 0.45, "dust": 12}, "fx": {"spark_core": 16, "spark_halo": 16}},
 	"enemy_rebounded": {"kick": 0.55, "shake": 0.35, "dust": 14},
-	"enemy_killed": {"pop": 14, "debris": 10, "chain_ms": 1500, "chain_cap": 7, "multi_ms": 90, "multi_stop_ms": 30.0, "pips": 8},
+	"enemy_killed": {"debris": 10, "fx": {"kill_shards": 16}, "chain_ms": 1500, "chain_cap": 7, "multi_ms": 90, "multi_stop_ms": 30.0, "pips": 8},
 	# A scrap trail's pieces are 9.8 m apart (ruling cd), 700 ms at the 14 m/s cruise: the window holds the run down to
 	# about 10 m/s, and a trail's rest (four empty beats, 2.8 s at cruise) still ends it.
 	"scrap_collected": {"chain_ms": 1000, "chain_cap": 9, "pulse": 0.05, "pulse_cap": 0.16},
@@ -255,10 +256,10 @@ const JUICE := {
 	"sticky_detonated": {"punch_fov": 3.0, "punch_per_enemy": 1.5, "punch_cap": 10.0, "debris": 12, "dust": 14, "shake": 0.35,
 		"near_m": 6.0, "near_kick": 0.6},
 	"rocket_jumped": {"kick": 0.8, "punch_fov": 8.0, "squash": 0.35},
-	"near_miss": {"stop_ms": 45.0, "punch_fov": -5.0, "grace_ms": 250},
+	"near_miss": {"punch_fov": -5.0, "grace_ms": 250},
 	"player_hit": {"edge_s": 0.4, "edge_alpha": 0.65, "squash": 0.18, "color": Palette.HAZARD},
 	"scrap_lost": {"pulse": -0.22},
-	"beacon_unsealed": {"stop_ms": 50.0, "punch_fov": 9.0},
+	"beacon_unsealed": {"punch_fov": 9.0},
 	# W12 VX-FX: GPU effects (presentation/fx_library.gd SPECS). "fx" is {spec id: particles};
 	# rolling plays continuously while the ball rolls at speed, its count per second. A
 	# "low" sub-dict gives the low preset's counts; "motes" and "streaks" are [idle, occupied].
@@ -388,6 +389,7 @@ const WEIGHT_EXEMPT := {
 	"boss_arena_entered": "Run and stage lifecycle owns music and cleanup, not an impact.",
 	"boss_attack_telegraphed": "Threat, windup and floor cues keep their committed geometry and sound; impact must not restyle them.",
 	"boss_phase_changed": "Run and stage lifecycle owns music and cleanup, not an impact.",
+	"boss_reeled": "Reward and economy ladders own the cue; rewards never stop time. Its strike is enemy_struck.",
 	"cause_armed": "The verb or ability grammar owns this cue; its landed strike is enemy_struck.",
 	"cause_fired": "The verb or ability grammar owns this cue; its landed strike is enemy_struck.",
 	"cogs_collected": "Reward and economy ladders own the cue; rewards never stop time.",

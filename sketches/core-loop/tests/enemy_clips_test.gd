@@ -173,10 +173,23 @@ func _death() -> void:
 	for kind in ["chaser", "winch_drone"]:
 		var enemy = _spawn(kind)
 		await _frames(2)
+		var settle := 0
+		while kind == "chaser" and not enemy.is_on_floor() and settle < 180:
+			await physics_frame
+			settle += 1
 		var parent: Node = enemy.get_parent()
+		var standing: bool = enemy.is_on_floor() and kind != "winch_drone"
 		enemy.take_damage(enemy.hp + 1.0)
-		await _frames(2)
 		var holder: Node = parent.get_node_or_null("DeathClip")
+		var pivot: Node3D = enemy.reaction_pivot
+		var pose: Transform3D = pivot.global_transform if pivot != null else Transform3D()
+		await _frames(1)
+		# The dead body's last tick leaves the clip's pivot in the pose it died in (W1-86 review).
+		_t.check("%s death clip keeps the pose it died in" % kind, pivot != null and pivot.global_transform.is_equal_approx(pose), str(pivot.global_transform if pivot != null else null))
+		var driver = holder.find_child("EnemyClips", true, false) if holder != null else null
+		_t.check("%s death clip lands only a standing body" % kind, driver != null and driver._land.is_valid() == standing,
+			"standing %s, lands %s" % [standing, driver != null and driver._land.is_valid()])
+		await _frames(1)
 		var playing: bool = holder != null and holder.find_child("EnemyClips", true, false) != null \
 			and holder.find_child("EnemyClips", true, false).clip == "death"
 		await _frames(int(ceil(0.5 * Engine.physics_ticks_per_second)) + 2)
