@@ -97,7 +97,10 @@ const PRIORITY_DB := [-6.0, -3.0, 0.0, 0.0]
 # beat. Damage never reads it.
 signal hit_on_beat(enemy: Node3D, kind: String)
 const ONBEAT_WINDOW_S := 0.08
-const ONBEAT_SOUND := "onbeat_sax_stab"
+# A hit on the beat claps with the band's drums (design-v3/sound/feedback_set.py): percussion, so it
+# never sits on the melody, ONBEAT_DB under the hit's own level.
+const ONBEAT_SOUND := "onbeat_clap"
+const ONBEAT_DB := -8.0
 # Tests set this to stand in for the beat clock: it returns the signed offset in seconds.
 var beat_offset_hook := Callable()
 var _onbeat_at := -(1 << 40)
@@ -3902,7 +3905,7 @@ func _pay_beat(enemy: Node3D, kind: String) -> void:
 	_onbeat_at = engine.clock
 	var stab := SfxBank.rendered(ONBEAT_SOUND)
 	if stab != null:
-		_start("hit_on_beat", ONBEAT_SOUND, stab, PRIORITY_DB[Rows.priority("enemy_struck")], Harmony.ratio(live_key()), "SFX")
+		_start("hit_on_beat", ONBEAT_SOUND, stab, PRIORITY_DB[Rows.priority("enemy_struck")] + ONBEAT_DB, 1.0, "SFX")
 	else:
 		cue_log.append(["hit_on_beat", ONBEAT_SOUND, "absent", engine.clock, 1.0])
 	hit_on_beat.emit(enemy, kind)

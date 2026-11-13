@@ -88,6 +88,7 @@ The rules of orchestration, each with what enforces it today.
 4. **Registers say who is speaking.** Rewards and the pilot's own actions climb D Dorian. Threats sit on Eb, Ab and Bb, outside the scale on purpose, so a warning is heard as foreign. [SOUND-STORY.md](../SOUND-STORY.md) owns the registers.
 5. **The band answers, it does not talk over.** A call gets an answer; the solo is handed round. The busier the cues, the thinner the band should play; nothing thins it today (after the sitting).
 6. **Every fight ends on the drop** (the hype rule below).
+7. **Combat feedback is percussion, not notes** (Andrew, 13 November 2026: the hit-scan sound and the other feedback sounded like jazz instruments and fought the melody). The facts a fight repeats many times a second (the shot, a hit, a crit, a kill and its chain, being hurt, a deflect, a weak point, the interface click, a hit on the beat) carry no pitch the band could clash with, and follow the conventions a shooter player already knows: the shot is a punch with a crack, the hit marker a high tick, the crit that tick with a metal ring, the kill a heavier break, the chain heavier with each link, damage a blow from below. Each lives in two lanes the melody leaves free: a short body from 120 to 300 Hz (above the kick, and still there on a laptop speaker) and a crack or inharmonic ring above 3 kHz; what crosses the melody's band is noise under 15 ms, heard as a click. A hit on the beat claps with the drums instead of playing a sax stab. Warnings stay tonal alarms on Eb, Ab and Bb, and pickups and rewards keep their pitched chimes, because those are the conventions there. [sound/feedback_set.py](sound/feedback_set.py) makes the sounds and lists each convention; the measure is the melody cover (how far the effects raise the melody's own loudest bands in a fight) and each cue's lead in its best third of an octave over the band.
 
 ### How it is checked
 
@@ -127,6 +128,7 @@ He gave the threads their own judgement on mechanics and tuning for this build-o
 - The set director's numbers (12 November 2026): an 8-bar phrase, a mood held two bars before it falls, two bars of release, the lead at 0.35 under an answer, the filter roll at 0.85 wet of a 420 Hz low-pass, answers 2 dB under the pilot's quote. All are constants at the top of `set_director.gd`, and the low-pass's in `ace_sequencer.gd`.
 - June answers in the room's colour before its mood: low armour first, then Overtime, then Heat at hot or redline. Low armour already strips the recorded lead, so her winking fall is the only melody there; it plays at the end of each phrase, not throughout.
 - The director stays out of the fight's sections: it adds June's answer while the guard holds, never in the breath, the drop or the break, and never trims a directed section.
+- The combat feedback sounds (rule 7) sit at about the loudness they had, the shot a little under (it plays ten times a second): trims weapon_zap -9, hit_thwack -3, crit_ping -5, kill_pop -5, ui_tick -8, and the on-beat clap 8 dB under the hit's level. Over the recorded world 1 fight these cut the effects' cover of the melody from a median 6.8 dB to 2.0 dB, and every cue still leads its best third of an octave over the band; over Brindle's anthem the chain's ratchet sits 3 dB under its own kill, so it is heard as part of the kill.
 - Kest's kick reads a tenth of a decibel over the peak line after its trim. It is left alone: the limiter holds it, and lowering it would change how loud it is.
 
 ## Tone: a game that loves having fun
@@ -218,7 +220,7 @@ The four boss previews from 2026-10-11 remain comparison material for this secti
 
 ## Event sounds
 
-Short, a little whimsical and tied to their event, like a rice cooker's end-of-cycle tune. Every pitch is in D Dorian so events never clash with the band. Gameplay sound plays on the frame. Only the musical answer waits for the grid.
+Short, a little whimsical and tied to their event, like a rice cooker's end-of-cycle tune. Every pitch is in D Dorian so events never clash with the band, and the combat feedback sounds carry no pitch at all (rule 7 under "Who has the melody"). Gameplay sound plays on the frame. Only the musical answer waits for the grid.
 
 | Event | Length | What you hear | Why it fits |
 | --- | --- | --- | --- |
