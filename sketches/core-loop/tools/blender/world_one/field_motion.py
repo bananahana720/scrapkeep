@@ -640,9 +640,17 @@ def deflector(root):
     })
     rig.clip("move", MOVE, {"body": gait(MOVE, 2.0, 0.04)})
     # deflector.gd raises the wall and squats the body; the crew shoulders into the dish.
-    rig.clip("windup", windup, {"body": windup_build(windup, (1.03, 0.97, 1.03), shudder=1.4, lean=(2, -14, 0))})
-    rig.clip("attack", attack, {"body": [(0, {"rot": (2, 10, 0), "scale": (1.08, 0.92, 1.08)}), (3 * F, {"rot": (2, 8, 0)}),
-                                         (attack * 0.6, {"rot": (1, 3, 0)}), (attack, {})]})
+    # The dish tips up to catch the spray as the crew sinks behind it.
+    rig.clip("windup", windup, {
+        "body": windup_build(windup, (1.12, 0.84, 1.12), shudder=1.6, lean=(8, -30, 0)),
+        "dish": [(0, {}), (windup * 0.6, {"rot": (-16, -10, 0)}), (windup, {"rot": (-22, -14, 0)})],
+    })
+    rig.clip("attack", attack, {
+        "body": [(0, {"rot": (6, 26, 0), "scale": (1.12, 0.86, 1.12)}), (3 * F, {"rot": (5, 20, 0)}),
+                 (attack * 0.6, {"rot": (2, 6, 0)}), (attack, {})],
+        "dish": [(0, {"rot": (10, 12, 0), "loc": (0, 0, 0.2)}), (3 * F, {"rot": (8, 9, 0), "loc": (0, 0, 0.16)}),
+                 (attack * 0.6, {"rot": (2, 2, 0)}), (attack, {})],
+    })
     rig.clip("hit", HIT, {"body": flinch(), "dish": merge([(0, {})], shake(F, 0.24, 4, period=2 * F, axis=1, decay=0.7), [(HIT, {})])})
     # Downed: the crew sags back and the dish, no longer held, pitches forward off its arm and
     # wobbles where it stops.
@@ -673,13 +681,18 @@ def gyro_jammer(root):
     })
     # The jam charges: the crew braces and the hoops climb and shudder on the mast.
     rig.clip("windup", windup, {
-        "body": windup_build(windup, (1.08, 0.9, 1.08), shudder=1.6, lean=(-6, 0, 0)),
-        "aerial": merge([(0, {})], shake(windup * 0.5, windup - 3 * F, 3, period=F, axis=0),
-                        [(windup - 3 * F, {"scale": (1.0, 1.08, 1.0)}), (windup, {"scale": (1.0, 1.08, 1.0)})]),
+        "body": windup_build(windup, (1.14, 0.82, 1.14), shudder=2.0, lean=(-14, 0, 9)),
+        "aerial": merge([(0, {}), (windup * 0.5, {"loc": (0, 0.22, 0), "scale": (1.0, 1.12, 1.0)})],
+                        shake(windup * 0.5 + F, windup - 3 * F, 7, period=F, axis=0,
+                              base={"loc": (0, 0.3, 0), "scale": (1.0, 1.16, 1.0)}),
+                        [(windup - 3 * F, {"loc": (0, 0.34, 0), "scale": (1.0, 1.18, 1.0)}),
+                         (windup, {"loc": (0, 0.34, 0), "scale": (1.0, 1.18, 1.0)})]),
     })
+    # The jam goes off: the crew bucks up and the hoops jump to the masthead, then settle.
     rig.clip("attack", attack, {
-        "body": strike(attack, (0.92, 1.12, 0.92), settle={"rot": (5, 0, 0)}),
-        "aerial": [(0, {"scale": (1.0, 1.12, 1.0)}), (3 * F, {"scale": (1.0, 1.06, 1.0)}), (attack, {})],
+        "body": strike(attack, (0.86, 1.2, 0.86), settle={"rot": (10, 0, 0)}),
+        "aerial": [(0, {"loc": (0, 0.5, 0), "scale": (1.0, 1.24, 1.0)}), (3 * F, {"loc": (0, 0.4, 0), "scale": (1.0, 1.14, 1.0)}),
+                   (attack * 0.6, {"loc": (0, 0.1, 0)}), (attack, {})],
     })
     rig.clip("hit", HIT, {"body": flinch()})
     # Downed: the crew slumps and the hoops slide down the mast, wobbling on their last spin.
