@@ -806,7 +806,7 @@ func _build_site(id: String, at: Vector2, spec: Dictionary) -> Site:
 	s.drawn = spec.get("drawn", false)
 	s.trade = spec.get("trade", {})
 	var spec_pay: Dictionary = spec.get("pay", {})
-	if id in ["enemy_camp", "hold_the_relay", "ambush_altar"] or not spec_pay.is_empty() or s.rule.has("bundle") or not s.interior.is_empty():
+	if id in ["enemy_camp", "hold_the_relay", "ambush_altar"] or not spec_pay.is_empty() or spec.has("face") or s.rule.has("bundle") or not s.interior.is_empty():
 		s.rule = s.rule.duplicate(true)
 	if not s.interior.is_empty():
 		s.footprint = spec.footprint
@@ -830,6 +830,9 @@ func _build_site(id: String, at: Vector2, spec: Dictionary) -> Site:
 	# A field find faces out of its dead end (secrets.gd FINDS spots); a park row may set its own face.
 	if spec.has("face"):
 		s.rule["face"] = spec["face"]
+	# A card 2 extra (PARK.md 2.12) is a second site beside the stage's own of its kind: it rolls apart (_luck_id).
+	if spec.get("extra", "") == "card_2":
+		s.set_meta("extra", String(spec.get("row", id)))
 	s.name = "Activity_" + id
 	(_site_parent if _site_parent != null else self).add_child(s)
 	s.global_position = ctx.terrain.drop_point(at.x, at.y, 0.0)
@@ -2156,8 +2159,9 @@ func _pay_scrap(s: Site, at: Vector3) -> void:
 		ctx.run.add_cogs(amount)
 
 
-# A field find, a first-win room, the timed door or a drawn pocket rolls on its own stream, so it never pays the
-# part the stage's ordinary site of its kind pays; every other site keeps its id, and so its rolls.
+# A field find, a first-win room, the timed door, a card 2 extra, a sealed room or a drawn pocket rolls on its own
+# stream, so it never pays the part the stage's ordinary site of its kind pays; every other site keeps its id, and so
+# its rolls.
 func _luck_id(s: Site) -> String:
 	if s.has_meta("find"):
 		return "%s:%s" % [s.id, s.get_meta("find")]
@@ -2165,6 +2169,12 @@ func _luck_id(s: Site) -> String:
 		return "%s:%s" % [s.id, s.get_meta("room")]
 	if s.has_meta("door"):
 		return "%s:timed_door" % s.id
+	# A card 2 extra and a room a valve or cracked wall seals (contraptions.gd) stand beside the stage's own
+	# cracked cache; on its stream they paid the same part.
+	if s.has_meta("extra"):
+		return "%s:%s" % [s.id, s.get_meta("extra")]
+	if s.has_meta("sealed"):
+		return "%s:%s" % [s.id, s.get_meta("sealed")]
 	# A drawn pocket rolls apart from the stage's authored site of its kind, or the two paid the same part:
 	# a drawn vault and the stage's own cache did on 23 of 40 dam runs and 24 of 40 flume runs (2026-11-09).
 	if s.drawn:

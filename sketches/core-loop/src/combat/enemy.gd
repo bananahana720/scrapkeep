@@ -567,6 +567,7 @@ func telegraph() -> Node3D:
 # The break-up (EnemyMotion.scatter) lives in its own detached node and frees itself.
 func _die() -> void:
 	_dead = true
+	_settle_look()
 	_facts_end(true)
 	collision_layer = 0
 	collision_mask = 0
@@ -749,6 +750,15 @@ func _show_strike(mat: StandardMaterial3D = null, base := Color.WHITE) -> void:
 # Whether the body wears the release flash right now (tests and captures).
 func strike_flashing() -> bool:
 	return _flash <= 0.0 and (_strike_frames == STRIKE_DONE or (_strike_frames > 0 and _strike_frames < STRIKE_FRAMES))
+
+
+# A body leaves in its resting look. The killing hit's flash fades on this body's own tick, which
+# stops at death, so the death clip and the pieces that share its materials kept it and drew
+# white for their whole life (PC film, 13 Nov 2026: "white crew marked HIRED").
+func _settle_look() -> void:
+	_flash = 0.0
+	_strike_frames = STRIKE_DONE
+	_update_flash(0.0)
 
 
 # The resting look: the base colour and no glow. The plating cue is on the plate's rim.

@@ -240,7 +240,14 @@ func _lands(enemy) -> void:
 	_t.check("the crew stands on the floor", enemy.is_on_floor())
 	var parent: Node = enemy.get_parent()
 	var count := parent.get_children().filter(func(n): return n.name.begins_with("DeathScatter")).size()
+	var paint: StandardMaterial3D = enemy._material
+	var rest: Color = enemy._base_color
+	# The ball's killing hit flashes the body the tick it dies.
+	enemy.flash()
+	enemy._update_flash(1.0 / 60.0)
 	enemy.take_damage(enemy.hp + 1.0)
+	_t.check("the pieces keep the crew's paint, not the killing hit's white", paint != null and paint.albedo_color.is_equal_approx(rest) and not paint.emission_enabled,
+		"%s, rest %s" % [paint.albedo_color if paint != null else null, rest])
 	var made: Array = parent.get_children().filter(func(n): return n.name.begins_with("DeathScatter"))
 	var scatter = made[made.size() - 1] if made.size() > count else null
 	if scatter == null:
