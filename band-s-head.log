@@ -1,0 +1,258 @@
+96 jobs (boss 0, warden 0, world 0, clear 96); estimated 0.6 h wall at 14 parallel
+[0.0m] start w1clear-novice-40300
+[0.0m] start w1clear-novice-40301
+[0.0m] start w1clear-novice-40302
+[0.0m] start w1clear-novice-40303
+[0.0m] start w1clear-novice-40304
+[0.0m] start w1clear-novice-40305
+[0.0m] start w1clear-novice-40306
+[0.0m] start w1clear-novice-40307
+[0.0m] start w1clear-novice-40308
+[0.0m] start w1clear-novice-40309
+[0.0m] start w1clear-novice-40310
+[0.0m] start w1clear-novice-40311
+[0.0m] start w1clear-novice-40312
+[0.0m] start w1clear-novice-40313
+[10.5m] done  w1clear-novice-40308: loss (lost, 235.8 s game), 627 s wall
+[10.5m] start w1clear-novice-40314
+[14.2m] done  w1clear-novice-40300: loss (lost, 332 s game), 853 s wall
+[14.2m] start w1clear-novice-40315
+[14.2m] done  w1clear-novice-40302: timeout (fight_capped, 321 s game), 853 s wall
+[14.2m] start w1clear-novice-40316
+[16.3m] done  w1clear-novice-40309: timeout (fight_capped, 354.59 s game), 979 s wall
+[16.3m] start w1clear-novice-40317
+[16.9m] done  w1clear-novice-40303: timeout (fight_capped, 354.13 s game), 1013 s wall
+[16.9m] start w1clear-novice-40318
+[16.9m] done  w1clear-novice-40310: loss (lost, 345.04 s game), 1013 s wall
+[16.9m] start w1clear-novice-40319
+[18.1m] done  w1clear-novice-40304: loss (lost, 371.63 s game), 1086 s wall
+[18.1m] start w1clear-novice-40320
+[25.0m] done  w1clear-novice-40314: timeout (fight_capped, 319.04 s game), 871 s wall
+[25.0m] start w1clear-novice-40321
+[26.4m] done  w1clear-novice-40320: loss (lost, 177.7 s game), 499 s wall
+[26.4m] start w1clear-novice-40322
+[26.9m] done  w1clear-novice-40305: timeout (fight_capped, 630.17 s game), 1614 s wall
+[26.9m] start w1clear-novice-40323
+[27.1m] done  w1clear-novice-40318: loss (lost, 228.26 s game), 612 s wall
+[27.1m] start w1clear-learner1-40300
+[27.2m] done  w1clear-novice-40312: timeout (fight_capped, 621.68 s game), 1634 s wall
+[27.2m] start w1clear-learner1-40301
+[28.2m] done  w1clear-novice-40311: timeout (fight_capped, 645.64 s game), 1692 s wall
+[28.2m] start w1clear-learner1-40302
+[29.8m] done  w1clear-novice-40315: timeout (fight_capped, 356.13 s game), 932 s wall
+[29.8m] start w1clear-learner1-40303
+[30.0m] done  w1clear-novice-40307: timeout (fight_capped, 644.48 s game), 1798 s wall
+[30.0m] start w1clear-learner1-40304
+[30.0m] done  w1clear-novice-40319: loss (lost, 298.99 s game), 785 s wall
+[30.0m] start w1clear-learner1-40305
+[30.3m] done  w1clear-novice-40301: timeout (fight_capped, 701.78 s game), 1821 s wall
+[30.3m] start w1clear-learner1-40306
+[30.4m] done  w1clear-novice-40313: timeout (fight_capped, 656.53 s game), 1824 s wall
+[30.4m] start w1clear-learner1-40307
+[31.4m] done  w1clear-novice-40316: timeout (fight_capped, 370.37 s game), 1032 s wall
+[31.4m] start w1clear-learner1-40308
+[31.6m] done  w1clear-novice-40306: timeout (fight_capped, 729.6 s game), 1898 s wall
+[31.6m] start w1clear-learner1-40309
+[39.9m] done  w1clear-novice-40321: timeout (fight_capped, 351.68 s game), 898 s wall
+[39.9m] start w1clear-learner1-40310
+[42.2m] done  w1clear-novice-40317: timeout (fight_capped, 601.98 s game), 1551 s wall
+[42.2m] start w1clear-learner1-40311
+[42.4m] done  w1clear-learner1-40302: timeout (fight_capped, 320.32 s game), 851 s wall
+[42.4m] start w1clear-learner1-40312
+[45.2m] done  w1clear-novice-40322: timeout (fight_capped, 379.63 s game), 1129 s wall
+[45.2m] start w1clear-learner1-40313
+[47.0m] done  w1clear-learner1-40300: win (until, 438.66 s game), 1196 s wall
+[47.0m] start w1clear-learner1-40314
+[47.7m] done  w1clear-learner1-40303: timeout (fight_capped, 353.66 s game), 1074 s wall
+[47.7m] start w1clear-learner1-40315
+[48.6m] done  w1clear-learner1-40309: timeout (fight_capped, 353.78 s game), 1020 s wall
+[48.6m] start w1clear-learner1-40316
+[49.0m] done  w1clear-learner1-40308: win (until, 367.03 s game), 1053 s wall
+[49.0m] start w1clear-learner1-40317
+[49.5m] done  w1clear-learner1-40305: win (until, 465.76 s game), 1172 s wall
+[49.5m] start w1clear-learner1-40318
+[50.0m] done  w1clear-learner1-40301: win (until, 466.36 s game), 1365 s wall
+[50.0m] start w1clear-learner1-40319
+[53.1m] done  w1clear-learner1-40307: win (until, 463.29 s game), 1362 s wall
+[53.1m] start w1clear-learner1-40320
+[54.2m] done  w1clear-novice-40323: timeout (fight_capped, 591.37 s game), 1639 s wall
+[54.2m] start w1clear-learner1-40321
+[55.9m] done  w1clear-learner1-40304: win (until, 540.86 s game), 1557 s wall
+[55.9m] start w1clear-learner1-40322
+[56.2m] done  w1clear-learner1-40306: win (until, 577.62 s game), 1553 s wall
+[56.2m] start w1clear-learner1-40323
+[61.4m] done  w1clear-learner1-40314: timeout (fight_capped, 319.67 s game), 863 s wall
+[61.4m] start w1clear-learner5-40300
+[62.7m] done  w1clear-learner1-40311: win (until, 469.31 s game), 1230 s wall
+[62.7m] start w1clear-learner5-40301
+[62.9m] done  w1clear-learner1-40312: win (until, 462.72 s game), 1230 s wall
+[62.9m] start w1clear-learner5-40302
+[63.4m] done  w1clear-learner1-40315: timeout (fight_capped, 355.97 s game), 943 s wall
+[63.4m] start w1clear-learner5-40303
+[66.6m] done  w1clear-learner1-40310: win (until, 567.21 s game), 1602 s wall
+[66.6m] start w1clear-learner5-40304
+[67.0m] done  w1clear-learner1-40320: timeout (fight_capped, 317.17 s game), 831 s wall
+[67.0m] start w1clear-learner5-40305
+[67.4m] done  w1clear-learner1-40317: win (until, 485.6 s game), 1108 s wall
+[67.4m] start w1clear-learner5-40306
+[67.7m] done  w1clear-learner1-40313: win (until, 490.1 s game), 1345 s wall
+[67.7m] start w1clear-learner5-40307
+[68.0m] done  w1clear-learner1-40318: win (until, 461.78 s game), 1109 s wall
+[68.0m] start w1clear-learner5-40308
+[70.3m] done  w1clear-learner1-40321: timeout (fight_capped, 355.49 s game), 962 s wall
+[70.3m] start w1clear-learner5-40309
+[72.7m] done  w1clear-learner1-40322: timeout (fight_capped, 369.09 s game), 1007 s wall
+[72.7m] start w1clear-learner5-40310
+[73.1m] done  w1clear-learner1-40323: win (until, 419.53 s game), 1011 s wall
+[73.1m] start w1clear-learner5-40311
+[74.1m] done  w1clear-learner1-40316: win (until, 600.76 s game), 1531 s wall
+[74.1m] start w1clear-learner5-40312
+[74.5m] done  w1clear-learner1-40319: win (until, 564.41 s game), 1473 s wall
+[74.5m] start w1clear-learner5-40313
+[76.3m] done  w1clear-learner5-40302: timeout (fight_capped, 321.29 s game), 809 s wall
+[76.3m] start w1clear-learner5-40314
+[77.9m] done  w1clear-learner5-40303: timeout (fight_capped, 353.97 s game), 873 s wall
+[77.9m] start w1clear-learner5-40315
+[80.6m] done  w1clear-learner5-40301: win (until, 412.89 s game), 1074 s wall
+[80.6m] start w1clear-learner5-40316
+[82.5m] done  w1clear-learner5-40305: win (until, 427.36 s game), 931 s wall
+[82.5m] start w1clear-learner5-40317
+[82.6m] done  w1clear-learner5-40308: win (until, 381.33 s game), 877 s wall
+[82.6m] start w1clear-learner5-40318
+[83.0m] done  w1clear-learner5-40304: timeout (fight_capped, 359.42 s game), 978 s wall
+[83.0m] start w1clear-learner5-40319
+[84.0m] done  w1clear-learner5-40309: timeout (fight_capped, 353.28 s game), 827 s wall
+[84.0m] start w1clear-learner5-40320
+[84.8m] done  w1clear-learner5-40300: win (until, 627.73 s game), 1405 s wall
+[84.8m] start w1clear-learner5-40321
+[85.5m] done  w1clear-learner5-40306: win (until, 484.66 s game), 1085 s wall
+[85.5m] start w1clear-learner5-40322
+[86.4m] done  w1clear-learner5-40307: win (until, 464.4 s game), 1127 s wall
+[86.4m] start w1clear-learner5-40323
+[89.6m] done  w1clear-learner5-40311: win (until, 461.03 s game), 994 s wall
+[89.6m] start w1clear-expert-40300
+[90.2m] done  w1clear-learner5-40312: win (until, 421.98 s game), 961 s wall
+[90.2m] start w1clear-expert-40301
+[91.6m] done  w1clear-learner5-40313: win (until, 410.5 s game), 1024 s wall
+[91.6m] start w1clear-expert-40302
+[92.4m] done  w1clear-learner5-40314: win (until, 428.73 s game), 961 s wall
+[92.4m] start w1clear-expert-40303
+[92.6m] done  w1clear-learner5-40315: timeout (fight_capped, 355.6 s game), 881 s wall
+[92.6m] start w1clear-expert-40304
+[93.1m] done  w1clear-learner5-40310: win (until, 509.21 s game), 1223 s wall
+[93.1m] start w1clear-expert-40305
+[95.7m] done  w1clear-learner5-40316: timeout (fight_capped, 358.97 s game), 904 s wall
+[95.7m] start w1clear-expert-40306
+[96.6m] done  w1clear-learner5-40320: timeout (fight_capped, 317.66 s game), 756 s wall
+[96.6m] start w1clear-expert-40307
+[97.7m] done  w1clear-learner5-40317: win (until, 404.59 s game), 916 s wall
+[97.7m] start w1clear-expert-40308
+[99.0m] done  w1clear-learner5-40318: win (until, 434.69 s game), 984 s wall
+[99.0m] start w1clear-expert-40309
+[99.0m] done  w1clear-learner5-40321: timeout (fight_capped, 358.27 s game), 854 s wall
+[99.0m] start w1clear-expert-40310
+[100.6m] done  w1clear-learner5-40319: win (until, 424.66 s game), 1060 s wall
+[100.6m] start w1clear-expert-40311
+[101.9m] done  w1clear-learner5-40323: win (until, 419.44 s game), 927 s wall
+[101.9m] start w1clear-expert-40312
+[103.9m] done  w1clear-learner5-40322: win (until, 435.53 s game), 1106 s wall
+[103.9m] start w1clear-expert-40313
+[105.1m] done  w1clear-expert-40302: win (until, 348.8 s game), 807 s wall
+[105.1m] start w1clear-expert-40314
+[107.9m] done  w1clear-expert-40303: win (until, 405 s game), 929 s wall
+[107.9m] start w1clear-expert-40315
+[107.9m] done  w1clear-expert-40301: win (until, 414.88 s game), 1067 s wall
+[107.9m] start w1clear-expert-40316
+[109.2m] done  w1clear-expert-40305: win (until, 444.82 s game), 966 s wall
+[109.2m] start w1clear-expert-40317
+[109.8m] done  w1clear-expert-40300: win (until, 527.39 s game), 1209 s wall
+[109.8m] start w1clear-expert-40318
+[110.8m] done  w1clear-expert-40306: win (until, 394.73 s game), 906 s wall
+[110.8m] start w1clear-expert-40319
+[111.0m] done  w1clear-expert-40308: win (until, 349.19 s game), 797 s wall
+[111.0m] start w1clear-expert-40320
+[111.4m] done  w1clear-expert-40304: win (until, 447.61 s game), 1125 s wall
+[111.4m] start w1clear-expert-40321
+[114.7m] done  w1clear-expert-40309: win (until, 418.72 s game), 943 s wall
+[114.7m] start w1clear-expert-40322
+[115.5m] done  w1clear-expert-40307: win (until, 462.72 s game), 1129 s wall
+[115.5m] start w1clear-expert-40323
+[115.8m] done  w1clear-expert-40311: win (until, 415.14 s game), 913 s wall
+[116.6m] done  w1clear-expert-40310: win (until, 420.98 s game), 1052 s wall
+[117.1m] done  w1clear-expert-40312: win (until, 413.26 s game), 913 s wall
+[117.2m] done  w1clear-expert-40314: win (until, 339.87 s game), 727 s wall
+[120.6m] done  w1clear-expert-40313: win (until, 423.82 s game), 998 s wall
+[121.8m] done  w1clear-expert-40317: win (until, 392.86 s game), 756 s wall
+[122.2m] done  w1clear-expert-40315: win (until, 432.56 s game), 859 s wall
+[122.7m] done  w1clear-expert-40320: win (until, 369.8 s game), 699 s wall
+[123.4m] done  w1clear-expert-40318: win (until, 452.7 s game), 820 s wall
+[123.8m] done  w1clear-expert-40316: win (until, 466.77 s game), 949 s wall
+[124.5m] done  w1clear-expert-40321: win (until, 448.02 s game), 789 s wall
+[125.0m] done  w1clear-expert-40319: win (until, 440.71 s game), 857 s wall
+[126.6m] done  w1clear-expert-40322: win (until, 440.23 s game), 712 s wall
+[127.3m] done  w1clear-expert-40323: win (until, 519.08 s game), 708 s wall
+# Challenge band table
+
+Label w40-s-head, commit 556b2030, 2026-11-13T05:50Z.
+
+Learner a1 at bosses and Wardens is information only (DECISIONS section 5, 19 Oct 19:00): no ✓/✗; the old reference range was 15%-35%. Parks still grade Learner a1 reach.
+
+Win rate (runs) [Wilson 95%] ✓/✗ against the target; ✓/✗ judges the point estimate. Brackets after a cell count deaths, fight caps (fight_capped, boss_stalled) and stalls; none is a win. Runs with no record, an unresumed doc or a harness kill are excluded from n and the rate and noted as `excluded`; over 10% excluded makes the column incomplete. Fight s and HP lost are medians over the cell's runs; top/ord is the Expert top fight time over the Expert ordinary fight time.
+
+## Whole World 1 clear (information only, not graded)
+
+`w1clear` plays the dam, the flume and Admiral Brindle in one attempt from a fresh run; a win is Brindle defeated. Where each run ended: the stage it reached, or the boss fight, and whether it died, hit a time cap (a stall or a fight cap) or cleared.
+
+| Band | Clears (runs) [Wilson 95%] | Ended (stage: died / capped / cleared) | Game s (median of clears) |
+| --- | --- | --- | --- |
+| w1clear novice | 0% (24) [0%-14%] (7 died, 17 capped) | s1: 7 died / 8 capped / 0 cleared, s2: 0 died / 9 capped / 0 cleared | - |
+| w1clear learner1 | 67% (24) [47%-82%] (8 capped) | boss: 0 died / 0 capped / 16 cleared, s1: 0 died / 8 capped / 0 cleared | 467.8 |
+| w1clear learner5 | 67% (24) [47%-82%] (8 capped) | boss: 0 died / 0 capped / 16 cleared, s1: 0 died / 8 capped / 0 cleared | 428.0 |
+| w1clear expert | 100% (24) [86%-100%] | boss: 0 died / 0 capped / 24 cleared | 422.4 |
+
+## Fairness (F1 to F3, information beside the difficulty change)
+
+The lines are in scripts/challenge/fairness.json. F1 telegraph share: hull lost to a hit whose own source had a telegraph over the ball for at least 0.6 s, over that plus hull from sources that publish telegraphs and had none in time; pass >= 95% and every killing hit shown. Contact hull (body contact and ram, no telegraph by design) is printed beside it and is outside the share; unknown is hull whose source has no telegraph owner to match, and F1 carries no mark while unknown is over 5% of hull. F2 stop tax: hull per second below cruise speed over hull per second at or above it; pass >= 2.0; the share of time at cruise is printed beside it. F3 first hit: median seconds from first contact with a pack to the first hit, one reading per stage and per boss fight; pass >= 3 s; a stage with no hit reads as later than any, and a hit that itself opened contact is counted apart. One line per cell and arm, with the runs behind it; runs graded error or unresumed are left out. "not measured" means no run carried the number; it is never read as zero.
+
+- w1clear novice (24 of 24 runs measured): F1 100% of 3973.3 hull shown ✓, killing hits shown 7 of 7 ✓; contact 0.0 hull, unknown 0.0 hull (0% of hull); F2 stop tax 4.64 ✓, 25% of time at cruise; F3 first hit 68.6 s median over 33 stage readings ✓, 0 of 33 took no hit.
+- w1clear learner1 (24 of 24 runs measured): F1 100% of 1503.7 hull shown ✓, killing hits shown none counted; contact 0.0 hull, unknown 0.0 hull (0% of hull); F2 stop tax 5.20 ✓, 33% of time at cruise; F3 first hit 63.2 s median over 56 stage readings ✓, 5 of 56 took no hit.
+- w1clear learner5 (24 of 24 runs measured): F1 100% of 668.2 hull shown ✓, killing hits shown none counted; contact 0.0 hull, unknown 0.0 hull (0% of hull); F2 stop tax 3.34 ✓, 36% of time at cruise; F3 first hit 67.7 s median over 56 stage readings ✓, 5 of 56 took no hit.
+- w1clear expert (24 of 24 runs measured): F1 100% of 391.5 hull shown ✓, killing hits shown none counted; contact 0.0 hull, unknown 0.0 hull (0% of hull); F2 stop tax 1.93 ✗, 40% of time at cruise; F3 first hit 67.1 s median over 72 stage readings ✓, 13 of 72 took no hit.
+
+No cell has a ✗ against a win-rate target.
+
+Fairness lines with a ✗: w1clear expert F2.
+
+## What a player would report
+
+The play watch (src/core/play_watch.gd) read 96 of 96 runs. It only reads the game, so the win rates above are what they would be without it. Information, not graded: a wedge, a fall, an empty objective plate or a hull bar off the hull is a bug to chase wherever it shows; a stuck or hung row is read with the bot's goal, since a camper waits by design.
+
+| Kind | Rows | Runs with one |
+| --- | --- | --- |
+| wedged | 0 | 0 |
+| fell | 0 | 0 |
+| blank | 0 | 0 |
+| bar | 0 | 0 |
+| stuck | 40 | 40 |
+| hung | 0 | 0 |
+
+| Kind | Stage | Near (x, y, z) | Runs | Rows | Cells | Bot's goal |
+| --- | --- | --- | --- | --- | --- | --- |
+| stuck | 1 | 0, 0, 570 | 12 | 12 | w1clear | ride spillway sheet; wait spillway sheet |
+| stuck | 1 | -10, 0, 570 | 5 | 5 | w1clear | ride spillway sheet; wait spillway sheet |
+| stuck | 2 | 330, 30, 520 | 5 | 5 | w1clear | boss pickup |
+| stuck | 1 | 10, 0, 570 | 4 | 4 | w1clear | ride spillway sheet |
+| stuck | 1 | -20, 0, 570 | 2 | 2 | w1clear | ride spillway sheet; wait spillway sheet |
+| stuck | 1 | -20, 0, 580 | 2 | 2 | w1clear | ride spillway sheet; wait spillway sheet |
+| stuck | 1 | 20, 0, 570 | 2 | 2 | w1clear | wait spillway sheet |
+| stuck | 1 | 20, 0, 600 | 2 | 2 | w1clear | ride spillway sheet; wait spillway sheet |
+| stuck | 1 | -20, 0, 590 | 1 | 1 | w1clear | wait spillway sheet |
+| stuck | 1 | -20, 0, 600 | 1 | 1 | w1clear | ride spillway sheet |
+| stuck | 1 | 0, 0, 610 | 1 | 1 | w1clear | ride spillway sheet |
+| stuck | 1 | 20, 0, 590 | 1 | 1 | w1clear | wait spillway sheet |
+| stuck | 2 | 320, 30, 510 | 1 | 1 | w1clear | boss pickup |
+| stuck | 2 | 340, 30, 520 | 1 | 1 | w1clear | boss pickup |
+
+Wall medians per job (re-estimate SECONDS_PER_JOB in lib.mjs from these):
+  clear: 96 jobs, median 989 s wall (max 1898), median 419 s game
+table written to /home/andrew/scratch/w40-pc/s-head/artifacts/local/challenge/w40-s-head/table.md
