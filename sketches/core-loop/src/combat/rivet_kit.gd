@@ -863,17 +863,33 @@ func _face_shadow(origin: Vector3, face: Array) -> Array:
 # The park's convex wedge colliders carry points, rather than triangle faces. Parks place the
 # same few wedges hundreds of times, and the face search is quartic in the points (about 100 ms a
 # wedge), so the faces are kept by point list for the life of the process. Readers map them
-# into world space and never write them.
+# into world space and never write them. A wedge not kept yet is searched on the terrain
+# worker (_terrain_entry), never on the main thread: the warm-up meeting a stage's new wedges
+# held one physics tick for 400 to 900 ms on the 4080 (board #934, 13 Nov 2026).
 static var _convex_cache := {}
+static var _convex_lock := Mutex.new()
 
 
-func _convex_faces(points: PackedVector3Array) -> Array:
-	if not _convex_cache.has(points):
-		_convex_cache[points] = _convex_faces_uncached(points)
-	return _convex_cache[points]
+static func _convex_faces(points: PackedVector3Array) -> Array:
+	_convex_lock.lock()
+	var faces = _convex_cache.get(points)
+	_convex_lock.unlock()
+	if faces == null:
+		faces = _convex_faces_uncached(points)
+		_convex_lock.lock()
+		_convex_cache[points] = faces
+		_convex_lock.unlock()
+	return faces
 
 
-func _convex_faces_uncached(points: PackedVector3Array) -> Array:
+static func _convex_kept(points: PackedVector3Array) -> bool:
+	_convex_lock.lock()
+	var kept := _convex_cache.has(points)
+	_convex_lock.unlock()
+	return kept
+
+
+static func _convex_faces_uncached(points: PackedVector3Array) -> Array:
 	var faces: Array = []
 	var normals: Array = []
 	var offsets: Array = []
@@ -995,7 +1011,7 @@ func _terrain_near(origin: Vector3, cells: Array) -> Dictionary:
 					# The face boxes decide what is near; a debug mesh's box costs a park tile
 					# 120 ms the first time.
 					var entry := _terrain_entry(collider.shape_owner_get_shape(owner, i), transform)
-					if entry.is_empty():
+					if entry.is_empty() or not terrain.readable(entry):
 						return {"faces": faces, "unreadable": true}
 					faces.append_array(terrain.faces_near(entry, bounds.grow(0.0001)))
 	return {"faces": faces}
@@ -1006,6 +1022,8 @@ func _terrain_entry(shape: Shape3D, transform: Transform3D) -> Dictionary:
 	var entry := terrain.cached(shape, transform)
 	if not entry.is_empty():
 		return entry
+	if shape is ConvexPolygonShape3D and not _convex_kept(shape.points):
+		return terrain.request(shape, transform, _convex_faces.bind(shape.points))
 	var local_faces = (shape as ConcavePolygonShape3D).get_faces() if shape is ConcavePolygonShape3D else _collider_faces(shape)
 	if local_faces.is_empty():
 		return {}
