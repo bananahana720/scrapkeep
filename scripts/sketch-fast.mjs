@@ -301,6 +301,9 @@ export function failingChecks(output) {
 
 // Added files must not be symlinks, root files or new top-level folders (#104 committed a
 // node_modules symlink, which broke every merge into a tree that has node_modules).
+// .mcp.json is the one root file a tool requires there: Claude Code reads project MCP servers
+// only from the repo root (the Godot MCP, Andrew 12 Nov 2026).
+export const ROOT_FILES_ALLOWED = new Set([".mcp.json"]);
 export function hygieneFindings(rawLines, baseTopLevel) {
   const findings = [];
   for (const line of rawLines) {
@@ -308,6 +311,7 @@ export function hygieneFindings(rawLines, baseTopLevel) {
     if (!match) continue;
     const [, , mode, file] = match;
     if (mode === "120000") findings.push(`symlink added: ${file}`);
+    else if (ROOT_FILES_ALLOWED.has(file)) continue;
     else if (!file.includes("/")) findings.push(`root file added: ${file}`);
     else if (!baseTopLevel.has(file.split("/")[0])) findings.push(`new top-level folder: ${file}`);
   }

@@ -204,6 +204,7 @@ test("hygiene fails added symlinks, root files and new top-level folders only", 
   const raw = [
     `:000000 120000 ${z} ${z} A\tnode_modules`,
     `:000000 100644 ${z} ${z} A\tNOTES.md`,
+    `:000000 100644 ${z} ${z} A\t.mcp.json`,
     `:000000 100644 ${z} ${z} A\tstray/x.txt`,
     `:000000 100644 ${z} ${z} A\tscripts/ok.mjs`,
     `:100644 100644 ${z} ${z} M\tREADME.md`,
