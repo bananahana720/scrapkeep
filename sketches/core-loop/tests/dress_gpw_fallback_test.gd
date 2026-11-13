@@ -22,19 +22,18 @@ func _run() -> void:
 		bay.setup(26.0, 14.0)
 		var barge := bay.get_node("Barge")
 		_check("deck keeps original vertex-colour ground", barge.get_node("BayDeck").get_child(1).material_override == Palette.ground_material())
-		var cabin_mat: Material = barge.get_node("MossCabin").get_child(1).material_override
-		_check("painted solids keep original material", cabin_mat is StandardMaterial3D and cabin_mat.albedo_color == Palette.VERDIGRIS and cabin_mat.albedo_texture == null and is_equal_approx(cabin_mat.roughness, 0.8))
-		_check("yard wall fallback", _old_stripes(barge.get_node("YardWall").get_child(1).material_override, Palette.VERDIGRIS))
+		# W1-23: the cabin and yard wall wear bay_kit.glb, which the surface kit never paints, so a broken shader leaves them as they are.
+		_check("cabin wears its model", barge.get_node("MossCabin").get_child(1).name == "BayCabin" and barge.get_node("MossCabin").get_child(1).material_override == null)
+		_check("yard wall wears its model", barge.get_node("YardWall").get_child(1).name == "BayYardWall" and barge.get_node("YardWall").get_child(1).material_override == null)
 		for entry in [[Vector3(Bay.JUKEBOX.x, 0.05, Bay.JUKEBOX.y), Palette.AMBER],
 				[Vector3(Bay.MARBLE_TOY.x, 0.05, Bay.MARBLE_TOY.y), Palette.SAND],
 				[Vector3(Bay.PAD.x, 0.06, Bay.PAD.y), Palette.AMBER],
-				[Vector3(0.0, 0.02 + Bay.deck_height(0.0, -(Bay.TRACK_R - 1.0)), -(Bay.TRACK_R - 1.0)), Palette.SAND],
-				[Vector3(Bay.CABIN.x + 2.55, 3.4, 0.0), Palette.RUST]]:
+				[Vector3(0.0, 0.02 + Bay.deck_height(0.0, -(Bay.TRACK_R - 1.0)), -(Bay.TRACK_R - 1.0)), Palette.SAND]]:
 			var found := false
 			for mesh in barge.get_children():
 				if mesh is MeshInstance3D and mesh.position.is_equal_approx(entry[0]):
 					found = _old_stripes(mesh.material_override, entry[1])
-			_check("original striped pad or shutter", found)
+			_check("original striped pad or mat", found)
 	_check("stage wall fallback", _old_stripes(scene.get_child(0).get_child(1).material_override, Palette.VERDIGRIS))
 	_check("one warning for shared broken path", StageMap._surface_warnings.size() == 1)
 	StageMap.surface_shader_path = original_path
