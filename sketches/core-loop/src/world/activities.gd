@@ -19,6 +19,9 @@ const StakeDevices := preload("res://src/world/stake_devices.gd")
 const PocketDraw := preload("res://src/world/pockets/pocket_draw.gd")
 const PocketLibrary := preload("res://src/world/pockets/pocket_library.gd")
 const Secrets := preload("res://src/core/secrets.gd")
+const AmbushAltar := preload("res://src/world/ambush_altar.gd")
+const CrackedCache := preload("res://src/world/cracked_cache.gd")
+const FindKit := preload("res://src/world/find_kit.gd")
 const SfxBank := preload("res://src/presentation/sfx_bank.gd")
 const WorldFx := preload("res://src/presentation/world_fx/world_fx.gd")
 const WorldFxAnchor := preload("res://src/presentation/world_fx/world_fx_anchor.gd")
@@ -934,6 +937,9 @@ func _activate_interior_collision(s: Site) -> void:
 
 
 func _build_altar(s: Site) -> void:
+	s.cap = AmbushAltar.dress(s)
+	if s.cap != null:
+		return
 	_mesh_cylinder(s, 0.45, 3.2, Vector3.UP * 1.6, _solid(Palette.VERDIGRIS))
 	s.cap = _mesh_box(s, Vector3(1.4, 0.6, 1.4), Vector3.UP * 3.5, _solid(Palette.BRASS))
 	_mesh_box(s, Vector3(1.42, 0.12, 1.42), Vector3.UP * 3.22, _solid(Palette.SAND))
@@ -945,6 +951,44 @@ func _build_cache(s: Site) -> void:
 		s.rotation.y = atan2(face.x, face.y)
 		s.global_position += s.global_basis.z * CACHE_LANE_OFFSET
 		s.global_position.y = ctx.terrain.height(s.global_position.x, s.global_position.z)
+	var local := Vector3(0.0, 0.0, -PEDESTAL_BACK)
+	s.pedestal = s.to_global(local)
+	s.pedestal.y = ctx.terrain.height(s.pedestal.x, s.pedestal.z)
+	s.fired_glow = StandardMaterial3D.new()
+	s.fired_glow.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
+	s.fired_glow.albedo_color = Color.BLACK
+	s.fired_glow.specular_mode = BaseMaterial3D.SPECULAR_DISABLED
+	if not _model_cache(s):
+		_greybox_cache(s)
+
+
+# The pocket wears the cracked cache's model over colliders of its own, as built: the shell without
+# its roof, stretched to this pocket's sink and depth (its inner back face on the back collider's),
+# the fracture panel on the wall's body and the model's pedestal. False, with nothing built, when the
+# model is missing.
+func _model_cache(s: Site) -> bool:
+	var shell := CrackedCache.model_part("CacheShell", s)
+	if shell == null:
+		return false
+	var tall := WALL_HEIGHT + WALL_SINK
+	var mid := tall * 0.5 - WALL_SINK
+	var rise := tall / (CrackedCache.HEIGHT + CrackedCache.SINK)
+	var deep := WALL_DEPTH / (CrackedCache.HALF_D * 2.0 + 0.5)
+	var front := CrackedCache.HALF_D + 0.5
+	shell.transform = Transform3D(Basis.from_scale(Vector3(1.0, rise, deep)),
+		Vector3(0.0, WALL_HEIGHT - CrackedCache.HEIGHT * rise, -front * deep)) * shell.transform
+	shell.material_overlay = s.fired_glow
+	s.wall = _wall_body(s, Vector3(WALL_HALF_W * 2.0, tall, 1.0), Vector3(0.0, mid, 0.0))
+	var panel := CrackedCache.model_part("CacheWall", s.wall)
+	panel.transform = Transform3D(Basis.from_scale(Vector3(1.0, rise, 1.0)) * panel.basis, Vector3.ZERO)
+	for side in [-1.0, 1.0]:
+		_wall_body(s, Vector3(1.0, tall, WALL_DEPTH), Vector3(side * (WALL_HALF_W + 0.5), mid, -WALL_DEPTH * 0.5))
+	_wall_body(s, Vector3(WALL_HALF_W * 2.0 + 2.0, tall, 1.0), Vector3(0.0, mid, -WALL_DEPTH - 0.5))
+	CrackedCache.model_part("CachePedestal", s).position = s.to_local(s.pedestal)
+	return true
+
+
+func _greybox_cache(s: Site) -> void:
 	var concrete := Palette.striped(Palette.VERDIGRIS, Palette.CHARCOAL)
 	var tall := WALL_HEIGHT + WALL_SINK
 	var mid := tall * 0.5 - WALL_SINK
@@ -957,18 +1001,11 @@ func _build_cache(s: Site) -> void:
 	for side in [-1.0, 1.0]:
 		_mesh_box(s, Vector3(1.0, tall, WALL_DEPTH), Vector3(side * (WALL_HALF_W + 0.5), mid, -WALL_DEPTH * 0.5), concrete, true)
 	var back := _mesh_box(s, Vector3(WALL_HALF_W * 2.0 + 2.0, tall, 1.0), Vector3(0.0, mid, -WALL_DEPTH - 0.5), concrete, true)
-	var local := Vector3(0.0, 0.0, -PEDESTAL_BACK)
-	s.pedestal = s.to_global(local)
-	s.pedestal.y = ctx.terrain.height(s.pedestal.x, s.pedestal.z)
 	_mesh_cylinder(s, 0.8, 0.6, s.to_local(s.pedestal) + Vector3.UP * 0.3, _solid(Palette.CHARCOAL))
 	# Finish only: the same workshop materials the Spillway props wear; colliders stay as built.
 	load("res://src/presentation/spillway_scenery.gd").dress_props(s, s.view)
 	# The dressed finish shader carries no emission, so the glow is this site's own additive
-	# overlay on its back wall, dark until the wall is fired.
-	s.fired_glow = StandardMaterial3D.new()
-	s.fired_glow.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
-	s.fired_glow.albedo_color = Color.BLACK
-	s.fired_glow.specular_mode = BaseMaterial3D.SPECULAR_DISABLED
+	# overlay on its back wall (the model's: its shell), dark until the wall is fired.
 	(back.get_child(1) as GeometryInstance3D).material_overlay = s.fired_glow
 
 
@@ -996,7 +1033,12 @@ func _seep_tell(s: Site) -> void:
 	var wet := _find_wet
 	for k in FIND_SEEP_STREAKS.size():
 		var streak: Vector3 = FIND_SEEP_STREAKS[k]
-		var mark := _mesh_box(s.wall, Vector3(streak.z, WALL_HEIGHT * 0.8, 0.04), Vector3(streak.x, streak.y, 0.52), wet)
+		var mark: Node3D = FindKit.part("FindSeep", s.wall)
+		if mark != null:
+			mark.position = Vector3(streak.x, streak.y, 0.52)
+			mark.scale = Vector3(streak.z, WALL_HEIGHT * 0.8, 1.0)
+		else:
+			mark = _mesh_box(s.wall, Vector3(streak.z, WALL_HEIGHT * 0.8, 0.04), Vector3(streak.x, streak.y, 0.52), wet)
 		mark.name = "FindSeep%d" % k
 	var glint: Node3D = WorldFxAnchor.make("secret")
 	glint.name = "FindGlint"
@@ -1032,8 +1074,13 @@ func _dress_door(s: Site) -> void:
 # The radio's tell: a short whip aerial over the roof line and the tune through the wall, heard from
 # Secrets.RADIO_HEAR_M. The aerial stays; the sound goes with the face.
 func _radio_tell(s: Site) -> void:
-	var aerial := _mesh_box(s, Vector3(0.12, FIND_AERIAL_M, 0.12), Vector3(WALL_HALF_W - 1.0, WALL_HEIGHT + FIND_AERIAL_M * 0.5, -1.0),
-		_solid(Palette.BRASS))
+	# The model's aerial is clamped to the side wall's top; the plain one stood inside the pocket's rim.
+	var aerial: Node3D = FindKit.part("FindAerial", s)
+	if aerial != null:
+		aerial.position = Vector3(WALL_HALF_W + 0.5, WALL_HEIGHT, -1.0)
+	else:
+		aerial = _mesh_box(s, Vector3(0.12, FIND_AERIAL_M, 0.12), Vector3(WALL_HALF_W - 1.0, WALL_HEIGHT + FIND_AERIAL_M * 0.5, -1.0),
+			_solid(Palette.BRASS))
 	aerial.name = "FindAerial"
 	s.wall.add_child(_find_sound("find_radio", Secrets.RADIO_HEAR_M))
 
@@ -1064,11 +1111,20 @@ func _hang_room_log(s: Site, room_id: String) -> void:
 func _hang_board(s: Site, site_name: String, title: String, text: String) -> void:
 	s.name = site_name
 	var board_z := -WALL_DEPTH + 0.06
-	var frame := _mesh_box(s, Vector3(ROOM_BOARD_SIZE.x + 0.3, ROOM_BOARD_SIZE.y + 0.3, 0.08),
-		Vector3(0.0, ROOM_LOG_HEIGHT, board_z), _solid(Palette.BRASS))
+	# The model's frame and plate stand on the back wall: their back face on its origin, the plate's
+	# face where the plain plate's was. The plate is painted one flat dark under the log line.
+	var frame: Node3D = FindKit.part("FindBoardFrame", s)
+	var board: Node3D = FindKit.part("FindBoard", s)
+	if frame != null and board != null:
+		frame.position = Vector3(0.0, ROOM_LOG_HEIGHT, board_z - 0.04)
+		board.position = frame.position
+		(board as MeshInstance3D).material_override = _solid(Palette.CHARCOAL)
+	else:
+		frame = _mesh_box(s, Vector3(ROOM_BOARD_SIZE.x + 0.3, ROOM_BOARD_SIZE.y + 0.3, 0.08),
+			Vector3(0.0, ROOM_LOG_HEIGHT, board_z), _solid(Palette.BRASS))
+		board = _mesh_box(s, Vector3(ROOM_BOARD_SIZE.x, ROOM_BOARD_SIZE.y, 0.08),
+			Vector3(0.0, ROOM_LOG_HEIGHT, board_z + 0.04), _solid(Palette.CHARCOAL))
 	frame.name = "RoomBoardFrame"
-	var board := _mesh_box(s, Vector3(ROOM_BOARD_SIZE.x, ROOM_BOARD_SIZE.y, 0.08),
-		Vector3(0.0, ROOM_LOG_HEIGHT, board_z + 0.04), _solid(Palette.CHARCOAL))
 	board.name = "RoomBoard"
 	var label := Label3D.new()
 	label.name = "RoomLog"
@@ -1161,6 +1217,13 @@ func _mesh_box(parent: Node3D, size: Vector3, at: Vector3, mat: Material, solid 
 		mesh.position = at
 		parent.add_child(mesh)
 		return mesh
+	var body := _wall_body(parent, size, at)
+	body.add_child(mesh)
+	return body
+
+
+# A bare wall collider: the box shape is its first child, any drawn face comes after.
+func _wall_body(parent: Node3D, size: Vector3, at: Vector3) -> StaticBody3D:
 	var body := StaticBody3D.new()
 	var shape := CollisionShape3D.new()
 	var bs := BoxShape3D.new()
@@ -1168,7 +1231,6 @@ func _mesh_box(parent: Node3D, size: Vector3, at: Vector3, mat: Material, solid 
 	shape.shape = bs
 	body.physics_material_override = _wall_material()
 	body.add_child(shape)
-	body.add_child(mesh)
 	body.position = at
 	parent.add_child(body)
 	return body

@@ -6,40 +6,12 @@
 # A glob covers only one owner's own subtree: game.gd owns every unscripted node under the game root, so its rows are exact.
 # Seeded 12 Nov 2026 from the census of cand/w40 243794e0 (seed 40317, pylon_engineer, park table, through Brindle).
 # Stand-in rows come first: the first row that covers a surface judges it, so a code glob cannot hide a stand-in.
-activities.gd	BoxMesh	Activities/Activity_ambush_altar/MeshInstance3D	stand-in	W1-22	ambush altar: a cylinder with a box cap (ambush_altar.glb exists, park path never loads it)
-activities.gd	BoxMesh	Activities/Find_dam_shift_radio/FindAerial	stand-in	W1-22	field find on the cracked-cache wall: wall, pedestal, notice board, aerial, seep
-activities.gd	BoxMesh	Activities/Find_dam_shift_radio/RoomBoard	stand-in	W1-22	field find on the cracked-cache wall: wall, pedestal, notice board, aerial, seep
-activities.gd	BoxMesh	Activities/Find_dam_shift_radio/RoomBoardFrame	stand-in	W1-22	field find on the cracked-cache wall: wall, pedestal, notice board, aerial, seep
-activities.gd	BoxMesh	Activities/Find_dam_turbine_hall/RoomBoard	stand-in	W1-22	field find on the cracked-cache wall: wall, pedestal, notice board, aerial, seep
-activities.gd	BoxMesh	Activities/Find_dam_turbine_hall/RoomBoardFrame	stand-in	W1-22	field find on the cracked-cache wall: wall, pedestal, notice board, aerial, seep
-activities.gd	BoxMesh	Activities/Find_flume_crew_radio/FindAerial	stand-in	W1-22	field find on the cracked-cache wall: wall, pedestal, notice board, aerial, seep
-activities.gd	BoxMesh	Activities/Find_flume_crew_radio/RoomBoard	stand-in	W1-22	field find on the cracked-cache wall: wall, pedestal, notice board, aerial, seep
-activities.gd	BoxMesh	Activities/Find_flume_crew_radio/RoomBoardFrame	stand-in	W1-22	field find on the cracked-cache wall: wall, pedestal, notice board, aerial, seep
-activities.gd	BoxMesh	Activities/Find_flume_trestle_seep/RoomBoard	stand-in	W1-22	field find on the cracked-cache wall: wall, pedestal, notice board, aerial, seep
-activities.gd	BoxMesh	Activities/Find_flume_trestle_seep/RoomBoardFrame	stand-in	W1-22	field find on the cracked-cache wall: wall, pedestal, notice board, aerial, seep
-activities.gd	BoxMesh	Activities/Node3D/MeshInstance3D	stand-in	W1-22	unnamed altar cap (flume) and cache pedestal (dam): the same pieces as above
 activities.gd	BoxMesh	Activity_cracked_cache/Interior_rim_vault/MeshInstance3D	stand-in	W1-23	pocket interior: striped blocks
-activities.gd	BoxMesh	Activity_cracked_cache/StaticBody3D/MeshInstance3D	stand-in	W1-22	cracked cache: box wall and cylinder pedestal (cracked_cache.glb exists, park path never loads it)
 activities.gd	BoxMesh	Activity_elite_arena/Interior_elite_bay/MeshInstance3D	stand-in	W1-23	pocket interior: striped blocks
 activities.gd	BoxMesh	Activity_enemy_camp/Interior_dome_camp/MeshInstance3D	stand-in	W1-23	pocket interior: striped blocks
-activities.gd	BoxMesh	Find_dam_shift_radio/StaticBody3D/MeshInstance3D	stand-in	W1-22	field find on the cracked-cache wall: wall, pedestal, notice board, aerial, seep
-activities.gd	BoxMesh	Find_dam_turbine_hall/StaticBody3D/FindSeep	stand-in	W1-22	field find on the cracked-cache wall: wall, pedestal, notice board, aerial, seep
-activities.gd	BoxMesh	Find_dam_turbine_hall/StaticBody3D/MeshInstance3D	stand-in	W1-22	field find on the cracked-cache wall: wall, pedestal, notice board, aerial, seep
-activities.gd	BoxMesh	Find_flume_crew_radio/StaticBody3D/MeshInstance3D	stand-in	W1-22	field find on the cracked-cache wall: wall, pedestal, notice board, aerial, seep
-activities.gd	BoxMesh	Find_flume_trestle_seep/StaticBody3D/FindSeep	stand-in	W1-22	field find on the cracked-cache wall: wall, pedestal, notice board, aerial, seep
-activities.gd	BoxMesh	Find_flume_trestle_seep/StaticBody3D/MeshInstance3D	stand-in	W1-22	field find on the cracked-cache wall: wall, pedestal, notice board, aerial, seep
 activities.gd	BoxMesh	Node3D/Interior_bend_vault/MeshInstance3D	stand-in	W1-23	pocket interior: striped blocks
 activities.gd	BoxMesh	Node3D/Interior_boiler_vault/MeshInstance3D	stand-in	W1-23	pocket interior: striped blocks
 activities.gd	BoxMesh	Node3D/Interior_siphon_camp/MeshInstance3D	stand-in	W1-23	pocket interior: striped blocks
-activities.gd	BoxMesh	Node3D/StaticBody3D/MeshInstance3D	stand-in	W1-22	cracked cache: box wall and cylinder pedestal (cracked_cache.glb exists, park path never loads it)
-activities.gd	CylinderMesh	Activities/Activity_ambush_altar/MeshInstance3D	stand-in	W1-22	ambush altar: a cylinder with a box cap (ambush_altar.glb exists, park path never loads it)
-activities.gd	CylinderMesh	Activities/Activity_cracked_cache/MeshInstance3D	stand-in	W1-22	cracked cache: box wall and cylinder pedestal (cracked_cache.glb exists, park path never loads it)
-activities.gd	CylinderMesh	Activities/Find_dam_shift_radio/MeshInstance3D	stand-in	W1-22	field find on the cracked-cache wall: wall, pedestal, notice board, aerial, seep
-activities.gd	CylinderMesh	Activities/Find_dam_turbine_hall/MeshInstance3D	stand-in	W1-22	field find on the cracked-cache wall: wall, pedestal, notice board, aerial, seep
-activities.gd	CylinderMesh	Activities/Find_flume_crew_radio/MeshInstance3D	stand-in	W1-22	field find on the cracked-cache wall: wall, pedestal, notice board, aerial, seep
-activities.gd	CylinderMesh	Activities/Find_flume_trestle_seep/MeshInstance3D	stand-in	W1-22	field find on the cracked-cache wall: wall, pedestal, notice board, aerial, seep
-activities.gd	CylinderMesh	Activities/Node3D/MeshInstance3D	stand-in	W1-22	unnamed altar cap (flume) and cache pedestal (dam): the same pieces as above
-activities.gd	CylinderMesh	Node3D/Activity_cracked_cache/MeshInstance3D	stand-in	W1-22	cracked cache: box wall and cylinder pedestal (cracked_cache.glb exists, park path never loads it)
 arena.gd	BoxMesh	Node3D/SlagBowl/MeshInstance3D	stand-in	W1-23	Slag Bowl crane mast, boom and rim vent
 arena.gd	CylinderMesh	Node3D/SlagBowl/MeshInstance3D	stand-in	W1-23	Slag Bowl crane mast, boom and rim vent
 arena.gd	CylinderMesh	Node3D/SlagBowl/WaterVent	stand-in	W1-23	Slag Bowl crane mast, boom and rim vent
