@@ -1,0 +1,53 @@
+{
+  "look": "cutaway",
+  "pilot": "tarn",
+  "pilot_seen": {
+    "fast": {
+      "pilot_height_px": 52,
+      "pilot_pixels": 1862,
+      "seen_median": 0.83,
+      "seen_rest_pose": 0.829,
+      "seen_worst": 0.825
+    },
+    "rest": {
+      "pilot_height_px": 98,
+      "pilot_pixels": 6353,
+      "seen_median": 0.828,
+      "seen_rest_pose": 0.824,
+      "seen_worst": 0.824
+    }
+  },
+  "see_through_surfaces": 0,
+  "shots": {
+    "chase_fast": {
+      "draw_calls": 84,
+      "primitives": 32088
+    },
+    "chase_rest": {
+      "draw_calls": 56,
+      "primitives": 32068
+    },
+    "hero": {
+      "draw_calls": 72,
+      "primitives": 48068
+    },
+    "side": {
+      "draw_calls": 57,
+      "primitives": 32446
+    },
+    "spin_a": {
+      "draw_calls": 56,
+      "primitives": 32068
+    },
+    "spin_b": {
+      "draw_calls": 56,
+      "primitives": 32068
+    },
+    "spin_c": {
+      "draw_calls": 56,
+      "primitives": 32068
+    }
+  },
+  "surfaces": 28,
+  "triangles": 16222
+}
