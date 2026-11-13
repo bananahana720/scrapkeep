@@ -221,7 +221,10 @@ const CLEAR_LIVE_ALPHA := 0.55
 const EDGES_FILL := 0.5
 const FENCE_CLEAR := 3.0
 const FENCE_FULL := 6.0
-const DEPTH_PULL := 0.6
+# 0.3 m: at 0.6 the fill still covered the lowest part of a crew standing on it (4080, 6 to 7% of the
+# crew's pixels at e5f85f07, against the 5% line); with the 0.2 m lift it still clears the floor between
+# the ground samples.
+const DEPTH_PULL := 0.3
 
 
 # Whether the haze look is on: set_haze() (tests, tools), else the launcher flag, read once

@@ -20,7 +20,7 @@
 // ground it lies on never hides it.
 #ifdef DEPTH_AWARE
 render_mode blend_mix, depth_draw_opaque, cull_disabled, diffuse_burley, specular_schlick_ggx, unshaded;
-uniform float depth_pull = 0.6;
+uniform float depth_pull = 0.3;
 #else
 render_mode blend_mix, depth_draw_opaque, cull_disabled, diffuse_burley, specular_schlick_ggx, unshaded, depth_test_disabled;
 #endif

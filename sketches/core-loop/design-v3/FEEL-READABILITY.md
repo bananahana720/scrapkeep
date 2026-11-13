@@ -22,7 +22,7 @@ Every drawn thing belongs to one priority class. The class decides draw order (f
 | P | Class | Members | Governor | Keyline | Draw order |
 | --- | --- | --- | --- | --- | --- |
 | P0 | The ball | Shell, cockpit, pilot, rig stubs, hull damage (§2.2) | never | n/a | world |
-| P1 | Hostile committed geometry | Every threat edge, front, bracket reticle, flight trace, height rail; the pulse core ring; a hold's binding | never | yes (exists); in the clear and edges telegraph looks (FX-29, clear the default since 13 Nov 2026) the height rail has none | priority 40, no depth test in haze and classic; clear and edges depth-test with a 0.6 m pull toward the eye, so a body or a wall draws over the line (threat_grammar.gd LOOKS) |
+| P1 | Hostile committed geometry | Every threat edge, front, bracket reticle, flight trace, height rail; the pulse core ring; a hold's binding | never | yes (exists); in the clear and edges telegraph looks (FX-29, clear the default since 13 Nov 2026) the height rail has none | priority 40, no depth test in haze and classic; clear and edges depth-test with a 0.3 m pull toward the eye, so a body or a wall draws over the line (threat_grammar.gd LOOKS) |
 | P2 | The three reads and the exits | The window beam; the safe-resolution chevrons; the return contraption's lane and gauge; kicker lips; the reach ring's dashed bone | never | yes | priority 39, depth-tested; short occlusion marker only |
 | P3 | Player committed geometry | Skill-shot indicators, the charge gauge ring, the grapple reticle | never | yes | priority 38 |
 | P4 | Rewards and pickups | Scrap squares in flight, cores, gate toppers, hoops, interactable glyphs | thinned only past density 0.8 | yes on the topper, none on scrap | priority 30 |
