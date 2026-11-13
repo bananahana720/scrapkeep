@@ -651,6 +651,9 @@ func _wall_slam() -> void:
 		if not BallRules.world_face(hit.get_collider()):
 			continue
 		var n := hit.get_normal()
+		# A face the floor rule owns (a hill or a ramp) carries the enemy; only a wall stops it.
+		if n.angle_to(Vector3.UP) <= floor_max_angle:
+			continue
 		n.y = 0.0
 		if n.length_squared() < 0.01:
 			continue

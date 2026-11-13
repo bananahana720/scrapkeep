@@ -266,6 +266,7 @@ func _watch_bumps(body_state: PhysicsDirectBodyState3D, origin: Vector3, delta: 
 	var handed: Vector3 = recent_velocities.back()
 	var best := 0.0
 	var normal := Vector3.ZERO
+	var at := origin
 	for i in body_state.get_contact_count():
 		if not Rules.world_face(body_state.get_contact_collider_object(i)):
 			continue
@@ -274,10 +275,11 @@ func _watch_bumps(body_state: PhysicsDirectBodyState3D, origin: Vector3, delta: 
 		if closing > best:
 			best = closing
 			normal = n
+			at = body_state.get_contact_local_position(i)
 	if best < Contact.BUMP_MIN_SPEED:
 		return
 	_bump_wait = Contact.BUMP_GAP_S
-	bumped.emit(origin - normal * Tuning.RADIUS, normal, best)
+	bumped.emit(at, normal, best)
 
 
 # A carve that ends leaves one fact on the kit, published with the kit's others this tick.

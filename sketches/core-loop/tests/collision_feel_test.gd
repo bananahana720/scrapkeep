@@ -10,7 +10,7 @@ const EventKinds := preload("res://src/core/event_kinds.gd")
 # its closing speed with the normal pointing back off the face, and juice answers it (camera kick,
 # pad, sound); a glancing roll and a plain landing publish none; a chaser knocked into the wall stops
 # on it with one enemy_walled (no damage), keeping less than half its speed along the face, while a
-# weak knock and a knock away from the wall publish none. Evidence limit: rules in a headless run,
+# weak knock, a knock away from the wall and a knock up a ramp publish none. Evidence limit: rules in a headless run,
 # not the feel, which needs Andrew's PC.
 
 const BASE := Vector3(0, 400, 0)
@@ -157,4 +157,15 @@ func _enemy_cases() -> void:
 	enemy.knock(Vector3(-1, 0, 0), 22.0 * float(enemy.weight))
 	await _ticks(0.6)
 	t.check("a knock away from the wall is not a slam", walls.is_empty(), "%d slams" % walls.size())
+	# A hill is a floor, not a wall: a knock thrown up a 12 degree ramp carries on up it.
+	walls.clear()
+	var ramp := _box(BASE + Vector3(-30, 0, 40), Vector3(40, 2, 12))
+	ramp.rotation.z = deg_to_rad(12.0)
+	enemy.global_position = BASE + Vector3(-36, 2.5, 40)
+	await _ticks(0.6)
+	var before_x: float = enemy.global_position.x
+	enemy.knock(Vector3(1, 0, 0), 22.0 * float(enemy.weight))
+	await _ticks(0.8)
+	t.check("a knock up a ramp is not a slam and carries up it", walls.is_empty() and enemy.global_position.x - before_x > 3.0,
+		"%d slams, %.1f m up" % [walls.size(), enemy.global_position.x - before_x])
 	t.check("enemy_walled has an event row with a sound", EventKinds.has("enemy_walled") and String(EventKinds.row("enemy_walled")["sound"]) != "", "row")

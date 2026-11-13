@@ -1689,7 +1689,7 @@ func setup(context_in) -> void:
 # Once the stage is built its small props are indexed, and every frame the ball moves the ones it
 # runs into (prop_kicks.gd). Presentation only: nothing here touches the run.
 func _kick(delta: float) -> void:
-	if not visible or instances.is_empty() or not is_built() or ctx.player == null:
+	if not visible or instances.is_empty() or not is_built() or ctx.player == null or ctx.player.frozen():
 		return
 	if not kicks.indexed:
 		_ground = ctx.terrain.ground_callable(ctx.terrain.stage)
