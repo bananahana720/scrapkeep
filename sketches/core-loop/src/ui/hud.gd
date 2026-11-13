@@ -827,7 +827,9 @@ func _on_event_announced(event_id: String, seconds_until: float, _at: Vector3) -
 # Only a lost event gets a toast: a win already has its milestone toast.
 func _on_event_ended(event_id: String, outcome: String) -> void:
 	if outcome == "lost":
-		toast(toast_text("event_ended", {"event": event_id.replace("_", " ").capitalize()}), Palette.RUST, "wave", 2)
+		# A site whose marker has its own word is lost under that word (the Stocktake yard), not its id's.
+		var called: String = game.world.activities.called(event_id)
+		toast(toast_text("event_ended", {"event": called if called != "" else event_id.replace("_", " ").capitalize()}), Palette.RUST, "wave", 2)
 
 
 func toast_kind(kind: String, fields := {}) -> void:

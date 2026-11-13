@@ -87,13 +87,6 @@ func _clear_to(rule, n: int) -> void:
 			_until(rule, 0, 6.0)
 
 
-func _grade_sum(pay: Dictionary) -> int:
-	var total := 0
-	for rarity in pay["rarities"]:
-		total += 1 + ItemGen.RARITIES.find(rarity)
-	return total
-
-
 func _opening() -> void:
 	var rule := SurvivalCount.new()
 	var ok := true
@@ -136,7 +129,10 @@ func _staying_pays_more() -> void:
 		ok = ok and rule.step(DT, 0) == "gate" and rule.cleared == n
 		var worth: Dictionary = rule.pay(rule.cleared)
 		ok = ok and int(worth["scrap"]) >= int(last["scrap"]) and int(worth["cores"]) >= int(last["cores"])
-		ok = ok and (worth["rarities"] as Array).size() >= (last["rarities"] as Array).size() and _grade_sum(worth) >= _grade_sum(last)
+		ok = ok and (worth["rarities"] as Array).size() >= (last["rarities"] as Array).size()
+		# Part by part: the nth part of this count is never a lower grade than the nth part of the count before.
+		for i in (last["rarities"] as Array).size():
+			ok = ok and ItemGen.RARITIES.find(worth["rarities"][i]) >= ItemGen.RARITIES.find(last["rarities"][i])
 		last = worth
 		var next: Array = _until(rule, 0, 6.0)
 		ok = ok and next[0] == "count" and rule.count == n + 1
@@ -161,6 +157,9 @@ func _no_last_count() -> void:
 	var ok: bool = rule.pack(30).size() > rule.pack(5).size()
 	ok = ok and rule.strength(30) > rule.strength(29) and is_equal_approx(rule.strength(5), 1.0) and is_equal_approx(rule.strength(6), 1.35)
 	ok = ok and (rule.pay(30)["rarities"] as Array).size() > (rule.pay(29)["rarities"] as Array).size()
+	# The extra rogue machines arrive on every third count past the opening five: none at 6 and 7, one from 8, two from 11.
+	var rogues := func(n: int) -> int: return rule.pack(n).count("reactor_relic")
+	ok = ok and rogues.call(5) == 1 and rogues.call(7) == 1 and rogues.call(8) == 2 and rogues.call(10) == 2 and rogues.call(11) == 3
 	_report("(f) there is no last count", ok, "count 10 is x%.2f" % rule.strength(10))
 
 

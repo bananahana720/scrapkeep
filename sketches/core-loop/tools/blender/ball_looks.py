@@ -1,11 +1,15 @@
-# Candidate looks for the ball (the "ball look" taste pick, 13 Nov 2026). Each is one shared
-# shell with the usual Core (rolls with the ball) and Pod (level, turns to the heading) parts,
-# the Hoberman cockpit's seat and controls, and nothing per pilot yet. The game shows one only
-# behind --ball-look=<id> (src/presentation/ball_looks.gd); today's shells are untouched.
+# The ball looks behind --ball-look=<id> (src/presentation/ball_looks.gd); today's shells are
+# untouched. Andrew picked the cutaway on 13 Nov 2026 (ruling dm); the gyro and the bell stay as
+# the candidates he saw.
 #
 #   gyro      three crossed hoops tumble around an open seat; nothing stands before the pilot
 #   bell      a salvaged diving bell: painted prow, glass back and porthole, three tread hoops
 #   cutaway   a solid plated ball; the game's shader opens a window on the side facing the camera
+#
+# The gyro and the bell are one shared shell each: Core (rolls with the ball), Pod (level, turns
+# to the heading) and the Hoberman cockpit's seat and controls. The game takes only the Core of
+# the cutaway and puts it on each pilot's own shell, so the pilot's kit, weapon ring and cockpit
+# stay; cutaway_c2 to cutaway_c5 are what each heft class bolts onto that plating.
 #
 #   blender -b -P tools/blender/ball_looks.py -- [--out <dir>]     writes ball_look_<id>.glb
 # Blender +Z is up, +Y forward; glTF becomes Godot +Y up, -Z forward.
@@ -150,7 +154,8 @@ def bell():
 
 
 def cutaway():
-    """A solid plated ball: petrol gores, a bone belt, oxide caps, tread pads and bolts."""
+    """A solid plated ball: petrol gores, a bone belt, oxide caps, tread pads and bolts.
+    An equipped paint takes the petrol gores only, so the dark gores, belt and caps keep the pattern."""
     core = Part("Core")
     faces = core.uv("paint", 0.965, 32, 16, rot=AXES["x"], color="petrol")
     dark = common.mix("petrol", "charcoal", 0.45)
@@ -158,11 +163,11 @@ def cutaway():
         c = f.calc_center_median().normalized()
         gore = int((math.atan2(c.y, c.z) + math.pi) / math.tau * 8) % 2
         if abs(c.x) > 0.80:
-            core.paint([f], "paint", "oxide")
+            core.paint([f], "paint", "oxide", alpha=0.0)
         elif abs(c.x) < 0.14:
-            core.paint([f], "paint", "bone")
+            core.paint([f], "paint", "bone", alpha=0.0)
         elif gore:
-            core.paint([f], "paint", dark)
+            core.paint([f], "paint", dark, alpha=0.0)
     for side in (-1, 1):
         hub(core, (side, 0, 0), 0.95, 0.985, 0.16)
         for k in range(8):
@@ -179,7 +184,45 @@ def cutaway():
     return assemble("Cutaway", core, sb.cockpit("bone"))
 
 
+PLATE_RADIUS = 0.983
+
+
+def _patch(part, slot, keep, color=None):
+    """Plating a finger above the ball's own: the faces of a sphere whose centre passes keep()."""
+    faces = part.uv(slot, PLATE_RADIUS, 32, 16, rot=AXES["x"], color=color)
+    drop = [f for f in faces if not keep(f.calc_center_median().normalized())]
+    bmesh.ops.delete(part.bm, geom=drop, context="FACES")
+
+
+def _gore(c):
+    return int((math.atan2(c.y, c.z) + math.pi) / math.tau * 8) % 2
+
+
+def cutaway_heft(n):
+    """What a heft class bolts onto the plated ball, each one slot: II copper hoops, III bone
+    armour over the dark gores, IV tread cleats on the belt, V copper caps with a stud crown."""
+    core = Part("Core")
+    if n == 2:
+        _patch(core, "copper", lambda c: 0.38 < abs(c.x) < 0.56)
+    elif n == 3:
+        _patch(core, "bare_metal", lambda c: 0.56 < abs(c.x) < 0.80 and _gore(c) == 1)
+    elif n == 4:
+        _patch(core, "rubber", lambda c: abs(c.x) < 0.14 and int((math.atan2(c.y, c.z) + math.pi) / math.tau * 16) % 2 == 0)
+    else:
+        _patch(core, "copper", lambda c: abs(c.x) > 0.90)
+        for side in (-1, 1):
+            for k in range(8):
+                a = k * math.tau / 8
+                n_ = Vector((side * 0.82, math.cos(a) * 0.572, math.sin(a) * 0.572)).normalized()
+                sb._drum(core, n_, 0.045, 0.96, 0.983, 6, "copper")
+    sb._sharpen(core)
+    root = common.empty("BallLookCutawayC%d" % n)
+    return root, core.to_object((0, 0, 0), root)
+
+
 LOOKS = {"gyro": gyro, "bell": bell, "cutaway": cutaway}
+for _n in (2, 3, 4, 5):
+    LOOKS["cutaway_c%d" % _n] = lambda n=_n: cutaway_heft(n)
 
 
 def main():

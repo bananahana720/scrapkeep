@@ -51,8 +51,9 @@ export const CANARY_COUNT = 4;
 // res:// path reaches from most diffs, so it always runs (cloud gate, 18 Oct). new_world_cost
 // scans every src/ script for a world, map or boss named outright, so no single path reaches it
 // either; it takes about a second (BACKLOG.md SG-01, 12 Nov). colour_meanings scans every src/
-// script for a reserved colour outside its meaning the same way (BACKLOG.md FX-20).
-export const ALWAYS = ["tests/unit_suite_test.gd", "tests/new_world_cost_test.gd", "tests/colour_meanings_test.gd"];
+// script for a reserved colour outside its meaning the same way (BACKLOG.md FX-20). ui_text_floor
+// counts every src/ use of the smallest type step against its ceiling (UI audit, principle P4).
+export const ALWAYS = ["tests/unit_suite_test.gd", "tests/new_world_cost_test.gd", "tests/colour_meanings_test.gd", "tests/ui_text_floor_test.gd"];
 // Some couplings have no res:// path: one park's recipe change moves other parks' bake hashes.
 export const PATH_RULES = [
   {
