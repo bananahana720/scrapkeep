@@ -1,25 +1,24 @@
-extends SceneTree
+extends "res://tests/work_machines_test.gd"
 
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const GraphicsPreset := preload("res://src/presentation/graphics_preset.gd")
-const ParkSchema := preload("res://src/world/park/park_schema.gd")
-const WorkMachines := preload("res://src/presentation/work_machines.gd")
 
 # Receipts for the looping workers (work_machines.gd, BACKLOG W1-93): for each machine in a park, a
-# still and a clip from where a pilot sees it, the nearest point of the nearest pilot line, at chase
-# height. Needs a rendered display (on a GPU-less box, xvfb):
+# still and a clip from where a pilot sees it: a pilot line point 60 to 140 m out, nearest 90 m, whose
+# sight of the machine is clear over the baked ground and the scatter props (the test's own judge;
+# props have no colliders, so a physics ray misses them). Needs a rendered display (on a GPU-less box, xvfb):
 #
 #   $GODOT_BIN --fixed-fps 15 --path sketches/core-loop --script res://tools/work_machines_capture.gd \
 #     -- --out=<absolute dir> [--park=park_dam] [--id=<row id>] [--seconds=20] [--near=1]
 #
-# --near=1 adds a second clip from 40 m off the machine's working side. Writes
+# --near=1 adds a second clip from the nearest line point with a clear sight, the closest a pilot
+# gets a whole view. Writes
 # <out>/<park>_<id>[_near]/{still.png, frame_####.png, works_<park>_<id>.mp4}.
 
 const FPS := 15.0
 const SIZE := Vector2i(1280, 720)
-const EYE_M := 7.0
-const NEAR_M := 40.0
+const CAM_EYE_M := 7.0
 const SETTLE_S := 2.0
 
 var _out := ""
@@ -30,6 +29,7 @@ var _near := false
 var _game
 var _cam: Camera3D
 var _fails := 0
+var _heights: PackedFloat32Array
 
 
 func _initialize() -> void:
@@ -96,16 +96,16 @@ func _main() -> void:
 	_cam.make_current()
 	_game.player.set_frozen(true)
 	_game.presentation.hide_ui()
-	var lines := _lines()
+	var lines := _ride_lines()
+	var map := ParkMap.new("res://src/world/park/%s.json" % _park)
+	_heights = ParkTerrain._read_zstd(ParkTerrain.bake_dir(_park) + "/ground.bin", ParkTerrain.SIDE * ParkTerrain.SIDE * 4).to_float32_array()
+	_scatter = _scatter_of(_park, map, _heights)
 	for m in works.machines:
 		if not _id.is_empty() and m.row.id != _id:
 			continue
-		var at: Vector2 = m.row.at
-		var eye := _vantage(m, lines)
-		await _shoot(m, "%s_%s" % [_park, m.row.id], eye)
+		await _shoot(m, "%s_%s" % [_park, m.row.id], _vantage(m, lines, 60.0, 140.0, 90.0))
 		if _near:
-			var face: Vector3 = Basis(Vector3.UP, deg_to_rad(float(m.row.yaw_deg))) * Vector3(0.0, 0.0, -NEAR_M)
-			await _shoot(m, "%s_%s_near" % [_park, m.row.id], at + Vector2(face.x, face.z))
+			await _shoot(m, "%s_%s_near" % [_park, m.row.id], _vantage(m, lines, 0.0, 140.0, 0.0))
 	quit(_fails)
 
 
@@ -113,7 +113,7 @@ func _gh(x: float, z: float) -> float:
 	return _game.ctx.terrain.height(x, z)
 
 
-func _lines() -> Array:
+func _ride_lines() -> Array:
 	var director = _game.world.get("events") if _game.get("world") != null else null
 	if director != null and director.get("_park_pilot_lines") != null and not director._park_pilot_lines.is_empty():
 		return director._park_pilot_lines
@@ -121,12 +121,12 @@ func _lines() -> Array:
 	return []
 
 
-# The point of a pilot line 60 to 140 m from the machine, nearest 90 m, with a clear physics sight line
-# from chase height to the machine's middle; the nearest line point when none is clear.
-func _vantage(m: Dictionary, lines: Array) -> Vector2:
+# The point of a pilot line between near_m and far_m from the machine, closest to want_m, whose sight of
+# the machine is clear; the nearest line point when none is.
+func _vantage(m: Dictionary, lines: Array, near_m: float, far_m: float, want_m: float) -> Vector2:
 	var at: Vector2 = m.row.at
-	var target: Vector3 = m.root.global_position + Vector3(0.0, 12.0, 0.0)
-	var space: PhysicsDirectSpaceState3D = _game.get_world_3d().direct_space_state
+	var target := Vector3(at.x, Terrain._grid_height(_heights, at.x, at.y) + MID_M, at.y)
+	var props := _scatter.filter(func(prop): return Vector2(prop.pos.x, prop.pos.z).distance_to(at) < far_m + 10.0)
 	var best := Vector2.INF
 	var best_score := INF
 	for points in lines:
@@ -137,15 +137,11 @@ func _vantage(m: Dictionary, lines: Array) -> Vector2:
 			for k in n:
 				var q := a.lerp(b, float(k) / n)
 				var d := q.distance_to(at)
-				if d < 60.0 or d > 140.0:
+				if d < near_m or d > far_m or absf(d - want_m) >= best_score:
 					continue
-				var eye := Vector3(q.x, _gh(q.x, q.y) + EYE_M, q.y)
-				var query := PhysicsRayQueryParameters3D.create(eye, target, 1)
-				var hit := space.intersect_ray(query)
-				if not hit.is_empty() and Vector2(hit.position.x, hit.position.z).distance_to(at) > 12.0:
-					continue
-				if absf(d - 90.0) < best_score:
-					best_score = absf(d - 90.0)
+				var eye := Vector3(q.x, Terrain._grid_height(_heights, q.x, q.y) + CAM_EYE_M, q.y)
+				if _sight_clear(eye, target, _heights, props):
+					best_score = absf(d - want_m)
 					best = q
 	if best != Vector2.INF:
 		return best
@@ -172,7 +168,7 @@ func _shoot(m: Dictionary, tag: String, eye2: Vector2) -> void:
 		if f.ends_with(".png"):
 			DirAccess.remove_absolute(dir_out.path_join(f))
 	var base: Vector3 = m.root.global_position
-	var eye := Vector3(eye2.x, _gh(eye2.x, eye2.y) + EYE_M, eye2.y)
+	var eye := Vector3(eye2.x, _gh(eye2.x, eye2.y) + CAM_EYE_M, eye2.y)
 	var ball := Vector3(eye2.x, _gh(eye2.x, eye2.y) + 1.2, eye2.y)
 	_game.player.body().global_position = ball
 	_game.player.body().linear_velocity = Vector3.ZERO

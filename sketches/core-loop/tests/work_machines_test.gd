@@ -4,6 +4,7 @@ const WorkMachines := preload("res://src/presentation/work_machines.gd")
 const ParkMap := preload("res://src/world/park/park_map.gd")
 const ParkSchema := preload("res://src/world/park/park_schema.gd")
 const ParkTerrain := preload("res://src/world/park/park_terrain.gd")
+const ParkProps := preload("res://src/presentation/park_props.gd")
 const Terrain := preload("res://src/world/terrain.gd")
 const GameEvents := preload("res://src/core/game_events.gd")
 const T := preload("res://tests/support/t.gd")
@@ -27,6 +28,11 @@ const TALL_CLEAR_M := 30.0
 const RING_CLEAR_M := 40.0
 const SIGHT_M := 160.0
 const SIGHT_SHARE := 0.5
+# Some stretch of line within this sees the machine whole, so it reads at a size, not as a speck (the PC
+# film: a sluice or conveyor seen only from 90 m is a speck; a 26 m derrick still reads there).
+const NEAR_SEEN_M := {"derrick": 100.0, "sluice": 75.0, "conveyor": 75.0}
+# Scatter props this tall or taller block a sightline and may not stand inside a machine's footprint.
+const PROP_BLOCK_M := 1.5
 const EYE_M := 4.0
 const MID_M := 12.0
 # The baked ground under a machine's footings may differ by this much at most: it is seated on the
@@ -135,6 +141,7 @@ func _placement(map_id: String) -> void:
 	var lines := _lines(park)
 	_t.check("%s has pilot lines" % map_id, lines.size() >= 4, str(lines.size()))
 	var heights := ParkTerrain._read_zstd(ParkTerrain.bake_dir(map_id) + "/ground.bin", ParkTerrain.SIDE * ParkTerrain.SIDE * 4).to_float32_array()
+	_scatter = _scatter_of(map_id, map, heights)
 	var rows := WorkMachines.rows_for(map_id)
 	_t.check("%s stands two or three machines (%d)" % [map_id, rows.size()], rows.size() >= 2 and rows.size() <= 3)
 	for row in rows:
@@ -146,8 +153,25 @@ func _placement(map_id: String) -> void:
 		_t.check("%s %s: %.0f m from the nearest enemy home's site" % [map_id, row.id, j.home_gap], j.home_gap >= HOME_CLEAR_M)
 		_t.check("%s %s: outside the Warden's ring (%.0f m, ring %.0f m)" % [map_id, row.id, j.beacon_gap, j.ring], j.beacon_gap >= j.ring)
 		_t.check("%s %s: seen from %d%% of the line within %d m (%d samples)" % [map_id, row.id, int(j.seen * 100.0), int(SIGHT_M), j.samples], j.samples > 0 and j.seen >= SIGHT_SHARE)
+		_t.check("%s %s: some line within %d m sees it whole (nearest %.0f m)" % [map_id, row.id, int(NEAR_SEEN_M[row.kind]), j.near_seen], j.near_seen <= NEAR_SEEN_M[row.kind])
+		_t.check("%s %s: no scatter prop stands inside it" % [map_id, row.id], j.props_inside.is_empty(), str(j.props_inside))
 		_t.check("%s %s: clear of every built row" % [map_id, row.id], j.rows.is_empty(), str(j.rows))
 		_t.check("%s %s: no tall row within %d m to hide it" % [map_id, row.id, int(TALL_CLEAR_M)], j.tall.is_empty(), str(j.tall))
+
+
+var _scatter: Array = []
+
+
+# The park's scatter props as the game seats them (ParkProps.prepare over the baked ground), those at least
+# PROP_BLOCK_M tall: [{pos: Vector3, radius, height}]. Park props have no colliders, so a physics ray misses them.
+func _scatter_of(map_id: String, map, heights: PackedFloat32Array) -> Array:
+	var ground := func(x: float, z: float, lift: float) -> Vector3: return Vector3(x, Terrain._grid_height(heights, x, z) + lift, z)
+	var ready := ParkProps.prepare(map_id, map, ground, ParkProps.stage_of(map_id), false)
+	var out := []
+	for inst in ready.get("list", []):
+		if float(inst.height) >= PROP_BLOCK_M:
+			out.append({"pos": inst.pos, "radius": float(inst.radius), "height": float(inst.height)})
+	return out
 
 
 # Every placement measure for a row: footing ground spread, gaps to the lines, enemy homes and the
@@ -184,6 +208,13 @@ func _judge(row: Dictionary, park: Dictionary, lines: Array, heights: PackedFloa
 	var seen := _seen_from_lines(row, lines, heights)
 	out.seen = seen.x
 	out.samples = int(seen.y)
+	out.near_seen = seen.z
+	out.props_inside = []
+	var hull := Geometry2D.convex_hull(foot + tips)
+	for prop in _scatter:
+		var p2 := Vector2(prop.pos.x, prop.pos.z)
+		if Geometry2D.is_point_in_polygon(p2, hull):
+			out.props_inside.append("%.0f,%.0f" % [p2.x, p2.y])
 	var all := Array(foot) + Array(tips)
 	for park_row in park.park_rows:
 		if park_row.element == "ground" or maxf(float(park_row.size[0]), float(park_row.size[2])) > 300.0:
@@ -198,12 +229,15 @@ func _judge(row: Dictionary, park: Dictionary, lines: Array, heights: PackedFloa
 	return out
 
 
-# (share of line samples within SIGHT_M that see the machine, sample count), every 4 m along each line.
-func _seen_from_lines(row: Dictionary, lines: Array, heights: PackedFloat32Array) -> Vector2:
+# (share of line samples within SIGHT_M that see the machine, sample count, distance of the nearest sample
+# that sees it), every 4 m along each line, over the baked ground and the scatter props.
+func _seen_from_lines(row: Dictionary, lines: Array, heights: PackedFloat32Array) -> Vector3:
 	var at: Vector2 = row.at
 	var target := Vector3(at.x, Terrain._grid_height(heights, at.x, at.y) + MID_M, at.y)
+	var props := _scatter.filter(func(prop): return Vector2(prop.pos.x, prop.pos.z).distance_to(at) < SIGHT_M + 10.0)
 	var total := 0
 	var clear := 0
+	var nearest := INF
 	for points in lines:
 		for i in points.size() - 1:
 			var a: Vector2 = points[i]
@@ -215,16 +249,29 @@ func _seen_from_lines(row: Dictionary, lines: Array, heights: PackedFloat32Array
 					continue
 				total += 1
 				var eye := Vector3(q.x, Terrain._grid_height(heights, q.x, q.y) + EYE_M, q.y)
-				var blocked := false
-				var steps := int(eye.distance_to(target) / 2.0)
-				for j in range(1, steps):
-					var p := eye.lerp(target, float(j) / steps)
-					if Terrain._grid_height(heights, p.x, p.z) > p.y:
-						blocked = true
-						break
-				if not blocked:
+				if _sight_clear(eye, target, heights, props):
 					clear += 1
-	return Vector2(float(clear) / maxi(total, 1), total)
+					nearest = minf(nearest, q.distance_to(at))
+	return Vector3(float(clear) / maxi(total, 1), total, nearest)
+
+
+func _sight_clear(eye: Vector3, target: Vector3, heights: PackedFloat32Array, props: Array) -> bool:
+	var steps := int(eye.distance_to(target) / 2.0)
+	for j in range(1, steps):
+		var p := eye.lerp(target, float(j) / steps)
+		if Terrain._grid_height(heights, p.x, p.z) > p.y:
+			return false
+	var e2 := Vector2(eye.x, eye.z)
+	var t2 := Vector2(target.x, target.z)
+	for prop in props:
+		var c := Vector2(prop.pos.x, prop.pos.z)
+		var q := Geometry2D.get_closest_point_to_segment(c, e2, t2)
+		if q.distance_to(c) > prop.radius:
+			continue
+		var y := lerpf(eye.y, target.y, e2.distance_to(q) / maxf(e2.distance_to(t2), 0.001))
+		if y < prop.pos.y + prop.height:
+			return false
+	return true
 
 
 # A channel's range over a kind's step targets (and its rest).
