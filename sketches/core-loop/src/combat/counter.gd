@@ -34,6 +34,8 @@ const AbilityState := preload("res://src/core/ability_state.gd")
 enum Phase { ROAM, WARN, LIVE }
 
 const INTERRUPT := 10.0
+# Kinds that set their own body yaw every tick, so the gait's turn would fight it.
+const GAIT_SKIP := ["linker"]
 # One interrupt window for every ordinary pack kind (W13-INTEGRATION-3 SQ3). Start value
 # from comps/roboquest/enemies-and-telegraphs.md:11 (1.25 s on nearly every row there).
 const STAGGER_WINDOW := 1.25
@@ -112,6 +114,9 @@ func setup(target_ref, terrain_ref, root_ref, live_ref: Callable, threat: float,
 	_rest = first_rest
 	_build_crew()
 	_build_tool()
+	if walk_speed > 0.0 and not kind in GAIT_SKIP:
+		_gait = EnemyGait.new()
+		_gait.steps = not EnemyClips.ROWS.has(kind) and Roster.CHASSIS.get(kind, {}).get("move_class", "") != "airborne"
 
 
 # Each counter setup in a run takes the next serial from world_root, so runtime identity never
@@ -231,6 +236,8 @@ func _physics_process(delta: float) -> void:
 			recover_left = maxf(0.0, recover_left - delta)
 			var seek := _seek(to_ball)
 			_move(delta, Vector3.ZERO if stunned() or open else _roam(seek))
+			if _gait != null and not stunned() and _knocked_speed() < 1.0 and seek.length() > 0.5:
+				_gait.aim(_facing_yaw(seek))
 			if not stunned() and not open and _rest <= 0.0 and _knocked_speed() < 1.0 and _wants_attack(seek):
 				if AttackBudget.ask(self):
 					_warn(seek)
@@ -437,4 +444,11 @@ func _cylinder(r: float, h: float, color: Color, at: Vector3, energy := 0.0, par
 
 func _facing(to_ball: Vector3) -> void:
 	if to_ball.length() > 0.5:
-		rotation.y = atan2(to_ball.x, to_ball.z)
+		rotation.y = _facing_yaw(to_ball)
+		if _gait != null:
+			_gait.committed()
+
+
+# The body yaw that faces `to_ball`: the tool on +Z.
+func _facing_yaw(to_ball: Vector3) -> float:
+	return atan2(to_ball.x, to_ball.z)
