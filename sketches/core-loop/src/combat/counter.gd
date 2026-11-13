@@ -368,6 +368,18 @@ func _real_ball() -> Vector3:
 	return holds.player.ball_position() if holds != null else _ball()
 
 
+# Where the ball's roll carries it in `seconds` along its present curve (PackPressure.predict), at
+# most `reach` metres on from where it is, at its own height: the spot a kind that lays its threat
+# across the ball's line aims at (W1-66). A target that cannot say its velocity is aimed at as it stands.
+func _ahead(seconds: float, reach: float) -> Vector3:
+	var at := _ball()
+	if target == null or not target.has_method("planar_velocity"):
+		return at
+	var on: Vector3 = PackPressure.predict(target, seconds) - at
+	on.y = 0.0
+	return at + on.limit_length(reach)
+
+
 func _player():
 	return holds.player if holds != null else null
 
