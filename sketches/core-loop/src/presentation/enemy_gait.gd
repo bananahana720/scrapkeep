@@ -38,6 +38,9 @@ const SETTLED := 0.002
 const STEP_LENGTH := 0.7
 const STEP_LIFT := 0.06
 const STEP_ROLL := 0.08
+# How fast the model settles onto a new slope (1/s), and the steepest it follows (radians).
+const GROUND_FOLLOW := 12.0
+const GROUND_MAX := 0.6
 # A glance holds the look on something for this long, then the aim takes it back.
 const GLANCE := 0.6
 # The cheer: a hop this high, this long.
@@ -60,6 +63,7 @@ var _step_mix := 0.0
 var _glance := 0.0
 var _glance_left := 0.0
 var _hop_age := -1.0
+var _ground := Vector3.UP
 
 
 func aim(yaw: float) -> void:
@@ -82,7 +86,10 @@ func committed() -> void:
 
 
 # `walking`: the body is on its feet under its own drive (not knocked or falling), so it steps.
-func step(delta: float, body: Node3D, velocity: Vector3, foot: float, walking := true) -> void:
+# `ground`: the floor's normal under it; the model sits flat on a slope instead of standing
+# upright into it (Andrew, 13 Nov: "the enemies are clipping into the terrain"). `girth` is the
+# body's radius: a round foot on a slope stands a little proud of the ground below its centre.
+func step(delta: float, body: Node3D, velocity: Vector3, foot: float, walking := true, ground := Vector3.UP, girth := 0.0) -> void:
 	tilt = Transform3D.IDENTITY
 	turn = Transform3D.IDENTITY
 	if not EnemyMotion.active() or delta <= 0.0:
@@ -127,13 +134,24 @@ func step(delta: float, body: Node3D, velocity: Vector3, foot: float, walking :=
 			_hop_age = -1.0
 	var roll := STEP_ROLL * sin(phase) * _step_mix * scale
 	turn = Transform3D(spin * Basis(Vector3.BACK, roll), Vector3(0.0, lift, 0.0))
+	var pivot := Vector3(0.0, -foot, 0.0)
+	var lay := Basis.IDENTITY
+	var sink := 0.0
+	_ground = _ground.slerp(ground.normalized(), 1.0 - exp(-GROUND_FOLLOW * delta)) if ground.length_squared() > 0.0 else _ground
+	var slope := minf(_ground.angle_to(Vector3.UP), GROUND_MAX)
+	if slope > 0.001:
+		# Lay the model on the slope about its feet, and drop it by the round foot's standoff.
+		var up := body.global_basis.inverse() * _ground
+		lay = Basis(Vector3.UP.cross(up).normalized(), slope)
+		sink = girth * (1.0 / cos(slope) - 1.0)
 	var angle := _tilt.length() * scale
+	var lean := Basis.IDENTITY
 	if angle > 0.0001:
 		# Tilt toward the lean vector, about the feet, in the body's own frame.
 		var local := body.global_basis.inverse() * _tilt
-		var axis := Vector3.UP.cross(local).normalized()
-		var pivot := Vector3(0.0, -foot, 0.0)
-		tilt = Transform3D(Basis.IDENTITY, pivot) * Transform3D(Basis(axis, angle), Vector3.ZERO) * Transform3D(Basis.IDENTITY, -pivot)
+		lean = Basis(Vector3.UP.cross(local).normalized(), angle)
+	if slope > 0.001 or angle > 0.0001:
+		tilt = Transform3D(Basis.IDENTITY, pivot + Vector3.DOWN * sink) * Transform3D(lay * lean, Vector3.ZERO) * Transform3D(Basis.IDENTITY, -pivot)
 
 
 # The turn the model carries now, radians (tests).

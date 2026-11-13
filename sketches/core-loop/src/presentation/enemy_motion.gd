@@ -46,9 +46,10 @@ var seconds := 0.5
 var style := "scatter"
 var t := 0.0
 var _pieces: Array = []
-# A grounded body's pieces land (W1-85/86): they bounce on the floor the body stood on, rest
-# there, then shrink away. INF floor is the old flight for a body that died in the air.
-var floor_y := -INF
+# A grounded body's pieces land (W1-86): each bounces on the ground under it (the terrain,
+# read through `ground`), rests there, then shrinks away. No ground is the old flight, for a
+# body that died in the air or rang out, under reduced motion and in a headless run.
+var ground := Callable()
 var rest := 0.0
 # How a landing piece meets the floor: the kicked props' numbers (prop_kicks.gd), so a death
 # and a kicked prop land alike.
@@ -56,8 +57,6 @@ const BOUNCE := 0.3
 const SKID := 0.55
 const SETTLE_SPEED := 0.8
 const LAND_REST := 0.9
-# A piece's centre rests this far above the feet, so it sits on the ground, not in it.
-const LAND_LIFT := 0.15
 
 
 static func active() -> bool:
@@ -131,7 +130,8 @@ static func part_count(death: Dictionary) -> int:
 # Breaks the dying enemy's look into its row's pieces, thrown along `direction`. Pieces reuse
 # the model's meshes and materials, each part again smaller and turned once the parts run out;
 # with fewer than two meshes they are boxes in its material. The spread is a hash of the death point, so seeded runs replay it.
-static func scatter(enemy: Node3D, kind: String, direction: Vector3) -> Node3D:
+# `land` is the ground height at (x, z) for a body that died standing (W1-86); empty for the old flight.
+static func scatter(enemy: Node3D, kind: String, direction: Vector3, land := Callable()) -> Node3D:
 	var death: Dictionary = WindupRows.ROWS.get(kind, {}).get("death", {})
 	var parent := enemy.get_parent()
 	if death.is_empty() or parent == null:
@@ -144,10 +144,8 @@ static func scatter(enemy: Node3D, kind: String, direction: Vector3) -> Node3D:
 	parent.add_child(node)
 	var at := enemy.global_position
 	node.global_transform = Transform3D(Basis.IDENTITY, at)
-	var on_floor: bool = enemy is CharacterBody3D and (enemy as CharacterBody3D).is_on_floor() \
-		and Roster.CHASSIS.get(kind, {}).get("move_class", "") != "airborne"
-	if on_floor and motion_scale > 0.0 and active():
-		node.floor_y = -float(enemy.get("half_height")) + LAND_LIFT
+	if land.is_valid() and motion_scale > 0.0 and active() and Roster.CHASSIS.get(kind, {}).get("move_class", "") != "airborne":
+		node.ground = land
 		node.rest = LAND_REST
 	var material: Material = null
 	if not sources.is_empty():
@@ -184,7 +182,11 @@ static func scatter(enemy: Node3D, kind: String, direction: Vector3) -> Node3D:
 			piece.mesh = box
 			piece.material_override = BakeLook.unbaked(material)
 			piece.position = out * 0.4 + Vector3.UP * 0.6
-		node._pieces.append({"node": piece, "velocity": _throw(node.style, out, throw), "spin": out.cross(Vector3.UP) * 6.0, "turn": piece.basis})
+		# How far the piece's lowest point sits under its origin, so it rests on the ground, not in it.
+		var low := 0.0
+		if piece.mesh != null:
+			low = maxf(0.0, -(Transform3D(piece.basis, Vector3.ZERO) * piece.mesh.get_aabb()).position.y)
+		node._pieces.append({"node": piece, "velocity": _throw(node.style, out, throw), "spin": out.cross(Vector3.UP) * 6.0, "turn": piece.basis, "low": low})
 	return node
 
 
@@ -227,6 +229,14 @@ static func _throw(death_style: String, out: Vector3, throw: Vector3) -> Vector3
 	return out * 3.0 + throw * 4.0 + Vector3.UP * 4.0
 
 
+# The local height a piece's origin rests at: the ground under it plus its own lowest point.
+func floor_at(piece: Node3D, low: float) -> float:
+	if not ground.is_valid():
+		return -INF
+	var at := global_transform * piece.position
+	return float(ground.call(at.x, at.z)) - global_position.y + low
+
+
 # The scatter's whole life: the row's seconds, plus the rest on the ground when it lands.
 func life() -> float:
 	return seconds + rest
@@ -241,7 +251,9 @@ func _physics_process(delta: float) -> void:
 		var v: Vector3 = piece.velocity
 		v.y -= GRAVITY * delta
 		mi.position += v * delta
-		if mi.position.y < floor_y:
+		var floor_y := floor_at(mi, float(piece.low) * size)
+		# Only a falling piece meets the ground; one still rising from under it keeps rising.
+		if mi.position.y < floor_y and v.y <= 0.0:
 			mi.position.y = floor_y
 			v.y = -v.y * BOUNCE if v.y < -SETTLE_SPEED else 0.0
 			v.x *= SKID

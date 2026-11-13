@@ -21,6 +21,7 @@ func _initialize() -> void:
 
 func _run() -> void:
 	_unit()
+	_grounding()
 	await _boot()
 	await _headless_off()
 	EnemyMotion.headless_idle = true
@@ -186,7 +187,26 @@ func _walking() -> void:
 	_t.check("its model watches the ball", off < deg_to_rad(15.0), "%.1f deg off" % rad_to_deg(off))
 	_t.check("its body keeps its own yaw", absf(enemy.rotation.y - body_yaw) < 0.0001, "%.4f -> %.4f" % [body_yaw, enemy.rotation.y])
 	_t.check("its colliders do not move", _shapes(enemy) == shapes)
+	await _notices(enemy)
 	await _lands(enemy)
+
+
+# W1-85: the crew reads the bus. A crewmate down nearby turns its head and flinches it without
+# the hit clip; the ball taking a hit makes it hop.
+func _notices(enemy) -> void:
+	var bus = enemy._reaction_bus
+	enemy._react_row = {}
+	bus.enemy_killed.emit("chaser", enemy.global_position + Vector3(4.0, 0.0, 0.0), 0)
+	var turned: bool = enemy.phase != enemy.Phase.ROAM or enemy._gait._glance_left > 0.0
+	_t.check("a crewmate down nearby turns its head and flinches it", turned and not enemy._react_row.is_empty(),
+		"phase %d, glance %.2f s, reaction %s" % [enemy.phase, enemy._gait._glance_left, enemy._react_row])
+	var ball: Vector3 = _game.player.ball_position()
+	_game.player.reset_to(_game.ctx.terrain.drop_point(enemy.global_position.x + 8.0, enemy.global_position.z, 0.0))
+	await physics_frame
+	bus.player_hit.emit(1.0, "test")
+	_t.check("the ball taking a hit makes it hop", enemy._gait._hop_age >= 0.0, "hop age %.2f at %.1f m" % [enemy._gait._hop_age, enemy._flat_to_ball().length()])
+	_game.player.reset_to(ball)
+	await physics_frame
 
 
 # W1-86: a grounded crew's death pieces fall to the floor it stood on, bounce, rest, then go.
@@ -200,8 +220,8 @@ func _lands(enemy) -> void:
 	if scatter == null:
 		_t.check("a death scatters", false)
 		return
-	_t.check("its pieces land on the floor and rest there", scatter.floor_y > -INF and is_equal_approx(scatter.life(), scatter.seconds + EnemyMotion.LAND_REST),
-		"floor %.2f, life %.2f s" % [scatter.floor_y, scatter.life()])
+	_t.check("its pieces land on the ground and rest there", scatter.ground.is_valid() and is_equal_approx(scatter.life(), scatter.seconds + EnemyMotion.LAND_REST),
+		"life %.2f s" % scatter.life())
 	var ref: WeakRef = weakref(scatter)
 	var rested := 0
 	var under := 0
@@ -213,9 +233,36 @@ func _lands(enemy) -> void:
 		if live == null or live.is_queued_for_deletion():
 			continue
 		for piece in live._pieces:
-			if (piece.node as Node3D).position.y < live.floor_y - 0.001:
+			var mi: Node3D = piece.node
+			var floor_y: float = live.floor_at(mi, float(piece.low) * mi.basis.get_scale().x)
+			# A piece thrown up from under the ground may rise through it; a falling one never sinks.
+			if mi.position.y < floor_y - 0.001 and (piece.velocity as Vector3).y <= 0.0:
 				under += 1
-			elif is_equal_approx((piece.node as Node3D).position.y, live.floor_y) and (piece.velocity as Vector3).y == 0.0:
+			elif is_equal_approx(mi.position.y, floor_y) and (piece.velocity as Vector3).y == 0.0:
 				rested += 1
 	_t.check("no piece sinks through the floor, and pieces come to rest", under == 0 and rested > 0, "%d under, %d resting samples" % [under, rested])
 	_t.check("the rest still ends", ref.get_ref() == null, "%d ticks" % ticks)
+
+
+# Only a walking crew's death lands, and only where pieces move at all: an airborne kind, reduced
+# motion and a headless run keep the old in-air scatter (W1-86 review).
+func _grounding() -> void:
+	var holder := Node3D.new()
+	root.add_child(holder)
+	var flat := func(_x: float, _z: float) -> float: return 0.0
+	var cases := [["hooker", true, 1.0, true], ["winch_drone", true, 1.0, false], ["hooker", true, 0.0, false], ["hooker", false, 1.0, false]]
+	var all_right := true
+	var said := []
+	for c in cases:
+		EnemyMotion.headless_idle = c[1]
+		EnemyMotion.motion_scale = c[2]
+		var body := Node3D.new()
+		holder.add_child(body)
+		var made = EnemyMotion.scatter(body, c[0], Vector3.FORWARD, flat)
+		var grounded: bool = made != null and made.ground.is_valid() and made.rest > 0.0
+		all_right = all_right and made != null and grounded == c[3]
+		said.append("%s idle %s scale %.0f: %s" % [c[0], c[1], c[2], grounded])
+	EnemyMotion.headless_idle = false
+	EnemyMotion.motion_scale = 1.0
+	holder.free()
+	_t.check("deaths land only for walking kinds with motion on", all_right, ", ".join(said))

@@ -391,8 +391,10 @@ func _on_crew_down(_kind: String, at: Vector3, _scrap: int) -> void:
 	var from := Vector3(at.x - global_position.x, 0.0, at.z - global_position.z)
 	if not _noticing() or from.length() > NOTICE_DOWN or from.length() < 0.5:
 		return
-	_gait.glance(_facing_yaw(from))
-	react("flinch", -from)
+	if phase == Phase.ROAM:
+		_gait.glance(_facing_yaw(from))
+	if _react_row.is_empty():
+		react("flinch", -from, false, false)
 
 
 # The ball took a hit: every crew in sight gives a small hop.
@@ -409,7 +411,8 @@ func _on_missed(_threat_kind: String, at: Vector3) -> void:
 		if other != self and other.has_method("_just_struck") and other._just_struck() \
 				and other.global_position.distance_to(at) < global_position.distance_to(at):
 			return
-	react("flinch", _flat_to_ball())
+	if _react_row.is_empty():
+		react("flinch", _flat_to_ball(), false, false)
 
 
 func _just_struck() -> bool:
@@ -428,6 +431,10 @@ func _player():
 func _exit_tree() -> void:
 	if holds != null and is_instance_valid(holds) and holds.held(self):
 		holds.release(self, "source_gone")
+	if is_instance_valid(_reaction_bus) and _reaction_bus.enemy_killed.is_connected(_on_crew_down):
+		_reaction_bus.enemy_killed.disconnect(_on_crew_down)
+		_reaction_bus.player_hit.disconnect(_on_ball_hit)
+		_reaction_bus.near_miss.disconnect(_on_missed)
 	super._exit_tree()
 
 
