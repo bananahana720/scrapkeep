@@ -168,10 +168,12 @@ def cutaway():
             a = (k + 0.5) * math.tau / 8
             n = Vector((side * 0.52, math.cos(a) * 0.854, math.sin(a) * 0.854)).normalized()
             sb._drum(core, n, 0.075, 0.955, 0.985, 6, "rubber")
+    # Bone blocks on the belt show the turn. The class colour comes with each pilot's kit on the
+    # level Pod: the ready glow swaps class_accent materials, which the window's shader would hide.
     for k in range(8):
         a = k * math.tau / 8
         n = Vector((0, math.cos(a), math.sin(a)))
-        core.box("class_accent", (0.20, 0.10, 0.03), loc=n * 0.972, rot=(a - math.pi / 2, 0, 0))
+        core.box("paint", (0.20, 0.10, 0.03), loc=n * 0.972, rot=(a - math.pi / 2, 0, 0), color="oxide")
     sb._sharpen(core)
     return assemble("Cutaway", core, sb.cockpit("bone"))
 

@@ -5,6 +5,7 @@ const ClassDef := preload("res://src/core/class_def.gd")
 const Palette := preload("res://src/core/palette.gd")
 const BallLooks := preload("res://src/presentation/ball_looks.gd")
 const Game := preload("res://src/game.gd")
+const Tuning := preload("res://src/movement/tuning.gd")
 const Intent := preload("res://src/movement/intent.gd")
 
 # Stills and counts of one ball look on a bare sand stage, so looks compare frame for frame:
@@ -97,8 +98,10 @@ func _run() -> void:
 
 	var painter := HeroAssets.new()
 	root.add_child(painter)
-	if _look != "":
-		painter.shell_assets = BallLooks.asset_paths(_look)
+	# The stage's painter reads the look from a tuning of its own, as the game's painter does.
+	var tuning := Tuning.new()
+	tuning.apply_args(PackedStringArray(["--ball-look=%s" % (_look if _look != "" else BallLooks.TODAY)]))
+	painter.ctx = {"tuning": tuning}
 	var def = ClassDef.by_id(_pilot)
 	var ball := Node3D.new()
 	ball.name = "Ball"
@@ -111,7 +114,6 @@ func _run() -> void:
 		push_error("ball_look_capture: no shell for look '%s' pilot '%s'" % [_look, _pilot])
 		quit(3)
 		return
-	BallLooks.dress(_look, shell)
 	var fitted: Dictionary = painter.fit_pilot_into(shell.pod, _pilot, def.color)
 	var animator = fitted.get("animator")
 	if animator is AnimationPlayer and animator.has_animation("idle_loop"):

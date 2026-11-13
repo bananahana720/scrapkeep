@@ -15,7 +15,6 @@ const LOOKS := {
 	"bell": "res://assets/models/world_one/ball_look_bell.glb",
 	"cutaway": "res://assets/models/world_one/ball_look_cutaway.glb",
 }
-const PILOTS := ["pylon_engineer", "runner_gunner", "demolitions_caster", "tarn", "tally", "remembered_cannon"]
 
 # The cutaway window: the cosine of its half angle seen from the ball's centre, the ink line
 # round it and the halftone fringe outside that. 0.76 is about 40 degrees, which clears a
@@ -38,14 +37,22 @@ uniform float ink_width = 0.035;
 uniform float fringe = 0.11;
 varying vec3 from_centre;
 varying vec3 to_camera;
+varying vec3 to_eye;
 void vertex() {
 	vec3 centre = MODEL_MATRIX[3].xyz;
 	from_centre = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz - centre;
 	to_camera = CAMERA_POSITION_WORLD - centre;
+	to_eye = INV_VIEW_MATRIX[2].xyz;
 }
 void fragment() {
 	float facing = dot(normalize(from_centre), normalize(to_camera));
-	if (!IN_SHADOW_PASS && facing > window) {
+	if (IN_SHADOW_PASS) {
+		// In a light's pass the eye is the light. The half toward it is left out, so the sun
+		// reaches the pilot; the far half still throws the whole round shadow on the ground.
+		if (dot(normalize(from_centre), normalize(to_eye)) > 0.0) {
+			discard;
+		}
+	} else if (facing > window) {
 		discard;
 	}
 	vec3 base = vertex_tint ? COLOR.rgb : tint.rgb;
@@ -103,12 +110,12 @@ static func ids() -> Array:
 	return [TODAY] + LOOKS.keys()
 
 
-# The shell path for every pilot under a look, for hero_assets.shell_assets; {} for today's.
-static func asset_paths(look: String) -> Dictionary:
+# The look's shell path under each pilot id, for hero_assets.shell_assets; {} for today's.
+static func asset_paths(look: String, pilots: Array) -> Dictionary:
 	var path := String(LOOKS.get(look, ""))
 	var out := {}
 	if path != "" and ResourceLoader.exists(path):
-		for pilot in PILOTS:
+		for pilot in pilots:
 			out[pilot] = path
 	return out
 
@@ -122,13 +129,15 @@ static func dress(look: String, shell: Dictionary) -> void:
 	elif look == "bell":
 		for view in (shell.pod as Node).find_children("*", "MeshInstance3D", true, false):
 			for i in view.mesh.get_surface_count():
-				if String(view.mesh.surface_get_material(i).resource_name if view.mesh.surface_get_material(i) != null else "") == "glass":
+				var was: Material = view.get_active_material(i)
+				if was != null and was.resource_name == "glass":
 					var canopy := ShaderMaterial.new()
 					canopy.shader = _shader("canopy", CANOPY_SHADER)
 					view.set_surface_override_material(i, canopy)
 
 
 # Every surface of the rolling part takes the window, keeping the colour it was painted with.
+# A class_accent surface keeps hero_assets' own material, which the ready glow swaps by identity.
 static func _cut(core: Node) -> void:
 	var views: Array = core.find_children("*", "MeshInstance3D", true, false)
 	if core is MeshInstance3D:
@@ -136,6 +145,8 @@ static func _cut(core: Node) -> void:
 	for view in views:
 		for i in view.mesh.get_surface_count():
 			var was: Material = view.get_active_material(i)
+			if was != null and was.resource_name == "class_accent":
+				continue
 			var cut := ShaderMaterial.new()
 			cut.shader = _shader("cutaway", CUTAWAY_SHADER)
 			cut.set_shader_parameter("window", WINDOW)
