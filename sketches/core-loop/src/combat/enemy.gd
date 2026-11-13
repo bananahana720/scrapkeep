@@ -640,9 +640,10 @@ func _knocked_speed() -> float:
 	return Vector3(_knock.x, 0.0, _knock.z).length()
 
 
-# A knock that drives this enemy into a world face stops it there (Contact.wall_slam_knock) with a
-# stagger and one enemy_walled, instead of letting move_and_slide glide it along the face. Once per
-# knock; walking into a wall is not a slam. Deals no damage.
+# A knock that drives this enemy into a world face lands as a slam: a stagger and one enemy_walled,
+# once per knock; walking into a wall is not a slam. Presentation only: the knock is left as it was,
+# so where the body goes, the pins it makes and the run are unchanged (the PR 950 band read: stopping
+# the body on the face moved the expert's stop tax under its line). No damage.
 func _wall_slam() -> void:
 	if _dead or _walled_knock == knocks or _knocked_speed() < Contact.WALL_SLAM_SPEED:
 		return
@@ -663,7 +664,6 @@ func _wall_slam() -> void:
 			continue
 		_walled_knock = knocks
 		wall_slams += 1
-		_knock = Contact.wall_slam_knock(_knock, n)
 		react("stagger", n)
 		if _reaction_bus != null and _reaction_bus.has_signal("enemy_walled"):
 			_reaction_bus.enemy_walled.emit(self, hit.get_position(), n, into)

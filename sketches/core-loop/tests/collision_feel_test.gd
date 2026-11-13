@@ -9,7 +9,7 @@ const EventKinds := preload("res://src/core/event_kinds.gd")
 # and a wall placed high above the map. Covers: a head-on roll into the wall publishes one bumped at
 # its closing speed with the normal pointing back off the face, and juice answers it (camera kick,
 # pad, sound); a glancing roll and a plain landing publish none; a chaser knocked into the wall stops
-# on it with one enemy_walled (no damage), keeping less than half its speed along the face, while a
+# into the wall lands one enemy_walled (no damage) and keeps its knock, so the run is unchanged, while a
 # weak knock, a knock away from the wall and a knock up a ramp publish none. Evidence limit: rules in a headless run,
 # not the feel, which needs Andrew's PC.
 
@@ -138,8 +138,7 @@ func _enemy_cases() -> void:
 		t.check("the slam faces back off the wall", (walls[0][2] as Vector3).x < -0.9, str(walls[0][2]))
 		t.check("the slam is sized from the speed into the face", float(walls[0][3]) >= Contact.WALL_SLAM_SPEED, "%.1f m/s" % float(walls[0][3]))
 	var knock: Vector3 = enemy._knock
-	t.check("the slam leaves less than half the speed along the face", absf(knock.z) < along_before * 0.5, "%.1f of %.1f" % [absf(knock.z), along_before])
-	t.check("the slam bounces it off the face, not into it", knock.x <= 0.0, "%.2f" % knock.x)
+	t.check("the slam leaves the knock as it was, so the run is unchanged", knock.x > 0.0 and absf(knock.z) > along_before * 0.5, "(%.1f, %.1f)" % [knock.x, knock.z])
 	t.check("the slam deals no damage", is_equal_approx(float(enemy.hp), hp_before), "%.0f to %.0f" % [hp_before, float(enemy.hp)])
 	await _ticks(0.8)
 	t.check("one slam per knock", walls.size() == 1, "%d slams" % walls.size())

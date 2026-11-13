@@ -93,19 +93,5 @@ static func bump_closing(velocity: Vector3, normal: Vector3) -> float:
 	return maxf(0.0, -velocity.dot(normal.normalized()))
 
 
-# A knocked enemy thrown into a world face: it stops on the face instead of gliding along it.
-# The part into the face comes back at WALL_RESTITUTION, the part along it keeps WALL_GRIP_KEEP.
+# A knocked enemy thrown into a world face this fast lands as a wall slam (enemy.gd _wall_slam).
 const WALL_SLAM_SPEED := 8.0
-const WALL_RESTITUTION := 0.25
-const WALL_GRIP_KEEP := 0.35
-
-
-# The knock left after a wall slam: the flat part reflected off `normal` (flat, face to enemy).
-static func wall_slam_knock(knock: Vector3, normal: Vector3) -> Vector3:
-	var flat := Vector3(knock.x, 0.0, knock.z)
-	var into := flat.dot(normal)
-	if into >= 0.0:
-		return knock
-	var along := (flat - normal * into) * WALL_GRIP_KEEP
-	var out := along - normal * into * WALL_RESTITUTION
-	return Vector3(out.x, knock.y, out.z)

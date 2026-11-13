@@ -159,7 +159,7 @@ Every signal has a row in `event_kinds.gd` keyed by its name. `spine_event_kinds
 | `dismounted` | `velocity: Vector3` | spine ball | left the pylon; the velocity is the slingshot, zero for an E drop |
 | `enemy_spawned` | `enemy: Node3D, kind: String` | A | an enemy entered the stage |
 | `enemy_struck` | `enemy: Node3D, kind: String, force: float` | A (from `strike`) | a resolved hit; kind is `stomp`, `ram`, `slam`, `arc`, `turret`, `runner` or `synergy` (a build synergy's shockwave, shrapnel, frost ring or blade: resolved as the damage given, never a landing, so no weak point that takes a slam takes it) |
-| `enemy_walled` | `enemy: Node3D, at: Vector3, normal: Vector3, speed: float` | the enemy itself (`enemy.gd` `_wall_slam`) | a knock threw the enemy into a world face at `speed` m/s into it, at least `Contact.WALL_SLAM_SPEED`; it stops on the face and staggers, once per knock, no damage |
+| `enemy_walled` | `enemy: Node3D, at: Vector3, normal: Vector3, speed: float` | the enemy itself (`enemy.gd` `_wall_slam`) | a knock threw the enemy into a world face at `speed` m/s into it, at least `Contact.WALL_SLAM_SPEED`; it staggers, once per knock; presentation only: the knock, the body's path and the damage are unchanged |
 | `strike_deflected` | `enemy: Node3D, kind: String, punch: float, plating: float` | A | a hit below plating chipped for 20% |
 | `shot_fired` | `weapon_id: String, from: Vector3, to: Vector3` | A | a weapon fired; the segment it drew |
 | `special_used` | `special_id: String, at: Vector3` | A | a class special fired |

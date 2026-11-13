@@ -119,8 +119,8 @@ signal enemy_rebounded(enemy: Node3D, speed: float)
 signal enemy_pinned(enemy: Node3D, damage: float)
 # A Highdraft enemy knocked off an island edge (enemy.gd ring_out); enemy_killed follows.
 signal enemy_ringed_out(kind: String, at: Vector3)
-# A knocked enemy thrown into a world face at `speed` m/s into it (enemy.gd): it stops on the
-# face instead of gliding along it. `at` is on the face, `normal` points face to enemy. No damage.
+# A knocked enemy thrown into a world face at `speed` m/s into it (enemy.gd): it staggers; its knock
+# and path are unchanged. `at` is on the face, `normal` points face to enemy. No damage.
 signal enemy_walled(enemy: Node3D, at: Vector3, normal: Vector3, speed: float)
 signal vault_kicked(at: Vector3, speed: float)
 signal gauge_charging(ability_id: String)
