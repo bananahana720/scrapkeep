@@ -34,6 +34,10 @@ const AbilityState := preload("res://src/core/ability_state.gd")
 enum Phase { ROAM, WARN, LIVE }
 
 const INTERRUPT := 10.0
+# A crew builds to its walking speed over this many seconds and eases to a stop or a turn the
+# same way (W1-84): it starts and stops with weight instead of jumping to full speed in one tick.
+# Roaming only: a warning stands the crew still from its first tick, so the telegraph and the body agree.
+const STRIDE_RAMP := 0.15
 # Kinds that set their own body yaw every tick, so the gait's turn would fight it.
 const GAIT_SKIP := ["linker"]
 # One interrupt window for every ordinary pack kind (W13-INTEGRATION-3 SQ3). Start value
@@ -91,6 +95,8 @@ var _t := 0.0
 var _rest := 0.0
 var _strafe := 1.0
 var _crew: MeshInstance3D
+# The roaming velocity the crew has built up (STRIDE_RAMP).
+var _stride := Vector3.ZERO
 
 
 func setup(target_ref, terrain_ref, root_ref, live_ref: Callable, threat: float, spec_ref := {}) -> void:
@@ -239,7 +245,7 @@ func _physics_process(delta: float) -> void:
 			var open := recovering()
 			recover_left = maxf(0.0, recover_left - delta)
 			var seek := _seek(to_ball)
-			_move(delta, Vector3.ZERO if stunned() or open else _roam(seek))
+			_move(delta, _ramp(delta, Vector3.ZERO if stunned() or open else _roam(seek)))
 			if _gait != null and not stunned() and _knocked_speed() < 1.0 and seek.length() > 0.5:
 				_gait.aim(_facing_yaw(seek))
 			if not stunned() and not open and _rest <= 0.0 and _knocked_speed() < 1.0 and _wants_attack(seek):
@@ -248,6 +254,7 @@ func _physics_process(delta: float) -> void:
 			else:
 				AttackBudget.withdraw(self)
 		Phase.WARN:
+			_stride = Vector3.ZERO
 			_move(delta, Vector3.ZERO)
 			var tele := telegraph()
 			if tele != null:
@@ -273,6 +280,12 @@ func _physics_process(delta: float) -> void:
 			if resolve_interrupt(asks) >= 0 or not _live(delta) or _t >= live_seconds:
 				_end()
 	_pose()
+
+
+# The roaming velocity this tick: `desired` reached at the crew's own rate, walk_speed in STRIDE_RAMP.
+func _ramp(delta: float, desired: Vector3) -> Vector3:
+	_stride = _stride.move_toward(desired, maxf(walk_speed, desired.length()) / STRIDE_RAMP * delta)
+	return _stride
 
 
 func _idle(delta: float) -> void:
