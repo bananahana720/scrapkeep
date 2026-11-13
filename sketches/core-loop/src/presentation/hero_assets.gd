@@ -72,6 +72,8 @@ const Accretion := preload("res://src/build/accretion.gd")
 const RewardGates := preload("res://src/build/reward_gates.gd")
 const PilotReactions := preload("res://src/presentation/pilot_reactions.gd")
 const MechaMotion := preload("res://src/presentation/mecha_motion.gd")
+const BallLooks := preload("res://src/presentation/ball_looks.gd")
+const Tuning := preload("res://src/movement/tuning.gd")
 # One pose table per pilot (PILOT-CLIPS section 4.2), by the PILOTS glb stem.
 # Pilot return-to-rest clip built at runtime for GLBs with no idle loop, and the blend an impact
 # gets when it interrupts another one-shot.
@@ -1089,8 +1091,15 @@ var _ready_glow := false
 func _assets() -> Dictionary:
 	if not _shell_assets_read and shell_assets.is_empty():
 		shell_assets = Cosmetics.asset_paths()
+		shell_assets.merge(BallLooks.asset_paths(ball_look(), SHELLS.keys()), true)
 	_shell_assets_read = true
 	return shell_assets
+
+
+# The ball look the launch asked for (--ball-look, ball_looks.gd); "today" without a tuning.
+func ball_look() -> String:
+	var tuning = ctx.get("tuning") if ctx != null else null
+	return tuning.option(Tuning.BALL_LOOK_KEY) if tuning != null else BallLooks.TODAY
 
 
 static func _layer_path(base: String, heft_class: int) -> String:
@@ -1146,6 +1155,10 @@ func shell_layers(pilot: String, variant: String, paths: Dictionary) -> Array[St
 	var base := shell_path(pilot, use, 1, paths)
 	out.append(base if _loadable(base) else "")
 	for n in HEFT_LAYERS:
+		# A ball look is one shell with no heft layers yet; nothing is missing, so nothing warns.
+		if BallLooks.is_look(base):
+			out.append("")
+			continue
 		var path := shell_path(pilot, use, n, paths)
 		if use != "" and not _loadable(path):
 			_warn_logged("shell_layer:%s:%d" % [use, n], "hero_assets: shell variant '%s' lacks its class %d layer; borrowing the default" % [use, n])
@@ -1326,6 +1339,8 @@ func fit_shell_into(ball: Node3D, pilot: String, variant: String, heft_class: in
 	# visibility_changed fires only inside the tree; a fit outside it syncs here.
 	for pair in ring_holders:
 		pair[1].visible = pair[0].visible
+	# Every caller's shell wears the look's own materials: the game, the pause read, the previews.
+	BallLooks.dress(ball_look(), rec)
 	if _ready_glow:
 		_glow_rec(rec, true)
 	return rec

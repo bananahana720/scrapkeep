@@ -61,6 +61,10 @@ const SPECS := [
 	# The attack warnings' look (threat_grammar.gd LOOKS). "clear" (the default since 13 Nov 2026, a
 	# taste call Andrew can overturn) and "edges" are haze made less obstructive.
 	{"key": "telegraph", "label": "Telegraph", "min": 0.0, "max": 3.0, "step": 1.0, "value": 2.0, "options": ["classic", "haze", "clear", "edges"]},
+	# The ball's look (presentation/ball_looks.gd): Andrew picked the cutaway on 13 Nov 2026 (ruling
+	# dm); gyro and bell are the two he passed over. "today" keeps the game's own shells and stays
+	# the default until he has seen the finished cutaway on the PC.
+	{"key": "ball_look", "label": "Ball look", "min": 0.0, "max": 3.0, "step": 1.0, "value": 0.0, "options": ["today", "gyro", "bell", "cutaway"]},
 	# World-one builds (design-v3/research/build-systems/BUILD-SYSTEMS.md, unit G): the master
 	# flag gives every pilot a two-depth tree, and the two hot-wired parts are selectable
 	# alone. All three default on. hotwire_shell is read by the build and the tree pick; hotwire_tread is read by the build (HotwireRules.fitted, build.gd) to fit the tread.
@@ -120,6 +124,7 @@ const DROP_ROOM_KEY := "drop_room"
 const SET_DIRECTOR_KEY := "set_director"
 const DISCOVERY_KEY := "discovery"
 const TELEGRAPH_KEY := "telegraph"
+const BALL_LOOK_KEY := "ball_look"
 
 const BRAKE_RESISTANCE := 4.0
 const BRAKE_TURN_BOOST := 2.2
@@ -238,6 +243,7 @@ const FLAGS := {
 	"set-director": ["set_director", "option", "launch"],
 	"discovery": ["discovery", "option", "launch"],
 	"telegraph": ["telegraph", "option", "launch"],
+	"ball-look": ["ball_look", "option", "launch"],
 	"world-one-builds": ["world_one_builds", "option", "launch"],
 	"pole-flail": ["pole_flail", "option", "launch"],
 	"hotwire-shell": ["hotwire_shell", "option", "launch"],

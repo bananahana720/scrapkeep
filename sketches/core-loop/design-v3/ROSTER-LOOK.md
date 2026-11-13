@@ -8,6 +8,15 @@ The concept source is the cleaned Astra picture set in `artifacts/local/alpha/pu
 
 **What this sheet replaces.** For the alpha sketch it replaces the class-shell rows and the "growth and cockpit rules" in `VISUAL-LANGUAGE.md` §9 (lines 378 to 416), and the "reuse the 0.98 m glass sphere" rule in the wave 1 D6 build spec (`game-completion-plan-75f776/artifacts/local/alpha/push/w1/D6/out/BUILD-SPEC.md:8`). Bible AD-01 (`BIBLE.md:620`) asks for "a protected, readable cockpit and recognizable equipment". The mecha meets that better than glass did. The pod hangs in a two-axis gimbal at the centre, the lattice is a roll cage around it, and the equipment sits outside where it shows. Moving the mecha into the Bible needs a heavy-lane card (`VISUAL-LANGUAGE.md:3`).
 
+## Ball look candidates, 13 November 2026 (Andrew picked the cutaway, ruling dm)
+
+Andrew asked on 13 Nov 2026 to reconsider the ball ("go big and bold") and set one hard rule: the player must see the pilot and what the pilot wears. Three candidates sit behind the launch switch `--ball-look=gyro|bell|cutaway`; the default `today` keeps the Hoberman shells this sheet describes, so nothing below changes until the finished cutaway has passed his PC check. The concept page with pictures, the pass line and the receipts is https://claude.ai/artifact/YLJGxfhfDNfA9nwEzpmQW4.
+
+- **Where they live.** Shapes: `tools/blender/ball_looks.py` (one shared shell per look, the cockpit of section 0.7, no per-pilot kit and no heft layers yet). Switch and materials: `src/presentation/ball_looks.gd`. Pictures and counts: `tools/ball_look_capture.gd`. Test: `tests/ball_looks_test.gd`.
+- **Pass line.** The play camera sees at least 75% of the pilot on the median of 24 spins and 60% on the worst, at 7.5 m and at 10.5 m. Cloud receipts with Sable: cutaway 82% and 82%, bell 67% and 53%, gyro 57% and 37%, today's shell 52% and 45%.
+- **Picked: cutaway** (Andrew, 13 Nov 21:44Z; ruling dm in [DECISIONS.md](../../../project-guide/handoff/DECISIONS.md)), a solid plated ball whose shader discards a window on the side facing the camera (no blended surface). It is the "sight-cone cutout" this sheet lists as a separable extra, made the whole look.
+- **What a pick replaces.** The bell puts glass on the level Pod, which the "Forbidden" row below allowed for an inner cockpit sphere on 22 Oct; none puts glass on the rolling outline.
+
 ## 0. Direction change, 2026-10-10 evening: the Hoberman mecha
 
 Andrew rejected all 38 open-cage pictures on 2026-10-10. His direction, in his words: "more like a Hoberman sphere that's like completely expanded out", with "panels or other things that kind of like tack on to that sphere within like maybe those different nodes or gaps", "gyroscopic stabilization for certain aspects of the ball", a weapon as "a stabilized horizontal ring that also wraps around" the sphere, and a cockpit with controls the pilot works "in sort of a mecha like manner": "a mecha that kind of like is an extension of that character", like Power Rangers.

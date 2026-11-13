@@ -36461,6 +36461,39 @@
    "exception_why": "Opt-in device with independently controlled state parts; existing prop class covers one small static mesh. Limits asserted by device_props_asset_test."
   },
   {
+   "id": "ball_look_bell",
+   "path": "res://assets/models/world_one/ball_look_bell.glb",
+   "class": "shell",
+   "ships": true,
+   "loader": "src/presentation/ball_looks.gd LOOKS (behind --ball-look=bell; a candidate for the ball look pick of 13 Nov 2026: a diving bell with a glass back)",
+   "provenance": {
+    "recipe": "tools/blender/ball_looks.py",
+    "helper": "tools/blender/shell_base.py cockpit(), weapon_ring()"
+   }
+  },
+  {
+   "id": "ball_look_cutaway",
+   "path": "res://assets/models/world_one/ball_look_cutaway.glb",
+   "class": "shell",
+   "ships": true,
+   "loader": "src/presentation/ball_looks.gd LOOKS (behind --ball-look=cutaway; a candidate for the ball look pick of 13 Nov 2026: a solid plated ball with a camera-facing window)",
+   "provenance": {
+    "recipe": "tools/blender/ball_looks.py",
+    "helper": "tools/blender/shell_base.py cockpit(), weapon_ring()"
+   }
+  },
+  {
+   "id": "ball_look_gyro",
+   "path": "res://assets/models/world_one/ball_look_gyro.glb",
+   "class": "shell",
+   "ships": true,
+   "loader": "src/presentation/ball_looks.gd LOOKS (behind --ball-look=gyro; a candidate for the ball look pick of 13 Nov 2026: three crossed hoops around an open seat)",
+   "provenance": {
+    "recipe": "tools/blender/ball_looks.py",
+    "helper": "tools/blender/shell_base.py cockpit(), weapon_ring()"
+   }
+  },
+  {
    "id": "bay_kit",
    "path": "res://assets/models/world_one/bay_kit.glb",
    "class": "prop",
@@ -37955,6 +37988,9 @@
   "arena_bowl_foundry",
   "arena_bowl_yard",
   "arena_waking_rim_sector.glb",
+  "ball_look_bell",
+  "ball_look_cutaway",
+  "ball_look_gyro",
   "barge",
   "barge_detail1",
   "barge_detail2",

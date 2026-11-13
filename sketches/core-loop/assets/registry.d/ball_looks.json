@@ -1,0 +1,37 @@
+{
+ "assets": [
+  {
+   "id": "ball_look_gyro",
+   "path": "res://assets/models/world_one/ball_look_gyro.glb",
+   "class": "shell",
+   "ships": true,
+   "loader": "src/presentation/ball_looks.gd LOOKS (behind --ball-look=gyro; a candidate for the ball look pick of 13 Nov 2026: three crossed hoops around an open seat)",
+   "provenance": {
+    "recipe": "tools/blender/ball_looks.py",
+    "helper": "tools/blender/shell_base.py cockpit(), weapon_ring()"
+   }
+  },
+  {
+   "id": "ball_look_bell",
+   "path": "res://assets/models/world_one/ball_look_bell.glb",
+   "class": "shell",
+   "ships": true,
+   "loader": "src/presentation/ball_looks.gd LOOKS (behind --ball-look=bell; a candidate for the ball look pick of 13 Nov 2026: a diving bell with a glass back)",
+   "provenance": {
+    "recipe": "tools/blender/ball_looks.py",
+    "helper": "tools/blender/shell_base.py cockpit(), weapon_ring()"
+   }
+  },
+  {
+   "id": "ball_look_cutaway",
+   "path": "res://assets/models/world_one/ball_look_cutaway.glb",
+   "class": "shell",
+   "ships": true,
+   "loader": "src/presentation/ball_looks.gd LOOKS (behind --ball-look=cutaway; a candidate for the ball look pick of 13 Nov 2026: a solid plated ball with a camera-facing window)",
+   "provenance": {
+    "recipe": "tools/blender/ball_looks.py",
+    "helper": "tools/blender/shell_base.py cockpit(), weapon_ring()"
+   }
+  }
+ ]
+}

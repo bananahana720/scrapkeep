@@ -307,6 +307,7 @@ Rulings run to dh (12 Nov 08:44Z). `npm run check:docs` fails a letter used twic
 | --- | --- | --- | --- |
 | 18 cosmetics; Kest's Rigger Harness cut. | 16 Oct 21:46 | tap | 19 cosmetics |
 | Pilot paint via a shader tint on the dark Core frame. | 16 Oct 23:40 | tap | |
+| Ruling dm, the ball goes to the cutaway look: of three candidates (open gyro hoops, a diving bell with a glass back, a solid plated ball with a camera-facing cutaway window) Andrew picked the cutaway to take to finished art. His hard rule for any ball: the player sees the pilot and what the pilot wears, to leave room for unlockable outfits. It is built behind `--ball-look=cutaway`; today's Hoberman shells stay the default until he has seen the finished cutaway on the PC. Pass line: the play camera sees at least 75% of the pilot on the median spin. [ROSTER-LOOK.md](../../sketches/core-loop/design-v3/ROSTER-LOOK.md) has the candidates and receipts. | 13 Nov 21:44Z | tap (thread "Redesign the ball mecha's look") | |
 | Sable's Cable Stitch trail is deep green. | 16 Oct 23:22 | tap | mint |
 | Rigger Blue is Homecoming's reward paint for Kest. | 17 Oct 00:20 | tap | |
 | Tarn and Cannon ship on their current first-pass animations. | 16 Oct 23:40 | tap | |
