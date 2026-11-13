@@ -296,7 +296,7 @@ func _warn(to_ball: Vector3) -> void:
 	phase = Phase.WARN
 	# Every wind-up drops the roaming look and glance, also for kinds that commit without _facing.
 	if _gait != null:
-		_gait.committed()
+		_gait.hold()
 	_t = 0.0
 
 

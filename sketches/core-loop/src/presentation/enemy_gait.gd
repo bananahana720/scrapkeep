@@ -80,6 +80,13 @@ func hop() -> void:
 	_hop_age = 0.0
 
 
+# A wind-up: drop the roaming look and any glance, and hold the heading it has (a kind that
+# faces its attack also calls committed(), which catches the model up to the body).
+func hold() -> void:
+	_aim = NAN
+	_glance_left = 0.0
+
+
 func committed() -> void:
 	_catching = true
 	_aim = NAN

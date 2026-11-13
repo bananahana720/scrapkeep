@@ -84,12 +84,17 @@ func _unit() -> void:
 	for i in 10:
 		gait.aim(2.0)
 		gait.step(dt, body, Vector3.ZERO, 0.6)
+	# A wind-up drops a glance and holds its heading; it never snaps back to the body.
 	var wound := EnemyGait.new()
-	wound.committed()
-	for i in 20:
-		wound.glance(1.5)
+	for i in 10:
+		wound.aim(1.0)
 		wound.step(dt, body, Vector3.ZERO, 0.6)
-	_t.check("a wind-up ignores a glance", absf(wound.yaw()) < 0.001, "%.3f rad" % wound.yaw())
+	var held := wound.yaw()
+	wound.glance(-1.5)
+	wound.hold()
+	for i in 20:
+		wound.step(dt, body, Vector3.ZERO, 0.6)
+	_t.check("a wind-up drops the glance and holds its heading", absf(wound.yaw() - held) < 0.001 and held > 0.5, "%.3f -> %.3f rad" % [held, wound.yaw()])
 	_t.check("turns at its rate, never snaps", absf(gait.yaw() - EnemyGait.TURN_RATE * dt * 10.0) < 0.001, "%.3f rad after 10 ticks toward 2.0" % gait.yaw())
 	for i in 60:
 		gait.aim(1.0)
