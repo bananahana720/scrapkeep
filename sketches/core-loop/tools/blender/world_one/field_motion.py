@@ -688,11 +688,15 @@ def gyro_jammer(root):
                         [(windup - 3 * F, {"loc": (0, 0.34, 0), "scale": (1.0, 1.18, 1.0)}),
                          (windup, {"loc": (0, 0.34, 0), "scale": (1.0, 1.18, 1.0)})]),
     })
-    # The jam goes off: the crew bucks up and the hoops jump to the masthead, then settle.
+    # The jam goes off: the crew is thrown back on its heels by its own broadcast while the hoops
+    # jump to the masthead and the mast whips, then it rocks forward and settles. A stretch alone
+    # read as standing still on the PC (13 Nov 2026), so the pose is carried by the recoil.
     rig.clip("attack", attack, {
-        "body": strike(attack, (0.86, 1.2, 0.86), settle={"rot": (10, 0, 0)}),
-        "aerial": [(0, {"loc": (0, 0.5, 0), "scale": (1.0, 1.24, 1.0)}), (3 * F, {"loc": (0, 0.4, 0), "scale": (1.0, 1.14, 1.0)}),
-                   (attack * 0.6, {"loc": (0, 0.1, 0)}), (attack, {})],
+        "body": [(0, {"rot": (-20, 0, 9), "scale": (0.88, 1.18, 0.88)}), (3 * F, {"rot": (-18, 0, 8), "scale": (0.9, 1.14, 0.9)}),
+                 (attack * 0.6, {"rot": (-8, 0, 3)}), (attack * 0.8, {"rot": (6, 0, -1)}), (attack, {})],
+        "aerial": merge([(0, {"loc": (0, 0.5, 0), "scale": (1.0, 1.24, 1.0), "rot": (-16, 0, 0)})],
+                        shake(F, attack * 0.6, 12, period=2 * F, axis=0, base={"loc": (0, 0.4, 0), "scale": (1.0, 1.14, 1.0)}, decay=0.7),
+                        [(attack, {})]),
     })
     rig.clip("hit", HIT, {"body": flinch()})
     # Downed: the crew slumps and the hoops slide down the mast, wobbling on their last spin.
