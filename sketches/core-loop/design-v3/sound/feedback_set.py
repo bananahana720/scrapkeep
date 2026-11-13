@@ -18,8 +18,8 @@ pitch. Rings are inharmonic (no partial is a whole multiple of another), so they
 
 | Cue | Convention it follows | What you hear |
 | --- | --- | --- |
-| weapon_zap | Gunfire: a punchy transient with a body, no tone | A tight "tuk": a 240-to-110 Hz punch under a 3 to 7 kHz crack |
-| hit_thwack | The hit marker: a crisp high tick, unlike the shot | A dry tick and a 30 ms ring of struck scrap above 3 kHz |
+| weapon_zap | Gunfire: a punchy transient with a body, no tone | A tight "tuk": a 260-to-120 Hz punch under a 2.5 to 5 kHz crack |
+| hit_thwack | The hit marker: a crisp high tick, unlike the shot | A dry tick and a 30 ms ring of struck scrap above 5 kHz, clear of the shot's crack |
 | crit_ping | The crit ding: the hit marker with a brighter, longer metal ring | The tick, then a 90 ms inharmonic "tink" from 3.3 to 9 kHz |
 | kill_pop | The kill confirm: heavier than a hit, a break and a pop | A low punch, a crunch and a snap, then scrap skittering |
 | kill_chain_tier_N | The multi-kill: each step heavier, not higher | N quick ratchet clicks and a rising air sweep; from 3 a low boom |
@@ -123,17 +123,18 @@ def sweep_noise(seconds, f0, f1, level=1.0, peak_at=0.7):
 def weapon_zap():
     """The shot, the most frequent sound in the game: short, dry, the same shape every time."""
     return mix(0.07, (punch(0.06, 260, 120, 0.01, 0.016, 1.0), 0),
-               (band_noise(0.04, 3000, 8000, 0.006, 0.9), 0),
-               (band_noise(0.02, 1200, 3000, 0.003, 0.45), 0))
+               (band_noise(0.04, 2500, 5000, 0.006, 0.9), 0),
+               (band_noise(0.02, 1200, 2500, 0.003, 0.45), 0))
 
 
 def _tick(level=1.0):
-    """The hit marker's tick: a 2 to 3 ms crack above 3 kHz, plus a hair of mid to give it a front."""
-    return mix(0.02, (band_noise(0.02, 3200, 9000, 0.0025, level), 0), (band_noise(0.015, 1200, 3200, 0.0012, 0.35 * level), 0))
+    """The hit marker's tick: a 2 to 3 ms crack above 5 kHz, over the shot's 2.5 to 5 kHz crack, so a hit never
+    hides in its own shot; plus a hair of mid to give it a front."""
+    return mix(0.02, (band_noise(0.02, 5000, 11000, 0.0025, level), 0), (band_noise(0.015, 1200, 3200, 0.0012, 0.35 * level), 0))
 
 
 def hit_thwack():
-    scrap = ring(0.06, [3170, 4430, 5810, 7340], 0.012, 0.35)
+    scrap = ring(0.06, [5270, 6650, 8390, 10130], 0.012, 0.35)
     return mix(0.1, (_tick(1.0), 0), (scrap, 0.001), (punch(0.04, 260, 170, 0.01, 0.009, 0.3), 0))
 
 

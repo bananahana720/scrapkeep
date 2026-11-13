@@ -114,7 +114,7 @@ const TRIM_DB := {
 	"land_thud": -6.0, "slam_boom": -1.0, "grapple_clink": -7.0, "grapple_release": -11.0,
 	"core_slam": -1.0, "ultimate_land": -1.0, "kest_demo_knock": -4.0, "rivet_skid_plate": -4.0,
 	"grown_sub": -4.0, "grown_crack": -7.0, "grown_tail": -10.0, "grown_rattle": -11.0,
-	"pylon_plant": -3.0, "pylon_eject": -4.0, "enemy_arrive": -9.0, "hit_thwack": -3.0,
+	"pylon_plant": -3.0, "pylon_eject": -4.0, "enemy_arrive": -9.0, "hit_thwack": -1.0,
 	"weapon_zap": -9.0, "special_fire": -4.0, "kill_pop": -5.0, "hurt": -3.0,
 	"death": 0.0, "scrap_tick": -10.0, "cog_tick": -10.0, "part_get": -3.0, "beacon_hum": -12.0,
 	"gate_through": -3.0, "launch_roar": -2.0, "event_start": -3.0, "event_end": -6.0,
@@ -172,7 +172,7 @@ const TRIM_DB := {
 	"pickup_fountain": -8.0, "synergy_fired": -6.0, "evolution_fired": -5.0, "lore_found": -10.0,
 	"pilot_unlocked": -9.0, "pilot_unlocked_sable": -9.0, "pilot_unlocked_rivet": -9.0, "pilot_unlocked_kest": -9.0,
 	"pilot_unlocked_tarn": -9.0, "pilot_unlocked_tally": -9.0, "pilot_unlocked_cannon": -9.0,
-	"kill_chain_tier": -5.0, "chain_crash": -12.0, "drop_landing": -3.0, "door_tick": -9.0,
+	"kill_chain_tier": 0.0, "chain_crash": -12.0, "drop_landing": -3.0, "door_tick": -9.0,
 	"return_launch_arpeggio": -4.0, "lift_hiss": -9.0, "crater_hold": -12.0,
 	# The Spillway's arena locks and Warden gates (src/world/stage_locks.gd): the yard slams shut,
 	# springs open, the Warden's clamp counts a crew, refuses a hit, and lets go.
