@@ -10,12 +10,29 @@ The concept source is the cleaned Astra picture set in `artifacts/local/alpha/pu
 
 ## Ball look candidates, 13 November 2026 (Andrew picked the cutaway, ruling dm)
 
-Andrew asked on 13 Nov 2026 to reconsider the ball ("go big and bold") and set one hard rule: the player must see the pilot and what the pilot wears. Three candidates sit behind the launch switch `--ball-look=gyro|bell|cutaway`; the default `today` keeps the Hoberman shells this sheet describes, so nothing below changes until the finished cutaway has passed his PC check. The concept page with pictures, the pass line and the receipts is https://claude.ai/artifact/YLJGxfhfDNfA9nwEzpmQW4.
+Andrew asked on 13 Nov 2026 to reconsider the ball ("go big and bold") and set one hard rule: the player must see the pilot and what the pilot wears. Three looks sit behind the launch switch `--ball-look=gyro|bell|cutaway`; the default `today` keeps the Hoberman shells this sheet describes, so nothing below changes until the finished cutaway has passed his PC check. The concept page with pictures, the pass line and the receipts is https://claude.ai/artifact/YLJGxfhfDNfA9nwEzpmQW4.
 
-- **Where they live.** Shapes: `tools/blender/ball_looks.py` (one shared shell per look, the cockpit of section 0.7, no per-pilot kit and no heft layers yet). Switch and materials: `src/presentation/ball_looks.gd`. Pictures and counts: `tools/ball_look_capture.gd`. Test: `tests/ball_looks_test.gd`.
-- **Pass line.** The play camera sees at least 75% of the pilot on the median of 24 spins and 60% on the worst, at 7.5 m and at 10.5 m. Cloud receipts with Sable: cutaway 82% and 82%, bell 67% and 53%, gyro 57% and 37%, today's shell 52% and 45%.
+- **Where they live.** Shapes: `tools/blender/ball_looks.py`. Switch, plating, window and materials: `src/presentation/ball_looks.gd`. Pictures and counts: `tools/ball_look_capture.gd`. Test: `tests/ball_looks_test.gd`.
+- **Pass line.** The play camera sees at least 75% of the pilot on the median of 24 spins and 60% on the worst, at 7.5 m and at 10.5 m. Blockout receipts (cloud, Sable, shared cockpit): cutaway 82% and 82%, bell 67% and 53%, gyro 57% and 37%, today's shell 52% and 45%.
 - **Picked: cutaway** (Andrew, 13 Nov 21:44Z; ruling dm in [DECISIONS.md](../../../project-guide/handoff/DECISIONS.md)), a solid plated ball whose shader discards a window on the side facing the camera (no blended surface). It is the "sight-cone cutout" this sheet lists as a separable extra, made the whole look.
 - **What a pick replaces.** The bell puts glass on the level Pod, which the "Forbidden" row below allowed for an inner cockpit sphere on 22 Oct; none puts glass on the rolling outline.
+
+### The cutaway as built (13 November 2026)
+
+The gyro and the bell remain one shared shell each, as Andrew saw them. The cutaway keeps every pilot's own shell and changes only what rolls, so sections 0.1 to 0.4 below still describe the Pod, the weapon ring, the cockpit and the hub mounts.
+
+| Part | Under `--ball-look=cutaway` |
+| --- | --- |
+| Rolling part (Core) | The lattice mesh becomes plating: gores in the pilot's own enamel (the mean colour of the lattice it replaces), darker gores between, a bone belt, oxide caps, tread pads. The hub mounts stay, so scrap still clamps on. |
+| Heft classes II to V | The lattice's gap panels sit inside the ball's radius and would float beside the pilot, so they are hidden. The plating grows instead: II copper hoops, III armour over the dark gores, IV tread cleats on the belt, V copper caps with a stud crown. Kit that stands outside the ball (hoods, drums, hooks) still arrives with its class. |
+| Window | 40 degrees about the line from the ball's centre to the camera, with an ink line and a halftone fringe. It cuts the plating, each pilot's outer kit where it stands farther than 0.93 from the centre (the weapon ring's near arc), and everything that rides the ball: scrap chunks, part hardware, panel plates. The cockpit inside the ball is never cut. |
+| Equipped paint | Takes the enamel gores; the dark gores, belt and caps keep the pattern. |
+| Outfits | Unchanged: `CosmeticWear` and `fit_outfit` already mount an outfit on the pilot's bones, and the window is what lets the player see it. |
+| Not cut | Glass, class accents (the ready glow swaps those materials by identity) and Kest's live band and fuse materials keep their own materials. |
+
+**Receipts** (`tools/ball_look_capture.gd`; cloud numbers are the compatibility renderer, the PC's are on branch `scratch/w40-ball-look-capture`). RECEIPTS_HERE
+
+**Still open.** The class card and customize previews build a painter with no tuning, so they show today's shells. Rivet's pilot is the least visible because Rivet's own seat back and cage rods, which are inside the ball and never cut, cover a small pilot; a lower seat back in `shell_rivet` is the fix and is not in this change. The default stays `today` until Andrew has seen the finished cutaway on his PC.
 
 ## 0. Direction change, 2026-10-10 evening: the Hoberman mecha
 

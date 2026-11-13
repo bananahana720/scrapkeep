@@ -7,9 +7,12 @@ const T := preload("res://tests/support/t.gd")
 
 # The ball looks (ball_looks.gd, --ball-look): the switch is "today" by default, and a painter
 # under "today" or with no tuning swaps no shell and dresses nothing. Under a look a painter with
-# the game's tuning fits that look's shell for every pilot and dresses it itself; the rolling part
-# stays inside the collider, the cutaway's window is on every surface of the rolling part but the
-# class accents and blends none, and the bell's glass wears the canopy, its one blended surface.
+# the game's tuning fits that look for every pilot and dresses it itself. The gyro and the bell
+# swap the whole shell. The cutaway keeps each pilot's own shell (kit, weapon ring, hub mounts)
+# and plates its rolling part: every heft class has plating inside the collider, the lattice's
+# gap panels are hidden, the window is on every surface of the rolling part but the class
+# accents, an equipped paint reaches the plating, nothing new blends, and what rides the ball
+# (scrap, panel plates) takes the window without touching a mesh another ball shares.
 
 const CORE_LIMIT := 0.985
 const PILOTS: Array = ["pylon_engineer", "runner_gunner", "demolitions_caster", "tarn", "tally", "remembered_cannon"]
@@ -30,7 +33,11 @@ func _run_all() -> void:
 	_unchanged("no tuning", null)
 	_unchanged("today", _tuning(BallLooks.TODAY))
 	for look in BallLooks.LOOKS:
-		_look(look)
+		if BallLooks.PLATED.has(look):
+			_plated(look)
+		else:
+			_look(look)
+	_riders()
 	quit(t.verdict())
 
 
@@ -82,6 +89,130 @@ func _look(look: String) -> void:
 	painter.free()
 
 
+# A plated look: each pilot's own shell at the heaviest heft class, with its rolling part plated.
+func _plated(look: String) -> void:
+	var plain := _painter(null)
+	var painter := _painter(_tuning(look))
+	t.eq("%s: the painter reads the look from the tuning" % look, painter.ball_look(), look)
+	t.eq("%s: no pilot's whole shell is swapped" % look, BallLooks.asset_paths(look, PILOTS), {})
+	var paint := Color(0.85, 0.3, 0.55)
+	for pilot in PILOTS:
+		var ball := Node3D.new()
+		root.add_child(ball)
+		var own: Dictionary = plain.fit_shell_into(ball, pilot, "", 5, {"class": Color.WHITE})
+		var shell: Dictionary = painter.fit_shell_into(ball, pilot, "", 5, {"class": Color.WHITE, "paint": paint})
+		t.check("%s: fits %s through the game's loader" % [look, pilot], not shell.is_empty())
+		if shell.is_empty() or own.is_empty():
+			ball.free()
+			continue
+		var core: Node3D = shell.core
+		var pod: Node3D = shell.pod
+		t.check("%s: %s keeps its hub mounts, so scrap still clamps on" % [look, pilot], core.has_node("Hub_00") == (own.core as Node).has_node("Hub_00"))
+		t.eq("%s: %s keeps its weapon ring" % [look, pilot], pod.has_node("WeaponRing"), (own.pod as Node).has_node("WeaponRing"))
+		t.check("%s: %s's rolling part stays inside the collider at every heft class" % [look, pilot], _reach(core) <= CORE_LIMIT + 0.001, "reach %.4f" % _reach(core))
+		var bare: Array = []
+		for n in shell.layers:
+			if _views(shell.layers[n].core).is_empty():
+				bare.append(n)
+		t.eq("%s: every heft class of %s has plating" % [look, pilot], bare, [])
+		var floating := 0
+		for n in shell.layers:
+			for view in _views(shell.layers[n].pod):
+				if view.layers != 0 and _far(view.mesh) < BallLooks.INSIDE_RADIUS:
+					floating += 1
+		t.eq("%s: no gap panel of %s floats inside the ball" % [look, pilot], floating, 0)
+		var cut := 0
+		var total := 0
+		var painted := 0
+		var enamelled := 0
+		for view in _views(core):
+			for i in view.mesh.get_surface_count():
+				var mat: Material = view.get_active_material(i)
+				if mat != null and mat.resource_name == "class_accent":
+					continue
+				total += 1
+				if _is_window(mat):
+					cut += 1
+					if _number(mat, "paint_take") > 0.0:
+						painted += 1
+					if _number(mat, "enamel_take") > 0.0:
+						enamelled += 1
+		t.check("%s: the window is on every surface of %s's rolling part" % [look, pilot], total > 0 and cut == total, "%d of %d" % [cut, total])
+		t.check("%s: an equipped paint reaches %s's plating" % [look, pilot], painted > 0)
+		t.check("%s: %s's plating wears the pilot's own enamel" % [look, pilot], enamelled > 0)
+		var kit := 0
+		for view in _views(pod):
+			for i in view.mesh.get_surface_count():
+				var mat: Material = view.get_active_material(i)
+				if _is_window(mat):
+					kit += 1
+					if _number(mat, "keep_within") < 0.9:
+						t.check("%s: %s's cockpit is never cut" % [look, pilot], false, "keep_within %s" % mat.get_shader_parameter("keep_within"))
+		t.check("%s: %s's outer kit takes the window" % [look, pilot], kit > 0)
+		t.eq("%s: %s blends nothing its own shell does not" % [look, pilot], _blended(core) + _blended(pod), _blended(own.core) + _blended(own.pod))
+		ball.free()
+	painter.free()
+	plain.free()
+
+
+# What rides the rolling ball takes the window under a plated look, and only then.
+func _riders() -> void:
+	var roll := Node3D.new()
+	root.add_child(roll)
+	roll.position = Vector3(3.0, 1.0, -2.0)
+	var steel := StandardMaterial3D.new()
+	steel.albedo_color = Color(0.4, 0.4, 0.45)
+	var chunk := MeshInstance3D.new()
+	chunk.mesh = BoxMesh.new()
+	chunk.material_override = steel
+	roll.add_child(chunk)
+	var shared := ArrayMesh.new()
+	shared.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, BoxMesh.new().get_mesh_arrays())
+	var face := StandardMaterial3D.new()
+	face.vertex_color_use_as_albedo = true
+	shared.surface_set_material(0, face)
+	var plates := MultiMeshInstance3D.new()
+	plates.multimesh = MultiMesh.new()
+	plates.multimesh.mesh = shared
+	roll.add_child(plates)
+	BallLooks.ride(BallLooks.TODAY, roll)
+	t.check("today: a rider keeps its material", chunk.material_override == steel and plates.multimesh.mesh == shared)
+	BallLooks.ride("cutaway", roll)
+	var cut := chunk.material_override as ShaderMaterial
+	t.check("cutaway: a rider takes the window", _is_window(cut))
+	t.check("cutaway: a rider's window is held at the ball's centre", cut != null and cut.get_shader_parameter("held") == true and cut.get_shader_parameter("centre_at") == roll.global_position)
+	t.check("cutaway: panel plates take the window on a mesh of their own", plates.multimesh.mesh != shared and _is_window(plates.multimesh.mesh.surface_get_material(0)))
+	t.check("cutaway: the mesh other balls share is untouched", shared.surface_get_material(0) == face)
+	var twin := MeshInstance3D.new()
+	twin.mesh = BoxMesh.new()
+	var steel_again := StandardMaterial3D.new()
+	steel_again.albedo_color = steel.albedo_color
+	twin.material_override = steel_again
+	roll.add_child(twin)
+	roll.position = Vector3(5.0, 1.0, 0.0)
+	BallLooks.ride("cutaway", roll)
+	t.check("cutaway: a new rider of the same look shares the material", twin.material_override == cut)
+	t.eq("cutaway: the window follows the ball", cut.get_shader_parameter("centre_at"), roll.global_position)
+	t.eq("cutaway: riders add one material per look", (roll.get_meta(BallLooks.RIDER_META) as Dictionary).size(), 2)
+	roll.free()
+
+
+func _is_window(mat: Material) -> bool:
+	return mat is ShaderMaterial and mat.shader != null and mat.shader.code.contains("uniform float window")
+
+
+func _number(mat: ShaderMaterial, key: String) -> float:
+	var value = mat.get_shader_parameter(key)
+	return float(value) if value != null else 0.0
+
+
+func _far(mesh: Mesh) -> float:
+	var far := 0.0
+	for point in mesh.get_faces():
+		far = maxf(far, point.length())
+	return far
+
+
 func _shape(look: String, shell: Dictionary) -> void:
 	var core: Node3D = shell.core
 	var pod: Node3D = shell.pod
@@ -90,20 +221,7 @@ func _shape(look: String, shell: Dictionary) -> void:
 		t.check("%s: the cockpit keeps %s" % [look, mount], pod.find_child(mount, true, false) != null)
 	var core_blend := _blended(core)
 	var pod_blend := _blended(pod)
-	if look == "cutaway":
-		var cut := 0
-		var total := 0
-		for view in _views(core):
-			for i in view.mesh.get_surface_count():
-				var mat: Material = view.get_active_material(i)
-				if mat != null and mat.resource_name == "class_accent":
-					continue
-				total += 1
-				if mat is ShaderMaterial and mat.shader.code.contains("uniform float window"):
-					cut += 1
-		t.check("cutaway: the window is on every surface of the rolling part", total > 0 and cut == total, "%d of %d" % [cut, total])
-		t.eq("cutaway: nothing blends", core_blend + pod_blend, 0)
-	elif look == "bell":
+	if look == "bell":
 		t.eq("bell: the glass is the one blended surface", [core_blend, pod_blend], [0, 1])
 		var canopies := 0
 		for view in _views(pod):

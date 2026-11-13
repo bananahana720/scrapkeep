@@ -677,6 +677,7 @@ func _steer_pod(rec: Dictionary, player, delta: float) -> void:
 		# Motion comes from the real velocity; the pilot remains on the upright Pod.
 		gyro.rotate_object_local(Vector3.RIGHT, v.length() * delta / 0.98)
 	sync_lattice(core, player.roll_node())
+	BallLooks.ride(ball_look(), player.roll_node())
 	var open := 1.0 if player.kit.gliding else 0.0
 	var kest := {}
 	if rec["class"] == "demolitions_caster" and ctx != null and ctx.spawner != null and ctx.spawner.get("ultimate") != null:
@@ -1292,6 +1293,7 @@ func fit_shell_into(ball: Node3D, pilot: String, variant: String, heft_class: in
 	var pod: Node3D = parts.pod
 	core.name = "HeroCore"
 	pod.name = "HeroPod"
+	BallLooks.replate(ball_look(), core)
 	var rec := {"core": core, "pod": pod, "layers": {}, "variant": variant, "heft": 1, "shown": {}, "tints": tints}
 	var ring_holders: Array = []
 	for i in HEFT_LAYERS.size():
@@ -1309,6 +1311,10 @@ func fit_shell_into(ball: Node3D, pilot: String, variant: String, heft_class: in
 				for key in ["core", "pod"]:
 					var part: Node3D = layer_parts[key]
 					part.transform = Transform3D.IDENTITY
+					if key == "core":
+						BallLooks.replate(ball_look(), part, n)
+					else:
+						BallLooks.strip(ball_look(), part)
 					(core_holder if key == "core" else pod_holder).add_child(part)
 				# A layer's WeaponRing rides the base ring, so a heft module turns with the aim;
 				# its holder shows and hides with the layer's Pod holder.

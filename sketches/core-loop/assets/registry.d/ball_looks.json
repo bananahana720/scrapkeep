@@ -27,10 +27,50 @@
    "path": "res://assets/models/world_one/ball_look_cutaway.glb",
    "class": "shell",
    "ships": true,
-   "loader": "src/presentation/ball_looks.gd LOOKS (behind --ball-look=cutaway; a candidate for the ball look pick of 13 Nov 2026: a solid plated ball with a camera-facing window)",
+   "loader": "src/presentation/ball_looks.gd LOOKS (behind --ball-look=cutaway, the picked look of ruling dm: its Core is the plating each pilot's own shell rolls in, cut by a camera-facing window)",
    "provenance": {
     "recipe": "tools/blender/ball_looks.py",
     "helper": "tools/blender/shell_base.py cockpit(), weapon_ring()"
+   }
+  },
+  {
+   "id": "ball_look_cutaway_c2",
+   "path": "res://assets/models/world_one/ball_look_cutaway_c2.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "src/presentation/ball_looks.gd replate (heft class II plating of the cutaway look: copper hoops)",
+   "provenance": {
+    "recipe": "tools/blender/ball_looks.py"
+   }
+  },
+  {
+   "id": "ball_look_cutaway_c3",
+   "path": "res://assets/models/world_one/ball_look_cutaway_c3.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "src/presentation/ball_looks.gd replate (heft class III plating of the cutaway look: armour over the dark gores)",
+   "provenance": {
+    "recipe": "tools/blender/ball_looks.py"
+   }
+  },
+  {
+   "id": "ball_look_cutaway_c4",
+   "path": "res://assets/models/world_one/ball_look_cutaway_c4.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "src/presentation/ball_looks.gd replate (heft class IV plating of the cutaway look: tread cleats on the belt)",
+   "provenance": {
+    "recipe": "tools/blender/ball_looks.py"
+   }
+  },
+  {
+   "id": "ball_look_cutaway_c5",
+   "path": "res://assets/models/world_one/ball_look_cutaway_c5.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "src/presentation/ball_looks.gd replate (heft class V plating of the cutaway look: copper caps with a stud crown)",
+   "provenance": {
+    "recipe": "tools/blender/ball_looks.py"
    }
   }
  ]
