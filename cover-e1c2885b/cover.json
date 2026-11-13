@@ -1,0 +1,122 @@
+{
+	"adapter": "NVIDIA GeForce RTX 4080",
+	"ball_px": 644,
+	"changed": 24,
+	"crew_px": 5805,
+	"head": "e1c2885b90070768df0e11c79466bb53bf596567",
+	"poses": [
+		{
+			"ball": 0.242236024844721,
+			"body": 0.22807924203273,
+			"look": "haze",
+			"noise": {
+				"ball": 0.0,
+				"body": 0.0,
+				"screen": 0.0
+			},
+			"pose": "lane-pending",
+			"screen": 0.273362630208333
+		},
+		{
+			"ball": 0.239130434782609,
+			"body": 0.241171403962102,
+			"look": "haze",
+			"noise": {
+				"ball": 0.0,
+				"body": 0.0,
+				"screen": 0.0
+			},
+			"pose": "lane-live",
+			"screen": 0.326151258680556
+		},
+		{
+			"ball": 0.127329192546584,
+			"body": 0.223944875107666,
+			"look": "haze",
+			"noise": {
+				"ball": 0.0,
+				"body": 0.0,
+				"screen": 0.0
+			},
+			"pose": "ring-pending",
+			"screen": 0.0389670138888889
+		},
+		{
+			"ball": 0.0015527950310559,
+			"body": 0.0494401378122308,
+			"look": "clear",
+			"noise": {
+				"ball": 0.0,
+				"body": 0.0,
+				"screen": 0.0
+			},
+			"pose": "lane-pending",
+			"screen": 0.0908235677083333
+		},
+		{
+			"ball": 0.0791925465838509,
+			"body": 0.0535745047372954,
+			"look": "clear",
+			"noise": {
+				"ball": 0.0,
+				"body": 0.0,
+				"screen": 0.0
+			},
+			"pose": "lane-live",
+			"screen": 0.139286024305556
+		},
+		{
+			"ball": 0.212732919254658,
+			"body": 0.0518518518518519,
+			"look": "clear",
+			"noise": {
+				"ball": 0.0,
+				"body": 0.0,
+				"screen": 0.0
+			},
+			"pose": "ring-pending",
+			"screen": 0.0219140625
+		},
+		{
+			"ball": 0.104037267080745,
+			"body": 0.0518518518518519,
+			"look": "edges",
+			"noise": {
+				"ball": 0.0,
+				"body": 0.0,
+				"screen": 0.0
+			},
+			"pose": "lane-pending",
+			"screen": 0.0895627170138889
+		},
+		{
+			"ball": 0.0046583850931677,
+			"body": 0.0477174849267873,
+			"look": "edges",
+			"noise": {
+				"ball": 0.0,
+				"body": 0.0,
+				"screen": 0.0
+			},
+			"pose": "lane-live",
+			"screen": 0.0905023871527778
+		},
+		{
+			"ball": 0.116459627329193,
+			"body": 0.037037037037037,
+			"look": "edges",
+			"noise": {
+				"ball": 0.0,
+				"body": 0.0,
+				"screen": 0.0
+			},
+			"pose": "ring-pending",
+			"screen": 0.0213161892361111
+		}
+	],
+	"size": [
+		1280,
+		720
+	],
+	"tool": "mark_cover_capture.gd"
+}
