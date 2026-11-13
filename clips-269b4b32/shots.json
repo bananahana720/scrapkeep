@@ -1,0 +1,344 @@
+{
+	"shots": [
+		{
+			"clip": "rest",
+			"file": "netcaster_00_rest.png",
+			"kind": "netcaster",
+			"label": "rest",
+			"t": 0.0
+		},
+		{
+			"clip": "idle",
+			"file": "netcaster_01_idle.png",
+			"kind": "netcaster",
+			"label": "idle",
+			"t": 2.501
+		},
+		{
+			"clip": "move",
+			"file": "netcaster_02_move.png",
+			"kind": "netcaster",
+			"label": "move",
+			"t": 0.117
+		},
+		{
+			"clip": "windup",
+			"file": "netcaster_03_windup_half.png",
+			"kind": "netcaster",
+			"label": "windup_half",
+			"t": 0.6
+		},
+		{
+			"clip": "windup",
+			"file": "netcaster_04_windup_release.png",
+			"kind": "netcaster",
+			"label": "windup_release",
+			"t": 1.2
+		},
+		{
+			"clip": "attack",
+			"file": "netcaster_05_attack.png",
+			"kind": "netcaster",
+			"label": "attack",
+			"t": 0.048
+		},
+		{
+			"clip": "hit",
+			"file": "netcaster_06_hit.png",
+			"kind": "netcaster",
+			"label": "hit",
+			"t": 0.036
+		},
+		{
+			"clip": "death",
+			"file": "netcaster_07_death.png",
+			"kind": "netcaster",
+			"label": "death",
+			"t": 0.5
+		},
+		{
+			"clip": "rest",
+			"file": "bola_thrower_00_rest.png",
+			"kind": "bola_thrower",
+			"label": "rest",
+			"t": 0.0
+		},
+		{
+			"clip": "idle",
+			"file": "bola_thrower_01_idle.png",
+			"kind": "bola_thrower",
+			"label": "idle",
+			"t": 2.501
+		},
+		{
+			"clip": "move",
+			"file": "bola_thrower_02_move.png",
+			"kind": "bola_thrower",
+			"label": "move",
+			"t": 0.117
+		},
+		{
+			"clip": "windup",
+			"file": "bola_thrower_03_windup_half.png",
+			"kind": "bola_thrower",
+			"label": "windup_half",
+			"t": 0.3
+		},
+		{
+			"clip": "windup",
+			"file": "bola_thrower_04_windup_release.png",
+			"kind": "bola_thrower",
+			"label": "windup_release",
+			"t": 0.6
+		},
+		{
+			"clip": "attack",
+			"file": "bola_thrower_05_attack.png",
+			"kind": "bola_thrower",
+			"label": "attack",
+			"t": 0.048
+		},
+		{
+			"clip": "hit",
+			"file": "bola_thrower_06_hit.png",
+			"kind": "bola_thrower",
+			"label": "hit",
+			"t": 0.036
+		},
+		{
+			"clip": "death",
+			"file": "bola_thrower_07_death.png",
+			"kind": "bola_thrower",
+			"label": "death",
+			"t": 0.5
+		},
+		{
+			"clip": "rest",
+			"file": "swatter_00_rest.png",
+			"kind": "swatter",
+			"label": "rest",
+			"t": 0.0
+		},
+		{
+			"clip": "idle",
+			"file": "swatter_01_idle.png",
+			"kind": "swatter",
+			"label": "idle",
+			"t": 2.501
+		},
+		{
+			"clip": "move",
+			"file": "swatter_02_move.png",
+			"kind": "swatter",
+			"label": "move",
+			"t": 0.117
+		},
+		{
+			"clip": "windup",
+			"file": "swatter_03_windup_half.png",
+			"kind": "swatter",
+			"label": "windup_half",
+			"t": 0.4
+		},
+		{
+			"clip": "windup",
+			"file": "swatter_04_windup_release.png",
+			"kind": "swatter",
+			"label": "windup_release",
+			"t": 0.8
+		},
+		{
+			"clip": "attack",
+			"file": "swatter_05_attack.png",
+			"kind": "swatter",
+			"label": "attack",
+			"t": 0.032
+		},
+		{
+			"clip": "hit",
+			"file": "swatter_06_hit.png",
+			"kind": "swatter",
+			"label": "hit",
+			"t": 0.036
+		},
+		{
+			"clip": "death",
+			"file": "swatter_07_death.png",
+			"kind": "swatter",
+			"label": "death",
+			"t": 0.5
+		},
+		{
+			"clip": "rest",
+			"file": "catch_trap_00_rest.png",
+			"kind": "catch_trap",
+			"label": "rest",
+			"t": 0.0
+		},
+		{
+			"clip": "idle",
+			"file": "catch_trap_01_idle.png",
+			"kind": "catch_trap",
+			"label": "idle",
+			"t": 2.501
+		},
+		{
+			"clip": "move",
+			"file": "catch_trap_02_move.png",
+			"kind": "catch_trap",
+			"label": "move",
+			"t": 0.117
+		},
+		{
+			"clip": "windup",
+			"file": "catch_trap_03_windup_half.png",
+			"kind": "catch_trap",
+			"label": "windup_half",
+			"t": 0.5
+		},
+		{
+			"clip": "windup",
+			"file": "catch_trap_04_windup_release.png",
+			"kind": "catch_trap",
+			"label": "windup_release",
+			"t": 1.0
+		},
+		{
+			"clip": "attack",
+			"file": "catch_trap_05_attack.png",
+			"kind": "catch_trap",
+			"label": "attack",
+			"t": 0.048
+		},
+		{
+			"clip": "hit",
+			"file": "catch_trap_06_hit.png",
+			"kind": "catch_trap",
+			"label": "hit",
+			"t": 0.036
+		},
+		{
+			"clip": "death",
+			"file": "catch_trap_07_death.png",
+			"kind": "catch_trap",
+			"label": "death",
+			"t": 0.5
+		},
+		{
+			"clip": "rest",
+			"file": "deflector_00_rest.png",
+			"kind": "deflector",
+			"label": "rest",
+			"t": 0.0
+		},
+		{
+			"clip": "idle",
+			"file": "deflector_01_idle.png",
+			"kind": "deflector",
+			"label": "idle",
+			"t": 2.501
+		},
+		{
+			"clip": "move",
+			"file": "deflector_02_move.png",
+			"kind": "deflector",
+			"label": "move",
+			"t": 0.117
+		},
+		{
+			"clip": "windup",
+			"file": "deflector_03_windup_half.png",
+			"kind": "deflector",
+			"label": "windup_half",
+			"t": 0.45
+		},
+		{
+			"clip": "windup",
+			"file": "deflector_04_windup_release.png",
+			"kind": "deflector",
+			"label": "windup_release",
+			"t": 0.9
+		},
+		{
+			"clip": "attack",
+			"file": "deflector_05_attack.png",
+			"kind": "deflector",
+			"label": "attack",
+			"t": 0.048
+		},
+		{
+			"clip": "hit",
+			"file": "deflector_06_hit.png",
+			"kind": "deflector",
+			"label": "hit",
+			"t": 0.036
+		},
+		{
+			"clip": "death",
+			"file": "deflector_07_death.png",
+			"kind": "deflector",
+			"label": "death",
+			"t": 0.5
+		},
+		{
+			"clip": "rest",
+			"file": "gyro_jammer_00_rest.png",
+			"kind": "gyro_jammer",
+			"label": "rest",
+			"t": 0.0
+		},
+		{
+			"clip": "idle",
+			"file": "gyro_jammer_01_idle.png",
+			"kind": "gyro_jammer",
+			"label": "idle",
+			"t": 2.501
+		},
+		{
+			"clip": "move",
+			"file": "gyro_jammer_02_move.png",
+			"kind": "gyro_jammer",
+			"label": "move",
+			"t": 0.117
+		},
+		{
+			"clip": "windup",
+			"file": "gyro_jammer_03_windup_half.png",
+			"kind": "gyro_jammer",
+			"label": "windup_half",
+			"t": 0.5
+		},
+		{
+			"clip": "windup",
+			"file": "gyro_jammer_04_windup_release.png",
+			"kind": "gyro_jammer",
+			"label": "windup_release",
+			"t": 1.0
+		},
+		{
+			"clip": "attack",
+			"file": "gyro_jammer_05_attack.png",
+			"kind": "gyro_jammer",
+			"label": "attack",
+			"t": 0.048
+		},
+		{
+			"clip": "hit",
+			"file": "gyro_jammer_06_hit.png",
+			"kind": "gyro_jammer",
+			"label": "hit",
+			"t": 0.036
+		},
+		{
+			"clip": "death",
+			"file": "gyro_jammer_07_death.png",
+			"kind": "gyro_jammer",
+			"label": "death",
+			"t": 0.5
+		}
+	],
+	"size": [
+		640,
+		480
+	]
+}

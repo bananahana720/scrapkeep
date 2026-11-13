@@ -20,3 +20,9 @@
 ## Run
 
 Both jobs ran on headless gamescope on the RTX 4080, with sound off and a scratch data home. Import and capture exited 0 for both.
+
+## Version 2 (jobs AE2 and AF2)
+
+- AE2 used PR 966 at 1e4ea54a, with the same scratch lamp_capture.gd and the same framing as the third take. Files are in lamps-1e4ea54a/. At 75% of the wind-up the lamp's energy is 0.84, which is below the new 1.3 peak. At rest it is 0.25.
+- AF2 used PR 968 at 269b4b32, with the same enemy_clip_capture.gd command. Files are in clips-269b4b32/.
+- Both runs exited 0 on headless gamescope on the RTX 4080, with sound off.
