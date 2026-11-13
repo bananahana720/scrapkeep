@@ -23,6 +23,7 @@ const SWAY_MAX := 0.25
 # The conveyor's buckets ride a MultiMesh each way, built from the GLB's CupFull and CupEmpty.
 const CONVEYOR := {
 	"model": "res://assets/models/world_one/works_conveyor.glb",
+	"scale": 1.6,
 	"belt": {"from": Vector3(0.0, 3.0, 13.0), "to": Vector3(0.0, 16.0, -11.0), "spacing_m": 2.0, "ride_m": 0.35, "return_m": 1.35},
 	"start": {"run_m": 0.0},
 	"steps": [
@@ -36,7 +37,7 @@ const CONVEYOR := {
 	],
 }
 
-# One row per kind: its model, its work cycle and the boxes that stand solid, in the machine's frame
+# One row per kind: its model (drawn at "scale", 1 when absent), its work cycle and the boxes that stand solid, in the machine's frame
 # (origin on the ground under its pivot, the working side towards -Z). A cycle is a list of steps,
 # [seconds, {channel: target}]: each step eases its channels from where the last step left them to
 # its targets (a channel it does not name holds), and the cycle starts where its last step ends, so
@@ -69,6 +70,7 @@ const KINDS := {
 	},
 	"sluice": {
 		"model": "res://assets/models/world_one/works_sluice.glb",
+		"scale": 1.35,
 		"wheel_rad_per_m": 2.4,
 		"steps": [
 			[6.0, {"lift_m": 4.2}],
@@ -94,13 +96,13 @@ const NODES := ["Slew", "Hook", "Fall", "Load", "Gate", "Wheel", "BeltFull", "Be
 const ROWS := {
 	"park_dam": [
 		{"id": "dam_pour_derrick", "kind": "derrick", "at": Vector2(-120.0, 600.0), "yaw_deg": 90.0, "phase_s": 0.0},
-		{"id": "wheelhouse_sluice", "kind": "sluice", "at": Vector2(-1.0, -301.0), "yaw_deg": 135.0, "phase_s": 4.0},
-		{"id": "rim_batch_conveyor", "kind": "conveyor", "at": Vector2(-180.0, -220.0), "yaw_deg": 0.0, "phase_s": 7.0},
+		{"id": "wheelhouse_sluice", "kind": "sluice", "at": Vector2(20.0, -280.0), "yaw_deg": -90.0, "phase_s": 4.0},
+		{"id": "rim_batch_conveyor", "kind": "conveyor", "at": Vector2(-200.0, -240.0), "yaw_deg": 45.0, "phase_s": 7.0},
 	],
 	"park_flume": [
 		{"id": "weir_pond_derrick", "kind": "derrick", "at": Vector2(-520.0, -700.0), "yaw_deg": 90.0, "phase_s": 11.0},
-		{"id": "bend_sluice", "kind": "sluice", "at": Vector2(120.0, -162.0), "yaw_deg": 118.0, "phase_s": 17.0},
-		{"id": "bench_batch_conveyor", "kind": "conveyor", "at": Vector2(-80.0, 480.0), "yaw_deg": 45.0, "phase_s": 3.0},
+		{"id": "rim_road_sluice", "kind": "sluice", "at": Vector2(-140.0, -80.0), "yaw_deg": 0.0, "phase_s": 17.0},
+		{"id": "bench_batch_conveyor", "kind": "conveyor", "at": Vector2(-160.0, 380.0), "yaw_deg": -135.0, "phase_s": 3.0},
 	],
 }
 
@@ -114,6 +116,38 @@ static var _scenes := {}
 
 static func rows_for(map: String) -> Array:
 	return ROWS.get(map, [])
+
+
+# A row's pivot and the ground corners of every solid box, in park metres (x, z).
+static func footprint(row: Dictionary) -> PackedVector2Array:
+	var kind: Dictionary = KINDS[row.kind]
+	var basis := Basis(Vector3.UP, deg_to_rad(float(row.yaw_deg))).scaled(Vector3.ONE * float(kind.get("scale", 1.0)))
+	var out := PackedVector2Array([row.at])
+	for box in kind.solid:
+		for cx in [-0.5, 0.5]:
+			for cz in [-0.5, 0.5]:
+				var c: Vector3 = basis * (box.at + Vector3(box.size.x * cx, 0.0, box.size.z * cz))
+				out.append(row.at + Vector2(c.x, c.z))
+	return out
+
+
+# Where a derrick's boom tip passes over its whole slew, 21 points; empty for a kind with no boom.
+static func reach(row: Dictionary) -> PackedVector2Array:
+	var kind: Dictionary = KINDS[row.kind]
+	var out := PackedVector2Array()
+	if not kind.has("reach_m"):
+		return out
+	var lo := INF
+	var hi := -INF
+	for step in kind.steps:
+		if step[1].has("slew_deg"):
+			lo = minf(lo, step[1].slew_deg)
+			hi = maxf(hi, step[1].slew_deg)
+	for i in 21:
+		var yaw := deg_to_rad(float(row.yaw_deg) + lerpf(lo, hi, i / 20.0))
+		var tip: Vector3 = Basis(Vector3.UP, yaw) * Vector3(0.0, 0.0, -float(kind.reach_m) * float(kind.get("scale", 1.0)))
+		out.append(row.at + Vector2(tip.x, tip.z))
+	return out
 
 
 static func cycle_s(kind: String) -> float:
@@ -207,12 +241,11 @@ func _build(row: Dictionary, ground: Callable) -> Dictionary:
 	root.name = String(row.id)
 	add_child(root)
 	var yaw := deg_to_rad(float(row.yaw_deg))
-	var basis := Basis(Vector3.UP, yaw)
+	var basis := Basis(Vector3.UP, yaw).scaled(Vector3.ONE * float(kind.get("scale", 1.0)))
 	# Seat on the lowest of the pivot and the footings, so nothing stands on air.
-	var floor_y: float = ground.call(row.at.x, row.at.y, 0.0).y
-	for box in kind.solid:
-		var foot: Vector3 = basis * Vector3(box.at.x, 0.0, box.at.z)
-		floor_y = minf(floor_y, ground.call(row.at.x + foot.x, row.at.y + foot.z, 0.0).y)
+	var floor_y := INF
+	for p in footprint(row):
+		floor_y = minf(floor_y, ground.call(p.x, p.y, 0.0).y)
 	root.transform = Transform3D(basis, Vector3(row.at.x, floor_y, row.at.y))
 	_paint(root)
 	var body := StaticBody3D.new()

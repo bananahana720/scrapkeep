@@ -32,6 +32,7 @@ RUST = common.mix("oxide", "charcoal", 0.25)
 CONCRETE = common.mix("sandstone", "bone", 0.45)
 CONCRETE_DARK = common.mix("sandstone", "charcoal", 0.3)
 WET = common.mix("charcoal", "petrol", 0.45)
+LEAF = common.mix("petrol", "bone", 0.45)
 ROPE = "9aa0a0"
 
 HALF_W = 4.0       # the channel's inner half width
@@ -106,7 +107,8 @@ finish(p, parent=root)
 # --- Gate: the leaf and its rising stem ---------------------------------------------------------------------------
 gate = common.empty("Gate", parent=root)
 p = Part("Leaf")
-box(p, (2 * HALF_W + 0.4, LEAF_H, 0.25), (0, LEAF_H / 2, 0), PETROL)
+# The leaf's skin is the lightest paint on the machine, so its rise reads against the dark slot.
+box(p, (2 * HALF_W + 0.4, LEAF_H, 0.25), (0, LEAF_H / 2, 0), LEAF)
 for y in (0.4, 1.3, 2.2, 3.1):
     box(p, (2 * HALF_W + 0.2, 0.32, 0.5), (0, y, 0.3), PETROL_DARK)
 for x in (-2.6, 0.0, 2.6):

@@ -21,6 +21,9 @@ const ROW_CLEAR_M := 4.0
 # A machine is there to be seen from the ride: of the line within SIGHT_M of it, at least SIGHT_SHARE
 # has a clear sight line over the baked ground from chase height to the machine's middle.
 const HOME_CLEAR_M := 25.0
+# A row this tall (masts, stacks, piers) hides a machine behind it, so none stands within TALL_CLEAR_M.
+const TALL_M := 15.0
+const TALL_CLEAR_M := 30.0
 const RING_CLEAR_M := 40.0
 const SIGHT_M := 160.0
 const SIGHT_SHARE := 0.5
@@ -135,58 +138,64 @@ func _placement(map_id: String) -> void:
 	var rows := WorkMachines.rows_for(map_id)
 	_t.check("%s stands two or three machines (%d)" % [map_id, rows.size()], rows.size() >= 1 and rows.size() <= 3)
 	for row in rows:
-		var kind: Dictionary = WorkMachines.KINDS[row.kind]
-		var basis := Basis(Vector3.UP, deg_to_rad(float(row.yaw_deg)))
-		var foot_gap := INF
-		var foot_points := [row.at]
-		for box in kind.solid:
-			for cx in [-0.5, 0.5]:
-				for cz in [-0.5, 0.5]:
-					var corner: Vector3 = basis * (box.at + Vector3(box.size.x * cx, 0.0, box.size.z * cz))
-					foot_points.append(row.at + Vector2(corner.x, corner.z))
-		var lo := INF
-		var hi := -INF
-		for p in foot_points:
-			foot_gap = minf(foot_gap, _line_gap(p, lines))
-			var y := Terrain._grid_height(heights, p.x, p.y)
-			lo = minf(lo, y)
-			hi = maxf(hi, y)
-		_t.check("%s %s: ground under the footings spans %.2f m (at %.1f m)" % [map_id, row.id, hi - lo, lo], hi - lo <= FOOT_SPREAD_M)
-		_t.check("%s %s: footings %.1f m off every line" % [map_id, row.id, foot_gap], foot_gap >= LINE_CLEAR_M)
-		var tip_points := []
-		if kind.has("reach_m"):
-			var tip_gap := INF
-			var sweep := _span(row.kind, "slew_deg")
-			for i in 21:
-				var slew := deg_to_rad(lerpf(sweep.x, sweep.y, i / 20.0))
-				var tip: Vector3 = Basis(Vector3.UP, deg_to_rad(float(row.yaw_deg)) + slew) * Vector3(0.0, 0.0, -float(kind.reach_m))
-				var p: Vector2 = row.at + Vector2(tip.x, tip.z)
-				tip_points.append(p)
-				tip_gap = minf(tip_gap, _line_gap(p, lines))
-			_t.check("%s %s: the tip swings %.1f m off every line at worst" % [map_id, row.id, tip_gap], tip_gap >= TIP_CLEAR_M)
-		var home_gap := INF
-		for home in park.home_rows:
-			for park_row in park.park_rows:
-				if park_row.id == home.site:
-					for p in foot_points:
-						home_gap = minf(home_gap, _row_gap(p, park_row))
-		_t.check("%s %s: %.0f m from the nearest enemy home's site" % [map_id, row.id, home_gap], home_gap >= HOME_CLEAR_M)
-		var beacon := Vector2(float(park.landmark.beacon[0]), float(park.landmark.beacon[1]))
-		var ring := float(park.landmark.reach_m) + RING_CLEAR_M
-		_t.check("%s %s: outside the Warden's ring (%.0f m, ring %.0f m)" % [map_id, row.id, row.at.distance_to(beacon), ring], row.at.distance_to(beacon) >= ring)
-		var seen := _seen_from_lines(row, lines, heights)
-		_t.check("%s %s: seen from %d%% of the line within %d m (%d samples)" % [map_id, row.id, int(seen.x * 100.0), int(SIGHT_M), int(seen.y)], seen.y > 0 and seen.x >= SIGHT_SHARE)
-		var hits := []
+		var j := _judge(row, park, lines, heights)
+		_t.check("%s %s: ground under the footings spans %.2f m" % [map_id, row.id, j.spread], j.spread <= FOOT_SPREAD_M)
+		_t.check("%s %s: footings %.1f m off every line" % [map_id, row.id, j.foot_gap], j.foot_gap >= LINE_CLEAR_M)
+		if j.has("tip_gap"):
+			_t.check("%s %s: the tip swings %.1f m off every line at worst" % [map_id, row.id, j.tip_gap], j.tip_gap >= TIP_CLEAR_M)
+		_t.check("%s %s: %.0f m from the nearest enemy home's site" % [map_id, row.id, j.home_gap], j.home_gap >= HOME_CLEAR_M)
+		_t.check("%s %s: outside the Warden's ring (%.0f m, ring %.0f m)" % [map_id, row.id, j.beacon_gap, j.ring], j.beacon_gap >= j.ring)
+		_t.check("%s %s: seen from %d%% of the line within %d m (%d samples)" % [map_id, row.id, int(j.seen * 100.0), int(SIGHT_M), j.samples], j.samples > 0 and j.seen >= SIGHT_SHARE)
+		_t.check("%s %s: clear of every built row" % [map_id, row.id], j.rows.is_empty(), str(j.rows))
+		_t.check("%s %s: no tall row within %d m to hide it" % [map_id, row.id, int(TALL_CLEAR_M)], j.tall.is_empty(), str(j.tall))
+
+
+# Every placement measure for a row: footing ground spread, gaps to the lines, enemy homes and the
+# Warden's beacon, the share of nearby line that sees it, and the built and tall rows it crowds.
+func _judge(row: Dictionary, park: Dictionary, lines: Array, heights: PackedFloat32Array) -> Dictionary:
+	var foot := WorkMachines.footprint(row)
+	var tips := WorkMachines.reach(row)
+	var out := {"rows": [], "tall": []}
+	var lo := INF
+	var hi := -INF
+	var foot_gap := INF
+	for p in foot:
+		foot_gap = minf(foot_gap, _line_gap(p, lines))
+		var y := Terrain._grid_height(heights, p.x, p.y)
+		lo = minf(lo, y)
+		hi = maxf(hi, y)
+	out.spread = hi - lo
+	out.foot_gap = foot_gap
+	if not tips.is_empty():
+		var tip_gap := INF
+		for p in tips:
+			tip_gap = minf(tip_gap, _line_gap(p, lines))
+		out.tip_gap = tip_gap
+	var home_gap := INF
+	for home in park.home_rows:
 		for park_row in park.park_rows:
-			if park_row.element == "ground":
-				continue
-			if maxf(float(park_row.size[0]), float(park_row.size[2])) > 300.0:
-				continue
-			for p in foot_points + tip_points:
-				if _row_gap(p, park_row) < ROW_CLEAR_M:
-					hits.append(park_row.id)
-					break
-		_t.check("%s %s: clear of every built row" % [map_id, row.id], hits.is_empty(), str(hits))
+			if park_row.id == home.site:
+				for p in foot:
+					home_gap = minf(home_gap, _row_gap(p, park_row))
+	out.home_gap = home_gap
+	var beacon := Vector2(float(park.landmark.beacon[0]), float(park.landmark.beacon[1]))
+	out.beacon_gap = row.at.distance_to(beacon)
+	out.ring = float(park.landmark.reach_m) + RING_CLEAR_M
+	var seen := _seen_from_lines(row, lines, heights)
+	out.seen = seen.x
+	out.samples = int(seen.y)
+	var all := Array(foot) + Array(tips)
+	for park_row in park.park_rows:
+		if park_row.element == "ground" or maxf(float(park_row.size[0]), float(park_row.size[2])) > 300.0:
+			continue
+		var near := INF
+		for p in all:
+			near = minf(near, _row_gap(p, park_row))
+		if near < ROW_CLEAR_M:
+			out.rows.append(park_row.id)
+		elif float(park_row.size[1]) >= TALL_M and near < TALL_CLEAR_M:
+			out.tall.append(park_row.id)
+	return out
 
 
 # (share of line samples within SIGHT_M that see the machine, sample count), every 4 m along each line.
