@@ -7,18 +7,11 @@
 # Seeded 12 Nov 2026 from the census of cand/w40 243794e0 (seed 40317, pylon_engineer, park table, through Brindle).
 # Stand-in rows come first: the first row that covers a surface judges it, so a code glob cannot hide a stand-in.
 arena.gd	CylinderMesh	Node3D/SlagBowl/WaterVent	code	-	the rim vent's glowing quench pad (arena.gd _vent), the mark the ball rolls onto; the nozzle beside it is slag_bowl_kit.glb
-arena.gd	CylinderMesh	BrindleReward/RewardCanister/BoneBand	code	-	bone band on the reward canister model
-arena.gd	CylinderMesh	Node3D/RewardCanister/BoneBand	code	-	bone band on the reward canister model
-bay.gd	BoxMesh	Barge/YardWall/MeshInstance3D	stand-in	W1-23	Moss's bay: yard wall, pins, cradle and barge fittings in code (found by the census, not in the audit table; W1-23 confirms or re-pins as code)
-bay.gd	BoxMesh	MossBay/Barge/MeshInstance3D	stand-in	W1-23	Moss's bay: yard wall, pins, cradle and barge fittings in code (found by the census, not in the audit table; W1-23 confirms or re-pins as code)
-bay.gd	CylinderMesh	Barge/Pin/MeshInstance3D	stand-in	W1-23	Moss's bay: yard wall, pins, cradle and barge fittings in code (found by the census, not in the audit table; W1-23 confirms or re-pins as code)
-bay.gd	CylinderMesh	Barge/StaticBody3D/MeshInstance3D	stand-in	W1-23	Moss's bay: yard wall, pins, cradle and barge fittings in code (found by the census, not in the audit table; W1-23 confirms or re-pins as code)
-bay.gd	CylinderMesh	MossBay/Barge/MeshInstance3D	stand-in	W1-23	Moss's bay: yard wall, pins, cradle and barge fittings in code (found by the census, not in the audit table; W1-23 confirms or re-pins as code)
-bay.gd	CylinderMesh	MossBay/Cradle/MeshInstance3D	stand-in	W1-23	Moss's bay: yard wall, pins, cradle and barge fittings in code (found by the census, not in the audit table; W1-23 confirms or re-pins as code)
-bay.gd	QuadMesh	MossBay/Barge/BakedLamplight	stand-in	W1-23	Moss's bay: yard wall, pins, cradle and barge fittings in code (found by the census, not in the audit table; W1-23 confirms or re-pins as code)
-bay.gd	SphereMesh	MossBay/Barge/MeshInstance3D	stand-in	W1-23	Moss's bay: yard wall, pins, cradle and barge fittings in code (found by the census, not in the audit table; W1-23 confirms or re-pins as code)
-bay.gd	TorusMesh	MossBay/Barge/MeshInstance3D	stand-in	W1-23	Moss's bay: yard wall, pins, cradle and barge fittings in code (found by the census, not in the audit table; W1-23 confirms or re-pins as code)
-bay.gd	TorusMesh	MossBay/Cradle/MeshInstance3D	stand-in	W1-23	Moss's bay: yard wall, pins, cradle and barge fittings in code (found by the census, not in the audit table; W1-23 confirms or re-pins as code)
+bay.gd	BoxMesh	MossBay/Barge/MeshInstance3D	code	-	Moss's bay marks: the three glowing rarity tokens on the shelf, the painted floor mats, the pad chevrons and the deck line; the props are bay_kit.glb
+bay.gd	CylinderMesh	MossBay/Barge/MeshInstance3D	code	-	Moss's bay effects and marks: the four thruster steam jets and the launch pad disc; the props are bay_kit.glb
+bay.gd	QuadMesh	MossBay/Barge/BakedLamplight	code	-	Moss's bay baked lamplight, a lighting card
+bay.gd	SphereMesh	MossBay/Barge/MeshInstance3D	code	-	the marble toy's marble, a ball by design
+bay.gd	TorusMesh	MossBay/Cradle/MeshInstance3D	code	-	the dock cradle's glowing amber ring, the mark that says roll here
 build_read.gd	SphereMesh	SubViewport/Node3D/MeshInstance3D	stand-in	W1-46	pause build preview: a grey sphere where the ball should be
 contraptions.gd	CylinderMesh	Contraptions/*_geyser/MeshInstance3D	code	-	geyser steam column (contraptions.gd _build_launcher): a translucent column that swells with the charge over the geyser_vent model
 rescue_site.gd	BoxMesh	rivet_cage/Node3D/MeshInstance3D	code	-	the cage's dashed ground ring (device.gd ground_ring), the interact mark every device draws; the cage itself is rescue_cage.glb
@@ -32,6 +25,8 @@ activity_view.gd	BoxMesh	*/View_*/Column	code	-	activity column, glyph and ring:
 activity_view.gd	BoxMesh	View_*/Glyph/MeshInstance3D	code	-	activity column, glyph and ring: marks
 activity_view.gd	BoxMesh	View_*/Ring/MeshInstance3D	code	-	activity column, glyph and ring: marks
 activity_view.gd	SphereMesh	View_*/Glyph/MeshInstance3D	code	-	activity column, glyph and ring: marks
+arena.gd	CylinderMesh	BrindleReward/RewardCanister/BoneBand	code	-	bone band on the reward canister model
+arena.gd	CylinderMesh	Node3D/RewardCanister/BoneBand	code	-	bone band on the reward canister model
 beacon.gd	SphereMesh	Node3D/Beacon/MeshInstance3D	code	-	beacon light and ring
 beacon.gd	TorusMesh	Node3D/Beacon/MeshInstance3D	code	-	beacon light and ring
 bolts.gd	BoxMesh	Node3D/Bolts/MultiMeshInstance3D	code	-	shot bolts, an effect

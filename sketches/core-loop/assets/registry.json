@@ -36285,6 +36285,23 @@
    "exception_why": "Opt-in device with independently controlled state parts; existing prop class covers one small static mesh. Limits asserted by device_props_asset_test."
   },
   {
+   "id": "bay_kit",
+   "path": "res://assets/models/world_one/bay_kit.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/world/bay.gd",
+   "provenance": {
+    "recipe": "tools/blender/world_one/bay_kit.py",
+    "note": "Procedural vertex-coloured Moss's bay kit (W1-23): cabin front, bell and frame, marble toy, yard wall, grapple post, bowling pin, dock cradle cup and mast."
+   },
+   "exception": {
+    "tris": 4000,
+    "verts": 8000,
+    "draws": 9
+   },
+   "exception_why": "Nine separately placed props on the barge and its dock cradle, one draw each, seen one bay at a time. Limits asserted by the recipe."
+  },
+  {
    "id": "bet_crate",
    "path": "res://assets/models/world_one/bet_crate.glb",
    "class": "prop",
@@ -37637,6 +37654,7 @@
   "barge_fenders",
   "barge_skin",
   "barge_skin_rusted-salvaged-plate.webp",
+  "bay_kit",
   "bed_cut",
   "bed_floor",
   "bed_recess",
