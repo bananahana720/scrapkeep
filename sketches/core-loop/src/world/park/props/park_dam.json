@@ -2700,7 +2700,7 @@
    "template": "survey_station",
    "at": [
     -44,
-    240
+    230
    ],
    "yaw_deg": -145,
    "near": "the_eye: A survey crew's tent"
@@ -3072,5 +3072,5 @@
   ],
   "seed": 11
  },
- "pin": 3359532784
+ "pin": 1219686764
 }

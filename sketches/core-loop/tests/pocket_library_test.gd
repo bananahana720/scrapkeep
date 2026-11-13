@@ -94,9 +94,10 @@ func _schema(entries: Array) -> void:
 			var key: String = entry.assigned.map + "/" + entry.assigned.row
 			t.check(entry.id + " unique assignment", not assignments.has(key))
 			assignments[key] = entry.id
-	t.eq("24 interiors", entries.size(), 24)
-	t.eq("eight per kind", split, {"arena": 8, "trade": 8, "secret": 8})
-	t.eq("eight live world-one assignments", assignments.size(), 8)
+	t.eq("25 interiors", entries.size(), 25)
+	# The ninth secret is the dam's blazing cache room (W1-76), assigned and so never drawn.
+	t.eq("eight per kind, nine secrets", split, {"arena": 8, "trade": 8, "secret": 9})
+	t.eq("nine live world-one assignments", assignments.size(), 9)
 	var copy: Array = library.rows()
 	copy[0].tell.word = "mutated caller"
 	t.check("callers cannot mutate cached library", library.rows()[0].tell.word != "mutated caller")
@@ -202,7 +203,8 @@ func _wiring(entries: Array) -> void:
 		game.ctx.terrain.stage = int(definition.stage)
 		acts._on_stage_entered(game.run.stage, false)
 		for i in map.activity_sites.size():
-			var spec: Dictionary = map.activity_sites[i]
+			# The site this run built: the row, or the alt its seed drew (W1-70), which keeps the row's interior.
+			var spec: Dictionary = acts.drawn(map.activity_sites[i])
 			if not spec.id in ARENAS and spec.id != "cracked_cache":
 				continue
 			var row_id: String = spec.get("row", spec.id)
@@ -233,7 +235,7 @@ func _wiring(entries: Array) -> void:
 		game.ctx.terrain.stage = index + 1
 		acts.clear()
 		await physics_frame
-	t.eq("world one live coverage", covered, 8)
+	t.eq("world one live coverage", covered, 9)
 	game.ctx.terrain.maps[index] = previous
 
 func _unchanged() -> void:

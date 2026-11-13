@@ -36319,6 +36319,17 @@
    "exception_why": "Opt-in device with independently controlled state parts; existing prop class covers one small static mesh. Limits asserted by device_props_asset_test."
   },
   {
+   "id": "bola_thrower_clips",
+   "path": "res://assets/models/world_one/clips/bola_thrower_clips.glb",
+   "class": "enemy",
+   "ships": true,
+   "loader": "src/presentation/enemy_clips.gd",
+   "provenance": {
+    "recipe": "tools/blender/world_one/field_motion.py",
+    "build_spec": "W1-87 clips for the rest of the Spillway crew (BACKLOG.md, World 1 enemy life)"
+   }
+  },
+  {
    "id": "boom_tender_clips",
    "path": "res://assets/models/world_one/clips/boom_tender_clips.glb",
    "class": "enemy",
@@ -36330,6 +36341,17 @@
    }
   },
   {
+   "id": "catch_trap_clips",
+   "path": "res://assets/models/world_one/clips/catch_trap_clips.glb",
+   "class": "enemy",
+   "ships": true,
+   "loader": "src/presentation/enemy_clips.gd",
+   "provenance": {
+    "recipe": "tools/blender/world_one/field_motion.py",
+    "build_spec": "W1-87 clips for the rest of the Spillway crew (BACKLOG.md, World 1 enemy life)"
+   }
+  },
+  {
    "id": "chaser_clips",
    "path": "res://assets/models/world_one/clips/chaser_clips.glb",
    "class": "enemy",
@@ -36338,6 +36360,28 @@
    "provenance": {
     "recipe": "tools/blender/world_one/field_motion.py",
     "build_spec": "world 1 unit 13, Spillway enemy clips (/mnt/project-files/world1/UNITS.md)"
+   }
+  },
+  {
+   "id": "deflector_clips",
+   "path": "res://assets/models/world_one/clips/deflector_clips.glb",
+   "class": "enemy",
+   "ships": true,
+   "loader": "src/presentation/enemy_clips.gd",
+   "provenance": {
+    "recipe": "tools/blender/world_one/field_motion.py",
+    "build_spec": "W1-87 clips for the rest of the Spillway crew (BACKLOG.md, World 1 enemy life)"
+   }
+  },
+  {
+   "id": "gyro_jammer_clips",
+   "path": "res://assets/models/world_one/clips/gyro_jammer_clips.glb",
+   "class": "enemy",
+   "ships": true,
+   "loader": "src/presentation/enemy_clips.gd",
+   "provenance": {
+    "recipe": "tools/blender/world_one/field_motion.py",
+    "build_spec": "W1-87 clips for the rest of the Spillway crew (BACKLOG.md, World 1 enemy life)"
    }
   },
   {
@@ -36385,6 +36429,17 @@
    }
   },
   {
+   "id": "netcaster_clips",
+   "path": "res://assets/models/world_one/clips/netcaster_clips.glb",
+   "class": "enemy",
+   "ships": true,
+   "loader": "src/presentation/enemy_clips.gd",
+   "provenance": {
+    "recipe": "tools/blender/world_one/field_motion.py",
+    "build_spec": "W1-87 clips for the rest of the Spillway crew (BACKLOG.md, World 1 enemy life)"
+   }
+  },
+  {
    "id": "plated_brute_clips",
    "path": "res://assets/models/world_one/clips/plated_brute_clips.glb",
    "class": "enemy",
@@ -36404,6 +36459,17 @@
    "provenance": {
     "recipe": "tools/blender/world_one/field_motion.py",
     "build_spec": "world 1 unit 13 clips for the Spillway roster (design-v3/SPILLWAY-ROSTER.md)"
+   }
+  },
+  {
+   "id": "swatter_clips",
+   "path": "res://assets/models/world_one/clips/swatter_clips.glb",
+   "class": "enemy",
+   "ships": true,
+   "loader": "src/presentation/enemy_clips.gd",
+   "provenance": {
+    "recipe": "tools/blender/world_one/field_motion.py",
+    "build_spec": "W1-87 clips for the rest of the Spillway crew (BACKLOG.md, World 1 enemy life)"
    }
   },
   {
@@ -37663,6 +37729,7 @@
   "bench_coping_detail1",
   "bench_coping_detail2",
   "bet_crate",
+  "bola_thrower_clips",
   "boom_tender_clips",
   "boss_brindle",
   "boss_brindle_scooter",
@@ -37733,6 +37800,7 @@
   "cannon_launcher_gauge",
   "cart_body",
   "cart_wheel",
+  "catch_trap_clips",
   "cavern_shell",
   "cavern_shell_detail1",
   "cavern_shell_detail2",
@@ -37925,6 +37993,7 @@
   "decal_seashell_mask.png",
   "decal_snail_shell_mask.png",
   "decal_thimble_mask.png",
+  "deflector_clips",
   "dprop_crown_billing_booth_a",
   "dprop_crown_billing_booth_a_lod1",
   "dprop_crown_billing_booth_a_lod2",
@@ -38876,6 +38945,7 @@
   "great_room_deck",
   "great_room_deck_detail1",
   "great_room_deck_detail2",
+  "gyro_jammer_clips",
   "half_pipe_concrete",
   "half_pipe_concrete_detail1",
   "half_pipe_concrete_detail2",
@@ -39080,6 +39150,7 @@
   "net_edge",
   "net_shoe",
   "net_tile",
+  "netcaster_clips",
   "ore_bin",
   "ore_bin_detail1",
   "ore_bin_detail2",
@@ -39301,6 +39372,7 @@
   "survey_mast_40",
   "survey_mast_40_detail1",
   "survey_mast_40_detail2",
+  "swatter_clips",
   "tailings_lip",
   "tailings_lip_detail1",
   "tailings_lip_detail2",
