@@ -6,9 +6,9 @@
 # A glob covers only one owner's own subtree: game.gd owns every unscripted node under the game root, so its rows are exact.
 # Seeded 12 Nov 2026 from the census of cand/w40 243794e0 (seed 40317, pylon_engineer, park table, through Brindle).
 # Stand-in rows come first: the first row that covers a surface judges it, so a code glob cannot hide a stand-in.
-arena.gd	BoxMesh	Node3D/SlagBowl/MeshInstance3D	stand-in	W1-23	Slag Bowl crane mast, boom and rim vent
-arena.gd	CylinderMesh	Node3D/SlagBowl/MeshInstance3D	stand-in	W1-23	Slag Bowl crane mast, boom and rim vent
-arena.gd	CylinderMesh	Node3D/SlagBowl/WaterVent	stand-in	W1-23	Slag Bowl crane mast, boom and rim vent
+arena.gd	CylinderMesh	Node3D/SlagBowl/WaterVent	code	-	the rim vent's glowing quench pad (arena.gd _vent), the mark the ball rolls onto; the nozzle beside it is slag_bowl_kit.glb
+arena.gd	CylinderMesh	BrindleReward/RewardCanister/BoneBand	code	-	bone band on the reward canister model
+arena.gd	CylinderMesh	Node3D/RewardCanister/BoneBand	code	-	bone band on the reward canister model
 bay.gd	BoxMesh	Barge/YardWall/MeshInstance3D	stand-in	W1-23	Moss's bay: yard wall, pins, cradle and barge fittings in code (found by the census, not in the audit table; W1-23 confirms or re-pins as code)
 bay.gd	BoxMesh	MossBay/Barge/MeshInstance3D	stand-in	W1-23	Moss's bay: yard wall, pins, cradle and barge fittings in code (found by the census, not in the audit table; W1-23 confirms or re-pins as code)
 bay.gd	CylinderMesh	Barge/Pin/MeshInstance3D	stand-in	W1-23	Moss's bay: yard wall, pins, cradle and barge fittings in code (found by the census, not in the audit table; W1-23 confirms or re-pins as code)
@@ -32,8 +32,6 @@ activity_view.gd	BoxMesh	*/View_*/Column	code	-	activity column, glyph and ring:
 activity_view.gd	BoxMesh	View_*/Glyph/MeshInstance3D	code	-	activity column, glyph and ring: marks
 activity_view.gd	BoxMesh	View_*/Ring/MeshInstance3D	code	-	activity column, glyph and ring: marks
 activity_view.gd	SphereMesh	View_*/Glyph/MeshInstance3D	code	-	activity column, glyph and ring: marks
-arena.gd	CylinderMesh	BrindleReward/RewardCanister/BoneBand	code	-	bone band on the reward canister model
-arena.gd	CylinderMesh	Node3D/RewardCanister/BoneBand	code	-	bone band on the reward canister model
 beacon.gd	SphereMesh	Node3D/Beacon/MeshInstance3D	code	-	beacon light and ring
 beacon.gd	TorusMesh	Node3D/Beacon/MeshInstance3D	code	-	beacon light and ring
 bolts.gd	BoxMesh	Node3D/Bolts/MultiMeshInstance3D	code	-	shot bolts, an effect

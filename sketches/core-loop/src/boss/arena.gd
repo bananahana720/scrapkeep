@@ -4,6 +4,10 @@ const Palette := preload("res://src/core/palette.gd")
 const Rules := preload("res://src/boss/boss_rules.gd")
 const BowlDress := preload("res://src/presentation/arena_bowl_dress.gd")
 const Requisition := preload("res://src/boss/requisition.gd")
+const ModelKit := preload("res://src/world/model_kit.gd")
+# The crane mast, its boom and the vent nozzle (tools/blender/world_one/slag_bowl_kit.py), each about its centre.
+const KIT := "res://assets/models/world_one/slag_bowl_kit.glb"
+const KIT_PARTS := ["CraneMast", "CraneBoom", "VentNozzle"]
 
 # The Slag Bowl: a foundry bowl about 124 m across, built ahead during stage 3's beacon, placed when
 # the fight starts and freed when it ends. A flat inner floor with two slag channels,
@@ -447,25 +451,30 @@ func _mast(body: StaticBody3D, angle: float) -> void:
 	bar.position = base + Vector3.UP * (MAST_HEIGHT - 0.4)
 	bar.rotation.y = -angle + PI * 0.5
 	body.add_child(bar)
-	var pole_mesh := MeshInstance3D.new()
-	var cm := CylinderMesh.new()
-	cm.top_radius = 1.0
-	cm.bottom_radius = 1.2
-	cm.height = MAST_HEIGHT
-	pole_mesh.mesh = cm
+	# The kit's mast and boom where the colliders stand (a cylinder and a box when the kit is missing).
+	var pole_mesh := ModelKit.part(KIT, KIT_PARTS, "CraneMast", self)
+	if pole_mesh == null:
+		pole_mesh = MeshInstance3D.new()
+		var cm := CylinderMesh.new()
+		cm.top_radius = 1.0
+		cm.bottom_radius = 1.2
+		cm.height = MAST_HEIGHT
+		pole_mesh.mesh = cm
+		add_child(pole_mesh)
 	pole_mesh.set_meta("bowl_surface", "Mast")
 	pole_mesh.material_override = Palette.solid(Palette.COPPER)
 	pole_mesh.position = pole.position
-	add_child(pole_mesh)
-	var bar_mesh := MeshInstance3D.new()
-	var bm := BoxMesh.new()
-	bm.size = box.size
-	bar_mesh.mesh = bm
+	var bar_mesh := ModelKit.part(KIT, KIT_PARTS, "CraneBoom", self)
+	if bar_mesh == null:
+		bar_mesh = MeshInstance3D.new()
+		var bm := BoxMesh.new()
+		bm.size = box.size
+		bar_mesh.mesh = bm
+		add_child(bar_mesh)
 	bar_mesh.set_meta("bowl_surface", "Crossbar")
 	bar_mesh.material_override = Palette.solid(Palette.COPPER, 0.3)
 	bar_mesh.position = bar.position
 	bar_mesh.rotation = bar.rotation
-	add_child(bar_mesh)
 
 
 # A ramp or kicker: a wedge that rises from 0 at `foot` to `top` over `length` along
@@ -504,15 +513,18 @@ func _vent(angle: float) -> void:
 	pad.position = _local(angle, VENT_R, 0.06)
 	pad.name = "WaterVent"
 	add_child(pad)
-	var nozzle := MeshInstance3D.new()
-	var pipe := CylinderMesh.new()
-	pipe.top_radius = 0.7
-	pipe.bottom_radius = 0.9
-	pipe.height = 3.0
-	nozzle.mesh = pipe
-	nozzle.material_override = Palette.solid(Palette.VERDIGRIS)
+	var nozzle := ModelKit.part(KIT, KIT_PARTS, "VentNozzle", self)
+	if nozzle == null:
+		nozzle = MeshInstance3D.new()
+		var pipe := CylinderMesh.new()
+		pipe.top_radius = 0.7
+		pipe.bottom_radius = 0.9
+		pipe.height = 3.0
+		nozzle.mesh = pipe
+		nozzle.material_override = Palette.solid(Palette.VERDIGRIS)
+		add_child(nozzle)
+	nozzle.name = "VentNozzle_%d" % roundi(rad_to_deg(angle))
 	nozzle.position = _local(angle, VENT_R + 3.5, 1.5)
-	add_child(nozzle)
 
 
 func _local(angle: float, r: float, lift := 0.0) -> Vector3:
