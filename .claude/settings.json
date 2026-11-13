@@ -81,5 +81,8 @@
       "Bash(npm i *)",
       "Bash(npm uninstall*)"
     ]
-  }
+  },
+  "enabledMcpjsonServers": [
+    "godot"
+  ]
 }

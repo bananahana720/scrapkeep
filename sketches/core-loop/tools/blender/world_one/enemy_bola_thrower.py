@@ -6,7 +6,7 @@
 #
 # Two meshes, three surfaces (three colour-pass draws, the E ceiling), no alpha:
 #   BolaThrowerBody  fleet_paint (torso, head and the raised arm; flashes with the enemy) and
-#                    paint (vertex colour: snout, ears, glove, wrist cord, strap, the brass tag).
+#                    paint (vertex colour: glove, wrist cord, strap, the brass tag).
 #   BolaLoop         one surface, class_accent (the runtime gives it the hazard bola material).
 #                    Its origin is the loop centre, 2.2 m over the collider centre, so the
 #                    runtime seats the node (bola_thrower.gd SEAT_AXIS) and whirls it about
@@ -55,8 +55,8 @@ b.box("paint", (0.36, 0.06, 0.24), loc=(0, -0.72, 0.28), color=BRASS)  # the one
 b.rod("fleet_paint", (0.60, 0.0, 0.55), (0.14, 0.0, 1.95), 0.11, segs=6)
 b.uv("paint", 0.17, u=8, v=5, loc=(0.14, 0.0, 2.0), color=CHAR)
 # The old works' two marks, cast in under the Fleet's paint: the crew number and HIRED.
-crew.cast_number(b, "paint", "03", (0, -0.59, 0.62), (0, -1, 0), 0.2)
-crew.hired(b, "paint", (0, 0.69, -0.4), (0, 1, 0), 0.1)
+crew.cast_number(b, "paint", "08", (0, -0.572, 0.62), (0, -1, 0), 0.2)
+crew.hired(b, "paint", (0, 0.672, -0.4), (0, 1, 0), 0.1)
 body = b.to_object(parent=root)
 
 # --- Loop: an open hoop with a weighted end on each side --------------------------------

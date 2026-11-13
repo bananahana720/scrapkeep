@@ -1,7 +1,7 @@
 extends RefCounted
 
 const Icons := preload("res://src/ui/icons.gd")
-const Palette := preload("res://src/core/palette.gd")
+const UiTokens := preload("res://src/ui/ui_tokens.gd")
 const UiFonts := preload("res://src/ui/ui_fonts.gd")
 
 # A drawn key, named by its key glyph id (key_f, key_lmb, key_1). The ability bar, the
@@ -61,7 +61,7 @@ static func draw(canvas: CanvasItem, at: Vector2, key: String, color: Color, hei
 		canvas.draw_texture_rect(Icons.texture(key), Rect2(at - Vector2(side, height) * 0.5, Vector2(side, height)), false, Icons.tint(key, color))
 		return rect
 	var box := StyleBoxFlat.new()
-	box.bg_color = Color(Palette.CHARCOAL, 0.92)
+	box.bg_color = Color(UiTokens.INK, UiTokens.PLATE_ALPHA)
 	box.border_color = color
 	box.set_border_width_all(2)
 	box.border_width_bottom = 4

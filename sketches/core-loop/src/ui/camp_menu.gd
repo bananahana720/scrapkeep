@@ -73,12 +73,12 @@ func _init() -> void:
 	var plate := PanelContainer.new()
 	plate.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var box := StyleBoxFlat.new()
-	box.bg_color = Color(Palette.CHARCOAL, 0.82)
-	box.set_corner_radius_all(8)
-	box.content_margin_left = 14.0
-	box.content_margin_right = 14.0
-	box.content_margin_top = 4.0
-	box.content_margin_bottom = 4.0
+	box.bg_color = Color(UiTokens.INK, UiTokens.PLATE_ALPHA)
+	box.set_corner_radius_all(UiTokens.RADIUS)
+	box.content_margin_left = UiTokens.GAP_M
+	box.content_margin_right = UiTokens.GAP_M
+	box.content_margin_top = UiTokens.GAP_XS
+	box.content_margin_bottom = UiTokens.GAP_XS
 	plate.add_theme_stylebox_override("panel", box)
 	_walk_keys = CreditsHint.new()
 	_walk_keys.name = "WalkKeys"

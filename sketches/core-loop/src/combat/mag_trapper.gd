@@ -135,10 +135,13 @@ static func _parts() -> Dictionary:
 
 # The discs' own material answers the hit event the body's does: enemy.flash() sets _flash,
 # the base decays it, and this mirrors the same neutral pulse on the discs and settles them to plain white at rest
-# (the discs carry no plating tint).
+# (the discs carry no plating tint). The release flash (FX-05) reaches the discs the same way.
 func _update_flash(delta: float) -> void:
 	super(delta)
 	if _disc_material == null:
+		return
+	if strike_flashing():
+		_show_strike(_disc_material, Color.WHITE)
 		return
 	_disc_material.albedo_color = Color.WHITE.lerp(Color(1.0, 1.0, 0.85), FlashGuard.whiten(_flash))
 	_disc_material.emission_enabled = _flash > 0.0

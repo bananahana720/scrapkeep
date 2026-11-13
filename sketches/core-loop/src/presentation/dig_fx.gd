@@ -1,10 +1,8 @@
 extends Node3D
 
-const Preset := preload("res://src/presentation/graphics_preset.gd")
 const FxLibrary := preload("res://src/presentation/fx_library.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
-const Palette := preload("res://src/core/palette.gd")
-const SLATE := Palette.SLATE
+const Kit := preload("res://src/presentation/world_fx/world_fx_kit.gd")
 const RUPTURE_SECONDS := 0.45
 const BURST_SECONDS := 0.85
 const GRIT_REACH := 22.0
@@ -30,6 +28,7 @@ var _stage := 0
 var _clock := 0.0
 var _grit_wait := 0.0
 var _ambient := true
+var _grit_on := true
 var _frozen := false
 var _played := {}
 
@@ -56,7 +55,7 @@ func finish_build() -> void:
 			p.emitting = false
 			add_child(p)
 			grit.append(p)
-	Preset.register_dressing_host(self)
+	Kit.follow_quality(self)
 
 
 func bind_context(ctx, stage: int) -> void:
@@ -102,14 +101,16 @@ func _deactivate() -> void:
 
 
 func _sync_dressing() -> void:
-	_ambient = available and active and Preset.current != "low"
+	var low := Kit.low_preset()
+	_ambient = available and active and Kit.dressing_share("dig_lamp_motion", low) > 0.0
+	_grit_on = available and active and Kit.dressing_share("dig_cut_grit", low) > 0.0
 	lamp_views = lamp_views.filter(is_instance_valid)
 	grit = grit.filter(is_instance_valid)
 	for view in lamp_views:
 		view.set_instance_shader_parameter("motion_enabled", _ambient)
 	for p in grit:
 		p.emitting = false
-		p.visible = _ambient
+		p.visible = _grit_on
 	# Existing one-shots also shrink if the player selects low during a rupture.
 	for burst in bursts:
 		for p: GPUParticles3D in burst["node"].get_children():
@@ -156,7 +157,7 @@ func _rupture(id: String, cover: Node3D, at: Vector3) -> void:
 	ghost.global_transform = _stage_root.global_transform * Transform3D(cover.basis, cover.get_meta("home")) * skin.transform
 	var moving := []
 	for view: MeshInstance3D in ghost.get_children():
-		view.set_instance_shader_parameter("state_tint", SLATE)
+		view.set_instance_shader_parameter("state_tint", Kit.dressing_colour("dig_spent"))
 		if not view.get_meta("wedge", false):
 			view.material_override = _spent_material()
 			view.set_instance_shader_parameter("motion_enabled", false)
@@ -187,13 +188,13 @@ func _spent_material() -> ShaderMaterial:
 		var material := ShaderMaterial.new()
 		material.shader = _shader
 		material.set_shader_parameter("spent", true)
-		material.set_shader_parameter("spent_tint", SLATE)
+		material.set_shader_parameter("spent_tint", Kit.dressing_colour("dig_spent"))
 		_lamp_materials["spent"] = material
 	return _lamp_materials["spent"]
 
 
 static func _burst_count(kind: String) -> int:
-	return int(FxLibrary.effects("breach_opened", "low" if Preset.current == "low" else "")["dig_" + kind])
+	return int(FxLibrary.effects("breach_opened", "low" if Kit.low_preset() else "")["dig_" + kind])
 
 
 func _process(delta: float) -> void:
@@ -203,6 +204,7 @@ func _process(delta: float) -> void:
 	if _ambient:
 		for view in lamp_views:
 			view.set_instance_shader_parameter("fx_time", _clock)
+	if _grit_on:
 		_grit_wait -= delta
 		if _grit_wait <= 0:
 			_grit_wait = GRIT_INTERVAL

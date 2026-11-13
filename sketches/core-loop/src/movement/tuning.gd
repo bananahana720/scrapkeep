@@ -104,6 +104,10 @@ const SPECS := [
 	# Carry a core (feature-fit.md, new mechanic 3; Andrew 11 Nov 19:24Z, one core, only into
 	# SPIL-9): Moss's counter stows one of this stage's cores in a SPIL-9 socket for the next stage.
 	{"key": "carry_core", "label": "Carry a core", "min": 0.0, "max": 1.0, "step": 1.0, "value": 0.0, "options": ["off", "on"]},
+	# The world whose boss ends the run won (W1-60, Andrew 12 Nov 22:06Z): "last" runs the whole
+	# stage table; "1" ends the world 1 sitting at Brindle, with its summary and HARD rung 1, instead
+	# of rolling on into the parked Dig.
+	{"key": "final_world", "label": "Run ends after", "min": 0.0, "max": 1.0, "step": 1.0, "value": 0.0, "options": ["last", "1"]},
 ]
 
 # The option rows other modules read by name.
@@ -246,15 +250,17 @@ const FLAGS := {
 	"carry-core": ["carry_core", "option", "launch"],
 	"overtime": ["overtime", "option", "launch"],
 	"called-shot": ["called_shot", "option", "launch"],
+	"final-world": ["final_world", "option", "launch"],
 }
 
 
 # What --profile=sitting turns on beyond the defaults: the loops Andrew wants in the world 1
-# sitting (ruling da), the marked hull and Moss's scale (ruling dd) and carry a core (ruling df).
+# sitting (ruling da), the marked hull and Moss's scale (ruling dd), carry a core (ruling df) and
+# the run's end at Brindle (W1-60).
 # A flag on the same command line wins, and bots and gate bands, which never pass the profile,
 # still measure the base game.
 const SITTING_SET := {"heat": "on", "overtime": "on", "called-shot": "on", "marked-hull": "on", "moss-scale": "on",
-	"carry-core": "on"}
+	"carry-core": "on", "final-world": "1"}
 
 
 # The one parse pass. `when` limits it to one phase ("start" or "launch"); empty applies
@@ -302,6 +308,12 @@ func sitting() -> bool:
 # The sitting's loops on a fresh profile that earns its unlocks and keeps them (W1-78).
 func sitting_earned() -> bool:
 	return option("profile") == "sitting-earned"
+
+
+# The world whose boss ends the run won, or 0 when the stage table's last stage does.
+func final_world() -> int:
+	var value := option("final_world")
+	return int(value) if value.is_valid_int() else 0
 
 
 func world_one() -> bool:

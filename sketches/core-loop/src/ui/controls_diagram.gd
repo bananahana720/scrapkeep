@@ -225,7 +225,7 @@ func _mouse() -> void:
 		var tone: Color = entry["tone"]
 		var half := Rect2(Vector2(body.position.x + i * MOUSE_SIZE.x * 0.5, body.position.y), Vector2(MOUSE_SIZE.x * 0.5, split - body.position.y)).grow(-5.0)
 		var box := _plate(tone, Color(tone, 0.22) if entry["lit"] else Color(Palette.CHARCOAL, 0.9), 3 if entry["lit"] else 2)
-		box.set_corner_radius_all(4)
+		box.set_corner_radius_all(UiTokens.RADIUS)
 		box.corner_detail = 12
 		if i == 0:
 			box.corner_radius_top_left = int(MOUSE_SIZE.x * 0.45)
@@ -275,6 +275,6 @@ static func _plate(edge: Color, fill: Color, width: int) -> StyleBoxFlat:
 	box.border_color = edge
 	box.set_border_width_all(width)
 	box.border_width_bottom = width + 2
-	box.set_corner_radius_all(7)
+	box.set_corner_radius_all(UiTokens.RADIUS)
 	box.corner_detail = 3
 	return box

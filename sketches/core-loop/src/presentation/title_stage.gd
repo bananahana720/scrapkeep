@@ -436,35 +436,30 @@ func _build_lights() -> void:
 	stage.add_child(lamp)
 
 
+# The deck (W1-47, the gig poster look Andrew picked on 13 Nov 2026): the crew on Moss's
+# barge at dusk while Brindle's ship hangs over them, all from the game's finished models. Each
+# row: name, model, position, yaw, scale. A model that fails to load is left out, never stood in.
+const DECK := [
+	["Barge", "res://assets/models/barge.glb", Vector3(0.0, -1.95, 0.3), 0.0, Vector3(1.0, 1.0, 0.62)],
+	["Brindle", "res://assets/models/bosses/boss_brindle.glb", Vector3(9.0, 6.5, -38.0), 2.5, Vector3(1.6, 1.6, 1.6)],
+	["Barrel", "res://assets/models/camp/camp_barrel.glb", Vector3(-5.6, 0.0, 1.2), 0.3, Vector3.ONE],
+	["Gauge", "res://assets/models/gauge_dial_stand.glb", Vector3(6.4, 0.0, 0.4), -0.4, Vector3.ONE],
+]
+
+
 func _build_deck() -> void:
-	_box("ServiceDeck", Vector3(13.0, 0.22, 5.0), Vector3(0.0, -0.16, 0.0), Palette.VERDIGRIS)
-	for i in 7:
-		_box("DeckPlate%d" % i, Vector3(1.79, 0.08, 4.75), Vector3(-5.55 + i * 1.85, -0.02, 0.0), Palette.CHARCOAL.lerp(Palette.COPPER, 0.15))
-	_box("CanalLip", Vector3(13.0, 0.3, 0.16), Vector3(0.0, 0.04, -2.4), Palette.SANDSTONE)
-	_box("WaterChannel", Vector3(13.0, 0.05, 1.0), Vector3(0.0, -0.05, -3.0), Color("397873"))
-	for i in 3:
-		var pipe := CylinderMesh.new()
-		pipe.top_radius = 0.16
-		pipe.bottom_radius = 0.16
-		pipe.height = 2.4
-		var view := _mesh("PumpPipe%d" % i, pipe, Vector3(-5.5 + i * 5.5, 0.8, -2.9), Palette.COPPER)
-		view.rotation.z = PI * 0.5
-		_box("PipeBrace%d" % i, Vector3(0.5, 0.45, 0.5), Vector3(-5.5 + i * 5.5, 0.2, -2.9), Palette.VERDIGRIS)
-	var lens := _box("LanternLens", Vector3(0.22, 0.32, 0.22), Vector3(-5.1, 2.0, 1.6), Palette.AMBER)
-	var mat := lens.material_override as StandardMaterial3D
-	mat.emission_enabled = true
-	mat.emission = Palette.AMBER
-	mat.emission_energy_multiplier = 1.5
-	_box("LanternPost", Vector3(0.09, 2.0, 0.09), Vector3(-5.1, 0.9, 1.6), Palette.CHARCOAL)
-	var ball := SphereMesh.new()
-	ball.radius = 0.45
-	ball.height = 0.9
-	_mesh("Ball", ball, Vector3(-5.0, 0.45, 0.5), Palette.COPPER)
-	var hoop := TorusMesh.new()
-	hoop.inner_radius = 0.46
-	hoop.outer_radius = 0.52
-	var ring := _mesh("BallGyro", hoop, Vector3(-5.0, 0.45, 0.5), Palette.SAND)
-	ring.rotation.x = PI * 0.5
+	for row in DECK:
+		var model := _visual_scene(row[1])
+		if model == null:
+			_warn(row[1])
+			continue
+		model.name = row[0]
+		model.position = row[2]
+		model.rotation.y = row[3]
+		model.scale = row[4]
+		TitleIntroPlayer.dress(model, row[1])
+		stage.add_child(model)
+		_freeze_visual(model)
 
 
 func _build_heroes() -> void:
@@ -567,7 +562,7 @@ func _freeze_visual(model: Node) -> void:
 func _warn(path: String) -> void:
 	if not _warned.has(path):
 		_warned[path] = true
-		push_warning("title_stage: '%s' unavailable or malformed; keeping a simple display body" % path)
+		push_warning("title_stage: '%s' unavailable or malformed; left out or kept as a simple display body" % path)
 
 
 func _box(label: String, dimensions: Vector3, at: Vector3, color: Color, parent: Node3D = null) -> MeshInstance3D:

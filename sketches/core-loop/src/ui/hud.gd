@@ -38,19 +38,26 @@ const PickupLines := preload("res://src/ui/pickup_lines.gd")
 const PanelFx := preload("res://src/presentation/panel_fx.gd")
 const Companion := preload("res://src/core/companion.gd")
 const HullMark := preload("res://src/world/hull_mark.gd")
+const RunState := preload("res://src/core/run_state.gd")
 const Interactables := preload("res://src/world/interactables.gd")
 
 # The wallet readout: the steel cog and the cogs the run holds, the one number the HUD
 # shows because it is what the next roll through a hoop spends. The icon wears the cog's steel.
+# While Moss's hook waits locked on a class the ball has not reached (shop.hook_goal, W1-79),
+# the chip pins that goal after the number: the heft weight in amber and the class numeral.
 class CogChip extends Control:
 	const ICON := "res_scrap"
 	const COLOR := Palette.STEEL
+	const HOOK_ICON := "res_heft"
+	const WIDTH := 72.0
+	const PIN_WIDTH := 56.0
 
 	var amount := 0
+	var hook_class := 0
 
 	func _init() -> void:
 		mouse_filter = Control.MOUSE_FILTER_IGNORE
-		custom_minimum_size = Vector2(72.0, 24.0)
+		custom_minimum_size = Vector2(WIDTH, 24.0)
 		size = custom_minimum_size
 
 	func set_amount(value: int) -> void:
@@ -58,13 +65,27 @@ class CogChip extends Control:
 			amount = value
 			queue_redraw()
 
+	func set_hook(heft_class: int) -> void:
+		if heft_class == hook_class:
+			return
+		hook_class = heft_class
+		custom_minimum_size.x = WIDTH + (PIN_WIDTH if hook_class > 0 else 0.0)
+		size = custom_minimum_size
+		queue_redraw()
+
 	func drawn_words() -> PackedStringArray:
-		return PackedStringArray([str(amount)])
+		var out := PackedStringArray([str(amount)])
+		if hook_class > 0:
+			out.append(RunState.roman(hook_class))
+		return out
 
 	func _draw() -> void:
 		var mid := size.y * 0.5
 		UiDraw.icon(self, Icons.texture(ICON), Rect2(Vector2(0.0, mid - 10.0), Vector2(20.0, 20.0)), Icons.tint(ICON, COLOR))
 		UiDraw.text(self, 26.0, mid, str(amount), UiTokens.BODY, Palette.SAND, true)
+		if hook_class > 0:
+			UiDraw.icon(self, Icons.texture(HOOK_ICON), Rect2(Vector2(WIDTH, mid - 10.0), Vector2(20.0, 20.0)), Icons.tint(HOOK_ICON, Palette.AMBER))
+			UiDraw.text(self, WIDTH + 24.0, mid, RunState.roman(hook_class), UiTokens.BODY, Palette.AMBER, true)
 
 
 # The field-notes key drawn small: the cap Tab opens the notes with.
@@ -126,7 +147,7 @@ const LORE_TOTAL := 3.0
 const LORE_TOP := 66.0
 # The top-right corner is one column: the radio chip, the unlock plate, the field note pill.
 # Each sits under whichever of the others is showing, this far apart, so none covers another.
-const CORNER_GAP := 4.0
+const CORNER_GAP := float(UiTokens.GAP_XS)
 const CORNER_SLIDE := 480.0
 const OBJECTIVE_WORDS := Objectives.MAX_WORDS
 const TOAST_ICON := 26.0
@@ -162,10 +183,10 @@ const OPEN_ROWS := ["shoot_magnets", "slam_caps", "bait_charge"]
 # The gaps of the top slot when a plate is mounted: from the band's top to the plate, and
 # from the plate to the objective plate under it.
 const PLATE_TOP := 6.0
-const PLATE_GAP := 10.0
+const PLATE_GAP := float(UiTokens.GAP_M)
 const TOAST_WIDTH := 800.0
 const MARGIN := 18.0
-const BOTTOM_GAP := 20.0
+const BOTTOM_GAP := float(UiTokens.GAP_L)
 const HEALTH_BAR := 190.0
 # The word under each bar (ui/gauge.gd caption): the game's own words for them, as the perk
 # rows say "max health" and the wear stamp says "ARMOUR OFF".
@@ -432,15 +453,10 @@ func _build_ach_toast() -> void:
 	_ach_panel = PanelContainer.new()
 	_ach_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_ach_panel.visible = false
-	var plate := StyleBoxFlat.new()
-	plate.bg_color = Color(Palette.CHARCOAL, 0.94)
-	plate.border_color = Palette.AMBER
-	plate.set_border_width_all(2)
-	plate.set_corner_radius_all(8)
-	plate.content_margin_left = 16.0
-	plate.content_margin_right = 20.0
-	plate.content_margin_top = 5.0
-	plate.content_margin_bottom = 5.0
+	# A plate in the accent colour; thin top and bottom so two lines fit the band under the chip.
+	var plate := UiTokens.plate(UiTokens.ACCENT)
+	plate.content_margin_top = UiTokens.GAP_XS
+	plate.content_margin_bottom = UiTokens.GAP_XS
 	_ach_panel.add_theme_stylebox_override("panel", plate)
 	layer_node.add_child(_ach_panel)
 	var row := HBoxContainer.new()
@@ -449,7 +465,7 @@ func _build_ach_toast() -> void:
 	_ach_panel.add_child(row)
 	var star := TextureRect.new()
 	star.texture = Icons.shape("star")
-	star.modulate = Palette.AMBER
+	star.modulate = UiTokens.ACCENT
 	star.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	star.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	star.custom_minimum_size = Vector2(TOAST_ICON, TOAST_ICON)
@@ -459,7 +475,7 @@ func _build_ach_toast() -> void:
 	_ach_icon = star
 	# A record or take says which it is here; an achievement's star and amber frame already do.
 	var word := _label(UiTokens.BODY)
-	word.add_theme_color_override("font_color", Palette.AMBER)
+	word.add_theme_color_override("font_color", UiTokens.ACCENT)
 	word.visible = false
 	row.add_child(word)
 	_ach_word = word
@@ -470,10 +486,10 @@ func _build_ach_toast() -> void:
 	words.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	row.add_child(words)
 	_ach_name = _label(ACH_FONT)
-	_ach_name.add_theme_color_override("font_color", Palette.SAND)
+	_ach_name.add_theme_color_override("font_color", UiTokens.TEXT)
 	words.add_child(_ach_name)
 	_ach_detail = _label(ACH_DETAIL_FONT)
-	_ach_detail.add_theme_color_override("font_color", Color(Palette.SAND, 0.78))
+	_ach_detail.add_theme_color_override("font_color", UiTokens.quiet())
 	words.add_child(_ach_detail)
 
 
@@ -484,15 +500,10 @@ func _build_lore_pulse() -> void:
 	_lore_panel = PanelContainer.new()
 	_lore_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_lore_panel.visible = false
-	var plate := StyleBoxFlat.new()
-	plate.bg_color = Color(Palette.CHARCOAL, 0.94)
-	plate.border_color = Palette.SAND
-	plate.set_border_width_all(2)
-	plate.set_corner_radius_all(8)
-	plate.content_margin_left = 12.0
-	plate.content_margin_right = 16.0
-	plate.content_margin_top = 6.0
-	plate.content_margin_bottom = 6.0
+	var plate := UiTokens.plate(UiTokens.TEXT)
+	plate.content_margin_left = UiTokens.GAP_M
+	plate.content_margin_top = UiTokens.GAP_XS
+	plate.content_margin_bottom = UiTokens.GAP_XS
 	_lore_panel.add_theme_stylebox_override("panel", plate)
 	layer_node.add_child(_lore_panel)
 	var row := HBoxContainer.new()
@@ -1419,6 +1430,8 @@ func _process(delta: float) -> void:
 			"", _armor_flash > 0.0, Palette.AMBER)
 	_speed.set_tier(game.player.state.tier)
 	_cogs.set_amount(run.cogs)
+	var shop = game.build.get("shop") if game.build != null else null
+	_cogs.set_hook(shop.hook_goal() if shop != null and not flow.in_arena else 0)
 
 	var tint: Color = run.class_def.color if run.class_def != null else Palette.SAND
 	var shape: String = run.class_def.shape if run.class_def != null else "ring"

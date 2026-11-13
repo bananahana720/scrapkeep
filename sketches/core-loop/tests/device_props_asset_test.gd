@@ -241,7 +241,7 @@ func _check_gameplay_sources() -> void:
 		var source := FileAccess.get_file_as_string("res://src/world/%s.gd" % stem)
 		var tail := "func " + source.get_slice("func " + SOURCE_PINS[stem][0], 1)
 		tail = tail.get_slice("\n\nstatic func _slot_material", 0).get_slice("\n\nfunc _collision_box", 0)
-		tail = tail.replace("\n\t\tp[\"gem\"].material_override.vertex_color_use_as_albedo = true", "").strip_edges()
+		tail = tail.strip_edges()
 		_check(tail.sha256_text() == SOURCE_PINS[stem][1], stem + " interaction, timing, reward and state logic unchanged")
 	for path in INHERITED_PINS:
 		_check(FileAccess.get_sha256("res://src/world/" + path + ".gd") == INHERITED_PINS[path], path + " unchanged source")
@@ -251,7 +251,8 @@ const SOURCE_PINS := {
 	# 2026-10-08: re-pinned for crumble()'s fired light becoming an emission change (Forward+ crash fix).
 	# 2026-10-09: re-pinned for take() publishing the cache_spent world fact (wave 12 vx-ground, VX-FX's ember keys on it).
 	# 2026-11-11: re-pinned for the relic offer becoming a relic-rung part (systems audit pass D fold).
-	"cracked_cache": ["stand_down()", "afa79eb2e425b4415c9477f78adaf49acc068f180839767e943dec1dd62dd45f"],
+	# 2026-11-12: re-pinned for the pedestal gem becoming its rung's TierMark shape (W1-26).
+	"cracked_cache": ["stand_down()", "b14d706ec681594489c17f963bf716d3cad249249b38f8bbf9162b40ab0abe8d"],
 	"bet_crate": ["reach_point()", "dc1b7b8203b6c2018894e88689885c366ed5edd5d928cae60f6370082acb2e16"],
 	"ambush_altar": ["reach_point()", "7a1a73f6c7f2d8fc8645eb7565f763f0fb95d0d7701598998f46905bc9aa6db3"],
 }

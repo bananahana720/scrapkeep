@@ -5,6 +5,7 @@ extends SceneTree
 # Real Dig cover breaks through world._on_slammed. Cosmetic copies fall at the hole;
 # the original cover parks immediately, and all one-shots expire. Boot is unchanged.
 # This measures the host's CPU work, not GPU rendering or human feel.
+const Palette := preload("res://src/core/palette.gd")
 const Scenery := preload("res://src/presentation/dig_scenery.gd")
 const Fx := preload("res://src/presentation/dig_fx.gd")
 const Preset := preload("res://src/presentation/graphics_preset.gd")
@@ -94,7 +95,7 @@ func _run() -> void:
 	t.eq("three real GLB wedges animate", rupture["wedges"].size(), 3)
 	t.check("copy remains at hole after cover parked", ghost.global_position.y > 11.9)
 	t.check("mint ends at break and tabs hide", ghost.get_children().all(func(v):
-		var muted: bool = v.get_instance_shader_parameter("state_tint") == Fx.SLATE if v.get_meta("wedge", false) else v.material_override.get_shader_parameter("spent") == true
+		var muted: bool = v.get_instance_shader_parameter("state_tint") == Palette.SLATE if v.get_meta("wedge", false) else v.material_override.get_shader_parameter("spent") == true
 		return muted and (not String(v.name).begins_with("tab_") or not v.visible)))
 	t.check("burst uses the fx table's gravity and lifetime grammar", (burst.get_node("Debris").process_material as ParticleProcessMaterial).gravity.y == -26.0
 		and burst.get_node("Dust").lifetime == 0.5 and burst.get_node("Debris").amount == 10)

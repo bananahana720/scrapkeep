@@ -50,13 +50,6 @@ radio_cache.gd	TorusMesh	Node3D/RadioCache_take-flume-gauge-house/MeshInstance3D
 radio_cache.gd	TorusMesh	Node3D/RadioCache_take-piston-flip/MeshInstance3D	stand-in	W1-23	signal radio cache: pole, half sphere, bulb, ring
 radio_cache.gd	TorusMesh	Node3D/RadioCache_take-top-shelf-trio/MeshInstance3D	stand-in	W1-23	signal radio cache: pole, half sphere, bulb, ring
 rescue_site.gd	BoxMesh	rivet_cage/Node3D/MeshInstance3D	stand-in	W1-23	rescue cage part (found by the census, not in the audit table)
-reward_gates.gd	BoxMesh	Node3D/Topper/Stripe	stand-in-live	W1-22	flume reward gate drawn as code posts and toppers (hero_assets _dress_gate gave up); W1-22 checks it
-reward_gates.gd	BoxMesh	RewardGates/Node3D/MeshInstance3D	stand-in-live	W1-22	flume reward gate drawn as code posts and toppers (hero_assets _dress_gate gave up); W1-22 checks it
-reward_gates.gd	BoxMesh	RewardGates/Node3D/Topper	stand-in-live	W1-22	flume reward gate drawn as code posts and toppers (hero_assets _dress_gate gave up); W1-22 checks it
-reward_gates.gd	PrismMesh	RewardGates/Node3D/Topper	stand-in-live	W1-22	flume reward gate drawn as code posts and toppers (hero_assets _dress_gate gave up); W1-22 checks it
-scrap_field.gd	BoxMesh	Node3D/Scrap/MeshInstance3D	stand-in-live	W1-21	cogs and dropped panels: a brass disc, a slate box under a bone column
-scrap_field.gd	CylinderMesh	Node3D/Scrap/MeshInstance3D	stand-in-live	W1-21	cogs and dropped panels: a brass disc, a slate box under a bone column
-scrap_field.gd	CylinderMesh	Scrap/MeshInstance3D/MeshInstance3D	stand-in-live	W1-21	cogs and dropped panels: a brass disc, a slate box under a bone column
 stakes.gd	CylinderMesh	SableStakes/Stake/MeshInstance3D	stand-in	W1-23	trade spot body (ruling ci: after the sitting)
 stakes.gd	TorusMesh	SableStakes/Stake/MeshInstance3D	stand-in	W1-23	trade spot body (ruling ci: after the sitting)
 game.gd	BoxMesh	Node3D/MeshInstance3D	stand-in-live	W1-23	an unnamed 24 x 0.3 x 16 m box hung straight on the game root at tick 9570 (not identified yet; W1-23 names it and models it or re-pins it as code)
@@ -125,3 +118,5 @@ warden_look.gd	QuadMesh	WardenLook/Badge/MeshInstance3D	code	-	warden badge and 
 warden_look.gd	SphereMesh	CharacterBody3D/WardenLook/MeshInstance3D	code	-	warden badge and core glow
 world_fx_anchor.gd	QuadMesh	*/WorldFx_*/Extra_*	code	-	mist and steam cards
 world_fx_anchor.gd	QuadMesh	*/WorldFx_*/Impostor_*	code	-	mist and steam cards
+kill_mark.gd	QuadMesh	PresentationFx/KillMark/MeshInstance3D	code	-	the kill mark, a camera-facing comic burst card (FX-01)
+scrap_field.gd	CylinderMesh	Scrap/MeshInstance3D/MeshInstance3D	code	-	a scrap cache's 14 m marker column (CACHE_COLUMN), a mark
