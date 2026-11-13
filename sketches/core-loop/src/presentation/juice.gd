@@ -594,7 +594,8 @@ func _on_unsealed(_stage: int) -> void:
 	var row := EventKinds.juice("beacon_unsealed")
 	_camera("punch_fov", "beacon_unsealed", Vector3.ZERO, float(row["punch_fov"]), 0.6)
 	rumble("beacon_unsealed")
-	request_hit_stop(float(row["stop_ms"]) / 1000.0, "beacon_unsealed")
+	# A beacon is not a strike: the ask is logged at zero and never sent (STRIKE_STOP_FACTS).
+	request_hit_stop(0.0, "beacon_unsealed")
 
 
 # --- Kills --------------------------------------------------------------------------
@@ -675,7 +676,8 @@ func _on_core(_source: String, at: Vector3, _count: int) -> void:
 # The dodge: a short slow-mo tick, a zoom-in and the chevron over the ball.
 func _on_near_miss(_kind: String, at: Vector3) -> void:
 	var row := EventKinds.juice("near_miss")
-	request_hit_stop(float(row["stop_ms"]) / 1000.0, "near_miss")
+	# A dodge keeps the ball's momentum: the ask is logged at zero and never sent (STRIKE_STOP_FACTS).
+	request_hit_stop(0.0, "near_miss")
 	_camera("punch_fov", "near_miss", Vector3.ZERO, float(row["punch_fov"]), 0.25)
 	rumble("near_miss")
 	if vfx != null:

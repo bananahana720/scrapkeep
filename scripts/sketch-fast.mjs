@@ -50,8 +50,9 @@ export const CANARY_COUNT = 4;
 // Content pins (music rows, attack rows, world digest, scatter rows) live in unit_suite, which no
 // res:// path reaches from most diffs, so it always runs (cloud gate, 18 Oct). new_world_cost
 // scans every src/ script for a world, map or boss named outright, so no single path reaches it
-// either; it takes about a second (BACKLOG.md SG-01, 12 Nov).
-export const ALWAYS = ["tests/unit_suite_test.gd", "tests/new_world_cost_test.gd"];
+// either; it takes about a second (BACKLOG.md SG-01, 12 Nov). colour_meanings scans every src/
+// script for a reserved colour outside its meaning the same way (BACKLOG.md FX-20).
+export const ALWAYS = ["tests/unit_suite_test.gd", "tests/new_world_cost_test.gd", "tests/colour_meanings_test.gd"];
 // Some couplings have no res:// path: one park's recipe change moves other parks' bake hashes.
 export const PATH_RULES = [
   {
@@ -66,6 +67,18 @@ export const PATH_RULES = [
     tests: ["tests/park_landmark_sight_test.gd", "tests/site_markers_test.gd", "tests/park_fight_bowl_test.gd", "tests/park_feature_census_test.gd", "tests/park_breath_test.gd", "tests/park_rhythm_test.gd", "tests/handover_rows_test.gd", "tests/park_scrap_lines_test.gd", "tests/park_scrap_trail_test.gd"],
   },
 ];
+// Node checks a sketch change must face though no script path reaches them.
+export const NODE_PATH_RULES = [
+  // SG-16: a park prop recipe or file faces the far-mesh fault check.
+  { name: "park prop far meshes", match: /(^|\/)park\/props\/|^tools\/model_audit\.py$/, tests: ["scripts/far-faults.test.mjs"] },
+  // SG-15: the palette, the kit's mirror of it, its reader and the icon generator stay in step.
+  { name: "palette", match: /^(src\/core\/palette\.gd|tools\/blender\/common\.py|tools\/palette_gd\.py|tools\/icons\/)/, tests: ["scripts/palette-gd.test.mjs"] },
+];
+
+export function nodeTestsForPaths(paths, rules = NODE_PATH_RULES) {
+  return [...new Set(rules.filter((rule) => paths.some((file) => rule.match.test(file))).flatMap((rule) => rule.tests))].sort();
+}
+
 // Long whole-run proofs a change class must face; they go to the bot shards even past the budget.
 export const SHARD_RULES = [
   {
@@ -778,9 +791,10 @@ async function main() {
       finish();
     }
   }
-  if (changed.node.length > 0) {
+  const pathNodeTests = nodeTestsForPaths(changed.godot);
+  if (changed.node.length > 0 || pathNodeTests.length > 0) {
     const all = git(["ls-files", "*.test.mjs", "*.test.js"]).split("\n").filter((file) => file && !file.startsWith(SKETCH) && !file.includes("node_modules"));
-    const nodeTests = nodeTestsFor(changed.node, all, (file) => readFileSync(path.join(root, file), "utf8"));
+    const nodeTests = [...new Set([...nodeTestsFor(changed.node, all, (file) => readFileSync(path.join(root, file), "utf8")), ...pathNodeTests])].sort();
     if (nodeTests.length > 0) {
       const node = spawnSync(process.execPath, ["--test", ...nodeTests], { cwd: root, encoding: "utf8", maxBuffer: 64 << 20 });
       if (!stage("node tests", node.status === 0, { note: nodeTests.join(" "), tests: nodeTests })) {

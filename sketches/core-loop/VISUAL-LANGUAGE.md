@@ -6,7 +6,8 @@ This is the style sheet for the v2 greybox as it grows into its real look (TRACK
 
 | Fact | Source row |
 | --- | --- |
-| A colour's role | `src/core/palette.gd` |
+| A colour's value | `src/core/palette.gd` |
+| A colour's meaning, and the code that must never draw it | `src/core/colour_meanings.gd` (checked by `tests/colour_meanings_test.gd`) |
 | A class's colour, shape and sound | the class row in `src/core/class_def.gd` |
 | An event's colour, shape, sound, wording and priority | `src/core/event_kinds.gd` |
 | A threat type's fill, motion and sound | `src/combat/threat_grammar.gd` (W2) |
@@ -46,7 +47,8 @@ The eight AD-02 colours carry every role. Four extensions already live in code a
 | Field mint | `#8bf0d3` | The shared collection field (scrap, beacon, core), **Sable**, the arc element, common rarity (the field-kit rung) on cards, gates and shop frames | Enemy parts; ambient decoration away from a working device |
 | Fleet cobalt (extension) | `#3d8bff` | Rare rarity: the fleet-grade rung, on cards, gates, shop frames and the ball's rare part pieces | Hostile marks, the ancients' light |
 | HAZARD (extension) | `#ff5a3c` | Hostile danger areas and nothing else | Any reward, any player effect |
-| BRASS (extension) | `#d9b44a` | Admiral Brindle and the Fleet's requisition tags | Player effects |
+| BRASS (extension) | `#d9b44a` | Admiral Brindle and the Fleet's requisition tags | Player effects, the money |
+| Worn steel (extension, W1-21, 12 Nov 2026) | `#9aa0a0` | The cog (the money) with bone-worn teeth, the HUD wallet chip, the grey panels' hardware (`Palette.STEEL`). Chosen off brass because a deuteranope reads brass as the relic's amber; an assumption Andrew can overturn | Not-yet states (slate's job), hostile marks |
 | ICE (extension) | `#c8f0ff` | The frost element | Anything that is not frost |
 | ANCIENT | `#9dff3c` (candidate B, chosen by Andrew 2026-10-09; seams carry the pattern cue) | Light seams on awakened ancient machines, the focal landmark's beacon | The Fleet, the player, rewards, danger areas |
 | Life lilac (extension, proposed 2026-10-19) | hue 250°–300°, saturation 0.15–0.55, for example `#8f84b3` | Ambient critters and locals: harmless and alive. Measured: no enemy, Warden or boss GLB has a saturated colour in 240°–330° (`tests/ambient_palette_test.gd` re-measures every run). See [AMBIENT-LIFE.md](AMBIENT-LIFE.md) | Enemy parts, telegraphs, rewards, pickups, targets, any emissive light |
@@ -368,7 +370,7 @@ This section makes "legible workshop instrumentation" concrete (AD-08, AC-15).
 ## 8. Motion and timing
 
 - **Easing follows function.** Anything that measures time or distance moves linearly: cooldown sweeps, gauge fills, telegraph fills, a wave's leading edge. Arrivals ease out (cubic). Departures ease in. A back-out overshoot (1.2) is reserved for player-owned success (ready pulse, pickup, synergy), so bounce means good news.
-- **Hit-stop.** Momentum is sacred, so ordinary hits get none. Smash-through gets 40 ms, a pin chain 50 ms, a Warden break 70 ms, and the boss routed 90 ms. There is at most one hit-stop per 250 ms, and never one on damage taken.
+- **Hit-stop.** Hit-stop belongs to the player's own strike, and the ball's motion never stops: a roll, a dodge, a reward or a beacon asks for none, and damage taken never gets one (`juice.gd` `STRIKE_STOP_FACTS`). An ordinary hit stops 12 to 40 ms by its damage (the `enemy_struck` row in `event_kinds.gd`), and a heavier impact profile stops longer, up to the 60 ms cap (`juice.gd` `SPINE_CAP_MS`). Stops keep a 90 ms gap and share a 60 ms budget per 300 ms and 100 ms per second (`event_kinds.gd` `STOP_*`). Those rows own the numbers; this line only names the rule.
 - **One bold animation per event.** Each event row owns one hero motion that matches its shape, such as the arc slam's ring or Kest's line of starbursts. Everything else in that event runs at 30% or less of its scale and brightness. Two events in one frame play by priority from `event_kinds`, and the lower one drops to its sound.
 - **Reduced motion (RR-11).** Motion that measures time or position is information and stays. Motion that celebrates is cosmetic and goes.
 

@@ -1,12 +1,12 @@
 extends Node3D
 
-const Palette := preload("res://src/core/palette.gd")
 const GraphicsPreset := preload("res://src/presentation/graphics_preset.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const Finishes := preload("res://src/presentation/highdraft_finishes.gd")
 const FxLibrary := preload("res://src/presentation/fx_library.gd")
 const FlashGuard := preload("res://src/presentation/flash_guard.gd")
+const Kit := preload("res://src/presentation/world_fx/world_fx_kit.gd")
 const SHADER_DIR := "res://assets/materials/highdraft/"
 const CATCH_SECONDS := 0.4
 const CATCH_DEPTH := 0.15
@@ -21,6 +21,8 @@ const PULSE_SECONDS := 0.2
 const CATCH_RADIUS := 6.0
 const CHUNK := 32.0
 const CLOUD_WRAP := 650.0
+# Seconds between cloud drift steps at full rate; the low preset's share of the rate is a DRESSING row.
+const CLOUD_STEP := 0.1
 # Idle and occupied counts per column come from the thermal_ride JUICE row.
 static var MOTE_COUNTS: Array = EventKinds.juice("thermal_ride")["motes"]
 static var STREAK_COUNTS: Array = EventKinds.juice("thermal_ride")["streaks"]
@@ -36,8 +38,13 @@ var cloud_placements: Array[Transform3D] = []
 var cloud_velocities: Array[Vector3] = []
 var clock := 0.0
 var frozen := false
-# The saved setting, read when the fx installs; Game.set_reduced_motion also updates a live one.
-static var preferred := false
+# The saved setting, read when the fx installs; Game.set_reduced_motion also updates a live one. It is
+# the world effects' one store (WorldFxKit.reduced_motion).
+static var preferred: bool:
+	get:
+		return Kit.reduced_motion
+	set(on):
+		Kit.reduced_motion = on
 var reduced_motion := preferred
 var low := false
 var _map
@@ -71,7 +78,7 @@ static func install(scenery: Node3D, presence: Node, map) -> Node3D:
 			fx._net_chunk(chunk, sag)
 	fx.clouds = scenery.get_node_or_null("Sky/CloudDeck") as MultiMeshInstance3D
 	fx._clouds()
-	GraphicsPreset.register_dressing_host(fx)
+	Kit.follow_quality(fx)
 	return fx
 
 
@@ -86,9 +93,9 @@ func _thermal(row: Dictionary, shader: Shader) -> void:
 	material.set_shader_parameter("column_height", row.height)
 	material.set_shader_parameter("column_radius", row.radius)
 	material.set_shader_parameter("lift_tint", EventKinds.world_row("thermal_ride").color)
-	material.set_shader_parameter("edge_tint", Palette.VERDIGRIS)
-	material.set_shader_parameter("idle_opacity", 0.72)
-	material.set_shader_parameter("occupied_opacity", 0.92)
+	material.set_shader_parameter("edge_tint", Kit.dressing_colour("hd_thermal_edge"))
+	material.set_shader_parameter("idle_opacity", Kit.dressing_alpha("hd_thermal_idle"))
+	material.set_shader_parameter("occupied_opacity", Kit.dressing_alpha("hd_thermal_occupied"))
 	var mote := BoxMesh.new()
 	mote.size = Vector3.ONE * 0.22
 	var streak := _lift_chevron()
@@ -152,7 +159,7 @@ func _net_chunk(view: MultiMeshInstance3D, shader: Shader) -> void:
 	material.set_shader_parameter("fade_end", 0.5)
 	material.set_shader_parameter("catch_point", Vector4(0.0, 0.0, 0.0, CATCH_RADIUS))
 	material.set_shader_parameter("visual_catch_gain", VISUAL_CATCH_GAIN)
-	material.set_shader_parameter("ring_glow", Palette.SAND)
+	material.set_shader_parameter("ring_glow", Kit.dressing_colour("hd_net_ring"))
 	view.material_override = material
 	view.custom_aabb = view.custom_aabb.grow(CATCH_DEPTH * VISUAL_CATCH_GAIN)
 	var at: Vector3 = (view.get_meta("placements") as Array[Transform3D])[0].origin
@@ -174,19 +181,19 @@ func _clouds() -> void:
 
 
 func _sync_dressing() -> void:
-	low = GraphicsPreset.current == "low"
+	low = Kit.low_preset()
 	for row in thermals:
 		_density(row)
 
 
 func _density(row: Dictionary) -> void:
 	var state := 1 if row.occupied else 0
-	var spec: Dictionary = GraphicsPreset.PRESETS[GraphicsPreset.current]
 	for kind in 2:
 		var view: MultiMeshInstance3D = row.views[kind]
+		var id := "hd_thermal_motes" if kind == 0 else "hd_thermal_streaks"
 		var amount: int = MOTE_COUNTS[state] if kind == 0 else STREAK_COUNTS[state]
-		view.multimesh.visible_instance_count = amount / 3 if low else amount
-		view.visible = spec.get("air_motes" if kind == 0 else "air_streaks", true)
+		view.multimesh.visible_instance_count = Kit.dressing_count(id, amount, low)
+		view.visible = Kit.dressing_shown(id)
 
 
 # Called by Presence after it reads the actual column occupancy. No physics writes or RNG.
@@ -209,7 +216,7 @@ func step(delta: float, ball: Vector3) -> void:
 			catch_at(ball)
 	_last_ball = ball
 	_cloud_wait += delta
-	if clouds != null and _cloud_wait >= (0.2 if low else 0.1):
+	if clouds != null and _cloud_wait >= CLOUD_STEP / Kit.dressing_share("hd_cloud_drift", low):
 		_cloud_wait = 0.0
 		for i in cloud_origins.size():
 			var xf: Transform3D = cloud_origins[i]
@@ -242,7 +249,7 @@ func catch_at(ball: Vector3) -> void:
 			active_catches.append(row)
 			material.set_shader_parameter("catch_point", Vector4(point.x, point.y, CATCH_DEPTH, CATCH_RADIUS))
 			_glow(row)
-	if not _net_dust.is_empty() and not reduced_motion:
+	if not _net_dust.is_empty() and Kit.dressing_share("hd_net_dust", low, reduced_motion) > 0.0:
 		var puff := _net_dust[_net_dust_next]
 		_net_dust_next = (_net_dust_next + 1) % _net_dust.size()
 		FxLibrary.fire(puff, "net_dust", "net_caught", int(FxLibrary.effects("net_caught")["net_dust"]), Vector3(ball.x, deck + 0.1, ball.z))
@@ -271,7 +278,7 @@ func _sink(age: float) -> float:
 func _glow(row: Dictionary) -> void:
 	var at: Vector2 = row.at
 	var material: ShaderMaterial = row.material
-	if reduced_motion:
+	if Kit.dressing_share("hd_net_ring", low, reduced_motion) == 0.0:
 		var level := clampf(1.0 - row.age / PULSE_SECONDS, 0.0, 1.0)
 		material.set_shader_parameter("pulse", Vector4(at.x, at.y, CATCH_RADIUS, FlashGuard.spike(0.0, level)))
 		return

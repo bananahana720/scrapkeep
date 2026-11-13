@@ -3,7 +3,8 @@ extends SceneTree
 # Rule: the mix is rows (mix_rows.gd) and the audio director reads them. The buses and the
 # master chain exist with a ceiling under -1 dB, each game state resolves to its snapshot, the
 # levels glide (down fast, up slow), a telegraph pulls the music and the ambience down and is
-# never quieted by the crowd rule, and stacked low-priority voices step down per doubling.
+# never quieted by the crowd rule, stacked low-priority voices step down per doubling, and the
+# hurt cue makes room: every other effect but a warning steps down while it sounds.
 const Game := preload("res://src/game.gd")
 const MixRows := preload("res://src/presentation/mix_rows.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
@@ -33,6 +34,7 @@ func _physics_process(_delta: float) -> bool:
 	_buses()
 	_states()
 	_glide_and_focus()
+	_make_room()
 	_game.free()
 	print("mix_rows_test: %s" % ("PASS" if _failures == 0 else "FAIL (%d)" % _failures))
 	quit(0 if _failures == 0 else 1)
@@ -128,3 +130,23 @@ func _glide_and_focus() -> void:
 	_check("mute covers the ambience", AudioServer.is_bus_mute(amb))
 	audio.muted = false
 	audio._apply_volumes()
+
+
+func _make_room() -> void:
+	var audio = _game.presentation.audio
+	var row: Dictionary = MixRows.MAKE_ROOM["hurt"]
+	_check("hurt makes room", float(row["db"]) <= -6.0 and float(row["hold_s"]) >= 0.25, str(row))
+	_check("hurt is a warning, so nothing it makes room for can be one", "hurt" in audio.DANGER_SOUNDS)
+	audio.sound_ready = true
+	audio._last_start.clear()
+	audio.cue_log.clear()
+	audio.play("player_hit")
+	var rooms: Array = audio.cue_log.filter(func(c): return c[2] == "room")
+	_check("a hit logs its room", rooms.size() == 1 and rooms[0][1] == "hurt" and is_equal_approx(float(rooms[0][4]), float(row["hold_s"])) and is_equal_approx(float(rooms[0][5]), float(row["db"])), str(audio.cue_log))
+	_check("the vent's boom steps under the hit", is_equal_approx(audio._room_offset("reactor_erupt"), float(row["db"])))
+	_check("a warning keeps its level", audio._room_offset("threat_hum") == 0.0 and audio._room_offset("boss_telegraph") == 0.0)
+	_check("the hit keeps its own level", audio._room_offset("hurt") == 0.0)
+	audio.clock += 10.0
+	_check("the hold runs on the wall clock, not the audio clock slow motion scales", audio._room_offset("reactor_erupt") != 0.0)
+	audio._room_until_ms = 0
+	_check("the room ends after its hold", audio._room_offset("reactor_erupt") == 0.0)
