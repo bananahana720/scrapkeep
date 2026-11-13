@@ -436,7 +436,7 @@ func _build_lights() -> void:
 	stage.add_child(lamp)
 
 
-# The deck (W1-47, the gig poster look recommended on the taste page): the crew on Moss's
+# The deck (W1-47, the gig poster look Andrew picked on 13 Nov 2026): the crew on Moss's
 # barge at dusk while Brindle's ship hangs over them, all from the game's finished models. Each
 # row: name, model, position, yaw, scale. A model that fails to load is left out, never stood in.
 const DECK := [
