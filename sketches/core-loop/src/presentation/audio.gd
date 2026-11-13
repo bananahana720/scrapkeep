@@ -108,11 +108,12 @@ var _onbeat_at := -(1 << 40)
 # sound plays when pressed, never moved to the grid; inside ONBEAT_WINDOW_S the pilot's motif joins on
 # the next sixteenths in its own voice. A hidden reward, sound and look only like the on-beat hit
 # (Q10). SKILL_ANSWER_NOTES of the motif's cells, all of them against an elite, a miniboss, the
-# Warden or a boss, with the last note doubled in the motif's band voice. Cooldowns stop a skill
-# from repeating it, so the gate only keeps two skills on one beat from stacking.
+# Warden, or anything in a live boss fight, with the last note doubled in the motif's band voice. Only
+# a line skill names its foe (at its bite); a special or gauge release counts as big only in a boss
+# fight. Cooldowns stop a skill from repeating it, so the gate only keeps two cues of one cast
+# (a gauge release and its special) or two skills on one beat from stacking.
 signal skill_on_beat(kind: String, big: bool)
 const SKILL_ANSWER_NOTES := 2
-const SKILL_ANSWER_DB := -2.0
 var _skill_answer_at := -(1 << 40)
 # Weak-point hits inside this window climb like a kill chain. Pickups and kills climb by
 # their streaks, whose windows are in EventKinds.JUICE.
@@ -3440,7 +3441,7 @@ func skill_answer(kind: String, target: Node3D) -> Array:
 		return []
 	_skill_answer_at = engine.clock
 	var big := big_foe(target)
-	var motif := Harmony.motif_or_first(_motif)
+	var motif := Harmony.motif_or_first(_motif if _motif != "" else Harmony.CLASS_MOTIFS[0])
 	var cells: Array = motif["cells"]
 	if not big:
 		cells = cells.slice(0, SKILL_ANSWER_NOTES)
@@ -3449,13 +3450,13 @@ func skill_answer(kind: String, target: Node3D) -> Array:
 	var booked := []
 	for cell in cells:
 		var at := start + int(cell[0]) * unit
-		_note_at("skill_on_beat", String(motif["voice"]), int(cell[1]), at, SKILL_ANSWER_DB)
+		_note_at("skill_on_beat", String(motif["voice"]), int(cell[1]), at)
 		booked.append([String(motif["voice"]), int(cell[1]), at])
 	if big and motif.has("band"):
 		var last: Array = cells[cells.size() - 1]
 		var midi := int(last[1]) + int(motif.get("band_octave", 0))
 		var at := start + int(last[0]) * unit
-		_note_at("skill_on_beat", String(motif["band"]), midi, at, SKILL_ANSWER_DB + SfxBank.GRID_UNDER_DB)
+		_note_at("skill_on_beat", String(motif["band"]), midi, at, SfxBank.GRID_UNDER_DB)
 		booked.append([String(motif["band"]), midi, at])
 	skill_on_beat.emit(kind, big)
 	return booked

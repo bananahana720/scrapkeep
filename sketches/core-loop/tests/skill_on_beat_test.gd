@@ -13,6 +13,13 @@ const Harmony := preload("res://src/presentation/harmony.gd")
 const SfxBank := preload("res://src/presentation/sfx_bank.gd")
 
 var t := T.new("skill_on_beat_test")
+
+
+class BossStandIn extends Node:
+	func active() -> bool:
+		return true
+
+
 var _game
 var _offset := 0.0
 
@@ -73,6 +80,23 @@ func _run() -> void:
 	events.gauge_released.emit("test", 1.0)
 	t.eq("a second cast on the same beat adds no answer", _answers(audio).size(), 0)
 
+	# One gauge cast tells the gauge release and then the special: one answer between them.
+	_reset(audio)
+	events.gauge_released.emit("test", 1.0)
+	events.special_used.emit("test", Vector3.ZERO)
+	t.eq("a gauge release and its special book one answer", _answers(audio).size(), Audio.SKILL_ANSWER_NOTES)
+
+	# In a live boss fight a skill with no foe still earns the whole answer.
+	_reset(audio)
+	var stand_in := BossStandIn.new()
+	var had_boss = _game.ctx.boss if "boss" in _game.ctx else null
+	_game.ctx.boss = stand_in
+	t.check("a live boss fight is big", audio.big_foe(null))
+	events.special_used.emit("test", Vector3.ZERO)
+	t.eq("in a boss fight: every motif note, plus the double", _answers(audio).size(), cells.size() + (1 if motif.has("band") else 0))
+	_game.ctx.boss = had_boss
+	stand_in.free()
+
 	# Against an elite: the whole motif and the band's double of its last note.
 	_reset(audio)
 	heard.clear()
@@ -111,8 +135,9 @@ func _answers(audio) -> Array:
 	return audio.cue_log.filter(func(cue: Array): return cue[0] == "skill_on_beat")
 
 
+# Cues of kind that started now (not refused or booked later).
 func _count(audio, kind: String) -> int:
-	return audio.cue_log.filter(func(cue: Array): return cue[0] == kind).size()
+	return audio.cue_log.filter(func(cue: Array): return cue[0] == kind and cue[2] == "now").size()
 
 
 func _target() -> Node3D:
