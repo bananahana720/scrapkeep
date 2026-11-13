@@ -34,21 +34,6 @@ contraptions.gd	CylinderMesh	Contraptions/forecourt_geyser/MeshInstance3D	stand-
 contraptions.gd	CylinderMesh	Contraptions/pool_geyser/MeshInstance3D	stand-in	W1-23	geyser base
 game.gd	TorusMesh	GroundScatter/Chunk_/Scatter_cable	stand-in	W1-23	ground scatter cable coil drawn as a torus (found by the census, not in the audit table)
 plated_brute.gd	BoxMesh	Node3D/CharacterBody3D/BountyCrate	stand-in-live	W1-23	bounty crate on the elite brute (found by the census, not in the audit table)
-radio_cache.gd	CylinderMesh	Node3D/RadioCache_take-cable-reach-liquid/MeshInstance3D	stand-in	W1-23	signal radio cache: pole, half sphere, bulb, ring
-radio_cache.gd	CylinderMesh	Node3D/RadioCache_take-dam-breaks/MeshInstance3D	stand-in	W1-23	signal radio cache: pole, half sphere, bulb, ring
-radio_cache.gd	CylinderMesh	Node3D/RadioCache_take-flume-gauge-house/MeshInstance3D	stand-in	W1-23	signal radio cache: pole, half sphere, bulb, ring
-radio_cache.gd	CylinderMesh	Node3D/RadioCache_take-piston-flip/MeshInstance3D	stand-in	W1-23	signal radio cache: pole, half sphere, bulb, ring
-radio_cache.gd	CylinderMesh	Node3D/RadioCache_take-top-shelf-trio/MeshInstance3D	stand-in	W1-23	signal radio cache: pole, half sphere, bulb, ring
-radio_cache.gd	SphereMesh	Node3D/RadioCache_take-cable-reach-liquid/MeshInstance3D	stand-in	W1-23	signal radio cache: pole, half sphere, bulb, ring
-radio_cache.gd	SphereMesh	Node3D/RadioCache_take-dam-breaks/MeshInstance3D	stand-in	W1-23	signal radio cache: pole, half sphere, bulb, ring
-radio_cache.gd	SphereMesh	Node3D/RadioCache_take-flume-gauge-house/MeshInstance3D	stand-in	W1-23	signal radio cache: pole, half sphere, bulb, ring
-radio_cache.gd	SphereMesh	Node3D/RadioCache_take-piston-flip/MeshInstance3D	stand-in	W1-23	signal radio cache: pole, half sphere, bulb, ring
-radio_cache.gd	SphereMesh	Node3D/RadioCache_take-top-shelf-trio/MeshInstance3D	stand-in	W1-23	signal radio cache: pole, half sphere, bulb, ring
-radio_cache.gd	TorusMesh	Node3D/RadioCache_take-cable-reach-liquid/MeshInstance3D	stand-in	W1-23	signal radio cache: pole, half sphere, bulb, ring
-radio_cache.gd	TorusMesh	Node3D/RadioCache_take-dam-breaks/MeshInstance3D	stand-in	W1-23	signal radio cache: pole, half sphere, bulb, ring
-radio_cache.gd	TorusMesh	Node3D/RadioCache_take-flume-gauge-house/MeshInstance3D	stand-in	W1-23	signal radio cache: pole, half sphere, bulb, ring
-radio_cache.gd	TorusMesh	Node3D/RadioCache_take-piston-flip/MeshInstance3D	stand-in	W1-23	signal radio cache: pole, half sphere, bulb, ring
-radio_cache.gd	TorusMesh	Node3D/RadioCache_take-top-shelf-trio/MeshInstance3D	stand-in	W1-23	signal radio cache: pole, half sphere, bulb, ring
 rescue_site.gd	BoxMesh	rivet_cage/Node3D/MeshInstance3D	stand-in	W1-23	rescue cage part (found by the census, not in the audit table)
 stakes.gd	CylinderMesh	SableStakes/Stake/MeshInstance3D	stand-in	W1-23	trade spot body (ruling ci: after the sitting)
 stakes.gd	TorusMesh	SableStakes/Stake/MeshInstance3D	stand-in	W1-23	trade spot body (ruling ci: after the sitting)

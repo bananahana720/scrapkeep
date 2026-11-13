@@ -1,0 +1,21 @@
+{
+ "assets": [
+  {
+   "id": "radio_cache",
+   "path": "res://assets/models/world_one/radio_cache.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/world/radio_cache.gd",
+   "provenance": {
+    "recipe": "tools/blender/world_one/radio_cache.py",
+    "note": "Procedural vertex-coloured Signal radio cache (W1-23): crew mast with dish, lamp and pulse ring."
+   },
+   "exception": {
+    "tris": 900,
+    "verts": 1800,
+    "draws": 3
+   },
+   "exception_why": "Three independently driven parts (mast, blinking lamp, widening pulse ring), one draw each. Limits asserted by the recipe."
+  }
+ ]
+}

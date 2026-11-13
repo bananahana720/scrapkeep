@@ -3,6 +3,10 @@ extends Node3D
 const Palette := preload("res://src/core/palette.gd")
 const RadioTakes := preload("res://src/core/radio_takes.gd")
 const FlashGuard := preload("res://src/presentation/flash_guard.gd")
+const ModelKit := preload("res://src/world/model_kit.gd")
+const MODEL := "res://assets/models/world_one/radio_cache.glb"
+const REQUIRED := ["RadioMast", "RadioLamp", "RadioPulse"]
+const LAMP_AT := Vector3(0.0, 2.66, 0.05)
 
 # A Signal cache: a small antenna mast with a dish and a blinking lamp, standing at a deliberate
 # spot in a park (catalogue rows whose found rule is {"on": "cache"}). Rolling within REACH of it
@@ -62,6 +66,25 @@ func _ready() -> void:
 	add_to_group(GROUP)
 	if _parts.is_empty():
 		_parts = _make_parts()
+	if not _build_model():
+		_build_plain()
+
+
+# The crew mast model (W1-23, tools/blender/world_one/radio_cache.py): the lamp sits on the dish's
+# feed horn and the pulse ring widens round the dish. False, with nothing built, when it is missing.
+func _build_model() -> bool:
+	if ModelKit.part(MODEL, REQUIRED, "RadioMast", self) == null:
+		return false
+	_lamp = ModelKit.part(MODEL, REQUIRED, "RadioLamp", self)
+	_lamp.position = LAMP_AT
+	_lamp.material_override = _parts.lamp
+	_ring = ModelKit.part(MODEL, REQUIRED, "RadioPulse", self)
+	_ring.position.y = 2.2
+	_ring.material_override = _parts.ring
+	return true
+
+
+func _build_plain() -> void:
 	var mast := MeshInstance3D.new()
 	mast.mesh = _parts.pole
 	mast.position.y = 1.2
