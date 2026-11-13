@@ -11,7 +11,8 @@ const Run := preload("res://src/core/run_state.gd")
 #
 # - dam_face (stage 1, variant ""): every pulse opens the spillway gates and a water sheet
 #   SHEET_WIDTH wide runs SHEET_RUN down the face from the relic for SHEET_SECONDS; the next charge
-#   ends it at the latest. The sheet is a ride (the kind sheet's open question, section 10: a ride
+#   ends it at the latest. Once the bar has lost a quarter, each charge opens one half of it
+#   (W1-67, _lane_for), drawn faint through the charge. The sheet is a ride (the kind sheet's open question, section 10: a ride
 #   assist, as the chutes and the ramp flipper's ride are, through target.add_external_accel). A
 #   ball inside the sheet that moves toward the relic is carried up a quarter-pipe profile from the
 #   sheet's foot to the core's height, and its planar speed is held at its entry speed, so it
@@ -50,6 +51,9 @@ const RIDE_TOP_MARGIN := 2.0
 const FACE_SLOPE := 0.15
 const POUR_OFFSET := Vector3(0.0, 0.0, -6.0)
 const SHEET_COLOR := Palette.SANDSTONE
+const SHEET_ALPHA := 0.55
+const LANE_TELL_ALPHA := 0.2
+const LANE_PAST_CORE := 2.0
 # A grown ball breaks the mounted bar in sheet_ram_breaks sheet rams; a lighter one's ram pays
 # its heft share of that to the power heft_curve, so a heft-1.0 ball needs 2.2 times the rams
 # (7), the posture bands' "small takes at least twice grown" (section 7). The stage's own
@@ -132,6 +136,9 @@ var entered_sheet_cycle := -1
 # sheet (the ball's boundary and core contacts on successive frames) only tops it up.
 var paid_cycle := -1
 var paid_gain := 0.0
+# The open half of the sheet (W1-67): 0 the whole width, 1 the right half, -1 the left (right of
+# sheet_dir, looking down the face), set at each charge by _lane_for.
+var lane := 0
 
 var _entry_speed := 0.0
 var _sheet_view: MeshInstance3D
@@ -176,6 +183,9 @@ func step(warden, delta: float) -> void:
 				and warden._in_play() and warden.hp > 0.0 and _line_on(warden)
 		warden._posture.line_held = held
 		warden._posture.contact_drain_delay = delta if held else 0.0
+	# A charge a stagger cancelled leaves its faint lane behind: it goes with the charge.
+	if sheet_left <= 0.0 and not warden._charging and is_instance_valid(_sheet_view):
+		_close_sheet()
 	if sheet_left > 0.0:
 		sheet_left = maxf(0.0, sheet_left - delta)
 		if sheet_left <= 0.0:
@@ -240,10 +250,53 @@ func sheet_heft(warden, heft: float) -> float:
 
 func on_charge(warden, seconds: float) -> void:
 	if _is_dam(warden):
-		warden._charge_time = maxf(0.0, warden._pulse_clock - (warden.pulse_cycle(warden.stage) - seconds))
+		warden._charge_time = maxf(0.0, warden._pulse_clock - (warden.cycle_now() - seconds))
 	if sheet_live():
 		sheet_left = 0.0
 		_close_sheet()
+	if _is_dam(warden):
+		lane = _lane_for(warden)
+		if lane != 0:
+			if sheet_dir == Vector3.ZERO:
+				sheet_dir = _face_heading(warden)
+			_show_sheet(warden, LANE_TELL_ALPHA)
+
+
+# W1-67: the dam's sheet runs full width until the bar has lost a quarter; from then on each charge
+# opens one of its two halves, drawn faint across the charge so the side is read before the gates
+# open. The side is drawn per chunk from the run seed, so the second half of the fight asks the
+# player to read which side, and a run cannot learn one fixed answer.
+func _lane_for(warden) -> int:
+	var lost: int = warden.chunks_lost()
+	if lost <= 0:
+		return 0
+	var fleet = warden.get("fleet")
+	var run = fleet.ctx.run if fleet != null and fleet.ctx != null else null
+	var run_seed: int = int(run.run_seed) if run != null else 0
+	return 1 if posmod(hash([run_seed, warden.stage, lost]), 2) == 0 else -1
+
+
+# Where across the sheet a point lies: metres to the right of its centre line (sheet_dir x up).
+func _across(warden, point: Vector3) -> float:
+	var flat := Vector3(point.x - warden.home.x, 0.0, point.z - warden.home.z)
+	return flat.dot(sheet_dir.cross(Vector3.UP))
+
+
+# The open lane's centre, metres right of the sheet's centre line: 0 for the full sheet. A lane is
+# its half of the sheet plus LANE_PAST_CORE over the centre line, so a ride that drifts across the
+# core's line on the way in keeps its water.
+func lane_offset() -> float:
+	return float(lane) * (SHEET_WIDTH * 0.5 - LANE_PAST_CORE) * 0.5
+
+
+func lane_width() -> float:
+	return SHEET_WIDTH if lane == 0 else SHEET_WIDTH * 0.5 + LANE_PAST_CORE
+
+
+# The dam's pulse never ratchets tighter than its sheet runs (warden.gd cycle_now): the next charge
+# closes the sheet, so a shorter rest would cut the ride, the fight's one way in.
+func rest_floor(warden) -> float:
+	return SHEET_SECONDS if _is_dam(warden) else 0.0
 
 
 func on_pulse(warden, _lifted: bool) -> void:
@@ -303,8 +356,8 @@ func in_sheet(warden, point: Vector3) -> bool:
 		return false
 	var flat := Vector3(point.x - warden.home.x, 0.0, point.z - warden.home.z)
 	var along := flat.dot(sheet_dir)
-	var across := absf(flat.dot(sheet_dir.cross(Vector3.UP)))
-	if along < 0.0 or along > SHEET_RUN or across > SHEET_WIDTH * 0.5:
+	var across := absf(_across(warden, point) - lane_offset())
+	if along < 0.0 or along > SHEET_RUN or across > lane_width() * 0.5:
 		return false
 	return point.y <= _profile(warden, point, along) + SHEET_DEPTH
 
@@ -376,24 +429,26 @@ func _ride(warden, delta: float) -> void:
 		target.add_external_accel(Vector3(push.x, maxf(up, 0.0), push.z))
 
 
-# A plain water slab over the footprint, in the ride colour; collides with nothing.
-func _show_sheet(warden) -> void:
+# A plain water slab over the footprint (its open lane), in the ride colour; collides with nothing.
+# The charge draws the lane faint (LANE_TELL_ALPHA) and the pulse replaces it with the water.
+func _show_sheet(warden, alpha := SHEET_ALPHA) -> void:
 	_close_sheet()
 	var root = warden.world_root
 	if root == null or not is_instance_valid(root):
 		return
 	var view := MeshInstance3D.new()
 	var box := BoxMesh.new()
-	box.size = Vector3(SHEET_WIDTH, 0.3, SHEET_RUN - SHEET_TOP)
+	box.size = Vector3(lane_width(), 0.3, SHEET_RUN - SHEET_TOP)
 	view.mesh = box
 	var material := StandardMaterial3D.new()
-	material.albedo_color = Color(SHEET_COLOR, 0.55)
+	material.albedo_color = Color(SHEET_COLOR, alpha)
 	material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	view.material_override = material
 	view.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	root.add_child(view)
-	var mid: Vector3 = warden.home + sheet_dir * (SHEET_TOP + (SHEET_RUN - SHEET_TOP) * 0.5)
+	var mid: Vector3 = warden.home + sheet_dir * (SHEET_TOP + (SHEET_RUN - SHEET_TOP) * 0.5) \
+			+ sheet_dir.cross(Vector3.UP) * lane_offset()
 	var ground: float = warden.terrain.height(mid.x, mid.z) if warden.terrain != null else warden.home.y
 	view.global_transform = Transform3D(Basis.looking_at(-sheet_dir, Vector3.UP), Vector3(mid.x, ground + 0.2, mid.z))
 	_sheet_view = view
@@ -466,9 +521,9 @@ func plate_targets(warden) -> Array[Dictionary]:
 	return out
 
 
-# The sheet's foot on the ground: SHEET_RUN down its heading from the relic.
+# The sheet's foot on the ground: SHEET_RUN down its heading from the relic, in the open lane.
 func _sheet_foot(warden) -> Vector3:
-	var at: Vector3 = warden.home + sheet_dir * SHEET_RUN
+	var at: Vector3 = warden.home + sheet_dir * SHEET_RUN + sheet_dir.cross(Vector3.UP) * lane_offset()
 	if warden.terrain != null:
 		at.y = warden.terrain.height(at.x, at.z)
 	return at

@@ -76,6 +76,8 @@ const PULSE_CYCLE := 6.0
 const PULSE_TELEGRAPH := 2.0
 const PULSE_LIFT := 10.0
 const PULSE_DAMAGE := 10.0
+# The least rest between a pulse and the next charge however far the cycle has ratcheted (cycle_now).
+const REST_FLOOR := 1.0
 const CORE_RADIUS := 6.0
 const LIFT_REACH_UP := 8.0
 const GUARD_RESPAWN := 10.0
@@ -147,6 +149,9 @@ var shrugs := 0
 var harpoon_anchor := false
 
 var _pulse_clock := 0.0
+var _lost_peak := 0
+# The chunks lost when this pulse cycle started (cycle_now).
+var _cycle_lost := 0
 var _charging := false
 var _charge_time := 0.0
 var _core_ring: Node3D
@@ -712,7 +717,7 @@ func _step_pulse(delta: float, inside: bool) -> void:
 	if not inside:
 		return
 	_pulse_clock += delta
-	if _pulse_clock >= pulse_cycle(stage) - pulse_telegraph(stage) and _charge_allowed():
+	if _pulse_clock >= cycle_now() - pulse_telegraph(stage) and _charge_allowed():
 		_charging = true
 		_charge_time = 0.0
 		_charge_len = pulse_telegraph(stage)
@@ -788,6 +793,28 @@ static func pulse_cycle(at_stage := 0) -> float:
 	return ChallengeDials.floored(PULSE_CYCLE, ChallengeDials.stage_mult("warden.pulse_cycle", at_stage))
 
 
+# The most chunks this Warden has lost at once, by the count its fight phases read (phase_chunks_left).
+# It never goes back: the dam's bar can drain, and its fight does not relax with it.
+func chunks_lost() -> int:
+	_lost_peak = maxi(_lost_peak, BossPosture.CHUNKS - phase_chunks_left())
+	return _lost_peak
+
+
+# The pulse cycle this Warden runs now (W1-67): the stage's cycle times the stage's ratchet
+# (challenge dial warden.pulse_ratchet_by_stage) once per chunk lost, as the fight phases count
+# chunks (phase_chunks_left, so the dam's sheet counts its bar's quarters). The count is read when
+# the pulse clock starts a cycle (_cycle_lost), so a chunk lost mid-cycle tightens the next cycle,
+# never the one running, and the charge it starts keeps its whole tell. The rest between pulses
+# never drops under REST_FLOOR, or under a mount driver's own rest_floor (the dam's sheet runs out).
+func cycle_now() -> float:
+	var base := pulse_cycle(stage)
+	var rest := REST_FLOOR
+	if mount_driver != null and mount_driver.has_method("rest_floor"):
+		rest = maxf(rest, mount_driver.rest_floor(self))
+	var ratchet := ChallengeDials.by_stage_or("warden.pulse_ratchet_by_stage", stage, 1.0)
+	return maxf(minf(base, pulse_telegraph(stage) + rest), base * pow(ratchet, _cycle_lost))
+
+
 static func pulse_telegraph(at_stage := 0) -> float:
 	return minf(PULSE_TELEGRAPH, pulse_cycle(at_stage))
 
@@ -814,6 +841,7 @@ func _pulse() -> void:
 	_since_pulse = 0.0
 	_charging = false
 	_pulse_clock = 0.0
+	_cycle_lost = chunks_lost()
 	_clear_telegraph()
 	if is_instance_valid(_core_ring):
 		_core_ring.queue_free()
@@ -1012,6 +1040,7 @@ func _begin_stagger() -> void:
 	_charging = false
 	_charge_time = 0.0
 	_pulse_clock = 0.0
+	_cycle_lost = chunks_lost()
 	_clear_telegraph()
 	if is_instance_valid(_core_ring):
 		_core_ring.queue_free()

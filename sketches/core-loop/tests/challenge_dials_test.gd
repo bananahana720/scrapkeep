@@ -23,6 +23,7 @@ const W37_TUNED := [
 	"mobs.lobber_lead_by_stage",  # D4
 	"mobs.lobber_share_step_by_stage",  # D4: ships at its old 0.07, which is not 1
 	"pilot.regen_rolling_by_stage",  # D7
+	"warden.pulse_ratchet_by_stage",  # W1-67 (13 Nov): world 1 Wardens tighten per chunk lost
 ]
 const T := preload("res://tests/support/t.gd")
 
@@ -103,6 +104,7 @@ func _rules() -> void:
 	_t.eq("chasers run at 9 m/s on world 1, their own speed after it", ChallengeDials.value("mobs.chaser_speed_by_stage"), [9.0, 9.0, 0.0, 0.0, 0.0, 0.0])
 	_t.eq("world 1 Wardens pulse x1.3, later ones at identity", ChallengeDials.value("warden.pulse_damage_by_stage"), [1.3, 1.3, 1.0, 1.0, 1.0, 1.0])
 	_t.eq("the flume's Warden pulses on a x0.85 cycle, the rest at identity", ChallengeDials.value("warden.pulse_cycle_by_stage"), [1.0, 0.85, 1.0, 1.0, 1.0, 1.0])
+	_t.eq("W1-67: world 1 Wardens' cycles tighten x0.9 per chunk lost, the rest stay flat", ChallengeDials.value("warden.pulse_ratchet_by_stage"), [0.9, 0.9, 1.0, 1.0, 1.0, 1.0])
 	_t.eq("the clock climbs three tiers on world 1, two after it", ChallengeDials.value("mobs.clock_tiers_by_stage"), [3.0, 3.0, 2.0, 2.0, 2.0, 2.0])
 	_t.eq("the boils read the stall on world 1, the loop after it", ChallengeDials.value("hazard.boil_stall_by_stage"), [1.0, 1.0, 0.0, 0.0, 0.0, 0.0])
 	_t.eq("the hull regenerates only while rolling on world 1, at any speed after it", ChallengeDials.value("pilot.regen_rolling_by_stage"), [1.0, 1.0, 0.0, 0.0, 0.0, 0.0])
