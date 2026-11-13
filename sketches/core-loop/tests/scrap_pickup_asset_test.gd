@@ -5,13 +5,17 @@ const Field := preload("res://src/build/scrap_field.gd")
 const Palette := preload("res://src/core/palette.gd")
 const GLB := "res://assets/models/world_one/scrap_pickups.glb"
 const NAMES := ["BentPlate", "GearSegment", "PipeStub", "BoltCluster"]
+const COG := "Cog"
+const PanelShell := preload("res://src/build/panel_shell.gd")
 # Re-pinned 2026-10-13 (IDENTITY-DET): a caught piece's swirl side now comes from the bot's sign or the
 # field's catch serial instead of its object id; layout, magnet, collection, value and timing unchanged.
 # Re-pinned 2026-10-16 (SCRAP-LEAK): drops fold the oldest loose piece past a cap into the newest; layout, magnet, collection, value and timing unchanged.
 # Re-pinned 2026-10-24 (IL-01 grey panels, #398): step() and clear() also take and clear panel pickups and rib caches; layout, magnet, collection, value and timing unchanged.
 # Re-pinned 2026-11-09 (ruling cd, scrap trail, #650): lay_trail and trail_spots lay a map's trail to the beat, and the fold passes over trail pieces; lay_out, magnet, collection, value and timing unchanged.
 # Re-pinned 2026-11-11 (site markers, map audit unit 4): caches() also gives each rib cache's drop ground, kept from drop_panel; lay_out, magnet, collection, value and timing unchanged.
-const LOGIC_SHA := "95c66567b4a811741c0036bcb36592f1d35d63b41baf36232fbb86478169ff54"
+# Re-pinned 2026-11-12 (W1-21, models for the cog and the dropped panel): drop_panel draws the panel's kit plate and
+# ground_plate builds it; lay_out, magnet, collection, value and timing unchanged.
+const LOGIC_SHA := "32c871a5590bf16268ff136524858e3d8a409023567442cd80cbaa933af72d8c"
 
 var failures: Array[String] = []
 var game
@@ -55,10 +59,11 @@ func _asset() -> void:
 		total_vertices += vs.size()
 		print("scrap variant %s: %d T / %d V / 1 D" % [part.name, tris, vs.size()])
 	var expected := NAMES.duplicate()
+	expected.append(COG)
 	expected.sort()
 	names.sort()
-	_check(names == expected, "exact four variant names")
-	_check(total_tris <= 1080 and total_vertices <= 2440, "aggregate four-prop budget")
+	_check(names == expected, "exact four variant names and the cog")
+	_check(total_tris <= 1350 and total_vertices <= 3050, "aggregate five-prop budget")
 	_check(scene.find_children("*", "CollisionObject3D", true, false).is_empty(), "GLB contains no physics bodies")
 	_check(scene.find_children("*", "CollisionShape3D", true, false).is_empty(), "GLB contains no collision shapes")
 	print("scrap kit: %d T / %d V / %d D" % [total_tris, total_vertices, names.size()])
@@ -105,6 +110,31 @@ func _draws(field, recovery := false) -> Dictionary:
 			_check(variants[variant] == item.mesh, "instances share variant mesh")
 		variants[variant] = item.mesh
 	return variants
+
+
+# W1-21: a cog is the kit's Cog model under a bone rim glow, and a dropped panel is its own kit plate lying flat,
+# never a Godot primitive.
+func _cogs_and_panels(field) -> void:
+	field.clear()
+	field.drop_cogs(Vector3.ZERO, 5)
+	_check(field.cog_count() == 5 and field.cog_value() == 5, "cog count and value unchanged")
+	for item in field._items:
+		_check(item.mesh == asset_meshes.get(COG), "a cog draws the kit's Cog mesh")
+		_check(not item.mesh is PrimitiveMesh, "a cog is no primitive")
+		var material := item.material_override as ShaderMaterial
+		_check(material != null and material.get_shader_parameter("glow_color") == Palette.SAND, "a cog glows bone, not brass")
+	field.clear()
+	field.drop_panel(Vector3.ZERO, "fin_plate")
+	field.drop_panel(Vector3(4, 0, 0), "no_such_panel", false, true)
+	_check(field.panel_count() == 2 and field.cache_count() == 1, "panel and cache counts unchanged")
+	for item in field._items:
+		_check(not item.mesh is PrimitiveMesh and item.material_override == null, "a dropped panel draws its kit plate with its own materials")
+	var fin: Mesh = field._items[0].mesh
+	var source := PanelShell.plate_mesh("fin")
+	_check(fin.get_surface_count() == source.get_surface_count()
+		and fin.get_aabb().size.is_equal_approx(source.get_aabb().size * Field.GROUND_PLATE), "the fin plate, GROUND_PLATE times larger")
+	_check(field._items[1].mesh == Field.ground_plate("hull_tile"), "an unknown panel lies down as the tile plate")
+	field.clear()
 
 
 func _run() -> void:
@@ -160,6 +190,7 @@ func _run() -> void:
 	_draws(field, true)
 	field.step(Vector3(1000, 0, 1000), 0.0, .1)
 	_draws(field, true)
+	_cogs_and_panels(field)
 	var source := FileAccess.get_file_as_string("res://src/build/scrap_field.gd")
 	var start := source.find("func lay_out(")
 	var end := source.find("func _add(at:")

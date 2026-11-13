@@ -436,6 +436,29 @@ const GRAIN := {
 	"spill_flood_flecks": {"amount": [0.6, 1.0], "size": [0.85, 1.2], "speed": [0.8, 1.3], "tint": ["SANDSTONE", 0.3]},
 }
 
+# What the world's effects sound like (FX-09; world_fx_sound.gd plays them, tools/ace/world_sfx.py makes
+# the files under assets/audio/world/). Keyed by an anchor set, a hook, or the wake set. Every one rides
+# the Ambient bus, so a fight, a Warden or a boss pulls it down and a warning's focus clears it away
+# (mix_rows.gd STATES and FOCUS); only the nearest anchor of a set takes a voice (WorldFx ranks them).
+#   file     the WAV's name without .wav
+#   play     loop     sounds while the anchor emits (a level-driven set follows its level)
+#            pulse    once each time the named pulsed spec starts a puff (pulse_of)
+#            once     once per hook, louder with the hook's size
+#   db       trim in dB; unit_m and reach_m the 3D distances (full level inside unit_m, silent past reach_m)
+#   at       where the voice sits in the anchor's frame (the dam's roar at its foot, not its lip)
+#   quiet_db a level-driven loop's trim at level 0 (calm water), easing to db at level 1
+const SOUNDS := {
+	"ball_splash": {"file": "spill_splash", "play": "once", "db": -2.0, "unit_m": 10.0, "reach_m": 70.0},
+	"spill_wake": {"file": "spill_wake", "play": "loop", "db": -4.0, "unit_m": 10.0, "reach_m": 60.0},
+	"spill_falls": {"file": "spill_falls", "play": "loop", "db": 0.0, "unit_m": 12.0, "reach_m": 110.0},
+	"landmark_dam": {"file": "dam_curtain", "play": "loop", "db": 2.0, "unit_m": 40.0, "reach_m": 320.0, "at": Vector3(0, -22, 3)},
+	"spill_powerhouse": {"file": "steam_breath", "play": "pulse", "pulse_of": "spill_powerhouse_steam", "db": -8.0,
+		"unit_m": 10.0, "reach_m": 90.0},
+	"landmark_penstock_tower": {"file": "penstock_vent", "play": "pulse", "pulse_of": "lm_penstock_vent", "db": -2.0,
+		"unit_m": 30.0, "reach_m": 260.0},
+	"spill_flood": {"file": "flood_foam", "play": "loop", "db": 0.0, "quiet_db": -10.0, "unit_m": 14.0, "reach_m": 100.0},
+}
+
 # Where the Spillway parks drop their anchor sets (spillway_fx.gd). A row names park rows by id (the
 # set stands on the row's top, lifted lift metres), or a landmark kind (the set stands in the landmark
 # node's own frame: at the mean of the named GLB nodes when they exist, else at `local`, then

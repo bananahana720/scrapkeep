@@ -11,6 +11,7 @@ The air, landmarks, events and ceremonies of Scrapkeep, as one data table and fo
 | `world_fx_anchor.gd` | A drop-in effect for dressing: landmarks, camp, relay, secrets |
 | `world_fx_cable.gd` | A swaying cable on a catenary (shader sway, no script cost) |
 | `world_fx_word.gd` | The drawn sound word (SPLOSH, KA-CHUNK, OOH, PAID) |
+| `world_fx_sound.gd` | The heard side of the world's water and steam (`SOUNDS` in the table): files, 3D distances, the Ambient bus, the cue log line |
 
 Stills: `tools/world_fx_capture.gd` renders every set on greybox stand-ins (command in its header). Checks: `tests/world_fx_test.gd`, and `tests/world_fx_dressing_test.gd` for the `DRESSING` rows.
 
@@ -18,7 +19,7 @@ Stills: `tools/world_fx_capture.gd` renders every set on greybox stand-ins (comm
 
 1. **Air never hides a threat.** Every effect that follows the camera or the ball is `ambient` (the ball's `wake` is the one exception: it is the ball's own feedback, sits at the waterline and stays translucent): it fades out within 7 m of the ball (`CLEAR_RADIUS`) and near the lens, stays translucent, and never wears `HAZARD`, `ARC` or `ANCIENT`. The test fails any ambient spec that breaks this.
 2. **Soft world, inked comic.** In-world effects have no outline. Ceremony and comic effects (title slam, summaries, the modifier announce, a secret's find) carry an ink rim, so the comic book sits on top of the world (tone bible, pillar 2).
-3. **Budget.** A world's air plus its heaviest overlay stays under `AMBIENT_CEILING` (330 particles). Only the six nearest anchors inside their range emit at once. Past `lod_m` an anchor rests and shows its impostor, one soft quad that keeps a landmark's plume visible across the park for one draw call. The low preset keeps each spec's `low` share; reduced motion drops strobes and fast sparks, halves the rest, stills cables and skips words.
+3. **Budget.** A world's air plus its heaviest overlay stays under `AMBIENT_CEILING` (330 particles). Every effect ceiling in the game, this one included, is a row in [`fx_budget.gd`](../fx_budget.gd), which sums a world's worst case (`FxBudget.worst_case(world)`, printed by `fx_budget_test`). Only the six nearest anchors inside their range emit at once. Past `lod_m` an anchor rests and shows its impostor, one soft quad that keeps a landmark's plume visible across the park for one draw call. The low preset keeps each spec's `low` share; reduced motion drops strobes and fast sparks, halves the rest, stills cables and skips words.
 4. **One quality reader.** A world's own shader and multimesh dressing (the Dig's lamps, grit and breach covers; the Highdraft's thermals, net and clouds) keeps its behaviour in its file, but its low-preset share, reduced-motion share, preset flag and colours are rows in `DRESSING` (`world_fx_specs.gd`), read through `WorldFxKit.dressing_share`, `dressing_count`, `dressing_shown`, `dressing_colour` and `dressing_alpha`; it joins the preset with one `WorldFxKit.follow_quality(self)`. The reduced-motion setting has one store, `WorldFxKit.reduced_motion` (`WorldFx.preferred` and `HighdraftFx.preferred` read and write it). A new world's dressing adds rows, not its own quality cuts or colours. Not yet folded: `game.gd` still pushes reduced motion into live `HighdraftFx` nodes, the Dig's burst counts take `fx_library.gd`'s low row, and two Highdraft tints come from `event_kinds.gd` and `highdraft_finishes.gd`.
 5. **Deterministic.** Fixed seed per run (the kit's seed off a run), no lights, no shadows, 30 fps particle step.
 
@@ -41,6 +42,22 @@ Each rolled emitter also takes its own particle seed, so the scatter differs too
 `spillway_fx.gd` stands world 1's anchor sets from `SPILL_PLACES` when a Spillway park's scenery builds: the powerhouse and weir gatehouse steam on their roofs (`spill_powerhouse`), the weir apron's falls (`spill_falls`), the dam's spray curtain and foot mist at its gate leaves (`landmark_dam`, once the landmark has built) and the penstock tower's vent (`landmark_penstock_tower`). They rank into `ANCHOR_SLOTS` like every anchor.
 
 Water (the Spillway only, `WAKE_WORLDS` and `natural.gd` `FOAM_PARKS`): `WorldFx` reads the terrain's material under the ball 15 times a second. Rolling through standing water throws the wake (`spill_wake`: spray thrown back off the ball, foam rings), thicker with speed; a fast entry or a drop fires `ball_splash` once. A rising flood carries foam (`spill_flood`, hung by `natural.gd` on the water in up to four pieces along its footprint, each on its own surface height), thick while it climbs and calmer once full. `tests/spillway_fx_test.gd` checks the placements in both parks; `tools/spillway_fx_capture.gd` renders stills.
+
+## Sound (FX-09)
+
+The Spillway's water and steam are heard where they are drawn. `SOUNDS` in `world_fx_specs.gd` holds one row per set or hook; `tools/ace/world_sfx.py` makes the files under `assets/audio/world/` (synthesized, deterministic, in the ambience register: one-shots peak at -6.1 dBFS, loops sit at -26 dBFS RMS, every hiss low-passed, no rising sweep, nothing on the beat grid).
+
+| Row | Sound | Plays |
+| --- | --- | --- |
+| `ball_splash` | `spill_splash`: a hollow plop, a slap of spray, droplets on D, A and E | once per splash, louder for a harder entry |
+| `spill_wake` | `spill_wake`: a churn of small waves | while the ball rolls through water, louder with speed |
+| `spill_falls` | `spill_falls`: a near roar with the pool's patter | loop while the weir's falls emit |
+| `landmark_dam` | `dam_curtain`: a deep, wide, slow-rolling roar, voiced at the dam's foot | loop while the curtain emits |
+| `spill_powerhouse` | `steam_breath`: a valve thunk and a soft plume | once as each steam puff starts |
+| `landmark_penstock_tower` | `penstock_vent`: a low chuff and a firmer jet | once as each vent puff starts |
+| `spill_flood` | `flood_foam`: bubbles fizzing over a low wash | loop on a flood's foam, quieter as it calms |
+
+Rules: everything rides the Ambient bus, so a fight, a Warden and a boss pull it down and a warning's focus clears it (`mix_rows.gd`). Each set has one voice, on its nearest emitting anchor (`WorldFx._rank`; it moves only when another anchor is clearly nearer, so it does not hop), so a flood's four foam pieces are one loop and the two steaming roofs never breathe together; the level follows the row's own distance law (full inside `unit_m`, 6 dB a doubling, silent past `reach_m`), never louder than the row's trim; a hidden anchor and a resting world are silent, and an anchor with no WorldFx installed stays silent. Each start goes into the game's cue log (`audio.note_cue`) at the level the player hears against the effects bus, so `tools/mix/mixsim.py` weighs it. Mist, midges, soot, the water surface and the landmark beam stay silent on purpose: air has no sound, and a buzz at the ball would read as the swarm enemy's. Checks: `tests/world_fx_sound_test.gd`.
 
 ## Hooks for other systems
 

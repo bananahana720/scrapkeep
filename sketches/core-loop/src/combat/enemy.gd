@@ -51,6 +51,11 @@ const PLATE_GLOW_LIVE := 1.8
 const PLATE_GLOW_SLATE := 0.5
 const PULSE_DEPTH := 0.14
 const PULSE_HZ := 2.0
+# A glance off a slate rim (flare_glance, the plating lesson in ui/first_steps.gd): the rim beats
+# GLANCE_BEATS times over GLANCE_SECONDS, up to GLANCE_PEAK times its resting glow, then holds slate.
+const GLANCE_SECONDS := 0.9
+const GLANCE_BEATS := 2.0
+const GLANCE_PEAK := 4.0
 # The cue lives on the plate's rim, not its faces (Andrew, 2026-09-29): the plate material
 # emits through a tiny nearest-filtered mask texture, so light appears only where the mask
 # is white (rim, bolts) and body and plate faces keep their resting finish in both states.
@@ -70,6 +75,11 @@ signal attack_phase(facts: Dictionary)
 
 const PHASE_WINDUP := "windup"
 const PHASE_STRIKE := "strike"
+# The release flash (_show_strike): frames held, the share of the way to HAZARD, the glow.
+const STRIKE_FRAMES := 2
+const STRIKE_DONE := -1
+const STRIKE_TINT := 0.85
+const STRIKE_GLOW := 1.6
 const PHASE_RECOVER := "recover"
 const PHASE_CANCELLED := "cancelled"
 # Enemies whose attack has no clean owner among these files, so they publish nothing.
@@ -121,6 +131,9 @@ var knocks := 0
 
 var _knock := Vector3.ZERO
 var _flash := 0.0
+# The attack's release flash (FX-05): physics frames of the HAZARD tint still to show, or
+# STRIKE_DONE when the last has shown and the rest look is owed.
+var _strike_frames := 0
 var _dead := false
 var _material: StandardMaterial3D
 var _base_color := Palette.RUST
@@ -134,6 +147,7 @@ static var _plate_shaders: Array[Material] = []
 # Open-crack glyphs a plated enemy shows only while your punch breaks it now.
 var _cracks: Array = []
 var _rim_clock := 0.0
+var _glance_left := 0.0
 # The open attack instance, or {} between attacks: instance, row, phase, managed, geometry, progress.
 var _atk := {}
 
@@ -498,6 +512,7 @@ func set_tint(state: String) -> void:
 	if state == tint_state:
 		return
 	tint_state = state
+	_glance_left = 0.0
 	var now := state == "amber"
 	for mat in _tint_materials:
 		_paint_plate(mat as StandardMaterial3D, state)
@@ -688,6 +703,32 @@ func _update_flash(delta: float) -> void:
 		_material.emission_energy_multiplier = FlashGuard.spike(0.0, _flash * 2.0)
 		if _flash <= 0.0:
 			_apply_rest_look()
+	if _strike_frames > 0:
+		_strike_frames -= 1
+		if _flash <= 0.0:
+			_show_strike()
+		if _strike_frames == 0:
+			_strike_frames = STRIKE_DONE
+	elif _strike_frames == STRIKE_DONE:
+		_strike_frames = 0
+		if _flash <= 0.0:
+			_apply_rest_look()
+
+
+# The release flash (FX-05, effects critique E5): on the strike, the body goes HAZARD for
+# STRIKE_FRAMES physics frames, so the attacker wears the hit's colour at the moment its mark
+# lands. A hit flash wins over it. Reduce flashes keeps the tint at its information share and
+# cuts the glow's rise.
+func _show_strike() -> void:
+	_material.albedo_color = _base_color.lerp(Palette.HAZARD, FlashGuard.info(STRIKE_TINT))
+	_material.emission_enabled = true
+	_material.emission = Palette.HAZARD
+	_material.emission_energy_multiplier = FlashGuard.spike(0.0, STRIKE_GLOW)
+
+
+# Whether the body wears the release flash right now (tests and captures).
+func strike_flashing() -> bool:
+	return _flash <= 0.0 and (_strike_frames == STRIKE_DONE or (_strike_frames > 0 and _strike_frames < STRIKE_FRAMES))
 
 
 # The resting look: the base colour and no glow. The plating cue is on the plate's rim.
@@ -789,6 +830,22 @@ func _pulse_rim(delta: float) -> void:
 		(mat as StandardMaterial3D).emission_energy_multiplier = PLATE_GLOW_LIVE * swing
 
 
+# The strike just glanced: the slate rim beats so the miss reads on the target. Nothing on a
+# target that is not slate right now, and a beat already running finishes first, so rapid
+# glances never strobe the rim (FlashGuard's 3 Hz).
+func flare_glance() -> void:
+	if tint_state == "slate" and not _tint_materials.is_empty() and _glance_left <= 0.0:
+		_glance_left = GLANCE_SECONDS
+
+
+func _beat_glance(delta: float) -> void:
+	_glance_left = maxf(0.0, _glance_left - delta)
+	var beat := absf(sin(PI * GLANCE_BEATS * (1.0 - _glance_left / GLANCE_SECONDS)))
+	var energy := FlashGuard.spike(PLATE_GLOW_SLATE, PLATE_GLOW_SLATE * lerpf(1.0, GLANCE_PEAK, beat))
+	for mat in _tint_materials:
+		(mat as StandardMaterial3D).emission_energy_multiplier = energy
+
+
 # A one-row or grid mask texture, nearest-sampled and mipless so a texel never blends.
 static func mask_texture(texels: Array, width: int, height := 1) -> ImageTexture:
 	var img := Image.create_empty(width, height, false, Image.FORMAT_RGB8)
@@ -851,6 +908,8 @@ func _notification(what: int) -> void:
 		_facts_poll()
 		if tint_state == "amber" and _pulses():
 			_pulse_rim(get_physics_process_delta_time())
+		elif _glance_left > 0.0:
+			_beat_glance(get_physics_process_delta_time())
 
 
 # The polish bake reaches every swapped-in material (BakeLook): the body paint the flash
@@ -944,6 +1003,8 @@ func _facts_phase(phase: String) -> void:
 		return
 	_facts_refresh()
 	_atk["phase"] = phase
+	if phase == PHASE_STRIKE and not _dead:
+		_strike_frames = STRIKE_FRAMES
 	attack_phase.emit(_facts_dict(phase))
 
 

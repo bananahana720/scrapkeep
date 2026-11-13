@@ -79,8 +79,9 @@ func _process(_delta: float) -> bool:
 		"gauge %s (%s), chip %s (%s)" % [gauge.icon_id, Icons.glyph_of(gauge.icon_id), chip.ICON, Icons.glyph_of(chip.ICON)])
 	_report("gauge wears the mass colour", gauge.visible and gauge.color == mass_color,
 		"gauge shown %s, colour %s, scrap_collected %s" % [gauge.visible, gauge.color.to_html(), mass_color.to_html()])
-	_report("chip wears brass", chip.COLOR == Palette.BRASS and chip.COLOR != mass_color,
-		"chip %s, brass %s, mass %s" % [chip.COLOR.to_html(), Palette.BRASS.to_html(), mass_color.to_html()])
+	# W1-21: the chip wears the cog's steel, off Brindle's brass (VISUAL-LANGUAGE palette table).
+	_report("chip wears the cog's steel", chip.COLOR == Palette.STEEL and chip.COLOR != mass_color and chip.COLOR != Palette.BRASS,
+		"chip %s, steel %s, mass %s" % [chip.COLOR.to_html(), Palette.STEEL.to_html(), mass_color.to_html()])
 	print("hud_icon_distinct_test: %s" % ("PASS" if _failures == 0 else "FAIL (%d)" % _failures))
 	_game.free()
 	quit(0 if _failures == 0 else 1)

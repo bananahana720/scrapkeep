@@ -12,7 +12,8 @@ const EventKinds := preload("res://src/core/event_kinds.gd")
 #
 # The same watch answers the question before the landing: standing_in() is how far along
 # the furthest warning the ball stands in has run, for the HUD's mark over the ball
-# (ui/danger_mark.gd). A floor mark cannot say "you are in me" to a camera inside it.
+# (ui/danger_mark.gd). A floor mark cannot say "you are in me" to a camera inside it. And
+# escape() is the way out of that same warning, for the ground paint (W1-05).
 
 var events
 # The ball's position; combat points it at the real ball, a test at a scripted point.
@@ -25,6 +26,7 @@ var _clock := 0.0
 var _last_hit := -INF
 var _hit_pending := false
 var _standing := -1.0
+var _escape := {}
 
 
 func setup(events_ref, ball_ref: Callable) -> void:
@@ -44,14 +46,25 @@ func standing_in() -> float:
 	return _standing
 
 
-# The shortest way out of a warning for a ball at `at` (for the danger mark's way out: a small
-# chevron on the mark failed its blind read on 10 Nov 2026, 0 of 9 answers named the way, so a
-# stronger candidate is owed), flat and unit length, from its committed
+# The way out of the warning the ball stands in, as of the last step: {dir, metres, run}, the
+# flat unit way to its nearest edge, how far that edge is and how far the warning has run; {}
+# when it stands in none. The ground paint (presentation/way_out_paint.gd) draws it on the floor.
+func escape() -> Dictionary:
+	return _escape
+
+
+# The shortest way out of a warning for a ball at `at`, flat and unit length, from its committed
 # shape (the descriptor its damage reads): a ring or wave outward, a band (a ring with a hole)
 # inward or outward, a wedge also across its nearer side, a lane sideways or off either end.
 # Zero when the shape gives no way (the ball on a ring's very centre still gets one: outward
 # along the ring's own first edge).
 static func way_out(d: Dictionary, at: Vector3) -> Vector3:
+	return way_out_reach(d, at)["dir"]
+
+
+# The same way out with how far it runs: {dir, metres}, metres the flat distance from `at` to
+# that nearest edge (0 when there is no way).
+static func way_out_reach(d: Dictionary, at: Vector3) -> Dictionary:
 	var centre: Vector3 = d.get("centre", at)
 	var flat := Vector3(at.x - centre.x, 0.0, at.z - centre.z)
 	var best := INF
@@ -70,12 +83,17 @@ static func way_out(d: Dictionary, at: Vector3) -> Vector3:
 			var a1 := float(d.get("a1", TAU))
 			if a1 - a0 < TAU - 0.01 and r > 0.01:
 				var angle := atan2(flat.z, flat.x)
+				# Across a side: straight at the side's edge line, the shortest way over it, while the
+				# ball is within a right angle of that side (a wide sector's far side is no way out).
 				for edge in [a0, a1]:
-					var across := r * absf(sin(wrapf(angle - edge, -PI, PI)))
+					var off := wrapf(angle - edge, -PI, PI)
+					if absf(off) >= PI * 0.5:
+						continue
+					var across := r * absf(sin(off))
 					if across < best:
 						best = across
-						var side := Vector3(-out.z, 0.0, out.x)
-						way = side if wrapf(edge - angle, -PI, PI) > 0.0 else -side
+						var normal := Vector3(-sin(edge), 0.0, cos(edge))
+						way = normal if off < 0.0 else -normal
 		"lane":
 			var dir: Vector3 = d.get("dir", Vector3.FORWARD)
 			dir = Vector3(dir.x, 0.0, dir.z).normalized()
@@ -89,13 +107,17 @@ static func way_out(d: Dictionary, at: Vector3) -> Vector3:
 				way = dir
 			# A lane reaches `back` metres behind its start (hazard.gd: along >= -back).
 			if along + float(d.get("back", 0.0)) < best:
+				best = along + float(d.get("back", 0.0))
 				way = -dir
-	return way.normalized() if way.length_squared() > 0.0 else Vector3.ZERO
+	if way.length_squared() <= 0.0:
+		return {"dir": Vector3.ZERO, "metres": 0.0}
+	return {"dir": way.normalized(), "metres": maxf(best, 0.0)}
 
 
 func step(delta: float) -> void:
 	_clock += delta
 	_standing = -1.0
+	_escape = {}
 	# A hit this tick counts from this tick, whichever ran first, the attack or this watch.
 	if _hit_pending:
 		_hit_pending = false
@@ -130,7 +152,11 @@ func step(delta: float) -> void:
 				# its answer is to stay down: a mark that says "get out or jump" would say the
 				# wrong thing, so it raises none.
 				if not bool(d.get("air", false)):
-					_standing = maxf(_standing, _run_of(node, at, d))
+					var ran := _run_of(node, at, d)
+					if ran >= _standing:
+						_standing = ran
+						_escape = way_out_reach(d, at)
+						_escape["run"] = ran
 			continue
 		if _last_hit >= w["resolved"]:
 			w["done"] = true

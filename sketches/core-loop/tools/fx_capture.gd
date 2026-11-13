@@ -19,6 +19,9 @@ const WorldLook := preload("res://src/presentation/world_look.gd")
 # empty stage, and by how much on average (of 255; a pixel counts when it moved more than DRAWN, so 0 or 21
 # and over). An effect nobody could see reads 0 or a handful; a pale effect on pale sand reads a low contrast. Compare them on the machine that
 # renders the real look (the PC), not across machines.
+# After the particles it shoots the moments as the game composes them (FX-01): "moment_hit" (the hit
+# star and sparks), "moment_crit", the kill "moment_kill" and an elite's kill with its clock-out card
+# "moment_kill_elite". --tint=<hex> sets the pilot colour the kill wears (default the copper row colour).
 
 const SIZE := Vector2i(640, 400)
 const FREEZE := 0.35
@@ -35,6 +38,12 @@ var camera: Camera3D
 var stage: Node3D
 var world_row := 1
 var _empty := PackedByteArray()
+var tint := Color.TRANSPARENT
+
+
+# Vfx reads camera.cam to face its glyphs.
+class Eye:
+	var cam: Camera3D
 
 
 func _initialize() -> void:
@@ -50,6 +59,8 @@ func _initialize() -> void:
 				quit(2)
 				return
 			freeze = clampf(float(arg.trim_prefix("--freeze=")), 0.0, 1.0)
+		elif arg.begins_with("--tint="):
+			tint = Color(arg.trim_prefix("--tint="))
 		elif arg.begins_with("--only="):
 			only = Array(arg.trim_prefix("--only=").split(","))
 	if out.is_empty() or DisplayServer.get_name() == "headless":
@@ -135,6 +146,13 @@ func _run() -> void:
 		var id: String = "burst_" + kind
 		if only.is_empty() or id in only:
 			await _burst_shot(vfx, kind)
+	vfx.camera = Eye.new()
+	vfx.camera.cam = camera
+	vfx._build_glyphs()
+	vfx._build_fx()
+	for id in ["moment_hit", "moment_crit", "moment_kill", "moment_kill_elite"]:
+		if only.is_empty() or id in only:
+			await _moment_shot(vfx, id)
 	var file := FileAccess.open(out.path_join("frames.json"), FileAccess.WRITE)
 	file.store_string(JSON.stringify({"world": world_row, "size": [SIZE.x, SIZE.y], "freeze": freeze, "reduce_flashes": FlashGuard.on,
 		"adapter": RenderingServer.get_video_adapter_name(), "frames": records}, "\t"))
@@ -169,6 +187,62 @@ func _burst_shot(vfx, kind: String) -> void:
 		p.speed_scale = 1.0
 	# What this burst threw dies before the next still, so the next count is its own.
 	await create_timer(float(spec["life"]) + 0.1).timeout
+
+
+# One moment as the game composes it, every part frozen at the same share of its own life.
+func _moment_shot(vfx, id: String) -> void:
+	var at := Vector3(0.0, 0.6, 0.0)
+	var used: Array = []
+	for pool in vfx._fx.values():
+		for p: GPUParticles3D in pool:
+			p.preprocess = p.lifetime * freeze
+	for kind in vfx._bursts:
+		for p: CPUParticles3D in vfx._bursts[kind]:
+			p.preprocess = p.lifetime * freeze
+	var copper := EventKinds.color(ROW_KIND)
+	match id:
+		"moment_hit", "moment_crit":
+			var crit := id == "moment_crit"
+			var force := 30.0 if crit else 10.0
+			vfx.glyph(ROW_KIND, at, 0.4, clampf(0.8 + force * 0.03, 0.8, 1.6), 0.14)
+			var colour: Color = EventKinds.juice(ROW_KIND)["crit"]["color"] if crit else copper
+			vfx.play_fx(ROW_KIND, at, colour, "crit" if crit else "")
+		_:
+			var shown: Color = tint if tint.a > 0.0 else copper
+			vfx.kill_look(at - Vector3.UP * 0.6, 1.0, shown)
+			if id == "moment_kill_elite":
+				vfx.kill_mark.card(at + Vector3.UP * 2.0)
+	await process_frame
+	for g in vfx._glyphs:
+		if g["t"] < 1.0:
+			g["t"] = freeze
+			vfx._draw_glyph(g)
+	for slot in vfx.kill_mark._slots:
+		if slot["t"] < 1.0:
+			slot["t"] = freeze
+			vfx.kill_mark._draw(slot)
+	vfx.kill_mark.set_process(false)
+	for pool in vfx._fx.values():
+		for p: GPUParticles3D in pool:
+			p.speed_scale = 0.0
+	for kind in vfx._bursts:
+		for p: CPUParticles3D in vfx._bursts[kind]:
+			p.speed_scale = 0.0
+	await _save(id)
+	vfx.kill_mark.clear()
+	vfx.kill_mark.set_process(true)
+	for g in vfx._glyphs:
+		g["t"] = 1.0
+		g["node"].visible = false
+	for pool in vfx._fx.values():
+		for p: GPUParticles3D in pool:
+			p.emitting = false
+			p.speed_scale = 1.0
+	for kind in vfx._bursts:
+		for p: CPUParticles3D in vfx._bursts[kind]:
+			p.emitting = false
+			p.speed_scale = 1.0
+	await create_timer(1.0).timeout
 
 
 func _save(id: String) -> void:

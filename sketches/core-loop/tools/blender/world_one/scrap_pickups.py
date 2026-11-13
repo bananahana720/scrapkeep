@@ -1,8 +1,13 @@
-"""Four shared, rigid salvage meshes, centred inside the field's 0.8 m cube.
+"""Four shared, rigid salvage meshes and the cog, centred inside the field's 0.8 m cube.
 
 blender -b --factory-startup --python-exit-code 1 -P scrap_pickups.py
 One opaque vertex-colour surface per variant. Runtime supplies mint/amber tint
 and the existing pickup emission, just as Brindle's folded casting does.
+
+The cog is the money (story map: the one part every maker still needs): a worn steel spur gear
+with bone-worn teeth and a charcoal hub, flat in the ground plane like the coin it is. It is
+steel, not brass, because brass is Brindle's and the Fleet's tags and a deuteranope reads brass
+as the relic's amber (visual assets audit finding 5, W1-21; an assumption Andrew can overturn).
 """
 import math
 import os
@@ -19,6 +24,10 @@ SLOT = "field"
 LIGHT = "ffffff"
 MID = "c7ccc9"
 DARK = "6c7872"
+STEEL = "9aa0a0"     # the grey panels' steel (item_panels.py); Palette.STEEL in the game
+BONE = "d2c5a5"
+CHARCOAL = "242a28"
+COG_TEETH = 10
 
 
 def finish(part, root):
@@ -75,6 +84,14 @@ def build():
         bolts.cyl(SLOT, .12, .12, .12, segs=6, loc=(x + tilt * .16, y, .22), color=LIGHT)
         bolts.ring(SLOT, .068, .094, .04, segs=4, loc=(x, y, -.10), color=LIGHT)
     finish(bolts, root)
+
+    cog = Part("Cog")
+    cog.ring(SLOT, .085, .29, .12, segs=COG_TEETH, color=STEEL)
+    for i in range(COG_TEETH):
+        a = (i + .5) * math.tau / COG_TEETH
+        cog.box(SLOT, (.1, .085, .1), loc=(.33 * math.cos(a), .33 * math.sin(a), 0), rot=(0, 0, a), color=BONE)
+    cog.ring(SLOT, .05, .11, .17, segs=6, color=CHARCOAL)
+    finish(cog, root)
     return root
 
 
@@ -82,4 +99,4 @@ if __name__ == "__main__":
     root = build()
     path = common.args()["out"] or os.path.join(common.MODELS, "world_one", "scrap_pickups.glb")
     common.export(root, path)
-    print("SCRAP PICKUPS", common.tri_total(root), "T / 4 variants / 1 draw per pickup")
+    print("SCRAP PICKUPS", common.tri_total(root), "T / 4 variants and the cog / 1 draw per pickup")
