@@ -1,0 +1,124 @@
+{
+  "about": "The UI principles the game is audited against, in rank order. scripts/ui-audit.mjs reads this file; design-v3/ui-audit/README.md says how the loop runs. standing: established = a published standard, inferred = our reading of genre practice with a threshold we set. checks: test = a headless test under sketches/core-loop/tests, lint = an npm script, capture = a still tool under sketches/core-loop/tools (needs a display), review = a blind read of a still. gap is what no check holds yet.",
+  "principles": [
+    {
+      "id": "P1", "name": "The threat reads first",
+      "rule": "Nothing hides a danger, including its own warning, and the warning comes early enough to act on.",
+      "standing": "inferred", "source": "Genre practice; LEGIBILITY.md sections 1 and 2; Andrew, 13 Nov 2026, on attack marks that hide the attack",
+      "checks": [
+        {"kind": "test", "ref": "telegraph_clear_look_test.gd"},
+        {"kind": "test", "ref": "telegraph_haze_test.gd"},
+        {"kind": "test", "ref": "telegraph_timing_pack_test.gd"},
+        {"kind": "capture", "ref": "mark_cover_capture.gd"}
+      ],
+      "gap": "Mark cover is read off stills by hand; no score with a pass line."
+    },
+    {
+      "id": "P2", "name": "Colour never works alone",
+      "rule": "Every fact a colour carries also has a shape, an icon, a pattern or a place.",
+      "standing": "established", "source": "WCAG 2.2 1.4.1; Game Accessibility Guidelines (basic); Xbox Accessibility Guideline 103",
+      "checks": [
+        {"kind": "test", "ref": "colour_cvd_test.gd"},
+        {"kind": "test", "ref": "colour_meanings_test.gd"},
+        {"kind": "test", "ref": "hud_icon_distinct_test.gd"},
+        {"kind": "capture", "ref": "tier_still.gd"}
+      ],
+      "gap": "Close pairs with no second carrier named, and one colour that carries two facts (the open P2 rows in UI-FINDINGS.tsv)."
+    },
+    {
+      "id": "P3", "name": "Words and marks hold contrast",
+      "rule": "4.5 to 1 for words, 3 to 1 for edges and marks.",
+      "standing": "established", "source": "WCAG 2.2 1.4.3 and 1.4.11",
+      "checks": [{"kind": "test", "ref": "ui_tokens_test.gd"}],
+      "gap": "HUD words and marks drawn over the live world have no measure; it needs stills of each stage's ground."
+    },
+    {
+      "id": "P4", "name": "Text is readable on the smallest screen",
+      "rule": "18 px or more at 1080p, 9 px or more on a Steam Deck.",
+      "standing": "established", "source": "Xbox Accessibility Guideline 101 (PC: 18 px at 1080p); Steam Deck compatibility review (9 px minimum, 12 px recommended, at 1280x800)",
+      "checks": [
+        {"kind": "test", "ref": "ui_text_floor_test.gd"},
+        {"kind": "test", "ref": "ui_tokens_test.gd"}
+      ],
+      "gap": "The smallest step is under the PC floor (UF-01). No text size setting. Text drawn by presentation scripts outside src/ui is not on the scale."
+    },
+    {
+      "id": "P5", "name": "Every input answers at once",
+      "rule": "A press shows on screen or in sound within 100 ms.",
+      "standing": "established", "source": "Response time limits (Miller 1968; Nielsen 1993)",
+      "checks": [],
+      "gap": "No measure. Needs a PC capture of press-to-first-change per verb and per menu."
+    },
+    {
+      "id": "P6", "name": "Everything works on a pad and focus is always visible",
+      "rule": "Every control can be reached and worked with the stick, and the focused one shows a ring.",
+      "standing": "established", "source": "WCAG 2.2 2.1.1 and 2.4.7; Xbox Accessibility Guidelines 112 and 113",
+      "checks": [
+        {"kind": "test", "ref": "ui_tokens_test.gd"},
+        {"kind": "test", "ref": "ui_settings_pad_rebind_test.gd"},
+        {"kind": "test", "ref": "menu_structure_test.gd"},
+        {"kind": "capture", "ref": "ui_capture.gd"}
+      ],
+      "gap": "No check that every focusable control on every screen is reachable from the first focus."
+    },
+    {
+      "id": "P7", "name": "Targets are big enough",
+      "rule": "44 px or more on the real screen.",
+      "standing": "established", "source": "WCAG 2.2 2.5.5",
+      "checks": [{"kind": "capture", "ref": "ui_capture.gd"}],
+      "gap": "Held only when stills are taken: ui_capture lists every small control, and no headless test does."
+    },
+    {
+      "id": "P8", "name": "Motion is optional and nothing flashes fast",
+      "rule": "Less motion and fewer flashes are settings; no more than three flashes a second.",
+      "standing": "established", "source": "WCAG 2.2 2.3.1 and 2.3.3; Xbox Accessibility Guidelines 117 and 118",
+      "checks": [
+        {"kind": "test", "ref": "reduced_motion_test.gd"},
+        {"kind": "test", "ref": "reduce_flashes_test.gd"},
+        {"kind": "capture", "ref": "flash_capture.gd"}
+      ],
+      "gap": "Flash rate is not measured against three a second."
+    },
+    {
+      "id": "P9", "name": "No fact arrives by sound alone",
+      "rule": "Every sound cue the player must act on has a visible twin.",
+      "standing": "established", "source": "Game Accessibility Guidelines (basic); Xbox Accessibility Guideline 103",
+      "checks": [],
+      "gap": "No list of act-on-it sound cues and their visible twins."
+    },
+    {
+      "id": "P10", "name": "Marks before words, one name for one thing",
+      "rule": "LEGIBILITY.md section 13: the carrier order and the S and W patterns.",
+      "standing": "established", "source": "Ruling cx (Andrew, 10 Nov 2026)",
+      "checks": [
+        {"kind": "lint", "ref": "sketch:lint"},
+        {"kind": "test", "ref": "ui_word_budget_test.gd"},
+        {"kind": "test", "ref": "hud_words_test.gd"},
+        {"kind": "test", "ref": "prompt_words_test.gd"},
+        {"kind": "review", "ref": "S1 to S7, W3, W5, W8, W9 by a reviewer and a blind read of a still"}
+      ],
+      "gap": ""
+    },
+    {
+      "id": "P11", "name": "The HUD stays quiet",
+      "rule": "It shows what matters now; nothing talks over a fight.",
+      "standing": "inferred", "source": "Progressive disclosure; PLAY-FINDINGS PF-19",
+      "checks": [
+        {"kind": "test", "ref": "hud_quiet_test.gd"},
+        {"kind": "test", "ref": "prompt_shown_count_test.gd"}
+      ],
+      "gap": ""
+    },
+    {
+      "id": "P12", "name": "Menus are consistent and forgiving",
+      "rule": "One way back, a confirm only where something is lost, the same control in the same place.",
+      "standing": "established", "source": "Nielsen's usability heuristics 3, 4 and 5",
+      "checks": [
+        {"kind": "test", "ref": "menu_structure_test.gd"},
+        {"kind": "test", "ref": "ui_menu_click_test.gd"},
+        {"kind": "test", "ref": "settings_rows_test.gd"}
+      ],
+      "gap": ""
+    }
+  ]
+}
