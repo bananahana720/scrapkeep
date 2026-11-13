@@ -111,6 +111,10 @@ func _physics_process(delta: float) -> bool:
 			# Before the bake lands, so _on_ready starts the players on the Dummy driver; the
 			# recorder goes last on Master, after the limiter audio.gd put there.
 			audio.live_output = true
+			# audio.gd chose the engine's warming from the Dummy driver; a recording warms like live
+			# play, so a note made late on its frame is a stall a player would hit (as bot_run.gd's --warm-band).
+			if audio.engine != null:
+				audio.engine.warm_stingers = true
 			if _record == null:
 				_record = AudioEffectRecord.new()
 				AudioServer.add_bus_effect(AudioServer.get_bus_index("Master"), _record)
