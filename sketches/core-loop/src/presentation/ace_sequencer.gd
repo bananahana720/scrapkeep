@@ -99,8 +99,9 @@ var stems: Array = []
 # package it just left reads none of its Oggs again: when the Warden engages, the dam's landmark
 # tune ends and the stage pack comes back, and its 24 load_from_file calls were 13 ms of the 4080's
 # engage tick (#512 comment 6507862519). A stream is shared, not played: each voice instantiates
-# its own playback. audio.gd also builds a band on a worker, hence the lock.
-const KEPT_PACKAGES := 3
+# its own playback. audio.gd also builds a band on a worker, hence the lock. Four, so a package
+# audio.gd reads ahead (read_ace_ahead) outlives the Warden's tune and a landmark's before its switch.
+const KEPT_PACKAGES := 4
 static var _kept := {}
 static var _kept_order: Array[String] = []
 static var _kept_lock := Mutex.new()
@@ -232,6 +233,15 @@ func _init(manifest_path := MANIFEST, sidecar_dir := "") -> void:
 			clip["paths"][stem] = file
 	_keep(path, streams)
 	_report()
+
+
+# True when the package's streams are kept: building its band reads no Ogg.
+static func kept(manifest_path: String, sidecar_dir := "") -> bool:
+	var path := resolve_manifest(manifest_path, sidecar_dir)
+	_kept_lock.lock()
+	var held := _kept.has(path)
+	_kept_lock.unlock()
+	return held
 
 
 static func _keep(path: String, read: Dictionary) -> void:
