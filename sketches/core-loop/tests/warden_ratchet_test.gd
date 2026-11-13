@@ -66,7 +66,7 @@ func _run() -> void:
 
 func _ratchet() -> void:
 	var w := Held.new()
-	for stage in [1, 2]:
+	for stage in [2]:
 		w.stage = stage
 		w._lost_peak = 0
 		w._cycle_lost = 0
@@ -83,7 +83,7 @@ func _ratchet() -> void:
 			_t.check("stage %d, %d lost: rest at least REST_FLOOR" % [stage, lost], cycle - Warden.pulse_telegraph(stage) >= Warden.REST_FLOOR - 0.0001)
 			last = cycle
 		_t.near("stage %d: the tell is unchanged" % stage, Warden.pulse_telegraph(stage), Warden.PULSE_TELEGRAPH)
-	w.stage = 1
+	w.stage = 2
 	w._lost_peak = 0
 	w.left = 2
 	w._cycle_lost = w.chunks_lost()
@@ -91,11 +91,12 @@ func _ratchet() -> void:
 	w.left = 4
 	w._cycle_lost = w.chunks_lost()
 	_t.near("a drained bar keeps the tighter cycle", w.cycle_now(), tight)
-	w.stage = 3
-	w._lost_peak = 0
-	w.left = 1
-	w._cycle_lost = w.chunks_lost()
-	_t.near("stage 3 (no ratchet) stays flat", w.cycle_now(), Warden.pulse_cycle(3))
+	for flat in [1, 3]:
+		w.stage = flat
+		w._lost_peak = 0
+		w.left = 1
+		w._cycle_lost = w.chunks_lost()
+		_t.near("stage %d (the dam, and past world 1) stays flat" % flat, w.cycle_now(), Warden.pulse_cycle(flat))
 	ChallengeDials.set_overrides({"warden.pulse_ratchet_by_stage": [0.1, 0.1, 1.0, 1.0, 1.0, 1.0]})
 	w.stage = 1
 	w._lost_peak = 0

@@ -38,9 +38,11 @@ const ZEROS6 := [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
 const PULSE_DAMAGE_W1 := [1.3, 1.3, 1.0, 1.0, 1.0, 1.0]
 const PULSE_CYCLE_W1 := [1.0, 0.85, 1.0, 1.0, 1.0, 1.0]
 # The Wardens escalate (W1-67, gameplay critique finding 5): each chunk the Warden has lost multiplies its
-# pulse cycle by this, so the fight tightens as it goes (6 s, 5.4, 4.86, 4.37 on the dam). The tell is
+# pulse cycle by this, so the fight tightens as it goes (5.1 s, 4.59, 4.13, 3.72 on the flume). The tell is
 # unchanged; only the rest between pulses shrinks (warden.gd cycle_now). 1.0 is the flat fight of before.
-const PULSE_RATCHET_W1 := [0.9, 0.9, 1.0, 1.0, 1.0, 1.0]
+# The dam stays on its flat 6 s (PR 845 moved it back from 5.1: a tighter dam pulse taxed the ball at cruise
+# more than the stopped one, bot_fairness_test F2); its escalation is the sheet's one-of-two lanes instead.
+const PULSE_RATCHET_W1 := [1.0, 0.9, 1.0, 1.0, 1.0, 1.0]
 # Silt boils ship on world 1 at strength 2 (pack pressure E, 24 Oct ruling; DECISIONS section 5).
 const SILT_W1 := [2.0, 2.0, 0.0, 0.0, 0.0, 0.0]
 # Crews on world 1 lead the ball's roll by half (wave 37 unit D1, ruling cu call 4: chasers lead your line).
