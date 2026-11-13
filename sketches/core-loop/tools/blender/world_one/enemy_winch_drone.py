@@ -21,7 +21,7 @@
 #
 # Three meshes, four surfaces (four colour-pass draws), no alpha:
 #   WinchBody   fleet_paint (crew barrel, chest and head; flashes with the enemy) and paint
-#               (vertex colour: charcoal mast, hanger, ears, snout, strap and pack, oxide plates and
+#               (vertex colour: charcoal mast, hanger, strap and pack, oxide plates and
 #               one brass tag on the chest).
 #   WinchDrum   paint only: the existing drum and cable wrap, pivoting on its X axle.
 #   WinchRotor  paint only: three oxide blades with unequal angular spacing and one pale bare-metal
@@ -102,7 +102,7 @@ d.paint([f for f in drum if abs(f.normal.x) > 0.9], "paint", CHAR)  # the two da
 d.cyl("paint", DRUM_R + 0.05, DRUM_R + 0.05, 0.26, segs=8, loc=g(0, DRUM_Y, 0), rot=(0, HALF_PI, 0), color=WORN)  # cable wrap
 
 # The old works' two marks, cast in under the Fleet's paint: the crew number and HIRED.
-crew.cast_number(b, "paint", "33", (0, -0.575, 0.45), (0, -1, 0), 0.16)
+crew.cast_number(b, "paint", "33", (0, -0.556, 0.45), (0, -1, 0), 0.16)
 crew.hired(b, "paint", (0, 0.9, 0.15), (0, 1, 0), 0.08)
 bmesh.ops.recalc_face_normals(b.bm, faces=b.bm.faces[:])
 body = b.to_object(parent=root)

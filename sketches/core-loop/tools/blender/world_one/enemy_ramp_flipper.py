@@ -3,7 +3,7 @@
 # A charcoal underframe and centre hinge divide two broad oxide deck panels; a petrol repair
 # panel, irregular grey edge chips and short hostile-orange lip marks break up the paint.
 # The centre axle ends and three hinge knuckles sit in the dark longitudinal deck recess.
-# RampBody has fleet_paint (crew) and paint (cart, ears, snout, arms, one brass tag).
+# RampBody has fleet_paint (crew) and paint (cart, arms, one brass tag).
 # RampPlate has paint only. Three opaque surfaces total, no lights or collision geometry.
 # Blender +Z is up; g() converts Godot coordinates. The carried plate transform and deployed
 # pose come from ramp_flipper.gd, rather than baked transforms in the exported mesh.
@@ -46,8 +46,8 @@ b.box("paint", (1.05, .65, .15), loc=g(0, -.88, 0), color="charcoal")
 b.cyl("paint", .635, .635, .10, segs=10, loc=g(0, .02, 0), color="charcoal")
 b.box("paint", (.28, .05, .18), loc=g(0, .43, .60), color="brass")
 # The old works' two marks, cast in under the Fleet's paint: the crew number and HIRED.
-crew.cast_number(b, "paint", "27", (0, -0.53, 0.70), (0, -1, 0), 0.16)
-crew.hired(b, "paint", (0, 0.6, 0.3), (0, 1, 0), 0.08)
+crew.cast_number(b, "paint", "27", (0, -0.507, 0.70), (0, -1, 0), 0.16)
+crew.hired(b, "paint", (0, 0.584, 0.3), (0, 1, 0), 0.08)
 bmesh.ops.recalc_face_normals(b.bm, faces=b.bm.faces[:])
 b.to_object(parent=root)
 

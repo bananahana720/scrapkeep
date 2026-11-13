@@ -66,8 +66,8 @@ cable = [(0.12, 1.6, -0.62), (0.18, 0.8, -0.85), (0.10, -0.2, -1.0), (0.0, -1.05
 for a, c in zip(cable, cable[1:]):
     b.rod("paint", g(*a), g(*c), 0.05, segs=5, color=CHAR)
 # The old works' two marks, cast in under the Fleet's paint: the crew number and HIRED.
-crew.cast_number(b, "paint", "16", (0, -0.54, 0.52), (0, -1, 0), 0.2)
-crew.hired(b, "paint", (0, 0.58, -0.6), (0, 1, 0), 0.1)
+crew.cast_number(b, "paint", "16", (0, -0.474, 0.52), (0, -1, 0), 0.2)
+crew.hired(b, "paint", (0, 0.566, -0.6), (0, 1, 0), 0.1)
 bmesh.ops.recalc_face_normals(b.bm, faces=b.bm.faces[:])
 body = b.to_object(parent=root)
 
