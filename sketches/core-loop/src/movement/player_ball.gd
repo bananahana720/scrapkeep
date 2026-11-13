@@ -248,6 +248,7 @@ func setup(tuning_ref, events_ref, spawn: Vector3) -> void:
 			"kicker_launch", "ride_glide_drop", "thermal_ride", "ride_hop", "crater_ride", "lift_fired"]:
 			_clear_speed_bank())
 	_rigid.landed.connect(func(impact: float): events.landed.emit(impact))
+	_rigid.bumped.connect(func(at: Vector3, normal: Vector3, speed: float): events.bumped.emit(at, normal, speed))
 	_rigid.jumped.connect(func(air: bool):
 		if not air:
 			_speed_bank_jumped = true

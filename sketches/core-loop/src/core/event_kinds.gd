@@ -66,6 +66,8 @@ const ROWS := {
 	"boosted": {"group": "movement", "color": Palette.AMBER, "shape": "arrow", "sound": "boost_whoosh", "hud": "", "objective": "", "priority": 1},
 	"dashed": {"group": "movement", "color": Palette.AMBER, "shape": "arrow", "sound": "dash_whoosh", "hud": "", "objective": "", "priority": 1},
 	"landed": {"group": "movement", "color": Palette.SANDSTONE, "shape": "ring", "sound": "land_thud", "hud": "", "objective": "", "priority": 1},
+	# A wall, cliff or structure side met at speed: the landing's thud, turned toward the face (juice.gd).
+	"bumped": {"group": "movement", "color": Palette.SANDSTONE, "shape": "burst", "sound": "land_thud", "hud": "", "objective": "", "priority": 1},
 	"slammed": {"group": "movement", "color": Palette.AMBER, "shape": "ring", "sound": "core_slam", "hud": "", "objective": "", "priority": 1},
 	# A carve's release: the grind lets go, so the ride off a bank is heard and felt, not just seen.
 	"carved": {"group": "movement", "color": Palette.AMBER, "shape": "arrow", "sound": "carve_release", "hud": "", "objective": "", "priority": 1},
@@ -106,6 +108,8 @@ const ROWS := {
 	# plant discharge rides mounted (the plant clack and the motif's first notes).
 	"enemy_rebounded": {"group": "combat", "color": Palette.SAND, "shape": "chevron", "sound": "shell_spring", "sound_next": "rebound_spring_snap", "hud": "", "objective": "", "priority": 1},
 	"enemy_pinned": {"group": "combat", "color": Palette.COPPER, "shape": "burst", "sound": "hit_thwack", "sound_next": "pin_double_thwack", "hud": "", "objective": "", "priority": 1},
+	# A thrown enemy stopped by a wall: a body's thud on stone, no damage (enemy.gd _wall_slam).
+	"enemy_walled": {"group": "combat", "color": Palette.SANDSTONE, "shape": "burst", "sound": "land_thud", "hud": "", "objective": "", "priority": 1},
 	"enemy_ringed_out": {"group": "combat", "color": Palette.COPPER, "shape": "arrow", "sound": "near_whoosh", "sound_next": "ring_out_fall", "hud": "", "objective": "", "priority": 1},
 	"vault_kicked": {"group": "movement", "color": ClassDef.SABLE_COLOR, "shape": "ring", "sound": "pylon_eject", "sound_next": "sable_octave_leap", "hud": "", "objective": "", "priority": 1},
 	"gauge_charging": {"group": "combat", "color": Palette.SAND, "shape": "ring", "sound": "beacon_hum", "sound_next": "motif_accumulate", "hud": "", "objective": "", "priority": 1},
@@ -267,6 +271,18 @@ const JUICE := {
 	"slammed": {"fx": {"slam_ring": 48, "slam_dust": 24}},
 	"harpoon_bit": {"fx": {"latch_ring": 24, "latch_halo": 24, "latch_pulse": 12}},
 	"wall_crumbled": {"fx": {"crack_debris": 28, "slam_dust": 14}},
+	# A park prop the ball ran into (prop_kicks.gd): by its move, the sound, its pitch at 4 and 30 m/s,
+	# its level and the dust. A metal one (tags machine or sign) clanks when it flies. Start values for a PC check.
+	"prop_kicked": {"fly": {"sound": "land_thud", "metal": "clank", "pitch": [1.5, 1.15], "db": -9.0, "dust": 8},
+		"shove": {"sound": "land_thud", "metal": "clank", "pitch": [0.95, 0.75], "db": -7.0, "dust": 10},
+		"bend": {"sound": "", "metal": "", "pitch": [1.0, 1.0], "db": 0.0, "dust": 4}},
+	# Collisions (thread "Make collisions feel physical", 13 Nov): speed in m/s of closing scales each
+	# from min_speed (share 0) to full_speed (share 1): squash, kick, shake, db and pitch are at share 0 and 1
+	# (shake only from shake_from up); the particle counts are fixed. Start values for a PC feel check.
+	"bumped": {"min_speed": 9.0, "full_speed": 30.0, "squash": 0.34, "kick": 0.45, "shake": 0.3, "shake_from": 0.5,
+		"db": [-10.0, 1.0], "pitch": [1.2, 0.8], "fx": {"slam_dust": 18, "crack_debris": 12}},
+	"enemy_walled": {"min_speed": 8.0, "full_speed": 30.0, "shake": 0.14, "near_m": 14.0,
+		"db": [-12.0, -2.0], "pitch": [1.05, 0.75], "fx": {"slam_dust": 12, "crack_debris": 8}},
 	"sticky_stuck": {"fx": {"spark_core": 8, "spark_halo": 8}},
 	"breach_opened": {"fx": {"dig_debris": 10, "dig_dust": 12}, "low": {"dig_debris": 4, "dig_dust": 5}},
 	"cache_spent": {"fx": {"cache_ember": 24, "cache_wisp": 6}},
@@ -418,6 +434,8 @@ const WEIGHT_EXEMPT := {
 	"interaction_found": "World, interaction and activity rows own their contextual glyph and sound.",
 	"jumped": "Ball motion preserves momentum; its existing camera and cue profile owns it.",
 	"landed": "Ball motion preserves momentum; its existing camera and cue profile owns it.",
+	"bumped": "Ball motion preserves momentum; its existing camera and cue profile owns it.",
+	"enemy_walled": "A thrown body stopped by a wall deals no damage; its thud, dust and stagger are juice.gd's and enemy.gd's.",
 	"launched": "Ball motion preserves momentum; its existing camera and cue profile owns it.",
 	"line_skill_loaded": "The verb or ability grammar owns this cue; its landed strike is enemy_struck.",
 	"line_state_changed": "The verb or ability grammar owns this cue; its landed strike is enemy_struck.",
