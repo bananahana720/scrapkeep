@@ -136,7 +136,7 @@ func _placement(map_id: String) -> void:
 	_t.check("%s has pilot lines" % map_id, lines.size() >= 4, str(lines.size()))
 	var heights := ParkTerrain._read_zstd(ParkTerrain.bake_dir(map_id) + "/ground.bin", ParkTerrain.SIDE * ParkTerrain.SIDE * 4).to_float32_array()
 	var rows := WorkMachines.rows_for(map_id)
-	_t.check("%s stands two or three machines (%d)" % [map_id, rows.size()], rows.size() >= 1 and rows.size() <= 3)
+	_t.check("%s stands two or three machines (%d)" % [map_id, rows.size()], rows.size() >= 2 and rows.size() <= 3)
 	for row in rows:
 		var j := _judge(row, park, lines, heights)
 		_t.check("%s %s: ground under the footings spans %.2f m" % [map_id, row.id, j.spread], j.spread <= FOOT_SPREAD_M)
@@ -321,7 +321,18 @@ func _view() -> void:
 		sway = maxf(sway, absf(m.nodes.Hook.rotation.z))
 	_t.check("the boom slews over 20 s", slews.max() - slews.min() > 1.0, str(slews.max() - slews.min()))
 	_t.check("the bucket rises and falls", drops.max() - drops.min() > 4.0, str(drops.max() - drops.min()))
-	_t.check("the hook sways on its rope, never wildly (%.3f rad)" % sway, sway > 0.005 and sway <= WorkMachines.SWAY_MAX)
+	_t.check("the hook sways on its rope, never against its stop (%.3f rad)" % sway, sway > 0.005 and sway < WorkMachines.SWAY_MAX * 0.8)
+	# A derrick that starts mid-slew (a phase offset, a stage entry) takes no kick from the boom's rate.
+	m.t = 9.5
+	m.sway = 0.0
+	m.sway_v = 0.0
+	m.last_slew = NAN
+	m.last_rate = NAN
+	var start_sway := 0.0
+	for i in 15:
+		view._process(1.0 / 30.0)
+		start_sway = maxf(start_sway, absf(m.nodes.Hook.rotation.z))
+	_t.check("a derrick started mid-slew swings gently (%.3f rad in 0.5 s)" % start_sway, start_sway < 0.03)
 	for sluice in view.machines.filter(func(x): return x.kind == "sluice"):
 		var lifts := []
 		var turns := []

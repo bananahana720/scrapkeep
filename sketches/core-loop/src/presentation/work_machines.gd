@@ -14,7 +14,6 @@ extends Node3D
 
 const WORLD_LAYER := 1
 const VIEW_END_M := 900.0
-const STILL_BEYOND_M := 700.0
 const SWAY_STEP_S := 1.0 / 60.0
 const GRAVITY := 9.8
 const SWAY_DAMP := 0.6
@@ -99,7 +98,8 @@ static var _rows := {}
 
 var ctx
 var map_id := ""
-# Built machines: {row, kind, root, slew, hook, fall, load, t, sway, sway_v, last_slew, last_rate}.
+# Built machines: {row, kind, root, nodes, t, sway, sway_v, last_slew, last_rate}. last_rate is NAN until two
+# frames have posed the boom, so a machine that starts mid-slew does not read its whole rate as a kick.
 var machines: Array = []
 var _built_for := -1
 static var _scenes := {}
@@ -269,8 +269,8 @@ func _build(row: Dictionary, ground: Callable) -> Dictionary:
 		if node != null:
 			nodes[node_name] = node
 	return {
-		"row": row, "kind": String(row.kind), "root": root, "nodes": nodes, "posed": false,
-		"t": float(row.get("phase_s", 0.0)), "sway": 0.0, "sway_v": 0.0, "last_slew": NAN, "last_rate": 0.0,
+		"row": row, "kind": String(row.kind), "root": root, "nodes": nodes,
+		"t": float(row.get("phase_s", 0.0)), "sway": 0.0, "sway_v": 0.0, "last_slew": NAN, "last_rate": NAN,
 	}
 
 
@@ -328,18 +328,9 @@ func _process(delta: float) -> void:
 
 
 func _tick(delta: float) -> void:
-	var eye: Variant = _eye()
 	for m in machines:
 		m.t += delta
-		if eye != null and m.posed and eye.distance_to(m.root.global_position) > STILL_BEYOND_M:
-			continue
 		_apply(m, delta)
-		m.posed = true
-
-
-func _eye() -> Variant:
-	var cam := get_viewport().get_camera_3d() if is_inside_tree() else null
-	return cam.global_position if cam != null else null
 
 
 # Poses the nodes from the cycle.
@@ -404,7 +395,7 @@ func _derrick(m: Dictionary, p: Dictionary, delta: float) -> void:
 		nodes.Load.position.y = -rope
 	if delta > 0.0 and not is_nan(m.last_slew):
 		var rate: float = (slew - m.last_slew) / delta
-		var accel: float = (rate - m.last_rate) / delta
+		var accel: float = 0.0 if is_nan(m.last_rate) else (rate - m.last_rate) / delta
 		m.last_rate = rate
 		var reach: float = KINDS[m.kind].reach_m * KINDS[m.kind].sway
 		var left := delta

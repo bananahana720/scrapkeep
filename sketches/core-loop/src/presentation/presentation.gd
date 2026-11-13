@@ -421,12 +421,12 @@ func _sync_dressing() -> void:
 	park_props = ParkProps.new()
 	add_child(park_props)
 	park_props.setup(ctx)
-	# Looping workers stand on every preset: their footings are solid for bots and players alike.
-	if is_instance_valid(work_machines):
-		work_machines.free()
-	work_machines = WorkMachines.new()
-	add_child(work_machines)
-	work_machines.setup(ctx)
+	# Looping workers stand on every preset (their footings are solid for bots and players alike), so a
+	# preset change keeps them: rebuilt here they would come back over a boss arena and lose their phase.
+	if not is_instance_valid(work_machines):
+		work_machines = WorkMachines.new()
+		add_child(work_machines)
+		work_machines.setup(ctx)
 	if is_instance_valid(ambient_life):
 		ambient_life.free()
 	ambient_life = null
