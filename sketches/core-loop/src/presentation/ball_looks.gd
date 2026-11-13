@@ -110,6 +110,11 @@ static func ids() -> Array:
 	return [TODAY] + LOOKS.keys()
 
 
+# True for a look's own shell path.
+static func is_look(path: String) -> bool:
+	return path != "" and LOOKS.values().has(path)
+
+
 # The look's shell path under each pilot id, for hero_assets.shell_assets; {} for today's.
 static func asset_paths(look: String, pilots: Array) -> Dictionary:
 	var path := String(LOOKS.get(look, ""))

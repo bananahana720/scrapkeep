@@ -1155,6 +1155,10 @@ func shell_layers(pilot: String, variant: String, paths: Dictionary) -> Array[St
 	var base := shell_path(pilot, use, 1, paths)
 	out.append(base if _loadable(base) else "")
 	for n in HEFT_LAYERS:
+		# A ball look is one shell with no heft layers yet; nothing is missing, so nothing warns.
+		if BallLooks.is_look(base):
+			out.append("")
+			continue
 		var path := shell_path(pilot, use, n, paths)
 		if use != "" and not _loadable(path):
 			_warn_logged("shell_layer:%s:%d" % [use, n], "hero_assets: shell variant '%s' lacks its class %d layer; borrowing the default" % [use, n])
