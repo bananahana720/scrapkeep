@@ -5,6 +5,8 @@ extends SceneTree
 #   <godot> --path sketches/core-loop --script res://tools/lamp_capture.gd -- --out=/abs/dir [--kinds=a,b] [--close=hooker]
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
+const Telegraph := preload("res://src/combat/telegraph.gd")
+const Threat := preload("res://src/combat/threat_grammar.gd")
 
 const SIZE := Vector2i(1920, 1080)
 const WIND := 0.75
@@ -45,6 +47,9 @@ func _set_wind(enemy, share: float) -> void:
 	if "phase" in enemy and "warn_seconds" in enemy:
 		if share <= 0.0:
 			enemy.phase = 0
+			enemy._t = 0.0
+		elif share >= 1.0:
+			enemy.phase = 2
 			enemy._t = 0.0
 		else:
 			enemy.phase = 1
@@ -88,9 +93,14 @@ func _run() -> void:
 		var eye_at := Vector3(low.x, terrain.height(low.x, low.z) + 3.5, low.z)
 		var near_at := feet + toward * 3.0 + Vector3.UP * 1.4
 		var has_eye: bool = enemy.get("_eye") != null
-		for share in [0.0, WIND]:
+		for share in [0.0, WIND, 1.0]:
 			_set_wind(enemy, share)
-			var tag := "rest" if share == 0.0 else "windup"
+			var tag := "rest" if share == 0.0 else ("windup" if share < 1.0 else "strike")
+			var ring: Node3D = null
+			if share > 0.0:
+				# A real hostile telegraph ring beside the crew, at the same progress, for the colour match.
+				ring = Telegraph.ring(game, terrain, Threat.Type.INSTANT, feet + Vector3(2.4, 0, 0), 0.9, 3.5)
+				ring.set_progress(minf(share, 0.99))
 			cam.fov = 70.0
 			cam.look_at_from_position(eye_at, feet + Vector3.UP * 0.8)
 			cam.current = true
@@ -103,6 +113,9 @@ func _run() -> void:
 				cam.current = true
 				await _shot(out.path_join("%s-%s-close.png" % [kind, tag]))
 				records.append({"kind": kind, "shot": tag + "-close", "camera_m": 3, "lamp": has_eye, "energy": snappedf(energy, 0.01)})
+			if ring != null:
+				ring.queue_free()
+				await process_frame
 		enemy.queue_free()
 		paused = false
 		await process_frame

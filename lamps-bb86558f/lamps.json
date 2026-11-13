@@ -1,0 +1,278 @@
+{
+	"frames": [
+		{
+			"camera_m": 12,
+			"energy": 0.25,
+			"kind": "mag_trapper",
+			"lamp": true,
+			"shot": "rest"
+		},
+		{
+			"camera_m": 12,
+			"energy": 0.84,
+			"kind": "mag_trapper",
+			"lamp": true,
+			"shot": "windup"
+		},
+		{
+			"camera_m": 12,
+			"energy": 1.3,
+			"kind": "mag_trapper",
+			"lamp": true,
+			"shot": "strike"
+		},
+		{
+			"camera_m": 12,
+			"energy": 0.25,
+			"kind": "hooker",
+			"lamp": true,
+			"shot": "rest"
+		},
+		{
+			"camera_m": 3,
+			"energy": 0.25,
+			"kind": "hooker",
+			"lamp": true,
+			"shot": "rest-close"
+		},
+		{
+			"camera_m": 12,
+			"energy": 0.84,
+			"kind": "hooker",
+			"lamp": true,
+			"shot": "windup"
+		},
+		{
+			"camera_m": 3,
+			"energy": 0.84,
+			"kind": "hooker",
+			"lamp": true,
+			"shot": "windup-close"
+		},
+		{
+			"camera_m": 12,
+			"energy": 1.3,
+			"kind": "hooker",
+			"lamp": true,
+			"shot": "strike"
+		},
+		{
+			"camera_m": 3,
+			"energy": 1.3,
+			"kind": "hooker",
+			"lamp": true,
+			"shot": "strike-close"
+		},
+		{
+			"camera_m": 12,
+			"energy": 0.25,
+			"kind": "jolt_layer",
+			"lamp": true,
+			"shot": "rest"
+		},
+		{
+			"camera_m": 12,
+			"energy": 0.84,
+			"kind": "jolt_layer",
+			"lamp": true,
+			"shot": "windup"
+		},
+		{
+			"camera_m": 12,
+			"energy": 1.3,
+			"kind": "jolt_layer",
+			"lamp": true,
+			"shot": "strike"
+		},
+		{
+			"camera_m": 12,
+			"energy": 0.25,
+			"kind": "catch_trap",
+			"lamp": true,
+			"shot": "rest"
+		},
+		{
+			"camera_m": 12,
+			"energy": 0.84,
+			"kind": "catch_trap",
+			"lamp": true,
+			"shot": "windup"
+		},
+		{
+			"camera_m": 12,
+			"energy": 1.3,
+			"kind": "catch_trap",
+			"lamp": true,
+			"shot": "strike"
+		},
+		{
+			"camera_m": 12,
+			"energy": 0.25,
+			"kind": "plated_brute",
+			"lamp": true,
+			"shot": "rest"
+		},
+		{
+			"camera_m": 12,
+			"energy": 0.84,
+			"kind": "plated_brute",
+			"lamp": true,
+			"shot": "windup"
+		},
+		{
+			"camera_m": 12,
+			"energy": 1.3,
+			"kind": "plated_brute",
+			"lamp": true,
+			"shot": "strike"
+		},
+		{
+			"camera_m": 12,
+			"energy": 0.25,
+			"kind": "ramp_flipper",
+			"lamp": true,
+			"shot": "rest"
+		},
+		{
+			"camera_m": 12,
+			"energy": 0.84,
+			"kind": "ramp_flipper",
+			"lamp": true,
+			"shot": "windup"
+		},
+		{
+			"camera_m": 12,
+			"energy": 1.3,
+			"kind": "ramp_flipper",
+			"lamp": true,
+			"shot": "strike"
+		},
+		{
+			"camera_m": 12,
+			"energy": 0.25,
+			"kind": "bola_thrower",
+			"lamp": true,
+			"shot": "rest"
+		},
+		{
+			"camera_m": 12,
+			"energy": 0.84,
+			"kind": "bola_thrower",
+			"lamp": true,
+			"shot": "windup"
+		},
+		{
+			"camera_m": 12,
+			"energy": 1.3,
+			"kind": "bola_thrower",
+			"lamp": true,
+			"shot": "strike"
+		},
+		{
+			"camera_m": 12,
+			"energy": 0.25,
+			"kind": "netcaster",
+			"lamp": true,
+			"shot": "rest"
+		},
+		{
+			"camera_m": 12,
+			"energy": 0.84,
+			"kind": "netcaster",
+			"lamp": true,
+			"shot": "windup"
+		},
+		{
+			"camera_m": 12,
+			"energy": 1.3,
+			"kind": "netcaster",
+			"lamp": true,
+			"shot": "strike"
+		},
+		{
+			"camera_m": 12,
+			"energy": 0.25,
+			"kind": "deflector",
+			"lamp": true,
+			"shot": "rest"
+		},
+		{
+			"camera_m": 12,
+			"energy": 0.84,
+			"kind": "deflector",
+			"lamp": true,
+			"shot": "windup"
+		},
+		{
+			"camera_m": 12,
+			"energy": 1.3,
+			"kind": "deflector",
+			"lamp": true,
+			"shot": "strike"
+		},
+		{
+			"camera_m": 12,
+			"energy": 0.25,
+			"kind": "gyro_jammer",
+			"lamp": true,
+			"shot": "rest"
+		},
+		{
+			"camera_m": 12,
+			"energy": 0.84,
+			"kind": "gyro_jammer",
+			"lamp": true,
+			"shot": "windup"
+		},
+		{
+			"camera_m": 12,
+			"energy": 1.3,
+			"kind": "gyro_jammer",
+			"lamp": true,
+			"shot": "strike"
+		},
+		{
+			"camera_m": 12,
+			"energy": 0.25,
+			"kind": "swatter",
+			"lamp": true,
+			"shot": "rest"
+		},
+		{
+			"camera_m": 12,
+			"energy": 0.84,
+			"kind": "swatter",
+			"lamp": true,
+			"shot": "windup"
+		},
+		{
+			"camera_m": 12,
+			"energy": 1.3,
+			"kind": "swatter",
+			"lamp": true,
+			"shot": "strike"
+		},
+		{
+			"camera_m": 12,
+			"energy": 0.25,
+			"kind": "winch_drone",
+			"lamp": true,
+			"shot": "rest"
+		},
+		{
+			"camera_m": 12,
+			"energy": 0.84,
+			"kind": "winch_drone",
+			"lamp": true,
+			"shot": "windup"
+		},
+		{
+			"camera_m": 12,
+			"energy": 1.3,
+			"kind": "winch_drone",
+			"lamp": true,
+			"shot": "strike"
+		}
+	],
+	"wind_share": 0.75
+}

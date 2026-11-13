@@ -26,3 +26,12 @@ Both jobs ran on headless gamescope on the RTX 4080, with sound off and a scratc
 - AE2 used PR 966 at 1e4ea54a, with the same scratch lamp_capture.gd and the same framing as the third take. Files are in lamps-1e4ea54a/. At 75% of the wind-up the lamp's energy is 0.84, which is below the new 1.3 peak. At rest it is 0.25.
 - AF2 used PR 968 at 269b4b32, with the same enemy_clip_capture.gd command. Files are in clips-269b4b32/.
 - Both runs exited 0 on headless gamescope on the RTX 4080, with sound off.
+
+## Version 3 (jobs AE3 and AF3)
+
+- AE3 used PR 966 at bb86558f. Files are in lamps-bb86558f/.
+  - Each kind is shot at rest, at 75% of the wind-up and at the strike (the attack live, 100%).
+  - For the wind-up and strike shots, a real hostile telegraph ring, Telegraph.ring with Threat.Type.INSTANT, stands 2.4 m to the side of the crew at the same progress.
+  - The lamp energy is 0.25 at rest, 0.84 at 75% and 1.3 at the strike. scratch-tool/lamp_capture.gd is updated.
+- AF3 used PR 968 at e8094fd2, for the deflector and the gyro jammer only. Files are in clips-e8094fd2/.
+- Both runs exited 0.

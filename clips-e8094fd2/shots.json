@@ -1,0 +1,120 @@
+{
+	"shots": [
+		{
+			"clip": "rest",
+			"file": "deflector_00_rest.png",
+			"kind": "deflector",
+			"label": "rest",
+			"t": 0.0
+		},
+		{
+			"clip": "idle",
+			"file": "deflector_01_idle.png",
+			"kind": "deflector",
+			"label": "idle",
+			"t": 2.501
+		},
+		{
+			"clip": "move",
+			"file": "deflector_02_move.png",
+			"kind": "deflector",
+			"label": "move",
+			"t": 0.117
+		},
+		{
+			"clip": "windup",
+			"file": "deflector_03_windup_half.png",
+			"kind": "deflector",
+			"label": "windup_half",
+			"t": 0.45
+		},
+		{
+			"clip": "windup",
+			"file": "deflector_04_windup_release.png",
+			"kind": "deflector",
+			"label": "windup_release",
+			"t": 0.9
+		},
+		{
+			"clip": "attack",
+			"file": "deflector_05_attack.png",
+			"kind": "deflector",
+			"label": "attack",
+			"t": 0.048
+		},
+		{
+			"clip": "hit",
+			"file": "deflector_06_hit.png",
+			"kind": "deflector",
+			"label": "hit",
+			"t": 0.036
+		},
+		{
+			"clip": "death",
+			"file": "deflector_07_death.png",
+			"kind": "deflector",
+			"label": "death",
+			"t": 0.5
+		},
+		{
+			"clip": "rest",
+			"file": "gyro_jammer_00_rest.png",
+			"kind": "gyro_jammer",
+			"label": "rest",
+			"t": 0.0
+		},
+		{
+			"clip": "idle",
+			"file": "gyro_jammer_01_idle.png",
+			"kind": "gyro_jammer",
+			"label": "idle",
+			"t": 2.501
+		},
+		{
+			"clip": "move",
+			"file": "gyro_jammer_02_move.png",
+			"kind": "gyro_jammer",
+			"label": "move",
+			"t": 0.117
+		},
+		{
+			"clip": "windup",
+			"file": "gyro_jammer_03_windup_half.png",
+			"kind": "gyro_jammer",
+			"label": "windup_half",
+			"t": 0.5
+		},
+		{
+			"clip": "windup",
+			"file": "gyro_jammer_04_windup_release.png",
+			"kind": "gyro_jammer",
+			"label": "windup_release",
+			"t": 1.0
+		},
+		{
+			"clip": "attack",
+			"file": "gyro_jammer_05_attack.png",
+			"kind": "gyro_jammer",
+			"label": "attack",
+			"t": 0.048
+		},
+		{
+			"clip": "hit",
+			"file": "gyro_jammer_06_hit.png",
+			"kind": "gyro_jammer",
+			"label": "hit",
+			"t": 0.036
+		},
+		{
+			"clip": "death",
+			"file": "gyro_jammer_07_death.png",
+			"kind": "gyro_jammer",
+			"label": "death",
+			"t": 0.5
+		}
+	],
+	"size": [
+		640,
+		480
+	]
+}
