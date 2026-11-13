@@ -6,6 +6,7 @@ import {
   carriedPrs,
   failingChecks,
   hygieneFindings,
+  bridgeFindings,
   canaries,
   classify,
   cacheableBaseRun,
@@ -214,6 +215,11 @@ test("hygiene fails added symlinks, root files and new top-level folders only", 
     "root file added: NOTES.md",
     "new top-level folder: stray/x.txt",
   ]);
+});
+
+test("hygiene fails a project.godot that carries the MCP bridge autoload", () => {
+  assert.deepEqual(bridgeFindings("[autoload]\nGameEvents=\"*res://src/core/game_events.gd\"\n"), []);
+  assert.equal(bridgeFindings("[autoload]\nMcpBridge=\"*res://.mcp/godot-runtime/bridge/mcp_bridge.gd\"\n").length, 1);
 });
 
 test("merged branch names come from GitHub and git merge subjects", () => {

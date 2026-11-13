@@ -318,6 +318,12 @@ export function hygieneFindings(rawLines, baseTopLevel) {
   return findings;
 }
 
+// The Godot MCP adds an McpBridge autoload to project.godot while the game runs and removes it
+// on stop; a commit made mid-session, or after a killed session, would ship it.
+export function bridgeFindings(projectGodot) {
+  return /McpBridge/.test(projectGodot) ? ["project.godot carries the Godot MCP's McpBridge autoload: call stop_project, then commit"] : [];
+}
+
 // Merge commits on the PR's first-parent path each carry another branch. A carried PR that has
 // moved on since is stale (#101 and #102 carried #79 without 1f69c639 and failed on old bakes).
 export function mergedBranch(subject) {
@@ -701,7 +707,10 @@ async function main() {
 
   // Stage 0: what the head is made of. Hygiene, then any stale branch it carries.
   const baseTop = new Set(git(["ls-tree", "--name-only", diffBase]).split("\n").filter(Boolean));
-  const hygiene = hygieneFindings(git(["diff", "--raw", "--no-abbrev", "--diff-filter=A", diffBase, "HEAD"]).split("\n"), baseTop);
+  const hygiene = [
+    ...hygieneFindings(git(["diff", "--raw", "--no-abbrev", "--diff-filter=A", diffBase, "HEAD"]).split("\n"), baseTop),
+    ...bridgeFindings(spawnSync("git", ["-C", root, "show", "HEAD:sketches/core-loop/project.godot"], { encoding: "utf8" }).stdout ?? ""),
+  ];
   if (!stage("tree hygiene", hygiene.length === 0, { note: hygiene.length ? hygiene.slice(0, 5).join("; ") : "no symlink, root file or new top-level folder", findings: hygiene }) && !options.dryRun) finish();
   const merges = git(["rev-list", "--first-parent", "--merges", "--parents", `${mergeBase}..HEAD`]).split("\n").filter(Boolean)
     .map((line) => line.split(" "))
