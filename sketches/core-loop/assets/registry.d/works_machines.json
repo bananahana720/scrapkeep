@@ -27,6 +27,17 @@
     "recipe": "tools/blender/world_one/works_sluice.py",
     "note": "Procedural vertex-coloured canal check gate (W1-93 looping worker): static channel, piers and hoist deck, a lifting leaf with its rising stem, and a handwheel, as separately driven nodes."
    }
+  },
+  {
+   "id": "works_conveyor",
+   "path": "res://assets/models/world_one/works_conveyor.glb",
+   "class": "park_large",
+   "ships": true,
+   "loader": "src/presentation/work_machines.gd",
+   "provenance": {
+    "recipe": "tools/blender/world_one/works_conveyor.py",
+    "note": "Procedural vertex-coloured batch-plant bucket conveyor (W1-93 looping worker): static truss, hopper, head tower and pile, and loaded and empty bucket templates the runtime copies along the belt."
+   }
   }
  ]
 }

@@ -20,12 +20,30 @@ const GRAVITY := 9.8
 const SWAY_DAMP := 0.6
 const SWAY_MAX := 0.25
 
+# The conveyor's buckets ride a MultiMesh each way, built from the GLB's CupFull and CupEmpty.
+const CONVEYOR := {
+	"model": "res://assets/models/world_one/works_conveyor.glb",
+	"belt": {"from": Vector3(0.0, 3.0, 13.0), "to": Vector3(0.0, 16.0, -11.0), "spacing_m": 2.0, "ride_m": 0.35, "return_m": 1.35},
+	"start": {"run_m": 0.0},
+	"steps": [
+		[16.0, {"run_m": 32.0}],
+		[5.0, {}],
+	],
+	"solid": [
+		{"size": Vector3(3.6, 1.4, 3.0), "at": Vector3(0.0, 0.7, 13.6)},
+		{"size": Vector3(4.0, 14.5, 3.6), "at": Vector3(0.0, 7.25, -11.0)},
+		{"size": Vector3(5.0, 2.0, 5.0), "at": Vector3(0.0, 1.0, -15.6)},
+	],
+}
+
 # One row per kind: its model, its work cycle and the boxes that stand solid, in the machine's frame
 # (origin on the ground under its pivot, the working side towards -Z). A cycle is a list of steps,
 # [seconds, {channel: target}]: each step eases its channels from where the last step left them to
 # its targets (a channel it does not name holds), and the cycle starts where its last step ends, so
 # it loops without a seam. Channels: slew_deg (a derrick's boom about its mast), drop_m (its hoist
-# rope below the boom's tip), lift_m (a sluice's leaf above its sill; the handwheel turns with it).
+# rope below the boom's tip), lift_m (a sluice's leaf above its sill; the handwheel turns with it),
+# run_m (how far a conveyor's belt has run; its buckets repeat every spacing_m, so a cycle whose run
+# is a whole number of spacings loops cleanly). A kind's "start" overrides where a channel starts.
 const KINDS := {
 	"derrick": {
 		"model": "res://assets/models/world_one/works_derrick.glb",
@@ -65,21 +83,24 @@ const KINDS := {
 			{"size": Vector3(2.2, 10.0, 3.0), "at": Vector3(4.6, 5.0, 0.0)},
 		],
 	},
+	"conveyor": CONVEYOR,
 }
 
 # The named nodes a kind's channels drive.
-const NODES := ["Slew", "Hook", "Fall", "Load", "Gate", "Wheel"]
+const NODES := ["Slew", "Hook", "Fall", "Load", "Gate", "Wheel", "BeltFull", "BeltEmpty"]
 
 # Where each park's machines stand: kind, ground point, yaw (the working side's centre, Godot yaw)
 # and a phase offset in seconds so two machines never move in step.
 const ROWS := {
 	"park_dam": [
-		{"id": "dam_pour_derrick", "kind": "derrick", "at": Vector2(-120.0, 600.0), "yaw_deg": 180.0, "phase_s": 0.0},
+		{"id": "dam_pour_derrick", "kind": "derrick", "at": Vector2(-120.0, 600.0), "yaw_deg": 90.0, "phase_s": 0.0},
 		{"id": "wheelhouse_sluice", "kind": "sluice", "at": Vector2(-1.0, -301.0), "yaw_deg": 135.0, "phase_s": 4.0},
+		{"id": "rim_batch_conveyor", "kind": "conveyor", "at": Vector2(-180.0, -220.0), "yaw_deg": 0.0, "phase_s": 7.0},
 	],
 	"park_flume": [
 		{"id": "weir_pond_derrick", "kind": "derrick", "at": Vector2(-520.0, -700.0), "yaw_deg": 90.0, "phase_s": 11.0},
 		{"id": "bend_sluice", "kind": "sluice", "at": Vector2(120.0, -162.0), "yaw_deg": 118.0, "phase_s": 17.0},
+		{"id": "bench_batch_conveyor", "kind": "conveyor", "at": Vector2(-80.0, 480.0), "yaw_deg": 45.0, "phase_s": 3.0},
 	],
 }
 
@@ -113,6 +134,7 @@ static func rest(kind: String) -> Dictionary:
 # The work cycle at time t (seconds) for a kind: every channel's value. Pure and periodic.
 static func pose(kind: String, t: float) -> Dictionary:
 	var at := rest(kind)
+	at.merge(KINDS[kind].get("start", {}), true)
 	var s := fposmod(t, cycle_s(kind))
 	for step in KINDS[kind].steps:
 		var length: float = step[0]
@@ -206,6 +228,8 @@ func _build(row: Dictionary, ground: Callable) -> Dictionary:
 		shape.shape = cube
 		shape.position = box.at
 		body.add_child(shape)
+	if kind.has("belt"):
+		_belt(root, kind.belt)
 	var nodes := {}
 	for node_name in NODES:
 		var node := root.find_child(node_name, true, false)
@@ -215,6 +239,26 @@ func _build(row: Dictionary, ground: Callable) -> Dictionary:
 		"row": row, "kind": String(row.kind), "root": root, "nodes": nodes, "posed": false,
 		"t": float(row.get("phase_s", 0.0)), "sway": 0.0, "sway_v": 0.0, "last_slew": NAN, "last_rate": 0.0,
 	}
+
+
+# A conveyor's two runs of buckets: one MultiMesh per run from the GLB's CupFull and CupEmpty, which
+# stay in the kit only as templates.
+static func _belt(root: Node3D, belt: Dictionary) -> void:
+	var count := int(Vector3(belt.to - belt.from).length() / float(belt.spacing_m))
+	for pair in [["CupFull", "BeltFull"], ["CupEmpty", "BeltEmpty"]]:
+		var cup := root.find_child(pair[0], true, false) as MeshInstance3D
+		if cup == null:
+			continue
+		cup.visible = false
+		var multi := MultiMesh.new()
+		multi.transform_format = MultiMesh.TRANSFORM_3D
+		multi.mesh = cup.mesh
+		multi.instance_count = count
+		var view := MultiMeshInstance3D.new()
+		view.name = pair[1]
+		view.multimesh = multi
+		view.visibility_range_end = VIEW_END_M
+		root.add_child(view)
 
 
 static func _scene(path: String) -> PackedScene:
@@ -277,6 +321,40 @@ func _apply(m: Dictionary, delta: float) -> void:
 			nodes.Wheel.rotation.x = lift * float(KINDS[m.kind].wheel_rad_per_m)
 	if p.has("slew_deg"):
 		_derrick(m, p, delta)
+	if p.has("run_m"):
+		_conveyor(m, float(p.run_m))
+
+
+# Each bucket sits spacing_m behind the next: up the carrying run loaded, back down under it empty.
+func _conveyor(m: Dictionary, run: float) -> void:
+	var placed := buckets(m.kind, run)
+	for pair in [["BeltFull", "full"], ["BeltEmpty", "empty"]]:
+		if not m.nodes.has(pair[0]):
+			continue
+		var multi: MultiMesh = m.nodes[pair[0]].multimesh
+		var list: Array = placed[pair[1]]
+		for i in mini(multi.instance_count, list.size()):
+			multi.set_instance_transform(i, list[i])
+
+
+# Where a conveyor's buckets are after its belt has run `run` metres, in the machine's frame: {full, empty},
+# one Transform3D per bucket, each facing along the carrying run. Pure.
+static func buckets(kind: String, run: float) -> Dictionary:
+	var belt: Dictionary = KINDS[kind].belt
+	var spacing: float = belt.spacing_m
+	var along: Vector3 = belt.to - belt.from
+	var length := along.length()
+	var dir := along / length
+	var up := -dir.cross(Vector3.RIGHT).normalized()
+	var facing := Basis.looking_at(dir, up)
+	var offset := fposmod(run, spacing)
+	var full := []
+	var empty := []
+	for i in int(length / spacing):
+		var d := fposmod(offset + i * spacing, length)
+		full.append(Transform3D(facing, belt.from + dir * d + up * float(belt.ride_m)))
+		empty.append(Transform3D(facing, belt.to - dir * d - up * float(belt.return_m)))
+	return {"full": full, "empty": empty}
 
 
 # A derrick slews its boom and hoists its bucket, and the hook swings on its rope as the boom's tip

@@ -37354,6 +37354,17 @@
    "loader": "src/presentation/spillway_scenery.gd:204"
   },
   {
+   "id": "works_conveyor",
+   "path": "res://assets/models/world_one/works_conveyor.glb",
+   "class": "park_large",
+   "ships": true,
+   "loader": "src/presentation/work_machines.gd",
+   "provenance": {
+    "recipe": "tools/blender/world_one/works_conveyor.py",
+    "note": "Procedural vertex-coloured batch-plant bucket conveyor (W1-93 looping worker): static truss, hopper, head tower and pile, and loaded and empty bucket templates the runtime copies along the belt."
+   }
+  },
+  {
    "id": "works_derrick",
    "path": "res://assets/models/world_one/works_derrick.glb",
    "class": "park_large",
@@ -39390,6 +39401,7 @@
   "weir_gatehouse_detail1",
   "weir_gatehouse_detail2",
   "winch_drone_clips",
+  "works_conveyor",
   "works_derrick",
   "works_sluice"
  ]

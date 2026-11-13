@@ -168,7 +168,8 @@ func _placement(map_id: String) -> void:
 		for home in park.home_rows:
 			for park_row in park.park_rows:
 				if park_row.id == home.site:
-					home_gap = minf(home_gap, row.at.distance_to(Vector2(float(park_row.at[0]), float(park_row.at[1]))) - maxf(float(park_row.size[0]), float(park_row.size[2])) / 2.0)
+					for p in foot_points:
+						home_gap = minf(home_gap, _row_gap(p, park_row))
 		_t.check("%s %s: %.0f m from the nearest enemy home's site" % [map_id, row.id, home_gap], home_gap >= HOME_CLEAR_M)
 		var beacon := Vector2(float(park.landmark.beacon[0]), float(park.landmark.beacon[1]))
 		var ring := float(park.landmark.reach_m) + RING_CLEAR_M
@@ -220,6 +221,9 @@ func _seen_from_lines(row: Dictionary, lines: Array, heights: PackedFloat32Array
 # A channel's range over a kind's step targets (and its rest).
 func _span(kind: String, channel: String) -> Vector2:
 	var span := Vector2(INF, -INF)
+	var start: Dictionary = WorkMachines.KINDS[kind].get("start", {})
+	if start.has(channel):
+		span = Vector2(start[channel], start[channel])
 	for step in WorkMachines.KINDS[kind].steps:
 		if step[1].has(channel):
 			span = Vector2(minf(span.x, step[1][channel]), maxf(span.y, step[1][channel]))
@@ -227,7 +231,7 @@ func _span(kind: String, channel: String) -> Vector2:
 
 
 # Per 60 Hz frame, at most this much of a channel: nothing snaps.
-const STEP_MAX := {"slew_deg": 2.0, "drop_m": 0.25, "lift_m": 0.1}
+const STEP_MAX := {"slew_deg": 2.0, "drop_m": 0.25, "lift_m": 0.1, "run_m": 0.1}
 
 
 func _cycle() -> void:
@@ -236,8 +240,16 @@ func _cycle() -> void:
 		var a := WorkMachines.pose(kind, 0.0)
 		var b := WorkMachines.pose(kind, cycle)
 		var closes := true
+		var wrap := float(WorkMachines.KINDS[kind].get("belt", {}).get("spacing_m", 0.0))
 		for channel in a:
-			closes = closes and is_equal_approx(float(a[channel]), float(b[channel]))
+			var va := float(a[channel])
+			var vb := float(b[channel])
+			if channel == "run_m":
+				va = fposmod(va, wrap)
+				vb = fposmod(vb, wrap)
+				closes = closes and (is_equal_approx(va, vb) or is_equal_approx(absf(va - vb), wrap))
+			else:
+				closes = closes and is_equal_approx(va, vb)
 		_t.check("%s cycle closes (%.0f s)" % [kind, cycle], closes)
 		var bounded := true
 		var smooth := true
@@ -249,7 +261,10 @@ func _cycle() -> void:
 				var span := _span(kind, channel)
 				var v := float(p[channel])
 				bounded = bounded and v >= span.x - 1e-4 and v <= span.y + 1e-4
-				smooth = smooth and absf(v - float(prev[channel])) <= STEP_MAX.get(channel, 0.0)
+				var dv := absf(v - float(prev[channel]))
+				if channel == "run_m":
+					dv = minf(dv, absf(dv - _span(kind, channel).y))
+				smooth = smooth and dv <= STEP_MAX.get(channel, 0.0)
 				var got: Vector2 = seen.get(channel, Vector2(INF, -INF))
 				seen[channel] = Vector2(minf(got.x, v), maxf(got.y, v))
 			prev = p
@@ -307,6 +322,28 @@ func _view() -> void:
 			turns.append(sluice.nodes.Wheel.rotation.x)
 		_t.check("%s: the leaf lifts and drops (%.1f m)" % [sluice.row.id, lifts.max() - lifts.min()], lifts.max() - lifts.min() > 3.5 and lifts.min() >= -1e-4)
 		_t.check("%s: the handwheel turns with it" % sluice.row.id, turns.max() - turns.min() > 6.0)
+	for conveyor in view.machines.filter(func(x): return x.kind == "conveyor"):
+		var belt: Dictionary = WorkMachines.KINDS.conveyor.belt
+		var count: int = conveyor.nodes.BeltFull.multimesh.instance_count
+		_t.check("%s: %d buckets each way, one MultiMesh a run" % [conveyor.row.id, count], count >= 10 and conveyor.nodes.BeltEmpty.multimesh.instance_count == count)
+		_t.check("%s: the template buckets are hidden" % conveyor.row.id, not conveyor.root.find_child("CupFull", true, false).visible)
+	var belt: Dictionary = WorkMachines.KINDS.conveyor.belt
+	var on_run := true
+	var a := WorkMachines.buckets("conveyor", 0.0)
+	var b := WorkMachines.buckets("conveyor", 0.5)
+	var c := WorkMachines.buckets("conveyor", float(belt.spacing_m))
+	for i in a.full.size():
+		for t: Transform3D in [a.full[i], a.empty[i]]:
+			on_run = on_run and t.origin.distance_to(Geometry3D.get_closest_point_to_segment(t.origin, belt.from, belt.to)) < 1.6
+	_t.check("every bucket rides within 1.6 m of the belt", on_run)
+	_t.check("half a metre of belt moves each bucket half a metre", is_equal_approx(a.full[0].origin.distance_to(b.full[0].origin), 0.5))
+	var same := true
+	for i in a.full.size():
+		var found := false
+		for j in c.full.size():
+			found = found or a.full[i].origin.is_equal_approx(c.full[j].origin)
+		same = same and found
+	_t.check("a whole spacing of belt puts every bucket where another was", same)
 	ctx.stages.stage.map = "park_flume"
 	events.stage_entered.emit(2, false)
 	_t.eq("a new park rebuilds its own machines", view.machines.size(), WorkMachines.rows_for("park_flume").size())
