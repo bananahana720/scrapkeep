@@ -5,6 +5,8 @@ const BakeLook := preload("res://src/presentation/bake_look.gd")
 const Telegraph := preload("res://src/combat/telegraph.gd")
 const Threat := preload("res://src/combat/threat_grammar.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
+const Contact := preload("res://src/movement/contact.gd")
+const BallRules := preload("res://src/movement/ball_rules.gd")
 const EnemyMotion := preload("res://src/presentation/enemy_motion.gd")
 const EnemyClips := preload("res://src/presentation/enemy_clips.gd")
 const WindupRows := preload("res://src/presentation/windup_rows.gd")
@@ -128,6 +130,9 @@ var half_height := 1.5
 var tint_state := ""
 # How many shoves this enemy has taken, for tests and anything that reads weight.
 var knocks := 0
+# How many wall slams this enemy has taken, and the knock count the last one spent (one per knock).
+var wall_slams := 0
+var _walled_knock := -1
 
 var _knock := Vector3.ZERO
 var _flash := 0.0
@@ -624,6 +629,7 @@ func _move(delta: float, desired: Vector3) -> void:
 	move_and_slide()
 	if is_on_floor() and velocity.y < 0.0:
 		velocity.y = 0.0
+	_wall_slam()
 	_knock = _knock.move_toward(Vector3.ZERO, KNOCK_DECAY * delta)
 	if _rings_out(grounded):
 		return
@@ -632,6 +638,33 @@ func _move(delta: float, desired: Vector3) -> void:
 
 func _knocked_speed() -> float:
 	return Vector3(_knock.x, 0.0, _knock.z).length()
+
+
+# A knock that drives this enemy into a world face stops it there (Contact.wall_slam_knock) with a
+# stagger and one enemy_walled, instead of letting move_and_slide glide it along the face. Once per
+# knock; walking into a wall is not a slam. Deals no damage.
+func _wall_slam() -> void:
+	if _dead or _walled_knock == knocks or _knocked_speed() < Contact.WALL_SLAM_SPEED:
+		return
+	for i in get_slide_collision_count():
+		var hit := get_slide_collision(i)
+		if not BallRules.world_face(hit.get_collider()):
+			continue
+		var n := hit.get_normal()
+		n.y = 0.0
+		if n.length_squared() < 0.01:
+			continue
+		n = n.normalized()
+		var into := -Vector3(_knock.x, 0.0, _knock.z).dot(n)
+		if into < Contact.WALL_SLAM_SPEED:
+			continue
+		_walled_knock = knocks
+		wall_slams += 1
+		_knock = Contact.wall_slam_knock(_knock, n)
+		react("stagger", n)
+		if _reaction_bus != null and _reaction_bus.has_signal("enemy_walled"):
+			_reaction_bus.enemy_walled.emit(self, hit.get_position(), n, into)
+		return
 
 
 # A knock opens the fall when it strikes an enemy standing on a floor, and the fall closes

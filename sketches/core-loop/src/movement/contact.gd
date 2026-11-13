@@ -75,3 +75,37 @@ static func heft_shove(force: float, heft: float) -> float:
 static func ram_knock(base: float, speed: float, heft: float, mult := 1.0) -> float:
 	var knock := minf(base * knock_scale(speed, heft), KNOCK_CEILING)
 	return minf(knock * mult, LANDING_CEILING) if mult > 1.0 else knock
+
+
+# A bump: the ball meeting a world face that is not a floor (a wall, a cliff, a dam face, a
+# structure's side or a ceiling) fast enough to feel it. Floors are landings (rigid_ball's
+# landed). The closing speed is the part of the velocity handed to the solver that ran into
+# the face; a roll along a wall closes at nothing, so a carve or a grip never bumps.
+const BUMP_FLOOR_DOT := 0.45
+const BUMP_MIN_SPEED := 9.0
+# One bump per this many seconds, so a ball ground into a corner reports the hit, not the rub.
+const BUMP_GAP_S := 0.25
+
+
+static func bump_closing(velocity: Vector3, normal: Vector3) -> float:
+	if normal.y > BUMP_FLOOR_DOT:
+		return 0.0
+	return maxf(0.0, -velocity.dot(normal.normalized()))
+
+
+# A knocked enemy thrown into a world face: it stops on the face instead of gliding along it.
+# The part into the face comes back at WALL_RESTITUTION, the part along it keeps WALL_GRIP_KEEP.
+const WALL_SLAM_SPEED := 8.0
+const WALL_RESTITUTION := 0.25
+const WALL_GRIP_KEEP := 0.35
+
+
+# The knock left after a wall slam: the flat part reflected off `normal` (flat, face to enemy).
+static func wall_slam_knock(knock: Vector3, normal: Vector3) -> Vector3:
+	var flat := Vector3(knock.x, 0.0, knock.z)
+	var into := flat.dot(normal)
+	if into >= 0.0:
+		return knock
+	var along := (flat - normal * into) * WALL_GRIP_KEEP
+	var out := along - normal * into * WALL_RESTITUTION
+	return Vector3(out.x, knock.y, out.z)
