@@ -29,12 +29,14 @@ const WARN_GAP := 0.2
 
 const ONES6 := [1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
 const ZEROS6 := [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
-# World 1's Wardens pulse harder and sooner (wave 37 unit D6, ruling cu): the core ring hits x1.3 and the
-# cycle runs x0.85 (6.0 s to 5.1 s), the HARD ladder's rung 2 values, now the base on the dam and the flume.
-# The ring still charges Warden.PULSE_TELEGRAPH seconds, so the tell is no shorter; only the gap between
-# pulses is. A ladder rung multiplies on top of these.
+# World 1's Wardens pulse harder (wave 37 unit D6, ruling cu): the core ring hits x1.3 on the dam and the flume,
+# and the flume's cycle runs x0.85 (6.0 s to 5.1 s), the HARD ladder's rung 2 values. The ring still charges
+# Warden.PULSE_TELEGRAPH seconds, so the tell is no shorter; only the gap between pulses is. The dam keeps the
+# 6 s gap (wave 39): at 5.1 s a ball rolling at cruise lost hull faster per second than one stopped (bot_fairness
+# F2 stop tax 1.05 pooled over six seeds, line 2.0; 3.71 at 6 s), so speed stopped being safety on the first
+# stage. A ladder rung multiplies on top of these.
 const PULSE_DAMAGE_W1 := [1.3, 1.3, 1.0, 1.0, 1.0, 1.0]
-const PULSE_CYCLE_W1 := [0.85, 0.85, 1.0, 1.0, 1.0, 1.0]
+const PULSE_CYCLE_W1 := [1.0, 0.85, 1.0, 1.0, 1.0, 1.0]
 # Silt boils ship on world 1 at strength 2 (pack pressure E, 24 Oct ruling; DECISIONS section 5).
 const SILT_W1 := [2.0, 2.0, 0.0, 0.0, 0.0, 0.0]
 # Crews on world 1 lead the ball's roll by half (wave 37 unit D1, ruling cu call 4: chasers lead your line).

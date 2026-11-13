@@ -102,7 +102,7 @@ func _rules() -> void:
 	_t.eq("crews lead the roll by half on world 1, nowhere else", ChallengeDials.value("pack.lead_by_stage"), [0.5, 0.5, 0.0, 0.0, 0.0, 0.0])
 	_t.eq("chasers run at 9 m/s on world 1, their own speed after it", ChallengeDials.value("mobs.chaser_speed_by_stage"), [9.0, 9.0, 0.0, 0.0, 0.0, 0.0])
 	_t.eq("world 1 Wardens pulse x1.3, later ones at identity", ChallengeDials.value("warden.pulse_damage_by_stage"), [1.3, 1.3, 1.0, 1.0, 1.0, 1.0])
-	_t.eq("world 1 Wardens pulse on a x0.85 cycle, later ones at identity", ChallengeDials.value("warden.pulse_cycle_by_stage"), [0.85, 0.85, 1.0, 1.0, 1.0, 1.0])
+	_t.eq("the flume's Warden pulses on a x0.85 cycle, the rest at identity", ChallengeDials.value("warden.pulse_cycle_by_stage"), [1.0, 0.85, 1.0, 1.0, 1.0, 1.0])
 	_t.eq("the clock climbs three tiers on world 1, two after it", ChallengeDials.value("mobs.clock_tiers_by_stage"), [3.0, 3.0, 2.0, 2.0, 2.0, 2.0])
 	_t.eq("the boils read the stall on world 1, the loop after it", ChallengeDials.value("hazard.boil_stall_by_stage"), [1.0, 1.0, 0.0, 0.0, 0.0, 0.0])
 	_t.eq("the hull regenerates only while rolling on world 1, at any speed after it", ChallengeDials.value("pilot.regen_rolling_by_stage"), [1.0, 1.0, 0.0, 0.0, 0.0, 0.0])

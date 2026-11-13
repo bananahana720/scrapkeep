@@ -57,12 +57,12 @@ func _rules() -> void:
 		if key == "mobs.damage_by_stage":
 			_t.eq("mobs.damage_by_stage ships x2 on the dam only", ChallengeDials.value(key), [2.0, 1.0, 1.0, 1.0, 1.0, 1.0])
 			continue
-		# World 1's Wardens pulse x1.3 on a x0.85 cycle (wave 37 unit D6); their own checks are below.
+		# World 1's Wardens pulse x1.3, the flume's on a x0.85 cycle (wave 37 unit D6, wave 39); their own checks are below.
 		if key == "warden.pulse_damage_by_stage":
 			_t.eq("warden.pulse_damage_by_stage ships x1.3 on world 1 only", ChallengeDials.value(key), [1.3, 1.3, 1.0, 1.0, 1.0, 1.0])
 			continue
 		if key == "warden.pulse_cycle_by_stage":
-			_t.eq("warden.pulse_cycle_by_stage ships x0.85 on world 1 only", ChallengeDials.value(key), [0.85, 0.85, 1.0, 1.0, 1.0, 1.0])
+			_t.eq("warden.pulse_cycle_by_stage ships x0.85 on the flume only", ChallengeDials.value(key), [1.0, 0.85, 1.0, 1.0, 1.0, 1.0])
 			continue
 		_t.eq("%s defaults to six 1.0" % key, ChallengeDials.value(key), [1.0, 1.0, 1.0, 1.0, 1.0, 1.0])
 		var all_one := true
@@ -123,13 +123,13 @@ func _run() -> void:
 		_game.combat._on_player_hit(10.0, Vector3.ZERO, "chaser")
 		var got := float(_hits[-1][1]) if not _hits.is_empty() else -1.0
 		_t.near("stage %d chaser hit with mobs.damage_by_stage [3,1,..]" % stage, got, 30.0 if stage == 1 else 10.0)
-	# Warden at the defaults (wave 37 unit D6): the dam's and the flume's pulse hits x1.3 on a 5.1 s cycle, the
-	# Dig's is the base; the ring charges the same PULSE_TELEGRAPH seconds everywhere, so no tell is shorter.
+	# Warden at the defaults (wave 37 unit D6): the dam's and the flume's pulse hits x1.3, the flume's on a 5.1 s
+	# cycle (the dam keeps 6 s, wave 39), the Dig's is the base; the ring charges the same PULSE_TELEGRAPH seconds everywhere, so no tell is shorter.
 	ChallengeDials.reset()
 	for stage in [1, 2, 3]:
 		var w1: bool = stage <= 2
 		_t.near("default stage %d pulse hit" % stage, _pulse_at(stage), Warden.PULSE_DAMAGE * (1.3 if w1 else 1.0), 0.001)
-		_t.near("default stage %d pulse cycle" % stage, Warden.pulse_cycle(stage), Warden.PULSE_CYCLE * (0.85 if w1 else 1.0), 0.001)
+		_t.near("default stage %d pulse cycle" % stage, Warden.pulse_cycle(stage), Warden.PULSE_CYCLE * (0.85 if stage == 2 else 1.0), 0.001)
 		_t.near("default stage %d pulse telegraph is the whole PULSE_TELEGRAPH" % stage, Warden.pulse_telegraph(stage), Warden.PULSE_TELEGRAPH, 0.0)
 		_t.near("default stage %d pulse charged that long on the Warden" % stage, _last_charge, Warden.PULSE_TELEGRAPH, DT + 0.0001)
 	# The planted case: the lists at identity are the game before this unit; the same reads must give the

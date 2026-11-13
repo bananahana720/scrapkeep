@@ -270,8 +270,7 @@ func _ultimate_cases() -> void:
 		root.add_child(body)
 		near.append(body)
 	# The crowd rule alone. The earlier cases cast beside the stage Warden, whose open core is the other reason Q
-	# goes (_core_open): its posture can stand staggered here, more often since world 1's Wardens pulse on 5.1 s
-	# (wave 37). The ball stands out of the core's reach first.
+	# goes (_core_open): its posture can stand staggered here. The ball stands out of the core's reach first.
 	var warden = _game.flow.warden
 	if is_instance_valid(warden):
 		var away: Vector3 = player.ball_position() - warden.global_position
