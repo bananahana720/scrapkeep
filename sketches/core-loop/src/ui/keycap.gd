@@ -37,10 +37,11 @@ static func label(key: String) -> String:
 
 
 # A cap's letters are words, so they are never smaller than the smallest type step. A caller
-# that asks for a shorter cap gets one tall enough to hold them (cap_height), so the label
-# never overruns its cap.
+# that asks for a cap too short to hold them gets one that does (cap_height): the letters plus
+# ROOM for the cap's top and bottom edges. Taller caps scale their letters by LETTER.
 const LETTER := 0.58
-const MIN_H := ceilf(UiTokens.CAPTION / LETTER)
+const ROOM := 5.0
+const MIN_H := UiTokens.CAPTION + ROOM
 
 
 static func cap_height(height: float) -> float:
@@ -48,7 +49,7 @@ static func cap_height(height: float) -> float:
 
 
 static func font_size(height: float) -> int:
-	return int(cap_height(height) * LETTER)
+	return maxi(UiTokens.CAPTION, int(height * LETTER))
 
 
 static func size_of(key: String, height := 24.0) -> Vector2:

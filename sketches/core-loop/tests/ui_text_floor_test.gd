@@ -14,11 +14,11 @@ const T := preload("res://tests/support/t.gd")
 #     never under 9);
 #   - a keycap's letters are never smaller than the smallest step, whatever height a caller
 #     asks for, and the cap is tall enough to hold them (finding UF-05);
-#   - planted: a 14 px step fails the PC floor and a 10 px step the Deck minimum.
+#   - planted, through the same judge: a 14 px step fails the PC floor and an 11 px step the
+#     Deck size, and the old letter rule on a 15 px cap falls under the smallest step.
 # ui_tokens_test already fails a literal size off the scale, so no step below CAPTION exists.
 
 const SMALLEST_WINDOW_H := 720.0
-const DECK_MIN_PX := 9.0
 const DECK_PX := 12.0
 const PC_FLOOR_PX := 18.0
 
@@ -31,13 +31,21 @@ func _initialize() -> void:
 	var hd := 1080.0 / canvas_h
 	var least: int = UiTokens.TYPE.min()
 	_t.eq("CAPTION is the smallest step", least, UiTokens.CAPTION)
-	_t.check("the smallest step holds the PC floor at 1080p", least * hd >= PC_FLOOR_PX, "%.1f px" % (least * hd))
-	_t.check("the smallest step holds the Deck's recommended size on the smallest window", least * small >= DECK_PX, "%.1f px" % (least * small))
+	_t.check("the smallest step holds the PC floor at 1080p", _holds(least, hd, PC_FLOOR_PX), "%.1f px" % (least * hd))
+	_t.check("the smallest step holds the Deck's recommended size on the smallest window", _holds(least, small, DECK_PX), "%.1f px" % (least * small))
 	_t.eq("the theme's default size is BODY", UiTokens.theme().default_font_size, UiTokens.BODY)
 	for height in [8.0, 15.0, 20.0, 24.0, 30.0, 48.0]:
 		var letters := Keycap.font_size(height)
+		var cap := Keycap.size_of("key_ctrl", height)
 		_t.check("a %.0f px keycap's letters hold the smallest step" % height, letters >= least, "%d px" % letters)
-		_t.check("a %.0f px keycap is tall enough for its letters" % height, Keycap.size_of("key_ctrl", height).y >= letters, "%.0f px tall" % Keycap.size_of("key_ctrl", height).y)
-	_t.check("planted: a 14 px step fails the PC floor", 14 * hd < PC_FLOOR_PX)
-	_t.check("planted: a 10 px step fails the Deck minimum", 10 * small < DECK_MIN_PX)
+		_t.check("a %.0f px keycap has room for its letters and its edges" % height, cap.y >= letters + Keycap.ROOM, "%.0f px tall" % cap.y)
+		_t.check("a %.0f px keycap is never shorter than asked" % height, cap.y >= height)
+	_t.eq("a mouse picture keeps the height asked for", Keycap.size_of("key_rmb", 14.0).y, 14.0)
+	_t.check("planted: a 14 px step fails the PC floor", not _holds(14, hd, PC_FLOOR_PX))
+	_t.check("planted: an 11 px step fails the Deck's recommended size", not _holds(11, small, DECK_PX))
+	_t.check("planted: letters at 0.58 of a 15 px cap fall under the smallest step", int(15.0 * Keycap.LETTER) < least)
 	quit(_t.verdict())
+
+
+static func _holds(step: int, scale: float, floor_px: float) -> bool:
+	return step * scale >= floor_px
