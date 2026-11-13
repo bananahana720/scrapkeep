@@ -163,6 +163,20 @@ func _check_parts() -> void:
 		var piece: Node3D = acc._piece(id)
 		var own := piece.get_node_or_null("Own") as MeshInstance3D
 		_check(own != null and own.material_override != null, "%s shows its own shape with the switch on" % id)
+		ModelVariants.set_enabled(false)
+		var plain_piece: Node3D = acc._piece(id)
+		ModelVariants.set_enabled(true)
+		var feet := func(node: Node3D) -> Array:
+			var out := []
+			for child in node.get_children():
+				if String(child.name).begins_with("Foot_"):
+					out.append(String(child.name))
+			return out
+		_check(feet.call(piece) == feet.call(plain_piece), "%s stands on the same tier foot as its primitive (%s)" % [id, feet.call(piece)])
+		var rarity_mat := own.material_override as StandardMaterial3D if own != null else null
+		var want: Color = Accretion.RARITY_COLORS.get(Accretion.ItemGen.resolve_rarity(Accretion.Parts.def(id).rarity), Color.BLACK)
+		_check(rarity_mat != null and rarity_mat.albedo_color.is_equal_approx(want), "%s shape wears its rarity colour" % id)
+		plain_piece.free()
 		if own != null:
 			var box := own.mesh.get_aabb()
 			_check(_mesh_tris(own.mesh) <= 1000, "%s shape is at most 1,000 triangles (%d)" % [id, _mesh_tris(own.mesh)])

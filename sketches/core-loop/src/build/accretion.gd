@@ -328,12 +328,18 @@ static func _own_shape(part_id: String, mat: Material) -> MeshInstance3D:
 	if path == "":
 		return null
 	if not _part_meshes.has(path):
-		var scene := (load(path) as PackedScene).instantiate()
-		var found := scene.find_children("*", "MeshInstance3D", true, false)
-		_part_meshes[path] = (found[0] as MeshInstance3D).mesh if found.size() == 1 else null
-		scene.free()
+		# A file that exists can still fail to load; the part then keeps its family primitive.
+		var packed := load(path) as PackedScene
+		var mesh: Mesh = null
+		if packed != null:
+			var scene := packed.instantiate()
+			var found := scene.find_children("*", "MeshInstance3D", true, false)
+			mesh = (found[0] as MeshInstance3D).mesh if found.size() == 1 else null
+			scene.free()
+		if mesh == null:
+			push_error("accretion: %s must load and hold one mesh" % path)
+		_part_meshes[path] = mesh
 	if _part_meshes[path] == null:
-		push_error("accretion: %s must hold one mesh" % path)
 		return null
 	var shape := MeshInstance3D.new()
 	shape.name = "Own"
