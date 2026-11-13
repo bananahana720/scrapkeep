@@ -92,10 +92,13 @@ void vertex() {
 	uv1_triplanar_pos *= vec3(1.0, -1.0, 1.0);
 #endif
 #ifdef DEPTH_AWARE
+	// Only the depth moves: the drawn position, and the perspective the fragment clip's `offset`
+	// interpolates with, stay the unpulled vertex's.
 	vec4 eye = MODELVIEW_MATRIX * vec4(VERTEX, 1.0);
 	float far = length(eye.xyz);
-	eye.xyz *= max(far - depth_pull, 0.05) / max(far, 0.0001);
+	vec4 pulled = PROJECTION_MATRIX * vec4(eye.xyz * (max(far - depth_pull, 0.05) / max(far, 0.0001)), 1.0);
 	POSITION = PROJECTION_MATRIX * eye;
+	POSITION.z = pulled.z / pulled.w * POSITION.w;
 #endif
 }
 

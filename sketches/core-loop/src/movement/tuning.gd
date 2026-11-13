@@ -220,7 +220,7 @@ func _init() -> void:
 #         reads them); "launch" flags apply when game.gd calls apply_cmdline("launch"),
 #         so a bot or tool that builds a bare Tuning never sees them.
 # `--scrap=armor --wear=on --route-seed=7 --start-mass=200 --music=ace --breath=gentle
-# --warden-form=loop --discovery=cards --telegraph=haze --world-one-builds=on --hotwire-shell=on --hotwire-tread=on
+# --warden-form=loop --discovery=cards --telegraph=clear --world-one-builds=on --hotwire-shell=on --hotwire-tread=on
 # --grip=off`, from the engine args
 # or the user args (after Godot's `--`). A flag in neither table is ignored.
 # threat_grammar.gd's Painter.haze_on() reads --telegraph from the launch args itself,

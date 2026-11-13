@@ -157,7 +157,7 @@ const SPIKE_HALF := 0.22
 const SPIKE_ALPHA := 0.7
 const SHELL_AREA_ALPHA := 0.24
 # Every mark fades with its distance from the lens: gone at LENS_CLEAR metres, whole at LENS_FULL.
-# Marks draw with no depth test, so a lane or fence passing by the camera stood over half the view
+# In haze and classic marks draw with no depth test, so a lane or fence passing by the camera stood over half the view
 # as flat orange slabs (PF-27, film 059 and 090). The ball rides at the arm's 8 m, or 4.2 m on a
 # mount, so a mark at the ball stays whole unless a wall pulls the arm in past LENS_FULL.
 const LENS_CLEAR := 1.0
@@ -166,7 +166,7 @@ const RAIL_ALPHA := 0.7
 const OWNER_STEP := PI / 6.0
 const OWNER_SPACING := 4.0
 
-# --telegraph=haze (Tuning.FLAGS, the default; classic is the other option): a hostile floor
+# --telegraph=haze (Tuning.FLAGS; clear, the default, and edges build on it; classic has stripes): a hostile floor
 # fill becomes a red haze with no hazard stripes. Every fill alpha scales by the one
 # HAZE_FILL, so each stencil class still holds one alpha and the LIVE / RUN ratio the drive
 # hands the shader is unchanged; the P1 lines, their keylines, the geometry, contains() and
@@ -202,10 +202,12 @@ const TELEGRAPH_FLAG := "telegraph"
 # The telegraph row's looks, Tuning's option order. "clear" and "edges" are the haze look made less
 # obstructive (Andrew, 13 Nov 2026: the warnings hid the attack they warn of; ruling cq candidates):
 #   clear  the fence a jump clears stands as thin posts and a thin rail with no charcoal keyline in
-#          the air, and fades out near the lens (FENCE_CLEAR, FENCE_FULL), so a camera inside a lane
-#          is not caged; a live lane's band is lighter (CLEAR_LIVE_ALPHA); and the driven marks draw
+#          the air, and fades out near the lens (FENCE_CLEAR, FENCE_FULL: still near half strength at
+#          the 4.2 m mount arm, whole at the 8 m arm), so a camera inside a lane is not caged; a live lane's band is lighter (CLEAR_LIVE_ALPHA); and the driven marks draw
 #          behind bodies: depth tested, pulled DEPTH_PULL metres toward the eye so the ground under
-#          them never wins, so the crew winding up and the ball stay whole over a fill.
+#          them never wins, so the crew winding up and the ball stay whole over a fill. A wall or ridge
+#          between the lens and a mark now hides it too. The tinted layers (TINTED_LAYERS) keep no
+#          depth test.
 #   edges  clear, with every area fill at EDGES_FILL of its alpha: the outline and its keyline carry
 #          the shape, the fill only the timing.
 # The ground outlines, their keylines and contains() are the same in every look.
@@ -217,8 +219,8 @@ const CLEAR_SPIKE_ALPHA := 0.45
 const CLEAR_BAND_TOP_ALPHA := 0.45
 const CLEAR_LIVE_ALPHA := 0.55
 const EDGES_FILL := 0.5
-const FENCE_CLEAR := 4.0
-const FENCE_FULL := 9.0
+const FENCE_CLEAR := 3.0
+const FENCE_FULL := 6.0
 const DEPTH_PULL := 0.6
 
 
@@ -1270,15 +1272,21 @@ class Painter:
 		_warmed = true
 		var holder := Node3D.new()
 		parent.add_child(holder)
-		for key in warm_keys():
+		var formats := [true, false] if soft_on() else [true]
+		for pair in _cross(warm_keys(), formats):
+			var key: Array = pair[0]
+			var custom: bool = pair[1]
 			var arrays := []
 			arrays.resize(Mesh.ARRAY_MAX)
 			arrays[Mesh.ARRAY_VERTEX] = PackedVector3Array([Vector3.ZERO, Vector3(0.01, 0.0, 0.0), Vector3(0.0, 0.0, 0.01)])
 			arrays[Mesh.ARRAY_COLOR] = PackedColorArray([Color.WHITE, Color.WHITE, Color.WHITE])
-			arrays[Mesh.ARRAY_CUSTOM0] = PackedFloat32Array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
-			arrays[Mesh.ARRAY_CUSTOM1] = PackedFloat32Array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
-			var flags := (Mesh.ARRAY_CUSTOM_RGBA_FLOAT << Mesh.ARRAY_FORMAT_CUSTOM0_SHIFT) \
-				| (Mesh.ARRAY_CUSTOM_RGBA_FLOAT << Mesh.ARRAY_FORMAT_CUSTOM1_SHIFT)
+			var flags := 0
+			# A soft look's static marks draw these materials without CUSTOM arrays, another pipeline.
+			if custom:
+				arrays[Mesh.ARRAY_CUSTOM0] = PackedFloat32Array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
+				arrays[Mesh.ARRAY_CUSTOM1] = PackedFloat32Array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
+				flags = (Mesh.ARRAY_CUSTOM_RGBA_FLOAT << Mesh.ARRAY_FORMAT_CUSTOM0_SHIFT) \
+					| (Mesh.ARRAY_CUSTOM_RGBA_FLOAT << Mesh.ARRAY_FORMAT_CUSTOM1_SHIFT)
 			var mesh := ArrayMesh.new()
 			mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays, [], {}, flags)
 			var instance := MeshInstance3D.new()
@@ -1295,6 +1303,13 @@ class Painter:
 			holder.add_child(instance)
 		_free_after_frames(holder, 3)
 		return holder
+
+	static func _cross(keys: Array, formats: Array) -> Array:
+		var out := []
+		for key in keys:
+			for custom in formats:
+				out.append([key, custom])
+		return out
 
 	static func _free_after_frames(node: Node, frames: int) -> void:
 		var tree := node.get_tree()
@@ -1484,11 +1499,11 @@ class Painter:
 			return instance
 		# A soft look draws every mark but the tinted ones with the shared depth-tested shader, so a
 		# body standing on a line or an area draws over it too; the fence keeps its far fade ("fence").
-		# A tinted layer keeps its own StandardMaterial3D (tint() writes it), depth tested in a soft look.
+		# A tinted layer (the live INSTANT fill, the landing's crack and dust) keeps its own
+		# StandardMaterial3D, which tint() writes, and its old no-depth-test draw: it has no pull, and
+		# on convex ground a single quad from centre to rim would sink under the floor.
 		if soft_on() and not layer in TINTED_LAYERS:
 			instance.material_override = mark_material("fence" if layer == "fence" else "", false, _priority(layer), false)
-			if layer == "crack":
-				instance.sorting_offset = CRACK_SORT
 			add_child(instance)
 			_layers[layer] = instance
 			return instance
@@ -1496,7 +1511,7 @@ class Painter:
 		mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 		mat.cull_mode = BaseMaterial3D.CULL_DISABLED
 		mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-		mat.no_depth_test = not soft_on()
+		mat.no_depth_test = true
 		mat.vertex_color_use_as_albedo = true
 		mat.vertex_color_is_srgb = true
 		mat.render_priority = _priority(layer)
