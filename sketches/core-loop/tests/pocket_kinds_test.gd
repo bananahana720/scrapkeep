@@ -152,6 +152,8 @@ func _admitted(stage: String, kind: String, row_index: int, default_pay := false
 	# A speed bar (W1-76) belongs to a cracked cache; retyped as another kind, the site drops it.
 	if kind != "cracked_cache":
 		data.activity_rows[row_index].erase("bar")
+	# Alternatives (W1-70) keep their row's kind and role; retyped, the site drops them and builds the new kind.
+	data.activity_rows[row_index].erase("alts")
 	if default_pay:
 		data.activity_rows[row_index].pay = {}
 	if not override.is_empty():
