@@ -158,7 +158,8 @@ func _run() -> void:
 # family primitive is drawn as before.
 func _check_parts() -> void:
 	var acc := Accretion.new()
-	for id in ["slag_rounds", "focus_lens", "gatling_heart", "rime_heart", "sunforged_core", "horizon_optic", "tempest_core", "scrap_gravity"]:
+	for id in ["slag_rounds", "focus_lens", "gatling_heart", "rime_heart", "sunforged_core", "horizon_optic", "tempest_core", "scrap_gravity",
+			"magnet_spool", "storm_mast", "arc_coil", "long_barrel", "hot_rivets", "double_feed", "rime_rounds", "rivet_plating"]:
 		ModelVariants.set_enabled(true)
 		var piece: Node3D = acc._piece(id)
 		var own := piece.get_node_or_null("Own") as MeshInstance3D
@@ -189,7 +190,7 @@ func _check_parts() -> void:
 		_check(piece.get_node_or_null("Own") == null and piece.get_child_count() > 0, "%s draws its family primitive with the switch off" % id)
 		piece.free()
 	ModelVariants.set_enabled(true)
-	var plain: Node3D = acc._piece("double_feed")
+	var plain: Node3D = acc._piece("loose_trigger")
 	_check(plain.get_node_or_null("Own") == null and plain.get_child_count() > 0, "a part with no Tripo file keeps its family primitive with the switch on")
 	plain.free()
 	ModelVariants.set_enabled(false)

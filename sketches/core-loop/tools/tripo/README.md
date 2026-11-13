@@ -91,6 +91,28 @@ with no texture step.
 API spend after this batch: 500 credits, the cap Andrew set on 13 Nov 2026. Pro spend: 640 credits (40 on the
 flume textures, 600 on six part sets).
 
+### Free parts from unused candidates
+
+Each Studio set returns four candidates and one is kept, so three are paid for and unused. A related part
+takes one of them: the same motif runs down an upgrade line (shells for the rounds, scopes for range, bolts
+for storm parts), and the rarity colour and tier foot tell the grades apart. Select the candidate in
+Studio's Assets panel and export it; no credits are spent.
+
+| part | grade | source | tris | cost |
+| --- | --- | --- | --- | --- |
+| magnet_spool | common | unused candidate of the scrap_gravity set | 822 | free |
+| storm_mast | evolved | unused candidate of the tempest_core set | 999 | free |
+| arc_coil | common | unused candidate of the tempest_core set | 873 | free |
+| long_barrel | common | unused candidate of the horizon_optic set | 1000 | free |
+| hot_rivets | common | unused candidate of the sunforged_core set | 1000 | free |
+| double_feed | common | unused candidate of the slag_rounds set | 1000 | free |
+| rime_rounds | rare | unused candidate of the slag_rounds set | 1000 | free |
+| rivet_plating | common | unused candidate of the rime_heart set | 945 | free |
+
+Cost per usable part on 13 Nov 2026: API low-poly 40 credits (2 of 4 tries usable at 20), Studio Smart
+Mesh 100 Pro credits (6 of 6 sets), unused candidates 0 (8 of 8). With the free candidates counted, the six
+Studio sets gave 14 parts, 43 Pro credits each.
+
 The fitter drops floating fragments by walking shells whose bounding boxes touch. A fragment that sits
 inside another shell's box survives; pick another of the four candidates then (Scrap Gravity's first
 candidate had a bolt lying beside its base).
