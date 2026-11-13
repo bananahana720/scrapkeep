@@ -5,6 +5,8 @@ extends SceneTree
 # when the switch is off or a model has no sibling.
 
 const ModelVariants := preload("res://src/presentation/model_variants.gd")
+const EnemyCasting := preload("res://src/combat/enemy_casting.gd")
+const ParkProps := preload("res://src/presentation/park_props.gd")
 
 # authored path -> {tris ceiling, draws ceiling}; -1 holds the sibling to the authored model's own count.
 # The chaser's ceilings are enemy_chaser_asset_test.gd's; the pet's 2,000 is what the fitter targets
@@ -60,6 +62,31 @@ func _shape(node: Node) -> Dictionary:
 	return {"names": names, "slots": slots, "tris": tris, "draws": draws}
 
 
+func _shape_of(path: String) -> Dictionary:
+	var node := (load(path) as PackedScene).instantiate()
+	var out := _shape(node)
+	node.free()
+	return out
+
+
+func _mesh_tris(mesh: Mesh) -> int:
+	var tris := 0
+	if mesh == null:
+		return -1
+	for s in mesh.get_surface_count():
+		var arrays := mesh.surface_get_arrays(s)
+		var idx = arrays[Mesh.ARRAY_INDEX]
+		tris += (idx.size() if idx != null else (arrays[Mesh.ARRAY_VERTEX] as PackedVector3Array).size()) / 3
+	return tris
+
+
+func _cast_tris(parts: Array) -> int:
+	var tris := 0
+	for part in parts:
+		tris += _mesh_tris(part.mesh)
+	return tris
+
+
 func _run() -> void:
 	ModelVariants.set_enabled(false)
 	for authored in PAIRS:
@@ -98,6 +125,21 @@ func _run() -> void:
 		_check(t.draws <= cap.draws, "%s sibling draws %d <= %d (authored %d)" % [authored.get_file(), t.draws, cap.draws, a.draws])
 		a_node.free()
 		t_node.free()
+	_check(PAIRS.size() == 12, "12 authored-sibling pairs checked (%d)" % PAIRS.size())
+	# The game's own load sites must reach the sibling, not only ModelVariants.path: the shared enemy
+	# caster and the park prop mesh cache, each compared by triangle count with the sibling file.
+	var tender := "res://assets/models/world_one/enemy_boom_tender.glb"
+	_check(_cast_tris(EnemyCasting.parts(tender, "tripo_test", true)) == _shape_of(ModelVariants.path(tender)).tris,
+		"EnemyCasting.parts loads the boom tender sibling with the switch on")
+	var shed := "res://assets/models/park/props/dam/gate_wheelhouse_a.glb"
+	ParkProps.release_shared()
+	_check(_mesh_tris(ParkProps._mesh(shed)) == _shape_of(ModelVariants.path(shed)).tris,
+		"park_props loads the wheelhouse sibling with the switch on")
+	ParkProps.release_shared()
 	ModelVariants.set_enabled(false)
+	_check(_cast_tris(EnemyCasting.parts(tender, "tripo_test", true)) == _shape_of(tender).tris,
+		"EnemyCasting.parts loads the authored boom tender with the switch off")
+	_check(_mesh_tris(ParkProps._mesh(shed)) == _shape_of(shed).tris, "park_props loads the authored wheelhouse with the switch off")
+	ParkProps.release_shared()
 	print("tripo_variants_test: %s" % ("PASS" if failures == 0 else "FAIL (%d)" % failures))
 	quit(1 if failures > 0 else 0)
