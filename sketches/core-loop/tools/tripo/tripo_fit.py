@@ -115,6 +115,12 @@ s = (rext.z / max(ext.z, 1e-6)) if opt["fit"] == "height" else min(rext[k] / max
 rc = (rmn + rmx) / 2; c = (mn + mx) / 2
 ob.data.transform(Matrix.Translation(Vector((rc.x, rc.y, rmn.z))) @ Matrix.Scale(s, 4) @ Matrix.Translation(Vector((-c.x, -c.y, -mn.z))))
 
+# Weld the vertices Tripo split along its UV seams; a vertex-coloured asset needs no UVs, so they
+# go first and the vertex count drops to what the colour borders need.
+def _weld(mesh, keep_uv):
+    bmw = bmesh.new(); bmw.from_mesh(mesh)
+    bmesh.ops.remove_doubles(bmw, verts=bmw.verts, dist=1e-5)
+    bmw.to_mesh(mesh); bmw.free()
 # 3. texture -> flat palette per face
 me = ob.data
 img = None
@@ -172,6 +178,10 @@ for n in [l.name for l in me.uv_layers][1:]:
 for im in list(bpy.data.images):
     bpy.data.images.remove(im)
 
+if style == "vertex":
+    while me.uv_layers:
+        me.uv_layers.remove(me.uv_layers[0])
+_weld(me, style != "vertex")
 # 4. budget, names, sockets, export
 tris = sum(len(p.vertices) - 2 for p in me.polygons)
 cap = int(opt["max-tris"])

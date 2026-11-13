@@ -1609,7 +1609,7 @@ static func _mesh(path: String) -> Mesh:
 	if _meshes.has(path):
 		return _meshes[path]
 	var mesh: Mesh = null
-	var packed = ResourceLoader.load_threaded_get(path) if _requested.has(path) else load(path)
+	var packed = ResourceLoader.load_threaded_get(_requested[path]) if _requested.has(path) else load(ModelVariants.path(path))
 	_requested.erase(path)
 	if packed is PackedScene:
 		var scene: Node = (packed as PackedScene).instantiate()
@@ -1661,7 +1661,7 @@ static func _vertex_material() -> StandardMaterial3D:
 # Teardown: the cached meshes go with the park, and with the Game (activities.gd _exit_tree calls this).
 static func release_shared() -> void:
 	for path: String in _requested:
-		ResourceLoader.load_threaded_get(path)
+		ResourceLoader.load_threaded_get(_requested[path])
 	_requested.clear()
 	_meshes.clear()
 	_far_sources.clear()
@@ -1845,8 +1845,9 @@ static func _uncached(paths: Array) -> Array:
 	var out := paths.filter(func(path: String): return not _meshes.has(path))
 	if not AppShell.headless():
 		for path: String in out:
-			if not _requested.has(path) and ResourceLoader.load_threaded_request(path) == OK:
-				_requested[path] = true
+			var source := ModelVariants.path(path)
+			if not _requested.has(path) and ResourceLoader.load_threaded_request(source) == OK:
+				_requested[path] = source
 	return out
 
 
@@ -1856,7 +1857,7 @@ func _read_meshes(budget_usec: int) -> void:
 	var started := Time.get_ticks_usec()
 	while not _reads.is_empty():
 		var path: String = _reads[0]
-		if _requested.has(path) and ResourceLoader.load_threaded_get_status(path) == ResourceLoader.THREAD_LOAD_IN_PROGRESS:
+		if _requested.has(path) and ResourceLoader.load_threaded_get_status(_requested[path]) == ResourceLoader.THREAD_LOAD_IN_PROGRESS:
 			return
 		_reads.pop_front()
 		var read_started := Time.get_ticks_usec()
@@ -1896,7 +1897,7 @@ func _prepare_next() -> void:
 		_next_reads = []
 	if not _next_meshes.is_empty():
 		var path: String = _next_meshes[0]
-		if _requested.has(path) and ResourceLoader.load_threaded_get_status(path) == ResourceLoader.THREAD_LOAD_IN_PROGRESS:
+		if _requested.has(path) and ResourceLoader.load_threaded_get_status(_requested[path]) == ResourceLoader.THREAD_LOAD_IN_PROGRESS:
 			return
 		var started := Time.get_ticks_usec()
 		_mesh(_next_meshes.pop_front())

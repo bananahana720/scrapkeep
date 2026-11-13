@@ -6,11 +6,22 @@ extends SceneTree
 
 const ModelVariants := preload("res://src/presentation/model_variants.gd")
 
-# authored path -> {tris ceiling, draws ceiling} (the chaser's from enemy_chaser_asset_test.gd,
-# the pet's from its enemy class in assets/asset_budgets.json, held to the 2,000 the fitter targets)
+# authored path -> {tris ceiling, draws ceiling}; -1 holds the sibling to the authored model's own count.
+# The chaser's ceilings are enemy_chaser_asset_test.gd's; the pet's 2,000 is what the fitter targets
+# (its enemy class allows 10,000). Scenery siblings must be no heavier than the authored prop, at every LOD.
 const PAIRS := {
 	"res://assets/models/world_one/enemy_chaser.glb": {"tris": 3400, "draws": 5},
 	"res://assets/models/camp/camp_pet.glb": {"tris": 2000, "draws": 1},
+	"res://assets/models/world_one/enemy_boom_tender.glb": {"tris": -1, "draws": -1},
+	"res://assets/models/park/props/dam/gate_wheelhouse_a.glb": {"tris": -1, "draws": -1},
+	"res://assets/models/park/props/dam/gate_wheelhouse_a_lod1.glb": {"tris": -1, "draws": -1},
+	"res://assets/models/park/props/dam/gate_wheelhouse_a_lod2.glb": {"tris": -1, "draws": -1},
+	"res://assets/models/park/props/dam/mixer_wreck_a.glb": {"tris": -1, "draws": -1},
+	"res://assets/models/park/props/dam/mixer_wreck_a_lod1.glb": {"tris": -1, "draws": -1},
+	"res://assets/models/park/props/dam/mixer_wreck_a_lod2.glb": {"tris": -1, "draws": -1},
+	"res://assets/models/park/props/dam/survey_tent_a.glb": {"tris": -1, "draws": -1},
+	"res://assets/models/park/props/dam/survey_tent_a_lod1.glb": {"tris": -1, "draws": -1},
+	"res://assets/models/park/props/dam/survey_tent_a_lod2.glb": {"tris": -1, "draws": -1},
 }
 
 var failures := 0
@@ -78,7 +89,11 @@ func _run() -> void:
 			if t.slots.has(n) and t.slots[n] != a.slots[n]:
 				slot_diff.append("%s %s vs %s" % [n, t.slots[n], a.slots[n]])
 		_check(slot_diff.is_empty(), "%s sibling keeps each part's material slots %s" % [authored.get_file(), slot_diff])
-		var cap: Dictionary = PAIRS[authored]
+		var cap: Dictionary = PAIRS[authored].duplicate()
+		if cap.tris < 0:
+			cap.tris = a.tris
+		if cap.draws < 0:
+			cap.draws = a.draws
 		_check(t.tris <= cap.tris, "%s sibling triangles %d <= %d (authored %d)" % [authored.get_file(), t.tris, cap.tris, a.tris])
 		_check(t.draws <= cap.draws, "%s sibling draws %d <= %d (authored %d)" % [authored.get_file(), t.draws, cap.draws, a.draws])
 		a_node.free()

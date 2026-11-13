@@ -88,6 +88,12 @@ s = (rext.z / max(ext.z, 1e-6)) if opt["fit"] == "height" else min(rext[k] / max
 c, rc = (mn + mx) / 2, (lmn + lmx) / 2
 me.transform(Matrix.Translation(Vector((rc.x, rc.y, lmn.z))) @ Matrix.Scale(s, 4) @ Matrix.Translation(Vector((-c.x, -c.y, -mn.z))))
 
+# Weld the vertices Tripo split along its UV seams; a vertex-coloured asset needs no UVs, so they
+# go first and the vertex count drops to what the colour borders need.
+def _weld(mesh, keep_uv):
+    bmw = bmesh.new(); bmw.from_mesh(mesh)
+    bmesh.ops.remove_doubles(bmw, verts=bmw.verts, dist=1e-5)
+    bmw.to_mesh(mesh); bmw.free()
 img = None
 for sl in ob.material_slots:
     if sl.material and sl.material.use_nodes:
@@ -128,6 +134,10 @@ for p in me.polygons:
         ca.data[li].color = (*rgb, 1.0)
 while len(me.uv_layers) > 1:
     me.uv_layers.remove(me.uv_layers[-1])
+if style == "vertex":
+    while me.uv_layers:
+        me.uv_layers.remove(me.uv_layers[0])
+_weld(me, style != "vertex")
 tris = sum(len(p.vertices) - 2 for p in me.polygons)
 cap = int(opt["max-tris"])
 if cap and tris > cap:
