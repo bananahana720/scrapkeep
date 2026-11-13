@@ -683,7 +683,7 @@ func _steer_pod(rec: Dictionary, player, delta: float) -> void:
 	BallLooks.ride(ball_look(), player.roll_node())
 	var glance = rec.get("glance")
 	if glance != null and is_instance_valid(glance) and ctx != null and ctx.get("camera") != null:
-		glance.observe(v.length() < GLANCE_STILL_SPEED and rec.get("reaction", "") == "", ctx.camera.global_position, delta)
+		glance.observe(_at_rest(rec, v.length()), ctx.camera.global_position, delta)
 	var open := 1.0 if player.kit.gliding else 0.0
 	var kest := {}
 	if rec["class"] == "demolitions_caster" and ctx != null and ctx.spawner != null and ctx.spawner.get("ultimate") != null:
@@ -1669,6 +1669,11 @@ func fit_companion_skin(model: Node3D, id: String) -> Array:
 # priority; when a clip ends the pilot goes back to a base loop (idle_loop, or ult_ride_loop
 # while the set piece holds the ride) instead of a bone reset. A GLB without idle_loop keeps
 # the old stop and reset and warns once per pilot. Code moves the mecha (mecha_motion.gd).
+
+# Whether the pilot is free to glance back: the ball sits still and no reaction clip plays.
+func _at_rest(rec: Dictionary, speed: float) -> bool:
+	return speed < GLANCE_STILL_SPEED and rec.get("reaction", "") == ""
+
 
 func _fit_pilot(rec: Dictionary) -> void:
 	rec["mecha"] = MechaMotion.new(rec.pod, rec.core, rec["class"], Array(_pilot_table(rec["class"]).get("machinery", [])))

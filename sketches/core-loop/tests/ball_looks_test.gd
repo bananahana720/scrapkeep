@@ -256,6 +256,12 @@ func _riders() -> void:
 	roll.free()
 
 
+# Stands in for the player where the game's own pilot fitting asks for the class colour.
+class _Rider:
+	func class_color() -> Color:
+		return Color.WHITE
+
+
 # The pilot's glance back at the camera (pilot_glance.gd): only at rest, only toward a camera
 # behind, over the shoulder on the camera's side, and gone the moment the ball moves.
 func _glance() -> void:
@@ -282,10 +288,16 @@ func _glance() -> void:
 		glance.observe(true, behind_right, 1.0 / 60.0)
 	t.check("glance: then over the right shoulder to a camera behind on the right", glance.turn > 0.8, str(glance.turn))
 	var head := skeleton.find_bone("head")
-	var rest := skeleton.get_bone_pose_rotation(head)
+	var rests := {}
+	for bone_name in PilotGlance.SHARES:
+		rests[bone_name] = skeleton.get_bone_pose_rotation(skeleton.find_bone(bone_name))
+	# The way the face points, in the head bone's own axes; the pilot faces -Z at rest.
+	var face: Vector3 = skeleton.get_bone_global_pose(head).basis.orthonormalized().inverse() * Vector3.FORWARD
 	glance._process_modification()
-	t.check("glance: the head turns", not skeleton.get_bone_pose_rotation(head).is_equal_approx(rest))
-	skeleton.set_bone_pose_rotation(head, rest)
+	var faces: Vector3 = skeleton.get_bone_global_pose(head).basis.orthonormalized() * face
+	t.check("glance: the face turns to the camera's side and past the shoulder", faces.x > 0.5 and faces.z > 0.0, str(faces))
+	for bone_name in rests:
+		skeleton.set_bone_pose_rotation(skeleton.find_bone(bone_name), rests[bone_name])
 	for i in 30:
 		glance.observe(false, behind_right, 1.0 / 60.0)
 	t.check("glance: gone within half a second of the ball moving", absf(glance.turn) < 0.02, str(glance.turn))
@@ -301,7 +313,17 @@ func _glance() -> void:
 		glance.observe(true, ahead, 1.0 / 60.0)
 	t.eq("glance: no glance at a camera in front", glance.turn, 0.0)
 	var plain := _painter(null)
-	t.check("glance: only a look that shows the pilot's back seats one", not BallLooks.PLATED.has(plain.ball_look()))
+	for case in [[painter, true], [plain, false]]:
+		var rec: Dictionary = case[0].fit_shell_into(ball, PILOTS[0], "", 1, {"class": Color.WHITE})
+		rec["class"] = PILOTS[0]
+		rec["player"] = _Rider.new()
+		case[0]._fit_pilot(rec)
+		t.eq("glance: the game seats one under %s: %s" % [case[0].ball_look(), case[1]], rec.get("glance") != null, case[1])
+		if rec.get("pilot") != null:
+			t.eq("glance: one modifier at most on that pilot", rec.pilot.find_children("PilotGlance", "", true, false).size(), 1 if case[1] else 0)
+	t.check("glance: a still ball is at rest", painter._at_rest({"reaction": ""}, 0.1))
+	t.check("glance: a moving ball is not", not painter._at_rest({"reaction": ""}, 2.0))
+	t.check("glance: a reaction clip ends the rest", not painter._at_rest({"reaction": "hit"}, 0.1))
 	ball.free()
 	painter.free()
 	plain.free()

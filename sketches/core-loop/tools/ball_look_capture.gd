@@ -141,6 +141,10 @@ func _run() -> void:
 		quit(3)
 		return
 	var fitted: Dictionary = painter.fit_pilot_into(shell.pod, _pilot, def.color)
+	if fitted.is_empty():
+		push_error("ball_look_capture: no pilot model for '%s'" % _pilot)
+		quit(3)
+		return
 	var animator = fitted.get("animator")
 	if animator is AnimationPlayer and animator.has_animation("idle_loop"):
 		animator.play("idle_loop")
