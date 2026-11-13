@@ -104,6 +104,17 @@ const ONBEAT_DB := -8.0
 # Tests set this to stand in for the beat clock: it returns the signed offset in seconds.
 var beat_offset_hook := Callable()
 var _onbeat_at := -(1 << 40)
+# A pilot's skill cast on the beat is answered by the band (Andrew, 13 Nov 02:17Z to 02:19Z): the skill's own
+# sound plays when pressed, never moved to the grid; inside ONBEAT_WINDOW_S the pilot's motif joins on
+# the next sixteenths in its own voice. A hidden reward, sound and look only like the on-beat hit
+# (Q10). SKILL_ANSWER_NOTES of the motif's cells, all of them against an elite, a miniboss, the
+# Warden, or anything in a live boss fight, with the last note doubled in the motif's band voice. Only
+# a line skill names its foe (at its bite); a special or gauge release counts as big only in a boss
+# fight. Cooldowns stop a skill from repeating it, so the gate only keeps two cues of one cast
+# (a gauge release and its special) or two skills on one beat from stacking.
+signal skill_on_beat(kind: String, big: bool)
+const SKILL_ANSWER_NOTES := 2
+var _skill_answer_at := -(1 << 40)
 # Weak-point hits inside this window climb like a kill chain. Pickups and kills climb by
 # their streaks, whose windows are in EventKinds.JUICE.
 const KILL_COMBO_WINDOW_MS := 1500
@@ -2051,7 +2062,12 @@ func _connect_all(events) -> void:
 	events.enemy_spawned.connect(_on_enemy_spawned)
 	events.enemy_struck.connect(_on_struck)
 	events.shot_fired.connect(_on_shot)
-	events.special_used.connect(func(_special: String, _at: Vector3): play("special_used"))
+	events.special_used.connect(func(_special: String, _at: Vector3):
+		play("special_used")
+		skill_answer("special_used", null))
+	events.gauge_released.connect(func(_id: String, _fraction: float): skill_answer("gauge_released", null))
+	events.line_skill_fired.connect(func(_id: String, target: Node3D, _at: Vector3, _on: String):
+		skill_answer("line_skill_fired", target))
 	events.active_fired.connect(_on_active_fired)
 	events.active_heat.connect(_on_active_heat)
 	events.reward_offered.connect(_on_offered)
@@ -3418,6 +3434,45 @@ func _on_ace_grid() -> bool:
 	return ace != null and engine.grid == ace and ace.mode != "off" and ace.section != ""
 
 
+# The band answers a skill cast on the beat (SKILL_ANSWER_NOTES above). Returns the notes booked,
+# empty off the beat. target is the foe the skill named, or null.
+func skill_answer(kind: String, target: Node3D) -> Array:
+	if absf(beat_offset_s()) > ONBEAT_WINDOW_S or engine.clock - _skill_answer_at < engine.beat_len() / 2:
+		return []
+	_skill_answer_at = engine.clock
+	var big := big_foe(target)
+	var motif := Harmony.motif_or_first(_motif if _motif != "" else Harmony.CLASS_MOTIFS[0])
+	var cells: Array = motif["cells"]
+	if not big:
+		cells = cells.slice(0, SKILL_ANSWER_NOTES)
+	var unit := grid_unit(4)
+	var start := next_grid(4)
+	var booked := []
+	for cell in cells:
+		var at := start + int(cell[0]) * unit
+		_note_at("skill_on_beat", String(motif["voice"]), int(cell[1]), at)
+		booked.append([String(motif["voice"]), int(cell[1]), at])
+	if big and motif.has("band"):
+		var last: Array = cells[cells.size() - 1]
+		var midi := int(last[1]) + int(motif.get("band_octave", 0))
+		var at := start + int(last[0]) * unit
+		_note_at("skill_on_beat", String(motif["band"]), midi, at, SfxBank.GRID_UNDER_DB)
+		booked.append([String(motif["band"]), midi, at])
+	skill_on_beat.emit(kind, big)
+	return booked
+
+
+# A foe that earns the band's whole answer: an elite pack's member, a miniboss, the Warden, or
+# anything while a boss fight is live.
+func big_foe(target: Node3D) -> bool:
+	if ctx != null and "boss" in ctx and ctx.boss != null and ctx.boss.has_method("active") and ctx.boss.active():
+		return true
+	if not is_instance_valid(target):
+		return false
+	return target.has_meta("elite_pack") or target == _miniboss or target.get("boss") != null \
+			or (ctx != null and ctx.flow != null and ctx.flow.get("warden") == target)
+
+
 # One division of the sounding band's beat in samples: per_beat 4 is a sixteenth, 2 an eighth.
 func grid_unit(per_beat: int) -> int:
 	return maxi(1, (ace.grid_beat if _on_ace_grid() else engine.beat_len()) / per_beat)
@@ -3473,6 +3528,13 @@ func _warm_grid_key() -> void:
 	for id in [SfxBank.grid_note_id(whip[0], whip[1]), SfxBank.grid_note_id(whip[0], whip[2]),
 			SfxBank.grid_note_id(DUNK_VOICE, DUNK_STORED_MIDI), SfxBank.grid_note_id(DUNK_VOICE, DUNK_SPENT_MIDI)]:
 		engine.warm_stinger(id, engine.clock)
+	# A skill's answer starts a sixteenth after the cast, too soon to make its notes then.
+	var row := Harmony.motif_or_first(motif)
+	for cell in row["cells"]:
+		engine.warm_stinger(SfxBank.grid_note_id(String(row["voice"]), int(cell[1])), engine.clock)
+	if row.has("band") and not row["cells"].is_empty():
+		var last: Array = row["cells"][row["cells"].size() - 1]
+		engine.warm_stinger(SfxBank.grid_note_id(String(row["band"]), int(last[1]) + int(row.get("band_octave", 0))), engine.clock)
 
 
 # The kill chain's window has closed: a chain worth hearing lands, once.
