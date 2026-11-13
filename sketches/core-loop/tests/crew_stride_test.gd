@@ -37,8 +37,8 @@ func _run() -> void:
 	var crew = _game.combat.spawn_enemy("hooker", ball + Vector3(14.0, 1.6, 0.0))
 	crew.hp = 100000.0
 	crew._rest = 999.0
-	# Let it land and stand.
-	# It walks straight at the ball at full pace while measured (inside keep_far it would circle).
+	# It walks straight at the ball at full pace while measured (inside keep_far it would circle),
+	# after 40 ticks standing (walk_speed 0) to land.
 	var full: float = crew.walk_speed
 	var far: float = crew.keep_far
 	crew.keep_far = 1.0
@@ -75,4 +75,30 @@ func _run() -> void:
 			break
 	_t.check("the crew warned", warned)
 	_t.check("a warning stands it still from its first tick", stood)
+	# Out of the attack it builds up from a standstill again.
+	crew._rest = 999.0
+	crew.keep_far = 1.0
+	var restarted := -1.0
+	for i in 600:
+		await physics_frame
+		if crew.phase == crew.Phase.ROAM and not crew.recovering():
+			await physics_frame
+			restarted = Vector2(crew.velocity.x, crew.velocity.z).length()
+			break
+	_t.check("after its attack it starts with a step again", restarted >= 0.0 and restarted < full * 0.3, "%.2f" % restarted)
+	# A knock carries the stride: when the knock bleeds out the crew does not snap to full speed.
+	for i in 30:
+		await physics_frame
+	crew.knock(Vector3.LEFT, 12.0 * crew.weight)
+	await physics_frame
+	_t.check("the knock carried it", crew._knocked_speed() >= 1.0, "%.2f" % crew._knocked_speed())
+	var after_knock := -1.0
+	for i in 120:
+		await physics_frame
+		if crew._knocked_speed() < 1.0:
+			# The tick after the knock hands control back to the crew.
+			await physics_frame
+			after_knock = Vector2(crew.velocity.x, crew.velocity.z).length()
+			break
+	_t.check("a knock hands over without a burst", after_knock >= 0.0 and after_knock <= full * 0.6, "%.2f of %.2f" % [after_knock, full])
 	quit(_t.verdict())

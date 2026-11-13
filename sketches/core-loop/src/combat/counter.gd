@@ -246,6 +246,7 @@ func _physics_process(delta: float) -> void:
 			recover_left = maxf(0.0, recover_left - delta)
 			var seek := _seek(to_ball)
 			_move(delta, _ramp(delta, Vector3.ZERO if stunned() or open else _roam(seek)))
+			_strode()
 			if _gait != null and not stunned() and _knocked_speed() < 1.0 and seek.length() > 0.5:
 				_gait.aim(_facing_yaw(seek))
 			if not stunned() and not open and _rest <= 0.0 and _knocked_speed() < 1.0 and _wants_attack(seek):
@@ -286,6 +287,14 @@ func _physics_process(delta: float) -> void:
 func _ramp(delta: float, desired: Vector3) -> Vector3:
 	_stride = _stride.move_toward(desired, maxf(walk_speed, desired.length()) / STRIDE_RAMP * delta)
 	return _stride
+
+
+# The stride keeps only what the body did: a knock that carried it, or a wall or edge that stopped
+# it, is where the next build-up starts, so it never snaps back to full speed out of either.
+func _strode() -> void:
+	var moved := Vector3(velocity.x, 0.0, velocity.z)
+	if _knocked_speed() >= 1.0 or moved.length() < _stride.length():
+		_stride = moved
 
 
 func _idle(delta: float) -> void:
