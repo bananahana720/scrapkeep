@@ -1378,7 +1378,8 @@ func _step_cuts(now := Engine.get_physics_frames()) -> void:
 		var out: Dictionary = job["out"]
 		var hits := _land_cut(_sector_shape(job["sector"], out["cells"], out["shadows"]), job["at"], job["heft"])
 		var record: Dictionary = job["record"]
-		record["volley_hits"] = int(record.get("volley_hits", 0)) + hits
+		if not record.is_empty():
+			record["volley_hits"] = int(record.get("volley_hits", 0)) + hits
 
 
 # Drops every cut still carving, with its hits.
