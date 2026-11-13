@@ -5,6 +5,7 @@ const TelegraphRecord := preload("res://src/combat/telegraph_record.gd")
 const AttackBudget := preload("res://src/combat/attack_budget.gd")
 const PackPressure := preload("res://src/combat/pack_pressure.gd")
 const AbilityState := preload("res://src/core/ability_state.gd")
+const CrewLamp := preload("res://src/presentation/crew_lamp.gd")
 
 # What every Fleet reinforcement shares (DESIGN-V2 section 10): an animal crew with its
 # anti-ball tool as the biggest shape, and one loop, roam -> warn -> live -> rest.
@@ -91,6 +92,8 @@ var _t := 0.0
 var _rest := 0.0
 var _strafe := 1.0
 var _crew: MeshInstance3D
+# The crew's head lamp, its eye (CrewLamp, W1-83); null for a kind with none.
+var _eye: Node3D
 
 
 func setup(target_ref, terrain_ref, root_ref, live_ref: Callable, threat: float, spec_ref := {}) -> void:
@@ -114,6 +117,7 @@ func setup(target_ref, terrain_ref, root_ref, live_ref: Callable, threat: float,
 	_rest = first_rest
 	_build_crew()
 	_build_tool()
+	_eye = CrewLamp.fit(reaction_pivot, kind, world_root)
 	if walk_speed > 0.0 and not kind in GAIT_SKIP:
 		_gait = EnemyGait.new()
 		_gait.steps = not EnemyClips.ROWS.has(kind) and Roster.CHASSIS.get(kind, {}).get("move_class", "") != "airborne"
@@ -183,6 +187,13 @@ func _go_live() -> void:
 
 func _warn_progress() -> float:
 	return _t / warn_seconds
+
+
+# How far the wind-up has run, 0 to 1, on its own clock; -1 outside a warning. The telegraph's
+# fill is _warn_progress, which a kind may hold (the bola's reticle stays open); the body's
+# wind-up pose reads this instead.
+func windup_run() -> float:
+	return clampf(_t / maxf(warn_seconds, 0.001), 0.0, 1.0) if phase == Phase.WARN else -1.0
 
 
 func _live(_delta: float) -> bool:
@@ -273,6 +284,8 @@ func _physics_process(delta: float) -> void:
 			if resolve_interrupt(asks) >= 0 or not _live(delta) or _t >= live_seconds:
 				_end()
 	_pose()
+	if _eye != null:
+		_eye.watch(delta, _t / maxf(warn_seconds, 0.001) if phase == Phase.WARN else (1.0 if phase == Phase.LIVE else 0.0))
 
 
 func _idle(delta: float) -> void:
@@ -503,6 +516,12 @@ func _facing(to_ball: Vector3) -> void:
 		rotation.y = _facing_yaw(to_ball)
 		if _gait != null:
 			_gait.committed()
+
+
+func _settle_look() -> void:
+	super._settle_look()
+	if _eye != null:
+		_eye.go_out()
 
 
 # The body yaw that faces `to_ball`: the tool on +Z.

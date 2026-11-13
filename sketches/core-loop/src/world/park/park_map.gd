@@ -198,6 +198,9 @@ func _fill() -> void:
 		# Optional: the way a cracked_cache's open face looks; without it, the rule's (north).
 		if row.has("face"):
 			site["face"] = _v2(row["face"]).normalized()
+		# Optional: a cracked_cache's wall bar as a speed tier (activities.gd BARS).
+		if row.has("bar"):
+			site["bar"] = String(row["bar"])
 		# Optional: a card 2 extra (the completionist card's added activities) stands beside the pocket draw.
 		if row.get("extra", "") == "card_2":
 			site["extra"] = "card_2"
