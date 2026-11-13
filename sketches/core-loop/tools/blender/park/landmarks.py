@@ -32,7 +32,7 @@ bake (the SOFT adapter below; tools/blender/POLISH.md). Those meshes carry a zer
 map (Bake: x unoccluded fraction, y wear); the -col meshes, the mid and far views and the isle tip stay unpolished and map-free.
 
   blender -b --threads 2 --python-exit-code 1 -P sketches/core-loop/tools/blender/park/landmarks.py -- \
-      [--out-dir DIR] [--only landmark_dam,...] [--count-only] [--dam-look today|a|b|c]
+      [--out-dir DIR] [--only landmark_dam,...] [--count-only]
 """
 import argparse
 import hashlib
@@ -390,12 +390,11 @@ def dam_gate(name, x0, x1):
     return v
 
 
-# The dam's look (W1-25, taste pick under ruling cq): "today" is the 10 Nov build; "a" weathers the cast face (graded
-# lifts, monolith tones, calcite leach and varnish streaks, a wet band by the spill); "b" adds the face's structure,
-# ribs at 40 m with the bays between them set back BAY_DEPTH (never forward: the face's collider stays where it is, so
-# a ball can only stand off a bay, never sink into one) under a lintel band; "c" is "b" with the Fleet's claim stencilled
-# on the lintel and the crew's chalk answer low on the face (STORY-MAP.md, The Spillway).
-DAM_LOOK = "c"
+# The dam's look (W1-25, Andrew's taste pick of 13 Nov under ruling cq): a weathered cast face (graded lifts, monolith
+# tones, calcite leach and varnish streaks, a wet band by the spill) with its structure drawn, ribs at 40 m with the bays
+# between them set back BAY_DEPTH (never forward: the face's collider stays where it is, so a ball can only stand off a
+# bay, never sink into one) under a lintel band carrying the Fleet's claim, and the crew's chalk answer low on the face
+# by the yard (STORY-MAP.md, The Spillway).
 DAM_RIBS = (-168.0, -128.0, -88.0, -48.0, 48.0, 88.0, 128.0, 168.0)   # rib centres; +-168 are the collided pilasters
 DAM_RIB_W = 6.0
 BAY_DEPTH = 1.0
@@ -424,9 +423,7 @@ def dam_lift(i, j):
 
 
 def dam_spans():
-    """The face across x in (x0, x1, kind): kind "rib" stands on the face line, "bay" is set back (look b and c only)."""
-    if DAM_LOOK in ("today", "a"):
-        return [(-DAM_CANYON + 16.0 * i, -DAM_CANYON + 16.0 * (i + 1), "rib") for i in range(25)]
+    """The face across x in (x0, x1, kind): kind "rib" stands on the face line, "bay" is set back."""
     edges = [-DAM_CANYON]
     for r in DAM_RIBS:
         edges += [r - DAM_RIB_W / 2, r + DAM_RIB_W / 2]
@@ -466,7 +463,7 @@ def dam_face(e, fz):
                 y0 = 29.9 + (DAM_PLATEAU + 0.3 - 29.9) * j / rows
                 y1 = 29.9 + (DAM_PLATEAU + 0.3 - 29.9) * (j + 1) / rows
                 lo, hi = dam_lift(mono if kind == "bay" else 300 + si, j)
-                if kind == "rib" and DAM_LOOK in ("b", "c"):
+                if kind == "rib":
                     lo, hi = vscale(lo, 1.14), vscale(hi, 1.14)
                 elif set_back:
                     lo, hi = vscale(lo, 0.8), vscale(hi, 0.84)
@@ -507,17 +504,17 @@ def dam_streak(s, depth, x, y_top, length, w_top, w_bot, c_top, c_bot, lift=0.04
 
 
 def dam_weather(e, depth):
-    """Streaks on the face (look a, b, c): varnish from the lip's drains, calcite under the lift joints, a wet band by the spill."""
+    """Streaks on the face: varnish from the lip's drains, calcite under the lift joints, a wet band by the spill."""
     rows = 20
-    band = dam_band()[0] if DAM_LOOK == "c" else 0.0
+    band = dam_band()[0]
     for k in range(34):
         x = -DAM_CANYON + 3.0 + (2 * DAM_CANYON - 6.0) * (k + rnd(k, 51)) / 34
         if abs(x) < 26.0:
             continue
-        if DAM_LOOK in ("b", "c") and any(abs(x - r) < DAM_RIB_W / 2 + 0.8 for r in DAM_RIBS):
+        if any(abs(x - r) < DAM_RIB_W / 2 + 0.8 for r in DAM_RIBS):
             continue
         wall = dam_lift(int((x + DAM_CANYON) // 16), rows - 1)[1]
-        in_bay = DAM_LOOK != "a" and depth(x, 70.0) != depth(x, 95.0)
+        in_bay = depth(x, 70.0) != depth(x, 95.0)
         top = BAY_TOP - 0.05 if in_bay else (BAY_TOP + 1.35 if abs(x) < band else DAM_PLATEAU + 0.2)
         length = 10.0 + 42.0 * rnd(k, 53) ** 1.5
         if in_bay:
@@ -531,9 +528,9 @@ def dam_weather(e, depth):
         if abs(x) < 26.0:
             continue
         y = 29.9 + (DAM_PLATEAU + 0.3 - 29.9) * j / rows
-        if DAM_LOOK in ("b", "c") and depth(x, 70.0) != depth(x, 95.0) and not (BAY_SILL + 12.6 < y < BAY_TOP - 0.2):
+        if depth(x, 70.0) != depth(x, 95.0) and not (BAY_SILL + 12.6 < y < BAY_TOP - 0.2):
             continue
-        if DAM_LOOK in ("b", "c") and any(abs(x - r) < DAM_RIB_W / 2 + 0.6 for r in DAM_RIBS):
+        if any(abs(x - r) < DAM_RIB_W / 2 + 0.6 for r in DAM_RIBS):
             continue
         wall = dam_lift(int((x + DAM_CANYON) // 16), j - 1)[1]
         pale = lerp(wall, col("calcite"), 0.55 + 0.3 * rnd(k, 64))
@@ -549,7 +546,7 @@ def dam_weather(e, depth):
 
 
 def dam_works(e, fz):
-    """Look b and c: the outlet works low on the ribs (a dark adit with a steel frame) and the hoist houses' windows."""
+    """The outlet works low on the ribs (a dark adit with a steel frame) and the hoist houses' windows."""
     for r in DAM_RIBS:
         if abs(r) > DAM_CHORD:
             continue
@@ -572,7 +569,7 @@ def dam_works(e, fz):
             e.poly([(xa, 131.0, zf), (xb, 131.0, zf), (xb, 136.5, zf), (xa, 136.5, zf)], col("iron"), up=(0.0, 0.0, 1.0))
 
 
-def dam_face_flat(s, fz, lifts, claim=False):
+def dam_face_flat(s, fz, lifts):
     """The face for the mid and far views: the same spans and tones as the base, flat, a bay drawn darker for its set-back."""
     for si, (x0, x1, kind) in enumerate(dam_spans()):
         n = max(1, int(round((x1 - x0) / (16.0 if lifts > 1 else 48.0))))
@@ -585,12 +582,12 @@ def dam_face_flat(s, fz, lifts, claim=False):
                 lo, hi = dam_lift(mono if kind == "bay" else 300 + si, j * 20 // lifts)
                 if kind == "bay":
                     lo, hi = vscale(lo, 0.7), vscale(hi, 0.76)
-                elif DAM_LOOK in ("b", "c"):
+                else:
                     lo, hi = vscale(lo, 1.14), vscale(hi, 1.14)
                 if abs((xa + xb) / 2) > DAM_CHORD:
                     lo, hi = lerp(lo, col("concrete_dk"), 0.45), lerp(hi, col("concrete_dk"), 0.45)
                 s.poly([(xa, y0, fz), (xb, y0, fz), (xb, y1, fz), (xa, y1, fz)], [lo, lo, hi, hi], up=(0.0, 0.0, 1.0))
-    half = dam_band()[0] if claim else 0.0
+    half = dam_band()[0]
     for k in range(18):
         x = -DAM_CANYON + 10.0 + (2 * DAM_CANYON - 20.0) * (k + rnd(k, 51)) / 18
         if abs(x) < max(26.0, half):
@@ -601,10 +598,9 @@ def dam_face_flat(s, fz, lifts, claim=False):
         dark = lerp(wall, col("varnish"), 0.65)
         s.poly([(x - 0.3, y_bot, fz + 0.05), (x + 0.3, y_bot, fz + 0.05), (x + w / 2, DAM_PLATEAU, fz + 0.05),
                 (x - w / 2, DAM_PLATEAU, fz + 0.05)], [wall, wall, dark, dark], up=(0.0, 0.0, 1.0))
-    if claim:
-        y0, y1 = BAY_TOP + 1.4, DAM_PLATEAU - 1.0
-        s.poly([(-half, y0, fz + 0.08), (half, y0, fz + 0.08), (half, y1, fz + 0.08), (-half, y1, fz + 0.08)], col("oxide"),
-               up=(0.0, 0.0, 1.0))
+    y0, y1 = BAY_TOP + 1.4, DAM_PLATEAU - 1.0
+    s.poly([(-half, y0, fz + 0.08), (half, y0, fz + 0.08), (half, y1, fz + 0.08), (-half, y1, fz + 0.08)], col("oxide"),
+           up=(0.0, 0.0, 1.0))
 
 
 def dam_letters(text, height=None, size_x=None, scale=None):
@@ -647,7 +643,7 @@ def dam_band():
 
 
 def dam_claim(e, d1, fz):
-    """Look c: the Fleet's stencil across the lintel, bone on an oxide band, and the crew's chalk under it at the yard."""
+    """The Fleet's stencil across the lintel, bone on an oxide band, and the crew's chalk under it at the yard."""
     y0, y1 = BAY_TOP + 1.4, DAM_PLATEAU - 1.0
     half, tris, width = dam_band()
     band = (-half, half)
@@ -703,27 +699,13 @@ def build_dam():
             q = [(x0, dam_ramp_y(z0) + 0.06, z0), (x1, dam_ramp_y(z0) + 0.06, z0), (x1, dam_ramp_y(z1) + 0.06, z1),
                  (x0, dam_ramp_y(z1) + 0.06, z1)]
             e.poly(q, shade("concrete_dk", 1.0, (i, j, 1), 0.05), up=(0.0, 0.83, 0.55))
-    # the face: cast courses 3.5 m tall in 16 m bays, a darker abutment band past the chord
     rows = 20
-    for i in range(25 if DAM_LOOK == "today" else 0):
-        x0, x1 = -DAM_CANYON + 16.0 * i, -DAM_CANYON + 16.0 * (i + 1)
-        for j in range(rows):
-            y0 = 29.9 + (DAM_PLATEAU + 0.3 - 29.9) * j / rows
-            y1 = 29.9 + (DAM_PLATEAU + 0.3 - 29.9) * (j + 1) / rows
-            c = dam_course(j, i)
-            if abs((x0 + x1) / 2) > DAM_CHORD:
-                c = lerp(c, col("concrete_dk"), 0.45)
-            if rnd(i, j, 17) > 0.93:
-                c = lerp(c, col("patch"), 0.7)
-            e.poly([(x0, y0, fz), (x1, y0, fz), (x1, y1, fz), (x0, y1, fz)], c, up=(0.0, 0.0, 1.0))
     d1, d2 = sky.Surf("landmark_dam_detail1"), sky.Surf("landmark_dam_detail2")
-    if DAM_LOOK != "today":
-        depth = dam_face(e, fz)
-        dam_weather(e, depth)
-        if DAM_LOOK in ("b", "c"):
-            dam_works(e, fz)
-        if DAM_LOOK == "c":
-            dam_claim(e, d1, fz)
+    # the face, cast in lifts with its ribs and set-back bays, weathered, its works and its two voices
+    depth = dam_face(e, fz)
+    dam_weather(e, depth)
+    dam_works(e, fz)
+    dam_claim(e, d1, fz)
     box(e, (-DAM_CANYON, DAM_PLATEAU, fz - 2.0), (DAM_CANYON, DAM_PLATEAU + 0.3, fz + 0.3), col("concrete_lt"))
     # pilasters just past the chord, standing on the ramp (outside x +-160, so nothing below y 30 collides there)
     for sx in (-1, 1):
@@ -880,13 +862,7 @@ def build_dam():
 
     # ---- mid: a 24-segment arch, the face, towers, gantry, closed gates, the halo
     me, ms = mid["enamel"], mid["steel"]
-    if DAM_LOOK != "today":
-        dam_face_flat(me, fz, 5, claim=DAM_LOOK == "c")
-    for i in range(10 if DAM_LOOK == "today" else 0):
-        x0, x1 = -DAM_CANYON + 40.0 * i, -DAM_CANYON + 40.0 * (i + 1)
-        for j in range(4):
-            y0, y1 = 29.9 + 17.6 * j, 29.9 + 17.6 * (j + 1)
-            me.poly([(x0, y0, fz), (x1, y0, fz), (x1, y1, fz), (x0, y1, fz)], dam_course(j, i), up=(0.0, 0.0, 1.0))
+    dam_face_flat(me, fz, 5)
     for k in range(n):
         xa, xb = xs[k], xs[k + 1]
         za, zb = dam_arch_z(xa), dam_arch_z(xb)
@@ -924,8 +900,7 @@ def build_dam():
     # ---- far: the drop-in hero silhouette: crest line, tower notches, the face as a pale bar
     fe = far["enamel"]
     box(fe, (-DAM_CANYON, 29.9, fz - 1.0), (DAM_CANYON, DAM_PLATEAU + 0.3, fz), col("concrete"))
-    if DAM_LOOK != "today":
-        dam_face_flat(fe, fz + 0.15, 1, claim=DAM_LOOK == "c")
+    dam_face_flat(fe, fz + 0.15, 1)
     for k in range(12):
         xa, xb = -DAM_CHORD + 2 * DAM_CHORD * k / 12, -DAM_CHORD + 2 * DAM_CHORD * (k + 1) / 12
         za, zb = dam_arch_z(xa), dam_arch_z(xb)
@@ -949,13 +924,11 @@ def build_dam():
         fe.poly([ring(r0, a0), ring(r1, a0), ring(r1, a1), ring(r0, a1)], col("concrete_lt"), up=(0.0, 0.0, 1.0))
 
     # ---- shells: course lines and tower ladders (1); monolith joints (2)
-    lines = [(-DAM_CANYON + 80.0 * i, -DAM_CANYON + 80.0 * (i + 1)) for i in range(5)]
-    if DAM_LOOK != "today":
-        lines = [(x0, x1) for x0, x1, _ in dam_spans()]
+    lines = [(x0, x1) for x0, x1, _ in dam_spans()]
     for j in range(1, rows):
         y = 29.9 + (DAM_PLATEAU + 0.3 - 29.9) * j / rows
         for x0, x1 in lines:
-            z = (depth((x0 + x1) / 2, y) if DAM_LOOK != "today" else fz) + 0.03
+            z = depth((x0 + x1) / 2, y) + 0.03
             card(d1, [(x0, y - 0.12, z), (x1, y - 0.12, z), (x1, y + 0.12, z), (x0, y + 0.12, z)],
                  col("joint"), (0.0, 0.0, 1.0))
     for sx in (-1, 1):
@@ -971,15 +944,12 @@ def build_dam():
                  col("stain"), (-sx, 0.0, 0.0))
     for i in range(1, 25):
         x = -DAM_CANYON + 16.0 * i
-        if DAM_LOOK == "today":
-            card(d2, [(x - 0.08, 29.95, fz + 0.04), (x + 0.08, 29.95, fz + 0.04), (x + 0.08, DAM_PLATEAU, fz + 0.04),
-                      (x - 0.08, DAM_PLATEAU, fz + 0.04)], col("joint"), (0.0, 0.0, 1.0))
-            continue
         if any(abs(x - r) < DAM_RIB_W / 2 + 0.2 for r in DAM_RIBS):
             continue
-        for ya, yb in ((29.95, BAY_TOP), (BAY_TOP, DAM_PLATEAU)):
-            z = depth(x, (ya + yb) / 2) + 0.04
-            card(d2, [(x - 0.08, ya, z), (x + 0.08, ya, z), (x + 0.08, yb, z), (x - 0.08, yb, z)], col("joint"), (0.0, 0.0, 1.0))
+        # a joint follows the face's profile: plinth, batter, set-back, lintel
+        for ya, yb in ((29.95, BAY_FOOT), (BAY_FOOT, BAY_SILL), (BAY_SILL, BAY_TOP), (BAY_TOP, DAM_PLATEAU)):
+            za, zb = depth(x, ya + 1e-6) + 0.04, depth(x, yb - 1e-6) + 0.04
+            card(d2, [(x - 0.08, ya, za), (x + 0.08, ya, za), (x + 0.08, yb, zb), (x - 0.08, yb, zb)], col("joint"), (0.0, 0.0, 1.0))
     empties = {
         "sight_top": (0.0, DAM_TOP, gz), "beam_root": DAM_ANCHOR, "warden_anchor": DAM_ANCHOR,
         "hp_0": (ax, ay + 1.6, az), "hp_1": (ax + 10.0, ay, az), "hp_2": (ax - 10.0, ay, az),
@@ -2697,10 +2667,7 @@ def main():
     parser.add_argument("--out-dir", default=str(MODELS))
     parser.add_argument("--only", default="")
     parser.add_argument("--count-only", action="store_true")
-    parser.add_argument("--dam-look", default="c", choices=("today", "a", "b", "c"))
     args = parser.parse_args(argv)
-    global DAM_LOOK
-    DAM_LOOK = args.dam_look
     ids = [i for i in args.only.split(",") if i] or list(BUILDERS)
     shas = {}
     for rid in ids:
