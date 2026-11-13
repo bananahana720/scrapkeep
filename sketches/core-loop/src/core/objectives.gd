@@ -69,7 +69,7 @@ const DONE_WORDS := {
 	"warden": "Warden broken",
 }
 
-# And when a site that can be lost is lost (it re-arms; activities.gd `retry_s`).
+# And when a site that can be lost is lost (it re-arms, activities.gd `retry_s`, or is forfeit, `out_s`).
 const LOST_WORDS := {
 	"hold_the_relay": "Relay lost",
 	"surge_run": "Surge lost",

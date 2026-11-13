@@ -180,7 +180,9 @@ func _rows(t) -> void:
 	t.eq("every site kind's done row keeps to five words", Activities.RULES.keys().filter(func(kind):
 		return WordBudget.words_in(Objectives.done_words(kind, Activities.called(kind))) > Objectives.MAX_WORDS), [])
 	t.eq("a drawn pocket's done row is its marker's word, done", Objectives.done_words("arena", Activities.called("arena")), "Arena done")
-	t.eq("only a site that can be lost has lost words", Objectives.LOST_WORDS.keys().filter(func(kind): return not Activities.RULES[kind].has("retry_s")), [])
+	# A site is lost by a loss that re-arms it (`retry_s`) or by a forfeit clock (`out_s`, the Stocktake yard).
+	t.eq("only a site that can be lost has lost words", Objectives.LOST_WORDS.keys().filter(func(kind):
+		return not (Activities.RULES[kind].has("retry_s") or Activities.RULES[kind].has("out_s"))), [])
 	t.eq("a kind that cannot be lost has none", Objectives.lost_words("enemy_camp"), "")
 	# A mark's tag is one or two words in capitals, and names every thing a fight can mark.
 	t.eq("every tag is one or two words in capitals", Objectives.TAGS.values().filter(func(w):
