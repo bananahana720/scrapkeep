@@ -677,6 +677,21 @@ func director_alive() -> int:
 	return maxi(0, get_tree().get_nodes_in_group("enemy").size() - activities.standing())
 
 
+# What the director's cap counts: the enemies near the ball (director.gd HOLD_M), less the activities' own.
+func director_held() -> int:
+	var at: Vector3 = ctx.player.ball_position()
+	var ball := Vector2(at.x, at.z)
+	var held := 0
+	var total := 0
+	for enemy in get_tree().get_nodes_in_group("enemy"):
+		if not enemy is Node3D or activities.keeps(enemy):
+			continue
+		total += 1
+		if Director.holds(String(enemy.get("kind")), Vector2(enemy.global_position.x, enemy.global_position.z), ball):
+			held += 1
+	return Director.held_count(held, total)
+
+
 func _step_director(delta: float) -> void:
 	director.spike = ctx.flow.state_name() == "beacon" or events.spike()
 	director.heft_class = ctx.run.heft_class()
@@ -684,7 +699,7 @@ func _step_director(delta: float) -> void:
 	if _build_clock >= BUILD_REFRESH and ctx.spawner != null and ctx.spawner.has_method("build_read"):
 		_build_clock = 0.0
 		director.build = ctx.spawner.build_read()
-	var alive := director_alive()
+	var alive := director_held()
 	var ball: Vector3 = ctx.player.ball_position()
 	var v: Vector3 = ctx.player.state.velocity
 	var forward: Vector3 = ctx.heading()
