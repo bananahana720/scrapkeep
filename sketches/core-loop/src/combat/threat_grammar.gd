@@ -199,6 +199,27 @@ const LIVE_SCORCH := 0.4
 const LIVE_SCORCH_ALPHA := 0.8
 const AIR_LIVE_ALPHA := 0.61
 const TELEGRAPH_FLAG := "telegraph"
+# The telegraph row's looks, Tuning's option order. "clear" and "edges" are the haze look made less
+# obstructive (Andrew, 13 Nov 2026: the warnings hid the attack they warn of; ruling cq candidates):
+#   clear  the fence a jump clears stands as thin posts and a thin rail with no charcoal keyline in
+#          the air, and fades out near the lens (FENCE_CLEAR, FENCE_FULL), so a camera inside a lane
+#          is not caged; a live lane's band is lighter (CLEAR_LIVE_ALPHA); and the driven marks draw
+#          behind bodies: depth tested, pulled DEPTH_PULL metres toward the eye so the ground under
+#          them never wins, so the crew winding up and the ball stay whole over a fill.
+#   edges  clear, with every area fill at EDGES_FILL of its alpha: the outline and its keyline carry
+#          the shape, the fill only the timing.
+# The ground outlines, their keylines and contains() are the same in every look.
+const LOOKS := ["classic", "haze", "clear", "edges"]
+const CLEAR_RAIL_HALF := 0.05
+const CLEAR_RAIL_ALPHA := 0.45
+const CLEAR_POST_ALPHA := 0.2
+const CLEAR_SPIKE_ALPHA := 0.45
+const CLEAR_BAND_TOP_ALPHA := 0.45
+const CLEAR_LIVE_ALPHA := 0.55
+const EDGES_FILL := 0.5
+const FENCE_CLEAR := 4.0
+const FENCE_FULL := 9.0
+const DEPTH_PULL := 0.6
 
 
 # Whether the haze look is on: set_haze() (tests, tools), else the launcher flag, read once
@@ -210,20 +231,38 @@ static func haze() -> bool:
 
 
 static func set_haze(on: bool) -> void:
-	Painter._haze = 1 if on else 0
+	Painter._look = "haze" if on else "classic"
+
+
+# The telegraph row's look (LOOKS); set_look() for tests and tools.
+static func look() -> String:
+	return Painter.look_now()
+
+
+static func set_look(name: String) -> void:
+	Painter._look = name if name in LOOKS else "haze"
+
+
+# Whether the look is one of the less obstructive candidates (clear, edges).
+static func soft() -> bool:
+	return Painter.soft_on()
 
 
 # The F1 telegraph row takes effect at the next stage entry or retry. A flip re-warms the
 # mark pipelines, since the haze look draws with a different material key.
 static func follow_row(tuning) -> void:
-	var on: bool = tuning.option(Tuning.TELEGRAPH_KEY) == "haze"
-	if on != haze():
-		set_haze(on)
+	var row: String = tuning.option(Tuning.TELEGRAPH_KEY)
+	if row != look():
+		set_look(row)
 		Painter._warmed = false
 
 
 # Layers whose name starts with "stripe" draw the hostile stripe pattern.
-const STATIC_LAYERS := ["under", "stripe", "base", "fill"]
+# "fence" holds a soft look's height fence (posts, rail, spikes), which fades out near the lens;
+# a painter makes it only when a mark draws on it.
+const STATIC_LAYERS := ["under", "stripe", "base", "fill", "fence"]
+# The layers tint() writes: the live INSTANT fill and the landing's crack and dust.
+const TINTED_LAYERS := ["fill", "crack", "dust"]
 const MOTION_LAYERS := ["motion_under", "stripe_motion", "motion"]
 # The layers a driven painter draws with threat_mark.gdshaderinc.
 const DRIVEN_LAYERS := ["stripe", "stripe_motion", "motion", "motion_under"]
@@ -479,7 +518,7 @@ static func drive(d: Dictionary) -> Dictionary:
 			out[_area_layer(d, true)] = _span_clip(d, 1.0)
 		Type.LANE:
 			var band := live_band(d)
-			var entry := _span_clip(d, LIVE_ALPHA / RUN_ALPHA if band else 1.0)
+			var entry := _span_clip(d, live_alpha() / RUN_ALPHA if band else 1.0)
 			entry["live"] = band
 			out[_area_layer(d, true)] = entry
 		Type.WAVE:
@@ -564,13 +603,13 @@ static func _driven_wave(d: Dictionary, out: Array) -> void:
 		var a0 := TAU * i / CURTAIN_STEPS
 		var a1 := TAU * (i + 1) / CURTAIN_STEPS
 		_wall(wall, _at(c, a0, r_out), _at(c, a1, r_out), 0.0, reach)
-		_wall(top, _at(c, a0, r_out), _at(c, a1, r_out), reach - BAND_TOP, reach + BAND_TOP)
+		_wall(top, _at(c, a0, r_out), _at(c, a1, r_out), reach - rail_half(), reach + rail_half())
 		for a in [a0, a0, a1, a0, a1, a1]:
 			rays.append_array([cos(a), sin(a), 0.0, 0.0])
 	var band := _driven(_mark("band", "motion", Color(hot, BAND_ALPHA), wall, {"height": reach}), Drive.CURTAIN)
 	band["c0"] = rays
 	out.append(band)
-	var band_top := _driven(_mark("band_top", "motion", Color(hot, 0.8), top, {"height": reach}), Drive.CURTAIN, 1.0)
+	var band_top := _driven(_mark("band_top", "motion", Color(hot, top_alpha()), top, {"height": reach}), Drive.CURTAIN, 1.0)
 	band_top["c0"] = rays
 	out.append(band_top)
 
@@ -713,7 +752,7 @@ static func _projectile(d: Dictionary, motion: bool, out: Array) -> void:
 
 static func _lane(d: Dictionary, motion: bool, out: Array) -> void:
 	var tone: Color = d["tone"]
-	var run_tone := _area_tone(d, LIVE_ALPHA if live_band(d) else RUN_ALPHA)
+	var run_tone := _area_tone(d, live_alpha() if live_band(d) else RUN_ALPHA)
 	var run_layer := _area_layer(d, true)
 	if d["form"] == "lane":
 		var length: float = d["length"]
@@ -752,7 +791,14 @@ static func _area_layer(d: Dictionary, motion: bool) -> String:
 	return "motion" if motion else "base"
 
 
+# A live lane band's alpha in this look.
+static func live_alpha() -> float:
+	return CLEAR_LIVE_ALPHA if soft() else LIVE_ALPHA
+
+
 static func _area_tone(d: Dictionary, alpha: float) -> Color:
+	if look() == "edges":
+		alpha *= EDGES_FILL
 	if stance(d["tone"]) != "hostile":
 		return Color(d["tone"], alpha)
 	return Color(Palette.HAZARD, alpha * HAZE_FILL) if haze() else Color(1.0, 1.0, 1.0, alpha)
@@ -778,8 +824,10 @@ static func _fence(out: Array, d: Dictionary) -> void:
 		return
 	var tone: Color = d["tone"]
 	var lines := _boundary(d)
+	var soft_fence := soft()
+	var layer := "fence" if soft_fence else "base"
 	if int(d["type"]) == Type.PROJECTILE:
-		out.append(_mark("band", "base", Color(tone, SPIKE_ALPHA), _spikes(lines, reach), {"height": reach}))
+		out.append(_mark("band", layer, Color(tone, CLEAR_SPIKE_ALPHA if soft_fence else SPIKE_ALPHA), _spikes(lines, reach), {"height": reach}))
 		return
 	var posts := PackedVector3Array()
 	for line in lines:
@@ -792,6 +840,10 @@ static func _fence(out: Array, d: Dictionary) -> void:
 				var at: Vector3 = line[i]
 				_wall(posts, at + Vector3(-POST_HALF, 0.0, 0.0), at + Vector3(POST_HALF, 0.0, 0.0), 0.0, reach)
 				_wall(posts, at + Vector3(0.0, 0.0, -POST_HALF), at + Vector3(0.0, 0.0, POST_HALF), 0.0, reach)
+	if soft_fence:
+		out.append(_mark("band", layer, Color(tone, CLEAR_POST_ALPHA), posts, {"height": reach}))
+		out.append(_mark("band_top", layer, Color(tone, CLEAR_RAIL_ALPHA), _rail(lines, reach, CLEAR_RAIL_HALF), {"height": reach}))
+		return
 	out.append(_mark("band", "base", Color(tone, POST_ALPHA), posts, {"height": reach}))
 	_lined(out, "band_top", false, Color(tone, RAIL_ALPHA), func(grow: float): return _rail(lines, reach, BAND_TOP + grow), {"height": reach})
 
@@ -933,9 +985,18 @@ static func _band(out: Array, line: Array, reach: float, hot: Color) -> void:
 	var top := PackedVector3Array()
 	for i in line.size() - 1:
 		_wall(wall, line[i], line[i + 1], 0.0, reach)
-		_wall(top, line[i], line[i + 1], reach - BAND_TOP, reach + BAND_TOP)
+		_wall(top, line[i], line[i + 1], reach - rail_half(), reach + rail_half())
 	out.append(_mark("band", "motion", Color(hot, BAND_ALPHA), wall, {"height": reach}))
-	out.append(_mark("band_top", "motion", Color(hot, 0.8 * hot.a), top, {"height": reach}))
+	out.append(_mark("band_top", "motion", Color(hot, top_alpha() * hot.a), top, {"height": reach}))
+
+
+# A wave curtain's top rail: its half height and alpha in this look.
+static func rail_half() -> float:
+	return CLEAR_RAIL_HALF if soft() else BAND_TOP
+
+
+static func top_alpha() -> float:
+	return CLEAR_BAND_TOP_ALPHA if soft() else 0.8
 
 
 static func _footprint(d: Dictionary) -> PackedVector3Array:
@@ -1128,14 +1189,21 @@ class Painter:
 	# material with a look is freed Godot frees that look's shader too: the next mark compiled it
 	# again, about 5 ms on the 4080, once a lobber volley came after the last ring had gone.
 	static var _held_looks := {}
-	static var _haze := -1  # -1 unread, 0 classic, 1 haze
+	static var _look := ""  # "" unread, else one of LOOKS
 
-	static func haze_on() -> bool:
-		if _haze < 0:
+	static func look_now() -> String:
+		if _look == "":
 			var flags := Tuning.new()
 			flags.apply_cmdline("launch")
-			_haze = 1 if flags.option(Tuning.FLAGS[TELEGRAPH_FLAG][0]) == "haze" else 0
-		return _haze == 1
+			_look = flags.option(Tuning.FLAGS[TELEGRAPH_FLAG][0])
+		return _look
+
+	# Every look but classic draws the haze fill.
+	static func haze_on() -> bool:
+		return look_now() != "classic"
+
+	static func soft_on() -> bool:
+		return look_now() in ["clear", "edges"]
 
 	static var _materials := {}
 	# Materials created so far; a run that has warmed up must not raise it.
@@ -1145,13 +1213,20 @@ class Painter:
 	# One shared material per (stencil class, stripes, priority, governed), so every driven
 	# telegraph draws with the same few materials. governed comes from the layer's roles
 	# (layer_governed), not from the stencil class.
+	# The material cache's key; a soft look's depth-tested materials are their own.
+	static func mark_key(fill_class: String, stripes: bool, priority: int, governed: bool) -> String:
+		return "%s/%s/%d/%s/%s" % [fill_class, stripes, priority, governed, soft_on()]
+
 	static func mark_material(fill_class: String, stripes: bool, priority: int, governed: bool) -> ShaderMaterial:
-		var key := "%s/%s/%d/%s" % [fill_class, stripes, priority, governed]
+		var depth := soft_on()
+		var key := mark_key(fill_class, stripes, priority, governed)
 		if _materials.has(key):
 			return _materials[key]
 		var code := "shader_type spatial;\n"
 		if stripes:
 			code += "#define STRIPES\n"
+		if depth:
+			code += "#define DEPTH_AWARE\n"
 		if FILL_STENCIL.has(fill_class):
 			code += "stencil_mode read, write, compare_not_equal, %d;\n" % FILL_STENCIL[fill_class]
 		code += "#include \"res://src/combat/threat_mark.gdshaderinc\"\n"
@@ -1161,7 +1236,9 @@ class Painter:
 		mat.shader = shader
 		mat.render_priority = priority
 		mat.set_shader_parameter("governed", 1.0 if governed else 0.0)
-		mat.set_shader_parameter("lens", Vector2(LENS_CLEAR, LENS_FULL))
+		mat.set_shader_parameter("lens", Vector2(FENCE_CLEAR, FENCE_FULL) if fill_class == "fence" else Vector2(LENS_CLEAR, LENS_FULL))
+		if depth:
+			mat.set_shader_parameter("depth_pull", DEPTH_PULL)
 		if stripes:
 			mat.set_shader_parameter("texture_albedo", stripe_texture())
 			mat.set_shader_parameter("uv1_scale", Vector3.ONE / (STRIPE_PITCH * sqrt(2.0)))
@@ -1178,6 +1255,10 @@ class Painter:
 				keys.append([fill_class, not haze_on(), LIVE_PRIORITY if fill_class == "live" else PRIORITY, governed])
 		keys.append(["", false, LINE_UNDER_PRIORITY, false])
 		keys.append(["", false, LINE_PRIORITY, false])
+		if soft_on():
+			# A soft look draws its static marks with these too (_layer): the areas and the fence.
+			keys.append(["", false, PRIORITY, false])
+			keys.append(["fence", false, LINE_PRIORITY, false])
 		return keys
 
 	# Compiles every mark pipeline before play: one driven-format triangle per key, at zero
@@ -1259,6 +1340,8 @@ class Painter:
 				if custom:
 					_append_custom(c0, m.get("c0"), m["tris"].size())
 					_append_custom(c1, m.get("c1"), m["tris"].size())
+			if layer == "fence" and verts.is_empty() and not _layers.has(layer):
+				continue
 			_set_layer(layer, verts, colors, c0, c1, custom and layer_governed(all, layer))
 
 	# The ground under every grounded vertex paint() will draw, read in one ask of ground_many.
@@ -1377,7 +1460,7 @@ class Painter:
 		instance.sorting_offset = FILL_SORT.get(fill_class, 0.0)
 
 	static func _priority(layer: String) -> int:
-		if layer == "crack":
+		if layer == "crack" or layer == "fence":
 			return LINE_PRIORITY
 		if layer.ends_with("under"):
 			return LINE_UNDER_PRIORITY
@@ -1399,17 +1482,27 @@ class Painter:
 			_layers[layer] = instance
 			_apply_class(layer)
 			return instance
+		# A soft look draws every mark but the tinted ones with the shared depth-tested shader, so a
+		# body standing on a line or an area draws over it too; the fence keeps its far fade ("fence").
+		# A tinted layer keeps its own StandardMaterial3D (tint() writes it), depth tested in a soft look.
+		if soft_on() and not layer in TINTED_LAYERS:
+			instance.material_override = mark_material("fence" if layer == "fence" else "", false, _priority(layer), false)
+			if layer == "crack":
+				instance.sorting_offset = CRACK_SORT
+			add_child(instance)
+			_layers[layer] = instance
+			return instance
 		var mat := StandardMaterial3D.new()
 		mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 		mat.cull_mode = BaseMaterial3D.CULL_DISABLED
 		mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-		mat.no_depth_test = true
+		mat.no_depth_test = not soft_on()
 		mat.vertex_color_use_as_albedo = true
 		mat.vertex_color_is_srgb = true
 		mat.render_priority = _priority(layer)
 		mat.distance_fade_mode = BaseMaterial3D.DISTANCE_FADE_PIXEL_ALPHA
-		mat.distance_fade_min_distance = LENS_CLEAR
-		mat.distance_fade_max_distance = LENS_FULL
+		mat.distance_fade_min_distance = FENCE_CLEAR if layer == "fence" else LENS_CLEAR
+		mat.distance_fade_max_distance = FENCE_FULL if layer == "fence" else LENS_FULL
 		if layer.begins_with("stripe") and not haze_on():
 			mat.albedo_texture = stripe_texture()
 			mat.uv1_triplanar = true

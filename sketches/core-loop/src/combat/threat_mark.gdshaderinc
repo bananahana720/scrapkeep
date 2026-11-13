@@ -15,7 +15,15 @@
 //   5 curtain: on ray CUSTOM0.xy at radius clip.w, height baked
 // CUSTOM1.y = 1 scales the vertex alpha by alpha_scale (a wave's hot ramp, a lane going
 // live). `governed` fills also take the density governor's threat_fill_scale.
+// DEPTH_AWARE (the telegraph row's clear and edges looks): the mark is depth tested, so a body
+// standing on it draws over it, and each vertex is pulled depth_pull metres toward the eye so the
+// ground it lies on never hides it.
+#ifdef DEPTH_AWARE
+render_mode blend_mix, depth_draw_opaque, cull_disabled, diffuse_burley, specular_schlick_ggx, unshaded;
+uniform float depth_pull = 0.6;
+#else
 render_mode blend_mix, depth_draw_opaque, cull_disabled, diffuse_burley, specular_schlick_ggx, unshaded, depth_test_disabled;
+#endif
 
 #ifdef STRIPES
 uniform sampler2D texture_albedo : source_color, filter_linear_mipmap, repeat_enable;
@@ -82,6 +90,12 @@ void vertex() {
 	uv1_triplanar_pos = world * uv1_scale + uv1_offset;
 	uv1_power_normal /= dot(uv1_power_normal, vec3(1.0));
 	uv1_triplanar_pos *= vec3(1.0, -1.0, 1.0);
+#endif
+#ifdef DEPTH_AWARE
+	vec4 eye = MODELVIEW_MATRIX * vec4(VERTEX, 1.0);
+	float far = length(eye.xyz);
+	eye.xyz *= max(far - depth_pull, 0.05) / max(far, 0.0001);
+	POSITION = PROJECTION_MATRIX * eye;
 #endif
 }
 

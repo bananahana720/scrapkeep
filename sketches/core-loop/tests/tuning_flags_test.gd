@@ -38,7 +38,7 @@ const EXPECTED := {
 }
 
 # The lab's winners are the shipping defaults: a bare Tuning reports each one.
-const DEFAULTS := {"scrap_mode": "armor", "wear": "on", "music": "ace", "warden_form": "form", "discovery": "cards", "telegraph": "haze",
+const DEFAULTS := {"scrap_mode": "armor", "wear": "on", "music": "ace", "warden_form": "form", "discovery": "cards", "telegraph": "clear",
 	"world_one_builds": "on", "hotwire_shell": "on", "hotwire_tread": "on", "grip": "on"}
 
 var _failures := 0

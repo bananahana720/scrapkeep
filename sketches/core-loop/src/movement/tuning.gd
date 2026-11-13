@@ -58,7 +58,9 @@ const SPECS := [
 	# has heard it on and off (ruling cq); `--set-director=on` turns it on.
 	{"key": "set_director", "label": "Set director", "min": 0.0, "max": 1.0, "step": 1.0, "value": 0.0, "options": ["off", "on"]},
 	{"key": "discovery", "label": "Discovery", "min": 0.0, "max": 1.0, "step": 1.0, "value": 1.0, "options": ["banner", "cards"]},
-	{"key": "telegraph", "label": "Telegraph", "min": 0.0, "max": 1.0, "step": 1.0, "value": 1.0, "options": ["classic", "haze"]},
+	# The attack warnings' look (threat_grammar.gd LOOKS). "clear" (the default since 13 Nov 2026, a
+	# taste call Andrew can overturn) and "edges" are haze made less obstructive.
+	{"key": "telegraph", "label": "Telegraph", "min": 0.0, "max": 3.0, "step": 1.0, "value": 2.0, "options": ["classic", "haze", "clear", "edges"]},
 	# World-one builds (design-v3/research/build-systems/BUILD-SYSTEMS.md, unit G): the master
 	# flag gives every pilot a two-depth tree, and the two hot-wired parts are selectable
 	# alone. All three default on. hotwire_shell is read by the build and the tree pick; hotwire_tread is read by the build (HotwireRules.fitted, build.gd) to fit the tread.
