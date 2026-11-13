@@ -282,16 +282,18 @@
   {"id": "forecourt_geyser", "kind": "launcher", "site": "drum_forecourt", "recipe": "geyser_vent", "style": "geyser", "at": [140, 400], "radius": 3.5, "target": [222, -12.0, 462], "floor": 30.0, "min_flight": 2.2, "charge": 3.0},
   {"id": "squall_lane", "kind": "thermal", "site": "bluff_rim", "recipe": "", "at": [120, 260], "radius": 6.0, "height": 50.0},
   {"id": "culvert_wall", "kind": "cracked_wall", "site": "wasteway_chute", "recipe": "", "at": [117, 311], "size": [10, 6, 1.4], "turn": 1.2, "break_at_cruise": true},
-  {"id": "bend_zip", "kind": "cable", "site": "bend_overlook", "recipe": "", "from": [50, 55.0, -170], "to": [120, 40.0, -40], "radius": 4.0, "floor": 18.0}
+  {"id": "bend_zip", "kind": "cable", "site": "bend_overlook", "recipe": "", "from": [50, 55.0, -170], "to": [120, 40.0, -40], "radius": 4.0, "floor": 18.0},
+  {"id": "grade_wall", "kind": "cracked_wall", "site": "canal_country_grade", "recipe": "", "at": [-267.76, 187.76], "size": [12, 6, 1.0], "turn": 2.35619, "break_at_cruise": true, "cache": {"at": [-272, 192], "face": [1, -1]}, "codex": {"id": "flume_grade_cache", "title": "Overtime Locker", "category": "world", "name": "Overtime Locker", "hint": "A cracked wall on the canal grade, looking at the hollow.", "clue": "Ram the cracked wall on the canal grade, west of the trestle hollow", "text": "The flume crew bricked up their overtime locker so the timesheets would match. The timesheets still do not match."}}
  ],
  "weather_rows": [
   {"id": "morning_clear", "kind": "clear", "trigger": {"on": "always"}, "lead_s": 0.0, "live_s": 0.0, "gap_s": 0.0, "fog": {"density": 0.0006, "color": "#b4c6d2"}, "sky": "clear", "sound": "bench_morning_bed", "music_layer": "", "event_odds": {}, "handling": "none"},
   {"id": "dust_squall", "kind": "dust_squall", "trigger": {"on": "clock_tier", "value": 2}, "lead_s": 15.0, "live_s": 60.0, "gap_s": 90.0, "fog": {"density": 0.003, "color": "#c8a878"}, "sky": "dust", "sound": "squall_hiss", "music_layer": "squall_shaker", "event_odds": {"hollow_trestle_collapse": 1.5, "wasteway_flash_flood": 0.5}, "handling": "none"}
  ],
  "activity_rows": [
-  {"id": "siphon_camp", "activity": "enemy_camp", "site": "the_siphon", "at": [-26, 174], "pack": ["lobber", "lobber", "lobber"], "pay": {"rarities": ["common"]}},
+  {"id": "siphon_camp", "activity": "enemy_camp", "site": "the_siphon", "at": [-26, 174], "pack": ["lobber", "lobber", "lobber"], "pay": {"rarities": ["common"]}, "alts": [{"activity": "enemy_camp", "pack": ["lobber", "winch_drone", "lobber"]}]},
   {"id": "bend_cache", "activity": "cracked_cache", "site": "bend_rim_ledge", "at": [42, -96], "face": [0, 1], "pack": [], "pay": {"rarities": ["rare"]}},
-  {"id": "bench_bounty", "activity": "hauler_bounty", "site": "south_bench", "at": [-119, 332], "pack": [], "pay": {"rarities": ["common", "rare"]}},
+  {"id": "trestle_cache", "activity": "cracked_cache", "site": "canal_country_low", "at": [-258, -426], "face": [0, 1], "pack": [], "pay": {"rarities": ["common", "rare"]}, "extra": "card_2"},
+  {"id": "bench_bounty", "activity": "hauler_bounty", "site": "south_bench", "at": [-119, 332], "pack": [], "pay": {"rarities": ["common", "rare"]}, "alts": [{"activity": "ambush_altar", "pack": ["chaser", "lobber", "lobber"]}]},
   {"id": "weir_surge", "activity": "surge_run", "site": "weir_mesa", "at": [-427, -563], "pack": [], "pay": {"rarities": ["common", "rare"]}, "extra": "card_2", "route": "flume_upper"},
   {"id": "canal_altar", "activity": "ambush_altar", "site": "main_canal", "at": [-475, -206], "pack": [], "pay": {"rarities": ["common", "rare"]}, "extra": "card_2"}
  ]

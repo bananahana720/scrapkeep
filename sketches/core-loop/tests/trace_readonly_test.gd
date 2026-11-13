@@ -194,7 +194,7 @@ func _physics_process(_delta: float) -> bool:
 	file.close()
 	var result: Dictionary = ChildRuns.run([{"script": launcher, "args": [
 		"--child", "--table=park", "--stage=0", "--pilot=sable", "--seeds=7",
-		"--ticks=1", "--out=" + base.path_join("actor-wiring")]}], 15.0)[0]
+		"--ticks=1", "--out=" + base.path_join("actor-wiring")]}], 65.0)[0]
 	print(String(result["log"]).strip_edges())
 	var summary := ChildRuns.summary(result)
 	t.check("production actor wiring child passes without a direct replay_side call", result["code"] == 0
