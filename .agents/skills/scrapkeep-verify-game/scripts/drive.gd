@@ -35,6 +35,9 @@ extends Node
 #   ui                                    <out>/<nn>-ui.txt: every visible Control with words, its script and box
 #   read <expression>                     a live value, written to the step's row. The expression is
 #                                         evaluated on the game node: flow.state_name(), player.global_position
+#   meshes "<text>" [<at least>]          counts the drawn 3D meshes whose file path holds the text (which model
+#                                         file is on screen: "_tripo", "ball_look_cutaway"); the row lists the
+#                                         first few. Fails when fewer than <at least> (default 0: only counts)
 #   expect state <name> | expect text "<words>" | expect no_text "<words>" | expect read <expression>
 #   quit                                  quits 0 (the end of the file does the same)
 #   quits <step>                          the last step, when that step must make the game itself quit
@@ -47,7 +50,7 @@ const DEFAULT_TIMEOUT := 60.0
 const TAP_S := 0.1
 const TAP_GAP_S := 0.6
 # The fewest words a step needs, itself included; a short step fails by name, not by a runtime error.
-const NEEDS := {"wait": 2, "until": 2, "tap_until": 3, "expect": 3, "key": 2, "down": 2, "up": 2, "mouse": 2, "click": 2, "click_at": 3, "look": 3, "quits": 2}
+const NEEDS := {"wait": 2, "until": 2, "tap_until": 3, "expect": 3, "key": 2, "down": 2, "up": 2, "mouse": 2, "click": 2, "click_at": 3, "look": 3, "quits": 2, "meshes": 2}
 
 var game: Node
 var _out := ""
@@ -196,6 +199,14 @@ func _do(step: String) -> Dictionary:
 		"read":
 			var value: Variant = _read(step.trim_prefix("read").strip_edges())
 			return {"ok": value[0], "value": str(value[1]), "detail": str(value[1])}
+		"meshes":
+			var found: Array = []
+			for node in get_tree().root.find_children("*", "MeshInstance3D", true, false):
+				var mesh: Mesh = node.mesh
+				if mesh != null and node.is_visible_in_tree() and words[1] in mesh.resource_path:
+					found.append("%s at %s" % [mesh.resource_path.get_slice("::", 0).get_file(), node.global_position.snappedf(0.1)])
+			var least := int(words[2]) if words.size() > 2 else 0
+			return {"ok": found.size() >= least, "value": str(found.size()), "first": found.slice(0, 6), "detail": "%d mesh(es) from a file with '%s'" % [found.size(), words[1]]}
 		"quit":
 			return {"ok": true}
 		"quits":

@@ -35,6 +35,7 @@ Each feature file has an H1, one paragraph on what the player sees, then four H2
 - [Settings](./settings.md): the four settings pages and a choice kept on disk.
 - [Pause and notes](./pause-and-notes.md): the pause menu and the held Tab pages.
 - [Save and continue](./save-and-continue.md): quit from the pause menu, Continue on the next launch.
+- [Launch switches](./launch-switches.md): the ball look, the Tripo models and the Stocktake yard, each proven on against off.
 - [A whole run](./whole-run.md): Warden, gates, the next stage, Brindle, death and the summary, played by the repo's own bot and filmed.
 
 Not mapped yet: Camp (K on the title), Moss's bay and shop, the companion panel, pad input, the reward ceremony. Add a file when a change touches one.
