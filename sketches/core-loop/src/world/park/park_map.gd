@@ -48,6 +48,8 @@ var time_of_day := ""
 # The stage's caged pilots for rescue_site.gd, from the park file's optional rescue_rows: {id, quest, prompt, pilot,
 # at: Vector2, face: Vector2}.
 var rescue_sites: Array = []
+# Where a survival count can stand, from the park file's optional survival_rows: {row, form, at: Vector2}.
+var survival_sites: Array = []
 
 
 # An empty path reads nothing (ok stays false): event_ground.gd's OverlayMap copies a loaded map's
@@ -213,6 +215,10 @@ func _fill() -> void:
 	for row in park.get("rescue_rows", []):
 		rescue_sites.append({"id": row["id"], "quest": row["quest"], "prompt": row["prompt"], "pilot": row["pilot"],
 			"at": _v2(row["at"]), "face": _v2(row["face"]).normalized()})
+
+	survival_sites = []
+	for row in park.get("survival_rows", []):
+		survival_sites.append({"row": row["id"], "form": row["form"], "at": _v2(row["at"])})
 
 	scrap_trail = _scrap_trail()
 

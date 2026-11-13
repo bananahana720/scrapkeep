@@ -162,8 +162,8 @@ func pack(n: int) -> Array:
 	return roles.map(func(role): return roster[role])
 
 
-# How much harder count n's machines hit and hold than the opening counts': 1 through the opening,
-# then `stronger` times the count before.
+# How much more health count n's machines have than the opening counts': 1 through the opening,
+# then `stronger` times the count before (the caller passes it to combat.gd spawn_enemy).
 func strength(n: int) -> float:
 	return pow(float(rule["after"]["stronger"]), maxi(0, n - (rule["counts"] as Array).size()))
 
