@@ -4,3 +4,8 @@
 - Display: headless gamescope on the RTX 4080 (10de:2704), 1920x1080. Both runs exit 0 (park_dam 621 s, park_flume 664 s wall).
 - One folder per shot: still.png and a 24 s mp4 (360 frames). `_near` is the 40 m camera; the other is about 90 m.
 - WORKS_CAPTURE lines are in aa-park_dam.log and aa-park_flume.log. Raw frame PNGs stay on the PC (2.7 GB).
+
+## Version 2 (job AA2): claude/project-thread-mig8fb 3ec91f00
+
+- The same command on the moved machines, in v2-3ec91f00/. The bend sluice is now rim_road_sluice, and its gate leaf has light paint.
+- Both runs exited 0 (park_dam 672 s, park_flume 662 s wall). The logs are aa2-park_dam.log and aa2-park_flume.log.
