@@ -20,9 +20,7 @@ bay.gd	SphereMesh	MossBay/Barge/MeshInstance3D	stand-in	W1-23	Moss's bay: yard w
 bay.gd	TorusMesh	MossBay/Barge/MeshInstance3D	stand-in	W1-23	Moss's bay: yard wall, pins, cradle and barge fittings in code (found by the census, not in the audit table; W1-23 confirms or re-pins as code)
 bay.gd	TorusMesh	MossBay/Cradle/MeshInstance3D	stand-in	W1-23	Moss's bay: yard wall, pins, cradle and barge fittings in code (found by the census, not in the audit table; W1-23 confirms or re-pins as code)
 build_read.gd	SphereMesh	SubViewport/Node3D/MeshInstance3D	stand-in	W1-46	pause build preview: a grey sphere where the ball should be
-contraptions.gd	CylinderMesh	Contraptions/forecourt_geyser/MeshInstance3D	stand-in	W1-23	geyser base
-contraptions.gd	CylinderMesh	Contraptions/pool_geyser/MeshInstance3D	stand-in	W1-23	geyser base
-game.gd	TorusMesh	GroundScatter/Chunk_/Scatter_cable	stand-in	W1-23	ground scatter cable coil drawn as a torus (found by the census, not in the audit table)
+contraptions.gd	CylinderMesh	Contraptions/*_geyser/MeshInstance3D	code	-	geyser steam column (contraptions.gd _build_launcher): a translucent column that swells with the charge over the geyser_vent model
 plated_brute.gd	BoxMesh	Node3D/CharacterBody3D/BountyCrate	stand-in-live	W1-23	bounty crate on the elite brute (found by the census, not in the audit table)
 rescue_site.gd	BoxMesh	rivet_cage/Node3D/MeshInstance3D	stand-in	W1-23	rescue cage part (found by the census, not in the audit table)
 stakes.gd	CylinderMesh	SableStakes/Stake/MeshInstance3D	stand-in	W1-23	trade spot body (ruling ci: after the sitting)
