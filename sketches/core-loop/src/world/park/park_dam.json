@@ -206,7 +206,8 @@
   {"id": "domes_camp", "activity": "enemy_camp", "site": "slickrock_domes", "at": [-51, -396], "pack": ["chaser", "chaser", "chaser"], "pay": {"rarities": ["common"]}, "alts": [{"activity": "enemy_camp", "pack": ["chaser", "mag_trapper", "chaser"]}]},
   {"id": "rim_cache", "activity": "cracked_cache", "site": "west_rim_bench", "at": [-210, 400], "pack": [], "pay": {"rarities": ["rare"]}},
   {"id": "bench_altar", "activity": "ambush_altar", "site": "east_rim_bench", "at": [206, 250], "pack": [], "pay": {"rarities": ["common", "rare"]}, "alts": [{"activity": "hauler_bounty", "pack": []}]},
-  {"id": "shelf_relay", "activity": "hold_the_relay", "site": "shelf_rise", "at": [-155, -385], "pack": [], "pay": {"rarities": ["common", "rare"]}}
+  {"id": "shelf_relay", "activity": "hold_the_relay", "site": "shelf_rise", "at": [-155, -385], "pack": [], "pay": {"rarities": ["common", "rare"]}},
+  {"id": "incline_cache", "activity": "cracked_cache", "site": "construction_incline", "at": [-44, 255], "pack": [], "pay": {"rarities": ["rare"]}, "bar": "blazing"}
  ],
  "rescue_rows": [
   {"id": "rivet_cage", "site": "dome_7", "at": [60, -594], "face": [-1, 0], "quest": "rivet", "pilot": "runner_gunner", "prompt": "free the runner"}
