@@ -121,6 +121,10 @@ func _rows() -> void:
 				_t.check("%s lock kind %s is a director kind" % [map, kind], kind in preload("res://src/world/director.gd").KIND_NAMES)
 			for kept_out in ["boom_tender", "mag_trapper", "plated_brute"]:
 				_t.check("%s keeps %s out of the ring" % [map, kept_out], not kept_out in wave)
+		# W1-65: the last two waves each carry one of the world's lesson kinds that never holds the ball.
+		var late: Array = (row["lock"]["waves"] as Array).slice(-2)
+		_t.check("%s second-last wave lays a jolt mat" % map, "jolt_layer" in late[0], str(late[0]))
+		_t.check("%s last wave drops a sluice flap" % map, "ramp_flipper" in late[1], str(late[1]))
 	_t.check("other parks have no row", LockRows.row("park_pit").is_empty() and LockRows.row("park_test").is_empty())
 	for kind in ["arena_locked", "arena_wave", "arena_unlocked", "warden_gate_pip", "warden_gate_refused", "warden_gate_opened"]:
 		var entry: Dictionary = EventKinds.world_row(kind)
