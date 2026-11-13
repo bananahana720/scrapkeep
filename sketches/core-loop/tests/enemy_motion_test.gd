@@ -165,8 +165,10 @@ func _idle_scene() -> void:
 			elif i == 0 and windup_frames > 0 and turned > 0.01:
 				released = true
 			else:
-				peaks[i] = maxf(peaks[i], origin.length())
-				inside[i] = inside[i] and origin.length() <= float(WindupRows.ROWS[SCENE_KINDS[i]].idle.amplitude) + 0.0001
+				# The idle's own offset: a walking kind's pivot also carries its gait (enemy_gait_test).
+				var idle: Vector3 = enemy.idle_offset
+				peaks[i] = maxf(peaks[i], idle.length())
+				inside[i] = inside[i] and idle.length() <= float(WindupRows.ROWS[SCENE_KINDS[i]].idle.amplitude) + 0.0001
 	for i in enemies.size():
 		var amp := float(WindupRows.ROWS[SCENE_KINDS[i]].idle.amplitude)
 		_t.check("GP6-2 idle " + SCENE_KINDS[i], inside[i] and peaks[i] > amp * 0.5, "peak %.4f m within %.3f m" % [peaks[i], amp])

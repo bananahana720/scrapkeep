@@ -10,6 +10,7 @@ const EnemyClips := preload("res://src/presentation/enemy_clips.gd")
 const WindupRows := preload("res://src/presentation/windup_rows.gd")
 const FlashGuard := preload("res://src/presentation/flash_guard.gd")
 const WindupPoses := preload("res://src/presentation/windup_poses.gd")
+const EnemyGait := preload("res://src/presentation/enemy_gait.gd")
 
 # What every enemy shares: health, plating, weight, knockback, the flash, the plating
 # tint, death and its telegraph. The spine's ball calls knock() and flash() on contact
@@ -197,6 +198,8 @@ var _idle_period := 0.0
 # null for a kind with none and in headless runs.
 var _clips: Node
 var _clips_tried := false
+# A walking kind's turn, lean and steps on the pivot (EnemyGait), seated by the kind; null otherwise.
+var _gait: EnemyGait
 
 
 func _visual_parent() -> Node3D:
@@ -308,11 +311,17 @@ func _update_reaction(delta: float) -> void:
 	if reaction_pivot == null and (_line_lean != 0.0 or not _react_row.is_empty()):
 		_visual_parent()
 	_update_idle(delta)
+	var tilt := Transform3D.IDENTITY
+	var turn := Transform3D.IDENTITY
+	if _gait != null and reaction_pivot != null and not _dead:
+		_gait.step(delta, self, velocity, half_height)
+		tilt = _gait.tilt
+		turn = _gait.turn
 	if reaction_pivot != null:
 		var lean_pose := Quaternion.IDENTITY
 		if _line_lean != 0.0 and is_instance_valid(target):
 			lean_pose = Quaternion(_reaction_axis(_reaction_ball() - global_position), deg_to_rad(LINE_LEAN) * _line_lean)
-		reaction_pivot.transform = Transform3D(Basis(lean_pose * _react_pose) * _idle_pose, idle_offset)
+		reaction_pivot.transform = tilt * Transform3D(Basis(lean_pose * _react_pose) * _idle_pose, idle_offset) * turn
 
 
 # The model breathes between attacks and holds still (or takes its row's pose) through
