@@ -7,7 +7,8 @@
 //   --json prints the report as JSON.
 // It fails on: a principle with no check and no gap, a check that names a missing file or
 // script, a ledger row that names no principle, and the lesson rule: a class of finding seen
-// twice or more whose rows name no guard (a test, a tool or an npm script that fails on it).
+// twice or more whose rows name no guard (a test, a tool or an npm script that fails on it). It
+// cannot tell whether the guard named really fails on that class; the reviewer of the row does.
 import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
@@ -24,9 +25,11 @@ const KINDS = ["test", "lint", "capture", "review"];
 export const REPEAT = 2;
 
 const defaults = {
-  test: (ref) => existsSync(path.join(SKETCH, "tests", ref)),
-  capture: (ref) => existsSync(path.join(SKETCH, "tools", ref)),
-  lint: (ref) => Boolean(JSON.parse(readFileSync(path.join(ROOT, "package.json"), "utf8")).scripts[ref]),
+  test: (ref) => /^\w+_test\.gd$/.test(ref) && existsSync(path.join(SKETCH, "tests", ref)),
+  capture: (ref) => /^\w+\.(gd|py)$/.test(ref) && existsSync(path.join(SKETCH, "tools", ref)),
+  lint: (ref) => Object.hasOwn(JSON.parse(readFileSync(path.join(ROOT, "package.json"), "utf8")).scripts, ref),
+  // The text of a guard that is a test, so the ledger ids it names can be checked.
+  read: (ref) => (/^\w+_test\.gd$/.test(ref) && existsSync(path.join(SKETCH, "tests", ref)) ? readFileSync(path.join(SKETCH, "tests", ref), "utf8") : ""),
 };
 
 export function checkPrinciples(list, has = defaults) {
@@ -76,6 +79,12 @@ export function checkLedger(rows, principles, has = defaults) {
     if (row.guard && !guardExists(row.guard, has)) errors.push(`${row.id}: guard "${row.guard}" does not exist`);
     byClass.set(row.class, [...(byClass.get(row.class) ?? []), row]);
   }
+  // A guard that holds the line names the rows it waits on (UF-<n>); each must be in the ledger.
+  for (const guard of new Set(rows.map((row) => row.guard).filter(Boolean))) {
+    for (const id of new Set((has.read?.(guard) ?? "").match(/\bUF-\d+\b/g) ?? [])) {
+      if (!seen.has(id)) errors.push(`${guard} names ${id}, which is not a ledger row`);
+    }
+  }
   // The lesson rule. Fixed rows count: a miss that was fixed and came back is the pattern.
   for (const [name, group] of byClass) {
     if (group.length >= REPEAT && !group.some((row) => row.guard)) {
@@ -118,10 +127,12 @@ function runTests(principles) {
   const run = spawnSync(process.execPath, args, { cwd: ROOT, encoding: "utf8", stdio: ["ignore", "pipe", "inherit"], maxBuffer: 1 << 28 });
   process.stderr.write(run.stdout ?? "");
   const file = /^receipt (.+)$/m.exec(run.stdout ?? "")?.[1];
-  if (!file) throw new Error("sketch:smoke wrote no receipt, so the run is not evidence");
-  const results = readResults(JSON.parse(readFileSync(file, "utf8")));
+  const results = file ? readResults(JSON.parse(readFileSync(file, "utf8"))) : new Map();
   for (const ref of tests) if (!results.has(ref)) results.set(ref, "did not run");
-  return results;
+  // The smoke run can fail with every test green (no receipt, an import that died, a quarantine
+  // row past its deadline), so its own exit code counts too.
+  const smoke = run.status === 0 && file ? "" : `sketch:smoke exited ${run.status ?? run.signal}${file ? "" : " and wrote no receipt"}; read its output above`;
+  return { results, smoke };
 }
 
 export function report(principles, rows, results = new Map()) {
@@ -129,9 +140,11 @@ export function report(principles, rows, results = new Map()) {
     const tests = p.checks.filter((c) => c.kind === "test").map((c) => c.ref);
     const ran = tests.filter((ref) => results.has(ref));
     const red = ran.filter((ref) => results.get(ref) !== "pass" && results.get(ref) !== "quarantined red");
+    // A quarantined red does not fail the run (tests/QUARANTINE.tsv owns that), but it is not a pass.
+    const quarantined = ran.filter((ref) => results.get(ref) === "quarantined red");
     const open = rows.filter((row) => row.principle === p.id && row.state === "open").map((row) => row.id);
     const held = p.gap ? (tests.length ? "partly" : "gap") : "held";
-    return { id: p.id, name: p.name, standing: p.standing, held, tests: tests.length, ran: ran.length, red, open, gap: p.gap ?? "" };
+    return { id: p.id, name: p.name, standing: p.standing, held, tests: tests.length, ran: ran.length, red, quarantined, open, gap: p.gap ?? "" };
   });
 }
 
@@ -145,13 +158,14 @@ function main(argv) {
   }
   const rows = parseLedger(readFileSync(LEDGER, "utf8"));
   const errors = [...checkPrinciples(principles), ...checkLedger(rows, principles)];
-  const results = argv.includes("--run") ? runTests(principles) : new Map();
+  const { results, smoke } = argv.includes("--run") ? runTests(principles) : { results: new Map(), smoke: "" };
+  if (smoke) errors.push(smoke);
   const lines = report(principles, rows, results);
   if (argv.includes("--json")) console.log(JSON.stringify({ principles: lines, errors }, null, 2));
   else {
     for (const l of lines) {
-      const ran = results.size ? `${l.ran - l.red.length}/${l.tests} tests pass` : `${l.tests} tests`;
-      console.log(`${l.id.padEnd(4)}${l.held.padEnd(7)}${ran.padEnd(18)}${l.name}${l.open.length ? `  open: ${l.open.join(", ")}` : ""}${l.red.length ? `  RED: ${l.red.join(", ")}` : ""}`);
+      const ran = results.size ? `${l.ran - l.red.length - l.quarantined.length}/${l.tests} tests pass` : `${l.tests} tests`;
+      console.log(`${l.id.padEnd(4)}${l.held.padEnd(7)}${ran.padEnd(18)}${l.name}${l.open.length ? `  open: ${l.open.join(", ")}` : ""}${l.red.length ? `  RED: ${l.red.join(", ")}` : ""}${l.quarantined.length ? `  quarantined red: ${l.quarantined.join(", ")}` : ""}`);
     }
     for (const e of errors) console.error(`ui-audit: ${e}`);
   }

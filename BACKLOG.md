@@ -6749,12 +6749,12 @@ Andrew, 13 Nov 01:08Z: "the AI creatures and bots - their look and feel creates 
 
 ### UI audit gaps (13 November 2026)
 
-From the first lap of [the UI audit loop](sketches/core-loop/design-v3/ui-audit/README.md) (Andrew, 13 Nov: a verification loop to audit and improve the game). Each row closes a gap named in [principles.json](sketches/core-loop/design-v3/ui-audit/principles.json); the measured misses are rows in [UI-FINDINGS.tsv](project-guide/handoff/UI-FINDINGS.tsv). None is ready to build until the comprehensive audit after wave 40 ranks it.
+From the first lap of [the UI audit loop](sketches/core-loop/design-v3/ui-audit/README.md) (Andrew, 13 Nov: a verification loop to audit and improve the game). Each row closes a gap named in [principles.json](sketches/core-loop/design-v3/ui-audit/principles.json); the measured misses are rows in [UI-FINDINGS.tsv](project-guide/handoff/UI-FINDINGS.tsv). None is ready to build until the whole-game audit Andrew asked for on 13 Nov, which starts once wave 40 is promoted, ranks it.
 
 | ID | What the player gets | Files | Size | Proof | Source |
 | --- | --- | --- | --- | --- | --- |
-| UA-01 | The smallest text is readable at 1080p and on a Steam Deck: CAPTION rises to hold 18 px at 1080p, or its 34 uses move to BODY. A look change, so Andrew picks from stills (UF-01) | `src/ui/ui_tokens.gd` and the files that use CAPTION | M | `tests/ui_text_floor_test.gd` with `CAPTION_USES` deleted | principle P4 |
-| UA-02 | A relic fact, a boss fact and a danger are told apart without colour: name the second carrier for each close pair, or move a colour (UF-02, UF-03) | `src/core/colour_meanings.gd`, `palette.gd` | M | `tests/colour_cvd_test.gd` with the three rows gone or carrying a carrier | principle P2 |
+| UA-01 | The smallest text is readable at 1080p and on a Steam Deck: CAPTION rises to hold the PC floor at 1080p, or its uses move to BODY. A look change, so Andrew picks from stills (UF-01) | `src/ui/ui_tokens.gd` and the files that use CAPTION | M | `tests/ui_text_floor_test.gd` with `CAPTION_USES` deleted | principle P4 |
+| UA-02 | A relic fact, a boss fact and a danger are told apart without colour: name the second carrier for each close pair and for the colour that carries two facts, or move a colour (UF-02, UF-03, UF-04) | `src/core/colour_meanings.gd`, `palette.gd` | M | `tests/colour_cvd_test.gd` with every `CLOSE` and `SHARED` row gone or naming its carrier | principle P2 |
 | UA-03 | A score, with a pass line, for how much of an attack its own warning covers | `tools/mark_cover_capture.gd` | M | a test or tool that fails over the line, with a planted bad case | principle P1 |
 | UA-04 | HUD words and marks hold contrast over each stage's ground, measured on stills | a new capture measure | M | the measure, with a planted bad case | principle P3 |
 | UA-05 | Every control on every menu can be reached with the stick from the first focus | a new headless test over `src/ui` screens | M | the test, with a planted unreachable control | principle P6 |

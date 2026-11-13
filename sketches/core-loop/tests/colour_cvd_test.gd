@@ -12,8 +12,9 @@ const T := preload("res://tests/support/t.gd")
 # need a second carrier (a shape, an icon, a pattern, a place). Such a pair must have a CLOSE
 # row naming that carrier, or the open finding that asks for one.
 #   - a close pair with no row fails: a new colour, or a moved one, cannot land silently;
+#   - one colour named for two facts needs a SHARED row the same way;
 #   - a row whose pair is no longer close fails, so a fixed pair deletes its row;
-#   - planted: two near-equal greens are caught, and red and blue are not.
+#   - planted: a made-up palette with each of those faults is failed by the same judge.
 #
 # FLOOR is ours, not a standard (inferred): 20 is about where two flat swatches a few pixels
 # wide stop being told apart at a glance. palette.gd's 9 Oct cobalt measure used 31 for a rung
@@ -36,32 +37,63 @@ const CLOSE := {
 	"ANCIENT|ARC": {"carrier": "ancient seams carry a pattern cue (material_slots.gd, the pattern field)", "finding": ""},
 }
 
+# One palette colour named for two facts: the same question with a difference of zero.
+const SHARED := {
+	"ARC": {"carrier": "", "finding": "UF-04"},
+}
+
 var _t := T.new("colour_cvd_test")
 
 
 func _initialize() -> void:
-	var names := {}
-	for name in Meanings.MEANINGS.values() + Meanings.REWARD_RUNGS.values():
-		names[name] = true
-	var sorted := names.keys()
-	sorted.sort()
 	var palette: Dictionary = (Palette as GDScript).get_script_constant_map()
-	_t.check("the meanings name seven or more palette colours", sorted.size() >= 7, str(sorted.size()))
-	var close := {}
-	for i in sorted.size():
-		for j in range(i + 1, sorted.size()):
-			var worst := closest(palette[sorted[i]], palette[sorted[j]])
-			if worst["de"] < FLOOR:
-				close["%s|%s" % [sorted[i], sorted[j]]] = worst
-	for key in close:
-		_t.check("%s is close (%s %.1f) and has a row" % [key, close[key]["sight"], close[key]["de"]], CLOSE.has(key))
-	for key in CLOSE:
-		_t.check("the row %s still names a close pair" % key, close.has(key), "delete the row when the pair is fixed")
-		var row: Dictionary = CLOSE[key]
-		_t.check("the row %s names a carrier or a finding" % key, row["carrier"] != "" or row["finding"] != "")
-	_t.check("planted: two near-equal greens are close", closest(Color("9dff3c"), Color("a5f548"))["de"] < FLOOR)
+	var facts := {}
+	for table in [Meanings.MEANINGS, Meanings.REWARD_RUNGS]:
+		for fact in table:
+			facts[fact] = table[fact]
+	_t.check("the meanings name seven or more facts", facts.size() >= 7, str(facts.size()))
+	_t.eq("every close pair and shared colour has a row, and every row is still needed", faults(facts, palette, CLOSE, SHARED), [])
+	# Planted, through the same judge: a close pair with no row, a shared colour with no row, a
+	# row whose pair is far apart, and a row with neither a carrier nor a finding.
+	var fake := {"A": Color("9dff3c"), "B": Color("a5f548"), "C": Color("0000ff")}
+	var planted := faults({"one": "A", "two": "B", "three": "A", "four": "C"}, fake, {"A|C": {"carrier": "", "finding": ""}}, {})
+	_t.eq("planted: the judge names all four faults", planted.size(), 4)
 	_t.check("planted: red and blue are not close", closest(Color("ff0000"), Color("0000ff"))["de"] >= FLOOR)
 	quit(_t.verdict())
+
+
+# facts is fact -> palette name. Every pair of names under FLOOR needs a close row, every name
+# carrying two facts needs a shared row, and every row must still be needed and say what to do.
+static func faults(facts: Dictionary, palette: Dictionary, close_rows: Dictionary, shared_rows: Dictionary) -> Array:
+	var out := []
+	var uses := {}
+	for fact in facts:
+		uses[facts[fact]] = uses.get(facts[fact], []) + [fact]
+	var names := uses.keys()
+	names.sort()
+	var close := {}
+	for i in names.size():
+		for j in range(i + 1, names.size()):
+			var worst := closest(palette[names[i]], palette[names[j]])
+			if worst["de"] < FLOOR:
+				close["%s|%s" % [names[i], names[j]]] = worst
+	for key in close:
+		if not close_rows.has(key):
+			out.append("%s is close (%s %.1f) and has no CLOSE row" % [key, close[key]["sight"], close[key]["de"]])
+	for name in names:
+		if uses[name].size() > 1 and not shared_rows.has(name):
+			out.append("%s carries %s and has no SHARED row" % [name, " and ".join(uses[name])])
+	for key in close_rows:
+		if not close.has(key):
+			out.append("the CLOSE row %s no longer names a close pair: delete it" % key)
+	for key in shared_rows:
+		if uses.get(key, []).size() < 2:
+			out.append("the SHARED row %s no longer names a colour with two facts: delete it" % key)
+	for rows in [close_rows, shared_rows]:
+		for key in rows:
+			if rows[key]["carrier"] == "" and rows[key]["finding"] == "":
+				out.append("the row %s names neither a carrier nor a finding" % key)
+	return out
 
 
 # The eye that separates two colours least, and by how much.

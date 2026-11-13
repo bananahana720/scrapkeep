@@ -374,7 +374,7 @@ This section binds every screen, card, tip, toast, caption, prompt and menu in e
 | W8 | Passive or roundabout phrasing where a short imperative fits |
 | W9 | A sentence that could appear unchanged in another game |
 
-**How it is checked.** A review of any change a player can read or navigate cites this section by code. `npm run sketch:lint` checks W1, W2, W4, W6, W7 and S8 over the player strings its source list reads (`scripts/sketch-lint-words.mjs`, with a planted bad case for each), taking W7's banned names from [NAMES.md](NAMES.md), the one home for names; S1 to S5, S6, S7, W3, W5, W8 and W9 stay with the reviewer and with a blind read of a still. This section is principle P10 of [the UI audit loop](ui-audit/README.md), which holds the other eleven (contrast, text size, colour-blind separation, pad focus, motion and the rest) and the findings ledger.
+**How it is checked.** A review of any change a player can read or navigate cites this section by code. `npm run sketch:lint` checks W1, W2, W4, W6, W7 and S8 over the player strings its source list reads (`scripts/sketch-lint-words.mjs`, with a planted bad case for each), taking W7's banned names from [NAMES.md](NAMES.md), the one home for names; S1 to S5, S6, S7, W3, W5, W8 and W9 stay with the reviewer and with a blind read of a still. This section is principle P10 of [the UI audit loop](ui-audit/README.md), which holds the others (contrast, text size, colour-blind separation, pad focus, motion and the rest) and the findings ledger.
 
 ## Changes to the plan
 

@@ -31,6 +31,17 @@ test("the lesson rule: a class found twice with no guard fails, and one guard cl
   assert.match(checkLedger([row({ guard: "gone_test.gd" })], [good], none)[0], /guard "gone_test.gd" does not exist/);
 });
 
+test("names that only look like a check do not pass, and a guard's ledger ids must exist", () => {
+  const principles = JSON.parse(readFileSync(PRINCIPLES, "utf8")).principles;
+  const bad = (check) => checkPrinciples([{ ...good, checks: [check] }]);
+  assert.match(bad({ kind: "lint", ref: "constructor" })[0], /does not exist/);
+  assert.match(bad({ kind: "test", ref: "support" })[0], /does not exist/);
+  assert.match(bad({ kind: "test", ref: "QUARANTINE.tsv" })[0], /does not exist/);
+  assert.deepEqual(bad({ kind: "test", ref: "ui_tokens_test.gd" }), []);
+  const reads = { ...all, read: () => "waits on UF-1 and UF-77" };
+  assert.deepEqual(checkLedger([row({ guard: "a_test.gd" })], principles, reads), ["a_test.gd names UF-77, which is not a ledger row"]);
+});
+
 test("a ledger row fails on an unknown principle, state or a reused id", () => {
   assert.match(checkLedger([row({ principle: "P9" })], [good], all)[0], /not in the list/);
   assert.match(checkLedger([row({ state: "done" })], [good], all)[0], /state/);
@@ -49,5 +60,5 @@ test("results are read from the smoke receipt by test name, and a red test marks
   assert.deepEqual([...results], [["a_test.gd", "fail"], ["b_test.gd", "pass"], ["c_test.gd", "quarantined red"]]);
   const lines = report([{ ...good, gap: "g" }, { ...good, id: "P2", checks: [{ kind: "test", ref: "c_test.gd" }] }], [row({})], results);
   assert.deepEqual([lines[0].held, lines[0].red, lines[0].open], ["partly", ["a_test.gd"], ["UF-1"]]);
-  assert.deepEqual([lines[1].held, lines[1].red], ["held", []]);
+  assert.deepEqual([lines[1].held, lines[1].red, lines[1].quarantined], ["held", [], ["c_test.gd"]]);
 });

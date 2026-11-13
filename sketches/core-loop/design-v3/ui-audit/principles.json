@@ -3,7 +3,7 @@
   "principles": [
     {
       "id": "P1", "name": "The threat reads first",
-      "rule": "Nothing hides a danger, including its own warning.",
+      "rule": "Nothing hides a danger, including its own warning, and the warning comes early enough to act on.",
       "standing": "inferred", "source": "Genre practice; LEGIBILITY.md sections 1 and 2; Andrew, 13 Nov 2026, on attack marks that hide the attack",
       "checks": [
         {"kind": "test", "ref": "telegraph_clear_look_test.gd"},
@@ -23,7 +23,7 @@
         {"kind": "test", "ref": "hud_icon_distinct_test.gd"},
         {"kind": "capture", "ref": "tier_still.gd"}
       ],
-      "gap": "Three close pairs have no second carrier named (UF-02, UF-03)."
+      "gap": "Close pairs with no second carrier named, and one colour that carries two facts (the open P2 rows in UI-FINDINGS.tsv)."
     },
     {
       "id": "P3", "name": "Words and marks hold contrast",
@@ -40,7 +40,7 @@
         {"kind": "test", "ref": "ui_text_floor_test.gd"},
         {"kind": "test", "ref": "ui_tokens_test.gd"}
       ],
-      "gap": "CAPTION is 16.8 px at 1080p (UF-01). No text size setting. Text drawn by presentation scripts outside src/ui is not on the scale."
+      "gap": "The smallest step is under the PC floor (UF-01). No text size setting. Text drawn by presentation scripts outside src/ui is not on the scale."
     },
     {
       "id": "P5", "name": "Every input answers at once",
@@ -55,7 +55,6 @@
       "standing": "established", "source": "WCAG 2.2 2.1.1 and 2.4.7; Xbox Accessibility Guidelines 112 and 113",
       "checks": [
         {"kind": "test", "ref": "ui_tokens_test.gd"},
-        {"kind": "test", "ref": "glyph_device_test.gd"},
         {"kind": "test", "ref": "ui_settings_pad_rebind_test.gd"},
         {"kind": "test", "ref": "menu_structure_test.gd"},
         {"kind": "capture", "ref": "ui_capture.gd"}
