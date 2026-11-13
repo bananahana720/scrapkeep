@@ -41,7 +41,7 @@ const HEIGHT := 648.0
 const PAD := 18.0
 const PREVIEW_H := 260.0
 # A row too tall for the card takes height from the preview, never below this.
-const PREVIEW_MIN := 160.0
+const PREVIEW_MIN := 148.0
 const LIFT := 0.06
 const BACK := 0.04
 const RATE := 9.0
