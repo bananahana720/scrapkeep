@@ -4,7 +4,7 @@ Status: design spec, wave 13 unit A2-CRITIC, written 2026-10-10 on `cand/alpha-w
 
 Reads with: [SKILL-BAR.md](SKILL-BAR.md), the framework, whose section 12 holds the eight cross-pilot rules this pass added; the six sheets in [pilots/](pilots/), which own every detail; [ROSTER-LOOK.md](ROSTER-LOOK.md), the body language. Where this page and a sheet disagree, the sheet's number wins and this page is stale.
 
-Proposed, not ruled or built: a hidden seventh pilot, Patch the possum, who clocks broken machines back in on the crew's side. Its sheet is [pilots/patch.md](pilots/patch.md); it is for after the world 1 sitting.
+Ruled and not built (ruling dl): a hidden seventh pilot, Patch the possum, who clocks broken machines back in on the crew's side. Its sheet is [pilots/patch.md](pilots/patch.md); it is for after the world 1 sitting.
 
 Terms, once. **Slot 2** is the old F special. **Slot 3** is the line skill: the harpoon flavour. **Set piece** is the ultimate's ride from A to B on Q. **Peak** is its middle beat. **Shift** is the pilot's instant movement chip. **Smash** is the Ctrl slam flavour. **Heft class** is the I to V weight class that scales the payoff.
 
