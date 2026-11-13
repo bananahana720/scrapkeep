@@ -197,6 +197,7 @@ func setup(ctx_ref, combat_ref) -> void:
 		_record = {}
 		ctx.run.set_meta("ultimate_record", {}))
 	ev.stage_entered.connect(_on_stage_entered)
+	ev.boss_arena_entered.connect(_pour_brew)
 	ev.stage_content_cleared.connect(func(_reason: String): _abort("stage"))
 	ev.player_died.connect(func(): _abort("death"))
 	ev.run_ended.connect(func(_won: bool): _abort("stage"))
@@ -223,6 +224,16 @@ func _on_stage_entered(_stage: int, retry: bool) -> void:
 		_was_full = meter.full()
 	else:
 		meter.mark_entry()
+
+
+# Moss's last-call kettle (shop.gd brew, W1-73): the cogs fed at the world's last till arrive
+# in the boss fight as a head start on the meter, at every arrival in that arena.
+func _pour_brew() -> void:
+	var shop = ctx.build.get("shop") if ctx.build != null else null
+	var points: float = shop.pour_brew() if shop != null else 0.0
+	if points > 0.0:
+		meter.refund(points)
+		_check_full()
 
 
 # --- The meter --------------------------------------------------------------------------
