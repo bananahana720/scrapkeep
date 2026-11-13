@@ -1,6 +1,7 @@
 extends RefCounted
 
-# Where ambient life lives: a pure planner from a parsed park file (park_schema.gd load_park) and
+# Where ambient life lives: a planner from a parsed park file (park_schema.gd load_park), the park's
+# props file (a kind with `spots` stands first beside those crew props, src/world/park/props/<map>.json) and
 # the ambient record (src/core/ambient_kinds.gd, the one row per kind). It picks `count` homes per
 # kind from the park rows the kind's `homes` names (any landform, element or society match), draws
 # each point inside the row's footprint, and keeps every home and every member clear of play:
@@ -134,6 +135,8 @@ static func _spot_homes(rng: RandomNumberGenerator, map_id: String, spec: Dictio
 	for sp in spots:
 		if out.size() >= want:
 			break
+		if not sp.has("at"):
+			continue
 		var base := Vector2(float(sp["at"][0]), float(sp["at"][1]))
 		for k in 6:
 			var at := base + Vector2(SPOT_SIDE_M, 0.0).rotated(TAU * (k + rng.randf()) / 6.0)
