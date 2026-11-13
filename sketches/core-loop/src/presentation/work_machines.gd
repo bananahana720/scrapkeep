@@ -91,20 +91,11 @@ const KINDS := {
 # The named nodes a kind's channels drive.
 const NODES := ["Slew", "Hook", "Fall", "Load", "Gate", "Wheel", "BeltFull", "BeltEmpty"]
 
-# Where each park's machines stand: kind, ground point, yaw (the working side's centre, Godot yaw)
-# and a phase offset in seconds so two machines never move in step.
-const ROWS := {
-	"park_dam": [
-		{"id": "dam_pour_derrick", "kind": "derrick", "at": Vector2(-120.0, 600.0), "yaw_deg": 90.0, "phase_s": 0.0},
-		{"id": "wheelhouse_sluice", "kind": "sluice", "at": Vector2(20.0, -280.0), "yaw_deg": -90.0, "phase_s": 4.0},
-		{"id": "rim_batch_conveyor", "kind": "conveyor", "at": Vector2(-200.0, -240.0), "yaw_deg": 45.0, "phase_s": 7.0},
-	],
-	"park_flume": [
-		{"id": "weir_pond_derrick", "kind": "derrick", "at": Vector2(-520.0, -700.0), "yaw_deg": 90.0, "phase_s": 11.0},
-		{"id": "rim_road_sluice", "kind": "sluice", "at": Vector2(-140.0, -80.0), "yaw_deg": 0.0, "phase_s": 17.0},
-		{"id": "bench_batch_conveyor", "kind": "conveyor", "at": Vector2(-160.0, 380.0), "yaw_deg": -135.0, "phase_s": 3.0},
-	],
-}
+# Where each park's machines stand (work_machine_rows.json, keyed by map): kind, ground point, yaw of
+# the working side and a phase offset in seconds so two machines never move in step.
+const ROWS_PATH := "res://src/presentation/work_machine_rows.json"
+static var _rows := {}
+
 
 var ctx
 var map_id := ""
@@ -115,7 +106,16 @@ static var _scenes := {}
 
 
 static func rows_for(map: String) -> Array:
-	return ROWS.get(map, [])
+	if _rows.is_empty():
+		var data = JSON.parse_string(FileAccess.get_file_as_string(ROWS_PATH))
+		for id in (data.get("maps", {}) if data is Dictionary else {}):
+			var list := []
+			for row in data.maps[id]:
+				var r: Dictionary = row.duplicate()
+				r.at = Vector2(float(row.at[0]), float(row.at[1]))
+				list.append(r)
+			_rows[id] = list
+	return _rows.get(map, [])
 
 
 # A row's pivot and the ground corners of every solid box, in park metres (x, z).
