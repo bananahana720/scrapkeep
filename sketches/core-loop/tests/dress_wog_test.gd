@@ -2,6 +2,9 @@ extends "res://tests/dress_material_test.gd"
 
 const Scenery := preload("res://src/presentation/spillway_scenery.gd")
 const Reach := preload("res://src/world/map_reach.gd")
+# 2026-11-13 re-recorded after W1-22 (77a2e2375): the Reach cache pocket's greybox meshes gave way to
+# cracked_cache.glb parts, so two Contraptions children before the valve door went and its path index moved
+# from 10 to 8. Every body, shape, layer and transform is unchanged.
 const PHYSICS_BASELINE := "res://tests/fixtures/dress_wog_physics.json"
 
 

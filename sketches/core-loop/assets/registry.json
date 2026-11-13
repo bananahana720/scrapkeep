@@ -36285,6 +36285,23 @@
    "exception_why": "Opt-in device with independently controlled state parts; existing prop class covers one small static mesh. Limits asserted by device_props_asset_test."
   },
   {
+   "id": "bay_kit",
+   "path": "res://assets/models/world_one/bay_kit.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/world/bay.gd",
+   "provenance": {
+    "recipe": "tools/blender/world_one/bay_kit.py",
+    "note": "Procedural vertex-coloured Moss's bay kit (W1-23): cabin front, bell and frame, marble toy, yard wall, grapple post, bowling pin, dock cradle cup and mast."
+   },
+   "exception": {
+    "tris": 4000,
+    "verts": 8000,
+    "draws": 9
+   },
+   "exception_why": "Nine separately placed props on the barge and its dock cradle, one draw each, seen one bay at a time. Limits asserted by the recipe."
+  },
+  {
    "id": "bet_crate",
    "path": "res://assets/models/world_one/bet_crate.glb",
    "class": "prop",
@@ -37297,6 +37314,23 @@
    }
   },
   {
+   "id": "slag_bowl_kit",
+   "path": "res://assets/models/world_one/slag_bowl_kit.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/boss/arena.gd",
+   "provenance": {
+    "recipe": "tools/blender/world_one/slag_bowl_kit.py",
+    "note": "Procedural vertex-coloured Slag Bowl kit (W1-23): crane mast, crossbar boom and rim vent nozzle, each placed where arena.gd's colliders stand."
+   },
+   "exception": {
+    "tris": 1600,
+    "verts": 3200,
+    "draws": 3
+   },
+   "exception_why": "Three separately placed parts (mast, boom, vent nozzle), one draw each; four masts and four vents per bowl. Limits asserted by the recipe."
+  },
+  {
    "id": "valve_door",
    "path": "res://assets/models/world_one/valve_door.glb",
    "class": "prop",
@@ -37620,6 +37654,7 @@
   "barge_fenders",
   "barge_skin",
   "barge_skin_rusted-salvaged-plate.webp",
+  "bay_kit",
   "bed_cut",
   "bed_floor",
   "bed_recess",
@@ -39241,6 +39276,7 @@
   "skylight_lip",
   "skylight_lip_detail1",
   "skylight_lip_detail2",
+  "slag_bowl_kit",
   "slot_canyon_flow",
   "slot_canyon_flow_bend15",
   "slot_canyon_flow_bend15_detail1",
