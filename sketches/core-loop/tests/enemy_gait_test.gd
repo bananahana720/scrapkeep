@@ -1,7 +1,8 @@
 extends SceneTree
 
 # A walking crew turns its model to watch the ball, leans with its weight and steps instead of
-# sliding (enemy_gait.gd). All of it is on the model's pivot: the body's yaw and colliders do not
+# sliding (enemy_gait.gd, W1-82); it notices a crewmate going down and the ball being hit (W1-85);
+# and its death pieces land (enemy_motion.gd, W1-86). All of it is on the model's pivot: the body's yaw and colliders do not
 # move, a commit snap leaves the model's heading continuous and closes within the wind-up, and a
 # headless run (tests, bots) or reduced motion keeps the old exact body.
 const Game := preload("res://src/game.gd")
@@ -131,6 +132,24 @@ func _unit() -> void:
 		lifted = maxf(lifted, gait.turn.origin.y)
 	_t.check("a knocked or falling body does not step", lifted == 0.0, "peak lift %.3f m" % lifted)
 	EnemyMotion.motion_scale = 1.0
+	# W1-85: a glance takes the look from the aim for a beat; a hop is a small cheer.
+	var aimed := gait.yaw()
+	gait.glance(aimed + 1.5)
+	for i in 20:
+		gait.aim(aimed)
+		gait.step(dt, body, Vector3.ZERO, 0.6)
+	var glanced := angle_difference(aimed, gait.yaw())
+	_t.check("a glance turns the head from its aim", glanced > 1.0, "%.2f rad toward the glance" % glanced)
+	for i in 60:
+		gait.aim(aimed)
+		gait.step(dt, body, Vector3.ZERO, 0.6)
+	_t.check("then the aim takes it back", absf(angle_difference(aimed, gait.yaw())) < 0.01, "%.3f rad off" % absf(angle_difference(aimed, gait.yaw())))
+	gait.hop()
+	var hop := 0.0
+	for i in 30:
+		gait.step(dt, body, Vector3.ZERO, 0.6)
+		hop = maxf(hop, gait.turn.origin.y)
+	_t.check("a hop lifts and comes down", hop > EnemyGait.HOP_LIFT * 0.9 and gait.turn.origin.y < 0.001, "peak %.3f m" % hop)
 	EnemyMotion.headless_idle = false
 	gait.step(dt, body, Vector3(0.0, 0.0, 3.8), 0.6)
 	_t.check("off in a headless run", gait.tilt == Transform3D.IDENTITY and gait.turn == Transform3D.IDENTITY)
@@ -167,4 +186,36 @@ func _walking() -> void:
 	_t.check("its model watches the ball", off < deg_to_rad(15.0), "%.1f deg off" % rad_to_deg(off))
 	_t.check("its body keeps its own yaw", absf(enemy.rotation.y - body_yaw) < 0.0001, "%.4f -> %.4f" % [body_yaw, enemy.rotation.y])
 	_t.check("its colliders do not move", _shapes(enemy) == shapes)
-	enemy.free()
+	await _lands(enemy)
+
+
+# W1-86: a grounded crew's death pieces fall to the floor it stood on, bounce, rest, then go.
+func _lands(enemy) -> void:
+	_t.check("the crew stands on the floor", enemy.is_on_floor())
+	var parent: Node = enemy.get_parent()
+	var count := parent.get_children().filter(func(n): return n.name.begins_with("DeathScatter")).size()
+	enemy.take_damage(enemy.hp + 1.0)
+	var made: Array = parent.get_children().filter(func(n): return n.name.begins_with("DeathScatter"))
+	var scatter = made[made.size() - 1] if made.size() > count else null
+	if scatter == null:
+		_t.check("a death scatters", false)
+		return
+	_t.check("its pieces land on the floor and rest there", scatter.floor_y > -INF and is_equal_approx(scatter.life(), scatter.seconds + EnemyMotion.LAND_REST),
+		"floor %.2f, life %.2f s" % [scatter.floor_y, scatter.life()])
+	var ref: WeakRef = weakref(scatter)
+	var rested := 0
+	var under := 0
+	var ticks := 0
+	while ref.get_ref() != null and ticks < 240:
+		await physics_frame
+		ticks += 1
+		var live = ref.get_ref()
+		if live == null or live.is_queued_for_deletion():
+			continue
+		for piece in live._pieces:
+			if (piece.node as Node3D).position.y < live.floor_y - 0.001:
+				under += 1
+			elif is_equal_approx((piece.node as Node3D).position.y, live.floor_y) and (piece.velocity as Vector3).y == 0.0:
+				rested += 1
+	_t.check("no piece sinks through the floor, and pieces come to rest", under == 0 and rested > 0, "%d under, %d resting samples" % [under, rested])
+	_t.check("the rest still ends", ref.get_ref() == null, "%d ticks" % ticks)

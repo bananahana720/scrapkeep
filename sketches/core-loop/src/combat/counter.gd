@@ -117,6 +117,10 @@ func setup(target_ref, terrain_ref, root_ref, live_ref: Callable, threat: float,
 	if walk_speed > 0.0 and not kind in GAIT_SKIP:
 		_gait = EnemyGait.new()
 		_gait.steps = not EnemyClips.ROWS.has(kind) and Roster.CHASSIS.get(kind, {}).get("move_class", "") != "airborne"
+		if _reaction_bus != null:
+			_reaction_bus.enemy_killed.connect(_on_crew_down)
+			_reaction_bus.player_hit.connect(_on_ball_hit)
+			_reaction_bus.near_miss.connect(_on_missed)
 
 
 # Each counter setup in a run takes the next serial from world_root, so runtime identity never
@@ -368,6 +372,48 @@ func _holding() -> bool:
 func _release(reason := "left") -> void:
 	if holds != null:
 		holds.release(self, reason)
+
+
+# --- Noticing (W1-85) ------------------------------------------------------------------
+# A crew reads as a crew when it notices things. Looks only, from facts already on the bus,
+# and only where the gait draws (never headless), so no clock, body or outcome moves.
+const NOTICE_DOWN := 12.0
+const NOTICE_HIT := 18.0
+const NOTICE_MISS := 25.0
+
+
+func _noticing() -> bool:
+	return _gait != null and not _dead and EnemyMotion.active()
+
+
+# A crewmate going down nearby: the head turns to it for a beat and the body flinches away.
+func _on_crew_down(_kind: String, at: Vector3, _scrap: int) -> void:
+	var from := Vector3(at.x - global_position.x, 0.0, at.z - global_position.z)
+	if not _noticing() or from.length() > NOTICE_DOWN or from.length() < 0.5:
+		return
+	_gait.glance(_facing_yaw(from))
+	react("flinch", -from)
+
+
+# The ball took a hit: every crew in sight gives a small hop.
+func _on_ball_hit(_amount: float, _source: String) -> void:
+	if _noticing() and _flat_to_ball().length() <= NOTICE_HIT:
+		_gait.hop()
+
+
+# The ball slipped an attack: the nearest crew whose attack just struck lurches after it.
+func _on_missed(_threat_kind: String, at: Vector3) -> void:
+	if not _noticing() or not _just_struck() or global_position.distance_to(at) > NOTICE_MISS:
+		return
+	for other in get_tree().get_nodes_in_group("enemy"):
+		if other != self and other.has_method("_just_struck") and other._just_struck() \
+				and other.global_position.distance_to(at) < global_position.distance_to(at):
+			return
+	react("flinch", _flat_to_ball())
+
+
+func _just_struck() -> bool:
+	return phase == Phase.LIVE or recovering()
 
 
 # The real ball, not what the sight sees: a hold is tested against where the ball is.

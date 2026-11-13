@@ -188,7 +188,8 @@ func _scatter_of(parent: Node) -> Array:
 
 
 # GP6-3 and GP6-4: the killing tick emits died and queues the enemy, as before; the
-# scatter has the row's pieces and is gone within its seconds plus one frame.
+# scatter has the row's pieces, lands on the floor a grounded body stood on, and is gone within
+# its life (the row's seconds plus the landing rest) plus one frame.
 func _death(kind: String, index: int, label: String) -> void:
 	var enemy = _spawn(kind, index)
 	await _frames(2)
@@ -206,7 +207,10 @@ func _death(kind: String, index: int, label: String) -> void:
 	if scatter == null:
 		return
 	var ref: WeakRef = weakref(scatter)
-	var limit := ceili(float(death.seconds) * Engine.physics_ticks_per_second) + 1
+	# A grounded body's pieces land and rest before they go (W1-86); life() is the row's seconds plus that rest.
+	var limit := ceili(float(scatter.life()) * Engine.physics_ticks_per_second) + 1
+	var floor_y: float = scatter.floor_y
+	var under := 0
 	var frames := 0
 	# A piece leaves by shrinking and never through the instance's transparency: a fade sends an
 	# opaque surface to the blended pass, and the first piece of a look to go there made the
@@ -223,7 +227,10 @@ func _death(kind: String, index: int, label: String) -> void:
 			for piece in live.get_children():
 				if piece is GeometryInstance3D and piece.transparency > 0.0:
 					faded += 1
+				if piece is Node3D and (piece as Node3D).position.y < floor_y - 0.001:
+					under += 1
 	_t.check(label + " freed " + kind, ref.get_ref() == null and frames <= limit, "freed after %d frames, limit %d" % [frames, limit])
+	_t.check(label + " pieces never sink through the floor " + kind, under == 0, "%d piece samples under the floor at %.2f" % [under, floor_y])
 	var shrinks := sizes.size() >= 4
 	for i in range(1, sizes.size()):
 		shrinks = shrinks and sizes[i] <= sizes[i - 1] + 0.0001

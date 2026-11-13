@@ -17,7 +17,8 @@ const EnemyMotion := preload("res://src/presentation/enemy_motion.gd")
 #
 # The owner calls aim(yaw) on each tick it is free to look (the yaw its _facing would set),
 # committed() when its _facing sets the body's yaw, and step() once a physics tick; then it
-# composes `tilt` outside its other poses and `turn` inside them.
+# composes `tilt` outside its other poses and `turn` inside them. glance(yaw) turns the head
+# to something that happened (a crewmate going down) for a beat, and hop() is a small cheer.
 
 # Turn speed, radians a second: a crew tracks a rolling ball at its circling range.
 const TURN_RATE := 6.0
@@ -37,6 +38,11 @@ const SETTLED := 0.002
 const STEP_LENGTH := 0.7
 const STEP_LIFT := 0.06
 const STEP_ROLL := 0.08
+# A glance holds the look on something for this long, then the aim takes it back.
+const GLANCE := 0.6
+# The cheer: a hop this high, this long.
+const HOP_LIFT := 0.14
+const HOP := 0.3
 
 var steps := true
 # Composed by the owner: tilt (body-local, about the feet) outside its poses, turn inside.
@@ -51,11 +57,23 @@ var _felt := Vector3.ZERO
 var _tilt := Vector3.ZERO
 var _travel := 0.0
 var _step_mix := 0.0
+var _glance := 0.0
+var _glance_left := 0.0
+var _hop_age := -1.0
 
 
 func aim(yaw: float) -> void:
 	_aim = yaw
 	_catching = false
+
+
+func glance(yaw: float) -> void:
+	_glance = yaw
+	_glance_left = GLANCE
+
+
+func hop() -> void:
+	_hop_age = 0.0
 
 
 func committed() -> void:
@@ -75,6 +93,9 @@ func step(delta: float, body: Node3D, velocity: Vector3, foot: float, walking :=
 		# The model's world heading is continuous when the body's yaw jumps (the commit snap).
 		_yaw = wrapf(_yaw - angle_difference(_root_yaw, root_yaw), -PI, PI)
 	_root_yaw = root_yaw
+	_glance_left = maxf(0.0, _glance_left - delta)
+	if _glance_left > 0.0 and not _catching:
+		_aim = _glance
 	if not is_nan(_aim):
 		var want := angle_difference(root_yaw, _aim)
 		_yaw += clampf(angle_difference(_yaw, want), -TURN_RATE * delta, TURN_RATE * delta)
@@ -99,6 +120,11 @@ func step(delta: float, body: Node3D, velocity: Vector3, foot: float, walking :=
 		_travel = fmod(_travel + speed * delta, STEP_LENGTH * 2.0)
 	var phase := PI * _travel / STEP_LENGTH
 	var lift := STEP_LIFT * absf(sin(phase)) * _step_mix * scale
+	if _hop_age >= 0.0:
+		lift += HOP_LIFT * sin(PI * _hop_age / HOP) * scale
+		_hop_age += delta
+		if _hop_age >= HOP:
+			_hop_age = -1.0
 	var roll := STEP_ROLL * sin(phase) * _step_mix * scale
 	turn = Transform3D(spin * Basis(Vector3.BACK, roll), Vector3(0.0, lift, 0.0))
 	var angle := _tilt.length() * scale
