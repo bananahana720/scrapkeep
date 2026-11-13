@@ -44,13 +44,14 @@ def hoop(part, axis, r_in, r_out, width, slot, color=None, marks=0, mark_slot="c
 
 
 def hub(part, direction, r_in, r_out, radius=0.11):
-    """A copper drum with a bolt circle where two hoops cross: the part a hand could undo."""
+    """A copper drum with a bolt circle where two hoops cross: the part a hand could undo.
+    Bolts ride a slot the Core already has, to stay inside the shell class's ten draws."""
     n = Vector(direction).normalized()
     sb._drum(part, n, radius, r_in, r_out, 8, "copper")
     e1, e2 = sb._frame(n)
     for k in range(4):
         a = k * math.tau / 4 + 0.4
-        part.bolt(n * r_out + (e1 * math.cos(a) + e2 * math.sin(a)) * radius * 0.62, n, r=0.018, h=0.012)
+        part.bolt(n * r_out + (e1 * math.cos(a) + e2 * math.sin(a)) * radius * 0.62, n, r=0.018, h=0.012, slot="rubber")
 
 
 def assemble(name, core_part, pod_part, extras=(), weapon_ring=True):
@@ -133,7 +134,7 @@ def bell():
     for k in range(16):
         a = k * math.tau / 16
         n = Vector((math.cos(a), 0, math.sin(a)))
-        hull.bolt(n * (radius + 0.035) + Vector((0, -0.02, 0)), n, r=0.02, h=0.014)
+        hull.bolt(n * (radius + 0.035) + Vector((0, -0.02, 0)), n, r=0.02, h=0.014, slot="copper")
     e1, e2 = sb._frame(port)
     ring_r = radius * math.sin(math.radians(27))
     ring_at = port * radius * math.cos(math.radians(27))
@@ -141,7 +142,7 @@ def bell():
         a0, a1 = k * math.tau / 20, (k + 1) * math.tau / 20
         hull.beam("copper", ring_at + (e1 * math.cos(a0) + e2 * math.sin(a0)) * ring_r + port * 0.015,
                   ring_at + (e1 * math.cos(a1) + e2 * math.sin(a1)) * ring_r + port * 0.015, 0.05)
-    hull.rod("bare_metal", (0, 0.1, radius - 0.01), (0, 0.1, radius + 0.03), 0.03, 8)
+    hull.rod("copper", (0, 0.1, radius - 0.01), (0, 0.1, radius + 0.03), 0.03, 8)
     hull.bm.normal_update()
     for f in hull.bm.faces:
         f.smooth = len(f.verts) <= 4 and abs(f.calc_center_median().length - radius) < 0.03
