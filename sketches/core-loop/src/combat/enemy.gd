@@ -718,12 +718,16 @@ func _update_flash(delta: float) -> void:
 # The release flash (FX-05, effects critique E5): on the strike, the body goes HAZARD for
 # STRIKE_FRAMES physics frames, so the attacker wears the hit's colour at the moment its mark
 # lands. A hit flash wins over it. Reduce flashes keeps the tint at its information share and
-# cuts the glow's rise.
-func _show_strike() -> void:
-	_material.albedo_color = _base_color.lerp(Palette.HAZARD, FlashGuard.info(STRIKE_TINT))
-	_material.emission_enabled = true
-	_material.emission = Palette.HAZARD
-	_material.emission_energy_multiplier = FlashGuard.spike(0.0, STRIKE_GLOW)
+# cuts the glow's rise. A body with a second material of its own (the mag trapper's discs)
+# paints it with the same look from its _update_flash while strike_flashing().
+func _show_strike(mat: StandardMaterial3D = null, base := Color.WHITE) -> void:
+	if mat == null:
+		mat = _material
+		base = _base_color
+	mat.albedo_color = base.lerp(Palette.HAZARD, FlashGuard.info(STRIKE_TINT))
+	mat.emission_enabled = true
+	mat.emission = Palette.HAZARD
+	mat.emission_energy_multiplier = FlashGuard.spike(0.0, STRIKE_GLOW)
 
 
 # Whether the body wears the release flash right now (tests and captures).
