@@ -900,6 +900,15 @@ func home_live(id: String) -> bool:
 	return false
 
 
+# Every live crew home and where it stands: [{id, at: Vector2}] (site_markers.gd puts a steam plume over each).
+func live_homes() -> Array:
+	var out := []
+	for home in homes:
+		if home_live(home.id):
+			out.append({"id": home.id, "at": _home_at(home)})
+	return out
+
+
 func break_home(id: String) -> bool:
 	for home in homes:
 		if home.id != id or home.broken:
