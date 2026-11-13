@@ -511,7 +511,7 @@ func _vent(angle: float) -> void:
 	pad.mesh = disc
 	pad.material_override = Palette.solid(Palette.ARC, 0.6)
 	pad.position = _local(angle, VENT_R, 0.06)
-	pad.name = "WaterVent"
+	pad.name = "WaterVent%d" % roundi(rad_to_deg(angle))
 	add_child(pad)
 	var nozzle := ModelKit.part(KIT, KIT_PARTS, "VentNozzle", self)
 	if nozzle == null:
