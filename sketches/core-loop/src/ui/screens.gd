@@ -8,6 +8,7 @@ const SummaryRows := preload("res://src/ui/summary_rows.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const FieldNotes := preload("res://src/ui/field_notes.gd")
 const Icons := preload("res://src/ui/icons.gd")
+const Wordmark := preload("res://src/ui/wordmark.gd")
 const Keycap := preload("res://src/ui/keycap.gd")
 const UiFonts := preload("res://src/ui/ui_fonts.gd")
 const ChoiceButton := preload("res://src/ui/choice_button.gd")
@@ -64,6 +65,14 @@ const TITLE := "SCRAPKEEP"
 const STAMP_FROM := 1.35
 const STAMP_TIME := 0.18
 const STAMP_TILT := -6.0
+# On the title the name is the drawn wordmark (W1-47), WORDMARK_H tall, laid inside the title label so
+# every place that shows, hides or stamps the name moves the picture with it. The label keeps the
+# word for screen readers and draws no glyphs of its own.
+const WORDMARK_H := 176.0
+# Share of the screen's height the wordmark may take, so at 1280x720 a wrapped second row of buttons
+# still ends above the stage line (pol_ui_title_readability_test).
+const WORDMARK_SHARE := 0.17
+const BAND_PAD := UiTokens.GAP_L
 # A win over the final world's boss opens the summary on the ending page (Worlds.ENDING). For
 # its first ENDING_HOLD seconds no key closes it, so a press meant for the fight cannot skip
 # it; after that Space, Enter, Esc or any pad button shows the summary beneath.
@@ -111,6 +120,7 @@ var _still_wait := false
 var _veil: ColorRect
 var _content: VBoxContainer
 var _title: Label
+var _wordmark: TextureRect
 # A beaten boss row's "stamp" (Worlds.BOSSES), inked under the victory title: the Mind's HIRED.
 var _mark: Label
 var _body: Label
@@ -179,6 +189,10 @@ func setup(game_ref) -> void:
 	add_child(_content)
 	_title = _label(UiTokens.DISPLAY)
 	_content.add_child(_title)
+	_wordmark = Wordmark.dress(_title)
+	_wordmark.visible = false
+	_content.sort_children.connect(_fit_band)
+	get_viewport().size_changed.connect(_fit_name)
 	_mark = _label(UiTokens.HEADING)
 	_mark.add_theme_color_override("font_color", Palette.AMBER)
 	_mark.visible = false
@@ -1307,9 +1321,12 @@ func _pad_enters_title(event: InputEvent) -> bool:
 
 
 func _show(title: String, color: Color, body: String) -> void:
+	var named := title == TITLE and _wordmark.texture != null
 	_title.text = title
 	_title.visible = title != ""
-	_title.add_theme_color_override("font_color", color)
+	_title.add_theme_color_override("font_color", Color.TRANSPARENT if named else color)
+	_wordmark.visible = named
+	_fit_name()
 	_body.text = body
 	_body.visible = body != ""
 	_balance(_body, BODY_WIDTH)
@@ -1624,6 +1641,29 @@ func _layout_backdrop() -> void:
 	_content.anchor_bottom = _veil.anchor_bottom
 	_content.add_theme_constant_override("separation", 18 if title_deck else 26)
 	_veil.color = Color(Palette.CHARCOAL, 1.0 if title_deck else 0.84)
+	_fit_band()
+
+
+func _fit_name() -> void:
+	var height := minf(WORDMARK_H, _screen().y * WORDMARK_SHARE)
+	_title.custom_minimum_size = Vector2(height * Wordmark.ASPECT, height) if _wordmark.visible else Vector2.ZERO
+
+
+# On the title the stage shows around the words too: the wordmark stands over the sky and only the
+# lines and buttons sit on the ink band, from just above the body line to just under the last row.
+func _fit_band() -> void:
+	var title_deck := _veil.anchor_bottom < 1.0 and _body.visible
+	# The content and the veil share a parent, and the content spans its top half here.
+	var parent_h := _content.size.y / maxf(0.01, _content.anchor_bottom)
+	if not title_deck:
+		_veil.anchor_top = 0.0
+		return
+	var end := 0.0
+	for child in _content.get_children():
+		if child is Control and child.visible:
+			end = maxf(end, child.position.y + child.size.y)
+	_veil.anchor_top = clampf((_body.position.y - BAND_PAD) / maxf(1.0, parent_h), 0.0, 0.5)
+	_veil.anchor_bottom = clampf((end + BAND_PAD) / maxf(1.0, parent_h), _veil.anchor_top, 0.5)
 
 
 # The actions wrap at the room's width: the first row fills it, the rest centre below.

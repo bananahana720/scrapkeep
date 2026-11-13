@@ -95,8 +95,8 @@ const CAMP := {"name": "camp", "sky": "hdri", "background": Color("243b43"),
 		"glow": Color("2c1e0e"), "energy": 1.0}}
 # The menu stages own their small worlds; they are never freed with a stage.
 const TITLE := {"energy": ROWS[1]["energy"], "sun_energy": ROWS[1]["sun_energy"], "sun_rotation": ROWS[1]["sun_rotation"],
-	"fill": ROWS[1]["fill"], "background": Color("243b43"), "ambient": Color("9db5cf"), "exposure": 1.1, "contrast": 1.25,
-	"sun_color": Color("ffd49a"), "fill_rotation": Vector3(-50.0, 125.0, 0.0), "fill_color": Color("a3c4e6"),
+	"fill": ROWS[1]["fill"], "background": Color("3a2a2e"), "ambient": Color("9db5cf"), "exposure": 1.1, "contrast": 1.25,
+	"sun_color": Color("ffb27a"), "fill_rotation": Vector3(-50.0, 125.0, 0.0), "fill_color": Color("a3c4e6"),
 	"lamp_color": Palette.AMBER, "lamp_energy": 2.2}
 const ENDING := {"sky": "workshop", "energy": 0.9, "fog": 0.0008, "sun_energy": 1.2, "sun_rotation": Vector3(-38.0, 118.0, 0.0)}
 const PREVIEW := {"energy": 0.6, "sun_energy": 1.4, "sun_rotation": Vector3(-48.0, 32.0, 0.0),
