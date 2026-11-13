@@ -48,7 +48,7 @@ Proof standards:
 
 ## Cleanup
 
-`$B cleanup` stops only drives whose pid files this checkout wrote and removes scratch save folders; evidence stays. A packed build under `artifacts/local/` is about 230 MB: it is scratch, and deleting old ones needs no go-ahead inside this checkout's own `artifacts/local/`, but leave any build a proof still names.
+`$B cleanup` removes stale pid files and scratch save folders and leaves running drives alone (`--stop <evidence name>` stops yours); evidence stays. A packed build under `artifacts/local/` is about 230 MB: it is scratch, but deleting old ones still follows the project's rule for deletes (ask Andrew first), and never one a proof still names.
 
 ## Helpers
 

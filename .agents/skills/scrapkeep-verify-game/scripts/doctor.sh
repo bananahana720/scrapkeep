@@ -40,8 +40,7 @@ fi
 running=0
 for pidfile in "$evidence_root"/*/drive.pid; do
   [ -f "$pidfile" ] || continue
-  pid="$(cat "$pidfile")"
-  if kill -0 "$pid" 2>/dev/null; then running=$((running + 1)); say INFO "a drive is running: pid $pid, $(dirname "$pidfile")"; fi
+  if pid="$(ours "$pidfile")"; then running=$((running + 1)); say INFO "a drive is running: pid $pid, $(dirname "$pidfile")"; fi
 done
 say OK "$running drive(s) running from this checkout (each has its own display and save folder, so more than one is safe; each wants about two cores)"
 say INFO "saves go to <evidence>/home, never ~/.local/share/godot/app_userdata/core-loop"

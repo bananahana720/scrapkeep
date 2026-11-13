@@ -11,12 +11,16 @@
 set -uo pipefail
 skill_dir="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/.." && pwd)"
 repo="$(git -C "$skill_dir" rev-parse --show-toplevel)"
+[ -n "$repo" ] || { echo "web: cannot find the repo from $skill_dir (git rev-parse failed)" >&2; exit 2; }
 run="$repo/artifacts/local/verify-web/run"
 vite_port="${VERIFY_WEB_VITE_PORT:-5199}"
 kit_port="${VERIFY_WEB_KIT_PORT:-8799}"
 verdicts="$run/verdicts.json"
 
-alive() { [ -f "$run/$1.pid" ] && kill -0 "$(cat "$run/$1.pid")" 2>/dev/null; }
+# A pid file holds "<pid> <the process's start time>", so a pid reused by another process is never taken for ours.
+started_at() { sed 's/.*) //' "/proc/$1/stat" 2>/dev/null | cut -d' ' -f20; }
+pid_of() { cut -d' ' -f1 "$run/$1.pid"; }
+alive() { local pid start; [ -f "$run/$1.pid" ] && read -r pid start < "$run/$1.pid" && [ -n "$start" ] && [ "$(started_at "$pid")" = "$start" ]; }
 answers() { curl -fs --noproxy '*' -o /dev/null --max-time 3 "$1"; }
 wait_for() { for _ in $(seq 1 60); do answers "$1" && return 0; sleep 0.5; done; return 1; }
 
@@ -24,13 +28,15 @@ case "${1:-}" in
   start)
     mkdir -p "$run"
     [ -d "$repo/node_modules/vite" ] || { echo "web: no node_modules; run npm ci" >&2; exit 2; }
-    for name in vite kit; do alive "$name" && { echo "web: $name already running (pid $(cat "$run/$name.pid")); run stop first" >&2; exit 2; }; done
+    for name in vite kit; do alive "$name" && { echo "web: $name already running (pid $(pid_of "$name")); run stop first" >&2; exit 2; }; done
     (cd "$repo" && exec node node_modules/vite/bin/vite.js --host 127.0.0.1 --port "$vite_port" --strictPort) > "$run/vite.log" 2>&1 &
-    echo $! > "$run/vite.pid"
+    echo "$! $(started_at $!)" > "$run/vite.pid"
     (cd "$repo" && exec node project-guide/handoff/sitting-kit/serve.mjs --port "$kit_port" --verdicts "$verdicts") > "$run/kit.log" 2>&1 &
-    echo $! > "$run/kit.pid"
+    echo "$! $(started_at $!)" > "$run/kit.pid"
     wait_for "http://127.0.0.1:$vite_port/" || { echo "web: Vite did not answer on $vite_port; see $run/vite.log" >&2; exit 1; }
     wait_for "http://127.0.0.1:$kit_port/api/build" || { echo "web: the Sitting Kit did not answer on $kit_port; see $run/kit.log" >&2; exit 1; }
+    # Something else on the port would answer for a server of ours that failed to start.
+    for name in vite kit; do alive "$name" || { echo "web: $name answered but ours is not running (is the port someone else's?); see $run/$name.log" >&2; exit 1; }; done
     echo "web: yard http://127.0.0.1:$vite_port/  orchard http://127.0.0.1:$vite_port/orchard.html  sitting kit http://127.0.0.1:$kit_port/"
     ;;
   doctor)
@@ -39,7 +45,7 @@ case "${1:-}" in
     head="$(git -C "$repo" rev-parse HEAD)"
     say INFO "checkout $repo at ${head:0:8} on $(git -C "$repo" rev-parse --abbrev-ref HEAD)"
     for name in vite kit; do
-      if alive "$name"; then say OK "$name is ours and running (pid $(cat "$run/$name.pid"))"; else say FAIL "$name is not running from this checkout: run web.sh start"; fi
+      if alive "$name"; then say OK "$name is ours and running (pid $(pid_of "$name"))"; else say FAIL "$name is not running from this checkout: run web.sh start"; fi
     done
     if answers "http://127.0.0.1:$vite_port/orchard.html" && answers "http://127.0.0.1:$vite_port/"; then say OK "Vite serves / and /orchard.html on $vite_port"; else say FAIL "Vite does not answer on $vite_port"; fi
     served="$(curl -fsS --noproxy '*' --max-time 3 "http://127.0.0.1:$kit_port/api/build" 2>/dev/null | sed -n 's/.*"sha":"\([0-9a-f]*\)".*/\1/p')"
@@ -50,7 +56,7 @@ case "${1:-}" in
     ;;
   stop)
     for name in vite kit; do
-      if alive "$name"; then kill -TERM "$(cat "$run/$name.pid")" && echo "web: stopped $name (pid $(cat "$run/$name.pid"))"; fi
+      if alive "$name"; then kill -TERM "$(pid_of "$name")" && echo "web: stopped $name (pid $(pid_of "$name"))"; fi
       rm -f "$run/$name.pid"
     done
     rm -f "$verdicts" "$verdicts.tmp"

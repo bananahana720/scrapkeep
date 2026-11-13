@@ -26,6 +26,4 @@ click "Quit"
 wait 1
 shot quit-asked
 ui
-click "Quit"
-wait 5
-shot should-not-be-here
+quits click "Quit"

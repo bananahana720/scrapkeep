@@ -37,6 +37,8 @@ extends Node
 #                                         evaluated on the game node: flow.state_name(), player.global_position
 #   expect state <name> | expect text "<words>" | expect no_text "<words>" | expect read <expression>
 #   quit                                  quits 0 (the end of the file does the same)
+#   quits <step>                          the last step, when that step must make the game itself quit
+#                                         (quits click "Quit"): fails if the game still runs 10 s later
 #
 # A check on a live value (read, expect read) is ground truth for the row, never the proof itself:
 # the proof is the picture and the side effect on disk.
@@ -44,6 +46,8 @@ extends Node
 const DEFAULT_TIMEOUT := 60.0
 const TAP_S := 0.1
 const TAP_GAP_S := 0.6
+# The fewest words a step needs, itself included; a short step fails by name, not by a runtime error.
+const NEEDS := {"wait": 2, "until": 2, "tap_until": 3, "expect": 3, "key": 2, "down": 2, "up": 2, "mouse": 2, "click": 2, "click_at": 3, "look": 3, "quits": 2}
 
 var game: Node
 var _out := ""
@@ -122,6 +126,11 @@ func _row(step: String, result: Dictionary) -> void:
 func _do(step: String) -> Dictionary:
 	var words := _split(step)
 	var verb: String = words[0]
+	var needs: int = NEEDS.get(verb, 1)
+	if verb in ["until", "tap_until"] and words.size() >= needs and words[needs - 1] != "play":
+		needs += 1
+	if words.size() < needs:
+		return {"ok": false, "detail": "'%s' needs %d more word(s); the step list is at the top of drive.gd" % [verb, needs - words.size()]}
 	match verb:
 		"wait":
 			await _sleep(float(words[1]))
@@ -189,6 +198,13 @@ func _do(step: String) -> Dictionary:
 			return {"ok": value[0], "value": str(value[1]), "detail": str(value[1])}
 		"quit":
 			return {"ok": true}
+		"quits":
+			print("drive: awaiting the game's own quit")
+			var inner: Dictionary = await _do(step.trim_prefix("quits").strip_edges())
+			if not inner.ok:
+				return inner
+			await _sleep(10.0)
+			return {"ok": false, "detail": "the game is still running 10 s later"}
 	return {"ok": false, "detail": "no step called '%s'" % verb}
 
 

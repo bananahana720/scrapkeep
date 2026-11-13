@@ -22,4 +22,7 @@ ui
 key ESCAPE
 until clickable "Settings" 10
 shot title-again
-quit
+# Esc on the title moves the focus to Quit; pressing Quit ends the game (LM-6). The driver only watches it go.
+key ESCAPE
+shot quit-focused
+quits click "Quit"

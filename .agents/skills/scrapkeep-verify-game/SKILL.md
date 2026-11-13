@@ -51,13 +51,13 @@ Proof standards:
 
 ## Cleanup
 
-`drive.sh` removes its own scratch save folder when the game exits. After a failed or interrupted drive, run `$S/cleanup.sh`: it stops only the drives whose pid files this checkout wrote, removes scratch save folders, and keeps every evidence folder. Pass a shared save folder (`VERIFY_GAME_HOME`) to remove it too. Never kill Godot by name: the Gate, the Godot MCP or Andrew may be running one.
+`drive.sh` removes its own scratch save folder when the game exits. After a failed or interrupted drive, run `$S/cleanup.sh`: it removes stale pid files and scratch save folders and keeps every evidence folder. It leaves running drives alone (another agent may own one); `--stop <evidence name>` stops yours by its pid file. Pass a shared save folder (`VERIFY_GAME_HOME`) to remove it too. Never kill Godot by name: the Gate, the Godot MCP or Andrew may be running one.
 
 ## Helpers
 
 - `$S/doctor.sh`: the read-only health check.
-- `$S/drive.sh <steps file> [<evidence name>] [-- <game flags>]`: one drive. Exit 0 every step passed, 1 a step failed (it takes a `FAILED` picture first), 2 a bad flag, 124 the wall timeout (`VERIFY_GAME_TIMEOUT`, default 1500 s). `VERIFY_GAME_HOME=<dir>` keeps one save folder across drives.
-- `$S/cleanup.sh [<shared save folder>]`: teardown that keeps evidence.
+- `$S/drive.sh <steps file> [<evidence name>] [-- <game flags>]`: one drive. Exit 0 every step passed, 1 a step failed (it takes a `FAILED` picture first), 2 a bad flag or evidence name, 3 the game quit by itself before the file ended (end with `quits <step>` when it should), 124 the wall timeout (`VERIFY_GAME_TIMEOUT`, default 1500 s; run a long drive in the background so the tool's own limit does not cut it). `VERIFY_GAME_HOME=<dir>` keeps one save folder across drives.
+- `$S/cleanup.sh [--stop <evidence name>] [<shared save folder>]`: teardown that keeps evidence.
 - `scripts/drive.gd`: the driver the game loads; its header is the step reference.
 
 ## Lessons and updates

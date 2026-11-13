@@ -11,7 +11,7 @@ This directory is the maintained source for verifying what a player meets in the
 
 ## Driving conventions
 
-- Every recipe starts with `until clickable "Settings" 120` and `until read get_node_or_null("/root/Boot") == null 30`: the title menu is up and the boot card has gone.
+- Every recipe that presses the title menu starts with `until clickable "Settings" 120` and `until read get_node_or_null("/root/Boot") == null 30`: the title menu is up and the boot card has gone. (The launch recipe watches the boot card and the opening first, so it waits on them by name.)
 - Keys are the stable handles; the control tables in `sketches/core-loop/README.md` name them. Buttons are found by the words on them. Points (`click_at`) are the last resort and use the game's own 1600x900 view.
 - Wait with `until`, not `wait`. A bare `wait` is only for letting a picture settle.
 - The game pauses itself on held cards (the kit pick, the start pick, the pause menu). `until read not get_tree().paused 30` is the wait for play to resume.

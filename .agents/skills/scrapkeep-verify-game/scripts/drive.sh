@@ -8,15 +8,19 @@
 #      sets it), VERIFY_GAME_EVIDENCE_ROOT (default artifacts/local/verify-game), VERIFY_GAME_SIZE (default 1280x720), VERIFY_GAME_HOME=<dir> (a save folder kept and shared by several
 #      drives, e.g. quit in one and continue in the next; without it each drive starts as a new player and
 #      its save folder is copied to <evidence>/saves and removed).
-# Exit: the game's own: 0 every step passed, 1 a step failed, 2 a bad flag; 124 the wall timeout.
+# Exit: 0 every step passed (or the file's last step was `quits` and the game quit), 1 a step failed,
+#       2 a bad flag or name, 3 the game quit by itself before the step file ended, 124 the wall timeout
+#       (137 when it had to be killed, 143 when cleanup.sh stopped it).
 set -uo pipefail
 source "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/common.sh"
-[ $# -ge 1 ] || { sed -n 2,8p "${BASH_SOURCE[0]}"; exit 2; }
+[ $# -ge 1 ] || { sed -n 2,13p "${BASH_SOURCE[0]}"; exit 2; }
 steps="$(readlink -f "$1")"; shift
 [ -f "$steps" ] || { echo "drive: no step file $steps" >&2; exit 2; }
 name="$(basename "${steps%.*}")-$(date -u +%Y%m%dT%H%M%SZ)"
 if [ $# -ge 1 ] && [ "$1" != "--" ]; then name="$1"; shift; fi
 [ "${1:-}" = "--" ] && shift
+# The name is one folder under the evidence root: no path, no leading dash (a game flag given without its `--`).
+[[ "$name" =~ ^[A-Za-z0-9][A-Za-z0-9._-]*$ ]] || { echo "drive: bad evidence name '$name' (letters, digits, . _ - only; game flags go after --)" >&2; exit 2; }
 out="$evidence_root/$name"
 exe="${VERIFY_GAME_EXE:-}"
 if [ -n "$exe" ]; then
@@ -53,18 +57,24 @@ else
 fi
 timeout --signal=TERM --kill-after=20 "${VERIFY_GAME_TIMEOUT:-1500}" "${run[@]}" > "$out/game.log" 2>&1 &
 pid=$!
-echo "$pid" > "$out/drive.pid"
+write_pid "$pid" "$out/drive.pid"
 wait "$pid"
 code=$?
-rm -f "$out/drive.pid"
+# The game can quit itself with 0 (Quit in the pause menu, Esc on the title). That is a pass only when
+# the step file said so with a last `quits` step; anywhere else it hid the steps that never ran.
+if [ "$code" = 0 ] && ! grep -q "^drive: done\|^drive: awaiting the game's own quit" "$out/game.log"; then
+  echo "drive: the game quit by itself after $(grep -c '^drive: ok ' "$out/game.log") of $(grep -cvE '^\s*(#|$)' "$out/steps.txt") steps" | tee -a "$out/game.log"
+  code=3
+fi
 echo "finished $(date -u +%FT%TZ) exit $code" >> "$out/identity.txt"
 grep '^drive: ' "$out/game.log" | tail -40
 # The game's save folder is copied into the evidence before any scratch goes, so the side effects stay.
 userdata="$home/data/godot/app_userdata/core-loop"
 if [ -d "$userdata" ]; then
-  rm -rf "$out/saves" && cp -r "$userdata" "$out/saves" && rm -rf "$out/saves/shader_cache" "$out/saves/vulkan"
+  rm -rf "${out:?}/saves" && cp -r "$userdata" "$out/saves" && rm -rf "${out:?}/saves/shader_cache" "${out:?}/saves/vulkan"
   (cd "$out/saves" && find . -type f -printf '%p %s bytes\n' | sort) > "$out/files-written.txt"
 fi
-[ -n "${VERIFY_GAME_HOME:-}" ] || rm -rf "$out/home"
+[ -n "${VERIFY_GAME_HOME:-}" ] || rm -rf "${out:?}/home"
+rm -f "$out/drive.pid"
 echo "drive: exit $code, evidence in $out"
 exit $code
