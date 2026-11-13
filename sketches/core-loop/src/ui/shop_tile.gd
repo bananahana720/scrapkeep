@@ -24,12 +24,17 @@ const ICON := 56.0
 const GLYPH := 20.0
 const PRICE_FONT := UiTokens.BODY
 const COG := 16.0
+# The rarity frames (VISUAL-LANGUAGE section 5): each rung differs by shape, not colour alone.
+# Common one line, rare two, relic two with round bolt heads round the bezel, evolved two with
+# its outer line cut into the ancients' dashed seam and diamond points at the corners.
 const RARITY := {
-	"common": {"color": Palette.ARC, "width": 2.0, "double": false, "notches": false},
-	"rare": {"color": Palette.COBALT, "width": 3.0, "double": true, "notches": false},
-	"relic": {"color": Palette.AMBER, "width": 3.0, "double": true, "notches": true},
-	"evolved": {"color": Palette.ANCIENT, "width": 4.0, "double": true, "notches": true},
+	"common": {"color": Palette.ARC, "width": 2.0, "double": false, "notches": "", "dashed": false},
+	"rare": {"color": Palette.COBALT, "width": 3.0, "double": true, "notches": "", "dashed": false},
+	"relic": {"color": Palette.AMBER, "width": 3.0, "double": true, "notches": "bolt", "dashed": false},
+	"evolved": {"color": Palette.ANCIENT, "width": 3.0, "double": true, "notches": "diamond", "dashed": true},
 }
+const NOTCH := 5.5
+const DASH := 9.0
 
 var rec := {}
 var index := -1
@@ -140,12 +145,26 @@ func _framed(icon_rect: Rect2, dim: float) -> void:
 	var frame: Dictionary = RARITY.get(String(rec.get("rarity", "common")), RARITY["common"])
 	var tint := Color(frame["color"], dim)
 	var outer := icon_rect.grow(4.0)
-	draw_rect(outer, tint, false, frame["width"])
+	var rim := [outer.position, Vector2(outer.end.x, outer.position.y), outer.end, Vector2(outer.position.x, outer.end.y)]
+	if frame["dashed"]:
+		for k in 4:
+			draw_dashed_line(rim[k], rim[(k + 1) % 4], tint, frame["width"], DASH)
+	else:
+		draw_rect(outer, tint, false, frame["width"])
 	if frame["double"]:
-		draw_rect(outer.grow(-6.0), Color(Palette.ARC, dim) if frame["notches"] else tint, false, frame["width"])
-	if frame["notches"]:
-		for corner in [outer.position, Vector2(outer.end.x, outer.position.y), outer.end, Vector2(outer.position.x, outer.end.y)]:
-			draw_circle(corner, 4.0, tint)
+		draw_rect(outer.grow(-6.0), Color(Palette.ARC, dim) if frame["notches"] != "" else tint, false, frame["width"])
+	match frame["notches"]:
+		"bolt":
+			# Corners and edge midpoints, so the bolts still read where the element and
+			# trigger badges cover the lower corners.
+			for k in 4:
+				draw_circle(rim[k], NOTCH, tint)
+				draw_circle((rim[k] + rim[(k + 1) % 4]) * 0.5, NOTCH, tint)
+		"diamond":
+			# Corners only, so the dashed seam reads along every edge.
+			var r := NOTCH * 1.6
+			for corner in rim:
+				draw_colored_polygon(PackedVector2Array([corner + Vector2(0.0, -r), corner + Vector2(r, 0.0), corner + Vector2(0.0, r), corner + Vector2(-r, 0.0)]), tint)
 	var icon_id := String(rec.get("icon", ""))
 	draw_texture_rect(Icons.texture(icon_id), icon_rect.grow(-10.0), false, Icons.tint(icon_id, Color(Palette.SAND, dim)))
 	var corners := [[String(rec.get("element_icon", "")), Vector2(outer.position.x, outer.end.y)],

@@ -4,10 +4,11 @@ const Parts := preload("res://src/build/parts.gd")
 const ItemGen := preload("res://src/build/item_gen.gd")
 const Palette := preload("res://src/core/palette.gd")
 const Synergies := preload("res://src/build/synergies.gd")
+const TierMark := preload("res://src/build/tier_mark.gd")
 
 # Scrap becomes your build, on the ball. Mass (DEMO-SPEC heft) shows as chunks stuck
 # to the surface, and each part as a piece of hardware whose shape says its family and
-# whose colour says its rarity. Spending compacts scrap into a part: the wallet drops
+# whose foot and colour say its rarity (TierMark: none, diamond, star, crown). Spending compacts scrap into a part: the wallet drops
 # but mass does not, so a fabricator purchase bolts a part on and takes no chunk off.
 # Only a theft (scrap_lost) takes chunks, and they fly off toward the thief. The whole
 # shell grows a step per heft class; the collider never does. This node lives under
@@ -301,7 +302,10 @@ func _piece(part_id: String) -> Node3D:
 					star.position = Vector3(0.0, 0.35, 0.0)
 					root.add_child(star)
 				_:
-					_box(root, Vector3(0.6, 0.12, 0.6), Vector3(0.0, 0.05, 0.0), mat, 0.0)
+					_disc(root, 0.3, 0.12, Vector3(0.0, 0.05, 0.0), mat)
+	var foot := TierMark.foot(rarity, mat)
+	if foot != null:
+		root.add_child(foot)
 	return root
 
 
@@ -313,6 +317,20 @@ func _box(parent: Node3D, size: Vector3, at: Vector3, mat: Material, yaw: float)
 	node.material_override = mat
 	node.position = at
 	node.rotation = Vector3(0.0, yaw, 0.0)
+	parent.add_child(node)
+
+
+# Round, so a tier foot's points stand clear of it.
+func _disc(parent: Node3D, radius: float, thick: float, at: Vector3, mat: Material) -> void:
+	var node := MeshInstance3D.new()
+	var cyl := CylinderMesh.new()
+	cyl.top_radius = radius
+	cyl.bottom_radius = radius
+	cyl.height = thick
+	cyl.radial_segments = 16
+	node.mesh = cyl
+	node.material_override = mat
+	node.position = at
 	parent.add_child(node)
 
 

@@ -3,6 +3,7 @@ extends "res://src/world/device.gd"
 const Parts := preload("res://src/build/parts.gd")
 const Relics := preload("res://src/build/relics.gd")
 const ItemGen := preload("res://src/build/item_gen.gd")
+const TierMark := preload("res://src/build/tier_mark.gd")
 const StageMap := preload("res://src/world/stage_map.gd")
 
 # A cracked wall and the buried cache behind it, the secrets family (LOOP-REDESIGN
@@ -131,15 +132,8 @@ func _build_pedestals(parts: Array) -> void:
 			cylinder(0.8, 0.6, Vector3.UP * 0.3, Palette.solid(Palette.CHARCOAL), pedestal)
 		else:
 			_model_part(parts, "CachePedestal", pedestal)
-		var gem := MeshInstance3D.new()
-		var sm := SphereMesh.new()
-		sm.radius = 0.45
-		sm.height = 0.9
-		sm.radial_segments = 4
-		sm.rings = 2
-		gem.mesh = sm
-		gem.material_override = Palette.solid(Palette.SAND)
-		gem.material_override.vertex_color_use_as_albedo = true
+		var gem := Node3D.new()
+		gem.name = "Gem"
 		gem.position = Vector3.UP * 1.4
 		pedestal.add_child(gem)
 		var label := WorldPrompt.new()
@@ -239,12 +233,23 @@ func fire() -> bool:
 			continue
 		var d: Resource = Parts.def(offers[i])
 		var rarity: String = d.rarity if d != null else "common"
-		p["gem"].material_override = Palette.solid(gem_color(rarity), 2.0)
-		p["gem"].material_override.vertex_color_use_as_albedo = true
+		_set_gem(p["gem"], rarity)
 		var words := Parts.display_name(offers[i]).split(" ", false)
 		var icon: String = "cat_" + (d.icon_category if d != null and d.icon_category != "" else "utility")
 		p["label"].set_parts(" ".join(words.slice(0, WorldPrompt.TITLE_WORDS)), "", icon)
 	return true
+
+
+# A pedestal gem is its rarity's mark (TierMark): the rung's shape in the rung's colour.
+static func _set_gem(holder: Node3D, rarity: String) -> void:
+	for child in holder.get_children():
+		holder.remove_child(child)
+		child.queue_free()
+	var mark := TierMark.mark(rarity, Palette.solid(gem_color(rarity), 2.0))
+	# Device surfaces take colour from the mesh (device_props_asset_test); primitives read white.
+	for m: MeshInstance3D in mark.find_children("*", "MeshInstance3D", true, false):
+		m.material_override.vertex_color_use_as_albedo = true
+	holder.add_child(mark)
 
 
 # A pedestal gem wears its rarity's rung of the item ladder, the colour the reward card uses.
