@@ -288,6 +288,19 @@ func _on_walled(_enemy: Node3D, at: Vector3, normal: Vector3, speed: float) -> v
 		request_shake(float(row["shake"]) * share, 0.15, "enemy_walled")
 
 
+# The ball ran into a park prop (park_props.gd prop_kicked): its knock or clank, higher for a light one
+# thrown, and a puff of dust where it stood. Sound and dust only; the prop's own move is prop_kicks.gd's.
+func on_prop_kicked(at: Vector3, mode: String, speed: float, tags: Array) -> void:
+	var row: Dictionary = EventKinds.juice("prop_kicked")[mode]
+	var share := clampf((speed - 4.0) / 26.0, 0.0, 1.0)
+	var metal := "machine" in tags or "sign" in tags
+	var sound := String(row["metal"] if metal else row["sound"])
+	if audio != null and sound != "":
+		audio.play("prop_kicked", float(row["db"]) + 4.0 * share, _span(row["pitch"], share), "SFX", sound)
+	if vfx != null:
+		vfx.burst("dust", at - Vector3.UP * 0.4, EventKinds.color("landed"), int(row["dust"]))
+
+
 func _reset() -> void:
 	# A retry restores mass, so the shell follows the restored class.
 	if ctx.run.has_method("heft_class"):

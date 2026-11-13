@@ -270,6 +270,11 @@ const JUICE := {
 	"slammed": {"fx": {"slam_ring": 48, "slam_dust": 24}},
 	"harpoon_bit": {"fx": {"latch_ring": 24, "latch_halo": 24, "latch_pulse": 12}},
 	"wall_crumbled": {"fx": {"crack_debris": 28, "slam_dust": 14}},
+	# A park prop the ball ran into (prop_kicks.gd): by its move, the sound, its pitch at 4 and 30 m/s,
+	# its level and the dust. A metal one (tags machine or sign) clanks when it flies. Start values for a PC check.
+	"prop_kicked": {"fly": {"sound": "land_thud", "metal": "clank", "pitch": [1.5, 1.15], "db": -9.0, "dust": 8},
+		"shove": {"sound": "land_thud", "metal": "clank", "pitch": [0.95, 0.75], "db": -7.0, "dust": 10},
+		"bend": {"sound": "", "metal": "", "pitch": [1.0, 1.0], "db": 0.0, "dust": 4}},
 	# Collisions (thread "Make collisions feel physical", 13 Nov): speed in m/s of closing scales each
 	# from min_speed (share 0) to full_speed (share 1): squash, kick, shake, db and pitch are at share 0 and 1
 	# (shake only from shake_from up); the particle counts are fixed. Start values for a PC feel check.
