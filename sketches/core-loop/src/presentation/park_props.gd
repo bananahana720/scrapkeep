@@ -1695,7 +1695,7 @@ func _kick(delta: float) -> void:
 		_ground = ctx.terrain.ground_callable(ctx.terrain.stage)
 		kicks.index(instances, func(inst: Dictionary): return inst["class"] != HERO and tier_of(inst) != "tall", views.filter(func(v): return v is MultiMeshInstance3D))
 	var height := func(x: float, z: float) -> float: return (_ground.call(x, z, 0.0) as Vector3).y
-	for kick: Dictionary in kicks.step(delta, ctx.player.ball_position(), ctx.player.state.velocity, Tuning.RADIUS, height):
+	for kick: Dictionary in kicks.step(delta, ctx.player.shown_position(), ctx.player.state.velocity, Tuning.RADIUS, height):
 		prop_kicked.emit(kick["at"], kick["mode"], kick["speed"], kick["tags"])
 
 
