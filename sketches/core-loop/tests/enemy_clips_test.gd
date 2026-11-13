@@ -13,7 +13,7 @@ const T := preload("res://tests/support/t.gd")
 # its clip and then breaks up, and a headless run seats nothing.
 
 const KINDS := ["chaser", "lobber", "mag_trapper", "plated_brute", "winch_drone", "jolt_layer", "hooker", "ramp_flipper",
-	"boom_tender"]
+	"boom_tender", "netcaster", "bola_thrower", "swatter", "catch_trap", "deflector", "gyro_jammer"]
 const FRAME := 1.0 / 30.0
 var _game
 var _t := T.new("enemy_clips_test")

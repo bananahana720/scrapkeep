@@ -54,6 +54,15 @@ const ROWS := {
 	"ramp_flipper": {"stride": 1.8, "parts": {"body": ["RampBody"]}},
 	"boom_tender": {"stride": 2.4, "parts": {"hull": ["BoomTenderBody/TenderHull"], "reel": ["BoomTenderBody/TenderReel"],
 		"boom": ["BoomTenderBody/Boom"]}},
+	# The rest of the Spillway crew (W1-87). The code's own poses ride inside the joints: the net
+	# (netcaster.gd), the bola's whirl and flight, the swatter's sweep, the trap's thrown cup, the
+	# deflector's wall and squash, the meter's spin.
+	"netcaster": {"stride": 1.8, "parts": {"body": ["NetcasterBody/Body"]}},
+	"bola_thrower": {"stride": 1.8, "parts": {"body": ["BolaThrowerBody"], "bola": ["BolaLoop"]}},
+	"swatter": {"stride": 1.8, "parts": {"body": ["SwatterBody"], "paddle": ["SwatterPaddle"]}},
+	"catch_trap": {"stride": 1.6, "parts": {"body": ["CatchBody"], "cup": ["CatchCup"]}},
+	"deflector": {"stride": 1.8, "parts": {"body": ["DeflectorBody/Body"], "dish": ["DeflectorBody/DishWall"]}},
+	"gyro_jammer": {"stride": 1.8, "parts": {"body": ["GyroBody"], "aerial": ["GyroAerial"]}},
 }
 
 # Tests opt in; a headless run otherwise plays nothing. This is its own switch, not
