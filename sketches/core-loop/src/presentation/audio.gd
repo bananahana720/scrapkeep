@@ -2194,6 +2194,8 @@ func wire_optional() -> void:
 	_listen_optional(events, "attack_cued", _on_attack_cued)
 	_listen_optional(events, "fight_phase_changed", _on_fight_phase)
 	_listen_optional(events, "boss_weak_point_hit", _on_weak_point)
+	# The Brindle reel (W1-61): each paid hit sheds scrap with its row's scrap tick.
+	_listen_optional(events, "boss_reeled", func(_at: Vector3, _scrap: int): play("boss_reeled"))
 	_listen_optional(events, "event_progress", _on_event_progress)
 	# The stage's content leaves before the arena: a soft fade, and any launch build
 	# resolves into the arena music instead of a landing.
