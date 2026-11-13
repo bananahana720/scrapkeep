@@ -677,8 +677,23 @@ func director_alive() -> int:
 	return maxi(0, get_tree().get_nodes_in_group("enemy").size() - activities.standing())
 
 
-# What the director's cap counts: the enemies near the ball (director.gd HOLD_M), less the activities' own. A
-# director pack member left past LEAVE_M leaves here, out of sight: no death, no scrap, no kill counted.
+# Director pack members left past director.gd LEAVE_M leave, out of sight: no death, no scrap, no kill counted.
+# Yard and overtime crews (yard_crew) and elite packs always stay.
+func _dismiss_left_packs() -> void:
+	var at: Vector3 = ctx.player.ball_position()
+	var ball := Vector2(at.x, at.z)
+	for enemy in get_tree().get_nodes_in_group("enemy"):
+		if not enemy is Node3D or not enemy.has_meta("pack_seq") or enemy.has_meta("elite_pack") or enemy.has_meta("yard_crew"):
+			continue
+		if enemy.has_method("is_dead") and enemy.is_dead():
+			continue
+		if Director.leaves(Vector2(enemy.global_position.x, enemy.global_position.z), ball):
+			enemy.remove_from_group("enemy")
+			enemy.remove_from_group("enemy_shot")
+			enemy.queue_free()
+
+
+# What the director's cap counts: the enemies near the ball (director.gd HOLD_M), less the activities' own.
 func director_held() -> int:
 	var at: Vector3 = ctx.player.ball_position()
 	var ball := Vector2(at.x, at.z)
@@ -687,15 +702,8 @@ func director_held() -> int:
 	for enemy in get_tree().get_nodes_in_group("enemy"):
 		if not enemy is Node3D or activities.keeps(enemy):
 			continue
-		var spot := Vector2(enemy.global_position.x, enemy.global_position.z)
-		if enemy.has_meta("pack_seq") and not enemy.has_meta("elite_pack") and Director.leaves(spot, ball) \
-				and not (enemy.has_method("is_dead") and enemy.is_dead()):
-			enemy.remove_from_group("enemy")
-			enemy.remove_from_group("enemy_shot")
-			enemy.queue_free()
-			continue
 		total += 1
-		if Director.holds(String(enemy.get("kind")), spot, ball):
+		if Director.holds(String(enemy.get("kind")), Vector2(enemy.global_position.x, enemy.global_position.z), ball):
 			held += 1
 	return Director.held_count(held, total)
 
@@ -707,6 +715,7 @@ func _step_director(delta: float) -> void:
 	if _build_clock >= BUILD_REFRESH and ctx.spawner != null and ctx.spawner.has_method("build_read"):
 		_build_clock = 0.0
 		director.build = ctx.spawner.build_read()
+	_dismiss_left_packs()
 	var alive := director_held()
 	var ball: Vector3 = ctx.player.ball_position()
 	var v: Vector3 = ctx.player.state.velocity
