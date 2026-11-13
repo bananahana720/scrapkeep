@@ -110,6 +110,11 @@ func _cache(c) -> void:
 		and not s.done and s.pickup == null, "door blocks the empty pedestal")
 	_report("real door collider", v["door"] is StaticBody3D and v["door"].get_child(0) is CollisionShape3D
 		and not v["door"].get_child(0).disabled, "existing valve builder supplies collision")
+	var door_view := v["door"].get_node_or_null("ValveDoor") as MeshInstance3D
+	var door_box: Vector3 = (v["door"].get_child(0).shape as BoxShape3D).size
+	_report("door draws the valve door model", door_view != null and not door_view.mesh is PrimitiveMesh
+		and door_view.scale.is_equal_approx(door_box / Vector3(12.0, 6.0, 1.0))
+		and v["door"].find_children("*", "MeshInstance3D", true, false).size() == 1, "one riveted gate scaled to the collider, no plain box")
 	_report("shared cache rule", s.rule == Activities.RULES["cracked_cache"] and s.wall == null and not s.view.visible,
 		"same pay/source/rarities, valve replaces cracked face, no prompt")
 	await _tick(c, at, velocity * 0.99)

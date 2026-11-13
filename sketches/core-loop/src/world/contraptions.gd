@@ -6,6 +6,8 @@ const RideRail := preload("res://src/world/ride_rail.gd")
 const Activities := preload("res://src/world/activities.gd")
 const RecipeProps := preload("res://src/presentation/recipe_props.gd")
 const ParkRecipes := preload("res://src/world/park/park_recipes.gd")
+const ModelKit := preload("res://src/world/model_kit.gd")
+const CrackedCache := preload("res://src/world/cracked_cache.gd")
 
 # The gorge's contraptions, built from the map's specs and run from world's physics
 # tick (DESIGN-V2 section 9, VISUAL-LANGUAGE section 11). Every one is a momentum tool
@@ -32,6 +34,9 @@ const WALL_REACH := 3.6
 const WALL_SPEED := 8.0
 const DOOR_SINK := 6.5
 const DOOR_SECONDS := 0.6
+# The valve door model (tools/blender/world_one/valve_door.py), built 12 by 6 by 1 m and scaled to each door.
+const DOOR_MODEL := "res://assets/models/world_one/valve_door.glb"
+const DOOR_MODEL_SIZE := Vector3(12.0, 6.0, 1.0)
 const CABLE_REST := 1.0
 const PUFF_SECONDS := 0.7
 # How hard a ball the player is not steering keeps station on a barge, per second of
@@ -942,12 +947,16 @@ func _build_valve(spec: Dictionary) -> Dictionary:
 	box.size = size
 	shape.shape = box
 	door.add_child(shape)
-	var mesh := MeshInstance3D.new()
-	var bm := BoxMesh.new()
-	bm.size = size
-	mesh.mesh = bm
-	mesh.material_override = Palette.striped(Palette.COPPER, Palette.CHARCOAL)
-	door.add_child(mesh)
+	var view := ModelKit.part(DOOR_MODEL, ["ValveDoor"], "ValveDoor", door)
+	if view != null:
+		view.scale = size / DOOR_MODEL_SIZE
+	else:
+		var mesh := MeshInstance3D.new()
+		var bm := BoxMesh.new()
+		bm.size = size
+		mesh.mesh = bm
+		mesh.material_override = Palette.striped(Palette.COPPER, Palette.CHARCOAL)
+		door.add_child(mesh)
 	door.position = door_foot + Vector3.UP * (size.y * 0.5 - 0.5)
 	door.rotation.y = d["turn"]
 	add_child(door)
@@ -1018,6 +1027,22 @@ func _build_wall(spec: Dictionary) -> Dictionary:
 	box.size = size
 	shape.shape = box
 	body.add_child(shape)
+	# Two of the cracked cache's fracture panels (CrackedCache: a slab with its charcoal fault line) back to
+	# back, each fitted to half the collider's depth, so the wall reads cracked from either approach; the
+	# striped box with three cracks stays as the fallback.
+	var panel := CrackedCache.model_part("CacheWall", body)
+	if panel != null:
+		var aabb := panel.mesh.get_aabb()
+		var fit := size / aabb.size * Vector3(1.0, 1.0, 0.5)
+		var back := CrackedCache.model_part("CacheWall", body)
+		back.name = "CacheWallBack"
+		for face in [[panel, 0.0], [back, PI]]:
+			var turn := Basis(Vector3.UP, face[1])
+			face[0].transform = Transform3D(turn * Basis.from_scale(fit), turn * (-aabb.get_center() * fit + Vector3(0.0, 0.0, size.z * 0.25)))
+		body.position = foot + Vector3.UP * (size.y * 0.5 - 0.6)
+		body.rotation.y = spec["turn"]
+		add_child(body)
+		return {"spec": spec, "body": body, "home": body.position, "broken": false}
 	var mesh := MeshInstance3D.new()
 	var bm := BoxMesh.new()
 	bm.size = size
