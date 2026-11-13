@@ -214,7 +214,8 @@ func _ordinary_reaction() -> bool:
 	return kind not in ["warden", "vault", "miniboss", "rogue_crane", "rogue_skip", "rogue_tender"] and not preload("res://src/combat/roster.gd").is_boss_piece(kind)
 
 
-func react(reaction: String, direction: Vector3, handed := false) -> void:
+# `struck` false is a reaction to something seen, not a blow: it plays no hit clip.
+func react(reaction: String, direction: Vector3, handed := false, struck := true) -> void:
 	_reaction_handed = handed
 	if not reactions_enabled or _dead or not _ordinary_reaction():
 		return
@@ -223,7 +224,7 @@ func react(reaction: String, direction: Vector3, handed := false) -> void:
 	_react_direction = Vector3(direction.x, 0.0, direction.z).normalized()
 	_react_speed = _knocked_speed()
 	_react_time = 0.0
-	if is_instance_valid(_clips):
+	if struck and is_instance_valid(_clips):
 		_clips.hit()
 	_react_duration = float(_react_row["rise"]) + float(_react_row["hold"]) + float(_react_row["recover"])
 	if float(_react_row["tumble"]) > 0.0:
@@ -314,10 +315,12 @@ func _update_reaction(delta: float) -> void:
 	var tilt := Transform3D.IDENTITY
 	var turn := Transform3D.IDENTITY
 	if _gait != null and reaction_pivot != null and not _dead:
-		_gait.step(delta, self, velocity, half_height, is_on_floor() and _knocked_speed() < 1.0)
+		var walking := is_on_floor() and _knocked_speed() < 1.0
+		_gait.step(delta, self, velocity, half_height, walking, get_floor_normal() if walking else Vector3.UP, radius)
 		tilt = _gait.tilt
 		turn = _gait.turn
-	if reaction_pivot != null:
+	# A dead body's pivot is a death clip's now (EnemyClips.die keeps the pose it died in).
+	if reaction_pivot != null and not _dead:
 		var lean_pose := Quaternion.IDENTITY
 		if _line_lean != 0.0 and is_instance_valid(target):
 			lean_pose = Quaternion(_reaction_axis(_reaction_ball() - global_position), deg_to_rad(LINE_LEAN) * _line_lean)
@@ -570,8 +573,10 @@ func _die() -> void:
 	_clear_telegraph()
 	# A kind with a death clip plays it on its own look first; the clip then scatters it.
 	# A ring-out falls out of the world, so it scatters at once.
-	if ringed_out or not (is_instance_valid(_clips) and _clips.die(_death_direction())):
-		EnemyMotion.scatter(self, kind, _death_direction())
+	# A body that died standing drops its pieces on the ground (W1-86); a ring-out or a body in the air does not.
+	var land := Callable(terrain, "height") if not ringed_out and is_on_floor() and terrain != null else Callable()
+	if ringed_out or not (is_instance_valid(_clips) and _clips.die(_death_direction(), land)):
+		EnemyMotion.scatter(self, kind, _death_direction(), land)
 	died.emit(global_position, scrap_value)
 	queue_free()
 
