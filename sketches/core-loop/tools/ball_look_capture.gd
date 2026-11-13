@@ -1,5 +1,8 @@
 extends SceneTree
 
+const Accretion := preload("res://src/build/accretion.gd")
+const PanelShell := preload("res://src/build/panel_shell.gd")
+const Panels := preload("res://src/build/panels.gd")
 const HeroAssets := preload("res://src/presentation/hero_assets.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
 const Palette := preload("res://src/core/palette.gd")
@@ -14,9 +17,11 @@ const Intent := preload("res://src/movement/intent.gd")
 # part turned through three spins. Needs a rendered display:
 #
 #   xvfb-run -a -s "-screen 0 1920x1080x24" $GODOT_BIN --rendering-driver opengl3 --path sketches/core-loop \
-#     --script res://tools/ball_look_capture.gd -- --out=<absolute dir> [--ball-look=<id>] [--pilot=<class id>] [--game=1]
+#     --script res://tools/ball_look_capture.gd -- --out=<absolute dir> [--ball-look=<id>] [--pilot=<class id>] [--heft=<1 to 5>] [--paint=<hex>] [--load=<panel plates>] [--game=1]
 #
 # --ball-look is the game's own launch switch (tuning.gd), so the stage and the game share it.
+# --heft fits that heft class, --paint an equipped paint, and --load a late run's ball: scrap
+# chunks and that many panel plates riding it. Each adds its own suffix to the file names.
 # --game=1 boots the park table instead of the stage and takes the play camera's own picture
 # with the ball at rest and after two seconds of rolling: <look>-game_rest.png and -game_roll.png.
 #
@@ -41,6 +46,9 @@ var _out := ""
 var _look := ""
 var _pilot := "pylon_engineer"
 var _in_game := false
+var _heft := 1
+var _paint := ""
+var _load := 0
 
 
 func _init() -> void:
@@ -51,6 +59,12 @@ func _init() -> void:
 			_look = arg.trim_prefix("--ball-look=")
 			if _look == BallLooks.TODAY:
 				_look = ""
+		elif arg.begins_with("--paint="):
+			_paint = arg.trim_prefix("--paint=")
+		elif arg.begins_with("--load="):
+			_load = int(arg.trim_prefix("--load="))
+		elif arg.begins_with("--heft="):
+			_heft = int(arg.trim_prefix("--heft="))
 		elif arg == "--game=1":
 			_in_game = true
 		elif arg.begins_with("--pilot="):
@@ -109,7 +123,10 @@ func _run() -> void:
 	root.add_child(ball)
 	var rolling := Node3D.new()
 	ball.add_child(rolling)
-	var shell: Dictionary = painter.fit_shell_into(rolling, _pilot, "", 1, {"class": def.color}, ball)
+	var tints := {"class": def.color}
+	if _paint != "":
+		tints["paint"] = Color(_paint)
+	var shell: Dictionary = painter.fit_shell_into(rolling, _pilot, "", _heft, tints, ball)
 	if shell.is_empty():
 		push_error("ball_look_capture: no shell for look '%s' pilot '%s'" % [_look, _pilot])
 		quit(3)
@@ -119,8 +136,26 @@ func _run() -> void:
 	if animator is AnimationPlayer and animator.has_animation("idle_loop"):
 		animator.play("idle_loop")
 		animator.advance(0.0)
-	var label := "%s-%s" % [_look if _look != "" else "current", _pilot]
-	var report := {"look": _look if _look != "" else "current", "pilot": _pilot, "shots": {}}
+	if _load > 0:
+		# A late run's ball: scrap chunks and panel plates ride the roll node, as build.gd adds them.
+		var roll := Node3D.new()
+		rolling.add_child(roll)
+		var scrap := Accretion.new()
+		roll.add_child(scrap)
+		scrap.setup()
+		scrap.set_lattice(true)
+		scrap.show_build(400.0, [], [], _heft)
+		var plates := PanelShell.new()
+		roll.add_child(plates)
+		var held := []
+		for i in _load:
+			held.append(Panels.ids()[i % Panels.ids().size()])
+		plates.show_panels(held, 7)
+		await process_frame
+		BallLooks.ride(painter.ball_look(), roll)
+	var label := "%s-%s%s%s%s" % [_look if _look != "" else "today", _pilot, "-h%d" % _heft if _heft > 1 else "",
+		"-paint" if _paint != "" else "", "-load%d" % _load if _load > 0 else ""]
+	var report := {"look": _look if _look != "" else "today", "pilot": _pilot, "shots": {}}
 	report.merge(_mesh_counts(ball))
 	for shot_name in SHOTS:
 		var shot: Dictionary = SHOTS[shot_name]
@@ -271,7 +306,7 @@ func _play() -> void:
 		if game.ctx.terrain.is_ready(1) and game.flow.in_play() and i > 240:
 			break
 	game.presentation.hide_ui()
-	var label := _look if _look != "" else "current"
+	var label := _look if _look != "" else "today"
 	var worn := String(game.tuning.option("ball_look"))
 	var shell: Node = game.player.find_child("HeroCore", true, false)
 	for i in 30:
