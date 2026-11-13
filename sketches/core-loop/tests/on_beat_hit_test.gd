@@ -1,7 +1,7 @@
 extends SceneTree
 
 # Hitting on the beat pays in sound and look only (Andrew, Q10 "Sound only", 17 Oct 22:12Z):
-# through the real game, an on-beat hit fires the sax stab cue and a bigger comic word, deals
+# through the real game, an on-beat hit fires the on-beat clap cue and a bigger comic word, deals
 # exactly what the same hit deals off the beat, and its own hit sound still plays on the
 # frame of the hit (inside the 5 ms contract), ahead of the stab. The beat clock is stood in
 # for by audio.beat_offset_hook, so this pins the decision, not the band's timing.
@@ -54,7 +54,7 @@ func _run() -> void:
 	t.near("an on-beat hit deals what the same hit deals off the beat", on["dealt"], off["dealt"])
 	t.check("the hit dealt damage at all", off["dealt"] > 0.0, str(off["dealt"]))
 	t.check("off the beat: no stab, no beat word", not off["stab"] and off["beat"] == 0)
-	t.check("on the beat: the sax stab cue fires", on["stab"])
+	t.check("on the beat: the clap cue fires", on["stab"])
 	t.check("on the beat: the beat fact reaches the comic word", on["beat"] == 1)
 	t.check("on the beat: the word is bigger", on["size"] >= PlayerFx.WORDS["beat"]["size"] * PlayerFx.ONBEAT_GROW - 0.001, str(on["size"]))
 	for row in [off, on]:
