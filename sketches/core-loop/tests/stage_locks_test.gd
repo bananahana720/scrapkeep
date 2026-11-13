@@ -4,6 +4,7 @@ extends SceneTree
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const ParkDefs := preload("res://src/core/park_defs.gd")
+const Director := preload("res://src/world/director.gd")
 const LockRows := preload("res://src/world/lock_rows.gd")
 const StageLocks := preload("res://src/world/stage_locks.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
@@ -61,6 +62,7 @@ func _run() -> void:
 	_rows()
 	await _gate()
 	await _riders()
+	await _left_behind()
 	await _lock()
 	await _timed_out()
 	await _skipped_when_engaged()
@@ -148,7 +150,8 @@ func _gate() -> void:
 	_t.eq("the plate says the clamp is shut while it holds", [plate["id"], plate["words"]], ["break_clamp_crews", "Break the clamp crews"])
 	_t.eq("its ring starts empty", plate["progress"], 0.0)
 	_t.eq("in slate, a locked thing", plate["color"], Palette.SLATE)
-	var at: Vector3 = warden.global_position
+	# Crews land by the ball, as the director lands them: one left LEAVE_M behind is dismissed (world.gd).
+	var at: Vector3 = game.ctx.player.ball_position()
 	# A lone arrival is no pack; a pack with a member gone alive is spoiled.
 	var lone := _spawn_pack(game, ["chaser"], 101, at)
 	_kill(lone[0])
@@ -218,7 +221,8 @@ func _riders() -> void:
 	var warden = game.flow.warden
 	game.ctx.spawner.strike(warden, "ram", 400.0)
 	await physics_frame
-	var at: Vector3 = warden.global_position
+	# Crews land by the ball, as the director lands them: one left LEAVE_M behind is dismissed (world.gd).
+	var at: Vector3 = game.ctx.player.ball_position()
 	# Two crews in reach: one housed member and a rider left, and two housed members.
 	var crew := _spawn_pack(game, ["chaser", "chaser", "lobber"], 201, at, [2])
 	var fresh := _spawn_pack(game, ["chaser", "chaser"], 202, at + Vector3(0.0, 0.0, 6.0))
@@ -248,7 +252,7 @@ func _riders() -> void:
 	await process_frame
 	game = await _game()
 	locks = game.flow.gate
-	at = game.flow.warden.global_position
+	at = game.ctx.player.ball_position()
 	var only := _spawn_pack(game, ["chaser", "lobber"], 204, at, [0, 1])
 	_kill(only[0])
 	await physics_frame
@@ -257,6 +261,32 @@ func _riders() -> void:
 	for i in 2:
 		await physics_frame
 	_t.eq("a crew of riders counts like a plain pack", locks.cleared, 1)
+	game.free()
+	await process_frame
+
+
+# A director crew left LEAVE_M behind the ball leaves (world.gd _dismiss_left_packs) and spoils, so it never
+# lights a pip; a yard crew at the same distance stays. Planted: the same crew by the ball stays.
+func _left_behind() -> void:
+	var game = await _game()
+	var locks = game.flow.gate
+	var ball: Vector3 = game.ctx.player.ball_position()
+	var far := ball + Vector3(0.0, 0.0, Director.LEAVE_M + 40.0)
+	var left := _spawn_pack(game, ["chaser", "lobber"], 301, far)
+	var near := _spawn_pack(game, ["chaser", "lobber"], 302, ball)
+	var yard: Node3D = game.ctx.spawner.spawn_enemy("chaser", game.ctx.terrain.drop_point(far.x, far.z + 6.0, 2.4))
+	yard.set_meta("pack_seq", 303)
+	yard.set_meta("yard_crew", true)
+	for i in 3:
+		await physics_frame
+	_t.check("a crew left behind leaves", left.all(func(e): return not is_instance_valid(e) or e.is_queued_for_deletion()))
+	_t.check("a yard crew left behind stays", is_instance_valid(yard) and not yard.is_queued_for_deletion())
+	_t.check("planted: a crew by the ball stays", near.all(func(e): return is_instance_valid(e) and not e.is_queued_for_deletion()))
+	for enemy in near:
+		_kill(enemy)
+	for i in 2:
+		await physics_frame
+	_t.eq("only the crew by the ball lights a pip", locks.cleared, 1)
 	game.free()
 	await process_frame
 

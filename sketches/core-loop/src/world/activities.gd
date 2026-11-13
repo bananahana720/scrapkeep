@@ -817,6 +817,14 @@ func standing() -> int:
 	return n
 
 
+# Whether `enemy` is one of the brutes standing() counts.
+func keeps(enemy: Node) -> bool:
+	for s in sites:
+		if s.brute == enemy:
+			return true
+	return false
+
+
 func _build(id: String, at: Vector2, spec := {}) -> Site:
 	var started := Time.get_ticks_usec()
 	var site := _build_site(id, at, spec)
