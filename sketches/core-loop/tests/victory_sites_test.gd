@@ -7,7 +7,7 @@ extends SceneTree
 # 13 Nov 2026). Plays the park table headless through the real flow with SimClock.ticks off, as a played game:
 #   - the victory after stage 2 (world 1's last) builds stage 3's sites under a hidden, disabled holder;
 #   - entering stage 3 takes every one of them;
-#   - a victory after the run's last stage, and a bot run (SimClock.ticks), build nothing ahead.
+#   - a victory that ends the run (a world 1 sitting at Brindle), and a bot run (SimClock.ticks), build nothing ahead.
 
 const T := preload("res://tests/support/t.gd")
 const Game := preload("res://src/game.gd")
@@ -74,12 +74,15 @@ func _run() -> void:
 	_t.check("the entry took every site the victory built", activities.last_entry_adopted == plan_size and activities.sites.size() == plan_size,
 		"adopted %d of %d, sites %d" % [activities.last_entry_adopted, plan_size, activities.sites.size()])
 
-	# The run's last stage has no next stage to build.
-	var last: int = _game.ctx.stages.DEFS.size() if "DEFS" in _game.ctx.stages else 0
-	_game.run.stage = last
-	activities._on_flow_changed("victory")
-	_t.check("a victory that ends the run builds nothing ahead", last == 0 or activities._ahead.is_empty(), "last stage %d" % last)
+	# A world 1 sitting (tuning final_world 1) ends won at Brindle: its victory builds nothing ahead, though stage 3 exists.
+	_game.tuning.set_option("final_world", "1")
 	_game.run.stage = 2
+	activities._on_flow_changed("victory")
+	_t.check("a victory that ends the run builds nothing ahead", flow.run_ends_after(2) and activities._ahead.is_empty(),
+		"ends %s, ahead %s" % [flow.run_ends_after(2), activities._ahead.get("stage")])
+	_game.tuning.set_option("final_world", "last")
+	_t.check("without the sitting the same victory builds ahead (the control)", _control_builds(activities), "")
+	activities._drop_ahead()
 	SimClock.ticks = true
 	activities._on_flow_changed("victory")
 	_t.check("a bot run builds nothing ahead", activities._ahead.is_empty(), "")
@@ -88,6 +91,11 @@ func _run() -> void:
 	_game.queue_free()
 	await process_frame
 	quit(_t.verdict())
+
+
+func _control_builds(activities) -> bool:
+	activities._on_flow_changed("victory")
+	return int(activities._ahead.get("stage", 0)) == 3
 
 
 func _ticks(n: int) -> void:
