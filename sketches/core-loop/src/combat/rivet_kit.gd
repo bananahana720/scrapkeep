@@ -1364,9 +1364,44 @@ func _peak_aim() -> Vector3:
 
 # Full Cut: the beam widens and sweeps FULL_CUT_DEG, half to each side of the aim, out to
 # FULL_CUT_REACH; every machine it crosses takes FULL_CUT_DAMAGE x heft once, no pierce cap.
+# The carve tests up to about 19,000 parts against terrain shadows (133 ms in the cloud, a tick
+# of 100 to 450 ms in a park), so it runs on a worker and the cut lands CUT_TICKS later (55 ms,
+# the Breach's "Beat later"), on the same tick every time so a seed replays. The terrain is
+# gathered here, on the peak tick, so the cut is the ground as it stood then. cut_ticks 0 carves
+# and lands on the peak tick, as before (a test's switch).
+const CUT_TICKS := LATE_TICKS
+var cut_ticks := CUT_TICKS
+# Cuts carving, oldest first: {task, due, sector, at, heft, record, out: {cells, shadows}}.
+var _cuts_due: Array = []
+# The worker's own kit, so its carve counts work apart from the main thread's Breach (_shade_work).
+var _carver = null
+
+
 func full_cut(at: Vector3, dir: Vector3, heft: float) -> int:
-	var shape := _commit_sector(at, dir, Weapons.FULL_CUT_REACH, deg_to_rad(Weapons.FULL_CUT_DEG * 0.5), Weapons.FULL_CUT_WIDTH)
 	carve_stats["full_cut"] += 1
+	var sector := _sector_cells(at, dir, Weapons.FULL_CUT_REACH, deg_to_rad(Weapons.FULL_CUT_DEG * 0.5), Weapons.FULL_CUT_WIDTH)
+	if cut_ticks <= 0:
+		var shadows: Array = []
+		var cells := _commit_terrain(at, sector["cells"], shadows, sector["hull"])
+		return _land_cut(_sector_shape(sector, cells, shadows), at, heft)
+	var found := _terrain_near(at, sector["cells"])
+	if _carver == null:
+		_carver = get_script().new()
+	var out := {}
+	var job := {"due": Engine.get_physics_frames() + cut_ticks, "sector": sector, "at": at, "heft": heft, "out": out,
+		"record": combat.ultimate._record if combat.ultimate != null else {}}
+	job["task"] = WorkerThreadPool.add_task(_carve_off.bind(_carver, at, sector["cells"], sector["hull"], found, out), true, "rivet full cut")
+	_cuts_due.append(job)
+	return 0
+
+
+static func _carve_off(carver, origin: Vector3, cells: Array, hull: Array, found: Dictionary, out: Dictionary) -> void:
+	var shadows: Array = []
+	out["cells"] = carver._carve(origin, cells, shadows, hull, found)
+	out["shadows"] = shadows
+
+
+func _land_cut(shape: Dictionary, at: Vector3, heft: float) -> int:
 	var hits := 0
 	for enemy in select(shape):
 		_beam_hit(enemy, Weapons.FULL_CUT_DAMAGE * heft, at)
@@ -1374,6 +1409,25 @@ func full_cut(at: Vector3, dir: Vector3, heft: float) -> int:
 	_draw_shape("rivet_scar", shape)
 	_scar_left = Weapons.FULL_CUT_SCAR
 	return hits
+
+
+# Lands each cut on its due tick, waiting for its carve when the worker is still on it.
+func _step_cuts(now := Engine.get_physics_frames()) -> void:
+	while not _cuts_due.is_empty() and now >= int(_cuts_due[0]["due"]):
+		var job: Dictionary = _cuts_due.pop_front()
+		WorkerThreadPool.wait_for_task_completion(job["task"])
+		var out: Dictionary = job["out"]
+		var hits := _land_cut(_sector_shape(job["sector"], out["cells"], out["shadows"]), job["at"], job["heft"])
+		var record: Dictionary = job["record"]
+		if not record.is_empty():
+			record["volley_hits"] = int(record.get("volley_hits", 0)) + hits
+
+
+# Drops every cut still carving, with its hits.
+func _drop_cuts() -> void:
+	for job in _cuts_due:
+		WorkerThreadPool.wait_for_task_completion(job["task"])
+	_cuts_due = []
 
 
 # The Breach Skid reach: 1.5 x the class landing radius, plus ult_radius.
@@ -1690,6 +1744,7 @@ func step(delta: float) -> void:
 	_step_preview()
 	_step_piece(delta)
 	_step_late()
+	_step_cuts()
 	_step_cards()
 
 
@@ -1701,7 +1756,16 @@ const WARM_REACH := 60.0
 
 func _exit_tree() -> void:
 	_drop_late()
+	_drop_cuts()
 	terrain.finish()
+
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_PREDELETE:
+		_drop_cuts()
+		if _carver != null:
+			_carver.free()
+			_carver = null
 
 
 # Warm-up cycles run, for a hitch guard: while Rivet stands, terrain.builds should stop growing.
@@ -1759,6 +1823,7 @@ func _clear_piece() -> void:
 func _clear() -> void:
 	selected_shapes.clear()
 	_drop_late(true)
+	_drop_cuts()
 	pulses.clear()
 	if not haul.is_empty():
 		_end_haul(false)
