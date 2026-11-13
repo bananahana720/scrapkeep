@@ -40,13 +40,19 @@ const BallState := preload("res://src/movement/ball_state.gd")
 # new. Stage 2 moved with world 1's level-ground rule (pocket_draw.gd TIDY). Stages 3 to 6 moved only in the
 # drawn camps' pay: with the old pay ({named hot_rivets, common and rare}) put back on each drawn camp, the four
 # hashes were the pins they replace (6b2244ea..., e6afadaa..., d89a37e5..., 01459ce0...), so no site moved.
+# 2026-11-13, two library rows: PR 924 (W1-17) assigned sump_vault to the flume's trestle_cache, so on stages 2 and 4,
+# whose draws held it, its interior carries the assignment (sites unchanged, measured on 1ec89600: stages 1, 3, 5, 6
+# kept their pins). PR 925 (W1-76) added incline_vault, a small secret assigned to the dam, which every other park
+# may draw; the draw picks among the rooms it can afford, so all six stages moved (3f989714... -> 37c6a9b6..., 36c277f7...
+# -> 6a062ee3..., c428c12b... -> 55d86bc8..., de3a6b7c... -> 09e28c2c..., 5b1da6fc... -> 70807e39..., 17825245... ->
+# ee063c31...).
 const GOLDEN := {
-	1: "3f9897144c5611195011b596083ab0f197023035d6263eff4c15955bc6e410ba",
-	2: "36c277f74ea206f8fbfb5cd25b9cb10019670baa3ec52fcdf58770a23e1cd615",
-	3: "c428c12b727ad17b698969d3b045e2ed705edca615250ce2f81641cf6ce61439",
-	4: "de3a6b7c0ea318c71f155a2b4492568c7872402d1462e0a090d193abbf133a2c",
-	5: "5b1da6fc4de1e662ef853ee0665d6db9cb0e7dacddc87bd9dcf01acf37c03acd",
-	6: "178252450f7dbc311e73ccca98c4d618545aebd92fd5a2e77c3f15e619e7bfff",
+	1: "37c6a9b642914fa639033a4c22cdfe0fbdd86952e1451f5c6f6a2883fb0cbb31",
+	2: "6a062ee367b7523c7260c9e5c742929d66b7383cf1e0d84c38a6d313d0eb8651",
+	3: "55d86bc8cf198a63c7a692c8c29f5e4efe58b7aa99312e02c345f42de7c22f7b",
+	4: "09e28c2ca5f2f22a286ee5e4495eab8d1e3d3724483816f053be9cccc4bcb99b",
+	5: "70807e398a40a6dfd76baa8a6fa437b864ba47603fc390402cec108c8325a12d",
+	6: "ee063c318b2053d8272dec36f194458c6f703435d78acd905878ac3f7b06bd7f",
 }
 const PICK_SEEDS := 2000
 const DRAW_SEEDS := 16
