@@ -264,8 +264,10 @@ func _component(seed_value: int, tier_value: int) -> Dictionary:
 		var measured := _schedule(d)
 		members += measured.members
 		if not record:
-			var cap_expected := mini(Director.HARD_CAP, roundi((6 + 2 * Director.MAX_TIME_TIERS) * row.threat * row.pressure.pack_scale * config.cap_weight))
-			var interval_expected := maxf(Director.MIN_INTERVAL, (Director.BASE_INTERVAL - 0.7 * Director.MAX_TIME_TIERS) / row.threat * row.pressure.interval_scale * config.interval_weight)
+			# The stage's last clock tier (mobs.clock_tiers_by_stage: +3 on world 1 since wave 37, +2 elsewhere).
+			var last_tier := Director.clock_tiers(d.dial_stage)
+			var cap_expected := mini(Director.HARD_CAP, roundi((6 + 2 * last_tier) * row.threat * row.pressure.pack_scale * config.cap_weight))
+			var interval_expected := maxf(Director.MIN_INTERVAL, (Director.BASE_INTERVAL - 0.7 * last_tier) / row.threat * row.pressure.interval_scale * config.interval_weight)
 			t.eq("independent cap seed %d tier %d stage %d" % [seed_value, tier_value, row.stage], measured.cap, cap_expected)
 			t.near("independent interval seed %d tier %d stage %d" % [seed_value, tier_value, row.stage], measured.interval, interval_expected)
 			# Ruling al: no tier raises enemy health.
