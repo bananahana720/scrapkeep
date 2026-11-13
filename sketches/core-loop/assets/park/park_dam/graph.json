@@ -1,31 +1,31 @@
 {
-  "bake_sha256": "1c9ba0eab021b9789e240a7083a49a1b543794d290b3fcabb74375fd6183c8b0",
+  "bake_sha256": "af620a914ee3d82fcc43cb2cb789a0449750ba26d2a3476fa413cc776eebfcb3",
   "beacon_ok": true,
   "breaches": [],
-  "bytes": 1312401,
-  "edges": 309883,
+  "bytes": 1312779,
+  "edges": 309863,
   "first_failed": "",
   "flags": {
     "deck": 0,
-    "door_ok": 40022,
-    "line": 290,
+    "door_ok": 40030,
+    "line": 282,
     "open": 40401,
-    "sight_ok": 8432,
+    "sight_ok": 8477,
     "under": 0
   },
   "full_visit_m": 2439,
-  "full_visit_ratio": "1.804",
-  "graph_sha256": "545bb2f44a8fc237423e7b95c2a4b4886f646fab3597dba02f088fd6dca58cbd",
+  "full_visit_ratio": "1.803",
+  "graph_sha256": "42d20ee204f028cd1623bdf36d84c4298f7dd31c8ca86abdc75ae926c575379d",
   "line_errors": [],
   "line_path_nodes": 159,
   "longest_est_m": 3144,
   "map": "park_dam",
   "nodes": 40401,
-  "park_sha256": "932c858392fefb39ec49a65d85c9de3658cb7e659827a4e647be34d22bb8d88a",
+  "park_sha256": "c7b1db3ed133fb6499a96298bb70201e478e33362a8ed5d079d1fbcf30ad48df",
   "pockets": [
     {
       "clear_ring": [],
-      "d_landmark": 1016,
+      "d_landmark": 1017,
       "d_spawn": 344,
       "detour_m": 0,
       "door_at": [
@@ -54,12 +54,12 @@
       "clear_ring": [],
       "d_landmark": 367,
       "d_spawn": 1161,
-      "detour_m": 403,
+      "detour_m": 411,
       "door_at": [
         -208,
         400
       ],
-      "door_m": 403,
+      "door_m": 411,
       "flags": [
         "open",
         "door_ok",
@@ -81,12 +81,12 @@
       "clear_ring": [],
       "d_landmark": 445,
       "d_spawn": 1137,
-      "detour_m": 251,
+      "detour_m": 243,
       "door_at": [
         208,
         248
       ],
-      "door_m": 251,
+      "door_m": 243,
       "flags": [
         "open",
         "door_ok",
@@ -107,7 +107,7 @@
     },
     {
       "clear_ring": [],
-      "d_landmark": 1043,
+      "d_landmark": 1045,
       "d_spawn": 315,
       "detour_m": 103,
       "door_at": [
@@ -159,7 +159,7 @@
       "site": "service_ledge"
     }
   ],
-  "reward_ratio": "0.859",
+  "reward_ratio": "0.858",
   "ride_edges": 16,
   "routes": {
     "bucket_flight": [],
@@ -181,12 +181,12 @@
   },
   "schema": "scrapkeep-park-graph/1",
   "spawn": {
-    "d_landmark": 1352,
-    "farther_share": "0.133",
+    "d_landmark": 1353,
+    "farther_share": "0.132",
     "ok": true,
     "run": true
   },
-  "spawn_beacon_m": 1352,
+  "spawn_beacon_m": 1353,
   "spawn_beacon_share": "0.430",
   "stage_checked": [
     "beacon_ok",
@@ -197,7 +197,7 @@
       "name": "full_visit_ratio",
       "ok": true,
       "target": "at most 3.0",
-      "value": 1.804
+      "value": 1.803
     }
   ],
   "tool_sha256": "a33c70d786843eec2d89c1ae510c6d8ef7c95aff43ff184940f56c816121dc7b",
@@ -212,7 +212,7 @@
         "viable": true
       },
       {
-        "cost": 1341.9,
+        "cost": 1342.3,
         "d_landmark": 63.7,
         "name": "pool_pillar",
         "on_route": false,
@@ -236,7 +236,7 @@
         "viable": true
       },
       {
-        "cost": 1297.2,
+        "cost": 1298.6,
         "d_landmark": 24.1,
         "name": "gate_row_apron",
         "on_route": true,
@@ -252,18 +252,10 @@
         "viable": false
       },
       {
-        "cost": 1273.7,
+        "cost": 1274.1,
         "d_landmark": 77.5,
         "name": "training_wall_east",
         "on_route": false,
-        "rank": 0,
-        "viable": false
-      },
-      {
-        "cost": 1212.7,
-        "d_landmark": 121.6,
-        "name": "apron_kicker_ramp",
-        "on_route": true,
         "rank": 0,
         "viable": false
       },
@@ -293,7 +285,7 @@
       },
       {
         "cost": 909.2,
-        "d_landmark": 446.4,
+        "d_landmark": 447.9,
         "name": "eye_fin_east",
         "on_route": false,
         "rank": 6,
@@ -301,7 +293,7 @@
       },
       {
         "cost": 896.0,
-        "d_landmark": 418.1,
+        "d_landmark": 423.6,
         "name": "the_eye",
         "on_route": true,
         "rank": 0,
@@ -309,7 +301,7 @@
       },
       {
         "cost": 889.4,
-        "d_landmark": 446.5,
+        "d_landmark": 448.0,
         "name": "eye_fin_west",
         "on_route": false,
         "rank": 7,
@@ -333,7 +325,7 @@
       },
       {
         "cost": 698.6,
-        "d_landmark": 840.1,
+        "d_landmark": 841.6,
         "name": "hoodoo_stack_7",
         "on_route": false,
         "rank": 0,
@@ -373,7 +365,7 @@
       },
       {
         "cost": 535.5,
-        "d_landmark": 523.1,
+        "d_landmark": 524.7,
         "name": "slot_fin_far",
         "on_route": false,
         "rank": 8,
@@ -389,7 +381,7 @@
       },
       {
         "cost": 474.7,
-        "d_landmark": 555.5,
+        "d_landmark": 556.9,
         "name": "wash_fin_west",
         "on_route": false,
         "rank": 9,
@@ -413,7 +405,7 @@
       },
       {
         "cost": 408.6,
-        "d_landmark": 927.2,
+        "d_landmark": 928.6,
         "name": "shelf_lip_ramp",
         "on_route": false,
         "rank": 0,
@@ -421,7 +413,7 @@
       },
       {
         "cost": 391.7,
-        "d_landmark": 930.6,
+        "d_landmark": 932.0,
         "name": "dome_25",
         "on_route": true,
         "rank": 0,
@@ -429,7 +421,7 @@
       },
       {
         "cost": 354.7,
-        "d_landmark": 965.5,
+        "d_landmark": 966.9,
         "name": "dome_24",
         "on_route": false,
         "rank": 10,
@@ -437,7 +429,7 @@
       },
       {
         "cost": 339.4,
-        "d_landmark": 992.1,
+        "d_landmark": 994.7,
         "name": "dome_23",
         "on_route": false,
         "rank": 11,
@@ -445,7 +437,7 @@
       },
       {
         "cost": 301.1,
-        "d_landmark": 1175.2,
+        "d_landmark": 1177.6,
         "name": "dome_8",
         "on_route": false,
         "rank": 12,
@@ -453,7 +445,7 @@
       },
       {
         "cost": 295.2,
-        "d_landmark": 1072.9,
+        "d_landmark": 1074.6,
         "name": "dome_20",
         "on_route": false,
         "rank": 13,
@@ -461,7 +453,7 @@
       },
       {
         "cost": 226.2,
-        "d_landmark": 1225.6,
+        "d_landmark": 1227.1,
         "name": "dome_7",
         "on_route": false,
         "rank": 14,
@@ -469,7 +461,7 @@
       },
       {
         "cost": 214.6,
-        "d_landmark": 1119.5,
+        "d_landmark": 1121.0,
         "name": "domes_kicker_ramp",
         "on_route": false,
         "rank": 0,
@@ -477,7 +469,7 @@
       },
       {
         "cost": 204.1,
-        "d_landmark": 1118.5,
+        "d_landmark": 1120.0,
         "name": "dome_19",
         "on_route": true,
         "rank": 0,
@@ -485,7 +477,7 @@
       },
       {
         "cost": 172.9,
-        "d_landmark": 1141.0,
+        "d_landmark": 1142.4,
         "name": "dome_18",
         "on_route": false,
         "rank": 15,
@@ -493,7 +485,7 @@
       },
       {
         "cost": 136.0,
-        "d_landmark": 1388.1,
+        "d_landmark": 1389.6,
         "name": "dome_12",
         "on_route": false,
         "rank": 16,
@@ -501,7 +493,7 @@
       },
       {
         "cost": 100.8,
-        "d_landmark": 1213.3,
+        "d_landmark": 1214.7,
         "name": "dome_5",
         "on_route": true,
         "rank": 0,
@@ -509,7 +501,7 @@
       },
       {
         "cost": 70.3,
-        "d_landmark": 1361.6,
+        "d_landmark": 1363.0,
         "name": "dome_1",
         "on_route": false,
         "rank": 17,
@@ -517,7 +509,7 @@
       },
       {
         "cost": 63.4,
-        "d_landmark": 1310.9,
+        "d_landmark": 1312.3,
         "name": "dome_2",
         "on_route": false,
         "rank": 18,
@@ -525,7 +517,7 @@
       },
       {
         "cost": 0.0,
-        "d_landmark": 1323.8,
+        "d_landmark": 1325.3,
         "name": "top_shelf_deck",
         "on_route": true,
         "rank": 0,
@@ -534,7 +526,7 @@
     ],
     "count": 106,
     "crossings": {
-      "drop": 35,
+      "drop": 36,
       "ride": 11,
       "walk": 155
     },

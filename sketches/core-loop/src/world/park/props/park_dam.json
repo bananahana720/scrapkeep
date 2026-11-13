@@ -2739,10 +2739,10 @@
    "id": "low_tool_roll_view_6",
    "template": "low_tool_roll",
    "at": [
-    -38,
-    410
+    -39,
+    406
    ],
-   "yaw_deg": -54,
+   "yaw_deg": -90,
    "near": "density window tally 0 m, 12 m from line"
   },
   {
@@ -3072,5 +3072,5 @@
   ],
   "seed": 11
  },
- "pin": 3576303166
+ "pin": 2694347742
 }
