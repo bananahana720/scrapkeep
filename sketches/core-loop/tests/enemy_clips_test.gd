@@ -168,6 +168,49 @@ func _chaser_cycle() -> void:
 	enemy.free()
 
 
+# The bola thrower's reticle is held open all wind-up (its telegraph progress stays 0); its body's
+# wind-up clip still runs on the wind-up's own clock (W1-87 review).
+func _bola_cycle() -> void:
+	var enemy = _spawn("bola_thrower")
+	enemy.global_position = _game.player.ball_position() + Vector3(10.0, 1.6, 0.0)
+	enemy._rest = 0.0
+	await _frames(2)
+	var driver = enemy._clips
+	var length := float(driver.lib.anims.windup.length)
+	var matched := true
+	var ticks := 0
+	var furthest := 0.0
+	for i in 900:
+		await physics_frame
+		if enemy.phase == enemy.Phase.WARN:
+			ticks += 1
+			matched = matched and driver.clip == "windup" and absf(driver.clip_time - enemy.windup_run() * length) < 0.0001
+			furthest = maxf(furthest, driver.clip_time)
+		elif ticks > 0:
+			break
+	_t.check("bola windup runs on its own clock under a held-open reticle", matched and ticks >= 20 and furthest > length * 0.8,
+		"%d wind-up ticks, furthest %.2f of %.2f s" % [ticks, furthest, length])
+	enemy.free()
+	await _frames(2)
+
+
+# The netcaster's net rides its body's joint; a crew whose tool is away (a thrown cup) breaks up at
+# once instead of playing a death clip without it.
+func _carried_parts() -> void:
+	var net = _spawn("netcaster")
+	await _frames(2)
+	var hung: Node = net.reaction_pivot.find_child("NetcasterNet", true, false)
+	_t.check("the netcaster's net rides its body joint", hung != null and String(hung.get_parent().name).begins_with(EnemyClips.JOINT_PREFIX), str(hung.get_parent().name if hung != null else null))
+	net.free()
+	var trap = _spawn("catch_trap")
+	await _frames(2)
+	var parent: Node = trap.get_parent()
+	trap._cup.top_level = true
+	trap.take_damage(trap.hp + 1.0)
+	_t.check("a catch trap killed with its cup out breaks up at once", parent.get_node_or_null("DeathClip") == null and parent.get_node_or_null("DeathScatter") != null)
+	await _frames(Engine.physics_ticks_per_second)
+
+
 # Death plays its clip on the look, then the usual break-up scatters it and frees the holder.
 func _death() -> void:
 	for kind in ["chaser", "winch_drone"]:
@@ -238,6 +281,8 @@ func _run() -> void:
 	_library()
 	await _per_kind()
 	await _chaser_cycle()
+	await _bola_cycle()
+	await _carried_parts()
 	await _death()
 	await _hits()
 	await _reduced_motion()

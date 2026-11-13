@@ -523,7 +523,7 @@ def netcaster(root):
     })
     rig.clip("move", MOVE, {"body": gait(MOVE, 2.5, 0.05)})
     # The rack leans back to fling: the crew digs in and loads the throw over the warning.
-    rig.clip("windup", windup, {"body": windup_build(windup, (1.05, 0.94, 1.05), shudder=1.6, lean=(-7, 0, 0))})
+    rig.clip("windup", windup, {"body": windup_build(windup, (1.05, 0.94, 1.05), shudder=1.0, lean=(-5, 0, 0))})
     rig.clip("attack", attack, {"body": strike(attack, (0.96, 1.07, 0.96), settle={"rot": (5, 0, 0)})})
     rig.clip("hit", HIT, {"body": flinch()})
     # Downed: the rack's weight tips the crew forward onto its face, and it rocks once on the bars.
@@ -577,17 +577,17 @@ def swatter(root):
         "body": throb(BAR2, 0.01),
         "paddle": beat_tics([2 * BEAT, 6 * BEAT], {"rot": (-4, 0, 0)}, fall=4 * F),
     })
-    rig.clip("move", MOVE, {"body": gait(MOVE, 2.5, 0.05)})
+    # Pitch stays small: the paddle is 6 m long and rides 0.2 m off the ground at its tip.
+    rig.clip("move", MOVE, {"body": gait(MOVE, 1.2, 0.05)})
     # swatter.gd draws the paddle back along the ground; the crew plants and twists into it.
-    rig.clip("windup", windup, {"body": windup_build(windup, (1.05, 0.94, 1.05), shudder=1.8, lean=(3, 0, 0))})
+    rig.clip("windup", windup, {"body": windup_build(windup, (1.05, 0.94, 1.05), shudder=1.8, lean=(0, 6, 0))})
     rig.clip("attack", attack, {"body": strike(attack, (0.95, 1.06, 0.95), settle={"rot": (0, 0, 3)})})
     rig.clip("hit", HIT, {"body": flinch()})
-    # Downed: the crew topples over its own paddle, which bounces once flat on the ground.
+    # Downed: the crew topples sideways off its paddle, which twangs side to side and stops.
     rig.clip("death", DEATH, {
         "body": [(0, {}), (4 * F, {"scale": (1.08, 0.86, 1.08)}), (0.28, {"rot": (0, 0, -20), "loc": (0, -0.14, 0)}),
                  (DEATH, {"rot": (0, 0, -18), "loc": (0, -0.16, 0)})],
-        "paddle": [(0, {}), (5 * F, {"loc": (0, 0.08, 0)}), (0.26, {"loc": (0, -0.04, 0)}), (0.34, {"loc": (0, 0.03, 0)}),
-                   (DEATH, {})],
+        "paddle": merge([(0, {})], shake(4 * F, DEATH - F, 9, period=2 * F, axis=1, decay=0.72), [(DEATH, {})]),
     })
     return rig
 
@@ -608,17 +608,13 @@ def catch_trap(root):
         "body": gait(MOVE, 3.0, 0.05),
         "cup": [(0, {"rot": (4, 0, 0)}), (MOVE / 2, {"rot": (-4, 0, 0)}), (MOVE, {"rot": (4, 0, 0)})],
     })
-    # It crouches and cocks the cup back over its head to sling it.
-    rig.clip("windup", windup, {
-        "body": windup_build(windup, (1.06, 0.92, 1.06), shudder=1.6, lean=(-5, 0, 0)),
-        "cup": [(0, {}), (windup * 0.6, {"rot": (-14, 0, 0)}), (windup - 3 * F, {"rot": (-22, 0, 0)}), (windup, {"rot": (-22, 0, 0)})],
-    })
-    rig.clip("attack", attack, {
-        "body": strike(attack, (0.94, 1.08, 0.94), settle={"rot": (4, 0, 0)}),
-        "cup": [(0, {"rot": (18, 0, 0)}), (3 * F, {"rot": (10, 0, 0)}), (attack, {})],
-    })
+    # The cup has left on the commit (catch_trap.gd throws it at the ring); the crew crouches and
+    # hauls its line through the warning, then heaves on the catch.
+    rig.clip("windup", windup, {"body": windup_build(windup, (1.06, 0.92, 1.06), shudder=1.6, lean=(-5, 0, 0))})
+    rig.clip("attack", attack, {"body": strike(attack, (0.94, 1.08, 0.94), settle={"rot": (-4, 0, 0)})})
     rig.clip("hit", HIT, {"body": flinch()})
-    # Downed: the crew drops on its seat and the cup tips over its head and rattles in place.
+    # Downed with its cup home: the crew drops on its seat and the cup tips over its head and
+    # rattles in place. A crew killed with its cup out breaks up at once (enemy_clips.gd).
     rig.clip("death", DEATH, {
         "body": [(0, {}), (3 * F, {"loc": (0, -0.12, 0), "scale": (1.12, 0.8, 1.12)}), (DEATH, {"loc": (0, -0.18, 0), "rot": (-6, 0, 0)})],
         "cup": merge([(0, {}), (5 * F, {"rot": (40, 0, 0)})],
@@ -642,15 +638,16 @@ def deflector(root):
     })
     rig.clip("move", MOVE, {"body": gait(MOVE, 2.0, 0.04)})
     # deflector.gd raises the wall and squats the body; the crew shoulders into the dish.
-    rig.clip("windup", windup, {"body": windup_build(windup, (1.03, 0.97, 1.03), shudder=1.4, lean=(5, 0, 0))})
+    rig.clip("windup", windup, {"body": windup_build(windup, (1.03, 0.97, 1.03), shudder=1.4, lean=(2, 0, 0))})
     rig.clip("attack", attack, {"body": strike(attack, (1.04, 0.97, 1.04), settle={"rot": (3, 0, 0)})})
     rig.clip("hit", HIT, {"body": flinch(), "dish": merge([(0, {})], shake(F, 0.24, 4, period=2 * F, axis=1, decay=0.7), [(HIT, {})])})
-    # Downed: the crew sags back and the dish falls forward off its arm and wobbles flat.
+    # Downed: the crew sags back and the dish, no longer held, pitches forward off its arm and
+    # wobbles where it stops.
     rig.clip("death", DEATH, {
         "body": [(0, {}), (4 * F, {"scale": (1.06, 0.88, 1.06)}), (DEATH, {"rot": (-10, 0, 0), "loc": (0, -0.16, 0)})],
-        "dish": merge([(0, {}), (6 * F, {"rot": (38, 0, 0), "loc": (0, -0.3, 0)})],
-                      shake(7 * F, DEATH - F, 8, period=2 * F, axis=2, base={"rot": (40, 0, 0), "loc": (0, -0.34, 0)}, decay=0.7),
-                      [(DEATH, {"rot": (40, 0, 0), "loc": (0, -0.34, 0)})]),
+        "dish": merge([(0, {}), (6 * F, {"rot": (52, 0, 0), "loc": (0, -0.3, 0)})],
+                      shake(7 * F, DEATH - F, 8, period=2 * F, axis=2, base={"rot": (54, 0, 0), "loc": (0, -0.34, 0)}, decay=0.7),
+                      [(DEATH, {"rot": (54, 0, 0), "loc": (0, -0.34, 0)})]),
     })
     return rig
 
@@ -662,7 +659,7 @@ def gyro_jammer(root):
         ("body", (0, -1.1, 0), None),
         ("aerial", (0, 2.6, -0.2), "body"),
     ])
-    # The current meter's keeper: it leans to read the flow and the rotor mast nods on the beat.
+    # The current meter's keeper: it leans to read the flow and the meter's hoops dip on the beat.
     rig.clip("idle", BAR2, {
         "body": [(0, {}), (2 * BEAT, {"rot": (2, 0, 0)}), (4 * BEAT, {}), (6 * BEAT, {"rot": (0, 0, 1.5)}), (BAR2, {})],
         "aerial": beat_tics([1 * BEAT, 5 * BEAT], {"rot": (-5, 0, 0)}, fall=5 * F),
@@ -671,7 +668,7 @@ def gyro_jammer(root):
         "body": gait(MOVE, 2.5, 0.05),
         "aerial": [(0, {"rot": (3, 0, 0)}), (MOVE / 2, {"rot": (-3, 0, 0)}), (MOVE, {"rot": (3, 0, 0)})],
     })
-    # The mast cranks up and hums: the crew braces and the mast shudders as the jam charges.
+    # The jam charges: the crew braces and the hoops climb and shudder on the mast.
     rig.clip("windup", windup, {
         "body": windup_build(windup, (1.04, 0.95, 1.04), shudder=1.2),
         "aerial": merge([(0, {})], shake(windup * 0.5, windup - 3 * F, 3, period=F, axis=0),
@@ -682,12 +679,12 @@ def gyro_jammer(root):
         "aerial": [(0, {"scale": (1.0, 1.12, 1.0)}), (3 * F, {"scale": (1.0, 1.06, 1.0)}), (attack, {})],
     })
     rig.clip("hit", HIT, {"body": flinch()})
-    # Downed: the crew slumps and the mast keels over, wobbling on its last spin.
+    # Downed: the crew slumps and the hoops slide down the mast, wobbling on their last spin.
     rig.clip("death", DEATH, {
         "body": [(0, {}), (4 * F, {"loc": (0, -0.1, 0), "scale": (1.08, 0.86, 1.08)}), (DEATH, {"loc": (0, -0.16, 0), "rot": (0, 0, 8)})],
-        "aerial": merge([(0, {}), (5 * F, {"rot": (0, 0, 30)})],
-                        shake(6 * F, DEATH - F, 14, period=2 * F, axis=0, base={"rot": (0, 0, 34)}, decay=0.72),
-                        [(DEATH, {"rot": (0, 0, 34)})]),
+        "aerial": merge([(0, {}), (5 * F, {"loc": (0, -0.5, 0)})],
+                        shake(6 * F, DEATH - F, 8, period=2 * F, axis=2, base={"loc": (0, -0.6, 0)}, decay=0.72),
+                        [(DEATH, {"loc": (0, -0.6, 0)})]),
     })
     return rig
 
