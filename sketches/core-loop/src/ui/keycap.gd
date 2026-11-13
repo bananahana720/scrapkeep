@@ -36,11 +36,24 @@ static func label(key: String) -> String:
 	return LABELS.get(key, key.trim_prefix("key_").to_upper())
 
 
+# A cap's letters are words, so they are never smaller than the smallest type step. A caller
+# that asks for a shorter cap gets one tall enough to hold them (cap_height), so the label
+# never overruns its cap.
+const LETTER := 0.58
+const MIN_H := ceilf(UiTokens.CAPTION / LETTER)
+
+
+static func cap_height(height: float) -> float:
+	return maxf(height, MIN_H)
+
+
 static func font_size(height: float) -> int:
-	return int(height * 0.58)
+	return int(cap_height(height) * LETTER)
 
 
 static func size_of(key: String, height := 24.0) -> Vector2:
+	if not is_mouse(key) and not DPAD.has(key):
+		height = cap_height(height)
 	if is_mouse(key):
 		return Vector2(height * 0.8, height)
 	if key in PAD_ROUND or DPAD.has(key):
@@ -53,6 +66,8 @@ static func size_of(key: String, height := 24.0) -> Vector2:
 static func draw(canvas: CanvasItem, at: Vector2, key: String, color: Color, height := 24.0) -> Rect2:
 	var size := size_of(key, height)
 	var rect := Rect2(at - size * 0.5, size)
+	if not is_mouse(key) and not DPAD.has(key):
+		height = cap_height(height)
 	# Only the mouse glyphs draw from their SVG. Every key SVG spells its letter with
 	# <text>, which Godot's SVG import drops, so a key drawn from its file came out as a
 	# blank cap (seen in the alpha captures on F, 1, 2, N, Q and Tab).
