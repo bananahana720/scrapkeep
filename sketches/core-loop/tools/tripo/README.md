@@ -56,3 +56,26 @@ candidate kept, then Export as GLB. The exported GLB goes through the same fitte
 crane were made this way on 13 Nov 2026. Both come out smaller than the authored prop's footprint, because
 the fit holds them inside the authored bounds: the skiff 4.7 m in a 7.9 m footprint, the crane (an upright
 crane, where the authored prop is a fallen boom) 6.5 m in 13.9 m. The 4k Studio texture never ships.
+
+## Ball parts (the part's own shape)
+
+A part bolted on the ball is drawn from rods, boxes and discs by family (`src/build/accretion.gd`). With
+`--models=tripo`, a part that has `assets/models/item_parts/part_<id>_tripo.glb` shows that mesh instead,
+painted in its rarity colour, on the same tier foot. No texture is generated, so one costs 20 API credits:
+
+`tripo make "<prompts/part_<id>.txt>, single small machine part standing upright on a round bolted base plate, chunky toy-like low poly game prop, bold readable silhouette, thick shapes, no thin wires, no text" --model tripo-v3.1 -p smart_low_poly=true -p face_limit=600 -p texture=false -p pbr=false --yes --json`
+
+`blender -b --factory-startup -P tools/tripo/tripo_part.py -- --in <model.glb> --out assets/models/item_parts/part_<id>_tripo.glb [--cut-above 0.62]`
+
+Tripo ignores `face_limit=600` here (it returned 666 to 1,818 triangles); the fitter caps at 1,000. Flat
+shading and a 600 cap turned the shapes into lumps, so the fitter keeps smooth shading with hard edges past
+40 degrees. Up to 24 parts show at once, so the worst case is 24,000 triangles on the ball.
+
+| part | grade | Tripo task | tris | note |
+| --- | --- | --- | --- | --- |
+| slag_rounds | common | 7b2b8357-c299-483c-afa6-50e6bc2bb95a | 619 | `--cut-above 0.62`: the shells came out as floating fragments and were cut, so it reads as a plain drum |
+| focus_lens | common | be892f4e-97f8-47a1-8c98-4a1655baed60 | 958 | |
+| gatling_heart | rare | c23a12d9-a38e-49ef-975d-5d411112e897 | 999 | |
+| rime_heart | relic | 8b9f62cf-df90-4e81-b550-a45525a85e9c | 766 | |
+
+API spend after this batch: 500 credits, the cap Andrew set on 13 Nov 2026.
