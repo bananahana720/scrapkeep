@@ -398,9 +398,13 @@ func new_run() -> void:
 	_begin_run(ctx.run.class_def)
 
 
-# The run's briefing (workshop.gd): in a played game the kit pick comes first, then this card on
-# the same paused screen, so the pick is made before the ball rolls and is never open in play.
-# The workshop holds the pause while the card shows; this function only says when it shows.
+# The start pick's briefing (workshop.gd): in a played game the kit pick comes first, then this card
+# on the same paused screen, so the pick is never open while the ball rolls. The workshop holds the
+# pause while the card shows; this function only says when it shows. On a stage with a yard lock
+# (stage_locks.gd) the card waits for the yard to be over, won or run
+# out, so the first seconds hold one thing and the first won fight pays the first build choice
+# (W1-63, W1-77, gameplay critique findings 3 and 14), on a profile with no harder rung to choose
+# (start_pick_at_yard).
 func show_start_card() -> void:
 	# Under the launch take's panel the card stays hidden; game shows it when the panel has gone.
 	var take = ctx.root.get("launch_take")
@@ -414,11 +418,25 @@ func show_start_card() -> void:
 	start_card.position = Vector2((view.x - start_card.size.x) * 0.5,
 		maxf(START_CARD_TOP, (view.y - start_card.size.y) * BRIEFING_CENTRE) if briefing else START_CARD_TOP)
 	# The kit pick has the screen first; the workshop calls back here when it closes.
-	if not interactive or not in_stage() or (host != null and host.kit_pick_due()):
+	if not interactive or not in_stage() or (host != null and host.kit_pick_due()) or start_pick_waits():
 		start_card.hide_card()
 	if host != null:
 		host.sync_start_card_pointer()
 		host.sync_briefing()
+
+
+# Stage 1's start pick is waiting for the yard still ahead (show_start_card).
+func start_pick_waits() -> bool:
+	return start_pick_at_yard() and gate.yard_ahead()
+
+
+# Stage 1's start pick comes at the yard's clear rather than at the drop: the briefing's
+# run-opening line is left off then (workshop.gd). A profile with a harder rung open keeps the card
+# at the drop: the run tier rides on it, and a rung chosen after the yard would credit a dam whose
+# yard was played below it.
+func start_pick_at_yard() -> bool:
+	return ctx.run.stage == 1 and gate != null and not gate.lock_row().is_empty() \
+			and RunTier.top_unlocked(ctx.profile) < RunTier.HARD
 
 
 # A screen open over the card (the pause menu) owns the keys and the clicks:
