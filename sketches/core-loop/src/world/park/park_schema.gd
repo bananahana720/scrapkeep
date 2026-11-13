@@ -170,6 +170,10 @@ const MUSIC_LAYER_PREFIX := "layer_"
 # Optional at the top: "rescue_rows", the stage's caged pilots (rescue_site.gd). pilot is the ClassDef id sitting in
 # the cage, so who is rescued is data; quest is what rescue_completed carries (the achievement rows key on it).
 const RESCUE_FIELDS := {"id": "s", "site": "s", "at": "v2", "face": "v2", "quest": "s", "pilot": "s", "prompt": "s"}
+# Optional at the top: "survival_rows", the places a survival count can stand (survival_count.gd FORMS names the
+# form; activities.gd builds one row of a form a run, and only with --stocktake=on). They are not activity rows, so
+# nothing that reads the stage's activities sees them.
+const SURVIVAL_FIELDS := {"id": "s", "form": ["yard", "muster", "ring"], "at": "v2"}
 const LANDMARK_FIELDS := {
 	"id": "s", "kind": LANDMARK_KINDS, "at": "v2", "size": "v3", "yaw_deg": "n", "recipe": "s",
 	"budget": ["hero_landmark"], "sight_top": "v3", "sight_share": "n", "beacon": "v2", "reach_m": "n",
@@ -276,6 +280,8 @@ static func validate(park: Dictionary, ctx: Dictionary = {}) -> Array:
 	var activities := _rows(out, park, "activity_rows", ACTIVITY_FIELDS)
 	var routes := _rows(out, park, "routes", ROUTE_FIELDS)
 	var rescues := _rows(out, park, "rescue_rows", RESCUE_FIELDS) if park.has("rescue_rows") else {}
+	if park.has("survival_rows"):
+		_rows(out, park, "survival_rows", SURVIVAL_FIELDS)
 
 	var landmark: Dictionary = park["landmark"]
 	_landmark(out, landmark, ctx)
