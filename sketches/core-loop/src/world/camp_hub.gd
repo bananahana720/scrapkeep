@@ -319,7 +319,7 @@ func to_global_spawn() -> Vector3:
 
 # One GLB placed under root at xf (layout space): views, shells, collision and socket markers.
 func _place(stem: String, xf: Transform3D, with_shells := false, key := "") -> Node3D:
-	var path := GLB_DIR + stem + ".glb"
+	var path := ModelVariants.path(GLB_DIR + stem + ".glb")
 	var scenes := Recipes._load(path)
 	if scenes.is_empty():
 		push_warning("camp_hub: %s is missing, it stays out" % path)
