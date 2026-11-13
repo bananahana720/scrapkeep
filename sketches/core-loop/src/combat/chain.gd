@@ -20,7 +20,7 @@ const PER_LINK := 0.3
 const COMBO_CAP := 6
 # The scrap a paid chain bursts out at its landing, by combo (W1-74): nothing below 3, then a
 # step per link up to COMBO_CAP. A combo of 3 pays about one kill; a full chain about three.
-const BURST := {3: 4, 4: 6, 5: 9, 6: 12}
+const BURST := {}
 # A let-go keeps the chain this long, counted in airtime.
 const GRACE := 0.8
 # A dry fire locks the harpoon this long.
