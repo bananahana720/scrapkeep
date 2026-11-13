@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { census, passes, ride, sites } from "./poi-census.mjs";
+import { census, main, passes, ride, sites } from "./poi-census.mjs";
 
 const park = (activity_rows) => ({
   map: "park_test",
@@ -37,4 +37,31 @@ test("a site every 150 m passes", () => {
 
 test("a pilot line that names a missing row is an error", () => {
   assert.throws(() => ride(park([]), ["drop_in", "nowhere"]), /nowhere/);
+});
+
+test("the census reports the median of an even number of pilots", () => {
+  const p = park([{ id: "near", activity: "cracked_cache", at: [55, 300] }]);
+  const two = { pilots: { sable: line.pilots.sable, rivet: { waypoints: ["drop_in", [400, 500], "landmark"] } } };
+  const row = census(p, two);
+  assert.deepEqual(row.rides.map((r) => r.sites), [2, 1]);
+  assert.equal(row.sites, 1.5);
+});
+
+test("the line ends at the landmark's beacon when the map has one", () => {
+  const p = park([]);
+  p.landmark.beacon = [0, 900];
+  assert.equal(ride(p, line.pilots.sable.waypoints).length_m, 900);
+});
+
+test("--check sets a failing exit code while the shipped maps are under the line", () => {
+  const before = process.exitCode;
+  const log = console.log;
+  console.log = () => {};
+  try {
+    main(["--check", "park_test"]);
+    assert.equal(process.exitCode, 1);
+  } finally {
+    console.log = log;
+    process.exitCode = before;
+  }
 });

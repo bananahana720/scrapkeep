@@ -20,22 +20,29 @@ const median = (xs) => {
   return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2;
 };
 
+// The game ends a pilot line at the landmark's beacon, where the Warden's ring stands.
+const beacon = (park) => park.landmark.beacon ?? park.landmark.at;
+
 export function sites(park) {
   const out = [];
   for (const row of [...(park.activity_rows ?? []), ...(park.rescue_rows ?? [])]) {
     if (row.at) out.push({ id: row.id, kind: row.activity ?? "rescue", at: row.at });
   }
-  out.push({ id: "warden", kind: "warden", at: park.landmark.at });
+  out.push({ id: "warden", kind: "warden", at: beacon(park) });
   return out;
 }
 
 function points(park, waypoints) {
-  const named = { drop_in: park.spawn.at, landmark: park.landmark.at };
-  for (const row of park.activity_rows ?? []) named[row.id] = row.at;
-  for (const row of park.park_rows ?? []) named[row.id] ??= row.at;
+  // Park rows win over activity ids, as in the game (tools/traversal_line.gd).
+  const named = { drop_in: park.spawn.at, landmark: beacon(park) };
+  const known = new Set(Object.keys(named));
+  for (const row of [...(park.park_rows ?? []), ...(park.activity_rows ?? [])]) {
+    known.add(row.id);
+    named[row.id] ??= row.at;
+  }
   return waypoints.map((w) => {
     if (typeof w !== "string") return w;
-    if (!named[w]) throw new Error(`pilot line names "${w}", which is no row of ${park.map}`);
+    if (!named[w]) throw new Error(known.has(w) ? `pilot line names "${w}", which has no position in ${park.map}` : `pilot line names "${w}", which is no row of ${park.map}`);
     return named[w];
   });
 }
@@ -85,7 +92,7 @@ export function census(park, lines) {
 
 export const passes = (row) => row.sites >= PASS.sites && row.gap_s <= PASS.gap_s;
 
-function main(argv) {
+export function main(argv) {
   const root = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "sketches", "core-loop");
   const maps = argv.filter((a) => !a.startsWith("--"));
   const rows = (maps.length ? maps : ["park_dam", "park_flume"]).map((map) =>
