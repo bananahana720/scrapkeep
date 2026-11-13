@@ -74,7 +74,7 @@ const WORDS := {
 	"redline": {"text": "KA-BLAM", "size": 1.2},
 }
 # An on-beat hit's word is this much bigger (Andrew, Q10 "Sound only"): the hit's own word
-# when it has one, else BWAP over the sax stab.
+# when it has one, else BWAP over the on-beat clap.
 const ONBEAT_GROW := 1.4
 # A read word's size (read_word: DENT, ZZAP!), on the same screen-share scale; it is the foe's,
 # so the build's might never grows it.

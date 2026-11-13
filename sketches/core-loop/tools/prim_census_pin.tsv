@@ -46,6 +46,7 @@ customize_page.gd	CylinderMesh	LivePreview/SubViewport/MeshInstance3D	code	-	pre
 element_field.gd	TorusMesh	Node3D/ElementField/MeshInstance3D	code	-	element field ring
 enemy_motion.gd	BoxMesh	Node3D/DeathScatter/MeshInstance3D	code	-	death scatter, an effect
 enemy_motion.gd	BoxMesh	Node3D/Node3D/MeshInstance3D	code	-	death debris piece
+enemy_motion.gd	CylinderMesh	Node3D/Node3D/MeshInstance3D	code	-	death debris piece (a cylinder part flung on death; seen once 918 moved the run)
 enemy_motion.gd	CylinderMesh	Node3D/DeathScatter/MeshInstance3D	code	-	death scatter, an effect
 enemy_motion.gd	TorusMesh	Node3D/DeathScatter/MeshInstance3D	code	-	death scatter, an effect
 event_view.gd	TorusMesh	Node3D/StageEvents/MeshInstance3D	code	-	stage event ring

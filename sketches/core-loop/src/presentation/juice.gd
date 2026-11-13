@@ -626,8 +626,8 @@ func _flush_kills() -> void:
 			rumble("multi_kill", minf(0.5 + mark / 8.0, 1.0))
 			_camera("punch_fov", "multi_kill", Vector3.ZERO, -2.0 - mark * 0.5, 0.3)
 			if audio != null:
-				# The pop an octave up and more, on the reward ladder: F at 2, G at 4, D at 8.
-				audio.play("enemy_killed", 2.0, Harmony.snapped_ratio(SfxBank.KILL_POP_MIDI, 12.0 + 1.5 * mark), "SFX", "kill_pop")
+				# A second, louder pop: percussion has no ladder (SOUND-BIBLE rule 7).
+				audio.play("enemy_killed", 2.0, 1.0, "SFX", "kill_pop")
 			if vfx != null:
 				vfx.glyph("enemy_killed", player.shown_position(), 1.0, 3.0 + mark, 0.35, Vector3.UP, "ring")
 
