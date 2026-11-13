@@ -141,7 +141,7 @@ const DOOR_FOR := "door.brindle_clock_run"
 # The world codex rows each world's camp count reads: its field finds, then the parks' authored
 # secret caches (the contraption rows that carry a codex id).
 const WORLD_CODEX := {1: ["spillway_turbine_seep", "spillway_shift_radio", "spillway_flume_seep", "spillway_crew_radio",
-	"spillway_gallery_cache", "flume_weir_cache", "spillway_clock_door"]}
+	"spillway_gallery_cache", "flume_weir_cache", "flume_grade_cache", "spillway_clock_door"]}
 const WORLD_NAMES := {1: "Spillway"}
 
 
