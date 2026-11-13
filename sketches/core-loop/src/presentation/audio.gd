@@ -92,12 +92,15 @@ const VOICE_LIMIT := SfxBank.VOICE_LIMIT
 const MIN_GAP_MS := SfxBank.MIN_GAP_MS
 const PRIORITY_DB := [-6.0, -3.0, 0.0, 0.0]
 # Hitting on the beat pays in sound and look only (Andrew, Q10 "Sound only", 17 Oct 22:12Z):
-# a hit within ONBEAT_WINDOW_S of a beat the player hears adds the sax stab, rendered by the
-# music session in the home key, and fires hit_on_beat for the comic word. At most once a
+# a hit within ONBEAT_WINDOW_S of a beat the player hears adds a clap (ONBEAT_SOUND), and fires
+# hit_on_beat for the comic word. At most once a
 # beat. Damage never reads it.
 signal hit_on_beat(enemy: Node3D, kind: String)
 const ONBEAT_WINDOW_S := 0.08
-const ONBEAT_SOUND := "onbeat_sax_stab"
+# A hit on the beat claps with the band's drums (design-v3/sound/feedback_set.py): percussion, so it
+# never sits on the melody. ONBEAT_DB puts it about at a ranged hit's level, 8 dB under the sax stab it replaced.
+const ONBEAT_SOUND := "onbeat_clap"
+const ONBEAT_DB := -8.0
 # Tests set this to stand in for the beat clock: it returns the signed offset in seconds.
 var beat_offset_hook := Callable()
 var _onbeat_at := -(1 << 40)
@@ -2194,6 +2197,8 @@ func wire_optional() -> void:
 	_listen_optional(events, "attack_cued", _on_attack_cued)
 	_listen_optional(events, "fight_phase_changed", _on_fight_phase)
 	_listen_optional(events, "boss_weak_point_hit", _on_weak_point)
+	# The Brindle reel (W1-61): each paid hit sheds scrap with its row's scrap tick.
+	_listen_optional(events, "boss_reeled", func(_at: Vector3, _scrap: int): play("boss_reeled"))
 	_listen_optional(events, "event_progress", _on_event_progress)
 	# The stage's content leaves before the arena: a soft fade, and any launch build
 	# resolves into the arena music instead of a landing.
@@ -3398,7 +3403,8 @@ func _on_kill(_kind: String, _at: Vector3, _value: int) -> void:
 		# A small drop, on the moment the vault breaks.
 		play("enemy_killed", 2.0, 1.0, "SFX", VAULT_KILL_SOUND)
 	var rung: int = kill_streak.bump(Time.get_ticks_msec())
-	play("enemy_killed", 0.0, Harmony.ratio(Harmony.pentatonic_step(rung)))
+	# The pop is percussion (SOUND-BIBLE rule 7): the chain grows by its tier layer, not by pitch.
+	play("enemy_killed")
 	if rung >= STREAK_LAND_RUNG:
 		_warm_landing(rung)
 	# Each link past the first adds its tier's stab (INTEGRATION section 3), five rungs.
@@ -3902,7 +3908,7 @@ func _pay_beat(enemy: Node3D, kind: String) -> void:
 	_onbeat_at = engine.clock
 	var stab := SfxBank.rendered(ONBEAT_SOUND)
 	if stab != null:
-		_start("hit_on_beat", ONBEAT_SOUND, stab, PRIORITY_DB[Rows.priority("enemy_struck")], Harmony.ratio(live_key()), "SFX")
+		_start("hit_on_beat", ONBEAT_SOUND, stab, PRIORITY_DB[Rows.priority("enemy_struck")] + ONBEAT_DB, 1.0, "SFX")
 	else:
 		cue_log.append(["hit_on_beat", ONBEAT_SOUND, "absent", engine.clock, 1.0])
 	hit_on_beat.emit(enemy, kind)

@@ -93,21 +93,21 @@ ce35040ebc776cdf5e06c6f102e53744567aaeb6a09b7eb3c4680baa32f44989  renders/lab-ro
 7c3fd071536f47b08c899b76fa1642cb35258cf13bbd8d63d13564cac6b33dd5  event-set/boost_whoosh.wav
 6b1acaa5b56fd93da93391b7c8c3b15abb22fe5b2221829637cb3f793d1b3f68  event-set/boss_arena_in.wav
 a016d9f4bff129a10de38612d82d56fa52b26e134b7698575a4e7bb96d51a75d  event-set/boss_phase.wav
-b310c2aa6daea70f045af59e73ce4e98d8f64d3990ac367fff0adf09556db426  event-set/boss_weak_hit.wav
+1cd32d28ff0a48f56cd82f212873531b4c2f3bd3359625604b0f4f1edd96e402  event-set/boss_weak_hit.wav
 c80bd13219496c69e3e6f6b79f87e65111eeb8073067b1c1e635e596e1781bef  event-set/callout_chime.wav
-64232dcf772e403377d29fef6207ef022f9fca14542ead95c398dbb03a0a85e7  event-set/crit_ping.wav
+d36ef09f9966fba8bfd38f884bf3a1b87a5138a29edc47ef480d8b75e2fd5248  event-set/crit_ping.wav
 74ba1893d22284b75052b04e262c44a77635dba60616200b861a909fc49fc4bb  event-set/dash_whoosh.wav
 bcd96ad726738ef339c2205f29b52325ddfa9080ce37a927a1d1f62c22c51877  event-set/death.wav
 305a13e82e3c9690a73d5bbdbb736fd92f8b15ebeb52b83c19c97a8591138405  event-set/found_chime.wav
-3475084a9081df6d18b3985267b7b3eb657c3114c5ab7484c7ffccd903b07b90  event-set/hit_thwack.wav
+36709c58c0e33f091ff1c816e428296bd216a05a112d414baed08306dde6aae3  event-set/hit_thwack.wav
 34ec7c05361b997550e08ed57bc96e34f01d2905bdea93a25fe3061045b669ce  event-set/hop.wav
-c2392a6f9895d057497ffe1453d3239793b5b94224912a9fbd133bac5e192f96  event-set/hurt.wav
-2f9215d169459f42c1ed38788652840d98172b8e4db5c5a0b8f521d9e3e28fb9  event-set/kill_chain_tier_1.wav
-b58f3021fe26a1373d0747c429cd2504008b52e8b05c513f334c264472a41e42  event-set/kill_chain_tier_2.wav
-ddb74ca14779c3281c3356e379448f1abe04bcc6a806994528f0558492b0bba0  event-set/kill_chain_tier_3.wav
-734d4c7347fdafee19ca2f039fc9639dbfc3a35668bcc1240d1bdb0d78b2c589  event-set/kill_chain_tier_4.wav
-9df58e6b5994207d375ef587e662b4700c8bf14d0d5ebdbc04fac5265dd81922  event-set/kill_chain_tier_5.wav
-a5ba53db174d5caa1202e247f43a22df246b054976440db8ce85cd002a153d44  event-set/kill_pop.wav
+c21c449a597bbe16e8ccc5e6bd5ce63dc1ffc764d647b993c0fc1dec8978d309  event-set/hurt.wav
+1e0f85ca127ed6fa6ead590bf148609b5d6c0f31f79fe5341b7d9228420376ca  event-set/kill_chain_tier_1.wav
+2cfc786b0622510327db827cc763460707555bc802e4c88cf712af6d5f05c6ef  event-set/kill_chain_tier_2.wav
+e5e3d45f71dc46d3d4b5ea62c15cb3f8fc08f1a7c23245ccc8a32f2fa3d3b2a9  event-set/kill_chain_tier_3.wav
+65f1a645e2c8ea3557cd7b623367610e25d62b21deb1a27d9f4382fac679bf22  event-set/kill_chain_tier_4.wav
+a8a1e965db6d8a3e147adfcba9bf7f8af7e5f57227a4a7c746f861c900002804  event-set/kill_chain_tier_5.wav
+4d06a8780f9a4647ac19485211687d8e17febcae8564308053c36d4ab4bfd853  event-set/kill_pop.wav
 8ce0e4b8d3b2bc2f4049f5fab9001a3cf81c7002a5b05a187c4d4b29c96afca2  event-set/land_thud.wav
 8342f6c2829d91e56ee6f8fd8e6b4b8f8e9e51b6802f66d1a9b4f2f82694edf6  event-set/lore_found.wav
 2f83e79393f21344599b1db621d5cca34fe8fa3596fe85e917079574a97d1998  event-set/near_whoosh.wav
@@ -135,8 +135,10 @@ f42ea10c66f5a3fbad65fa67ffe00a4d22dc90e76a2e4e5345af323f15d508fb  event-set/stin
 beca361e5280193d04c3b22050f8b53c2f61e3f836f189fd709610028ffb91e0  event-set/stinger_world.wav
 42d643865042864f8cb54a322e62ea901c29a5ea698c078c2312a6e3f44234fc  event-set/synergy_fanfare.wav
 a96b8048f316ace2b04cd22c4c9e04a6195aca5120ab7723d9c4dfabfa12a889  event-set/threat_whistle.wav
-94762c1fbb9d3aa2b47f310118ecd99dbe9ad92c631daed717ff0a04058d147c  event-set/ui_tick.wav
+4312e4786346df64b09ed05ef1c3f9046ad28414e2bbdb9e7f7b453e9c971919  event-set/ui_tick.wav
 876f826ee0d6cef027704cab5b02e8ab1b69f766664a2df7217171369c6a4915  event-set/verb_fail.wav
+ed8d167ce308c0851efc1b27a0f18445e302a3c02a5ee9a33707a045cc9d6f08  event-set/weapon_zap.wav
+1239c485eae9f1d589eb473e7f6eea8516aceb166d2c7f09c491edb31a1f168f  event-set/clank.wav
 0709df2f584db81b7619a0d4c32bcb3598ff3783c9dad9de1e44dd527c2da23b  event-set-reel.mp3
 ```
 
@@ -332,7 +334,7 @@ e67e6e0a372aca18b339cf539d641156029d188852e147f05008b5187c134f98  variant-src/hy
 ## Cue sheet notes, 2026-10-17
 
 - **The Mind's first quote, in the Spillway** (Andrew, Q9 "A musical quote"). `music_layer_mind_quote_spillway` is two bars of the Spillway pack's travel clip (bars 1 to 3) with the Mind's line on its sine chime on top: theme K bars 1 and 2 in D Dorian, inverted around its first note, last note a semitone flat (D B G E C | D E F G A Bb), swung, the band's melody stem at 0.45 under it. Made by `tools/ace/mind_quote.py`, -16 LUFS, true peak -2.7 dBTP. It is the first time the player hears the Mind, a world before they meet it. Ear check: Andrew. Where it fires is the Spillway's choice (a landmark or the Warden approach, once per run); it sits in SfxBank as a file sound.
-- **A hit on the beat** (Andrew, Q10 "Sound only"). `assets/audio/sfx/onbeat_sax_stab.wav` is a bright two-note `sax_lounge` stab in the home key (A5, D6), 0.16 s, peak -1 dBFS, with a breath on the attack. It sits over the hit sound at most once per beat; Player effects (#50) pitches it to the live key and fires it. No damage change.
+- **A hit on the beat** (Andrew, Q10 "Sound only"). Since 13 November 2026 it is `assets/audio/sfx/onbeat_clap.wav` from [feedback_set.py](feedback_set.py): a clap of three short noise bursts and a small room, 0.18 s, no pitch, played about at a ranged hit's level (8 dB under the old stab) at most once per beat. The earlier `onbeat_sax_stab.wav` (a two-note `sax_lounge` stab, A5 and D6) is no longer played. No damage change.
 - **Place layers stay out of arenas** (the Crown pass). A place music layer's sensor sits outside every arena, or the music director locks layers during a fight: a layer switching mid-fight moves the on-bar telegraphs. That holds for the Mind quote above wherever it fires.
 - **The Highdraft's own drops** (PR #83). `drop_fleet_anvil` (an anvil pair, then a G Lydian brass stab) and `drop_boiler` (a hiss, a pop and a whistle bending to the tritone) are designed one-shots for 3-1 and 3-2, a whole step apart, by `tools/ace/highdraft_stingers.py`; `cut_stingers.py` leaves them to it. The Highdraft has no cut `riser_mind_quote` or `drop_mind_wrong`, so the engine plays its pilot-aware Mind quote there.
 

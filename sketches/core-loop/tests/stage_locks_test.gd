@@ -22,7 +22,7 @@ const Palette := preload("res://src/core/palette.gd")
 # - riders (ruling w): a crew's homeless rider (director.gd _home_pack_spots) neither holds nor
 #   spoils its count, a crew of riders alone counts as a plain pack, and the bot hand goes for the
 #   crew's housed members, the crew nearest to a pip first;
-# - lock: on the ground inside within_m of the beacon the yard shuts round the ball with its crew,
+# - lock: on level ground inside within_m of the beacon the yard shuts round the ball with its crew,
 #   the wall turns an escaping ball back, the last crew member down opens it, and the crew counts
 #   toward the gate; its kills roll no panel and the cleared yard pays one (ruling af); the Warden already awake leaves it unfired;
 # - plate (w22 first-timer red team): while the yard holds, the objective plate says so, its bar
@@ -267,7 +267,9 @@ func _lock() -> void:
 	var row: Dictionary = LockRows.row("park_dam")["lock"]
 	_t.eq("lock armed on entry", locks.lock_state, "armed")
 	var beacon: Vector3 = game.flow.beacon.global_position
-	var spot := beacon + Vector3(0.0, 0.0, -float(row["within_m"]) + 20.0)
+	# On the apron past the incline foot: the circle's outer ring there is the incline, where the yard
+	# waits for level ground (PF-46, dam_incline_yard_test).
+	var spot := beacon + Vector3(0.0, 0.0, -float(row["within_m"]) * StageLocks.LOCK_ANY_SLOPE_SHARE + 10.0)
 	var ground: Vector3 = game.ctx.terrain.drop_point(spot.x, spot.z, 1.0)
 	game.player.reset_to(ground, Vector3.ZERO)
 	var waited := 0
@@ -358,7 +360,9 @@ func _timed_out() -> void:
 	var locks = game.flow.gate
 	var row: Dictionary = LockRows.row("park_dam")["lock"]
 	var beacon: Vector3 = game.flow.beacon.global_position
-	var spot := beacon + Vector3(0.0, 0.0, -float(row["within_m"]) + 20.0)
+	# On the apron past the incline foot: the circle's outer ring there is the incline, where the yard
+	# waits for level ground (PF-46, dam_incline_yard_test).
+	var spot := beacon + Vector3(0.0, 0.0, -float(row["within_m"]) * StageLocks.LOCK_ANY_SLOPE_SHARE + 10.0)
 	game.player.reset_to(game.ctx.terrain.drop_point(spot.x, spot.z, 1.0), Vector3.ZERO)
 	var waited := 0
 	while locks.lock_state == "armed" and waited < 240:

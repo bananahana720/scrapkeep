@@ -181,9 +181,9 @@ func show_cranes(on: bool) -> void:
 func open_caps(open: bool) -> void:
 	for mesh in _cap_meshes:
 		(mesh as MeshInstance3D).position.y = 0.25 if open else 0.0
-		((mesh as MeshInstance3D).material_override as StandardMaterial3D).emission_enabled = open
-		((mesh as MeshInstance3D).material_override as StandardMaterial3D).emission = Palette.HAZARD
-		((mesh as MeshInstance3D).material_override as StandardMaterial3D).emission_energy_multiplier = 1.2
+	# The glow lives on the cap's tint material, which its target owns, so a hit hands it back.
+	for cap in caps:
+		cap.set_rest_glow(Palette.HAZARD, 1.2 if open else 0.0)
 	# The model's caps lift with the enter_furnace clip; the glow is the same tint material.
 
 
