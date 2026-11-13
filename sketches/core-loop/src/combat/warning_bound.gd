@@ -20,9 +20,6 @@ const OWNER_OUT := 0.4
 const OWNER_HALF := 0.2
 # _wave/_sweep_chevrons: the chevron tip stands WAVE_EDGE + 0.3 + CHEVRON_DEPTH ahead.
 const CHEVRON_AHEAD_GAP := 0.3
-# _pip: a cross 0.7 long, 0.12 wide, plus grow.
-const PIP_ARM := 0.7
-const PIP_HALF := 0.12
 # _brackets: arms 0.14 + r * 0.015 wide, plus grow.
 const BRACKET_HALF_BASE := 0.14
 const BRACKET_HALF_PER_M := 0.015
@@ -109,8 +106,7 @@ static func box(d: Dictionary, meshes: AABB) -> AABB:
 		_pad(span, LANE_PAD)
 	elif int(d["type"]) == Threat.Type.PROJECTILE:
 		var r: float = d["r_out"]
-		var reach_out := maxf(r + _rim_pad(d), maxf(Threat.BRACKET_OPEN * r + BRACKET_HALF_BASE + r * BRACKET_HALF_PER_M + GROW,
-			PIP_ARM + PIP_HALF + GROW))
+		var reach_out := maxf(r + _rim_pad(d), Threat.BRACKET_OPEN * r + BRACKET_HALF_BASE + r * BRACKET_HALF_PER_M + GROW)
 		_grow(span, c.x - reach_out, c.z - reach_out)
 		_grow(span, c.x + reach_out, c.z + reach_out)
 	else:
