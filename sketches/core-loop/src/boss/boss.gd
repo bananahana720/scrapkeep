@@ -109,6 +109,9 @@ var _hint_next := 0.0
 # The reel's paid hits this phase and the fight clock of the last one (Rules.REEL_*).
 var _reel_hits := 0
 var _reel_last := -INF
+# The phase beat's preview (FX-03): the next phase's signature mark in the harmless bone style,
+# drawn through the transition beat and cleared when it ends; null when none shows.
+var _preview: Node3D
 
 
 func setup(ctx_ref) -> void:
@@ -214,6 +217,7 @@ func exit_arena() -> void:
 	_cranes = [{}, {}]
 	_charge = {}
 	_eject = {}
+	_preview = null
 	_drones.clear()
 	_ghost_until = -1.0
 	if state != DEFEATED:
@@ -249,6 +253,7 @@ func advance(delta: float) -> void:
 	_step_hazards(delta, ball)
 	_step_trail(ball)
 	_step_drones(delta)
+	_step_preview(delta)
 	if state == FIGHT:
 		_step_posture(delta)
 		match phase:
@@ -380,6 +385,51 @@ func _enter_phase(next: int) -> void:
 	_publish("boss_phase_changed", [next, Rules.PHASE_NAMES[next - 1]])
 	if _phases != null:
 		_phases.enter(next, clock)
+	_show_preview(next)
+
+
+# FX-03: through the beat that opens the Furnace or the Scuttle, while no attack can commit, the
+# phase's signature mark draws once in the harmless bone style (threat_grammar.gd, a dashed
+# outline): the slag ring its first lead fills, or a charge lane from the hull's nose toward the
+# ball. It never hurts and is never a threat; it shows the new rule before it is live.
+func _show_preview(next: int) -> void:
+	_clear_preview()
+	if not _in_transition() or not next in [2, 3]:
+		return
+	var h = Hazard.new()
+	h.ground = arena.ground
+	h.color = Palette.SAND
+	var beat: float = _phases.transition()
+	if next == 2:
+		h.commit_annulus("preview_slag", Hazard.Threat.Type.INSTANT, arena.global_position, Arena.RING_A, 0.0, beat, 0.01)
+	else:
+		var from: Vector3 = ship.global_position
+		var heading := _aim_at(ctx.player.ball_position())
+		var half := Requisition.HULL.z * 0.5
+		var length := minf(Rules.CHARGE_STOP_R, _travel_to_rim(from, heading))
+		h.commit_lane("preview_charge", Hazard.Threat.Type.LANE, from, heading, half, length + half, Requisition.HULL.x * 0.5 + 1.0,
+			0.0, beat, 0.01)
+	arena.add_child(h)
+	_preview = h
+
+
+func preview() -> Node3D:
+	return _preview if is_instance_valid(_preview) else null
+
+
+func _step_preview(delta: float) -> void:
+	if _preview == null:
+		return
+	if not is_instance_valid(_preview) or state != FIGHT or not _in_transition():
+		_clear_preview()
+		return
+	_preview.step(delta)
+
+
+func _clear_preview() -> void:
+	if is_instance_valid(_preview):
+		_preview.queue_free()
+	_preview = null
 
 
 # Test and dev hook: the fight as if the earlier phases had just been won.
@@ -1266,6 +1316,7 @@ func _add_hazard(h) -> void:
 # Scrap a magnet still holds is dripped out along its trail at once: only phase 1 steps
 # the cranes, so a hold left at the phase end would never be paid back.
 func _cancel_hazards() -> void:
+	_clear_preview()
 	for h in hazards:
 		if is_instance_valid(h):
 			h.queue_free()

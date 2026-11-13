@@ -168,6 +168,15 @@ const ROWS := {
 		"short": [
 			{"kind": "caption", "at": 0.0, "for": 1.2, "slot": "left_low", "text": ["Dignity: optional.", "Brindle rounds down. Once.", "Plan C. There was no plan B."]},
 		]},
+	# The chase (FX-03): the goal flips from the hull to the scooter, so the camera follows the
+	# scooter's arc off the deck (a glance that waits until it has left the hull behind) and its
+	# target tag carries the new goal (boss.gd plate_targets). No caption: the EJECT word, the
+	# chase toast and the objective line already speak (ruling cx), so the row adds motion only.
+	"brindle_chase": {"priority": 3, "on": "phase", "boss": "brindle", "phases": [4],
+		"world": {"full": [{"kind": "glance", "anchor": "scooter", "at": 0.6, "seconds": 1.6}],
+			"short": [{"kind": "glance", "anchor": "scooter", "at": 0.6, "seconds": 1.2}]},
+		"full": [{"kind": "speed_lines", "at": 0.0, "for": 1.0}],
+		"short": [{"kind": "speed_lines", "at": 0.0, "for": 0.8}]},
 	# The catch: the scooter sails over the rim in slow motion while the crew cheer. The ROUTED
 	# stamp names the rout; the victory card that follows names what was won (worlds.gd).
 	"brindle_rout": {"priority": 3, "on": "rout", "boss": "brindle",
