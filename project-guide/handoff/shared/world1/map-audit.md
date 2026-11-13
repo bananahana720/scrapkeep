@@ -70,7 +70,7 @@ Data the checks read, all public today unless noted: stage graph `src/world/park
 | dam | riding-line nodes that see the landmark | 1.00 | 0.85 | pass |
 | flume | open ground that sees the landmark | 0.87 | 0.85 | pass |
 | flume | riding-line nodes that see the landmark | 1.00 | 0.85 | pass |
-| dam yard | rim minus centre, worst site median | 2.97 m | 2.0 m | thin pass (one direction is 11 m below) |
+| dam yard | rim minus centre, worst site median | 4.61 m (13 Nov, apron_yard_bowl; 0.72 after PF-46, 2.97 before it) | 2.0 m | pass: a 52 m bowl 4 m deep at the incline foot, where the yard shuts since PF-46; every rim direction at least 1.0 m above the floor |
 | flume yard | rim minus centre, worst site median | -0.41 m | 2.0 m | OWED: the fight floor is flat |
 | Slag Bowl | rim minus centre | 10.0 m | 2.0 m | pass |
 | dam | player-changed features near a line | 5 | 2 | pass |
