@@ -48,16 +48,16 @@ const SHED_LEAVE := 0.36
 const SHED_STREAK_SCALE := 0.5
 
 # The priority class of every threat mark role (§1.1). P6 fills are governed; P1 never. A
-# shell's landing is an "edge" and a "pip" (P1, as its brackets were until wave 36) over a
-# "fill" (P6, the only part that fades in a crowd); its flight is a dashed "trace".
+# shell's landing is an "edge" and spikes ("band", P1) over a "fill" (P6, the only part that
+# fades in a crowd); its flight is a dashed "trace".
 const CLASS_OF_ROLE := {
 	"area": "P6", "fill": "P6", "swept": "P6", "run": "P6",
-	"edge": "P1", "front": "P1", "chevrons": "P1", "outline": "P1", "pip": "P1",
+	"edge": "P1", "front": "P1", "chevrons": "P1", "outline": "P1",
 	"trace": "P1", "band": "P1", "band_top": "P1", "owner": "P1", "solid": "P1",
 }
 # Glyph kinds that are not P5 candy. Anything unlisted is a P5 player effect.
 const CLASS_OF_KIND := {
-	"near_miss": "P2", "interact_armed": "P2", "interact_fired": "P2",
+	"near_miss": "P2", "redline_blast": "P2", "interact_armed": "P2", "interact_fired": "P2",
 	"part_gained": "P4", "milestone_won": "P4", "core_gained": "P4", "reward_rare": "P4",
 	"reward_payoff": "P4", "beacon_unsealed": "P4", "bet_resolved": "P4", "ambush_ended": "P4", "interaction_found": "P4",
 }

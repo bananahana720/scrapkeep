@@ -36280,9 +36280,26 @@
    "exception": {
     "tris": 1100,
     "verts": 2100,
-    "draws": 3
+    "draws": 4
    },
    "exception_why": "Opt-in device with independently controlled state parts; existing prop class covers one small static mesh. Limits asserted by device_props_asset_test."
+  },
+  {
+   "id": "bay_kit",
+   "path": "res://assets/models/world_one/bay_kit.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/world/bay.gd",
+   "provenance": {
+    "recipe": "tools/blender/world_one/bay_kit.py",
+    "note": "Procedural vertex-coloured Moss's bay kit (W1-23): cabin front, bell and frame, marble toy, yard wall, grapple post, bowling pin, dock cradle cup and mast."
+   },
+   "exception": {
+    "tris": 4000,
+    "verts": 8000,
+    "draws": 9
+   },
+   "exception_why": "Nine separately placed props on the barge and its dock cradle, one draw each, seen one bay at a time. Limits asserted by the recipe."
   },
   {
    "id": "bet_crate",
@@ -36302,6 +36319,17 @@
    "exception_why": "Opt-in device with independently controlled state parts; existing prop class covers one small static mesh. Limits asserted by device_props_asset_test."
   },
   {
+   "id": "bola_thrower_clips",
+   "path": "res://assets/models/world_one/clips/bola_thrower_clips.glb",
+   "class": "enemy",
+   "ships": true,
+   "loader": "src/presentation/enemy_clips.gd",
+   "provenance": {
+    "recipe": "tools/blender/world_one/field_motion.py",
+    "build_spec": "W1-87 clips for the rest of the Spillway crew (BACKLOG.md, World 1 enemy life)"
+   }
+  },
+  {
    "id": "boom_tender_clips",
    "path": "res://assets/models/world_one/clips/boom_tender_clips.glb",
    "class": "enemy",
@@ -36313,6 +36341,17 @@
    }
   },
   {
+   "id": "catch_trap_clips",
+   "path": "res://assets/models/world_one/clips/catch_trap_clips.glb",
+   "class": "enemy",
+   "ships": true,
+   "loader": "src/presentation/enemy_clips.gd",
+   "provenance": {
+    "recipe": "tools/blender/world_one/field_motion.py",
+    "build_spec": "W1-87 clips for the rest of the Spillway crew (BACKLOG.md, World 1 enemy life)"
+   }
+  },
+  {
    "id": "chaser_clips",
    "path": "res://assets/models/world_one/clips/chaser_clips.glb",
    "class": "enemy",
@@ -36321,6 +36360,28 @@
    "provenance": {
     "recipe": "tools/blender/world_one/field_motion.py",
     "build_spec": "world 1 unit 13, Spillway enemy clips (/mnt/project-files/world1/UNITS.md)"
+   }
+  },
+  {
+   "id": "deflector_clips",
+   "path": "res://assets/models/world_one/clips/deflector_clips.glb",
+   "class": "enemy",
+   "ships": true,
+   "loader": "src/presentation/enemy_clips.gd",
+   "provenance": {
+    "recipe": "tools/blender/world_one/field_motion.py",
+    "build_spec": "W1-87 clips for the rest of the Spillway crew (BACKLOG.md, World 1 enemy life)"
+   }
+  },
+  {
+   "id": "gyro_jammer_clips",
+   "path": "res://assets/models/world_one/clips/gyro_jammer_clips.glb",
+   "class": "enemy",
+   "ships": true,
+   "loader": "src/presentation/enemy_clips.gd",
+   "provenance": {
+    "recipe": "tools/blender/world_one/field_motion.py",
+    "build_spec": "W1-87 clips for the rest of the Spillway crew (BACKLOG.md, World 1 enemy life)"
    }
   },
   {
@@ -36368,6 +36429,17 @@
    }
   },
   {
+   "id": "netcaster_clips",
+   "path": "res://assets/models/world_one/clips/netcaster_clips.glb",
+   "class": "enemy",
+   "ships": true,
+   "loader": "src/presentation/enemy_clips.gd",
+   "provenance": {
+    "recipe": "tools/blender/world_one/field_motion.py",
+    "build_spec": "W1-87 clips for the rest of the Spillway crew (BACKLOG.md, World 1 enemy life)"
+   }
+  },
+  {
    "id": "plated_brute_clips",
    "path": "res://assets/models/world_one/clips/plated_brute_clips.glb",
    "class": "enemy",
@@ -36387,6 +36459,17 @@
    "provenance": {
     "recipe": "tools/blender/world_one/field_motion.py",
     "build_spec": "world 1 unit 13 clips for the Spillway roster (design-v3/SPILLWAY-ROSTER.md)"
+   }
+  },
+  {
+   "id": "swatter_clips",
+   "path": "res://assets/models/world_one/clips/swatter_clips.glb",
+   "class": "enemy",
+   "ships": true,
+   "loader": "src/presentation/enemy_clips.gd",
+   "provenance": {
+    "recipe": "tools/blender/world_one/field_motion.py",
+    "build_spec": "W1-87 clips for the rest of the Spillway crew (BACKLOG.md, World 1 enemy life)"
    }
   },
   {
@@ -36419,7 +36502,7 @@
    "exception": {
     "tris": 1100,
     "verts": 2100,
-    "draws": 5
+    "draws": 6
    },
    "exception_why": "Opt-in device with independently controlled state parts; existing prop class covers one small static mesh. Limits asserted by device_props_asset_test."
   },
@@ -36680,6 +36763,57 @@
    "exception_why": "winch drone test ceiling 4 draws"
   },
   {
+   "id": "find_kit",
+   "path": "res://assets/models/world_one/find_kit.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/world/find_kit.gd",
+   "provenance": {
+    "recipe": "tools/blender/world_one/find_kit.py",
+    "note": "Procedural vertex-coloured field-find dressing (W1-22): notice board frame and plate, radio aerial, seep streak."
+   },
+   "exception": {
+    "tris": 600,
+    "verts": 1200,
+    "draws": 4
+   },
+   "exception_why": "A kit of four independently placed parts, one draw each; a field find draws at most three of them. Limits asserted by the recipe and activities_test."
+  },
+  {
+   "id": "pocket_kit",
+   "path": "res://assets/models/world_one/pocket_kit.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/world/activities.gd",
+   "provenance": {
+    "recipe": "tools/blender/world_one/pocket_kit.py",
+    "note": "Procedural vertex-coloured pocket interior kit (W1-23): crew-cast cover block and entrance bollard, scaled to each authored block."
+   },
+   "exception": {
+    "tris": 700,
+    "verts": 1400,
+    "draws": 3
+   },
+   "exception_why": "Two separately placed parts (cover block in two slots, entrance bollard in one), one draw per slot. Limits asserted by the recipe."
+  },
+  {
+   "id": "radio_cache",
+   "path": "res://assets/models/world_one/radio_cache.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/world/radio_cache.gd",
+   "provenance": {
+    "recipe": "tools/blender/world_one/radio_cache.py",
+    "note": "Procedural vertex-coloured Signal radio cache (W1-23): crew mast with dish, lamp and pulse ring."
+   },
+   "exception": {
+    "tris": 900,
+    "verts": 1800,
+    "draws": 3
+   },
+   "exception_why": "Three independently driven parts (mast, blinking lamp, widening pulse ring), one draw each. Limits asserted by the recipe."
+  },
+  {
    "id": "relay_mast",
    "path": "res://assets/models/world_one/relay_mast.glb",
    "class": "prop",
@@ -36738,7 +36872,7 @@
    "loader": "src/build/scrap_field.gd:101",
    "provenance": {
     "recipe": "tools/blender/world_one/scrap_pickups.py",
-    "note": "Four procedural salvage variants, one opaque vertex-colour surface each. Each variant meets prop caps of 270 triangles, 610 imported vertices, one draw. Aggregate registered as a chunk kit. No external assets."
+    "note": "Four procedural salvage variants and the cog (the money, W1-21), one opaque vertex-colour surface each. Each part meets prop caps of 270 triangles, 610 imported vertices, one draw. Aggregate registered as a chunk kit. No external assets."
    }
   },
   {
@@ -37246,6 +37380,40 @@
    }
   },
   {
+   "id": "slag_bowl_kit",
+   "path": "res://assets/models/world_one/slag_bowl_kit.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/boss/arena.gd",
+   "provenance": {
+    "recipe": "tools/blender/world_one/slag_bowl_kit.py",
+    "note": "Procedural vertex-coloured Slag Bowl kit (W1-23): crane mast, crossbar boom and rim vent nozzle, each placed where arena.gd's colliders stand."
+   },
+   "exception": {
+    "tris": 1600,
+    "verts": 3200,
+    "draws": 3
+   },
+   "exception_why": "Three separately placed parts (mast, boom, vent nozzle), one draw each; four masts and four vents per bowl. Limits asserted by the recipe."
+  },
+  {
+   "id": "valve_door",
+   "path": "res://assets/models/world_one/valve_door.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/world/contraptions.gd",
+   "provenance": {
+    "recipe": "tools/blender/world_one/valve_door.py",
+    "note": "Procedural vertex-coloured valve door (W1-23): a riveted copper sluice gate with stiffeners, a gate plate and lifting lugs, scaled to each door's size."
+   },
+   "exception": {
+    "tris": 1200,
+    "verts": 2400,
+    "draws": 1
+   },
+   "exception_why": "One riveted gate panel, one draw, readable from both faces at 10 to 12 m wide. Limits asserted by the recipe."
+  },
+  {
    "path": "res://assets/models/world_one/water_edges.glb",
    "class": "scenery",
    "ships": true,
@@ -37552,6 +37720,7 @@
   "barge_fenders",
   "barge_skin",
   "barge_skin_rusted-salvaged-plate.webp",
+  "bay_kit",
   "bed_cut",
   "bed_floor",
   "bed_recess",
@@ -37560,6 +37729,7 @@
   "bench_coping_detail1",
   "bench_coping_detail2",
   "bet_crate",
+  "bola_thrower_clips",
   "boom_tender_clips",
   "boss_brindle",
   "boss_brindle_scooter",
@@ -37630,6 +37800,7 @@
   "cannon_launcher_gauge",
   "cart_body",
   "cart_wheel",
+  "catch_trap_clips",
   "cavern_shell",
   "cavern_shell_detail1",
   "cavern_shell_detail2",
@@ -37822,6 +37993,7 @@
   "decal_seashell_mask.png",
   "decal_snail_shell_mask.png",
   "decal_thimble_mask.png",
+  "deflector_clips",
   "dprop_crown_billing_booth_a",
   "dprop_crown_billing_booth_a_lod1",
   "dprop_crown_billing_booth_a_lod2",
@@ -38725,6 +38897,7 @@
   "fabricator_hoop",
   "fabricator_hoop_detail1",
   "fabricator_hoop_detail2",
+  "find_kit",
   "floating_island",
   "floating_island_detail1",
   "floating_island_detail2",
@@ -38772,6 +38945,7 @@
   "great_room_deck",
   "great_room_deck_detail1",
   "great_room_deck_detail2",
+  "gyro_jammer_clips",
   "half_pipe_concrete",
   "half_pipe_concrete_detail1",
   "half_pipe_concrete_detail2",
@@ -38976,6 +39150,7 @@
   "net_edge",
   "net_shoe",
   "net_tile",
+  "netcaster_clips",
   "ore_bin",
   "ore_bin_detail1",
   "ore_bin_detail2",
@@ -39069,6 +39244,7 @@
   "plate_kicker_8x3x20_detail1",
   "plate_kicker_8x3x20_detail2",
   "plated_brute_clips",
+  "pocket_kit",
   "primer_coil",
   "primer_coil__escape_rail",
   "primer_coil__escape_vent",
@@ -39090,6 +39266,7 @@
   "prop_pot",
   "prop_sail",
   "prop_spool",
+  "radio_cache",
   "ram_prow",
   "ram_prow__escape_rail",
   "ram_prow__escape_vent",
@@ -39170,6 +39347,7 @@
   "skylight_lip",
   "skylight_lip_detail1",
   "skylight_lip_detail2",
+  "slag_bowl_kit",
   "slot_canyon_flow",
   "slot_canyon_flow_bend15",
   "slot_canyon_flow_bend15_detail1",
@@ -39194,6 +39372,7 @@
   "survey_mast_40",
   "survey_mast_40_detail1",
   "survey_mast_40_detail2",
+  "swatter_clips",
   "tailings_lip",
   "tailings_lip_detail1",
   "tailings_lip_detail2",
@@ -39225,6 +39404,7 @@
   "tube_mouth_lip",
   "tube_mouth_lip_detail1",
   "tube_mouth_lip_detail2",
+  "valve_door",
   "valve_wheel_band",
   "valve_wheel_detail1",
   "valve_wheel_detail1m",

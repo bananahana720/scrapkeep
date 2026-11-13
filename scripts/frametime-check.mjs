@@ -26,7 +26,8 @@ import { fileURLToPath } from "node:url";
 // npm run sketch:export -- --self-play) and any --self-play-<name>=<v> flag goes with it. The game's
 // "self-play:" lines are kept in self-play.log and summary.json (stage entries as seconds since
 // launch and in the MangoHud log's own time, with the worst frame from 1 s before to 5 s after
-// each). Keep the log alive to its end: --self-play-min=<warmup + seconds + 10>.
+// each). Keep the log alive to its end: --self-play-min=<warmup + seconds + 10>. A self-play run is
+// silent; --sound keeps its audio.
 // A self-play game runs on its own XDG data and config under the run folder (xdg-data, xdg-config).
 // A self-play game that exits non-zero (1 run ended early, 2 no tools/ in the pack, 3 stalled)
 // fails the check with exit 1, or 2 for code 2.
@@ -50,6 +51,7 @@ export function parseArgs(argv) {
     hitch: BUDGET.hitchMs,
     keepVsync: false,
     hud: false,
+    sound: false,
     selfPlay: false,
     selfPlayArgs: [],
     gameArgs: [],
@@ -74,6 +76,7 @@ export function parseArgs(argv) {
     else if (arg.startsWith("--hitch=")) args.hitch = number(arg, "hitch");
     else if (arg === "--keep-vsync") args.keepVsync = true;
     else if (arg === "--hud") args.hud = true;
+    else if (arg === "--sound") args.sound = true;
     else if (arg === "--self-play") args.selfPlay = true;
     else if (arg.startsWith("--self-play-script="))
       throw new FrametimeError("--self-play-script= is a test override of the game and is not forwarded");
@@ -86,11 +89,13 @@ export function parseArgs(argv) {
   return args;
 }
 
-// The game's argv: the plain list after -- by default (unchanged); with --self-play the flag and
-// its options follow a leading -- so the game reads them as user args.
+// The game's argv: the plain list after -- by default (a person is playing, so sound stays on);
+// with --self-play the run is silent unless --sound, so it never plays over a live session, and
+// the flag and its options follow a leading -- so the game reads them as user args.
 export function gameArgv(args) {
   if (!args.selfPlay) return args.gameArgs;
-  return ["--", "--self-play", ...args.selfPlayArgs, ...args.gameArgs];
+  const engine = args.sound ? [] : ["--audio-driver", "Dummy"];
+  return [...engine, "--", "--self-play", ...args.selfPlayArgs, ...args.gameArgs];
 }
 
 export function selfPlayXdg(outDir) {

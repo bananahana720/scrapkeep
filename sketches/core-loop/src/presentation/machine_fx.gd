@@ -58,6 +58,8 @@ const MOMENTS := {
 const WORDS := {"fleet_heavy": "KLANG", "ancient_heavy": "KRZZT", "stagger": "KRNK", "elite": "CLOCKED OUT"}
 # Every glyph the uppercase words draw (WORDS, SPECIALS, BOSSES, the fall words and the panel pops).
 const WARM_GLYPHS := "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!?.,'+-%"
+# The steam sigh under an elite's clock-out card.
+const ELITE_SIGH := {"steam_puff": 8}
 const WORD_TINT := {"fleet": Palette.BRASS, "ancient": Palette.ANCIENT}
 
 # The four kill-first specials (ENEMY-PRIORITY.md 4, 4a; SOUND-BIBLE specials). Each
@@ -87,7 +89,7 @@ const SPECIALS := {
 # blasts across the body, then one ring), and the wink word lands one beat after it.
 const BOSSES := {
 	"brindle": {"family": "fleet", "tint": Palette.BRASS, "reach": 8.0,
-		"phase": {"phase_ring": 64, "steam_puff": 10, "brass_spark": 16, "plate_chunks": 12}, "phase_word": "KA-CHUNK",
+		"phase": {"phase_ring": 64, "steam_puff": 10, "brass_spark": 16, "plate_chunks": 12}, "phase_word": "",
 		"eject_word": "EJECT"},
 	"waking": {"family": "ancient", "tint": Palette.ANCIENT, "reach": 5.0,
 		"phase": {"phase_ring": 64, "arc_fizz": 14, "shell_shards": 14, "seam_motes": 12}, "phase_word": "KRAKK",
@@ -151,6 +153,9 @@ var _clock := 0.0
 var _sample := 0.0
 var _boss_at := Vector3.ZERO
 var director_ref = null
+# Vfx's kill mark (kill_mark.gd): a downed elite gets its clock-out card stamp and a steam sigh.
+# Null (a MachineFx without Presentation, in a tool or test) stamps the word instead.
+var kill_mark = null
 
 
 func setup(ctx_ref) -> void:
@@ -522,7 +527,12 @@ func _on_died(at: Vector3, _scrap: int, enemy: Node3D, kind: String, family: Str
 	var elite := kind == "miniboss" or String(enemy.get_meta("elite_affix", "")) != ""
 	if elite:
 		fire(MOMENTS[family]["chunk"], lifted, Color.TRANSPARENT, "P1")
-		word(WORDS["elite"], at + Vector3.UP * WORD_HEIGHT, WORD_TINT[family], true)
+		if kill_mark != null:
+			kill_mark.card(at + Vector3.UP * WORD_HEIGHT * 0.8)
+			fire(ELITE_SIGH, at + Vector3.UP * WORD_HEIGHT * 0.5, Color.TRANSPARENT, "P1")
+			_note("clock_out", family, at)
+		else:
+			word(WORDS["elite"], at + Vector3.UP * WORD_HEIGHT, WORD_TINT[family], true)
 
 
 # A posture body (a Warden or a boss's): the stagger vents for its whole window under a
@@ -748,7 +758,7 @@ func _on_boss_phase(phase: int, phase_name := "") -> void:
 
 
 # A boss changes phase: a ring out to its reach, its family's chunk of armour or shell,
-# and the phase word, big.
+# and the phase word, big, for a boss that has one.
 func boss_phase(boss: String, at: Vector3) -> void:
 	var row: Dictionary = BOSSES.get(boss, {})
 	if row.is_empty():
@@ -756,7 +766,9 @@ func boss_phase(boss: String, at: Vector3) -> void:
 	_boss_at = at
 	var lift: Vector3 = Vector3.UP * (float(row["reach"]) * 0.4)
 	fire(row["phase"], at + lift, row["tint"], "P1")
-	word(String(row["phase_word"]), at + lift + Vector3.UP * (WORD_HEIGHT + 2.0), row["tint"], true, 1.1, 1.6)
+	# Brindle's turn is read from his plates and the glance, not a word over him (flourish_rows.gd brindle_phase_2).
+	if String(row["phase_word"]) != "":
+		word(String(row["phase_word"]), at + lift + Vector3.UP * (WORD_HEIGHT + 2.0), row["tint"], true, 1.1, 1.6)
 	_note("boss_phase", boss, at)
 
 

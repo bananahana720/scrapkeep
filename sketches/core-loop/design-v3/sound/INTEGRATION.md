@@ -31,7 +31,7 @@ This is `set_pressure` with a new parameter source (`set_parameter_source` alrea
 | --- | --- | --- |
 | Stomp (landing on an enemy) | `slam_boom` | A one-beat band gap, then the downbeat hits harder: `drop_now(1, 0.6)` |
 | Wall bash | `smash_crack` | A brass stab from the world's lead family when the bash is above three quarters of top speed |
-| Kill chain | `kill_pop`, then `kill_chain_tier_1` to `_5` | Each tier is one more note of a rising D Dorian phrase, so a five-chain plays a melody. Tier 5 triggers the lead stem's hook. |
+| Kill chain | `kill_pop`, then `kill_chain_tier_1` to `_5` | Each tier racks one more click and a higher air rise, heavier and never a note (SOUND-BIBLE rule 7, [feedback_set.py](feedback_set.py)). Tier 5 triggers the lead stem's hook. |
 | Scrap pickup run | `scrap_tick_1` to `_5` by pickup streak | Same ladder, so collecting sounds like playing scales |
 | Boost and dash | `boost_whoosh`, `dash_whoosh` | None. Movement is never quantized. |
 | Getting hurt | `hurt` (the tritone rasp) | Bass ducks for half a second |
@@ -143,7 +143,7 @@ Lead times as the systems thread read them on stage 14709f17 and checked again o
 | Crowd and pack bodies | none yet (`pack_arrived` fires as they land) | every body shows a ground ring for 1.0 s | yes |
 | The next spawn slot | private | 1.5 to 6.5 s | no: it can be skipped, and its contents are drawn when it fires |
 | Clock tier rise | `threat_rose(tier)` | stage second 45 and 90, known from stage entry | yes |
-| Offers | `event_announced(id, seconds_until)` | 4.0 s | yes |
+| Offers | `event_announced(id, seconds_until, at)` | 4.0 s | yes |
 | Squall, flood | `event_announced` | 6.0 s | yes |
 | Park set pieces | `event_announced` | 5 to 10 s; rows marked `on_bar` already wait for the band's next bar | yes |
 | Warden pulse | `vent_charging(at, seconds)` | 2.0 s, every 6.0 s | yes |
@@ -185,7 +185,7 @@ After, each behind a switch and read on bot bands with the switch off and on, on
 
 ### Before and after the world 1 sitting
 
-Before: the conductor's timing does not change, and the band reads only the names above. The band's one change is the Warden form on the recorded band, behind its switch.
+Before: the conductor's timing does not change, and the band reads only the names above. The band's one change is the Warden form on the recorded band, behind its switch. The set director (ruling di, SOUND-BIBLE "The DJ at the decks") reads only names already listed here (pressure, the faders, `event_announced`, the fight word) plus the Heat band and the Overtime facts the band already hears, and changes only what the band plays, behind `--set-director=on`.
 
 After, in order:
 

@@ -181,7 +181,7 @@ static func _category_values(sheet) -> Dictionary:
 		"mods": sheet.mods, "cooldown": sheet.cooldown_scale, "patterns": sheet.patterns,
 		"elements": sheet.triggers, "magnet": sheet.magnet, "kill_scrap": sheet.kill_scrap,
 		"max_hp": sheet.max_hp_bonus, "punch": sheet.punch,
-		"synergy": [sheet.synergies, sheet.consumed, sheet.rules, sheet.transformers, sheet.dials],
+		"synergy": [sheet.synergies, sheet.transformers, sheet.dials],
 	}
 
 
@@ -220,8 +220,7 @@ func _all_ids() -> Array:
 
 
 func _ingredients(part_id: String) -> Array:
-	var key := Synergies.evolution_of(part_id)
-	return Synergies.ROWS[key]["evolution"]["parts"].duplicate() if key != "" else []
+	return Synergies.EVOLUTIONS.get(part_id, []).duplicate()
 
 
 func _check_declared_touches() -> void:
@@ -296,10 +295,10 @@ func _check_random_builds() -> void:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 20261015
 	var pool := _all_ids()
-	# Evolution ingredients, drawn often enough that consumed pairs come and go.
+	# Evolution ingredients, drawn often enough that live Evolved parts come and go.
 	var ingredients: Array = []
-	for key in Synergies.evolution_ids():
-		ingredients += Synergies.ROWS[key]["evolution"]["parts"]
+	for key in Synergies.EVOLUTIONS:
+		ingredients += Synergies.EVOLUTIONS[key]
 	var tier_run := TierRun.new()
 	Parts.bind_run(tier_run)
 	var mismatches: Array = []
@@ -355,7 +354,7 @@ func _check_random_builds() -> void:
 
 
 # The categories a change from before to after may refold: everything the added or
-# removed parts declare, every held Evolved part's (its gate reads the consumed set), and
+# removed parts declare, every held Evolved part's (its gate reads its ingredients), and
 # the row-fed categories when synergy refolds.
 func _allowed_dirty(before: Array, after: Array) -> Array:
 	var changed: Array = []

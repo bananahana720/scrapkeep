@@ -165,12 +165,6 @@ func _run() -> void:
 	for node in _game.get_tree().get_nodes_in_group("enemy"):
 		node.queue_free()
 	await _settle(0.5)
-	# 2026-10-04 (fix round D): since HW2 the Warden's break offers a hot-wired part, and the
-	# Fit / Recycle screen opens over the paused tree as the gates open, freezing the HUD's
-	# toast clock. Recycle it here so the earn queue runs; the toast order is unchanged.
-	if hud.hotwire_screen != null and hud.hotwire_screen.is_open():
-		hud.hotwire_screen.choose("recycle")
-		await _frames(3)
 	# 2026-11-11 (wave 36): a ball still rolling can pass a reward gate while the cards below come, and
 	# the gate's own crate and take then hold the one line. The gates close so the line is the earns alone.
 	_game.build.gates.close()

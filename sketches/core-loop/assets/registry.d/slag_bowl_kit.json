@@ -1,0 +1,21 @@
+{
+ "assets": [
+  {
+   "id": "slag_bowl_kit",
+   "path": "res://assets/models/world_one/slag_bowl_kit.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/boss/arena.gd",
+   "provenance": {
+    "recipe": "tools/blender/world_one/slag_bowl_kit.py",
+    "note": "Procedural vertex-coloured Slag Bowl kit (W1-23): crane mast, crossbar boom and rim vent nozzle, each placed where arena.gd's colliders stand."
+   },
+   "exception": {
+    "tris": 1600,
+    "verts": 3200,
+    "draws": 3
+   },
+   "exception_why": "Three separately placed parts (mast, boom, vent nozzle), one draw each; four masts and four vents per bowl. Limits asserted by the recipe."
+  }
+ ]
+}

@@ -70,13 +70,28 @@ func _static_checks() -> void:
 	for id in ["brindle_phase_2", "brindle_phase_3"]:
 		var full := Rows.length(id, false)
 		_t.check("02 %s fits the transition beat" % id, full > 0.0 and full < TRANSITION_SECONDS, "%.2f s" % full)
+		# w37 film PF-26: a stamp or a drawn word over the turn covered Brindle and his target tags; the caption stays.
+		for form in ["full", "short"]:
+			var kinds := (Rows.ROWS[id][form] as Array).map(func(p: Dictionary) -> String: return String(p["kind"]))
+			_t.check("02b %s %s draws no word over the fight, only its caption" % [id, form], not kinds.has("stamp") and not kinds.has("sfx_word") and kinds.has("caption"), str(kinds))
 	var first := Rows.length("brindle_rout", false) + Rows.length("tarn_sign_on", false)
 	_t.check("03 a first rout and sign-on need no more than the cap past the window", first - Flow.VICTORY_SECONDS <= Cues.HOLD_CAP,
 		"%.2f s against %.1f + %.1f" % [first, Flow.VICTORY_SECONDS, Cues.HOLD_CAP])
 	_t.check("04 a repeat rout fits the window", Rows.length("brindle_rout", true) <= Flow.VICTORY_SECONDS, "%.2f s" % Rows.length("brindle_rout", true))
 	var triggers := {"arrival": Cues.matching("arrival", "brindle"), "rout": Cues.matching("rout", "brindle"),
 		"sign_on": Cues.matching("sign_on", "brindle"), "phase": Cues.matching("phase", "brindle")}
-	_t.check("05 one row per moment, two phase panels", triggers.arrival.size() == 1 and triggers.rout.size() == 1 and triggers.sign_on.size() == 1 and triggers.phase.size() == 2, str(triggers))
+	_t.check("05 one row per moment, three phase panels (two phases and the chase)", triggers.arrival.size() == 1 and triggers.rout.size() == 1 and triggers.sign_on.size() == 1 and triggers.phase.size() == 3, str(triggers))
+	# FX-03: the chase turn has its own beat, a glance that waits for the scooter to leave the hull.
+	for short in [false, true]:
+		var chase: Array = Cues.world_beats("brindle_chase", short).filter(func(b): return b.get("kind") == "glance")
+		_t.check("06 the chase turn glances along the scooter's arc (%s)" % ("short" if short else "full"),
+			chase.size() == 1 and chase[0]["anchor"] == "scooter" and float(chase[0]["at"]) > 0.0
+				and float(chase[0]["at"]) + float(chase[0]["seconds"]) <= Rules.EJECT_FLIGHT, str(chase))
+		# The glance waits inside the row, so a row that has ended (a death, a skip) drops it.
+		var words := (Rows.ROWS["brindle_chase"]["short" if short else "full"] as Array).map(func(p: Dictionary) -> String: return String(p["kind"]))
+		_t.check("06b the chase row adds no words and outlasts its glance's wait (%s)" % ("short" if short else "full"),
+			not words.has("caption") and not words.has("stamp") and not words.has("sfx_word")
+				and Rows.length("brindle_chase", short) > float(chase[0]["at"]), str(words))
 
 
 func _to_arena() -> void:

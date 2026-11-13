@@ -4,6 +4,7 @@ const AppShell := preload("res://src/core/app_shell.gd")
 const WindupRows := preload("res://src/presentation/windup_rows.gd")
 const GraphicsPreset := preload("res://src/presentation/graphics_preset.gd")
 const BakeLook := preload("res://src/presentation/bake_look.gd")
+const Roster := preload("res://src/combat/roster.gd")
 
 # An enemy's life between attacks and its break-up on death, read from its WindupRows row
 # (idle, death, and the swarm remnant's wind-up pose). The idle moves the model's pivot
@@ -45,6 +46,17 @@ var seconds := 0.5
 var style := "scatter"
 var t := 0.0
 var _pieces: Array = []
+# A grounded body's pieces land (W1-86): each bounces on the ground under it (the terrain,
+# read through `ground`), rests there, then shrinks away. No ground is the old flight, for a
+# body that died in the air or rang out, under reduced motion and in a headless run.
+var ground := Callable()
+var rest := 0.0
+# How a landing piece meets the floor: the kicked props' numbers (prop_kicks.gd), so a death
+# and a kicked prop land alike.
+const BOUNCE := 0.3
+const SKID := 0.55
+const SETTLE_SPEED := 0.8
+const LAND_REST := 0.9
 
 
 static func active() -> bool:
@@ -118,7 +130,8 @@ static func part_count(death: Dictionary) -> int:
 # Breaks the dying enemy's look into its row's pieces, thrown along `direction`. Pieces reuse
 # the model's meshes and materials, each part again smaller and turned once the parts run out;
 # with fewer than two meshes they are boxes in its material. The spread is a hash of the death point, so seeded runs replay it.
-static func scatter(enemy: Node3D, kind: String, direction: Vector3) -> Node3D:
+# `land` is the ground height at (x, z) for a body that died standing (W1-86); empty for the old flight.
+static func scatter(enemy: Node3D, kind: String, direction: Vector3, land := Callable()) -> Node3D:
 	var death: Dictionary = WindupRows.ROWS.get(kind, {}).get("death", {})
 	var parent := enemy.get_parent()
 	if death.is_empty() or parent == null:
@@ -131,6 +144,9 @@ static func scatter(enemy: Node3D, kind: String, direction: Vector3) -> Node3D:
 	parent.add_child(node)
 	var at := enemy.global_position
 	node.global_transform = Transform3D(Basis.IDENTITY, at)
+	if land.is_valid() and motion_scale > 0.0 and active() and Roster.CHASSIS.get(kind, {}).get("move_class", "") != "airborne":
+		node.ground = land
+		node.rest = LAND_REST
 	var material: Material = null
 	if not sources.is_empty():
 		material = sources[0]["material"]
@@ -209,15 +225,29 @@ static func _throw(death_style: String, out: Vector3, throw: Vector3) -> Vector3
 	return out * 3.0 + throw * 4.0 + Vector3.UP * 4.0
 
 
+# The local height a piece's origin rests at: the ground under it, raised by how far the piece's
+# lowest point sits under its origin as it is turned now, so it rests on the ground, not in it.
+func floor_at(piece: MeshInstance3D) -> float:
+	if not ground.is_valid():
+		return -INF
+	var at := global_transform * piece.position
+	var low := 0.0
+	if piece.mesh != null:
+		low = maxf(0.0, -(Transform3D(piece.basis, Vector3.ZERO) * piece.mesh.get_aabb()).position.y)
+	return float(ground.call(at.x, at.z)) - global_position.y + low
+
+
+# The scatter's whole life: the row's seconds, plus the rest on the ground when it lands.
+func life() -> float:
+	return seconds + rest
+
+
 func _physics_process(delta: float) -> void:
 	t += delta
-	var size := clampf((1.0 - t / seconds) / SHRINK, SPECK, 1.0)
+	var size := clampf((1.0 - t / life()) / SHRINK, SPECK, 1.0) if rest == 0.0 \
+		else clampf((life() - t) / (seconds * SHRINK), SPECK, 1.0)
 	for piece in _pieces:
 		var mi: MeshInstance3D = piece.node
-		var v: Vector3 = piece.velocity
-		v.y -= GRAVITY * delta
-		piece.velocity = v
-		mi.position += v * delta
 		var spin: Vector3 = piece.spin * (3.0 if style == "spin_down" else 1.0)
 		# The turn is kept at full size and the drawn basis is that turn at this tick's size.
 		var turn: Basis = piece.turn
@@ -225,5 +255,17 @@ func _physics_process(delta: float) -> void:
 			turn = turn.rotated(spin.normalized(), spin.length() * delta)
 			piece.turn = turn
 		mi.basis = turn * size
-	if t >= seconds:
+		var v: Vector3 = piece.velocity
+		v.y -= GRAVITY * delta
+		mi.position += v * delta
+		var floor_y := floor_at(mi)
+		# Only a falling piece meets the ground; one still rising from under it keeps rising.
+		if mi.position.y < floor_y and v.y <= 0.0:
+			mi.position.y = floor_y
+			v.y = -v.y * BOUNCE if v.y < -SETTLE_SPEED else 0.0
+			v.x *= SKID
+			v.z *= SKID
+			piece.spin = piece.spin * SKID
+		piece.velocity = v
+	if t >= life():
 		queue_free()

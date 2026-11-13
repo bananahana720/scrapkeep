@@ -22,6 +22,7 @@ test("command renders under xvfb by default and headless without pixels", () => 
   const xvfb = command({ binary: "/g", pilot: "tally", depth: 4, out: "/o", render: "xvfb" });
   assert.equal(xvfb.cmd, "xvfb-run");
   assert.ok(xvfb.argv.includes("opengl3"));
+  assert.ok(xvfb.argv.includes("Dummy"), "a displayed read makes no sound");
   const none = command({ binary: "/g", pilot: "tally", depth: 4, out: "/o", render: "none" });
   assert.equal(none.cmd, "/g");
   assert.deepEqual(none.argv.slice(-5), ["--", "--pilot=tally", "--depth=4", "--out=/o", "--render=0"]);

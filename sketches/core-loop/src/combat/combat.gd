@@ -25,6 +25,8 @@ const MindAttacks := preload("res://src/boss/mind_attacks.gd")
 const Sticky := preload("res://src/combat/sticky.gd")
 const Devices := preload("res://src/core/devices.gd")
 const NearMiss := preload("res://src/combat/near_miss.gd")
+const WayOutPaint := preload("res://src/presentation/way_out_paint.gd")
+const Redline := preload("res://src/combat/redline.gd")
 const Flail := preload("res://src/combat/flail.gd")
 const Augments := preload("res://src/movement/augments.gd")
 const Ultimate := preload("res://src/combat/ultimate.gd")
@@ -274,6 +276,9 @@ var drivers: Dictionary = Companion.DRIVERS
 # mark}; companion_body.gd shows it. The gauge clears on run start and every attempt.
 signal companion_assisted(assist: Dictionary)
 signal companion_assist_full
+# A swung or thrown body (flail_hit) landed on `enemy`, whatever path the hit then takes: a
+# Warden's posture path never emits enemy_struck, so Called Shot reads BOWL from this.
+signal flung(enemy: Node3D)
 var assist_charge := 0.0
 var assists := 0
 var last_assist := {}
@@ -405,6 +410,11 @@ func setup(ctx_ref) -> void:
 	add_child(flail)
 	flail.setup(ctx, self)
 	near_miss.setup(ctx.events, Callable(ctx.player, "ball_position"))
+	# The way out of the warning the ball stands in, painted on the floor (W1-05).
+	var way_out := WayOutPaint.new()
+	near_miss.add_child(way_out)
+	way_out.setup(near_miss, Callable(ctx.player, "ball_position"), Callable(ground, "height"))
+	_wire_redline()
 	_specials = {
 		"detonation_gauge": {"geometry": _discharge_geometry, "fire": _fire_discharge},
 		"overdrive_blast": {"geometry": _overdrive_geometry, "fire": _fire_overdrive},
@@ -3205,6 +3215,7 @@ func _piece_hit(enemy: Node3D, damage: float, from: Vector3, knock: float) -> fl
 # A flail strike (flail.gd, POLES-FLAILS section 5): a swung or thrown body, not a weapon, so
 # the habit read never counts it. A Warden or a boss takes it through its posture like a volley.
 func flail_hit(enemy: Node3D, damage: float, from: Vector3, knock: float) -> void:
+	flung.emit(enemy)
 	if (enemy.has_method("_apply_posture") and enemy.has_method("staggered")) or _target_class(enemy) == "boss":
 		_ult_hit(enemy, "flail", damage, from, false)
 		return
@@ -4094,6 +4105,21 @@ func _on_player_hit(amount: float, shove: Vector3, source: String) -> void:
 	# The damage always lands; what the hit may take is the stop, and that goes through
 	# the player's crowd-control door, which Rivet's sprint shuts.
 	ctx.player.crowd_control("knock", shove / get_physics_process_delta_time())
+
+
+# Heat on the shell (redline.gd, loops.md Spec 1): a hot shell scales every hit at the run's one
+# damage choke point, and a cook-off takes its share of the hull. The blast itself is the
+# ball's (player_ball.gd), struck through the same slam path as any other.
+func _wire_redline() -> void:
+	var redline = ctx.player.get("redline") if ctx.player != null else null
+	if redline == null:
+		return
+	ctx.run.taken_hook = func(_source: String) -> float:
+		redline.note_hit()
+		return redline.taken_scale()
+	redline.cooked_off.connect(func(_at: Vector3, _force: float):
+		if ctx.flow.in_play():
+			ctx.run.damage(ctx.run.max_hp * Redline.COOK_OFF_SELF_HULL, Redline.COOK_OFF_SOURCE))
 
 
 func _on_lobber_fired(origin: Vector3, landing: Vector3, flight: float, lobber: Node3D) -> void:

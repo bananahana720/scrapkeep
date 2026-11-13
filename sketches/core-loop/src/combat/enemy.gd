@@ -5,11 +5,14 @@ const BakeLook := preload("res://src/presentation/bake_look.gd")
 const Telegraph := preload("res://src/combat/telegraph.gd")
 const Threat := preload("res://src/combat/threat_grammar.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
+const Contact := preload("res://src/movement/contact.gd")
+const BallRules := preload("res://src/movement/ball_rules.gd")
 const EnemyMotion := preload("res://src/presentation/enemy_motion.gd")
 const EnemyClips := preload("res://src/presentation/enemy_clips.gd")
 const WindupRows := preload("res://src/presentation/windup_rows.gd")
 const FlashGuard := preload("res://src/presentation/flash_guard.gd")
 const WindupPoses := preload("res://src/presentation/windup_poses.gd")
+const EnemyGait := preload("res://src/presentation/enemy_gait.gd")
 
 # What every enemy shares: health, plating, weight, knockback, the flash, the plating
 # tint, death and its telegraph. The spine's ball calls knock() and flash() on contact
@@ -51,6 +54,11 @@ const PLATE_GLOW_LIVE := 1.8
 const PLATE_GLOW_SLATE := 0.5
 const PULSE_DEPTH := 0.14
 const PULSE_HZ := 2.0
+# A glance off a slate rim (flare_glance, the plating lesson in ui/first_steps.gd): the rim beats
+# GLANCE_BEATS times over GLANCE_SECONDS, up to GLANCE_PEAK times its resting glow, then holds slate.
+const GLANCE_SECONDS := 0.9
+const GLANCE_BEATS := 2.0
+const GLANCE_PEAK := 4.0
 # The cue lives on the plate's rim, not its faces (Andrew, 2026-09-29): the plate material
 # emits through a tiny nearest-filtered mask texture, so light appears only where the mask
 # is white (rim, bolts) and body and plate faces keep their resting finish in both states.
@@ -70,6 +78,11 @@ signal attack_phase(facts: Dictionary)
 
 const PHASE_WINDUP := "windup"
 const PHASE_STRIKE := "strike"
+# The release flash (_show_strike): frames held, the share of the way to HAZARD, the glow.
+const STRIKE_FRAMES := 2
+const STRIKE_DONE := -1
+const STRIKE_TINT := 0.85
+const STRIKE_GLOW := 1.6
 const PHASE_RECOVER := "recover"
 const PHASE_CANCELLED := "cancelled"
 # Enemies whose attack has no clean owner among these files, so they publish nothing.
@@ -118,9 +131,15 @@ var half_height := 1.5
 var tint_state := ""
 # How many shoves this enemy has taken, for tests and anything that reads weight.
 var knocks := 0
+# How many wall slams this enemy has taken, and the knock count the last one spent (one per knock).
+var wall_slams := 0
+var _walled_knock := -1
 
 var _knock := Vector3.ZERO
 var _flash := 0.0
+# The attack's release flash (FX-05): physics frames of the HAZARD tint still to show, or
+# STRIKE_DONE when the last has shown and the rest look is owed.
+var _strike_frames := 0
 var _dead := false
 var _material: StandardMaterial3D
 var _base_color := Palette.RUST
@@ -134,6 +153,7 @@ static var _plate_shaders: Array[Material] = []
 # Open-crack glyphs a plated enemy shows only while your punch breaks it now.
 var _cracks: Array = []
 var _rim_clock := 0.0
+var _glance_left := 0.0
 # The open attack instance, or {} between attacks: instance, row, phase, managed, geometry, progress.
 var _atk := {}
 
@@ -183,6 +203,8 @@ var _idle_period := 0.0
 # null for a kind with none and in headless runs.
 var _clips: Node
 var _clips_tried := false
+# A walking kind's turn, lean and steps on the pivot (EnemyGait), seated by the kind; null otherwise.
+var _gait: EnemyGait
 
 
 func _visual_parent() -> Node3D:
@@ -197,7 +219,8 @@ func _ordinary_reaction() -> bool:
 	return kind not in ["warden", "vault", "miniboss", "rogue_crane", "rogue_skip", "rogue_tender"] and not preload("res://src/combat/roster.gd").is_boss_piece(kind)
 
 
-func react(reaction: String, direction: Vector3, handed := false) -> void:
+# `struck` false is a reaction to something seen, not a blow: it plays no hit clip.
+func react(reaction: String, direction: Vector3, handed := false, struck := true) -> void:
 	_reaction_handed = handed
 	if not reactions_enabled or _dead or not _ordinary_reaction():
 		return
@@ -206,7 +229,7 @@ func react(reaction: String, direction: Vector3, handed := false) -> void:
 	_react_direction = Vector3(direction.x, 0.0, direction.z).normalized()
 	_react_speed = _knocked_speed()
 	_react_time = 0.0
-	if is_instance_valid(_clips):
+	if struck and is_instance_valid(_clips):
 		_clips.hit()
 	_react_duration = float(_react_row["rise"]) + float(_react_row["hold"]) + float(_react_row["recover"])
 	if float(_react_row["tumble"]) > 0.0:
@@ -294,11 +317,21 @@ func _update_reaction(delta: float) -> void:
 	if reaction_pivot == null and (_line_lean != 0.0 or not _react_row.is_empty()):
 		_visual_parent()
 	_update_idle(delta)
-	if reaction_pivot != null:
+	var tilt := Transform3D.IDENTITY
+	var turn := Transform3D.IDENTITY
+	if _gait != null and reaction_pivot != null and not _dead:
+		var walking := is_on_floor() and _knocked_speed() < 1.0
+		_gait.step(delta, self, velocity, half_height, walking, get_floor_normal() if walking else Vector3.UP, radius)
+		tilt = _gait.tilt
+		turn = _gait.turn
+	# A dead body's pivot is a death clip's now (EnemyClips.die keeps the pose it died in).
+	if reaction_pivot != null and not _dead:
 		var lean_pose := Quaternion.IDENTITY
 		if _line_lean != 0.0 and is_instance_valid(target):
 			lean_pose = Quaternion(_reaction_axis(_reaction_ball() - global_position), deg_to_rad(LINE_LEAN) * _line_lean)
-		reaction_pivot.transform = Transform3D(Basis(lean_pose * _react_pose) * _idle_pose, idle_offset)
+		# The reaction and line lean are in the body's frame; the turn carries the model, and the
+		# idle, wind-up and release poses ride inside it, so a nose-up stays nose-up when it is turned.
+		reaction_pivot.transform = tilt * Transform3D(Basis(lean_pose * _react_pose), Vector3.ZERO) * turn * Transform3D(_idle_pose, idle_offset)
 
 
 # The model breathes between attacks and holds still (or takes its row's pose) through
@@ -447,7 +480,25 @@ func plating_now() -> float:
 # The armour row damage_families.gd reads (its armour_of falls through to the kind table on
 # ""): a Dig elite arrives with spec armour "plated".
 func armour_class() -> String:
-	return String(spec.get("armour", ""))
+	var own := String(spec.get("armour", ""))
+	if own == "" and _soaked_left > 0.0:
+		return "wet"
+	return own
+
+
+# A flood soaks this machine for `seconds` (overtime.gd's sluice): with no armour of its own it
+# reads as wet, so arc hits it at the wet row (damage_families.gd) and the sluice's arc jump finds
+# it. It dries on its own physics tick (so a pause holds it and a fixed-fps bot run replays), even
+# after the sluice that soaked it is gone.
+var _soaked_left := 0.0
+
+
+func soak(seconds: float) -> void:
+	_soaked_left = maxf(_soaked_left, seconds)
+
+
+func wet() -> bool:
+	return armour_class() == "wet"
 
 
 # The plating one hit meets. `part` is "" for the body or a weak point id.
@@ -480,6 +531,7 @@ func set_tint(state: String) -> void:
 	if state == tint_state:
 		return
 	tint_state = state
+	_glance_left = 0.0
 	var now := state == "amber"
 	for mat in _tint_materials:
 		_paint_plate(mat as StandardMaterial3D, state)
@@ -520,14 +572,17 @@ func telegraph() -> Node3D:
 # The break-up (EnemyMotion.scatter) lives in its own detached node and frees itself.
 func _die() -> void:
 	_dead = true
+	_settle_look()
 	_facts_end(true)
 	collision_layer = 0
 	collision_mask = 0
 	_clear_telegraph()
 	# A kind with a death clip plays it on its own look first; the clip then scatters it.
 	# A ring-out falls out of the world, so it scatters at once.
-	if ringed_out or not (is_instance_valid(_clips) and _clips.die(_death_direction())):
-		EnemyMotion.scatter(self, kind, _death_direction())
+	# A body that died standing drops its pieces on the ground (W1-86); a ring-out or a body in the air does not.
+	var land := Callable(terrain, "height") if not ringed_out and is_on_floor() and terrain != null else Callable()
+	if ringed_out or not (is_instance_valid(_clips) and _clips.die(_death_direction(), land)):
+		EnemyMotion.scatter(self, kind, _death_direction(), land)
 	died.emit(global_position, scrap_value)
 	queue_free()
 
@@ -591,6 +646,7 @@ func _move(delta: float, desired: Vector3) -> void:
 	move_and_slide()
 	if is_on_floor() and velocity.y < 0.0:
 		velocity.y = 0.0
+	_wall_slam()
 	_knock = _knock.move_toward(Vector3.ZERO, KNOCK_DECAY * delta)
 	if _rings_out(grounded):
 		return
@@ -599,6 +655,36 @@ func _move(delta: float, desired: Vector3) -> void:
 
 func _knocked_speed() -> float:
 	return Vector3(_knock.x, 0.0, _knock.z).length()
+
+
+# A knock that drives this enemy into a world face lands as a slam: a stagger and one enemy_walled,
+# once per knock; walking into a wall is not a slam. Presentation only: the knock is left as it was,
+# so where the body goes, the pins it makes and the run are unchanged (the PR 950 band read: stopping
+# the body on the face moved the expert's stop tax under its line). No damage.
+func _wall_slam() -> void:
+	if _dead or _walled_knock == knocks or _knocked_speed() < Contact.WALL_SLAM_SPEED:
+		return
+	for i in get_slide_collision_count():
+		var hit := get_slide_collision(i)
+		if not BallRules.world_face(hit.get_collider()):
+			continue
+		var n := hit.get_normal()
+		# A face the floor rule owns (a hill or a ramp) carries the enemy; only a wall stops it.
+		if n.angle_to(Vector3.UP) <= floor_max_angle:
+			continue
+		n.y = 0.0
+		if n.length_squared() < 0.01:
+			continue
+		n = n.normalized()
+		var into := -Vector3(_knock.x, 0.0, _knock.z).dot(n)
+		if into < Contact.WALL_SLAM_SPEED:
+			continue
+		_walled_knock = knocks
+		wall_slams += 1
+		react("stagger", n)
+		if _reaction_bus != null and _reaction_bus.has_signal("enemy_walled"):
+			_reaction_bus.enemy_walled.emit(self, hit.get_position(), n, into)
+		return
 
 
 # A knock opens the fall when it strikes an enemy standing on a floor, and the fall closes
@@ -670,6 +756,45 @@ func _update_flash(delta: float) -> void:
 		_material.emission_energy_multiplier = FlashGuard.spike(0.0, _flash * 2.0)
 		if _flash <= 0.0:
 			_apply_rest_look()
+	if _strike_frames > 0:
+		_strike_frames -= 1
+		if _flash <= 0.0:
+			_show_strike()
+		if _strike_frames == 0:
+			_strike_frames = STRIKE_DONE
+	elif _strike_frames == STRIKE_DONE:
+		_strike_frames = 0
+		if _flash <= 0.0:
+			_apply_rest_look()
+
+
+# The release flash (FX-05, effects critique E5): on the strike, the body goes HAZARD for
+# STRIKE_FRAMES physics frames, so the attacker wears the hit's colour at the moment its mark
+# lands. A hit flash wins over it. Reduce flashes keeps the tint at its information share and
+# cuts the glow's rise. A body with a second material of its own (the mag trapper's discs)
+# paints it with the same look from its _update_flash while strike_flashing().
+func _show_strike(mat: StandardMaterial3D = null, base := Color.WHITE) -> void:
+	if mat == null:
+		mat = _material
+		base = _base_color
+	mat.albedo_color = base.lerp(Palette.HAZARD, FlashGuard.info(STRIKE_TINT))
+	mat.emission_enabled = true
+	mat.emission = Palette.HAZARD
+	mat.emission_energy_multiplier = FlashGuard.spike(0.0, STRIKE_GLOW)
+
+
+# Whether the body wears the release flash right now (tests and captures).
+func strike_flashing() -> bool:
+	return _flash <= 0.0 and (_strike_frames == STRIKE_DONE or (_strike_frames > 0 and _strike_frames < STRIKE_FRAMES))
+
+
+# A body leaves in its resting look. The killing hit's flash fades on this body's own tick, which
+# stops at death, so the death clip and the pieces that share its materials kept it and drew
+# white for their whole life (PC film, 13 Nov 2026: "white crew marked HIRED").
+func _settle_look() -> void:
+	_flash = 0.0
+	_strike_frames = STRIKE_DONE
+	_update_flash(0.0)
 
 
 # The resting look: the base colour and no glow. The plating cue is on the plate's rim.
@@ -771,6 +896,22 @@ func _pulse_rim(delta: float) -> void:
 		(mat as StandardMaterial3D).emission_energy_multiplier = PLATE_GLOW_LIVE * swing
 
 
+# The strike just glanced: the slate rim beats so the miss reads on the target. Nothing on a
+# target that is not slate right now, and a beat already running finishes first, so rapid
+# glances never strobe the rim (FlashGuard's 3 Hz).
+func flare_glance() -> void:
+	if tint_state == "slate" and not _tint_materials.is_empty() and _glance_left <= 0.0:
+		_glance_left = GLANCE_SECONDS
+
+
+func _beat_glance(delta: float) -> void:
+	_glance_left = maxf(0.0, _glance_left - delta)
+	var beat := absf(sin(PI * GLANCE_BEATS * (1.0 - _glance_left / GLANCE_SECONDS)))
+	var energy := FlashGuard.spike(PLATE_GLOW_SLATE, PLATE_GLOW_SLATE * lerpf(1.0, GLANCE_PEAK, beat))
+	for mat in _tint_materials:
+		(mat as StandardMaterial3D).emission_energy_multiplier = energy
+
+
 # A one-row or grid mask texture, nearest-sampled and mipless so a texel never blends.
 static func mask_texture(texels: Array, width: int, height := 1) -> ImageTexture:
 	var img := Image.create_empty(width, height, false, Image.FORMAT_RGB8)
@@ -828,9 +969,13 @@ func _notification(what: int) -> void:
 			_clips_tried = true
 			_clips = EnemyClips.seat(self)
 		_update_reaction(get_physics_process_delta_time())
+		if _soaked_left > 0.0:
+			_soaked_left = maxf(0.0, _soaked_left - get_physics_process_delta_time())
 		_facts_poll()
 		if tint_state == "amber" and _pulses():
 			_pulse_rim(get_physics_process_delta_time())
+		elif _glance_left > 0.0:
+			_beat_glance(get_physics_process_delta_time())
 
 
 # The polish bake reaches every swapped-in material (BakeLook): the body paint the flash
@@ -924,6 +1069,8 @@ func _facts_phase(phase: String) -> void:
 		return
 	_facts_refresh()
 	_atk["phase"] = phase
+	if phase == PHASE_STRIKE and not _dead:
+		_strike_frames = STRIKE_FRAMES
 	attack_phase.emit(_facts_dict(phase))
 
 

@@ -26,7 +26,7 @@ Every drawn thing belongs to one priority class. The class decides draw order (f
 | P2 | The three reads and the exits | The window beam; the safe-resolution chevrons; the return contraption's lane and gauge; kicker lips; the reach ring's dashed bone | never | yes | priority 39, depth-tested; short occlusion marker only |
 | P3 | Player committed geometry | Skill-shot indicators, the charge gauge ring, the grapple reticle | never | yes | priority 38 |
 | P4 | Rewards and pickups | Scrap squares in flight, cores, gate toppers, hoops, interactable glyphs | thinned only past density 0.8 | yes on the topper, none on scrap | priority 30 |
-| P5 | Player effects | Hit sparks, kill pops, chain bursts, trails, speed lines, slam rings' afterglow, synergy shockwaves | yes | **never** | priority 20, additive |
+| P5 | Player effects | Hit sparks, kill pops, chain bursts, trails, speed lines, slam rings' afterglow, synergy shockwaves | yes | **never** the keyline band; the solid hit spark, the kill mark and the stun stars wear a thin comic ink rim inside their own shape (FX-01, FX-02, 12 Nov 2026, an assumption Andrew can overturn) | priority 20, additive |
 | P6 | Hostile area fills and swept ground | The striped 35% fill inside an edge, a wave's 15% swept stripes, a lane's run fill | unioned past 4 overlapping areas (§1.3) | n/a | priority 10 |
 | P7 | Ambient | Dust, steam, sparks off the fins, heat shimmer, idle loops | first to go | never | world |
 
@@ -205,7 +205,7 @@ What the rig does today (`chase_camera.gd`): FOV 65→82 with speed fraction, ar
 | **In the bowl** (r < `BOWL_OUT`) | A soft look assist toward the mast: when the mouse has been still 0.5 s, yaw blends 25% toward the Warden at 2/s; any mouse input cancels it for 1 s | setting `camera_assist`, default off; optional bowl-only trial | "where is it" while circling; the Warden is the room's landmark |
 | **Riding the return** | The launch profile (exists: +16 FOV, kick 0.6) with the punch clamp above | | a ride that feels like a ride |
 | **In chaos** (density ≥ 0.6) | Shake sum capped at 0.6, kicks at 0.4, no roll from impacts; hit-stop obeys §3.4 across every source | | the camera must not add noise to a full screen |
-| **Damage taken** | Never shake (VL §8). W11's read is the hull crack, an iron-oxide vignette 0.25 s and a squash | | shake on being hit is the one thing that makes "did I dodge" unanswerable |
+| **Damage taken** | Never shake (VL §8). The read is a hazard-red edge flash toward the source for 0.4 s, the damage number and a squash (the `player_hit` row in `event_kinds.gd`, drawn by `edge_flash.gd`) | | shake on being hit is the one thing that makes "did I dodge" unanswerable |
 
 ### 3.2 Motion comfort and settings
 
@@ -225,7 +225,7 @@ Rules that hold at every setting: pitch clamp −1.25 to 0.55 rad (exists), roll
 
 ### 3.3 Per-weapon feedback profiles
 
-One table of numbers, the contract W11's implementation must meet and Audio's cue set pairs with. Ordinary hits get no hit-stop (VL §8: momentum is sacred). Knockback is the enemy's, in m/s at heft I, scaling ×1.3 per heft class. The ball's own recoil is a squash, never a velocity change, except the bomb's rocket jump.
+One table of numbers, the contract W11's implementation must meet and Audio's cue set pairs with. Hit-stop belongs to the player's own strike: an ordinary hit stops 12 to 40 ms by its damage, and the ball's motion, a dodge and damage taken get none (VL §8; the rows in `event_kinds.gd` own the numbers). Knockback is the enemy's, in m/s at heft I, scaling ×1.3 per heft class. The ball's own recoil is a squash, never a velocity change, except the bomb's rocket jump.
 
 | Weapon | Hit-stop | Camera kick | FOV punch | Shake | Enemy knockback | Ball squash | Hit shape | Instrument (Audio) |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -493,6 +493,6 @@ Class slams must keep distinct bank ids on the frame they share with `slammed`. 
 
 Each primary cue lives in `EventKinds.ROWS` and resolves through `Rows.sound`; `WEIGHTED` holds no sound override. The existing `sound_next` ids `kest_falling_triad` and `rivet_snare_flam` stay reserved. The ultimate keeps its cue distinct from a vault kill's `Audio.VAULT_KILL_SOUND` on the same frame. At unshifted playback, `ultimate_land` measures 110.4 zero crossings per second over 1.25 seconds, below and longer than the live shared slam cue returned by `Rows.sound("slammed")`. Both have the same -1 dB bank trim. Andrew's listening verdict on the authored cues remains open. The harpoon smash guard follows `Rows.sound("slammed")`, so a smash plays that cue once, one womp and one crack on its impact frame.
 
-The universal ownership and audibility checks also cover the existing shared facts. Neutral `slammed` uses the authored `core_slam`, a 105-to-55 Hz sweep with a rounded attack and sustained mass; neutral `enemy_rebounded` uses `shell_spring`; Rivet's `cc_ignored` uses `tenacity_choke`. Their primary cues carry no other pilot's voice. `posture_changed` and its presentation sub-fact `posture_break` use the shared `drop_landing`; the sub-fact lives in `UI_ROWS` because it is not a bus signal. `kill_pop` has a -7 dB trim, the minimum correction needed to stay within 6 dB of `slam_boom` when the kill rule resolves to massive or climax. The rebound, ignored-control and posture bindings use existing recipes. Their listening effect still needs Andrew's verdict.
+The universal ownership and audibility checks also cover the existing shared facts. Neutral `slammed` uses the authored `core_slam`, a 105-to-55 Hz sweep with a rounded attack and sustained mass; neutral `enemy_rebounded` uses `shell_spring`; Rivet's `cc_ignored` uses `tenacity_choke`. Their primary cues carry no other pilot's voice. `posture_changed` and its presentation sub-fact `posture_break` use the shared `drop_landing`; the sub-fact lives in `UI_ROWS` because it is not a bus signal. `kill_pop` had a -7 dB trim, the minimum correction needed to stay within 6 dB of `slam_boom` when the kill rule resolves to massive or climax; since the percussion remake (13 November 2026) the pop is quieter by nature and its trim is -5. The rebound, ignored-control and posture bindings use existing recipes. Their listening effect still needs Andrew's verdict.
 
 Owner default: the Warden-break freeze rides the player's `posture_break` strike, and `beacon_unsealed` stays a reward with no stop. Andrew may veto this default and amend this page.

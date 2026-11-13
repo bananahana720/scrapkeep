@@ -26,6 +26,9 @@ varying vec3 uv1_triplanar_pos;
 varying vec3 uv1_power_normal;
 #endif
 uniform float governed = 0.0;
+// Gone at lens.x metres from the eye, whole at lens.y (threat_grammar.gd LENS_CLEAR, LENS_FULL),
+// as StandardMaterial3D's pixel distance fade does for the static marks.
+uniform vec2 lens = vec2(1.0, 3.0);
 global uniform float threat_fill_scale;
 
 instance uniform vec3 centre;
@@ -112,5 +115,6 @@ void fragment() {
 #endif
 	albedo_tex *= COLOR;
 	ALBEDO = albedo_tex.rgb;
-	ALPHA *= albedo_tex.a * mix(1.0, alpha_scale, scaled) * mix(1.0, threat_fill_scale, governed);
+	ALPHA *= albedo_tex.a * mix(1.0, alpha_scale, scaled) * mix(1.0, threat_fill_scale, governed)
+			* smoothstep(lens.x, lens.y, length(VERTEX));
 }

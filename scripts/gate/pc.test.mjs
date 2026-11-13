@@ -5,7 +5,7 @@ import path from "node:path";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 
 import { checkTally, expectedShards, tallyRows, planHead } from "./tally.mjs";
-import { challengeArgs, checkBands, compareBands, compareLines, compareRuns, gatePlan, loadBands, nodeSummary, planFileText, runPlan, sortedLines, spareWhileWaiting, stepEnv, worktreePool } from "./pc.mjs";
+import { SCOPED_ALWAYS, challengeArgs, receiptBotShards, checkBands, compareBands, compareLines, compareRuns, gatePlan, loadBands, nodeSummary, planFileText, runPlan, sortedLines, spareWhileWaiting, stepEnv, worktreePool } from "./pc.mjs";
 
 const names = (count, prefix) => Array.from({ length: count }, (_, index) => `${prefix}${String(index).padStart(4, "0")}_test`);
 const lists = {
@@ -314,9 +314,29 @@ test("the worktree pool reuses a free worktree, prefers the one a step used, and
 });
 
 test("challenge arguments carry the label, jobs and resume the way the lane scripts did", () => {
-  assert.deepEqual(challengeArgs({ only: "w1", seeds: 24, label: "w34-75099fa7-w1", resume: false }), ["scripts/challenge/run.mjs", "--only=w1", "--seeds=24", "--no-top", "--jobs=6", "--label=w34-75099fa7-w1"]);
-  assert.deepEqual(challengeArgs({ only: "w1", seeds: 48, bands: "expert", tier: 5, label: "l", resume: true }).slice(2), ["--seeds=48", "--bands=expert", "--tier=5", "--no-top", "--jobs=6", "--label=l", "--resume"]);
+  assert.deepEqual(challengeArgs({ only: "w1", seeds: 24, label: "w34-75099fa7-w1", resume: false }), ["scripts/challenge/run.mjs", "--only=w1", "--seeds=24", "--no-top", "--jobs=12", "--label=w34-75099fa7-w1"]);
+  assert.deepEqual(challengeArgs({ only: "w1", seeds: 48, bands: "expert", tier: 5, label: "l", resume: true }).slice(2), ["--seeds=48", "--bands=expert", "--tier=5", "--no-top", "--jobs=12", "--label=l", "--resume"]);
   assert.equal(nodeSummary("ℹ tests 1049\nℹ pass 1049\nℹ fail 0\n").tests, 1049);
   assert.equal(nodeSummary("# tests 3\n# fail 1\n").fail, 1);
   assert.ok(Number.isNaN(nodeSummary("nothing").tests), "a missing summary is not zero failures");
+});
+
+test("the wave gate plan (--scoped) is the three windows, one scoped shard by name, the node suite and the plan file", () => {
+  const waveLists = { ...lists, bots: [...lists.bots, ...SCOPED_ALWAYS].sort() };
+  const steps = gatePlan({ wave: 37, head, lists: waveLists, weekly: lists.weekly, bands: null, persona: "cautious", scoped: ["bot_c_test", "bot_a_test.gd", "w_bot_test", "a_one_test"] });
+  assert.deepEqual(steps.map((step) => step.id), ["tests-1-350", "tests-351-700", "tests-701-1049", "scoped", "weekly-tests", "weekly-bots", "node", "plan-file"]);
+  assert.deepEqual(steps.find((step) => step.id === "scoped").args, ["--bots", "bot_a_test,bot_c_test,w_bot_test,world1_run_test"]);
+  assert.throws(() => gatePlan({ wave: 37, head, lists: waveLists, bands: null, scoped: ["no_such_test"] }), /on no gate list: no_such_test/);
+  assert.throws(() => gatePlan({ wave: 37, head, lists, bands: null, scoped: [] }), /on no gate list: world1_run_test/);
+  const text = planFileText({ wave: 37, head, persona: null, base: null, results: allPass(steps), compare: null, steps, today });
+  const rows = tallyRows(text);
+  assert.deepEqual(rows.map((row) => row.shard), ["tests 1-350", "tests 351-700", "tests 701-1049", "scoped", "weekly sweep"]);
+  assert.deepEqual(checkTally(rows, { testCount: 1049, botCount: waveLists.bots.length, weeklyCount: 2, today, scope: "wave" }), []);
+  assert.match(text, /tally\.mjs --wave --plan/);
+  assert.notDeepEqual(checkTally(rows, { testCount: 1049, botCount: waveLists.bots.length, today }), [], "the release tally still wants every shard");
+});
+
+test("the scoped names can come from a sketch:fast receipt's bot shards", () => {
+  assert.deepEqual(receiptBotShards({ selection: { bot_shards: ["tests/bot_a_test.gd", "tests/world1_run_test.gd"] } }), ["bot_a_test", "world1_run_test"]);
+  assert.throws(() => receiptBotShards({ selection: {} }), /no selection.bot_shards/);
 });

@@ -1,8 +1,8 @@
 {
-  "bake_sha256": "3335eba29f899178791edbf62e90cfb44eb03d5f7c6877c23ab71436dc2570de",
+  "bake_sha256": "26017ce042aab8a5b25531de64aa614a2665bbbee11ac7f780a5f02dea048f0a",
   "beacon_ok": true,
   "breaches": [],
-  "bytes": 1092893,
+  "bytes": 1093403,
   "edges": 315494,
   "first_failed": "",
   "flags": {
@@ -13,15 +13,15 @@
     "sight_ok": 10693,
     "under": 0
   },
-  "full_visit_m": 2011,
-  "full_visit_ratio": "1.437",
-  "graph_sha256": "83d9545f96694a2ef06a9360ea9d9fc60c5e78d468f48577d13a769060514e3c",
+  "full_visit_m": 2193,
+  "full_visit_ratio": "1.567",
+  "graph_sha256": "b08efaaa61a3d265a2ed5cb5331dbdf9ab8add6b0ddb1634b1fca11cd47ffdee",
   "line_errors": [],
   "line_path_nodes": 125,
   "longest_est_m": 2954,
   "map": "park_flume",
   "nodes": 41197,
-  "park_sha256": "9ef846b02b0e65d8d6196409511d94d09bf12ca1d0a2b79aaa741916fb563221",
+  "park_sha256": "6272b5851f829a192767d9c3dec62fbb6e4ac430de946ea0f7f4e3a2b7ed0c1d",
   "pockets": [
     {
       "clear_ring": [],
@@ -76,6 +76,34 @@
       "role": "reward",
       "sight_ok": true,
       "site": "bend_rim_ledge"
+    },
+    {
+      "clear_ring": [],
+      "d_landmark": 1104,
+      "d_spawn": 333,
+      "detour_m": 164,
+      "door_at": [
+        -256,
+        -424
+      ],
+      "door_m": 164,
+      "flags": [
+        "open",
+        "door_ok",
+        "sight_ok"
+      ],
+      "id": "trestle_cache",
+      "kind": "cracked_cache",
+      "nearest_door": 223,
+      "nearest_door_id": "weir_valve",
+      "pay_named": "",
+      "pay_rarities": [
+        "common",
+        "rare"
+      ],
+      "role": "reward",
+      "sight_ok": true,
+      "site": "canal_country_low"
     },
     {
       "clear_ring": [],
@@ -150,8 +178,8 @@
       ],
       "id": "canal_altar",
       "kind": "ambush_altar",
-      "nearest_door": 337,
-      "nearest_door_id": "weir_valve",
+      "nearest_door": 318,
+      "nearest_door_id": "trestle_cache",
       "pay_named": "",
       "pay_rarities": [
         "common",
@@ -178,8 +206,8 @@
       ],
       "id": "weir_valve",
       "kind": "valve",
-      "nearest_door": 263,
-      "nearest_door_id": "bend_cache",
+      "nearest_door": 223,
+      "nearest_door_id": "trestle_cache",
       "pay_named": "",
       "pay_rarities": [],
       "role": "hidden",
@@ -187,7 +215,7 @@
       "site": "butte_gap"
     }
   ],
-  "reward_ratio": "0.482",
+  "reward_ratio": "0.397",
   "ride_edges": 149,
   "routes": {
     "annex_ramp_line": [],
@@ -226,10 +254,10 @@
       "name": "full_visit_ratio",
       "ok": true,
       "target": "at most 3.0",
-      "value": 1.437
+      "value": 1.567
     }
   ],
-  "tool_sha256": "a33c70d786843eec2d89c1ae510c6d8ef7c95aff43ff184940f56c816121dc7b",
+  "tool_sha256": "53ce9ae2ec1d853571c748cebaa79a6ac9a050d2af06a896522c4b175e617bf5",
   "zones": {
     "anchors": [
       {

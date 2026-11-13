@@ -18,6 +18,9 @@ const MISS := "chain_miss"
 # COMBO_CAP links. A combo of 1 pays x1.0, exactly the game without a chain.
 const PER_LINK := 0.3
 const COMBO_CAP := 6
+# The scrap a paid chain bursts out at its landing, by combo (W1-74): nothing below 3, then a
+# step per link up to COMBO_CAP. A combo of 3 pays about one kill; a full chain about three.
+const BURST := {3: 4, 4: 6, 5: 9, 6: 12}
 # A let-go keeps the chain this long, counted in airtime.
 const GRACE := 0.8
 # A dry fire locks the harpoon this long.
@@ -111,6 +114,18 @@ func pay() -> Dictionary:
 	var mult := multiplier()
 	var events := _end("paid", true) if _active else []
 	return {"mult": mult, "events": events}
+
+
+# The combo the last paid chain ended at (a smash's landing), or 0 when the last end was unpaid.
+func last_paid_combo() -> int:
+	if finished.is_empty() or not finished.back().get("paid", false):
+		return 0
+	return int(finished.back().get("combo", 0))
+
+
+# The scrap the last end pays as a burst: 0 unless it was paid at a combo of 3 or more.
+func last_burst() -> int:
+	return int(BURST.get(mini(last_paid_combo(), COMBO_CAP), 0))
 
 
 # A new run starts clean.

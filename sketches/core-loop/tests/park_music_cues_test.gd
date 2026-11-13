@@ -209,7 +209,7 @@ func _physics_process(_delta: float) -> bool:
 		_game.ctx.calm = true
 		_game.flow.press_start()
 		_game.flow.choose_class(0)
-		_game.events.event_announced.connect(func(id, seconds):
+		_game.events.event_announced.connect(func(id, seconds, _at):
 			_announcements[id] = seconds
 			_routed[id] = audio.engine._actions.filter(func(a): return a.get("type") == "park_cue").duplicate(true)
 			_director_times[id] = _game.world.events.stage_time

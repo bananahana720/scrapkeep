@@ -97,9 +97,9 @@ func _check_toasts() -> void:
 		"passed and won ends added %d toasts; a lost Surge Run toasts %s" % [after_quiet.size() - before.size(), lost])
 	# "incoming" is a warning: the stage's resting weather is announced with no lead and warns of nothing.
 	hud.clear_toasts()
-	_game.events.event_announced.emit("dawn_still", 0.0)
+	_game.events.event_announced.emit("dawn_still", 0.0, Vector3.INF)
 	var resting: Array = hud.toast_texts()
-	_game.events.event_announced.emit("monsoon_buildup", 20.0)
+	_game.events.event_announced.emit("monsoon_buildup", 20.0, Vector3.INF)
 	var coming: Array = hud.toast_texts()
 	_report("only weather on its way toasts as incoming", resting.is_empty() and coming == ["Monsoon Buildup incoming"],
 		"resting weather toasts %s; a monsoon 20 s out toasts %s" % [resting, coming])

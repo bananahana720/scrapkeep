@@ -18,7 +18,7 @@ const DT := 1.0 / 90.0
 const EXPECTED := {
 	Threat.Type.INSTANT: ["area", "band", "band_top", "edge", "fill", "solid"],
 	Threat.Type.WAVE: ["band", "band_top", "chevrons", "front", "outline"],
-	Threat.Type.PROJECTILE: ["area", "band", "band_top", "edge", "fill", "pip", "trace"],
+	Threat.Type.PROJECTILE: ["area", "band", "edge", "fill", "trace"],
 	Threat.Type.LANE: ["area", "band", "band_top", "edge", "run"],
 }
 
@@ -154,10 +154,36 @@ func _check_grammars() -> void:
 			% [run_span.y, lane.width * 0.5 - Threat.RAIL, rails.get("half_width", -1.0), in_lane, off_lane])
 
 	var pd: Dictionary = shell.descriptor()
-	var pip := _mark(pd, "pip")
 	var shell_fill := _mark(pd, "fill")
-	_report("projectile reticle", not shell_fill.is_empty() and _mark(pd, "bracket").is_empty() and pip.get("centre") == shell.center and shell.contains(shell.center + Vector3.UP),
-		"a growing fill and the pip centre on %s, the committed landing contains() tests; no brackets" % [shell.center])
+	var spikes := _mark(pd, "band")
+	var tris: PackedVector3Array = spikes.get("tris", PackedVector3Array())
+	var points := 0
+	var feet := 0
+	for v in tris:
+		points += int(is_equal_approx(v.y, shell.reach_up))
+		feet += int(is_zero_approx(v.y))
+	var trace: Color = _mark(pd, "trace").get("tone", Color.BLACK)
+	_report("projectile landing reads as danger", not shell_fill.is_empty() and _mark(pd, "bracket").is_empty() and _mark(pd, "pip").is_empty()
+			and _mark(pd, "band_top").is_empty() and tris.size() > 0 and points * 3 == tris.size() and feet * 3 == tris.size() * 2
+			and is_equal_approx(spikes.get("height", -1.0), shell.reach_up) and _mark(pd, "edge").get("centre") == shell.center
+			and Color(trace, 1.0) == Palette.HAZARD and shell.contains(shell.center + Vector3.UP),
+		"a growing fill and an edge centred on %s; the height band stands as %d spikes pointed at %.1f m with no rail, no centre cross and no brackets; the flight line is HAZARD (%s); contains() tests the landing"
+			% [shell.center, points / 2, spikes.get("height", -1.0), trace.to_html()])
+	var faded := 0
+	var meshes := 0
+	for child in shell.painter().get_children():
+		var mat := (child as MeshInstance3D).material_override if child is MeshInstance3D else null
+		if mat == null:
+			continue
+		meshes += 1
+		if mat is BaseMaterial3D:
+			var base := mat as BaseMaterial3D
+			faded += int(base.distance_fade_mode == BaseMaterial3D.DISTANCE_FADE_PIXEL_ALPHA
+				and is_equal_approx(base.distance_fade_min_distance, Threat.LENS_CLEAR) and is_equal_approx(base.distance_fade_max_distance, Threat.LENS_FULL))
+		elif mat is ShaderMaterial:
+			faded += int((mat as ShaderMaterial).get_shader_parameter("lens") == Vector2(Threat.LENS_CLEAR, Threat.LENS_FULL))
+	_report("marks clear the lens", meshes > 0 and faded == meshes,
+		"%d of %d mark meshes fade out between %.1f and %.1f m from the lens (PF-27)" % [faded, meshes, Threat.LENS_FULL, Threat.LENS_CLEAR])
 	for node in nodes:
 		node.free()
 

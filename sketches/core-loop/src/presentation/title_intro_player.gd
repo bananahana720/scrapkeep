@@ -19,6 +19,7 @@ const Palette := preload("res://src/core/palette.gd")
 const UiFonts := preload("res://src/ui/ui_fonts.gd")
 const MaterialSlots := preload("res://src/presentation/material_slots.gd")
 const PilotAntics := preload("res://src/presentation/pilot_antics.gd")
+const Wordmark := preload("res://src/ui/wordmark.gd")
 
 # The set stands far enough off the deck that no deck shot sees it, and the reverse.
 const SET_AT := Vector3(600.0, 0.0, 0.0)
@@ -316,7 +317,7 @@ func _model(path: String, label: String, fit: float) -> Node3D:
 	_set.add_child(holder)
 	holder.add_child(model)
 	host._freeze_visual(model)
-	_dress(model, path)
+	dress(model, path)
 	var box := _bounds(model)
 	var side := maxf(box.size.x, maxf(box.size.y, box.size.z))
 	if side > 0.001:
@@ -327,7 +328,9 @@ func _model(path: String, label: String, fit: float) -> Node3D:
 	return holder
 
 
-func _dress(model: Node, path: String) -> void:
+# Gives an imported model its drawn finish (vertex colour; the dam's tints; the Dig's library
+# parts). The title stage dresses its deck with it too.
+static func dress(model: Node, path: String) -> void:
 	for view: MeshInstance3D in model.find_children("*", "MeshInstance3D", true, false):
 		if view.mesh == null:
 			continue
@@ -337,7 +340,7 @@ func _dress(model: Node, path: String) -> void:
 				view.set_surface_override_material(i, drawn)
 
 
-func _finished(source: Material, path: String) -> Material:
+static func _finished(source: Material, path: String) -> Material:
 	if not (source is BaseMaterial3D):
 		return null
 	var slot := String(source.resource_name)
@@ -755,10 +758,12 @@ func _sfx(text: String, at: Vector2, tilt: float, scale_by: float, fill := SFX_F
 	_pop(label, 1.5)
 
 
+# The drawn name (W1-47) lands as the opening's last beat; the plain word only if it fails to load.
 func _logo() -> void:
-	var label := _label("SCRAPKEEP", 150, Palette.ARC, 18)
+	var label: Control = Wordmark.view(_screen().y * 0.24) if Wordmark.texture() != null else _label("SCRAPKEEP", 150, Palette.ARC, 18)
 	label.name = "Logo"
-	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	if label is Label:
+		label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	label.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP)
 	label.grow_horizontal = Control.GROW_DIRECTION_BOTH
 	label.position.y = _screen().y * 0.08

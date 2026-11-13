@@ -68,7 +68,8 @@ func _new_run(on: bool) -> void:
 
 # One stage clear, with the bay boarded at the same stage, in the order a run sees them.
 func _visit(stage: int) -> void:
-	_game.run.stage = stage
+	# Enter the stage as flow does, so its per-stage marks (pick_opened, SA-F1) start clear.
+	_game.run.enter_stage(stage)
 	_game.world._open_pick(stage)
 	_game.world._open_pick(stage)
 

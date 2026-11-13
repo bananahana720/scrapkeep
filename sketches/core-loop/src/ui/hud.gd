@@ -1,6 +1,7 @@
 extends CanvasLayer
 
 const EventKinds := preload("res://src/core/event_kinds.gd")
+const UiTokens := preload("res://src/ui/ui_tokens.gd")
 const Palette := preload("res://src/core/palette.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
 const Objectives := preload("res://src/core/objectives.gd")
@@ -33,20 +34,30 @@ const DangerMark := preload("res://src/ui/danger_mark.gd")
 const BossPlate := preload("res://src/ui/boss_plate.gd")
 const ChainCounter := preload("res://src/ui/chain_counter.gd")
 const DamageNumbers := preload("res://src/presentation/damage_numbers.gd")
-const HotwireScreen := preload("res://src/ui/hotwire_screen.gd")
+const PickupLines := preload("res://src/ui/pickup_lines.gd")
+const PanelFx := preload("res://src/presentation/panel_fx.gd")
 const Companion := preload("res://src/core/companion.gd")
+const HullMark := preload("res://src/world/hull_mark.gd")
+const RunState := preload("res://src/core/run_state.gd")
+const Interactables := preload("res://src/world/interactables.gd")
 
-# The wallet readout: the brass cog and the cogs the run holds, the one number the HUD
-# shows because it is what the next roll through a hoop spends.
+# The wallet readout: the steel cog and the cogs the run holds, the one number the HUD
+# shows because it is what the next roll through a hoop spends. The icon wears the cog's steel.
+# While Moss's hook waits locked on a class the ball has not reached (shop.hook_goal, W1-79),
+# the chip pins that goal after the number: the heft weight in amber and the class numeral.
 class CogChip extends Control:
 	const ICON := "res_scrap"
-	const COLOR := Palette.BRASS
+	const COLOR := Palette.STEEL
+	const HOOK_ICON := "res_heft"
+	const WIDTH := 72.0
+	const PIN_WIDTH := 56.0
 
 	var amount := 0
+	var hook_class := 0
 
 	func _init() -> void:
 		mouse_filter = Control.MOUSE_FILTER_IGNORE
-		custom_minimum_size = Vector2(72.0, 24.0)
+		custom_minimum_size = Vector2(WIDTH, 24.0)
 		size = custom_minimum_size
 
 	func set_amount(value: int) -> void:
@@ -54,13 +65,27 @@ class CogChip extends Control:
 			amount = value
 			queue_redraw()
 
+	func set_hook(heft_class: int) -> void:
+		if heft_class == hook_class:
+			return
+		hook_class = heft_class
+		custom_minimum_size.x = WIDTH + (PIN_WIDTH if hook_class > 0 else 0.0)
+		size = custom_minimum_size
+		queue_redraw()
+
 	func drawn_words() -> PackedStringArray:
-		return PackedStringArray([str(amount)])
+		var out := PackedStringArray([str(amount)])
+		if hook_class > 0:
+			out.append(RunState.roman(hook_class))
+		return out
 
 	func _draw() -> void:
 		var mid := size.y * 0.5
 		UiDraw.icon(self, Icons.texture(ICON), Rect2(Vector2(0.0, mid - 10.0), Vector2(20.0, 20.0)), Icons.tint(ICON, COLOR))
-		UiDraw.text(self, 26.0, mid, str(amount), 18, Palette.SAND, true)
+		UiDraw.text(self, 26.0, mid, str(amount), UiTokens.BODY, Palette.SAND, true)
+		if hook_class > 0:
+			UiDraw.icon(self, Icons.texture(HOOK_ICON), Rect2(Vector2(WIDTH, mid - 10.0), Vector2(20.0, 20.0)), Icons.tint(HOOK_ICON, Palette.AMBER))
+			UiDraw.text(self, WIDTH + 24.0, mid, RunState.roman(hook_class), UiTokens.BODY, Palette.AMBER, true)
 
 
 # The field-notes key drawn small: the cap Tab opens the notes with.
@@ -91,7 +116,7 @@ class NoteKey extends Control:
 const TOAST_IN := 0.12
 const TOAST_OUT := 0.2
 const TOAST_HOLD := {3: 2.4, 2: 1.6}
-const TOAST_FONT := {3: 23, 2: 19}
+const TOAST_FONT := {3: UiTokens.LABEL, 2: UiTokens.BODY}
 const TOAST_WORDS := 4
 # What the cores held do for the gates, by count (parts.gd gate_rarities reads min(count, RunState.CORE_TIER_CAP)):
 # one core lets a gate offer a rare, two make a gate offer rares or relics, and from a third the gates
@@ -103,8 +128,8 @@ const CORE_WORDS := ["", "Gates may offer rares", "Gates offer rares, relics", "
 const ACH_LAYER := 8
 const ACH_TOTAL := 3.0
 const ACH_TOP := 14.0
-const ACH_FONT := 21
-const ACH_DETAIL_FONT := 15
+const ACH_FONT := UiTokens.LABEL
+const ACH_DETAIL_FONT := UiTokens.CAPTION
 # A jukebox record found in play shares the achievement plate, in the one line with every other card
 # (screen_busy.gd), oldest first.
 # A record found in play wears the drawn wave on amber. A radio take wears the radio chip's knob
@@ -122,7 +147,7 @@ const LORE_TOTAL := 3.0
 const LORE_TOP := 66.0
 # The top-right corner is one column: the radio chip, the unlock plate, the field note pill.
 # Each sits under whichever of the others is showing, this far apart, so none covers another.
-const CORNER_GAP := 4.0
+const CORNER_GAP := float(UiTokens.GAP_XS)
 const CORNER_SLIDE := 480.0
 const OBJECTIVE_WORDS := Objectives.MAX_WORDS
 const TOAST_ICON := 26.0
@@ -158,10 +183,10 @@ const OPEN_ROWS := ["shoot_magnets", "slam_caps", "bait_charge"]
 # The gaps of the top slot when a plate is mounted: from the band's top to the plate, and
 # from the plate to the objective plate under it.
 const PLATE_TOP := 6.0
-const PLATE_GAP := 10.0
+const PLATE_GAP := float(UiTokens.GAP_M)
 const TOAST_WIDTH := 800.0
 const MARGIN := 18.0
-const BOTTOM_GAP := 20.0
+const BOTTOM_GAP := float(UiTokens.GAP_L)
 const HEALTH_BAR := 190.0
 # The word under each bar (ui/gauge.gd caption): the game's own words for them, as the perk
 # rows say "max health" and the wear stamp says "ARMOUR OFF".
@@ -193,7 +218,6 @@ var _title_world := 0
 var _title_stage := 0
 var _cursed := false
 var why_callout
-var hotwire_screen
 # Where each prompt went this frame, for tests: prompt node to its screen rect.
 var prompt_rects := {}
 
@@ -257,6 +281,8 @@ var _cogs: CogChip
 var chain_counter: Control
 # SR6: floating damage numbers, one layer over the world (presentation/damage_numbers.gd).
 var damage_numbers: Control
+# Grey panel pickup lines at the HUD's edge, off the fight (ui/pickup_lines.gd, PF-14).
+var pickup_lines: Control
 var _armor_flash := 0.0
 var _armor_peak := ARMOR_PEAK_FLOOR
 # The companion pip, left of the armour gauge: the escape charge read from run.companion,
@@ -340,6 +366,11 @@ func setup(game_ref) -> void:
 	damage_numbers = DamageNumbers.new()
 	damage_numbers.project = _project_to_screen
 	add_child(damage_numbers)
+	pickup_lines = PickupLines.new()
+	add_child(pickup_lines)
+	var panel_fx = game.presentation.get("panel_fx") if game.get("presentation") != null else null
+	if panel_fx != null:
+		panel_fx.popped.connect(pickup_lines.show_line)
 	# Juice raises the numbers from the hits it draws, so a number and its effect agree.
 	if game.presentation != null and game.presentation.get("juice") != null:
 		game.presentation.juice.number_sink = Callable(damage_numbers, "add")
@@ -364,7 +395,6 @@ func setup(game_ref) -> void:
 	add_child(part_name)
 	danger_mark = DangerMark.new()
 	add_child(danger_mark)
-	_mount_hotwire_screen()
 
 	_build_ach_toast()
 	_build_lore_pulse()
@@ -416,17 +446,6 @@ func setup(game_ref) -> void:
 	layout(_screen_size())
 
 
-# The hot-wired Fit / Recycle screen (hotwire_screen.gd) is a modal like the pause menu, so it
-# sits beside it on the game, out of the HUD's play-view word budget; the HUD keeps the handle
-# and hides it outside play. It opens itself from build's hotwire_offered. Added at once, as the
-# pause menu is: a deferred add left the screen unparented when a test freed the game in the same
-# frame, and its labels then leaked at exit (2026-10-04, wave 6 gate 2 flagged 24 tests).
-func _mount_hotwire_screen() -> void:
-	hotwire_screen = HotwireScreen.new()
-	game.add_child(hotwire_screen)
-	hotwire_screen.setup(game)
-
-
 func _build_ach_toast() -> void:
 	var layer_node := CanvasLayer.new()
 	layer_node.layer = ACH_LAYER
@@ -434,24 +453,19 @@ func _build_ach_toast() -> void:
 	_ach_panel = PanelContainer.new()
 	_ach_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_ach_panel.visible = false
-	var plate := StyleBoxFlat.new()
-	plate.bg_color = Color(Palette.CHARCOAL, 0.94)
-	plate.border_color = Palette.AMBER
-	plate.set_border_width_all(2)
-	plate.set_corner_radius_all(8)
-	plate.content_margin_left = 16.0
-	plate.content_margin_right = 20.0
-	plate.content_margin_top = 5.0
-	plate.content_margin_bottom = 5.0
+	# A plate in the accent colour; thin top and bottom so two lines fit the band under the chip.
+	var plate := UiTokens.plate(UiTokens.ACCENT)
+	plate.content_margin_top = UiTokens.GAP_XS
+	plate.content_margin_bottom = UiTokens.GAP_XS
 	_ach_panel.add_theme_stylebox_override("panel", plate)
 	layer_node.add_child(_ach_panel)
 	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 10)
+	row.add_theme_constant_override("separation", 8)
 	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_ach_panel.add_child(row)
 	var star := TextureRect.new()
 	star.texture = Icons.shape("star")
-	star.modulate = Palette.AMBER
+	star.modulate = UiTokens.ACCENT
 	star.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	star.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	star.custom_minimum_size = Vector2(TOAST_ICON, TOAST_ICON)
@@ -460,8 +474,8 @@ func _build_ach_toast() -> void:
 	row.add_child(star)
 	_ach_icon = star
 	# A record or take says which it is here; an achievement's star and amber frame already do.
-	var word := _label(18)
-	word.add_theme_color_override("font_color", Palette.AMBER)
+	var word := _label(UiTokens.BODY)
+	word.add_theme_color_override("font_color", UiTokens.ACCENT)
 	word.visible = false
 	row.add_child(word)
 	_ach_word = word
@@ -472,10 +486,10 @@ func _build_ach_toast() -> void:
 	words.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	row.add_child(words)
 	_ach_name = _label(ACH_FONT)
-	_ach_name.add_theme_color_override("font_color", Palette.SAND)
+	_ach_name.add_theme_color_override("font_color", UiTokens.TEXT)
 	words.add_child(_ach_name)
 	_ach_detail = _label(ACH_DETAIL_FONT)
-	_ach_detail.add_theme_color_override("font_color", Color(Palette.SAND, 0.78))
+	_ach_detail.add_theme_color_override("font_color", UiTokens.quiet())
 	words.add_child(_ach_detail)
 
 
@@ -486,19 +500,14 @@ func _build_lore_pulse() -> void:
 	_lore_panel = PanelContainer.new()
 	_lore_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_lore_panel.visible = false
-	var plate := StyleBoxFlat.new()
-	plate.bg_color = Color(Palette.CHARCOAL, 0.94)
-	plate.border_color = Palette.SAND
-	plate.set_border_width_all(2)
-	plate.set_corner_radius_all(8)
-	plate.content_margin_left = 12.0
-	plate.content_margin_right = 16.0
-	plate.content_margin_top = 6.0
-	plate.content_margin_bottom = 6.0
+	var plate := UiTokens.plate(UiTokens.TEXT)
+	plate.content_margin_left = UiTokens.GAP_M
+	plate.content_margin_top = UiTokens.GAP_XS
+	plate.content_margin_bottom = UiTokens.GAP_XS
 	_lore_panel.add_theme_stylebox_override("panel", plate)
 	layer_node.add_child(_lore_panel)
 	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 10)
+	row.add_theme_constant_override("separation", 8)
 	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_lore_panel.add_child(row)
 	row.add_child(NoteKey.new())
@@ -810,7 +819,7 @@ func _on_posture(enemy: Node3D, posture: float, staggered: bool) -> void:
 
 # "incoming" warns of something still on its way. An announcement with no lead is already here
 # (a stage's resting weather starts with the stage: "Dawn Still"), so it warns of nothing.
-func _on_event_announced(event_id: String, seconds_until: float) -> void:
+func _on_event_announced(event_id: String, seconds_until: float, _at: Vector3) -> void:
 	if seconds_until > 0.0:
 		_on_field_fact(event_id, "event_announced")
 
@@ -1034,6 +1043,7 @@ func layout(size: Vector2) -> void:
 	_companion.position = Vector2(_armor.position.x - BOTTOM_GAP - _companion.size.x, slot_mid - _companion.size.y * 0.5)
 	_speed.position = Vector2(MARGIN, slot_mid - _speed.size.y * 0.5)
 	_cogs.position = Vector2(_speed.position.x + _speed.size.x + BOTTOM_GAP, slot_mid - _cogs.size.y * 0.5)
+	pickup_lines.layout(size, PanelFx.POP_ROWS)
 	chain_counter.position = Vector2(ability_bar.position.x + bar_size.x + BOTTOM_GAP, slot_mid - chain_counter.size.y * 0.5)
 
 
@@ -1125,6 +1135,31 @@ func hull_shown() -> float:
 	return _health.fraction
 
 
+# Where the hull bar's weld starts, 0 to 1 (1.0 with nothing marked): a marked hull's max over the
+# unmarked max (hull_mark.gd).
+func hull_cap_shown() -> float:
+	return _health.cap
+
+
+# The ball on screen and what rides on it (the part name, the danger mark, the prompts beside it
+# such as a boss part's readout), for the marks' tags to stay off.
+func _ball_readouts() -> Array[Rect2]:
+	var out: Array[Rect2] = []
+	for rect in prompt_rects.values():
+		out.append(rect)
+	var cam: Camera3D = game.camera.cam
+	var at: Vector3 = game.player.shown_position()
+	if cam == null or cam.is_position_behind(at):
+		return out
+	var centre := cam.unproject_position(at)
+	var half := centre.distance_to(cam.unproject_position(at + cam.global_basis.x * Tuning.RADIUS))
+	out.append(Rect2(centre - Vector2(half, half), Vector2(half, half) * 2.0))
+	for rect in [part_name.rect(), danger_mark.rect()]:
+		if rect.has_area():
+			out.append(rect)
+	return out
+
+
 # The objective for the flow's state: the row objectives.gd picks, with its glyph, its colour
 # and, while the Warden is still to be found, the metres to it.
 func objective_reading() -> Dictionary:
@@ -1171,9 +1206,41 @@ func objective_reading() -> Dictionary:
 		# The cockpit is open: the row's words hold and its glyph turns to the cockpit row's.
 		icon = Objectives.COCKPIT_GLYPH
 	return {"id": id, "icon": icon, "words": words, "color": row_color(id),
-		"progress": _clamp_fraction(gate) if id == "break_clamp_crews" else game.beacon.fraction() if id in RING_ROWS else -1.0,
+		"progress": _clamp_fraction(gate) if id == "break_clamp_crews" else gate.yard_fraction() if id == "break_yard_crew" \
+			else game.beacon.fraction() if id in RING_ROWS else -1.0,
 		"distance": int(distance) if id == "find_warden" and distance < INF else -1,
 		"step": Objectives.live_step(id, String(asked[0]["what"]) if not asked.is_empty() else "")}
+
+
+# The plate's detour row under the goal (objectives.gd detour_shown): the stage's caged pilot while
+# one waits, else the nearest side site not yet started, each with its metres (as the goal row's) and in its own
+# marker's colour and glyph, so the row and the chevron at the edge read as one thing. {} for none.
+func detour_reading(goal: Dictionary) -> Dictionary:
+	if not Objectives.detour_shown(String(goal.get("id", ""))) or game.world == null:
+		return {}
+	var ball: Vector3 = game.player.shown_position()
+	var rescue = game.world.get("rescue")
+	if rescue != null:
+		for waiting in rescue.waiting():
+			var cage = rescue.cage(String(waiting["quest"]))
+			return {"what": "cage", "icon": Interactables.row("ally")["icon"], "color": Interactables.color("ally"),
+				"words": Objectives.cage_words(cage.terms() if cage != null else ""),
+				"distance": int(ball.distance_to(waiting["at"]))}
+	var best = null
+	var best_m := INF
+	for site in edge_markers.unfinished_sites():
+		if site.started or site.failed:
+			continue
+		var m := ball.distance_to(site.global_position)
+		if m < best_m:
+			best = site
+			best_m = m
+	if best == null:
+		return {}
+	var kind := String(best.id)
+	return {"what": kind, "icon": Objectives.glyph("find_activity"),
+		"color": EdgeMarkers.marker_color({"activity": String(best.rule.get("cue", {}).get("view", kind))}),
+		"words": Objectives.activity_words(kind, game.world.activities.called(kind)), "distance": int(best_m)}
 
 
 # What the plate shows: the objective, or for Objectives.Done.SECONDS after a goal is finished
@@ -1214,19 +1281,50 @@ func place_prompts(size: Vector2, playing: bool) -> void:
 	near.sort_custom(func(a, b): return a[0] < b[0])
 	var band := ScreenRegions.rect("prompts", size)
 	var placed: Array[Rect2] = []
+	# The pickup lines rise over the band's lower left; a prompt stands clear of them while they show.
+	var taken: Array[Rect2] = []
+	if pickup_lines.rect().has_area():
+		taken.append(pickup_lines.rect())
 	for entry in near:
 		if placed.size() >= ScreenRegions.MAX_PROMPTS:
 			break
 		var prompt: Label = entry[1]
 		prompt.near = ball.distance_to(entry[2]) <= prompt.detail_range
-		var spot := prompt_spot(prompt, cam.unproject_position(entry[2]), size, placed, band)
+		var spot := prompt_spot(prompt, cam.unproject_position(entry[2]), size, taken, band)
 		if spot.size == Vector2.ZERO:
 			continue
 		prompt.position = spot.position
 		prompt.size = spot.size
+		prompt.aim_at(cam.unproject_position(entry[2]), _leader_room(size))
 		prompt.visible = true
 		placed.append(spot)
+		taken.append(spot)
 		prompt_rects[prompt] = spot
+	# A gate's leader that would cross another prompt's words is not drawn: the column says it.
+	for prompt in prompt_rects:
+		if prompt.leader_end().is_finite() and crosses(prompt.position + prompt.leader_end(), prompt.position + Vector2(prompt.size.x * 0.5, 0.0), prompt_rects, prompt):
+			prompt.aim_at(Vector2.INF, Rect2())
+
+
+# The play view between the toasts band and the prompts band: a gate's leader stays inside it.
+static func _leader_room(size: Vector2) -> Rect2:
+	var top := ScreenRegions.rect("toasts", size).end.y
+	return Rect2(0.0, top, size.x, ScreenRegions.rect("prompts", size).position.y - top)
+
+
+# Whether the segment from `a` to `b` runs through any placed prompt but `own`.
+static func crosses(a: Vector2, b: Vector2, rects: Dictionary, own) -> bool:
+	for other in rects:
+		if other == own:
+			continue
+		var r: Rect2 = rects[other]
+		if r.has_point(a) or r.has_point(b):
+			return true
+		var corners := [r.position, Vector2(r.end.x, r.position.y), r.end, Vector2(r.position.x, r.end.y)]
+		for i in 4:
+			if Geometry2D.segment_intersects_segment(a, b, corners[i], corners[(i + 1) % 4]) != null:
+				return true
+	return false
 
 
 # The spot for a prompt whose anchor projects to `at`. A prompt showing its detail that finds no
@@ -1276,13 +1374,14 @@ func _process(delta: float) -> void:
 	_step_toast(delta)
 	_step_curse()
 	damage_numbers.step(delta)
+	pickup_lines.step(delta)
 	_step_ach(delta)
 	_step_lore(delta)
 
 	var flow = game.flow
 	var playing: bool = flow.in_play()
 	place_prompts(size, playing)
-	for piece in [_objective, _status, _toasts, ability_bar, _health, _speed, _cogs, reticle, key_glyphs, first_steps, edge_markers, why_callout, hotwire_screen, damage_numbers]:
+	for piece in [_objective, _status, _toasts, ability_bar, _health, _speed, _cogs, reticle, key_glyphs, first_steps, edge_markers, why_callout, damage_numbers, pickup_lines]:
 		piece.visible = playing
 	if _plate != null:
 		_plate.visible = playing
@@ -1305,17 +1404,24 @@ func _process(delta: float) -> void:
 	var goal := objective_reading()
 	var reading := plate_shown(goal)
 	_objective.set_objective(reading["icon"], reading["words"], reading["color"], reading["progress"], reading["distance"], reading.get("done", ""), reading["step"])
+	var detour := detour_reading(goal)
+	_objective.set_detour(detour.get("icon", ""), detour.get("words", ""), detour.get("color", Color.WHITE), detour.get("distance", -1))
 	edge_markers.objective_id = goal["id"]
 	edge_markers.objective_icon = goal["icon"]
 	edge_markers.engaged = _engaged
 	edge_markers.yard_locked = reading["id"] == "break_yard_crew"
+	edge_markers.keep_clear = _ball_readouts()
 	var tbl = game.ctx.stages
 	var world: int = tbl.world_of(run.stage)
 	var world_stages: int = tbl.last_of(world) - tbl.first_of(world) + 1
 	var has_boss: bool = game.boss != null and tbl.BOSS != "" and bool(flow.boss_row(world).get("built", false))
 	_status.set_status(tbl.local(run.stage), world_stages, has_boss, flow.in_arena, _threat)
 
-	var hp_share: float = clampf(run.hp / maxf(1.0, run.max_hp), 0.0, 1.0)
+	# Marked hull (hull_mark.gd): the bar spans the unmarked max, and the marked stretch is a
+	# welded plate edged in the Warden's colour, because the Warden break lifts it.
+	var full: float = maxf(1.0, run.max_hp + HullMark.held(run))
+	var hp_share: float = clampf(run.hp / full, 0.0, 1.0)
+	_health.set_cap(run.max_hp / full, EventKinds.color("warden_engaged"))
 	_health.set_reading(hp_share, Palette.SAND, "", hp_share <= LOW_HEALTH, EventKinds.color("player_hit"))
 	if run.armor_mode:
 		_armor_peak = maxf(_armor_peak, run.mass)
@@ -1324,6 +1430,8 @@ func _process(delta: float) -> void:
 			"", _armor_flash > 0.0, Palette.AMBER)
 	_speed.set_tier(game.player.state.tier)
 	_cogs.set_amount(run.cogs)
+	var shop = game.build.get("shop") if game.build != null else null
+	_cogs.set_hook(shop.hook_goal() if shop != null and not flow.in_arena else 0)
 
 	var tint: Color = run.class_def.color if run.class_def != null else Palette.SAND
 	var shape: String = run.class_def.shape if run.class_def != null else "ring"

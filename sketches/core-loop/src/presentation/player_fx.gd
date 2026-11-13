@@ -7,6 +7,7 @@ const Density := preload("res://src/presentation/density.gd")
 const FxLibrary := preload("res://src/presentation/fx_library.gd")
 const FlashGuard := preload("res://src/presentation/flash_guard.gd")
 const Threat := preload("res://src/combat/threat_grammar.gd")
+const Redline := preload("res://src/combat/redline.gd")
 
 # The player-side effects vfx.gd does not draw (PLAYER-FX.md). Everything here answers a
 # committed fact or the ball's own motion and never decides an outcome (TADR-008).
@@ -17,8 +18,10 @@ const Threat := preload("res://src/combat/threat_grammar.gd")
 #   aura       one mote per part orbits the ball in its element's colour; motes flare on
 #              each hit and stretch into streamers once the build is grown
 #   boon       a hit throws a second spark burst in the build's dominant element colour
-#   words      comic sound words (KLANG, WHUMP) stamped beside big moments, never on
-#              ordinary hits, never ahead of the ball (TONE-BIBLE pillar 2)
+#   words      comic sound words (KLANG, WHUMP) stamped beside big moments, never ahead of
+#              the ball (TONE-BIBLE pillar 2), never on a hostile warning or the foe they
+#              name (beside it, else above it, else unsaid); an ordinary hit
+#              says only BWAP, beside the ball, when it lands on the beat (PF-26)
 #   overdrive  past SOFT_CAP_MPS the ball burns: white-hot rim, flame flecks and a
 #              hanging ember trail, so "my contact hurts now" reads at a glance
 #   carve      grinding sparks while the ball rides banked ground at speed
@@ -67,11 +70,22 @@ const WORDS := {
 	"paid": {"text": "PAID", "size": 0.9},
 	"wham": {"text": "WHAM", "size": 1.0},
 	"strike": {"text": "STRIKE", "size": 1.1},
-	"beat": {"text": "BWAP", "size": 0.9},
+	"beat": {"text": "BWAP", "size": 0.64},
+	"redline": {"text": "KA-BLAM", "size": 1.2},
 }
 # An on-beat hit's word is this much bigger (Andrew, Q10 "Sound only"): the hit's own word
-# when it has one, else BWAP over the sax stab.
+# when it has one, else BWAP over the on-beat clap.
 const ONBEAT_GROW := 1.4
+# A read word's size (read_word: DENT, ZZAP!), on the same screen-share scale; it is the foe's,
+# so the build's might never grows it.
+const READ_SIZE := 0.8
+# Where a foe's marks stack over its feet (stack_rect): the interrupted star at 2.4 m, the class
+# icon at 3.1 m and machine_fx's stagger word at 3.2 m, with room for that word's height (about
+# 1.1 m) and half its width.
+const STACK_LOW := 1.8
+const STACK_TOP := 3.8
+const STACK_HALF := 1.8
+const WORD_FONT_PATH := "res://assets/fonts/NotoSans-Bold.ttf"
 # Word size is screen height share: "size" 1.0 is WORD_SCREEN of the screen's height,
 # whatever the distance, so a word near the camera never swallows the ball.
 const WORD_SCREEN := 0.075
@@ -97,6 +111,13 @@ const WORD_POOL := 4
 const WORDS_ALIVE := 2
 const WORD_GAP_S := 0.35
 const WORD_REPEAT_S := 1.2
+# BWAP rides an ordinary hit that lands on the beat, the commonest hit in a fight, so it
+# repeats far less often than a big moment's word (PF-26: the w37 film's readers said the
+# hit words cover the fight).
+const BEAT_REPEAT_S := 4.0
+# A word keeps this far, in px, off any hostile warning on screen.
+# 24 covers the word's ink outline and its tilt at the ends, which _word_rect leaves out.
+const WORD_WARNING_GAP := 24.0
 const WORD_LIFE := 0.6
 const WORD_STAMP_S := 0.1
 const WORD_EXIT_S := 0.2
@@ -136,6 +157,8 @@ var overdrive := false
 var heat := 0.0
 var _evolutions := 0
 var _clock := 0.0
+var _warn_frame := -1
+var _warn_rects: Array[Rect2] = []
 var _rng := RandomNumberGenerator.new()
 var _font: Font
 var _words: Array = []
@@ -179,8 +202,7 @@ func setup(ctx_ref, vfx_ref = null) -> void:
 	root = Node3D.new()
 	root.name = "PlayerFxRoot"
 	ctx.root.add_child(root)
-	if ResourceLoader.exists("res://assets/fonts/NotoSans-Bold.ttf"):
-		_font = load("res://assets/fonts/NotoSans-Bold.ttf")
+	_font = word_font()
 	for i in WORD_POOL:
 		_words.append(_make_word())
 	_build_aura()
@@ -476,6 +498,11 @@ func _wire() -> void:
 	events.enemy_killed.connect(_on_killed)
 	SignalWire.listen(events, "enemy_pinned", _on_pinned)
 	events.stage_entered.connect(func(_stage: int, _retry: bool): clear())
+	_wire_redline()
+	# Called Shot (build/called_shot.gd): a met break holds the frame (its pad thump is juice.gd's).
+	events.world_fact.connect(func(kind: String, at: Vector3):
+		if kind == "call_met":
+			impact_frame(at, 1.0))
 
 
 func _pilot_id() -> String:
@@ -500,7 +527,7 @@ func _on_evolution(part_id: String) -> void:
 func _on_struck(enemy: Node3D, kind: String, _force: float) -> void:
 	_mote_flare = 1.0
 	if kind in LAUNCH_KINDS and _tier() >= SpeedTier.BLAZING and is_instance_valid(enemy) and enemy.is_inside_tree():
-		word("wham", enemy.global_position + Vector3.UP * 1.8)
+		word("wham", enemy.global_position + Vector3.UP * 1.8, Color.TRANSPARENT, enemy)
 		impact_frame(enemy.global_position, clampf(0.6 + 0.4 * might, 0.0, 1.0))
 	elif kind in CONTACT_KINDS and might_tier(might) >= 2 and is_instance_valid(enemy) and enemy.is_inside_tree():
 		# Grown builds earn the edge ink on every contact hit, not only the biggest.
@@ -544,9 +571,9 @@ static func boon_count(value: float) -> int:
 	return int(round(BOON * clampf(value, 0.0, 1.0)))
 
 
-func _on_smashed(_enemy: Node3D, at: Vector3, speed: float) -> void:
+func _on_smashed(enemy: Node3D, at: Vector3, speed: float) -> void:
 	if speed >= lerpf(SMASH_WORD_MPS[0], SMASH_WORD_MPS[1], might):
-		word("smash", at + Vector3.UP * 1.8)
+		word("smash", at + Vector3.UP * 1.8, Color.TRANSPARENT, enemy)
 	if speed >= lerpf(SMASH_FRAME_MPS[0], SMASH_FRAME_MPS[1], might):
 		impact_frame(at, clampf(0.6 + might * 0.4, 0.0, 1.0))
 
@@ -557,7 +584,7 @@ func _on_pinned(victim: Node3D, _damage: float) -> void:
 	while not _pin_times.is_empty() and _clock - float(_pin_times[0]) > STRIKE_WINDOW_S:
 		_pin_times.pop_front()
 	if _pin_times.size() == STRIKE_PINS and is_instance_valid(victim) and victim.is_inside_tree():
-		word("strike", victim.global_position + Vector3.UP * 2.0, Palette.BRASS)
+		word("strike", victim.global_position + Vector3.UP * 2.0, Palette.BRASS, victim)
 		impact_frame(victim.global_position, 0.8)
 
 
@@ -573,12 +600,19 @@ func on_beat_hit(enemy: Node3D, kind: String) -> void:
 func _on_beat_word(enemy, _kind: String, at_clock: float) -> void:
 	spawned["on_beat"] = spawned.get("on_beat", 0) + 1
 	for w in _words:
-		if w["t"] < 1.0 and float(w.get("born", -1.0)) >= at_clock:
-			w["size"] = float(w["size"]) * ONBEAT_GROW
+		if w["t"] < 1.0 and float(w.get("born", -1.0)) >= at_clock and w["id"] != "read":
+			# The hit's own word grows (a read word is the foe's, never the beat's), unless the bigger word would reach a warning.
+			var grown: Array[Rect2] = []
+			if camera != null and camera.cam != null:
+				grown.append(_word_rect(camera.cam, w["at"], float(w["away"]) > 0.0, float(w["width_px"]),
+					float(w["size"]) * ONBEAT_GROW, w["node"].pixel_size))
+			if grown.is_empty() or word_spot(grown, _warnings()) == 0:
+				w["size"] = float(w["size"]) * ONBEAT_GROW
 			return
 	if not is_instance_valid(enemy) or not enemy.is_inside_tree():
 		return
-	if word("beat", enemy.global_position + Vector3.UP * 1.8):
+	# Beside the ball, not over the foe: an ordinary hit's word never covers what is being hit.
+	if word("beat", _beside_ball(), Color.TRANSPARENT, enemy):
 		_words_by_id("beat")["size"] *= ONBEAT_GROW
 
 
@@ -615,6 +649,14 @@ func clear() -> void:
 # --- Sound words -------------------------------------------------------------------------
 
 func _make_word() -> Dictionary:
+	var label := word_label(_font)
+	label.visible = false
+	root.add_child(label)
+	return {"node": label, "t": 1.0, "id": "", "tilt": 0.0, "size": 1.0, "at": Vector3.ZERO}
+
+
+# A pooled word's label, as every word wears it (BakeWarm stands one per read word at stage entry).
+static func word_label(font: Font = null) -> Label3D:
 	var label := Label3D.new()
 	label.name = "SoundWord"
 	label.billboard = BaseMaterial3D.BILLBOARD_DISABLED
@@ -631,11 +673,13 @@ func _make_word() -> Dictionary:
 	label.no_depth_test = true
 	label.render_priority = RENDER_PRIORITY
 	label.outline_render_priority = RENDER_PRIORITY - 1
-	if _font != null:
-		label.font = _font
-	label.visible = false
-	root.add_child(label)
-	return {"node": label, "t": 1.0, "id": "", "tilt": 0.0, "size": 1.0, "at": Vector3.ZERO}
+	if font != null:
+		label.font = font
+	return label
+
+
+static func word_font() -> Font:
+	return load(WORD_FONT_PATH) if ResourceLoader.exists(WORD_FONT_PATH) else null
 
 
 func word_text(id: String) -> String:
@@ -643,10 +687,11 @@ func word_text(id: String) -> String:
 	return String(own.get(id, WORDS[id]["text"]))
 
 
+# The sound words showing; a read word (read_word) stands outside their budget.
 func words_alive() -> int:
 	var n := 0
 	for w in _words:
-		if w["t"] < 1.0:
+		if w["t"] < 1.0 and w["id"] != "read":
 			n += 1
 	return n
 
@@ -654,42 +699,195 @@ func words_alive() -> int:
 # Stamps a sound word at `at`, pushed off the line ahead of the ball. Refused inside the
 # gap since the last word, inside a word's own repeat window, with two alive, or in the
 # densest band, where only the reads may speak.
-func word(id: String, at: Vector3, color := Color.TRANSPARENT) -> bool:
+# `foe` is untyped: a freed foe cannot pass a typed parameter (see _on_beat_word).
+func word(id: String, at: Vector3, color := Color.TRANSPARENT, foe = null) -> bool:
 	if not WORDS.has(id) or root == null or not root.is_inside_tree():
 		return false
-	if _clock - _last_word < WORD_GAP_S or _clock - float(_word_seen.get(id, -1.0e9)) < WORD_REPEAT_S:
+	var repeat := BEAT_REPEAT_S if id == "beat" else WORD_REPEAT_S
+	if _clock - _last_word < WORD_GAP_S or _clock - float(_word_seen.get(id, -1.0e9)) < repeat:
 		return false
 	if words_alive() >= WORDS_ALIVE or Density.live().band()["max"] > 0.7:
 		return false
-	var slot: Dictionary = _words[0]
-	for w in _words:
-		if w["t"] >= 1.0:
-			slot = w
-			break
-	_last_word = _clock
-	_word_seen[id] = _clock
+	var slot := _free_slot()
 	var label: Label3D = slot["node"]
-	label.text = word_text(id)
-	# The word grows away from the ball, so a long one never covers it.
+	var text := word_text(id)
+	var width_px := _text_px(label, text)
+	var size := float(WORDS[id]["size"]) * (1.0 + 0.8 * might)
+	# The word grows away from the ball, so a long one never covers it, and never lands on a
+	# hostile warning or on the foe it names: it takes the ball's other side, or the space just
+	# above the foe, or stays unsaid (PF-26).
 	var placed := clear_of_lane(at)
 	var right_of_ball := true
 	if camera != null and camera.cam != null:
-		right_of_ball = (placed - player.shown_position()).dot(camera.cam.global_basis.x) >= 0.0
-	slot["away"] = 1.0 if right_of_ball else -1.0
+		var cam: Camera3D = camera.cam
+		var side: Vector3 = cam.global_basis.x
+		var rel: Vector3 = placed - player.shown_position()
+		right_of_ball = rel.dot(side) >= 0.0
+		var grow := ONBEAT_GROW if id == "beat" else 1.0
+		var spots: Array = [[placed, right_of_ball], [placed - side * 2.0 * rel.dot(side), not right_of_ball]]
+		var avoid := _warnings().duplicate()
+		var body := foe_rect(foe, cam)
+		if body.has_area():
+			avoid.append(body.grow(WORD_WARNING_GAP))
+			var tall := size * grow * WORD_SCREEN * cam.get_viewport().get_visible_rect().size.y
+			var p := cam.unproject_position(placed)
+			var depth := -(cam.global_transform.affine_inverse() * placed).z
+			# A pixel past the gap: placed flush on the grown body's edge, float rounding put it on the foe one run in four.
+			spots.append([cam.project_position(Vector2(p.x, body.position.y - WORD_WARNING_GAP - tall * 0.6 - 1.0), maxf(depth, cam.near + 0.1)), right_of_ball])
+		var pick := _pick_spot(cam, spots, width_px, size * grow, label.pixel_size, avoid)
+		if pick < 0:
+			spawned["word_held"] = spawned.get("word_held", 0) + 1
+			return false
+		placed = spots[pick][0]
+		right_of_ball = spots[pick][1]
+	_last_word = _clock
+	_word_seen[id] = _clock
+	_stamp_word(slot, id, text, placed, right_of_ball, width_px, size, color if color.a > 0.0 else heat_tint(_word_color(id)))
+	return true
+
+
+# A read word (DENT, ZZAP!): an armour class answering its first hit (armour_marks.gd). A read
+# teaches, so it speaks past the sound words' budget (the gap, the repeat window, the densest
+# band; it takes only a free slot and leaves the gap alone), but it keeps their placement: screen-share size, the safe area, the warning
+# gap, render priority, and the foe's body kept clear. It stands beside the foe it names at
+# mid-body, either side, else above the column of marks stacked on it; false when every spot is
+# covered, every slot is showing or the foe is out of view, so the caller asks again next hit.
+func read_word(text: String, foe: Node3D, color: Color) -> bool:
+	if text == "" or root == null or not root.is_inside_tree() or camera == null or camera.cam == null:
+		return false
+	var cam: Camera3D = camera.cam
+	var body := foe_rect(foe, cam)
+	if not body.has_area():
+		return false
+	var slot := _free_slot()
+	if slot["t"] < 1.0:
+		return false
+	var label: Label3D = slot["node"]
+	var width_px := _text_px(label, text)
+	var tall := READ_SIZE * WORD_SCREEN * cam.get_viewport().get_visible_rect().size.y
+	var wide := width_px * label.pixel_size * tall / 0.7
+	# A pixel past the gap, as word() does: flush on the grown body's edge, rounding can touch it.
+	var gap := WORD_WARNING_GAP + 1.0
+	var depth := maxf(-(cam.global_transform.affine_inverse() * foe.global_position).z, cam.near + 0.1)
+	var stack := stack_rect(foe, cam)
+	var whole := body.merge(stack) if stack.has_area() else body
+	var spots: Array = []
+	for s in [[Vector2(body.end.x + gap, body.get_center().y), true], [Vector2(body.position.x - gap, body.get_center().y), false],
+			[Vector2(whole.get_center().x - wide * 0.5, whole.position.y - gap - tall * 0.6), true]]:
+		spots.append([cam.project_position(s[0], depth), s[1]])
+	var avoid := _warnings().duplicate()
+	avoid.append(body.grow(WORD_WARNING_GAP))
+	if stack.has_area():
+		avoid.append(stack.grow(WORD_WARNING_GAP))
+	var pick := _pick_spot(cam, spots, width_px, READ_SIZE, label.pixel_size, avoid)
+	if pick < 0:
+		spawned["word_held"] = spawned.get("word_held", 0) + 1
+		return false
+	_stamp_word(slot, "read", text, spots[pick][0], spots[pick][1], width_px, READ_SIZE, color)
+	return true
+
+
+# The screen rect of the marks that stack over a foe and are not part of its body: the
+# interrupted star, the class icon and the stagger word, STACK_LOW to STACK_TOP over its feet and
+# STACK_HALF either side (the stagger word is the widest). Empty when it is behind the camera.
+static func stack_rect(foe: Node3D, cam: Camera3D) -> Rect2:
+	var low := foe.global_position + Vector3.UP * STACK_LOW
+	var high := foe.global_position + Vector3.UP * STACK_TOP
+	if cam.is_position_behind(low) or cam.is_position_behind(high):
+		return Rect2()
+	var side := cam.global_basis.x * STACK_HALF
+	var span := Rect2(cam.unproject_position(low), Vector2.ZERO)
+	for p in [low - side, low + side, high - side, high + side]:
+		span = span.expand(cam.unproject_position(p))
+	return span
+
+
+# A pooled word that is not showing, else the first of the pool.
+func _free_slot() -> Dictionary:
+	for w in _words:
+		if w["t"] >= 1.0:
+			return w
+	return _words[0]
+
+
+static func _text_px(label: Label3D, text: String) -> float:
 	var font: Font = label.font if label.font != null else ThemeDB.fallback_font
-	slot["width_px"] = font.get_string_size(label.text, HORIZONTAL_ALIGNMENT_LEFT, -1, label.font_size).x
-	var tint: Color = color if color.a > 0.0 else heat_tint(_word_color(id))
+	return font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, label.font_size).x
+
+
+# Which of `spots` ([at, runs right]) a word takes: the first whose rect stands inside the safe
+# area and covers none of `avoid`, else -1. Inside the safe area already, so the draw's pull never
+# drags it back onto what it avoided.
+static func _pick_spot(cam: Camera3D, spots: Array, width_px: float, size: float, pixel_size: float, avoid: Array[Rect2]) -> int:
+	var view := cam.get_viewport().get_visible_rect().size
+	var safe := Rect2(view * 0.5 * (Vector2.ONE - WORD_SAFE), view * WORD_SAFE)
+	var rects: Array[Rect2] = []
+	for s in spots:
+		var r := _word_rect(cam, s[0], s[1], width_px, size, pixel_size)
+		rects.append(r if safe.encloses(r) else Rect2())
+	return word_spot(rects, avoid)
+
+
+func _stamp_word(slot: Dictionary, id: String, text: String, at: Vector3, right: bool, width_px: float, size: float, tint: Color) -> void:
+	var label: Label3D = slot["node"]
+	label.text = text
 	label.modulate = tint
+	slot["away"] = 1.0 if right else -1.0
+	slot["width_px"] = width_px
 	slot["t"] = 0.0
 	slot["id"] = id
-	slot["at"] = placed
+	slot["at"] = at
 	slot["tilt"] = _rng.randf_range(-0.2, 0.2)
-	slot["size"] = float(WORDS[id]["size"]) * (1.0 + 0.8 * might)
+	slot["size"] = size
 	slot["born"] = _clock
 	label.visible = true
 	_draw_word(slot)
 	spawned["word_" + id] = spawned.get("word_" + id, 0) + 1
-	return true
+
+
+# The hostile warnings' screen rects, grown by WORD_WARNING_GAP, read once a frame: a ram
+# through a pack asks for a word per foe.
+func _warnings() -> Array[Rect2]:
+	var frame := Engine.get_process_frames()
+	if frame != _warn_frame:
+		_warn_frame = frame
+		_warn_rects = warning_rects(get_tree(), camera.cam if camera != null else null, WORD_WARNING_GAP)
+	return _warn_rects
+
+
+# Which spot a word takes: the first of `spots` (its own, the ball's other side, above the
+# foe) that covers none of `avoid`, or -1 when every one does.
+static func word_spot(spots: Array[Rect2], avoid: Array[Rect2]) -> int:
+	for i in spots.size():
+		if spots[i].has_area() and not avoid.any(func(r): return r.intersects(spots[i])):
+			return i
+	return -1
+
+
+# The screen rect of `foe`'s visible meshes, or an empty rect without one in view.
+static func foe_rect(foe, cam: Camera3D) -> Rect2:
+	if foe == null or not is_instance_valid(foe) or not foe.is_inside_tree() or cam == null:
+		return Rect2()
+	var merged := [AABB(), false]
+	_merge_meshes(foe, merged)
+	if not merged[1]:
+		return Rect2()
+	var span := [Vector2(INF, INF), Vector2(-INF, -INF)]
+	_project_box(merged[0], cam, span)
+	return Rect2(span[0], span[1] - span[0]) if span[0].x <= span[1].x else Rect2()
+
+
+# The screen rect a word of `width_px` at `size` covers when its near end sits at `at` and it
+# runs away from the ball (_draw_word's sizing, before the safe-area pull and the stamp's
+# overshoot).
+static func _word_rect(cam: Camera3D, at: Vector3, right: bool, width_px: float, size: float, pixel_size: float) -> Rect2:
+	if cam.is_position_behind(at):
+		return Rect2()
+	var view_h := cam.get_viewport().get_visible_rect().size.y
+	var tall := size * WORD_SCREEN * view_h
+	var wide := width_px * pixel_size * tall / 0.7
+	var p := cam.unproject_position(at)
+	return Rect2(Vector2(p.x if right else p.x - wide, p.y - tall * 0.6), Vector2(wide, tall * 1.2))
 
 
 func _word_color(id: String) -> Color:
@@ -1281,11 +1479,20 @@ func _draw_overdrive(delta: float) -> void:
 		if vfx != null:
 			vfx.glyph("overdrive", back, 0.8, 4.0, 0.3, v, "ring", HEAT_COLOR)
 	var on := heat > 0.01
-	_rim.visible = on
+	# Heat on the shell (redline.gd) lights the same rim before overdrive does: mint at a quarter,
+	# amber when hot, white at redline. Overdrive's own heat wins when it is the brighter.
+	var shell := shell_heat() if _shell_band > 0 else 0.0
+	var lit := maxf(heat, shell)
+	_rim.visible = lit > 0.01
 	var ball: Vector3 = player.shown_position()
-	if on:
+	if lit > 0.01:
 		_rim.global_position = ball
-		_rim_mat.set_shader_parameter("heat", heat)
+		_rim_mat.set_shader_parameter("heat", lit)
+		# A hot shell keeps its own colour over overdrive's: the risk reads first.
+		var red = player.get("redline")
+		var shell_wins: bool = shell > 0.0 and (heat < shell or red.hot())
+		_rim_mat.set_shader_parameter("rim", shell_color(red) if shell_wins else OVERDRIVE_RIM)
+	if on:
 		_rim_mat.set_shader_parameter("pilot", player.class_color())
 		if speed > 1.0:
 			var basis := Basis.looking_at(-v / speed, Vector3.UP if absf(v.y / speed) < 0.95 else Vector3.RIGHT)
@@ -1298,6 +1505,47 @@ func _draw_overdrive(delta: float) -> void:
 		FxLibrary.set_heat(_embers)
 		_flecks.emitting = on
 		_embers.emitting = on
+
+
+# --- Heat on the shell ------------------------------------------------------------------
+# The shell's heat (redline.gd) carries itself in colour, motion, sound and the pad, never a bar
+# (ruling cx): the rim warms mint, amber, white; a blast stamps its word and draws its true ring;
+# the pad (juice.gd heat_* rumble rows) buzzes while the shell waits at redline and thumps on the blast.
+const OVERDRIVE_RIM := Color(1.0, 0.62, 0.24)
+const SHELL_COLORS := [Color(0.45, 1.0, 0.75), Color(1.0, 0.72, 0.25), Color(1.0, 0.98, 0.92)]
+# The rim's brightness at full heat, under overdrive's 1.0 so the soft cap still reads above it.
+const SHELL_RIM := 0.7
+const BLAST_RING := Color(1.0, 0.97, 0.9)
+var _shell_band := 0
+
+
+# 0 to SHELL_RIM, how bright the rim burns for the shell's heat; 0 when the flag is not on.
+func shell_heat() -> float:
+	var redline = player.get("redline")
+	return SHELL_RIM * redline.warmth() if redline != null else 0.0
+
+
+static func shell_color(redline) -> Color:
+	if redline.redline():
+		return SHELL_COLORS[2]
+	return SHELL_COLORS[0].lerp(SHELL_COLORS[1], redline.hot_share())
+
+
+func _wire_redline() -> void:
+	var redline = player.get("redline")
+	if redline == null:
+		return
+	redline.detonated.connect(_on_redline_blast)
+	redline.cooked_off.connect(_on_redline_blast)
+	redline.changed.connect(func(_value: float, band: int): _shell_band = band)
+
+
+func _on_redline_blast(at: Vector3, _force: float) -> void:
+	spawned["redline_blast"] = spawned.get("redline_blast", 0) + 1
+	word("redline", at + Vector3.UP * 2.0)
+	impact_frame(at, 1.0)
+	if vfx != null:
+		vfx.glyph("redline_blast", at + Vector3.UP * 0.3, 1.0, Redline.BLAST_RADIUS, 0.35, Vector3.UP, "ring", BLAST_RING)
 
 
 # --- Carve sparks ------------------------------------------------------------------------
@@ -1320,11 +1568,12 @@ func carving() -> bool:
 
 
 func _draw_carve() -> void:
-	var on := carving()
+	var v: Vector3 = _velocity()
+	var speed := v.length()
+	# A carve needs a heading: a ball at rest on a steep face (the pose's speed tier can lag a stop) has none.
+	var on := carving() and speed > 0.01
 	if on:
-		var v: Vector3 = _velocity()
-		var speed := v.length()
-		var back: Vector3 = -v / maxf(speed, 0.01)
+		var back: Vector3 = -v / speed
 		var normal := _normal()
 		var up: Vector3 = normal
 		if absf(back.dot(up)) > 0.95:

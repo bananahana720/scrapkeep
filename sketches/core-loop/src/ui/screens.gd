@@ -1,12 +1,14 @@
 extends CanvasLayer
 
 const ResultsOdds := preload("res://src/ui/results_odds.gd")
+const UiTokens := preload("res://src/ui/ui_tokens.gd")
 
 const Palette := preload("res://src/core/palette.gd")
 const SummaryRows := preload("res://src/ui/summary_rows.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const FieldNotes := preload("res://src/ui/field_notes.gd")
 const Icons := preload("res://src/ui/icons.gd")
+const Wordmark := preload("res://src/ui/wordmark.gd")
 const Keycap := preload("res://src/ui/keycap.gd")
 const UiFonts := preload("res://src/ui/ui_fonts.gd")
 const ChoiceButton := preload("res://src/ui/choice_button.gd")
@@ -25,7 +27,9 @@ const EndingSequence := preload("res://src/ui/ending_sequence.gd")
 const PrologueRows := preload("res://src/core/prologue_rows.gd")
 const CreditsHint := preload("res://src/ui/credits_hint.gd")
 const DeathTips := preload("res://src/core/death_tips.gd")
+const DeathCause := preload("res://src/core/death_cause.gd")
 const ScrapFrame := preload("res://src/ui/scrap_frame.gd")
+const ChasePlate := preload("res://src/ui/chase_plate.gd")
 
 # The screens outside play: title (with its how-to-play page on H), class select,
 # death, victory and summary. Each is one glance and one key, and every choice is also
@@ -49,7 +53,7 @@ const LEVEL_TRIES := 6
 # The actions' gap, between buttons and between rows. A row that would pass the narrowest
 # supported width (int_screen_layout_test's 1280) less SIDE each way wraps onto a second
 # centred row; no button is dropped or shrunk.
-const ACTION_GAP := 18
+const ACTION_GAP := UiTokens.GAP_M
 const NARROW_W := 1280.0
 const MENU_STATES := ["title", "class_select", "dead", "victory", "summary"]
 # The screens a run ends on.
@@ -61,6 +65,14 @@ const TITLE := "SCRAPKEEP"
 const STAMP_FROM := 1.35
 const STAMP_TIME := 0.18
 const STAMP_TILT := -6.0
+# On the title the name is the drawn wordmark (W1-47), WORDMARK_H tall, laid inside the title label so
+# every place that shows, hides or stamps the name moves the picture with it. The label keeps the
+# word for screen readers and draws no glyphs of its own.
+const WORDMARK_H := 176.0
+# Share of the screen's height the wordmark may take, so at 1280x720 a wrapped second row of buttons
+# still ends above the stage line (pol_ui_title_readability_test).
+const WORDMARK_SHARE := 0.17
+const BAND_PAD := UiTokens.GAP_L
 # A win over the final world's boss opens the summary on the ending page (Worlds.ENDING). For
 # its first ENDING_HOLD seconds no key closes it, so a press meant for the fight cannot skip
 # it; after that Space, Enter, Esc or any pad button shows the summary beneath.
@@ -75,17 +87,17 @@ const PILOT_LINE := "Loose cannons, all of them. Pick one."
 const COMIC_PAGE_PATH := "res://src/ui/comic_page.gd"
 const COMIC_HEIGHT := 0.5
 # The word under each of the summary's stats.
-const STAT_WORD_FONT := 13
+const STAT_WORD_FONT := UiTokens.CAPTION
 const COMIC_MAX_HEIGHT := 540.0
 const COMIC_BODY_LINES := 3
 const COMIC_MIN_HEIGHT := 240.0
 # RUN OVER's "next shift" note (core/death_tips.gd): an amber-edged plate taped up beside the comic page,
 # where the column has room; under the body it pushed the actions off a 900 px screen. Its words wrap at
 # TIP_WIDTH.
-const TIP_FONT := 20
-const TIP_HEAD_FONT := 16
+const TIP_FONT := UiTokens.BODY
+const TIP_HEAD_FONT := UiTokens.BODY
 const TIP_WIDTH := 300.0
-const TIP_GAP := 28
+const TIP_GAP := UiTokens.GAP_XL
 const TIP_SERIAL := 33
 # The summary's input latch (game.summary_latched) shuts every key while an input held at its opening is
 # still down. The cue names that input once the latch has held LATCH_CUE_AFTER seconds, or at once when a
@@ -94,8 +106,10 @@ const TIP_SERIAL := 33
 # moves nothing.
 const LATCH_CUE_AFTER := 0.5
 const LATCH_DIM := 0.12
-const PRIMARY_FONT := 26
+const PRIMARY_FONT := UiTokens.LABEL
 const PRIMARY_HEIGHT := 60.0
+# The widest a wrapped body line runs.
+const BODY_WIDTH := 1000.0
 
 var game
 var _victory_boss := {}
@@ -106,12 +120,15 @@ var _still_wait := false
 var _veil: ColorRect
 var _content: VBoxContainer
 var _title: Label
+var _wordmark: TextureRect
 # A beaten boss row's "stamp" (Worlds.BOSSES), inked under the victory title: the Mind's HIRED.
 var _mark: Label
 var _body: Label
 # The summary's "next shift" note, in the comic row; null when the screen has none.
 var _tip: Control
 var _tip_said := ""
+# The summary's "what to chase" plate (chase_plate.gd), left of the comic page; null when the screen has none.
+var _chase: Control
 var _latch_cue
 var _latch_held := 0.0
 var _latch_glyph := ""
@@ -167,21 +184,25 @@ func setup(game_ref) -> void:
 	_content = VBoxContainer.new()
 	_content.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_content.alignment = BoxContainer.ALIGNMENT_CENTER
-	_content.add_theme_constant_override("separation", 26)
+	_content.add_theme_constant_override("separation", 24)
 	_content.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_content)
-	_title = _label(64)
+	_title = _label(UiTokens.DISPLAY)
 	_content.add_child(_title)
-	_mark = _label(44)
+	_wordmark = Wordmark.dress(_title)
+	_wordmark.visible = false
+	_content.sort_children.connect(_fit_band)
+	get_viewport().size_changed.connect(_fit_name)
+	_mark = _label(UiTokens.HEADING)
 	_mark.add_theme_color_override("font_color", Palette.AMBER)
 	_mark.visible = false
 	_content.add_child(_mark)
-	_body = _label(22)
+	_body = _label(UiTokens.LABEL)
 	_body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_body.custom_minimum_size = Vector2(1000.0, 0.0)
+	_body.custom_minimum_size = Vector2(BODY_WIDTH, 0.0)
 	_body.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	_content.add_child(_body)
-	_stats = _row(30)
+	_stats = _row(UiTokens.GAP_XL)
 	_content.add_child(_stats)
 	_comic_row = _row(TIP_GAP)
 	_content.add_child(_comic_row)
@@ -194,7 +215,7 @@ func setup(game_ref) -> void:
 	_actions.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	_actions.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_content.add_child(_actions)
-	_refusal = _label(18)
+	_refusal = _label(UiTokens.BODY)
 	_refusal.add_theme_color_override("font_color", Palette.SAND)
 	_refusal.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_refusal.custom_minimum_size = Vector2(1000.0, 0.0)
@@ -206,6 +227,10 @@ func setup(game_ref) -> void:
 	_footer.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	_content.add_child(_footer)
 	prologue_enabled = not game.bot_driven
+	# A card that can wait (a record heard, a take found) waits for the story cards to close: the
+	# menu's own record used to land its card on the prologue's first line (PF-19).
+	if game.ctx.screen_busy != null:
+		game.ctx.screen_busy.add_source(prologue_showing)
 	_help = HelpPage.new()
 	_help.tuning = game.tuning
 	_help.visible = false
@@ -256,12 +281,12 @@ func setup(game_ref) -> void:
 	_content.add_child(_radio)
 	_ending = VBoxContainer.new()
 	_ending.alignment = BoxContainer.ALIGNMENT_CENTER
-	_ending.add_theme_constant_override("separation", 26)
+	_ending.add_theme_constant_override("separation", 24)
 	_ending.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_ending.visible = false
-	_ending_title = _label(64)
+	_ending_title = _label(UiTokens.DISPLAY)
 	_ending.add_child(_ending_title)
-	_ending_body = _label(22)
+	_ending_body = _label(UiTokens.LABEL)
 	_ending_body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_ending_body.custom_minimum_size = Vector2(1000.0, 0.0)
 	_ending_body.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
@@ -317,6 +342,7 @@ func _on_flow_changed(state: String) -> void:
 	_refusal.text = ""
 	_tip = null
 	_tip_said = ""
+	_chase = null
 	_latch_held = 0.0
 	_mark.visible = false
 	_unstamp()
@@ -379,9 +405,15 @@ func _on_flow_changed(state: String) -> void:
 			_footer.visible = true
 			if _prologue_due():
 				_begin_prologue()
+			else:
+				_open_first_pilot()
 		"dead":
 			# The store-less flow's end screen says what RUN OVER says: who, then what to try (death_tips.gd).
 			var said: String = game.flow.death_cause
+			# The Foreman logs the loss under the cause, only when the crew's tip follows: the crew
+			# has the run's last word (STORY-MAP, "Call-ins").
+			if said != "" and game.flow.death_tip != "":
+				said += "\n" + DeathCause.memo(game.run.run_seed, game.run.stage)
 			if game.flow.death_tip != "":
 				said += "\n" + DeathTips.shown(game.flow.death_tip)
 			_show("SCRAPPED", EventKinds.color("player_died"), said.strip_edges())
@@ -405,6 +437,8 @@ func _on_flow_changed(state: String) -> void:
 			# What scrapped you, under the pilot (core/death_cause.gd): a won run has none.
 			if not game.flow.run_won and game.flow.death_cause != "":
 				body += "\n" + game.flow.death_cause
+				if game.flow.death_tip != "":
+					body += "\n" + DeathCause.memo(game.run.run_seed, game.run.stage)
 			# The trade pockets' odds are a tuning readout (recency, safe share, refusal weight), so
 			# only a --dev launch prints them; a played run's summary keeps to the run.
 			var trade_lines := ResultsOdds.text(game.run.summary().trade_pockets) if game.ctx.dev else ""
@@ -426,6 +460,7 @@ func _on_flow_changed(state: String) -> void:
 			# What to try next shift (core/death_tips.gd): only a lost run has one.
 			if not game.flow.run_won and game.flow.death_tip != "":
 				_show_tip(game.flow.death_tip)
+			_show_chase()
 			_summary_stats()
 			_action("again", "key_n", "New run")
 			_action("class", "key_c", "Choose pilot")
@@ -567,6 +602,7 @@ func end_prologue() -> void:
 	_footer.visible = true
 	_queue_level()
 	_fade(true)
+	_open_first_pilot()
 
 
 # While the prologue shows, every key stays on it (Esc too, which never quits), so a number cannot
@@ -1057,6 +1093,22 @@ func achievements_page():
 	return _achievements
 
 
+# Pilot select opens on the first pilot the profile can take (w37 film PF-40), on arrival and when the prologue ends: an
+# open card names each key's icon and the role, so the closed cards' icon rows read by example, and the arrows walk to a
+# locked card's unlock words. The focus waits a frame, for the cards to be in the row.
+func _open_first_pilot() -> void:
+	for card in class_cards():
+		if not card.locked:
+			_focus_card.call_deferred(card)
+			return
+
+
+# A screen change in the same frame can take the card away first; a card no longer shown takes no focus.
+func _focus_card(card: Control) -> void:
+	if is_instance_valid(card) and card.is_inside_tree() and card.is_visible_in_tree() and get_viewport().gui_get_focus_owner() == null:
+		card.grab_focus()
+
+
 # The words on a locked pilot's card: the pilot's reward row text and lifetime count, then
 # the row's beat, the one line of why.
 func _unlock_hint(def) -> String:
@@ -1269,11 +1321,24 @@ func _pad_enters_title(event: InputEvent) -> bool:
 
 
 func _show(title: String, color: Color, body: String) -> void:
+	var named := title == TITLE and _wordmark.texture != null
 	_title.text = title
 	_title.visible = title != ""
-	_title.add_theme_color_override("font_color", color)
+	_title.add_theme_color_override("font_color", Color.TRANSPARENT if named else color)
+	_wordmark.visible = named
+	_fit_name()
 	_body.text = body
 	_body.visible = body != ""
+	_balance(_body, BODY_WIDTH)
+
+
+# A wrapped line breaks into lines of even length, never one long line over a lone tail: the label
+# is as wide as half its words plus a margin, and never wider than the column.
+func _balance(label: Label, widest: float) -> void:
+	var font_size := label.get_theme_font_size("font_size")
+	var whole := UiFonts.bold().get_string_size(label.text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x
+	var lines := ceili(whole / widest)
+	label.custom_minimum_size.x = widest if lines <= 1 else minf(widest, whole / lines + font_size * 2.0)
 
 
 func _action(id: String, key: String, words: String) -> void:
@@ -1284,7 +1349,17 @@ func _action(id: String, key: String, words: String) -> void:
 		button.pressed.connect(_press.bind(key))
 	if id == "start":
 		_make_primary(button)
+	else:
+		_make_quiet(button)
 	_actions.add_child(button)
+
+
+# Every choice beside the primary one steps down a size: body words on a target-height plate, so
+# the eye lands on the filled primary first and reads the rest as a row of ways out.
+func _make_quiet(button: Button) -> void:
+	button.add_theme_font_size_override("font_size", UiTokens.BODY)
+	button.custom_minimum_size.y = UiTokens.TARGET
+	button.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 
 
 # The filled amber plate, charcoal words and a taller, larger face; the unfilled focus ring
@@ -1297,7 +1372,7 @@ func _make_primary(button: Button) -> void:
 		if state == "disabled":
 			box.bg_color = Color(Palette.AMBER, 0.5)
 		button.add_theme_stylebox_override(state, box)
-	button.add_theme_stylebox_override("focus", ChoiceButton.plate(Color.WHITE, 4, left, false))
+	button.add_theme_stylebox_override("focus", UiTokens.focus_ring(left))
 	for color in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color"]:
 		button.add_theme_color_override(color, Palette.CHARCOAL)
 	button.add_theme_font_size_override("font_size", PRIMARY_FONT)
@@ -1310,6 +1385,7 @@ func _make_primary(button: Button) -> void:
 func _companion_action() -> void:
 	var button := ChoiceButton.new("companion", "key_m", "Companion")
 	button.pressed.connect(func(): game.workshop().open_companion())
+	_make_quiet(button)
 	_actions.add_child(button)
 
 
@@ -1335,6 +1411,8 @@ func _show_comic_page(page: Dictionary) -> void:
 	comic.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_comic_row.add_child(comic)
 	_comic_row.move_child(comic, 0)
+	if is_instance_valid(_chase):
+		_comic_row.move_child(_chase, 0)
 	_fit_comic()
 	comic.show_page(page)
 
@@ -1359,7 +1437,7 @@ static func comic_height(screen_h: float, body_lines: int, line_h: float) -> flo
 
 func comic_page() -> Control:
 	for child in _comic_row.get_children():
-		if child != _tip:
+		if child != _tip and child != _chase:
 			return child
 	return null
 
@@ -1377,7 +1455,7 @@ func _show_tip(tip: String) -> void:
 	_tip.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	_tip.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var column := VBoxContainer.new()
-	column.add_theme_constant_override("separation", 6)
+	column.add_theme_constant_override("separation", 4)
 	column.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_tip.add_child(column)
 	var head := _label(TIP_HEAD_FONT)
@@ -1392,6 +1470,37 @@ func _show_tip(tip: String) -> void:
 	column.add_child(words)
 	_tip_said = DeathTips.shown(tip)
 	_comic_row.add_child(_tip)
+
+
+# What to chase next shift (chase_plate.gd): the shift board's next rung and the run's world's secrets,
+# left of the comic page. The summary opens before run_ended reaches progress, which closes the shift
+# (a first run's Clocked In stamps then), so the plate is drawn again once run_ended has gone round. The
+# one-shot connection re-arms on each draw; outside the summary it does nothing.
+func _show_chase() -> void:
+	if is_instance_valid(_chase):
+		_comic_row.remove_child(_chase)
+		_chase.queue_free()
+	_chase = null
+	var codex = game.ctx.get("codex")
+	var sitting: bool = game.tuning != null and game.tuning.sitting()
+	var read := ChasePlate.reading(game.ctx.profile, game.ctx.stages.world_of(game.run.stage),
+		func(id): return codex != null and codex.known(id), sitting)
+	if ChasePlate.shows(read):
+		_chase = ChasePlate.new(read)
+		_comic_row.add_child(_chase)
+		_comic_row.move_child(_chase, 0)
+	if not game.events.run_ended.is_connected(_on_run_ended_chase):
+		game.events.run_ended.connect(_on_run_ended_chase, CONNECT_ONE_SHOT | CONNECT_DEFERRED)
+
+
+func _on_run_ended_chase(_won: bool) -> void:
+	if _state == "summary":
+		_show_chase()
+
+
+# The chase plate as it reads (ChasePlate.said); "" when the screen has none.
+func chase_text() -> String:
+	return _chase.text() if is_instance_valid(_chase) and _chase.visible else ""
 
 
 # What the run did to the shift board (progress.gd board_line). A lost run's summary is built before
@@ -1420,9 +1529,9 @@ static func summary_chips(s: Dictionary, stage_count: int) -> Array:
 
 
 func _summary_stats() -> void:
-	for block in SummaryRows.grouped(summary_chips(game.run.summary(), game.ctx.stages.COUNT)):
+	for block in SummaryRows.grouped(summary_chips(game.run.summary(), game.flow.run_stage_count())):
 		var group := VBoxContainer.new()
-		group.add_theme_constant_override("separation", 2)
+		group.add_theme_constant_override("separation", 4)
 		group.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		if block[0] != "":
 			var head := _label(STAT_WORD_FONT)
@@ -1430,7 +1539,7 @@ func _summary_stats() -> void:
 			head.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 			head.add_theme_color_override("font_color", Palette.AMBER)
 			group.add_child(head)
-		var cells := _row(30)
+		var cells := _row(UiTokens.GAP_XL)
 		for chip in block[1]:
 			cells.add_child(_stat_cell(chip))
 		group.add_child(cells)
@@ -1450,7 +1559,7 @@ func _stat_cell(chip: Array) -> VBoxContainer:
 	icon.custom_minimum_size = Vector2(30.0, 30.0)
 	icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	row.add_child(icon)
-	var value := _label(26)
+	var value := _label(UiTokens.LABEL)
 	value.add_theme_font_override("font", UiFonts.mono())
 	value.text = chip[1]
 	row.add_child(value)
@@ -1493,7 +1602,7 @@ func _announce_ready() -> void:
 
 func ready_line(ms: int) -> String:
 	var open: int = game.flow.classes.filter(func(def): return game.pilot_unlocked(def)).size()
-	var launch_set := "sitting" if game.tuning != null and game.tuning.sitting() else "default"
+	var launch_set: String = game.tuning.option("profile") if game.tuning != null else "default"
 	return "SCRAPKEEP_MENU_READY ms=%d profile=%s pilots=%d/%d" % [ms, launch_set, open, game.flow.classes.size()]
 
 
@@ -1532,6 +1641,29 @@ func _layout_backdrop() -> void:
 	_content.anchor_bottom = _veil.anchor_bottom
 	_content.add_theme_constant_override("separation", 18 if title_deck else 26)
 	_veil.color = Color(Palette.CHARCOAL, 1.0 if title_deck else 0.84)
+	_fit_band()
+
+
+func _fit_name() -> void:
+	var height := minf(WORDMARK_H, _screen().y * WORDMARK_SHARE)
+	_title.custom_minimum_size = Vector2(height * Wordmark.ASPECT, height) if _wordmark.visible else Vector2.ZERO
+
+
+# On the title the stage shows around the words too: the wordmark stands over the sky and only the
+# lines and buttons sit on the ink band, from just above the body line to just under the last row.
+func _fit_band() -> void:
+	var title_deck := _veil.anchor_bottom < 1.0 and _body.visible
+	# The content and the veil share a parent, and the content spans its top half here.
+	var parent_h := _content.size.y / maxf(0.01, _content.anchor_bottom)
+	if not title_deck:
+		_veil.anchor_top = 0.0
+		return
+	var end := 0.0
+	for child in _content.get_children():
+		if child is Control and child.visible:
+			end = maxf(end, child.position.y + child.size.y)
+	_veil.anchor_top = clampf((_body.position.y - BAND_PAD) / maxf(1.0, parent_h), 0.0, 0.5)
+	_veil.anchor_bottom = clampf((end + BAND_PAD) / maxf(1.0, parent_h), _veil.anchor_top, 0.5)
 
 
 # The actions wrap at the room's width: the first row fills it, the rest centre below.

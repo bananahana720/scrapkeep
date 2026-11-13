@@ -35,6 +35,9 @@ what it finished.
 
 - `classes_raw`, `classes_places`: snag counts by what was hit. `piece`: the piece the lane was aimed
   at (or a part of it). `ground`: terrain tiles or the map's own floor. `other`: any other collider.
+  `moving`: a lift, barge or other moving body, whatever lane met it (see Moving pieces). A contact with
+  an actor (anything that takes damage: an enemy, a boss piece such as Brindle's hull in the bowl) is
+  not the map and is never a snag.
 - `places`: snags within 2 m of each other on one collider are one row with `count`, `worst_loss`,
   `speed_before` and `speed_after` at the worst, `pieces` (how many pieces' lanes reached it) and
   `drawn` (a drawn mesh covers the contact; under `--headless` a MultiMesh is not indexed, so false
@@ -61,10 +64,21 @@ flume's hollow lift and `tests/park_service_lift_roll_test.gd` for the dam's (wa
 0 snags; at fixed phases the plate landing on a ball that rolled under it while raised stops the ball dead,
 cycle 2.5 to 3.4 s after firing). Since wave 37 a lift is a cap on a solid drum and both tests pass.
 
-Sweep one piece alone with `--only=<path substring>`, e.g. `--map=park_flume --only=hollow_lift`. On the
-drum lift that reads 0 snags over 8 lanes but exits 1: 3 lanes skip with `no_floor at Stage2`, over the 20%
-limit. The plate lift before it skipped the same 3 of 12 and exited 1 too, so the skip is the probe's on this
-piece, not the drum's.
+Sweep one piece alone with `--only=<path substring>`, e.g. `--map=park_flume --only=hollow_lift`. Until
+wave 37 that skipped 3 of the drum lift's 8 lanes with `no_floor at Stage2` and exited 1: the lift rests in
+a hollow, so those lanes start on a bank higher than the lift's top, and the drop ray started inside the
+ground. A lane that meets no floor from over the piece now drops again from over the ground at its start
+(0 skipped, exit 0). The two drum contacts it then reads are class `moving`.
+
+## Pieces that are not ridden
+
+A piece no taller than the ride height is ridden unless the whole ball passes under it. One held up at least
+the ball's height (2 m) over the highest floor under its centre and corners gets no lanes: a lane rolls on the
+floor, so it would pass under the piece and meet only what holds it up. A piece hung lower keeps its lanes,
+because the ball can wedge under it. Until wave 37 the Slag Bowl's four crossbars, 19 m up their
+masts, were ridden this way and gave all 16 of the bowl's piece-lane snags, each a ball rolled into a mast;
+the flume's crew ledges, 6.5 m over the mesa rim, gave its 3 ride-lane ground snags. `snag_sweep_test`
+plants a bar 10 m over its floor (no lanes) and one 1.8 m over it (its lanes).
 
 ## Limits
 

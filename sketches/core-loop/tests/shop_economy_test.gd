@@ -102,9 +102,9 @@ func _check_paused() -> void:
 
 func _check_shelf() -> void:
 	var broke: Dictionary = _shop.buy(0)
-	_game.run.add_cogs(60)
-	var before: int = _game.run.parts.size()
 	var price: int = _shop.shelf_offers()[0]["price"]
+	_game.run.add_cogs(price)
+	var before: int = _game.run.parts.size()
 	var wallet: int = _game.run.cogs
 	var bought: Dictionary = _shop.buy(0)
 	var again: Dictionary = _shop.buy(0)

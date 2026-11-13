@@ -1,20 +1,26 @@
 extends Control
 
 const EventKinds := preload("res://src/core/event_kinds.gd")
+const UiTokens := preload("res://src/ui/ui_tokens.gd")
 const UiDraw := preload("res://src/ui/ui_draw.gd")
 
 # The hook chain's combo beside the ability bar (design-v3/HOOK-CHAIN.md, "One source, every
 # layer"). The HUD steps it each frame from player.chain.combo and nothing here writes the chain.
 # Shown only while the combo is 2 or more. Each new link swells the digits and eases them back
 # in PULSE seconds; when the chain ends the last number drops and fades over FALL seconds, then
-# hides. The colour is the chain_link row's, so the live colour law holds.
+# hides. The colour is the chain_link row's, so the live colour law holds. The count wears two
+# linked rings and a times sign ("chain x2"), so it reads as a count of links and not as a
+# stray number beside the bar (w37 film 022, PF-21).
 
-const FONT := 40
+const FONT := UiTokens.HEADING
 const PULSE := 0.12
 const SWELL := 0.35
 const FALL := 0.3
 const DROP := 18.0
-const BOX := Vector2(72.0, 48.0)
+const BOX := Vector2(104.0, 48.0)
+const LINK := 9.0
+const LINK_W := 2.5
+const TIMES := "×"
 
 # The combo on show: the live combo, or the last one while it falls.
 var shown := 0
@@ -75,7 +81,18 @@ func _draw() -> void:
 		var t := _fall / FALL
 		drop = DROP * t
 		color.a = 1.0 - t
-	var label := str(shown)
 	draw_set_transform(Vector2(0.0, size.y * 0.5 + drop), 0.0, Vector2(scale, scale))
-	UiDraw.text(self, 0.0, 0.0, label, FONT, color, true)
+	_draw_links(color)
+	var x := LINK * 3.4
+	x += UiDraw.text(self, x, 0.0, TIMES, UiTokens.LABEL, color)
+	UiDraw.text(self, x + 1.0, 0.0, str(shown), FONT, color, true)
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+
+
+# Two linked rings, the chain itself, with their middle at the counter's mid line.
+func _draw_links(color: Color) -> void:
+	var outline := Color(UiDraw.OUTLINE, UiDraw.OUTLINE.a * color.a)
+	for at in [Vector2(LINK, 0.0), Vector2(LINK * 2.2, 0.0)]:
+		draw_arc(at, LINK * 0.8, 0.0, TAU, 24, outline, LINK_W + 2.0)
+	for at in [Vector2(LINK, 0.0), Vector2(LINK * 2.2, 0.0)]:
+		draw_arc(at, LINK * 0.8, 0.0, TAU, 24, color, LINK_W)

@@ -49,7 +49,7 @@ func _suspension(in_bay: bool, aligned := false) -> void:
 	audio.bake_now()
 	var announcement := []
 	var starts := []
-	game.events.event_announced.connect(func(id, seconds):
+	game.events.event_announced.connect(func(id, seconds, _at):
 		if id == "plunge_pool_flood":
 			announcement.append({"sample": audio.engine.clock + roundi(seconds * Harmony.RATE),
 				"at": audio.engine.clock, "lead": roundi(seconds * Harmony.RATE), "stage": game.world.events.stage_time + seconds}))

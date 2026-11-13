@@ -15,14 +15,15 @@ const ROWS := [
 ]
 
 # One row per boss. kind is the prefix of the boss's piece kinds ("brindle_hull"); music
-# is the music engine's id. title is the victory screen's heading; victory its body; stamp, when set, is inked
+# is the music engine's id. title is the victory screen's heading; victory its body. Brindle's rout
+# already has its ROUTED stamp (flourish_rows.gd), so his heading names what was won (ruling cx); stamp, when set, is inked
 # under the heading (the Mind's crew took you on: "All hands", Andrew 2026-10-18). built false means the script does not exist yet.
 # script is the module flow runs for that world's arena. The Waking (waking.gd) and the Mind
 # (mind.gd) have their own modules; each extends stub_boss.gd, one posture Warden on a flat
 # pad, until its fight lands.
 const BOSSES := {
-	"brindle": {"name": "Admiral Brindle", "title": "BRINDLE ROUTED", "script": "res://src/boss/boss.gd", "kind": "brindle", "music": "brindle",
-		"built": true, "victory": "The Spillway is ours again.", "epitaph": "Brindle, crane parked over the Slag Bowl. Anchors accounted for."},
+	"brindle": {"name": "Admiral Brindle", "title": "SPILLWAY RECLAIMED", "script": "res://src/boss/boss.gd", "kind": "brindle", "music": "brindle",
+		"built": true, "victory": "Back on the crew's books, kettle and all.", "epitaph": "Brindle, crane parked over the Slag Bowl. Anchors accounted for."},
 	"waking": {"name": "The Waking", "title": "THE WAKING STILLED", "script": "res://src/boss/waking.gd", "kind": "waking", "music": "waking",
 		"built": true, "victory": "The Waking is stilled.", "epitaph": "The Waking, stilled in the Dig. Fallen floors await pit inspection."},
 	"mind": {"name": "The Mind", "title": "THE MIND QUIETED", "script": "res://src/boss/mind.gd", "kind": "mind", "music": "mind",

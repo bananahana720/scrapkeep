@@ -4,7 +4,7 @@ const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const Synergies := preload("res://src/build/synergies.gd")
 
-# Every named synergy that build runs does something you can count, live, through the
+# Every maker trick (two parts of one maker) that build runs does something you can count, live, through the
 # real bus and spawner: Shrapnel Bloom, Wrecking Ball, Lightning Rod, Tesla Pylon,
 # Pinwheel and Glacier Hull each land strikes on nearby enemies. Shrapnel stays under
 # its per-second cap however many kills arrive at once. Accidental interactions are
@@ -49,15 +49,15 @@ func _physics_process(_delta: float) -> bool:
 		_build = _game.ctx.get_meta("build")
 		_game.events.enemy_struck.connect(func(_e: Node3D, kind: String, _f: float): _struck[kind] = _struck.get(kind, 0) + 1)
 		_scenarios = [
-			["shrapnel bloom", ["cross_split", "hot_rivets"], _set_shrapnel, 3, _check_shrapnel],
-			["shrapnel cap", ["cross_split", "hot_rivets"], _set_shrapnel_flood, 2, _check_shrapnel_cap],
+			["shrapnel bloom", ["cross_split", "pin_setter"], _set_shrapnel, 3, _check_shrapnel],
+			["shrapnel cap", ["cross_split", "pin_setter"], _set_shrapnel_flood, 2, _check_shrapnel_cap],
 			["wrecking ball", ["double_feed", "hot_rivets"], _set_wreck, 3, _check_wreck],
-			["lightning rod", ["arc_coil", "rivet_plating"], _set_rod, 6, _check_rod],
-			["tesla pylon", ["focus_lens", "arc_coil"], _set_tesla, 50, _check_tesla],
-			["pinwheel", ["spiral_wave", "tread_plating"], _set_pinwheel, 12, _check_pinwheel],
-			["glacier hull", ["slag_rounds", "frost_vane"], _set_glacier, 3, _check_glacier],
+			["lightning rod", ["arc_coil", "drop_weight"], _set_rod, 6, _check_rod],
+			["tesla pylon", ["focus_lens", "live_line"], _set_tesla, 50, _check_tesla],
+			["pinwheel", ["loose_trigger", "long_barrel"], _set_pinwheel, 12, _check_pinwheel],
+			["glacier hull", ["slag_rounds", "rivet_plating"], _set_glacier, 3, _check_glacier],
 			["frost then kinetic", [], _set_kinetic, 3, _check_kinetic],
-			["linked spiral", ["spiral_wave", "chain_arc"], _set_spiral, 2, _check_spiral],
+			["linked spiral", ["spiral_wave", "echo_locator"], _set_spiral, 2, _check_spiral],
 		]
 		return false
 	if _ticks < 12:
@@ -116,7 +116,7 @@ func _set_shrapnel() -> void:
 
 func _check_shrapnel() -> void:
 	_report("shrapnel bloom", _build.has_transformer("shrapnel_bloom") and _synergy_hits() >= 2,
-		"Cross Split + Hot Rivets: one kill between two enemies %.1f m apart burst into shrapnel that struck %d of them"
+		"Cross Split + Pin Setter (Redjaw): one kill between two enemies %.1f m apart burst into shrapnel that struck %d of them"
 			% [_gap, _synergy_hits()])
 
 
@@ -153,7 +153,7 @@ func _set_rod() -> void:
 
 func _check_rod() -> void:
 	_report("lightning rod", _build.has_transformer("lightning_rod") and _struck.get("arc", 0) >= 1,
-		"Arc Coil + Rivet Plating: picking up scrap sparked %d arcs at the nearest enemy" % _struck.get("arc", 0))
+		"Arc Coil + Drop Weight (Moss): picking up scrap sparked %d arcs at the nearest enemy" % _struck.get("arc", 0))
 
 
 func _set_tesla() -> void:
@@ -166,7 +166,7 @@ func _check_tesla() -> void:
 	var hooked: bool = _game.player.kit.hooked
 	_game.player.release_grapple()
 	_report("tesla pylon", _build.has_transformer("tesla_pylon") and hooked and _struck.get("arc", 0) >= 2,
-		"Focus Lens + Arc Coil, hooked for 0.55 s: arcs leapt to nearby enemies %d times" % _struck.get("arc", 0))
+		"Focus Lens + Live Line (Mind-glass), hooked for 0.55 s: arcs leapt to nearby enemies %d times" % _struck.get("arc", 0))
 
 
 func _set_pinwheel() -> void:
@@ -176,7 +176,7 @@ func _set_pinwheel() -> void:
 
 func _check_pinwheel() -> void:
 	_report("pinwheel", _build.has_transformer("pinwheel") and _synergy_hits() >= 1,
-		"Spiral Wave + Tread Plating at 30 m/s: the blade ring cut %d enemies it passed" % _synergy_hits())
+		"Loose Trigger + Long Barrel (Highdraft) at 30 m/s: the blade ring cut %d enemies it passed" % _synergy_hits())
 
 
 func _set_glacier() -> void:
@@ -186,7 +186,7 @@ func _set_glacier() -> void:
 
 func _check_glacier() -> void:
 	_report("glacier hull", _build.has_transformer("glacier_hull") and _synergy_hits() >= 1,
-		"Slag Rounds + Frost Vane: a 12 m/s landing cracked a frost ring that struck %d enemies" % _synergy_hits())
+		"Slag Rounds + Rivet Plating (Fleet): a 12 m/s landing cracked a frost ring that struck %d enemies" % _synergy_hits())
 
 
 func _water(point: Vector3) -> Dictionary:
@@ -222,7 +222,7 @@ func _check_spiral() -> void:
 	var found: Array = _build.found()
 	var linked := found.filter(func(line): return String(line).begins_with("A spiral carrying chain"))
 	_report("spiral carrying chain", _build.has_transformer("linked_spiral") and linked.size() == 1,
-		"Spiral Wave + Chain Arc: two shots logged the unnamed find once: %s" % [linked])
+		"Spiral Wave + Echo Locator (Waking): two shots logged the unnamed find once: %s" % [linked])
 
 
 func _finish() -> bool:

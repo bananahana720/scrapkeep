@@ -8,6 +8,9 @@ extends Node
 #           stays, speed lines turning and FWOOSH! stamped, until ready_check() says the dam is drawn, HOLD_MIN_S to HOLD_MAX_S
 #   reveal  the panel sweeps on out through the top right, REVEAL_S, over the ball already dropping in
 # Reduced motion keeps the panel still (no lines turning, no camera move) and shortens the wind to nothing.
+# A stage launch (flow.gd, dam to flume and flume to the Slag Bowl) rides the same take with play_over_flight: the cannon
+# shot is the wind, so the player watches it go, the panel closes over the flight's last COVER_S, and on_cover waits for
+# cover_gate (the flight's end). The launch has stamped its own word, so this take stamps none.
 #
 # Only a played game runs it: bots, tests and every headless run call on_cover at once (live is false), so run timing
 # and every run-start test stay as they were. A test sets live (and steps it with advance()) to drive the phases.
@@ -41,6 +44,9 @@ var shown_ms := 0
 var _t := 0.0
 var _on_cover := Callable()
 var _ready_check := Callable()
+var _cover_gate := Callable()
+var _wind_s := WIND_S
+var _wordless := false
 var _layer: CanvasLayer
 var _panel: ColorRect
 var _word: Label
@@ -92,6 +98,17 @@ func busy() -> bool:
 # Runs wind (once, at the start), then the swipe, calling on_cover under full cover. ready_check() is polled through the hold.
 # Not live, on_cover runs now and nothing shows. Returns true when the take plays.
 func play(on_cover: Callable, wind := Callable(), ready_check := Callable()) -> bool:
+	return _begin(on_cover, wind, ready_check, Callable(), 0.0 if HighdraftFx.preferred else WIND_S, false)
+
+
+# The take over a cannon shot of flight_s: the shot is the wind, so the panel waits and closes over the flight's last
+# COVER_S, and on_cover waits at full cover until cover_gate() says the flight is over. Then the same hold and reveal as
+# play. No word: the launch stamped its own.
+func play_over_flight(on_cover: Callable, cover_gate: Callable, ready_check := Callable(), flight_s := 0.0) -> bool:
+	return _begin(on_cover, Callable(), ready_check, cover_gate, maxf(0.0, flight_s - COVER_S), true)
+
+
+func _begin(on_cover: Callable, wind: Callable, ready_check: Callable, cover_gate: Callable, wind_s: float, wordless: bool) -> bool:
 	if busy():
 		return false
 	if not live:
@@ -101,15 +118,16 @@ func play(on_cover: Callable, wind := Callable(), ready_check := Callable()) -> 
 	reduced_motion = HighdraftFx.preferred
 	_on_cover = on_cover
 	_ready_check = ready_check
+	_cover_gate = cover_gate
+	_wind_s = wind_s
+	_wordless = wordless
 	_t = 0.0
 	_layer.visible = true
 	_set_progress(0.0)
 	_material.set_shader_parameter("lines", 0.0 if reduced_motion else 1.0)
-	phase = WIND
+	phase = WIND if wind_s > 0.0 else COVER
 	if wind.is_valid():
 		wind.call()
-	if reduced_motion:
-		phase = COVER
 	set_process(true)
 	return true
 
@@ -129,11 +147,11 @@ func advance(delta: float) -> void:
 		_material.set_shader_parameter("spin", _t * SPIN_RATE)
 	match phase:
 		WIND:
-			if _t >= WIND_S:
+			if _t >= _wind_s:
 				_next(COVER)
 		COVER:
 			_set_progress(minf(1.0, _t / COVER_S))
-			if _t >= COVER_S:
+			if _t >= COVER_S and (not _cover_gate.is_valid() or bool(_cover_gate.call())):
 				_next(HOLD)
 				_cover()
 		HOLD:
@@ -164,6 +182,7 @@ func _cover() -> void:
 func _end() -> void:
 	phase = IDLE
 	_ready_check = Callable()
+	_cover_gate = Callable()
 	_layer.visible = false
 	_set_progress(0.0)
 	set_process(false)
@@ -174,7 +193,7 @@ func _end() -> void:
 func _set_progress(value: float) -> void:
 	_material.set_shader_parameter("progress", value)
 	var stamp := clampf((value - 0.7) / 0.3, 0.0, 1.0) * clampf((1.25 - value) / 0.15, 0.0, 1.0)
-	_word.visible = stamp > 0.0
+	_word.visible = stamp > 0.0 and not _wordless
 	_word.modulate.a = stamp
 	_word.scale = Vector2.ONE * (1.0 if reduced_motion else lerpf(1.35, 1.0, stamp))
 	_word.pivot_offset = _word.size * 0.5

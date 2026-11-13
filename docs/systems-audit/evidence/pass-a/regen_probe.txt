@@ -1,0 +1,3 @@
+regen_probe: paid 25% hull -> full again after 9.2 s with no hit (REGEN_DELAY 5.0 s, REGEN_RATE 6.0 hp/s)
+regen_probe: paid 50% hull -> full again after 13.3 s with no hit (REGEN_DELAY 5.0 s, REGEN_RATE 6.0 hp/s)
+regen_probe: paid 75% hull -> full again after 17.5 s with no hit (REGEN_DELAY 5.0 s, REGEN_RATE 6.0 hp/s)

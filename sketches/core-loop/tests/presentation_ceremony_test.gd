@@ -24,7 +24,7 @@ const SliceDefs := preload("res://src/core/slice_defs.gd")
 #   - a key during the build jumps to the reveal, a second key closes it;
 #   - the payoff accent waits for the part to land, then fires once on its first effect;
 #   - a completed synergy's card snaps a wire to the partner's glyph;
-#   - a part that feeds a synergy hints at the partner still to find, and on the slice
+#   - a part that feeds a maker trick hints at the piece still to find, and on the slice
 #     table never at a synergy the slice cuts;
 #   - short plays a gate find at the rare tier with no pause, its stop drawn from the
 #     shared hit-stop budget (the fight word budget with a flare up is ui_word_budget_test);
@@ -231,14 +231,15 @@ func _physics_process(_delta: float) -> bool:
 		"synergy":
 			if _elapsed() > 200:
 				var find: Dictionary = _ceremony.find_of("loose_trigger", "test")
-				_report("synergy hint", find["link"] == "hint" and find["partner"] == "spiral_wave",
-					"loose_trigger with no spiral held feeds %s: link %s, partner %s" % [find["synergy"], find["link"], find["partner"]])
-				_game.run.add_part("chain_arc", "test")
+				# The first Highdraft piece hints at its maker's trick; the second piece is any part of that maker.
+				_report("synergy hint", find["link"] == "hint" and find["synergy"] in Synergies.of_maker("highdraft_roosts") and find["partner"] == "",
+					"loose_trigger with no Highdraft part held feeds %s: link %s, partner '%s'" % [find["synergy"], find["link"], find["partner"]])
+				_game.run.add_part("pin_setter", "test")
 				_game.run.add_part("cross_split", "test")
 				var wired: Dictionary = _ceremony.find_of("cross_split", "test")
 				var card: Dictionary = _ceremony.card_state(wired, int(_clock_ms), false)
-				_report("synergy snaps", wired["link"] == "lit" and wired["tier"] == "reveal" and card["partner_icon"] == Ceremony.icon_of("chain_arc"),
-					"cross_split after chain_arc completes %s: link %s, tier %s, partner glyph %s"
+				_report("synergy snaps", wired["link"] == "lit" and wired["tier"] == "reveal" and card["partner_icon"] == Ceremony.icon_of("pin_setter"),
+					"cross_split after pin_setter (both Redjaw) completes %s: link %s, tier %s, partner glyph %s"
 						% [wired["synergy"], wired["link"], wired["tier"], card["partner_icon"]])
 				var crest: Dictionary = _ceremony.card_state(_ceremony.find_of(BossRules.CREST_PART, "boss"), int(_clock_ms), false)
 				_report("crest card", crest["name"] == "Admiral's Crest" and crest["stamp"] == "TROPHY" and crest["verb"] == "Fleet property. Yours now.",

@@ -1,6 +1,7 @@
 extends Control
 
 const Secrets := preload("res://src/core/secrets.gd")
+const UiTokens := preload("res://src/ui/ui_tokens.gd")
 const Cosmetics := preload("res://src/core/cosmetics.gd")
 const CosmeticWear := preload("res://src/core/cosmetic_wear.gd")
 const Achievements := preload("res://src/core/achievements.gd")
@@ -136,15 +137,16 @@ class Card:
 		state = card_state
 		tint = card_tint
 		words = card_words
+		accessibility_name = card_words
 		focus_mode = Control.FOCUS_NONE
 		custom_minimum_size = Vector2(132.0, 132.0)
 		mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 		pivot_offset = Vector2(66.0, 66.0)
 		var plate := StyleBoxFlat.new()
-		plate.bg_color = Color(Palette.CHARCOAL, 0.95)
-		plate.border_color = Palette.VERDIGRIS
-		plate.set_border_width_all(2)
-		plate.set_corner_radius_all(8)
+		plate.bg_color = Color(UiTokens.INK, UiTokens.PLATE_ALPHA)
+		plate.border_color = UiTokens.LINE
+		plate.set_border_width_all(UiTokens.EDGE)
+		plate.set_corner_radius_all(UiTokens.RADIUS)
 		add_theme_stylebox_override("normal", plate)
 		var lit := plate.duplicate() as StyleBoxFlat
 		lit.border_color = Palette.SAND
@@ -165,7 +167,7 @@ class Card:
 		draw_rect(swatch, fill)
 		var font := UiFonts.bold()
 		if state == "hidden":
-			draw_string(font, swatch.get_center() + Vector2(-9.0, 12.0), "?", HORIZONTAL_ALIGNMENT_LEFT, -1, 34, Palette.SAND)
+			draw_string(font, swatch.get_center() + Vector2(-9.0, 12.0), "?", HORIZONTAL_ALIGNMENT_LEFT, -1, UiTokens.HEADING, Palette.SAND)
 		elif state == "locked":
 			var c := swatch.get_center()
 			draw_rect(Rect2(c + Vector2(-10.0, -2.0), Vector2(20.0, 16.0)), Palette.SAND)
@@ -177,7 +179,7 @@ class Card:
 			draw_polyline(PackedVector2Array([c + Vector2(-5.0, 0.0), c + Vector2(-1.0, 4.0), c + Vector2(5.0, -4.0)]), Palette.CHARCOAL, 2.5)
 		elif state == "new":
 			draw_circle(Vector2(s.x - 16.0, 16.0), 7.0, Palette.ARC)
-		draw_string(font, Vector2(10.0, s.y - 14.0), caption(), HORIZONTAL_ALIGNMENT_CENTER, s.x - 20.0, 15, Palette.SAND if state != "locked" else Color(Palette.SAND, 0.6))
+		draw_string(font, Vector2(10.0, s.y - 14.0), caption(), HORIZONTAL_ALIGNMENT_CENTER, s.x - 20.0, UiTokens.CAPTION, Palette.SAND if state != "locked" else UiTokens.quiet())
 
 
 func _init() -> void:
@@ -188,7 +190,7 @@ func _init() -> void:
 	_backdrop.color = Color(Palette.CHARCOAL, 0.94)
 	_backdrop.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_backdrop)
-	_title = _label("CUSTOMIZE", 30)
+	_title = _label("CUSTOMIZE", UiTokens.HEADING)
 	_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	add_child(_title)
 	back = ChoiceButton.new("back", "key_esc", "Back")
@@ -197,16 +199,16 @@ func _init() -> void:
 	add_child(back)
 	_build_preview()
 	_heft_strip = HBoxContainer.new()
-	_heft_strip.add_theme_constant_override("separation", 10)
+	_heft_strip.add_theme_constant_override("separation", 8)
 	_heft_strip.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var heft_word := _label("HEFT", 18)
+	var heft_word := _label("HEFT", UiTokens.BODY)
 	_heft_strip.add_child(heft_word)
 	for i in HEFT_WORDS.size():
 		var pip := Button.new()
 		pip.text = HEFT_WORDS[i]
 		pip.focus_mode = Control.FOCUS_NONE
 		pip.toggle_mode = true
-		pip.custom_minimum_size = Vector2(44.0, 40.0)
+		pip.custom_minimum_size = Vector2(UiTokens.TARGET, UiTokens.TARGET)
 		pip.add_theme_font_override("font", UiFonts.bold())
 		pip.mouse_entered.connect(_hover_heft.bind(i + 1))
 		pip.mouse_exited.connect(_hover_heft.bind(0))
@@ -219,18 +221,19 @@ func _init() -> void:
 	_column.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_column)
 	_pilot_strip = HBoxContainer.new()
-	_pilot_strip.add_theme_constant_override("separation", 6)
+	_pilot_strip.add_theme_constant_override("separation", 4)
 	_pilot_strip.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_column.add_child(_pilot_strip)
 	var pilot_row := ChoiceButton.new("pilot", "key_enter", "")
 	pilot_row.custom_minimum_size = Vector2(168.0, PORTRAIT)
-	pilot_row.add_theme_font_size_override("font_size", 18)
+	pilot_row.add_theme_font_size_override("font_size", UiTokens.BODY)
 	pilot_row.pressed.connect(_row_clicked.bind("pilot"))
 	rows["pilot"] = pilot_row
 	_pilot_strip.add_child(pilot_row)
 	for def in ClassDef.all():
 		var portrait := Button.new()
 		portrait.name = "Portrait_" + def.id
+		portrait.accessibility_name = String(def.display_name)
 		portrait.focus_mode = Control.FOCUS_NONE
 		portrait.custom_minimum_size = Vector2(PORTRAIT, PORTRAIT)
 		portrait.mouse_entered.connect(_hover_portrait.bind(def.id))
@@ -239,13 +242,13 @@ func _init() -> void:
 		_portraits[def.id] = portrait
 		_pilot_strip.add_child(portrait)
 	_slot_list = VBoxContainer.new()
-	_slot_list.add_theme_constant_override("separation", 2)
+	_slot_list.add_theme_constant_override("separation", 4)
 	_slot_list.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_column.add_child(_slot_list)
 	for group in GROUPS:
 		# Each group's title says whose slot its rows are (BALL, PILOT, SPIL-9, BAY): Outfit and Decoration
 		# read as a ball's or the companion's without it.
-		var heading := _label(group[0], 14)
+		var heading := _label(group[0], UiTokens.CAPTION)
 		heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 		heading.add_theme_color_override("font_color", Palette.SANDSTONE)
 		_group_labels[group[0]] = heading
@@ -267,12 +270,12 @@ func _init() -> void:
 	_grid.add_theme_constant_override("h_separation", int(CARD_GAP))
 	_grid.add_theme_constant_override("v_separation", int(CARD_GAP))
 	_scroll.add_child(_grid)
-	_hover = _label("", 16)
+	_hover = _label("", UiTokens.BODY)
 	_hover.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	_hover.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_hover.custom_minimum_size = Vector2(0.0, HOVER_H)
 	_column.add_child(_hover)
-	_notice = _label("", 15)
+	_notice = _label("", UiTokens.CAPTION)
 	_notice.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	_column.add_child(_notice)
 
@@ -315,11 +318,11 @@ func _slot_row() -> Button:
 	row.custom_minimum_size = Vector2(0.0, ROW_H)
 	row.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 	row.add_theme_font_override("font", UiFonts.bold())
-	row.add_theme_font_size_override("font_size", 17)
+	row.add_theme_font_size_override("font_size", UiTokens.BODY)
 	row.add_theme_color_override("font_color", Palette.SAND)
-	row.add_theme_color_override("font_hover_color", Color.WHITE)
-	row.add_theme_color_override("font_focus_color", Color.WHITE)
-	for pair in [["normal", Palette.VERDIGRIS, 2, true], ["hover", Palette.SAND, 2, true], ["pressed", Palette.AMBER, 3, true], ["focus", Palette.SAND, 4, false]]:
+	row.add_theme_color_override("font_hover_color", UiTokens.TEXT)
+	row.add_theme_color_override("font_focus_color", UiTokens.TEXT)
+	for pair in [["normal", UiTokens.LINE, 2, true], ["hover", Palette.SAND, 2, true], ["pressed", Palette.AMBER, 3, true], ["focus", Palette.SAND, 4, false]]:
 		var box: StyleBoxFlat = ChoiceButton.plate(pair[1], pair[2], 14.0, pair[3])
 		box.content_margin_top = 4.0
 		box.content_margin_bottom = 4.0

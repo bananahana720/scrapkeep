@@ -11,9 +11,12 @@ const Palette := preload("res://src/core/palette.gd")
 # companion, active and dunk toasts its words once on a fresh profile when first met, one tip per toast
 # lifetime, and counts as told (prompt_shown("tip_<id>") and the profile's seen list) only after
 # its toast has been on screen for MIN_SHOWN; a tip taken down sooner is told again later. A fight
-# (an engaged, unbroken Warden, or the boss arena) holds tips back. The pilot is Tally, whose bar
-# carries Gather Plate's cast time, so the cast tip and the radio dial's tip are both owed on the
-# drop and must reach the screen one after the other. The help page's rule lines name six of the
+# (an engaged, unbroken Warden, or the boss arena) holds tips back. Pacing (systems audit pass E):
+# the drop owes no tip, though Tally's bar carries Gather Plate's cast time and the radio dial is
+# up; at most one tip goes up in a run's first OPENING seconds, so the dunk and the first cast met
+# there show one, then the other after OPENING; the radio waits for a cleared stage and hangs its
+# keys on the dial while its tip is up; the grip waits for a real carve (events.carved) that
+# touched a wall, so open ground and a dune face tell nothing; the active waits for a fight met in the run (a hit or a kill). The help page's rule lines name six of the
 # eight (field_notes.gd FIELD_RULES; SPIL-9 is the Pictures caption, the dunk has no rule line). The first-timer audit
 # reaches grip, radio and cast; the rest it cannot (a jammer, a relay, a seated companion and
 # actives are not on the bot's path), so this is their check. The dunk tip toasts on the first stored
@@ -106,6 +109,20 @@ func _advance(seconds: float) -> Array[String]:
 	return drawn
 
 
+# A carve of 0.5 s on a face with `normal`, ended as rigid_ball.gd ends one: the flag drops, then
+# events.carved.
+func _carve(normal: Vector3) -> void:
+	var state = _game.player.state
+	state.grounded = true
+	state.contact_normal = normal
+	state.carving = true
+	_advance(0.5)
+	state.carving = false
+	state.contact_normal = Vector3.UP
+	_game.events.carved.emit(_game.player.ball_position(), 0.5, 20.0)
+	_advance(1.0 / 60.0)
+
+
 func _fight(on: bool) -> void:
 	_game.flow._engaged = on
 	_game.flow.sealed = on
@@ -113,6 +130,8 @@ func _fight(on: bool) -> void:
 
 func _tip(id: String, trigger: Callable) -> void:
 	var tips = _game.hud.field_tips
+	# Past the opening's one tip, which the start of the test checks.
+	tips._run_time = maxf(tips._run_time, FieldTips.OPENING)
 	_advance(3.0)
 	var before := _prompts.count("tip_" + id)
 	var was_seen: bool = tips.seen(id)
@@ -137,31 +156,54 @@ func _run() -> void:
 	var dt := 1.0 / 60.0
 	var min_frames := int(ceil(FieldTips.MIN_SHOWN / dt))
 	_report("in play", _game.flow.in_play(), "state %s" % _game.flow.state_name())
-	_report("pilot carries a cast slot", _game.run.class_def.id == "tally" and FieldTips.has_cast_slot(_game.player.abilities),
-		"class %s" % _game.run.class_def.id)
-	# The drop owes two tips on one tick, the radio dial's and the cast slot's. Neither counts as
-	# told on that tick: the toast has not been on screen yet.
-	tips._physics_process(dt)
-	_report("nothing is told before it is seen", _prompts.filter(func(p): return p.begins_with("tip_")).is_empty() and not tips.seen("radio") and not tips.seen("cast"),
-		"prompts %s, showing %s, pending %s" % [_prompts, tips.showing, tips.pending])
-	var drawn := _advance(8.0)
-	var radio := _span(drawn, "radio")
-	var cast := _span(drawn, "cast")
-	_report("radio tip on screen, then told", radio[2] >= min_frames and tips.seen("radio") and _prompts.count("tip_radio") == 1,
-		"radio frames %s, prompts %s" % [radio, _prompts])
-	_report("cast tip on screen, then told", cast[2] >= min_frames and tips.seen("cast") and _prompts.count("tip_cast") == 1,
-		"cast frames %s, prompts %s" % [cast, _prompts])
-	_report("drop tips show one after the other", radio[0] >= 0 and cast[0] > radio[1] and _prompts.find("tip_radio") < _prompts.find("tip_cast"),
-		"radio frames %s, cast frames %s, prompts %s" % [radio, cast, _prompts])
+	var deck = _game.get("radio_deck")
+	var dial_up: bool = deck != null and deck.dial != null and deck.dial.is_visible_in_tree()
+	# The drop: the dial is up and the bar holds a cast time, and no tip is owed yet.
+	var drop := _advance(8.0)
+	_report("the drop owes no tip", _game.run.class_def.id == "tally" and dial_up and drop.filter(func(id): return id != "").is_empty()
+		and tips.pending.is_empty() and _prompts.filter(func(p): return p.begins_with("tip_")).is_empty(),
+		"class %s, dial %s, pending %s, prompts %s" % [_game.run.class_def.id, dial_up, tips.pending, _prompts])
+	# Inside the opening, two verbs met: one tip goes up, the other waits for OPENING.
+	_report("still in the opening", tips._run_time < FieldTips.OPENING - 6.0, "run time %.1f" % tips._run_time)
+	_game.player.dunk.store(10.0, "", "tally", Color.WHITE)
+	_game.player.abilities.casting = "special"
+	var opening := _advance(5.0)
+	_game.player.abilities.casting = ""
+	var dunk := _span(opening, "dunk")
+	_report("one tip in the opening", dunk[2] >= min_frames and tips.seen("dunk") and opening.count("cast") == 0
+		and tips.pending.has("cast") and not tips.seen("cast"), "dunk frames %s, cast frames %d, pending %s" % [dunk, opening.count("cast"), tips.pending])
+	var after_opening := _advance(FieldTips.OPENING - tips._run_time + 4.0)
+	var cast := _span(after_opening, "cast")
+	_report("the waiting tip goes up after the opening", cast[2] >= min_frames and tips.seen("cast") and _prompts.count("tip_cast") == 1
+		and _prompts.find("tip_dunk") < _prompts.find("tip_cast"), "cast frames %s, prompts %s" % [cast, _prompts])
+	_game.player.dunk.clear()
+	# The radio waits for a cleared stage, then its dial draws its keys while the tip is up.
+	_report("no radio tip before a stage is cleared", not tips.seen("radio") and not tips.pending.has("radio"), "pending %s" % [tips.pending])
+	_game.events.stage_cleared.emit(1)
+	_advance(0.2)
+	var teaching: bool = deck.dial.teaching()
+	var radio_on := _advance(4.0)
+	_report("a cleared stage lets the radio tip up, keys on the dial", teaching and radio_on.count("radio") > 0 and tips.seen("radio")
+		and _prompts.count("tip_radio") == 1, "teaching %s, frames %d, prompts %s" % [teaching, radio_on.count("radio"), _prompts])
 	_game.player.abilities.casting = "special"
 	_advance(3.0)
 	_game.player.abilities.casting = ""
 	_report("cast tip does not repeat when a cast starts", _prompts.count("tip_cast") == 1, "prompts %s" % [_prompts])
-	# A tip met in a fight waits, and is told when the fight lets go (the fight's word budget).
-	_fight(true)
+	# Open ground: a carve on the flat, and one down a dune face (30 degrees, past CARVE_DOT but no
+	# wall), each end with events.carved and tell nothing (PC film 93d3fd86, frame 0016).
+	_carve(Vector3.UP)
+	_carve(Vector3(0.5, 0.866, 0.0))
+	_report("a carve on open ground or a dune is no grip lesson", not tips.pending.has("grip") and not tips.seen("grip")
+		and tips.showing != "grip", "pending %s, showing %s" % [tips.pending, tips.showing])
+	# A seam hop sets the carving flag for a moment: no tip. A real carve ends with events.carved.
 	_game.player.state.carving = true
 	_advance(1.0)
 	_game.player.state.carving = false
+	_report("a seam hop is no grip lesson", not tips.pending.has("grip") and not tips.seen("grip"), "pending %s" % [tips.pending])
+	# A tip met in a fight waits, and is told when the fight lets go (the fight's word budget).
+	_fight(true)
+	_carve(Vector3(0.95, 0.1, 0.0).normalized())
+	_advance(1.0)
 	_report("a fight holds the grip tip", not tips.seen("grip") and tips.pending.has("grip") and _prompts.count("tip_grip") == 0
 		and not _game.hud.toast_texts().has(FieldTips.TIPS["grip"]), "pending %s, prompts %s" % [tips.pending, _prompts])
 	# A Warden broken: flow unseals, the engaged flag stays up until the next beacon, and the
@@ -209,9 +251,8 @@ func _run() -> void:
 		"was up %s, pending %s, prompts %s" % [jam_up, tips.pending, _prompts])
 	_advance(6.0)
 	_report("the replaced tip is told after", tips.seen("jam") and _prompts.count("tip_jam") == 1, "prompts %s" % [_prompts])
-	_game.player.state.carving = true
+	_carve(Vector3(0.95, 0.1, 0.0).normalized())
 	_advance(3.0)
-	_game.player.state.carving = false
 	_report("grip tip does not repeat", _prompts.count("tip_grip") == 1, "prompts %s" % [_prompts])
 	var post := Post.new()
 	_game.add_child(post)
@@ -264,17 +305,21 @@ func _run() -> void:
 	_report("the start card holds the active tip", under_card.count("active") == 0 and not tips.pending.has("active")
 		and not tips.seen("active"), "frames %d, pending %s" % [under_card.count("active"), tips.pending])
 	card.visible = card_was
+	# A rack before any fight in the run waits; the first kill lets it up.
+	var calm := _advance(3.0)
+	_report("a rack before a fight tells nothing", calm.count("active") == 0 and not tips.seen("active"), "pending %s" % [tips.pending])
 	rack.active_id = ""
+	_game.events.enemy_killed.emit("grunt", Vector3.ZERO, 1)
 	_tip("active", func(): rack.active_id = "torch")
 	_game.combat.actives = real_rack
-	_tip("dunk", func(): _game.player.dunk.store(10.0, "", "tally", Color.WHITE))
-	_game.player.dunk.clear()
 	# A new run on the same profile repeats none of them, every verb met again.
 	var count := _prompts.size()
 	_game.events.run_started.emit("pylon_engineer")
 	_game.combat.actives = rack
 	rack.active_id = "torch"
-	_game.player.state.carving = true
+	_carve(Vector3(0.95, 0.1, 0.0).normalized())
+	_game.events.player_hit.emit(5.0, "test")
+	_game.events.stage_cleared.emit(1)
 	_game.player.abilities.jam(0.5)
 	_game.player.abilities.casting = "special"
 	_game.combat.companion_assist_full.emit()
@@ -282,7 +327,6 @@ func _run() -> void:
 	interact.devices.append(post)
 	post.global_position = _game.player.ball_position()
 	var again_run := _advance(3.0)
-	_game.player.state.carving = false
 	_game.player.abilities.casting = ""
 	interact.devices.erase(post)
 	_game.combat.actives = real_rack
@@ -312,6 +356,7 @@ func _radio_waits_for_the_pick() -> void:
 	var old_profile = tips.profile
 	var fresh_dir := "user://field_tips_test_fresh_%d" % OS.get_process_id()
 	tips.profile = UiProfile.new(fresh_dir)
+	_game.events.stage_cleared.emit(1)
 	tips.pending.append("radio")
 	_game.player.dunk.clear()
 	var card = _game.flow.start_card

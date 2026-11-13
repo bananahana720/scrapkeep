@@ -99,7 +99,8 @@ func _row_fault(screens, room: float) -> String:
 			var q: Rect2 = buttons[j].get_global_rect()
 			if r.intersects(q):
 				return "%s overlaps %s" % [buttons[i].action, buttons[j].action]
-			if q.position.y < r.position.y - 0.5 or (absf(q.position.y - r.position.y) <= 0.5 and q.position.x < r.position.x):
+			# Rows by centre line: the primary button stands taller than its neighbours (ui_tokens).
+			if q.get_center().y < r.get_center().y - 0.5 or (absf(q.get_center().y - r.get_center().y) <= 0.5 and q.position.x < r.position.x):
 				return "%s reads before %s" % [buttons[j].action, buttons[i].action]
 	return ""
 
@@ -107,7 +108,7 @@ func _row_fault(screens, room: float) -> String:
 func _rows(screens) -> int:
 	var ys := {}
 	for c in screens._actions.get_children():
-		ys[roundi(c.get_global_rect().position.y)] = true
+		ys[roundi(c.get_global_rect().get_center().y)] = true
 	return ys.size()
 
 

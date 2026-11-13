@@ -43,6 +43,9 @@ var _built_for := []
 var last_entry_usec := 0
 # The next stage's plan (plan()) while a worker draws it: {"key", "task", "out"}, else empty.
 var _prep := {}
+# Plans already built from, by key, oldest first (_keep).
+var _kept := {}
+const KEPT_PLANS := 3
 # A first stage still building behind the menu (world.gd MENU-READY): a worker draws its plan once
 # its ground is built and the menu builds it, so neither setup nor the first entry waits on it.
 var _dress_when_planned := false
@@ -86,14 +89,18 @@ func _stage_entered(_stage: int, _retry: bool) -> void:
 	var started := Time.get_ticks_usec()
 	_active = true
 	entry_deferred = false
-	_build_stage()
+	_build_stage(true)
 	last_entry_usec = Time.get_ticks_usec() - started
 
 func _clear_stage(_reason: String) -> void:
 	_active = false
 	visible = false
 
-func _build_stage() -> void:
+# On a stage entry (defer) a stage with no plan drawn or kept is planned on a worker and built the
+# frame it is done, so the entry never draws one on the main thread: that draw took 0.5 s on a New
+# run after a death and 3.5 s entering the Dig after Brindle (cloud), a frozen frame and a gap in
+# the music. Setup and a preset change build at once.
+func _build_stage(defer := false) -> void:
 	_dress_when_planned = false
 	var stage: int = ctx.terrain.stage
 	var root: Node3D = ctx.terrain.geometry_root(stage)
@@ -114,16 +121,27 @@ func _build_stage() -> void:
 		_dress_when_planned = true
 		entry_deferred = true
 		return
-	_built_for = key
+	# A worker's plan is taken even when it came back empty (a stopped or failed draw), so a
+	# deferred entry never starts a new worker every frame.
+	var from_worker: bool = not _prep.is_empty() and _prep.key == key
+	var planned := _take_plan(key)
+	built_from_worker = from_worker
+	if not from_worker:
+		planned = _kept.get(key, {})
 	_clear_children()
+	if planned.is_empty() and defer and not from_worker:
+		_built_for = []
+		_dress_when_planned = true
+		entry_deferred = true
+		return
+	_built_for = key
 	map_id = ctx.stages.of(stage).map
 	seed_value = map_id.hash()
 	_ground = ctx.terrain.ground_callable(stage)
-	var map = ctx.terrain.map_for(stage)
-	var planned := _take_plan(key)
-	built_from_worker = not planned.is_empty()
-	if planned.is_empty():
+	if planned.is_empty() and not from_worker:
+		var map = ctx.terrain.map_for(stage)
 		planned = plan(map_rows(map), keepouts(map, stage), _ground, seed_value, _flags())
+	_keep(key, planned)
 	if planned.has("rock"):
 		_build_props(planned)
 	if planned.has("dust"):
@@ -134,6 +152,14 @@ func _build_stage() -> void:
 		streaks.material_override.set_shader_parameter("ground_streak", true)
 		streaks.material_override.set_shader_parameter("opacity", 0.018)
 	_update_protection()
+
+# The plans of the last stages built stay, so a New run back on stage 1 builds at once on the
+# ground it left. A rebuilt ground is a new key; the oldest plan goes past KEPT_PLANS.
+func _keep(key: Array, planned: Dictionary) -> void:
+	_kept.erase(key)
+	_kept[key] = planned
+	while _kept.size() > KEPT_PLANS:
+		_kept.erase(_kept.keys()[0])
 
 func _clear_children() -> void:
 	for child in get_children():
@@ -592,7 +618,7 @@ func _process(delta: float) -> void:
 func _work(delta: float) -> void:
 	_prepare_next()
 	if _dress_when_planned and not _prep.is_empty() and WorkerThreadPool.is_task_completed(_prep.task):
-		_build_stage()
+		_build_stage(true)
 	visible = _active and ctx.flow.in_play()
 	if not visible:
 		return

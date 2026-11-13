@@ -2,6 +2,9 @@ extends "res://tests/dress_material_test.gd"
 
 const Scenery := preload("res://src/presentation/spillway_scenery.gd")
 const Reach := preload("res://src/world/map_reach.gd")
+# 2026-11-13 re-recorded after W1-22 (77a2e2375): the Reach cache pocket's greybox meshes gave way to
+# cracked_cache.glb parts, so two Contraptions children before the valve door went and its path index moved
+# from 10 to 8. Every body, shape, layer and transform is unchanged.
 const PHYSICS_BASELINE := "res://tests/fixtures/dress_wog_physics.json"
 
 
@@ -146,14 +149,20 @@ func _signals(stage_root: Node3D, stage: int) -> void:
 		if mat != null:
 			_require(mat.get_shader_parameter("base_color") != Palette.HAZARD, "harmless Reach devices do not acquire hostile red")
 	var door: StaticBody3D = devices.valves[0].door
-	_finish(door.get_child(1), "cache door", Palette.COPPER, Palette.CHARCOAL)
-	_require(door.get_child(1).get_meta("spillway_finish", "") == "shutter", "cache door has shutter ribs")
+	# W1-23: the cache door is the valve door model, whose own ribs the greybox finish leaves alone.
+	var door_view := door.get_child(1) as MeshInstance3D
+	_require(door_view.name == "ValveDoor" and not door_view.mesh is PrimitiveMesh and not door_view.has_meta("spillway_finish"),
+		"cache door is the riveted valve door model, left to its own finish")
 	var wall: StaticBody3D = devices.walls[0].body
-	_finish(wall.get_child(1), "breakable wall", Palette.SANDSTONE, Palette.VERDIGRIS)
+	# W1-23: the breakable wall is two cracked-cache fracture panels, left to their own finish.
+	var wall_views := wall.find_children("CacheWall*", "MeshInstance3D", false, false)
+	_require(wall_views.size() == 2 and wall_views.all(func(v): return not v.has_meta("spillway_finish")),
+		"breakable wall wears the fracture panel on both faces")
 	print("wog device counts: grates=%d safety=%d cracks=%d plumes=%d" % [grates, safety, dark_cracks, plumes])
 	# 2026-10-09 swap-wave 12-F: the valve's torus wheel, amber stem and charcoal spoke are the authored recipe views
 	# now (contraptions.gd _build_valve), which the greybox finish skips: wheels 1 -> 0, safety 1 -> 0, cracks 4 -> 3.
-	_require(grates == 2 and safety == 0 and dark_cracks == 3 and plumes == 2 and hooks == 1 and cable_spans == 1 and wheels == 0, "all Reach contraption signals checked")
+	# W1-23: the breakable wall's three crack boxes gave way to its fracture panels' modelled fault line: cracks 3 -> 0.
+	_require(grates == 2 and safety == 0 and dark_cracks == 0 and plumes == 2 and hooks == 1 and cable_spans == 1 and wheels == 0, "all Reach contraption signals checked")
 	var valve_views: Array = (devices.valves[0]["wheel"] as Node3D).find_children("valve_wheel_*", "MeshInstance3D", false, false)
 	_require(valve_views.size() == 2 and valve_views.all(func(v): return v.material_override == null and not v.has_meta("spillway_finish")),
 		"the valve wheel is the recipe's two base views, left to their slot materials")

@@ -37,6 +37,7 @@ class BallState:
 
 class Kit:
 	var hooked := false
+	var mounted := false
 
 
 class Player:
@@ -210,6 +211,24 @@ func _rest() -> void:
 	_step(second)
 	var hung: Array = _of("hung")
 	_t.check("at rest off the ground is one hung row", hung.size() == 1 and _count("wedged") == 0 and hung[0]["grounded"] == false, "%s" % [hung])
+
+	# SA-F2: a pylon engineer mounted on a pylon rests in the air by choice.
+	_fresh()
+	_game.player.state.velocity = Vector3.ZERO
+	_game.player.state.grounded = false
+	_game.player.kit.mounted = true
+	_step(int(PlayWatch.STUCK_S / TICK) + 2)
+	_t.check("mounted on a pylon is neither hung nor stuck", _count("hung") == 0 and _count("stuck") == 0, "hung %d, stuck %d" % [_count("hung"), _count("stuck")])
+	_game.player.kit.mounted = false
+	_step(second)
+	_t.check("and off the mount, at rest in the air, is hung again", _count("hung") == 1, "%d rows" % _count("hung"))
+	# The mount's seconds count nothing toward stuck: off it and rolling on the spot, stuck waits its full time.
+	_fresh()
+	_game.player.kit.mounted = true
+	_step(int(PlayWatch.STUCK_S / TICK) + 2)
+	_game.player.kit.mounted = false
+	_step(int(PlayWatch.STUCK_S / TICK) - 90)
+	_t.check("a dismounted ball starts its stuck time afresh", _count("stuck") == 0, "%d rows" % _count("stuck"))
 
 
 func _stuck() -> void:

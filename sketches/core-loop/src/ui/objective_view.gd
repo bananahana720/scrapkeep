@@ -1,18 +1,23 @@
 extends Control
 
 const Icons := preload("res://src/ui/icons.gd")
+const UiTokens := preload("res://src/ui/ui_tokens.gd")
 const UiDraw := preload("res://src/ui/ui_draw.gd")
 
 # The objective, top centre: its glyph (ringed by how much of the Warden is broken), at
 # most five words from objectives.gd and, while the Warden is still to be found, the
 # distance to it in whole metres. A finished goal shows in the same place with a tick where the
-# glyph was (a lost one with a cross), drawn here so it needs no glyph of its own.
+# glyph was (a lost one with a cross), drawn here so it needs no glyph of its own. Under the goal,
+# on the same plate, a quieter detour row (objectives.gd detour_shown): a smaller glyph, the
+# detour's words and metres, all at UiTokens.QUIET_ALPHA, so it reads as on offer, never as the goal.
 
 const ICON := 34.0
-const FONT := 19
+const FONT := UiTokens.BODY
 const GAP := 12.0
 const PLATE_PAD := 6.0
 const PAST_STEP := 0.4
+const DETOUR_ICON := 24.0
+const DETOUR_GAP := float(UiTokens.GAP_S)
 
 var icon_id := ""
 var words := ""
@@ -23,6 +28,11 @@ var metres := -1
 var done := ""
 # The live step of a loop row (objectives.gd STEPS): the steps before it are drawn dim.
 var step := 0
+# The detour row: "" words for none.
+var detour_icon := ""
+var detour_words := ""
+var detour_color := Color.WHITE
+var detour_metres := -1
 
 
 func _init() -> void:
@@ -44,12 +54,29 @@ func set_objective(icon: String, text: String, tint: Color, broken := -1.0, dist
 	queue_redraw()
 
 
+func set_detour(icon: String, text: String, tint: Color, distance := -1) -> void:
+	if icon == detour_icon and text == detour_words and tint == detour_color and distance == detour_metres:
+		return
+	detour_icon = icon
+	detour_words = text
+	detour_color = tint
+	detour_metres = distance
+	custom_minimum_size = extent()
+	queue_redraw()
+
+
 func extent() -> Vector2:
-	return Vector2(_row_width(), ICON)
+	if not _detour_shown():
+		return Vector2(_row_width(), ICON)
+	return Vector2(maxf(_row_width(), _detour_width()), ICON + DETOUR_GAP + DETOUR_ICON)
 
 
 func distance_text() -> String:
-	return "%dm" % metres if metres >= 0 else ""
+	return _metres_text(metres)
+
+
+static func _metres_text(m: int) -> String:
+	return "%dm" % m if m >= 0 else ""
 
 
 func _row_width() -> float:
@@ -59,20 +86,38 @@ func _row_width() -> float:
 	return w
 
 
+func _detour_shown() -> bool:
+	return words != "" and detour_words != ""
+
+
+func _detour_width() -> float:
+	var w := DETOUR_ICON + GAP + UiDraw.width(detour_words, FONT)
+	if detour_metres >= 0:
+		w += GAP + UiDraw.width(_metres_text(detour_metres), FONT, true)
+	return w
+
+
 func drawn_words() -> PackedStringArray:
 	var out := PackedStringArray()
 	if words != "":
 		out.append(words)
 		if metres >= 0:
 			out.append(distance_text())
+	if _detour_shown():
+		out.append(detour_words)
+		if detour_metres >= 0:
+			out.append(_metres_text(detour_metres))
 	return out
 
 
 func _draw() -> void:
 	if words == "":
 		return
-	var plate_w := _row_width() + PLATE_PAD * 2.0
-	UiDraw.panel(self, Rect2(Vector2((size.x - plate_w) * 0.5, -PLATE_PAD), Vector2(plate_w, ICON + PLATE_PAD * 2.0)))
+	var box := extent()
+	var plate_w := box.x + PLATE_PAD * 2.0
+	UiDraw.panel(self, Rect2(Vector2((size.x - plate_w) * 0.5, -PLATE_PAD), Vector2(plate_w, box.y + PLATE_PAD * 2.0)))
+	if _detour_shown():
+		_draw_detour(ICON + DETOUR_GAP)
 	var x := (size.x - _row_width()) * 0.5
 	var mid := ICON * 0.5
 	var icon_rect := Rect2(Vector2(x, 0.0), Vector2(ICON, ICON))
@@ -91,6 +136,23 @@ func _draw() -> void:
 	x += GAP
 	if metres >= 0:
 		UiDraw.text(self, x, mid, distance_text(), FONT, color, true)
+
+
+# The detour row's ink: its colour stepped back to QUIET_ALPHA, so it reads as on offer, not as the goal.
+func detour_ink() -> Color:
+	return Color(detour_color, detour_color.a * UiTokens.QUIET_ALPHA)
+
+
+# The detour row at `top`, centred under the goal and quieter than it.
+func _draw_detour(top: float) -> void:
+	var quiet := detour_ink()
+	var x := (size.x - _detour_width()) * 0.5
+	var mid := top + DETOUR_ICON * 0.5
+	draw_texture_rect(Icons.texture(detour_icon), Rect2(Vector2(x, top), Vector2(DETOUR_ICON, DETOUR_ICON)).grow(-3.0), false, Icons.tint(detour_icon, quiet))
+	x += DETOUR_ICON + GAP
+	x += UiDraw.text(self, x, mid, detour_words, FONT, quiet)
+	if detour_metres >= 0:
+		UiDraw.text(self, x + GAP, mid, _metres_text(detour_metres), FONT, quiet, true)
 
 
 # The done row's mark: a tick for a goal finished, a cross for one lost, inked like the words.

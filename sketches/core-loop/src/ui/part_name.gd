@@ -1,6 +1,7 @@
 extends Control
 
 const EventKinds := preload("res://src/core/event_kinds.gd")
+const UiTokens := preload("res://src/ui/ui_tokens.gd")
 const UiDraw := preload("res://src/ui/ui_draw.gd")
 const Parts := preload("res://src/build/parts.gd")
 
@@ -14,7 +15,7 @@ const Parts := preload("res://src/build/parts.gd")
 
 const SHOW_SECONDS := 1.2
 const NAME_WORDS := 2
-const FONT := 20
+const FONT := UiTokens.BODY
 const FADE := 0.25
 const LIFT := Vector2(0.0, -24.0)
 const AVOID_GAP := 4.0

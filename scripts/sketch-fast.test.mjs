@@ -1,10 +1,12 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import {
+import { nodeTestsForPaths,
+  defaultWidth,
   mergedBranch,
   carriedPrs,
   failingChecks,
   hygieneFindings,
+  bridgeFindings,
   canaries,
   classify,
   cacheableBaseRun,
@@ -18,6 +20,9 @@ import {
   lanePool,
   nodeTestsFor,
   parseArgs,
+  batchable,
+  splitBatch,
+  takeBatch,
   placeholderIncrease,
   plan,
   referrers,
@@ -200,6 +205,7 @@ test("hygiene fails added symlinks, root files and new top-level folders only", 
   const raw = [
     `:000000 120000 ${z} ${z} A\tnode_modules`,
     `:000000 100644 ${z} ${z} A\tNOTES.md`,
+    `:000000 100644 ${z} ${z} A\t.mcp.json`,
     `:000000 100644 ${z} ${z} A\tstray/x.txt`,
     `:000000 100644 ${z} ${z} A\tscripts/ok.mjs`,
     `:100644 100644 ${z} ${z} M\tREADME.md`,
@@ -209,6 +215,11 @@ test("hygiene fails added symlinks, root files and new top-level folders only", 
     "root file added: NOTES.md",
     "new top-level folder: stray/x.txt",
   ]);
+});
+
+test("hygiene fails a project.godot that carries the MCP bridge autoload", () => {
+  assert.deepEqual(bridgeFindings("[autoload]\nGameEvents=\"*res://src/core/game_events.gd\"\n"), []);
+  assert.equal(bridgeFindings("[autoload]\nMcpBridge=\"*res://.mcp/godot-runtime/bridge/mcp_bridge.gd\"\n").length, 1);
 });
 
 test("merged branch names come from GitHub and git merge subjects", () => {
@@ -297,7 +308,7 @@ test("a test with no timings row is priced at 180 s", () => {
 });
 
 test("parseArgs defaults to origin/main and a 15 minute budget", () => {
-  assert.deepEqual(parseArgs([]), { base: "origin/main", budgetS: 900, dryRun: false, receipt: "fast", width: null, baseCheck: true, pre: [] });
+  assert.deepEqual(parseArgs([]), { base: "origin/main", budgetS: 900, dryRun: false, receipt: "fast", width: null, baseCheck: true, batch: true, pre: [] });
   assert.deepEqual(parseArgs(["--pre", "#91", "--pre", "67"]).pre, ["91", "67"]);
   assert.throws(() => parseArgs(["--pre", "abc"]));
   assert.equal(parseArgs(["--base", "stage/alpha-w17", "--budget", "600"]).budgetS, 600);
@@ -511,4 +522,51 @@ test("a crash signal is named as a crash, and only a plain kill points at the me
   assert.match(signalReason("SIGSEGV"), /^ended on SIGSEGV /);
   assert.match(signalReason("SIGKILL"), /memory limit/);
   assert.match(signalReason(null), /memory limit/);
+});
+
+test("the default width is one lane per idle core, between 2 and 8", () => {
+  assert.equal(defaultWidth(4, 0.1), 4);
+  assert.equal(defaultWidth(4, 1.6), 2);
+  assert.equal(defaultWidth(4, 0), 4);
+  assert.equal(defaultWidth(32, 30), 2);
+  assert.equal(defaultWidth(32, 4), 8);
+  assert.equal(defaultWidth(2, 0), 2);
+});
+
+test("a plain SceneTree test batches; a timed, solo or extended one does not", () => {
+  assert.equal(batchable("extends SceneTree\n\nfunc _initialize():\n\tquit(0)\n"), true);
+  assert.equal(batchable('extends "res://tests/rivet_kit_test.gd"\n'), false);
+  assert.equal(batchable("extends SceneTree\nvar t := Time.get_ticks_msec()\n"), false);
+  assert.equal(batchable("extends SceneTree\n# the warm cache\n"), false);
+  assert.equal(batchable("extends SceneTree\nfunc f():\n\tOS.execute('x', [])\n"), false);
+});
+
+test("takeBatch takes consecutive batchable rows within the test and time caps", () => {
+  const rows = (list) => list.map(([test, ms, ok = true]) => ({ test, ms, ok }));
+  const can = (row) => row.ok;
+  const q1 = rows([["a", 10_000], ["b", 10_000], ["c", 10_000, false], ["d", 1]]);
+  assert.deepEqual(takeBatch(q1, can).map((row) => row.test), ["a", "b"]);
+  assert.deepEqual(q1.map((row) => row.test), ["c", "d"]);
+  assert.deepEqual(takeBatch(q1, can), []);
+  const q2 = rows([["a", 100_000], ["b", 30_000], ["c", 1]]);
+  assert.deepEqual(takeBatch(q2, can).map((row) => row.test), ["a"]);
+  const q3 = rows(Array.from({ length: 10 }, (_, i) => [`t${i}`, 1]));
+  assert.equal(takeBatch(q3, can).length, 8);
+});
+
+test("splitBatch gives each test its own output and names a cut-off test", () => {
+  const out = ["Godot", "BATCH START tests/a.gd", "x -> PASS", "a: PASS", "BATCH END tests/a.gd exit=0 ms=5", "BATCH START tests/b.gd", "y -> FAIL", "crash"].join("\n");
+  const split = splitBatch(out, ["tests/a.gd", "tests/b.gd", "tests/c.gd"]);
+  assert.deepEqual(split.done, [{ test: "tests/a.gd", exit: 0, ms: 5, output: "x -> PASS\na: PASS" }]);
+  assert.equal(split.cut, "tests/b.gd");
+  assert.deepEqual(split.rest, ["tests/c.gd"]);
+});
+
+test("nodeTestsForPaths: a park prop recipe or file faces the far-mesh fault check, other sketch paths do not", () => {
+  assert.deepEqual(nodeTestsForPaths(["assets/models/park/props/dam/cable_drum_a_lod2.glb"]), ["scripts/far-faults.test.mjs"]);
+  assert.deepEqual(nodeTestsForPaths(["tools/blender/park/props/kit.py", "src/game.gd"]), ["scripts/far-faults.test.mjs"]);
+  assert.deepEqual(nodeTestsForPaths(["tools/model_audit.py"]), ["scripts/far-faults.test.mjs"]);
+  assert.deepEqual(nodeTestsForPaths(["src/core/palette.gd"]), ["scripts/palette-gd.test.mjs"]);
+  assert.deepEqual(nodeTestsForPaths(["tools/icons/generate_icons.py", "tools/blender/common.py"]), ["scripts/palette-gd.test.mjs"]);
+  assert.deepEqual(nodeTestsForPaths(["src/world/park/park_dam.json", "assets/models/world_one/ambush_altar.glb"]), []);
 });

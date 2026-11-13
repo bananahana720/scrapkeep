@@ -14,6 +14,9 @@ signal boosted(direction: Vector3)
 # A fact one of the kit's static rules left: the bus signal's name and its arguments.
 signal kit_fact(kind: String, args: Array)
 signal landed(impact: float)
+# The ball met a world face that is not a floor at `speed` m/s of closing (Contact.bump_closing):
+# `at` is the contact point and `normal` points from the face to the ball.
+signal bumped(at: Vector3, normal: Vector3, speed: float)
 
 var tuning
 var state
@@ -44,6 +47,12 @@ var _settle_interpolation := 0
 # transform still points at the old spot, so whoever draws from the ball reads the raw one
 # (PlayerBall.shown_transform): a lens snapped in the same breath lands on the new spot.
 var placing := false
+# A carve shorter than this is a seam hop, not a ride, and publishes nothing (systems audit
+# pass C: carving was the one verb with no bus fact, so sound, the pad and the tricks book
+# could not answer it). A start value; the carve itself is ball_rules' state.carving.
+const CARVE_MIN_S := 0.3
+var _carve_s := 0.0
+var _bump_wait := 0.0
 
 
 func setup(tuning_ref, state_ref) -> void:
@@ -80,6 +89,7 @@ func setup(tuning_ref, state_ref) -> void:
 
 func set_active(active: bool) -> void:
 	_active = active
+	_carve_s = 0.0
 	freeze = not active
 	set_collision_layer_value(2, active)
 	_probe.enabled = active
@@ -101,6 +111,7 @@ func set_velocity_now(new_velocity: Vector3) -> void:
 
 func teleport(to: Vector3, new_velocity: Vector3) -> void:
 	teleporting.emit()
+	_carve_s = 0.0
 	new_velocity = _finite(new_velocity)
 	_pending_velocity = new_velocity
 	state.velocity = new_velocity
@@ -157,6 +168,7 @@ func _integrate_forces(body_state: PhysicsDirectBodyState3D) -> void:
 	gravity_scale = tuning.f("gravity") / 9.8
 	state.velocity = body_state.linear_velocity
 	var origin := body_state.transform.origin
+	_watch_bumps(body_state, origin, delta)
 	Rules.tick_grip(state, tuning, delta)
 	if tuning.on("legacy_spin_probe"):
 		_probe.global_transform = body_state.transform
@@ -171,6 +183,7 @@ func _integrate_forces(body_state: PhysicsDirectBodyState3D) -> void:
 		take_speed = INF
 	Rules.probe_ground(_probe, state, Rules.ground_dot(state, tuning), take_speed)
 	Rules.grip_contact(state, tuning, body_state, take_speed)
+	_track_carve(origin, delta)
 
 	var spin = Rules.carve_spin(state, tuning)
 	if spin != null:
@@ -242,6 +255,41 @@ func _integrate_forces(body_state: PhysicsDirectBodyState3D) -> void:
 	_last_fall_speed = falling
 	state.velocity = body_state.linear_velocity
 	_remember(state.velocity)
+
+
+# The hardest new world-face contact this tick, sized from the velocity the solver was handed
+# (the contact arrives after the solver has bounced the ball), published once per BUMP_GAP_S.
+func _watch_bumps(body_state: PhysicsDirectBodyState3D, origin: Vector3, delta: float) -> void:
+	_bump_wait = maxf(0.0, _bump_wait - delta)
+	if _bump_wait > 0.0 or recent_velocities.is_empty():
+		return
+	var handed: Vector3 = recent_velocities.back()
+	var best := 0.0
+	var normal := Vector3.ZERO
+	var at := origin
+	for i in body_state.get_contact_count():
+		if not Rules.world_face(body_state.get_contact_collider_object(i)):
+			continue
+		var n := body_state.get_contact_local_normal(i)
+		var closing := Contact.bump_closing(handed, n)
+		if closing > best:
+			best = closing
+			normal = n
+			at = body_state.get_contact_local_position(i)
+	if best < Contact.BUMP_MIN_SPEED:
+		return
+	_bump_wait = Contact.BUMP_GAP_S
+	bumped.emit(at, normal, best)
+
+
+# A carve that ends leaves one fact on the kit, published with the kit's others this tick.
+func _track_carve(at: Vector3, delta: float) -> void:
+	if state.carving:
+		_carve_s += delta
+		return
+	if _carve_s >= CARVE_MIN_S and kit != null:
+		kit.facts.append(["carved", [at, _carve_s, state.velocity.length()]])
+	_carve_s = 0.0
 
 
 func _remember(velocity: Vector3) -> void:

@@ -9,6 +9,9 @@ const Probe := preload("res://tools/qa/snag_probe.gd")
 # map carries a 0.3 m lip box. The probe must report a snag at the lip, none on the same lanes once
 # the lip is gone, none along a flat wall (a graze slides off), and none for the lip when the loss
 # tolerance is set too loose to see it. Without the control a zero from the sweep means nothing.
+# The same lip on a moving body is classed moving, on an actor (it takes damage) is no snag, and a
+# low piece held 10 m over the floor gets no ride lanes (the Slag Bowl's crossbars, wave 37), one
+# held 1.8 m over it, lower than the ball is tall, keeps them.
 #
 # Evidence limit: one fixture on a flat floor, calm world, not a run.
 
@@ -26,8 +29,9 @@ func _initialize() -> void:
 	_run.call_deferred()
 
 
-func _box(parent: Node, name: String, size: Vector3, at: Vector3) -> StaticBody3D:
-	var body := StaticBody3D.new()
+func _box(parent: Node, name: String, size: Vector3, at: Vector3, body: PhysicsBody3D = null) -> PhysicsBody3D:
+	if body == null:
+		body = StaticBody3D.new()
 	body.name = name
 	body.collision_layer = 1
 	body.position = at
@@ -175,6 +179,50 @@ func _run() -> void:
 	await physics_frame
 	var without: Array = await _snags(probe, found["Lip"], lip_lanes)
 	t.check("same lanes, lip removed: no snag", _count(without) == 0 and _skipped(without) == 0, "%d snags, %d skipped" % [_count(without), _skipped(without)])
+
+	# The same lip on a moving body (a lift's plate) is listed as moving, not as a catch: its phase test judges it.
+	var moving := _box(fixture, "MovingLip", LIP_SIZE, FLOOR_AT + Vector3(0, LIP_SIZE.y * 0.5, 0), AnimatableBody3D.new())
+	await physics_frame
+	await physics_frame
+	var on_moving: Array = await _snags(probe, found["Lip"], lip_lanes)
+	var classes := {}
+	for r in on_moving:
+		if r.has("piece"):
+			classes[r["class"]] = true
+	t.check("a lip on a moving body: a snag, classed moving and nothing else", _count(on_moving) >= 1 and classes.keys() == [Probe.MOVING], "%d snags, classes %s" % [_count(on_moving), classes.keys()])
+	moving.queue_free()
+
+	# The same lip on an actor (anything that takes damage: an enemy, a boss piece) is not the map.
+	var script := GDScript.new()
+	script.source_code = "extends StaticBody3D\nfunc take_damage(_amount, _source = null):\n\tpass\n"
+	script.reload()
+	var actor_body := StaticBody3D.new()
+	actor_body.set_script(script)
+	var actor := _box(fixture, "ActorLip", LIP_SIZE, FLOOR_AT + Vector3(0, LIP_SIZE.y * 0.5, 0), actor_body)
+	await physics_frame
+	await physics_frame
+	probe.actors_seen = 0
+	var on_actor: Array = await _snags(probe, found["Lip"], lip_lanes)
+	t.eq("a lip that takes damage is an actor: no snag", _count(on_actor), 0)
+	t.check("the actor lip's facing contacts were met and left out", probe.actors_seen > 0, "%d contacts" % probe.actors_seen)
+	actor.queue_free()
+
+	# A low piece held up over the floor (a crossbar on a mast) gets no ride lanes: they would roll under it.
+	_box(fixture, "Crossbar", LIP_SIZE, FLOOR_AT + Vector3(0, 10.0, -30.0))
+	await physics_frame
+	var bar := {}
+	for p in probe.pieces(fixture):
+		if String(p.path).get_file() == "Crossbar":
+			bar = p
+	t.check("a low piece 10 m over the floor is a piece with no lanes", not bar.is_empty() and probe.lanes(bar).is_empty(), str(bar))
+	# One hung lower than the ball is tall still gets its lanes: the ball can wedge under it.
+	_box(fixture, "LowBar", LIP_SIZE, FLOOR_AT + Vector3(0, 1.8 + LIP_SIZE.y * 0.5, 30.0))
+	await physics_frame
+	var low := {}
+	for p in probe.pieces(fixture):
+		if String(p.path).get_file() == "LowBar":
+			low = p
+	t.check("a low piece 1.8 m over the floor (under the ball's height) keeps its ride lanes", not low.is_empty() and probe.lanes(low).size() == 4 * Probe.LANES, str(low))
 	game.queue_free()
 	await process_frame
 	quit(t.verdict())

@@ -1,6 +1,7 @@
 extends Control
 
 const Palette := preload("res://src/core/palette.gd")
+const UiTokens := preload("res://src/ui/ui_tokens.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const Icons := preload("res://src/ui/icons.gd")
 const UiFonts := preload("res://src/ui/ui_fonts.gd")
@@ -14,7 +15,7 @@ const ScrapFrame := preload("res://src/ui/scrap_frame.gd")
 
 const R := 44.0
 const ICON := 46.0
-const FONT := 19
+const FONT := UiTokens.BODY
 # id -> {at, icon, kind, words}; kind is the event_kinds row whose colour and shape it wears.
 const NODES := {
 	"scrap": {"at": Vector2(90.0, 84.0), "icon": "res_mass", "kind": "scrap_collected", "words": "roll scrap"},
@@ -112,7 +113,7 @@ func _bubble(at: Vector2, color: Color) -> void:
 	box.bg_color = Color(color, 0.25)
 	box.border_color = color
 	box.set_border_width_all(2)
-	box.set_corner_radius_all(10)
+	box.set_corner_radius_all(UiTokens.RADIUS)
 	draw_style_box(box, rect)
 	draw_colored_polygon(PackedVector2Array([rect.end - Vector2(18.0, 1.0), rect.end - Vector2(8.0, 1.0), rect.end + Vector2(-16.0, 12.0)]), color)
 	draw_texture_rect(Icons.texture("res_scrap"), Rect2(rect.get_center() - Vector2(12.0, 12.0), Vector2(24.0, 24.0)), false, Icons.tint("res_scrap", Palette.ARC))

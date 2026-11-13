@@ -213,7 +213,8 @@ test("--self-play passes the flag and its options to the game; the default launc
   const self = parseArgs(["--self-play", "--self-play-from=6", "--self-play-seed=2506", "--seconds=60"]);
   assert.equal(self.selfPlay, true);
   assert.equal(self.seconds, 60);
-  assert.deepEqual(gameArgv(self), ["--", "--self-play", "--self-play-from=6", "--self-play-seed=2506"]);
+  assert.deepEqual(gameArgv(self), ["--audio-driver", "Dummy", "--", "--self-play", "--self-play-from=6", "--self-play-seed=2506"]);
+  assert.equal(gameArgv(parseArgs(["--self-play", "--sound"]))[0], "--");
   assert.throws(() => parseArgs(["--self-play-from=6"]), /need --self-play/);
   assert.throws(() => parseArgs(["--self-play", "--self-play-script=res://x.gd"]), /not forwarded/);
 });
@@ -289,6 +290,8 @@ test("main --self-play launches the game with the flag and records the self-play
   const run = selfPlayRun(0, ["self-play: stage 6 entered at 10.50 s", "self-play: done at 40.00 s"]);
   assert.equal(run.code, 0);
   assert.deepEqual(readFileSync(path.join(run.dir, "args.txt"), "utf8").trim().split("\n").slice(1), [
+    "--audio-driver",
+    "Dummy",
     "--",
     "--self-play",
     "--self-play-from=6",

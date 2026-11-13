@@ -82,14 +82,14 @@ func _run() -> void:
 	var built := _read(ArmourMarks.icon_view(ArmourMarks.icon_mesh(), ArmourMarks.icon_material()))
 	t.check("the armour read's icon is the one a badge builds", icons.size() == 1 and icons[0] == built, "%s vs %s" % [icons, built])
 	var words := armour.filter(func(v): return v.has("text")).map(func(v): return v["text"])
-	var want := ArmourMarks.READ_STATES.values().map(func(state): return _read(ArmourMarks.word_label(state))["text"])
+	var want := ArmourMarks.READ_STATES.values().map(func(state): return ArmourMarks.word_text(state))
 	t.check("and every stamp word stands beside it", words.size() == want.size() and words.all(func(w): return w in want and w != ""), "%s vs %s" % [words, want])
 	var ring: Array = views.get("synergy_ring", [])
 	t.check("the synergy ring is add_ring's", ring.size() == 1 and ring[0]["name"] == "SynergyRing" and ring[0]["blend"] == BaseMaterial3D.BLEND_MODE_ADD)
 	var pickups: Array = views.get("scrap_pickup", [])
 	var variants := ScrapField.PICKUP_VARIANTS.size()
-	t.check("each scrap pickup and recovery cluster stands, in the pickup shader a field piece wears",
-		pickups.size() == 2 * variants and pickups.all(func(v): return v["shader"] == ScrapField._pickup_material(Palette.ARC).shader), "%d views" % pickups.size())
+	t.check("each scrap pickup and recovery cluster and the cog stands, in the pickup shader a field piece wears",
+		pickups.size() == 2 * variants + 1 and pickups.all(func(v): return v["shader"] == ScrapField._pickup_material(Palette.ARC).shader), "%d views" % pickups.size())
 	var arc: Array = views.get("arc_mark", [])
 	t.check("the arc mark draws the shared ring every mark draws", arc.size() == 1 and arc[0]["mesh"] == Combat._arc_ring())
 	var machine := []
@@ -106,9 +106,11 @@ func _run() -> void:
 					drawn.append(String(row[key]))
 	for id in Panels.ids():
 		drawn.append(Panels.pop_text(id))
+	# A row with no word ("" , Brindle's phase since PF-26) draws nothing.
+	drawn = drawn.filter(func(w: String): return w != "")
 	var missing := drawn.filter(func(w: String): return Array(w.to_upper().replace(" ", "").split("")).any(func(c): return c not in MachineFx.WARM_GLYPHS))
 	t.check("every machine word's glyphs are in the warm label", not drawn.is_empty() and missing.is_empty(), str(missing))
-	t.check("the materials the views drew are held", BakeWarm._kept.size() == 3 and BakeWarm._kept.all(func(m): return is_instance_valid(m)))
+	t.check("the materials the views drew are held (the cog glow is the fourth, W1-21)", BakeWarm._kept.size() == 4 and BakeWarm._kept.all(func(m): return is_instance_valid(m)))
 	t.check("the kill chunks' glb is held, loaded on the main thread under the headless renderer, so a discovery burst reads the cache",
 		ResourceLoader.has_cached(HeroAssets.CHUNKS_PATH) and BakeWarm._held.get(HeroAssets.CHUNKS_PATH) == load(HeroAssets.CHUNKS_PATH) and BakeWarm._loading.is_empty())
 	# A threaded load still in flight at teardown is collected (a quit before it lands, scrapkeep#322). A script

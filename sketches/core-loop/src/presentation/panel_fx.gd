@@ -4,30 +4,24 @@ const Panels := preload("res://src/build/panels.gd")
 const Harmony := preload("res://src/presentation/harmony.gd")
 const Palette := preload("res://src/core/palette.gd")
 
-# How a grey panel pickup lands (IL-01 card section 6): the panel's name and step pop at the
-# ball for POP_LIFE in the comic word style, a short ratchet tick plays, and each panel in a
-# STREAK_MS streak plays the next note of a pentatonic phrase in the live combat key. The
-# phrase is drawn from the run seed, so every run has its own tune and a replay keeps it; a
-# reel or dunk drop adds the pinball jackpot over the note. Reduced motion tames the pop (a
-# smaller word with no slam or slide, machine_fx's own rule).
+# How a grey panel pickup lands (IL-01 card section 6): the panel's name and step pop for
+# POP_LIFE, a short ratchet tick plays, and each panel in a STREAK_MS streak plays the next note
+# of a pentatonic phrase in the live combat key. The phrase is drawn from the run seed, so every
+# run has its own tune and a replay keeps it; a reel or dunk drop adds the pinball jackpot over
+# the note. This decides what each pop says, its tint, its row and when it shows, and sends it
+# out as `popped`; the HUD draws it as a line rising at its edge (src/ui/pickup_lines.gd), off
+# the fight and off the gates' feet (PF-14).
+
+signal popped(words: String, tint: Color, row: int, life: float)
 
 const POP_LIFE := 1.2
-const POP_HEIGHT := 2.6
-# The pop's letters stand about 4.6 percent of the view's height, six tenths of the player's
-# ordinary hit word (player_fx.gd WORD_SCREEN), and the longest line 3.3: picked from five
-# measured candidates on 10 Nov 2026 (design-v3/SIGHT-PERSONA.md section 7, "A taste call").
-const POP_SIZE := 0.5
-const POP_SIZE_REDUCED := 0.4
-# A pop that lands while the last one is still up takes the next free one of POP_ROWS lines, POP_LINE
-# higher, so pickups in a row never print on top of each other. Two lines only: at the play camera a
-# third would stand across the objective plate. While both lines are held a pop waits for one to clear
-# (a cleared camp drops several panels at once, and a third pop on the bottom line printed over the
-# first, play finding from the goal plate film). The step is about one and a half of the pop's letter lines
-# (0.48 m at POP_SIZE), which keeps the upper line under the hint line below the objective plate.
-const POP_LINE := 0.7
+# A pop that lands while the last one is still up takes the next free one of POP_ROWS rows, so
+# pickups in a row never print on top of each other. While both rows are held a pop waits for one
+# to clear (a cleared camp drops several panels at once, and a third pop on the bottom row printed
+# over the first, play finding from the goal plate film).
 const POP_ROWS := 2
 # A pop never shows later than POP_LIFE after its pickup sound (sight and sound of one event are
-# paired, PF-19). A line is held a frame's slack short of POP_LIFE so a waiting pop is up inside
+# paired, PF-19). A row is held a frame's slack short of POP_LIFE so a waiting pop is up inside
 # that window, and at most POP_ROWS pops wait: a longer pile folds into the lines waiting, as
 # "+3 FIN" when they are one kind, "+3 PANELS" when they are not.
 const ROW_HOLD := POP_LIFE - 0.05
@@ -40,23 +34,21 @@ const PHRASE_STEPS := [-1, 1, 1, 2, -2, 1]
 
 var ctx
 var audio
-var machine_fx
 var phrase: Array = []
 var streak := 0
 var _last_ms := -100000
 var _phrase_seed := -1
 # [id, rung, jackpot] per pickup, for tests and captures.
 var played: Array = []
-# Seconds each pop line is still held, and the pops waiting for a line: [panel_id, jackpot, count].
+# Seconds each pop row is still held, and the pops waiting for a line: [panel_id, jackpot, count].
 # A folded line of mixed kinds has the id "".
 var _row_left: Array = []
 var _waiting: Array = []
 
 
-func setup(ctx_ref, audio_ref, machine_fx_ref) -> void:
+func setup(ctx_ref, audio_ref) -> void:
 	ctx = ctx_ref
 	audio = audio_ref
-	machine_fx = machine_fx_ref
 	name = "PanelFx"
 	ctx.events.panel_gained.connect(_on_panel_gained)
 	ctx.events.run_started.connect(_on_run_started)
@@ -133,31 +125,27 @@ static func pop_words(pop: Array) -> String:
 	return "+%d %s" % [n, noun if noun != "" else MIXED_NOUN]
 
 
-# Shows waiting pops while a line is free, oldest first.
+# Shows waiting pops while a row is free, oldest first.
 func _release() -> void:
 	while not _waiting.is_empty():
-		var lift := next_pop_lift()
-		if lift < 0.0:
+		var row := next_pop_row()
+		if row < 0:
 			return
 		var pop: Array = _waiting.pop_front()
-		if machine_fx == null or ctx == null or ctx.player == null:
-			continue
-		var reduced: bool = machine_fx.reduced_motion
-		machine_fx.word(pop_words(pop), ctx.player.shown_position() + Vector3.UP * (POP_HEIGHT + lift),
-			Palette.AMBER if pop[1] else Palette.SAND, true, POP_LIFE, POP_SIZE_REDUCED if reduced else POP_SIZE)
+		popped.emit(pop_words(pop), Palette.AMBER if pop[1] else Palette.SAND, row, POP_LIFE)
 
 
-# How far above POP_HEIGHT the next pop stands, holding that line for POP_LIFE: the lowest free line,
-# or -1 while every line is held.
-func next_pop_lift() -> float:
+# The row the next pop takes, holding it for POP_LIFE: the lowest free row, or -1 while every
+# row is held.
+func next_pop_row() -> int:
 	if _row_left.size() != POP_ROWS:
 		_row_left.resize(POP_ROWS)
 		_row_left.fill(0.0)
 	for row in POP_ROWS:
 		if float(_row_left[row]) <= 0.0:
 			_row_left[row] = ROW_HOLD
-			return row * POP_LINE
-	return -1.0
+			return row
+	return -1
 
 
 func _process(delta: float) -> void:

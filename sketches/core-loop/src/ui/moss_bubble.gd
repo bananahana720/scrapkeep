@@ -1,6 +1,7 @@
 extends Control
 
 const Palette := preload("res://src/core/palette.gd")
+const UiTokens := preload("res://src/ui/ui_tokens.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const Icons := preload("res://src/ui/icons.gd")
 const UiFonts := preload("res://src/ui/ui_fonts.gd")
@@ -27,7 +28,7 @@ const CallerTile := preload("res://src/ui/caller_tile.gd")
 # Moss's own counter talk stays as it was: the tail off the screen's edge, and a hand.
 
 const TEXT_WIDTH := 330.0
-const FONT := 20
+const FONT := UiTokens.BODY
 const PAD := Vector2(20.0, 14.0)
 const TAIL := 28.0
 const RADIUS := 18.0
@@ -475,7 +476,8 @@ func _tick_call(delta: float) -> void:
 			if other["id"] == row["id"] or (row.has("pilot") and other.has("pilot") and other["on"] == row["on"]):
 				_calls_played[other["id"]] = true
 		_call_quiet = 0.0
-		_present(String(row["speaker"]), String(row["text"]), _voice(String(row["speaker"]), String(row["text"])))
+		var words := LoreRows.call_text(row, _game.run.run_seed)
+		_present(String(row["speaker"]), words, _voice(String(row["speaker"]), words))
 		return
 	_call_fresh -= delta
 	if _call_fresh <= 0.0:

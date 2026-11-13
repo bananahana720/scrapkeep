@@ -213,6 +213,12 @@ func _game() -> void:
 			else:
 				_t.check("%s seeps down its face" % id, s.wall.get_node_or_null("FindSeep0") != null and s.wall.get_node_or_null("FindGlint") != null)
 			_t.check("%s shows no beacon" % id, not s.view.lit() and not s.view.word.visible)
+			# W1-22: the find draws its models (find_kit.glb, cracked_cache.glb), no Godot primitive.
+			var plain := []
+			for view: MeshInstance3D in s.find_children("*", "MeshInstance3D", true, false):
+				if view.mesh is PrimitiveMesh and not s.view.is_ancestor_of(view):
+					plain.append(String(view.name))
+			_t.check("%s draws no plain shapes" % id, plain.is_empty(), str(plain))
 			_t.check("%s is no marked activity" % id, not game.hud.edge_markers.unfinished_sites().has(s) if _has_markers(game) else true)
 			_t.check("%s is declared before it is found" % id, game.ctx.codex.status(String(f["codex"]["id"])) == "unencountered")
 			game.world.activities._break_wall(s)

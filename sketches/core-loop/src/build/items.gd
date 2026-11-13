@@ -200,7 +200,7 @@ const TABLE := {
 		"tags": ["arc", "anchor"], "verb": "The nearest vault pings every 12s", "text": "Every 12s, the nearest vault pings",
 		"effect": {"do": "ping", "every": 12.0, "target": "vault"}},
 	"synergy_lens": {"maker": "mind_glass", "base": "utility", "rarity": "rare", "stack": "capped", "cap": 1, "tags": ["chain", "split"],
-		"verb": "Offers show hidden synergy names", "text": "Offers name their synergy where they showed ???", "effect": {"do": "perk", "perk": "lens"}},
+		"verb": "Offers name each pair's trick", "text": "Shop offers name the trick two parts wake", "effect": {"do": "perk", "perk": "lens"}},
 	"salvage_drone": {"maker": "fleet_surplus", "base": "utility", "rarity": "rare", "trigger": "on_kill", "stack": "capped", "cap": 1,
 		"tags": ["mass", "speed"], "verb": "Kills sometimes triple your scrap magnet", "text": "4% of kills triple scrap magnet for 4s",
 		"effect": {"do": "drone", "chance": 0.04, "seconds": 4.0, "magnet": 3.0}},

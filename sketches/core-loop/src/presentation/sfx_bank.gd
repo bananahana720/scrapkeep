@@ -3,6 +3,7 @@ extends RefCounted
 const Harmony := preload("res://src/presentation/harmony.gd")
 const Synth := preload("res://src/presentation/synth.gd")
 const MixRows := preload("res://src/presentation/mix_rows.gd")
+const SetDirector := preload("res://src/presentation/set_director.gd")
 
 # One baked sound per event_kinds `sound` id. Each recipe is built from the shared
 # rack in synth.gd and pitched from harmony.gd, so the families mean something:
@@ -14,7 +15,7 @@ const MixRows := preload("res://src/presentation/mix_rows.gd")
 
 const RATE := Harmony.RATE
 
-# The 49 event-set WAVs (design-v3/sound/INTEGRATION.md section 7, item 2; renders in
+# The 51 event-set WAVs (49, and feedback_set.py's shot and deflect) (design-v3/sound/INTEGRATION.md section 7, item 2; renders in
 # RENDERS.md), registered under their cue keys. A file cue replaces the recipe of the
 # same key. The file is decoded to the bank's rate at bake time, so stingers, streams and
 # the keyed bakes read it like any other cue. Peak -1 dBFS, like the recipes' 0.9.
@@ -29,6 +30,8 @@ const EVENT_CUES := [
 	"scrap_tick_2", "scrap_tick_3", "scrap_tick_4", "scrap_tick_5", "shop_bell", "slam_boom", "smash_crack",
 	"stinger_boss_defeated", "stinger_clear", "stinger_milestone", "stinger_run_end", "stinger_run",
 	"stinger_stage", "stinger_world", "synergy_fanfare", "threat_whistle", "ui_tick", "verb_fail",
+	# Combat feedback as percussion (design-v3/sound/feedback_set.py): the shot and the deflect.
+	"weapon_zap", "clank",
 ]
 # Tiered cues: the base key keeps its recipe and its pitch-ladder callers; resolve() picks
 # the tier's file from the rung the caller already sends (the scrap and kill ladders, and
@@ -77,12 +80,13 @@ const VOICE_LIMIT := MixRows.VOICE_LIMIT
 const MIN_GAP_MS := MixRows.MIN_GAP_MS
 # Danger sounds pull the bass down so the low end never masks a warning.
 const DANGER_SOUNDS := ["hurt", "enemy_arrive", "boss_telegraph", "ratchet_cue", "klaxon", "threat_up", "death",
-	"threat_tick", "threat_whoosh", "threat_whistle", "threat_hum", "threat_tear", "hold_pit", "hold_bola", "hold_tether", "hold_net"]
-# Pitched cues that follow the live key (a lifted Warden plays its chimes in Eb).
-const KEYED_SOUNDS := ["panel_note", "panel_jackpot", "line_claw_drag", "armor_reclaim", "scrap_tick", "cog_tick", "kill_pop", "part_get", "core_socket", "found_chime", "gate_through",
+	"threat_tick", "threat_whoosh", "threat_whistle", "threat_hum", "threat_tear", "hold_pit", "hold_bola", "hold_tether", "hold_net", "heat_kettle"]
+# Pitched cues that follow the live key (a lifted Warden plays its chimes in Eb). The combat
+# feedback percussion (feedback_set.py) has no key, so it is not here.
+const KEYED_SOUNDS := ["panel_note", "panel_jackpot", "line_claw_drag", "armor_reclaim", "scrap_tick", "cog_tick", "part_get", "core_socket", "found_chime", "gate_through",
 	"rivet_line_punch", "rivet_line_arrive",
-	"grapple_clink", "grapple_release", "pylon_plant", "beacon_hum", "clank", "hit_thwack", "hurt",
-	"enemy_arrive", "boss_weak_hit", "ui_tick", "element_resolved", "ice_form", "vault_rise", "synergy_hit",
+	"grapple_clink", "grapple_release", "pylon_plant", "beacon_hum", 
+	"enemy_arrive", "element_resolved", "ice_form", "vault_rise", "synergy_hit",
 	"sable_arpeggio", "rivet_hihat_roll", "kest_low_thump", "tarn_latch_tear", "tally_balance_due", "cannon_recall", "sable_ready", "rivet_ready", "kest_ready", "tarn_ready", "tally_ready", "cannon_ready",
 	"sable_break", "rivet_break", "kest_break", "tarn_break", "tally_break", "cannon_break", "fleet_motif", "reactor_erupt", "swarm_buzz", "swarm_lock",
 	"swarm_scatter", "mind_sable", "mind_rivet", "mind_kest", "mind_tarn", "mind_tally", "mind_cannon", "hold_pit", "hold_bola", "hold_tether", "hold_net",
@@ -91,7 +95,7 @@ const KEYED_SOUNDS := ["panel_note", "panel_jackpot", "line_claw_drag", "armor_r
 	# v3 AU2 bank: every pitched cue named in design-v3/AUDIO-V3.md sections 4, 5, 8.
 	"bet_clunk", "bet_crack", "bet_refusal", "sunken_bell", "ally_hum_sable", "ally_hum_rivet", "ally_hum_kest",
 	"ally_wake", "fight_arm_stamp", "near_miss_whip_sable", "near_miss_whip_rivet", "near_miss_whip_kest",
-	"kill_chain_tier", "drop_landing", "return_launch_arpeggio", "crater_hold", "shell_spring", "hotwire_offer",
+	"drop_landing", "return_launch_arpeggio", "crater_hold", "shell_spring",
 	"core_slam", "ultimate_land", "kest_demo_knock", "rivet_skid_plate",
 	"active_cutting_torch",
 	# --- P-C Tally keyed sounds ---
@@ -106,12 +110,12 @@ const KEST_SOUNDS := ["cable_kest_fizz", "cable_kest_set", "cable_kest_blast", "
 # Per-cue trim in dB against the 0.9 peak every cue is normalized to. Rapid, small
 # facts sit low so a firefight never turns to mush; rare facts sit at the top.
 const TRIM_DB := {
-	"ui_tick": -14.0, "hop": -10.0, "boost_whoosh": -6.0, "dash_whoosh": -5.0,
+	"ui_tick": -8.0, "hop": -10.0, "boost_whoosh": -6.0, "dash_whoosh": -5.0, "carve_release": -8.0,
 	"land_thud": -6.0, "slam_boom": -1.0, "grapple_clink": -7.0, "grapple_release": -11.0,
 	"core_slam": -1.0, "ultimate_land": -1.0, "kest_demo_knock": -4.0, "rivet_skid_plate": -4.0,
 	"grown_sub": -4.0, "grown_crack": -7.0, "grown_tail": -10.0, "grown_rattle": -11.0,
-	"pylon_plant": -3.0, "pylon_eject": -4.0, "enemy_arrive": -9.0, "hit_thwack": -5.0,
-	"weapon_zap": -15.0, "special_fire": -4.0, "kill_pop": -7.0, "hurt": -3.0,
+	"pylon_plant": -3.0, "pylon_eject": -4.0, "enemy_arrive": -9.0, "hit_thwack": -1.0,
+	"weapon_zap": -9.0, "special_fire": -4.0, "kill_pop": -5.0, "hurt": -3.0,
 	"death": 0.0, "scrap_tick": -10.0, "cog_tick": -10.0, "part_get": -3.0, "beacon_hum": -12.0,
 	"gate_through": -3.0, "launch_roar": -2.0, "event_start": -3.0, "event_end": -6.0,
 	"klaxon": -3.0, "stinger_run": -3.0, "stinger_stage": -4.0, "stinger_clear": -2.0,
@@ -149,7 +153,7 @@ const TRIM_DB := {
 	"hold_pit": -13.0, "hold_bola": -14.5, "hold_tether": -13.0, "hold_net": -9.0, "hold_riser": -9.0, "tenacity_choke": -4.0,
 	"callout_chime": -8.0, "shop_bell": -6.0, "bench_clank": -7.0, "babble": -8.0,
 	# v3 W11 juice: the dodge whoosh and the crit's bright ping over the thwack.
-	"near_whoosh": -6.0, "crit_ping": -7.0, "kest_kick_thump": 0.0,
+	"near_whoosh": -6.0, "crit_ping": -5.0, "kest_kick_thump": 0.0,
 	# v3 W13 reward ceremony: the rarity tick and bell, the card's plate, the crate's build
 	# and the burst's resolve.
 	"rarity_tick": -9.0, "rarity_bell": -5.0, "reveal_clank": -4.0, "ceremony_build": -3.0, "ceremony_resolve": -1.0,
@@ -168,12 +172,15 @@ const TRIM_DB := {
 	"pickup_fountain": -8.0, "synergy_fired": -6.0, "evolution_fired": -5.0, "lore_found": -10.0,
 	"pilot_unlocked": -9.0, "pilot_unlocked_sable": -9.0, "pilot_unlocked_rivet": -9.0, "pilot_unlocked_kest": -9.0,
 	"pilot_unlocked_tarn": -9.0, "pilot_unlocked_tally": -9.0, "pilot_unlocked_cannon": -9.0,
-	"kill_chain_tier": -5.0, "chain_crash": -12.0, "drop_landing": -3.0, "door_tick": -9.0,
+	"kill_chain_tier": 0.0, "chain_crash": -12.0, "drop_landing": -3.0, "door_tick": -9.0,
 	"return_launch_arpeggio": -4.0, "lift_hiss": -9.0, "crater_hold": -12.0,
 	# The Spillway's arena locks and Warden gates (src/world/stage_locks.gd): the yard slams shut,
 	# springs open, the Warden's clamp counts a crew, refuses a hit, and lets go.
 	"arena_lock_slam": -2.0, "arena_wave_whistle": -6.0, "arena_unlock_bells": -4.0, "warden_gate_pip": -7.0,
 	"warden_gate_clunk": -10.0, "warden_gate_release": -3.0,
+	# Called Shot (loops.md Spec 3) and Heat (Spec 1), each its own sound (sound-gaps 12 Nov): the call
+	# inks with a stamp that climbs, a miss drops dry, and a shell about to cook off whistles like a kettle.
+	"call_ink": -6.0, "call_drop": -8.0, "heat_kettle": -9.0,
 	# Durability prototype: the plate shed in three sizes and the reclaim chime.
 	"armor_shed_small": -6.0, "armor_shed": -5.0, "armor_shed_big": -4.0, "armor_reclaim": -7.0,
 	"armor_deflect": -10.0,
@@ -184,8 +191,6 @@ const TRIM_DB := {
 	"shell_spring": -9.0,
 	# The escape charge re-arms (a rising mallet pair) or is spent (a falling one).
 	"companion_chirp_ready": -8.0, "companion_chirp_spent": -9.0,
-	# The hot-wired offer: two rising brass notes, under 0.4 s (audio.gd, Build.hotwire_offered).
-	"hotwire_offer": -6.0,
 	# The harpoon line's states (design-v3/LEGIBILITY.md section 3), its hum, and one refusal per
 	# verb. The bite (line_bite, -7) is the reference: the dry tick sits 14 dB under it by RMS, the
 	# lock tick and the refusals under that, the world clunk under the bite.
@@ -277,6 +282,11 @@ const PILOT_QUOTE := "pilot_quote_"
 const PILOT_QUOTE_DB := -6.0
 # A motif whose top note is under A4 (Kest's toms, Tarn's bass) goes up an octave so the sax sings it.
 const PILOT_QUOTE_FLOOR := 69
+# June's answer at the end of a phrase (set_director.gd, SOUND-BIBLE "The set"): set_answer_<phrase id>,
+# one bar from the director's phrase book on the sax, made for the sounding band's step and key
+# like the quote, and 2 dB under it so the quote stays the bigger moment.
+const SET_ANSWER := "set_answer_"
+const SET_ANSWER_DB := -8.0
 const DEATH_FALL_DB := -6.0
 # The note each climbing cue rings on, where its ladder starts (Harmony.ladder_ratio): the kill
 # pop's bell is D6 and the line's bite A5, in the recipes here and in the event-set files.
@@ -388,6 +398,7 @@ static func break_midis(variant := 0) -> Array:
 
 static func has_recipe(id: String) -> bool:
 	return (TRIM_DB.has(id) or id.begins_with(CAUSE_NOTE) or id.begins_with(GRID_NOTE) or id.begins_with(PILOT_QUOTE) or id.begins_with(SAY)
+		or (id.begins_with(SET_ANSWER) and SetDirector.has_answer(id.trim_prefix(SET_ANSWER)))
 		or _assist_parts(id).size() > 0 or id in EVENT_CUES)
 
 
@@ -398,6 +409,8 @@ static func trim_db(id: String) -> float:
 		return GRID_NOTE_DB
 	if id.begins_with(PILOT_QUOTE):
 		return PILOT_QUOTE_DB
+	if id.begins_with(SET_ANSWER):
+		return SET_ANSWER_DB
 	if id.begins_with(SAY):
 		return TRIM_DB["babble"] + float(_caller(_said(id)[0]).get("db", 0.0))
 	if id == "babble":
@@ -766,7 +779,7 @@ static func _key_at(id: String, step: int, shift: int, theme: int) -> String:
 # A sound written on the grid is made again for each step it sounds at: the listed stingers, and
 # a pilot's quote, and a line from a caller who talks on the grid.
 static func _gridded(id: String) -> bool:
-	return STINGER_BEATS.has(id) or id.begins_with(PILOT_QUOTE) or (id.begins_with(SAY) and caller_on_grid(_said(id)[0]))
+	return STINGER_BEATS.has(id) or id.begins_with(PILOT_QUOTE) or id.begins_with(SET_ANSWER) or (id.begins_with(SAY) and caller_on_grid(_said(id)[0]))
 
 
 # Every tonal recipe reads pitches through these, so a keyed bake transposes it whole.
@@ -837,6 +850,11 @@ static func _bake(id: String) -> PackedFloat32Array:
 			return _mix([[_tone(0.11, 380.0, 640.0, "sine", 28.0), 0, 1.0], [_noise(0.02, 3000.0, 3000.0, 200.0), 0, 0.3]])
 		"boost_whoosh":
 			return _mix([[_noise(0.42, 500.0, 3200.0, 7.0, 0.06), 0, 1.0], [_tone(0.12, 90.0, 55.0, "sine", 25.0), 0, 0.7]])
+		# The carve letting go: the grind's bright rasp falls away under a short rising saw, so the
+		# ride off a bank sounds like the shell springing free of the wall.
+		"carve_release":
+			return _mix([[_noise(0.18, 5200.0, 1600.0, 16.0, 0.004), 0, 0.9], [_tone(0.14, 220.0, 520.0, "saw", 18.0), Synth.seconds(0.03), 0.22],
+				[_tone(0.08, 140.0, 90.0, "sine", 30.0), 0, 0.5]])
 		"dash_whoosh":
 			return _mix([[_noise(0.28, 1400.0, 5200.0, 11.0, 0.02), 0, 1.0], [_tone(0.2, 300.0, 950.0, "saw", 14.0), 0, 0.18]])
 		"land_thud":
@@ -983,8 +1001,6 @@ static func _bake(id: String) -> PackedFloat32Array:
 			return _sputter()
 		"shell_spring":
 			return _shell_spring()
-		"hotwire_offer":
-			return _hotwire_offer()
 		"death":
 			return _death()
 		"scrap_tick":
@@ -1301,6 +1317,12 @@ static func _bake(id: String) -> PackedFloat32Array:
 			return _warden_gate_clunk()
 		"warden_gate_release":
 			return _warden_gate_release()
+		"call_ink":
+			return _call_ink()
+		"call_drop":
+			return _call_drop()
+		"heat_kettle":
+			return _heat_kettle()
 	if id.begins_with(CAUSE_NOTE):
 		return _mix([[_cut(_n("mallet", int(id.trim_prefix(CAUSE_NOTE))), 0.6), 0, 1.0]])
 	if id.begins_with(GRID_NOTE):
@@ -1308,6 +1330,8 @@ static func _bake(id: String) -> PackedFloat32Array:
 		return _mix([[_cut(_n(bits[0], int(bits[1])), GRID_NOTE_SECONDS), 0, 1.0]])
 	if id.begins_with(PILOT_QUOTE):
 		return Synth.render_score(pilot_quote_score(id.trim_prefix(PILOT_QUOTE)), 0.5)
+	if id.begins_with(SET_ANSWER):
+		return Synth.render_score(SetDirector.answer_score(id.trim_prefix(SET_ANSWER)), 0.5)
 	if id.begins_with(SAY):
 		return _say(_said(id)[0], _said(id)[1])
 	if _assist_parts(id).size() > 0:
@@ -2587,12 +2611,6 @@ static func _shell_spring() -> PackedFloat32Array:
 		[_noise(0.02, 4500.0, 3000.0, 200.0), 0, 0.3]])
 
 
-# The hot-wired offer: two brass notes a fifth apart, D4 to A4, the second riding the first's tail.
-static func _hotwire_offer() -> PackedFloat32Array:
-	return _mix([[_cut(_n("brass", 62), 0.14), 0, 0.8], [_cut(_n("brass", 69), 0.22, Synth.seconds(0.05)), Synth.seconds(0.12), 0.95],
-		[_noise(0.012, 4500.0, 3000.0, 250.0), 0, 0.2]])
-
-
 # The held-door ready pulse, class-independent: a bright blip on the next sixteenth, so
 # a hit reads as progress without borrowing whichever class happens to be playing.
 static func _door_tick() -> PackedFloat32Array:
@@ -2652,6 +2670,33 @@ static func _warden_gate_release() -> PackedFloat32Array:
 	var chord := [[0, 62, 6, "keys", 0.45], [0, 66, 6, "keys", 0.4], [0, 69, 6, "keys", 0.4], [0, 74, 6, "bell", 0.6], [0, 38, 6, "sub", 0.6]]
 	parts.append([Synth.render_score(chord, 0.05), Synth.seconds(0.3), 1.0])
 	return _mix(parts)
+
+
+# A Called Shot is inked: a stamp thumps, then two brass notes climb D to A, a promise made. It
+# shares nothing with the gate's dull clank, so placing a bet never sounds like being refused.
+static func _call_ink() -> PackedFloat32Array:
+	var score := [[0, 62, 1, "brass", 0.6], [1, 69, 3, "brass", 0.75]]
+	return _mix([[_noise(0.06, 900.0, 500.0, 45.0), 0, 0.7], [_tone(0.08, _hz(38), _hz(36), "sine", 30.0), 0, 0.6],
+		[Synth.render_score(score, 0.05), Synth.seconds(0.03), 1.0]])
+
+
+# The call missed: one muted note sags from A down to E and stops dead, no ring and no chord, so a
+# lost bet is heard as a let-down and never as a warning.
+static func _call_drop() -> PackedFloat32Array:
+	return _mix([[_tone(0.34, _hz(57), _hz(52), "square_dark", 9.0), 0, 0.8], [_noise(0.05, 600.0, 300.0, 50.0), 0, 0.3]])
+
+
+# The shell at redline is about to cook off: a kettle whistle that climbs from D to the tritone
+# above over two seconds and swells as it goes, so the last two seconds of the fuse are heard.
+static func _heat_kettle() -> PackedFloat32Array:
+	var n := Synth.seconds(2.0)
+	var whistle := _tone(2.0, _hz(86), _hz(92), "sine", 0.0)
+	var breath := _noise(2.0, 5200.0, 7400.0, 0.0, 0.3)
+	for i in n:
+		var swell := 0.25 + 0.75 * float(i) / n
+		whistle[i] *= swell
+		breath[i] *= swell
+	return _mix([[whistle, 0, 0.8], [breath, 0, 0.18]])
 
 
 static func _lift_hiss() -> PackedFloat32Array:

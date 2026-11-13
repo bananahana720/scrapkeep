@@ -30,12 +30,24 @@ func _frames(n: int) -> void:
 		await process_frame
 
 
+# Waits `seconds` of game time, however many frames that takes.
+func _settle(seconds: float) -> void:
+	var left := seconds
+	while left > 0.0:
+		await process_frame
+		left -= _game.get_process_delta_time()
+
+
 func _run() -> void:
 	await _frames(2)
 	_game.ctx.calm = true
 	_game.flow.press_start()
 	_game.flow.choose_class(0)
 	await _frames(5)
+	# The ball holds still: on a free-running clock a loaded machine drops physics ticks, so a rolling ball ends up
+	# somewhere else on the slope each run, and the camera with it, and the word spots this test reads move off the
+	# safe area. The checks set the ball's state (velocity, contact) where they need motion.
+	_game.player.set_frozen(true)
 	var fx = _game.presentation.player_fx
 	t.check("player fx is built by presentation", fx != null and fx.root != null and fx.root.is_inside_tree())
 	Density.live().reset()
@@ -90,11 +102,149 @@ func _run() -> void:
 	t.check("the densest band refuses words", not fx.word("rocket", ball))
 	Density.live().reset()
 
+	# PF-26: BWAP, the word for an ordinary hit on the beat, waits BEAT_REPEAT_S, not a big
+	# moment's WORD_REPEAT_S; and no word lands on a hostile warning.
+	for w in fx._words:
+		w["t"] = 1.0
+	fx._last_word = -1.0e9
+	fx._word_seen.clear()
+	t.check("an on-beat BWAP stands no taller than a plain KLANG", PlayerFx.WORDS["beat"]["size"] * PlayerFx.ONBEAT_GROW <= PlayerFx.WORDS["smash"]["size"] + 0.001)
+	t.check("BWAP stamps", fx.word("beat", ball + Vector3(3, 2, 0)))
+	for w in fx._words:
+		w["t"] = 1.0
+	fx._last_word = -1.0e9
+	fx._word_seen["beat"] = fx._clock - PlayerFx.WORD_REPEAT_S - 0.1
+	t.check("planted: past a big word's repeat window, BWAP still waits", not fx.word("beat", ball + Vector3(3, 2, 0)))
+	fx._word_seen["beat"] = fx._clock - PlayerFx.BEAT_REPEAT_S - 0.1
+	t.check("past its own window BWAP stamps again", fx.word("beat", ball + Vector3(3, 2, 0)))
+	# A hit's own word grows on the beat (on_beat_hit): the growth's warning check builds a typed rect list, which once
+	# raised a script error and left the word its plain size.
+	for w in fx._words:
+		w["t"] = 1.0
+	fx._last_word = -1.0e9
+	fx._word_seen.clear()
+	t.check("KLANG stamps for the beat to grow", fx.word("smash", ball + Vector3(3, 2, 0)))
+	var plain: float = float(fx._words_by_id("smash").get("size", 0.0))
+	fx._on_beat_word(null, "smash", fx._clock)
+	t.near("and the beat grows it", float(fx._words_by_id("smash").get("size", -1.0)), plain * PlayerFx.ONBEAT_GROW)
+	for w in fx._words:
+		w["t"] = 1.0
+	fx._last_word = -1.0e9
+	fx._word_seen.clear()
+	var own := Rect2(600, 300, 120, 50)
+	var other := Rect2(400, 300, 120, 50)
+	var warn_own: Array[Rect2] = [Rect2(650, 320, 40, 40)]
+	var warn_both: Array[Rect2] = [Rect2(450, 320, 240, 40)]
+	var warn_none: Array[Rect2] = [Rect2(50, 50, 40, 40)]
+	var above := Rect2(500, 200, 120, 50)
+	var spots: Array[Rect2] = [own, other, above]
+	var foe_box: Array[Rect2] = [Rect2(380, 280, 360, 90)]
+	t.eq("a word clear of warnings keeps its spot", PlayerFx.word_spot(spots, warn_none), 0)
+	t.eq("planted: a word on a warning takes the ball's other side", PlayerFx.word_spot(spots, warn_own), 1)
+	t.eq("a word with its foe on both sides goes above the foe", PlayerFx.word_spot(spots, foe_box), 2)
+	t.eq("a word with every spot covered stays unsaid", PlayerFx.word_spot(spots, [Rect2(0, 0, 1000, 1000)] as Array[Rect2]), -1)
+	# The camera eases its arm and field of view toward the ball's speed (chase_camera.gd), and the checks above set the
+	# ball's velocity, so the placement checks below wait until it has settled by game time, not by frame count: a
+	# loaded machine runs fewer, longer frames, and the view then sat a pixel or two elsewhere each run.
+	await _settle(4.0)
+	var wcam: Camera3D = fx.camera.cam
+	# A ring on the ground under each side's spot: the word has nowhere to go.
+	var at: Vector3 = fx.clear_of_lane(ball + Vector3(3, 2, 0))
+	var side: Vector3 = wcam.global_basis.x
+	var rel: Vector3 = at - ball
+	var covers: Array = []
+	for spot in [at, at - side * 2.0 * rel.dot(side)]:
+		var px := wcam.unproject_position(spot)
+		var floor_at = Plane(Vector3.UP, 0.0).intersects_ray(wcam.project_ray_origin(px), wcam.project_ray_normal(px))
+		if floor_at != null:
+			covers.append(Telegraph.ring(_game, FlatGround.new(), Threat.Type.INSTANT, floor_at, 6.0))
+	await _frames(1)
+	for w in fx._words:
+		w["t"] = 1.0
+	fx._last_word = -1.0e9
+	fx._word_seen.clear()
+	var held: int = fx.spawned.get("word_held", 0)
+	# The foe a word names is avoided like a warning: a box mesh where the word would go.
+	var foe := Node3D.new()
+	var shape := MeshInstance3D.new()
+	var box := BoxMesh.new()
+	box.size = Vector3(1.5, 1.5, 1.5)
+	shape.mesh = box
+	foe.add_child(shape)
+	_game.add_child(foe)
+	foe.global_position = ball + Vector3(3, 2, 0)
+	var foe_px := PlayerFx.foe_rect(foe, wcam)
+	t.check("the foe has a screen rect", foe_px.has_area(), str(foe_px))
+	t.check("a word naming its foe never lands on it", fx.word("smash", ball + Vector3(3, 2, 0), Color.TRANSPARENT, foe)
+		and not PlayerFx._word_rect(wcam, fx._words_by_id("smash")["at"], float(fx._words_by_id("smash")["away"]) > 0.0, float(fx._words_by_id("smash")["width_px"]),
+			float(fx._words_by_id("smash")["size"]), 0.01).intersects(foe_px), "foe %s" % foe_px)
+	# A foe filling the top of the view: the spot above it is off screen, so the word stays clear
+	# of it or unsaid, never pulled back onto it.
+	foe.global_position = ball + Vector3(3, 6, 0)
+	(shape.mesh as BoxMesh).size = Vector3(8, 8, 1.5)
+	await _frames(1)
+	for w in fx._words:
+		w["t"] = 1.0
+	fx._last_word = -1.0e9
+	fx._word_seen.clear()
+	var big := PlayerFx.foe_rect(foe, wcam)
+	var said: bool = fx.word("smash", ball + Vector3(3, 2, 0), Color.TRANSPARENT, foe)
+	var vsize := wcam.get_viewport().get_visible_rect().size
+	var safe := Rect2(vsize * 0.5 * (Vector2.ONE - PlayerFx.WORD_SAFE), vsize * PlayerFx.WORD_SAFE)
+	var took := Rect2() if not said else PlayerFx._word_rect(wcam, fx._words_by_id("smash")["at"], float(fx._words_by_id("smash")["away"]) > 0.0,
+		float(fx._words_by_id("smash")["width_px"]), float(fx._words_by_id("smash")["size"]), 0.01)
+	t.check("planted: a word by a big foe never ends up on it, nor off the safe area", not said or (safe.encloses(took) and not took.intersects(big)),
+		"said %s at %s foe %s" % [said, took, big])
+	# FX-07: a read word (DENT) speaks inside the sound words' gap, but places by their rules:
+	# beside the foe, clear of its body by the warning gap, inside the safe area, at render priority.
+	foe.global_position = ball + Vector3(3, 2, 0)
+	(shape.mesh as BoxMesh).size = Vector3(1.5, 1.5, 1.5)
+	await _frames(1)
+	for w in fx._words:
+		w["t"] = 1.0
+	fx._last_word = -1.0e9
+	fx._word_seen.clear()
+	var body := PlayerFx.foe_rect(foe, wcam)
+	var stack := PlayerFx.stack_rect(foe, wcam)
+	fx._last_word = fx._clock
+	var gap_said: bool = not fx.word("vault", ball + Vector3(-3, 2, 0))
+	var read_said: bool = fx.read_word("DENT", foe, Color.WHITE)
+	var read: Dictionary = fx._words_by_id("read")
+	var read_rect := Rect2() if read.is_empty() else PlayerFx._word_rect(wcam, read["at"], float(read["away"]) > 0.0, float(read["width_px"]), float(read["size"]), 0.01)
+	t.check("a read word speaks inside the gap, beside its foe, clear of it and the marks stacked over it, inside the safe area",
+		gap_said and read_said and read_rect.has_area() and not read_rect.intersects(body.grow(PlayerFx.WORD_WARNING_GAP))
+		and stack.has_area() and not read_rect.intersects(stack.grow(PlayerFx.WORD_WARNING_GAP)) and safe.encloses(read_rect)
+		and is_equal_approx(float(read["size"]), PlayerFx.READ_SIZE) and is_equal_approx(fx._last_word, fx._clock) and (read["node"] as Label3D).render_priority == PlayerFx.RENDER_PRIORITY,
+		"said %s/%s at %s foe %s" % [gap_said, read_said, read_rect, body])
+	# Every pooled slot showing: the read waits rather than cut a live word short.
+	var live: Array = []
+	for w in fx._words:
+		live.append(w["t"])
+		w["t"] = 0.5
+	var busy_said: bool = fx.read_word("ZZAP!", foe, Color.WHITE)
+	t.check("a read word with every slot showing waits and cuts no word short", not busy_said and fx._words.all(func(w): return w["t"] == 0.5))
+	for i in fx._words.size():
+		fx._words[i]["t"] = live[i]
+	shape.visible = false
+	t.check("a read word for a foe out of view stays unsaid, so the next hit asks again", not fx.read_word("ZZAP!", foe, Color.WHITE))
+	foe.free()
+	for w in fx._words:
+		w["t"] = 1.0
+	fx._last_word = -1.0e9
+	fx._word_seen.clear()
+	held = fx.spawned.get("word_held", 0)
+	t.check("a warning under both sides holds the word", not PlayerFx.warning_rects(root.get_tree(), wcam, 0.0).is_empty()
+		and not fx.word("slam", ball + Vector3(3, 2, 0)) and fx.spawned.get("word_held", 0) == held + 1,
+		"rects %s" % [PlayerFx.warning_rects(root.get_tree(), wcam, 0.0)])
+	for c in covers:
+		c.free()
+	await _frames(1)
+
 	# Knockback moments: a blazing ram says WHAM, a bump says nothing; three pins inside
 	# the window stamp STRIKE.
 	var dummy := Node3D.new()
 	_game.add_child(dummy)
-	dummy.global_position = ball + Vector3(4, 0, 0)
+	dummy.global_position = ball + Vector3(3, 2, 0)
 	for w in fx._words:
 		w["t"] = 1.0
 	fx._last_word = -1.0e9

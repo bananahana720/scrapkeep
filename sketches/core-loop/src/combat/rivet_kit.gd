@@ -860,8 +860,20 @@ func _face_shadow(origin: Vector3, face: Array) -> Array:
 	return planes
 
 
-# The park's convex wedge colliders carry points, rather than triangle faces.
+# The park's convex wedge colliders carry points, rather than triangle faces. Parks place the
+# same few wedges hundreds of times, and the face search is quartic in the points (about 100 ms a
+# wedge), so the faces are kept by point list for the life of the process. Readers map them
+# into world space and never write them.
+static var _convex_cache := {}
+
+
 func _convex_faces(points: PackedVector3Array) -> Array:
+	if not _convex_cache.has(points):
+		_convex_cache[points] = _convex_faces_uncached(points)
+	return _convex_cache[points]
+
+
+func _convex_faces_uncached(points: PackedVector3Array) -> Array:
 	var faces: Array = []
 	var normals: Array = []
 	var offsets: Array = []

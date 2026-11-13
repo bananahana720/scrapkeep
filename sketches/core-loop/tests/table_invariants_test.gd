@@ -12,6 +12,7 @@ const RunState := preload("res://src/core/run_state.gd")
 const Ultimate := preload("res://src/combat/ultimate.gd")
 const Weapons := preload("res://src/combat/weapons.gd")
 const Synergies := preload("res://src/build/synergies.gd")
+const Parts := preload("res://src/build/parts.gd")
 const ShiftBoard := preload("res://src/core/shift_board.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
 const Elements := preload("res://src/build/elements.gd")
@@ -94,15 +95,12 @@ func _stage_rows(table) -> void:
 func _synergies(table) -> void:
 	var name := _label(table)
 	for id in table.SYNERGIES:
-		var known: bool = Synergies.ROWS.has(id) or Synergies.TAG_RULES.has(id)
-		_t.check("%s synergy %s is a synergy row" % [name, id], known)
+		_t.check("%s synergy %s is a trick row" % [name, id], Synergies.ROWS.has(id))
 		if not Synergies.ROWS.has(id):
 			continue
-		var row: Dictionary = Synergies.ROWS[id]
-		var needs: Array = [row.get("shown", "")]
-		needs.append_array(row.get("evolution", {}).get("parts", []))
-		for part in needs:
-			_t.check("%s synergy %s part %s is in the table's parts" % [name, id, part], table.PARTS.has(part))
+		var maker: String = Synergies.ROWS[id]["maker"]
+		var pieces: Array = table.PARTS.filter(func(part): return Parts.maker_of(part) == maker)
+		_t.check("%s trick %s has two %s parts in the table's parts" % [name, id, maker], pieces.size() >= Synergies.AT, str(pieces))
 
 
 # director.gd interval() and cap() multiply by these weights; zero or less stalls or floods a stage.
@@ -130,7 +128,7 @@ func _rogues_are_bosses() -> void:
 		_t.check("rogue %s counts as a boss for elements" % id, id in Elements.BOSS_KINDS)
 
 
-# The camp's "Spillway secrets: N of 7" counts WORLD_CODEX[1]; each id needs something in world 1
+# The camp's "Spillway secrets: N of 8" counts WORLD_CODEX[1]; each id needs something in world 1
 # that files it (a field find, the clock door, or a park contraption's codex row).
 func _world_one_secrets() -> void:
 	var filed := {}

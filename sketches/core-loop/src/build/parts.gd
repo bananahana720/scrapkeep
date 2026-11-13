@@ -6,6 +6,8 @@ const Synergies := preload("res://src/build/synergies.gd")
 const Items := preload("res://src/build/items.gd")
 const ItemGen := preload("res://src/build/item_gen.gd")
 const Nemesis := preload("res://src/combat/nemesis.gd")
+const Relics := preload("res://src/build/relics.gd")
+const HotwireRules := preload("res://src/build/hotwire_rules.gd")
 
 # The parts catalogue (TADR-008): one row per part, turned into typed PartDef resources
 # once and cached. Each row has a verb (what it makes you do), punch (flat per-hit
@@ -33,21 +35,21 @@ const BURDEN_PAYOUT_CAP := 0.75
 const BURDEN_PAYOUT_SLOPE := 0.25
 
 const CATALOGUE := {
-	"load_dividend": {"touches": "fire", "name": "Load Dividend", "verb": "Burdens add extra hit damage", "text": "Each burden adds hit damage, up to +%d%%" % roundi(BURDEN_PAYOUT_CAP * 100.0),
+	"load_dividend": {"maker": "redjaw", "touches": "fire", "name": "Load Dividend", "verb": "Burdens add extra hit damage", "text": "Each burden adds hit damage, up to +%d%%" % roundi(BURDEN_PAYOUT_CAP * 100.0),
 		"rarity": "rare", "tier": 2, "family": "weapon", "tags": ["mass"], "icon": "damage",
 		"trigger": "on_hit", "stack": "hyperbolic", "cap": BURDEN_PAYOUT_CAP,
 		"effect": {"do": "burden_payout", "per": BURDEN_PAYOUT_SLOPE}},
 	# Common: gate fodder. Only these may be plain percentages.
-	"hot_rivets": {"touches": "fire", "name": "Hot Rivets", "verb": "Hit harder", "text": "+4 punch, +12% weapon damage",
+	"hot_rivets": {"maker": "fleet_surplus", "touches": "fire", "name": "Hot Rivets", "verb": "Hit harder", "text": "+4 punch, +12% weapon damage",
 		"rarity": "common", "tier": 1, "family": "weapon", "tags": ["kinetic"], "punch": 4.0,
 		"mods": {"weapon_damage": 1.12}, "stack": "capped", "cap": 3, "levels": [
 			{"punch": 4.0, "mods": {"weapon_damage": 1.12}, "text": "+4 punch, +12% weapon damage"},
 			{"punch": 8.0, "mods": {"weapon_damage": 1.25}, "text": "+8 punch, +25% weapon damage"},
 			{"punch": 13.0, "mods": {"weapon_damage": 1.42}, "text": "+13 punch, +42% weapon damage"}]},
-	"loose_trigger": {"touches": "fire", "name": "Loose Trigger", "verb": "Fire faster", "text": "+10% fire rate",
+	"loose_trigger": {"maker": "highdraft_roosts", "touches": "fire", "name": "Loose Trigger", "verb": "Fire faster", "text": "+10% fire rate",
 		"rarity": "common", "tier": 1, "family": "weapon", "tags": ["speed"],
 		"mods": {"weapon_rate": 1.1}},
-	"long_barrel": {"touches": "fire", "name": "Long Barrel", "verb": "Shoot farther", "text": "+12% weapon range",
+	"long_barrel": {"maker": "highdraft_roosts", "touches": "fire", "name": "Long Barrel", "verb": "Shoot farther", "text": "+12% weapon range",
 		"rarity": "common", "tier": 1, "family": "weapon", "tags": ["anchor"],
 		"mods": {"weapon_range": 1.12}},
 	"long_spool": {"name": "Long Spool", "verb": "Harpoon reaches farther", "text": "+30% harpoon range",
@@ -62,13 +64,13 @@ const CATALOGUE := {
 	"dash_vane": {"name": "Dash Vane", "verb": "Dash harder", "text": "+15% air dash",
 		"rarity": "common", "tier": 1, "family": "mobility", "tags": ["speed"],
 		"mods": {"dash_impulse": 1.15}},
-	"rivet_plating": {"touches": "roll", "name": "Rivet Hull", "verb": "Raise your max health", "text": "+15 max health",
+	"rivet_plating": {"maker": "fleet_surplus", "touches": "roll", "name": "Rivet Hull", "verb": "Raise your max health", "text": "+15 max health",
 		"rarity": "common", "tier": 1, "family": "stat", "tags": ["mass"],
 		"max_hp_bonus": 15.0, "stack": "capped", "cap": 3, "levels": [
 			{"max_hp_bonus": 15.0, "text": "+15 max health"},
 			{"max_hp_bonus": 30.0, "text": "+30 max health"},
 			{"max_hp_bonus": 48.0, "text": "+48 max health"}]},
-	"magnet_spool": {"touches": "roll", "name": "Magnet Spool", "verb": "Pull scrap from farther", "text": "scrap magnet reaches 50% further",
+	"magnet_spool": {"maker": "spillway_works", "touches": "roll", "name": "Magnet Spool", "verb": "Pull scrap from farther", "text": "scrap magnet reaches 50% further",
 		"icon": "utility", "rarity": "common", "tier": 1, "family": "stat", "tags": ["mass"],
 		"magnet": 1.5, "stack": "capped", "cap": 3, "levels": [
 			{"magnet": 1.5, "text": "scrap magnet reaches 50% further"},
@@ -91,43 +93,43 @@ const CATALOGUE := {
 	# second ingredients of two evolutions, and change what the verb does instead of how fast
 	# the ball moves: how wide the harpoon's lock cone opens (it targets more, the ball goes no
 # farther or faster), how hard a smash throws its pins (drop_weight's base row was slam_speed 1.15).
-	"grip_tread": {"name": "Grip Tread", "verb": "Accelerate faster", "pitch": "Tread bites harder", "touches": "roll",
+	"grip_tread": {"maker": "highdraft_roosts", "name": "Grip Tread", "verb": "Accelerate faster", "pitch": "Tread bites harder", "touches": "roll",
 		"text": "+15% drive acceleration", "icon": "mobility",
 		"rarity": "common", "tier": 1, "family": "mobility", "class_id": "runner_gunner", "tags": ["anchor"],
 		"mods": {"drive_accel": 1.15}},
-	"live_line": {"name": "Live Line", "verb": "Harpoon locks on wider", "pitch": "Harpoon grabs wider", "touches": "harpoon",
+	"live_line": {"maker": "mind_glass", "name": "Live Line", "verb": "Harpoon locks on wider", "pitch": "Harpoon grabs wider", "touches": "harpoon",
 		"text": "+25% harpoon lock cone", "icon": "mobility",
 		"rarity": "common", "tier": 2, "family": "mobility", "tags": ["arc"],
 		"mods": {"harpoon_lock_deg": 1.25}},
-	"vent_baffle": {"name": "Vent Baffle", "verb": "Boost again sooner", "pitch": "Boost breathes quicker", "touches": "boost",
+	"vent_baffle": {"maker": "spillway_works", "name": "Vent Baffle", "verb": "Boost again sooner", "pitch": "Boost breathes quicker", "touches": "boost",
 		"text": "Boost refills 12% sooner", "icon": "mobility",
 		"rarity": "common", "tier": 1, "family": "mobility", "class_id": "tally", "tags": ["speed"],
 		"cooldown_scale": 0.88},
 	# 2026-10-15 (wave 14 SQ19b, BIBLE.md Mobility row): Tally's own winch. A trial with reel_speed
 	# at 1.25 while held took Tally's stage-2 Brindle fight from 340 s to 80 s. A class part,
 	# like Vent Baffle, because a faster haul changes how fast the ball moves.
-	"winch_pawl": {"name": "Winch Pawl", "verb": "Reel in faster", "pitch": "Winch hauls quicker", "touches": "harpoon",
+	"winch_pawl": {"maker": "redjaw", "name": "Winch Pawl", "verb": "Reel in faster", "pitch": "Winch hauls quicker", "touches": "harpoon",
 		"text": "+25% winch top speed", "icon": "mobility",
 		"rarity": "common", "tier": 1, "family": "mobility", "class_id": "tally", "tags": ["anchor"],
 		"mods": {"reel_speed": 1.25}},
-	"spring_shims": {"name": "Spring Shims", "verb": "Jump higher", "pitch": "Hop clears rails", "touches": "jump",
+	"spring_shims": {"maker": "redjaw", "name": "Spring Shims", "verb": "Jump higher", "pitch": "Hop clears rails", "touches": "jump",
 		"text": "+10% jump speed", "icon": "mobility",
 		"rarity": "common", "tier": 1, "family": "mobility", "class_id": "pylon_engineer", "tags": ["spiral"],
 		"mods": {"jump_speed": 1.1}},
-	"drop_weight": {"name": "Drop Weight", "verb": "Post-smash, knocked machines hit 25% harder", "pitch": "Knocks hit harder", "touches": "haul",
+	"drop_weight": {"maker": "moss", "name": "Drop Weight", "verb": "Post-smash, knocked machines hit 25% harder", "pitch": "Knocks hit harder", "touches": "haul",
 		"text": "After a smash, knocked machines hit 25% harder", "icon": "mobility",
 		"rarity": "common", "tier": 1, "family": "mobility", "tags": ["mass"],
 		"trigger": "on_smash", "stack": "linear", "cap": 3,
 		"effect": {"do": "pin_bonus", "bonus": 0.25, "window": 1.5}},
 
 	# Uncommon: gates and fabricators. Punch, a pattern or an element on every row.
-	"slag_rounds": {"touches": "fire", "name": "Slag Rounds", "verb": "Hit much harder", "text": "+10 punch, +25% weapon damage",
+	"slag_rounds": {"maker": "fleet_surplus", "touches": "fire", "name": "Slag Rounds", "verb": "Hit much harder", "text": "+10 punch, +25% weapon damage",
 		"rarity": "common", "tier": 2, "family": "weapon", "tags": ["kinetic", "mass"], "punch": 10.0,
 		"mods": {"weapon_damage": 1.25}},
-	"double_feed": {"touches": "fire", "name": "Double Feed", "verb": "Fire much faster", "text": "+3 punch, +25% fire rate",
+	"double_feed": {"maker": "fleet_surplus", "touches": "fire", "name": "Double Feed", "verb": "Fire much faster", "text": "+3 punch, +25% fire rate",
 		"rarity": "common", "tier": 2, "family": "weapon", "tags": ["speed", "split"], "punch": 3.0,
 		"mods": {"weapon_rate": 1.25}},
-	"focus_lens": {"touches": "fire", "name": "Focus Lens", "verb": "Shoot much farther", "text": "+6 punch, +25% weapon range",
+	"focus_lens": {"maker": "mind_glass", "touches": "fire", "name": "Focus Lens", "verb": "Shoot much farther", "text": "+6 punch, +25% weapon range",
 		"rarity": "common", "tier": 2, "family": "weapon", "tags": ["anchor"], "punch": 6.0,
 		"mods": {"weapon_range": 1.25}},
 	# Pattern transformers. The part id is the pattern id, and each copy adds a level.
@@ -147,37 +149,37 @@ const CATALOGUE := {
 		"elements": {"dash": "frost"}, "mods": {"dash_impulse": 1.1}},
 	# Arc Coil and Runner Overclock carry one tag: kinetic was not their identity, and on
 	# them it put Wrecking Ball over the 60% discovery cap (balance loop, B4).
-	"arc_coil": {"touches": "haul", "name": "Arc Coil", "verb": "Slams burst arcs nearby", "text": "Slams burst arcs at everything near",
+	"arc_coil": {"maker": "moss", "touches": "haul", "name": "Arc Coil", "verb": "Slams burst arcs nearby", "text": "Slams burst arcs at everything near",
 		"element": "arc", "rarity": "common", "tier": 2, "family": "mobility", "tags": ["arc"],
 		"elements": {"slam": "arc"}},
 	# Class mods: offered only to their class.
-	"pylon_capacitor": {"touches": "jump", "name": "Pylon Capacitor", "verb": "Launch harder off pylons", "text": "+8 punch, slingshot +50% boost",
+	"pylon_capacitor": {"maker": "spillway_works", "touches": "jump", "name": "Pylon Capacitor", "verb": "Launch harder off pylons", "text": "+8 punch, slingshot +50% boost",
 		"icon": "mobility", "rarity": "common", "tier": 2, "family": "class", "class_id": "pylon_engineer", "tags": ["anchor", "arc"],
 		"punch": 8.0, "mods": {"slingshot_boost": 1.5, "slingshot_keep": 1.1, "turret_damage": 1.4}},
-	"runner_overclock": {"touches": "fire", "name": "Runner Overclock", "verb": "Fire faster, boost refills sooner", "text": "+35% fire rate, boost refills 20% sooner",
+	"runner_overclock": {"maker": "highdraft_roosts", "touches": "fire", "name": "Runner Overclock", "verb": "Fire faster, boost refills sooner", "text": "+35% fire rate, boost refills 20% sooner",
 		"icon": "damage", "rarity": "common", "tier": 2, "family": "class", "class_id": "runner_gunner", "tags": ["speed"],
 		"punch": 4.0, "mods": {"weapon_rate": 1.35}, "cooldown_scale": 0.8},
 
 	# Rare: vaults, and gates with one bonus core.
-	"sunforged_core": {"touches": "fire", "name": "Sunforged Core", "verb": "Hit far harder", "text": "+22 punch, +50% weapon damage",
+	"sunforged_core": {"maker": "waking", "touches": "fire", "name": "Sunforged Core", "verb": "Hit far harder", "text": "+22 punch, +50% weapon damage",
 		"rarity": "rare", "tier": 3, "family": "weapon", "tags": ["kinetic", "mass"], "punch": 22.0,
 		"mods": {"weapon_damage": 1.5}},
-	"gatling_heart": {"touches": "fire", "name": "Gatling Heart", "verb": "Fire far faster", "text": "+5 punch, +50% fire rate",
+	"gatling_heart": {"maker": "fleet_surplus", "touches": "fire", "name": "Gatling Heart", "verb": "Fire far faster", "text": "+5 punch, +50% fire rate",
 		"rarity": "rare", "tier": 3, "family": "weapon", "tags": ["spiral", "speed"], "punch": 5.0,
 		"mods": {"weapon_rate": 1.5}},
-	"horizon_optic": {"touches": "fire", "name": "Horizon Optic", "verb": "Hit harder from much farther", "text": "+12 punch, +50% range, +15% weapon damage",
+	"horizon_optic": {"maker": "highdraft_roosts", "touches": "fire", "name": "Horizon Optic", "verb": "Hit harder from much farther", "text": "+12 punch, +50% range, +15% weapon damage",
 		"rarity": "rare", "tier": 3, "family": "weapon", "tags": ["anchor", "kinetic"], "punch": 12.0,
 		"mods": {"weapon_range": 1.5, "weapon_damage": 1.15}},
-	"rime_rounds": {"touches": "fire", "name": "Rime Rounds", "verb": "Shots freeze water", "text": "+6 punch. Shots freeze water.",
+	"rime_rounds": {"maker": "spillway_works", "touches": "fire", "name": "Rime Rounds", "verb": "Shots freeze water", "text": "+6 punch. Shots freeze water.",
 		"element": "frost", "rarity": "rare", "tier": 3, "family": "weapon", "tags": ["frost", "kinetic"], "punch": 6.0,
 		"elements": {"shot": "frost"}},
-	"galvanic_rounds": {"touches": "fire", "name": "Galvanic Rounds", "verb": "Shots electrify water", "text": "+6 punch. Shots electrify water.",
+	"galvanic_rounds": {"maker": "mind_glass", "touches": "fire", "name": "Galvanic Rounds", "verb": "Shots electrify water", "text": "+6 punch. Shots electrify water.",
 		"element": "arc", "rarity": "rare", "tier": 3, "family": "weapon", "tags": ["arc", "chain"], "punch": 6.0,
 		"elements": {"shot": "arc"}},
-	"ram_plow": {"touches": "roll", "name": "Ram Plow", "verb": "Hit harder, gain 15 max health", "text": "+18 punch, +15 max health",
+	"ram_plow": {"maker": "fleet_surplus", "touches": "roll", "name": "Ram Plow", "verb": "Hit harder, gain 15 max health", "text": "+18 punch, +15 max health",
 		"icon": "damage", "rarity": "rare", "tier": 3, "family": "stat", "tags": ["kinetic", "mass"], "punch": 18.0,
 		"max_hp_bonus": 15.0},
-	"spare_cell": {"name": "Spare Cell", "verb": "One more special charge", "pitch": "One cell extra", "touches": "special",
+	"spare_cell": {"maker": "moss", "name": "Spare Cell", "verb": "One more special charge", "pitch": "One cell extra", "touches": "special",
 		"text": "+1 special charge", "icon": "charge",
 		"rarity": "rare", "tier": 3, "family": "stat", "tags": ["mass"],
 		"charges": {"special": 1}},
@@ -209,9 +211,11 @@ const MILESTONE_FOR_EVENT := {
 }
 const MILESTONE_ORDER := ["scrap_gravity", "tempest_core", "rime_heart"]
 
-# How often an offer slot is spent on the part that completes a synergy, when one is
-# a single part away. Isaac's "one more piece" pull, kept off a sure thing.
-const SYNERGY_BAIT := 0.5
+# How often an offer slot is spent on the named partner (completing_part) of a held part whose
+# maker is one piece short of waking a trick. Isaac's "one more piece" pull, kept off a sure
+# thing. 0.35 since the pass D fold (was 0.5): more parts name a maker now, so the pull finds a
+# partner more often; 0.35 keeps every pilot's kit lean in its band (offer_weights_test).
+const SYNERGY_BAIT := 0.35
 
 # "Nudge loot" for maker sets (maker_sets.gd): once MAKER_NUDGE_AT distinct pieces of one maker
 # are held, that maker's other pieces weigh MAKER_NUDGE times their offer bucket's other parts
@@ -219,7 +223,9 @@ const SYNERGY_BAIT := 0.5
 # its total weight in each group (_nudged), so a pilot's kit, shelf, movement and pair shares hold
 # (offer_weights_test): the nudge picks which piece of a bucket shows, never which bucket.
 const MAKER_NUDGE_AT := 2
-const MAKER_NUDGE := 1.5
+# 1.1 since the pass D fold (was 1.5): with every world 1 part naming a maker the nudge fires on
+# far more draws, and 1.5 moved bucket shares past offer_weights_test's 0.03 drift bar.
+const MAKER_NUDGE := 1.1
 # Off only for a measurement that needs the kit lean alone on a fixed seed (offer_weights_test).
 static var maker_nudge_on := true
 
@@ -325,9 +331,9 @@ const NEUTRAL_REPEAT_CAP := 2
 # enter rows(), ids(), offer_pool() or roll(): a hot-wired part is offered by authorship,
 # never drawn as loot. Each row names both consequences with an icon id and at most three
 # words; "{armor}", "{armor_x}", "{steer}", "{bonus}", "{wear}" and "{wear_x}" are resolved from
-# Build, RunState and HotwireRules by hotwire_choice.gd, so the words follow the tuning. Nothing
-# here equips a part: build.gd offers one after Warden I as a Fit / Recycle choice. Recycle pays
-# recycle_commons common-part recycle values (BUILD-SYSTEMS.md: two for H1, three for H2).
+# HotwireRules.fill, so the words follow the tuning; the label is the gate card's line
+# (_hotwired_spec). Nothing here equips a part: build.gd puts one at the gates after Warden I
+# (pass D fold; the Fit / Recycle choice is retired). recycle_commons is what a burden pays.
 # Spark Tread needs armour mode too: its cost is rolling wear, which only armour mode takes.
 # Burden start values (SG4; comps/gunfire/scrolls-and-synergies.md:86 sweep of 0 to 10 burdens,
 # survival bar in burden_parts_test): each burden is a small pure cost, so ten stay a felt
@@ -340,11 +346,11 @@ const BURDEN_MAGNET_LOSS := 0.10
 const HOTWIRE_CAP_WORLD_ONE := 1
 const HOTWIRE_CAP_LATER := 2
 const HOTWIRED := {
-	"riveted_shell": {"name": "Riveted Shell", "tags": ["mass"], "needs_armor": true, "recycle_commons": 2,
+	"riveted_shell": {"name": "Riveted Shell", "tags": ["mass"], "maker": "fleet_surplus", "needs_armor": true, "recycle_commons": 2,
 		"label": "{armor} armour. Air steering \u2212{steer}%.",
 		"upside": {"icon": "cat_defense", "words": "{armor_x}x armour"},
 		"downside": {"icon": "cat_mobility", "words": "Air steering \u2212{steer}%"}},
-	"spark_tread": {"name": "Spark Tread", "tags": ["kinetic", "arc"], "needs_armor": true, "recycle_commons": 3,
+	"spark_tread": {"name": "Spark Tread", "tags": ["kinetic", "arc"], "maker": "spillway_works", "needs_armor": true, "recycle_commons": 3,
 		"label": "Big signature hits. {wear} rolling wear.",
 		"upside": {"icon": "cat_damage", "words": "+{bonus}% signature hit"},
 		"downside": {"icon": "cat_defense", "words": "{wear_x}x rolling wear"}},
@@ -369,9 +375,9 @@ const HOTWIRED := {
 # One common part's recycle value in cogs (design-v3/research/economy/ECONOMY.md, Cogs: recycling).
 const RECYCLE_COMMON := 10
 
-# The four Evolved parts (Synergies rows with "evolution"). Not in CATALOGUE, so they never
-# enter rows(), ids(), offer_pool(), roll() or roll_gate(): build.gd grants one when both
-# ingredients are held (source "evolution"). Rarity evolved carries roll weight 0 too.
+# The four Evolved parts (their ingredient pairs are Synergies.EVOLUTIONS). Not in CATALOGUE, so
+# they never enter rows(), ids(), offer_pool(), roll() or roll_gate(): build.gd grants one when
+# both ingredients are held (source "evolution"). Rarity evolved carries roll weight 0 too.
 const EVOLVED := {
 	"breaker_drive": {"name": "Breaker Drive", "verb": "Hit 35% harder, +8 punch", "text": "+8 punch, +35% weapon damage. From Wrecking Ball.",
 		"rarity": "evolved", "tier": 3, "family": "weapon", "tags": ["kinetic", "speed"], "punch": 8.0,
@@ -474,6 +480,10 @@ static func _base_row(part_id: String) -> Dictionary:
 		return _settled(EVOLVED[part_id])
 	if is_burden(part_id):
 		return _settled(_burden_spec(part_id))
+	if Relics.is_relic(part_id):
+		return Relics.part_row(part_id)
+	if HOTWIRED.has(part_id):
+		return _hotwired_spec(part_id)
 	var generated := ItemGen.generated_row(part_id)
 	return _settled(generated) if not generated.is_empty() else generated
 
@@ -619,7 +629,7 @@ static func def(part_id: String) -> Resource:
 
 
 static func has(part_id: String) -> bool:
-	return rows().has(part_id) or EVOLVED.has(part_id) or is_burden(part_id) or ItemGen.is_generated(part_id) and not ItemGen.parse(part_id).is_empty()
+	return rows().has(part_id) or EVOLVED.has(part_id) or HOTWIRED.has(part_id) or Relics.is_relic(part_id) or ItemGen.is_generated(part_id) and not ItemGen.parse(part_id).is_empty()
 
 
 # The authored pool, catalogue first. Generated recipes are unbounded and not listed.
@@ -692,6 +702,17 @@ static func _burden_spec(part_id: String) -> Dictionary:
 	spec["icon"] = String(hot["downside"]["icon"]).trim_prefix("cat_")
 	spec["text"] = _burden_fill(hot["label"], hot["part"])
 	return spec
+
+
+# A hot-wired part's row on the ladder: a rare, one copy, its maker, its label as the card line.
+# It carries no stat: build.gd reads the held id (shell_held, tread_fitted). Not in rows(), so
+# no shelf, pool or roll draws it; the Warden's gates put it up (build.gd).
+static func _hotwired_spec(part_id: String) -> Dictionary:
+	var hot: Dictionary = HOTWIRED[part_id]
+	var line := HotwireRules.fill(hot["label"])
+	return {"name": hot["name"], "verb": line, "text": line, "tags": hot["tags"], "maker": hot["maker"],
+		"rarity": "rare", "tier": 2, "family": "stat", "icon": String(hot["upside"]["icon"]).trim_prefix("cat_"),
+		"cap": 1, "stack": "capped"}
 
 
 # Cogs a hot-wired part recycles for; 0 for an id that is not hot-wired.
@@ -783,25 +804,67 @@ static func tag_sets(held: Array) -> Array:
 	return sets
 
 
-# The named synergy taking part_id now would complete, or "".
+# A part's maker ("spillway_works", "moss", ...), or "" for a part no maker made (a generated
+# recipe, an Evolved part, a burden, a token). Relics and hot-wired parts carry theirs.
+static var _maker_of := {}
+
+
+static func maker_of(part_id: String) -> String:
+	if not _maker_of.has(part_id):
+		_maker_of[part_id] = String(row(part_id).get("maker", "")) if has(part_id) else ""
+	return _maker_of[part_id]
+
+
+# Held parts that set shop and fabricator prices: every part but relics, which come from caches
+# and never through a till (pass D fold: a relic on the ladder adds no price step).
+static func priced_count(held: Array) -> int:
+	return held.filter(func(part_id): return not Relics.is_relic(String(part_id))).size()
+
+
+# maker -> distinct pieces in held: a copy of a piece already held is not a second piece.
+static func maker_counts(held: Array) -> Dictionary:
+	var seen := {}
+	var out := {}
+	for part_id in held:
+		var maker := maker_of(String(part_id))
+		if maker == "" or seen.has(part_id):
+			continue
+		seen[part_id] = true
+		out[maker] = int(out.get(maker, 0)) + 1
+	return out
+
+
+# The maker trick taking part_id now would wake, or "" (Synergies.AT pieces of one maker).
 static func completed_by(part_id: String, held: Array) -> String:
-	return Synergies.completed_by(held, tag_sets(held), part_id, tags_of(part_id))
+	if part_id in held:
+		return ""
+	return Synergies.completed_by(maker_counts(held), maker_of(part_id))
 
 
-# The part in pool that would complete a named synergy, or "".
+# The maker trick taking part_id now would start toward, or "": the first piece of its maker.
+static func started_by(part_id: String, held: Array) -> String:
+	if part_id in held:
+		return ""
+	return Synergies.started_by(maker_counts(held), maker_of(part_id))
+
+
+# The part in pool that would wake a maker trick as its named pair, or "": the callout partner
+# of a held part whose maker is one piece short. Any piece of that maker wakes the trick, but
+# the bait pulls only the named one, so the "one more piece" slot stays as rare as the old
+# named pairs' and does not crowd out each pilot's kit lean (offer_weights_test).
 static func completing_part(held: Array, pool: Array) -> String:
-	var sets := tag_sets(held)
+	var counted := maker_counts(held)
+	var wanted := {}
+	for trick_id in Synergies.ROWS:
+		var call := Synergies.callout(trick_id)
+		if call.is_empty() or not Synergies.in_play(trick_id) or int(counted.get(Synergies.ROWS[trick_id]["maker"], 0)) != Synergies.AT - 1:
+			continue
+		if call["a"] in held and not call["b"] in held:
+			wanted[call["b"]] = true
+		elif call["b"] in held and not call["a"] in held:
+			wanted[call["a"]] = true
 	for key in pool:
-		if Synergies.completed_by(held, sets, key, tags_of(key)) != "":
-			return key
-	return ""
-
-
-# The not-yet-live named synergy whose hint card shows part_id as its ingredient, or "".
-static func ingredient_of(part_id: String, held: Array) -> String:
-	var live := Synergies.active(held, tag_sets(held))
-	for key in Synergies.ROWS:
-		if Synergies.in_play(key) and Synergies.ROWS[key]["shown"] == part_id and not key in live:
+		if wanted.has(key):
 			return key
 	return ""
 

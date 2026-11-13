@@ -48,6 +48,25 @@ const ROWS := {
 	"paint_cannon_verdigris": {"slot": "paint", "pilot": "remembered_cannon", "name": "Old Verdigris", "starter": true, "tint": Color("4f7f7a")},
 	"paint_any_kelp": {"slot": "paint", "pilot": "", "name": "Kelp", "starter": false, "tint": Color("3f6b4f")},
 	"paint_any_cobalt": {"slot": "paint", "pilot": "", "name": "Cobalt", "starter": false, "tint": Color("2a4fd6")},
+	# Four paints for the activity and discovery grants that paid head starts no screen shows
+	# (systems audit pass D, row 31, 11 Nov 2026). Tint only, so no art is owed.
+	"paint_any_shift": {"slot": "paint", "pilot": "", "name": "Shift Denim", "starter": false, "tint": Color("4a6a8c")},
+	"paint_any_mortar": {"slot": "paint", "pilot": "", "name": "Mortar Dust", "starter": false, "tint": Color("b8ab95")},
+	"paint_any_cache": {"slot": "paint", "pilot": "", "name": "Cache Green", "starter": false, "tint": Color("4e8a6c")},
+	"paint_any_spark": {"slot": "paint", "pilot": "", "name": "Spark Teal", "starter": false, "tint": Color("39a8c9")},
+	# Eleven paints for the content-family records that paid nothing (feature-fit.md row 30, 12 Nov 2026).
+	# Tint only, so no art is owed; none is mint, cobalt, pearl, gold or the Mind's purple.
+	"paint_any_jolt": {"slot": "paint", "pilot": "", "name": "Rubber Mat", "starter": false, "tint": Color("444a52")},
+	"paint_any_sluice": {"slot": "paint", "pilot": "", "name": "Sluice Foam", "starter": false, "tint": Color("cfe3dc")},
+	"paint_any_tether": {"slot": "paint", "pilot": "", "name": "Tether Oxblood", "starter": false, "tint": Color("6e2a2a")},
+	"paint_any_soaked": {"slot": "paint", "pilot": "", "name": "Soaked Navy", "starter": false, "tint": Color("23406b")},
+	"paint_any_float": {"slot": "paint", "pilot": "", "name": "Boom Teak", "starter": false, "tint": Color("7a5236")},
+	"paint_any_foreman": {"slot": "paint", "pilot": "", "name": "Foreman Khaki", "starter": false, "tint": Color("8c7d4f")},
+	"paint_any_signal": {"slot": "paint", "pilot": "", "name": "Signal Steel", "starter": false, "tint": Color("7d8b96")},
+	"paint_any_tape": {"slot": "paint", "pilot": "", "name": "Tape Umber", "starter": false, "tint": Color("3e2c22")},
+	"paint_any_stake": {"slot": "paint", "pilot": "", "name": "Stake Clay", "starter": false, "tint": Color("9a7a62")},
+	"paint_any_maker": {"slot": "paint", "pilot": "", "name": "Workshop Olive", "starter": false, "tint": Color("6b6b2e")},
+	"paint_any_overflow": {"slot": "paint", "pilot": "", "name": "Overflow Sea", "starter": false, "tint": Color("2f6f7f")},
 	"paint_any_brine": {"slot": "paint", "pilot": "", "name": "Brine", "starter": false, "tint": Color("7fb8c4")},
 	"paint_any_ink": {"slot": "paint", "pilot": "", "name": "Ink", "starter": false, "tint": Color("1c1f2b")},
 	"paint_any_sky": {"slot": "paint", "pilot": "", "name": "Highdraft Sky", "starter": false, "tint": Color("8fc4ec")},

@@ -12,7 +12,15 @@ extends RefCounted
 
 # Fixed bus levels in dB, under the player's volume sliders (settings_store volumes, 0 to 1).
 # Ambient carries the parks' life (ambient_life.gd) and sends to Master beside the effects.
-const BUS_DB := {"Music": -4.0, "SFX": -1.5, "UI": -8.0, "Ambient": -7.0}
+# The band leads the effects (Andrew, 12 Nov: the effects drowned the music). Measured one side
+# at a time (ace_bounce --only, skipper seed 1, 150 s, the recorded band on the PC): the music
+# sat 1 to 4 LU under the effects in every state. SFX sits 4.5 dB lower than it did, and the
+# music row is 3 dB higher with every non-fight state 3 dB deeper, so only the fights lift. The
+# pass line is the music at least 3 LU over the effects in each fight state, with the whole mix
+# within 1 LU of where it was. The effects' level is spread over warnings, slams and stingers,
+# not the rapid hits (hit_thwack, weapon_zap and clank together are about 6% of it), so the bus
+# is the lever, not a per-cue trim.
+const BUS_DB := {"Music": -1.0, "SFX": -6.0, "UI": -8.0, "Ambient": -7.0}
 
 # Glue on the effects bus: catches a pile-up before the master has to.
 const SFX_COMP := {"threshold_db": -16.0, "ratio": 3.0, "attack_us": 3000.0, "release_ms": 120.0, "gain_db": 0.0}
@@ -33,16 +41,16 @@ const MASTER_CEILING_DB := -1.5
 # No state moves the SFX bus: the stinger lane rides it, so a death, a victory or a run's first
 # stinger always lands at full level.
 const STATES := {
-	"menu": {"Music": -3.0, "Ambient": -14.0},
-	"camp": {"Music": -5.0, "Ambient": -6.0},
-	"roam": {"Music": -2.0},
+	"menu": {"Music": -6.0, "Ambient": -14.0},
+	"camp": {"Music": -8.0, "Ambient": -6.0},
+	"roam": {"Music": -5.0},
 	"combat": {"Music": -1.5, "Ambient": -5.0},
-	"shop": {"Music": -5.0, "Ambient": -6.0},
+	"shop": {"Music": -8.0, "Ambient": -6.0},
 	"miniboss": {"Ambient": -10.0},
 	"boss_1": {"Music": -1.0, "Ambient": -14.0},
 	"boss_2": {"Music": -0.5, "Ambient": -14.0},
 	"boss_3": {"Ambient": -16.0},
-	"run_over": {"Music": -4.0, "Ambient": -16.0},
+	"run_over": {"Music": -7.0, "Ambient": -16.0},
 }
 # The systemic pressure (pressure_changed) at which a stage counts as a fight, and below which
 # it is roaming again (hysteresis, so a fight's edge does not flicker the mix).
@@ -64,8 +72,10 @@ const GLIDE_DOWN_DB_S := 30.0
 const GLIDE_UP_DB_S := 6.0
 
 # The telegraph focus: a danger sound or a threat row (audio.gd _is_telegraph), now or on the beat, drops the music and the ambience for hold_s,
-# then they come back at GLIDE_UP_DB_S.
-const FOCUS := {"Music": -3.0, "Ambient": -8.0, "hold_s": 0.4}
+# then they come back at GLIDE_UP_DB_S. A Warden fight sounds a warning about twice a second, so
+# the focus held the music down for a third of a measured run, so it dips 2 dB (12 Nov); the
+# band's own duck on every priority 2 cue (audio.gd play) still opens the room for the warning.
+const FOCUS := {"Music": -2.0, "Ambient": -8.0, "hold_s": 0.4}
 
 # Room for the Warden form's drop (tuning drop_room, off by default): offsets in dB that hold from
 # just before the drop's beat for DROP_ROOM_BARS bars of the band's grid, gliding in at
@@ -78,6 +88,21 @@ const FOCUS := {"Music": -3.0, "Ambient": -8.0, "hold_s": 0.4}
 const DROP_ROOM := {"duck": {"SFX": -5.0}, "lift": {"Music": 3.0}}
 const DROP_ROOM_BARS := 2
 const DROP_ROOM_LEAD_S := 0.1
+
+# Room for a fact the player must hear over anything (direction 18: sound is the fairness
+# channel). When one of these sounds starts, every other effect voice already sounding, or
+# starting within hold_s, drops by db, then comes back at its own level. Warnings keep theirs
+# (audio.gd DANGER_SOUNDS), so a hit never hides the next tell. The PC's mix read (12 Nov) had
+# hurt under reactor_erupt both times it played: the vent that erupts is what hit the player.
+const MAKE_ROOM := {"hurt": {"db": -10.0, "hold_s": 0.35}}
+
+
+# The offset a voice of sound takes while room is held for room_for: none for room_for's own
+# voices or a warning.
+static func room_db(room_for: String, sound: String, warning: bool) -> float:
+	if warning or sound == room_for or not MAKE_ROOM.has(room_for):
+		return 0.0
+	return float(MAKE_ROOM[room_for]["db"])
 
 # The crowd rule: the high-rate cues in CROWD_SOUNDS (the ones a swarm or a streak stacks,
 # 12 a second each in a measured Warden fight) get quieter as live effect voices pile up, by

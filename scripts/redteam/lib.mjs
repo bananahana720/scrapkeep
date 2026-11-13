@@ -93,11 +93,15 @@ function botJob(persona, pilot, seed, quick) {
 // game never has (wave 36, PF-33). --warm-band=1 does what a played game does, and the seed replays the same.
 export const PLAYED_AUDIO = "--warm-band=1";
 
+// bot_run.gd plays the legacy maps unless told otherwise; a launched game plays the park table, so the red
+// team does too (wave 37: PF-31's stuck detours were a legacy stage 2 crease the park flume does not have).
+export const PLAYED_TABLE = "--table=park";
+
 export function botArgs(job, out) {
   return [
     "--headless", "--fixed-fps", "90", "--path", "sketches/core-loop", "--script", "res://tools/bot_run.gd", "--",
     "--out=" + out, "--policy=" + job.policy, "--seeds=" + job.seed, "--pilot=" + job.pilot,
-    PLAYED_AUDIO, "--bot-audit=1", "--bot-profile=1", ...job.args,
+    PLAYED_TABLE, PLAYED_AUDIO, "--bot-audit=1", "--bot-profile=1", ...job.args,
   ];
 }
 

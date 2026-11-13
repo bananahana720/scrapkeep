@@ -43,8 +43,39 @@ So the score is one set, and the player is the room the DJ is reading. Every mov
 | Pull the room down for a held moment | The world slows for a close-up (Brindle's entrance): a falling sweep in, the music and the ambience held under it, a rising sweep out | Plays today, for a hand on the controls |
 | Mix the next record in on the bar | Zone, fight and moment changes enter on a bar or a beat | Plays today |
 | Mix in key | Each world has one key (D, E, G) and each pack declares it | Declared; not checked when a pack is swapped |
+| Answer the phrase: the lead steps back and June plays a bar | The room's mood and colour, on each phrase's last bar | The set director, behind `--set-director=on` |
+| Swap the bass out the bar before a peak | The room rising toward the peak; a set piece announced to land next bar | The set director, behind `--set-director=on` |
 | Ride the filter into a drop, pump the chords against the kick, tape stop, switch-hit | A set piece's lead time, a kill chain, the last phase | After the world 1 sitting |
 | Cue the next record before the room needs it | The conductor's warning of what is coming | After the world 1 sitting |
+
+### The DJ at the decks: the set director
+
+Andrew, 12 November 2026: "I want it to feel like there is a backend dj that mixes things and orchestrated things perfectly with the players experience", and "I want a dj club vibe. I love house and a jazz-house crossover dj persona" (ruling di). So the 2010 band plays as a club set: **Arlo is the DJ behind the decks, playing a jazz-house crossover set, and June sits in on alto.** The tunes, the year, the keys and the grid are unchanged.
+
+`src/presentation/set_director.gd` is Arlo. Half a bar before each bar line of the recorded band, `audio.gd` hands it one read of the room and books the plan it returns on that bar. The director never moves game time, never touches the synth band and never decides a fight section: the Warden form keeps those. It is behind the launch switch `--set-director=on`, off by default until Andrew has heard it on and off (ruling cq).
+
+| It reads | Into |
+| --- | --- |
+| Pressure, threat, the chain, the approach, rolling speed, Heat's band, Overtime, the fight word | One energy, 0 to 1, and a mood: lull, build, peak, release. A mood climbs on the next bar; it falls only after two bars low, and a peak falls through two bars of release |
+| Low armour, Overtime, Heat at hot or redline | The colour June answers in, in that order |
+| A warning sounding, another melodic cue in the last two bars, a fight section that owns the lead | No answer this phrase |
+| A set piece announced to land within the next bar; the room rising toward the peak line | The bass swap, or a filter roll inside a fight |
+| The fight word: the guard holding or cracking; a boss or set-piece song (an anthem) | June out of an anthem and out of any bar under a warning; an anthem plays as written |
+
+| Move | When | What you hear |
+| --- | --- | --- |
+| Answer | The last bar of an 8-bar phrase, counted from when the band starts, when nothing else owns the melody and the last move was at least 16 bars ago; taken back if a fight section, warning, caller or quote arrives after it is booked | The recorded lead steps back to about a third, and June plays one bar from her phrase book in the room's colour or mood: lazy and low in a lull, climbing in a build, the hook an octave up at the peak, a run up the ladder when hot, a brass call on Overtime, a fall that winks (a bell after it) when hanging on |
+| Home | The first bar of a release | A cadence home to D |
+| Bass swap | The bar before a peak or an announced set piece, outside a fight; once per climb and once per announcement | The bass steps out for one bar and slams back on the downbeat |
+| Filter roll | The same, inside a fight | The band rolls under a low-pass across the bar and opens on the downbeat |
+| Breakdown | A phrase end June does not take, when the last move was at least 16 bars ago | The drums step out for the bar; the melody carries on |
+| Hold | Anything else, and always inside the band's own directed sections (a pivot, the Warden's breath, drop, break, return and home, a directed piece) and a boss or set-piece song | Nothing changes |
+
+The move rate (Andrew, 13 November 2026, on the whole-stretch page: "it sounds really chaotic and I can't really follow the song"): melody first. At least 16 bars pass between any two moves, across records, so the song carries and each move is an event: about two a minute at most, fights included. Boss and set-piece songs play as written. The moves that remain only take sound away, and the lead never drops out. This replaces the 12 November target of a move every phrase, which gave the Brindle fight 15 moves in 90 seconds. `tests/set_director_test.gd` holds the gap on a scripted stretch of play, and the bounce receipt's `set_plans` rows carry the time, the fight word and why a phrase end held (`gap` among them), so the PC can measure it on real runs.
+
+How her melody progresses: each book (lull, build, peak, release, hot, overtime, hanging) is four or two one-bar phrases written as statement, variation, development and home, and each is walked in order, so successive answers tell a short story and land where they began. An answer never repeats the one before it. Every note is in D Dorian or a C# leading home, never on Eb, Ab or Bb, the threat notes, so an answer is never heard as a warning (the test checks every phrase). Trims and the low-pass only take sound away and are gone by the next bar; the directed sections and the Warden's breath and drop ignore them.
+
+What it borrows, as principles only (research notes in [sound/DIRECTOR-RESEARCH.md](sound/DIRECTOR-RESEARCH.md)): Left 4 Dead's one intensity number with a held peak and a forced relax; Metal: Hellsinger's best layer saved as the reward; Elias's rule that the melody moves slower than the drums; Hades's thin-out after a fight; Celeste's silence before a confrontation (the bass swap); and Roboquest's drive and its boss music that shifts at a phase. Nothing is copied: no melody, stem or sample from any of them.
 
 ### Who has the melody
 
@@ -56,6 +87,9 @@ The rules of orchestration, each with what enforces it today.
 4. **Registers say who is speaking.** Rewards and the pilot's own actions climb D Dorian. Threats sit on Eb, Ab and Bb, outside the scale on purpose, so a warning is heard as foreign. [SOUND-STORY.md](../SOUND-STORY.md) owns the registers.
 5. **The band answers, it does not talk over.** A call gets an answer; the solo is handed round. The busier the cues, the thinner the band should play; nothing thins it today (after the sitting).
 6. **Every fight ends on the drop** (the hype rule below).
+7. **Combat feedback is percussion, not notes** (Andrew, 13 November 2026: the hit-scan sound and the other feedback sounded like jazz instruments and fought the melody). The facts a fight repeats many times a second (the shot, a hit, a crit, a kill and its chain, being hurt, a deflect, a weak point, the interface click, a hit on the beat) carry no pitch the band could clash with, and follow the conventions a shooter player already knows: the shot is a punch with a crack, the hit marker a high tick, the crit that tick with a metal ring, the kill a heavier break, the chain heavier with each link, damage a blow from below. Each lives in two lanes the melody leaves free: a short body from 120 to 300 Hz (above the kick, and still there on a laptop speaker) and a crack or inharmonic ring above 3 kHz; what crosses the melody's band is noise under 15 ms, heard as a click. A hit on the beat claps with the drums instead of playing a sax stab. Warnings stay tonal alarms on Eb, Ab and Bb, and pickups and rewards keep their pitched chimes, because those are the conventions there. [sound/feedback_set.py](sound/feedback_set.py) makes the sounds and lists each convention; the measure is the melody cover (how far the effects raise the melody's own loudest bands in a fight) and each cue's lead in its best third of an octave over the band.
+
+8. **A skill cast on the beat is answered by the band** (Andrew, 13 November 2026, after rule 7: abilities may be musical where basic feedback is not, and timing a skill to the music should be a reward the player finds). The skill's own sound plays the moment it is cast, never moved to the grid, because the player's timing is the point and the cooldown already stops it repeating. A special, gauge release or line skill cast within 80 ms of a beat (the on-beat hit's window) adds the pilot's motif in its own voice on the next sixteenths, in the live key: its first two notes, and the whole motif with the last note doubled in the band voice in a live boss fight or when a line skill bites an elite pack's member, a miniboss or the Warden (a special or gauge release names no foe). A line skill is answered at its bite, not its press. Sound only, like the on-beat hit (Q10). Nothing on screen names it. `skill_answer` in `src/presentation/audio.gd`; `tests/skill_on_beat_test.gd`. The answer size (two notes) is a taste call Andrew can overturn.
 
 ### How it is checked
 
@@ -92,6 +126,10 @@ He gave the threads their own judgement on mechanics and tuning for this build-o
 - Slow motion is marked at both ends, quietly and above 200 Hz, and the music neither slows nor filters: it is held 3 dB under, as it is for a warning. A tape stop on the band itself waits for after the sitting.
 - The Cannon keeps its bent chime and has no mouth: it is a machine on the crew's side.
 - Moss sounds the same at his bench as on a call.
+- The set director's numbers (12 November 2026): an 8-bar phrase, a mood held two bars before it falls, two bars of release, the lead at 0.35 under an answer, the filter roll at 0.85 wet of a 420 Hz low-pass, answers 2 dB under the pilot's quote. All are constants at the top of `set_director.gd`, and the low-pass's in `ace_sequencer.gd`.
+- June answers in the room's colour before its mood: low armour first, then Overtime, then Heat at hot or redline. Low armour already strips the recorded lead, so her winking fall is the only melody there; it plays at the end of each phrase, not throughout.
+- The director stays out of the fight's sections: it adds June's answer while the guard holds, never in the breath, the drop or the break, and never trims a directed section.
+- The combat feedback sounds (rule 7) sit at about the loudness they had, the shot a little under (it plays ten times a second): trims weapon_zap -9, hit_thwack -1, crit_ping -5, kill_pop -5, kill_chain_tier 0, ui_tick -8, and the on-beat clap about at a ranged hit's level, 8 dB under where the sax stab sat. Over the recorded world 1 fight these cut the effects' cover of the melody from a median 6.8 dB to 2.0 dB, and every cue still leads its best third of an octave over the band; over Brindle's anthem the chain's ratchet sits 3 dB under its own kill, so it is heard as part of the kill. The PC take of a world 1 run (13 November, job P) found the hit buried under its own shot, so the shot's crack sits at 2.5 to 5 kHz and the hit's tick above 5 kHz, and the hit and the chain went up 2 and 5 dB; in a rebuild of that run the hit leads its best band by +2.1 dB and the shot by +1.8. A chain link that lands with a special's blast stays under it, as a tick under its own event's big sound.
 - Kest's kick reads a tenth of a decibel over the peak line after its trim. It is left alone: the limiter holds it, and lowering it would change how loud it is.
 
 ## Tone: a game that loves having fun
@@ -183,7 +221,7 @@ The four boss previews from 2026-10-11 remain comparison material for this secti
 
 ## Event sounds
 
-Short, a little whimsical and tied to their event, like a rice cooker's end-of-cycle tune. Every pitch is in D Dorian so events never clash with the band. Gameplay sound plays on the frame. Only the musical answer waits for the grid.
+Short, a little whimsical and tied to their event, like a rice cooker's end-of-cycle tune. Every pitch is in D Dorian so events never clash with the band, and the combat feedback sounds carry no pitch at all (rule 7 under "Who has the melody"). Gameplay sound plays on the frame. Only the musical answer waits for the grid.
 
 | Event | Length | What you hear | Why it fits |
 | --- | --- | --- | --- |

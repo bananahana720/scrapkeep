@@ -92,13 +92,11 @@ func _stage(table: String) -> void:
 			var plan: Dictionary = gates.choose_placement(game.player.ball_position(), Vector3.FORWARD)
 			_check("post-break placement returns sites", not plan.is_empty() and plan.get("spots", []).size() == gates.offers.size(),
 				"sites %d" % plan.get("spots", []).size())
+			# The Warden break's hot-wired part stands at the gates with the rolled picks (pass D fold).
 			var pending_offer: Dictionary = game.build.hotwire_pending()
-			var before: int = gates.offers.size()
-			_check("hotwire offer opens after break", pending_offer["state"] == "open", str(pending_offer))
-			var fitted: bool = game.build.hotwire_fit()
 			var ids: Array = gates.offers.map(func(offer): return offer["part_id"])
-			_check("hotwire fit places its gate", fitted and ids.size() == before + 1 and ids.has(pending_offer["part_id"]),
-				"fitted %s, sites %d -> %d" % [fitted, before, ids.size()])
+			_check("the break puts the hot-wired part at a placed gate", pending_offer["state"] == "fit" and ids.has(pending_offer["part_id"]),
+				"pending %s, gate parts %s" % [pending_offer, ids])
 	else:
 		_check("old Ground is the single body", ground is StaticBody3D and bodies.size() == 1)
 		if ground is CollisionObject3D:

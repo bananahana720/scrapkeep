@@ -3,6 +3,7 @@ extends "res://src/world/device.gd"
 const Parts := preload("res://src/build/parts.gd")
 const Relics := preload("res://src/build/relics.gd")
 const ItemGen := preload("res://src/build/item_gen.gd")
+const TierMark := preload("res://src/build/tier_mark.gd")
 const StageMap := preload("res://src/world/stage_map.gd")
 
 # A cracked wall and the buried cache behind it, the secrets family (LOOP-REDESIGN
@@ -30,7 +31,7 @@ const PICK_RARITIES := ["common", "rare"]
 const PEDESTALS := [Vector3(-4.0, 0.0, -3.0), Vector3(0.0, 0.0, -3.5), Vector3(4.0, 0.0, -3.0)]
 const PEDESTAL_REACH := 1.7
 # RL2: the chance a cache's last pedestal holds a relic for a slot the pilot has not
-# filled, instead of a part. Drawn from the device's own luck stream under another key,
+# filled (a part on the relic rung) instead of an ordinary part. Drawn from the device's own luck stream under another key,
 # so the parts roll above it consumes exactly what it did before relics.
 const RELIC_CHANCE := 0.2
 const LANE_OFFSET := 6.0
@@ -58,7 +59,7 @@ var _roof: GeometryInstance3D
 var _pedestals: Array = []
 var _inside: Array = []
 const MODEL := "res://assets/models/world_one/cracked_cache.glb"
-const REQUIRED := ["CacheShell", "CacheWall", "CacheChest", "CacheLid", "CachePedestal"]
+const REQUIRED := ["CacheShell", "CacheRoof", "CacheWall", "CacheChest", "CacheLid", "CachePedestal"]
 static var _shared: Array = []
 # VX3: the shell and chest wear the workshop finish (concrete and painted metal), whose
 # chipped edges give the pocket a lighter rim. The finish multiplies the vertex colours, so the
@@ -130,16 +131,9 @@ func _build_pedestals(parts: Array) -> void:
 		if parts.is_empty():
 			cylinder(0.8, 0.6, Vector3.UP * 0.3, Palette.solid(Palette.CHARCOAL), pedestal)
 		else:
-			_model_part(parts, "CachePedestal", pedestal)
-		var gem := MeshInstance3D.new()
-		var sm := SphereMesh.new()
-		sm.radius = 0.45
-		sm.height = 0.9
-		sm.radial_segments = 4
-		sm.rings = 2
-		gem.mesh = sm
-		gem.material_override = Palette.solid(Palette.SAND)
-		gem.material_override.vertex_color_use_as_albedo = true
+			_attach(parts, "CachePedestal", pedestal)
+		var gem := Node3D.new()
+		gem.name = "Gem"
 		gem.position = Vector3.UP * 1.4
 		pedestal.add_child(gem)
 		var label := WorldPrompt.new()
@@ -237,15 +231,25 @@ func fire() -> bool:
 		_inside.append(_on(p, ball))
 		if not shown:
 			continue
-		var is_relic := Relics.has(offers[i])
-		var d: Resource = Parts.def(Relics.part_of(offers[i]) if is_relic else offers[i])
+		var d: Resource = Parts.def(offers[i])
 		var rarity: String = d.rarity if d != null else "common"
-		p["gem"].material_override = Palette.solid(gem_color(rarity), 2.0)
-		p["gem"].material_override.vertex_color_use_as_albedo = true
-		var words := (Relics.name_of(offers[i]) if is_relic else Parts.display_name(offers[i])).split(" ", false)
+		_set_gem(p["gem"], rarity)
+		var words := Parts.display_name(offers[i]).split(" ", false)
 		var icon: String = "cat_" + (d.icon_category if d != null and d.icon_category != "" else "utility")
 		p["label"].set_parts(" ".join(words.slice(0, WorldPrompt.TITLE_WORDS)), "", icon)
 	return true
+
+
+# A pedestal gem is its rarity's mark (TierMark): the rung's shape in the rung's colour.
+static func _set_gem(holder: Node3D, rarity: String) -> void:
+	for child in holder.get_children():
+		holder.remove_child(child)
+		child.queue_free()
+	var mark := TierMark.mark(rarity, Palette.solid(gem_color(rarity), 2.0))
+	# Device surfaces take colour from the mesh (device_props_asset_test); primitives read white.
+	for m: MeshInstance3D in mark.find_children("*", "MeshInstance3D", true, false):
+		m.material_override.vertex_color_use_as_albedo = true
+	holder.add_child(mark)
 
 
 # A pedestal gem wears its rarity's rung of the item ladder, the colour the reward card uses.
@@ -254,11 +258,11 @@ static func gem_color(rarity: String) -> Color:
 	return ItemGen.RARITY[id if id != "" else "common"]["color"]
 
 
-# The relic this cache holds, or "". Only a relic of this stage's world the pilot can use
+# The relic part this cache holds, or "". Only a relic of this stage's world the pilot can use
 # for an empty slot.
 func _relic_offer() -> String:
 	var tree = ctx.player.tree if ctx.player != null else null
-	var pool := Relics.eligible(ctx.run.class_id(), ctx.run.relics, tree, ctx.stages.world_of(ctx.run.stage))
+	var pool := Relics.eligible(ctx.run.class_id(), Relics.held(ctx.run.parts), tree, ctx.stages.world_of(ctx.run.stage))
 	if pool.is_empty():
 		return ""
 	var rng: RandomNumberGenerator = system.luck(id + ":relic")
@@ -266,7 +270,7 @@ func _relic_offer() -> String:
 	var pick := rng.randi()
 	if not relic_guaranteed and roll >= relic_chance:
 		return ""
-	return pool[pick % pool.size()]
+	return Relics.part_of(pool[pick % pool.size()])
 
 
 func _on(p: Dictionary, ball: Vector3) -> bool:
@@ -292,10 +296,7 @@ func take(index: int) -> void:
 	spent = true
 	for p in _pedestals:
 		p["node"].visible = false
-	if Relics.has(taken):
-		ctx.run.add_relic(taken, "cache")
-	else:
-		ctx.run.add_part(taken, "cache")
+	ctx.run.add_part(taken, "cache")
 	ctx.events.world_fact.emit("cache_spent", global_position)
 
 
@@ -319,14 +320,15 @@ func _build_model(parts: Array) -> void:
 		_collision_box(Vector3(1.0, tall, HALF_D * 2.0 + 2.0), Vector3(s * (HALF_W + 0.5), mid, 0.0))
 	_collision_box(Vector3(HALF_W * 2.0 + 2.0, 1.0, HALF_D * 2.0 + 2.0), Vector3(0.0, HEIGHT + 0.5, 0.0))
 	_wall = _collision_box(Vector3(HALF_W * 2.0, tall, 1.0), Vector3(0.0, mid, HALF_D + 0.5))
-	var panel := _model_part(parts, "CacheWall", _wall)
+	var panel := _attach(parts, "CacheWall", _wall)
 	panel.position = Vector3.ZERO
-	_model_part(parts, "CacheShell")
+	_attach(parts, "CacheShell", self)
+	_attach(parts, "CacheRoof", self)
 	var chest := Vector3(0.0, 0.0, -HALF_D + 1.2)
 	chest.y = ground_y(chest)
-	var body := _model_part(parts, "CacheChest")
+	var body := _attach(parts, "CacheChest", self)
 	body.position = chest
-	_lid = _model_part(parts, "CacheLid")
+	_lid = _attach(parts, "CacheLid", self)
 	_lid.position = chest + Vector3.UP * 1.35
 
 
@@ -431,7 +433,13 @@ static func _parts() -> Array:
 	return _shared
 
 
-func _model_part(parts: Array, part_name: String, parent: Node3D = self) -> MeshInstance3D:
+# One named part of the model on parent, or null when the model is missing. The park's cracked
+# pockets (activities.gd) wear the shell, wall and pedestal over colliders of their own.
+static func model_part(part_name: String, parent: Node3D) -> MeshInstance3D:
+	return _attach(_parts(), part_name, parent)
+
+
+static func _attach(parts: Array, part_name: String, parent: Node3D) -> MeshInstance3D:
 	for part in parts:
 		if part.name == part_name:
 			var view := MeshInstance3D.new()

@@ -149,6 +149,11 @@ func _kill(pack: Array) -> void:
 func _admitted(stage: String, kind: String, row_index: int, default_pay := false, override := {}) -> Array:
 	var data: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://src/world/park/%s.json" % stage))
 	data.activity_rows[row_index].activity = kind
+	# A speed bar (W1-76) belongs to a cracked cache; retyped as another kind, the site drops it.
+	if kind != "cracked_cache":
+		data.activity_rows[row_index].erase("bar")
+	# Alternatives (W1-70) keep their row's kind and role; retyped, the site drops them and builds the new kind.
+	data.activity_rows[row_index].erase("alts")
 	if default_pay:
 		data.activity_rows[row_index].pay = {}
 	if not override.is_empty():
@@ -271,8 +276,8 @@ func _ladder() -> void:
 		print("tier-rise stage file: %s; %d sites x four kinds x 20 seeds" % [path, data.activity_rows.size()])
 		acts.clear()
 	t.check("tier rises on both stage files", rise, "park_dam and park_test: every authored activity site, four ascending rungs")
-	t.check("shown-equals-paid over 20 seeds", equals_paid and checks == 480 and grants == 840, "%d chests / %d real part grants, expected 480/840" % [checks, grants])
-	t.check("tier shown before commit", shown, "all 24 stands carry their reward tier")
+	t.check("shown-equals-paid over 20 seeds", equals_paid and checks == 560 and grants == 980, "%d chests / %d real part grants, expected 560/980 (seven authored sites with the dam incline cache)" % [checks, grants])
+	t.check("tier shown before commit", shown, "all 28 stands carry their reward tier")
 
 
 func _authored_pay() -> void:

@@ -16,7 +16,7 @@
 #
 # Two meshes, three surfaces (three colour-pass draws), no alpha:
 #   DeflectorBody   fleet_paint (crew barrel, chest and head; flashes with the enemy) and paint
-#                   (vertex colour: snout, ears, pack, one brass tag).
+#                   (vertex colour: pack, one brass tag).
 #   DishWall        paint (dish, rim, frame and grips); origin at the face centre for e10_dish_wall.
 # Provenance: procedural bmesh in this repository; no external meshes or textures.
 #
@@ -32,6 +32,7 @@ from mathutils import Vector
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 import common
+import crew
 import polish
 from common import Part
 
@@ -80,14 +81,14 @@ bm = b.bm
 # --- The crew, behind the dish ---------------------------------------------------------
 b.cyl("fleet_paint", 0.62, 0.72, 1.05, segs=10, loc=(0, 0, -0.575))
 b.cyl("fleet_paint", 0.72, 0.58, 0.90, segs=10, loc=(0, 0, 0.42))
-b.uv("fleet_paint", 0.34, u=10, v=6, loc=(0, -0.05, 1.12))
-b.box("paint", (0.20, 0.24, 0.16), loc=(0, -0.34, 1.06), color=CHAR)  # snout
-for s in (-1, 1):
-    b.cyl("paint", 0.11, 0.0, 0.30, segs=6, loc=(s * 0.19, -0.02, 1.50), color=CHAR)  # ears
+crew.jet_deflector_head(b, (0, -0.05, 1.12), 0.34)
 b.cyl("paint", 0.73, 0.73, 0.10, segs=10, loc=(0, 0, -0.05), color=CHAR)  # strap
 b.box("paint", (0.56, 0.22, 0.56), loc=(0, 0.72, 0.30), color=CHAR)  # pack on the back
 b.box("paint", (0.28, 0.05, 0.18), loc=(0, 0.855, 0.30), color=BRASS)  # the one brass tag
 
+# The old works' two marks, cast in under the Fleet's paint: the crew number and HIRED.
+crew.cast_number(b, "paint", "09", (0.613, -0.199, 0.35), (0.951, -0.309, 0), 0.2)
+crew.hired(b, "paint", (-0.613, -0.199, 0.35), (-0.951, -0.309, 0), 0.1)
 body = b.to_object(parent=root)
 b = Part("DishWall")
 b.subsurf = 0

@@ -99,9 +99,13 @@ static func doors(map) -> Array:
 	var out := []
 	for row in map.park.activity_rows:
 		out.append({"id": String(row.id), "at": Vector2(row.at[0], row.at[1])})
+	# A sealed cache's door: a valve's sinking door, or the cracked wall that stands across the room's mouth
+	# (contraptions.gd sealed_wall; not preloaded here, as activities.gd preloads this file).
 	for row in map.park.contraption_rows:
 		if row.has("door"):
 			out.append({"id": String(row.id), "at": Vector2(row.door.at[0], row.door.at[1])})
+		elif row.get("cache") is Dictionary and row.cache.has("face"):
+			out.append({"id": String(row.id), "at": Vector2(row.at[0], row.at[1])})
 	return out
 
 static func candidates(graph, map) -> PackedInt32Array:
@@ -215,6 +219,8 @@ static func validate_doc(doc, entrance: int) -> String:
 			return "invalid trade timestamp: " + key
 	if not doc.get("seen") is Array or not doc.get("offers") is Dictionary or not doc.get("decisions") is Dictionary:
 		return "invalid trade history"
+	if not preload("res://src/world/hull_mark.gd").doc_ok(doc):
+		return "invalid hull mark"
 	var seen := {}
 	for offer in doc.seen:
 		if not _offer_ok(offer, entrance) or seen.has(int(offer.stage)):

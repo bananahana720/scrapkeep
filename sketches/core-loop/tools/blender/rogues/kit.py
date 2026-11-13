@@ -15,9 +15,10 @@ import struct
 
 import bmesh
 import bpy
-from mathutils import Matrix, Vector
+from mathutils import Vector
 
 import common
+from crew import stencil  # noqa: F401  (the rogues call kit.stencil)
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 SHELLS = os.path.join(HERE, "shells")
@@ -120,40 +121,6 @@ def weights(part):
             if not vertex[layer]:
                 vertex[layer][index] = 1.0
     return bind
-
-
-def stencil(part, slot, text, loc, normal, height, color, depth=0.03, resolution=3):
-    """Raised stencil letters (the crew number, HIRED) on a face whose outward normal is
-    `normal`, centred at `loc`, `height` metres tall."""
-    curve = bpy.data.curves.new("stencil", "FONT")
-    curve.body = text
-    curve.align_x = "CENTER"
-    curve.align_y = "CENTER"
-    curve.extrude = depth / 2
-    curve.resolution_u = resolution
-    curve.size = height / 0.72
-    obj = bpy.data.objects.new("stencil", curve)
-    bpy.context.scene.collection.objects.link(obj)
-    dg = bpy.context.evaluated_depsgraph_get()
-    mesh = bpy.data.meshes.new_from_object(obj.evaluated_get(dg))
-    bpy.data.objects.remove(obj, do_unlink=True)
-    bpy.data.curves.remove(curve)
-    n = Vector(normal).normalized()
-    up = Vector((0, 0, 1)) if abs(n.z) < 0.9 else Vector((0, 1, 0))
-    x = up.cross(n).normalized()
-    y = n.cross(x)
-    basis = Matrix((x, y, n)).transposed().to_4x4()
-    m = Matrix.Translation(Vector(loc) + n * (depth / 2)) @ basis
-    tmp = bmesh.new()
-    tmp.from_mesh(mesh)
-    bpy.data.meshes.remove(mesh)
-    bmesh.ops.transform(tmp, matrix=m, verts=tmp.verts[:])
-    with part.region(bevel=0, subsurf=0, detail=1):
-        vmap = {v: part.bm.verts.new(v.co) for v in tmp.verts}
-        faces = [part.bm.faces.new([vmap[v] for v in f.verts]) for f in tmp.faces]
-        part.paint(faces, slot, color)
-    tmp.free()
-    return faces
 
 
 def governor(part, slot, base, height=0.9, scale=1.0):

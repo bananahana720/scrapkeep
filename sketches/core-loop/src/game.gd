@@ -26,6 +26,7 @@ const Grip := preload("res://src/movement/grip.gd")
 const Augments := preload("res://src/movement/augments.gd")
 const Hud := preload("res://src/ui/hud.gd")
 const Screens := preload("res://src/ui/screens.gd")
+const UiTokens := preload("res://src/ui/ui_tokens.gd")
 const FieldNotes := preload("res://src/ui/field_notes.gd")
 const TuningPanel := preload("res://src/ui/tuning_panel.gd")
 const World := preload("res://src/world/world.gd")
@@ -252,6 +253,16 @@ func _ready() -> void:
 		# that folder, so a second launch finds the first one's save (quit, then Continue).
 		storage_dir = "user://self-play-%s" % _self_play_save()
 		DirAccess.make_dir_recursive_absolute(storage_dir)
+	elif tuning != null and tuning.sitting_earned():
+		# The earned sitting plays on a profile of its own, so the player's saves stay as they are
+		# and the first unlock is earned, and kept, as a new player would earn it (W1-78).
+		storage_dir = "user://sitting-earned"
+		DirAccess.make_dir_recursive_absolute(storage_dir)
+		# It starts from the player's own keys, look and volume: a copy, made once, so a change
+		# made in the sitting stays in the sitting.
+		var settings := storage_dir.path_join(SettingsStore.FILE)
+		if not FileAccess.file_exists(settings) and FileAccess.file_exists("user://".path_join(SettingsStore.FILE)):
+			DirAccess.copy_absolute("user://".path_join(SettingsStore.FILE), settings)
 	apply_saved_bindings()
 	camera.apply_look_settings(settings_store())
 	codex = Codex.new()
@@ -839,6 +850,15 @@ func _take_live() -> bool:
 	return launch_take.force_live or (not test_mode and not bot_driven and not AppShell.headless())
 
 
+# A stage launch of flight_s asks for the take (flow.gd): the panel closes over the flight's end and on_cover waits under
+# it until flight_over() says so. False when no take plays, and then nothing was called: the caller cuts as it always did.
+func play_launch_take(on_cover: Callable, flight_over: Callable, ready_check: Callable, flight_s: float) -> bool:
+	if launch_take.busy() or not _take_live():
+		return false
+	launch_take.live = true
+	return launch_take.play_over_flight(on_cover, flight_over, ready_check, flight_s)
+
+
 # A pilot picked on pilot select: the deck camera lifts, the swipe covers, the run starts under it.
 func pick_pilot(index: int) -> void:
 	launch_take.live = _take_live()
@@ -1106,6 +1126,7 @@ func set_reduced_motion(on: bool) -> void:
 	EnemyMotion.motion_scale = 0.0 if on else 1.0
 	HighdraftFx.preferred = on
 	AbilityBar.reduced_motion = on
+	UiTokens.reduced_motion = on
 	AimReticle.reduced_motion = on
 	RewardView.reduced_motion = on
 	MossBubble.reduced_motion = on

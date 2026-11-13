@@ -1,0 +1,268 @@
+{
+ "label": "after-scale-on",
+ "runs": 24,
+ "summary": {
+  "minmax": {
+   "runs": 24,
+   "wins": 24,
+   "game_min": 7.16,
+   "game_min_range": [
+    5.03,
+    8.35
+   ],
+   "game_hours_total": 2.81,
+   "cogs_earned": 1586.5,
+   "cogs_earned_range": [
+    1344,
+    1846
+   ],
+   "cogs_spent": 1261.5,
+   "cogs_spent_range": [
+    880,
+    1408
+   ],
+   "cogs_end": 517.5,
+   "cogs_end_range": [
+    357,
+    667
+   ],
+   "parts_end": 16.0,
+   "parts_end_range": [
+    10,
+    19
+   ],
+   "panels_end": 10.5,
+   "panels_end_range": [
+    3,
+    15
+   ],
+   "cores_gained": 1.0,
+   "cores_gained_range": [
+    0,
+    1
+   ],
+   "cores_wiped": 1.0,
+   "cores_wiped_range": [
+    0,
+    1
+   ],
+   "tree_end": 2.0,
+   "tree_end_range": [
+    2,
+    2
+   ],
+   "relics_end": 0.0,
+   "relics_end_range": [
+    0,
+    0
+   ],
+   "min_hp": 101.15,
+   "min_hp_range": [
+    63.6,
+    135.0
+   ],
+   "hits": 4.0,
+   "hits_range": [
+    0,
+    40.0
+   ],
+   "hp_lost": 65.5,
+   "hp_lost_range": [
+    0,
+    410.1
+   ],
+   "hull_lost": 11.0,
+   "hull_lost_range": [
+    0,
+    66.6
+   ],
+   "brindle_s": 82.97,
+   "brindle_s_range": [
+    78.21,
+    109.3
+   ],
+   "scrap_end": 1257.0,
+   "scrap_end_range": [
+    995,
+    1643
+   ],
+   "mass_end": 952.5,
+   "mass_end_range": [
+    332.5,
+    1372.0
+   ],
+   "heft_end": 4.0,
+   "heft_end_range": [
+    2,
+    4
+   ],
+   "regen_and_heals_hp": 1.9,
+   "regen_and_heals_hp_range": [
+    0.0,
+    17.7
+   ],
+   "big_heals_hp": 0.0,
+   "big_heals_hp_range": [
+    0,
+    0
+   ],
+   "max_hp_grown": 69.0,
+   "max_hp_grown_range": [
+    14.0,
+    149.0
+   ],
+   "max_hp_end": 155.0,
+   "max_hp_end_range": [
+    87.0,
+    254.0
+   ],
+   "rib_caches": 0.0,
+   "rib_caches_range": [
+    0,
+    1
+   ],
+   "rogues": 0.0,
+   "rogues_range": [
+    0,
+    0
+   ],
+   "secrets": 0.0,
+   "secrets_range": [
+    0,
+    0
+   ],
+   "presses": 6.0,
+   "presses_range": [
+    2,
+    10
+   ],
+   "mass_sold": 300.0,
+   "mass_sold_range": [
+    100,
+    500
+   ],
+   "scale_cogs": 150.0,
+   "scale_cogs_range": [
+    50,
+    250
+   ],
+   "per_min": {
+    "big_heals_hp": 0.0,
+    "cogs:activities, events, start pick": 2.843,
+    "cogs:discovery bursts (by amount)": 55.789,
+    "cogs:kill and boss gears": 144.057,
+    "cogs:other pickups (folded gears, Brindle piles)": 25.466,
+    "cogs_earned": 228.155,
+    "cogs_spent": 174.291,
+    "cores_gained": 0.083,
+    "cores_wiped": 0.083,
+    "hp_lost": 12.818,
+    "hull_lost": 2.025,
+    "mass_sold": 39.431,
+    "max_hp_grown": 9.689,
+    "panels_end": 1.457,
+    "parts:boss": 0.142,
+    "parts:evolution": 0.03,
+    "parts:gate": 0.284,
+    "parts:shop": 1.558,
+    "parts:spare": 0.142,
+    "parts:start_pick": 0.059,
+    "parts_end": 2.215,
+    "regen_and_heals_hp": 0.595,
+    "relics_end": 0.0,
+    "scale_cogs": 19.716,
+    "scrap_end": 186.627,
+    "spent:cell": 15.215,
+    "spent:reroll": 10.127,
+    "spent:shelf": 148.949,
+    "tree_end": 0.284
+   },
+   "per_10h": {
+    "big_heals_hp": 0,
+    "cogs:activities, events, start pick": 1706,
+    "cogs:discovery bursts (by amount)": 33473,
+    "cogs:kill and boss gears": 86434,
+    "cogs:other pickups (folded gears, Brindle piles)": 15280,
+    "cogs_earned": 136893,
+    "cogs_spent": 104574,
+    "cores_gained": 50,
+    "cores_wiped": 50,
+    "hp_lost": 7691,
+    "hull_lost": 1215,
+    "mass_sold": 23659,
+    "max_hp_grown": 5813,
+    "panels_end": 874,
+    "parts:boss": 85,
+    "parts:evolution": 18,
+    "parts:gate": 171,
+    "parts:shop": 935,
+    "parts:spare": 85,
+    "parts:start_pick": 36,
+    "parts_end": 1329,
+    "regen_and_heals_hp": 357,
+    "relics_end": 0,
+    "scale_cogs": 11829,
+    "scrap_end": 111976,
+    "spent:cell": 9129,
+    "spent:reroll": 6076,
+    "spent:shelf": 89369,
+    "tree_end": 171
+   },
+   "bay": {
+    "1": {
+     "visits": 24,
+     "wallet": 575.5,
+     "spent": 614.5,
+     "spent_share": 1.09,
+     "left_on_shelf": 0.0,
+     "presses": 3.5,
+     "mass_sold": 175.0,
+     "hook_bought": 0,
+     "bought_out": 19
+    },
+    "2": {
+     "visits": 24,
+     "wallet": 573.5,
+     "spent": 632.5,
+     "spent_share": 1.08,
+     "left_on_shelf": 2.0,
+     "presses": 3.0,
+     "mass_sold": 129.0,
+     "hook_bought": 0,
+     "bought_out": 2
+    }
+   },
+   "start_picks": {
+    "core": 14,
+    "focus_lens": 2,
+    "rivet_plating": 1,
+    "slag_rounds": 2,
+    "double_feed": 1,
+    "spiral_wave": 1,
+    "chain_arc": 1,
+    "cross_split": 1,
+    "hot_rivets": 1
+   },
+   "pilots": {
+    "tally": 4,
+    "remembered_cannon": 4,
+    "pylon_engineer": 4,
+    "runner_gunner": 4,
+    "demolitions_caster": 4,
+    "tarn": 4
+   }
+  }
+ },
+ "flags": [
+  {
+   "flag": "inflation",
+   "type": "minmax",
+   "detail": "stage 1 shelf bought out in 19 of 24 visits (median 109% of the wallet spent)"
+  },
+  {
+   "flag": "wins over 60%",
+   "type": "minmax",
+   "detail": "24 of 24 runs cleared world 1"
+  }
+ ]
+}

@@ -1,6 +1,7 @@
 extends Button
 
 const Parts := preload("res://src/build/parts.gd")
+const UiTokens := preload("res://src/ui/ui_tokens.gd")
 const PartDef := preload("res://src/build/part_def.gd")
 const BuildSheet := preload("res://src/build/build_sheet.gd")
 const ItemEffects := preload("res://src/build/item_effects.gd")
@@ -155,7 +156,7 @@ func _label(words: String) -> Label:
 	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	label.add_theme_font_override("font", UiFonts.bold())
-	label.add_theme_font_size_override("font_size", 16)
+	label.add_theme_font_size_override("font_size", UiTokens.BODY)
 	label.add_theme_color_override("font_color", Palette.SAND)
 	return label
 
@@ -186,7 +187,7 @@ func _part_row(row: Dictionary) -> void:
 			var extra := _label("+%d" % int(row["over"]))
 			extra.name = "Over"
 			extra.size_flags_horizontal = Control.SIZE_SHRINK_END
-			extra.add_theme_font_size_override("font_size", 14)
+			extra.add_theme_font_size_override("font_size", UiTokens.CAPTION)
 			box.add_child(extra)
 	elif row["at_cap"]:
 		# A part with no copy count that has reached its ceiling: one filled pip, the full-row look.

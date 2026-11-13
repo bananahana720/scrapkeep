@@ -111,6 +111,10 @@ func _physics_process(delta: float) -> bool:
 			# Before the bake lands, so _on_ready starts the players on the Dummy driver; the
 			# recorder goes last on Master, after the limiter audio.gd put there.
 			audio.live_output = true
+			# audio.gd chose the engine's warming from the Dummy driver; a recording warms like live
+			# play, so a note made late on its frame is a stall a player would hit (as bot_run.gd's --warm-band).
+			if audio.engine != null:
+				audio.engine.warm_stingers = true
 			if _record == null:
 				_record = AudioEffectRecord.new()
 				AudioServer.add_bus_effect(AudioServer.get_bus_index("Master"), _record)
@@ -210,6 +214,15 @@ func _cue_rows(rows: Array) -> Array:
 	return out
 
 
+# The set director's plans, each with its bar's time in seconds of the WAV (-1 before the recording).
+func _plan_rows(plans: Array) -> Array:
+	var out := []
+	for row in plans:
+		var at := int(row[4]) if row.size() > 4 else -1
+		out.append(row.duplicate() + [snappedf((at - _base_sample) / RATE, 0.0001) if at >= _base_sample else -1.0])
+	return out
+
+
 func _finish() -> void:
 	if _slowing:
 		# The recording ended inside the window: the world gets its speed back, and the facts say so.
@@ -242,7 +255,8 @@ func _finish() -> void:
 	for row in sections:
 		row.pop_back()
 	var info := {"wav": out, "seconds": snappedf(_now(), 0.1), "mix_rate": AudioServer.get_mix_rate(), "driver": AudioServer.get_driver_name(),
-		"music": _game.tuning.option("music"), "breath": _game.tuning.option("breath"),
+		"music": _game.tuning.option("music"), "breath": _game.tuning.option("breath"), "set_director": _game.tuning.option("set_director"),
+		"set_plans": _plan_rows(audio.set_director.plans),
 		"policy": _driver.policy, "outcome": _driver.outcome, "stage": _game.run.stage, "tail": _tail,
 		"ace_loaded": ace != null, "ace_missing": audio.ace_missing, "only": String(_settings.get("only", "")),
 		"music_skips": _skips(audio) - _skips_before if audio._music_pb != null else -1, "music_skips_before": _skips_before, "music_skip_rows": _skip_rows,

@@ -3,6 +3,7 @@ extends Node3D
 const LockRows := preload("res://src/world/lock_rows.gd")
 const ParkDefs := preload("res://src/core/park_defs.gd")
 const Palette := preload("res://src/core/palette.gd")
+const Overtime := preload("res://src/world/overtime.gd")
 
 # The Spillway's pacing locks (lock_rows.gd): the park Warden's gate and the yard's arena lock.
 # Both are rows; a map with no row is untouched, and so is every table but the park table.
@@ -18,19 +19,26 @@ const Palette := preload("res://src/core/palette.gd")
 # spoils the count: the crew counts once its housed members are dead (ruling w, 24 Oct), while
 # the rider still fights and drops. A pack of riders alone counts like any other.
 #
-# The lock. Once, on the ground and inside the row's circle round the beacon, the yard shuts:
+# The lock. Once, on level ground and inside the row's circle round the beacon, the yard shuts:
 # a hazard wall rises round the ball with a slam that falls (arena_locked), the crew lands
 # ahead on the ring, and the wall springs a ball back that tries to leave. A wave down, the next
 # whistles in (arena_wave) from further round the ring; the last wave down, or the row's max_s,
 # opens it on climbing bells (arena_unlocked), and the whole crew counts as one of the gate's
 # packs. Its crew rolls no panels; the yard broken to its last wave pays one at its
 # centre (build.gd yard_cleared), as an Isaac room pays on clear. The Warden already awake skips it, so the lock never lands in its fight.
+# Level ground (LOCK_LEVEL_DOT): a ball riding a slope into the circle shuts the yard at the slope's foot,
+# not on it, so the ring never lands on a riding line where its wall would throw the ball back up the hill
+# (PF-46: the dam's construction incline is 23 degrees and crosses 200 m from the beacon mid-slope).
+# Inside LOCK_ANY_SLOPE_SHARE of the circle any ground arms it (a slope, a gripped wall), so a ball
+# that never finds level ground still shuts the yard before the Warden.
 #
 # StageLocks.active = false (bot_run --locks=0) turns both off for a base measure on one binary.
 
 static var active := true
 
 const LOCK_SEQ := 900000
+const LOCK_LEVEL_DOT := 0.978
+const LOCK_ANY_SLOPE_SHARE := 0.75
 const MIN_PACK := 2
 const WALL_HEIGHT := 9.0
 const WALL_RISE := 0.35
@@ -72,6 +80,8 @@ var _collar: Node3D
 var _pips: Array[MeshInstance3D] = []
 var _pip_lit: StandardMaterial3D
 var _pip_dark: StandardMaterial3D
+# Reservoir: a won yard's bell, pot and sluice (overtime.gd, behind --overtime).
+var overtime: Node3D
 
 
 func setup(ctx_ref) -> void:
@@ -85,6 +95,9 @@ func setup(ctx_ref) -> void:
 	ctx.events.flow_changed.connect(_on_flow_changed)
 	_pip_lit = Palette.unshaded(Palette.BRASS)
 	_pip_dark = Palette.unshaded(Palette.CHARCOAL)
+	overtime = Overtime.new()
+	add_child(overtime)
+	overtime.setup(ctx)
 
 
 # The park Warden's posture_gate: true while its clamp holds the guard shut.
@@ -116,6 +129,30 @@ func lock_active() -> bool:
 # The live crew of the shut yard.
 func crew_alive() -> Array:
 	return _crew.map(func(ref: WeakRef): return ref.get_ref()).filter(func(enemy): return _alive(enemy))
+
+
+# How much of the shut yard's crew is down, 0 to 1, over every wave's members (0 while the yard
+# is open): the yard row's bar on the plate. The row said "Break the yard crew" with no count of
+# what was left (w37 film 020-022, PF-39).
+func yard_fraction() -> float:
+	if not lock_active():
+		return 0.0
+	var waves := _waves()
+	var total := 0
+	var down := 0
+	for i in waves.size():
+		var size: int = waves[i].size()
+		total += size
+		if i < _wave:
+			down += size
+		elif i == _wave:
+			down += maxi(0, size - crew_alive().size())
+	return clampf(float(down) / float(total), 0.0, 1.0) if total > 0 else 0.0
+
+
+# The living member of the shut yard's crew nearest the ball, or null: the yard row's edge marker.
+func yard_crew(ball: Vector3) -> Node3D:
+	return _nearest(crew_alive(), ball, INF) if lock_active() else null
 
 
 # What a hand that reads the tells goes for: the yard's crew while it is shut; while the clamp is
@@ -235,6 +272,7 @@ func _clear() -> void:
 	_refused_at = -INF
 	_drop_wall()
 	_drop_collar()
+	overtime.clear()
 
 
 func _on_flow_changed(state: String) -> void:
@@ -245,6 +283,7 @@ func _on_flow_changed(state: String) -> void:
 				enemy.remove_meta("yard_crew")
 			_drop_wall()
 		_drop_collar()
+		overtime.clear()
 
 
 func _on_activity_done(id: String, _at: Vector3) -> void:
@@ -318,7 +357,8 @@ func _step_lock(delta: float) -> void:
 				return
 			var ball: Vector3 = ctx.player.ball_position()
 			var beacon: Vector3 = ctx.flow.beacon.global_position
-			if ctx.player.state.grounded and _flat(ball, beacon) <= float(lock_row().get("within_m", 0.0)):
+			if lock_arms(ctx.player.state.grounded, ctx.player.state.contact_normal.y, _flat(ball, beacon),
+					float(lock_row().get("within_m", 0.0))):
 				_lock(ball, beacon)
 		"locked":
 			lock_left -= delta
@@ -339,6 +379,14 @@ func _step_lock(delta: float) -> void:
 				if _wave_wait < 0.0:
 					_wave += 1
 					_land_wave()
+
+
+# Whether the yard shuts this tick: grounded inside the circle on level ground, or on any ground
+# inside the inner share of it.
+static func lock_arms(grounded: bool, normal_y: float, dist: float, within_m: float) -> bool:
+	if not grounded or dist > within_m:
+		return false
+	return normal_y >= LOCK_LEVEL_DOT or dist <= within_m * LOCK_ANY_SLOPE_SHARE
 
 
 func _lock(ball: Vector3, beacon: Vector3) -> void:
@@ -392,6 +440,8 @@ func _unlock(won: bool) -> void:
 	# The whole crew broken pays one panel (build.gd yard_cleared), and is one of the clamp's packs.
 	if won and ctx.get("build") != null and ctx.build.has_method("yard_cleared"):
 		ctx.build.yard_cleared(lock_centre)
+	if won:
+		overtime.offer(lock_centre, _facing, lock_row())
 	if won and not gate_open:
 		cleared += 1
 		ctx.events.world_fact.emit("warden_gate_pip", ctx.player.ball_position())

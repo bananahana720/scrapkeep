@@ -10,7 +10,7 @@ const Palette := preload("res://src/core/palette.gd")
 const T := preload("res://tests/support/t.gd")
 const PilotBlocks := preload("res://tests/support/pilot_blocks.gd")
 
-# Every achievement pays a reward (except the record-only rows named in Achievements.RECORD_ONLY, wave 20),
+# Every achievement pays a reward (the eleven record-only rows of wave 20 pay a paint since 12 Nov 2026),
 # and every earned paint has exactly one earner (alpha wave 14).
 #   F1 the table sizes: 16 achievements, 18 paints, no empty reward;
 #   F2 waking_stilled: only the world-two boss earns it, and it pays Dig Ochre;
@@ -76,10 +76,12 @@ func _tables() -> void:
 	# 2026-10-24 merge of #406 (world 1 unit 16, shift board: six brindle_mark_* rows, each paying
 	# one item) onto the w19 Spillway roster (five reward-free records): 56 + 5 + 6.
 	_t.eq("F1 sixty-seven achievements", PilotBlocks.shared(Achievements.ids(), "res://src/core/achievements.gd").size(), 67)
-	_t.eq("F1 forty-seven cosmetics", PilotBlocks.shared(Cosmetics.ids(), "res://src/core/cosmetics.gd").size(), 47)
+	# 2026-11-11 (systems audit pass D, row 31): four paints for the ach_meta_* grants; was 47.
+	# 2026-11-12 (feature-fit.md row 30): eleven paints for the record-only rows; was 51.
+	_t.eq("F1 sixty-two cosmetics", PilotBlocks.shared(Cosmetics.ids(), "res://src/core/cosmetics.gd").size(), 62)
 	# A pilot's "or" rule row (class_def.gd unlock) pays that pilot through the class row, so its own reward is empty.
 	var or_rows := ClassDef.all().filter(func(d): return d.unlock.has("or")).map(func(d): return ClassDef.unlock_row(String(d.unlock["or"])))
-	var empty := Achievements.ids().filter(func(id): return Achievements.reward_of(id).is_empty() and not or_rows.has(id) and not Achievements.RECORD_ONLY.has(id))
+	var empty := Achievements.ids().filter(func(id): return Achievements.reward_of(id).is_empty() and not or_rows.has(id))
 	_t.eq("F1 no achievement has an empty reward", empty, [])
 
 

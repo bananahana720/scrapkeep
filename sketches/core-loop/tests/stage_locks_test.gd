@@ -22,11 +22,12 @@ const Palette := preload("res://src/core/palette.gd")
 # - riders (ruling w): a crew's homeless rider (director.gd _home_pack_spots) neither holds nor
 #   spoils its count, a crew of riders alone counts as a plain pack, and the bot hand goes for the
 #   crew's housed members, the crew nearest to a pip first;
-# - lock: on the ground inside within_m of the beacon the yard shuts round the ball with its crew,
+# - lock: on level ground inside within_m of the beacon the yard shuts round the ball with its crew,
 #   the wall turns an escaping ball back, the last crew member down opens it, and the crew counts
 #   toward the gate; its kills roll no panel and the cleared yard pays one (ruling af); the Warden already awake leaves it unfired;
-# - plate (w22 first-timer red team): while the yard holds, the objective plate says so and no edge
-#   marker points past its wall; while the clamp is shut on an awake Warden, the plate says so and its
+# - plate (w22 first-timer red team): while the yard holds, the objective plate says so, its bar
+#   fills as the crew goes down over every wave, and the one edge marker points at the crew member
+#   nearest, none past its wall (PF-39); while the clamp is shut on an awake Warden, the plate says so and its
 #   ring fills with the pips, an edge marker with the plate's glyph points at the crew nearest a pip
 #   (w23 cautious red team watch 5) while the Warden's keeps its own, and the open clamp hands the
 #   plate back to the guard and drops the crew marker;
@@ -266,7 +267,9 @@ func _lock() -> void:
 	var row: Dictionary = LockRows.row("park_dam")["lock"]
 	_t.eq("lock armed on entry", locks.lock_state, "armed")
 	var beacon: Vector3 = game.flow.beacon.global_position
-	var spot := beacon + Vector3(0.0, 0.0, -float(row["within_m"]) + 20.0)
+	# On the apron past the incline foot: the circle's outer ring there is the incline, where the yard
+	# waits for level ground (PF-46, dam_incline_yard_test).
+	var spot := beacon + Vector3(0.0, 0.0, -float(row["within_m"]) * StageLocks.LOCK_ANY_SLOPE_SHARE + 10.0)
 	var ground: Vector3 = game.ctx.terrain.drop_point(spot.x, spot.z, 1.0)
 	game.player.reset_to(ground, Vector3.ZERO)
 	var waited := 0
@@ -283,7 +286,15 @@ func _lock() -> void:
 	game.hud._process(0.0)
 	_t.eq("the plate says the yard is locked", [game.hud.objective_reading()["id"], game.hud.objective_reading()["words"]],
 			["break_yard_crew", "Break the yard crew"])
-	_t.eq("no edge marker points out past the wall", game.hud.edge_markers.targets(), [])
+	# PF-39 (w37 film 020-022): the row gave no count and nothing pointed at the crew. The plate's
+	# bar fills as the crew goes down, over every wave, and the one edge marker is the crew member nearest.
+	var held: Array = game.hud.edge_markers.targets()
+	_t.check("the only edge marker points at the crew member nearest, none past the wall",
+		held.size() == 1 and held[0]["at"] == locks.yard_crew(game.player.shown_position()).global_position and locks.yard_crew(game.player.shown_position()) in crew, str(held))
+	_t.eq("the yard row's bar starts empty", game.hud.objective_reading()["progress"], 0.0)
+	var crew_total := 0
+	for wave in waves:
+		crew_total += (wave as Array).size()
 	_t.check("the bot hand goes for the crew", locks.foe_for(game.player.ball_position()) in crew)
 	var logged: int = game.build.kill_log.size()
 	var dry: int = game.build.dropper.dry
@@ -303,6 +314,9 @@ func _lock() -> void:
 			await physics_frame
 		if w + 1 < waves.size():
 			_t.eq("wave %d down: the yard holds" % (w + 1), locks.lock_state, "locked")
+			if w == 0:
+				game.hud._process(0.0)
+				_t.near("one wave down fills the bar by its share of the crew", game.hud.objective_reading()["progress"], float((waves[0] as Array).size()) / crew_total)
 			_t.eq("wave %d down: the next whistles in" % (w + 1), _count("arena_wave"), w + 1)
 			# The gap runs on game time. The kill's hit stop can slow the rest of a frame that runs
 			# several ticks (game.gd hit_stop), so a loaded box lands the wave a few ticks late:
@@ -346,7 +360,9 @@ func _timed_out() -> void:
 	var locks = game.flow.gate
 	var row: Dictionary = LockRows.row("park_dam")["lock"]
 	var beacon: Vector3 = game.flow.beacon.global_position
-	var spot := beacon + Vector3(0.0, 0.0, -float(row["within_m"]) + 20.0)
+	# On the apron past the incline foot: the circle's outer ring there is the incline, where the yard
+	# waits for level ground (PF-46, dam_incline_yard_test).
+	var spot := beacon + Vector3(0.0, 0.0, -float(row["within_m"]) * StageLocks.LOCK_ANY_SLOPE_SHARE + 10.0)
 	game.player.reset_to(game.ctx.terrain.drop_point(spot.x, spot.z, 1.0), Vector3.ZERO)
 	var waited := 0
 	while locks.lock_state == "armed" and waited < 240:

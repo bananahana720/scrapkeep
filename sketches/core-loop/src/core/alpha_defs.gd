@@ -20,8 +20,10 @@ const BOSS := "brindle"
 
 const COUNT := 6
 
-# The named synergies this table keeps. Any other synergy and every unnamed tag rule is out.
-const SYNERGIES := ["wrecking_ball", "tesla_pylon", "pinwheel", "shrapnel_bloom", "lightning_rod"]
+# The maker tricks (synergies.gd) this table keeps: the five named synergies and the five
+# former three-part sets. Any other trick is out.
+const SYNERGIES := ["wrecking_ball", "tesla_pylon", "pinwheel", "shrapnel_bloom", "lightning_rod",
+	"ballast_rig", "shatter_crew", "live_wire", "hair_trigger", "storm_front"]
 
 # The nineteen parts every source on this table offers, and the only ones. The five shown
 # parts of the kept synergies, one carrier of each hidden tag they need (kinetic, speed, mass;

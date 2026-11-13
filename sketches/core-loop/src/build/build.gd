@@ -3,12 +3,12 @@ extends Node
 const Companion := preload("res://src/core/companion.gd")
 const ScrapField := preload("res://src/build/scrap_field.gd")
 const RewardGates := preload("res://src/build/reward_gates.gd")
+const CalledShot := preload("res://src/build/called_shot.gd")
 const Fabricators := preload("res://src/build/fabricators.gd")
+const HullMark := preload("res://src/world/hull_mark.gd")
 const ElementField := preload("res://src/build/element_field.gd")
 const Elements := preload("res://src/build/elements.gd")
 const Accretion := preload("res://src/build/accretion.gd")
-const PartSets := preload("res://src/build/part_sets.gd")
-const SetTell := preload("res://src/presentation/set_tell.gd")
 const Parts := preload("res://src/build/parts.gd")
 const HotwireRules := preload("res://src/build/hotwire_rules.gd")
 const Synergies := preload("res://src/build/synergies.gd")
@@ -25,6 +25,7 @@ const Relics := preload("res://src/build/relics.gd")
 const AbilityState := preload("res://src/core/ability_state.gd")
 const ActiveOffers := preload("res://src/combat/actives/active_offers.gd")
 const MakerBonuses := preload("res://src/build/maker_bonuses.gd")
+const MakerSets := preload("res://src/build/maker_sets.gd")
 const Panels := preload("res://src/build/panels.gd")
 const PanelShell := preload("res://src/build/panel_shell.gd")
 
@@ -33,11 +34,11 @@ const PanelShell := preload("res://src/build/panel_shell.gd")
 # the beacon offer two parts you roll through; vaults and won events award parts. Every
 # held part folds into one derived sheet (build_sheet.gd) that sets the tuning mods,
 # the pattern levels combat reads, the element triggers that feed the element x
-# material table (elements.gd, resolved by element_field.gd), and the live synergies.
+# material table (elements.gd, resolved by element_field.gd), and the awake maker tricks.
 #
-# Synergies (synergies.gd) are tag pairs. This module runs the behaviour of each named
-# one, tells the codex (ctx.codex) the first time each goes live in a run, and tells it
-# the first time an unnamed interaction fires. The codex publishes synergy_discovered
+# Maker tricks (synergies.gd) wake on two parts of one maker. This module runs the behaviour
+# of each, tells the codex (ctx.codex) the first time each fires in a run, and tells it the
+# first time an unnamed interaction fires. The codex publishes synergy_discovered
 # and interaction_found and grants the discovery burst; build never emits those two.
 #
 # Other modules reach this node as ctx.build (ctx.build_module() also finds it). Its
@@ -51,15 +52,14 @@ const GATE_CHOICES := 2
 # shell_air_factor() only, so an inversion (S4, K5, R6) changes one return value later.
 const SHELL_SCRAP_PER_HP := 5.0
 const SHELL_AIR_FACTOR := 0.75
-# Hot-wired H1, Riveted Shell, the part a run holds after Fit (Parts.HOTWIRED). Until 9 Nov the
-# baseline above was all "the shell" did, so Fit changed nothing and Recycle's cogs always won.
-# Held, it now pays what its card says, measured from the baseline the player has been rolling
+# Hot-wired H1, Riveted Shell, a rare part a Warden's gate puts up (Parts.HOTWIRED). Until 9 Nov
+# the baseline above was all "the shell" did, so holding it changed nothing. Held, it now pays what its card says, measured from the baseline the player has been rolling
 # on: the armour goes RIVETED_ARMOUR times as far per scrap again, and airborne steering takes
 # RIVETED_AIR_FACTOR again. An inversion still lifts the factor to its own value, so the tree's
 # three shell nodes are worth more to a pilot who fits it.
 const RIVETED_SHELL := "riveted_shell"
-const RIVETED_ARMOUR := 2.0
-const RIVETED_AIR_FACTOR := 0.75
+const RIVETED_ARMOUR := HotwireRules.RIVETED_ARMOUR
+const RIVETED_AIR_FACTOR := HotwireRules.RIVETED_AIR_FACTOR
 # S4, Face Runner (--world-one-builds=on, node taken, shell fitted): for this many sim seconds
 # after a valid vault the shell's air factor is SHELL_AIR_FACTOR_VAULT instead.
 const SHELL_VAULT_WINDOW := 2.0
@@ -70,15 +70,10 @@ const SHELL_AIR_FACTOR_SPRINT := 1.0
 # The resolved shell factor moved between two fitted values: `rose` is true above the resting
 # factor (an inversion is live), false on the return to it. Presentation reads only this.
 signal shell_air_changed(factor: float, rose: bool)
-# The hot-wired Fit / Recycle choice (BUILD-SYSTEMS.md, Two hot-wired parts): offered once per
-# world, after its first Warden; resolved by hotwire_fit() ("fit") or hotwire_recycle() ("recycle", with
-# the cogs paid). Build-local like shell_air_changed, not a bus fact.
-signal hotwire_offered(part_id: String, recycle: int)
-signal hotwire_resolved(part_id: String, choice: String, cogs: int)
-# A gained part completed a three-part set (part_sets.gd) for the first time this run. Build-local:
-# presentation raises the "Set complete" banner from it, with the set's name, its one line and
-# the colour of its studs on the ball. A resume or a retry that restores a held set recomputes
-# without a gain, so it never announces the set again.
+# A gained part woke a maker trick that is told on waking (Synergies.told_on_wake: one that only
+# adds an element) for the first time this run. Build-local: presentation raises the banner from
+# it, with the trick's name, its one line and its colour. A resume or a retry that restores a held
+# trick recomputes without a gain, so it never announces the trick again.
 signal set_completed(set_id: String, title: String, text: String, color: Color)
 const PARTICIPANTS := ["player"]
 # SG15: an offer of a part already held shows the level it would reach, by its current level.
@@ -135,8 +130,13 @@ var dropper = Panels.Dropper.new()
 var panel_rng := RandomNumberGenerator.new()
 # Scrap drops roll on their own stream, so how a fight spills scrap does not move the stage plan.
 var scrap_rng := RandomNumberGenerator.new()
+# A paid chain's burst rolls on its own stream, so a chain never moves where a kill's scrap lands.
+var chain_rng := RandomNumberGenerator.new()
 # Vaults paid this stage: each names its own offer stream.
 var _vaults_paid := 0
+var _overtimes_paid := 0
+# Called Shot (called_shot.gd, behind --called-shot): the gate asks it for the pair's rarities.
+var called_shot: Node3D
 # Louvres the last recompute converted into the pilot's signature stat (Panels.OVERFLOW), and
 # the counts it folded after that conversion (what the build read's stat lines say).
 var panel_overflow := 0
@@ -159,11 +159,9 @@ var _cache_spots: Array = []
 # for the drop simulation's recorded streams (tools/bot_run.gd --panel-log=1).
 var kill_log: Array = []
 const KILL_LOG_CAP := 4000
-# SI6: the complete sets' tell on the ball, and the sets this run has completed (a respec
-# that breaks a set keeps it here and in the codex's Found list).
-var set_tell
-var set_ledger = PartSets.Ledger.new()
-# The sets the last recompute found complete for the first time this run.
+# The told-on-wake tricks this run has woken (a respec that sends one back to sleep keeps it
+# here and in the codex's Found list), and the ones the last recompute woke for the first time.
+var _woken := {}
 var _sets_fresh: Array = []
 var sheet
 # SI5: the derived sheet between part-list changes; recompute() reads it, so pickup,
@@ -259,6 +257,9 @@ func setup(ctx_ref) -> void:
 	gates.name = "RewardGates"
 	ctx.root.add_child(gates)
 	gates.setup(ctx.terrain)
+	called_shot = CalledShot.new()
+	ctx.root.add_child(called_shot)
+	called_shot.setup(ctx)
 	gates.mark_for = offer_mark
 	gates.active_row = _active_row
 	gates.chosen.connect(_on_gate_chosen)
@@ -277,9 +278,6 @@ func setup(ctx_ref) -> void:
 	accretion.setup()
 	panel_shell = PanelShell.new()
 	ctx.player.roll_node().add_child(panel_shell)
-	set_tell = SetTell.new()
-	set_tell.name = "SetTell"
-	ctx.player.roll_node().add_child(set_tell)
 	bus = Triggers.Bus.new()
 	effects = ItemEffects.new(self)
 	clock = RunClock.new()
@@ -304,6 +302,7 @@ func setup(ctx_ref) -> void:
 	ctx.events.shot_fired.connect(_on_shot_fired)
 	ctx.events.run_started.connect(_on_run_started)
 	ctx.events.scrap_lost.connect(_on_scrap_lost)
+	ctx.events.line_state_changed.connect(_on_line_state)
 	ctx.run.armor_hit.connect(_on_armor_hit)
 	ctx.run.death_save_hook = effects.death_save_hull
 	_sync_scrap_flags()
@@ -311,6 +310,8 @@ func setup(ctx_ref) -> void:
 	_connect_triggers()
 	ctx.events.beacon_unsealed.connect(func(_stage: int): clock.warden_broken())
 	ctx.events.beacon_unsealed.connect(_on_warden_broken_hotwire)
+	# Marked hull: the Warden break lifts the mark a keeper's gamble put on max hull.
+	ctx.events.beacon_unsealed.connect(func(_stage: int): HullMark.lift(ctx.run))
 	ctx.events.enemy_struck.connect(_on_tread_struck)
 	ctx.events.player_died.connect(func(): shop.note_death(ctx.run.cogs))
 	makers.setup()
@@ -360,10 +361,10 @@ func part_info(part_id: String) -> Dictionary:
 		"tags": d.tags, "rarity": d.rarity, "tier": d.tier, "family": d.family}
 
 
-# Codex hint cards for the build category: {id, category, name, hint, clue, text,
-# shown, tags}. Declared to ctx.codex at setup when the registry exists.
+# Codex cards for the build category: {id, category, name, hint, text, maker, tags}. Declared
+# to ctx.codex at setup when the registry exists.
 func codex_declarations() -> Array:
-	var cards: Array = Synergies.declarations(func(part_id: String) -> String: return Parts.display_name(part_id))
+	var cards: Array = Synergies.declarations(func(maker: String) -> String: return String(MakerSets.SETS.get(maker, {}).get("name", maker)))
 	for entry in Lanes.ENTRIES:
 		cards.append(entry.duplicate())
 	return cards
@@ -404,23 +405,19 @@ static func resolve(element_id: String, material_id: String) -> Dictionary:
 
 
 # The line an offer (gate or fabricator) adds under its name: "* completes X *" when
-# taking it brings a named synergy live, "* ingredient: ??? *" when it is the shown
-# ingredient of a synergy not yet live (named once discovered), else "".
+# taking it wakes a maker trick, "* level N *" for a part already held, "* starts X *" for a
+# maker's first piece while the lens perk is held, else "".
 func offer_mark(part_id: String) -> String:
 	var held: Array = ctx.run.parts
 	var completes := Parts.completed_by(part_id, held)
 	if completes != "":
 		return "* completes %s *" % Synergies.ROWS[completes]["name"]
-	var set_id := PartSets.completed_by(part_id, held)
-	if set_id != "":
-		return "* completes %s *" % PartSets.SETS[set_id]["name"]
 	var level := Parts.level_of(part_id, held)
 	if level > 0 and level < LEVEL_NAMES.size():
 		return "* level %s *" % LEVEL_NAMES[level]
-	var ingredient := Parts.ingredient_of(part_id, held)
-	if ingredient != "":
-		var named: bool = is_known(ingredient) or has_perk("lens")
-		return "* ingredient: %s *" % (Synergies.ROWS[ingredient]["name"] if named else "???")
+	var starts := Parts.started_by(part_id, held) if has_perk("lens") else ""
+	if starts != "":
+		return "* starts %s *" % Synergies.ROWS[starts]["name"]
 	return ""
 
 
@@ -614,20 +611,24 @@ func recompute() -> void:
 	effects.apply_abilities(ctx.player)
 	scrap.magnet_scale = sheet.magnet
 	field.shatter_scale = sheet.dial("shatter_damage")
-	# A synergy folded into an Evolved part still acts, so it keeps its fired flag: erasing it
-	# would tell the codex the pair was discovered again.
 	for synergy_id in _live:
-		if not synergy_id in sheet.synergies and not synergy_id in sheet.consumed:
+		if not synergy_id in sheet.synergies:
 			_fired.erase(synergy_id)
 	for synergy_id in sheet.synergies:
 		if not synergy_id in _live:
 			_on_synergy_live(synergy_id)
 	_live = sheet.synergies.duplicate()
-	for synergy_id in sheet.consumed:
-		_live.append(synergy_id)
-	_sets_fresh = set_ledger.note(sheet.sets)
-	for set_id in _sets_fresh:
-		_note_found("set:" + set_id, "%s: %s" % [PartSets.SETS[set_id]["name"], PartSets.SETS[set_id]["text"]])
+	_sets_fresh = []
+	for trick_id in sheet.synergies:
+		if Synergies.told_on_wake(trick_id) and not _woken.has(trick_id):
+			_woken[trick_id] = true
+			_sets_fresh.append(trick_id)
+			_discovered[trick_id] = true
+			var codex = _codex()
+			if codex != null:
+				if not _declared:
+					_declare()
+				codex.mark_known(trick_id, PARTICIPANTS)
 	_redraw()
 
 
@@ -749,11 +750,11 @@ func shell_scrap_per_hp() -> float:
 	return SHELL_SCRAP_PER_HP / (RIVETED_ARMOUR if shell_held() else 1.0)
 
 
-# ---- Hot-wired offer (unit V's Fit / Recycle) and Spark Tread (H2) ----
+# ---- Hot-wired parts at the gates, and Spark Tread (H2) ----
 
-# The first Warden broken in each world offers the first part Parts.hotwire_offer allows;
-# later Wardens in that world offer nothing (the stage-2 discovery offer is
-# authored elsewhere).
+# The first Warden broken in each world puts up the first part Parts.hotwire_offer allows as a
+# striped rare gate beside the pair ("fit": it waits at the gates until taken). Later Wardens in
+# that world add nothing new (the stage-2 discovery offer is authored elsewhere).
 func _on_warden_broken_hotwire(_stage: int) -> void:
 	var world := maxi(ctx.run.world, 1)
 	if world != _hotwire_world:
@@ -769,9 +770,17 @@ func _on_warden_broken_hotwire(_stage: int) -> void:
 	if ids.is_empty():
 		return
 	_hotwire_id = ids[0]
-	_hotwire_state = "open"
+	_hotwire_state = "fit"
 	_hotwire_save()
-	hotwire_offered.emit(_hotwire_id, Parts.hotwire_recycle(_hotwire_id))
+	_hotwire_to_open_gates()
+
+
+# Gates already standing are put up again with the hot-wired part beside them.
+func _hotwire_to_open_gates() -> void:
+	if gates.is_open() and not _hotwire_id in gates.offers.map(func(offer): return offer["part_id"]):
+		var ids: Array = gates.offers.map(func(offer): return offer["part_id"])
+		ids.append(_hotwire_id)
+		ctx.events.reward_offered.emit(gates.open(ids, ctx.player.ball_position(), _heading(), ctx.run.parts))
 
 
 # The offer's fields ride the run's extra so the entrance doc carries them: resume_run
@@ -800,39 +809,17 @@ func _hotwire_restore(retry := false) -> void:
 	_hotwire_state = String(saved.get("state", ""))
 	_hotwire_spent = bool(saved.get("spent", false))
 	_hotwire_world = int(saved.get("world", 1))
+	# A save from before the fold can hold an offer still waiting on the Fit / Recycle screen
+	# ("open"). There is no screen now, so it goes to the gates like a fresh one.
+	if _hotwire_state == "open":
+		_hotwire_state = "fit"
+		_hotwire_save()
 
 
-# {part_id, state, recycle}; part_id "" when nothing was offered this run.
+# {part_id, state}: state "fit" while the Warden break's hot-wired part waits at the gates (an old
+# save may say "recycle", a choice the retired screen made); part_id "" when none was put up.
 func hotwire_pending() -> Dictionary:
-	return {"part_id": _hotwire_id, "state": _hotwire_state, "recycle": Parts.hotwire_recycle(_hotwire_id)}
-
-
-# Fit: the part becomes the held offer, standing as a striped gate the player rolls through
-# like any other; nothing is added to run.parts here. Open gates are put up again with it.
-func hotwire_fit() -> bool:
-	if _hotwire_state != "open":
-		return false
-	_hotwire_state = "fit"
-	_hotwire_save()
-	if gates.is_open():
-		var ids: Array = gates.offers.map(func(offer): return offer["part_id"])
-		ids.append(_hotwire_id)
-		ctx.events.reward_offered.emit(gates.open(ids, ctx.player.ball_position(), _heading(), ctx.run.parts))
-	hotwire_resolved.emit(_hotwire_id, "fit", 0)
-	return true
-
-
-# Recycle: the offer pays its stated cogs once and is gone. Returns the cogs paid (0 when
-# there was nothing open to recycle).
-func hotwire_recycle() -> int:
-	if _hotwire_state != "open":
-		return 0
-	_hotwire_state = "recycle"
-	_hotwire_save()
-	var cogs := Parts.hotwire_recycle(_hotwire_id)
-	ctx.run.add_cogs(cogs)
-	hotwire_resolved.emit(_hotwire_id, "recycle", cogs)
-	return cogs
+	return {"part_id": _hotwire_id, "state": _hotwire_state}
 
 
 # The held hot-wired offer a gate opening adds after its rolled picks, until it is taken.
@@ -885,9 +872,8 @@ func _apply_shell() -> void:
 
 
 func _redraw() -> void:
-	accretion.show_build(ctx.run.mass, ctx.run.parts, sheet.synergies + sheet.consumed, ctx.run.heft_class())
+	accretion.show_build(ctx.run.mass, ctx.run.parts, sheet.synergies, ctx.run.heft_class())
 	panel_shell.show_panels(ctx.run.panels, ctx.run.run_seed)
-	set_tell.show_sets(sheet.sets)
 
 
 func _codex():
@@ -905,7 +891,7 @@ func _declare() -> void:
 		return
 	for card in codex_declarations():
 		codex.declare({"id": card["id"], "category": card["category"], "name": card["name"],
-			"hint": card["hint"], "clue": card["clue"], "text": card["text"]})
+			"hint": card["hint"], "clue": String(card.get("clue", "")), "text": card["text"]})
 
 
 func _exit_tree() -> void:
@@ -969,17 +955,17 @@ func _class_id() -> String:
 
 
 
-# The element a part set's rule adds, "frost" or "arc": what its chime rings in.
-func set_element(set_id: String) -> String:
-	return PartSets.element(set_id)
+# The element a told-on-wake trick adds, "frost" or "arc": what its chime rings in.
+func set_element(trick_id: String) -> String:
+	return Synergies.element(trick_id)
 
 
 func _on_part_gained(part_id: String, _source: String) -> void:
 	recompute()
 	# A copy: a listener's own part gain recomputes and replaces the list.
-	for set_id in _sets_fresh.duplicate():
-		var row: Dictionary = PartSets.SETS[set_id]
-		set_completed.emit(set_id, row["name"], row["text"], row["color"])
+	for trick_id in _sets_fresh.duplicate():
+		var row: Dictionary = Synergies.ROWS[trick_id]
+		set_completed.emit(trick_id, row["name"], row["text"], row["color"])
 	_grant_evolutions()
 	var d: Resource = Parts.def(part_id)
 	if d != null and d.effect.get("do", "") == "ballast":
@@ -997,7 +983,7 @@ func _on_scrap_collected(_amount: int, _at: Vector3, _total: int) -> void:
 	if mass_hp != _mass_hp:
 		sheet.max_hp_bonus += mass_hp - _mass_hp
 		_mass_hp = mass_hp
-		ctx.run.set_max_hp(ctx.run.base_max_hp() + sheet.max_hp_bonus)
+		ctx.run.set_max_hp(HullMark.ceiling(ctx.run, ctx.run.base_max_hp() + sheet.max_hp_bonus))
 	_redraw()
 
 
@@ -1020,7 +1006,7 @@ func _on_run_started(_class_id_value: String) -> void:
 	tread_fires = 0
 	_discovered.clear()
 	_found.clear()
-	set_ledger = PartSets.Ledger.new()
+	_woken.clear()
 	_refresh_seams()
 	bus.clear()
 	effects.reset_run()
@@ -1065,10 +1051,12 @@ func _on_stage_entered(stage: int, retry: bool) -> void:
 	lanes.reset()
 	_offered = {}
 	_vaults_paid = 0
+	_overtimes_paid = 0
 	# A retry replays the same procs and panel drops: the seeds name the run and stage only.
 	loot_rng.seed = hash([LOOT_SEED, ctx.flow.run_key(), stage, "loot"])
 	panel_rng.seed = hash([ctx.run.run_seed, stage, "panels"])
 	scrap_rng.seed = hash([ctx.flow.run_key(), stage, "scrap"])
+	chain_rng.seed = hash([ctx.flow.run_key(), stage, "chain"])
 	scrap.clear_caches()
 	_caches_pending = true
 	_caches_wait = 0
@@ -1092,6 +1080,8 @@ func _on_stage_entered(stage: int, retry: bool) -> void:
 func _on_stage_content_cleared(reason: String) -> void:
 	if reason == "arena_retry":
 		_fired.clear()
+	# A Continue into the arena (SA-F1) reaches it with no stage_entered, so the relics are put on the kit here.
+	sync_relics()
 	scrap.clear()
 	fabricators.clear()
 	gates.close()
@@ -1162,6 +1152,24 @@ func yard_cleared(at: Vector3) -> void:
 	if kill_log.size() < KILL_LOG_CAP:
 		kill_log.append([ctx.flow.stage(), "yard_clear", false, 1.0, false, true, false])
 	scrap.drop_panel(at, Panels.draw(panel_rng, _class_id()))
+
+
+# The overtime pot (overtime.gd, loops.md Spec 2), on top of the yard's own panel (ruling af
+# stays): one ring adds a panel, two add a rare (cobalt) part, three add a core and another rare.
+# Each payout rolls its own stream, like a vault's, so no other stream moves.
+func overtime_paid(at: Vector3, rings: int) -> void:
+	if scrapless() or rings <= 0:
+		return
+	_overtimes_paid += 1
+	var rng := _offer_rng("overtime_%d" % _overtimes_paid)
+	scrap.drop_panel(at, Panels.draw(rng, _class_id()))
+	var rares := (1 if rings >= 2 else 0) + (1 if rings >= 3 else 0)
+	for i in rares:
+		var picks: Array = Parts.roll(rng, Parts.SOURCE_RARITIES["vault"], _class_id(), ctx.run.parts, 1)
+		if not picks.is_empty():
+			ctx.run.add_part(picks[0], "overtime")
+	if rings >= 3:
+		ctx.run.add_core("overtime", at)
 
 
 # The rib multiplier at a kill: DROP.rib in an off-spine dead end, else 1.0. A stage with no
@@ -1287,7 +1295,8 @@ func _active_row(id: String) -> Dictionary:
 func _on_flow_changed(state: String) -> void:
 	if state != "gates" or gates.is_open():
 		return
-	var rarities := Parts.gate_rarities(ctx.run.gate_tier_bonus())
+	# The called shot settles here (called_shot.gd): a met call lifts the pair, a missed one costs a core.
+	var rarities: Array = called_shot.gate_rarities()
 	var gate_rng := _offer_rng("gates")
 	var picks: Array = Parts.roll_gate(gate_rng, rarities, _class_id(), ctx.run.parts, GATE_CHOICES, ctx.flow.stage(), _offered)
 	picks = Parts.floor_gate(gate_rng, picks, _class_id(), ctx.run.parts, _offered, GATE_CHOICES)
@@ -1343,6 +1352,17 @@ func _on_dashed(_direction: Vector3) -> void:
 		_trail_ticks = 0
 
 
+# A paid chain of 3 or more bursts scrap at its landing (W1-74), scaled as a kill's scrap is.
+# Scrap only: the wallet already outruns the shop by Brindle (gameplay critique finding 11).
+func _on_line_state(id: String, _target: Node3D, at: Vector3, cause: String) -> void:
+	if id != "chain_end" or cause != "paid" or scrapless() or not ctx.flow.in_stage():
+		return
+	var stage_pay := float(ctx.flow.stage_def().get("kill_scrap", 1.0))
+	var amount := int(round(ctx.player.chain.last_burst() * sheet.kill_scrap * stage_pay))
+	if amount > 0:
+		scrap.drop(at, amount, chain_rng)
+
+
 # Every slam carries kinetic, so a slam on ice shatters it whatever you hold.
 func _on_slammed(at: Vector3, strength: float, _flatness: float) -> void:
 	_slams.append({"at": at, "strength": clampf(strength, 0.3, 1.6)})
@@ -1363,9 +1383,8 @@ func _on_shot_fired(_weapon_id: String, _from: Vector3, to: Vector3) -> void:
 		_fire("storm_lattice", null, ctx.player.ball_position())
 	if not sheet.elements_for("shot").is_empty():
 		_shots.append(to)
-	for rule_id in sheet.rules:
-		if Synergies.TAG_RULES[rule_id].get("fires_on", "") == "shot":
-			_note_found("rule:" + rule_id, Synergies.TAG_RULES[rule_id]["found"])
+	if has_transformer("linked_spiral"):
+		_note_found("trick:linked_spiral", Synergies.ROWS["linked_spiral"]["found"])
 
 
 # The ball's own line when it is moving, else where the player faces.
@@ -1529,7 +1548,7 @@ func _step_fabricators(ball: Vector3, delta: float) -> void:
 		# (tunes.json "fabricator"). No WORLD_ROWS row, so it plays no sound of its own.
 		ctx.events.world_fact.emit("fabricator_used", fab["at"])
 		var part_id: String = fab["part_id"]
-		if ctx.run.spend_cogs(Fabricators.price(part_id, ctx.run.parts.size())):
+		if ctx.run.spend_cogs(Fabricators.hoop_price(part_id, Parts.priced_count(ctx.run.parts))):
 			fabricators.sold(fab)
 			ctx.run.add_part(part_id, "fabricator")
 
@@ -1593,24 +1612,9 @@ func _grant_evolutions() -> void:
 		ctx.run.add_part(part_id, "evolution")
 
 
-# Synergies consumed into a held Evolved part.
-func consumed_synergies() -> Array:
-	return sheet.consumed.duplicate()
-
-
-# The HUD's synergy list: each live synergy by name, then each consumed one as folded into
-# the Evolved part that took it over, so Wrecking Ball stays listed while it still acts.
+# The awake maker tricks by name, with the maker that woke each.
 func synergy_read() -> Array:
-	var read: Array = []
-	for key in sheet.synergies:
-		read.append({"id": key, "name": Synergies.ROWS[key]["name"], "into": ""})
-	for key in sheet.consumed:
-		var into: String = Synergies.ROWS[key]["evolution"]["into"]
-		var part: Resource = Parts.def(into)
-		var part_name: String = part.display_name if part != null else into
-		read.append({"id": key, "name": Synergies.ROWS[key]["name"], "into": into,
-			"text": "%s (folded into %s)" % [Synergies.ROWS[key]["name"], part_name]})
-	return read
+	return sheet.synergies.map(func(key): return {"id": key, "name": Synergies.ROWS[key]["name"], "maker": Synergies.ROWS[key]["maker"]})
 
 
 # ---- Named synergy behaviours ----
@@ -1714,9 +1718,9 @@ func _synergy_hit(enemy: Node3D, force: float, synergy_id: String) -> void:
 
 # ---- RL2: relics on the kit. -------------------------------------------------------------
 # What each slot's held relic did to the kit: slot to {relic, prev (the ability id the
-# swap replaced), swapped, cooldown, charges}. sync_relics() makes the kit match
-# run.relics from this record, so a gain, a stage entry, a retry and a loaded entrance
-# all land on the same kit and none applies a row twice.
+# swap replaced), swapped, cooldown, charges}. sync_relics() makes the kit match the relics
+# in the part list (Relics.held) from this record, so a gain, a stage entry, a retry and a
+# loaded entrance all land on the same kit and none applies a row twice.
 var _relic_fx := {}
 
 
@@ -1728,9 +1732,11 @@ func sync_relics() -> void:
 	var abilities = ctx.player.get("abilities") if ctx.player != null else null
 	if abilities == null:
 		return
+	_adopt_saved_relics()
+	var held := Relics.held(ctx.run.parts)
 	var touched := false
 	for slot in AbilityState.SLOTS:
-		var want: String = ctx.run.relics.get(slot, "")
+		var want: String = held.get(slot, "")
 		if not Relics.has(want):
 			want = ""
 		var fx: Dictionary = _relic_fx.get(slot, {})
@@ -1744,6 +1750,20 @@ func sync_relics() -> void:
 		touched = true
 	if touched and ctx.player.has_method("_refit"):
 		ctx.player._refit()
+
+
+# A save from before relics joined the part list holds them in RunState.relics, slot to relic
+# id. They move into the part list once, silently (no part_gained, so no second reveal), and
+# the old map is emptied so a later save writes them in one place only.
+func _adopt_saved_relics() -> void:
+	if ctx.run.relics.is_empty():
+		return
+	for slot in ctx.run.relics:
+		var part_id := Relics.part_of(String(ctx.run.relics[slot]))
+		if part_id != "" and not part_id in ctx.run.parts:
+			ctx.run.parts.append(part_id)
+	ctx.run.relics.clear()
+	recompute()
 
 
 func _relic_apply(abilities, slot: String, relic_id: String) -> Dictionary:

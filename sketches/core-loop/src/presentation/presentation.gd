@@ -24,6 +24,7 @@ const GraphicsPreset := preload("res://src/presentation/graphics_preset.gd")
 const SetDressing := preload("res://src/presentation/set_dressing.gd")
 const ParkProps := preload("res://src/presentation/park_props.gd")
 const AmbientLife := preload("res://src/presentation/ambient_life.gd")
+const SiteMarkers := preload("res://src/presentation/site_markers.gd")
 const Parts := preload("res://src/build/parts.gd")
 const WindupRows := preload("res://src/presentation/windup_rows.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
@@ -53,7 +54,7 @@ const PanelFx := preload("res://src/presentation/panel_fx.gd")
 #   hero_assets    the V3 models dressed over the greybox shell, chunks and gates
 #   warden_ring    a posture Warden's health as four arcs on the ground round its foot
 #   reward_ceremony  how a part find is presented, from a rarity tick to the crate (v3 W13)
-#   panel_fx       a grey panel pickup: the word at the ball, the ratchet and the run's phrase
+#   panel_fx       a grey panel pickup: the pop the HUD draws at its edge, the ratchet and the run's phrase
 #   flourish_player  the in-run comic beats (flourish_rows.gd); spillway_story starts world 1's rows,
 #                  flourish_cues the bosses' arrival, phase, rout and sign-on rows
 
@@ -76,6 +77,7 @@ var flourish_cues
 var set_dressing: Node3D
 var park_props: Node3D
 var ambient_life: Node3D
+var site_markers: Node3D
 var title_stage: Node
 var ui_hidden := false
 # Presentation shows the discovery banner itself. Set false if the HUD shows its own.
@@ -103,6 +105,7 @@ func setup(ctx_ref) -> void:
 	machine_fx = MachineFx.new()
 	add_child(machine_fx)
 	machine_fx.setup(ctx)
+	machine_fx.kill_mark = vfx.kill_mark
 	player_fx = PlayerFx.new()
 	add_child(player_fx)
 	player_fx.setup(ctx, vfx)
@@ -118,7 +121,7 @@ func setup(ctx_ref) -> void:
 	status_marks.setup(ctx, vfx)
 	armour_marks = ArmourMarks.new()
 	add_child(armour_marks)
-	armour_marks.setup(ctx)
+	armour_marks.setup(ctx, player_fx)
 	hero_assets = HeroAssets.new()
 	add_child(hero_assets)
 	hero_assets.setup(ctx)
@@ -144,7 +147,7 @@ func setup(ctx_ref) -> void:
 	ceremony.setup(ctx, audio, juice, vfx)
 	panel_fx = PanelFx.new()
 	add_child(panel_fx)
-	panel_fx.setup(ctx, audio, machine_fx)
+	panel_fx.setup(ctx, audio)
 	flourish = FlourishPlayer.new()
 	add_child(flourish)
 	flourish.setup(ctx)
@@ -154,6 +157,9 @@ func setup(ctx_ref) -> void:
 	flourish_cues = FlourishCues.new()
 	add_child(flourish_cues)
 	flourish_cues.setup(ctx, flourish)
+	site_markers = SiteMarkers.new()
+	add_child(site_markers)
+	site_markers.setup(ctx)
 	wire_optional()
 	GraphicsPreset.register_dressing_host(self)
 	if not get_tree().node_added.is_connected(_on_node_added):
@@ -357,9 +363,10 @@ static func part_card(part_id: String) -> Dictionary:
 		"detail": String(row.get("text", Parts.token(part_id).get("verb", "")))}
 
 
-# The third part of a set landed: the set's name and what it changes, in the set's own colour (the
-# band of studs set_tell.gd draws on the ball), once per run. Like every find it waits for a calm
-# moment, so a set finished in a fight is told when the fight lets go.
+# A second part of one maker woke a trick that adds an element (Synergies.told_on_wake): its
+# name and what it changes, in its own colour (its halo on the ball, accretion.gd), once per run.
+# Like every find it waits for a calm moment, so a trick woken in a fight is told when the fight
+# lets go.
 func _on_set_completed(set_id: String, title: String, text: String, color: Color) -> void:
 	if auto_banner:
 		banner.show_discovery(title, "build", text, "Set complete", SET_KEY + set_id, "synergy_discovered", color, true)
@@ -412,6 +419,7 @@ func _sync_dressing() -> void:
 	park_props = ParkProps.new()
 	add_child(park_props)
 	park_props.setup(ctx)
+	park_props.prop_kicked.connect(juice.on_prop_kicked)
 	if is_instance_valid(ambient_life):
 		ambient_life.free()
 	ambient_life = null

@@ -1,6 +1,7 @@
 extends Button
 
 const Palette := preload("res://src/core/palette.gd")
+const UiTokens := preload("res://src/ui/ui_tokens.gd")
 const AbilityState := preload("res://src/core/ability_state.gd")
 const Bindings := preload("res://src/core/bindings.gd")
 const Icons := preload("res://src/ui/icons.gd")
@@ -46,12 +47,13 @@ func _init(node_row := {}, key_id := "", class_color := Palette.SAND, node_depth
 	depth = node_depth
 	focus_mode = Control.FOCUS_ALL
 	mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	accessibility_name = String(node.get("name", ""))
 	custom_minimum_size = Vector2(WIDTH, HEIGHT)
 	pivot_offset = custom_minimum_size * 0.5
 	add_theme_stylebox_override("normal", ClassCard._plate(Color(color, 0.7), 2))
 	add_theme_stylebox_override("hover", ClassCard._plate(color, 4))
 	add_theme_stylebox_override("pressed", ClassCard._plate(Palette.AMBER, 4))
-	add_theme_stylebox_override("focus", ClassCard._plate(Color.WHITE, 3, false))
+	add_theme_stylebox_override("focus", ClassCard._plate(UiTokens.TEXT, 3, false))
 	add_theme_stylebox_override("disabled", ClassCard._plate(Color(color, 0.3), 2))
 	var box := VBoxContainer.new()
 	box.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -60,20 +62,20 @@ func _init(node_row := {}, key_id := "", class_color := Palette.SAND, node_depth
 	box.offset_right = -20.0
 	box.offset_bottom = -14.0
 	box.alignment = BoxContainer.ALIGNMENT_BEGIN
-	box.add_theme_constant_override("separation", 6)
+	box.add_theme_constant_override("separation", 4)
 	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(box)
-	_name = _text(String(node.get("name", "")), 26, color)
+	_name = _text(String(node.get("name", "")), UiTokens.LABEL, color)
 	box.add_child(_name)
-	_effect = _text(WorldOneCards.effect_line(node, world_one, shell), 18, Palette.SAND)
+	_effect = _text(WorldOneCards.effect_line(node, world_one, shell), UiTokens.BODY, Palette.SAND)
 	box.add_child(_effect)
 	# The set-piece line, dimmer than the effect so the effect stays the brighter line.
 	var piece := WorldOneCards.set_piece_line(node, set_piece_table, pilot)
-	_set_piece = _text(piece, 16, Color(Palette.SAND, 0.85))
+	_set_piece = _text(piece, UiTokens.BODY, Color(Palette.SAND, 0.85))
 	_set_piece.visible = piece != ""
 	box.add_child(_set_piece)
 	# The skip prompt of a take_or_skip offer (SG8): one short line, hidden on a plain pair.
-	_skip_prompt = _text(SKIP_PROMPT if offer_kind == UpgradeTree.OFFER_TAKE_OR_SKIP else "", 16, Palette.AMBER)
+	_skip_prompt = _text(SKIP_PROMPT if offer_kind == UpgradeTree.OFFER_TAKE_OR_SKIP else "", UiTokens.BODY, Palette.AMBER)
 	_skip_prompt.visible = offer_kind == UpgradeTree.OFFER_TAKE_OR_SKIP
 	box.add_child(_skip_prompt)
 	_depth_table = BuildReadout.new()
@@ -81,12 +83,12 @@ func _init(node_row := {}, key_id := "", class_color := Palette.SAND, node_depth
 	# order the worlds are played, is the button's hover line, so the page keeps its word budget.
 	_depth_table.tooltip_text = depth_sentence()
 	_depth_table.add_theme_font_override("font", UiFonts.bold())
-	_depth_table.add_theme_font_size_override("font_size", 14)
+	_depth_table.add_theme_font_size_override("font_size", UiTokens.CAPTION)
 	box.add_child(_depth_table)
 	# Nothing here a first pick can use: the Build page and the slot's key tag come in with the
 	# second pick (PF-01).
 	_depth_table.visible = depth > 1
-	_taken = _text("Taken", 20, Palette.AMBER)
+	_taken = _text("Taken", UiTokens.BODY, Palette.AMBER)
 	_taken.visible = false
 	_taken.set_anchors_preset(Control.PRESET_TOP_RIGHT)
 	_taken.position = Vector2(WIDTH - 100.0, 20.0)
@@ -194,15 +196,15 @@ func _process(delta: float) -> void:
 
 
 func _draw() -> void:
-	var bright := Color.WHITE if is_hovered() and not disabled else Palette.SAND
+	var bright := UiTokens.TEXT if is_hovered() and not disabled else Palette.SAND
 	Keycap.draw(self, Vector2(20.0 + Keycap.size_of(key, KEY_H).x * 0.5, 18.0 + KEY_H * 0.5), key, bright, KEY_H)
 	var centre := Vector2(size.x * 0.5, 24.0 + SLOT * 0.5 - 6.0 * _lift)
 	var rect := Rect2(centre - Vector2(SLOT, SLOT) * 0.5, Vector2(SLOT, SLOT))
 	var plate := StyleBoxFlat.new()
-	plate.bg_color = Color(Palette.CHARCOAL, 0.95)
+	plate.bg_color = Color(UiTokens.INK, UiTokens.PLATE_ALPHA)
 	plate.border_color = color if _lift > 0.5 else Palette.SAND
 	plate.set_border_width_all(3)
-	plate.set_corner_radius_all(12)
+	plate.set_corner_radius_all(UiTokens.RADIUS)
 	draw_style_box(plate, rect)
 	var icon_id := String(node.get("icon", ""))
 	var inset := rect.grow(-12.0)

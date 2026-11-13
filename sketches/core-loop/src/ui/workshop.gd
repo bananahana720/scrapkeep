@@ -1,6 +1,7 @@
 extends CanvasLayer
 
 const Palette := preload("res://src/core/palette.gd")
+const UiTokens := preload("res://src/ui/ui_tokens.gd")
 const UiFonts := preload("res://src/ui/ui_fonts.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const Keycap := preload("res://src/ui/keycap.gd")
@@ -76,7 +77,8 @@ class TalkButton extends Button:
 	func _init() -> void:
 		focus_mode = Control.FOCUS_NONE
 		mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
-		custom_minimum_size = Vector2(Keycap.size_of("key_t", H).x + 34.0, H + 8.0)
+		accessibility_name = "Talk"
+		custom_minimum_size = Vector2(maxf(Keycap.size_of("key_t", H).x + 34.0, UiTokens.TARGET), maxf(H + 8.0, UiTokens.TARGET))
 		size = custom_minimum_size
 		for state in ["normal", "hover", "pressed", "focus", "disabled"]:
 			add_theme_stylebox_override(state, StyleBoxEmpty.new())
@@ -88,16 +90,16 @@ class TalkButton extends Button:
 		queue_redraw()
 
 	func _draw() -> void:
-		var tint := Color.WHITE if is_hovered() else Palette.SAND
+		var tint := UiTokens.TEXT if is_hovered() else Palette.SAND
 		var cap := Keycap.size_of("key_t", H)
 		Keycap.draw(self, Vector2(cap.x * 0.5, size.y * 0.5), "key_t", tint, H)
 		var at := Vector2(cap.x + 8.0, size.y * 0.5 - 9.0)
 		var bubble_rect := Rect2(at, Vector2(24.0, 16.0))
 		var box := StyleBoxFlat.new()
-		box.bg_color = Color(Palette.CHARCOAL, 0.9)
+		box.bg_color = Color(UiTokens.INK, UiTokens.PLATE_ALPHA)
 		box.border_color = tint
 		box.set_border_width_all(2)
-		box.set_corner_radius_all(6)
+		box.set_corner_radius_all(UiTokens.RADIUS)
 		draw_style_box(box, bubble_rect)
 		draw_colored_polygon(PackedVector2Array([at + Vector2(4.0, 15.0), at + Vector2(-2.0, 22.0), at + Vector2(11.0, 15.0)]), tint)
 

@@ -5,18 +5,21 @@ extends SceneTree
 #   godot --headless --audio-driver Dummy --script res://tools/mix/bounce_ids.gd -- <run.json> <out folder>
 const Bank := preload("res://src/presentation/sfx_bank.gd")
 const Harmony := preload("res://src/presentation/harmony.gd")
+# The world's water and steam (world_fx_sound.gd) log their file names; their trims are in the logged level.
+const WorldSound := preload("res://src/presentation/world_fx/world_fx_sound.gd")
 
 
 func _initialize() -> void:
 	var args := OS.get_cmdline_user_args()
 	var run: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(args[0]))
+	DirAccess.make_dir_recursive_absolute(args[1])
 	var ids := {}
 	for row in run["cue_rows"]:
 		ids[String(row[2])] = true
 	var rows := []
 	var n := 0
 	for id in ids:
-		var stream: AudioStreamWAV = Bank.stream(id) if Bank.has_recipe(id) or Bank.file_backed(id) else null
+		var stream: AudioStreamWAV = Bank.stream(id) if Bank.has_recipe(id) or Bank.file_backed(id) else WorldSound.pcm(id)
 		if stream == null or stream.data.is_empty():
 			rows.append("%s\tNONE\t0\t0" % id)
 			continue

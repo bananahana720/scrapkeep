@@ -1,6 +1,7 @@
 extends CanvasLayer
 
 const EventKinds := preload("res://src/core/event_kinds.gd")
+const UiTokens := preload("res://src/ui/ui_tokens.gd")
 const Palette := preload("res://src/core/palette.gd")
 const Icons := preload("res://src/ui/icons.gd")
 const Keycap := preload("res://src/ui/keycap.gd")
@@ -200,7 +201,7 @@ func setup(game_ref) -> void:
 	add_child(_notes)
 
 	var box := VBoxContainer.new()
-	box.add_theme_constant_override("separation", 18)
+	box.add_theme_constant_override("separation", 16)
 	_notes.add_child(box)
 	_tabs = TabStrip.new()
 	_tabs.notes = self
@@ -368,7 +369,7 @@ func render_page(page: String) -> int:
 	var style: Dictionary = EventKinds.category(page)
 	var listed: Array = codex.entries(page)
 	var head := Label.new()
-	head.add_theme_font_size_override("font_size", 20)
+	head.add_theme_font_size_override("font_size", UiTokens.BODY)
 	head.add_theme_color_override("font_color", style["color"])
 	head.text = "%s %s, %d of %d found" % [SHAPE_GLYPHS.get(style["shape"], ""), style["label"],
 		listed.filter(func(e): return e["known"]).size(), listed.size()]
@@ -380,8 +381,8 @@ func render_page(page: String) -> int:
 		return 0
 	var grid := GridContainer.new()
 	grid.columns = CARD_COLUMNS
-	grid.add_theme_constant_override("h_separation", 14)
-	grid.add_theme_constant_override("v_separation", 14)
+	grid.add_theme_constant_override("h_separation", 12)
+	grid.add_theme_constant_override("v_separation", 12)
 	_codex_page.add_child(grid)
 	for entry in listed:
 		grid.add_child(_card(entry, style))
@@ -415,8 +416,8 @@ func _render_notes() -> int:
 		var line := Label.new()
 		line.name = entry["id"]
 		line.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		line.add_theme_font_size_override("font_size", 16)
-		line.add_theme_color_override("font_color", Palette.SAND if entry["known"] else Color(Palette.SAND, 0.45))
+		line.add_theme_font_size_override("font_size", UiTokens.BODY)
+		line.add_theme_color_override("font_color", Palette.SAND if entry["known"] else UiTokens.quiet())
 		line.text = "%d. %s" % [i + 1, entry["text"] if entry["known"] else "Locked"]
 		lines.add_child(line)
 	return listed.size()
@@ -429,12 +430,12 @@ func _card(entry: Dictionary, style: Dictionary) -> Control:
 	box.bg_color = Color(0.10, 0.11, 0.14, 0.96)
 	box.border_color = style["color"] if entry["known"] else Color(style["color"], 0.35)
 	box.set_border_width_all(2)
-	box.set_corner_radius_all(6)
+	box.set_corner_radius_all(UiTokens.RADIUS)
 	box.set_content_margin_all(12.0)
 	card.add_theme_stylebox_override("panel", box)
 	var text := Label.new()
 	text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	text.add_theme_font_size_override("font_size", 15)
+	text.add_theme_font_size_override("font_size", UiTokens.CAPTION)
 	var glyph: String = SHAPE_GLYPHS.get(style["shape"], "")
 	if entry["known"]:
 		text.text = "%s %s\n%s" % [glyph, entry["name"], entry["text"]]
@@ -462,7 +463,7 @@ func _render_found(codex) -> int:
 	var list := RichTextLabel.new()
 	list.bbcode_enabled = true
 	list.fit_content = true
-	list.add_theme_font_size_override("normal_font_size", 16)
+	list.add_theme_font_size_override("normal_font_size", UiTokens.BODY)
 	var lines := PackedStringArray(["Found by accident, no name yet"])
 	for text in codex.found():
 		var style: Dictionary = EventKinds.category(codex.found_category(text))

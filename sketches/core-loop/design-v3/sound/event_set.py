@@ -9,7 +9,8 @@ Families share one record so a sound's kind is audible without looking:
 - boss: brass stabs and the versus fanfare
 - stinger: short ii-V-I cadences that land on D
 - ui: tiny Rhodes and wood
-Ladders (kill chain, scrap) climb D Dorian degree by degree, so a chain is a melody.
+The scrap ladder climbs D Dorian degree by degree. The combat feedback cues (impact family, the kill chain)
+are written by feedback_set.py as unpitched percussion; their makers here are kept only for the shared seed.
 Writes 48 kHz mono 16-bit WAVs, peak -1 dBFS, plus manifest.json with each cue's family.
 """
 
@@ -24,6 +25,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from event_sounds import SR, bell, env, hz, noise_burst, place, rhodes, sax, t_of  # noqa: E402
 
 RNG = np.random.default_rng(2026)
+# Combat feedback cues are percussion now and feedback_set.py writes them (Andrew, 13 November 2026).
+from feedback_set import EVENT_OWNED as FEEDBACK_OWNED  # noqa: E402
 LADDER = ["A4", "B4", "D5", "E5", "A5"]
 
 
@@ -371,7 +374,9 @@ def main():
     out_dir.mkdir(parents=True, exist_ok=True)
     manifest = []
     for name, (family, make) in CUES.items():
-        audio = make()
+        audio = make()  # always made, so the shared seed reaches every later cue unchanged
+        if name in FEEDBACK_OWNED:
+            continue
         nz = np.nonzero(np.abs(audio) > 1e-4)[0]
         audio = audio[: nz[-1] + 1] if len(nz) else audio
         audio = audio / np.max(np.abs(audio)) * 10 ** (-1 / 20)
