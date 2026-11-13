@@ -28,7 +28,7 @@ World 1 is the title, the camp, the dam, the flume and Brindle in the Slag Bowl.
 | 6 | The sitting run ends won at Brindle (ruling dk, W1-60), then Moss's last call and his hook (W1-73, W1-79) on the same flow fence | Build thread started 12 Nov |
 | 7 | The sitting build: the Warden form on the synth band and on Brindle, the Slag Bowl stand crew bodies, the sitting sheet refresh, the release gate with a first-timer red team, the install with rollbacks | Not started. It closes as "ready for your verdict" |
 
-Parked until after the sitting: dam perf remainders (the f4045 riser, the Warden break and engage spikes, the seed 3 f14k swing); the twin-line grapple prototype (pull request 771, waiting on Andrew's feel check); the way out of the Slag Bowl into world 2, the dam launch over the crest, the rebuilt concave flume yard (the bowl test records it as OWED), a reactive valve, two-variant sub-regions, arrivals on the musical grid, enemy health (ruling al), and the dam Warden's sheet heading (ruling cm).
+Parked until after the sitting: dam perf remainders (the f4045 riser, the Warden break and engage spikes, the seed 3 f14k swing); the twin-line grapple prototype (pull request 771, waiting on Andrew's feel check); the way out of the Slag Bowl into world 2, the dam launch over the crest, the rebuilt concave flume yard (the bowl test records it as OWED), a reactive valve, two-variant sub-regions, arrivals on the musical grid, enemy health (ruling al), and the dam Warden's sheet heading (ruling cm), and the hidden seventh pilot, Patch (ruling dl; sheet [pilots/patch.md](../../sketches/core-loop/design-v3/pilots/patch.md)).
 
 ### Engineering hygiene that rides along (never holds a promotion)
 
