@@ -43,7 +43,6 @@ func _run() -> void:
 	audio._read_ahead_phases("brindle")
 	audio._settle_ace_ahead(heavy)
 	_t.check("the boss's phase 2 pack is read as the fight opens", heavy != "" and Ace.kept(heavy), heavy.get_base_dir().get_file())
-	audio.ace_manifest = next
 	var reads: int = audio._ace_ahead.size()
 	audio.read_ace_ahead(heavy)
 	_t.check("a kept package is not read again", audio._ace_ahead.size() == reads)

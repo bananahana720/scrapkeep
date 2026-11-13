@@ -582,7 +582,9 @@ var _ace_ahead := {}
 
 
 func read_ace_ahead(manifest: String) -> void:
-	if manifest == "" or _ace_ahead.has(manifest) or not ace_wanted() or AceSequencer.kept(manifest):
+	# The export proof reads the first ACE_CHECK line, which a read-ahead's band would race to print.
+	if manifest == "" or _ace_failed or _ace_ahead.has(manifest) or not ace_wanted() or AceSequencer.kept(manifest) \
+			or "--ace-check" in OS.get_cmdline_args() or "--ace-check" in OS.get_cmdline_user_args():
 		return
 	_ace_ahead[manifest] = WorkerThreadPool.add_task(_ace_loader(manifest, []), true, "presentation ACE read-ahead")
 
@@ -591,12 +593,14 @@ func read_ace_ahead(manifest: String) -> void:
 # stage the boss's entry anthem. Read when the world starts building the next stage.
 func _read_ahead_after(stage: int) -> void:
 	var stages = _music_stages()
-	if stages.has_method("is_world_last") and stages.is_world_last(stage):
+	if stages.is_world_last(stage):
 		var boss := _boss_track()
 		if boss in MusicEngine.BOSS_TRACKS:
 			read_ace_ahead(MusicRows.resolve(_boss_entry(boss))["ace_manifest"])
 	if not stages.is_last(stage):
-		read_ace_ahead(_music_row(stage + 1)["ace_manifest"])
+		# The next stage's remix or modifier tune when it has one, as _ace_stage picks.
+		var tune := level_tune(stage + 1, true)
+		read_ace_ahead(MusicRows.resolve(tune)["ace_manifest"] if tune != "" else _music_row(stage + 1)["ace_manifest"])
 
 
 # The boss's later phase packs, read as the fight opens (Brindle's anthem: heavy, then heavier).
@@ -2875,10 +2879,6 @@ func _on_stage_entered(stage: int, retry: bool) -> void:
 	# A stage starts with no moments; the stage band the flow starts is the music to return to.
 	_moments.clear()
 	_moment_playing = ""
-	# The Warden's fight takes the band to its own tune (13 ms of the engage tick in the cloud).
-	var fight := level_tune(stage, true)
-	if fight != "":
-		read_ace_ahead(MusicRows.resolve(fight)["ace_manifest"])
 	_warden_engaged = false
 	_warden_fighting = false
 	engine.parameters_stage_entered()

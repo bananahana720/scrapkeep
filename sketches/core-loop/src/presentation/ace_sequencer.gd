@@ -99,9 +99,10 @@ var stems: Array = []
 # package it just left reads none of its Oggs again: when the Warden engages, the dam's landmark
 # tune ends and the stage pack comes back, and its 24 load_from_file calls were 13 ms of the 4080's
 # engage tick (#512 comment 6507862519). A stream is shared, not played: each voice instantiates
-# its own playback. audio.gd also builds a band on a worker, hence the lock. Four, so a package
-# audio.gd reads ahead (read_ace_ahead) outlives the Warden's tune and a landmark's before its switch.
-const KEPT_PACKAGES := 4
+# its own playback. audio.gd also builds a band on a worker, hence the lock. Five, so the two
+# packages audio.gd reads ahead at a world's last Warden (read_ace_ahead) leave the three a retry
+# goes back to kept, as before.
+const KEPT_PACKAGES := 5
 static var _kept := {}
 static var _kept_order: Array[String] = []
 static var _kept_lock := Mutex.new()
