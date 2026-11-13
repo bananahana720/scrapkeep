@@ -204,6 +204,8 @@ test("hygiene fails added symlinks, root files and new top-level folders only", 
   const z = "0".repeat(40);
   const raw = [
     `:000000 120000 ${z} ${z} A\tnode_modules`,
+    `:000000 120000 ${z} ${z} A\t.claude/skills/scrapkeep-verify-game`,
+    `:000000 120000 ${z} ${z} A\t.claude/skills/nested/link`,
     `:000000 100644 ${z} ${z} A\tNOTES.md`,
     `:000000 100644 ${z} ${z} A\t.mcp.json`,
     `:000000 100644 ${z} ${z} A\tstray/x.txt`,
@@ -212,6 +214,7 @@ test("hygiene fails added symlinks, root files and new top-level folders only", 
   ];
   assert.deepEqual(hygieneFindings(raw, new Set(["scripts", "sketches"])), [
     "symlink added: node_modules",
+    "symlink added: .claude/skills/nested/link",
     "root file added: NOTES.md",
     "new top-level folder: stray/x.txt",
   ]);
