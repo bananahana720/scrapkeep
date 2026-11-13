@@ -4,7 +4,7 @@ extends "res://tests/rivet_kit_test.gd"
 # alone, the terrain warm-up rebuilt every placement each cycle: 100 to 175 ms physics ticks
 # every 0.5 s while Rivet stood still (the revert of 8e40be12). Keyed by shape and transform, a
 # standing Rivet's warm-up finds everything cached after the first cycle. Counts, not times, so
-# it holds on any machine. Expected: 14 checks, including the count assertion.
+# it holds on any machine. Expected: 15 checks, including the count assertion.
 # 2026-11-11 (speed pass): a park's convex wedges share point lists, so their faces are searched
 # once per point list; the kept faces equal a fresh search, and another wedge gets its own.
 # 2026-11-13 (board #934): a wedge not searched yet is searched on the terrain worker. On the main
@@ -18,7 +18,7 @@ const MISSES_PER_CYCLE_MAX := 1
 
 func _initialize() -> void:
 	_t = T.new("rivet_warm_hitch_test")
-	_expected_checks = 14
+	_expected_checks = 15
 	super._initialize()
 
 
@@ -77,7 +77,7 @@ func _run() -> void:
 	_finish()
 
 
-# A ring of 16 points makes a search of tens of ms, so the worker is still on it as the call returns.
+# A ring of 16 points: a new wedge, searched on a worker once however many placements meet it.
 func _new_wedge_off_main() -> void:
 	var points := PackedVector3Array()
 	for i in 8:
@@ -90,9 +90,15 @@ func _new_wedge_off_main() -> void:
 	var faces := TerrainFaces.new()
 	_kit.terrain.finish()
 	_kit.terrain = faces
+	var searches: int = _kit.convex_searches
+	var on_main: int = _kit.convex_searches_on_main
 	var entry: Dictionary = _kit._terrain_entry(shape, place)
-	_t.check("a new wedge is searched on the worker, not in the warm-up's tick", entry.has("task") and not _kit._convex_kept(points),
-		"task %s, kept %s" % [entry.has("task"), _kit._convex_kept(points)])
+	for i in 6:
+		_kit._terrain_entry(shape, Transform3D(Basis.IDENTITY, Vector3(50.0 + 6.0 * float(i), 0.0, 0.0)))
+	faces.finish()
+	_t.check("seven placements of a new wedge search it once", _kit.convex_searches - searches == 1, "%d searches" % (_kit.convex_searches - searches))
+	_t.check("a new wedge is searched on the worker, not in the warm-up's tick", _kit.convex_searches_on_main == on_main,
+		"%d on the main thread" % (_kit.convex_searches_on_main - on_main))
 	_t.check("its build is readable once the worker is done", faces.readable(entry))
 	var fresh: Array = _kit._convex_faces_uncached(points).map(func(face): return (face as Array).map(func(v): return place * v))
 	_t.check("the worker's faces equal a fresh search in world space", var_to_str(entry["result"]["faces"]) == var_to_str(fresh),

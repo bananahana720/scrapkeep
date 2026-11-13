@@ -868,17 +868,40 @@ func _face_shadow(origin: Vector3, face: Array) -> Array:
 # held one physics tick for 400 to 900 ms on the 4080 (board #934, 13 Nov 2026).
 static var _convex_cache := {}
 static var _convex_lock := Mutex.new()
+# One lock per point list being searched, so a warm-up that meets 200 placements of a new wedge
+# searches it once: the other workers wait on that search and read the kept faces.
+static var _convex_searching := {}
+# Searches run, and those run on the main thread, for the hitch guard's counts.
+static var convex_searches := 0
+static var convex_searches_on_main := 0
 
 
 static func _convex_faces(points: PackedVector3Array) -> Array:
 	_convex_lock.lock()
 	var faces = _convex_cache.get(points)
+	var key_lock: Mutex = null
+	if faces == null:
+		key_lock = _convex_searching.get(points)
+		if key_lock == null:
+			key_lock = Mutex.new()
+			_convex_searching[points] = key_lock
+	_convex_lock.unlock()
+	if faces != null:
+		return faces
+	key_lock.lock()
+	_convex_lock.lock()
+	faces = _convex_cache.get(points)
 	_convex_lock.unlock()
 	if faces == null:
 		faces = _convex_faces_uncached(points)
 		_convex_lock.lock()
 		_convex_cache[points] = faces
+		convex_searches += 1
+		if OS.get_thread_caller_id() == OS.get_main_thread_id():
+			convex_searches_on_main += 1
+		_convex_searching.erase(points)
 		_convex_lock.unlock()
+	key_lock.unlock()
 	return faces
 
 
