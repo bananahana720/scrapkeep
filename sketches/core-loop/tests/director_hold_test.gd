@@ -2,7 +2,8 @@ extends SceneTree
 
 # Which enemies hold the director's cap (director.gd HOLD_M, NEVER_HOLDS, FAR_CEILING; world.gd director_held):
 # 1. Rule: an enemy within HOLD_M of the ball holds a slot, one past it does not, the Warden never does, and once
-#    FAR_CEILING enemies are alive in all the count is the hard cap, so nothing more comes.
+#    FAR_CEILING enemies are alive in all the count is the hard cap, so nothing more comes. A pack member past LEAVE_M
+#    leaves, and LEAVE_M is past HOLD_M.
 # 2. The dam's opening as the bot traces showed it (13 Nov 2026, stage/alpha-w40): a pack of 3 passed at the drop-in
 #    plus the Warden left 2 of the 6 slots, so every 3-pack was refused for 37 s. Replayed on the dam's staged
 #    director with the ball rolled 200 m on: counted the new way, a pack places inside a minute. Planted: counted the
@@ -30,6 +31,9 @@ func _rule() -> void:
 	t.eq("under the ceiling the count is the near enemies", Director.held_count(2, Director.FAR_CEILING - 1), 2)
 	t.eq("at the ceiling the count is the hard cap", Director.held_count(2, Director.FAR_CEILING), Director.HARD_CAP)
 	t.check("the ceiling sits above the hard cap, so near enemies reach the cap first", Director.FAR_CEILING > Director.HARD_CAP)
+	t.check("a pack member past LEAVE_M leaves", Director.leaves(ball + Vector2(Director.LEAVE_M + 1.0, 0.0), ball))
+	t.check("one on LEAVE_M stays", not Director.leaves(ball + Vector2(Director.LEAVE_M, 0.0), ball))
+	t.check("one leaves only after it stops holding a slot", Director.LEAVE_M > Director.HOLD_M)
 
 
 # Seconds until the staged dam director places its next pack, with `counted` enemies given to advance(); -1 if none in `limit`.

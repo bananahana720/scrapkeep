@@ -677,7 +677,8 @@ func director_alive() -> int:
 	return maxi(0, get_tree().get_nodes_in_group("enemy").size() - activities.standing())
 
 
-# What the director's cap counts: the enemies near the ball (director.gd HOLD_M), less the activities' own.
+# What the director's cap counts: the enemies near the ball (director.gd HOLD_M), less the activities' own. A
+# director pack member left past LEAVE_M leaves here, out of sight: no death, no scrap, no kill counted.
 func director_held() -> int:
 	var at: Vector3 = ctx.player.ball_position()
 	var ball := Vector2(at.x, at.z)
@@ -686,8 +687,15 @@ func director_held() -> int:
 	for enemy in get_tree().get_nodes_in_group("enemy"):
 		if not enemy is Node3D or activities.keeps(enemy):
 			continue
+		var spot := Vector2(enemy.global_position.x, enemy.global_position.z)
+		if enemy.has_meta("pack_seq") and not enemy.has_meta("elite_pack") and Director.leaves(spot, ball) \
+				and not (enemy.has_method("is_dead") and enemy.is_dead()):
+			enemy.remove_from_group("enemy")
+			enemy.remove_from_group("enemy_shot")
+			enemy.queue_free()
+			continue
 		total += 1
-		if Director.holds(String(enemy.get("kind")), Vector2(enemy.global_position.x, enemy.global_position.z), ball):
+		if Director.holds(String(enemy.get("kind")), spot, ball):
 			held += 1
 	return Director.held_count(held, total)
 

@@ -114,9 +114,11 @@ const HEFT_CAP_STEP := 2
 const HARD_CAP := 24
 # The cap counts an enemy only while it is within HOLD_M of the ball. A pack the ball has rolled past stays where
 # it is, but it no longer holds a slot (13 Nov 2026: the dam's drop-in pack, passed at 4 s, held 3 of the 6
-# slots and the director refused every pack from 10 s to 47 s). The Warden never holds one. Past FAR_CEILING
-# enemies alive in all, nothing more comes, so the ones left behind cannot pile up without end.
+# slots and the director refused every pack from 10 s to 47 s). The Warden never holds one. A director pack member
+# past LEAVE_M gives up and leaves (world.gd director_held): a completionist's detours otherwise stranded 15 to 25
+# enemies across the park. Past FAR_CEILING enemies alive in all, nothing more comes.
 const HOLD_M := 150.0
+const LEAVE_M := 260.0
 const NEVER_HOLDS := ["warden"]
 const FAR_CEILING := 32
 const ARRIVAL := 1.0
@@ -410,6 +412,11 @@ func _timer_pack(alive: int, ball: Vector2, velocity: Vector2, forward: Vector2)
 # Whether an enemy of `kind` at `at` holds one of the cap's slots with the ball at `ball`.
 static func holds(kind: String, at: Vector2, ball: Vector2) -> bool:
 	return not NEVER_HOLDS.has(kind) and at.distance_to(ball) <= HOLD_M
+
+
+# Whether a director pack member at `at` has been left far enough behind to leave the stage.
+static func leaves(at: Vector2, ball: Vector2) -> bool:
+	return at.distance_to(ball) > LEAVE_M
 
 
 # The count advance() is given: `held` enemies near the ball, or the hard cap once `total` alive reach FAR_CEILING.
