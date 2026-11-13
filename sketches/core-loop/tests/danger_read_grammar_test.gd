@@ -476,6 +476,9 @@ static func _live_ok(kind: String, look: Dictionary) -> bool:
 
 
 func _check_live() -> void:
+	# The base live look is the haze look's; the soft looks lighten a live lane (telegraph_clear_look_test).
+	var was := Threat.look()
+	Threat.set_look("haze")
 	var ring: Node3D = Telegraph.ring(_world, _ground, Threat.Type.INSTANT, Vector3(0.0, 0.0, -100.0), 4.5)
 	var lane: Node3D = Telegraph.lane(_world, _ground, Threat.Type.LANE, Vector3(20.0, 0.0, -100.0), Vector3.FORWARD, 11.0, 3.0)
 	var shell: Node3D = Telegraph.ring(_world, _ground, Threat.Type.PROJECTILE, Vector3(40.0, 0.0, -100.0), 3.6)
@@ -494,6 +497,7 @@ func _check_live() -> void:
 		ok = ok and _live_ok(kind, looks[kind])
 	_report("a live ring, lane and slag draw as base", ok, "haze %s, LIVE %.2f, scorch %.2f, air %.2f; %s" % [Threat.haze(), Threat.LIVE_ALPHA,
 		Threat.LIVE_SCORCH_ALPHA, Threat.AIR_LIVE_ALPHA, looks])
+	Threat.set_look(was)
 	var shell_look := _live_look(shell)
 	_report("a live shell's fill, one tick, new in wave 36", _live_ok("shell", shell_look) and not _live_ok("shell", looks["lane"]),
 		"%s; a fill in the live lane's class fails the same check" % [shell_look])

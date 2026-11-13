@@ -188,7 +188,8 @@ func _scatter_of(parent: Node) -> Array:
 
 
 # GP6-3 and GP6-4: the killing tick emits died and queues the enemy, as before; the
-# scatter has the row's pieces and is gone within its seconds plus one frame.
+# scatter has the row's pieces, lands on the floor a grounded body stood on, and is gone within
+# its life (the row's seconds plus the landing rest) plus one frame.
 func _death(kind: String, index: int, label: String) -> void:
 	var enemy = _spawn(kind, index)
 	await _frames(2)
@@ -206,7 +207,9 @@ func _death(kind: String, index: int, label: String) -> void:
 	if scatter == null:
 		return
 	var ref: WeakRef = weakref(scatter)
-	var limit := ceili(float(death.seconds) * Engine.physics_ticks_per_second) + 1
+	# A grounded body's pieces land and rest before they go (W1-86); life() is the row's seconds plus that rest.
+	var limit := ceili(float(scatter.life()) * Engine.physics_ticks_per_second) + 1
+	var under := 0
 	var frames := 0
 	# A piece leaves by shrinking and never through the instance's transparency: a fade sends an
 	# opaque surface to the blended pass, and the first piece of a look to go there made the
@@ -217,13 +220,18 @@ func _death(kind: String, index: int, label: String) -> void:
 	while ref.get_ref() != null and frames <= limit + 30:
 		await physics_frame
 		frames += 1
-		var live: Node = ref.get_ref()
+		var live = ref.get_ref()
 		if live != null and not live.is_queued_for_deletion():
 			sizes.append((live.get_child(0) as Node3D).basis.get_scale().length() / full)
 			for piece in live.get_children():
 				if piece is GeometryInstance3D and piece.transparency > 0.0:
 					faded += 1
+			for piece in live._pieces:
+				var mi: Node3D = piece.node
+				if mi.position.y < live.floor_at(mi) - 0.001:
+					under += 1
 	_t.check(label + " freed " + kind, ref.get_ref() == null and frames <= limit, "freed after %d frames, limit %d" % [frames, limit])
+	_t.check(label + " pieces never sink through the floor " + kind, under == 0, "%d piece samples under the ground" % under)
 	var shrinks := sizes.size() >= 4
 	for i in range(1, sizes.size()):
 		shrinks = shrinks and sizes[i] <= sizes[i - 1] + 0.0001

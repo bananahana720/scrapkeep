@@ -54,6 +54,15 @@ const ROWS := {
 	"ramp_flipper": {"stride": 1.8, "parts": {"body": ["RampBody"]}},
 	"boom_tender": {"stride": 2.4, "parts": {"hull": ["BoomTenderBody/TenderHull"], "reel": ["BoomTenderBody/TenderReel"],
 		"boom": ["BoomTenderBody/Boom"]}},
+	# The rest of the Spillway crew (W1-87). The code's own poses ride inside the joints: the
+	# bola's whirl, the swatter's sweep, the deflector's wall and squash, the meter's spin; the net
+	# rides the netcaster's body joint.
+	"netcaster": {"stride": 1.8, "parts": {"body": ["NetcasterBody/Body", "NetcasterNet"]}},
+	"bola_thrower": {"stride": 1.8, "parts": {"body": ["BolaThrowerBody"], "bola": ["BolaLoop"]}},
+	"swatter": {"stride": 1.8, "parts": {"body": ["SwatterBody"], "paddle": ["SwatterPaddle"]}},
+	"catch_trap": {"stride": 1.6, "parts": {"body": ["CatchBody"], "cup": ["CatchCup"]}},
+	"deflector": {"stride": 1.8, "parts": {"body": ["DeflectorBody/Body"], "dish": ["DeflectorBody/DishWall"]}},
+	"gyro_jammer": {"stride": 1.8, "parts": {"body": ["GyroBody"], "aerial": ["GyroAerial"]}},
 }
 
 # Tests opt in; a headless run otherwise plays nothing. This is its own switch, not
@@ -220,10 +229,14 @@ func hit() -> void:
 # Takes the dying body's look with it: the pivot moves to a holder in the world that plays
 # the death clip, then breaks up as before (EnemyMotion.scatter) and frees. False when the
 # kind has no death clip, so the caller scatters at once.
-func die(direction: Vector3) -> bool:
+var _land := Callable()
+
+
+func die(direction: Vector3, land := Callable()) -> bool:
+	_land = land
 	var pivot := get_parent() as Node3D
 	var world := enemy.get_parent() if enemy != null else null
-	if _dying or not lib.anims.has("death") or pivot == null or world == null:
+	if _dying or not lib.anims.has("death") or pivot == null or world == null or _tool_away():
 		return false
 	_holder = Node3D.new()
 	_holder.name = "DeathClip"
@@ -240,12 +253,22 @@ func die(direction: Vector3) -> bool:
 	return true
 
 
+# A part the kind has let go of (a bola in flight, a thrown cup) does not ride the clip: a crew
+# whose tool is away breaks up at once, the way it did before it had a death clip.
+func _tool_away() -> bool:
+	for row in _joints:
+		for part in (row.joint as Node3D).get_children():
+			if part is Node3D and (part as Node3D).top_level:
+				return true
+	return false
+
+
 func _physics_process(delta: float) -> void:
 	if _dying:
 		_sample("death", _death_age, 1.0)
 		_death_age += delta
 		if _death_age >= float(lib.anims.death.length):
-			EnemyMotion.scatter(_holder, kind, _death_direction)
+			EnemyMotion.scatter(_holder, kind, _death_direction, _land)
 			_holder.queue_free()
 			set_physics_process(false)
 		return
@@ -276,6 +299,10 @@ func _choose() -> Array:
 		_hit_age = -1.0
 		var tele = atk.get("tele")
 		var progress := float(tele.progress) if tele != null and is_instance_valid(tele) else float(atk.progress)
+		# A crew's wind-up runs on its own clock even where its telegraph is held open (the bola).
+		var run: float = enemy.windup_run() if enemy.has_method("windup_run") else -1.0
+		if run >= 0.0:
+			progress = run
 		return ["windup", clampf(progress, 0.0, 1.0) * float(anims.windup.length)]
 	if _strike_age >= 0.0 and anims.has("attack"):
 		# A live phase longer than the clip (a pit, a winch) holds its last pose until it closes,

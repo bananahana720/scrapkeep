@@ -24,6 +24,7 @@ const CrackedCache := preload("res://src/world/cracked_cache.gd")
 const FindKit := preload("res://src/world/find_kit.gd")
 const ModelKit := preload("res://src/world/model_kit.gd")
 const SfxBank := preload("res://src/presentation/sfx_bank.gd")
+const SpeedTier := preload("res://src/movement/speed_tier.gd")
 const WorldFx := preload("res://src/presentation/world_fx/world_fx.gd")
 const WorldFxAnchor := preload("res://src/presentation/world_fx/world_fx_anchor.gd")
 const StageModifier := preload("res://src/world/events/stage_modifier.gd")
@@ -175,6 +176,11 @@ const SLAM_MIN_PER_CRUISE := 1.0
 # so with the bar at cruise itself only the speed bank's roll start or a burst broke the wall: a player
 # already rolling at full speed bumped the face (cautious red team, 26 Oct). A nudge stays under it.
 const RAM_MIN_PER_CRUISE := 0.85
+# A park row's `bar` raises a cache wall to a speed tier (W1-76, Shift's job in world 1): only a ram into
+# the face at that tier of the unmodded cruise breaks it, and a slam never does. The streaks read the
+# modded cruise, so a cruise item can break the wall before they turn (overpowered pays, 24 Oct ruling).
+# Under the bar the refused cue still answers, so the face reads as "faster".
+const BARS := {"blazing": SpeedTier.BLAZING}
 const PEDESTAL_BACK := 4.0
 const CACHE_LANE_OFFSET := 6.0
 # The first-win room's log line on the back wall, on a dark crew board of its own: the fired wall
@@ -527,7 +533,8 @@ func _use_map(map) -> Dictionary:
 func _plan(map, entry_data: Dictionary) -> Dictionary:
 	var out := []
 	var modifier := {}
-	for spec in map.activity_sites:
+	for authored in map.activity_sites:
+		var spec := drawn(authored)
 		var id := String(spec["id"])
 		if not RULES.has(id):
 			continue
@@ -571,6 +578,25 @@ func _plan(map, entry_data: Dictionary) -> Dictionary:
 			if not ctx.calm or RULES[drawn_spec.id].finishes == "wall_broken":
 				out.append({"kind": "drawn", "id": drawn_spec.id, "at": drawn_spec.at, "spec": drawn_spec})
 	return {"sites": out, "modifier": modifier}
+
+
+# The site this run builds for an authored spec (W1-70): the spec itself, or one of its alts (park_map.gd), drawn
+# from the run's seed and the row, so a replay or a retry draws the same and the next run may not.
+func drawn(spec: Dictionary) -> Dictionary:
+	return variant(spec, hash([ctx.rng.seed, ctx.run.run_seed, "site_variants"]))
+
+
+# drawn for a given seed. An alt brings its own kind and pack; the place, row, pay and the rest stay the spec's.
+static func variant(spec: Dictionary, seed: int) -> Dictionary:
+	var alts: Array = spec.get("alts", [])
+	var pick := posmod(hash([seed, String(spec.get("row", ""))]), alts.size() + 1)
+	if pick == 0:
+		return spec
+	var out := spec.duplicate(true)
+	out.erase("pack")
+	out.erase("alts")
+	out.merge(alts[pick - 1].duplicate(true), true)
+	return out
 
 
 # What a site kind's marker calls it ("Arena", "Pickup course"), "" for a kind whose cue has no word.
@@ -806,7 +832,7 @@ func _build_site(id: String, at: Vector2, spec: Dictionary) -> Site:
 	s.drawn = spec.get("drawn", false)
 	s.trade = spec.get("trade", {})
 	var spec_pay: Dictionary = spec.get("pay", {})
-	if id in ["enemy_camp", "hold_the_relay", "ambush_altar"] or not spec_pay.is_empty() or s.rule.has("bundle") or not s.interior.is_empty():
+	if id in ["enemy_camp", "hold_the_relay", "ambush_altar"] or not spec_pay.is_empty() or spec.has("face") or s.rule.has("bundle") or not s.interior.is_empty():
 		s.rule = s.rule.duplicate(true)
 	if not s.interior.is_empty():
 		s.footprint = spec.footprint
@@ -830,6 +856,12 @@ func _build_site(id: String, at: Vector2, spec: Dictionary) -> Site:
 	# A field find faces out of its dead end (secrets.gd FINDS spots); a park row may set its own face.
 	if spec.has("face"):
 		s.rule["face"] = spec["face"]
+	if BARS.has(spec.get("bar", "")):
+		s.rule = s.rule.duplicate(true)
+		s.rule["bar_tier"] = BARS[spec["bar"]]
+	# A card 2 extra (PARK.md 2.12) is a second site beside the stage's own of its kind: it rolls apart (_luck_id).
+	if spec.get("extra", "") == "card_2":
+		s.set_meta("extra", String(spec.get("row", id)))
 	s.name = "Activity_" + id
 	(_site_parent if _site_parent != null else self).add_child(s)
 	s.global_position = ctx.terrain.drop_point(at.x, at.y, 0.0)
@@ -1968,8 +2000,7 @@ func _watch_wall(s: Site, ball: Vector3) -> void:
 	var ahead := local.z - 0.5
 	if ahead < -1.0 or ahead > WALL_REACH + maxf(0.0, toward) / 30.0 or absf(local.x) > WALL_HALF_W + 1.0 or local.y > WALL_HEIGHT + 2.0:
 		return
-	var bar: float = ctx.tuning.f("cruise") * RAM_MIN_PER_CRUISE
-	if toward >= bar:
+	if toward >= ram_bar(s):
 		_break_wall(s)
 	elif ahead <= WALL_CONTACT and local.y < WALL_HEIGHT:
 		_refuse_ram(s, toward)
@@ -1989,11 +2020,18 @@ func _refuse_ram(s: Site, toward: float) -> void:
 	ctx.events.verb_failed.emit("roll", "under_bar", ctx.player.ball_position())
 
 
+# The speed into a cache's face that breaks its wall: RAM_MIN_PER_CRUISE x cruise, or a row bar's tier.
+func ram_bar(s: Site) -> float:
+	if s.rule.has("bar_tier"):
+		return ctx.tuning.tier_cruise() * SpeedTier.MULTIPLES[int(s.rule["bar_tier"])]
+	return ctx.tuning.f("cruise") * RAM_MIN_PER_CRUISE
+
+
 func _slammed(at: Vector3, strength: float) -> void:
 	if strength < ctx.player.slam_strength(ctx.tuning.f("cruise")) * SLAM_MIN_PER_CRUISE:
 		return
 	for s in sites:
-		if s.wall == null or s.done:
+		if s.wall == null or s.done or s.rule.has("bar_tier"):
 			continue
 		var local: Vector3 = s.to_local(at)
 		if local.z > 0.5 and local.z < 0.5 + SLAM_REACH and absf(local.x) <= WALL_HALF_W + 1.0:
@@ -2156,8 +2194,9 @@ func _pay_scrap(s: Site, at: Vector3) -> void:
 		ctx.run.add_cogs(amount)
 
 
-# A field find, a first-win room, the timed door or a drawn pocket rolls on its own stream, so it never pays the
-# part the stage's ordinary site of its kind pays; every other site keeps its id, and so its rolls.
+# A field find, a first-win room, the timed door, a card 2 extra, a sealed room or a drawn pocket rolls on its own
+# stream, so it never pays the part the stage's ordinary site of its kind pays; every other site keeps its id, and so
+# its rolls.
 func _luck_id(s: Site) -> String:
 	if s.has_meta("find"):
 		return "%s:%s" % [s.id, s.get_meta("find")]
@@ -2165,6 +2204,12 @@ func _luck_id(s: Site) -> String:
 		return "%s:%s" % [s.id, s.get_meta("room")]
 	if s.has_meta("door"):
 		return "%s:timed_door" % s.id
+	# A card 2 extra and a room a valve or cracked wall seals (contraptions.gd) stand beside the stage's own
+	# cracked cache; on its stream they paid the same part.
+	if s.has_meta("extra"):
+		return "%s:%s" % [s.id, s.get_meta("extra")]
+	if s.has_meta("sealed"):
+		return "%s:%s" % [s.id, s.get_meta("sealed")]
 	# A drawn pocket rolls apart from the stage's authored site of its kind, or the two paid the same part:
 	# a drawn vault and the stage's own cache did on 23 of 40 dam runs and 24 of 40 flume runs (2026-11-09).
 	if s.drawn:
