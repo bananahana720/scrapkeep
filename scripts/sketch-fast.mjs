@@ -314,6 +314,9 @@ export function failingChecks(output) {
 
 // Added files must not be symlinks, root files or new top-level folders (#104 committed a
 // node_modules symlink, which broke every merge into a tree that has node_modules).
+// .mcp.json is the one root file a tool requires there: Claude Code reads project MCP servers
+// only from the repo root (the Godot MCP, Andrew 12 Nov 2026).
+export const ROOT_FILES_ALLOWED = new Set([".mcp.json"]);
 export function hygieneFindings(rawLines, baseTopLevel) {
   const findings = [];
   for (const line of rawLines) {
@@ -321,10 +324,17 @@ export function hygieneFindings(rawLines, baseTopLevel) {
     if (!match) continue;
     const [, , mode, file] = match;
     if (mode === "120000") findings.push(`symlink added: ${file}`);
+    else if (ROOT_FILES_ALLOWED.has(file)) continue;
     else if (!file.includes("/")) findings.push(`root file added: ${file}`);
     else if (!baseTopLevel.has(file.split("/")[0])) findings.push(`new top-level folder: ${file}`);
   }
   return findings;
+}
+
+// The Godot MCP adds an McpBridge autoload to project.godot while the game runs and removes it
+// on stop; a commit made mid-session, or after a killed session, would ship it.
+export function bridgeFindings(projectGodot) {
+  return /McpBridge/.test(projectGodot) ? ["project.godot carries the Godot MCP's McpBridge autoload: call stop_project, then commit"] : [];
 }
 
 // Merge commits on the PR's first-parent path each carry another branch. A carried PR that has
@@ -710,7 +720,10 @@ async function main() {
 
   // Stage 0: what the head is made of. Hygiene, then any stale branch it carries.
   const baseTop = new Set(git(["ls-tree", "--name-only", diffBase]).split("\n").filter(Boolean));
-  const hygiene = hygieneFindings(git(["diff", "--raw", "--no-abbrev", "--diff-filter=A", diffBase, "HEAD"]).split("\n"), baseTop);
+  const hygiene = [
+    ...hygieneFindings(git(["diff", "--raw", "--no-abbrev", "--diff-filter=A", diffBase, "HEAD"]).split("\n"), baseTop),
+    ...bridgeFindings(spawnSync("git", ["-C", root, "show", "HEAD:sketches/core-loop/project.godot"], { encoding: "utf8" }).stdout ?? ""),
+  ];
   if (!stage("tree hygiene", hygiene.length === 0, { note: hygiene.length ? hygiene.slice(0, 5).join("; ") : "no symlink, root file or new top-level folder", findings: hygiene }) && !options.dryRun) finish();
   const merges = git(["rev-list", "--first-parent", "--merges", "--parents", `${mergeBase}..HEAD`]).split("\n").filter(Boolean)
     .map((line) => line.split(" "))
