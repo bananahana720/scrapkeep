@@ -64,6 +64,9 @@ const SPECS := [
 	# World-one builds (design-v3/research/build-systems/BUILD-SYSTEMS.md, unit G): the master
 	# flag gives every pilot a two-depth tree, and the two hot-wired parts are selectable
 	# alone. All three default on. hotwire_shell is read by the build and the tree pick; hotwire_tread is read by the build (HotwireRules.fitted, build.gd) to fit the tread.
+	# The ball's look (presentation/ball_looks.gd): three candidates for Andrew's eye under ruling
+	# cq. "today" keeps the game's own shells and is the default, so the game is unchanged.
+	{"key": "ball_look", "label": "Ball look", "min": 0.0, "max": 3.0, "step": 1.0, "value": 0.0, "options": ["today", "gyro", "bell", "cutaway"]},
 	{"key": "world_one_builds", "label": "World-one builds", "min": 0.0, "max": 1.0, "step": 1.0, "value": 1.0, "options": ["off", "on"]},
 	# Poles and flails (design-v3/POLES-FLAILS.md): `--pole-flail=on` lets weight decide what a
 	# held harpoon does to a bitten enemy. Off keeps today's reel on every body until the lab
@@ -120,6 +123,7 @@ const DROP_ROOM_KEY := "drop_room"
 const SET_DIRECTOR_KEY := "set_director"
 const DISCOVERY_KEY := "discovery"
 const TELEGRAPH_KEY := "telegraph"
+const BALL_LOOK_KEY := "ball_look"
 
 const BRAKE_RESISTANCE := 4.0
 const BRAKE_TURN_BOOST := 2.2
@@ -238,6 +242,7 @@ const FLAGS := {
 	"set-director": ["set_director", "option", "launch"],
 	"discovery": ["discovery", "option", "launch"],
 	"telegraph": ["telegraph", "option", "launch"],
+	"ball-look": ["ball_look", "option", "launch"],
 	"world-one-builds": ["world_one_builds", "option", "launch"],
 	"pole-flail": ["pole_flail", "option", "launch"],
 	"hotwire-shell": ["hotwire_shell", "option", "launch"],

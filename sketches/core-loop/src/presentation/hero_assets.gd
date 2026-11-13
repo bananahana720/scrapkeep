@@ -72,6 +72,7 @@ const Accretion := preload("res://src/build/accretion.gd")
 const RewardGates := preload("res://src/build/reward_gates.gd")
 const PilotReactions := preload("res://src/presentation/pilot_reactions.gd")
 const MechaMotion := preload("res://src/presentation/mecha_motion.gd")
+const BallLooks := preload("res://src/presentation/ball_looks.gd")
 # One pose table per pilot (PILOT-CLIPS section 4.2), by the PILOTS glb stem.
 # Pilot return-to-rest clip built at runtime for GLBs with no idle loop, and the blend an impact
 # gets when it interrupts another one-shot.
@@ -584,6 +585,7 @@ func _fit(rec: Dictionary) -> void:
 	var shell := fit_shell_into(rolling, id, variant, _run_heft_class(), tints, player.pod_mount() if player.has_method("pod_mount") else player.juice_node())
 	if shell.is_empty():
 		return
+	BallLooks.dress(ball_look(), shell)
 	hide_placeholder(rolling)
 	rec["shell"] = shell
 	rec["core"] = shell.core
@@ -1089,8 +1091,15 @@ var _ready_glow := false
 func _assets() -> Dictionary:
 	if not _shell_assets_read and shell_assets.is_empty():
 		shell_assets = Cosmetics.asset_paths()
+		shell_assets.merge(BallLooks.asset_paths(ball_look()), true)
 	_shell_assets_read = true
 	return shell_assets
+
+
+# The ball look the launch asked for (--ball-look, ball_looks.gd); "today" without a tuning.
+func ball_look() -> String:
+	var tuning = ctx.get("tuning") if ctx != null else null
+	return tuning.option("ball_look") if tuning != null else BallLooks.TODAY
 
 
 static func _layer_path(base: String, heft_class: int) -> String:
