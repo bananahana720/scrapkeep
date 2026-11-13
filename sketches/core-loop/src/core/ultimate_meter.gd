@@ -12,9 +12,11 @@ const SpeedTier := preload("res://src/movement/speed_tier.gd")
 
 const CAP := 100.0
 # Points per unit of each source. A per-second source (fast, blazing) is added by tick().
+# A reel hit is a hull hit on a boss held in his reel (boss.gd, W1-61): Brindle's hits per reel
+# are capped (boss_rules.gd REEL_HITS), so a full reel pays at most REEL_HITS times this.
 const WEIGHTS := {
 	"weapon": 0.25, "contact": 2.0, "smash": 5.0, "chain_link": 2.0, "near_miss": 4.0,
-	"kill": 1.0, "stagger": 8.0, "shatter": 12.0, "fast": 0.5, "blazing": 1.2,
+	"kill": 1.0, "stagger": 8.0, "shatter": 12.0, "fast": 0.5, "blazing": 1.2, "reel": 6.0,
 }
 const WEAPON_RATE_CAP := 0.4
 # The most weapon points that can wait in the budget: two fresh hits, then the rate holds.

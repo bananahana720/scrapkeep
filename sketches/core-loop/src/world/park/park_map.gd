@@ -80,9 +80,10 @@ func warden_spec() -> Dictionary:
 # (its site row, resolved by NaturalFootprint, half sizes from effect.footprint_m when set, event_director.gd _park_clear; a
 # lightning row is its strike disc, a "ring" of 0 to strike_m at the site's centre) carry the row's footprint as "half": Vector2 and "yaw_deg", as footprint_contains
 # reads it; the "warden" (the engage ring) and the "yard" lock (lock_rows.gd) carry "ring": Vector2(inner, outer), the
-# band of distance from `at` they cover. The yard lock shuts wherever the ball first crosses within_m of the beacon on
-# the ground, centred ahead_m inside it, so its ring is every place that circle can stand for a ball that crosses
-# the line rolling (one landing from the air inside it shuts the yard nearer in). An "activity" that fights (a camp, an
+# band of distance from `at` they cover. The yard lock shuts wherever the ball first stands on level ground within
+# within_m of the beacon, or on any ground within its inner share (stage_locks.gd lock_arms), centred ahead_m inside
+# it, so its ring is every place that circle can stand for a ball that crosses the line rolling, down to the inner
+# share for a ball riding a slope in (one landing from the air inside it shuts the yard nearer in). An "activity" that fights (a camp, an
 # ambush altar, a relay) carries its rule's ring at the row's spot. Dormant homes count: an
 # event wakes them. Director timer packs are not sites; they spawn ahead of the ball anywhere off the pilot lines.
 # An event that commits no hazard and sends no foe is not a fight: the sluice surge is the surge run's water front,
@@ -127,8 +128,11 @@ func fight_sites() -> Array:
 	var lock: Dictionary = LockRows.row(title).get("lock", {})
 	if not lock.is_empty():
 		var radius := float(lock.get("radius_m", 26.0))
-		var centre := float(lock.get("within_m", 0.0)) - minf(float(lock.get("ahead_m", 0.0)), radius * 0.5)
-		out.append({"id": String(lock["id"]), "kind": "yard", "at": beacon, "ring": Vector2(maxf(0.0, centre - radius), centre + radius)})
+		var ahead := minf(float(lock.get("ahead_m", 0.0)), radius * 0.5)
+		var within := float(lock.get("within_m", 0.0))
+		var share: float = load("res://src/world/stage_locks.gd").LOCK_ANY_SLOPE_SHARE
+		out.append({"id": String(lock["id"]), "kind": "yard", "at": beacon,
+			"ring": Vector2(maxf(0.0, within * share - ahead - radius), within - ahead + radius)})
 	return out
 
 

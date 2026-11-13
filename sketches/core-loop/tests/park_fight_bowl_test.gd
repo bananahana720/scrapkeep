@@ -6,11 +6,13 @@ extends SceneTree
 # rim-minus-centre, at least BOWL_MIN_M; the minimum is printed beside it.
 #
 # Fight sites, as the game decides them:
-#  - the dam and flume yard locks (lock_rows.row(map_id), stage_locks.gd _lock()): the first time the
-#    ball is grounded within `within_m` of the beacon the yard shuts, centred `ahead_m` (capped at
+#  - the dam and flume yard locks (lock_rows.row(map_id), stage_locks.gd lock_arms() and _lock()): the
+#    first time the ball is grounded on level ground within `within_m` of the beacon, or on any ground
+#    within its inner share, the yard shuts, centred `ahead_m` (capped at
 #    half the radius) from the ball toward the beacon, `radius_m` round. So the centre follows the
 #    ball, not a fixed point. Reading used here: every ground LINE node of the stage graph whose
-#    flat distance to the beacon is within SITE_BAND_M of `within_m` stands in for the ball crossing
+#    flat distance to the beacon is within SITE_BAND_M of `within_m`, run on toward the beacon over
+#    sloped ground to the first level point or the inner share (PF-46), stands in for the ball crossing
 #    the circle, and its centre is that node moved ahead_m toward the beacon. The stage reading is the
 #    WORST site's median (so one good approach cannot hide a flat one), and the minimum over all sites
 #    of the minimum.
@@ -29,6 +31,7 @@ const T := preload("res://tests/support/t.gd")
 const ParkGraph := preload("res://src/world/park/park_graph.gd")
 const ParkMap := preload("res://src/world/park/park_map.gd")
 const LockRows := preload("res://src/world/lock_rows.gd")
+const StageLocks := preload("res://src/world/stage_locks.gd")
 const Arena := preload("res://src/boss/arena.gd")
 const Tool := preload("res://tools/park_graph.gd")
 
@@ -44,6 +47,7 @@ const BAKE_SIDE := 801
 # Stages under their line today. {"<stage>": {"value": measured median m, "why": "..."}}. Pruned by the
 # test itself: an entry that now meets the line fails it.
 const OWED := {
+	"park_dam": {"value": 0.72, "why": "PF-46 (12 Nov): the yard no longer shuts on the construction incline, whose 23 degree slope read as a rim but threw a riding ball back uphill; it shuts at the incline foot on the toe apron, which is 2 m deep at most, so half the ring is flat. Owes a real bowl on the apron (map work)"},
 	"park_flume": {"value": -0.41, "why": "both lock sites (the ball crossing 210 m from the beacon on the two lines) stand on flat forecourt ground; the ring rim reads no higher than the floor, and 10 m lower in places"},
 }
 
@@ -90,23 +94,37 @@ static func ground_height(ground: PackedFloat32Array, x: float, z: float) -> flo
 	return lerpf(lerpf(h00, h10, u), lerpf(h01, h11, u), v)
 
 
-# The yard centres the lock can take on this stage: ground LINE nodes at the lock circle's edge, each
-# moved ahead_m toward the beacon, as stage_locks.gd _lock() does.
-static func yard_sites(g, beacon: Vector2, lock: Dictionary) -> Array:
+# The yard centres the lock can take on this stage, as stage_locks.gd lock_arms() and _lock() decide:
+# ground LINE nodes at the lock circle's edge stand in for a ball crossing it. Where the ground there
+# is level the yard shuts on the spot; where it is not, the ball runs on toward the beacon until it
+# meets level ground or the circle's inner share, any ground (PF-46: the dam's incline crosses the
+# edge mid-slope). Each centre is that point moved ahead_m toward the beacon.
+static func yard_sites(g, beacon: Vector2, lock: Dictionary, height: Callable) -> Array:
 	var within := float(lock["within_m"])
+	var inner := within * StageLocks.LOCK_ANY_SLOPE_SHARE
 	var radius := float(lock["radius_m"])
 	var ahead := minf(float(lock["ahead_m"]), radius * 0.5)
+	var level_grade := tan(acos(StageLocks.LOCK_LEVEL_DOT))
 	var out := []
 	for n in g.node_count():
 		if g.flags(n) & ParkGraph.LINE == 0 or g.node_row(n) != "":
 			continue
 		var p: Vector3 = g.position(n)
-		var d := Vector2(p.x, p.z).distance_to(beacon)
-		if absf(d - within) > SITE_BAND_M:
+		var at := Vector2(p.x, p.z)
+		if absf(at.distance_to(beacon) - within) > SITE_BAND_M:
 			continue
-		var toward := (beacon - Vector2(p.x, p.z)).normalized()
-		out.append(Vector2(p.x, p.z) + toward * ahead)
+		var toward := (beacon - at).normalized()
+		while at.distance_to(beacon) > inner and grade(height, at.x, at.y) > level_grade:
+			at += toward * 2.0
+		out.append(at + toward * ahead)
 	return out
+
+
+# The ground's steepest rise per metre at (x, z), over a 2 m step each way.
+static func grade(height: Callable, x: float, z: float) -> float:
+	var dx: float = (float(height.call(x + 2.0, z)) - float(height.call(x - 2.0, z))) / 4.0
+	var dz: float = (float(height.call(x, z + 2.0)) - float(height.call(x, z - 2.0))) / 4.0
+	return Vector2(dx, dz).length()
 
 
 func _park_yard(map_id: String) -> void:
@@ -120,7 +138,7 @@ func _park_yard(map_id: String) -> void:
 		return
 	var ground: PackedFloat32Array = bake["ground"]
 	var height := func(x: float, z: float) -> float: return ground_height(ground, x, z)
-	var sites := yard_sites(g, map.beacon, lock)
+	var sites := yard_sites(g, map.beacon, lock, height)
 	if not t.check("%s yard sites found on the lines" % map_id, sites.size() > 0, "%d sites at %.0f m from the beacon" % [sites.size(), float(lock["within_m"])]):
 		return
 	var medians := []

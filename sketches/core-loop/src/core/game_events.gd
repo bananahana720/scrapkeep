@@ -106,6 +106,9 @@ signal fight_phase_changed(fight_id: String, phase: int, phases: int)
 # A cued follow-up: its hazard is drawn in FightPhases.CUE_LEAD and lands seconds_until from now.
 signal attack_cued(fight_id: String, attack_id: String, seconds_until: float)
 signal boss_weak_point_hit(point_id: String)
+# A hull hit while the boss reels on a chunk broken before its phase floor (W1-61): `scrap`
+# was shed as pickups beside `at`, and the ultimate meter takes one reel hit.
+signal boss_reeled(at: Vector3, scrap: int)
 signal boss_defeated
 
 # v2 W3 characters: the class abilities and the shared bowling-ball contact. Movement

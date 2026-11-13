@@ -97,6 +97,7 @@ const ROWS := {
 	"fight_phase_changed": {"group": "event", "color": Palette.BRASS, "shape": "none", "sound": "ui_tick", "hud": "", "objective": "", "priority": 0},
 	"attack_cued": {"group": "combat", "color": Palette.BRASS, "shape": "wave", "sound": "ratchet_cue", "hud": "", "objective": "", "priority": 2},
 	"boss_weak_point_hit": {"group": "combat", "color": Palette.BRASS, "shape": "burst", "sound": "boss_weak_hit", "hud": "", "objective": "", "priority": 1},
+	"boss_reeled": {"group": "economy", "color": Palette.AMBER, "shape": "square", "sound": "scrap_tick", "hud": "", "objective": "", "priority": 1},
 	"boss_defeated": {"group": "flow", "color": Palette.BRASS, "shape": "star", "sound": "stinger_boss_defeated", "hud": "", "objective": "", "priority": 3},
 	"threat_rose": {"group": "event", "color": Palette.RUST, "shape": "chevron", "sound": "threat_up", "hud": "Threat rising", "objective": "", "priority": 2},
 	# v2 W3 characters. A class's own facts wear its colour and shape from class_def.gd;
@@ -404,6 +405,7 @@ const WEIGHT_EXEMPT := {
 	"boss_arena_entered": "Run and stage lifecycle owns music and cleanup, not an impact.",
 	"boss_attack_telegraphed": "Threat, windup and floor cues keep their committed geometry and sound; impact must not restyle them.",
 	"boss_phase_changed": "Run and stage lifecycle owns music and cleanup, not an impact.",
+	"boss_reeled": "Reward and economy ladders own the cue; rewards never stop time. Its strike is enemy_struck.",
 	"cause_armed": "The verb or ability grammar owns this cue; its landed strike is enemy_struck.",
 	"cause_fired": "The verb or ability grammar owns this cue; its landed strike is enemy_struck.",
 	"cogs_collected": "Reward and economy ladders own the cue; rewards never stop time.",

@@ -4,7 +4,7 @@ const Harmony := preload("res://src/presentation/harmony.gd")
 const SfxBank := preload("res://src/presentation/sfx_bank.gd")
 const T := preload("res://tests/support/t.gd")
 
-# INTEGRATION section 7, item 2: the 49 event-set WAVs are registered under their cue
+# INTEGRATION section 7, item 2: the 51 event-set WAVs (49, and feedback_set.py's shot and deflect) are registered under their cue
 # keys. Every registered key resolves to a file that exists and decodes, the tiered cues
 # map to the tier and rarity arguments the callers already send, and a registered file
 # is what the bank bakes.
@@ -14,7 +14,7 @@ var t := T.new("audio_event_bank_test")
 
 func _initialize() -> void:
 	var cues: Array = SfxBank.EVENT_CUES
-	t.eq("49 event cues are registered", cues.size(), 49)
+	t.eq("51 event cues are registered", cues.size(), 51)
 	var dir := DirAccess.get_files_at(SfxBank.EVENT_DIR)
 	var on_disk: Array = Array(dir).filter(func(name: String): return name.ends_with(".wav")).map(func(name: String): return name.get_basename())
 	on_disk.sort()
@@ -44,7 +44,7 @@ func _initialize() -> void:
 			baked_peak = maxf(baked_peak, absf(v))
 		t.check("%s bakes to the file, not a recipe" % id, baked.size() == raw.size() and absf(baked_peak - 0.9) < 0.01, "%d samples, peak %.3f" % [baked.size(), baked_peak])
 	t.eq("no registered file fails to decode", empty, 0)
-	t.check("the 48 kHz files land at the bank rate", absf(float(SfxBank.file_samples("hit_thwack").size()) - 8640.0 * Harmony.RATE / 48000.0) <= 1.0)
+	t.check("the 48 kHz files land at the bank rate", absf(float(SfxBank.file_samples("land_thud").size()) - 13440.0 * Harmony.RATE / 48000.0) <= 1.0)
 	_tiers()
 	quit(t.verdict())
 

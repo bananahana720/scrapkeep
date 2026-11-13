@@ -290,6 +290,9 @@ func _run() -> void:
 	_t.check("caches share their meshes and materials (made once, not per cache on the entry frame)",
 		cache._ring.mesh == twin._ring.mesh and cache._ring.material_override == twin._ring.material_override and cache._lamp.mesh == twin._lamp.mesh)
 	twin.free()
+	# W1-23: the cache draws the crew mast model, no Godot primitive.
+	var plain := cache.find_children("*", "MeshInstance3D", true, false).filter(func(v): return v.mesh is PrimitiveMesh)
+	_t.check("the cache draws its mast model, no plain shapes", cache.get_node_or_null("RadioMast") != null and plain.is_empty(), "%d plain" % plain.size())
 	# The cache is handed the game's own ball, as radio_deck hands it: the PlayerBall node sits at
 	# the origin for the whole run, so reach is measured from the ball, never from that node.
 	var ball: Vector3 = _game.ctx.player.ball_position()

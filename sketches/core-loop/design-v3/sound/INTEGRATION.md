@@ -31,7 +31,7 @@ This is `set_pressure` with a new parameter source (`set_parameter_source` alrea
 | --- | --- | --- |
 | Stomp (landing on an enemy) | `slam_boom` | A one-beat band gap, then the downbeat hits harder: `drop_now(1, 0.6)` |
 | Wall bash | `smash_crack` | A brass stab from the world's lead family when the bash is above three quarters of top speed |
-| Kill chain | `kill_pop`, then `kill_chain_tier_1` to `_5` | Each tier is one more note of a rising D Dorian phrase, so a five-chain plays a melody. Tier 5 triggers the lead stem's hook. |
+| Kill chain | `kill_pop`, then `kill_chain_tier_1` to `_5` | Each tier racks one more click and a higher air rise, heavier and never a note (SOUND-BIBLE rule 7, [feedback_set.py](feedback_set.py)). Tier 5 triggers the lead stem's hook. |
 | Scrap pickup run | `scrap_tick_1` to `_5` by pickup streak | Same ladder, so collecting sounds like playing scales |
 | Boost and dash | `boost_whoosh`, `dash_whoosh` | None. Movement is never quantized. |
 | Getting hurt | `hurt` (the tritone rasp) | Bass ducks for half a second |
