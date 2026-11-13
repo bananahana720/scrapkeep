@@ -913,7 +913,6 @@ const ACTIVITY_ROWS := {
 	"cracked_cache": {"color": "amber", "motion": "steady", "shape": "diamond", "sound": "found_chime", "word": "Cache"},
 	"hauler_bounty": {"color": "amber", "motion": "steady", "shape": "square", "sound": "found_chime", "word": "Bounty"},
 	"hold_the_relay": {"color": "amber", "motion": "steady", "shape": "cross", "sound": "found_chime", "word": "Relay"},
-	"stocktake_yard": {"color": "amber", "motion": "steady", "shape": "square", "sound": "found_chime", "word": "Stocktake"},
 }
 
 

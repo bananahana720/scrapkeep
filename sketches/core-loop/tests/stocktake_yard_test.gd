@@ -5,21 +5,23 @@ const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const SurvivalCount := preload("res://src/world/survival_count.gd")
 const Parts := preload("res://src/build/parts.gd")
+const Palette := preload("res://src/core/palette.gd")
 
 # The Stocktake yard on the dam (BACKLOG W1-101): survival_count.gd's rule stood on the map by activities.gd.
 # (a) with the launch flag off the dam plans no yard; with it on it plans one of the park's two yard rows;
 # (b) the flag builds one yard site, on that row's ground;
 # (c) rolling in starts count 1, its machines climb in one at a time, and the gate stays shut until every one of
 #     them has arrived and fallen;
-# (d) a cleared floor opens the gate; staying through it brings count 2's machines;
-# (e) rolling out through the open gate after count 2 ends the yard won and pays exactly pay(2): its scrap and
-#     one part of the listed grade, on a pickup in the ball's path;
+# (d) a cleared floor opens the gate and the ring turns the live colour; staying through it brings count 2's
+#     machines and the ring turns back; a floor cleared with the ball outside the ring banks nothing;
+# (e) rolling in and out through the open gate after count 2 ends the yard won and pays exactly pay(2): its
+#     scrap, and one part of the listed grade on a pickup in the ball's path;
 # (f) a fresh yard left with the gate shut forfeits after out_s and pays nothing;
 # (g) a ball destroyed inside forfeits a fresh yard;
 # (h) a machine spawned at twice the health scale has twice the health of the same machine spawned plain.
 
 const SEED := 23
-const EXPECTED_CHECKS := 13
+const EXPECTED_CHECKS := 14
 
 var _game
 var _t := preload("res://tests/support/t.gd").new("stocktake_yard_test")
@@ -54,6 +56,10 @@ func _kill(s) -> void:
 	for enemy in s.pack:
 		if is_instance_valid(enemy):
 			enemy.take_damage(100000.0)
+
+
+func _ring_color(s) -> Color:
+	return ((s.view.ring.get_child(0) as MeshInstance3D).material_override as StandardMaterial3D).albedo_color
 
 
 func _centre(s) -> Vector3:
@@ -127,13 +133,19 @@ func _counts(spec: Dictionary) -> void:
 		"started %s arrived %d of %d, most in one frame %d" % [s.started, seen.size(), first.size(), peak_new])
 	_t.check("the gate stays shut while machines are still owed", not early_gate, "")
 	await _hold(_centre(s))
-	_t.check("a cleared floor opens the gate", rule.gate_open and rule.cleared == 1 and s.view.word.text == "1", "gate %s cleared %d word %s" % [rule.gate_open, rule.cleared, s.view.word.text])
+	_t.check("a cleared floor opens the gate and the ring turns the live colour", rule.gate_open and rule.cleared == 1 and _ring_color(s) == Palette.live(),
+		"gate %s cleared %d ring %s" % [rule.gate_open, rule.cleared, _ring_color(s)])
 	for frame in int((float(rule.rule["gate_s"]) + float(s.rule["arrive_s"]) * rule.pack(2).size() + 0.5) * Engine.physics_ticks_per_second):
 		await _hold(_centre(s))
 	_t.check("staying through the gate brings count 2's machines", rule.count == 2 and not rule.gate_open
-		and _acts().yard_standing(s) == rule.pack(2).size() and s.yard_owed.is_empty(), "count %d standing %d" % [rule.count, _acts().yard_standing(s)])
+		and _acts().yard_standing(s) == rule.pack(2).size() and s.yard_owed.is_empty() and _ring_color(s) != Palette.live(),
+		"count %d standing %d" % [rule.count, _acts().yard_standing(s)])
+	# The last machine falls with the ball outside the ring: the gate opens, and nothing is banked for it.
+	await _hold(_outside(s))
 	_kill(s)
-	await _hold(_centre(s))
+	await _hold(_outside(s))
+	await _hold(_outside(s))
+	_t.check("a floor cleared from outside opens the gate and banks nothing", rule.gate_open and not s.done and _ended.is_empty(), "gate %s done %s" % [rule.gate_open, s.done])
 	await _hold(_centre(s))
 	var scrap_before: int = _game.run.scrap
 	var parts_before: Array = _game.run.parts.duplicate()

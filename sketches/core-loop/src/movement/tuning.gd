@@ -79,7 +79,7 @@ const SPECS := [
 	{"key": "called_shot", "label": "Called shot", "min": 0.0, "max": 1.0, "step": 1.0, "value": 0.0, "options": ["off", "on"]},
 	# The survival yard (BACKLOG W1-101, src/world/survival_count.gd): off by default, so no yard is built and
 	# bots, tests and the sitting play the game without it until its band read is in.
-	{"key": "stocktake", "label": "Survival yard", "min": 0.0, "max": 1.0, "step": 1.0, "value": 0.0, "options": ["off", "on"]},
+	{"key": "stocktake", "label": "Stocktake", "min": 0.0, "max": 1.0, "step": 1.0, "value": 0.0, "options": ["off", "on"]},
 	# The harpoon (DESIGN-NOTES, "Harpoon and winch"): one mode for every pilot, locking on an enemy inside
 	# harpoon_lock_deg and flying the ball in.
 	{"key": "harpoon_smash_speed", "label": "Harpoon smash speed", "min": 10.0, "max": 45.0, "step": 1.0, "value": 24.0},

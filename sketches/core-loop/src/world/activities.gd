@@ -137,11 +137,13 @@ const RULES := {
 	# The Stocktake yard (BACKLOG W1-101; survival_count.gd owns the counts, their clocks and the pay ladder): one of
 	# the park's survival_rows of this `form`, drawn by the run's seed, and only with --stocktake=on. Rolling into
 	# the ring starts count 1. A count's machines climb in on the ring's edge one every `arrive_s`. With the gate
-	# open, rolling out of the ring banks the pay into the ball's path; staying takes the next count. `out_s`
-	# outside the ring with the gate shut, or the ball destroyed, forfeits it all.
+	# open the ring turns the live colour, and rolling out of it from inside banks the pay (scrap and cores at once,
+	# parts on a pickup in the ball's path); staying takes the next count. `out_s` outside the ring with the gate
+	# shut, or the ball destroyed, forfeits it all. It wears the bounty's marker row under its own word.
 	"stocktake_yard": {
 		"starts": "ring", "ring": 40.0, "finishes": "count", "pack": [], "form": "yard", "arrive_s": 0.4, "out_s": 4.0,
 		"pay_ahead_m": 12.0, "pay": {"scrap": 0, "rarities": [], "source": "activity_yard", "where": "gate"},
+		"cue": {"view": "hauler_bounty", "word": "Stocktake"},
 	},
 	# The surge course in a park (surge_course.gd): rolling into the ring by the head of the activity row's `route`
 	# opens the sluice (the park's sluice_surge event row, triggered on this row), and when the gate lands the water
@@ -362,6 +364,8 @@ class Site extends Node3D:
 	var yard_owed: Array = []
 	var yard_wait := 0.0
 	var yard_out := 0.0
+	# The ball has been inside the ring with this gate open, so crossing out is its choice to bank.
+	var yard_may_bank := false
 
 	func _exit_tree() -> void:
 		for enemy in pack + minibosses:
@@ -921,6 +925,7 @@ func _build_site(id: String, at: Vector2, spec: Dictionary) -> Site:
 			_build_relay(s)
 		"stocktake_yard":
 			s.yard = SurvivalCount.new(ctx.stages.world_of(ctx.run.stage), String(s.rule["form"]))
+			s.view.word.text = String(s.rule.cue.word)
 		"surge_run":
 			_build_surge(s, spec)
 		"ambush_altar":
@@ -2040,13 +2045,23 @@ func _watch_yard(s: Site, delta: float, ball: Vector3) -> void:
 	s.yard_wait -= delta
 	if s.yard_wait <= 0.0 and not s.yard_owed.is_empty():
 		_yard_arrive(s, ball)
-	if yard.step(delta, yard_standing(s)) in ["count", "pile"]:
-		_yard_owe(s)
-	s.view.word.text = str(yard.cleared) if yard.gate_open else str(yard.count)
+	match yard.step(delta, yard_standing(s)):
+		"gate":
+			s.view.ring_role("live")
+		"count":
+			s.view.ring_role("amber")
+			s.yard_may_bank = false
+			_yard_owe(s)
+		"pile":
+			_yard_owe(s)
+	s.view.word.text = str(yard.count)
 	if inside:
 		s.yard_out = 0.0
+		s.yard_may_bank = yard.gate_open
 	elif yard.gate_open:
-		_yard_pay(s, yard.leave(), ball)
+		# A floor cleared from outside the ring banks nothing by itself: the ball rolls in, then out.
+		if s.yard_may_bank:
+			_yard_pay(s, yard.leave(), ball)
 	else:
 		s.yard_out += delta
 		if s.yard_out >= float(s.rule["out_s"]):
@@ -2072,9 +2087,9 @@ func _yard_arrive(s: Site, ball: Vector3) -> void:
 	s.yard_wait = float(s.rule["arrive_s"])
 
 
-# The ball left through the open gate: `pay` (SurvivalCount.pay) lands on its path, one part roll a rarity listed.
+# The ball left through the open gate: `pay` (SurvivalCount.pay) is banked. Scrap and cores land at once; the
+# parts, one roll a rarity listed, wait on a pickup in the ball's path.
 func _yard_pay(s: Site, pay: Dictionary, ball: Vector3) -> void:
-	s.rule["pay"]["scrap"] = int(pay.get("scrap", 0))
 	s.reward_parts = []
 	var rarities: Array = pay.get("rarities", [])
 	for i in rarities.size():
@@ -2087,6 +2102,10 @@ func _yard_pay(s: Site, pay: Dictionary, ball: Vector3) -> void:
 	at = ctx.terrain.drop_point(at.x, at.z, 1.0)
 	for i in int(pay.get("cores", 0)):
 		ctx.run.add_core(String(s.rule["pay"]["source"]), at)
+	var scrap := int(pay.get("scrap", 0))
+	if scrap > 0:
+		ctx.run.add_scrap(scrap, at)
+		ctx.run.add_cogs(scrap)
 	ctx.events.event_ended.emit(s.id, "won")
 	_finish(s, at)
 
@@ -2298,7 +2317,7 @@ func _finish(s: Site, at: Vector3) -> void:
 		else:
 			s.pickup_part = _roll(_luck_id(s), table["rarities"])
 	if s.pickup_part != "":
-		s.pickup = ActivityView.gem(String(s.rule.cue.view) if s.rule.has("bundle") else s.id)
+		s.pickup = ActivityView.gem(String(s.rule.cue.view) if s.rule.has("bundle") or s.yard != null else s.id)
 		s.add_child(s.pickup)
 		s.pickup.global_position = at
 		s.inside_pickup = _planar(ctx.player.ball_position(), at) <= PICKUP_REACH

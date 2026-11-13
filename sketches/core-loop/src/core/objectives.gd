@@ -41,6 +41,7 @@ const ACTIVITY_WORDS := {
 	"hold_the_relay": "Hold the relay",
 	"surge_run": "Outrun the surge",
 	"hauler_bounty": "Break the bounty hauler",
+	"stocktake_yard": "Clear the count",
 	# The trade spots by their ruled names (ruling ci): the risky ones are the keeper's gamble, the
 	# safe one the foreman's kindness. The site's own label says the same.
 	"trade_risk": "The keeper's gamble",
@@ -58,6 +59,7 @@ const DONE_WORDS := {
 	"hold_the_relay": "Relay held",
 	"surge_run": "Surge outrun",
 	"hauler_bounty": "Bounty hauler broken",
+	"stocktake_yard": "Count banked",
 	"trade_risk": "Gamble taken",
 	"curse": "Gamble taken",
 	"sacrifice": "Gamble taken",
@@ -71,6 +73,7 @@ const DONE_WORDS := {
 const LOST_WORDS := {
 	"hold_the_relay": "Relay lost",
 	"surge_run": "Surge lost",
+	"stocktake_yard": "Count forfeit",
 }
 
 # The one or two words a mark wears on the thing the plate's row sends the player at
