@@ -18,10 +18,12 @@ const Palette := preload("res://src/core/palette.gd")
 #     scrap, and one part of the listed grade on a pickup in the ball's path;
 # (f) a fresh yard left with the gate shut forfeits after out_s and pays nothing;
 # (g) a ball destroyed inside forfeits a fresh yard;
-# (h) a machine spawned at twice the health scale has twice the health of the same machine spawned plain.
+# (h) on a short rule whose count 2 is twice as strong, the yard's own count 2 machine has twice a plain machine's
+#     health, and leaving after it banks the core and scrap at the gate and three parts, each its own, on the pickup;
+# (i) across run seeds both rows are drawn, and one seed always draws the same row.
 
 const SEED := 23
-const EXPECTED_CHECKS := 14
+const EXPECTED_CHECKS := 16
 
 var _game
 var _t := preload("res://tests/support/t.gd").new("stocktake_yard_test")
@@ -95,7 +97,9 @@ func _run() -> void:
 	await _walks_out()
 	await _fresh()
 	await _destroyed()
-	_health()
+	await _fresh()
+	await _later_count()
+	_rows(map)
 	_t.eq("expected check count", _t.checks + 1, EXPECTED_CHECKS)
 	_game.free()
 	await _frames(2)
@@ -194,11 +198,73 @@ func _destroyed() -> void:
 	_kill(s)
 
 
-func _health() -> void:
+# A short rule so a later count is reached in a second: one runner a count, count 2 at twice the health, and a pay
+# row with two parts and a core, plus the one more rare part count 2 earns past the ladder.
+const SHORT := {
+	"counts": [["runner"]],
+	"after": {"stronger": 2.0, "rogue_every": 3},
+	"count_s": 25.0,
+	"gate_s": 0.3,
+	"pay": [{"scrap": 50, "rarities": ["common", "rare"], "cores": 1}],
+	"pay_after": {"rarity": "rare", "relic": "relic", "relic_at": [8]},
+}
+
+
+func _later_count() -> void:
 	var s = _site()
-	var at: Vector3 = _outside(s)
-	var plain = _game.ctx.spawner.spawn_enemy("chaser", at)
-	var strong = _game.ctx.spawner.spawn_enemy("chaser", at + Vector3(4.0, 0.0, 0.0), "", Vector3.INF, 2.0)
-	_t.near("twice the health scale is twice the health", strong.max_hp, plain.max_hp * 2.0, 0.01)
+	if s == null:
+		_t.check("a later count's machines arrive stronger", false, "no site")
+		_t.check("a later count's pay is banked whole", false, "no site")
+		return
+	_ended.clear()
+	s.yard = SurvivalCount.new(1, "yard", SHORT)
+	var plain = _game.ctx.spawner.spawn_enemy("chaser", _outside(s))
+	var plain_hp: float = plain.max_hp
 	plain.queue_free()
-	strong.queue_free()
+	var settle := int((float(SHORT["gate_s"]) + float(s.rule["arrive_s"]) + 0.3) * Engine.physics_ticks_per_second)
+	for frame in settle:
+		await _hold(_centre(s))
+	var first_hp: float = s.pack[0].max_hp if s.pack.size() == 1 else -1.0
+	_kill(s)
+	for frame in settle:
+		await _hold(_centre(s))
+	var second_hp: float = s.pack[0].max_hp if s.pack.size() == 1 else -1.0
+	_t.check("the yard spawns count 2 at the rule's strength", s.yard.count == 2 and is_equal_approx(first_hp, plain_hp)
+		and is_equal_approx(second_hp, plain_hp * 2.0), "count %d, health %.1f then %.1f, plain %.1f" % [s.yard.count, first_hp, second_hp, plain_hp])
+	_kill(s)
+	await _hold(_centre(s))
+	await _hold(_centre(s))
+	var scrap_before: int = _game.run.scrap
+	var cores_before: int = _game.run.bonus_cores
+	var parts_before: int = _game.run.parts.size()
+	await _hold(_outside(s))
+	var cores_at_gate: int = _game.run.bonus_cores - cores_before
+	var pickup_at: Vector3 = s.pickup.global_position if s.pickup != null else Vector3.INF
+	for frame in 40:
+		await _hold(pickup_at + Vector3(0.0, 1.05, 0.0))
+		if s.pickup_taken:
+			break
+	var gained: Array = _game.run.parts.slice(parts_before)
+	var grades: Array = gained.map(func(part): return Parts.rarity_of(part))
+	var distinct := {}
+	for part in gained:
+		distinct[part] = true
+	_t.check("a later count banks its core, its scrap and every part, each its own", _ended == ["won"] and cores_at_gate == 1
+		and _game.run.scrap - scrap_before == 50 and grades == ["common", "rare", "rare"] and distinct.size() == 3,
+		"ended %s cores %d scrap %d grades %s parts %s" % [_ended, cores_at_gate, _game.run.scrap - scrap_before, grades, gained])
+
+
+# Across run seeds both of the dam's rows are drawn, and one seed always draws the same row.
+func _rows(map) -> void:
+	var kept: int = _game.run.run_seed
+	var drawn := {}
+	var steady := true
+	for run_seed in 24:
+		_game.run.run_seed = run_seed
+		var row := String(_acts().yard_spec(map).get("row", ""))
+		steady = steady and row == String(_acts().yard_spec(map).get("row", ""))
+		drawn[row] = true
+	_game.run.run_seed = kept
+	var rows: Array = drawn.keys()
+	rows.sort()
+	_t.check("both yard rows are drawn across run seeds, the same row for the same seed", steady and rows == ["shelf_yard", "slot_yard"], str(rows))
