@@ -419,6 +419,7 @@ func _sync_dressing() -> void:
 	park_props = ParkProps.new()
 	add_child(park_props)
 	park_props.setup(ctx)
+	park_props.prop_kicked.connect(juice.on_prop_kicked)
 	if is_instance_valid(ambient_life):
 		ambient_life.free()
 	ambient_life = null

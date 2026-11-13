@@ -22,7 +22,9 @@ const Secrets := preload("res://src/core/secrets.gd")
 const AmbushAltar := preload("res://src/world/ambush_altar.gd")
 const CrackedCache := preload("res://src/world/cracked_cache.gd")
 const FindKit := preload("res://src/world/find_kit.gd")
+const ModelKit := preload("res://src/world/model_kit.gd")
 const SfxBank := preload("res://src/presentation/sfx_bank.gd")
+const SpeedTier := preload("res://src/movement/speed_tier.gd")
 const WorldFx := preload("res://src/presentation/world_fx/world_fx.gd")
 const WorldFxAnchor := preload("res://src/presentation/world_fx/world_fx_anchor.gd")
 const StageModifier := preload("res://src/world/events/stage_modifier.gd")
@@ -53,6 +55,10 @@ signal sluice_closed(row_id: String)
 #           in a stage entry also adds the next companion piece (Companion.DROP_ORDER) to the run, unequipped.
 const PAY_RARITIES := ["common", "rare"]
 const PAY_SCRAP := 180
+# A pocket interior's cover block and entrance bollard (pocket_kit.glb), the block built 4 by 3 by 4 m.
+const POCKET_KIT := "res://assets/models/world_one/pocket_kit.glb"
+const POCKET_PARTS := ["PocketBlock", "PocketPost"]
+const POCKET_BLOCK := Vector3(4.0, 3.0, 4.0)
 const RULES := {
 	"trade_risk": {"starts": "none", "ring": 6.0, "finishes": "trade", "pay": {"scrap": 0, "rarities": [], "source": "trade_risk", "where": "device"}, "cue": {"view": "cracked_cache"}},
 	"trade_safe": {"starts": "none", "ring": 6.0, "finishes": "trade", "pay": {"scrap": 0, "rarities": [], "source": "trade_safe", "where": "device"}, "cue": {"view": "cracked_cache"}},
@@ -170,6 +176,11 @@ const SLAM_MIN_PER_CRUISE := 1.0
 # so with the bar at cruise itself only the speed bank's roll start or a burst broke the wall: a player
 # already rolling at full speed bumped the face (cautious red team, 26 Oct). A nudge stays under it.
 const RAM_MIN_PER_CRUISE := 0.85
+# A park row's `bar` raises a cache wall to a speed tier (W1-76, Shift's job in world 1): only a ram into
+# the face at that tier of the unmodded cruise breaks it, and a slam never does. The streaks read the
+# modded cruise, so a cruise item can break the wall before they turn (overpowered pays, 24 Oct ruling).
+# Under the bar the refused cue still answers, so the face reads as "faster".
+const BARS := {"blazing": SpeedTier.BLAZING}
 const PEDESTAL_BACK := 4.0
 const CACHE_LANE_OFFSET := 6.0
 # The first-win room's log line on the back wall, on a dark crew board of its own: the fired wall
@@ -809,7 +820,7 @@ func _build_site(id: String, at: Vector2, spec: Dictionary) -> Site:
 	s.drawn = spec.get("drawn", false)
 	s.trade = spec.get("trade", {})
 	var spec_pay: Dictionary = spec.get("pay", {})
-	if id in ["enemy_camp", "hold_the_relay", "ambush_altar"] or not spec_pay.is_empty() or s.rule.has("bundle") or not s.interior.is_empty():
+	if id in ["enemy_camp", "hold_the_relay", "ambush_altar"] or not spec_pay.is_empty() or spec.has("face") or s.rule.has("bundle") or not s.interior.is_empty():
 		s.rule = s.rule.duplicate(true)
 	if not s.interior.is_empty():
 		s.footprint = spec.footprint
@@ -833,6 +844,12 @@ func _build_site(id: String, at: Vector2, spec: Dictionary) -> Site:
 	# A field find faces out of its dead end (secrets.gd FINDS spots); a park row may set its own face.
 	if spec.has("face"):
 		s.rule["face"] = spec["face"]
+	if BARS.has(spec.get("bar", "")):
+		s.rule = s.rule.duplicate(true)
+		s.rule["bar_tier"] = BARS[spec["bar"]]
+	# A card 2 extra (PARK.md 2.12) is a second site beside the stage's own of its kind: it rolls apart (_luck_id).
+	if spec.get("extra", "") == "card_2":
+		s.set_meta("extra", String(spec.get("row", id)))
 	s.name = "Activity_" + id
 	(_site_parent if _site_parent != null else self).add_child(s)
 	s.global_position = ctx.terrain.drop_point(at.x, at.y, 0.0)
@@ -903,15 +920,32 @@ func _build_interior(s: Site) -> void:
 	var root := Node3D.new()
 	root.name = "Interior_" + String(s.interior.id)
 	s.add_child(root)
+	# Each block and bollard wears the pocket kit's model (tools/blender/world_one/pocket_kit.py), scaled from
+	# its nominal size; a block's model sits under an unscaled holder so its collider (added on entry)
+	# keeps the authored size. A missing kit keeps the striped boxes.
 	for block in s.interior.terrain:
 		var size := Vector3(block.size[0], block.size[1], block.size[2])
 		var at := Vector3(block.at[0], size.y * 0.5, block.at[1])
+		var holder := Node3D.new()
+		holder.position = at
+		root.add_child(holder)
+		var view := ModelKit.part(POCKET_KIT, POCKET_PARTS, "PocketBlock", holder)
+		if view != null:
+			view.scale = size / POCKET_BLOCK
+			continue
+		holder.free()
 		if _interior_block == null:
 			_interior_block = Palette.striped(Palette.VERDIGRIS, Palette.CHARCOAL)
 		_mesh_box(root, size, at, _interior_block)
 	for entrance in s.interior.entrances:
 		for side in [-1.0, 1.0]:
-			_mesh_box(root, Vector3(0.3, 2.0, 0.3), Vector3(entrance.at[0] + side * entrance.width * 0.5, 1.0, entrance.at[1]), _solid(EventKinds.activity_color(s.view.id)))
+			var post_at := Vector3(entrance.at[0] + side * entrance.width * 0.5, 1.0, entrance.at[1])
+			var post := ModelKit.part(POCKET_KIT, POCKET_PARTS, "PocketPost", root)
+			if post != null:
+				post.position = post_at
+				post.material_override = _solid(EventKinds.activity_color(s.view.id))
+			else:
+				_mesh_box(root, Vector3(0.3, 2.0, 0.3), post_at, _solid(EventKinds.activity_color(s.view.id)))
 	# The interior builds after the site's own dressing pass, so it dresses its own blocks (2026-10-14).
 	load("res://src/presentation/spillway_scenery.gd").dress_props(root)
 
@@ -1954,8 +1988,7 @@ func _watch_wall(s: Site, ball: Vector3) -> void:
 	var ahead := local.z - 0.5
 	if ahead < -1.0 or ahead > WALL_REACH + maxf(0.0, toward) / 30.0 or absf(local.x) > WALL_HALF_W + 1.0 or local.y > WALL_HEIGHT + 2.0:
 		return
-	var bar: float = ctx.tuning.f("cruise") * RAM_MIN_PER_CRUISE
-	if toward >= bar:
+	if toward >= ram_bar(s):
 		_break_wall(s)
 	elif ahead <= WALL_CONTACT and local.y < WALL_HEIGHT:
 		_refuse_ram(s, toward)
@@ -1975,11 +2008,18 @@ func _refuse_ram(s: Site, toward: float) -> void:
 	ctx.events.verb_failed.emit("roll", "under_bar", ctx.player.ball_position())
 
 
+# The speed into a cache's face that breaks its wall: RAM_MIN_PER_CRUISE x cruise, or a row bar's tier.
+func ram_bar(s: Site) -> float:
+	if s.rule.has("bar_tier"):
+		return ctx.tuning.tier_cruise() * SpeedTier.MULTIPLES[int(s.rule["bar_tier"])]
+	return ctx.tuning.f("cruise") * RAM_MIN_PER_CRUISE
+
+
 func _slammed(at: Vector3, strength: float) -> void:
 	if strength < ctx.player.slam_strength(ctx.tuning.f("cruise")) * SLAM_MIN_PER_CRUISE:
 		return
 	for s in sites:
-		if s.wall == null or s.done:
+		if s.wall == null or s.done or s.rule.has("bar_tier"):
 			continue
 		var local: Vector3 = s.to_local(at)
 		if local.z > 0.5 and local.z < 0.5 + SLAM_REACH and absf(local.x) <= WALL_HALF_W + 1.0:
@@ -2142,8 +2182,9 @@ func _pay_scrap(s: Site, at: Vector3) -> void:
 		ctx.run.add_cogs(amount)
 
 
-# A field find, a first-win room, the timed door or a drawn pocket rolls on its own stream, so it never pays the
-# part the stage's ordinary site of its kind pays; every other site keeps its id, and so its rolls.
+# A field find, a first-win room, the timed door, a card 2 extra, a sealed room or a drawn pocket rolls on its own
+# stream, so it never pays the part the stage's ordinary site of its kind pays; every other site keeps its id, and so
+# its rolls.
 func _luck_id(s: Site) -> String:
 	if s.has_meta("find"):
 		return "%s:%s" % [s.id, s.get_meta("find")]
@@ -2151,6 +2192,12 @@ func _luck_id(s: Site) -> String:
 		return "%s:%s" % [s.id, s.get_meta("room")]
 	if s.has_meta("door"):
 		return "%s:timed_door" % s.id
+	# A card 2 extra and a room a valve or cracked wall seals (contraptions.gd) stand beside the stage's own
+	# cracked cache; on its stream they paid the same part.
+	if s.has_meta("extra"):
+		return "%s:%s" % [s.id, s.get_meta("extra")]
+	if s.has_meta("sealed"):
+		return "%s:%s" % [s.id, s.get_meta("sealed")]
 	# A drawn pocket rolls apart from the stage's authored site of its kind, or the two paid the same part:
 	# a drawn vault and the stage's own cache did on 23 of 40 dam runs and 24 of 40 flume runs (2026-11-09).
 	if s.drawn:

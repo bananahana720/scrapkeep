@@ -432,12 +432,14 @@ func _clear_preview() -> void:
 	_preview = null
 
 
-# Test and dev hook: the fight as if the earlier phases had just been won.
+# Test and dev hook: the fight as if the earlier phases had just been won. The chunks left are
+# set, not only lowered, so a jump back to an earlier phase opens it with its own chunk whole:
+# a chunk already broken would hold the phase and start the reel (W1-61), not the fight.
 func jump_to_phase(next: int) -> void:
 	if not active():
 		return
 	if next > 1:
-		_posture.chunks = mini(_posture.chunks, BossPosture.CHUNKS - (next - 1))
+		_posture.chunks = BossPosture.CHUNKS - (mini(next, 4) - 1)
 		hp = float(_posture.chunks)
 	if next > 3:
 		_begin_eject()

@@ -268,11 +268,11 @@ func _check_site_models() -> void:
 			"shell %s" % [box])
 
 
-# Primitive meshes the site draws, less its beacon view and a pocket interior (W1-23's family).
+# Primitive meshes the site draws, less its beacon view.
 func _primitives(node: Node, skip: Node) -> int:
 	var n := 0
 	for view: MeshInstance3D in node.find_children("*", "MeshInstance3D", true, false):
-		if view.mesh is PrimitiveMesh and not skip.is_ancestor_of(view) and not String(node.get_path_to(view)).begins_with("Interior_"):
+		if view.mesh is PrimitiveMesh and not skip.is_ancestor_of(view):
 			n += 1
 	return n
 
@@ -315,8 +315,11 @@ func _bounty() -> void:
 		and _planar(brute.global_position, s.global_position) < 3.0, "brute %s" % [brute])
 	_t.eq("the director is given the enemy group's size less the bounty's brute",
 		_game.world.director_alive(), _game.get_tree().get_nodes_in_group("enemy").size() - 1)
-	_t.check("its crate wears the row's amber, apart from its plates", brute.get_node("BountyCrate").material_override.albedo_color == EventKinds.activity_color("hauler_bounty")
+	var crate: MeshInstance3D = brute.get_node("BountyCrate")
+	_t.check("its crate wears the row's amber, apart from its plates", crate.material_override.albedo_color == EventKinds.activity_color("hauler_bounty")
 		and brute.find_child("BrutePlates", true, false) != null, "crate colour")
+	_t.check("its crate is the crew's cache chest and lid, not a box", not crate.mesh is PrimitiveMesh and crate.get_child_count() == 1
+		and not (crate.get_child(0) as MeshInstance3D).mesh is PrimitiveMesh, "crate %s" % [crate.mesh])
 	# Walked off and woken, with the ball 60 m away, it goes home inside 300 frames.
 	var near: Vector3 = _ground(s.global_position + Vector3(20.0, 0.0, 0.0))
 	var acts = _game.world.activities

@@ -17,6 +17,8 @@ var _done := false
 var _run_time := 0.0
 var _outcome := ""
 var _rumble_log: Array = []
+# The player's finished chains (chain.gd `finished`), read each tick while the game lives (W1-74).
+var _chains: Array = []
 # The feel facts in order, for the timeline clip: [run seconds, kind, detail].
 const TIMELINE_KINDS := ["carved", "near_miss", "player_hit", "slammed", "harpoon_bit"]
 var _timeline: Array = []
@@ -58,6 +60,8 @@ func _physics_process(delta: float) -> bool:
 		var juice = _census_game.presentation.get("juice") if _census_game.presentation != null else null
 		if juice != null and juice.get("rumble_log") != null:
 			_rumble_log = juice.rumble_log
+		if _census_game.player != null and _census_game.player.get("chain") != null:
+			_chains = _census_game.player.chain.finished.duplicate()
 		if _driver != null:
 			_outcome = String(_driver.outcome)
 	return over
@@ -78,5 +82,20 @@ func _finalize() -> void:
 	if f != null:
 		f.store_string(JSON.stringify({"seed": seed, "policy": String(_settings.get("policy", "")), "outcome": _outcome,
 			"run_time": snappedf(_run_time, 0.01), "carve_seconds": snappedf(_carve_s, 0.01), "carves_started": _carves,
-			"rumbles": rumbles, "timeline": _timeline, "events": _counts}, "\t"))
+			"rumbles": rumbles, "chains": _chain_summary(), "timeline": _timeline, "events": _counts}, "\t"))
 		f.close()
+
+
+# Chains by how they ended: paid ones by combo (the burst steps, W1-74), the best, and the unpaid count.
+func _chain_summary() -> Dictionary:
+	var paid_by_combo := {}
+	var best := 0
+	var unpaid := 0
+	for c in _chains:
+		var combo := int(c.get("combo", 0))
+		best = maxi(best, combo)
+		if c.get("paid", false):
+			paid_by_combo[str(combo)] = int(paid_by_combo.get(str(combo), 0)) + 1
+		else:
+			unpaid += 1
+	return {"total": _chains.size(), "best_combo": best, "unpaid": unpaid, "paid_by_combo": paid_by_combo}

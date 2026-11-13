@@ -1,0 +1,52 @@
+{
+  "id": "incline_vault",
+  "kind": "secret",
+  "activity": "cracked_cache",
+  "footprint": "small",
+  "ring": 6,
+  "entrances": [
+    {
+      "at": [
+        0,
+        12.0
+      ],
+      "width": 6,
+      "marked": true
+    }
+  ],
+  "entry_spot": [
+    0,
+    6
+  ],
+  "entry_radius": 40,
+  "difficulty": 1,
+  "weight": 1,
+  "density": {
+    "terrain": 65,
+    "enemies": 25,
+    "pickups": 10,
+    "start": true
+  },
+  "tell": {
+    "word": "Incline vault",
+    "record": "cracked_cache"
+  },
+  "pack": [],
+  "terrain": [],
+  "hazards": [],
+  "safe_path": {
+    "from": [
+      0,
+      12.0
+    ],
+    "to": [
+      0,
+      0
+    ],
+    "width": 4
+  },
+  "assigned": {
+    "map": "park_dam",
+    "row": "incline_cache"
+  }
+}
