@@ -6,19 +6,12 @@
 # A glob covers only one owner's own subtree: game.gd owns every unscripted node under the game root, so its rows are exact.
 # Seeded 12 Nov 2026 from the census of cand/w40 243794e0 (seed 40317, pylon_engineer, park table, through Brindle).
 # Stand-in rows come first: the first row that covers a surface judges it, so a code glob cannot hide a stand-in.
-arena.gd	BoxMesh	Node3D/SlagBowl/MeshInstance3D	stand-in	W1-23	Slag Bowl crane mast, boom and rim vent
-arena.gd	CylinderMesh	Node3D/SlagBowl/MeshInstance3D	stand-in	W1-23	Slag Bowl crane mast, boom and rim vent
-arena.gd	CylinderMesh	Node3D/SlagBowl/WaterVent	stand-in	W1-23	Slag Bowl crane mast, boom and rim vent
-bay.gd	BoxMesh	Barge/YardWall/MeshInstance3D	stand-in	W1-23	Moss's bay: yard wall, pins, cradle and barge fittings in code (found by the census, not in the audit table; W1-23 confirms or re-pins as code)
-bay.gd	BoxMesh	MossBay/Barge/MeshInstance3D	stand-in	W1-23	Moss's bay: yard wall, pins, cradle and barge fittings in code (found by the census, not in the audit table; W1-23 confirms or re-pins as code)
-bay.gd	CylinderMesh	Barge/Pin/MeshInstance3D	stand-in	W1-23	Moss's bay: yard wall, pins, cradle and barge fittings in code (found by the census, not in the audit table; W1-23 confirms or re-pins as code)
-bay.gd	CylinderMesh	Barge/StaticBody3D/MeshInstance3D	stand-in	W1-23	Moss's bay: yard wall, pins, cradle and barge fittings in code (found by the census, not in the audit table; W1-23 confirms or re-pins as code)
-bay.gd	CylinderMesh	MossBay/Barge/MeshInstance3D	stand-in	W1-23	Moss's bay: yard wall, pins, cradle and barge fittings in code (found by the census, not in the audit table; W1-23 confirms or re-pins as code)
-bay.gd	CylinderMesh	MossBay/Cradle/MeshInstance3D	stand-in	W1-23	Moss's bay: yard wall, pins, cradle and barge fittings in code (found by the census, not in the audit table; W1-23 confirms or re-pins as code)
-bay.gd	QuadMesh	MossBay/Barge/BakedLamplight	stand-in	W1-23	Moss's bay: yard wall, pins, cradle and barge fittings in code (found by the census, not in the audit table; W1-23 confirms or re-pins as code)
-bay.gd	SphereMesh	MossBay/Barge/MeshInstance3D	stand-in	W1-23	Moss's bay: yard wall, pins, cradle and barge fittings in code (found by the census, not in the audit table; W1-23 confirms or re-pins as code)
-bay.gd	TorusMesh	MossBay/Barge/MeshInstance3D	stand-in	W1-23	Moss's bay: yard wall, pins, cradle and barge fittings in code (found by the census, not in the audit table; W1-23 confirms or re-pins as code)
-bay.gd	TorusMesh	MossBay/Cradle/MeshInstance3D	stand-in	W1-23	Moss's bay: yard wall, pins, cradle and barge fittings in code (found by the census, not in the audit table; W1-23 confirms or re-pins as code)
+arena.gd	CylinderMesh	Node3D/SlagBowl/WaterVent	code	-	the rim vent's glowing quench pad (arena.gd _vent), the mark the ball rolls onto; the nozzle beside it is slag_bowl_kit.glb
+bay.gd	BoxMesh	MossBay/Barge/MeshInstance3D	code	-	Moss's bay marks: the three glowing rarity tokens on the shelf, the painted floor mats, the pad chevrons and the deck line; the props are bay_kit.glb
+bay.gd	CylinderMesh	MossBay/Barge/MeshInstance3D	code	-	Moss's bay effects and marks: the four thruster steam jets and the launch pad disc; the props are bay_kit.glb
+bay.gd	QuadMesh	MossBay/Barge/BakedLamplight	code	-	Moss's bay baked lamplight, a lighting card
+bay.gd	SphereMesh	MossBay/Barge/MeshInstance3D	code	-	the marble toy's marble, a ball by design
+bay.gd	TorusMesh	MossBay/Cradle/MeshInstance3D	code	-	the dock cradle's glowing amber ring, the mark that says roll here
 build_read.gd	SphereMesh	SubViewport/Node3D/MeshInstance3D	stand-in	W1-46	pause build preview: a grey sphere where the ball should be
 contraptions.gd	CylinderMesh	Contraptions/*_geyser/MeshInstance3D	code	-	geyser steam column (contraptions.gd _build_launcher): a translucent column that swells with the charge over the geyser_vent model
 rescue_site.gd	BoxMesh	rivet_cage/Node3D/MeshInstance3D	code	-	the cage's dashed ground ring (device.gd ground_ring), the interact mark every device draws; the cage itself is rescue_cage.glb
