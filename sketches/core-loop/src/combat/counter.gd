@@ -92,7 +92,7 @@ var _t := 0.0
 var _rest := 0.0
 var _strafe := 1.0
 var _crew: MeshInstance3D
-# The crew's eye on its job head (CrewLamp, W1-83); null for a kind with no head lamp.
+# The crew's head lamp, its eye (CrewLamp, W1-83); null for a kind with none.
 var _eye: Node3D
 
 
@@ -278,7 +278,7 @@ func _physics_process(delta: float) -> void:
 				_end()
 	_pose()
 	if _eye != null:
-		_eye.watch(delta, _warn_progress() if phase == Phase.WARN else (1.0 if phase == Phase.LIVE else 0.0))
+		_eye.watch(delta, _t / maxf(warn_seconds, 0.001) if phase == Phase.WARN else (1.0 if phase == Phase.LIVE else 0.0))
 
 
 func _idle(delta: float) -> void:

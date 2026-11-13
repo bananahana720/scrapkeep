@@ -1,11 +1,13 @@
 extends Node3D
 
+const Palette := preload("res://src/core/palette.gd")
 const FlashGuard := preload("res://src/presentation/flash_guard.gd")
 
 # A crew's eye (W1-83): one work lamp on its job head, facing the way the head faces. The gait
 # turns the model to watch where the crew means to strike, so the lamp shows where it looks; it
-# glows dull at rest, brightens through the wind-up in the danger colour and goes out when the
-# crew dies. A player reads attention and intent on the body before the telegraph finishes, and
+# glows a dull work-lamp bone at rest, turns to the danger colour and brightens through the
+# wind-up (the colour law gives HAZARD to the wind-up, LEGIBILITY.md), and goes out when the crew
+# dies. A player reads attention and intent on the body before the telegraph finishes, and
 # the read adds nothing to the ground the "clear" telegraph keeps open.
 #
 # This node is the lamp's place: a child of the head's own part, so a baked clip that moves the
@@ -37,14 +39,16 @@ const ROWS := {
 	"winch_drone": {"part": "WinchBody/Body", "at": Vector3(0.0, 0.95, 0.39)},
 }
 
-# The lens: a dome this wide, standing this far out of the head.
+# The lens: a dome this wide, standing this far out of the head (a hemisphere's height is its dome).
 const LENS := 0.085
 const LENS_DEPTH := 0.06
 # Glow: dull at rest, full at the strike (emission energy), and the share of the lens colour
 # lit at rest.
-const REST := 0.35
+const REST := 0.25
 const PEAK := 4.0
 const REST_TINT := 0.45
+# The rest colour (a work lamp's bone); the wind-up turns it to Palette.HAZARD.
+const REST_COLOUR := Palette.LEDGER
 # Seconds the glow takes to fall back after an attack (the rise follows the warning exactly).
 const FADE := 0.3
 const FIELD := "CrewLamps"
@@ -55,8 +59,8 @@ var _out := false
 var _field: Node3D
 
 
-# The kind's lamp seated on its head part, or null for a kind with no row or no such part.
-# `world` holds the lamp field (the crews' common parent).
+# The kind's lamp seated on its head part, or null for a kind with no row, no such part or no
+# world. `world` holds the lamp field (the crews' common parent).
 static func fit(pivot: Node3D, kind: String, world: Node) -> Node3D:
 	var row: Dictionary = ROWS.get(kind, {})
 	if row.is_empty() or pivot == null or world == null:
@@ -92,7 +96,7 @@ static func _field_in(world: Node) -> Node3D:
 	return found
 
 
-# goal 0 to 1: the open attack's warn progress, 1 while it is live, 0 between attacks.
+# goal 0 to 1: how far the wind-up has run, 1 while the attack is live, 0 between attacks.
 func watch(delta: float, goal: float) -> void:
 	if _out:
 		return
@@ -120,6 +124,11 @@ func tint() -> float:
 func _enter_tree() -> void:
 	if is_instance_valid(_field):
 		_field.join(self)
+
+
+# How far the lens has turned from its rest colour to the danger colour.
+func danger() -> float:
+	return 0.0 if _out else warmth
 
 
 func _exit_tree() -> void:

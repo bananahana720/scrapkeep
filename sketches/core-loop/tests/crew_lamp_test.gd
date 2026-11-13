@@ -25,7 +25,7 @@ func _run() -> void:
 	for kind in CrewLamp.ROWS:
 		await _seated(kind, ball + Vector3(14.0, 1.6, 0.0))
 	await _one_draw(ball)
-	await _follows_warning(ball)
+	await _follows_warning()
 	quit(_t.verdict())
 
 
@@ -94,45 +94,70 @@ func _one_draw(ball: Vector3) -> void:
 	var drawn: Transform3D = field.global_transform * field.place(eye)
 	_t.check("an instance stands at its lamp", drawn.origin.distance_to(eye.global_position) < 0.001)
 	_t.check("an instance faces the lamp's way", drawn.basis.y.normalized().dot(eye.global_basis.z.normalized()) > 0.99)
+	# A crew leaving from the middle hands its slot to the last; the others stay on their lamps.
+	crews[1].free()
+	crews.remove_at(1)
+	await process_frame
+	var placed := true
 	for crew in crews:
+		placed = placed and (field.global_transform * field.place(crew._eye)).origin.distance_to(crew._eye.global_position) < 0.001 and field._lamps.has(crew._eye)
+	_t.check("a crew leaving from the middle keeps the others on their lamps", placed and field.lamps() == 3)
+	# A full field grows instead of leaving a crew without its eye.
+	var room: int = field.multimesh.instance_count
+	var crowd := []
+	for i in room:
+		crowd.append(_game.combat.spawn_enemy("hooker", ball + Vector3(12.0 + float(i % 8) * 3.0, 1.6, -8.0 - float(i / 8) * 3.0)))
+	await process_frame
+	_t.check("a full field grows to take every lamp", field.lamps() == room + 3 and field.multimesh.instance_count >= room + 3, "%d lamps, room %d" % [field.lamps(), field.multimesh.instance_count])
+	_t.check("the field runs while the tree is paused (stills)", field.process_mode == Node.PROCESS_MODE_ALWAYS)
+	for crew in crews + crowd:
 		crew.free()
 	await process_frame
 	_t.check("the instances leave with their crews", field.multimesh.visible_instance_count == 0)
 
 
-func _follows_warning(ball: Vector3) -> void:
-	var enemy = _game.combat.spawn_enemy("hooker", ball + Vector3(10.0, 1.6, 0.0))
+func _follows_warning() -> void:
+	# The bola thrower's telegraph stays open all wind-up (its _warn_progress is 0); its lamp still
+	# follows the wind-up's own clock.
+	for kind in ["hooker", "bola_thrower"]:
+		await _warns(kind, _game.player.ball_position())
+
+
+func _warns(kind: String, ball: Vector3) -> void:
+	var enemy = _game.combat.spawn_enemy(kind, ball + Vector3(10.0, 1.6, 0.0))
 	enemy.hp = 100000.0
 	enemy._rest = 0.0
 	var lamp: Node3D = enemy._eye
 	var rest: float = -1.0
+	var rest_danger: float = -1.0
 	var rising := true
 	var followed := true
 	var last := -1.0
 	var warned := false
 	var lived := false
-	for i in 600:
+	for i in 900:
 		await physics_frame
 		if enemy.phase == enemy.Phase.ROAM and not warned and rest < 0.0 and i > 5:
 			rest = lamp.energy()
+			rest_danger = lamp.danger()
 		if enemy.phase == enemy.Phase.WARN:
 			warned = true
-			followed = followed and absf(lamp.warmth - clampf(enemy._warn_progress(), 0.0, 1.0)) < 0.001
+			followed = followed and absf(lamp.warmth - clampf(enemy._t / enemy.warn_seconds, 0.0, 1.0)) < 0.001
 			rising = rising and lamp.energy() >= last
 			last = lamp.energy()
 		elif enemy.phase == enemy.Phase.LIVE:
 			lived = true
-			followed = followed and lamp.warmth == 1.0
+			followed = followed and lamp.warmth == 1.0 and lamp.danger() == 1.0
 		elif lived:
 			break
-	_t.check("the hooker warned and went live", warned and lived)
-	_t.check("the lamp's warmth is the warning's progress, and full while live", followed)
-	_t.check("the lamp only brightens through the warning", rising)
-	_t.check("the lamp is brighter at the strike than at rest", lamp.energy() > rest and rest > 0.0, "rest %.2f now %.2f" % [rest, lamp.energy()])
+	_t.check(kind + " warned and went live", warned and lived)
+	_t.check(kind + " lamp's warmth is the wind-up's run, and full and in the danger colour while live", followed)
+	_t.check(kind + " lamp only brightens through the wind-up", rising and last > rest)
+	_t.check(kind + " lamp rests in its own colour, not the danger colour", rest_danger == 0.0 and rest > 0.0, "rest %.2f" % rest)
 	for i in 30:
 		await physics_frame
-	_t.check("the lamp fades back after the attack", lamp.warmth < 0.2, str(lamp.warmth))
+	_t.check(kind + " lamp fades back after the attack", lamp.warmth < 0.2, str(lamp.warmth))
 	enemy.hp = 1.0
 	enemy.take_damage(10.0)
-	_t.check("the lamp goes dark at death", lamp.energy() == 0.0 and lamp.tint() == 0.0)
+	_t.check(kind + " lamp goes dark at death", lamp.energy() == 0.0 and lamp.tint() == 0.0)
 	await physics_frame
