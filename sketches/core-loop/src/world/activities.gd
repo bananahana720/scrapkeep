@@ -382,6 +382,7 @@ func setup(ctx_ref) -> void:
 		clear()
 		_drop_ahead())
 	ctx.events.launched.connect(_on_launched)
+	ctx.events.flow_changed.connect(_on_flow_changed)
 	ctx.events.slammed.connect(func(at: Vector3, strength: float, _flatness: float): _slammed(at, strength))
 	ctx.events.world_fact.connect(_on_world_fact)
 	ctx.events.player_died.connect(_forfeit_yards)
@@ -673,14 +674,28 @@ func _arm(site: Site) -> void:
 # where stages are built on workers (a played game, a frame-capture bot run). Bots and tests build at entry as before.
 func _on_launched(_velocity: Vector3) -> void:
 	_drop_ahead()
+	var flow = ctx.get("flow")
+	if flow == null or not flow.state_name() in ["gates", "launch"] or ctx.stages.is_world_last(ctx.run.stage):
+		return
+	_start_ahead(ctx.run.stage + 1)
+
+
+# A world boss's victory starts the next world's first stage the same way: that stage is entered from the arena
+# with no launch, and building its sites on the entry tick was about 5 ms of the Dig's (cloud, 13 Nov 2026).
+func _on_flow_changed(state: String) -> void:
+	if state != "victory":
+		return
+	_drop_ahead()
+	var flow = ctx.get("flow")
+	if flow == null or not flow.has_method("run_ends_after") or flow.run_ends_after(ctx.run.stage):
+		return
+	_start_ahead(ctx.run.stage + 1)
+
+
+func _start_ahead(stage: int) -> void:
 	if ctx.terrain == null or not ctx.terrain.has_method("_worker_builds") or not ctx.terrain._worker_builds():
 		return
-	var flow = ctx.get("flow")
-	if flow == null or not flow.state_name() in ["gates", "launch"]:
-		return
-	var stage: int = ctx.run.stage + 1
-	if ctx.stages.is_world_last(ctx.run.stage) or not "maps" in ctx.terrain or stage > ctx.terrain.maps.size() \
-			or not ctx.terrain.is_ready(stage):
+	if not "maps" in ctx.terrain or stage > ctx.terrain.maps.size() or not ctx.terrain.is_ready(stage):
 		return
 	var map = ctx.terrain.map_for(stage)
 	if not "park" in map or map.park.is_empty() or not "activity_sites" in map:
