@@ -40,15 +40,15 @@ static func _staged() -> Director:
 
 # A pilot line point and the heading along the line there.
 static func _on_line(d: Director) -> Array:
-	var line: Array = d._corridors._park_pilot_lines[0]
+	var line: Array = d._corridors.pilot_lines()[0]
 	var i := int(line.size() / 3)
 	return [line[i], (line[i + 4] - line[i]).normalized()]
 
 
 func _line_spots() -> void:
 	var d := _staged()
-	t.check("the staged dam director has pilot lines", d._corridors != null and not d._corridors._park_pilot_lines.is_empty())
-	if d._corridors == null or d._corridors._park_pilot_lines.is_empty():
+	t.check("the staged dam director has pilot lines", d._corridors != null and not d._corridors.pilot_lines().is_empty())
+	if d._corridors == null or d._corridors.pilot_lines().is_empty():
 		return
 	var at: Array = _on_line(d)
 	var ball: Vector2 = at[0]
@@ -61,7 +61,7 @@ func _line_spots() -> void:
 			continue
 		placed += 1
 		var near_line := INF
-		for line in d._corridors._park_pilot_lines:
+		for line in d._corridors.pilot_lines():
 			for k in range(1, line.size()):
 				var on := Geometry2D.get_closest_point_to_segment(spot, line[k - 1], line[k])
 				near_line = minf(near_line, on.distance_to(spot))

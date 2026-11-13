@@ -378,6 +378,11 @@ func set_clock_tier(effective_tier: int) -> void:
 
 # Fight phases are pulses, including each stagger. A blocked pulse remains queued
 # for its row; it is consumed on announcement, never remembered as a fight state.
+# The park's pilot lines as Vector2 point lists ([] off the park table): where the director lands route packs.
+func pilot_lines() -> Array:
+	return _park_pilot_lines
+
+
 func notify_warden_phase(phase: String) -> void:
 	if phase == "broken":
 		_park_quiet_until = stage_time + PARK_QUIET_S

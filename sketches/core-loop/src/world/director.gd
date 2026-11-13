@@ -367,7 +367,7 @@ func advance(delta: float, alive_count: int, ball := Vector2.ZERO, velocity := V
 				due.append(spawn)
 	if paused:
 		return due
-	var quiet := _breathe(delta, ball)
+	var quiet := _breathe(delta, ball, _heading(velocity, forward))
 	if mode == "credit":
 		if not quiet:
 			_credit_advance(delta, alive_count + due.size(), ball, velocity, forward)
@@ -966,7 +966,7 @@ static func facing(heading: Vector2, to: Vector2, cone: float) -> bool:
 # `heading`, moved LINE_SIDE to one side, and safe (off every corridor, out of breathers).
 func _line_spot(ball: Vector2, heading: Vector2) -> Vector2:
 	var ahead: Array[Vector2] = []
-	for line in _corridors._park_pilot_lines:
+	for line in _corridors.pilot_lines():
 		for i in range(1, line.size()):
 			var a: Vector2 = line[i - 1]
 			var b: Vector2 = line[i]
@@ -1080,11 +1080,11 @@ func _home_spot(home: Dictionary, ball: Vector2, preferred := Vector2.ZERO, assi
 # Whether the ball's free packs wait this tick, spending delta of its breather's BREATH_S: it is inside a breather with
 # quiet left and no live crew home is in the window ahead. A crew home is an authored fight the map places (and
 # park_breath_test measures); a breather quiets only the director's own packs.
-func _breathe(delta: float, ball: Vector2) -> bool:
+func _breathe(delta: float, ball: Vector2, heading := Vector2.ZERO) -> bool:
 	var id := breather_at(ball)
 	if id == "" or float(breath_used.get(id, 0.0)) >= BREATH_S:
 		return false
-	if _park_map != null and not _window_homes(ball).is_empty():
+	if _park_map != null and not _window_homes(ball, heading).is_empty():
 		return false
 	breath_used[id] = float(breath_used.get(id, 0.0)) + delta
 	return true
@@ -1106,7 +1106,7 @@ func in_breather(p: Vector2) -> bool:
 func _park_safe(spot: Vector2) -> bool:
 	if in_breather(spot):
 		return false
-	for line in _corridors._park_pilot_lines:
+	for line in _corridors.pilot_lines():
 		for i in range(1, line.size()):
 			# A point footprint uses ParkMap's same segment/margin predicate as KE1.
 			var point := {"at": [spot.x, spot.y], "size": [0.0, 0.0, 0.0], "yaw_deg": 0.0}
@@ -1228,8 +1228,13 @@ func compose() -> Array:
 	return kinds
 
 
+# Where the ball is going: its velocity once it moves, else where it faces. Breathers and spawns read the same one.
+static func _heading(velocity: Vector2, forward: Vector2) -> Vector2:
+	return velocity.normalized() if velocity.length() > SLOW else forward.normalized()
+
+
 func spawn_spot(ball: Vector2, velocity: Vector2, forward: Vector2) -> Vector2:
-	var heading := velocity.normalized() if velocity.length() > SLOW else forward.normalized()
+	var heading := _heading(velocity, forward)
 	if _park_map != null:
 		_forward_homes = _window_homes(ball, heading)
 		if not _forward_homes.is_empty():
