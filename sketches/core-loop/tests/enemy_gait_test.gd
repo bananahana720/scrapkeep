@@ -80,9 +80,9 @@ func _unit() -> void:
 	var gait := EnemyGait.new()
 	var dt := 1.0 / 60.0
 	for i in 10:
-		gait.aim(1.0)
+		gait.aim(2.0)
 		gait.step(dt, body, Vector3.ZERO, 0.6)
-	_t.check("turns at its rate", absf(gait.yaw() - EnemyGait.TURN_RATE * dt * 10.0) < 0.001, "%.3f rad after 10 ticks" % gait.yaw())
+	_t.check("turns at its rate, never snaps", absf(gait.yaw() - EnemyGait.TURN_RATE * dt * 10.0) < 0.001, "%.3f rad after 10 ticks toward 2.0" % gait.yaw())
 	for i in 60:
 		gait.aim(1.0)
 		gait.step(dt, body, Vector3.ZERO, 0.6)
@@ -116,6 +116,20 @@ func _unit() -> void:
 		gait.step(dt, body, Vector3(0.0, 0.0, 3.8 if i % 10 < 5 else 0.0), 0.6)
 		still = still and gait.tilt.is_equal_approx(Transform3D.IDENTITY) and gait.turn.origin == Vector3.ZERO
 	_t.check("reduced motion drops the lean and steps", still)
+	var before := gait.yaw()
+	for i in 10:
+		gait.aim(before + 1.0)
+		gait.step(dt, body, Vector3.ZERO, 0.6)
+	_t.check("reduced motion keeps the turn", absf(gait.yaw() - before - EnemyGait.TURN_RATE * dt * 10.0) < 0.001, "%.3f rad" % (gait.yaw() - before))
+	var lifted := 0.0
+	for i in 30:
+		gait.step(dt, body, Vector3(10.0, 0.0, 0.0), 0.6, false)
+		lifted = maxf(lifted, gait.turn.origin.y)
+	EnemyMotion.motion_scale = 1.0
+	for i in 30:
+		gait.step(dt, body, Vector3(10.0, 0.0, 0.0), 0.6, false)
+		lifted = maxf(lifted, gait.turn.origin.y)
+	_t.check("a knocked or falling body does not step", lifted == 0.0, "peak lift %.3f m" % lifted)
 	EnemyMotion.motion_scale = 1.0
 	EnemyMotion.headless_idle = false
 	gait.step(dt, body, Vector3(0.0, 0.0, 3.8), 0.6)

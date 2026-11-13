@@ -314,14 +314,16 @@ func _update_reaction(delta: float) -> void:
 	var tilt := Transform3D.IDENTITY
 	var turn := Transform3D.IDENTITY
 	if _gait != null and reaction_pivot != null and not _dead:
-		_gait.step(delta, self, velocity, half_height)
+		_gait.step(delta, self, velocity, half_height, is_on_floor() and _knocked_speed() < 1.0)
 		tilt = _gait.tilt
 		turn = _gait.turn
 	if reaction_pivot != null:
 		var lean_pose := Quaternion.IDENTITY
 		if _line_lean != 0.0 and is_instance_valid(target):
 			lean_pose = Quaternion(_reaction_axis(_reaction_ball() - global_position), deg_to_rad(LINE_LEAN) * _line_lean)
-		reaction_pivot.transform = tilt * Transform3D(Basis(lean_pose * _react_pose) * _idle_pose, idle_offset) * turn
+		# The reaction and line lean are in the body's frame; the turn carries the model, and the
+		# idle, wind-up and release poses ride inside it, so a nose-up stays nose-up when it is turned.
+		reaction_pivot.transform = tilt * Transform3D(Basis(lean_pose * _react_pose), Vector3.ZERO) * turn * Transform3D(_idle_pose, idle_offset)
 
 
 # The model breathes between attacks and holds still (or takes its row's pose) through

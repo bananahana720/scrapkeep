@@ -133,7 +133,7 @@ func _shapes(enemy) -> Array:
 	return out
 
 
-# GP6-2: the pivot moves inside the row's amplitude, the colliders never move, and every
+# GP6-2: the idle moves the pivot inside the row's amplitude (beside a walking kind's gait), the colliders never move, and every
 # frame with an open attack has a zero idle offset.
 func _idle_scene() -> void:
 	var enemies: Array = []
@@ -165,8 +165,8 @@ func _idle_scene() -> void:
 			elif i == 0 and windup_frames > 0 and turned > 0.01:
 				released = true
 			else:
-				# The idle's own offset: a walking kind's pivot also carries its gait (enemy_gait_test).
-				var idle: Vector3 = enemy.idle_offset
+				# A walking kind's pivot also carries its gait (enemy_gait_test), so read its idle's own offset.
+				var idle: Vector3 = enemy.idle_offset if enemy._gait != null else origin
 				peaks[i] = maxf(peaks[i], idle.length())
 				inside[i] = inside[i] and idle.length() <= float(WindupRows.ROWS[SCENE_KINDS[i]].idle.amplitude) + 0.0001
 	for i in enemies.size():

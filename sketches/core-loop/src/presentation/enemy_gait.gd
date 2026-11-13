@@ -63,7 +63,8 @@ func committed() -> void:
 	_aim = NAN
 
 
-func step(delta: float, body: Node3D, velocity: Vector3, foot: float) -> void:
+# `walking`: the body is on its feet under its own drive (not knocked or falling), so it steps.
+func step(delta: float, body: Node3D, velocity: Vector3, foot: float, walking := true) -> void:
 	tilt = Transform3D.IDENTITY
 	turn = Transform3D.IDENTITY
 	if not EnemyMotion.active() or delta <= 0.0:
@@ -93,8 +94,9 @@ func step(delta: float, body: Node3D, velocity: Vector3, foot: float) -> void:
 		_tilt = Vector3.ZERO
 		_felt = planar
 	var speed := planar.length()
-	_step_mix = move_toward(_step_mix, clampf(speed / WALK_REF, 0.0, 1.0) if steps else 0.0, delta * 6.0)
-	_travel = fmod(_travel + speed * delta, STEP_LENGTH * 2.0)
+	_step_mix = move_toward(_step_mix, clampf(speed / WALK_REF, 0.0, 1.0) if steps and walking else 0.0, delta * 6.0)
+	if walking:
+		_travel = fmod(_travel + speed * delta, STEP_LENGTH * 2.0)
 	var phase := PI * _travel / STEP_LENGTH
 	var lift := STEP_LIFT * absf(sin(phase)) * _step_mix * scale
 	var roll := STEP_ROLL * sin(phase) * _step_mix * scale
