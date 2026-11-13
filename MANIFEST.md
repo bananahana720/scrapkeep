@@ -35,3 +35,8 @@ Both jobs ran on headless gamescope on the RTX 4080, with sound off and a scratc
   - The lamp energy is 0.25 at rest, 0.84 at 75% and 1.3 at the strike. scratch-tool/lamp_capture.gd is updated.
 - AF3 used PR 968 at e8094fd2, for the deflector and the gyro jammer only. Files are in clips-e8094fd2/.
 - Both runs exited 0.
+
+## Version 4 (job AF4)
+
+- PR 971, branch claude/project-thread-ihg103 at f20ff5ed. Files are in clips-f20ff5ed/.
+- enemy_clip_capture.gd --kinds=gyro_jammer, exit 0.
