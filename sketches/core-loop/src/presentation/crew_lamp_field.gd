@@ -104,4 +104,4 @@ func place(lamp: Node3D) -> Transform3D:
 
 
 func _placed(to_field: Transform3D, lamp: Node3D) -> Transform3D:
-	return to_field * lamp.global_transform * Transform3D(FACE, Vector3.ZERO)
+	return to_field * lamp.global_transform * Transform3D(FACE.scaled(Vector3.ONE * lamp.swell()), Vector3.ZERO)

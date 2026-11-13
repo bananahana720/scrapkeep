@@ -42,10 +42,15 @@ const ROWS := {
 # The lens: a dome this wide, standing this far out of the head (a hemisphere's height is its dome).
 const LENS := 0.085
 const LENS_DEPTH := 0.06
+# The lens swells to this size at the strike, so the wind-up reads at play size (a few pixels at
+# rest from chase height; PC stills, 13 Nov 2026).
+const SWELL := 1.8
 # Glow: dull at rest, full at the strike (emission energy), and the share of the lens colour
 # lit at rest.
+# The peak stays low enough that the tonemapper keeps it red: at 4.0 the lens blew out to salmon
+# pink on the PC (13 Nov 2026).
 const REST := 0.25
-const PEAK := 4.0
+const PEAK := 1.3
 const REST_TINT := 0.45
 # The rest colour (a work lamp's bone); the wind-up turns it to Palette.HAZARD.
 const REST_COLOUR := Palette.LEDGER
@@ -113,6 +118,11 @@ func go_out() -> void:
 # Emission energy now: 0 once out.
 func energy() -> float:
 	return 0.0 if _out else lerpf(REST, FlashGuard.spike(REST, PEAK), warmth * warmth)
+
+
+# The lens's size now, 1 at rest, SWELL at the strike; a dead lamp keeps its rest size.
+func swell() -> float:
+	return 1.0 if _out else lerpf(1.0, SWELL, warmth * warmth)
 
 
 # The lens colour's lit share now: 0 (charcoal) once out.

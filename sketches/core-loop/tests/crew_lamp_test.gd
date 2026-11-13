@@ -147,11 +147,11 @@ func _warns(kind: String, ball: Vector3) -> void:
 			last = lamp.energy()
 		elif enemy.phase == enemy.Phase.LIVE:
 			lived = true
-			followed = followed and lamp.warmth == 1.0 and lamp.danger() == 1.0
+			followed = followed and lamp.warmth == 1.0 and lamp.danger() == 1.0 and is_equal_approx(lamp.swell(), CrewLamp.SWELL)
 		elif lived:
 			break
 	_t.check(kind + " warned and went live", warned and lived)
-	_t.check(kind + " lamp's warmth is the wind-up's run, and full and in the danger colour while live", followed)
+	_t.check(kind + " lamp's warmth is the wind-up's run, and full, swollen and in the danger colour while live", followed)
 	_t.check(kind + " lamp only brightens through the wind-up", rising and last > rest)
 	_t.check(kind + " lamp rests in its own colour, not the danger colour", rest_danger == 0.0 and rest > 0.0, "rest %.2f" % rest)
 	for i in 30:
