@@ -21,13 +21,10 @@ func _initialize() -> void:
 	var started := paths.filter(func(path: String): return ResourceLoader.load_threaded_get_status(path) != ResourceLoader.THREAD_LOAD_INVALID_RESOURCE)
 	t.eq("every family driver starts loading on a worker", started.size(), paths.size())
 	t.check("there is a driver to load", paths.size() >= 2, str(paths))
-	var deadline := Time.get_ticks_msec() + 20000
-	var loaded := 0
-	while loaded < paths.size() and Time.get_ticks_msec() < deadline:
-		loaded = paths.filter(func(path: String): return ResourceLoader.load_threaded_get_status(path) == ResourceLoader.THREAD_LOAD_LOADED).size()
-		OS.delay_msec(5)
-	t.eq("every driver finishes loading", loaded, paths.size())
-	var same := paths.filter(func(path: String): return load(path) == ResourceLoader.load_threaded_get(path))
+	# load_threaded_get waits for each worker load; a Warden's load() then reads the same script.
+	var got := paths.map(func(path: String): return ResourceLoader.load_threaded_get(path))
+	t.eq("every driver finishes loading", got.filter(func(script): return script is GDScript).size(), paths.size())
+	var same := range(paths.size()).filter(func(i: int): return load(paths[i]) == got[i])
 	t.eq("a Warden's load() takes the script the worker loaded", same.size(), paths.size())
 	Warden._request_drivers()
 	t.check("a second Warden requests nothing more", Warden._drivers_requested)
