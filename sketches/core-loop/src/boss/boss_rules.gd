@@ -21,6 +21,20 @@ const MAX_HP := 4.0
 const PHASE_NAMES := ["Requisition", "Furnace", "Scuttle"]
 const PHASE_MIN_SECONDS := [28.0, 24.0, 22.0]
 const HELD_BANK := 50.0
+# The reel (W1-61): for the rest of a held phase Brindle reels. He commits no new attack (what
+# is already drawn plays out, a cued follow-up keeps its cue's promise, and a charge that ends
+# in the reel takes no hook turn), and each ball contact on the hull (stomp, ram or slam),
+# at most one per REEL_GAP seconds and REEL_HITS a reel, sheds REEL_SCRAP as REEL_PICKUPS
+# pickups REEL_REACH metres from the hull's centre toward the ball (scrap and cogs, as a break
+# spill pays) and pays the ultimate meter's "reel" weight. A build that breaks no chunk early
+# never sees it; a strong one gets a loot shower where it used to wait. 2026-11-12, tuning
+# taste Andrew can overturn: 12 hits of 10 scrap is 1.5 phase-break spills a reel.
+const REEL_GAP := 0.5
+const REEL_HITS := 12
+const REEL_SCRAP := 10
+const REEL_PICKUPS := 2
+const REEL_REACH := 9.0
+const REEL_SPREAD := 1.6
 # No attack lands before this, so the entry and the hull readout are free to read.
 const INTRO_SECONDS := 3.0
 

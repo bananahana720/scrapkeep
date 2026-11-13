@@ -156,7 +156,10 @@ Every committed hostile attack draws the declared geometry damage will use, and 
 | --- | --- | --- |
 | Common (field kit) | Thin 2 px outline | Mint |
 | Rare (fleet grade) | Double outline, two 3 px lines with a 3 px gap | Cobalt |
-| Relic (gold; was rare_plus) | Double outline with four bolt-head notches at 45°, like a gauge bezel | Amber outer, mint inner |
+| Relic (gold; was rare_plus) | Double outline with bolt heads round it, like a gauge bezel: at the four corners (45°) and the edge midpoints, so they still read where the element and trigger badges cover the lower corners | Amber outer, mint inner |
+| Evolved | Double outline, the outer cut into the ancients' dashed seam, with diamond points at the corners and no bolts, so the dashes read along every edge | ANCIENT outer, mint inner |
+
+**Rarity shapes in the world.** The same rungs have one 3D shape each, owned by `src/build/tier_mark.gd`: common a bar, rare a diamond, relic a four-point star with a mint heart, evolved a crown. The reward gate's toppers (`tools/blender/reward_gate.py`) carry the same four shapes. A pedestal gem is the upright shape. A part piece on the ball stands on the flat version (none for common, which stays bare copper hardware). `tools/tier_still.gd` and `tools/tier_cvd.py` render the four tiers and check they still differ under deuteranopia (W1-26).
 
 **Category backplates.**
 
@@ -370,7 +373,7 @@ This section makes "legible workshop instrumentation" concrete (AD-08, AC-15).
 ## 8. Motion and timing
 
 - **Easing follows function.** Anything that measures time or distance moves linearly: cooldown sweeps, gauge fills, telegraph fills, a wave's leading edge. Arrivals ease out (cubic). Departures ease in. A back-out overshoot (1.2) is reserved for player-owned success (ready pulse, pickup, synergy), so bounce means good news.
-- **Hit-stop.** Momentum is sacred, so ordinary hits get none. Smash-through gets 40 ms, a pin chain 50 ms, a Warden break 70 ms, and the boss routed 90 ms. There is at most one hit-stop per 250 ms, and never one on damage taken.
+- **Hit-stop.** Hit-stop belongs to the player's own strike, and the ball's motion never stops: a roll, a dodge, a reward or a beacon asks for none, and damage taken never gets one (`juice.gd` `STRIKE_STOP_FACTS`). An ordinary hit stops 12 to 40 ms by its damage (the `enemy_struck` row in `event_kinds.gd`), and a heavier impact profile stops longer, up to the 60 ms cap (`juice.gd` `SPINE_CAP_MS`). Stops keep a 90 ms gap and share a 60 ms budget per 300 ms and 100 ms per second (`event_kinds.gd` `STOP_*`). Those rows own the numbers; this line only names the rule.
 - **One bold animation per event.** Each event row owns one hero motion that matches its shape, such as the arc slam's ring or Kest's line of starbursts. Everything else in that event runs at 30% or less of its scale and brightness. Two events in one frame play by priority from `event_kinds`, and the lower one drops to its sound.
 - **Reduced motion (RR-11).** Motion that measures time or position is information and stays. Motion that celebrates is cosmetic and goes.
 

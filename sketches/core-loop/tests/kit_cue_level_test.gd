@@ -332,7 +332,7 @@ func _observe(driven_kind: String) -> Array:
 		var sound := String(action.id)
 		var kind := driven_kind
 		for row in _audio.cue_log:
-			if row[1] == sound and row[2] == "beat":
+			if row[1] == sound and row[2] in ["beat", "grid"]:
 				kind = row[0]
 		if _audio.engine._voices.is_empty():
 			continue

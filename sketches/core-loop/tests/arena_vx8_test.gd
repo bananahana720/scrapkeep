@@ -32,6 +32,9 @@ func _run() -> void:
 			t.check("bowl ramp is not hazard striped", not (view.material_override is BaseMaterial3D and view.material_override.get_meta("greybox_checker", false)), String(view.name))
 		var rig := arena.find_children("*", "MeshInstance3D", true, false).filter(func(n): return n.get_meta("bowl_surface", "") in ["Mast", "Crossbar"])
 		t.eq("all rig parts use the copper family", rig.size(), 8)
+		t.check("the masts and booms are the crane kit, not a cylinder and a box", rig.all(func(v): return not v.mesh is PrimitiveMesh))
+		var nozzles := arena.find_children("VentNozzle_*", "MeshInstance3D", false, false)
+		t.check("each rim vent has its nozzle model", nozzles.size() == 4 and nozzles.all(func(v): return not v.mesh is PrimitiveMesh), "%d nozzles" % nozzles.size())
 		for view: MeshInstance3D in rig:
 			t.check("rig part is copper rather than hazard striped", view.material_override is BaseMaterial3D
 				and not view.material_override.get_meta("greybox_checker", false)

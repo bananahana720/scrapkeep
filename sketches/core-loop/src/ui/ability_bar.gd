@@ -1,6 +1,7 @@
 extends Control
 
 const EventKinds := preload("res://src/core/event_kinds.gd")
+const UiTokens := preload("res://src/ui/ui_tokens.gd")
 const Palette := preload("res://src/core/palette.gd")
 const Icons := preload("res://src/ui/icons.gd")
 const Keycap := preload("res://src/ui/keycap.gd")
@@ -33,21 +34,21 @@ const FlashGuard := preload("res://src/presentation/flash_guard.gd")
 # square; an empty charge that time does not refill (refill "contact", Tally's pressure) is a
 # dashed frame over hollow pips, the same hollow pips its pool slot wears, and no clock.
 
-const SLOT := 56.0
-const GAP := 14.0
-const KEY_GAP := 5.0
+const SLOT := UiTokens.TARGET
+const GAP := float(UiTokens.GAP_M)
+const KEY_GAP := float(UiTokens.GAP_XS)
 const KEY_H := 20.0
 const PIP := 3.0
-const PIP_GAP := 4.0
+const PIP_GAP := float(UiTokens.GAP_XS)
 const PULSE_SECONDS := 0.18
 const PULSE_SCALE := 0.12
 const SWEEP_STEP := TAU / 64.0
 const NUMBERED := 3
 const CHIP_SCALE := 0.75
-const CHIP_GAP := 24.0
+const CHIP_GAP := float(UiTokens.GAP_XL)
 const GLYPH_SLIDE := 0.12
 const GLYPH_H := 18.0
-const GLYPH_GAP := 7.0
+const GLYPH_GAP := float(UiTokens.GAP_S)
 const UNDERLINE := 2.0
 const SHAKE := 3.0
 const SHAKE_TIME := 0.25
@@ -118,8 +119,8 @@ class Plates:
 		var rects: Dictionary = bar.slot_rects()
 		for name in rects:
 			var back := StyleBoxFlat.new()
-			back.bg_color = Color(Palette.CHARCOAL, 0.88)
-			back.set_corner_radius_all(int(9.0 * (rects[name] as Rect2).size.x / SLOT))
+			back.bg_color = Color(UiTokens.INK, UiTokens.PLATE_ALPHA)
+			back.set_corner_radius_all(int(UiTokens.RADIUS * (rects[name] as Rect2).size.x / SLOT))
 			draw_style_box(back, rects[name])
 
 
@@ -332,9 +333,9 @@ func slot_look(entry: Dictionary) -> Dictionary:
 	var state: String = entry["state"]
 	var selected: bool = entry.get("selected", false)
 	var active := state == "active"
-	var ink: Color = tint if active else Color(Palette.SAND, 0.5 if state == "unavailable" else 0.95)
-	return {"cap_fill": Palette.SAND if selected else Color(Palette.CHARCOAL, 0.92),
-		"cap_ink": Palette.CHARCOAL if selected else ink, "lift": 3.0 if active else 0.0, "doubled": active,
+	var ink: Color = tint if active else Color(UiTokens.TEXT, 0.5 if state == "unavailable" else 0.95)
+	return {"cap_fill": UiTokens.TEXT if selected else Color(UiTokens.INK, UiTokens.PLATE_ALPHA),
+		"cap_ink": UiTokens.INK if selected else ink, "lift": 3.0 if active else 0.0, "doubled": active,
 		"glyph": selected}
 
 
@@ -395,7 +396,7 @@ func _draw_slot(entry: Dictionary, rect: Rect2, scale: float) -> void:
 	var name := slot_name(entry)
 	var state: String = entry["state"]
 	var look := slot_look(entry)
-	var color: Color = tint if state == "active" else EventKinds.UI_ROWS.get("ability_" + state, {}).get("color", Palette.SAND)
+	var color: Color = tint if state == "active" else EventKinds.UI_ROWS.get("ability_" + state, {}).get("color", UiTokens.TEXT)
 	var shake := shake_offset(name)
 	rect.position += shake
 	var key_centre := Vector2(rect.get_center().x, SLOT + KEY_GAP + KEY_H * 0.5)
@@ -405,9 +406,9 @@ func _draw_slot(entry: Dictionary, rect: Rect2, scale: float) -> void:
 	if look["doubled"]:
 		rect = rect.grow(2.0)
 	rect.position.y -= look["lift"]
-	var radius := int(9.0 * scale)
+	var radius := int(UiTokens.RADIUS * scale)
 	var back := StyleBoxFlat.new()
-	back.bg_color = Color(Palette.CHARCOAL, 0.88) if state != "unavailable" else Color(Palette.VERDIGRIS, 0.5)
+	back.bg_color = Color(UiTokens.INK, UiTokens.PLATE_ALPHA) if state != "unavailable" else Color(Palette.VERDIGRIS, 0.5)
 	back.set_corner_radius_all(radius)
 	draw_style_box(back, rect)
 
@@ -458,7 +459,7 @@ func _draw_slot(entry: Dictionary, rect: Rect2, scale: float) -> void:
 		draw_texture_rect(Icons.shape(motif), Rect2(rect.get_center() - Vector2(reach, reach) * 0.5, Vector2(reach, reach)), false, Color(tint, 0.6 * (1.0 - t)))
 	if name == "line" and line_loaded:
 		var badge := Rect2(Vector2(rect.end.x - BADGE * 0.6, rect.position.y - BADGE * 0.4), Vector2(BADGE, BADGE))
-		draw_circle(badge.get_center(), BADGE * 0.55, Color(Palette.CHARCOAL, 0.92))
+		draw_circle(badge.get_center(), BADGE * 0.55, Color(UiTokens.INK, UiTokens.PLATE_ALPHA))
 		draw_texture_rect(Icons.texture(Icons.REEL), badge, false, Icons.tint(Icons.REEL, tint))
 	if not key_hidden(entry):
 		_draw_cap(key_centre + Vector2(shake.x, 0.0), entry["key"], look, KEY_H * scale)
@@ -503,11 +504,11 @@ func _draw_glyph() -> void:
 	var w := GLYPH_H * 0.8
 	var top := -GLYPH_GAP - GLYPH_H - UNDERLINE - 2.0
 	var rect := Rect2(Vector2(x - w * 0.5, top), Vector2(w, GLYPH_H))
-	draw_texture_rect(Icons.texture("key_lmb"), rect, false, Icons.tint("key_lmb", Palette.SAND))
+	draw_texture_rect(Icons.texture("key_lmb"), rect, false, Icons.tint("key_lmb", UiTokens.TEXT))
 	var share := underline_share()
 	if share > 0.0:
 		var y := rect.end.y + 2.0 + UNDERLINE * 0.5
-		draw_line(Vector2(x - w * 0.5, y), Vector2(x - w * 0.5 + w * share, y), Palette.SAND, UNDERLINE)
+		draw_line(Vector2(x - w * 0.5, y), Vector2(x - w * 0.5 + w * share, y), UiTokens.TEXT, UNDERLINE)
 
 
 # The remaining cooldown as a petrol wedge: it fills the part of the slot still to come back
@@ -543,8 +544,8 @@ func _draw_hand(rect: Rect2, frac: float) -> void:
 	var centre := rect.get_center()
 	var angle := -PI * 0.5 + (1.0 - frac) * TAU
 	# A clock hand is round: it stops inside the slot's rounded corners.
-	draw_line(centre, centre + Vector2(cos(angle), sin(angle)) * (rect.size.x * 0.5 - HAND * 2.0), Palette.SAND, HAND)
-	draw_circle(centre, HAND * 1.5, Palette.SAND)
+	draw_line(centre, centre + Vector2(cos(angle), sin(angle)) * (rect.size.x * 0.5 - HAND * 2.0), UiTokens.TEXT, HAND)
+	draw_circle(centre, HAND * 1.5, UiTokens.TEXT)
 
 
 # An empty charge's frame: DASHES dashes a side, so the slot reads as hollow, not as cooling.

@@ -121,7 +121,7 @@ func setup(ctx_ref) -> void:
 	status_marks.setup(ctx, vfx)
 	armour_marks = ArmourMarks.new()
 	add_child(armour_marks)
-	armour_marks.setup(ctx)
+	armour_marks.setup(ctx, player_fx)
 	hero_assets = HeroAssets.new()
 	add_child(hero_assets)
 	hero_assets.setup(ctx)

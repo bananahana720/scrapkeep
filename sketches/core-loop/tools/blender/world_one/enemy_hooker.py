@@ -11,7 +11,7 @@
 #
 # Two meshes, three surfaces (three colour-pass draws), no alpha:
 #   HookerBody      static: fleet_paint (crew body and head, flashes with the enemy) and
-#                   paint (vertex colour: post, spool, anchor crown, cradle, ears, the brass tag).
+#                   paint (vertex colour: post, spool, anchor crown, cradle, the brass tag).
 #   HookerHarpoon   the harpoon on a pivot at the cradle: one paint surface (vertex colour:
 #                   charcoal shaft, hazard head). hooker.gd slides it along its own axis in the
 #                   existing warn phase; the anchor and tether endpoint do not move.
@@ -50,7 +50,7 @@ HALF_PI = math.pi / 2
 
 # --- Body: crew, post, spool, anchor crown ------------------------------------------
 b = Part("HookerBody")
-# Crew: a barrel torso (rust, flashes at runtime), a round head, a charcoal snout and ears.
+# Crew: a barrel torso (rust, flashes at runtime), a cast head from its old job (crew.py), its number and HIRED.
 b.cyl("fleet_paint", 0.66, 0.80, 1.1, segs=10, loc=(0, 0, -0.55))
 b.cyl("fleet_paint", 0.80, 0.70, 1.1, segs=10, loc=(0, 0, 0.55))
 crew.bollard_head(b, (0, 0, 1.3), 0.38)
@@ -80,8 +80,8 @@ for sx in (-1, 1):
           color=CHAR, r2=0.02)
 b.ring("paint", 0.13, 0.22, 0.10, segs=10, loc=(POST_X, 0, HEAD_Z + 0.62), rot=(HALF_PI, 0, 0), color=IRON)
 # The old works' two marks, cast in under the Fleet's paint: the crew number and HIRED.
-crew.cast_number(b, "paint", "12", (0, -0.74, 0.74), (0, -1, 0), 0.26)
-crew.hired(b, "paint", (0, 0.77, -0.3), (0, 1, 0), 0.11)
+crew.cast_number(b, "paint", "12", (0, -0.715, 0.74), (0, -1, 0), 0.26)
+crew.hired(b, "paint", (0, 0.745, -0.3), (0, 1, 0), 0.11)
 body = b.to_object(parent=root)
 
 # --- Harpoon: long level shaft, hazard barbed head, tail ring ------------------------

@@ -12,3 +12,4 @@ assets/music_ace/.gdignore
 !assets/models/park/props/*/*.glb.import
 # Local evidence (tools write here; the repo-root artifacts/local/ rule does not reach this folder).
 artifacts/local/
+.mcp/

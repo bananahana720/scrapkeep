@@ -11,8 +11,10 @@ const FxLibrary := preload("res://src/presentation/fx_library.gd")
 const LandmarkBeam := preload("res://src/presentation/landmark_beam.gd")
 const T := preload("res://tests/support/t.gd")
 
-# The ceilings on cand/w40 f4e04867 (effects-critique.md "How the effects system scales").
-const TODAY := {"world_air": 330, "anchors": 760, "hits_and_kills": 752, "machines": 876}
+# The ceilings on cand/w40 f4e04867 (effects-critique.md "How the effects system scales"), with
+# hits and kills raised from 752 to 800 by FX-01's kill_shards pool (3 x 16) on stage/alpha-w40.
+# A ceiling that moves on purpose moves here in the same change.
+const TODAY := {"world_air": 330, "anchors": 760, "hits_and_kills": 800, "machines": 876}
 
 var _t := T.new("fx_budget_test")
 

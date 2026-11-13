@@ -643,10 +643,10 @@ func _frame(edge: Color, width: int, fill := true) -> StyleBox:
 static func _plate(edge: Color, width: int, fill := true) -> StyleBoxFlat:
 	var box := StyleBoxFlat.new()
 	box.draw_center = fill
-	box.bg_color = Color(Palette.CHARCOAL, 0.94)
+	box.bg_color = Color(UiTokens.INK, UiTokens.PLATE_ALPHA)
 	box.border_color = edge
 	box.set_border_width_all(width)
-	box.set_corner_radius_all(10)
+	box.set_corner_radius_all(UiTokens.RADIUS)
 	box.corner_detail = 3
 	return box
 

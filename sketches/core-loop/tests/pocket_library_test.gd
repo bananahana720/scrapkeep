@@ -97,7 +97,7 @@ func _schema(entries: Array) -> void:
 	t.eq("25 interiors", entries.size(), 25)
 	# The ninth secret is the dam's blazing cache room (W1-76), assigned and so never drawn.
 	t.eq("eight per kind, nine secrets", split, {"arena": 8, "trade": 8, "secret": 9})
-	t.eq("eight live world-one assignments", assignments.size(), 8)
+	t.eq("nine live world-one assignments", assignments.size(), 9)
 	var copy: Array = library.rows()
 	copy[0].tell.word = "mutated caller"
 	t.check("callers cannot mutate cached library", library.rows()[0].tell.word != "mutated caller")
@@ -234,7 +234,7 @@ func _wiring(entries: Array) -> void:
 		game.ctx.terrain.stage = index + 1
 		acts.clear()
 		await physics_frame
-	t.eq("world one live coverage", covered, 8)
+	t.eq("world one live coverage", covered, 9)
 	game.ctx.terrain.maps[index] = previous
 
 func _unchanged() -> void:

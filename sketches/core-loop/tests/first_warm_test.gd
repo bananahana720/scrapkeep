@@ -82,7 +82,7 @@ func _run() -> void:
 	var built := _read(ArmourMarks.icon_view(ArmourMarks.icon_mesh(), ArmourMarks.icon_material()))
 	t.check("the armour read's icon is the one a badge builds", icons.size() == 1 and icons[0] == built, "%s vs %s" % [icons, built])
 	var words := armour.filter(func(v): return v.has("text")).map(func(v): return v["text"])
-	var want := ArmourMarks.READ_STATES.values().map(func(state): return _read(ArmourMarks.word_label(state))["text"])
+	var want := ArmourMarks.READ_STATES.values().map(func(state): return ArmourMarks.word_text(state))
 	t.check("and every stamp word stands beside it", words.size() == want.size() and words.all(func(w): return w in want and w != ""), "%s vs %s" % [words, want])
 	var ring: Array = views.get("synergy_ring", [])
 	t.check("the synergy ring is add_ring's", ring.size() == 1 and ring[0]["name"] == "SynergyRing" and ring[0]["blend"] == BaseMaterial3D.BLEND_MODE_ADD)
