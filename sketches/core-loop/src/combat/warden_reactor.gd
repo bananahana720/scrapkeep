@@ -383,6 +383,7 @@ func _show_sheet(warden) -> void:
 	if root == null or not is_instance_valid(root):
 		return
 	var view := MeshInstance3D.new()
+	view.name = "ReactorSheet"
 	var box := BoxMesh.new()
 	box.size = Vector3(SHEET_WIDTH, 0.3, SHEET_RUN - SHEET_TOP)
 	view.mesh = box
