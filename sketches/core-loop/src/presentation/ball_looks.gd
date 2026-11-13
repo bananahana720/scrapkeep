@@ -104,6 +104,7 @@ void fragment() {
 """
 
 static var _shaders := {}
+static var _canopy_material: ShaderMaterial
 
 
 static func ids() -> Array:
@@ -136,9 +137,7 @@ static func dress(look: String, shell: Dictionary) -> void:
 			for i in view.mesh.get_surface_count():
 				var was: Material = view.get_active_material(i)
 				if was != null and was.resource_name == "glass":
-					var canopy := ShaderMaterial.new()
-					canopy.shader = _shader("canopy", CANOPY_SHADER)
-					view.set_surface_override_material(i, canopy)
+					view.set_surface_override_material(i, _canopy())
 
 
 # Every surface of the rolling part takes the window, keeping the colour it was painted with.
@@ -167,6 +166,14 @@ static func _cut(core: Node) -> void:
 			else:
 				cut.set_shader_parameter("vertex_tint", true)
 			view.set_surface_override_material(i, cut)
+
+
+# The canopy takes no parameters, so every bell shares one material.
+static func _canopy() -> ShaderMaterial:
+	if _canopy_material == null:
+		_canopy_material = ShaderMaterial.new()
+		_canopy_material.shader = _shader("canopy", CANOPY_SHADER)
+	return _canopy_material
 
 
 static func _shader(key: String, code: String) -> Shader:
