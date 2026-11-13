@@ -2760,7 +2760,7 @@
    "template": "low_cold_fire",
    "at": [
     -14,
-    404
+    399
    ],
    "yaw_deg": 126,
    "near": "tally fill, 11 m from line"
@@ -3072,5 +3072,5 @@
   ],
   "seed": 11
  },
- "pin": 3359532784
+ "pin": 3576303166
 }
