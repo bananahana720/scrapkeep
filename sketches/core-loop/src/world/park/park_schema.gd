@@ -319,6 +319,8 @@ static func validate(park: Dictionary, ctx: Dictionary = {}) -> Array:
 			_add(out, id, "reference", "a surge_run names a park route, not %s" % str(activities[id].get("route")))
 		if activities[id].has("face") and not (_typed(activities[id]["face"], "v2") and _v2_len(activities[id]["face"]) > 0.0):
 			_add(out, id, "type", "face %s is not a nonzero [x, z]" % str(activities[id]["face"]))
+		if activities[id].has("bar") and not (activities[id]["activity"] == "cracked_cache" and activities[id]["bar"] in ["blazing"]):
+			_add(out, id, "type", "bar %s is not blazing on a cracked_cache" % str(activities[id]["bar"]))
 		if activities[id].has("extra") and activities[id]["extra"] != "card_2":
 			_add(out, id, "type", "extra %s is not card_2" % str(activities[id]["extra"]))
 	for id in rescues:
