@@ -438,11 +438,12 @@ func _build_lights() -> void:
 
 # The deck (W1-47, the gig poster look Andrew picked on 13 Nov 2026): the crew on Moss's
 # barge at dusk while Brindle's ship hangs over them, all from the game's finished models. Each
-# row: name, model, position, yaw, scale. A model that fails to load is left out, never stood in.
+# row: name, model, position, yaw, scale. A model that fails to load is left out, never stood in. Only
+# models without collision shapes load here (_visual_scene), so a camp prop with a -col node cannot be used.
 const DECK := [
 	["Barge", "res://assets/models/barge.glb", Vector3(0.0, -1.95, 0.3), 0.0, Vector3(1.0, 1.0, 0.62)],
 	["Brindle", "res://assets/models/bosses/boss_brindle.glb", Vector3(9.0, 6.5, -38.0), 2.5, Vector3(1.6, 1.6, 1.6)],
-	["Barrel", "res://assets/models/camp/camp_barrel.glb", Vector3(-5.6, 0.0, 1.2), 0.3, Vector3.ONE],
+	["ToolRack", "res://assets/models/camp/camp_tool_rack.glb", Vector3(-6.2, 0.0, 0.6), 0.5, Vector3.ONE],
 	["Gauge", "res://assets/models/gauge_dial_stand.glb", Vector3(6.4, 0.0, 0.4), -0.4, Vector3.ONE],
 ]
 
