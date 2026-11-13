@@ -182,7 +182,9 @@ def boss_weak_hit():
 
 
 def ui_tick():
-    return mix(0.03, (band_noise(0.012, 2000, 7000, 0.002, 1.0), 0), (band_noise(0.012, 2000, 7000, 0.0018, 0.7), 0.006))
+    # a breath of room after the clicks keeps it 30 ms long, so it reads as a sound and not a glitch
+    return mix(0.045, (band_noise(0.012, 2000, 7000, 0.002, 1.0), 0), (band_noise(0.012, 2000, 7000, 0.0018, 0.7), 0.006),
+               (band_noise(0.04, 2000, 6000, 0.012, 0.3), 0.008))
 
 
 def onbeat_clap():
