@@ -30,7 +30,7 @@ A step file is plain text, one step a line; `scripts/drive.gd` lists every step 
 | Step | Use it for |
 | --- | --- |
 | `key SPACE`, `key 1`, `key P`, `down W` / `up W`, `tap_until E no_text "FIRST SHIFT" 90` | the keys the README's control tables name; they are the stable handles |
-| `click "Settings"`, `until clickable "Continue" 10` | a button by the words on it; a click fails if something covers it |
+| `click "Settings"`, `until clickable "Continue" 10` | a button by the words on it; a click fails if something covers it, or while the mouse is the camera's (in play) |
 | `until state class_select 30`, `until play 60`, `until text "Rig your kit" 60` | waiting for the game, never a bare `wait`, before the next press |
 | `shot <name>`, `ui` | a picture; the list of every visible control with its words and box |
 | `read <expression>`, `until read not get_tree().paused 30` | a live value from the game node, written to the row as ground truth |

@@ -322,6 +322,10 @@ func _click(at: Vector2, path: Variant) -> Dictionary:
 # Moves the pointer to the control's middle and says whether the control (or a part of it) is what
 # the pointer is then over, as the engine itself answers it.
 func _lands_on(control: Control) -> bool:
+	# A captured mouse is the camera's (the ball is in play): no control can be clicked, and moving
+	# the pointer to ask would turn the view.
+	if Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
+		return false
 	_pointer = control.get_global_rect().get_center()
 	var motion := InputEventMouseMotion.new()
 	motion.position = _to_window(_pointer)
