@@ -1,8 +1,8 @@
 """Fit an untextured Tripo mesh as a ball part's own shape (src/build/accretion.gd PART_GLB).
 
-blender -b --factory-startup -P tripo_part.py -- --in tripo.glb --out part_<id>_tripo.glb [--max-tris 1000] [--tall 0.65] [--wide 0.6] [--cut-above 0.6]
+blender -b --factory-startup -P tripo_part.py -- --in tripo.glb --out part_<id>_tripo.glb [--max-tris 1000] [--tall 0.65] [--wide 0.6] [--cut-above 0.6] [--touch 0.02]
 
-Joins the mesh, welds seam splits, drops stray islands, decimates to --max-tris, scales it uniformly to sit inside
+Joins the mesh, welds seam splits, drops floating fragments, decimates to --max-tris, scales it uniformly to sit inside
 --wide across and --tall high, stands its base on the origin, drops materials, UVs and colours
 (the game paints the part in its rarity colour), and exports one mesh named Part.
 Prints one JSON line with counts.
@@ -12,7 +12,7 @@ import bpy, bmesh
 from mathutils import Vector
 
 argv = sys.argv[sys.argv.index("--") + 1:]
-opt = {"max-tris": "1000", "tall": "0.65", "wide": "0.6", "cut-above": "1.0"}
+opt = {"max-tris": "1000", "tall": "0.65", "wide": "0.6", "cut-above": "1.0", "touch": "0.02"}
 i = 0
 while i < len(argv):
     opt[argv[i][2:]] = argv[i + 1]; i += 2
@@ -33,8 +33,10 @@ me = ob.data
 bm = bmesh.new(); bm.from_mesh(me)
 bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=1e-5)
 bmesh.ops.triangulate(bm, faces=bm.faces)
-# Drop stray islands (a thin floating wire sets the bounds and shrinks the part): keep islands
-# holding at least 6 % of the faces.
+# Drop floating fragments (a thin stray wire sets the bounds and shrinks the part). A model is often
+# built from separate shells that touch, so a shell stays when its bounding box overlaps, within --touch
+# (2 %) of the model's size, a shell already kept (low-poly shells cross without sharing near
+# vertices, so a vertex-distance test drops bases; a fragment inside another shell's box survives); the walk starts from the shell with the most faces.
 seen = set(); islands = []
 for f in bm.faces:
     if f in seen:
@@ -47,8 +49,25 @@ for f in bm.faces:
                 if h not in seen:
                     seen.add(h); stack.append(h)
     islands.append(isl)
-total = len(bm.faces)
-stray = [f for isl in islands if len(isl) < 0.06 * total for f in isl]
+def box(isl):
+    pts = [v.co for f in isl for v in f.verts]
+    return (Vector((min(p.x for p in pts), min(p.y for p in pts), min(p.z for p in pts))),
+            Vector((max(p.x for p in pts), max(p.y for p in pts), max(p.z for p in pts))))
+boxes = [box(isl) for isl in islands]
+allp = [v.co for v in bm.verts]
+margin = float(opt["touch"]) * max(max(p[k] for p in allp) - min(p[k] for p in allp) for k in range(3))
+order = sorted(range(len(islands)), key=lambda n: -len(islands[n]))
+kept = {order[0]}; grew = True
+while grew:
+    grew = False
+    for n in order:
+        if n in kept:
+            continue
+        for m in kept:
+            if all(boxes[n][0][k] <= boxes[m][1][k] + margin and boxes[m][0][k] <= boxes[n][1][k] + margin for k in range(3)):
+                kept.add(n); grew = True
+                break
+stray = [f for n, isl in enumerate(islands) if n not in kept for f in isl]
 if stray:
     bmesh.ops.delete(bm, geom=stray, context="FACES")
 # --cut-above F removes faces whose centre is above fraction F of the height, for a floating

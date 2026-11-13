@@ -76,7 +76,11 @@ shading and a 600 cap turned the shapes into lumps, so the fitter keeps smooth s
 | slag_rounds | common | Studio workspace 44ee8e17-935e-4603-84d9-6ca1a0ffc3cd | 999 | Studio remake; the API version lost its shells (task 7b2b8357-c299-483c-afa6-50e6bc2bb95a) |
 | focus_lens | common | be892f4e-97f8-47a1-8c98-4a1655baed60 | 958 | API |
 | gatling_heart | rare | c23a12d9-a38e-49ef-975d-5d411112e897 | 999 | API |
-| rime_heart | relic | Studio workspace 25af73fd-2017-412a-bcc9-cf59ea8e8a4c | 746 | Studio remake; the API version was a rounded lump (task 8b9f62cf-df90-4e81-b550-a45525a85e9c) |
+| rime_heart | relic | Studio workspace 25af73fd-2017-412a-bcc9-cf59ea8e8a4c | 984 | Studio remake; the API version was a rounded lump (task 8b9f62cf-df90-4e81-b550-a45525a85e9c) |
+| sunforged_core | rare | Studio workspace 677c84b5-e429-4af3-8c91-8b755b7811d2 | 946 | Studio |
+| horizon_optic | rare | Studio workspace 81bbd92e-54ea-47be-9fdb-bc38b454836b | 1000 | Studio |
+| tempest_core | relic | Studio workspace 40dd48a7-e75d-4641-b55e-f4a56a847933 | 782 | Studio |
+| scrap_gravity | relic | Studio workspace 581ed437-8f40-48ce-aede-b92c7f34e99b | 999 | Studio |
 
 Studio's Smart Mesh gives cleaner part shapes than the API's smart_low_poly at this size: set Topology to
 Triangle and the polygon count to 1,000 under Customize Poly Counts, Privacy to Private, and type the whole
@@ -84,5 +88,9 @@ prompt (the Studio prompt files hold the full text, with no shared suffix to add
 Pro credits and returns four candidates whatever the Number of Generation says; export the one kept as GLB
 with no texture step.
 
-API spend after this batch: 500 credits, the cap Andrew set on 13 Nov 2026. Pro spend: 240 credits (40 on the
-flume textures, 200 on the two part remakes).
+API spend after this batch: 500 credits, the cap Andrew set on 13 Nov 2026. Pro spend: 640 credits (40 on the
+flume textures, 600 on six part sets).
+
+The fitter drops floating fragments by walking shells whose bounding boxes touch. A fragment that sits
+inside another shell's box survives; pick another of the four candidates then (Scrap Gravity's first
+candidate had a bolt lying beside its base).

@@ -158,7 +158,7 @@ func _run() -> void:
 # family primitive is drawn as before.
 func _check_parts() -> void:
 	var acc := Accretion.new()
-	for id in ["slag_rounds", "focus_lens", "gatling_heart", "rime_heart"]:
+	for id in ["slag_rounds", "focus_lens", "gatling_heart", "rime_heart", "sunforged_core", "horizon_optic", "tempest_core", "scrap_gravity"]:
 		ModelVariants.set_enabled(true)
 		var piece: Node3D = acc._piece(id)
 		var own := piece.get_node_or_null("Own") as MeshInstance3D
