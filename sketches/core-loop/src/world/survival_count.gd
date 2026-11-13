@@ -48,11 +48,19 @@ const HAZARDS := {
 	1: {"kind": "flood", "step_m": 1.0, "max_m": 4.0},
 }
 
-# The ways in. `counts` 0 means the rule's own; `pay` "record" pays nothing and keeps a best count.
+# The ways in. `pay` "record" pays nothing and keeps a best count. `move` names a MOVES row: how
+# the ground the count is fought on travels once it has landed (Andrew, 13 Nov 2026).
 const FORMS := {
-	"yard": {"enter": "gate", "leave": "gate", "pay": "ladder"},
-	"muster": {"enter": "siren", "leave": "ring_edge", "pay": "ladder"},
-	"ring": {"enter": "camp", "leave": "any", "pay": "record"},
+	"yard": {"enter": "gate", "leave": "gate", "pay": "ladder", "move": "still"},
+	"muster": {"enter": "siren", "leave": "ring_edge", "pay": "ladder", "move": "loop"},
+	"ring": {"enter": "camp", "leave": "any", "pay": "record", "move": "still"},
+}
+
+# How the fought ground moves. "still" stays where it landed. "loop" rides a circle of `radius_m`
+# that passes through the landing point and comes back to it every `lap_s`.
+const MOVES := {
+	"still": {},
+	"loop": {"radius_m": 60.0, "lap_s": 45.0},
 }
 
 var rule: Dictionary = RULE
@@ -162,6 +170,19 @@ func pay(n: int) -> Dictionary:
 func hazard(n: int) -> Dictionary:
 	var row: Dictionary = HAZARDS[world]
 	return {"kind": row["kind"], "level": minf(float(row["max_m"]), float(row["step_m"]) * maxi(0, n - 1))}
+
+
+# Where the fought ground's centre is `t` seconds after it landed at `landed`, the ball then
+# heading along `heading`: the landing point itself for a still form; for a loop, a circle to the
+# left of the heading that starts and ends each lap on the landing point.
+func ground_at(landed: Vector2, heading: Vector2, t: float) -> Vector2:
+	var move: Dictionary = MOVES[str(FORMS[form]["move"])]
+	if move.is_empty():
+		return landed
+	var radius := float(move["radius_m"])
+	var forward := heading.normalized() if heading.length() > 0.001 else Vector2.DOWN
+	var centre := landed + forward.orthogonal() * radius
+	return centre + (landed - centre).rotated(TAU * t / float(move["lap_s"]))
 
 
 # Seconds left on the open gate, or 0 while it is shut.

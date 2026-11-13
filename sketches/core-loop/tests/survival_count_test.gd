@@ -13,10 +13,12 @@ const Director := preload("res://src/world/director.gd")
 # (g) cobalt is paid at counts 8 and 12 and nowhere under 8;
 # (h) a broken ball is paid nothing;
 # (i) the camp ring may be left at any time and keeps a record in place of pay;
-# (j) the flood rises a metre a count and stops at its top.
+# (j) the flood rises a metre a count and stops at its top;
+# (k) a still form's ground stays where it landed, and a looping form's leaves, stays one radius
+#     from its circle's centre and is back on the landing point after one lap.
 
 const DT := 0.1
-const EXPECTED_REPORTS := 10
+const EXPECTED_REPORTS := 11
 
 var _failures := 0
 var _reports := 0
@@ -33,6 +35,7 @@ func _initialize() -> void:
 	_broken()
 	_ring()
 	_flood()
+	_moves()
 	if _reports != EXPECTED_REPORTS:
 		_failures += 1
 		print("FAIL report count: %d of %d checks reported (a check died mid-way)" % [_reports, EXPECTED_REPORTS])
@@ -155,3 +158,22 @@ func _flood() -> void:
 	var rule := SurvivalCount.new()
 	var ok: bool = is_zero_approx(rule.hazard(1)["level"]) and is_equal_approx(rule.hazard(3)["level"], 2.0) and is_equal_approx(rule.hazard(9)["level"], 4.0) and rule.hazard(1)["kind"] == "flood"
 	_report("(j) the flood rises a metre a count to four", ok)
+
+
+func _moves() -> void:
+	var landed := Vector2(40.0, -120.0)
+	var heading := Vector2(0.0, 1.0)
+	var yard := SurvivalCount.new(1, "yard")
+	var muster := SurvivalCount.new(1, "muster")
+	var loop: Dictionary = SurvivalCount.MOVES["loop"]
+	var radius := float(loop["radius_m"])
+	var lap := float(loop["lap_s"])
+	var ok: bool = yard.ground_at(landed, heading, 20.0) == landed
+	ok = ok and muster.ground_at(landed, heading, 0.0).distance_to(landed) < 0.01
+	ok = ok and muster.ground_at(landed, heading, lap).distance_to(landed) < 0.01
+	ok = ok and is_equal_approx(muster.ground_at(landed, heading, lap * 0.5).distance_to(landed), radius * 2.0)
+	var centre := landed + heading.orthogonal() * radius
+	for i in 9:
+		ok = ok and is_equal_approx(muster.ground_at(landed, heading, lap * i / 9.0).distance_to(centre), radius)
+	ok = ok and muster.ground_at(landed, Vector2.ZERO, 0.0).distance_to(landed) < 0.01
+	_report("(k) a still ground stays put and a looping ground comes back each lap", ok)
