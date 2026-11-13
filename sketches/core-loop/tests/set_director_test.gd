@@ -71,14 +71,14 @@ func _answers() -> void:
 		if p.answer != "":
 			answers.append([p.bar, p.answer])
 			t.check("an answer gives the lead room", is_equal_approx(float(p.trims.get("other", 1.0)), SetDirector.LEAD_SPACE), str(p))
-	t.eq("an answer on each phrase's last bar", answers.map(func(a): return a[0]), [7, 15, 23, 31])
-	t.eq("the build book is walked in order", answers.map(func(a): return a[1]), ["build_a", "build_b", "build_c", "build_d"])
+	t.eq("an answer on a phrase's last bar, every other phrase (melody first)", answers.map(func(a): return a[0]), [7, 23])
+	t.eq("the build book is walked in order", answers.map(func(a): return a[1]), ["build_a", "build_b"])
 	for i in range(1, answers.size()):
 		t.check("never the same answer twice in a row", answers[i][1] != answers[i - 1][1], str(answers))
 
 
 func _gates() -> void:
-	for room in [{"pressure": 0.35, "warning": true}, {"pressure": 0.35, "busy": true}, {"fight": "open"}, {"fight": "drop"}, {"fight": "piece"}, {"fight": "anthem"}]:
+	for room in [{"pressure": 0.35, "warning": true}, {"pressure": 0.35, "busy": true}, {"fight": "open"}, {"fight": "drop"}, {"fight": "piece"}, {"fight": "anthem"}, {"fight": "directed"}]:
 		var plans := _run(SetDirector.new(), room, 8)
 		t.eq("no answer over %s" % [room], plans[7].answer, "")
 	t.check("the guard holding still gets an answer", _run(SetDirector.new(), {"fight": "closed"}, 8)[7].answer.begins_with("build"))
@@ -86,7 +86,8 @@ func _gates() -> void:
 
 func _colours() -> void:
 	t.check("a hot shell answers hot", _run(SetDirector.new(), {"pressure": 0.35, "heat": 2}, 8)[7].answer.begins_with("hot"))
-	t.check("overtime answers with the shift", _run(SetDirector.new(), {"pressure": 0.35, "heat": 3, "overtime": true}, 8)[7].answer.begins_with("overtime"))
+	var shift := _run(SetDirector.new(), {"pressure": 0.35, "heat": 3, "overtime": true}, 24).filter(func(p): return p.answer != "")
+	t.check("overtime answers with the shift", not shift.is_empty() and shift[0].answer.begins_with("overtime"), str(shift))
 	t.check("hanging on outranks everything", _run(SetDirector.new(), {"pressure": 0.35, "overtime": true, "armour": 0.2}, 8)[7].answer.begins_with("hanging"))
 	t.check("a cool shell answers by mood", _run(SetDirector.new(), {"pressure": 0.0, "heat": 1}, 8)[7].answer.begins_with("lull"))
 	var d := SetDirector.new()
@@ -107,7 +108,8 @@ func _swap_and_breath() -> void:
 	c.read({"pressure": 0.45})
 	var climb := [0.53, 0.55, 0.57, 0.59, 0.6, 0.61].map(func(p): return c.read({"pressure": p}).move)
 	t.eq("a long climb swaps the bass once", climb.count("bass_swap"), 1)
-	c.read({"pressure": 0.35})
+	for i in SetDirector.MIN_GAP_BARS:
+		c.read({"pressure": 0.35, "fight": "directed"})
 	t.eq("falling well back re-arms the swap", c.read({"pressure": 0.56}).move, "bass_swap")
 	var h := SetDirector.new()
 	h.read({"pressure": 0.35})
@@ -134,19 +136,19 @@ func _swap_and_breath() -> void:
 	var b := SetDirector.new()
 	var plans := _run(b, {"pressure": 0.5, "fight": "closed", "warning": true}, SetDirector.PHRASE_BARS * 4)
 	var turns := plans.filter(func(p): return p.bar % SetDirector.PHRASE_BARS == SetDirector.PHRASE_BARS - 1)
-	t.eq("under a warning the turnarounds walk the moves", turns.map(func(p): return p.move), ["dub", "filter_roll", "breakdown", "dub"])
-	var halves := plans.filter(func(p): return p.bar % SetDirector.PHRASE_BARS == SetDirector.PHRASE_BARS / 2 - 1)
-	t.eq("in a fight the band turns at the half phrase too", halves.map(func(p): return p.move), ["filter_roll", "breakdown", "dub", "filter_roll"])
 	var moved := plans.filter(func(p): return p.move != "hold")
-	t.check("each takes sound away", moved.all(func(p): return p.answer == "" and (p.sweep > 0.0 or p.trims.values().all(func(g): return g < 1.0)) and not p.trims.is_empty() != (p.sweep > 0.0)), str(moved))
+	t.eq("under a warning a fight's phrases end on a breakdown, every other phrase", moved.map(func(p): return [p.bar, p.move]), [[7, "breakdown"], [23, "breakdown"]])
+	t.check("each takes sound away", moved.all(func(p): return p.answer == "" and p.trims.values().all(func(g): return g < 1.0)), str(moved))
 	var quiet := SetDirector.new()
 	t.eq("a lull turns only at the phrase's end", _run(quiet, {"pressure": 0.0, "busy": true}, 8).map(func(p): return p.move).count("hold"), 7)
+	t.eq("a boss or set-piece song plays as written", _run(SetDirector.new(), {"fight": "anthem", "pressure": 0.7}, 24).filter(func(p): return p.move != "hold"), [])
 	t.check("never an answer under a warning", plans.all(func(p): return p.answer == ""))
 
 
-# The move rate (assumption, 12 November 2026): a player hears at least one DJ move in every
-# phrase the band plays outside a directed section. A scripted stretch of play: explore, a
-# climb, a Warden fight under warnings, its breath and drop, then a boss anthem.
+# The move rate (Andrew, 13 November 2026: melody first, the whole-stretch page was chaotic):
+# never two moves within MIN_GAP_BARS, and still a move in every stretch of two gaps the band
+# plays outside its own form. A scripted stretch of play: explore, a climb, a Warden fight under
+# warnings, its breath and drop, then a boss anthem.
 func _move_rate() -> void:
 	var d := SetDirector.new()
 	var stretch: Array = []
@@ -161,15 +163,18 @@ func _move_rate() -> void:
 	for i in 34:
 		stretch.append({"fight": "anthem", "pressure": 0.7, "warning": i % 2 == 0})
 	var plans := stretch.map(func(room): return d.read(room))
-	var quiet := []
-	for start in range(0, plans.size() - SetDirector.PHRASE_BARS + 1, SetDirector.PHRASE_BARS):
-		var phrase: Array = plans.slice(start, start + SetDirector.PHRASE_BARS)
-		var free := phrase.filter(func(p): return not String(d.plans[p.bar][6]) in SetDirector.OWN_FORM)
-		if free.size() == SetDirector.PHRASE_BARS and free.all(func(p): return p.move == "hold"):
-			quiet.append(start)
-	t.eq("every phrase outside a directed section has a move", quiet, [])
-	var heard := plans.filter(func(p): return p.move != "hold").size()
-	t.check("about one move a phrase or more", heard >= plans.size() / SetDirector.PHRASE_BARS, "%d moves in %d bars" % [heard, plans.size()])
+	var at: Array = []
+	for p in plans:
+		if p.move != "hold":
+			at.append(p.bar)
+	var gaps: Array = []
+	for i in range(1, at.size()):
+		gaps.append(at[i] - at[i - 1])
+	t.check("never two moves within the gap", gaps.all(func(g): return g >= SetDirector.MIN_GAP_BARS), str(at))
+	t.check("a move in the explore and the fight", at.any(func(b): return b < 24) and at.any(func(b): return b >= 24 and b < 56), str(at))
+	t.check("the boss anthem plays as written", at.all(func(b): return b < 62), str(at))
+	var per_minute := at.size() * 60.0 / (plans.size() * 1.875)
+	t.check("about two moves a minute or fewer at 128 bpm", per_minute <= 2.0, "%.2f a minute" % per_minute)
 
 
 func _deterministic() -> void:
@@ -301,7 +306,7 @@ func _in_game() -> void:
 		var from: int = audio.ace.clock
 		_bars(audio, 17)
 		var answers := _set_log(audio).filter(func(e): return e[0] == "set_answer")
-		t.check("switched on, June answers each phrase", answers.size() >= 2, str(answers))
+		t.check("switched on, June answers", answers.size() >= 1, str(answers))
 		for e in answers:
 			t.eq("an answer starts on the band's bar line", posmod(int(e[3]) - audio.ace.origin, audio.ace.grid_bar), 0)
 			t.check("an answer is booked ahead of its bar", int(e[3]) > from)
