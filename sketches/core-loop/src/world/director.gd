@@ -139,6 +139,8 @@ const HOME_WINDOW := Vector2(60.0, 250.0)
 const HOME_CONE := 0.8726646  # 50 degrees
 const LINE_AHEAD := Vector2(60.0, 100.0)
 const LINE_SIDE := Vector2(12.0, 20.0)
+# Pilot line points sit up to about 95 m apart; _line_spot walks each segment in steps this long.
+const LINE_STEP := 10.0
 # Past the stage's elite arrival, the chance at elite_rate 1.0 that an authored arrival is the
 # elite pack again; never two elites in a row.
 const ELITE_REPEAT := 0.1
@@ -951,16 +953,20 @@ static func facing(heading: Vector2, to: Vector2, cone: float) -> bool:
 	return heading == Vector2.ZERO or to == Vector2.ZERO or absf(heading.angle_to(to)) <= cone
 
 
-# A spot beside the riding line ahead of the ball, or INF: a pilot line point LINE_AHEAD away inside AHEAD_CONE of
+# A spot beside the riding line ahead of the ball, or INF: a point on a pilot line LINE_AHEAD away inside AHEAD_CONE of
 # `heading`, moved LINE_SIDE to one side, and safe (off every corridor, out of breathers).
 func _line_spot(ball: Vector2, heading: Vector2) -> Vector2:
 	var ahead: Array[Vector2] = []
 	for line in _corridors._park_pilot_lines:
 		for i in range(1, line.size()):
-			var p: Vector2 = line[i]
-			var d := p.distance_to(ball)
-			if d >= LINE_AHEAD.x and d <= LINE_AHEAD.y and facing(heading, p - ball, AHEAD_CONE):
-				ahead.append(p)
+			var a: Vector2 = line[i - 1]
+			var b: Vector2 = line[i]
+			var steps := maxi(1, int(a.distance_to(b) / LINE_STEP))
+			for k in steps:
+				var p := a.lerp(b, float(k + 1) / steps)
+				var d := p.distance_to(ball)
+				if d >= LINE_AHEAD.x and d <= LINE_AHEAD.y and facing(heading, p - ball, AHEAD_CONE):
+					ahead.append(p)
 	if ahead.is_empty():
 		return Vector2.INF
 	for _i in TRIES:
