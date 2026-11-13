@@ -2,6 +2,8 @@ extends SceneTree
 
 const BallLooks := preload("res://src/presentation/ball_looks.gd")
 const HeroAssets := preload("res://src/presentation/hero_assets.gd")
+const PilotGlance := preload("res://src/presentation/pilot_glance.gd")
+const Cosmetics := preload("res://src/core/cosmetics.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
 const T := preload("res://tests/support/t.gd")
 
@@ -38,6 +40,7 @@ func _run_all() -> void:
 		else:
 			_look(look)
 	_riders()
+	_glance()
 	quit(t.verdict())
 
 
@@ -162,6 +165,16 @@ func _plated(look: String) -> void:
 					if _number(mat, "keep_within") < 0.9:
 						t.check("%s: %s's cockpit is never cut" % [look, pilot], false, "keep_within %s" % mat.get_shader_parameter("keep_within"))
 		t.check("%s: %s's outer kit takes the window" % [look, pilot], kit > 0)
+		var seat := 9.0
+		for i in (pod as MeshInstance3D).mesh.get_surface_count():
+			var mat: Material = (pod as MeshInstance3D).get_active_material(i)
+			if _is_window(mat):
+				seat = minf(seat, _number(mat, "seat_back_top"))
+		t.eq("%s: only a small pilot's seat back is lowered (%s)" % [look, pilot], seat, float(BallLooks.LOW_SEAT_BACK.get(pilot, 9.0)))
+		var seated: Dictionary = painter.fit_pilot_into(pod, pilot, Color.WHITE)
+		var outfits: Array = Cosmetics.ROWS.keys().filter(func(id): return Cosmetics.ROWS[id].get("slot", "") == "outfit" and Cosmetics.ROWS[id].get("pilot", "") == pilot)
+		if not seated.is_empty() and not outfits.is_empty():
+			t.check("%s: %s's outfit %s mounts on the pilot behind the window" % [look, pilot, outfits[0]], not painter.fit_outfit(seated.pilot, outfits[0], {"class": Color.WHITE}).is_empty())
 		var accents := 0
 		for view in _views(core) + _views(pod):
 			for i in view.mesh.get_surface_count():
@@ -241,6 +254,57 @@ func _riders() -> void:
 	t.eq("cutaway: the window follows the ball", cut.get_shader_parameter("centre_at"), roll.global_position)
 	t.eq("cutaway: riders add one material per look", (roll.get_meta(BallLooks.RIDER_META).cuts as Dictionary).size(), 3)
 	roll.free()
+
+
+# The pilot's glance back at the camera (pilot_glance.gd): only at rest, only toward a camera
+# behind, over the shoulder on the camera's side, and gone the moment the ball moves.
+func _glance() -> void:
+	var painter := _painter(_tuning("cutaway"))
+	var ball := Node3D.new()
+	root.add_child(ball)
+	var shell: Dictionary = painter.fit_shell_into(ball, PILOTS[0], "", 1, {"class": Color.WHITE})
+	var seated: Dictionary = painter.fit_pilot_into(shell.pod, PILOTS[0], Color.WHITE)
+	var glance = PilotGlance.seat(seated.pilot)
+	t.check("glance: seats on the pilot's skeleton", glance != null and glance.get_parent() is Skeleton3D)
+	if glance == null:
+		return
+	var skeleton: Skeleton3D = glance.get_parent()
+	var behind_right := skeleton.global_transform * Vector3(2.0, 1.0, 6.0)
+	var behind_left := skeleton.global_transform * Vector3(-2.0, 1.0, 6.0)
+	var ahead := skeleton.global_transform * Vector3(0.5, 1.0, -6.0)
+	for i in 120:
+		glance.observe(false, behind_right, 1.0 / 60.0)
+	t.eq("glance: a moving ball's pilot looks ahead", glance.turn, 0.0)
+	for i in int(PilotGlance.FIRST_AFTER * 60.0) - 6:
+		glance.observe(true, behind_right, 1.0 / 60.0)
+	t.eq("glance: nothing before the ball has sat still a moment", glance.turn, 0.0)
+	for i in 40:
+		glance.observe(true, behind_right, 1.0 / 60.0)
+	t.check("glance: then over the right shoulder to a camera behind on the right", glance.turn > 0.8, str(glance.turn))
+	var head := skeleton.find_bone("head")
+	var rest := skeleton.get_bone_pose_rotation(head)
+	glance._process_modification()
+	t.check("glance: the head turns", not skeleton.get_bone_pose_rotation(head).is_equal_approx(rest))
+	skeleton.set_bone_pose_rotation(head, rest)
+	for i in 30:
+		glance.observe(false, behind_right, 1.0 / 60.0)
+	t.check("glance: gone within half a second of the ball moving", absf(glance.turn) < 0.02, str(glance.turn))
+	for i in int((PilotGlance.FIRST_AFTER + 0.6) * 60.0):
+		glance.observe(true, behind_left, 1.0 / 60.0)
+	t.check("glance: over the left shoulder to a camera on the left", glance.turn < -0.8, str(glance.turn))
+	for i in int((PilotGlance.HOLD + 1.0) * 60.0):
+		glance.observe(true, behind_left, 1.0 / 60.0)
+	t.check("glance: the look is held, then the pilot turns back", absf(glance.turn) < 0.02, str(glance.turn))
+	for i in 60:
+		glance.observe(false, ahead, 1.0 / 60.0)
+	for i in int((PilotGlance.FIRST_AFTER + 0.6) * 60.0):
+		glance.observe(true, ahead, 1.0 / 60.0)
+	t.eq("glance: no glance at a camera in front", glance.turn, 0.0)
+	var plain := _painter(null)
+	t.check("glance: only a look that shows the pilot's back seats one", not BallLooks.PLATED.has(plain.ball_look()))
+	ball.free()
+	painter.free()
+	plain.free()
 
 
 func _is_window(mat: Material) -> bool:
