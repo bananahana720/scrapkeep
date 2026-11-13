@@ -28,9 +28,20 @@ The gyro and the bell remain one shared shell each, as Andrew saw them. The cuta
 | Window | 40 degrees about the line from the ball's centre to the camera, with an ink line and a halftone fringe. It cuts the plating, each pilot's outer kit where it stands farther than 0.93 from the centre (the weapon ring's near arc), and everything that rides the ball: scrap chunks, part hardware, panel plates. The cockpit inside the ball is never cut. |
 | Equipped paint | Takes the enamel gores; the dark gores, belt and caps keep the pattern. |
 | Outfits | Unchanged: `CosmeticWear` and `fit_outfit` already mount an outfit on the pilot's bones, and the window is what lets the player see it. |
-| Not cut | Glass, class accents (the ready glow swaps those materials by identity) and Kest's live band and fuse materials keep their own materials. |
+| Not cut | Glass, class accents (the ready glow swaps those materials by identity), Kest's live band and fuse materials, and unshaded or see-through riders such as synergy halos keep their own materials. An equipped decal shows on the weapon ring's band only (its other home, the gap panels, is hidden), and that band is then not cut. |
 
-**Receipts** (`tools/ball_look_capture.gd`; cloud numbers are the compatibility renderer, the PC's are on branch `scratch/w40-ball-look-capture`). RECEIPTS_HERE
+**Receipts** (`tools/ball_look_capture.gd`; cloud numbers are the compatibility renderer, the PC's are on branch `scratch/w40-ball-look-capture`). Share of the pilot the play camera sees, median of 24 spins at rest (the worst spin and the speed view are within one point), heft class I, cloud:
+
+| Pilot | Cutaway | Ball triangles | Surfaces |
+| --- | --- | --- | --- |
+| Sable | 87% | 13,812 | 20 |
+| Rivet | 70% | 14,416 | 17 |
+| Kest | 79% | 14,680 | 19 |
+| Tarn | 80% | 15,174 | 21 |
+| Tally | 78% | 14,633 | 13 |
+| Cannon | 77% | 9,566 | 15 |
+
+Today's shell shows 52% of Sable (PC: 54%, against the cutaway blockout's 85%). Heft class V adds 5 to 8 surfaces and about 1,300 to 2,100 triangles and hides no more of the pilot. A late run's ball (Sable, class III, scrap chunks and 40 panel plates) shows 86% of the pilot under the cutaway; today's shell with the same load showed 21%, 6% on the worst spin. No surface blends. The pilot is about 9,800 of each ball's triangles.
 
 **Still open.** The class card and customize previews build a painter with no tuning, so they show today's shells. Rivet's pilot is the least visible because Rivet's own seat back and cage rods, which are inside the ball and never cut, cover a small pilot; a lower seat back in `shell_rivet` is the fix and is not in this change. The default stays `today` until Andrew has seen the finished cutaway on his PC.
 

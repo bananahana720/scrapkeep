@@ -55,14 +55,18 @@ func _painter(tuning) -> HeroAssets:
 	return painter
 
 
-# A painter with no look fits the pilot's own shell and leaves hero_assets' materials on it.
+# A painter with no look fits the pilot's own shell at the heaviest heft class exactly as a
+# painter with no tuning does: the same meshes, the same ones drawing, hero_assets' materials.
 func _unchanged(label: String, tuning) -> void:
+	var plain := _painter(null)
 	var painter := _painter(tuning)
 	var ball := Node3D.new()
 	root.add_child(ball)
-	var shell: Dictionary = painter.fit_shell_into(ball, PILOTS[0], "", 1, {"class": Color.WHITE})
+	var want: Dictionary = plain.fit_shell_into(ball, PILOTS[0], "", 5, {"class": Color.WHITE})
+	var shell: Dictionary = painter.fit_shell_into(ball, PILOTS[0], "", 5, {"class": Color.WHITE})
 	var swapped: Array = PILOTS.filter(func(pilot): return painter.shell_assets.has(pilot))
 	t.eq("%s: no pilot's shell is swapped" % label, swapped, [])
+	t.eq("%s: every mesh is the pilot's own and draws as it did" % label, _drawn(shell), _drawn(want))
 	var dressed := 0
 	for view in _views(shell.core) + _views(shell.pod):
 		for i in view.mesh.get_surface_count():
@@ -72,6 +76,15 @@ func _unchanged(label: String, tuning) -> void:
 	t.eq("%s: no surface wears a look's material" % label, dressed, 0)
 	ball.free()
 	painter.free()
+	plain.free()
+
+
+# Every mesh of a fitted shell with the render layers it draws on, in tree order.
+func _drawn(shell: Dictionary) -> Array:
+	var out: Array = []
+	for view in _views(shell.core) + _views(shell.pod):
+		out.append([view.mesh, view.layers])
+	return out
 
 
 func _look(look: String) -> void:
@@ -149,6 +162,13 @@ func _plated(look: String) -> void:
 					if _number(mat, "keep_within") < 0.9:
 						t.check("%s: %s's cockpit is never cut" % [look, pilot], false, "keep_within %s" % mat.get_shader_parameter("keep_within"))
 		t.check("%s: %s's outer kit takes the window" % [look, pilot], kit > 0)
+		var accents := 0
+		for view in _views(core) + _views(pod):
+			for i in view.mesh.get_surface_count():
+				var mat: Material = view.get_active_material(i)
+				if mat != null and mat.resource_name == "class_accent":
+					accents += 1
+		t.check("%s: the ready glow still lights %s's class accents" % [look, pilot], accents > 0 and painter._glow_rec(shell, true) == accents, "%d accents" % accents)
 		t.eq("%s: %s blends nothing its own shell does not" % [look, pilot], _blended(core) + _blended(pod), _blended(own.core) + _blended(own.pod))
 		ball.free()
 	painter.free()
@@ -175,6 +195,26 @@ func _riders() -> void:
 	plates.multimesh = MultiMesh.new()
 	plates.multimesh.mesh = shared
 	roll.add_child(plates)
+	var halo := MeshInstance3D.new()
+	halo.mesh = BoxMesh.new()
+	var flat := StandardMaterial3D.new()
+	flat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	halo.material_override = flat
+	roll.add_child(halo)
+	var ghost := MeshInstance3D.new()
+	ghost.mesh = BoxMesh.new()
+	var clear := StandardMaterial3D.new()
+	clear.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	ghost.material_override = clear
+	roll.add_child(ghost)
+	var lamp := MeshInstance3D.new()
+	lamp.mesh = BoxMesh.new()
+	var lit := StandardMaterial3D.new()
+	lit.emission_enabled = true
+	lit.emission = Color(0.5, 0.5, 0.5)
+	lit.emission_energy_multiplier = 3.0
+	lamp.material_override = lit
+	roll.add_child(lamp)
 	BallLooks.ride(BallLooks.TODAY, roll)
 	t.check("today: a rider keeps its material", chunk.material_override == steel and plates.multimesh.mesh == shared)
 	BallLooks.ride("cutaway", roll)
@@ -183,17 +223,23 @@ func _riders() -> void:
 	t.check("cutaway: a rider's window is held at the ball's centre", cut != null and cut.get_shader_parameter("held") == true and cut.get_shader_parameter("centre_at") == roll.global_position)
 	t.check("cutaway: panel plates take the window on a mesh of their own", plates.multimesh.mesh != shared and _is_window(plates.multimesh.mesh.surface_get_material(0)))
 	t.check("cutaway: the mesh other balls share is untouched", shared.surface_get_material(0) == face)
+	t.check("cutaway: an unshaded or see-through rider keeps its material", halo.material_override == flat and ghost.material_override == clear)
+	var glow = (lamp.material_override as ShaderMaterial).get_shader_parameter("glow")
+	t.check("cutaway: a rider's glow is its linear colour times its energy", glow is Vector3 and absf(glow.x - Color(0.5, 0.5, 0.5).srgb_to_linear().r * 3.0) < 0.001, str(glow))
 	var twin := MeshInstance3D.new()
 	twin.mesh = BoxMesh.new()
 	var steel_again := StandardMaterial3D.new()
 	steel_again.albedo_color = steel.albedo_color
 	twin.material_override = steel_again
-	roll.add_child(twin)
+	var holder := Node3D.new()
+	roll.add_child(holder)
+	BallLooks.ride("cutaway", roll)
+	holder.add_child(twin)
 	roll.position = Vector3(5.0, 1.0, 0.0)
 	BallLooks.ride("cutaway", roll)
-	t.check("cutaway: a new rider of the same look shares the material", twin.material_override == cut)
+	t.check("cutaway: a rider added later under a child is cut and shares the material", twin.material_override == cut)
 	t.eq("cutaway: the window follows the ball", cut.get_shader_parameter("centre_at"), roll.global_position)
-	t.eq("cutaway: riders add one material per look", (roll.get_meta(BallLooks.RIDER_META) as Dictionary).size(), 2)
+	t.eq("cutaway: riders add one material per look", (roll.get_meta(BallLooks.RIDER_META).cuts as Dictionary).size(), 3)
 	roll.free()
 
 

@@ -37,7 +37,8 @@ uniform vec4 tint : source_color = vec4(1.0);
 uniform bool vertex_tint = false;
 uniform float metal = 0.0;
 uniform float rough = 0.8;
-uniform vec3 glow : source_color = vec3(0.0);
+// Linear light, already multiplied by its energy.
+uniform vec3 glow = vec3(0.0);
 uniform vec3 lining : source_color = vec3(0.82, 0.77, 0.65);
 uniform vec3 ink : source_color = vec3(0.14, 0.16, 0.16);
 uniform float window = 0.76;
@@ -48,6 +49,8 @@ uniform bool inside = false;
 // A part that rides the ball away from its centre is told where the centre is each frame.
 uniform bool held = false;
 uniform vec3 centre_at = vec3(0.0);
+// A part of the shell whose own origin is off the ball's centre: the centre in its own space.
+uniform vec3 centre_local = vec3(0.0);
 // hero_assets' equipped paint: the tint takes where the vertex alpha says paint.
 uniform vec4 paint_tint : source_color = vec4(1.0);
 uniform vec4 lift : source_color = vec4(1.0);
@@ -72,7 +75,7 @@ void vertex() {
 	local_pos = VERTEX;
 	local_normal = NORMAL;
 	model_scale = length(MODEL_MATRIX[0].xyz);
-	vec3 centre = held ? centre_at : MODEL_MATRIX[3].xyz;
+	vec3 centre = held ? centre_at : (MODEL_MATRIX * vec4(centre_local, 1.0)).xyz;
 	from_centre = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz - centre;
 	to_camera = CAMERA_POSITION_WORLD - centre;
 	to_eye = INV_VIEW_MATRIX[2].xyz;
@@ -198,6 +201,7 @@ static func replate(look: String, core: Node, heft := 1) -> void:
 
 # The mean vertex colour of a mesh's paint-taking paint surfaces, or null when it has none.
 const ENAMEL_META := "ball_enamel"
+const WORN_META := "ball_window_worn"
 
 static func _enamel(mesh: Mesh):
 	if not _enamels.has(mesh):
@@ -280,50 +284,89 @@ static func dress(look: String, shell: Dictionary) -> void:
 # Every surface of the rolling part takes the window, keeping the colour it was painted with.
 # A class_accent surface keeps hero_assets' own material, which the ready glow swaps by identity.
 static func _cut(core: Node) -> void:
-	var views: Array = core.find_children("*", "MeshInstance3D", true, false)
-	if core is MeshInstance3D:
-		views.append(core)
-	for view in views:
+	var cuts := {}
+	for view in _views(core):
+		var enamel = view.get_meta(ENAMEL_META) if view.has_meta(ENAMEL_META) else null
+		var centre := _centre_in(view, core)
 		for i in view.mesh.get_surface_count():
 			var was: Material = view.get_active_material(i)
 			if was != null and was.resource_name == "class_accent":
 				continue
-			var cut := _windowed(was)
-			cut.set_shader_parameter("inside", cut.get_shader_parameter("vertex_tint"))
-			if view.get_meta(ENAMEL_META, null) != null:
-				cut.set_shader_parameter("enamel", view.get_meta(ENAMEL_META))
-				cut.set_shader_parameter("enamel_take", 1.0)
-			view.set_surface_override_material(i, cut)
+			var key := [was, enamel, centre]
+			if not cuts.has(key):
+				var cut := _windowed(was)
+				cut.set_shader_parameter("inside", cut.get_shader_parameter("vertex_tint"))
+				cut.set_shader_parameter("centre_local", centre)
+				if enamel != null:
+					cut.set_shader_parameter("enamel", enamel)
+					cut.set_shader_parameter("enamel_take", 1.0)
+				cuts[key] = cut
+			_wear(view, i, cuts[key])
+
+
+# A node's metadata outlives its rendering instance, which must not outlive a material it draws
+# with (hero_assets keeps its own surface materials the same way).
+static func _wear(view: MeshInstance3D, surface: int, mat: Material) -> void:
+	view.set_surface_override_material(surface, mat)
+	var held: Array = view.get_meta(WORN_META, [])
+	held.append(mat)
+	view.set_meta(WORN_META, held)
+
+
+# A part's meshes that can draw.
+static func _views(part: Node) -> Array:
+	var views: Array = part.find_children("*", "MeshInstance3D", true, false)
+	if part is MeshInstance3D:
+		views.append(part)
+	return views.filter(func(view): return view.mesh != null)
+
+
+# The ball's centre (the origin of the shell part `root`) in a mesh's own space, as the mesh
+# sits at rest: a mortar or a heft module whose pivot is off the centre still cuts about the ball.
+static func _centre_in(view: Node3D, root: Node) -> Vector3:
+	var to_root := Transform3D.IDENTITY
+	var node: Node = view
+	while node != null and node != root:
+		if node is Node3D:
+			to_root = (node as Node3D).transform * to_root
+		node = node.get_parent()
+	return to_root.affine_inverse().origin.snappedf(0.001)
+
+
+# What may take the window: plain opaque lit surfaces and hero_assets' plain paint. Glass, an
+# unshaded halo, class accents (the ready glow swaps them by identity) and a live shader of a
+# pilot's or a part's own keep their materials, because the window's material cannot draw them.
+static func _takes_window(was: Material) -> bool:
+	if was == null or was.resource_name == "class_accent":
+		return false
+	if was is BaseMaterial3D:
+		return was.transparency == BaseMaterial3D.TRANSPARENCY_DISABLED and was.shading_mode != BaseMaterial3D.SHADING_MODE_UNSHADED
+	return was is ShaderMaterial and was.get_shader_parameter("paint_take") != null and was.get_shader_parameter("class_color") == null
 
 
 # The level part: kit that stands outside the ball (weapon ring, hoods, drums) takes the window
 # where it comes between the camera and the pilot; the cockpit inside the ball is never cut.
-# Only plain opaque surfaces and hero_assets' plain paint are swapped. Glass, class accents
-# (the ready glow swaps them by identity) and a pilot's own live shaders keep their materials.
+# _takes_window says which surfaces are swapped.
 const KIT_KEEP_WITHIN := 0.93
 
 static func _cut_kit(pod: Node) -> void:
 	var cuts := {}
-	var views: Array = pod.find_children("*", "MeshInstance3D", true, false)
-	if pod is MeshInstance3D:
-		views.append(pod)
 	var dome := pod.find_child("Dome", true, false)
-	for view in views:
-		if view.mesh == null or dome != null and dome.is_ancestor_of(view):
+	for view in _views(pod):
+		if dome != null and dome.is_ancestor_of(view):
 			continue
+		var centre := _centre_in(view, pod)
 		for i in view.mesh.get_surface_count():
 			var was: Material = view.get_active_material(i)
-			if was == null or was.resource_name == "class_accent":
+			if not _takes_window(was):
 				continue
-			if was is BaseMaterial3D and was.transparency != BaseMaterial3D.TRANSPARENCY_DISABLED:
-				continue
-			if was is ShaderMaterial and (was.get_shader_parameter("paint_take") == null or was.get_shader_parameter("class_color") != null):
-				continue
-			if not cuts.has(was):
+			var key := [was, centre]
+			if not cuts.has(key):
 				var cut := _windowed(was)
 				cut.set_shader_parameter("keep_within", KIT_KEEP_WITHIN)
-				cuts[was] = cut
-			view.set_surface_override_material(i, cuts[was])
+				cut.set_shader_parameter("centre_local", centre)
+				cuts[key] = cut
+			_wear(view, i, cuts[key])
 
 
 # A material's colour, metal, roughness, glow and equipped paint behind the window.
@@ -340,7 +383,8 @@ static func _windowed(was: Material) -> ShaderMaterial:
 		cut.set_shader_parameter("metal", was.metallic)
 		cut.set_shader_parameter("rough", was.roughness)
 		if was.emission_enabled:
-			cut.set_shader_parameter("glow", was.emission * was.emission_energy_multiplier)
+			var lit: Color = was.emission.srgb_to_linear() * was.emission_energy_multiplier
+			cut.set_shader_parameter("glow", Vector3(lit.r, lit.g, lit.b))
 		if was.albedo_texture != null and was.uv1_triplanar:
 			cut.set_shader_parameter("plated", true)
 			cut.set_shader_parameter("plate", was.albedo_texture)
@@ -358,45 +402,63 @@ static func _windowed(was: Material) -> ShaderMaterial:
 
 # What rides the rolling ball outside the shell (scrap chunks, part hardware, panel plates)
 # would stand between the camera and the pilot, so under a plated look it takes the same
-# window. Call every frame with the node those parts ride: new parts are cut as they appear and
-# the window follows the ball. The cut materials live on that node, shared by look.
+# window. Call every frame with the node those parts ride: the window follows the ball, and
+# the riders are walked again only after a node joins the roll node or one of its children
+# (Accretion, PanelShell). The state lives on the roll node, with one cut material per look.
 const RIDER_META := "ball_window"
 
 static func ride(look: String, roll: Node3D) -> void:
 	if roll == null or not PLATED.has(look):
 		return
 	if not roll.has_meta(RIDER_META):
-		roll.set_meta(RIDER_META, {})
-	var cuts: Dictionary = roll.get_meta(RIDER_META)
-	for node in roll.find_children("*", "GeometryInstance3D", true, false):
-		if node.has_meta(RIDER_META):
-			continue
-		node.set_meta(RIDER_META, true)
-		var multi := node as MultiMeshInstance3D
-		var view := node as MeshInstance3D
-		if node.material_override != null:
-			node.material_override = _rider(cuts, node.material_override)
-		elif multi != null and multi.multimesh != null and multi.multimesh.mesh != null:
-			# A multimesh has no surface overrides, and its mesh is shared with other balls.
-			var mesh: Mesh = multi.multimesh.mesh.duplicate()
-			for i in mesh.get_surface_count():
-				mesh.surface_set_material(i, _rider(cuts, mesh.surface_get_material(i)))
-			multi.multimesh.mesh = mesh
-		elif view != null and view.mesh != null:
-			for i in view.mesh.get_surface_count():
-				var was: Material = view.get_active_material(i)
-				if was == null or was is BaseMaterial3D and was.transparency != BaseMaterial3D.TRANSPARENCY_DISABLED:
-					continue
-				view.set_surface_override_material(i, _rider(cuts, was))
+		roll.set_meta(RIDER_META, {"cuts": {}, "dirty": true})
+		roll.child_entered_tree.connect(_watch.bind(roll))
+		for child in roll.get_children():
+			_watch(child, roll)
+	var state: Dictionary = roll.get_meta(RIDER_META)
+	var cuts: Dictionary = state.cuts
+	if state.dirty:
+		state.dirty = false
+		for node in roll.find_children("*", "GeometryInstance3D", true, false):
+			if not node.has_meta(RIDER_META):
+				node.set_meta(RIDER_META, true)
+				_cut_rider(node, cuts)
 	var centre := roll.global_position if roll.is_inside_tree() else Vector3.ZERO
 	for cut in cuts.values():
 		cut.set_shader_parameter("centre_at", centre)
 
 
+static func _watch(child: Node, roll: Node3D) -> void:
+	_mark(child, roll)
+	child.child_entered_tree.connect(_mark.bind(roll))
+
+
+static func _mark(_node: Node, roll: Node3D) -> void:
+	if is_instance_valid(roll) and roll.has_meta(RIDER_META):
+		roll.get_meta(RIDER_META).dirty = true
+
+
+static func _cut_rider(node: GeometryInstance3D, cuts: Dictionary) -> void:
+	var multi := node as MultiMeshInstance3D
+	var view := node as MeshInstance3D
+	if node.material_override != null:
+		if _takes_window(node.material_override):
+			node.material_override = _rider(cuts, node.material_override)
+	elif multi != null and multi.multimesh != null and multi.multimesh.mesh != null:
+		# A multimesh has no surface overrides, and its mesh is shared with other balls.
+		var mesh: Mesh = multi.multimesh.mesh.duplicate()
+		for i in mesh.get_surface_count():
+			if _takes_window(mesh.surface_get_material(i)):
+				mesh.surface_set_material(i, _rider(cuts, mesh.surface_get_material(i)))
+		multi.multimesh.mesh = mesh
+	elif view != null and view.mesh != null:
+		for i in view.mesh.get_surface_count():
+			if _takes_window(view.get_active_material(i)):
+				view.set_surface_override_material(i, _rider(cuts, view.get_active_material(i)))
+
+
 # One cut material per look a rider can have, so a run's redraws add no materials.
 static func _rider(cuts: Dictionary, was: Material) -> Material:
-	if was is ShaderMaterial and was.shader == _shader("cutaway", CUTAWAY_SHADER):
-		return was
 	var cut := _windowed(was)
 	var key := ""
 	for name in ["vertex_tint", "tint", "metal", "rough", "glow", "paint_tint", "paint_take", "plate", "plate_scale"]:
