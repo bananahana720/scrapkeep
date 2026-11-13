@@ -24,6 +24,12 @@ const PAIRS := {
 	"res://assets/models/park/props/dam/survey_tent_a.glb": {"tris": -1, "draws": -1},
 	"res://assets/models/park/props/dam/survey_tent_a_lod1.glb": {"tris": -1, "draws": -1},
 	"res://assets/models/park/props/dam/survey_tent_a_lod2.glb": {"tris": -1, "draws": -1},
+	"res://assets/models/park/props/flume/skiff_on_blocks_a.glb": {"tris": -1, "draws": -1},
+	"res://assets/models/park/props/flume/skiff_on_blocks_a_lod1.glb": {"tris": -1, "draws": -1},
+	"res://assets/models/park/props/flume/skiff_on_blocks_a_lod2.glb": {"tris": -1, "draws": -1},
+	"res://assets/models/park/props/flume/boom_crane_wreck_a.glb": {"tris": -1, "draws": -1},
+	"res://assets/models/park/props/flume/boom_crane_wreck_a_lod1.glb": {"tris": -1, "draws": -1},
+	"res://assets/models/park/props/flume/boom_crane_wreck_a_lod2.glb": {"tris": -1, "draws": -1},
 }
 
 var failures := 0
@@ -125,7 +131,7 @@ func _run() -> void:
 		_check(t.draws <= cap.draws, "%s sibling draws %d <= %d (authored %d)" % [authored.get_file(), t.draws, cap.draws, a.draws])
 		a_node.free()
 		t_node.free()
-	_check(PAIRS.size() == 12, "12 authored-sibling pairs checked (%d)" % PAIRS.size())
+	_check(PAIRS.size() == 18, "18 authored-sibling pairs checked (%d)" % PAIRS.size())
 	# The game's own load sites must reach the sibling, not only ModelVariants.path: the shared enemy
 	# caster and the park prop mesh cache, each compared by triangle count with the sibling file.
 	var tender := "res://assets/models/world_one/enemy_boom_tender.glb"

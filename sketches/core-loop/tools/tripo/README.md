@@ -38,6 +38,8 @@ outputs with the account holder. Outputs made on a free account are public domai
 | park/props/dam/gate_wheelhouse_a{,_lod1,_lod2}_tripo.glb | 7f215046-0286-4f10-b0cd-6d0121db046e | prompts/gate_wheelhouse.txt | 30 | 6,000 / 3,000 / 900 (16,588 / 8,294 / 2,488) | 1 | box |
 | park/props/dam/mixer_wreck_a{,_lod1,_lod2}_tripo.glb | see registry row | prompts/mixer_wreck.txt | 60 (2 candidates) | 6,000 / 3,000 / 898 (12,740 / 6,370 / 1,904) | 1 | box |
 | park/props/dam/survey_tent_a{,_lod1,_lod2}_tripo.glb | see registry row | prompts/survey_tent.txt | 60 (2 candidates) | 5,000 / 2,500 / 750 (8,840 / 4,420 / 1,326) | 1 | box |
+| park/props/flume/skiff_on_blocks_a{,_lod1,_lod2}_tripo.glb | Studio workspace 91afa2b0-76cf-452c-8c73-050af720aee6 | typed in Studio, not saved | 20 Pro (texture; the Smart Mesh batch of 4 was free on the trial counter) | 5,435 / 2,700 / 799 (11,524 / 5,762 / 1,728) | 1 | yaw 90, box |
+| park/props/flume/boom_crane_wreck_a{,_lod1,_lod2}_tripo.glb | Studio workspace 5accd8b9-3eec-4698-9050-615d8214c2d5 | typed in Studio, not saved | 20 Pro (texture) | 5,999 / 3,000 / 1,237 (17,782 / 8,890 / 2,666) | 1 | yaw 0, box |
 
 The two runner-up candidates cost 60 credits more (tasks 4ff28976-cb42-4c54-a38e-3f11ad6ff8d4 and
 bf9a1416-9b54-4d86-9cc2-bc2f7b50791f). Counts are Godot's, from `tests/tripo_variants_test.gd`.
@@ -45,3 +47,12 @@ bf9a1416-9b54-4d86-9cc2-bc2f7b50791f). Counts are Godot's, from `tests/tripo_var
 Wave 2 also generated a lobber hopper and a magnet cart (120 credits). Both were left out: swapping only
 their body node left the authored sling, barrel and magnet discs floating or doubled. They need a
 whole-model generation with the parts cut out instead. API spend after wave 2: 420 credits.
+
+## Tripo Studio (Pro credits)
+
+The CLI spends API credits, a pool apart from the Pro subscription's Studio credits. Pro credits are spent
+in the browser at studio.tripo3d.ai: Model, Smart Mesh, a text prompt, then Texture (20 credits) on the
+candidate kept, then Export as GLB. The exported GLB goes through the same fitter. The flume skiff and
+crane were made this way on 13 Nov 2026. Both come out smaller than the authored prop's footprint, because
+the fit holds them inside the authored bounds: the skiff 4.7 m in a 7.9 m footprint, the crane (an upright
+crane, where the authored prop is a fallen boom) 6.5 m in 13.9 m. The 4k Studio texture never ships.

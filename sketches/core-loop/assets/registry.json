@@ -19925,6 +19925,17 @@
    }
   },
   {
+   "id": "boom_crane_wreck_a_lod1_tripo",
+   "path": "res://assets/models/park/props/flume/boom_crane_wreck_a_lod1_tripo.glb",
+   "class": "dress_hero",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_flume.json) through src/presentation/model_variants.gd (--models=tripo)",
+   "provenance": {
+    "recipe": "tools/tripo/README.md",
+    "note": "Generated in Tripo Studio (studio.tripo3d.ai, Smart Mesh, P2.0, text prompt, then Texture; workspace id 5accd8b9-3eec-4698-9050-615d8214c2d5, Studio asset name 'dock crane 3d model') on Andrew's paid Pro account (Tripo terms 5.2: the outputs belong to the account holder); fitted by tools/tripo/tripo_fit.py inside the authored bounds; LOD by decimation; faces snapped to the authored palette, no texture ships. sha256 4f574c79bf1b4a11fa56cd152cb4d20209355eef4259ffe6e5684b2eb4b2e69a"
+   }
+  },
+  {
    "id": "dprop_flume_boom_crane_wreck_a_lod2",
    "path": "res://assets/models/park/props/flume/boom_crane_wreck_a_lod2.glb",
    "class": "dress_hero",
@@ -19950,6 +19961,28 @@
      4.7604,
      5.1974
     ]
+   }
+  },
+  {
+   "id": "boom_crane_wreck_a_lod2_tripo",
+   "path": "res://assets/models/park/props/flume/boom_crane_wreck_a_lod2_tripo.glb",
+   "class": "dress_hero",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_flume.json) through src/presentation/model_variants.gd (--models=tripo)",
+   "provenance": {
+    "recipe": "tools/tripo/README.md",
+    "note": "Generated in Tripo Studio (studio.tripo3d.ai, Smart Mesh, P2.0, text prompt, then Texture; workspace id 5accd8b9-3eec-4698-9050-615d8214c2d5, Studio asset name 'dock crane 3d model') on Andrew's paid Pro account (Tripo terms 5.2: the outputs belong to the account holder); fitted by tools/tripo/tripo_fit.py inside the authored bounds; LOD by decimation; faces snapped to the authored palette, no texture ships. sha256 2f786201bfd842d9faaebc0c458b10545dd597abcdc757e18f6cf37904e14872"
+   }
+  },
+  {
+   "id": "boom_crane_wreck_a_tripo",
+   "path": "res://assets/models/park/props/flume/boom_crane_wreck_a_tripo.glb",
+   "class": "dress_hero",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_flume.json) through src/presentation/model_variants.gd (--models=tripo)",
+   "provenance": {
+    "recipe": "tools/tripo/README.md",
+    "note": "Generated in Tripo Studio (studio.tripo3d.ai, Smart Mesh, P2.0, text prompt, then Texture; workspace id 5accd8b9-3eec-4698-9050-615d8214c2d5, Studio asset name 'dock crane 3d model') on Andrew's paid Pro account (Tripo terms 5.2: the outputs belong to the account holder); fitted by tools/tripo/tripo_fit.py inside the authored bounds; LOD by decimation; faces snapped to the authored palette, no texture ships. sha256 0e4a0a8cfd1c8a0fd66e8633b78b72299a0ac85a606cd44f7e1f7b94e5cfef7a"
    }
   },
   {
@@ -21941,6 +21974,17 @@
    }
   },
   {
+   "id": "skiff_on_blocks_a_lod1_tripo",
+   "path": "res://assets/models/park/props/flume/skiff_on_blocks_a_lod1_tripo.glb",
+   "class": "dress_hero",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_flume.json) through src/presentation/model_variants.gd (--models=tripo)",
+   "provenance": {
+    "recipe": "tools/tripo/README.md",
+    "note": "Generated in Tripo Studio (studio.tripo3d.ai, Smart Mesh, P2.0, text prompt, then Texture; workspace id 91afa2b0-76cf-452c-8c73-050af720aee6, Studio asset name 'wooden rowboat 3d model') on Andrew's paid Pro account (Tripo terms 5.2: the outputs belong to the account holder); fitted by tools/tripo/tripo_fit.py inside the authored bounds; LOD by decimation; faces snapped to the authored palette, no texture ships. sha256 e2b7d57929faea3992e3d7b6be37c95f9341f47ec7b86b34895217a34b2cb510"
+   }
+  },
+  {
    "id": "dprop_flume_skiff_on_blocks_a_lod2",
    "path": "res://assets/models/park/props/flume/skiff_on_blocks_a_lod2.glb",
    "class": "dress_hero",
@@ -21966,6 +22010,28 @@
      3.0764,
      6.8437
     ]
+   }
+  },
+  {
+   "id": "skiff_on_blocks_a_lod2_tripo",
+   "path": "res://assets/models/park/props/flume/skiff_on_blocks_a_lod2_tripo.glb",
+   "class": "dress_hero",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_flume.json) through src/presentation/model_variants.gd (--models=tripo)",
+   "provenance": {
+    "recipe": "tools/tripo/README.md",
+    "note": "Generated in Tripo Studio (studio.tripo3d.ai, Smart Mesh, P2.0, text prompt, then Texture; workspace id 91afa2b0-76cf-452c-8c73-050af720aee6, Studio asset name 'wooden rowboat 3d model') on Andrew's paid Pro account (Tripo terms 5.2: the outputs belong to the account holder); fitted by tools/tripo/tripo_fit.py inside the authored bounds; LOD by decimation; faces snapped to the authored palette, no texture ships. sha256 8e72a153b0319ce71f4ab4e9937d1ca33e8f62ae0728891a0352ae88ffadf222"
+   }
+  },
+  {
+   "id": "skiff_on_blocks_a_tripo",
+   "path": "res://assets/models/park/props/flume/skiff_on_blocks_a_tripo.glb",
+   "class": "dress_hero",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_flume.json) through src/presentation/model_variants.gd (--models=tripo)",
+   "provenance": {
+    "recipe": "tools/tripo/README.md",
+    "note": "Generated in Tripo Studio (studio.tripo3d.ai, Smart Mesh, P2.0, text prompt, then Texture; workspace id 91afa2b0-76cf-452c-8c73-050af720aee6, Studio asset name 'wooden rowboat 3d model') on Andrew's paid Pro account (Tripo terms 5.2: the outputs belong to the account holder); fitted by tools/tripo/tripo_fit.py inside the authored bounds; LOD by decimation; faces snapped to the authored palette, no texture ships. sha256 34a5e88eb86101a664264ca7668976922b6dd97889739539d0cc36a6032cd1d4"
    }
   },
   {
@@ -37905,6 +37971,9 @@
   "bench_coping_detail2",
   "bet_crate",
   "bola_thrower_clips",
+  "boom_crane_wreck_a_lod1_tripo",
+  "boom_crane_wreck_a_lod2_tripo",
+  "boom_crane_wreck_a_tripo",
   "boom_tender_clips",
   "boss_brindle",
   "boss_brindle_scooter",
@@ -39523,6 +39592,9 @@
   "shell_tarn_c4",
   "shell_tarn_c5",
   "shell_tarn_redjaw_teeth",
+  "skiff_on_blocks_a_lod1_tripo",
+  "skiff_on_blocks_a_lod2_tripo",
+  "skiff_on_blocks_a_tripo",
   "sky_blades",
   "sky_cloud",
   "sky_cradle",
