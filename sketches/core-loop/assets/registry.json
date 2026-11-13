@@ -36697,6 +36697,23 @@
    "exception_why": "A kit of four independently placed parts, one draw each; a field find draws at most three of them. Limits asserted by the recipe and activities_test."
   },
   {
+   "id": "pocket_kit",
+   "path": "res://assets/models/world_one/pocket_kit.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/world/activities.gd",
+   "provenance": {
+    "recipe": "tools/blender/world_one/pocket_kit.py",
+    "note": "Procedural vertex-coloured pocket interior kit (W1-23): crew-cast cover block and entrance bollard, scaled to each authored block."
+   },
+   "exception": {
+    "tris": 700,
+    "verts": 1400,
+    "draws": 3
+   },
+   "exception_why": "Two separately placed parts (cover block in two slots, entrance bollard in one), one draw per slot. Limits asserted by the recipe."
+  },
+  {
    "id": "radio_cache",
    "path": "res://assets/models/world_one/radio_cache.glb",
    "class": "prop",
@@ -39121,6 +39138,7 @@
   "plate_kicker_8x3x20_detail1",
   "plate_kicker_8x3x20_detail2",
   "plated_brute_clips",
+  "pocket_kit",
   "primer_coil",
   "primer_coil__escape_rail",
   "primer_coil__escape_vent",

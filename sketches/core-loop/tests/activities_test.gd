@@ -268,11 +268,11 @@ func _check_site_models() -> void:
 			"shell %s" % [box])
 
 
-# Primitive meshes the site draws, less its beacon view and a pocket interior (W1-23's family).
+# Primitive meshes the site draws, less its beacon view.
 func _primitives(node: Node, skip: Node) -> int:
 	var n := 0
 	for view: MeshInstance3D in node.find_children("*", "MeshInstance3D", true, false):
-		if view.mesh is PrimitiveMesh and not skip.is_ancestor_of(view) and not String(node.get_path_to(view)).begins_with("Interior_"):
+		if view.mesh is PrimitiveMesh and not skip.is_ancestor_of(view):
 			n += 1
 	return n
 
