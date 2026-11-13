@@ -9,7 +9,7 @@ The roadmap is ordered by what has to be true, not by dates. Wave numbers keep c
 - **Goal (16 Oct, unchanged):** a finished-feeling Linux alpha, accepted at one sitting: 11 areas marked with no "Not yet", no open blocker, frame times in budget, zero placeholders.
 - **Priority (23 Oct, ruling at):** world 1 first. Worlds 2 and 3 start nothing new until the world 1 sitting is done.
 - **World 1 sitting:** started, not finished. Andrew played the dam on the wave 26 build on 30 Oct ("fun"; many invisible walls; models clipping); every fix shipped in wave 29. No area is marked yet. Ruling cs (10 Nov) holds the sitting until world 1 is fully polished.
-- **Main:** wave 37 (b190dd26, 12 Nov). Wave 38 is open; [STATE.md](STATE.md) says where it stands.
+- **Main and the open stage:** the Wave facts table in [STATE.md](STATE.md) names the last promotion and the open stage, and its "Now" section says where the wave stands.
 - **Last measures with receipts:** the wave 37 difficulty band read (board, 12 Nov 04:08Z): w1 Novice 35% against a target of 15% or less (29% without the stack), Learner a5 79%, Expert 96%. The 4080 p99 medians are still wave 32's: dam 14.8 ms, flume 15.2 ms, Brindle 12.2 ms. 0 placeholders.
 
 ## Phase 1: the world 1 sitting
@@ -22,7 +22,7 @@ World 1 is the title, the camp, the dam, the flume and Brindle in the Slag Bowl.
 | --- | --- | --- |
 | 1 | Waves 34 to 36: the first PC gate, words and first checks, danger marks, the HUD and the instruments | Done: main 47c79b49 (#750), 11 Nov |
 | 2 | Wave 37, one ride and the bugs (ruling cv): both launches under the comic swipe, heading carried across a launch, the Slag Bowl ahead of the flume launch, the lift and crate fixes; the systems audit fixes; the loop mechanics Heat, Overtime, Called Shot, marked hull and carry a core, behind the sitting launch (rulings da, dd, df) | Done: main b190dd26 (#812), 12 Nov |
-| 3 | Wave 38, polish: the open play findings (PF-16, PF-22, PF-26, PF-34 to PF-40), objective markers, breathers, scrap on the skill lines, the clip snaps, the Slag Bowl smoke column, the sitting build's look and sound | Open on `stage/alpha-w38`; its wave gate runs on the PC |
+| 3 | Wave 38, polish: the open play findings (PF-16, PF-22, PF-26, PF-34 to PF-40), objective markers, breathers, scrap on the skill lines, the clip snaps, the Slag Bowl smoke column, the sitting build's look and sound | Done: main 8f0ce028 (#847), 12 Nov |
 | 4 | Harder by movement (ruling cu): chasers lead and run faster, the Warden pulse, a third clock tier, regen only while rolling, terrain stops shells, boils punish the stall | Backed out of wave 37 when the gate found seven new reds; re-landed on wave 38 with pull request 805. Judged by paired band reads to the targets in [the difficulty plan](shared/world1/difficulty-plan.md) |
 | 5 | The look rebuilds (ruling dj): the crew's distinct heads, the dam, the title screen and Brindle's armour plates, the last two areas with a taste page first | Build threads started 12 Nov; they land on the wave after the one open when each passes its checks |
 | 6 | The sitting run ends won at Brindle (ruling dk, W1-60), then Moss's last call and his hook (W1-73, W1-79) on the same flow fence | Build thread started 12 Nov |
