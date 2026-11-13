@@ -214,19 +214,21 @@ def armour(parent):
     rivet = common.mix("charcoal", "bone", .45)
     for k, (side, z) in enumerate(((-1, -3.5), (-1, 3.5), (1, -3.5), (1, 3.5))):
         p = Part("Armour%d" % k)
-        face = side * 4.86
+        # The plate keeps its 0.4 x 3.2 x 6 envelope (BUILD-SPEC D4, dress_bri_assets_test):
+        # the slab is thinner so the fittings stand inside it, rivet heads at the outer face.
+        face = side * 4.76
         # Surface 0: the slab and a raised inner panel, so the flat tint still shows a frame
         # line and a bevel highlight at ram distance.
-        box(p, (.36, 3.2, 6), (side * 4.68, 2.8, z), "bone")
+        box(p, (.26, 3.2, 6), (side * 4.63, 2.8, z), "bone")
         box(p, (.07, 1.9, 4.9), (face + side * .03, 2.8, z), "bone")
         # Surface 1: two charcoal bands with a rivet row each, wide enough to read at 20 m.
         for y in (1.48, 4.12):
-            box(p, (.09, .36, 6.04), (face + side * .04, y, z), "charcoal", JOINT)
+            box(p, (.09, .36, 6), (face + side * .04, y, z), "charcoal", JOINT)
         with p.region(bevel=0, detail=1):
             for y in (1.48, 4.12):
                 for j in range(8):
                     dz = -2.62 + j * 5.24 / 7
-                    rod(p, (face + side * .07, y, z + dz), (face + side * .13, y, z + dz), .055,
+                    rod(p, (face + side * .07, y, z + dz), (face + side * .14, y, z + dz), .055,
                         rivet, JOINT, 4)
             # The brass requisition tag, riveted proud of the inner panel near the top band:
             # the Fleet's one mark (SIGHT-PERSONA habit 6).
