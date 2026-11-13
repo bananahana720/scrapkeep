@@ -83,6 +83,7 @@ func _run() -> void:
 	for i in ceili(Warden.PULSE_CYCLE * 2.0 / tick):
 		if sheet.gates_opened > cycle: break
 		await physics_frame
-	t.near("stationary pulse lifecycle keeps six-second rhythm", game.run.stage_time - steady_start, 6.0, 2.0 * tick)
+	# The stage's own cycle: the flume's Warden pulses on 5.1 s since wave 37, the dam's on 6 s (ChallengeDials.PULSE_CYCLE_W1).
+	t.near("stationary pulse lifecycle keeps the stage's rhythm", game.run.stage_time - steady_start, Warden.pulse_cycle(game.run.stage), 2.0 * tick)
 	game.free()
 	quit(t.verdict())

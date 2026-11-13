@@ -592,6 +592,8 @@ func spawn_enemy(kind: String, at: Vector3, affix_id := "", perch := Vector3.INF
 	var target = Sight.new(ctx.player, self, enemy, kind) if Sight.REACH.has(kind) or fleet.makes(kind) else ctx.player
 	var health_scale := _threat()
 	var enemy_spec: Dictionary = fleet.dress(kind, _spec_for(kind))
+	if kind == "lobber" and ctx.flow.in_stage():
+		enemy_spec["lead"] = ChallengeDials.by_stage_or("mobs.lobber_lead_by_stage", ctx.flow.stage(), Lobber.LEAD)
 	if affix_id == EliteAffixes.PLATED:
 		enemy_spec["armour"] = EliteAffixes.PLATED
 	# A park perch top (terrain.perch_near) is the Dispatcher's spec["perch"]; with none it builds its own mast.
@@ -614,6 +616,9 @@ func spawn_enemy(kind: String, at: Vector3, affix_id := "", perch := Vector3.INF
 				_pressure_chasers += 1
 				pressure["flanker"] = _pressure_chasers % 2 == 0
 			enemy_spec["pressure"] = pressure
+		# A chaser runs at its stage's speed (ChallengeDials mobs.chaser_speed_by_stage); boss adds keep their own.
+		if kind == "chaser" and ctx.flow.in_stage():
+			enemy_spec["run_speed"] = Chaser.stage_speed(int(ctx.run.stage))
 	enemy.setup(target, ground, ctx.root, Callable(ctx.flow, "in_play"), health_scale, enemy_spec)
 	# The vault and the Warden settle onto the ground or their landmark anchor in setup.
 	if enemy is CollisionObject3D and not enemy.global_position.is_equal_approx(at):
@@ -1626,7 +1631,7 @@ func _physics_process(delta: float) -> void:
 		_detonate(charge)
 	_step_devices(delta)
 	wear_trail.step(delta, enemies)
-	PackPressure.observe(ctx.player.planar_velocity())
+	PackPressure.observe(ctx.player.planar_velocity(), ctx.player.tuning.f("cruise"))
 	churn.step(delta)
 	boils.step(delta, enemies)
 	_pin_step(enemies)
@@ -4125,7 +4130,8 @@ func _wire_redline() -> void:
 func _on_lobber_fired(origin: Vector3, landing: Vector3, flight: float, lobber: Node3D) -> void:
 	var shell := Projectile.new()
 	ctx.root.add_child(shell)
-	shell.setup(ctx.player, ground, ctx.root, Callable(ctx.flow, "in_play"), origin, landing, flight, lobber)
+	var cover: bool = ctx.flow.in_stage() and ChallengeDials.by_stage_or("hazard.shell_cover_by_stage", ctx.flow.stage(), 0.0) > 0.5
+	shell.setup(ctx.player, ground, ctx.root, Callable(ctx.flow, "in_play"), origin, landing, flight, lobber, cover)
 	shell.hit_player.connect(_on_player_hit.bind("lobber"))
 	shell.returned_landed.connect(_on_shell_returned)
 	shell.exploded.connect(func(at: Vector3, blast: float, _hit: bool): effects.ring(at, blast, Palette.HAZARD))
