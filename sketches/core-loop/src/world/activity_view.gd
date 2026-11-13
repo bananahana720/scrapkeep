@@ -123,6 +123,11 @@ func finish() -> void:
 			part.visible = false
 
 
+# The word the site shows when the ball is near.
+func say(text: String) -> void:
+	word.text = text
+
+
 # The ring wears `role`'s colour (EventKinds.role_color) while its edge means something else for a time: the
 # Stocktake yard's ring is its gate, live while leaving through it banks the pay.
 func ring_role(role: String) -> void:

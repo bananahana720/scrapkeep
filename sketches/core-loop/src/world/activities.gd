@@ -925,7 +925,7 @@ func _build_site(id: String, at: Vector2, spec: Dictionary) -> Site:
 			_build_relay(s)
 		"stocktake_yard":
 			s.yard = SurvivalCount.new(ctx.stages.world_of(ctx.run.stage), String(s.rule["form"]))
-			s.view.word.text = String(s.rule.cue.word)
+			s.view.say(String(s.rule.cue.word))
 		"surge_run":
 			_build_surge(s, spec)
 		"ambush_altar":
@@ -2054,7 +2054,7 @@ func _watch_yard(s: Site, delta: float, ball: Vector3) -> void:
 			_yard_owe(s)
 		"pile":
 			_yard_owe(s)
-	s.view.word.text = str(yard.count)
+	s.view.say(str(yard.count))
 	if inside:
 		s.yard_out = 0.0
 		s.yard_may_bank = yard.gate_open
@@ -2119,6 +2119,7 @@ func _yard_forfeit(s: Site) -> void:
 	ctx.events.event_ended.emit(s.id, "lost")
 
 
+# A destroyed ball forfeits every yard it has started and not banked, wherever it fell: the count is the ball's.
 func _forfeit_yards() -> void:
 	for s in sites:
 		if is_instance_valid(s) and s.yard != null and s.started and not s.done:
