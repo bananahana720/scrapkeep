@@ -84,6 +84,12 @@ func _unit() -> void:
 	for i in 10:
 		gait.aim(2.0)
 		gait.step(dt, body, Vector3.ZERO, 0.6)
+	var wound := EnemyGait.new()
+	wound.committed()
+	for i in 20:
+		wound.glance(1.5)
+		wound.step(dt, body, Vector3.ZERO, 0.6)
+	_t.check("a wind-up ignores a glance", absf(wound.yaw()) < 0.001, "%.3f rad" % wound.yaw())
 	_t.check("turns at its rate, never snaps", absf(gait.yaw() - EnemyGait.TURN_RATE * dt * 10.0) < 0.001, "%.3f rad after 10 ticks toward 2.0" % gait.yaw())
 	for i in 60:
 		gait.aim(1.0)
@@ -200,6 +206,21 @@ func _notices(enemy) -> void:
 	var turned: bool = enemy.phase != enemy.Phase.ROAM or enemy._gait._glance_left > 0.0
 	_t.check("a crewmate down nearby turns its head and flinches it", turned and not enemy._react_row.is_empty(),
 		"phase %d, glance %.2f s, reaction %s" % [enemy.phase, enemy._gait._glance_left, enemy._react_row])
+	# A reaction already playing keeps playing, and a notice never plays the hit clip.
+	await physics_frame
+	var running: Dictionary = enemy._react_row
+	var age: float = enemy._react_time
+	bus.enemy_killed.emit("chaser", enemy.global_position + Vector3(-4.0, 0.0, 0.0), 0)
+	var clip: String = enemy._clips.clip if is_instance_valid(enemy._clips) else ""
+	_t.check("a notice never cuts a running reaction or plays the hit clip", enemy._react_row == running and enemy._react_time == age and clip != "hit",
+		"reaction age %.3f -> %.3f, clip %s" % [age, enemy._react_time, clip])
+	# The ball slips an attack that just struck: that crew lurches after it.
+	var phase: int = enemy.phase
+	enemy.phase = enemy.Phase.LIVE
+	enemy._react_row = {}
+	bus.near_miss.emit("hooker", enemy.global_position + Vector3(3.0, 0.0, 0.0))
+	_t.check("a near miss of its own attack makes it lurch", not enemy._react_row.is_empty())
+	enemy.phase = phase
 	var ball: Vector3 = _game.player.ball_position()
 	_game.player.reset_to(_game.ctx.terrain.drop_point(enemy.global_position.x + 8.0, enemy.global_position.z, 0.0))
 	await physics_frame
@@ -234,7 +255,7 @@ func _lands(enemy) -> void:
 			continue
 		for piece in live._pieces:
 			var mi: Node3D = piece.node
-			var floor_y: float = live.floor_at(mi, float(piece.low) * mi.basis.get_scale().x)
+			var floor_y: float = live.floor_at(mi)
 			# A piece thrown up from under the ground may rise through it; a falling one never sinks.
 			if mi.position.y < floor_y - 0.001 and (piece.velocity as Vector3).y <= 0.0:
 				under += 1

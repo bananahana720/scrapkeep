@@ -228,7 +228,7 @@ func _death(kind: String, index: int, label: String) -> void:
 					faded += 1
 			for piece in live._pieces:
 				var mi: Node3D = piece.node
-				if mi.position.y < live.floor_at(mi, float(piece.low) * mi.basis.get_scale().x) - 0.001:
+				if mi.position.y < live.floor_at(mi) - 0.001:
 					under += 1
 	_t.check(label + " freed " + kind, ref.get_ref() == null and frames <= limit, "freed after %d frames, limit %d" % [frames, limit])
 	_t.check(label + " pieces never sink through the floor " + kind, under == 0, "%d piece samples under the ground" % under)

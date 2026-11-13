@@ -182,11 +182,7 @@ static func scatter(enemy: Node3D, kind: String, direction: Vector3, land := Cal
 			piece.mesh = box
 			piece.material_override = BakeLook.unbaked(material)
 			piece.position = out * 0.4 + Vector3.UP * 0.6
-		# How far the piece's lowest point sits under its origin, so it rests on the ground, not in it.
-		var low := 0.0
-		if piece.mesh != null:
-			low = maxf(0.0, -(Transform3D(piece.basis, Vector3.ZERO) * piece.mesh.get_aabb()).position.y)
-		node._pieces.append({"node": piece, "velocity": _throw(node.style, out, throw), "spin": out.cross(Vector3.UP) * 6.0, "turn": piece.basis, "low": low})
+		node._pieces.append({"node": piece, "velocity": _throw(node.style, out, throw), "spin": out.cross(Vector3.UP) * 6.0, "turn": piece.basis})
 	return node
 
 
@@ -229,11 +225,15 @@ static func _throw(death_style: String, out: Vector3, throw: Vector3) -> Vector3
 	return out * 3.0 + throw * 4.0 + Vector3.UP * 4.0
 
 
-# The local height a piece's origin rests at: the ground under it plus its own lowest point.
-func floor_at(piece: Node3D, low: float) -> float:
+# The local height a piece's origin rests at: the ground under it, raised by how far the piece's
+# lowest point sits under its origin as it is turned now, so it rests on the ground, not in it.
+func floor_at(piece: MeshInstance3D) -> float:
 	if not ground.is_valid():
 		return -INF
 	var at := global_transform * piece.position
+	var low := 0.0
+	if piece.mesh != null:
+		low = maxf(0.0, -(Transform3D(piece.basis, Vector3.ZERO) * piece.mesh.get_aabb()).position.y)
 	return float(ground.call(at.x, at.z)) - global_position.y + low
 
 
@@ -248,10 +248,17 @@ func _physics_process(delta: float) -> void:
 		else clampf((life() - t) / (seconds * SHRINK), SPECK, 1.0)
 	for piece in _pieces:
 		var mi: MeshInstance3D = piece.node
+		var spin: Vector3 = piece.spin * (3.0 if style == "spin_down" else 1.0)
+		# The turn is kept at full size and the drawn basis is that turn at this tick's size.
+		var turn: Basis = piece.turn
+		if spin.length_squared() > 0.0:
+			turn = turn.rotated(spin.normalized(), spin.length() * delta)
+			piece.turn = turn
+		mi.basis = turn * size
 		var v: Vector3 = piece.velocity
 		v.y -= GRAVITY * delta
 		mi.position += v * delta
-		var floor_y := floor_at(mi, float(piece.low) * size)
+		var floor_y := floor_at(mi)
 		# Only a falling piece meets the ground; one still rising from under it keeps rising.
 		if mi.position.y < floor_y and v.y <= 0.0:
 			mi.position.y = floor_y
@@ -260,12 +267,5 @@ func _physics_process(delta: float) -> void:
 			v.z *= SKID
 			piece.spin = piece.spin * SKID
 		piece.velocity = v
-		var spin: Vector3 = piece.spin * (3.0 if style == "spin_down" else 1.0)
-		# The turn is kept at full size and the drawn basis is that turn at this tick's size.
-		var turn: Basis = piece.turn
-		if spin.length_squared() > 0.0:
-			turn = turn.rotated(spin.normalized(), spin.length() * delta)
-			piece.turn = turn
-		mi.basis = turn * size
 	if t >= life():
 		queue_free()

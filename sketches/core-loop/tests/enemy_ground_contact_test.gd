@@ -2,7 +2,7 @@ extends SceneTree
 
 # A crew stands on the ground, never in it (Andrew, 13 Nov 2026: "the enemies are clipping into
 # the terrain"). Each walking crew is set on a slope of the slice and on the flat; its drawn
-# model's lowest points are compared with the terrain under them while it stands and walks. The
+# model's lowest points are compared with the terrain under them while it stands and turns. The
 # model may not sink more than SINK_MAX into the ground nor float more than FLOAT_MAX above it.
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")

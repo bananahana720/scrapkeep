@@ -319,7 +319,8 @@ func _update_reaction(delta: float) -> void:
 		_gait.step(delta, self, velocity, half_height, walking, get_floor_normal() if walking else Vector3.UP, radius)
 		tilt = _gait.tilt
 		turn = _gait.turn
-	if reaction_pivot != null:
+	# A dead body's pivot is a death clip's now (EnemyClips.die keeps the pose it died in).
+	if reaction_pivot != null and not _dead:
 		var lean_pose := Quaternion.IDENTITY
 		if _line_lean != 0.0 and is_instance_valid(target):
 			lean_pose = Quaternion(_reaction_axis(_reaction_ball() - global_position), deg_to_rad(LINE_LEAN) * _line_lean)
