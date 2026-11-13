@@ -2659,11 +2659,12 @@ func _anchor_fight(target: Node3D, short: bool, delta: float) -> void:
 		var sheet = target.mount_driver
 		var dir: Vector3 = sheet.sheet_dir if sheet.sheet_dir != Vector3.ZERO else sheet._face_heading(target)
 		var runup: float = minf(RUNUP, float(sheet.SHEET_RUN) - RUNUP_EDGE)
-		var foot: Vector3 = at + dir * runup
+		# The open lane (W1-67): read from the charge's faint lane on, as a player reads it.
+		var foot: Vector3 = at + dir * runup + dir.cross(Vector3.UP) * sheet.lane_offset()
 		var live: bool = sheet.sheet_live()
 		if kit.hooked:
 			source.press["harpoon_released"] = true
-		var until_pulse: float = target._charge_len - target._charge_time if target._charging else target.pulse_cycle() - target._pulse_clock
+		var until_pulse: float = target._charge_len - target._charge_time if target._charging else target.cycle_now() - target._pulse_clock
 		if live and sheet.entered_sheet_cycle == sheet.gates_opened and game.player.body().get_colliding_bodies().has(target):
 			_fight_phase = "sheet return %d" % sheet.gates_opened
 		var rammed: bool = _fight_phase == "sheet return %d" % sheet.gates_opened

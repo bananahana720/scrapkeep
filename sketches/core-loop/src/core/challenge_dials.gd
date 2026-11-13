@@ -37,6 +37,10 @@ const ZEROS6 := [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
 # stage. A ladder rung multiplies on top of these.
 const PULSE_DAMAGE_W1 := [1.3, 1.3, 1.0, 1.0, 1.0, 1.0]
 const PULSE_CYCLE_W1 := [1.0, 0.85, 1.0, 1.0, 1.0, 1.0]
+# The Wardens escalate (W1-67, gameplay critique finding 5): each chunk the Warden has lost multiplies its
+# pulse cycle by this, so the fight tightens as it goes (6 s, 5.4, 4.86, 4.37 on the dam). The tell is
+# unchanged; only the rest between pulses shrinks (warden.gd cycle_now). 1.0 is the flat fight of before.
+const PULSE_RATCHET_W1 := [0.9, 0.9, 1.0, 1.0, 1.0, 1.0]
 # Silt boils ship on world 1 at strength 2 (pack pressure E, 24 Oct ruling; DECISIONS section 5).
 const SILT_W1 := [2.0, 2.0, 0.0, 0.0, 0.0, 0.0]
 # Crews on world 1 lead the ball's roll by half (wave 37 unit D1, ruling cu call 4: chasers lead your line).
@@ -111,6 +115,7 @@ const DEFAULTS := {
 	# Wardens (warden.gd): the pulse's damage and cycle, the meltdown slag's damage.
 	"warden.pulse_damage_mult": 1.0, "warden.pulse_cycle_mult": 1.0, "warden.slag_damage_mult": 1.0,
 	"warden.pulse_damage_by_stage": PULSE_DAMAGE_W1, "warden.pulse_cycle_by_stage": PULSE_CYCLE_W1, "warden.slag_damage_by_stage": ONES6,
+	"warden.pulse_ratchet_by_stage": PULSE_RATCHET_W1,
 	# The Warden's counter-pulse (warden.gd): a second core ring committed inside a stagger. Damage is an
 	# absolute value per stage (0 = off, the default: nothing is built or rolled); the telegraph is floored at
 	# TELL_FLOOR; the delay is seconds into the stagger before it starts charging.
