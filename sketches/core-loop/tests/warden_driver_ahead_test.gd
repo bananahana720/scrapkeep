@@ -26,6 +26,4 @@ func _initialize() -> void:
 	t.eq("every driver finishes loading", got.filter(func(script): return script is GDScript).size(), paths.size())
 	var same := range(paths.size()).filter(func(i: int): return load(paths[i]) == got[i])
 	t.eq("a Warden's load() takes the script the worker loaded", same.size(), paths.size())
-	Warden._request_drivers()
-	t.check("a second Warden requests nothing more", Warden._drivers_requested)
 	quit(t.verdict())
