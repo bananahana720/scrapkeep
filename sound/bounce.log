@@ -1,0 +1,47 @@
+Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org
+
+WARNING: title_stage: 'res://assets/models/camp/camp_barrel.glb' unavailable or malformed; left out or kept as a simple display body
+     at: push_warning (core/variant/variant_utility.cpp:1033)
+     GDScript backtrace (most recent call first):
+         [0] _warn (res://src/presentation/title_stage.gd:565)
+         [1] _build_deck (res://src/presentation/title_stage.gd:454)
+         [2] setup (res://src/presentation/title_stage.gd:98)
+         [3] setup (res://src/presentation/presentation.gd:133)
+         [4] _module (res://src/game.gd:558)
+         [5] _ready (res://src/game.gd:313)
+SCRAPKEEP_MENU_READY ms=10566 profile=default pilots=1/6
+ACE music: generator ring 8191 frames, queue target 3072
+ACE music: a 7596 ms gap between pumps outlasted the queue (2561 skips) at frame 1588, stage 1
+SKIP control Fin.L
+SKIP control Fin.R
+ACE music: the ring ran dry (8 skips) at frame 1591, stage 1, 15 ms since the last pump; queue target now 4096 frames
+panels: stage 1 has no cell data, rib drops pay 1.0
+WARNING: bay: no clear dock beside these gates; the bay stays away this time
+     at: push_warning (core/variant/variant_utility.cpp:1033)
+     GDScript backtrace (most recent call first):
+         [0] dock (res://src/world/bay.gd:167)
+         [1] _on_reward_offered (res://src/world/world.gd:883)
+         [2] _on_flow_changed (res://src/build/build.gd:1305)
+         [3] _set_state (res://src/core/flow.gd:1417)
+         [4] _unseal (res://src/core/flow.gd:1294)
+         [5] _on_enemy_killed (res://src/core/flow.gd:1270)
+         [6] record_kill (res://src/core/run_state.gd:883)
+         [7] <anonymous lambda> (res://src/combat/combat.gd:636)
+         [8] _die (res://src/combat/enemy.gd:569)
+         [9] take_damage (res://src/combat/enemy.gd:547)
+         [10] take_damage (res://src/combat/warden.gd:1043)
+         [11] health (res://src/combat/damage_door.gd:104)
+         [12] _door_health (res://src/combat/combat.gd:836)
+         [13] pass_hit (res://src/combat/damage_door.gd:77)
+         [14] strike (res://src/combat/combat.gd:700)
+         [15] <anonymous lambda> (res://src/game.gd:318)
+         [16] _rebound (res://src/movement/player_ball.gd:1716)
+         [17] _on_enemy_touched (res://src/movement/player_ball.gd:1631)
+         [18] _on_body_entered (res://src/movement/rigid_ball.gd:324)
+panels: stage 2 has no cell data, rib drops pay 1.0
+ACE music: a 191 ms gap between pumps outlasted the queue (32 skips) at frame 19186, stage 2
+ACE music: a 296 ms gap between pumps outlasted the queue (64 skips) at frame 21471, stage 2
+ace_bounce: 150.3 s, 7 facts, 45 ACE entries, music skips 232 -> /home/andrew/scratch/w40-pc/out-s-sound/head-whole.wav
+ACE music: a 333 ms gap between pumps outlasted the queue (96 skips) at frame 21578, stage 2
+WARNING: 282 ObjectDB instances were leaked at exit (run with `--verbose` for details).
+   at: cleanup (core/object/object.cpp:2536)

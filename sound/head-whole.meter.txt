@@ -1,0 +1,86 @@
+[
+  {
+    "wav": "head-whole.wav",
+    "seconds": 148.7,
+    "integrated_lufs": -21.4,
+    "true_peak_dbtp": -5.43,
+    "sample_peak_dbfs": -5.45,
+    "short_term_max_lufs": -18.7,
+    "short_term_p95_lufs": -19.3,
+    "short_term_p10_lufs": -24.5,
+    "at_ceiling_share": 0.0,
+    "by_state": {
+      "roam": {
+        "seconds": 13.8,
+        "lufs": -22.6
+      },
+      "combat": {
+        "seconds": 6.0,
+        "lufs": -21.9
+      },
+      "miniboss": {
+        "seconds": 111.8,
+        "lufs": -21.1
+      },
+      "boss_1": {
+        "seconds": 17.0,
+        "lufs": -21.8
+      }
+    },
+    "top_cues": [
+      [
+        "hit_thwack",
+        1723
+      ],
+      [
+        "weapon_zap",
+        1598
+      ],
+      [
+        "clank",
+        675
+      ],
+      [
+        "onbeat_clap",
+        255
+      ],
+      [
+        "scrap_tick",
+        105
+      ],
+      [
+        "cog_tick",
+        86
+      ],
+      [
+        "shell_spring",
+        85
+      ],
+      [
+        "rivet_ready",
+        81
+      ],
+      [
+        "line_hum",
+        67
+      ],
+      [
+        "line_bite",
+        66
+      ],
+      [
+        "near_whoosh",
+        64
+      ],
+      [
+        "land_thud",
+        61
+      ]
+    ],
+    "cues_total": 5959,
+    "outcome": "",
+    "stage": 2,
+    "policy": "skipper",
+    "music": "ace"
+  }
+]
