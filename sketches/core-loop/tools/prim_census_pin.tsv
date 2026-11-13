@@ -93,3 +93,5 @@ dispatcher.gd	BoxMesh	CharacterBody3D/DispatchMast/MeshInstance3D	code	-	the dis
 warden_look.gd	*	CharacterBody3D/WardenLook/MeshInstance3D	code	-	the Warden's procedural clamp (warden_look.gd header): collar, deck and integrity band; visual audit may reclassify
 warden_look.gd	BoxMesh	Jaws/*/MeshInstance3D	code	-	the Warden's jaw plates and lips, tinted by plating state (warden_look.gd _build_jaws); visual audit may reclassify
 warden_kit.gd	*	CharacterBody3D/WardenKit/MeshInstance3D	code	-	the Warden family kit on the clamp (warden_kit.gd header: reactor stacks, hive cells, mind arm); visual audit may reclassify
+crew_lamp_field.gd	SphereMesh	Node3D/CrewLamps	code	-	crew lamp eyes (W1-83): one multimesh of glowing spheres that brighten through the wind-up, a mark meant to be a shape
+game.gd	CapsuleMesh	Node3D/DispatchPod	code	-	the Dispatcher's pod in flight (combat/dispatcher.gd), a lobbed projectile hung on the world root for its flight time
