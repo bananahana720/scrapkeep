@@ -8,12 +8,15 @@ const CrewLamp := preload("res://src/presentation/crew_lamp.gd")
 # share). A lamp joins when its crew is fitted and leaves when its node leaves the tree; the last
 # instance moves into the freed slot, and a full field doubles. It runs while the tree is paused,
 # so a still taken on a paused frame shows each lamp on its head. The lens and its material are
-# built once a session and shared, so no field compiles a shader in a fight.
+# built once a session and shared, so no field compiles a shader in a fight. The lens is unshaded,
+# like the telegraphs: lit glass reads as Palette.HAZARD itself at the strike, where an emissive
+# lens went through the tonemapper and the sun and came out coral (PC stills, 13 Nov 2026).
 
 const SHADER := """
 shader_type spatial;
-render_mode cull_back;
+render_mode cull_back, unshaded, fog_disabled;
 uniform vec3 rest : source_color;
+uniform float peak;
 uniform vec3 danger : source_color;
 uniform vec3 dark : source_color;
 varying vec3 glow;
@@ -22,9 +25,7 @@ void vertex() {
 }
 void fragment() {
 	vec3 lit = mix(rest, danger, glow.z);
-	ALBEDO = mix(dark, lit, glow.y);
-	ROUGHNESS = 0.25;
-	EMISSION = lit * glow.x;
+	ALBEDO = mix(dark, lit, glow.y) * clamp(glow.x / peak, 0.5, 1.0);
 }
 """
 
@@ -47,6 +48,7 @@ static func lens() -> Mesh:
 		mat.set_shader_parameter("rest", CrewLamp.REST_COLOUR)
 		mat.set_shader_parameter("danger", Palette.HAZARD)
 		mat.set_shader_parameter("dark", Palette.CHARCOAL)
+		mat.set_shader_parameter("peak", CrewLamp.PEAK)
 		dome.material = mat
 		_lens = dome
 	return _lens

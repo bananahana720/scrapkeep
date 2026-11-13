@@ -43,12 +43,11 @@ const ROWS := {
 const LENS := 0.085
 const LENS_DEPTH := 0.06
 # The lens swells to this size at the strike, so the wind-up reads at play size (a few pixels at
-# rest from chase height; PC stills, 13 Nov 2026).
-const SWELL := 1.8
-# Glow: dull at rest, full at the strike (emission energy), and the share of the lens colour
-# lit at rest.
-# The peak stays low enough that the tonemapper keeps it red: at 4.0 the lens blew out to salmon
-# pink on the PC (13 Nov 2026).
+# rest from chase height; PC stills, 13 Nov 2026). It grows with the wind-up run, not its square, so
+# it has already doubled halfway through.
+const SWELL := 2.6
+# Glow: dull at rest, full at the strike (the lens's brightness, half at rest), and the share of the
+# lens colour lit at rest. FlashGuard caps the rise.
 const REST := 0.25
 const PEAK := 1.3
 const REST_TINT := 0.45
@@ -122,7 +121,7 @@ func energy() -> float:
 
 # The lens's size now, 1 at rest, SWELL at the strike; a dead lamp keeps its rest size.
 func swell() -> float:
-	return 1.0 if _out else lerpf(1.0, SWELL, warmth * warmth)
+	return 1.0 if _out else lerpf(1.0, SWELL, warmth)
 
 
 # The lens colour's lit share now: 0 (charcoal) once out.
