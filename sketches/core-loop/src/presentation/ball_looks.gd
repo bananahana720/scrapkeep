@@ -27,6 +27,8 @@ const LOOKS := {
 # seated pilot of half the ball's height and leaves a rim of plating to show the spin.
 # Looks that replace only the rolling part of each pilot's own shell.
 const PLATED := ["cutaway"]
+const COCKPIT := "res://assets/models/world_one/ball_look_cutaway_cockpit.glb"
+const COCKPIT_NODE := "Cockpit"
 const WINDOW := 0.76
 const WINDOW_INK := 0.035
 const WINDOW_FRINGE := 0.11
@@ -40,6 +42,10 @@ uniform float rough = 0.8;
 // Linear light, already multiplied by its energy.
 uniform vec3 glow = vec3(0.0);
 uniform vec3 lining : source_color = vec3(0.82, 0.77, 0.65);
+// The inside of the plating is built, not bare: six longerons, two ring frames and a hub plate at
+// each axle, in big shapes that still read at play size and show the roll.
+uniform vec3 lining_frame : source_color = vec3(0.40, 0.43, 0.40);
+uniform vec3 lining_hub : source_color = vec3(0.52, 0.33, 0.19);
 uniform vec3 ink : source_color = vec3(0.14, 0.16, 0.16);
 uniform float window = 0.76;
 uniform float ink_width = 0.035;
@@ -155,7 +161,14 @@ void fragment() {
 		if (!inside) {
 			discard;
 		}
-		ALBEDO = facing > edge ? ink : lining;
+		vec3 n = normalize(local_pos - centre_local);
+		float around = atan(n.y, n.z) / 6.2831853;
+		float longeron = abs(fract(around * 6.0) - 0.5);
+		float frame = min(abs(abs(n.x) - 0.42), abs(n.x));
+		vec3 wall = mix(lining, lining * 0.86, step(0.5, fract(around * 6.0 + step(0.42, abs(n.x)) * 0.5)));
+		wall = mix(lining_frame, wall, step(0.055, longeron) * step(0.035, frame));
+		wall = abs(n.x) > 0.93 ? (abs(n.x) > 0.96 ? lining_hub : lining_frame) : wall;
+		ALBEDO = facing > edge ? ink : wall;
 		ROUGHNESS = 1.0;
 	}
 }
@@ -286,14 +299,33 @@ static func _plating(look: String, heft: int) -> Mesh:
 	var path := String(LOOKS[look])
 	if heft > 1:
 		path = path.replace(".glb", "_c%d.glb" % heft)
+	return _part(path, "Core")
+
+
+# The mesh of one named part of a look's scene, loaded once.
+static func _part(path: String, part: String) -> Mesh:
 	if not _platings.has(path):
 		var packed := load(path) as PackedScene if ResourceLoader.exists(path) else null
 		var scene: Node = packed.instantiate() if packed != null else null
-		var found := scene.find_child("Core", true, false) as MeshInstance3D if scene != null else null
+		var found := scene.find_child(part, true, false) as MeshInstance3D if scene != null else null
 		_platings[path] = found.mesh if found != null else null
 		if scene != null:
 			scene.free()
 	return _platings[path]
+
+
+# Under a plated look the level part gains the cockpit the window shows around the pilot: floor
+# pan, cradle ring, dash and gauges, console and cables. Call before the shell is painted.
+static func furnish(look: String, pod: Node) -> void:
+	if pod == null or not PLATED.has(look) or pod.has_node(COCKPIT_NODE):
+		return
+	var mesh := _part(COCKPIT, COCKPIT_NODE)
+	if mesh == null:
+		return
+	var view := MeshInstance3D.new()
+	view.name = COCKPIT_NODE
+	view.mesh = mesh
+	pod.add_child(view)
 
 
 # Gives a fitted shell (hero_assets.fit_shell_into's {core, pod}) the look's own materials.

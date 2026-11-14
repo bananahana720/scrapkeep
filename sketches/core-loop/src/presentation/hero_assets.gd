@@ -1300,6 +1300,7 @@ func fit_shell_into(ball: Node3D, pilot: String, variant: String, heft_class: in
 	core.name = "HeroCore"
 	pod.name = "HeroPod"
 	BallLooks.replate(ball_look(), core)
+	BallLooks.furnish(ball_look(), pod)
 	var rec := {"core": core, "pod": pod, "layers": {}, "pilot": pilot, "variant": variant, "heft": 1, "shown": {}, "tints": tints}
 	var ring_holders: Array = []
 	for i in HEFT_LAYERS.size():

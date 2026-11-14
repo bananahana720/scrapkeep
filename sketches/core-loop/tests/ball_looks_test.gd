@@ -70,6 +70,7 @@ func _unchanged(label: String, tuning) -> void:
 	var swapped: Array = PILOTS.filter(func(pilot): return painter.shell_assets.has(pilot))
 	t.eq("%s: no pilot's shell is swapped" % label, swapped, [])
 	t.eq("%s: every mesh is the pilot's own and draws as it did" % label, _drawn(shell), _drawn(want))
+	t.check("%s: no cockpit is added" % label, not (shell.pod as Node).has_node(BallLooks.COCKPIT_NODE))
 	var dressed := 0
 	for view in _views(shell.core) + _views(shell.pod):
 		for i in view.mesh.get_surface_count():
@@ -183,6 +184,19 @@ func _plated(look: String) -> void:
 				seat = minf(seat, _number(mat, "seat_back_top"))
 		t.eq("%s: only a small pilot's seat back is lowered (%s)" % [look, pilot], seat, float(BallLooks.LOW_SEAT_BACK.get(pilot, 9.0)))
 		t.eq("%s: no light node rides %s's ball" % [look, pilot], (pod as Node).find_children("*", "Light3D", true, false).size(), 0)
+		var cockpits: Array = (pod as Node).find_children(BallLooks.COCKPIT_NODE, "MeshInstance3D", true, false)
+		t.eq("%s: %s's level part carries one cockpit" % [look, pilot], cockpits.size(), 1)
+		if cockpits.size() == 1:
+			var far := 0.0
+			for point in (cockpits[0] as MeshInstance3D).mesh.get_faces():
+				far = maxf(far, point.length())
+			t.check("%s: the cockpit stays inside the plating" % look, far < BallLooks.PLATING_RADIUS, str(far))
+			var hidden := 0
+			for i in (cockpits[0] as MeshInstance3D).mesh.get_surface_count():
+				var mat: Material = (cockpits[0] as MeshInstance3D).get_active_material(i)
+				if _is_window(mat) and _number(mat, "keep_within") < 0.9:
+					hidden += 1
+			t.eq("%s: the cockpit is never cut" % look, hidden, 0)
 		var seated: Dictionary = painter.fit_pilot_into(pod, pilot, Color.WHITE)
 		if not seated.is_empty():
 			t.check("%s: %s's shaded side takes light from their far side" % [look, pilot], _backlit(seated.pilot) > 0)
