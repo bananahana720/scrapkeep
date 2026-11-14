@@ -6,6 +6,13 @@ sibling only when it is launched with `--models=tripo` (`src/presentation/model_
 the switch, and for every model that has no sibling, the authored model loads as before. No authored file
 is replaced. Andrew picks per model which one stays.
 
+**Accepted or rejected, per model (ruling dr).** `--models=tripo` loads only accepted siblings. To reject one,
+add its own `res://` path and a one-line reason to `REJECTED` in `src/presentation/model_variants.gd`, and set
+`"accepted": false` with `"accepted_why"` on its row in `assets/registry.d/tripo_variants.json`, then run
+`python3 tools/fold_registry.py`. A prop has three files (the model and two detail levels), so reject all three.
+`tests/tripo_variants_test.gd` fails when the list and the rows disagree. `--models=tripo-all` loads every
+sibling, rejected ones too, so a rejected model can still be judged in the game.
+
 Earlier generated-mesh trials were rejected (docs/decisions.tsv rows 352 to 361, TADR-011): lumps at
 budget, licence problems, colour loss. Row 361 allows a reopen "only with a different model class".
 Tripo's v3.1 smart_low_poly mode is that different class, and Andrew asked for it on 13 Nov 2026. The
@@ -169,6 +176,23 @@ Pro credits left after this batch: 1,760 (Studio's counter). Pro spend so far: 1
 The fitter drops floating fragments by walking shells whose bounding boxes touch. A fragment that sits
 inside another shell's box survives; pick another of the four candidates then (Scrap Gravity's first
 candidate had a bolt lying beside its base).
+
+## Generated and not shipped
+
+A generated model ships only when it reads at least as well as the authored one beside it. These did not, and the
+authored model stays. Each is listed so nobody spends credits on the same attempt again.
+
+| Model | What was tried | Why it did not ship |
+| --- | --- | --- |
+| park/props/flume/gauge_dial_shed_a | Tripo Studio, three textured candidates (`prompts/gauge_dial_shed.txt`, workspaces 2be99a2f and b3e31c1b-6c7e-462b-a5d6-2d4eaa3bfc48, 160 Pro credits in all) | The prop is about its chalk-white dial. The dial face came out grey, then teal, and never white, even with the authored colours named in the prompt. |
+| park/props/dam/cable_drum_a | Tripo Studio, one textured candidate (workspace ba236b15-44b1-4c72-ac28-fbe3ef28433f, 120 Pro credits) | It textured as one dark colour, standing on its rims. The authored drum lies flat, with tan wooden ends and a wound grey cable. |
+| The other crew enemies (bola thrower, deflector, gyro jammer, jolt layer, mag trapper, winch drone, catch trap, ramp flipper) | A spare generated torso swapped into the drum of the bola thrower and the deflector with `tripo_swap.py --region`, no credits | These enemies share one authored drum that carries the crew number plate. The generated torso reads no better and loses the plate. |
+| world_one/enemy_netcaster (whole model) | See "Crew enemies" below | Its own test failed it. |
+
+**Colour match by tint.** `tripo_fit.py --match tone` snaps each face to the authored colour of the nearest tint and
+counts lightness at a quarter weight. Use it when a generated texture is a lighter or darker shade of the authored
+paint, so a sky-blue wall lands on the authored teal and not on the pale grey. The default, `--match rgb`, is the
+plain nearest colour.
 
 ## New props (no authored twin)
 

@@ -116,6 +116,42 @@ func _cast_tris(parts: Array) -> int:
 	return tris
 
 
+# Ruling dr: a rejected sibling stays out under --models=tripo and loads under --models=tripo-all, and the
+# registry rows say the same as ModelVariants.REJECTED.
+func _check_accept(authored: String) -> void:
+	var sibling := authored.get_basename() + "_tripo.glb"
+	ModelVariants.set_rejected({sibling: "test"})
+	_check(ModelVariants.path(authored) == authored, "a rejected sibling stays out with the switch on")
+	_check(ModelVariants.only(sibling) == "", "a rejected part shape stays out with the switch on")
+	ModelVariants.set_enabled(true, true)
+	_check(ModelVariants.path(authored) == sibling, "--models=tripo-all loads a rejected sibling")
+	ModelVariants.set_rejected()
+	ModelVariants.set_enabled(true)
+	_check(ModelVariants.path(authored) == (sibling if ModelVariants.accepted(sibling) else authored), "the real list is back after the test")
+	var rows := 0
+	var said := {}
+	var dir := DirAccess.open("res://assets/registry.d")
+	for file in dir.get_files():
+		if not file.ends_with(".json"):
+			continue
+		var data = JSON.parse_string(FileAccess.get_file_as_string("res://assets/registry.d/" + file))
+		for row in data["assets"]:
+			var path := String(row["path"])
+			if not path.ends_with("_tripo.glb"):
+				continue
+			rows += 1
+			_check(row.has("accepted") and row["accepted"] is bool, "%s says whether it is accepted" % path.get_file())
+			if row.get("accepted") == false:
+				said[path] = String(row.get("accepted_why", ""))
+				_check(said[path] != "", "%s gives the reason it is rejected" % path.get_file())
+	_check(rows >= 74, "%d Tripo rows read from the registry (at least 74)" % rows)
+	var listed: Array = ModelVariants.REJECTED.keys()
+	var from_rows: Array = said.keys()
+	listed.sort()
+	from_rows.sort()
+	_check(listed == from_rows, "ModelVariants.REJECTED %s matches the rejected registry rows %s" % [listed, from_rows])
+
+
 func _run() -> void:
 	ModelVariants.set_enabled(false)
 	for authored in PAIRS:
@@ -125,7 +161,11 @@ func _run() -> void:
 		"switch on keeps a model that has no sibling")
 	for authored in PAIRS:
 		var alt := ModelVariants.path(authored)
-		_check(alt == authored.get_basename() + "_tripo.glb", "switch on picks %s" % alt.get_file())
+		var sibling: String = authored.get_basename() + "_tripo.glb"
+		if not ModelVariants.accepted(sibling):
+			_check(alt == authored, "switch on keeps the authored %s, its sibling is rejected" % authored.get_file())
+			continue
+		_check(alt == sibling, "switch on picks %s" % alt.get_file())
 		var a_scene := load(authored) as PackedScene
 		var t_scene := load(alt) as PackedScene
 		_check(a_scene != null and t_scene != null, "%s and its sibling load" % authored.get_file())
@@ -165,6 +205,7 @@ func _run() -> void:
 	_check(_mesh_tris(ParkProps._mesh(shed)) == _shape_of(ModelVariants.path(shed)).tris,
 		"park_props loads the wheelhouse sibling with the switch on")
 	ParkProps.release_shared()
+	_check_accept(tender)
 	ModelVariants.set_enabled(false)
 	_check(_cast_tris(EnemyCasting.parts(tender, "tripo_test", true)) == _shape_of(tender).tris,
 		"EnemyCasting.parts loads the authored boom tender with the switch off")
