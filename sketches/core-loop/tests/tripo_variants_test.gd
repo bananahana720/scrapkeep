@@ -165,9 +165,12 @@ func _run() -> void:
 		var alt := ModelVariants.path(authored)
 		var sibling: String = authored.get_basename() + "_tripo.glb"
 		if not ModelVariants.accepted(sibling):
+			# a rejected sibling stays out of the game, but its file still ships and --models=tripo-all still loads it,
+			# so it is held to the same contract below (ruling dr)
 			_check(alt == authored, "switch on keeps the authored %s, its sibling is rejected" % authored.get_file())
-			continue
-		_check(alt == sibling, "switch on picks %s" % alt.get_file())
+			alt = sibling
+		else:
+			_check(alt == sibling, "switch on picks %s" % alt.get_file())
 		var a_scene := load(authored) as PackedScene
 		var t_scene := load(alt) as PackedScene
 		_check(a_scene != null and t_scene != null, "%s and its sibling load" % authored.get_file())
@@ -585,9 +588,14 @@ func _check_stand_ins() -> void:
 	wide["a"]["radius"] = 5.25
 	_check(ParkProps._find_stand_in(wide, "b") == shed_a, "a sister 1.05 times as wide stands in")
 	ModelVariants.set_rejected()
-	if not ModelVariants.accepted(String(shed_a[0]).get_basename() + ModelVariants.SUFFIX + ".glb"):
-		_check(ParkProps._lod_paths(flume, {"kind": "sluice_shed", "v": "b"}) == shed_b and ParkProps._lod_paths(flume, {"kind": "sluice_shed", "v": "a"}) == shed_a,
-			"with the shipped rejected list, every sluice shed keeps its authored model")
+	var shed_rejected := false
+	for lod in shed_a:
+		shed_rejected = shed_rejected or not ModelVariants.accepted(String(lod).get_basename() + ModelVariants.SUFFIX + ".glb")
+	if shed_rejected:
+		var kept := true
+		for v in ["a", "b", "c"]:
+			kept = kept and ParkProps._lod_paths(flume, {"kind": "sluice_shed", "v": v}) == flume["kinds"]["sluice_shed"]["variants"][v]["lod"]
+		_check(kept, "with the shipped rejected list, no sluice shed variant draws another variant's model")
 	ParkProps.release_shared()
 	ModelVariants.set_enabled(false)
 
