@@ -4,6 +4,7 @@ extends SceneTree
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const SurvivalCount := preload("res://src/world/survival_count.gd")
+const Dress := preload("res://src/world/stocktake_dress.gd")
 
 # The Stocktake muster on the flume (BACKLOG W1-101): the survival count as an event that comes to the ball.
 # (a) with the launch flag on it is called on about one run seed in three, and on no seed with the flag off;
@@ -23,7 +24,7 @@ const SurvivalCount := preload("res://src/world/survival_count.gd")
 #     MUSTER_WAIT_S of that the muster stands down, and is called again near its row.
 
 const SEED := 23
-const EXPECTED_CHECKS := 17
+const EXPECTED_CHECKS := 18
 
 var _game
 var _t := preload("res://tests/support/t.gd").new("stocktake_muster_test")
@@ -106,7 +107,7 @@ func _run() -> void:
 	_game.flow.enter_stage(2, Vector3.ZERO, false)
 	await _frames(4)
 	_t.check("a run seed that is not called builds no muster", _site() == null, "seed %d" % quiet)
-	_t.eq("expected check count", _t.checks + 1, EXPECTED_CHECKS)
+	_t.eq("expected check count", _t.checks + _t.skips + 1, EXPECTED_CHECKS)
 	_game.free()
 	await _frames(2)
 	quit(_t.verdict())
@@ -119,6 +120,14 @@ func _muster() -> void:
 	if s == null:
 		return
 	var row := Vector2(s.global_position.x, s.global_position.z)
+	# The siren mast stands where the muster is called, on the ground, shown though the site is not.
+	if ResourceLoader.exists(Dress.MAST):
+		var mast: Node3D = s.yard_mast
+		_t.check("the siren mast stands where the muster is called", mast != null and mast.is_visible_in_tree()
+			and Vector2(mast.global_position.x, mast.global_position.z).distance_to(row) < 0.1
+			and absf(mast.global_position.y - _game.ctx.terrain.height(row.x, row.y)) < 0.01, str(mast))
+	else:
+		_t.skip("the siren mast stands where the muster is called", "poi_siren_mast.glb is not on this stage yet")
 	var call_m := float(s.rule["call_m"])
 	for frame in 30:
 		await _hold(_over(row.x - call_m - 40.0, row.y))

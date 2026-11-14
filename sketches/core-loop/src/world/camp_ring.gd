@@ -30,6 +30,8 @@ const BOARD_HEIGHT := 3.2
 const POST_HEIGHT := 2.2
 const POST := "res://assets/models/world_one/poi_camp_tally_post.glb"
 const POST_MODEL_HEIGHT := 2.5
+# The model is drawn this much larger: at 2.5 m it read small at play distance in the PC stills of 14 Nov.
+const POST_MODEL_SCALE := 1.6
 
 var hub
 var sandbox
@@ -174,10 +176,11 @@ func _post(at: Vector3) -> MeshInstance3D:
 	foot.name = "RingPost"
 	hub.root.add_child(foot)
 	foot.global_position = Vector3(at.x, sandbox.ground.floor_y, at.z)
-	# The camp tally post's model (2.5 m), facing the yard's centre; the plain pole when the file is missing.
+	# The camp tally post's model (2.5 m, drawn at POST_MODEL_SCALE), facing the yard's centre; the plain pole when the file is missing.
 	var top := POST_HEIGHT
 	if ModelKit.whole(POST, foot) != null:
-		top = POST_MODEL_HEIGHT
+		top = POST_MODEL_HEIGHT * POST_MODEL_SCALE
+		foot.scale = Vector3.ONE * POST_MODEL_SCALE
 		foot.rotation.y = atan2(at.z - _centre.z, _centre.x - at.x)
 	else:
 		var pole := MeshInstance3D.new()
@@ -195,7 +198,9 @@ func _post(at: Vector3) -> MeshInstance3D:
 	bulb.height = 0.68
 	lamp.mesh = bulb
 	foot.add_child(lamp)
-	lamp.position = Vector3.UP * (top + 0.2)
+	# Set in the world's frame: the foot may be scaled.
+	lamp.top_level = true
+	lamp.global_position = foot.global_position + Vector3.UP * (top + 0.2)
 	return lamp
 
 

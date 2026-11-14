@@ -402,6 +402,7 @@ class Site extends Node3D:
 	var yard_stood := false
 	# The yard's stand and gate (stocktake_dress.gd), or null.
 	var yard_dress
+	var yard_mast: Node3D
 
 	func _exit_tree() -> void:
 		for enemy in pack + minibosses:
@@ -849,7 +850,8 @@ func _uncover(ahead: Dictionary) -> void:
 		return
 	# Every other child goes, a failed build's part-made site too.
 	for child in ahead.holder.get_children():
-		if not child in taken:
+		# A site's furniture that stands beside it (a muster's siren mast) stays with its site.
+		if not child in taken and not taken.any(func(site): return site.yard_mast == child):
 			ahead.holder.remove_child(child)
 			child.queue_free()
 	ahead.holder.visible = true
@@ -989,9 +991,12 @@ func _build_site(id: String, at: Vector2, spec: Dictionary) -> Site:
 			s.view.say(String(s.rule.cue.word))
 			# A form that comes to the ball shows nothing until it lands, and brings no furniture.
 			s.visible = not s.rule.has("siren_s")
+			var onward: Vector2 = ctx.terrain.map().beacon - Vector2(s.global_position.x, s.global_position.z)
 			if s.visible:
-				var onward: Vector2 = ctx.terrain.map().beacon - Vector2(s.global_position.x, s.global_position.z)
 				s.yard_dress = StocktakeDress.attach(s, float(s.rule["ring"]), onward, ctx.terrain.height)
+			else:
+				# The mast stands where the muster is called, under the sites' parent: the site itself is hidden.
+				s.yard_mast = StocktakeDress.mast(s.get_parent(), Vector2(s.global_position.x, s.global_position.z), onward, ctx.terrain.height)
 		"surge_run":
 			_build_surge(s, spec)
 		"ambush_altar":

@@ -4,6 +4,7 @@ const Game := preload("res://src/game.gd")
 const Profile := preload("res://src/core/profile.gd")
 const Records := preload("res://src/world/camp_records.gd")
 const SurvivalCount := preload("res://src/world/survival_count.gd")
+const CampRing := preload("res://src/world/camp_ring.gd")
 const Picker := preload("res://src/ui/camp_enemy_picker.gd")
 const T := preload("res://tests/support/t.gd")
 
@@ -64,6 +65,9 @@ func _ring() -> void:
 	var model: Array = foot.find_children("*", "MeshInstance3D", true, false).filter(func(view): return view.mesh is ArrayMesh)
 	_t.check("the post wears the camp tally post's model, facing the yard's centre", not model.is_empty() and model[0].material_override.vertex_color_use_as_albedo
 		and Vector2(foot.global_transform.basis.x.x, foot.global_transform.basis.x.z).dot(Vector2(yard.x - post.x, yard.z - post.z).normalized()) > 0.99, "%d views" % model.size())
+	var tall: float = (foot.global_transform * model[0].get_aabb()).size.y if not model.is_empty() else 0.0
+	_t.check("the post stands about 4 m tall with its lamp on top", absf(tall - CampRing.POST_MODEL_HEIGHT * CampRing.POST_MODEL_SCALE) < 0.4
+		and absf(ring._lamp.global_position.y - foot.global_position.y - tall) < 0.6, "%.1f m, lamp at %.1f m" % [tall, ring._lamp.global_position.y - foot.global_position.y])
 	_t.eq("a quiet board with no best shows nothing", ring.board.text, "")
 	game.events.enemy_killed.connect(func(_k, _a, _s): _kills += 1)
 	game.events.player_died.connect(func(): _deaths += 1)
