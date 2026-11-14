@@ -28,7 +28,7 @@ const Intent := preload("res://src/movement/intent.gd")
 # fewer than MIN_PIXELS pixels (the check saw nothing, which is not a pass).
 
 const SIZE := Vector2i(800, 600)
-const KINDS := ["chaser", "lobber", "swatter", "hooker", "netcaster"]
+const KINDS := ["chaser", "lobber", "swatter", "hooker", "netcaster", "boom_tender"]
 const VIEWS := [Vector3(0.55, 0.3, 0.75), Vector3(-0.6, 0.3, -0.7)]
 const DIFFERS := 0.06  # a pixel belongs to the enemy when any channel moves this far from the empty ground
 const NEAR_BLACK := 0.08
@@ -129,12 +129,12 @@ func _shoot() -> void:
 			var ground := await _still()
 			enemy.visible = true
 			var shadows := {}
-			for view: MeshInstance3D in views:
-				shadows[view] = view.cast_shadow
-				view.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+			for drawn: GeometryInstance3D in enemy.find_children("*", "GeometryInstance3D", true, false):  # batched parts too (the boom tender's floats)
+				shadows[drawn] = drawn.cast_shadow
+				drawn.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 			var bare := await _still()
-			for view: MeshInstance3D in views:
-				view.cast_shadow = shadows[view]
+			for drawn: GeometryInstance3D in shadows:
+				drawn.cast_shadow = shadows[drawn]
 			var lit := await _still()
 			var row := _measure(ground, bare, lit)
 			blind = blind or int(row["pixels"]) < MIN_PIXELS
