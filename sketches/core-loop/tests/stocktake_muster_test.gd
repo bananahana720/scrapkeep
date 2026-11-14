@@ -221,13 +221,16 @@ func _waits() -> void:
 		hemmed != Vector2.INF and acts.ground_fault(PackedVector2Array([HOME]), ring, s) == "taken" and acts.ground_fault(PackedVector2Array([map.beacon]), ring, s) == "taken"
 		and acts.ground_fault(PackedVector2Array([map.play_rect.position + Vector2(5.0, 5.0)]), ring, s) == "edge", "hemmed at %s" % hemmed)
 	# Read here on a 3 m grid of this test's own: the ring of the spot found with a rise does hold ground past the
-	# line, and no spot that fits holds ground 4 m past it (the rule reads every 6 m, so a narrow spike can slip by).
+	# line, and no spot that fits holds ground 4 m past it or a slope 0.2 past RING_SLOPE (the rule reads every 6 m at
+	# set angles, so a finer grid finds a little more).
 	var level := true
+	var steepest := 0.0
 	for at in open:
 		level = level and _steepest(at, ring) <= acts.RING_RISE_M + 4.0
+		steepest = maxf(steepest, _slope(at, ring))
 	_t.check("no ring fits round a rise: a spot whose only fault is a rise has one, and every spot that fits is level across its ring",
-		level and open.size() > 100 and rise != Vector2.INF and _steepest(rise, ring) > acts.RING_RISE_M,
-		"%d spots fit, rise at %s of %.1f m" % [open.size(), rise, _steepest(rise, ring) if rise != Vector2.INF else 0.0])
+		level and steepest <= acts.RING_SLOPE + 0.2 and open.size() > 100 and rise != Vector2.INF and _steepest(rise, ring) > acts.RING_RISE_M,
+		"%d spots fit, steepest slope %.2f, rise at %s of %.1f m" % [open.size(), steepest, rise, _steepest(rise, ring) if rise != Vector2.INF else 0.0])
 	# Another site standing this run (a drawn pocket) and a built contraption keep the ring off by their own size.
 	var others := []
 	for other in acts.sites:
@@ -295,9 +298,16 @@ func _waits() -> void:
 	for frame in int(acts.MUSTER_WAIT_S * Engine.physics_ticks_per_second):
 		await _hold(_over(HOME.x, HOME.y))
 	var stood_down: bool = not s.yard_called and not s.started and _announced.size() == 1
+	# Stood down with the ball still in call range, it stays quiet: the ball must leave first.
+	s.yard_stood = true
 	for frame in 30:
 		await _hold(near)
-	_t.check("a muster that finds no clear ground in time stands down, and is called again near its row", stood_down and s.yard_called and _announced.size() == 2,
+	stood_down = stood_down and not s.yard_called and _announced.size() == 1
+	for frame in 5:
+		await _hold(_over(HOME.x, HOME.y))
+	for frame in 30:
+		await _hold(near)
+	_t.check("a muster that finds no clear ground in time stands down, stays quiet while the ball stays near, and is called again once it has left", stood_down and s.yard_called and _announced.size() == 2,
 		"stood down %s, announced %d" % [stood_down, _announced.size()])
 	for frame in int((siren + 0.5) * Engine.physics_ticks_per_second):
 		await _hold(_over(hemmed.x, hemmed.y))
@@ -331,4 +341,17 @@ func _steepest(at: Vector2, ring: float) -> float:
 			var off := Vector2(x, z) * 3.0
 			if off.length() <= ring:
 				worst = maxf(worst, absf(t.height(at.x + off.x, at.y + off.y) + t.height(at.x - off.x, at.y - off.y) - 2.0 * here))
+	return worst
+
+
+# The steepest even slope across a ring of `ring` metres at `at`, rise over run, between spots straight across the
+# centre from each other and at least 6 m from it, on a 3 m grid.
+func _slope(at: Vector2, ring: float) -> float:
+	var t = _game.ctx.terrain
+	var worst := 0.0
+	for x in range(-8, 9):
+		for z in range(0, 9):
+			var off := Vector2(x, z) * 3.0
+			if off.length() <= ring and off.length() >= 6.0:
+				worst = maxf(worst, absf(t.height(at.x + off.x, at.y + off.y) - t.height(at.x - off.x, at.y - off.y)) / (2.0 * off.length()))
 	return worst

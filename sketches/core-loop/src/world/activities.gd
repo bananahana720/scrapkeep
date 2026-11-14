@@ -184,7 +184,7 @@ const SITE_PAD_M := 20.0
 # How far apart the ground inside a ring is read for a rise.
 const RING_READ_M := 6.0
 # A muster whose siren has ended waits this long for the ball to reach ground a ring fits on, then stands down; it
-# can be called again.
+# can be called again once the ball has been out of its call range.
 const MUSTER_WAIT_S := 20.0
 # A contraption row with no size of its own (a valve, a lift, a launcher) is taken as this wide a disc.
 const CONTRAPTION_M := 6.0
@@ -394,9 +394,11 @@ class Site extends Node3D:
 	var yard_out := 0.0
 	# The ball has been inside the ring with this gate open, so crossing out is its choice to bank.
 	var yard_may_bank := false
-	# Seconds of siren left before a muster lands; under 0, it has not been called.
-	var yard_siren := -1.0
+	# A muster: called (its siren has sounded), the seconds of siren left before it lands (under 0, the seconds it
+	# has waited for ground a ring fits on), and stood down (it found none; the ball must leave before a new call).
 	var yard_called := false
+	var yard_siren := -1.0
+	var yard_stood := false
 
 	func _exit_tree() -> void:
 		for enemy in pack + minibosses:
@@ -2145,7 +2147,9 @@ func _muster_lands(s: Site, delta: float, ball: Vector3) -> bool:
 	if ctx.flow.engaged():
 		return false
 	if not s.yard_called:
-		if _planar(ball, s.global_position) <= float(s.rule["call_m"]):
+		var close: bool = _planar(ball, s.global_position) <= float(s.rule["call_m"])
+		s.yard_stood = s.yard_stood and close
+		if close and not s.yard_stood:
 			s.yard_called = true
 			s.yard_siren = float(s.rule["siren_s"])
 			ctx.events.event_announced.emit(s.id, s.yard_siren, Vector3.INF)
@@ -2159,6 +2163,7 @@ func _muster_lands(s: Site, delta: float, ball: Vector3) -> bool:
 	if not clear_ground(PackedVector2Array([Vector2(ball.x, ball.z)]), float(s.rule["ring"]), s):
 		if s.yard_siren < -MUSTER_WAIT_S:
 			s.yard_called = false
+			s.yard_stood = true
 		return false
 	s.global_position = ctx.terrain.drop_point(ball.x, ball.z, 0.0)
 	s.visible = true
@@ -2235,7 +2240,7 @@ func _keep_off(map) -> Array:
 		for row in (map.park.get("contraption_rows", []) if "park" in map else []):
 			var wide := CONTRAPTION_M
 			for part in [row] + row.values().filter(func(v): return v is Dictionary):
-				for n in (part.get("size", []) as Array) + [part.get("radius", 0.0)]:
+				for n in (part.get("size", []) as Array) + [2.0 * float(part.get("radius", 0.0))]:
 					wide = maxf(wide, float(n) * 0.5)
 			for part in [row] + row.values().filter(func(v): return v is Dictionary):
 				for key in ["at", "from", "to", "target"]:
