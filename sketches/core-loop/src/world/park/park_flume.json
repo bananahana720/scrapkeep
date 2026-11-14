@@ -298,6 +298,6 @@
   {"id": "canal_altar", "activity": "ambush_altar", "site": "main_canal", "at": [-475, -206], "pack": [], "pay": {"rarities": ["common", "rare"]}, "extra": "card_2"}
  ],
  "survival_rows": [
-  {"id": "runout_muster", "form": "muster", "at": [80, 340]}
+  {"id": "fields_muster", "form": "muster", "at": [-242, 65]}
  ]
 }

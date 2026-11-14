@@ -65,6 +65,9 @@ var ground := YardGround.new()
 var live: Array[Node3D] = []
 var hull := HULL
 var wrecks := 0
+# How many times the yard has been emptied by clear() (the call box's "Clear yard", leaving the yard, the walk
+# ending), which is not a kill: the ring ends a count on it (camp_ring.gd).
+var clears := 0
 var walking := false
 var inside := false
 var page_open := false
@@ -251,6 +254,11 @@ func _is_live() -> bool:
 	return walking and inside and not page_open
 
 
+# True while the yard's machines fight: on the walk, the ball inside the fence and the call box's page shut.
+func fighting() -> bool:
+	return _is_live()
+
+
 # Sends every called enemy home.
 func clear() -> void:
 	for enemy in live:
@@ -260,6 +268,7 @@ func clear() -> void:
 	live.clear()
 	_shells.clear()
 	_slots.clear()
+	clears += 1
 	if combat != null and combat.fleet != null and combat.fleet.holds != null:
 		combat.fleet.holds.clear()
 	changed.emit()

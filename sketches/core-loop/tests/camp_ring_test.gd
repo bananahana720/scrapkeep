@@ -60,6 +60,10 @@ func _ring() -> void:
 	var box: Vector3 = hub.socket("camp_call_box", "interact").origin
 	var post: Vector3 = ring.board.global_position
 	_t.check("the post stands inside the fence, away from the call box", Vector2(post.x - yard.x, post.z - yard.z).length() < 21.0 and Vector2(post.x - box.x, post.z - box.z).length() > 8.0, str(post))
+	var foot: Node3D = hub.root.get_node("RingPost")
+	var model: Array = foot.find_children("*", "MeshInstance3D", true, false).filter(func(view): return view.mesh is ArrayMesh)
+	_t.check("the post wears the camp tally post's model, facing the yard's centre", not model.is_empty() and model[0].material_override.vertex_color_use_as_albedo
+		and Vector2(foot.global_transform.basis.x.x, foot.global_transform.basis.x.z).dot(Vector2(yard.x - post.x, yard.z - post.z).normalized()) > 0.99, "%d views" % model.size())
 	_t.eq("a quiet board with no best shows nothing", ring.board.text, "")
 	game.events.enemy_killed.connect(func(_k, _a, _s): _kills += 1)
 	game.events.player_died.connect(func(): _deaths += 1)
@@ -116,6 +120,14 @@ func _ring() -> void:
 	sandbox._close_page()
 	await _frames(2)
 	_t.eq("and no count is cleared by it", ring.best(), 1)
+
+	# Emptying the yard by anything but kills ends the count too, however the page was reached.
+	ring.begin()
+	await _frames(40)
+	sandbox.clear()
+	await _frames(3)
+	_t.check("a yard emptied without kills ends the ring", not ring.running(), "clear()")
+	_t.eq("and that clears no count either", ring.best(), 1)
 
 	# Count 6 on: more health, the same tools.
 	var plain: Node3D = sandbox.stand("mag_trapper", yard + Vector3(6.0, 0.0, 0.0))

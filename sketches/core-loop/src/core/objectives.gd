@@ -41,8 +41,8 @@ const ACTIVITY_WORDS := {
 	"hold_the_relay": "Hold the relay",
 	"surge_run": "Outrun the surge",
 	"hauler_bounty": "Break the bounty hauler",
-	"stocktake_yard": "Clear the stocktake",
-	"stocktake_muster": "Clear the stocktake",
+	"stocktake_yard": "Survive the stocktake",
+	"stocktake_muster": "Survive the stocktake",
 	# The trade spots by their ruled names (ruling ci): the risky ones are the keeper's gamble, the
 	# safe one the foreman's kindness. The site's own label says the same.
 	"trade_risk": "The keeper's gamble",
