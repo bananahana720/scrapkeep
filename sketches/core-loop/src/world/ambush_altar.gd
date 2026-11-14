@@ -19,7 +19,7 @@ var _ring: Node3D
 var _cap: Node3D
 
 const MODEL := "res://assets/models/world_one/ambush_altar.glb"
-const REQUIRED := ["AltarPost", "AltarCap", "AltarRing"]
+const REQUIRED := ["AltarPost", "AltarCap", "AltarBand", "AltarRing"]
 static var _shared: Array = []
 static var _loaded := false
 
@@ -29,15 +29,24 @@ func _init() -> void:
 
 
 func build() -> void:
+	_ring = null
+	_cap = dress(self)
+	if _cap == null:
+		_build_greybox()
+
+
+# The altar's model on parent: the verdigris post, its bone band and the brass cap, which is returned
+# so its owner can turn or hide it. Null, with nothing built, when the model is missing; the park's
+# altar sites (activities.gd) wear it too.
+static func dress(parent: Node3D) -> MeshInstance3D:
 	var parts := _parts()
-	if not parts.is_empty():
-		_model_part(parts, "AltarPost").material_override = finish(Palette.VERDIGRIS)
-		_cap = _model_part(parts, "AltarCap")
-		_cap.material_override = finish(Palette.BRASS)
-		_ring = null
-		box(Vector3(BAND_SIZE, 0.12, BAND_SIZE), Vector3.UP * 3.22, _bone_material(true), false)
-		return
-	_build_greybox()
+	if parts.is_empty():
+		return null
+	_model_part(parts, "AltarPost", parent).material_override = finish(Palette.VERDIGRIS)
+	_model_part(parts, "AltarBand", parent).material_override = _bone_material(true)
+	var cap := _model_part(parts, "AltarCap", parent)
+	cap.material_override = finish(Palette.BRASS)
+	return cap
 
 
 func _build_greybox() -> void:
@@ -57,7 +66,7 @@ static func finish(color: Color) -> StandardMaterial3D:
 	return material
 
 
-func _bone_material(dressed: bool) -> StandardMaterial3D:
+static func _bone_material(dressed: bool) -> StandardMaterial3D:
 	var material := finish(Palette.SAND) if dressed else StandardMaterial3D.new()
 	material.resource_name = "altar_bone_band"
 	material.albedo_color = Palette.SAND
@@ -185,7 +194,7 @@ static func _parts() -> Array:
 	return _shared
 
 
-func _model_part(parts: Array, part_name: String, parent: Node3D = self) -> MeshInstance3D:
+static func _model_part(parts: Array, part_name: String, parent: Node3D) -> MeshInstance3D:
 	for part in parts:
 		if part.name == part_name:
 			var view := MeshInstance3D.new()

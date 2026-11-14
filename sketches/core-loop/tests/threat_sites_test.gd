@@ -27,7 +27,8 @@ const AUDIT := {
 	# counter-pulse ring is a fourth, INSTANT like the core ring it shares.
 	"res://src/combat/warden.gd": ["LANE", "INSTANT", "INSTANT", "INSTANT"],
 	"res://src/combat/projectile.gd": ["PROJECTILE", "PROJECTILE"],
-	"res://src/boss/boss.gd": ["WAVE", "INSTANT", "INSTANT", "LANE"],
+	# 2026-11-12 (FX-03): the phase beat's harmless previews come first in source order, a bone slag ring and a bone charge lane.
+	"res://src/boss/boss.gd": ["INSTANT", "LANE", "WAVE", "INSTANT", "INSTANT", "LANE"],
 	# v2 W7 counter units and ancients: one telegraph each, in its threat type.
 	"res://src/combat/mag_trapper.gd": ["INSTANT"],
 	"res://src/combat/netcaster.gd": ["INSTANT"],

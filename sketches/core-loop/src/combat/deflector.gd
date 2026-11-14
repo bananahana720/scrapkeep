@@ -254,7 +254,8 @@ func _on_end() -> void:
 func _exit_tree() -> void:
 	if is_instance_valid(_rim) and not _rim.is_inside_tree():
 		_rim.free()
-	if is_instance_valid(_wall):
+	# A dead deflector's pivot lives on in its death clip; the wall falls from where it stood.
+	if is_instance_valid(_wall) and not is_dead():
 		_wall.transform = _wall_rest
 		_body.transform = Transform3D.IDENTITY
 	if holds != null and is_instance_valid(holds) and holds.ctx.events.jumped.is_connected(_on_jumped):

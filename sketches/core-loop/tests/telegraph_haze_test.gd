@@ -4,7 +4,7 @@ const Game := preload("res://src/game.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
 const Threat := preload("res://src/combat/threat_grammar.gd")
 
-# The telegraph row and the painter agree. A repeated --telegraph flag resolves to its last
+# The telegraph row and the painter agree (every look but classic draws the haze fill). A repeated --telegraph flag resolves to its last
 # value in both (checked in child processes, which see real command-line args); the row
 # takes effect at the next hold-R, as the panel says; Threat.set_haze() still overrides
 # for tests and tools.
@@ -35,7 +35,7 @@ func _child(flags: Array) -> void:
 			if row.begins_with("CHILD "):
 				line = row
 	var fields := line.split(" ")
-	var ok: bool = code == 0 and fields.size() == 3 and fields[1].trim_prefix("painter=") == str(fields[2].trim_prefix("tuning=") == "haze")
+	var ok: bool = code == 0 and fields.size() == 3 and fields[1].trim_prefix("painter=") == str(fields[2].trim_prefix("tuning=") != "classic")
 	_check("args %s" % [flags], ok, "%s (exit %d)" % [line, code])
 
 

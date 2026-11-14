@@ -41,7 +41,7 @@ const HEIGHT := 648.0
 const PAD := 18.0
 const PREVIEW_H := 260.0
 # A row too tall for the card takes height from the preview, never below this.
-const PREVIEW_MIN := 160.0
+const PREVIEW_MIN := 150.0
 const LIFT := 0.06
 const BACK := 0.04
 const RATE := 9.0
@@ -50,8 +50,9 @@ const CELL_CAP := 26.0
 const MOUSE_CAP := 36.0
 const PIP := 9.0
 const CHIP_ICON := 24.0
-const CHIP_CAP := 14.0
-const TRADEOFF_H := 44.0
+const CHIP_CAP := 20.0
+# Two lines of the smallest type step, on the spacing scale.
+const TRADEOFF_H := 48.0
 const WORD_SIZE := UiTokens.CAPTION
 const SHAKE := 0.25
 const LOCK_DIM := 0.4
@@ -519,7 +520,8 @@ func _name_row(color: Color, width: float) -> HBoxContainer:
 
 
 # Cells share the row evenly while every keycap fits its share. When the caps outgrow it
-# (six cards), the cells without a wide cap narrow first, then every cap steps down 5%.
+# (six cards), the cells without a wide cap narrow first, then every cap steps down 5%
+# (a lettered cap stops at Keycap.MIN_H, the height that still holds readable letters).
 func _fit_cells(records: Array, cell_w: float, room: float) -> Dictionary:
 	var scale := 1.0
 	while scale > 0.5 and _caps_width(records, scale, 0.0) > room:
@@ -546,7 +548,7 @@ func _cap_height(key_name: String) -> float:
 # shared grammar (harpoon, go verb, smash); the field notes' Keys page names them in words.
 func _chip(record: Dictionary, color: Color, _cap_scale: float) -> VBoxContainer:
 	var cell := VBoxContainer.new()
-	cell.add_theme_constant_override("separation", 0)
+	cell.add_theme_constant_override("separation", UiTokens.GAP_XS)
 	cell.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var icon := TextureRect.new()
 	icon.texture = Icons.texture(record["icon"])
@@ -643,10 +645,10 @@ func _frame(edge: Color, width: int, fill := true) -> StyleBox:
 static func _plate(edge: Color, width: int, fill := true) -> StyleBoxFlat:
 	var box := StyleBoxFlat.new()
 	box.draw_center = fill
-	box.bg_color = Color(Palette.CHARCOAL, 0.94)
+	box.bg_color = Color(UiTokens.INK, UiTokens.PLATE_ALPHA)
 	box.border_color = edge
 	box.set_border_width_all(width)
-	box.set_corner_radius_all(10)
+	box.set_corner_radius_all(UiTokens.RADIUS)
 	box.corner_detail = 3
 	return box
 

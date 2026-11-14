@@ -325,6 +325,12 @@ test("B3: a malformed lesson header fails with a named finding", async () => {
   assert.ok(failures(findings, "lessons").some((f) => f.message.includes("malformed")));
 });
 
+test("B3: the verify skills' lesson prefixes (VGM, VBD, VWB) are lesson ids, not malformed headers", async () => {
+  const { status, findings, stdout } = await runFixture("verify-prefixes");
+  assert.equal(status, 0, stdout);
+  assert.equal(failures(findings, "lessons").length, 0, stdout);
+});
+
 test("B3: an RML- id inside the lab skill's ledger fails (prefix scope)", async () => {
   const { status, findings, stdout } = await runFixture("wrong-prefix-scope");
   assert.equal(status, 1, stdout);

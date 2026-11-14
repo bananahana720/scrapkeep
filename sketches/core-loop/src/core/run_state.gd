@@ -151,6 +151,11 @@ var event_core_grants := 0
 # the piece it unseated ("" when a socket was free). arrived_core is the core that arrived in this
 # stage: it cannot ride again, and a Continue to this stage's entrance gets it back.
 var carried_core := 0
+# Pours of Moss's last-call kettle (shop.gd buy_brew, W1-73) and the stage they were bought on: the
+# boss fight that closes that stage pours them into the ultimate meter. Saved with a cleared stage,
+# so a Continue into the arena keeps what the cogs bought.
+var brew := 0
+var brew_stage := 0
 var core_seat := ""
 var arrived_core := 0
 # SA-F1 (systems audit pass F): the stage's exit is taken. Flow saves the cleared doc
@@ -243,6 +248,8 @@ func begin(chosen_class: Resource) -> void:
 	bonus_cores = 0
 	carried_core = 0
 	core_seat = ""
+	brew = 0
+	brew_stage = 0
 	arrived_core = 0
 	cleared = false
 	pick_opened = false
@@ -938,6 +945,8 @@ func snapshot(entry_position: Vector3, entry_velocity: Vector3, camera_yaw: floa
 		"bonus_cores": bonus_cores,
 		"carried_core": carried_core,
 		"core_seat": core_seat,
+		"brew": brew,
+		"brew_stage": brew_stage,
 		"parts": parts.duplicate(),
 		"panels": panels.duplicate(),
 		"relics": relics.duplicate(),
@@ -1014,6 +1023,8 @@ func restore() -> void:
 		end_ride()
 	carried_core = int(_snapshot.get("carried_core", 0))
 	core_seat = String(_snapshot.get("core_seat", ""))
+	brew = int(_snapshot.get("brew", 0))
+	brew_stage = int(_snapshot.get("brew_stage", 0))
 	parts.assign(_snapshot["parts"])
 	panels.assign(_snapshot.get("panels", []))
 	relics = (_snapshot.get("relics", {}) as Dictionary).duplicate()
@@ -1089,7 +1100,7 @@ const ENTRANCE_KEYS := {
 	"entry_position": "vec3", "entry_velocity": "vec3", "camera_yaw": "num",
 	"tree_picks": "strs", "tree_allowed": "int", "retries_spent": "dict",
 }
-const ENTRANCE_OPTIONAL := {"cogs": "int", "companion": "dict", "settled": "strs", "relics": "dict", "start_pick": "dict", "run_tier": "int", "event_core_grants": "int", "run_tallies": "dict", "seen_wardens": "strs", "trade_memory": "dict", "pocket_draw_cache": "dict", "tree_late_skipped": "bool", "death_save_spent": "bool", "panels": "strs", "arrived_core": "int", "cleared": "bool", "pick_opened": "bool", "landed": "bool", "carried_core": "int", "core_seat": "str"}
+const ENTRANCE_OPTIONAL := {"cogs": "int", "companion": "dict", "settled": "strs", "relics": "dict", "start_pick": "dict", "run_tier": "int", "event_core_grants": "int", "run_tallies": "dict", "seen_wardens": "strs", "trade_memory": "dict", "pocket_draw_cache": "dict", "tree_late_skipped": "bool", "death_save_spent": "bool", "panels": "strs", "arrived_core": "int", "cleared": "bool", "pick_opened": "bool", "landed": "bool", "carried_core": "int", "core_seat": "str", "brew": "int", "brew_stage": "int"}
 
 
 # `tree` is optional: when given, its picks and allowed count are read the way world.gd
@@ -1183,6 +1194,9 @@ func to_cleared_doc(tree, launch_velocity: Vector3) -> Dictionary:
 	if carried_core > 0:
 		doc["carried_core"] = carried_core
 		doc["core_seat"] = core_seat
+	if brew > 0:
+		doc["brew"] = brew
+		doc["brew_stage"] = brew_stage
 	return doc
 
 
@@ -1302,7 +1316,9 @@ static func _entrance_range_error(doc: Dictionary) -> String:
 			return "%s %s is negative" % [key, doc[key]]
 	if doc.has("carried_core") and (int(doc["carried_core"]) < 0 or int(doc["carried_core"]) > 1):
 		return "carried_core %d is outside 0..1" % int(doc["carried_core"])
-	for key in ["pick_opened", "landed", "carried_core", "core_seat"]:
+	if doc.has("brew") and (int(doc["brew"]) < 0 or int(doc["brew"]) > 3):
+		return "brew %d is outside 0..3" % int(doc["brew"])
+	for key in ["pick_opened", "landed", "carried_core", "core_seat", "brew", "brew_stage"]:
 		if doc.has(key) and not bool(doc.get("cleared", false)):
 			return "%s belongs to a cleared stage" % key
 	if doc.has("cogs") and int(doc["cogs"]) < 0:
@@ -1358,6 +1374,8 @@ func from_entrance_doc(doc) -> bool:
 	companion = preload("res://src/core/companion.gd").sanitize(doc["companion"])[0] if doc.has("companion") else {}
 	carried_core = int(doc.get("carried_core", 0))
 	core_seat = String(doc.get("core_seat", ""))
+	brew = int(doc.get("brew", 0))
+	brew_stage = int(doc.get("brew_stage", 0))
 	arrived_core = clampi(int(doc.get("arrived_core", 0)), 0, 1)
 	cleared = bool(doc.get("cleared", false))
 	pick_opened = bool(doc.get("pick_opened", false))

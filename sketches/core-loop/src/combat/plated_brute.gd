@@ -2,6 +2,7 @@ extends "res://src/combat/counter.gd"
 
 const EliteAffixes := preload("res://src/combat/elite_affixes.gd")
 const SwingArc := preload("res://src/combat/swing_arc.gd")
+const CrackedCache := preload("res://src/world/cracked_cache.gd")
 
 # The plated brute (DESIGN-V2 section 10): a mini-Warden, bolted plate layers visibly
 # one layer more than any other crew. It keeps the Warden's plating grammar (a punch
@@ -225,14 +226,24 @@ func is_bounty() -> bool:
 # its plates, so the plate cue still reads.
 func carry_bounty(home: Vector3, color: Color) -> void:
 	bounty_home = home
-	_crate = MeshInstance3D.new()
+	# The crew's cache chest and lid (CrackedCache's model) in the bounty's glowing colour, about 1.4 by 1.1 by
+	# 1.4 m, riding the brute's back; a plain box when the model is missing.
+	var glow := Palette.solid(color, 1.6)
+	_crate = CrackedCache.model_part("CacheChest", self)
+	if _crate != null:
+		_crate.transform = Transform3D(Basis.from_scale(Vector3(0.7, 0.73, 0.95)), Vector3(0.0, 2.35, -0.5))
+		var lid := CrackedCache.model_part("CacheLid", _crate)
+		lid.position = Vector3.UP * 1.35
+		lid.material_override = glow
+	else:
+		_crate = MeshInstance3D.new()
+		var bm := BoxMesh.new()
+		bm.size = Vector3(1.4, 1.1, 1.4)
+		_crate.mesh = bm
+		_crate.position = Vector3(0.0, 2.9, -0.5)
+		add_child(_crate)
 	_crate.name = "BountyCrate"
-	var bm := BoxMesh.new()
-	bm.size = Vector3(1.4, 1.1, 1.4)
-	_crate.mesh = bm
-	_crate.material_override = Palette.solid(color, 1.6)
-	_crate.position = Vector3(0.0, 2.9, -0.5)
-	add_child(_crate)
+	_crate.material_override = glow
 
 
 # The ball is out of the leash, or the brute has been walked off by it and now heads home.

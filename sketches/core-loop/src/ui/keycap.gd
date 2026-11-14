@@ -1,7 +1,7 @@
 extends RefCounted
 
 const Icons := preload("res://src/ui/icons.gd")
-const Palette := preload("res://src/core/palette.gd")
+const UiTokens := preload("res://src/ui/ui_tokens.gd")
 const UiFonts := preload("res://src/ui/ui_fonts.gd")
 
 # A drawn key, named by its key glyph id (key_f, key_lmb, key_1). The ability bar, the
@@ -36,11 +36,25 @@ static func label(key: String) -> String:
 	return LABELS.get(key, key.trim_prefix("key_").to_upper())
 
 
+# A cap's letters are words, so they are never smaller than the smallest type step. A caller
+# that asks for a cap too short to hold them gets one that does (cap_height): the letters plus
+# ROOM for the cap's top and bottom edges. Taller caps scale their letters by LETTER.
+const LETTER := 0.58
+const ROOM := 5.0
+const MIN_H := UiTokens.CAPTION + ROOM
+
+
+static func cap_height(height: float) -> float:
+	return maxf(height, MIN_H)
+
+
 static func font_size(height: float) -> int:
-	return int(height * 0.58)
+	return maxi(UiTokens.CAPTION, int(height * LETTER))
 
 
 static func size_of(key: String, height := 24.0) -> Vector2:
+	if not is_mouse(key) and not DPAD.has(key):
+		height = cap_height(height)
 	if is_mouse(key):
 		return Vector2(height * 0.8, height)
 	if key in PAD_ROUND or DPAD.has(key):
@@ -53,6 +67,8 @@ static func size_of(key: String, height := 24.0) -> Vector2:
 static func draw(canvas: CanvasItem, at: Vector2, key: String, color: Color, height := 24.0) -> Rect2:
 	var size := size_of(key, height)
 	var rect := Rect2(at - size * 0.5, size)
+	if not is_mouse(key) and not DPAD.has(key):
+		height = cap_height(height)
 	# Only the mouse glyphs draw from their SVG. Every key SVG spells its letter with
 	# <text>, which Godot's SVG import drops, so a key drawn from its file came out as a
 	# blank cap (seen in the alpha captures on F, 1, 2, N, Q and Tab).
@@ -61,7 +77,7 @@ static func draw(canvas: CanvasItem, at: Vector2, key: String, color: Color, hei
 		canvas.draw_texture_rect(Icons.texture(key), Rect2(at - Vector2(side, height) * 0.5, Vector2(side, height)), false, Icons.tint(key, color))
 		return rect
 	var box := StyleBoxFlat.new()
-	box.bg_color = Color(Palette.CHARCOAL, 0.92)
+	box.bg_color = Color(UiTokens.INK, UiTokens.PLATE_ALPHA)
 	box.border_color = color
 	box.set_border_width_all(2)
 	box.border_width_bottom = 4

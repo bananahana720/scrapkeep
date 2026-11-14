@@ -863,17 +863,56 @@ func _face_shadow(origin: Vector3, face: Array) -> Array:
 # The park's convex wedge colliders carry points, rather than triangle faces. Parks place the
 # same few wedges hundreds of times, and the face search is quartic in the points (about 100 ms a
 # wedge), so the faces are kept by point list for the life of the process. Readers map them
-# into world space and never write them.
+# into world space and never write them. A wedge not kept yet is searched on the terrain
+# worker (_terrain_entry), never on the main thread: the warm-up meeting a stage's new wedges
+# held one physics tick for 400 to 900 ms on the 4080 (board #934, 13 Nov 2026).
 static var _convex_cache := {}
+static var _convex_lock := Mutex.new()
+# One lock per point list being searched, so a warm-up that meets 200 placements of a new wedge
+# searches it once: the other workers wait on that search and read the kept faces.
+static var _convex_searching := {}
+# Searches run, and those run on the main thread, for the hitch guard's counts.
+static var convex_searches := 0
+static var convex_searches_on_main := 0
 
 
-func _convex_faces(points: PackedVector3Array) -> Array:
-	if not _convex_cache.has(points):
-		_convex_cache[points] = _convex_faces_uncached(points)
-	return _convex_cache[points]
+static func _convex_faces(points: PackedVector3Array) -> Array:
+	_convex_lock.lock()
+	var faces = _convex_cache.get(points)
+	var key_lock: Mutex = null
+	if faces == null:
+		key_lock = _convex_searching.get(points)
+		if key_lock == null:
+			key_lock = Mutex.new()
+			_convex_searching[points] = key_lock
+	_convex_lock.unlock()
+	if faces != null:
+		return faces
+	key_lock.lock()
+	_convex_lock.lock()
+	faces = _convex_cache.get(points)
+	_convex_lock.unlock()
+	if faces == null:
+		faces = _convex_faces_uncached(points)
+		_convex_lock.lock()
+		_convex_cache[points] = faces
+		convex_searches += 1
+		if OS.get_thread_caller_id() == OS.get_main_thread_id():
+			convex_searches_on_main += 1
+		_convex_searching.erase(points)
+		_convex_lock.unlock()
+	key_lock.unlock()
+	return faces
 
 
-func _convex_faces_uncached(points: PackedVector3Array) -> Array:
+static func _convex_kept(points: PackedVector3Array) -> bool:
+	_convex_lock.lock()
+	var kept := _convex_cache.has(points)
+	_convex_lock.unlock()
+	return kept
+
+
+static func _convex_faces_uncached(points: PackedVector3Array) -> Array:
 	var faces: Array = []
 	var normals: Array = []
 	var offsets: Array = []
@@ -995,7 +1034,7 @@ func _terrain_near(origin: Vector3, cells: Array) -> Dictionary:
 					# The face boxes decide what is near; a debug mesh's box costs a park tile
 					# 120 ms the first time.
 					var entry := _terrain_entry(collider.shape_owner_get_shape(owner, i), transform)
-					if entry.is_empty():
+					if entry.is_empty() or not terrain.readable(entry):
 						return {"faces": faces, "unreadable": true}
 					faces.append_array(terrain.faces_near(entry, bounds.grow(0.0001)))
 	return {"faces": faces}
@@ -1006,6 +1045,8 @@ func _terrain_entry(shape: Shape3D, transform: Transform3D) -> Dictionary:
 	var entry := terrain.cached(shape, transform)
 	if not entry.is_empty():
 		return entry
+	if shape is ConvexPolygonShape3D and not _convex_kept(shape.points):
+		return terrain.request(shape, transform, _convex_faces.bind(shape.points))
 	var local_faces = (shape as ConcavePolygonShape3D).get_faces() if shape is ConcavePolygonShape3D else _collider_faces(shape)
 	if local_faces.is_empty():
 		return {}
@@ -1323,9 +1364,44 @@ func _peak_aim() -> Vector3:
 
 # Full Cut: the beam widens and sweeps FULL_CUT_DEG, half to each side of the aim, out to
 # FULL_CUT_REACH; every machine it crosses takes FULL_CUT_DAMAGE x heft once, no pierce cap.
+# The carve tests up to about 19,000 parts against terrain shadows (133 ms in the cloud, a tick
+# of 100 to 450 ms in a park), so it runs on a worker and the cut lands CUT_TICKS later (55 ms,
+# the Breach's "Beat later"), on the same tick every time so a seed replays. The terrain is
+# gathered here, on the peak tick, so the cut is the ground as it stood then. cut_ticks 0 carves
+# and lands on the peak tick, as before (a test's switch).
+const CUT_TICKS := LATE_TICKS
+var cut_ticks := CUT_TICKS
+# Cuts carving, oldest first: {task, due, sector, at, heft, record, out: {cells, shadows}}.
+var _cuts_due: Array = []
+# The worker's own kit, so its carve counts work apart from the main thread's Breach (_shade_work).
+var _carver = null
+
+
 func full_cut(at: Vector3, dir: Vector3, heft: float) -> int:
-	var shape := _commit_sector(at, dir, Weapons.FULL_CUT_REACH, deg_to_rad(Weapons.FULL_CUT_DEG * 0.5), Weapons.FULL_CUT_WIDTH)
 	carve_stats["full_cut"] += 1
+	var sector := _sector_cells(at, dir, Weapons.FULL_CUT_REACH, deg_to_rad(Weapons.FULL_CUT_DEG * 0.5), Weapons.FULL_CUT_WIDTH)
+	if cut_ticks <= 0:
+		var shadows: Array = []
+		var cells := _commit_terrain(at, sector["cells"], shadows, sector["hull"])
+		return _land_cut(_sector_shape(sector, cells, shadows), at, heft)
+	var found := _terrain_near(at, sector["cells"])
+	if _carver == null:
+		_carver = get_script().new()
+	var out := {}
+	var job := {"due": Engine.get_physics_frames() + cut_ticks, "sector": sector, "at": at, "heft": heft, "out": out,
+		"record": combat.ultimate._record if combat.ultimate != null else {}}
+	job["task"] = WorkerThreadPool.add_task(_carve_off.bind(_carver, at, sector["cells"], sector["hull"], found, out), true, "rivet full cut")
+	_cuts_due.append(job)
+	return 0
+
+
+static func _carve_off(carver, origin: Vector3, cells: Array, hull: Array, found: Dictionary, out: Dictionary) -> void:
+	var shadows: Array = []
+	out["cells"] = carver._carve(origin, cells, shadows, hull, found)
+	out["shadows"] = shadows
+
+
+func _land_cut(shape: Dictionary, at: Vector3, heft: float) -> int:
 	var hits := 0
 	for enemy in select(shape):
 		_beam_hit(enemy, Weapons.FULL_CUT_DAMAGE * heft, at)
@@ -1333,6 +1409,25 @@ func full_cut(at: Vector3, dir: Vector3, heft: float) -> int:
 	_draw_shape("rivet_scar", shape)
 	_scar_left = Weapons.FULL_CUT_SCAR
 	return hits
+
+
+# Lands each cut on its due tick, waiting for its carve when the worker is still on it.
+func _step_cuts(now := Engine.get_physics_frames()) -> void:
+	while not _cuts_due.is_empty() and now >= int(_cuts_due[0]["due"]):
+		var job: Dictionary = _cuts_due.pop_front()
+		WorkerThreadPool.wait_for_task_completion(job["task"])
+		var out: Dictionary = job["out"]
+		var hits := _land_cut(_sector_shape(job["sector"], out["cells"], out["shadows"]), job["at"], job["heft"])
+		var record: Dictionary = job["record"]
+		if not record.is_empty():
+			record["volley_hits"] = int(record.get("volley_hits", 0)) + hits
+
+
+# Drops every cut still carving, with its hits.
+func _drop_cuts() -> void:
+	for job in _cuts_due:
+		WorkerThreadPool.wait_for_task_completion(job["task"])
+	_cuts_due = []
 
 
 # The Breach Skid reach: 1.5 x the class landing radius, plus ult_radius.
@@ -1649,6 +1744,7 @@ func step(delta: float) -> void:
 	_step_preview()
 	_step_piece(delta)
 	_step_late()
+	_step_cuts()
 	_step_cards()
 
 
@@ -1660,7 +1756,16 @@ const WARM_REACH := 60.0
 
 func _exit_tree() -> void:
 	_drop_late()
+	_drop_cuts()
 	terrain.finish()
+
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_PREDELETE:
+		_drop_cuts()
+		if _carver != null:
+			_carver.free()
+			_carver = null
 
 
 # Warm-up cycles run, for a hitch guard: while Rivet stands, terrain.builds should stop growing.
@@ -1718,6 +1823,7 @@ func _clear_piece() -> void:
 func _clear() -> void:
 	selected_shapes.clear()
 	_drop_late(true)
+	_drop_cuts()
 	pulses.clear()
 	if not haul.is_empty():
 		_end_haul(false)

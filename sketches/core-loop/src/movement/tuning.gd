@@ -58,7 +58,13 @@ const SPECS := [
 	# has heard it on and off (ruling cq); `--set-director=on` turns it on.
 	{"key": "set_director", "label": "Set director", "min": 0.0, "max": 1.0, "step": 1.0, "value": 0.0, "options": ["off", "on"]},
 	{"key": "discovery", "label": "Discovery", "min": 0.0, "max": 1.0, "step": 1.0, "value": 1.0, "options": ["banner", "cards"]},
-	{"key": "telegraph", "label": "Telegraph", "min": 0.0, "max": 1.0, "step": 1.0, "value": 1.0, "options": ["classic", "haze"]},
+	# The attack warnings' look (threat_grammar.gd LOOKS). "clear" (the default since 13 Nov 2026, a
+	# taste call Andrew can overturn) and "edges" are haze made less obstructive.
+	{"key": "telegraph", "label": "Telegraph", "min": 0.0, "max": 3.0, "step": 1.0, "value": 2.0, "options": ["classic", "haze", "clear", "edges"]},
+	# The ball's look (presentation/ball_looks.gd): Andrew picked the cutaway on 13 Nov 2026 (ruling
+	# dm); gyro and bell are the two he passed over. "today" keeps the lattice shells. The cutaway is
+	# the default since 14 Nov 2026, when he had seen it rendered on his PC.
+	{"key": "ball_look", "label": "Ball look", "min": 0.0, "max": 3.0, "step": 1.0, "value": 3.0, "options": ["today", "gyro", "bell", "cutaway"]},
 	# World-one builds (design-v3/research/build-systems/BUILD-SYSTEMS.md, unit G): the master
 	# flag gives every pilot a two-depth tree, and the two hot-wired parts are selectable
 	# alone. All three default on. hotwire_shell is read by the build and the tree pick; hotwire_tread is read by the build (HotwireRules.fitted, build.gd) to fit the tread.
@@ -75,6 +81,9 @@ const SPECS := [
 	{"key": "heat", "label": "Heat", "min": 0.0, "max": 2.0, "step": 1.0, "value": 0.0, "options": ["off", "watch", "on"]},
 	{"key": "overtime", "label": "Overtime", "min": 0.0, "max": 1.0, "step": 1.0, "value": 0.0, "options": ["off", "on"]},
 	{"key": "called_shot", "label": "Called shot", "min": 0.0, "max": 1.0, "step": 1.0, "value": 0.0, "options": ["off", "on"]},
+	# The survival yard (BACKLOG W1-101, src/world/survival_count.gd): off by default, so no yard is built and
+	# bots, tests and the sitting play the game without it until its band read is in.
+	{"key": "stocktake", "label": "Stocktake", "min": 0.0, "max": 1.0, "step": 1.0, "value": 0.0, "options": ["off", "on"]},
 	# The harpoon (DESIGN-NOTES, "Harpoon and winch"): one mode for every pilot, locking on an enemy inside
 	# harpoon_lock_deg and flying the ball in.
 	{"key": "harpoon_smash_speed", "label": "Harpoon smash speed", "min": 10.0, "max": 45.0, "step": 1.0, "value": 24.0},
@@ -104,6 +113,10 @@ const SPECS := [
 	# Carry a core (feature-fit.md, new mechanic 3; Andrew 11 Nov 19:24Z, one core, only into
 	# SPIL-9): Moss's counter stows one of this stage's cores in a SPIL-9 socket for the next stage.
 	{"key": "carry_core", "label": "Carry a core", "min": 0.0, "max": 1.0, "step": 1.0, "value": 0.0, "options": ["off", "on"]},
+	# The world whose boss ends the run won (W1-60, Andrew 12 Nov 22:06Z): "last" runs the whole
+	# stage table; "1" ends the world 1 sitting at Brindle, with its summary and HARD rung 1, instead
+	# of rolling on into the parked Dig.
+	{"key": "final_world", "label": "Run ends after", "min": 0.0, "max": 1.0, "step": 1.0, "value": 0.0, "options": ["last", "1"]},
 ]
 
 # The option rows other modules read by name.
@@ -114,6 +127,7 @@ const DROP_ROOM_KEY := "drop_room"
 const SET_DIRECTOR_KEY := "set_director"
 const DISCOVERY_KEY := "discovery"
 const TELEGRAPH_KEY := "telegraph"
+const BALL_LOOK_KEY := "ball_look"
 
 const BRAKE_RESISTANCE := 4.0
 const BRAKE_TURN_BOOST := 2.2
@@ -214,7 +228,7 @@ func _init() -> void:
 #         reads them); "launch" flags apply when game.gd calls apply_cmdline("launch"),
 #         so a bot or tool that builds a bare Tuning never sees them.
 # `--scrap=armor --wear=on --route-seed=7 --start-mass=200 --music=ace --breath=gentle
-# --warden-form=loop --discovery=cards --telegraph=haze --world-one-builds=on --hotwire-shell=on --hotwire-tread=on
+# --warden-form=loop --discovery=cards --telegraph=clear --world-one-builds=on --hotwire-shell=on --hotwire-tread=on
 # --grip=off`, from the engine args
 # or the user args (after Godot's `--`). A flag in neither table is ignored.
 # threat_grammar.gd's Painter.haze_on() reads --telegraph from the launch args itself,
@@ -232,6 +246,7 @@ const FLAGS := {
 	"set-director": ["set_director", "option", "launch"],
 	"discovery": ["discovery", "option", "launch"],
 	"telegraph": ["telegraph", "option", "launch"],
+	"ball-look": ["ball_look", "option", "launch"],
 	"world-one-builds": ["world_one_builds", "option", "launch"],
 	"pole-flail": ["pole_flail", "option", "launch"],
 	"hotwire-shell": ["hotwire_shell", "option", "launch"],
@@ -246,15 +261,18 @@ const FLAGS := {
 	"carry-core": ["carry_core", "option", "launch"],
 	"overtime": ["overtime", "option", "launch"],
 	"called-shot": ["called_shot", "option", "launch"],
+	"stocktake": ["stocktake", "option", "launch"],
+	"final-world": ["final_world", "option", "launch"],
 }
 
 
 # What --profile=sitting turns on beyond the defaults: the loops Andrew wants in the world 1
-# sitting (ruling da), the marked hull and Moss's scale (ruling dd) and carry a core (ruling df).
+# sitting (ruling da), the marked hull and Moss's scale (ruling dd), carry a core (ruling df) and
+# the run's end at Brindle (W1-60).
 # A flag on the same command line wins, and bots and gate bands, which never pass the profile,
 # still measure the base game.
 const SITTING_SET := {"heat": "on", "overtime": "on", "called-shot": "on", "marked-hull": "on", "moss-scale": "on",
-	"carry-core": "on"}
+	"carry-core": "on", "final-world": "1"}
 
 
 # The one parse pass. `when` limits it to one phase ("start" or "launch"); empty applies
@@ -302,6 +320,12 @@ func sitting() -> bool:
 # The sitting's loops on a fresh profile that earns its unlocks and keeps them (W1-78).
 func sitting_earned() -> bool:
 	return option("profile") == "sitting-earned"
+
+
+# The world whose boss ends the run won, or 0 when the stage table's last stage does.
+func final_world() -> int:
+	var value := option("final_world")
+	return int(value) if value.is_valid_int() else 0
 
 
 func world_one() -> bool:

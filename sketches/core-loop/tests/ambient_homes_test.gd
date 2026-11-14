@@ -21,6 +21,22 @@ func _initialize() -> void:
 	_main()
 
 
+# A kind with `spots` (the keepers) stands beside the park's crew props first: at least half its homes are within
+# SPOT_SIDE_M + 1 m of a prop of a listed template. Planted: a camp 200 m from every home fails the same line.
+func _at_camps(map_id: String, kind: String, spec: Dictionary, homes: Array) -> void:
+	var props = JSON.parse_string(FileAccess.get_file_as_string("res://src/world/park/props/%s.json" % map_id))
+	var camps: Array = (props["spots"] as Array).filter(func(sp): return (spec["spots"] as Array).has(String(sp["template"]))) \
+		.map(func(sp): return Vector2(float(sp["at"][0]), float(sp["at"][1])))
+	var mine := homes.filter(func(h): return h["kind"] == kind)
+	var near := func(points: Array) -> int:
+		return mine.filter(func(h): return points.any(func(c: Vector2): return c.distance_to(h["at"]) <= AmbientHomes.SPOT_SIDE_M + 1.0)).size()
+	var at_camp: int = near.call(camps)
+	print("[camps] %s %s: %d of %d homes at a crew prop (%d props)" % [map_id, kind, at_camp, mine.size(), camps.size()])
+	_t.check("%s %s: at least half its homes stand at the crew props" % [map_id, kind], at_camp * 2 >= mine.size(), "%d of %d" % [at_camp, mine.size()])
+	var far: Array = mine.map(func(h): return (h["at"] as Vector2) + Vector2(200.0, 0.0))
+	_t.check("planted: %s camps moved 200 m away hold none of its homes" % map_id, near.call(far) == 0)
+
+
 func _main() -> void:
 	await process_frame
 	_run()
@@ -55,6 +71,8 @@ func _run() -> void:
 			var count := homes.filter(func(h): return h["kind"] == kind).size()
 			var spec: Dictionary = AmbientKinds.row(kind)["homes"]
 			_t.check("%s %s has homes" % [map_id, kind], count >= 1, "%d (want %d..%d)" % [count, spec["count"][0], spec["count"][1]])
+			if spec.has("spots"):
+				_at_camps(map_id, kind, spec, homes)
 	# A veto rejects homes and members: with the west half vetoed every position stands east, and kinds still get homes.
 	var dam: Dictionary = ParkSchema.load_park("res://src/world/park/park_dam.json")["data"]
 	var east := AmbientHomes.plan(dam, AmbientKinds.for_park("park_dam"), SEED, func(at: Vector2, _perch: String) -> bool: return at.x < 0.0)

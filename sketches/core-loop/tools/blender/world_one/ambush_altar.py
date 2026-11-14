@@ -121,6 +121,10 @@ for side in range(4):
         if len(poly)>=3:
             p.prism("device_marks",poly,0.035,matrix=mat,color="hazard")
 finish(p,(0,3.5,0))
+# The bone band under the cap, proud of its octagon; the runtime gives it the altar's bone finish.
+p=Part("AltarBand")
+p.cyl("device_metal",0.79,0.79,0.12,segs=8,loc=g(0,3.22,0),rot=(0,0,math.pi/8),color="bone")
+finish(p)
 p=Part("AltarRing")
 # Existing radius and 20-dash extent; keylines belong to this hazard footprint.
 for k in range(20):
@@ -133,7 +137,7 @@ bpy.context.view_layer.update()
 tris=common.tri_total(root)
 draws=sum(len(o.data.materials) for o in common.tree(root) if o.type=="MESH")
 print("DEVICE_BUDGET",tris,"T",draws,"D")
-if tris>1100 or draws>3:
+if tris>1100 or draws>4:
     raise SystemExit("device budget exceeded")
 opts=common.args()
 common.export(root,opts["out"] or os.path.join(common.MODELS,"world_one","ambush_altar.glb"))

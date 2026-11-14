@@ -85,7 +85,8 @@ func _run() -> void:
 			covered += 1
 	t.eq("every selected live interior measured", covered, entries.size())
 	if "--only" not in args:
-		t.eq("all sixteen live interiors", covered, 16)
+		# Seventeen since the incline vault joined the library (W1-76, a4e664b31).
+		t.eq("all seventeen live interiors", covered, 17)
 		t.check("dodger exercised BotDriver telegraph steering", total_telegraphs > 0 and total_evasions > 0, "seen=%d evasions=%d reaction=%.3fs" % [total_telegraphs, total_evasions, BotDriver.REACTION])
 	var path := OS.get_environment("SQ12_ENTRY_RATES")
 	if path == "":

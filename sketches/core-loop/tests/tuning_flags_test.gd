@@ -23,6 +23,7 @@ const EXPECTED := {
 	"set-director": ["set_director", "on", "bogus", "launch"],
 	"discovery": ["discovery", "cards", "bogus", "launch"],
 	"telegraph": ["telegraph", "haze", "bogus", "launch"],
+	"ball-look": ["ball_look", "cutaway", "bogus", "launch"],
 	"world-one-builds": ["world_one_builds", "on", "bogus", "launch"],
 	"pole-flail": ["pole_flail", "on", "bogus", "launch"],
 	"hotwire-shell": ["hotwire_shell", "on", "bogus", "launch"],
@@ -34,10 +35,12 @@ const EXPECTED := {
 	"heat": ["heat", "on", "bogus", "launch"],
 	"overtime": ["overtime", "on", "bogus", "launch"],
 	"called-shot": ["called_shot", "on", "bogus", "launch"],
+	"stocktake": ["stocktake", "on", "bogus", "launch"],
+	"final-world": ["final_world", "1", "bogus", "launch"],
 }
 
 # The lab's winners are the shipping defaults: a bare Tuning reports each one.
-const DEFAULTS := {"scrap_mode": "armor", "wear": "on", "music": "ace", "warden_form": "form", "discovery": "cards", "telegraph": "haze",
+const DEFAULTS := {"scrap_mode": "armor", "wear": "on", "music": "ace", "warden_form": "form", "discovery": "cards", "telegraph": "clear",
 	"world_one_builds": "on", "hotwire_shell": "on", "hotwire_tread": "on", "grip": "on"}
 
 var _failures := 0
@@ -83,11 +86,12 @@ func _initialize() -> void:
 	var sit := Tuning.new()
 	sit.apply_args(PackedStringArray(["--profile=sitting", "--called-shot=off"]))
 	var sit_on: bool = sit.sitting() and sit.option("heat") == "on" and sit.option("overtime") == "on" \
-		and sit.option("marked_hull") == "on" and sit.option("carry_core") == "on" and sit.option("called_shot") == "off" and sit.option("moss_scale") == "on"
+		and sit.option("marked_hull") == "on" and sit.option("carry_core") == "on" and sit.option("called_shot") == "off" and sit.option("moss_scale") == "on" \
+		and sit.final_world() == 1
 	var plain := Tuning.new()
 	plain.apply_args(PackedStringArray(["--heat=watch"]))
 	_check("sitting set", sit_on and plain.option("overtime") == "off" and plain.option("heat") == "watch" \
-		and plain.option("moss_scale") == "off",
+		and plain.option("moss_scale") == "off" and plain.final_world() == 0,
 		"--profile=sitting turns on %s unless the line names the flag; without it the loops stay off" % [Tuning.SITTING_SET])
 	var earned := Tuning.new()
 	earned.apply_args(PackedStringArray(["--profile=sitting-earned"]))

@@ -130,6 +130,8 @@ var dropper = Panels.Dropper.new()
 var panel_rng := RandomNumberGenerator.new()
 # Scrap drops roll on their own stream, so how a fight spills scrap does not move the stage plan.
 var scrap_rng := RandomNumberGenerator.new()
+# A paid chain's burst rolls on its own stream, so a chain never moves where a kill's scrap lands.
+var chain_rng := RandomNumberGenerator.new()
 # Vaults paid this stage: each names its own offer stream.
 var _vaults_paid := 0
 var _overtimes_paid := 0
@@ -300,6 +302,7 @@ func setup(ctx_ref) -> void:
 	ctx.events.shot_fired.connect(_on_shot_fired)
 	ctx.events.run_started.connect(_on_run_started)
 	ctx.events.scrap_lost.connect(_on_scrap_lost)
+	ctx.events.line_state_changed.connect(_on_line_state)
 	ctx.run.armor_hit.connect(_on_armor_hit)
 	ctx.run.death_save_hook = effects.death_save_hull
 	_sync_scrap_flags()
@@ -1054,6 +1057,7 @@ func _on_stage_entered(stage: int, retry: bool) -> void:
 	loot_rng.seed = hash([LOOT_SEED, ctx.flow.run_key(), stage, "loot"])
 	panel_rng.seed = hash([ctx.run.run_seed, stage, "panels"])
 	scrap_rng.seed = hash([ctx.flow.run_key(), stage, "scrap"])
+	chain_rng.seed = hash([ctx.flow.run_key(), stage, "chain"])
 	scrap.clear_caches()
 	_caches_pending = true
 	_caches_wait = 0
@@ -1356,6 +1360,17 @@ func _on_dashed(_direction: Vector3) -> void:
 	if not sheet.elements_for("dash").is_empty():
 		_trail = FROST_TRAIL
 		_trail_ticks = 0
+
+
+# A paid chain of 3 or more bursts scrap at its landing (W1-74), scaled as a kill's scrap is.
+# Scrap only: the wallet already outruns the shop by Brindle (gameplay critique finding 11).
+func _on_line_state(id: String, _target: Node3D, at: Vector3, cause: String) -> void:
+	if id != "chain_end" or cause != "paid" or scrapless() or not ctx.flow.in_stage():
+		return
+	var stage_pay := float(ctx.flow.stage_def().get("kill_scrap", 1.0))
+	var amount := int(round(ctx.player.chain.last_burst() * sheet.kill_scrap * stage_pay))
+	if amount > 0:
+		scrap.drop(at, amount, chain_rng)
 
 
 # Every slam carries kinetic, so a slam on ice shatters it whatever you hold.

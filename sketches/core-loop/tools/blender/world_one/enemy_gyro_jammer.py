@@ -1,5 +1,5 @@
 # C19 Gyro jammer: an oxide Fleet animal crew carrying a charcoal aerial with three
-# concentric tilted metal hoops. The gyroscope is high above the ears on the aerial:
+# concentric tilted metal hoops. The gyroscope is high above the head on the aerial:
 # outer radii 0.55, 0.43 and 0.31 m, all centred at Godot (0, 3.55, -0.2).
 # Each hoop is a 16-sector, four-sided tube (128 T). Their three oblique planes and
 # charcoal inner faces leave intersecting openings; oxide faces and sparse grey edge
@@ -66,7 +66,7 @@ for s in (-1, 1):
     b.rod("paint", g(s * 0.42, 0.52, -0.23), g(0, 1.5, -0.2), 0.045, segs=5, color=IRON)
 b.cyl("paint", 0.105, 0.105, 0.16, segs=8, loc=g(*CENTER), color=CHAR)
 # The old works' two marks, cast in under the Fleet's paint: the crew number and HIRED.
-crew.cast_number(b, "paint", "11", (0, -0.54, 0.52), (0, -1, 0), 0.2)
+crew.cast_number(b, "paint", "11", (0, -0.474, 0.52), (0, -1, 0), 0.2)
 crew.hired(b, "paint", (0, 0.745, 0.25), (0, 1, 0), 0.08)
 bmesh.ops.recalc_face_normals(b.bm, faces=b.bm.faces[:])
 body = b.to_object(parent=root)

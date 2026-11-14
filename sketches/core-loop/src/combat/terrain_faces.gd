@@ -318,8 +318,8 @@ var hits := 0
 var keep_one_placement := false
 
 
-# local_faces: the shape's faces in its own space, an Array of vertex Arrays, or a
-# PackedVector3Array of triangles (a trimesh).
+# local_faces: the shape's faces in its own space, an Array of vertex Arrays, a
+# PackedVector3Array of triangles (a trimesh), or a Callable the worker calls for either.
 func request(shape: Shape3D, transform: Transform3D, local_faces) -> Dictionary:
 	var id := shape.get_instance_id()
 	var entry := cached(shape, transform)
@@ -328,15 +328,10 @@ func request(shape: Shape3D, transform: Transform3D, local_faces) -> Dictionary:
 	if not _watched.has(id):
 		_watched[id] = true
 		shape.changed.connect(_forget.bind(id))
-	var world
-	if local_faces is PackedVector3Array:
-		world = transform * (local_faces as PackedVector3Array)
-	else:
-		world = (local_faces as Array).map(func(face): return (face as Array).map(func(v): return transform * v))
 	builds += 1
 	entry = {"shape": weakref(shape), "result": {}, "used": Engine.get_physics_frames()}
 	var result: Dictionary = entry["result"]
-	entry["task"] = WorkerThreadPool.add_task(func(): _build(world, result), false, "rivet terrain faces")
+	entry["task"] = WorkerThreadPool.add_task(func(): _build(_world(local_faces, transform), result), false, "rivet terrain faces")
 	if keep_one_placement:
 		_forget(id)
 	if not _entries.has(id):
@@ -357,9 +352,7 @@ func cached(shape: Shape3D, transform: Transform3D) -> Dictionary:
 
 # The faces whose box meets box, in the shape's order.
 func faces_near(entry: Dictionary, box: AABB) -> Array:
-	if entry.has("task"):
-		WorkerThreadPool.wait_for_task_completion(entry["task"])
-		entry.erase("task")
+	_wait(entry)
 	var result: Dictionary = entry["result"]
 	var picks := {}
 	var grid: Dictionary = result["grid"]
@@ -378,6 +371,19 @@ func faces_near(entry: Dictionary, box: AABB) -> Array:
 		if box.intersects(boxes[index]):
 			near.append(faces[index])
 	return near
+
+
+# False when the shape gave no faces the carve can read (a build from a Callable can only tell
+# once it has run).
+func readable(entry: Dictionary) -> bool:
+	_wait(entry)
+	return not (entry["result"]["faces"] as Array).is_empty()
+
+
+func _wait(entry: Dictionary) -> void:
+	if entry.has("task"):
+		WorkerThreadPool.wait_for_task_completion(entry["task"])
+		entry.erase("task")
 
 
 # Waits for every build, so none runs past its kit.
@@ -417,6 +423,16 @@ func _forget(id: int) -> void:
 			WorkerThreadPool.wait_for_task_completion(entry["task"])
 			entry.erase("task")
 	_entries.erase(id)
+
+
+# The shape's faces in world space. local_faces is a PackedVector3Array of triangles, an Array
+# of polygons, or a Callable that returns either (a search too slow for the main thread).
+static func _world(local_faces, transform: Transform3D):
+	if local_faces is Callable:
+		local_faces = (local_faces as Callable).call()
+	if local_faces is PackedVector3Array:
+		return transform * (local_faces as PackedVector3Array)
+	return (local_faces as Array).map(func(face): return (face as Array).map(func(v): return transform * v))
 
 
 static func _build(world, result: Dictionary) -> void:

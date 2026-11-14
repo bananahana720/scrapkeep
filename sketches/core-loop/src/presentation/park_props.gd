@@ -126,6 +126,12 @@ static var far_reads := 0
 static var _material: StandardMaterial3D
 
 var ctx
+const PropKicks := preload("res://src/presentation/prop_kicks.gd")
+const Tuning := preload("res://src/movement/tuning.gd")
+# The ball's kicks of this stage's props (prop_kicks.gd); presentation answers each with sound and dust.
+signal prop_kicked(at: Vector3, mode: String, speed: float, tags: Array)
+var kicks := PropKicks.new()
+var _ground := Callable()
 var map_id := ""
 var instances: Array = []
 var views: Array[GeometryInstance3D] = []
@@ -1462,6 +1468,8 @@ static func _batch(holder: Node3D, label: String, mesh: Mesh, members: Array, fi
 	_ranges(view, [begin_end[0], float(begin_end[1]) + spread], margin)
 	_tag(view, first, lod, false)
 	view.set_meta("dress_count", members.size())
+	# Instance i of this batch is members[i] (prop_kicks.gd moves it): a headless renderer keeps no transforms to read back.
+	view.set_meta("dress_members", members)
 	holder.add_child(view)
 
 
@@ -1591,7 +1599,7 @@ static func tier_of(inst: Dictionary) -> String:
 
 
 static func _transform(inst: Dictionary) -> Transform3D:
-	return Transform3D((inst["basis"] as Basis).scaled_local(Vector3.ONE * float(inst["scale"])), inst["pos"])
+	return PropKicks.place_of(inst)
 
 
 # A GLB's one mesh, read once per path on the main thread; a path asked of the loader thread is taken from it.
@@ -1601,7 +1609,7 @@ static func _mesh(path: String) -> Mesh:
 	if _meshes.has(path):
 		return _meshes[path]
 	var mesh: Mesh = null
-	var packed = ResourceLoader.load_threaded_get(path) if _requested.has(path) else load(path)
+	var packed = ResourceLoader.load_threaded_get(_requested[path]) if _requested.has(path) else load(ModelVariants.path(path))
 	_requested.erase(path)
 	if packed is PackedScene:
 		var scene: Node = (packed as PackedScene).instantiate()
@@ -1653,7 +1661,7 @@ static func _vertex_material() -> StandardMaterial3D:
 # Teardown: the cached meshes go with the park, and with the Game (activities.gd _exit_tree calls this).
 static func release_shared() -> void:
 	for path: String in _requested:
-		ResourceLoader.load_threaded_get(path)
+		ResourceLoader.load_threaded_get(_requested[path])
 	_requested.clear()
 	_meshes.clear()
 	_far_sources.clear()
@@ -1678,6 +1686,19 @@ func setup(context_in) -> void:
 		_pending = true
 
 
+# Once the stage is built its small props are indexed, and every frame the ball moves the ones it
+# runs into (prop_kicks.gd). Presentation only: nothing here touches the run.
+func _kick(delta: float) -> void:
+	if not visible or instances.is_empty() or not is_built() or ctx.player == null or ctx.player.frozen():
+		return
+	if not kicks.indexed:
+		_ground = ctx.terrain.ground_callable(ctx.terrain.stage)
+		kicks.index(instances, func(inst: Dictionary): return inst["class"] != HERO and tier_of(inst) != "tall", views.filter(func(v): return v is MultiMeshInstance3D))
+	var height := func(x: float, z: float) -> float: return (_ground.call(x, z, 0.0) as Vector3).y
+	for kick: Dictionary in kicks.step(delta, ctx.player.shown_position(), ctx.player.state.velocity, Tuning.RADIUS, height):
+		prop_kicked.emit(kick["at"], kick["mode"], kick["speed"], kick["tags"])
+
+
 func _process(_delta: float) -> void:
 	var started := Time.get_ticks_usec()
 	last_steps = PackedStringArray()
@@ -1693,6 +1714,7 @@ func _process(_delta: float) -> void:
 		_slice(BUILD_SLICE_USEC)
 	elif _task < 0 and not _pending:
 		_prepare_next()
+	_kick(_delta)
 	last_process_usec = Time.get_ticks_usec() - started
 	last_process_frame = Engine.get_process_frames()
 
@@ -1761,6 +1783,7 @@ func _free_views() -> void:
 		child.process_mode = Node.PROCESS_MODE_DISABLED
 		_dying.append(child)
 	views.clear()
+	kicks.clear()
 	instances = []
 	_built_for = []
 	map_id = ""
@@ -1822,8 +1845,9 @@ static func _uncached(paths: Array) -> Array:
 	var out := paths.filter(func(path: String): return not _meshes.has(path))
 	if not AppShell.headless():
 		for path: String in out:
-			if not _requested.has(path) and ResourceLoader.load_threaded_request(path) == OK:
-				_requested[path] = true
+			var source := ModelVariants.path(path)
+			if not _requested.has(path) and ResourceLoader.load_threaded_request(source) == OK:
+				_requested[path] = source
 	return out
 
 
@@ -1833,7 +1857,7 @@ func _read_meshes(budget_usec: int) -> void:
 	var started := Time.get_ticks_usec()
 	while not _reads.is_empty():
 		var path: String = _reads[0]
-		if _requested.has(path) and ResourceLoader.load_threaded_get_status(path) == ResourceLoader.THREAD_LOAD_IN_PROGRESS:
+		if _requested.has(path) and ResourceLoader.load_threaded_get_status(_requested[path]) == ResourceLoader.THREAD_LOAD_IN_PROGRESS:
 			return
 		_reads.pop_front()
 		var read_started := Time.get_ticks_usec()
@@ -1873,7 +1897,7 @@ func _prepare_next() -> void:
 		_next_reads = []
 	if not _next_meshes.is_empty():
 		var path: String = _next_meshes[0]
-		if _requested.has(path) and ResourceLoader.load_threaded_get_status(path) == ResourceLoader.THREAD_LOAD_IN_PROGRESS:
+		if _requested.has(path) and ResourceLoader.load_threaded_get_status(_requested[path]) == ResourceLoader.THREAD_LOAD_IN_PROGRESS:
 			return
 		var started := Time.get_ticks_usec()
 		_mesh(_next_meshes.pop_front())
