@@ -34,6 +34,11 @@ func _initialize() -> void:
 
 func _run() -> void:
 	EnemyMotion.headless_idle = true
+	# The log sees the error it is here to count: one planted bad axis.
+	var planted := _log.axis
+	var bad := Vector3(1.1, 0.0, 0.0)
+	var _refused := Basis(bad, 1.0)
+	_t.eq("the log catches a bad axis", _log.axis - planted, 1)
 	_settled_ground()
 	await _resting_pieces()
 	EnemyMotion.headless_idle = false
