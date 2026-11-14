@@ -18,12 +18,15 @@ With --fit fill, each axis is scaled on its own until the mesh fills the authore
 stretches the shape: look at the render. (--fit box scales uniformly until it fits inside them; the default,
 height, matches the authored height only.)
 With --radius, the mesh is then narrowed about the model's up axis (X and Y together, the height stays) until no
-point is farther than that many metres from the axis: an enemy must stay inside its round hit core, and a
+point is farther than that many metres from the axis, and again after the triangle reduction if that moved a point
+out (0, the default, turns it off; a negative value or a non-number stops the script; the FIT line prints the
+exported "reach"): an enemy must stay inside its round hit core, and a
 box-shaped body that fills the authored bounds has corners that the authored shape does not.
-With --slots (an enemy-style model only), the texture no longer decides the slot. A first item with no "=" names the
-slot every face takes; each "x0,y0,z0,x1,y1,z1=slot" item then gives the faces that lie wholly in that box
+With --slots (an enemy-style model only), the texture no longer decides the slot. An item with no "=" names the
+slot every face takes (put it first: it overwrites every box before it); each "x0,y0,z0,x1,y1,z1=slot" item then gives the faces that lie wholly in that box
 (every corner inside; metres, Blender axes, Z up, after the fit) that slot, later items winning. A face that
-crosses a box edge keeps what it had, so a slot never spills past its box. This is for a generated texture whose
+crosses a box edge keeps what it had, so a slot never spills past its box (as assigned; the triangle reduction
+that follows can move an edge slightly). This is for a generated texture whose
 colours land on the wrong authored slot. A slot name the authored model lacks, or a box that holds no face, stops
 the script.
 Prints one JSON line with counts.
@@ -38,6 +41,20 @@ opt = {"yaw": "0", "max-tris": "0", "fit": "height", "split": "", "match": "rgb"
 i = 0
 while i < len(argv):
     opt[argv[i][2:]] = argv[i + 1]; i += 2
+try:
+    radius = float(opt["radius"])
+except ValueError:
+    radius = float("nan")
+if not (radius >= 0.0 and math.isfinite(radius)):
+    raise SystemExit("tripo_fit: --radius takes a number of metres, 0 or more (0 turns it off), not %r" % opt["radius"])
+
+def narrow(mesh):
+    """Scale X and Y about the up axis until no point is farther than --radius from it; returns the factor."""
+    reach = max(math.hypot(v.co.x, v.co.y) for v in mesh.vertices)
+    if radius <= 0 or reach <= radius + 1e-4:
+        return 1.0
+    mesh.transform(Matrix.Diagonal((radius / reach, radius / reach, 1.0, 1.0)))
+    return radius / reach
 
 def srgb(c):
     c = np.clip(np.asarray(c, float), 0, 1)
@@ -128,12 +145,8 @@ s = (rext.z / max(ext.z, 1e-6)) if opt["fit"] == "height" else min(rext[k] / max
 rc = (rmn + rmx) / 2; c = (mn + mx) / 2
 sv = [rext[k] / max(ext[k], 1e-6) for k in range(3)] if opt["fit"] == "fill" else [s, s, s]
 ob.data.transform(Matrix.Translation(Vector((rc.x, rc.y, rmn.z))) @ Matrix.Diagonal((*sv, 1.0)) @ Matrix.Translation(Vector((-c.x, -c.y, -mn.z))))
-if float(opt["radius"]) > 0:
-    reach = max(math.hypot(v.co.x, v.co.y) for v in ob.data.vertices)
-    if reach > float(opt["radius"]):
-        k = float(opt["radius"]) / reach
-        ob.data.transform(Matrix.Diagonal((k, k, 1.0, 1.0)))
-        sv = [sv[0] * k, sv[1] * k, sv[2]]
+k = narrow(ob.data)
+sv = [sv[0] * k, sv[1] * k, sv[2]]
 
 # Weld the vertices Tripo split along its UV seams; a vertex-coloured asset needs no UVs, so they
 # go first and the vertex count drops to what the colour borders need.
@@ -244,6 +257,8 @@ if cap and tris > cap:
     md = ob.modifiers.new("dec", "DECIMATE"); md.ratio = cap / tris
     bpy.ops.object.modifier_apply(modifier=md.name)
     tris = sum(len(p.vertices) - 2 for p in me.polygons)
+    narrow(me)  # the reduction can move a point out again; the radius is a promise about the exported mesh
+reach_out = round(max(math.hypot(v.co.x, v.co.y) for v in me.vertices), 4)
 ob.name = mesh_name; me.name = mesh_name
 root = bpy.data.objects.new(root_name, None); bpy.context.scene.collection.objects.link(root)
 ob.parent = root
@@ -290,6 +305,6 @@ fwd = {}
 for k in used:
     cs = [p.center for p in me.polygons if p.material_index == k]
     if cs: fwd[k] = [round(sum(c[a] for c in cs) / len(cs), 2) for a in range(3)]
-print("FIT " + json.dumps({"out": opt["out"], "tris": tris, "verts": len(me.vertices), "style": style,
+print("FIT " + json.dumps({"out": opt["out"], "tris": tris, "reach": reach_out, "verts": len(me.vertices), "style": style,
                           "palette": len(palette), "slots_used": used, "had_texture": img is not None,
                           "scale": [round(float(x), 4) for x in sv], "sockets": len(sockets), "parts": parts, "slot_centroids_blender_xyz": fwd}))
