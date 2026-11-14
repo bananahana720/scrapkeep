@@ -296,5 +296,8 @@
   {"id": "bench_bounty", "activity": "hauler_bounty", "site": "south_bench", "at": [-119, 332], "pack": [], "pay": {"rarities": ["common", "rare"]}, "alts": [{"activity": "ambush_altar", "pack": ["chaser", "lobber", "lobber"]}]},
   {"id": "weir_surge", "activity": "surge_run", "site": "weir_mesa", "at": [-427, -563], "pack": [], "pay": {"rarities": ["common", "rare"]}, "extra": "card_2", "route": "flume_upper"},
   {"id": "canal_altar", "activity": "ambush_altar", "site": "main_canal", "at": [-475, -206], "pack": [], "pay": {"rarities": ["common", "rare"]}, "extra": "card_2"}
+ ],
+ "survival_rows": [
+  {"id": "runout_muster", "form": "muster", "at": [80, 340]}
  ]
 }
