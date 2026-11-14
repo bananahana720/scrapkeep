@@ -36572,7 +36572,7 @@
    "loader": "src/presentation/hero_assets.gd (PILOTS) through src/presentation/model_variants.gd (--models=tripo)",
    "provenance": {
     "recipe": "tools/tripo/README.md",
-    "note": "Tripo Studio HD Model (H3.1, text to 3D, 45 Pro credits) on Andrew's paid Pro account (Tripo terms 5.2: the outputs belong to the account holder); fitted onto the authored Cannon skeleton and clips by tools/tripo/pilot_fit.py and tools/tripo/pilot_touch.py; one skinned mesh of 8,200 triangles, texture baked to vertex colour; the prompt was typed in Studio and is in the account's history, not in the repository; the counts are in the README's pilot table. sha256 f5c1a3af74c360f659f9c057d5329e9f7b19f7bd55a157b91e85f148c1c4e463"
+    "note": "Tripo Studio HD Model (H3.1, text to 3D, 45 Pro credits) on Andrew's paid Pro account (Tripo terms 5.2: the outputs belong to the account holder); fitted onto the authored Cannon skeleton and clips by tools/tripo/pilot_fit.py and tools/tripo/pilot_touch.py, skin weights worked out on the new mesh (refit 14 November 2026); one skinned mesh of 8,199 triangles, texture baked to vertex colour; the prompt was typed in Studio and is in the account's history, not in the repository; the counts are in the README's pilot table. sha256 e2e14c86cd76110cc3bab95d2471a0de7b74584785461e5a76fedd95656ffe5b"
    }
   },
   {
@@ -36589,7 +36589,7 @@
    "loader": "src/presentation/hero_assets.gd (PILOTS) through src/presentation/model_variants.gd (--models=tripo)",
    "provenance": {
     "recipe": "tools/tripo/README.md",
-    "note": "Tripo Studio HD Model (H3.1, text to 3D, 45 Pro credits) on Andrew's paid Pro account (Tripo terms 5.2: the outputs belong to the account holder); fitted onto the authored Kest skeleton and clips by tools/tripo/pilot_fit.py and tools/tripo/pilot_touch.py; one skinned mesh of 8,200 triangles, texture baked to vertex colour; the prompt was typed in Studio and is in the account's history, not in the repository; the counts are in the README's pilot table. sha256 827fb1a51306c15b1868c825e2c7bd9b319bb265d391c5108f8b1fc71f41fc42"
+    "note": "Tripo Studio HD Model (H3.1, text to 3D, 45 Pro credits) on Andrew's paid Pro account (Tripo terms 5.2: the outputs belong to the account holder); fitted onto the authored Kest skeleton and clips by tools/tripo/pilot_fit.py and tools/tripo/pilot_touch.py, skin weights worked out on the new mesh (refit 14 November 2026); one skinned mesh of 8,200 triangles, texture baked to vertex colour; the prompt was typed in Studio and is in the account's history, not in the repository; the counts are in the README's pilot table. sha256 2ba7b804ce64202e34d73d48df5e67840ca467b01b2672875a2cc1ec3a7b3bf4"
    }
   },
   {
@@ -36606,7 +36606,7 @@
    "loader": "src/presentation/hero_assets.gd (PILOTS) through src/presentation/model_variants.gd (--models=tripo)",
    "provenance": {
     "recipe": "tools/tripo/README.md",
-    "note": "Tripo Studio HD Model (H3.1, text to 3D, 45 Pro credits) on Andrew's paid Pro account (Tripo terms 5.2: the outputs belong to the account holder); fitted onto the authored Rivet skeleton and clips by tools/tripo/pilot_fit.py and tools/tripo/pilot_touch.py; one skinned mesh of 8,200 triangles, texture baked to vertex colour; the prompt and counts are in the README's pilot table. sha256 8984f7e8c2fd8c6d1c979fb04b743d9969dc358a256a25b3c09b2f767d107b00"
+    "note": "Tripo Studio HD Model (H3.1, text to 3D, 45 Pro credits) on Andrew's paid Pro account (Tripo terms 5.2: the outputs belong to the account holder); fitted onto the authored Rivet skeleton and clips by tools/tripo/pilot_fit.py and tools/tripo/pilot_touch.py, skin weights worked out on the new mesh (refit 14 November 2026); one skinned mesh of 8,149 triangles, texture baked to vertex colour; the prompt and counts are in the README's pilot table. sha256 e479c7940d38de64480c1026f7462f4cd615aa6d884638a34a85af652ec716d6"
    }
   },
   {
@@ -36623,7 +36623,7 @@
    "loader": "src/presentation/hero_assets.gd (PILOTS) through src/presentation/model_variants.gd (--models=tripo)",
    "provenance": {
     "recipe": "tools/tripo/README.md",
-    "note": "Tripo Studio HD Model (H3.1, text to 3D, 45 Pro credits) on Andrew's paid Pro account (Tripo terms 5.2: the outputs belong to the account holder); fitted onto the authored Sable skeleton and clips by tools/tripo/pilot_fit.py and tools/tripo/pilot_touch.py; one skinned mesh of 8,200 triangles, texture baked to vertex colour; the prompt and counts are in the README's pilot table. sha256 8595c6204ffed9cad9cbfca452fa41169deb073b9df5075c760328348b8156d2"
+    "note": "Tripo Studio HD Model (H3.1, text to 3D, 45 Pro credits) on Andrew's paid Pro account (Tripo terms 5.2: the outputs belong to the account holder); fitted onto the authored Sable skeleton and clips by tools/tripo/pilot_fit.py and tools/tripo/pilot_touch.py, skin weights worked out on the new mesh (refit 14 November 2026); one skinned mesh of 8,029 triangles, texture baked to vertex colour; the prompt and counts are in the README's pilot table. sha256 5c93dc05fad57a80fecd3d3a3a5b9553dc6d71569ba765a89c21ea9af1cdb392"
    }
   },
   {
@@ -36645,7 +36645,7 @@
    "loader": "src/presentation/hero_assets.gd (PILOTS) through src/presentation/model_variants.gd (--models=tripo)",
    "provenance": {
     "recipe": "tools/tripo/README.md",
-    "note": "Tripo Studio HD Model (H3.1, text to 3D, 45 Pro credits) on Andrew's paid Pro account (Tripo terms 5.2: the outputs belong to the account holder); fitted onto the authored Tally skeleton and clips by tools/tripo/pilot_fit.py and tools/tripo/pilot_touch.py; one skinned mesh of 8,200 triangles, texture baked to vertex colour; the prompt was typed in Studio and is in the account's history, not in the repository; the counts are in the README's pilot table. sha256 0cfcc965c0c2518ef854c3b493bdb216fed72168aa438cd0311d569bb93592db"
+    "note": "Tripo Studio HD Model (H3.1, text to 3D, 45 Pro credits) on Andrew's paid Pro account (Tripo terms 5.2: the outputs belong to the account holder); fitted onto the authored Tally skeleton and clips by tools/tripo/pilot_fit.py and tools/tripo/pilot_touch.py, skin weights worked out on the new mesh (refit 14 November 2026); one skinned mesh of 8,200 triangles, texture baked to vertex colour; the prompt was typed in Studio and is in the account's history, not in the repository; the counts are in the README's pilot table. sha256 8436a4261708081edfda50488c148b228507122f84107beb993b9bbdc6680389"
    }
   },
   {
@@ -36667,7 +36667,7 @@
    "loader": "src/presentation/hero_assets.gd (PILOTS) through src/presentation/model_variants.gd (--models=tripo)",
    "provenance": {
     "recipe": "tools/tripo/README.md",
-    "note": "Tripo Studio HD Model (H3.1, text to 3D, 45 Pro credits) on Andrew's paid Pro account (Tripo terms 5.2: the outputs belong to the account holder); fitted onto the authored Tarn skeleton and clips by tools/tripo/pilot_fit.py and tools/tripo/pilot_touch.py; one skinned mesh of 8,200 triangles, texture baked to vertex colour; the prompt was typed in Studio and is in the account's history, not in the repository; the counts are in the README's pilot table. sha256 c8aaec20ea6155026048c0a3213157d9ac5bb4fcf2b4ba9eb9a9df3a25f9e2b4"
+    "note": "Tripo Studio HD Model (H3.1, text to 3D, 45 Pro credits) on Andrew's paid Pro account (Tripo terms 5.2: the outputs belong to the account holder); fitted onto the authored Tarn skeleton and clips by tools/tripo/pilot_fit.py and tools/tripo/pilot_touch.py, skin weights worked out on the new mesh (refit 14 November 2026); two skinned meshes (Pilot and Cap) of 8,546 triangles together, texture baked to vertex colour; the prompt was typed in Studio and is in the account's history, not in the repository; the counts are in the README's pilot table. sha256 a01ccbc3c8df167b83eb58dbe89528be6876d3bff511bc2ed1680279fa311b2f"
    }
   },
   {
