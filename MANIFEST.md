@@ -17,3 +17,7 @@ Pilot seen by the chase camera (median over spins; worst in brackets):
 | pylon_engineer, paint d94f8a | 0.888 / 0.885 | | 117 |
 
 No see-through surfaces in any capture. PC lane, Claude Opus 5.5.
+
+## Pickup film (item 4)
+
+Self-play seed 1, skipper, --ball-look=cutaway, filmed every second to stage 3 (441 frames, exit 0). film/ holds the frames either side of the biggest mass jumps (stage 1 at 7 s and 66 s, stage 2 at 61 s and 114 s, and the Brindle fight) and crop-*.jpg, the ball cut out of them. With chunks and plates riding the rim, the pilot still shows through the window in the later frames (0231, 0232, 0380). The aim reticle sits over the window at play size.
