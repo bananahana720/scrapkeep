@@ -10,8 +10,9 @@ What it does, in order:
    k-means in sRGB), then smooths one-face speckles away. The texture, the image and the UVs are dropped: the prop
    ships linear COLOR_0 on one material named paint, as the park props do (the loader sets vertex colour as albedo).
 3. Welds the seam splits, decimates to --max-tris, names the mesh --name under a root of the same name plus "Root".
-   With --span "a:b", the middle is then widened or narrowed: points a metres either side of the centre along X move
-   to b metres, and the outer edge stays where it is, so an opening can be set to a planned width.
+   With --span "a:b", the middle is widened or narrowed right after that scaling: points a metres either side of the
+   centre along X move to b metres, and the outer edge stays where it is, so an opening can be set to a planned
+   width. It acts on X only, so turn the mesh with --yaw until the opening runs along X.
    With --paint "n=#rrggbb,...", found colour number n is repainted. The numbers are in the "found" list this script
    prints, and they change when a geometry option changes, so read them from a run with the same options.
 4. With --lods, also writes <out stem>_lod1.glb, _lod2.glb ... at those shares of the triangle count.

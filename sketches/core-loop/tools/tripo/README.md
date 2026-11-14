@@ -217,14 +217,14 @@ World 1 points of interest, 14 November 2026 (API credits, text to model v3.1, s
 | `world_one/poi_camp_tally_post.glb` | `prompts/poi_camp_tally_post.txt` | 8b2f90eb-a287-4815-8a9e-58f1d89d3b62 | 1,999 (999, 296) | 2.5 m tall |
 | `world_one/poi_fence_panel.glb` | built by `poi_yard.py` | none | 288 | 6.2 m wide, 2.5 m tall; repeat every 6.2 m, feet touching |
 | `world_one/poi_survey_stake.glb` | built by `poi_yard.py` | none | 168 | 3.16 m tall, origin at the foot |
-| `world_one/poi_weighbridge_gantry.glb` | `prompts/poi_weighbridge_gantry.txt` | Studio workspace e67eb1c6-c217-4e11-a2a1-b9c2798bbd08 (120 Pro) | 3,200 (1,599, 480) | 12.0 m wide, 7.0 m tall, 5.5 m deep, 8 m roll-over plate (`--wide 12 --tall 7 --span 3.1:4.0`, seven colours repainted with `--paint`) |
+| `world_one/poi_weighbridge_gantry.glb` | `prompts/poi_weighbridge_gantry.txt` | Studio workspace e67eb1c6-c217-4e11-a2a1-b9c2798bbd08 (120 Pro) | 3,200 (1,598, 478) | 12.0 m wide, 7.0 m tall, 5.5 m deep, 8 m roll-over plate (`--wide 12 --tall 7 --span 3.1:4.0`, seven colours repainted with `--paint`) |
 | `world_one/poi_ring_flag.glb` | built by `poi_yard.py` | none | 204 | 2.0 m tall, origin at the foot |
 | `world_one/poi_siren_mast.glb` | built by `poi_yard.py` | none | 328 | 6.0 m tall, horn along +X, origin at the foot |
 | `world_one/poi_furnace_stacks.glb` | built by `poi_yard.py` | none | 396 | 46.6 m wide, 60.2 m tall, for a 600 m view |
 | `world_one/poi_tagged_crate.glb` | built by `poi_yard.py` | none | 204 | 1.2 m cube, brass tag on the front |
 | `world_one/poi_tagged_crate_piece_{a,b,c,d}.glb` | built by `poi_yard.py` | none | 36 each | the four pieces a broken crate leaves, each with its origin at its centre |
-| `world_one/poi_req_locker.glb` | built by `poi_yard.py` | none | 156 | 3.2 m wide, 2.66 m tall, 1.7 m deep, open at the front |
-| `world_one/poi_req_locker_door.glb` | built by `poi_yard.py` | none | 120 | 2.76 by 2.0 m, origin at the hinge foot; place at (-1.38, 0.3, 0.75) on the locker and turn about the up axis |
+| `world_one/poi_req_locker.glb` | built by `poi_yard.py` | none | 156 | 3.0 m wide, 2.5 m tall, 1.5 m deep, open at the front |
+| `world_one/poi_req_locker_door.glb` | built by `poi_yard.py` | none | 120 | 2.56 by 1.8 m, origin at the hinge foot; place at (-1.28, 0.3, 0.7) on the locker and turn about the up axis |
 
 The stand and the gate came back narrower and taller than the placement asked for (2 m across, and 6.7 m tall), so both are fitted with `--wide` and `--tall` together, which scales the ground plane and the height separately. Look at the render when using both: these two chunky shapes take it, a thin or round one may not.
 

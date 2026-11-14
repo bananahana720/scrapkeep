@@ -595,8 +595,8 @@ const POI_PROPS := [
 	["poi_tagged_crate_piece_b", 0.66, 0.94, false, true],
 	["poi_tagged_crate_piece_c", 0.1, 0.96, false, true],
 	["poi_tagged_crate_piece_d", 0.52, 0.46, false, true],
-	["poi_req_locker", 2.66, 3.2, false],
-	["poi_req_locker_door", 2.0, 2.76, false],
+	["poi_req_locker", 2.5, 3.0, false],
+	["poi_req_locker_door", 1.8, 2.56, false],
 ]
 
 
@@ -622,7 +622,7 @@ func _check_poi_props() -> void:
 					var mid := box.get_center()
 					# the stake's pennant hangs to one side of its foot, so only the fitted props are held to the centre
 					if row.size() > 4 and row[4]:
-						_check(mid.length() < 0.15, "%s turns about its centre (%.3f from its origin)" % [row[0], mid.length()])
+						_check(mid.length() < 0.1 and absf(mid.y) < 0.04, "%s turns about its centre (%.3f from its origin)" % [row[0], mid.length()])
 					else:
 						_check(absf(box.position.y) < 0.02 and (not row[3] or (absf(mid.x) < 0.05 and absf(mid.z) < 0.05)), "%s stands on its origin (base %.3f, centre %.3f, %.3f)" % [row[0], box.position.y, mid.x, mid.z])
 					_check(absf(box.size.y - row[1]) < 0.1 and absf(maxf(box.size.x, box.size.z) - row[2]) < 0.1,

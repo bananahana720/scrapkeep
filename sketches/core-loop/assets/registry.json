@@ -37910,7 +37910,7 @@
    "loader": "not placed yet: the points of interest thread loads it (branch claude/project-thread-kjv6sg), with vertex colour as albedo as src/presentation/park_props.gd does",
    "provenance": {
     "recipe": "tools/blender/world_one/poi_yard.py",
-    "note": "Procedural, vertex coloured, the requisition locker body, 3.2 m wide, 2.66 m tall and 1.7 m deep, open at the front with a shelf and brass stock inside; built by hand in Blender for the Brindle arena surroundings (W1-104). sha256 b38e7ffb263522e51fae156d4e70978aae26e2da3c28f1b5bed046d8a9118fac"
+    "note": "Procedural, vertex coloured, the requisition locker body, 3.0 m wide, 2.5 m tall and 1.5 m deep, open at the front with a shelf and brass stock inside; built by hand in Blender for the Brindle arena surroundings (W1-104). sha256 782ae0e06e83954ffae4d74a692974f979161e99817e22b63a3c703dd933bde9"
    }
   },
   {
@@ -37921,7 +37921,7 @@
    "loader": "not placed yet: the points of interest thread loads it (branch claude/project-thread-kjv6sg), with vertex colour as albedo as src/presentation/park_props.gd does",
    "provenance": {
     "recipe": "tools/blender/world_one/poi_yard.py",
-    "note": "Procedural, vertex coloured, the requisition locker's brass door, 2.76 m by 2.0 m, origin at the hinge foot; it sits at (-1.38, 0.3, 0.75) on the locker in Godot axes and turns about its up axis to pop open; built by hand in Blender for the Brindle arena surroundings (W1-104). sha256 3d9c15574a0925593d727502aae4d7dab291d84a33063b994bb542cf4dfe6e11"
+    "note": "Procedural, vertex coloured, the requisition locker's brass door, 2.56 m by 1.8 m, origin at the hinge foot; it sits at (-1.28, 0.3, 0.7) on the locker in Godot axes and turns about its up axis to pop open; built by hand in Blender for the Brindle arena surroundings (W1-104). sha256 2c593f8f92b6bad6bdf9fd43924f1e1481a0d478f27cfda01fa2fde1360c7e62"
    }
   },
   {
@@ -38009,7 +38009,7 @@
    "loader": "not placed yet: the points of interest thread loads it (branch claude/project-thread-kjv6sg), with vertex colour as albedo as src/presentation/park_props.gd does",
    "provenance": {
     "recipe": "tools/blender/world_one/poi_yard.py",
-    "note": "Procedural, vertex coloured, broken crate piece d, the brass tag on its hook, origin at its centre; built by hand in Blender for the Brindle arena surroundings (W1-104). sha256 e22356b5cbea752262e19ba943e525ea46beb17e8b75050d7a78ce61cda9508e"
+    "note": "Procedural, vertex coloured, broken crate piece d, the brass tag on its hook, origin at its centre; built by hand in Blender for the Brindle arena surroundings (W1-104). sha256 6b87fddf817a99e9be65cb4bbefba7c1cb394c3863058ed8871f342caf93102a"
    }
   },
   {

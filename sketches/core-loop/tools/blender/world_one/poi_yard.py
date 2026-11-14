@@ -136,8 +136,7 @@ def stake(bm):
 
 
 def ring_flag(bm):
-    # A ring edge marker, 2 m tall: a weighted dome foot, a spring, a short post leaning a little so a ring of them reads
-    # as a line of flags at speed, and one broad orange pennant with a bone stripe.
+    # A ring edge marker, 2 m tall: a weighted dome foot, a spring, a short upright post, and one broad orange pennant with a bone stripe.
     cone(bm, CHAR, 0.34, 0.2, 0.16, (0, 0, 0), 10)
     for k in range(4):
         cylinder(bm, WIRE if k % 2 == 0 else CHAR, 0.075, 0.06, (0, 0, 0.16 + 0.06 * k), 8)
@@ -168,7 +167,7 @@ def siren_mast(bm):
 
 
 def furnace_stacks(bm):
-    # The horizon mark east of the flume, 60 m tall and read from 600 m: three tapered stacks on one long charging
+    # The horizon mark east of the flume, 60.2 m tall and read from 600 m: three tapered stacks on one long charging
     # house, soot-dark with a warning band each and a glowing mouth, the middle one tallest.
     box(bm, SOOT, (46.0, 14.0, 9.0), (0, 0, 4.5))
     box(bm, RUST, (46.6, 14.6, 1.2), (0, 0, 9.0))
@@ -182,11 +181,6 @@ def furnace_stacks(bm):
 
 
 WOOD, WOOD_D = lin("b98a55"), lin("8a6238")
-
-
-def _crate_side(bm, cx, cy, cz, sx, sy, sz):
-    # one plank slab with a darker frame on its two long edges
-    box(bm, WOOD, (sx, sy, sz), (cx, cy, cz))
 
 
 def tagged_crate(bm):
@@ -221,26 +215,26 @@ def _piece(kind):
             box(bm, WOOD, (0.9, 0.5, 0.08), (0, 0, 0)); box(bm, WOOD_D, (0.96, 0.1, 0.1), (0, 0.24, 0))
             box(bm, WOOD_D, (0.1, 0.56, 0.1), (-0.43, 0, 0))
         else:  # the brass tag on its hook, the piece the player follows
-            box(bm, BRASS, (0.46, 0.05, 0.34), (0, 0, 0)); box(bm, BONE, (0.3, 0.02, 0.06), (0, -0.03, 0.04))
-            box(bm, CHAR, (0.03, 0.03, 0.2), (0, 0.0, 0.25))
+            box(bm, BRASS, (0.46, 0.05, 0.34), (0, 0, -0.09)); box(bm, BONE, (0.3, 0.02, 0.06), (0, -0.03, -0.05))
+            box(bm, CHAR, (0.03, 0.03, 0.2), (0, 0.0, 0.16))
         bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
     return build
 
 
 def _locker_shell(bm):
-    # 3 m wide, 2.5 m tall, 1.5 m deep; the front (-Y) is open where the door hangs
-    box(bm, CONC, (3.2, 1.7, 0.2), (0, 0, 0.1))
-    box(bm, GREEN, (3.0, 0.1, 2.2), (0, 0.7, 1.3))
-    for x in (-1.45, 1.45):
-        box(bm, GREEN, (0.1, 1.5, 2.2), (x, 0, 1.3))
-    box(bm, CHAR, (3.1, 1.6, 0.14), (0, 0, 2.43))
-    box(bm, GREEN, (3.0, 1.5, 0.1), (0, 0, 0.25))
-    box(bm, CHAR, (2.8, 1.3, 0.06), (0, 0, 1.3))  # one shelf, seen when the door is open
-    box(bm, BRASS, (0.5, 0.5, 0.4), (-0.7, 0.1, 0.5)); box(bm, BRASS, (0.36, 0.36, 0.3), (0.5, 0.2, 1.48))  # what is inside
-    for x in (-1.45, 1.45):
-        box(bm, BRASS, (0.12, 0.06, 2.2), (x, -0.76, 1.3))
-    box(bm, BRASS, (3.0, 0.06, 0.12), (0, -0.76, 2.34))
-    box(bm, ORANGE, (0.3, 0.3, 0.16), (1.1, 0, 2.58))  # the lamp on top
+    # 3.0 m wide, 2.5 m tall and 1.5 m deep over everything, lamp included; the front (-Y) is open where the door hangs
+    box(bm, CONC, (3.0, 1.5, 0.2), (0, 0, 0.1))
+    box(bm, GREEN, (2.8, 0.1, 2.0), (0, 0.65, 1.2))
+    for x in (-1.35, 1.35):
+        box(bm, GREEN, (0.1, 1.4, 2.0), (x, 0, 1.2))
+    box(bm, CHAR, (2.9, 1.5, 0.14), (0, 0, 2.27))
+    box(bm, GREEN, (2.8, 1.4, 0.1), (0, 0, 0.25))
+    box(bm, CHAR, (2.6, 1.2, 0.06), (0, 0, 1.2))  # one shelf, seen when the door is open
+    box(bm, BRASS, (0.5, 0.5, 0.4), (-0.7, 0.1, 0.5)); box(bm, BRASS, (0.36, 0.36, 0.3), (0.5, 0.2, 1.38))  # what is inside
+    for x in (-1.35, 1.35):
+        box(bm, BRASS, (0.12, 0.06, 2.0), (x, -0.72, 1.2))
+    box(bm, BRASS, (2.8, 0.06, 0.12), (0, -0.72, 2.14))
+    box(bm, ORANGE, (0.3, 0.3, 0.16), (1.0, 0, 2.42))  # the lamp on top
 
 
 def req_locker(bm):
@@ -249,17 +243,16 @@ def req_locker(bm):
 
 
 def req_locker_door(bm):
-    # The brass front, 2.76 m by 2.0 m, hinged on its left edge: the origin is the hinge foot, so the game turns the
-    # door about its own up axis to pop it. Placed at (-1.38, 0.3, -0.75) in Godot terms on the locker.
-    box(bm, BRASS, (2.76, 0.08, 2.0), (1.38, 0, 1.0))
-    box(bm, RUST, (2.5, 0.04, 0.16), (1.38, -0.05, 1.0))
-    for x in (0.3, 2.46):
-        for z in (0.2, 1.8):
+    # The brass front, 2.56 m by 1.8 m, hinged on its left edge as seen from the front: the origin is the hinge foot,
+    # so the game turns the door about its own up axis to pop it. Placed at (-1.28, 0.3, 0.7) in Godot axes on the
+    # locker, which is its open front.
+    box(bm, BRASS, (2.56, 0.08, 1.8), (1.28, 0, 0.9))
+    box(bm, RUST, (2.3, 0.04, 0.16), (1.28, -0.05, 0.9))
+    for x in (0.3, 2.26):
+        for z in (0.2, 1.6):
             box(bm, CHAR, (0.1, 0.05, 0.1), (x, -0.05, z))
-    cylinder(bm, CHAR, 0.2, 0.08, (2.3, 0, 0), 10)
-    bmesh.ops.transform(bm, matrix=Matrix.Translation((2.3, -0.1, 1.0)) @ Matrix.Rotation(math.radians(90), 4, "X") @ Matrix.Translation((-2.3, 0, 0)),
-                        verts=[v for v in bm.verts if abs(v.co.x - 2.3) < 0.21 and v.co.z < 0.09 and abs(v.co.y) < 0.21])
-    box(bm, BONE, (0.5, 0.03, 0.3), (0.7, -0.05, 1.5))
+    cone(bm, CHAR, 0.2, 0.2, 0.08, (2.1, -0.06, 0.9), 10, Matrix.Rotation(math.radians(90), 4, "X"))  # the wheel handle
+    box(bm, BONE, (0.5, 0.03, 0.3), (0.7, -0.05, 1.4))
     bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
 
 
