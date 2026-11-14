@@ -6,7 +6,7 @@ extends RefCounted
 # without those methods (a build before that key landed) keeps the skee best in the stats
 # map, which merges by max; the trial and its ghost then last for the session only.
 #
-#   {"skee_best": 340, "trial": {"best_ms": 61240, "ghost": {...}}}
+#   {"skee_best": 340, "trial": {"best_ms": 61240, "ghost": {...}}, "ring": {"pylon_engineer": 7}}
 #
 # The ghost is the best lap's ball path at GHOST_HZ in the track's own space, quantised to
 # centimetres and stored as the first point ("p0") followed by per-sample deltas ("d", one
@@ -59,6 +59,26 @@ func submit_skee(score: int) -> bool:
 			push_warning("camp: record not saved: %s" % profile.last_error)
 	else:
 		_store(doc)
+	return true
+
+
+# The camp ring's best count for a pilot (camp_ring.gd), 0 when there is none.
+func ring_best(pilot: String) -> int:
+	var ring = _doc().get("ring", {})
+	return int(ring.get(pilot, 0)) if ring is Dictionary else 0
+
+
+# True when `count` beat that pilot's best (and was saved).
+func submit_ring(pilot: String, count: int) -> bool:
+	if count <= ring_best(pilot):
+		return false
+	var doc := _doc()
+	var ring = doc.get("ring", {})
+	if not ring is Dictionary:
+		ring = {}
+	ring[pilot] = count
+	doc["ring"] = ring
+	_store(doc)
 	return true
 
 

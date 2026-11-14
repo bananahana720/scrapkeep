@@ -9,7 +9,7 @@ const Push := preload("res://tests/workshop/push.gd")
 const T := preload("res://tests/support/t.gd")
 
 # Every station the hub prompts with a key (the pet pen has a zone but no key).
-const KEYED := ["achieve", "camp_skee", "camp_trial", "gate", "jukebox", "lockers", "moss", "radio", "sandbox_call_box",
+const KEYED := ["achieve", "camp_ring", "camp_skee", "camp_trial", "gate", "jukebox", "lockers", "moss", "radio", "sandbox_call_box",
 	"scrapbook", "settings"]
 
 # Rule: from the real title, the main menu's Camp button enters the walk, and every station the hub reports opens its
@@ -50,7 +50,7 @@ func _put_in(id: String) -> void:
 	await _physics(4)
 
 
-# Anything a station may start besides a page: the skee game and the time trial.
+# Anything a station may start besides a page: the skee game, the time trial and the ring's stocktake.
 func _activity() -> String:
 	var skee = _hub.root.get_node_or_null("CampSkee")
 	var trial = _hub.root.get_node_or_null("CampTrial")
@@ -58,6 +58,9 @@ func _activity() -> String:
 		return "skee"
 	if trial != null and trial.run.state != trial.State.IDLE:
 		return "trial"
+	var ring = _hub.root.get_node_or_null("CampRing")
+	if ring != null and ring.running():
+		return "ring"
 	return ""
 
 
@@ -66,6 +69,8 @@ func _end_activity(kind: String) -> void:
 		_hub.root.get_node("CampSkee").end_game(true)
 	elif kind == "trial":
 		_hub.root.get_node("CampTrial").abort()
+	elif kind == "ring":
+		_hub.root.get_node("CampRing").stop()
 	await _frames(2)
 
 
