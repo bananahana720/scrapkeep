@@ -8,9 +8,10 @@ const SurvivalCount := preload("res://src/world/survival_count.gd")
 # The Stocktake muster on the flume (BACKLOG W1-101): the survival count as an event that comes to the ball.
 # (a) with the launch flag on it is called on about one run seed in three, and on no seed with the flag off;
 # (b) a called run builds one muster site, shown nowhere until it lands;
-# (c) away from its row nothing happens; near it the siren announces it once and nothing starts for siren_s;
-# (d) when the siren ends the ring lands on the ground under the ball, shows, and count 1 begins;
-# (e) the ring then travels: it leaves the landing point and stays on the rule's loop;
+# (c) away from its row nothing happens; near it the siren announces it once and nothing starts for siren_s; a ball
+#     the Warden has engaged is neither called on nor landed on;
+# (d) when the siren ends the ring lands on the ground under the moving ball, away from its row, shows, and count 1 begins;
+# (e) the ring then travels: it sets off the way the ball was heading and stays on the rule's loop;
 # (f) with the floor clear the gate opens, and rolling out of the travelling ring from inside banks pay(1);
 # (g) a run seed that is not called builds no muster.
 
@@ -112,33 +113,54 @@ func _muster() -> void:
 		await _hold(_over(row.x - call_m - 40.0, row.y))
 	var far_quiet: bool = _announced.is_empty() and not s.started
 	var near: Vector3 = _over(row.x - call_m + 20.0, row.y)
+	# Engaged by the Warden, the ball is not called on.
+	_game.flow._engaged = true
+	for frame in 30:
+		await _hold(near)
+	far_quiet = far_quiet and _announced.is_empty()
+	_game.flow._engaged = false
 	var siren := float(s.rule["siren_s"])
 	for frame in int((siren - 0.5) * Engine.physics_ticks_per_second):
 		await _hold(near)
 	_t.check("away from its row nothing happens; near it the siren announces it once and nothing starts yet",
 		far_quiet and _announced == [siren] and not s.started and not s.visible, "far quiet %s announced %s started %s" % [far_quiet, _announced, s.started])
+	# The ball rolls east at 5 m/s as the siren ends, so the ring lands under it there and sets off east.
+	var going := Vector3(5.0, 0.0, 0.0)
+	var at := near
 	for frame in Engine.physics_ticks_per_second:
-		await _hold(near)
-	var landed := Vector2(near.x, near.z)
+		if s.started:
+			break
+		at = _over(at.x + going.x / Engine.physics_ticks_per_second, at.z)
+		_game.player.reset_to(at, going)
+		_game.player.set_velocity_now(going)
+		await physics_frame
+	var landed := Vector2(s.global_position.x, s.global_position.z)
 	_t.check("when the siren ends the ring lands under the ball, shows, and count 1 begins", s.started and s.visible and s.yard.count == 1
-		and _announced.size() == 1, "started %s visible %s count %d" % [s.started, s.visible, s.yard.count])
+		and _announced.size() == 1 and landed.distance_to(Vector2(at.x, at.z)) < 1.0 and landed.distance_to(row) > 20.0,
+		"started %s visible %s count %d, %.1f m from the ball" % [s.started, s.visible, s.yard.count, landed.distance_to(Vector2(at.x, at.z))])
 	# The ball rides with the ring, felling what arrives, and the ring travels the loop.
 	var loop: Dictionary = SurvivalCount.MOVES["loop"]
 	var furthest := 0.0
 	var on_loop := true
 	var opened := false
+	var first_step := Vector2.ZERO
+	# The loop's centre sits one radius to the right of the heading at landing (east), which is south.
+	var centre := landed + Vector2(0.0, float(loop["radius_m"]))
 	for frame in 6 * Engine.physics_ticks_per_second:
 		await _hold(_over(s.global_position.x, s.global_position.z))
-		var at := Vector2(s.global_position.x, s.global_position.z)
-		furthest = maxf(furthest, at.distance_to(landed))
-		on_loop = on_loop and at.distance_to(landed) <= 2.0 * float(loop["radius_m"]) + 0.5
+		var ring_at := Vector2(s.global_position.x, s.global_position.z)
+		if frame == 20:
+			first_step = ring_at - landed
+		furthest = maxf(furthest, ring_at.distance_to(landed))
+		on_loop = on_loop and absf(ring_at.distance_to(centre) - float(loop["radius_m"])) < 0.5
 		for enemy in s.pack:
 			if is_instance_valid(enemy):
 				enemy.take_damage(100000.0)
 		if s.yard.gate_open and s.yard_owed.is_empty():
 			opened = true
 			break
-	_t.check("the ring leaves its landing point and stays on the loop", furthest > 5.0 and on_loop, "furthest %.1f m" % furthest)
+	_t.check("the ring sets off the way the ball was heading and stays on the loop", furthest > 5.0 and on_loop and first_step.x > 1.0
+		and absf(first_step.y) < first_step.x, "furthest %.1f m, first step %s" % [furthest, first_step])
 	_t.check("a clear floor opens the gate on the travelling ring", opened and s.yard.cleared == 1, "opened %s cleared %d" % [opened, s.yard.cleared])
 	await _hold(_over(s.global_position.x, s.global_position.z))
 	var scrap_before: int = _game.run.scrap

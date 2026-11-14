@@ -631,10 +631,9 @@ func survival_spec(map, kind: String) -> Dictionary:
 	var rows: Array = map.survival_sites.filter(func(row: Dictionary) -> bool: return row["form"] == form)
 	if rows.is_empty() or not SurvivalCount.ROSTERS.has(ctx.stages.world_of(ctx.run.stage)):
 		return {}
-	var draw := hash([ctx.rng.seed, ctx.run.run_seed, "survival_" + form])
-	if posmod(draw / 7, int(RULES[kind].get("one_in", 1))) != 0:
+	if posmod(hash([ctx.rng.seed, ctx.run.run_seed, "survival_called_" + form]), int(RULES[kind].get("one_in", 1))) != 0:
 		return {}
-	return rows[posmod(draw, rows.size())]
+	return rows[posmod(hash([ctx.rng.seed, ctx.run.run_seed, "survival_" + form]), rows.size())]
 
 
 # The site this run builds for an authored spec (W1-70): the spec itself, or one of its alts (park_map.gd), drawn
@@ -2083,7 +2082,7 @@ func _watch_yard(s: Site, delta: float, ball: Vector3) -> void:
 		yard.begin(Vector2(s.global_position.x, s.global_position.z), Vector2(going.x, going.z))
 		_yard_owe(s)
 		ctx.events.event_started.emit(s.id)
-	elif SurvivalCount.FORMS[yard.form]["move"] != "still":
+	elif s.rule.has("siren_s"):
 		var ground: Vector2 = yard.ground()
 		s.global_position = ctx.terrain.drop_point(ground.x, ground.y, 0.0)
 	var inside := _planar(ball, s.global_position) <= float(s.rule["ring"])
@@ -2115,12 +2114,16 @@ func _watch_yard(s: Site, delta: float, ball: Vector3) -> void:
 
 
 # The muster comes to the ball: within `call_m` of its row the siren announces it, and `siren_s` later its ring
-# lands on the ground under the ball. True on the frame it lands.
+# lands on the ground under the ball. True on the frame it lands. It neither calls nor lands on a ball the Warden
+# has engaged: the siren waits, and a ball that goes to the fight is not followed in. The announcement names no
+# place (the ring lands wherever the ball is by then), so no edge marker points at one.
 func _muster_lands(s: Site, delta: float, ball: Vector3) -> bool:
+	if ctx.flow.engaged():
+		return false
 	if s.yard_siren < 0.0:
 		if _planar(ball, s.global_position) <= float(s.rule["call_m"]):
 			s.yard_siren = float(s.rule["siren_s"])
-			ctx.events.event_announced.emit(s.id, s.yard_siren, ball)
+			ctx.events.event_announced.emit(s.id, s.yard_siren, Vector3.INF)
 		return false
 	s.yard_siren -= delta
 	if s.yard_siren > 0.0:
