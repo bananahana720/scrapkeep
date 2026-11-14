@@ -69,8 +69,8 @@ func _init() -> void:
 			_outfit = arg.trim_prefix("--outfit=")
 		elif arg == "--glance=1":
 			_glance = true
-		elif arg == "--shade=1":
-			_shade = true
+		elif arg.begins_with("--shade="):
+			_shade = arg.trim_prefix("--shade=") == "1"
 		elif arg.begins_with("--paint="):
 			_paint = arg.trim_prefix("--paint=")
 		elif arg.begins_with("--load="):
