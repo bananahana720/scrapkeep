@@ -34,12 +34,18 @@ outputs with the account holder. Outputs made on a free account are public domai
 | --- | --- | --- | --- | --- | --- | --- |
 | camp/camp_pet_tripo.glb | 4bbd2038-8fe8-48d9-8fda-afda32599557 | prompts/camp_pet.txt | 30 | 2,000 (1,100) | 1 (1) | yaw -90, height, 8 sockets |
 | world_one/enemy_chaser_tripo.glb | 6013f673-bd92-4d65-9bc4-7e6abff67f8c | prompts/enemy_chaser.txt | 30 | 3,175 (3,176) | 5 (5) | yaw 90, box, claws below 22 %, fin above 80 % (rubber) |
+| world_one/enemy_lobber_tripo.glb | 904d0a41-6627-44d7-a982-ce68527c27f0 | prompts/enemy_lobber_whole.txt | 120 (four candidates over two prompts) | 6,699 (6,720) | 5 (5) | tripo_fit.py, yaw 90, `--name LobberBody --max-tris 6700`, then lobber_parts.py |
+| world_one/enemy_swatter_tripo.glb (SwatterBody only) | fbbb83dd-0bbc-4636-9f2b-172f3a03d2dd (the second candidate; the row named the first candidate's id until 14 November 2026) | prompts/enemy_swatter_body.txt | 60 | 2,753 (2,760) | 3 (3) | tripo_swap.py, yaw 90, `--fit fill --max-tris 2650 --bright match` |
+| world_one/enemy_hooker_tripo.glb (the barrel and head of HookerBody only) | 27fecf60-4f86-4d56-92cd-e06c64efbf31 (the second candidate; the row named the first candidate's id until 14 November 2026) | prompts/enemy_hooker_body.txt | 60 | 6,380 (6,414) | 3 (3) | tripo_swap.py, yaw 90, `--fit fill --max-tris 6100 --bright match --region "-0.8,-0.8,-1.15,0.72,0.8,1.65"` |
+| world_one/enemy_netcaster_tripo.glb (the control box of NetcasterBody only) | ff17498a-5ed6-4f6b-b933-5f27f62e4cab (the first swatter body candidate, unused by the swatter) | prompts/enemy_swatter_body.txt | 0 (an unused candidate) | 6,993 (7,048) | 2 (2) | tripo_swap.py, yaw 90, `--fit fill --region ... --max-tris 7000 --bright match` |
 | world_one/enemy_boom_tender_tripo.glb (TenderHull only) | cfa436e8-08dc-42f8-b416-53dee2a7619b | prompts/enemy_boom_tender.txt | 30 | 7,375 (7,928) | as authored | tripo_swap.py, yaw 90, box |
 | park/props/dam/gate_wheelhouse_a{,_lod1,_lod2}_tripo.glb | 7f215046-0286-4f10-b0cd-6d0121db046e | prompts/gate_wheelhouse.txt | 30 | 6,000 / 3,000 / 900 (16,588 / 8,294 / 2,488) | 1 | box |
 | park/props/dam/mixer_wreck_a{,_lod1,_lod2}_tripo.glb | see registry row | prompts/mixer_wreck.txt | 60 (2 candidates) | 6,000 / 3,000 / 898 (12,740 / 6,370 / 1,904) | 1 | box |
 | park/props/dam/survey_tent_a{,_lod1,_lod2}_tripo.glb | see registry row | prompts/survey_tent.txt | 60 (2 candidates) | 5,000 / 2,500 / 750 (8,840 / 4,420 / 1,326) | 1 | box |
 | park/props/flume/skiff_on_blocks_a{,_lod1,_lod2}_tripo.glb | Studio workspace 91afa2b0-76cf-452c-8c73-050af720aee6 | typed in Studio, not saved | 20 Pro (texture; the Smart Mesh batch of 4 was free on the trial counter) | 5,435 / 2,700 / 799 (11,524 / 5,762 / 1,728) | 1 | yaw 90, box |
 | park/props/flume/boom_crane_wreck_a{,_lod1,_lod2}_tripo.glb | Studio workspace 5accd8b9-3eec-4698-9050-615d8214c2d5 | typed in Studio, not saved | 20 Pro (texture) | 5,999 / 3,000 / 1,237 (17,782 / 8,890 / 2,666) | 1 | yaw 0, box |
+| park/props/flume/sluice_shed_a{,_lod1,_lod2}_tripo.glb | Studio workspace 05a306ba-03b8-48d6-bc96-2dd5d84cc071 | prompts/sluice_shed.txt | 120 Pro (Smart Mesh set of four, then texture) | 5,499 / 2,700 / 799 (10,364 / 5,182 / 1,553) | 1 | yaw 90, box |
+| park/props/dam/compressor_cart_a{,_lod1,_lod2}_tripo.glb | Studio workspace f54a0591-0944-401c-b714-88dbfc594ca6 | prompts/compressor_cart.txt | 120 Pro | 1,499 / 750 / 216 (1,500 / 750 / 222) | 1 | yaw 0, box |
 
 The two runner-up candidates cost 60 credits more (tasks 4ff28976-cb42-4c54-a38e-3f11ad6ff8d4 and
 bf9a1416-9b54-4d86-9cc2-bc2f7b50791f). Counts are Godot's, from `tests/tripo_variants_test.gd`.
@@ -187,6 +193,30 @@ World 1 points of interest, 14 November 2026 (API credits, text to model v3.1, s
 The stand and the gate came back narrower and taller than the placement asked for (2 m across, and 6.7 m tall), so both are fitted with `--wide` and `--tall` together, which scales the ground plane and the height separately. Look at the render when using both: these two chunky shapes take it, a thin or round one may not.
 
 The runner-up candidates are tasks f5a7ba00-eb9f-4153-a98c-f80c4fc5fc28 (stand), 3caed186-71a7-42da-b675-1e4eb764475f (gate) and 90a8c17b-94b5-4bec-b359-f07be0b83963 (post). All six candidates were usable. The count boards came back with painted digits although the prompt said no text; they ship as flat colour patches, and the game should draw the live number itself.
+
+## Crew enemies (a new body, the authored tool kept)
+
+The Spillway crew are a body mesh plus a tool mesh (the swatter's paddle, the hooker's harpoon). The tool carries the enemy's warning, so it stays authored and only the body is swapped:
+
+`blender -b --factory-startup -P tools/tripo/tripo_swap.py -- --in <tripo model.glb> --ref assets/models/world_one/enemy_swatter.glb --node SwatterBody --out assets/models/world_one/enemy_swatter_tripo.glb --yaw 90 --fit fill --max-tris 2650`
+
+- **Colour.** The game paints the crew from vertex colour, and the two slots only say which surface flashes. `tripo_swap.py` sees this (a white slot beside a coloured one) and gives each face the nearest of the authored node's own vertex colours, in that colour's slot. Before 14 November 2026 it flattened such a body to one colour.
+- **Size.** `--fit fill` stretches the new body to the authored body's bounds on each axis, so the collider, the tool's pivot and the enemy's height stay as they were. `--fit box` keeps the generated proportions and left the swatter half its height.
+- **The enemy's own test decides.** Run `tests/enemy_<name>_asset_test.gd -- --models=tripo`. A whole generated netcaster failed it: the authored body is a frame with an open window where the game draws the net, and a stout generated robot put 804 triangles in that window (`prompts/enemy_netcaster_whole.txt`, task 76b8b5f4-ce6a-4468-8a4a-0fde6507f4d3, 60 credits, not shipped).
+- **A body that holds a frame** (the netcaster). `--region "x0,y0,z0,x1,y1,z1"` (the node's own Blender space, Z up) swaps only the faces whose centres lie in that box and keeps the node's other faces as authored. The netcaster keeps its masts, crossbar and feet, and only its control box becomes a generated torso: `--node NetcasterBody --yaw 90 --fit fill --region "-0.5,-0.85,-1.15,0.5,0.11,1.0" --max-tris 7000`. The torso is the unused first swatter body candidate, so it cost no credits.
+- **Brightness.** Add `--bright match`. A generated texture is darker than the authored paint, so many faces snapped to charcoal and the PC look of 14 November 2026 found the swatter and the hooker standing out less against the dam rock. The option lifts the sampled colours until the body's mean brightness (weighted by area, kept faces included) reaches the authored body's. The tool prints the new part's brightness and the brightness of the faces it replaced (`lum`, `lum_ref`); with `--region` neither is the whole-body mean, which only the test measures: `tests/tripo_variants_test.gd` (`BODIES`) fails a body under 95 percent of the authored one.
+- **Silhouette.** The hooker's authored body is a barrel beside a thin mast. Swapping the whole node stretched one robot over both and read as a tall block, so its swap is limited to the barrel with `--region`, as the netcaster's is.
+- **Skinned bodies** (the plated brute, the foreman, the dispatcher, the linker, the splitter) cannot be swapped by this tool. They need the pilot route below.
+
+## The lobber (a whole model split into moving parts)
+
+The game moves the lobber's tube and swells its bulb, so its file must hold three meshes at the authored pivots. `lobber_parts.py` cuts them out of a whole fitted model:
+
+`blender -b --factory-startup -P tools/tripo/lobber_parts.py -- --in <tripo_fit output> --ref assets/models/world_one/enemy_lobber.glb --out assets/models/world_one/enemy_lobber_tripo.glb`
+
+It squeezes the model inside the 2.4 m collider, finds the brass ball (the largest joined brass patch; it stops if that patch is not a ball on the axis), stretches the model so the ball's centre lands on the authored bulb pivot, scales the ball to reach 0.9 m from that pivot, as the authored bulb does, and cuts body, tube and bulb in the authored slot order. The prompt must ask for a brass ball joint between the chassis and the tube, and for an upright tube: the first prompt's leaning tube reached outside the collider and the lobber's own test (`enemy_lobber_asset_test -- --models=tripo`) failed it.
+
+**A warning must never read weaker than the one it replaces** (the board, 14 November 2026). The first lobber shipped a 0.65 m bulb, and the PC look measured about half the bright area of the authored 0.9 m bulb before a shot. Any Tripo part that carries a tell (a glow, a swell, a raised tool) is sized to the authored part, not to what looks tidy on the new body.
 
 ## Pilots (a new body on the authored skeleton)
 

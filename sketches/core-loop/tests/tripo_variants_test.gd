@@ -16,6 +16,10 @@ const HeroAssets := preload("res://src/presentation/hero_assets.gd")
 const PAIRS := {
 	"res://assets/models/world_one/enemy_chaser.glb": {"tris": 3400, "draws": 5},
 	"res://assets/models/camp/camp_pet.glb": {"tris": 2000, "draws": 1},
+	"res://assets/models/world_one/enemy_lobber.glb": {"tris": -1, "draws": -1},
+	"res://assets/models/world_one/enemy_swatter.glb": {"tris": -1, "draws": -1},
+	"res://assets/models/world_one/enemy_hooker.glb": {"tris": -1, "draws": -1},
+	"res://assets/models/world_one/enemy_netcaster.glb": {"tris": -1, "draws": -1},
 	"res://assets/models/world_one/enemy_boom_tender.glb": {"tris": -1, "draws": -1},
 	"res://assets/models/park/props/dam/gate_wheelhouse_a.glb": {"tris": -1, "draws": -1},
 	"res://assets/models/park/props/dam/gate_wheelhouse_a_lod1.glb": {"tris": -1, "draws": -1},
@@ -26,12 +30,18 @@ const PAIRS := {
 	"res://assets/models/park/props/dam/survey_tent_a.glb": {"tris": -1, "draws": -1},
 	"res://assets/models/park/props/dam/survey_tent_a_lod1.glb": {"tris": -1, "draws": -1},
 	"res://assets/models/park/props/dam/survey_tent_a_lod2.glb": {"tris": -1, "draws": -1},
+	"res://assets/models/park/props/dam/compressor_cart_a.glb": {"tris": -1, "draws": -1},
+	"res://assets/models/park/props/dam/compressor_cart_a_lod1.glb": {"tris": -1, "draws": -1},
+	"res://assets/models/park/props/dam/compressor_cart_a_lod2.glb": {"tris": -1, "draws": -1},
 	"res://assets/models/park/props/flume/skiff_on_blocks_a.glb": {"tris": -1, "draws": -1},
 	"res://assets/models/park/props/flume/skiff_on_blocks_a_lod1.glb": {"tris": -1, "draws": -1},
 	"res://assets/models/park/props/flume/skiff_on_blocks_a_lod2.glb": {"tris": -1, "draws": -1},
 	"res://assets/models/park/props/flume/boom_crane_wreck_a.glb": {"tris": -1, "draws": -1},
 	"res://assets/models/park/props/flume/boom_crane_wreck_a_lod1.glb": {"tris": -1, "draws": -1},
 	"res://assets/models/park/props/flume/boom_crane_wreck_a_lod2.glb": {"tris": -1, "draws": -1},
+	"res://assets/models/park/props/flume/sluice_shed_a.glb": {"tris": -1, "draws": -1},
+	"res://assets/models/park/props/flume/sluice_shed_a_lod1.glb": {"tris": -1, "draws": -1},
+	"res://assets/models/park/props/flume/sluice_shed_a_lod2.glb": {"tris": -1, "draws": -1},
 }
 
 var failures := 0
@@ -144,7 +154,7 @@ func _run() -> void:
 		_check(t.draws <= cap.draws, "%s sibling draws %d <= %d (authored %d)" % [authored.get_file(), t.draws, cap.draws, a.draws])
 		a_node.free()
 		t_node.free()
-	_check(PAIRS.size() == 18, "18 authored-sibling pairs checked (%d)" % PAIRS.size())
+	_check(PAIRS.size() == 28, "28 authored-sibling pairs checked (%d)" % PAIRS.size())
 	# The game's own load sites must reach the sibling, not only ModelVariants.path: the shared enemy
 	# caster and the park prop mesh cache, each compared by triangle count with the sibling file.
 	var tender := "res://assets/models/world_one/enemy_boom_tender.glb"
@@ -164,6 +174,8 @@ func _run() -> void:
 	_check_pilots()
 	await _check_head_outfits()
 	_check_poi_props()
+	_check_tells()
+	_check_bodies()
 	print("tripo_variants_test: %s" % ("PASS" if failures == 0 else "FAIL (%d)" % failures))
 	quit(1 if failures > 0 else 0)
 
@@ -351,6 +363,88 @@ func _check_head_outfits() -> void:
 				_check(scale > 1.05 and absf(ratio - scale) < 0.05 * scale, "%s's head outfit grows by the node's size (%.2f, node %.2f)" % [row.pilot, ratio, scale])
 			else:
 				_check((boxes["_tripo"] as AABB).is_equal_approx(boxes[""]), "%s's head outfit mounts as on the authored pilot" % row.pilot)
+
+
+# A warning must never read weaker than the one it replaces (the board, 14 November 2026): a part that carries an
+# enemy's tell is at least as large on the sibling as on the authored model. [authored file, part node].
+const TELLS := [
+	["res://assets/models/world_one/enemy_lobber.glb", "LobberBulb"],
+	["res://assets/models/world_one/enemy_swatter.glb", "SwatterPaddle"],
+	["res://assets/models/world_one/enemy_hooker.glb", "HookerHarpoonMesh"],
+]
+
+
+func _part_reach(path: String, part: String) -> float:
+	var scene := load(path) as PackedScene
+	if scene == null:
+		return -1.0
+	var node := scene.instantiate()
+	var mi := node.find_child(part, true, false) as MeshInstance3D
+	var reach := -1.0
+	if mi != null:
+		for s in mi.mesh.get_surface_count():
+			for v in mi.mesh.surface_get_arrays(s)[Mesh.ARRAY_VERTEX] as PackedVector3Array:
+				reach = maxf(reach, v.length())
+	node.free()
+	return reach
+
+
+func _check_tells() -> void:
+	for row in TELLS:
+		var authored := _part_reach(row[0], row[1])
+		var sibling := _part_reach((row[0] as String).replace(".glb", "_tripo.glb"), row[1])
+		_check(authored > 0.0 and sibling >= 0.98 * authored, "%s on the sibling reaches as far as the authored one (%.3f, authored %.3f)" % [row[1], sibling, authored])
+
+
+# A crew enemy's body must stand out against the dam rock as the authored one does (the board's PC look of the
+# swatter and the hooker, 14 November 2026): the body's mean brightness, weighted by area, is at least 95 percent
+# of the authored body's. Brightness is the slot colour times the vertex colour, as the game paints the crew.
+# [authored file, body node].
+const BODIES := [
+	["res://assets/models/world_one/enemy_swatter.glb", "SwatterBody"],
+	["res://assets/models/world_one/enemy_hooker.glb", "HookerBody"],
+	["res://assets/models/world_one/enemy_netcaster.glb", "NetcasterBody"],
+]
+
+
+func _part_brightness(path: String, part: String) -> float:
+	var scene := load(path) as PackedScene
+	if scene == null:
+		return -1.0
+	var node := scene.instantiate()
+	var mi := node.find_child(part, true, false) as MeshInstance3D
+	var total := 0.0
+	var area := 0.0
+	if mi != null and mi.mesh != null:
+		for s in mi.mesh.get_surface_count():
+			var arrays := mi.mesh.surface_get_arrays(s)
+			var verts := arrays[Mesh.ARRAY_VERTEX] as PackedVector3Array
+			var cols: PackedColorArray = arrays[Mesh.ARRAY_COLOR] if arrays[Mesh.ARRAY_COLOR] != null else PackedColorArray()
+			var index: PackedInt32Array = arrays[Mesh.ARRAY_INDEX] if arrays[Mesh.ARRAY_INDEX] != null else PackedInt32Array()
+			var mat := mi.mesh.surface_get_material(s) as BaseMaterial3D
+			var base := mat.albedo_color if mat != null else Color.WHITE
+			if cols.size() != verts.size():  # the crew is painted from vertex colour; a body that lost it must not read as bright
+				node.free()
+				return -1.0
+			var count := index.size() if not index.is_empty() else verts.size()
+			for t in range(0, count - 2, 3):
+				var ids := [t, t + 1, t + 2] if index.is_empty() else [index[t], index[t + 1], index[t + 2]]
+				var a := 0.5 * (verts[ids[1]] - verts[ids[0]]).cross(verts[ids[2]] - verts[ids[0]]).length()
+				var c := base.srgb_to_linear()  # glTF vertex colour is linear; the imported slot colour is sRGB
+				c = c * ((cols[ids[0]] + cols[ids[1]] + cols[ids[2]]) / 3.0)
+				c = c.linear_to_srgb()
+				total += a * (0.2126 * c.r + 0.7152 * c.g + 0.0722 * c.b)
+				area += a
+	node.free()
+	return total / area if area > 0.0 else -1.0
+
+
+func _check_bodies() -> void:
+	_check(BODIES.size() == 3, "3 crew bodies checked for brightness (%d)" % BODIES.size())
+	for row in BODIES:
+		var authored := _part_brightness(row[0], row[1])
+		var sibling := _part_brightness((row[0] as String).replace(".glb", "_tripo.glb"), row[1])
+		_check(authored > 0.0 and sibling >= 0.95 * authored, "%s on the sibling is as bright as the authored one (%.3f, authored %.3f)" % [row[1], sibling, authored])
 
 
 # The world 1 point of interest props have no authored twin (tools/tripo/README.md, "New props"). The loader that places them

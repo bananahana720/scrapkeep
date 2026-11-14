@@ -17056,6 +17056,17 @@
    }
   },
   {
+   "id": "compressor_cart_a_lod1_tripo",
+   "path": "res://assets/models/park/props/dam/compressor_cart_a_lod1_tripo.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_dam.json) through src/presentation/model_variants.gd (--models=tripo)",
+   "provenance": {
+    "recipe": "tools/tripo/README.md",
+    "note": "Generated in Tripo Studio (studio.tripo3d.ai, Smart Mesh, P2.0, text prompt tools/tripo/prompts/compressor_cart.txt, then Texture; workspace id f54a0591-0944-401c-b714-88dbfc594ca6, Studio asset name 'air compressor cart 3d model', one of four candidates) on Andrew's paid Pro account (Tripo terms 5.2: the outputs belong to the account holder); fitted by tools/tripo/tripo_fit.py inside the authored bounds; LOD by decimation; faces snapped to the authored palette, no texture ships. sha256 523fb19a37cc5264cde608f8f333504cc5541a3e305bf505c0bb5ef68eb63009"
+   }
+  },
+  {
    "id": "dprop_dam_compressor_cart_a_lod2",
    "path": "res://assets/models/park/props/dam/compressor_cart_a_lod2.glb",
    "class": "dress_prop",
@@ -17081,6 +17092,28 @@
      2.633,
      3.3347
     ]
+   }
+  },
+  {
+   "id": "compressor_cart_a_lod2_tripo",
+   "path": "res://assets/models/park/props/dam/compressor_cart_a_lod2_tripo.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_dam.json) through src/presentation/model_variants.gd (--models=tripo)",
+   "provenance": {
+    "recipe": "tools/tripo/README.md",
+    "note": "Generated in Tripo Studio (studio.tripo3d.ai, Smart Mesh, P2.0, text prompt tools/tripo/prompts/compressor_cart.txt, then Texture; workspace id f54a0591-0944-401c-b714-88dbfc594ca6, Studio asset name 'air compressor cart 3d model', one of four candidates) on Andrew's paid Pro account (Tripo terms 5.2: the outputs belong to the account holder); fitted by tools/tripo/tripo_fit.py inside the authored bounds; LOD by decimation; faces snapped to the authored palette, no texture ships. sha256 463745ac55d53106ccf6198d186b2d3effc9b9ede8774ff74e1d8443758c17c4"
+   }
+  },
+  {
+   "id": "compressor_cart_a_tripo",
+   "path": "res://assets/models/park/props/dam/compressor_cart_a_tripo.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_dam.json) through src/presentation/model_variants.gd (--models=tripo)",
+   "provenance": {
+    "recipe": "tools/tripo/README.md",
+    "note": "Generated in Tripo Studio (studio.tripo3d.ai, Smart Mesh, P2.0, text prompt tools/tripo/prompts/compressor_cart.txt, then Texture; workspace id f54a0591-0944-401c-b714-88dbfc594ca6, Studio asset name 'air compressor cart 3d model', one of four candidates) on Andrew's paid Pro account (Tripo terms 5.2: the outputs belong to the account holder); fitted by tools/tripo/tripo_fit.py inside the authored bounds; LOD by decimation; faces snapped to the authored palette, no texture ships. sha256 207ed23082d51ee4abf2ffb82af1d68fa80628542555f041febc1ae45bcec5a0"
    }
   },
   {
@@ -22765,6 +22798,17 @@
    }
   },
   {
+   "id": "sluice_shed_a_lod1_tripo",
+   "path": "res://assets/models/park/props/flume/sluice_shed_a_lod1_tripo.glb",
+   "class": "dress_hero",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_flume.json) through src/presentation/model_variants.gd (--models=tripo)",
+   "provenance": {
+    "recipe": "tools/tripo/README.md",
+    "note": "Generated in Tripo Studio (studio.tripo3d.ai, Smart Mesh, P2.0, text prompt tools/tripo/prompts/sluice_shed.txt, then Texture; workspace id 05a306ba-03b8-48d6-bc96-2dd5d84cc071, Studio asset name 'desert sluice shed 3d model', the first of four candidates) on Andrew's paid Pro account (Tripo terms 5.2: the outputs belong to the account holder); fitted by tools/tripo/tripo_fit.py inside the authored bounds, turned 90 degrees so the wheel faces as the authored wheel does; LOD by decimation; faces snapped to the authored palette, no texture ships. sha256 928178bbc3301d965c9add28a6cb774144a7cd2d97bd4628331ab27777ff5982"
+   }
+  },
+  {
    "id": "dprop_flume_sluice_shed_a_lod2",
    "path": "res://assets/models/park/props/flume/sluice_shed_a_lod2.glb",
    "class": "dress_hero",
@@ -22790,6 +22834,28 @@
      5.6211,
      7.3262
     ]
+   }
+  },
+  {
+   "id": "sluice_shed_a_lod2_tripo",
+   "path": "res://assets/models/park/props/flume/sluice_shed_a_lod2_tripo.glb",
+   "class": "dress_hero",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_flume.json) through src/presentation/model_variants.gd (--models=tripo)",
+   "provenance": {
+    "recipe": "tools/tripo/README.md",
+    "note": "Generated in Tripo Studio (studio.tripo3d.ai, Smart Mesh, P2.0, text prompt tools/tripo/prompts/sluice_shed.txt, then Texture; workspace id 05a306ba-03b8-48d6-bc96-2dd5d84cc071, Studio asset name 'desert sluice shed 3d model', the first of four candidates) on Andrew's paid Pro account (Tripo terms 5.2: the outputs belong to the account holder); fitted by tools/tripo/tripo_fit.py inside the authored bounds, turned 90 degrees so the wheel faces as the authored wheel does; LOD by decimation; faces snapped to the authored palette, no texture ships. sha256 5a9dd926e4973c5a163813e44ef1026257bb5dc9c249700cd2d65d3f875a4f1e"
+   }
+  },
+  {
+   "id": "sluice_shed_a_tripo",
+   "path": "res://assets/models/park/props/flume/sluice_shed_a_tripo.glb",
+   "class": "dress_hero",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_flume.json) through src/presentation/model_variants.gd (--models=tripo)",
+   "provenance": {
+    "recipe": "tools/tripo/README.md",
+    "note": "Generated in Tripo Studio (studio.tripo3d.ai, Smart Mesh, P2.0, text prompt tools/tripo/prompts/sluice_shed.txt, then Texture; workspace id 05a306ba-03b8-48d6-bc96-2dd5d84cc071, Studio asset name 'desert sluice shed 3d model', the first of four candidates) on Andrew's paid Pro account (Tripo terms 5.2: the outputs belong to the account holder); fitted by tools/tripo/tripo_fit.py inside the authored bounds, turned 90 degrees so the wheel faces as the authored wheel does; LOD by decimation; faces snapped to the authored palette, no texture ships. sha256 747164b788920deb13b3f014752f31b2a0104142d94faf2f376ce86a512656f1"
    }
   },
   {
@@ -37461,6 +37527,17 @@
    "loader": "src/combat/hooker.gd (load of this path)"
   },
   {
+   "id": "enemy_hooker_tripo",
+   "path": "res://assets/models/world_one/enemy_hooker_tripo.glb",
+   "class": "enemy",
+   "ships": true,
+   "loader": "src/combat/hooker.gd through src/presentation/model_variants.gd (--models=tripo)",
+   "provenance": {
+    "recipe": "tools/tripo/README.md",
+    "note": "Generated by Tripo (text-to-model v3.1, smart_low_poly, task 27fecf60-4f86-4d56-92cd-e06c64efbf31, the second of two candidates) from tools/tripo/prompts/enemy_hooker_body.txt on a paid account (Tripo terms 5.2: the outputs belong to the account holder); tools/tripo/tripo_swap.py replaced only the barrel and head of the HookerBody mesh (--region -0.8,-0.8,-1.15 to 0.72,0.8,1.65, --fit fill), so the thin mast and reel stay as authored, each face taking the nearest of the authored node's own vertex colours and its slot; the authored harpoon (the hooker's tell) is kept; no texture ships. Refitted 14 November 2026 with --bright match, which lifts the sampled colours until the body is as bright as the authored one (the board's PC look). sha256 b9f56347dfc46372b8c39993acccc0c65bc1c8bdce2e916e02b81459613d0fe1"
+   }
+  },
+  {
    "id": "enemy_jolt_layer",
    "path": "res://assets/models/world_one/enemy_jolt_layer.glb",
    "class": "enemy",
@@ -37493,6 +37570,21 @@
    "exception_why": "lobber test ceiling 5 draws"
   },
   {
+   "id": "enemy_lobber_tripo",
+   "path": "res://assets/models/world_one/enemy_lobber_tripo.glb",
+   "class": "enemy",
+   "ships": true,
+   "loader": "src/combat/lobber.gd through src/presentation/model_variants.gd (--models=tripo)",
+   "exception": {
+    "draws": 5
+   },
+   "exception_why": "5 draws, as enemy_lobber.glb: the body and the tube in two slots each, the bulb in one",
+   "provenance": {
+    "recipe": "tools/tripo/README.md",
+    "note": "Generated by Tripo (text-to-model v3.1, smart_low_poly, task 904d0a41-6627-44d7-a982-ce68527c27f0, the first of two upright candidates) from tools/tripo/prompts/enemy_lobber_whole.txt on a paid account (Tripo terms 5.2: the outputs belong to the account holder); fitted by tools/tripo/tripo_fit.py to the authored height and slots, then split by tools/tripo/lobber_parts.py into LobberBody, LobberBarrel and LobberBulb at the authored pivots, squeezed to 0.85 across to fit the 2.4 m collider, the bulb scaled 1.95 times to reach 0.9 m from its pivot, as the authored bulb does (the PC look of 14 Nov 2026 found the 0.65 m bulb's shot warning weaker); no texture ships. sha256 ce9fa98221563bf490e87fcc131b1e6c6069af92ba9816c89ee09f4b76bcbd95"
+   }
+  },
+  {
    "path": "res://assets/models/world_one/enemy_mag_trapper.glb",
    "class": "enemy",
    "ships": true,
@@ -37520,6 +37612,17 @@
    "class": "enemy",
    "ships": true,
    "loader": "src/combat/netcaster.gd (load of this path)"
+  },
+  {
+   "id": "enemy_netcaster_tripo",
+   "path": "res://assets/models/world_one/enemy_netcaster_tripo.glb",
+   "class": "enemy",
+   "ships": true,
+   "loader": "src/combat/netcaster.gd through src/presentation/model_variants.gd (--models=tripo)",
+   "provenance": {
+    "recipe": "tools/tripo/README.md",
+    "note": "Generated by Tripo (text-to-model v3.1, smart_low_poly, task ff17498a-5ed6-4f6b-b933-5f27f62e4cab, the first of the two swatter body candidates, unused by the swatter) from tools/tripo/prompts/enemy_swatter_body.txt on a paid account (Tripo terms 5.2: the outputs belong to the account holder); tools/tripo/tripo_swap.py --region replaced only the control box of the NetcasterBody mesh (the faces whose centres lie in -0.5,-0.85,-1.15 to 0.5,0.11,1.0), stretched to those faces' bounds (--fit fill); the authored masts, crossbar and feet that frame the net window are kept as authored; no texture ships. Made 14 November 2026 with --bright match, which lifts the sampled colours until the body is as bright as the authored one (the board's PC look). sha256 59a2d8115f50c5eef2bbf270e5ae38d439eb5e07f8d889ec969964a8ce31bdcb"
+   }
   },
   {
    "path": "res://assets/models/world_one/enemy_plated_brute.glb",
@@ -37595,6 +37698,17 @@
     "recipe": "tools/blender/world_one/enemy_swatter.py",
     "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D3/out/BUILD-SPEC.md",
     "note": "Ported world-one recipe; D3 supplies the shared enemy budget contract."
+   }
+  },
+  {
+   "id": "enemy_swatter_tripo",
+   "path": "res://assets/models/world_one/enemy_swatter_tripo.glb",
+   "class": "enemy",
+   "ships": true,
+   "loader": "src/combat/swatter.gd through src/presentation/model_variants.gd (--models=tripo)",
+   "provenance": {
+    "recipe": "tools/tripo/README.md",
+    "note": "Generated by Tripo (text-to-model v3.1, smart_low_poly, task fbbb83dd-0bbc-4636-9f2b-172f3a03d2dd, the second of two candidates) from tools/tripo/prompts/enemy_swatter_body.txt on a paid account (Tripo terms 5.2: the outputs belong to the account holder); tools/tripo/tripo_swap.py replaced the SwatterBody mesh only, stretched to that node's own bounds (--fit fill), each face taking the nearest of the authored node's own vertex colours and its slot; the authored paddle (the swatter's tell) is kept; no texture ships. Refitted 14 November 2026 with --bright match, which lifts the sampled colours until the body is as bright as the authored one (the board's PC look). sha256 69e2e95119456016590c7f5d002c1011cac3cbb59c8406e1afd43997d312d932"
    }
   },
   {
@@ -38841,6 +38955,9 @@
   "cliff_dwelling_row_detail1",
   "cliff_dwelling_row_detail2",
   "companion_skin_till_bell",
+  "compressor_cart_a_lod1_tripo",
+  "compressor_cart_a_lod2_tripo",
+  "compressor_cart_a_tripo",
   "cottonwood_crown",
   "cottonwood_detail1",
   "cottonwood_detail2",
@@ -39900,12 +40017,15 @@
   "enemy_gap_net",
   "enemy_gap_net_curtain",
   "enemy_gyro_jammer",
+  "enemy_hooker_tripo",
   "enemy_jolt_layer",
   "enemy_kite_drone",
   "enemy_lamp_swarm",
   "enemy_line_cutter",
   "enemy_linker",
+  "enemy_lobber_tripo",
   "enemy_miniboss",
+  "enemy_netcaster_tripo",
   "enemy_pit_jaw",
   "enemy_prop_crew",
   "enemy_ramp_flipper",
@@ -39914,6 +40034,7 @@
   "enemy_splitter_piece",
   "enemy_swarm_remnant",
   "enemy_swatter",
+  "enemy_swatter_tripo",
   "enemy_vault",
   "escape_rail",
   "escape_rail__primer_coil",
@@ -40460,6 +40581,9 @@
   "slot_canyon_flow_bend30_detail2",
   "slot_canyon_flow_detail1",
   "slot_canyon_flow_detail2",
+  "sluice_shed_a_lod1_tripo",
+  "sluice_shed_a_lod2_tripo",
+  "sluice_shed_a_tripo",
   "spil9",
   "spillway_tunnel",
   "spillway_tunnel_detail1",
