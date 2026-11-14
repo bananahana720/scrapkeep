@@ -407,7 +407,8 @@ func quiet(on: bool) -> void:
 # ---- The briefing ----
 
 # The run's briefing: the kit pick (the pick above), then the start pick of three (flow's start
-# card), one after the other on a paused screen before the ball rolls. The start card is flow's
+# card), one after the other on a paused screen: before the ball rolls, or, on a stage with a yard
+# lock, at the yard's clear (flow.start_pick_waits). The start card is flow's
 # and draws on its own layer over this one; this layer gives it the veil, the heading and the
 # hold. Only an armed workshop briefs, so tests and bots see the card as flow shows it.
 func briefing() -> bool:
@@ -434,8 +435,11 @@ func _show_briefing(on: bool) -> void:
 	if not on:
 		return
 	var card = game.flow.start_card
+	# At the yard's clear (flow.start_pick_at_yard) the run is well under way: the opening line stays off.
+	var mid_run: bool = game.flow.start_pick_at_yard()
 	for i in BRIEF_ROWS.size():
 		var words: Label = brief.get_child(i)
+		words.visible = not (mid_run and BRIEF_ROWS[i][0] == BRIEF_LINE)
 		words.position = Vector2(0.0, card.position.y - float(BRIEF_ROWS[i][2]))
 		words.size = Vector2(screen_size().x, BRIEF_ROW_H)
 

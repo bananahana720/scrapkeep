@@ -221,7 +221,7 @@ const SEEK_LEAD_S := 1.0
 
 
 func _seek(to_ball: Vector3) -> Vector3:
-	var lead := float(spec.get("pressure", {}).get("lead", 0.0))
+	var lead := PackPressure.lead_now(spec.get("pressure", {}), target)
 	if lead <= 0.0:
 		return to_ball
 	var at: Vector3 = PackPressure.predict(target, SEEK_LEAD_S * lead) - global_position
@@ -460,6 +460,23 @@ func _just_struck() -> bool:
 # The real ball, not what the sight sees: a hold is tested against where the ball is.
 func _real_ball() -> Vector3:
 	return holds.player.ball_position() if holds != null else _ball()
+
+
+# Where the ball's roll carries it in `seconds` along its present curve (PackPressure.predict), at
+# most `reach` metres on from where it is, at its own height: the spot a kind that lays its threat
+# across the ball's line aims at (W1-66). The lead fades toward cruise as the crews' does (the row's
+# pressure lead_cruise, PackPressure.lead_now), so a ball that slows and holds a line is met and a ball
+# at cruise is aimed at where it is: stopping still costs more than rolling (bot_fairness_test F2).
+# A target that cannot say its velocity is aimed at as it stands.
+func _ahead(seconds: float, reach: float) -> Vector3:
+	var at := _ball()
+	if target == null or not target.has_method("planar_velocity"):
+		return at
+	var keep := float(spec.get("pressure", {}).get("lead_cruise", 1.0))
+	seconds *= PackPressure.lead_now({"lead": 1.0, "lead_cruise": keep}, target)
+	var on: Vector3 = PackPressure.predict(target, seconds) - at
+	on.y = 0.0
+	return at + on.limit_length(reach)
 
 
 func _player():
