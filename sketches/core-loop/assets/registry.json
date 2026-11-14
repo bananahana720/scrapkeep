@@ -36645,7 +36645,7 @@
    "loader": "src/presentation/hero_assets.gd (PILOTS) through src/presentation/model_variants.gd (--models=tripo)",
    "provenance": {
     "recipe": "tools/tripo/README.md",
-    "note": "Tripo Studio HD Model (H3.1, text to 3D, 45 Pro credits) on Andrew's paid Pro account (Tripo terms 5.2: the outputs belong to the account holder); fitted onto the authored Tally skeleton and clips by tools/tripo/pilot_fit.py and tools/tripo/pilot_touch.py, skin weights worked out on the new mesh (refit 14 November 2026); one skinned mesh of 8,200 triangles, texture baked to vertex colour; the prompt was typed in Studio and is in the account's history, not in the repository; the counts are in the README's pilot table. sha256 516453413ff23fbd65b504a4048ac225aeab3c1540d20dae5aa21139bb90deac"
+    "note": "Tripo Studio HD Model (H3.1, text to 3D, 45 Pro credits) on Andrew's paid Pro account (Tripo terms 5.2: the outputs belong to the account holder); fitted onto the authored Tally skeleton and clips by tools/tripo/pilot_fit.py and tools/tripo/pilot_touch.py, skin weights worked out on the new mesh (refit 14 November 2026); one skinned mesh of 8,200 triangles, texture baked to vertex colour; the prompt was typed in Studio and is in the account's history, not in the repository; the counts are in the README's pilot table. sha256 036a362b26cd6423d44d3206fa21751786daa66cbf0b4a6d27a68729880dabf1"
    }
   },
   {

@@ -188,8 +188,11 @@ Then measure it: `blender -b --factory-startup -P tools/tripo/pilot_pose_check.p
 1. It finds each hand on the new mesh (between hips and neck, beside the body, level with or in front of the shoulder, so ears, crests and a tail never count) and aims a stand-in arm at it. The stand-in armature has one bone along each limb, because the imported bones are short stubs that all point forward. It also has helper bones for the legs and the snout, which fold into the pelvis and the head, so those parts do not take the weights of a hand beside them.
 2. It makes a watertight voxel copy of the mesh, gives it Blender's automatic weights from the stand-in, and copies the weights back to the mesh.
 3. It removes forearm and hand weights from skin that is not joined to a hand (a whisker tip beside a control stick).
-4. It settles each bridge. A bridge is skin that joins a hand straight to the belly, legs or head: a hand modelled resting on the chest, or a control stick modelled from the hand down to the boot. Each bridge vertex goes wholly to one side. `--bridge` (default 0.5) sets the share the arm needs to take it. `--cut 1` also removes the few faces left spanning the break, so a raised hand lifts its stick clear instead of stretching it; that leaves a small open edge.
-5. It carries the arms from where the new mesh has them to the authored rest pose.
+4. It gives skin the head mostly owns (half its weight or more) to the head alone. A cheek modelled beside a hand otherwise takes shoulder and upper arm weight, and a cheer pulls a dark split open in it. Only Tally was refitted with this rule; the other five passed the PC check without it.
+5. It settles each bridge. A bridge is skin that joins a hand straight to the belly, legs or head: a hand modelled resting on the chest, or a control stick modelled from the hand down to the boot. Each bridge vertex goes wholly to one side. `--bridge` (default 0.5) sets the share the arm needs to take it. `--cut 1` also removes the few faces left spanning the break, so a raised hand lifts its stick clear instead of stretching it; that leaves a small open edge.
+6. It carries the arms from where the new mesh has them to the authored rest pose.
+
+`pilot_touch.py --lift <metres>` raises the whole pilot in the seat. Use it when the ball look measure (`tools/ball_look_capture.gd`, line 75 percent of the pilot seen) comes in low: Tally measured 74.2 percent on the PC check of 14 November 2026 and 76.7 percent with `--lift 0.04`. Keep the head top at or under +0.57, and add the lift to the `--mount-fit` up number.
 
 ### Head outfits
 
@@ -203,7 +206,7 @@ Copy the authored model's tracked `.glb.import` settings to the sibling (everyth
 | Sable | `prompts/pilot_sable.txt` | 45 Pro | 8,029 and 6,396 | fit `--bridge 0.2 --cut 1` (the sticks run down to the boots) | 0.4% in `wince` (7.5%) |
 | Kest | typed in Studio and not saved here; it is in the Tripo account's history | 45 Pro | 8,200 and 6,856 | none | 3.4% in `big_cheer` (7.4%) |
 | Tarn | typed in Studio and not saved here; it is in the Tripo account's history | 90 Pro (the first try stood upright and tore when seated) | 8,546 and 6,360, in two meshes (`Pilot` and `Cap`) | touch `--cap-hue "0.40 0.56" --mount-fit "1.6 0.008 -0.04 -0.14"` | 0.1% in `heave` (2.1%) |
-| Tally | typed in Studio and not saved here; it is in the Tripo account's history | 45 Pro | 8,200 and 6,537 | touch `--mount-fit "1.32 0 0.062 0.069"` | 1.3% in `ult_strike` (5.1%) |
+| Tally | typed in Studio and not saved here; it is in the Tripo account's history | 45 Pro | 8,200 and 6,537 | touch `--lift 0.04 --mount-fit "1.32 0 0.062 0.109"` (refitted 14 November with the head rule, step 4) | 1.3% in `ult_strike` (5.1%) |
 | The Cannon | typed in Studio and not saved here; it is in the Tripo account's history | 45 Pro | 8,199 and 6,562 | none | 1.3% in `big_cheer` (6.7%) |
 
 The refit of 14 November 2026 used the saved Studio downloads and cost no credits. The authored pilots measure 0.0 to 0.1 percent. The measure is taken in Blender; the look in the game is the board's PC check.
