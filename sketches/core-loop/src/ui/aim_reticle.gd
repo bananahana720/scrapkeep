@@ -134,10 +134,13 @@ static func over_pilot(apart: float, pilot_px: float) -> float:
 
 # The same, this frame, from where the ball sits on screen.
 func cover(centre: Vector2) -> float:
-	if camera == null or not (player is Node3D) or camera.is_position_behind(player.global_position):
+	if camera == null or not player.has_method("shown_position"):
 		return 0.0
-	var ball := camera.unproject_position(player.global_position)
-	var edge := camera.unproject_position(player.global_position + camera.global_basis.x * Tuning.RADIUS * PILOT_SHARE)
+	var at: Vector3 = player.shown_position()
+	if camera.is_position_behind(at):
+		return 0.0
+	var ball := camera.unproject_position(at)
+	var edge := camera.unproject_position(at + camera.global_basis.x * Tuning.RADIUS * PILOT_SHARE)
 	return over_pilot(centre.distance_to(ball), ball.distance_to(edge))
 
 
