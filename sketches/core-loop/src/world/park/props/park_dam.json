@@ -2449,8 +2449,8 @@
    "id": "mid_hat_wall_122",
    "template": "mid_hat_wall",
    "at": [
-    35,
-    505
+    38,
+    456
    ],
    "yaw_deg": -103,
    "near": "the_eye: A hat wall sagging in the sun"
@@ -3072,5 +3072,5 @@
   ],
   "seed": 11
  },
- "pin": 4125146692
+ "pin": 3216723680
 }
