@@ -102,9 +102,12 @@ const PICK := {"plating": 110.0, "curve": 2.0, "ram_shatters": false}
 # outright (small 70.7 s on 82683ffa); the bot now re-presses one every 0.25 s (BotDriver.PASS_BITE_GAP_S), a
 # player's sustained mash. One run on stage/alpha-w31 0786c1a8 with that hand: small 66.7 s, grown 25.8 s over
 # 24 seeds (1013c7d1 read 50.9 / 27.5), ratio 2.59 over the 1.85x floor, grown inside 25 to 45 s.
+# 2026-11-14 (wave 40 gate, PC, bd5b30f5c): small 54.4 s, grown 25.6 s over 24 seeds (a cloud read: 54.8 / 25.6).
+# Wave 40's stack shortened the small fight about 18%; the board re-pinned at promotion (an assumption
+# Andrew can overturn), and wave 41's harder world 1 stack (PR 845) is tuned against these pins. Was 66.7 / 25.8.
 const GROWTH := 1.85
-const EXPECT_SMALL_S := 66.7
-const EXPECT_GROWN_S := 25.8
+const EXPECT_SMALL_S := 54.4
+const EXPECT_GROWN_S := 25.6
 const SWEEP := "res://tools/posture_sweep.tsv"
 const TOLERANCE := 0.10
 

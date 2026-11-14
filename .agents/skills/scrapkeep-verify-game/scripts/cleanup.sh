@@ -23,12 +23,12 @@ for folder in "$evidence_root"/*/; do
   if [ -f "$pidfile" ]; then
     if pid="$(ours "$pidfile")"; then
       if ! wanted "$(basename "$folder")"; then echo "cleanup: left running drive $pid alone ($folder); name it with --stop to stop it"; continue; fi
-      kill -TERM "$pid" && echo "cleanup: stopped drive $pid ($folder)"
+      touch "$pidfile.stop"; kill -TERM "$pid" && echo "cleanup: stopped drive $pid ($folder)"
       # drive.sh copies the saves and removes its own pid file once the game is gone; give it time.
       for _ in $(seq 1 30); do [ -f "$pidfile" ] || break; sleep 1; done
       ours "$pidfile" >/dev/null && kill -KILL "$pid"
     fi
-    rm -f "$pidfile"
+    rm -f "$pidfile" "$pidfile.stop"
   fi
   [ -d "$folder/home" ] && rm -rf "${folder:?}/home" && echo "cleanup: removed scratch save folder $folder/home"
 done

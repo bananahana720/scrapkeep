@@ -533,7 +533,10 @@ static func ride(look: String, roll: Node3D) -> void:
 
 static func _watch(child: Node, roll: Node3D) -> void:
 	_mark(child, roll)
-	child.child_entered_tree.connect(_mark.bind(roll))
+	# A child taken out and put back enters the roll again; it is already watched.
+	var mark := _mark.bind(roll)
+	if not child.child_entered_tree.is_connected(mark):
+		child.child_entered_tree.connect(mark)
 
 
 static func _mark(_node: Node, roll: Node3D) -> void:

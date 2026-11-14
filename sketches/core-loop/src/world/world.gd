@@ -703,7 +703,9 @@ func director_held() -> int:
 		if not enemy is Node3D or activities.keeps(enemy):
 			continue
 		total += 1
-		if Director.holds(String(enemy.get("kind")), Vector2(enemy.global_position.x, enemy.global_position.z), ball):
+		# A body in the group without a kind (a test's stand-in) counts as an ordinary enemy.
+		var kind = enemy.get("kind")
+		if Director.holds(String(kind) if kind != null else "", Vector2(enemy.global_position.x, enemy.global_position.z), ball):
 			held += 1
 	return Director.held_count(held, total)
 

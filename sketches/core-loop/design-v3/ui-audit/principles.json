@@ -18,6 +18,7 @@
       "rule": "Every fact a colour carries also has a shape, an icon, a pattern or a place.",
       "standing": "established", "source": "WCAG 2.2 1.4.1; Game Accessibility Guidelines (basic); Xbox Accessibility Guideline 103",
       "checks": [
+        {"kind": "test", "ref": "ui_gauge_weld_test.gd"},
         {"kind": "test", "ref": "colour_cvd_test.gd"},
         {"kind": "test", "ref": "colour_meanings_test.gd"},
         {"kind": "test", "ref": "hud_icon_distinct_test.gd"},

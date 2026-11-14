@@ -210,8 +210,16 @@ const TELEGRAPH_FLAG := "telegraph"
 #          depth test.
 #   edges  clear, with every area fill at EDGES_FILL of its alpha: the outline and its keyline carry
 #          the shape, the fill only the timing.
+#   tape   clear, with the hostile stripes back as a faint pattern in the haze: bands of the same red
+#          TAPE_SHADE as light, TAPE_SHARE of each period, where classic's are charcoal and half. A
+#          hostile floor then differs from the player's own clean amber fill by shape, which holds
+#          under red-green colour blindness, where the two hues read as one (UI findings UF-02 and
+#          UF-03; Andrew, 13 Nov 2026: keep the colours, add shapes). A candidate until the PC has
+#          measured how much of the attack it covers.
 # The ground outlines, their keylines and contains() are the same in every look.
-const LOOKS := ["classic", "haze", "clear", "edges"]
+const LOOKS := ["classic", "haze", "clear", "edges", "tape"]
+const TAPE_SHADE := 0.55
+const TAPE_SHARE := 0.35
 const CLEAR_RAIL_HALF := 0.05
 const CLEAR_RAIL_ALPHA := 0.45
 const CLEAR_POST_ALPHA := 0.2
@@ -248,7 +256,12 @@ static func set_look(name: String) -> void:
 	Painter._look = name if name in LOOKS else "haze"
 
 
-# Whether the look is one of the less obstructive candidates (clear, edges).
+# Whether hostile fills carry the stripe pattern in this look (classic, tape).
+static func striped() -> bool:
+	return Painter.striped_on()
+
+
+# Whether the look is one of the less obstructive candidates (clear, edges, tape).
 static func soft() -> bool:
 	return Painter.soft_on()
 
@@ -1188,7 +1201,7 @@ class Painter:
 	var _layers := {}
 	var _driven_values := {}
 
-	static var _stripes: ImageTexture
+	static var _stripes := {}
 	# The first material of each look a line layer draws with (plain or striped), held for the
 	# session. A mark's StandardMaterial3D is its own, since tint() writes it, and when the last
 	# material with a look is freed Godot frees that look's shader too: the next mark compiled it
@@ -1208,7 +1221,10 @@ class Painter:
 		return look_now() != "classic"
 
 	static func soft_on() -> bool:
-		return look_now() in ["clear", "edges"]
+		return look_now() in ["clear", "edges", "tape"]
+
+	static func striped_on() -> bool:
+		return look_now() in ["classic", "tape"]
 
 	static var _materials := {}
 	# Materials created so far; a run that has warmed up must not raise it.
@@ -1257,7 +1273,7 @@ class Painter:
 		var keys := []
 		for fill_class in FILL_STENCIL:
 			for governed in [false, true]:
-				keys.append([fill_class, not haze_on(), LIVE_PRIORITY if fill_class == "live" else PRIORITY, governed])
+				keys.append([fill_class, striped_on(), LIVE_PRIORITY if fill_class == "live" else PRIORITY, governed])
 		keys.append(["", false, LINE_UNDER_PRIORITY, false])
 		keys.append(["", false, LINE_PRIORITY, false])
 		if soft_on():
@@ -1321,17 +1337,23 @@ class Painter:
 		if is_instance_valid(node):
 			node.queue_free()
 
-	# 45-degree HAZARD and charcoal stripes, one period per texture repeat.
+	# The look's stripes at 45 degrees, one period per texture repeat: HAZARD and charcoal halves
+	# (classic), or white with a TAPE_SHARE band at TAPE_SHADE (tape), which the haze fill's own
+	# red multiplies, so the band is the same red, darker.
 	static func stripe_texture() -> ImageTexture:
-		if _stripes == null:
+		var tape := soft_on()
+		if not _stripes.has(tape):
 			var size := 32
 			var image := Image.create_empty(size, size, false, Image.FORMAT_RGBA8)
+			var light := Color.WHITE if tape else Palette.HAZARD
+			var dark := Color(TAPE_SHADE, TAPE_SHADE, TAPE_SHADE) if tape else Palette.CHARCOAL
+			var band := int(size * (1.0 - TAPE_SHARE)) if tape else size / 2
 			for y in size:
 				for x in size:
-					image.set_pixel(x, y, Palette.HAZARD if (x + y) % size < size / 2 else Palette.CHARCOAL)
+					image.set_pixel(x, y, light if (x + y) % size < band else dark)
 			image.generate_mipmaps()
-			_stripes = ImageTexture.create_from_image(image)
-		return _stripes
+			_stripes[tape] = ImageTexture.create_from_image(image)
+		return _stripes[tape]
 
 	func paint(all: Array, layers: Array) -> void:
 		var heights := _heights_under(all, layers)
@@ -1474,7 +1496,7 @@ class Painter:
 	func _apply_class(layer: String) -> void:
 		var instance: MeshInstance3D = _layers[layer]
 		var fill_class := _fill_class(layer)
-		instance.material_override = mark_material(fill_class, layer.begins_with("stripe") and not haze_on(), LIVE_PRIORITY if fill_class == "live" else _priority(layer), _governed.get(layer, false))
+		instance.material_override = mark_material(fill_class, layer.begins_with("stripe") and striped_on(), LIVE_PRIORITY if fill_class == "live" else _priority(layer), _governed.get(layer, false))
 		instance.sorting_offset = FILL_SORT.get(fill_class, 0.0)
 
 	static func _priority(layer: String) -> int:
@@ -1506,7 +1528,7 @@ class Painter:
 		# StandardMaterial3D, which tint() writes, and its old no-depth-test draw: it has no pull, and
 		# on convex ground a single quad from centre to rim would sink under the floor.
 		if soft_on() and not layer in TINTED_LAYERS:
-			instance.material_override = mark_material("fence" if layer == "fence" else "", false, _priority(layer), false)
+			instance.material_override = mark_material("fence" if layer == "fence" else "", layer.begins_with("stripe") and striped_on(), _priority(layer), false)
 			add_child(instance)
 			_layers[layer] = instance
 			return instance
@@ -1521,7 +1543,7 @@ class Painter:
 		mat.distance_fade_mode = BaseMaterial3D.DISTANCE_FADE_PIXEL_ALPHA
 		mat.distance_fade_min_distance = FENCE_CLEAR if layer == "fence" else LENS_CLEAR
 		mat.distance_fade_max_distance = FENCE_FULL if layer == "fence" else LENS_FULL
-		if layer.begins_with("stripe") and not haze_on():
+		if layer.begins_with("stripe") and striped_on():
 			mat.albedo_texture = stripe_texture()
 			mat.uv1_triplanar = true
 			mat.uv1_world_triplanar = true
