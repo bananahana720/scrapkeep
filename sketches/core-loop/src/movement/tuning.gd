@@ -60,7 +60,7 @@ const SPECS := [
 	{"key": "discovery", "label": "Discovery", "min": 0.0, "max": 1.0, "step": 1.0, "value": 1.0, "options": ["banner", "cards"]},
 	# The attack warnings' look (threat_grammar.gd LOOKS). "clear" (the default since 13 Nov 2026, a
 	# taste call Andrew can overturn) and "edges" are haze made less obstructive.
-	{"key": "telegraph", "label": "Telegraph", "min": 0.0, "max": 3.0, "step": 1.0, "value": 2.0, "options": ["classic", "haze", "clear", "edges"]},
+	{"key": "telegraph", "label": "Telegraph", "min": 0.0, "max": 4.0, "step": 1.0, "value": 2.0, "options": ["classic", "haze", "clear", "edges", "tape"]},
 	# The ball's look (presentation/ball_looks.gd): Andrew picked the cutaway on 13 Nov 2026 (ruling
 	# dm); gyro and bell are the two he passed over. "today" keeps the game's own shells and stays
 	# the default until he has seen the finished cutaway on the PC.
