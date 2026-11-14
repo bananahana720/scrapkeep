@@ -37029,6 +37029,16 @@
    }
   },
   {
+   "id": "ball_look_cutaway_cockpit",
+   "path": "res://assets/models/world_one/ball_look_cutaway_cockpit.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "src/presentation/ball_looks.gd COCKPIT (furnish(): the cockpit the cutaway's window shows around the pilot, on the level part of every pilot's shell: floor pan, cradle ring, dash with gauges, console, cables)",
+   "provenance": {
+    "recipe": "tools/blender/ball_looks.py"
+   }
+  },
+  {
    "id": "ball_look_gyro",
    "path": "res://assets/models/world_one/ball_look_gyro.glb",
    "class": "shell",
@@ -38540,6 +38550,7 @@
   "ball_look_cutaway_c3",
   "ball_look_cutaway_c4",
   "ball_look_cutaway_c5",
+  "ball_look_cutaway_cockpit",
   "ball_look_gyro",
   "barge",
   "barge_detail1",
