@@ -307,6 +307,28 @@
     "recipe": "tools/blender/world_one/poi_yard.py",
     "note": "Procedural, vertex coloured, the parade scooter that stands in the scooter shed, a too-small step-through scooter 1.6 m long, 0.64 m wide and 1.05 m tall with a tally pennant on the back; its nose points the way the shed's door faces, so it is placed at the shed's origin; built by hand in Blender for the Brindle arena surroundings (W1-104). sha256 ef8e34544987621eafc1b64ca9e0db9d6c6fd483b788f3263a067a8e6db939c0"
    }
+  },
+  {
+   "id": "poi_parade_crew_cheer",
+   "path": "res://assets/models/world_one/poi_parade_crew_cheer.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "not placed yet: the points of interest thread loads it (branch claude/project-thread-kjv6sg), with vertex colour as albedo as src/presentation/park_props.gd does",
+   "provenance": {
+    "recipe": "tools/blender/world_one/poi_parade_crew.py",
+    "note": "Vertex coloured, a parade crew member 1.4 m tall, both mittens up, 1.26 m across: the stands' plush crew from assets/models/bosses/arena_bowl_yard.glb put in parade dress (a warning orange hat with a brass band and a warning orange sash), so the parade is the same animal as the crowd; its origin is on the ground under its seat and it faces the way the scooter shed's door faces; made with no generation credits for the Brindle arena surroundings (W1-104). sha256 ee5704b8ee0897ea2069f01983897c8991104905c42f81f99aa42d237f9d7b28"
+   }
+  },
+  {
+   "id": "poi_parade_crew_standard",
+   "path": "res://assets/models/world_one/poi_parade_crew_standard.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "not placed yet: the points of interest thread loads it (branch claude/project-thread-kjv6sg), with vertex colour as albedo as src/presentation/park_props.gd does",
+   "provenance": {
+    "recipe": "tools/blender/world_one/poi_parade_crew.py",
+    "note": "Vertex coloured, a parade crew member 1.4 m tall, holding the tally pennant on its staff, 1.14 m across: the stands' plush crew from assets/models/bosses/arena_bowl_yard.glb put in parade dress (a warning orange hat with a brass band and a warning orange sash), so the parade is the same animal as the crowd; its origin is on the ground under its seat and it faces the way the scooter shed's door faces; made with no generation credits for the Brindle arena surroundings (W1-104). sha256 275b0053a4b77f31cf7e05f6efaf59cdf03293e3b7dafaf97ececebffe66bff3"
+   }
   }
  ]
 }
