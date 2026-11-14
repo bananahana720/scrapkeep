@@ -104,6 +104,7 @@
       "rule": "It shows what matters now; nothing talks over a fight.",
       "standing": "inferred", "source": "Progressive disclosure; PLAY-FINDINGS PF-19",
       "checks": [
+        {"kind": "test", "ref": "reticle_over_pilot_test.gd"},
         {"kind": "test", "ref": "hud_quiet_test.gd"},
         {"kind": "test", "ref": "prompt_shown_count_test.gd"}
       ],
