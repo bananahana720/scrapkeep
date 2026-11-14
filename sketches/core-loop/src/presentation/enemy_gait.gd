@@ -144,7 +144,11 @@ func step(delta: float, body: Node3D, velocity: Vector3, foot: float, walking :=
 	var pivot := Vector3(0.0, -foot, 0.0)
 	var lay := Basis.IDENTITY
 	var sink := 0.0
-	_ground = _ground.slerp(ground.normalized(), 1.0 - exp(-GROUND_FOLLOW * delta)) if ground.length_squared() > 0.0 else _ground
+	if ground.length_squared() > 0.0:
+		# Normalised lerp, not slerp: slerp turns about the cross of two nearly equal normals, whose
+		# normalised axis can be off unit length, an engine error a tick on settled ground.
+		var followed := _ground.lerp(ground.normalized(), 1.0 - exp(-GROUND_FOLLOW * delta))
+		_ground = followed.normalized() if followed.length_squared() > 0.000001 else ground.normalized()
 	var slope := minf(_ground.angle_to(Vector3.UP), GROUND_MAX)
 	if slope > 0.001:
 		# Lay the model on the slope about its feet, and drop it by the round foot's standoff.
