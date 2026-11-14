@@ -164,32 +164,83 @@ The fitter drops floating fragments by walking shells whose bounding boxes touch
 inside another shell's box survives; pick another of the four candidates then (Scrap Gravity's first
 candidate had a bolt lying beside its base).
 
+## New props (no authored twin)
+
+A prop that does not exist yet has no authored model to fit against. `tripo_prop.py` fits it on its own terms:
+
+`blender -b --factory-startup -P tools/tripo/tripo_prop.py -- --in <tripo model.glb> --out assets/models/world_one/<stem>.glb --name <MeshName> --tall <metres> [--wide <metres>] --max-tris <cap> --lods "0.5,0.15"`
+
+It scales the mesh to `--tall` metres (or to `--wide` metres across its longer ground side), stands it on its origin, groups the texture into eight flat colours of its own, writes them as linear `COLOR_0` on one material named `paint`, drops the texture and the UVs, and writes `_lod1` and `_lod2` files by decimation. The loader must set vertex colour as albedo, as `src/presentation/park_props.gd` does. Register each file in `assets/registry.d/poi_props.json` with its Tripo task and sha256, run `python3 tools/fold_registry.py`, and add the stem to `POI_PROPS` in `tests/tripo_variants_test.gd`.
+
+A mesh generator returns a thin shape (a stake, a wire fence) as a lump. Build those by hand: `tools/blender/world_one/poi_yard.py` builds the fence panel and the survey stake in the same format.
+
+World 1 points of interest, 14 November 2026 (API credits, text to model v3.1, smart_low_poly, face limit 4,000, two candidates each at 30 credits; 180 credits, 320 left after):
+
+| Prop | Prompt | Tripo task kept | Triangles (LODs) | Size |
+| --- | --- | --- | --- | --- |
+| `world_one/poi_tally_stand.glb` | `prompts/poi_tally_stand.txt` | 8a6d32a8-84a9-4ad4-b963-121041481f76 | 3,998 (1,999, 598) | 2.9 by 3.0 m, 4.0 m tall (`--wide 3 --tall 4`) |
+| `world_one/poi_yard_gate.glb` | `prompts/poi_yard_gate.txt` | 116aee24-7cd0-4233-a99d-7a90954303a4 | 4,000 (2,000, 599) | 8.0 m wide along Z, 4.0 m tall, 2.3 m deep (`--wide 8 --tall 4`) |
+| `world_one/poi_camp_tally_post.glb` | `prompts/poi_camp_tally_post.txt` | 8b2f90eb-a287-4815-8a9e-58f1d89d3b62 | 1,999 (999, 296) | 2.5 m tall |
+| `world_one/poi_fence_panel.glb` | built by `poi_yard.py` | none | 288 | 6.2 m wide, 2.5 m tall; repeat every 6.2 m, feet touching |
+| `world_one/poi_survey_stake.glb` | built by `poi_yard.py` | none | 168 | 3.16 m tall, origin at the foot |
+
+The stand and the gate came back narrower and taller than the placement asked for (2 m across, and 6.7 m tall), so both are fitted with `--wide` and `--tall` together, which scales the ground plane and the height separately. Look at the render when using both: these two chunky shapes take it, a thin or round one may not.
+
+The runner-up candidates are tasks f5a7ba00-eb9f-4153-a98c-f80c4fc5fc28 (stand), 3caed186-71a7-42da-b675-1e4eb764475f (gate) and 90a8c17b-94b5-4bec-b359-f07be0b83963 (post). All six candidates were usable. The count boards came back with painted digits although the prompt said no text; they ship as flat colour patches, and the game should draw the live number itself.
+
 ## Pilots (a new body on the authored skeleton)
 
-A pilot's sibling is `assets/models/pilot_<name>_anim_tripo.glb`. `hero_assets.gd` loads it through `ModelVariants.path` when the game runs with `--models=tripo`. The sibling keeps the authored armature, its 25 bones and every clip, so the glance, the pose tables and every outfit that mounts on a bone work unchanged. One exception: Tarn's cap is part of his new body, so the Steady Cap outfit (its `Replace_Cap` node hides the authored `Cap` mesh, `design-v3/CUSTOMIZE.md`) finds no `Cap` to hide and sits over the modelled cap while the switch is on. That is accepted while the siblings are a comparison set; if the new Tarn is adopted, split his cap into its own `Cap` mesh first. Only the skin is new, and it wears the same `pilot` material slot, so the game dresses it like the authored pilot.
+A pilot's sibling is `assets/models/pilot_<name>_anim_tripo.glb`. `hero_assets.gd` loads it through `ModelVariants.path` when the game runs with `--models=tripo`. The sibling keeps the authored armature, its 25 bones and every clip, so the glance, the pose tables and every outfit that mounts on a bone work unchanged. Only the skin is new, and it wears the same `pilot` material slot, so the game dresses it like the authored pilot.
+
+Two things differ from the authored pilots:
+
+- The head and everything on it (ears, jaw, snout, crest, goggles) moves as one piece with the `head` bone, and a tail does not wag. The new skin has weights for the pelvis (the legs move with it), spine, neck, head, shoulders, arms and hands only.
+- A new head is bigger than the authored one, so a head outfit built for the authored head would be buried in it. A sibling that needs it carries a `MountFit_head` node under its head bone. `hero_assets.gd` (`_mount_fit`) reads the node's size and place and re-seats every part mounted on that bone. Tarn and Tally carry one; Rivet's hood already showed, so Rivet has none.
 
 Make one in three steps:
 
 1. Generate in Tripo Studio: HD Model, text input, model H3.1, Private (45 Pro credits). The prompt must name the species, the head shape, the eyewear, each outfit colour and "No tail" if the pilot has none. A loose prompt gave a monkey; a render of the authored model as the image input gave smeared colours and no added detail.
-2. Fit it: `blender -b --factory-startup -P tools/tripo/pilot_fit.py -- --old assets/models/pilot_<name>_anim.glb --new <download>.glb --out fit.glb --head-scale 1.35 --neck 0.5 --tris 8200`. This scales the body to the authored height, enlarges everything above the neck line, cuts the mesh to 8,200 triangles (the pilot class allows 8,100 vertices, and Godot makes 0.74 to 0.95 vertices per triangle on these six), bakes the texture to vertex colour, and copies the skin weights from the authored meshes posed to the new arm angle.
-3. Tidy it: `blender -b --factory-startup -P tools/tripo/pilot_touch.py -- --in fit.glb --out assets/models/pilot_<name>_anim_tripo.glb --head 1.0 --fwd 0.57` (the defaults). This slides the pilot back until nothing is forward of 0.57 (the dash is at 0.60) and tucks in a pink tail stub. Leave `--head` at 1.0: scaling the head by skin weights tears the back plate, because the authored head's weights reach the new shoulders.
+2. Fit it: `blender -b --factory-startup -P tools/tripo/pilot_fit.py -- --old assets/models/pilot_<name>_anim.glb --new <download>.glb --out fit.glb --head-scale 1.35 --neck 0.5 --tris 8200`. This scales the body to the authored height, enlarges everything above the neck line, cuts the mesh to 8,200 triangles (the pilot class allows 8,100 vertices, and Godot makes 0.74 to 0.95 vertices per triangle on these six), bakes the texture to vertex colour, and works out the skin weights (below).
+3. Tidy it: `blender -b --factory-startup -P tools/tripo/pilot_touch.py -- --in fit.glb --out assets/models/pilot_<name>_anim_tripo.glb --head 1.0 --fwd 0.57` (the defaults). This slides the pilot back until nothing is forward of 0.57 (the dash is at 0.60) and tucks in a pink tail stub. Leave `--head` at 1.0.
+
+Then measure it: `blender -b --factory-startup -P tools/tripo/pilot_pose_check.py -- assets/models/pilot_<name>_anim_tripo.glb`. It plays every clip and prints the share of edges that more than double in length in the worst clip. Keep that under 4 percent, and look at `big_cheer` and `heave` yourself; the table below has each pilot's number.
+
+### How the skin weights are made
+
+`pilot_fit.py` works the weights out on the new mesh. The first six siblings copied them from the authored mesh, and the PC check of 14 November 2026 failed four of them: a new body is fatter, so its belly took the weights of the authored arm that rests in front of it, and `big_cheer` pulled the belly up in sheets.
+
+1. It finds each hand on the new mesh (between hips and neck, beside the body, level with or in front of the shoulder, so ears, crests and a tail never count) and aims a stand-in arm at it. The stand-in armature has one bone along each limb, because the imported bones are short stubs that all point forward. It also has helper bones for the legs and the snout, which fold into the pelvis and the head, so those parts do not take the weights of a hand beside them.
+2. It makes a watertight voxel copy of the mesh, gives it Blender's automatic weights from the stand-in, and copies the weights back to the mesh.
+3. It removes forearm and hand weights from skin that is not joined to a hand (a whisker tip beside a control stick).
+4. It gives skin the head mostly owns (half its weight or more) to the head alone. A cheek modelled beside a hand otherwise takes shoulder and upper arm weight, and a cheer pulls a dark split open in it. Only Tally was refitted with this rule; the other five passed the PC check without it.
+5. It settles each bridge. A bridge is skin that joins a hand straight to the belly, legs or head: a hand modelled resting on the chest, or a control stick modelled from the hand down to the boot. Each bridge vertex goes wholly to one side. `--bridge` (default 0.5) sets the share the arm needs to take it. `--cut 1` also removes the few faces left spanning the break, so a raised hand lifts its stick clear instead of stretching it; that leaves a small open edge.
+6. It carries the arms from where the new mesh has them to the authored rest pose.
+
+`pilot_touch.py --lift <metres>` raises the whole pilot in the seat. Use it when the ball look measure (`tools/ball_look_capture.gd`, line 75 percent of the pilot seen) comes in low: Tally measured 74.2 percent on the PC check of 14 November 2026 and 76.7 percent with `--lift 0.04`. Keep the head top at or under +0.57, and add the lift to the `--mount-fit` up number. Do not combine it with `--cap-hue`: the cap split measures from the head bone, which the lift does not move.
+
+### Head outfits
+
+`pilot_touch.py --mount-fit "<size> <right> <forward> <up>"` adds the `MountFit_head` node: the outfit grows by the size about the head joint and then moves by the offset, in ball model units. Pick the numbers by eye from a render with the outfit on. `--cap-hue "<low> <high>"` splits a modelled cap of that hue (0 to 1) into its own `Cap` mesh, as authored Tarn has, so an outfit's `Replace_Cap` node hides it (`design-v3/CUSTOMIZE.md`). The body keeps those faces, pressed onto the skull and painted fur colour, so the head is whole under the outfit. `tests/tripo_variants_test.gd` checks that Tarn's Steady Cap hides and covers his modelled cap, that Tally's Eyeshade reaches the front of the head, and that Rivet's hood mounts as before.
 
 Copy the authored model's tracked `.glb.import` settings to the sibling (everything after the `dest_files` line). `tests/asset_registry_test.gd` holds the sibling to the pilot class budget. Without the import settings Godot renames `idle_loop` to `idle` and the clip lookups miss. `tests/tripo_variants_test.gd` checks the bones, the clips, a 10,000 triangle cap, the `pilot` material slot and the cockpit limits. The limits are the ball look work's measurements of 13 November 2026, in ball model units: head top no higher than +0.57, feet no lower than -0.59, half width at most 0.43, nothing forward of 0.58 (the dash is at 0.60). `design-v3/ROSTER-LOOK.md` ("The cutaway as built") describes the cockpit they come from.
 
-| Pilot | Prompt | Credits | Triangles, vertices |
-| --- | --- | --- | --- |
-| Rivet | `prompts/pilot_rivet.txt` | 45 Pro (plus 90 on two rejected tries) | 8,200 and 7,811 (authored: 10,456 triangles) |
-| Sable | `prompts/pilot_sable.txt` | 45 Pro | 8,200 and 6,421 |
-| Kest | typed in Studio and not saved here; it is in the Tripo account's history | 45 Pro | 8,200 and 6,857 |
-| Tarn | typed in Studio and not saved here; it is in the Tripo account's history | 90 Pro (the first try stood upright and tore when seated) | 8,200 and 6,079 |
-| Tally | typed in Studio and not saved here; it is in the Tripo account's history | 45 Pro | 8,200 and 6,534 |
-| The Cannon | typed in Studio and not saved here; it is in the Tripo account's history | 45 Pro | 8,200 and 6,583 |
+| Pilot | Prompt | Credits | Triangles, vertices | Options beyond the defaults | Edges doubled, worst clip (before the refit) |
+| --- | --- | --- | --- | --- | --- |
+| Rivet | `prompts/pilot_rivet.txt` | 45 Pro (plus 90 on two rejected tries) | 8,149 and 7,784 (authored: 10,456 triangles) | fit `--cut 1` | 1.3% in `big_cheer` (6.1%) |
+| Sable | `prompts/pilot_sable.txt` | 45 Pro | 8,029 and 6,396 | fit `--bridge 0.2 --cut 1` (the sticks run down to the boots) | 0.4% in `wince` (7.5%) |
+| Kest | typed in Studio and not saved here; it is in the Tripo account's history | 45 Pro | 8,200 and 6,856 | none | 3.4% in `big_cheer` (7.4%) |
+| Tarn | typed in Studio and not saved here; it is in the Tripo account's history | 90 Pro (the first try stood upright and tore when seated) | 8,546 and 6,360, in two meshes (`Pilot` and `Cap`) | touch `--cap-hue "0.40 0.56" --mount-fit "1.6 0.008 -0.04 -0.14"` | 0.1% in `heave` (2.1%) |
+| Tally | typed in Studio and not saved here; it is in the Tripo account's history | 45 Pro | 8,200 and 6,537 | touch `--lift 0.04 --mount-fit "1.32 0 0.062 0.109"` (refitted 14 November with the head rule, step 4) | 1.3% in `ult_strike` (5.1%) |
+| The Cannon | typed in Studio and not saved here; it is in the Tripo account's history | 45 Pro | 8,199 and 6,562 | none | 1.3% in `big_cheer` (6.7%) |
+
+The refit of 14 November 2026 used the saved Studio downloads and cost no credits. The authored pilots measure 0.0 to 0.1 percent. The measure is taken in Blender; the look in the game is the board's PC check.
 
 Every sibling's rest box is inside the cockpit limits; `tests/tripo_variants_test.gd` prints each box.
 
 What the six taught:
 
 - Ask for the pose in the prompt: seated, knees bent, both arms reaching forward to hold two control sticks. An upright model with arms at its sides tears when the seated clips bend it.
-- `pilot_fit.py` replaces every authored skinned mesh by default (`--drop all`): body, claws, tail, wings and cap. It measures the arm angle from the generated hands, which it looks for between the hips and the neck, beside the body, and level with or in front of the shoulder, so ears, crests and a tail beside the body never count as hands.
+- `pilot_fit.py` replaces every authored skinned mesh by default (`--drop all`): body, claws, tail, wings and cap.
+- Tripo models the control sticks and often joins them to the boots, and models hands resting on the chest. Both are bridges (above). If a clip stretches a stick or a boot, refit with `--cut 1`.
 - `pilot_touch.py` centres a pilot that fits the width but sits off centre, and narrows a pilot wider than 0.86 (twice `--half`, default 0.43) evenly about its centre and prints the factor (Kest, 6 percent). Pass `--tail 0` for a pilot that has a tail.
 - After copying the import settings, `touch` the sibling's `.glb.import` before running `godot --headless --import`. Godot compares change times to the second, and skips a file whose settings changed in the same second it was first imported; the clips then keep Godot's default names (`idle`, not `idle_loop`). `*.import` is ignored here, so add the sibling's file with `git add -f`, as the authored pilots' files are.

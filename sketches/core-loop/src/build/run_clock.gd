@@ -19,6 +19,13 @@ const MODIFIERS := [SCRAPLESS, PAR]
 # Not chosen at the start: a run turns cursed when it takes a curse pocket's deal. Build keeps
 # the flag in step with RunState.cursed(), and tags() lists it so the music can follow it.
 const CURSE := "curse"
+# A quick break (W1-62, overpowered pays): a Warden broken within this many seconds of its
+# engagement adds one part roll to its gate, so a grown ball's fast break is worth a choice, not
+# only time. One entry per run stage; 0 means the stage has no quick break. World 1's dam takes
+# four rams at a 6 s pulse from an ordinary ball and three from a grown one; on the flume a
+# five-seed read of the harder stack (PR 845) had grown balls at a 19 s median and small ones at
+# 30 s. Worlds 2 and 3 are parked, so their stages pay nothing until they are fitted.
+const QUICK_BREAK_SECONDS := [30.0, 20.0, 0.0, 0.0, 0.0, 0.0]
 
 var run_seconds := 0.0
 var stage_seconds := 0.0
@@ -30,6 +37,8 @@ var cursed := false
 # Stage number (as a String, the JSON key) to the best Warden-break seconds on record.
 var best := {}
 var broke_at := -1.0
+# Stage seconds when this attempt's Warden fight began, or -1.
+var engaged_at := -1.0
 
 
 func begin_run(chosen: Dictionary) -> void:
@@ -47,6 +56,7 @@ func enter_stage(index: int) -> void:
 	stage_seconds = 0.0
 	difficulty_seconds = 0.0
 	broke_at = -1.0
+	engaged_at = -1.0
 	paused = false
 
 
@@ -62,6 +72,24 @@ func advance(delta: float, run_time: float, in_stage: bool) -> void:
 func warden_broken() -> void:
 	if broke_at < 0.0:
 		broke_at = stage_seconds
+
+
+# Each attempt's engagement restarts the fight's count; the break keeps the first.
+func warden_engaged() -> void:
+	if broke_at < 0.0:
+		engaged_at = stage_seconds
+
+
+# Seconds from the Warden's engagement to its break, or -1 before both.
+func fight_seconds() -> float:
+	return broke_at - engaged_at if broke_at >= 0.0 and engaged_at >= 0.0 else -1.0
+
+
+# True when this stage's Warden fell within its quick-break limit.
+func quick_break() -> bool:
+	var limit: float = QUICK_BREAK_SECONDS[stage - 1] if stage >= 1 and stage <= QUICK_BREAK_SECONDS.size() else 0.0
+	var fight := fight_seconds()
+	return limit > 0.0 and fight >= 0.0 and fight <= limit
 
 
 func tags() -> Array:

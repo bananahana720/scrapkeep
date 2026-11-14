@@ -30,6 +30,7 @@ const LOSS_HOLD := 0.35
 const LOSS_DRAIN := 0.45
 const CAPTION_FONT := UiTokens.CAPTION
 const CAPTION_LINE := 13.0
+const WELD_INSET := 3.0
 
 var icon_id := ""
 var color := Color.WHITE
@@ -161,12 +162,27 @@ func _draw() -> void:
 		draw_rect(bar.grow(2.5), Color(warn_color, 0.35 + 0.65 * beat), false, 2.5)
 
 
-# The welded stretch: an ink plate from the cap to the bar's end, edged in the plate line, and a
-# brass bracket standing proud of the bar at the cap.
+# The welded stretch: an ink plate from the cap to the bar's end, edged in the plate line, a
+# brass bracket standing proud of the bar at the cap, and a weld mark (a cross) on the plate.
+# The cross is the weld's own shape: under red-green colour blindness the plate's edge and
+# the armour bar beside it read as one colour (UI finding UF-07), and no other bar is crossed.
 func _draw_weld(bar: Rect2) -> void:
 	var at := bar.position.x + bar.size.x * cap
 	var plate := Rect2(Vector2(at, bar.position.y), Vector2(bar.end.x - at, BAR_H))
 	draw_rect(plate, UiTokens.INK)
 	draw_rect(plate, cap_edge, false, 1.5)
+	var mark := weld_mark(plate)
+	if mark.size.x > 0.0:
+		draw_line(mark.position, mark.end, UiTokens.TEXT, 2.0)
+		draw_line(Vector2(mark.position.x, mark.end.y), Vector2(mark.end.x, mark.position.y), UiTokens.TEXT, 2.0)
 	var reach := 3.0
 	draw_rect(Rect2(Vector2(at - 2.0, bar.position.y - reach), Vector2(4.0, BAR_H + reach * 2.0)), UiTokens.ACCENT)
+
+
+# Where the weld's cross sits: a square in the plate's middle, clear of its edge. A plate too
+# narrow to hold one gets none, because a cramped cross reads as noise.
+static func weld_mark(plate: Rect2) -> Rect2:
+	var side := plate.size.y - WELD_INSET * 2.0
+	if side <= 0.0 or plate.size.x < side + WELD_INSET * 2.0:
+		return Rect2()
+	return Rect2(plate.get_center() - Vector2(side, side) * 0.5, Vector2(side, side))

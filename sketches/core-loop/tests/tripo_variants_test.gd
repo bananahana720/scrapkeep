@@ -8,6 +8,7 @@ const ModelVariants := preload("res://src/presentation/model_variants.gd")
 const EnemyCasting := preload("res://src/combat/enemy_casting.gd")
 const ParkProps := preload("res://src/presentation/park_props.gd")
 const Accretion := preload("res://src/build/accretion.gd")
+const HeroAssets := preload("res://src/presentation/hero_assets.gd")
 
 # authored path -> {tris ceiling, draws ceiling}; -1 holds the sibling to the authored model's own count.
 # The chaser's ceilings are enemy_chaser_asset_test.gd's; the pet's 2,000 is what the fitter targets
@@ -74,6 +75,17 @@ func _shape_of(path: String) -> Dictionary:
 	var out := _shape(node)
 	node.free()
 	return out
+
+
+# A node's transform up to (not including) the scene root, so an offset on a parent node counts.
+func _to_root(n: Node3D, root: Node) -> Transform3D:
+	var xf := Transform3D.IDENTITY
+	var at: Node = n
+	while at != null and at != root:
+		if at is Node3D:
+			xf = (at as Node3D).transform * xf
+		at = at.get_parent()
+	return xf
 
 
 func _mesh_tris(mesh: Mesh) -> int:
@@ -150,6 +162,8 @@ func _run() -> void:
 	ParkProps.release_shared()
 	_check_parts()
 	_check_pilots()
+	await _check_head_outfits()
+	_check_poi_props()
 	print("tripo_variants_test: %s" % ("PASS" if failures == 0 else "FAIL (%d)" % failures))
 	quit(1 if failures > 0 else 0)
 
@@ -203,11 +217,12 @@ func _check_parts() -> void:
 
 
 # A pilot's Tripo sibling sits on the authored skeleton: the same bones (outfits mount on them and
-# the glance turns three of them), the same clips, one skinned mesh at most 10,000 triangles, and a
+# the glance turns three of them), the same clips, a skinned Pilot mesh, at most 10,000 triangles in all, and a
 # rest shape inside the cockpit limits the ball look work measured on 13 November 2026 (head top
 # +0.57, feet -0.59, half width 0.43, nothing forward of 0.58; tools/tripo/README.md, Pilots).
-# Tarn's sibling has no separate Cap mesh (the cap is part of the body), so his Steady Cap outfit's Replace_Cap
-# finds nothing to hide with the switch on (tools/tripo/README.md, Pilots).
+# Tarn's sibling keeps his cap as its own Cap mesh, as the authored model does, so his Steady Cap outfit's Replace_Cap
+# hides it; a sibling may have no skinned mesh the authored model does not name. A sibling whose head is a different size
+# carries a MountFit_head node that re-seats head outfits (hero_assets.gd, _mount_fit).
 const PILOT_SIBLINGS := [
 	"res://assets/models/pilot_rivet_anim.glb",
 	"res://assets/models/pilot_sable_anim.glb",
@@ -247,19 +262,134 @@ func _check_pilots() -> void:
 		var new_clips: Array = clips.call(new)
 		_check(not new_clips.is_empty() and new_clips == clips.call(old), "%s sibling keeps every clip (%d)" % [stem, new_clips.size()])
 		var skinned := []
-		for mi in new.find_children("*", "MeshInstance3D", true, false):
+		var authored_names := []
+		for mi in old.find_children("*", "MeshInstance3D", true, false):
 			if (mi as MeshInstance3D).skin != null:
-				skinned.append(mi)
-		_check(skinned.size() == 1, "%s sibling is one skinned mesh (%d)" % [stem, skinned.size()])
-		if skinned.size() == 1:
-			var mesh: Mesh = (skinned[0] as MeshInstance3D).mesh
-			var box := mesh.get_aabb()
-			_check(_mesh_tris(mesh) <= 10000, "%s sibling is at most 10,000 triangles (%d)" % [stem, _mesh_tris(mesh)])
-			_check(mesh.get_surface_count() == 1, "%s sibling is one draw" % stem)
-			var slot := mesh.surface_get_material(0)
+				authored_names.append(String(mi.name))
+		var strangers := []
+		var tris := 0
+		var draws_ok := true
+		var box := AABB()
+		for mi in new.find_children("*", "MeshInstance3D", true, false):
+			if (mi as MeshInstance3D).skin == null:
+				continue
+			var part: Mesh = (mi as MeshInstance3D).mesh
+			if not authored_names.has(String(mi.name)):
+				strangers.append(String(mi.name))
+			tris += _mesh_tris(part)
+			draws_ok = draws_ok and part.get_surface_count() == 1
+			box = part.get_aabb() if skinned.is_empty() else box.merge(part.get_aabb())
+			skinned.append(mi)
+		var body := new.find_child("Pilot", true, false) as MeshInstance3D
+		_check(body != null and skinned.has(body) and strangers.is_empty(), "%s sibling has a skinned Pilot mesh and no skinned mesh the authored model lacks (%s)" % [stem, strangers])
+		if body != null:
+			_check(tris <= 10000, "%s sibling is at most 10,000 triangles (%d)" % [stem, tris])
+			_check(draws_ok, "%s sibling is one draw a mesh (%d)" % [stem, skinned.size()])
+			var slot := body.mesh.surface_get_material(0)
 			_check(slot != null and slot.resource_name == "pilot", "%s sibling wears the pilot material slot (%s)" % [stem, slot.resource_name if slot != null else "none"])
 			_check(box.end.y <= 0.575 and box.position.y >= -0.595 and maxf(absf(box.position.x), absf(box.end.x)) <= 0.435 and box.position.z >= -0.585,
 				"%s sibling rests inside the cockpit limits (%s to %s)" % [stem, box.position, box.end])
 		old.free()
 		new.free()
 	ModelVariants.set_enabled(false)
+
+
+# A head outfit is built for the authored head. On a sibling with a bigger head it was buried (PC check of
+# 14 November 2026: the Steady Cap changed 794 pixels and the Eyeshade 492). The sibling's MountFit_head node
+# re-seats it: bigger by the node's size, and reaching past the skin around it. A sibling with no node (Rivet,
+# whose hood already showed) mounts its outfit exactly as the authored pilot does.
+const HEAD_OUTFITS := [
+	{"pilot": "tarn", "outfit": "res://assets/cosmetics/outfits/outfit_tarn_steady_cap.glb", "mesh": "SteadyCap*", "fit": true},
+	{"pilot": "tally", "outfit": "res://assets/cosmetics/outfits/outfit_tally_eyeshade.glb", "mesh": "Eyeshade*", "fit": true},
+	{"pilot": "rivet", "outfit": "res://assets/cosmetics/outfits/outfit_rivet_hood.glb", "mesh": "HoodShell*", "fit": false},
+]
+
+
+func _check_head_outfits() -> void:
+	for row in HEAD_OUTFITS:
+		var boxes := {}
+		var scale := 1.0
+		for suffix in ["", "_tripo"]:
+			var rig := (load("res://assets/models/pilot_%s_anim%s.glb" % [row.pilot, suffix]) as PackedScene).instantiate() as Node3D
+			root.add_child(rig)
+			var hero := HeroAssets.new()
+			var mounts := hero.fit_outfit_scene(rig, row.outfit, {})
+			await process_frame
+			var worn := mounts[0].find_child(row.mesh, true, false) as MeshInstance3D if not mounts.is_empty() else null
+			_check(worn != null, "%s%s wears its head outfit" % [row.pilot, suffix])
+			if worn != null:
+				boxes[suffix] = worn.global_transform * worn.get_aabb()
+			var mark := rig.find_child("MountFit_head", true, false) as Node3D
+			if suffix == "_tripo":
+				_check((mark != null) == bool(row.fit), "%s sibling %s MountFit_head node" % [row.pilot, "carries a" if row.fit else "has no"])
+				if mark != null:
+					var sizes := mark.transform.basis.get_scale()
+					scale = sizes.y
+					_check(absf(sizes.x - sizes.y) < 0.005 * sizes.y and absf(sizes.z - sizes.y) < 0.005 * sizes.y, "%s sibling's MountFit_head node is one size on every axis (%s)" % [row.pilot, sizes])
+				var cap := rig.find_child("Cap", true, false) as MeshInstance3D
+				if row.pilot == "tarn":
+					_check(cap != null and cap.layers == 0, "the Steady Cap hides the sibling's modelled Cap")
+					if cap != null and worn != null:
+						var under: AABB = cap.global_transform * cap.get_aabb()
+						var over: AABB = boxes[suffix]
+						_check(over.grow(0.01).encloses(AABB(Vector3(under.position.x, over.position.y, under.position.z), Vector3(under.size.x, 0.0, under.size.z))),
+							"the Steady Cap covers where the modelled Cap sat (cap %s, steady %s)" % [under, over])
+						_check(over.end.y > under.end.y - 0.01 and over.end.y < under.end.y + 0.03,
+							"the Steady Cap's crown sits at the modelled Cap's crown, neither sunk nor floating (cap top %.3f, steady top %.3f)" % [under.end.y, over.end.y])
+				if row.pilot == "tally" and worn != null:
+					var skin := rig.find_child("Pilot", true, false) as MeshInstance3D
+					var body: AABB = skin.global_transform * skin.get_aabb()
+					var shade: AABB = boxes[suffix]
+					_check(shade.position.z < body.position.z + 0.14 and shade.position.y > 0.3,
+						"the Eyeshade's brim reaches the front of the sibling's head, above the glasses (front %.3f, body front %.3f, height %.3f)" % [shade.position.z, body.position.z, shade.position.y])
+			hero.remove_outfit(rig)
+			rig.queue_free()
+			hero.free()
+		if boxes.size() == 2:
+			var ratio: float = (boxes["_tripo"] as AABB).size.x / (boxes[""] as AABB).size.x
+			if row.fit:
+				_check(scale > 1.05 and absf(ratio - scale) < 0.05 * scale, "%s's head outfit grows by the node's size (%.2f, node %.2f)" % [row.pilot, ratio, scale])
+			else:
+				_check((boxes["_tripo"] as AABB).is_equal_approx(boxes[""]), "%s's head outfit mounts as on the authored pilot" % row.pilot)
+
+
+# The world 1 point of interest props have no authored twin (tools/tripo/README.md, "New props"). The loader that places them
+# sets vertex colour as albedo, so each must be one mesh that carries COLOR_0, stands on its origin, and is the size its
+# placement was planned for: [stem, tall in metres, longer ground side in metres, has LOD files].
+const POI_PROPS := [
+	["poi_tally_stand", 4.0, 3.0, true],
+	["poi_yard_gate", 4.0, 8.0, true],
+	["poi_camp_tally_post", 2.5, 1.2, true],
+	["poi_fence_panel", 2.5, 6.2, false],
+	["poi_survey_stake", 3.16, 0.88, false],
+]
+
+
+func _check_poi_props() -> void:
+	for row in POI_PROPS:
+		var tris := []
+		for suffix in (["", "_lod1", "_lod2"] if row[3] else [""]):
+			var scene := load("res://assets/models/world_one/%s%s.glb" % [row[0], suffix]) as PackedScene
+			_check(scene != null, "%s%s loads" % [row[0], suffix])
+			if scene == null:
+				continue
+			var node := scene.instantiate()
+			var meshes := node.find_children("*", "MeshInstance3D", true, false)
+			_check(meshes.size() == 1 and (meshes[0] as MeshInstance3D).mesh.get_surface_count() == 1, "%s%s is one mesh and one draw" % [row[0], suffix])
+			if meshes.size() == 1:
+				var mi := meshes[0] as MeshInstance3D
+				var arrays := mi.mesh.surface_get_arrays(0)
+				_check(arrays[Mesh.ARRAY_COLOR] != null and (arrays[Mesh.ARRAY_COLOR] as PackedColorArray).size() > 0, "%s%s carries vertex colours" % [row[0], suffix])
+				_check(arrays[Mesh.ARRAY_TEX_UV] == null, "%s%s ships no texture coordinates" % [row[0], suffix])
+				var box: AABB = _to_root(mi, node) * mi.mesh.get_aabb()
+				tris.append(_mesh_tris(mi.mesh))
+				if suffix == "":
+					var mid := box.get_center()
+					# the stake's pennant hangs to one side of its foot, so only the fitted props are held to the centre
+					_check(absf(box.position.y) < 0.02 and (not row[3] or (absf(mid.x) < 0.05 and absf(mid.z) < 0.05)), "%s stands on its origin (base %.3f, centre %.3f, %.3f)" % [row[0], box.position.y, mid.x, mid.z])
+					_check(absf(box.size.y - row[1]) < 0.1 and absf(maxf(box.size.x, box.size.z) - row[2]) < 0.1,
+						"%s is the planned size (%.2f tall, %.2f across)" % [row[0], box.size.y, maxf(box.size.x, box.size.z)])
+			node.free()
+		if row[3] and tris.size() == 3:
+			_check(tris[0] > tris[1] and tris[1] > tris[2], "%s LOD files step down (%s)" % [row[0], tris])
+

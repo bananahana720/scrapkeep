@@ -1,4 +1,6 @@
-# Lane brief template
+# Lane brief template (history)
+
+**Not in use since 9 November 2026.** Ruling by (one thread, one writer) replaced the sub-coordinator lanes this template set up, and ruling dh moved coordination to the claude.ai project. A thread's rules are in [AGENTS.md](../../AGENTS.md). Kept as the record of the 18 October set-up.
 
 The local coordinator fills the bracketed fields and starts each cloud lane with this text. A lane is a sub-coordinator: it plans its units, fans out its own agents and workflows inside its sandbox, gates its work and opens PRs. Andrew's words on 18 Oct authorize this: "sessions that can also be their own coordinators within their sandboxes. And if they need to spin up their own agents and yeah, kind of divide and conquer."
 

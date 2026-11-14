@@ -2,6 +2,7 @@ extends SceneTree
 
 const Meanings := preload("res://src/core/colour_meanings.gd")
 const Palette := preload("res://src/core/palette.gd")
+const ShopTile := preload("res://src/ui/shop_tile.gd")
 const T := preload("res://tests/support/t.gd")
 
 # Colour never works alone (UI principle P2, design-v3/ui-audit/principles.json; WCAG 1.4.1).
@@ -31,7 +32,7 @@ const SIGHTS := {
 # name order. `carrier` is what tells the two facts apart without colour; a row with no carrier
 # yet names its finding in project-guide/handoff/UI-FINDINGS.tsv.
 const CLOSE := {
-	"AMBER|BRASS": {"carrier": "", "finding": "UF-02"},
+	"AMBER|BRASS": {"carrier": "a relic reward's frame is doubled with bolt heads (shop_tile.gd RARITY, checked below); a boss's ground warning carries rim ticks (threat_grammar.gd, the owner mark)", "finding": ""},
 	"AMBER|HAZARD": {"carrier": "", "finding": "UF-03"},
 	"BRASS|HAZARD": {"carrier": "", "finding": "UF-03"},
 	"ANCIENT|ARC": {"carrier": "ancient seams carry a pattern cue (material_slots.gd, the pattern field)", "finding": ""},
@@ -39,7 +40,7 @@ const CLOSE := {
 
 # One palette colour named for two facts: the same question with a difference of zero.
 const SHARED := {
-	"ARC": {"carrier": "", "finding": "UF-04"},
+	"ARC": {"carrier": "the common reward is the one single-line frame on a tile (shop_tile.gd RARITY, checked below); live is drawn on an enemy part or a key, never in a frame", "finding": ""},
 }
 
 var _t := T.new("colour_cvd_test")
@@ -64,6 +65,14 @@ func _initialize() -> void:
 	for want in ["A|B is close", "A carries one and three", "the CLOSE row A|C no longer", "the row A|C names neither"]:
 		_t.check("planted: one fault reads \"%s\"" % want, planted.any(func(line: String) -> bool: return line.begins_with(want)))
 	_t.check("planted: red and blue are not close", closest(Color("ff0000"), Color("0000ff"))["de"] >= FLOOR)
+	# The carriers the rows above name, held here: every reward rung's frame differs from every
+	# other by shape, the common rung is the only single line, and the relic rung has bolt heads.
+	_t.eq("every reward rung has a frame", frame_faults(Meanings.REWARD_RUNGS.keys(), ShopTile.RARITY), [])
+	_t.check("the common reward is the one single-line frame", _single_lines(ShopTile.RARITY) == ["common"], str(_single_lines(ShopTile.RARITY)))
+	_t.eq("the relic reward's frame carries bolt heads", ShopTile.RARITY["relic"]["notches"], "bolt")
+	var twins := {"a": {"color": Color.RED, "width": 2.0, "double": false, "notches": "", "dashed": false},
+		"b": {"color": Color.BLUE, "width": 2.0, "double": false, "notches": "", "dashed": false}}
+	_t.eq("planted: two frames that differ only by colour are named", frame_faults(["a", "b", "c"], twins), ["a and b differ by colour alone", "c has no frame"])
 	quit(_t.verdict())
 
 
@@ -98,6 +107,35 @@ static func faults(facts: Dictionary, palette: Dictionary, close_rows: Dictionar
 		for key in rows:
 			if rows[key]["carrier"] == "" and rows[key]["finding"] == "":
 				out.append("the row %s names neither a carrier nor a finding" % key)
+	return out
+
+
+# Reward frames (shop_tile.gd RARITY rows): each rung needs one, and no two may differ by colour alone.
+static func frame_faults(rungs: Array, frames: Dictionary) -> Array:
+	var out := []
+	var have := []
+	for rung in rungs:
+		if frames.has(rung):
+			have.append(rung)
+	for i in have.size():
+		for j in range(i + 1, have.size()):
+			if _shape(frames[have[i]]) == _shape(frames[have[j]]):
+				out.append("%s and %s differ by colour alone" % [have[i], have[j]])
+	for rung in rungs:
+		if not frames.has(rung):
+			out.append("%s has no frame" % rung)
+	return out
+
+
+static func _shape(frame: Dictionary) -> Array:
+	return [frame["width"], frame["double"], frame["notches"], frame["dashed"]]
+
+
+static func _single_lines(frames: Dictionary) -> Array:
+	var out := []
+	for rung in frames:
+		if not frames[rung]["double"]:
+			out.append(rung)
 	return out
 
 
