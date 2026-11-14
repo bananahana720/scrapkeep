@@ -1,0 +1,512 @@
+[gamescope] [[0;34mInfo[0m]  [0;37mconsole:[0m gamescope version 3.16.31 (gcc 16.2.1)
+No CAP_SYS_NICE, falling back to regular-priority compute and threads.
+Performance will be affected.
+[gamescope] [[0;34mInfo[0m]  [0;37mscriptmgr:[0m Loading scripts from: '/usr/share/gamescope/scripts'
+[gamescope] [[0;34mInfo[0m]  [0;37mscriptmgr:[0m Loading scripts from: '/usr/share/gamescope/scripts/00-gamescope'
+[gamescope] [[0;34mInfo[0m]  [0;37mscriptmgr:[0m Loading scripts from: '/usr/share/gamescope/scripts/00-gamescope/common'
+[gamescope] [[0;34mInfo[0m]  [0;37mscriptmgr:[0m Running script file '/usr/share/gamescope/scripts/00-gamescope/common/inspect.lua' (id: 0)
+[gamescope] [[0;34mInfo[0m]  [0;37mscriptmgr:[0m Running script file '/usr/share/gamescope/scripts/00-gamescope/common/modegen.lua' (id: 1)
+[gamescope] [[0;34mInfo[0m]  [0;37mscriptmgr:[0m Running script file '/usr/share/gamescope/scripts/00-gamescope/common/util.lua' (id: 2)
+[gamescope] [[0;34mInfo[0m]  [0;37mscriptmgr:[0m Loading scripts from: '/usr/share/gamescope/scripts/00-gamescope/displays'
+[gamescope] [[0;34mInfo[0m]  [0;37mscriptmgr:[0m Running script file '/usr/share/gamescope/scripts/00-gamescope/displays/asus.rogally.lcd.lua' (id: 3)
+[gamescope] [[0;34mInfo[0m]  [0;37mscriptmgr:[0m Running script file '/usr/share/gamescope/scripts/00-gamescope/displays/deckhd.steamdeck.deckhd-lcd.lua' (id: 4)
+[gamescope] [[0;34mInfo[0m]  [0;37mscriptmgr:[0m Running script file '/usr/share/gamescope/scripts/00-gamescope/displays/gpd.win4.lcd.lua' (id: 5)
+[gamescope] [[0;34mInfo[0m]  [0;37mscriptmgr:[0m Running script file '/usr/share/gamescope/scripts/00-gamescope/displays/lenovo.legiongo.lcd.lua' (id: 6)
+[gamescope] [[0;34mInfo[0m]  [0;37mscriptmgr:[0m Running script file '/usr/share/gamescope/scripts/00-gamescope/displays/lenovo.legiongo2.oled.lua' (id: 7)
+[gamescope] [[0;34mInfo[0m]  [0;37mscriptmgr:[0m Running script file '/usr/share/gamescope/scripts/00-gamescope/displays/lenovo.legiongos.lcd.lua' (id: 8)
+[gamescope] [[0;34mInfo[0m]  [0;37mscriptmgr:[0m Running script file '/usr/share/gamescope/scripts/00-gamescope/displays/onexplayer.f1.oled.lua' (id: 9)
+[gamescope] [[0;34mInfo[0m]  [0;37mscriptmgr:[0m Running script file '/usr/share/gamescope/scripts/00-gamescope/displays/valve.steamdeck.lcd.lua' (id: 10)
+[gamescope] [[0;34mInfo[0m]  [0;37mscriptmgr:[0m Running script file '/usr/share/gamescope/scripts/00-gamescope/displays/valve.steamdeck.oled.lua' (id: 11)
+[gamescope] [[0;34mInfo[0m]  [0;37mscriptmgr:[0m Running script file '/usr/share/gamescope/scripts/00-gamescope/displays/zotac.zone.oled.lua' (id: 12)
+[gamescope] [[0;34mInfo[0m]  [0;37mscriptmgr:[0m Loading scripts from: '/etc/gamescope/scripts'
+[gamescope] [[0;33mWarn[0m]  [0;37mscriptmgr:[0m Directory '/etc/gamescope/scripts' does not exist
+[gamescope] [[0;34mInfo[0m]  [0;37mscriptmgr:[0m Loading scripts from: '/home/andrew/scratch/w40-pc/out-ax/sitting-run/home/config/gamescope/scripts'
+[gamescope] [[0;33mWarn[0m]  [0;37mscriptmgr:[0m Directory '/home/andrew/scratch/w40-pc/out-ax/sitting-run/home/config/gamescope/scripts' does not exist
+[gamescope] [[0;34mInfo[0m]  [0;37mvulkan:[0m selecting physical device 'NVIDIA GeForce RTX 4080': queue family 2 (general queue family 0)
+[gamescope] [[0;34mInfo[0m]  [0;37mvulkan:[0m physical device supports DRM format modifiers
+[gamescope] [[0;34mInfo[0m]  [0;37mwlserver:[0m [backend/headless/backend.c:60] Creating headless backend
+[gamescope] [[0;31mError[0m] [0;37mvulkan:[0m vkGetPhysicalDeviceFormatProperties2 returned zero modifiers for DRM format 0x38344241 (VkResult: 0)
+[gamescope] [[0;31mError[0m] [0;37mvulkan:[0m vkGetPhysicalDeviceFormatProperties2 returned zero modifiers for DRM format 0x38344258 (VkResult: 0)
+[gamescope] [[0;34mInfo[0m]  [0;37mvulkan:[0m supported DRM formats for sampling usage:
+[gamescope] [[0;34mInfo[0m]  [0;37mvulkan:[0m   AR24 (0x34325241)
+[gamescope] [[0;34mInfo[0m]  [0;37mvulkan:[0m   XR24 (0x34325258)
+[gamescope] [[0;34mInfo[0m]  [0;37mvulkan:[0m   AB24 (0x34324241)
+[gamescope] [[0;34mInfo[0m]  [0;37mvulkan:[0m   XB24 (0x34324258)
+[gamescope] [[0;34mInfo[0m]  [0;37mvulkan:[0m   RG16 (0x36314752)
+[gamescope] [[0;34mInfo[0m]  [0;37mvulkan:[0m   NV12 (0x3231564E)
+[gamescope] [[0;34mInfo[0m]  [0;37mvulkan:[0m   AB4H (0x48344241)
+[gamescope] [[0;34mInfo[0m]  [0;37mvulkan:[0m   XB4H (0x48344258)
+[gamescope] [[0;34mInfo[0m]  [0;37mvulkan:[0m   AB30 (0x30334241)
+[gamescope] [[0;34mInfo[0m]  [0;37mvulkan:[0m   XB30 (0x30334258)
+[gamescope] [[0;34mInfo[0m]  [0;37mvulkan:[0m   AR30 (0x30335241)
+[gamescope] [[0;34mInfo[0m]  [0;37mvulkan:[0m   XR30 (0x30335258)
+[gamescope] [[0;34mInfo[0m]  [0;37mwlserver:[0m Using explicit sync when available
+[gamescope] [[0;34mInfo[0m]  [0;37mwlserver:[0m Running compositor on wayland display 'gamescope-0'
+[gamescope] [[0;34mInfo[0m]  [0;37mwlserver:[0m [backend/headless/backend.c:17] Starting headless backend
+[gamescope] [[0;34mInfo[0m]  [0;37mwlserver:[0m Successfully initialized libei for input emulation!
+[gamescope] [[0;34mInfo[0m]  [0;37mwlserver:[0m [xwayland/server.c:108] Starting Xwayland on :1
+The XKEYBOARD keymap compiler (xkbcomp) reports:
+> Warning:          Multiple symbols for level 1/group 1 on key <FK23>
+>                   Using F23, ignoring XF86TouchpadOff
+> Warning:          Symbol map for key <FK23> redefined
+>                   Using last definition for conflicting fields
+> Warning:          Symbol map for key <FK24> redefined
+>                   Using last definition for conflicting fields
+Errors from xkbcomp are not fatal to the X server
+[gamescope] [[0;34mInfo[0m]  [0;37mpipewire:[0m stream state changed: connecting
+[gamescope] [[0;34mInfo[0m]  [0;37mpipewire:[0m stream state changed: paused
+[gamescope] [[0;34mInfo[0m]  [0;37mpipewire:[0m stream available on node ID: 93
+[gamescope] [[0;34mInfo[0m]  [0;37mvblank:[0m Using timerfd.
+Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org
+[Gamescope WSI] Application info:
+  pApplicationName: Scrapkeep
+  applicationVersion: 0
+  pEngineName: Godot Engine
+  engineVersion: 16805890
+  apiVersion: 4202496
+[Gamescope WSI] Executable name: Godot_v4.7.2-stable_linux.x86_64
+WARNING: Failed to create wd.xic as the input method or its xim server may not have started yet.
+     at: _create_xic (platform/linuxbsd/x11/display_server_x11.cpp:6347)
+[Gamescope WSI] Creating Gamescope surface: xid: 0x400002
+[Gamescope WSI] Atom of T was wrong type. Expected XCB_ATOM_CARDINAL.
+[Gamescope WSI] Made gamescope surface for xid: 0x400002
+[Gamescope WSI] Surface state:
+  steam app id:                  0
+  window xid:                    0x400002
+  wayland surface res id:        6
+  layer client flags:            0x0
+  server hdr output enabled:     false
+  hdr formats exposed to client: false
+[Gamescope WSI] Forcing on VK_EXT_swapchain_maintenance1.
+Vulkan 1.4.351 - Forward+ - Using Device #0: NVIDIA - NVIDIA GeForce RTX 4080
+
+[Gamescope WSI] Creating swapchain for xid: 0x400002 - oldSwapchain: (nil) - provided minImageCount: 3 - minImageCount: 3 - format: VK_FORMAT_B8G8R8A8_UNORM - colorspace: VK_COLOR_SPACE_SRGB_NONLINEAR_KHR - flip: true
+[Gamescope WSI] Created swapchain for xid: 0x400002 swapchain: 0x2bbb3770 - imageCount: 3
+The XKEYBOARD keymap compiler (xkbcomp) reports:
+> Warning:          Unsupported maximum keycode 709, clipping.
+>                   X11 cannot support keycodes above 255.
+> Warning:          Virtual modifier Hyper multiply defined
+>                   Using 0, ignoring 0
+> Warning:          Virtual modifier ScrollLock multiply defined
+>                   Using 0, ignoring 0
+Errors from xkbcomp are not fatal to the X server
+SCRAPKEEP_BUILD commit=9602dbd5b445aaeed6aec10baa006e91938eff02 dirty=false built=unknown source=checkout
+SCRAPKEEP_TITLE_INTERACTIVE ms=3856
+[Gamescope WSI] Destroying swapchain: 0x2bbb3770
+[Gamescope WSI] Destroyed swapchain: 0x2bbb3770
+WARNING: The requested V-Sync mode Disabled is not available. Falling back to V-Sync mode Enabled.
+     at: swap_chain_resize (drivers/vulkan/rendering_device_driver_vulkan.cpp:3767)
+[Gamescope WSI] Creating swapchain for xid: 0x400002 - oldSwapchain: (nil) - provided minImageCount: 3 - minImageCount: 3 - format: VK_FORMAT_B8G8R8A8_UNORM - colorspace: VK_COLOR_SPACE_SRGB_NONLINEAR_KHR - flip: true
+[Gamescope WSI] Created swapchain for xid: 0x400002 swapchain: 0x2bbb3770 - imageCount: 3
+SCRAPKEEP_SHELL name=Scrapkeep splash_bg=#242a28 splash=res://assets/app/scrapkeep_splash.png icon=icon 256x256
+WARNING: instance_reset_physics_interpolation() is deprecated.
+     at: _instance_reset_physics_interpolation_bind_compat_104269 (servers/rendering/rendering_server.compat.inc:62)
+     GDScript backtrace (most recent call first):
+         [0] make_render (res://src/world/park/park_terrain.gd:391)
+         [1] build (res://src/world/terrain.gd:208)
+         [2] setup (res://src/world/world.gd:124)
+         [3] _module (res://src/game.gd:558)
+         [4] _ready (res://src/game.gd:291)
+         [5] _add_game (res://src/boot/boot.gd:167)
+         [6] _poll (res://src/boot/boot.gd:123)
+         [7] _process (res://src/boot/boot.gd:113)
+SCRAPKEEP_MENU_READY ms=21465 profile=sitting pilots=6/6
+[Gamescope WSI] Destroying swapchain: 0x2bbb3770
+[Gamescope WSI] Destroyed swapchain: 0x2bbb3770
+[Gamescope WSI] Creating swapchain for xid: 0x400002 - oldSwapchain: (nil) - provided minImageCount: 3 - minImageCount: 3 - format: VK_FORMAT_B8G8R8A8_UNORM - colorspace: VK_COLOR_SPACE_SRGB_NONLINEAR_KHR - flip: true
+[Gamescope WSI] Created swapchain for xid: 0x400002 swapchain: 0x2bbb3770 - imageCount: 3
+self-play: skipper seed 1 until win started at 7.74 s
+WARNING: [Physics interpolation] Interpolated Camera3D triggered from outside physics process: "/root/Game/Screens/@VBoxContainer@301/@HBoxContainer@307/@Button@1423/@VBoxContainer@1363/@SubViewportContainer@1382/@SubViewport@1364/@Camera3D@1365" (possibly benign).
+     at: _notification (scene/3d/camera_3d.cpp:218)
+self-play: prologue read with 3 presses at 17.79 s
+self-play: pilot 1 picked by key at 17.79 s
+self-play: pilot 1 picked by key at 18.29 s
+self-play: stage 1 entered at 18.53 s
+self-play: carry stage=1 hp=100.00 mass=0.00 cogs=0 parts= picks=
+self-play: in play by keys at 18.54 s
+SCRAPKEEP_FIRST_CONTROL ms=70260
+self-play: kit pick taken with 1 at 21.56 s
+self-play: start pick taken with 1 at 24.56 s
+WARNING: progress: ach_w19_soaked earned but not saved: not saving: sitting profile: this session does not save
+     at: push_warning (core/variant/variant_utility.cpp:1033)
+     GDScript backtrace (most recent call first):
+         [0] _earn (res://src/core/progress.gd:421)
+         [1] _evaluate (res://src/core/progress.gd:360)
+         [2] _fact (res://src/core/progress.gd:328)
+         [3] <anonymous lambda> (res://src/core/progress.gd:297)
+         [4] mark_discovered (res://src/core/codex.gd:185)
+         [5] _discover (res://src/combat/combat.gd:4240)
+         [6] _read_armour (res://src/combat/combat.gd:791)
+         [7] _door_caps (res://src/combat/combat.gd:723)
+         [8] pass_hit (res://src/combat/damage_door.gd:77)
+         [9] strike (res://src/combat/combat.gd:701)
+         [10] _hit (res://src/combat/combat.gd:1775)
+         [11] _discharge (res://src/combat/combat.gd:3460)
+         [12] _fire_discharge (res://src/combat/combat.gd:2069)
+         [13] _step_special (res://src/combat/combat.gd:1901)
+         [14] _physics_process (res://src/combat/combat.gd:1619)
+self-play: kit pick taken with 1 at 87.56 s
+WARNING: progress: ach_any_set_piece earned but not saved: not saving: sitting profile: this session does not save
+     at: push_warning (core/variant/variant_utility.cpp:1033)
+     GDScript backtrace (most recent call first):
+         [0] _earn (res://src/core/progress.gd:421)
+         [1] _evaluate (res://src/core/progress.gd:360)
+         [2] _fact (res://src/core/progress.gd:328)
+         [3] <anonymous lambda> (res://src/core/progress.gd:297)
+         [4] mark_discovered (res://src/core/codex.gd:185)
+         [5] _discover (res://src/combat/combat.gd:4240)
+         [6] _strike (res://src/combat/ultimate.gd:778)
+         [7] _land (res://src/combat/ultimate.gd:746)
+         [8] _land (res://src/combat/kest_kit.gd:313)
+         [9] _fly (res://src/combat/ultimate.gd:710)
+         [10] _fly (res://src/combat/kest_kit.gd:274)
+         [11] step (res://src/combat/ultimate.gd:634)
+         [12] step (res://src/combat/kest_kit.gd:555)
+         [13] _physics_process (res://src/combat/ultimate.gd:604)
+WARNING: progress: ach_meta_pocket_tint earned but not saved: not saving: sitting profile: this session does not save
+     at: push_warning (core/variant/variant_utility.cpp:1033)
+     GDScript backtrace (most recent call first):
+         [0] _earn (res://src/core/progress.gd:421)
+         [1] _evaluate (res://src/core/progress.gd:360)
+         [2] _fact (res://src/core/progress.gd:328)
+         [3] <anonymous lambda> (res://src/core/progress.gd:297)
+         [4] mark_discovered (res://src/core/codex.gd:185)
+         [5] _discover (res://src/combat/combat.gd:4240)
+         [6] _strike (res://src/combat/ultimate.gd:778)
+         [7] _land (res://src/combat/ultimate.gd:746)
+         [8] _land (res://src/combat/kest_kit.gd:313)
+         [9] _fly (res://src/combat/ultimate.gd:710)
+         [10] _fly (res://src/combat/kest_kit.gd:274)
+         [11] step (res://src/combat/ultimate.gd:634)
+         [12] step (res://src/combat/kest_kit.gd:555)
+         [13] _physics_process (res://src/combat/ultimate.gd:604)
+WARNING: progress: ach_sable_parting_shot earned but not saved: not saving: sitting profile: this session does not save
+     at: push_warning (core/variant/variant_utility.cpp:1033)
+     GDScript backtrace (most recent call first):
+         [0] _earn (res://src/core/progress.gd:421)
+         [1] _evaluate (res://src/core/progress.gd:360)
+         [2] _fact (res://src/core/progress.gd:328)
+         [3] <anonymous lambda> (res://src/core/progress.gd:297)
+         [4] mark_discovered (res://src/core/codex.gd:185)
+         [5] _discover (res://src/combat/combat.gd:4240)
+         [6] _detect_after (res://src/combat/combat.gd:4268)
+         [7] _door_events (res://src/combat/combat.gd:849)
+         [8] pass_hit (res://src/combat/damage_door.gd:77)
+         [9] strike (res://src/combat/combat.gd:701)
+         [10] _hit (res://src/combat/combat.gd:1775)
+         [11] _discharge (res://src/combat/combat.gd:3460)
+         [12] _fire_discharge (res://src/combat/combat.gd:2069)
+         [13] _step_special (res://src/combat/combat.gd:1901)
+         [14] _physics_process (res://src/combat/combat.gd:1619)
+WARNING: progress: ach_w20_legend_take earned but not saved: not saving: sitting profile: this session does not save
+     at: push_warning (core/variant/variant_utility.cpp:1033)
+     GDScript backtrace (most recent call first):
+         [0] _earn (res://src/core/progress.gd:421)
+         [1] _evaluate (res://src/core/progress.gd:360)
+         [2] _fact (res://src/core/progress.gd:328)
+         [3] <anonymous lambda> (res://src/core/progress.gd:297)
+         [4] find (res://src/presentation/radio_deck.gd:122)
+         [5] bus_signal (res://src/presentation/radio_deck.gd:88)
+         [6] <anonymous lambda> (res://src/presentation/radio_deck.gd:72)
+         [7] mark_discovered (res://src/core/codex.gd:185)
+         [8] _discover (res://src/combat/combat.gd:4240)
+         [9] discover (res://src/combat/fleet.gd:227)
+         [10] _apply_posture (res://src/combat/warden.gd:1011)
+         [11] on_struck (res://src/combat/warden.gd:352)
+         [12] _door_plates (res://src/combat/combat.gd:829)
+         [13] pass_hit (res://src/combat/damage_door.gd:77)
+         [14] strike (res://src/combat/combat.gd:701)
+         [15] <anonymous lambda> (res://src/game.gd:318)
+         [16] _on_enemy_touched (res://src/movement/player_ball.gd:1628)
+         [17] _on_body_entered (res://src/movement/rigid_ball.gd:324)
+WARNING: progress: ach_d7_moth_tuft earned but not saved: not saving: sitting profile: this session does not save
+     at: push_warning (core/variant/variant_utility.cpp:1033)
+     GDScript backtrace (most recent call first):
+         [0] _earn (res://src/core/progress.gd:421)
+         [1] _evaluate (res://src/core/progress.gd:360)
+         [2] _fact (res://src/core/progress.gd:328)
+         [3] <anonymous lambda> (res://src/core/progress.gd:297)
+         [4] mark_discovered (res://src/core/codex.gd:185)
+         [5] _discover (res://src/combat/combat.gd:4240)
+         [6] discover (res://src/combat/fleet.gd:227)
+         [7] _apply_posture (res://src/combat/warden.gd:1011)
+         [8] on_struck (res://src/combat/warden.gd:352)
+         [9] _door_plates (res://src/combat/combat.gd:829)
+         [10] pass_hit (res://src/combat/damage_door.gd:77)
+         [11] strike (res://src/combat/combat.gd:701)
+         [12] <anonymous lambda> (res://src/game.gd:318)
+         [13] _on_enemy_touched (res://src/movement/player_ball.gd:1628)
+         [14] _on_body_entered (res://src/movement/rigid_ball.gd:324)
+WARNING: progress: warden_broken earned but not saved: not saving: sitting profile: this session does not save
+     at: push_warning (core/variant/variant_utility.cpp:1033)
+     GDScript backtrace (most recent call first):
+         [0] _earn (res://src/core/progress.gd:421)
+         [1] _evaluate (res://src/core/progress.gd:360)
+         [2] _fact (res://src/core/progress.gd:328)
+         [3] <anonymous lambda> (res://src/core/progress.gd:293)
+         [4] _unseal (res://src/core/flow.gd:1293)
+         [5] _on_enemy_killed (res://src/core/flow.gd:1270)
+         [6] record_kill (res://src/core/run_state.gd:883)
+         [7] <anonymous lambda> (res://src/combat/combat.gd:637)
+         [8] _die (res://src/combat/enemy.gd:586)
+         [9] take_damage (res://src/combat/enemy.gd:561)
+         [10] take_damage (res://src/combat/warden.gd:1062)
+         [11] health (res://src/combat/damage_door.gd:104)
+         [12] _door_health (res://src/combat/combat.gd:837)
+         [13] pass_hit (res://src/combat/damage_door.gd:77)
+         [14] strike (res://src/combat/combat.gd:701)
+         [15] <anonymous lambda> (res://src/game.gd:318)
+         [16] _on_enemy_touched (res://src/movement/player_ball.gd:1628)
+         [17] _on_body_entered (res://src/movement/rigid_ball.gd:324)
+self-play: stage 1 exit taken at 162.50 s
+self-play: stage 2 entered at 162.50 s
+self-play: carry stage=2 hp=135.00 mass=588.00 cogs=699 parts=rivet_plating+impact_driver picks=s_cannonball+s_coil_hook
+WARNING: progress: ach_w19_flap_ride earned but not saved: not saving: sitting profile: this session does not save
+     at: push_warning (core/variant/variant_utility.cpp:1033)
+     GDScript backtrace (most recent call first):
+         [0] _earn (res://src/core/progress.gd:421)
+         [1] _evaluate (res://src/core/progress.gd:360)
+         [2] _fact (res://src/core/progress.gd:328)
+         [3] <anonymous lambda> (res://src/core/progress.gd:297)
+         [4] mark_discovered (res://src/core/codex.gd:185)
+         [5] _discover (res://src/combat/combat.gd:4240)
+         [6] discover (res://src/combat/fleet.gd:227)
+         [7] _ride (res://src/combat/ramp_flipper.gd:150)
+         [8] _go_live (res://src/combat/ramp_flipper.gd:126)
+         [9] _physics_process (res://src/combat/counter.gd:284)
+WARNING: progress: ach_d7_thimble earned but not saved: not saving: sitting profile: this session does not save
+     at: push_warning (core/variant/variant_utility.cpp:1033)
+     GDScript backtrace (most recent call first):
+         [0] _earn (res://src/core/progress.gd:421)
+         [1] _evaluate (res://src/core/progress.gd:360)
+         [2] _fact (res://src/core/progress.gd:328)
+         [3] <anonymous lambda> (res://src/core/progress.gd:295)
+         [4] _physics_process (res://src/build/build.gd:1527)
+WARNING: progress: codex_keeper earned but not saved: not saving: sitting profile: this session does not save
+     at: push_warning (core/variant/variant_utility.cpp:1033)
+     GDScript backtrace (most recent call first):
+         [0] _earn (res://src/core/progress.gd:421)
+         [1] _evaluate (res://src/core/progress.gd:360)
+         [2] _fact (res://src/core/progress.gd:328)
+         [3] <anonymous lambda> (res://src/core/progress.gd:297)
+         [4] mark_discovered (res://src/core/codex.gd:185)
+         [5] _discover (res://src/combat/combat.gd:4240)
+         [6] discover (res://src/combat/fleet.gd:227)
+         [7] on_struck (res://src/combat/plated_brute.gd:339)
+         [8] _door_plates (res://src/combat/combat.gd:829)
+         [9] pass_hit (res://src/combat/damage_door.gd:77)
+         [10] strike (res://src/combat/combat.gd:701)
+         [11] <anonymous lambda> (res://src/game.gd:318)
+         [12] _on_enemy_touched (res://src/movement/player_ball.gd:1639)
+         [13] _on_body_entered (res://src/movement/rigid_ball.gd:324)
+WARNING: progress: ach_d7_moth_grey earned but not saved: not saving: sitting profile: this session does not save
+     at: push_warning (core/variant/variant_utility.cpp:1033)
+     GDScript backtrace (most recent call first):
+         [0] _earn (res://src/core/progress.gd:421)
+         [1] _evaluate (res://src/core/progress.gd:360)
+         [2] _fact (res://src/core/progress.gd:328)
+         [3] <anonymous lambda> (res://src/core/progress.gd:297)
+         [4] mark_discovered (res://src/core/codex.gd:185)
+         [5] _discover (res://src/combat/combat.gd:4240)
+         [6] discover (res://src/combat/fleet.gd:227)
+         [7] on_struck (res://src/combat/plated_brute.gd:339)
+         [8] _door_plates (res://src/combat/combat.gd:829)
+         [9] pass_hit (res://src/combat/damage_door.gd:77)
+         [10] strike (res://src/combat/combat.gd:701)
+         [11] <anonymous lambda> (res://src/game.gd:318)
+         [12] _on_enemy_touched (res://src/movement/player_ball.gd:1639)
+         [13] _on_body_entered (res://src/movement/rigid_ball.gd:324)
+WARNING: progress: ach_any_curtain_call earned but not saved: not saving: sitting profile: this session does not save
+     at: push_warning (core/variant/variant_utility.cpp:1033)
+     GDScript backtrace (most recent call first):
+         [0] _earn (res://src/core/progress.gd:421)
+         [1] _evaluate (res://src/core/progress.gd:360)
+         [2] _fact (res://src/core/progress.gd:328)
+         [3] <anonymous lambda> (res://src/core/progress.gd:297)
+         [4] mark_discovered (res://src/core/codex.gd:185)
+         [5] _discover (res://src/combat/combat.gd:4240)
+         [6] _ult_hit (res://src/combat/combat.gd:2737)
+         [7] _sable_damage (res://src/combat/ultimate.gd:873)
+         [8] _sable_landing (res://src/combat/ultimate.gd:881)
+         [9] _strike (res://src/combat/ultimate.gd:768)
+         [10] _land (res://src/combat/ultimate.gd:746)
+         [11] _land (res://src/combat/kest_kit.gd:313)
+         [12] _fly (res://src/combat/ultimate.gd:710)
+         [13] _fly (res://src/combat/kest_kit.gd:274)
+         [14] step (res://src/combat/ultimate.gd:634)
+         [15] step (res://src/combat/kest_kit.gd:555)
+         [16] _physics_process (res://src/combat/ultimate.gd:604)
+WARNING: progress: ach_sable_cable_runs earned but not saved: not saving: sitting profile: this session does not save
+     at: push_warning (core/variant/variant_utility.cpp:1033)
+     GDScript backtrace (most recent call first):
+         [0] _earn (res://src/core/progress.gd:421)
+         [1] _evaluate (res://src/core/progress.gd:360)
+         [2] _fact (res://src/core/progress.gd:328)
+         [3] <anonymous lambda> (res://src/core/progress.gd:297)
+         [4] mark_discovered (res://src/core/codex.gd:185)
+         [5] _discover (res://src/combat/combat.gd:4240)
+         [6] _strike (res://src/combat/ultimate.gd:777)
+         [7] _land (res://src/combat/ultimate.gd:746)
+         [8] _land (res://src/combat/kest_kit.gd:313)
+         [9] _fly (res://src/combat/ultimate.gd:710)
+         [10] _fly (res://src/combat/kest_kit.gd:274)
+         [11] step (res://src/combat/ultimate.gd:634)
+         [12] step (res://src/combat/kest_kit.gd:555)
+         [13] _physics_process (res://src/combat/ultimate.gd:604)
+self-play: stage 2 exit taken at 298.61 s
+self-play: boss arena entered at 298.61 s
+WARNING: progress: brindle_routed earned but not saved: not saving: sitting profile: this session does not save
+     at: push_warning (core/variant/variant_utility.cpp:1033)
+     GDScript backtrace (most recent call first):
+         [0] _earn (res://src/core/progress.gd:421)
+         [1] _evaluate (res://src/core/progress.gd:360)
+         [2] _fact (res://src/core/progress.gd:328)
+         [3] <anonymous lambda> (res://src/core/progress.gd:297)
+         [4] record_kill (res://src/core/run_state.gd:883)
+         [5] _defeat (res://src/boss/boss.gd:1262)
+         [6] _on_enemy_struck (res://src/boss/boss.gd:1242)
+         [7] _door_announce (res://src/combat/combat.gd:817)
+         [8] pass_hit (res://src/combat/damage_door.gd:77)
+         [9] strike (res://src/combat/combat.gd:701)
+         [10] <anonymous lambda> (res://src/game.gd:318)
+         [11] _on_enemy_touched (res://src/movement/player_ball.gd:1639)
+         [12] _on_body_entered (res://src/movement/rigid_ball.gd:324)
+WARNING: progress: brindle_mark_sable earned but not saved: not saving: sitting profile: this session does not save
+     at: push_warning (core/variant/variant_utility.cpp:1033)
+     GDScript backtrace (most recent call first):
+         [0] _earn (res://src/core/progress.gd:421)
+         [1] _evaluate (res://src/core/progress.gd:360)
+         [2] _fact (res://src/core/progress.gd:328)
+         [3] <anonymous lambda> (res://src/core/progress.gd:297)
+         [4] record_kill (res://src/core/run_state.gd:883)
+         [5] _defeat (res://src/boss/boss.gd:1262)
+         [6] _on_enemy_struck (res://src/boss/boss.gd:1242)
+         [7] _door_announce (res://src/combat/combat.gd:817)
+         [8] pass_hit (res://src/combat/damage_door.gd:77)
+         [9] strike (res://src/combat/combat.gd:701)
+         [10] <anonymous lambda> (res://src/game.gd:318)
+         [11] _on_enemy_touched (res://src/movement/player_ball.gd:1639)
+         [12] _on_body_entered (res://src/movement/rigid_ball.gd:324)
+self-play: boss defeated at 383.70 s
+WARNING: progress: first_win earned but not saved: not saving: sitting profile: this session does not save
+     at: push_warning (core/variant/variant_utility.cpp:1033)
+     GDScript backtrace (most recent call first):
+         [0] _earn (res://src/core/progress.gd:421)
+         [1] _evaluate (res://src/core/progress.gd:360)
+         [2] _fact (res://src/core/progress.gd:328)
+         [3] <anonymous lambda> (res://src/core/progress.gd:293)
+         [4] _end_run (res://src/core/flow.gd:1191)
+         [5] _end_run_won (res://src/core/flow.gd:1113)
+         [6] _advance_from (res://src/core/flow.gd:1075)
+         [7] physics_step (res://src/core/flow.gd:1005)
+         [8] _physics_process (res://src/game.gd:622)
+WARNING: progress: clean_win earned but not saved: not saving: sitting profile: this session does not save
+     at: push_warning (core/variant/variant_utility.cpp:1033)
+     GDScript backtrace (most recent call first):
+         [0] _earn (res://src/core/progress.gd:421)
+         [1] _evaluate (res://src/core/progress.gd:360)
+         [2] _fact (res://src/core/progress.gd:328)
+         [3] <anonymous lambda> (res://src/core/progress.gd:293)
+         [4] _end_run (res://src/core/flow.gd:1191)
+         [5] _end_run_won (res://src/core/flow.gd:1113)
+         [6] _advance_from (res://src/core/flow.gd:1075)
+         [7] physics_step (res://src/core/flow.gd:1005)
+         [8] _physics_process (res://src/game.gd:622)
+WARNING: progress: ach_d7_salt_skip earned but not saved: not saving: sitting profile: this session does not save
+     at: push_warning (core/variant/variant_utility.cpp:1033)
+     GDScript backtrace (most recent call first):
+         [0] _earn (res://src/core/progress.gd:421)
+         [1] _evaluate (res://src/core/progress.gd:360)
+         [2] _fact (res://src/core/progress.gd:328)
+         [3] <anonymous lambda> (res://src/core/progress.gd:293)
+         [4] _end_run (res://src/core/flow.gd:1191)
+         [5] _end_run_won (res://src/core/flow.gd:1113)
+         [6] _advance_from (res://src/core/flow.gd:1075)
+         [7] physics_step (res://src/core/flow.gd:1005)
+         [8] _physics_process (res://src/game.gd:622)
+WARNING: progress: secret_paint_sable earned but not saved: not saving: sitting profile: this session does not save
+     at: push_warning (core/variant/variant_utility.cpp:1033)
+     GDScript backtrace (most recent call first):
+         [0] _earn (res://src/core/progress.gd:421)
+         [1] _evaluate (res://src/core/progress.gd:360)
+         [2] _fact (res://src/core/progress.gd:328)
+         [3] <anonymous lambda> (res://src/core/progress.gd:293)
+         [4] _end_run (res://src/core/flow.gd:1191)
+         [5] _end_run_won (res://src/core/flow.gd:1113)
+         [6] _advance_from (res://src/core/flow.gd:1075)
+         [7] physics_step (res://src/core/flow.gd:1005)
+         [8] _physics_process (res://src/game.gd:622)
+WARNING: progress: secret_paint_rivet earned but not saved: not saving: sitting profile: this session does not save
+     at: push_warning (core/variant/variant_utility.cpp:1033)
+     GDScript backtrace (most recent call first):
+         [0] _earn (res://src/core/progress.gd:421)
+         [1] _evaluate (res://src/core/progress.gd:360)
+         [2] _fact (res://src/core/progress.gd:328)
+         [3] <anonymous lambda> (res://src/core/progress.gd:293)
+         [4] _end_run (res://src/core/flow.gd:1191)
+         [5] _end_run_won (res://src/core/flow.gd:1113)
+         [6] _advance_from (res://src/core/flow.gd:1075)
+         [7] physics_step (res://src/core/flow.gd:1005)
+         [8] _physics_process (res://src/game.gd:622)
+WARNING: progress: secret_paint_kest earned but not saved: not saving: sitting profile: this session does not save
+     at: push_warning (core/variant/variant_utility.cpp:1033)
+     GDScript backtrace (most recent call first):
+         [0] _earn (res://src/core/progress.gd:421)
+         [1] _evaluate (res://src/core/progress.gd:360)
+         [2] _fact (res://src/core/progress.gd:328)
+         [3] <anonymous lambda> (res://src/core/progress.gd:293)
+         [4] _end_run (res://src/core/flow.gd:1191)
+         [5] _end_run_won (res://src/core/flow.gd:1113)
+         [6] _advance_from (res://src/core/flow.gd:1075)
+         [7] physics_step (res://src/core/flow.gd:1005)
+         [8] _physics_process (res://src/game.gd:622)
+WARNING: progress: secret_paint_tarn earned but not saved: not saving: sitting profile: this session does not save
+     at: push_warning (core/variant/variant_utility.cpp:1033)
+     GDScript backtrace (most recent call first):
+         [0] _earn (res://src/core/progress.gd:421)
+         [1] _evaluate (res://src/core/progress.gd:360)
+         [2] _fact (res://src/core/progress.gd:328)
+         [3] <anonymous lambda> (res://src/core/progress.gd:293)
+         [4] _end_run (res://src/core/flow.gd:1191)
+         [5] _end_run_won (res://src/core/flow.gd:1113)
+         [6] _advance_from (res://src/core/flow.gd:1075)
+         [7] physics_step (res://src/core/flow.gd:1005)
+         [8] _physics_process (res://src/game.gd:622)
+WARNING: progress: secret_paint_tally earned but not saved: not saving: sitting profile: this session does not save
+     at: push_warning (core/variant/variant_utility.cpp:1033)
+     GDScript backtrace (most recent call first):
+         [0] _earn (res://src/core/progress.gd:421)
+         [1] _evaluate (res://src/core/progress.gd:360)
+         [2] _fact (res://src/core/progress.gd:328)
+         [3] <anonymous lambda> (res://src/core/progress.gd:293)
+         [4] _end_run (res://src/core/flow.gd:1191)
+         [5] _end_run_won (res://src/core/flow.gd:1113)
+         [6] _advance_from (res://src/core/flow.gd:1075)
+         [7] physics_step (res://src/core/flow.gd:1005)
+         [8] _physics_process (res://src/game.gd:622)
+WARNING: progress: secret_paint_cannon earned but not saved: not saving: sitting profile: this session does not save
+     at: push_warning (core/variant/variant_utility.cpp:1033)
+     GDScript backtrace (most recent call first):
+         [0] _earn (res://src/core/progress.gd:421)
+         [1] _evaluate (res://src/core/progress.gd:360)
+         [2] _fact (res://src/core/progress.gd:328)
+         [3] <anonymous lambda> (res://src/core/progress.gd:293)
+         [4] _end_run (res://src/core/flow.gd:1191)
+         [5] _end_run_won (res://src/core/flow.gd:1113)
+         [6] _advance_from (res://src/core/flow.gd:1075)
+         [7] physics_step (res://src/core/flow.gd:1005)
+         [8] _physics_process (res://src/game.gd:622)
+self-play: run won at 407.76 s
+self-play: watch stuck=0 hung=0 wedged=0 fell=0 objectives=16 blank_max=1.0 bar_off_max=0.0 stages=1,2
+self-play: skills slot2=38 slot3=10 set_pieces=5
+self-play: film 166 frames (948 drawn) in /home/andrew/scratch/w40-pc/out-ax/sitting-run/film
+ERROR: BUG, indexing did not unpair geometries from light.
+   at: instance_set_scenario (servers/rendering/renderer_scene_cull.cpp:844)
+ERROR: BUG, indexing did not unpair geometries from light.
+   at: instance_set_base (servers/rendering/renderer_scene_cull.cpp:616)
+[Gamescope WSI] Destroying swapchain: 0x2bbb3770
+[Gamescope WSI] Destroyed swapchain: 0x2bbb3770
+WARNING: 123 ObjectDB instances were leaked at exit (run with `--verbose` for details).
+   at: cleanup (core/object/object.cpp:2536)
+[gamescope] [[0;34mInfo[0m]  [0;37mlaunch:[0m Primary child shut down!
+(EE) failed to read Wayland events: Broken pipe
