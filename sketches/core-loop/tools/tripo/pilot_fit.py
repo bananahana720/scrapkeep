@@ -189,6 +189,17 @@ for names in (("lower_arm.L", "hand.L"), ("lower_arm.R", "hand.R")):
             for g, w in rest_w.items(): v[dl][g] = w / tot
 bm.to_mesh(me); bm.free()
 print("STRAY", stray)
+# skin the head mostly owns moves with the head alone. A cheek modelled beside a raised hand picks up shoulder and upper arm
+# weight in the voxel copy, and a cheer then pulls a dark split open in it (PC check of 14 November 2026, Tally).
+ARM_ALL = {n.vertex_groups[k].index for k in ("shoulder.L", "upper_arm.L", "lower_arm.L", "hand.L", "shoulder.R", "upper_arm.R", "lower_arm.R", "hand.R")}
+head_g = n.vertex_groups["head"].index; whole = 0
+for v in me.vertices:
+    ws = {g.group: g.weight for g in v.groups}
+    if ws.get(head_g, 0.0) >= 0.5 and any(ws.get(g, 0.0) > 0.0 for g in ARM_ALL):
+        keep = {g: w for g, w in ws.items() if g not in ARM_ALL}; tot = sum(keep.values()); whole += 1
+        for g in ws: vg[g].remove([v.index])
+        for g, w in keep.items(): vg[g].add([v.index], w / tot, "REPLACE")
+print("HEAD", whole)
 # a bridge is skin that joins a forearm or hand straight to the legs, belly or head: a hand modelled resting on the chest, a
 # control stick modelled from the hand down to the boot. Its weights would blend the two and it would stretch like rubber, so
 # each bridge vertex goes wholly to the side that has more of it (--bridge 0.5; a lower number sends more to the arm). The few
