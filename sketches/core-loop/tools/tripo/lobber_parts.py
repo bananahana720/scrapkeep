@@ -1,15 +1,16 @@
 """Split a fitted whole-model lobber into the three parts the game moves.
 
-blender -b --factory-startup -P lobber_parts.py -- --in fitted.glb --ref assets/models/world_one/enemy_lobber.glb --out enemy_lobber_tripo.glb [--half 1.15] [--top 4.9] [--bulb-r 0.85]
+blender -b --factory-startup -P lobber_parts.py -- --in fitted.glb --ref assets/models/world_one/enemy_lobber.glb --out enemy_lobber_tripo.glb [--half 1.15] [--top 4.9] [--bulb-r 0.65]
 
 --in is tripo_fit.py's output for a whole lobber: one mesh in the authored slots (rubber, fleet_paint, requisition_tag),
 at the authored height. The prompt must give a brass ball joint between the chassis and the tube, because the ball is
-found as the requisition_tag faces nearest the authored bulb height. What it does, in order:
+found as the largest joined patch of requisition_tag faces. The script stops if that patch is not a ball on the axis
+in the middle of the height (a brass tag or trim picked by mistake). What it does, in order:
 1. Squeezes the ground plane so the model fits inside --half metres of the axis (the collider is 2.4 m square).
 2. Finds the ball and stretches the model in two pieces along the height, so the ball's centre lands on the authored
    LobberBulb pivot, the base stays where it was and the top lands at --top.
-3. Cuts three meshes at the authored pivots: LobberBulb (the ball, one requisition_tag slot, shrunk if it reaches past
-   --bulb-r), LobberBarrel (all above the ball: rubber, fleet_paint) and LobberBody (the rest: fleet_paint, rubber).
+3. Cuts three meshes at the authored pivots: LobberBulb (the ball, one requisition_tag slot, centred on the pivot and
+   scaled so it reaches --bulb-r from it: the bulb is the warning before a shot, so it must read), LobberBarrel (all above the ball: rubber, fleet_paint) and LobberBody (the rest: fleet_paint, rubber).
    Tag faces outside the ball join fleet_paint, so the file draws five times, as the authored one does.
 Prints one JSON line with counts.
 """
@@ -19,7 +20,7 @@ import numpy as np
 from mathutils import Vector
 
 argv = sys.argv[sys.argv.index("--") + 1:]
-opt = {"half": "1.15", "top": "4.9", "bulb-r": "0.85"}
+opt = {"half": "1.15", "top": "4.9", "bulb-r": "0.65"}
 known = set(opt) | {"in", "out", "ref"}
 i = 0
 while i < len(argv):
@@ -60,12 +61,12 @@ co[:, :2] *= squeeze
 base, top = co[:, 2].min(), co[:, 2].max()
 bulb_z = pivot["LobberBulb"].z
 
-# the ball: tag faces in the middle half of the height, then only the island nearest the authored bulb height
+# the ball: the largest joined patch of tag faces
 bm = bmesh.new(); bm.from_mesh(me); bm.faces.ensure_lookup_table()
-mid = [f for f in bm.faces if f.material_index == TAG and base + 0.3 * (top - base) < f.calc_center_median().z < base + 0.85 * (top - base)]
-if not mid:
-    raise SystemExit("lobber_parts: no requisition_tag faces between the chassis and the tube; the prompt needs a brass ball joint")
-pool = set(mid); islands = []
+tagged = [f for f in bm.faces if f.material_index == TAG]
+if not tagged:
+    raise SystemExit("lobber_parts: no requisition_tag faces; the prompt needs a brass ball joint")
+pool = set(tagged); islands = []
 while pool:
     seed = pool.pop(); isle = [seed]; todo = [seed]
     while todo:
@@ -78,17 +79,25 @@ while pool:
 ball = max(islands, key=lambda isle: sum(f.calc_area() for f in isle))
 ball_idx = {f.index for f in ball}
 ball_verts = sorted({v.index for f in ball for v in f.verts})
-zc = (co[ball_verts, 2].min() + co[ball_verts, 2].max()) / 2
-ball_top = co[ball_verts, 2].max()
+blo, bhi = co[ball_verts].min(axis=0), co[ball_verts].max(axis=0)
+centre = (blo + bhi) / 2
+zc = centre[2]
+ball_top = bhi[2]
+size = bhi - blo
+if not base + 0.3 * (top - base) < zc < base + 0.85 * (top - base):
+    raise SystemExit("lobber_parts: the largest brass patch sits at height %.2f, not between the chassis and the tube" % zc)
+if np.hypot(centre[0], centre[1]) > 0.15 or size.min() < 0.5 * size.max() or size.max() < 0.4:
+    raise SystemExit("lobber_parts: the largest brass patch is not a ball on the axis (centre %s, size %s)" % (centre.round(2), size.round(2)))
 
 def warp(z):  # two straight pieces: base..zc onto base..bulb_z, zc..top onto bulb_z..--top
     return np.where(z < zc, base + (z - base) * (bulb_z - base) / (zc - base), bulb_z + (z - zc) * (float(opt["top"]) - bulb_z) / (top - zc))
 
 ball_top_w = float(warp(np.array([ball_top]))[0])
 co[:, 2] = warp(co[:, 2])
-reach = np.linalg.norm(co[ball_verts] - np.array([0.0, 0.0, bulb_z]), axis=1).max()
-shrink = min(1.0, float(opt["bulb-r"]) / reach)
-co[ball_verts] = np.array([0.0, 0.0, bulb_z]) + (co[ball_verts] - np.array([0.0, 0.0, bulb_z])) * shrink
+own = np.array([centre[0], centre[1], bulb_z])  # the ball's own centre after the stretch; it moves onto the pivot
+reach = np.linalg.norm(co[ball_verts] - own, axis=1).max()
+shrink = float(opt["bulb-r"]) / reach
+co[ball_verts] = np.array([0.0, 0.0, bulb_z]) + (co[ball_verts] - own) * shrink
 for v, c in zip(bm.verts, co):
     v.co = Vector(c)
 
@@ -131,4 +140,4 @@ bpy.ops.object.select_all(action="SELECT")
 bpy.ops.export_scene.gltf(filepath=opt["out"], export_format="GLB", use_selection=True, export_yup=True, export_apply=False,
                           export_image_format="NONE", export_animations=False)
 print("PARTS " + json.dumps({"out": opt["out"], "tris": counts, "squeeze": round(float(squeeze), 3), "ball_centre_was": round(float(zc), 2),
-                             "ball_reach": round(float(reach * shrink), 2), "top": float(opt["top"])}))
+                             "ball_reach": round(float(reach * shrink), 2), "ball_scale": round(float(shrink), 2), "top": float(opt["top"])}))
