@@ -1,6 +1,6 @@
 """Fit a textured Tripo mesh as a new prop that has no authored twin.
 
-blender -b --factory-startup -P tripo_prop.py -- --in tripo.glb --out prop.glb --name PropName [--tall 4.0] [--wide 0] [--yaw 0] [--max-tris 2000] [--colours 8] [--smooth 2] [--lods "0.5,0.15"]
+blender -b --factory-startup -P tripo_prop.py -- --in tripo.glb --out prop.glb --name PropName [--tall 4.0] [--wide 0] [--yaw 0] [--max-tris 2000] [--colours 8] [--smooth 2] [--lods "0.5,0.15"] [--span "3.1:4.0"] [--paint "1=#c4572a,5=#d39a3c"]
 
 What it does, in order:
 1. Joins the mesh, turns it by --yaw about the up axis, scales it uniformly to --tall metres high or to --wide metres
@@ -10,8 +10,12 @@ What it does, in order:
    k-means in sRGB), then smooths one-face speckles away. The texture, the image and the UVs are dropped: the prop
    ships linear COLOR_0 on one material named paint, as the park props do (the loader sets vertex colour as albedo).
 3. Welds the seam splits, decimates to --max-tris, names the mesh --name under a root of the same name plus "Root".
+   With --span "a:b", the middle is then widened or narrowed: points a metres either side of the centre along X move
+   to b metres, and the outer edge stays where it is, so an opening can be set to a planned width.
+   With --paint "n=#rrggbb,...", found colour number n is repainted. The numbers are in the "found" list this script
+   prints, and they change when a geometry option changes, so read them from a run with the same options.
 4. With --lods, also writes <out stem>_lod1.glb, _lod2.glb ... at those shares of the triangle count.
-Prints one JSON line with counts and the size in metres.
+Prints one JSON line with counts, the found colours with their share of the area, and the size in metres.
 """
 import json, math, sys
 import bpy, bmesh
@@ -19,7 +23,7 @@ import numpy as np
 from mathutils import Vector, Matrix
 
 argv = sys.argv[sys.argv.index("--") + 1:]
-opt = {"yaw": "0", "max-tris": "2000", "colours": "8", "smooth": "2", "wide": "0", "tall": "0", "lods": "", "name": "Prop"}
+opt = {"yaw": "0", "max-tris": "2000", "colours": "8", "smooth": "2", "wide": "0", "tall": "0", "lods": "", "name": "Prop", "span": "", "paint": ""}
 i = 0
 known = set(opt) | {"in", "out"}
 while i < len(argv):
@@ -60,6 +64,14 @@ sh = wide / max(ext[0], ext[1]) if wide > 0 else tall / ext[2]
 sv = tall / ext[2] if tall > 0 else sh
 c = (mn + mx) / 2
 me.transform(Matrix.Diagonal((sh, sh, sv, 1.0)) @ Matrix.Translation(Vector((-c[0], -c[1], -mn[2]))))
+if opt["span"]:  # widen or narrow the middle: points at |x| = a move to |x| = b, the outer edge stays where it is
+    a, b = [float(x) for x in opt["span"].split(":")]
+    half = max(abs(v.co.x) for v in me.vertices)
+    if not (0 < a < half and 0 < b < half):
+        raise SystemExit("tripo_prop: --span needs both numbers inside the half width %.2f" % half)
+    for v in me.vertices:
+        x = abs(v.co.x)
+        v.co.x = math.copysign(x * b / a if x <= a else b + (x - a) * (half - b) / (half - a), v.co.x)
 
 # texture -> one colour a face
 img = None
@@ -110,6 +122,13 @@ for _ in range(int(opt["smooth"])):
                 new[f.index] = vals[cnt.argmax()]
     slot = new
 bm.free()
+shares = [float(area[slot == j].sum() / area.sum()) for j in range(k)]
+found = ["#%02x%02x%02x" % tuple(int(round(float(x) * 255)) for x in np.clip(cent[j], 0, 1)) for j in range(k)]
+for item in [x for x in opt["paint"].split(",") if x]:  # repaint a found colour by its number in the printed list
+    j, hx = item.split("=")
+    if not 0 <= int(j) < k:
+        raise SystemExit("tripo_prop: --paint names colour %s, the mesh has 0 to %d" % (j, k - 1))
+    cent[int(j)] = [int(hx.lstrip("#")[n:n + 2], 16) / 255 for n in (0, 2, 4)]
 pal = linear(cent)
 me.materials.clear()
 paint = bpy.data.materials.new("paint"); paint.use_backface_culling = False; paint.diffuse_color = (1, 1, 1, 1); me.materials.append(paint)
@@ -154,4 +173,5 @@ for n, share in enumerate([float(x) for x in opt["lods"].split(",") if x], 1):
     lods.append(decimate(ob, max(1, int(tris * share))))
     export(opt["out"][:-4] + "_lod%d.glb" % n)
 print("PROP " + json.dumps({"out": opt["out"], "tris": tris, "lods": lods, "colours": int(len(set(slot.tolist()))),
+                           "found": ["%d %s %.0f%%" % (j, found[j], shares[j] * 100) for j in range(k)],
                            "size_m": [round(float(x), 2) for x in (co.max(axis=0) - co.min(axis=0))], "scale": [round(float(sh), 4), round(float(sv), 4)]}))

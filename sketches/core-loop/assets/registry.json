@@ -37892,6 +37892,61 @@
    }
   },
   {
+   "id": "poi_furnace_stacks",
+   "path": "res://assets/models/world_one/poi_furnace_stacks.glb",
+   "class": "landmark",
+   "ships": true,
+   "loader": "not placed yet: the points of interest thread loads it (branch claude/project-thread-kjv6sg), with vertex colour as albedo as src/presentation/park_props.gd does",
+   "provenance": {
+    "recipe": "tools/blender/world_one/poi_yard.py",
+    "note": "Procedural, vertex coloured, the furnace stacks for the horizon east of the flume, three stacks on a charging house, 46.6 m wide and 60.2 m tall, low detail for a 600 m view; built by hand in Blender for the Brindle arena surroundings (W1-104). sha256 66f2ee87f9defa7a232c3b7afe7ee96a040e4e9cec4328f4e6d780a5d629d936"
+   }
+  },
+  {
+   "id": "poi_req_locker",
+   "path": "res://assets/models/world_one/poi_req_locker.glb",
+   "class": "landmark",
+   "ships": true,
+   "loader": "not placed yet: the points of interest thread loads it (branch claude/project-thread-kjv6sg), with vertex colour as albedo as src/presentation/park_props.gd does",
+   "provenance": {
+    "recipe": "tools/blender/world_one/poi_yard.py",
+    "note": "Procedural, vertex coloured, the requisition locker body, 3.2 m wide, 2.66 m tall and 1.7 m deep, open at the front with a shelf and brass stock inside; built by hand in Blender for the Brindle arena surroundings (W1-104). sha256 b38e7ffb263522e51fae156d4e70978aae26e2da3c28f1b5bed046d8a9118fac"
+   }
+  },
+  {
+   "id": "poi_req_locker_door",
+   "path": "res://assets/models/world_one/poi_req_locker_door.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "not placed yet: the points of interest thread loads it (branch claude/project-thread-kjv6sg), with vertex colour as albedo as src/presentation/park_props.gd does",
+   "provenance": {
+    "recipe": "tools/blender/world_one/poi_yard.py",
+    "note": "Procedural, vertex coloured, the requisition locker's brass door, 2.76 m by 2.0 m, origin at the hinge foot; it sits at (-1.38, 0.3, 0.75) on the locker in Godot axes and turns about its up axis to pop open; built by hand in Blender for the Brindle arena surroundings (W1-104). sha256 3d9c15574a0925593d727502aae4d7dab291d84a33063b994bb542cf4dfe6e11"
+   }
+  },
+  {
+   "id": "poi_ring_flag",
+   "path": "res://assets/models/world_one/poi_ring_flag.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "not placed yet: the points of interest thread loads it (branch claude/project-thread-kjv6sg), with vertex colour as albedo as src/presentation/park_props.gd does",
+   "provenance": {
+    "recipe": "tools/blender/world_one/poi_yard.py",
+    "note": "Procedural, vertex coloured, a ring edge marker flag, 2.0 m tall, a sprung pennant on a weighted foot, origin at the foot; built by hand in Blender for the Brindle arena surroundings (W1-104). sha256 ccc16176eda93e0fd2fde67726557a9702671b1a3bd692f4f6b0b9bfc03141be"
+   }
+  },
+  {
+   "id": "poi_siren_mast",
+   "path": "res://assets/models/world_one/poi_siren_mast.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "not placed yet: the points of interest thread loads it (branch claude/project-thread-kjv6sg), with vertex colour as albedo as src/presentation/park_props.gd does",
+   "provenance": {
+    "recipe": "tools/blender/world_one/poi_yard.py",
+    "note": "Procedural, vertex coloured, the muster siren mast, 6.0 m tall, a pole with a hand-crank box, a brass horn along +X and a tally flag, origin at the foot; built by hand in Blender for the Brindle arena surroundings (W1-104). sha256 33e27c13446fbcd109233e127ebcb59aff8ccadb0b5c39c16f87e7e20e074466"
+   }
+  },
+  {
    "id": "poi_survey_stake",
    "path": "res://assets/models/world_one/poi_survey_stake.glb",
    "class": "prop",
@@ -37900,6 +37955,61 @@
    "provenance": {
     "recipe": "tools/blender/world_one/poi_yard.py",
     "note": "Procedural, vertex coloured, a survey stake with a striped cap and pennant, 3.16 m tall, origin at the foot; built by hand because a mesh generator returns thin shapes as lumps. sha256 906e8b1c52c44d5b6501dc283a48023f9cf3ca40fa4d68a8a3103c7f09f6157f"
+   }
+  },
+  {
+   "id": "poi_tagged_crate",
+   "path": "res://assets/models/world_one/poi_tagged_crate.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "not placed yet: the points of interest thread loads it (branch claude/project-thread-kjv6sg), with vertex colour as albedo as src/presentation/park_props.gd does",
+   "provenance": {
+    "recipe": "tools/blender/world_one/poi_yard.py",
+    "note": "Procedural, vertex coloured, a tagged requisition crate, a 1.2 m cube with a brass tag on its front, origin under its centre; built by hand in Blender for the Brindle arena surroundings (W1-104). sha256 dfdeb61c97b2737e9a8c29d421803b9c88546491fe6c0c16ec0f2898c1e32e59"
+   }
+  },
+  {
+   "id": "poi_tagged_crate_piece_a",
+   "path": "res://assets/models/world_one/poi_tagged_crate_piece_a.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "not placed yet: the points of interest thread loads it (branch claude/project-thread-kjv6sg), with vertex colour as albedo as src/presentation/park_props.gd does",
+   "provenance": {
+    "recipe": "tools/blender/world_one/poi_yard.py",
+    "note": "Procedural, vertex coloured, broken crate piece a, a corner of two plank faces, origin at its centre; built by hand in Blender for the Brindle arena surroundings (W1-104). sha256 4d4eb99a877fc3840f8c353c6387deadefc7348acd85f37942fda3de59d17d81"
+   }
+  },
+  {
+   "id": "poi_tagged_crate_piece_b",
+   "path": "res://assets/models/world_one/poi_tagged_crate_piece_b.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "not placed yet: the points of interest thread loads it (branch claude/project-thread-kjv6sg), with vertex colour as albedo as src/presentation/park_props.gd does",
+   "provenance": {
+    "recipe": "tools/blender/world_one/poi_yard.py",
+    "note": "Procedural, vertex coloured, broken crate piece b, a plank face with a piece of the rust band, origin at its centre; built by hand in Blender for the Brindle arena surroundings (W1-104). sha256 ce125e038a9679d3398b6d64be82b9fcb7c28629ed5db2870dde2cabd61883c9"
+   }
+  },
+  {
+   "id": "poi_tagged_crate_piece_c",
+   "path": "res://assets/models/world_one/poi_tagged_crate_piece_c.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "not placed yet: the points of interest thread loads it (branch claude/project-thread-kjv6sg), with vertex colour as albedo as src/presentation/park_props.gd does",
+   "provenance": {
+    "recipe": "tools/blender/world_one/poi_yard.py",
+    "note": "Procedural, vertex coloured, broken crate piece c, the split lid, origin at its centre; built by hand in Blender for the Brindle arena surroundings (W1-104). sha256 6514bcd21373560a60653fe0602cd47d1238a116c1a3b1fb30b263ce7d24255f"
+   }
+  },
+  {
+   "id": "poi_tagged_crate_piece_d",
+   "path": "res://assets/models/world_one/poi_tagged_crate_piece_d.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "not placed yet: the points of interest thread loads it (branch claude/project-thread-kjv6sg), with vertex colour as albedo as src/presentation/park_props.gd does",
+   "provenance": {
+    "recipe": "tools/blender/world_one/poi_yard.py",
+    "note": "Procedural, vertex coloured, broken crate piece d, the brass tag on its hook, origin at its centre; built by hand in Blender for the Brindle arena surroundings (W1-104). sha256 e22356b5cbea752262e19ba943e525ea46beb17e8b75050d7a78ce61cda9508e"
    }
   },
   {
@@ -37933,6 +38043,39 @@
    "provenance": {
     "recipe": "tools/tripo/README.md",
     "note": "Generated by Tripo (text-to-model v3.1, smart_low_poly, task 8a6d32a8-84a9-4ad4-b963-121041481f76) from tools/tripo/prompts/poi_tally_stand.txt on a paid account (Tripo terms 5.2: the outputs belong to the account holder); a stock clerk's stand for the stocktake yards, 3 m across and 4 m tall (--wide 3 --tall 4, stretched 1.5 times across); fitted by tools/tripo/tripo_prop.py: its own eight flat colours as COLOR_0, no texture ships; LOD by decimation. sha256 2a067d9441ada2a12d4d4bb40729bf08b4bbef130a0bd136d83a072f9dbe5348"
+   }
+  },
+  {
+   "id": "poi_weighbridge_gantry",
+   "path": "res://assets/models/world_one/poi_weighbridge_gantry.glb",
+   "class": "landmark",
+   "ships": true,
+   "loader": "not placed yet: the points of interest thread loads it (branch claude/project-thread-kjv6sg), with vertex colour as albedo as src/presentation/park_props.gd does",
+   "provenance": {
+    "recipe": "tools/tripo/README.md",
+    "note": "Generated in Tripo Studio (studio.tripo3d.ai, Smart Mesh, P2.0, text prompt tools/tripo/prompts/poi_weighbridge_gantry.txt, then Texture; workspace id e67eb1c6-c217-4e11-a2a1-b9c2798bbd08, Studio asset name 'toll gate prop 3d model', one of four candidates, 120 Studio credits) on Andrew's paid Pro account (Tripo terms 5.2: the outputs belong to the account holder); the weighbridge gantry across the flume line before the boss launch (W1-104), 12 m wide, 7 m tall, 5.5 m deep, with the opening widened to an 8 m roll-over plate (--wide 12 --tall 7 --span 3.1:4.0); fitted by tools/tripo/tripo_prop.py: eight flat colours as COLOR_0, seven repainted to rust orange, brass and charcoal with --paint because the generated texture was a dull khaki, no texture ships; LOD by decimation. sha256 5c74cde7153c1f340cfb77a6d0a7334715753712291f2035871d8270b199fd5b"
+   }
+  },
+  {
+   "id": "poi_weighbridge_gantry_lod1",
+   "path": "res://assets/models/world_one/poi_weighbridge_gantry_lod1.glb",
+   "class": "landmark",
+   "ships": true,
+   "loader": "not placed yet: the points of interest thread loads it (branch claude/project-thread-kjv6sg), with vertex colour as albedo as src/presentation/park_props.gd does",
+   "provenance": {
+    "recipe": "tools/tripo/README.md",
+    "note": "Generated in Tripo Studio (studio.tripo3d.ai, Smart Mesh, P2.0, text prompt tools/tripo/prompts/poi_weighbridge_gantry.txt, then Texture; workspace id e67eb1c6-c217-4e11-a2a1-b9c2798bbd08, Studio asset name 'toll gate prop 3d model', one of four candidates, 120 Studio credits) on Andrew's paid Pro account (Tripo terms 5.2: the outputs belong to the account holder); the weighbridge gantry across the flume line before the boss launch (W1-104), 12 m wide, 7 m tall, 5.5 m deep, with the opening widened to an 8 m roll-over plate (--wide 12 --tall 7 --span 3.1:4.0); fitted by tools/tripo/tripo_prop.py: eight flat colours as COLOR_0, seven repainted to rust orange, brass and charcoal with --paint because the generated texture was a dull khaki, no texture ships; LOD by decimation. sha256 790ddab81b18625f10b043c44a33c7d32abf1e03b2a13070032167a78812f9af"
+   }
+  },
+  {
+   "id": "poi_weighbridge_gantry_lod2",
+   "path": "res://assets/models/world_one/poi_weighbridge_gantry_lod2.glb",
+   "class": "landmark",
+   "ships": true,
+   "loader": "not placed yet: the points of interest thread loads it (branch claude/project-thread-kjv6sg), with vertex colour as albedo as src/presentation/park_props.gd does",
+   "provenance": {
+    "recipe": "tools/tripo/README.md",
+    "note": "Generated in Tripo Studio (studio.tripo3d.ai, Smart Mesh, P2.0, text prompt tools/tripo/prompts/poi_weighbridge_gantry.txt, then Texture; workspace id e67eb1c6-c217-4e11-a2a1-b9c2798bbd08, Studio asset name 'toll gate prop 3d model', one of four candidates, 120 Studio credits) on Andrew's paid Pro account (Tripo terms 5.2: the outputs belong to the account holder); the weighbridge gantry across the flume line before the boss launch (W1-104), 12 m wide, 7 m tall, 5.5 m deep, with the opening widened to an 8 m roll-over plate (--wide 12 --tall 7 --span 3.1:4.0); fitted by tools/tripo/tripo_prop.py: eight flat colours as COLOR_0, seven repainted to rust orange, brass and charcoal with --paint because the generated texture was a dull khaki, no texture ships; LOD by decimation. sha256 30277de83a6aed4b43ec879562ea409032dd7f3b3682d3facb3db0bcaaa0cf33"
    }
   },
   {
@@ -40539,10 +40682,23 @@
   "poi_camp_tally_post_lod1",
   "poi_camp_tally_post_lod2",
   "poi_fence_panel",
+  "poi_furnace_stacks",
+  "poi_req_locker",
+  "poi_req_locker_door",
+  "poi_ring_flag",
+  "poi_siren_mast",
   "poi_survey_stake",
+  "poi_tagged_crate",
+  "poi_tagged_crate_piece_a",
+  "poi_tagged_crate_piece_b",
+  "poi_tagged_crate_piece_c",
+  "poi_tagged_crate_piece_d",
   "poi_tally_stand",
   "poi_tally_stand_lod1",
   "poi_tally_stand_lod2",
+  "poi_weighbridge_gantry",
+  "poi_weighbridge_gantry_lod1",
+  "poi_weighbridge_gantry_lod2",
   "poi_yard_gate",
   "poi_yard_gate_lod1",
   "poi_yard_gate_lod2",

@@ -578,13 +578,25 @@ func _check_stand_ins() -> void:
 
 # The world 1 point of interest props have no authored twin (tools/tripo/README.md, "New props"). The loader that places them
 # sets vertex colour as albedo, so each must be one mesh that carries COLOR_0, stands on its origin, and is the size its
-# placement was planned for: [stem, tall in metres, longer ground side in metres, has LOD files].
+# placement was planned for: [stem, tall in metres, longer ground side in metres, has LOD files]. A fifth true marks a
+# piece that is thrown and spun, so its origin is its centre and not its foot.
 const POI_PROPS := [
 	["poi_tally_stand", 4.0, 3.0, true],
 	["poi_yard_gate", 4.0, 8.0, true],
 	["poi_camp_tally_post", 2.5, 1.2, true],
 	["poi_fence_panel", 2.5, 6.2, false],
 	["poi_survey_stake", 3.16, 0.88, false],
+	["poi_weighbridge_gantry", 7.0, 12.0, true],
+	["poi_ring_flag", 2.0, 1.27, false],
+	["poi_siren_mast", 6.0, 2.66, false],
+	["poi_furnace_stacks", 60.2, 46.6, false],
+	["poi_tagged_crate", 1.2, 1.27, false],
+	["poi_tagged_crate_piece_a", 0.8, 0.71, false, true],
+	["poi_tagged_crate_piece_b", 0.66, 0.94, false, true],
+	["poi_tagged_crate_piece_c", 0.1, 0.96, false, true],
+	["poi_tagged_crate_piece_d", 0.52, 0.46, false, true],
+	["poi_req_locker", 2.66, 3.2, false],
+	["poi_req_locker_door", 2.0, 2.76, false],
 ]
 
 
@@ -609,7 +621,10 @@ func _check_poi_props() -> void:
 				if suffix == "":
 					var mid := box.get_center()
 					# the stake's pennant hangs to one side of its foot, so only the fitted props are held to the centre
-					_check(absf(box.position.y) < 0.02 and (not row[3] or (absf(mid.x) < 0.05 and absf(mid.z) < 0.05)), "%s stands on its origin (base %.3f, centre %.3f, %.3f)" % [row[0], box.position.y, mid.x, mid.z])
+					if row.size() > 4 and row[4]:
+						_check(mid.length() < 0.15, "%s turns about its centre (%.3f from its origin)" % [row[0], mid.length()])
+					else:
+						_check(absf(box.position.y) < 0.02 and (not row[3] or (absf(mid.x) < 0.05 and absf(mid.z) < 0.05)), "%s stands on its origin (base %.3f, centre %.3f, %.3f)" % [row[0], box.position.y, mid.x, mid.z])
 					_check(absf(box.size.y - row[1]) < 0.1 and absf(maxf(box.size.x, box.size.z) - row[2]) < 0.1,
 						"%s is the planned size (%.2f tall, %.2f across)" % [row[0], box.size.y, maxf(box.size.x, box.size.z)])
 			node.free()
