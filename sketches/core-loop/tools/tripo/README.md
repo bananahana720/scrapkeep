@@ -13,10 +13,61 @@ add its own `res://` path and a one-line reason to `REJECTED` in `src/presentati
 `tests/tripo_variants_test.gd` fails when the list and the rows disagree. `--models=tripo-all` loads every
 sibling, rejected ones too, so a rejected model can still be judged in the game.
 
-Rejected today (14 November 2026, the board's PC looks):
+Rejected today (14 November 2026, by the board's PC looks and the render check):
 
-- `world_one/enemy_hooker_tripo.glb`: the barrel renders near-black beside the authored rust-orange one, close up and at 22 m. The light test in `tests/tripo_variants_test.gd` passed it twice, so that test is a floor and not proof. A retry is judged from a lit render of the barrel beside the authored one.
+- `world_one/enemy_chaser_tripo.glb`: failed the render check below. In view 1 it sends 0.54 of the authored chaser's brightness, with 0.37 of its pixels near-black against 0.04, and the still shows loose black faces on the shell.
 - `park/props/flume/sluice_shed_a{,_lod1,_lod2}_tripo.glb`: it swaps cleanly and holds its shape from 40 to 160 m, but it loses the big red water wheel, the authored shed's landmark shape. A retry must keep a big wheel, or keep the authored wheel beside the generated shack.
+
+**The render check (generated enemy models, from 14 November 2026).** `tools/model_render_check.gd` judges a
+generated enemy from rendered pixels, because the light test passed a barrel twice that the game drew near-black.
+It spawns each enemy in the real game, paused, and takes two views from opposite sides (view 0 and view 1). For each
+view it finds the enemy's own pixels and measures the still the game draws: mean brightness, and the share of
+near-black pixels. Shoot once with the authored models and once with `--models=tripo-all`, then compare:
+
+```
+source /home/andrew/scratch/world1/env-pc.sh <name> 1 1
+gamescope --backend headless --prefer-vk-device 10de:2504 -W 800 -H 600 -w 800 -h 600 -- $GODOT_BIN \
+  --path sketches/core-loop --gpu-index 1 --resolution 800x600 --audio-driver Dummy \
+  --script res://tools/model_render_check.gd -- --out=<abs>/authored [--kinds=hooker,lobber]
+<the same> -- --out=<abs>/tripo --models=tripo-all
+$GODOT_BIN --headless --path sketches/core-loop --script res://tools/model_render_check.gd -- \
+  --compare=<abs>/authored,<abs>/tripo --out=<abs>/sheets
+```
+
+The compare step prints one PASS or FAIL line per enemy, writes a side-by-side sheet per enemy (authored left,
+generated right) and exits 1 on any FAIL. An enemy fails when, in either view, the generated model sends under
+0.80 of the authored brightness or has more than 0.15 more near-black pixels. A shoot needs a graphics card, so
+it does not run in `npm run sketch:fast`; run it on the PC before a generated enemy model is marked accepted.
+Its first run (14 November 2026) failed the hooker, which the PC look had failed twice, and passed the lobber
+and the swatter, which the PC look had passed. It also failed the netcaster and the chaser. It covers the
+chaser, lobber, swatter, hooker and netcaster. The boom tender's generated hull is accepted and not yet render
+checked: its floats are drawn as one batch the tool does not yet bound or shadow-mask. A prop is still judged by
+the PC look. The number is for the whole enemy, so an authored mast or tool dilutes a dark swapped part: the
+known-dark hooker scored 0.81 in view 0 and failed only in view 1. A result near the floor still needs the PC look.
+A shoot stops with exit 2 on an enemy name it does not know (the game would spawn a chaser for it) and on any
+model flag but `--models=tripo-all`.
+
+| Enemy | View 0: brightness, near-black (authored) | View 1: brightness, near-black (authored) | Result |
+| --- | --- | --- | --- |
+| Lobber | 1.06, 0.02 (0.00) | 1.11, 0.04 (0.02) | pass |
+| Swatter | 0.96, 0.00 (0.00) | 1.04, 0.10 (0.13) | pass |
+| Hooker | 0.81, 0.12 (0.03) | 0.65, 0.33 (0.04) | fail |
+| Netcaster | 0.86, 0.31 (0.09) | 0.82, 0.10 (0.10) | fail |
+| Chaser | 0.95, 0.20 (0.12) | 0.54, 0.37 (0.04) | fail |
+
+The hooker and the netcaster were dark for one cause, found the same day: their generated faces read as fully in
+shadow in the second UV set (see "Crew enemies", **The bake**). Both were refitted with the fixed tool and shot
+again, with the swatter as the unchanged control:
+
+| Enemy | View 0: brightness, near-black (authored) | View 1: brightness, near-black (authored) | Result |
+| --- | --- | --- | --- |
+| Hooker | 1.07, 0.01 (0.00) | 0.97, 0.01 (0.04) | pass |
+| Netcaster | 1.05, 0.00 (0.01) | 0.82, 0.05 (0.04) | pass |
+| Swatter | 0.97, 0.00 (0.00) | 1.03, 0.13 (0.15) | pass |
+
+Both are accepted again. The netcaster's view 1 is near the floor, so it still needs the PC look. After a model
+file changes, run `$GODOT_BIN --headless --path sketches/core-loop --import` before a shoot: a script run draws
+the last imported copy, and a shoot taken before the import still showed the old dark barrel.
 
 Earlier generated-mesh trials were rejected (docs/decisions.tsv rows 352 to 361, TADR-011): lumps at
 budget, licence problems, colour loss. Row 361 allows a reopen "only with a different model class".
@@ -249,6 +300,7 @@ The Spillway crew are a body mesh plus a tool mesh (the swatter's paddle, the ho
 - **The enemy's own test decides.** Run `tests/enemy_<name>_asset_test.gd -- --models=tripo`. A whole generated netcaster failed it: the authored body is a frame with an open window where the game draws the net, and a stout generated robot put 804 triangles in that window (`prompts/enemy_netcaster_whole.txt`, task 76b8b5f4-ce6a-4468-8a4a-0fde6507f4d3, 60 credits, not shipped).
 - **A body that holds a frame** (the netcaster). `--region "x0,y0,z0,x1,y1,z1"` (the node's own Blender space, Z up) swaps only the faces whose centres lie in that box and keeps the node's other faces as authored. The netcaster keeps its masts, crossbar and feet, and only its control box becomes a generated torso: `--node NetcasterBody --yaw 90 --fit fill --region "-0.5,-0.85,-1.15,0.5,0.11,1.0" --max-tris 7000`. The torso is the unused first swatter body candidate, so it cost no credits.
 - **Brightness.** Add `--bright match`. A generated texture is darker than the authored paint, so many faces snapped to charcoal and the PC look of 14 November 2026 found the swatter and the hooker standing out less against the dam rock. The option lifts the sampled colours until the body's mean brightness (weighted by area, kept faces included) reaches the authored body's. The tool prints the new part's brightness and the brightness of the faces it replaced (`lum`, `lum_ref`); with `--region` neither is the whole-body mean, which only the test measures: `tests/tripo_variants_test.gd` (`BODIES`) fails a body under 95 percent of the authored one.
+- **The bake.** An authored crew body has a second UV set that holds the polish bake (x: the share of the face out of shadow, y: edge wear), and the game multiplies the rust paint by it (`src/presentation/bake_look.gd`). With `--region` the kept authored faces bring that set along, and until 14 November 2026 the generated faces read (0, 0) in it, fully in shadow: the hooker barrel and the netcaster torso rendered near-black in the game while every calculated brightness passed. `tripo_swap.py` now writes the unshaded value (1, 0.5) on the generated faces. A whole-node swap (the swatter) has no second set and is not shaded.
 - **Silhouette.** The hooker's authored body is a barrel beside a thin mast. Swapping the whole node stretched one robot over both and read as a tall block, so its swap is limited to the barrel with `--region`, as the netcaster's is.
 - **What the camera gets.** The mean brightness above passed a hooker barrel that the PC look of 14 November 2026 showed as a thin near-black figure: the mean is taken over the whole node, mast included, and says nothing about how much of the body faces the camera. `tests/tripo_variants_test.gd` (`_part_seen`) now also adds up the light each body sends to a chase camera from four sides and holds the worst side to 0.65 of the authored body. That hooker barrel sent 0.48; the swatter and the netcaster, which the same look passed, send 0.71 and 0.81. Pick a generated torso that fills the authored barrel: a robot figure with legs and arms does not.
 - **Skinned bodies** (the plated brute, the foreman, the dispatcher, the linker, the splitter) cannot be swapped by this tool. They need the pilot route below.

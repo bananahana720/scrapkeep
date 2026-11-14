@@ -495,8 +495,11 @@ func _part_brightness(path: String, part: String) -> float:
 # a render. The floor sits between what that PC look failed and passed: the failed hooker barrel sent 0.48 of the
 # authored body's light, the swatter it passed 0.71 and the netcaster it passed 0.81. Three bodies set it, so a new
 # body that lands near the floor still needs the PC look. It is not proof of brightness: the second hooker barrel
-# measured 0.72 here and the PC look still showed it near-black, so that barrel is rejected (ModelVariants.REJECTED)
-# and a retry is judged from a lit render, not from this number.
+# measured 0.72 here and the PC look still showed it near-black, so that barrel was rejected (ruling dr)
+# and a retry is judged from a lit render, not from this number. That render check is tools/model_render_check.gd;
+# it also failed the netcaster this test had passed at 0.81. The cause was outside what this test reads: the
+# generated faces read as fully in shadow in the second UV set (tools/tripo/README.md, "The bake"). Both bodies
+# were refitted and pass the render check.
 const SEEN_FLOOR := 0.65
 
 
@@ -550,6 +553,35 @@ func _check_bodies() -> void:
 		var seen := _part_seen(twin, row[1])
 		_check(seen_authored > 0.0 and seen >= SEEN_FLOOR * seen_authored,
 			"%s on the sibling sends the chase camera at least %.2f of the authored body's light from its worst side (%.2f, authored %.2f)" % [row[1], SEEN_FLOOR, seen, seen_authored])
+		var lit_authored := _part_bake(row[0], row[1])
+		var lit := _part_bake(twin, row[1])
+		_check(lit_authored > 0.0 and lit >= 0.8 * lit_authored,
+			"%s on the sibling is no deeper in baked shadow than the authored one (worst surface %.2f out of shadow, authored %.2f)" % [row[1], lit, lit_authored])
+
+
+# The share of a body out of baked shadow: the mean x of the second UV set (the polish bake bake_look.gd multiplies
+# the paint by), on the surface where it is lowest. A surface with no second set is not shaded and counts as 1. The
+# hooker barrel and the netcaster torso of 14 November 2026 read 0.00 on their rust paint and rendered near-black
+# while the two checks above passed them.
+func _part_bake(path: String, part: String) -> float:
+	var scene := load(path) as PackedScene
+	if scene == null:
+		return -1.0
+	var node := scene.instantiate()
+	var mi := node.find_child(part, true, false) as MeshInstance3D
+	var worst := -1.0
+	if mi != null and mi.mesh != null:
+		worst = 1.0
+		for s in mi.mesh.get_surface_count():
+			var uv2 = mi.mesh.surface_get_arrays(s)[Mesh.ARRAY_TEX_UV2]
+			if uv2 == null or (uv2 as PackedVector2Array).is_empty():
+				continue
+			var sum := 0.0
+			for uv in (uv2 as PackedVector2Array):
+				sum += uv.x
+			worst = minf(worst, sum / (uv2 as PackedVector2Array).size())
+	node.free()
+	return worst
 
 
 # A prop kind's variants are placed at random (park_props.gd expand), and only variant a has a generated sibling, so a
