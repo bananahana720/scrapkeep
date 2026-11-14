@@ -10,7 +10,7 @@ The concept source is the cleaned Astra picture set in `artifacts/local/alpha/pu
 
 ## Ball look candidates, 13 November 2026 (Andrew picked the cutaway, ruling dm)
 
-Andrew asked on 13 Nov 2026 to reconsider the ball ("go big and bold") and set one hard rule: the player must see the pilot and what the pilot wears. Four looks sit behind the launch switch `--ball-look=today|gyro|bell|cutaway`. The cutaway is the default since 14 Nov 2026, when Andrew chose it after seeing the PC stills; `today` keeps the Hoberman shells the rest of this sheet describes, and a painter with no tuning (the class card and customize previews) still draws those. The concept page with pictures, the pass line and the receipts is https://claude.ai/artifact/YLJGxfhfDNfA9nwEzpmQW4.
+Andrew asked on 13 Nov 2026 to reconsider the ball ("go big and bold") and set one hard rule: the player must see the pilot and what the pilot wears. Four looks sit behind the launch switch `--ball-look=today|gyro|bell|cutaway`. The cutaway is the default since 14 Nov 2026, when Andrew chose it after seeing the PC stills; `today` keeps the Hoberman shells the rest of this sheet describes. The class card and customize previews draw the default too (`HeroAssets.previewing()`); any other painter with no tuning still draws today's shells, which the unit tests rely on. The concept page with pictures, the pass line and the receipts is https://claude.ai/artifact/YLJGxfhfDNfA9nwEzpmQW4.
 
 - **Where they live.** Shapes: `tools/blender/ball_looks.py`. Switch, plating, window and materials: `src/presentation/ball_looks.gd`. Pictures and counts: `tools/ball_look_capture.gd`. Test: `tests/ball_looks_test.gd`.
 - **Pass line.** The play camera sees at least 75% of the pilot on the median of 24 spins and 60% on the worst, at 7.5 m and at 10.5 m. Blockout receipts (cloud, Sable, shared cockpit): cutaway 82% and 82%, bell 67% and 53%, gyro 57% and 37%, today's shell 52% and 45%.
@@ -48,7 +48,7 @@ The gyro and the bell remain one shared shell each, as Andrew saw them. The cuta
 
 Today's shell shows 52% of Sable (PC: 54%, against the cutaway blockout's 85%). Heft class V adds 5 to 8 surfaces and about 1,300 to 2,100 triangles and hides no more of the pilot. A late run's ball (Sable, class III, scrap chunks and 40 panel plates) shows 86% of the pilot under the cutaway; today's shell with the same load showed 21%, 6% on the worst spin. No surface blends. The pilot is about 9,800 of each ball's triangles.
 
-**Still open.** In the PC film of a run (14 November, branch `scratch/w40-ball-look-capture-2`) the aim reticle sits over the window at play size; the reticle is the HUD's. The class card and customize previews build a painter with no tuning, so they show today's shells. The pilot models themselves are being redone in the thread "Upgrade game models with Tripo"; a new pilot must keep the seat pose and the shared rig's bone names so the cockpit, the glance and the outfits still fit.
+**Still open.** In the PC film of a run (14 November, branch `scratch/w40-ball-look-capture-2`) the aim reticle sits over the window at play size; the reticle is the HUD's. The class card and customize previews now draw the cutaway but have not been looked at on the PC. The pilot models themselves are being redone in the thread "Upgrade game models with Tripo"; a new pilot must keep the seat pose and the shared rig's bone names so the cockpit, the glance and the outfits still fit.
 
 ## 0. Direction change, 2026-10-10 evening: the Hoberman mecha
 
