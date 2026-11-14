@@ -195,7 +195,9 @@ The game moves the lobber's tube and swells its bulb, so its file must hold thre
 
 `blender -b --factory-startup -P tools/tripo/lobber_parts.py -- --in <tripo_fit output> --ref assets/models/world_one/enemy_lobber.glb --out assets/models/world_one/enemy_lobber_tripo.glb`
 
-It squeezes the model inside the 2.4 m collider, finds the brass ball (the largest joined brass patch; it stops if that patch is not a ball on the axis), stretches the model so the ball's centre lands on the authored bulb pivot, scales the ball to reach 0.65 m from that pivot so the shot warning reads (the authored bulb reaches 0.9 m), and cuts body, tube and bulb in the authored slot order. The prompt must ask for a brass ball joint between the chassis and the tube, and for an upright tube: the first prompt's leaning tube reached outside the collider and the lobber's own test (`enemy_lobber_asset_test -- --models=tripo`) failed it.
+It squeezes the model inside the 2.4 m collider, finds the brass ball (the largest joined brass patch; it stops if that patch is not a ball on the axis), stretches the model so the ball's centre lands on the authored bulb pivot, scales the ball to reach 0.9 m from that pivot, as the authored bulb does, and cuts body, tube and bulb in the authored slot order. The prompt must ask for a brass ball joint between the chassis and the tube, and for an upright tube: the first prompt's leaning tube reached outside the collider and the lobber's own test (`enemy_lobber_asset_test -- --models=tripo`) failed it.
+
+**A warning must never read weaker than the one it replaces** (the board, 14 November 2026). The first lobber shipped a 0.65 m bulb, and the PC look measured about half the bright area of the authored 0.9 m bulb before a shot. Any Tripo part that carries a tell (a glow, a swell, a raised tool) is sized to the authored part, not to what looks tidy on the new body.
 
 ## Pilots (a new body on the authored skeleton)
 

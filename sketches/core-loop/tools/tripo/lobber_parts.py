@@ -1,6 +1,6 @@
 """Split a fitted whole-model lobber into the three parts the game moves.
 
-blender -b --factory-startup -P lobber_parts.py -- --in fitted.glb --ref assets/models/world_one/enemy_lobber.glb --out enemy_lobber_tripo.glb [--half 1.15] [--top 4.9] [--bulb-r 0.65]
+blender -b --factory-startup -P lobber_parts.py -- --in fitted.glb --ref assets/models/world_one/enemy_lobber.glb --out enemy_lobber_tripo.glb [--half 1.15] [--top 4.9] [--bulb-r 0.895]
 
 --in is tripo_fit.py's output for a whole lobber: one mesh in the authored slots (rubber, fleet_paint, requisition_tag),
 at the authored height. The prompt must give a brass ball joint between the chassis and the tube, because the ball is
@@ -10,7 +10,8 @@ in the middle of the height (a brass tag or trim picked by mistake). What it doe
 2. Finds the ball and stretches the model in two pieces along the height, so the ball's centre lands on the authored
    LobberBulb pivot, the base stays where it was and the top lands at --top.
 3. Cuts three meshes at the authored pivots: LobberBulb (the ball, one requisition_tag slot, centred on the pivot and
-   scaled so it reaches --bulb-r from it: the bulb is the warning before a shot, so it must read), LobberBarrel (all above the ball: rubber, fleet_paint) and LobberBody (the rest: fleet_paint, rubber).
+   scaled so it reaches --bulb-r from it: the bulb is the warning before a shot, and a warning must never read weaker
+   than the one it replaces, so the default is the authored bulb's 0.9 m, just inside the test's limit), LobberBarrel (all above the ball: rubber, fleet_paint) and LobberBody (the rest: fleet_paint, rubber).
    Tag faces outside the ball join fleet_paint, so the file draws five times, as the authored one does.
 Prints one JSON line with counts.
 """
@@ -20,7 +21,7 @@ import numpy as np
 from mathutils import Vector
 
 argv = sys.argv[sys.argv.index("--") + 1:]
-opt = {"half": "1.15", "top": "4.9", "bulb-r": "0.65"}
+opt = {"half": "1.15", "top": "4.9", "bulb-r": "0.895"}
 known = set(opt) | {"in", "out", "ref"}
 i = 0
 while i < len(argv):
