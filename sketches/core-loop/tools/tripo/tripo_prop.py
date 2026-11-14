@@ -25,7 +25,7 @@ What it does, in order:
    differently from the full model, and a sibling must keep each file's node names).
 Prints one JSON line with counts, the found colours with their share of the area, and the size in metres.
 """
-import json, math, sys
+import json, math, re, sys
 import bpy, bmesh
 import numpy as np
 from mathutils import Vector, Matrix
@@ -44,6 +44,14 @@ if float(opt["tall"]) <= 0 and float(opt["wide"]) <= 0:
 def srgb(c):
     c = np.clip(np.asarray(c, float), 0, 1)
     return np.where(c <= 0.0031308, c * 12.92, 1.055 * np.power(c, 1 / 2.4) - 0.055)
+
+def hexcol(text, option):
+    # "#rrggbb" or "rrggbb" as three sRGB floats; anything else stops the script (a short colour would paint wrong)
+    if not re.fullmatch(r"#?[0-9a-fA-F]{6}", text.strip()):
+        raise SystemExit("tripo_prop: %s needs a colour as #rrggbb, got %s" % (option, text))
+    h = text.strip().lstrip("#")
+    return [int(h[n:n + 2], 16) / 255 for n in (0, 2, 4)]
+
 
 def linear(c):
     c = np.clip(np.asarray(c, float), 0, 1)
@@ -133,24 +141,29 @@ bm.free()
 shares = [float(area[slot == j].sum() / area.sum()) for j in range(k)]
 found = ["#%02x%02x%02x" % tuple(int(round(float(x) * 255)) for x in np.clip(cent[j], 0, 1)) for j in range(k)]
 for item in [x for x in opt["paint"].split(",") if x]:  # repaint a found colour by its number in the printed list
+    if item.count("=") != 1 or not item.split("=")[0].strip().isdigit():
+        raise SystemExit("tripo_prop: --paint needs number=#rrggbb, got " + item)
     j, hx = item.split("=")
     if not 0 <= int(j) < k:
         raise SystemExit("tripo_prop: --paint names colour %s, the mesh has 0 to %d" % (j, k - 1))
-    cent[int(j)] = [int(hx.lstrip("#")[n:n + 2], 16) / 255 for n in (0, 2, 4)]
+    cent[int(j)] = hexcol(hx, "--paint")
 fcol = cent[slot].copy()  # one sRGB colour a face
 if opt["region"]:
     lum = fcol @ np.array([0.2126, 0.7152, 0.0722])
     centre = np.array([p.center[:] for p in me.polygons])
     for item in [x for x in opt["region"].split(";") if x]:
-        box, hx = item.split("=")
-        b = [float(x) for x in box.split(",")]
+        try:
+            box, hx = item.split("=")
+            b = [float(x) for x in box.split(",")]
+        except ValueError:
+            b = []
         if len(b) != 6:
             raise SystemExit("tripo_prop: --region needs six numbers and a colour, got " + item)
         lo, hi = np.minimum(b[:3], b[3:]), np.maximum(b[:3], b[3:])
         inside = np.all((centre >= lo) & (centre <= hi), axis=1)
         if not inside.any():
             raise SystemExit("tripo_prop: --region box %s holds no face" % box)
-        target = np.array([int(hx.lstrip("#")[n:n + 2], 16) / 255 for n in (0, 2, 4)])
+        target = np.array(hexcol(hx, "--region"))
         mean = float((lum[inside] * area[inside]).sum() / area[inside].sum())
         shade = np.clip(lum[inside] / max(mean, 1e-6), 0.7, 1.3)
         fcol[inside] = np.clip(target[None, :] * shade[:, None], 0, 1)
