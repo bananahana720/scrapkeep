@@ -40,7 +40,7 @@
         {"kind": "test", "ref": "ui_text_floor_test.gd"},
         {"kind": "test", "ref": "ui_tokens_test.gd"}
       ],
-      "gap": "The smallest step is under the PC floor (UF-01). No text size setting. Text drawn by presentation scripts outside src/ui is not on the scale."
+      "gap": "No text size setting. Text drawn by presentation scripts outside src/ui, or sized by its own arithmetic as the keycap letters were (UF-05), is not on the scale."
     },
     {
       "id": "P5", "name": "Every input answers at once",

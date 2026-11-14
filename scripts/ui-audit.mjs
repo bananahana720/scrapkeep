@@ -131,7 +131,7 @@ function runTests(principles) {
   for (const ref of tests) if (!results.has(ref)) results.set(ref, "did not run");
   // The smoke run can fail with every test green (no receipt, an import that died, a quarantine
   // row past its deadline), so its own exit code counts too.
-  const smoke = run.status === 0 && file ? "" : `sketch:smoke exited ${run.status ?? run.signal}${file ? "" : " and wrote no receipt"}; read its output above`;
+  const smoke = run.status === 0 && file ? "" : `sketch:smoke ${run.error ? `did not start (${run.error.message})` : `exited ${run.status ?? run.signal}`}${file ? "" : " and wrote no receipt"}; read its output above`;
   return { results, smoke };
 }
 

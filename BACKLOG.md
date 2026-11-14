@@ -6753,7 +6753,7 @@ From the first lap of [the UI audit loop](sketches/core-loop/design-v3/ui-audit/
 
 | ID | What the player gets | Files | Size | Proof | Source |
 | --- | --- | --- | --- | --- | --- |
-| UA-01 | The smallest text is readable at 1080p and on a Steam Deck: CAPTION rises to hold the PC floor at 1080p, or its uses move to BODY. A look change, so Andrew picks from stills (UF-01) | `src/ui/ui_tokens.gd` and the files that use CAPTION | M | `tests/ui_text_floor_test.gd` with `CAPTION_USES` deleted | principle P4 |
+| UA-01 | **Built 13 Nov (Andrew picked one step up).** The smallest text is 18 px at 1080p and 12 px on a Steam Deck: CAPTION is 15, and keycap letters hold the same floor (UF-01, UF-05) | `src/ui/ui_tokens.gd`, `src/ui/keycap.gd` | M | `tests/ui_text_floor_test.gd` | principle P4 |
 | UA-02 | A relic fact, a boss fact and a danger are told apart without colour: name the second carrier for each close pair and for the colour that carries two facts, or move a colour (UF-02, UF-03, UF-04) | `src/core/colour_meanings.gd`, `palette.gd` | M | `tests/colour_cvd_test.gd` with every `CLOSE` and `SHARED` row gone or naming its carrier | principle P2 |
 | UA-03 | A score, with a pass line, for how much of an attack its own warning covers | `tools/mark_cover_capture.gd` | M | a test or tool that fails over the line, with a planted bad case | principle P1 |
 | UA-04 | HUD words and marks hold contrast over each stage's ground, measured on stills | a new capture measure | M | the measure, with a planted bad case | principle P3 |

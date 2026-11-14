@@ -24,8 +24,10 @@ const GAP_XXXL := 48
 # The scale as one list, for a check that a size sits on it.
 const SPACE := [0, GAP_XS, GAP_S, GAP_M, GAP_L, GAP_XL, GAP_XXL, GAP_XXXL]
 
-# Type scale, in px. Five steps; nothing smaller than CAPTION.
-const CAPTION := 14
+# Type scale, in px. Five steps; nothing smaller than CAPTION. CAPTION is 15 so the smallest
+# word is 18 px at 1080p and 12 px on a 1280x720 window (Andrew's pick, 13 Nov 2026;
+# tests/ui_text_floor_test.gd holds both floors).
+const CAPTION := 15
 const BODY := 18
 const LABEL := 22
 const HEADING := 32
