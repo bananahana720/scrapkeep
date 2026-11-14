@@ -1,0 +1,53 @@
+{
+  "look": "cutaway",
+  "pilot": "remembered_cannon",
+  "pilot_seen": {
+    "fast": {
+      "pilot_height_px": 65,
+      "pilot_pixels": 2360,
+      "seen_median": 0.992,
+      "seen_rest_pose": 0.992,
+      "seen_worst": 0.989
+    },
+    "rest": {
+      "pilot_height_px": 122,
+      "pilot_pixels": 8124,
+      "seen_median": 0.976,
+      "seen_rest_pose": 0.966,
+      "seen_worst": 0.966
+    }
+  },
+  "see_through_surfaces": 0,
+  "shots": {
+    "chase_fast": {
+      "draw_calls": 45,
+      "primitives": 41670
+    },
+    "chase_rest": {
+      "draw_calls": 30,
+      "primitives": 28100
+    },
+    "hero": {
+      "draw_calls": 44,
+      "primitives": 41342
+    },
+    "side": {
+      "draw_calls": 31,
+      "primitives": 28102
+    },
+    "spin_a": {
+      "draw_calls": 30,
+      "primitives": 28100
+    },
+    "spin_b": {
+      "draw_calls": 30,
+      "primitives": 28100
+    },
+    "spin_c": {
+      "draw_calls": 30,
+      "primitives": 28100
+    }
+  },
+  "surfaces": 15,
+  "triangles": 14050
+}
