@@ -4,6 +4,7 @@ const Game := preload("res://src/game.gd")
 const Profile := preload("res://src/core/profile.gd")
 const Records := preload("res://src/world/camp_records.gd")
 const SurvivalCount := preload("res://src/world/survival_count.gd")
+const Picker := preload("res://src/ui/camp_enemy_picker.gd")
 const T := preload("res://tests/support/t.gd")
 
 # The camp ring (camp_ring.gd): the best count per pilot in the camp's records, and the ring
@@ -71,6 +72,7 @@ func _ring() -> void:
 	_t.check("nothing starts outside the yard", not ring.running(), "plaza")
 	await _put(game, yard + Vector3.UP * 1.5)
 	sandbox.met_override = []
+	var met_before: Array = Picker.met_kinds(game.ctx.profile)
 	ring.begin()
 	# The gap between counts is the rule's; a short one keeps the test short.
 	var short: Dictionary = SurvivalCount.RULE.duplicate(true)
@@ -80,10 +82,11 @@ func _ring() -> void:
 	var first: Array = SurvivalCount.new(1, "ring").pack(1)
 	await _frames(int(ceil(first.size() * 0.4 * 60.0)) + 20)
 	_t.eq("count 1's machines climb in, met or not", sandbox.live_count(), first.size())
-	var edge_ok := true
+	_t.eq("standing a machine in the ring is not meeting it", Picker.met_kinds(game.ctx.profile), met_before)
+	var fenced := true
 	for enemy in sandbox.live:
-		edge_ok = edge_ok and enemy.has_meta("sandbox_slot")
-	_t.check("each is a yard machine, so standing one is not meeting it", edge_ok, "sandbox_slot")
+		fenced = fenced and Vector2(enemy.global_position.x - yard.x, enemy.global_position.z - yard.z).length() < 21.5
+	_t.check("each climbed in inside the fence", fenced, "20 m")
 	ring.begin()
 	_t.eq("the post does nothing mid-count", ring.count.count, 1)
 
@@ -93,6 +96,7 @@ func _ring() -> void:
 	await _frames(4)
 	_t.check("an empty floor clears the count", ring.count.cleared == 1 and ring.count.gate_open, "cleared %d" % ring.count.cleared)
 	await _frames(8)
+	_t.check("the lamp on the post is lit", ring.get("_lamp") != null and ring._lamp.is_visible_in_tree(), "lamp")
 	_t.check("the next count climbs in on its own", ring.count.count == 2 and ring.board.text == "2" and (sandbox.live_count() > 0 or not ring._owed.is_empty()), ring.board.text)
 
 	# Wrecked: the ring ends, the best is the last count cleared, the yard is empty and whole.
@@ -102,6 +106,23 @@ func _ring() -> void:
 	_t.eq("the last count cleared is the pilot's best", ring.best(), 1)
 	_t.eq("the quiet board shows it", ring.board.text, "BEST 1")
 	_t.check("the yard is empty and the hull whole", sandbox.live_count() == 0 and sandbox.hull == sandbox.HULL, "%d up" % sandbox.live_count())
+
+	# The call box's page can clear the yard, so opening it ends the count with what was cleared.
+	await _put(game, yard + Vector3.UP * 1.5)
+	ring.begin()
+	sandbox.open_picker()
+	await _frames(3)
+	_t.check("opening the call box ends the ring", sandbox.page_open and not ring.running(), "page")
+	sandbox._close_page()
+	await _frames(2)
+	_t.eq("and no count is cleared by it", ring.best(), 1)
+
+	# Count 6 on: more health, the same tools.
+	var plain: Node3D = sandbox.stand("mag_trapper", yard + Vector3(6.0, 0.0, 0.0))
+	var strong: Node3D = sandbox.stand("mag_trapper", yard + Vector3(-6.0, 0.0, 0.0), 2.0)
+	_t.check("a stronger machine has more health", strong.max_hp > plain.max_hp * 1.9, "%.0f against %.0f" % [strong.max_hp, plain.max_hp])
+	sandbox.clear()
+	await _frames(2)
 
 	# Leaving the yard ends it too, and a lower count leaves the best alone.
 	await _put(game, yard + Vector3.UP * 1.5)

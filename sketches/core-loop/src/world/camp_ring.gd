@@ -26,6 +26,7 @@ const ARRIVE_S := 0.4
 # How far to either side of straight across from the ball a count spreads, in radians.
 const SPREAD := 1.1
 const BOARD_HEIGHT := 3.2
+const POST_HEIGHT := 2.2
 
 var hub
 var sandbox
@@ -37,6 +38,9 @@ var _centre := Vector3.ZERO
 var _owed: Array = []
 var _wait := 0.0
 var _wrecks := 0
+var _lamp: MeshInstance3D
+# Where along the fence each machine climbs in: a stream of the ring's own, off the run's seed.
+var _rng := RandomNumberGenerator.new()
 
 
 # The camp hub calls this once after it is built, after the yard's own feature.
@@ -61,7 +65,11 @@ func bind(camp_hub, yard: Node, records_ref = null) -> void:
 	away = away.normalized() if away.length() > 0.5 else Vector3.BACK
 	var post := _centre + away * POST_M
 	hub.add_station(STATION, post, "Stocktake", KEY, STATION_RADIUS, begin)
+	_lamp = _post(post)
 	board = _board(post)
+	# The pilot at the gate can change between walks, and the board shows that pilot's best.
+	hub.walk_entered.connect(_show)
+	hub.walk_left.connect(stop)
 	_show()
 
 
@@ -89,10 +97,9 @@ func begin() -> void:
 func _physics_process(delta: float) -> void:
 	if not running():
 		return
-	if not sandbox.walking or not sandbox.inside or sandbox.wrecks != _wrecks:
+	# The call box's page stops the yard and can clear it, so opening it mid-count ends the count.
+	if not sandbox.walking or not sandbox.inside or sandbox.wrecks != _wrecks or sandbox.page_open:
 		stop()
-		return
-	if sandbox.page_open:
 		return
 	_arrive(delta)
 	var was := count.count
@@ -118,7 +125,7 @@ func _arrive(delta: float) -> void:
 	var ball: Vector3 = hub.ball.ball_position()
 	var across := Vector2(_centre.x - ball.x, _centre.z - ball.z)
 	across = across.normalized() if across.length() > 0.5 else Vector2.UP
-	across = across.rotated(randf_range(-SPREAD, SPREAD))
+	across = across.rotated(_rng.randf_range(-SPREAD, SPREAD))
 	sandbox.stand(row["kind"], _centre + Vector3(across.x, 0.0, across.y) * EDGE_M, row["health"])
 
 
@@ -146,10 +153,35 @@ func _show() -> void:
 	if running():
 		board.text = str(count.count)
 		board.modulate = Palette.HAZARD
+		_lamp.material_override = Palette.solid(Palette.HAZARD, 2.0, false)
 	else:
 		var kept := best()
 		board.text = "BEST %d" % kept if kept > 0 else ""
 		board.modulate = Palette.AMBER
+		_lamp.material_override = Palette.solid(Palette.AMBER, 1.0, false)
+
+
+# The post the ball rolls up to: a dark pole with a lamp on top, amber while the yard is quiet and
+# red while a count stands, so the place is marked before any best is on the board.
+func _post(at: Vector3) -> MeshInstance3D:
+	var pole := MeshInstance3D.new()
+	pole.name = "RingPost"
+	var shaft := CylinderMesh.new()
+	shaft.top_radius = 0.14
+	shaft.bottom_radius = 0.2
+	shaft.height = POST_HEIGHT
+	pole.mesh = shaft
+	pole.material_override = Palette.solid(Palette.CHARCOAL)
+	hub.root.add_child(pole)
+	pole.global_position = Vector3(at.x, sandbox.ground.floor_y + POST_HEIGHT * 0.5, at.z)
+	var lamp := MeshInstance3D.new()
+	var bulb := SphereMesh.new()
+	bulb.radius = 0.34
+	bulb.height = 0.68
+	lamp.mesh = bulb
+	pole.add_child(lamp)
+	lamp.position = Vector3.UP * (POST_HEIGHT * 0.5 + 0.2)
+	return lamp
 
 
 func _board(post: Vector3) -> Label3D:

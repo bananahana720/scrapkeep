@@ -182,25 +182,29 @@ func spawn(kind: String) -> Node3D:
 	var slot := 0
 	while _slots.has(slot):
 		slot += 1
-	var enemy := stand(kind, hub.socket("camp_sandbox_yard", "enemy_spawn_%d" % slot).origin, 1.0, slot)
+	var enemy := stand(kind, hub.socket("camp_sandbox_yard", "enemy_spawn_%d" % slot).origin)
 	_slots[slot] = enemy
 	return enemy
 
 
 # Stands one enemy of a kind on the yard's floor at `at`, at `health` times its health, wired to this yard's hull.
 # The call box's own limits (met kinds, the cap, the grates) are spawn()'s; the ring's counts come in here
-# (camp_ring.gd), on no grate (`slot` -1).
-func stand(kind: String, at: Vector3, health := 1.0, slot := -1) -> Node3D:
+# (camp_ring.gd). More health is health only: what the machine's tools do stays at stage one's numbers.
+func stand(kind: String, at: Vector3, health := 1.0) -> Node3D:
 	var enemy := _make(kind)
 	ctx.root.add_child(enemy)
 	enemy.global_position = ground.drop_point(at.x, at.z, SPAWN_CLEARANCE)
 	var target = Sight.new(ctx.player, combat, enemy, kind)
-	enemy.setup(target, ground, ctx.root, _is_live, health, _spec_for(kind))
+	var spec := _spec_for(kind)
+	if health != 1.0:
+		spec["stage_threat"] = 1.0
+	enemy.setup(target, ground, ctx.root, _is_live, health, spec)
 	enemy.hit_player.connect(_on_hit.bind(kind))
 	if enemy.has_signal("fired"):
 		enemy.fired.connect(_on_fired.bind(enemy))
 	enemy.died.connect(func(_where: Vector3, _scrap: int): _forget(enemy))
-	enemy.set_meta("sandbox_slot", slot)
+	# A yard machine: the picker's met-marking skips anything that carries this.
+	enemy.set_meta("sandbox_slot", true)
 	live.append(enemy)
 	ctx.events.enemy_spawned.emit(enemy, kind)
 	changed.emit()
