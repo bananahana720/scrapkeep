@@ -1706,7 +1706,7 @@ func _fit_pilot(rec: Dictionary) -> void:
 func fit_pilot_into(pod: Node3D, class_id: String, class_color: Color) -> Dictionary:
 	if not PILOTS.has(class_id):
 		return {}
-	var pilot := _scene(PILOTS[class_id]) as Node3D
+	var pilot := _scene(ModelVariants.path(PILOTS[class_id])) as Node3D
 	if pilot == null:
 		return {}
 	pilot.name = "AnimatedPilot"
