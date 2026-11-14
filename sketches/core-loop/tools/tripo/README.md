@@ -40,9 +40,9 @@ generated right) and exits 1 on any FAIL. An enemy fails when, in either view, t
 it does not run in `npm run sketch:fast`; run it on the PC before a generated enemy model is marked accepted.
 Its first run (14 November 2026) failed the hooker, which the PC look had failed twice, and passed the lobber
 and the swatter, which the PC look had passed. It also failed the netcaster and the chaser. It covers the
-chaser, lobber, swatter, hooker and netcaster. The boom tender's generated hull is accepted and not yet render
-checked: its floats are drawn as one batch the tool does not yet bound or shadow-mask. A prop is still judged by
-the PC look. The number is for the whole enemy, so an authored mast or tool dilutes a dark swapped part: the
+chaser, lobber, swatter, hooker, netcaster and boom tender. The boom tender's generated hull passed on the same
+day (0.97 and 1.05 of the authored brightness); the tool turns off the shadows of its batched floats too, and
+frames it by its meshes. A prop is still judged by the PC look. The number is for the whole enemy, so an authored mast or tool dilutes a dark swapped part: the
 known-dark hooker scored 0.81 in view 0 and failed only in view 1. A result near the floor still needs the PC look.
 A shoot stops with exit 2 on an enemy name it does not know (the game would spawn a chaser for it) and on any
 model flag but `--models=tripo-all`.
