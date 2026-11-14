@@ -1656,7 +1656,7 @@ func _bowl_if_killed(enemy: Node3D, direction: Vector3, shove: float) -> void:
 # rebound or ram) resolves on a free ball, and starts the rewind before it: a kill or a
 # stomp inside that contact re-seats the hook at once.
 func _begin_landing(enemy: Node3D) -> bool:
-	if not kit.hooked or kit.line_state != Augments.LINE_SMASH or kit.anchor_body != enemy:
+	if Augments.landing_body(kit) != enemy:
 		return false
 	kit.drop_line("landed")
 	kit.rewind_left = tuning.harpoon_rewind()

@@ -11,14 +11,17 @@ const Contact := preload("res://src/movement/contact.gd")
 # launches of learner seed 40322: a haul through a pair of chasers landed in one launch and was
 # spent on the bystander in the other).
 # - Contact.meets_first: the body a committed haul is landing on, then the nearer, then tree order.
-# - In a live game the ball drops through a side-by-side pair with real physics. Whichever of the
-#   two was spawned first, a committed haul lands on its own body (harpoon_smashed names it), and
-#   with no line the nearer body is told first.
+# - In a live game the ball drops through a side-by-side pair with real physics, nearer to the
+#   bystander. Whichever of the two was spawned first, a committed haul lands on its own body
+#   (harpoon_smashed names it), and with no line the nearer body is told first.
 # Evidence limit: a headless run on one machine. It shows the order no longer follows spawn
 # order; it cannot show two launches on another machine agree.
 
 const FLAT_SHELF := Vector3(-45.0, 15.0, 6.0)
 const GAP := 0.2
+# The drop leans past the bystander, away from the target, so the bystander is the nearer.
+const LEAN := 0.1
+const LIFTS := [5.0, 4.9, 4.8, 4.7, 4.6]
 
 var _failures := 0
 var _game
@@ -107,11 +110,32 @@ func _rule() -> void:
 	b.free()
 
 
-# The ball falls onto `target`, with `other` GAP beside it, so both are met in one tick. A haul
-# must tell its own body first; with no line the nearer of the two is first, whichever that is on
-# the slope. `first_spawned` says whether `target` is the earlier of the two in
-# the tree and in the physics server.
+# The ball falls beside `target`, over `other` GAP away, so both are met in one tick with the
+# bystander the nearer. A haul must still tell its own body first; with no line the nearer is
+# first. `first_spawned` says whether `target` is the earlier of the two in the tree and in the
+# physics server. The two are met in one tick only at some drop heights, so a few are tried.
 func _pair(hauled: bool, first_spawned: bool, slot: int) -> void:
+	var label := "%s, %s spawned first" % ["haul" if hauled else "no line", "its body" if first_spawned else "the bystander"]
+	var result := {}
+	for lift in LIFTS:
+		result = await _drop(hauled, first_spawned, slot, lift)
+		if result["same_tick"]:
+			break
+	var told: Array = result["told"]
+	_check(label + ": one tick", result["same_tick"], "%d touches, ticks %s" % [told.size(), str(told.map(func(row): return row[1]))])
+	if not result["same_tick"]:
+		return
+	var first_is_target: bool = told[0][3]
+	if hauled:
+		_check(label + ": its body first, though farther", first_is_target and told[0][2] > told[1][2],
+			"first told is the %s at %.3f m, then one at %.3f m" % ["haul's body" if first_is_target else "bystander", told[0][2], told[1][2]])
+		_check(label + ": the haul lands on its body", result["landings"] == 1 and result["landed_on_target"],
+			"%d landings, on its body %s" % [result["landings"], result["landed_on_target"]])
+	else:
+		_check(label + ": nearer first", told[0][2] < told[1][2], "first told at %.3f m, then one at %.3f m" % [told[0][2], told[1][2]])
+
+
+func _drop(hauled: bool, first_spawned: bool, slot: int, lift: float) -> Dictionary:
 	var here := _point(12.0 * slot, -20.0, 1.5)
 	var beside := here + Vector3(GAP, 0.0, 0.0)
 	var target: Node3D
@@ -125,13 +149,13 @@ func _pair(hauled: bool, first_spawned: bool, slot: int) -> void:
 	await _sim(0.4)
 	var told := []
 	var hear := func(enemy: Node3D, _normal: Vector3):
-		told.append([enemy, Engine.get_physics_frames(), _player.ball_position().distance_to(enemy.global_position)])
+		told.append([enemy, Engine.get_physics_frames(), _player.ball_position().distance_to(enemy.global_position), enemy == target])
 	var smashed := []
 	var landed := func(enemy, _at: Vector3, _closing: float): smashed.append(enemy)
 	_player.body().enemy_touched.connect(hear)
 	_game.events.harpoon_smashed.connect(landed)
 	var fall := Vector3(0.0, -24.0, 0.0)
-	_player.reset_to(target.global_position + Vector3(0.0, 5.0, 0.0), fall)
+	_player.reset_to(other.global_position + Vector3(LEAN, lift, 0.0), fall)
 	if hauled:
 		_player.grapple_to(target.global_position, Vector3.BACK, target)
 		Augments.commit_smash(_player.kit, _player.tuning, fall)
@@ -141,17 +165,11 @@ func _pair(hauled: bool, first_spawned: bool, slot: int) -> void:
 			break
 	_player.body().enemy_touched.disconnect(hear)
 	_game.events.harpoon_smashed.disconnect(landed)
-	var label := "%s, %s spawned first" % ["haul" if hauled else "no line", "its body" if first_spawned else "the bystander"]
-	var same_tick: bool = told.size() >= 2 and told[0][1] == told[1][1]
-	_check(label + ": one tick", same_tick, "%d touches, ticks %s" % [told.size(), str(told.map(func(row): return row[1]))])
-	if same_tick:
-		_check(label + ": order", told[0][0] == target if hauled else told[0][2] < told[1][2],
-			"first told is the %s at %.3f m, then one at %.3f m" % ["target" if told[0][0] == target else "bystander", told[0][2], told[1][2]])
-	if hauled:
-		_check(label + ": the haul lands on its body", smashed.size() == 1 and smashed[0] == target,
-			"%d landings, on its body %s" % [smashed.size(), not smashed.is_empty() and smashed[0] == target])
+	var result := {"told": told, "same_tick": told.size() >= 2 and told[0][1] == told[1][1],
+		"landings": smashed.size(), "landed_on_target": not smashed.is_empty() and smashed[0] == target}
 	_player.release_grapple()
 	for enemy in [target, other]:
 		if is_instance_valid(enemy):
 			enemy.queue_free()
 	await _sim(0.2)
+	return result

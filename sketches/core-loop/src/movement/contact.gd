@@ -25,7 +25,7 @@ static func normal_between(ball_at: Vector3, body_at: Vector3) -> Vector3:
 # Which of two bodies met in one tick the ball handles first: the body a committed haul is
 # landing on (`landing`, or null), then the nearer to the ball at `ball_at`, then scene-tree order.
 # Every term is game state, so the order repeats from launch to launch.
-static func meets_first(a: Node3D, b: Node3D, ball_at: Vector3, landing: Node3D) -> bool:
+static func meets_first(a: Node3D, b: Node3D, ball_at: Vector3, landing) -> bool:
 	if (a == landing) != (b == landing):
 		return a == landing
 	var a_far := ball_at.distance_squared_to(a.global_position)

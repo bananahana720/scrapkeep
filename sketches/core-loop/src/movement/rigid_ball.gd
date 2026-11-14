@@ -343,21 +343,20 @@ func _note_enemies(body_state: PhysicsDirectBodyState3D) -> void:
 			_met.append(body)
 	_touching = now
 	if _met.size() > 1:
-		var landing: Node3D = kit.anchor_body if kit != null and kit.hooked and kit.line_state == Augments.LINE_SMASH else null
-		_met.sort_custom(Contact.meets_first.bind(body_state.transform.origin, landing))
+		_met.sort_custom(Contact.meets_first.bind(body_state.transform.origin, Augments.landing_body(kit)))
 
 
 # body_entered arrives once per new body, right after _integrate_forces, in the server's order.
 # The first one reports every enemy met this tick in the ball's order; the rest find theirs told.
+# A body the server names that the ball's own list missed (a boss whose contact moved between
+# two of its shapes) is told when its signal arrives, after the ordered ones.
 func _on_body_entered(body: Node) -> void:
-	if not _active or not body.is_in_group("enemy"):
-		return
 	var met := _met.duplicate()
 	_met.clear()
 	if not _told.has(body.get_instance_id()) and not met.has(body):
 		met.append(body)
 	for enemy in met:
-		if not is_instance_valid(enemy):
+		if not _active or not is_instance_valid(enemy) or not enemy.is_in_group("enemy"):
 			continue
 		_told[enemy.get_instance_id()] = true
 		enemy_touched.emit(enemy, Contact.normal_between(global_position, enemy.global_position))

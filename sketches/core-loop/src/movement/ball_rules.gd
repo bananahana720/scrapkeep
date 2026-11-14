@@ -115,11 +115,25 @@ static func grip_contact(state, tuning, body_state: PhysicsDirectBodyState3D, ta
 		if not world_face(body_state.get_contact_collider_object(i)):
 			continue
 		var n := body_state.get_contact_local_normal(i)
-		if n.y > best and _takes(state, n, Tuning.GRIP_SLOPE_DOT, take_speed, false, true):
+		if (n.y > best or (n.y == best and _faced_first(n, found, state.velocity))) \
+				and _takes(state, n, Tuning.GRIP_SLOPE_DOT, take_speed, false, true):
 			best = n.y
 			found = n
 	if found != null:
 		_set_ground(state, found)
+
+
+# Of two touched faces equally steep (two upright walls in a corner), the one the ball is moving
+# into harder, then the lower x and z of the normal: the server lists a tick's contacts in the
+# order its threads found them, so "the first one listed" would differ between launches.
+static func _faced_first(n: Vector3, other, velocity: Vector3) -> bool:
+	if other == null:
+		return true
+	var into := velocity.dot(n)
+	var other_into := velocity.dot(other)
+	if into != other_into:
+		return into < other_into
+	return n.x < other.x if n.x != other.x else n.z < other.z
 
 
 # A static face of the world. A boss hull is an AnimatableBody3D (a StaticBody3D) in the enemy
