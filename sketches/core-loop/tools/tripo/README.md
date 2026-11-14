@@ -34,6 +34,7 @@ outputs with the account holder. Outputs made on a free account are public domai
 | --- | --- | --- | --- | --- | --- | --- |
 | camp/camp_pet_tripo.glb | 4bbd2038-8fe8-48d9-8fda-afda32599557 | prompts/camp_pet.txt | 30 | 2,000 (1,100) | 1 (1) | yaw -90, height, 8 sockets |
 | world_one/enemy_chaser_tripo.glb | 6013f673-bd92-4d65-9bc4-7e6abff67f8c | prompts/enemy_chaser.txt | 30 | 3,175 (3,176) | 5 (5) | yaw 90, box, claws below 22 %, fin above 80 % (rubber) |
+| world_one/enemy_lobber_tripo.glb | 904d0a41-6627-44d7-a982-ce68527c27f0 | prompts/enemy_lobber_whole.txt | 120 (four candidates over two prompts) | 6,699 (6,720) | 5 (5) | tripo_fit.py, yaw 90, `--name LobberBody --max-tris 6700`, then lobber_parts.py |
 | world_one/enemy_boom_tender_tripo.glb (TenderHull only) | cfa436e8-08dc-42f8-b416-53dee2a7619b | prompts/enemy_boom_tender.txt | 30 | 7,375 (7,928) | as authored | tripo_swap.py, yaw 90, box |
 | park/props/dam/gate_wheelhouse_a{,_lod1,_lod2}_tripo.glb | 7f215046-0286-4f10-b0cd-6d0121db046e | prompts/gate_wheelhouse.txt | 30 | 6,000 / 3,000 / 900 (16,588 / 8,294 / 2,488) | 1 | box |
 | park/props/dam/mixer_wreck_a{,_lod1,_lod2}_tripo.glb | see registry row | prompts/mixer_wreck.txt | 60 (2 candidates) | 6,000 / 3,000 / 898 (12,740 / 6,370 / 1,904) | 1 | box |
@@ -187,6 +188,14 @@ World 1 points of interest, 14 November 2026 (API credits, text to model v3.1, s
 The stand and the gate came back narrower and taller than the placement asked for (2 m across, and 6.7 m tall), so both are fitted with `--wide` and `--tall` together, which scales the ground plane and the height separately. Look at the render when using both: these two chunky shapes take it, a thin or round one may not.
 
 The runner-up candidates are tasks f5a7ba00-eb9f-4153-a98c-f80c4fc5fc28 (stand), 3caed186-71a7-42da-b675-1e4eb764475f (gate) and 90a8c17b-94b5-4bec-b359-f07be0b83963 (post). All six candidates were usable. The count boards came back with painted digits although the prompt said no text; they ship as flat colour patches, and the game should draw the live number itself.
+
+## The lobber (a whole model split into moving parts)
+
+The game moves the lobber's tube and swells its bulb, so its file must hold three meshes at the authored pivots. `lobber_parts.py` cuts them out of a whole fitted model:
+
+`blender -b --factory-startup -P tools/tripo/lobber_parts.py -- --in <tripo_fit output> --ref assets/models/world_one/enemy_lobber.glb --out assets/models/world_one/enemy_lobber_tripo.glb`
+
+It squeezes the model inside the 2.4 m collider, finds the brass ball, stretches the model so the ball's centre lands on the authored bulb pivot, and cuts body, tube and bulb in the authored slot order. The prompt must ask for a brass ball joint between the chassis and the tube, and for an upright tube: the first prompt's leaning tube reached outside the collider and the lobber's own test (`enemy_lobber_asset_test -- --models=tripo`) failed it.
 
 ## Pilots (a new body on the authored skeleton)
 
