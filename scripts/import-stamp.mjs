@@ -20,12 +20,13 @@ function git(root, args) {
 }
 
 // The git tree of the sketch folder at HEAD, so commits that leave the sketch alone keep the stamp.
-// Uncommitted edits under the sketch are named apart: they are not in the tree a stamp records.
+// Uncommitted edits to tracked sketch files are named apart (untracked files, such as a run's own
+// output, are not): they are not in the tree a stamp records.
 export function sketchState(root, sketch = DEFAULT_SKETCH) {
   return {
     tree: git(root, ["rev-parse", `HEAD:${sketch}`]),
     head: git(root, ["rev-parse", "HEAD"]),
-    dirty: Boolean(git(root, ["status", "--porcelain", "--", sketch])),
+    dirty: Boolean(git(root, ["status", "--porcelain", "--untracked-files=no", "--", sketch])),
   };
 }
 
@@ -41,8 +42,8 @@ export function writeImportStamp(root, sketch = DEFAULT_SKETCH, now = new Date()
   return state;
 }
 
-// { ok, reason }. A stamp written with uncommitted sketch edits, or a tree with them now, is
-// trusted only when the trees match; the edits themselves are the caller's to know about.
+// { ok, reason }. Uncommitted sketch edits, at the import or now, are not in any tree a stamp can
+// name, so either one refuses.
 export function checkImportStamp(root, sketch = DEFAULT_SKETCH) {
   const file = stampPath(root, sketch);
   if (!existsSync(path.join(root, sketch, ".godot"))) return { ok: false, reason: `${sketch} has no .godot folder; it was never imported` };
@@ -55,6 +56,8 @@ export function checkImportStamp(root, sketch = DEFAULT_SKETCH) {
   }
   const now = sketchState(root, sketch);
   if (!now.tree) return { ok: false, reason: `git cannot name the tree of ${sketch} at HEAD` };
+  if (stamp.dirty) return { ok: false, reason: `${sketch}/.godot was imported with uncommitted sketch edits` };
+  if (now.dirty) return { ok: false, reason: `${sketch} has uncommitted edits that no import stamp covers` };
   if (stamp.tree !== now.tree) return { ok: false, reason: `${sketch}/.godot was imported at commit ${String(stamp.head).slice(0, 9)}, whose sketch differs from HEAD ${String(now.head).slice(0, 9)}` };
   return { ok: true, reason: "" };
 }

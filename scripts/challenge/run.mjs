@@ -151,7 +151,6 @@ function stateEnv(dir) {
 // --- the build library ----------------------------------------------------------------------
 
 async function buildLibrary() {
-  needGodot();
   const label = opts.label ?? "lib-" + stamp;
   const dir = path.join(outRoot, "library", label);
   const jobs = [];
@@ -161,6 +160,7 @@ async function buildLibrary() {
   }
   jobs.splice(0, jobs.length, ...shardJobs(jobs, opts.libShard));
   if (opts.dryRun) return console.log(`library ${label}: ${jobs.length} full park runs (to stage 6), 4 parallel; about ${Math.ceil((jobs.length * 600) / opts.jobs / 60)} min at 10 min a run`);
+  needGodot();
   mkdirSync(dir, { recursive: true });
   const index = [];
   const tasks = jobs.map((job) => async () => {

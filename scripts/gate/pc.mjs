@@ -22,7 +22,7 @@ import { isDeepStrictEqual } from "node:util";
 import { fileURLToPath } from "node:url";
 
 import { chunks, gateLists, namedPool, testName } from "./shard.mjs";
-import { writeImportStamp } from "../import-stamp.mjs";
+import { checkImportStamp, writeImportStamp } from "../import-stamp.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 const SKETCH = "sketches/core-loop";
@@ -507,7 +507,7 @@ export function nodeSummary(logText) {
 
 async function importOnce(wt, env, log) {
   const marker = path.join(wt, "artifacts", "local", "gate-import.done");
-  if (existsSync(marker)) return true;
+  if (existsSync(marker) && checkImportStamp(wt, SKETCH).ok) return true;
   for (let attempt = 1; attempt <= 3; attempt++) {
     const file = `${log}.import-${attempt}`;
     const exit = await runLogged(env.GODOT_BIN, ["--headless", "--path", path.join(wt, SKETCH), "--editor", "--import"], { cwd: wt, env, log: file });

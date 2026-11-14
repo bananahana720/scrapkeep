@@ -46,3 +46,14 @@ test("the stamp holds across commits outside the sketch and breaks on a sketch c
   assert.equal(checkImportStamp(dir, "sk").ok, true);
   rmSync(dir, { recursive: true });
 });
+
+test("uncommitted sketch edits refuse, at the import or after it", () => {
+  const { dir, commit } = repo();
+  writeImportStamp(dir, "sk");
+  writeFileSync(path.join(dir, "sk", "a.gd"), "edited\n");
+  assert.match(checkImportStamp(dir, "sk").reason, /uncommitted edits/);
+  writeImportStamp(dir, "sk");
+  commit("sk/a.gd", "edited\n");
+  assert.match(checkImportStamp(dir, "sk").reason, /imported with uncommitted/);
+  rmSync(dir, { recursive: true });
+});
