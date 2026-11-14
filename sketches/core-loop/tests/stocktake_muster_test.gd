@@ -266,7 +266,6 @@ func _waits() -> void:
 	# The same along the ride line, every 20 m, heading along it.
 	var line := {"wait": 0, 60: 0, 40: 0, 25: 0, 0: 0}
 	var trail: PackedVector2Array = t.scrap_trail(2)["points"]
-	var slowest := 0
 	for i in trail.size() - 1:
 		var seg: Vector2 = trail[i + 1] - trail[i]
 		for j in maxi(1, int(seg.length() / 20.0)):
@@ -276,12 +275,10 @@ func _waits() -> void:
 			if why != "":
 				line["wait"] += 1
 				continue
-			var began := Time.get_ticks_usec()
 			var count := SurvivalCount.new(1, "muster")
 			count.begin(at, seg, func(lap: PackedVector2Array) -> bool: return acts.clear_ground(lap, ring, s))
-			slowest = maxi(slowest, Time.get_ticks_usec() - began)
 			line[int(absf(count.way))] += 1
-	print("measure (run seed %d): ride line by circle %s, slowest choice of a way %.1f ms" % [_game.run.run_seed, line, slowest / 1000.0])
+	print("measure (run seed %d): ride line by circle %s" % [_game.run.run_seed, line])
 	print("measure: landing spots by fault (\"\" fits): round the row %s, on the ride line %s" % [faults, line_faults])
 	_t.check("round its row at least one landing in four fits at once and one in ten travels", tally["wait"] * 4 < cases * 3 and travels * 10 > cases,
 		"%d of %d wait, %d travel" % [tally["wait"], cases, travels])
