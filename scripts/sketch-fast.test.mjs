@@ -1,11 +1,12 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import {
+import { nodeTestsForPaths,
   defaultWidth,
   mergedBranch,
   carriedPrs,
   failingChecks,
   hygieneFindings,
+  bridgeFindings,
   canaries,
   classify,
   cacheableBaseRun,
@@ -203,16 +204,25 @@ test("hygiene fails added symlinks, root files and new top-level folders only", 
   const z = "0".repeat(40);
   const raw = [
     `:000000 120000 ${z} ${z} A\tnode_modules`,
+    `:000000 120000 ${z} ${z} A\t.claude/skills/scrapkeep-verify-game`,
+    `:000000 120000 ${z} ${z} A\t.claude/skills/nested/link`,
     `:000000 100644 ${z} ${z} A\tNOTES.md`,
+    `:000000 100644 ${z} ${z} A\t.mcp.json`,
     `:000000 100644 ${z} ${z} A\tstray/x.txt`,
     `:000000 100644 ${z} ${z} A\tscripts/ok.mjs`,
     `:100644 100644 ${z} ${z} M\tREADME.md`,
   ];
   assert.deepEqual(hygieneFindings(raw, new Set(["scripts", "sketches"])), [
     "symlink added: node_modules",
+    "symlink added: .claude/skills/nested/link",
     "root file added: NOTES.md",
     "new top-level folder: stray/x.txt",
   ]);
+});
+
+test("hygiene fails a project.godot that carries the MCP bridge autoload", () => {
+  assert.deepEqual(bridgeFindings("[autoload]\nGameEvents=\"*res://src/core/game_events.gd\"\n"), []);
+  assert.equal(bridgeFindings("[autoload]\nMcpBridge=\"*res://.mcp/godot-runtime/bridge/mcp_bridge.gd\"\n").length, 1);
 });
 
 test("merged branch names come from GitHub and git merge subjects", () => {
@@ -553,4 +563,13 @@ test("splitBatch gives each test its own output and names a cut-off test", () =>
   assert.deepEqual(split.done, [{ test: "tests/a.gd", exit: 0, ms: 5, output: "x -> PASS\na: PASS" }]);
   assert.equal(split.cut, "tests/b.gd");
   assert.deepEqual(split.rest, ["tests/c.gd"]);
+});
+
+test("nodeTestsForPaths: a park prop recipe or file faces the far-mesh fault check, other sketch paths do not", () => {
+  assert.deepEqual(nodeTestsForPaths(["assets/models/park/props/dam/cable_drum_a_lod2.glb"]), ["scripts/far-faults.test.mjs"]);
+  assert.deepEqual(nodeTestsForPaths(["tools/blender/park/props/kit.py", "src/game.gd"]), ["scripts/far-faults.test.mjs"]);
+  assert.deepEqual(nodeTestsForPaths(["tools/model_audit.py"]), ["scripts/far-faults.test.mjs"]);
+  assert.deepEqual(nodeTestsForPaths(["src/core/palette.gd"]), ["scripts/palette-gd.test.mjs"]);
+  assert.deepEqual(nodeTestsForPaths(["tools/icons/generate_icons.py", "tools/blender/common.py"]), ["scripts/palette-gd.test.mjs"]);
+  assert.deepEqual(nodeTestsForPaths(["src/world/park/park_dam.json", "assets/models/world_one/ambush_altar.glb"]), []);
 });

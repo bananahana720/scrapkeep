@@ -130,6 +130,8 @@ var dropper = Panels.Dropper.new()
 var panel_rng := RandomNumberGenerator.new()
 # Scrap drops roll on their own stream, so how a fight spills scrap does not move the stage plan.
 var scrap_rng := RandomNumberGenerator.new()
+# A paid chain's burst rolls on its own stream, so a chain never moves where a kill's scrap lands.
+var chain_rng := RandomNumberGenerator.new()
 # Vaults paid this stage: each names its own offer stream.
 var _vaults_paid := 0
 var _overtimes_paid := 0
@@ -300,12 +302,14 @@ func setup(ctx_ref) -> void:
 	ctx.events.shot_fired.connect(_on_shot_fired)
 	ctx.events.run_started.connect(_on_run_started)
 	ctx.events.scrap_lost.connect(_on_scrap_lost)
+	ctx.events.line_state_changed.connect(_on_line_state)
 	ctx.run.armor_hit.connect(_on_armor_hit)
 	ctx.run.death_save_hook = effects.death_save_hull
 	_sync_scrap_flags()
 	ctx.events.heft_class_changed.connect(func(_c: int, _h: float): _redraw())
 	_connect_triggers()
 	ctx.events.beacon_unsealed.connect(func(_stage: int): clock.warden_broken())
+	ctx.events.warden_engaged.connect(func(_stage: int): clock.warden_engaged())
 	ctx.events.beacon_unsealed.connect(_on_warden_broken_hotwire)
 	# Marked hull: the Warden break lifts the mark a keeper's gamble put on max hull.
 	ctx.events.beacon_unsealed.connect(func(_stage: int): HullMark.lift(ctx.run))
@@ -1053,6 +1057,7 @@ func _on_stage_entered(stage: int, retry: bool) -> void:
 	loot_rng.seed = hash([LOOT_SEED, ctx.flow.run_key(), stage, "loot"])
 	panel_rng.seed = hash([ctx.run.run_seed, stage, "panels"])
 	scrap_rng.seed = hash([ctx.flow.run_key(), stage, "scrap"])
+	chain_rng.seed = hash([ctx.flow.run_key(), stage, "chain"])
 	scrap.clear_caches()
 	_caches_pending = true
 	_caches_wait = 0
@@ -1287,7 +1292,8 @@ func _active_row(id: String) -> Dictionary:
 # The gates open when flow enters its gates state, never on the charge reading: a
 # sealed beacon's shown charge can reach 1.0 a tick before the Warden's kill is
 # recorded, and gates opened then would be ignored by flow and soft-lock the stage.
-# Stage 2's pair carries the pattern guarantee (Parts.roll_gate).
+# Stage 2's pair carries the pattern guarantee (Parts.roll_gate). A quick break (RunClock) rolls
+# one more arch, drawn after the floored pair so the pair itself never moves with it.
 func _on_flow_changed(state: String) -> void:
 	if state != "gates" or gates.is_open():
 		return
@@ -1296,13 +1302,21 @@ func _on_flow_changed(state: String) -> void:
 	var gate_rng := _offer_rng("gates")
 	var picks: Array = Parts.roll_gate(gate_rng, rarities, _class_id(), ctx.run.parts, GATE_CHOICES, ctx.flow.stage(), _offered)
 	picks = Parts.floor_gate(gate_rng, picks, _class_id(), ctx.run.parts, _offered, GATE_CHOICES)
+	var quick: Array = []
+	if clock.quick_break():
+		quick = Parts.roll(_offer_rng("quick_break"), rarities, _class_id(), ctx.run.parts, 1, picks, _offered)
+		picks += quick
 	for part_id in picks:
 		_offered[part_id] = _offered.get(part_id, 0) + 1
 	picks += _hotwire_gate_ids()
 	var active := active_offer("gate", rarities, gate_rng)
 	if active != "":
 		picks.append(active)
-	ctx.events.reward_offered.emit(gates.open(picks, ctx.player.ball_position(), _heading(), ctx.run.parts))
+	var offers: Array = gates.open(picks, ctx.player.ball_position(), _heading(), ctx.run.parts)
+	ctx.events.reward_offered.emit(offers)
+	for offer in offers:
+		if offer["part_id"] in quick:
+			ctx.events.quick_break.emit(ctx.flow.stage(), clock.fight_seconds(), offer["at"])
 
 
 # A reward's own stream, named by the run, the stage and the source: the gate pair and a vault's
@@ -1346,6 +1360,17 @@ func _on_dashed(_direction: Vector3) -> void:
 	if not sheet.elements_for("dash").is_empty():
 		_trail = FROST_TRAIL
 		_trail_ticks = 0
+
+
+# A paid chain of 3 or more bursts scrap at its landing (W1-74), scaled as a kill's scrap is.
+# Scrap only: the wallet already outruns the shop by Brindle (gameplay critique finding 11).
+func _on_line_state(id: String, _target: Node3D, at: Vector3, cause: String) -> void:
+	if id != "chain_end" or cause != "paid" or scrapless() or not ctx.flow.in_stage():
+		return
+	var stage_pay := float(ctx.flow.stage_def().get("kill_scrap", 1.0))
+	var amount := int(round(ctx.player.chain.last_burst() * sheet.kill_scrap * stage_pay))
+	if amount > 0:
+		scrap.drop(at, amount, chain_rng)
 
 
 # Every slam carries kinetic, so a slam on ice shatters it whatever you hold.

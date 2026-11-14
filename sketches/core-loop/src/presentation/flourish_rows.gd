@@ -100,23 +100,24 @@ const ROWS := {
 			{"kind": "stamp", "at": 0.0, "for": 1.6, "text": "NEXT: SLAG BOWL", "colour": "ARC"},
 			{"kind": "sfx_word", "at": 0.6, "for": 1.0, "text": "HONK", "at_share": Vector2(0.70, 0.32)},
 		]},
-	# After Brindle's rout (boss_defeated in world 1); waits behind the rout's own row.
+	# After Brindle's rout (boss_defeated in world 1); waits behind the rout's own row. The rout is
+	# named once, by the ROUTED stamp (ruling cx): this row logs the shift and never names it again.
 	"spillway_clear": {"priority": 0,
 		"full": [
 			{"kind": "card", "at": 0.0, "for": 4.2, "slot": "left_top",
-				"card": ["SPILLWAY WORKS", "World one · shift log", "Pumps", "running", "Admiral", "routed (politely)", "Overtime", "logged, not paid"]},
+				"card": ["SPILLWAY WORKS", "World one · shift log", "Pumps", "running", "Seals", "holding", "Overtime", "logged, not paid"]},
 			{"kind": "stamp", "at": 0.4, "for": 2.4, "text": "SHIFT COMPLETE", "colour": "AMBER"},
 			{"kind": "caption", "at": 2.4, "for": 3.0, "slot": "left_low", "text": [
-				"Shift log: seals checked. Admiral routed. Kettle still warm.",
-				"Shift log: dam held. Flume drained. One badger, filed under weather.",
-				"Shift log: pumps running. Nobody clocked the overtime."]},
+				"Shift log: seals checked. Gauges agree, for once.",
+				"Shift log: dam held. Flume drained. Weather blamed.",
+				"Shift log: pumps running. The river kept its side of it."]},
 		],
 		"short": [
 			{"kind": "stamp", "at": 0.0, "for": 2.0, "text": "SHIFT COMPLETE", "colour": "AMBER"},
 			{"kind": "caption", "at": 0.2, "for": 1.8, "slot": "left_low", "text": [
-				"Shift log: seals checked. Admiral routed. Kettle still warm.",
-				"Shift log: dam held. Flume drained. One badger, filed under weather.",
-				"Shift log: pumps running. Nobody clocked the overtime."]},
+				"Shift log: seals checked. Gauges agree, for once.",
+				"Shift log: dam held. Flume drained. Weather blamed.",
+				"Shift log: pumps running. The river kept its side of it."]},
 		]},
 	# --- Brindle's beats (world 1 plan, unit 3). flourish_cues.gd starts them from the trigger
 	# fields on, boss, phases and earned, and runs their "world" beats in the bowl. Arrival plays
@@ -135,9 +136,10 @@ const ROWS := {
 			{"kind": "sfx_word", "at": 0.1, "for": 1.0, "text": "HONK", "anchor": "ship"},
 			{"kind": "inset", "at": 0.15, "for": 0.7, "anchor": "ship_body", "home": "ship", "toward": "arena"},
 			# left_low: Moss's bubble carries Brindle's per-pilot threat line in the column's top
-			# at the same moment (moss_bubble.gd, lore_rows intro), and the card sits under it.
+			# at the same moment (moss_bubble.gd, lore_rows intro), and the card sits under it. Its stats
+			# are not the title reel's (title_intros.gd): a player who saw that card learns something new.
 			{"kind": "card", "at": 0.2, "for": 2.7, "slot": "left_low",
-				"card": ["ADMIRAL BRINDLE", "Badger · Furnace Fleet", "Height", "two paws", "Iron", "twelve hundred tons (rounded up)", "Voice", "never raised"]},
+				"card": ["ADMIRAL BRINDLE", "Badger · Furnace Fleet", "Ship", "the Requisition", "Schedule", "kept to the minute", "Retreat", "filed in advance"]},
 			{"kind": "sfx_word", "at": 1.4, "for": 0.9, "text": "CHUNK", "anchor": "ship"},
 		],
 		"short": [
@@ -166,8 +168,17 @@ const ROWS := {
 		"short": [
 			{"kind": "caption", "at": 0.0, "for": 1.2, "slot": "left_low", "text": ["Dignity: optional.", "Brindle rounds down. Once.", "Plan C. There was no plan B."]},
 		]},
-	# The catch: the scooter sails over the rim in slow motion while the crew cheer. The victory
-	# card waits for it, then stamps BRINDLE ROUTED.
+	# The chase (FX-03): the goal flips from the hull to the scooter, so the camera follows the
+	# scooter's arc off the deck (a glance that waits until it has left the hull behind) and its
+	# target tag carries the new goal (boss.gd plate_targets). No caption: the EJECT word, the
+	# chase toast and the objective line already speak (ruling cx), so the row adds motion only.
+	"brindle_chase": {"priority": 3, "on": "phase", "boss": "brindle", "phases": [4],
+		"world": {"full": [{"kind": "glance", "anchor": "scooter", "at": 0.6, "seconds": 1.6}],
+			"short": [{"kind": "glance", "anchor": "scooter", "at": 0.6, "seconds": 1.2}]},
+		"full": [{"kind": "speed_lines", "at": 0.0, "for": 1.0}],
+		"short": [{"kind": "speed_lines", "at": 0.0, "for": 0.8}]},
+	# The catch: the scooter sails over the rim in slow motion while the crew cheer. The ROUTED
+	# stamp names the rout; the victory card that follows names what was won (worlds.gd).
 	"brindle_rout": {"priority": 3, "on": "rout", "boss": "brindle",
 		"world": {"full": [{"kind": "eject", "at": 0.0, "seconds": 1.8}], "short": [{"kind": "eject", "at": 0.0, "seconds": 1.1}]},
 		"full": [

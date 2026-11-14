@@ -13,9 +13,12 @@ Start a fresh session in this repository after configuration changes.
 | "Verify this Scrapkeep change" | `scrapkeep-verify` selects checks for the actual artifact and reports evidence limits. |
 | "Add a scenario to the lab" or "gate this run against the pin" | `scrapkeep-lab` runs, extends, gates or ports the headless Godot lab and says what a gate exit means. |
 | "Block out this pocket in mojulo" or "set up mojulo in the cloud" | `scrapkeep-blockout` builds mojulo recipes, exports lit glb, proves them with the ball in headless Godot and carries the mojulo gotchas and cloud setup. |
+| "Show this working in the running game" | `scrapkeep-verify-game` launches the Godot game from source, plays it with real keys and clicks from a step file, and keeps pictures, step rows and the save files as proof. Its feature map covers launch and menus, starting a run, settings, pause, save and continue, and a whole run by the repo's bot. |
+| "Check the build Andrew will install" | `scrapkeep-verify-build` cuts or names a packed Linux build, checks it is this checkout's commit and plays it with the same driver: cold launch, first run, the sitting launch. The package and installer rows need the PC. |
+| "Check the Sitting Kit page" or a preserved browser proof | `scrapkeep-verify-web` serves the pages on ports of its own and drives them in headless Chromium: the Sitting Kit, the yard and the Iron Orchard. |
 | "Design or evaluate a model decision inside the game loop" | `reactive-model-loop` covers controls, blind corpora, pre-registration, caching and cost fields for a fast model deciding inside a running system. It is portable and names nothing from this repository. |
 
-Claude commands are `/plan-session`, `/scrapkeep-task`, `/scrapkeep-verify`, `/scrapkeep-lab`, `/scrapkeep-blockout` and `/reactive-model-loop`. [The skills README](../../.agents/skills/README.md) says when a new skill is warranted and gives the template.
+Claude commands are `/plan-session`, `/scrapkeep-task`, `/scrapkeep-verify`, `/scrapkeep-lab`, `/scrapkeep-blockout`, `/scrapkeep-verify-game`, `/scrapkeep-verify-build`, `/scrapkeep-verify-web` and `/reactive-model-loop`. [The skills README](../../.agents/skills/README.md) says when a new skill is warranted and gives the template.
 
 `BIBLE.md` and accepted `adr/` records own direction. `BACKLOG.md` defines tasks. `TRACKING.md` owns heavy-lane state and answers; alpha waves 17 to 21 run from [GRAPH.md](../../project-guide/coord/GRAPH.md) and GitHub issue #241. `ORCHESTRATOR.md` owns dispatch and admission. A proposed sprint or ready card is not permission to execute it. Keep one coordinator responsible for the board; handing off the coordinator does not create a second writer.
 

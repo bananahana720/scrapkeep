@@ -89,6 +89,21 @@ const DROP_ROOM := {"duck": {"SFX": -5.0}, "lift": {"Music": 3.0}}
 const DROP_ROOM_BARS := 2
 const DROP_ROOM_LEAD_S := 0.1
 
+# Room for a fact the player must hear over anything (direction 18: sound is the fairness
+# channel). When one of these sounds starts, every other effect voice already sounding, or
+# starting within hold_s, drops by db, then comes back at its own level. Warnings keep theirs
+# (audio.gd DANGER_SOUNDS), so a hit never hides the next tell. The PC's mix read (12 Nov) had
+# hurt under reactor_erupt both times it played: the vent that erupts is what hit the player.
+const MAKE_ROOM := {"hurt": {"db": -10.0, "hold_s": 0.35}}
+
+
+# The offset a voice of sound takes while room is held for room_for: none for room_for's own
+# voices or a warning.
+static func room_db(room_for: String, sound: String, warning: bool) -> float:
+	if warning or sound == room_for or not MAKE_ROOM.has(room_for):
+		return 0.0
+	return float(MAKE_ROOM[room_for]["db"])
+
 # The crowd rule: the high-rate cues in CROWD_SOUNDS (the ones a swarm or a streak stacks,
 # 12 a second each in a measured Warden fight) get quieter as live effect voices pile up, by
 # CROWD_DB_PER_DOUBLING for each doubling above CROWD_FREE, never below CROWD_FLOOR_DB.

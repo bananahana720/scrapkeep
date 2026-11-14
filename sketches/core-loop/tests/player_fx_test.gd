@@ -195,6 +195,38 @@ func _run() -> void:
 		float(fx._words_by_id("smash")["width_px"]), float(fx._words_by_id("smash")["size"]), 0.01)
 	t.check("planted: a word by a big foe never ends up on it, nor off the safe area", not said or (safe.encloses(took) and not took.intersects(big)),
 		"said %s at %s foe %s" % [said, took, big])
+	# FX-07: a read word (DENT) speaks inside the sound words' gap, but places by their rules:
+	# beside the foe, clear of its body by the warning gap, inside the safe area, at render priority.
+	foe.global_position = ball + Vector3(3, 2, 0)
+	(shape.mesh as BoxMesh).size = Vector3(1.5, 1.5, 1.5)
+	await _frames(1)
+	for w in fx._words:
+		w["t"] = 1.0
+	fx._last_word = -1.0e9
+	fx._word_seen.clear()
+	var body := PlayerFx.foe_rect(foe, wcam)
+	var stack := PlayerFx.stack_rect(foe, wcam)
+	fx._last_word = fx._clock
+	var gap_said: bool = not fx.word("vault", ball + Vector3(-3, 2, 0))
+	var read_said: bool = fx.read_word("DENT", foe, Color.WHITE)
+	var read: Dictionary = fx._words_by_id("read")
+	var read_rect := Rect2() if read.is_empty() else PlayerFx._word_rect(wcam, read["at"], float(read["away"]) > 0.0, float(read["width_px"]), float(read["size"]), 0.01)
+	t.check("a read word speaks inside the gap, beside its foe, clear of it and the marks stacked over it, inside the safe area",
+		gap_said and read_said and read_rect.has_area() and not read_rect.intersects(body.grow(PlayerFx.WORD_WARNING_GAP))
+		and stack.has_area() and not read_rect.intersects(stack.grow(PlayerFx.WORD_WARNING_GAP)) and safe.encloses(read_rect)
+		and is_equal_approx(float(read["size"]), PlayerFx.READ_SIZE) and is_equal_approx(fx._last_word, fx._clock) and (read["node"] as Label3D).render_priority == PlayerFx.RENDER_PRIORITY,
+		"said %s/%s at %s foe %s" % [gap_said, read_said, read_rect, body])
+	# Every pooled slot showing: the read waits rather than cut a live word short.
+	var live: Array = []
+	for w in fx._words:
+		live.append(w["t"])
+		w["t"] = 0.5
+	var busy_said: bool = fx.read_word("ZZAP!", foe, Color.WHITE)
+	t.check("a read word with every slot showing waits and cuts no word short", not busy_said and fx._words.all(func(w): return w["t"] == 0.5))
+	for i in fx._words.size():
+		fx._words[i]["t"] = live[i]
+	shape.visible = false
+	t.check("a read word for a foe out of view stays unsaid, so the next hit asks again", not fx.read_word("ZZAP!", foe, Color.WHITE))
 	foe.free()
 	for w in fx._words:
 		w["t"] = 1.0

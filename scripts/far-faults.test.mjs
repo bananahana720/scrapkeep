@@ -1,0 +1,76 @@
+import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import os from "node:os";
+import path from "node:path";
+import test from "node:test";
+import { CAP, overCap, scanFaults } from "./far-faults.mjs";
+
+// SG-16: every park prop's far mesh stays under the inside-out cap (scripts/far-faults.mjs).
+const numpy = spawnSync("python3", ["-c", "import numpy"]).status === 0;
+
+// A GLB of unindexed triangles with per-face normals: [[p0, p1, p2, normal]].
+function glb(tris) {
+  const floats = [...tris.flatMap(([a, b, c]) => [...a, ...b, ...c]), ...tris.flatMap(([, , , n]) => [...n, ...n, ...n])];
+  const count = tris.length * 3;
+  const corners = tris.flatMap(([a, b, c]) => [a, b, c]);
+  const bound = (pick) => [0, 1, 2].map((axis) => pick(...corners.map((corner) => corner[axis])));
+  const json = {
+    asset: { version: "2.0" },
+    scene: 0,
+    scenes: [{ nodes: [0] }],
+    nodes: [{ name: "Body", mesh: 0 }],
+    meshes: [{ primitives: [{ attributes: { POSITION: 0, NORMAL: 1 } }] }],
+    buffers: [{ byteLength: floats.length * 4 }],
+    bufferViews: [
+      { buffer: 0, byteOffset: 0, byteLength: count * 12, target: 34962 },
+      { buffer: 0, byteOffset: count * 12, byteLength: count * 12, target: 34962 },
+    ],
+    accessors: [
+      { bufferView: 0, componentType: 5126, count, type: "VEC3", min: bound(Math.min), max: bound(Math.max) },
+      { bufferView: 1, componentType: 5126, count, type: "VEC3" },
+    ],
+  };
+  const bin = Buffer.from(new Float32Array(floats).buffer);
+  let text = Buffer.from(JSON.stringify(json));
+  text = Buffer.concat([text, Buffer.alloc((4 - (text.length % 4)) % 4, 0x20)]);
+  const header = Buffer.alloc(12);
+  header.writeUInt32LE(0x46546c67, 0);
+  header.writeUInt32LE(2, 4);
+  header.writeUInt32LE(12 + 8 + text.length + 8 + bin.length, 8);
+  const chunk = (data, type) => {
+    const head = Buffer.alloc(8);
+    head.writeUInt32LE(data.length, 0);
+    head.writeUInt32LE(type, 4);
+    return Buffer.concat([head, data]);
+  };
+  return Buffer.concat([header, chunk(text, 0x4e4f534a), chunk(bin, 0x004e4942)]);
+}
+
+// A unit quad facing up, as two triangles; `flip` winds the second one the other way with the same up normal.
+const UP = [0, 1, 0];
+const quad = (x, flip = false) => [
+  [[x, 0, 0], [x, 0, 1], [x + 1, 0, 0], UP],
+  flip ? [[x + 1, 0, 0], [x + 1, 0, 1], [x, 0, 1], UP] : [[x + 1, 0, 0], [x, 0, 1], [x + 1, 0, 1], UP],
+];
+
+test("far faults: every park prop's far mesh is under the inside-out cap", { skip: !numpy && "python3 has no numpy" }, () => {
+  const rows = scanFaults();
+  assert.ok(rows.length >= 280, `${rows.length} far meshes scanned`);
+  const over = overCap(rows);
+  assert.deepEqual(over, [], over.map((o) => `${o.file} ${(o.share * 100).toFixed(2)}%`).join("; "));
+});
+
+test("far faults: a planted flipped far mesh under the props glob fails, a sound one passes", { skip: !numpy && "python3 has no numpy" }, (t) => {
+  const dir = mkdtempSync(path.join(os.tmpdir(), "far-faults-plant-"));
+  t.after(() => rmSync(dir, { recursive: true, force: true }));
+  mkdirSync(path.join(dir, "assets/models/park/props/dam"), { recursive: true });
+  writeFileSync(path.join(dir, "assets/models/park/props/dam/sound_lod2.glb"), glb([...quad(0), ...quad(2)]));
+  writeFileSync(path.join(dir, "assets/models/park/props/dam/planted_lod2.glb"), glb([...quad(0), ...quad(2, true)]));
+  const rows = scanFaults(["assets/models/park/props/*/*_lod2.glb"], dir);
+  assert.equal(rows.length, 2);
+  const over = overCap(rows);
+  assert.equal(over.length, 1, JSON.stringify(rows.map((r) => [r.file, r.flipped_m2, r.area_m2])));
+  assert.match(over[0].file, /planted_lod2\.glb$/);
+  assert.ok(over[0].share > CAP);
+});

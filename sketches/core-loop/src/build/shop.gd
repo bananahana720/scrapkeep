@@ -7,6 +7,8 @@ const Fabricators := preload("res://src/build/fabricators.gd")
 const ItemGen := preload("res://src/build/item_gen.gd")
 const OddsReadout := preload("res://src/ui/odds_readout.gd")
 const ActiveOffers := preload("res://src/combat/actives/active_offers.gd")
+const MakerSets := preload("res://src/build/maker_sets.gd")
+const UltimateMeter := preload("res://src/core/ultimate_meter.gd")
 
 # Moss's workshop economy (DESIGN-V2 section 12): the shelf, the reroll, charge cells,
 # sell-back, the heft-locked top shelf and the conversation loop. It has no geometry:
@@ -43,6 +45,16 @@ const WELDED := "welded"
 const NOT_HELD := "not_held"
 const CLOSED := "closed"
 const TOO_LIGHT := "too_light"
+
+# Moss's last call (W1-73, gameplay critique finding 11): the bay after a world's last Warden
+# launches the ball into that world's boss arena, so it is the last till of the world and cogs
+# held past it die at the boss. There the shelf's first slot is a piece of the maker set the
+# player is nearest to finishing, and Moss's kettle takes cogs: each pour starts the boss fight
+# with BREW_SHARE of the ultimate meter filled, BREW_PRICES[pour] cogs each, so a full brew opens
+# the fight with the ultimate ready. Prices are a first cut at the 1,332 to 2,012 cogs the economy
+# pass found unspent at Brindle (assumption Andrew can overturn).
+const BREW_PRICES := [250, 450, 700]
+const BREW_SHARE := 1.0 / 3.0
 
 # The conversation's six beats (SOUND-STORY section 8, "The conversation loop"), with
 # the babble's root per beat and whether a refusal grumble sits under the first word.
@@ -177,8 +189,11 @@ func enter() -> Dictionary:
 
 
 # The first stock of a stage: shelf, hook (locked one heft class up; at the top class the hook
-# is already yours) and the reroll, kept so a retry can put it back.
+# is already yours) and the reroll, kept so a retry can put it back. A hook left locked carries
+# on to the next stage's stock at the class it asked for (W1-79), so growing into it is a goal
+# the HUD can pin (hook_goal), not a lock that moves up with the ball.
 func _stock_stage(here: Array) -> void:
+	var carried := _carried_hook() if not stocked_for.is_empty() and stocked_for != here else {}
 	stocked_for = here
 	stocks += 1
 	rerolls_left = REROLLS_PER_VISIT
@@ -186,11 +201,36 @@ func _stock_stage(here: Array) -> void:
 	# the bay never picks a later stage's shelf, and a Continue (which starts the count again)
 	# stocks the shelf the first sitting saw.
 	_rng.seed = hash([SEED, ctx.flow.run_key() if ctx.flow != null else ctx.run.run_seed, ctx.run.world, ctx.run.stage, "shelf"])
+	# The shelf and the hook draw as they always have, so a Continue (which carries no hook)
+	# stocks the shelf the first sitting saw; a carried hook then takes the drawn hook's place
+	# unless the shelf drew the same part.
 	shelf = _stock()
 	var lock_class: int = mini(TOP_CLASS_MAX, ctx.run.heft_class() + 1)
 	var hook := _roll_hook(shelf.map(func(entry): return entry["part_id"]))
 	top = {"part_id": hook["part_id"], "table": hook["table"], "lock_class": lock_class, "sold": false} if hook["part_id"] != "" else {}
+	if not carried.is_empty() and not shelf.any(func(entry): return entry["part_id"] == carried["part_id"]):
+		top = carried
 	_stage_stocks[str(here)] = {"shelf": shelf.duplicate(true), "top": top.duplicate(true), "rng": _rng.state}
+
+
+# The last stage's hook, unsold and still above the ball's class, with the class it asked for;
+# {} when there is none to carry (bought, opened, or never stocked).
+func _carried_hook() -> Dictionary:
+	if top.is_empty() or top["sold"] or ctx.run.heft_class() >= int(top["lock_class"]):
+		return {}
+	if Parts.stacked_out(top["part_id"], ctx.run.parts):
+		return {}
+	var out := top.duplicate(true)
+	out["carried"] = true
+	return out
+
+
+# The heft class a seen, locked hook is waiting for, for the HUD's pin (W1-79); 0 when none.
+func hook_goal() -> int:
+	if top.is_empty() or top["sold"] or stocks == 0:
+		return 0
+	var needs := int(top["lock_class"])
+	return needs if ctx.run.heft_class() < needs else 0
 
 
 # A retry or replay (stage_entered with retry) put the run back to the stage's start: its cogs
@@ -253,6 +293,12 @@ func shelf_offers() -> Array:
 		var offer := _offer(shelf[i]["part_id"], shelf[i]["sold"], i)
 		offer["odds"] = shelf[i].get("odds", [])
 		offer["odds_text"] = OddsReadout.text(offer["odds"])
+		# The last call's set piece names its maker, and how many of the set are held without it.
+		if shelf[i].has("set"):
+			var maker := String(shelf[i]["set"])
+			offer["set"] = maker
+			offer["set_held"] = int(_set_counts().get(maker, 0))
+			offer["set_pieces"] = int(MakerSets.SETS.get(maker, {}).get("pieces", 0))
 		out.append(offer)
 	return out
 
@@ -565,16 +611,22 @@ func _result(ok: bool, reason: String, line_id := "", part_id := "", cost := 0) 
 # gates get. It moves weight inside a part's offer bucket only, so the shelf's mix of buckets and its
 # rarities, and every price, stay as they were (answer_weights_test).
 func _stock() -> Array:
+	# The last call's first slot is the nearest maker set's missing piece (set_piece) in place of the
+	# cobalt rung's draw; elsewhere, and when no set is started, the rung as before.
+	var set_pick: String = _set_pick() if last_call() else ""
 	# The cobalt rung (item ladder, wave 20): the first slot draws from FLOOR_RARITIES, so it is
 	# always a rare or better, and the other slots from the shelf's table.
-	var floor_pick: Array = Parts.roll(_rng, FLOOR_RARITIES, ctx.run.class_id(), ctx.run.parts, 1)
+	var floor_pick: Array = [set_pick] if set_pick != "" else Parts.roll(_rng, FLOOR_RARITIES, ctx.run.class_id(), ctx.run.parts, 1)
 	var picks: Array = Parts.roll(_rng, SHELF_RARITIES, ctx.run.class_id(), ctx.run.parts,
 		SHELF_SIZE - floor_pick.size(), floor_pick)
 	var out: Array = []
 	# Each record carries the odds of the table it was drawn from (SG13), read from the same
-	# rarities and weight row its roll reads.
+	# rarities and weight row its roll reads. The set piece is no draw, so it shows none.
 	for part_id in floor_pick:
-		out.append({"part_id": part_id, "sold": false, "odds": OddsReadout.odds_for(FLOOR_RARITIES, ctx.run.class_id())})
+		var entry := {"part_id": part_id, "sold": false, "odds": [] if set_pick != "" else OddsReadout.odds_for(FLOOR_RARITIES, ctx.run.class_id())}
+		if set_pick != "":
+			entry["set"] = MakerSets.maker_of(part_id)
+		out.append(entry)
 	var odds: Array = OddsReadout.odds_for(SHELF_RARITIES, ctx.run.class_id())
 	for part_id in picks:
 		out.append({"part_id": part_id, "sold": false, "odds": odds})
@@ -586,6 +638,87 @@ func _stock() -> Array:
 		if active != "":
 			out[-1] = {"part_id": active, "sold": false, "odds": odds}
 	return out
+
+
+# ---- Moss's last call (W1-73) ----
+
+# This stage's bay is the world's last till: its launch lands in the world boss's arena.
+func last_call() -> bool:
+	var stages = ctx.get("stages") if ctx != null else null
+	return stages != null and stages.BOSS != "" and stages.is_world_last(ctx.run.stage)
+
+
+# The maker set nearest to waking: {maker, held, pieces}, fewest pieces missing first, then SETS
+# order; {} when no set is started or every started set is whole.
+func set_piece() -> Dictionary:
+	var counted: Dictionary = _set_counts()
+	var best := {}
+	for maker in MakerSets.SETS:
+		var held := int(counted.get(maker, 0))
+		var pieces := int(MakerSets.SETS[maker]["pieces"])
+		if held <= 0 or held >= pieces or _set_pool(maker, []).is_empty():
+			continue
+		if best.is_empty() or pieces - held < int(best["pieces"]) - int(best["held"]):
+			best = {"maker": maker, "held": held, "pieces": pieces}
+	return best
+
+
+# Pieces held per maker as the set bonuses count them, the racked active's included.
+func _set_counts() -> Dictionary:
+	return build.maker_counts() if build != null and build.has_method("maker_counts") else MakerSets.counts(ctx.run.parts)
+
+
+func _set_pick() -> String:
+	var target := set_piece()
+	if target.is_empty():
+		return ""
+	var pool := _set_pool(String(target["maker"]), [])
+	return pool[_rng.randi_range(0, pool.size() - 1)] if not pool.is_empty() else ""
+
+
+# The maker's pieces the shelf may stock that the run does not hold yet, in a stable order.
+func _set_pool(maker: String, exclude: Array) -> Array:
+	var pool: Array = Parts.offer_pool(ctx.run.class_id(), SHELF_RARITIES + FLOOR_RARITIES).filter(func(id):
+		return MakerSets.maker_of(id) == maker and not id in ctx.run.parts and not id in exclude)
+	pool.sort()
+	return pool
+
+
+# The kettle at the last call: {pours, cap, price, share}; {} anywhere else. price is -1 once full.
+func brew_offer() -> Dictionary:
+	if not last_call():
+		return {}
+	var pours := _pours()
+	return {"pours": pours, "cap": BREW_PRICES.size(), "share": BREW_SHARE,
+		"price": -1 if pours >= BREW_PRICES.size() else int(round(BREW_PRICES[pours] * _price_scale()))}
+
+
+# The pours bought on this stage (run_state.gd keeps them with the run, so a retry and a
+# Continue rewind them with the cogs); a brew from another stage is spent already.
+func _pours() -> int:
+	return ctx.run.brew if ctx.run.brew_stage == ctx.run.stage else 0
+
+
+func buy_brew() -> Dictionary:
+	if not inside:
+		return _result(false, CLOSED)
+	var offer := brew_offer()
+	if offer.is_empty():
+		return _result(false, LOCKED)
+	if int(offer["price"]) < 0:
+		return _result(false, CAPPED)
+	if not ctx.run.spend_cogs(int(offer["price"])):
+		return _result(false, CANT_AFFORD, "moss.bark.cant_afford", "", int(offer["price"]))
+	ctx.run.brew = _pours() + 1
+	ctx.run.brew_stage = ctx.run.stage
+	bought_this_visit += 1
+	return _result(true, OK, "", "", int(offer["price"]))
+
+
+# What the boss fight's arrival pours into the ultimate meter, in meter points (ultimate.gd
+# refunds them): the brew bought on this stage, at every arrival in its arena.
+func pour_brew() -> float:
+	return _pours() * BREW_SHARE * UltimateMeter.CAP
 
 
 func _rack():

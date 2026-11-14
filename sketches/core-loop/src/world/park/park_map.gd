@@ -48,6 +48,8 @@ var time_of_day := ""
 # The stage's caged pilots for rescue_site.gd, from the park file's optional rescue_rows: {id, quest, prompt, pilot,
 # at: Vector2, face: Vector2}.
 var rescue_sites: Array = []
+# Where a survival count can stand, from the park file's optional survival_rows: {row, form, at: Vector2}.
+var survival_sites: Array = []
 
 
 # An empty path reads nothing (ok stays false): event_ground.gd's OverlayMap copies a loaded map's
@@ -80,9 +82,10 @@ func warden_spec() -> Dictionary:
 # (its site row, resolved by NaturalFootprint, half sizes from effect.footprint_m when set, event_director.gd _park_clear; a
 # lightning row is its strike disc, a "ring" of 0 to strike_m at the site's centre) carry the row's footprint as "half": Vector2 and "yaw_deg", as footprint_contains
 # reads it; the "warden" (the engage ring) and the "yard" lock (lock_rows.gd) carry "ring": Vector2(inner, outer), the
-# band of distance from `at` they cover. The yard lock shuts wherever the ball first crosses within_m of the beacon on
-# the ground, centred ahead_m inside it, so its ring is every place that circle can stand for a ball that crosses
-# the line rolling (one landing from the air inside it shuts the yard nearer in). An "activity" that fights (a camp, an
+# band of distance from `at` they cover. The yard lock shuts wherever the ball first stands on level ground within
+# within_m of the beacon, or on any ground within its inner share (stage_locks.gd lock_arms), centred ahead_m inside
+# it, so its ring is every place that circle can stand for a ball that crosses the line rolling, down to the inner
+# share for a ball riding a slope in (one landing from the air inside it shuts the yard nearer in). An "activity" that fights (a camp, an
 # ambush altar, a relay) carries its rule's ring at the row's spot. Dormant homes count: an
 # event wakes them. Director timer packs are not sites; they spawn ahead of the ball anywhere off the pilot lines.
 # An event that commits no hazard and sends no foe is not a fight: the sluice surge is the surge run's water front,
@@ -119,16 +122,24 @@ func fight_sites() -> Array:
 	# An activity that fights (its rule has a pack: a camp, an ambush altar, a relay) is a ring of its rule's radius at
 	# the row's own spot. Loaded here, not preloaded: only the map checks ask, and activities.gd pulls in half the game.
 	var rules: Dictionary = load("res://src/world/activities.gd").RULES
+	# A row with alts fights as its widest fighting variant.
 	for row in park.get("activity_rows", []):
-		var rule: Dictionary = rules.get(String(row.get("activity", "")), {})
-		if rule.has("pack") and row.has("at"):
-			out.append({"id": row["id"], "kind": "activity", "at": _v2(row["at"]), "ring": Vector2(0.0, float(rule.get("ring", 0.0)))})
+		var ring := -1.0
+		for variant in [row] + row.get("alts", []):
+			var rule: Dictionary = rules.get(String(variant.get("activity", "")), {})
+			if rule.has("pack"):
+				ring = maxf(ring, float(rule.get("ring", 0.0)))
+		if ring >= 0.0 and row.has("at"):
+			out.append({"id": row["id"], "kind": "activity", "at": _v2(row["at"]), "ring": Vector2(0.0, ring)})
 	out.append({"id": "warden", "kind": "warden", "at": beacon, "ring": Vector2(0.0, reach_m)})
 	var lock: Dictionary = LockRows.row(title).get("lock", {})
 	if not lock.is_empty():
 		var radius := float(lock.get("radius_m", 26.0))
-		var centre := float(lock.get("within_m", 0.0)) - minf(float(lock.get("ahead_m", 0.0)), radius * 0.5)
-		out.append({"id": String(lock["id"]), "kind": "yard", "at": beacon, "ring": Vector2(maxf(0.0, centre - radius), centre + radius)})
+		var ahead := minf(float(lock.get("ahead_m", 0.0)), radius * 0.5)
+		var within := float(lock.get("within_m", 0.0))
+		var share: float = load("res://src/world/stage_locks.gd").LOCK_ANY_SLOPE_SHARE
+		out.append({"id": String(lock["id"]), "kind": "yard", "at": beacon,
+			"ring": Vector2(maxf(0.0, within * share - ahead - radius), within - ahead + radius)})
 	return out
 
 
@@ -182,25 +193,32 @@ func _fill() -> void:
 	activity_sites = []
 	for row in park["activity_rows"]:
 		# activities.gd keys its rule by the activity kind; an empty pack or pay keeps the rule's own.
-		var site := {"id": row["activity"], "row": row["id"], "site": row["site"], "at": _v2(row["at"])}
-		if not (row["pack"] as Array).is_empty():
-			site["pack"] = row["pack"].duplicate()
-		if not (row["pay"] as Dictionary).is_empty():
-			site["pay"] = row["pay"].duplicate(true)
+		var site := _variant(row)
+		site.merge({"row": row["id"], "site": row["site"], "at": _v2(row["at"])})
 		if row.has("route"):
 			site["route"] = String(row["route"])
 		# Optional: the way a cracked_cache's open face looks; without it, the rule's (north).
 		if row.has("face"):
 			site["face"] = _v2(row["face"]).normalized()
+		# Optional: a cracked_cache's wall bar as a speed tier (activities.gd BARS).
+		if row.has("bar"):
+			site["bar"] = String(row["bar"])
 		# Optional: a card 2 extra (the completionist card's added activities) stands beside the pocket draw.
 		if row.get("extra", "") == "card_2":
 			site["extra"] = "card_2"
+		# Optional (W1-70): the row's other activities, one drawn per run in its place and on its pay (activities.gd drawn).
+		if row.has("alts"):
+			site["alts"] = (row["alts"] as Array).map(func(alt: Dictionary) -> Dictionary: return _variant(alt.merged({"pay": {}})))
 		activity_sites.append(site)
 
 	rescue_sites = []
 	for row in park.get("rescue_rows", []):
 		rescue_sites.append({"id": row["id"], "quest": row["quest"], "prompt": row["prompt"], "pilot": row["pilot"],
 			"at": _v2(row["at"]), "face": _v2(row["face"]).normalized()})
+
+	survival_sites = []
+	for row in park.get("survival_rows", []):
+		survival_sites.append({"row": row["id"], "form": row["form"], "at": _v2(row["at"])})
 
 	scrap_trail = _scrap_trail()
 
@@ -218,6 +236,16 @@ func _fill() -> void:
 	# ghost-solid band (#183) are sunk to the band along the park's line (scatter.gd, LANE_BAND_M), not across whole
 	# row footprints. Nothing is read or built here: scatter.gd's chunked build makes the mask on a worker, in the first
 	# of its chunk jobs (lane_mask_for), so a ParkMap stays cheap to make and the boot path never touches the graph.
+
+
+# An activity row's kind, pack and pay (an alt's kind and pack) as a site spec: {"id", "pack"?, "pay"?}.
+static func _variant(row: Dictionary) -> Dictionary:
+	var out := {"id": row["activity"]}
+	if not (row["pack"] as Array).is_empty():
+		out["pack"] = row["pack"].duplicate()
+	if not (row["pay"] as Dictionary).is_empty():
+		out["pay"] = row["pay"].duplicate(true)
+	return out
 
 
 # The stage's scrap trail (stage_map.gd scrap_trail): the floor line of the park's lines.json, where that line carries

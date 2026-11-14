@@ -30,7 +30,7 @@ func setup() -> void:
 	_plane = MeshInstance3D.new()
 	_quad = PlaneMesh.new()
 	_plane.mesh = _quad
-	_plane.material_override = Palette.water(Palette.VERDIGRIS.lerp(Palette.ARC, 0.35))
+	_plane.material_override = Palette.water(Palette.water_tone())
 	add_child(_plane)
 
 	_mast = MeshInstance3D.new()

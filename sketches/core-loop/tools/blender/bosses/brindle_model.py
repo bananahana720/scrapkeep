@@ -207,28 +207,46 @@ def drums(parent):
 
 
 def armour(parent):
+    """Fleet plating bolted over the hull (SIGHT-PERSONA: Fleet paint, charcoal bands, one
+    brass tag riveted on). Gameplay overrides surface 0 (the STEEL slab) with the slate or
+    amber plating tint, so everything that must survive that tint, the bands, rivets, tag
+    and scuffs, is built on the JOINT surface, which keeps its own colours."""
+    rivet = common.mix("charcoal", "bone", .45)
     for k, (side, z) in enumerate(((-1, -3.5), (-1, 3.5), (1, -3.5), (1, 3.5))):
         p = Part("Armour%d" % k)
-        x = side * 4.7
-        box(p, (.36, 3.2, 6), (side * 4.68, 2.8, z), "bone")
-        for y in (1.26, 4.34):
-            box(p, (.08, .12, 6), (side * 4.86, y, z), "petrol")
-        for dz in (-2.94, 2.94):
-            box(p, (.08, 3.2, .12), (side * 4.86, 2.8, z + dz), "petrol")
-        # Wear follows the lower edge and hardware. The broad armour face stays bone.
-        for j, (y, dz, width, height) in enumerate(((1.28, -1.5, .8, .12), (1.4, .2, 1.3, .18),
-                                                  (3.9, 1.7, .7, .16), (2.5, -2.7, .16, .55))):
-            x_face = side * 4.861
-            polygon = [(x_face, y, z + dz), (x_face, y + height, z + dz - width * .15),
-                       (x_face, y + height * .8, z + dz + width), (x_face, y, z + dz + width * .8)]
-            vertices = [p.bm.verts.new(xyz(v)) for v in (polygon if side == 1 else list(reversed(polygon)))]
-            p.paint([p.bm.faces.new(vertices)], STEEL, "oxide" if j % 2 else "copper")
-        for dz in (-2.7, 2.7):
-            for y in (1.45, 4.15):
-                bolt(p, (side * 4.86, y, z + dz), (side, 0, 0))
-        for dz in (-1.5, 0, 1.5):
-            box(p, (.015, 2.65, .08), (side * 4.87, 2.8, z + dz), "charcoal", JOINT)
-        worn(p)
+        # The plate keeps its 0.4 x 3.2 x 6 envelope (BUILD-SPEC D4, dress_bri_assets_test):
+        # the slab is thinner so the fittings stand inside it, rivet heads at the outer face.
+        face = side * 4.76
+        # Surface 0: the slab and a raised inner panel, so the flat tint still shows a frame
+        # line and a bevel highlight at ram distance.
+        box(p, (.26, 3.2, 6), (side * 4.63, 2.8, z), "bone")
+        box(p, (.07, 1.9, 4.9), (face + side * .03, 2.8, z), "bone")
+        # Surface 1: two charcoal bands with a rivet row each, wide enough to read at 20 m.
+        for y in (1.48, 4.12):
+            box(p, (.09, .36, 6), (face + side * .04, y, z), "charcoal", JOINT)
+        with p.region(bevel=0, detail=1):
+            for y in (1.48, 4.12):
+                for j in range(8):
+                    dz = -2.62 + j * 5.24 / 7
+                    rod(p, (face + side * .07, y, z + dz), (face + side * .14, y, z + dz), .055,
+                        rivet, JOINT, 4)
+            # The brass requisition tag, riveted proud of the inner panel near the top band:
+            # the Fleet's one mark (SIGHT-PERSONA habit 6).
+            tag_z = z + (1.9 if z < 0 else -1.9)
+            box(p, (.03, .5, .78), (face + side * .085, 3.4, tag_z), "brass", JOINT)
+            for dz in (-.29, .29):
+                rod(p, (face + side * .095, 3.4, tag_z + dz), (face + side * .125, 3.4, tag_z + dz), .04,
+                    "charcoal", JOINT, 4)
+            # Scrapes to bare steel where the ball strikes most, low on the panel: a mid grey
+            # that shows on slate and on amber, never the warning red.
+            rng = random.Random("brindle:scuffs%d" % k)
+            for y, dz, width, height in ((1.95, -1.7, 1.1, .16), (2.2, .6, 1.4, .12), (3.1, -.2, .7, .1)):
+                dz += rng.uniform(-.3, .3)
+                x_face = face + side * .068
+                polygon = [(x_face, y, z + dz), (x_face, y + height, z + dz + width * .2),
+                           (x_face, y + height * .5, z + dz + width), (x_face, y - height * .3, z + dz + width * .6)]
+                vertices = [p.bm.verts.new(xyz(v)) for v in (polygon if side == 1 else list(reversed(polygon)))]
+                p.paint([p.bm.faces.new(vertices)], JOINT, common.mix("bone", "charcoal", .4))
         finish(p, (side * 4.5, 2.8, z), parent)
 
 

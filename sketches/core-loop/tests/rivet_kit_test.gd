@@ -98,6 +98,9 @@ func _boot() -> void:
 	_player.fit_class(def)
 	await _sim(0.6)
 	_kit = _combat.get_node("RivetKit")
+	# Full Cut lands on its peak tick here, as before the worker carve; rivet_full_cut_late_test
+	# checks the late landing.
+	_kit.cut_ticks = 0
 	_player.set_physics_process(false)
 	_combat.set_physics_process(false)
 	_kit.set_physics_process(false)

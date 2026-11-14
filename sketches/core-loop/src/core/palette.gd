@@ -26,6 +26,15 @@ const BRASS := Color("d9b44a")
 const LEDGER := Color("e6d9b8")
 # "Not yet": out of range, a glancing hit, a locked thing. Cool, so no warm colour shares it.
 const SLATE := Color("6f7f8f")
+# Worn steel: the cog, the money, and the grey panels' hardware (W1-21). Neutral and light, so it is
+# neither Brindle's brass nor the relic's amber to any eye, nor slate's cool "not yet".
+const STEEL := Color("9aa0a0")
+# Frost and ice reads in models and icons (VISUAL-LANGUAGE section 2 extension).
+const ICE := Color("c8f0ff")
+# Icon-only inks (tools/icons/generate_icons.py): ash for Redjaw, the ledger page's light, and the older verdigris.
+const REDJAW_ASH := Color("5e5a54")
+const LEDGER_CREAM := Color("f7f1e3")
+const OLD_VERDIGRIS := Color("4f7f7a")
 
 
 # The colour of "your verb works on this right now". Mint for every pilot until a swatch
@@ -299,6 +308,12 @@ static func stripe_texture(a: Color, b: Color, size := 64) -> ImageTexture:
 # hazard surface, so the stripe pitch and the two colours cannot drift between props.
 static func hazard_stripe() -> StandardMaterial3D:
 	return slot_material("hazard_stripe") as StandardMaterial3D
+
+
+# The colour of water: verdigris leaning mint. Plain mint is kept for "your verb works here"
+# and the common reward (colour_meanings.gd), so standing water never borrows it.
+static func water_tone() -> Color:
+	return VERDIGRIS.lerp(ARC, 0.35)
 
 
 static func water(color: Color) -> StandardMaterial3D:

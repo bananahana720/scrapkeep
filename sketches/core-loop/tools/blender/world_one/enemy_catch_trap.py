@@ -2,7 +2,7 @@
 # The cup has a dark empty well, oxide tapered walls, a worn grey lip and one red
 # hostile latch tab. A side spring stack, pivot pin and long release paddle stand
 # outside the well. They travel with the cup; the runtime has no jaw or lever pose.
-# The crew has charcoal ears, snout, boots, belt and pack, with one brass chest tag.
+# The crew has charcoal boots, belt and pack, with one brass chest tag.
 #
 # Two meshes / three opaque surfaces: CatchBody (fleet_paint + vertex paint) and
 # CatchCup (vertex paint). CatchCup's origin is its centre; catch_trap.gd supplies
@@ -25,6 +25,7 @@ from mathutils import Vector
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 import common
+import crew
 import polish
 from common import Part
 
@@ -45,15 +46,17 @@ def g(x, y, z):
 b = Part("CatchBody")
 b.cyl("fleet_paint", 0.34, 0.36, 0.70, segs=10, loc=g(0, -0.48, 0.08))
 b.cyl("fleet_paint", 0.36, 0.29, 0.65, segs=10, loc=g(0, 0.20, 0.08))
-b.uv("fleet_paint", 0.24, u=10, v=6, loc=g(0, 0.76, 0.18))
-b.box("paint", (0.18, 0.18, 0.14), loc=g(0, 0.72, 0.41), color=CHAR)
+crew.sheave_head(b, g(0, 0.76, 0.18), 0.24)
 for side in (-1, 1):
-    b.cyl("paint", 0.075, 0.0, 0.22, segs=6, loc=g(side * 0.13, 1.065, 0.18), color=CHAR)
     b.box("paint", (0.24, 0.38, 0.20), loc=g(side * 0.20, -1.00, 0.14), color=CHAR)
     b.rod("paint", g(side * 0.29, 0.39, 0.05), g(side * 0.32, 1.20, -0.24), 0.065, segs=6, color=IRON)
 b.cyl("paint", 0.37, 0.37, 0.09, segs=10, loc=g(0, -0.05, 0.08), color=CHAR)
 b.box("paint", (0.40, 0.20, 0.45), loc=g(0, 0.10, -0.31), color=CHAR)
 b.box("paint", (0.22, 0.04, 0.14), loc=g(0, 0.20, 0.405), color="brass")
+# The old works' two marks, cast in under the Fleet's paint: the crew number and HIRED, one on
+# each cheek of the hoist block, the part of it that stands clear of the cup.
+crew.cast_number(b, "paint", "05", (0.185, -0.18, 0.80), (1, 0, 0), 0.15)
+crew.hired(b, "paint", (-0.185, -0.18, 0.80), (-1, 0, 0), 0.05)
 bmesh.ops.recalc_face_normals(b.bm, faces=b.bm.faces[:])
 body = b.to_object(parent=root)
 

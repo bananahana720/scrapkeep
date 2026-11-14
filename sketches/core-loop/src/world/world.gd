@@ -677,6 +677,39 @@ func director_alive() -> int:
 	return maxi(0, get_tree().get_nodes_in_group("enemy").size() - activities.standing())
 
 
+# Director pack members left past director.gd LEAVE_M leave, out of sight: no death, no scrap, no kill counted.
+# Yard and overtime crews (yard_crew) and elite packs always stay.
+func _dismiss_left_packs() -> void:
+	var at: Vector3 = ctx.player.ball_position()
+	var ball := Vector2(at.x, at.z)
+	for enemy in get_tree().get_nodes_in_group("enemy"):
+		if not enemy is Node3D or not enemy.has_meta("pack_seq") or enemy.has_meta("elite_pack") or enemy.has_meta("yard_crew"):
+			continue
+		if enemy.has_method("is_dead") and enemy.is_dead():
+			continue
+		if Director.leaves(Vector2(enemy.global_position.x, enemy.global_position.z), ball):
+			enemy.remove_from_group("enemy")
+			enemy.remove_from_group("enemy_shot")
+			enemy.queue_free()
+
+
+# What the director's cap counts: the enemies near the ball (director.gd HOLD_M), less the activities' own.
+func director_held() -> int:
+	var at: Vector3 = ctx.player.ball_position()
+	var ball := Vector2(at.x, at.z)
+	var held := 0
+	var total := 0
+	for enemy in get_tree().get_nodes_in_group("enemy"):
+		if not enemy is Node3D or activities.keeps(enemy):
+			continue
+		total += 1
+		# A body in the group without a kind (a test's stand-in) counts as an ordinary enemy.
+		var kind = enemy.get("kind")
+		if Director.holds(String(kind) if kind != null else "", Vector2(enemy.global_position.x, enemy.global_position.z), ball):
+			held += 1
+	return Director.held_count(held, total)
+
+
 func _step_director(delta: float) -> void:
 	director.spike = ctx.flow.state_name() == "beacon" or events.spike()
 	director.heft_class = ctx.run.heft_class()
@@ -684,7 +717,8 @@ func _step_director(delta: float) -> void:
 	if _build_clock >= BUILD_REFRESH and ctx.spawner != null and ctx.spawner.has_method("build_read"):
 		_build_clock = 0.0
 		director.build = ctx.spawner.build_read()
-	var alive := director_alive()
+	_dismiss_left_packs()
+	var alive := director_held()
 	var ball: Vector3 = ctx.player.ball_position()
 	var v: Vector3 = ctx.player.state.velocity
 	var forward: Vector3 = ctx.heading()

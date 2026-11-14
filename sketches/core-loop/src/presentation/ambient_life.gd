@@ -339,15 +339,27 @@ static func prepare(node: Node) -> void:
 			for i in view.mesh.get_surface_count():
 				var mat := view.get_active_material(i) as BaseMaterial3D
 				if mat != null and not mat.vertex_color_use_as_albedo:
-					mat = mat.duplicate() as BaseMaterial3D
-					mat.vertex_color_use_as_albedo = true
-					view.set_surface_override_material(i, mat)
+					view.set_surface_override_material(i, _vertex_painted(mat))
 	for player in node.find_children("*", "AnimationPlayer", true, false):
 		for library in player.get_animation_library_list():
 			var lib: AnimationLibrary = player.get_animation_library(library)
 			for clip in lib.get_animation_list():
 				# react plays once into its pose, then _pose loops its hold; idle and move repeat.
 				lib.get_animation(clip).loop_mode = Animation.LOOP_NONE if String(clip).ends_with("react") else Animation.LOOP_LINEAR
+
+
+# One vertex-painted copy per imported material, shared by every instance and kept for the session. A copy per
+# instance died with its node, and freeing a posed, skinned creature then queried the freed material ("Parameter
+# 'material' is null" on both renderers, first seen when a keeper stood by the ambient_view_test ball, 13 Nov).
+static var _painted := {}
+
+
+static func _vertex_painted(mat: BaseMaterial3D) -> BaseMaterial3D:
+	if not _painted.has(mat):
+		var copy := mat.duplicate() as BaseMaterial3D
+		copy.vertex_color_use_as_albedo = true
+		_painted[mat] = copy
+	return _painted[mat]
 
 
 func _pose(node: Node3D, m: AmbientPool.Member) -> void:

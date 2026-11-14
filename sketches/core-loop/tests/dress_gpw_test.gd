@@ -65,8 +65,12 @@ func _run() -> void:
 				_check("over 95 percent of slab face retains hue", washed_area / face_area > 0.95)
 				var code: String = mat.shader.code
 				_check("concrete shader preserves tint away from chips", code.contains("vec3 paint = base_color.rgb * COLOR.rgb;") and code.contains("finish = paint * (0.86 + wash * 0.19 + aggregate * 0.08 - seams * 0.17 - holes * 0.30);") and code.contains("finish = mix(finish, vec3(0.37, 0.39, 0.35), chips * 0.72);") and code.contains("ALBEDO = finish;"))
-	_check("three walls and bay pylon face dressed", concrete_faces == 4)
-	_check("both families dressed", dressed >= 30)
+	# W1-23: the bay's props wear bay_kit.glb, so only the three pylon walls are concrete faces and the bay's
+	# painted marks (mats, pad, chevrons, deck line) are what the surface kit still dresses (was 4 and 30).
+	_check("three walls dressed", concrete_faces == 3)
+	_check("both families dressed", dressed >= 8)
+	var yard_wall := bay.get_node("Barge/YardWall")
+	_check("the bay yard wall wears its model", yard_wall.get_child(1) is MeshInstance3D and not yard_wall.get_child(1).mesh is PrimitiveMesh)
 	print("gpw geometry: %d nodes %s; %d meshes; %d dressed" % [snapshot.size(), "unchanged" if geometry_same else "DIFFER", meshes.size(), dressed])
 	scene.free()
 	print("dress_gpw_test: " + ("PASS" if _failures == 0 else "FAIL"))

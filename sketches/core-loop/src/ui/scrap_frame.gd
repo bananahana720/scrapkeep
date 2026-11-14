@@ -1,5 +1,6 @@
 extends StyleBox
 
+const UiTokens := preload("res://src/ui/ui_tokens.gd")
 const Palette := preload("res://src/core/palette.gd")
 
 # The salvage look for UI frames ("HUD look: scrapped together, clean to read"): the
@@ -21,7 +22,7 @@ const TAPE := Vector2(40.0, 13.0)
 
 var kind := Kind.PLATE
 var border_color := Palette.SAND
-var bg_color := Color(Palette.CHARCOAL, 0.94)
+var bg_color := Color(UiTokens.INK, UiTokens.PLATE_ALPHA)
 var border_width := 2.0
 var serial := 0
 var rivets := true

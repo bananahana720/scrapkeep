@@ -25,6 +25,7 @@ const MindAttacks := preload("res://src/boss/mind_attacks.gd")
 const Sticky := preload("res://src/combat/sticky.gd")
 const Devices := preload("res://src/core/devices.gd")
 const NearMiss := preload("res://src/combat/near_miss.gd")
+const WayOutPaint := preload("res://src/presentation/way_out_paint.gd")
 const Redline := preload("res://src/combat/redline.gd")
 const Flail := preload("res://src/combat/flail.gd")
 const Augments := preload("res://src/movement/augments.gd")
@@ -409,6 +410,10 @@ func setup(ctx_ref) -> void:
 	add_child(flail)
 	flail.setup(ctx, self)
 	near_miss.setup(ctx.events, Callable(ctx.player, "ball_position"))
+	# The way out of the warning the ball stands in, painted on the floor (W1-05).
+	var way_out := WayOutPaint.new()
+	near_miss.add_child(way_out)
+	way_out.setup(near_miss, Callable(ctx.player, "ball_position"), Callable(ground, "height"))
 	_wire_redline()
 	_specials = {
 		"detonation_gauge": {"geometry": _discharge_geometry, "fire": _fire_discharge},
@@ -550,7 +555,8 @@ func setup(ctx_ref) -> void:
 # kind is "chaser", "lobber", "miniboss", "warden" or "vault". An unknown kind spawns a
 # chaser, with a warning, so a typo in an event table never leaves a stage empty. The
 # Warden and the vault sit on the ground under `at`; the others are placed at `at`.
-func spawn_enemy(kind: String, at: Vector3, affix_id := "", perch := Vector3.INF) -> Node3D:
+# `health_scale` multiplies the health the enemy would otherwise spawn with (the survival yard's later counts).
+func spawn_enemy(kind: String, at: Vector3, affix_id := "", perch := Vector3.INF, health_scale: float = 1.0) -> Node3D:
 	var enemy: Node3D
 	match kind:
 		"lobber":
@@ -585,7 +591,7 @@ func spawn_enemy(kind: String, at: Vector3, affix_id := "", perch := Vector3.INF
 	# Fodder sees the player through its sight, which Kest's cloak can fool; the Warden
 	# and the vault are set pieces and always see the ball.
 	var target = Sight.new(ctx.player, self, enemy, kind) if Sight.REACH.has(kind) or fleet.makes(kind) else ctx.player
-	var health_scale := _threat()
+	var health := _threat()
 	var enemy_spec: Dictionary = fleet.dress(kind, _spec_for(kind))
 	if affix_id == EliteAffixes.PLATED:
 		enemy_spec["armour"] = EliteAffixes.PLATED
@@ -595,7 +601,7 @@ func spawn_enemy(kind: String, at: Vector3, affix_id := "", perch := Vector3.INF
 	if kind not in ["warden", "vault"]:
 		var director = _director()
 		if director != null:
-			health_scale = director.hp_scale()
+			health = director.hp_scale()
 			enemy_spec["rest_scale"] = director.rest_scale()
 		if director != null and director.run_tier() >= 1:
 			enemy_spec["stage_threat"] = _threat()
@@ -609,7 +615,7 @@ func spawn_enemy(kind: String, at: Vector3, affix_id := "", perch := Vector3.INF
 				_pressure_chasers += 1
 				pressure["flanker"] = _pressure_chasers % 2 == 0
 			enemy_spec["pressure"] = pressure
-	enemy.setup(target, ground, ctx.root, Callable(ctx.flow, "in_play"), health_scale, enemy_spec)
+	enemy.setup(target, ground, ctx.root, Callable(ctx.flow, "in_play"), health * health_scale, enemy_spec)
 	# The vault and the Warden settle onto the ground or their landmark anchor in setup.
 	if enemy is CollisionObject3D and not enemy.global_position.is_equal_approx(at):
 		_reenter_space(enemy)

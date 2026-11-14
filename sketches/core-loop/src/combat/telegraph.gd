@@ -65,6 +65,10 @@ var mechanic_tag := ""
 
 var _painter
 var _flashed := false
+# Whether the warning's end is the hit (FX-05). An owner whose hits come later sets it false and
+# calls land() at each hit itself (the jolt layer's pulses), so no landing marks a moment that
+# cannot hurt.
+var lands_on_live := true
 # Driven: the motion marks were built once and each frame only moves them (E1). Every type
 # except a wave is driven; a wave is driven only when it is full and its area layer is not
 # "motion" (Threat.can_drive), so a partial wave or a motion wave is repainted instead.
@@ -232,9 +236,22 @@ func set_progress(value: float) -> void:
 	_repaint()
 	if armed and progress >= 1.0:
 		went_live.emit()
-	if type == Threat.Type.INSTANT and progress >= 1.0 and not _flashed and is_inside_tree() and is_hostile():
+	if progress >= 1.0 and not _flashed:
 		_flashed = true
-		Threat.flash(get_parent(), descriptor(), center.y, LIFT)
+		if lands_on_live:
+			land()
+
+
+# The landing now (Threat.flash): an INSTANT's solid flash, and the ink crack ring and dust kick of
+# any hostile ground mark but a wave (FX-05), on the mark's own ground. set_progress calls it once,
+# on the tick the warning ends; an owner whose hit comes at another moment (a thrown bola or disc
+# arriving, each pulse of a held field) calls it at that moment instead. Nothing for a mark that
+# is not hostile or not in the tree.
+func land() -> void:
+	if not is_inside_tree() or not is_hostile():
+		return
+	var floor: bool = _painter != null
+	Threat.flash(get_parent(), descriptor(), center.y, LIFT, _painter.ground if floor else Callable(), _painter.ground_many if floor else Callable())
 
 
 # The committed numbers the drawing reads: the same fields contains() reads.

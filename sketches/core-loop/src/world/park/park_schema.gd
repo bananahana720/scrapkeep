@@ -170,6 +170,10 @@ const MUSIC_LAYER_PREFIX := "layer_"
 # Optional at the top: "rescue_rows", the stage's caged pilots (rescue_site.gd). pilot is the ClassDef id sitting in
 # the cage, so who is rescued is data; quest is what rescue_completed carries (the achievement rows key on it).
 const RESCUE_FIELDS := {"id": "s", "site": "s", "at": "v2", "face": "v2", "quest": "s", "pilot": "s", "prompt": "s"}
+# Optional at the top: "survival_rows", the places a survival count can stand (survival_count.gd FORMS names the
+# form; activities.gd builds one row of a form a run, and only with --stocktake=on). They are not activity rows, so
+# nothing that reads the stage's activities sees them.
+const SURVIVAL_FIELDS := {"id": "s", "form": ["yard", "muster", "ring"], "at": "v2"}
 const LANDMARK_FIELDS := {
 	"id": "s", "kind": LANDMARK_KINDS, "at": "v2", "size": "v3", "yaw_deg": "n", "recipe": "s",
 	"budget": ["hero_landmark"], "sight_top": "v3", "sight_share": "n", "beacon": "v2", "reach_m": "n",
@@ -276,6 +280,8 @@ static func validate(park: Dictionary, ctx: Dictionary = {}) -> Array:
 	var activities := _rows(out, park, "activity_rows", ACTIVITY_FIELDS)
 	var routes := _rows(out, park, "routes", ROUTE_FIELDS)
 	var rescues := _rows(out, park, "rescue_rows", RESCUE_FIELDS) if park.has("rescue_rows") else {}
+	if park.has("survival_rows"):
+		_rows(out, park, "survival_rows", SURVIVAL_FIELDS)
 
 	var landmark: Dictionary = park["landmark"]
 	_landmark(out, landmark, ctx)
@@ -319,8 +325,12 @@ static func validate(park: Dictionary, ctx: Dictionary = {}) -> Array:
 			_add(out, id, "reference", "a surge_run names a park route, not %s" % str(activities[id].get("route")))
 		if activities[id].has("face") and not (_typed(activities[id]["face"], "v2") and _v2_len(activities[id]["face"]) > 0.0):
 			_add(out, id, "type", "face %s is not a nonzero [x, z]" % str(activities[id]["face"]))
+		if activities[id].has("bar") and not (activities[id]["activity"] == "cracked_cache" and activities[id]["bar"] in ["blazing"]):
+			_add(out, id, "type", "bar %s is not blazing on a cracked_cache" % str(activities[id]["bar"]))
 		if activities[id].has("extra") and activities[id]["extra"] != "card_2":
 			_add(out, id, "type", "extra %s is not card_2" % str(activities[id]["extra"]))
+		if activities[id].has("alts"):
+			_activity_alts(out, id, activities[id])
 	for id in rescues:
 		_site(out, id, rescues[id], rows)
 		if String(rescues[id]["quest"]) == "":
@@ -521,6 +531,42 @@ static func _lead_floor(row: Dictionary) -> float:
 # combat.gd spawn_enemy turns an unknown kind into a chaser with only a warning, and an enemy camp
 # with an empty pack never starts, so its pay is unreachable.
 const SET_PIECE_KINDS := ["miniboss", "warden", "vault"]
+
+
+# W1-70: an activity row may list alternatives, one drawn per run (activities.gd drawn). An alternative names its
+# own activity and pack and keeps the row's place, site, pay and pocket role (PARK.md 2.12), so every map check
+# that reads the row holds whichever is drawn: a camp stays a camp, a risk stays a risk, the pay ladder stands.
+static func _activity_alts(out: Array, id: String, row: Dictionary) -> void:
+	var alts = row["alts"]
+	if not (alts is Array and not (alts as Array).is_empty()):
+		_add(out, id, "type", "alts %s is not a nonempty array" % str(alts))
+		return
+	var role := _alt_role(String(row["activity"]))
+	if role == "":
+		_add(out, id, "enum", "a %s row cannot list alts" % row["activity"])
+		return
+	var n := 0
+	for alt in alts:
+		var label := "%s alts[%d]" % [id, n]
+		n += 1
+		if not _fields(out, label, alt, {"activity": ACTIVITY_KINDS, "pack": "a"}):
+			continue
+		for key in alt:
+			if not key in ["activity", "pack"]:
+				_add(out, label, "type", "an alt sets only activity and pack, not %s" % key)
+		if _alt_role(String(alt["activity"])) != role:
+			_add(out, label, "enum", "a %s alt changes the row's role from %s" % [alt["activity"], role])
+		_activity_pack(out, label, alt)
+
+
+# The pocket role an alternative must keep (park_placement.gd's kinds, not preloaded: it preloads this file), "" for a
+# kind that cannot vary: a cache has an assigned interior, a surge course its route and sluice, a relay its stake post.
+static func _alt_role(kind: String) -> String:
+	if kind == "enemy_camp":
+		return "online"
+	if kind in ["ambush_altar", "hauler_bounty"]:
+		return "risk"
+	return ""
 
 
 static func _activity_pack(out: Array, id: String, row: Dictionary) -> void:

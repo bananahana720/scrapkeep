@@ -371,7 +371,7 @@ func _build_props() -> void:
 	disc.bottom_radius = radius
 	disc.height = 0.08
 	_water.mesh = disc
-	_water_mat = Palette.unshaded(Color(Palette.ARC, WATER_ALPHA))
+	_water_mat = Palette.unshaded(Color(Palette.water_tone(), WATER_ALPHA))
 	_water_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	_water.material_override = _water_mat
 	_water.position = centre + Vector3.UP * 0.5

@@ -140,6 +140,8 @@ func _live(_delta: float) -> bool:
 		return true
 	if not _landed:
 		_landed = true
+		# The flight never takes the ring to its end, so the landing is drawn as the bola arrives.
+		ring.land()
 		_bola.top_level = false
 		_bola.position = Vector3(0.0, CREW_HALF + 1.1, 0.0)
 		_bola.basis = _seat() * Basis(Vector3.UP, _spin)

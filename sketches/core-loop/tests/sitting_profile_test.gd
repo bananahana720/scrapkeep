@@ -84,3 +84,5 @@ func _run() -> void:
 		any_earned = any_earned or _game.ctx.profile.earned(id)
 	_t.check("no achievement earned through the run", not any_earned, str(_earned))
 	_t.check("default option restores the lock", _game.tuning.set_option("profile", "default") and _open_ids().size() == 1, "back to one pilot")
+	_t.check("the earned sitting opens nothing in advance (W1-78)", _game.tuning.set_option("profile", "sitting-earned")
+		and not _game.tuning.sitting() and _open_ids().size() == 1, "%d open" % _open_ids().size())

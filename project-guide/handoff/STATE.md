@@ -6,17 +6,23 @@ Heads and open pull requests change by the hour, so read them live (`git ls-remo
 
 | Fact | Value |
 | --- | --- |
-| Last promotion | wave 38, main 8f0ce028, #847 |
-| Open stage | stage/alpha-w39 |
-| Live board | #848 |
-| Red team | greedy |
-| Compare against | gate/w38-48f62bf9/ |
+| Last promotion | wave 40, main 8d92764c, #1011 |
+| Open stage | stage/alpha-w41 |
+| Live board | #1012 |
+| Red team | speedrunner |
+| Compare against | gate/w40-bd5b30f5/ |
 
 The board is the GitHub issue in the table. It also holds the file fences of the open pull requests. The stage log (`git log --first-parent origin/stage/alpha-w<N>`) is the stack queue. "Compare against" names the receipts the next full gate reads its base values from, published on a `scratch/gate-receipts-<folder>` branch. The Gate updates the table as its first commit on a new stage: `node scripts/wave-state.mjs --write --board <new board issue> --compare <receipts folder>` (the red team persona rotates by itself).
 
-## Now (12 Nov 2026)
+## Now (14 Nov 2026)
 
-Wave 38 is on `main` (8f0ce028, pull request 847): CLEAN on 48f62bf9 plus docs, receipt on the wave 38 board. The difficulty stack is backed out again: its re-land showed three behaviour reds (idle entry safety in five pockets, the ultimate count, the flume band pin), and its owner thread fixes them and re-lands it last in the sprint. `stage/alpha-w39` is cut at 5c80d7a3, whose tree equals `cand/w39` 87fb3a5a; it holds the set director (off by default), the pilot card opening on the first pilot, set dressing planned off the main thread and Moss's scale in the sitting. The wave 39 gate runs on the PC. The loop mechanics Heat, Overtime, Called Shot, marked hull and carry a core are on in the "Scrapkeep sitting" launch and off for bots and tests (rulings da, dd, df). The coordinator is this claude.ai project (ruling dh); the board thread owns the wave board and the PC session, and every automated PC job runs silent. The board's latest comments say what is stacked, what is fenced and what the gate has found.
+Wave 40 is on `main` (8d92764c, pull request 1011). It passed the wave gate on the PC on bd5b30f5c, then closed at 23039d84:
+- three gate reds were fixed (an axis test that planted a real error, a kindless enemy in `director_held`, and the cutaway rider watch connecting twice);
+- the dam (54.4 / 25.6 s) and flume (26.5 / 18.5 s) posture pins were re-cut, because wave 40 shortened both fights (an assumption Andrew can overturn);
+- pocket_entry now counts 17 interiors;
+- bot_fairness_test (red, one-seed design) and stocktake_yard_test (flake) got ledger rows.
+
+Wave 40 shipped the critique build wave, the hitch fixes, the cutaway as the default ball (ruling dm), and the Tripo pilot bodies behind `--models=tripo`. `stage/alpha-w41` is cut at 8d92764c, with the wave board in the table above. Queued for it: 1007, 1008, 1009 (survival forms and survey posts behind flags), 957 (the dam bowl), 1010 (Tripo skin weights), and the difficulty stack 845 and 948, which still lands last. The full-game audit starts on this stage.
 
 Done for the sitting is counted: no major or minor row left in [PLAY-FINDINGS.tsv](PLAY-FINDINGS.tsv), a clean release gate, 4080 frames in budget, zero placeholders, and that build installed on the PC. Andrew has played only the dam (wave 26 build, 30 Oct) and has marked no area yet.
 

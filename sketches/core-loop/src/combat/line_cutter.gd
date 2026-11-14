@@ -141,6 +141,8 @@ func _live(_delta: float) -> bool:
 	if _landed:
 		return false
 	_landed = true
+	# The flight never takes the ring to its end, so the landing is drawn as the disc arrives.
+	ring.land()
 	_rest_disc()
 	throws += 1
 	var player = _player()

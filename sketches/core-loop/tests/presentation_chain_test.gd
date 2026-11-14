@@ -125,9 +125,13 @@ func _physics_process(_delta: float) -> bool:
 		"five kills 150 ms apart climb rungs %s; %d pips over the ball" % [rungs, _marks["pips"]])
 	_check("chain resets", _marks["reset"] == [0, 1] and _marks["reset_pips"] == 0,
 		"a kill after a %d ms gap is rung %d of a run of %d; %d pips shown" % [EventKinds.juice("enemy_killed")["chain_ms"], _marks["reset"][0], _marks["reset"][1], _marks["reset_pips"]])
+	# The chain grows by its tier layer, not by the pop's pitch (SOUND-BIBLE rule 7, PR 947): every pop
+	# keeps its own pitch, and each link past the first adds the next, heavier tier.
 	var kill_pitches: Array = _audio.cue_log.filter(func(e: Array): return e[0] == "enemy_killed" and e[1] == "kill_pop").map(func(e: Array): return snappedf(e[4], 0.001))
-	_check("chain sings", kill_pitches.size() >= 5 and kill_pitches[1] > kill_pitches[0] and kill_pitches[4] > kill_pitches[3],
-		"kill pops by pitch %s" % [kill_pitches.slice(0, 6)])
+	var tiers: Array = _audio.cue_log.filter(func(e: Array): return e[0] == "enemy_killed" and String(e[1]).begins_with("kill_chain_tier_")).map(func(e: Array): return e[1])
+	_check("chain grows", kill_pitches.size() >= 5 and kill_pitches.slice(0, 5).all(func(p): return p == kill_pitches[0])
+		and tiers.slice(0, 4) == ["kill_chain_tier_1", "kill_chain_tier_2", "kill_chain_tier_3", "kill_chain_tier_4"],
+		"kill pops by pitch %s; tier layers %s" % [kill_pitches.slice(0, 6), tiers.slice(0, 6)])
 	var multi: Array = _marks["multi"]
 	_check("multi-kill beat", multi.size() == 1 and multi[0][0] == 2,
 		"three kills in one frame: extra beats %s" % [multi])
@@ -144,8 +148,9 @@ func _physics_process(_delta: float) -> bool:
 	_check("pickup streak climbs", climbing and swelling,
 		"six pieces 60 ms apart tick at %s semitones; each swells the shell by %s" % [steps, swells.map(func(v: float): return snappedf(v, 0.01))])
 	var bursts: Dictionary = _vfx.spawned
-	_check("kill bursts", bursts.get("burst_pop", 0) >= 9 and bursts.get("burst_debris", 0) >= 9,
-		"%d pops and %d debris bursts for 9 kills" % [bursts.get("burst_pop", 0), bursts.get("burst_debris", 0)])
+	# FX-01: a kill pops as its own mark (Vfx.kill_look counts it as enemy_killed), shards and debris.
+	_check("kill bursts", bursts.get("enemy_killed", 0) >= 9 and bursts.get("burst_debris", 0) >= 9,
+		"%d kill marks and %d debris bursts for 9 kills" % [bursts.get("enemy_killed", 0), bursts.get("burst_debris", 0)])
 	print("presentation_chain_test: %s" % ("PASS" if _failures == 0 else "FAIL (%d)" % _failures))
 	_game.free()
 	quit(0 if _failures == 0 else 1)

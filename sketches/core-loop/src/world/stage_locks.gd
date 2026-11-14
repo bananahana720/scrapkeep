@@ -19,19 +19,26 @@ const Overtime := preload("res://src/world/overtime.gd")
 # spoils the count: the crew counts once its housed members are dead (ruling w, 24 Oct), while
 # the rider still fights and drops. A pack of riders alone counts like any other.
 #
-# The lock. Once, on the ground and inside the row's circle round the beacon, the yard shuts:
+# The lock. Once, on level ground and inside the row's circle round the beacon, the yard shuts:
 # a hazard wall rises round the ball with a slam that falls (arena_locked), the crew lands
 # ahead on the ring, and the wall springs a ball back that tries to leave. A wave down, the next
 # whistles in (arena_wave) from further round the ring; the last wave down, or the row's max_s,
 # opens it on climbing bells (arena_unlocked), and the whole crew counts as one of the gate's
 # packs. Its crew rolls no panels; the yard broken to its last wave pays one at its
 # centre (build.gd yard_cleared), as an Isaac room pays on clear. The Warden already awake skips it, so the lock never lands in its fight.
+# Level ground (LOCK_LEVEL_DOT): a ball riding a slope into the circle shuts the yard at the slope's foot,
+# not on it, so the ring never lands on a riding line where its wall would throw the ball back up the hill
+# (PF-46: the dam's construction incline is 23 degrees and crosses 200 m from the beacon mid-slope).
+# Inside LOCK_ANY_SLOPE_SHARE of the circle any ground arms it (a slope, a gripped wall), so a ball
+# that never finds level ground still shuts the yard before the Warden.
 #
 # StageLocks.active = false (bot_run --locks=0) turns both off for a base measure on one binary.
 
 static var active := true
 
 const LOCK_SEQ := 900000
+const LOCK_LEVEL_DOT := 0.978
+const LOCK_ANY_SLOPE_SHARE := 0.75
 const MIN_PACK := 2
 const WALL_HEIGHT := 9.0
 const WALL_RISE := 0.35
@@ -350,7 +357,8 @@ func _step_lock(delta: float) -> void:
 				return
 			var ball: Vector3 = ctx.player.ball_position()
 			var beacon: Vector3 = ctx.flow.beacon.global_position
-			if ctx.player.state.grounded and _flat(ball, beacon) <= float(lock_row().get("within_m", 0.0)):
+			if lock_arms(ctx.player.state.grounded, ctx.player.state.contact_normal.y, _flat(ball, beacon),
+					float(lock_row().get("within_m", 0.0))):
 				_lock(ball, beacon)
 		"locked":
 			lock_left -= delta
@@ -371,6 +379,14 @@ func _step_lock(delta: float) -> void:
 				if _wave_wait < 0.0:
 					_wave += 1
 					_land_wave()
+
+
+# Whether the yard shuts this tick: grounded inside the circle on level ground, or on any ground
+# inside the inner share of it.
+static func lock_arms(grounded: bool, normal_y: float, dist: float, within_m: float) -> bool:
+	if not grounded or dist > within_m:
+		return false
+	return normal_y >= LOCK_LEVEL_DOT or dist <= within_m * LOCK_ANY_SLOPE_SHARE
 
 
 func _lock(ball: Vector3, beacon: Vector3) -> void:

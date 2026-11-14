@@ -196,6 +196,7 @@ func _lit() -> void:
 	var cap = _site("ambush_altar").cap
 	_t.check("the altar cap is brass", cap != null and _rgb(cap.material_override.albedo_color) == _rgb(Palette.BRASS),
 		"cap %s" % [cap.material_override.albedo_color if cap != null else null])
+	_check_site_models()
 	# Views of one row share their meshes and materials (the stage entry frame built them per view); a
 	# stage modifier's sight scale stretches only its own column.
 	var view_a := ActivityView.new()
@@ -232,6 +233,50 @@ func _lit() -> void:
 	bet.free()
 
 
+# W1-22: the park's altar and cracked pocket draw their models, not primitives, over the colliders
+# they always had, and the pocket's shell fits its colliders (its inner back face on the back wall's).
+func _check_site_models() -> void:
+	var altar: Node3D = _site("ambush_altar")
+	_t.check("the altar wears its model", altar.find_child("AltarPost", false, false) != null
+		and altar.find_child("AltarBand", false, false) != null and altar.cap.name == "AltarCap" and _primitives(altar, altar.view) == 0,
+		"primitives %d" % _primitives(altar, altar.view))
+	var cache: Node3D = _site("cracked_cache")
+	var shell: MeshInstance3D = cache.find_child("CacheShell", false, false)
+	_t.check("the cache wears its model", shell != null and cache.wall.find_child("CacheWall", false, false) != null
+		and cache.find_child("CachePedestal", false, false) != null and cache.find_child("CacheRoof", true, false) == null
+		and _primitives(cache, cache.view) == 0, "primitives %d" % _primitives(cache, cache.view))
+	var boxes := []
+	for shape: CollisionShape3D in cache.find_children("*", "CollisionShape3D", true, false):
+		boxes.append([(shape.shape as BoxShape3D).size, (cache.global_transform.affine_inverse() * shape.global_transform).origin])
+	var tall := Activities.WALL_HEIGHT + Activities.WALL_SINK
+	var mid := tall * 0.5 - Activities.WALL_SINK
+	var expected := [
+		[Vector3(12, tall, 1), Vector3(0, mid, 0)],
+		[Vector3(1, tall, Activities.WALL_DEPTH), Vector3(-6.5, mid, -Activities.WALL_DEPTH * 0.5)],
+		[Vector3(1, tall, Activities.WALL_DEPTH), Vector3(6.5, mid, -Activities.WALL_DEPTH * 0.5)],
+		[Vector3(14, tall, 1), Vector3(0, mid, -Activities.WALL_DEPTH - 0.5)],
+	]
+	var same := boxes.size() == expected.size()
+	for i in mini(boxes.size(), expected.size()):
+		same = same and boxes[i][0].is_equal_approx(expected[i][0]) and boxes[i][1].is_equal_approx(expected[i][1])
+	_t.check("the cache keeps its four wall colliders as built", same, "%s" % [boxes])
+	if shell != null:
+		var box: AABB = shell.transform * shell.mesh.get_aabb()
+		_t.check("the cache's shell fits its colliders", absf(box.position.y + Activities.WALL_SINK) < 0.05
+			and absf(box.end.y - Activities.WALL_HEIGHT) < 0.05 and absf(box.position.x + 7.0) < 0.15
+			and box.position.z > -Activities.WALL_DEPTH - 1.0 and box.position.z < -Activities.WALL_DEPTH - 0.5 and box.end.z > 0.0 and box.end.z < 0.6,
+			"shell %s" % [box])
+
+
+# Primitive meshes the site draws, less its beacon view.
+func _primitives(node: Node, skip: Node) -> int:
+	var n := 0
+	for view: MeshInstance3D in node.find_children("*", "MeshInstance3D", true, false):
+		if view.mesh is PrimitiveMesh and not skip.is_ancestor_of(view):
+			n += 1
+	return n
+
+
 func _no_hazard_surface(node: Node) -> bool:
 	for view: MeshInstance3D in node.find_children("*", "MeshInstance3D", true, false):
 		if view.material_override is BaseMaterial3D:
@@ -244,7 +289,7 @@ func _no_hazard_surface(node: Node) -> bool:
 
 func _has_bone_band(node: Node) -> bool:
 	for view: MeshInstance3D in node.find_children("*", "MeshInstance3D", true, false):
-		if view.mesh is BoxMesh and (view.mesh as BoxMesh).size == Vector3(1.42, 0.12, 1.42):
+		if view.name == "AltarBand" or view.mesh is BoxMesh and (view.mesh as BoxMesh).size == Vector3(1.42, 0.12, 1.42):
 			return view.material_override is StandardMaterial3D \
 				and view.material_override.resource_name == "altar_bone_band" \
 				and _rgb(view.material_override.albedo_color) == _rgb(Palette.SAND)
@@ -270,8 +315,11 @@ func _bounty() -> void:
 		and _planar(brute.global_position, s.global_position) < 3.0, "brute %s" % [brute])
 	_t.eq("the director is given the enemy group's size less the bounty's brute",
 		_game.world.director_alive(), _game.get_tree().get_nodes_in_group("enemy").size() - 1)
-	_t.check("its crate wears the row's amber, apart from its plates", brute.get_node("BountyCrate").material_override.albedo_color == EventKinds.activity_color("hauler_bounty")
+	var crate: MeshInstance3D = brute.get_node("BountyCrate")
+	_t.check("its crate wears the row's amber, apart from its plates", crate.material_override.albedo_color == EventKinds.activity_color("hauler_bounty")
 		and brute.find_child("BrutePlates", true, false) != null, "crate colour")
+	_t.check("its crate is the crew's cache chest and lid, not a box", not crate.mesh is PrimitiveMesh and crate.get_child_count() == 1
+		and not (crate.get_child(0) as MeshInstance3D).mesh is PrimitiveMesh, "crate %s" % [crate.mesh])
 	# Walked off and woken, with the ball 60 m away, it goes home inside 300 frames.
 	var near: Vector3 = _ground(s.global_position + Vector3(20.0, 0.0, 0.0))
 	var acts = _game.world.activities

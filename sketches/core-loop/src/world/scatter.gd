@@ -14,10 +14,14 @@ const DigScenery := preload("res://src/presentation/dig_scenery.gd")
 const Palette := preload("res://src/core/palette.gd")
 const ParkTerrain := preload("res://src/world/park/park_terrain.gd")
 
-const COIL_INNER := 0.3
-const COIL_OUTER := 0.42
-const COIL_RINGS := 10
-const COIL_SEGMENTS := 5
+# A dropped cable coil (W1-23, was a torus): a tube of COIL_TUBE radius wound COIL_TURNS times about its
+# centre, each loop a little tighter and higher than the last, its end trailing off straight. COIL_STEPS samples a turn and
+# COIL_SIDES rings the tube, so it costs about what the torus did.
+const COIL_RADIUS := 0.38
+const COIL_TUBE := 0.06
+const COIL_TURNS := 2.0
+const COIL_STEPS := 8
+const COIL_SIDES := 5
 const SLOPE_PROBE := 1.0
 const FLOATS := 12
 # The ghost-solid lane band (#183): a thing the ride line can touch that stands more than this above the ground
@@ -631,12 +635,15 @@ static func row_vertices(row: Dictionary, map, ground: Callable) -> int:
 # {"mesh", "local", "aabb", "verts"} for a row's mesh source, {} when it cannot be built.
 static func _source(spec: String) -> Dictionary:
 	if spec == "prim:coil":
-		var torus := TorusMesh.new()
-		torus.inner_radius = COIL_INNER
-		torus.outer_radius = COIL_OUTER
-		torus.rings = COIL_RINGS
-		torus.ring_segments = COIL_SEGMENTS
-		return _found(torus, Transform3D.IDENTITY)
+		# Placement reads the old torus's bounds, so the old maps' coils land exactly where they did.
+		var found := _found(coil_mesh(), Transform3D.IDENTITY)
+		var footprint := TorusMesh.new()
+		footprint.inner_radius = 0.3
+		footprint.outer_radius = 0.42
+		footprint.rings = 10
+		footprint.ring_segments = 5
+		found["aabb"] = footprint.get_aabb()
+		return found
 	if spec.begins_with("kit:"):
 		return _found(kit_mesh(spec.trim_prefix("kit:")), Transform3D.IDENTITY)
 	if spec.begins_with("glb:"):
@@ -664,6 +671,72 @@ static func _scene_source(packed: PackedScene) -> Dictionary:
 static func _found(mesh: Mesh, local: Transform3D) -> Dictionary:
 	var arrays := mesh.surface_get_arrays(0)
 	return {"mesh": mesh, "local": local, "aabb": local * mesh.get_aabb(), "verts": (arrays[Mesh.ARRAY_VERTEX] as PackedVector3Array).size()}
+
+
+# The cable coil: a smooth tube along a flat spiral plus a short straight tail, wound for Godot.
+static func coil_mesh() -> ArrayMesh:
+	var path: Array[Vector3] = []
+	var loops := int(COIL_TURNS * COIL_STEPS)
+	for k in loops + 1:
+		var t := float(k) / COIL_STEPS
+		var a := TAU * t
+		var r := COIL_RADIUS * (1.0 - 0.1 * t / COIL_TURNS)
+		path.append(Vector3(cos(a) * r, 0.07 * (t / COIL_TURNS - 0.5), sin(a) * r))
+	var last := path[path.size() - 1]
+	var along := Vector3(-sin(TAU * COIL_TURNS), 0.0, cos(TAU * COIL_TURNS))
+	for k in [1, 2]:
+		path.append(Vector3(last.x, -0.035, last.z) + along * 0.22 * k)
+	var verts := PackedVector3Array()
+	var normals := PackedVector3Array()
+	var uvs := PackedVector2Array()
+	for k in path.size():
+		var ahead: Vector3 = path[mini(k + 1, path.size() - 1)] - path[maxi(k - 1, 0)]
+		var side := ahead.cross(Vector3.UP).normalized()
+		var up := side.cross(ahead).normalized()
+		for j in COIL_SIDES:
+			var phi := TAU * j / COIL_SIDES
+			var n := side * cos(phi) + up * sin(phi)
+			verts.append(path[k] + n * COIL_TUBE)
+			normals.append(n)
+			uvs.append(Vector2(float(j) / COIL_SIDES, float(k) / path.size()))
+	var indices := PackedInt32Array()
+	for k in path.size() - 1:
+		for j in COIL_SIDES:
+			var a := k * COIL_SIDES + j
+			var b := k * COIL_SIDES + (j + 1) % COIL_SIDES
+			for tri in [[a, b, a + COIL_SIDES], [b, b + COIL_SIDES, a + COIL_SIDES]]:
+				_wind(indices, verts, normals, tri)
+	# A cut face on each end of the cable, a fan round the end's centre.
+	for end in [[0, 1], [path.size() - 1, -1]]:
+		var ring: int = end[0] * COIL_SIDES
+		var out: Vector3 = (path[end[0]] - path[end[0] + end[1]]).normalized()
+		var centre := verts.size()
+		verts.append(path[end[0]])
+		normals.append(out)
+		uvs.append(Vector2.ZERO)
+		for j in COIL_SIDES:
+			_wind(indices, verts, PackedVector3Array([out, out, out]), [centre, ring + j, ring + (j + 1) % COIL_SIDES], true)
+	var arrays := []
+	arrays.resize(Mesh.ARRAY_MAX)
+	arrays[Mesh.ARRAY_VERTEX] = verts
+	arrays[Mesh.ARRAY_NORMAL] = normals
+	arrays[Mesh.ARRAY_TEX_UV] = uvs
+	arrays[Mesh.ARRAY_INDEX] = indices
+	var mesh := ArrayMesh.new()
+	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+	return mesh
+
+
+# Appends tri clockwise seen from outside (Godot's front face), outside being its vertices' normals
+# (or, with given, the three normals passed in that order).
+static func _wind(indices: PackedInt32Array, verts: PackedVector3Array, normals: PackedVector3Array, tri: Array, given := false) -> void:
+	var a: Vector3 = verts[tri[0]]
+	var face := (verts[tri[1]] - a).cross(verts[tri[2]] - a)
+	var outside := normals[0] + normals[1] + normals[2] if given else normals[tri[0]] + normals[tri[1]] + normals[tri[2]]
+	if face.dot(outside) > 0.0:
+		indices.append_array([tri[0], tri[2], tri[1]])
+	else:
+		indices.append_array([tri[0], tri[1], tri[2]])
 
 
 # One of ScatterRows.KIT: a closed lat-long solid, flat shaded, wound for Godot (clockwise from outside).

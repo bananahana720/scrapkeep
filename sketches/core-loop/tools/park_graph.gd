@@ -1239,6 +1239,10 @@ static func pockets(graph, park: Dictionary, rows_only := false) -> Dictionary:
 		var role := "extra"
 		if act["id"] == online_id:
 			role = "online"
+		# A cache whose wall bar is a speed tier (activities.gd BARS, W1-76) is a skill ask that stands on a
+		# fast line on purpose, not a detour reward: role "skill" keeps the sight and clear-ring checks only.
+		elif act.has("bar"):
+			role = "skill"
 		elif REWARD_KINDS.has(act["activity"]):
 			role = "reward"
 		elif RISK_KINDS.has(act["activity"]):
@@ -1323,7 +1327,7 @@ static func pockets(graph, park: Dictionary, rows_only := false) -> Dictionary:
 			breaches.append(_breach(id, "sight", "no clear ray from the door to a line node within %d m" % SIGHT_M))
 		if not row["clear_ring"].is_empty():
 			breaches.append(_breach(id, "clear_ring", "within %d m of the door: %s" % [RING_M, ", ".join(row["clear_ring"])]))
-		if role in ["online", "extra", "event"]:
+		if role in ["online", "extra", "event", "skill"]:
 			continue
 		if row["d_spawn"] < DOOR_SPAWN_M:
 			breaches.append(_breach(id, "spawn", "%s m from the spawn, want at least %d" % [_m(row["d_spawn"]), DOOR_SPAWN_M]))

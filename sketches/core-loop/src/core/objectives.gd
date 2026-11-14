@@ -41,6 +41,7 @@ const ACTIVITY_WORDS := {
 	"hold_the_relay": "Hold the relay",
 	"surge_run": "Outrun the surge",
 	"hauler_bounty": "Break the bounty hauler",
+	"stocktake_yard": "Clear the stocktake",
 	# The trade spots by their ruled names (ruling ci): the risky ones are the keeper's gamble, the
 	# safe one the foreman's kindness. The site's own label says the same.
 	"trade_risk": "The keeper's gamble",
@@ -58,6 +59,7 @@ const DONE_WORDS := {
 	"hold_the_relay": "Relay held",
 	"surge_run": "Surge outrun",
 	"hauler_bounty": "Bounty hauler broken",
+	"stocktake_yard": "Stocktake banked",
 	"trade_risk": "Gamble taken",
 	"curse": "Gamble taken",
 	"sacrifice": "Gamble taken",
@@ -67,10 +69,11 @@ const DONE_WORDS := {
 	"warden": "Warden broken",
 }
 
-# And when a site that can be lost is lost (it re-arms; activities.gd `retry_s`).
+# And when a site that can be lost is lost (it re-arms, activities.gd `retry_s`, or is forfeit, `out_s`).
 const LOST_WORDS := {
 	"hold_the_relay": "Relay lost",
 	"surge_run": "Surge lost",
+	"stocktake_yard": "Stocktake forfeit",
 }
 
 # The one or two words a mark wears on the thing the plate's row sends the player at
@@ -144,6 +147,26 @@ static func live_step(id: String, what: String) -> int:
 
 static func tag(what: String) -> String:
 	return String(TAGS.get(what, ""))
+
+
+# The detour row: a dim second row under the goal that names a detour the run pays for, so the
+# plate never reads as a hallway to the Warden (gameplay critique finding 8). It names the stage's
+# caged pilot while one waits, by the cage's own prompt, else the nearest side site not yet started,
+# by what finishes it (activity_words); its edge marker is the cage's or the site's own. It stands
+# only under the rows in DETOUR_UNDER: once the Warden is engaged the fight's plate takes the room.
+const DETOUR_UNDER := ["find_warden"]
+const CAGE_WORDS := "Free the caged pilot"
+
+
+static func detour_shown(id: String) -> bool:
+	return id in DETOUR_UNDER
+
+
+# The cage's row, from the prompt its own label shows ("free the runner"), capitalised.
+static func cage_words(prompt: String) -> String:
+	if prompt == "" or prompt.split(" ", false).size() > MAX_WORDS:
+		return CAGE_WORDS
+	return prompt.left(1).to_upper() + prompt.substr(1)
 
 
 # The row id the plate shows for this reading, or "" when it shows nothing.

@@ -9,15 +9,17 @@ const UiFonts := preload("res://src/ui/ui_fonts.gd")
 # The pause screen's build read (IL-01 card section 7; the ladder page, "One glance build
 # read"): the ball turns in a little window with every held panel bolted where it sits and
 # labelled by stack, and a stat line per panel reads in plain words ("Fire rate +25%: 5
-# louvres"). It draws the same PanelShell under the same run seed as the ball in play, so
-# what you read is what you roll. Built once, refreshed each time the pause menu opens; it
-# turns while the tree is paused.
+# louvres"). It draws the pilot's own shell (wear(): variant, paint and heft class as worn) and
+# the same PanelShell under the same run seed as the ball in play, so what you read is what you
+# roll. Built once, refreshed each time the pause menu opens; it turns while the tree is paused.
 
 const VIEW := Vector2i(300, 240)
 const TURN := 0.6
 const LABEL_LIFT := 1.75
+# A panel tag's letter height in the view's world units.
+const TAG_HEIGHT := 0.16
 # Clearance from the screen's edge and from the pause column's left side (layout()).
-const MARGIN := 24.0
+const MARGIN := float(UiTokens.GAP_XL)
 # The view shrinks no smaller than this share of VIEW when a long list needs the height.
 const VIEW_MIN := 0.6
 
@@ -28,15 +30,17 @@ var _labels: Node3D
 var _list: VBoxContainer
 var _ball: MeshInstance3D
 var _frame: SubViewportContainer
+# The worn shell's record from HeroAssets.fit_worn_into, {} while the stand-in sphere shows.
+var _worn := {}
 
 
 func _init() -> void:
 	name = "BuildRead"
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
-	custom_minimum_size = Vector2(VIEW.x + 24, 0)
+	custom_minimum_size = Vector2(VIEW.x + UiTokens.GAP_XL, 0)
 	var box := VBoxContainer.new()
-	box.add_theme_constant_override("separation", 4)
+	box.add_theme_constant_override("separation", UiTokens.GAP_XS)
 	add_child(box)
 	var frame := SubViewportContainer.new()
 	frame.custom_minimum_size = Vector2(VIEW)
@@ -60,6 +64,7 @@ func _init() -> void:
 	view.add_child(sun)
 	_pivot = Node3D.new()
 	view.add_child(_pivot)
+	# A stand-in for a game with no painter or no shell model; wear() hides it.
 	_ball = MeshInstance3D.new()
 	var sphere := SphereMesh.new()
 	sphere.radius = 1.0
@@ -102,10 +107,10 @@ func refresh(run, overflow := 0, class_id := "", effective := {}) -> void:
 			var tag := Label3D.new()
 			tag.text = "%s x%d" % [String(Panels.ROWS[id]["noun"]).to_upper(), int(counts[id])]
 			tag.billboard = BaseMaterial3D.BILLBOARD_ENABLED
-			tag.font_size = 40
-			tag.pixel_size = 0.004
-			tag.outline_size = 10
-			tag.modulate = Palette.SAND
+			tag.font_size = UiTokens.HEADING
+			tag.pixel_size = TAG_HEIGHT / UiTokens.HEADING
+			tag.outline_size = UiTokens.GAP_S
+			tag.modulate = UiTokens.TEXT
 			tag.position = at * LABEL_LIFT
 			_labels.add_child(tag)
 	if overflow > 0:
@@ -117,6 +122,15 @@ func refresh(run, overflow := 0, class_id := "", effective := {}) -> void:
 		var line := "No panels yet. Machines drop them."
 		lines.append(line)
 		_list.add_child(_line(line))
+
+
+# Puts the pilot's shell, as the player wears it, where the stand-in sphere sits. painter is the
+# game's HeroAssets; a game without one (or a pilot with no model) keeps the sphere.
+func wear(painter, player) -> void:
+	if painter == null or player == null:
+		return
+	_worn = painter.fit_worn_into(_pivot, player, _worn)
+	_ball.visible = _worn.is_empty()
 
 
 # Seats the read in the screen's left gutter, centred on its height, clear of the pause
@@ -138,7 +152,7 @@ func _line(text: String) -> Label:
 	var label := Label.new()
 	label.text = text
 	label.add_theme_font_size_override("font_size", UiTokens.BODY)
-	label.add_theme_color_override("font_color", Palette.SAND)
+	label.add_theme_color_override("font_color", UiTokens.TEXT)
 	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	label.custom_minimum_size.x = VIEW.x
 	return label

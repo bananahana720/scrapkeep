@@ -1,6 +1,7 @@
 extends RefCounted
 
-# Where ambient life lives: a pure planner from a parsed park file (park_schema.gd load_park) and
+# Where ambient life lives: a planner from a parsed park file (park_schema.gd load_park), the park's
+# props file (a kind with `spots` stands first beside those crew props, src/world/park/props/<map>.json) and
 # the ambient record (src/core/ambient_kinds.gd, the one row per kind). It picks `count` homes per
 # kind from the park rows the kind's `homes` names (any landform, element or society match), draws
 # each point inside the row's footprint, and keeps every home and every member clear of play:
@@ -29,6 +30,8 @@ const NEAR_ROUTE_M := 80.0
 const ATTEMPTS := 400
 const VALID_PER_HOME := 6
 const EDGE_M := 20.0
+# A home at a crew prop stands this far beside it, so the keeper is at the camp and not inside the prop.
+const SPOT_SIDE_M := 3.0
 
 
 # homes: [{kind, at: Vector2, perch, group: int, members: Array[Vector2] (offsets, the first is ZERO)}].
@@ -84,12 +87,19 @@ class Planner extends RefCounted:
 		rng.seed = hash([_seed_number, String(kind_id), String(_park["map"])])
 		# A ride or grapple row is wholly inside its own keepout, so it can never hold a home: skip it up front.
 		var rect := _rect
+		var want := rng.randi_range(int(spec["count"][0]), int(spec["count"][1]))
+		var placed: Array[Vector2] = []
+		# A kind with `spots` lives first at the park's crew props of those templates (the camps and yards).
+		for found in Homes._spot_homes(rng, String(_park["map"]), spec, _keep, _rect, want, _veto):
+			placed.append(found["at"])
+			found["kind"] = String(kind_id)
+			found["perch"] = String(spec["perch"])
+			found["group"] = homes.size()
+			homes.append(found)
 		var matching := _rows.filter(func(r): return Homes._matches(r, spec) and not Homes._own_keepout(r, rect))
 		if matching.is_empty():
 			return
-		var want := rng.randi_range(int(spec["count"][0]), int(spec["count"][1]))
-		var placed: Array[Vector2] = []
-		for h in want:
+		for h in want - placed.size():
 			var found := Homes._find_home(rng, matching, _keep, _rect, _routes, spec, kind, placed, _veto)
 			if found.is_empty():
 				continue
@@ -98,6 +108,46 @@ class Planner extends RefCounted:
 			found["perch"] = String(spec["perch"])
 			found["group"] = homes.size()
 			homes.append(found)
+
+
+# Homes at the park's crew props whose template is in spec["spots"] (src/world/park/props/<map>.json): each stands
+# SPOT_SIDE_M beside its prop, clear of every keepout, at most `want`, spread SPREAD_M apart, in a seeded order.
+static func _spot_homes(rng: RandomNumberGenerator, map_id: String, spec: Dictionary, keep: Dictionary, rect: Rect2,
+		want: int, veto := Callable()) -> Array:
+	var out := []
+	var templates: Array = spec.get("spots", [])
+	if templates.is_empty() or want <= 0:
+		return out
+	var path := "res://src/world/park/props/%s.json" % map_id
+	if not FileAccess.file_exists(path):
+		return out
+	var props = JSON.parse_string(FileAccess.get_file_as_string(path))
+	if not props is Dictionary:
+		return out
+	var spots: Array = (props.get("spots", []) as Array).filter(func(sp): return templates.has(String(sp.get("template", ""))))
+	for i in range(spots.size() - 1, 0, -1):
+		var j := rng.randi_range(0, i)
+		var swap = spots[i]
+		spots[i] = spots[j]
+		spots[j] = swap
+	var placed: Array[Vector2] = []
+	var perch := String(spec["perch"])
+	for sp in spots:
+		if out.size() >= want:
+			break
+		if not sp.has("at"):
+			continue
+		var base := Vector2(float(sp["at"][0]), float(sp["at"][1]))
+		for k in 6:
+			var at := base + Vector2(SPOT_SIDE_M, 0.0).rotated(TAU * (k + rng.randf()) / 6.0)
+			if not rect.grow(-EDGE_M).has_point(at) or _blocked_near(keep, at) != "" or _crowded(at, placed):
+				continue
+			if veto.is_valid() and veto.call(at, perch):
+				continue
+			placed.append(at)
+			out.append({"at": at, "members": [Vector2.ZERO] as Array[Vector2]})
+			break
+	return out
 
 
 static func _own_keepout(row: Dictionary, rect: Rect2) -> bool:

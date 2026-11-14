@@ -21,6 +21,9 @@ signal beacon_unsealed(stage: int)
 # engaged: the moment before the fight, when intro lines and reveal cards play (flow.gd).
 signal warden_sighted(stage: int)
 signal warden_engaged(stage: int)
+# A Warden broke within its quick-break limit (run_clock.gd, W1-62): its gate stands one more arch,
+# at `at`, and this is the moment that says why. seconds is the fight, engagement to break.
+signal quick_break(stage: int, seconds: float, at: Vector3)
 signal stage_content_cleared(reason: String)
 
 # Run state (spine; emitted by run_state.gd's mutators, called by the modules).
@@ -53,6 +56,9 @@ signal jumped(air: bool)
 signal boosted(direction: Vector3)
 signal dashed(direction: Vector3)
 signal landed(impact: float)
+# The ball met a world face that is not a floor (a wall, cliff, structure side or ceiling) at
+# `speed` m/s of closing, Contact.BUMP_MIN_SPEED or more: `at` on the face, `normal` face to ball.
+signal bumped(at: Vector3, normal: Vector3, speed: float)
 signal slammed(at: Vector3, strength: float, flatness: float)
 # A carve ended (rigid_ball.gd through the kit's facts): the ball rode banked ground steeper
 # than Tuning.CARVE_DOT at grip speed for `seconds`, and left it at `speed` m/s from `at`.
@@ -103,6 +109,9 @@ signal fight_phase_changed(fight_id: String, phase: int, phases: int)
 # A cued follow-up: its hazard is drawn in FightPhases.CUE_LEAD and lands seconds_until from now.
 signal attack_cued(fight_id: String, attack_id: String, seconds_until: float)
 signal boss_weak_point_hit(point_id: String)
+# A hull hit while the boss reels on a chunk broken before its phase floor (W1-61): `scrap`
+# was shed as pickups beside `at`, and the ultimate meter takes one reel hit.
+signal boss_reeled(at: Vector3, scrap: int)
 signal boss_defeated
 
 # v2 W3 characters: the class abilities and the shared bowling-ball contact. Movement
@@ -113,6 +122,9 @@ signal enemy_rebounded(enemy: Node3D, speed: float)
 signal enemy_pinned(enemy: Node3D, damage: float)
 # A Highdraft enemy knocked off an island edge (enemy.gd ring_out); enemy_killed follows.
 signal enemy_ringed_out(kind: String, at: Vector3)
+# A knocked enemy thrown into a world face at `speed` m/s into it (enemy.gd): it staggers; its knock
+# and path are unchanged. `at` is on the face, `normal` points face to enemy. No damage.
+signal enemy_walled(enemy: Node3D, at: Vector3, normal: Vector3, speed: float)
 signal vault_kicked(at: Vector3, speed: float)
 signal gauge_charging(ability_id: String)
 signal gauge_released(ability_id: String, fraction: float)

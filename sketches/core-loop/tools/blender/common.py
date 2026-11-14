@@ -27,7 +27,9 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 SKETCH = os.path.normpath(os.path.join(HERE, "..", ".."))
 MODELS = os.path.join(SKETCH, "assets", "models")
 
-# Mirror of src/core/palette.gd plus the VISUAL-LANGUAGE section 2 extensions.
+# Mirror of src/core/palette.gd under the kit's paint names (tools/palette_gd.py ALIASES), kept as a
+# literal because tools/asset-forge reads it with ast inside a sandbox that sees only this folder.
+# tools/palette_gd.py --check (scripts/palette-gd.test.mjs) fails when it drifts from palette.gd.
 HEX = {
     "bone": "d2c5a5",
     "sandstone": "c6a274",
@@ -40,7 +42,7 @@ HEX = {
     "hazard": "ff5a3c",
     "brass": "d9b44a",
     "ice": "c8f0ff",
-    "ancient": "9dff3c",  # uranium-glass green, palette.gd ANCIENT since wave 12 (decisions.tsv, VX-SURF 5a9e1ef)
+    "ancient": "9dff3c",
 }
 
 # The section 9 slot names, exactly. `vc` slots take their colour from vertex colours.

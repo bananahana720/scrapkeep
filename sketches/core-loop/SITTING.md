@@ -1,3 +1,5 @@
+> **Out of date (kept as history).** This is the checkpoint 1 sheet of October 2026 for build b9f9712. The world 1 sitting is described in [ROADMAP.md](../../project-guide/handoff/ROADMAP.md) ("Andrew plays") and marked on the Sitting Kit (`project-guide/handoff/sitting-kit/`).
+
 # Checkpoint 1: the Cable Reach
 
 About 30 to 40 minutes. One zone, one Warden, the slice table. This is the first build where everything from the alpha plan's first milestone is in: the harpoon for every pilot, the Warden's guard and core fight, packs, side activities, and growth that matters.

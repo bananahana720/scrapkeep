@@ -6,6 +6,7 @@ const CrackedCache := preload("res://src/world/cracked_cache.gd")
 const ItemGen := preload("res://src/build/item_gen.gd")
 const Parts := preload("res://src/build/parts.gd")
 const Relics := preload("res://src/build/relics.gd")
+const TierMark := preload("res://src/build/tier_mark.gd")
 
 # The cracked wall behind stage 1's vault plinth and the cache in its pocket
 # (LOOP-REDESIGN section 9), in the running game as Kest in calm. Rolled into at
@@ -254,14 +255,16 @@ func _check_gem_colours() -> void:
 		var offer: String = _cache.offers[i]
 		var d: Resource = Parts.def(offer)
 		var rarity: String = d.rarity if d != null else "common"
-		var gem: Color = _cache._pedestals[i]["gem"].material_override.albedo_color
+		var holder: Node3D = _cache._pedestals[i]["gem"]
+		var mark: Node3D = holder.get_child(holder.get_child_count() - 1)
+		var gem: Color = (mark.get_child(0) as MeshInstance3D).material_override.albedo_color
 		seen.append(rarity)
-		ok = ok and gem == ItemGen.RARITY[rarity]["color"]
+		ok = ok and gem == ItemGen.RARITY[rarity]["color"] and String(mark.name) == "Tier_" + TierMark.shape_of(rarity)
 	var ladder := true
 	for rarity in ItemGen.RARITIES:
 		ladder = ladder and CrackedCache.gem_color(rarity) == ItemGen.RARITY[rarity]["color"]
-	_report("gems wear the ladder colour", ok and ladder and CrackedCache.gem_color("relic") == ItemGen.RARITY["relic"]["color"],
-		"offered rarities %s, every rung read from ItemGen.RARITY" % [seen])
+	_report("gems wear the ladder colour and shape", ok and ladder and CrackedCache.gem_color("relic") == ItemGen.RARITY["relic"]["color"],
+		"offered rarities %s, every rung read from ItemGen.RARITY, each gem its TierMark shape" % [seen])
 
 
 func _onto_pedestal() -> void:
