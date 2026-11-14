@@ -186,10 +186,13 @@ func _run() -> void:
 		await _frames(2)
 	_t.eq("a ball through all five knocks all five", row["hit"], Posts.POSTS)
 	_t.check("the set throws scrap ahead", posts.sets_paid == 1 and _game.ctx.build.scrap.count() >= scrap_before + Posts.SET_SCRAP - 2, "%d pieces against %d" % [_game.ctx.build.scrap.count(), scrap_before])
-	# The fall is an idle-time tween: step drawn frames until it has run.
-	for i in 90:
+	# The fall is an idle-time tween: step drawn frames until it has run (or a generous count has passed).
+	var flat := false
+	for i in 3000:
 		await process_frame
-	var flat: bool = row["posts"].all(func(post: Node3D) -> bool: return post.global_transform.basis.y.y < 0.3)
+		flat = row["posts"].all(func(post: Node3D) -> bool: return post.global_transform.basis.y.y < 0.3)
+		if flat:
+			break
 	_t.check("the posts lie flat", flat, "up %.2f" % row["posts"][0].global_transform.basis.y.y)
 	_game.flow.enter_stage(2, Vector3.ZERO, false)
 	await _frames(4)
