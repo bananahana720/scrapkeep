@@ -70,7 +70,6 @@ func _unchanged(label: String, tuning) -> void:
 	var swapped: Array = PILOTS.filter(func(pilot): return painter.shell_assets.has(pilot))
 	t.eq("%s: no pilot's shell is swapped" % label, swapped, [])
 	t.eq("%s: every mesh is the pilot's own and draws as it did" % label, _drawn(shell), _drawn(want))
-	t.eq("%s: no lamp is added" % label, (shell.pod as Node).find_children("*", "OmniLight3D", true, false).size(), (want.pod as Node).find_children("*", "OmniLight3D", true, false).size())
 	var dressed := 0
 	for view in _views(shell.core) + _views(shell.pod):
 		for i in view.mesh.get_surface_count():
@@ -172,10 +171,7 @@ func _plated(look: String) -> void:
 			if _is_window(mat):
 				seat = minf(seat, _number(mat, "seat_back_top"))
 		t.eq("%s: only a small pilot's seat back is lowered (%s)" % [look, pilot], seat, float(BallLooks.LOW_SEAT_BACK.get(pilot, 9.0)))
-		var lamps: Array = (pod as Node).find_children("*", "OmniLight3D", true, false)
-		t.eq("%s: %s's cockpit has one lamp" % [look, pilot], lamps.size(), 1)
-		if lamps.size() == 1:
-			t.check("%s: the lamp casts no shadow and stays inside the plating" % look, not lamps[0].shadow_enabled and lamps[0].omni_range <= pod.global_transform.basis.get_scale().y)
+		t.eq("%s: no light node rides %s's ball" % [look, pilot], (pod as Node).find_children("*", "Light3D", true, false).size(), 0)
 		var seated: Dictionary = painter.fit_pilot_into(pod, pilot, Color.WHITE)
 		var outfits: Array = Cosmetics.ROWS.keys().filter(func(id): return Cosmetics.ROWS[id].get("slot", "") == "outfit" and Cosmetics.ROWS[id].get("pilot", "") == pilot)
 		if not seated.is_empty() and not outfits.is_empty():
