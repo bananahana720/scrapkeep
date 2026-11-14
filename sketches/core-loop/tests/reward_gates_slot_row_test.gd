@@ -6,7 +6,9 @@ extends SceneTree
 # so seed 6 skipper (row 31's run, #351) got gates on the rim 4 m up a bank and stalled in "gates".
 # Checked on the real park files, from that ball in the bowl (a fixed plan ignores the ball): two and
 # three gates get the slot row; one gate keeps the slot; the pit's row lies across its slot; a
-# three-slot park keeps its slots for three gates and the ordinary placement for four.
+# three-slot park keeps its slots for three gates. Four gates (W1-62: a quick break's arch beside the
+# first Warden's hot-wired one) stand on the dam's slot row at its spacing; on a Highdraft island a
+# row spot past the slots never stands off the slots' ground (it falls back to the ordinary placement).
 
 const T := preload("res://tests/support/t.gd")
 const Terrain := preload("res://src/world/terrain.gd")
@@ -34,6 +36,7 @@ func _run() -> void:
 		{"stage": 1, "world": 2, "map": "park_sinkhole"},
 		{"stage": 2, "world": 2, "map": "park_pit"},
 		{"stage": 3, "world": 1, "map": "park_dam"},
+		{"stage": 4, "world": 3, "map": "park_islands"},
 	]})
 	terrain.build(holder)
 	var gates := RewardGates.new()
@@ -71,11 +74,23 @@ func _run() -> void:
 	for i in dam_slots.size():
 		on_slots = on_slots and _flat(dam["spots"][i]).distance_to(dam_slots[i]["at"]) < 0.01
 	t.check("three gates on a three-slot park keep its slots", on_slots, str(dam.get("spots")))
-	# Four gates on several slots keep the ordinary placement (a row past a Highdraft island's slots
-	# would leave its edge).
 	var four := _plan(gates, 4, Vector3(0.0, 0.0, 500.0), Vector3.FORWARD)
-	t.check("four gates on a three-slot park use the ordinary placement", not four.get("fixed", false)
-		and four.get("spots", []).size() == 4, str(four.get("spots")))
+	var step: Vector2 = (dam_slots[1]["at"] as Vector2) - (dam_slots[0]["at"] as Vector2)
+	t.check("four gates on the dam stand on its slot row at the slots' spacing", four.get("fixed", false)
+		and _row(four, dam_slots[1]["at"], step.normalized(), step.length()), str(four.get("spots")))
+	terrain.use(4)
+	var isle_slots: Array = terrain.map().gate_slots
+	var ground := 0.0
+	for isle_slot in isle_slots:
+		ground += terrain.height(isle_slot["at"].x, isle_slot["at"].y) / isle_slots.size()
+	var isle := _plan(gates, 4, Vector3(0.0, 0.0, 700.0), Vector3.FORWARD)
+	var off := []
+	if isle.get("fixed", false):
+		for at: Vector3 in isle["spots"]:
+			if absf(terrain.height(at.x, at.z) - ground) > RewardGates.SLOT_LINE_DROP:
+				off.append(at)
+	t.check("four gates on an island never stand off the slots' ground", isle.get("spots", []).size() == 4 and off.is_empty(),
+		"fixed %s, off %s" % [isle.get("fixed", false), off])
 
 	holder.queue_free()
 	await process_frame

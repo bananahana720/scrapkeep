@@ -1589,6 +1589,8 @@ func _mount_on_bones(scope: Node3D, scene: Node, tints: Dictionary, kind: String
 		attach.bone_name = bone
 		attach.set_meta("addon", kind)
 		attach.add_child(part)
+		if part is Node3D:
+			part.transform = _mount_fit(skeleton, bone) * part.transform
 		skeleton.add_child(attach)
 		mounts.append(attach)
 	for mount in mounts:
@@ -1606,6 +1608,17 @@ func _mount_on_bones(scope: Node3D, scene: Node, tints: Dictionary, kind: String
 		mounts.append(player)
 	scene.free()
 	return mounts
+
+
+# A body whose head (or other bone) is a different size than the authored one carries a node named
+# MountFit_<bone> under that bone: its size and its place, in the bone's frame, re-seat every part
+# mounted there (tools/tripo/README.md, Pilots). No node, no change. A part that its own clip moves
+# keeps the clip's transform.
+func _mount_fit(skeleton: Skeleton3D, bone: String) -> Transform3D:
+	var fit := skeleton.find_child("MountFit_" + bone.validate_node_name(), true, false) as Node3D
+	if fit == null:
+		return Transform3D.IDENTITY
+	return Transform3D(Basis.from_scale(Vector3.ONE * fit.transform.basis.get_scale().y), fit.transform.origin)
 
 
 # Imported clips address parts from the GLB root ("head/HoodShell"). After the mount each part
