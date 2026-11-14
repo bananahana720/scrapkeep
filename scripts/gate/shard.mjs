@@ -29,6 +29,7 @@ import { WEEKLY_FILE, weeklyNames as readWeeklyNames } from "./weekly.mjs";
 
 export { WEEKLY_FILE, WEEKLY_HEADER, parseWeekly } from "./weekly.mjs";
 import { IMPORT_TRIES, failingLines, importTry, isBot, scriptErrorCount, testScripts, testTimeoutMs, timeScale } from "../sketch-smoke.mjs";
+import { writeImportStamp } from "../import-stamp.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 const SKETCH = "sketches/core-loop";
@@ -477,6 +478,7 @@ async function run(options) {
     if (imported !== "ok") console.log(`import ${pass} of ${IMPORT_TRIES}: ${imported}`);
   }
   if (imported !== "ok") throw new Error(`the last import was not clean (${imported}); no test ran. Read ${options.out}/import-*.log, then start again in a new folder`);
+  writeImportStamp(root, SKETCH);
 
   const groups = options.bots ? names.map((name) => [name]) : chunks(names, options.chunk);
   const groupName = (index) => (options.bots ? `bot-${names[index]}` : `chunk${String(index).padStart(2, "0")}`);

@@ -22,6 +22,7 @@ import { isDeepStrictEqual } from "node:util";
 import { fileURLToPath } from "node:url";
 
 import { chunks, gateLists, namedPool, testName } from "./shard.mjs";
+import { writeImportStamp } from "../import-stamp.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 const SKETCH = "sketches/core-loop";
@@ -513,6 +514,7 @@ async function importOnce(wt, env, log) {
     if (attempt >= 2 && exit === 0 && !/SCRIPT ERROR/.test(readIf(file) ?? "")) {
       mkdirSync(path.dirname(marker), { recursive: true });
       writeFileSync(marker, "ok\n");
+      writeImportStamp(wt, SKETCH);
       return true;
     }
   }

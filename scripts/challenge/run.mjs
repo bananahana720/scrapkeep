@@ -16,6 +16,7 @@ import { appendFileSync, copyFileSync, existsSync, mkdirSync, readFileSync, read
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { COLUMNS, MAX_RUN_TIER, fairnessByCell, PILOTS, botArgs, buildTable, cellVerdict, describeDoc, bucketInfo, checkMerge, dedupeBy, estimate, gradeRun, maxJobs, aggregate, columnTarget, settledMark, jobKey, playerReport, qaRows, renderPlayerReport, hashString, mergeLibraryIndexes, planHash, parseNdjson, pickBuilds, planCells, renderTable, shardJobs, wallStats } from "./lib.mjs";
+import { checkImportStamp, REIMPORT_HINT } from "../import-stamp.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const godot = process.env.GODOT_BIN;
@@ -25,7 +26,7 @@ const KIND_TIMEOUT_MS = 40 * 60_000;
 const opts = {
   library: null, buildLibrary: false, libSeeds: 4, libPilots: PILOTS, cells: ["boss", "warden", "park"], only: null, seeds: null, libShard: null, libraryMerge: null, wardenPersona: "skipper", tune: "", resume: false, allowMixed: false,
   bands: ["novice", "learner1", "learner5", "expert"], top: true, persona: "brawler", parkPersona: "skipper", jobs: 4, label: null,
-  shard: null, merge: null, dryRun: false, strict: false, earlyStop: false,
+  shard: null, merge: null, dryRun: false, strict: false, earlyStop: false, staleImportOk: false,
 };
 for (const arg of process.argv.slice(2)) {
   const [k, v] = arg.replace(/^--/, "").split("=");
@@ -53,6 +54,7 @@ for (const arg of process.argv.slice(2)) {
   else if (k === "allow-mixed") opts.allowMixed = true;
   else if (k === "dry-run") opts.dryRun = true;
   else if (k === "strict") opts.strict = true;
+  else if (k === "stale-import-ok") opts.staleImportOk = true;  // run on a .godot imported at another tree (the result is not this tree's)
   else if (k === "early-stop") opts.earlyStop = true;  // ruling dg: skip a column's seeds once they cannot change its mark
   else die("unknown option " + arg);
 }
@@ -104,6 +106,9 @@ function mergeRuns() {
 
 function needGodot() {
   if (!godot || !existsSync(godot)) die("set GODOT_BIN to the Godot 4.7.2 editor (the cloud SessionStart hook does)");
+  const stamp = checkImportStamp(root);
+  if (!stamp.ok && !opts.staleImportOk) die(`refusing to run on a stale import: ${stamp.reason}; ${REIMPORT_HINT}`);
+  if (!stamp.ok) console.warn(`challenge: running on a stale import (--stale-import-ok): ${stamp.reason}`);
 }
 
 function runProcess(args, { env, timeout, logFile }) {

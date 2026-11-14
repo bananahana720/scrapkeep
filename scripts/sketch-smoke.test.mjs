@@ -95,6 +95,7 @@ function botTierFixture(args, check) {
   try {
     mkdirSync(path.join(dir, "scripts"));
     writeFileSync(path.join(dir, "scripts/sketch-smoke.mjs"), readFileSync(new URL("./sketch-smoke.mjs", import.meta.url)));
+    writeFileSync(path.join(dir, "scripts/import-stamp.mjs"), readFileSync(new URL("./import-stamp.mjs", import.meta.url)));
     const tests = path.join(dir, "sketches/core-loop/tests");
     mkdirSync(tests, { recursive: true });
     writeFileSync(path.join(dir, "sketches/core-loop/project.godot"), "config_version=5\n");
