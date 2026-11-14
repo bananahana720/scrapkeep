@@ -1,0 +1,2 @@
+- [Ask before changing run guards](ask-before-changing-run-guards.md) — 2026-11-10: loosening a guard on queued PC jobs is Andrew's call via the coordinator first; away.sh (lock or all screens off) approved
+- [godot-safe wrapper](godot-safe-scratch-xdg.md) — PC Godot runs use ~/scratch/bin/godot-safe (refuses without scratch XDG) after a parse check hit Andrew's real logs, 2026-11-10

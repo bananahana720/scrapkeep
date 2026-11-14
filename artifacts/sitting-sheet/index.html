@@ -1,0 +1,316 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Spillway Sitting Sheet</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Stencil+Display:wght@700;800&family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: one phone column read like a shift card; stencil stamps head each section, cobalt marks the actions. */
+:root {
+  --paper: #eef1f4;
+  --card: #ffffff;
+  --ink: #1b2430;
+  --muted: #5a6676;
+  --rule: #cfd6df;
+  --cobalt: #2f6fe0;
+  --cobalt-soft: #e2ebfc;
+  --accept: #1f8a5b;
+  --fixes: #b7791f;
+  --notyet: #c0442b;
+  --code-bg: #1b2430;
+  --code-fg: #e6edf5;
+  --f-stamp: "Big Shoulders Stencil Display", "Impact", "Arial Narrow", sans-serif;
+  --f-body: "Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+  --f-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #12171e; --card: #1a212b; --ink: #e4e9f0; --muted: #9aa6b5; --rule: #2c3644;
+    --cobalt: #6ea2ff; --cobalt-soft: #1c2a44; --accept: #4cc28e; --fixes: #e0a54a; --notyet: #f07a5f;
+    --code-bg: #0b0f14; --code-fg: #dbe4ee; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #12171e; --card: #1a212b; --ink: #e4e9f0; --muted: #9aa6b5; --rule: #2c3644;
+  --cobalt: #6ea2ff; --cobalt-soft: #1c2a44; --accept: #4cc28e; --fixes: #e0a54a; --notyet: #f07a5f;
+  --code-bg: #0b0f14; --code-fg: #dbe4ee; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--paper); color: var(--ink); font-family: var(--f-body); font-size: 16px; line-height: 1.5;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 20px 48px;
+}
+main { max-width: 680px; margin: 0 auto; display: flex; flex-direction: column; gap: 28px; }
+h1, h2 { font-family: var(--f-stamp); text-transform: uppercase; letter-spacing: 0.04em; margin: 0; text-wrap: balance; line-height: 1.05; }
+h1 { font-size: 2.6rem; }
+h2 { font-size: 1.6rem; display: flex; align-items: baseline; gap: 10px; }
+h2 .n { color: var(--cobalt); }
+p { margin: 0; }
+.eyebrow { font-family: var(--f-mono); font-size: 0.75rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
+header { display: flex; flex-direction: column; gap: 8px; }
+.lede { color: var(--muted); max-width: 62ch; }
+.status { border: 2px dashed var(--fixes); border-radius: 6px; padding: 12px 14px; display: flex; flex-direction: column; gap: 4px; }
+.status strong { font-family: var(--f-stamp); font-size: 1.15rem; letter-spacing: 0.05em; text-transform: uppercase; color: var(--fixes); }
+section { display: flex; flex-direction: column; gap: 14px; }
+ol.steps { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 14px; counter-reset: s; }
+ol.steps > li { counter-increment: s; background: var(--card); border: 1px solid var(--rule); border-radius: 6px; padding: 14px; display: grid; grid-template-columns: 2rem 1fr; gap: 4px 10px; }
+ol.steps > li::before { content: counter(s); font-family: var(--f-stamp); font-size: 1.7rem; line-height: 1; color: var(--cobalt); grid-row: span 9; }
+ol.steps > li > * { min-width: 0; }
+.step-title { font-weight: 700; }
+.note { color: var(--muted); font-size: 0.92rem; }
+.caution { font-size: 0.92rem; border-left: 3px solid var(--fixes); padding-left: 10px; }
+.cmd { display: flex; flex-direction: column; gap: 6px; margin-top: 6px; }
+pre { margin: 0; background: var(--code-bg); color: var(--code-fg); font-family: var(--f-mono); font-size: 0.82rem; padding: 10px 12px; border-radius: 5px; overflow-x: auto; white-space: pre; }
+button { font: inherit; cursor: pointer; }
+.copy { align-self: flex-start; background: var(--cobalt-soft); color: var(--cobalt); border: 1px solid var(--cobalt); border-radius: 4px; padding: 4px 12px; font-family: var(--f-mono); font-size: 0.8rem; }
+.copy:focus-visible, .look input:focus-visible, a:focus-visible { outline: 3px solid var(--cobalt); outline-offset: 2px; }
+kbd { font-family: var(--f-mono); font-size: 0.85em; border: 1px solid var(--rule); border-bottom-width: 2px; border-radius: 3px; padding: 0 5px; background: var(--card); }
+a { color: var(--cobalt); }
+.verdicts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+@media (max-width: 520px) { .verdicts { grid-template-columns: 1fr; } }
+.v { border: 2px solid currentColor; border-radius: 6px; padding: 10px 12px; display: flex; flex-direction: column; gap: 4px; background: var(--card); }
+.v b { font-family: var(--f-stamp); font-size: 1.2rem; text-transform: uppercase; letter-spacing: 0.04em; }
+.v span { color: var(--ink); font-size: 0.9rem; }
+.v.a { color: var(--accept); } .v.f { color: var(--fixes); } .v.n { color: var(--notyet); }
+.kit { background: var(--cobalt-soft); border-radius: 6px; padding: 12px 14px; display: flex; flex-direction: column; gap: 4px; }
+.areas { display: flex; flex-direction: column; border-top: 1px solid var(--rule); }
+.area { border-bottom: 1px solid var(--rule); padding: 10px 0; display: grid; grid-template-columns: 1.8rem 1fr; gap: 0 10px; }
+.area > * { min-width: 0; }
+.area .i { font-family: var(--f-mono); color: var(--muted); font-size: 0.85rem; padding-top: 2px; }
+.area h3 { margin: 0; font-size: 1rem; }
+.area p { color: var(--muted); font-size: 0.93rem; }
+.group { display: flex; flex-direction: column; gap: 6px; }
+.group h3 { margin: 0; font-family: var(--f-mono); font-size: 0.78rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
+.look { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.look li label { display: grid; grid-template-columns: 1.4rem 1fr; gap: 8px; align-items: start; background: var(--card); border: 1px solid var(--rule); border-radius: 5px; padding: 9px 11px; cursor: pointer; }
+.look li label > span { min-width: 0; }
+.look input { width: 1.1rem; height: 1.1rem; margin: 3px 0 0; accent-color: var(--accept); }
+.look .where { display: block; color: var(--muted); font-size: 0.86rem; }
+.look input:checked + span { color: var(--muted); }
+.look input:checked + span b { text-decoration: line-through; text-decoration-color: var(--accept); }
+.tally { font-family: var(--f-mono); font-size: 0.85rem; color: var(--muted); }
+table { border-collapse: collapse; width: 100%; font-size: 0.93rem; font-variant-numeric: tabular-nums; }
+.tablewrap { overflow-x: auto; }
+th, td { text-align: left; padding: 7px 8px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+th { font-family: var(--f-mono); font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+footer { color: var(--muted); font-size: 0.85rem; border-top: 1px solid var(--rule); padding-top: 12px; }
+@media (prefers-reduced-motion: no-preference) { .look li label { transition: background 0.15s; } }
+</style>
+
+<main>
+  <header>
+    <span class="eyebrow">Shift card · Spillway · world 1</span>
+    <h1>Spillway sitting sheet</h1>
+    <p class="lede">One sitting on world 1: the title, the camp, the dam, the flume and Brindle in the Slag Bowl. Set the old save aside, launch from the app menu, play, then mark each area.</p>
+    <div class="status" role="note">
+      <strong>Build: main 556cca8e (wave 29)</strong>
+      <p>Installed to your app menu on 31 Oct. This replaces wave 26 (83f02396). Cold launch 6.1 s with 0 errors. Frames are equal to or better than wave 26: dam p99 13.4 ms, flume 14.7 ms, Brindle 7 to 9 ms.</p>
+    </div>
+  </header>
+
+  <section aria-labelledby="h-start">
+    <h2 id="h-start"><span class="n">A</span> Before you play</h2>
+    <ol class="steps">
+      <li>
+        <span class="step-title">Quiet the PC.</span>
+        <span class="note">Run the game fullscreen on DP-1 (VRR on). Close Nautilus, minimize the Claude app, and leave nothing else running on the 4080. Frame feel is part of the verdict.</span>
+      </li>
+      <li>
+        <span class="step-title">Set your old save aside.</span>
+        <span class="note">The sitting plays on a fresh profile that saves, so you feel the first-hour ladder across runs: Rivet freed, Tarn signing on, and the shift board opening items. The save lives in the game's data folder, the directory where Godot keeps a game's files under your home folder.</span>
+        <p class="caution">This only renames the save; it deletes nothing. Your volume and display settings live in a separate file and stay as they are. To go back, rename the file back.</p>
+        <div class="cmd">
+          <pre id="cmd-aside">cd ~/.local/share/godot/app_userdata/core-loop
+mv profile.json profile.pre-w19-sitting.json
+[ -f run.json ] &amp;&amp; mv run.json run.pre-w19-sitting.json</pre>
+          <button class="copy" type="button" data-copy="cmd-aside" id="copy-aside">Copy</button>
+        </div>
+        <span class="note">The last line also sets aside a half-played run, so the game can't resume it.</span>
+      </li>
+      <li>
+        <span class="step-title">Launch from the app menu.</span>
+        <span class="note">Press <kbd>Super</kbd> + <kbd>Space</kbd> to open the Omarchy launcher, type <b>Scrapkeep</b>, and pick the plain <b>Scrapkeep</b> entry. Don't pick "Scrapkeep sitting (all pilots, save untouched)": that one opens every pilot and doesn't save, so the ladder never moves. A fresh profile starts with Sable.</span>
+        <p class="caution">If the game doesn't start, the AppImage probably can't mount itself. Install FUSE (the library that lets an AppImage mount itself), then launch again.</p>
+        <div class="cmd">
+          <pre id="cmd-fuse">sudo pacman -S fuse2</pre>
+          <button class="copy" type="button" data-copy="cmd-fuse" id="copy-fuse">Copy</button>
+        </div>
+      </li>
+      <li>
+        <span class="step-title">Play two runs and time them.</span>
+        <span class="note">Make one run a straight line to Brindle, and one a completionist run that takes every cache, activity, secret and rogue. Note the wall-clock minutes of each. The bots take 8.2 min for the skipper run (489 bot-s) and 20.8 min for the completionist run (1249 bot-s). Your times against theirs set the final pacing target (ruling ag).</span>
+      </li>
+    </ol>
+  </section>
+
+  <section aria-labelledby="h-verdict">
+    <h2 id="h-verdict"><span class="n">B</span> Mark each area</h2>
+    <div class="verdicts">
+      <div class="v a"><b>● Accept</b><span>Ships as it is.</span></div>
+      <div class="v f"><b>◐ Accept with fixes</b><span>Ships once the fixes in your note are made. Each note becomes a card.</span></div>
+      <div class="v n"><b>○ Not yet</b><span>Not ready. Say what's missing.</span></div>
+    </div>
+    <div class="kit">
+      <p>Record verdicts on the <a href="https://claude.ai/artifact/HxmWTSrJf1vifhjXXPW1qT" target="_blank" rel="noopener">Sitting Kit</a>. It saves as you tap, and the crew reads it from there.</p>
+      <p class="note">World 1 passes when all 11 areas are marked and none is "Not yet". There must also be no open blocker bug, frames in budget, and zero placeholders.</p>
+    </div>
+    <div class="areas">
+      <div class="area"><span class="i">01</span><div><h3>Core feel</h3><p>Rolling, ramming, the harpoon and the slam feel instant and joyful on the dam and the flume.</p></div></div>
+      <div class="area"><span class="i">02</span><div><h3>Wardens and bosses</h3><p>The dam and flume Wardens, the rogue mini-boss in each park, and Brindle's three phases are readable, beatable and fair.</p></div></div>
+      <div class="area"><span class="i">03</span><div><h3>In-run growth</h3><p>Grey panels on the ball, FIELD KIT and FLEET GRADE (cobalt) drops at Wardens and shop slot 1. A grown run feels mightier.</p></div></div>
+      <div class="area"><span class="i">04</span><div><h3>Progression across runs</h3><p>The shift board, Rivet freed, Tarn on Brindle, the codex count at camp, and the timed door (Brindle under 12 min) give you a reason to go again.</p></div></div>
+      <div class="area"><span class="i">05</span><div><h3>Pilots</h3><p>Sable first, then whoever unlocks. Each plays differently and has a character. The Cannon says its line.</p></div></div>
+      <div class="area"><span class="i">06</span><div><h3>Stage and world design</h3><p>The dam, the flume and the Slag Bowl each test a skill, have lines to ride, and hide secrets and rib caches worth finding.</p></div></div>
+      <div class="area"><span class="i">07</span><div><h3>Look</h3><p>Soft toy bodies, crisp machines, dawn to noon light, spray, mist and foam. The Slag Bowl crowd now has smooth-shell crew.</p></div></div>
+      <div class="area"><span class="i">08</span><div><h3>Sound and music</h3><p>The Spillway's own event sounds and stings, Brindle's phase anthems, and the radio takes in the caches.</p></div></div>
+      <div class="area"><span class="i">09</span><div><h3>Clarity</h3><p>Each mechanic is taught before you need it. The plate names the yard lock and the shut clamp. Warnings read in a crowd.</p></div></div>
+      <div class="area"><span class="i">10</span><div><h3>Difficulty and pacing</h3><p>Runs last 10 to 15 min, with about 30 min for a completionist. Chaos you can learn. A strong build steamrolls. HARD opens after a win.</p></div></div>
+      <div class="area"><span class="i">11</span><div><h3>Stability</h3><p>The game opens from the app menu, never crashes or blocks you, and holds its frames.</p></div></div>
+    </div>
+  </section>
+
+  <section aria-labelledby="h-look">
+    <h2 id="h-look"><span class="n">C</span> Look for</h2>
+    <p class="tally" id="tally" aria-live="polite">0 of 0 checked</p>
+
+    <div class="group">
+      <h3>Frames</h3>
+      <ul class="look">
+        <li><label><input type="checkbox" id="lf-flume-drop"><span><b>Flume drop:</b> does the drop into the flume read as one beat, or as a stutter? <span class="where">The entry frame is about 58 ms, then five frames at 20 to 34 ms.</span></span></label></li>
+        <li><label><input type="checkbox" id="lf-cold"><span><b>First launch:</b> any hitch before the dam, or a stutter on the speed lines? <span class="where">A 438 ms Warden setup step hides under the boot frame today.</span></span></label></li>
+      </ul>
+    </div>
+
+    <div class="group">
+      <h3>Real mouse and Esc</h3>
+      <ul class="look">
+        <li><label><input type="checkbox" id="lf-card"><span><b>Start card:</b> mouse look works before you pick, <kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd> take a pick, and <kbd>Esc</kbd> opens pause without picking anything. <span class="where">Fresh profile, after the drop into the dam.</span></span></label></li>
+        <li><label><input type="checkbox" id="lf-tier"><span><b>Tier card:</b> the cursor is free over the tier buttons. <kbd>Esc</kbd>, <kbd>P</kbd> or pad Start opens pause over the card, and clicks do nothing under it. Closing pause leaves the cursor free, and a click on a tier still takes it. Look returns when the dam Warden wakes. <span class="where">After your first win, once a HARD rung is open.</span></span></label></li>
+        <li><label><input type="checkbox" id="lf-moss"><span><b>Moss's counter:</b> <kbd>Esc</kbd> or pad <kbd>B</kbd> leaves the counter, even before you take the start pick. Does a first visit open it naturally? <span class="where">Pull up slowly next to Moss. It opens under 4 m/s.</span></span></label></li>
+        <li><label><input type="checkbox" id="lf-summary"><span><b>Run summary:</b> <kbd>Esc</kbd> takes you to the camp, never to the desktop. <span class="where">After a win or a loss.</span></span></label></li>
+      </ul>
+    </div>
+
+    <div class="group">
+      <h3>Brindle and the Slag Bowl</h3>
+      <ul class="look">
+        <li><label><input type="checkbox" id="lf-arrival"><span><b>Arrival:</b> does the Requisition's arc over the rim land as an entrance? <span class="where">The first 3 s of the fight.</span></span></label></li>
+        <li><label><input type="checkbox" id="lf-rout"><span><b>Rout:</b> does the scooter's slow-motion flight read as a big comic beat, or as a hitch? <span class="where">The win, then Tarn's HIRED stamp.</span></span></label></li>
+        <li><label><input type="checkbox" id="lf-long"><span><b>Light build:</b> does a light ball drag in the Furnace phase? The worst bot fight is now about 117 s. If yours runs past 2.5 min, note what the scooter and the ball are doing. <span class="where">Phase 2, the Furnace.</span></span></label></li>
+        <li><label><input type="checkbox" id="lf-crowd"><span><b>Crowd:</b> the stand crew now have smooth-shell bodies. Do they read as crew at play distance, and does the pennant wave? <span class="where">The three stands.</span></span></label></li>
+        <li><label><input type="checkbox" id="lf-spill"><span><b>Armour spill:</b> Brindle's armour hits spill pickups that ring a chime when you reclaim them. Can you read it in the fight? <span class="where">Any phase.</span></span></label></li>
+      </ul>
+    </div>
+
+    <div class="group">
+      <h3>Teaching</h3>
+      <ul class="look">
+        <li><label><input type="checkbox" id="lf-dunk"><span><b>Dunk:</b> a tip now states the rule the first time you store a dunk: slam in the air, then reel into a body within 3 s. Does it land at the right moment? <span class="where">Your first air slam.</span></span></label></li>
+        <li><label><input type="checkbox" id="lf-first11"><span><b>First seconds:</b> the radio and active tips now wait until you take the start pick. Does the drop into the dam feel calm? <span class="where">The drop into the dam.</span></span></label></li>
+        <li><label><input type="checkbox" id="lf-clamp"><span><b>Clamp shut:</b> an orange chevron with the clamp glyph points to the nearest crew when it's off screen. Does it lead you there without crowding the Warden's chevron? <span class="where">The dam Warden, before its shield opens.</span></span></label></li>
+        <li><label><input type="checkbox" id="lf-weight"><span><b>Scrap weight:</b> nothing says scrap makes you heavier. Do you feel it anyway?</span></label></li>
+        <li><label><input type="checkbox" id="lf-rung"><span><b>Rung card on a fresh profile:</b> it now shows a locked rung, not HARD's numbers. Does it read simply? <span class="where">The start card on your first run.</span></span></label></li>
+      </ul>
+    </div>
+
+    <div class="group">
+      <h3>Places</h3>
+      <ul class="look">
+        <li><label><input type="checkbox" id="lf-ledge"><span><b>Flume ledge:</b> can you roll off the ledge about 7 m up, 29 m before the first flume gate? <span class="where">The bots wedged there twice.</span></span></label></li>
+        <li><label><input type="checkbox" id="lf-fin"><span><b>Dam east fin:</b> does the 20 m fin read as a lane wall that sends you to the Eye's mouth? <span class="where">Rolling towards the spillway sheet.</span></span></label></li>
+      </ul>
+    </div>
+
+    <div class="group">
+      <h3>Look and sound</h3>
+      <ul class="look">
+        <li><label><input type="checkbox" id="lf-pivot"><span><b>Roam to Warden:</b> the bass and lead drop for one beat as a Warden fight starts. Is it a deliberate switch-up, or does the music sound like it cut out?</span></label></li>
+        <li><label><input type="checkbox" id="lf-tear"><span><b>Charge tear:</b> does the tear in Brindle's music land on the charge? <span class="where">This can only be checked live.</span></span></label></li>
+        <li><label><input type="checkbox" id="lf-cobalt"><span><b>Cobalt find:</b> a FLEET GRADE stamp on the find card, and a coil whine and click on the find. Does a cobalt feel like an event? <span class="where">A Warden's drop, or shop slot 1.</span></span></label></li>
+        <li><label><input type="checkbox" id="lf-label"><span><b>Item label:</b> does it sit over the dunk coil and hide it?</span></label></li>
+        <li><label><input type="checkbox" id="lf-colours"><span><b>Pilot colours:</b> can you tell orange from tan at a glance?</span></label></li>
+      </ul>
+    </div>
+  </section>
+
+  <section aria-labelledby="h-fixed">
+    <h2 id="h-fixed"><span class="n">D</span> Fixed since your first pass (wave 29)</h2>
+    <p class="note">These are the things you hit in wave 26. Each one is meant to be gone. Tick a line if it looks right. Leave it unticked and tell us where if you still see it.</p>
+    <ul class="look">
+      <li><label><input type="checkbox" id="fx-camp-walls"><span><b>Camp invisible walls:</b> you can roll right up to the trees without bumping into air. <span class="where">The camp, around the tree trunks.</span></span></label></li>
+      <li><label><input type="checkbox" id="fx-dam-walls"><span><b>Dam invisible walls:</b> the mushroom-shaped rock pillars and the dam arch face stop you where they look like they should, not before. <span class="where">The dam, the pillars and the arch.</span></span></label></li>
+      <li><label><input type="checkbox" id="fx-zip-piers"><span><b>Flume zip piers:</b> the two piers that used to trap the ball have moved. You should never get stuck against one. <span class="where">The flume, under the zip line.</span></span></label></li>
+      <li><label><input type="checkbox" id="fx-crane"><span><b>Crane boom and trestle posts:</b> no more getting blocked right beside them by nothing. <span class="where">The crane and the trestle.</span></span></label></li>
+      <li><label><input type="checkbox" id="fx-doubled"><span><b>Doubled posts and overlapping props:</b> 516 of them are gone across the dam, the flume, the camp and the Brindle arena. Nothing should look like two things stuck in the same place. <span class="where">Anywhere. Say where if you spot one.</span></span></label></li>
+      <li><label><input type="checkbox" id="fx-caches"><span><b>Flume rib caches:</b> they land in different spots each run, 3 per run from 8 possible spots. Your second run should not match your first. <span class="where">The flume, over two runs.</span></span></label></li>
+      <li><label><input type="checkbox" id="fx-runover"><span><b>RUN OVER screen:</b> it now names what killed you. <span class="where">Any death.</span></span></label></li>
+      <li><label><input type="checkbox" id="fx-brindle-death"><span><b>Dying to Brindle:</b> no error spam in the log any more. If the game stalls or stutters when you die to him, say so. <span class="where">The Slag Bowl, on a loss.</span></span></label></li>
+    </ul>
+    <div class="status" role="note">
+      <strong>Known, fix queued (wave 30)</strong>
+      <p>The dam river-canyon crevice at the north end can trap the ball. If it does, relaunch the run; you don't need to report it again.</p>
+      <p>Approach the dam Warden from the east, and say whether the water sheet still carries you onto the core.</p>
+    </div>
+  </section>
+
+  <section aria-labelledby="h-known">
+    <h2 id="h-known"><span class="n">E</span> Known before you start</h2>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>What</th><th>State</th></tr></thead>
+        <tbody>
+          <tr><td>Placeholders</td><td>Closed: 0 on 556cca8e; the wave 26 and wave 29 gates were both clean</td></tr>
+          <tr><td>Slag Bowl crowd bodies</td><td>Closed: smooth shells in #578</td></tr>
+          <tr><td>Brindle fight length</td><td>Closed: the worst bot fight is about 117 s on the wave 26 gate, under the 150 s line (ruling ay, #584)</td></tr>
+          <tr><td>Missing sound cues</td><td>0. The full mix check runs on the PC with the stems.</td></tr>
+          <tr><td>World 1 frames on the 4080</td><td>Read on 556cca8e: dam p99 13.4 ms, flume 14.7 ms, Brindle 7 to 9 ms. Equal to or better than wave 26. Cold launch 6.1 s, 0 errors.</td></tr>
+          <tr><td>Flume length</td><td>The skipper takes 154 s against a 180 s minimum. It's recorded as a miss, with no change before the sitting (ruling ax).</td></tr>
+          <tr><td>Completionist length</td><td>20.8 bot-min, recorded as over the 15 to 20 target (ruling ag)</td></tr>
+          <tr><td>Fullscreen and black bars</td><td>Intended, from the sitting build on: the game starts fullscreen (#647). On the 3440x1440 monitor it shows a 16:9 picture with black bars at the sides.</td></tr>
+          <tr><td>Switching workspace</td><td>Intended, from the sitting build on: switching workspace away from the game pauses the run (#640).</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <footer>Read on main 556cca8e (wave 29), 31 Oct 2026. Look-for lines from waves 24 to 28 are kept above. Gap list: world1/SITTING-GAPS.md in the shared folder. Your ticks save in this browser only.</footer>
+</main>
+
+<script>
+(function () {
+  var boxes = Array.prototype.slice.call(document.querySelectorAll('.look input[type=checkbox]'));
+  var tally = document.getElementById('tally');
+  var KEY = 'spillway-sheet-ticks';
+  var saved = {};
+  try { saved = JSON.parse(localStorage.getItem(KEY) || '{}') || {}; } catch (e) { saved = {}; }
+  function update() {
+    var n = boxes.filter(function (b) { return b.checked; }).length;
+    tally.textContent = n + ' of ' + boxes.length + ' checked';
+  }
+  boxes.forEach(function (b) {
+    if (saved[b.id]) b.checked = true;
+    b.addEventListener('change', function () {
+      saved[b.id] = b.checked;
+      try { localStorage.setItem(KEY, JSON.stringify(saved)); } catch (e) {}
+      update();
+    });
+  });
+  update();
+  document.querySelectorAll('.copy').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var pre = document.getElementById(btn.getAttribute('data-copy'));
+      var text = pre.textContent;
+      function selectIt() {
+        var r = document.createRange(); r.selectNodeContents(pre);
+        var s = window.getSelection(); s.removeAllRanges(); s.addRange(r);
+        btn.textContent = 'Selected, copy it';
+      }
+      try {
+        navigator.clipboard.writeText(text).then(function () { btn.textContent = 'Copied'; setTimeout(function () { btn.textContent = 'Copy'; }, 1600); }, selectIt);
+      } catch (e) { selectIt(); }
+    });
+  });
+})();
+</script>
+
+</body></html>

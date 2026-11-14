@@ -1,0 +1,144 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Scrapkeep Roadmap</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bungee&family=Atkinson+Hyperlegible:wght@400;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: a crew shift board. One column, a track of five stops on top, each phase a shift card stamped with its state. */
+:root{
+  --bg:#f3f1ec; --panel:#fffdf8; --ink:#1f2326; --muted:#5b6268; --rule:#d9d4c9;
+  --spill:#167a83; /* world 1 water */ --mint:#2f9e6e; --cobalt:#2b55c7; --pearl:#8a8fa8; --gold:#b98512; --warn:#b4471f;
+  --chip:#ebe7de;
+  --display:"Bungee","Arial Black",Impact,sans-serif;
+  --body:"Atkinson Hyperlegible",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#15181b; --panel:#1e2226; --ink:#e9e6df; --muted:#a2a9ae; --rule:#343a40;
+  --spill:#3fb6c0; --mint:#55c896; --cobalt:#7c9bff; --pearl:#b4b8cf; --gold:#e2b04a; --warn:#f07d52; --chip:#2a2f34; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#15181b; --panel:#1e2226; --ink:#e9e6df; --muted:#a2a9ae; --rule:#343a40;
+  --spill:#3fb6c0; --mint:#55c896; --cobalt:#7c9bff; --pearl:#b4b8cf; --gold:#e2b04a; --warn:#f07d52; --chip:#2a2f34; color-scheme:dark}
+body{background:var(--bg);color:var(--ink);font:16px/1.55 var(--body)}
+.wrap{max-width:760px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:28px 56px;display:grid;gap:22px}
+h1{font:400 clamp(28px,7vw,40px)/1.05 var(--display);margin:0;letter-spacing:.01em;text-wrap:balance}
+h2{font:400 20px/1.2 var(--display);margin:0;text-wrap:balance}
+h3{font-size:15px;margin:6px 0 0;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+p{margin:0;max-width:65ch}
+.lead{color:var(--muted)}
+.meta{font:13px var(--mono);color:var(--muted)}
+.track{display:flex;flex-wrap:wrap;gap:8px;align-items:stretch}
+.stop{flex:1 1 120px;min-width:0;border:2px solid var(--rule);border-radius:6px;padding:8px 10px;background:var(--panel)}
+.stop b{display:block;font:400 13px/1.2 var(--display)}
+.stop span{font-size:13px;color:var(--muted)}
+.stop.here{border-color:var(--spill);box-shadow:0 0 0 2px var(--spill) inset}
+.stop.here::before{content:"YOU ARE HERE";display:block;font:600 10px var(--mono);letter-spacing:.08em;color:var(--spill)}
+.card{background:var(--panel);border:1px solid var(--rule);border-radius:8px;padding:18px;display:grid;gap:12px;border-top:6px solid var(--c,var(--rule))}
+.card.p1{--c:var(--spill)} .card.p2{--c:var(--cobalt)} .card.p3{--c:var(--gold)}
+.stamp{justify-self:start;font:400 12px var(--display);letter-spacing:.06em;color:var(--c);border:2px solid var(--c);padding:2px 8px;border-radius:3px;transform:rotate(-2deg)}
+ul,ol{margin:0;padding-left:20px;display:grid;gap:6px}
+li{max-width:65ch}
+.tbl{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--rule);vertical-align:top}
+th{font:600 11px var(--mono);text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.pill{display:inline-block;font:600 11px var(--mono);padding:1px 7px;border-radius:999px;background:var(--chip);white-space:nowrap}
+.pill.owed{color:var(--warn)} .pill.queued{color:var(--cobalt)} .pill.open{color:var(--spill)}
+.nums{display:flex;flex-wrap:wrap;gap:8px}
+.num{flex:1 1 140px;min-width:0;background:var(--chip);border-radius:6px;padding:8px 10px}
+.num b{display:block;font:600 18px var(--mono);font-variant-numeric:tabular-nums}
+.num span{font-size:12px;color:var(--muted)}
+.areas{display:flex;flex-wrap:wrap;gap:6px}
+.areas span{font-size:13px;background:var(--chip);border-radius:4px;padding:2px 8px}
+a{color:var(--cobalt)}
+a:focus-visible{outline:2px solid var(--cobalt);outline-offset:2px}
+footer{font-size:13px;color:var(--muted)}
+</style>
+
+<div class="wrap">
+  <header style="display:grid;gap:8px">
+    <div class="meta">Read 13 Nov 2026 · stage/alpha-w40 c2725364 · main cd095277 (wave 39)</div>
+    <h1>Scrapkeep Roadmap</h1>
+    <p class="lead">Next up: the world 1 sprint runs until world 1 is fully polished (your ruling of 10 Nov). Then the build comes to you as "ready for your verdict", and you play the world 1 sitting. Everything else waits on your marks.</p>
+  </header>
+
+  <nav class="track" aria-label="Roadmap stops">
+    <div class="stop here"><b>World 1 sitting</b><span>dam played 30 Oct; no areas marked</span></div>
+    <div class="stop"><b>World 1 variety</b><span>variants, run modifiers</span></div>
+    <div class="stop"><b>Worlds 2 and 3</b><span>to world 1's bar</span></div>
+    <div class="stop"><b>Full alpha sitting</b><span>11 areas, all six stages</span></div>
+    <div class="stop"><b>After the alpha</b><span>lore, NG+, offerings</span></div>
+  </nav>
+
+  <section class="card p1">
+    <div class="stamp">Shift 1 · on now</div>
+    <h2>The world 1 sitting</h2>
+    <p>World 1 is the title, the camp, the dam, the flume and Brindle in the Slag Bowl. On 30 Oct you played the dam and reported invisible walls and clipping; every fix shipped in wave 29. Waves 33 to 39 were promoted between 10 and 12 Nov, and wave 40 is open. On 10 Nov you ruled that the sprint ends at world 1 fully polished, so you play the promotion that closes the polish work, launched from the plain menu entry. Since 11 Nov the work runs from this project again; one thread drives the wave board and your PC.</p>
+    <div class="nums">
+      <div class="num"><b>35%</b><span>Novice wins w1, target 15% or less (12 Nov read)</span></div>
+      <div class="num"><b>79%</b><span>Learner wins</span></div>
+      <div class="num"><b>96%</b><span>Expert wins</span></div>
+      <div class="num"><b>14.8 ms</b><span>dam p99 on the 4080 (wave 32 read)</span></div>
+      <div class="num"><b>0</b><span>placeholders</span></div>
+    </div>
+    <h3>Left before you play</h3>
+    <div class="tbl"><table>
+      <thead><tr><th>Item</th><th>State</th></tr></thead>
+      <tbody>
+        <tr><td>Wave 34: the first full gate on your PC, with the weekly sweep</td><td><span class="pill queued">done, 10 Nov</span></td></tr>
+        <tr><td>Wave 35, words and first checks: the kit pick cards, the run summary and Esc in one press, item words, key prompts, three map checks</td><td><span class="pill queued">done, 11 Nov</span></td></tr>
+        <tr><td>Wave 36, read the fight: danger marks, the HUD, the landmark beam, the tools that film maps and stage hand-overs</td><td><span class="pill queued">done, 11 Nov</span></td></tr>
+        <tr><td>Wave 37, one ride through a world: a swipe over both stage cuts, a launch that lands facing the way it flew, the bugs, and the new loops (Heat, Overtime, Called Shot, marked hull, carry a core) in the sitting launch</td><td><span class="pill queued">done, 12 Nov</span></td></tr>
+        <tr><td>Wave 38, polish: what the first-timer film found (gate names, hit words, warnings, cut-off words), markers, breathers, Brindle's smoke column on the horizon</td><td><span class="pill queued">done, 12 Nov</span></td></tr>
+        <tr><td>Wave 39: the three world 1 critiques (gameplay, effects, look) and their work lists, fights lifting the band over the effects, the DJ's moves in fights (off by default)</td><td><span class="pill queued">done, 12 Nov</span></td></tr>
+        <tr><td>Wave 40, the first build wave from the critiques: screen reads, kill and hit looks, sounds, crew heads, models, the earned sitting launch set</td><td><span class="pill open">open</span></td></tr>
+        <tr><td>The four look rebuilds (your ruling of 12 Nov): the crew's own heads, the dam, the title screen, Brindle's armour plates</td><td><span class="pill open">building</span></td></tr>
+        <tr><td>The sitting run ends won at Brindle (your ruling of 12 Nov), then Moss's last call</td><td><span class="pill open">building</span></td></tr>
+        <tr><td>The sitting build: the Warden form on the synth band and on Brindle, the Slag Bowl crowd bodies, the sitting sheet refresh</td><td><span class="pill owed">next</span></td></tr>
+        <tr><td>Harder by movement (your ruling): chasers lead, regen only while rolling, terrain stops shells. Pulled out of wave 37 when the gate found 7 new test failures; being fixed to land last, before the release gate</td><td><span class="pill owed">re-landing</span></td></tr>
+        <tr><td>The release gate with a first-timer red team, then the install with rollbacks</td><td><span class="pill owed">last</span></td></tr>
+      </tbody>
+    </table></div>
+    <h3>You play</h3>
+    <p>Once the sitting build is promoted and installed, play world 1 as often as you like and mark each area on the <a href="https://claude.ai/artifact/HxmWTSrJf1vifhjXXPW1qT">Sitting Kit</a>. The <a href="https://claude.ai/artifact/9qYJpyFRe2q7zbwh6XvFVL">sitting sheet</a> says what to try.</p>
+    <h3>Ruled to wait for your sitting</h3>
+    <ul>
+      <li>HARD top rung: Expert wins 63% on the wave 34 gate (56% when ruled); target re-read.</li>
+      <li>Novice: no longer a ceiling to hold. You ruled harder and never easier, so it is a target that must drop (20% or less at the dam Warden); the 12 Nov read is 35% against 15% or less.</li>
+      <li>Flume length: the bot skipper runs 154 s against a 180 s floor; your feel decides.</li>
+      <li>Completionist time: the bot takes 20.8 min against 15-20; your wall time decides.</li>
+      <li>Brindle's cobalt pick: parked until world 2 is in a sitting.</li>
+    </ul>
+  </section>
+
+  <section class="card p2">
+    <div class="stamp">Shift 2 · after your marks</div>
+    <h2>World 1 variety, then the full alpha</h2>
+    <ol>
+      <li><b>Fix what you mark.</b> Every "fixes" or "Not yet" note becomes a unit, world 1 first.</li>
+      <li><b>Repeatable variety in world 1.</b> Stage variants, run modifiers and unlocks that build anticipation, in the spirit of Isaac's variant floors, never copied.</li>
+      <li><b>Worlds 2 and 3 to world 1's bar.</b> Three-phase fights for the Waking and the Mind with anthem phases; two-phase mini-bosses; staged story beats; soft-toy polish and dressing; cobalt as the top ordinary rung in every world (pearl and gold after the alpha, your call 8 Nov); the parked Dig and sinkhole frame spikes; difficulty bands in all six stages and the HARD ladder.</li>
+      <li><b>The full alpha sitting.</b> From the app menu, title to the Mind's end through all six stages. Accepted with no "Not yet", no blocker, frames in budget, zero placeholders.</li>
+    </ol>
+    <h3>The 11 areas you mark</h3>
+    <div class="areas">
+      <span>Core feel</span><span>Wardens and bosses</span><span>In-run growth</span><span>Progression across runs</span><span>Pilots</span><span>Stages and world</span><span>Look</span><span>Sound and music</span><span>Clarity</span><span>Difficulty and pacing</span><span>Stability</span>
+    </div>
+  </section>
+
+  <section class="card p3">
+    <div class="stamp">Shift 3 · parked</div>
+    <h2>After the alpha</h2>
+    <ul>
+      <li>Story, lore, characters, boss and system tweaks from your notes.</li>
+      <li>Higher item rungs (pearl, gold), brass trophies, hotwire kits, the Mind's purple offerings, Work Orders at the camp.</li>
+      <li>New game plus as world mutations, challenges, monster origins, park societies, pilot personality.</li>
+      <li>A fourth world, or a Mind that was never the real foreman (a seed, not a ruling).</li>
+      <li>Toward a beta or a low-cost public release.</li>
+    </ul>
+  </section>
+
+  <footer>Source of truth: project-guide/handoff/ROADMAP.md in the repo. Rulings: the decisions register. Live wave state: STATE.md and the wave board.</footer>
+</div>
+
+</body></html>

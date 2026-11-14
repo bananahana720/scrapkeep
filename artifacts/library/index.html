@@ -1,0 +1,287 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+
+<title>Scrapkeep Library</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;900&family=Barlow:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap">
+<style>
+/* Layout: a crew manifest. One narrow column, sections as stamped bays, status shown by chip colour. */
+:root{
+  --bg:#eef0ee; --panel:#f8f9f7; --ink:#1d2421; --muted:#5b6661; --line:#cfd5d1;
+  --rust:#b2512a; --live:#2f6b4f; --old:#9a6a12; --ref:#4c5d73;
+  --live-bg:#dcebe2; --old-bg:#f3e6c9; --ref-bg:#dfe5ee;
+  --display:"Big Shoulders Display","Arial Narrow",Impact,sans-serif;
+  --body:"Barlow","Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#141917; --panel:#1c2320; --ink:#e4e9e6; --muted:#9aa6a0; --line:#2f3934;
+  --rust:#e07a4f; --live:#6fc596; --old:#e0b451; --ref:#93a9c8;
+  --live-bg:#1f3a2c; --old-bg:#3a2f15; --ref-bg:#232f40; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#141917; --panel:#1c2320; --ink:#e4e9e6; --muted:#9aa6a0; --line:#2f3934;
+  --rust:#e07a4f; --live:#6fc596; --old:#e0b451; --ref:#93a9c8;
+  --live-bg:#1f3a2c; --old-bg:#3a2f15; --ref-bg:#232f40; color-scheme:dark}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.5}
+.wrap{max-width:720px;margin:0 auto;padding-block:20px 56px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:32px}
+h1,h2{font-family:var(--display);text-transform:uppercase;letter-spacing:.02em;margin:0;text-wrap:balance;line-height:1}
+h1{font-size:clamp(44px,12vw,72px);font-weight:900}
+h1 span{color:var(--rust)}
+h2{font-size:28px;font-weight:700;display:flex;align-items:baseline;gap:10px}
+h2 small{font-family:var(--mono);font-size:12px;color:var(--muted);letter-spacing:.08em;font-weight:500}
+p{margin:0;max-width:65ch}
+a{color:var(--ink);text-decoration-color:var(--rust);text-underline-offset:3px}
+a:focus-visible{outline:2px solid var(--rust);outline-offset:2px}
+.label{font-family:var(--mono);font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+section{display:flex;flex-direction:column;gap:14px}
+.goal{border-left:4px solid var(--rust);padding-left:14px;display:flex;flex-direction:column;gap:8px}
+.now{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:14px 16px;display:flex;flex-direction:column;gap:8px}
+.now ul{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:4px}
+.key{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.chip{font-family:var(--mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;padding:2px 7px;border-radius:3px;white-space:nowrap}
+.c-live{background:var(--live-bg);color:var(--live)}
+.c-ref{background:var(--ref-bg);color:var(--ref)}
+.c-old{background:var(--old-bg);color:var(--old)}
+.c-now{background:var(--rust);color:var(--panel)}
+.list{display:flex;flex-direction:column;border-top:1px solid var(--line)}
+.item{display:grid;grid-template-columns:1fr auto;gap:2px 12px;padding:10px 0;border-bottom:1px solid var(--line)}
+.item a{font-weight:600}
+.item p{grid-column:1/-1;color:var(--muted);font-size:15px}
+.item .chip{align-self:start;margin-top:3px}
+.group{display:flex;flex-direction:column;gap:6px}
+.group h3{margin:6px 0 0;font-family:var(--mono);font-size:13px;letter-spacing:.1em;text-transform:uppercase;color:var(--rust);font-weight:500}
+.waves{display:flex;flex-direction:column;gap:0;border-top:1px solid var(--line)}
+.wave{display:grid;grid-template-columns:52px 1fr;gap:12px;padding:10px 0;border-bottom:1px solid var(--line)}
+.wave b{font-family:var(--display);font-size:30px;line-height:1;font-weight:900;font-variant-numeric:tabular-nums}
+.wave div{display:flex;flex-direction:column;gap:4px;min-width:0}
+.wave .head{display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-weight:600}
+.wave p{color:var(--muted);font-size:15px}
+.wave.done b{color:var(--live)} .wave.cur b{color:var(--rust)} .wave.next b{color:var(--muted)}
+.world{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.world div{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:10px;display:flex;flex-direction:column;gap:2px}
+.world strong{font-family:var(--display);font-size:20px;text-transform:uppercase}
+.world span{font-size:14px;color:var(--muted)}
+@media (max-width:460px){.world{grid-template-columns:1fr}}
+.files{width:100%;border-collapse:collapse;font-size:15px}
+.files td{padding:8px 8px 8px 0;border-bottom:1px solid var(--line);vertical-align:top}
+.files td:first-child{font-family:var(--mono);font-size:13px;white-space:nowrap}
+.tablewrap{overflow-x:auto}
+footer{color:var(--muted);font-size:14px}
+</style>
+
+<div class="wrap">
+
+<header style="display:flex;flex-direction:column;gap:12px">
+  <span class="label">Crew manifest · updated 14 Nov 2026, 09:20 UTC</span>
+  <h1>Scrap<span>keep</span> Library</h1>
+  <div class="goal">
+    <p><strong>The goal:</strong> a finished-feeling Linux alpha, accepted at the full-alpha sitting after a world 1 sitting. You open it from your app menu, play from the title screen through all three worlds and six dressed parks, and accept it at your playtest sitting: 11 areas, none "Not yet", no blocker open, frame times in budget, zero placeholders.</p>
+    <p><strong>The mission:</strong> every run gives you things to look forward to, explore, discover and experience, the way Isaac does; everything visual and intuitive, with information popping where and when you need it.</p>
+  </div>
+</header>
+
+<section class="now" aria-labelledby="now-h">
+  <span class="label" id="now-h">Where things stand</span>
+  <ul>
+    <li><strong>World 1 comes first, fully polished.</strong> On 10 Nov you ruled that the world 1 sprint ends at "world 1 fully polished" before you play. The build then comes to you as "ready for your verdict". You played the dam on 30 Oct.</li>
+    <li><strong>Main is the wave 39 promotion</strong> (cd095277, 12 Nov); waves 37, 38 and 39 all landed that day. Wave 40 is open: the first build wave from the three world 1 critiques (screen reads, kill and hit looks, sounds, crew heads, models). The work runs from this project: one thread drives the wave board and your PC, one thread per unit.</li>
+    <li><strong>Your rulings of 10 and 11 Nov:</strong> the year is 2010, the map standard of ten points, harder and never easier, one ride through a world, no slop in anything the player meets, test where the change is and gate the release once, and write for a reader with no context. On 11 Nov: Heat, Overtime and Called Shot before the sitting, test only where needed, four build systems folded into three, and early stop in band reads. On 12 Nov: the project coordinates, the score is a DJ set mixed to play, the four look rebuilds land before the sitting, and the sitting run ends won at Brindle. On 13 Nov: a hidden seventh pilot, Patch, built after the sitting, and the ball goes to the cutaway look. The register has every ruling.</li>
+    <li><strong>What is left, in order:</strong> the Roadmap below.</li>
+  </ul>
+</section>
+
+<section aria-labelledby="start-h">
+  <h2 id="start-h">Start here <small>6 pages</small></h2>
+  <div class="list">
+    <div class="item"><a href="https://claude.ai/artifact/55bppMdvsEXW52ZVFyhNna">Scrapkeep Roadmap</a><span class="chip c-live">Current</span><p>What is left: the world 1 sitting, then world 1 variety and worlds 2 and 3, then the full-alpha sitting, then after the alpha.</p></div>
+    <div class="item"><a href="https://claude.ai/code/artifact/e209a132-0f39-416d-a116-3be4e9df8de9">Decisions register</a><span class="chip c-live">Current</span><p>Every ruling you've made, by topic, with its date, how you made it and what it replaced. Check here before deciding something twice.</p></div>
+    <div class="item"><a href="https://claude.ai/artifact/9qYJpyFRe2q7zbwh6XvFVL">Spillway Sitting Sheet</a><span class="chip c-live">Current</span><p>The world 1 sitting, which comes first: what to play and what to mark. It is due a refresh for the pre-sitting pass before you play.</p></div>
+    <div class="item"><a href="https://claude.ai/artifact/GzjpkrydUYjV787yaYhVor">World 1 plan</a><span class="chip c-live">Current</span><p>The plan behind the world 1 sitting.</p></div>
+    <div class="item"><a href="https://claude.ai/code/artifact/95d92907-5cfe-4290-b303-d465baccedde">Lessons and ways of working</a><span class="chip c-live">Current</span><p>How this project runs: taps vs typed lines, cards, the cloud gate, permission prompts. Every thread reads it.</p></div>
+    <div class="item"><a href="https://claude.ai/artifact/4zk8ujuRjpwbo9vohJESPH">Test Throughput Playbook</a><span class="chip c-live">Current</span><p>How to make test and bot runs faster (11 Nov research): where the time goes and the ranked plan.</p></div>
+  </div>
+</section>
+
+<section aria-labelledby="vision-h">
+  <h2 id="vision-h">The game</h2>
+  <p>A roguelite where you pilot a rolling scrap-mech ball with a harpoon. You bowl through enemies, grapple and slam, carve half-pipes, and grow mightier over a run, Binding of Isaac style, while the chaos scales with you. The presentation is a melodramatic anime and comic-book playground with Scott Pilgrim as the touchstone; written lore stays in a dry crew-log voice. The music is jazz-rooted steampunk-cyberpunk with house and electro bass, and every mini-boss, boss and intense moment gets its own bass-heavy EDM anthem. It plays hard but fair, Souls-like: bosses are learned, and a cracked build still steamrolls.</p>
+  <div class="world">
+    <div><strong>Spillway</strong><span>Boss: Brindle</span><span>Key of D</span></div>
+    <div><strong>The Dig</strong><span>Boss: the Waking</span><span>Key of E</span></div>
+    <div><strong>Highdraft</strong><span>Boss: the Mind</span><span>Key of G</span></div>
+  </div>
+</section>
+
+<section aria-labelledby="pages-h">
+  <h2 id="pages-h">Every page</h2>
+  <div class="key"><span class="chip c-live">Current</span><span class="label">use it now</span><span class="chip c-ref">Reference</span><span class="label">settled, still true</span><span class="chip c-old">Out of date</span><span class="label">kept for history</span></div>
+
+  <div class="group"><h3>Picks and builds, 13 to 14 Nov</h3><div class="list">
+    <div class="item"><a href="https://claude.ai/artifact/YLJGxfhfDNfA9nwEzpmQW4">Ball Look Candidates</a><span class="chip c-live">Current</span><p>Three looks for the ball. You picked the cutaway, so the pilot and their outfit stay in view.</p></div>
+    <div class="item"><a href="https://claude.ai/artifact/YZG9B1gL1SBfZ1Cb8gmiCe">Patch, the hidden pilot</a><span class="chip c-live">Current</span><p>The design page for the hidden seventh pilot, a possum hacker, with your four picks. Built after the sitting.</p></div>
+    <div class="item"><a href="https://claude.ai/artifact/LitKf1yxbaEHmcgnqKYfh1">Scrapkeep UI audit loop</a><span class="chip c-live">Current</span><p>Twelve UI principles, each tied to a check, and the loop that audits, records and learns.</p></div>
+    <div class="item"><a href="https://claude.ai/artifact/J31PeeTfMwdcNoraYBXvev">Scrapkeep UI picks</a><span class="chip c-live">Current</span><p>Your look picks of 13 Nov, with stills: 18 px smallest text, and shapes instead of new colours for colour-blind players.</p></div>
+    <div class="item"><a href="https://claude.ai/artifact/5HNMYP2hCf2m7UpvsVziHZ">Points of interest: concept</a><span class="chip c-live">Current</span><p>How world 1 gets packed with places worth going to, and the three survival forms.</p></div>
+    <div class="item"><a href="https://claude.ai/artifact/TCzaEseqx4gfF5kNaac89X">Points of interest: dam yard</a><span class="chip c-live">Current</span><p>The dam yard survival form and its sites.</p></div>
+    <div class="item"><a href="https://claude.ai/artifact/AwwD2TCm6F1MLzJ1apSk66">Points of interest: flume muster</a><span class="chip c-live">Current</span><p>The flume muster survival form and its sites.</p></div>
+    <div class="item"><a href="https://claude.ai/artifact/LcxbJL51MvxdrZLBJYrDB8">What Tripo can do for Scrapkeep</a><span class="chip c-ref">Reference</span><p>Research on the 3D model tool: what it can and cannot make for this game, and the ranked uses.</p></div>
+  </div></div>
+
+  <div class="group"><h3>World 1 critiques and builds, 12 to 13 Nov</h3><div class="list">
+    <div class="item"><a href="https://claude.ai/artifact/UJW33E4mqJtDhy57ph3dkh">Hollow Spillway Findings</a><span class="chip c-live">Current</span><p>Your "maps feel empty" feedback, measured: how much of world 1 is dead air, why, and the fixes built for routes and life.</p></div>
+    <div class="item"><a href="https://claude.ai/artifact/WT2ja1JwWZJrVtVnHsUgwa">Uncanny enemies</a><span class="chip c-live">Current</span><p>Why the crews looked uncanny, with before and after of their walk and the rows that follow.</p></div>
+    <div class="item"><a href="https://claude.ai/artifact/FQqXm7MeEo2Q9oBswNBh9Q">Crew lamp eyes</a><span class="chip c-live">Current</span><p>The PC look at the crews' lamp eyes. Private page.</p></div>
+    <div class="item"><a href="https://claude.ai/artifact/2j3JtbGmp7rjndyZ399ubA">Looping workers</a><span class="chip c-live">Current</span><p>The derrick, the sluice gate and the bucket conveyor working in each world 1 park, for your look check.</p></div>
+    <div class="item"><a href="https://claude.ai/artifact/WfARaXv35MchNJJvTMyqC2">Attack marks</a><span class="chip c-live">Current</span><p>Taste page for attack indicators that hide less of the attack they announce.</p></div>
+    <div class="item"><a href="https://claude.ai/artifact/97Q9T7BYJ6koXv19fiGjaS">Crew heads</a><span class="chip c-live">Current</span><p>All 12 Spillway crew kinds with their own heads, in PC stills at play size.</p></div>
+    <div class="item"><a href="https://claude.ai/artifact/Fb3iQTypHBepGmeDGDrGw2">Dam look</a><span class="chip c-live">Current</span><p>Taste page for the dam rebuild: three candidates.</p></div>
+    <div class="item"><a href="https://claude.ai/artifact/5fgKzZPfZcYwCevFZgkiay">Title look</a><span class="chip c-live">Current</span><p>Taste page for the title screen: the drawn wordmark and the looks to pick from.</p></div>
+    <div class="item"><a href="https://claude.ai/artifact/WANtZooYbGicvjoVuogjMe">Kill look</a><span class="chip c-ref">Reference</span><p>The kill mark pick. You chose ink with the elite card; it is built.</p></div>
+    <div class="item"><a href="https://claude.ai/artifact/CxLxtaq7QGDMtQjqXJHtKA">Visual critique PC pictures</a><span class="chip c-ref">Reference</span><p>PC pictures of the wave 40 candidate behind the world 1 visual critique.</p></div>
+    <div class="item"><a href="https://claude.ai/artifact/BsVyVj8FitSVnRACPtXrDn">The DJ, whole stretches</a><span class="chip c-live">Current</span><p>The score mixed as a DJ set, off against on, in whole stretches of play.</p></div>
+    <div class="item"><a href="https://claude.ai/artifact/TjRr4bxVvvtnRejSkdo3X8">Feedback as Percussion</a><span class="chip c-live">Current</span><p>Hit and feedback sounds remade as focused percussion, after you said hit-scan sounded like a jazz instrument.</p></div>
+    <div class="item"><a href="https://claude.ai/artifact/EuhKL2udMR3q7DtjsXG8jW">Skill Answers</a><span class="chip c-live">Current</span><p>A small musical answer when a pilot ability lands in time with the music.</p></div>
+    <div class="item"><a href="https://claude.ai/artifact/NHw65YVscVTwUBRgH88v8t">Adopting the Reddit Claude workflow</a><span class="chip c-ref">Reference</span><p>A solo developer's Claude workflow compared with this project, and what is worth adopting.</p></div>
+  </div></div>
+
+  <div class="group"><h3>Pre-sitting improvement pass, 9 Nov</h3><div class="list">
+    <div class="item"><a href="https://claude.ai/artifact/Sgcijc7ssE22WrimfPRrWy">World 1 design findings</a><span class="chip c-live">Current</span><p>What the design lane found in the Spillway and the units it started: the fight text, death and summary screens, Brindle's charge, melodic kills, shop and growth choices, the dam's variety.</p></div>
+    <div class="item"><a href="https://claude.ai/artifact/TffRjeWWobddpDtPooEnQi">World 1 look and feel findings</a><span class="chip c-live">Current</span><p>What the look-and-feel lane found: pilot select, the first ten seconds, the Brindle entrance, wording and the HUD.</p></div>
+    <div class="item"><a href="https://claude.ai/artifact/2TzNk4bpPzbK4nDffFSVYg">Look and Feel Films</a><span class="chip c-live">Current</span><p>The PC films and verdicts behind look-and-feel pull requests, such as the gate sign, the flume entry and the aim fan. Private page; the findings page holds the calls.</p></div>
+    <div class="item"><a href="https://claude.ai/artifact/9gHRLMa7dbmuhLErDRC2So">HUD Meters Check</a><span class="chip c-ref">Reference</span><p>The PC check of the HUD meter names. The words pass; icons vanished on pale sand, which a later change fixed. Private page.</p></div>
+    <div class="item"><a href="https://claude.ai/artifact/TKonUiQsuKx9cEKi7uKeZU">Aim Mark Recheck</a><span class="chip c-ref">Reference</span><p>The second PC look at the wall kick's aim mark. Private page.</p></div>
+    <div class="item"><a href="https://claude.ai/artifact/5P6KdujvPfv4Zfhq9NzmwJ">Goal Plate Film</a><span class="chip c-ref">Reference</span><p>The PC film of the goal plate change from the design lane. Private page.</p></div>
+    <div class="item"><a href="https://claude.ai/artifact/UMwsXyyeinbocwzQEL1AGb">Technicals and performance findings</a><span class="chip c-live">Current</span><p>Frame pacing on your 144 Hz monitor, the quit freeze, pause on focus loss, the build stamp, and the plan for each.</p></div>
+    <div class="item"><a href="https://claude.ai/artifact/Lvw6dFxirhy2GodBsQVu3U">Ultrawide Fill Check</a><span class="chip c-live">Current</span><p>The picture on your 3440 by 1440 monitor: today's black bars against a picture that fills the screen. Private page.</p></div>
+    <div class="item"><a href="https://claude.ai/artifact/82WSxGRg2unmoKb3AtVRBB">Game UI rebuild: resolutions and accessibility</a><span class="chip c-live">Current</span><p>The results of the four UI passes of 11 Nov: one set of sizes and colours, the settings form, every screen at five resolutions, and the accessibility check.</p></div>
+    <div class="item"><a href="https://claude.ai/artifact/AVTs9YHwjbSq52g6yEzvwb">Testing and bot runs findings</a><span class="chip c-live">Current</span><p>Where the test and bot time goes, what repeats, and the ranked plan to speed it up.</p></div>
+    <div class="item"><a href="https://claude.ai/artifact/6Ys5QmM2yv5kSWiMUG2Joa">Gate Catch Table</a><span class="chip c-live">Current</span><p>22 realistic world 1 faults planted one at a time against the promotion tests and bots: which tests catch each, the two nothing catches, and the cheapest checks to close them.</p></div>
+    <div class="item"><a href="https://claude.ai/artifact/2zNZPnv6jVpwS3a2umjPqX">Workflows findings and plan</a><span class="chip c-live">Current</span><p>The gate, the boards, the docs, memory, model rules and repo tidiness: what was wrong and what changed.</p></div>
+    <div class="item"><a href="https://claude.ai/artifact/5mBB7p1QWCLJmyhsUbRqa1">Deep-modules sweep findings</a><span class="chip c-ref">Reference</span><p>Where game modules leak their insides, from the wave 32 sweep. The method runs after every promotion.</p></div>
+  </div></div>
+
+  <div class="group"><h3>Direction</h3><div class="list">
+    <div class="item"><a href="https://claude.ai/artifact/GiVnd79hcp2tkx4UaWkAY7">Game systems: audit and plan</a><span class="chip c-live">Current</span><p>How the game's systems fit its story, measured against what Binding of Isaac does: nine findings, what is safe before the sitting, what waits until after, and three cards for your taste.</p></div>
+    <div class="item"><a href="https://claude.ai/artifact/Fb7otFCzb4cUhEAsUAr3Xk">Ambition Map</a><span class="chip c-ref">Reference</span><p>A hard target for every part of the game, waves 16 to 21, and how each is proved. The targets stand; since 23 Oct world 1 is finished first.</p></div>
+    <div class="item"><a href="https://claude.ai/artifact/A7tVAy4BSfdUGmBppn38jw">Catch-up, 19 to 23 Oct</a><span class="chip c-ref">Reference</span><p>What you decided on the other account and what happened while the PC coordinator ran things.</p></div>
+    <div class="item"><a href="https://claude.ai/artifact/Db9zVVEkB8DtSuWB8MubQL">Item Ladder</a><span class="chip c-live">Current</span><p>Isaac-style scaling and a five-rung ladder: grey panels on the sphere, mint, cobalt, pearl, gold; the Mind's offerings after the alpha. You ruled the colours, offerings and scope on 23 Oct.</p></div>
+    <div class="item"><a href="https://claude.ai/artifact/48ATT1f4HUQ7PHi7NoqZRY">Map Design</a><span class="chip c-live">Current</span><p>Height layers, the line system, drop points, mini-boss ground, anti-kiting and rhythm. You approved every default on 23 Oct.</p></div>
+    <div class="item"><a href="https://claude.ai/artifact/BkritUa1WFADGzWBiBmJK8">Design Questions</a><span class="chip c-live">Current</span><p>Open design questions as multiple choice. Your answers save on the page; skipped ones keep the recommended option.</p></div>
+    <div class="item"><a href="https://claude.ai/artifact/VUEwZEcmF9cGhTF3fYQBnt">Alpha goal</a><span class="chip c-old">Partly out of date</span><p>What "finished-feeling alpha" means. Its five first-time players rule was dropped on 17 Oct; the register has the current version.</p></div>
+    <div class="item"><a href="https://claude.ai/artifact/WuFG8zZpsFfdjVFB5fqQxb">Alpha playtest playbook</a><span class="chip c-ref">Reference</span><p>How the sitting runs and what the 11 areas mean. Record verdicts in the Sitting Kit instead.</p></div>
+  </div></div>
+
+  <div class="group"><h3>Story and tone</h3><div class="list">
+    <div class="item"><a href="https://claude.ai/artifact/GiVnd79hcp2tkx4UaWkAY7#2f0db9da-597d">Story map</a><span class="chip c-live">Current</span><p>What the world is and what every place, system, enemy and item means in it, with what each should look, sound and play like. The art, sound and systems work all hang on it. Rows marked W are working calls you can strike.</p></div>
+    <div class="item"><a href="https://claude.ai/artifact/4BPUR2Qtgqreq8FC4skm1N">Title Openings</a><span class="chip c-live">Current</span><p>Each pilot's anime-style title opening.</p></div>
+    <div class="item"><a href="https://claude.ai/artifact/NYmkJKkoq7bCDs7g2pMbSE">Run Pages</a><span class="chip c-live">Current</span><p>The run-end comic page and scrapbook.</p></div>
+    <div class="item"><a href="https://claude.ai/artifact/RBzETXRoy72U3Mnex7cUtV">Boss Threat Lines</a><span class="chip c-live">Current</span><p>One boss line per pilot.</p></div>
+    <div class="item"><a href="https://claude.ai/artifact/Wj4PAfGSHMZ9eENrHV5YEJ">One Day per Run</a><span class="chip c-live">Current</span><p>Dawn to night across a single run.</p></div>
+    <div class="item"><a href="https://claude.ai/artifact/SP2Rcy3tzwhpwK3hcHAsBk">Intro Storyboard</a><span class="chip c-ref">Reference</span><p>Sable's opening, the first-launch title.</p></div>
+    <div class="item"><a href="https://claude.ai/artifact/RyPLAHaAZFAJRxDqqKJgkv">Brindle's Big Day</a><span class="chip c-ref">Reference</span><p>The 23 Oct comic strip of Brindle's arrival, his two phases, his rout and Tarn signing on, as stills from the build. The entrance has since gained a camera glance and a close-up.</p></div>
+  </div></div>
+
+  <div class="group"><h3>Music and sound</h3><div class="list">
+    <div class="item"><a href="https://claude.ai/artifact/4vBSSMqa4L23bGCrnYSzom">Sound Artist</a><span class="chip c-live">Current</span><p>The sound persona: one house band, Local 172, in three dated generations (1978, 1996, 2010), with its rules, an audit of today's sound and the ranked plan. You picked 2010 on 10 Nov; 1996 and 1978 stay as radio stations.</p></div>
+    <div class="item"><a href="https://claude.ai/artifact/RiLTfMgXiDRov8qTN15h9k">Persona Auditions</a><span class="chip c-ref">Reference</span><p>The 24 clips the year was picked from: three years by roam, fight, anthem and free. Private page.</p></div>
+    <div class="item"><a href="https://claude.ai/artifact/1pRSWw44k5VXp7gGtJs9Sq">Soundtrack</a><span class="chip c-live">Current</span><p>Every take, with the picks marked. Roaming keeps the jazzy picks; since 19 Oct boss and intense slots get EDM anthems and every song goes through the radio quality pass.</p></div>
+    <div class="item"><a href="https://claude.ai/artifact/XxpvvCj5Gv5uvPFrfvawjF">Anthem Jukebox</a><span class="chip c-live">Current</span><p>Every boss, mini-boss and event anthem candidate. Suggested takes are wired; swap any pick here. Phase 2 and 3 covers run +10 and +20 BPM.</p></div>
+    <div class="item"><a href="https://claude.ai/artifact/LuzR8R3uEst5g9qUMuVJg9">Moss's Jukebox</a><span class="chip c-live">Current</span><p>The camp jukebox that replays tunes you've discovered, with hints on blank records.</p></div>
+    <div class="item"><a href="https://claude.ai/artifact/JeV1uveg8KSVmYLtkYmfsA">Pilot Radio</a><span class="chip c-live">Current</span><p>How the in-run radio works: stations, collectible tracks, pins. Wordless voices on six takes; Wardens and boss finales take over from it.</p></div>
+    <div class="item"><a href="https://claude.ai/artifact/UYsfcJhHw94BDYcguVrCsE">Radio, first takes</a><span class="chip c-live">Current</span><p>Listen to the radio's first takes, seven stations of collectible covers with my picks marked. Nobody has listened yet.</p></div>
+    <div class="item"><a href="https://claude.ai/artifact/X3jhV2TuRES7THD6Rw8fJn">Warden Fight Listen</a><span class="chip c-live">Current</span><p>The Warden fight four ways: the new form, the new form with an ultimate, at the dam, and as it was. Private page.</p></div>
+    <div class="item"><a href="https://claude.ai/artifact/LGjt4ASGaH5wVLvpByNKLa">Melodic Kills Listening</a><span class="chip c-live">Current</span><p>The six-kill crash, the set chime, call-ins and the pilot quote. Private page.</p></div>
+    <div class="item"><a href="https://claude.ai/artifact/Wohn7aaSYt77V2BVHHjLG4">Spillway Fight Music Check</a><span class="chip c-ref">Reference</span><p>The 25 Oct by-ear checks of the Spillway fight music. Still on the sitting watch list.</p></div>
+    <div class="item"><a href="https://claude.ai/artifact/A5cPNHU7p8qFuB6y71vf4m">Mix With the Band</a><span class="chip c-live">Current</span><p>The whole mix with the recorded band, and slow motion, measured on your PC. Private page.</p></div>
+    <div class="item"><a href="https://claude.ai/artifact/FipU6CpSegiwS4FoCeJRmS">Sounds on their events</a><span class="chip c-live">Current</span><p>Each sound cut from a recorded run on the event it answers, for your ear. Private page.</p></div>
+    <div class="item"><a href="https://claude.ai/artifact/PbEERHmLT5TQ68Bo1cb9X4">Score Plan</a><span class="chip c-old">Out of date</span><p>Its "Written themes" retakes were replaced on 17 Oct by keeping the current tracks. "Build to ending" still stands.</p></div>
+  </div></div>
+
+  <div class="group"><h3>Enemies and combat</h3><div class="list">
+    <div class="item"><a href="https://claude.ai/artifact/1qJBFCBCbQEMNMaSZBPHQu">Kill Order and the Half-Pipe</a><span class="chip c-ref">Reference</span><p>Enemy priorities, the four kill-first specials, carving and grapple play.</p></div>
+    <div class="item"><a href="https://claude.ai/artifact/PyD3yK4W6hKtKSXGi8fsz3">Foreman and Dispatcher</a><span class="chip c-ref">Reference</span><p>Two special-enemy bodies. The Dispatcher now escalates when ignored.</p></div>
+    <div class="item"><a href="https://claude.ai/artifact/CKDMJfJZ8eEtWE6PaFcREE">Splitter and Linker</a><span class="chip c-ref">Reference</span><p>The other two special-enemy bodies.</p></div>
+    <div class="item"><a href="https://claude.ai/artifact/BJ1vsvShzMEaC6cnjEyeWR">Dig and Highdraft Rosters</a><span class="chip c-live">Current</span><p>Who you fight in worlds 2 and 3: enemies unique to each world, built as harder remixes of the core verbs.</p></div>
+    <div class="item"><a href="https://claude.ai/artifact/LGcoBTuLyfY6yr3XfcKV7Z">Dig and Highdraft Bodies</a><span class="chip c-live">Current</span><p>The models for the world 2 and 3 enemies.</p></div>
+    <div class="item"><a href="https://claude.ai/artifact/PsceAUSYJzGGjGFrr8f7wR">Fields and Cast Times</a><span class="chip c-live">Current</span><p>Enemy fields and auras, such as the electric jam, and cast times on the big pilot abilities.</p></div>
+    <div class="item"><a href="https://claude.ai/artifact/AX8GHjV8tbvMvaJTyNJGpZ">Softer, Smoother Models</a><span class="chip c-live">Current</span><p>You picked Soft toy: crews and round bodies go smooth, machines keep crisp bevelled edges. Before-and-after shots.</p></div>
+    <div class="item"><a href="https://claude.ai/artifact/Trhb9ecLx1cDN3NYzFisJc">Why the Mind Is a Hand</a><span class="chip c-live">Current</span><p>You picked All hands: the crew were its hands, so it grew its own. Gloves, crew numbers and a HIRED stamp on defeat.</p></div>
+    <div class="item"><a href="https://claude.ai/artifact/8FU1C1kC7ZZMmgSbGHagav">Pilots Hopping Out</a><span class="chip c-live">Current</span><p>Stills of all six pilots climbing out for their goofy bit. Right-drag or the right stick looks closer.</p></div>
+    <div class="item"><a href="https://claude.ai/artifact/Wxw9x7YsJhaSKsoHbZpY8e">World 1 Enemy Polish</a><span class="chip c-live">Current</span><p>Before and after: 23 world 1 enemies and the kill-first specials, soft-toy pass.</p></div>
+    <div class="item"><a href="https://claude.ai/artifact/AUxERJm65mEHHjHYLXQSUd">Dig and Highdraft Enemy Polish</a><span class="chip c-live">Current</span><p>Before and after: the 11 Dig and Highdraft enemies.</p></div>
+    <div class="item"><a href="https://claude.ai/artifact/7jrpwBG65Su4AJ8ocbGzyv">Bosses and Wardens Polish</a><span class="chip c-live">Current</span><p>Before and after: Brindle, the Waking, the Mind and the Wardens.</p></div>
+    <div class="item"><a href="https://claude.ai/artifact/RndjnYZXk1ajbZnAXYsfBe">Boss Phases and Sound-Cued Attacks</a><span class="chip c-live">Current</span><p>Bosses up to three phases, mini-bosses two: the transition beat, the ratchet cue and how a tighter tell stays fair.</p></div>
+    <div class="item"><a href="https://claude.ai/artifact/Emw1U41EZgd7TrwDVMhVwK">Rogue Fleet Mini-Bosses</a><span class="chip c-live">Current</span><p>Fleet machines gone rogue, one per stage: the crane, the skip and the tender, their attacks and sites.</p></div>
+    <div class="item"><a href="https://claude.ai/artifact/TQF4xkQWGSRCH9i38UnrZM">Rogue Fleet Bodies</a><span class="chip c-live">Current</span><p>Stills of the three rogue bodies, crisp-bevelled machines.</p></div>
+    <div class="item"><a href="https://claude.ai/artifact/8cUQNfsPXkCYh8vSUrHe82">The Waking's Attacks</a><span class="chip c-live">Current</span><p>The Dig boss's own attacks: burrow lanes, cave-ins and bore breaches.</p></div>
+    <div class="item"><a href="https://claude.ai/artifact/N1KaXeksfjmmAEjKm4PbbQ">Knockback Feel</a><span class="chip c-live">Current</span><p>Bowling-ball hits and grapple slams, measured. Throws reach about 36 m.</p></div>
+    <div class="item"><a href="https://claude.ai/artifact/5WZmsZE7xjxh3GEnaSQtJb">Poles and Flails</a><span class="chip c-ref">Reference</span><p>Weight decides pole or flail; a grown ball rips turrets out and swings them.</p></div>
+    <div class="item"><a href="https://claude.ai/artifact/TahSV1sJR1FQDf6fsZhFMi">Power Read</a><span class="chip c-live">Current</span><p>How much mightier a grown pilot's hit reads than the first one of the run.</p></div>
+    <div class="item"><a href="https://claude.ai/artifact/JPb8mjHhDf9S7hQmtiREem">Power Read on PR 50</a><span class="chip c-old">Out of date</span><p>An earlier measurement; the Power Read page above is newer.</p></div>
+    <div class="item"><a href="https://claude.ai/artifact/D3kPhtU161uiv44JS5r8uT">SPIL-9 Grows Up</a><span class="chip c-live">Current</span><p>Your companion drone grows with each module and calls a ram assist.</p></div>
+    <div class="item"><a href="https://claude.ai/artifact/38Drb12GsPgDxmgDUt6TWW">Makers and Actives</a><span class="chip c-old">Partly out of date</span><p>Its four rarity tiers are replaced by the Item Ladder's five rungs; makers, sets and actives still stand. The item layer: six maker workshops with set bonuses, six actives and five weapon overrides. Actives and sets land before your sitting; overrides come after.</p></div>
+  </div></div>
+
+  <div class="group"><h3>Parks, camp and art</h3><div class="list">
+    <div class="item"><a href="https://claude.ai/artifact/4iXArqTTJYFwRZgH9E5jfC">Sight Persona</a><span class="chip c-live">Current</span><p>The look persona: one artist, Dot Marrow, her seven habits, the audit of every model family against them and the ranked plan. You picked 2010 on 10 Nov, the same year as the band.</p></div>
+    <div class="item"><a href="https://claude.ai/artifact/1ZH3K5Jjanw9WAuqima1Am">Art Direction PC Stills</a><span class="chip c-live">Current</span><p>17 subjects photographed on your PC, chase view and close up. Private page.</p></div>
+    <div class="item"><a href="https://claude.ai/artifact/FvEScpCRsteFv1PY4p8LSU">Spillway crew at play speed</a><span class="chip c-live">Current</span><p>Three reels of the 15 Spillway bodies moving at play speed. Private page.</p></div>
+    <div class="item"><a href="https://claude.ai/artifact/BNioSWgWBc1q2eVzEujSmB">Sight Receipt Files</a><span class="chip c-ref">Reference</span><p>The 2010 proof, the far cable drum and 32 effect strips. Private page.</p></div>
+    <div class="item"><a href="https://claude.ai/artifact/DNUUZZaKdZzq5ckV5iYW14">Sight Raw Files</a><span class="chip c-ref">Reference</span><p>Raw stills of 15 Spillway bodies and the danger marks seen from inside and outside the ball. Private page.</p></div>
+    <div class="item"><a href="https://claude.ai/artifact/23yAZUpsmdtYnC9d1bVwgn">Sight Raw Files 2</a><span class="chip c-ref">Reference</span><p>A second set of raw stills from the sight thread. Private page.</p></div>
+    <div class="item"><a href="https://claude.ai/artifact/BYdHUBopqdbM5ziTKWArmm">Mind Purple at Sunset</a><span class="chip c-ref">Reference</span><p>The Mind's purple checked against the sunset sky.</p></div>
+    <div class="item"><a href="https://claude.ai/artifact/8qCXFyo2DqQpJWQjeTVJrS">Body Reference Sheets</a><span class="chip c-live">Current</span><p>Turnaround sheets for 16 bodies, the 1.84 m ball in every view. Drafts: check scale before modelling; two units were refused by the image filter.</p></div>
+    <div class="item"><a href="https://claude.ai/artifact/Bo8kUt8eCJ84ficQj1BK5U">Mojulo Trial</a><span class="chip c-ref">Reference</span><p>Why new critter and enemy bodies are sculpted in Mojulo as one smooth shell, while props stay on the Blender kit. You agreed on 23 Oct.</p></div>
+    <div class="item"><a href="https://claude.ai/artifact/JRbmps32uKnqqWUaFMvW7J">Park Polish Stills</a><span class="chip c-live">Current</span><p>4080 stills of the dressed parks.</p></div>
+    <div class="item"><a href="https://claude.ai/artifact/4Jwa2qD9nnUWH963tBpBoK">Crown All Hands Stills</a><span class="chip c-live">Current</span><p>The crown's All hands props.</p></div>
+    <div class="item"><a href="https://claude.ai/artifact/8UyShBj6vxy8QVTS73Wwse">Pit Park Dressing</a><span class="chip c-live">Current</span><p>The pit's lived-in dressing pass.</p></div>
+    <div class="item"><a href="https://claude.ai/artifact/5ZLtVCYtdUKebqd8apZHTs">Polished Props and Landmarks</a><span class="chip c-live">Current</span><p>Before and after: props and landmarks with soft-toy bevels and baked shading.</p></div>
+    <div class="item"><a href="https://claude.ai/artifact/XiiSqtatpeBbhAKnUrLvnv">Effects and Surfaces Pass</a><span class="chip c-live">Current</span><p>Shaped particles, painted-prop grain and baked shading on enemies.</p></div>
+    <div class="item"><a href="https://claude.ai/artifact/6zevvycarJiEmiUDtTK94L">Motion Blends Wave 17</a><span class="chip c-live">Current</span><p>Smoother pilot, enemy and boss animation blends.</p></div>
+    <div class="item"><a href="https://claude.ai/artifact/WiHm8C6ThJDHiYxgdbYSiv">Ride Pieces</a><span class="chip c-live">Current</span><p>Sized kickers, mesa lips, shelf edge and sinkhole channels.</p></div>
+    <div class="item"><a href="https://claude.ai/artifact/VqtWt3mM8DAKW1wam5MFNZ">Meteor Crater Victory Lap</a><span class="chip c-live">Current</span><p>The 60 s free roll after the Mind.</p></div>
+    <div class="item"><a href="https://claude.ai/artifact/C8j2CjcWvUhQYoNNXUPnaC">Outfits</a><span class="chip c-live">Current</span><p>The pilot outfit cosmetics.</p></div>
+    <div class="item"><a href="https://claude.ai/artifact/KND9Q6yYH72gyJrBTPNKpm">Landmarks</a><span class="chip c-live">Current</span><p>The six hero landmark models as built.</p></div>
+    <div class="item"><a href="https://claude.ai/artifact/GhTEdmmti7aewmmYJnvsk9">Landmark Storyboards</a><span class="chip c-ref">Reference</span><p>The approved sketches the landmark and camp builds follow.</p></div>
+    <div class="item"><a href="https://claude.ai/artifact/SSXq2pkbnHYea6R7wkaBjE">Camp Kit</a><span class="chip c-live">Current</span><p>The hub-ring camp, 34 models.</p></div>
+    <div class="item"><a href="https://claude.ai/artifact/C7rNhAgsBcRqYpUJuRt3RL">Every Park Scorecard</a><span class="chip c-live">Current</span><p>Intent check for all six parks, the camp and boss arenas. The red team re-runs it every wave.</p></div>
+    <div class="item"><a href="https://claude.ai/artifact/GdtwjnEsUrH7MJSbgQ3YUL">Hanging Isle Tether</a><span class="chip c-live">Current</span><p>The stage 5 island tether, added in island dressing.</p></div>
+    <div class="item"><a href="https://claude.ai/artifact/CeJL81EYepSp52jXY5bx4x">Rig Reel</a><span class="chip c-live">Current</span><p>Enemy, boss and SPIL-9 animations.</p></div>
+    <div class="item"><a href="https://claude.ai/artifact/UB1is4LkzYfsdbeSZSRPNf">Player Effects</a><span class="chip c-live">Current</span><p>Effects that grow with your build.</p></div>
+    <div class="item"><a href="https://claude.ai/artifact/HJ6fBe5Ay7ETDCy9neFsXw">Machine Effects</a><span class="chip c-live">Current</span><p>Steam, sparks, specials' tells, boss phases and falls.</p></div>
+    <div class="item"><a href="https://claude.ai/artifact/3pSn2Nuets93soxzAkSZjn">World Effects</a><span class="chip c-live">Current</span><p>World and event effects kit.</p></div>
+  </div></div>
+
+  <div class="group"><h3>Testing and status</h3><div class="list">
+    <div class="item"><a href="https://claude.ai/artifact/HxmWTSrJf1vifhjXXPW1qT">Sitting Kit</a><span class="chip c-ref">Reference</span><p>Where you mark the 11 areas at the full-alpha sitting, with notes and photos. The world 1 sitting uses the Spillway Sitting Sheet under Start here.</p></div>
+    <div class="item"><a href="https://claude.ai/artifact/UFF2sjUMDXcUd8BgnkjiWr">First-Timer Audit</a><span class="chip c-live">Current</span><p>Does the game teach each mechanic before it asks for it?</p></div>
+    <div class="item"><a href="https://claude.ai/artifact/Y5hvZs8tQ6ou4AktKEKS2X">Red Team Wave 16</a><span class="chip c-ref">Reference</span><p>What the red team found playing the wave 16 build: no blockers. The same link earlier held the wave 15 report.</p></div>
+    <div class="item"><a href="https://claude.ai/artifact/Sg5PdVuaSZ7Wu6jcohrSen">Placeholder Burn-down</a><span class="chip c-old">Out of date</span><p>The 1,442 count from wave 15 and where it goes. Wave 16 lowers it.</p></div>
+  </div></div>
+</section>
+
+<section aria-labelledby="files-h">
+  <h2 id="files-h">Shared folder</h2>
+  <p>Threads keep working files in the project's shared folder. Its full map is INDEX.md at the top.</p>
+  <div class="tablewrap"><table class="files">
+    <tr><td>project-guide/</td><td>Decisions register and lessons (thread copies), and past-decision conflicts.</td></tr>
+    <tr><td>alpha-status/</td><td>Scope, what's left, ambition map, placeholder count, the queued cards.</td></tr>
+    <tr><td>design/</td><td>Design page sources (the item ladder).</td></tr>
+    <tr><td>design-questions/</td><td>Open design questions, mirrored from the Design Questions page.</td></tr>
+    <tr><td>tone/</td><td>The tone bible and the story map. Read both before any creative work.</td></tr>
+    <tr><td>music/</td><td>Sound bible, integration notes, mix check and every take.</td></tr>
+    <tr><td>gate/</td><td>Per-PR receipts and bot shards. Older wave gates are in archive/.</td></tr>
+    <tr><td>world1/</td><td>The world 1 sitting: plan, sitting sheet, gaps, budgets and the pass findings.</td></tr>
+    <tr><td>ui-pass/</td><td>Before and after stills of every screen from the 11 Nov UI rebuild.</td></tr>
+    <tr><td>routes-and-life/, effects/, fx-*/</td><td>Working files of the 12 and 13 Nov build threads, with w1-72/ and workflow-trials/. They are due a move into the area folders.</td></tr>
+    <tr><td>testing/</td><td>Test and bot timing, the catch table data and the player's-eye films.</td></tr>
+    <tr><td>systems/, art-direction/, audio-mix/</td><td>Working files of the systems, sight and sound threads.</td></tr>
+    <tr><td>housekeeping/</td><td>The nightly tidy-up: its log, and the list of things waiting for your yes before they are deleted or archived.</td></tr>
+    <tr><td>archive/</td><td>Superseded drafts, old gate receipts, the 10 Nov hand-off notes and old red team findings, kept, never current.</td></tr>
+  </table></div>
+</section>
+
+<footer>Updated 14 Nov by the nightly housekeeping run: eight pages from the picks and builds of 13 and 14 Nov, and your two rulings of 13 Nov. Out-of-date pages stay listed so old links still make sense.</footer>
+</div>
+
+
+</body></html>
