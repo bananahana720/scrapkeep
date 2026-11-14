@@ -165,9 +165,12 @@ func _run() -> void:
 		var alt := ModelVariants.path(authored)
 		var sibling: String = authored.get_basename() + "_tripo.glb"
 		if not ModelVariants.accepted(sibling):
+			# a rejected sibling stays out of the game, but its file still ships and --models=tripo-all still loads it,
+			# so it is held to the same contract below (ruling dr)
 			_check(alt == authored, "switch on keeps the authored %s, its sibling is rejected" % authored.get_file())
-			continue
-		_check(alt == sibling, "switch on picks %s" % alt.get_file())
+			alt = sibling
+		else:
+			_check(alt == sibling, "switch on picks %s" % alt.get_file())
 		var a_scene := load(authored) as PackedScene
 		var t_scene := load(alt) as PackedScene
 		_check(a_scene != null and t_scene != null, "%s and its sibling load" % authored.get_file())
@@ -491,7 +494,9 @@ func _part_brightness(path: String, part: String) -> float:
 # anything here, so a face inside the body is counted too; it is a floor on a body that is too dark or too thin, not
 # a render. The floor sits between what that PC look failed and passed: the failed hooker barrel sent 0.48 of the
 # authored body's light, the swatter it passed 0.71 and the netcaster it passed 0.81. Three bodies set it, so a new
-# body that lands near the floor still needs the PC look.
+# body that lands near the floor still needs the PC look. It is not proof of brightness: the second hooker barrel
+# measured 0.72 here and the PC look still showed it near-black, so that barrel is rejected (ModelVariants.REJECTED)
+# and a retry is judged from a lit render, not from this number.
 const SEEN_FLOOR := 0.65
 
 
@@ -556,6 +561,7 @@ func _check_stand_ins() -> void:
 	var shed_a: Array = flume["kinds"]["sluice_shed"]["variants"]["a"]["lod"]
 	var shed_b: Array = flume["kinds"]["sluice_shed"]["variants"]["b"]["lod"]
 	var tent_b: Array = dam["kinds"]["survey_tent"]["variants"]["b"]["lod"]
+	ModelVariants.set_rejected({})  # the rule is tested on the sluice shed whether or not its generated model is accepted today
 	ModelVariants.set_enabled(false)
 	_check(ParkProps._lod_paths(flume, {"kind": "sluice_shed", "v": "b"}) == shed_b, "switch off: a variant b sluice shed draws its own model")
 	ParkProps.release_shared()
@@ -571,20 +577,53 @@ func _check_stand_ins() -> void:
 	_check(ParkProps._lod_paths(dam, {"kind": "survey_tent", "v": "b"}) == tent_b, "switch on: the low survey tent b keeps its own model, variant a is too tall to stand in")
 	ModelVariants.set_rejected({ModelVariants.path(shed_a[0]): "test"})
 	_check(ParkProps._lod_paths(flume, {"kind": "sluice_shed", "v": "b"}) == shed_b, "a rejected sibling does not stand in for its sisters")
+	ModelVariants.set_rejected({ModelVariants.path(shed_a[2]): "test"})
+	_check(ParkProps._lod_paths(flume, {"kind": "sluice_shed", "v": "b"}) == shed_b and ParkProps._lod_paths(flume, {"kind": "sluice_shed", "v": "a"}) == shed_a,
+		"a sister with one far detail level rejected does not stand in")
+	ModelVariants.set_rejected({})
+	_check(ParkProps._lod_paths(flume, {"kind": "sluice_shed", "v": "b"}) == shed_a, "the kept answer is dropped when the rejected list changes back")
+	# the width rule, on a made-up kind: a sister 1.2 times as wide stays out, one 1.05 times as wide stands in
+	var wide := {"a": {"lod": shed_a, "radius": 6.0, "height": 5.0}, "b": {"lod": shed_b, "radius": 5.0, "height": 5.0}}
+	_check(ParkProps._find_stand_in(wide, "b") == shed_b, "a sister 1.2 times as wide does not stand in")
+	wide["a"]["radius"] = 5.25
+	_check(ParkProps._find_stand_in(wide, "b") == shed_a, "a sister 1.05 times as wide stands in")
 	ModelVariants.set_rejected()
+	var shed_rejected := false
+	for lod in shed_a:
+		shed_rejected = shed_rejected or not ModelVariants.accepted(String(lod).get_basename() + ModelVariants.SUFFIX + ".glb")
+	if shed_rejected:
+		var kept := true
+		for v in ["a", "b", "c"]:
+			kept = kept and ParkProps._lod_paths(flume, {"kind": "sluice_shed", "v": v}) == flume["kinds"]["sluice_shed"]["variants"][v]["lod"]
+		_check(kept, "with the shipped rejected list, no sluice shed variant draws another variant's model")
 	ParkProps.release_shared()
 	ModelVariants.set_enabled(false)
 
 
 # The world 1 point of interest props have no authored twin (tools/tripo/README.md, "New props"). The loader that places them
 # sets vertex colour as albedo, so each must be one mesh that carries COLOR_0, stands on its origin, and is the size its
-# placement was planned for: [stem, tall in metres, longer ground side in metres, has LOD files].
+# placement was planned for: [stem, tall in metres, longer ground side in metres, has LOD files]. A fifth true marks a
+# piece that is thrown and spun, so its origin is its centre and not its foot.
 const POI_PROPS := [
 	["poi_tally_stand", 4.0, 3.0, true],
 	["poi_yard_gate", 4.0, 8.0, true],
 	["poi_camp_tally_post", 2.5, 1.2, true],
 	["poi_fence_panel", 2.5, 6.2, false],
 	["poi_survey_stake", 3.16, 0.88, false],
+	["poi_weighbridge_gantry", 7.0, 12.0, true],
+	["poi_ring_flag", 2.0, 1.27, false],
+	["poi_siren_mast", 6.0, 2.66, false],
+	["poi_furnace_stacks", 60.2, 46.6, false],
+	["poi_tagged_crate", 1.2, 1.27, false],
+	["poi_tagged_crate_piece_a", 0.8, 0.71, false, true],
+	["poi_tagged_crate_piece_b", 0.66, 0.94, false, true],
+	["poi_tagged_crate_piece_c", 0.1, 0.96, false, true],
+	["poi_tagged_crate_piece_d", 0.52, 0.46, false, true],
+	["poi_req_locker", 2.5, 3.0, false],
+	["poi_req_locker_door", 1.8, 2.56, false],
+	["poi_tag_rack", 3.03, 3.0, false],
+	["poi_tag_rack_leaning", 3.66, 4.57, false],
+	["poi_scooter_shed", 3.0, 4.0, false],
 ]
 
 
@@ -609,7 +648,10 @@ func _check_poi_props() -> void:
 				if suffix == "":
 					var mid := box.get_center()
 					# the stake's pennant hangs to one side of its foot, so only the fitted props are held to the centre
-					_check(absf(box.position.y) < 0.02 and (not row[3] or (absf(mid.x) < 0.05 and absf(mid.z) < 0.05)), "%s stands on its origin (base %.3f, centre %.3f, %.3f)" % [row[0], box.position.y, mid.x, mid.z])
+					if row.size() > 4 and row[4]:
+						_check(mid.length() < 0.1 and absf(mid.y) < 0.04, "%s turns about its centre (%.3f from its origin)" % [row[0], mid.length()])
+					else:
+						_check(absf(box.position.y) < 0.02 and (not row[3] or (absf(mid.x) < 0.05 and absf(mid.z) < 0.05)), "%s stands on its origin (base %.3f, centre %.3f, %.3f)" % [row[0], box.position.y, mid.x, mid.z])
 					_check(absf(box.size.y - row[1]) < 0.1 and absf(maxf(box.size.x, box.size.z) - row[2]) < 0.1,
 						"%s is the planned size (%.2f tall, %.2f across)" % [row[0], box.size.y, maxf(box.size.x, box.size.z)])
 			node.free()

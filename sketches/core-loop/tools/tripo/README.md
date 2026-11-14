@@ -13,6 +13,11 @@ add its own `res://` path and a one-line reason to `REJECTED` in `src/presentati
 `tests/tripo_variants_test.gd` fails when the list and the rows disagree. `--models=tripo-all` loads every
 sibling, rejected ones too, so a rejected model can still be judged in the game.
 
+Rejected today (14 November 2026, the board's PC looks):
+
+- `world_one/enemy_hooker_tripo.glb`: the barrel renders near-black beside the authored rust-orange one, close up and at 22 m. The light test in `tests/tripo_variants_test.gd` passed it twice, so that test is a floor and not proof. A retry is judged from a lit render of the barrel beside the authored one.
+- `park/props/flume/sluice_shed_a{,_lod1,_lod2}_tripo.glb`: it swaps cleanly and holds its shape from 40 to 160 m, but it loses the big red water wheel, the authored shed's landmark shape. A retry must keep a big wheel, or keep the authored wheel beside the generated shack.
+
 Earlier generated-mesh trials were rejected (docs/decisions.tsv rows 352 to 361, TADR-011): lumps at
 budget, licence problems, colour loss. Row 361 allows a reopen "only with a different model class".
 Tripo's v3.1 smart_low_poly mode is that different class, and Andrew asked for it on 13 Nov 2026. The
@@ -179,7 +184,7 @@ candidate had a bolt lying beside its base).
 
 ## Props: one generated model for every variant of a kind
 
-A prop kind has variants a, b and c, and each placement picks one at random (`park_props.gd` `expand`). Only variant a has a generated sibling. With the switch on, a variant with no sibling of its own draws a sister's sibling when the sister is the same size: no more than 1.1 times as wide and within 15 percent of its height (`park_props.gd` `_stand_in`). So every sluice shed changes with the switch, not one in three, and the low survey tent b keeps its own model because tent a is too tall for it. The PC look of 14 November 2026 found the nearest sluice shed unchanged by the switch: it was a variant b.
+A prop kind has variants a, b and c, and each placement picks one at random (`park_props.gd` `expand`). Only variant a has a generated sibling. With the switch on, a variant with no sibling of its own draws a sister's sibling when the sister has one for every detail level, is no more than 1.1 times as wide and is within 15 percent of its height (`park_props.gd` `_stand_in`). A narrower sister is allowed, so a stand-in can look smaller than the prop it stands for: the compressor cart's variants b and c draw a cart 26 to 36 percent narrower. So every sluice shed changes with the switch, not one in three, and the low survey tent b keeps its own model because tent a is too tall for it. The PC look of 14 November 2026 found the nearest sluice shed unchanged by the switch: it was a variant b.
 
 ## Generated and not shipped
 
@@ -204,9 +209,9 @@ A prop that does not exist yet has no authored model to fit against. `tripo_prop
 
 `blender -b --factory-startup -P tools/tripo/tripo_prop.py -- --in <tripo model.glb> --out assets/models/world_one/<stem>.glb --name <MeshName> --tall <metres> [--wide <metres>] --max-tris <cap> --lods "0.5,0.15"`
 
-It scales the mesh to `--tall` metres (or to `--wide` metres across its longer ground side), stands it on its origin, groups the texture into eight flat colours of its own, writes them as linear `COLOR_0` on one material named `paint`, drops the texture and the UVs, and writes `_lod1` and `_lod2` files by decimation. The loader must set vertex colour as albedo, as `src/presentation/park_props.gd` does. Register each file in `assets/registry.d/poi_props.json` with its Tripo task and sha256, run `python3 tools/fold_registry.py`, and add the stem to `POI_PROPS` in `tests/tripo_variants_test.gd`.
+It scales the mesh to `--tall` metres (or to `--wide` metres across its longer ground side), stands it on its origin, groups the texture into eight flat colours of its own, writes them as linear `COLOR_0` on one material named `paint`, drops the texture and the UVs, and writes `_lod1` and `_lod2` files by decimation. With both `--tall` and `--wide`, the height and the ground plane are scaled separately. `--span "a:b"` moves points a metres either side of the centre to b metres, which sets an opening to a planned width, and `--paint "n=#rrggbb"` repaints found colour n when the generated texture misses the palette (the script prints the found colours). The loader must set vertex colour as albedo, as `src/presentation/park_props.gd` does. Register each file in `assets/registry.d/poi_props.json` with its Tripo task and sha256, run `python3 tools/fold_registry.py`, and add the stem to `POI_PROPS` in `tests/tripo_variants_test.gd`.
 
-A mesh generator returns a thin shape (a stake, a wire fence) as a lump. Build those by hand: `tools/blender/world_one/poi_yard.py` builds the fence panel and the survey stake in the same format.
+A mesh generator returns a thin shape (a stake, a wire fence) as a lump. Build those by hand: `tools/blender/world_one/poi_yard.py` builds the fence panel, the survey stake, the ring flag and the siren mast in the same format, and the plain box props (the furnace stacks, the tagged crate and its pieces, the requisition locker and its door, the tag rack and the scooter shed), which are cheaper to build than to generate.
 
 World 1 points of interest, 14 November 2026 (API credits, text to model v3.1, smart_low_poly, face limit 4,000, two candidates each at 30 credits; 180 credits, 320 left after):
 
@@ -217,6 +222,17 @@ World 1 points of interest, 14 November 2026 (API credits, text to model v3.1, s
 | `world_one/poi_camp_tally_post.glb` | `prompts/poi_camp_tally_post.txt` | 8b2f90eb-a287-4815-8a9e-58f1d89d3b62 | 1,999 (999, 296) | 2.5 m tall |
 | `world_one/poi_fence_panel.glb` | built by `poi_yard.py` | none | 288 | 6.2 m wide, 2.5 m tall; repeat every 6.2 m, feet touching |
 | `world_one/poi_survey_stake.glb` | built by `poi_yard.py` | none | 168 | 3.16 m tall, origin at the foot |
+| `world_one/poi_weighbridge_gantry.glb` | `prompts/poi_weighbridge_gantry.txt` | Studio workspace e67eb1c6-c217-4e11-a2a1-b9c2798bbd08 (120 Pro) | 3,200 (1,598, 478) | 12.0 m wide, 7.0 m tall, 5.5 m deep, 8 m roll-over plate (`--wide 12 --tall 7 --span 3.1:4.0`, seven colours repainted with `--paint`) |
+| `world_one/poi_ring_flag.glb` | built by `poi_yard.py` | none | 204 | 2.0 m tall, origin at the foot |
+| `world_one/poi_siren_mast.glb` | built by `poi_yard.py` | none | 328 | 6.0 m tall, horn along +X, origin at the foot |
+| `world_one/poi_furnace_stacks.glb` | built by `poi_yard.py` | none | 396 | 46.6 m wide, 60.2 m tall, for a 600 m view |
+| `world_one/poi_tagged_crate.glb` | built by `poi_yard.py` | none | 204 | 1.2 m cube, brass tag on the front |
+| `world_one/poi_tagged_crate_piece_{a,b,c,d}.glb` | built by `poi_yard.py` | none | 36 each | the four pieces a broken crate leaves, each with its origin at its centre |
+| `world_one/poi_req_locker.glb` | built by `poi_yard.py` | none | 156 | 3.0 m wide, 2.5 m tall, 1.5 m deep, open at the front |
+| `world_one/poi_req_locker_door.glb` | built by `poi_yard.py` | none | 120 | 2.56 by 1.8 m, origin at the hinge foot; place at (-1.28, 0.3, 0.7) on the locker and turn about the up axis |
+| `world_one/poi_tag_rack.glb` | built by `poi_yard.py` | none | 444 | 3.0 m wide, 3.0 m tall, 2.0 m deep; tags face the front |
+| `world_one/poi_tag_rack_leaning.glb` | built by `poi_yard.py` | none | 492 | the rack tipped 14 degrees with a seventh crate on the ground beside it; 4.6 m wide, 3.7 m tall |
+| `world_one/poi_scooter_shed.glb` | built by `poi_yard.py` | none | 352 | 4.0 m wide, 3.0 m deep, 3.0 m tall with its pennant; the scooter stands inside at the origin |
 
 The stand and the gate came back narrower and taller than the placement asked for (2 m across, and 6.7 m tall), so both are fitted with `--wide` and `--tall` together, which scales the ground plane and the height separately. Look at the render when using both: these two chunky shapes take it, a thin or round one may not.
 
