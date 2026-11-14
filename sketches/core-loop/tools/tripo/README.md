@@ -170,7 +170,7 @@ A pilot's sibling is `assets/models/pilot_<name>_anim_tripo.glb`. `hero_assets.g
 
 Two things differ from the authored pilots:
 
-- The head and everything on it (ears, jaw, snout, crest, goggles) moves as one piece with the `head` bone, and a tail does not wag. The new skin has weights for the spine, neck, head, shoulders, arms and hands only.
+- The head and everything on it (ears, jaw, snout, crest, goggles) moves as one piece with the `head` bone, and a tail does not wag. The new skin has weights for the pelvis (the legs move with it), spine, neck, head, shoulders, arms and hands only.
 - A new head is bigger than the authored one, so a head outfit built for the authored head would be buried in it. A sibling that needs it carries a `MountFit_head` node under its head bone. `hero_assets.gd` (`_mount_fit`) reads the node's size and place and re-seats every part mounted on that bone. Tarn and Tally carry one; Rivet's hood already showed, so Rivet has none.
 
 Make one in three steps:
@@ -203,7 +203,7 @@ Copy the authored model's tracked `.glb.import` settings to the sibling (everyth
 | Sable | `prompts/pilot_sable.txt` | 45 Pro | 8,029 and 6,396 | fit `--bridge 0.2 --cut 1` (the sticks run down to the boots) | 0.4% in `wince` (7.5%) |
 | Kest | typed in Studio and not saved here; it is in the Tripo account's history | 45 Pro | 8,200 and 6,856 | none | 3.4% in `big_cheer` (7.4%) |
 | Tarn | typed in Studio and not saved here; it is in the Tripo account's history | 90 Pro (the first try stood upright and tore when seated) | 8,546 and 6,360, in two meshes (`Pilot` and `Cap`) | touch `--cap-hue "0.40 0.56" --mount-fit "1.6 0.008 -0.04 -0.14"` | 0.1% in `heave` (2.1%) |
-| Tally | typed in Studio and not saved here; it is in the Tripo account's history | 45 Pro | 8,200 and 6,537 | touch `--mount-fit "1.3 0 0.07 0.06"` | 1.3% in `ult_strike` (5.1%) |
+| Tally | typed in Studio and not saved here; it is in the Tripo account's history | 45 Pro | 8,200 and 6,537 | touch `--mount-fit "1.32 0 0.062 0.069"` | 1.3% in `ult_strike` (5.1%) |
 | The Cannon | typed in Studio and not saved here; it is in the Tripo account's history | 45 Pro | 8,199 and 6,562 | none | 1.3% in `big_cheer` (6.7%) |
 
 The refit of 14 November 2026 used the saved Studio downloads and cost no credits. The authored pilots measure 0.0 to 0.1 percent. The measure is taken in Blender; the look in the game is the board's PC check.

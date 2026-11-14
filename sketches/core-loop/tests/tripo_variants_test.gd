@@ -205,7 +205,7 @@ func _check_parts() -> void:
 
 
 # A pilot's Tripo sibling sits on the authored skeleton: the same bones (outfits mount on them and
-# the glance turns three of them), the same clips, one skinned mesh at most 10,000 triangles, and a
+# the glance turns three of them), the same clips, a skinned Pilot mesh, at most 10,000 triangles in all, and a
 # rest shape inside the cockpit limits the ball look work measured on 13 November 2026 (head top
 # +0.57, feet -0.59, half width 0.43, nothing forward of 0.58; tools/tripo/README.md, Pilots).
 # Tarn's sibling keeps his cap as its own Cap mesh, as the authored model does, so his Steady Cap outfit's Replace_Cap
@@ -269,7 +269,7 @@ func _check_pilots() -> void:
 			box = part.get_aabb() if skinned.is_empty() else box.merge(part.get_aabb())
 			skinned.append(mi)
 		var body := new.find_child("Pilot", true, false) as MeshInstance3D
-		_check(body != null and strangers.is_empty(), "%s sibling has a Pilot mesh and no skinned mesh the authored model lacks (%s)" % [stem, strangers])
+		_check(body != null and skinned.has(body) and strangers.is_empty(), "%s sibling has a skinned Pilot mesh and no skinned mesh the authored model lacks (%s)" % [stem, strangers])
 		if body != null:
 			_check(tris <= 10000, "%s sibling is at most 10,000 triangles (%d)" % [stem, tris])
 			_check(draws_ok, "%s sibling is one draw a mesh (%d)" % [stem, skinned.size()])
@@ -311,7 +311,9 @@ func _check_head_outfits() -> void:
 			if suffix == "_tripo":
 				_check((mark != null) == bool(row.fit), "%s sibling %s MountFit_head node" % [row.pilot, "carries a" if row.fit else "has no"])
 				if mark != null:
-					scale = mark.transform.basis.get_scale().y
+					var sizes := mark.transform.basis.get_scale()
+					scale = sizes.y
+					_check(absf(sizes.x - sizes.y) < 0.005 * sizes.y and absf(sizes.z - sizes.y) < 0.005 * sizes.y, "%s sibling's MountFit_head node is one size on every axis (%s)" % [row.pilot, sizes])
 				var cap := rig.find_child("Cap", true, false) as MeshInstance3D
 				if row.pilot == "tarn":
 					_check(cap != null and cap.layers == 0, "the Steady Cap hides the sibling's modelled Cap")
@@ -320,6 +322,8 @@ func _check_head_outfits() -> void:
 						var over: AABB = boxes[suffix]
 						_check(over.grow(0.01).encloses(AABB(Vector3(under.position.x, over.position.y, under.position.z), Vector3(under.size.x, 0.0, under.size.z))),
 							"the Steady Cap covers where the modelled Cap sat (cap %s, steady %s)" % [under, over])
+						_check(over.end.y > under.end.y - 0.01 and over.end.y < under.end.y + 0.03,
+							"the Steady Cap's crown sits at the modelled Cap's crown, neither sunk nor floating (cap top %.3f, steady top %.3f)" % [under.end.y, over.end.y])
 				if row.pilot == "tally" and worn != null:
 					var skin := rig.find_child("Pilot", true, false) as MeshInstance3D
 					var body: AABB = skin.global_transform * skin.get_aabb()

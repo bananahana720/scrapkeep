@@ -1,4 +1,4 @@
-# blender -b --factory-startup -P pilot_touch.py -- --in fit.glb --out out.glb [--head 1.0] [--fwd 0.57] [--tail 1] [--half 0.43] [--cap-hue "0.40 0.56"] [--mount-fit "1.3 0 0.07 0.06"]
+# blender -b --factory-startup -P pilot_touch.py -- --in fit.glb --out out.glb [--head 1.0] [--fwd 0.57] [--tail 1] [--half 0.43] [--cap-hue "0.40 0.56"] [--mount-fit "1.32 0 0.062 0.069"]
 # After pilot_fit.py: enlarge the head by its skin weights, keep the snout inside the cockpit's forward limit, and tuck a tail stub in.
 # --cap-hue splits a modelled cap of that colour into its own Cap mesh, so an outfit's Replace_Cap node can hide it.
 # --mount-fit leaves an MountFit_head marker: the size and the offset (right, forward, up) that seat a head outfit on this head.
@@ -94,7 +94,10 @@ if "--mount-fit" in opt:
     fs, fx, fy, fz = [float(x) for x in opt["--mount-fit"].split()]
     mark = bpy.data.objects.new("MountFit_head", None); bpy.context.scene.collection.objects.link(mark)
     mark.parent = arm; mark.parent_type = "BONE"; mark.parent_bone = "head"
-    mark.matrix_world = Matrix.Translation(head_at) @ Matrix.Translation((fx, fy, fz)) @ Matrix.Scale(fs, 4)
+    # placed from the head bone's rest matrix, never from matrix_world: the imported rig is still playing a clip here
+    hb = arm.data.bones["head"]; seat = arm.matrix_world @ hb.matrix_local @ Matrix.Translation((0.0, hb.length, 0.0))
+    mark.matrix_parent_inverse = Matrix.Identity(4)
+    mark.matrix_basis = seat.inverted() @ Matrix.Translation(head_at) @ Matrix.Translation((fx, fy, fz)) @ Matrix.Scale(fs, 4)
 hv = [c for c, x in zip(co, w) if x > 0.5]
 print("TOUCH", json.dumps({"tail_verts": tail, "y": [round(min(c.y for c in co), 2), round(max(c.y for c in co), 2)],
     "z": [round(min(c.z for c in co), 2), round(max(c.z for c in co), 2)], "x": [round(min(c.x for c in co), 2), round(max(c.x for c in co), 2)],

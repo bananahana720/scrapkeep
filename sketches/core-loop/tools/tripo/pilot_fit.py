@@ -7,7 +7,7 @@ opt.update(dict(zip(a[::2], a[1::2])))
 bpy.ops.wm.read_factory_settings(use_empty=True)
 bpy.ops.import_scene.gltf(filepath=opt["--old"])
 arm = [o for o in bpy.data.objects if o.type == "ARMATURE"][0]
-# the authored skinned meshes (body, claws, tail, wings, cap): they lend their weights and are then replaced
+# the authored skinned meshes (body, claws, tail, wings, cap): they give the skeleton and the list of meshes to replace
 old = [o for o in bpy.data.objects if o.type == "MESH" and o.vertex_groups and (opt["--drop"] == "all" or o.name in opt["--drop"].split(","))]
 body = max(old, key=lambda o: len(o.data.polygons))
 before = set(bpy.data.objects)
@@ -126,7 +126,6 @@ only(n); bpy.ops.object.duplicate(); px = bpy.context.view_layer.objects.active
 rm = px.modifiers.new("r", "REMESH"); rm.mode = "VOXEL"; rm.voxel_size = float(opt.get("--voxel", "0.012")); bpy.ops.object.modifier_apply(modifier="r")
 px.vertex_groups.clear()
 only(px, bo); bpy.context.view_layer.objects.active = bo; bpy.ops.object.parent_set(type="ARMATURE_AUTO")
-gname = {g.index: g.name for g in px.vertex_groups}
 for src_nm, dst_nm in fold.items():
     sg_ = px.vertex_groups.get(src_nm); dg = px.vertex_groups.get(dst_nm)
     if sg_ is None: continue
