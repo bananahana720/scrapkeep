@@ -176,6 +176,20 @@ Make one in three steps:
 
 Copy the authored model's tracked `.glb.import` settings to the sibling (everything after the `dest_files` line). `tests/asset_registry_test.gd` holds the sibling to the pilot class budget. Without the import settings Godot renames `idle_loop` to `idle` and the clip lookups miss. `tests/tripo_variants_test.gd` checks the bones, the clips, a 10,000 triangle cap, the `pilot` material slot and the cockpit limits. The limits are the ball look work's measurements of 13 November 2026, in ball model units: head top no higher than +0.57, feet no lower than -0.59, half width at most 0.43, nothing forward of 0.58 (the dash is at 0.60). `design-v3/ROSTER-LOOK.md` ("The cutaway as built") describes the cockpit they come from.
 
-| Pilot | Prompt | Credits | Triangles, vertices | Rest box (x, y, z) |
-| --- | --- | --- | --- | --- |
-| Rivet | `prompts/pilot_rivet.txt` | 45 Pro (plus 90 on two rejected tries) | 8,200 and 7,811 (authored: 10,456 triangles) | -0.40 to 0.39, -0.54 to 0.43, -0.57 to 0.45 |
+| Pilot | Prompt | Credits | Triangles, vertices |
+| --- | --- | --- | --- |
+| Rivet | `prompts/pilot_rivet.txt` | 45 Pro (plus 90 on two rejected tries) | 8,200 and 7,811 (authored: 10,456 triangles) |
+| Sable | `prompts/pilot_sable.txt` | 45 Pro | 8,200 and 6,421 |
+| Kest | typed in Studio, kept in the account's history | 45 Pro | 8,200 and 6,857 |
+| Tarn | typed in Studio, kept in the account's history | 90 Pro (the first try stood upright and tore when seated) | 8,200 and 6,079 |
+| Tally | typed in Studio, kept in the account's history | 45 Pro | 8,200 and 6,534 |
+| The Cannon | typed in Studio, kept in the account's history | 45 Pro | 8,200 and 6,583 |
+
+Every sibling's rest box is inside the cockpit limits; `tests/tripo_variants_test.gd` prints each box.
+
+What the six taught:
+
+- Ask for the pose in the prompt: seated, knees bent, both arms reaching forward to hold two control sticks. An upright model with arms at its sides tears when the seated clips bend it.
+- `pilot_fit.py` replaces every authored skinned mesh by default (`--drop all`): body, claws, tail, wings and cap. It measures the arm angle from the generated hands, which it looks for between the hips and the neck, beside the body, and level with or in front of the shoulder, so ears, crests and a tail beside the body never count as hands.
+- `pilot_touch.py` centres a pilot that fits the width but sits off centre, and narrows a pilot wider than 0.86 evenly about its centre (Kest, 6 percent). Pass `--tail 0` for a pilot that has a tail.
+- After copying the import settings, `touch` the sibling's `.glb.import` before running `godot --headless --import`. Godot compares change times to the second, and skips a file whose settings changed in the same second it was first imported; the clips then keep Godot's default names (`idle`, not `idle_loop`). `*.import` is ignored here, so add the sibling's file with `git add -f`, as the authored pilots' files are.

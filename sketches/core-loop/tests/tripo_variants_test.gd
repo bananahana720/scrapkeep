@@ -206,7 +206,14 @@ func _check_parts() -> void:
 # the glance turns three of them), the same clips, one skinned mesh at most 10,000 triangles, and a
 # rest shape inside the cockpit limits the ball look work measured on 13 November 2026 (head top
 # +0.57, feet -0.59, half width 0.43, nothing forward of 0.58; tools/tripo/README.md, Pilots).
-const PILOT_SIBLINGS := ["res://assets/models/pilot_rivet_anim.glb"]
+const PILOT_SIBLINGS := [
+	"res://assets/models/pilot_rivet_anim.glb",
+	"res://assets/models/pilot_sable_anim.glb",
+	"res://assets/models/pilot_kest_anim.glb",
+	"res://assets/models/pilot_tarn_anim.glb",
+	"res://assets/models/pilot_tally_anim.glb",
+	"res://assets/models/pilot_cannon_anim.glb",
+]
 
 
 func _check_pilots() -> void:
