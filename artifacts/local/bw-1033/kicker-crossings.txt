@@ -1,0 +1,2 @@
+cross z476 at t 9502 (104.6 s) x -6.6 y -0.8 v 0.8,1.9,12.6 flow stage | peak y 1.6 | landing t 9622 at x -5.2 y -0.8 z 495.9 flow stage
+cross z476 at t 10875 (119.7 s) x -9.8 y -0.4 v 10.1,4.8,21.2 flow beacon | peak y 1.6 | landing t 10972 at x -2.4 y -0.9 z 497.7 flow beacon
