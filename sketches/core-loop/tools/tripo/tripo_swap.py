@@ -11,7 +11,8 @@ that node's material slots (or, for a single-material vertex-coloured node, its 
 for a crew enemy whose slots are white and whose colour is all vertex colour, the nearest of each
 slot's own vertex colours, taking that slot).
 With --region (a box in the node's own Blender space, Z up) only the node's faces whose centres lie in the box are
-replaced: the Tripo mesh is fitted to those faces' bounds and the node's other faces stay as authored. This is
+replaced: the Tripo mesh is fitted to those faces' bounds and the node's other faces stay as authored. The new
+faces take the unshaded value in the authored second UV set (the polish bake the game multiplies paint by). This is
 for a body that holds a frame or a mast the game's own drawing depends on (the netcaster's net window); --max-tris
 then caps the whole node, kept faces included.
 With --bright match the sampled texture is lifted until the node's mean brightness (kept faces included) reaches the
@@ -253,6 +254,14 @@ if region is not None:  # the authored faces outside the box join the new mesh, 
     both = bmesh.new(); both.from_mesh(me)
     fresh = len(both.faces)
     both.from_mesh(tme); both.faces.ensure_lookup_table()
+    # The authored faces bring their second UV set, which holds the polish bake (x: the share of the face out of
+    # shadow, y: edge wear, 0.5 neutral). The game multiplies the slot colour by it (bake_look.gd). The new faces
+    # would read (0, 0) there, fully in shadow: the hooker barrel and the netcaster torso rendered near-black for
+    # that reason until 14 November 2026. They take the unshaded value instead.
+    for layer in list(both.loops.layers.uv.values())[1:]:
+        for f in both.faces[:fresh]:
+            for loop in f.loops:
+                loop[layer].uv = (1.0, 0.5)
     bmesh.ops.delete(both, geom=[f for f in both.faces[fresh:] if in_region(f.calc_center_median())], context="FACES")
     both.to_mesh(me); both.free()
     tris = sum(len(p.vertices) - 2 for p in me.polygons)
