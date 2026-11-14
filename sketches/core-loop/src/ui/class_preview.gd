@@ -209,7 +209,7 @@ static func preview_lights(viewport: Node, tint: Color, rim_light: bool) -> Arra
 
 func _build_shell() -> void:
 	if _painter == null:
-		_painter = HeroAssets.new()
+		_painter = HeroAssets.previewing()
 	ball = Node3D.new()
 	ball.name = "Shell"
 	_viewport.add_child(ball)

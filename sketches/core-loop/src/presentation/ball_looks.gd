@@ -477,7 +477,12 @@ static func _windowed(was: Material) -> ShaderMaterial:
 	cut.set_shader_parameter("vertex_tint", true)
 	if was is BaseMaterial3D:
 		cut.set_shader_parameter("vertex_tint", was.vertex_color_use_as_albedo)
-		cut.set_shader_parameter("tint", was.albedo_color)
+		# A vertex-coloured surface carries its colour as the paint lift with no paint taken,
+		# the same terms hero_assets' painted material uses, so one reading fits both.
+		cut.set_shader_parameter("tint", Color.WHITE if was.vertex_color_use_as_albedo else was.albedo_color)
+		cut.set_shader_parameter("lift", was.albedo_color if was.vertex_color_use_as_albedo else Color.WHITE)
+		cut.set_shader_parameter("paint_tint", Color.WHITE)
+		cut.set_shader_parameter("paint_take", 0.0)
 		cut.set_shader_parameter("metal", was.metallic)
 		cut.set_shader_parameter("rough", was.roughness)
 		if was.emission_enabled:

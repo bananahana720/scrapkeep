@@ -1103,18 +1103,19 @@ func _assets() -> Dictionary:
 	return shell_assets
 
 
-# The ball look the launch asked for (--ball-look, ball_looks.gd). A painter with no tuning (the
-# class card, the customize page, the title) draws the default look, so a preview shows the ball
-# the run will.
-static var _default_look := ""
-
+# The ball look the launch asked for (--ball-look, ball_looks.gd); "today" without a tuning. A
+# preview that should show the ball a run will gives its painter a tuning (previewing()).
 func ball_look() -> String:
 	var tuning = ctx.get("tuning") if ctx != null else null
-	if tuning != null:
-		return tuning.option(Tuning.BALL_LOOK_KEY)
-	if _default_look == "":
-		_default_look = Tuning.new().option(Tuning.BALL_LOOK_KEY)
-	return _default_look
+	return tuning.option(Tuning.BALL_LOOK_KEY) if tuning != null else BallLooks.TODAY
+
+
+# A painter for a preview outside a run (the class card, the customize page): it draws the
+# default ball look, so the preview shows the ball the run will.
+static func previewing() -> Node:
+	var painter: Node = (load("res://src/presentation/hero_assets.gd") as GDScript).new()
+	painter.ctx = {"tuning": Tuning.new()}
+	return painter
 
 
 static func _layer_path(base: String, heft_class: int) -> String:

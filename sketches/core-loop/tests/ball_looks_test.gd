@@ -8,7 +8,7 @@ const Tuning := preload("res://src/movement/tuning.gd")
 const T := preload("res://tests/support/t.gd")
 
 # The ball looks (ball_looks.gd, --ball-look): the switch is the cutaway by default, and a
-# painter with no tuning (a preview) draws that default. A painter under "today" swaps no shell
+# preview's painter draws that default. A painter under "today" or with no tuning swaps no shell
 # and dresses nothing. Under a look a painter fits that look for every pilot and dresses it itself. The gyro and the bell
 # swap the whole shell. The cutaway keeps each pilot's own shell (kit, weapon ring, hub mounts)
 # and plates its rolling part: every heft class has plating inside the collider, the lattice's
@@ -32,10 +32,11 @@ func _run_all() -> void:
 	t.eq("every look is an option of the switch", tuning.options_of(Tuning.BALL_LOOK_KEY), BallLooks.ids())
 	t.eq("today swaps no shell", BallLooks.asset_paths(BallLooks.TODAY, PILOTS), {})
 	t.eq("an unknown look swaps no shell", BallLooks.asset_paths("bogus", PILOTS), {})
-	var preview := HeroAssets.new()
+	var preview := HeroAssets.previewing()
 	root.add_child(preview)
-	t.eq("a painter with no tuning (a preview) draws the default look", preview.ball_look(), tuning.option(Tuning.BALL_LOOK_KEY))
+	t.eq("a preview's painter draws the default look", preview.ball_look(), tuning.option(Tuning.BALL_LOOK_KEY))
 	preview.free()
+	_unchanged("no tuning", null)
 	_unchanged("today", _tuning(BallLooks.TODAY))
 	for look in BallLooks.LOOKS:
 		if BallLooks.PLATED.has(look):
@@ -64,7 +65,7 @@ func _painter(tuning) -> HeroAssets:
 # A painter with no look fits the pilot's own shell at the heaviest heft class exactly as a
 # painter with no tuning does: the same meshes, the same ones drawing, hero_assets' materials.
 func _unchanged(label: String, tuning) -> void:
-	var plain := _painter(_tuning(BallLooks.TODAY))
+	var plain := _painter(null)
 	var painter := _painter(tuning)
 	var ball := Node3D.new()
 	root.add_child(ball)
@@ -122,7 +123,7 @@ func _look(look: String) -> void:
 
 # A plated look: each pilot's own shell at the heaviest heft class, with its rolling part plated.
 func _plated(look: String) -> void:
-	var plain := _painter(_tuning(BallLooks.TODAY))
+	var plain := _painter(null)
 	var painter := _painter(_tuning(look))
 	t.eq("%s: the painter reads the look from the tuning" % look, painter.ball_look(), look)
 	t.eq("%s: no pilot's whole shell is swapped" % look, BallLooks.asset_paths(look, PILOTS), {})
@@ -346,7 +347,7 @@ func _glance() -> void:
 	for i in int((PilotGlance.FIRST_AFTER + 0.6) * 60.0):
 		glance.observe(true, ahead, 1.0 / 60.0)
 	t.eq("glance: no glance at a camera in front", glance.turn, 0.0)
-	var plain := _painter(_tuning(BallLooks.TODAY))
+	var plain := _painter(null)
 	for case in [[painter, true], [plain, false]]:
 		var rec: Dictionary = case[0].fit_shell_into(ball, PILOTS[0], "", 1, {"class": Color.WHITE})
 		rec["class"] = PILOTS[0]
