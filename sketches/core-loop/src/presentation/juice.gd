@@ -212,6 +212,10 @@ func setup(ctx_ref) -> void:
 			camera.set_lock(at)
 		elif camera != null and kind == "arena_unlocked":
 			camera.set_lock(null))
+	# A yard also ends on these flow states with no arena_unlocked (stage_locks.gd _on_flow_changed).
+	events.flow_changed.connect(func(state: String):
+		if camera != null and state in ["gates", "launch", "summary", "title", "victory"]:
+			camera.set_lock(null))
 	if ctx.spawner != null and ctx.spawner.has_method("resolve"):
 		resolve_of = Callable(ctx.spawner, "resolve")
 	if ctx.spawner != null and ctx.spawner.has_method("plating_of"):

@@ -222,7 +222,7 @@ func _step_glance(delta: float) -> void:
 		_glance_subject = null
 
 
-# A harpoon lock point, or null to release. A lock changes the arm, pitch bias and lens
+# A shut yard's centre (juice.gd, from stage_locks.gd), or null to release. A lock changes the arm, pitch bias and lens
 # only; the player's yaw is never touched.
 func set_lock(point) -> void:
 	_locked = point != null
