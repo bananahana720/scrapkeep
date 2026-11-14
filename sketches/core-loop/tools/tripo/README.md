@@ -113,6 +113,53 @@ Cost per usable part on 13 Nov 2026: API low-poly 40 credits (2 of 4 tries usabl
 Mesh 100 Pro credits (6 of 6 sets), unused candidates 0 (8 of 8). With the free candidates counted, the six
 Studio sets gave 14 parts, 43 Pro credits each.
 
+### The rest of the catalogue (14 Nov 2026)
+
+Every part in `src/build/parts.gd` now has its own shape: 46 files. The last thirty came from five more
+unused candidates and eight Studio sets, one set per motif, with all four candidates of a set exported and
+shared out among related parts. The set prompts are `prompts/partset_<motif>.txt`.
+
+| part | source | tris |
+| --- | --- | --- |
+| grounding_spike | unused candidate of the tempest_core set | 927 |
+| breaker_drive | unused candidate of the sunforged_core set | 1000 |
+| drop_weight | unused candidate of the sunforged_core set | 825 |
+| relay_convergence | unused candidate of the scrap_gravity set | 893 |
+| galvanic_rounds | unused candidate of the slag_rounds set | 974 |
+| tread_plating | tread set | 950 |
+| spark_tread | tread set | 1000 |
+| ram_plow | tread set | 951 |
+| grip_tread | tread set | 1000 |
+| long_spool | coil set | 947 |
+| spring_shims | coil set | 1000 |
+| boost_coil | coil set | 981 |
+| slack_coil | coil set | 1000 |
+| dash_vane | vane set | 825 |
+| frost_vane | vane set | 897 |
+| live_line | harpoon set | 982 |
+| winch_pawl | harpoon set | 985 |
+| riveted_shell | armor set | 840 |
+| cracked_plating | armor set | 925 |
+| thin_pickings | armor set | 936 |
+| load_dividend | armor set | 877 |
+| vent_baffle | fan set | 809 |
+| bladestorm_rotor | fan set | 649 |
+| spiral_wave | fan set | 775 |
+| runner_overclock | fan set | 807 |
+| pylon_capacitor | capacitor set | 912 |
+| spare_cell | capacitor set | 978 |
+| chain_arc | capacitor set | 1000 |
+| cross_split | trigger set | 994 |
+| loose_trigger | trigger set | 571 |
+
+Eight sets cost 800 Pro credits and gave 25 parts, 32 credits each; the five unused candidates were free.
+Seven set candidates were left out: two thin weather vanes, two spare harpoons, two spare cross guns, and
+one capacitor whose body sat in a separate shell from its base, so the fitter kept only the base (136
+triangles; check the count the fitter prints). A prompt that names a thin object (a weather vane) returns
+thin rods whatever the suffix says, so name a chunky object instead (the vent fan set).
+
+Pro credits left after this batch: 1,760 (Studio's counter). Pro spend so far: 1,440.
+
 The fitter drops floating fragments by walking shells whose bounding boxes touch. A fragment that sits
 inside another shell's box survives; pick another of the four candidates then (Scrap Gravity's first
 candidate had a bolt lying beside its base).
