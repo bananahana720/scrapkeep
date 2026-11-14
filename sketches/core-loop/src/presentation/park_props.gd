@@ -1431,28 +1431,54 @@ static func _lod_paths(kit: Dictionary, inst: Dictionary) -> Array:
 
 
 # With the generated-model switch on (model_variants.gd), a variant that has no generated sibling of its own draws a
-# sister variant's when that sister has one and is the same size: no more than STAND_IN_RADIUS times as wide and
-# within STAND_IN_HEIGHT of its height, so the placement rules that passed for this variant still hold. A kind's
-# variants are placed at random, so without this only one shed in three would change with the switch. The paths
-# stay the authored ones; _mesh swaps each for its sibling.
+# sister variant's when that sister has one for every detail level, is no wider than STAND_IN_RADIUS times this
+# variant and is within STAND_IN_HEIGHT of its height, so the placement rules that passed for this variant still hold.
+# A narrower sister is allowed: it leaves room, it does not overlap. A kind's variants are placed at random, so without
+# this only one shed in three would change with the switch. The paths stay the authored ones; _mesh swaps each for its
+# sibling. The answer is kept per variant, because every placed prop asks; a worker asks too (prepare), hence the lock.
 const STAND_IN_RADIUS := 1.1
 const STAND_IN_HEIGHT := 0.15
+static var _stand_ins := {}
+static var _stand_ins_stamp := -1
+static var _stand_ins_lock := Mutex.new()
 
 
 static func _stand_in(variants: Dictionary, v: String) -> Array:
 	var own: Dictionary = variants[v]
-	if ModelVariants.path(String(own["lod"][0])) != String(own["lod"][0]):
+	var key := String(own["lod"][0])
+	_stand_ins_lock.lock()
+	if _stand_ins_stamp != ModelVariants.stamp():
+		_stand_ins.clear()
+		_stand_ins_stamp = ModelVariants.stamp()
+	if not _stand_ins.has(key):
+		_stand_ins[key] = _find_stand_in(variants, v)
+	var found: Array = _stand_ins[key]
+	_stand_ins_lock.unlock()
+	return found
+
+
+static func _find_stand_in(variants: Dictionary, v: String) -> Array:
+	var own: Dictionary = variants[v]
+	if _all_generated(own["lod"]):
 		return own["lod"]
 	var keys := variants.keys()
 	keys.sort()
 	for key in keys:
 		var sister: Dictionary = variants[key]
-		if key == v or ModelVariants.path(String(sister["lod"][0])) == String(sister["lod"][0]):
+		if key == v or not _all_generated(sister["lod"]):
 			continue
 		if float(sister["radius"]) <= float(own["radius"]) * STAND_IN_RADIUS \
 				and absf(float(sister["height"]) - float(own["height"])) <= float(own["height"]) * STAND_IN_HEIGHT:
 			return sister["lod"]
 	return own["lod"]
+
+
+# Every detail level has an accepted generated sibling: a variant never draws a mix of the two sets.
+static func _all_generated(lods: Array) -> bool:
+	for lod in lods:
+		if ModelVariants.path(String(lod)) == String(lod):
+			return false
+	return true
 
 
 static func _hero(holder: Node3D, inst: Dictionary, kit: Dictionary) -> void:

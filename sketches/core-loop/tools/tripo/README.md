@@ -179,7 +179,7 @@ candidate had a bolt lying beside its base).
 
 ## Props: one generated model for every variant of a kind
 
-A prop kind has variants a, b and c, and each placement picks one at random (`park_props.gd` `expand`). Only variant a has a generated sibling. With the switch on, a variant with no sibling of its own draws a sister's sibling when the sister is the same size: no more than 1.1 times as wide and within 15 percent of its height (`park_props.gd` `_stand_in`). So every sluice shed changes with the switch, not one in three, and the low survey tent b keeps its own model because tent a is too tall for it. The PC look of 14 November 2026 found the nearest sluice shed unchanged by the switch: it was a variant b.
+A prop kind has variants a, b and c, and each placement picks one at random (`park_props.gd` `expand`). Only variant a has a generated sibling. With the switch on, a variant with no sibling of its own draws a sister's sibling when the sister has one for every detail level, is no more than 1.1 times as wide and is within 15 percent of its height (`park_props.gd` `_stand_in`). A narrower sister is allowed, so a stand-in can look smaller than the prop it stands for: the compressor cart's variants b and c draw a cart 26 to 36 percent narrower. So every sluice shed changes with the switch, not one in three, and the low survey tent b keeps its own model because tent a is too tall for it. The PC look of 14 November 2026 found the nearest sluice shed unchanged by the switch: it was a variant b.
 
 ## Generated and not shipped
 

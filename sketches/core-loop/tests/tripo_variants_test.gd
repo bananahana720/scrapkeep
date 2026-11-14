@@ -571,7 +571,16 @@ func _check_stand_ins() -> void:
 	_check(ParkProps._lod_paths(dam, {"kind": "survey_tent", "v": "b"}) == tent_b, "switch on: the low survey tent b keeps its own model, variant a is too tall to stand in")
 	ModelVariants.set_rejected({ModelVariants.path(shed_a[0]): "test"})
 	_check(ParkProps._lod_paths(flume, {"kind": "sluice_shed", "v": "b"}) == shed_b, "a rejected sibling does not stand in for its sisters")
+	ModelVariants.set_rejected({ModelVariants.path(shed_a[2]): "test"})
+	_check(ParkProps._lod_paths(flume, {"kind": "sluice_shed", "v": "b"}) == shed_b and ParkProps._lod_paths(flume, {"kind": "sluice_shed", "v": "a"}) == shed_a,
+		"a sister with one far detail level rejected does not stand in")
 	ModelVariants.set_rejected()
+	_check(ParkProps._lod_paths(flume, {"kind": "sluice_shed", "v": "b"}) == shed_a, "the kept answer is dropped when the rejected list changes back")
+	# the width rule, on a made-up kind: a sister 1.2 times as wide stays out, one 1.05 times as wide stands in
+	var wide := {"a": {"lod": shed_a, "radius": 6.0, "height": 5.0}, "b": {"lod": shed_b, "radius": 5.0, "height": 5.0}}
+	_check(ParkProps._find_stand_in(wide, "b") == shed_b, "a sister 1.2 times as wide does not stand in")
+	wide["a"]["radius"] = 5.25
+	_check(ParkProps._find_stand_in(wide, "b") == shed_a, "a sister 1.05 times as wide stands in")
 	ParkProps.release_shared()
 	ModelVariants.set_enabled(false)
 

@@ -19,6 +19,7 @@ const REJECTED := {}
 
 static var _on := -1
 static var _rejected: Dictionary = REJECTED
+static var _stamp := 0
 
 
 # The path to load for `authored`: its Tripo sibling when the switch is on and the sibling exists.
@@ -47,11 +48,19 @@ static func enabled() -> bool:
 	return _on >= 1
 
 
+# Changes each time a test or tool changes the switch or the rejected list, so a caller that keeps answers
+# from path() knows when to drop them. In a game run it never changes.
+static func stamp() -> int:
+	return _stamp
+
+
 # Tests and tools set the switch directly instead of through the command line.
 static func set_enabled(on: bool, all := false) -> void:
 	_on = (2 if all else 1) if on else 0
+	_stamp += 1
 
 
 # Tests swap the rejected list to prove a rejected sibling stays out; no argument restores REJECTED.
 static func set_rejected(rejected: Dictionary = REJECTED) -> void:
 	_rejected = rejected
+	_stamp += 1
