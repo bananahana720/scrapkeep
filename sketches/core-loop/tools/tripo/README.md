@@ -192,7 +192,7 @@ Then measure it: `blender -b --factory-startup -P tools/tripo/pilot_pose_check.p
 5. It settles each bridge. A bridge is skin that joins a hand straight to the belly, legs or head: a hand modelled resting on the chest, or a control stick modelled from the hand down to the boot. Each bridge vertex goes wholly to one side. `--bridge` (default 0.5) sets the share the arm needs to take it. `--cut 1` also removes the few faces left spanning the break, so a raised hand lifts its stick clear instead of stretching it; that leaves a small open edge.
 6. It carries the arms from where the new mesh has them to the authored rest pose.
 
-`pilot_touch.py --lift <metres>` raises the whole pilot in the seat. Use it when the ball look measure (`tools/ball_look_capture.gd`, line 75 percent of the pilot seen) comes in low: Tally measured 74.2 percent on the PC check of 14 November 2026 and 76.7 percent with `--lift 0.04`. Keep the head top at or under +0.57, and add the lift to the `--mount-fit` up number.
+`pilot_touch.py --lift <metres>` raises the whole pilot in the seat. Use it when the ball look measure (`tools/ball_look_capture.gd`, line 75 percent of the pilot seen) comes in low: Tally measured 74.2 percent on the PC check of 14 November 2026 and 76.7 percent with `--lift 0.04`. Keep the head top at or under +0.57, and add the lift to the `--mount-fit` up number. Do not combine it with `--cap-hue`: the cap split measures from the head bone, which the lift does not move.
 
 ### Head outfits
 
