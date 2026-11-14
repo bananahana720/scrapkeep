@@ -283,7 +283,7 @@
    "loader": "not placed yet: the points of interest thread loads it (branch claude/project-thread-kjv6sg), with vertex colour as albedo as src/presentation/park_props.gd does",
    "provenance": {
     "recipe": "tools/blender/world_one/poi_yard.py",
-    "note": "Procedural, vertex coloured, the tag rack tipped 14 degrees to its right with a seventh crate standing on the ground beside it, 4.6 m wide and 3.7 m tall with the fallen crate; built by hand in Blender for the Brindle arena surroundings (W1-104). sha256 5b74432dc0f744d74de3eabe85436c9eedc4a95b2d1dcb3834d8a6d078444482"
+    "note": "Procedural, vertex coloured, the tag rack tipped 14 degrees to its right with a seventh crate standing on the ground beside it, 4.6 m wide and 3.7 m tall with that crate; built by hand in Blender for the Brindle arena surroundings (W1-104). sha256 5b74432dc0f744d74de3eabe85436c9eedc4a95b2d1dcb3834d8a6d078444482"
    }
   },
   {

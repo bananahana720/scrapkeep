@@ -15,7 +15,12 @@ extends RefCounted
 const SUFFIX := "_tripo"
 const FLAG := "--models=tripo"
 const FLAG_ALL := "--models=tripo-all"
-const REJECTED := {}
+const REJECTED := {
+	"res://assets/models/world_one/enemy_hooker_tripo.glb": "renders near-black beside the authored barrel (PC looks of PRs 1022 and 1024)",
+	"res://assets/models/park/props/flume/sluice_shed_a_tripo.glb": "loses the big red water wheel, the authored landmark shape (PC look of PR 1024)",
+	"res://assets/models/park/props/flume/sluice_shed_a_lod1_tripo.glb": "loses the big red water wheel, the authored landmark shape (PC look of PR 1024)",
+	"res://assets/models/park/props/flume/sluice_shed_a_lod2_tripo.glb": "loses the big red water wheel, the authored landmark shape (PC look of PR 1024)",
+}
 
 static var _on := -1
 static var _rejected: Dictionary = REJECTED

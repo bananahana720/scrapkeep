@@ -13,6 +13,11 @@ add its own `res://` path and a one-line reason to `REJECTED` in `src/presentati
 `tests/tripo_variants_test.gd` fails when the list and the rows disagree. `--models=tripo-all` loads every
 sibling, rejected ones too, so a rejected model can still be judged in the game.
 
+Rejected today (14 November 2026, the board's PC looks):
+
+- `world_one/enemy_hooker_tripo.glb`: the barrel renders near-black beside the authored rust-orange one, close up and at 22 m. The light test in `tests/tripo_variants_test.gd` passed it twice, so that test is a floor and not proof. A retry is judged from a lit render of the barrel beside the authored one.
+- `park/props/flume/sluice_shed_a{,_lod1,_lod2}_tripo.glb`: it swaps cleanly and holds its shape from 40 to 160 m, but it loses the big red water wheel, the authored shed's landmark shape. A retry must keep a big wheel, or keep the authored wheel beside the generated shack.
+
 Earlier generated-mesh trials were rejected (docs/decisions.tsv rows 352 to 361, TADR-011): lumps at
 budget, licence problems, colour loss. Row 361 allows a reopen "only with a different model class".
 Tripo's v3.1 smart_low_poly mode is that different class, and Andrew asked for it on 13 Nov 2026. The

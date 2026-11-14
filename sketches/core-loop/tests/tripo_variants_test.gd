@@ -491,7 +491,9 @@ func _part_brightness(path: String, part: String) -> float:
 # anything here, so a face inside the body is counted too; it is a floor on a body that is too dark or too thin, not
 # a render. The floor sits between what that PC look failed and passed: the failed hooker barrel sent 0.48 of the
 # authored body's light, the swatter it passed 0.71 and the netcaster it passed 0.81. Three bodies set it, so a new
-# body that lands near the floor still needs the PC look.
+# body that lands near the floor still needs the PC look. It is not proof of brightness: the second hooker barrel
+# measured 0.72 here and the PC look still showed it near-black, so that barrel is rejected (ModelVariants.REJECTED)
+# and a retry is judged from a lit render, not from this number.
 const SEEN_FLOOR := 0.65
 
 
@@ -556,6 +558,7 @@ func _check_stand_ins() -> void:
 	var shed_a: Array = flume["kinds"]["sluice_shed"]["variants"]["a"]["lod"]
 	var shed_b: Array = flume["kinds"]["sluice_shed"]["variants"]["b"]["lod"]
 	var tent_b: Array = dam["kinds"]["survey_tent"]["variants"]["b"]["lod"]
+	ModelVariants.set_rejected({})  # the rule is tested on the sluice shed whether or not its generated model is accepted today
 	ModelVariants.set_enabled(false)
 	_check(ParkProps._lod_paths(flume, {"kind": "sluice_shed", "v": "b"}) == shed_b, "switch off: a variant b sluice shed draws its own model")
 	ParkProps.release_shared()
@@ -574,13 +577,17 @@ func _check_stand_ins() -> void:
 	ModelVariants.set_rejected({ModelVariants.path(shed_a[2]): "test"})
 	_check(ParkProps._lod_paths(flume, {"kind": "sluice_shed", "v": "b"}) == shed_b and ParkProps._lod_paths(flume, {"kind": "sluice_shed", "v": "a"}) == shed_a,
 		"a sister with one far detail level rejected does not stand in")
-	ModelVariants.set_rejected()
+	ModelVariants.set_rejected({})
 	_check(ParkProps._lod_paths(flume, {"kind": "sluice_shed", "v": "b"}) == shed_a, "the kept answer is dropped when the rejected list changes back")
 	# the width rule, on a made-up kind: a sister 1.2 times as wide stays out, one 1.05 times as wide stands in
 	var wide := {"a": {"lod": shed_a, "radius": 6.0, "height": 5.0}, "b": {"lod": shed_b, "radius": 5.0, "height": 5.0}}
 	_check(ParkProps._find_stand_in(wide, "b") == shed_b, "a sister 1.2 times as wide does not stand in")
 	wide["a"]["radius"] = 5.25
 	_check(ParkProps._find_stand_in(wide, "b") == shed_a, "a sister 1.05 times as wide stands in")
+	ModelVariants.set_rejected()
+	if not ModelVariants.accepted(String(shed_a[0]).get_basename() + ModelVariants.SUFFIX + ".glb"):
+		_check(ParkProps._lod_paths(flume, {"kind": "sluice_shed", "v": "b"}) == shed_b and ParkProps._lod_paths(flume, {"kind": "sluice_shed", "v": "a"}) == shed_a,
+			"with the shipped rejected list, every sluice shed keeps its authored model")
 	ParkProps.release_shared()
 	ModelVariants.set_enabled(false)
 
