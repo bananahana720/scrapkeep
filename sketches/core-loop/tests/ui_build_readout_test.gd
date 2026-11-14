@@ -28,7 +28,8 @@ const EXPECTED_LAYERS := {
 	"double_feed": "local", "focus_lens": "local", "cross_split": "local",
 	"spiral_wave": "local", "chain_arc": "local", "frost_vane": "global",
 	"arc_coil": "global", "pylon_capacitor": "global", "runner_overclock": "global",
-	"sunforged_core": "local", "gatling_heart": "local", "horizon_optic": "local",
+	# 2026-11-12 W1-64: Sunforged Core carries a timed trigger, so global like Overpressure.
+	"sunforged_core": "global", "gatling_heart": "local", "horizon_optic": "local",
 	"rime_rounds": "local", "galvanic_rounds": "local", "ram_plow": "global",
 	"spare_cell": "global", "tempest_core": "local", "rime_heart": "global",
 	"scrap_gravity": "global",

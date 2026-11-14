@@ -217,6 +217,8 @@ func _physics_process(_delta: float) -> bool:
 						and _ceremony()._cards.size() == 1 and _ceremony().queued() == 0 and _name_showing()
 						and presented.all(func(p: Array): return p[1] in ["common", "rare"]),
 					"common and relic repeats for %d frames in a fight: no card, no pop; tiers %s" % [QUIET_FRAMES, presented.map(func(p: Array): return p[1])])
+				# A quick break (RunClock) would stand a third arch on the middle slot too: not this fight's.
+				_game.ctx.build.clock.engaged_at = -1.0
 				_game.flow.warden._die()
 				# The Warden's crowd is really removed (not announced away): the screen's quiet clock then runs.
 				_remove_crowd()

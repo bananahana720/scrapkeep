@@ -50,6 +50,8 @@ var time_of_day := ""
 var rescue_sites: Array = []
 # Where a survival count can stand, from the park file's optional survival_rows: {row, form, at: Vector2}.
 var survival_sites: Array = []
+# The way to the boss's bowl for bowl_approach.gd, from the park file's optional approach: {to, smoke: Vector2}, or {}.
+var approach := {}
 
 
 # An empty path reads nothing (ok stays false): event_ground.gd's OverlayMap copies a loaded map's
@@ -219,6 +221,8 @@ func _fill() -> void:
 	survival_sites = []
 	for row in park.get("survival_rows", []):
 		survival_sites.append({"row": row["id"], "form": row["form"], "at": _v2(row["at"])})
+
+	approach = {"to": park["approach"]["to"], "smoke": _v2(park["approach"]["smoke"])} if park.has("approach") else {}
 
 	scrap_trail = _scrap_trail()
 

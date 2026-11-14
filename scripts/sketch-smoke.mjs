@@ -16,6 +16,7 @@ import {
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { writeImportStamp } from "./import-stamp.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const recordedBinary =
@@ -781,6 +782,7 @@ async function main() {
       console.error(`${name} import failed ${IMPORT_TRIES} times (${imported.tries.map((row) => row.outcome).join(", ")}); tests not run`);
       process.exit(1);
     }
+    writeImportStamp(root, name);
     if (!named && !options.bots) jobs.push({ label: `${name} boot`, args: [...base, "--quit-after", "300"] });
     for (const script of scripts) {
       const isSoloJob = isSoloScript(directory, script);

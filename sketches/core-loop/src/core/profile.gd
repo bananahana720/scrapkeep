@@ -210,6 +210,14 @@ static func _merge_camp(mine: Dictionary, other: Dictionary) -> Dictionary:
 		var ours_trial: Variant = out.get("trial")
 		if not (ours_trial is Dictionary) or not ours_trial.has("best_ms") or int(theirs_trial["best_ms"]) < int(ours_trial["best_ms"]):
 			out["trial"] = (theirs_trial as Dictionary).duplicate(true)
+	# The camp ring's best count per pilot: the higher of the two.
+	var theirs_ring: Variant = other.get("ring")
+	if theirs_ring is Dictionary:
+		var ours_ring: Dictionary = (out["ring"] as Dictionary).duplicate() if out.get("ring") is Dictionary else {}
+		for pilot in theirs_ring:
+			if _whole(theirs_ring[pilot]) and int(theirs_ring[pilot]) > int(ours_ring.get(pilot, 0)):
+				ours_ring[pilot] = theirs_ring[pilot]
+		out["ring"] = ours_ring
 	for key in other:
 		if not out.has(key):
 			out[key] = other[key]
@@ -585,6 +593,11 @@ static func _sanitize_records(doc: Dictionary) -> void:
 	if camp.has("skee_best") and not _whole(camp["skee_best"]):
 		push_warning("profile: camp skee_best %s is not a number; dropped" % str(camp["skee_best"]))
 		camp.erase("skee_best")
+	if camp.has("ring"):
+		var ring = camp["ring"]
+		if not (ring is Dictionary) or not (ring as Dictionary).values().all(func(v): return _whole(v)):
+			push_warning("profile: camp ring is malformed; dropped")
+			camp.erase("ring")
 	if camp.has("trial"):
 		var trial = camp["trial"]
 		if not (trial is Dictionary) or not _whole(trial.get("best_ms")):

@@ -1,6 +1,6 @@
 """Fit a Tripo-generated GLB to an authored Scrapkeep asset's conventions.
 
-blender -b --factory-startup -P tripo_fit.py -- --in tripo.glb --ref authored.glb --out fitted.glb [--yaw DEG] [--max-tris N]
+blender -b --factory-startup -P tripo_fit.py -- --in tripo.glb --ref authored.glb --out fitted.glb [--yaw DEG] [--max-tris N] [--name BodyMeshName] [--match rgb|tone]
 
 What it does, in order:
 1. Reads the authored asset: its bounds, its socket empties, and its palette. The palette is the
@@ -12,7 +12,8 @@ What it does, in order:
    colour stays flat per slot (the colour law); faces take that slot's material (enemy style) or
    that vertex colour on the single material (camp style). The texture and its image are dropped.
 4. Decimates to --max-tris if over, copies the authored sockets, names the mesh after the authored
-   one, and exports a GLB with no images.
+   one (--name picks which, when the authored model has several meshes and the first is not the body),
+   and exports a GLB with no images.
 Prints one JSON line with counts.
 """
 import json, math, sys
@@ -21,7 +22,7 @@ import numpy as np
 from mathutils import Vector, Matrix
 
 argv = sys.argv[sys.argv.index("--") + 1:]
-opt = {"yaw": "0", "max-tris": "0", "fit": "height", "split": ""}
+opt = {"yaw": "0", "max-tris": "0", "fit": "height", "split": "", "match": "rgb"}
 i = 0
 while i < len(argv):
     opt[argv[i][2:]] = argv[i + 1]; i += 2
@@ -47,7 +48,7 @@ ref_meshes = [o for o in ref if o.type == "MESH"]
 rmn, rmx = bounds(ref_meshes)
 sockets = [(o.name, o.matrix_world.translation.copy()) for o in ref if o.type == "EMPTY" and o.parent is not None]
 root_name = next((o.name for o in ref if o.parent is None), "root")
-mesh_name = next((o.name for o in ref_meshes if o.parent is not None and o.parent.type != "MESH"), ref_meshes[0].name)
+mesh_name = opt.get("name") or next((o.name for o in ref_meshes if o.parent is not None and o.parent.type != "MESH"), ref_meshes[0].name)
 pivots = {o.name: o.matrix_world.translation.copy() for o in ref_meshes}
 mats = []
 for o in ref_meshes:
@@ -132,6 +133,15 @@ for sl in ob.material_slots:
     if img: break
 pal = np.array([p[0] for pal_i, p in enumerate(palette)]) if palette else np.zeros((1, 3))
 pal_s = srgb(pal)
+LUMA = np.array([0.2126, 0.7152, 0.0722])
+
+
+def tone_dist(col):
+    # --match tone: compare the tint first and the lightness at a quarter weight, so a lighter or darker shade of
+    # an authored colour still lands on that colour (a sky-blue wall on the authored teal, not on the pale grey).
+    dl = pal_s @ LUMA - float(np.asarray(col) @ LUMA)
+    dc = (pal_s - (pal_s @ LUMA)[:, None]) - (np.asarray(col) - float(np.asarray(col) @ LUMA))
+    return 0.25 * dl ** 2 + np.sum(dc ** 2, axis=1)
 face_slot = np.zeros(len(me.polygons), int)
 if img is not None and me.uv_layers:
     W, H = img.size
@@ -149,7 +159,7 @@ if img is not None and me.uv_layers:
             x = min(W - 1, max(0, int((u.x % 1.0) * W))); y = min(H - 1, max(0, int((u.y % 1.0) * H)))
             cols.append(px_s[y, x])
         col = np.median(np.array(cols), axis=0)
-        face_slot[p.index] = int(np.argmin(np.sum((pal_s - col) ** 2, axis=1)))
+        face_slot[p.index] = int(np.argmin(tone_dist(col) if opt["match"] == "tone" else np.sum((pal_s - col) ** 2, axis=1)))
 # Two passes of neighbour-majority smoothing: palette snapping turns painted rust spots and bolt
 # dots into one-face speckles, which read as noise at game distance.
 bm = bmesh.new(); bm.from_mesh(me); bm.faces.ensure_lookup_table()

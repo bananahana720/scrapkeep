@@ -21,6 +21,7 @@ import {
   testTimeoutMs,
 } from "./sketch-smoke.mjs";
 import { readLedger } from "./known-failing.mjs";
+import { writeImportStamp } from "./import-stamp.mjs";
 
 // npm run sketch:fast: the fast PR lane of the tiered gate (ORCHESTRATOR, "Tiered gate").
 // It judges one PR head in about 15 minutes, cheapest and most-often-failing checks first, and
@@ -845,6 +846,7 @@ async function main() {
     return { label: job.label, exit: result.status, signal: result.signal ?? null, scriptErrors: scriptErrorCount((result.stdout || "") + (result.stderr || "")), ok: result.status === 0, ms: Date.now() - t };
   }, log);
   if (!stage("import", imported.ok, { note: imported.tries.map((row) => `${row.outcome} exit=${row.exit ?? row.signal}`).join(", ") })) finish();
+  writeImportStamp(root, SKETCH);
   const boot = spawnSync(binary, [...base, "--quit-after", "300"], { encoding: "utf8", timeout: 180_000, env: { ...process.env, XDG_DATA_HOME: mkdtempSync(path.join(os.tmpdir(), "sketch-fast-")) } });
   const bootVerdict = judge({ status: boot.status, output: (boot.stdout || "") + (boot.stderr || "") });
   if (!stage("boot", bootVerdict.ok, { note: bootVerdict.reason ?? "300 frames" })) finish();

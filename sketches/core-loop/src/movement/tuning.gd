@@ -84,6 +84,12 @@ const SPECS := [
 	# The survival yard (BACKLOG W1-101, src/world/survival_count.gd): off by default, so no yard is built and
 	# bots, tests and the sitting play the game without it until its band read is in.
 	{"key": "stocktake", "label": "Stocktake", "min": 0.0, "max": 1.0, "step": 1.0, "value": 0.0, "options": ["off", "on"]},
+	# Survey posts (BACKLOG W1-103, src/world/survey_posts.gd): rows of posts to weave through on the floor line.
+	# Off by default, so bots, tests and the sitting ride the line as it was until its read is in.
+	{"key": "posts", "label": "Survey posts", "min": 0.0, "max": 1.0, "step": 1.0, "value": 0.0, "options": ["off", "on"]},
+	# The approach to the boss's bowl (BACKLOG W1-104, src/world/bowl_approach.gd): tag racks, a weighbridge and the
+	# furnace's smoke on the last of the flume's floor line. Off by default, as the survey posts are.
+	{"key": "approach", "label": "Bowl approach", "min": 0.0, "max": 1.0, "step": 1.0, "value": 0.0, "options": ["off", "on"]},
 	# The harpoon (DESIGN-NOTES, "Harpoon and winch"): one mode for every pilot, locking on an enemy inside
 	# harpoon_lock_deg and flying the ball in.
 	{"key": "harpoon_smash_speed", "label": "Harpoon smash speed", "min": 10.0, "max": 45.0, "step": 1.0, "value": 24.0},
@@ -262,6 +268,8 @@ const FLAGS := {
 	"overtime": ["overtime", "option", "launch"],
 	"called-shot": ["called_shot", "option", "launch"],
 	"stocktake": ["stocktake", "option", "launch"],
+	"posts": ["posts", "option", "launch"],
+	"approach": ["approach", "option", "launch"],
 	"final-world": ["final_world", "option", "launch"],
 }
 

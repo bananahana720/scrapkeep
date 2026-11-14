@@ -98,7 +98,7 @@ static var _shared: Array = []
 static func _parts() -> Array:
 	if not _shared.is_empty():
 		return _shared
-	var scene := (load("res://assets/models/world_one/enemy_lobber.glb") as PackedScene).instantiate()
+	var scene := (load(ModelVariants.path("res://assets/models/world_one/enemy_lobber.glb")) as PackedScene).instantiate()
 	var charcoal := Palette.solid(Palette.CHARCOAL)
 	for node in scene.find_children("*", "MeshInstance3D", true, false):
 		var mi := node as MeshInstance3D

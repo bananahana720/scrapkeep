@@ -1,4 +1,4 @@
-# blender -b --factory-startup -P pilot_fit.py -- --old pilot_x_anim.glb --new tripo.glb --out out.glb [--tris 8200] [--arm-yaw 90] [--flip 1] [--head-scale 1.35 --neck 0.5] [--drop all]
+# blender -b --factory-startup -P pilot_fit.py -- --old pilot_x_anim.glb --new tripo.glb --out out.glb [--tris 8200] [--arm-yaw 90] [--flip 1] [--head-scale 1.35 --neck 0.5] [--drop all] [--bridge 0.5] [--cut 0] [--voxel 0.012]
 import bpy, sys, math, json
 from mathutils import Matrix, Vector
 a = sys.argv[sys.argv.index("--") + 1:]
@@ -7,7 +7,7 @@ opt.update(dict(zip(a[::2], a[1::2])))
 bpy.ops.wm.read_factory_settings(use_empty=True)
 bpy.ops.import_scene.gltf(filepath=opt["--old"])
 arm = [o for o in bpy.data.objects if o.type == "ARMATURE"][0]
-# the authored skinned meshes (body, claws, tail, wings, cap): they lend their weights and are then replaced
+# the authored skinned meshes (body, claws, tail, wings, cap): they give the skeleton and the list of meshes to replace
 old = [o for o in bpy.data.objects if o.type == "MESH" and o.vertex_groups and (opt["--drop"] == "all" or o.name in opt["--drop"].split(","))]
 body = max(old, key=lambda o: len(o.data.polygons))
 before = set(bpy.data.objects)
@@ -73,60 +73,168 @@ pm = bpy.data.materials.new("pilot"); pm.use_nodes = True
 bs = pm.node_tree.nodes["Principled BSDF"]; vc = pm.node_tree.nodes.new("ShaderNodeVertexColor"); vc.layer_name = "Col"
 pm.node_tree.links.new(vc.outputs["Color"], bs.inputs["Base Color"]); bs.inputs["Roughness"].default_value = 0.8
 me.materials.append(pm)
-# bind: a copy of the rig posed to the new mesh's arms takes the automatic weights, then carries the mesh back
-def out_angle(dx, dy): return math.atan2(abs(dx), dy)  # 0 = straight forward, 90 deg = straight out to the side
-if opt["--arm-yaw"] == "auto":
-    ub = arm.data.bones["upper_arm.L"]; hb = arm.data.bones["hand.L"]
-    sh = arm.matrix_world @ ub.head_local; hd0 = arm.matrix_world @ hb.head_local
-    # the hands: between hips and neck (so ears, crests and cheeks never count), beside the body, level with or in front of
-    # the shoulder (so a tail never counts), farthest from the shoulder
-    zlo = (arm.matrix_world @ arm.data.bones["pelvis"].head_local).z; zhi = (arm.matrix_world @ arm.data.bones["neck"].head_local).z
-    side = [v for v in wverts(n) if zlo < v.z < zhi and abs(v.x) > 0.6 * abs(sh.x) and v.y > sh.y - 0.05]
-    if not side:
-        print("YAW no hand vertices found beside the body; measuring from the whole mesh, check the arms"); side = wverts(n)
-    side.sort(key=lambda v: math.hypot(abs(v.x) - abs(sh.x), v.y - sh.y), reverse=True)
-    tips = side[:max(10, len(side) // 30)]
-    print("YAW tips", len(tips))
-    tx = sum(abs(v.x) for v in tips) / len(tips); ty = sum(v.y for v in tips) / len(tips)
-    yaw = out_angle(tx - abs(sh.x), ty - sh.y) - out_angle(hd0.x - sh.x, hd0.y - sh.y)
-    print("YAW deg", round(math.degrees(yaw), 1))
-else:
-    yaw = math.radians(float(opt["--arm-yaw"]))
-a2 = arm.copy(); a2.data = arm.data.copy(); a2.animation_data_clear(); bpy.context.scene.collection.objects.link(a2)
-def swing(sign_l):
-    for nm, sg in (("upper_arm.L", 1), ("upper_arm.R", -1)):
-        pb = a2.pose.bones[nm]; hd = pb.head.copy()
-        pb.matrix = Matrix.Translation(hd) @ Matrix.Rotation(sign_l * sg * yaw, 4, "Z") @ Matrix.Translation(-hd) @ pb.matrix
-        bpy.context.view_layer.update()
+# bind: the skin weights are worked out on the new mesh itself. A stand-in armature with real limb segments, its arms aimed
+# at the new hands, takes Blender's automatic weights on a watertight voxel copy of the mesh; the weights are copied back to
+# the mesh, and a copy of the rig then carries the arms to the authored rest pose. (Copying weights from the authored mesh
+# tore the big poses: a fatter belly took the weights of the authored arm in front of it.)
 def only(*objs):
     for o in bpy.data.objects: o.select_set(False)
     for o in objs: o.select_set(True)
     bpy.context.view_layer.objects.active = objs[0]
-# the old meshes, posed with the arms where the new mesh has them, lend their weights
-only(*old); bpy.ops.object.duplicate()
-src = bpy.context.view_layer.objects.active
-if len(bpy.context.selected_objects) > 1: bpy.ops.object.join()
-src = bpy.context.view_layer.objects.active
-for md in src.modifiers:
-    if md.type == "ARMATURE": md.object = a2
+def bw(name): return arm.matrix_world @ arm.data.bones[name].head_local
+zlo = bw("pelvis").z; zhi = bw("neck").z; allv = wverts(n)
+aim = {}
+for sfx, old_sign in (("L", 1), ("R", -1)):
+    sh = bw("upper_arm." + sfx); hand0 = bw("hand." + sfx); sg = 1 if sh.x > 0 else -1
+    if opt["--arm-yaw"] == "auto":
+        # the hand: between hips and neck (so ears, crests and cheeks never count), beside the body, level with or in front
+        # of the shoulder (so a tail never counts), farthest from the shoulder
+        side = [v for v in allv if zlo < v.z < zhi and v.x * sg > 0.6 * abs(sh.x) and v.y > sh.y - 0.05]
+        if not side:
+            print("AIM", sfx, "no hand vertices found beside the body; the arm keeps the authored angle, check it"); rot = Matrix.Identity(4)
+        else:
+            side.sort(key=lambda v: math.hypot(v.x - sh.x, v.y - sh.y), reverse=True)
+            tips = side[:max(10, len(side) // 30)]; tip = sum(tips, Vector()) / len(tips)
+            q = (hand0 - sh).rotation_difference(tip - sh); rot = q.to_matrix().to_4x4()
+            print("AIM", sfx, "deg", round(math.degrees(q.angle), 1), "tips", len(tips))
+    else:
+        rot = Matrix.Rotation(old_sign * math.radians(float(opt["--arm-yaw"])), 4, "Z")
+    aim[sfx] = Matrix.Translation(sh) @ rot @ Matrix.Translation(-sh)
+# the stand-in: one bone per deforming joint, laid along the limb (the imported bones are short stubs that all point forward).
+# Helper bones (h_*) keep the legs and the snout from taking the weights of the hands beside them; they fold into their owner.
+ztop = max(v.z for v in allv); zbot = min(v.z for v in allv)
+segs = [("pelvis", bw("pelvis") - Vector((0, 0, 0.1)), bw("spine_01")), ("spine_01", bw("spine_01"), bw("spine_02")),
+    ("spine_02", bw("spine_02"), bw("neck")), ("neck", bw("neck"), bw("head")), ("head", bw("head"), Vector((bw("head").x, bw("head").y, ztop - 0.05)))]
+fold = {}
+for sfx in ("L", "R"):
+    A = aim[sfx]; up = bw("upper_arm." + sfx); lo = A @ bw("lower_arm." + sfx); ha = A @ bw("hand." + sfx); sg = 1 if up.x > 0 else -1
+    segs += [("shoulder." + sfx, bw("shoulder." + sfx), up), ("upper_arm." + sfx, up, lo), ("lower_arm." + sfx, lo, ha),
+        ("hand." + sfx, ha, ha + (ha - lo).normalized() * 0.08)]
+    feet = [v for v in allv if v.x * sg > 0.03 and v.z < zbot + 0.12]
+    if feet:
+        segs.append(("h_leg." + sfx, Vector((sg * 0.1, bw("pelvis").y, bw("pelvis").z)), sum(feet, Vector()) / len(feet))); fold["h_leg." + sfx] = "pelvis"
+face = [v for v in allv if abs(v.x) < 0.08 and v.z > bw("neck").z + 0.05]
+if face:
+    nose = max(face, key=lambda v: v.y)
+    if nose.y > bw("head").y + 0.15: segs.append(("h_snout", bw("head"), nose - Vector((0, 0.03, 0)))); fold["h_snout"] = "head"
+bd = bpy.data.armatures.new("bind"); bo = bpy.data.objects.new("bind", bd); bpy.context.scene.collection.objects.link(bo)
+only(bo); bpy.ops.object.mode_set(mode="EDIT")
+for nm, h, t in segs:
+    eb = bd.edit_bones.new(nm); eb.head = h; eb.tail = t
+bpy.ops.object.mode_set(mode="OBJECT")
+only(n); bpy.ops.object.duplicate(); px = bpy.context.view_layer.objects.active
+rm = px.modifiers.new("r", "REMESH"); rm.mode = "VOXEL"; rm.voxel_size = float(opt.get("--voxel", "0.012")); bpy.ops.object.modifier_apply(modifier="r")
+px.vertex_groups.clear()
+only(px, bo); bpy.context.view_layer.objects.active = bo; bpy.ops.object.parent_set(type="ARMATURE_AUTO")
+for src_nm, dst_nm in fold.items():
+    sg_ = px.vertex_groups.get(src_nm); dg = px.vertex_groups.get(dst_nm)
+    if sg_ is None: continue
+    for v in px.data.vertices:
+        for g in v.groups:
+            if g.group == sg_.index and g.weight > 0: dg.add([v.index], g.weight, "ADD")
+    px.vertex_groups.remove(sg_)
+# a part the automatic weights could not reach (a floating island) takes the weights of the nearest part they did reach
+from mathutils import kdtree
+has = [v.index for v in px.data.vertices if any(g.weight > 0 for g in v.groups)]
+bare = [v.index for v in px.data.vertices if not any(g.weight > 0 for g in v.groups)]
+if not has: raise SystemExit("pilot_fit: the automatic weights reached no part of the mesh")
+if bare:
+    kd = kdtree.KDTree(len(has))
+    for i, vi in enumerate(has): kd.insert(px.data.vertices[vi].co, i)
+    kd.balance(); gi = {g.index: g for g in px.vertex_groups}
+    for vi in bare:
+        _, i, _ = kd.find(px.data.vertices[vi].co)
+        for g in px.data.vertices[has[i]].groups: gi[g.group].add([vi], g.weight, "REPLACE")
+print("BIND", json.dumps({"proxy_verts": len(px.data.vertices), "filled": len(bare), "bones": [s[0] for s in segs]}))
+n.vertex_groups.clear()
+for b in arm.data.bones: n.vertex_groups.new(name=b.name)
+dt = n.modifiers.new("dt", "DATA_TRANSFER"); dt.object = px; dt.use_vert_data = True; dt.data_types_verts = {"VGROUP_WEIGHTS"}
+dt.vert_mapping = "POLYINTERP_NEAREST"; dt.layers_vgroup_select_src = "ALL"; dt.layers_vgroup_select_dst = "NAME"
+only(n); bpy.ops.object.modifier_apply(modifier="dt")
+bpy.data.objects.remove(px); bpy.data.objects.remove(bo)
+# at most four bones a vertex (the glTF limit), tiny weights dropped, the rest summing to one
+vg = {g.index: g for g in n.vertex_groups}
+for v in me.vertices:
+    gs = sorted(((g.group, g.weight) for g in v.groups), key=lambda t: -t[1]); keep = [t for t in gs[:4] if t[1] > 0.01] or gs[:1]
+    tot = sum(t[1] for t in keep)
+    for gidx, _ in gs: vg[gidx].remove([v.index])
+    for gidx, wt in keep: vg[gidx].add([v.index], wt / tot if tot > 0 else 1.0, "REPLACE")
+# forearm and hand weights belong only to skin that is joined to a hand through skin the arm mostly owns, and to the blend
+# zone that fades out from it. A whisker tip, a snout or a knee that merely sits beside a hand in the voxel copy loses them.
+import bmesh
+bm = bmesh.new(); bm.from_mesh(me); bm.verts.ensure_lookup_table(); dl = bm.verts.layers.deform.verify(); stray = 0
+# the import splits a vertex along every seam, so "joined" is judged by place: vertices at one point count as one
+spot = {}; place = []
+for v in bm.verts: place.append(spot.setdefault((round(v.co.x, 5), round(v.co.y, 5), round(v.co.z, 5)), len(spot)))
+links = [set() for _ in spot]
+for e in bm.edges:
+    i, j = place[e.verts[0].index], place[e.verts[1].index]; links[i].add(j); links[j].add(i)
+for names in (("lower_arm.L", "hand.L"), ("lower_arm.R", "hand.R")):
+    gi_ = [n.vertex_groups[k].index for k in names]; hi = gi_[1]
+    far = [0.0] * len(spot); hand = [0.0] * len(spot)
+    for v in bm.verts:
+        k = place[v.index]; far[k] = max(far[k], sum(v[dl].get(g, 0.0) for g in gi_)); hand[k] = max(hand[k], v[dl].get(hi, 0.0))
+    reach = {k for k in range(len(spot)) if hand[k] > 0.5}
+    if not reach: print("STRAY no skin is mostly the hand's on one side; left as it is"); continue
+    for floor in (0.5, 0.02):  # first through skin the arm mostly owns, then out through the blend zone
+        stack = list(reach)
+        while stack:
+            for o in links[stack.pop()]:
+                if o not in reach and far[o] >= floor: reach.add(o); stack.append(o)
+    for v in bm.verts:
+        if sum(v[dl].get(g, 0.0) for g in gi_) > 0.02 and place[v.index] not in reach:
+            rest_w = {g: w for g, w in v[dl].items() if g not in gi_}; tot = sum(rest_w.values())
+            if tot <= 0: continue
+            v[dl].clear(); stray += 1
+            for g, w in rest_w.items(): v[dl][g] = w / tot
+bm.to_mesh(me); bm.free()
+print("STRAY", stray)
+# skin the head mostly owns moves with the head alone. A cheek modelled beside a raised hand picks up shoulder and upper arm
+# weight in the voxel copy, and a cheer then pulls a dark split open in it (PC check of 14 November 2026, Tally).
+ARM_ALL = {n.vertex_groups[k].index for k in ("shoulder.L", "upper_arm.L", "lower_arm.L", "hand.L", "shoulder.R", "upper_arm.R", "lower_arm.R", "hand.R")}
+head_g = n.vertex_groups["head"].index; whole = 0
+for v in me.vertices:
+    ws = {g.group: g.weight for g in v.groups}
+    if ws.get(head_g, 0.0) >= 0.5 and any(ws.get(g, 0.0) > 0.0 for g in ARM_ALL):
+        keep = {g: w for g, w in ws.items() if g not in ARM_ALL}; tot = sum(keep.values()); whole += 1
+        for g in ws: vg[g].remove([v.index])
+        for g, w in keep.items(): vg[g].add([v.index], w / tot, "REPLACE")
+print("HEAD", whole)
+# a bridge is skin that joins a forearm or hand straight to the legs, belly or head: a hand modelled resting on the chest, a
+# control stick modelled from the hand down to the boot. Its weights would blend the two and it would stretch like rubber, so
+# each bridge vertex goes wholly to the side that has more of it (--bridge 0.5; a lower number sends more to the arm). The few
+# faces left spanning the break still stretch. For a long stick, pass --cut 1 to remove them, so a raised hand lifts the stick
+# clear, and a lower --bridge to put the break at the boot end.
+ARM_FAR = {"lower_arm.L", "lower_arm.R", "hand.L", "hand.R"}; LINK = {"upper_arm.L", "upper_arm.R", "shoulder.L", "shoulder.R", "spine_02"}
+vname = {g.index: g.name for g in n.vertex_groups}; side_of = {}
+for v in me.vertices:
+    ws = {vname[g.group]: g.weight for g in v.groups}
+    af = sum(w for k, w in ws.items() if k in ARM_FAR); lk = sum(w for k, w in ws.items() if k in LINK); bf = 1.0 - af - lk
+    if af >= 0.98: side_of[v.index] = "arm"
+    elif bf >= 0.98: side_of[v.index] = "body"
+    if af > 0.02 and bf > 0.02 and lk < 0.25:
+        to_arm = af / (af + bf) >= float(opt.get("--bridge", "0.5")); side_of[v.index] = "arm" if to_arm else "body"
+        keep = {k: w for k, w in ws.items() if (k in ARM_FAR) == to_arm and k not in LINK}; tot = sum(keep.values())
+        for k in ws: n.vertex_groups[k].remove([v.index])
+        for k, w in keep.items(): n.vertex_groups[k].add([v.index], w / tot, "REPLACE")
+bm = bmesh.new(); bm.from_mesh(me)
+cut = [f for f in bm.faces if {"arm", "body"} <= {side_of.get(v.index) for v in f.verts}]
+print("BRIDGE", json.dumps({"faces_spanning": len(cut), "cut": opt.get("--cut", "0") == "1"}))
+if opt.get("--cut", "0") == "1": bmesh.ops.delete(bm, geom=cut, context="FACES")
+bm.to_mesh(me); bm.free()
+# carry the arms from where the new mesh has them to the authored rest pose
+a2 = arm.copy(); a2.data = arm.data.copy(); a2.animation_data_clear(); bpy.context.scene.collection.objects.link(a2)
 only(a2); bpy.ops.object.mode_set(mode="POSE")
 for pb in a2.pose.bones: pb.matrix_basis = Matrix.Identity(4)
 bpy.context.view_layer.update()
-if yaw != 0: swing(1)
+for sfx in ("L", "R"):
+    pb = a2.pose.bones["upper_arm." + sfx]; pb.matrix = aim[sfx] @ pb.matrix; bpy.context.view_layer.update()
+bpy.ops.pose.armature_apply(selected=False)
+for b in arm.data.bones:  # parents come first in this list
+    a2.pose.bones[b.name].matrix = b.matrix_local; bpy.context.view_layer.update()
 bpy.ops.object.mode_set(mode="OBJECT")
-only(src)
-names = [g.name for g in src.vertex_groups]
-for md in list(src.modifiers):
-    if md.type == "ARMATURE": bpy.ops.object.modifier_apply(modifier=md.name)
-for nm in names: n.vertex_groups.new(name=nm)
-dt = n.modifiers.new("dt", "DATA_TRANSFER"); dt.object = src; dt.use_vert_data = True; dt.data_types_verts = {"VGROUP_WEIGHTS"}
-dt.vert_mapping = "POLYINTERP_NEAREST"; dt.layers_vgroup_select_src = "ALL"; dt.layers_vgroup_select_dst = "NAME"
-only(n); bpy.ops.object.modifier_apply(modifier="dt")
-bpy.data.objects.remove(src)
-if yaw != 0:
-    only(a2); bpy.ops.object.mode_set(mode="POSE"); bpy.ops.pose.armature_apply(selected=False); swing(-1); bpy.ops.object.mode_set(mode="OBJECT")
-    md = n.modifiers.new("back", "ARMATURE"); md.object = a2
-    only(n); bpy.ops.object.modifier_apply(modifier="back")
+md = n.modifiers.new("back", "ARMATURE"); md.object = a2
+only(n); bpy.ops.object.modifier_apply(modifier="back")
 wm = n.matrix_world.copy(); n.parent = None; n.matrix_world = wm
 bpy.data.objects.remove(a2)
 unweighted = sum(1 for v in me.vertices if not v.groups)
