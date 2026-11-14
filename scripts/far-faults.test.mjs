@@ -4,7 +4,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
-import { CAP, overCap, scanFaults } from "./far-faults.mjs";
+import { CAP, overCap, scanCover, scanFaults } from "./far-faults.mjs";
 
 // SG-16: every park prop's far mesh stays under the inside-out cap (scripts/far-faults.mjs).
 const numpy = spawnSync("python3", ["-c", "import numpy"]).status === 0;
@@ -73,4 +73,35 @@ test("far faults: a planted flipped far mesh under the props glob fails, a sound
   assert.equal(over.length, 1, JSON.stringify(rows.map((r) => [r.file, r.flipped_m2, r.area_m2])));
   assert.match(over[0].file, /planted_lod2\.glb$/);
   assert.ok(over[0].share > CAP);
+});
+
+test("far cover: every park prop LOD fills LOD0's outline", { skip: !numpy && "python3 has no numpy" }, () => {
+  const rows = scanCover();
+  assert.ok(rows.length >= 560, `${rows.length} LODs scored`);
+  const thin = rows.filter((row) => row.under);
+  assert.deepEqual(thin, [], thin.map((row) => `${row.file} ${(row.cover * 100).toFixed(1)}%`).join("; "));
+});
+
+test("far cover: a planted LOD that lost a part fails, a whole one passes", { skip: !numpy && "python3 has no numpy" }, (t) => {
+  const dir = mkdtempSync(path.join(os.tmpdir(), "far-cover-plant-"));
+  t.after(() => rmSync(dir, { recursive: true, force: true }));
+  const props = path.join(dir, "assets/models/park/props/dam");
+  mkdirSync(props, { recursive: true });
+  // A wall of four upright unit squares side by side; the hollow LOD keeps only the two outer ones, as the drum kept its rings.
+  const N = [0, 0, 1];
+  const panel = (x) => [
+    [[x, 0, 0], [x + 1, 0, 0], [x, 1, 0], N],
+    [[x + 1, 0, 0], [x + 1, 1, 0], [x, 1, 0], N],
+  ];
+  const wall = [0, 1, 2, 3].flatMap((x) => panel(x - 2));
+  for (const name of ["whole", "hollow"]) writeFileSync(path.join(props, `${name}.glb`), glb(wall));
+  for (const lod of ["_lod1", "_lod2"]) {
+    writeFileSync(path.join(props, `whole${lod}.glb`), glb(wall));
+    writeFileSync(path.join(props, `hollow${lod}.glb`), glb(lod === "_lod2" ? [...panel(-2), ...panel(1)] : wall));
+  }
+  const rows = scanCover(["assets/models/park/props/*/*.glb"], dir);
+  assert.equal(rows.length, 4);
+  const thin = rows.filter((row) => row.under);
+  assert.equal(thin.length, 1, JSON.stringify(rows));
+  assert.match(thin[0].file, /hollow_lod2\.glb$/);
 });

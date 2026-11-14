@@ -3,6 +3,7 @@
 
     python3 tools/model_audit.py faults   <glb or glob>... [--out=<json>]
     python3 tools/model_audit.py outlines <glb or glob>... --out=<dir> [--ppm=32] [--pitch=35] [--yaw=30] [--seed=7]
+    python3 tools/model_audit.py cover    <LOD0 glb or glob>... [--out=<json>]
 
 It reads the GLB the game loads, not the Blender scene, and needs no engine. `faults` needs numpy; `outlines`
 also needs Pillow. Both report and exit 0: a finding is a candidate for a look, never a verdict.
@@ -35,6 +36,14 @@ round), feet on a shared ground point, at `ppm` pixels a metre. 32 is a 1080p fr
   outlines-blind.jpg  the outlines at that size, in shuffled order under letters. Give this sheet, and nothing
                       else, to a reviewer who has not seen the game and ask what each one is and does.
   outlines-key.json   letter to file name, for scoring the answers afterwards.
+cover, per LOD0 file with `<name>_lod1.glb` and `<name>_lod2.glb` beside it: how much of LOD0's outline each lower LOD
+still fills, seen from COVER_YAWS round at COVER_PITCH down (a far prop seen across the map), on a COVER_PX grid across
+LOD0's width. The score is the worst view's share of LOD0's filled cells that the LOD also fills (1 is whole). A
+collapse that eats a part leaves a hole the faults scan cannot see: on 14 Nov the dam's cable drums drew as floating
+rings at 100 m with no face flipped (W1-29). The props kit raises a LOD's triangles until it reaches COVER_MIN, and a LOD
+under COVER_FLOOR fails (a thin prop, ropes and fronds, may stop between the two at the kit's cap). Pure numpy, so the
+kit can call it inside Blender.
+
 An outline has no colour, motion or sound. A high overlap or a wrong blind answer says the shape is not doing the
 work on its own; whether it matters in play is for a PC photograph and a person.
 """
@@ -54,6 +63,11 @@ WEIGHT_SLACK = 0.02
 WELD = 1e-4                  # grid step, metres: corners on the same grid point are one point when matching faces
 AREA_EPS = 1e-9
 MARGIN_M = 0.25              # clear canvas round the largest outline
+COVER_YAWS = 6               # views round a model for `cover`
+COVER_PITCH = 12.0           # degrees down: a far prop is seen nearly side on
+COVER_PX = 128               # grid cells across LOD0's widest reach
+COVER_MIN = 0.85             # the share of LOD0's outline the kit aims for a lower LOD to fill, worst view
+COVER_FLOOR = 0.80           # under this a LOD fails (the drums that drew as rings filled 0.70 to 0.82)
 BONE = (210, 197, 165)
 OXIDE = (155, 81, 58)
 
@@ -285,6 +299,90 @@ def faults(files, out):
     return rows
 
 
+def _view(surfaces, pitch, yaw):
+    """Every triangle of `surfaces` seen from `yaw` round and `pitch` down: an Mx3x2 array of (across, up) corners."""
+    cy, sy, cp, sp = np.cos(yaw), np.sin(yaw), np.cos(pitch), np.sin(pitch)
+    tris = []
+    for pos, idx in surfaces:
+        across = pos[:, 0] * cy + pos[:, 2] * sy
+        depth = -pos[:, 0] * sy + pos[:, 2] * cy
+        up = pos[:, 1] * cp + depth * sp
+        tris.append(np.stack([across, up], axis=1)[idx])
+    return np.concatenate(tris) if tris else np.zeros((0, 3, 2))
+
+
+def _fill(tris, origin, cell, shape):
+    """A boolean grid of `shape` (rows, columns) from `origin` (left, top) in steps of `cell` metres: the cells whose
+    centres fall inside any triangle (either winding). Scanline: each row crosses every triangle at once."""
+    rows, cols = shape
+    grid = np.zeros(shape, dtype=bool)
+    xs = (tris[..., 0] - origin[0]) / cell - 0.5
+    ys = (origin[1] - tris[..., 1]) / cell - 0.5
+    ends = [(0, 1), (1, 2), (2, 0)]
+    lo, hi = ys.min(axis=1), ys.max(axis=1)
+    for r in range(max(int(np.ceil(lo.min())), 0) if len(tris) else 0, min(int(np.floor(hi.max())) + 1, rows) if len(tris) else 0):
+        live = (lo <= r) & (hi >= r)
+        if not live.any():
+            continue
+        tx, ty = xs[live], ys[live]
+        left = np.full(len(tx), np.inf)
+        right = np.full(len(tx), -np.inf)
+        for a, b in ends:
+            ya, yb, xa, xb = ty[:, a], ty[:, b], tx[:, a], tx[:, b]
+            cross = (np.minimum(ya, yb) <= r) & (np.maximum(ya, yb) >= r) & (ya != yb)
+            x = np.where(cross, xa + (r - ya) * (xb - xa) / np.where(ya != yb, yb - ya, 1.0), np.nan)
+            left = np.where(cross, np.minimum(left, x), left)
+            right = np.where(cross, np.maximum(right, x), right)
+        c0 = np.clip(np.ceil(left), 0, cols).astype(int)
+        c1 = np.clip(np.floor(right) + 1, 0, cols).astype(int)
+        keep = np.isfinite(left) & (c1 > c0)
+        line = np.zeros(cols + 1, dtype=int)
+        np.add.at(line, c0[keep], 1)
+        np.add.at(line, c1[keep], -1)
+        grid[r] = np.cumsum(line[:cols]) > 0
+    return grid
+
+
+def cover(lod0, lod, yaws=COVER_YAWS, pitch=COVER_PITCH, px=COVER_PX):
+    """The worst view's share of `lod0`'s outline that `lod` also fills (see the module doc)."""
+    full = [(pos, idx) for _name, pos, _nor, idx, _prim, _raw in Glb(lod0).surfaces()]
+    part = [(pos, idx) for _name, pos, _nor, idx, _prim, _raw in Glb(lod).surfaces()]
+    if not full:
+        raise ValueError("no triangles in " + str(lod0))
+    reach = max(np.hypot(pos[:, 0], pos[:, 2]).max() for pos, _ in full)
+    rise = max(np.linalg.norm(pos, axis=1).max() for pos, _ in full)
+    cell = 2 * reach / px
+    origin = (-reach, rise)
+    shape = (int(np.ceil(2 * rise / cell)) + 1, px)
+    worst = 1.0
+    for k in range(yaws):
+        yaw = 2 * np.pi * k / yaws
+        a = _fill(_view(full, np.radians(pitch), yaw), origin, cell, shape)
+        b = _fill(_view(part, np.radians(pitch), yaw), origin, cell, shape)
+        if a.sum():
+            worst = min(worst, float((a & b).sum() / a.sum()))
+    return worst
+
+
+def covers(files, out):
+    rows = []
+    for path in files:
+        base = str(path)[:-4]
+        if base.endswith(("_lod1", "_lod2")):
+            continue
+        for suffix in ("_lod1", "_lod2"):
+            if Path(base + suffix + ".glb").exists():
+                fills = cover(path, base + suffix + ".glb")
+                rows.append({"file": base + suffix + ".glb", "cover": round(fills, 4), "under": fills < COVER_FLOOR})
+    if out:
+        Path(out).write_text(json.dumps(rows, indent=1))
+    low = [row for row in rows if row["under"]]
+    for row in sorted(low, key=lambda row: row["cover"]):
+        print("%-50s %.3f" % (Path(row["file"]).name, row["cover"]))
+    print("covered %d, under %.2f %d" % (len(rows), COVER_FLOOR, len(low)))
+    return rows
+
+
 def _flat(path, pitch, yaw):
     """One model seen from the play camera's side, in metres from its ground point: [(across, up, indices)]."""
     surfaces = [(pos, idx) for _name, pos, _nor, idx, _prim, _raw in Glb(path).surfaces()]
@@ -381,7 +479,7 @@ def outlines(files, out, ppm=32.0, pitch=35.0, yaw=30.0, seed=7):
 
 
 def main(argv):
-    if len(argv) < 2 or argv[0] not in ("faults", "outlines"):
+    if len(argv) < 2 or argv[0] not in ("faults", "outlines", "cover"):
         print(__doc__)
         return 2
     options = {}
@@ -397,6 +495,9 @@ def main(argv):
         return 2
     if argv[0] == "faults":
         faults(files, options.get("out"))
+        return 0
+    if argv[0] == "cover":
+        covers(files, options.get("out"))
         return 0
     if "out" not in options:
         print("outlines needs --out=<dir>")

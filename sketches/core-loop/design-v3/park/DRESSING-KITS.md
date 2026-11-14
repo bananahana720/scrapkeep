@@ -34,6 +34,7 @@ Each park has a kit of at least 12 kinds, and each kind has 2 or 3 variants (dif
 | `dress_hero` (2 or 3 kinds per park) | 6,000 to 20,000 | about 50% (40 to 60) | about 15% (10 to 20) | 1 per LOD | LOD0 only |
 | `dress_prop` | 300 to 3,000 | about 50% | about 15% (at least 40 tris) | 1 per LOD | never |
 
+- A LOD must keep the prop's shape: it should fill 85% of LOD0's outline from every side seen from 12 degrees down, and under 80% it fails (`tools/model_audit.py cover`). Where the collapse eats a part at the target, `kit.py` gives that LOD a quarter more triangles at a time until it reaches 85%, up to 75% of LOD0; `scripts/far-faults.mjs` checks every shipped LOD. On 14 Nov the dam's cable drums drew as floating rings at 100 m before this rule (W1-29).
 - Each GLB has one surface, one vertex-colour material, baked AO and wear (`polish.py`), its origin at the foot centre, the floor at y 0, and Y up after import.
 - Colour travels as linear `COLOR_0` and nothing else. `kit.py` `inspect_glb` asserts every exported GLB has it. Godot imports the GLB with an albedo-white material that ignores vertex colour, so `park_props.gd` `_mesh()` gives each cached mesh (a copy; the import stays as it is) one material with `vertex_color_use_as_albedo` on, `vertex_color_is_srgb` off, roughness 0.8, metallic 0 and no emission. `park_props_test` checks every built surface has `ARRAY_COLOR` and that material.
 - Builds are deterministic: a rebuild is byte-identical.

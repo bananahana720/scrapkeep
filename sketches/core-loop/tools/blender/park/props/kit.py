@@ -39,7 +39,9 @@ from mathutils import Matrix, Quaternion, Vector
 HERE = Path(__file__).resolve().parent
 BLENDER = HERE.parent.parent
 sys.path.insert(0, str(BLENDER))
+sys.path.insert(0, str(BLENDER.parent))
 import common
+import model_audit
 import cycles_device
 import polish
 
@@ -53,6 +55,11 @@ PERCH_MIN_HEIGHT = 6.0  # metres: a variant this tall or taller exports a `perch
 BUDGET = {"dress_hero": (6000, 20000), "dress_prop": (300, 3000)}
 LOD1_BAND, LOD2_BAND, LOD2_MIN_TRIS = (0.40, 0.60), (0.10, 0.20), 40
 LOD1_TARGET, LOD2_TARGET = 0.50, 0.15
+# A LOD that fills less than model_audit.COVER_MIN of LOD0's outline gets COVER_STEP times the triangles again, up to
+# COVER_CAP of LOD0's triangles, and one still under model_audit.COVER_FLOOR there fails the build; the collapse otherwise ate whole parts (the dam's cable drums drew as floating rings at 100 m,
+# 14 Nov, W1-29). Only those LODs pass their band's top.
+COVER_STEP = 1.25
+COVER_CAP = 0.75
 FLOOR_TOL = 0.02  # metres a LOD bottom may sit off y 0
 RESEAT_MAX = 0.15  # metres decimate() may shift a LOD down or up to put its bottom back on the floor
 
@@ -552,15 +559,32 @@ class Kit:
             info["perch"] = perch_of(obj, verts)
         stats = [self.write(root, obj, out_dir / (base + ".glb"))]
         assert stats[0]["tris"] == t0, base + ": exported tris differ from mesh tris"
-        for suffix, target, band, floor in (("_lod1", LOD1_TARGET, LOD1_BAND, 0),
-                                            ("_lod2", LOD2_TARGET, LOD2_BAND, LOD2_MIN_TRIS)):
+        full = out_dir / (base + ".glb")
+        for suffix, target, band, cap, floor in (("_lod1", LOD1_TARGET, LOD1_BAND, COVER_CAP, 0),
+                                                 ("_lod2", LOD2_TARGET, LOD2_BAND, COVER_CAP, LOD2_MIN_TRIS)):
             want = max(round(t0 * target), floor)
-            lod = self.decimate(root, obj, want)
-            stats.append(self.write(root, lod, out_dir / (base + suffix + ".glb")))
+            path = out_dir / (base + suffix + ".glb")
+            while True:
+                lod = self.decimate(root, obj, want)
+                stat = self.write(root, lod, path)
+                fills = model_audit.cover(full, path)
+                # Never more than the LOD before it.
+                most = min(math.floor(t0 * cap), stats[-1]["tris"])
+                if fills >= model_audit.COVER_MIN or want >= most:
+                    break
+                bpy.data.objects.remove(lod)
+                want = min(round(want * COVER_STEP), most)
+            stats.append(stat)
             ratio = stats[-1]["tris"] / t0
-            assert band[0] <= ratio <= band[1] and stats[-1]["tris"] >= floor, \
+            top = band[1] if ratio <= band[1] else cap
+            assert band[0] <= ratio <= top and stats[-1]["tris"] >= floor, \
                 "%s%s: %d tris is %.1f%% of LOD0 %d (accept %d-%d%%, min %d)" % (
-                    base, suffix, stats[-1]["tris"], ratio * 100, t0, band[0] * 100, band[1] * 100, floor)
+                    base, suffix, stats[-1]["tris"], ratio * 100, t0, band[0] * 100, top * 100, floor)
+            assert fills >= model_audit.COVER_FLOOR, "%s%s: fills %.3f of LOD0's outline at %d tris, want %.2f" % (
+                base, suffix, fills, stats[-1]["tris"], model_audit.COVER_FLOOR)
+            if ratio > band[1]:
+                print("KIT_COVER %s%s raised to %d tris (%.0f%%) to fill %.3f of LOD0's outline" % (
+                    base, suffix, stats[-1]["tris"], ratio * 100, fills), flush=True)
             low = stats[-1]["bounds"][0][1]
             assert abs(low) <= FLOOR_TOL, "%s%s: bottom at y %.3f, not 0" % (base, suffix, low)
             bpy.data.objects.remove(lod)
