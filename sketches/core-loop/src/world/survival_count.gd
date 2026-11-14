@@ -60,11 +60,14 @@ const FORMS := {
 }
 
 # How the fought ground moves. "still" stays where it landed. "loop" rides a circle of `radius_m`
-# that passes through the landing point and comes back to it every `lap_s`.
+# that passes through the landing point and comes back to it every `lap_s`; where that circle has
+# no clear ground it rides one of the `tighter_m` circles at the same pace, or holds (ways()).
 const MOVES := {
 	"still": {},
-	"loop": {"radius_m": 60.0, "lap_s": 45.0},
+	"loop": {"radius_m": 60.0, "lap_s": 45.0, "tighter_m": [40.0, 25.0]},
 }
+# A course's plan points are about this far apart.
+const COURSE_STEP_M := 8.0
 
 var rule: Dictionary = RULE
 var world := 1
@@ -79,6 +82,9 @@ var _count_left := 0.0
 var _gate_left := 0.0
 var _landed := Vector2.ZERO
 var _forward := Vector2.DOWN
+# The circle the ground rides: its radius, to the right of the heading at landing when positive, to
+# the left when negative, and 0 for ground that holds where it landed (ways()).
+var _way := 0.0
 var _clock := 0.0
 
 
@@ -89,10 +95,13 @@ func _init(world_id := 1, form_id := "yard", rule_row: Dictionary = RULE) -> voi
 
 
 # The first count climbs in, on ground that landed at `landed` with the ball heading along
-# `heading` (a looping form sets off that way). Returns the first pack.
-func begin(landed := Vector2.ZERO, heading := Vector2.DOWN) -> Array:
+# `heading` (a looping form sets off that way, on the circle `way` names: one of ways(), and the
+# first of them when left out). Returns the first pack.
+func begin(landed := Vector2.ZERO, heading := Vector2.DOWN, way := INF) -> Array:
 	_landed = landed
 	_forward = heading.normalized() if heading.length() > 0.001 else Vector2.DOWN
+	var all := ways(form)
+	_way = way if all.has(way) else all[0]
 	_clock = 0.0
 	count = 1
 	cleared = 0
@@ -189,15 +198,45 @@ func hazard(n: int) -> Dictionary:
 	return {"kind": row["kind"], "level": minf(float(row["max"]), float(row["step"]) * maxi(0, n - 1))}
 
 
-# Where the fought ground's centre is now: the landing point for a still form; for a loop, a
-# circle to the right of the heading at landing, which sets off along that heading and is back on
-# the landing point every lap.
+# Where the fought ground's centre is now: the landing point for a still form or a held loop; for a
+# loop, on its circle beside the heading at landing, which sets off along that heading and is back
+# on the landing point every lap. Every circle is ridden at the pace of the move's own.
 func ground() -> Vector2:
-	var move: Dictionary = MOVES[str(FORMS[form]["move"])]
-	if move.is_empty():
+	if is_zero_approx(_way):
 		return _landed
-	var centre := _landed - _forward.orthogonal() * float(move["radius_m"])
-	return centre + (_landed - centre).rotated(TAU * _clock / float(move["lap_s"]))
+	var move: Dictionary = MOVES[str(FORMS[form]["move"])]
+	return _on_course(_landed, _forward, _way, _clock / (float(move["lap_s"]) * absf(_way) / float(move["radius_m"])))
+
+
+# The circles a form's ground may ride, best first, as signed radii: positive lies to the right of
+# the heading at landing, negative to the left, and the last, 0, holds where it landed. A still
+# form has only the 0.
+static func ways(form_id: String) -> Array:
+	var move: Dictionary = MOVES[str(FORMS[form_id]["move"])]
+	var out := []
+	if not move.is_empty():
+		for radius in [move["radius_m"]] + move["tighter_m"]:
+			out.append(float(radius))
+			out.append(-float(radius))
+	out.append(0.0)
+	return out
+
+
+# One lap of a way from `landed` along `heading`, as plan points about COURSE_STEP_M apart starting
+# at the landing point: for the caller to look at the ground under a way before begin(). The
+# landing point alone for the way that holds.
+static func course(landed: Vector2, heading: Vector2, way: float) -> PackedVector2Array:
+	var out := PackedVector2Array([landed])
+	var forward := heading.normalized() if heading.length() > 0.001 else Vector2.DOWN
+	var steps := ceili(TAU * absf(way) / COURSE_STEP_M)
+	for i in range(1, steps):
+		out.append(_on_course(landed, forward, way, float(i) / steps))
+	return out
+
+
+static func _on_course(landed: Vector2, forward: Vector2, way: float, laps: float) -> Vector2:
+	var centre := landed - forward.orthogonal() * way
+	return centre + (landed - centre).rotated(TAU * laps * signf(way))
 
 
 # Seconds until the standing count gets the next on top of it, or 0 while the gate is open.

@@ -11,12 +11,15 @@ const SurvivalCount := preload("res://src/world/survival_count.gd")
 # (c) away from its row nothing happens; near it the siren announces it once and nothing starts for siren_s; a ball
 #     the Warden has engaged is neither called on nor landed on;
 # (d) when the siren ends the ring lands on the ground under the moving ball, away from its row, shows, and count 1 begins;
-# (e) the ring then travels: it sets off the way the ball was heading and stays on the rule's loop;
+# (e) the ring then travels: it sets off the way the ball was heading and stays on the circle the site chose, and
+#     every point of that circle is ground a ring fits on;
 # (f) with the floor clear the gate opens, and rolling out of the travelling ring from inside banks pay(1);
-# (g) a run seed that is not called builds no muster.
+# (g) a run seed that is not called builds no muster;
+# (h) ground a ring fits on: not a crew's home, not the Warden's ring; a landing with no clear circle holds;
+# (i) a ball on another fight's ground when the siren ends is not landed on until it is on clear ground.
 
 const SEED := 23
-const EXPECTED_CHECKS := 9
+const EXPECTED_CHECKS := 13
 
 var _game
 var _t := preload("res://tests/support/t.gd").new("stocktake_muster_test")
@@ -91,6 +94,10 @@ func _run() -> void:
 	_game.flow.enter_stage(2, Vector3.ZERO, false)
 	await _frames(4)
 	await _muster()
+	_game.run.run_seed = on[1]
+	_game.flow.enter_stage(2, Vector3.ZERO, false)
+	await _frames(4)
+	await _waits()
 	_game.run.run_seed = quiet
 	_game.flow.enter_stage(2, Vector3.ZERO, false)
 	await _frames(4)
@@ -144,23 +151,32 @@ func _muster() -> void:
 	var on_loop := true
 	var opened := false
 	var first_step := Vector2.ZERO
-	# The loop's centre sits one radius to the right of the heading at landing (east), which is south.
-	var centre := landed + Vector2(0.0, float(loop["radius_m"]))
+	# The site rides the first clear way: a circle of that radius, its centre to the right of the heading at landing
+	# (east), which is south, for a positive way and to the left for a negative one.
+	var ring := float(s.rule["ring"])
+	var way: float = _acts().clear_way("muster", landed, Vector2(going.x, going.z), ring)
+	var centre := landed + Vector2(0.0, way)
 	for frame in 6 * Engine.physics_ticks_per_second:
 		await _hold(_over(s.global_position.x, s.global_position.z))
 		var ring_at := Vector2(s.global_position.x, s.global_position.z)
 		if frame == 20:
 			first_step = ring_at - landed
 		furthest = maxf(furthest, ring_at.distance_to(landed))
-		on_loop = on_loop and absf(ring_at.distance_to(centre) - float(loop["radius_m"])) < 0.5
+		on_loop = on_loop and absf(ring_at.distance_to(centre) - absf(way)) < 0.5
 		for enemy in s.pack:
 			if is_instance_valid(enemy):
 				enemy.take_damage(100000.0)
 		if s.yard.gate_open and s.yard_owed.is_empty():
 			opened = true
 			break
-	_t.check("the ring sets off the way the ball was heading and stays on the loop", furthest > 5.0 and on_loop and first_step.x > 1.0
-		and absf(first_step.y) < first_step.x, "furthest %.1f m, first step %s" % [furthest, first_step])
+	_t.check("the ring sets off the way the ball was heading and stays on the circle the site chose", furthest > 5.0 and on_loop
+		and first_step.x > 1.0 and absf(first_step.y) < first_step.x and absf(way) >= float(loop["tighter_m"][-1]),
+		"way %.0f m, furthest %.1f m, first step %s" % [way, furthest, first_step])
+	var course := SurvivalCount.course(landed, Vector2(going.x, going.z), way)
+	var fits := course.size() > 8
+	for p in course:
+		fits = fits and _acts().clear_ground(PackedVector2Array([p]), ring)
+	_t.check("every point of the chosen circle is ground a ring fits on", fits and _acts().clear_ground(course, ring), "%d points" % course.size())
 	_t.check("a clear floor opens the gate on the travelling ring", opened and s.yard.cleared == 1, "opened %s cleared %d" % [opened, s.yard.cleared])
 	await _hold(_over(s.global_position.x, s.global_position.z))
 	var scrap_before: int = _game.run.scrap
@@ -168,3 +184,39 @@ func _muster() -> void:
 	var pay: Dictionary = SurvivalCount.new().pay(1)
 	_t.check("rolling out of the ring from inside banks pay(1)", _ended == ["won"] and s.done and _game.run.scrap - scrap_before == int(pay["scrap"]),
 		"ended %s scrap %d of %d" % [_ended, _game.run.scrap - scrap_before, pay["scrap"]])
+
+
+# The wasteway is a crew's home (ParkMap.fight_sites() wasteway_chasers), and on HEMMED, west of it, a ring fits but no circle is clear.
+const HOME := Vector2(85.0, 335.0)
+const HEMMED := Vector2(-30.0, 300.0)
+
+
+func _waits() -> void:
+	var s = _site()
+	var acts = _acts()
+	var map = _game.ctx.terrain.map()
+	var ring := float(s.rule["ring"])
+	var one := func(p: Vector2) -> bool: return acts.clear_ground(PackedVector2Array([p]), ring)
+	var hemmed := true
+	for k in 8:
+		hemmed = hemmed and is_zero_approx(acts.clear_way("muster", HEMMED, Vector2.RIGHT.rotated(TAU * k / 8.0), ring))
+	_t.check("a ring fits on open ground, not on a crew's home, the Warden's ring or the map's edge; a hemmed landing holds",
+		one.call(HEMMED) and not one.call(HOME) and not one.call(map.beacon) and not one.call(map.play_rect.position + Vector2(5.0, 5.0)) and hemmed,
+		"open %s home %s warden %s hemmed %s" % [one.call(HEMMED), one.call(HOME), one.call(map.beacon), hemmed])
+	var row := Vector2(s.global_position.x, s.global_position.z)
+	var near: Vector3 = _over(row.x - float(s.rule["call_m"]) + 20.0, row.y)
+	_announced.clear()
+	for frame in 30:
+		await _hold(near)
+	var siren := float(s.rule["siren_s"])
+	for frame in int((siren + 1.0) * Engine.physics_ticks_per_second):
+		await _hold(_over(HOME.x, HOME.y))
+	var waited: bool = _announced == [siren] and not s.started and not s.visible
+	for frame in 10:
+		await _hold(_over(HEMMED.x, HEMMED.y))
+	var landed := Vector2(s.global_position.x, s.global_position.z)
+	_t.check("a ball on a crew's home when the siren ends is landed on only once it is on clear ground",
+		waited and s.started and s.visible and landed.distance_to(HEMMED) < 1.0, "waited %s started %s, %.1f m from the clear spot" % [waited, s.started, landed.distance_to(HEMMED)])
+	await _frames(Engine.physics_ticks_per_second)
+	_t.check("a landing with no clear circle holds where it landed", Vector2(s.global_position.x, s.global_position.z).distance_to(landed) < 0.01,
+		"moved %.2f m" % Vector2(s.global_position.x, s.global_position.z).distance_to(landed))

@@ -175,6 +175,9 @@ const RULES := {
 const PICKUP_REACH := 1.7
 const PICKUP_HEIGHT := 3.0
 # The activity kinds that stand a survival count (survival_count.gd), each on a park survival_rows row of its form.
+# A travelling survival ring's course may rise or fall this much between two of its plan points (8 m of ground,
+# SurvivalCount.COURSE_STEP_M): more is a wall, a drop or a void, and the ring does not go that way.
+const COURSE_RISE_M := 8.0
 const SURVIVAL_KINDS := ["stocktake_yard", "stocktake_muster"]
 const RING_HEIGHT := 8.0
 const BRUTE_DROP := 2.4
@@ -2085,7 +2088,9 @@ func _watch_yard(s: Site, delta: float, ball: Vector3) -> void:
 			return
 		s.started = true
 		var going: Vector3 = ctx.player.planar_velocity()
-		yard.begin(Vector2(s.global_position.x, s.global_position.z), Vector2(going.x, going.z))
+		var landed := Vector2(s.global_position.x, s.global_position.z)
+		var heading := Vector2(going.x, going.z)
+		yard.begin(landed, heading, clear_way(yard.form, landed, heading, float(s.rule["ring"])))
 		_yard_owe(s)
 		ctx.events.event_started.emit(s.id)
 	elif s.rule.has("siren_s"):
@@ -2131,11 +2136,48 @@ func _muster_lands(s: Site, delta: float, ball: Vector3) -> bool:
 			s.yard_siren = float(s.rule["siren_s"])
 			ctx.events.event_announced.emit(s.id, s.yard_siren, Vector3.INF)
 		return false
-	s.yard_siren -= delta
-	if s.yard_siren > 0.0:
+	# Held at 0 while it waits for clear ground: below 0 is a muster not yet called.
+	s.yard_siren = maxf(0.0, s.yard_siren - delta)
+	# The ring lands when the siren ends, or as soon after as the ball is on ground a ring fits on: never on another
+	# fight's ground, the Warden's, or the map's edge (clear_ground).
+	if s.yard_siren > 0.0 or not clear_ground(PackedVector2Array([Vector2(ball.x, ball.z)]), float(s.rule["ring"])):
 		return false
 	s.global_position = ctx.terrain.drop_point(ball.x, ball.z, 0.0)
 	s.visible = true
+	return true
+
+
+# The way a survival form's ground travels from `landed` along `heading` (one of SurvivalCount.ways()): the first
+# whose whole lap is clear ground for a ring of `ring` metres. The last way holds where it landed, and is the answer
+# when no circle is clear.
+func clear_way(form: String, landed: Vector2, heading: Vector2, ring: float) -> float:
+	for way in SurvivalCount.ways(form):
+		if is_zero_approx(way) or clear_ground(SurvivalCount.course(landed, heading, way), ring):
+			return way
+	return 0.0
+
+
+# True when a ring of `ring` metres fits on every one of `points` in turn: inside the play area, outside the Warden's
+# ring and every fight's own ground (ParkMap.fight_sites()), and with no rise or fall of more than COURSE_RISE_M from
+# one point to the next (a wall, a drop, a void). A lap's last point is checked against its first.
+func clear_ground(points: PackedVector2Array, ring: float) -> bool:
+	var map = ctx.terrain.map()
+	var fights: Array = map.fight_sites() if map.has_method("fight_sites") else []
+	var before: float = ctx.terrain.height(points[-1].x, points[-1].y)
+	for p in points:
+		var here: float = ctx.terrain.height(p.x, p.y)
+		if absf(here - before) > COURSE_RISE_M or not map.play_rect.grow(-ring).has_point(p):
+			return false
+		before = here
+		for fight in fights:
+			var local: Vector2 = p - fight["at"]
+			if fight.has("half"):
+				local = local.rotated(deg_to_rad(float(fight.get("yaw_deg", 0.0))))
+				var half: Vector2 = fight["half"]
+				if Vector2(maxf(0.0, absf(local.x) - half.x), maxf(0.0, absf(local.y) - half.y)).length() < ring:
+					return false
+			elif local.length() > float(fight["ring"].x) - ring and local.length() < float(fight["ring"].y) + ring:
+				return false
 	return true
 
 
