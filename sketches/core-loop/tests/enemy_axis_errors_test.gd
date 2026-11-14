@@ -34,11 +34,11 @@ func _initialize() -> void:
 
 func _run() -> void:
 	EnemyMotion.headless_idle = true
-	# The log sees the error it is here to count: one planted bad axis.
+	# The log counts the engine's own wording. It is fed the line, not a real bad axis, because
+	# any ERROR line in a test's output fails the test in the runner.
 	var planted := _log.axis
-	var bad := Vector3(1.1, 0.0, 0.0)
-	var _refused := Basis(bad, 1.0)
-	_t.eq("the log catches a bad axis", _log.axis - planted, 1)
+	_log._log_error("basis_axis", "core/math/basis.cpp", 0, "", "The axis Vector3 (1.1, 0.0, 0.0) must be normalized.", false, 0, [] as Array[ScriptBacktrace])
+	_t.eq("the log counts the engine's axis wording", _log.axis - planted, 1)
 	_settled_ground()
 	await _resting_pieces()
 	EnemyMotion.headless_idle = false

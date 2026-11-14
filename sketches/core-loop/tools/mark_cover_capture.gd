@@ -138,7 +138,7 @@ func _run() -> void:
 	var ball_mask := _mask(plain[0], no_ball)
 	var noise := {"screen": _changed(again, plain, PackedByteArray()), "body": _changed(again, plain, crew_mask), "ball": _changed(again, plain, ball_mask)}
 	print("crew px %d, ball px %d, noise %s" % [_count(crew_mask), _count(ball_mask), noise])
-	for look in ["haze", "clear", "edges"]:
+	for look in ["haze", "clear", "edges", "tape"]:
 		Threat.set_look(look)
 		for pose in ["lane-pending", "lane-live", "ring-pending"]:
 			var mark: Node3D
