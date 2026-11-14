@@ -2133,7 +2133,7 @@ func _watch_yard(s: Site, delta: float, ball: Vector3) -> void:
 			_yard_owe(s)
 	s.view.say(str(yard.count))
 	if s.yard_dress != null:
-		s.yard_dress.step(delta, yard.gate_open, ball)
+		s.yard_dress.step(delta, yard.gate_open, [ball] + s.pack.map(func(enemy): return enemy.global_position))
 	if inside:
 		s.yard_out = 0.0
 		s.yard_may_bank = yard.gate_open
@@ -2296,6 +2296,8 @@ func _yard_pay(s: Site, pay: Dictionary, ball: Vector3) -> void:
 		ctx.run.add_scrap(scrap, at)
 		ctx.run.add_cogs(scrap)
 	ctx.events.event_ended.emit(s.id, "won")
+	if s.yard_dress != null:
+		s.yard_dress.stand_down()
 	_finish(s, at)
 
 
@@ -2304,6 +2306,8 @@ func _yard_forfeit(s: Site) -> void:
 	s.yard.forfeit()
 	s.yard_owed = []
 	s.done = true
+	if s.yard_dress != null:
+		s.yard_dress.stand_down()
 	s.view.finish()
 	ctx.events.event_ended.emit(s.id, "lost")
 

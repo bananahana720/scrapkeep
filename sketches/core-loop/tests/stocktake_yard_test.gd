@@ -129,14 +129,16 @@ func _counts(spec: Dictionary) -> void:
 		var out: Vector2 = (_game.ctx.terrain.map().beacon - Vector2(s.global_position.x, s.global_position.z)).normalized()
 		var gate_off := Vector2(gate.global_position.x - s.global_position.x, gate.global_position.z - s.global_position.z)
 		var stand_off := Vector2(stand.global_position.x - s.global_position.x, stand.global_position.z - s.global_position.z)
-		furnished = absf(gate_off.length() - ring) < 0.01 and gate_off.normalized().dot(out) > 0.99 and stand_off.length() > ring + 2.0
+		# Machines climb in on the ring itself (_yard_arrive), so both pieces stand clear outside it.
+		furnished = gate_off.length() - dress.GATE_SIZE.x * 0.5 > ring + 1.0 and gate_off.length() < ring + 6.0 and gate_off.normalized().dot(out) > 0.99
+		furnished = furnished and stand_off.length() - dress.STAND_SIZE.x > ring + 1.0
 		furnished = furnished and dress.gate_shut() and absf(gate.global_position.y - _game.ctx.terrain.height(gate.global_position.x, gate.global_position.z)) < 0.01
 		for piece in [gate, stand]:
 			var views: Array = piece.find_children("*", "MeshInstance3D", true, false)
 			furnished = furnished and not views.is_empty() and views[0].mesh is ArrayMesh and views[0].material_override.vertex_color_use_as_albedo
 		# The gate's width lies along the ring: its Z axis is square to the way out.
 		furnished = furnished and absf(Vector2(gate.global_transform.basis.z.x, gate.global_transform.basis.z.z).dot(out)) < 0.01
-	_t.check("the yard has its gate on the ring toward the beacon, shut, and its stand outside the ring", furnished, "dress %s" % dress)
+	_t.check("the yard has its gate toward the beacon and its stand, both just outside the ring, the gate shut", furnished, "dress %s" % dress)
 	var first: Array = rule.pack(1)
 	var early_gate := false
 	var stood := true
@@ -160,7 +162,7 @@ func _counts(spec: Dictionary) -> void:
 	await _hold(_centre(s))
 	for frame in Engine.physics_ticks_per_second:
 		await _hold(_centre(s))
-	var sunk: bool = dress != null and dress.get_child(0).global_position.y < s.global_position.y - 4.0
+	var sunk: bool = dress != null and dress.gate_sunk()
 	_t.check("a cleared floor opens the gate, which sinks, and the ring turns the live colour", sunk and rule.gate_open and rule.cleared == 1 and _ring_color(s) == Palette.live(),
 		"gate %s cleared %d ring %s" % [rule.gate_open, rule.cleared, _ring_color(s)])
 	for frame in int((float(rule.rule["gate_s"]) + float(s.rule["arrive_s"]) * rule.pack(2).size() + 0.5) * Engine.physics_ticks_per_second):
@@ -186,7 +188,8 @@ func _counts(spec: Dictionary) -> void:
 			break
 	var gained: Array = _game.run.parts.slice(parts_before.size())
 	var grades: Array = gained.map(func(part): return Parts.rarity_of(part))
-	_t.check("leaving through the open gate ends the yard won", _ended == ["won"] and s.done, str(_ended))
+	await _frames(Engine.physics_ticks_per_second)
+	_t.check("leaving through the open gate ends the yard won, its gate sunk", _ended == ["won"] and s.done and s.yard_dress.gate_sunk(), str(_ended))
 	_t.check("it pays exactly pay(2): the scrap and each listed part grade", _game.run.scrap - scrap_before == int(pay["scrap"]) and grades == pay["rarities"],
 		"scrap %d of %d, grades %s of %s" % [_game.run.scrap - scrap_before, pay["scrap"], grades, pay["rarities"]])
 
@@ -205,7 +208,9 @@ func _walks_out() -> void:
 	var held: bool = not s.done
 	for frame in Engine.physics_ticks_per_second:
 		await _hold(_outside(s))
-	_t.check("a yard left with the gate shut forfeits after out_s and pays nothing", held and s.done and _ended == ["lost"]
+	var was_shut: bool = s.yard_dress.gate_shut() or not s.yard_dress.gate_sunk()
+	await _frames(Engine.physics_ticks_per_second)
+	_t.check("a yard left with the gate shut forfeits after out_s and pays nothing, and its gate sinks out of the way", was_shut and s.yard_dress.gate_sunk() and held and s.done and _ended == ["lost"]
 		and s.pickup == null and _game.run.scrap == scrap_before, "held %s done %s ended %s" % [held, s.done, _ended])
 	_kill(s)
 
