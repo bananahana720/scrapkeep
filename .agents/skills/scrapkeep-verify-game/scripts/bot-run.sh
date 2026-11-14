@@ -10,10 +10,12 @@
 # Evidence: <evidence>/film/ (the kept frames and film.ndjson, what the game knew at each), game.log,
 #      identity.txt, saves/ (run.json, runs.ndjson).
 # Exit: the bot's own: 0 the goal was reached, 1 the run ended first, 3 a stall; 2 a bad argument or no
-#       Godot; 124 the wall timeout; 143 the script was interrupted (Ctrl-C, cleanup.sh --stop).
+#       Godot; 124 the wall timeout (137 when it had to be killed); 143 the script was interrupted (Ctrl-C,
+#       cleanup.sh --stop). The display wrapper has codes of its own: a 1 or 3 with no `self-play:` line in
+#       game.log is a display that did not start, not the bot.
 set -uo pipefail
 source "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/common.sh"
-[ $# -ge 1 ] || { sed -n 2,13p "${BASH_SOURCE[0]}"; exit 2; }
+[ $# -ge 1 ] || { sed -n 2,15p "${BASH_SOURCE[0]}"; exit 2; }
 name="$1"; shift
 [ "${1:-}" = "--" ] && shift
 [[ "$name" =~ ^[A-Za-z0-9][A-Za-z0-9._-]*$ ]] || { echo "bot-run: bad evidence name '$name' (letters, digits, . _ - only; game flags go after --)" >&2; exit 2; }
@@ -31,20 +33,10 @@ mkdir -p "$out/film" "$home/data" "$home/config" "$home/cache"
 } > "$out/identity.txt"
 export XDG_DATA_HOME="$home/data" XDG_CONFIG_HOME="$home/config" XDG_CACHE_HOME="$home/cache"
 # The red team's film flags (scripts/redteam/lib.mjs filmArgs); the caller's flags come last and win.
-timeout --signal=TERM --kill-after=20 "${VERIFY_GAME_TIMEOUT:-7000}" xvfb-run -a -s "-screen 0 1280x720x24" \
+run_game "$out/drive.pid" "$out/game.log" "${VERIFY_GAME_TIMEOUT:-7000}" xvfb-run -a -s "-screen 0 1280x720x24" \
   "$godot" --rendering-driver opengl3 --audio-driver Dummy --resolution 1280x720 --fixed-fps 30 --path "$sketch" -- \
   --self-play --self-play-seed=1 --self-play-policy=skipper --self-play-keys=1 --self-play-eyes=1 --self-play-watch=1 \
-  --self-play-save=verify-bot --self-play-stall=600 "--self-play-film=$out/film" --self-play-until=win --self-play-hold=5 "$@" \
-  > "$out/game.log" 2>&1 &
-pid=$!
-write_pid "$pid" "$out/drive.pid"
-# Ctrl-C or a TERM to this script stops the game too (timeout passes the signal on to the game and its
-# display), then the script goes on to keep the evidence; a second wait collects the game's exit.
-trap 'kill -TERM "$pid" 2>/dev/null' INT TERM
-wait "$pid"
-code=$?
-if [ "$code" -gt 128 ] && kill -0 "$pid" 2>/dev/null; then wait "$pid"; code=$?; fi
-trap - INT TERM
+  --self-play-save=verify-bot --self-play-stall=600 "--self-play-film=$out/film" --self-play-until=win --self-play-hold=5 "$@"
 echo "finished $(date -u +%FT%TZ) exit $code" >> "$out/identity.txt"
 grep '^self-play: ' "$out/game.log" | tail -12
 userdata="$home/data/godot/app_userdata/core-loop"
