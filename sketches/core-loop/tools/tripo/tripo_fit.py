@@ -1,6 +1,6 @@
 """Fit a Tripo-generated GLB to an authored Scrapkeep asset's conventions.
 
-blender -b --factory-startup -P tripo_fit.py -- --in tripo.glb --ref authored.glb --out fitted.glb [--yaw DEG] [--max-tris N]
+blender -b --factory-startup -P tripo_fit.py -- --in tripo.glb --ref authored.glb --out fitted.glb [--yaw DEG] [--max-tris N] [--name BodyMeshName]
 
 What it does, in order:
 1. Reads the authored asset: its bounds, its socket empties, and its palette. The palette is the
@@ -12,7 +12,8 @@ What it does, in order:
    colour stays flat per slot (the colour law); faces take that slot's material (enemy style) or
    that vertex colour on the single material (camp style). The texture and its image are dropped.
 4. Decimates to --max-tris if over, copies the authored sockets, names the mesh after the authored
-   one, and exports a GLB with no images.
+   one (--name picks which, when the authored model has several meshes and the first is not the body),
+   and exports a GLB with no images.
 Prints one JSON line with counts.
 """
 import json, math, sys
@@ -47,7 +48,7 @@ ref_meshes = [o for o in ref if o.type == "MESH"]
 rmn, rmx = bounds(ref_meshes)
 sockets = [(o.name, o.matrix_world.translation.copy()) for o in ref if o.type == "EMPTY" and o.parent is not None]
 root_name = next((o.name for o in ref if o.parent is None), "root")
-mesh_name = next((o.name for o in ref_meshes if o.parent is not None and o.parent.type != "MESH"), ref_meshes[0].name)
+mesh_name = opt.get("name") or next((o.name for o in ref_meshes if o.parent is not None and o.parent.type != "MESH"), ref_meshes[0].name)
 pivots = {o.name: o.matrix_world.translation.copy() for o in ref_meshes}
 mats = []
 for o in ref_meshes:
