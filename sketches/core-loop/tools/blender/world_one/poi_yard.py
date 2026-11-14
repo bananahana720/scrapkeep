@@ -7,7 +7,8 @@
 #                         read at speed against brown concrete and sand. One rigid mesh, origin at the foot, so the
 #                         game can knock it flat by turning it about its origin.
 #   poi_ring_flag.glb, poi_siren_mast.glb, poi_furnace_stacks.glb, poi_tagged_crate.glb and its four pieces,
-#   poi_req_locker.glb and poi_req_locker_door.glb: the Brindle arena surroundings (W1-104); each builder's comment
+#   poi_req_locker.glb and poi_req_locker_door.glb, poi_tag_rack.glb, poi_tag_rack_leaning.glb and
+#   poi_scooter_shed.glb: the Brindle arena surroundings (W1-104); each builder's comment
 #   gives its size and where its origin is.
 # Each is one mesh on one material named paint with linear COLOR_0 and no texture, as the park props and the Tripo props
 # (tools/tripo/tripo_prop.py) are; the loader sets vertex colour as albedo. Metres; Godot (X,Y,Z) -> Blender (X,-Z,Y).
@@ -261,8 +262,8 @@ def _small_crate(bm, at, size=0.8):
     x, y, z = at
     box(bm, WOOD, (size, size, size), (x, y, z + size / 2))
     box(bm, WOOD_D, (size + 0.06, size + 0.06, 0.08), (x, y, z + size - 0.04))
-    box(bm, BRASS, (0.34, 0.05, 0.26), (x, y - size / 2 - 0.03, z + size * 0.5))
-    box(bm, BONE, (0.22, 0.02, 0.05), (x, y - size / 2 - 0.06, z + size * 0.55))
+    box(bm, BRASS, (0.34, 0.05, 0.26), (x, y - size / 2 - 0.025, z + size * 0.5))
+    box(bm, BONE, (0.22, 0.02, 0.05), (x, y - size / 2 - 0.055, z + size * 0.55))
 
 
 def _tag_rack(bm):
@@ -270,8 +271,8 @@ def _tag_rack(bm):
     # each, and a striped awning; the tags face the front (-Y)
     box(bm, CONC, (3.0, 2.0, 0.15), (0, 0, 0.075))
     for x in (-1.4, 1.4):
-        for y in (-0.9, 0.9):
-            box(bm, RUST, (0.12, 0.12, 2.6), (x, y, 1.45))
+        box(bm, RUST, (0.12, 0.12, 2.6), (x, -0.9, 1.45))
+        box(bm, RUST, (0.12, 0.12, 2.8), (x, 0.9, 1.55))  # the back posts are taller and carry the awning's back rail
     for z in (0.5, 1.6):
         box(bm, CHAR, (2.9, 1.9, 0.08), (0, 0, z))
         for k, x in enumerate((-0.92, 0.0, 0.92)):
@@ -287,7 +288,8 @@ def tag_rack(bm):
 
 
 def tag_rack_leaning(bm):
-    # the same rack tipped 14 degrees to its right about its right foot line, with one crate fallen to the ground
+    # the same rack tipped 14 degrees to its right about its right foot line, with a seventh crate standing on the
+    # ground beside it; the rack is set 0.45 m left of centre so the pair sits about the origin
     _tag_rack(bm)
     bmesh.ops.transform(bm, matrix=Matrix.Translation((1.5, 0, 0)) @ Matrix.Rotation(math.radians(14), 4, "Y") @ Matrix.Translation((-1.5, 0, 0)), verts=bm.verts)
     low = min(v.co.z for v in bm.verts)
@@ -299,8 +301,8 @@ def tag_rack_leaning(bm):
 
 
 def scooter_shed(bm):
-    # A tiny tin garage, 4 m wide, 3 m deep and 3 m tall with its pennant: petrol-green corrugated walls, a sloping
-    # charcoal roof, an open door on the front (-Y) too small for comfort, and a pennant pole on the ridge. The
+    # A tiny tin garage, 4 m wide, 3 m deep and 3 m tall with its pennant: petrol-green corrugated walls, a flat
+    # charcoal roof with a rust gutter, an open door on the front (-Y) too small for comfort, and a pennant pole on the roof. The
     # scooter is a second model and stands inside at the origin.
     box(bm, CONC, (4.0, 3.0, 0.12), (0, 0, 0.06))
     box(bm, GREEN, (3.8, 0.1, 2.0), (0, 1.4, 1.1))
@@ -315,8 +317,8 @@ def scooter_shed(bm):
     for k in range(7):  # corrugation ribs on the side walls
         for x in (-1.92, 1.92):
             box(bm, WIRE, (0.04, 0.08, 1.9), (x, -1.2 + 0.4 * k, 1.1))
-    box(bm, CHAR, (4.0, 3.0, 0.1), (0, 0, 2.2), Matrix.Rotation(math.radians(-6), 4, "X"))
-    box(bm, RUST, (4.0, 0.12, 0.12), (0, -1.5, 2.06))
+    box(bm, CHAR, (4.0, 3.0, 0.1), (0, 0, 2.15))  # flat, resting on the 2.1 m walls
+    box(bm, RUST, (4.0, 0.12, 0.12), (0, -1.5, 2.1))
     cylinder(bm, BONE, 0.04, 0.8, (1.5, 0, 2.2), 6)
     wedge(bm, ORANGE, [(1.46, 3.0), (1.46, 2.58), (0.8, 2.79)], 0.04)
     box(bm, ORANGE, (0.3, 0.06, 0.2), (0, -1.47, 1.86))  # the lamp over the door
