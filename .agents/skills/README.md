@@ -9,9 +9,14 @@ Each directory here is one skill that Claude Code loads. Claude reaches it throu
 | `scrapkeep-verify` | project | choose and run the checks that qualify an artifact |
 | `scrapkeep-lab` | project | run, extend, gate or port the headless Godot lab |
 | `scrapkeep-blockout` | project | build mojulo blockout pieces and heroes, export them and prove them with the ball |
+| `scrapkeep-verify-game` | project | play the launched game from a step file and keep the proof a feature works |
+| `scrapkeep-verify-build` | project | check and play the packed Linux build Andrew installs |
+| `scrapkeep-verify-web` | project | drive the Sitting Kit and the two preserved browser proofs in a real browser |
 | `reactive-model-loop` | portable | design and evaluate a fast model that decides inside a running system |
 
 `reactive-model-loop` is a mirror. Since 2026-09-26 its canonical copy is the A stack plugin (`/home/andrew/.config/astack/plugin/skills/reactive-model-loop`), so every project on both hosts gets it. Change the A stack copy first, then copy it here byte for byte; `python /home/andrew/.config/astack/verify.py --project <this repo>` fails when the two differ. The RML origin map in `scrapkeep-lab/references/lessons.md` still covers every lesson id.
+
+The three `scrapkeep-verify-*` skills were made with the A stack's `create-verification-skill` (Andrew, 13 November 2026). Each has a `features/` map, one file per player-facing feature, and helper scripts under `scripts/`; `/astack:create-verification-skill maintain` audits a map against the source and the running app. `scrapkeep-verify` still picks which checks qualify a change; these three show a feature working.
 
 ## Decide whether it is a skill
 
