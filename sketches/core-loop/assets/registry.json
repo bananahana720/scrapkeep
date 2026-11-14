@@ -36565,10 +36565,32 @@
    }
   },
   {
+   "id": "pilot_cannon_anim_tripo",
+   "path": "res://assets/models/pilot_cannon_anim_tripo.glb",
+   "class": "pilot",
+   "ships": true,
+   "loader": "src/presentation/hero_assets.gd (PILOTS) through src/presentation/model_variants.gd (--models=tripo)",
+   "provenance": {
+    "recipe": "tools/tripo/README.md",
+    "note": "Tripo Studio HD Model (H3.1, text to 3D, 45 Pro credits) on Andrew's paid Pro account (Tripo terms 5.2: the outputs belong to the account holder); fitted onto the authored Cannon skeleton and clips by tools/tripo/pilot_fit.py and tools/tripo/pilot_touch.py; one skinned mesh of 8,200 triangles, texture baked to vertex colour; the prompt was typed in Studio and is in the account's history, not in the repository; the counts are in the README's pilot table. sha256 f5c1a3af74c360f659f9c057d5329e9f7b19f7bd55a157b91e85f148c1c4e463"
+   }
+  },
+  {
    "path": "res://assets/models/pilot_kest_anim.glb",
    "class": "pilot",
    "ships": true,
    "loader": "src/presentation/hero_assets.gd:17"
+  },
+  {
+   "id": "pilot_kest_anim_tripo",
+   "path": "res://assets/models/pilot_kest_anim_tripo.glb",
+   "class": "pilot",
+   "ships": true,
+   "loader": "src/presentation/hero_assets.gd (PILOTS) through src/presentation/model_variants.gd (--models=tripo)",
+   "provenance": {
+    "recipe": "tools/tripo/README.md",
+    "note": "Tripo Studio HD Model (H3.1, text to 3D, 45 Pro credits) on Andrew's paid Pro account (Tripo terms 5.2: the outputs belong to the account holder); fitted onto the authored Kest skeleton and clips by tools/tripo/pilot_fit.py and tools/tripo/pilot_touch.py; one skinned mesh of 8,200 triangles, texture baked to vertex colour; the prompt was typed in Studio and is in the account's history, not in the repository; the counts are in the README's pilot table. sha256 827fb1a51306c15b1868c825e2c7bd9b319bb265d391c5108f8b1fc71f41fc42"
+   }
   },
   {
    "path": "res://assets/models/pilot_rivet_anim.glb",
@@ -36584,7 +36606,7 @@
    "loader": "src/presentation/hero_assets.gd (PILOTS) through src/presentation/model_variants.gd (--models=tripo)",
    "provenance": {
     "recipe": "tools/tripo/README.md",
-    "note": "Tripo Studio HD Model (H3.1, text to 3D, 45 Pro credits) from tools/tripo/prompts/pilot_rivet.txt, on Andrew's paid Pro account (Tripo terms 5.2: the outputs belong to the account holder); fitted onto the authored Rivet skeleton and clips by tools/tripo/pilot_fit.py (--head-scale 1.35 --neck 0.5 --tris 8200) and tools/tripo/pilot_touch.py (--head 1.0 --fwd 0.57); one skinned mesh, 8,200 triangles and 7,811 vertices (the authored Rivet is 10,456 triangles), texture baked to vertex colour. sha256 f0090c777a1f63d28238e48318e7b1cfae6eb17b44c4a8e4f2b66fe946b88e7a"
+    "note": "Tripo Studio HD Model (H3.1, text to 3D, 45 Pro credits) on Andrew's paid Pro account (Tripo terms 5.2: the outputs belong to the account holder); fitted onto the authored Rivet skeleton and clips by tools/tripo/pilot_fit.py and tools/tripo/pilot_touch.py; one skinned mesh of 8,200 triangles, texture baked to vertex colour; the prompt and counts are in the README's pilot table. sha256 8984f7e8c2fd8c6d1c979fb04b743d9969dc358a256a25b3c09b2f767d107b00"
    }
   },
   {
@@ -36592,6 +36614,17 @@
    "class": "pilot",
    "ships": true,
    "loader": "src/presentation/hero_assets.gd:16"
+  },
+  {
+   "id": "pilot_sable_anim_tripo",
+   "path": "res://assets/models/pilot_sable_anim_tripo.glb",
+   "class": "pilot",
+   "ships": true,
+   "loader": "src/presentation/hero_assets.gd (PILOTS) through src/presentation/model_variants.gd (--models=tripo)",
+   "provenance": {
+    "recipe": "tools/tripo/README.md",
+    "note": "Tripo Studio HD Model (H3.1, text to 3D, 45 Pro credits) on Andrew's paid Pro account (Tripo terms 5.2: the outputs belong to the account holder); fitted onto the authored Sable skeleton and clips by tools/tripo/pilot_fit.py and tools/tripo/pilot_touch.py; one skinned mesh of 8,200 triangles, texture baked to vertex colour; the prompt and counts are in the README's pilot table. sha256 8595c6204ffed9cad9cbfca452fa41169deb073b9df5075c760328348b8156d2"
+   }
   },
   {
    "id": "pilot_tally_anim",
@@ -36605,6 +36638,17 @@
    }
   },
   {
+   "id": "pilot_tally_anim_tripo",
+   "path": "res://assets/models/pilot_tally_anim_tripo.glb",
+   "class": "pilot",
+   "ships": true,
+   "loader": "src/presentation/hero_assets.gd (PILOTS) through src/presentation/model_variants.gd (--models=tripo)",
+   "provenance": {
+    "recipe": "tools/tripo/README.md",
+    "note": "Tripo Studio HD Model (H3.1, text to 3D, 45 Pro credits) on Andrew's paid Pro account (Tripo terms 5.2: the outputs belong to the account holder); fitted onto the authored Tally skeleton and clips by tools/tripo/pilot_fit.py and tools/tripo/pilot_touch.py; one skinned mesh of 8,200 triangles, texture baked to vertex colour; the prompt was typed in Studio and is in the account's history, not in the repository; the counts are in the README's pilot table. sha256 0cfcc965c0c2518ef854c3b493bdb216fed72168aa438cd0311d569bb93592db"
+   }
+  },
+  {
    "id": "pilot_tarn_anim",
    "path": "res://assets/models/pilot_tarn_anim.glb",
    "class": "pilot",
@@ -36613,6 +36657,17 @@
    "provenance": {
     "recipe": "tools/blender/pilot_tarn.py",
     "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D6/out/BUILD-SPEC.md"
+   }
+  },
+  {
+   "id": "pilot_tarn_anim_tripo",
+   "path": "res://assets/models/pilot_tarn_anim_tripo.glb",
+   "class": "pilot",
+   "ships": true,
+   "loader": "src/presentation/hero_assets.gd (PILOTS) through src/presentation/model_variants.gd (--models=tripo)",
+   "provenance": {
+    "recipe": "tools/tripo/README.md",
+    "note": "Tripo Studio HD Model (H3.1, text to 3D, 45 Pro credits) on Andrew's paid Pro account (Tripo terms 5.2: the outputs belong to the account holder); fitted onto the authored Tarn skeleton and clips by tools/tripo/pilot_fit.py and tools/tripo/pilot_touch.py; one skinned mesh of 8,200 triangles, texture baked to vertex colour; the prompt was typed in Studio and is in the account's history, not in the repository; the counts are in the README's pilot table. sha256 c8aaec20ea6155026048c0a3213157d9ac5bb4fcf2b4ba9eb9a9df3a25f9e2b4"
    }
   },
   {
@@ -40106,9 +40161,14 @@
   "penstock_run_detail1",
   "penstock_run_detail2",
   "pilot_cannon_anim",
+  "pilot_cannon_anim_tripo",
+  "pilot_kest_anim_tripo",
   "pilot_rivet_anim_tripo",
+  "pilot_sable_anim_tripo",
   "pilot_tally_anim",
+  "pilot_tally_anim_tripo",
   "pilot_tarn_anim",
+  "pilot_tarn_anim_tripo",
   "pipeline_rail",
   "pipeline_rail_detail1",
   "pipeline_rail_detail2",

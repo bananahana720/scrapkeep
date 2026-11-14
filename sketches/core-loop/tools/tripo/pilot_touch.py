@@ -1,9 +1,9 @@
-# blender -b --factory-startup -P pilot_touch.py -- --in fit.glb --out out.glb [--head 1.0] [--fwd 0.57] [--tail 1]
+# blender -b --factory-startup -P pilot_touch.py -- --in fit.glb --out out.glb [--head 1.0] [--fwd 0.57] [--tail 1] [--half 0.43]
 # After pilot_fit.py: enlarge the head by its skin weights, keep the snout inside the cockpit's forward limit, and tuck a tail stub in.
 import bpy, sys, json
 from mathutils import Vector
 a = sys.argv[sys.argv.index("--") + 1:]
-opt = {"--head": "1.0", "--fwd": "0.57", "--tail": "1"}
+opt = {"--head": "1.0", "--fwd": "0.57", "--tail": "1", "--half": "0.43"}
 opt.update(dict(zip(a[::2], a[1::2])))
 bpy.ops.wm.read_factory_settings(use_empty=True)
 bpy.ops.import_scene.gltf(filepath=opt["--in"])
@@ -25,6 +25,17 @@ for i, c in enumerate(co):
 ex = max(c.y for c in co) - float(opt["--fwd"])
 if ex > 0:
     for i in range(len(co)): co[i].y -= ex  # the whole pilot slides back, so the skin stays whole
+# a pilot that fits the width but sits off centre slides sideways until it is centred
+xs = [c.x for c in co]; half = float(opt["--half"])
+if max(abs(min(xs)), abs(max(xs))) > half and max(xs) - min(xs) <= 2 * half:
+    mid = (max(xs) + min(xs)) / 2
+    for i in range(len(co)): co[i].x -= mid
+# a pilot wider than the cockpit narrows evenly about its centre (Kest's elbows: 6 percent)
+xs = [c.x for c in co]
+if max(xs) - min(xs) > 2 * half:
+    mid = (max(xs) + min(xs)) / 2; k = 2 * half / (max(xs) - min(xs))
+    for i in range(len(co)): co[i].x = (co[i].x - mid) * k
+    print("NARROW", round(k, 3))
 # tail stub: pink corners low at the back
 tail = 0
 if opt["--tail"] == "1":

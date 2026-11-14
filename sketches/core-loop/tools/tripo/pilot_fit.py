@@ -1,13 +1,14 @@
-# blender -b --factory-startup -P pilot_fit.py -- --old pilot_x_anim.glb --new tripo.glb --out out.glb [--tris 8200] [--arm-yaw 90] [--flip 1] [--head-scale 1.35 --neck 0.5]
+# blender -b --factory-startup -P pilot_fit.py -- --old pilot_x_anim.glb --new tripo.glb --out out.glb [--tris 8200] [--arm-yaw 90] [--flip 1] [--head-scale 1.35 --neck 0.5] [--drop all]
 import bpy, sys, math, json
 from mathutils import Matrix, Vector
 a = sys.argv[sys.argv.index("--") + 1:]
-opt = {"--tris": "8200", "--arm-yaw": "auto", "--flip": "1", "--drop": "Pilot,Claws.L,Claws.R"}
+opt = {"--tris": "8200", "--arm-yaw": "auto", "--flip": "1", "--drop": "all"}
 opt.update(dict(zip(a[::2], a[1::2])))
 bpy.ops.wm.read_factory_settings(use_empty=True)
 bpy.ops.import_scene.gltf(filepath=opt["--old"])
 arm = [o for o in bpy.data.objects if o.type == "ARMATURE"][0]
-old = [o for o in bpy.data.objects if o.type == "MESH" and o.name in opt["--drop"].split(",")]
+# the authored skinned meshes (body, claws, tail, wings, cap): they lend their weights and are then replaced
+old = [o for o in bpy.data.objects if o.type == "MESH" and o.vertex_groups and (opt["--drop"] == "all" or o.name in opt["--drop"].split(","))]
 body = max(old, key=lambda o: len(o.data.polygons))
 before = set(bpy.data.objects)
 bpy.ops.import_scene.gltf(filepath=opt["--new"])
@@ -77,9 +78,18 @@ def out_angle(dx, dy): return math.atan2(abs(dx), dy)  # 0 = straight forward, 9
 if opt["--arm-yaw"] == "auto":
     ub = arm.data.bones["upper_arm.L"]; hb = arm.data.bones["hand.L"]
     sh = arm.matrix_world @ ub.head_local; hd0 = arm.matrix_world @ hb.head_local
-    tips = [v for v in wverts(n) if abs(v.x) > 0.8 * max(abs(w.x) for w in wverts(n))]
+    # the hands: between hips and neck (so ears, crests and cheeks never count), beside the body, level with or in front of
+    # the shoulder (so a tail never counts), farthest from the shoulder
+    zlo = (arm.matrix_world @ arm.data.bones["pelvis"].head_local).z; zhi = (arm.matrix_world @ arm.data.bones["neck"].head_local).z
+    side = [v for v in wverts(n) if zlo < v.z < zhi and abs(v.x) > 0.6 * abs(sh.x) and v.y > sh.y - 0.05]
+    if not side:
+        print("YAW no hand vertices found beside the body; measuring from the whole mesh, check the arms"); side = wverts(n)
+    side.sort(key=lambda v: math.hypot(abs(v.x) - abs(sh.x), v.y - sh.y), reverse=True)
+    tips = side[:max(10, len(side) // 30)]
+    print("YAW tips", len(tips))
     tx = sum(abs(v.x) for v in tips) / len(tips); ty = sum(v.y for v in tips) / len(tips)
     yaw = out_angle(tx - abs(sh.x), ty - sh.y) - out_angle(hd0.x - sh.x, hd0.y - sh.y)
+    print("YAW deg", round(math.degrees(yaw), 1))
 else:
     yaw = math.radians(float(opt["--arm-yaw"]))
 a2 = arm.copy(); a2.data = arm.data.copy(); a2.animation_data_clear(); bpy.context.scene.collection.objects.link(a2)
