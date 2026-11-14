@@ -68,6 +68,9 @@ export function newestTarball(directory, list = readdirSync, mtime = (file) => s
 // Exec names the command on PATH inside the AppDir; install.sh points it at the installed copy.
 // The sitting action (decisions.tsv P-R21 and B7) launches with --profile=sitting, which opens all
 // six pilots and never writes the real save; the plain entry plays the unlock ladder.
+// The earned sitting action launches with --profile=sitting-earned (W1-78): the sitting's loops and
+// the run that ends won at Brindle (rulings da, dd, df, dk), on a profile of its own that keeps what
+// it earns. It is the launch the world 1 sitting plays; without an entry it could only be typed.
 export function desktopEntry({ exec, icon = APP_ID }) {
   return (
     [
@@ -83,7 +86,11 @@ export function desktopEntry({ exec, icon = APP_ID }) {
       "StartupWMClass=" + WM_CLASS,
       "Categories=Game;ActionGame;",
       "Keywords=scrap;mech;harpoon;roguelite;",
-      "Actions=sitting;",
+      "Actions=sitting-earned;sitting;",
+      "",
+      "[Desktop Action sitting-earned]",
+      "Name=Scrapkeep sitting (fresh profile, unlocks earned)",
+      "Exec=" + exec + " -- --profile=sitting-earned",
       "",
       "[Desktop Action sitting]",
       "Name=Scrapkeep sitting (all pilots, save untouched)",
