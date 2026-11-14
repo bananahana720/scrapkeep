@@ -36,7 +36,7 @@ const EXPECTED := {
 	"overtime": ["overtime", "on", "bogus", "launch"],
 	"called-shot": ["called_shot", "on", "bogus", "launch"],
 	"stocktake": ["stocktake", "on", "bogus", "launch"],
-	"stakes": ["stakes", "on", "bogus", "launch"],
+	"posts": ["posts", "on", "bogus", "launch"],
 	"final-world": ["final_world", "1", "bogus", "launch"],
 }
 

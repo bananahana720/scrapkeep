@@ -15,7 +15,7 @@ const Bay := preload("res://src/world/bay.gd")
 const Threat := preload("res://src/combat/threat_grammar.gd")
 const Interact := preload("res://src/world/interact.gd")
 const Activities := preload("res://src/world/activities.gd")
-const TallyStakes := preload("res://src/world/tally_stakes.gd")
+const SurveyPosts := preload("res://src/world/survey_posts.gd")
 const StageLocks := preload("res://src/world/stage_locks.gd")
 const RescueSites := preload("res://src/world/rescue_site.gd")
 const AbilityState := preload("res://src/core/ability_state.gd")
@@ -77,7 +77,7 @@ var interact
 var locks
 # The map's standing activities (activities.gd).
 var activities
-var tally_stakes: Node3D
+var survey_posts: Node3D
 # The map's world rescue (rescue_site.gd).
 var rescue
 # What Moss said last (the shop's result record), for the shop UI.
@@ -175,10 +175,10 @@ func setup(ctx_ref) -> void:
 	activities = Activities.new()
 	ctx.root.add_child(activities)
 	activities.setup(ctx)
-	# Tally stakes along the floor line (--stakes=on): after the map is the stage's, as activities are.
-	tally_stakes = TallyStakes.new()
-	ctx.root.add_child(tally_stakes)
-	tally_stakes.setup(ctx)
+	# Survey posts along the floor line (--posts=on): after the map is the stage's, as activities are.
+	survey_posts = SurveyPosts.new()
+	ctx.root.add_child(survey_posts)
+	survey_posts.setup(ctx)
 	# A surge course opens the park's sluice row and, won or lost, ends it.
 	activities.sluice_opened.connect(func(row_id: String):
 		if events != null:
