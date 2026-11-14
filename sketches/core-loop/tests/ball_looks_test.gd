@@ -171,6 +171,7 @@ func _plated(look: String) -> void:
 			if _is_window(mat):
 				seat = minf(seat, _number(mat, "seat_back_top"))
 		t.eq("%s: only a small pilot's seat back is lowered (%s)" % [look, pilot], seat, float(BallLooks.LOW_SEAT_BACK.get(pilot, 9.0)))
+		t.eq("%s: no light node rides %s's ball" % [look, pilot], (pod as Node).find_children("*", "Light3D", true, false).size(), 0)
 		var seated: Dictionary = painter.fit_pilot_into(pod, pilot, Color.WHITE)
 		var outfits: Array = Cosmetics.ROWS.keys().filter(func(id): return Cosmetics.ROWS[id].get("slot", "") == "outfit" and Cosmetics.ROWS[id].get("pilot", "") == pilot)
 		if not seated.is_empty() and not outfits.is_empty():

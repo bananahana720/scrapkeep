@@ -67,6 +67,7 @@ uniform float keep_within = 0.0;
 // units), not by its angle from the centre: a rod near the centre never reaches that angle, and
 // a barrel that stands out past the ball reaches it while still beside the opening.
 uniform float tube = 0.0;
+const float STANDS_OUT = 1.15;
 uniform bool back_is_kit = false;
 // A small pilot's seat back is lowered to this height (the level part's own Y): every vertex of
 // the seat back's slab above it is pressed down to it, so the back stays a closed box.
@@ -113,7 +114,10 @@ void fragment() {
 	} else if (IN_SHADOW_PASS) {
 		// In a light's pass the eye is the light. The half toward it is left out, so the sun
 		// reaches the pilot; the far half still throws the whole round shadow on the ground.
-		if (dot(normalize(from_centre), normalize(to_eye)) > 0.0) {
+		// Kit that stands out past the ball (a barrel) blocks no sun from the pilot and keeps
+		// its whole shadow.
+		bool stands_out = tube > 0.0 && length(from_centre) > STANDS_OUT * model_scale;
+		if (!stands_out && dot(normalize(from_centre), normalize(to_eye)) > 0.0) {
 			discard;
 		}
 	} else if (facing > window) {
