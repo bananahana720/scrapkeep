@@ -509,7 +509,7 @@ func _vent(angle: float) -> void:
 	disc.bottom_radius = Rules.VENT_REACH
 	disc.height = 0.1
 	pad.mesh = disc
-	pad.material_override = Palette.solid(Palette.water_tone(), 0.6)
+	pad.material_override = Palette.solid(Palette.ARC, 0.6)
 	pad.position = _local(angle, VENT_R, 0.06)
 	pad.name = "WaterVent%d" % roundi(rad_to_deg(angle))
 	add_child(pad)
