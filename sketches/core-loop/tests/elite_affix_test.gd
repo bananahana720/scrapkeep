@@ -12,6 +12,7 @@ const Profile := preload("res://src/core/profile.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const Telegraph := preload("res://src/combat/telegraph.gd")
 const Brute := preload("res://src/combat/plated_brute.gd")
+const PackPressure := preload("res://src/combat/pack_pressure.gd")
 const SPAWNS := 50
 const TICK := 1.0 / 90.0
 const EDGE_STEP := 0.05
@@ -234,7 +235,10 @@ func _solo(id: String, world: int) -> void:
 		var onset := false
 		for frame in 360:
 			if start < 0 and enemy.phase == enemy.Phase.ROAM:
-				var aim: Vector3 = enemy.target.ball_position() - enemy.global_position
+				# The lane is laid toward the ball's roll SEEK_LEAD_S ahead, scaled by the stage's crew lead: world 1
+				# crews lead at half since wave 37 (ChallengeDials.LEAD_W1, ruling cu); a lead of 0 aims at the ball.
+				var lead := PackPressure.lead_now(enemy.spec.get("pressure", {}), enemy.target)
+				var aim: Vector3 = (PackPressure.predict(enemy.target, Brute.SEEK_LEAD_S * lead) if lead > 0.0 else enemy.target.ball_position()) - enemy.global_position
 				aim.y = 0.0
 				sample["aim"] = aim.normalized()
 			await physics_frame

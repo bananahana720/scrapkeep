@@ -10,6 +10,7 @@ const RunState := preload("res://src/core/run_state.gd")
 const RunStore := preload("res://src/core/run_store.gd")
 const RunTier := preload("res://src/core/run_tier.gd")
 const DeathCause := preload("res://src/core/death_cause.gd")
+const SpeedTier := preload("res://src/movement/speed_tier.gd")
 const DeathTips := preload("res://src/core/death_tips.gd")
 const UpgradeTree := preload("res://src/core/upgrade_tree.gd")
 const StartPickCard := preload("res://src/ui/start_pick_card.gd")
@@ -1010,7 +1011,7 @@ func physics_step(delta: float) -> void:
 		return
 	if not in_play():
 		return
-	ctx.run.advance(delta)
+	ctx.run.advance(delta, ctx.player.speed_tier() >= SpeedTier.CRUISE)
 	if state == BEACON or state == GATES or state == LAUNCH:
 		_read_boss_ahead()
 	var ball: Vector3 = ctx.player.ball_position()

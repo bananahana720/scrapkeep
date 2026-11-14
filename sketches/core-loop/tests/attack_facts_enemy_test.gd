@@ -19,7 +19,9 @@ const Chaser := preload("res://src/combat/chaser.gd")
 # - Damage: a chaser lunge that lands emits hit_player with Chaser.DAMAGE.
 # - A counter (the mag trapper) publishes the same phases from its own loop, row E05.
 # - Nothing about the attacks changes: TIMELINE below is captured from base 1c2f777 (md5 of the text), where
-#   the same scenario ran with no facts.
+#   the same scenario ran with no facts. Wave 37 unit D2 runs chasers at 9 m/s on the dam, and wave 39 holds a
+#   chaser at Chaser.SPEED for its first ENTRY_GRACE_S alive (the pocket entry stays safe), so in its 13 chase
+#   ticks the stage 0 chaser runs at base pace again and the timeline equals base's.
 
 const TICK_LIMIT := 480
 const OFFSET := Vector3(8.0, 0.0, 0.0)

@@ -26,6 +26,12 @@ const DAMAGE := 12.0
 const SHOVE := 5.0
 const HIT_RADIUS := 0.9
 const RETURN_FLIGHT := 0.9
+# The first seconds of a covered flight in which the muzzle is clear of cover, and the collision layer
+# terrain and landform bodies are on (Godot's default 1; the ball is alone on layer 2).
+const COVER_CLEAR_SECONDS := 0.15
+const COVER_MASK := 1
+# How far above its ring's seat a hit still counts as the landing ground, not cover (metres).
+const COVER_SEAT_BAND := 0.25
 # The batting cue (LEGIBILITY section 6): while the ball could reach the landing point before
 # the shell lands, the shell wears the will_break row's rim, and a rising ping sounds when the
 # rim first lights. The ping is SfxBank's "vault_rise", the breathy rising sweep. Visual and
@@ -49,6 +55,9 @@ var flight := 1.9
 var launch := Vector3.ZERO
 var ring: Node3D
 var returned := false
+# Whether terrain and landforms stop this shell in flight (the stage's hazard.shell_cover_by_stage, passed in
+# by combat): a covered shell bursts harmlessly where its path meets static geometry short of its landing.
+var covered := false
 # Test seam: the rim and its ping off, nothing else changes.
 var rim_cue_enabled := true
 var pings := 0
@@ -78,7 +87,8 @@ static func lob_velocity(from: Vector3, to: Vector3, seconds: float) -> Vector3:
 
 
 func setup(target_ref, terrain_ref, root_ref: Node, live_ref: Callable, from: Vector3, to: Vector3, seconds: float,
-		lobber_ref: Node3D = null) -> void:
+		lobber_ref: Node3D = null, cover_ref := false) -> void:
+	covered = cover_ref
 	target = target_ref
 	terrain = terrain_ref
 	world_root = root_ref
@@ -129,8 +139,11 @@ func bat() -> bool:
 func _physics_process(delta: float) -> void:
 	if live.is_valid() and not live.call():
 		return
+	var before := position
 	_age = minf(_age + delta, flight)
 	position = origin + launch * _age + Vector3.DOWN * 0.5 * GRAVITY * _age * _age
+	if covered and not returned and _age < flight and _age > COVER_CLEAR_SECONDS and _burst_on_cover(before):
+		return
 	_step_rim(delta)
 	if is_instance_valid(ring):
 		ring.set_progress(_age / flight)
@@ -150,6 +163,29 @@ func _physics_process(delta: float) -> void:
 		hit_player.emit(DAMAGE, away * SHOVE + Vector3.UP * 3.0)
 	exploded.emit(landing, BLAST_RADIUS, hit)
 	queue_free()
+
+
+# Casts the step just flown against static geometry. A hit short of the landing ring bursts the shell
+# there, harmlessly. Returns true when the shell is gone.
+func _burst_on_cover(from: Vector3) -> bool:
+	if not is_inside_tree():
+		return false
+	var query := PhysicsRayQueryParameters3D.create(from, position, COVER_MASK)
+	var hit := get_world_3d().direct_space_state.intersect_ray(query)
+	if hit.is_empty():
+		return false
+	var at: Vector3 = hit["position"]
+	if Vector2(at.x - landing.x, at.z - landing.z).length() <= BLAST_RADIUS:
+		return false
+	# Cover stands above the ground the ring is seated on. A hit no higher than that seat is the shell meeting
+	# its own landing ground (an arena floor raised over the aim point, say), so it flies on and lands.
+	if is_instance_valid(ring) and at.y <= ring.center.y + COVER_SEAT_BAND:
+		return false
+	exploded.emit(at, BLAST_RADIUS, false)
+	if is_instance_valid(ring):
+		ring.queue_free()
+	queue_free()
+	return true
 
 
 # Whether the ball can bat this shell: at cruise or faster (combat._bat_by_ball's floor), and at its

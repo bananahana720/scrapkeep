@@ -108,9 +108,14 @@ const WALL_S := 1100.0
 # 2026-11-14 (wave 40 gate, PC, bd5b30f5c): small median 26.5, grown 18.5, after the clamp the same, 3.5 s over
 # the 15 s floor. PR 925 then the wave 40 stack (PR 956 among it) shortened both; re-pinned at promotion (an
 # assumption Andrew can overturn). Was 33.1 / 22.4 / 22.4.
-const EXPECT_SMALL_S := 26.5
-const EXPECT_GROWN_S := 18.5
-const EXPECT_GROWN_OPEN_S := 18.5
+# 2026-11-14 (PR 845, the world 1 difficulty stack re-landed on stage/alpha-w41 49e801ad, cloud): re-pinned. One run:
+# small [28.63, 28.72, 17.37, 21.83, 13.25] median 21.8, grown [19.9, 18.77, 16.33, 15.76, 6.09] median 16.3, after
+# the clamp the same, 1.3 s over the 15 s floor; campers never break. The stack's faster crews reshuffle each seed's
+# fight, as on 2026-11-12. Assumption Andrew can overturn: the flume fight stays as the stack leaves it, inside its
+# band. The margin on the 15 s floor is now thin: a further shortening is a design question (ruling bj).
+const EXPECT_SMALL_S := 21.8
+const EXPECT_GROWN_S := 16.3
+const EXPECT_GROWN_OPEN_S := 16.3
 const TOLERANCE := 0.10
 
 

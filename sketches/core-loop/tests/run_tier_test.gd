@@ -79,27 +79,30 @@ const Cards := preload("res://src/world/director_cards.gd")
 # 2026-10-31 stage/alpha-w30 re-pin at 860ee797 (ruling j integration commit): #605's dam crevice fill is park-row data in the
 # schedule hash, so all 20 schedules moved; #608, #609 and #610 move none (the values equal #605's own record at a9c379cb,
 # #607 comment 6539679622). Whole-run hashes unchanged. Recorded with --record-base --section=runtime --seed=N at 860ee797.
+# 2026-11-14 PR 845 (world 1 difficulty stack re-land, merged with stage/alpha-w40 bd5b30f5 at 7077c2ee): the director
+# schedule moves with the stack (a third clock tier on world 1, mobs.clock_tiers_by_stage): all 20 schedules moved;
+# whole-run hashes unchanged. Recorded with --record-base --section=runtime.
 const BASE_SCHEDULE := [
-	"babfc41f183280405f05779dca7f27253ea67ce65acc9a0a2ed830324164f5f6",
-	"09507fadf35aaf8047446e75dcebd089cd8e8a52f957388bc2d48e836492b619",
-	"f11ab7858da83fa59c7a9b3ff8445a9846fd6c5b19b870dcacb537a5e55285b9",
-	"5f02444e05433d92fde378527506e78c9863dc487ef74127d4f7b3623f742d4a",
-	"6f0e0eee105cf421217fd196b5835666df624ab85b7519a94874e0fefb10d173",
-	"d52090fdbc2b219430024ea0301e447bfc5f5d61809455cc3a176442461cb31a",
-	"c3ab396707766dff3ec16ab195197c8ad7a1de940835c74c903c384205ddcc15",
-	"74a59c690b860ba04c3f1a912024fe221d44f79bb59dcfb4afce9b329ad6f413",
-	"ac1d67238f1d33c124a15784dc4f5b93eb40b62ba49d605f28b9992d712e4df9",
-	"1478177cd4f653e31ca137c3f932a4df457c4fb4404a7a9a8d771047faebdd19",
-	"1966155e78a2d6fe81f7c21685a3466a7aa5ed990a35f476e785a73f4ef8daaa",
-	"7929c672f7671444875bbea27d92bc689a80c52e31ee758b84d05f815183326f",
-	"b5b1db6da857fccc6669673c9595e180c67b3467100c116376fc4e868e2f2756",
-	"896a29c8e4cb69ef39a39b6301edae734e8d0c973ce0933c5c5e46335e9a56cb",
-	"b1cbb507573693855bcf651c8fb81df2e4844d89829ce7023baf44f6e81e3bba",
-	"6f36612548e8c7cd3cd0d4f4a712c16cd78f4ed7316e02c19509eca9886cd365",
-	"b68ad21a754dced2cca4313384c3931979808dd1dc47158a9612e6e7114bc013",
-	"4535b5ae3f61d0c616acfe3a6bd8c2039e7258bf73a71c8741039f03bfb4632e",
-	"93df57fe9448369d2ca97bce33800f1cea50c8c309baa13f6ed802117a6a3d0c",
-	"deca5c2462a3808f13e1e349f6b8ad8476c12d046ffb0a5e19312933baa71cf8",
+	"ed17962613691e59a3bb29c66a2f4ca10d129d69aa117d67b94ffc65feda76a8",
+	"acaa5513f167b63efa3081ff8d35d03cef67991cb53cff163c230df850cafc9e",
+	"7b2590add65f318d94f0d17ecc6917df312641c6a3bc031dbc1b435c89c51427",
+	"6e5966ec0f6dca1cebafada6364483a4f3cf1174c3018cd6844ac7a4b23d703c",
+	"81089cf9c3ed111824fb1f05f7d3cc9cf92b4d9114557cdd8461dca0ac7d88e5",
+	"6a7dec29bfe20df281c9ccef457751bb5cf95022e872d206f5222bc21fb76e4d",
+	"9e4f732114630d14811268d23bcaa044d4f6f717ad5891d3aa50017c37aa2645",
+	"509792ea7707fa0dfaecc80490281ea7cb0dde80672de23b0bb5f4e58fdad052",
+	"f26e0e7b5212033d1323c0eae168be31984d2f76e12280cf7791dfdf357e7a56",
+	"92f7675f04a164393e4d8c7da9787ae84314f0e4a881e28968d5c3b078847c67",
+	"60ce065d855699e16b554f7e527e0b56573341a0728307244599cd203c407f77",
+	"14a59a2f25825b81f896dc68252a809ad045b593eceecdf3dceef4fdf8a7c811",
+	"15c9d0af6a50bc2962bf1bdcecb5894c64adb35fc2d4c91736beb9070cc2b635",
+	"34dd0e51d3e1f20d61d514910bfd5ff629203bad813ec7474f1bd0f5e524aeaf",
+	"7152e5a590c515e84a55a6328c20129832047e9d45c6e62d0eae84de69d74977",
+	"e2f7f33d18d98e10e6c21840266435ef76bf2b012f6aa01fc662d8737244318a",
+	"974be8d23247cfa2d4a87796c0009b5c12f817dbda4e9bfb0633dbe40150ce10",
+	"e6542d22a6c2047dee99d4f6758089b2ff5e2ee87eb0a93374917d495169b4c1",
+	"f2b103f8974b429705c577c23ff9f8c67d0d6f529d311bbd0ad8fc46e4ea30c0",
+	"b8ebc250e0b7068c0011d7cf537844c4e5eb0c72690eb7ca674208bed9099161",
 ]
 # 2026-10-15 wave-14 re-pin at 8b507ffb (SQ9 speed bank, PC-POOL part rows, SQ19 offer weights and
 # the SQ9 free-rest fix move the default run; schedules unchanged): recorded with --record-base.
@@ -264,8 +267,10 @@ func _component(seed_value: int, tier_value: int) -> Dictionary:
 		var measured := _schedule(d)
 		members += measured.members
 		if not record:
-			var cap_expected := mini(Director.HARD_CAP, roundi((6 + 2 * Director.MAX_TIME_TIERS) * row.threat * row.pressure.pack_scale * config.cap_weight))
-			var interval_expected := maxf(Director.MIN_INTERVAL, (Director.BASE_INTERVAL - 0.7 * Director.MAX_TIME_TIERS) / row.threat * row.pressure.interval_scale * config.interval_weight)
+			# The stage's last clock tier (mobs.clock_tiers_by_stage: +3 on world 1 since wave 37, +2 elsewhere).
+			var last_tier := Director.clock_tiers(d.dial_stage)
+			var cap_expected := mini(Director.HARD_CAP, roundi((6 + 2 * last_tier) * row.threat * row.pressure.pack_scale * config.cap_weight))
+			var interval_expected := maxf(Director.MIN_INTERVAL, (Director.BASE_INTERVAL - 0.7 * last_tier) / row.threat * row.pressure.interval_scale * config.interval_weight)
 			t.eq("independent cap seed %d tier %d stage %d" % [seed_value, tier_value, row.stage], measured.cap, cap_expected)
 			t.near("independent interval seed %d tier %d stage %d" % [seed_value, tier_value, row.stage], measured.interval, interval_expected)
 			# Ruling al: no tier raises enemy health.
