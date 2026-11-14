@@ -129,9 +129,14 @@ def star(n, outer, inner):
 
 
 # The evolved crown's outline (x, z about the topper centre): a band and five points.
-# Clockwise, like star(), so the prism's faces point the same way as the star's.
-CROWN = [(-1.1, -0.6), (-1.1, 0.7), (-0.825, 0.05), (-0.55, 0.95), (-0.275, 0.05), (0.0, 1.2), (0.275, 0.05),
-         (0.55, 0.95), (0.825, 0.05), (1.1, 0.7), (1.1, -0.6)]
+# Clockwise, like star(), so the prism's faces point the same way as the star's. Drawn
+# CROWN_RISE times taller than the sketch below and centred on the topper, so the crown
+# stands at least 1.2 times the relic star's height (gate_topper_names_test): the top
+# rung reads as the bigger prize.
+CROWN_RISE = 1.45
+CROWN = [(x, (z - 0.3) * CROWN_RISE) for x, z in [
+    (-1.1, -0.6), (-1.1, 0.7), (-0.825, 0.05), (-0.55, 0.95), (-0.275, 0.05), (0.0, 1.2), (0.275, 0.05),
+    (0.55, 0.95), (0.825, 0.05), (1.1, 0.7), (1.1, -0.6)]]
 
 
 def offset(pts, d):
@@ -170,7 +175,7 @@ def topper(rarity):
         outline_loop(t, rim, 0.18)
     elif rarity == "relic":
         # A four-point star with the gauge bezel's bolts and a mint heart (src/build/tier_mark.gd).
-        tall = 1.3
+        tall = 1.15
         pts = [(x, y * tall) for x, y in star(4, 1.0, 0.36)]
         t.prism("rarity", pts, 0.34, matrix=upright)
         outline_loop(t, star(4, 1.16, 0.44), 0.07, tall)

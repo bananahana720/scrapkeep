@@ -37,7 +37,7 @@ CLIP_DIR = SKETCH / "assets/models/world_one/clips"
 FPS = 30
 CLIPS = ("idle", "move", "windup", "attack", "hit", "death")
 KINDS = ("chaser", "lobber", "mag_trapper", "plated_brute", "winch_drone", "jolt_layer", "hooker", "ramp_flipper",
-         "boom_tender")
+         "boom_tender", "netcaster", "bola_thrower", "swatter", "catch_trap", "deflector", "gyro_jammer")
 SIZE_CAP = 64 * 1024
 TOL = 1e-4
 IDLE_ROT_CAP = 20.0
@@ -142,6 +142,12 @@ def leads():
         "hooker": (_snap(_configured("hooker", "warn_seconds")), ATTACK_CAP),
         "ramp_flipper": (_snap(_configured("ramp_flipper", "warn_seconds")), _snap(min(_const("ramp_flipper", "TILT") + 0.05, ATTACK_CAP))),
         "boom_tender": (_snap(_configured("boom_tender", "warn_seconds")), _snap(_const("boom_tender", "SWEEP"))),
+        "netcaster": (_snap(_configured("netcaster", "warn_seconds")), ATTACK_CAP),
+        "bola_thrower": (_snap(_configured("bola_thrower", "warn_seconds")), ATTACK_CAP),
+        "swatter": (_snap(_configured("swatter", "warn_seconds")), _snap(min(_const("swatter", "BAT") + 0.05, ATTACK_CAP))),
+        "catch_trap": (_snap(_configured("catch_trap", "warn_seconds")), ATTACK_CAP),
+        "deflector": (_snap(_configured("deflector", "warn_seconds")), ATTACK_CAP),
+        "gyro_jammer": (_snap(_configured("gyro_jammer", "warn_seconds")), ATTACK_CAP),
     }, ATTACK_CAP
 
 

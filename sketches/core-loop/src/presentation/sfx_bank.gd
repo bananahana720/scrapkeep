@@ -15,7 +15,7 @@ const SetDirector := preload("res://src/presentation/set_director.gd")
 
 const RATE := Harmony.RATE
 
-# The 49 event-set WAVs (design-v3/sound/INTEGRATION.md section 7, item 2; renders in
+# The 51 event-set WAVs (49, and feedback_set.py's shot and deflect) (design-v3/sound/INTEGRATION.md section 7, item 2; renders in
 # RENDERS.md), registered under their cue keys. A file cue replaces the recipe of the
 # same key. The file is decoded to the bank's rate at bake time, so stingers, streams and
 # the keyed bakes read it like any other cue. Peak -1 dBFS, like the recipes' 0.9.
@@ -30,6 +30,8 @@ const EVENT_CUES := [
 	"scrap_tick_2", "scrap_tick_3", "scrap_tick_4", "scrap_tick_5", "shop_bell", "slam_boom", "smash_crack",
 	"stinger_boss_defeated", "stinger_clear", "stinger_milestone", "stinger_run_end", "stinger_run",
 	"stinger_stage", "stinger_world", "synergy_fanfare", "threat_whistle", "ui_tick", "verb_fail",
+	# Combat feedback as percussion (design-v3/sound/feedback_set.py): the shot and the deflect.
+	"weapon_zap", "clank",
 ]
 # Tiered cues: the base key keeps its recipe and its pitch-ladder callers; resolve() picks
 # the tier's file from the rung the caller already sends (the scrap and kill ladders, and
@@ -79,11 +81,12 @@ const MIN_GAP_MS := MixRows.MIN_GAP_MS
 # Danger sounds pull the bass down so the low end never masks a warning.
 const DANGER_SOUNDS := ["hurt", "enemy_arrive", "boss_telegraph", "ratchet_cue", "klaxon", "threat_up", "death",
 	"threat_tick", "threat_whoosh", "threat_whistle", "threat_hum", "threat_tear", "hold_pit", "hold_bola", "hold_tether", "hold_net", "heat_kettle"]
-# Pitched cues that follow the live key (a lifted Warden plays its chimes in Eb).
-const KEYED_SOUNDS := ["panel_note", "panel_jackpot", "line_claw_drag", "armor_reclaim", "scrap_tick", "cog_tick", "kill_pop", "part_get", "core_socket", "found_chime", "gate_through",
+# Pitched cues that follow the live key (a lifted Warden plays its chimes in Eb). The combat
+# feedback percussion (feedback_set.py) has no key, so it is not here.
+const KEYED_SOUNDS := ["panel_note", "panel_jackpot", "line_claw_drag", "armor_reclaim", "scrap_tick", "cog_tick", "part_get", "core_socket", "found_chime", "gate_through",
 	"rivet_line_punch", "rivet_line_arrive",
-	"grapple_clink", "grapple_release", "pylon_plant", "beacon_hum", "clank", "hit_thwack", "hurt",
-	"enemy_arrive", "boss_weak_hit", "ui_tick", "element_resolved", "ice_form", "vault_rise", "synergy_hit",
+	"grapple_clink", "grapple_release", "pylon_plant", "beacon_hum", 
+	"enemy_arrive", "element_resolved", "ice_form", "vault_rise", "synergy_hit",
 	"sable_arpeggio", "rivet_hihat_roll", "kest_low_thump", "tarn_latch_tear", "tally_balance_due", "cannon_recall", "sable_ready", "rivet_ready", "kest_ready", "tarn_ready", "tally_ready", "cannon_ready",
 	"sable_break", "rivet_break", "kest_break", "tarn_break", "tally_break", "cannon_break", "fleet_motif", "reactor_erupt", "swarm_buzz", "swarm_lock",
 	"swarm_scatter", "mind_sable", "mind_rivet", "mind_kest", "mind_tarn", "mind_tally", "mind_cannon", "hold_pit", "hold_bola", "hold_tether", "hold_net",
@@ -92,7 +95,7 @@ const KEYED_SOUNDS := ["panel_note", "panel_jackpot", "line_claw_drag", "armor_r
 	# v3 AU2 bank: every pitched cue named in design-v3/AUDIO-V3.md sections 4, 5, 8.
 	"bet_clunk", "bet_crack", "bet_refusal", "sunken_bell", "ally_hum_sable", "ally_hum_rivet", "ally_hum_kest",
 	"ally_wake", "fight_arm_stamp", "near_miss_whip_sable", "near_miss_whip_rivet", "near_miss_whip_kest",
-	"kill_chain_tier", "drop_landing", "return_launch_arpeggio", "crater_hold", "shell_spring",
+	"drop_landing", "return_launch_arpeggio", "crater_hold", "shell_spring",
 	"core_slam", "ultimate_land", "kest_demo_knock", "rivet_skid_plate",
 	"active_cutting_torch",
 	# --- P-C Tally keyed sounds ---
@@ -107,12 +110,12 @@ const KEST_SOUNDS := ["cable_kest_fizz", "cable_kest_set", "cable_kest_blast", "
 # Per-cue trim in dB against the 0.9 peak every cue is normalized to. Rapid, small
 # facts sit low so a firefight never turns to mush; rare facts sit at the top.
 const TRIM_DB := {
-	"ui_tick": -14.0, "hop": -10.0, "boost_whoosh": -6.0, "dash_whoosh": -5.0, "carve_release": -8.0,
+	"ui_tick": -8.0, "hop": -10.0, "boost_whoosh": -6.0, "dash_whoosh": -5.0, "carve_release": -8.0,
 	"land_thud": -6.0, "slam_boom": -1.0, "grapple_clink": -7.0, "grapple_release": -11.0,
 	"core_slam": -1.0, "ultimate_land": -1.0, "kest_demo_knock": -4.0, "rivet_skid_plate": -4.0,
 	"grown_sub": -4.0, "grown_crack": -7.0, "grown_tail": -10.0, "grown_rattle": -11.0,
-	"pylon_plant": -3.0, "pylon_eject": -4.0, "enemy_arrive": -9.0, "hit_thwack": -5.0,
-	"weapon_zap": -15.0, "special_fire": -4.0, "kill_pop": -7.0, "hurt": -3.0,
+	"pylon_plant": -3.0, "pylon_eject": -4.0, "enemy_arrive": -9.0, "hit_thwack": -1.0,
+	"weapon_zap": -9.0, "special_fire": -4.0, "kill_pop": -5.0, "hurt": -3.0,
 	"death": 0.0, "scrap_tick": -10.0, "cog_tick": -10.0, "part_get": -3.0, "beacon_hum": -12.0,
 	"gate_through": -3.0, "launch_roar": -2.0, "event_start": -3.0, "event_end": -6.0,
 	"klaxon": -3.0, "stinger_run": -3.0, "stinger_stage": -4.0, "stinger_clear": -2.0,
@@ -150,7 +153,7 @@ const TRIM_DB := {
 	"hold_pit": -13.0, "hold_bola": -14.5, "hold_tether": -13.0, "hold_net": -9.0, "hold_riser": -9.0, "tenacity_choke": -4.0,
 	"callout_chime": -8.0, "shop_bell": -6.0, "bench_clank": -7.0, "babble": -8.0,
 	# v3 W11 juice: the dodge whoosh and the crit's bright ping over the thwack.
-	"near_whoosh": -6.0, "crit_ping": -7.0, "kest_kick_thump": 0.0,
+	"near_whoosh": -6.0, "crit_ping": -5.0, "kest_kick_thump": 0.0,
 	# v3 W13 reward ceremony: the rarity tick and bell, the card's plate, the crate's build
 	# and the burst's resolve.
 	"rarity_tick": -9.0, "rarity_bell": -5.0, "reveal_clank": -4.0, "ceremony_build": -3.0, "ceremony_resolve": -1.0,
@@ -169,7 +172,7 @@ const TRIM_DB := {
 	"pickup_fountain": -8.0, "synergy_fired": -6.0, "evolution_fired": -5.0, "lore_found": -10.0,
 	"pilot_unlocked": -9.0, "pilot_unlocked_sable": -9.0, "pilot_unlocked_rivet": -9.0, "pilot_unlocked_kest": -9.0,
 	"pilot_unlocked_tarn": -9.0, "pilot_unlocked_tally": -9.0, "pilot_unlocked_cannon": -9.0,
-	"kill_chain_tier": -5.0, "chain_crash": -12.0, "drop_landing": -3.0, "door_tick": -9.0,
+	"kill_chain_tier": 0.0, "chain_crash": -12.0, "drop_landing": -3.0, "door_tick": -9.0,
 	"return_launch_arpeggio": -4.0, "lift_hiss": -9.0, "crater_hold": -12.0,
 	# The Spillway's arena locks and Warden gates (src/world/stage_locks.gd): the yard slams shut,
 	# springs open, the Warden's clamp counts a crew, refuses a hit, and lets go.

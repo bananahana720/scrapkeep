@@ -100,6 +100,7 @@ const RUMBLE := {
 	"slammed": {"weak": 0.2, "strong": 0.75, "ms": 150},
 	"landed": {"weak": 0.0, "strong": 0.4, "ms": 80},
 	"carved": {"weak": 0.35, "strong": 0.15, "ms": 70},
+	"bumped": {"weak": 0.2, "strong": 0.6, "ms": 90},
 	"player_hit": {"weak": 0.45, "strong": 0.7, "ms": 170},
 	"multi_kill": {"weak": 0.4, "strong": 0.3, "ms": 90},
 	"boss_weak_point_hit": {"weak": 0.5, "strong": 0.65, "ms": 120},
@@ -230,6 +231,8 @@ func wire_optional() -> void:
 	SignalWire.listen(events, "core_gained", _on_core)
 	SignalWire.listen(events, "harpoon_bit", _on_harpoon_bit)
 	SignalWire.listen(events, "carved", _on_carved)
+	SignalWire.listen(events, "bumped", _on_bumped)
+	SignalWire.listen(events, "enemy_walled", _on_walled)
 
 
 func _on_harpoon_bit(_enemy: Node3D, _at: Vector3) -> void:
@@ -244,6 +247,58 @@ func _on_carved(_at: Vector3, seconds: float, speed: float) -> void:
 	if audio != null:
 		audio.play("carved", lerpf(-4.0, 0.0, share), clampf(speed / CARVE_PITCH_SPEED, 0.85, 1.25))
 	rumble("carved", share)
+
+
+# How far `speed` sits between a collision row's min_speed (0) and full_speed (1).
+static func collision_share(row: Dictionary, speed: float) -> float:
+	return clampf((speed - float(row["min_speed"])) / (float(row["full_speed"]) - float(row["min_speed"])), 0.0, 1.0)
+
+
+static func _span(pair: Array, share: float) -> float:
+	return lerpf(float(pair[0]), float(pair[1]), share)
+
+
+# The ball hit a wall, cliff or structure side: a thud lower and louder with speed, the shell
+# flattened against the face, the camera kicked into it, dust and chips off the face, and from
+# shake_from up a shake and the pad. Camera, shell and sound only; the ball's bounce is physics'.
+func _on_bumped(at: Vector3, normal: Vector3, speed: float) -> void:
+	var row := EventKinds.juice("bumped")
+	var share := collision_share(row, speed)
+	squash(lerpf(0.12, float(row["squash"]), share), normal)
+	_camera("kick", "bumped", -normal, float(row["kick"]) * share)
+	if audio != null:
+		audio.play("bumped", _span(row["db"], share), _span(row["pitch"], share))
+	if vfx != null:
+		vfx.play_fx("bumped", at, Color.TRANSPARENT, "", normal)
+	if share >= float(row["shake_from"]):
+		request_shake(float(row["shake"]) * share, 0.18, "bumped")
+	rumble("bumped", maxf(share, 0.35))
+
+
+# A thrown enemy stopped by a wall: its thud and dust where it struck, and a small shake when it
+# struck near the ball. The stagger is the enemy's own (enemy.gd _wall_slam).
+func _on_walled(_enemy: Node3D, at: Vector3, normal: Vector3, speed: float) -> void:
+	var row := EventKinds.juice("enemy_walled")
+	var share := collision_share(row, speed)
+	if audio != null:
+		audio.play("enemy_walled", _span(row["db"], share), _span(row["pitch"], share))
+	if vfx != null:
+		vfx.play_fx("enemy_walled", at, Color.TRANSPARENT, "", normal)
+	if player != null and at.distance_to(player.shown_position()) <= float(row["near_m"]):
+		request_shake(float(row["shake"]) * share, 0.15, "enemy_walled")
+
+
+# The ball ran into a park prop (park_props.gd prop_kicked): its knock or clank, higher for a light one
+# thrown, and a puff of dust where it stood. Sound and dust only; the prop's own move is prop_kicks.gd's.
+func on_prop_kicked(at: Vector3, mode: String, speed: float, tags: Array) -> void:
+	var row: Dictionary = EventKinds.juice("prop_kicked")[mode]
+	var share := clampf((speed - 4.0) / 26.0, 0.0, 1.0)
+	var metal := "machine" in tags or "sign" in tags
+	var sound := String(row["metal"] if metal else row["sound"])
+	if audio != null and sound != "":
+		audio.play("prop_kicked", float(row["db"]) + 4.0 * share, _span(row["pitch"], share), "SFX", sound)
+	if vfx != null:
+		vfx.burst("dust", at - Vector3.UP * 0.4, EventKinds.color("landed"), int(row["dust"]))
 
 
 func _reset() -> void:
@@ -626,8 +681,8 @@ func _flush_kills() -> void:
 			rumble("multi_kill", minf(0.5 + mark / 8.0, 1.0))
 			_camera("punch_fov", "multi_kill", Vector3.ZERO, -2.0 - mark * 0.5, 0.3)
 			if audio != null:
-				# The pop an octave up and more, on the reward ladder: F at 2, G at 4, D at 8.
-				audio.play("enemy_killed", 2.0, Harmony.snapped_ratio(SfxBank.KILL_POP_MIDI, 12.0 + 1.5 * mark), "SFX", "kill_pop")
+				# A second, louder pop: percussion has no ladder (SOUND-BIBLE rule 7).
+				audio.play("enemy_killed", 2.0, 1.0, "SFX", "kill_pop")
 			if vfx != null:
 				vfx.glyph("enemy_killed", player.shown_position(), 1.0, 3.0 + mark, 0.35, Vector3.UP, "ring")
 

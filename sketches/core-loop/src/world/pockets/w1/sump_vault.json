@@ -67,5 +67,9 @@
       0
     ],
     "width": 4
+  },
+  "assigned": {
+    "map": "park_flume",
+    "row": "trestle_cache"
   }
 }

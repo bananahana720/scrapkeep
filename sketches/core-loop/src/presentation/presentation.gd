@@ -24,6 +24,7 @@ const GraphicsPreset := preload("res://src/presentation/graphics_preset.gd")
 const SetDressing := preload("res://src/presentation/set_dressing.gd")
 const ParkProps := preload("res://src/presentation/park_props.gd")
 const AmbientLife := preload("res://src/presentation/ambient_life.gd")
+const WorkMachines := preload("res://src/presentation/work_machines.gd")
 const SiteMarkers := preload("res://src/presentation/site_markers.gd")
 const Parts := preload("res://src/build/parts.gd")
 const WindupRows := preload("res://src/presentation/windup_rows.gd")
@@ -77,6 +78,7 @@ var flourish_cues
 var set_dressing: Node3D
 var park_props: Node3D
 var ambient_life: Node3D
+var work_machines: Node3D
 var site_markers: Node3D
 var title_stage: Node
 var ui_hidden := false
@@ -419,6 +421,13 @@ func _sync_dressing() -> void:
 	park_props = ParkProps.new()
 	add_child(park_props)
 	park_props.setup(ctx)
+	park_props.prop_kicked.connect(juice.on_prop_kicked)
+	# Looping workers stand on every preset (their footings are solid for bots and players alike), so a
+	# preset change keeps them: rebuilt here they would come back over a boss arena and lose their phase.
+	if not is_instance_valid(work_machines):
+		work_machines = WorkMachines.new()
+		add_child(work_machines)
+		work_machines.setup(ctx)
 	if is_instance_valid(ambient_life):
 		ambient_life.free()
 	ambient_life = null

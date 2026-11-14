@@ -178,10 +178,13 @@ func _check_grammars() -> void:
 		meshes += 1
 		if mat is BaseMaterial3D:
 			var base := mat as BaseMaterial3D
+			# A soft look's fence fades out further out (Threat.FENCE_CLEAR, FENCE_FULL), so it clears the lens too.
+			var fence := is_equal_approx(base.distance_fade_min_distance, Threat.FENCE_CLEAR) and is_equal_approx(base.distance_fade_max_distance, Threat.FENCE_FULL)
 			faded += int(base.distance_fade_mode == BaseMaterial3D.DISTANCE_FADE_PIXEL_ALPHA
-				and is_equal_approx(base.distance_fade_min_distance, Threat.LENS_CLEAR) and is_equal_approx(base.distance_fade_max_distance, Threat.LENS_FULL))
+				and (fence or (is_equal_approx(base.distance_fade_min_distance, Threat.LENS_CLEAR) and is_equal_approx(base.distance_fade_max_distance, Threat.LENS_FULL))))
 		elif mat is ShaderMaterial:
-			faded += int((mat as ShaderMaterial).get_shader_parameter("lens") == Vector2(Threat.LENS_CLEAR, Threat.LENS_FULL))
+			var lens: Vector2 = (mat as ShaderMaterial).get_shader_parameter("lens")
+			faded += int(lens == Vector2(Threat.LENS_CLEAR, Threat.LENS_FULL) or lens == Vector2(Threat.FENCE_CLEAR, Threat.FENCE_FULL))
 	_report("marks clear the lens", meshes > 0 and faded == meshes,
 		"%d of %d mark meshes fade out between %.1f and %.1f m from the lens (PF-27)" % [faded, meshes, Threat.LENS_FULL, Threat.LENS_CLEAR])
 	for node in nodes:
@@ -361,7 +364,7 @@ func _check_driven() -> void:
 	lane.set_progress(1.0)
 	var live: Dictionary = _drive(lane, "stripe_motion")
 	var end_ok: bool = is_equal_approx(float(live["span"].y), lane.width * 0.5 * Threat.LIVE_LANE) and lane.contains(lane.center + lane.dir * (lane.length - 0.01) + Vector3.UP) \
-		and not lane.contains(lane.center + lane.dir * (lane.length + 0.01) + Vector3.UP) and is_equal_approx(float(live["alpha"]), Threat.LIVE_ALPHA / Threat.RUN_ALPHA)
+		and not lane.contains(lane.center + lane.dir * (lane.length + 0.01) + Vector3.UP) and is_equal_approx(float(live["alpha"]), Threat.live_alpha() / Threat.RUN_ALPHA)
 	_report("driven numbers", agree and end_ok,
 		"drive(d) gives the numbers marks(d, true) draws, the wave clip is contains()'s front band and the fill grows from the centre: %s; a live lane fills to %.2f m either side, its rails"
 			% ["; ".join(rows), float(live["span"].y)])
@@ -551,12 +554,12 @@ func _check_fill_classes() -> void:
 			% [PALE_L, pending_l, live_l, slag_step, LIVE_STEP, old_l, old_step])
 	var step := 1.0 / 255.0
 	var pending_target: float = Threat.RUN_ALPHA * Threat.HAZE_FILL
-	var live_target: float = Threat.LIVE_ALPHA * Threat.HAZE_FILL
-	var live_short: float = step * Threat.LIVE_ALPHA / Threat.RUN_ALPHA
+	var live_target: float = Threat.live_alpha() * Threat.HAZE_FILL
+	var live_short: float = step * Threat.live_alpha() / Threat.RUN_ALPHA
 	var pending_in: bool = pending_alpha <= pending_target + 0.0005 and pending_alpha > pending_target - step - 0.0005
 	var live_in: bool = live_alpha <= live_target + 0.0005 and live_alpha > live_target - live_short - 0.0005
 	_report("fill classes", one_alpha and reach_apart and live_class != pending_class and after_all and back_to_run
-			and Threat.haze() and pending_in and absf(live_alpha - pending_alpha * Threat.LIVE_ALPHA / Threat.RUN_ALPHA) < 0.001 and live_in,
+			and Threat.haze() and pending_in and absf(live_alpha - pending_alpha * Threat.live_alpha() / Threat.RUN_ALPHA) < 0.001 and live_in,
 		"stencil value -> alphas drawn %s (one alpha each: %s); the projectile's footprint is its own class (%s); a lane goes from class %d (alpha %.2f, sort %.0f) to class %d (alpha %.2f, sort %.0f, after the swept ring at %.0f, priority %d over the fills' %d) live, and back on a retarget (%s); pending %.4f against %.4f and live %.4f against %.4f, each at most 0.0005 over and at most one 8-bit step (%.4f) or that step times LIVE_ALPHA / RUN_ALPHA (%.4f) short"
 			% [alphas, one_alpha, reach_apart, pending_class, pending_alpha, pending_sort, live_class, live_alpha, live_sort, swept_sort, live_priority, Threat.PRIORITY, back_to_run, pending_alpha, pending_target, live_alpha, live_target, step, live_short])
 	for node in nodes:
@@ -615,7 +618,7 @@ func _check_warm_up() -> void:
 	var cache: Dictionary = Threat.Painter._materials
 	var listed := true
 	for key in keys:
-		listed = listed and cache.has("%s/%s/%d/%s" % [key[0], key[1], key[2], key[3]])
+		listed = listed and cache.has(Threat.Painter.mark_key(key[0], key[1], key[2], key[3]))
 	var warmed_size := cache.size()
 	var built := Threat.Painter.materials_built
 	var nodes: Array = [

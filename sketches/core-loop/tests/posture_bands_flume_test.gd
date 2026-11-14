@@ -105,19 +105,17 @@ const WALL_S := 1100.0
 # [22.43, 22.46, 19.45, 26.79, 7.1] median 22.4, after the clamp the same, 7.4 s over the 15 s floor; every
 # small and grown run breaks the Warden, campers never break. Against the pins above, small seed 0 is 1.2 s
 # shorter and grown seed 4 is 1.8 s shorter; the other eight runs are as long or longer.
-# 2026-11-12 (wave 38 gate, the world 1 difficulty stack re-landed for wave 39 on cand/w39 with chasers held to
-# their old pace for their first 2 s alive): re-pinned. One run of this test: small [29.94, 34.08, 28.84, 31.99,
-# 25.57] median 29.9, grown [23.83, 19.14, 19.24, 20.2, 4.24] median 19.2, after the clamp the same, 4.2 s over the
-# 15 s floor; every small and grown run breaks the Warden, campers never break. Controls, grown arm by
-# tools/bot_run.gd children of this test's shape: cand/w39 without the stack (bfa6cc0c) [22.71, 24.4, 25.3, 21.87,
-# 7.1] median 22.7, the old pin; the stack with the Warden's 5.1 s pulse put back to 6 s 20.3; with the stage's
-# chaser speed off 20.7. No one dial carries the move; the Warden takes the same 800 damage in 3 or 4 hauls in
-# every run, and the per-seed changes have mixed signs (+1.1, -5.3, -6.1, -1.7, -2.9 s), the reshuffle the stack's
-# faster crews give each seed's fight, as on 2026-11-08 and 11-09. Assumption Andrew can overturn: the flume
-# fight stays as the stack leaves it, inside its band; the stage around it is harder (ruling cu).
-const EXPECT_SMALL_S := 29.9
-const EXPECT_GROWN_S := 19.2
-const EXPECT_GROWN_OPEN_S := 19.2
+# 2026-11-14 (wave 40 gate, PC, bd5b30f5c): small median 26.5, grown 18.5, after the clamp the same, 3.5 s over
+# the 15 s floor. PR 925 then the wave 40 stack (PR 956 among it) shortened both; re-pinned at promotion (an
+# assumption Andrew can overturn). Was 33.1 / 22.4 / 22.4.
+# 2026-11-14 (PR 845, the world 1 difficulty stack re-landed on stage/alpha-w41 49e801ad, cloud): re-pinned. One run:
+# small [28.63, 28.72, 17.37, 21.83, 13.25] median 21.8, grown [19.9, 18.77, 16.33, 15.76, 6.09] median 16.3, after
+# the clamp the same, 1.3 s over the 15 s floor; campers never break. The stack's faster crews reshuffle each seed's
+# fight, as on 2026-11-12. Assumption Andrew can overturn: the flume fight stays as the stack leaves it, inside its
+# band. The margin on the 15 s floor is now thin: a further shortening is a design question (ruling bj).
+const EXPECT_SMALL_S := 21.8
+const EXPECT_GROWN_S := 16.3
+const EXPECT_GROWN_OPEN_S := 16.3
 const TOLERANCE := 0.10
 
 

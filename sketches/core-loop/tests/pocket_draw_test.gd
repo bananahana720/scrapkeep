@@ -316,14 +316,18 @@ func _runtime(_specs: Array) -> void:
 		t.eq("drawn cache keeps planned centre", Vector2(built.global_position.x, built.global_position.z), at)
 		t.check("drawn cache keeps planned orientation", is_equal_approx(built.rotation.y, -turn * PI * 0.5))
 		var expected := at + _turned(Vector2(0, -resumed.world.activities.PEDESTAL_BACK), turn)
-		var rendered: MeshInstance3D
-		for child in built.get_children():
-			if child is MeshInstance3D and child.mesh is CylinderMesh:
-				rendered = child
+		# The model's pedestal stands on its origin (W1-22); the greybox cylinder is centred.
+		var rendered: MeshInstance3D = built.get_node_or_null("CachePedestal")
+		var lift := 0.0
+		if rendered == null:
+			for child in built.get_children():
+				if child is MeshInstance3D and child.mesh is CylinderMesh:
+					rendered = child
+					lift = rendered.mesh.height * 0.5
 		if t.check("drawn cache renders pedestal turn %d" % turn, rendered != null):
 			t.check("drawn cache rendered pedestal at owned offset turn %d" % turn, Vector2(rendered.global_position.x, rendered.global_position.z).distance_to(expected) < 0.001)
 			t.check("drawn cache reward and rendered pedestal agree turn %d" % turn, Vector2(built.pedestal.x, built.pedestal.z).distance_to(expected) < 0.001)
-			t.check("drawn cache pedestal world position agrees turn %d" % turn, (rendered.global_position - Vector3.UP * rendered.mesh.height * 0.5).distance_to(built.pedestal) < 0.001)
+			t.check("drawn cache pedestal world position agrees turn %d" % turn, (rendered.global_position - Vector3.UP * lift).distance_to(built.pedestal) < 0.001)
 			var before_parts: int = resumed.run.parts.size()
 			resumed.world.activities._break_wall(built)
 			if t.check("drawn cache wall releases reward turn %d" % turn, built.pickup != null):

@@ -35,7 +35,8 @@ extends RefCounted
 #   sleep      share of calm time spent asleep (idle loop slowed, eyes shut pose)
 #   homes      where the planner may put it: landforms / elements / societies (any match),
 #              perch ("ground" | "rim" | "ceiling" | "water"), count [min, max] homes per
-#              park, group [min, max] members per home
+#              park, group [min, max] members per home; optional `spots`, crew prop templates
+#              (src/world/park/props/<map>.json) the kind lives beside first, so keepers stand at the camps
 
 const LIFE_HUE := Vector2(250.0, 300.0)
 const LIFE_SAT := Vector2(0.15, 0.55)
@@ -109,7 +110,9 @@ const KINDS := {
 		"call_every": [9.0, 16.0], "volume_db": -17.0,
 		"motion": "walk", "speed": 0.0, "flee_speed": 0.0, "flee_m": 8.0, "react": "duck", "wander_m": 0.0, "sleep": 0.15,
 		"homes": {"landforms": [], "elements": ["ground", "bank", "terrace", "ledge"], "societies": ["dam_era"],
-			"perch": "ground", "count": [2, 2], "group": [1, 1]},
+			"perch": "ground", "count": [5, 6], "group": [1, 1],
+			"spots": ["crew_camp", "wheelhouse_yard", "survey_station", "tool_wall", "pour_site", "flood_gauge",
+				"washday", "camp_corner", "sluice_station", "head_gate_crew", "crane_yard", "skiff_shore"]},
 	},
 	# --- World 2, the Dig: the miners left, their burros stayed ---
 	"pit_burro": {

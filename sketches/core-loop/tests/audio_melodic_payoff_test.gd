@@ -99,8 +99,10 @@ func _multi_kill(game: Node, audio) -> void:
 	audio._last_start.clear()
 	juice.flush()
 	var pops: Array = audio.cue_log.filter(func(e: Array): return e[1] == "kill_pop" and e[2] == "now").map(func(e: Array): return _semitones(float(e[4])))
-	t.check("multi-kill pop is on the ladder", pops.size() >= 2 and pops.back() == 15,
-		"three kills in a frame: pops at %s semitones over D, the extra beat on F" % [pops])
+	# The pop is percussion since 13 November 2026 (SOUND-BIBLE rule 7): the multi-kill adds a louder
+	# pop at its own pitch, never a climb up the ladder.
+	t.check("multi-kill adds an unpitched pop", pops.size() >= 2 and pops.all(func(s): return s == 0),
+		"three kills in a frame: pops at %s semitones, every one at the pop's own pitch" % [pops])
 	audio.kill_streak.reset()
 	audio._streak_landed_ms = audio.kill_streak.last_ms
 

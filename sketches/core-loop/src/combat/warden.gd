@@ -116,6 +116,10 @@ const HARDPOINTS := [Vector3(0.0, HALF_HEIGHT, 0.0), Vector3(RADIUS, 0.0, 0.0), 
 
 # Variant values already warned about, so a bad row warns once, not once per Warden.
 static var warned_variants := {}
+# The family driver scripts start loading on a worker when the first Warden is set up, so a later
+# world's first Warden finds its script compiled: a main-thread load() of warden_swarm.gd was 20 ms
+# of the Dig's entry tick (cloud, 13 Nov 2026).
+static var _drivers_requested := false
 
 var stage := 1
 var reach := DEFAULT_REACH
@@ -188,6 +192,7 @@ var _bitten := -1
 
 func setup(target_ref, terrain_ref, root_ref, live_ref: Callable, _threat: float, spec_ref := {}) -> void:
 	_setup_common(target_ref, terrain_ref, root_ref, live_ref, spec_ref)
+	_request_drivers()
 	kind = "warden"
 	stage = spec.get("stage", 1)
 	reach = spec.get("reach", DEFAULT_REACH)
@@ -531,9 +536,23 @@ func _hook_posture() -> void:
 	_hook_chunks = _posture.chunks
 
 
+static func _driver_path(fam: String) -> String:
+	return "res://src/combat/warden_%s.gd" % fam
+
+
+static func _request_drivers() -> void:
+	if _drivers_requested:
+		return
+	_drivers_requested = true
+	for fam in Roster.WARDEN_FAMILIES:
+		var path := _driver_path(fam)
+		if ResourceLoader.exists(path) and not ResourceLoader.has_cached(path):
+			ResourceLoader.load_threaded_request(path)
+
+
 # The kind's own driver file, once KF2 to KF4 have written it; no file is no driver.
 func _kind_driver():
-	var path := "res://src/combat/warden_%s.gd" % family
+	var path := _driver_path(family)
 	if not ResourceLoader.exists(path):
 		return null
 	var script = load(path)

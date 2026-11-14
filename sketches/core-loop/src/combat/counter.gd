@@ -5,6 +5,7 @@ const TelegraphRecord := preload("res://src/combat/telegraph_record.gd")
 const AttackBudget := preload("res://src/combat/attack_budget.gd")
 const PackPressure := preload("res://src/combat/pack_pressure.gd")
 const AbilityState := preload("res://src/core/ability_state.gd")
+const CrewLamp := preload("res://src/presentation/crew_lamp.gd")
 
 # What every Fleet reinforcement shares (DESIGN-V2 section 10): an animal crew with its
 # anti-ball tool as the biggest shape, and one loop, roam -> warn -> live -> rest.
@@ -34,6 +35,12 @@ const AbilityState := preload("res://src/core/ability_state.gd")
 enum Phase { ROAM, WARN, LIVE }
 
 const INTERRUPT := 10.0
+# A crew builds to its walking speed over this many seconds and eases to a stop or a turn the
+# same way (W1-84): it starts and stops with weight instead of jumping to full speed in one tick.
+# Roaming only: a warning stands the crew still from its first tick, so the telegraph and the body agree.
+const STRIDE_RAMP := 0.15
+# Kinds that set their own body yaw every tick, so the gait's turn would fight it.
+const GAIT_SKIP := ["linker"]
 # One interrupt window for every ordinary pack kind (W13-INTEGRATION-3 SQ3). Start value
 # from comps/roboquest/enemies-and-telegraphs.md:11 (1.25 s on nearly every row there).
 const STAGGER_WINDOW := 1.25
@@ -89,6 +96,10 @@ var _t := 0.0
 var _rest := 0.0
 var _strafe := 1.0
 var _crew: MeshInstance3D
+# The roaming velocity the crew has built up (STRIDE_RAMP).
+var _stride := Vector3.ZERO
+# The crew's head lamp, its eye (CrewLamp, W1-83); null for a kind with none.
+var _eye: Node3D
 
 
 func setup(target_ref, terrain_ref, root_ref, live_ref: Callable, threat: float, spec_ref := {}) -> void:
@@ -112,6 +123,14 @@ func setup(target_ref, terrain_ref, root_ref, live_ref: Callable, threat: float,
 	_rest = first_rest
 	_build_crew()
 	_build_tool()
+	_eye = CrewLamp.fit(reaction_pivot, kind, world_root)
+	if walk_speed > 0.0 and not kind in GAIT_SKIP:
+		_gait = EnemyGait.new()
+		_gait.steps = not EnemyClips.ROWS.has(kind) and Roster.CHASSIS.get(kind, {}).get("move_class", "") != "airborne"
+		if _reaction_bus != null:
+			_reaction_bus.enemy_killed.connect(_on_crew_down)
+			_reaction_bus.player_hit.connect(_on_ball_hit)
+			_reaction_bus.near_miss.connect(_on_missed)
 
 
 # Each counter setup in a run takes the next serial from world_root, so runtime identity never
@@ -176,6 +195,13 @@ func _warn_progress() -> float:
 	return _t / warn_seconds
 
 
+# How far the wind-up has run, 0 to 1, on its own clock; -1 outside a warning. The telegraph's
+# fill is _warn_progress, which a kind may hold (the bola's reticle stays open); the body's
+# wind-up pose reads this instead.
+func windup_run() -> float:
+	return clampf(_t / maxf(warn_seconds, 0.001), 0.0, 1.0) if phase == Phase.WARN else -1.0
+
+
 func _live(_delta: float) -> bool:
 	return true
 
@@ -230,13 +256,17 @@ func _physics_process(delta: float) -> void:
 			var open := recovering()
 			recover_left = maxf(0.0, recover_left - delta)
 			var seek := _seek(to_ball)
-			_move(delta, Vector3.ZERO if stunned() or open else _roam(seek))
+			_move(delta, _ramp(delta, Vector3.ZERO if stunned() or open else _roam(seek)))
+			_strode()
+			if _gait != null and not stunned() and _knocked_speed() < 1.0 and seek.length() > 0.5:
+				_gait.aim(_facing_yaw(seek))
 			if not stunned() and not open and _rest <= 0.0 and _knocked_speed() < 1.0 and _wants_attack(seek):
 				if AttackBudget.ask(self):
 					_warn(seek)
 			else:
 				AttackBudget.withdraw(self)
 		Phase.WARN:
+			_stride = Vector3.ZERO
 			_move(delta, Vector3.ZERO)
 			var tele := telegraph()
 			if tele != null:
@@ -262,6 +292,22 @@ func _physics_process(delta: float) -> void:
 			if resolve_interrupt(asks) >= 0 or not _live(delta) or _t >= live_seconds:
 				_end()
 	_pose()
+	if _eye != null:
+		_eye.watch(delta, _t / maxf(warn_seconds, 0.001) if phase == Phase.WARN else (1.0 if phase == Phase.LIVE else 0.0))
+
+
+# The roaming velocity this tick: `desired` reached at the crew's own rate, walk_speed in STRIDE_RAMP.
+func _ramp(delta: float, desired: Vector3) -> Vector3:
+	_stride = _stride.move_toward(desired, maxf(walk_speed, desired.length()) / STRIDE_RAMP * delta)
+	return _stride
+
+
+# The stride keeps only what the body did: a knock that carried it, or a wall or edge that stopped
+# it, is where the next build-up starts, so it never snaps back to full speed out of either.
+func _strode() -> void:
+	var moved := Vector3(velocity.x, 0.0, velocity.z)
+	if _knocked_speed() >= 1.0 or moved.length() < _stride.length():
+		_stride = moved
 
 
 func _idle(delta: float) -> void:
@@ -283,6 +329,9 @@ func _warn(to_ball: Vector3) -> void:
 	warned += 1
 	broken_by = ""
 	phase = Phase.WARN
+	# Every wind-up drops the roaming look and glance, also for kinds that commit without _facing.
+	if _gait != null:
+		_gait.hold()
 	_t = 0.0
 
 
@@ -363,6 +412,51 @@ func _release(reason := "left") -> void:
 		holds.release(self, reason)
 
 
+# --- Noticing (W1-85) ------------------------------------------------------------------
+# A crew reads as a crew when it notices things. Looks only, from facts already on the bus,
+# and only where the gait draws (never headless), so no clock, body or outcome moves.
+const NOTICE_DOWN := 12.0
+const NOTICE_HIT := 18.0
+const NOTICE_MISS := 25.0
+
+
+func _noticing() -> bool:
+	return _gait != null and not _dead and EnemyMotion.active()
+
+
+# A crewmate going down nearby: the head turns to it for a beat and the body flinches away.
+func _on_crew_down(_kind: String, at: Vector3, _scrap: int) -> void:
+	var from := Vector3(at.x - global_position.x, 0.0, at.z - global_position.z)
+	if not _noticing() or from.length() > NOTICE_DOWN or from.length() < 0.5:
+		return
+	if phase == Phase.ROAM:
+		_gait.glance(_facing_yaw(from))
+	if _react_row.is_empty():
+		react("flinch", -from, false, false)
+
+
+# The ball took a hit: every crew in sight gives a small hop.
+func _on_ball_hit(_amount: float, _source: String) -> void:
+	if _noticing() and _flat_to_ball().length() <= NOTICE_HIT:
+		_gait.hop()
+
+
+# The ball slipped an attack: the nearest crew whose attack just struck lurches after it.
+func _on_missed(_threat_kind: String, at: Vector3) -> void:
+	if not _noticing() or not _just_struck() or global_position.distance_to(at) > NOTICE_MISS:
+		return
+	for other in get_tree().get_nodes_in_group("enemy"):
+		if other != self and other.has_method("_just_struck") and other._just_struck() \
+				and other.global_position.distance_to(at) < global_position.distance_to(at):
+			return
+	if _react_row.is_empty():
+		react("flinch", _flat_to_ball(), false, false)
+
+
+func _just_struck() -> bool:
+	return phase == Phase.LIVE or recovering()
+
+
 # The real ball, not what the sight sees: a hold is tested against where the ball is.
 func _real_ball() -> Vector3:
 	return holds.player.ball_position() if holds != null else _ball()
@@ -392,6 +486,10 @@ func _player():
 func _exit_tree() -> void:
 	if holds != null and is_instance_valid(holds) and holds.held(self):
 		holds.release(self, "source_gone")
+	if is_instance_valid(_reaction_bus) and _reaction_bus.enemy_killed.is_connected(_on_crew_down):
+		_reaction_bus.enemy_killed.disconnect(_on_crew_down)
+		_reaction_bus.player_hit.disconnect(_on_ball_hit)
+		_reaction_bus.near_miss.disconnect(_on_missed)
 	super._exit_tree()
 
 
@@ -454,4 +552,17 @@ func _cylinder(r: float, h: float, color: Color, at: Vector3, energy := 0.0, par
 
 func _facing(to_ball: Vector3) -> void:
 	if to_ball.length() > 0.5:
-		rotation.y = atan2(to_ball.x, to_ball.z)
+		rotation.y = _facing_yaw(to_ball)
+		if _gait != null:
+			_gait.committed()
+
+
+func _settle_look() -> void:
+	super._settle_look()
+	if _eye != null:
+		_eye.go_out()
+
+
+# The body yaw that faces `to_ball`: the tool on +Z.
+func _facing_yaw(to_ball: Vector3) -> float:
+	return atan2(to_ball.x, to_ball.z)

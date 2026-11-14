@@ -235,9 +235,9 @@ func _bowl_through(ball: Vector3) -> void:
 
 
 # The bow (-Z) toward the ball, where the other kinds turn +Z.
-func _facing(to_ball: Vector3) -> void:
-	if to_ball.length() > 0.5:
-		rotation.y = atan2(-to_ball.x, -to_ball.z)
+# The tender's boom runs out along -Z.
+func _facing_yaw(to_ball: Vector3) -> float:
+	return atan2(-to_ball.x, -to_ball.z)
 
 
 # Where float i lies along the committed lane (from where the hull stood at the commit).
