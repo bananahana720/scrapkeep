@@ -1,5 +1,7 @@
 # Ambition brief: waves 17 to 21
 
+> **History.** This is the waves 17 to 21 brief of the local coordinator. Live state is in [STATE.md](../handoff/STATE.md); coordination is ruled by dh in [DECISIONS.md](../handoff/DECISIONS.md).
+
 Owner: the local coordinator. Written 2026-10-19 from Andrew's requests in the coordination session, reframed through [the ambition article](../handoff/shared/ways-of-working/rieseberg-ambition-article.md) (Altitude, Depth, Range, Speed) and building on [the ambition map](../handoff/shared/alpha-status/ambition-map.md). Every lane reads this with [LANE-BRIEF.md](LANE-BRIEF.md) and [GRAPH.md](GRAPH.md). Rulings stay in [DECISIONS.md](../handoff/DECISIONS.md); where this page and a ruling differ, the ruling wins.
 
 ## What Andrew asked for, in his words (19 Oct)

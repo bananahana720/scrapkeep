@@ -4,7 +4,7 @@ The claude.ai project "Scrapkeep" coordinates the alpha. Each role below is a th
 
 | Role | Where | What it does |
 | --- | --- | --- |
-| Coordinator | project chat | Talks to Andrew, starts and messages threads, writes the register and memory. Andrew reads the project chat on his phone, not threads |
+| Coordinator | project chat | Talks to Andrew, starts and messages threads, writes the register and memory. Andrew reads the project chat on his phone, not threads. A fresh coordinator also reads [ROADMAP.md](ROADMAP.md), the library map `/mnt/project-files/INDEX.md` and the phone start page https://claude.ai/artifact/LQF6h696vYdtJee3soD2Pi |
 | Gate | thread "Drive the wave <N> board" | The only thread that stacks onto the open stage. Cuts each `stage/alpha-w<N>`, opens the wave board, stacks reviewed pull requests, runs the wave gate per promotion and the release gate once per sprint (ruling cy), promotes. Owns the shared flow, launch, arena, boss and world files, and the PC Remote Control session for GPU work ([DEVICES.md](DEVICES.md)) |
 | Unit threads | cloud threads | One unit each, built from the open stage: claim on the board with a file fence, build, run focused tests and `sketch:fast`, one independent review, a draft pull request with its receipt, a "ready" comment on the board ([COMMS.md](COMMS.md)) |
 | Systems audit | thread "Audit and improve game systems" | The systems audit passes A to F (`docs/systems-audit/`), cards SA-A to SA-F in [BACKLOG.md](../../BACKLOG.md). Brings Andrew only a cut or merge of a feature, a pillar conflict, or a balance fix that needs a design change |
