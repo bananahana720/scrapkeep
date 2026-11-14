@@ -468,6 +468,9 @@ static func _cut_kit(pod: Node, pilot: String) -> void:
 static func _windowed(was: Material) -> ShaderMaterial:
 	var cut := ShaderMaterial.new()
 	cut.shader = _shader("cutaway", CUTAWAY_SHADER)
+	# The slot name stays, so what finds a surface by it (the decal's fallback onto the weapon
+	# ring's paint) still does.
+	cut.resource_name = was.resource_name if was != null else ""
 	cut.set_shader_parameter("window", WINDOW)
 	cut.set_shader_parameter("ink_width", WINDOW_INK)
 	cut.set_shader_parameter("fringe", WINDOW_FRINGE)
