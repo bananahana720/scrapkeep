@@ -16,7 +16,41 @@ sibling, rejected ones too, so a rejected model can still be judged in the game.
 Rejected today (14 November 2026, the board's PC looks):
 
 - `world_one/enemy_hooker_tripo.glb`: the barrel renders near-black beside the authored rust-orange one, close up and at 22 m. The light test in `tests/tripo_variants_test.gd` passed it twice, so that test is a floor and not proof. A retry is judged from a lit render of the barrel beside the authored one.
+- `world_one/enemy_netcaster_tripo.glb`: failed the render check below. The generated torso renders near-black beside the authored rust-orange one (0.31 of its pixels near-black against 0.09 on the lit side). The light test had passed it at 0.81.
+- `world_one/enemy_chaser_tripo.glb`: failed the render check below. From the far side it sends 0.54 of the authored chaser's brightness, with 0.37 of its pixels near-black against 0.04, and the still shows loose black faces on the shell.
 - `park/props/flume/sluice_shed_a{,_lod1,_lod2}_tripo.glb`: it swaps cleanly and holds its shape from 40 to 160 m, but it loses the big red water wheel, the authored shed's landmark shape. A retry must keep a big wheel, or keep the authored wheel beside the generated shack.
+
+**The render check (every generated enemy model, from 14 November 2026).** `tools/model_render_check.gd` judges a
+generated enemy from rendered pixels, because the light test passed a barrel twice that the game drew near-black.
+It spawns each enemy in the real game, paused, and takes two views (the lit side and the far side). For each
+view it finds the enemy's own pixels and measures the still the game draws: mean brightness, and the share of
+near-black pixels. Shoot once with the authored models and once with `--models=tripo-all`, then compare:
+
+```
+source /home/andrew/scratch/world1/env-pc.sh <name> 1 1
+gamescope --backend headless --prefer-vk-device 10de:2504 -W 800 -H 600 -w 800 -h 600 -- $GODOT_BIN \
+  --path sketches/core-loop --gpu-index 1 --resolution 800x600 --audio-driver Dummy \
+  --script res://tools/model_render_check.gd -- --out=<abs>/authored [--kinds=hooker,lobber]
+<the same> -- --out=<abs>/tripo --models=tripo-all
+$GODOT_BIN --headless --path sketches/core-loop --script res://tools/model_render_check.gd -- \
+  --compare=<abs>/authored,<abs>/tripo --out=<abs>/sheets
+```
+
+The compare step prints one PASS or FAIL line per enemy, writes a side-by-side sheet per enemy (authored left,
+generated right) and exits 1 on any FAIL. An enemy fails when, in either view, the generated model sends under
+0.80 of the authored brightness or has more than 0.15 more near-black pixels. A shoot needs a graphics card, so
+it does not run in `npm run sketch:fast`; run it on the PC before a generated enemy model is marked accepted.
+Its first run (14 November 2026) failed the hooker, which the PC look had failed twice, and passed the lobber
+and the swatter, which the PC look had passed. It also failed the netcaster and the chaser. It covers enemies
+only; a prop is still judged by the PC look.
+
+| Enemy | Lit side: brightness, near-black (authored) | Far side: brightness, near-black (authored) | Result |
+| --- | --- | --- | --- |
+| Lobber | 1.06, 0.02 (0.00) | 1.11, 0.04 (0.02) | pass |
+| Swatter | 0.96, 0.00 (0.00) | 1.04, 0.10 (0.13) | pass |
+| Hooker | 0.81, 0.12 (0.03) | 0.65, 0.33 (0.04) | fail |
+| Netcaster | 0.86, 0.31 (0.09) | 0.82, 0.10 (0.10) | fail |
+| Chaser | 0.95, 0.20 (0.12) | 0.54, 0.37 (0.04) | fail |
 
 Earlier generated-mesh trials were rejected (docs/decisions.tsv rows 352 to 361, TADR-011): lumps at
 budget, licence problems, colour loss. Row 361 allows a reopen "only with a different model class".

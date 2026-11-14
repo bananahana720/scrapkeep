@@ -496,7 +496,8 @@ func _part_brightness(path: String, part: String) -> float:
 # authored body's light, the swatter it passed 0.71 and the netcaster it passed 0.81. Three bodies set it, so a new
 # body that lands near the floor still needs the PC look. It is not proof of brightness: the second hooker barrel
 # measured 0.72 here and the PC look still showed it near-black, so that barrel is rejected (ModelVariants.REJECTED)
-# and a retry is judged from a lit render, not from this number.
+# and a retry is judged from a lit render, not from this number. That render check is tools/model_render_check.gd;
+# it also failed the netcaster this test had passed at 0.81.
 const SEEN_FLOOR := 0.65
 
 
