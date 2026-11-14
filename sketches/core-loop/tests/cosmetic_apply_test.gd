@@ -71,7 +71,9 @@ static func slot_albedos(node: Node, slot: String, out: Array = []) -> Array:
 				if mat is StandardMaterial3D:
 					out.append(mat.albedo_color)
 				elif mat is ShaderMaterial:
-					out.append(mat.get_shader_parameter("paint_tint"))
+					# The cutaway look's window material keeps an unpainted surface's colour as "tint".
+					var painted = mat.get_shader_parameter("paint_tint")
+					out.append(painted if painted != null else mat.get_shader_parameter("tint"))
 	for c in node.get_children():
 		slot_albedos(c, slot, out)
 	return out
