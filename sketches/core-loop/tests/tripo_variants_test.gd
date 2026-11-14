@@ -606,6 +606,9 @@ const POI_PROPS := [
 	["poi_tagged_crate_piece_d", 0.52, 0.46, false, true],
 	["poi_req_locker", 2.5, 3.0, false],
 	["poi_req_locker_door", 1.8, 2.56, false],
+	["poi_tag_rack", 3.03, 3.0, false],
+	["poi_tag_rack_leaning", 3.66, 4.57, false],
+	["poi_scooter_shed", 3.0, 4.0, false],
 ]
 
 

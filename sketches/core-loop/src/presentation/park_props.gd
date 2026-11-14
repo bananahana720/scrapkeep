@@ -1473,7 +1473,7 @@ static func _find_stand_in(variants: Dictionary, v: String) -> Array:
 	return own["lod"]
 
 
-# Every detail level has an accepted generated sibling: a variant never draws a mix of the two sets.
+# Every detail level has an accepted generated sibling: a stand-in is never a mix of the two sets.
 static func _all_generated(lods: Array) -> bool:
 	for lod in lods:
 		if ModelVariants.path(String(lod)) == String(lod):

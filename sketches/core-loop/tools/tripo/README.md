@@ -206,7 +206,7 @@ A prop that does not exist yet has no authored model to fit against. `tripo_prop
 
 It scales the mesh to `--tall` metres (or to `--wide` metres across its longer ground side), stands it on its origin, groups the texture into eight flat colours of its own, writes them as linear `COLOR_0` on one material named `paint`, drops the texture and the UVs, and writes `_lod1` and `_lod2` files by decimation. With both `--tall` and `--wide`, the height and the ground plane are scaled separately. `--span "a:b"` moves points a metres either side of the centre to b metres, which sets an opening to a planned width, and `--paint "n=#rrggbb"` repaints found colour n when the generated texture misses the palette (the script prints the found colours). The loader must set vertex colour as albedo, as `src/presentation/park_props.gd` does. Register each file in `assets/registry.d/poi_props.json` with its Tripo task and sha256, run `python3 tools/fold_registry.py`, and add the stem to `POI_PROPS` in `tests/tripo_variants_test.gd`.
 
-A mesh generator returns a thin shape (a stake, a wire fence) as a lump. Build those by hand: `tools/blender/world_one/poi_yard.py` builds the fence panel, the survey stake, the ring flag and the siren mast in the same format, and the plain box props (the furnace stacks, the tagged crate and its pieces, the requisition locker and its door), which are cheaper to build than to generate.
+A mesh generator returns a thin shape (a stake, a wire fence) as a lump. Build those by hand: `tools/blender/world_one/poi_yard.py` builds the fence panel, the survey stake, the ring flag and the siren mast in the same format, and the plain box props (the furnace stacks, the tagged crate and its pieces, the requisition locker and its door, the tag rack and the scooter shed), which are cheaper to build than to generate.
 
 World 1 points of interest, 14 November 2026 (API credits, text to model v3.1, smart_low_poly, face limit 4,000, two candidates each at 30 credits; 180 credits, 320 left after):
 
@@ -225,6 +225,9 @@ World 1 points of interest, 14 November 2026 (API credits, text to model v3.1, s
 | `world_one/poi_tagged_crate_piece_{a,b,c,d}.glb` | built by `poi_yard.py` | none | 36 each | the four pieces a broken crate leaves, each with its origin at its centre |
 | `world_one/poi_req_locker.glb` | built by `poi_yard.py` | none | 156 | 3.0 m wide, 2.5 m tall, 1.5 m deep, open at the front |
 | `world_one/poi_req_locker_door.glb` | built by `poi_yard.py` | none | 120 | 2.56 by 1.8 m, origin at the hinge foot; place at (-1.28, 0.3, 0.7) on the locker and turn about the up axis |
+| `world_one/poi_tag_rack.glb` | built by `poi_yard.py` | none | 444 | 3.0 m wide, 3.0 m tall, 2.0 m deep; tags face the front |
+| `world_one/poi_tag_rack_leaning.glb` | built by `poi_yard.py` | none | 492 | the rack tipped 14 degrees with one fallen crate; 4.6 m wide, 3.7 m tall |
+| `world_one/poi_scooter_shed.glb` | built by `poi_yard.py` | none | 352 | 4.0 m wide, 3.0 m deep, 3.0 m tall with its pennant; the scooter stands inside at the origin |
 
 The stand and the gate came back narrower and taller than the placement asked for (2 m across, and 6.7 m tall), so both are fitted with `--wide` and `--tall` together, which scales the ground plane and the height separately. Look at the render when using both: these two chunky shapes take it, a thin or round one may not.
 

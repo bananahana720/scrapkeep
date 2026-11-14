@@ -256,10 +256,79 @@ def req_locker_door(bm):
     bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
 
 
+def _small_crate(bm, at, size=0.8):
+    # a rack crate: a plank box, a darker lid rim and one brass tag on its front (-Y)
+    x, y, z = at
+    box(bm, WOOD, (size, size, size), (x, y, z + size / 2))
+    box(bm, WOOD_D, (size + 0.06, size + 0.06, 0.08), (x, y, z + size - 0.04))
+    box(bm, BRASS, (0.34, 0.05, 0.26), (x, y - size / 2 - 0.03, z + size * 0.5))
+    box(bm, BONE, (0.22, 0.02, 0.05), (x, y - size / 2 - 0.06, z + size * 0.55))
+
+
+def _tag_rack(bm):
+    # 3 m wide, 3 m tall and 2 m deep: four rust angle posts on a concrete slab, two shelves of three tagged crates
+    # each, and a striped awning; the tags face the front (-Y)
+    box(bm, CONC, (3.0, 2.0, 0.15), (0, 0, 0.075))
+    for x in (-1.4, 1.4):
+        for y in (-0.9, 0.9):
+            box(bm, RUST, (0.12, 0.12, 2.6), (x, y, 1.45))
+    for z in (0.5, 1.6):
+        box(bm, CHAR, (2.9, 1.9, 0.08), (0, 0, z))
+        for k, x in enumerate((-0.92, 0.0, 0.92)):
+            _small_crate(bm, (x, -0.25 + 0.1 * ((k + int(z)) % 2), z + 0.04))
+    for k in range(5):  # the awning, five stripes sloping to the front
+        box(bm, ORANGE if k % 2 == 0 else BONE, (0.6, 2.0, 0.08), (-1.2 + 0.6 * k, 0, 2.85), Matrix.Rotation(math.radians(8), 4, "X"))
+    box(bm, RUST, (3.0, 0.1, 0.1), (0, 0.95, 2.95))
+
+
+def tag_rack(bm):
+    _tag_rack(bm)
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+
+
+def tag_rack_leaning(bm):
+    # the same rack tipped 14 degrees to its right about its right foot line, with one crate fallen to the ground
+    _tag_rack(bm)
+    bmesh.ops.transform(bm, matrix=Matrix.Translation((1.5, 0, 0)) @ Matrix.Rotation(math.radians(14), 4, "Y") @ Matrix.Translation((-1.5, 0, 0)), verts=bm.verts)
+    low = min(v.co.z for v in bm.verts)
+    bmesh.ops.translate(bm, vec=(0, 0, -low), verts=bm.verts)
+    lo, hi = min(v.co.x for v in bm.verts), max(v.co.x for v in bm.verts)
+    bmesh.ops.translate(bm, vec=(-(lo + hi) / 2 - 0.45, 0, 0), verts=bm.verts)
+    _small_crate(bm, (hi - (lo + hi) / 2 - 0.45 + 0.5, -0.3, 0.0))
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+
+
+def scooter_shed(bm):
+    # A tiny tin garage, 4 m wide, 3 m deep and 3 m tall with its pennant: petrol-green corrugated walls, a sloping
+    # charcoal roof, an open door on the front (-Y) too small for comfort, and a pennant pole on the ridge. The
+    # scooter is a second model and stands inside at the origin.
+    box(bm, CONC, (4.0, 3.0, 0.12), (0, 0, 0.06))
+    box(bm, GREEN, (3.8, 0.1, 2.0), (0, 1.4, 1.1))
+    for x in (-1.85, 1.85):
+        box(bm, GREEN, (0.1, 2.8, 2.0), (x, 0, 1.1))
+    for x in (-1.5, 1.5):
+        box(bm, GREEN, (0.8, 0.1, 2.0), (x, -1.4, 1.1))
+    box(bm, GREEN, (2.2, 0.1, 0.5), (0, -1.4, 1.85))
+    for x in (-1.14, 1.14):
+        box(bm, BRASS, (0.08, 0.12, 1.5), (x, -1.42, 0.87))
+    box(bm, BRASS, (2.36, 0.12, 0.08), (0, -1.42, 1.62))
+    for k in range(7):  # corrugation ribs on the side walls
+        for x in (-1.92, 1.92):
+            box(bm, WIRE, (0.04, 0.08, 1.9), (x, -1.2 + 0.4 * k, 1.1))
+    box(bm, CHAR, (4.0, 3.0, 0.1), (0, 0, 2.2), Matrix.Rotation(math.radians(-6), 4, "X"))
+    box(bm, RUST, (4.0, 0.12, 0.12), (0, -1.5, 2.06))
+    cylinder(bm, BONE, 0.04, 0.8, (1.5, 0, 2.2), 6)
+    wedge(bm, ORANGE, [(1.46, 3.0), (1.46, 2.58), (0.8, 2.79)], 0.04)
+    box(bm, ORANGE, (0.3, 0.06, 0.2), (0, -1.47, 1.86))  # the lamp over the door
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+
+
 FILES.update({"TaggedCrate": "poi_tagged_crate.glb", "TaggedCratePieceA": "poi_tagged_crate_piece_a.glb", "TaggedCratePieceB": "poi_tagged_crate_piece_b.glb",
               "TaggedCratePieceC": "poi_tagged_crate_piece_c.glb", "TaggedCratePieceD": "poi_tagged_crate_piece_d.glb",
-              "ReqLocker": "poi_req_locker.glb", "ReqLockerDoor": "poi_req_locker_door.glb"})
+              "ReqLocker": "poi_req_locker.glb", "ReqLockerDoor": "poi_req_locker_door.glb",
+              "TagRack": "poi_tag_rack.glb", "TagRackLeaning": "poi_tag_rack_leaning.glb", "ScooterShed": "poi_scooter_shed.glb"})
 for _name, _build in (("FencePanel", fence), ("SurveyStake", stake), ("RingFlag", ring_flag), ("SirenMast", siren_mast), ("FurnaceStacks", furnace_stacks),
                       ("TaggedCrate", tagged_crate), ("TaggedCratePieceA", _piece("a")), ("TaggedCratePieceB", _piece("b")), ("TaggedCratePieceC", _piece("c")),
-                      ("TaggedCratePieceD", _piece("d")), ("ReqLocker", req_locker), ("ReqLockerDoor", req_locker_door)):
+                      ("TaggedCratePieceD", _piece("d")), ("ReqLocker", req_locker), ("ReqLockerDoor", req_locker_door),
+                      ("TagRack", tag_rack), ("TagRackLeaning", tag_rack_leaning), ("ScooterShed", scooter_shed)):
     write(_name, _build)

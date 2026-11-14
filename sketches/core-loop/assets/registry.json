@@ -37936,6 +37936,17 @@
    }
   },
   {
+   "id": "poi_scooter_shed",
+   "path": "res://assets/models/world_one/poi_scooter_shed.glb",
+   "class": "landmark",
+   "ships": true,
+   "loader": "not placed yet: the points of interest thread loads it (branch claude/project-thread-kjv6sg), with vertex colour as albedo as src/presentation/park_props.gd does",
+   "provenance": {
+    "recipe": "tools/blender/world_one/poi_yard.py",
+    "note": "Procedural, vertex coloured, the scooter shed, a tin garage 4.0 m wide, 3.0 m deep and 3.0 m tall with its pennant, open at the front; the scooter is a second model that stands inside at the origin; built by hand in Blender for the Brindle arena surroundings (W1-104). sha256 2aee753632fa8b83621d97269d58f6f19af22d5653a02f2c4cbf59ec895818bb"
+   }
+  },
+  {
    "id": "poi_siren_mast",
    "path": "res://assets/models/world_one/poi_siren_mast.glb",
    "class": "prop",
@@ -37955,6 +37966,28 @@
    "provenance": {
     "recipe": "tools/blender/world_one/poi_yard.py",
     "note": "Procedural, vertex coloured, a survey stake with a striped cap and pennant, 3.16 m tall, origin at the foot; built by hand because a mesh generator returns thin shapes as lumps. sha256 906e8b1c52c44d5b6501dc283a48023f9cf3ca40fa4d68a8a3103c7f09f6157f"
+   }
+  },
+  {
+   "id": "poi_tag_rack",
+   "path": "res://assets/models/world_one/poi_tag_rack.glb",
+   "class": "landmark",
+   "ships": true,
+   "loader": "not placed yet: the points of interest thread loads it (branch claude/project-thread-kjv6sg), with vertex colour as albedo as src/presentation/park_props.gd does",
+   "provenance": {
+    "recipe": "tools/blender/world_one/poi_yard.py",
+    "note": "Procedural, vertex coloured, a tag rack, 3.0 m wide, 3.0 m tall and 2.0 m deep, two shelves of three tagged crates under a striped awning, tags facing the front; built by hand in Blender for the Brindle arena surroundings (W1-104). sha256 0deb19a4613061c75303aaa428f0d5be489edb4d507b22bcdd93b8c147a7c7b5"
+   }
+  },
+  {
+   "id": "poi_tag_rack_leaning",
+   "path": "res://assets/models/world_one/poi_tag_rack_leaning.glb",
+   "class": "landmark",
+   "ships": true,
+   "loader": "not placed yet: the points of interest thread loads it (branch claude/project-thread-kjv6sg), with vertex colour as albedo as src/presentation/park_props.gd does",
+   "provenance": {
+    "recipe": "tools/blender/world_one/poi_yard.py",
+    "note": "Procedural, vertex coloured, the tag rack tipped 14 degrees to its right with one crate fallen beside it, 4.6 m wide and 3.7 m tall with the fallen crate; built by hand in Blender for the Brindle arena surroundings (W1-104). sha256 26efa8cff9314b3c2ae6ef8812c3b7b3d24d1b551990b8603bd2825ac3f68384"
    }
   },
   {
@@ -40686,8 +40719,11 @@
   "poi_req_locker",
   "poi_req_locker_door",
   "poi_ring_flag",
+  "poi_scooter_shed",
   "poi_siren_mast",
   "poi_survey_stake",
+  "poi_tag_rack",
+  "poi_tag_rack_leaning",
   "poi_tagged_crate",
   "poi_tagged_crate_piece_a",
   "poi_tagged_crate_piece_b",
