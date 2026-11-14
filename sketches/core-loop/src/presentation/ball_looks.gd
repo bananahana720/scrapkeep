@@ -63,9 +63,9 @@ uniform float enamel_take = 0.0;
 uniform float keep_within = 0.0;
 // ...except behind the pilot's back above the seat (the level part's own +Z and +Y past these),
 // where only brackets and backrests stand: those count as outer kit at any distance.
-// What stands inside the ball is judged by the tube of sight the window opens (the plating's
-// radius, in the model's units), not by its angle from the centre, which a rod near the centre
-// never reaches.
+// Kit is judged by the tube of sight the window opens (the plating's radius, in the model's
+// units), not by its angle from the centre: a rod near the centre never reaches that angle, and
+// a barrel that stands out past the ball reaches it while still beside the opening.
 uniform float tube = 0.0;
 uniform bool back_is_kit = false;
 // A small pilot's seat back is lowered to this height (the level part's own Y): every vertex of
@@ -97,8 +97,7 @@ void vertex() {
 }
 void fragment() {
 	float facing = dot(normalize(from_centre), normalize(to_camera));
-	float reach = length(from_centre) / model_scale;
-	if (tube > 0.0 && reach < tube) {
+	if (tube > 0.0) {
 		vec3 axis = normalize(to_camera);
 		float along = dot(from_centre, axis) / model_scale;
 		float across = length(from_centre / model_scale - axis * along);
