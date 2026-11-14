@@ -284,6 +284,7 @@ World 1 points of interest, 14 November 2026 (API credits, text to model v3.1, s
 | `world_one/poi_tag_rack.glb` | built by `poi_yard.py` | none | 444 | 3.0 m wide, 3.0 m tall, 2.0 m deep; tags face the front |
 | `world_one/poi_tag_rack_leaning.glb` | built by `poi_yard.py` | none | 492 | the rack tipped 14 degrees with a seventh crate on the ground beside it; 4.6 m wide, 3.7 m tall |
 | `world_one/poi_scooter_shed.glb` | built by `poi_yard.py` | none | 352 | 4.0 m wide, 3.0 m deep, 3.0 m tall with its pennant; the scooter stands inside at the origin |
+| `world_one/poi_scooter.glb` | built by `poi_yard.py` | none | 328 | 1.6 m long, 0.64 m wide, 1.04 m tall; nose toward the shed's door, so place it at the shed's origin |
 
 The stand and the gate came back narrower and taller than the placement asked for (2 m across, and 6.7 m tall), so both are fitted with `--wide` and `--tall` together, which scales the ground plane and the height separately. Look at the render when using both: these two chunky shapes take it, a thin or round one may not.
 

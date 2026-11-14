@@ -37940,6 +37940,17 @@
    }
   },
   {
+   "id": "poi_scooter",
+   "path": "res://assets/models/world_one/poi_scooter.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "not placed yet: the points of interest thread loads it (branch claude/project-thread-kjv6sg), with vertex colour as albedo as src/presentation/park_props.gd does",
+   "provenance": {
+    "recipe": "tools/blender/world_one/poi_yard.py",
+    "note": "Procedural, vertex coloured, the parade scooter that stands in the scooter shed, a too-small step-through scooter 1.6 m long, 0.64 m wide and 1.04 m tall with a tally pennant on the back; its nose points the way the shed's door faces, so it is placed at the shed's origin; built by hand in Blender for the Brindle arena surroundings (W1-104). sha256 6d8d6defcc3978b7d8d0b527db357bf835e9d3ebad20d4960a9cf27b326ebaf2"
+   }
+  },
+  {
    "id": "poi_scooter_shed",
    "path": "res://assets/models/world_one/poi_scooter_shed.glb",
    "class": "landmark",
@@ -40723,6 +40734,7 @@
   "poi_req_locker",
   "poi_req_locker_door",
   "poi_ring_flag",
+  "poi_scooter",
   "poi_scooter_shed",
   "poi_siren_mast",
   "poi_survey_stake",

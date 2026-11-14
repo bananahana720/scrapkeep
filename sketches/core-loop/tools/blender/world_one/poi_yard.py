@@ -8,7 +8,7 @@
 #                         game can knock it flat by turning it about its origin.
 #   poi_ring_flag.glb, poi_siren_mast.glb, poi_furnace_stacks.glb, poi_tagged_crate.glb and its four pieces,
 #   poi_req_locker.glb and poi_req_locker_door.glb, poi_tag_rack.glb, poi_tag_rack_leaning.glb and
-#   poi_scooter_shed.glb: the Brindle arena surroundings (W1-104); each builder's comment
+#   poi_scooter_shed.glb and poi_scooter.glb: the Brindle arena surroundings (W1-104); each builder's comment
 #   gives its size and where its origin is.
 # Each is one mesh on one material named paint with linear COLOR_0 and no texture, as the park props and the Tripo props
 # (tools/tripo/tripo_prop.py) are; the loader sets vertex colour as albedo. Metres; Godot (X,Y,Z) -> Blender (X,-Z,Y).
@@ -325,12 +325,43 @@ def scooter_shed(bm):
     bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
 
 
-FILES.update({"TaggedCrate": "poi_tagged_crate.glb", "TaggedCratePieceA": "poi_tagged_crate_piece_a.glb", "TaggedCratePieceB": "poi_tagged_crate_piece_b.glb",
+# The parade scooter that lives in the scooter shed (W1-104): a too-small step-through scooter, 1.6 m long, 0.6 m
+# wide at the handlebar and 1.05 m tall, in parade orange with a bone seat, brass trim and a little tally pennant
+# on the back. It points along -Y in Blender (+Z in Godot), the way the shed's door faces, so at the shed's origin
+# it stands nose out in the doorway. The origin is on the ground under its middle.
+def scooter(bm):
+    side = Matrix.Rotation(math.radians(90), 4, "Y")  # a cone built along Z, laid along X: a wheel that rolls along Y
+    for y in (-0.58, 0.58):
+        cone(bm, CHAR, 0.22, 0.22, 0.12, (-0.06, y, 0.22), 10, side)
+        cone(bm, BONE, 0.09, 0.09, 0.14, (-0.07, y, 0.22), 8, side)
+    box(bm, ORANGE, (0.34, 0.62, 0.07), (0, 0.0, 0.2))  # the step-through deck
+    box(bm, ORANGE, (0.36, 0.56, 0.36), (0, 0.5, 0.45))  # the engine cover under the seat
+    box(bm, BONE, (0.3, 0.5, 0.09), (0, 0.46, 0.675))  # the seat
+    box(bm, ORANGE, (0.3, 0.3, 0.04), (0, 0.58, 0.47), Matrix.Rotation(math.radians(-20), 4, "X"))  # rear fender
+    box(bm, ORANGE, (0.36, 0.07, 0.62), (0, -0.4, 0.5), Matrix.Rotation(math.radians(-12), 4, "X"))  # the leg shield
+    box(bm, ORANGE, (0.2, 0.34, 0.05), (0, -0.6, 0.47), Matrix.Rotation(math.radians(18), 4, "X"))  # front fender
+    box(bm, CHAR, (0.06, 0.06, 0.34), (0, -0.47, 0.84))  # the steering column
+    box(bm, BRASS, (0.6, 0.05, 0.05), (0, -0.47, 1.0))  # the handlebar
+    for x in (-0.27, 0.27):
+        box(bm, CHAR, (0.1, 0.07, 0.07), (x, -0.47, 1.0))  # grips
+    cone(bm, BRASS, 0.09, 0.07, 0.08, (0, -0.48, 0.86), 8, Matrix.Rotation(math.radians(90), 4, "X"))  # the headlamp
+    box(bm, GLOW, (0.1, 0.02, 0.1), (0, -0.565, 0.86))
+    box(bm, BRASS, (0.26, 0.03, 0.16), (0, 0.79, 0.44))  # the tally plate on the back
+    cylinder(bm, BONE, 0.015, 0.5, (0.12, 0.74, 0.55), 6)
+    old = set(bm.verts)
+    wedge(bm, ORANGE, [(0.12, 1.05), (0.12, 0.85), (-0.14, 0.95)], 0.02)  # the pennant; a wedge is built about Y = 0
+    for v in [v for v in bm.verts if v not in old]:
+        v.co.y += 0.74
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+
+
+FILES.update({"Scooter": "poi_scooter.glb",
+"TaggedCrate": "poi_tagged_crate.glb", "TaggedCratePieceA": "poi_tagged_crate_piece_a.glb", "TaggedCratePieceB": "poi_tagged_crate_piece_b.glb",
               "TaggedCratePieceC": "poi_tagged_crate_piece_c.glb", "TaggedCratePieceD": "poi_tagged_crate_piece_d.glb",
               "ReqLocker": "poi_req_locker.glb", "ReqLockerDoor": "poi_req_locker_door.glb",
               "TagRack": "poi_tag_rack.glb", "TagRackLeaning": "poi_tag_rack_leaning.glb", "ScooterShed": "poi_scooter_shed.glb"})
 for _name, _build in (("FencePanel", fence), ("SurveyStake", stake), ("RingFlag", ring_flag), ("SirenMast", siren_mast), ("FurnaceStacks", furnace_stacks),
                       ("TaggedCrate", tagged_crate), ("TaggedCratePieceA", _piece("a")), ("TaggedCratePieceB", _piece("b")), ("TaggedCratePieceC", _piece("c")),
                       ("TaggedCratePieceD", _piece("d")), ("ReqLocker", req_locker), ("ReqLockerDoor", req_locker_door),
-                      ("TagRack", tag_rack), ("TagRackLeaning", tag_rack_leaning), ("ScooterShed", scooter_shed)):
+                      ("TagRack", tag_rack), ("TagRackLeaning", tag_rack_leaning), ("ScooterShed", scooter_shed), ("Scooter", scooter)):
     write(_name, _build)
