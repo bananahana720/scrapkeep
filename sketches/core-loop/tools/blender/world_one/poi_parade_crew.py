@@ -5,8 +5,9 @@
 #   poi_parade_crew_standard.glb  holding the tally pennant on its staff
 # Parade dress is paint: the work hat turns warning orange with a brass band, and a warning orange sash runs
 # from one shoulder to the other hip. The baked shading of the source is kept under the new colours.
-# Each is scaled to 1.4 m tall to the top of the hat or the staff, faces -Y in Blender (+Z in Godot) and keeps the
-# source's origin, which is on the ground under the seat. One mesh on one material named paint with COLOR_0 and no
+# Each is scaled to 1.4 m tall to its highest point (the raised mittens, or the top of the staff), so the two bodies
+# differ a little in size. Each faces -Y in Blender (+Z in Godot) and keeps the source's origin, which is on the
+# ground under the seat. One mesh on one material named paint with COLOR_0 and no
 # texture coordinates, as tools/blender/world_one/poi_yard.py writes its props. Metres.
 #
 #   blender -b --factory-startup --python-exit-code 1 -P sketches/core-loop/tools/blender/world_one/poi_parade_crew.py -- [--out DIR]
@@ -64,12 +65,18 @@ def write(source, name, filename):
     me.transform(ob.matrix_world)
     ob.parent = None
     ob.matrix_world = Matrix.Identity(4)
+    if len(me.color_attributes) != 1 or me.color_attributes[0].domain != "CORNER":
+        raise SystemExit(source + " must carry exactly one per-corner colour layer")
+    if "paint" not in [m.name for m in me.materials]:
+        raise SystemExit(source + " has no material named paint")
+    skin = [m.name for m in me.materials].index("paint")
     old = me.color_attributes[0]
+    old_name = old.name
     shaded = [tuple(d.color[:3]) for d in old.data]
     new = me.color_attributes.new("Col", "FLOAT_COLOR", "CORNER")
     for li, c in enumerate(shaded):
         new.data[li].color = (*c, 1.0)
-    # The sash is a band 0.11 m wide across the chest and the back, from the left shoulder down to the right hip.
+    # The sash is a band 0.11 m wide, measured on the source before scaling, across the chest and the back, from the left shoulder down to the right hip.
     # The trunk is cut along the band's two long edges and its shoulder end first, so the band paints with a crisp edge on this coarse skin.
     # The source faces +X with Z up and its seat at the origin.
     slope = Vector((0.0, -0.85, 1.0)).normalized()
@@ -82,7 +89,7 @@ def write(source, name, filename):
         return nearest([sum(lp[cl][k] for lp in f.loops) / len(f.loops) for k in range(3)])
 
     def trunk(f):  # fur only: not the staff (the second material), the hat, a mitten or the tail
-        return f.material_index == 0 and paint_of(f) in ("fur", "belly")
+        return f.material_index == skin and paint_of(f) in ("fur", "belly")
 
     def wears_sash(f):
         return trunk(f) and 0.3 < f.calc_center_median().z < TOP
@@ -103,7 +110,7 @@ def write(source, name, filename):
                 k = min(1.3, lum(lp[cl]) / lum(SOURCE[paint]))
                 lp[cl] = (*(min(1.0, t * k) for t in target), 1.0)
     bm.to_mesh(me); bm.free()
-    me.color_attributes.remove(me.color_attributes[0])
+    me.color_attributes.remove(me.color_attributes[old_name])
     me.color_attributes.active_color = me.color_attributes[0]
     me.color_attributes.render_color_index = 0
     while me.uv_layers:
