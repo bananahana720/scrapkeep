@@ -2,7 +2,7 @@ extends SceneTree
 
 # Rule: the gate GLB holds exactly common, rare, relic and evolved toppers. Each
 # resolves directly through HeroAssets to a mesh and dresses its live placeholder.
-# Evolved keeps the star prism but has a crown at least 20% taller than relic.
+# Evolved is a crown (relic a four-point star) and stands at least 20% taller than relic.
 const HeroAssets := preload("res://src/presentation/hero_assets.gd")
 const RARITIES := ["common", "rare", "relic", "evolved"]
 const TOPPERS := ["Topper_common", "Topper_rare", "Topper_relic", "Topper_evolved"]

@@ -1,0 +1,24 @@
+# Change a setting from the title and leave; the choice is on the screen and on disk.
+# Launch with: -- --no-intro
+until clickable "Settings" 120
+until read get_node_or_null("/root/Boot") == null 30
+click "Settings"
+until text "Less motion" 10
+shot display-before
+click "Less motion"
+wait 1
+shot display-after
+click "Controls"
+wait 1
+shot controls
+ui
+click "Look"
+wait 1
+shot look
+click "Feel"
+wait 1
+shot feel
+ui
+key ESCAPE
+until clickable "Settings" 10
+quit

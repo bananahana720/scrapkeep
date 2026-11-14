@@ -18,7 +18,7 @@ Critters and locals that make each park feel inhabited, with no effect on play. 
 | Spillway | Dusk quail | critter, coveys of 3–5 | round teardrop, curled topknot | scurries in a line on washes and aprons | three-note "chi-ca-go" | runs single file, hides in scrub |
 | Spillway | Dam swift | critter, rows of 3–5 | ball with crescent wings | perches on dam rails, mesa rims | thin twitter | the row lifts and circles high, each on its own orbit, then re-perches |
 | Spillway | Puddle toad | critter | squat dome, big eyes | sits at canal and pool edges, dozes | low croak | plops in and sinks |
-| Spillway | Weir-keeper beaver | local, dam-era keepers | pear body, flat tail, wide hat | fishes off a bucket, waves, mends nets | two-note whistle | pulls the hat down behind the bucket |
+| Spillway | Weir-keeper beaver | local, dam-era keepers, 5 to 6 a park at the empty crew camps and yards (13 Nov) | pear body, flat tail, wide hat | fishes off a bucket, waves, mends nets | two-note whistle | pulls the hat down behind the bucket |
 | Dig | Pit burro | critter | barrel body, big ears | grazes the pit benches | bray | trots to the far end of its bench |
 | Dig | Tube bat | critter, roosts of 3–6 | furry ball, folded wings, unlit | hangs asleep under tube ceilings and adits, only where a real roof stands 1.5–14 m overhead (none in park_sinkhole yet) | tiny squeaks | unrolls and flutters to a farther roost |
 | Dig | Horned lizard | critter | round pancake, soft nubs | basks on warm rock | pebble scratch | puffs up, wedges into a crack |

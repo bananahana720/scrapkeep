@@ -23,6 +23,7 @@ const EXPECTED := {
 	"set-director": ["set_director", "on", "bogus", "launch"],
 	"discovery": ["discovery", "cards", "bogus", "launch"],
 	"telegraph": ["telegraph", "haze", "bogus", "launch"],
+	"ball-look": ["ball_look", "cutaway", "bogus", "launch"],
 	"world-one-builds": ["world_one_builds", "on", "bogus", "launch"],
 	"pole-flail": ["pole_flail", "on", "bogus", "launch"],
 	"hotwire-shell": ["hotwire_shell", "on", "bogus", "launch"],
@@ -34,6 +35,7 @@ const EXPECTED := {
 	"heat": ["heat", "on", "bogus", "launch"],
 	"overtime": ["overtime", "on", "bogus", "launch"],
 	"called-shot": ["called_shot", "on", "bogus", "launch"],
+	"stocktake": ["stocktake", "on", "bogus", "launch"],
 	"final-world": ["final_world", "1", "bogus", "launch"],
 }
 

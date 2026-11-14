@@ -555,7 +555,8 @@ func setup(ctx_ref) -> void:
 # kind is "chaser", "lobber", "miniboss", "warden" or "vault". An unknown kind spawns a
 # chaser, with a warning, so a typo in an event table never leaves a stage empty. The
 # Warden and the vault sit on the ground under `at`; the others are placed at `at`.
-func spawn_enemy(kind: String, at: Vector3, affix_id := "", perch := Vector3.INF) -> Node3D:
+# `health_scale` multiplies the health the enemy would otherwise spawn with (the survival yard's later counts).
+func spawn_enemy(kind: String, at: Vector3, affix_id := "", perch := Vector3.INF, health_scale: float = 1.0) -> Node3D:
 	var enemy: Node3D
 	match kind:
 		"lobber":
@@ -590,7 +591,7 @@ func spawn_enemy(kind: String, at: Vector3, affix_id := "", perch := Vector3.INF
 	# Fodder sees the player through its sight, which Kest's cloak can fool; the Warden
 	# and the vault are set pieces and always see the ball.
 	var target = Sight.new(ctx.player, self, enemy, kind) if Sight.REACH.has(kind) or fleet.makes(kind) else ctx.player
-	var health_scale := _threat()
+	var health := _threat()
 	var enemy_spec: Dictionary = fleet.dress(kind, _spec_for(kind))
 	if kind == "lobber" and ctx.flow.in_stage():
 		enemy_spec["lead"] = ChallengeDials.by_stage_or("mobs.lobber_lead_by_stage", ctx.flow.stage(), Lobber.LEAD)
@@ -602,7 +603,7 @@ func spawn_enemy(kind: String, at: Vector3, affix_id := "", perch := Vector3.INF
 	if kind not in ["warden", "vault"]:
 		var director = _director()
 		if director != null:
-			health_scale = director.hp_scale()
+			health = director.hp_scale()
 			enemy_spec["rest_scale"] = director.rest_scale()
 		if director != null and director.run_tier() >= 1:
 			enemy_spec["stage_threat"] = _threat()
@@ -619,7 +620,7 @@ func spawn_enemy(kind: String, at: Vector3, affix_id := "", perch := Vector3.INF
 		# A chaser runs at its stage's speed (ChallengeDials mobs.chaser_speed_by_stage); boss adds keep their own.
 		if kind == "chaser" and ctx.flow.in_stage():
 			enemy_spec["run_speed"] = Chaser.stage_speed(int(ctx.run.stage))
-	enemy.setup(target, ground, ctx.root, Callable(ctx.flow, "in_play"), health_scale, enemy_spec)
+	enemy.setup(target, ground, ctx.root, Callable(ctx.flow, "in_play"), health * health_scale, enemy_spec)
 	# The vault and the Warden settle onto the ground or their landmark anchor in setup.
 	if enemy is CollisionObject3D and not enemy.global_position.is_equal_approx(at):
 		_reenter_space(enemy)

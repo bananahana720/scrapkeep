@@ -6,6 +6,7 @@ const EventKinds := preload("res://src/core/event_kinds.gd")
 const Cards := preload("res://src/world/director_cards.gd")
 const HoldRelay := preload("res://src/world/hold_relay.gd")
 const RelayStake := preload("res://src/world/relay_stake.gd")
+const SurvivalCount := preload("res://src/world/survival_count.gd")
 const Interact := preload("res://src/world/interact.gd")
 const ItemGen := preload("res://src/build/item_gen.gd")
 const OddsReadout := preload("res://src/ui/odds_readout.gd")
@@ -132,6 +133,17 @@ const RULES := {
 		"waves": 3, "wave_s": 6.0, "pack_gap_s": 0.5, "miniboss_at": 0.35, "miniboss_step": 0.12,
 		"post_out": 26.0, "retry_s": 12.0, "budget": {"start": 6, "per_class": 1, "per_world": 2, "cap": 12},
 		"pay": {"scrap": PAY_SCRAP, "rarities": PAY_RARITIES, "source": "activity_relay", "where": "relay"},
+	},
+	# The Stocktake yard (BACKLOG W1-101; survival_count.gd owns the counts, their clocks and the pay ladder): one of
+	# the park's survival_rows of this `form`, drawn by the run's seed, and only with --stocktake=on. Rolling into
+	# the ring starts count 1. A count's machines climb in on the ring's edge one every `arrive_s`. With the gate
+	# open the ring turns the live colour, and rolling out of it from inside banks the pay (scrap and cores at once,
+	# parts on a pickup in the ball's path); staying takes the next count. `out_s` outside the ring with the gate
+	# shut, or the ball destroyed, forfeits it all. It wears the bounty's marker row under its own word.
+	"stocktake_yard": {
+		"starts": "ring", "ring": 40.0, "finishes": "count", "pack": [], "form": "yard", "arrive_s": 0.4, "out_s": 4.0,
+		"pay_ahead_m": 12.0, "pay": {"scrap": 0, "rarities": [], "source": "activity_yard", "where": "gate"},
+		"cue": {"view": "hauler_bounty", "word": "Stocktake"},
 	},
 	# The surge course in a park (surge_course.gd): rolling into the ring by the head of the activity row's `route`
 	# opens the sluice (the park's sluice_surge event row, triggered on this row), and when the gate lands the water
@@ -347,6 +359,13 @@ class Site extends Node3D:
 	var surge_live := false
 	var surge_wait := 0.0
 	var surge_shown := -1.0
+	var yard
+	# The machines of the counts sent so far that have yet to climb in: [kind, health scale] each.
+	var yard_owed: Array = []
+	var yard_wait := 0.0
+	var yard_out := 0.0
+	# The ball has been inside the ring with this gate open, so crossing out is its choice to bank.
+	var yard_may_bank := false
 
 	func _exit_tree() -> void:
 		for enemy in pack + minibosses:
@@ -363,8 +382,10 @@ func setup(ctx_ref) -> void:
 		clear()
 		_drop_ahead())
 	ctx.events.launched.connect(_on_launched)
+	ctx.events.flow_changed.connect(_on_flow_changed)
 	ctx.events.slammed.connect(func(at: Vector3, strength: float, _flatness: float): _slammed(at, strength))
 	ctx.events.world_fact.connect(_on_world_fact)
+	ctx.events.player_died.connect(_forfeit_yards)
 	# The trade devices' plate finish neutralises its texture pixel by pixel on first use (about
 	# 55 ms, SWAP-HITCH-2); Palette caches it, so it is made here rather than on a stage entry.
 	Palette.look_texture("rusted-salvaged-plate-worn", true)
@@ -550,6 +571,9 @@ func _plan(map, entry_data: Dictionary) -> Dictionary:
 				built_spec.pack = spec.pack.duplicate()
 				built_spec.tell = spec.get("tell", {}).duplicate(true)
 		out.append({"kind": "row", "id": id, "at": spec["at"], "spec": built_spec})
+	var yard := yard_spec(map)
+	if not yard.is_empty():
+		out.append({"kind": "row", "id": "stocktake_yard", "at": yard["at"], "spec": yard})
 	if _graph_map != "":
 		var tuning = ctx.get("tuning")
 		var sitting: bool = tuning != null and tuning.has_method("sitting") and tuning.sitting()
@@ -578,6 +602,19 @@ func _plan(map, entry_data: Dictionary) -> Dictionary:
 			if not ctx.calm or RULES[drawn_spec.id].finishes == "wall_broken":
 				out.append({"kind": "drawn", "id": drawn_spec.id, "at": drawn_spec.at, "spec": drawn_spec})
 	return {"sites": out, "modifier": modifier}
+
+
+# The survival yard this run stands on `map`, or {} for none: --stocktake=on, not calm, a world with a roster, and
+# one of the map's yard rows drawn by the run's seed, so a replay or a retry stands the same one.
+func yard_spec(map) -> Dictionary:
+	var tuning = ctx.get("tuning")
+	if tuning == null or tuning.option("stocktake") != "on" or ctx.calm or not "survival_sites" in map:
+		return {}
+	var form := String(RULES["stocktake_yard"]["form"])
+	var rows: Array = map.survival_sites.filter(func(row: Dictionary) -> bool: return row["form"] == form)
+	if rows.is_empty() or not SurvivalCount.ROSTERS.has(ctx.stages.world_of(ctx.run.stage)):
+		return {}
+	return rows[posmod(hash([ctx.rng.seed, ctx.run.run_seed, "survival_" + form]), rows.size())]
 
 
 # The site this run builds for an authored spec (W1-70): the spec itself, or one of its alts (park_map.gd), drawn
@@ -637,14 +674,28 @@ func _arm(site: Site) -> void:
 # where stages are built on workers (a played game, a frame-capture bot run). Bots and tests build at entry as before.
 func _on_launched(_velocity: Vector3) -> void:
 	_drop_ahead()
+	var flow = ctx.get("flow")
+	if flow == null or not flow.state_name() in ["gates", "launch"] or ctx.stages.is_world_last(ctx.run.stage):
+		return
+	_start_ahead(ctx.run.stage + 1)
+
+
+# A world boss's victory starts the next world's first stage the same way: that stage is entered from the arena
+# with no launch, and building its sites on the entry tick was about 5 ms of the Dig's (cloud, 13 Nov 2026).
+func _on_flow_changed(state: String) -> void:
+	if state != "victory":
+		return
+	_drop_ahead()
+	var flow = ctx.get("flow")
+	if flow == null or not flow.has_method("run_ends_after") or flow.run_ends_after(ctx.run.stage):
+		return
+	_start_ahead(ctx.run.stage + 1)
+
+
+func _start_ahead(stage: int) -> void:
 	if ctx.terrain == null or not ctx.terrain.has_method("_worker_builds") or not ctx.terrain._worker_builds():
 		return
-	var flow = ctx.get("flow")
-	if flow == null or not flow.state_name() in ["gates", "launch"]:
-		return
-	var stage: int = ctx.run.stage + 1
-	if ctx.stages.is_world_last(ctx.run.stage) or not "maps" in ctx.terrain or stage > ctx.terrain.maps.size() \
-			or not ctx.terrain.is_ready(stage):
+	if not "maps" in ctx.terrain or stage > ctx.terrain.maps.size() or not ctx.terrain.is_ready(stage):
 		return
 	var map = ctx.terrain.map_for(stage)
 	if not "park" in map or map.park.is_empty() or not "activity_sites" in map:
@@ -817,6 +868,14 @@ func standing() -> int:
 	return n
 
 
+# Whether `enemy` is one of the brutes standing() counts.
+func keeps(enemy: Node) -> bool:
+	for s in sites:
+		if s.brute == enemy:
+			return true
+	return false
+
+
 func _build(id: String, at: Vector2, spec := {}) -> Site:
 	var started := Time.get_ticks_usec()
 	var site := _build_site(id, at, spec)
@@ -832,7 +891,7 @@ func _build_site(id: String, at: Vector2, spec: Dictionary) -> Site:
 	s.drawn = spec.get("drawn", false)
 	s.trade = spec.get("trade", {})
 	var spec_pay: Dictionary = spec.get("pay", {})
-	if id in ["enemy_camp", "hold_the_relay", "ambush_altar"] or not spec_pay.is_empty() or spec.has("face") or s.rule.has("bundle") or not s.interior.is_empty():
+	if id in ["enemy_camp", "hold_the_relay", "ambush_altar", "stocktake_yard"] or not spec_pay.is_empty() or spec.has("face") or s.rule.has("bundle") or not s.interior.is_empty():
 		s.rule = s.rule.duplicate(true)
 	if not s.interior.is_empty():
 		s.footprint = spec.footprint
@@ -879,6 +938,9 @@ func _build_site(id: String, at: Vector2, spec: Dictionary) -> Site:
 	match id:
 		"hold_the_relay":
 			_build_relay(s)
+		"stocktake_yard":
+			s.yard = SurvivalCount.new(ctx.stages.world_of(ctx.run.stage), String(s.rule["form"]))
+			s.view.say(String(s.rule.cue.word))
 		"surge_run":
 			_build_surge(s, spec)
 		"ambush_altar":
@@ -1341,6 +1403,8 @@ func _physics_process(delta: float) -> void:
 			match String(s.rule["finishes"]):
 				"relay":
 					_watch_relay(s, delta, ball)
+				"count":
+					_watch_yard(s, delta, ball)
 				"surge":
 					_watch_surge(s, delta, ball)
 				"pack_dead":
@@ -1975,6 +2039,108 @@ func _relay_pack(s: Site, ball: Vector3) -> void:
 	s.relay_gap_s = float(s.rule["pack_gap_s"])
 
 
+# ---- The Stocktake yard ----
+
+# Machines the yard still has to beat: the ones up and the ones yet to climb in.
+func yard_standing(s: Site) -> int:
+	return _alive(s.pack) + s.yard_owed.size()
+
+
+func _watch_yard(s: Site, delta: float, ball: Vector3) -> void:
+	var yard = s.yard
+	var inside := _planar(ball, s.global_position) <= float(s.rule["ring"])
+	if not s.started:
+		if not inside or absf(ball.y - s.global_position.y) > RING_HEIGHT or not ctx.can_spawn():
+			return
+		s.started = true
+		yard.begin(Vector2(s.global_position.x, s.global_position.z))
+		_yard_owe(s)
+		ctx.events.event_started.emit(s.id)
+	s.pack = s.pack.filter(func(enemy): return is_instance_valid(enemy) and not (enemy.has_method("is_dead") and enemy.is_dead()))
+	s.yard_wait -= delta
+	if s.yard_wait <= 0.0 and not s.yard_owed.is_empty():
+		_yard_arrive(s, ball)
+	match yard.step(delta, yard_standing(s)):
+		"gate":
+			s.view.ring_role("live")
+		"count":
+			s.view.ring_role("amber")
+			s.yard_may_bank = false
+			_yard_owe(s)
+		"pile":
+			_yard_owe(s)
+	s.view.say(str(yard.count))
+	if inside:
+		s.yard_out = 0.0
+		s.yard_may_bank = yard.gate_open
+	elif yard.gate_open:
+		# A floor cleared from outside the ring banks nothing by itself: the ball rolls in, then out.
+		if s.yard_may_bank:
+			_yard_pay(s, yard.leave(), ball)
+	else:
+		s.yard_out += delta
+		if s.yard_out >= float(s.rule["out_s"]):
+			_yard_forfeit(s)
+
+
+# The standing count's machines join the ones owed, at that count's strength.
+func _yard_owe(s: Site) -> void:
+	var strength: float = s.yard.strength(s.yard.count)
+	for kind in s.yard.pack(s.yard.count):
+		s.yard_owed.append([kind, strength])
+
+
+# The next owed machine climbs in on the ring's edge, across the yard from the ball, each a step round from the last.
+func _yard_arrive(s: Site, ball: Vector3) -> void:
+	var owed: Array = s.yard_owed.pop_front()
+	var entry: Vector3 = ball - s.global_position
+	var a := atan2(entry.z, entry.x) + PI + PACK_TURN * float(s.yard_owed.size() % 5 - 2)
+	var spot := s.global_position + Vector3(cos(a), 0.0, sin(a)) * float(s.rule["ring"])
+	var enemy = ctx.spawner.spawn_enemy(owed[0], ctx.terrain.drop_point(spot.x, spot.z, SPAWN_CLEARANCE), "", Vector3.INF, owed[1])
+	if enemy != null:
+		s.pack.append(enemy)
+	s.yard_wait = float(s.rule["arrive_s"])
+
+
+# The ball left through the open gate: `pay` (SurvivalCount.pay) is banked. Scrap and cores land at once; the
+# parts, one roll a rarity listed, wait on a pickup in the ball's path.
+func _yard_pay(s: Site, pay: Dictionary, ball: Vector3) -> void:
+	s.reward_parts = []
+	var rarities: Array = pay.get("rarities", [])
+	for i in rarities.size():
+		var rng := RandomNumberGenerator.new()
+		rng.seed = Interact.luck_seed(ctx.rng.seed, ctx.run.run_id, ctx.run.stage, "%s:%d" % [s.id, i])
+		s.reward_parts.append_array(Parts.roll(rng, [rarities[i]], ctx.run.class_id(), ctx.run.parts + s.reward_parts, 1, s.reward_parts))
+	var out: Vector3 = ball - s.global_position
+	out.y = 0.0
+	var at: Vector3 = ball + out.normalized() * float(s.rule["pay_ahead_m"])
+	at = ctx.terrain.drop_point(at.x, at.z, 1.0)
+	for i in int(pay.get("cores", 0)):
+		ctx.run.add_core(String(s.rule["pay"]["source"]), at)
+	var scrap := int(pay.get("scrap", 0))
+	if scrap > 0:
+		ctx.run.add_scrap(scrap, at)
+		ctx.run.add_cogs(scrap)
+	ctx.events.event_ended.emit(s.id, "won")
+	_finish(s, at)
+
+
+# The one ending that pays nothing. The machines stay up: they are the field's now.
+func _yard_forfeit(s: Site) -> void:
+	s.yard.forfeit()
+	s.yard_owed = []
+	s.done = true
+	s.view.finish()
+	ctx.events.event_ended.emit(s.id, "lost")
+
+
+# A destroyed ball forfeits every yard it has started and not banked, wherever it fell: the count is the ball's.
+func _forfeit_yards() -> void:
+	for s in sites:
+		if is_instance_valid(s) and s.yard != null and s.started and not s.done:
+			_yard_forfeit(s)
+
+
 # Each miniboss lands in the relay's miniboss zone, seeded per relay and per arrival, so a
 # stage retry puts them where they were.
 func _relay_miniboss(s: Site) -> void:
@@ -2158,13 +2324,16 @@ func _finish(s: Site, at: Vector3) -> void:
 		if s.rule.has("bundle"):
 			s.pickup_parts = s.reward_parts.duplicate()
 			s.pickup_part = String(s.pickup_parts[0]) if not s.pickup_parts.is_empty() else ""
+		elif s.yard != null:
+			s.pickup_parts = s.reward_parts.duplicate()
+			s.pickup_part = String(s.pickup_parts[0]) if not s.pickup_parts.is_empty() else ""
 		elif s.relay != null:
 			s.pickup_parts = _roll_many(s.id, table["rarities"], s.relay.rewards())
 			s.pickup_part = String(s.pickup_parts[0]) if not s.pickup_parts.is_empty() else ""
 		else:
 			s.pickup_part = _roll(_luck_id(s), table["rarities"])
 	if s.pickup_part != "":
-		s.pickup = ActivityView.gem(String(s.rule.cue.view) if s.rule.has("bundle") else s.id)
+		s.pickup = ActivityView.gem(String(s.rule.cue.view) if s.rule.has("bundle") or s.yard != null else s.id)
 		s.add_child(s.pickup)
 		s.pickup.global_position = at
 		s.inside_pickup = _planar(ctx.player.ball_position(), at) <= PICKUP_REACH

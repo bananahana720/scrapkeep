@@ -25,7 +25,9 @@ extends RefCounted
 #   one that landed inside the ring (a ball that first touched ground close in) stays and fights.
 const ROWS := {
 	"park_dam": {
-		"gate": {"packs": 4, "also": ["enemy_camp"], "max_s": 75.0},
+		# 5 packs, was 4 (13 Nov, PR 956, a taste call Andrew can overturn): with packs arriving on the route the
+		# gate lit early and a learner reached the stagger sooner; one more pack keeps the extra supply as fighting.
+		"gate": {"packs": 5, "also": ["enemy_camp"], "max_s": 75.0},
 		"lock": {"id": "apron_crew", "within_m": 200.0, "sentry": {"kind": "lobber", "within_m": 330.0, "ahead_m": 60.0, "side_m": 20.0}, "radius_m": 26.0, "ahead_m": 10.0, "max_s": 60.0, "wave_gap_s": 3.5,
 			"waves": [["chaser", "chaser", "lobber"], ["lobber", "lobber", "chaser"], ["chaser", "chaser", "chaser", "lobber"], ["lobber", "chaser", "chaser"], ["chaser", "chaser", "lobber", "lobber"]],
 			# Reservoir (overtime.gd): the sluice sheet runs down the apron (+z is downhill there).
