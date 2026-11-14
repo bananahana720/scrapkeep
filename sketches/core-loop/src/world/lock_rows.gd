@@ -16,20 +16,31 @@ extends RefCounted
 #   whole crew counts as one of the gate's packs. No plated or holding kind rides in a ring: an
 #   ungrown ball inside a wall with a mag pit or a brute's plating has no way out but the clock
 #   (completionist seed 9, heft 1.0, timed out the 75 s lock on 99beaf80).
+#   The last two waves each carry one of the world's lesson kinds on top of the run-down crew (W1-65,
+#   gameplay critique finding 4): a jolt layer's mat, answered by a jump or by speed, then a sluice
+#   flap, ridden as a ramp at speed or jumped. Neither traps the ball (the flap flings it), so the rule stands,
+#   and the climax before the Warden asks two questions that are not "go faster" alone.
+# sentry: once, the first time the ball is on the ground within `within_m` of the beacon, one `kind`
+#   lands `ahead_m` up the ball's line to the beacon and `side_m` to its right: a plain enemy, no crew
+#   and no pack. On the dam a lobber, so its shell is met and dodged on the way into the yard, before
+#   the Warden's fight (systems audit pass E, change 4; ruling cu, harder sooner). It lands 130 m before
+#   the yard shuts, so a ball at cruise meets at least one shell (a lobber's first lands 5.5 s after it is
+#   in range). When the yard shuts, a sentry still outside the wall leaves (stage_locks.gd _retire_sentry);
+#   one that landed inside the ring (a ball that first touched ground close in) stays and fights.
 const ROWS := {
 	"park_dam": {
 		# 5 packs, was 4 (13 Nov, PR 956, a taste call Andrew can overturn): with packs arriving on the route the
 		# gate lit early and a learner reached the stagger sooner; one more pack keeps the extra supply as fighting.
 		"gate": {"packs": 5, "also": ["enemy_camp"], "max_s": 75.0},
-		"lock": {"id": "apron_crew", "within_m": 200.0, "radius_m": 26.0, "ahead_m": 10.0, "max_s": 60.0, "wave_gap_s": 3.5,
-			"waves": [["chaser", "chaser", "lobber"], ["lobber", "lobber", "chaser"], ["chaser", "chaser", "chaser", "lobber"], ["lobber", "chaser", "chaser"], ["chaser", "chaser", "lobber", "lobber"]],
+		"lock": {"id": "apron_crew", "within_m": 200.0, "sentry": {"kind": "lobber", "within_m": 330.0, "ahead_m": 60.0, "side_m": 20.0}, "radius_m": 26.0, "ahead_m": 10.0, "max_s": 60.0, "wave_gap_s": 3.5,
+			"waves": [["chaser", "chaser", "lobber"], ["lobber", "lobber", "chaser"], ["chaser", "chaser", "chaser", "lobber"], ["lobber", "chaser", "chaser", "jolt_layer"], ["chaser", "chaser", "lobber", "lobber", "ramp_flipper"]],
 			# Reservoir (overtime.gd): the sluice sheet runs down the apron (+z is downhill there).
 			"overtime": {"flow": [0.0, 0.0, 1.0]}},
 	},
 	"park_flume": {
 		"gate": {"packs": 1, "also": ["enemy_camp"], "max_s": 75.0},
 		"lock": {"id": "forecourt_crew", "within_m": 210.0, "radius_m": 26.0, "ahead_m": 10.0, "max_s": 70.0, "wave_gap_s": 3.5,
-			"waves": [["chaser", "chaser", "lobber"], ["chaser", "lobber", "lobber"], ["chaser", "chaser", "lobber", "lobber"], ["lobber", "chaser", "chaser"], ["chaser", "lobber", "lobber"], ["chaser", "chaser", "lobber"], ["chaser", "chaser", "chaser", "lobber"]]},
+			"waves": [["chaser", "chaser", "lobber"], ["chaser", "lobber", "lobber"], ["chaser", "chaser", "lobber", "lobber"], ["lobber", "chaser", "chaser"], ["chaser", "lobber", "lobber"], ["chaser", "chaser", "lobber", "jolt_layer"], ["chaser", "chaser", "chaser", "lobber", "ramp_flipper"]]},
 	},
 }
 

@@ -221,7 +221,7 @@ const SEEK_LEAD_S := 1.0
 
 
 func _seek(to_ball: Vector3) -> Vector3:
-	var lead := float(spec.get("pressure", {}).get("lead", 0.0))
+	var lead := PackPressure.lead_now(spec.get("pressure", {}), target)
 	if lead <= 0.0:
 		return to_ball
 	var at: Vector3 = PackPressure.predict(target, SEEK_LEAD_S * lead) - global_position

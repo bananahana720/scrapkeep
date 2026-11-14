@@ -10,6 +10,7 @@ const StageLocks := preload("res://src/world/stage_locks.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const SfxBank := preload("res://src/presentation/sfx_bank.gd")
 const Rows := preload("res://src/presentation/rows.gd")
+const RunTier := preload("res://src/core/run_tier.gd")
 const T := preload("res://tests/support/t.gd")
 const Palette := preload("res://src/core/palette.gd")
 
@@ -26,6 +27,8 @@ const Palette := preload("res://src/core/palette.gd")
 # - lock: on level ground inside within_m of the beacon the yard shuts round the ball with its crew,
 #   the wall turns an escaping ball back, the last crew member down opens it, and the crew counts
 #   toward the gate; its kills roll no panel and the cleared yard pays one (ruling af); the Warden already awake leaves it unfired;
+# - sentry (systems audit pass E): on the dam one lobber lands up the ball's line once, inside the sentry's
+#   circle and before the yard shuts, as a plain enemy that is no crew;
 # - plate (w22 first-timer red team): while the yard holds, the objective plate says so, its bar
 #   fills as the crew goes down over every wave, and the one edge marker points at the crew member
 #   nearest, none past its wall (PF-39); while the clamp is shut on an awake Warden, the plate says so and its
@@ -64,6 +67,7 @@ func _run() -> void:
 	await _riders()
 	await _left_behind()
 	await _lock()
+	await _sentry()
 	await _timed_out()
 	await _skipped_when_engaged()
 	await _off()
@@ -86,6 +90,17 @@ func _game():
 	return game
 
 
+# Whether flow shows the start card to a played game (the scripted hand is a bot, whose card stays hidden).
+func _card_as_played(game) -> bool:
+	var bot: bool = game.bot_driven
+	game.bot_driven = false
+	game.flow.show_start_card()
+	var up: bool = game.flow.start_card.showing()
+	game.bot_driven = bot
+	game.flow.show_start_card()
+	return up
+
+
 # The clamp row's crew markers (edge_markers.gd), as the HUD reads them this frame.
 func _crew_markers(game) -> Array:
 	return game.hud.edge_markers.targets().filter(func(m): return m["kind"] == "pack_arrived")
@@ -106,6 +121,10 @@ func _rows() -> void:
 				_t.check("%s lock kind %s is a director kind" % [map, kind], kind in preload("res://src/world/director.gd").KIND_NAMES)
 			for kept_out in ["boom_tender", "mag_trapper", "plated_brute"]:
 				_t.check("%s keeps %s out of the ring" % [map, kept_out], not kept_out in wave)
+		# W1-65: the last two waves each carry one of the world's lesson kinds that never holds the ball.
+		var late: Array = (row["lock"]["waves"] as Array).slice(-2)
+		_t.check("%s second-last wave lays a jolt mat" % map, "jolt_layer" in late[0], str(late[0]))
+		_t.check("%s last wave drops a sluice flap" % map, "ramp_flipper" in late[1], str(late[1]))
 	_t.check("other parks have no row", LockRows.row("park_pit").is_empty() and LockRows.row("park_test").is_empty())
 	for kind in ["arena_locked", "arena_wave", "arena_unlocked", "warden_gate_pip", "warden_gate_refused", "warden_gate_opened"]:
 		var entry: Dictionary = EventKinds.world_row(kind)
@@ -296,6 +315,9 @@ func _lock() -> void:
 	var locks = game.flow.gate
 	var row: Dictionary = LockRows.row("park_dam")["lock"]
 	_t.eq("lock armed on entry", locks.lock_state, "armed")
+	# W1-63, W1-77: stage 1's start pick waits for the yard, so the drop holds one thing.
+	_t.check("the start pick waits for the yard", game.flow.start_pick_waits() and game.flow.start_pick_at_yard())
+	_t.check("no start card over the drop", not _card_as_played(game))
 	var beacon: Vector3 = game.flow.beacon.global_position
 	# On the apron past the incline foot: the circle's outer ring there is the incline, where the yard
 	# waits for level ground (PF-46, dam_incline_yard_test).
@@ -363,6 +385,7 @@ func _lock() -> void:
 			_t.eq("wave %d lands" % (w + 2), crew.size(), (waves[w + 1] as Array).size())
 	_t.eq("the last crew down opens the yard", locks.lock_state, "spent")
 	_t.check("won", locks.lock_won)
+	_t.check("the yard's clear brings the start pick up", not game.flow.start_pick_waits() and _card_as_played(game))
 	_t.eq("the bells play", _count("arena_unlocked"), 1)
 	game.hud._process(0.0)
 	_t.check("the open yard hands the plate back", game.hud.objective_reading()["id"] != "break_yard_crew", game.hud.objective_reading()["id"])
@@ -377,8 +400,68 @@ func _lock() -> void:
 	_t.eq("every crew kill is logged as the yard's", crew_kills.size(), crew_size)
 	_t.check("no crew kill drops a panel", crew_kills.all(func(k: Array): return not bool(k[5])))
 	_t.eq("the cleared yard pays one panel", since.filter(func(k: Array): return String(k[1]) == "yard_clear" and bool(k[5])).size(), 1)
-	_t.eq("the yard leaves pity alone", game.build.dropper.dry, dry)
+	# Pity moves only on kills outside the crew. A director chaser or lobber can still meet the ball
+	# while the yard holds (the escaping ball above runs out past the wall at 20 m/s), and on a loaded
+	# box more game time passes, so replay the pity count over those kills rather than expecting none.
+	var outside := since.filter(func(k: Array): return not (k.size() > 6 and bool(k[6])) and String(k[1]) != "yard_clear")
+	var want := dry
+	for k: Array in outside:
+		want = 0 if bool(k[5]) else want + 1
+	_t.check("the yard leaves pity alone", game.build.dropper.dry == want,
+			"got %d, want %d; kills outside the crew: %s" % [game.build.dropper.dry, want, str(outside)])
 	_t.eq("its panel lies in the field", game.build.scrap.panel_count(), panels + 1)
+	game.free()
+	await process_frame
+
+
+func _lobbers(game) -> Array:
+	return game.get_tree().get_nodes_in_group("enemy").filter(func(e): return String(e.get("kind")) == "lobber" and not e.is_dead())
+
+
+func _sentry() -> void:
+	var game = await _game()
+	var locks = game.flow.gate
+	var row: Dictionary = LockRows.row("park_dam")["lock"]
+	var sentry: Dictionary = row["sentry"]
+	_t.eq("the dam's sentry is a lobber", sentry["kind"], "lobber")
+	_t.check("the sentry lands before the yard shuts", float(sentry["within_m"]) > float(row["within_m"]))
+	for enemy in game.get_tree().get_nodes_in_group("enemy"):
+		if String(enemy.get("kind")) not in ["warden", "vault", ""]:
+			enemy.queue_free()
+	await physics_frame
+	var beacon: Vector3 = game.flow.beacon.global_position
+	var spot := beacon + Vector3(0.0, 0.0, -float(sentry["within_m"]) + 10.0)
+	var ground: Vector3 = game.ctx.terrain.drop_point(spot.x, spot.z, 1.0)
+	game.player.reset_to(ground, Vector3.ZERO)
+	for i in 6:
+		await physics_frame
+	var lobbers := _lobbers(game)
+	_t.eq("one lobber lands", lobbers.size(), 1)
+	_t.eq("the yard is still armed", locks.lock_state, "armed")
+	if lobbers.size() == 1:
+		var at: Vector3 = lobbers[0].global_position
+		var ball: Vector3 = game.player.ball_position()
+		var ahead := Vector3(beacon.x - ball.x, 0.0, beacon.z - ball.z).normalized().dot(Vector3(at.x - ball.x, 0.0, at.z - ball.z))
+		_t.near("it stands ahead_m up the line to the beacon", ahead, float(sentry["ahead_m"]), 3.0)
+		_t.check("it is in shell range of the ball", Vector2(at.x - ball.x, at.z - ball.z).length() < 75.0)
+		_t.check("it is no crew", not lobbers[0].has_meta("yard_crew"))
+	var spot2 := beacon + Vector3(0.0, 0.0, -float(sentry["within_m"]) + 30.0)
+	game.player.reset_to(game.ctx.terrain.drop_point(spot2.x, spot2.z, 1.0), Vector3.ZERO)
+	for i in 6:
+		await physics_frame
+	_t.eq("it lands once", _lobbers(game).size(), lobbers.size())
+	# The yard shuts with the sentry outside the wall: it goes, and the crew lands as before. The ball stands inside
+	# the circle's any-ground share, since the dam's incline crosses the outer ring (PF-46).
+	var spot3 := beacon + Vector3(0.0, 0.0, -float(row["within_m"]) * StageLocks.LOCK_ANY_SLOPE_SHARE + 10.0)
+	game.player.reset_to(game.ctx.terrain.drop_point(spot3.x, spot3.z, 1.0), Vector3.ZERO)
+	var waited := 0
+	while locks.lock_state == "armed" and waited < 240:
+		await physics_frame
+		waited += 1
+	await physics_frame
+	_t.eq("the yard shuts", locks.lock_state, "locked")
+	_t.check("a sentry outside the wall leaves as the yard shuts", lobbers.size() == 1 and not is_instance_valid(lobbers[0]))
+	_t.eq("the crew is the first wave alone", locks.crew_alive().size(), (row["waves"][0] as Array).size())
 	game.free()
 	await process_frame
 
@@ -423,6 +506,13 @@ func _skipped_when_engaged() -> void:
 	await physics_frame
 	await physics_frame
 	_t.eq("an awake Warden leaves the lock unfired", locks.lock_state, "spent")
+	_t.check("a yard skipped for the Warden lets the start pick up", not game.flow.start_pick_waits())
+	game.free()
+	await process_frame
+	# A profile with a harder rung open chooses its tier on the card at the drop, before the yard.
+	game = await _game()
+	game.ctx.profile.earn(RunTier.UNLOCK, 0.0)
+	_t.check("a rung-holder's start pick (and tier) comes at the drop", game.flow.gate.yard_ahead() and not game.flow.start_pick_waits() and not game.flow.start_pick_at_yard())
 	game.free()
 	await process_frame
 
@@ -433,6 +523,7 @@ func _off() -> void:
 	var locks = game.flow.gate
 	_t.check("off: no clamp", not locks.locked() and not locks.has_gate())
 	_t.eq("off: no lock", locks.lock_state, "")
+	_t.check("off: the start pick comes at the drop", not game.flow.start_pick_waits() and not game.flow.start_pick_at_yard())
 	_t.check("off: the Warden spec has no gate", not game.flow.warden.spec.has("posture_gate"))
 	StageLocks.active = true
 	game.free()
