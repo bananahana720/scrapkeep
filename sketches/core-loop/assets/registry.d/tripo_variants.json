@@ -707,6 +707,17 @@
     "recipe": "tools/tripo/README.md",
     "note": "A candidate of the Tripo Studio Smart Mesh set generated from tools/tripo/prompts/partset_trigger.txt (P2.0, triangle topology at 1,000 polygons, no texture), on Andrew's paid Pro account (Tripo terms 5.2: the outputs belong to the account holder); fitted by tools/tripo/tripo_part.py; one untextured mesh, painted in the part's rarity colour by the game. sha256 b39110d4451d515515a5269e00b85017c171209c24d74dbb73737c30e4cb3d3c"
    }
+  },
+  {
+   "id": "pilot_rivet_anim_tripo",
+   "path": "res://assets/models/pilot_rivet_anim_tripo.glb",
+   "class": "pilot",
+   "ships": true,
+   "loader": "src/presentation/hero_assets.gd (PILOTS) through src/presentation/model_variants.gd (--models=tripo)",
+   "provenance": {
+    "recipe": "tools/tripo/README.md",
+    "note": "Tripo Studio HD Model (H3.1, text to 3D, 45 Pro credits) from tools/tripo/prompts/pilot_rivet.txt, on Andrew's paid Pro account (Tripo terms 5.2: the outputs belong to the account holder); fitted onto the authored Rivet skeleton and clips by tools/tripo/pilot_fit.py (--head-scale 1.35 --neck 0.5 --tris 8200) and tools/tripo/pilot_touch.py (--head 1.0 --fwd 0.57); one skinned mesh, 8,200 triangles and 7,811 vertices (the authored Rivet is 10,456 triangles), texture baked to vertex colour. sha256 f0090c777a1f63d28238e48318e7b1cfae6eb17b44c4a8e4f2b66fe946b88e7a"
+   }
   }
  ]
 }
