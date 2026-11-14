@@ -299,12 +299,29 @@ static func dress(look: String, shell: Dictionary) -> void:
 	if look == "cutaway":
 		_cut(shell.core)
 		_cut_kit(shell.pod, String(shell.get("pilot", "")))
+		_light_cockpit(shell.pod)
 	elif look == "bell":
 		for view in (shell.pod as Node).find_children("*", "MeshInstance3D", true, false):
 			for i in view.mesh.get_surface_count():
 				var was: Material = view.get_active_material(i)
 				if was != null and was.resource_name == "glass":
 					view.set_surface_override_material(i, _canopy())
+
+
+# A lamp over the seat, so the pilot reads when the ball's shaded side faces the camera. It casts
+# no shadow and reaches no farther than the plating.
+static func _light_cockpit(pod: Node3D) -> void:
+	if pod.has_node(LAMP):
+		return
+	var lamp := OmniLight3D.new()
+	lamp.name = LAMP
+	lamp.position = Vector3(0.0, 0.5, 0.25)
+	lamp.light_color = LAMP_COLOR
+	lamp.light_energy = LAMP_ENERGY
+	lamp.light_specular = 0.0
+	lamp.shadow_enabled = false
+	pod.add_child(lamp)
+	lamp.omni_range = PLATING_RADIUS * pod.global_transform.basis.get_scale().y
 
 
 # Every surface of the rolling part takes the window, keeping the colour it was painted with.
@@ -373,6 +390,10 @@ static func _takes_window(was: Material) -> bool:
 # The level part: kit that stands outside the ball (weapon ring, hoods, drums) takes the window
 # where it comes between the camera and the pilot; the cockpit inside the ball is never cut.
 # _takes_window says which surfaces are swapped.
+# The cockpit lamp: warm, behind and above the pilot's head, on the camera's side.
+const LAMP := "CockpitLamp"
+const LAMP_COLOR := Color(1.0, 0.9, 0.72)
+const LAMP_ENERGY := 1.6
 const KIT_KEEP_WITHIN := 0.93
 const PLATING_RADIUS := 0.965
 # Pilots too small for the shared seat back (shell_base.py: seat top -0.30, back top -0.10), and
