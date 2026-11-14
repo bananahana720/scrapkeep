@@ -6,6 +6,13 @@ sibling only when it is launched with `--models=tripo` (`src/presentation/model_
 the switch, and for every model that has no sibling, the authored model loads as before. No authored file
 is replaced. Andrew picks per model which one stays.
 
+**Accepted or rejected, per model (ruling dr).** `--models=tripo` loads only accepted siblings. To reject one,
+add its own `res://` path and a one-line reason to `REJECTED` in `src/presentation/model_variants.gd`, and set
+`"accepted": false` with `"accepted_why"` on its row in `assets/registry.d/tripo_variants.json`, then run
+`python3 tools/fold_registry.py`. A prop has three files (the model and two detail levels), so reject all three.
+`tests/tripo_variants_test.gd` fails when the list and the rows disagree. `--models=tripo-all` loads every
+sibling, rejected ones too, so a rejected model can still be judged in the game.
+
 Earlier generated-mesh trials were rejected (docs/decisions.tsv rows 352 to 361, TADR-011): lumps at
 budget, licence problems, colour loss. Row 361 allows a reopen "only with a different model class".
 Tripo's v3.1 smart_low_poly mode is that different class, and Andrew asked for it on 13 Nov 2026. The
@@ -36,7 +43,7 @@ outputs with the account holder. Outputs made on a free account are public domai
 | world_one/enemy_chaser_tripo.glb | 6013f673-bd92-4d65-9bc4-7e6abff67f8c | prompts/enemy_chaser.txt | 30 | 3,175 (3,176) | 5 (5) | yaw 90, box, claws below 22 %, fin above 80 % (rubber) |
 | world_one/enemy_lobber_tripo.glb | 904d0a41-6627-44d7-a982-ce68527c27f0 | prompts/enemy_lobber_whole.txt | 120 (four candidates over two prompts) | 6,699 (6,720) | 5 (5) | tripo_fit.py, yaw 90, `--name LobberBody --max-tris 6700`, then lobber_parts.py |
 | world_one/enemy_swatter_tripo.glb (SwatterBody only) | fbbb83dd-0bbc-4636-9f2b-172f3a03d2dd (the second candidate; the row named the first candidate's id until 14 November 2026) | prompts/enemy_swatter_body.txt | 60 | 2,753 (2,760) | 3 (3) | tripo_swap.py, yaw 90, `--fit fill --max-tris 2650 --bright match` |
-| world_one/enemy_hooker_tripo.glb (the barrel and head of HookerBody only) | 27fecf60-4f86-4d56-92cd-e06c64efbf31 (the second candidate; the row named the first candidate's id until 14 November 2026) | prompts/enemy_hooker_body.txt | 60 | 6,380 (6,414) | 3 (3) | tripo_swap.py, yaw 90, `--fit fill --max-tris 6100 --bright match --region "-0.8,-0.8,-1.15,0.72,0.8,1.65"` |
+| world_one/enemy_hooker_tripo.glb (the barrel and head of HookerBody only) | fbbb83dd-0bbc-4636-9f2b-172f3a03d2dd (the swatter body, used a second time; the first barrel, task 27fecf60-4f86-4d56-92cd-e06c64efbf31, 60 credits, was replaced on 14 November 2026) | prompts/enemy_swatter_body.txt | 0 (a candidate already paid for) | 6,381 (6,414) | 3 (3) | tripo_swap.py, yaw 90, `--fit fill --max-tris 6100 --bright match --region "-0.8,-0.8,-1.15,0.72,0.8,1.65"` |
 | world_one/enemy_netcaster_tripo.glb (the control box of NetcasterBody only) | ff17498a-5ed6-4f6b-b933-5f27f62e4cab (the first swatter body candidate, unused by the swatter) | prompts/enemy_swatter_body.txt | 0 (an unused candidate) | 6,993 (7,048) | 2 (2) | tripo_swap.py, yaw 90, `--fit fill --region ... --max-tris 7000 --bright match` |
 | world_one/enemy_boom_tender_tripo.glb (TenderHull only) | cfa436e8-08dc-42f8-b416-53dee2a7619b | prompts/enemy_boom_tender.txt | 30 | 7,375 (7,928) | as authored | tripo_swap.py, yaw 90, box |
 | park/props/dam/gate_wheelhouse_a{,_lod1,_lod2}_tripo.glb | 7f215046-0286-4f10-b0cd-6d0121db046e | prompts/gate_wheelhouse.txt | 30 | 6,000 / 3,000 / 900 (16,588 / 8,294 / 2,488) | 1 | box |
@@ -170,6 +177,27 @@ The fitter drops floating fragments by walking shells whose bounding boxes touch
 inside another shell's box survives; pick another of the four candidates then (Scrap Gravity's first
 candidate had a bolt lying beside its base).
 
+## Props: one generated model for every variant of a kind
+
+A prop kind has variants a, b and c, and each placement picks one at random (`park_props.gd` `expand`). Only variant a has a generated sibling. With the switch on, a variant with no sibling of its own draws a sister's sibling when the sister is the same size: no more than 1.1 times as wide and within 15 percent of its height (`park_props.gd` `_stand_in`). So every sluice shed changes with the switch, not one in three, and the low survey tent b keeps its own model because tent a is too tall for it. The PC look of 14 November 2026 found the nearest sluice shed unchanged by the switch: it was a variant b.
+
+## Generated and not shipped
+
+A generated model ships only when it reads at least as well as the authored one beside it. These did not, and the
+authored model stays. Each is listed so nobody spends credits on the same attempt again.
+
+| Model | What was tried | Why it did not ship |
+| --- | --- | --- |
+| park/props/flume/gauge_dial_shed_a | Tripo Studio, three textured candidates (`prompts/gauge_dial_shed.txt`, workspaces 2be99a2f and b3e31c1b-6c7e-462b-a5d6-2d4eaa3bfc48, 160 Pro credits in all) | The prop is about its chalk-white dial. The dial face came out grey, then teal, and never white, even with the authored colours named in the prompt. |
+| park/props/dam/cable_drum_a | Tripo Studio, one textured candidate (workspace ba236b15-44b1-4c72-ac28-fbe3ef28433f, 120 Pro credits) | It textured as one dark colour, standing on its rims. The authored drum lies flat, with tan wooden ends and a wound grey cable. |
+| The other crew enemies (bola thrower, deflector, gyro jammer, jolt layer, mag trapper, winch drone, catch trap, ramp flipper) | A spare generated torso swapped into the drum of the bola thrower and the deflector with `tripo_swap.py --region`, no credits | These enemies share one authored drum that carries the crew number plate. The generated torso reads no better and loses the plate. |
+| world_one/enemy_netcaster (whole model) | See "Crew enemies" below | Its own test failed it. |
+
+**Colour match by tint.** `tripo_fit.py --match tone` snaps each face to the authored colour of the nearest tint and
+counts lightness at a quarter weight. Use it when a generated texture is a lighter or darker shade of the authored
+paint, so a sky-blue wall lands on the authored teal and not on the pale grey. The default, `--match rgb`, is the
+plain nearest colour.
+
 ## New props (no authored twin)
 
 A prop that does not exist yet has no authored model to fit against. `tripo_prop.py` fits it on its own terms:
@@ -206,6 +234,7 @@ The Spillway crew are a body mesh plus a tool mesh (the swatter's paddle, the ho
 - **A body that holds a frame** (the netcaster). `--region "x0,y0,z0,x1,y1,z1"` (the node's own Blender space, Z up) swaps only the faces whose centres lie in that box and keeps the node's other faces as authored. The netcaster keeps its masts, crossbar and feet, and only its control box becomes a generated torso: `--node NetcasterBody --yaw 90 --fit fill --region "-0.5,-0.85,-1.15,0.5,0.11,1.0" --max-tris 7000`. The torso is the unused first swatter body candidate, so it cost no credits.
 - **Brightness.** Add `--bright match`. A generated texture is darker than the authored paint, so many faces snapped to charcoal and the PC look of 14 November 2026 found the swatter and the hooker standing out less against the dam rock. The option lifts the sampled colours until the body's mean brightness (weighted by area, kept faces included) reaches the authored body's. The tool prints the new part's brightness and the brightness of the faces it replaced (`lum`, `lum_ref`); with `--region` neither is the whole-body mean, which only the test measures: `tests/tripo_variants_test.gd` (`BODIES`) fails a body under 95 percent of the authored one.
 - **Silhouette.** The hooker's authored body is a barrel beside a thin mast. Swapping the whole node stretched one robot over both and read as a tall block, so its swap is limited to the barrel with `--region`, as the netcaster's is.
+- **What the camera gets.** The mean brightness above passed a hooker barrel that the PC look of 14 November 2026 showed as a thin near-black figure: the mean is taken over the whole node, mast included, and says nothing about how much of the body faces the camera. `tests/tripo_variants_test.gd` (`_part_seen`) now also adds up the light each body sends to a chase camera from four sides and holds the worst side to 0.65 of the authored body. That hooker barrel sent 0.48; the swatter and the netcaster, which the same look passed, send 0.71 and 0.81. Pick a generated torso that fills the authored barrel: a robot figure with legs and arms does not.
 - **Skinned bodies** (the plated brute, the foreman, the dispatcher, the linker, the splitter) cannot be swapped by this tool. They need the pilot route below.
 
 ## The lobber (a whole model split into moving parts)
