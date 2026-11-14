@@ -17,6 +17,6 @@ Setup is in [tools/cloud/CLOUD-SETUP.md](../../tools/cloud/CLOUD-SETUP.md). The 
 
 - **Size:** 4 vCPU, 15 GB RAM, about 30 GB disk, no GPU. Background tasks cap at 2 hours. The box is reclaimed when idle, and `artifacts/local/` goes with it.
 - **Setup hook:** `.claude/hooks/session-start.sh` installs Godot 4.7.2, Blender 5.2.2 (shim `scripts/cloud/blender`) and npm deps. It takes about 70 s fresh and about 2 s cached.
-- **Cloud can run:** sketch smoke and the gate, bot runs, the headless win-proof export, Blender recipes, and Cycles on the CPU.
+- **Cloud can run:** sketch smoke, gate shards as overflow (the gate itself runs on the PC since 10 Nov), bot runs, the headless win-proof export, Blender recipes, and Cycles on the CPU.
 - **Cloud can't prove:** 60 fps, menu-ready time, or anything GPU. Cloud perf numbers never count, and the cloud-to-PC ratio differs by kind of work (LESSONS 55-58).
 - **Concurrency:** more than 6 Godot lanes on 4 vCPU causes mass 180 s timeouts, and band sweeps can be killed for running out of memory.

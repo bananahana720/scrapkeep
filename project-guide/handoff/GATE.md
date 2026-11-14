@@ -17,7 +17,7 @@ On the PC one command runs steps 1 to 4: `node scripts/gate/pc.mjs run --wave N 
 
 ## What a full gate is
 
-One promotion, one full gate, on the frozen stage head. The Gate thread writes a plan at `/mnt/project-files/gate/w<N>-<head>-gate-plan.md` and the coordinator starts about 13 shard threads from one post:
+The full gate is the release gate, once per sprint (ruling cy). Since 10 Nov it runs on the PC with `scripts/gate/pc.mjs` (above), driven by the board thread (ruling dh). The shard table and shard-thread rules below are the cloud-era recipe, kept for a cloud overflow run; the wall times are for a 4 vCPU cloud box. The Gate thread writes a plan at `/mnt/project-files/gate/w<N>-<head>-gate-plan.md`; for a cloud run, about 13 shard threads start from one post:
 
 | Shard | What it runs | Usual wall time on a 4 vCPU cloud box |
 | --- | --- | --- |
