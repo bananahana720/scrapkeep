@@ -15,8 +15,6 @@ The claude.ai project "Scrapkeep" coordinates the alpha. Each role below is a th
 
 **Every thread finishes every to-do before it goes idle** (ruling dn, [AGENTS.md](../../AGENTS.md) rule 1). Every brief says so, and the coordinator checks a "done" task by task and nudges a thread that stopped partway.
 
-**Models.** Ruling bp sets tiers. Andrew's setting of 13 Nov: threads run the newest top model at medium effort, and the coordinator runs one tier below it.
-
 **Restate the head in every message that carries a ruling.** A thread reads the board only when it pages it, and a thread stopped by usage limits does not resume by itself; the coordinator re-messages it with its head SHA.
 
 **Gate steps.** The recipe is [GATE.md](GATE.md), with the step scripts under `scripts/gate/`. Before relaunching a "missing" step, check the board and the thread list.

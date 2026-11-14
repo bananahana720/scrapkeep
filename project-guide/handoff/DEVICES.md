@@ -9,7 +9,7 @@
 - **The 3060 renders music** (ACE-Step renders and stem splits) and stills. Music renders pause while a 4080 perf reading runs.
 - **Reboot rule.** An NVIDIA driver auto-update locks the GPU ("Driver/library version mismatch") until a reboot. Ask Andrew to reboot after any update, and don't pin the driver.
 - **One script, not compound shells.** Pipes, `&&` and `cd` chains trigger allow-once prompts. Use one checked-in script with subcommands (`scripts/music/mx` for music), called as one plain command.
-- **Allow-list.** The PC allows test and check scripts, read-only git, and pushes to `cand/*` and `scratch/*`. A push to main follows the standing merge authority in [DECISIONS.md](DECISIONS.md); a force-push needs Andrew's go-ahead first.
+- **Allow-list.** The PC allows test and check scripts, read-only git, and pushes to `cand/*` and `scratch/*`. A push to main follows the standing merge authority in [DECISIONS.md](DECISIONS.md); a force-push or an install needs Andrew's go-ahead first.
 
 ## The cloud box
 

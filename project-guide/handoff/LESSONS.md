@@ -5,7 +5,7 @@ How this project actually runs, learned the hard way since 16 Oct 2026. Each les
 ## Getting Andrew's word
 
 1. **Act on the standing approval; ask for his typed words only when a safety check refuses.** When a check refuses, ask him for one exact line that names the action and its target, then relay it with `message_thread` and his message id attached. Some threads' checks want the line typed in their own thread.
-2. **Retired.** The standing approval is the last section of [AGENTS.md](../../AGENTS.md); lesson 47 covers a merge check that refuses.
+2. **Retired.** The standing approval is "Steps that need no approval" in [AGENTS.md](../../AGENTS.md); lesson 47 covers a merge check that refuses.
 3. **A tap on a withdrawn card still counts.** He clears cards fast (about 12 in 3 minutes at 15:30Z 17 Oct), including ones a thread already withdrew. Honour the tap.
 4. **His typed answer beats the card.** The Splitter card was withdrawn after he typed the behaviour he wanted (18:19Z). Record the typed version.
 5a. **Verify a relayed tap before writing it into a record.** A register write based only on a coordinator relay was blocked as unverified (20:03Z 17 Oct). Reading the project timeline for the card's `decide` event with `chosen_by` Andrew's id confirmed it, and the write then went through.
@@ -24,7 +24,7 @@ How this project actually runs, learned the hard way since 16 Oct 2026. Each les
 11. **Retired.** Same as lesson 48.
 12. **Resolve finished threads.** A review-ready thread whose PR is in the gate or merge queue is resolved (24 cleared at 19:39Z 17 Oct). Don't poke threads busy with background work.
 13. **After `stop_rc_session`, the thread's folder tools did not come back.** Plan folder work before stopping a Remote Control session.
-14. **One cloud thread per independent unit; split long sweeps by seed or pilot.** No gate-passed pull request should wait over 12 h.
+14. **One cloud thread per independent unit; split long sweeps by seed or pilot.** Targets: 12+ cloud threads at once, ask to draft PR under 2 h, draft PR to gate verdict under 4 h, no gate-passed PR waiting over 12 h.
 
 ## The cloud container
 
@@ -98,7 +98,7 @@ He said he won't dictate anything but direction (19:55Z 17 Oct), so the filing i
 ## Back in the project, 23 Oct
 
 47. **Gate-passed PRs stack and promote without a typed line (27 Oct); if a merge safety check still refuses, a typed line covers only the PRs it names.** On 23 Oct Andrew's 17:27Z line landed #383, but #385, held in the queue it described, was refused. When a check refuses, ask for one line per batch that names the thread, the action and each PR number, and attach it with `context_message_ids`.
-48. **Remote Control sessions cannot receive `send_message`.** Reach an RC session through `message_thread` on its thread; other threads route through the coordinator.
+48. **Remote Control sessions cannot receive `send_message`.** Brief one through its start instructions, and reach a running one through `message_thread` on its thread; other threads route through the coordinator.
 49. **The image service filter refuses some reference-sheet prompts.** The mag trapper and the Cannon close-ups were refused on PR #387, so those units are incomplete. Word prompts as machinery and tools, not weapons or traps, keep the approved board as image 1, and rerun only the refused views. Sheets are review drafts: check the 1.84 m ball for scale drift before a modeller traces them.
 50. **Run the export include check whenever code starts reading a new file type.** Park ground step 2 made `park_terrain` read each park's `surface.bin`, but no `include_filter` pattern shipped it. Every headless test passed; only the 23 Oct release dry run caught it. #390 adds the pattern to both Linux presets and a seeded control test that drops it.
 51. **A fix that passes the fast lane can still change a run.** #351 (free a released stage over frames) stalled the seed 6 skipper at stage 4, while the bare stage head won to stage 6. Before calling a bot red "base", run the same seed on the bare head; hold the PR and anything stacked on it (#374) until it is fixed.
