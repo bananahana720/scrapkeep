@@ -26,7 +26,8 @@ const EDGE_M := 20.0
 const ARRIVE_S := 0.4
 # How far to either side of straight across from the ball a count spreads, in radians.
 const SPREAD := 1.1
-const BOARD_HEIGHT := 3.2
+# The board floats this far above the post's lamp, so it clears the post whatever its height.
+const BOARD_ABOVE_M := 0.8
 const POST_HEIGHT := 2.2
 const POST := "res://assets/models/world_one/poi_camp_tally_post.glb"
 const POST_MODEL_HEIGHT := 2.5
@@ -72,7 +73,7 @@ func bind(camp_hub, yard: Node, records_ref = null) -> void:
 	var post := _centre + away * POST_M
 	hub.add_station(STATION, post, "Stocktake: endless counts", KEY, STATION_RADIUS, begin)
 	_lamp = _post(post)
-	board = _board(post)
+	board = _board(_lamp.global_position + Vector3.UP * BOARD_ABOVE_M)
 	# The pilot at the gate can change between walks, and the board shows that pilot's best.
 	hub.walk_entered.connect(_show)
 	hub.walk_left.connect(stop)
@@ -204,7 +205,7 @@ func _post(at: Vector3) -> MeshInstance3D:
 	return lamp
 
 
-func _board(post: Vector3) -> Label3D:
+func _board(at: Vector3) -> Label3D:
 	var label := Label3D.new()
 	label.name = "RingBoard"
 	label.font = UiFonts.mono()
@@ -215,5 +216,5 @@ func _board(post: Vector3) -> Label3D:
 	label.shaded = false
 	label.billboard = BaseMaterial3D.BILLBOARD_FIXED_Y
 	hub.root.add_child(label)
-	label.global_position = post + Vector3.UP * BOARD_HEIGHT
+	label.global_position = at
 	return label

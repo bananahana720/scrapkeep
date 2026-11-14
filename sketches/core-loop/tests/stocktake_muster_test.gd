@@ -24,7 +24,7 @@ const Dress := preload("res://src/world/stocktake_dress.gd")
 #     MUSTER_WAIT_S of that the muster stands down, and is called again near its row.
 
 const SEED := 23
-const EXPECTED_CHECKS := 18
+const EXPECTED_CHECKS := 19
 
 var _game
 var _t := preload("res://tests/support/t.gd").new("stocktake_muster_test")
@@ -107,6 +107,9 @@ func _run() -> void:
 	_game.flow.enter_stage(2, Vector3.ZERO, false)
 	await _frames(4)
 	_t.check("a run seed that is not called builds no muster", _site() == null, "seed %d" % quiet)
+	await _frames(2)
+	var masts: Array = _game.find_children("SirenMast*", "Node3D", true, false)
+	_t.check("and no earlier muster's mast is left standing", masts.is_empty(), "%d masts" % masts.size())
 	_t.eq("expected check count", _t.checks + _t.skips + 1, EXPECTED_CHECKS)
 	_game.free()
 	await _frames(2)

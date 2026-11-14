@@ -18,7 +18,7 @@ const Posts := preload("res://src/world/survey_posts.gd")
 
 const RUN_SEED := 7
 const EYE_M := 3.0
-const EXPECTED_CHECKS := 38
+const EXPECTED_CHECKS := 39
 
 var _game
 var _t := preload("res://tests/support/t.gd").new("bowl_approach_test")
@@ -245,6 +245,9 @@ func _run() -> void:
 	_game.player.reset_to(first + Vector3.UP * 1.0, Vector3.ZERO)
 	_game.player.set_velocity_now(heading * 14.0)
 	await _frames(2)
+	# Where the piece models are on the stage, the crate breaks into four of them on the hit.
+	var pieces: int = approach.get_child_count() - before
+	_t.check("a burst crate breaks into its four pieces", pieces == (4 if ResourceLoader.exists(Approach.PIECES % "a") else 0), "%d pieces" % pieces)
 	_t.check("a ball at speed bursts one crate and scrap lands ahead", row["hit"] == 1 and approach.clusters_paid == 0
 		and _game.ctx.build.scrap.count() >= scrap_before + Approach.CRATE_SCRAP, "%d hit, %d pieces against %d" % [row["hit"], _game.ctx.build.scrap.count(), scrap_before])
 	scrap_before = _game.ctx.build.scrap.count()
@@ -262,11 +265,10 @@ func _run() -> void:
 			break
 	_t.check("the burst crates are gone", gone, "three crates")
 	var tidy := false
-	for i in 600:
+	var until := Time.get_ticks_msec() + 20000
+	while not tidy and Time.get_ticks_msec() < until:
 		await process_frame
 		tidy = approach.get_child_count() <= before
-		if tidy:
-			break
 	_t.check("and their pieces leave nothing behind", tidy, "%d children against %d" % [approach.get_child_count(), before])
 	# The weighbridge: a slow crossing weighs nothing; a fast one weighs once.
 	var along := Vector3(approach.bridge["heading"].x, 0.0, approach.bridge["heading"].y)

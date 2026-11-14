@@ -80,6 +80,8 @@ var _rng := RandomNumberGenerator.new()
 var _puffs: Array = []
 var _smoke_clock := 0.0
 var _furnace_home := Vector3.ZERO
+# The crate's piece models, held so the first burst loads nothing on the hit's own tick.
+var _piece_models: Array = []
 
 
 func setup(context) -> void:
@@ -217,6 +219,9 @@ func _build(stage: int) -> void:
 	if planned.is_empty():
 		return
 	_rng.seed = hash([ctx.rng.seed, ctx.run.run_seed, stage, "bowl_approach"])
+	if _piece_models.is_empty() and ResourceLoader.exists(PIECES % "a"):
+		for k in 4:
+			_piece_models.append(load(PIECES % "abcd"[k]))
 	for row in planned["racks"]:
 		var yaw: float = atan2(row["heading"].x, row["heading"].y)
 		var rack := _rack()

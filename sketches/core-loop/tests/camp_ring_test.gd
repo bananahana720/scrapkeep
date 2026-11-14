@@ -67,7 +67,8 @@ func _ring() -> void:
 		and Vector2(foot.global_transform.basis.x.x, foot.global_transform.basis.x.z).dot(Vector2(yard.x - post.x, yard.z - post.z).normalized()) > 0.99, "%d views" % model.size())
 	var tall: float = (foot.global_transform * model[0].get_aabb()).size.y if not model.is_empty() else 0.0
 	_t.check("the post stands about 4 m tall with its lamp on top", absf(tall - CampRing.POST_MODEL_HEIGHT * CampRing.POST_MODEL_SCALE) < 0.4
-		and absf(ring._lamp.global_position.y - foot.global_position.y - tall) < 0.6, "%.1f m, lamp at %.1f m" % [tall, ring._lamp.global_position.y - foot.global_position.y])
+		and absf(ring._lamp.global_position.y - foot.global_position.y - tall) < 0.6
+		and ring.board.global_position.y - foot.global_position.y > tall + 0.5, "%.1f m, lamp at %.1f m, board at %.1f m" % [tall, ring._lamp.global_position.y - foot.global_position.y, ring.board.global_position.y - foot.global_position.y])
 	_t.eq("a quiet board with no best shows nothing", ring.board.text, "")
 	game.events.enemy_killed.connect(func(_k, _a, _s): _kills += 1)
 	game.events.player_died.connect(func(): _deaths += 1)

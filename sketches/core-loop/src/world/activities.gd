@@ -408,6 +408,9 @@ class Site extends Node3D:
 		for enemy in pack + minibosses:
 			if is_instance_valid(enemy):
 				enemy.queue_free()
+		# The muster's mast stands under the sites' parent, not under this site, so it goes with it here.
+		if is_instance_valid(yard_mast):
+			yard_mast.queue_free()
 
 
 func setup(ctx_ref) -> void:
@@ -989,7 +992,7 @@ func _build_site(id: String, at: Vector2, spec: Dictionary) -> Site:
 		"stocktake_yard", "stocktake_muster":
 			s.yard = SurvivalCount.new(ctx.stages.world_of(ctx.run.stage), String(s.rule["form"]))
 			s.view.say(String(s.rule.cue.word))
-			# A form that comes to the ball shows nothing until it lands, and brings no furniture.
+			# A form that comes to the ball shows nothing until it lands; its only furniture is the siren mast at its row.
 			s.visible = not s.rule.has("siren_s")
 			var onward: Vector2 = ctx.terrain.map().beacon - Vector2(s.global_position.x, s.global_position.z)
 			if s.visible:

@@ -153,8 +153,10 @@ func _counts(spec: Dictionary) -> void:
 		if stood:
 			for flag in flags.get_children():
 				var off: Vector3 = flag.global_position - s.global_position
+				var way: Vector3 = dress.get_child(0).global_position - s.global_position
+				stood = stood and absf(Vector2(off.x, off.z).angle_to(Vector2(way.x, way.z))) >= Dress.FLAG_GATE_CLEAR
 				stood = stood and absf(Vector2(off.x, off.z).length() - ring_m) < 0.1 and absf(flag.global_position.y - _game.ctx.terrain.height(flag.global_position.x, flag.global_position.z)) < 0.01
-		_t.check("the flags stand on the ring's edge, on the ground", stood, "%s" % flags)
+		_t.check("the flags stand on the ring's edge, on the ground, none in the built gate's doorway", stood, "%s" % flags)
 	else:
 		_t.skip("the flags stand on the ring's edge, on the ground", "poi_ring_flag.glb is not on this stage yet")
 	var first: Array = rule.pack(1)
@@ -265,8 +267,6 @@ func _later_count() -> void:
 		return
 	_ended.clear()
 	s.yard = SurvivalCount.new(1, "yard", SHORT)
-	# The short rule starts from nothing earned: an earlier case may have cleared a count on the map's own rule.
-	s.reward_parts.clear()
 	var plain = _game.ctx.spawner.spawn_enemy("chaser", _outside(s))
 	var plain_hp: float = plain.max_hp
 	plain.queue_free()
@@ -301,7 +301,7 @@ func _later_count() -> void:
 	var held: bool = s.pickup_taken
 	for part in gained:
 		distinct[part] = true
-		held = held and _game.run.parts.slice(parts_before).has(part)
+		held = held and gained.count(part) == 1 and _game.run.parts.slice(parts_before).has(part)
 	_t.check("a later count banks its core, its scrap and every part, each its own", _ended == ["won"] and cores_at_gate == 1
 		and scrap_at_gate == 50 and grades == ["common", "rare", "rare"] and distinct.size() == 3 and held,
 		"ended %s cores %d scrap %d grades %s parts %s" % [_ended, cores_at_gate, scrap_at_gate, grades, gained])
@@ -335,15 +335,17 @@ func _rows(map) -> void:
 			for post in posts[i]:
 				inside += int(post.distance_to(site["at"]) <= ring + 2.0)
 		var fault: String = _acts().ground_fault(PackedVector2Array([site["at"]]), ring, _site())
-		# The map's own ground is what this reads. A pocket this run drew beside the row is the run's, not the map's:
-		# it is printed, not failed (pockets do not keep off a survival row yet; BACKLOG W1-101).
+		# The map's own ground is what this reads. A pocket this run drew beside the row is the run's, not the map's
+		# (pockets do not keep off a survival row yet; BACKLOG W1-101): it is named, and the row is read again without it.
 		if fault == "taken":
-			for other in _acts().sites:
-				if other != _site() and is_instance_valid(other) and other.visible and other.drawn:
-					var reach: float = float(other.rule.get("ring", 0.0)) + _acts().SITE_PAD_M + ring
-					if Vector2(other.global_position.x, other.global_position.z).distance_to(site["at"]) < reach:
-						print("stocktake_yard_test note: this run's drawn pocket %s stands beside %s" % [other.id, site["row"]])
-						fault = ""
+			var beside: Array = _acts().sites.filter(func(other) -> bool: return other != _site() and is_instance_valid(other) and other.visible and other.drawn)
+			for other in beside:
+				other.visible = false
+			fault = _acts().ground_fault(PackedVector2Array([site["at"]]), ring, _site())
+			for other in beside:
+				other.visible = true
+			if fault != "taken":
+				print("stocktake_yard_test note: a pocket this run drew stands beside %s" % site["row"])
 		if inside > 0 or fault != "":
 			faults.append("%s: %d anchor posts, ground %s" % [site["row"], inside, fault])
 	_t.check("every yard row is open ground", faults.is_empty(), str(faults))
