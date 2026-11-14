@@ -214,6 +214,6 @@
  ],
  "survival_rows": [
   {"id": "shelf_yard", "form": "yard", "at": [-260, -620]},
-  {"id": "slot_yard", "form": "yard", "at": [110, -10]}
+  {"id": "slot_yard", "form": "yard", "at": [120, 80]}
  ]
 }
