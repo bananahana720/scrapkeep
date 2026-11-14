@@ -1,11 +1,11 @@
 # Scrapkeep lessons and ways of working
 
-How this project actually runs, learned the hard way on 16-23 Oct 2026. Each lesson is the rule, then why. Read this before starting a thread, posting a card or running a gate. Andrew's readable copy is the Claude Doc [Scrapkeep lessons and ways of working](https://claude.ai/code/artifact/95d92907-5cfe-4290-b303-d465baccedde); this file (repo project-guide/handoff/LESSONS.md, shared copy /mnt/project-files/project-guide/LESSONS.md) is the copy threads read. Owner: the project coordinator, since 23 Oct. Lesson numbers stay fixed so older receipts still match. Last updated 2026-11-10 by the cautious-instructions cleanup: lessons 1, 10, 21, 22, 26, 27 and 47 rewritten to state their scope, 43-46 archived; the old text is in `/mnt/project-files/archive/instructions-2026-11-10/repo/project-guide/handoff/LESSONS.md`. What needs no approval is the last section of [AGENTS.md](../../AGENTS.md).
+How this project actually runs, learned the hard way since 16 Oct 2026. Each lesson is the rule, then why. **Do not read it end to end at start-up: read the section for the work you are about to do.** The rules every thread follows are in [AGENTS.md](../../AGENTS.md). Lesson numbers stay fixed so older receipts still match; a retired lesson keeps its number and says what replaced it, and its old text is in git history. Andrew's reading copy is the Claude Doc [Scrapkeep lessons and ways of working](https://claude.ai/code/artifact/95d92907-5cfe-4290-b303-d465baccedde). Owner: the project coordinator. Last trimmed 14 Nov 2026: lessons 2, 9, 11, 16, 17, 20, 26 and 40 retired or pointed at their one home.
 
 ## Getting Andrew's word
 
-1. **Act on the standing approval; ask for his typed words only when a safety check refuses.** On 17 Oct the PC coordinator's safety check rejected relayed taps for notes files, register rows, a push to main and waiving a proof. When a check refuses, ask him for one exact line in the project chat, then relay it with `message_thread` and his message id in `context_message_ids` (worked first time for the wave 15 push, 02:13Z 17 Oct).
-2. **Try the standing merge authority first.** Since 19:41Z 17 Oct his typed message covers merges, main pushes and git housekeeping. Attach that message id when a check wants his words; ask for a new line only if it is refused.
+1. **Act on the standing approval; ask for his typed words only when a safety check refuses.** When a check refuses, ask him for one exact line that names the action and its target, then relay it with `message_thread` and his message id attached. Some threads' checks want the line typed in their own thread.
+2. **Retired.** The standing approval is the last section of [AGENTS.md](../../AGENTS.md); lesson 47 covers a merge check that refuses.
 3. **A tap on a withdrawn card still counts.** He clears cards fast (about 12 in 3 minutes at 15:30Z 17 Oct), including ones a thread already withdrew. Honour the tap.
 4. **His typed answer beats the card.** The Splitter card was withdrawn after he typed the behaviour he wanted (18:19Z). Record the typed version.
 5a. **Verify a relayed tap before writing it into a record.** A register write based only on a coordinator relay was blocked as unverified (20:03Z 17 Oct). Reading the project timeline for the card's `decide` event with `chosen_by` Andrew's id confirmed it, and the write then went through.
@@ -16,27 +16,27 @@ How this project actually runs, learned the hard way on 16-23 Oct 2026. Each les
 6. **At most three cards open, one question each, a recommended option, game terms not file names.** He reads cards on his phone in the project chat and never opens threads to steer.
 7. **Queue overflow in `alpha-status/queued-cards.md`.** Card text sent by `send_message` is lost when the coordinator is recycled. The queue file survives.
 8. **Keep working on the recommended option while a card waits.** A card is not a stop.
-9. **Batch the boring ones.** Merge approvals cleared fastest as a run of one-tap cards. Since 19:41Z they need no card at all.
+9. **Retired.** Merges need no card since 17 Oct (AGENTS.md, steps that need no approval).
 
 ## Threads and sessions
 
 10. **In a project thread, don't ask Andrew in-thread or ask him to paste between threads,** because he reads the project chat on his phone, not threads. Raise a hand to the coordinator and carry on. A local session at his computer asks him directly.
-11. **`send_message` to the PC wave thread's session id fails ("not found").** Use `message_thread` on its thread. Remote Control sessions cannot receive `send_message` at start; brief them through `start_rc_session` instructions.
+11. **Retired.** Same as lesson 48.
 12. **Resolve finished threads.** A review-ready thread whose PR is in the gate or merge queue is resolved (24 cleared at 19:39Z 17 Oct). Don't poke threads busy with background work.
 13. **After `stop_rc_session`, the thread's folder tools did not come back.** Plan folder work before stopping a Remote Control session.
-14. **One cloud thread per independent unit; split long sweeps by seed or pilot.** Targets: 12+ cloud threads at once, ask to draft PR under 2 h, draft PR to gate verdict under 4 h, no gate-passed PR waiting over 12 h.
+14. **One cloud thread per independent unit; split long sweeps by seed or pilot.** No gate-passed pull request should wait over 12 h.
 
 ## The cloud container
 
 15. **A cloud container is reclaimed after it sits idle, and `artifacts/local/` goes with it.** Copy evidence you want kept to `/mnt/project-files/` (red team runs live in `redteam/w<n>/`) and push branches before going quiet.
-16. **Background tasks cap at 2 hours; the box has 4 vCPU, 15 GB RAM, about 30 GB disk and no GPU.** A full gate takes about 2 h in the cloud, so shard it.
-17. **The session-start hook installs Godot 4.7.2, Blender 5.2.2 (PyPI `bpy`) and npm deps** in about 70 s fresh, 2 s cached. download.blender.org is blocked; the `scripts/cloud/blender` shim covers it.
+16. **Retired.** The cloud box's size and caps are in [DEVICES.md](DEVICES.md). A full gate takes about 2 h in the cloud, so shard it.
+17. **Retired.** The cloud setup is in [DEVICES.md](DEVICES.md).
 18. **GPU work stays on the 4080:** frame times, ACE-Step music renders, Eevee/Vulkan captures, the real export proof. Cloud perf numbers never count (the bench swings 24-146 ms p99 between sandboxes).
 
 ## Gating and testing
 
 19. **No thread grades its own work.** A game change is done only when a tool check passes (smoke, lab gate, placeholder gate) and an independent reviewer agrees.
-20. **The cloud gate thread is the gate of record, except GPU checks.** It builds one integration commit from main plus the draft PRs, and sibling threads run bot shards from `gate/BOT-SHARDS.md`. Pass tests by base name (`--test bot_six_tally_test`), not `res://` path. Shards don't push, comment or fix.
+20. **The board thread is the gate of record (ruling dh); shards don't push, comment or fix.** Pass tests by base name (`--test bot_six_tally_test`), not `res://` path. The recipe is [GATE.md](GATE.md).
 21. **Known reds live in the ledger.** Each red a promotion may carry has a row in [KNOWN-FAILING.tsv](KNOWN-FAILING.tsv) with a cause, an owner and a review date (ruling bq). The 23 Oct list of cloud-only false fails that stood here is in the archive copy.
 22. **"Flake" is not a cause.** The effects RNG test failed on and off for a day; the real cause was a 65 s limit on a busy machine (now 180 s). Rerunning a red to see whether it repeats is always fine; what needs a found cause is calling it a flake.
 23. **Red team every wave, carrying the last findings.** Camper stalls without a Warden break and traversal stalls are by design. A hitch counts only when it lands at the same run moment across seeds.
@@ -47,7 +47,7 @@ How this project actually runs, learned the hard way on 16-23 Oct 2026. Each les
 ## Permission prompts
 
 25. **Allow-once prompts come from compound shell commands.** Pipes, `&&` and `cd` chains don't match allow-list rules. Fix: one checked-in script with subcommands (the music session's `scripts/music/mx`), allow-listed in `.claude/settings.local.json`, called as one plain command.
-26. **The PC allow-list covers test and check scripts, read-only git, and pushes to `cand/*` and `scratch/*`.** A push to main follows the standing merge authority; a force-push or an install needs Andrew's go-ahead first.
+26. **Retired.** The PC allow-list is in [DEVICES.md](DEVICES.md).
 
 ## Music
 
@@ -56,7 +56,7 @@ How this project actually runs, learned the hard way on 16-23 Oct 2026. Each les
 
 ## Library and records
 
-28. **One register for decisions.** Check `project-guide/DECISIONS.md` (repo: `project-guide/handoff/DECISIONS.md`) before proposing anything that might already be decided; he dislikes re-deciding and the tokens spent rediscovering old calls (19:46Z 17 Oct).
+28. **One register for decisions.** Check [DECISIONS.md](DECISIONS.md) before proposing anything that might already be decided; he dislikes re-deciding and the tokens spent rediscovering old calls (19:46Z 17 Oct).
 29. **Every idea he gives is a motif.** Brief design threads with the motifs that touch their area (world enemy themes, single-skill areas, damage-type armour, buff/debuff zones, cast times).
 30. **The Custom view tab strips colour, opacity and positioning.** Use `currentColor`, no hard-coded colours (dark mode).
 31. **Memory sync to his PC is one-way.** A snapshot goes to `docs/project/PROJECT-MEMORY.md` only on request.
@@ -86,7 +86,7 @@ He said he won't dictate anything but direction (19:55Z 17 Oct), so the filing i
 37. **Permission prompts from the PC's Remote Control sessions are often phantoms.** Raise one to Andrew only if the session is still stalled several minutes later.
 38. **An NVIDIA driver auto-update locks the 4080 until a reboot** ("Driver/library version mismatch"). Ask him to reboot after any update; no pacman hold.
 39. **Band sweeps OOM on the 4-core cloud box.** posture_bands sweeps spawn about 24 children; a missing record counts as 300 s. Rerun a 300 s or timeout row alone before calling it red.
-40. **Promote fast, the wave 17 flow (PR #106, ORCHESTRATOR).** Fast lane (`npm run sketch:fast -- --base <stage>`) plus a reviewer stacks a PR on the stage branch; each stage head gets the full cloud gate and one rotating red team persona; with no new red or blocker, staging merges the stage PR to main on GitHub; the PC runs GPU checks on each promoted head (GPU red is a next-wave fix unless it crashes); five-persona sweep at wave close.
+40. **Retired.** The promotion flow is the tiered gate in [ORCHESTRATOR.md](../../ORCHESTRATOR.md) (ruling cy).
 41. **Claude Docs edit grammar.** `target {"kind":"blocks","ids":[...]}`, `source {"as":"blocks","from":{"kind":"inline","content":[rows]}}`; a table row can't be replaced, so insert the new row after it and `delete` the old one with its `ifHash`.
 42. **Artifacts and Claude Docs are private to the account that made them.** For a move to another account, carry the content as files in the repo (project-guide/handoff/) or share the pages with the new account.
 
