@@ -23,7 +23,7 @@ const Palette := preload("res://src/core/palette.gd")
 # (i) across run seeds both rows are drawn, and one seed always draws the same row.
 
 const SEED := 23
-const EXPECTED_CHECKS := 16
+const EXPECTED_CHECKS := 17
 
 var _game
 var _t := preload("res://tests/support/t.gd").new("stocktake_yard_test")
@@ -118,8 +118,28 @@ func _counts(spec: Dictionary) -> void:
 	if s == null:
 		return
 	var rule = s.yard
+	# The yard's furniture (stocktake_dress.gd): the gate on the ring's edge toward the Warden's beacon, the clerk's
+	# stand outside the ring, both wearing their models; the gate shut.
+	var dress = s.yard_dress
+	var ring := float(s.rule["ring"])
+	var furnished: bool = dress != null and dress.get_child_count() == 2
+	if furnished:
+		var gate: Node3D = dress.get_child(0)
+		var stand: Node3D = dress.get_child(1)
+		var out: Vector2 = (_game.ctx.terrain.map().beacon - Vector2(s.global_position.x, s.global_position.z)).normalized()
+		var gate_off := Vector2(gate.global_position.x - s.global_position.x, gate.global_position.z - s.global_position.z)
+		var stand_off := Vector2(stand.global_position.x - s.global_position.x, stand.global_position.z - s.global_position.z)
+		furnished = absf(gate_off.length() - ring) < 0.01 and gate_off.normalized().dot(out) > 0.99 and stand_off.length() > ring + 2.0
+		furnished = furnished and dress.gate_shut() and absf(gate.global_position.y - _game.ctx.terrain.height(gate.global_position.x, gate.global_position.z)) < 0.01
+		for piece in [gate, stand]:
+			var views: Array = piece.find_children("*", "MeshInstance3D", true, false)
+			furnished = furnished and not views.is_empty() and views[0].mesh is ArrayMesh and views[0].material_override.vertex_color_use_as_albedo
+		# The gate's width lies along the ring: its Z axis is square to the way out.
+		furnished = furnished and absf(Vector2(gate.global_transform.basis.z.x, gate.global_transform.basis.z.z).dot(out)) < 0.01
+	_t.check("the yard has its gate on the ring toward the beacon, shut, and its stand outside the ring", furnished, "dress %s" % dress)
 	var first: Array = rule.pack(1)
 	var early_gate := false
+	var stood := true
 	var peak_new := 0
 	var seen := {}
 	for frame in int((float(s.rule["arrive_s"]) * first.size() + 0.5) * Engine.physics_ticks_per_second):
@@ -131,13 +151,17 @@ func _counts(spec: Dictionary) -> void:
 				fresh += 1
 		peak_new = maxi(peak_new, fresh)
 		early_gate = early_gate or (rule.gate_open and seen.size() < first.size())
+		stood = stood and (rule.gate_open or dress == null or dress.gate_shut())
 		# Each arrival falls the frame it lands, so the floor is empty while machines are still owed.
 		_kill(s)
 	_t.check("rolling in starts count 1 and its machines climb in one at a time", s.started and seen.size() == first.size() and peak_new == 1,
 		"started %s arrived %d of %d, most in one frame %d" % [s.started, seen.size(), first.size(), peak_new])
-	_t.check("the gate stays shut while machines are still owed", not early_gate, "")
+	_t.check("the gate stays shut while machines are still owed", not early_gate and stood, "")
 	await _hold(_centre(s))
-	_t.check("a cleared floor opens the gate and the ring turns the live colour", rule.gate_open and rule.cleared == 1 and _ring_color(s) == Palette.live(),
+	for frame in Engine.physics_ticks_per_second:
+		await _hold(_centre(s))
+	var sunk: bool = dress != null and dress.get_child(0).global_position.y < s.global_position.y - 4.0
+	_t.check("a cleared floor opens the gate, which sinks, and the ring turns the live colour", sunk and rule.gate_open and rule.cleared == 1 and _ring_color(s) == Palette.live(),
 		"gate %s cleared %d ring %s" % [rule.gate_open, rule.cleared, _ring_color(s)])
 	for frame in int((float(rule.rule["gate_s"]) + float(s.rule["arrive_s"]) * rule.pack(2).size() + 0.5) * Engine.physics_ticks_per_second):
 		await _hold(_centre(s))

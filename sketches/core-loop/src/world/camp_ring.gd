@@ -1,5 +1,6 @@
 extends Node
 
+const ModelKit := preload("res://src/world/model_kit.gd")
 const Palette := preload("res://src/core/palette.gd")
 const UiFonts := preload("res://src/ui/ui_fonts.gd")
 const Records := preload("res://src/world/camp_records.gd")
@@ -27,6 +28,8 @@ const ARRIVE_S := 0.4
 const SPREAD := 1.1
 const BOARD_HEIGHT := 3.2
 const POST_HEIGHT := 2.2
+const POST := "res://assets/models/world_one/poi_camp_tally_post.glb"
+const POST_MODEL_HEIGHT := 2.5
 
 var hub
 var sandbox
@@ -167,23 +170,32 @@ func _show() -> void:
 # The post the ball rolls up to: a dark pole with a lamp on top, amber while the yard is quiet and
 # red while a count stands, so the place is marked before any best is on the board.
 func _post(at: Vector3) -> MeshInstance3D:
-	var pole := MeshInstance3D.new()
-	pole.name = "RingPost"
-	var shaft := CylinderMesh.new()
-	shaft.top_radius = 0.14
-	shaft.bottom_radius = 0.2
-	shaft.height = POST_HEIGHT
-	pole.mesh = shaft
-	pole.material_override = Palette.solid(Palette.CHARCOAL)
-	hub.root.add_child(pole)
-	pole.global_position = Vector3(at.x, sandbox.ground.floor_y + POST_HEIGHT * 0.5, at.z)
+	var foot := Node3D.new()
+	foot.name = "RingPost"
+	hub.root.add_child(foot)
+	foot.global_position = Vector3(at.x, sandbox.ground.floor_y, at.z)
+	# The camp tally post's model (2.5 m), facing the yard's centre; the plain pole when the file is missing.
+	var top := POST_HEIGHT
+	if ModelKit.whole(POST, foot) != null:
+		top = POST_MODEL_HEIGHT
+		foot.rotation.y = atan2(at.z - _centre.z, _centre.x - at.x)
+	else:
+		var pole := MeshInstance3D.new()
+		var shaft := CylinderMesh.new()
+		shaft.top_radius = 0.14
+		shaft.bottom_radius = 0.2
+		shaft.height = POST_HEIGHT
+		pole.mesh = shaft
+		pole.material_override = Palette.solid(Palette.CHARCOAL)
+		pole.position = Vector3.UP * POST_HEIGHT * 0.5
+		foot.add_child(pole)
 	var lamp := MeshInstance3D.new()
 	var bulb := SphereMesh.new()
 	bulb.radius = 0.34
 	bulb.height = 0.68
 	lamp.mesh = bulb
-	pole.add_child(lamp)
-	lamp.position = Vector3.UP * (POST_HEIGHT * 0.5 + 0.2)
+	foot.add_child(lamp)
+	lamp.position = Vector3.UP * (top + 0.2)
 	return lamp
 
 

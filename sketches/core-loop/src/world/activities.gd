@@ -14,6 +14,7 @@ const Palette := preload("res://src/core/palette.gd")
 const BakeLook := preload("res://src/presentation/bake_look.gd")
 const Parts := preload("res://src/build/parts.gd")
 const ParkGraph := preload("res://src/world/park/park_graph.gd")
+const StocktakeDress := preload("res://src/world/stocktake_dress.gd")
 const PocketFog := preload("res://src/world/events/pocket_fog.gd")
 const TradePockets := preload("res://src/world/trade_pockets.gd")
 const StakeDevices := preload("res://src/world/stake_devices.gd")
@@ -399,6 +400,8 @@ class Site extends Node3D:
 	var yard_called := false
 	var yard_siren := -1.0
 	var yard_stood := false
+	# The yard's stand and gate (stocktake_dress.gd), or null.
+	var yard_dress
 
 	func _exit_tree() -> void:
 		for enemy in pack + minibosses:
@@ -984,8 +987,11 @@ func _build_site(id: String, at: Vector2, spec: Dictionary) -> Site:
 		"stocktake_yard", "stocktake_muster":
 			s.yard = SurvivalCount.new(ctx.stages.world_of(ctx.run.stage), String(s.rule["form"]))
 			s.view.say(String(s.rule.cue.word))
-			# A form that comes to the ball shows nothing until it lands.
+			# A form that comes to the ball shows nothing until it lands, and brings no furniture.
 			s.visible = not s.rule.has("siren_s")
+			if s.visible:
+				var onward: Vector2 = ctx.terrain.map().beacon - Vector2(s.global_position.x, s.global_position.z)
+				s.yard_dress = StocktakeDress.attach(s, float(s.rule["ring"]), onward, ctx.terrain.height)
 		"surge_run":
 			_build_surge(s, spec)
 		"ambush_altar":
@@ -2126,6 +2132,8 @@ func _watch_yard(s: Site, delta: float, ball: Vector3) -> void:
 		"pile":
 			_yard_owe(s)
 	s.view.say(str(yard.count))
+	if s.yard_dress != null:
+		s.yard_dress.step(delta, yard.gate_open, ball)
 	if inside:
 		s.yard_out = 0.0
 		s.yard_may_bank = yard.gate_open

@@ -165,6 +165,9 @@ func _run() -> void:
 			nearest = minf(nearest, at.distance_to(Geometry2D.get_closest_point_to_segment(at, trail["points"][i - 1], trail["points"][i])))
 		beside = beside and absf(nearest - Posts.SIDE_M) < 0.2
 	_t.check("each post stands a step beside the floor line", beside, str(row["posts"][0].global_position))
+	var stake: Array = row["posts"][0].find_children("*", "MeshInstance3D", true, false)
+	_t.check("each post wears the survey stake's model", not stake.is_empty() and stake[0].mesh is ArrayMesh and stake[0].mesh.get_aabb().size.y > 3.0
+		and stake[0].material_override.vertex_color_use_as_albedo, "%d views" % stake.size())
 	# A ball falling straight down beside a post knocks nothing either.
 	_game.player.reset_to(row["posts"][0].global_position + Vector3.UP * 2.5, Vector3.ZERO)
 	_game.player.set_velocity_now(Vector3.DOWN * 12.0)

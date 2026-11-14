@@ -1,5 +1,6 @@
 extends Node3D
 
+const ModelKit := preload("res://src/world/model_kit.gd")
 const Palette := preload("res://src/core/palette.gd")
 
 # Survey posts (BACKLOG W1-103): something small to do on the ride between sites, behind `--posts=on` (off by
@@ -13,6 +14,7 @@ const Palette := preload("res://src/core/palette.gd")
 # EVERY_M of line, kept on two runs in three, slid along the line to the first stretch that is rolled ground, runs
 # straight and is clear of every site. So a run's rows differ from the last run's and a replay keeps them.
 
+const STAKE := "res://assets/models/world_one/poi_survey_stake.glb"
 const POSTS := 5
 const SIDE_M := 2.4
 const FIRST_M := 130.0
@@ -240,6 +242,9 @@ func _knock(row: Dictionary, index: int, velocity: Vector3) -> void:
 # foot. Sized to read from the chase camera at speed.
 func _post() -> Node3D:
 	var post := Node3D.new()
+	# The survey stake's model, its pivot at the foot; the plain pole and pennant when the file is missing.
+	if ModelKit.whole(STAKE, post) != null:
+		return post
 	var pole := MeshInstance3D.new()
 	var shaft := CylinderMesh.new()
 	shaft.top_radius = 0.15

@@ -6,7 +6,11 @@ extends RefCounted
 
 const ROUGH := {"device_metal": 0.68, "device_marks": 0.85}
 
+# A whole model's far versions swap in past these distances, when the files stand beside it.
+const LOD_M := [60.0, 150.0]
+
 static var _kits: Dictionary = {}
+static var _flat: StandardMaterial3D
 
 
 # A new view of the named part on parent, or null when the kit is missing or malformed.
@@ -19,6 +23,36 @@ static func part(path: String, required: Array, part_name: String, parent: Node3
 	view.mesh = mesh
 	parent.add_child(view)
 	return view
+
+
+# A new view on parent of a GLB that is one mesh with flat vertex colours and no texture (the world 1 point of
+# interest props), wearing one shared vertex-colour material as park_props.gd's props do; null when the file is
+# missing, so its caller keeps its plain shapes. A `<stem>_lod1.glb` and `_lod2.glb` beside it take over at LOD_M.
+static func whole(path: String, parent: Node3D) -> MeshInstance3D:
+	var first: MeshInstance3D = null
+	var stems := [path, path.replace(".glb", "_lod1.glb"), path.replace(".glb", "_lod2.glb")]
+	var have := stems.filter(func(stem: String) -> bool: return (stem == path or ResourceLoader.exists(stem)) and not _meshes(stem, []).is_empty())
+	if have.is_empty() or have[0] != path:
+		return null
+	if _flat == null:
+		_flat = StandardMaterial3D.new()
+		_flat.vertex_color_use_as_albedo = true
+		_flat.vertex_color_is_srgb = false
+		_flat.roughness = 0.8
+	for i in have.size():
+		var view := MeshInstance3D.new()
+		view.mesh = _meshes(have[i], []).values()[0]
+		view.material_override = _flat
+		if i > 0:
+			view.visibility_range_begin = LOD_M[i - 1]
+		if i < have.size() - 1:
+			view.visibility_range_end = LOD_M[i]
+		if first == null:
+			first = view
+			parent.add_child(view)
+		else:
+			first.add_child(view)
+	return first
 
 
 static func _meshes(path: String, required: Array) -> Dictionary:
