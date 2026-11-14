@@ -62,9 +62,9 @@ const SPECS := [
 	# taste call Andrew can overturn) and "edges" are haze made less obstructive.
 	{"key": "telegraph", "label": "Telegraph", "min": 0.0, "max": 3.0, "step": 1.0, "value": 2.0, "options": ["classic", "haze", "clear", "edges"]},
 	# The ball's look (presentation/ball_looks.gd): Andrew picked the cutaway on 13 Nov 2026 (ruling
-	# dm); gyro and bell are the two he passed over. "today" keeps the game's own shells and stays
-	# the default until he has seen the finished cutaway on the PC.
-	{"key": "ball_look", "label": "Ball look", "min": 0.0, "max": 3.0, "step": 1.0, "value": 0.0, "options": ["today", "gyro", "bell", "cutaway"]},
+	# dm); gyro and bell are the two he passed over. "today" keeps the lattice shells. The cutaway is
+	# the default since 14 Nov 2026, when he had seen it rendered on his PC.
+	{"key": "ball_look", "label": "Ball look", "min": 0.0, "max": 3.0, "step": 1.0, "value": 3.0, "options": ["today", "gyro", "bell", "cutaway"]},
 	# World-one builds (design-v3/research/build-systems/BUILD-SYSTEMS.md, unit G): the master
 	# flag gives every pilot a two-depth tree, and the two hot-wired parts are selectable
 	# alone. All three default on. hotwire_shell is read by the build and the tree pick; hotwire_tread is read by the build (HotwireRules.fitted, build.gd) to fit the tread.

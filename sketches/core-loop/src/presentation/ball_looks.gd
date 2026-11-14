@@ -27,6 +27,8 @@ const LOOKS := {
 # seated pilot of half the ball's height and leaves a rim of plating to show the spin.
 # Looks that replace only the rolling part of each pilot's own shell.
 const PLATED := ["cutaway"]
+const COCKPIT := "res://assets/models/world_one/ball_look_cutaway_cockpit.glb"
+const COCKPIT_NODE := "Cockpit"
 const WINDOW := 0.76
 const WINDOW_INK := 0.035
 const WINDOW_FRINGE := 0.11
@@ -40,6 +42,10 @@ uniform float rough = 0.8;
 // Linear light, already multiplied by its energy.
 uniform vec3 glow = vec3(0.0);
 uniform vec3 lining : source_color = vec3(0.82, 0.77, 0.65);
+// The inside of the plating is built, not bare: six longerons, two ring frames and a hub plate at
+// each axle, in big shapes that still read at play size and show the roll.
+uniform vec3 lining_frame : source_color = vec3(0.40, 0.43, 0.40);
+uniform vec3 lining_hub : source_color = vec3(0.52, 0.33, 0.19);
 uniform vec3 ink : source_color = vec3(0.14, 0.16, 0.16);
 uniform float window = 0.76;
 uniform float ink_width = 0.035;
@@ -67,6 +73,7 @@ uniform float keep_within = 0.0;
 // units), not by its angle from the centre: a rod near the centre never reaches that angle, and
 // a barrel that stands out past the ball reaches it while still beside the opening.
 uniform float tube = 0.0;
+const float STANDS_OUT = 1.15;
 uniform bool back_is_kit = false;
 // A small pilot's seat back is lowered to this height (the level part's own Y): every vertex of
 // the seat back's slab above it is pressed down to it, so the back stays a closed box.
@@ -113,7 +120,10 @@ void fragment() {
 	} else if (IN_SHADOW_PASS) {
 		// In a light's pass the eye is the light. The half toward it is left out, so the sun
 		// reaches the pilot; the far half still throws the whole round shadow on the ground.
-		if (dot(normalize(from_centre), normalize(to_eye)) > 0.0) {
+		// Kit that stands out past the ball (a barrel) blocks no sun from the pilot and keeps
+		// its whole shadow.
+		bool stands_out = tube > 0.0 && length(from_centre) > STANDS_OUT * model_scale;
+		if (!stands_out && dot(normalize(from_centre), normalize(to_eye)) > 0.0) {
 			discard;
 		}
 	} else if (facing > window) {
@@ -151,7 +161,14 @@ void fragment() {
 		if (!inside) {
 			discard;
 		}
-		ALBEDO = facing > edge ? ink : lining;
+		vec3 n = normalize(local_pos - centre_local);
+		float around = atan(n.y, n.z) / 6.2831853;
+		float longeron = abs(fract(around * 6.0) - 0.5);
+		float frame = min(abs(abs(n.x) - 0.42), abs(n.x));
+		vec3 wall = mix(lining, lining * 0.86, step(0.5, fract(around * 6.0 + step(0.42, abs(n.x)) * 0.5)));
+		wall = mix(lining_frame, wall, step(0.055, longeron) * step(0.035, frame));
+		wall = abs(n.x) > 0.93 ? (abs(n.x) > 0.96 ? lining_hub : lining_frame) : wall;
+		ALBEDO = facing > edge ? ink : wall;
 		ROUGHNESS = 1.0;
 	}
 }
@@ -282,14 +299,33 @@ static func _plating(look: String, heft: int) -> Mesh:
 	var path := String(LOOKS[look])
 	if heft > 1:
 		path = path.replace(".glb", "_c%d.glb" % heft)
+	return _part(path, "Core")
+
+
+# The mesh of one named part of a look's scene, loaded once.
+static func _part(path: String, part: String) -> Mesh:
 	if not _platings.has(path):
 		var packed := load(path) as PackedScene if ResourceLoader.exists(path) else null
 		var scene: Node = packed.instantiate() if packed != null else null
-		var found := scene.find_child("Core", true, false) as MeshInstance3D if scene != null else null
+		var found := scene.find_child(part, true, false) as MeshInstance3D if scene != null else null
 		_platings[path] = found.mesh if found != null else null
 		if scene != null:
 			scene.free()
 	return _platings[path]
+
+
+# Under a plated look the level part gains the cockpit the window shows around the pilot: floor
+# pan, cradle ring, dash and gauges, console and cables. Call before the shell is painted.
+static func furnish(look: String, pod: Node) -> void:
+	if pod == null or not PLATED.has(look) or pod.has_node(COCKPIT_NODE):
+		return
+	var mesh := _part(COCKPIT, COCKPIT_NODE)
+	if mesh == null:
+		return
+	var view := MeshInstance3D.new()
+	view.name = COCKPIT_NODE
+	view.mesh = mesh
+	pod.add_child(view)
 
 
 # Gives a fitted shell (hero_assets.fit_shell_into's {core, pod}) the look's own materials.
@@ -305,6 +341,29 @@ static func dress(look: String, shell: Dictionary) -> void:
 				var was: Material = view.get_active_material(i)
 				if was != null and was.resource_name == "glass":
 					view.set_surface_override_material(i, _canopy())
+
+
+# The pilot's shaded side takes a share of the light that falls on their far side, in their own
+# colours, so they read when the ball's shaded side faces the camera. It is set on the pilot's
+# own surfaces: a light node freed with a stage crashes the renderer. hero_assets calls this as
+# it seats a pilot.
+static func light_pilot(look: String, pilot: Node) -> void:
+	if not PLATED.has(look):
+		return
+	var lit := {}
+	for view in _views(pilot):
+		for i in view.mesh.get_surface_count():
+			var was := view.get_active_material(i) as BaseMaterial3D
+			# A surface that glows reads in shade already, and hero_assets swaps the class accents'
+			# material by identity for the ready glow.
+			if was == null or was.backlight_enabled or was.emission_enabled or was.shading_mode == BaseMaterial3D.SHADING_MODE_UNSHADED:
+				continue
+			if not lit.has(was):
+				var mat: BaseMaterial3D = was.duplicate()
+				mat.backlight_enabled = true
+				mat.backlight = Color(PILOT_BACKLIGHT, PILOT_BACKLIGHT, PILOT_BACKLIGHT)
+				lit[was] = mat
+			_wear(view, i, lit[was])
 
 
 # Every surface of the rolling part takes the window, keeping the colour it was painted with.
@@ -373,6 +432,8 @@ static func _takes_window(was: Material) -> bool:
 # The level part: kit that stands outside the ball (weapon ring, hoods, drums) takes the window
 # where it comes between the camera and the pilot; the cockpit inside the ball is never cut.
 # _takes_window says which surfaces are swapped.
+# The share of the light on a pilot's far side that shows on their near side.
+const PILOT_BACKLIGHT := 0.6
 const KIT_KEEP_WITHIN := 0.93
 const PLATING_RADIUS := 0.965
 # Pilots too small for the shared seat back (shell_base.py: seat top -0.30, back top -0.10), and
@@ -407,13 +468,21 @@ static func _cut_kit(pod: Node, pilot: String) -> void:
 static func _windowed(was: Material) -> ShaderMaterial:
 	var cut := ShaderMaterial.new()
 	cut.shader = _shader("cutaway", CUTAWAY_SHADER)
+	# The slot name stays, so what finds a surface by it (the decal's fallback onto the weapon
+	# ring's paint) still does.
+	cut.resource_name = was.resource_name if was != null else ""
 	cut.set_shader_parameter("window", WINDOW)
 	cut.set_shader_parameter("ink_width", WINDOW_INK)
 	cut.set_shader_parameter("fringe", WINDOW_FRINGE)
 	cut.set_shader_parameter("vertex_tint", true)
 	if was is BaseMaterial3D:
 		cut.set_shader_parameter("vertex_tint", was.vertex_color_use_as_albedo)
-		cut.set_shader_parameter("tint", was.albedo_color)
+		# A vertex-coloured surface carries its colour as the paint lift with no paint taken,
+		# the same terms hero_assets' painted material uses, so one reading fits both.
+		cut.set_shader_parameter("tint", Color.WHITE if was.vertex_color_use_as_albedo else was.albedo_color)
+		cut.set_shader_parameter("lift", was.albedo_color if was.vertex_color_use_as_albedo else Color.WHITE)
+		cut.set_shader_parameter("paint_tint", Color.WHITE)
+		cut.set_shader_parameter("paint_take", 0.0)
 		cut.set_shader_parameter("metal", was.metallic)
 		cut.set_shader_parameter("rough", was.roughness)
 		if was.emission_enabled:

@@ -1103,10 +1103,19 @@ func _assets() -> Dictionary:
 	return shell_assets
 
 
-# The ball look the launch asked for (--ball-look, ball_looks.gd); "today" without a tuning.
+# The ball look the launch asked for (--ball-look, ball_looks.gd); "today" without a tuning. A
+# preview that should show the ball a run will gives its painter a tuning (previewing()).
 func ball_look() -> String:
 	var tuning = ctx.get("tuning") if ctx != null else null
 	return tuning.option(Tuning.BALL_LOOK_KEY) if tuning != null else BallLooks.TODAY
+
+
+# A painter for a preview outside a run (the class card, the customize page): it draws the
+# default ball look, so the preview shows the ball the run will.
+static func previewing() -> Node:
+	var painter: Node = (load("res://src/presentation/hero_assets.gd") as GDScript).new()
+	painter.ctx = {"tuning": Tuning.new()}
+	return painter
 
 
 static func _layer_path(base: String, heft_class: int) -> String:
@@ -1300,6 +1309,7 @@ func fit_shell_into(ball: Node3D, pilot: String, variant: String, heft_class: in
 	core.name = "HeroCore"
 	pod.name = "HeroPod"
 	BallLooks.replate(ball_look(), core)
+	BallLooks.furnish(ball_look(), pod)
 	var rec := {"core": core, "pod": pod, "layers": {}, "pilot": pilot, "variant": variant, "heft": 1, "shown": {}, "tints": tints}
 	var ring_holders: Array = []
 	for i in HEFT_LAYERS.size():
@@ -1706,7 +1716,7 @@ func _fit_pilot(rec: Dictionary) -> void:
 func fit_pilot_into(pod: Node3D, class_id: String, class_color: Color) -> Dictionary:
 	if not PILOTS.has(class_id):
 		return {}
-	var pilot := _scene(PILOTS[class_id]) as Node3D
+	var pilot := _scene(ModelVariants.path(PILOTS[class_id])) as Node3D
 	if pilot == null:
 		return {}
 	pilot.name = "AnimatedPilot"
@@ -1715,6 +1725,7 @@ func fit_pilot_into(pod: Node3D, class_id: String, class_color: Color) -> Dictio
 		hide_placeholder(placeholder)
 	pod.add_child(pilot)
 	paint(pilot, {"class": class_color})
+	BallLooks.light_pilot(ball_look(), pilot)
 	var animator := pilot.find_child("AnimationPlayer", true, false) as AnimationPlayer
 	return {"pilot": pilot, "animator": animator}
 

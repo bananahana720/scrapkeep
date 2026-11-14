@@ -51,13 +51,18 @@ func _initialize() -> void:
 	for table in [Meanings.MEANINGS, Meanings.REWARD_RUNGS]:
 		for fact in table:
 			facts[fact] = table[fact]
-	_t.check("the meanings name seven or more facts", facts.size() >= 7, str(facts.size()))
+	var colours := {}
+	for fact in facts:
+		colours[facts[fact]] = true
+	_t.check("the meanings name seven or more colours", colours.size() >= 7, str(colours.size()))
 	_t.eq("every close pair and shared colour has a row, and every row is still needed", faults(facts, palette, CLOSE, SHARED), [])
 	# Planted, through the same judge: a close pair with no row, a shared colour with no row, a
 	# row whose pair is far apart, and a row with neither a carrier nor a finding.
 	var fake := {"A": Color("9dff3c"), "B": Color("a5f548"), "C": Color("0000ff")}
 	var planted := faults({"one": "A", "two": "B", "three": "A", "four": "C"}, fake, {"A|C": {"carrier": "", "finding": ""}}, {})
-	_t.eq("planted: the judge names all four faults", planted.size(), 4)
+	_t.eq("planted: the judge names four faults", planted.size(), 4)
+	for want in ["A|B is close", "A carries one and three", "the CLOSE row A|C no longer", "the row A|C names neither"]:
+		_t.check("planted: one fault reads \"%s\"" % want, planted.any(func(line: String) -> bool: return line.begins_with(want)))
 	_t.check("planted: red and blue are not close", closest(Color("ff0000"), Color("0000ff"))["de"] >= FLOOR)
 	quit(_t.verdict())
 

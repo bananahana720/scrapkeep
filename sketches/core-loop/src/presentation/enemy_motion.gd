@@ -57,6 +57,9 @@ const BOUNCE := 0.3
 const SKID := 0.55
 const SETTLE_SPEED := 0.8
 const LAND_REST := 0.9
+# A landed piece's spin under this (rad/s) is still: the skid would shrink it toward 1e-22, where
+# normalized() is no longer unit and Basis.rotated rejects the axis (an engine error a tick).
+const SPIN_STILL := 0.01
 
 
 static func active() -> bool:
@@ -265,7 +268,7 @@ func _physics_process(delta: float) -> void:
 			v.y = -v.y * BOUNCE if v.y < -SETTLE_SPEED else 0.0
 			v.x *= SKID
 			v.z *= SKID
-			piece.spin = piece.spin * SKID
+			piece.spin = piece.spin * SKID if piece.spin.length() * SKID > SPIN_STILL else Vector3.ZERO
 		piece.velocity = v
 	if t >= life():
 		queue_free()
