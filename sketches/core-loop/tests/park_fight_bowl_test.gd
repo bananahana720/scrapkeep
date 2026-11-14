@@ -47,7 +47,6 @@ const BAKE_SIDE := 801
 # Stages under their line today. {"<stage>": {"value": measured median m, "why": "..."}}. Pruned by the
 # test itself: an entry that now meets the line fails it.
 const OWED := {
-	"park_dam": {"value": 0.72, "why": "PF-46 (12 Nov): the yard no longer shuts on the construction incline, whose 23 degree slope read as a rim but threw a riding ball back uphill; it shuts at the incline foot on the toe apron, which is 2 m deep at most, so half the ring is flat. Owes a real bowl on the apron (map work)"},
 	"park_flume": {"value": -0.41, "why": "both lock sites (the ball crossing 210 m from the beacon on the two lines) stand on flat forecourt ground; the ring rim reads no higher than the floor, and 10 m lower in places"},
 }
 
