@@ -152,6 +152,7 @@ func _run() -> void:
 	_check_parts()
 	_check_pilots()
 	await _check_head_outfits()
+	_check_poi_props()
 	print("tripo_variants_test: %s" % ("PASS" if failures == 0 else "FAIL (%d)" % failures))
 	quit(1 if failures > 0 else 0)
 
@@ -339,3 +340,43 @@ func _check_head_outfits() -> void:
 				_check(scale > 1.05 and absf(ratio - scale) < 0.05 * scale, "%s's head outfit grows by the node's size (%.2f, node %.2f)" % [row.pilot, ratio, scale])
 			else:
 				_check((boxes["_tripo"] as AABB).is_equal_approx(boxes[""]), "%s's head outfit mounts as on the authored pilot" % row.pilot)
+
+
+# The world 1 point of interest props have no authored twin (tools/tripo/README.md, "New props"). The loader that places them
+# sets vertex colour as albedo, so each must be one mesh that carries COLOR_0, stands on its origin, and is the size its
+# placement was planned for: [stem, tall in metres, longer ground side in metres, has LOD files].
+const POI_PROPS := [
+	["poi_tally_stand", 4.0, 2.0, true],
+	["poi_yard_gate", 6.7, 8.0, true],
+	["poi_camp_tally_post", 2.5, 1.2, true],
+	["poi_fence_panel", 2.5, 6.2, false],
+	["poi_survey_stake", 3.16, 0.88, false],
+]
+
+
+func _check_poi_props() -> void:
+	for row in POI_PROPS:
+		var tris := []
+		for suffix in (["", "_lod1", "_lod2"] if row[3] else [""]):
+			var scene := load("res://assets/models/world_one/%s%s.glb" % [row[0], suffix]) as PackedScene
+			_check(scene != null, "%s%s loads" % [row[0], suffix])
+			if scene == null:
+				continue
+			var node := scene.instantiate()
+			var meshes := node.find_children("*", "MeshInstance3D", true, false)
+			_check(meshes.size() == 1 and (meshes[0] as MeshInstance3D).mesh.get_surface_count() == 1, "%s%s is one mesh and one draw" % [row[0], suffix])
+			if meshes.size() == 1:
+				var mi := meshes[0] as MeshInstance3D
+				var arrays := mi.mesh.surface_get_arrays(0)
+				_check(arrays[Mesh.ARRAY_COLOR] != null and (arrays[Mesh.ARRAY_COLOR] as PackedColorArray).size() > 0, "%s%s carries vertex colours" % [row[0], suffix])
+				_check(arrays[Mesh.ARRAY_TEX_UV] == null, "%s%s ships no texture coordinates" % [row[0], suffix])
+				var box: AABB = mi.transform * mi.mesh.get_aabb()
+				tris.append(_mesh_tris(mi.mesh))
+				if suffix == "":
+					_check(absf(box.position.y) < 0.02, "%s stands on its origin (base %.3f)" % [row[0], box.position.y])
+					_check(absf(box.size.y - row[1]) < 0.1 and absf(maxf(box.size.x, box.size.z) - row[2]) < 0.1,
+						"%s is the planned size (%.2f tall, %.2f across)" % [row[0], box.size.y, maxf(box.size.x, box.size.z)])
+			node.free()
+		if row[3] and tris.size() == 3:
+			_check(tris[0] > tris[1] and tris[1] > tris[2], "%s LOD files step down (%s)" % [row[0], tris])
+
