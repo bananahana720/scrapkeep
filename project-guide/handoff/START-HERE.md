@@ -13,7 +13,7 @@ The rules every thread follows are in [AGENTS.md](../../AGENTS.md), most importa
 3. The board issue (it holds the open pull requests' file fences) and your brief. Post a claim before you build.
 4. The rows of [DECISIONS.md](DECISIONS.md) your brief cites. Newest wins; do not re-ask one. Search it before you ask Andrew anything.
 
-Everything else is read when the work calls for it; the table below says which page. A fresh coordinator also reads [ROADMAP.md](ROADMAP.md) (phone copy: https://claude.ai/artifact/55bppMdvsEXW52ZVFyhNna) the shared folder map `/mnt/project-files/INDEX.md` and the phone start page https://claude.ai/artifact/LQF6h696vYdtJee3soD2Pi. The log, briefs and scripts of the local PC session that coordinated on 10 and 11 November are on branch `scratch/coordinator-notes-2026-11-11`.
+Everything else is read when the work calls for it; the table below says which page. A fresh coordinator also reads [ROADMAP.md](ROADMAP.md) (phone copy: https://claude.ai/artifact/55bppMdvsEXW52ZVFyhNna), the shared folder map `/mnt/project-files/INDEX.md` and the phone start page https://claude.ai/artifact/LQF6h696vYdtJee3soD2Pi. The log, briefs and scripts of the local PC session that coordinated on 10 and 11 November are on branch `scratch/coordinator-notes-2026-11-11`.
 
 ## Where to go when
 
