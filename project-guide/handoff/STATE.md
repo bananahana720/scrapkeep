@@ -22,7 +22,7 @@ Wave 40 is on `main` (8d92764c, pull request 1011). It passed the wave gate on t
 - pocket_entry now counts 17 interiors;
 - bot_fairness_test (red, one-seed design) and stocktake_yard_test (flake) got ledger rows.
 
-Wave 40 shipped the critique build wave, the hitch fixes, the cutaway as the default ball (ruling dm), and the Tripo pilot bodies behind `--models=tripo`. `stage/alpha-w41` is cut at 8d92764c, and its board is #1012. Queued for it: 1007, 1008, 1009 (survival forms and survey posts behind flags), 957 (the dam bowl), 1010 (Tripo skin weights), and the difficulty stack 845 and 948, which still lands last. The full-game audit starts on this stage.
+Wave 40 shipped the critique build wave, the hitch fixes, the cutaway as the default ball (ruling dm), and the Tripo pilot bodies behind `--models=tripo`. `stage/alpha-w41` is cut at 8d92764c, with the wave board in the table above. Queued for it: 1007, 1008, 1009 (survival forms and survey posts behind flags), 957 (the dam bowl), 1010 (Tripo skin weights), and the difficulty stack 845 and 948, which still lands last. The full-game audit starts on this stage.
 
 Done for the sitting is counted: no major or minor row left in [PLAY-FINDINGS.tsv](PLAY-FINDINGS.tsv), a clean release gate, 4080 frames in budget, zero placeholders, and that build installed on the PC. Andrew has played only the dam (wave 26 build, 30 Oct) and has marked no area yet.
 
