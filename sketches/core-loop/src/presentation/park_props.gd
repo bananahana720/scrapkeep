@@ -1426,7 +1426,33 @@ static func _range(base: Array, low: bool, lod: int) -> Array:
 
 
 static func _lod_paths(kit: Dictionary, inst: Dictionary) -> Array:
-	return kit["kinds"][inst["kind"]]["variants"][inst["v"]]["lod"]
+	var variants: Dictionary = kit["kinds"][inst["kind"]]["variants"]
+	return _stand_in(variants, String(inst["v"])) if ModelVariants.enabled() else variants[inst["v"]]["lod"]
+
+
+# With the generated-model switch on (model_variants.gd), a variant that has no generated sibling of its own draws a
+# sister variant's when that sister has one and is the same size: no more than STAND_IN_RADIUS times as wide and
+# within STAND_IN_HEIGHT of its height, so the placement rules that passed for this variant still hold. A kind's
+# variants are placed at random, so without this only one shed in three would change with the switch. The paths
+# stay the authored ones; _mesh swaps each for its sibling.
+const STAND_IN_RADIUS := 1.1
+const STAND_IN_HEIGHT := 0.15
+
+
+static func _stand_in(variants: Dictionary, v: String) -> Array:
+	var own: Dictionary = variants[v]
+	if ModelVariants.path(String(own["lod"][0])) != String(own["lod"][0]):
+		return own["lod"]
+	var keys := variants.keys()
+	keys.sort()
+	for key in keys:
+		var sister: Dictionary = variants[key]
+		if key == v or ModelVariants.path(String(sister["lod"][0])) == String(sister["lod"][0]):
+			continue
+		if float(sister["radius"]) <= float(own["radius"]) * STAND_IN_RADIUS \
+				and absf(float(sister["height"]) - float(own["height"])) <= float(own["height"]) * STAND_IN_HEIGHT:
+			return sister["lod"]
+	return own["lod"]
 
 
 static func _hero(holder: Node3D, inst: Dictionary, kit: Dictionary) -> void:

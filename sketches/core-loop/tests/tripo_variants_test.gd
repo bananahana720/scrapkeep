@@ -125,9 +125,11 @@ func _check_accept(authored: String) -> void:
 	_check(ModelVariants.only(sibling) == "", "a rejected part shape stays out with the switch on")
 	ModelVariants.set_enabled(true, true)
 	_check(ModelVariants.path(authored) == sibling, "--models=tripo-all loads a rejected sibling")
+	_check(ModelVariants.only(sibling) == sibling, "--models=tripo-all loads a rejected part shape")
 	ModelVariants.set_rejected()
 	ModelVariants.set_enabled(true)
-	_check(ModelVariants.path(authored) == (sibling if ModelVariants.accepted(sibling) else authored), "the real list is back after the test")
+	_check(ModelVariants._rejected == ModelVariants.REJECTED and ModelVariants.accepted(sibling) == (not ModelVariants.REJECTED.has(sibling)),
+		"the real list is back after the test")
 	var rows := 0
 	var said := {}
 	var dir := DirAccess.open("res://assets/registry.d")
@@ -217,6 +219,7 @@ func _run() -> void:
 	_check_poi_props()
 	_check_tells()
 	_check_bodies()
+	_check_stand_ins()
 	print("tripo_variants_test: %s" % ("PASS" if failures == 0 else "FAIL (%d)" % failures))
 	quit(1 if failures > 0 else 0)
 
@@ -232,7 +235,7 @@ func _check_parts() -> void:
 			"grip_tread", "long_spool", "spring_shims", "boost_coil", "slack_coil", "dash_vane", "frost_vane", "live_line",
 			"winch_pawl", "riveted_shell", "cracked_plating", "thin_pickings", "load_dividend", "vent_baffle", "bladestorm_rotor", "spiral_wave",
 			"runner_overclock", "pylon_capacitor", "spare_cell", "chain_arc", "cross_split", "loose_trigger"]:
-		ModelVariants.set_enabled(true)
+		ModelVariants.set_enabled(true, true)  # every file is judged here, rejected or not (ruling dr)
 		var piece: Node3D = acc._piece(id)
 		var own := piece.get_node_or_null("Own") as MeshInstance3D
 		_check(own != null and own.material_override != null, "%s shows its own shape with the switch on" % id)
@@ -292,7 +295,7 @@ func _check_pilots() -> void:
 		var stem := String(authored).get_file()
 		ModelVariants.set_enabled(false)
 		_check(ModelVariants.path(authored) == authored, "switch off keeps %s" % stem)
-		ModelVariants.set_enabled(true)
+		ModelVariants.set_enabled(true, true)  # every file is judged here, rejected or not (ruling dr)
 		var alt := ModelVariants.path(authored)
 		_check(alt != authored, "switch on swaps %s for its sibling" % stem)
 		var old := (load(authored) as PackedScene).instantiate()
@@ -480,12 +483,97 @@ func _part_brightness(path: String, part: String) -> float:
 	return total / area if area > 0.0 else -1.0
 
 
+# The mean above passed a hooker barrel the PC look of 14 November 2026 showed as a thin dark figure: a mean over the
+# whole node is diluted by the authored mast, and it says nothing about how much of the body faces the camera. This
+# measures the light the body sends to a chase camera instead: over every face turned to the camera, its area as the
+# camera sees it times its painted brightness times a simple light (a key light from over the camera's shoulder and
+# 0.35 of ambient). It is taken from four sides, looking 25 degrees down, and the worst side counts. Nothing hides
+# anything here, so a face inside the body is counted too; it is a floor on a body that is too dark or too thin, not
+# a render. The floor sits between what that PC look failed and passed: the failed hooker barrel sent 0.48 of the
+# authored body's light, the swatter it passed 0.71 and the netcaster it passed 0.81. Three bodies set it, so a new
+# body that lands near the floor still needs the PC look.
+const SEEN_FLOOR := 0.65
+
+
+func _part_seen(path: String, part: String) -> float:
+	var scene := load(path) as PackedScene
+	if scene == null:
+		return -1.0
+	var node := scene.instantiate()
+	var mi := node.find_child(part, true, false) as MeshInstance3D
+	var worst := -1.0
+	if mi != null and mi.mesh != null:
+		var to_root := _to_root(mi, node)
+		for side in 4:
+			var to_cam := Vector3(0.0, sin(deg_to_rad(25.0)), cos(deg_to_rad(25.0))).rotated(Vector3.UP, side * PI / 2.0)
+			var to_light := (to_cam + Vector3(0.0, 0.8, 0.0)).normalized()
+			var seen := 0.0
+			for s in mi.mesh.get_surface_count():
+				var arrays := mi.mesh.surface_get_arrays(s)
+				var verts := arrays[Mesh.ARRAY_VERTEX] as PackedVector3Array
+				var normals := arrays[Mesh.ARRAY_NORMAL] as PackedVector3Array
+				var cols: PackedColorArray = arrays[Mesh.ARRAY_COLOR] if arrays[Mesh.ARRAY_COLOR] != null else PackedColorArray()
+				var index: PackedInt32Array = arrays[Mesh.ARRAY_INDEX] if arrays[Mesh.ARRAY_INDEX] != null else PackedInt32Array()
+				var mat := mi.mesh.surface_get_material(s) as BaseMaterial3D
+				var base := (mat.albedo_color if mat != null else Color.WHITE).srgb_to_linear()
+				if cols.size() != verts.size() or normals.size() != verts.size():
+					node.free()
+					return -1.0
+				var count := index.size() if not index.is_empty() else verts.size()
+				for t in range(0, count - 2, 3):
+					var ids := [t, t + 1, t + 2] if index.is_empty() else [index[t], index[t + 1], index[t + 2]]
+					var a := 0.5 * (to_root.basis * (verts[ids[1]] - verts[ids[0]])).cross(to_root.basis * (verts[ids[2]] - verts[ids[0]])).length()
+					var n := (to_root.basis * (normals[ids[0]] + normals[ids[1]] + normals[ids[2]])).normalized()
+					var facing := n.dot(to_cam)
+					if facing <= 0.0:
+						continue
+					var c := (base * ((cols[ids[0]] + cols[ids[1]] + cols[ids[2]]) / 3.0)).linear_to_srgb()
+					seen += a * facing * (0.2126 * c.r + 0.7152 * c.g + 0.0722 * c.b) * (0.35 + 0.65 * maxf(0.0, n.dot(to_light)))
+			worst = seen if worst < 0.0 else minf(worst, seen)
+	node.free()
+	return worst
+
+
 func _check_bodies() -> void:
 	_check(BODIES.size() == 3, "3 crew bodies checked for brightness (%d)" % BODIES.size())
 	for row in BODIES:
+		var twin := (row[0] as String).replace(".glb", "_tripo.glb")
 		var authored := _part_brightness(row[0], row[1])
-		var sibling := _part_brightness((row[0] as String).replace(".glb", "_tripo.glb"), row[1])
+		var sibling := _part_brightness(twin, row[1])
 		_check(authored > 0.0 and sibling >= 0.95 * authored, "%s on the sibling is as bright as the authored one (%.3f, authored %.3f)" % [row[1], sibling, authored])
+		var seen_authored := _part_seen(row[0], row[1])
+		var seen := _part_seen(twin, row[1])
+		_check(seen_authored > 0.0 and seen >= SEEN_FLOOR * seen_authored,
+			"%s on the sibling sends the chase camera at least %.2f of the authored body's light from its worst side (%.2f, authored %.2f)" % [row[1], SEEN_FLOOR, seen, seen_authored])
+
+
+# A prop kind's variants are placed at random (park_props.gd expand), and only variant a has a generated sibling, so a
+# same-sized sister stands in for b and c with the switch on (park_props.gd _stand_in). The PC look of 14 November 2026
+# found the nearest sluice shed, a variant b, unchanged by the switch.
+func _check_stand_ins() -> void:
+	var flume := ParkProps.load_json("res://assets/models/park/props/flume/manifest.json")
+	var dam := ParkProps.load_json("res://assets/models/park/props/dam/manifest.json")
+	var shed_a: Array = flume["kinds"]["sluice_shed"]["variants"]["a"]["lod"]
+	var shed_b: Array = flume["kinds"]["sluice_shed"]["variants"]["b"]["lod"]
+	var tent_b: Array = dam["kinds"]["survey_tent"]["variants"]["b"]["lod"]
+	ModelVariants.set_enabled(false)
+	_check(ParkProps._lod_paths(flume, {"kind": "sluice_shed", "v": "b"}) == shed_b, "switch off: a variant b sluice shed draws its own model")
+	ParkProps.release_shared()
+	var authored_tris := _mesh_tris(ParkProps._mesh(ParkProps._lod_paths(flume, {"kind": "sluice_shed", "v": "b"})[0]))
+	ModelVariants.set_enabled(true)
+	ParkProps.release_shared()
+	for v in ["a", "b", "c"]:
+		var lods: Array = ParkProps._lod_paths(flume, {"kind": "sluice_shed", "v": v})
+		_check(lods == shed_a, "switch on: a variant %s sluice shed draws variant a's models" % v)
+		var tris := _mesh_tris(ParkProps._mesh(lods[0]))
+		_check(tris == _shape_of(ModelVariants.path(shed_a[0])).tris and (v == "a" or tris != authored_tris),
+			"switch on: the variant %s sluice shed's mesh is the generated one (%d triangles, authored b %d)" % [v, tris, authored_tris])
+	_check(ParkProps._lod_paths(dam, {"kind": "survey_tent", "v": "b"}) == tent_b, "switch on: the low survey tent b keeps its own model, variant a is too tall to stand in")
+	ModelVariants.set_rejected({ModelVariants.path(shed_a[0]): "test"})
+	_check(ParkProps._lod_paths(flume, {"kind": "sluice_shed", "v": "b"}) == shed_b, "a rejected sibling does not stand in for its sisters")
+	ModelVariants.set_rejected()
+	ParkProps.release_shared()
+	ModelVariants.set_enabled(false)
 
 
 # The world 1 point of interest props have no authored twin (tools/tripo/README.md, "New props"). The loader that places them
