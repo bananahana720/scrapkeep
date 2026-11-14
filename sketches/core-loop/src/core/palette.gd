@@ -310,6 +310,12 @@ static func hazard_stripe() -> StandardMaterial3D:
 	return slot_material("hazard_stripe") as StandardMaterial3D
 
 
+# The colour of water: verdigris leaning mint. Plain mint is kept for "your verb works here"
+# and the common reward (colour_meanings.gd), so standing water never borrows it.
+static func water_tone() -> Color:
+	return VERDIGRIS.lerp(ARC, 0.35)
+
+
 static func water(color: Color) -> StandardMaterial3D:
 	var mat := StandardMaterial3D.new()
 	mat.albedo_color = Color(color.r, color.g, color.b, 0.62)

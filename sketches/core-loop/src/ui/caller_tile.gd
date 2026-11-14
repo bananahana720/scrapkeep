@@ -42,7 +42,7 @@ const CALLERS := {
 	"pump_crew": {"hands": "keeper", "icon": "obj_fabricator", "color": Palette.COPPER},
 	"flume_crew": {"hands": "keeper", "icon": "obj_event", "color": Palette.ARC},
 	"signal_crew": {"hands": "keeper", "icon": "obj_beacon", "color": Palette.BRASS},
-	"brindle": {"hands": "fleet", "icon": "fac_fleet", "color": Palette.HAZARD},
+	"brindle": {"hands": "fleet", "icon": "fac_fleet", "color": Palette.BRASS},
 	"mind": {"hands": "works", "icon": "fac_mind", "color": Palette.ANCIENT},
 }
 

@@ -845,7 +845,8 @@ func _launch_lobber() -> void:
 	at = Vector3(at.x, arena.ground(at), at.z)
 	var marker = Hazard.new()
 	marker.ground = arena.ground
-	marker.color = Palette.AMBER
+	# Bone, the harmless field: the pad hurts nothing, and amber is the player's own ring.
+	marker.color = Palette.SAND
 	marker.commit_annulus("drone_pad", Hazard.Threat.Type.INSTANT, at, Vector2(0.0, 2.5), 0.0, Rules.DRONE_WARN, Rules.DRONE_WAIT)
 	arena.add_child(marker)
 	_drones.append({"at": at, "marker": marker})
