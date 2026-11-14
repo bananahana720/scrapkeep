@@ -41,7 +41,7 @@ const HEIGHT := 648.0
 const PAD := 18.0
 const PREVIEW_H := 260.0
 # A row too tall for the card takes height from the preview, never below this.
-const PREVIEW_MIN := 154.0
+const PREVIEW_MIN := 152.0
 const LIFT := 0.06
 const BACK := 0.04
 const RATE := 9.0
@@ -548,7 +548,7 @@ func _cap_height(key_name: String) -> float:
 # shared grammar (harpoon, go verb, smash); the field notes' Keys page names them in words.
 func _chip(record: Dictionary, color: Color, _cap_scale: float) -> VBoxContainer:
 	var cell := VBoxContainer.new()
-	cell.add_theme_constant_override("separation", 0)
+	cell.add_theme_constant_override("separation", 2)
 	cell.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var icon := TextureRect.new()
 	icon.texture = Icons.texture(record["icon"])
