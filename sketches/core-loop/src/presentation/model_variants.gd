@@ -16,7 +16,6 @@ const SUFFIX := "_tripo"
 const FLAG := "--models=tripo"
 const FLAG_ALL := "--models=tripo-all"
 const REJECTED := {
-	"res://assets/models/world_one/enemy_chaser_tripo.glb": "view 1 sends 0.54 of the authored brightness, loose black faces (render check, 14 November 2026)",
 }
 
 static var _on := -1

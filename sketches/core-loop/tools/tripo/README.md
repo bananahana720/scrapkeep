@@ -15,7 +15,7 @@ sibling, rejected ones too, so a rejected model can still be judged in the game.
 
 Rejected today (14 November 2026, by the board's PC looks and the render check):
 
-- `world_one/enemy_chaser_tripo.glb`: failed the render check below. In view 1 it sends 0.54 of the authored chaser's brightness, with 0.37 of its pixels near-black against 0.04, and the still shows loose black faces on the shell.
+- No file is rejected today. The first generated chaser failed the render check below (view 1 sent 0.54 of the authored chaser's brightness, with loose black faces on the shell). A new chaser that passes replaced it and is accepted (see its row below); it still needs the PC look.
 - The first generated sluice shed was rejected by the PC look of PR 1024 because it lost the big red water wheel. A second shed that keeps the wheel replaced it and is accepted (see its row below); it still needs the PC look.
 
 **The render check (generated enemy models, from 14 November 2026).** `tools/model_render_check.gd` judges a
@@ -54,6 +54,8 @@ model flag but `--models=tripo-all`.
 | Hooker | 0.81, 0.12 (0.03) | 0.65, 0.33 (0.04) | fail |
 | Netcaster | 0.86, 0.31 (0.09) | 0.82, 0.10 (0.10) | fail |
 | Chaser | 0.95, 0.20 (0.12) | 0.54, 0.37 (0.04) | fail |
+
+The chaser was regenerated as a tall slab and shot again on 14 November 2026: view 0 brightness 1.19 with 0.01 near-black (authored 0.12), view 1 brightness 1.02 with 0.04 near-black (authored 0.04), pass. Its legs are shorter and sit under the slab, so from behind and above they are mostly hidden; from the front the visor, the clawed legs and the fin all show.
 
 The hooker and the netcaster were dark for one cause, found the same day: their generated faces read as fully in
 shadow in the second UV set (see "Crew enemies", **The bake**). Both were refitted with the fixed tool and shot
@@ -96,7 +98,7 @@ outputs with the account holder. Outputs made on a free account are public domai
 | sibling | Tripo task | prompt | credits | tris (authored) | draws (authored) | fit |
 | --- | --- | --- | --- | --- | --- | --- |
 | camp/camp_pet_tripo.glb | 4bbd2038-8fe8-48d9-8fda-afda32599557 | prompts/camp_pet.txt | 30 | 2,000 (1,100) | 1 (1) | yaw -90, height, 8 sockets |
-| world_one/enemy_chaser_tripo.glb | 6013f673-bd92-4d65-9bc4-7e6abff67f8c | prompts/enemy_chaser.txt | 30 | 3,175 (3,176) | 5 (5) | yaw 90, box, claws below 22 %, fin above 80 % (rubber) |
+| world_one/enemy_chaser_tripo.glb | Studio workspace 2f2966ab-1a15-41d1-bc51-94a44505dede (replaces API task 6013f673, which failed the render check, and Studio workspace 2635ebdc, a squat wedge never shipped) | prompts/enemy_chaser_slab.txt | 240 Studio (two generations of four candidates, two textures) plus 30 API for the first | 3,176 (3,176) | 5 (5) | yaw 180, `--fit fill --radius 0.97 --max-tris 3176`, `--slots` (body fleet_paint, top and bottom rubber, visor frame rubber, visor panel requisition_tag), claws below 22 %, fin above 80 % (rubber) |
 | world_one/enemy_lobber_tripo.glb | 904d0a41-6627-44d7-a982-ce68527c27f0 | prompts/enemy_lobber_whole.txt | 120 (four candidates over two prompts) | 6,699 (6,720) | 5 (5) | tripo_fit.py, yaw 90, `--name LobberBody --max-tris 6700`, then lobber_parts.py |
 | world_one/enemy_swatter_tripo.glb (SwatterBody only) | fbbb83dd-0bbc-4636-9f2b-172f3a03d2dd (the second candidate; the row named the first candidate's id until 14 November 2026) | prompts/enemy_swatter_body.txt | 60 | 2,753 (2,760) | 3 (3) | tripo_swap.py, yaw 90, `--fit fill --max-tris 2650 --bright match` |
 | world_one/enemy_hooker_tripo.glb (the barrel and head of HookerBody only) | fbbb83dd-0bbc-4636-9f2b-172f3a03d2dd (the swatter body, used a second time; the first barrel, task 27fecf60-4f86-4d56-92cd-e06c64efbf31, 60 credits, was replaced on 14 November 2026) | prompts/enemy_swatter_body.txt | 0 (a candidate already paid for) | 6,381 (6,414) | 3 (3) | tripo_swap.py, yaw 90, `--fit fill --max-tris 6100 --bright match --region "-0.8,-0.8,-1.15,0.72,0.8,1.65"` |

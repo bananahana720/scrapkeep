@@ -1,6 +1,6 @@
 """Fit a Tripo-generated GLB to an authored Scrapkeep asset's conventions.
 
-blender -b --factory-startup -P tripo_fit.py -- --in tripo.glb --ref authored.glb --out fitted.glb [--yaw DEG] [--max-tris N] [--name BodyMeshName] [--match rgb|tone]
+blender -b --factory-startup -P tripo_fit.py -- --in tripo.glb --ref authored.glb --out fitted.glb [--yaw DEG] [--max-tris N] [--name BodyMeshName] [--match rgb|tone] [--fit height|box|fill] [--radius 0.98] [--slots "fleet_paint;x0,y0,z0,x1,y1,z1=rubber;..."]
 
 What it does, in order:
 1. Reads the authored asset: its bounds, its socket empties, and its palette. The palette is the
@@ -14,6 +14,18 @@ What it does, in order:
 4. Decimates to --max-tris if over, copies the authored sockets, names the mesh after the authored
    one (--name picks which, when the authored model has several meshes and the first is not the body),
    and exports a GLB with no images.
+With --fit fill, each axis is scaled on its own until the mesh fills the authored bounds, which squashes or
+stretches the shape: look at the render. (--fit box scales uniformly until it fits inside them; the default,
+height, matches the authored height only.)
+With --radius, the mesh is then narrowed about the model's up axis (X and Y together, the height stays) until no
+point is farther than that many metres from the axis: an enemy must stay inside its round hit core, and a
+box-shaped body that fills the authored bounds has corners that the authored shape does not.
+With --slots (an enemy-style model only), the texture no longer decides the slot. A first item with no "=" names the
+slot every face takes; each "x0,y0,z0,x1,y1,z1=slot" item then gives the faces that lie wholly in that box
+(every corner inside; metres, Blender axes, Z up, after the fit) that slot, later items winning. A face that
+crosses a box edge keeps what it had, so a slot never spills past its box. This is for a generated texture whose
+colours land on the wrong authored slot. A slot name the authored model lacks, or a box that holds no face, stops
+the script.
 Prints one JSON line with counts.
 """
 import json, math, sys
@@ -22,7 +34,7 @@ import numpy as np
 from mathutils import Vector, Matrix
 
 argv = sys.argv[sys.argv.index("--") + 1:]
-opt = {"yaw": "0", "max-tris": "0", "fit": "height", "split": "", "match": "rgb"}
+opt = {"yaw": "0", "max-tris": "0", "fit": "height", "split": "", "match": "rgb", "slots": "", "radius": "0"}
 i = 0
 while i < len(argv):
     opt[argv[i][2:]] = argv[i + 1]; i += 2
@@ -114,7 +126,14 @@ mn, mx = bounds([ob])
 ext = mx - mn; rext = rmx - rmn
 s = (rext.z / max(ext.z, 1e-6)) if opt["fit"] == "height" else min(rext[k] / max(ext[k], 1e-6) for k in range(3))
 rc = (rmn + rmx) / 2; c = (mn + mx) / 2
-ob.data.transform(Matrix.Translation(Vector((rc.x, rc.y, rmn.z))) @ Matrix.Scale(s, 4) @ Matrix.Translation(Vector((-c.x, -c.y, -mn.z))))
+sv = [rext[k] / max(ext[k], 1e-6) for k in range(3)] if opt["fit"] == "fill" else [s, s, s]
+ob.data.transform(Matrix.Translation(Vector((rc.x, rc.y, rmn.z))) @ Matrix.Diagonal((*sv, 1.0)) @ Matrix.Translation(Vector((-c.x, -c.y, -mn.z))))
+if float(opt["radius"]) > 0:
+    reach = max(math.hypot(v.co.x, v.co.y) for v in ob.data.vertices)
+    if reach > float(opt["radius"]):
+        k = float(opt["radius"]) / reach
+        ob.data.transform(Matrix.Diagonal((k, k, 1.0, 1.0)))
+        sv = [sv[0] * k, sv[1] * k, sv[2]]
 
 # Weld the vertices Tripo split along its UV seams; a vertex-coloured asset needs no UVs, so they
 # go first and the vertex count drops to what the colour borders need.
@@ -173,6 +192,32 @@ for _ in range(int(opt.get("smooth", "2"))):
                 new[f.index] = vals[cnt.argmax()]
     face_slot = new
 bm.free()
+if opt["slots"]:
+    if style != "slots":
+        raise SystemExit("tripo_fit: --slots needs an authored model with several material slots")
+    names = [m.name for m in keep_mats]
+    vco = np.array([v.co[:] for v in me.vertices])
+    corners = [list(q.vertices) for q in me.polygons]
+    for item in [x.strip() for x in opt["slots"].split(";") if x.strip()]:
+        box, _, name = item.rpartition("=")
+        if name not in names:
+            raise SystemExit("tripo_fit: --slots names slot %s, the authored model has %s" % (name, names))
+        k = next(i for i, q in enumerate(palette) if q[1] == names.index(name))
+        if not box:
+            face_slot[:] = k
+            continue
+        try:
+            b = [float(x) for x in box.split(",")]
+        except ValueError:
+            b = []
+        if len(b) != 6:
+            raise SystemExit("tripo_fit: --slots needs six numbers and a slot name, got " + item)
+        lo, hi = np.minimum(b[:3], b[3:]), np.maximum(b[:3], b[3:])
+        vin = np.all((vco >= lo) & (vco <= hi), axis=1)
+        inside = np.array([bool(vin[c].all()) for c in corners])
+        if not inside.any():
+            raise SystemExit("tripo_fit: --slots box %s holds no whole face" % box)
+        face_slot[inside] = k
 me.materials.clear()
 for m in keep_mats:
     me.materials.append(m)
@@ -247,4 +292,4 @@ for k in used:
     if cs: fwd[k] = [round(sum(c[a] for c in cs) / len(cs), 2) for a in range(3)]
 print("FIT " + json.dumps({"out": opt["out"], "tris": tris, "verts": len(me.vertices), "style": style,
                           "palette": len(palette), "slots_used": used, "had_texture": img is not None,
-                          "scale": round(s, 4), "sockets": len(sockets), "parts": parts, "slot_centroids_blender_xyz": fwd}))
+                          "scale": [round(float(x), 4) for x in sv], "sockets": len(sockets), "parts": parts, "slot_centroids_blender_xyz": fwd}))

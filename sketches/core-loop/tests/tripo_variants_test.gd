@@ -418,6 +418,7 @@ const TELLS := [
 	["res://assets/models/world_one/enemy_lobber.glb", "LobberBulb"],
 	["res://assets/models/world_one/enemy_swatter.glb", "SwatterPaddle"],
 	["res://assets/models/world_one/enemy_hooker.glb", "HookerHarpoonMesh"],
+	["res://assets/models/world_one/enemy_chaser.glb", "ChaserFin"],
 ]
 
 
