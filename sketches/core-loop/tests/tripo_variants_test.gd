@@ -16,6 +16,7 @@ const HeroAssets := preload("res://src/presentation/hero_assets.gd")
 const PAIRS := {
 	"res://assets/models/world_one/enemy_chaser.glb": {"tris": 3400, "draws": 5},
 	"res://assets/models/camp/camp_pet.glb": {"tris": 2000, "draws": 1},
+	"res://assets/models/world_one/enemy_lobber.glb": {"tris": -1, "draws": -1},
 	"res://assets/models/world_one/enemy_boom_tender.glb": {"tris": -1, "draws": -1},
 	"res://assets/models/park/props/dam/gate_wheelhouse_a.glb": {"tris": -1, "draws": -1},
 	"res://assets/models/park/props/dam/gate_wheelhouse_a_lod1.glb": {"tris": -1, "draws": -1},
@@ -133,7 +134,7 @@ func _run() -> void:
 		_check(t.draws <= cap.draws, "%s sibling draws %d <= %d (authored %d)" % [authored.get_file(), t.draws, cap.draws, a.draws])
 		a_node.free()
 		t_node.free()
-	_check(PAIRS.size() == 18, "18 authored-sibling pairs checked (%d)" % PAIRS.size())
+	_check(PAIRS.size() == 19, "19 authored-sibling pairs checked (%d)" % PAIRS.size())
 	# The game's own load sites must reach the sibling, not only ModelVariants.path: the shared enemy
 	# caster and the park prop mesh cache, each compared by triangle count with the sibling file.
 	var tender := "res://assets/models/world_one/enemy_boom_tender.glb"
