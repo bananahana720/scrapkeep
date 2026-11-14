@@ -13,16 +13,16 @@ add its own `res://` path and a one-line reason to `REJECTED` in `src/presentati
 `tests/tripo_variants_test.gd` fails when the list and the rows disagree. `--models=tripo-all` loads every
 sibling, rejected ones too, so a rejected model can still be judged in the game.
 
-Rejected today (14 November 2026, the board's PC looks):
+Rejected today (14 November 2026, by the board's PC looks and the render check):
 
 - `world_one/enemy_hooker_tripo.glb`: the barrel renders near-black beside the authored rust-orange one, close up and at 22 m. The light test in `tests/tripo_variants_test.gd` passed it twice, so that test is a floor and not proof. A retry is judged from a lit render of the barrel beside the authored one.
-- `world_one/enemy_netcaster_tripo.glb`: failed the render check below. The generated torso renders near-black beside the authored rust-orange one (0.31 of its pixels near-black against 0.09 on the lit side). The light test had passed it at 0.81.
-- `world_one/enemy_chaser_tripo.glb`: failed the render check below. From the far side it sends 0.54 of the authored chaser's brightness, with 0.37 of its pixels near-black against 0.04, and the still shows loose black faces on the shell.
+- `world_one/enemy_netcaster_tripo.glb`: failed the render check below. The generated torso renders near-black beside the authored rust-orange one (0.31 of its pixels near-black against 0.09 in view 0). The light test had passed it at 0.81.
+- `world_one/enemy_chaser_tripo.glb`: failed the render check below. In view 1 it sends 0.54 of the authored chaser's brightness, with 0.37 of its pixels near-black against 0.04, and the still shows loose black faces on the shell.
 - `park/props/flume/sluice_shed_a{,_lod1,_lod2}_tripo.glb`: it swaps cleanly and holds its shape from 40 to 160 m, but it loses the big red water wheel, the authored shed's landmark shape. A retry must keep a big wheel, or keep the authored wheel beside the generated shack.
 
-**The render check (every generated enemy model, from 14 November 2026).** `tools/model_render_check.gd` judges a
+**The render check (generated enemy models, from 14 November 2026).** `tools/model_render_check.gd` judges a
 generated enemy from rendered pixels, because the light test passed a barrel twice that the game drew near-black.
-It spawns each enemy in the real game, paused, and takes two views (the lit side and the far side). For each
+It spawns each enemy in the real game, paused, and takes two views from opposite sides (view 0 and view 1). For each
 view it finds the enemy's own pixels and measures the still the game draws: mean brightness, and the share of
 near-black pixels. Shoot once with the authored models and once with `--models=tripo-all`, then compare:
 
@@ -41,10 +41,15 @@ generated right) and exits 1 on any FAIL. An enemy fails when, in either view, t
 0.80 of the authored brightness or has more than 0.15 more near-black pixels. A shoot needs a graphics card, so
 it does not run in `npm run sketch:fast`; run it on the PC before a generated enemy model is marked accepted.
 Its first run (14 November 2026) failed the hooker, which the PC look had failed twice, and passed the lobber
-and the swatter, which the PC look had passed. It also failed the netcaster and the chaser. It covers enemies
-only; a prop is still judged by the PC look.
+and the swatter, which the PC look had passed. It also failed the netcaster and the chaser. It covers the
+chaser, lobber, swatter, hooker and netcaster. The boom tender's generated hull is accepted and not yet render
+checked: its floats are drawn as one batch the tool does not yet bound or shadow-mask. A prop is still judged by
+the PC look. The number is for the whole enemy, so an authored mast or tool dilutes a dark swapped part: the
+known-dark hooker scored 0.81 in view 0 and failed only in view 1. A result near the floor still needs the PC look.
+A shoot stops with exit 2 on an enemy name it does not know (the game would spawn a chaser for it) and on any
+model flag but `--models=tripo-all`.
 
-| Enemy | Lit side: brightness, near-black (authored) | Far side: brightness, near-black (authored) | Result |
+| Enemy | View 0: brightness, near-black (authored) | View 1: brightness, near-black (authored) | Result |
 | --- | --- | --- | --- |
 | Lobber | 1.06, 0.02 (0.00) | 1.11, 0.04 (0.02) | pass |
 | Swatter | 0.96, 0.00 (0.00) | 1.04, 0.10 (0.13) | pass |

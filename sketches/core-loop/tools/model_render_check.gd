@@ -13,8 +13,8 @@ const Intent := preload("res://src/movement/intent.gd")
 #   <gamescope ...> -- $GODOT_BIN --path sketches/core-loop --script res://tools/model_render_check.gd -- \
 #     --out=/abs/authored [--kinds=hooker,lobber]
 #   <the same> -- --out=/abs/tripo --models=tripo-all
-# Each run spawns every kind in the real game, paused, on the launch lip, and takes two views of it (the lit
-# side and the far side). For each view it takes three stills from one camera: the ground with the enemy
+# Each run spawns every kind in the real game, paused, on the launch lip, and takes two views of it from
+# opposite sides. For each view it takes three stills from one camera: the ground with the enemy
 # hidden, the enemy casting no shadow, and the enemy as the game draws it. The first two give the enemy's own
 # pixels; the third is measured over those pixels and saved. stats.json records, per kind and view, the mean
 # brightness, the share of near-black pixels and the pixel count.
@@ -49,9 +49,14 @@ func _initialize() -> void:
 			out = arg.trim_prefix("--out=")
 		elif arg.begins_with("--kinds="):
 			kinds = Array(arg.trim_prefix("--kinds=").split(","))
+			for kind in kinds:
+				if not kind in KINDS:  # the spawner draws a chaser for a name it does not know
+					printerr("model_render_check: unknown kind %s (known: %s)" % [kind, ", ".join(KINDS)])
+					quit(2)
+					return
 		elif arg.begins_with("--compare="):
 			compare = arg.trim_prefix("--compare=")
-		elif not arg.begins_with("--models="):
+		elif arg != "--models=tripo-all":  # --models=tripo would shoot accepted siblings under the label "authored"
 			printerr("model_render_check: unknown option %s" % arg)
 			quit(2)
 			return
