@@ -415,7 +415,7 @@ func _part_brightness(path: String, part: String) -> float:
 	var mi := node.find_child(part, true, false) as MeshInstance3D
 	var total := 0.0
 	var area := 0.0
-	if mi != null:
+	if mi != null and mi.mesh != null:
 		for s in mi.mesh.get_surface_count():
 			var arrays := mi.mesh.surface_get_arrays(s)
 			var verts := arrays[Mesh.ARRAY_VERTEX] as PackedVector3Array
@@ -423,13 +423,15 @@ func _part_brightness(path: String, part: String) -> float:
 			var index: PackedInt32Array = arrays[Mesh.ARRAY_INDEX] if arrays[Mesh.ARRAY_INDEX] != null else PackedInt32Array()
 			var mat := mi.mesh.surface_get_material(s) as BaseMaterial3D
 			var base := mat.albedo_color if mat != null else Color.WHITE
+			if cols.size() != verts.size():  # the crew is painted from vertex colour; a body that lost it must not read as bright
+				node.free()
+				return -1.0
 			var count := index.size() if not index.is_empty() else verts.size()
 			for t in range(0, count - 2, 3):
 				var ids := [t, t + 1, t + 2] if index.is_empty() else [index[t], index[t + 1], index[t + 2]]
 				var a := 0.5 * (verts[ids[1]] - verts[ids[0]]).cross(verts[ids[2]] - verts[ids[0]]).length()
 				var c := base.srgb_to_linear()  # glTF vertex colour is linear; the imported slot colour is sRGB
-				if cols.size() == verts.size():
-					c = c * ((cols[ids[0]] + cols[ids[1]] + cols[ids[2]]) / 3.0)
+				c = c * ((cols[ids[0]] + cols[ids[1]] + cols[ids[2]]) / 3.0)
 				c = c.linear_to_srgb()
 				total += a * (0.2126 * c.r + 0.7152 * c.g + 0.0722 * c.b)
 				area += a
@@ -438,6 +440,7 @@ func _part_brightness(path: String, part: String) -> float:
 
 
 func _check_bodies() -> void:
+	_check(BODIES.size() == 3, "3 crew bodies checked for brightness (%d)" % BODIES.size())
 	for row in BODIES:
 		var authored := _part_brightness(row[0], row[1])
 		var sibling := _part_brightness((row[0] as String).replace(".glb", "_tripo.glb"), row[1])
