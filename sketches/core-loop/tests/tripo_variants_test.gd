@@ -165,6 +165,7 @@ func _run() -> void:
 	_check_pilots()
 	await _check_head_outfits()
 	_check_poi_props()
+	_check_tells()
 	print("tripo_variants_test: %s" % ("PASS" if failures == 0 else "FAIL (%d)" % failures))
 	quit(1 if failures > 0 else 0)
 
@@ -352,6 +353,35 @@ func _check_head_outfits() -> void:
 				_check(scale > 1.05 and absf(ratio - scale) < 0.05 * scale, "%s's head outfit grows by the node's size (%.2f, node %.2f)" % [row.pilot, ratio, scale])
 			else:
 				_check((boxes["_tripo"] as AABB).is_equal_approx(boxes[""]), "%s's head outfit mounts as on the authored pilot" % row.pilot)
+
+
+# A warning must never read weaker than the one it replaces (the board, 14 November 2026): a part that carries an
+# enemy's tell is at least as large on the sibling as on the authored model. [authored file, part node].
+const TELLS := [
+	["res://assets/models/world_one/enemy_lobber.glb", "LobberBulb"],
+]
+
+
+func _part_reach(path: String, part: String) -> float:
+	var scene := load(path) as PackedScene
+	if scene == null:
+		return -1.0
+	var node := scene.instantiate()
+	var mi := node.find_child(part, true, false) as MeshInstance3D
+	var reach := -1.0
+	if mi != null:
+		for s in mi.mesh.get_surface_count():
+			for v in mi.mesh.surface_get_arrays(s)[Mesh.ARRAY_VERTEX] as PackedVector3Array:
+				reach = maxf(reach, v.length())
+	node.free()
+	return reach
+
+
+func _check_tells() -> void:
+	for row in TELLS:
+		var authored := _part_reach(row[0], row[1])
+		var sibling := _part_reach((row[0] as String).replace(".glb", "_tripo.glb"), row[1])
+		_check(authored > 0.0 and sibling >= 0.98 * authored, "%s on the sibling reaches as far as the authored one (%.3f, authored %.3f)" % [row[1], sibling, authored])
 
 
 # The world 1 point of interest props have no authored twin (tools/tripo/README.md, "New props"). The loader that places them
