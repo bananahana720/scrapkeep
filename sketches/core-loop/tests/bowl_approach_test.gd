@@ -75,7 +75,7 @@ func _pure() -> void:
 	_t.check("no piece stands over a ledge", not over and stepped["racks"].size() == Approach.RACKS, "%d racks" % stepped["racks"].size())
 	# The furnace's stand-in: its own place for a near eye; for a far eye, on the same ray and inside the far plane.
 	var home := Vector3(900, 0, 480)
-	var near_eye: Transform3D = Approach.stand_in(home, Approach.FURNACE_REACH_M, Vector3(700, 3, 480), 700.0)
+	var near_eye: Transform3D = Approach.stand_in(home, Approach.FURNACE_REACH_M, Vector3(860, 3, 480), 700.0)
 	var eye := Vector3(-242, 5, 65)
 	var far_eye: Transform3D = Approach.stand_in(home, Approach.FURNACE_REACH_M, eye, 700.0)
 	var k := far_eye.basis.get_scale().x

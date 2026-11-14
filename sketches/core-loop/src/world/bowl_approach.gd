@@ -51,12 +51,12 @@ const WEIGH_PER_HEFT := 2
 const WEIGH_SCRAP_MAX := 12
 # The furnace: three stacks this tall, and how fast the smoke climbs.
 const STACK_M := 60.0
-const SMOKE_PUFFS := 6
-const SMOKE_RISE_M := 90.0
-const SMOKE_S := 24.0
+const SMOKE_PUFFS := 10
+const SMOKE_RISE_M := 260.0
+const SMOKE_S := 40.0
 const FAR_SHARE := 0.8
 # The farthest the furnace reaches from its foot: the top of its smoke, and across its stacks.
-const FURNACE_REACH_M := 200.0
+const FURNACE_REACH_M := 420.0
 
 var ctx
 # What stands this stage: racks [{"crates": [Node3D], "down": [bool], "hit": int, "paid": bool}], bridge {} or
@@ -338,16 +338,16 @@ func _process(delta: float) -> void:
 	for i in _puffs.size():
 		var t := fmod(_smoke_clock + float(i) / _puffs.size(), 1.0)
 		var puff: MeshInstance3D = _puffs[i]
-		puff.position = Vector3(t * t * 30.0, STACK_M + t * SMOKE_RISE_M, 0.0)
-		puff.scale = Vector3.ONE * (10.0 + 26.0 * t)
+		puff.position = Vector3(t * t * 80.0, STACK_M + t * SMOKE_RISE_M, 0.0)
+		puff.scale = Vector3.ONE * (24.0 + 70.0 * t)
 
 
-func _box(size: Vector3, at: Vector3, color: Color, parent: Node3D, glow := 0.0) -> MeshInstance3D:
+func _box(size: Vector3, at: Vector3, color: Color, parent: Node3D, glow := 0.0, grain := false) -> MeshInstance3D:
 	var mesh := MeshInstance3D.new()
 	var box := BoxMesh.new()
 	box.size = size
 	mesh.mesh = box
-	mesh.material_override = Palette.solid(color, glow, glow <= 0.0)
+	mesh.material_override = Palette.solid(color, glow, grain)
 	mesh.position = at
 	parent.add_child(mesh)
 	return mesh
@@ -412,14 +412,17 @@ func _furnace() -> Node3D:
 			var tall: float = STACK_M * [1.0, 0.8, 0.65][i]
 			_box(Vector3(9.0, tall, 9.0), Vector3(0.0, tall * 0.5, (i - 1) * 22.0), Palette.CHARCOAL, works)
 			_box(Vector3(9.6, 3.0, 9.6), Vector3(0.0, tall - 4.0, (i - 1) * 22.0), Palette.AMBER, works, 1.6)
-	_box(Vector3(30.0, 14.0, 70.0), Vector3(0.0, 7.0, 0.0), Palette.AMBER, works, 2.4)
+	var glow := _box(Vector3(30.0, 14.0, 70.0), Vector3(0.0, 7.0, 0.0), Palette.AMBER, works, 2.4)
+	(glow.material_override as StandardMaterial3D).disable_fog = true
 	var cloud := SphereMesh.new()
 	cloud.radius = 0.5
 	cloud.height = 1.0
 	cloud.radial_segments = 8
 	cloud.rings = 4
 	var soot := StandardMaterial3D.new()
-	soot.albedo_color = Color(0.13, 0.11, 0.1, 0.8)
+	soot.albedo_color = Color(0.1, 0.085, 0.08, 0.85)
+	# Read against the sky from far off: the fog would wash it to the sky's colour.
+	soot.disable_fog = true
 	soot.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	soot.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	for i in SMOKE_PUFFS:
