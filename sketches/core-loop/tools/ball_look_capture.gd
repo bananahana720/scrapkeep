@@ -18,7 +18,7 @@ const Intent := preload("res://src/movement/intent.gd")
 # part turned through three spins. Needs a rendered display:
 #
 #   xvfb-run -a -s "-screen 0 1920x1080x24" $GODOT_BIN --rendering-driver opengl3 --path sketches/core-loop \
-#     --script res://tools/ball_look_capture.gd -- --out=<absolute dir> [--ball-look=<id>] [--pilot=<class id>] [--heft=<1 to 5>] [--paint=<hex>] [--load=<panel plates>] [--outfit=<cosmetic id>] [--glance=1] [--game=1]
+#     --script res://tools/ball_look_capture.gd -- --out=<absolute dir> [--ball-look=<id>] [--pilot=<class id>] [--heft=<1 to 5>] [--paint=<hex>] [--load=<panel plates>] [--outfit=<cosmetic id>] [--glance=1] [--shade=1] [--game=1]
 #
 # --ball-look is the game's own launch switch (tuning.gd), so the stage and the game share it.
 # --heft fits that heft class, --paint an equipped paint, and --load a late run's ball: scrap
@@ -53,6 +53,7 @@ var _paint := ""
 var _load := 0
 var _outfit := ""
 var _glance := false
+var _shade := false
 var _label := ""
 
 
@@ -68,6 +69,8 @@ func _init() -> void:
 			_outfit = arg.trim_prefix("--outfit=")
 		elif arg == "--glance=1":
 			_glance = true
+		elif arg == "--shade=1":
+			_shade = true
 		elif arg.begins_with("--paint="):
 			_paint = arg.trim_prefix("--paint=")
 		elif arg.begins_with("--load="):
@@ -97,7 +100,9 @@ func _run() -> void:
 	env.background_color = Palette.SAND.darkened(0.25)
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
 	env.ambient_light_color = Palette.SAND
-	env.ambient_light_energy = 0.7
+	# The sun shines toward the chase camera, so that camera sees the ball's shaded side; --shade=1
+	# takes most of the sky's fill away, as under a bridge or at dusk.
+	env.ambient_light_energy = 0.15 if _shade else 0.7
 	cam.environment = env
 	root.add_child(cam)
 	var sun := DirectionalLight3D.new()
@@ -175,7 +180,7 @@ func _run() -> void:
 		BallLooks.ride(painter.ball_look(), roll)
 	_label = "%s-%s%s%s%s" % [_look if _look != "" else "today", _pilot, "-h%d" % _heft if _heft > 1 else "",
 		"-paint" if _paint != "" else "", "-load%d" % _load if _load > 0 else ""]
-	_label += ("-" + _outfit if _outfit != "" else "") + ("-glance" if _glance else "")
+	_label += ("-" + _outfit if _outfit != "" else "") + ("-glance" if _glance else "") + ("-shade" if _shade else "")
 	var report := {"look": _look if _look != "" else "today", "pilot": _pilot, "shots": {}}
 	report.merge(_mesh_counts(ball))
 	for shot_name in SHOTS:

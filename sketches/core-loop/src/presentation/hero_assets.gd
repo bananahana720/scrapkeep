@@ -1715,6 +1715,7 @@ func fit_pilot_into(pod: Node3D, class_id: String, class_color: Color) -> Dictio
 		hide_placeholder(placeholder)
 	pod.add_child(pilot)
 	paint(pilot, {"class": class_color})
+	BallLooks.light_pilot(ball_look(), pilot)
 	var animator := pilot.find_child("AnimationPlayer", true, false) as AnimationPlayer
 	return {"pilot": pilot, "animator": animator}
 

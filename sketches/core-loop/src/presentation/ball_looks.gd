@@ -311,6 +311,29 @@ static func dress(look: String, shell: Dictionary) -> void:
 					view.set_surface_override_material(i, _canopy())
 
 
+# The pilot's shaded side takes a share of the light that falls on their far side, in their own
+# colours, so they read when the ball's shaded side faces the camera. It is set on the pilot's
+# own surfaces: a light node freed with a stage crashes the renderer. hero_assets calls this as
+# it seats a pilot.
+static func light_pilot(look: String, pilot: Node) -> void:
+	if not PLATED.has(look):
+		return
+	var lit := {}
+	for view in _views(pilot):
+		for i in view.mesh.get_surface_count():
+			var was := view.get_active_material(i) as BaseMaterial3D
+			# A surface that glows reads in shade already, and hero_assets swaps the class accents'
+			# material by identity for the ready glow.
+			if was == null or was.backlight_enabled or was.emission_enabled or was.shading_mode == BaseMaterial3D.SHADING_MODE_UNSHADED:
+				continue
+			if not lit.has(was):
+				var mat: BaseMaterial3D = was.duplicate()
+				mat.backlight_enabled = true
+				mat.backlight = Color(PILOT_BACKLIGHT, PILOT_BACKLIGHT, PILOT_BACKLIGHT)
+				lit[was] = mat
+			_wear(view, i, lit[was])
+
+
 # Every surface of the rolling part takes the window, keeping the colour it was painted with.
 # A class_accent surface keeps hero_assets' own material, which the ready glow swaps by identity.
 static func _cut(core: Node) -> void:
@@ -377,6 +400,8 @@ static func _takes_window(was: Material) -> bool:
 # The level part: kit that stands outside the ball (weapon ring, hoods, drums) takes the window
 # where it comes between the camera and the pilot; the cockpit inside the ball is never cut.
 # _takes_window says which surfaces are swapped.
+# The share of the light on a pilot's far side that shows on their near side.
+const PILOT_BACKLIGHT := 0.6
 const KIT_KEEP_WITHIN := 0.93
 const PLATING_RADIUS := 0.965
 # Pilots too small for the shared seat back (shell_base.py: seat top -0.30, back top -0.10), and

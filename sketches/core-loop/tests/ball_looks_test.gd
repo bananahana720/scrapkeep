@@ -28,7 +28,7 @@ func _initialize() -> void:
 
 func _run_all() -> void:
 	var tuning := Tuning.new()
-	t.eq("the switch is today by default", tuning.option(Tuning.BALL_LOOK_KEY), BallLooks.TODAY)
+	t.eq("the cutaway is the default look", tuning.option(Tuning.BALL_LOOK_KEY), "cutaway")
 	t.eq("every look is an option of the switch", tuning.options_of(Tuning.BALL_LOOK_KEY), BallLooks.ids())
 	t.eq("today swaps no shell", BallLooks.asset_paths(BallLooks.TODAY, PILOTS), {})
 	t.eq("an unknown look swaps no shell", BallLooks.asset_paths("bogus", PILOTS), {})
@@ -83,6 +83,17 @@ func _unchanged(label: String, tuning) -> void:
 
 
 # Every mesh of a fitted shell with the render layers it draws on, in tree order.
+# How many of a pilot's surfaces take light through from their far side.
+func _backlit(pilot: Node) -> int:
+	var count := 0
+	for view in _views(pilot):
+		for i in view.mesh.get_surface_count():
+			var mat := view.get_active_material(i) as BaseMaterial3D
+			if mat != null and mat.backlight_enabled:
+				count += 1
+	return count
+
+
 func _drawn(shell: Dictionary) -> Array:
 	var out: Array = []
 	for view in _views(shell.core) + _views(shell.pod):
@@ -173,6 +184,11 @@ func _plated(look: String) -> void:
 		t.eq("%s: only a small pilot's seat back is lowered (%s)" % [look, pilot], seat, float(BallLooks.LOW_SEAT_BACK.get(pilot, 9.0)))
 		t.eq("%s: no light node rides %s's ball" % [look, pilot], (pod as Node).find_children("*", "Light3D", true, false).size(), 0)
 		var seated: Dictionary = painter.fit_pilot_into(pod, pilot, Color.WHITE)
+		if not seated.is_empty():
+			t.check("%s: %s's shaded side takes light from their far side" % [look, pilot], _backlit(seated.pilot) > 0)
+			var plainly: Dictionary = plain.fit_pilot_into(pod, pilot, Color.WHITE)
+			t.eq("%s: today's %s is lit as before" % [look, pilot], _backlit(plainly.pilot), 0)
+			plainly.pilot.free()
 		var outfits: Array = Cosmetics.ROWS.keys().filter(func(id): return Cosmetics.ROWS[id].get("slot", "") == "outfit" and Cosmetics.ROWS[id].get("pilot", "") == pilot)
 		if not seated.is_empty() and not outfits.is_empty():
 			t.check("%s: %s's outfit %s mounts on the pilot behind the window" % [look, pilot, outfits[0]], not painter.fit_outfit(seated.pilot, outfits[0], {"class": Color.WHITE}).is_empty())
