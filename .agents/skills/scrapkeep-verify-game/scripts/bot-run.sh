@@ -9,10 +9,11 @@
 #      wall seconds a game second, so run it in the background).
 # Evidence: <evidence>/film/ (the kept frames and film.ndjson, what the game knew at each), game.log,
 #      identity.txt, saves/ (run.json, runs.ndjson).
-# Exit: the bot's own: 0 the goal was reached, 1 the run ended first, 3 a stall; 124 the wall timeout.
+# Exit: the bot's own: 0 the goal was reached, 1 the run ended first, 3 a stall; 2 a bad argument or no
+#       Godot; 124 the wall timeout; 143 the script was interrupted (Ctrl-C, cleanup.sh --stop).
 set -uo pipefail
 source "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/common.sh"
-[ $# -ge 1 ] || { sed -n 2,12p "${BASH_SOURCE[0]}"; exit 2; }
+[ $# -ge 1 ] || { sed -n 2,13p "${BASH_SOURCE[0]}"; exit 2; }
 name="$1"; shift
 [ "${1:-}" = "--" ] && shift
 [[ "$name" =~ ^[A-Za-z0-9][A-Za-z0-9._-]*$ ]] || { echo "bot-run: bad evidence name '$name' (letters, digits, . _ - only; game flags go after --)" >&2; exit 2; }
@@ -37,8 +38,13 @@ timeout --signal=TERM --kill-after=20 "${VERIFY_GAME_TIMEOUT:-7000}" xvfb-run -a
   > "$out/game.log" 2>&1 &
 pid=$!
 write_pid "$pid" "$out/drive.pid"
+# Ctrl-C or a TERM to this script stops the game too (timeout passes the signal on to the game and its
+# display), then the script goes on to keep the evidence; a second wait collects the game's exit.
+trap 'kill -TERM "$pid" 2>/dev/null' INT TERM
 wait "$pid"
 code=$?
+if [ "$code" -gt 128 ] && kill -0 "$pid" 2>/dev/null; then wait "$pid"; code=$?; fi
+trap - INT TERM
 echo "finished $(date -u +%FT%TZ) exit $code" >> "$out/identity.txt"
 grep '^self-play: ' "$out/game.log" | tail -12
 userdata="$home/data/godot/app_userdata/core-loop"

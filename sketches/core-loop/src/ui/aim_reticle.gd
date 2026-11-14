@@ -2,6 +2,7 @@ extends Control
 
 const AimStyle := preload("res://src/movement/aim_style.gd")
 const Augments := preload("res://src/movement/augments.gd")
+const Tuning := preload("res://src/movement/tuning.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const Keycap := preload("res://src/ui/keycap.gd")
 const Glyphs := preload("res://src/ui/glyphs.gd")
@@ -30,6 +31,16 @@ const METER_Q_H := 20.0
 # The full meter breathes at 1 Hz; the hook lock pulses at 2 Hz, so the two never read alike.
 const BREATH_HZ := 1.0
 const BREATH_DEPTH := 0.12
+# The pilot rides in view inside the ball (ball_looks.gd: the cutaway's window faces the
+# camera), and at the resting camera the aim point sits on the pilot's head. While the reticle
+# is over the pilot its dark tracks and fills drop to BACK_OVER of their strength and its lines
+# to LINE_OVER, so the rider shows through and the readings stay; the aim point itself stays
+# whole, and the reticle never leaves the camera's centre ray. PILOT_SHARE is the part of the
+# ball's radius the pilot shows through; the change runs over BAND px so it never pops.
+const BACK_OVER := 0.2
+const LINE_OVER := 0.6
+const PILOT_SHARE := 0.65
+const BAND := 20.0
 
 # The reticle carries no words: its shape and colour are the aim state (AimStyle), and
 # a grapple target in reach adds the right-mouse key glyph beside it (key_glyphs.gd).
@@ -55,6 +66,7 @@ var hide_q := false
 var _shake_left := 0.0
 var _shake_clock := 0.0
 var _breath_clock := 0.0
+var _cover := 0.0
 
 
 func setup(player_ref, camera_ref: Camera3D) -> void:
@@ -110,6 +122,26 @@ static func meter_rim(full: bool) -> Color:
 # The full meter's width scale at `t` seconds into the breath: one breath a second.
 static func breathe(t: float) -> float:
 	return 1.0 + BREATH_DEPTH * sin(TAU * BREATH_HZ * t)
+
+
+# How far the reticle is over the pilot, 0 clear to 1 on them: `apart` px from the aim point to
+# the centre of a pilot `pilot_px` in radius.
+static func over_pilot(apart: float, pilot_px: float) -> float:
+	if pilot_px <= 0.0:
+		return 0.0
+	return smoothstep(0.0, 1.0, (pilot_px + RING + BAND - apart) / BAND)
+
+
+# The same, this frame, from where the ball sits on screen.
+func cover(centre: Vector2) -> float:
+	if camera == null or not player.has_method("shown_position"):
+		return 0.0
+	var at: Vector3 = player.shown_position()
+	if camera.is_position_behind(at):
+		return 0.0
+	var ball := camera.unproject_position(at)
+	var edge := camera.unproject_position(at + camera.global_basis.x * Tuning.RADIUS * PILOT_SHARE)
+	return over_pilot(centre.distance_to(ball), ball.distance_to(edge))
 
 
 func q_shown() -> bool:
@@ -175,13 +207,14 @@ func _draw() -> void:
 	# The reticle marks the camera's centre ray, which is the viewport centre whatever
 	# size layout gave this control.
 	var centre := get_viewport_rect().size * 0.5 + shake_offset()
+	_cover = cover(centre)
 	if player.kit.on(Augments.GRAPPLE):
 		var ready := EventKinds.line_color("locked")
-		draw_arc(centre, HARPOON_RING, 0.0, TAU, 48, Color(ready, 0.25), HARPOON_WIDTH)
-		draw_arc(centre, HARPOON_RING, -PI * 0.5, -PI * 0.5 + TAU * harpoon_fill, 48, ready, HARPOON_WIDTH)
+		draw_arc(centre, HARPOON_RING, 0.0, TAU, 48, _back(Color(ready, 0.25)), HARPOON_WIDTH)
+		draw_arc(centre, HARPOON_RING, -PI * 0.5, -PI * 0.5 + TAU * harpoon_fill, 48, _thin(ready), HARPOON_WIDTH)
 	if gauge > 0.0:
-		draw_arc(centre, GAUGE_RING, 0.0, TAU, 48, Color(UiTokens.INK, BACKING_ALPHA), GAUGE_WIDTH + UiTokens.EDGE)
-		draw_arc(centre, GAUGE_RING, -PI * 0.5, -PI * 0.5 + TAU * clampf(gauge, 0.0, 1.0), 48, gauge_color,
+		draw_arc(centre, GAUGE_RING, 0.0, TAU, 48, _back(Color(UiTokens.INK, BACKING_ALPHA)), GAUGE_WIDTH + UiTokens.EDGE)
+		draw_arc(centre, GAUGE_RING, -PI * 0.5, -PI * 0.5 + TAU * clampf(gauge, 0.0, 1.0), 48, _thin(gauge_color),
 			GAUGE_WIDTH + (1.5 if gauge >= 1.0 else 0.0))
 	_draw_meter(centre)
 	match drawn_shape(style):
@@ -191,11 +224,11 @@ func _draw() -> void:
 			draw_line(centre - Vector2(8.0, 0.0), centre + Vector2(8.0, 0.0), color, 2.0)
 			draw_line(centre - Vector2(0.0, 8.0), centre + Vector2(0.0, 8.0), color, 2.0)
 		"ring":
-			draw_circle(centre, RING, Color(color, 0.3))
-			draw_arc(centre, RING, 0.0, TAU, 40, color, 2.5)
+			draw_circle(centre, RING, _back(Color(color, 0.3)))
+			draw_arc(centre, RING, 0.0, TAU, 40, _thin(color), 2.5)
 			draw_circle(centre, 2.5, color)
 		"hollow_ring":
-			draw_arc(centre, RING, 0.0, TAU, 40, color, 2.5)
+			draw_arc(centre, RING, 0.0, TAU, 40, _thin(color), 2.5)
 		"brackets":
 			# An enemy the harpoon would bite: the snap line to the body. The brackets on the body
 			# are the line view's, in the world, so there is one set and it pulses.
@@ -217,6 +250,14 @@ func _draw() -> void:
 			draw_polyline(points, color, 2.5)
 
 
+func _thin(c: Color) -> Color:
+	return Color(c, c.a * lerpf(1.0, LINE_OVER, _cover))
+
+
+func _back(c: Color) -> Color:
+	return Color(c, c.a * lerpf(1.0, BACK_OVER, _cover))
+
+
 # The ultimate meter: nothing at 0, so the aim stays clear until the first point; then a dark
 # track over the whole sweep, the fill in the class colour, and at full a mint rim, a 1 Hz
 # breath and the Q keycap in the gap.
@@ -226,12 +267,12 @@ func _draw_meter(centre: Vector2) -> void:
 	var r := meter_radius()
 	var whole := meter_span(1.0)
 	var span := meter_span(meter)
-	draw_arc(centre, r, whole.x, whole.y, 48, meter_rim(false), METER_WIDTH + 2.0)
+	draw_arc(centre, r, whole.x, whole.y, 48, _back(meter_rim(false)), METER_WIDTH + 2.0)
 	var width := METER_WIDTH * (breathe(_breath_clock) if meter_full else 1.0)
 	if span.y > span.x:
-		draw_arc(centre, r, span.x, span.y, 48, meter_color, width)
+		draw_arc(centre, r, span.x, span.y, 48, _thin(meter_color), width)
 	if meter_full:
-		var rim := meter_rim(true)
+		var rim := _thin(meter_rim(true))
 		draw_arc(centre, r + width * 0.5 + 1.0, whole.x, whole.y, 48, rim, 1.5)
 		draw_arc(centre, r - width * 0.5 - 1.0, whole.x, whole.y, 48, rim, 1.5)
 	if q_shown():

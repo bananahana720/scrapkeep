@@ -57,7 +57,7 @@ Proof standards:
 
 - `$S/doctor.sh`: the read-only health check.
 - `$S/drive.sh <steps file> [<evidence name>] [-- <game flags>]`: one drive. Exit 0 every step passed, 1 a step failed (it takes a `FAILED` picture first), 2 a bad flag or evidence name, 3 the game quit by itself before the file ended (end with `quits <step>` when it should), 124 the wall timeout (`VERIFY_GAME_TIMEOUT`, default 1500 s; run a long drive in the background so the tool's own limit does not cut it). `VERIFY_GAME_HOME=<dir>` keeps one save folder across drives.
-- `$S/bot-run.sh <evidence name> [-- <game flags>]`: films the repo's bot playing a whole run with scratch saves, for flows too long to script (the sitting launch to Brindle: `-- --profile=sitting`). Exit 0 the goal was reached, 1 the run ended first, 3 a stall. A long run: start it in the background.
+- `$S/bot-run.sh <evidence name> [-- <game flags>]`: films the repo's bot playing a whole run with scratch saves, for flows too long to script (the sitting launch to Brindle: `-- --profile=sitting`). Exit 0 the goal was reached, 1 the run ended first, 3 a stall, 2 a bad argument or no Godot, 124 the wall timeout (`VERIFY_GAME_TIMEOUT`, default 7000 s), 143 interrupted. A long run: start it in the background.
 - `$S/cleanup.sh [--stop <evidence name>] [<shared save folder>]`: teardown that keeps evidence.
 - `scripts/drive.gd`: the driver the game loads; its header is the step reference.
 
