@@ -67,7 +67,8 @@ if img is not None:
 me.color_attributes.active_color = col; me.color_attributes.render_color_index = 0
 while me.uv_layers: me.uv_layers.remove(me.uv_layers[0])
 me.materials.clear()
-pm = bpy.data.materials.new("pilot")  # the slot name hero_assets.paint() dresses (SLOTS["pilot"]); pm.use_nodes = True
+# "pilot" is the slot name hero_assets.paint() dresses (SLOTS["pilot"])
+pm = bpy.data.materials.new("pilot"); pm.use_nodes = True
 bs = pm.node_tree.nodes["Principled BSDF"]; vc = pm.node_tree.nodes.new("ShaderNodeVertexColor"); vc.layer_name = "Col"
 pm.node_tree.links.new(vc.outputs["Color"], bs.inputs["Base Color"]); bs.inputs["Roughness"].default_value = 0.8
 me.materials.append(pm)
