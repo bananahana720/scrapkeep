@@ -83,15 +83,15 @@ static func _row(points: PackedVector2Array, from: float, spacing: float, gaps: 
 	var run := spacing * (POSTS - 1)
 	if from < MARGIN_M or gaps.any(func(g: Array) -> bool: return from - MARGIN_M <= g[1] and from + run + MARGIN_M >= g[0]):
 		return {}
-	var first := _along(points, from)
-	var last := _along(points, from + run)
+	var first := along(points, from)
+	var last := along(points, from + run)
 	if absf(first["heading"].angle_to(last["heading"])) > TURN:
 		return {}
-	var before: Dictionary = _along(points, from - MARGIN_M)
+	var before: Dictionary = along(points, from - MARGIN_M)
 	var height: float = ground.call(before["at"].x, before["at"].y)
 	var d := from - MARGIN_M + 1.0
 	while d <= from + run + MARGIN_M:
-		var here: Dictionary = _along(points, d)
+		var here: Dictionary = along(points, d)
 		var y: float = ground.call(here["at"].x, here["at"].y)
 		if absf(y - height) > SLOPE or clear_of.any(func(c: Dictionary) -> bool: return near(c, here["at"])):
 			return {}
@@ -99,7 +99,7 @@ static func _row(points: PackedVector2Array, from: float, spacing: float, gaps: 
 		d += 1.0
 	var posts := []
 	for i in POSTS:
-		var here: Dictionary = _along(points, from + spacing * i)
+		var here: Dictionary = along(points, from + spacing * i)
 		var side: Vector2 = here["heading"].orthogonal() * (SIDE_M if i % 2 == 0 else -SIDE_M)
 		var at: Vector2 = here["at"] + side
 		var y: float = ground.call(at.x, at.y)
@@ -110,8 +110,8 @@ static func _row(points: PackedVector2Array, from: float, spacing: float, gaps: 
 	return {"posts": posts, "heading": first["heading"]}
 
 
-# The plan position and unit heading `d` metres along a line.
-static func _along(points: PackedVector2Array, d: float) -> Dictionary:
+# The plan position and unit heading `d` metres along a line (the approach to the boss's bowl reads lines with it too).
+static func along(points: PackedVector2Array, d: float) -> Dictionary:
 	var left := maxf(0.0, d)
 	for i in range(1, points.size()):
 		var leg := points[i] - points[i - 1]

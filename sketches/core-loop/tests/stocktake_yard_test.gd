@@ -298,7 +298,7 @@ func _rows(map) -> void:
 	rows.sort()
 	_t.check("both yard rows are drawn across run seeds, the same row for the same seed", steady and rows == ["shelf_yard", "slot_yard"], str(rows))
 	# A yard is open ground: no grapple anchor of the map's own fields stands in any yard row's ring, and the ring
-	# is clear of every fight, contraption, rise and edge (the PC stills of 14 Nov showed 13 saguaro posts in one).
+	# is clear of every fight, contraption, rise and edge (the PC stills of 14 Nov showed one ring full of saguaro posts, 14 by the map's plan).
 	var ring := float(load("res://src/world/activities.gd").RULES["stocktake_yard"]["ring"])
 	var recipes = load("res://src/world/park/park_recipes.gd")
 	var posts: Dictionary = recipes.field_posts(map.park["park_rows"], recipes.clear_zones(map.park))

@@ -8,16 +8,17 @@ const Posts := preload("res://src/world/survey_posts.gd")
 # The approach to the boss's bowl (BACKLOG W1-104, src/world/bowl_approach.gd).
 # (a) plan(): on a long flat line the bridge stands at the line's end and three racks behind it, each three crates
 #     across the line; all inside the line's last LAST_M; nothing near a site, on a ramp's stretch or on a steep run;
-#     pay() rises with heft and is capped;
+#     no piece over a ledge; the furnace's stand-in keeps it inside a far eye's far plane; pay() rises with heft
+#     and is capped;
 # (b) in the real game the flag off builds nothing on any stage; on, only the map that names an approach gets one,
-#     standing on its ground beside its floor line; survey posts keep off it; a ball at speed bursts a crate and
+#     standing on its ground beside its floor line, off every grapple anchor; survey posts keep off it; a ball at speed bursts a crate and
 #     scrap lands ahead, all three pay the cluster, a ball at rest or falling bursts nothing; crossing the plate at
 #     speed weighs the ball once and flips the board; the furnace stands where the map says and its smoke is in view from most
 #     of the line from the tally fields on (the measure is printed).
 
 const RUN_SEED := 7
 const EYE_M := 3.0
-const EXPECTED_CHECKS := 31
+const EXPECTED_CHECKS := 36
 
 var _game
 var _t := preload("res://tests/support/t.gd").new("bowl_approach_test")
@@ -64,6 +65,23 @@ func _pure() -> void:
 	var tilted := func(x: float, _z: float) -> float: return x * 0.8
 	var off: Dictionary = Approach.plan(line, [], [], tilted)
 	_t.check("nothing stands on ground that falls away to the side", off["bridge"].is_empty() and off["racks"].is_empty(), "0.8 m a metre across")
+	# A 2.2 m ledge across the line: no piece stands over it.
+	var ledge := func(_x: float, z: float) -> float: return 2.2 if z >= 950.0 else 0.0
+	var stepped: Dictionary = Approach.plan(line, [], [], ledge)
+	var over := false
+	for rack in stepped["racks"]:
+		over = over or (rack["crates"][0].z < 950.0 and rack["crates"][2].z >= 950.0)
+	over = over or (not stepped["bridge"].is_empty() and absf(stepped["bridge"]["at"].z - 950.0) <= Approach.PLATE_DEEP_M)
+	_t.check("no piece stands over a ledge", not over and stepped["racks"].size() == Approach.RACKS, "%d racks" % stepped["racks"].size())
+	# The furnace's stand-in: its own place for a near eye; for a far eye, on the same ray and inside the far plane.
+	var home := Vector3(900, 0, 480)
+	var near_eye: Transform3D = Approach.stand_in(home, Approach.FURNACE_REACH_M, Vector3(700, 3, 480), 700.0)
+	var eye := Vector3(-242, 5, 65)
+	var far_eye: Transform3D = Approach.stand_in(home, Approach.FURNACE_REACH_M, eye, 700.0)
+	var k := far_eye.basis.get_scale().x
+	_t.check("the furnace stands in its own place for a near eye", near_eye.origin.is_equal_approx(home) and is_equal_approx(near_eye.basis.get_scale().x, 1.0), str(near_eye.origin))
+	_t.check("for a far eye it is drawn on the same ray, inside the far plane", k < 1.0 and far_eye.origin.distance_to(eye) + Approach.FURNACE_REACH_M * k <= 700.0
+		and (far_eye.origin - eye).normalized().is_equal_approx((home - eye).normalized()), "scale %.2f at %.0f m" % [k, far_eye.origin.distance_to(eye)])
 	_t.check("the bridge pays more for a heavier ball, to a cap", Approach.pay(1.0) == Approach.WEIGH_SCRAP and Approach.pay(3.0) > Approach.pay(1.0)
 		and Approach.pay(500.0) == Approach.WEIGH_SCRAP_MAX, "%d, %d, %d" % [Approach.pay(1.0), Approach.pay(3.0), Approach.pay(500.0)])
 
@@ -159,21 +177,49 @@ func _run() -> void:
 	_t.check("nothing stands near a site or inside a fight's ground", kept, "%d places kept clear" % clear_of.size())
 	_t.check("every crate sits on the ground", seated, str(approach.racks[0]["crates"][0].global_position))
 	_t.check("the bridge is on the line's last stretch", float(planned["bridge"]["along"]) >= total - Approach.LAST_M, "%.0f of %.0f m" % [planned["bridge"]["along"], total])
-	# Survey posts keep off the approach on every run seed.
+	# Survey posts keep off the approach: a run seed whose rows would stand on it is found, then played with both
+	# flags on, and the rows the game stands are off it.
 	var taken: Array = Approach.taken(planned)
-	var apart := true
 	var ground := func(x: float, z: float) -> float: return terrain.height(x, z)
-	for seed_value in 40:
-		for row in Posts.rows(trail["points"], float(trail["spacing_m"]), trail["gaps"], clear_of + taken, ground, seed_value):
-			for post in row["posts"]:
-				apart = apart and taken.all(func(c: Dictionary) -> bool: return Vector2(post.x, post.z).distance_to(c["at"]) >= float(c["r"]) - Posts.SIDE_M - 0.5)
-	_t.check("survey posts keep off the approach", apart, "40 run seeds")
+	var on_it := func(rows: Array) -> bool:
+		return rows.any(func(row) -> bool:
+			return row["posts"].any(func(post) -> bool:
+				var at: Vector3 = post if post is Vector3 else post.global_position
+				return taken.any(func(c: Dictionary) -> bool: return Vector2(at.x, at.z).distance_to(c["at"]) < float(c["r"]) - Posts.SIDE_M - 0.5)))
+	var clash := -1
+	for run_seed in 200:
+		var rows_seed := hash([_game.ctx.rng.seed, run_seed, named, "survey_posts"])
+		if on_it.call(Posts.rows(trail["points"], float(trail["spacing_m"]), trail["gaps"], clear_of, ground, rows_seed)):
+			clash = run_seed
+			break
+	if _t.check("some run seed's survey posts would stand on the approach", clash >= 0, "run seed %d" % clash):
+		_game.run.run_seed = clash
+		_game.ctx.tuning.set_option("posts", "on")
+		_game.flow.enter_stage(named, Vector3.ZERO, false)
+		await _frames(4)
+		var stood: Array = _game.world.survey_posts.standing
+		_t.check("with both on, the posts the game stands keep off it", not stood.is_empty() and not on_it.call(stood), "%d rows" % stood.size())
+		_game.ctx.tuning.set_option("posts", "off")
+		_game.run.run_seed = RUN_SEED
+		_game.flow.enter_stage(named, Vector3.ZERO, false)
+		await _frames(4)
+	# No grapple anchor post of the map's own fields stands in a piece.
+	var recipes = load("res://src/world/park/park_recipes.gd")
+	var fields: Dictionary = recipes.field_posts(map.park["park_rows"], recipes.clear_zones(map.park))
+	var anchored := 0
+	for i in fields:
+		for post in fields[i]:
+			anchored += int(Vector2(plate.x, plate.z).distance_to(post) < Approach.GANTRY_WIDE_M * 0.5 + 1.0)
+			for rack in planned["racks"]:
+				for crate in rack["crates"]:
+					anchored += int(Vector2(crate.x, crate.z).distance_to(post) < Approach.ANCHOR_CLEAR_M)
+	_t.eq("no grapple anchor stands in a piece", anchored, 0)
 	# The furnace.
 	var smoke: Vector2 = map.approach["smoke"]
-	var works: Node3D = approach.furnace
-	_t.check("the furnace stands where the map says", works != null and Vector2(works.global_position.x, works.global_position.z).distance_to(smoke) < 0.1, str(smoke))
-	var stacks := _seen(trail["points"], Vector2(-242, 65), works.global_position + Vector3.UP * Approach.STACK_M)
-	var share := _seen(trail["points"], Vector2(-242, 65), works.global_position + Vector3.UP * (Approach.STACK_M + Approach.SMOKE_RISE_M))
+	var works: Vector3 = approach.furnace_home()
+	_t.check("the furnace stands where the map says", approach.furnace != null and Vector2(works.x, works.z).distance_to(smoke) < 0.1, str(smoke))
+	var stacks := _seen(trail["points"], Vector2(-242, 65), works + Vector3.UP * Approach.STACK_M)
+	var share := _seen(trail["points"], Vector2(-242, 65), works + Vector3.UP * (Approach.STACK_M + Approach.SMOKE_RISE_M))
 	print("bowl_approach_test measure: from the tally fields on, the smoke's top is in view from %.0f%% of the floor line and the stacks' top from %.0f%%" % [share * 100.0, stacks * 100.0])
 	_t.check("the smoke is in view from most of the line from the tally fields on", share >= 0.85, "%.2f" % share)
 	# A ball at rest, then a falling ball, burst nothing.

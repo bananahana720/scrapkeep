@@ -3,12 +3,14 @@ extends Node3D
 const ModelKit := preload("res://src/world/model_kit.gd")
 const Palette := preload("res://src/core/palette.gd")
 const SurveyPosts := preload("res://src/world/survey_posts.gd")
+const ParkRecipes := preload("res://src/world/park/park_recipes.gd")
+const ParkTerrain := preload("res://src/world/park/park_terrain.gd")
 
 # The approach to the boss's bowl (BACKLOG W1-104, pieces 1 to 3 of its concept page), behind `--approach=on` (off
 # by default). A map that names an approach row gets, on the last LAST_M of its floor line and outside every fight's ground: tag racks (a rack beside
 # the line and three tagged crates across it; a crate the ball touches at speed bursts and throws scrap ahead, all
 # three throw more), a weighbridge across the line (rolling over its plate at speed flips the board to the ball's
-# heft and throws scrap, once a stage), and the furnace's stacks, glow and smoke standing where the row's `smoke`
+# heft and throws scrap, once an attempt at the stage), and the furnace's stacks, glow and smoke standing where the row's `smoke`
 # says, which is where the stage's launch aims. Nothing has a collider, nothing stops the ball, no marker points at
 # any of it and missing it costs nothing.
 #
@@ -20,13 +22,13 @@ const RACK := "res://assets/models/world_one/poi_tag_rack.glb"
 const CRATE := "res://assets/models/world_one/poi_tagged_crate.glb"
 const STACKS := "res://assets/models/world_one/poi_furnace_stacks.glb"
 
-# The stretch of the line's end the approach may stand on. The Warden's own ground takes the last of a line (about
-# 250 m of the flume's), so the approach is what leads up to it.
+# The stretch of the line's end the approach may stand on. A floor line ends at the Warden's engage ring, and the
+# ground the Warden's fight can shut (the yard lock's ring, a fight site) reaches back about 250 m of the flume's
+# line from there, so the approach is what leads up to that ground.
 const LAST_M := 560.0
-const SLOPE := 0.45
-# The line may turn this much across a piece, in radians.
-const TURN := 0.35
 const STEP_M := 5.0
+# A piece keeps this far from every grapple anchor post of the map's own fields.
+const ANCHOR_CLEAR_M := 4.0
 # Tag racks: how many, how far apart their centres are along the line, and a cluster's lay-out.
 const RACKS := 3
 const RACK_EVERY_M := 50.0
@@ -35,9 +37,6 @@ const CRATE_STEP_M := 8.0
 const CRATE_SIDE_M := 3.0
 const RACK_SIDE_M := 7.0
 const CRATE_M := 1.2
-const TOUCH_M := 1.7
-const TOUCH_UP_M := 3.0
-const MIN_SPEED := 6.0
 const CRATE_SCRAP := 1
 const CLUSTER_SCRAP := 4
 const THROW_M := 24.0
@@ -55,10 +54,14 @@ const STACK_M := 60.0
 const SMOKE_PUFFS := 6
 const SMOKE_RISE_M := 90.0
 const SMOKE_S := 24.0
+const FAR_SHARE := 0.8
+# The farthest the furnace reaches from its foot: the top of its smoke, and across its stacks.
+const FURNACE_REACH_M := 200.0
 
 var ctx
 # What stands this stage: racks [{"crates": [Node3D], "down": [bool], "hit": int, "paid": bool}], bridge {} or
-# {"node", "at": Vector3, "heading": Vector2, "side": float, "weighed": bool, "board": Label3D}, furnace or null.
+# {"node", "at": Vector3, "heading": Vector2, "side": float, "weighed": bool, "board": Label3D}, furnace or null
+# (furnace_home() is where it stands; the node itself is drawn nearer for a far eye, stand_in()).
 var racks: Array = []
 var bridge := {}
 var furnace: Node3D
@@ -69,6 +72,7 @@ var weighed := 0.0
 var _rng := RandomNumberGenerator.new()
 var _puffs: Array = []
 var _smoke_clock := 0.0
+var _furnace_home := Vector3.ZERO
 
 
 func setup(context) -> void:
@@ -94,7 +98,7 @@ static func plan(points: PackedVector2Array, gaps: Array, clear_of: Array, groun
 	var d := total - STEP_M
 	while d >= floor_m and out["bridge"].is_empty():
 		if _suits(points, d - PLATE_DEEP_M, d + PLATE_DEEP_M, PLATE_HALF_M, gaps, clear_of, ground):
-			var here := SurveyPosts._along(points, d)
+			var here := SurveyPosts.along(points, d)
 			out["bridge"] = {"at": _on_ground(here["at"], ground), "heading": here["heading"], "along": d}
 		d -= STEP_M
 	var run := CRATE_STEP_M * (CRATES - 1)
@@ -102,13 +106,13 @@ static func plan(points: PackedVector2Array, gaps: Array, clear_of: Array, groun
 	while out["racks"].size() < RACKS and next - run >= floor_m:
 		var from := next - run
 		if _suits(points, from, next, RACK_SIDE_M, gaps, clear_of, ground):
-			var first := SurveyPosts._along(points, from)
+			var first := SurveyPosts.along(points, from)
 			var crates := []
 			for i in CRATES:
-				var here := SurveyPosts._along(points, from + CRATE_STEP_M * i)
+				var here := SurveyPosts.along(points, from + CRATE_STEP_M * i)
 				var side: Vector2 = here["heading"].orthogonal() * CRATE_SIDE_M * float(i - (CRATES >> 1))
 				crates.append(_on_ground(here["at"] + side, ground))
-			var mid := SurveyPosts._along(points, from + run * 0.5)
+			var mid := SurveyPosts.along(points, from + run * 0.5)
 			var beside: Vector2 = mid["at"] + mid["heading"].orthogonal() * RACK_SIDE_M * (1.0 if out["racks"].size() % 2 == 0 else -1.0)
 			out["racks"].append({"crates": crates, "rack": _on_ground(beside, ground), "heading": first["heading"], "along": from})
 			next = from - RACK_EVERY_M + run
@@ -134,24 +138,24 @@ static func _on_ground(at: Vector2, ground: Callable) -> Vector3:
 	return Vector3(at.x, ground.call(at.x, at.y), at.y)
 
 
-# True where the line from `from` to `to` metres runs straight on rolled ground no steeper than SLOPE, `half` metres
+# True where the line from `from` to `to` metres runs straight on rolled ground no steeper than SurveyPosts.SLOPE, `half` metres
 # to each side included, off every ramp and clear of everything in `clear_of`.
 static func _suits(points: PackedVector2Array, from: float, to: float, half: float, gaps: Array, clear_of: Array, ground: Callable) -> bool:
 	if from < 0.0 or gaps.any(func(g: Array) -> bool: return from <= g[1] and to >= g[0]):
 		return false
-	var first := SurveyPosts._along(points, from)
-	if absf(first["heading"].angle_to(SurveyPosts._along(points, to)["heading"])) > TURN:
+	var first := SurveyPosts.along(points, from)
+	if absf(first["heading"].angle_to(SurveyPosts.along(points, to)["heading"])) > SurveyPosts.TURN:
 		return false
 	var height: float = ground.call(first["at"].x, first["at"].y)
 	var d := from
 	while d <= to:
-		var here: Dictionary = SurveyPosts._along(points, d)
+		var here: Dictionary = SurveyPosts.along(points, d)
 		var y: float = ground.call(here["at"].x, here["at"].y)
-		if absf(y - height) > SLOPE * maxf(1.0, minf(STEP_M, d - from)):
+		if absf(y - height) > SurveyPosts.SLOPE:
 			return false
 		for side in [-half, half]:
 			var off: Vector2 = here["at"] + here["heading"].orthogonal() * side
-			if absf(float(ground.call(off.x, off.y)) - y) > half * SLOPE:
+			if absf(float(ground.call(off.x, off.y)) - y) > half * SurveyPosts.SLOPE:
 				return false
 			if clear_of.any(func(c: Dictionary) -> bool: return SurveyPosts.near(c, off)):
 				return false
@@ -163,17 +167,38 @@ static func _suits(points: PackedVector2Array, from: float, to: float, half: flo
 
 
 # The plan for a stage's map, {} where the map names no approach or has no floor line. The same for every caller,
-# so survey posts can keep off it.
+# so survey posts can keep off it. The pieces keep off what survey posts keep off, and off every grapple anchor post
+# the map's own fields plant.
 static func plan_for(map, ground: Callable) -> Dictionary:
 	if not "approach" in map or map.approach.is_empty() or map.scrap_trail.is_empty():
 		return {}
 	var trail: Dictionary = map.scrap_trail
-	return plan(trail["points"], trail.get("gaps", []), SurveyPosts.keep_clear(map), ground)
+	var clear_of: Array = SurveyPosts.keep_clear(map)
+	var fields: Dictionary = ParkRecipes.field_posts(map.park["park_rows"], ParkRecipes.clear_zones(map.park))
+	for i in fields:
+		for post in fields[i]:
+			clear_of.append({"at": post, "r": ANCHOR_CLEAR_M})
+	return plan(trail["points"], trail.get("gaps", []), clear_of, ground)
+
+
+# Where the furnace is drawn for an eye whose far plane is `far`: its own place while all of it (`radius` metres
+# about `home`) stands inside FAR_SHARE of the far plane, else scaled about the eye so every part stays on the ray it
+# had and inside the far plane (landmark_impostor.gd's method; the chase camera's far plane is 700 m and the furnace
+# stands farther than that from most of the line).
+static func stand_in(home: Vector3, radius: float, eye: Vector3, far: float) -> Transform3D:
+	var reach := far * FAR_SHARE
+	var span := home.distance_to(eye) + radius
+	var k := 1.0 if span <= reach else reach / span
+	return Transform3D(Basis.IDENTITY.scaled(Vector3.ONE * k), eye + (home - eye) * k)
 
 
 static func on(context) -> bool:
 	var tuning = context.get("tuning")
 	return tuning != null and tuning.option("approach") == "on" and not context.calm
+
+
+func furnace_home() -> Vector3:
+	return _furnace_home
 
 
 func _build(stage: int) -> void:
@@ -211,11 +236,14 @@ func _build(stage: int) -> void:
 		node.global_position = planned["bridge"]["at"]
 		node.rotation.y = atan2(heading.x, heading.y)
 		bridge = {"node": node, "at": planned["bridge"]["at"], "heading": heading, "side": 0.0, "weighed": false,
-			"board": node.find_child("Board", true, false)}
+			"board": node.get_meta("board")}
 	var smoke: Vector2 = map.approach["smoke"]
 	furnace = _furnace()
 	add_child(furnace)
-	furnace.global_position = Vector3(smoke.x, ctx.terrain.height(clampf(smoke.x, -790.0, 790.0), clampf(smoke.y, -790.0, 790.0)), smoke.y)
+	# Its foot is level with the map's ground nearest it: the furnace may stand off the map.
+	var edge := ParkTerrain.HALF - 10.0
+	_furnace_home = Vector3(smoke.x, ctx.terrain.height(clampf(smoke.x, -edge, edge), clampf(smoke.y, -edge, edge)), smoke.y)
+	furnace.global_position = _furnace_home
 	set_physics_process(true)
 	set_process(true)
 
@@ -237,7 +265,7 @@ func _physics_process(_delta: float) -> void:
 	var ball: Vector3 = ctx.player.ball_position()
 	# Speed along the ground: a ball falling straight down beside a crate bursts nothing.
 	var velocity: Vector3 = ctx.player.planar_velocity()
-	var fast := velocity.length() >= MIN_SPEED
+	var fast := velocity.length() >= SurveyPosts.MIN_SPEED
 	for row in racks:
 		if row["paid"] or not fast:
 			continue
@@ -245,7 +273,7 @@ func _physics_process(_delta: float) -> void:
 			if row["down"][i]:
 				continue
 			var to: Vector3 = ball - row["crates"][i].global_position
-			if Vector2(to.x, to.z).length() <= TOUCH_M and absf(to.y) <= TOUCH_UP_M:
+			if Vector2(to.x, to.z).length() <= SurveyPosts.TOUCH_M and absf(to.y) <= SurveyPosts.TOUCH_UP_M:
 				_burst(row, i, ball, velocity)
 		if row["hit"] == CRATES:
 			row["paid"] = true
@@ -262,7 +290,7 @@ func _weigh(ball: Vector3, velocity: Vector3, fast: bool) -> void:
 	var along := Vector2(to.x, to.z).dot(heading)
 	var across := absf(Vector2(to.x, to.z).dot(heading.orthogonal()))
 	var before: float = bridge["side"]
-	bridge["side"] = signf(along) if across <= PLATE_HALF_M and absf(to.y) <= TOUCH_UP_M and absf(along) <= PLATE_DEEP_M * 4.0 else 0.0
+	bridge["side"] = signf(along) if across <= PLATE_HALF_M and absf(to.y) <= SurveyPosts.TOUCH_UP_M and absf(along) <= PLATE_DEEP_M * 4.0 else 0.0
 	if not fast or before == 0.0 or bridge["side"] == 0.0 or before == bridge["side"]:
 		return
 	bridge["weighed"] = true
@@ -302,6 +330,10 @@ func _burst(row: Dictionary, index: int, ball: Vector3, velocity: Vector3) -> vo
 
 # The smoke climbs and thins, each puff in turn; drawn frames only.
 func _process(delta: float) -> void:
+	var viewport := get_viewport()
+	var camera := viewport.get_camera_3d() if viewport != null else null
+	if camera != null and furnace != null:
+		furnace.global_transform = stand_in(_furnace_home, FURNACE_REACH_M, camera.global_position, camera.far)
 	_smoke_clock = fmod(_smoke_clock + delta / SMOKE_S, 1.0)
 	for i in _puffs.size():
 		var t := fmod(_smoke_clock + float(i) / _puffs.size(), 1.0)
@@ -367,6 +399,7 @@ func _gantry() -> Node3D:
 	board.billboard = BaseMaterial3D.BILLBOARD_FIXED_Y
 	board.position = Vector3(0.0, GANTRY_TALL_M + 1.4, 0.0)
 	gantry.add_child(board)
+	gantry.set_meta("board", board)
 	return gantry
 
 
