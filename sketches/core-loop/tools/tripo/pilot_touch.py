@@ -1,9 +1,9 @@
-# blender -b --factory-startup -P pilot_touch.py -- --in fit.glb --out out.glb [--head 1.22] [--fwd 0.56] [--tail 1]
+# blender -b --factory-startup -P pilot_touch.py -- --in fit.glb --out out.glb [--head 1.0] [--fwd 0.57] [--tail 1]
 # After pilot_fit.py: enlarge the head by its skin weights, keep the snout inside the cockpit's forward limit, and tuck a tail stub in.
 import bpy, sys, json
 from mathutils import Vector
 a = sys.argv[sys.argv.index("--") + 1:]
-opt = {"--head": "1.22", "--fwd": "0.56", "--tail": "1"}
+opt = {"--head": "1.0", "--fwd": "0.57", "--tail": "1"}
 opt.update(dict(zip(a[::2], a[1::2])))
 bpy.ops.wm.read_factory_settings(use_empty=True)
 bpy.ops.import_scene.gltf(filepath=opt["--in"])

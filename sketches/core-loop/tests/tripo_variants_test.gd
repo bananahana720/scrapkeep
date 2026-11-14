@@ -204,7 +204,8 @@ func _check_parts() -> void:
 
 # A pilot's Tripo sibling sits on the authored skeleton: the same bones (outfits mount on them and
 # the glance turns three of them), the same clips, one skinned mesh at most 10,000 triangles, and a
-# rest shape inside the cockpit limits in design-v3/ROSTER-LOOK.md ("The cutaway as built").
+# rest shape inside the cockpit limits the ball look work measured on 13 November 2026 (head top
+# +0.57, feet -0.59, half width 0.43, nothing forward of 0.58; tools/tripo/README.md, Pilots).
 const PILOT_SIBLINGS := ["res://assets/models/pilot_rivet_anim.glb"]
 
 
@@ -245,6 +246,8 @@ func _check_pilots() -> void:
 			var box := mesh.get_aabb()
 			_check(_mesh_tris(mesh) <= 10000, "%s sibling is at most 10,000 triangles (%d)" % [stem, _mesh_tris(mesh)])
 			_check(mesh.get_surface_count() == 1, "%s sibling is one draw" % stem)
+			var slot := mesh.surface_get_material(0)
+			_check(slot != null and slot.resource_name == "pilot", "%s sibling wears the pilot material slot (%s)" % [stem, slot.resource_name if slot != null else "none"])
 			_check(box.end.y <= 0.575 and box.position.y >= -0.595 and maxf(absf(box.position.x), absf(box.end.x)) <= 0.435 and box.position.z >= -0.585,
 				"%s sibling rests inside the cockpit limits (%s to %s)" % [stem, box.position, box.end])
 		old.free()

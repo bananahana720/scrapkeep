@@ -67,7 +67,7 @@ if img is not None:
 me.color_attributes.active_color = col; me.color_attributes.render_color_index = 0
 while me.uv_layers: me.uv_layers.remove(me.uv_layers[0])
 me.materials.clear()
-pm = bpy.data.materials.new("PilotPaint"); pm.use_nodes = True
+pm = bpy.data.materials.new("pilot")  # the slot name hero_assets.paint() dresses (SLOTS["pilot"]); pm.use_nodes = True
 bs = pm.node_tree.nodes["Principled BSDF"]; vc = pm.node_tree.nodes.new("ShaderNodeVertexColor"); vc.layer_name = "Col"
 pm.node_tree.links.new(vc.outputs["Color"], bs.inputs["Base Color"]); bs.inputs["Roughness"].default_value = 0.8
 me.materials.append(pm)
@@ -127,4 +127,7 @@ vs = wverts(n)
 print("FIT", json.dumps({"tris": sum(len(p.vertices) - 2 for p in me.polygons), "unweighted": unweighted, "groups": len(n.vertex_groups),
     "x": [round(min(v.x for v in vs), 2), round(max(v.x for v in vs), 2)], "y": [round(min(v.y for v in vs), 2), round(max(v.y for v in vs), 2)],
     "z": [round(min(v.z for v in vs), 2), round(max(v.z for v in vs), 2)], "old_z": [round(oz0, 2), round(oz1, 2)], "actions": len(bpy.data.actions)}))
+for m in bpy.data.materials:  # the authored material still holds the name; ours must be exactly "pilot"
+    if m is not pm: m.name = "old_" + m.name
+pm.name = "pilot"
 bpy.ops.export_scene.gltf(filepath=opt["--out"], export_format="GLB", export_animations=True, export_animation_mode="ACTIONS", export_yup=True, export_apply=False)
