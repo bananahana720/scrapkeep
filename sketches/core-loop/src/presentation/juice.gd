@@ -206,6 +206,12 @@ func setup(ctx_ref) -> void:
 			events.connect(signal_name, _reset.unbind(argc) if argc > 0 else _reset)
 	events.run_started.connect(func(_class_id: String): _heft_class = 1)
 	_wire_loop_rumble(events)
+	# A shut yard lifts the camera over its rim (chase_camera.gd "locked" row) until it opens.
+	events.world_fact.connect(func(kind: String, at: Vector3):
+		if camera != null and kind == "arena_locked":
+			camera.set_lock(at)
+		elif camera != null and kind == "arena_unlocked":
+			camera.set_lock(null))
 	if ctx.spawner != null and ctx.spawner.has_method("resolve"):
 		resolve_of = Callable(ctx.spawner, "resolve")
 	if ctx.spawner != null and ctx.spawner.has_method("plating_of"):
@@ -306,6 +312,8 @@ func _reset() -> void:
 	# A retry restores mass, so the shell follows the restored class.
 	if ctx.run.has_method("heft_class"):
 		_heft_class = int(ctx.run.heft_class())
+	if camera != null:
+		camera.set_lock(null)
 	_squash = 0.0
 	_squash_velocity = 0.0
 	_plant_t = -1.0
