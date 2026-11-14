@@ -21,6 +21,26 @@ write_pid() { echo "$1 $(started_at "$1")" > "$2"; }
 # ours <pid file>: prints the pid and returns 0 only when that same process is still running.
 ours() {
   local pid start
-  read -r pid start < "$1" 2>/dev/null || return 1
+  [ -f "$1" ] && read -r pid start < "$1" || return 1
   [ -n "$pid" ] && [ -n "$start" ] && [ "$(started_at "$pid")" = "$start" ] && echo "$pid"
+}
+# run_game <pid file> <log> <wall seconds> <command ...>: runs the command under a wall timeout, in a process
+# group of its own, and sets $code to how it ended. Ctrl-C or a TERM to the calling script stops the game
+# too ($code 143) and the script goes on to keep its evidence. Whatever is left of the group afterwards (a
+# display, a game slow to stop) gets 20 seconds and is then killed by its group, never by name.
+run_game() {
+  local pidfile="$1" log="$2" limit="$3" last; shift 3
+  game_pid=""; interrupted=0
+  trap 'interrupted=1; [ -n "$game_pid" ] && kill -TERM "$game_pid" 2>/dev/null' INT TERM
+  timeout --signal=TERM --kill-after=20 "$limit" "$@" > "$log" 2>&1 &
+  game_pid=$!
+  write_pid "$game_pid" "$pidfile"
+  # A trapped signal ends a wait early, so wait again until the timeout process is really gone.
+  while :; do wait "$game_pid"; code=$?; kill -0 "$game_pid" 2>/dev/null || break; done
+  wait "$game_pid" 2>/dev/null; last=$?; [ "$last" = 127 ] || code=$last
+  for _ in $(seq 1 20); do pgrep -g "$game_pid" > /dev/null || break; sleep 1; done
+  pgrep -g "$game_pid" > /dev/null && kill -KILL -- "-$game_pid" 2>/dev/null
+  trap - INT TERM
+  [ "$interrupted" = 1 ] && code=143
+  return 0
 }

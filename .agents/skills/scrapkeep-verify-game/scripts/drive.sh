@@ -10,7 +10,8 @@
 #      its save folder is copied to <evidence>/saves and removed).
 # Exit: 0 every step passed (or the file's last step was `quits` and the game quit), 1 a step failed,
 #       2 a bad flag or name, 3 the game quit by itself before the step file ended, 124 the wall timeout
-#       (137 when it had to be killed, 143 when cleanup.sh stopped it).
+#       (137 when it had to be killed), 143 the script was interrupted (Ctrl-C, cleanup.sh --stop). The display
+#       wrapper has codes of its own: with no row passed, 1 can be a display that did not start; see game.log.
 set -uo pipefail
 source "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/common.sh"
 [ $# -ge 1 ] || { sed -n 2,13p "${BASH_SOURCE[0]}"; exit 2; }
@@ -55,16 +56,7 @@ if [ -n "${DISPLAY:-}" ] && [ "${VERIFY_GAME_DISPLAY:-}" = 1 ]; then
 else
   run=(xvfb-run -a -s "-screen 0 ${size}x24" "${game[@]}")
 fi
-timeout --signal=TERM --kill-after=20 "${VERIFY_GAME_TIMEOUT:-1500}" "${run[@]}" > "$out/game.log" 2>&1 &
-pid=$!
-write_pid "$pid" "$out/drive.pid"
-# Ctrl-C or a TERM to this script stops the game too (timeout passes the signal on to the game and its
-# display), then the script goes on to keep the evidence; a second wait collects the game's exit.
-trap 'kill -TERM "$pid" 2>/dev/null' INT TERM
-wait "$pid"
-code=$?
-if [ "$code" -gt 128 ] && kill -0 "$pid" 2>/dev/null; then wait "$pid"; code=$?; fi
-trap - INT TERM
+run_game "$out/drive.pid" "$out/game.log" "${VERIFY_GAME_TIMEOUT:-1500}" "${run[@]}"
 # The game can quit itself with 0 (Quit in the pause menu, Esc on the title). That is a pass only when
 # the step file said so with a last `quits` step; anywhere else it hid the steps that never ran.
 if [ "$code" = 0 ] && ! grep -q "^drive: done\|^drive: awaiting the game's own quit" "$out/game.log"; then
