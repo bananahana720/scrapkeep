@@ -206,6 +206,8 @@ func _check_parts() -> void:
 # the glance turns three of them), the same clips, one skinned mesh at most 10,000 triangles, and a
 # rest shape inside the cockpit limits the ball look work measured on 13 November 2026 (head top
 # +0.57, feet -0.59, half width 0.43, nothing forward of 0.58; tools/tripo/README.md, Pilots).
+# Tarn's sibling has no separate Cap mesh (the cap is part of the body), so his Steady Cap outfit's Replace_Cap
+# finds nothing to hide with the switch on (tools/tripo/README.md, Pilots).
 const PILOT_SIBLINGS := [
 	"res://assets/models/pilot_rivet_anim.glb",
 	"res://assets/models/pilot_sable_anim.glb",
@@ -217,6 +219,7 @@ const PILOT_SIBLINGS := [
 
 
 func _check_pilots() -> void:
+	_check(PILOT_SIBLINGS.size() == 6, "six pilot siblings (%d)" % PILOT_SIBLINGS.size())
 	for authored in PILOT_SIBLINGS:
 		var stem := String(authored).get_file()
 		ModelVariants.set_enabled(false)

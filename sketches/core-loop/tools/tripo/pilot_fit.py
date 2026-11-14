@@ -1,4 +1,4 @@
-# blender -b --factory-startup -P pilot_fit.py -- --old pilot_x_anim.glb --new tripo.glb --out out.glb [--tris 8200] [--arm-yaw 90] [--flip 1] [--head-scale 1.35 --neck 0.5]
+# blender -b --factory-startup -P pilot_fit.py -- --old pilot_x_anim.glb --new tripo.glb --out out.glb [--tris 8200] [--arm-yaw 90] [--flip 1] [--head-scale 1.35 --neck 0.5] [--drop all]
 import bpy, sys, math, json
 from mathutils import Matrix, Vector
 a = sys.argv[sys.argv.index("--") + 1:]
@@ -81,7 +81,9 @@ if opt["--arm-yaw"] == "auto":
     # the hands: between hips and neck (so ears, crests and cheeks never count), beside the body, level with or in front of
     # the shoulder (so a tail never counts), farthest from the shoulder
     zlo = (arm.matrix_world @ arm.data.bones["pelvis"].head_local).z; zhi = (arm.matrix_world @ arm.data.bones["neck"].head_local).z
-    side = [v for v in wverts(n) if zlo < v.z < zhi and abs(v.x) > 0.6 * abs(sh.x) and v.y > sh.y - 0.05] or wverts(n)
+    side = [v for v in wverts(n) if zlo < v.z < zhi and abs(v.x) > 0.6 * abs(sh.x) and v.y > sh.y - 0.05]
+    if not side:
+        print("YAW no hand vertices found beside the body; measuring from the whole mesh, check the arms"); side = wverts(n)
     side.sort(key=lambda v: math.hypot(abs(v.x) - abs(sh.x), v.y - sh.y), reverse=True)
     tips = side[:max(10, len(side) // 30)]
     print("YAW tips", len(tips))
