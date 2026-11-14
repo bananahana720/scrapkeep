@@ -28,4 +28,6 @@ Verification is scoped to the artifact; a passing unrelated suite cannot qualify
 
 In Claude Code use supported shell and browser tools. In Codex use the host's available tool APIs and their control restrictions. The same checks and evidence meanings apply in both apps. A missing browser yields a browser-verification gap; successful HTTP serving is not browser behavior.
 
+When the acceptance criteria name something a player sees or presses, add a driven proof from the matching skill: `scrapkeep-verify-game` (the game from source), `scrapkeep-verify-build` (the packed Linux build) or `scrapkeep-verify-web` (the Sitting Kit and the preserved browser proofs). A driven proof adds to the rows above and replaces none of them.
+
 Distinguish static checks, staged fixtures, ordinary input replay, automated native play, human feedback and hardware/performance measurements. A screenshot or a model's success statement does not establish gameplay outcomes. Automated lab play is not a feel verdict.
