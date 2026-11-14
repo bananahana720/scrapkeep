@@ -18,7 +18,7 @@ const Intent := preload("res://src/movement/intent.gd")
 # part turned through three spins. Needs a rendered display:
 #
 #   xvfb-run -a -s "-screen 0 1920x1080x24" $GODOT_BIN --rendering-driver opengl3 --path sketches/core-loop \
-#     --script res://tools/ball_look_capture.gd -- --out=<absolute dir> [--ball-look=<id>] [--pilot=<class id>] [--heft=<1 to 5>] [--paint=<hex>] [--load=<panel plates>] [--outfit=<cosmetic id>] [--glance=1] [--game=1]
+#     --script res://tools/ball_look_capture.gd -- --out=<absolute dir> [--ball-look=<id>] [--pilot=<class id>] [--heft=<1 to 5>] [--paint=<hex>] [--load=<panel plates>] [--outfit=<cosmetic id>] [--glance=1] [--game=1 [--ui=1] [--pitch=<camera pitch, radians>]]
 #
 # --ball-look is the game's own launch switch (tuning.gd), so the stage and the game share it.
 # --heft fits that heft class, --paint an equipped paint, and --load a late run's ball: scrap
@@ -48,6 +48,8 @@ var _out := ""
 var _look := ""
 var _pilot := "pylon_engineer"
 var _in_game := false
+var _keep_ui := false
+var _pitch := NAN
 var _heft := 1
 var _paint := ""
 var _load := 0
@@ -76,6 +78,10 @@ func _init() -> void:
 			_heft = int(arg.trim_prefix("--heft="))
 		elif arg == "--game=1":
 			_in_game = true
+		elif arg == "--ui=1":
+			_keep_ui = true
+		elif arg.begins_with("--pitch="):
+			_pitch = float(arg.trim_prefix("--pitch="))
 		elif arg.begins_with("--pilot="):
 			_pilot = arg.trim_prefix("--pilot=")
 	if _out == "":
@@ -328,7 +334,10 @@ func _play() -> void:
 			print("BALL_LOOK_GAME frame ", i, " in_play ", game.flow.in_play())
 		if game.ctx.terrain.is_ready(1) and game.flow.in_play() and i > 240:
 			break
-	game.presentation.hide_ui()
+	if not _keep_ui:
+		game.presentation.hide_ui()
+	if not is_nan(_pitch):
+		game.camera.pitch = _pitch
 	var label := _look if _look != "" else "today"
 	var worn := String(game.tuning.option("ball_look"))
 	var shell: Node = game.player.find_child("HeroCore", true, false)
