@@ -1,4 +1,4 @@
-# blender -b --factory-startup -P pilot_touch.py -- --in fit.glb --out out.glb [--head 1.0] [--fwd 0.57] [--tail 1] [--half 0.43] [--cap-hue "0.40 0.56"] [--mount-fit "1.32 0 0.062 0.069"]
+# blender -b --factory-startup -P pilot_touch.py -- --in fit.glb --out out.glb [--head 1.0] [--fwd 0.57] [--tail 1] [--half 0.43] [--lift 0.0] [--cap-hue "0.40 0.56"] [--mount-fit "1.32 0 0.062 0.069"]
 # After pilot_fit.py: enlarge the head by its skin weights, keep the snout inside the cockpit's forward limit, and tuck a tail stub in.
 # --cap-hue splits a modelled cap of that colour into its own Cap mesh, so an outfit's Replace_Cap node can hide it.
 # --mount-fit leaves an MountFit_head marker: the size and the offset (right, forward, up) that seat a head outfit on this head.
@@ -28,6 +28,8 @@ for i, c in enumerate(co):
 ex = max(c.y for c in co) - float(opt["--fwd"])
 if ex > 0:
     for i in range(len(co)): co[i].y -= ex  # the whole pilot slides back, so the skin stays whole
+lift = float(opt.get("--lift", "0"))  # raises the whole pilot in the seat, so more of it shows over the seat back
+for i in range(len(co)): co[i].z += lift
 # a pilot that fits the width but sits off centre slides sideways until it is centred
 xs = [c.x for c in co]; half = float(opt["--half"])
 if max(abs(min(xs)), abs(max(xs))) > half and max(xs) - min(xs) <= 2 * half:
