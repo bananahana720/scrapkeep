@@ -1,10 +1,11 @@
 """Fit a textured Tripo mesh as a new prop that has no authored twin.
 
-blender -b --factory-startup -P tripo_prop.py -- --in tripo.glb --out prop.glb --name PropName --tall 4.0 [--wide 0] [--yaw 0] [--max-tris 2000] [--colours 8] [--smooth 2] [--lods "0.5,0.15"]
+blender -b --factory-startup -P tripo_prop.py -- --in tripo.glb --out prop.glb --name PropName [--tall 4.0] [--wide 0] [--yaw 0] [--max-tris 2000] [--colours 8] [--smooth 2] [--lods "0.5,0.15"]
 
 What it does, in order:
-1. Joins the mesh, turns it by --yaw about the up axis, scales it uniformly to --tall metres high (or, when --wide is
-   given, to --wide metres across its longer ground side), stands its base on the origin and centres it.
+1. Joins the mesh, turns it by --yaw about the up axis, scales it uniformly to --tall metres high or to --wide metres
+   across its longer ground side, stands its base on the origin and centres it. With both, the ground plane is
+   scaled to --wide and the height to --tall separately, which squashes or stretches the shape: look at the render.
 2. Samples the texture once per face and groups the faces into --colours flat colours of its own (area-weighted
    k-means in sRGB), then smooths one-face speckles away. The texture, the image and the UVs are dropped: the prop
    ships linear COLOR_0 on one material named paint, as the park props do (the loader sets vertex colour as albedo).
@@ -20,7 +21,10 @@ from mathutils import Vector, Matrix
 argv = sys.argv[sys.argv.index("--") + 1:]
 opt = {"yaw": "0", "max-tris": "2000", "colours": "8", "smooth": "2", "wide": "0", "tall": "0", "lods": "", "name": "Prop"}
 i = 0
+known = set(opt) | {"in", "out"}
 while i < len(argv):
+    if argv[i][2:] not in known:
+        raise SystemExit("tripo_prop: unknown option " + argv[i])
     opt[argv[i][2:]] = argv[i + 1]; i += 2
 if float(opt["tall"]) <= 0 and float(opt["wide"]) <= 0:
     raise SystemExit("tripo_prop: pass --tall or --wide in metres")
@@ -51,17 +55,19 @@ bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
 me = ob.data
 me.transform(Matrix.Rotation(math.radians(float(opt["yaw"])), 4, "Z"))
 co = np.array([v.co[:] for v in me.vertices]); mn = co.min(axis=0); mx = co.max(axis=0); ext = mx - mn
-s = float(opt["wide"]) / max(ext[0], ext[1]) if float(opt["wide"]) > 0 else float(opt["tall"]) / ext[2]
+wide, tall = float(opt["wide"]), float(opt["tall"])
+sh = wide / max(ext[0], ext[1]) if wide > 0 else tall / ext[2]
+sv = tall / ext[2] if tall > 0 else sh
 c = (mn + mx) / 2
-me.transform(Matrix.Scale(s, 4) @ Matrix.Translation(Vector((-c[0], -c[1], -mn[2]))))
+me.transform(Matrix.Diagonal((sh, sh, sv, 1.0)) @ Matrix.Translation(Vector((-c[0], -c[1], -mn[2]))))
 
 # texture -> one colour a face
 img = None
 for sl in ob.material_slots:
     if sl.material and sl.material.use_nodes:
-        for n in sl.material.node_tree.nodes:
-            if n.type == "TEX_IMAGE" and n.image:
-                img = n.image; break
+        for ln in sl.material.node_tree.links:  # the image that feeds Base Color, not a normal or roughness map
+            if ln.to_socket.name == "Base Color" and ln.from_node.type == "TEX_IMAGE" and ln.from_node.image:
+                img = ln.from_node.image; break
     if img: break
 if img is None or not me.uv_layers:
     raise SystemExit("tripo_prop: the mesh has no texture to take colours from")
@@ -107,7 +113,10 @@ bm.free()
 pal = linear(cent)
 me.materials.clear()
 paint = bpy.data.materials.new("paint"); paint.use_backface_culling = False; paint.diffuse_color = (1, 1, 1, 1); me.materials.append(paint)
+for old in list(me.color_attributes):  # a colour layer the generator shipped would stay active and export instead
+    me.color_attributes.remove(old)
 ca = me.color_attributes.new("Col", "FLOAT_COLOR", "CORNER")
+me.color_attributes.active_color = ca
 for p in me.polygons:
     p.material_index = 0
     for li in p.loop_indices:
@@ -145,4 +154,4 @@ for n, share in enumerate([float(x) for x in opt["lods"].split(",") if x], 1):
     lods.append(decimate(ob, max(1, int(tris * share))))
     export(opt["out"][:-4] + "_lod%d.glb" % n)
 print("PROP " + json.dumps({"out": opt["out"], "tris": tris, "lods": lods, "colours": int(len(set(slot.tolist()))),
-                           "size_m": [round(float(x), 2) for x in (co.max(axis=0) - co.min(axis=0))], "scale": round(float(s), 4)}))
+                           "size_m": [round(float(x), 2) for x in (co.max(axis=0) - co.min(axis=0))], "scale": [round(float(sh), 4), round(float(sv), 4)]}))

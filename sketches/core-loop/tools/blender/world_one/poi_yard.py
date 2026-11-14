@@ -1,5 +1,5 @@
 # Two thin point of interest props for world 1, built by hand because a mesh generator returns thin shapes as lumps:
-#   poi_fence_panel.glb   one repeatable stocktake yard fence panel, 6 m wide and 2.5 m tall: two scrap posts on
+#   poi_fence_panel.glb   one repeatable stocktake yard fence panel, 6.2 m wide and 2.5 m tall, repeated every 6.2 m so the concrete feet touch: two scrap posts on
 #                         concrete feet, a top and a bottom rail, and a diamond lattice standing in for chain-link.
 #                         The origin is on the ground at the panel's centre; it runs along X, so panels butt post to post.
 #   poi_survey_stake.glb  one survey stake, 3.2 m tall: a slim post, a striped cap and a stiff pennant, bright enough to
@@ -64,7 +64,7 @@ def write(name, build):
 
 def fence(bm):
     W, H = 6.0, 2.5
-    for sx in (-1, 1):  # a post at each end, half on this panel, so two panels share one post's width
+    for sx in (-1, 1):  # a post at each end, wholly on this panel; panels repeat every 6.2 m, feet touching
         box(bm, CONC, (0.5, 0.5, 0.25), (sx * (W / 2 - 0.15), 0, 0.125))
         box(bm, GREEN, (0.22, 0.22, H), (sx * (W / 2 - 0.15), 0, H / 2))
         box(bm, ORANGE, (0.26, 0.26, 0.14), (sx * (W / 2 - 0.15), 0, H - 0.2))

@@ -77,6 +77,17 @@ func _shape_of(path: String) -> Dictionary:
 	return out
 
 
+# A node's transform up to (not including) the scene root, so an offset on a parent node counts.
+func _to_root(n: Node3D, root: Node) -> Transform3D:
+	var xf := Transform3D.IDENTITY
+	var at: Node = n
+	while at != null and at != root:
+		if at is Node3D:
+			xf = (at as Node3D).transform * xf
+		at = at.get_parent()
+	return xf
+
+
 func _mesh_tris(mesh: Mesh) -> int:
 	var tris := 0
 	if mesh == null:
@@ -346,8 +357,8 @@ func _check_head_outfits() -> void:
 # sets vertex colour as albedo, so each must be one mesh that carries COLOR_0, stands on its origin, and is the size its
 # placement was planned for: [stem, tall in metres, longer ground side in metres, has LOD files].
 const POI_PROPS := [
-	["poi_tally_stand", 4.0, 2.0, true],
-	["poi_yard_gate", 6.7, 8.0, true],
+	["poi_tally_stand", 4.0, 3.0, true],
+	["poi_yard_gate", 4.0, 8.0, true],
 	["poi_camp_tally_post", 2.5, 1.2, true],
 	["poi_fence_panel", 2.5, 6.2, false],
 	["poi_survey_stake", 3.16, 0.88, false],
@@ -370,10 +381,12 @@ func _check_poi_props() -> void:
 				var arrays := mi.mesh.surface_get_arrays(0)
 				_check(arrays[Mesh.ARRAY_COLOR] != null and (arrays[Mesh.ARRAY_COLOR] as PackedColorArray).size() > 0, "%s%s carries vertex colours" % [row[0], suffix])
 				_check(arrays[Mesh.ARRAY_TEX_UV] == null, "%s%s ships no texture coordinates" % [row[0], suffix])
-				var box: AABB = mi.transform * mi.mesh.get_aabb()
+				var box: AABB = _to_root(mi, node) * mi.mesh.get_aabb()
 				tris.append(_mesh_tris(mi.mesh))
 				if suffix == "":
-					_check(absf(box.position.y) < 0.02, "%s stands on its origin (base %.3f)" % [row[0], box.position.y])
+					var mid := box.get_center()
+					# the stake's pennant hangs to one side of its foot, so only the fitted props are held to the centre
+					_check(absf(box.position.y) < 0.02 and (not row[3] or (absf(mid.x) < 0.05 and absf(mid.z) < 0.05)), "%s stands on its origin (base %.3f, centre %.3f, %.3f)" % [row[0], box.position.y, mid.x, mid.z])
 					_check(absf(box.size.y - row[1]) < 0.1 and absf(maxf(box.size.x, box.size.z) - row[2]) < 0.1,
 						"%s is the planned size (%.2f tall, %.2f across)" % [row[0], box.size.y, maxf(box.size.x, box.size.z)])
 			node.free()
