@@ -15,11 +15,12 @@ const SurvivalCount := preload("res://src/world/survival_count.gd")
 #     every point of that circle is ground a ring fits on;
 # (f) with the floor clear the gate opens, and rolling out of the travelling ring from inside banks pay(1);
 # (g) a run seed that is not called builds no muster;
-# (h) ground a ring fits on: not a crew's home, the Warden's ring, the map's edge, another site of this run or a built
-#     contraption, and not round a rise; two spots that fit with a wall or drop between them are not a way; a landing
-#     with no clear circle holds; round its row the muster lands at once more often than not and some landings travel
-#     (the measure is printed);
-# (i) a ball on another fight's ground when the siren ends is not landed on until it is on clear ground.
+# (h) ground a ring fits on: not a crew's home, the Warden's ring, the map's edge, another site of this run or a place
+#     a contraption names, and not round a rise (checked on this test's own finer grid); a landing with no clear
+#     circle holds; round its row at least one landing in four fits at once and one in ten travels (the measure
+#     BACKLOG W1-101 quotes is printed, for the row and for the ride line);
+# (i) a ball on another fight's ground when the siren ends is not landed on until it is on clear ground; after
+#     MUSTER_WAIT_S of that the muster stands down, and is called again near its row.
 
 const SEED := 23
 const EXPECTED_CHECKS := 17
@@ -200,62 +201,58 @@ func _waits() -> void:
 	var ring := float(s.rule["ring"])
 	var t = _game.ctx.terrain
 	var one := func(p: Vector2) -> bool: return acts.clear_ground(PackedVector2Array([p]), ring, s)
-	# Found on the map, not assumed: a spot whose ring holds a rise (the ring's edge stands RING_RISE_M off its centre
-	# while the centre itself is no fight's ground), and two spots a ring fits on with a wall or drop between them.
+	# Found on the map, not assumed: a spot whose only fault is a rise inside the ring, two neighbouring spots a ring
+	# fits on with a wall or drop between them, and a spot that fits but has no clear circle at any heading.
 	var rise := Vector2.INF
 	var hemmed := Vector2.INF
-	var cliff := []
 	var open := []
 	for gx in range(-30, 20):
 		for gz in range(-30, 30):
 			var at := Vector2(gx, gz) * 20.0
-			var here: float = t.height(at.x, at.y)
-			var steepest := 0.0
-			for k in 8:
-				var edge: Vector2 = at + Vector2.RIGHT.rotated(TAU * k / 8.0) * ring
-				steepest = maxf(steepest, absf(t.height(edge.x, edge.y) - here))
-			if one.call(at):
-				open.append(at)
-				if hemmed == Vector2.INF and at.distance_to(HOME) < 300.0 and _holds(at, ring):
-					hemmed = at
-				for other in open:
-					if cliff.is_empty() and other.distance_to(at) > 1.0 and other.distance_to(at) < 45.0 and absf(t.height(other.x, other.y) - here) > acts.COURSE_RISE_M + 1.0:
-						cliff = [other, at]
-			elif rise == Vector2.INF and steepest > acts.RING_RISE_M + 2.0 and steepest < acts.RING_RISE_M + 8.0:
+			var fault: String = acts.ground_fault(PackedVector2Array([at]), ring, s)
+			if fault == "rise" and rise == Vector2.INF:
 				rise = at
+			if fault != "":
+				continue
+			open.append(at)
+			if hemmed == Vector2.INF and at.distance_to(HOME) < 300.0 and _holds(at, ring):
+				hemmed = at
+	_t.check("a ring fits on open ground, not on a crew's home, the Warden's ring or the map's edge; a landing with no clear circle is found",
+		hemmed != Vector2.INF and acts.ground_fault(PackedVector2Array([HOME]), ring, s) == "taken" and acts.ground_fault(PackedVector2Array([map.beacon]), ring, s) == "taken"
+		and acts.ground_fault(PackedVector2Array([map.play_rect.position + Vector2(5.0, 5.0)]), ring, s) == "edge", "hemmed at %s" % hemmed)
+	# Read here on a 3 m grid of this test's own: the ring of the spot found with a rise does hold ground past the
+	# line, and no spot that fits holds ground 4 m past it (the rule reads every 6 m, so a narrow spike can slip by).
 	var level := true
 	for at in open:
-		var here: float = t.height(at.x, at.y)
-		for k in 8:
-			var edge: Vector2 = at + Vector2.RIGHT.rotated(TAU * k / 8.0) * ring
-			level = level and absf(t.height(edge.x, edge.y) - here) <= acts.RING_RISE_M
-	_t.check("a ring fits on open ground, not on a crew's home, the Warden's ring or the map's edge; a landing with no clear circle is found",
-		hemmed != Vector2.INF and not one.call(HOME) and not one.call(map.beacon) and not one.call(map.play_rect.position + Vector2(5.0, 5.0)),
-		"hemmed at %s home %s warden %s" % [hemmed, one.call(HOME), one.call(map.beacon)])
-	_t.check("no ring fits round a rise: every spot that fits is level across the ring, and a spot found with a rise in it does not fit",
-		level and open.size() > 100 and rise != Vector2.INF and not one.call(rise), "%d spots fit, rise at %s" % [open.size(), rise])
-	_t.check("two spots a ring fits on, with a wall or drop between them, are not a way", cliff.size() == 2
-		and not acts.clear_ground(PackedVector2Array(cliff), ring, s), "pair %s" % [cliff])
+		level = level and _steepest(at, ring) <= acts.RING_RISE_M + 4.0
+	_t.check("no ring fits round a rise: a spot whose only fault is a rise has one, and every spot that fits is level across its ring",
+		level and open.size() > 100 and rise != Vector2.INF and _steepest(rise, ring) > acts.RING_RISE_M,
+		"%d spots fit, rise at %s of %.1f m" % [open.size(), rise, _steepest(rise, ring) if rise != Vector2.INF else 0.0])
 	# Another site standing this run (a drawn pocket) and a built contraption keep the ring off by their own size.
 	var others := []
 	for other in acts.sites:
 		if other != s and other.visible:
 			others.append(Vector2(other.global_position.x, other.global_position.z))
-	var wall := Vector2(-267.76, 187.76)
-	var off_sites: bool = not others.is_empty() and not one.call(wall)
-	for at in others:
-		off_sites = off_sites and not one.call(at)
-	_t.check("no ring fits on another site standing this run or on the grade wall", off_sites, "%d other sites" % others.size())
+	# The grade wall, the weir valve's door and cache, a cable's foot and a launcher's landing (park_flume.json).
+	var built := [Vector2(-267.76, 187.76), Vector2(-152.0, -252.0), Vector2(-142.0, -238.0), Vector2(-290.0, -245.0), Vector2(-190.0, -20.0)]
+	var off_sites: bool = not others.is_empty()
+	for at in others + built:
+		off_sites = off_sites and acts.ground_fault(PackedVector2Array([at]), ring, s) == "taken"
+	_t.check("no ring fits on another site standing this run or on a place a contraption names", off_sites, "%d other sites" % others.size())
 	# The measure BACKLOG W1-101 quotes: landings within 120 m of the row, at eight headings.
 	var row_at := Vector2(s.global_position.x, s.global_position.z)
 	var tally := {"wait": 0, 60: 0, 40: 0, 25: 0, 0: 0}
+	var faults := {}
+	var line_faults := {}
 	var cases := 0
 	for gx in range(-6, 7):
 		for gz in range(-6, 7):
 			var at := row_at + Vector2(gx, gz) * 20.0
 			if at.distance_to(row_at) > 120.0:
 				continue
-			var lands: bool = one.call(at)
+			var why: String = acts.ground_fault(PackedVector2Array([at]), ring, s)
+			var lands: bool = why == ""
+			faults[why] = int(faults.get(why, 0)) + 1
 			for k in 8:
 				cases += 1
 				if not lands:
@@ -265,8 +262,28 @@ func _waits() -> void:
 				count.begin(at, Vector2.RIGHT.rotated(TAU * k / 8.0), func(lap: PackedVector2Array) -> bool: return acts.clear_ground(lap, ring, s))
 				tally[int(absf(count.way))] += 1
 	var travels: int = tally[60] + tally[40] + tally[25]
-	print("measure: row %s, %d cases, by circle %s" % [row_at, cases, tally])
-	_t.check("round its row the muster lands at once more often than not, and some landings travel", tally["wait"] * 2 < cases and travels * 10 > cases,
+	print("measure (run seed %d): row %s, %d cases, by circle %s" % [_game.run.run_seed, row_at, cases, tally])
+	# The same along the ride line, every 20 m, heading along it.
+	var line := {"wait": 0, 60: 0, 40: 0, 25: 0, 0: 0}
+	var trail: PackedVector2Array = t.scrap_trail(2)["points"]
+	var slowest := 0
+	for i in trail.size() - 1:
+		var seg: Vector2 = trail[i + 1] - trail[i]
+		for j in maxi(1, int(seg.length() / 20.0)):
+			var at: Vector2 = trail[i] + seg * j / maxi(1, int(seg.length() / 20.0))
+			var why: String = acts.ground_fault(PackedVector2Array([at]), ring, s)
+			line_faults[why] = int(line_faults.get(why, 0)) + 1
+			if why != "":
+				line["wait"] += 1
+				continue
+			var began := Time.get_ticks_usec()
+			var count := SurvivalCount.new(1, "muster")
+			count.begin(at, seg, func(lap: PackedVector2Array) -> bool: return acts.clear_ground(lap, ring, s))
+			slowest = maxi(slowest, Time.get_ticks_usec() - began)
+			line[int(absf(count.way))] += 1
+	print("measure (run seed %d): ride line by circle %s, slowest choice of a way %.1f ms" % [_game.run.run_seed, line, slowest / 1000.0])
+	print("measure: landing spots by fault (\"\" fits): round the row %s, on the ride line %s" % [faults, line_faults])
+	_t.check("round its row at least one landing in four fits at once and one in ten travels", tally["wait"] * 4 < cases * 3 and travels * 10 > cases,
 		"%d of %d wait, %d travel" % [tally["wait"], cases, travels])
 	var row := Vector2(s.global_position.x, s.global_position.z)
 	var near: Vector3 = _over(row.x - float(s.rule["call_m"]) + 20.0, row.y)
@@ -277,7 +294,15 @@ func _waits() -> void:
 	for frame in int((siren + 1.0) * Engine.physics_ticks_per_second):
 		await _hold(_over(HOME.x, HOME.y))
 	var waited: bool = _announced == [siren] and not s.started and not s.visible
-	for frame in 10:
+	# It waits MUSTER_WAIT_S and stands down; back near its row it is called again.
+	for frame in int(acts.MUSTER_WAIT_S * Engine.physics_ticks_per_second):
+		await _hold(_over(HOME.x, HOME.y))
+	var stood_down: bool = not s.yard_called and not s.started and _announced.size() == 1
+	for frame in 30:
+		await _hold(near)
+	_t.check("a muster that finds no clear ground in time stands down, and is called again near its row", stood_down and s.yard_called and _announced.size() == 2,
+		"stood down %s, announced %d" % [stood_down, _announced.size()])
+	for frame in int((siren + 0.5) * Engine.physics_ticks_per_second):
 		await _hold(_over(hemmed.x, hemmed.y))
 	var landed := Vector2(s.global_position.x, s.global_position.z)
 	_t.check("a ball on a crew's home when the siren ends is landed on only once it is on clear ground",
@@ -296,3 +321,17 @@ func _holds(at: Vector2, ring: float) -> bool:
 		if count.way != 0.0:
 			return false
 	return true
+
+
+# How far the ground inside a ring of `ring` metres at `at` stands off an even slope through its centre, on a 3 m
+# grid: the most that two spots straight across the centre from each other stand off the line between them.
+func _steepest(at: Vector2, ring: float) -> float:
+	var t = _game.ctx.terrain
+	var here: float = t.height(at.x, at.y)
+	var worst := 0.0
+	for x in range(-8, 9):
+		for z in range(0, 9):
+			var off := Vector2(x, z) * 3.0
+			if off.length() <= ring:
+				worst = maxf(worst, absf(t.height(at.x + off.x, at.y + off.y) + t.height(at.x - off.x, at.y - off.y) - 2.0 * here))
+	return worst

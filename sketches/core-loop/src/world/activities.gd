@@ -14,7 +14,6 @@ const Palette := preload("res://src/core/palette.gd")
 const BakeLook := preload("res://src/presentation/bake_look.gd")
 const Parts := preload("res://src/build/parts.gd")
 const ParkGraph := preload("res://src/world/park/park_graph.gd")
-const SurveyPosts := preload("res://src/world/survey_posts.gd")
 const PocketFog := preload("res://src/world/events/pocket_fog.gd")
 const TradePockets := preload("res://src/world/trade_pockets.gd")
 const StakeDevices := preload("res://src/world/stake_devices.gd")
@@ -176,13 +175,17 @@ const RULES := {
 const PICKUP_REACH := 1.7
 const PICKUP_HEIGHT := 3.0
 # The activity kinds that stand a survival count (survival_count.gd), each on a park survival_rows row of its form.
-# A travelling survival ring's course may rise or fall this much between two of its plan points (8 m of ground,
-# SurvivalCount.COURSE_STEP_M): more is a wall, a drop or a void, and the ring does not go that way.
-const COURSE_RISE_M := 8.0
-# Ground on the ring's edge may stand this far above or below the ring's centre.
+# Ground inside the ring may stand this far off an even slope through the ring's centre, and that slope may be this
+# steep (rise over run; survey_posts.gd stands its posts on no steeper).
 const RING_RISE_M := 10.0
+const RING_SLOPE := 0.45
 # A travelling ring keeps this far past another site's own ring: a pocket's walls and cover stand outside its ring.
 const SITE_PAD_M := 20.0
+# How far apart the ground inside a ring is read for a rise.
+const RING_READ_M := 6.0
+# A muster whose siren has ended waits this long for the ball to reach ground a ring fits on, then stands down; it
+# can be called again.
+const MUSTER_WAIT_S := 20.0
 # A contraption row with no size of its own (a valve, a lift, a launcher) is taken as this wide a disc.
 const CONTRAPTION_M := 6.0
 const SURVIVAL_KINDS := ["stocktake_yard", "stocktake_muster"]
@@ -393,6 +396,7 @@ class Site extends Node3D:
 	var yard_may_bank := false
 	# Seconds of siren left before a muster lands; under 0, it has not been called.
 	var yard_siren := -1.0
+	var yard_called := false
 
 	func _exit_tree() -> void:
 		for enemy in pack + minibosses:
@@ -2140,53 +2144,85 @@ func _watch_yard(s: Site, delta: float, ball: Vector3) -> void:
 func _muster_lands(s: Site, delta: float, ball: Vector3) -> bool:
 	if ctx.flow.engaged():
 		return false
-	if s.yard_siren < 0.0:
+	if not s.yard_called:
 		if _planar(ball, s.global_position) <= float(s.rule["call_m"]):
+			s.yard_called = true
 			s.yard_siren = float(s.rule["siren_s"])
 			ctx.events.event_announced.emit(s.id, s.yard_siren, Vector3.INF)
 		return false
-	# Held at 0 while it waits for clear ground: below 0 is a muster not yet called.
-	s.yard_siren = maxf(0.0, s.yard_siren - delta)
 	# The ring lands when the siren ends, or as soon after as the ball is on ground a ring fits on: never on another
-	# fight's ground, the Warden's, or the map's edge (clear_ground).
-	if s.yard_siren > 0.0 or not clear_ground(PackedVector2Array([Vector2(ball.x, ball.z)]), float(s.rule["ring"]), s):
+	# fight's ground, the Warden's, a rock rise or the map's edge (ground_fault). The wait runs the siren below zero to
+	# -MUSTER_WAIT_S, where the muster stands down as if never called.
+	s.yard_siren -= delta
+	if s.yard_siren > 0.0:
+		return false
+	if not clear_ground(PackedVector2Array([Vector2(ball.x, ball.z)]), float(s.rule["ring"]), s):
+		if s.yard_siren < -MUSTER_WAIT_S:
+			s.yard_called = false
 		return false
 	s.global_position = ctx.terrain.drop_point(ball.x, ball.z, 0.0)
 	s.visible = true
 	return true
 
 
-# True when a ring of `ring` metres fits on every one of `points` in turn: inside the play area; off every fight's
-# own ground and the Warden's ring (ParkMap.fight_sites()), every built contraption and every other site standing this
-# run (a drawn pocket too) by SITE_PAD_M; with no ground inside the ring RING_RISE_M above or below its centre (a
-# butte, a wall, a pit); and with no rise or fall over COURSE_RISE_M from one point to the next. A lap's last point is
-# checked against its first. Water and hole cells are not looked at.
+# True when a ring of `ring` metres fits on every one of `points` in turn (ground_fault() finds none).
 func clear_ground(points: PackedVector2Array, ring: float, but: Site = null) -> bool:
+	return ground_fault(points, ring, but) == ""
+
+
+# Why a ring of `ring` metres does not fit on `points` in turn, or "" when it does. "edge": off the play area.
+# "taken": on a fight's own ground or the Warden's ring (ParkMap.fight_sites()), on a place a contraption row names,
+# or within SITE_PAD_M of another site standing this run (a drawn pocket too; `but` is the asking site). "rise":
+# the ground inside the ring is not one even slope: two reads straight across the centre from each other stand
+# RING_RISE_M off the line through the centre between them (a butte, a mesa, a pit), or the slope between them is
+# over RING_SLOPE. Read every RING_READ_M across a lone point's ring and round the outer part of a lap's (its
+# neighbours read the middle), so a wall or a drop between two points of a lap is inside a ring that reads it.
+# Water and hole cells are not looked at.
+func ground_fault(points: PackedVector2Array, ring: float, but: Site = null) -> String:
 	var map = ctx.terrain.map()
 	var keep := _keep_off(map)
 	for other in sites:
 		if other != but and is_instance_valid(other) and other.visible:
 			keep.append({"at": Vector2(other.global_position.x, other.global_position.z), "r": float(other.rule.get("ring", 0.0)) + SITE_PAD_M})
-	var before: float = ctx.terrain.height(points[-1].x, points[-1].y)
-	for p in points:
-		var here: float = ctx.terrain.height(p.x, p.y)
-		if absf(here - before) > COURSE_RISE_M or not map.play_rect.grow(-ring).has_point(p):
-			return false
-		before = here
-		for k in 8:
-			var edge: Vector2 = p + Vector2.RIGHT.rotated(TAU * k / 8.0) * ring
-			if absf(ctx.terrain.height(edge.x, edge.y) - here) > RING_RISE_M:
-				return false
+	var inside: Rect2 = map.play_rect.grow(-ring)
+	var reads := PackedVector2Array()
+	for band in range(1 if points.size() == 1 else 2, int(ring / RING_READ_M) + 1):
+		var around := 6 * band
+		for k in around / 2:
+			var read := Vector2.RIGHT.rotated(TAU * k / around) * minf(ring, band * RING_READ_M)
+			reads.append(read)
+			reads.append(-read)
+	var centres: PackedFloat64Array = ctx.terrain.heights(points)
+	var under := PackedVector2Array()
+	under.resize(reads.size())
+	for i in points.size():
+		var p := points[i]
+		if not inside.has_point(p):
+			return "edge"
 		for row in keep:
-			var pad := {"r": float(row["r"]) + ring}
-			pad.merge(row)
-			if SurveyPosts.near(pad, p):
-				return false
-	return true
+			var local: Vector2 = p - row["at"]
+			var reach: float = float(row["r"]) + ring
+			if row.has("half"):
+				local = local.rotated(deg_to_rad(float(row["yaw_deg"])))
+				var half: Vector2 = row["half"]
+				local = Vector2(maxf(0.0, absf(local.x) - half.x), maxf(0.0, absf(local.y) - half.y))
+			if local.length() < reach:
+				return "taken"
+		for k in reads.size():
+			under[k] = p + reads[k]
+		# Each read is followed by the one straight across the centre from it (reads come in opposite pairs).
+		var across: PackedFloat64Array = ctx.terrain.heights(under)
+		for k in range(0, across.size(), 2):
+			var lump: float = absf(across[k] + across[k + 1] - 2.0 * centres[i])
+			var slope: float = absf(across[k] - across[k + 1]) / (2.0 * reads[k].length())
+			if lump > RING_RISE_M or slope > RING_SLOPE:
+				return "rise"
+	return ""
 
 
-# What a map's own rows keep a travelling ring off, as SurveyPosts.near() rows whose `r` is the pad past the row's own
-# ground: each fight site and each contraption row (a cracked wall, a barge, a cable is not in the height grid).
+# What a map's own rows keep a travelling ring off, each {"at", "r"} for a disc or {"at", "half", "yaw_deg", "r"} for
+# a box with `r` the pad past it: each fight site's ground, and every place a contraption row names on the ground (its
+# own spot, a valve's door and cache, a cable's two ends, a launcher's landing), none of which is in the height grid.
 func _keep_off(map) -> Array:
 	if map != _keep_map:
 		_keep_map = map
@@ -2197,9 +2233,14 @@ func _keep_off(map) -> Array:
 			else:
 				_keep_rows.append({"at": fight["at"], "r": float((fight["ring"] as Vector2).y)})
 		for row in (map.park.get("contraption_rows", []) if "park" in map else []):
-			if row.has("at"):
-				var size: Array = row.get("size", [0.0])
-				_keep_rows.append({"at": Vector2(float(row["at"][0]), float(row["at"][-1])), "r": maxf(CONTRAPTION_M, float(size.max()) * 0.5)})
+			var wide := CONTRAPTION_M
+			for part in [row] + row.values().filter(func(v): return v is Dictionary):
+				for n in (part.get("size", []) as Array) + [part.get("radius", 0.0)]:
+					wide = maxf(wide, float(n) * 0.5)
+			for part in [row] + row.values().filter(func(v): return v is Dictionary):
+				for key in ["at", "from", "to", "target"]:
+					if part.get(key) is Array:
+						_keep_rows.append({"at": Vector2(float(part[key][0]), float(part[key][-1])), "r": wide})
 	return _keep_rows.duplicate()
 
 

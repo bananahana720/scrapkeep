@@ -216,7 +216,10 @@ func _moves() -> void:
 	yard.step(20.0, 3)
 	var ok: bool = yard.ground() == landed
 	var muster := SurvivalCount.new(1, "muster")
-	muster.begin(landed, heading)
+	muster.begin(landed, heading, func(_lap: PackedVector2Array) -> bool: return true)
+	var unasked := SurvivalCount.new(1, "muster")
+	unasked.begin(landed, heading)
+	ok = ok and unasked.way == 0.0 and muster.way == radius
 	ok = ok and muster.ground().distance_to(landed) < 0.01
 	muster.step(1.0, 3)
 	var first: Vector2 = muster.ground() - landed

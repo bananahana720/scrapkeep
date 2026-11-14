@@ -96,15 +96,14 @@ func _init(world_id := 1, form_id := "yard", rule_row: Dictionary = RULE) -> voi
 
 # The first count climbs in, on ground that landed at `landed` with the ball heading along
 # `heading`. A looping form sets off that way on the first of its ways() whose lap `fits`: a call
-# that takes the lap's plan points (course()) and says whether the ground under them will do. With
-# no `fits` it rides the first. The last way holds, and is taken when no lap fits. Returns the
-# first pack.
+# that takes the lap's plan points (course()) and says whether the ground under them will do. The
+# last way holds, and is taken when no lap fits or no `fits` is given. Returns the first pack.
 func begin(landed := Vector2.ZERO, heading := Vector2.DOWN, fits := Callable()) -> Array:
 	_landed = landed
 	_forward = heading.normalized() if heading.length() > 0.001 else Vector2.DOWN
 	way = 0.0
 	for offered in ways(form):
-		if is_zero_approx(offered) or not fits.is_valid() or fits.call(course(landed, heading, offered)):
+		if is_zero_approx(offered) or (fits.is_valid() and fits.call(course(landed, heading, offered))):
 			way = offered
 			break
 	_clock = 0.0
