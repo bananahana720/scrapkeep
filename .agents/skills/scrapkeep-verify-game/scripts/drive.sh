@@ -14,7 +14,7 @@
 #       wrapper has codes of its own: with no row passed, 1 can be a display that did not start; see game.log.
 set -uo pipefail
 source "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/common.sh"
-[ $# -ge 1 ] || { sed -n 2,13p "${BASH_SOURCE[0]}"; exit 2; }
+[ $# -ge 1 ] || { sed -n 2,14p "${BASH_SOURCE[0]}"; exit 2; }
 steps="$(readlink -f "$1")"; shift
 [ -f "$steps" ] || { echo "drive: no step file $steps" >&2; exit 2; }
 name="$(basename "${steps%.*}")-$(date -u +%Y%m%dT%H%M%SZ)"

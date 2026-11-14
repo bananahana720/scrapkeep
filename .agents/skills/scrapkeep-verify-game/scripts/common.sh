@@ -30,17 +30,25 @@ ours() {
 # display, a game slow to stop) gets 20 seconds and is then killed by its group, never by name.
 run_game() {
   local pidfile="$1" log="$2" limit="$3" last; shift 3
-  game_pid=""; interrupted=0
+  game_pid=""; interrupted=0; code=1
   trap 'interrupted=1; [ -n "$game_pid" ] && kill -TERM "$game_pid" 2>/dev/null' INT TERM
   timeout --signal=TERM --kill-after=20 "$limit" "$@" > "$log" 2>&1 &
   game_pid=$!
   write_pid "$game_pid" "$pidfile"
+  # A signal that landed before the pid was known stopped nothing yet.
+  [ "$interrupted" = 1 ] && kill -TERM "$game_pid" 2>/dev/null
   # A trapped signal ends a wait early, so wait again until the timeout process is really gone.
-  while :; do wait "$game_pid"; code=$?; kill -0 "$game_pid" 2>/dev/null || break; done
-  wait "$game_pid" 2>/dev/null; last=$?; [ "$last" = 127 ] || code=$last
+  while :; do
+    wait "$game_pid" 2>/dev/null; last=$?
+    [ "$last" = 127 ] && break  # already collected: nothing more to wait for
+    code=$last
+    kill -0 "$game_pid" 2>/dev/null || { wait "$game_pid" 2>/dev/null; last=$?; [ "$last" = 127 ] || code=$last; break; }
+  done
   for _ in $(seq 1 20); do pgrep -g "$game_pid" > /dev/null || break; sleep 1; done
   pgrep -g "$game_pid" > /dev/null && kill -KILL -- "-$game_pid" 2>/dev/null
   trap - INT TERM
+  # cleanup.sh --stop signals the game, not this script, and leaves a note beside the pid file to say so.
+  [ -f "$pidfile.stop" ] && { interrupted=1; rm -f "$pidfile.stop"; }
   [ "$interrupted" = 1 ] && code=143
   return 0
 }
