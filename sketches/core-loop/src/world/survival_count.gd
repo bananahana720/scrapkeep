@@ -70,6 +70,9 @@ const MOVES := {
 const COURSE_STEP_M := 8.0
 
 var rule: Dictionary = RULE
+# The circle the ground rides, chosen at begin(): its radius, to the right of the heading at landing when positive,
+# to the left when negative, and 0 for ground that holds where it landed.
+var way := 0.0
 var world := 1
 var form := "yard"
 # The count now standing (1 is the first); 0 before begin().
@@ -82,9 +85,6 @@ var _count_left := 0.0
 var _gate_left := 0.0
 var _landed := Vector2.ZERO
 var _forward := Vector2.DOWN
-# The circle the ground rides: its radius, to the right of the heading at landing when positive, to
-# the left when negative, and 0 for ground that holds where it landed (ways()).
-var _way := 0.0
 var _clock := 0.0
 
 
@@ -95,13 +95,18 @@ func _init(world_id := 1, form_id := "yard", rule_row: Dictionary = RULE) -> voi
 
 
 # The first count climbs in, on ground that landed at `landed` with the ball heading along
-# `heading` (a looping form sets off that way, on the circle `way` names: one of ways(), and the
-# first of them when left out). Returns the first pack.
-func begin(landed := Vector2.ZERO, heading := Vector2.DOWN, way := INF) -> Array:
+# `heading`. A looping form sets off that way on the first of its ways() whose lap `fits`: a call
+# that takes the lap's plan points (course()) and says whether the ground under them will do. With
+# no `fits` it rides the first. The last way holds, and is taken when no lap fits. Returns the
+# first pack.
+func begin(landed := Vector2.ZERO, heading := Vector2.DOWN, fits := Callable()) -> Array:
 	_landed = landed
 	_forward = heading.normalized() if heading.length() > 0.001 else Vector2.DOWN
-	var all := ways(form)
-	_way = way if all.has(way) else all[0]
+	way = 0.0
+	for offered in ways(form):
+		if is_zero_approx(offered) or not fits.is_valid() or fits.call(course(landed, heading, offered)):
+			way = offered
+			break
 	_clock = 0.0
 	count = 1
 	cleared = 0
@@ -202,10 +207,10 @@ func hazard(n: int) -> Dictionary:
 # loop, on its circle beside the heading at landing, which sets off along that heading and is back
 # on the landing point every lap. Every circle is ridden at the pace of the move's own.
 func ground() -> Vector2:
-	if is_zero_approx(_way):
+	if is_zero_approx(way):
 		return _landed
 	var move: Dictionary = MOVES[str(FORMS[form]["move"])]
-	return _on_course(_landed, _forward, _way, _clock / (float(move["lap_s"]) * absf(_way) / float(move["radius_m"])))
+	return _on_course(_landed, _forward, way, _clock / (float(move["lap_s"]) * absf(way) / float(move["radius_m"])))
 
 
 # The circles a form's ground may ride, best first, as signed radii: positive lies to the right of
@@ -223,8 +228,8 @@ static func ways(form_id: String) -> Array:
 
 
 # One lap of a way from `landed` along `heading`, as plan points about COURSE_STEP_M apart starting
-# at the landing point: for the caller to look at the ground under a way before begin(). The
-# landing point alone for the way that holds.
+# at the landing point: what begin() hands its `fits`. The landing point alone for the way that
+# holds.
 static func course(landed: Vector2, heading: Vector2, way: float) -> PackedVector2Array:
 	var out := PackedVector2Array([landed])
 	var forward := heading.normalized() if heading.length() > 0.001 else Vector2.DOWN

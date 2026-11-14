@@ -25,8 +25,9 @@ const ItemGen := preload("res://src/build/item_gen.gd")
 #     heading, stays one radius from a centre to the right of that heading, is a full circle
 #     across at half a lap and back on the landing point after one lap;
 # (l) a looping form's ways are its own circle to the right then the left, then each tighter circle the same, then
-#     holding; a way to the left sets off along the heading too with its centre on the left; a tighter circle is
-#     ridden at the same pace; the way that holds stays put; a still form only holds;
+#     holding, and begin() takes the first whose lap its caller says fits; a way to the left sets off along the
+#     heading too with its centre on the left; a tighter circle is ridden at the same pace; the way that holds stays
+#     put; a still form only holds;
 # (m) a way's course starts on the landing point, stays on that way's circle, has points no further apart than
 #     COURSE_STEP_M, and matches where the ground is at that share of a lap; the holding way's course is one point.
 
@@ -231,28 +232,33 @@ func _moves() -> void:
 	var ways := SurvivalCount.ways("muster")
 	ok = ways == [radius, -radius, float(tight[0]), -float(tight[0]), float(tight[1]), -float(tight[1]), 0.0]
 	ok = ok and SurvivalCount.ways("yard") == [0.0] and SurvivalCount.ways("ring") == [0.0]
-	var left := SurvivalCount.new(1, "muster")
-	left.begin(landed, heading, -radius)
+	# Each way is taken when every lap before it is refused, and the lap handed over is that way's course.
+	for i in ways.size():
+		var seen := []
+		var picky := SurvivalCount.new(1, "muster")
+		picky.begin(landed, heading, func(lap: PackedVector2Array) -> bool:
+			seen.append(lap)
+			return seen.size() > i)
+		ok = ok and picky.way == ways[i] and seen.size() == mini(i + 1, ways.size() - 1)
+		ok = ok and (seen.is_empty() or seen[-1] == SurvivalCount.course(landed, heading, ways[mini(i, ways.size() - 2)]))
+	var left := _riding(landed, heading, 1)
 	left.step(1.0, 3)
 	var left_first: Vector2 = left.ground() - landed
-	ok = ok and left_first.normalized().dot(heading) > 0.95
+	ok = ok and left.way == -radius and left_first.normalized().dot(heading) > 0.95
 	ok = ok and is_equal_approx(left.ground().distance_to(landed + heading.orthogonal() * radius), radius)
 	ok = ok and left_first.dot(heading.orthogonal()) * first.dot(heading.orthogonal()) < 0.0
-	var small := SurvivalCount.new(1, "muster")
-	small.begin(landed, heading, float(tight[1]))
+	var small := _riding(landed, heading, 4)
 	small.step(1.0, 3)
-	ok = ok and absf((small.ground() - landed).length() - first.length()) < 0.2
+	ok = ok and small.way == float(tight[1]) and absf((small.ground() - landed).length() - first.length()) < 0.2
 	small.step(lap * float(tight[1]) / radius - 1.0, 3)
 	ok = ok and small.ground().distance_to(landed) < 0.01
-	var held := SurvivalCount.new(1, "muster")
-	held.begin(landed, heading, 0.0)
+	var held := _riding(landed, heading, ways.size())
 	held.step(lap * 0.3, 3)
-	ok = ok and held.ground() == landed
-	var odd := SurvivalCount.new(1, "muster")
-	odd.begin(landed, heading, 17.0)
-	odd.step(1.0, 3)
-	ok = ok and odd.ground().is_equal_approx(landed + first)
-	_report("(l) ways: right, left, tighter, hold; left sets off ahead too; tighter keeps the pace; a way not offered rides the first", ok, "ways %s" % [ways])
+	ok = ok and held.way == 0.0 and held.ground() == landed
+	var still := SurvivalCount.new(1, "yard")
+	still.begin(landed, heading, func(_lap: PackedVector2Array) -> bool: return true)
+	ok = ok and still.way == 0.0
+	_report("(l) ways: right, left, tighter, hold, each taken when the laps before it do not fit; left sets off ahead too; tighter keeps the pace", ok, "ways %s" % [ways])
 	ok = true
 	for way in ways:
 		var course := SurvivalCount.course(landed, heading, way)
@@ -260,11 +266,20 @@ func _moves() -> void:
 			ok = ok and course == PackedVector2Array([landed])
 			continue
 		var centre_w: Vector2 = landed - heading.orthogonal() * way
-		var rider := SurvivalCount.new(1, "muster")
-		rider.begin(landed, heading, way)
+		var rider := _riding(landed, heading, ways.find(way))
 		rider.step(lap * absf(way) / radius / course.size(), 3)
 		ok = ok and course[0] == landed and course[1].distance_to(rider.ground()) < 0.01
 		for i in course.size():
 			ok = ok and is_equal_approx(course[i].distance_to(centre_w), absf(way))
 			ok = ok and course[i].distance_to(course[(i + 1) % course.size()]) <= SurvivalCount.COURSE_STEP_M + 0.001
 	_report("(m) a course starts on the landing, keeps to its circle in short steps and is where the ground goes", ok)
+
+
+# A muster begun on its way number `refused`: the laps of the ways before it are refused.
+func _riding(landed: Vector2, heading: Vector2, refused: int) -> SurvivalCount:
+	var asked := [0]
+	var count := SurvivalCount.new(1, "muster")
+	count.begin(landed, heading, func(_lap: PackedVector2Array) -> bool:
+		asked[0] += 1
+		return asked[0] > refused)
+	return count

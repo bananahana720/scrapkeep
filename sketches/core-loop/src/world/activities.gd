@@ -14,6 +14,7 @@ const Palette := preload("res://src/core/palette.gd")
 const BakeLook := preload("res://src/presentation/bake_look.gd")
 const Parts := preload("res://src/build/parts.gd")
 const ParkGraph := preload("res://src/world/park/park_graph.gd")
+const SurveyPosts := preload("res://src/world/survey_posts.gd")
 const PocketFog := preload("res://src/world/events/pocket_fog.gd")
 const TradePockets := preload("res://src/world/trade_pockets.gd")
 const StakeDevices := preload("res://src/world/stake_devices.gd")
@@ -178,6 +179,12 @@ const PICKUP_HEIGHT := 3.0
 # A travelling survival ring's course may rise or fall this much between two of its plan points (8 m of ground,
 # SurvivalCount.COURSE_STEP_M): more is a wall, a drop or a void, and the ring does not go that way.
 const COURSE_RISE_M := 8.0
+# Ground on the ring's edge may stand this far above or below the ring's centre.
+const RING_RISE_M := 10.0
+# A travelling ring keeps this far past another site's own ring: a pocket's walls and cover stand outside its ring.
+const SITE_PAD_M := 20.0
+# A contraption row with no size of its own (a valve, a lift, a launcher) is taken as this wide a disc.
+const CONTRAPTION_M := 6.0
 const SURVIVAL_KINDS := ["stocktake_yard", "stocktake_muster"]
 const RING_HEIGHT := 8.0
 const BRUTE_DROP := 2.4
@@ -245,6 +252,8 @@ const LET_GO_M := 100.0
 
 var ctx
 var sites: Array = []
+var _keep_map
+var _keep_rows: Array = []
 var _piece_paid := false
 var _pending_stage := false
 var _elite_arrivals := 0
@@ -2090,7 +2099,7 @@ func _watch_yard(s: Site, delta: float, ball: Vector3) -> void:
 		var going: Vector3 = ctx.player.planar_velocity()
 		var landed := Vector2(s.global_position.x, s.global_position.z)
 		var heading := Vector2(going.x, going.z)
-		yard.begin(landed, heading, clear_way(yard.form, landed, heading, float(s.rule["ring"])))
+		yard.begin(landed, heading, func(lap: PackedVector2Array) -> bool: return clear_ground(lap, float(s.rule["ring"]), s))
 		_yard_owe(s)
 		ctx.events.event_started.emit(s.id)
 	elif s.rule.has("siren_s"):
@@ -2140,45 +2149,58 @@ func _muster_lands(s: Site, delta: float, ball: Vector3) -> bool:
 	s.yard_siren = maxf(0.0, s.yard_siren - delta)
 	# The ring lands when the siren ends, or as soon after as the ball is on ground a ring fits on: never on another
 	# fight's ground, the Warden's, or the map's edge (clear_ground).
-	if s.yard_siren > 0.0 or not clear_ground(PackedVector2Array([Vector2(ball.x, ball.z)]), float(s.rule["ring"])):
+	if s.yard_siren > 0.0 or not clear_ground(PackedVector2Array([Vector2(ball.x, ball.z)]), float(s.rule["ring"]), s):
 		return false
 	s.global_position = ctx.terrain.drop_point(ball.x, ball.z, 0.0)
 	s.visible = true
 	return true
 
 
-# The way a survival form's ground travels from `landed` along `heading` (one of SurvivalCount.ways()): the first
-# whose whole lap is clear ground for a ring of `ring` metres. The last way holds where it landed, and is the answer
-# when no circle is clear.
-func clear_way(form: String, landed: Vector2, heading: Vector2, ring: float) -> float:
-	for way in SurvivalCount.ways(form):
-		if is_zero_approx(way) or clear_ground(SurvivalCount.course(landed, heading, way), ring):
-			return way
-	return 0.0
-
-
-# True when a ring of `ring` metres fits on every one of `points` in turn: inside the play area, outside the Warden's
-# ring and every fight's own ground (ParkMap.fight_sites()), and with no rise or fall of more than COURSE_RISE_M from
-# one point to the next (a wall, a drop, a void). A lap's last point is checked against its first.
-func clear_ground(points: PackedVector2Array, ring: float) -> bool:
+# True when a ring of `ring` metres fits on every one of `points` in turn: inside the play area; off every fight's
+# own ground and the Warden's ring (ParkMap.fight_sites()), every built contraption and every other site standing this
+# run (a drawn pocket too) by SITE_PAD_M; with no ground inside the ring RING_RISE_M above or below its centre (a
+# butte, a wall, a pit); and with no rise or fall over COURSE_RISE_M from one point to the next. A lap's last point is
+# checked against its first. Water and hole cells are not looked at.
+func clear_ground(points: PackedVector2Array, ring: float, but: Site = null) -> bool:
 	var map = ctx.terrain.map()
-	var fights: Array = map.fight_sites() if map.has_method("fight_sites") else []
+	var keep := _keep_off(map)
+	for other in sites:
+		if other != but and is_instance_valid(other) and other.visible:
+			keep.append({"at": Vector2(other.global_position.x, other.global_position.z), "r": float(other.rule.get("ring", 0.0)) + SITE_PAD_M})
 	var before: float = ctx.terrain.height(points[-1].x, points[-1].y)
 	for p in points:
 		var here: float = ctx.terrain.height(p.x, p.y)
 		if absf(here - before) > COURSE_RISE_M or not map.play_rect.grow(-ring).has_point(p):
 			return false
 		before = here
-		for fight in fights:
-			var local: Vector2 = p - fight["at"]
-			if fight.has("half"):
-				local = local.rotated(deg_to_rad(float(fight.get("yaw_deg", 0.0))))
-				var half: Vector2 = fight["half"]
-				if Vector2(maxf(0.0, absf(local.x) - half.x), maxf(0.0, absf(local.y) - half.y)).length() < ring:
-					return false
-			elif local.length() > float(fight["ring"].x) - ring and local.length() < float(fight["ring"].y) + ring:
+		for k in 8:
+			var edge: Vector2 = p + Vector2.RIGHT.rotated(TAU * k / 8.0) * ring
+			if absf(ctx.terrain.height(edge.x, edge.y) - here) > RING_RISE_M:
+				return false
+		for row in keep:
+			var pad := {"r": float(row["r"]) + ring}
+			pad.merge(row)
+			if SurveyPosts.near(pad, p):
 				return false
 	return true
+
+
+# What a map's own rows keep a travelling ring off, as SurveyPosts.near() rows whose `r` is the pad past the row's own
+# ground: each fight site and each contraption row (a cracked wall, a barge, a cable is not in the height grid).
+func _keep_off(map) -> Array:
+	if map != _keep_map:
+		_keep_map = map
+		_keep_rows = []
+		for fight in (map.fight_sites() if map.has_method("fight_sites") else []):
+			if fight.has("half"):
+				_keep_rows.append({"at": fight["at"], "half": fight["half"], "yaw_deg": float(fight.get("yaw_deg", 0.0)), "r": 0.0})
+			else:
+				_keep_rows.append({"at": fight["at"], "r": float((fight["ring"] as Vector2).y)})
+		for row in (map.park.get("contraption_rows", []) if "park" in map else []):
+			if row.has("at"):
+				var size: Array = row.get("size", [0.0])
+				_keep_rows.append({"at": Vector2(float(row["at"][0]), float(row["at"][-1])), "r": maxf(CONTRAPTION_M, float(size.max()) * 0.5)})
+	return _keep_rows.duplicate()
 
 
 # The standing count's machines join the ones owed, at that count's strength.
