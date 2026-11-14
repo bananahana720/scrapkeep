@@ -149,6 +149,7 @@ func _run() -> void:
 	_check(_mesh_tris(ParkProps._mesh(shed)) == _shape_of(shed).tris, "park_props loads the authored wheelhouse with the switch off")
 	ParkProps.release_shared()
 	_check_parts()
+	_check_pilots()
 	print("tripo_variants_test: %s" % ("PASS" if failures == 0 else "FAIL (%d)" % failures))
 	quit(1 if failures > 0 else 0)
 
@@ -199,3 +200,66 @@ func _check_parts() -> void:
 	plain.free()
 	ModelVariants.set_enabled(false)
 	acc.free()
+
+
+# A pilot's Tripo sibling sits on the authored skeleton: the same bones (outfits mount on them and
+# the glance turns three of them), the same clips, one skinned mesh at most 10,000 triangles, and a
+# rest shape inside the cockpit limits the ball look work measured on 13 November 2026 (head top
+# +0.57, feet -0.59, half width 0.43, nothing forward of 0.58; tools/tripo/README.md, Pilots).
+# Tarn's sibling has no separate Cap mesh (the cap is part of the body), so his Steady Cap outfit's Replace_Cap
+# finds nothing to hide with the switch on (tools/tripo/README.md, Pilots).
+const PILOT_SIBLINGS := [
+	"res://assets/models/pilot_rivet_anim.glb",
+	"res://assets/models/pilot_sable_anim.glb",
+	"res://assets/models/pilot_kest_anim.glb",
+	"res://assets/models/pilot_tarn_anim.glb",
+	"res://assets/models/pilot_tally_anim.glb",
+	"res://assets/models/pilot_cannon_anim.glb",
+]
+
+
+func _check_pilots() -> void:
+	_check(PILOT_SIBLINGS.size() == 6, "six pilot siblings (%d)" % PILOT_SIBLINGS.size())
+	for authored in PILOT_SIBLINGS:
+		var stem := String(authored).get_file()
+		ModelVariants.set_enabled(false)
+		_check(ModelVariants.path(authored) == authored, "switch off keeps %s" % stem)
+		ModelVariants.set_enabled(true)
+		var alt := ModelVariants.path(authored)
+		_check(alt != authored, "switch on swaps %s for its sibling" % stem)
+		var old := (load(authored) as PackedScene).instantiate()
+		var new := (load(alt) as PackedScene).instantiate()
+		var bones := func(root: Node) -> Array:
+			var sk := root.find_children("*", "Skeleton3D", true, false)
+			var out := []
+			if not sk.is_empty():
+				for i in (sk[0] as Skeleton3D).get_bone_count():
+					out.append((sk[0] as Skeleton3D).get_bone_name(i))
+			out.sort()
+			return out
+		var clips := func(root: Node) -> Array:
+			var ap := root.find_child("AnimationPlayer", true, false) as AnimationPlayer
+			var out := Array(ap.get_animation_list()) if ap != null else []
+			out.sort()
+			return out
+		var new_bones: Array = bones.call(new)
+		_check(new_bones.size() == 25 and new_bones == bones.call(old), "%s sibling keeps the 25 bones (%d)" % [stem, new_bones.size()])
+		var new_clips: Array = clips.call(new)
+		_check(not new_clips.is_empty() and new_clips == clips.call(old), "%s sibling keeps every clip (%d)" % [stem, new_clips.size()])
+		var skinned := []
+		for mi in new.find_children("*", "MeshInstance3D", true, false):
+			if (mi as MeshInstance3D).skin != null:
+				skinned.append(mi)
+		_check(skinned.size() == 1, "%s sibling is one skinned mesh (%d)" % [stem, skinned.size()])
+		if skinned.size() == 1:
+			var mesh: Mesh = (skinned[0] as MeshInstance3D).mesh
+			var box := mesh.get_aabb()
+			_check(_mesh_tris(mesh) <= 10000, "%s sibling is at most 10,000 triangles (%d)" % [stem, _mesh_tris(mesh)])
+			_check(mesh.get_surface_count() == 1, "%s sibling is one draw" % stem)
+			var slot := mesh.surface_get_material(0)
+			_check(slot != null and slot.resource_name == "pilot", "%s sibling wears the pilot material slot (%s)" % [stem, slot.resource_name if slot != null else "none"])
+			_check(box.end.y <= 0.575 and box.position.y >= -0.595 and maxf(absf(box.position.x), absf(box.end.x)) <= 0.435 and box.position.z >= -0.585,
+				"%s sibling rests inside the cockpit limits (%s to %s)" % [stem, box.position, box.end])
+		old.free()
+		new.free()
+	ModelVariants.set_enabled(false)

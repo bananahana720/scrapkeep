@@ -220,7 +220,56 @@ def cutaway_heft(n):
     return root, core.to_object((0, 0, 0), root)
 
 
-LOOKS = {"gyro": gyro, "bell": bell, "cutaway": cutaway}
+def cutaway_cockpit():
+    """What the window shows around the pilot: a floor pan on a cradle ring, a dash with three
+    gauges and a switch row ahead of the yokes, a console by the left knee, and cable looms.
+    It rides the level part of every pilot's shell, below and ahead of the seat, so nothing
+    stands between the chase camera and the pilot. The gauge needles are class_accent: they
+    light with the ready glow. Two surfaces: everything else is one vertex-coloured slot whose
+    paint mask is 0, so an equipped paint leaves it alone."""
+    c = Part("Cockpit")
+    keep = dict(alpha=0.0)
+    dark = common.mix("petrol", "charcoal", 0.6)
+    steel = common.mix("bone", "charcoal", 0.35)
+    # Floor pan and its tread strips, under the pedals.
+    c.paint(c.cyl("paint", 0.60, 0.56, 0.03, 12, loc=(0, 0, -0.685)), "paint", "charcoal", alpha=0.0)
+    for y in (-0.30, -0.10, 0.10, 0.30):
+        c.box("paint", (0.62, 0.05, 0.012), loc=(0, y, -0.667), color=steel, **keep)
+    # The cradle ring the shell rolls around, on four struts.
+    c.paint(c.ring("paint", 0.80, 0.85, 0.035, 24, loc=(0, 0, -0.42)), "paint", steel, alpha=0.0)
+    for k in range(4):
+        a = (k + 0.5) * math.tau / 4
+        c.rod("paint", (math.cos(a) * 0.82, math.sin(a) * 0.82, -0.43), (math.cos(a) * 0.55, math.sin(a) * 0.55, -0.67), 0.022, 6, color="charcoal", **keep)
+    # The dash: a cowl ahead of the yokes with three gauges facing the pilot.
+    c.box("paint", (0.58, 0.09, 0.19), loc=(0, 0.66, -0.10), rot=(-0.30, 0, 0), color=dark, **keep)
+    c.box("paint", (0.62, 0.13, 0.03), loc=(0, 0.655, 0.005), rot=(-0.30, 0, 0), color="oxide", **keep)
+    for i, x in enumerate((-0.18, 0.0, 0.18)):
+        c.paint(c.cyl("paint", 0.062, 0.062, 0.02, 10, loc=(x, 0.605, -0.075), rot=(math.pi / 2 - 0.30, 0, 0)), "paint", "bone", alpha=0.0)
+        c.paint(c.cyl("paint", 0.072, 0.072, 0.012, 10, loc=(x, 0.612, -0.077), rot=(math.pi / 2 - 0.30, 0, 0)), "paint", "copper", alpha=0.0)
+        lean = (-0.7, 0.2, 0.9)[i]
+        c.box("class_accent", (0.010, 0.012, 0.050), loc=(x + math.sin(lean) * 0.018, 0.592, -0.066), rot=(-0.30, lean, 0))
+    for k in range(5):
+        c.box("paint", (0.03, 0.02, 0.035), loc=(-0.16 + k * 0.08, 0.625, -0.165), rot=(-0.30, 0, 0), color="copper" if k % 2 else "bone", **keep)
+    # A console by the left knee (the slot bank owns the right side).
+    c.box("paint", (0.10, 0.30, 0.07), loc=(-0.52, 0.24, -0.29), color=dark, **keep)
+    c.paint(c.cyl("paint", 0.035, 0.035, 0.03, 8, loc=(-0.52, 0.32, -0.245)), "paint", "copper", alpha=0.0)
+    c.paint(c.cyl("paint", 0.028, 0.028, 0.03, 8, loc=(-0.52, 0.22, -0.245)), "paint", "bone", alpha=0.0)
+    c.box("class_accent", (0.05, 0.03, 0.012), loc=(-0.52, 0.13, -0.252))
+    # Cable looms: dash to floor, console to floor, seat base to the cradle, in rubber and copper.
+    for side in (-1, 1):
+        c.rod("paint", (side * 0.22, 0.66, -0.20), (side * 0.30, 0.56, -0.50), 0.02, 6, color="charcoal", **keep)
+        c.rod("paint", (side * 0.30, 0.56, -0.50), (side * 0.36, 0.40, -0.67), 0.02, 6, color="charcoal", **keep)
+        c.rod("paint", (side * 0.12, 0.67, -0.20), (side * 0.14, 0.58, -0.66), 0.012, 5, color="copper", **keep)
+        c.rod("paint", (side * 0.17, -0.20, -0.42), (side * 0.40, -0.36, -0.52), 0.02, 6, color="charcoal", **keep)
+        c.rod("paint", (side * 0.40, -0.36, -0.52), (side * 0.60, -0.52, -0.43), 0.02, 6, color="charcoal", **keep)
+    c.rod("paint", (-0.52, 0.10, -0.32), (-0.50, -0.05, -0.60), 0.012, 5, color="copper", **keep)
+    c.rod("paint", (-0.50, -0.05, -0.60), (-0.30, -0.20, -0.67), 0.012, 5, color="copper", **keep)
+    sb._sharpen(c)
+    root = common.empty("BallLookCutawayCockpit")
+    return root, c.to_object((0, 0, 0), root)
+
+
+LOOKS = {"gyro": gyro, "bell": bell, "cutaway": cutaway, "cutaway_cockpit": cutaway_cockpit}
 for _n in (2, 3, 4, 5):
     LOOKS["cutaway_c%d" % _n] = lambda n=_n: cutaway_heft(n)
 

@@ -7,9 +7,9 @@ const Cosmetics := preload("res://src/core/cosmetics.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
 const T := preload("res://tests/support/t.gd")
 
-# The ball looks (ball_looks.gd, --ball-look): the switch is "today" by default, and a painter
-# under "today" or with no tuning swaps no shell and dresses nothing. Under a look a painter with
-# the game's tuning fits that look for every pilot and dresses it itself. The gyro and the bell
+# The ball looks (ball_looks.gd, --ball-look): the switch is the cutaway by default, and a
+# preview's painter draws that default. A painter under "today" or with no tuning swaps no shell
+# and dresses nothing. Under a look a painter fits that look for every pilot and dresses it itself. The gyro and the bell
 # swap the whole shell. The cutaway keeps each pilot's own shell (kit, weapon ring, hub mounts)
 # and plates its rolling part: every heft class has plating inside the collider, the lattice's
 # gap panels are hidden, the window is on every surface of the rolling part but the class
@@ -28,10 +28,14 @@ func _initialize() -> void:
 
 func _run_all() -> void:
 	var tuning := Tuning.new()
-	t.eq("the switch is today by default", tuning.option(Tuning.BALL_LOOK_KEY), BallLooks.TODAY)
+	t.eq("the cutaway is the default look", tuning.option(Tuning.BALL_LOOK_KEY), "cutaway")
 	t.eq("every look is an option of the switch", tuning.options_of(Tuning.BALL_LOOK_KEY), BallLooks.ids())
 	t.eq("today swaps no shell", BallLooks.asset_paths(BallLooks.TODAY, PILOTS), {})
 	t.eq("an unknown look swaps no shell", BallLooks.asset_paths("bogus", PILOTS), {})
+	var preview := HeroAssets.previewing()
+	root.add_child(preview)
+	t.eq("a preview's painter draws the default look", preview.ball_look(), tuning.option(Tuning.BALL_LOOK_KEY))
+	preview.free()
 	_unchanged("no tuning", null)
 	_unchanged("today", _tuning(BallLooks.TODAY))
 	for look in BallLooks.LOOKS:
@@ -70,6 +74,7 @@ func _unchanged(label: String, tuning) -> void:
 	var swapped: Array = PILOTS.filter(func(pilot): return painter.shell_assets.has(pilot))
 	t.eq("%s: no pilot's shell is swapped" % label, swapped, [])
 	t.eq("%s: every mesh is the pilot's own and draws as it did" % label, _drawn(shell), _drawn(want))
+	t.check("%s: no cockpit is added" % label, not (shell.pod as Node).has_node(BallLooks.COCKPIT_NODE))
 	var dressed := 0
 	for view in _views(shell.core) + _views(shell.pod):
 		for i in view.mesh.get_surface_count():
@@ -83,6 +88,17 @@ func _unchanged(label: String, tuning) -> void:
 
 
 # Every mesh of a fitted shell with the render layers it draws on, in tree order.
+# How many of a pilot's surfaces take light through from their far side.
+func _backlit(pilot: Node) -> int:
+	var count := 0
+	for view in _views(pilot):
+		for i in view.mesh.get_surface_count():
+			var mat := view.get_active_material(i) as BaseMaterial3D
+			if mat != null and mat.backlight_enabled:
+				count += 1
+	return count
+
+
 func _drawn(shell: Dictionary) -> Array:
 	var out: Array = []
 	for view in _views(shell.core) + _views(shell.pod):
@@ -172,7 +188,25 @@ func _plated(look: String) -> void:
 				seat = minf(seat, _number(mat, "seat_back_top"))
 		t.eq("%s: only a small pilot's seat back is lowered (%s)" % [look, pilot], seat, float(BallLooks.LOW_SEAT_BACK.get(pilot, 9.0)))
 		t.eq("%s: no light node rides %s's ball" % [look, pilot], (pod as Node).find_children("*", "Light3D", true, false).size(), 0)
+		var cockpits: Array = (pod as Node).find_children(BallLooks.COCKPIT_NODE, "MeshInstance3D", true, false)
+		t.eq("%s: %s's level part carries one cockpit" % [look, pilot], cockpits.size(), 1)
+		if cockpits.size() == 1:
+			var far := 0.0
+			for point in (cockpits[0] as MeshInstance3D).mesh.get_faces():
+				far = maxf(far, point.length())
+			t.check("%s: the cockpit stays inside the plating" % look, far < BallLooks.PLATING_RADIUS, str(far))
+			var hidden := 0
+			for i in (cockpits[0] as MeshInstance3D).mesh.get_surface_count():
+				var mat: Material = (cockpits[0] as MeshInstance3D).get_active_material(i)
+				if _is_window(mat) and _number(mat, "keep_within") < 0.9:
+					hidden += 1
+			t.eq("%s: the cockpit is never cut" % look, hidden, 0)
 		var seated: Dictionary = painter.fit_pilot_into(pod, pilot, Color.WHITE)
+		if not seated.is_empty():
+			t.check("%s: %s's shaded side takes light from their far side" % [look, pilot], _backlit(seated.pilot) > 0)
+			var plainly: Dictionary = plain.fit_pilot_into(pod, pilot, Color.WHITE)
+			t.eq("%s: today's %s is lit as before" % [look, pilot], _backlit(plainly.pilot), 0)
+			plainly.pilot.free()
 		var outfits: Array = Cosmetics.ROWS.keys().filter(func(id): return Cosmetics.ROWS[id].get("slot", "") == "outfit" and Cosmetics.ROWS[id].get("pilot", "") == pilot)
 		if not seated.is_empty() and not outfits.is_empty():
 			t.check("%s: %s's outfit %s mounts on the pilot behind the window" % [look, pilot, outfits[0]], not painter.fit_outfit(seated.pilot, outfits[0], {"class": Color.WHITE}).is_empty())

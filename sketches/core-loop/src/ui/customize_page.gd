@@ -392,7 +392,7 @@ func _build_preview() -> void:
 	_camera.fov = CAM_FOV
 	_viewport.add_child(_camera)
 	_place_camera()
-	_painter = HeroAssets.new()
+	_painter = HeroAssets.previewing()
 	_decal_view = CosmeticPresentation.new()
 
 

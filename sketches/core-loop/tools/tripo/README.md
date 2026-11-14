@@ -163,3 +163,33 @@ Pro credits left after this batch: 1,760 (Studio's counter). Pro spend so far: 1
 The fitter drops floating fragments by walking shells whose bounding boxes touch. A fragment that sits
 inside another shell's box survives; pick another of the four candidates then (Scrap Gravity's first
 candidate had a bolt lying beside its base).
+
+## Pilots (a new body on the authored skeleton)
+
+A pilot's sibling is `assets/models/pilot_<name>_anim_tripo.glb`. `hero_assets.gd` loads it through `ModelVariants.path` when the game runs with `--models=tripo`. The sibling keeps the authored armature, its 25 bones and every clip, so the glance, the pose tables and every outfit that mounts on a bone work unchanged. One exception: Tarn's cap is part of his new body, so the Steady Cap outfit (its `Replace_Cap` node hides the authored `Cap` mesh, `design-v3/CUSTOMIZE.md`) finds no `Cap` to hide and sits over the modelled cap while the switch is on. That is accepted while the siblings are a comparison set; if the new Tarn is adopted, split his cap into its own `Cap` mesh first. Only the skin is new, and it wears the same `pilot` material slot, so the game dresses it like the authored pilot.
+
+Make one in three steps:
+
+1. Generate in Tripo Studio: HD Model, text input, model H3.1, Private (45 Pro credits). The prompt must name the species, the head shape, the eyewear, each outfit colour and "No tail" if the pilot has none. A loose prompt gave a monkey; a render of the authored model as the image input gave smeared colours and no added detail.
+2. Fit it: `blender -b --factory-startup -P tools/tripo/pilot_fit.py -- --old assets/models/pilot_<name>_anim.glb --new <download>.glb --out fit.glb --head-scale 1.35 --neck 0.5 --tris 8200`. This scales the body to the authored height, enlarges everything above the neck line, cuts the mesh to 8,200 triangles (the pilot class allows 8,100 vertices, and Godot makes 0.74 to 0.95 vertices per triangle on these six), bakes the texture to vertex colour, and copies the skin weights from the authored meshes posed to the new arm angle.
+3. Tidy it: `blender -b --factory-startup -P tools/tripo/pilot_touch.py -- --in fit.glb --out assets/models/pilot_<name>_anim_tripo.glb --head 1.0 --fwd 0.57` (the defaults). This slides the pilot back until nothing is forward of 0.57 (the dash is at 0.60) and tucks in a pink tail stub. Leave `--head` at 1.0: scaling the head by skin weights tears the back plate, because the authored head's weights reach the new shoulders.
+
+Copy the authored model's tracked `.glb.import` settings to the sibling (everything after the `dest_files` line). `tests/asset_registry_test.gd` holds the sibling to the pilot class budget. Without the import settings Godot renames `idle_loop` to `idle` and the clip lookups miss. `tests/tripo_variants_test.gd` checks the bones, the clips, a 10,000 triangle cap, the `pilot` material slot and the cockpit limits. The limits are the ball look work's measurements of 13 November 2026, in ball model units: head top no higher than +0.57, feet no lower than -0.59, half width at most 0.43, nothing forward of 0.58 (the dash is at 0.60). `design-v3/ROSTER-LOOK.md` ("The cutaway as built") describes the cockpit they come from.
+
+| Pilot | Prompt | Credits | Triangles, vertices |
+| --- | --- | --- | --- |
+| Rivet | `prompts/pilot_rivet.txt` | 45 Pro (plus 90 on two rejected tries) | 8,200 and 7,811 (authored: 10,456 triangles) |
+| Sable | `prompts/pilot_sable.txt` | 45 Pro | 8,200 and 6,421 |
+| Kest | typed in Studio and not saved here; it is in the Tripo account's history | 45 Pro | 8,200 and 6,857 |
+| Tarn | typed in Studio and not saved here; it is in the Tripo account's history | 90 Pro (the first try stood upright and tore when seated) | 8,200 and 6,079 |
+| Tally | typed in Studio and not saved here; it is in the Tripo account's history | 45 Pro | 8,200 and 6,534 |
+| The Cannon | typed in Studio and not saved here; it is in the Tripo account's history | 45 Pro | 8,200 and 6,583 |
+
+Every sibling's rest box is inside the cockpit limits; `tests/tripo_variants_test.gd` prints each box.
+
+What the six taught:
+
+- Ask for the pose in the prompt: seated, knees bent, both arms reaching forward to hold two control sticks. An upright model with arms at its sides tears when the seated clips bend it.
+- `pilot_fit.py` replaces every authored skinned mesh by default (`--drop all`): body, claws, tail, wings and cap. It measures the arm angle from the generated hands, which it looks for between the hips and the neck, beside the body, and level with or in front of the shoulder, so ears, crests and a tail beside the body never count as hands.
+- `pilot_touch.py` centres a pilot that fits the width but sits off centre, and narrows a pilot wider than 0.86 (twice `--half`, default 0.43) evenly about its centre and prints the factor (Kest, 6 percent). Pass `--tail 0` for a pilot that has a tail.
+- After copying the import settings, `touch` the sibling's `.glb.import` before running `godot --headless --import`. Godot compares change times to the second, and skips a file whose settings changed in the same second it was first imported; the clips then keep Godot's default names (`idle`, not `idle_loop`). `*.import` is ignored here, so add the sibling's file with `git add -f`, as the authored pilots' files are.
