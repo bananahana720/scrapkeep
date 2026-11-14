@@ -58,8 +58,13 @@ fi
 timeout --signal=TERM --kill-after=20 "${VERIFY_GAME_TIMEOUT:-1500}" "${run[@]}" > "$out/game.log" 2>&1 &
 pid=$!
 write_pid "$pid" "$out/drive.pid"
+# Ctrl-C or a TERM to this script stops the game too (timeout passes the signal on to the game and its
+# display), then the script goes on to keep the evidence; a second wait collects the game's exit.
+trap 'kill -TERM "$pid" 2>/dev/null' INT TERM
 wait "$pid"
 code=$?
+if [ "$code" -gt 128 ] && kill -0 "$pid" 2>/dev/null; then wait "$pid"; code=$?; fi
+trap - INT TERM
 # The game can quit itself with 0 (Quit in the pause menu, Esc on the title). That is a pass only when
 # the step file said so with a last `quits` step; anywhere else it hid the steps that never ran.
 if [ "$code" = 0 ] && ! grep -q "^drive: done\|^drive: awaiting the game's own quit" "$out/game.log"; then

@@ -6,7 +6,7 @@ Owner: the project coordinator. This file is the register. The Claude Doc [Scrap
 
 Sources: Andrew's typed lines and taps (project chat card taps until 18 Oct), the wave board issues (#241 in waves 18 to 21, then one board per wave; STATE.md names the current one) and, 18 to 23 Oct, the local coordinator session. The machine's own register is docs/decisions.tsv in the repo (1,000 rows since Sept; 55 rows added at wave 15 close).
 
-Rulings run to dh (12 Nov 08:44Z). `npm run check:docs` fails a letter used twice. Who added which row, and when, is in `git log -p -- project-guide/handoff/DECISIONS.md`.
+The next free ruling letter is the one after the highest in use: `grep -o '^| Ruling [a-z][a-z]' project-guide/handoff/DECISIONS.md | sort | tail -1` prints the highest. `npm run check:docs` fails a letter used twice. Who added which row, and when, is in `git log -p -- project-guide/handoff/DECISIONS.md`.
 
 ## Direction (standing principles, not single rulings)
 
