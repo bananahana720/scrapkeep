@@ -260,6 +260,12 @@ func hits_harder() -> bool:
 	return punch > 0.0 or not patterns.is_empty()
 
 
+# True when the part changes what the ball does, not only how much: a trigger, a pattern or an
+# element. A Warden gate's guaranteed cobalt is one (Parts.floor_gate, W1-64).
+func changes_behaviour() -> bool:
+	return trigger != "" or not patterns.is_empty() or not elements.is_empty()
+
+
 # Copies of this part to the value its stack rule gives: linear adds per copy,
 # hyperbolic approaches 1 and never reaches it, capped stops at stack_cap.
 func stacked(per_copy: float, copies: int) -> float:

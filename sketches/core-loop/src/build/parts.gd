@@ -161,9 +161,13 @@ const CATALOGUE := {
 		"punch": 4.0, "mods": {"weapon_rate": 1.35}, "cooldown_scale": 0.8},
 
 	# Rare: vaults, and gates with one bonus core.
-	"sunforged_core": {"maker": "waking", "touches": "fire", "name": "Sunforged Core", "verb": "Hit far harder", "text": "+22 punch, +50% weapon damage",
+	# W1-64: Sunforged Core and Spare Cell each carry a trigger, so a Warden gate's cobalt changes
+	# how a fight plays. Sunforged keeps its numbers and arms a power hit every 6 s (arm_hit: the
+	# next hit lands again at its full weapon-scaled amount).
+	"sunforged_core": {"maker": "waking", "touches": "fire", "name": "Sunforged Core", "verb": "Hit harder, power hit every 6s", "text": "+22 punch, +50% weapon damage, 6s power hit",
 		"rarity": "rare", "tier": 3, "family": "weapon", "tags": ["kinetic", "mass"], "punch": 22.0,
-		"mods": {"weapon_damage": 1.5}},
+		"mods": {"weapon_damage": 1.5}, "trigger": "timed",
+		"effect": {"do": "arm_hit", "every": 6.0, "bonus": 1.0}},
 	"gatling_heart": {"maker": "fleet_surplus", "touches": "fire", "name": "Gatling Heart", "verb": "Fire far faster", "text": "+5 punch, +50% fire rate",
 		"rarity": "rare", "tier": 3, "family": "weapon", "tags": ["spiral", "speed"], "punch": 5.0,
 		"mods": {"weapon_rate": 1.5}},
@@ -179,10 +183,11 @@ const CATALOGUE := {
 	"ram_plow": {"maker": "fleet_surplus", "touches": "roll", "name": "Ram Plow", "verb": "Hit harder, gain 15 max health", "text": "+18 punch, +15 max health",
 		"icon": "damage", "rarity": "rare", "tier": 3, "family": "stat", "tags": ["kinetic", "mass"], "punch": 18.0,
 		"max_hp_bonus": 15.0},
-	"spare_cell": {"maker": "moss", "name": "Spare Cell", "verb": "One more special charge", "pitch": "One cell extra", "touches": "special",
-		"text": "+1 special charge", "icon": "charge",
+	"spare_cell": {"maker": "moss", "name": "Spare Cell", "verb": "Kills refill your special", "touches": "special",
+		"text": "+1 special charge. Kills refill it, 12s apart.", "icon": "charge",
 		"rarity": "rare", "tier": 3, "family": "stat", "tags": ["mass"],
-		"charges": {"special": 1}},
+		"charges": {"special": 1}, "trigger": "on_kill",
+		"effect": {"do": "grant_charge", "slot": "special", "every": 12.0}},
 
 	# Rare-plus: won events, and gates with two or more bonus cores.
 	"tempest_core": {"name": "Tempest Core", "verb": "Levels up spiral and chain shots", "text": "spiral +2, chain +1, +30% fire rate",
@@ -872,29 +877,63 @@ static func completing_part(held: Array, pool: Array) -> String:
 # Gate tiers by overcharge: 0 bonus cores offer common, 1 common or rare, 2 or more
 # rare or relic.
 # The cobalt rung's Warden floor (item ladder, wave 20): a gate pair always holds a rare or
-# better. When the roll brought none, its first pick that is not a pattern part (stage 2's
-# guarantee) becomes a rare drawn the same way; cores still lift the other. A pair short of
-# count (the pool ran dry) gains the rare instead, and a pair of patterns keeps its first.
+# better, and since W1-64 that rare changes behaviour (PartDef.changes_behaviour: a trigger, a
+# pattern or an element), so the Warden's guaranteed find is a new way to play, not a bigger
+# number. When the roll brought no such part, a behaviour rare drawn the same way takes the slot
+# of a stat-only rare in the pair, else its first pick that is not a pattern part (stage 2's
+# guarantee); cores still lift the other. When the slot held the pair's only harder hitter, the
+# rare drawn hits harder too. A relic is never traded for it. A pair short of count (the pool ran
+# dry) gains the rare instead, and a pair of patterns keeps its first. With no behaviour rare left
+# any rare stands in, still keeping the hitter.
 # Callers outside the Warden's gates (tests that read common shares, the tools) never pass
 # through it.
 static func floor_gate(rng: RandomNumberGenerator, picks: Array, class_id: String, held: Array,
 		offered: Dictionary = {}, count := 2) -> Array:
-	if picks.is_empty() or picks.any(func(key): return rung_of(key) >= RUNG_FLOOR):
-		return picks
-	var cobalt: Array = roll(rng, ["rare"], class_id, held, 1, picks, offered)
-	if cobalt.is_empty():
+	if picks.is_empty() or picks.any(func(key): return rung_of(key) >= RUNG_FLOOR and changes_behaviour(key)):
 		return picks
 	var out := picks.duplicate()
-	var slot := 0
-	while slot < out.size() and out[slot] in PATTERN_PARTS:
-		slot += 1
+	# A relic or better is never traded down: the slot is a stat-only rare, else a common that is
+	# not a pattern part, else (no room left) the last common pattern.
+	var slot := -1
+	for i in out.size():
+		if rung_of(out[i]) == RUNG_FLOOR:
+			slot = i
+			break
+	if slot < 0:
+		slot = 0
+		while slot < out.size() and (out[slot] in PATTERN_PARTS or rung_of(out[slot]) > RUNG_FLOOR):
+			slot += 1
+	if slot >= out.size() and out.size() >= count:
+		if out.any(func(key): return rung_of(key) > RUNG_FLOOR):
+			return picks
+		slot = out.size()
+		for i in range(out.size() - 1, -1, -1):
+			if rung_of(out[i]) < RUNG_FLOOR:
+				slot = i
+				break
+		if slot >= out.size():
+			return picks
+	var others: Array = out.filter(func(key): return key != out[slot]) if slot < out.size() else out
+	var needs_hitter: bool = slot < out.size() and def(out[slot]) != null and def(out[slot]).hits_harder() \
+		and not others.any(func(key): return def(key) != null and def(key).hits_harder())
+	var plain: Array = offer_pool(class_id, ["rare"]).filter(func(key): return not changes_behaviour(key) \
+		or (needs_hitter and not def(key).hits_harder()))
+	var cobalt: Array = roll(rng, ["rare"], class_id, held, 1, picks + plain, offered)
+	if cobalt.is_empty():
+		var soft: Array = offer_pool(class_id, ["rare"]).filter(func(key): return needs_hitter and not def(key).hits_harder())
+		cobalt = roll(rng, ["rare"], class_id, held, 1, picks + soft, offered)
+	if cobalt.is_empty():
+		return picks
 	if slot < out.size():
 		out[slot] = cobalt[0]
-	elif out.size() < count:
-		out.append(cobalt[0])
 	else:
-		out[-1] = cobalt[0]
+		out.append(cobalt[0])
 	return out
+
+
+static func changes_behaviour(part_id: String) -> bool:
+	var d: Resource = def(part_id)
+	return d != null and d.changes_behaviour()
 
 
 # A part's rung on the ladder: 0 common, 1 rare, 2 relic, 3 evolved (ItemGen.RARITIES order).
