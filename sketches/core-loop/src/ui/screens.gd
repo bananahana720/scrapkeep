@@ -1603,7 +1603,8 @@ func _announce_ready() -> void:
 func ready_line(ms: int) -> String:
 	var open: int = game.flow.classes.filter(func(def): return game.pilot_unlocked(def)).size()
 	var launch_set: String = game.tuning.option("profile") if game.tuning != null else "default"
-	return "SCRAPKEEP_MENU_READY ms=%d profile=%s pilots=%d/%d" % [ms, launch_set, open, game.flow.classes.size()]
+	# stages: how many stages this launch's run holds, so a launch log says where its run ends.
+	return "SCRAPKEEP_MENU_READY ms=%d profile=%s pilots=%d/%d stages=%d" % [ms, launch_set, open, game.flow.classes.size(), game.flow.run_stage_count()]
 
 
 func _unstamp() -> void:

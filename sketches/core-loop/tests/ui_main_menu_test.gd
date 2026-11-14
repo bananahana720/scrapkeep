@@ -48,8 +48,8 @@ func _run() -> void:
 		"%s in %s" % [screens._wordmark.get_global_rect(), screens._title.get_global_rect()])
 	_t.check("the band starts below the wordmark", screens._veil.anchor_top > 0.0 and screens._veil.anchor_top < 0.5,
 		str(screens._veil.anchor_top))
-	_t.eq("the ready line names the launch set and the open pilots", screens.ready_line(1234),
-		"SCRAPKEEP_MENU_READY ms=1234 profile=default pilots=1/6")
+	_t.eq("the ready line names the launch set, the open pilots and the run's stages", screens.ready_line(1234),
+		"SCRAPKEEP_MENU_READY ms=1234 profile=default pilots=1/6 stages=%d" % game.flow.run_stage_count())
 
 	# Steps the stamp past its end on the tween's own clock, not the wall clock.
 	screens._stamp_tween.custom_step(Screens.STAMP_TIME + 0.2)
