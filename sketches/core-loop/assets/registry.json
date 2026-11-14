@@ -2720,6 +2720,512 @@
    }
   },
   {
+   "id": "part_arc_coil_tripo",
+   "path": "res://assets/models/item_parts/part_arc_coil_tripo.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/build/accretion.gd (PART_GLB) through src/presentation/model_variants.gd (--models=tripo)",
+   "provenance": {
+    "recipe": "tools/tripo/README.md",
+    "note": "An unused candidate of the Tripo Studio Smart Mesh set generated from tools/tripo/prompts/part_tempest_core.txt (Studio asset name 'storm generator 3d model'; P2.0, triangle topology at 1,000 polygons, no texture), on Andrew's paid Pro account (Tripo terms 5.2: the outputs belong to the account holder); fitted by tools/tripo/tripo_part.py; one untextured mesh, painted in the part's rarity colour by the game. sha256 a89fd84a0b526ddacea97b937bab2ec98731848202d1ddefd5fc3fbb18f633e8"
+   }
+  },
+  {
+   "id": "part_bladestorm_rotor_tripo",
+   "path": "res://assets/models/item_parts/part_bladestorm_rotor_tripo.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/build/accretion.gd (PART_GLB) through src/presentation/model_variants.gd (--models=tripo)",
+   "provenance": {
+    "recipe": "tools/tripo/README.md",
+    "note": "A candidate of the Tripo Studio Smart Mesh set generated from tools/tripo/prompts/partset_fan.txt (P2.0, triangle topology at 1,000 polygons, no texture), on Andrew's paid Pro account (Tripo terms 5.2: the outputs belong to the account holder); fitted by tools/tripo/tripo_part.py; one untextured mesh, painted in the part's rarity colour by the game. sha256 8a0fb861f548096c032b5a3362e58b8ed6bbbf68f48a0a9d35c27cfbe73f58f5"
+   }
+  },
+  {
+   "id": "part_boost_coil_tripo",
+   "path": "res://assets/models/item_parts/part_boost_coil_tripo.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/build/accretion.gd (PART_GLB) through src/presentation/model_variants.gd (--models=tripo)",
+   "provenance": {
+    "recipe": "tools/tripo/README.md",
+    "note": "A candidate of the Tripo Studio Smart Mesh set generated from tools/tripo/prompts/partset_coil.txt (P2.0, triangle topology at 1,000 polygons, no texture), on Andrew's paid Pro account (Tripo terms 5.2: the outputs belong to the account holder); fitted by tools/tripo/tripo_part.py; one untextured mesh, painted in the part's rarity colour by the game. sha256 c4a0d848c81b9d2ec864b5ad31477d6f69c30550144b0b3619f28345dc0031b9"
+   }
+  },
+  {
+   "id": "part_breaker_drive_tripo",
+   "path": "res://assets/models/item_parts/part_breaker_drive_tripo.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/build/accretion.gd (PART_GLB) through src/presentation/model_variants.gd (--models=tripo)",
+   "provenance": {
+    "recipe": "tools/tripo/README.md",
+    "note": "An unused candidate of the Tripo Studio Smart Mesh set generated from tools/tripo/prompts/part_sunforged_core.txt (P2.0, triangle topology at 1,000 polygons, no texture), on Andrew's paid Pro account (Tripo terms 5.2: the outputs belong to the account holder); fitted by tools/tripo/tripo_part.py; one untextured mesh, painted in the part's rarity colour by the game. sha256 878a98f9783d2502f2974179e3db12775566c8311df0ab23b23835d32af0d53a"
+   }
+  },
+  {
+   "id": "part_chain_arc_tripo",
+   "path": "res://assets/models/item_parts/part_chain_arc_tripo.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/build/accretion.gd (PART_GLB) through src/presentation/model_variants.gd (--models=tripo)",
+   "provenance": {
+    "recipe": "tools/tripo/README.md",
+    "note": "A candidate of the Tripo Studio Smart Mesh set generated from tools/tripo/prompts/partset_capacitor.txt (P2.0, triangle topology at 1,000 polygons, no texture), on Andrew's paid Pro account (Tripo terms 5.2: the outputs belong to the account holder); fitted by tools/tripo/tripo_part.py; one untextured mesh, painted in the part's rarity colour by the game. sha256 abf9e403998f47da4d95fc7a20ebf81967dbe46e25c0d36a7cd22fab4ffb0a52"
+   }
+  },
+  {
+   "id": "part_cracked_plating_tripo",
+   "path": "res://assets/models/item_parts/part_cracked_plating_tripo.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/build/accretion.gd (PART_GLB) through src/presentation/model_variants.gd (--models=tripo)",
+   "provenance": {
+    "recipe": "tools/tripo/README.md",
+    "note": "A candidate of the Tripo Studio Smart Mesh set generated from tools/tripo/prompts/partset_armor.txt (P2.0, triangle topology at 1,000 polygons, no texture), on Andrew's paid Pro account (Tripo terms 5.2: the outputs belong to the account holder); fitted by tools/tripo/tripo_part.py; one untextured mesh, painted in the part's rarity colour by the game. sha256 a58ec76c6ef58ffe58826e6f5355c6ba220176003c61127fad1c93c8361b760f"
+   }
+  },
+  {
+   "id": "part_cross_split_tripo",
+   "path": "res://assets/models/item_parts/part_cross_split_tripo.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/build/accretion.gd (PART_GLB) through src/presentation/model_variants.gd (--models=tripo)",
+   "provenance": {
+    "recipe": "tools/tripo/README.md",
+    "note": "A candidate of the Tripo Studio Smart Mesh set generated from tools/tripo/prompts/partset_trigger.txt (P2.0, triangle topology at 1,000 polygons, no texture), on Andrew's paid Pro account (Tripo terms 5.2: the outputs belong to the account holder); fitted by tools/tripo/tripo_part.py; one untextured mesh, painted in the part's rarity colour by the game. sha256 75c5c9fdb18f5974a7087c4382972faa732a3208b4acdc5224ccb403fa9222ba"
+   }
+  },
+  {
+   "id": "part_dash_vane_tripo",
+   "path": "res://assets/models/item_parts/part_dash_vane_tripo.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/build/accretion.gd (PART_GLB) through src/presentation/model_variants.gd (--models=tripo)",
+   "provenance": {
+    "recipe": "tools/tripo/README.md",
+    "note": "A candidate of the Tripo Studio Smart Mesh set generated from tools/tripo/prompts/partset_vane.txt (P2.0, triangle topology at 1,000 polygons, no texture), on Andrew's paid Pro account (Tripo terms 5.2: the outputs belong to the account holder); fitted by tools/tripo/tripo_part.py; one untextured mesh, painted in the part's rarity colour by the game. sha256 1b8cda0b267a262d4cd6cce0a53ed27352a7ffd6dd7e680b977b3862fa3d5649"
+   }
+  },
+  {
+   "id": "part_double_feed_tripo",
+   "path": "res://assets/models/item_parts/part_double_feed_tripo.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/build/accretion.gd (PART_GLB) through src/presentation/model_variants.gd (--models=tripo)",
+   "provenance": {
+    "recipe": "tools/tripo/README.md",
+    "note": "An unused candidate of the Tripo Studio Smart Mesh set generated from tools/tripo/prompts/part_slag_rounds.txt (Studio asset name 'ammunition drum 3d model'; P2.0, triangle topology at 1,000 polygons, no texture), on Andrew's paid Pro account (Tripo terms 5.2: the outputs belong to the account holder); fitted by tools/tripo/tripo_part.py; one untextured mesh, painted in the part's rarity colour by the game. sha256 6e01a73364ebd32bf2ca2d66ed2ecd98e16308b20e17b493b6ac7fb33e827e73"
+   }
+  },
+  {
+   "id": "part_drop_weight_tripo",
+   "path": "res://assets/models/item_parts/part_drop_weight_tripo.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/build/accretion.gd (PART_GLB) through src/presentation/model_variants.gd (--models=tripo)",
+   "provenance": {
+    "recipe": "tools/tripo/README.md",
+    "note": "An unused candidate of the Tripo Studio Smart Mesh set generated from tools/tripo/prompts/part_sunforged_core.txt (P2.0, triangle topology at 1,000 polygons, no texture), on Andrew's paid Pro account (Tripo terms 5.2: the outputs belong to the account holder); fitted by tools/tripo/tripo_part.py; one untextured mesh, painted in the part's rarity colour by the game. sha256 9b7920cc2de01f6f9b876f8ce75e0ce5f238b021c1b0ea1ff9a1600b273ee15b"
+   }
+  },
+  {
+   "id": "part_focus_lens_tripo",
+   "path": "res://assets/models/item_parts/part_focus_lens_tripo.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/build/accretion.gd (PART_GLB) through src/presentation/model_variants.gd (--models=tripo)",
+   "provenance": {
+    "recipe": "tools/tripo/README.md",
+    "note": "Generated by Tripo (text-to-model v3.1, smart_low_poly, no texture, task be892f4e-97f8-47a1-8c98-4a1655baed60) from tools/tripo/prompts/part_focus_lens.txt plus the shared part suffix in the README, on a paid account (Tripo terms 5.2: the outputs belong to the account holder); fitted by tools/tripo/tripo_part.py; one untextured mesh, painted in the part's rarity colour by the game. sha256 413b3f434ac3d41887e9c05451af23d1814c54f4af8d76c490ebd68b7f5cdae5"
+   }
+  },
+  {
+   "id": "part_frost_vane_tripo",
+   "path": "res://assets/models/item_parts/part_frost_vane_tripo.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/build/accretion.gd (PART_GLB) through src/presentation/model_variants.gd (--models=tripo)",
+   "provenance": {
+    "recipe": "tools/tripo/README.md",
+    "note": "A candidate of the Tripo Studio Smart Mesh set generated from tools/tripo/prompts/partset_vane.txt (P2.0, triangle topology at 1,000 polygons, no texture), on Andrew's paid Pro account (Tripo terms 5.2: the outputs belong to the account holder); fitted by tools/tripo/tripo_part.py; one untextured mesh, painted in the part's rarity colour by the game. sha256 48c62582676ae91edb5e8d43aeb53a4c5119ccd9af29a7b6dd3772e1875cd346"
+   }
+  },
+  {
+   "id": "part_galvanic_rounds_tripo",
+   "path": "res://assets/models/item_parts/part_galvanic_rounds_tripo.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/build/accretion.gd (PART_GLB) through src/presentation/model_variants.gd (--models=tripo)",
+   "provenance": {
+    "recipe": "tools/tripo/README.md",
+    "note": "An unused candidate of the Tripo Studio Smart Mesh set generated from tools/tripo/prompts/part_slag_rounds.txt (P2.0, triangle topology at 1,000 polygons, no texture), on Andrew's paid Pro account (Tripo terms 5.2: the outputs belong to the account holder); fitted by tools/tripo/tripo_part.py; one untextured mesh, painted in the part's rarity colour by the game. sha256 35f646958258f9ee05195316787cc20c6faee3b15ee0bc2c944a491b07678b1c"
+   }
+  },
+  {
+   "id": "part_gatling_heart_tripo",
+   "path": "res://assets/models/item_parts/part_gatling_heart_tripo.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/build/accretion.gd (PART_GLB) through src/presentation/model_variants.gd (--models=tripo)",
+   "provenance": {
+    "recipe": "tools/tripo/README.md",
+    "note": "Generated by Tripo (text-to-model v3.1, smart_low_poly, no texture, task c23a12d9-a38e-49ef-975d-5d411112e897) from tools/tripo/prompts/part_gatling_heart.txt plus the shared part suffix in the README, on a paid account (Tripo terms 5.2: the outputs belong to the account holder); fitted by tools/tripo/tripo_part.py; one untextured mesh, painted in the part's rarity colour by the game. sha256 c42cf5d2efe2bb2471c54c21592472734809e234281f08f15c759bd858845dc0"
+   }
+  },
+  {
+   "id": "part_grip_tread_tripo",
+   "path": "res://assets/models/item_parts/part_grip_tread_tripo.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/build/accretion.gd (PART_GLB) through src/presentation/model_variants.gd (--models=tripo)",
+   "provenance": {
+    "recipe": "tools/tripo/README.md",
+    "note": "A candidate of the Tripo Studio Smart Mesh set generated from tools/tripo/prompts/partset_tread.txt (P2.0, triangle topology at 1,000 polygons, no texture), on Andrew's paid Pro account (Tripo terms 5.2: the outputs belong to the account holder); fitted by tools/tripo/tripo_part.py; one untextured mesh, painted in the part's rarity colour by the game. sha256 0188d865045fb3abf2941b874e9706654ba69194b29fbc2dc9242369d4224277"
+   }
+  },
+  {
+   "id": "part_grounding_spike_tripo",
+   "path": "res://assets/models/item_parts/part_grounding_spike_tripo.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/build/accretion.gd (PART_GLB) through src/presentation/model_variants.gd (--models=tripo)",
+   "provenance": {
+    "recipe": "tools/tripo/README.md",
+    "note": "An unused candidate of the Tripo Studio Smart Mesh set generated from tools/tripo/prompts/part_tempest_core.txt (P2.0, triangle topology at 1,000 polygons, no texture), on Andrew's paid Pro account (Tripo terms 5.2: the outputs belong to the account holder); fitted by tools/tripo/tripo_part.py; one untextured mesh, painted in the part's rarity colour by the game. sha256 1dbdc870f8d07689fef12427c15ef2c52e07529bfb28067001a92129a2cc9129"
+   }
+  },
+  {
+   "id": "part_horizon_optic_tripo",
+   "path": "res://assets/models/item_parts/part_horizon_optic_tripo.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/build/accretion.gd (PART_GLB) through src/presentation/model_variants.gd (--models=tripo)",
+   "provenance": {
+    "recipe": "tools/tripo/README.md",
+    "note": "Generated in Tripo Studio (studio.tripo3d.ai, Smart Mesh, P2.0, triangle topology at 1,000 polygons, no texture; workspace id 81bbd92e-54ea-47be-9fdb-bc38b454836b, Studio asset name 'telescope 3d model') from tools/tripo/prompts/part_horizon_optic.txt on Andrew's paid Pro account (Tripo terms 5.2: the outputs belong to the account holder); fitted by tools/tripo/tripo_part.py; one untextured mesh, painted in the part's rarity colour by the game. sha256 fc662676b121dacd53f5e04f79a2cfebb8015d510bd6c9543e67ed653187e7f9"
+   }
+  },
+  {
+   "id": "part_hot_rivets_tripo",
+   "path": "res://assets/models/item_parts/part_hot_rivets_tripo.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/build/accretion.gd (PART_GLB) through src/presentation/model_variants.gd (--models=tripo)",
+   "provenance": {
+    "recipe": "tools/tripo/README.md",
+    "note": "An unused candidate of the Tripo Studio Smart Mesh set generated from tools/tripo/prompts/part_sunforged_core.txt (Studio asset name 'sun sculpture 3d model'; P2.0, triangle topology at 1,000 polygons, no texture), on Andrew's paid Pro account (Tripo terms 5.2: the outputs belong to the account holder); fitted by tools/tripo/tripo_part.py; one untextured mesh, painted in the part's rarity colour by the game. sha256 343b6b349e284b528831327a3b7a54bf8021f8359e76ae12e8f3739263a283ea"
+   }
+  },
+  {
+   "id": "part_live_line_tripo",
+   "path": "res://assets/models/item_parts/part_live_line_tripo.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/build/accretion.gd (PART_GLB) through src/presentation/model_variants.gd (--models=tripo)",
+   "provenance": {
+    "recipe": "tools/tripo/README.md",
+    "note": "A candidate of the Tripo Studio Smart Mesh set generated from tools/tripo/prompts/partset_harpoon.txt (P2.0, triangle topology at 1,000 polygons, no texture), on Andrew's paid Pro account (Tripo terms 5.2: the outputs belong to the account holder); fitted by tools/tripo/tripo_part.py; one untextured mesh, painted in the part's rarity colour by the game. sha256 99f74cd0395cbf9e893f784d1afc7009b77daf0db4a6de939abb26db4e8249a7"
+   }
+  },
+  {
+   "id": "part_load_dividend_tripo",
+   "path": "res://assets/models/item_parts/part_load_dividend_tripo.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/build/accretion.gd (PART_GLB) through src/presentation/model_variants.gd (--models=tripo)",
+   "provenance": {
+    "recipe": "tools/tripo/README.md",
+    "note": "A candidate of the Tripo Studio Smart Mesh set generated from tools/tripo/prompts/partset_armor.txt (P2.0, triangle topology at 1,000 polygons, no texture), on Andrew's paid Pro account (Tripo terms 5.2: the outputs belong to the account holder); fitted by tools/tripo/tripo_part.py; one untextured mesh, painted in the part's rarity colour by the game. sha256 3b948fefa9085e9c07d411aea08b518d63def115e2a71d5b5589ad6f52dc54ba"
+   }
+  },
+  {
+   "id": "part_long_barrel_tripo",
+   "path": "res://assets/models/item_parts/part_long_barrel_tripo.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/build/accretion.gd (PART_GLB) through src/presentation/model_variants.gd (--models=tripo)",
+   "provenance": {
+    "recipe": "tools/tripo/README.md",
+    "note": "An unused candidate of the Tripo Studio Smart Mesh set generated from tools/tripo/prompts/part_horizon_optic.txt (Studio asset name 'rangefinder telescope 3d model'; P2.0, triangle topology at 1,000 polygons, no texture), on Andrew's paid Pro account (Tripo terms 5.2: the outputs belong to the account holder); fitted by tools/tripo/tripo_part.py; one untextured mesh, painted in the part's rarity colour by the game. sha256 cf9ce2720b732fbfd67108f2b9406c42a1f89215de3e0a8ddcd3c319f7567da1"
+   }
+  },
+  {
+   "id": "part_long_spool_tripo",
+   "path": "res://assets/models/item_parts/part_long_spool_tripo.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/build/accretion.gd (PART_GLB) through src/presentation/model_variants.gd (--models=tripo)",
+   "provenance": {
+    "recipe": "tools/tripo/README.md",
+    "note": "A candidate of the Tripo Studio Smart Mesh set generated from tools/tripo/prompts/partset_coil.txt (P2.0, triangle topology at 1,000 polygons, no texture), on Andrew's paid Pro account (Tripo terms 5.2: the outputs belong to the account holder); fitted by tools/tripo/tripo_part.py; one untextured mesh, painted in the part's rarity colour by the game. sha256 9423323872797159d88b169bc66b03c05c32a45b1a29832ccf721e734a944c6f"
+   }
+  },
+  {
+   "id": "part_loose_trigger_tripo",
+   "path": "res://assets/models/item_parts/part_loose_trigger_tripo.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/build/accretion.gd (PART_GLB) through src/presentation/model_variants.gd (--models=tripo)",
+   "provenance": {
+    "recipe": "tools/tripo/README.md",
+    "note": "A candidate of the Tripo Studio Smart Mesh set generated from tools/tripo/prompts/partset_trigger.txt (P2.0, triangle topology at 1,000 polygons, no texture), on Andrew's paid Pro account (Tripo terms 5.2: the outputs belong to the account holder); fitted by tools/tripo/tripo_part.py; one untextured mesh, painted in the part's rarity colour by the game. sha256 b39110d4451d515515a5269e00b85017c171209c24d74dbb73737c30e4cb3d3c"
+   }
+  },
+  {
+   "id": "part_magnet_spool_tripo",
+   "path": "res://assets/models/item_parts/part_magnet_spool_tripo.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/build/accretion.gd (PART_GLB) through src/presentation/model_variants.gd (--models=tripo)",
+   "provenance": {
+    "recipe": "tools/tripo/README.md",
+    "note": "An unused candidate of the Tripo Studio Smart Mesh set generated from tools/tripo/prompts/part_scrap_gravity.txt (Studio asset name 'horseshoe magnet 3d model'; P2.0, triangle topology at 1,000 polygons, no texture), on Andrew's paid Pro account (Tripo terms 5.2: the outputs belong to the account holder); fitted by tools/tripo/tripo_part.py; one untextured mesh, painted in the part's rarity colour by the game. sha256 4cc958c7b20b52ada36a47a9663dd77ecf0f11dc6185ffd7a9860042780985b3"
+   }
+  },
+  {
+   "id": "part_pylon_capacitor_tripo",
+   "path": "res://assets/models/item_parts/part_pylon_capacitor_tripo.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/build/accretion.gd (PART_GLB) through src/presentation/model_variants.gd (--models=tripo)",
+   "provenance": {
+    "recipe": "tools/tripo/README.md",
+    "note": "A candidate of the Tripo Studio Smart Mesh set generated from tools/tripo/prompts/partset_capacitor.txt (P2.0, triangle topology at 1,000 polygons, no texture), on Andrew's paid Pro account (Tripo terms 5.2: the outputs belong to the account holder); fitted by tools/tripo/tripo_part.py; one untextured mesh, painted in the part's rarity colour by the game. sha256 56837af609670c538ea9b0c9703cd905e5a9d5141955ab238940147807cb68c1"
+   }
+  },
+  {
+   "id": "part_ram_plow_tripo",
+   "path": "res://assets/models/item_parts/part_ram_plow_tripo.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/build/accretion.gd (PART_GLB) through src/presentation/model_variants.gd (--models=tripo)",
+   "provenance": {
+    "recipe": "tools/tripo/README.md",
+    "note": "A candidate of the Tripo Studio Smart Mesh set generated from tools/tripo/prompts/partset_tread.txt (P2.0, triangle topology at 1,000 polygons, no texture), on Andrew's paid Pro account (Tripo terms 5.2: the outputs belong to the account holder); fitted by tools/tripo/tripo_part.py; one untextured mesh, painted in the part's rarity colour by the game. sha256 6064f5e86b758cdaf63952b1b4ec86cc27f6e3753ec409477fe1aa45eb680f05"
+   }
+  },
+  {
+   "id": "part_relay_convergence_tripo",
+   "path": "res://assets/models/item_parts/part_relay_convergence_tripo.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/build/accretion.gd (PART_GLB) through src/presentation/model_variants.gd (--models=tripo)",
+   "provenance": {
+    "recipe": "tools/tripo/README.md",
+    "note": "An unused candidate of the Tripo Studio Smart Mesh set generated from tools/tripo/prompts/part_scrap_gravity.txt (P2.0, triangle topology at 1,000 polygons, no texture), on Andrew's paid Pro account (Tripo terms 5.2: the outputs belong to the account holder); fitted by tools/tripo/tripo_part.py; one untextured mesh, painted in the part's rarity colour by the game. sha256 4cd057f75503a4035027175cc35b06166a47a39e943d3759c7d4448a4b4dd738"
+   }
+  },
+  {
+   "id": "part_rime_heart_tripo",
+   "path": "res://assets/models/item_parts/part_rime_heart_tripo.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/build/accretion.gd (PART_GLB) through src/presentation/model_variants.gd (--models=tripo)",
+   "provenance": {
+    "recipe": "tools/tripo/README.md",
+    "note": "Generated in Tripo Studio (studio.tripo3d.ai, Smart Mesh, P2.0, triangle topology at 1,000 polygons, no texture; workspace id 25af73fd-2017-412a-bcc9-cf59ea8e8a4c, Studio asset name 'blue crystal heart 3d model') from tools/tripo/prompts/part_rime_heart.txt on Andrew's paid Pro account (Tripo terms 5.2: the outputs belong to the account holder); fitted by tools/tripo/tripo_part.py; one untextured mesh, painted in the part's rarity colour by the game. sha256 46038e3d6230c55376e80bbbcda2008607fa345df9172a65ebef2d8f8d17f11b"
+   }
+  },
+  {
+   "id": "part_rime_rounds_tripo",
+   "path": "res://assets/models/item_parts/part_rime_rounds_tripo.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/build/accretion.gd (PART_GLB) through src/presentation/model_variants.gd (--models=tripo)",
+   "provenance": {
+    "recipe": "tools/tripo/README.md",
+    "note": "An unused candidate of the Tripo Studio Smart Mesh set generated from tools/tripo/prompts/part_slag_rounds.txt (Studio asset name 'ammo drum 3d model'; P2.0, triangle topology at 1,000 polygons, no texture), on Andrew's paid Pro account (Tripo terms 5.2: the outputs belong to the account holder); fitted by tools/tripo/tripo_part.py; one untextured mesh, painted in the part's rarity colour by the game. sha256 7947019c3324489d7c6576d6b3a750ae72707c0cad2133e4b1afc842f4000ac4"
+   }
+  },
+  {
+   "id": "part_rivet_plating_tripo",
+   "path": "res://assets/models/item_parts/part_rivet_plating_tripo.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/build/accretion.gd (PART_GLB) through src/presentation/model_variants.gd (--models=tripo)",
+   "provenance": {
+    "recipe": "tools/tripo/README.md",
+    "note": "An unused candidate of the Tripo Studio Smart Mesh set generated from tools/tripo/prompts/part_rime_heart.txt (Studio asset name 'crystal heart 3d model'; P2.0, triangle topology at 1,000 polygons, no texture), on Andrew's paid Pro account (Tripo terms 5.2: the outputs belong to the account holder); fitted by tools/tripo/tripo_part.py; one untextured mesh, painted in the part's rarity colour by the game. sha256 c28c5facc80952c05e7bc8625c94e82061f83aca6fc6478c2cc73cc657d61e56"
+   }
+  },
+  {
+   "id": "part_riveted_shell_tripo",
+   "path": "res://assets/models/item_parts/part_riveted_shell_tripo.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/build/accretion.gd (PART_GLB) through src/presentation/model_variants.gd (--models=tripo)",
+   "provenance": {
+    "recipe": "tools/tripo/README.md",
+    "note": "A candidate of the Tripo Studio Smart Mesh set generated from tools/tripo/prompts/partset_armor.txt (P2.0, triangle topology at 1,000 polygons, no texture), on Andrew's paid Pro account (Tripo terms 5.2: the outputs belong to the account holder); fitted by tools/tripo/tripo_part.py; one untextured mesh, painted in the part's rarity colour by the game. sha256 9cf514b9eb8e6780f303f3591ab1324bba95d32ca62aeb868ef8924c14e88410"
+   }
+  },
+  {
+   "id": "part_runner_overclock_tripo",
+   "path": "res://assets/models/item_parts/part_runner_overclock_tripo.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/build/accretion.gd (PART_GLB) through src/presentation/model_variants.gd (--models=tripo)",
+   "provenance": {
+    "recipe": "tools/tripo/README.md",
+    "note": "A candidate of the Tripo Studio Smart Mesh set generated from tools/tripo/prompts/partset_fan.txt (P2.0, triangle topology at 1,000 polygons, no texture), on Andrew's paid Pro account (Tripo terms 5.2: the outputs belong to the account holder); fitted by tools/tripo/tripo_part.py; one untextured mesh, painted in the part's rarity colour by the game. sha256 4591dac6036ffde3fcfa60dda00ffa9f353b6ce4c46656573415480275a3441e"
+   }
+  },
+  {
+   "id": "part_scrap_gravity_tripo",
+   "path": "res://assets/models/item_parts/part_scrap_gravity_tripo.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/build/accretion.gd (PART_GLB) through src/presentation/model_variants.gd (--models=tripo)",
+   "provenance": {
+    "recipe": "tools/tripo/README.md",
+    "note": "Generated in Tripo Studio (studio.tripo3d.ai, Smart Mesh, P2.0, triangle topology at 1,000 polygons, no texture; workspace id 581ed437-8f40-48ce-aede-b92c7f34e99b, Studio asset name 'horseshoe magnet 3d model') from tools/tripo/prompts/part_scrap_gravity.txt on Andrew's paid Pro account (Tripo terms 5.2: the outputs belong to the account holder); fitted by tools/tripo/tripo_part.py; one untextured mesh, painted in the part's rarity colour by the game. sha256 a3073da58eaa5932cd4865aa05d47eef778dcdff710ed6f93e383414cadd9604"
+   }
+  },
+  {
+   "id": "part_slack_coil_tripo",
+   "path": "res://assets/models/item_parts/part_slack_coil_tripo.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/build/accretion.gd (PART_GLB) through src/presentation/model_variants.gd (--models=tripo)",
+   "provenance": {
+    "recipe": "tools/tripo/README.md",
+    "note": "A candidate of the Tripo Studio Smart Mesh set generated from tools/tripo/prompts/partset_coil.txt (P2.0, triangle topology at 1,000 polygons, no texture), on Andrew's paid Pro account (Tripo terms 5.2: the outputs belong to the account holder); fitted by tools/tripo/tripo_part.py; one untextured mesh, painted in the part's rarity colour by the game. sha256 b857061cb31e25933199e250d53a180587e7ebfa3d7a7b49920bd10a44bb7a03"
+   }
+  },
+  {
+   "id": "part_slag_rounds_tripo",
+   "path": "res://assets/models/item_parts/part_slag_rounds_tripo.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/build/accretion.gd (PART_GLB) through src/presentation/model_variants.gd (--models=tripo)",
+   "provenance": {
+    "recipe": "tools/tripo/README.md",
+    "note": "Generated in Tripo Studio (studio.tripo3d.ai, Smart Mesh, P2.0, triangle topology at 1,000 polygons, no texture; workspace id 44ee8e17-935e-4603-84d9-6ca1a0ffc3cd, Studio asset name 'ammunition drum 3d model') from tools/tripo/prompts/part_slag_rounds.txt on Andrew's paid Pro account (Tripo terms 5.2: the outputs belong to the account holder); fitted by tools/tripo/tripo_part.py; one untextured mesh, painted in the part's rarity colour by the game. sha256 bac7ecff94e05b249267742e8f79be450502b625621cef02235cc738e52c39c4"
+   }
+  },
+  {
+   "id": "part_spare_cell_tripo",
+   "path": "res://assets/models/item_parts/part_spare_cell_tripo.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/build/accretion.gd (PART_GLB) through src/presentation/model_variants.gd (--models=tripo)",
+   "provenance": {
+    "recipe": "tools/tripo/README.md",
+    "note": "A candidate of the Tripo Studio Smart Mesh set generated from tools/tripo/prompts/partset_capacitor.txt (P2.0, triangle topology at 1,000 polygons, no texture), on Andrew's paid Pro account (Tripo terms 5.2: the outputs belong to the account holder); fitted by tools/tripo/tripo_part.py; one untextured mesh, painted in the part's rarity colour by the game. sha256 cbe50c2c5ec4ab9850051b84358dd73797d1c04a3fe9216dd271870c770ecc6a"
+   }
+  },
+  {
+   "id": "part_spark_tread_tripo",
+   "path": "res://assets/models/item_parts/part_spark_tread_tripo.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/build/accretion.gd (PART_GLB) through src/presentation/model_variants.gd (--models=tripo)",
+   "provenance": {
+    "recipe": "tools/tripo/README.md",
+    "note": "A candidate of the Tripo Studio Smart Mesh set generated from tools/tripo/prompts/partset_tread.txt (P2.0, triangle topology at 1,000 polygons, no texture), on Andrew's paid Pro account (Tripo terms 5.2: the outputs belong to the account holder); fitted by tools/tripo/tripo_part.py; one untextured mesh, painted in the part's rarity colour by the game. sha256 87fdb5d05d3aa4a5de8ffc1c987fee3dbc66165e05018378754654a14f2ef48f"
+   }
+  },
+  {
+   "id": "part_spiral_wave_tripo",
+   "path": "res://assets/models/item_parts/part_spiral_wave_tripo.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/build/accretion.gd (PART_GLB) through src/presentation/model_variants.gd (--models=tripo)",
+   "provenance": {
+    "recipe": "tools/tripo/README.md",
+    "note": "A candidate of the Tripo Studio Smart Mesh set generated from tools/tripo/prompts/partset_fan.txt (P2.0, triangle topology at 1,000 polygons, no texture), on Andrew's paid Pro account (Tripo terms 5.2: the outputs belong to the account holder); fitted by tools/tripo/tripo_part.py; one untextured mesh, painted in the part's rarity colour by the game. sha256 613a30236996281236d4bab7c01cafc4704436ee93b7eeda47483859278c5731"
+   }
+  },
+  {
+   "id": "part_spring_shims_tripo",
+   "path": "res://assets/models/item_parts/part_spring_shims_tripo.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/build/accretion.gd (PART_GLB) through src/presentation/model_variants.gd (--models=tripo)",
+   "provenance": {
+    "recipe": "tools/tripo/README.md",
+    "note": "A candidate of the Tripo Studio Smart Mesh set generated from tools/tripo/prompts/partset_coil.txt (P2.0, triangle topology at 1,000 polygons, no texture), on Andrew's paid Pro account (Tripo terms 5.2: the outputs belong to the account holder); fitted by tools/tripo/tripo_part.py; one untextured mesh, painted in the part's rarity colour by the game. sha256 0c5e039bccc0c77a0196dd86371acc8a12b23c3f59a1cedb4e0a1529b88fb652"
+   }
+  },
+  {
+   "id": "part_storm_mast_tripo",
+   "path": "res://assets/models/item_parts/part_storm_mast_tripo.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/build/accretion.gd (PART_GLB) through src/presentation/model_variants.gd (--models=tripo)",
+   "provenance": {
+    "recipe": "tools/tripo/README.md",
+    "note": "An unused candidate of the Tripo Studio Smart Mesh set generated from tools/tripo/prompts/part_tempest_core.txt (Studio asset name 'lightning bolt spring prop 3d model'; P2.0, triangle topology at 1,000 polygons, no texture), on Andrew's paid Pro account (Tripo terms 5.2: the outputs belong to the account holder); fitted by tools/tripo/tripo_part.py; one untextured mesh, painted in the part's rarity colour by the game. sha256 3429dc5c72dab10a5c92f0e686f4e457f9cc9a55ab29f67eed46890b694880f7"
+   }
+  },
+  {
+   "id": "part_sunforged_core_tripo",
+   "path": "res://assets/models/item_parts/part_sunforged_core_tripo.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/build/accretion.gd (PART_GLB) through src/presentation/model_variants.gd (--models=tripo)",
+   "provenance": {
+    "recipe": "tools/tripo/README.md",
+    "note": "Generated in Tripo Studio (studio.tripo3d.ai, Smart Mesh, P2.0, triangle topology at 1,000 polygons, no texture; workspace id 677c84b5-e429-4af3-8c91-8b755b7811d2, Studio asset name 'spiky sun orb 3d model') from tools/tripo/prompts/part_sunforged_core.txt on Andrew's paid Pro account (Tripo terms 5.2: the outputs belong to the account holder); fitted by tools/tripo/tripo_part.py; one untextured mesh, painted in the part's rarity colour by the game. sha256 ddc11060765e9c5793619da1fd5df1554f891cef167d43a58a5fcce71b5b1e1c"
+   }
+  },
+  {
+   "id": "part_tempest_core_tripo",
+   "path": "res://assets/models/item_parts/part_tempest_core_tripo.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/build/accretion.gd (PART_GLB) through src/presentation/model_variants.gd (--models=tripo)",
+   "provenance": {
+    "recipe": "tools/tripo/README.md",
+    "note": "Generated in Tripo Studio (studio.tripo3d.ai, Smart Mesh, P2.0, triangle topology at 1,000 polygons, no texture; workspace id 40dd48a7-e75d-4641-b55e-f4a56a847933, Studio asset name 'spiral tower 3d model') from tools/tripo/prompts/part_tempest_core.txt on Andrew's paid Pro account (Tripo terms 5.2: the outputs belong to the account holder); fitted by tools/tripo/tripo_part.py; one untextured mesh, painted in the part's rarity colour by the game. sha256 7733f44d14130275369eab43c087b593a8be7228c8cd320cfd93328d978c3849"
+   }
+  },
+  {
+   "id": "part_thin_pickings_tripo",
+   "path": "res://assets/models/item_parts/part_thin_pickings_tripo.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/build/accretion.gd (PART_GLB) through src/presentation/model_variants.gd (--models=tripo)",
+   "provenance": {
+    "recipe": "tools/tripo/README.md",
+    "note": "A candidate of the Tripo Studio Smart Mesh set generated from tools/tripo/prompts/partset_armor.txt (P2.0, triangle topology at 1,000 polygons, no texture), on Andrew's paid Pro account (Tripo terms 5.2: the outputs belong to the account holder); fitted by tools/tripo/tripo_part.py; one untextured mesh, painted in the part's rarity colour by the game. sha256 d177cfa0051a653abf611ea573901d53c29fa68895dcff09ee074e68f0e681a0"
+   }
+  },
+  {
+   "id": "part_tread_plating_tripo",
+   "path": "res://assets/models/item_parts/part_tread_plating_tripo.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/build/accretion.gd (PART_GLB) through src/presentation/model_variants.gd (--models=tripo)",
+   "provenance": {
+    "recipe": "tools/tripo/README.md",
+    "note": "A candidate of the Tripo Studio Smart Mesh set generated from tools/tripo/prompts/partset_tread.txt (P2.0, triangle topology at 1,000 polygons, no texture), on Andrew's paid Pro account (Tripo terms 5.2: the outputs belong to the account holder); fitted by tools/tripo/tripo_part.py; one untextured mesh, painted in the part's rarity colour by the game. sha256 3c80a1d6d3d91b674432bcc8fd9722502a6405ce8e79cd0cf51f27693dbf239b"
+   }
+  },
+  {
+   "id": "part_vent_baffle_tripo",
+   "path": "res://assets/models/item_parts/part_vent_baffle_tripo.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/build/accretion.gd (PART_GLB) through src/presentation/model_variants.gd (--models=tripo)",
+   "provenance": {
+    "recipe": "tools/tripo/README.md",
+    "note": "A candidate of the Tripo Studio Smart Mesh set generated from tools/tripo/prompts/partset_fan.txt (P2.0, triangle topology at 1,000 polygons, no texture), on Andrew's paid Pro account (Tripo terms 5.2: the outputs belong to the account holder); fitted by tools/tripo/tripo_part.py; one untextured mesh, painted in the part's rarity colour by the game. sha256 6a479953f17ee32361c4338abf2000390483bc7ecd5024d788632d11c8061bc2"
+   }
+  },
+  {
+   "id": "part_winch_pawl_tripo",
+   "path": "res://assets/models/item_parts/part_winch_pawl_tripo.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/build/accretion.gd (PART_GLB) through src/presentation/model_variants.gd (--models=tripo)",
+   "provenance": {
+    "recipe": "tools/tripo/README.md",
+    "note": "A candidate of the Tripo Studio Smart Mesh set generated from tools/tripo/prompts/partset_harpoon.txt (P2.0, triangle topology at 1,000 polygons, no texture), on Andrew's paid Pro account (Tripo terms 5.2: the outputs belong to the account holder); fitted by tools/tripo/tripo_part.py; one untextured mesh, painted in the part's rarity colour by the game. sha256 66bedd33e4549d9dcca5301b09e0541f656304fc465b0b3c6d45c9dcdb13ab27"
+   }
+  },
+  {
    "id": "kicker_wedge",
    "path": "res://assets/models/kicker_wedge.glb",
    "class": "prop",
@@ -39528,6 +40034,52 @@
   "park_contraption_trebuchet_arm",
   "park_contraption_trebuchet_detail1",
   "park_contraption_trebuchet_detail2",
+  "part_arc_coil_tripo",
+  "part_bladestorm_rotor_tripo",
+  "part_boost_coil_tripo",
+  "part_breaker_drive_tripo",
+  "part_chain_arc_tripo",
+  "part_cracked_plating_tripo",
+  "part_cross_split_tripo",
+  "part_dash_vane_tripo",
+  "part_double_feed_tripo",
+  "part_drop_weight_tripo",
+  "part_focus_lens_tripo",
+  "part_frost_vane_tripo",
+  "part_galvanic_rounds_tripo",
+  "part_gatling_heart_tripo",
+  "part_grip_tread_tripo",
+  "part_grounding_spike_tripo",
+  "part_horizon_optic_tripo",
+  "part_hot_rivets_tripo",
+  "part_live_line_tripo",
+  "part_load_dividend_tripo",
+  "part_long_barrel_tripo",
+  "part_long_spool_tripo",
+  "part_loose_trigger_tripo",
+  "part_magnet_spool_tripo",
+  "part_pylon_capacitor_tripo",
+  "part_ram_plow_tripo",
+  "part_relay_convergence_tripo",
+  "part_rime_heart_tripo",
+  "part_rime_rounds_tripo",
+  "part_rivet_plating_tripo",
+  "part_riveted_shell_tripo",
+  "part_runner_overclock_tripo",
+  "part_scrap_gravity_tripo",
+  "part_slack_coil_tripo",
+  "part_slag_rounds_tripo",
+  "part_spare_cell_tripo",
+  "part_spark_tread_tripo",
+  "part_spiral_wave_tripo",
+  "part_spring_shims_tripo",
+  "part_storm_mast_tripo",
+  "part_sunforged_core_tripo",
+  "part_tempest_core_tripo",
+  "part_thin_pickings_tripo",
+  "part_tread_plating_tripo",
+  "part_vent_baffle_tripo",
+  "part_winch_pawl_tripo",
   "penstock_run",
   "penstock_run_detail1",
   "penstock_run_detail2",

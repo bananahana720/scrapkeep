@@ -56,3 +56,110 @@ candidate kept, then Export as GLB. The exported GLB goes through the same fitte
 crane were made this way on 13 Nov 2026. Both come out smaller than the authored prop's footprint, because
 the fit holds them inside the authored bounds: the skiff 4.7 m in a 7.9 m footprint, the crane (an upright
 crane, where the authored prop is a fallen boom) 6.5 m in 13.9 m. The 4k Studio texture never ships.
+
+## Ball parts (the part's own shape)
+
+A part bolted on the ball is drawn from rods, boxes and discs by family (`src/build/accretion.gd`). With
+`--models=tripo`, a part that has `assets/models/item_parts/part_<id>_tripo.glb` shows that mesh instead,
+painted in its rarity colour, on the same tier foot. No texture is generated, so one costs 20 API credits:
+
+`tripo make "<prompts/part_<id>.txt>, single small machine part standing upright on a round bolted base plate, chunky toy-like low poly game prop, bold readable silhouette, thick shapes, no thin wires, no text" --model tripo-v3.1 -p smart_low_poly=true -p face_limit=600 -p texture=false -p pbr=false --yes --json`
+
+`blender -b --factory-startup -P tools/tripo/tripo_part.py -- --in <model.glb> --out assets/models/item_parts/part_<id>_tripo.glb [--cut-above 0.62]`
+
+Tripo ignores `face_limit=600` here (it returned 666 to 1,818 triangles); the fitter caps at 1,000. Flat
+shading and a 600 cap turned the shapes into lumps, so the fitter keeps smooth shading with hard edges past
+40 degrees. Up to 24 parts show at once, so the worst case is 24,000 triangles on the ball.
+
+| part | grade | Tripo task | tris | note |
+| --- | --- | --- | --- | --- |
+| slag_rounds | common | Studio workspace 44ee8e17-935e-4603-84d9-6ca1a0ffc3cd | 999 | Studio remake; the API version lost its shells (task 7b2b8357-c299-483c-afa6-50e6bc2bb95a) |
+| focus_lens | common | be892f4e-97f8-47a1-8c98-4a1655baed60 | 958 | API |
+| gatling_heart | rare | c23a12d9-a38e-49ef-975d-5d411112e897 | 999 | API |
+| rime_heart | relic | Studio workspace 25af73fd-2017-412a-bcc9-cf59ea8e8a4c | 984 | Studio remake; the API version was a rounded lump (task 8b9f62cf-df90-4e81-b550-a45525a85e9c) |
+| sunforged_core | rare | Studio workspace 677c84b5-e429-4af3-8c91-8b755b7811d2 | 946 | Studio |
+| horizon_optic | rare | Studio workspace 81bbd92e-54ea-47be-9fdb-bc38b454836b | 1000 | Studio |
+| tempest_core | relic | Studio workspace 40dd48a7-e75d-4641-b55e-f4a56a847933 | 782 | Studio |
+| scrap_gravity | relic | Studio workspace 581ed437-8f40-48ce-aede-b92c7f34e99b | 999 | Studio |
+
+Studio's Smart Mesh gives cleaner part shapes than the API's smart_low_poly at this size: set Topology to
+Triangle and the polygon count to 1,000 under Customize Poly Counts, Privacy to Private, and type the whole
+prompt (the Studio prompt files hold the full text, with no shared suffix to add). One Generate costs 100
+Pro credits and returns four candidates whatever the Number of Generation says; export the one kept as GLB
+with no texture step.
+
+API spend after this batch: 500 credits, the cap Andrew set on 13 Nov 2026. Pro spend: 640 credits (40 on the
+flume textures, 600 on six part sets).
+
+### Free parts from unused candidates
+
+Each Studio set returns four candidates and one is kept, so three are paid for and unused. A related part
+takes one of them: the same motif runs down an upgrade line (shells for the rounds, scopes for range, bolts
+for storm parts), and the rarity colour and tier foot tell the grades apart. Select the candidate in
+Studio's Assets panel and export it; no credits are spent.
+
+| part | grade | source | tris | cost |
+| --- | --- | --- | --- | --- |
+| magnet_spool | common | unused candidate of the scrap_gravity set | 822 | free |
+| storm_mast | evolved | unused candidate of the tempest_core set | 999 | free |
+| arc_coil | common | unused candidate of the tempest_core set | 873 | free |
+| long_barrel | common | unused candidate of the horizon_optic set | 1000 | free |
+| hot_rivets | common | unused candidate of the sunforged_core set | 1000 | free |
+| double_feed | common | unused candidate of the slag_rounds set | 1000 | free |
+| rime_rounds | rare | unused candidate of the slag_rounds set | 1000 | free |
+| rivet_plating | common | unused candidate of the rime_heart set | 945 | free |
+
+Cost per usable part on 13 Nov 2026: API low-poly 40 credits (2 of 4 tries usable at 20), Studio Smart
+Mesh 100 Pro credits (6 of 6 sets), unused candidates 0 (8 of 8). With the free candidates counted, the six
+Studio sets gave 14 parts, 43 Pro credits each.
+
+### The rest of the catalogue (14 Nov 2026)
+
+Every part in `src/build/parts.gd` now has its own shape: 46 files. The last thirty came from five more
+unused candidates and eight Studio sets, one set per motif, with all four candidates of a set exported and
+shared out among related parts. The set prompts are `prompts/partset_<motif>.txt`.
+
+| part | source | tris |
+| --- | --- | --- |
+| grounding_spike | unused candidate of the tempest_core set | 927 |
+| breaker_drive | unused candidate of the sunforged_core set | 1000 |
+| drop_weight | unused candidate of the sunforged_core set | 825 |
+| relay_convergence | unused candidate of the scrap_gravity set | 893 |
+| galvanic_rounds | unused candidate of the slag_rounds set | 974 |
+| tread_plating | tread set | 950 |
+| spark_tread | tread set | 1000 |
+| ram_plow | tread set | 951 |
+| grip_tread | tread set | 1000 |
+| long_spool | coil set | 947 |
+| spring_shims | coil set | 1000 |
+| boost_coil | coil set | 981 |
+| slack_coil | coil set | 1000 |
+| dash_vane | vane set | 825 |
+| frost_vane | vane set | 897 |
+| live_line | harpoon set | 982 |
+| winch_pawl | harpoon set | 985 |
+| riveted_shell | armor set | 840 |
+| cracked_plating | armor set | 925 |
+| thin_pickings | armor set | 936 |
+| load_dividend | armor set | 877 |
+| vent_baffle | fan set | 809 |
+| bladestorm_rotor | fan set | 649 |
+| spiral_wave | fan set | 775 |
+| runner_overclock | fan set | 807 |
+| pylon_capacitor | capacitor set | 912 |
+| spare_cell | capacitor set | 978 |
+| chain_arc | capacitor set | 1000 |
+| cross_split | trigger set | 994 |
+| loose_trigger | trigger set | 571 |
+
+Eight sets cost 800 Pro credits and gave 25 parts, 32 credits each; the five unused candidates were free.
+Seven set candidates were left out: two thin weather vanes, two spare harpoons, two spare cross guns, and
+one capacitor whose body sat in a separate shell from its base, so the fitter kept only the base (136
+triangles; check the count the fitter prints). A prompt that names a thin object (a weather vane) returns
+thin rods whatever the suffix says, so name a chunky object instead (the vent fan set).
+
+Pro credits left after this batch: 1,760 (Studio's counter). Pro spend so far: 1,440.
+
+The fitter drops floating fragments by walking shells whose bounding boxes touch. A fragment that sits
+inside another shell's box survives; pick another of the four candidates then (Scrap Gravity's first
+candidate had a bolt lying beside its base).

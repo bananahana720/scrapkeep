@@ -7,6 +7,7 @@ extends SceneTree
 const ModelVariants := preload("res://src/presentation/model_variants.gd")
 const EnemyCasting := preload("res://src/combat/enemy_casting.gd")
 const ParkProps := preload("res://src/presentation/park_props.gd")
+const Accretion := preload("res://src/build/accretion.gd")
 
 # authored path -> {tris ceiling, draws ceiling}; -1 holds the sibling to the authored model's own count.
 # The chaser's ceilings are enemy_chaser_asset_test.gd's; the pet's 2,000 is what the fitter targets
@@ -147,5 +148,54 @@ func _run() -> void:
 		"EnemyCasting.parts loads the authored boom tender with the switch off")
 	_check(_mesh_tris(ParkProps._mesh(shed)) == _shape_of(shed).tris, "park_props loads the authored wheelhouse with the switch off")
 	ParkProps.release_shared()
+	_check_parts()
 	print("tripo_variants_test: %s" % ("PASS" if failures == 0 else "FAIL (%d)" % failures))
 	quit(1 if failures > 0 else 0)
+
+
+# A ball part shows its own Tripo shape only with the switch on: one mesh under the cap and inside
+# the part box, in the rarity material, on the tier foot. Off, or for a part with no file, the
+# family primitive is drawn as before.
+func _check_parts() -> void:
+	var acc := Accretion.new()
+	for id in ["slag_rounds", "focus_lens", "gatling_heart", "rime_heart", "sunforged_core", "horizon_optic", "tempest_core", "scrap_gravity",
+			"magnet_spool", "storm_mast", "arc_coil", "long_barrel", "hot_rivets", "double_feed", "rime_rounds", "rivet_plating",
+			"grounding_spike", "breaker_drive", "drop_weight", "relay_convergence", "galvanic_rounds", "tread_plating", "spark_tread", "ram_plow",
+			"grip_tread", "long_spool", "spring_shims", "boost_coil", "slack_coil", "dash_vane", "frost_vane", "live_line",
+			"winch_pawl", "riveted_shell", "cracked_plating", "thin_pickings", "load_dividend", "vent_baffle", "bladestorm_rotor", "spiral_wave",
+			"runner_overclock", "pylon_capacitor", "spare_cell", "chain_arc", "cross_split", "loose_trigger"]:
+		ModelVariants.set_enabled(true)
+		var piece: Node3D = acc._piece(id)
+		var own := piece.get_node_or_null("Own") as MeshInstance3D
+		_check(own != null and own.material_override != null, "%s shows its own shape with the switch on" % id)
+		ModelVariants.set_enabled(false)
+		var plain_piece: Node3D = acc._piece(id)
+		ModelVariants.set_enabled(true)
+		var feet := func(node: Node3D) -> Array:
+			var out := []
+			for child in node.get_children():
+				if String(child.name).begins_with("Foot_"):
+					out.append(String(child.name))
+			return out
+		_check(feet.call(piece) == feet.call(plain_piece), "%s stands on the same tier foot as its primitive (%s)" % [id, feet.call(piece)])
+		var rarity_mat := own.material_override as StandardMaterial3D if own != null else null
+		var want: Color = Accretion.RARITY_COLORS.get(Accretion.ItemGen.resolve_rarity(Accretion.Parts.def(id).rarity), Color.BLACK)
+		_check(rarity_mat != null and rarity_mat.albedo_color.is_equal_approx(want), "%s shape wears its rarity colour" % id)
+		plain_piece.free()
+		if own != null:
+			var box := own.mesh.get_aabb()
+			_check(_mesh_tris(own.mesh) <= 1000, "%s shape is at most 1,000 triangles (%d)" % [id, _mesh_tris(own.mesh)])
+			_check(box.position.y > -0.01 and box.end.y <= 0.66 and maxf(box.size.x, box.size.z) <= 0.61,
+				"%s shape stands on the origin inside the part box (%s)" % [id, box.size])
+			_check(own.mesh.get_surface_count() == 1, "%s shape is one draw" % id)
+		piece.free()
+		ModelVariants.set_enabled(false)
+		piece = acc._piece(id)
+		_check(piece.get_node_or_null("Own") == null and piece.get_child_count() > 0, "%s draws its family primitive with the switch off" % id)
+		piece.free()
+	ModelVariants.set_enabled(true)
+	var plain: Node3D = acc._piece("admirals_crest")
+	_check(plain.get_node_or_null("Own") == null and plain.get_child_count() > 0, "a part with no Tripo file keeps its family primitive with the switch on")
+	plain.free()
+	ModelVariants.set_enabled(false)
+	acc.free()
