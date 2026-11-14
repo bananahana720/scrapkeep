@@ -125,7 +125,7 @@ node scripts/known-failing.mjs --promotion          # fails if any row is past i
 
 ## The node tests, once per promotion
 
-The fast lane runs only the node tests a diff selects, and the shards run Godot tests. So once per promotion the whole node suite runs on the PC, where no test is skipped for the box: a full clone, an ordinary user, installed packages. The coordinator queues it on the PC lane when the Gate calls the promotion.
+The fast lane runs only the node tests a diff selects, and the shards run Godot tests. So once per promotion the whole node suite runs on the PC, where no test is skipped for the box: a full clone, an ordinary user, installed packages. The board thread queues it on the PC lane when the Gate calls the promotion.
 
 ```
 git fetch origin && git checkout --detach <stage head>
