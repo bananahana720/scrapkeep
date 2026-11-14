@@ -38,6 +38,7 @@ var _centre := Vector3.ZERO
 var _owed: Array = []
 var _wait := 0.0
 var _wrecks := 0
+var _clears := 0
 var _lamp: MeshInstance3D
 # Where along the fence each machine climbs in: a stream of the ring's own, off the run's seed.
 var _rng := RandomNumberGenerator.new()
@@ -64,7 +65,7 @@ func bind(camp_hub, yard: Node, records_ref = null) -> void:
 	var away := Vector3(_centre.x - box.x, 0.0, _centre.z - box.z)
 	away = away.normalized() if away.length() > 0.5 else Vector3.BACK
 	var post := _centre + away * POST_M
-	hub.add_station(STATION, post, "Stocktake", KEY, STATION_RADIUS, begin)
+	hub.add_station(STATION, post, "Stocktake: endless counts", KEY, STATION_RADIUS, begin)
 	_lamp = _post(post)
 	board = _board(post)
 	# The pilot at the gate can change between walks, and the board shows that pilot's best.
@@ -89,6 +90,7 @@ func begin() -> void:
 	sandbox.clear()
 	sandbox.mend()
 	_wrecks = sandbox.wrecks
+	_clears = sandbox.clears
 	count = SurvivalCount.new(1, "ring")
 	_owe(count.begin())
 	_show()
@@ -97,8 +99,9 @@ func begin() -> void:
 func _physics_process(delta: float) -> void:
 	if not running():
 		return
-	# The call box's page stops the yard and can clear it, so opening it mid-count ends the count.
-	if not sandbox.walking or not sandbox.inside or sandbox.wrecks != _wrecks or sandbox.page_open:
+	# The count ends when the yard stops fighting (the walk ends, the ball leaves, the call box's page opens), when
+	# the hull is wrecked, and when the yard is emptied by anything but kills (the call box's "Clear yard").
+	if not sandbox.fighting() or sandbox.wrecks != _wrecks or sandbox.clears != _clears:
 		stop()
 		return
 	_arrive(delta)

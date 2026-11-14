@@ -871,6 +871,12 @@ func clear() -> void:
 	_pending_stage = false
 
 
+# The sites a player is offered now: built, not done, shown (a muster is hidden until it lands) and not a field
+# find, which is found, never pointed at. The markers and the HUD's count read this.
+func on_offer() -> Array:
+	return sites.filter(func(s) -> bool: return is_instance_valid(s) and not s.done and not s.has_meta("find") and s.visible)
+
+
 func site(id: String) -> Site:
 	for s in sites:
 		if s.id == id:
@@ -2078,7 +2084,7 @@ func _watch_yard(s: Site, delta: float, ball: Vector3) -> void:
 		elif _planar(ball, s.global_position) > float(s.rule["ring"]) or absf(ball.y - s.global_position.y) > RING_HEIGHT:
 			return
 		s.started = true
-		var going: Vector3 = ctx.player.state.velocity
+		var going: Vector3 = ctx.player.planar_velocity()
 		yard.begin(Vector2(s.global_position.x, s.global_position.z), Vector2(going.x, going.z))
 		_yard_owe(s)
 		ctx.events.event_started.emit(s.id)

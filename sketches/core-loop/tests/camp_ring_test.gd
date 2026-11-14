@@ -117,6 +117,14 @@ func _ring() -> void:
 	await _frames(2)
 	_t.eq("and no count is cleared by it", ring.best(), 1)
 
+	# Emptying the yard by anything but kills ends the count too, however the page was reached.
+	ring.begin()
+	await _frames(40)
+	sandbox.clear()
+	await _frames(3)
+	_t.check("a yard emptied without kills ends the ring", not ring.running(), "clear()")
+	_t.eq("and that clears no count either", ring.best(), 1)
+
 	# Count 6 on: more health, the same tools.
 	var plain: Node3D = sandbox.stand("mag_trapper", yard + Vector3(6.0, 0.0, 0.0))
 	var strong: Node3D = sandbox.stand("mag_trapper", yard + Vector3(-6.0, 0.0, 0.0), 2.0)
