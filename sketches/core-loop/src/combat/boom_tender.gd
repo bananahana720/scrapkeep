@@ -4,8 +4,8 @@ const SpeedTier := preload("res://src/movement/speed_tier.gd")
 
 # The boom tender (Boom Tender No. 22, design-v3/SPILLWAY-ROSTER.md; world 1): a low tug on
 # tracks paying out a debris boom of five floats and an end buoy. It stows the boom to one side
-# and the warning is a lane from the hull toward where the ball is rolling (W1-66, LEAD_REACH),
-# the boom's whole reach; through the warn the reel ratchets and the float lamps light one by one out along the lane. Live, the
+# and the warning is a lane from the hull toward the ball, the boom's whole reach; through the
+# warn the reel ratchets and the float lamps light one by one out along the lane. Live, the
 # boom swings into the lane. A ball in the lane below FAST tier is pinned: stung, shoved and
 # hauled toward the hull. A ball at FAST tier bowls through instead: every float within
 # POP_REACH of it bursts like a pin, pays FLOAT_SCRAP, and stays burst for the tender's life.
@@ -27,10 +27,6 @@ const PIN_DAMP := 2.5
 const STING_DAMAGE := 5.0
 const SHOVE := 6.0
 const HP := 60.0
-# W1-66 (gameplay critique finding 4): the lane is aimed where the ball's roll carries it by the middle
-# of the sweep, at most LEAD_REACH metres on, so the boom swings across the ball's line and a ball that
-# holds it rolls into the sweep. The answer is a turn off the line (or speed to bowl through).
-const LEAD_REACH := 10.0
 # The floats' distances out from the hull centre (-Z forward); the glb's BoomFloat sits at the first.
 const FLOAT_OUT := [2.07, 3.37, 4.67, 5.97, 7.27]
 const LAMP_ON := 2.4
@@ -169,15 +165,10 @@ static func _parts() -> Array:
 
 
 func _commit(to_ball: Vector3) -> Node3D:
-	var aim := _ahead(warn_seconds + SWEEP * 0.5, LEAD_REACH) - global_position
-	# A ball rolling straight at the hull is led past it: the lane would point behind the tender, so it
-	# is laid at the ball as it stands, which covers that approach.
-	if Vector2(aim.x, aim.z).dot(Vector2(to_ball.x, to_ball.z)) <= 0.0 or Vector2(aim.x, aim.z).length() < 0.5:
-		aim = to_ball
-	_heading = Vector3(aim.x, 0.0, aim.z).normalized()
+	_heading = Vector3(to_ball.x, 0.0, to_ball.z).normalized()
 	if _heading.length() < 0.5:
 		_heading = -global_transform.basis.z
-	_facing(aim)
+	_facing(to_ball)
 	_side = _strafe
 	_origin = global_position
 	_pops_live = 0
