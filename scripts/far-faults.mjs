@@ -11,7 +11,8 @@ import { fileURLToPath } from "node:url";
 // 12 Nov none had any, so the cap only leaves room for a sliver shut inside a body. sketch:fast runs
 // scripts/far-faults.test.mjs when a park prop recipe or file changes.
 // The far meshes must also keep the prop's shape: model_audit.py cover scores how much of LOD0's outline each LOD fills, and
-// a LOD under its COVER_MIN fails. On 14 Nov the dam's cable drums drew as floating rings at 100 m with no face flipped:
+// marks a LOD `under` (it fails) by model_audit.under: under COVER_MIN with triangles left under the kit's cap, or under
+// COVER_FLOOR at all. On 14 Nov the dam's cable drums drew as floating rings at 100 m with no face flipped:
 // the collapse had eaten the barrel (W1-29); the kit now raises such a LOD's triangles.
 // Run: node scripts/far-faults.mjs   (needs python3 with numpy)
 
@@ -44,7 +45,7 @@ export function scanFaults(files = [FAR_GLOB], cwd = SKETCH) {
 }
 
 // model_audit.py cover over LOD0 files (paths or globs, relative to `cwd`): one row per LOD beside each,
-// {file, cover, under}, under when it fills less of LOD0's outline than model_audit.COVER_MIN.
+// {file, cover, tris, lod0_tris, under}, under as model_audit.under decides.
 export function scanCover(files = [LOD0_GLOB], cwd = SKETCH) {
   const dir = mkdtempSync(path.join(os.tmpdir(), "far-cover-"));
   try {

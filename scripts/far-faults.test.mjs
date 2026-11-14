@@ -105,3 +105,29 @@ test("far cover: a planted LOD that lost a part fails, a whole one passes", { sk
   assert.equal(thin.length, 1, JSON.stringify(rows));
   assert.match(thin[0].file, /hollow_lod2\.glb$/);
 });
+
+test("far cover: between the floor and the target a LOD fails with triangles to spare and passes at the cap", { skip: !numpy && "python3 has no numpy" }, (t) => {
+  const dir = mkdtempSync(path.join(os.tmpdir(), "far-cover-band-"));
+  t.after(() => rmSync(dir, { recursive: true, force: true }));
+  const props = path.join(dir, "assets/models/park/props/dam");
+  mkdirSync(props, { recursive: true });
+  const N = [0, 0, 1];
+  const span = (x0, x1) => [
+    [[x0, 0, 0], [x1, 0, 0], [x0, 1, 0], N],
+    [[x1, 0, 0], [x1, 1, 0], [x0, 1, 0], N],
+  ];
+  // LOD0: 24 unit panels in a row (48 triangles). Both LODs keep 20 of them, about 0.83 of the outline: "lean" as one
+  // long quad (2 triangles, room to spare under the cap), "capped" as 20 panels (40 triangles, at the cap).
+  const panels = (n) => Array.from({ length: n }, (_, i) => span(i - 12, i - 11)).flat();
+  for (const name of ["lean", "capped"]) {
+    writeFileSync(path.join(props, `${name}.glb`), glb(panels(24)));
+    writeFileSync(path.join(props, `${name}_lod1.glb`), glb(panels(24)));
+  }
+  writeFileSync(path.join(props, "lean_lod2.glb"), glb(span(-12, 8)));
+  writeFileSync(path.join(props, "capped_lod2.glb"), glb(panels(20)));
+  const rows = scanCover(["assets/models/park/props/*/*.glb"], dir);
+  const lod2 = Object.fromEntries(rows.filter((row) => row.file.endsWith("_lod2.glb")).map((row) => [path.basename(row.file), row]));
+  assert.ok(lod2["lean_lod2.glb"].cover > 0.8 && lod2["lean_lod2.glb"].cover < 0.85, JSON.stringify(lod2));
+  assert.equal(lod2["lean_lod2.glb"].under, true);
+  assert.equal(lod2["capped_lod2.glb"].under, false, JSON.stringify(lod2));
+});

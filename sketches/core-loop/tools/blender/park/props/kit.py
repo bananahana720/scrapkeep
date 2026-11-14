@@ -56,10 +56,9 @@ BUDGET = {"dress_hero": (6000, 20000), "dress_prop": (300, 3000)}
 LOD1_BAND, LOD2_BAND, LOD2_MIN_TRIS = (0.40, 0.60), (0.10, 0.20), 40
 LOD1_TARGET, LOD2_TARGET = 0.50, 0.15
 # A LOD that fills less than model_audit.COVER_MIN of LOD0's outline gets COVER_STEP times the triangles again, up to
-# COVER_CAP of LOD0's triangles, and one still under model_audit.COVER_FLOOR there fails the build; the collapse otherwise ate whole parts (the dam's cable drums drew as floating rings at 100 m,
+# model_audit.COVER_CAP of LOD0's triangles (and no more than the LOD before it), and one still under model_audit.COVER_FLOOR there fails the build; the collapse otherwise ate whole parts (the dam's cable drums drew as floating rings at 100 m,
 # 14 Nov, W1-29). Only those LODs pass their band's top.
 COVER_STEP = 1.25
-COVER_CAP = 0.75
 FLOOR_TOL = 0.02  # metres a LOD bottom may sit off y 0
 RESEAT_MAX = 0.15  # metres decimate() may shift a LOD down or up to put its bottom back on the floor
 
@@ -560,10 +559,12 @@ class Kit:
         stats = [self.write(root, obj, out_dir / (base + ".glb"))]
         assert stats[0]["tris"] == t0, base + ": exported tris differ from mesh tris"
         full = out_dir / (base + ".glb")
-        for suffix, target, band, cap, floor in (("_lod1", LOD1_TARGET, LOD1_BAND, COVER_CAP, 0),
-                                                 ("_lod2", LOD2_TARGET, LOD2_BAND, COVER_CAP, LOD2_MIN_TRIS)):
+        cap = model_audit.COVER_CAP
+        for suffix, target, band, floor in (("_lod1", LOD1_TARGET, LOD1_BAND, 0),
+                                            ("_lod2", LOD2_TARGET, LOD2_BAND, LOD2_MIN_TRIS)):
             want = max(round(t0 * target), floor)
             path = out_dir / (base + suffix + ".glb")
+            raised = False
             while True:
                 lod = self.decimate(root, obj, want)
                 stat = self.write(root, lod, path)
@@ -574,14 +575,18 @@ class Kit:
                     break
                 bpy.data.objects.remove(lod)
                 want = min(round(want * COVER_STEP), most)
+                raised = True
             stats.append(stat)
             ratio = stats[-1]["tris"] / t0
-            top = band[1] if ratio <= band[1] else cap
+            top = cap if raised else band[1]
             assert band[0] <= ratio <= top and stats[-1]["tris"] >= floor, \
                 "%s%s: %d tris is %.1f%% of LOD0 %d (accept %d-%d%%, min %d)" % (
                     base, suffix, stats[-1]["tris"], ratio * 100, t0, band[0] * 100, top * 100, floor)
-            assert fills >= model_audit.COVER_FLOOR, "%s%s: fills %.3f of LOD0's outline at %d tris, want %.2f" % (
-                base, suffix, fills, stats[-1]["tris"], model_audit.COVER_FLOOR)
+            assert stats[-1]["tris"] <= stats[-2]["tris"], "%s%s: %d tris, more than the LOD before it (%d)" % (
+                base, suffix, stats[-1]["tris"], stats[-2]["tris"])
+            assert not model_audit.under(fills, stats[-1]["tris"], t0, stats[-2]["tris"]), \
+                "%s%s: fills %.3f of LOD0's outline at %d tris (want %.2f, or %.2f at the cap)" % (
+                    base, suffix, fills, stats[-1]["tris"], model_audit.COVER_MIN, model_audit.COVER_FLOOR)
             if ratio > band[1]:
                 print("KIT_COVER %s%s raised to %d tris (%.0f%%) to fill %.3f of LOD0's outline" % (
                     base, suffix, stats[-1]["tris"], ratio * 100, fills), flush=True)

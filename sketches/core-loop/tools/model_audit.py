@@ -40,8 +40,9 @@ cover, per LOD0 file with `<name>_lod1.glb` and `<name>_lod2.glb` beside it: how
 still fills, seen from COVER_YAWS round at COVER_PITCH down (a far prop seen across the map), on a COVER_PX grid across
 LOD0's width. The score is the worst view's share of LOD0's filled cells that the LOD also fills (1 is whole). A
 collapse that eats a part leaves a hole the faults scan cannot see: on 14 Nov the dam's cable drums drew as floating
-rings at 100 m with no face flipped (W1-29). The props kit raises a LOD's triangles until it reaches COVER_MIN, and a LOD
-under COVER_FLOOR fails (a thin prop, ropes and fronds, may stop between the two at the kit's cap). Pure numpy, so the
+rings at 100 m with no face flipped (W1-29; they filled 0.70 to 0.82). The props kit raises a LOD's triangles until it
+reaches COVER_MIN or its cap. A LOD fails (`under`) when it fills less than COVER_MIN with room left under the cap, or
+less than COVER_FLOOR at all: only a thin prop at the cap (ropes, fronds) may stop between the two. Pure numpy, so the
 kit can call it inside Blender.
 
 An outline has no colour, motion or sound. A high overlap or a wrong blind answer says the shape is not doing the
@@ -67,7 +68,9 @@ COVER_YAWS = 6               # views round a model for `cover`
 COVER_PITCH = 12.0           # degrees down: a far prop is seen nearly side on
 COVER_PX = 128               # grid cells across LOD0's widest reach
 COVER_MIN = 0.85             # the share of LOD0's outline the kit aims for a lower LOD to fill, worst view
-COVER_FLOOR = 0.80           # under this a LOD fails (the drums that drew as rings filled 0.70 to 0.82)
+COVER_FLOOR = 0.80           # under this a LOD fails outright
+COVER_CAP = 0.75             # the kit raises a LOD's triangles no further than this share of LOD0's (nor past the LOD before it)
+COVER_CAP_SLACK = 0.97       # the collapse lands within about 2% of the triangles it is asked for
 BONE = (210, 197, 165)
 OXIDE = (155, 81, 58)
 
@@ -364,22 +367,38 @@ def cover(lod0, lod, yaws=COVER_YAWS, pitch=COVER_PITCH, px=COVER_PX):
     return worst
 
 
+def _tris(path):
+    return sum(len(idx) for _name, _pos, _nor, idx, _prim, _raw in Glb(path).surfaces())
+
+
+def under(fills, tris, lod0_tris, before_tris):
+    """True when a LOD filling `fills` of LOD0's outline fails: under COVER_MIN with room left under the kit's cap (COVER_CAP
+    of LOD0's triangles, and no more than the LOD before it), or under COVER_FLOOR at all."""
+    cap = min(int(lod0_tris * COVER_CAP), before_tris)
+    return fills < COVER_FLOOR or (fills < COVER_MIN and tris < cap * COVER_CAP_SLACK)
+
+
 def covers(files, out):
     rows = []
     for path in files:
         base = str(path)[:-4]
         if base.endswith(("_lod1", "_lod2")):
             continue
+        before = lod0 = _tris(path)
         for suffix in ("_lod1", "_lod2"):
-            if Path(base + suffix + ".glb").exists():
-                fills = cover(path, base + suffix + ".glb")
-                rows.append({"file": base + suffix + ".glb", "cover": round(fills, 4), "under": fills < COVER_FLOOR})
+            lod = base + suffix + ".glb"
+            if Path(lod).exists():
+                fills, tris = cover(path, lod), _tris(lod)
+                rows.append({"file": lod, "cover": round(fills, 4), "tris": tris, "lod0_tris": lod0,
+                             "under": under(fills, tris, lod0, before)})
+                before = tris
     if out:
         Path(out).write_text(json.dumps(rows, indent=1))
     low = [row for row in rows if row["under"]]
     for row in sorted(low, key=lambda row: row["cover"]):
         print("%-50s %.3f" % (Path(row["file"]).name, row["cover"]))
-    print("covered %d, under %.2f %d" % (len(rows), COVER_FLOOR, len(low)))
+    print("covered %d, failing %d (under %.2f with room under the cap, or under %.2f)" % (len(rows), len(low), COVER_MIN,
+                                                                                       COVER_FLOOR))
     return rows
 
 
