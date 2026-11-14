@@ -325,27 +325,26 @@ def scooter_shed(bm):
     bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
 
 
-# The parade scooter that lives in the scooter shed (W1-104): a too-small step-through scooter, 1.6 m long, 0.6 m
-# wide at the handlebar and 1.05 m tall, in parade orange with a bone seat, brass trim and a little tally pennant
+# The parade scooter that lives in the scooter shed (W1-104): a too-small step-through scooter, 1.6 m long, 0.64 m
+# wide at the grips and 1.05 m tall, in parade orange with a bone seat, brass trim and a little tally pennant
 # on the back. It points along -Y in Blender (+Z in Godot), the way the shed's door faces, so at the shed's origin
 # it stands nose out in the doorway. The origin is on the ground under its middle.
 def scooter(bm):
     side = Matrix.Rotation(math.radians(90), 4, "Y")  # a cone built along Z, laid along X: a wheel that rolls along Y
     for y in (-0.58, 0.58):
-        cone(bm, CHAR, 0.22, 0.22, 0.12, (-0.06, y, 0.22), 10, side)
-        cone(bm, BONE, 0.09, 0.09, 0.14, (-0.07, y, 0.22), 8, side)
-    box(bm, ORANGE, (0.34, 0.62, 0.07), (0, 0.0, 0.2))  # the step-through deck
+        cone(bm, CHAR, 0.22, 0.22, 0.12, (-0.06, y, 0.209), 10, side)  # a flat of the ten-sided tyre rests on the ground
+        cone(bm, BONE, 0.09, 0.09, 0.14, (-0.07, y, 0.209), 8, side)
+    box(bm, ORANGE, (0.34, 0.86, 0.1), (0, -0.02, 0.24))  # the step-through deck, from the leg shield into the engine cover
     box(bm, ORANGE, (0.36, 0.56, 0.36), (0, 0.5, 0.45))  # the engine cover under the seat
     box(bm, BONE, (0.3, 0.5, 0.09), (0, 0.46, 0.675))  # the seat
-    box(bm, ORANGE, (0.3, 0.3, 0.04), (0, 0.58, 0.47), Matrix.Rotation(math.radians(-20), 4, "X"))  # rear fender
     box(bm, ORANGE, (0.36, 0.07, 0.62), (0, -0.4, 0.5), Matrix.Rotation(math.radians(-12), 4, "X"))  # the leg shield
     box(bm, ORANGE, (0.2, 0.34, 0.05), (0, -0.6, 0.47), Matrix.Rotation(math.radians(18), 4, "X"))  # front fender
-    box(bm, CHAR, (0.06, 0.06, 0.34), (0, -0.47, 0.84))  # the steering column
-    box(bm, BRASS, (0.6, 0.05, 0.05), (0, -0.47, 1.0))  # the handlebar
+    box(bm, CHAR, (0.06, 0.06, 0.34), (0, -0.39, 0.84))  # the steering column, its foot sunk in the top of the leg shield
+    box(bm, BRASS, (0.6, 0.05, 0.05), (0, -0.39, 1.0))  # the handlebar
     for x in (-0.27, 0.27):
-        box(bm, CHAR, (0.1, 0.07, 0.07), (x, -0.47, 1.0))  # grips
-    cone(bm, BRASS, 0.09, 0.07, 0.08, (0, -0.48, 0.86), 8, Matrix.Rotation(math.radians(90), 4, "X"))  # the headlamp
-    box(bm, GLOW, (0.1, 0.02, 0.1), (0, -0.565, 0.86))
+        box(bm, CHAR, (0.1, 0.07, 0.07), (x, -0.39, 1.0))  # grips
+    cone(bm, BRASS, 0.09, 0.07, 0.08, (0, -0.40, 0.86), 8, Matrix.Rotation(math.radians(90), 4, "X"))  # the headlamp
+    box(bm, GLOW, (0.1, 0.02, 0.1), (0, -0.485, 0.86))
     box(bm, BRASS, (0.26, 0.03, 0.16), (0, 0.79, 0.44))  # the tally plate on the back
     cylinder(bm, BONE, 0.015, 0.5, (0.12, 0.74, 0.55), 6)
     old = set(bm.verts)

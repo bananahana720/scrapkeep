@@ -305,7 +305,7 @@
    "loader": "not placed yet: the points of interest thread loads it (branch claude/project-thread-kjv6sg), with vertex colour as albedo as src/presentation/park_props.gd does",
    "provenance": {
     "recipe": "tools/blender/world_one/poi_yard.py",
-    "note": "Procedural, vertex coloured, the parade scooter that stands in the scooter shed, a too-small step-through scooter 1.6 m long, 0.64 m wide and 1.04 m tall with a tally pennant on the back; its nose points the way the shed's door faces, so it is placed at the shed's origin; built by hand in Blender for the Brindle arena surroundings (W1-104). sha256 6d8d6defcc3978b7d8d0b527db357bf835e9d3ebad20d4960a9cf27b326ebaf2"
+    "note": "Procedural, vertex coloured, the parade scooter that stands in the scooter shed, a too-small step-through scooter 1.6 m long, 0.64 m wide and 1.05 m tall with a tally pennant on the back; its nose points the way the shed's door faces, so it is placed at the shed's origin; built by hand in Blender for the Brindle arena surroundings (W1-104). sha256 ef8e34544987621eafc1b64ca9e0db9d6c6fd483b788f3263a067a8e6db939c0"
    }
   }
  ]
