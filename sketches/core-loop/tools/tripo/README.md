@@ -35,6 +35,8 @@ outputs with the account holder. Outputs made on a free account are public domai
 | camp/camp_pet_tripo.glb | 4bbd2038-8fe8-48d9-8fda-afda32599557 | prompts/camp_pet.txt | 30 | 2,000 (1,100) | 1 (1) | yaw -90, height, 8 sockets |
 | world_one/enemy_chaser_tripo.glb | 6013f673-bd92-4d65-9bc4-7e6abff67f8c | prompts/enemy_chaser.txt | 30 | 3,175 (3,176) | 5 (5) | yaw 90, box, claws below 22 %, fin above 80 % (rubber) |
 | world_one/enemy_lobber_tripo.glb | 904d0a41-6627-44d7-a982-ce68527c27f0 | prompts/enemy_lobber_whole.txt | 120 (four candidates over two prompts) | 6,699 (6,720) | 5 (5) | tripo_fit.py, yaw 90, `--name LobberBody --max-tris 6700`, then lobber_parts.py |
+| world_one/enemy_swatter_tripo.glb (SwatterBody only) | ff17498a-5ed6-4f6b-b933-5f27f62e4cab | prompts/enemy_swatter_body.txt | 60 | 2,748 (2,760) | 3 (3) | tripo_swap.py, yaw 90, `--fit fill --max-tris 2650` |
+| world_one/enemy_hooker_tripo.glb (HookerBody only) | de1a4fae-8429-447c-a46a-2d0fedb97039 | prompts/enemy_hooker_body.txt | 60 | 6,382 (6,414) | 3 (3) | tripo_swap.py, yaw 90, `--fit fill --max-tris 6100` |
 | world_one/enemy_boom_tender_tripo.glb (TenderHull only) | cfa436e8-08dc-42f8-b416-53dee2a7619b | prompts/enemy_boom_tender.txt | 30 | 7,375 (7,928) | as authored | tripo_swap.py, yaw 90, box |
 | park/props/dam/gate_wheelhouse_a{,_lod1,_lod2}_tripo.glb | 7f215046-0286-4f10-b0cd-6d0121db046e | prompts/gate_wheelhouse.txt | 30 | 6,000 / 3,000 / 900 (16,588 / 8,294 / 2,488) | 1 | box |
 | park/props/dam/mixer_wreck_a{,_lod1,_lod2}_tripo.glb | see registry row | prompts/mixer_wreck.txt | 60 (2 candidates) | 6,000 / 3,000 / 898 (12,740 / 6,370 / 1,904) | 1 | box |
@@ -188,6 +190,17 @@ World 1 points of interest, 14 November 2026 (API credits, text to model v3.1, s
 The stand and the gate came back narrower and taller than the placement asked for (2 m across, and 6.7 m tall), so both are fitted with `--wide` and `--tall` together, which scales the ground plane and the height separately. Look at the render when using both: these two chunky shapes take it, a thin or round one may not.
 
 The runner-up candidates are tasks f5a7ba00-eb9f-4153-a98c-f80c4fc5fc28 (stand), 3caed186-71a7-42da-b675-1e4eb764475f (gate) and 90a8c17b-94b5-4bec-b359-f07be0b83963 (post). All six candidates were usable. The count boards came back with painted digits although the prompt said no text; they ship as flat colour patches, and the game should draw the live number itself.
+
+## Crew enemies (a new body, the authored tool kept)
+
+The Spillway crew are a body mesh plus a tool mesh (the swatter's paddle, the hooker's harpoon). The tool carries the enemy's warning, so it stays authored and only the body is swapped:
+
+`blender -b --factory-startup -P tools/tripo/tripo_swap.py -- --in <tripo model.glb> --ref assets/models/world_one/enemy_swatter.glb --node SwatterBody --out assets/models/world_one/enemy_swatter_tripo.glb --yaw 90 --fit fill --max-tris 2650`
+
+- **Colour.** The game paints the crew from vertex colour, and the two slots only say which surface flashes. `tripo_swap.py` sees this (a white slot beside a coloured one) and gives each face the nearest of the authored node's own vertex colours, in that colour's slot. Before 14 November 2026 it flattened such a body to one colour.
+- **Size.** `--fit fill` stretches the new body to the authored body's bounds on each axis, so the collider, the tool's pivot and the enemy's height stay as they were. `--fit box` keeps the generated proportions and left the swatter half its height.
+- **The enemy's own test decides.** Run `tests/enemy_<name>_asset_test.gd -- --models=tripo`. The netcaster failed it: its authored body is a frame with an open window where the game draws the net, and a stout generated robot put 804 triangles in that window (`prompts/enemy_netcaster_whole.txt`, task 76b8b5f4-ce6a-4468-8a4a-0fde6507f4d3, 60 credits, not shipped). A netcaster needs a prompt for the frame itself, or a hand-built frame with a generated torso.
+- **Skinned bodies** (the plated brute, the foreman, the dispatcher, the linker, the splitter) cannot be swapped by this tool. They need the pilot route below.
 
 ## The lobber (a whole model split into moving parts)
 
