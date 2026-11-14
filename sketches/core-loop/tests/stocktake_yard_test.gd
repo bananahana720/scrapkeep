@@ -23,7 +23,7 @@ const Palette := preload("res://src/core/palette.gd")
 # (i) across run seeds both rows are drawn, and one seed always draws the same row.
 
 const SEED := 23
-const EXPECTED_CHECKS := 17
+const EXPECTED_CHECKS := 18
 
 var _game
 var _t := preload("res://tests/support/t.gd").new("stocktake_yard_test")
@@ -297,3 +297,20 @@ func _rows(map) -> void:
 	var rows: Array = drawn.keys()
 	rows.sort()
 	_t.check("both yard rows are drawn across run seeds, the same row for the same seed", steady and rows == ["shelf_yard", "slot_yard"], str(rows))
+	# A yard is open ground: no grapple anchor of the map's own fields stands in any yard row's ring, and the ring
+	# is clear of every fight, contraption, rise and edge (the PC stills of 14 Nov showed one ring full of saguaro posts, 14 by the map's plan).
+	var ring := float(load("res://src/world/activities.gd").RULES["stocktake_yard"]["ring"])
+	var recipes = load("res://src/world/park/park_recipes.gd")
+	var posts: Dictionary = recipes.field_posts(map.park["park_rows"], recipes.clear_zones(map.park))
+	var faults := []
+	for site in map.survival_sites:
+		if site["form"] != "yard":
+			continue
+		var inside := 0
+		for i in posts:
+			for post in posts[i]:
+				inside += int(post.distance_to(site["at"]) <= ring + 2.0)
+		var fault: String = _acts().ground_fault(PackedVector2Array([site["at"]]), ring, _site())
+		if inside > 0 or fault != "":
+			faults.append("%s: %d anchor posts, ground %s" % [site["row"], inside, fault])
+	_t.check("every yard row is open ground", faults.is_empty(), str(faults))
