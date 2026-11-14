@@ -265,9 +265,11 @@ func _run() -> void:
 			break
 	_t.check("the burst crates are gone", gone, "three crates")
 	var tidy := false
-	var until := Time.get_ticks_msec() + 20000
-	while not tidy and Time.get_ticks_msec() < until:
+	# Waited in game time, so a fast host's short frames do not run out before the pieces' tween does.
+	var waited := 0.0
+	while not tidy and waited < 20.0:
 		await process_frame
+		waited += root.get_process_delta_time()
 		tidy = approach.get_child_count() <= before
 	_t.check("and their pieces leave nothing behind", tidy, "%d children against %d" % [approach.get_child_count(), before])
 	# The weighbridge: a slow crossing weighs nothing; a fast one weighs once.
