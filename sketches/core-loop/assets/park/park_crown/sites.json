@@ -1,8 +1,0 @@
-{"schema": "scrapkeep-sites/1", "map": "park_crown",
- "_note": "Mini-boss roster open (Q-P25): miniboss names the world's WORLD_ANCIENTS kind as a placeholder. Sites from World's survey, board #241 6364394284.",
- "miniboss_sites": [
-  {"id": "crown_mb_early", "at": [-88, -600], "radius_m": 38, "near": "watch_butte", "third": "early", "miniboss": "mind_hand"},
-  {"id": "crown_mb_mid", "at": [24, -304], "radius_m": 40, "near": "turnstone", "third": "mid", "miniboss": "mind_hand"},
-  {"id": "crown_mb_late", "at": [-16, -48], "radius_m": 38, "near": "meander_bend", "third": "late", "miniboss": "mind_hand"}],
- "risk_rows": [
-  {"id": "crown_west_alcove", "route": "west", "hazards": ["needle_strikes"], "reward": "alcove_ledge"}]}

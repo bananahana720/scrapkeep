@@ -1,6 +1,0 @@
-Assets: every <kind>.glb in this folder (the list is assets/registry.d/ambient_life.json).
-Source: authored procedurally in this repository by the recipes under tools/blender/ambient/ (soft ellipsoids, capsules and swept
-tubes from tools/blender/ambient/_life.py on tools/blender/common.py, Blender 5.2.2 headless). No imported mesh, texture, scan,
-generated image or traced reference. Colour is per-vertex from the palette rows in src/core/ambient_kinds.gd.
-Licence of these assets: the Scrapkeep project's own authored content; no third-party licence attaches to the geometry.
-Provenance record: ambient.PROVENANCE.txt beside this file.

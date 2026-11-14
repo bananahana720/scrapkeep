@@ -1,0 +1,63 @@
+diff --git c/sketches/core-loop/tests/brindle_death_test.gd w/sketches/core-loop/tests/brindle_death_test.gd
+index 6bd9f99d5..2e7bafcdc 100644
+--- c/sketches/core-loop/tests/brindle_death_test.gd
++++ w/sketches/core-loop/tests/brindle_death_test.gd
+@@ -16,6 +16,9 @@ const T := preload("res://tests/support/t.gd")
+ #   lane:   _run_charge running the committed lane into the ball, which went on to _charge["travelled"]
+ #   ring:   _step_hazards with both slag rings live, the ball in ring A: the loop went on to ring B and
+ #           put the torn-down hazards back on the list exit_arena had cleared
++#   drone:  a slag kill with a dropped lobber standing in the bowl. The lobber is freed at the frame's
++#           end, so it ticked once more that frame and read its ground from the bowl, which had left
++#           the tree: three engine errors (w35 gate, world1_run_test, tally's lost run)
+ 
+ const DIR := "user://brindle_death_test/"
+ const PATH := DIR + "run.json"
+@@ -27,12 +30,15 @@ var _log := ErrorLog.new()
+ class ErrorLog:
+ 	extends Logger
+ 	var errors: Array[String] = []
++	var engine: Array[String] = []
+ 
+ 	func _log_error(_function: String, file: String, line: int, code: String,
+ 			rationale: String, _editor_notify: bool, error_type: int,
+ 			_script_backtraces: Array[ScriptBacktrace]) -> void:
+ 		if error_type == Logger.ERROR_TYPE_SCRIPT:
+ 			errors.append("%s:%d %s %s" % [file, line, code, rationale])
++		elif error_type == Logger.ERROR_TYPE_ERROR:
++			engine.append("%s:%d %s %s" % [file, line, code, rationale])
+ 
+ 
+ func _initialize() -> void:
+@@ -42,7 +48,7 @@ func _initialize() -> void:
+ 
+ 
+ func _run() -> void:
+-	for how in ["slag", "charge", "lane", "ring"]:
++	for how in ["slag", "charge", "lane", "ring", "drone"]:
+ 		await _die_to(how)
+ 	DirAccess.remove_absolute(PATH)
+ 	quit(_t.verdict())
+@@ -68,8 +74,15 @@ func _die_to(how: String) -> void:
+ 	game.run.max_hp = 1000.0
+ 	game.run.hp = 1.0
+ 	_log.errors.clear()
++	_log.engine.clear()
+ 	var ball: Vector3 = game.player.ball_position()
+ 	match how:
++		"drone":
++			boss._drop_drone(Harness.ground_spot(boss, 2.0, Arena.FLOOR_R * 0.5, 0.0))
++			_t.eq("drone: a lobber stands in the bowl", boss._lobbers.size(), 1)
++			var fake := Node.new()
++			boss._slag_hit(fake, ball)
++			fake.free()
+ 		"slag", "charge":
+ 			var fake := Node.new()
+ 			if how == "slag":
+@@ -93,6 +106,7 @@ func _die_to(how: String) -> void:
+ 	_t.eq("%s: the run is over" % how, game.flow.state_name(), "summary")
+ 	_t.check("%s: RUN OVER names Brindle" % how, game.flow.death_cause.begins_with("Scrapped by Brindle's"), game.flow.death_cause)
+ 	_t.check("%s: no script error" % how, _log.errors.is_empty(), " | ".join(_log.errors))
++	_t.check("%s: no engine error" % how, _log.engine.is_empty(), " | ".join(_log.engine))
+ 	_t.check("%s: no hazard outlives the arena" % how, boss.hazards.is_empty(), "%d left" % boss.hazards.size())
+ 	game.free()
+ 	await physics_frame

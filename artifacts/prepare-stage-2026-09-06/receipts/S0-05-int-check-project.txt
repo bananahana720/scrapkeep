@@ -1,2 +1,0 @@
-Project checks passed: 90 Markdown files, 1806 file links, package/lock metadata.
-exit=0

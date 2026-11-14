@@ -1,0 +1,32 @@
+diff --git c/sketches/core-loop/src/presentation/music_engine.gd w/sketches/core-loop/src/presentation/music_engine.gd
+index 020de8d59..734a79b74 100644
+--- c/sketches/core-loop/src/presentation/music_engine.gd
++++ w/sketches/core-loop/src/presentation/music_engine.gd
+@@ -1842,12 +1842,13 @@ func _run(action: Dictionary) -> void:
+ 			var music: bool = action.get("music", false)
+ 			var live_key: int = key if grid == null else grid.key_at(clock)
+ 			var made_for := int(action.get("step", 0))
++			var _probe_warm := SfxBank.cached_at(action["id"], made_for if made_for > 0 else step_len, 0 if music or action.get("home", false) else live_key, theme)
+ 			var buf := SfxBank.samples_at(action["id"], made_for if made_for > 0 else step_len, 0 if music or action.get("home", false) else live_key, theme)
+ 			var gain := db_to_linear(SfxBank.trim_db(action["id"]) + float(action["db"]))
+ 			var voice := _start(buf, buf.size(), -1, gain, 0.0, not action["music"])
+ 			if voice != null:
+ 				voice.stinger = action["id"]
+-			stinger_starts.append([action["id"], clock])
++			stinger_starts.append([action["id"], clock, _probe_warm])
+ 		"restart":
+ 			parameters_stage_entered()
+ 			_dominant_held = false
+diff --git c/sketches/core-loop/tools/ace_bounce.gd w/sketches/core-loop/tools/ace_bounce.gd
+index 334f4a4af..6653b3bd6 100644
+--- c/sketches/core-loop/tools/ace_bounce.gd
++++ w/sketches/core-loop/tools/ace_bounce.gd
+@@ -259,7 +259,7 @@ func _finish() -> void:
+ 		"ace_bands": _bands.size(), "ace_misses": misses if ace != null else -1, "ace_short_reads": short_reads if ace != null else -1,
+ 		"ace_render_ms_per_second": snappedf(render_usec / 1000.0 / maxf(rendered / RATE, 0.001), 0.01) if ace != null else -1.0,
+ 		"note": "section times are the render head in seconds from the recording's start; the ring and device add about 75 ms",
+-		"facts": _facts, "ace_sections": sections, "mix_states": _mix_states, "cue_counts": _cue_counts(audio.cue_log), "cue_rows": _cue_rows(audio.cue_log)}
++		"facts": _facts, "ace_sections": sections, "mix_states": _mix_states, "cue_counts": _cue_counts(audio.cue_log), "cue_rows": _cue_rows(audio.cue_log), "probe_stinger_starts": audio.engine.stinger_starts, "probe_cue_log": audio.cue_log}
+ 	var file := FileAccess.open(out.get_basename() + ".json", FileAccess.WRITE)
+ 	file.store_string(JSON.stringify(info, "  "))
+ 	file.close()

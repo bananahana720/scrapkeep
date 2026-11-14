@@ -1,9 +1,0 @@
-check:scope 420fc9b40fa1dee94a98b9a77786e84e1eb1d3fa..2f3b2a876374b41eec4a997527e5a482105b3dc4
-scope: documentation-only (1 changed paths)
-class documentation-only [evidence: structural documentation checks; no build or runtime evidence]
-  docs/tech/sections/TH-18-input-integration.md
-required commands:
-  npm run check:docs
-  npm run check:project
-  npm run check:drift
-This selector classifies paths and names commands. It runs none of them and proves nothing about their outcome.

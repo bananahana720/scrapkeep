@@ -1,0 +1,32 @@
+diff --git c/sketches/core-loop/tools/bot_run.gd w/sketches/core-loop/tools/bot_run.gd
+index 3bcd9fca9..9a2bdb2ed 100644
+--- c/sketches/core-loop/tools/bot_run.gd
++++ w/sketches/core-loop/tools/bot_run.gd
+@@ -297,6 +297,9 @@ func _next() -> void:
+ 	_game.test_mode = true
+ 	_game.run_store_path = _out.path_join("entrance.json")
+ 	root.add_child(_game)
++	if _game.launch_take != null:
++		_game.launch_take.force_live = true
++		print("PROBE take force_live")
+ 	_driver = null
+ 	if _settings.get("frame-log", "0") == "1":
+ 		_frame_log = FileAccess.open(_out.path_join("frames-%d.ndjson" % _seeds[_index]), FileAccess.WRITE)
+@@ -568,6 +571,9 @@ func _finish() -> void:
+ func _process(_delta: float) -> bool:
+ 	if BotProfile.enabled:
+ 		BotProfile.idle_begin()
++	if _game != null and _game.launch_take != null and not _game.launch_take.force_live:
++		_game.launch_take.force_live = true
++		print("PROBE take force_live f=%d" % _frame_index)
+ 	if _frame_log != null and _game != null and _game.run != null:
+ 		var now := Time.get_ticks_usec()
+ 		if _frame_usec > 0:
+@@ -575,6 +581,7 @@ func _process(_delta: float) -> bool:
+ 			# physics ticks. A headless run draws nothing, so there the idle and draw split is null.
+ 			var drew := _draw_began > _frame_usec and _draw_ended >= _draw_began
+ 			var row := {"f": _frame_index, "ms": (now - _frame_usec) / 1000.0, "stage": _game.run.stage, "state": _game.flow.state,
++				"take": _game.launch_take.phase if _game.launch_take != null else -1, "take_p": _game.launch_take.progress() if _game.launch_take != null else -1.0,
+ 				"idle_ms": (_draw_began - _frame_usec) / 1000.0 if drew else null, "draw_ms": (_draw_ended - _draw_began) / 1000.0 if drew else null,
+ 				"tick_ms": (now - (_draw_ended if drew else _frame_usec)) / 1000.0, "ticks": _ticks,
+ 				"process_ms": Performance.get_monitor(Performance.TIME_PROCESS) * 1000.0, "physics_ms": Performance.get_monitor(Performance.TIME_PHYSICS_PROCESS) * 1000.0,

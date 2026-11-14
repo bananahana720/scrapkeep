@@ -1,9 +1,0 @@
-# Probe for tests/active_flashes_test.gd: four marks that skip ActiveFx.peak, one that does not.
-func bad() -> void:
-	combat.effects.spark(at, COLOR)
-	combat.effects.ring(at,
-		radius, COLOR)
-	var fx = combat.effects
-	combat._chain(enemy, at, {"damage": 1.0, "color": COLOR})
-	combat.effects.arc(a + Vector3(cos(t), 0.0, sin(t)),
-		b, ActiveFx.peak(COLOR))

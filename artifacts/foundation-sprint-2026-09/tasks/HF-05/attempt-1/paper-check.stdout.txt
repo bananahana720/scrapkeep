@@ -1,7 +1,0 @@
-{
-  "result": "PASS",
-  "checks": 126,
-  "failures": [],
-  "notes": [],
-  "receipt": "/home/andrew/Projects/scrapkeep-wt-HF-05/artifacts/local/tasks/HF-05/paper-check.json"
-}

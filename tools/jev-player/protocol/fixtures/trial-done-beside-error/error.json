@@ -1,7 +1,0 @@
-{
-  "protocol": "scrapkeep-jev/1",
-  "code": "intent_timeout",
-  "seq": 0,
-  "tick": 26,
-  "message": "no intent-000000.json after 30 s"
-}

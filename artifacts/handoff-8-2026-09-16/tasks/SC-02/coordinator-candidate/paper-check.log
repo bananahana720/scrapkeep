@@ -1,6 +1,0 @@
-SC-02 paper check: 597 passed, 0 failed; negative controls noticed 5 of 5
-CONTROL NC-1 noticed ['C02a-rows-equal-scope', 'C02f-type-added-once:AbilityDefinition']
-CONTROL NC-2 noticed ['C07b-save-equals-hf06b:AttackDefinition:F-02', 'C07b-save-equals-hf06b:AttackDefinition:N-020', 'C07c-projection-or-exclusion:AttackDefinition:F-02']
-CONTROL NC-3 noticed ['C04c-unset-field-symbolic:ChaosOutcomeDefinition.frequency_weight', 'C09f-symbol-unset-and-cited:ChaosOutcomeDefinition:frequency_weight:SP-26', 'C10b-q-p13-no-value:SP-26']
-CONTROL NC-4 noticed ['C09g-roundtrip-fields:AbilityDefinition', 'C09h-roundtrip-reference:AbilityDefinition:commits']
-CONTROL NC-5 noticed ['C08b-trace-step:AM.3']

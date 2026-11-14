@@ -1,5 +1,0 @@
-TH-13 predecessor reconciliation at integrated commit b04b826b02ba239c1035be92f8e127e7b16be81f
-TH-13 revision 1 done (task index last event EV-0364), accepted integrated identity 5c5c8e8bd9007289836835ed920af63f1593154d (admission event EV-0320).
-git merge-base --is-ancestor 5c5c8e8bd9007289836835ed920af63f1593154d HEAD: exit 0
-docs/tech/sections/TH-13-chaos-outcomes.md sha256 at this commit: 63c668ab677ab9247af5fddd900a2f23fd57d4dd7003551f4b9fbe6a569e75d0
-npm run check:drift and the schemas scan at this commit: exit 0 (closure/check-drift.log, closure/check-drift-schemas.log); retained checks rerun at this commit: closure/paper-reruns.log

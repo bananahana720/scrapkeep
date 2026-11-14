@@ -1,7 +1,0 @@
-config_version=5
-[application]
-config/name="skeelab"
-run/main_scene=""
-[physics]
-3d/physics_engine="Jolt Physics"
-common/physics_ticks_per_second=90

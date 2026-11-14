@@ -1,7 +1,0 @@
-[gd_resource type="ShaderMaterial" load_steps=2 format=3]
-
-[ext_resource type="Shader" path="res://assets/materials/dig_mechanical/steel.gdshader" id="1"]
-
-[resource]
-resource_name = "steel"
-shader = ExtResource("1")

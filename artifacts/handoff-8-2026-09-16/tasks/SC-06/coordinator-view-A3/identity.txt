@@ -1,4 +1,0 @@
-main a04fdedb9510ec2d42b14dae1aca44628f6f5291
-candidate b53767236ed908a5851d6ee43c681dbf8241be3f
-merged-names:
-A	docs/tech/schemas/SC-06.md

@@ -1,1 +1,0 @@
-integrated ea11a9ea35561490c26a12a39e79aff59eac5b55 (no-ff merge of 1a2d40e40d2e59788064638bb912727505dc38bd into main at d6ecab2 plus the README index line). check:docs, check:project, check:drift exit 0; TH-02 paper check exit 0; TH-01 paper check rerun exit 0; check:scope documentation-only.

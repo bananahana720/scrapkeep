@@ -1,5 +1,0 @@
-HF-06a predecessor reconciliation at integrated commit 09d52a1d4790e948fde979a8d54a9fdc885ec314
-HF-06a revision 1 done at EV-0146, accepted integrated identity 321929ad25b3261758b1a800f5996b5416d43550.
-docs/tech/sections/HF-06a-schema-inventory.md sha256 at this commit: fd0bd9b345aef1e0b5aec4383055ed8e692ab01f7fb1194924cbed1201ff5fa7
-git merge-base --is-ancestor 321929ad25b3261758b1a800f5996b5416d43550 HEAD: exit 0
-npm run check:drift at this commit: exit 0 (closure/check-drift.log); retained checks rerun at this commit: closure/paper-reruns.log

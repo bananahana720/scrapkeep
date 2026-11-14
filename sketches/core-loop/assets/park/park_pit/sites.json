@@ -1,8 +1,0 @@
-{"schema": "scrapkeep-sites/1", "map": "park_pit",
- "_note": "Mini-boss roster open (Q-P25): miniboss names the world's WORLD_ANCIENTS kind as a placeholder. Sites from World's survey, board #241 6364394284.",
- "miniboss_sites": [
-  {"id": "pit_mb_early", "at": [-280, -448], "radius_m": 38, "near": "canal_lip", "third": "early", "miniboss": "swarm_remnant"},
-  {"id": "pit_mb_mid", "at": [-360, -232], "radius_m": 38, "near": "slickrock_15", "third": "mid", "miniboss": "swarm_remnant"}],
- "risk_rows": [
-  {"id": "pit_east_benches", "route": "east_benches", "hazards": ["tailings_slump"], "reward": "east_dive"},
-  {"id": "pit_eruption_lip", "route": "eruption_lip", "hazards": ["deep_adit_wakes"], "reward": "eruption_lip"}]}

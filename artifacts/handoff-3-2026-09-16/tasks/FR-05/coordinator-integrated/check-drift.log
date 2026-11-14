@@ -1,2 +1,0 @@
-check:drift pass: 18 sections, 77 stated hashes, 0 mismatches, 0 unbound. Scanned docs/tech/sections, dependencies resolved from each citing file
-Hash agreement only. A match proves the dependency's bytes are the ones the citing section recorded; it proves nothing about whether the citation, the line numbers or the claim built on them is still correct, and a mismatch is a finding for a card and a reviewer, not a defect this check judges.

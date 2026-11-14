@@ -1,0 +1,116 @@
+diff --git c/scripts/gate/gate.test.mjs w/scripts/gate/gate.test.mjs
+index 7b63ff2e3..2f77619c5 100644
+--- c/scripts/gate/gate.test.mjs
++++ w/scripts/gate/gate.test.mjs
+@@ -9,7 +9,7 @@ import { place, sortChanges, testsToRerun } from "./carry.mjs";
+ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+ import os from "node:os";
+ import { WEEKLY_HEADER, chunks, classifyFailure, errorCounts, gateLists, importOutcome, nearLimit, numbered, parseSmokeLog, parseWeekly, parseWindow, renderReceipt, retime, shardVerdict, soloEnvironment } from "./shard.mjs";
+-import { WEEKLY_MAX_DAYS, checkTally, checkWeeklySweep, expectedShards, isPass, planHead, tallyRows } from "./tally.mjs";
++import { WEEKLY_MAX_DAYS, checkTally, checkWeeklySweep, expectedShards, isDeferred, isPass, planHead, tallyRows } from "./tally.mjs";
+ import { WEEKLY_FILE, checkWeekly } from "./weekly.mjs";
+ 
+ const repoRoot = fileURLToPath(new URL("../..", import.meta.url));
+@@ -187,6 +187,30 @@ test("a full tally passes", () => {
+   assert.deepEqual(checkTally(tallyRows(plan(full)), counts), []);
+ });
+ 
++test("the wave gate needs every test window and the scoped row, and lets a release shard wait", () => {
++  const wave = { ...counts, scope: "wave" };
++  const tests = ["| tests 1-5 | PASS. Receipt tests-1-5.md |", "| tests 6-10 | PASS. Receipt tests-6-10.md |"];
++  const scoped = "| scoped | PASS 4/4: world1_run_test, posture_bands_flume_test, bot_run_end_test, session_test. Receipt scoped.md |";
++  assert.deepEqual(checkTally(tallyRows(plan([...tests, scoped])), wave), [], "no row at all for bots, bands or the red team");
++  const deferred = ["| bands B | DEFERRED to the release gate; last read PASS on f165fbb4, receipt w36-f165fbb4/bands-B |", "| red team | DEFERRED to the release gate; last read CLEAR on f165fbb4, receipt w36-f165fbb4/redteam |"];
++  assert.deepEqual(checkTally(tallyRows(plan([...tests, scoped, ...deferred])), wave), []);
++  assert.match(checkTally(tallyRows(plan(tests)), wave).join("\n"), /no row for "scoped"/);
++  assert.match(checkTally(tallyRows(plan([tests[0], scoped])), wave).join("\n"), /non-bot tests 6 to 10 have no row/);
++  assert.match(checkTally(tallyRows(plan([...tests, "| scoped | RED world1_run_test fell. Receipt scoped.md |"])), wave).join("\n"), /"scoped" does not open with PASS/);
++  assert.match(checkTally(tallyRows(plan([...tests, scoped, "| bands A | RED posture_bands_flume_test. Receipt bands-A.md |"])), wave).join("\n"), /"bands A" does not open with PASS/, "a release shard that was read and is red still blocks");
++  assert.match(checkTally(tallyRows(plan([...tests, scoped, "| bands B | DEFERRED to the release gate |"])), wave).join("\n"), /"bands B" names no receipt/);
++  assert.match(checkTally(tallyRows(plan(["| tests 1-5 | DEFERRED. Receipt old.md |", tests[1], scoped])), wave).join("\n"), /"tests 1-5" does not open with PASS/, "a test window is never deferred");
++  assert.match(checkTally(tallyRows(plan([...tests, "| scoped | DEFERRED. Receipt old.md |"])), wave).join("\n"), /"scoped" does not open with PASS/, "the scoped row is never deferred");
++});
++
++test("the release gate defers nothing", () => {
++  const rows = full.map((row) => (row.startsWith("| bands B") ? "| bands B | DEFERRED to the release gate; last read PASS, receipt bands-B.md |" : row));
++  assert.match(checkTally(tallyRows(plan(rows)), counts).join("\n"), /"bands B" does not open with PASS/);
++  assert.match(checkTally(tallyRows(plan(full.slice(0, 5))), counts).join("\n"), /no row for "bands B"/);
++  assert.equal(isDeferred("**DEFERRED** to the release gate"), true);
++  assert.equal(isDeferred("PASS, deferred nothing"), false);
++});
++
+ test("an empty verdict, a missing shard, a gap in the tests and a missing receipt are each named", () => {
+   const rows = [...full];
+   rows[1] = "| tests 7-10 | PASS. Receipt tests-7-10.md |";
+diff --git c/scripts/gate/tally.mjs w/scripts/gate/tally.mjs
+index 446201c4a..2f73550fb 100644
+--- c/scripts/gate/tally.mjs
++++ w/scripts/gate/tally.mjs
+@@ -9,6 +9,14 @@
+ // opens with PASS (CLEAR for the red team), the plan gates the checked-out head, no known-failing row is past its review date,
+ // and, while tests sit on the weekly list, a "weekly sweep" row dates a sweep no older than a week. When a head moves
+ // and a shard is read again, add a new row; the newest row for a name wins.
++//
++//   node scripts/gate/tally.mjs --wave --plan <plan>
++//
++// The wave gate (ruling cy, 11 November 2026) tests where a wave changed the game and leaves the wide sweeps to the
++// release gate at the end of a sprint. With --wave the plan still needs every non-bot test window, and in place of
++// the bot blocks, the three band sweeps and the red team it needs one "scoped" row: the bot and band tests the
++// wave's changes reach, by name. A release shard may still have a row; it may open with DEFERRED and name the
++// receipt of its last full read. Without --wave nothing is deferred: that is the release gate.
+ 
+ import { spawnSync } from "node:child_process";
+ import { readFileSync, realpathSync } from "node:fs";
+@@ -53,6 +61,11 @@ export function expectedShards(botCount) {
+ export const isPass = (verdict) => /^(?:PASS|CLEAR)\b/.test(verdict.replace(/^[\s*_]+/, "").replace(/^verdict:\s*/i, "").replace(/^[\s*_]+/, ""));
+ const hasReceipt = (verdict) => /\breceipts?\b|\blogs?\b/i.test(verdict);
+ 
++export const SCOPED_SHARD = "scoped";
++// A release shard the wave gate does not read says so first, and names where it was last read in full.
++export const isDeferred = (verdict) => /^DEFERRED\b/.test(verdict.replace(/^[\s*_]+/, ""));
++const isReleaseShard = (shard, botCount) => expectedShards(botCount).some((name) => shard.toLowerCase() === name.toLowerCase() || shard.toLowerCase().startsWith(name.toLowerCase() + " "));
++
+ // "w33-1a2b3c4d-gate-plan.md" names the head the plan gates.
+ export function planHead(file) {
+   return /(?:^|[/-])w\d+-([0-9a-f]{7,40})-gate-plan\.md$/.exec(file)?.[1] ?? null;
+@@ -80,7 +93,8 @@ export function checkWeeklySweep(rows, { weeklyCount = 0, today = new Date() } =
+   return [];
+ }
+ 
+-export function checkTally(rows, { testCount, botCount, planHead: gated = null, head = null, weeklyCount = 0, today = new Date() }) {
++export function checkTally(rows, { testCount, botCount, planHead: gated = null, head = null, weeklyCount = 0, today = new Date(), scope = "release" }) {
++  const wave = scope === "wave";
+   const problems = [];
+   if (gated && head && !head.startsWith(gated) && !gated.startsWith(head)) problems.push(`the plan gates ${gated} and this checkout is at ${head.slice(0, 8)}; the test and bot lists are counted here, so check out the gated head first`);
+   const latest = new Map();
+@@ -91,9 +105,10 @@ export function checkTally(rows, { testCount, botCount, planHead: gated = null,
+   for (const row of latest.values()) {
+     if (row.verdict === "") continue;
+     if (!hasReceipt(row.verdict)) problems.push(`line ${row.line}: "${row.shard}" names no receipt`);
++    if (wave && isDeferred(row.verdict) && isReleaseShard(row.shard, botCount)) continue;
+     if (!isPass(row.verdict)) problems.push(`line ${row.line}: "${row.shard}" does not open with PASS (CLEAR for the red team) in its newest row; fix the red or carry it on the ledger, then add a new row`);
+   }
+-  for (const name of expectedShards(botCount)) {
++  for (const name of wave ? [SCOPED_SHARD] : expectedShards(botCount)) {
+     if (![...latest.keys()].some((key) => key === name.toLowerCase() || key.startsWith(name.toLowerCase() + " "))) problems.push(`no row for "${name}"`);
+   }
+   const windows = [...latest.values()]
+@@ -114,14 +129,16 @@ export function checkTally(rows, { testCount, botCount, planHead: gated = null,
+ async function main() {
+   const argv = process.argv.slice(2);
+   const planAt = argv.indexOf("--plan");
+-  if (planAt < 0 || !argv[planAt + 1]) throw new Error("usage: node scripts/gate/tally.mjs --plan <gate plan.md>");
++  if (planAt < 0 || !argv[planAt + 1]) throw new Error("usage: node scripts/gate/tally.mjs [--wave] --plan <gate plan.md>");
+   const lists = gateLists(path.join(root, "sketches", "core-loop"));
+   const rows = tallyRows(readFileSync(argv[planAt + 1], "utf8"));
+   const gated = planHead(argv[planAt + 1]);
+   const head = spawnSync("git", ["-C", root, "rev-parse", "HEAD"], { encoding: "utf8" }).stdout.trim() || null;
+   if (!gated) console.log("NOTE the plan's file name is not w<N>-<head>-gate-plan.md, so the head it gates was not checked against this checkout");
+   const weekly = lists.weekly.tests.length + lists.weekly.bots.length;
+-  const problems = checkTally(rows, { testCount: lists.tests.length, botCount: lists.bots.length, planHead: gated, head, weeklyCount: weekly });
++  const scope = argv.includes("--wave") ? "wave" : "release";
++  const problems = checkTally(rows, { testCount: lists.tests.length, botCount: lists.bots.length, planHead: gated, head, weeklyCount: weekly, scope });
++  console.log(scope === "wave" ? `wave gate (ruling cy): every non-bot test and the "${SCOPED_SHARD}" row; bot blocks, bands and the red team wait for the release gate` : "release gate: every shard, nothing deferred");
+   const notRun = new Set([...lists.weekly.tests, ...lists.weekly.bots]);
+   const ledger = (await checkLedger(root, { promotion: true, notRun })).filter((finding) => finding.level === "failure");
+   for (const finding of ledger) problems.push(`ledger line ${finding.line}: ${finding.message}`);

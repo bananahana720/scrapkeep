@@ -1,5 +1,0 @@
-date 2026-09-25T21:50:19Z
-node_wt head 6245021c427259b476bd21815943eb387a06e190 branch wt/JL-26
-lab_wt head 29dcbcf15569b309c6912577bcbd1856378b9076 branch lab/cable-bench
-proto/cable-bench 29dcbcf15569b309c6912577bcbd1856378b9076
-CLAUDE_EFFORT=high

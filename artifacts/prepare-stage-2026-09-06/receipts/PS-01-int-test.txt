@@ -1,2 +1,0 @@
-== npm test after npm ci ==
-exit=0

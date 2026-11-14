@@ -1,2 +1,0 @@
-{"seq":0,"id":"20260925T205241Z-batch-downhill-run-scripted-101eb1e2","type":"batch","label":"downhill-run-scripted","result":"pass","started_at":"2026-09-25T20:52:41.675Z","finished_at":"2026-09-25T20:53:00.037Z","head":"d8e67d08d0c63584c62d929508cf02422ceb0361","dirty":true}
-{"seq":1,"id":"20260925T205300Z-batch-run-to-pad-scripted-e4e25d0b","type":"batch","label":"run-to-pad-scripted","result":"inconclusive","started_at":"2026-09-25T20:53:00.081Z","finished_at":"2026-09-25T20:53:26.089Z","head":"d8e67d08d0c63584c62d929508cf02422ceb0361","dirty":true}

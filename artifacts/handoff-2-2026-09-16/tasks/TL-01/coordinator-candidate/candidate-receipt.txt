@@ -1,8 +1,0 @@
- CONTRIBUTING.md         |   1 +
- package.json            |   1 +
- scripts/check-drift.mjs | 202 ++++++++++++++++++++++++++++++++++++++++++++++++
- 3 files changed, 204 insertions(+)
-d0050fc8380d5e2a950747ab56b3f93a7b8df97c777380bdc5c134ddda77db06  scripts/check-drift.mjs
-0a336fe8a7b2df55ccc70c07f4b19f4ab1df1bc2677cf987707196bd2e571d42  package.json
-b70b4b3ba80275fd4599ce3e0fb41bda5df1ccda58fe43bc68d05b889357b46e  CONTRIBUTING.md
-coordinator rerun in /home/andrew/Projects/scrapkeep-wt-TL-01 at 4d702ac8244bfeb57b87cc95a15beb1661dbb80d, 2026-09-16T05:20Z: npm run check:drift exit 1 with 4 DRIFT lines (all HF-09: HF-06b, HF-07a md and csv, HF-07b) and 1 UNBOUND (HF-04b:9), nothing for TH-01, HF-07a, HF-07b, HF-08; control run exit 1 naming the one altered hash; unaltered copy exit 0; check:docs exit 0; check:project exit 0; check:scope mixed (tooling plus documentation) so its required npm run verify was not run under the no-build authorization (EV-0217); npm test in the worktree exits 1 on three tests whose single cause is a missing node_modules (Cannot find package three), the same suite exits 0 on main at the same base, and it is rerun on the integrated commit.

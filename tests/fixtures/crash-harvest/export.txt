@@ -1,5 +1,0 @@
-SCRIPT ERROR: Parse Error: Expected expression for variable initial value after "=".
-          at: GDScript::reload (res://src/ui/shop.gd:88)
-ERROR: Failed to load script "res://src/ui/shop.gd" with error "Parse error".
-   at: load (modules/gdscript/gdscript_resource_format.cpp:46)
-cloud export: done

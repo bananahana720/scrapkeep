@@ -1,6 +1,0 @@
-kloofendal_48d_partly_cloudy_puresky_2k.hdr
-Source: Poly Haven, https://polyhaven.com/a/kloofendal_48d_partly_cloudy_puresky
-File: https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/2k/kloofendal_48d_partly_cloudy_puresky_2k.hdr
-Licence: CC0 1.0 Universal (public domain dedication), per Poly Haven's site-wide licence.
-Downloaded 2026-10-09 by the wave 12 coordinator with Andrew's approval (human-in-the-loop task 3); 5,451,493 bytes, sha256 prefix 5244534e9cf5b606, Radiance RGBE header verified.
-Transforms: none at import; used as a PanoramaSkyMaterial candidate against the painted workshop sky.

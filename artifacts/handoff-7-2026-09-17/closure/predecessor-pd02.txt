@@ -1,5 +1,0 @@
-PD-02 predecessor reconciliation at integrated commit 09d52a1d4790e948fde979a8d54a9fdc885ec314
-PD-02 revision 1 done at EV-0343, accepted integrated identity b576fc180c69cc4be69c85215c1289979cd1d005.
-docs/product/sections/PD-02-interface-states.md sha256 at this commit: 7a17619a2949ed8e57da9541a54dab046c504e9d8eb592d1f08a5d92ecdf2905
-git merge-base --is-ancestor b576fc180c69cc4be69c85215c1289979cd1d005 HEAD: exit 0
-npm run check:drift at this commit: exit 0 (closure/check-drift.log); retained checks rerun at this commit: closure/paper-reruns.log

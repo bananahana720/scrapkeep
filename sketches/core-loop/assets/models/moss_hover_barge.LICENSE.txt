@@ -1,6 +1,0 @@
-Assets: moss_hover_barge.glb, moss_hover_barge_thrusters.glb, moss_hover_barge_detail1.glb, moss_hover_barge_detail2.glb
-Source: authored procedurally in this repository by tools/blender/moss_hover_barge.py, moss_hover_barge_detail1.py and moss_hover_barge_detail2.py (kit.Surface from tools/blender/dig_mechanical/kit.py, helpers from lantern_beacon.py and ore_cart.py, Blender headless). No imported mesh, texture, scan or generated geometry. Colour is per-vertex from the recipe's TONES (palette constants of src/core/palette.gd).
-Concept references (not shipped, not traced into geometry): FLUX.1 [schnell] output artifacts/local/alpha/push/w12/concepts/boards/alpha-props-r2/moss_hover_barge_202.png (approved re-roll) and artifacts/local/alpha/push/w12/units/rc-moss_hover_barge/ref/moss_hover_barge_pass2.png (image-to-image of a project render), black-forest-labs/FLUX.1-schnell revision 741f7c3ce8b383c54771c7003378a50191e9efe9.
-Concept model licence: Apache-2.0, stated in that repository's README.md only (no LICENSE file at that revision). The images are model output from a text prompt and a project render, no third-party image input.
-Licence of these assets: the Scrapkeep project's own authored content; no third-party licence attaches to the geometry.
-Provenance record (PF-01 to PF-15): moss_hover_barge.PROVENANCE.txt beside this file.

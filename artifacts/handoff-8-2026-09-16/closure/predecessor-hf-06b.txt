@@ -1,5 +1,0 @@
-HF-06b predecessor reconciliation at integrated commit b04b826b02ba239c1035be92f8e127e7b16be81f
-HF-06b revision 1 done (task index last event EV-0153), accepted integrated identity 4d9af64d4c3f82ed2ab51c4fa68e1e0ac5ab2669 (admission event EV-0153).
-git merge-base --is-ancestor 4d9af64d4c3f82ed2ab51c4fa68e1e0ac5ab2669 HEAD: exit 0
-docs/tech/sections/HF-06b-persistence-projection.md sha256 at this commit: d2344ecf38788778f0c334a06f16490b1c83522ebb5ee04643505fc8ca06814d
-npm run check:drift and the schemas scan at this commit: exit 0 (closure/check-drift.log, closure/check-drift-schemas.log); retained checks rerun at this commit: closure/paper-reruns.log

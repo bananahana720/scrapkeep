@@ -1,7 +1,0 @@
-Assets: every camp_*.glb in this folder (34 files; the list is assets/registry.d/camp.json).
-Source: authored procedurally in this repository by the recipes under tools/blender/camp/ (kit.Surface parts from
-tools/blender/dig_mechanical/kit.py via tools/blender/park/contraptions/_park.py and tools/blender/camp/_camp.py, Blender 5.2.2 LTS
-headless). No imported mesh, texture, scan, generated image or traced reference. Colour is per-vertex from the game palette
-(tools/blender/common.py, src/core/palette.gd) and the park tones.
-Licence of these assets: the Scrapkeep project's own authored content; no third-party licence attaches to the geometry.
-Provenance record: camp.PROVENANCE.txt beside this file.

@@ -1,3 +1,0 @@
-ts	hook	ms	input_tokens	questions	model	question_versions	input_sha256	request	server_request	output_tokens	usage	error
-2026-09-25T20:50:57Z	test-order	288	3361	16	jev-1.13.0	test-order@71168cd1b541	d87ff76b20469999ed8c53fd3ac346ba0ad4df6aa1eb6a966c0936020f214760	62c1a87f-d15e-4494-83e3-9d985443b09c	req_01a0da55e4d0739ea4628d28157d4e78	276	{"input_tokens":3361,"output_tokens":276}	
-2026-09-25T20:53:04Z	test-order	259	1300	4	jev-1.13.0	test-order@71168cd1b541	ed9fe77acbb046b5aa6a5d7ed5b195ebfd8fee5d14493cdbaf1b0510fb670d25	df14c483-c68b-48d8-948d-a5bad0b06404	req_01a0da57d6227c818e2d2ee59fcafbe1	72	{"input_tokens":1300,"output_tokens":72}	

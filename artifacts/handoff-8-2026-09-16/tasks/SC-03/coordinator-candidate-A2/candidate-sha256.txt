@@ -1,1 +1,0 @@
-2a59d68d2c10e46c1ad09519e4bc8438f8a1fbc8f8362f9367eb7de6c809f8fe  docs/tech/schemas/SC-03.md

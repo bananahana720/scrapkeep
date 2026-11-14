@@ -1,2 +1,0 @@
-# Planted fixture: a data file naming a forbidden networking class.
-channel = DTLSServer

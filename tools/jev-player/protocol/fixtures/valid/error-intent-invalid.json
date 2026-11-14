@@ -1,7 +1,0 @@
-{
-  "protocol": "scrapkeep-jev/1",
-  "code": "intent_invalid",
-  "seq": 3,
-  "tick": 296,
-  "message": "intent-000003.json names hit_kicker, which was not offered"
-}

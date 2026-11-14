@@ -1,5 +1,0 @@
-Source: Poly Haven texture "dense_sand", https://polyhaven.com/a/dense_sand
-File: https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/dense_sand/dense_sand_diff_1k.jpg
-Licence: CC0 1.0 Universal (public domain dedication), https://polyhaven.com/license
-Transforms: 1 px Gaussian blur, luminance split into six equal-population bands, each band painted one palette.gd tone (ramp "floor" in w12 P-SURF quantise.py, narrowed in its fix round), then a per-channel multiply (R 0.8913, G 0.7865, B 0.6601, ImageMagick -evaluate multiply) that restores the previous map's mean colour (0.734, 0.596, 0.413) so the vertex tint keeps its sand hue (w12 VX-SURF, 2026-10-09), WebP q88.
-Provenance record (PF-01 to PF-15): artifacts/local/alpha/push/w12/units/vx-surf/provenance.md

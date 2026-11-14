@@ -1,7 +1,0 @@
-[gd_resource type="StandardMaterial3D" format=3]
-
-[resource]
-resource_name = "paint"
-albedo_color = Color(0.913725490, 0.925490196, 0.917647059, 1)
-roughness = 0.8
-vertex_color_use_as_albedo = true

@@ -1,5 +1,0 @@
-CONTROL NC-1 unlisted command noticed=True
-CONTROL NC-2 edge endpoints do not match noticed=True
-CONTROL NC-3 parameter with neither source nor question noticed=True
-check_movement pass: 25 interface rows, 26 route rows, 120 module mentions, 42 edge uses, 18 local steps, 55 commands checked, 53 callback classes, 28 parameter rows, 25 question gates, 4 traced cases, 7 stated hashes, 0 findings, 0 blind controls
-Document agreement only. It checks this section against the admitted HF-03a module table, the HF-03b adjacency list, the HF-04a callback families and the BACKLOG question anchors at the checked bytes. It establishes no engine, browser or hardware behaviour.

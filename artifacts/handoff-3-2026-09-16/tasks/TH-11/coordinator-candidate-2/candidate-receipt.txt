@@ -1,2 +1,0 @@
-1d738f2cf1568fef6e93d0cd5d011b595937187ea4adeb9dc8cf9d87b4a862b3  docs/tech/sections/TH-11-runs-regions-exits-and-saves.md
-coordinator rerun at 704c08580b709aa4dbc2a92aa06ed22287fd9747, 2026-09-16T23:20Z: one file, 30 insertions 25 deletions; EV-0275 cited, RP-10a present; check:scope --no-build exit 0; check:docs exit 0; check:project exit 0; check:drift exit 0; check_routing.py exit 0 result pass.

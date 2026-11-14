@@ -1,1 +1,0 @@
-NotoSans-Bold.ttf (2.015) and NotoSansMono-Bold.ttf (2.014) are copied unmodified from Arch noto-fonts 1:2026.09.01-1 (/usr/share/fonts/noto/) on 2026-09-27; SIL OFL 1.1, text in OFL.txt.

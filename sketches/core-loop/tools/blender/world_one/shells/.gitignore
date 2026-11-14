@@ -1,2 +1,0 @@
-# Raw mojulo shells (several MB each) are rebuilt by ../shells.py from the *.mojulo.json recipes.
-*.glb

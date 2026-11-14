@@ -1,9 +1,0 @@
-check:scope 254f8e11147c41d4ec9d34bb1d4687ba006f09e0..07bef9da9bf72b1831307811bba177646d004f3c
-scope: documentation-only (1 changed paths)
-class documentation-only [evidence: structural documentation checks; no build or runtime evidence]
-  docs/tech/schemas/SC-02.md
-required commands:
-  npm run check:docs
-  npm run check:project
-  npm run check:drift
-This selector classifies paths and names commands. It runs none of them and proves nothing about their outcome.

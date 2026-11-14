@@ -1,0 +1,39 @@
+diff --git c/sketches/core-loop/tools/ace_bounce.gd w/sketches/core-loop/tools/ace_bounce.gd
+index 72d1fa2f3..4cb99881e 100644
+--- c/sketches/core-loop/tools/ace_bounce.gd
++++ w/sketches/core-loop/tools/ace_bounce.gd
+@@ -38,6 +38,9 @@ var _base_sample := 0
+ var _mix_states: Array = []
+ var _tail := 3.0
+ var _end_at := -1.0
++# scratch-only (snd job): keep each replaced ACE instance's events_log
++var _last_ace = null
++var _ace_logs: Array = []
+ 
+ 
+ func _initialize() -> void:
+@@ -91,6 +94,10 @@ func _physics_process(delta: float) -> bool:
+ 			if kind.begins_with("steam_lift") or kind.begins_with("ride_"):
+ 				_facts.append([_now(), "world_fact", kind]))
+ 		return false
++	if audio.ace != _last_ace:
++		if _last_ace != null:
++			_ace_logs.append(_last_ace.events_log)
++		_last_ace = audio.ace
+ 	if audio.has_method("mix_state"):
+ 		var state: String = audio.mix_state()
+ 		if _mix_states.is_empty() or _mix_states.back()[1] != state:
+@@ -141,7 +148,12 @@ func _finish() -> void:
+ 	if ace != null:
+ 		for e in ace.events_log:
+ 			sections.append([snappedf((int(e[1]) - _base_sample) / RATE, 0.01), e[0], e[2]])
+-	var info := {"wav": out, "seconds": snappedf(_now(), 0.1), "mix_rate": AudioServer.get_mix_rate(), "driver": AudioServer.get_driver_name(),
++	var all_sections := []
++	for elog in _ace_logs + ([ace.events_log] if ace != null else []):
++		for e in elog:
++			if int(e[1]) >= _base_sample:
++				all_sections.append([snappedf((int(e[1]) - _base_sample) / RATE, 0.01), e[0], e[2]])
++	var info := {"ace_sections_all": all_sections, "ace_instances": _ace_logs.size() + 1, "wav": out, "seconds": snappedf(_now(), 0.1), "mix_rate": AudioServer.get_mix_rate(), "driver": AudioServer.get_driver_name(),
+ 		"music": _game.tuning.option("music"), "breath": _game.tuning.option("breath"),
+ 		"policy": _driver.policy, "outcome": _driver.outcome, "stage": _game.run.stage, "tail": _tail,
+ 		"ace_loaded": ace != null, "ace_missing": audio.ace_missing, "music_skips": audio._music_pb.get_skips() if audio._music_pb != null else -1,

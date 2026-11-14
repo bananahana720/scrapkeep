@@ -1,6 +1,0 @@
-check-scope EXIT=0 :: npm run -s check:scope -- 43a8f12ad64b63a7352adb6cefab9f111a1cb5e8 1f5a5a4d298ed3b1e1ff5f87be3d3c4f38cde7f8 --no-build
-check-docs EXIT=0 :: npm run -s check:docs
-check-project EXIT=0 :: npm run -s check:project
-check-drift EXIT=0 :: npm run -s check:drift
-check-drift-schemas EXIT=0 :: node scripts/check-drift.mjs --sections docs/tech/schemas
-paper-check EXIT=0 :: python3 /home/andrew/Projects/scrapkeep/artifacts/handoff-8-2026-09-16/tasks/SC-01/coordinator-candidate-A3/check_contract.py --root /home/andrew/Projects/scrapkeep-wt-SC-01-A2 --out /home/andrew/Projects/scrapkeep/artifacts/handoff-8-2026-09-16/tasks/SC-01/coordinator-candidate-A3/paper-check

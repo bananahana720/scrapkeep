@@ -1,6 +1,0 @@
-Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org
-
-[stage 1 cost] 15 bodies, 15 shapes, 22 mesh instances, 12 materials, 0 lights; wall time per frame over 600 frames: p50 6.85 ms, p99 8.61 ms, max 43.32 ms -> PASS
-[stage 2 cost] 57 bodies, 57 shapes, 374 mesh instances, 173 materials, 1 lights; wall time per frame over 600 frames: p50 6.83 ms, p99 9.79 ms, max 35.30 ms -> PASS
-[stage 2 costs no more than twice stage 1] median 6.83 ms against stage 1's 6.85 ms; p99 9.79 ms against the 16.7 ms 60 Hz frame (reported, not gated: headless CPU on a shared machine) -> PASS
-stage_gorge_perf_test: PASS
