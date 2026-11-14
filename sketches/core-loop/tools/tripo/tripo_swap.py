@@ -1,7 +1,8 @@
 """Swap one mesh node of an authored model for a Tripo mesh, keeping everything else.
 
 blender -b --factory-startup -P tools/tripo/tripo_swap.py -- --in tripo.glb --ref authored.glb --node NodeName \
-    --out out.glb [--yaw DEG] [--max-tris N] [--fit box|height|fill]
+    --out out.glb [--yaw DEG] [--max-tris N] [--fit box|height|fill] [--region "x0,y0,z0,x1,y1,z1"]
+    [--bright keep|match]
 
 For models whose code animates named parts (enemy_clips.gd ROWS): the authored hierarchy, pivots,
 sockets and the other parts stay as they are; only `--node`'s mesh is replaced. The Tripo mesh is
@@ -9,6 +10,12 @@ turned by --yaw, fitted inside that node's own bounds, and each face snaps to th
 that node's material slots (or, for a single-material vertex-coloured node, its vertex palette; or,
 for a crew enemy whose slots are white and whose colour is all vertex colour, the nearest of each
 slot's own vertex colours, taking that slot).
+With --region (a box in the node's own Blender space, Z up) only the node's faces whose centres lie in the box are
+replaced: the Tripo mesh is fitted to those faces' bounds and the node's other faces stay as authored. This is
+for a body that holds a frame or a mast the game's own drawing depends on (the netcaster's net window); --max-tris
+then caps the whole node, kept faces included.
+With --bright match the sampled texture is lifted until the node's mean brightness (kept faces included) reaches the
+authored node's; the line printed at the end gives both means (lum, lum_ref) either way.
 The texture never ships. Chain runs (out of one as --ref of the next) to swap several nodes.
 Prints one JSON line with counts.
 """
@@ -18,7 +25,7 @@ import numpy as np
 from mathutils import Vector, Matrix
 
 argv = sys.argv[sys.argv.index("--") + 1:]
-opt = {"yaw": "0", "max-tris": "0", "fit": "box"}
+opt = {"yaw": "0", "max-tris": "0", "fit": "box", "region": "", "bright": "keep"}
 i = 0
 while i < len(argv):
     opt[argv[i][2:]] = argv[i + 1]; i += 2
@@ -45,6 +52,24 @@ tme = target.data
 lmn = Vector([min(v.co[k] for v in tme.vertices) for k in range(3)])
 lmx = Vector([max(v.co[k] for v in tme.vertices) for k in range(3)])
 old_tris = sum(len(p.vertices) - 2 for p in tme.polygons)
+region = [float(x) for x in opt["region"].split(",")] if opt["region"] else None
+kept_tris = 0
+
+
+def in_region(c):
+    return region is not None and all(region[k] <= c[k] <= region[k + 3] for k in range(3))
+
+
+if region is not None:
+    if len(region) != 6:
+        raise SystemExit("tripo_swap: --region takes six numbers")
+    inside = [p for p in tme.polygons if in_region(p.center)]
+    if not inside:
+        raise SystemExit("tripo_swap: no face of %s has its centre in --region" % opt["node"])
+    pts = [tme.vertices[i].co for p in inside for i in p.vertices]
+    lmn = Vector([min(v[k] for v in pts) for k in range(3)])
+    lmx = Vector([max(v[k] for v in pts) for k in range(3)])
+    kept_tris = old_tris - sum(len(p.vertices) - 2 for p in inside)
 gj, _ = read_glb(opt["ref"])
 factor = {m.get("name"): m.get("pbrMetallicRoughness", {}).get("baseColorFactor", [1.0] * 4)[:3] for m in gj.get("materials", [])}
 mats = [s.material for s in target.material_slots if s.material]
@@ -124,16 +149,62 @@ for sl in ob.material_slots:
     if img:
         break
 pal_s = srgb(np.array([p[0] for p in palette]))
+
+
+def lum(c):  # brightness of sRGB colours, one per row
+    return np.asarray(c) @ np.array([0.2126, 0.7152, 0.0722])
+
+
+def node_lum(mesh, layer):  # area-weighted mean brightness of what the game shows: slot colour times vertex colour
+    tot = a = 0.0
+    for p in mesh.polygons:
+        if region is not None and mesh is tme and not in_region(p.center):
+            continue
+        m = mesh.materials[p.material_index] if p.material_index < len(mesh.materials) and mesh.materials[p.material_index] else None
+        base = flat.get(m.name.split(".")[0], np.ones(3)) if m else np.ones(3)
+        if layer is not None:
+            idx = p.loop_indices if layer.domain == "CORNER" else p.vertices
+            base = base * np.mean([layer.data[j].color[:3] for j in idx], axis=0)
+        tot += float(lum(srgb(base))) * p.area; a += p.area
+    return tot / max(a, 1e-9)
+
+
+ref_lum = node_lum(tme, ca)
+# With --region the node is judged whole: the faces kept outside the box count at their own brightness, so a new
+# part with less bright surface than the one it replaces is lifted further.
+whole_lum, kept_lum, kept_area = ref_lum, 0.0, 0.0
+if region is not None:
+    full, region = region, None
+    whole_lum = node_lum(tme, ca); whole_area = sum(p.area for p in tme.polygons)
+    region = full
+    in_area = sum(p.area for p in tme.polygons if in_region(p.center))
+    kept_area = whole_area - in_area
+    kept_lum = (whole_lum * whole_area - ref_lum * in_area) / max(kept_area, 1e-9)
 slot = np.zeros(len(me.polygons), int)
 if img is not None and me.uv_layers:
     W, H = img.size
     px = np.array(img.pixels[:], dtype=np.float32).reshape(H, W, -1)[:, :, :3]
     uv = me.uv_layers.active.data
+    samp = np.zeros((len(me.polygons), 3)); area = np.array([p.area for p in me.polygons])
     for p in me.polygons:
         pts = [uv[li].uv for li in p.loop_indices]
         cen = sum((Vector(u) for u in pts), Vector((0, 0))) / len(pts)
         cols = [px[min(H - 1, max(0, int((u.y % 1.0) * H))), min(W - 1, max(0, int((u.x % 1.0) * W)))] for u in pts + [cen, cen]]
-        slot[p.index] = int(np.argmin(np.sum((pal_s - np.median(np.array(cols), axis=0)) ** 2, axis=1)))
+        samp[p.index] = np.median(np.array(cols), axis=0)
+    def snap(cols):
+        return np.argmin(((cols[:, None, :] - pal_s[None, :, :]) ** 2).sum(axis=2), axis=1)
+    slot = snap(samp)
+    if opt["bright"] == "match" and ref_lum > 0.0:
+        # A generated texture is usually darker than the authored paint, so many faces snap to the dark colours
+        # and the enemy stands out less (the board's PC look, 14 November 2026). Lift the samples until the
+        # snapped faces' mean brightness reaches the authored node's.
+        gain = 1.0
+        for _ in range(12):
+            got = float((np.sum(lum(pal_s[slot]) * area) + kept_lum * kept_area) / max(area.sum() + kept_area, 1e-9))
+            if got >= whole_lum * 0.995:
+                break
+            gain *= max(whole_lum / max(got, 1e-6), 1.03)
+            slot = snap(np.clip(samp * gain, 0.0, 1.0))
 bm = bmesh.new(); bm.from_mesh(me); bm.faces.ensure_lookup_table()
 for _ in range(2):
     nxt = slot.copy()
@@ -148,7 +219,11 @@ bm.free()
 me.materials.clear()
 for m in mats:
     me.materials.append(m)
-ca = me.color_attributes.new("Col", "FLOAT_COLOR", "CORNER")
+authored_ca = ca
+if region is not None and (authored_ca is None or authored_ca.domain != "CORNER"):
+    raise SystemExit("tripo_swap: --region needs the node to carry a per-corner colour layer")
+ca = me.color_attributes.new(authored_ca.name if region is not None else "Col", authored_ca.data_type if region is not None else "FLOAT_COLOR", "CORNER")
+ca_name = ca.name
 for p in me.polygons:
     k = slot[p.index]
     p.material_index = palette[k][1] if style != "vertex" else 0
@@ -163,10 +238,23 @@ if style == "vertex":
 _weld(me, style != "vertex")
 tris = sum(len(p.vertices) - 2 for p in me.polygons)
 cap = int(opt["max-tris"])
+if cap and region is not None:
+    cap -= kept_tris
+    if cap <= 0:
+        raise SystemExit("tripo_swap: the faces kept outside --region already use the whole --max-tris")
 if cap and tris > cap:
     md = ob.modifiers.new("dec", "DECIMATE"); md.ratio = cap / tris
     bpy.context.view_layer.objects.active = ob
     bpy.ops.object.modifier_apply(modifier=md.name)
+    tris = sum(len(p.vertices) - 2 for p in me.polygons)
+
+new_lum = node_lum(me, me.color_attributes[ca_name])
+if region is not None:  # the authored faces outside the box join the new mesh, colours and slots as they were
+    both = bmesh.new(); both.from_mesh(me)
+    fresh = len(both.faces)
+    both.from_mesh(tme); both.faces.ensure_lookup_table()
+    bmesh.ops.delete(both, geom=[f for f in both.faces[fresh:] if in_region(f.calc_center_median())], context="FACES")
+    both.to_mesh(me); both.free()
     tris = sum(len(p.vertices) - 2 for p in me.polygons)
 
 # hand the new mesh to the authored node, then drop the import
@@ -191,5 +279,5 @@ body = struct.pack("<I", len(js)) + b"JSON" + js + rest
 open(opt["out"], "wb").write(b"glTF" + struct.pack("<II", 2, 12 + len(body)) + body)
 total = sum(sum(len(p.vertices) - 2 for p in o.data.polygons) for o in bpy.context.scene.objects if o.type == "MESH")
 print("SWAP " + json.dumps({"out": opt["out"], "node": opt["node"], "node_tris": tris, "node_tris_before": old_tris,
-                           "model_tris": total, "style": style, "slots_used": sorted(set(int(x) for x in slot)),
-                           "scale": round(s, 4), "had_texture": img is not None}))
+                           "model_tris": total, "style": style, "lum": round(new_lum, 3), "lum_ref": round(ref_lum, 3), "slots_used": sorted(set(int(x) for x in slot)),
+                           "scale": [round(float(v), 4) for v in (sx, sy, sz)], "kept_tris": kept_tris, "had_texture": img is not None}))
