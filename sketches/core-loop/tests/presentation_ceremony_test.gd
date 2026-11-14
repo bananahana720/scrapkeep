@@ -167,7 +167,7 @@ func _physics_process(_delta: float) -> bool:
 			if _elapsed() > SETTLE_MS:
 				var ball: Vector3 = _game.player.ball_position()
 				_enemy = _game.ctx.spawner.spawn_enemy("chaser", _game.ctx.terrain.drop_point(ball.x + 6.0, ball.z + 6.0, 1.0))
-				_game.run.add_part("sunforged_core", "vault")
+				_game.run.add_part("gatling_heart", "vault")
 				_game.ctx.spawner.strike(_enemy, "shell", 1.0)
 				_next("near")
 		"near":
@@ -175,8 +175,8 @@ func _physics_process(_delta: float) -> bool:
 				_report("queued while not calm", _ceremony.queued() == 1 and not _ceremony.active() and not paused and not _ceremony.calm(),
 					"an enemy %.1f m off: queued %d, active %s, paused %s" % [_enemy.global_position.distance_to(_game.player.ball_position()),
 						_ceremony.queued(), _ceremony.active(), paused])
-				_report("no payoff before it lands", _ceremony.payoffs.filter(func(p: Array): return p[0] == "sunforged_core").is_empty()
-						and not _ceremony.armed().has("sunforged_core"),
+				_report("no payoff before it lands", _ceremony.payoffs.filter(func(p: Array): return p[0] == "gatling_heart").is_empty()
+						and not _ceremony.armed().has("gatling_heart"),
 					"a strike while the vault find waits: payoffs %s, armed %s" % [_ceremony.payoffs, _ceremony.armed()])
 				_game.ctx.spawner.strike(_enemy, "ram", 9999.0)
 				_game.run.add_part("tempest_core", "milestone")
@@ -194,7 +194,7 @@ func _physics_process(_delta: float) -> bool:
 				_report("paused mid-build", paused and _ceremony.phase() == "build" and body.linear_velocity == _v0,
 					"paused %s, phase %s, velocity %s (held %s)" % [paused, _ceremony.phase(), body.linear_velocity, _v0])
 				Push.key(root, KEY_X)
-				_report("skip to the reveal", _ceremony.phase() == "reveal" and _revealed == "sunforged_core" and paused,
+				_report("skip to the reveal", _ceremony.phase() == "reveal" and _revealed == "gatling_heart" and paused,
 					"a key in the build: phase %s, revealed %s, still paused %s" % [_ceremony.phase(), _revealed, paused])
 				Push.key(root, KEY_X)
 				var v1: Vector3 = body.linear_velocity
@@ -222,8 +222,8 @@ func _physics_process(_delta: float) -> bool:
 				var target: Node3D = _game.ctx.spawner.spawn_enemy("chaser", _game.ctx.terrain.drop_point(ball.x + 5.0, ball.z - 5.0, 1.0))
 				_game.ctx.spawner.strike(target, "shell", 1.0)
 				_game.ctx.spawner.strike(target, "shell", 1.0)
-				var paid: Array = _ceremony.payoffs.filter(func(p: Array): return p[0] == "sunforged_core")
-				_report("payoff once", armed.has("sunforged_core") and paid.size() == 1 and paid[0][1] == "enemy_struck"
+				var paid: Array = _ceremony.payoffs.filter(func(p: Array): return p[0] == "gatling_heart")
+				_report("payoff once", armed.has("gatling_heart") and paid.size() == 1 and paid[0][1] == "enemy_struck"
 						and _ceremony.view.flashes.size() >= 1,
 					"armed after landing %s; two strikes paid %s; flashes %d" % [armed, paid, _ceremony.view.flashes.size()])
 				_game.ctx.spawner.strike(target, "ram", 9999.0)
@@ -285,7 +285,7 @@ func _on_started(part: String) -> void:
 	_started = part
 	_v0 = _game.player.body().linear_velocity
 	_s0 = _game.player.state.velocity
-	_report("pauses when calm", part == "sunforged_core" and paused and _ceremony.queued() == 0,
+	_report("pauses when calm", part == "gatling_heart" and paused and _ceremony.queued() == 0,
 		"the enemy gone: began %s, paused %s, queued %d, velocity %s" % [part, paused, _ceremony.queued(), _v0])
 
 

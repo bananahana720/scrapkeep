@@ -61,7 +61,9 @@ test("the desktop entry names the game, its icon and the Game category", () => {
   assert.match(entry, /^Categories=Game;ActionGame;$/m);
   assert.match(entry, /^Terminal=false$/m);
   assert.doesNotMatch(entry, /TryExec/);
-  assert.match(entry, /^Actions=sitting;$/m);
+  assert.match(entry, /^Actions=sitting-earned;sitting;$/m);
+  // The launch the world 1 sitting plays has a menu entry of its own (W1-78, ruling dk).
+  assert.ok(entry.includes("\n[Desktop Action sitting-earned]\nName=Scrapkeep sitting (fresh profile, unlocks earned)\nExec=scrapkeep -- --profile=sitting-earned\n"), entry);
   assert.ok(entry.endsWith("[Desktop Action sitting]\nName=Scrapkeep sitting (all pilots, save untouched)\nExec=scrapkeep -- --profile=sitting\n"), entry);
 });
 

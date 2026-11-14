@@ -178,11 +178,13 @@ World 1 points of interest, 14 November 2026 (API credits, text to model v3.1, s
 
 | Prop | Prompt | Tripo task kept | Triangles (LODs) | Size |
 | --- | --- | --- | --- | --- |
-| `world_one/poi_tally_stand.glb` | `prompts/poi_tally_stand.txt` | 8a6d32a8-84a9-4ad4-b963-121041481f76 | 3,998 (1,998, 599) | 1.9 by 2.0 m, 4.0 m tall |
-| `world_one/poi_yard_gate.glb` | `prompts/poi_yard_gate.txt` | 116aee24-7cd0-4233-a99d-7a90954303a4 | 4,000 (2,000, 595) | 8.0 m wide, 6.7 m tall, 2.3 m deep |
+| `world_one/poi_tally_stand.glb` | `prompts/poi_tally_stand.txt` | 8a6d32a8-84a9-4ad4-b963-121041481f76 | 3,998 (1,999, 598) | 2.9 by 3.0 m, 4.0 m tall (`--wide 3 --tall 4`) |
+| `world_one/poi_yard_gate.glb` | `prompts/poi_yard_gate.txt` | 116aee24-7cd0-4233-a99d-7a90954303a4 | 4,000 (2,000, 599) | 8.0 m wide along Z, 4.0 m tall, 2.3 m deep (`--wide 8 --tall 4`) |
 | `world_one/poi_camp_tally_post.glb` | `prompts/poi_camp_tally_post.txt` | 8b2f90eb-a287-4815-8a9e-58f1d89d3b62 | 1,999 (999, 296) | 2.5 m tall |
-| `world_one/poi_fence_panel.glb` | built by `poi_yard.py` | none | 288 | 6.2 m wide, 2.5 m tall |
+| `world_one/poi_fence_panel.glb` | built by `poi_yard.py` | none | 288 | 6.2 m wide, 2.5 m tall; repeat every 6.2 m, feet touching |
 | `world_one/poi_survey_stake.glb` | built by `poi_yard.py` | none | 168 | 3.16 m tall, origin at the foot |
+
+The stand and the gate came back narrower and taller than the placement asked for (2 m across, and 6.7 m tall), so both are fitted with `--wide` and `--tall` together, which scales the ground plane and the height separately. Look at the render when using both: these two chunky shapes take it, a thin or round one may not.
 
 The runner-up candidates are tasks f5a7ba00-eb9f-4153-a98c-f80c4fc5fc28 (stand), 3caed186-71a7-42da-b675-1e4eb764475f (gate) and 90a8c17b-94b5-4bec-b359-f07be0b83963 (post). All six candidates were usable. The count boards came back with painted digits although the prompt said no text; they ship as flat colour patches, and the game should draw the live number itself.
 
