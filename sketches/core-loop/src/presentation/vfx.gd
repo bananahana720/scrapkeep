@@ -13,6 +13,7 @@ const Threat := preload("res://src/combat/threat_grammar.gd")
 const Synergies := preload("res://src/build/synergies.gd")
 const FxLibrary := preload("res://src/presentation/fx_library.gd")
 const FlashGuard := preload("res://src/presentation/flash_guard.gd")
+const KillMark := preload("res://src/presentation/kill_mark.gd")
 
 # World-space effects. Each glyph takes its colour and silhouette from the fact's
 # event_kinds row, so a slam ring, a kill burst and a scrap square read the same way
@@ -29,25 +30,32 @@ const SPARKLE_POOL := 6
 # Trail seconds and width per speed tier: nothing at a walk, a comet when blazing.
 const TRAIL_SECONDS := [0.0, 0.12, 0.22, 0.36]
 const TRAIL_WIDTH := [0.0, 0.28, 0.48, 0.72]
+# A trail point nearer the eye than the ball fades out: gone at TRAIL_NEAR.x of the ball's distance
+# from the eye, whole at .y. After a drop at full speed the trail lay back up over the camera and its
+# last metres filled the middle of the view as a pale cone (PF-07, w37 film 019 and 070: read as a
+# light from above). Shares of the ball's distance, so the trail at the ball stays whole on the 8 m
+# arm and the 4.2 m mount alike.
+const TRAIL_NEAR := Vector2(0.4, 0.8)
 const LINES_PER_TIER := [0, 0, 10, 20]
 # v3 W11 bursts: pooled one-shot CPU particles, one shared mesh and material per kind;
 # each burst sets only its emitter's colour, place and count. pool emitters x max count
 # is the ceiling a dense fight can hold alive at once (DESIGN-NOTES v3 W11).
-#   pop       a kill: a quick round puff
 #   debris    a kill or a blast: chunks thrown up under gravity
 #   dust      a ram, a rebound or a blast: soft puffs rolling out along the ground
 #   fountain  a part or a core: a column that rises and falls around the drop
 const BURSTS := {
-	"pop": {"pool": 6, "max": 14, "life": 0.32, "speed": [3.0, 7.0], "spread": 180.0, "gravity": -3.0, "size": Vector3.ONE * 0.16},
 	"debris": {"pool": 6, "max": 12, "life": 0.7, "speed": [4.0, 9.0], "spread": 55.0, "gravity": -26.0, "size": Vector3.ONE * 0.24},
 	"dust": {"pool": 4, "max": 14, "life": 0.5, "speed": [2.0, 5.0], "spread": 85.0, "gravity": 1.5, "size": Vector3.ONE * 0.4, "soft": true},
 	"fountain": {"pool": 3, "max": 24, "life": 0.9, "speed": [6.0, 10.0], "spread": 22.0, "gravity": -18.0, "size": Vector3.ONE * 0.18},
 }
-const BURST_LOOKS := {"pop": "puff", "debris": "chunk", "dust": "puff", "fountain": "bead"}
+const BURST_LOOKS := {"debris": "chunk", "dust": "puff", "fountain": "bead"}
 # The kill chain: a pip per kill in the run over the ball, from 2 up.
 const PIPS := 8
 const PIP_RADIUS := 0.9
 const PIP_HEIGHT := 2.5
+# The kill mark's width across its longest points, before the merged pop's scale: a crit's
+# star reaches 1.6 m, so a single kill's mark stands clear of it.
+const KILL_MARK_M := 3.0
 
 var ctx
 var player
@@ -93,8 +101,10 @@ var heat := 0.0
 const HEAT_GLYPH := Color(1.0, 0.5, 0.12)
 # False skips the ball trail and speed lines; tools/perf_bench.gd --no-trails sets it.
 var trails := true
-# Every kill's starburst, pop and debris pass through this gate (kill_pop).
+# Every kill's mark, shards and debris pass through this gate (kill_pop).
 var pops := PopGate.new()
+# A kill's own mark (FX-01, Andrew's pick 12 Nov 2026: the ink burst, and a time card on elites).
+var kill_mark: KillMark
 var _fill_scale := 1.0
 # What the governor steers toward, recounted every 1 / Density.SAMPLE_HZ seconds.
 var _density_target := 0.0
@@ -162,20 +172,7 @@ func setup(ctx_ref) -> void:
 	root = Node3D.new()
 	root.name = "PresentationFx"
 	ctx.root.add_child(root)
-	_build_meshes()
-	for i in POOL:
-		var glyph := MeshInstance3D.new()
-		var mat := StandardMaterial3D.new()
-		mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-		mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-		mat.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
-		mat.cull_mode = BaseMaterial3D.CULL_DISABLED
-		mat.no_depth_test = false
-		glyph.material_override = mat
-		glyph.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-		glyph.visible = false
-		root.add_child(glyph)
-		_glyphs.append({"node": glyph, "mat": mat, "t": 1.0, "life": 1.0, "from": 1.0, "to": 1.0, "color": Color.WHITE})
+	_build_glyphs()
 	for i in SPARKLE_POOL:
 		_sparkles.append(_make_sparkle())
 	_build_bursts()
@@ -354,6 +351,13 @@ func _on_element(_element: String, _material: String, behaviour: String, at: Vec
 
 
 const MAX_RINGS := 4
+# A ring shows whole for RING_READ seconds after its discovery, then settles over RING_SETTLE to
+# RING_REST of its alpha for the rest of the run: four bright rings round the ball stood over the
+# view all run (PF-27, film 048). Once read, it is the build's mark, not news.
+const RING_ALPHA := 0.8
+const RING_REST := 0.3
+const RING_READ := 2.5
+const RING_SETTLE := 1.0
 
 
 func add_ring(id: String, tint: Color) -> void:
@@ -361,7 +365,12 @@ func add_ring(id: String, tint: Color) -> void:
 		return
 	var ring := ring_view(_rings.size(), tint)
 	player.juice_node().add_child(ring)
-	_rings[id] = {"node": ring, "tilt": 0.5 + 0.35 * _rings.size(), "speed": 1.4 + 0.5 * _rings.size()}
+	_rings[id] = {"node": ring, "tilt": 0.5 + 0.35 * _rings.size(), "speed": 1.4 + 0.5 * _rings.size(), "born": _clock}
+
+
+# A ring's alpha `age` seconds after its discovery: whole while it is news, then settled.
+static func ring_alpha(age: float) -> float:
+	return lerpf(RING_ALPHA, RING_ALPHA * RING_REST, smoothstep(RING_READ, RING_READ + RING_SETTLE, age))
 
 
 # The index-th synergy ring as add_ring draws it (BakeWarm builds one at stage entry).
@@ -375,7 +384,7 @@ static func ring_view(index: int, tint: Color) -> MeshInstance3D:
 	ring.mesh = torus
 	var mat := StandardMaterial3D.new()
 	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	mat.albedo_color = Color(tint.r, tint.g, tint.b, 0.8)
+	mat.albedo_color = Color(tint.r, tint.g, tint.b, RING_ALPHA)
 	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	mat.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
 	ring.material_override = mat
@@ -403,6 +412,8 @@ func clear() -> void:
 		for p in _bursts[kind]:
 			p.emitting = false
 	_chain = 0
+	if kill_mark != null:
+		kill_mark.clear()
 	_trail_points.clear()
 	_streaks.clear()
 	pops.clear()
@@ -415,6 +426,26 @@ func clear() -> void:
 
 
 # --- Glyphs ---------------------------------------------------------------------------
+
+# The glyph pool and the kill mark, under root.
+func _build_glyphs() -> void:
+	_build_meshes()
+	for i in POOL:
+		var glyph := MeshInstance3D.new()
+		var mat := StandardMaterial3D.new()
+		mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		mat.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
+		mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+		mat.no_depth_test = false
+		glyph.material_override = mat
+		glyph.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		glyph.visible = false
+		root.add_child(glyph)
+		_glyphs.append({"node": glyph, "mat": mat, "t": 1.0, "life": 1.0, "from": 1.0, "to": 1.0, "color": Color.WHITE})
+	kill_mark = KillMark.new()
+	root.add_child(kill_mark)
+
 
 func _build_meshes() -> void:
 	var ring := TorusMesh.new()
@@ -693,6 +724,9 @@ func _process(delta: float) -> void:
 		var node: Node3D = entry["node"]
 		if is_instance_valid(node):
 			node.basis = Basis(Vector3.UP, _clock * entry["speed"]) * Basis(Vector3.RIGHT, entry["tilt"])
+			var mat := (node as MeshInstance3D).material_override as StandardMaterial3D
+			if mat != null:
+				mat.albedo_color.a = ring_alpha(_clock - float(entry["born"]))
 	_draw_pips(delta)
 	_govern(delta)
 	_emit_pops()
@@ -703,6 +737,11 @@ func _process(delta: float) -> void:
 		_draw_trail(tier)
 		_draw_lines(tier, delta)
 	_roll_dust()
+
+
+# How much of a trail point at `point_m` from the eye is drawn when the ball is `ball_m` away.
+static func trail_near(point_m: float, ball_m: float) -> float:
+	return smoothstep(ball_m * TRAIL_NEAR.x, ball_m * TRAIL_NEAR.y, point_m)
 
 
 func _draw_trail(tier: int) -> void:
@@ -726,7 +765,7 @@ func _draw_trail(tier: int) -> void:
 		if along.length_squared() < 0.000001:
 			along = Vector3.FORWARD
 		var side := along.cross(eye - p).normalized() * width * (1.0 - float(i) / count)
-		var fade := (1.0 - float(i) / count) * 0.55
+		var fade := (1.0 - float(i) / count) * 0.55 * trail_near(eye.distance_to(p), eye.distance_to(at))
 		mesh.surface_set_color(Color(color.r, color.g, color.b, fade))
 		mesh.surface_add_vertex(p + side)
 		mesh.surface_set_color(Color(color.r, color.g, color.b, fade))
@@ -874,11 +913,16 @@ func play_fx(kind: String, at: Vector3, tint := Color.TRANSPARENT, variant := ""
 	for id in effects:
 		if not _fx.has(id) or FxLibrary.SPECS[id]["attach"] == "ball":
 			continue
-		var pool: Array = _fx[id]
-		var p: GPUParticles3D = pool[_fx_next[id]]
-		_fx_next[id] = (_fx_next[id] + 1) % pool.size()
-		FxLibrary.fire(p, id, kind, int(effects[id]), at, tint, toward)
-		spawned["fx_" + id] = spawned.get("fx_" + id, 0) + 1
+		_fire_fx(id, kind, int(effects[id]), at, tint, toward)
+
+
+# The oldest emitter of one "vfx" spec restarts at `at`.
+func _fire_fx(id: String, kind: String, count: int, at: Vector3, tint := Color.TRANSPARENT, toward := Vector3.ZERO) -> void:
+	var pool: Array = _fx[id]
+	var p: GPUParticles3D = pool[_fx_next[id]]
+	_fx_next[id] = (_fx_next[id] + 1) % pool.size()
+	FxLibrary.fire(p, id, kind, count, at, tint, toward)
+	spawned["fx_" + id] = spawned.get("fx_" + id, 0) + 1
 
 
 func _on_world_fact_fx(kind: String, at: Vector3) -> void:
@@ -912,7 +956,7 @@ func _roll_dust() -> void:
 			spawned["fx_roll_dust"] = spawned.get("fx_roll_dust", 0) + 1
 
 
-# A kill's starburst, pop and debris, through the kill-pop gate: one call per kill.
+# A kill's mark, shards and debris, through the kill-pop gate: one call per kill.
 func kill_pop(at: Vector3) -> void:
 	var governor := Density.live()
 	pops.add(_clock, at, governor.coalesce_metres())
@@ -922,13 +966,32 @@ func kill_pop(at: Vector3) -> void:
 func _emit_pops() -> void:
 	if pops.pending.is_empty():
 		return
-	var row := EventKinds.juice("enemy_killed")
 	for cluster in pops.ready(_clock, Density.live().coalesce_seconds()):
-		var at: Vector3 = cluster["at"]
-		var scale: float = cluster["scale"] * (1.0 + MIGHT_GLYPH * might)
-		glyph("enemy_killed", at + Vector3.UP * 0.8, 0.6 * scale, 1.8 * scale, 0.3, Vector3.ZERO, "", _hot("enemy_killed"))
-		burst("pop", at + Vector3.UP * 0.8, EventKinds.color("enemy_killed").lerp(HEAT_GLYPH, heat), int(ceil(float(row["pop"]) * scale)))
-		burst("debris", at + Vector3.UP * 0.5, EventKinds.color("scrap_lost"), int(ceil(float(row["debris"]) * scale)))
+		kill_look(cluster["at"], cluster["scale"])
+
+
+# One merged kill pop at `at`, `scale` from its kill count (FX-01): the kill mark, the body's
+# shards in the pilot's colour and ink debris. `pilot` overrides the pilot's colour (a capture
+# with no ball).
+func kill_look(at: Vector3, scale: float, pilot := Color.TRANSPARENT) -> void:
+	var row := EventKinds.juice("enemy_killed")
+	scale *= 1.0 + MIGHT_GLYPH * might
+	if root == null or not root.is_inside_tree():
+		return
+	var tint := (pilot if pilot.a > 0.0 else kill_tint()).lerp(HEAT_GLYPH, heat)
+	kill_mark.reduced_motion = camera != null and camera.get("reduced_motion") == true
+	kill_mark.fire(at + Vector3.UP * 0.8, KILL_MARK_M * scale, tint,
+		Density.live().apply(Density.class_of_kind("enemy_killed"), 1.0, 1.0, 1.0))
+	var fx := FxLibrary.effects("enemy_killed")
+	for id in fx:
+		_fire_fx(id, "enemy_killed", int(ceil(float(fx[id]) * scale)), at + Vector3.UP * 0.6, tint)
+	burst("debris", at + Vector3.UP * 0.5, Palette.CHARCOAL, int(ceil(float(row["debris"]) * scale)))
+	spawned["enemy_killed"] = spawned.get("enemy_killed", 0) + 1
+
+
+# The pilot's colour: "you did this" (VISUAL-LANGUAGE section 2); the row's copper without a pilot.
+func kill_tint() -> Color:
+	return player.class_color() if player != null and player.has_method("class_color") else EventKinds.color("enemy_killed")
 
 
 # One density per frame from what is in view (FEEL-READABILITY.md §1.2); the P6 fill

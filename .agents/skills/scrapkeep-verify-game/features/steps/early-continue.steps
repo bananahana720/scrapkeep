@@ -1,0 +1,10 @@
+# Continue pressed as soon as it can be clicked, before the boot card has gone (board issue 934).
+until clickable "Continue" 120
+read get_node_or_null("/root/Boot") != null
+key C
+until text "Rig your kit" 60
+wait 5
+expect read get_tree().paused
+expect read get_node_or_null("/root/Boot") == null
+shot five-seconds-after-continue
+quit

@@ -6,6 +6,7 @@ const EventKinds := preload("res://src/core/event_kinds.gd")
 const Cards := preload("res://src/world/director_cards.gd")
 const HoldRelay := preload("res://src/world/hold_relay.gd")
 const RelayStake := preload("res://src/world/relay_stake.gd")
+const SurvivalCount := preload("res://src/world/survival_count.gd")
 const Interact := preload("res://src/world/interact.gd")
 const ItemGen := preload("res://src/build/item_gen.gd")
 const OddsReadout := preload("res://src/ui/odds_readout.gd")
@@ -19,7 +20,12 @@ const StakeDevices := preload("res://src/world/stake_devices.gd")
 const PocketDraw := preload("res://src/world/pockets/pocket_draw.gd")
 const PocketLibrary := preload("res://src/world/pockets/pocket_library.gd")
 const Secrets := preload("res://src/core/secrets.gd")
+const AmbushAltar := preload("res://src/world/ambush_altar.gd")
+const CrackedCache := preload("res://src/world/cracked_cache.gd")
+const FindKit := preload("res://src/world/find_kit.gd")
+const ModelKit := preload("res://src/world/model_kit.gd")
 const SfxBank := preload("res://src/presentation/sfx_bank.gd")
+const SpeedTier := preload("res://src/movement/speed_tier.gd")
 const WorldFx := preload("res://src/presentation/world_fx/world_fx.gd")
 const WorldFxAnchor := preload("res://src/presentation/world_fx/world_fx_anchor.gd")
 const StageModifier := preload("res://src/world/events/stage_modifier.gd")
@@ -50,6 +56,10 @@ signal sluice_closed(row_id: String)
 #           in a stage entry also adds the next companion piece (Companion.DROP_ORDER) to the run, unequipped.
 const PAY_RARITIES := ["common", "rare"]
 const PAY_SCRAP := 180
+# A pocket interior's cover block and entrance bollard (pocket_kit.glb), the block built 4 by 3 by 4 m.
+const POCKET_KIT := "res://assets/models/world_one/pocket_kit.glb"
+const POCKET_PARTS := ["PocketBlock", "PocketPost"]
+const POCKET_BLOCK := Vector3(4.0, 3.0, 4.0)
 const RULES := {
 	"trade_risk": {"starts": "none", "ring": 6.0, "finishes": "trade", "pay": {"scrap": 0, "rarities": [], "source": "trade_risk", "where": "device"}, "cue": {"view": "cracked_cache"}},
 	"trade_safe": {"starts": "none", "ring": 6.0, "finishes": "trade", "pay": {"scrap": 0, "rarities": [], "source": "trade_safe", "where": "device"}, "cue": {"view": "cracked_cache"}},
@@ -124,6 +134,17 @@ const RULES := {
 		"post_out": 26.0, "retry_s": 12.0, "budget": {"start": 6, "per_class": 1, "per_world": 2, "cap": 12},
 		"pay": {"scrap": PAY_SCRAP, "rarities": PAY_RARITIES, "source": "activity_relay", "where": "relay"},
 	},
+	# The Stocktake yard (BACKLOG W1-101; survival_count.gd owns the counts, their clocks and the pay ladder): one of
+	# the park's survival_rows of this `form`, drawn by the run's seed, and only with --stocktake=on. Rolling into
+	# the ring starts count 1. A count's machines climb in on the ring's edge one every `arrive_s`. With the gate
+	# open the ring turns the live colour, and rolling out of it from inside banks the pay (scrap and cores at once,
+	# parts on a pickup in the ball's path); staying takes the next count. `out_s` outside the ring with the gate
+	# shut, or the ball destroyed, forfeits it all. It wears the bounty's marker row under its own word.
+	"stocktake_yard": {
+		"starts": "ring", "ring": 40.0, "finishes": "count", "pack": [], "form": "yard", "arrive_s": 0.4, "out_s": 4.0,
+		"pay_ahead_m": 12.0, "pay": {"scrap": 0, "rarities": [], "source": "activity_yard", "where": "gate"},
+		"cue": {"view": "hauler_bounty", "word": "Stocktake"},
+	},
 	# The surge course in a park (surge_course.gd): rolling into the ring by the head of the activity row's `route`
 	# opens the sluice (the park's sluice_surge event row, triggered on this row), and when the gate lands the water
 	# chases the ball down the route's grind rows through the gates. A ring with no sluice heard opens anyway after
@@ -167,6 +188,11 @@ const SLAM_MIN_PER_CRUISE := 1.0
 # so with the bar at cruise itself only the speed bank's roll start or a burst broke the wall: a player
 # already rolling at full speed bumped the face (cautious red team, 26 Oct). A nudge stays under it.
 const RAM_MIN_PER_CRUISE := 0.85
+# A park row's `bar` raises a cache wall to a speed tier (W1-76, Shift's job in world 1): only a ram into
+# the face at that tier of the unmodded cruise breaks it, and a slam never does. The streaks read the
+# modded cruise, so a cruise item can break the wall before they turn (overpowered pays, 24 Oct ruling).
+# Under the bar the refused cue still answers, so the face reads as "faster".
+const BARS := {"blazing": SpeedTier.BLAZING}
 const PEDESTAL_BACK := 4.0
 const CACHE_LANE_OFFSET := 6.0
 # The first-win room's log line on the back wall, on a dark crew board of its own: the fired wall
@@ -333,6 +359,13 @@ class Site extends Node3D:
 	var surge_live := false
 	var surge_wait := 0.0
 	var surge_shown := -1.0
+	var yard
+	# The machines of the counts sent so far that have yet to climb in: [kind, health scale] each.
+	var yard_owed: Array = []
+	var yard_wait := 0.0
+	var yard_out := 0.0
+	# The ball has been inside the ring with this gate open, so crossing out is its choice to bank.
+	var yard_may_bank := false
 
 	func _exit_tree() -> void:
 		for enemy in pack + minibosses:
@@ -349,8 +382,10 @@ func setup(ctx_ref) -> void:
 		clear()
 		_drop_ahead())
 	ctx.events.launched.connect(_on_launched)
+	ctx.events.flow_changed.connect(_on_flow_changed)
 	ctx.events.slammed.connect(func(at: Vector3, strength: float, _flatness: float): _slammed(at, strength))
 	ctx.events.world_fact.connect(_on_world_fact)
+	ctx.events.player_died.connect(_forfeit_yards)
 	# The trade devices' plate finish neutralises its texture pixel by pixel on first use (about
 	# 55 ms, SWAP-HITCH-2); Palette caches it, so it is made here rather than on a stage entry.
 	Palette.look_texture("rusted-salvaged-plate-worn", true)
@@ -519,7 +554,8 @@ func _use_map(map) -> Dictionary:
 func _plan(map, entry_data: Dictionary) -> Dictionary:
 	var out := []
 	var modifier := {}
-	for spec in map.activity_sites:
+	for authored in map.activity_sites:
+		var spec := drawn(authored)
 		var id := String(spec["id"])
 		if not RULES.has(id):
 			continue
@@ -535,6 +571,9 @@ func _plan(map, entry_data: Dictionary) -> Dictionary:
 				built_spec.pack = spec.pack.duplicate()
 				built_spec.tell = spec.get("tell", {}).duplicate(true)
 		out.append({"kind": "row", "id": id, "at": spec["at"], "spec": built_spec})
+	var yard := yard_spec(map)
+	if not yard.is_empty():
+		out.append({"kind": "row", "id": "stocktake_yard", "at": yard["at"], "spec": yard})
 	if _graph_map != "":
 		var tuning = ctx.get("tuning")
 		var sitting: bool = tuning != null and tuning.has_method("sitting") and tuning.sitting()
@@ -563,6 +602,38 @@ func _plan(map, entry_data: Dictionary) -> Dictionary:
 			if not ctx.calm or RULES[drawn_spec.id].finishes == "wall_broken":
 				out.append({"kind": "drawn", "id": drawn_spec.id, "at": drawn_spec.at, "spec": drawn_spec})
 	return {"sites": out, "modifier": modifier}
+
+
+# The survival yard this run stands on `map`, or {} for none: --stocktake=on, not calm, a world with a roster, and
+# one of the map's yard rows drawn by the run's seed, so a replay or a retry stands the same one.
+func yard_spec(map) -> Dictionary:
+	var tuning = ctx.get("tuning")
+	if tuning == null or tuning.option("stocktake") != "on" or ctx.calm or not "survival_sites" in map:
+		return {}
+	var form := String(RULES["stocktake_yard"]["form"])
+	var rows: Array = map.survival_sites.filter(func(row: Dictionary) -> bool: return row["form"] == form)
+	if rows.is_empty() or not SurvivalCount.ROSTERS.has(ctx.stages.world_of(ctx.run.stage)):
+		return {}
+	return rows[posmod(hash([ctx.rng.seed, ctx.run.run_seed, "survival_" + form]), rows.size())]
+
+
+# The site this run builds for an authored spec (W1-70): the spec itself, or one of its alts (park_map.gd), drawn
+# from the run's seed and the row, so a replay or a retry draws the same and the next run may not.
+func drawn(spec: Dictionary) -> Dictionary:
+	return variant(spec, hash([ctx.rng.seed, ctx.run.run_seed, "site_variants"]))
+
+
+# drawn for a given seed. An alt brings its own kind and pack; the place, row, pay and the rest stay the spec's.
+static func variant(spec: Dictionary, seed: int) -> Dictionary:
+	var alts: Array = spec.get("alts", [])
+	var pick := posmod(hash([seed, String(spec.get("row", ""))]), alts.size() + 1)
+	if pick == 0:
+		return spec
+	var out := spec.duplicate(true)
+	out.erase("pack")
+	out.erase("alts")
+	out.merge(alts[pick - 1].duplicate(true), true)
+	return out
 
 
 # What a site kind's marker calls it ("Arena", "Pickup course"), "" for a kind whose cue has no word.
@@ -603,14 +674,28 @@ func _arm(site: Site) -> void:
 # where stages are built on workers (a played game, a frame-capture bot run). Bots and tests build at entry as before.
 func _on_launched(_velocity: Vector3) -> void:
 	_drop_ahead()
+	var flow = ctx.get("flow")
+	if flow == null or not flow.state_name() in ["gates", "launch"] or ctx.stages.is_world_last(ctx.run.stage):
+		return
+	_start_ahead(ctx.run.stage + 1)
+
+
+# A world boss's victory starts the next world's first stage the same way: that stage is entered from the arena
+# with no launch, and building its sites on the entry tick was about 5 ms of the Dig's (cloud, 13 Nov 2026).
+func _on_flow_changed(state: String) -> void:
+	if state != "victory":
+		return
+	_drop_ahead()
+	var flow = ctx.get("flow")
+	if flow == null or not flow.has_method("run_ends_after") or flow.run_ends_after(ctx.run.stage):
+		return
+	_start_ahead(ctx.run.stage + 1)
+
+
+func _start_ahead(stage: int) -> void:
 	if ctx.terrain == null or not ctx.terrain.has_method("_worker_builds") or not ctx.terrain._worker_builds():
 		return
-	var flow = ctx.get("flow")
-	if flow == null or not flow.state_name() in ["gates", "launch"]:
-		return
-	var stage: int = ctx.run.stage + 1
-	if ctx.stages.is_world_last(ctx.run.stage) or not "maps" in ctx.terrain or stage > ctx.terrain.maps.size() \
-			or not ctx.terrain.is_ready(stage):
+	if not "maps" in ctx.terrain or stage > ctx.terrain.maps.size() or not ctx.terrain.is_ready(stage):
 		return
 	var map = ctx.terrain.map_for(stage)
 	if not "park" in map or map.park.is_empty() or not "activity_sites" in map:
@@ -783,6 +868,14 @@ func standing() -> int:
 	return n
 
 
+# Whether `enemy` is one of the brutes standing() counts.
+func keeps(enemy: Node) -> bool:
+	for s in sites:
+		if s.brute == enemy:
+			return true
+	return false
+
+
 func _build(id: String, at: Vector2, spec := {}) -> Site:
 	var started := Time.get_ticks_usec()
 	var site := _build_site(id, at, spec)
@@ -798,7 +891,7 @@ func _build_site(id: String, at: Vector2, spec: Dictionary) -> Site:
 	s.drawn = spec.get("drawn", false)
 	s.trade = spec.get("trade", {})
 	var spec_pay: Dictionary = spec.get("pay", {})
-	if id in ["enemy_camp", "hold_the_relay", "ambush_altar"] or not spec_pay.is_empty() or s.rule.has("bundle") or not s.interior.is_empty():
+	if id in ["enemy_camp", "hold_the_relay", "ambush_altar", "stocktake_yard"] or not spec_pay.is_empty() or spec.has("face") or s.rule.has("bundle") or not s.interior.is_empty():
 		s.rule = s.rule.duplicate(true)
 	if not s.interior.is_empty():
 		s.footprint = spec.footprint
@@ -822,6 +915,12 @@ func _build_site(id: String, at: Vector2, spec: Dictionary) -> Site:
 	# A field find faces out of its dead end (secrets.gd FINDS spots); a park row may set its own face.
 	if spec.has("face"):
 		s.rule["face"] = spec["face"]
+	if BARS.has(spec.get("bar", "")):
+		s.rule = s.rule.duplicate(true)
+		s.rule["bar_tier"] = BARS[spec["bar"]]
+	# A card 2 extra (PARK.md 2.12) is a second site beside the stage's own of its kind: it rolls apart (_luck_id).
+	if spec.get("extra", "") == "card_2":
+		s.set_meta("extra", String(spec.get("row", id)))
 	s.name = "Activity_" + id
 	(_site_parent if _site_parent != null else self).add_child(s)
 	s.global_position = ctx.terrain.drop_point(at.x, at.y, 0.0)
@@ -839,6 +938,9 @@ func _build_site(id: String, at: Vector2, spec: Dictionary) -> Site:
 	match id:
 		"hold_the_relay":
 			_build_relay(s)
+		"stocktake_yard":
+			s.yard = SurvivalCount.new(ctx.stages.world_of(ctx.run.stage), String(s.rule["form"]))
+			s.view.say(String(s.rule.cue.word))
 		"surge_run":
 			_build_surge(s, spec)
 		"ambush_altar":
@@ -892,15 +994,32 @@ func _build_interior(s: Site) -> void:
 	var root := Node3D.new()
 	root.name = "Interior_" + String(s.interior.id)
 	s.add_child(root)
+	# Each block and bollard wears the pocket kit's model (tools/blender/world_one/pocket_kit.py), scaled from
+	# its nominal size; a block's model sits under an unscaled holder so its collider (added on entry)
+	# keeps the authored size. A missing kit keeps the striped boxes.
 	for block in s.interior.terrain:
 		var size := Vector3(block.size[0], block.size[1], block.size[2])
 		var at := Vector3(block.at[0], size.y * 0.5, block.at[1])
+		var holder := Node3D.new()
+		holder.position = at
+		root.add_child(holder)
+		var view := ModelKit.part(POCKET_KIT, POCKET_PARTS, "PocketBlock", holder)
+		if view != null:
+			view.scale = size / POCKET_BLOCK
+			continue
+		holder.free()
 		if _interior_block == null:
 			_interior_block = Palette.striped(Palette.VERDIGRIS, Palette.CHARCOAL)
 		_mesh_box(root, size, at, _interior_block)
 	for entrance in s.interior.entrances:
 		for side in [-1.0, 1.0]:
-			_mesh_box(root, Vector3(0.3, 2.0, 0.3), Vector3(entrance.at[0] + side * entrance.width * 0.5, 1.0, entrance.at[1]), _solid(EventKinds.activity_color(s.view.id)))
+			var post_at := Vector3(entrance.at[0] + side * entrance.width * 0.5, 1.0, entrance.at[1])
+			var post := ModelKit.part(POCKET_KIT, POCKET_PARTS, "PocketPost", root)
+			if post != null:
+				post.position = post_at
+				post.material_override = _solid(EventKinds.activity_color(s.view.id))
+			else:
+				_mesh_box(root, Vector3(0.3, 2.0, 0.3), post_at, _solid(EventKinds.activity_color(s.view.id)))
 	# The interior builds after the site's own dressing pass, so it dresses its own blocks (2026-10-14).
 	load("res://src/presentation/spillway_scenery.gd").dress_props(root)
 
@@ -934,6 +1053,9 @@ func _activate_interior_collision(s: Site) -> void:
 
 
 func _build_altar(s: Site) -> void:
+	s.cap = AmbushAltar.dress(s)
+	if s.cap != null:
+		return
 	_mesh_cylinder(s, 0.45, 3.2, Vector3.UP * 1.6, _solid(Palette.VERDIGRIS))
 	s.cap = _mesh_box(s, Vector3(1.4, 0.6, 1.4), Vector3.UP * 3.5, _solid(Palette.BRASS))
 	_mesh_box(s, Vector3(1.42, 0.12, 1.42), Vector3.UP * 3.22, _solid(Palette.SAND))
@@ -945,6 +1067,44 @@ func _build_cache(s: Site) -> void:
 		s.rotation.y = atan2(face.x, face.y)
 		s.global_position += s.global_basis.z * CACHE_LANE_OFFSET
 		s.global_position.y = ctx.terrain.height(s.global_position.x, s.global_position.z)
+	var local := Vector3(0.0, 0.0, -PEDESTAL_BACK)
+	s.pedestal = s.to_global(local)
+	s.pedestal.y = ctx.terrain.height(s.pedestal.x, s.pedestal.z)
+	s.fired_glow = StandardMaterial3D.new()
+	s.fired_glow.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
+	s.fired_glow.albedo_color = Color.BLACK
+	s.fired_glow.specular_mode = BaseMaterial3D.SPECULAR_DISABLED
+	if not _model_cache(s):
+		_greybox_cache(s)
+
+
+# The pocket wears the cracked cache's model over colliders of its own, as built: the shell without
+# its roof, stretched to this pocket's sink and depth (its inner back face on the back collider's),
+# the fracture panel on the wall's body and the model's pedestal. False, with nothing built, when the
+# model is missing.
+func _model_cache(s: Site) -> bool:
+	var shell := CrackedCache.model_part("CacheShell", s)
+	if shell == null:
+		return false
+	var tall := WALL_HEIGHT + WALL_SINK
+	var mid := tall * 0.5 - WALL_SINK
+	var rise := tall / (CrackedCache.HEIGHT + CrackedCache.SINK)
+	var deep := WALL_DEPTH / (CrackedCache.HALF_D * 2.0 + 0.5)
+	var front := CrackedCache.HALF_D + 0.5
+	shell.transform = Transform3D(Basis.from_scale(Vector3(1.0, rise, deep)),
+		Vector3(0.0, WALL_HEIGHT - CrackedCache.HEIGHT * rise, -front * deep)) * shell.transform
+	shell.material_overlay = s.fired_glow
+	s.wall = _wall_body(s, Vector3(WALL_HALF_W * 2.0, tall, 1.0), Vector3(0.0, mid, 0.0))
+	var panel := CrackedCache.model_part("CacheWall", s.wall)
+	panel.transform = Transform3D(Basis.from_scale(Vector3(1.0, rise, 1.0)) * panel.basis, Vector3.ZERO)
+	for side in [-1.0, 1.0]:
+		_wall_body(s, Vector3(1.0, tall, WALL_DEPTH), Vector3(side * (WALL_HALF_W + 0.5), mid, -WALL_DEPTH * 0.5))
+	_wall_body(s, Vector3(WALL_HALF_W * 2.0 + 2.0, tall, 1.0), Vector3(0.0, mid, -WALL_DEPTH - 0.5))
+	CrackedCache.model_part("CachePedestal", s).position = s.to_local(s.pedestal)
+	return true
+
+
+func _greybox_cache(s: Site) -> void:
 	var concrete := Palette.striped(Palette.VERDIGRIS, Palette.CHARCOAL)
 	var tall := WALL_HEIGHT + WALL_SINK
 	var mid := tall * 0.5 - WALL_SINK
@@ -957,18 +1117,11 @@ func _build_cache(s: Site) -> void:
 	for side in [-1.0, 1.0]:
 		_mesh_box(s, Vector3(1.0, tall, WALL_DEPTH), Vector3(side * (WALL_HALF_W + 0.5), mid, -WALL_DEPTH * 0.5), concrete, true)
 	var back := _mesh_box(s, Vector3(WALL_HALF_W * 2.0 + 2.0, tall, 1.0), Vector3(0.0, mid, -WALL_DEPTH - 0.5), concrete, true)
-	var local := Vector3(0.0, 0.0, -PEDESTAL_BACK)
-	s.pedestal = s.to_global(local)
-	s.pedestal.y = ctx.terrain.height(s.pedestal.x, s.pedestal.z)
 	_mesh_cylinder(s, 0.8, 0.6, s.to_local(s.pedestal) + Vector3.UP * 0.3, _solid(Palette.CHARCOAL))
 	# Finish only: the same workshop materials the Spillway props wear; colliders stay as built.
 	load("res://src/presentation/spillway_scenery.gd").dress_props(s, s.view)
 	# The dressed finish shader carries no emission, so the glow is this site's own additive
-	# overlay on its back wall, dark until the wall is fired.
-	s.fired_glow = StandardMaterial3D.new()
-	s.fired_glow.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
-	s.fired_glow.albedo_color = Color.BLACK
-	s.fired_glow.specular_mode = BaseMaterial3D.SPECULAR_DISABLED
+	# overlay on its back wall (the model's: its shell), dark until the wall is fired.
 	(back.get_child(1) as GeometryInstance3D).material_overlay = s.fired_glow
 
 
@@ -996,7 +1149,12 @@ func _seep_tell(s: Site) -> void:
 	var wet := _find_wet
 	for k in FIND_SEEP_STREAKS.size():
 		var streak: Vector3 = FIND_SEEP_STREAKS[k]
-		var mark := _mesh_box(s.wall, Vector3(streak.z, WALL_HEIGHT * 0.8, 0.04), Vector3(streak.x, streak.y, 0.52), wet)
+		var mark: Node3D = FindKit.part("FindSeep", s.wall)
+		if mark != null:
+			mark.position = Vector3(streak.x, streak.y, 0.52)
+			mark.scale = Vector3(streak.z, WALL_HEIGHT * 0.8, 1.0)
+		else:
+			mark = _mesh_box(s.wall, Vector3(streak.z, WALL_HEIGHT * 0.8, 0.04), Vector3(streak.x, streak.y, 0.52), wet)
 		mark.name = "FindSeep%d" % k
 	var glint: Node3D = WorldFxAnchor.make("secret")
 	glint.name = "FindGlint"
@@ -1032,8 +1190,13 @@ func _dress_door(s: Site) -> void:
 # The radio's tell: a short whip aerial over the roof line and the tune through the wall, heard from
 # Secrets.RADIO_HEAR_M. The aerial stays; the sound goes with the face.
 func _radio_tell(s: Site) -> void:
-	var aerial := _mesh_box(s, Vector3(0.12, FIND_AERIAL_M, 0.12), Vector3(WALL_HALF_W - 1.0, WALL_HEIGHT + FIND_AERIAL_M * 0.5, -1.0),
-		_solid(Palette.BRASS))
+	# The model's aerial is clamped to the side wall's top; the plain one stood inside the pocket's rim.
+	var aerial: Node3D = FindKit.part("FindAerial", s)
+	if aerial != null:
+		aerial.position = Vector3(WALL_HALF_W + 0.5, WALL_HEIGHT, -1.0)
+	else:
+		aerial = _mesh_box(s, Vector3(0.12, FIND_AERIAL_M, 0.12), Vector3(WALL_HALF_W - 1.0, WALL_HEIGHT + FIND_AERIAL_M * 0.5, -1.0),
+			_solid(Palette.BRASS))
 	aerial.name = "FindAerial"
 	s.wall.add_child(_find_sound("find_radio", Secrets.RADIO_HEAR_M))
 
@@ -1064,11 +1227,20 @@ func _hang_room_log(s: Site, room_id: String) -> void:
 func _hang_board(s: Site, site_name: String, title: String, text: String) -> void:
 	s.name = site_name
 	var board_z := -WALL_DEPTH + 0.06
-	var frame := _mesh_box(s, Vector3(ROOM_BOARD_SIZE.x + 0.3, ROOM_BOARD_SIZE.y + 0.3, 0.08),
-		Vector3(0.0, ROOM_LOG_HEIGHT, board_z), _solid(Palette.BRASS))
+	# The model's frame and plate stand on the back wall: their back face on its origin, the plate's
+	# face where the plain plate's was. The plate is painted one flat dark under the log line.
+	var frame: Node3D = FindKit.part("FindBoardFrame", s)
+	var board: Node3D = FindKit.part("FindBoard", s)
+	if frame != null and board != null:
+		frame.position = Vector3(0.0, ROOM_LOG_HEIGHT, board_z - 0.04)
+		board.position = frame.position
+		(board as MeshInstance3D).material_override = _solid(Palette.CHARCOAL)
+	else:
+		frame = _mesh_box(s, Vector3(ROOM_BOARD_SIZE.x + 0.3, ROOM_BOARD_SIZE.y + 0.3, 0.08),
+			Vector3(0.0, ROOM_LOG_HEIGHT, board_z), _solid(Palette.BRASS))
+		board = _mesh_box(s, Vector3(ROOM_BOARD_SIZE.x, ROOM_BOARD_SIZE.y, 0.08),
+			Vector3(0.0, ROOM_LOG_HEIGHT, board_z + 0.04), _solid(Palette.CHARCOAL))
 	frame.name = "RoomBoardFrame"
-	var board := _mesh_box(s, Vector3(ROOM_BOARD_SIZE.x, ROOM_BOARD_SIZE.y, 0.08),
-		Vector3(0.0, ROOM_LOG_HEIGHT, board_z + 0.04), _solid(Palette.CHARCOAL))
 	board.name = "RoomBoard"
 	var label := Label3D.new()
 	label.name = "RoomLog"
@@ -1161,6 +1333,13 @@ func _mesh_box(parent: Node3D, size: Vector3, at: Vector3, mat: Material, solid 
 		mesh.position = at
 		parent.add_child(mesh)
 		return mesh
+	var body := _wall_body(parent, size, at)
+	body.add_child(mesh)
+	return body
+
+
+# A bare wall collider: the box shape is its first child, any drawn face comes after.
+func _wall_body(parent: Node3D, size: Vector3, at: Vector3) -> StaticBody3D:
 	var body := StaticBody3D.new()
 	var shape := CollisionShape3D.new()
 	var bs := BoxShape3D.new()
@@ -1168,7 +1347,6 @@ func _mesh_box(parent: Node3D, size: Vector3, at: Vector3, mat: Material, solid 
 	shape.shape = bs
 	body.physics_material_override = _wall_material()
 	body.add_child(shape)
-	body.add_child(mesh)
 	body.position = at
 	parent.add_child(body)
 	return body
@@ -1225,6 +1403,8 @@ func _physics_process(delta: float) -> void:
 			match String(s.rule["finishes"]):
 				"relay":
 					_watch_relay(s, delta, ball)
+				"count":
+					_watch_yard(s, delta, ball)
 				"surge":
 					_watch_surge(s, delta, ball)
 				"pack_dead":
@@ -1859,6 +2039,108 @@ func _relay_pack(s: Site, ball: Vector3) -> void:
 	s.relay_gap_s = float(s.rule["pack_gap_s"])
 
 
+# ---- The Stocktake yard ----
+
+# Machines the yard still has to beat: the ones up and the ones yet to climb in.
+func yard_standing(s: Site) -> int:
+	return _alive(s.pack) + s.yard_owed.size()
+
+
+func _watch_yard(s: Site, delta: float, ball: Vector3) -> void:
+	var yard = s.yard
+	var inside := _planar(ball, s.global_position) <= float(s.rule["ring"])
+	if not s.started:
+		if not inside or absf(ball.y - s.global_position.y) > RING_HEIGHT or not ctx.can_spawn():
+			return
+		s.started = true
+		yard.begin(Vector2(s.global_position.x, s.global_position.z))
+		_yard_owe(s)
+		ctx.events.event_started.emit(s.id)
+	s.pack = s.pack.filter(func(enemy): return is_instance_valid(enemy) and not (enemy.has_method("is_dead") and enemy.is_dead()))
+	s.yard_wait -= delta
+	if s.yard_wait <= 0.0 and not s.yard_owed.is_empty():
+		_yard_arrive(s, ball)
+	match yard.step(delta, yard_standing(s)):
+		"gate":
+			s.view.ring_role("live")
+		"count":
+			s.view.ring_role("amber")
+			s.yard_may_bank = false
+			_yard_owe(s)
+		"pile":
+			_yard_owe(s)
+	s.view.say(str(yard.count))
+	if inside:
+		s.yard_out = 0.0
+		s.yard_may_bank = yard.gate_open
+	elif yard.gate_open:
+		# A floor cleared from outside the ring banks nothing by itself: the ball rolls in, then out.
+		if s.yard_may_bank:
+			_yard_pay(s, yard.leave(), ball)
+	else:
+		s.yard_out += delta
+		if s.yard_out >= float(s.rule["out_s"]):
+			_yard_forfeit(s)
+
+
+# The standing count's machines join the ones owed, at that count's strength.
+func _yard_owe(s: Site) -> void:
+	var strength: float = s.yard.strength(s.yard.count)
+	for kind in s.yard.pack(s.yard.count):
+		s.yard_owed.append([kind, strength])
+
+
+# The next owed machine climbs in on the ring's edge, across the yard from the ball, each a step round from the last.
+func _yard_arrive(s: Site, ball: Vector3) -> void:
+	var owed: Array = s.yard_owed.pop_front()
+	var entry: Vector3 = ball - s.global_position
+	var a := atan2(entry.z, entry.x) + PI + PACK_TURN * float(s.yard_owed.size() % 5 - 2)
+	var spot := s.global_position + Vector3(cos(a), 0.0, sin(a)) * float(s.rule["ring"])
+	var enemy = ctx.spawner.spawn_enemy(owed[0], ctx.terrain.drop_point(spot.x, spot.z, SPAWN_CLEARANCE), "", Vector3.INF, owed[1])
+	if enemy != null:
+		s.pack.append(enemy)
+	s.yard_wait = float(s.rule["arrive_s"])
+
+
+# The ball left through the open gate: `pay` (SurvivalCount.pay) is banked. Scrap and cores land at once; the
+# parts, one roll a rarity listed, wait on a pickup in the ball's path.
+func _yard_pay(s: Site, pay: Dictionary, ball: Vector3) -> void:
+	s.reward_parts = []
+	var rarities: Array = pay.get("rarities", [])
+	for i in rarities.size():
+		var rng := RandomNumberGenerator.new()
+		rng.seed = Interact.luck_seed(ctx.rng.seed, ctx.run.run_id, ctx.run.stage, "%s:%d" % [s.id, i])
+		s.reward_parts.append_array(Parts.roll(rng, [rarities[i]], ctx.run.class_id(), ctx.run.parts + s.reward_parts, 1, s.reward_parts))
+	var out: Vector3 = ball - s.global_position
+	out.y = 0.0
+	var at: Vector3 = ball + out.normalized() * float(s.rule["pay_ahead_m"])
+	at = ctx.terrain.drop_point(at.x, at.z, 1.0)
+	for i in int(pay.get("cores", 0)):
+		ctx.run.add_core(String(s.rule["pay"]["source"]), at)
+	var scrap := int(pay.get("scrap", 0))
+	if scrap > 0:
+		ctx.run.add_scrap(scrap, at)
+		ctx.run.add_cogs(scrap)
+	ctx.events.event_ended.emit(s.id, "won")
+	_finish(s, at)
+
+
+# The one ending that pays nothing. The machines stay up: they are the field's now.
+func _yard_forfeit(s: Site) -> void:
+	s.yard.forfeit()
+	s.yard_owed = []
+	s.done = true
+	s.view.finish()
+	ctx.events.event_ended.emit(s.id, "lost")
+
+
+# A destroyed ball forfeits every yard it has started and not banked, wherever it fell: the count is the ball's.
+func _forfeit_yards() -> void:
+	for s in sites:
+		if is_instance_valid(s) and s.yard != null and s.started and not s.done:
+			_yard_forfeit(s)
+
+
 # Each miniboss lands in the relay's miniboss zone, seeded per relay and per arrival, so a
 # stage retry puts them where they were.
 func _relay_miniboss(s: Site) -> void:
@@ -1884,8 +2166,7 @@ func _watch_wall(s: Site, ball: Vector3) -> void:
 	var ahead := local.z - 0.5
 	if ahead < -1.0 or ahead > WALL_REACH + maxf(0.0, toward) / 30.0 or absf(local.x) > WALL_HALF_W + 1.0 or local.y > WALL_HEIGHT + 2.0:
 		return
-	var bar: float = ctx.tuning.f("cruise") * RAM_MIN_PER_CRUISE
-	if toward >= bar:
+	if toward >= ram_bar(s):
 		_break_wall(s)
 	elif ahead <= WALL_CONTACT and local.y < WALL_HEIGHT:
 		_refuse_ram(s, toward)
@@ -1905,11 +2186,18 @@ func _refuse_ram(s: Site, toward: float) -> void:
 	ctx.events.verb_failed.emit("roll", "under_bar", ctx.player.ball_position())
 
 
+# The speed into a cache's face that breaks its wall: RAM_MIN_PER_CRUISE x cruise, or a row bar's tier.
+func ram_bar(s: Site) -> float:
+	if s.rule.has("bar_tier"):
+		return ctx.tuning.tier_cruise() * SpeedTier.MULTIPLES[int(s.rule["bar_tier"])]
+	return ctx.tuning.f("cruise") * RAM_MIN_PER_CRUISE
+
+
 func _slammed(at: Vector3, strength: float) -> void:
 	if strength < ctx.player.slam_strength(ctx.tuning.f("cruise")) * SLAM_MIN_PER_CRUISE:
 		return
 	for s in sites:
-		if s.wall == null or s.done:
+		if s.wall == null or s.done or s.rule.has("bar_tier"):
 			continue
 		var local: Vector3 = s.to_local(at)
 		if local.z > 0.5 and local.z < 0.5 + SLAM_REACH and absf(local.x) <= WALL_HALF_W + 1.0:
@@ -2036,13 +2324,16 @@ func _finish(s: Site, at: Vector3) -> void:
 		if s.rule.has("bundle"):
 			s.pickup_parts = s.reward_parts.duplicate()
 			s.pickup_part = String(s.pickup_parts[0]) if not s.pickup_parts.is_empty() else ""
+		elif s.yard != null:
+			s.pickup_parts = s.reward_parts.duplicate()
+			s.pickup_part = String(s.pickup_parts[0]) if not s.pickup_parts.is_empty() else ""
 		elif s.relay != null:
 			s.pickup_parts = _roll_many(s.id, table["rarities"], s.relay.rewards())
 			s.pickup_part = String(s.pickup_parts[0]) if not s.pickup_parts.is_empty() else ""
 		else:
 			s.pickup_part = _roll(_luck_id(s), table["rarities"])
 	if s.pickup_part != "":
-		s.pickup = ActivityView.gem(String(s.rule.cue.view) if s.rule.has("bundle") else s.id)
+		s.pickup = ActivityView.gem(String(s.rule.cue.view) if s.rule.has("bundle") or s.yard != null else s.id)
 		s.add_child(s.pickup)
 		s.pickup.global_position = at
 		s.inside_pickup = _planar(ctx.player.ball_position(), at) <= PICKUP_REACH
@@ -2072,8 +2363,9 @@ func _pay_scrap(s: Site, at: Vector3) -> void:
 		ctx.run.add_cogs(amount)
 
 
-# A field find, a first-win room, the timed door or a drawn pocket rolls on its own stream, so it never pays the
-# part the stage's ordinary site of its kind pays; every other site keeps its id, and so its rolls.
+# A field find, a first-win room, the timed door, a card 2 extra, a sealed room or a drawn pocket rolls on its own
+# stream, so it never pays the part the stage's ordinary site of its kind pays; every other site keeps its id, and so
+# its rolls.
 func _luck_id(s: Site) -> String:
 	if s.has_meta("find"):
 		return "%s:%s" % [s.id, s.get_meta("find")]
@@ -2081,6 +2373,12 @@ func _luck_id(s: Site) -> String:
 		return "%s:%s" % [s.id, s.get_meta("room")]
 	if s.has_meta("door"):
 		return "%s:timed_door" % s.id
+	# A card 2 extra and a room a valve or cracked wall seals (contraptions.gd) stand beside the stage's own
+	# cracked cache; on its stream they paid the same part.
+	if s.has_meta("extra"):
+		return "%s:%s" % [s.id, s.get_meta("extra")]
+	if s.has_meta("sealed"):
+		return "%s:%s" % [s.id, s.get_meta("sealed")]
 	# A drawn pocket rolls apart from the stage's authored site of its kind, or the two paid the same part:
 	# a drawn vault and the stage's own cache did on 23 of 40 dam runs and 24 of 40 flume runs (2026-11-09).
 	if s.drawn:

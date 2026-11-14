@@ -82,6 +82,7 @@ func run(t) -> void:
 	_fights(t)
 	_mount_reading(t)
 	_struggle(t)
+	_detour(t)
 
 
 # What the mounting hands the plate (WardenReactor.plate_reading): the dam and the flume by
@@ -179,7 +180,9 @@ func _rows(t) -> void:
 	t.eq("every site kind's done row keeps to five words", Activities.RULES.keys().filter(func(kind):
 		return WordBudget.words_in(Objectives.done_words(kind, Activities.called(kind))) > Objectives.MAX_WORDS), [])
 	t.eq("a drawn pocket's done row is its marker's word, done", Objectives.done_words("arena", Activities.called("arena")), "Arena done")
-	t.eq("only a site that can be lost has lost words", Objectives.LOST_WORDS.keys().filter(func(kind): return not Activities.RULES[kind].has("retry_s")), [])
+	# A site is lost by a loss that re-arms it (`retry_s`) or by a forfeit clock (`out_s`, the Stocktake yard).
+	t.eq("only a site that can be lost has lost words", Objectives.LOST_WORDS.keys().filter(func(kind):
+		return not (Activities.RULES[kind].has("retry_s") or Activities.RULES[kind].has("out_s"))), [])
 	t.eq("a kind that cannot be lost has none", Objectives.lost_words("enemy_camp"), "")
 	# A mark's tag is one or two words in capitals, and names every thing a fight can mark.
 	t.eq("every tag is one or two words in capitals", Objectives.TAGS.values().filter(func(w):
@@ -387,3 +390,23 @@ func _struggle(t) -> void:
 	t.eq("seconds with no gain at all never count", [tally.struggling, tally.tally], [false, 0.0])
 	tally.begin()
 	t.eq("a retry clears a standing struggle", tally.struggling, false)
+
+
+# The detour row (Objectives.detour_shown): it stands under "Find the Warden" and nothing else, so
+# it is up on the road from the drop and gone once the Warden is engaged, a lock holds or a side
+# site has the row. The cage's row is its own prompt, capitalised, within the plate's word cap.
+func _detour(t) -> void:
+	var under := []
+	for id in CASES:
+		if Objectives.detour_shown(Objectives.choose(CASES[id])):
+			under.append(id)
+	t.eq("the detour row stands only under the road to the Warden", under, ["find_warden"])
+	var road: Dictionary = CASES["find_warden"]
+	for key in ["engaged", "yard_locked", "site_at_hand"]:
+		var reading := road.duplicate()
+		reading[key] = true
+		t.eq("the detour row goes once %s" % key, Objectives.detour_shown(Objectives.choose(reading)), false)
+	t.eq("the cage's row is its prompt, capitalised", Objectives.cage_words("free the runner"), "Free the runner")
+	t.eq("a cage with no prompt is the caged pilot", Objectives.cage_words(""), Objectives.CAGE_WORDS)
+	t.eq("a prompt over the word cap falls back", Objectives.cage_words("free the one runner in the cage"), Objectives.CAGE_WORDS)
+	t.eq("the fallback fits the plate", Objectives.CAGE_WORDS.split(" ").size() <= Objectives.MAX_WORDS, true)

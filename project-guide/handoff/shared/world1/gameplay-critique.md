@@ -85,7 +85,7 @@ Read: `warden.gd:40-43` runs the same pulse every chunk (2 s charge in a 6 s cyc
 
 ### 6. The difficulty curve peaks at the dam and then rests four times (to the "Tune dam yard and Brindle pressure" thread, W1-31)
 
-Read: `MOBS_DAMAGE_W1` is 1.5 on the dam and 1.0 on the flume today, and 2.0 and 1.0 with the stack. The dam gate needs 4 packs and the flume gate 1 (`lock_rows.gd`). The flume's director breather sits on its landing (`breather_rows.gd` "landing_breather"), and Brindle's first phase deals no damage. Measured: the flume took 116 to 151 s for the skipper, still under ruling ax's 180 s floor. So the run's hardest minute is its fourth, and the next eight minutes get easier. This is W1-31's job (its target already says the flume's opening must not be a rest); this page adds the cause list and hands it to the owning thread instead of filing a second row.
+Read: `MOBS_DAMAGE_W1` is 1.5 on the dam and 1.0 on the flume today, and 2.0 and 1.0 with the stack. The dam gate needs 5 packs (4 before PR 956) and the flume gate 1 (`lock_rows.gd`). The flume's director breather sits on its landing (`breather_rows.gd` "landing_breather"), and Brindle's first phase deals no damage. Measured: the flume took 116 to 151 s for the skipper, still under ruling ax's 180 s floor. So the run's hardest minute is its fourth, and the next eight minutes get easier. This is W1-31's job (its target already says the flume's opening must not be a rest); this page adds the cause list and hands it to the owning thread instead of filing a second row.
 
 ### 7. The plating read is never taught in the run (W1-68)
 

@@ -165,6 +165,14 @@ func _shop_visit(world) -> void:
 				if r.get("ok", false):
 					_row("buy", {"what": "cell", "item": o["part_id"], "price": r.get("price", 0)})
 					bought = true
+	# Moss's last-call kettle (W1-73): the cogs left at the world's last till go into the boss fight.
+	var brew: Dictionary = shop.brew_offer() if shop.has_method("brew_offer") else {}
+	while not brew.is_empty() and int(brew["price"]) >= 0 and _afford(shop, int(brew["price"])):
+		var r: Dictionary = shop.buy_brew()
+		if not r.get("ok", false):
+			break
+		_row("buy", {"what": "brew", "price": r.get("price", 0)})
+		brew = shop.brew_offer()
 	for o in shop.shelf_offers():
 		if not o.get("sold", false):
 			_row("no_buy", {"what": "shelf", "item": o.get("part_id", ""), "price": o.get("price", 0)})

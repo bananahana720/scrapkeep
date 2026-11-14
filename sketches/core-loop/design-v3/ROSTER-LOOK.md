@@ -8,6 +8,48 @@ The concept source is the cleaned Astra picture set in `artifacts/local/alpha/pu
 
 **What this sheet replaces.** For the alpha sketch it replaces the class-shell rows and the "growth and cockpit rules" in `VISUAL-LANGUAGE.md` §9 (lines 378 to 416), and the "reuse the 0.98 m glass sphere" rule in the wave 1 D6 build spec (`game-completion-plan-75f776/artifacts/local/alpha/push/w1/D6/out/BUILD-SPEC.md:8`). Bible AD-01 (`BIBLE.md:620`) asks for "a protected, readable cockpit and recognizable equipment". The mecha meets that better than glass did. The pod hangs in a two-axis gimbal at the centre, the lattice is a roll cage around it, and the equipment sits outside where it shows. Moving the mecha into the Bible needs a heavy-lane card (`VISUAL-LANGUAGE.md:3`).
 
+## Ball look candidates, 13 November 2026 (Andrew picked the cutaway, ruling dm)
+
+Andrew asked on 13 Nov 2026 to reconsider the ball ("go big and bold") and set one hard rule: the player must see the pilot and what the pilot wears. Four looks sit behind the launch switch `--ball-look=today|gyro|bell|cutaway`. The cutaway is the default since 14 Nov 2026, when Andrew chose it after seeing the PC stills; `today` keeps the Hoberman shells the rest of this sheet describes. The class card and customize previews draw the default too (`HeroAssets.previewing()`); any other painter with no tuning still draws today's shells, which the unit tests rely on. The concept page with pictures, the pass line and the receipts is https://claude.ai/artifact/YLJGxfhfDNfA9nwEzpmQW4.
+
+- **Where they live.** Shapes: `tools/blender/ball_looks.py`. Switch, plating, window and materials: `src/presentation/ball_looks.gd`. Pictures and counts: `tools/ball_look_capture.gd`. Test: `tests/ball_looks_test.gd`.
+- **Pass line.** The play camera sees at least 75% of the pilot on the median of 24 spins and 60% on the worst, at 7.5 m and at 10.5 m. Blockout receipts (cloud, Sable, shared cockpit): cutaway 82% and 82%, bell 67% and 53%, gyro 57% and 37%, today's shell 52% and 45%.
+- **Picked: cutaway** (Andrew, 13 Nov 21:44Z; ruling dm in [DECISIONS.md](../../../project-guide/handoff/DECISIONS.md)), a solid plated ball whose shader discards a window on the side facing the camera (no blended surface). It is the "sight-cone cutout" this sheet lists as a separable extra, made the whole look.
+- **What a pick replaces.** The bell puts glass on the level Pod, which the "Forbidden" row below allowed for an inner cockpit sphere on 22 Oct; none puts glass on the rolling outline.
+
+### The cutaway as built (13 November 2026)
+
+The gyro and the bell remain one shared shell each, as Andrew saw them. The cutaway keeps every pilot's own shell and changes only what rolls, so sections 0.1 to 0.4 below still describe the Pod, the weapon ring, the cockpit and the hub mounts.
+
+| Part | Under `--ball-look=cutaway` |
+| --- | --- |
+| Rolling part (Core) | The lattice mesh becomes plating: gores in the pilot's own enamel (the mean colour of the lattice it replaces), darker gores between, a bone belt, oxide caps, tread pads. The hub mounts stay, so scrap still clamps on. |
+| Heft classes II to V | The lattice's gap panels sit inside the ball's radius and would float beside the pilot, so they are hidden. The plating grows instead: II copper hoops, III armour over the dark gores, IV tread cleats on the belt, V copper caps with a stud crown. Kit that stands outside the ball (hoods, drums, hooks) still arrives with its class. |
+| Window | 40 degrees about the line from the ball's centre to the camera, with an ink line and a halftone fringe. It cuts the plating, and everything that rides the ball: scrap chunks, part hardware, panel plates. On the level part it cuts kit that stands farther than 0.93 from the centre (the weapon ring's near arc), and anything behind the pilot's back above the seat (brackets, backrests), all judged by the tube of sight the window opens, so a part that stands out beside the opening (Cannon's barrel) stays whole. Kit that stands out past the ball also keeps its whole shadow. The seat, controls and everything in front of the pilot are never cut. |
+| Seat back | A pilot too small for the shared seat back has it lowered (`LOW_SEAT_BACK`: Rivet, to 0.06 above the seat). |
+| Cockpit | What the window shows around the pilot (Andrew, 14 November: it must look like the inside of the mecha). The inside of the plating is drawn by the shader as six longerons, two ring frames and a hub plate at each axle, and rolls with the ball. On the level part, `furnish()` adds `ball_look_cutaway_cockpit.glb`: a floor pan with tread strips on a cradle ring, a dash with three gauges and a switch row ahead of the yokes, a console by the left knee, and cable looms. 1,004 triangles, two surfaces. It sits below and ahead of the seat, so it hides none of the pilot from the chase camera, and its gauge needles light with the ready glow. |
+| Pilot in shade | Each pilot's own surfaces take 60% of the light that falls on their far side (`PILOT_BACKLIGHT`, the material's backlight), in their own colours, so the pilot reads when the ball's shaded side faces the camera. No light node: lint L6 forbids one, and a glow on the material washes the vertex-coloured pilots grey. Assumption Andrew can overturn: 60%. |
+| Room for the pilot | In the ball's model units from its centre (plating radius 0.965): head top at most 0.57 up, feet at most 0.59 down, half width at most 0.43 (Kest's crest reaches 0.60), nothing past 0.58 forward (the dash stands at 0.60), a tail to 0.72 behind. The window shows a circle of radius 0.63 round the camera's line to the centre. The seated `idle_loop` pose, the 25 bone names and the head and shoulder positions stay, so the yokes, the glance and the outfits keep fitting a remade pilot. |
+| Glance | At rest for three seconds, the pilot turns chest, neck and head over a shoulder to look at the camera, holds 1.2 seconds, turns back, and repeats about every eight seconds; the pilot faces front again within a third of a second of the ball moving or a reaction clip starting (`src/presentation/pilot_glance.gd`, laid over the playing clip). |
+| Equipped paint | Takes the enamel gores; the dark gores, belt and caps keep the pattern. |
+| Outfits | Unchanged: the `outfit` slot, the customize page and `fit_outfit` already mount an outfit on the pilot's bones (three exist: Rivet's Welding Hood, Tarn's Steady Cap, Tally's Eyeshade), and the window is what lets the player see it in play. A new outfit is a `Cosmetics` row and a GLB whose parts are named for the rig's bones. |
+| Not cut | Glass, class accents (the ready glow swaps those materials by identity), Kest's live band and fuse materials, and unshaded or see-through riders such as synergy halos keep their own materials. An equipped decal shows on the weapon ring's band only (its other home, the gap panels, is hidden), and that band is then not cut. |
+
+**Receipts** (`tools/ball_look_capture.gd`; cloud numbers are the compatibility renderer, the PC's are on branch `scratch/w40-ball-look-capture`). Share of the pilot the play camera sees, median of 24 spins at rest (the worst spin and the speed view are within one point), heft class I, cloud:
+
+| Pilot | Cutaway | Ball triangles | Surfaces |
+| --- | --- | --- | --- |
+| Sable | 90% | 13,812 | 20 |
+| Rivet | 88% | 14,416 | 17 |
+| Kest | 79% | 14,680 | 19 |
+| Tarn | 81% | 15,174 | 21 |
+| Tally | 78% | 14,633 | 13 |
+| Cannon | 77% | 9,566 | 15 |
+
+Today's shell shows 52% of Sable (PC: 54%, against the cutaway blockout's 85%). Heft class V adds 5 to 8 surfaces and about 1,300 to 2,100 triangles and hides no more of the pilot. A late run's ball (Sable, class III, scrap chunks and 40 panel plates) shows 86% of the pilot under the cutaway; today's shell with the same load showed 21%, 6% on the worst spin. No surface blends. The pilot is about 9,800 of each ball's triangles.
+
+**Still open.** In the PC film of a run (14 November, branch `scratch/w40-ball-look-capture-2`) the aim reticle sits over the window at play size; the reticle is the HUD's. The class card and customize previews now draw the cutaway but have not been looked at on the PC. The pilot models themselves are being redone in the thread "Upgrade game models with Tripo"; a new pilot must keep the seat pose and the shared rig's bone names so the cockpit, the glance and the outfits still fit.
+
 ## 0. Direction change, 2026-10-10 evening: the Hoberman mecha
 
 Andrew rejected all 38 open-cage pictures on 2026-10-10. His direction, in his words: "more like a Hoberman sphere that's like completely expanded out", with "panels or other things that kind of like tack on to that sphere within like maybe those different nodes or gaps", "gyroscopic stabilization for certain aspects of the ball", a weapon as "a stabilized horizontal ring that also wraps around" the sphere, and a cockpit with controls the pilot works "in sort of a mecha like manner": "a mecha that kind of like is an extension of that character", like Power Rangers.

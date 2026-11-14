@@ -201,10 +201,10 @@ func _draw() -> void:
 	var centre := Vector2(size.x * 0.5, 24.0 + SLOT * 0.5 - 6.0 * _lift)
 	var rect := Rect2(centre - Vector2(SLOT, SLOT) * 0.5, Vector2(SLOT, SLOT))
 	var plate := StyleBoxFlat.new()
-	plate.bg_color = Color(Palette.CHARCOAL, 0.95)
+	plate.bg_color = Color(UiTokens.INK, UiTokens.PLATE_ALPHA)
 	plate.border_color = color if _lift > 0.5 else Palette.SAND
 	plate.set_border_width_all(3)
-	plate.set_corner_radius_all(12)
+	plate.set_corner_radius_all(UiTokens.RADIUS)
 	draw_style_box(plate, rect)
 	var icon_id := String(node.get("icon", ""))
 	var inset := rect.grow(-12.0)

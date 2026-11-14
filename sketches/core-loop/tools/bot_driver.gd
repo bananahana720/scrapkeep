@@ -1933,6 +1933,10 @@ func _activity_goal(delta: float) -> bool:
 		for c in activities.sites:
 			if not is_instance_valid(c) or not _activity_open(c):
 				continue
+			# A cache whose row raises its wall to a speed tier (activities.gd BARS, W1-76) asks for a line
+			# the bot does not plan; ramming it at the bot's speed would only loop the refused cue.
+			if c.rule.has("bar_tier"):
+				continue
 			var level := roundf(c.global_position.y / LEVEL_BAND)
 			# The alpha maps' camp comes after the slice's standing sites, wherever it stands:
 			# on the reach its shelf pulled the explorer off the cache into a wall it cannot pass.
@@ -2065,9 +2069,10 @@ func _site_has_authored_pack(s) -> bool:
 	var map = game.ctx.terrain.map()
 	if not "activity_sites" in map:
 		return false
-	for spec in map.activity_sites:
-		if String(spec.get("id", "")) == s.id:
-			return not spec.get("pack", []).is_empty()
+	for authored in map.activity_sites:
+		for spec in [authored] + authored.get("alts", []):
+			if String(spec.get("id", "")) == s.id:
+				return not spec.get("pack", []).is_empty()
 	return false
 
 
@@ -2113,7 +2118,10 @@ func _route_to(s, ball: Vector3) -> Array[Vector3]:
 	var site_d := INF
 	for spec in map.park.get("activity_rows", []):
 		var spot: Array = spec.get("at", [])
-		if String(spec.get("activity", "")) != s.id or spot.size() < 2:
+		var kinds: Array = [String(spec.get("activity", ""))]
+		for alt in spec.get("alts", []):
+			kinds.append(String(alt.get("activity", "")))
+		if not kinds.has(s.id) or spot.size() < 2:
 			continue
 		var d := Vector2(float(spot[0]), float(spot[1])).distance_to(Vector2(s.global_position.x, s.global_position.z))
 		if d < site_d:

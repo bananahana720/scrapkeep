@@ -40,13 +40,19 @@ const BallState := preload("res://src/movement/ball_state.gd")
 # new. Stage 2 moved with world 1's level-ground rule (pocket_draw.gd TIDY). Stages 3 to 6 moved only in the
 # drawn camps' pay: with the old pay ({named hot_rivets, common and rare}) put back on each drawn camp, the four
 # hashes were the pins they replace (6b2244ea..., e6afadaa..., d89a37e5..., 01459ce0...), so no site moved.
+# 2026-11-13, two library rows: PR 924 (W1-17) assigned sump_vault to the flume's trestle_cache, so on stages 2 and 4,
+# whose draws held it, its interior carries the assignment (sites unchanged, measured on 1ec89600: stages 1, 3, 5, 6
+# kept their pins). PR 925 (W1-76) added incline_vault, a small secret assigned to the dam, which every other park
+# may draw; the draw picks among the rooms it can afford, so all six stages moved (3f989714... -> 37c6a9b6..., 36c277f7...
+# -> 6a062ee3..., c428c12b... -> 55d86bc8..., de3a6b7c... -> 09e28c2c..., 5b1da6fc... -> 70807e39..., 17825245... ->
+# ee063c31...).
 const GOLDEN := {
-	1: "3f9897144c5611195011b596083ab0f197023035d6263eff4c15955bc6e410ba",
-	2: "36c277f74ea206f8fbfb5cd25b9cb10019670baa3ec52fcdf58770a23e1cd615",
-	3: "c428c12b727ad17b698969d3b045e2ed705edca615250ce2f81641cf6ce61439",
-	4: "de3a6b7c0ea318c71f155a2b4492568c7872402d1462e0a090d193abbf133a2c",
-	5: "5b1da6fc4de1e662ef853ee0665d6db9cb0e7dacddc87bd9dcf01acf37c03acd",
-	6: "178252450f7dbc311e73ccca98c4d618545aebd92fd5a2e77c3f15e619e7bfff",
+	1: "37c6a9b642914fa639033a4c22cdfe0fbdd86952e1451f5c6f6a2883fb0cbb31",
+	2: "6a062ee367b7523c7260c9e5c742929d66b7383cf1e0d84c38a6d313d0eb8651",
+	3: "55d86bc8cf198a63c7a692c8c29f5e4efe58b7aa99312e02c345f42de7c22f7b",
+	4: "09e28c2ca5f2f22a286ee5e4495eab8d1e3d3724483816f053be9cccc4bcb99b",
+	5: "70807e398a40a6dfd76baa8a6fa437b864ba47603fc390402cec108c8325a12d",
+	6: "ee063c318b2053d8272dec36f194458c6f703435d78acd905878ac3f7b06bd7f",
 }
 const PICK_SEEDS := 2000
 const DRAW_SEEDS := 16
@@ -98,6 +104,21 @@ func _rows() -> void:
 		var pair_w: float = UiDraw.width(pair, LaunchCard.LINE_FONT)
 		t.check("%s line fits the card beside the cursed line" % row.id, pair_w <= 1600.0 * 0.85, "%.0f px: %s" % [pair_w, pair])
 	t.check("the cursed line fits the card too", String(Modifier.CURSE.line).split(" ", false).size() <= 8)
+	# W1-75: a stage with no modifier carries a nominal Foreman memo, never a blank card. Each fits
+	# beside the cursed line, names no condition (no "Word:" before it), and the seed picks it.
+	var nominal := {}
+	for line in Modifier.NOMINAL:
+		t.check("nominal memo '%s' fits in 8 words" % line, String(line).split(" ", false).size() <= 8)
+		t.check("nominal memo '%s' names no condition" % line, not Modifier.ROWS.any(func(r): return String(line).begins_with(String(r.word))))
+		var with_curse: String = Modifier.caption(Modifier.CURSE) + "  /  " + String(line)
+		t.check("nominal memo '%s' fits beside the cursed line" % line, UiDraw.width(with_curse, LaunchCard.LINE_FONT) <= 1600.0 * 0.85)
+	for seed_n in 64:
+		for stage in range(1, 7):
+			nominal[Modifier.memo(seed_n, stage, {})] = true
+	t.check("every nominal memo comes from the list", nominal.keys().all(func(m): return Modifier.NOMINAL.has(m)), str(nominal.keys()))
+	t.eq("64 seeds over six stages show every nominal memo", nominal.size(), Modifier.NOMINAL.size())
+	t.check("the same seed and stage keep the same memo", Modifier.memo(7, 2, {}) == Modifier.memo(7, 2, {}))
+	t.check("a rolled modifier's memo is its caption", Modifier.memo(7, 2, Modifier.ROWS[0]) == Modifier.caption(Modifier.ROWS[0]))
 	t.eq("row ids are unique", ids.size(), Modifier.ROWS.size())
 	t.check("world-effect overlays name WORLD-FX.md kinds", Modifier.ROWS.all(func(row): return String(row.get("fx", "")) in ["", "plenty", "scarce", "hidden"]))
 	var planted := {"id": "slick", "word": "Slick", "line": "x", "friction": 0.1}
@@ -270,8 +291,8 @@ func _step(row: Dictionary, map, prepared: Dictionary) -> Dictionary:
 
 
 # A park game enters stages 1 to 6 for three run seeds. On every entry the activities' applied row
-# equals the pick, the stage card shows its caption (no line when there is none), and the card
-# shown at launch for the next stage in the world carries the same caption. A retry keeps the row.
+# equals the pick, the stage card shows its memo (the caption, or a nominal Foreman line when none
+# rolled), and the card shown at launch for the next stage in the world carries the same memo. A retry keeps the row.
 func _runtime() -> void:
 	var Game = load("res://src/game.gd")
 	var game = Game.new()
@@ -312,7 +333,7 @@ func _runtime() -> void:
 			await physics_frame
 			# A new world shows its world card first and the stage card a beat later.
 			if hud.launch_card.title != game.ctx.stages.of(stage)["name"]:
-				world_ok = world_ok and hud.launch_card.line == Modifier.caption(expected)
+				world_ok = world_ok and hud.launch_card.line == Modifier.memo(s, stage, expected)
 				world_cards += 1
 				for frame in 600:
 					if hud.launch_card.title == game.ctx.stages.of(stage)["name"]:
@@ -320,7 +341,7 @@ func _runtime() -> void:
 					await process_frame
 			entries += 1
 			var card_line: String = hud.launch_card.line if hud.launch_card.showing() else "<no card>"
-			var ok: bool = acts.stage_modifier == expected and card_line == Modifier.caption(acts.stage_modifier)
+			var ok: bool = acts.stage_modifier == expected and card_line == Modifier.memo(s, stage, acts.stage_modifier)
 			shown_ok += int(ok)
 			if not ok:
 				print("seed %d stage %d: applied %s, expected %s, card %s / %s" % [s, stage, str(acts.stage_modifier.get("id", "")), str(expected.get("id", "")), hud.launch_card.title, card_line])
@@ -333,7 +354,7 @@ func _runtime() -> void:
 			if next <= game.ctx.stages.last_of(game.ctx.stages.world_of(stage)):
 				hud.launch_card.visible = false
 				hud._on_launched(Vector3.ZERO)
-				launch_ok = launch_ok and hud.launch_card.line == Modifier.caption(Modifier.pick(s, next, 3))
+				launch_ok = launch_ok and hud.launch_card.line == Modifier.memo(s, next, Modifier.pick(s, next, 3))
 	t.eq("every stage entry shows the applied modifier on its card", shown_ok, entries)
 	t.check("the runtime saw modifiers applied", applied > 0, "%d of %d entries" % [applied, entries])
 	t.check("the launch card for the next stage carries its modifier", launch_ok)

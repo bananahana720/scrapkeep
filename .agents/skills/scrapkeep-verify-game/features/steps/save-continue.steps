@@ -1,0 +1,15 @@
+# Second half of save and continue: the next launch offers Continue and it resumes the run.
+# Launch with the same VERIFY_GAME_HOME=<dir> and: -- --no-intro
+until clickable "Settings" 120
+until read get_node_or_null("/root/Boot") == null 30
+until clickable "Continue" 10
+shot title-continue
+ui
+key C
+until play 60
+wait 2
+shot continued
+ui
+read run.stage
+read player.ball_position()
+quit

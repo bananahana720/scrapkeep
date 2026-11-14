@@ -21,7 +21,7 @@
 #
 # Three meshes, four surfaces (four colour-pass draws), no alpha:
 #   WinchBody   fleet_paint (crew barrel, chest and head; flashes with the enemy) and paint
-#               (vertex colour: charcoal mast, hanger, ears, snout, strap and pack, oxide plates and
+#               (vertex colour: charcoal mast, hanger, strap and pack, oxide plates and
 #               one brass tag on the chest).
 #   WinchDrum   paint only: the existing drum and cable wrap, pivoting on its X axle.
 #   WinchRotor  paint only: three oxide blades with unequal angular spacing and one pale bare-metal
@@ -42,6 +42,7 @@ from mathutils import Vector
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 import common
+import crew
 import polish
 from common import Part
 
@@ -78,10 +79,7 @@ b = Part("WinchBody")
 # --- The crew: an oxide barrel, chest and head, small under the rotor ------------------
 b.cyl("fleet_paint", 0.50, 0.62, 0.70, segs=10, loc=g(0, -0.40, 0))  # lower barrel, tapering toward the hanger
 b.cyl("fleet_paint", 0.62, 0.56, 0.60, segs=10, loc=g(0, 0.25, 0))  # chest
-b.uv("fleet_paint", 0.32, u=10, v=6, loc=g(0, 0.85, 0.20))  # head, forward of the mast
-b.box("paint", (0.18, 0.16, 0.22), loc=g(0, 0.80, 0.50), color=CHAR)  # snout
-for s in (-1, 1):
-    b.cyl("paint", 0.10, 0.0, 0.28, segs=6, loc=g(s * 0.17, 1.24, 0.16), color=CHAR)  # ears
+crew.buoy_head(b, g(0, 0.85, 0.20), 0.32)
 b.cyl("paint", 0.64, 0.64, 0.10, segs=10, loc=g(0, -0.02, 0), color=CHAR)  # strap round the waist
 b.box("paint", (0.50, 0.55, 0.30), loc=g(0, 0.15, -0.62), color=CHAR)  # battery pack behind the crew
 b.box("paint", (0.28, 0.18, 0.05), loc=g(0, 0.20, 0.60), color=BRASS)  # the one brass requisition tag
@@ -103,6 +101,9 @@ d.bm.normal_update()
 d.paint([f for f in drum if abs(f.normal.x) > 0.9], "paint", CHAR)  # the two dark end flanges
 d.cyl("paint", DRUM_R + 0.05, DRUM_R + 0.05, 0.26, segs=8, loc=g(0, DRUM_Y, 0), rot=(0, HALF_PI, 0), color=WORN)  # cable wrap
 
+# The old works' two marks, cast in under the Fleet's paint: the crew number and HIRED.
+crew.cast_number(b, "paint", "33", (0, -0.556, 0.45), (0, -1, 0), 0.16)
+crew.hired(b, "paint", (0, 0.9, 0.15), (0, 1, 0), 0.08)
 bmesh.ops.recalc_face_normals(b.bm, faces=b.bm.faces[:])
 body = b.to_object(parent=root)
 bmesh.ops.recalc_face_normals(d.bm, faces=d.bm.faces[:])

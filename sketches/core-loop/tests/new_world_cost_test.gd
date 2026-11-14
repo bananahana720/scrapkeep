@@ -35,7 +35,8 @@ const PATTERNS := {
 	"map_id": "\"(park_dam|park_flume|park_pit|park_sinkhole|park_islands|park_crown|spillway|gorge)\"",
 	"legacy_map_cmp": "(==|!=)\\s*\"(reach|dig|dig_deep|highdraft|highdraft_crown)\"|\"(reach|dig|dig_deep|highdraft|highdraft_crown)\"\\s*(==|!=|in\\b)|\\[\\s*\"(reach|dig|dig_deep|highdraft|highdraft_crown)\"\\s*,",
 }
-# Counted on stage/alpha-w39 de79a4e6, 12 Nov 2026: 109 sites in 32 files.
+# Counted on stage/alpha-w39 de79a4e6, 12 Nov 2026: 109 sites in 32 files. FX-22 (12 Nov) took
+# world_fx_specs.gd from 15 to 5 by dropping the unread "set" key from its spec rows: 99 sites.
 const PINS := {
 	"res://src/build/parts.gd": 1,
 	"res://src/combat/kest_kit.gd": 1,
@@ -53,7 +54,7 @@ const PINS := {
 	"res://src/presentation/phase_music.gd": 2,
 	"res://src/presentation/title_intro_player.gd": 4,
 	"res://src/presentation/title_intros.gd": 1,
-	"res://src/presentation/world_fx/world_fx_specs.gd": 15,
+	"res://src/presentation/world_fx/world_fx_specs.gd": 5,
 	"res://src/presentation/world_look.gd": 1,
 	"res://src/ui/comic_page.gd": 1,
 	"res://src/ui/ending_sequence.gd": 9,

@@ -24,6 +24,7 @@ const GraphicsPreset := preload("res://src/presentation/graphics_preset.gd")
 const SetDressing := preload("res://src/presentation/set_dressing.gd")
 const ParkProps := preload("res://src/presentation/park_props.gd")
 const AmbientLife := preload("res://src/presentation/ambient_life.gd")
+const WorkMachines := preload("res://src/presentation/work_machines.gd")
 const SiteMarkers := preload("res://src/presentation/site_markers.gd")
 const Parts := preload("res://src/build/parts.gd")
 const WindupRows := preload("res://src/presentation/windup_rows.gd")
@@ -54,7 +55,7 @@ const PanelFx := preload("res://src/presentation/panel_fx.gd")
 #   hero_assets    the V3 models dressed over the greybox shell, chunks and gates
 #   warden_ring    a posture Warden's health as four arcs on the ground round its foot
 #   reward_ceremony  how a part find is presented, from a rarity tick to the crate (v3 W13)
-#   panel_fx       a grey panel pickup: the word at the ball, the ratchet and the run's phrase
+#   panel_fx       a grey panel pickup: the pop the HUD draws at its edge, the ratchet and the run's phrase
 #   flourish_player  the in-run comic beats (flourish_rows.gd); spillway_story starts world 1's rows,
 #                  flourish_cues the bosses' arrival, phase, rout and sign-on rows
 
@@ -77,6 +78,7 @@ var flourish_cues
 var set_dressing: Node3D
 var park_props: Node3D
 var ambient_life: Node3D
+var work_machines: Node3D
 var site_markers: Node3D
 var title_stage: Node
 var ui_hidden := false
@@ -105,6 +107,7 @@ func setup(ctx_ref) -> void:
 	machine_fx = MachineFx.new()
 	add_child(machine_fx)
 	machine_fx.setup(ctx)
+	machine_fx.kill_mark = vfx.kill_mark
 	player_fx = PlayerFx.new()
 	add_child(player_fx)
 	player_fx.setup(ctx, vfx)
@@ -120,7 +123,7 @@ func setup(ctx_ref) -> void:
 	status_marks.setup(ctx, vfx)
 	armour_marks = ArmourMarks.new()
 	add_child(armour_marks)
-	armour_marks.setup(ctx)
+	armour_marks.setup(ctx, player_fx)
 	hero_assets = HeroAssets.new()
 	add_child(hero_assets)
 	hero_assets.setup(ctx)
@@ -146,7 +149,7 @@ func setup(ctx_ref) -> void:
 	ceremony.setup(ctx, audio, juice, vfx)
 	panel_fx = PanelFx.new()
 	add_child(panel_fx)
-	panel_fx.setup(ctx, audio, machine_fx)
+	panel_fx.setup(ctx, audio)
 	flourish = FlourishPlayer.new()
 	add_child(flourish)
 	flourish.setup(ctx)
@@ -418,6 +421,13 @@ func _sync_dressing() -> void:
 	park_props = ParkProps.new()
 	add_child(park_props)
 	park_props.setup(ctx)
+	park_props.prop_kicked.connect(juice.on_prop_kicked)
+	# Looping workers stand on every preset (their footings are solid for bots and players alike), so a
+	# preset change keeps them: rebuilt here they would come back over a boss arena and lose their phase.
+	if not is_instance_valid(work_machines):
+		work_machines = WorkMachines.new()
+		add_child(work_machines)
+		work_machines.setup(ctx)
 	if is_instance_valid(ambient_life):
 		ambient_life.free()
 	ambient_life = null

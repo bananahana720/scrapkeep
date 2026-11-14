@@ -6,7 +6,8 @@ const Palette := preload("res://src/core/palette.gd")
 
 # Rule (PF-16): an event announced with a lead and a place points the edge marker at that place
 # through its lead, in the warning colour with the event glyph, and no longer: the marker goes
-# when the lead runs out (or the event starts or ends, through the bus). The weather, the flood
+# when the lead runs out (or the event starts or ends, through the bus). In view the place wears
+# brackets instead of the edge chevron (W1-04), so the target is a mark. The weather, the flood
 # and a squall have no one place (Vector3.INF) and get none; nor does an event with no lead.
 
 var _t := preload("res://tests/support/t.gd").new("ui_edge_marker_incoming_test")
@@ -24,6 +25,7 @@ func _initialize() -> void:
 		_t.check("it points at the published place", shown[0]["at"] == at, str(shown[0]))
 		_t.check("in the warning colour", EdgeMarkers.marker_color(shown[0]) == Palette.HAZARD, str(EdgeMarkers.marker_color(shown[0])))
 		_t.eq("with the event glyph", shown[0]["icon"], "obj_event")
+		_t.check("and brackets on the place once it is in view", shown[0].get("mark", false) and String(shown[0].get("tag", "")) == "", str(shown[0]))
 	m.step_incoming(5.9)
 	_t.eq("still up inside its lead", m.incoming_targets().size(), 1)
 	m.step_incoming(0.2)

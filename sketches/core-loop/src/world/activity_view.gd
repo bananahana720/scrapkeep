@@ -123,6 +123,21 @@ func finish() -> void:
 			part.visible = false
 
 
+# The word the site shows when the ball is near.
+func say(text: String) -> void:
+	word.text = text
+
+
+# The ring wears `role`'s colour (EventKinds.role_color) while its edge means something else for a time: the
+# Stocktake yard's ring is its gate, live while leaving through it banks the pay.
+func ring_role(role: String) -> void:
+	if ring == null:
+		return
+	var mat := _solid(EventKinds.role_color(role), COLUMN_ENERGY)
+	for dash in ring.get_children():
+		(dash as MeshInstance3D).material_override = mat
+
+
 func lit() -> bool:
 	return shown and column.visible and glyph.visible and ring.visible
 

@@ -80,7 +80,12 @@ func _commit(_to_ball: Vector3) -> Node3D:
 	field = AreaField.new(FIELD, at, self)
 	if _on_water(at):
 		field.spread = WET_SPREAD
-	return _commit_ring(Threat.Type.INSTANT, at, field.radius(), 4.0)
+	var ring: Node3D = _commit_ring(Threat.Type.INSTANT, at, field.radius(), 4.0)
+	# The mat cannot jolt until its first pulse, 1.2 s after it goes live, so only pulses land
+	# (assumption Andrew can overturn, 12 Nov 2026).
+	if ring != null:
+		ring.lands_on_live = false
+	return ring
 
 
 func _live(delta: float) -> bool:
@@ -95,6 +100,8 @@ func _live(delta: float) -> bool:
 		_cue("tell")
 	if not pulsed:
 		return true
+	# The lead fill restarts on every pulse and never reaches its end, so each pulse lands here.
+	tele.land()
 	var player = _player()
 	if player == null:
 		return true

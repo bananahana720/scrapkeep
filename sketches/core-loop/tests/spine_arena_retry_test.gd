@@ -3,6 +3,7 @@ extends SceneTree
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const BossDouble := preload("res://tests/doubles/spine_boss_double.gd")
+const DeathCause := preload("res://src/core/death_cause.gd")
 
 # The arena's own attempt (FIXWAVE spine [C] and minors), through the real flow, codex
 # and run log with a boss that publishes the live seam:
@@ -93,6 +94,7 @@ func _physics_process(_delta: float) -> bool:
 			_s["said"] = String(_game.screens._body.text)
 			_s["cause"] = String(flow.death_cause)
 			_s["tip"] = String(flow.death_tip)
+			_s["memo"] = DeathCause.memo(run.run_seed, run.stage)
 			_s["arena_deaths"] = (_game.run_log._record.get("arena", {}).get("deaths", []) as Array).size()
 			_s["stage3_deaths"] = (_game.run_log._stages[3]["deaths"] as Array).size()
 			# R is still down from the moment of death: the frame on the death screen sees it, and the
@@ -160,8 +162,8 @@ func _report_arena() -> void:
 	_report("live boss objective", "150" in _s["objective_live"] and _s["objective_chase"].begins_with("Brindle is running"),
 		"objective with live plating 150: \"%s\"; during the chase: \"%s\"" % [_s["objective_live"], _s["objective_chase"]])
 	_report("death screen words", _s["cause"].begins_with("Scrapped by ") and _s["tip"].contains("plating 120.")
-			and _s["said"] == "%s\nNext shift: %s" % [_s["cause"], _s["tip"]],
-		"met the hull at plating 120 and died against a bow at 150: \"%s\"" % _s["said"].replace("\n", " | "))
+			and _s["said"] == "%s\n%s\nNext shift: %s" % [_s["cause"], _s["memo"], _s["tip"]],
+		"met the hull at plating 120 and died against a bow at 150; cause, the Foreman's loss memo, then the crew's tip (W1-75): \"%s\"" % _s["said"].replace("\n", " | "))
 	_report("arena run log", _s["arena_deaths"] == 1 and _s["stage3_deaths"] == 0,
 		"an arena death went to the arena record (%d) and not to stage 3's deaths (%d)" % [_s["arena_deaths"], _s["stage3_deaths"]])
 	_report("one retry per held R", _s["after_r"] == "boss" and _s["clears_while_held"] == 2 and _s["clears_after_release"] == 3,

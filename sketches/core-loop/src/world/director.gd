@@ -112,6 +112,15 @@ const MIN_INTERVAL := 1.5
 const FIRST_SPAWN := 4.0
 const HEFT_CAP_STEP := 2
 const HARD_CAP := 24
+# The cap counts an enemy only while it is within HOLD_M of the ball. A pack the ball has rolled past stays where
+# it is, but it no longer holds a slot (13 Nov 2026: the dam's drop-in pack, passed at 4 s, held 3 of the 6
+# slots and the director refused every pack from 10 s to 47 s). The Warden never holds one. A director pack member
+# past LEAVE_M gives up and leaves (world.gd director_held): a completionist's detours otherwise stranded 15 to 25
+# enemies across the park. Past FAR_CEILING enemies alive in all, nothing more comes.
+const HOLD_M := 150.0
+const LEAVE_M := 260.0
+const NEVER_HOLDS := ["warden"]
+const FAR_CEILING := 32
 const ARRIVAL := 1.0
 const AHEAD_SHARE := 0.6
 const AHEAD_CONE := 0.6108652  # 35 degrees
@@ -124,6 +133,14 @@ const RIM_SEEK := 24.0
 const SLOW := 3.0
 const TRIES := 8
 const HOME_WINDOW := Vector2(60.0, 250.0)
+# Routes with a fight on them (13 Nov 2026): a crew home is in the window only while it lies within HOME_CONE of the
+# ball's heading, so a crew on a route the ball did not take no longer draws every pack there. A free pack ahead lands
+# beside the riding line the ball is on: a line point LINE_AHEAD m ahead inside AHEAD_CONE, LINE_SIDE m off it.
+const HOME_CONE := 0.8726646  # 50 degrees
+const LINE_AHEAD := Vector2(60.0, 100.0)
+const LINE_SIDE := Vector2(12.0, 20.0)
+# Pilot line points sit up to about 95 m apart; _line_spot walks each segment in steps this long.
+const LINE_STEP := 10.0
 # Past the stage's elite arrival, the chance at elite_rate 1.0 that an authored arrival is the
 # elite pack again; never two elites in a row.
 const ELITE_REPEAT := 0.1
@@ -350,7 +367,7 @@ func advance(delta: float, alive_count: int, ball := Vector2.ZERO, velocity := V
 				due.append(spawn)
 	if paused:
 		return due
-	var quiet := _breathe(delta, ball)
+	var quiet := _breathe(delta, ball, _heading(velocity, forward))
 	if mode == "credit":
 		if not quiet:
 			_credit_advance(delta, alive_count + due.size(), ball, velocity, forward)
@@ -398,6 +415,21 @@ func _timer_pack(alive: int, ball: Vector2, velocity: Vector2, forward: Vector2)
 		return true
 	_place_pack(at, pack, ball, false, room)
 	return true
+
+
+# Whether an enemy of `kind` at `at` holds one of the cap's slots with the ball at `ball`.
+static func holds(kind: String, at: Vector2, ball: Vector2) -> bool:
+	return not NEVER_HOLDS.has(kind) and at.distance_to(ball) <= HOLD_M
+
+
+# Whether a director pack member at `at` has been left far enough behind to leave the stage.
+static func leaves(at: Vector2, ball: Vector2) -> bool:
+	return at.distance_to(ball) > LEAVE_M
+
+
+# The count advance() is given: `held` enemies near the ball, or the hard cap once `total` alive reach FAR_CEILING.
+static func held_count(held: int, total: int) -> int:
+	return HARD_CAP if total >= FAR_CEILING else held
 
 
 func income_per_second() -> float:
@@ -868,6 +900,15 @@ func home_live(id: String) -> bool:
 	return false
 
 
+# Every live crew home and where it stands: [{id, at: Vector2}] (site_markers.gd puts a steam plume over each).
+func live_homes() -> Array:
+	var out := []
+	for home in homes:
+		if home_live(home.id):
+			out.append({"id": home.id, "at": _home_at(home)})
+	return out
+
+
 func break_home(id: String) -> bool:
 	for home in homes:
 		if home.id != id or home.broken:
@@ -907,12 +948,44 @@ func _ahead(at: Vector2, ball: Vector2) -> bool:
 	return is_finite(ahead) and ahead >= HOME_WINDOW.x and ahead <= HOME_WINDOW.y
 
 
-func _window_homes(ball: Vector2) -> Array[Dictionary]:
+func _window_homes(ball: Vector2, heading := Vector2.ZERO) -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
 	for home in homes:
-		if home_live(home.id) and not _stopped_kinds.has(home.enemy) and _ahead(_home_at(home), ball):
+		if home_live(home.id) and not _stopped_kinds.has(home.enemy) and _ahead(_home_at(home), ball) \
+				and facing(heading, _home_at(home) - ball, HOME_CONE):
 			out.append(home)
 	return out
+
+
+# Whether `to` lies within `cone` radians of `heading`; true with no heading.
+static func facing(heading: Vector2, to: Vector2, cone: float) -> bool:
+	return heading == Vector2.ZERO or to == Vector2.ZERO or absf(heading.angle_to(to)) <= cone
+
+
+# A spot beside the riding line ahead of the ball, or INF: a point on a pilot line LINE_AHEAD away inside AHEAD_CONE of
+# `heading`, moved LINE_SIDE to one side, and safe (off every corridor, out of breathers).
+func _line_spot(ball: Vector2, heading: Vector2) -> Vector2:
+	var ahead: Array[Vector2] = []
+	for line in _corridors.pilot_lines():
+		for i in range(1, line.size()):
+			var a: Vector2 = line[i - 1]
+			var b: Vector2 = line[i]
+			var steps := maxi(1, int(a.distance_to(b) / LINE_STEP))
+			for k in steps:
+				var p := a.lerp(b, float(k + 1) / steps)
+				var d := p.distance_to(ball)
+				if d >= LINE_AHEAD.x and d <= LINE_AHEAD.y and facing(heading, p - ball, AHEAD_CONE):
+					ahead.append(p)
+	if ahead.is_empty():
+		return Vector2.INF
+	for _i in TRIES:
+		var k := _rng.randi_range(0, ahead.size() - 1)
+		var along := heading if heading != Vector2.ZERO else (ahead[k] - ball).normalized()
+		var side := Vector2(-along.y, along.x) * (1.0 if _rng.randf() < 0.5 else -1.0)
+		var spot: Vector2 = ahead[k] + side * _rng.randf_range(LINE_SIDE.x, LINE_SIDE.y)
+		if play_rect.has_point(spot) and spot.distance_to(ball) >= MIN_GAP and _park_safe(spot):
+			return spot
+	return Vector2.INF
 
 
 
@@ -1007,11 +1080,11 @@ func _home_spot(home: Dictionary, ball: Vector2, preferred := Vector2.ZERO, assi
 # Whether the ball's free packs wait this tick, spending delta of its breather's BREATH_S: it is inside a breather with
 # quiet left and no live crew home is in the window ahead. A crew home is an authored fight the map places (and
 # park_breath_test measures); a breather quiets only the director's own packs.
-func _breathe(delta: float, ball: Vector2) -> bool:
+func _breathe(delta: float, ball: Vector2, heading := Vector2.ZERO) -> bool:
 	var id := breather_at(ball)
 	if id == "" or float(breath_used.get(id, 0.0)) >= BREATH_S:
 		return false
-	if _park_map != null and not _window_homes(ball).is_empty():
+	if _park_map != null and not _window_homes(ball, heading).is_empty():
 		return false
 	breath_used[id] = float(breath_used.get(id, 0.0)) + delta
 	return true
@@ -1033,7 +1106,7 @@ func in_breather(p: Vector2) -> bool:
 func _park_safe(spot: Vector2) -> bool:
 	if in_breather(spot):
 		return false
-	for line in _corridors._park_pilot_lines:
+	for line in _corridors.pilot_lines():
 		for i in range(1, line.size()):
 			# A point footprint uses ParkMap's same segment/margin predicate as KE1.
 			var point := {"at": [spot.x, spot.y], "size": [0.0, 0.0, 0.0], "yaw_deg": 0.0}
@@ -1155,17 +1228,26 @@ func compose() -> Array:
 	return kinds
 
 
+# Where the ball is going: its velocity once it moves, else where it faces. Breathers and spawns read the same one.
+static func _heading(velocity: Vector2, forward: Vector2) -> Vector2:
+	return velocity.normalized() if velocity.length() > SLOW else forward.normalized()
+
+
 func spawn_spot(ball: Vector2, velocity: Vector2, forward: Vector2) -> Vector2:
+	var heading := _heading(velocity, forward)
 	if _park_map != null:
-		_forward_homes = _window_homes(ball)
+		_forward_homes = _window_homes(ball, heading)
 		if not _forward_homes.is_empty():
 			for home in _forward_homes:
 				var at := _home_spot(home, ball)
 				if at != Vector2.INF:
 					return at
 			return Vector2.INF
-	var heading := velocity.normalized() if velocity.length() > SLOW else forward.normalized()
 	var ahead := _rng.randf() < AHEAD_SHARE
+	if ahead and _park_map != null and _corridors != null:
+		var by_line := _line_spot(ball, heading)
+		if by_line != Vector2.INF:
+			return by_line
 	for i in TRIES:
 		var angle: float
 		var dist: float

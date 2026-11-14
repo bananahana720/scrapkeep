@@ -98,6 +98,72 @@
     "recipe": "tools/blender/world_one/field_motion.py",
     "build_spec": "world 1 unit 13 clips for the Spillway roster (design-v3/SPILLWAY-ROSTER.md)"
    }
+  },
+  {
+   "id": "netcaster_clips",
+   "path": "res://assets/models/world_one/clips/netcaster_clips.glb",
+   "class": "enemy",
+   "ships": true,
+   "loader": "src/presentation/enemy_clips.gd",
+   "provenance": {
+    "recipe": "tools/blender/world_one/field_motion.py",
+    "build_spec": "W1-87 clips for the rest of the Spillway crew (BACKLOG.md, World 1 enemy life)"
+   }
+  },
+  {
+   "id": "bola_thrower_clips",
+   "path": "res://assets/models/world_one/clips/bola_thrower_clips.glb",
+   "class": "enemy",
+   "ships": true,
+   "loader": "src/presentation/enemy_clips.gd",
+   "provenance": {
+    "recipe": "tools/blender/world_one/field_motion.py",
+    "build_spec": "W1-87 clips for the rest of the Spillway crew (BACKLOG.md, World 1 enemy life)"
+   }
+  },
+  {
+   "id": "swatter_clips",
+   "path": "res://assets/models/world_one/clips/swatter_clips.glb",
+   "class": "enemy",
+   "ships": true,
+   "loader": "src/presentation/enemy_clips.gd",
+   "provenance": {
+    "recipe": "tools/blender/world_one/field_motion.py",
+    "build_spec": "W1-87 clips for the rest of the Spillway crew (BACKLOG.md, World 1 enemy life)"
+   }
+  },
+  {
+   "id": "catch_trap_clips",
+   "path": "res://assets/models/world_one/clips/catch_trap_clips.glb",
+   "class": "enemy",
+   "ships": true,
+   "loader": "src/presentation/enemy_clips.gd",
+   "provenance": {
+    "recipe": "tools/blender/world_one/field_motion.py",
+    "build_spec": "W1-87 clips for the rest of the Spillway crew (BACKLOG.md, World 1 enemy life)"
+   }
+  },
+  {
+   "id": "deflector_clips",
+   "path": "res://assets/models/world_one/clips/deflector_clips.glb",
+   "class": "enemy",
+   "ships": true,
+   "loader": "src/presentation/enemy_clips.gd",
+   "provenance": {
+    "recipe": "tools/blender/world_one/field_motion.py",
+    "build_spec": "W1-87 clips for the rest of the Spillway crew (BACKLOG.md, World 1 enemy life)"
+   }
+  },
+  {
+   "id": "gyro_jammer_clips",
+   "path": "res://assets/models/world_one/clips/gyro_jammer_clips.glb",
+   "class": "enemy",
+   "ships": true,
+   "loader": "src/presentation/enemy_clips.gd",
+   "provenance": {
+    "recipe": "tools/blender/world_one/field_motion.py",
+    "build_spec": "W1-87 clips for the rest of the Spillway crew (BACKLOG.md, World 1 enemy life)"
+   }
   }
  ]
 }

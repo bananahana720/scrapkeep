@@ -72,6 +72,9 @@ const Accretion := preload("res://src/build/accretion.gd")
 const RewardGates := preload("res://src/build/reward_gates.gd")
 const PilotReactions := preload("res://src/presentation/pilot_reactions.gd")
 const MechaMotion := preload("res://src/presentation/mecha_motion.gd")
+const BallLooks := preload("res://src/presentation/ball_looks.gd")
+const PilotGlance := preload("res://src/presentation/pilot_glance.gd")
+const Tuning := preload("res://src/movement/tuning.gd")
 # One pose table per pilot (PILOT-CLIPS section 4.2), by the PILOTS glb stem.
 # Pilot return-to-rest clip built at runtime for GLBs with no idle loop, and the blend an impact
 # gets when it interrupts another one-shot.
@@ -130,6 +133,8 @@ const CHUNK_BANDS := [[12, "small"], [24, "medium"], [Accretion.MAX_CHUNKS, "lar
 const TUCK_FROM := -0.15
 const TUCK_GONE := 0.30
 const POD_TURN_RATE := 10.0
+# Below this speed the ball counts as still for the pilot's glance back at the camera.
+const GLANCE_STILL_SPEED := 0.6
 const POD_TURN_SPEED := 1.5
 const VANE_RATE := 8.0
 # Hoberman weapon ring yaw toward the aim (PILOT-CLIPS section 5, start value).
@@ -519,6 +524,38 @@ func _equipped_variant(id: String) -> String:
 	return String(Cosmetics.row(worn).get("asset", "")) if worn != "" else ""
 
 
+func _worn_tints(player: Node, tint) -> Dictionary:
+	var tints := {"class": player.class_color()}
+	if tint != null:
+		tints["paint"] = tint
+	return tints
+
+
+# The shell the player wears right now (pilot, variant, paint, heft class), fitted under ball
+# for a preview such as the pause menu's build read. Pass back the record it returned last time:
+# the same pilot, variant and paint only update the heft class; anything else refits. {} when
+# even the default base is unavailable (the caller keeps its own stand-in).
+func fit_worn_into(ball: Node3D, player: Node, rec := {}) -> Dictionary:
+	var id := class_id(player)
+	var paint_id := _equipped_paint(id)
+	var tint = paint_tint(id, paint_id) if paint_id != "" else null
+	var variant := _equipped_variant(id)
+	var look := [id, variant, tint]
+	if not rec.is_empty() and rec.get("worn") == look and is_instance_valid(rec.core):
+		set_heft_class(rec, _run_heft_class(), false)
+		_glow_rec(rec, _ready_glow)
+		return rec
+	for key in ["core", "pod"]:
+		var old = rec.get(key)
+		if old != null and is_instance_valid(old):
+			old.get_parent().remove_child(old)
+			old.queue_free()
+	var shell := fit_shell_into(ball, id, variant, _run_heft_class(), _worn_tints(player, tint))
+	if not shell.is_empty():
+		shell["worn"] = look
+	return shell
+
+
 func _run_heft_class() -> int:
 	var run = ctx.get("run") if ctx != null else null
 	if run != null and run.has_method("heft_class"):
@@ -548,9 +585,7 @@ func _fit(rec: Dictionary) -> void:
 	var rolling := player.roll_node().get_parent() as MeshInstance3D
 	rolling.layers = rec.layers
 	rolling.cast_shadow = rec.shadow
-	var tints := {"class": player.class_color()}
-	if tint != null:
-		tints["paint"] = tint
+	var tints := _worn_tints(player, tint)
 	var shell := fit_shell_into(rolling, id, variant, _run_heft_class(), tints, player.pod_mount() if player.has_method("pod_mount") else player.juice_node())
 	if shell.is_empty():
 		return
@@ -645,6 +680,10 @@ func _steer_pod(rec: Dictionary, player, delta: float) -> void:
 		# Motion comes from the real velocity; the pilot remains on the upright Pod.
 		gyro.rotate_object_local(Vector3.RIGHT, v.length() * delta / 0.98)
 	sync_lattice(core, player.roll_node())
+	BallLooks.ride(ball_look(), player.roll_node())
+	var glance = rec.get("glance")
+	if glance != null and is_instance_valid(glance) and ctx != null and ctx.get("camera") != null:
+		glance.observe(_at_rest(rec, v.length()), ctx.camera.global_position, delta)
 	var open := 1.0 if player.kit.gliding else 0.0
 	var kest := {}
 	if rec["class"] == "demolitions_caster" and ctx != null and ctx.spawner != null and ctx.spawner.get("ultimate") != null:
@@ -1059,8 +1098,24 @@ var _ready_glow := false
 func _assets() -> Dictionary:
 	if not _shell_assets_read and shell_assets.is_empty():
 		shell_assets = Cosmetics.asset_paths()
+		shell_assets.merge(BallLooks.asset_paths(ball_look(), SHELLS.keys()), true)
 	_shell_assets_read = true
 	return shell_assets
+
+
+# The ball look the launch asked for (--ball-look, ball_looks.gd); "today" without a tuning. A
+# preview that should show the ball a run will gives its painter a tuning (previewing()).
+func ball_look() -> String:
+	var tuning = ctx.get("tuning") if ctx != null else null
+	return tuning.option(Tuning.BALL_LOOK_KEY) if tuning != null else BallLooks.TODAY
+
+
+# A painter for a preview outside a run (the class card, the customize page): it draws the
+# default ball look, so the preview shows the ball the run will.
+static func previewing() -> Node:
+	var painter: Node = (load("res://src/presentation/hero_assets.gd") as GDScript).new()
+	painter.ctx = {"tuning": Tuning.new()}
+	return painter
 
 
 static func _layer_path(base: String, heft_class: int) -> String:
@@ -1116,6 +1171,10 @@ func shell_layers(pilot: String, variant: String, paths: Dictionary) -> Array[St
 	var base := shell_path(pilot, use, 1, paths)
 	out.append(base if _loadable(base) else "")
 	for n in HEFT_LAYERS:
+		# A ball look is one shell with no heft layers yet; nothing is missing, so nothing warns.
+		if BallLooks.is_look(base):
+			out.append("")
+			continue
 		var path := shell_path(pilot, use, n, paths)
 		if use != "" and not _loadable(path):
 			_warn_logged("shell_layer:%s:%d" % [use, n], "hero_assets: shell variant '%s' lacks its class %d layer; borrowing the default" % [use, n])
@@ -1249,7 +1308,9 @@ func fit_shell_into(ball: Node3D, pilot: String, variant: String, heft_class: in
 	var pod: Node3D = parts.pod
 	core.name = "HeroCore"
 	pod.name = "HeroPod"
-	var rec := {"core": core, "pod": pod, "layers": {}, "variant": variant, "heft": 1, "shown": {}, "tints": tints}
+	BallLooks.replate(ball_look(), core)
+	BallLooks.furnish(ball_look(), pod)
+	var rec := {"core": core, "pod": pod, "layers": {}, "pilot": pilot, "variant": variant, "heft": 1, "shown": {}, "tints": tints}
 	var ring_holders: Array = []
 	for i in HEFT_LAYERS.size():
 		var n: int = HEFT_LAYERS[i]
@@ -1266,6 +1327,10 @@ func fit_shell_into(ball: Node3D, pilot: String, variant: String, heft_class: in
 				for key in ["core", "pod"]:
 					var part: Node3D = layer_parts[key]
 					part.transform = Transform3D.IDENTITY
+					if key == "core":
+						BallLooks.replate(ball_look(), part, n)
+					else:
+						BallLooks.strip(ball_look(), part)
 					(core_holder if key == "core" else pod_holder).add_child(part)
 				# A layer's WeaponRing rides the base ring, so a heft module turns with the aim;
 				# its holder shows and hides with the layer's Pod holder.
@@ -1296,6 +1361,8 @@ func fit_shell_into(ball: Node3D, pilot: String, variant: String, heft_class: in
 	# visibility_changed fires only inside the tree; a fit outside it syncs here.
 	for pair in ring_holders:
 		pair[1].visible = pair[0].visible
+	# Every caller's shell wears the look's own materials: the game, the pause read, the previews.
+	BallLooks.dress(ball_look(), rec)
 	if _ready_glow:
 		_glow_rec(rec, true)
 	return rec
@@ -1613,6 +1680,11 @@ func fit_companion_skin(model: Node3D, id: String) -> Array:
 # while the set piece holds the ride) instead of a bone reset. A GLB without idle_loop keeps
 # the old stop and reset and warns once per pilot. Code moves the mecha (mecha_motion.gd).
 
+# Whether the pilot is free to glance back: the ball sits still and no reaction clip plays.
+func _at_rest(rec: Dictionary, speed: float) -> bool:
+	return speed < GLANCE_STILL_SPEED and rec.get("reaction", "") == ""
+
+
 func _fit_pilot(rec: Dictionary) -> void:
 	rec["mecha"] = MechaMotion.new(rec.pod, rec.core, rec["class"], Array(_pilot_table(rec["class"]).get("machinery", [])))
 	var fitted := fit_pilot_into(rec.pod, rec["class"], rec.player.class_color())
@@ -1622,6 +1694,8 @@ func _fit_pilot(rec: Dictionary) -> void:
 	var animator = fitted.get("animator")
 	rec["animator"] = animator
 	rec["pilot"] = pilot
+	# The window shows the pilot's back, so under a plated look the pilot glances back at rest.
+	rec["glance"] = PilotGlance.seat(pilot) if BallLooks.PLATED.has(ball_look()) else null
 	rec["reaction"] = ""
 	rec["priority"] = -1
 	rec["cooldowns"] = {}
@@ -1642,7 +1716,7 @@ func _fit_pilot(rec: Dictionary) -> void:
 func fit_pilot_into(pod: Node3D, class_id: String, class_color: Color) -> Dictionary:
 	if not PILOTS.has(class_id):
 		return {}
-	var pilot := _scene(PILOTS[class_id]) as Node3D
+	var pilot := _scene(ModelVariants.path(PILOTS[class_id])) as Node3D
 	if pilot == null:
 		return {}
 	pilot.name = "AnimatedPilot"
@@ -1651,6 +1725,7 @@ func fit_pilot_into(pod: Node3D, class_id: String, class_color: Color) -> Dictio
 		hide_placeholder(placeholder)
 	pod.add_child(pilot)
 	paint(pilot, {"class": class_color})
+	BallLooks.light_pilot(ball_look(), pilot)
 	var animator := pilot.find_child("AnimationPlayer", true, false) as AnimationPlayer
 	return {"pilot": pilot, "animator": animator}
 

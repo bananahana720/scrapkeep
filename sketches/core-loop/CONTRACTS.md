@@ -151,6 +151,7 @@ Every signal has a row in `event_kinds.gd` keyed by its name. `spine_event_kinds
 | `boosted` | `direction: Vector3` | spine ball | the ground boost fired |
 | `dashed` | `direction: Vector3` | spine ball | the air dash fired |
 | `landed` | `impact: float` | spine ball | a hard landing, in m/s of fall |
+| `bumped` | `at: Vector3, normal: Vector3, speed: float` | spine ball | the ball met a world face that is not a floor (wall, cliff, structure side, ceiling) at `speed` m/s of closing, at least `Contact.BUMP_MIN_SPEED`, at most once per `Contact.BUMP_GAP_S`; `normal` points face to ball |
 | `slammed` | `at: Vector3, strength: float, flatness: float` | spine ball | a slam landed; flatness 1 is flat ground |
 | `grapple_fired` | `anchor: Vector3` | spine ball | the hook attached |
 | `grapple_released` | none | spine ball | the hook let go |
@@ -158,6 +159,7 @@ Every signal has a row in `event_kinds.gd` keyed by its name. `spine_event_kinds
 | `dismounted` | `velocity: Vector3` | spine ball | left the pylon; the velocity is the slingshot, zero for an E drop |
 | `enemy_spawned` | `enemy: Node3D, kind: String` | A | an enemy entered the stage |
 | `enemy_struck` | `enemy: Node3D, kind: String, force: float` | A (from `strike`) | a resolved hit; kind is `stomp`, `ram`, `slam`, `arc`, `turret`, `runner` or `synergy` (a build synergy's shockwave, shrapnel, frost ring or blade: resolved as the damage given, never a landing, so no weak point that takes a slam takes it) |
+| `enemy_walled` | `enemy: Node3D, at: Vector3, normal: Vector3, speed: float` | the enemy itself (`enemy.gd` `_wall_slam`) | a knock threw the enemy into a world face at `speed` m/s into it, at least `Contact.WALL_SLAM_SPEED`; it staggers, once per knock; presentation only: the knock, the body's path and the damage are unchanged |
 | `strike_deflected` | `enemy: Node3D, kind: String, punch: float, plating: float` | A | a hit below plating chipped for 20% |
 | `shot_fired` | `weapon_id: String, from: Vector3, to: Vector3` | A | a weapon fired; the segment it drew |
 | `special_used` | `special_id: String, at: Vector3` | A | a class special fired |
@@ -224,7 +226,7 @@ Helpers: `EventKinds.row(kind)`, `color(kind)`, `priority(kind)`, `hud(kind, fie
 
 Per-kind stats, transformer ids and `register_part` are documented in `src/combat/README.md`.
 
-- `spawn_enemy(kind: String, at: Vector3) -> Node3D`. The kinds are `chaser`, `lobber`, `miniboss`, `warden` and `vault`, and A may add more. The call adds the enemy under `ctx.root`, wires its damage to `run.damage` and its death to `run.record_kill`, and emits `enemy_spawned`. It does not check `ctx.calm`.
+- `spawn_enemy(kind: String, at: Vector3, affix_id := "", perch := Vector3.INF, health_scale: float = 1.0) -> Node3D`. `health_scale` multiplies the health the enemy would otherwise spawn with (the Stocktake yard's count 6 and later). The kinds are `chaser`, `lobber`, `miniboss`, `warden` and `vault`, and A may add more. The call adds the enemy under `ctx.root`, wires its damage to `run.damage` and its death to `run.record_kill`, and emits `enemy_spawned`. It does not check `ctx.calm`.
 - `strike(enemy: Node3D, kind: String, force: float)` resolves one hit into damage against plating and emits `enemy_struck`, plus `strike_deflected` below plating. The spine calls it for ball contacts: `stomp` (force is fall speed), `ram` (force is speed, at the cruise tier or above) and `slam` (force is knockback after falloff). Combat's own weapons call it too.
 - `punch_now() -> float` is the punch the player would land now: ram punch at the ball's planar speed from the cruise tier up, or the current weapon's per-hit damage, whichever is larger.
 - `plating_of(enemy) -> float`.
@@ -347,6 +349,7 @@ During play the screen is four horizontal bands, as shares of the visible height
 - The middle between `toasts` and `prompts` is the play view and the reticle.
 - A toast whose words are already showing is not repeated; the showing one stays up for another full beat.
 - A module that labels something in the world uses `src/ui/world_prompt.gd` (a `Label`), sets its text and colour, and calls `attach(anchor, offset, reach)`. It never uses a `Label3D` for words. The HUD places every prompt each frame: nearest first, at most 3, under its anchor's column where there is room, clamped inside `prompts`, never overlapping another prompt.
+- Grey panel pickup lines (`src/ui/pickup_lines.gd`) rise from the top edge of `bottom` at its left, over the speed and cogs readouts, in at most two rows; `presentation/panel_fx.gd` says what each line says and when (its `popped` signal), and a prompt stands clear of the lines while they show (PF-14).
 - Screens (title, class select, death, summary), the field notes and the tuning panel draw only while flow is out of play or the game is paused, when the HUD bands are hidden.
 - Presentation's discovery banner follows the same rule: it belongs in `toasts` or in the middle view, never in `top` or `prompts`.
 
@@ -373,13 +376,15 @@ The HUD's ability bar (`src/ui/ability_bar.gd`) draws one input, an ordered arra
 | `icon` | String | an Icons id (below): `ab_<pilot>_<role>`, the role being `weapon`, `move`, `special` or `smash` |
 | `key` | String | a key glyph id: `key_lmb`, `key_rmb`, `key_f`, `key_ctrl` |
 | `cooldown_frac` | float, 0 to 1 | the share of the recharging charge still to go; 0 when every charge is in |
+| `pool` | string, optional | the slot whose charges this one spends (its own name unless the row names another) |
+| `refill` | string, optional | `time` for a cooldown (the bar draws a clock), `contact` for pressure only rolling and contact refill (the bar draws an empty charge: dashed frame, hollow pips); absent reads as `time` |
 | `charges` | int, 0 to `max_charges` | charges stocked now |
 | `max_charges` | int, 1 or more | the stockpile cap; pips show under the key only when it is above 1 |
 | `state` | String | one of `ready`, `cooling`, `active`, `unavailable` |
 | `gauge` | float, 0 to 1 | the fill of a charging hold-gauge-release; the reticle's gauge ring shows the fullest |
 
 - `ready` means pressing the key does the thing now. `cooling` means no charge is in. `active` means the ability is running or its gauge is charging. `unavailable` means the key does nothing useful now.
-- The bar tells the states apart by shape as well as colour. `ready` has a solid frame. `cooling` has a petrol wedge that uncovers the icon clockwise from twelve. `active` has a doubled frame in the class colour and a lifted slot. `unavailable` has a faded icon struck through. A slot going from `cooling` to `ready` swells once, and the swell and the charge pips wear the class row's `shape`.
+- The bar tells the states apart by shape as well as colour. `ready` has a solid frame. `cooling` with a `time` refill is a clock: a petrol wedge that shrinks clockwise from twelve under the icon, with a sand hand at its edge; `cooling` with a `contact` refill is an empty charge, a dashed frame over the pool's hollow pips. During the set piece the marks dim and solid plates stay behind them. `active` has a doubled frame in the class colour and a lifted slot. `unavailable` has a faded icon struck through. A slot going from `cooling` to `ready` swells once, and the swell and the charge pips wear the class row's `shape`.
 - **Publisher (W3).** `player.abilities.slots()` (`src/core/ability_state.gd`). The HUD reads it every frame through `src/ui/ability_slots.gd`, which names icons and keys the Icons way. An `icon` that is not an Icons id becomes `ab_<pilot>_<role>`, the pilot being the class row's `display_name` in lower case. A `key` label such as `LMB` or `F` becomes `key_lmb` or `key_f`. A record that then fails `AbilitySlots.valid_slot` empties the bar and warns once.
 - **Reticle gauge.** While any slot's `gauge` is above 0, a ring round the reticle fills clockwise from twelve, linearly, in the class colour. It closes when the gauge is full.
 - A slot `key` may also be a glyph id (`key_*`, `pad_*`), which `normalized()` passes through.
@@ -454,6 +459,8 @@ Every enemy threat is a committed telegraph (`src/combat/telegraph.gd`) or boss 
 
 Instant, projectile and lane also draw their height band as posts and a rail at `reach`.
 
+The landing (FX-05): on the tick a hostile enemy telegraph goes live, an instant, projectile or lane on the ground leaves an ink crack ring and a dust kick at its committed edge for half a second (`Threat.flash`, `Threat.landing`), and the attacker's body wears HAZARD for two physics frames on its strike (`enemy.gd` `_show_strike`). A wave, an air-only net, an aerial ring, a harmless field and the player's own marks leave no crack. Display only: nothing reads it for damage.
+
 Every type's warning sound plays on the frame the threat is declared (`audio.gd` `_warn_threat`). A LANE also has a release half: both nodes emit `went_live` when the warning ends (`Hazard.step` reaching `warn_seconds`, `Telegraph.set_progress` reaching 1), and on that frame the held hum stops and `threat_tear` plays. The tear is fire time (SOUND-STORY section 7), so it lands on the tick the charge, lunge or beam starts, at any warning length.
 
 The type is a required argument everywhere; no factory defaults it, and a node committed without one pushes an error.
@@ -472,7 +479,7 @@ The type is a required argument everywhere; no factory defaults it, and a node c
 
 - **The class row** (`src/core/class_def.gd`) is the one source for a character: `id`, `display_name`, `role`, `species`, `pitch`, the four ability ids (`weapon_id`, `movement_id`, `special_id`, `smash_id`), `color`, `shape` (an event_kinds shape; the indicator's rim ticks), `motif` (the leitmotif id, `sable`, `rivet` or `kest`, whose notes live in W5's motif table in `harmony.gd`), `sound` (a synth id standing in now), `bible_home` and `synergy_hooks`. `ClassDef.all()` is ordered Sable, Rivet, Kest, and flow's class index follows it. `SABLE_COLOR`, `RIVET_COLOR` and `KEST_COLOR` are what class-owned event rows and the indicator read.
 - **The ability state** (`src/core/ability_state.gd`) lives on the ball as `player.abilities` (the kit's). Movement and combat spend from it, and nothing else writes it. Slots are `weapon`, `movement`, `special` and `smash`.
-  - `slots() -> Array` returns W1's ability-slot records in bar order: `{slot, id, icon, key, cooldown_frac, charges, max_charges, state, gauge}`. `state` is `ready`, `cooling`, `active` or `unavailable`. `cooldown_frac` is the share of the recharging charge still to go, 0 when full. `gauge` is the fill of a charging hold, 0 to 1, for the reticle ring.
+  - `slots() -> Array` returns W1's ability-slot records in bar order: `{slot, id, icon, key, cooldown_frac, charges, max_charges, state, gauge, pool, refill}` (W1-06 added `pool` and `refill`). `state` is `ready`, `cooling`, `active` or `unavailable`. `cooldown_frac` is the share of the recharging charge still to go, 0 when full. `gauge` is the fill of a charging hold, 0 to 1, for the reticle ring.
   - `set_max_charges(slot, n)` and `set_cooldown_scale(slot, s)` are the item seams. Charges recharge one at a time and stockpile. No scale takes a cooldown under `COOLDOWN_FLOOR` (0.4 s), and `AbilityState.floored(base, scale)` applies the same floor to cooldowns outside the slots, such as combat's `rocket_cooldown_scale`.
   - `Gauge` is the one hold-gauge-release rule. Only ticks with the key down fill it. Release fires at the fraction reached, a full gauge fires by itself 0.5 s later, and a cancel spends nothing.
 - **The grammar** is the same for every class: LMB weapon, RMB class movement, F hold-gauge-release special, Ctrl smash, Space jump, Shift boost. `Intent` adds `special_held`, `special_released`, `movement_pressed`, `movement_held`, `movement_released`, `fire_released` and `cancel_pressed`. The ball turns an RMB press made during any charge into `cancel_pressed`. Sable's grapple rides RMB through the intent; `game.gd` has no RMB branch.

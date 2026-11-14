@@ -31,6 +31,9 @@ func _initialize() -> void:
 
 
 func _run() -> void:
+	# Held looks are the StandardMaterial3D line layers of the haze and classic looks; the soft looks
+	# draw their lines with the shared, cached mark shaders (telegraph_clear_look_test).
+	Threat.set_look("haze")
 	var world := Node3D.new()
 	root.add_child(world)
 	var first_layers := {}

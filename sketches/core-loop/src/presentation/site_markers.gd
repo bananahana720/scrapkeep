@@ -11,6 +11,9 @@ extends Node3D
 # - cage: a caged pilot not yet freed (rescue_site.gd). A smoke signal: pale puffs rising in an even beat.
 # - rogue: the stage's rogue site while its machine still sleeps (world.gd rogue_plan). Works exhaust: a dark column
 #   that chugs in puffs that drift off the beat, the rogue's old work cycle (STORY-MAP section 3).
+# - crew: a Fleet crew home still standing (director.gd live_homes()), so a fork shows which branch holds the fight.
+#   A work crew's steam: a squat column of quick, even puffs, lower than a cache's wisp and a cage's signal
+#   (13 Nov 2026, "Give maps routes and life": a route with a fight on it reads from the fork).
 # - furnace: Brindle's Slag Bowl, ahead of the world's last stage's exit gate where its launch lands (Arena.place_ahead).
 #   A tall works column lit from below by the furnace (hand-overs audit T6, ruling cv: the next place is in view before
 #   you leave). It is a horizon sign: it shows from the drop-in, so it has no far fade, and past PULL_M it is drawn
@@ -40,6 +43,8 @@ const KINDS := {
 		"sway": 0.12, "sway_hz": 0.1, "rise": 0.09, "grain": Vector2(2.5, 5.0), "puffs": 4.0, "stutter": 0.0},
 	"rogue": {"tint": WORKS_SMOKE, "height": 48.0, "width": 20.0, "alpha": 1.0, "foot": 0.2, "crown": 0.9, "rim_dark": 1.0,
 		"sway": 0.08, "sway_hz": 0.07, "rise": 0.07, "grain": Vector2(2.0, 4.0), "puffs": 6.0, "stutter": 0.8},
+	"crew": {"tint": CREW_SMOKE, "height": 30.0, "width": 16.0, "alpha": 1.3, "foot": 0.1, "crown": 0.8, "rim_dark": 0.6,
+		"sway": 0.05, "sway_hz": 0.2, "rise": 0.16, "grain": Vector2(3.0, 6.0), "puffs": 9.0, "stutter": 0.0},
 	"furnace": {"tint": WORKS_SMOKE, "height": 170.0, "width": 80.0, "alpha": 1.8, "foot": 0.3, "crown": 0.95, "rim_dark": 0.7,
 		"sway": 0.06, "sway_hz": 0.05, "rise": 0.035, "grain": Vector2(2.0, 3.5), "puffs": 0.0, "stutter": 0.0,
 		"glow": Color(FURNACE_GLOW, 0.85), "far": true, "near": Vector2(60.0, 140.0)},
@@ -143,6 +148,11 @@ static func sites(world, scrap, terrain) -> Array:
 	if rescue != null:
 		for cage in rescue.waiting():
 			out.append({"key": "cage:" + String(cage["quest"]), "kind": "cage", "at": cage["at"]})
+	var director = world.get("director") if world != null else null
+	if director != null and director.has_method("live_homes"):
+		for home in director.live_homes():
+			var spot: Vector2 = home["at"]
+			out.append({"key": "crew:" + String(home["id"]), "kind": "crew", "at": _ground(terrain, Vector3(spot.x, 0.0, spot.y))})
 	var plan = world.get("rogue_plan") if world != null else null
 	if plan is Dictionary and not plan.is_empty():
 		var at: Vector2 = plan["at"]

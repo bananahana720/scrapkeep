@@ -3,7 +3,7 @@ extends RefCounted
 
 const Palette := preload("res://src/core/palette.gd")
 
-# Reads an enemy's authored GLB into the parts its script casts into meshes: one
+# Reads an enemy's authored GLB (or its Tripo sibling under --models=tripo, model_variants.gd) into the parts its script casts into meshes: one
 # {name, mesh, xform, flash} per MeshInstance3D, every surface set to one white
 # vertex-coloured finish, flash = the surface whose source material is "fleet_paint"
 # (-1 when none). Returns [] when the file is missing or is not a scene. The caller
@@ -12,7 +12,8 @@ const Palette := preload("res://src/core/palette.gd")
 static var _warned: Dictionary = {}
 
 
-static func parts(path: String, tag: String, bake_parents := false) -> Array:
+static func parts(authored: String, tag: String, bake_parents := false) -> Array:
+	var path := ModelVariants.path(authored)
 	if not ResourceLoader.exists(path):
 		return []
 	var packed := load(path) as PackedScene
