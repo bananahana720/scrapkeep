@@ -327,7 +327,9 @@ func base_max_hp() -> float:
 	return float(pilot.base_hp) + float(pilot.hp_growth) * (_heft_class - 1)
 
 
-func advance(delta: float) -> void:
+# One tick of the run's clocks and of hull regen. `rolling` is whether the ball is in the cruise speed tier or
+# above this tick (flow hands it the player's tier); a caller with no ball leaves it true.
+func advance(delta: float, rolling := true) -> void:
 	if not alive():
 		return
 	run_time += delta
@@ -335,8 +337,15 @@ func advance(delta: float) -> void:
 	escape_window_left = maxf(0.0, escape_window_left - maxf(0.0, delta))
 	since_damage += delta
 	# pilot.regen_* move only on the HARD ladder's top rungs (run_tier.gd LADDER, Andrew 27 Oct option 3).
-	if since_damage > REGEN_DELAY * ChallengeDials.f("pilot.regen_delay_mult") and hp < max_hp:
+	# Where the stage's dial is on, only a rolling ball heals (wave 37 unit D7): the wait after a hit runs at any
+	# speed, the healing does not.
+	if since_damage > REGEN_DELAY * ChallengeDials.f("pilot.regen_delay_mult") and hp < max_hp and (rolling or not regen_needs_roll()):
 		hp = minf(max_hp, hp + REGEN_RATE * ChallengeDials.f("pilot.regen_rate_mult") * delta)
+
+
+# Whether this stage heals only a ball rolling in the cruise tier or above (ChallengeDials pilot.regen_rolling_by_stage).
+func regen_needs_roll() -> bool:
+	return ChallengeDials.by_stage_or("pilot.regen_rolling_by_stage", stage, 0.0) > 0.0
 
 
 func add_scrap(amount: int, at: Vector3) -> void:
