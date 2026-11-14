@@ -1,0 +1,53 @@
+{
+  "look": "today",
+  "pilot": "pylon_engineer",
+  "pilot_seen": {
+    "fast": {
+      "pilot_height_px": 62,
+      "pilot_pixels": 2045,
+      "seen_median": 0.542,
+      "seen_rest_pose": 0.5,
+      "seen_worst": 0.489
+    },
+    "rest": {
+      "pilot_height_px": 117,
+      "pilot_pixels": 6988,
+      "seen_median": 0.539,
+      "seen_rest_pose": 0.492,
+      "seen_worst": 0.479
+    }
+  },
+  "see_through_surfaces": 0,
+  "shots": {
+    "chase_fast": {
+      "draw_calls": 60,
+      "primitives": 29136
+    },
+    "chase_rest": {
+      "draw_calls": 40,
+      "primitives": 29152
+    },
+    "hero": {
+      "draw_calls": 57,
+      "primitives": 43458
+    },
+    "side": {
+      "draw_calls": 41,
+      "primitives": 29154
+    },
+    "spin_a": {
+      "draw_calls": 40,
+      "primitives": 29152
+    },
+    "spin_b": {
+      "draw_calls": 40,
+      "primitives": 29152
+    },
+    "spin_c": {
+      "draw_calls": 40,
+      "primitives": 29152
+    }
+  },
+  "surfaces": 20,
+  "triangles": 14576
+}
