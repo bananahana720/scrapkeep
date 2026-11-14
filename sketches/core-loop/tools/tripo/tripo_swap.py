@@ -2,7 +2,7 @@
 
 blender -b --factory-startup -P tools/tripo/tripo_swap.py -- --in tripo.glb --ref authored.glb --node NodeName \
     --out out.glb [--yaw DEG] [--max-tris N] [--fit box|height|fill] [--region "x0,y0,z0,x1,y1,z1"]
-    [--bright keep|match]
+    [--bright keep|match] [--crop "lo,hi"]
 
 For models whose code animates named parts (enemy_clips.gd ROWS): the authored hierarchy, pivots,
 sockets and the other parts stay as they are; only `--node`'s mesh is replaced. The Tripo mesh is
@@ -17,6 +17,10 @@ for a body that holds a frame or a mast the game's own drawing depends on (the n
 then caps the whole node, kept faces included.
 With --bright match the sampled texture is lifted until the node's mean brightness (kept faces included) reaches the
 authored node's; the line printed at the end gives both means (lum, lum_ref) either way.
+With --crop "lo,hi" (fractions of the generated mesh's height, 0 at its base, 1 at its top) the generated faces
+whose centres lie outside that band are dropped before the fit, so feet or a cap do not take part of the fitted
+box; the cut end is left open, so use it where the cut sits on the ground or inside another part. The band must
+satisfy 0 <= lo < hi <= 1 and keep at least one face, or the script stops.
 The texture never ships. Chain runs (out of one as --ref of the next) to swap several nodes.
 Prints one JSON line with counts.
 """
@@ -26,7 +30,7 @@ import numpy as np
 from mathutils import Vector, Matrix
 
 argv = sys.argv[sys.argv.index("--") + 1:]
-opt = {"yaw": "0", "max-tris": "0", "fit": "box", "region": "", "bright": "keep"}
+opt = {"yaw": "0", "max-tris": "0", "fit": "box", "region": "", "bright": "keep", "crop": ""}
 i = 0
 while i < len(argv):
     opt[argv[i][2:]] = argv[i + 1]; i += 2
@@ -127,6 +131,20 @@ mw = ob.matrix_world.copy(); ob.parent = None; ob.matrix_world = mw
 bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
 me = ob.data
 me.transform(Matrix.Rotation(math.radians(float(opt["yaw"])), 4, "Z"))
+if opt["crop"]:
+    try:
+        lo, hi = [float(x) for x in opt["crop"].split(",")]
+    except ValueError:
+        raise SystemExit("tripo_swap: --crop takes two numbers \"lo,hi\", not %r" % opt["crop"])
+    if not (0.0 <= lo < hi <= 1.0):
+        raise SystemExit("tripo_swap: --crop needs 0 <= lo < hi <= 1, not %r" % opt["crop"])
+    z0 = min(v.co.z for v in me.vertices); zh = max(max(v.co.z for v in me.vertices) - z0, 1e-6)
+    bm = bmesh.new(); bm.from_mesh(me)
+    out = [f for f in bm.faces if not (lo <= (f.calc_center_median().z - z0) / zh <= hi)]
+    if len(out) == len(bm.faces):
+        raise SystemExit("tripo_swap: --crop %s keeps no face" % opt["crop"])
+    bmesh.ops.delete(bm, geom=out, context="FACES")
+    bm.to_mesh(me); bm.free()
 mn = Vector([min(v.co[k] for v in me.vertices) for k in range(3)])
 mx = Vector([max(v.co[k] for v in me.vertices) for k in range(3)])
 ext, rext = mx - mn, lmx - lmn
