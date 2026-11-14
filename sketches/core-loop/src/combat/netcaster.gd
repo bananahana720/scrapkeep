@@ -53,6 +53,7 @@ func _build_tool() -> void:
 	body.set_surface_override_material(parts["flash"], _material)
 	dress.add_child(body)
 	_net = _box(Vector3(2.4, 1.6, 0.04), Palette.HAZARD, Vector3(0.0, MAST_HEIGHT - CREW_HALF - 0.9, -0.3), 0.9)
+	_net.name = "NetcasterNet"
 
 
 static func _parts() -> Dictionary:

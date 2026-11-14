@@ -317,13 +317,18 @@ export function failingChecks(output) {
 // .mcp.json is the one root file a tool requires there: Claude Code reads project MCP servers
 // only from the repo root (the Godot MCP, Andrew 12 Nov 2026).
 export const ROOT_FILES_ALLOWED = new Set([".mcp.json"]);
+// A project skill's link is the one symlink a check requires: `npm run check:skills` fails a
+// skill under .agents/skills/ that has no .claude/skills/<name> link (.agents/skills/README.md),
+// and check:skills is what proves the link points at that skill.
+export const SKILL_LINK = /^\.claude\/skills\/[a-z0-9-]+$/;
 export function hygieneFindings(rawLines, baseTopLevel) {
   const findings = [];
   for (const line of rawLines) {
     const match = /^:(\d+) (\d+) \S+ \S+ A\t(.+)$/.exec(line);
     if (!match) continue;
     const [, , mode, file] = match;
-    if (mode === "120000") findings.push(`symlink added: ${file}`);
+    if (mode === "120000" && SKILL_LINK.test(file)) continue;
+    else if (mode === "120000") findings.push(`symlink added: ${file}`);
     else if (ROOT_FILES_ALLOWED.has(file)) continue;
     else if (!file.includes("/")) findings.push(`root file added: ${file}`);
     else if (!baseTopLevel.has(file.split("/")[0])) findings.push(`new top-level folder: ${file}`);

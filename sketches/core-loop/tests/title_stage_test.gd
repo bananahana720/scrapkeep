@@ -40,8 +40,8 @@ func _run() -> void:
 	var built: Array = display.stage.find_children("*", "MeshInstance3D", true, false).filter(
 		func(view): return view.is_visible_in_tree() and view.layers != 0 and view.mesh is PrimitiveMesh)
 	_t.eq("the deck draws no code-built shapes", built.map(func(view): return String(view.name)), [])
-	for prop in ["Barge", "Brindle"]:
-		_t.check(prop + " is on the deck from its model", display.stage.get_node_or_null(prop) != null)
+	for row in display.DECK:
+		_t.check(String(row[0]) + " is on the deck from its model", display.stage.get_node_or_null(String(row[0])) != null)
 	for pilot in ["SableShell", "RivetShell", "KestShell"]:
 		var shell: Node = display.stage.get_node_or_null(pilot)
 		_t.check(pilot + " has real core, pod and seated pilot", shell != null and shell.find_child("Core", true, false) != null

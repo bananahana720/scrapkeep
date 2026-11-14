@@ -5,6 +5,7 @@ const ItemGen := preload("res://src/build/item_gen.gd")
 const Palette := preload("res://src/core/palette.gd")
 const Synergies := preload("res://src/build/synergies.gd")
 const TierMark := preload("res://src/build/tier_mark.gd")
+const ModelVariants := preload("res://src/presentation/model_variants.gd")
 
 # Scrap becomes your build, on the ball. Mass (DEMO-SPEC heft) shows as chunks stuck
 # to the surface, and each part as a piece of hardware whose shape says its family and
@@ -50,6 +51,10 @@ const RARITY_COLORS := {
 	"evolved": Palette.ANCIENT,
 }
 const ICE := Color("c8f0ff")
+# A part's own shape, shown only with --models=tripo (tools/tripo/README.md): one untextured mesh,
+# base at the origin, +Y out of the shell, at most 0.65 m tall and 0.6 m across (tripo_part.py). The
+# rarity colour still paints it.
+const PART_GLB := "res://assets/models/item_parts/part_%s_tripo.glb"
 # One colour per tag, so a synergy's ring says what it is made of.
 const TAG_COLORS := {
 	"frost": ICE, "arc": Palette.ARC, "kinetic": Palette.COPPER, "split": Palette.SAND,
@@ -68,6 +73,7 @@ var _shell_class := 1
 # True while the ball wears a Hoberman shell; set_lattice() re-seats the chunks.
 var lattice := false
 static var _layout := {}
+static var _part_meshes := {}
 
 
 func setup() -> void:
@@ -264,6 +270,13 @@ func _piece(part_id: String) -> Node3D:
 	var mat := Palette.solid(color, 1.4 if rarity != "common" else 0.4)
 	var root := Node3D.new()
 	root.name = "Part_" + part_id
+	var own := _own_shape(part_id, mat)
+	if own != null:
+		root.add_child(own)
+		var own_foot := TierMark.foot(rarity, mat)
+		if own_foot != null:
+			root.add_child(own_foot)
+		return root
 	match part_id:
 		"cross_split":
 			for yaw in [0.0, PI * 0.5]:
@@ -307,6 +320,32 @@ func _piece(part_id: String) -> Node3D:
 	if foot != null:
 		root.add_child(foot)
 	return root
+
+
+# The part's own mesh in the rarity material, or null when the switch is off or it has none.
+static func _own_shape(part_id: String, mat: Material) -> MeshInstance3D:
+	var path := ModelVariants.only(PART_GLB % part_id)
+	if path == "":
+		return null
+	if not _part_meshes.has(path):
+		# A file that exists can still fail to load; the part then keeps its family primitive.
+		var packed := load(path) as PackedScene
+		var mesh: Mesh = null
+		if packed != null:
+			var scene := packed.instantiate()
+			var found := scene.find_children("*", "MeshInstance3D", true, false)
+			mesh = (found[0] as MeshInstance3D).mesh if found.size() == 1 else null
+			scene.free()
+		if mesh == null:
+			push_error("accretion: %s must load and hold one mesh" % path)
+		_part_meshes[path] = mesh
+	if _part_meshes[path] == null:
+		return null
+	var shape := MeshInstance3D.new()
+	shape.name = "Own"
+	shape.mesh = _part_meshes[path]
+	shape.material_override = mat
+	return shape
 
 
 func _box(parent: Node3D, size: Vector3, at: Vector3, mat: Material, yaw: float) -> void:

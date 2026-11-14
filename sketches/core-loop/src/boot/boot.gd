@@ -71,6 +71,9 @@ var _paced := {}
 
 func _ready() -> void:
 	name = "Boot"
+	# The card fades over a paused tree too: Continue opens the kit pick, which pauses, and a card
+	# that paused with it would stay over the screen for good.
+	process_mode = Node.PROCESS_MODE_ALWAYS
 	print(BuildStamp.line())
 	if _use_card():
 		# A close request in the middle of the load waits for it (_notification, _poll).

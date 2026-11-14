@@ -203,6 +203,19 @@ func _run() -> void:
 	start_game.free()
 	await process_frame
 
+	# 5d. A paused tree under the card (Continue opens the kit pick, which pauses) does not freeze the fade.
+	var paused_boot = _card()
+	var paused_game = await _wait_for_game()
+	paused = true
+	frames = 0
+	while is_instance_valid(paused_boot) and frames < FRAMES_MAX:
+		await process_frame
+		frames += 1
+	_t.check("the card fades and frees with the tree paused", not is_instance_valid(paused_boot), "%d frames" % frames)
+	paused = false
+	paused_game.free()
+	await process_frame
+
 	# 5c. The no-card path never holds.
 	var plain_boot = _card(false)
 	var plain_game = await _wait_for_game()

@@ -489,7 +489,7 @@ func _draw_cap(at: Vector2, key: String, look: Dictionary, height: float) -> voi
 	box.border_color = look["cap_fill"]
 	box.set_border_width_all(2)
 	box.border_width_bottom = 4
-	box.set_corner_radius_all(int(height * 0.2))
+	box.set_corner_radius_all(int(cap.y * 0.2))
 	draw_style_box(box, Rect2(at - cap * 0.5, cap))
 	var fs := Keycap.font_size(height)
 	var text := Keycap.label(key)

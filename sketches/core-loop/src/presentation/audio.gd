@@ -92,15 +92,29 @@ const VOICE_LIMIT := SfxBank.VOICE_LIMIT
 const MIN_GAP_MS := SfxBank.MIN_GAP_MS
 const PRIORITY_DB := [-6.0, -3.0, 0.0, 0.0]
 # Hitting on the beat pays in sound and look only (Andrew, Q10 "Sound only", 17 Oct 22:12Z):
-# a hit within ONBEAT_WINDOW_S of a beat the player hears adds the sax stab, rendered by the
-# music session in the home key, and fires hit_on_beat for the comic word. At most once a
+# a hit within ONBEAT_WINDOW_S of a beat the player hears adds a clap (ONBEAT_SOUND), and fires
+# hit_on_beat for the comic word. At most once a
 # beat. Damage never reads it.
 signal hit_on_beat(enemy: Node3D, kind: String)
 const ONBEAT_WINDOW_S := 0.08
-const ONBEAT_SOUND := "onbeat_sax_stab"
+# A hit on the beat claps with the band's drums (design-v3/sound/feedback_set.py): percussion, so it
+# never sits on the melody. ONBEAT_DB puts it about at a ranged hit's level, 8 dB under the sax stab it replaced.
+const ONBEAT_SOUND := "onbeat_clap"
+const ONBEAT_DB := -8.0
 # Tests set this to stand in for the beat clock: it returns the signed offset in seconds.
 var beat_offset_hook := Callable()
 var _onbeat_at := -(1 << 40)
+# A pilot's skill cast on the beat is answered by the band (Andrew, 13 Nov 02:17Z to 02:19Z): the skill's own
+# sound plays when pressed, never moved to the grid; inside ONBEAT_WINDOW_S the pilot's motif joins on
+# the next sixteenths in its own voice. A hidden reward, sound and look only like the on-beat hit
+# (Q10). SKILL_ANSWER_NOTES of the motif's cells, all of them against an elite, a miniboss, the
+# Warden, or anything in a live boss fight, with the last note doubled in the motif's band voice. Only
+# a line skill names its foe (at its bite); a special or gauge release counts as big only in a boss
+# fight. Cooldowns stop a skill from repeating it, so the gate only keeps two cues of one cast
+# (a gauge release and its special) or two skills on one beat from stacking.
+signal skill_on_beat(kind: String, big: bool)
+const SKILL_ANSWER_NOTES := 2
+var _skill_answer_at := -(1 << 40)
 # Weak-point hits inside this window climb like a kill chain. Pickups and kills climb by
 # their streaks, whose windows are in EventKinds.JUICE.
 const KILL_COMBO_WINDOW_MS := 1500
@@ -451,6 +465,7 @@ func setup(ctx_ref) -> void:
 	ace_manifest = MusicRows.resolve(title_now())["ace_manifest"]
 	_ace_row_manifest = ace_manifest
 	_start_ace_load()
+	read_ace_ahead(_music_row(1)["ace_manifest"])
 	_flow_queue.append(["idle"])
 
 
@@ -559,6 +574,54 @@ func _start_ace_load() -> void:
 	_ace_task = WorkerThreadPool.add_task(_ace_loader(_ace_loaded_from, _ace_slot), true, "presentation ACE stems")
 
 
+# Packages read ahead on a worker, by manifest: task ids. A switch of package on the main
+# thread read the new package's 24 Oggs in its tick: 63 ms at each stage entry in the cloud, and
+# the 4080's Dig entry tick held 114 to 118 ms (board #934, 13 Nov 2026). Read ahead, the switch
+# finds the streams kept (AceSequencer.kept) and reads none.
+var _ace_ahead := {}
+
+
+func read_ace_ahead(manifest: String) -> void:
+	# The export proof reads the first ACE_CHECK line, which a read-ahead's band would race to print.
+	if manifest == "" or _ace_failed or _ace_ahead.has(manifest) or not ace_wanted() or AceSequencer.kept(manifest) \
+			or "--ace-check" in OS.get_cmdline_args() or "--ace-check" in OS.get_cmdline_user_args():
+		return
+	_ace_ahead[manifest] = WorkerThreadPool.add_task(_ace_loader(manifest, []), true, "presentation ACE read-ahead")
+
+
+# The packages a Warden's engage leads to: the next stage's band, and after a world's last
+# stage the boss's entry anthem. Read when the world starts building the next stage.
+func _read_ahead_after(stage: int) -> void:
+	var stages = _music_stages()
+	if stages.is_world_last(stage):
+		var boss := _boss_track()
+		if boss in MusicEngine.BOSS_TRACKS:
+			read_ace_ahead(MusicRows.resolve(_boss_entry(boss))["ace_manifest"])
+	if not stages.is_last(stage):
+		# The next stage's remix or modifier tune when it has one, as _ace_stage picks.
+		var tune := level_tune(stage + 1, true)
+		read_ace_ahead(MusicRows.resolve(tune)["ace_manifest"] if tune != "" else _music_row(stage + 1)["ace_manifest"])
+
+
+# The boss's later phase packs, read as the fight opens (Brindle's anthem: heavy, then heavier).
+func _read_ahead_phases(boss: String) -> void:
+	var heavy := PhaseMusic.track_for_phase(boss, 2, pack_available)
+	if heavy != "":
+		read_ace_ahead(MusicRows.resolve(heavy)["ace_manifest"])
+	var final_track := String(PhaseMusic.final_plan(boss, pack_available)["track"])
+	if final_track != "":
+		read_ace_ahead(MusicRows.resolve(final_track)["ace_manifest"])
+
+
+# Ends finished read-aheads; wait names one the band needs now, which it waits for.
+func _settle_ace_ahead(wait := "") -> void:
+	for manifest in _ace_ahead.keys():
+		var task: int = _ace_ahead[manifest]
+		if manifest == wait or WorkerThreadPool.is_task_completed(task):
+			WorkerThreadPool.wait_for_task_completion(task)
+			_ace_ahead.erase(manifest)
+
+
 # Built in a static function so the lambda holds no self: a task bound to this node locks
 # it for the whole load, and freeing it then fails ("Object is locked") and corrupts the heap.
 static func _ace_loader(manifest: String, slot: Array) -> Callable:
@@ -567,9 +630,13 @@ static func _ace_loader(manifest: String, slot: Array) -> Callable:
 
 func _notification(what: int) -> void:
 	# A node freed outside the tree (the tests) still waits for its stems to finish loading.
-	if what == NOTIFICATION_PREDELETE and _ace_task >= 0:
-		WorkerThreadPool.wait_for_task_completion(_ace_task)
-		_ace_task = -1
+	if what == NOTIFICATION_PREDELETE:
+		if _ace_task >= 0:
+			WorkerThreadPool.wait_for_task_completion(_ace_task)
+			_ace_task = -1
+		for task in _ace_ahead.values():
+			WorkerThreadPool.wait_for_task_completion(task)
+		_ace_ahead.clear()
 
 
 # Blocks until stage 1's whole band is baked, as a player's time on the title allows for.
@@ -860,6 +927,8 @@ func _poly_player(bus: String, node_name: String) -> AudioStreamPlayer:
 func _process(delta: float) -> void:
 	clock += delta
 	_step_cannon_cues()
+	if not _ace_ahead.is_empty():
+		_settle_ace_ahead()
 	if not sound_ready:
 		if _poll_bake():
 			_on_ready()
@@ -1145,6 +1214,7 @@ func ace_ready() -> bool:
 		loaded = _ace_slot[0]
 	_ace_slot = []
 	if loaded == null:
+		_settle_ace_ahead(ace_manifest)
 		loaded = AceSequencer.new(ace_manifest)
 	if not loaded.ready():
 		_ace_failed = true
@@ -2048,7 +2118,12 @@ func _connect_all(events) -> void:
 	events.enemy_spawned.connect(_on_enemy_spawned)
 	events.enemy_struck.connect(_on_struck)
 	events.shot_fired.connect(_on_shot)
-	events.special_used.connect(func(_special: String, _at: Vector3): play("special_used"))
+	events.special_used.connect(func(_special: String, _at: Vector3):
+		play("special_used")
+		skill_answer("special_used", null))
+	events.gauge_released.connect(func(_id: String, _fraction: float): skill_answer("gauge_released", null))
+	events.line_skill_fired.connect(func(_id: String, target: Node3D, _at: Vector3, _on: String):
+		skill_answer("line_skill_fired", target))
 	events.active_fired.connect(_on_active_fired)
 	events.active_heat.connect(_on_active_heat)
 	events.reward_offered.connect(_on_offered)
@@ -2168,7 +2243,8 @@ func wire_optional() -> void:
 	_listen_optional(events, "interaction_found", func(): play("interaction_found"), true)
 	_listen_optional(events, "element_resolved", func(_element: String, _material: String, behaviour: String, _at: Vector3):
 		play("element_resolved", 0.0, 1.0, "SFX", Rows.element_sound(behaviour)))
-	_listen_optional(events, "warden_engaged", func(_stage: int):
+	_listen_optional(events, "warden_engaged", func(engaged: int):
+		_read_ahead_after(engaged)
 		_begin_boss("warden_engaged", "warden")
 		engine.parameter_danger("warden_engaged")
 		if ace_playing():
@@ -2181,6 +2257,7 @@ func wire_optional() -> void:
 			_ace_arrival_at = -1
 			_ace_stage(stage, engine.next_bar(), true))
 	_listen_optional(events, "boss_arena_entered", func():
+		_read_ahead_phases(_boss_track())
 		_boss_phase = 1
 		_disarm_launch()
 		_begin_boss("boss_arena_entered", _boss_track()), true)
@@ -3400,7 +3477,8 @@ func _on_kill(_kind: String, _at: Vector3, _value: int) -> void:
 		# A small drop, on the moment the vault breaks.
 		play("enemy_killed", 2.0, 1.0, "SFX", VAULT_KILL_SOUND)
 	var rung: int = kill_streak.bump(Time.get_ticks_msec())
-	play("enemy_killed", 0.0, Harmony.ratio(Harmony.pentatonic_step(rung)))
+	# The pop is percussion (SOUND-BIBLE rule 7): the chain grows by its tier layer, not by pitch.
+	play("enemy_killed")
 	if rung >= STREAK_LAND_RUNG:
 		_warm_landing(rung)
 	# Each link past the first adds its tier's stab (INTEGRATION section 3), five rungs.
@@ -3412,6 +3490,45 @@ func _on_kill(_kind: String, _at: Vector3, _value: int) -> void:
 # True while the recorded band's grid is the one the player hears.
 func _on_ace_grid() -> bool:
 	return ace != null and engine.grid == ace and ace.mode != "off" and ace.section != ""
+
+
+# The band answers a skill cast on the beat (SKILL_ANSWER_NOTES above). Returns the notes booked,
+# empty off the beat. target is the foe the skill named, or null.
+func skill_answer(kind: String, target: Node3D) -> Array:
+	if absf(beat_offset_s()) > ONBEAT_WINDOW_S or engine.clock - _skill_answer_at < engine.beat_len() / 2:
+		return []
+	_skill_answer_at = engine.clock
+	var big := big_foe(target)
+	var motif := Harmony.motif_or_first(_motif if _motif != "" else Harmony.CLASS_MOTIFS[0])
+	var cells: Array = motif["cells"]
+	if not big:
+		cells = cells.slice(0, SKILL_ANSWER_NOTES)
+	var unit := grid_unit(4)
+	var start := next_grid(4)
+	var booked := []
+	for cell in cells:
+		var at := start + int(cell[0]) * unit
+		_note_at("skill_on_beat", String(motif["voice"]), int(cell[1]), at)
+		booked.append([String(motif["voice"]), int(cell[1]), at])
+	if big and motif.has("band"):
+		var last: Array = cells[cells.size() - 1]
+		var midi := int(last[1]) + int(motif.get("band_octave", 0))
+		var at := start + int(last[0]) * unit
+		_note_at("skill_on_beat", String(motif["band"]), midi, at, SfxBank.GRID_UNDER_DB)
+		booked.append([String(motif["band"]), midi, at])
+	skill_on_beat.emit(kind, big)
+	return booked
+
+
+# A foe that earns the band's whole answer: an elite pack's member, a miniboss, the Warden, or
+# anything while a boss fight is live.
+func big_foe(target: Node3D) -> bool:
+	if ctx != null and "boss" in ctx and ctx.boss != null and ctx.boss.has_method("active") and ctx.boss.active():
+		return true
+	if not is_instance_valid(target):
+		return false
+	return target.has_meta("elite_pack") or target == _miniboss or target.get("boss") != null \
+			or (ctx != null and ctx.flow != null and ctx.flow.get("warden") == target)
 
 
 # One division of the sounding band's beat in samples: per_beat 4 is a sixteenth, 2 an eighth.
@@ -3469,6 +3586,13 @@ func _warm_grid_key() -> void:
 	for id in [SfxBank.grid_note_id(whip[0], whip[1]), SfxBank.grid_note_id(whip[0], whip[2]),
 			SfxBank.grid_note_id(DUNK_VOICE, DUNK_STORED_MIDI), SfxBank.grid_note_id(DUNK_VOICE, DUNK_SPENT_MIDI)]:
 		engine.warm_stinger(id, engine.clock)
+	# A skill's answer starts a sixteenth after the cast, too soon to make its notes then.
+	var row := Harmony.motif_or_first(motif)
+	for cell in row["cells"]:
+		engine.warm_stinger(SfxBank.grid_note_id(String(row["voice"]), int(cell[1])), engine.clock)
+	if row.has("band") and not row["cells"].is_empty():
+		var last: Array = row["cells"][row["cells"].size() - 1]
+		engine.warm_stinger(SfxBank.grid_note_id(String(row["band"]), int(last[1]) + int(row.get("band_octave", 0))), engine.clock)
 
 
 # The kill chain's window has closed: a chain worth hearing lands, once.
@@ -3904,7 +4028,7 @@ func _pay_beat(enemy: Node3D, kind: String) -> void:
 	_onbeat_at = engine.clock
 	var stab := SfxBank.rendered(ONBEAT_SOUND)
 	if stab != null:
-		_start("hit_on_beat", ONBEAT_SOUND, stab, PRIORITY_DB[Rows.priority("enemy_struck")], Harmony.ratio(live_key()), "SFX")
+		_start("hit_on_beat", ONBEAT_SOUND, stab, PRIORITY_DB[Rows.priority("enemy_struck")] + ONBEAT_DB, 1.0, "SFX")
 	else:
 		cue_log.append(["hit_on_beat", ONBEAT_SOUND, "absent", engine.clock, 1.0])
 	hit_on_beat.emit(enemy, kind)

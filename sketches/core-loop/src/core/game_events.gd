@@ -53,6 +53,9 @@ signal jumped(air: bool)
 signal boosted(direction: Vector3)
 signal dashed(direction: Vector3)
 signal landed(impact: float)
+# The ball met a world face that is not a floor (a wall, cliff, structure side or ceiling) at
+# `speed` m/s of closing, Contact.BUMP_MIN_SPEED or more: `at` on the face, `normal` face to ball.
+signal bumped(at: Vector3, normal: Vector3, speed: float)
 signal slammed(at: Vector3, strength: float, flatness: float)
 # A carve ended (rigid_ball.gd through the kit's facts): the ball rode banked ground steeper
 # than Tuning.CARVE_DOT at grip speed for `seconds`, and left it at `speed` m/s from `at`.
@@ -116,6 +119,9 @@ signal enemy_rebounded(enemy: Node3D, speed: float)
 signal enemy_pinned(enemy: Node3D, damage: float)
 # A Highdraft enemy knocked off an island edge (enemy.gd ring_out); enemy_killed follows.
 signal enemy_ringed_out(kind: String, at: Vector3)
+# A knocked enemy thrown into a world face at `speed` m/s into it (enemy.gd): it staggers; its knock
+# and path are unchanged. `at` is on the face, `normal` points face to enemy. No damage.
+signal enemy_walled(enemy: Node3D, at: Vector3, normal: Vector3, speed: float)
 signal vault_kicked(at: Vector3, speed: float)
 signal gauge_charging(ability_id: String)
 signal gauge_released(ability_id: String, fraction: float)

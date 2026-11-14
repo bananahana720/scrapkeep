@@ -151,6 +151,7 @@ Every signal has a row in `event_kinds.gd` keyed by its name. `spine_event_kinds
 | `boosted` | `direction: Vector3` | spine ball | the ground boost fired |
 | `dashed` | `direction: Vector3` | spine ball | the air dash fired |
 | `landed` | `impact: float` | spine ball | a hard landing, in m/s of fall |
+| `bumped` | `at: Vector3, normal: Vector3, speed: float` | spine ball | the ball met a world face that is not a floor (wall, cliff, structure side, ceiling) at `speed` m/s of closing, at least `Contact.BUMP_MIN_SPEED`, at most once per `Contact.BUMP_GAP_S`; `normal` points face to ball |
 | `slammed` | `at: Vector3, strength: float, flatness: float` | spine ball | a slam landed; flatness 1 is flat ground |
 | `grapple_fired` | `anchor: Vector3` | spine ball | the hook attached |
 | `grapple_released` | none | spine ball | the hook let go |
@@ -158,6 +159,7 @@ Every signal has a row in `event_kinds.gd` keyed by its name. `spine_event_kinds
 | `dismounted` | `velocity: Vector3` | spine ball | left the pylon; the velocity is the slingshot, zero for an E drop |
 | `enemy_spawned` | `enemy: Node3D, kind: String` | A | an enemy entered the stage |
 | `enemy_struck` | `enemy: Node3D, kind: String, force: float` | A (from `strike`) | a resolved hit; kind is `stomp`, `ram`, `slam`, `arc`, `turret`, `runner` or `synergy` (a build synergy's shockwave, shrapnel, frost ring or blade: resolved as the damage given, never a landing, so no weak point that takes a slam takes it) |
+| `enemy_walled` | `enemy: Node3D, at: Vector3, normal: Vector3, speed: float` | the enemy itself (`enemy.gd` `_wall_slam`) | a knock threw the enemy into a world face at `speed` m/s into it, at least `Contact.WALL_SLAM_SPEED`; it staggers, once per knock; presentation only: the knock, the body's path and the damage are unchanged |
 | `strike_deflected` | `enemy: Node3D, kind: String, punch: float, plating: float` | A | a hit below plating chipped for 20% |
 | `shot_fired` | `weapon_id: String, from: Vector3, to: Vector3` | A | a weapon fired; the segment it drew |
 | `special_used` | `special_id: String, at: Vector3` | A | a class special fired |
@@ -224,7 +226,7 @@ Helpers: `EventKinds.row(kind)`, `color(kind)`, `priority(kind)`, `hud(kind, fie
 
 Per-kind stats, transformer ids and `register_part` are documented in `src/combat/README.md`.
 
-- `spawn_enemy(kind: String, at: Vector3) -> Node3D`. The kinds are `chaser`, `lobber`, `miniboss`, `warden` and `vault`, and A may add more. The call adds the enemy under `ctx.root`, wires its damage to `run.damage` and its death to `run.record_kill`, and emits `enemy_spawned`. It does not check `ctx.calm`.
+- `spawn_enemy(kind: String, at: Vector3, affix_id := "", perch := Vector3.INF, health_scale: float = 1.0) -> Node3D`. `health_scale` multiplies the health the enemy would otherwise spawn with (the Stocktake yard's count 6 and later). The kinds are `chaser`, `lobber`, `miniboss`, `warden` and `vault`, and A may add more. The call adds the enemy under `ctx.root`, wires its damage to `run.damage` and its death to `run.record_kill`, and emits `enemy_spawned`. It does not check `ctx.calm`.
 - `strike(enemy: Node3D, kind: String, force: float)` resolves one hit into damage against plating and emits `enemy_struck`, plus `strike_deflected` below plating. The spine calls it for ball contacts: `stomp` (force is fall speed), `ram` (force is speed, at the cruise tier or above) and `slam` (force is knockback after falloff). Combat's own weapons call it too.
 - `punch_now() -> float` is the punch the player would land now: ram punch at the ball's planar speed from the cruise tier up, or the current weapon's per-hit damage, whichever is larger.
 - `plating_of(enemy) -> float`.

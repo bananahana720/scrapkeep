@@ -115,17 +115,17 @@ def lifting_beam_head(part, loc, radius):
 
 
 def handwheel_head(part, loc, radius):
-    """Flap tender: the gate valve, a cast bonnet with a spoked charcoal handwheel lying on
-    top."""
+    """Flap tender: the gate valve, a cast bonnet with a spoked charcoal handwheel standing on
+    its front face, so the wheel still faces the player under a carried load."""
     with part.region(subsurf=0, detail=1):  # cast: filleted, not subdivided
         c, r = Vector(loc), radius
         part.cyl("fleet_paint", r * 0.75, r * 0.45, r * 1.45, segs=8, loc=c + Vector((0, 0, -r * 0.325)))
-        part.cyl("paint", r * 0.14, r * 0.14, r * 0.6, segs=6, loc=c + Vector((0, 0, r * 0.6)), color=CHAR)
-        hub = c + Vector((0, 0, r * 0.85))
-        part.ring("paint", r * 1.05, r * 1.3, r * 0.18, segs=16, loc=hub, color=CHAR)
+        hub = c + Vector((0, -r * 0.95, -r * 0.3))
+        part.rod("paint", tuple(c + Vector((0, -r * 0.4, -r * 0.3))), tuple(hub), r * 0.14, segs=6, color=CHAR)
+        part.ring("paint", r * 0.62, r * 0.82, r * 0.16, segs=16, loc=hub, rot=(HALF_PI, 0, 0), color=CHAR)
         for k in range(3):
             a = k * math.pi / 3
-            d = Vector((math.cos(a), math.sin(a), 0)) * r * 1.1
+            d = Vector((math.cos(a), 0, math.sin(a))) * r * 0.7
             part.rod("paint", tuple(hub - d), tuple(hub + d), r * 0.07, segs=4, color=CHAR)
 
 

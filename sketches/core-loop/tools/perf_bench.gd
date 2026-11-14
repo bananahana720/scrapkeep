@@ -568,6 +568,7 @@ func _step_carve() -> void:
 	var built: int = kit.terrain.builds
 	var begin := Time.get_ticks_usec()
 	kit.full_cut(at, heading, 1.0)
+	kit._step_cuts(Engine.get_physics_frames() + kit.cut_ticks)
 	row["landing_ms"] = snappedf((Time.get_ticks_usec() - begin) / 1000.0, 0.001)
 	row["ms"] = row["landing_ms"]
 	row["builds"] = kit.terrain.builds - built

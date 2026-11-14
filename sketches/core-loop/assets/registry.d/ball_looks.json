@@ -1,0 +1,87 @@
+{
+ "assets": [
+  {
+   "id": "ball_look_gyro",
+   "path": "res://assets/models/world_one/ball_look_gyro.glb",
+   "class": "shell",
+   "ships": true,
+   "loader": "src/presentation/ball_looks.gd LOOKS (behind --ball-look=gyro; a candidate for the ball look pick of 13 Nov 2026: three crossed hoops around an open seat)",
+   "provenance": {
+    "recipe": "tools/blender/ball_looks.py",
+    "helper": "tools/blender/shell_base.py cockpit(), weapon_ring()"
+   }
+  },
+  {
+   "id": "ball_look_bell",
+   "path": "res://assets/models/world_one/ball_look_bell.glb",
+   "class": "shell",
+   "ships": true,
+   "loader": "src/presentation/ball_looks.gd LOOKS (behind --ball-look=bell; a candidate for the ball look pick of 13 Nov 2026: a diving bell with a glass back)",
+   "provenance": {
+    "recipe": "tools/blender/ball_looks.py",
+    "helper": "tools/blender/shell_base.py cockpit(), weapon_ring()"
+   }
+  },
+  {
+   "id": "ball_look_cutaway",
+   "path": "res://assets/models/world_one/ball_look_cutaway.glb",
+   "class": "shell",
+   "ships": true,
+   "loader": "src/presentation/ball_looks.gd LOOKS (behind --ball-look=cutaway, the picked look of ruling dm: its Core is the plating each pilot's own shell rolls in, cut by a camera-facing window)",
+   "provenance": {
+    "recipe": "tools/blender/ball_looks.py",
+    "helper": "tools/blender/shell_base.py cockpit(), weapon_ring()"
+   }
+  },
+  {
+   "id": "ball_look_cutaway_c2",
+   "path": "res://assets/models/world_one/ball_look_cutaway_c2.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "src/presentation/ball_looks.gd replate (heft class II plating of the cutaway look: copper hoops)",
+   "provenance": {
+    "recipe": "tools/blender/ball_looks.py"
+   }
+  },
+  {
+   "id": "ball_look_cutaway_c3",
+   "path": "res://assets/models/world_one/ball_look_cutaway_c3.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "src/presentation/ball_looks.gd replate (heft class III plating of the cutaway look: armour over the dark gores)",
+   "provenance": {
+    "recipe": "tools/blender/ball_looks.py"
+   }
+  },
+  {
+   "id": "ball_look_cutaway_c4",
+   "path": "res://assets/models/world_one/ball_look_cutaway_c4.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "src/presentation/ball_looks.gd replate (heft class IV plating of the cutaway look: tread cleats on the belt)",
+   "provenance": {
+    "recipe": "tools/blender/ball_looks.py"
+   }
+  },
+  {
+   "id": "ball_look_cutaway_c5",
+   "path": "res://assets/models/world_one/ball_look_cutaway_c5.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "src/presentation/ball_looks.gd replate (heft class V plating of the cutaway look: copper caps with a stud crown)",
+   "provenance": {
+    "recipe": "tools/blender/ball_looks.py"
+   }
+  },
+  {
+   "id": "ball_look_cutaway_cockpit",
+   "path": "res://assets/models/world_one/ball_look_cutaway_cockpit.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "src/presentation/ball_looks.gd COCKPIT (furnish(): the cockpit the cutaway's window shows around the pilot, on the level part of every pilot's shell: floor pan, cradle ring, dash with gauges, console, cables)",
+   "provenance": {
+    "recipe": "tools/blender/ball_looks.py"
+   }
+  }
+ ]
+}

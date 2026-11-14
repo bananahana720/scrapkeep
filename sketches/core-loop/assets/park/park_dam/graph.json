@@ -1,5 +1,5 @@
 {
-  "bake_sha256": "af620a914ee3d82fcc43cb2cb789a0449750ba26d2a3476fa413cc776eebfcb3",
+  "bake_sha256": "8c8418f24873f17f3b92a284567ccacf7632887063c86e5362967c147b20695e",
   "beacon_ok": true,
   "breaches": [],
   "bytes": 1312779,
@@ -13,15 +13,15 @@
     "sight_ok": 8477,
     "under": 0
   },
-  "full_visit_m": 2439,
-  "full_visit_ratio": "1.803",
+  "full_visit_m": 2460,
+  "full_visit_ratio": "1.818",
   "graph_sha256": "42d20ee204f028cd1623bdf36d84c4298f7dd31c8ca86abdc75ae926c575379d",
   "line_errors": [],
   "line_path_nodes": 159,
   "longest_est_m": 3144,
   "map": "park_dam",
   "nodes": 40401,
-  "park_sha256": "c7b1db3ed133fb6499a96298bb70201e478e33362a8ed5d079d1fbcf30ad48df",
+  "park_sha256": "0350e7333aae0224e2de7c4be8a7425125c2a91a9fd4c3736227f9879831ae3e",
   "pockets": [
     {
       "clear_ring": [],
@@ -135,6 +135,33 @@
     },
     {
       "clear_ring": [],
+      "d_landmark": 352,
+      "d_spawn": 1013,
+      "detour_m": 40,
+      "door_at": [
+        -40,
+        256
+      ],
+      "door_m": 40,
+      "flags": [
+        "open",
+        "door_ok",
+        "sight_ok"
+      ],
+      "id": "incline_cache",
+      "kind": "cracked_cache",
+      "nearest_door": -1,
+      "nearest_door_id": "",
+      "pay_named": "",
+      "pay_rarities": [
+        "rare"
+      ],
+      "role": "skill",
+      "sight_ok": true,
+      "site": "construction_incline"
+    },
+    {
+      "clear_ring": [],
       "d_landmark": 196,
       "d_spawn": 1394,
       "detour_m": 268,
@@ -197,10 +224,10 @@
       "name": "full_visit_ratio",
       "ok": true,
       "target": "at most 3.0",
-      "value": 1.803
+      "value": 1.818
     }
   ],
-  "tool_sha256": "a33c70d786843eec2d89c1ae510c6d8ef7c95aff43ff184940f56c816121dc7b",
+  "tool_sha256": "53ce9ae2ec1d853571c748cebaa79a6ac9a050d2af06a896522c4b175e617bf5",
   "zones": {
     "anchors": [
       {
