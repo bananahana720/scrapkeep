@@ -36,7 +36,8 @@ const QaWatch := preload("res://tools/qa_watch.gd")
 # Without --band the driver is unchanged. Multi-seed children are forwarded every flag.
 #
 # --trace prints the bot's goal and the ball every two game seconds. --trace-ticks=1
-# writes full-precision pre-driver snapshots to trace-<seed>.ndjson. --ticks=N caps a
+# writes full-precision pre-driver snapshots to trace-<seed>.ndjson, each with the hits landed
+# since the row before, in order (`struck`). --ticks=N caps a
 # diagnostic run. --fixed-fps 90 makes one frame one physics tick, faster than real time.
 # --comic-page=1 ends a run cut short as a loss so it folds a comic page (run_moments.gd); with a
 # rendering display (not --headless) the panels carry real stills.
@@ -147,6 +148,8 @@ var _started_msec := 0
 var _out := ""
 var _results: Array[Dictionary] = []
 var _tick_trace: FileAccess
+# The hits since the last trace row, in the order they landed: enemy kind, its position, hit kind, force.
+var _struck: Array = []
 var _scrap_serial := 0
 var _counter_serial := 0
 var _bot_options
@@ -351,6 +354,10 @@ func _physics_process(delta: float) -> bool:
 			_driver.class_index = BotDriver.class_index_for(_seeds[_index], String(_settings["pilot"]))
 		if _settings.has("band"):
 			_driver.band = SkillBand.make(String(_settings["band"]), int(_settings.get("attempt", "1")), _seeds[_index])
+		if _tick_trace != null:
+			_struck.clear()
+			_game.events.enemy_struck.connect(func(enemy: Node3D, kind: String, force: float):
+				_struck.append([enemy.get("kind"), _vector(enemy.global_position), kind, force]))
 		_driver.trace = _settings.has("trace")
 		if _driver.trace:
 			_game.events.world_entered.connect(func(world: int): print("  trace world %d entered" % world))
@@ -556,7 +563,9 @@ func _snapshot(delta: float) -> Dictionary:
 	for state in (director._park_states if director != null else []):
 		events.append({"id": state.row.id, "phase": state.phase, "due": state.due_s,
 			"ready": state.ready_s, "elapsed": state.live_elapsed_s, "holding": state.holding})
-	return {"tick": _driver.ticks + 1, "delta": delta, "flow": _game.flow.state_name(),
+	var struck := _struck.duplicate()
+	_struck.clear()
+	return {"tick": _driver.ticks + 1, "delta": delta, "struck": struck, "flow": _game.flow.state_name(),
 		"stage": _game.run.stage, "stage_time": _game.run.stage_time, "paused": paused,
 		"scale": Engine.time_scale, "position": _vector(_game.player.ball_position()),
 		"velocity": _vector(_game.player.body().linear_velocity), "hp": _game.run.hp,
