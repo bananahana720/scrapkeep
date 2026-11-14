@@ -821,7 +821,8 @@ func _on_posture(enemy: Node3D, posture: float, staggered: bool) -> void:
 # (a stage's resting weather starts with the stage: "Dawn Still"), so it warns of nothing.
 func _on_event_announced(event_id: String, seconds_until: float, _at: Vector3) -> void:
 	if seconds_until > 0.0:
-		_on_field_fact(event_id, "event_announced")
+		var called: String = game.world.activities.called(event_id)
+		_on_field_fact(called if called != "" else event_id, "event_announced")
 
 
 # Only a lost event gets a toast: a win already has its milestone toast.
