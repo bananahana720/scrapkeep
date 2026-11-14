@@ -1,12 +1,14 @@
 """Swap one mesh node of an authored model for a Tripo mesh, keeping everything else.
 
 blender -b --factory-startup -P tools/tripo/tripo_swap.py -- --in tripo.glb --ref authored.glb --node NodeName \
-    --out out.glb [--yaw DEG] [--max-tris N] [--fit box|height]
+    --out out.glb [--yaw DEG] [--max-tris N] [--fit box|height|fill]
 
 For models whose code animates named parts (enemy_clips.gd ROWS): the authored hierarchy, pivots,
 sockets and the other parts stay as they are; only `--node`'s mesh is replaced. The Tripo mesh is
 turned by --yaw, fitted inside that node's own bounds, and each face snaps to the nearest colour of
-that node's material slots (or, for a single-material vertex-coloured node, its vertex palette).
+that node's material slots (or, for a single-material vertex-coloured node, its vertex palette; or,
+for a crew enemy whose slots are white and whose colour is all vertex colour, the nearest of each
+slot's own vertex colours, taking that slot).
 The texture never ships. Chain runs (out of one as --ref of the next) to swap several nodes.
 Prints one JSON line with counts.
 """
@@ -47,24 +49,42 @@ gj, _ = read_glb(opt["ref"])
 factor = {m.get("name"): m.get("pbrMetallicRoughness", {}).get("baseColorFactor", [1.0] * 4)[:3] for m in gj.get("materials", [])}
 mats = [s.material for s in target.material_slots if s.material]
 palette = []
-if len(mats) > 1:
-    style = "slots"
-    for k, m in enumerate(mats):
-        palette.append((np.array(factor.get(m.name.split(".")[0], [0.8] * 3)), k))
-else:
-    style = "vertex"
-    ca = tme.color_attributes.active_color or (tme.color_attributes[0] if tme.color_attributes else None)
+ca = tme.color_attributes.active_color or (tme.color_attributes[0] if tme.color_attributes else None)
+
+
+def vertex_palette(slot_index, limit):  # the node's own vertex colours on one slot (None: all), largest area first
     area = {}
     for p in tme.polygons:
-        if ca is None:
-            break
+        if ca is None or (slot_index is not None and p.material_index != slot_index):
+            continue
         idx = p.loop_indices if ca.domain == "CORNER" else p.vertices
         c = np.mean([ca.data[j].color[:3] for j in idx], axis=0)
         key = tuple(np.round(srgb(c) * 32).astype(int))
         a, s = area.get(key, (0.0, np.zeros(3)))
         area[key] = (a + p.area, s + c * p.area)
-    for key, (a, s) in sorted(area.items(), key=lambda kv: -kv[1][0])[:12]:
-        palette.append((s / a, 0))
+    return [s / a for key, (a, s) in sorted(area.items(), key=lambda kv: -kv[1][0])[:limit]]
+
+
+flat = {m.name.split(".")[0]: np.array(factor.get(m.name.split(".")[0], [0.8] * 3)) for m in mats}
+if len(mats) > 1 and ca is not None and any(np.allclose(flat[m.name.split(".")[0]], 1.0, atol=0.02) for m in mats):
+    # Crew enemies: the game paints every surface from vertex colour (enemy_casting.gd), and the slots only say
+    # which surface flashes. Each slot offers its own vertex colours; a face takes the nearest and that slot.
+    style = "slots+vertex"
+    for k, m in enumerate(mats):
+        own = flat[m.name.split(".")[0]]
+        if np.allclose(own, 1.0, atol=0.02):
+            for c in vertex_palette(k, 10):
+                palette.append((c, k, c))
+        else:  # a slot with a colour of its own (the flashing body paint): match on it, keep white vertex colour
+            palette.append((own, k, np.ones(3)))
+elif len(mats) > 1:
+    style = "slots"
+    for k, m in enumerate(mats):
+        palette.append((flat[m.name.split(".")[0]], k))
+else:
+    style = "vertex"
+    for c in vertex_palette(None, 12):
+        palette.append((c, 0))
     if not palette:
         palette.append((np.array(factor.get(mats[0].name.split(".")[0], [0.8] * 3)) if mats else np.ones(3), 0))
 
@@ -85,8 +105,11 @@ mn = Vector([min(v.co[k] for v in me.vertices) for k in range(3)])
 mx = Vector([max(v.co[k] for v in me.vertices) for k in range(3)])
 ext, rext = mx - mn, lmx - lmn
 s = (rext.z / max(ext.z, 1e-6)) if opt["fit"] == "height" else min(rext[k] / max(ext[k], 1e-6) for k in range(3))
+# --fit fill stretches each axis to the node's bounds: the part keeps the authored reach where the game's collider
+# and its other parts expect it, at the price of the generated proportions. Look at the render.
+sx, sy, sz = [rext[k] / max(ext[k], 1e-6) for k in range(3)] if opt["fit"] == "fill" else (s, s, s)
 c, rc = (mn + mx) / 2, (lmn + lmx) / 2
-me.transform(Matrix.Translation(Vector((rc.x, rc.y, lmn.z))) @ Matrix.Scale(s, 4) @ Matrix.Translation(Vector((-c.x, -c.y, -mn.z))))
+me.transform(Matrix.Translation(Vector((rc.x, rc.y, lmn.z))) @ Matrix.Diagonal((sx, sy, sz, 1.0)) @ Matrix.Translation(Vector((-c.x, -c.y, -mn.z))))
 
 # Weld the vertices Tripo split along its UV seams; a vertex-coloured asset needs no UVs, so they
 # go first and the vertex count drops to what the colour borders need.
@@ -128,8 +151,8 @@ for m in mats:
 ca = me.color_attributes.new("Col", "FLOAT_COLOR", "CORNER")
 for p in me.polygons:
     k = slot[p.index]
-    p.material_index = palette[k][1] if style == "slots" else 0
-    rgb = (1.0, 1.0, 1.0) if style == "slots" else tuple(palette[k][0])
+    p.material_index = palette[k][1] if style != "vertex" else 0
+    rgb = (1.0, 1.0, 1.0) if style == "slots" else tuple(palette[k][2] if len(palette[k]) > 2 else palette[k][0])
     for li in p.loop_indices:
         ca.data[li].color = (*rgb, 1.0)
 while len(me.uv_layers) > 1:

@@ -17,6 +17,8 @@ const PAIRS := {
 	"res://assets/models/world_one/enemy_chaser.glb": {"tris": 3400, "draws": 5},
 	"res://assets/models/camp/camp_pet.glb": {"tris": 2000, "draws": 1},
 	"res://assets/models/world_one/enemy_lobber.glb": {"tris": -1, "draws": -1},
+	"res://assets/models/world_one/enemy_swatter.glb": {"tris": -1, "draws": -1},
+	"res://assets/models/world_one/enemy_hooker.glb": {"tris": -1, "draws": -1},
 	"res://assets/models/world_one/enemy_boom_tender.glb": {"tris": -1, "draws": -1},
 	"res://assets/models/park/props/dam/gate_wheelhouse_a.glb": {"tris": -1, "draws": -1},
 	"res://assets/models/park/props/dam/gate_wheelhouse_a_lod1.glb": {"tris": -1, "draws": -1},
@@ -145,7 +147,7 @@ func _run() -> void:
 		_check(t.draws <= cap.draws, "%s sibling draws %d <= %d (authored %d)" % [authored.get_file(), t.draws, cap.draws, a.draws])
 		a_node.free()
 		t_node.free()
-	_check(PAIRS.size() == 19, "19 authored-sibling pairs checked (%d)" % PAIRS.size())
+	_check(PAIRS.size() == 21, "21 authored-sibling pairs checked (%d)" % PAIRS.size())
 	# The game's own load sites must reach the sibling, not only ModelVariants.path: the shared enemy
 	# caster and the park prop mesh cache, each compared by triangle count with the sibling file.
 	var tender := "res://assets/models/world_one/enemy_boom_tender.glb"
@@ -359,6 +361,8 @@ func _check_head_outfits() -> void:
 # enemy's tell is at least as large on the sibling as on the authored model. [authored file, part node].
 const TELLS := [
 	["res://assets/models/world_one/enemy_lobber.glb", "LobberBulb"],
+	["res://assets/models/world_one/enemy_swatter.glb", "SwatterPaddle"],
+	["res://assets/models/world_one/enemy_hooker.glb", "HookerHarpoonMesh"],
 ]
 
 
