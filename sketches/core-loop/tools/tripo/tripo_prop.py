@@ -1,6 +1,6 @@
 """Fit a textured Tripo mesh as a new prop that has no authored twin.
 
-blender -b --factory-startup -P tripo_prop.py -- --in tripo.glb --out prop.glb --name PropName [--tall 4.0] [--wide 0] [--yaw 0] [--max-tris 2000] [--colours 8] [--smooth 2] [--lods "0.5,0.15"] [--span "3.1:4.0"] [--paint "1=#c4572a,5=#d39a3c"]
+blender -b --factory-startup -P tripo_prop.py -- --in tripo.glb --out prop.glb --name PropName [--root RootName] [--lod-name LodMeshName] [--tall 4.0] [--wide 0] [--yaw 0] [--max-tris 2000] [--colours 8] [--smooth 2] [--lods "0.5,0.15"] [--span "3.1:4.0"] [--paint "1=#c4572a,5=#d39a3c"] [--region "x0,y0,z0,x1,y1,z1=#a8492b"]
 
 What it does, in order:
 1. Joins the mesh, turns it by --yaw about the up axis, scales it uniformly to --tall metres high or to --wide metres
@@ -9,13 +9,20 @@ What it does, in order:
 2. Samples the texture once per face and groups the faces into --colours flat colours of its own (area-weighted
    k-means in sRGB), then smooths one-face speckles away. The texture, the image and the UVs are dropped: the prop
    ships linear COLOR_0 on one material named paint, as the park props do (the loader sets vertex colour as albedo).
-3. Welds the seam splits, decimates to --max-tris, names the mesh --name under a root of the same name plus "Root".
+3. Welds the seam splits, decimates to --max-tris, names the mesh --name under a root of the same name plus "Root"
+   (or --root, for a sibling that must keep an authored model's node names).
    With --span "a:b", the middle is widened or narrowed right after that scaling: points a metres either side of the
    centre along X move to b metres, and the outer edge stays where it is, so an opening can be set to a planned
    width. It acts on X only, so turn the mesh with --yaw until the opening runs along X.
    With --paint "n=#rrggbb,...", found colour number n is repainted. The numbers are in the "found" list this script
    prints, and they change when a geometry option changes, so read them from a run with the same options.
+   With --region "x0,y0,z0,x1,y1,z1=#rrggbb", every face whose centre lies in that box (metres, Blender axes, Z up,
+   after the fit) is repainted that colour, for a part whose colour the texture lost (a wheel that must be red).
+   Each face keeps its lightness against the box's average, within 0.7 to 1.3, so the part's own shapes still read.
+   Several boxes are separated by semicolons. A box that holds no face stops the script.
 4. With --lods, also writes <out stem>_lod1.glb, _lod2.glb ... at those shares of the triangle count.
+   With --lod-name, the mesh node in those files takes that name (an authored prop's detail levels can name it
+   differently from the full model, and a sibling must keep each file's node names).
 Prints one JSON line with counts, the found colours with their share of the area, and the size in metres.
 """
 import json, math, sys
@@ -24,7 +31,7 @@ import numpy as np
 from mathutils import Vector, Matrix
 
 argv = sys.argv[sys.argv.index("--") + 1:]
-opt = {"yaw": "0", "max-tris": "2000", "colours": "8", "smooth": "2", "wide": "0", "tall": "0", "lods": "", "name": "Prop", "span": "", "paint": ""}
+opt = {"yaw": "0", "max-tris": "2000", "colours": "8", "smooth": "2", "wide": "0", "tall": "0", "lods": "", "name": "Prop", "span": "", "paint": "", "region": "", "root": "", "lod-name": ""}
 i = 0
 known = set(opt) | {"in", "out"}
 while i < len(argv):
@@ -130,7 +137,24 @@ for item in [x for x in opt["paint"].split(",") if x]:  # repaint a found colour
     if not 0 <= int(j) < k:
         raise SystemExit("tripo_prop: --paint names colour %s, the mesh has 0 to %d" % (j, k - 1))
     cent[int(j)] = [int(hx.lstrip("#")[n:n + 2], 16) / 255 for n in (0, 2, 4)]
-pal = linear(cent)
+fcol = cent[slot].copy()  # one sRGB colour a face
+if opt["region"]:
+    lum = fcol @ np.array([0.2126, 0.7152, 0.0722])
+    centre = np.array([p.center[:] for p in me.polygons])
+    for item in [x for x in opt["region"].split(";") if x]:
+        box, hx = item.split("=")
+        b = [float(x) for x in box.split(",")]
+        if len(b) != 6:
+            raise SystemExit("tripo_prop: --region needs six numbers and a colour, got " + item)
+        lo, hi = np.minimum(b[:3], b[3:]), np.maximum(b[:3], b[3:])
+        inside = np.all((centre >= lo) & (centre <= hi), axis=1)
+        if not inside.any():
+            raise SystemExit("tripo_prop: --region box %s holds no face" % box)
+        target = np.array([int(hx.lstrip("#")[n:n + 2], 16) / 255 for n in (0, 2, 4)])
+        mean = float((lum[inside] * area[inside]).sum() / area[inside].sum())
+        shade = np.clip(lum[inside] / max(mean, 1e-6), 0.7, 1.3)
+        fcol[inside] = np.clip(target[None, :] * shade[:, None], 0, 1)
+fcol_lin = linear(fcol)
 me.materials.clear()
 paint = bpy.data.materials.new("paint"); paint.use_backface_culling = False; paint.diffuse_color = (1, 1, 1, 1); me.materials.append(paint)
 for old in list(me.color_attributes):  # a colour layer the generator shipped would stay active and export instead
@@ -140,7 +164,7 @@ me.color_attributes.active_color = ca
 for p in me.polygons:
     p.material_index = 0
     for li in p.loop_indices:
-        ca.data[li].color = (*pal[slot[p.index]], 1.0)
+        ca.data[li].color = (*fcol_lin[p.index], 1.0)
 while me.uv_layers:
     me.uv_layers.remove(me.uv_layers[0])
 for im in list(bpy.data.images):
@@ -160,7 +184,7 @@ def decimate(obj, cap):
 
 tris = decimate(ob, int(opt["max-tris"]))
 ob.name = opt["name"]; me.name = opt["name"]
-root = bpy.data.objects.new(opt["name"] + "Root", None); bpy.context.scene.collection.objects.link(root)
+root = bpy.data.objects.new(opt["root"] or opt["name"] + "Root", None); bpy.context.scene.collection.objects.link(root)
 ob.parent = root
 
 def export(path):
@@ -172,6 +196,8 @@ co = np.array([v.co[:] for v in me.vertices])  # the size of the full mesh, befo
 lods = []
 for n, share in enumerate([float(x) for x in opt["lods"].split(",") if x], 1):
     lods.append(decimate(ob, max(1, int(tris * share))))
+    if opt["lod-name"]:
+        ob.name = opt["lod-name"]; me.name = opt["lod-name"]
     export(opt["out"][:-4] + "_lod%d.glb" % n)
 print("PROP " + json.dumps({"out": opt["out"], "tris": tris, "lods": lods, "colours": int(len(set(slot.tolist()))),
                            "found": ["%d %s %.0f%%" % (j, found[j], shares[j] * 100) for j in range(k)],

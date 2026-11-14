@@ -17,9 +17,6 @@ const FLAG := "--models=tripo"
 const FLAG_ALL := "--models=tripo-all"
 const REJECTED := {
 	"res://assets/models/world_one/enemy_chaser_tripo.glb": "view 1 sends 0.54 of the authored brightness, loose black faces (render check, 14 November 2026)",
-	"res://assets/models/park/props/flume/sluice_shed_a_tripo.glb": "loses the big red water wheel, the authored landmark shape (PC look of PR 1024)",
-	"res://assets/models/park/props/flume/sluice_shed_a_lod1_tripo.glb": "loses the big red water wheel, the authored landmark shape (PC look of PR 1024)",
-	"res://assets/models/park/props/flume/sluice_shed_a_lod2_tripo.glb": "loses the big red water wheel, the authored landmark shape (PC look of PR 1024)",
 }
 
 static var _on := -1

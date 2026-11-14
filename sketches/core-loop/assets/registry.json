@@ -22870,10 +22870,9 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_flume.json) through src/presentation/model_variants.gd (--models=tripo)",
    "provenance": {
     "recipe": "tools/tripo/README.md",
-    "note": "Generated in Tripo Studio (studio.tripo3d.ai, Smart Mesh, P2.0, text prompt tools/tripo/prompts/sluice_shed.txt, then Texture; workspace id 05a306ba-03b8-48d6-bc96-2dd5d84cc071, Studio asset name 'desert sluice shed 3d model', the first of four candidates) on Andrew's paid Pro account (Tripo terms 5.2: the outputs belong to the account holder); fitted by tools/tripo/tripo_fit.py inside the authored bounds, turned 90 degrees so the wheel faces as the authored wheel does; LOD by decimation; faces snapped to the authored palette, no texture ships. sha256 928178bbc3301d965c9add28a6cb774144a7cd2d97bd4628331ab27777ff5982"
+    "note": "Generated in Tripo Studio (studio.tripo3d.ai, Smart Mesh, P2.0, text prompt tools/tripo/prompts/sluice_shed_wheel.txt, then Texture; workspace id 2c172e1b-a32c-4c10-b35f-b88b6b8b33fd, Studio asset name 'water wheel shed 3d model', the third of four candidates) on Andrew's paid Pro account (Tripo terms 5.2: the outputs belong to the account holder); it replaces the first generated shed (workspace 05a306ba-03b8-48d6-bc96-2dd5d84cc071), which had lost the big water wheel; fitted by tools/tripo/tripo_prop.py to the authored 5.65 m height, turned 90 degrees so the wheel stands at the front right as the authored wheel does; the texture left the wheel grey, so the wheel's faces are repainted rust red (--region); LOD by decimation; ten flat colours of its own, no texture ships. sha256 456e56e846338ddabb8772b62007228979afe06cc6ae8fcd703867c1aa794a9d"
    },
-   "accepted": false,
-   "accepted_why": "The board's PC look of PR 1024 (14 November 2026): it swaps cleanly and holds its shape from 40 to 160 m, but it loses the big red water wheel, which is the authored shed's landmark shape. Held back until a generated shed keeps a big wheel."
+   "accepted": true
   },
   {
    "id": "dprop_flume_sluice_shed_a_lod2",
@@ -22911,10 +22910,9 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_flume.json) through src/presentation/model_variants.gd (--models=tripo)",
    "provenance": {
     "recipe": "tools/tripo/README.md",
-    "note": "Generated in Tripo Studio (studio.tripo3d.ai, Smart Mesh, P2.0, text prompt tools/tripo/prompts/sluice_shed.txt, then Texture; workspace id 05a306ba-03b8-48d6-bc96-2dd5d84cc071, Studio asset name 'desert sluice shed 3d model', the first of four candidates) on Andrew's paid Pro account (Tripo terms 5.2: the outputs belong to the account holder); fitted by tools/tripo/tripo_fit.py inside the authored bounds, turned 90 degrees so the wheel faces as the authored wheel does; LOD by decimation; faces snapped to the authored palette, no texture ships. sha256 5a9dd926e4973c5a163813e44ef1026257bb5dc9c249700cd2d65d3f875a4f1e"
+    "note": "Generated in Tripo Studio (studio.tripo3d.ai, Smart Mesh, P2.0, text prompt tools/tripo/prompts/sluice_shed_wheel.txt, then Texture; workspace id 2c172e1b-a32c-4c10-b35f-b88b6b8b33fd, Studio asset name 'water wheel shed 3d model', the third of four candidates) on Andrew's paid Pro account (Tripo terms 5.2: the outputs belong to the account holder); it replaces the first generated shed (workspace 05a306ba-03b8-48d6-bc96-2dd5d84cc071), which had lost the big water wheel; fitted by tools/tripo/tripo_prop.py to the authored 5.65 m height, turned 90 degrees so the wheel stands at the front right as the authored wheel does; the texture left the wheel grey, so the wheel's faces are repainted rust red (--region); LOD by decimation; ten flat colours of its own, no texture ships. sha256 e5eff0d5f116ccc5c13d074c0717f8ad2e8730e9e1ec01aabb7355f4b25a9aac"
    },
-   "accepted": false,
-   "accepted_why": "The board's PC look of PR 1024 (14 November 2026): it swaps cleanly and holds its shape from 40 to 160 m, but it loses the big red water wheel, which is the authored shed's landmark shape. Held back until a generated shed keeps a big wheel."
+   "accepted": true
   },
   {
    "id": "sluice_shed_a_tripo",
@@ -22924,10 +22922,9 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_flume.json) through src/presentation/model_variants.gd (--models=tripo)",
    "provenance": {
     "recipe": "tools/tripo/README.md",
-    "note": "Generated in Tripo Studio (studio.tripo3d.ai, Smart Mesh, P2.0, text prompt tools/tripo/prompts/sluice_shed.txt, then Texture; workspace id 05a306ba-03b8-48d6-bc96-2dd5d84cc071, Studio asset name 'desert sluice shed 3d model', the first of four candidates) on Andrew's paid Pro account (Tripo terms 5.2: the outputs belong to the account holder); fitted by tools/tripo/tripo_fit.py inside the authored bounds, turned 90 degrees so the wheel faces as the authored wheel does; LOD by decimation; faces snapped to the authored palette, no texture ships. sha256 747164b788920deb13b3f014752f31b2a0104142d94faf2f376ce86a512656f1"
+    "note": "Generated in Tripo Studio (studio.tripo3d.ai, Smart Mesh, P2.0, text prompt tools/tripo/prompts/sluice_shed_wheel.txt, then Texture; workspace id 2c172e1b-a32c-4c10-b35f-b88b6b8b33fd, Studio asset name 'water wheel shed 3d model', the third of four candidates) on Andrew's paid Pro account (Tripo terms 5.2: the outputs belong to the account holder); it replaces the first generated shed (workspace 05a306ba-03b8-48d6-bc96-2dd5d84cc071), which had lost the big water wheel; fitted by tools/tripo/tripo_prop.py to the authored 5.65 m height, turned 90 degrees so the wheel stands at the front right as the authored wheel does; the texture left the wheel grey, so the wheel's faces are repainted rust red (--region); LOD by decimation; ten flat colours of its own, no texture ships. sha256 54eaa2134038b55202b49de6126eb1d3d41b62ad8b477568902d80c6c6dfa210"
    },
-   "accepted": false,
-   "accepted_why": "The board's PC look of PR 1024 (14 November 2026): it swaps cleanly and holds its shape from 40 to 160 m, but it loses the big red water wheel, which is the authored shed's landmark shape. Held back until a generated shed keeps a big wheel."
+   "accepted": true
   },
   {
    "id": "dprop_flume_sluice_shed_b",
