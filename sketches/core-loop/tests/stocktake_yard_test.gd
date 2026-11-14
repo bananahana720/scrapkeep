@@ -87,9 +87,9 @@ func _run() -> void:
 	_game.run.set_max_hp(99999.0)
 	await _frames(4)
 	var map = _game.ctx.terrain.map()
-	_t.check("flag off: no yard is planned or built", _acts().yard_spec(map).is_empty() and _site() == null, str(_acts().yard_spec(map)))
+	_t.check("flag off: no yard is planned or built", _acts().survival_spec(map, "stocktake_yard").is_empty() and _site() == null, str(_acts().survival_spec(map, "stocktake_yard")))
 	_game.ctx.tuning.set_option("stocktake", "on")
-	var spec: Dictionary = _acts().yard_spec(map)
+	var spec: Dictionary = _acts().survival_spec(map, "stocktake_yard")
 	_t.check("flag on: one of the dam's yard rows is drawn", spec.get("row", "") in ["shelf_yard", "slot_yard"], str(spec))
 	await _fresh()
 	await _counts(spec)
@@ -261,8 +261,8 @@ func _rows(map) -> void:
 	var steady := true
 	for run_seed in 24:
 		_game.run.run_seed = run_seed
-		var row := String(_acts().yard_spec(map).get("row", ""))
-		steady = steady and row == String(_acts().yard_spec(map).get("row", ""))
+		var row := String(_acts().survival_spec(map, "stocktake_yard").get("row", ""))
+		steady = steady and row == String(_acts().survival_spec(map, "stocktake_yard").get("row", ""))
 		drawn[row] = true
 	_game.run.run_seed = kept
 	var rows: Array = drawn.keys()
