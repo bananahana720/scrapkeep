@@ -6,6 +6,7 @@
  "spawn": {"at": [-460, -650], "heading_deg": 31},
  "atlas": {"origin": [460, 1600], "heading_deg": 0},
  "exit": {"kind": "launch", "speed_cruise": 1.0, "opens": "warden_broken"},
+ "approach": {"to": "slag_bowl", "smoke": [900, 480]},
  "arrives": {"kind": "land", "speed_cruise": 1.0, "from": "dam gate"},
  "play_rect": [-780, -780, 1300, 1560],
  "landmark": {"id": "penstock_tower", "kind": "penstock_tower", "at": [270, 510], "size": [140, 90, 120], "yaw_deg": 31, "recipe": "landmark_penstock_tower", "budget": "hero_landmark", "sight_top": [300, 90.0, 560], "sight_share": 0.85, "beacon": [230, 480], "reach_m": 30, "warden": {"family": "reactor", "mounting": "flume", "anchor": [230, -2.0, 470], "path": [], "hardpoints": 3, "hardpoint_offsets": [[0, 1.6, 0], [-3.1, 4, 3.9], [3.1, 4, -3.9]], "harpoon_anchor": true}, "bay_dock": {"at": [239, 480], "facing_deg": 90}, "gate_slots": [{"at": [300, 466], "facing_deg": 90}, {"at": [300, 480], "facing_deg": 90}, {"at": [300, 494], "facing_deg": 90}], "light": "ancient_beam", "music": "landmark_hum", "fragment": "headhouse_relic_plate"},

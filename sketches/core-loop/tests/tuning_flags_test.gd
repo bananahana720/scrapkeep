@@ -37,6 +37,7 @@ const EXPECTED := {
 	"called-shot": ["called_shot", "on", "bogus", "launch"],
 	"stocktake": ["stocktake", "on", "bogus", "launch"],
 	"posts": ["posts", "on", "bogus", "launch"],
+	"approach": ["approach", "on", "bogus", "launch"],
 	"final-world": ["final_world", "1", "bogus", "launch"],
 }
 

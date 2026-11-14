@@ -138,7 +138,14 @@ func _build(stage: int) -> void:
 	var map = ctx.terrain.map_for(stage)
 	_rng.seed = hash([ctx.rng.seed, ctx.run.run_seed, stage, "survey_posts"])
 	var ground := func(x: float, z: float) -> float: return ctx.terrain.height(x, z)
-	for row in rows(trail["points"], float(trail["spacing_m"]), trail.get("gaps", []), keep_clear(map), ground, _rng.seed):
+	var clear := keep_clear(map)
+	# Rows keep off the approach to the boss's bowl where one stands (loaded here: that script reads this one).
+	var approach = load("res://src/world/bowl_approach.gd")
+	if approach.on(ctx):
+		var planned: Dictionary = approach.plan_for(map, ground)
+		if not planned.is_empty():
+			clear.append_array(approach.taken(planned))
+	for row in rows(trail["points"], float(trail["spacing_m"]), trail.get("gaps", []), clear, ground, _rng.seed):
 		var nodes := []
 		var yaw: float = atan2(row["heading"].x, row["heading"].y)
 		for at in row["posts"]:
