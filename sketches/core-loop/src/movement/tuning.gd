@@ -328,7 +328,7 @@ func final_world() -> int:
 	return int(value) if value.is_valid_int() else 0
 
 
-# A player's launch ends the run won at world 1's boss while worlds 2 and 3 are parked (ruling at;
+# A player's launch ends the run won at world 1's boss while worlds 2 and 3 are parked (ruling dr;
 # Andrew, 14 Nov 2026), as the sitting launch does: the Dig is not ready to be rolled into. `applied`
 # is what apply_cmdline returned, so a --final-world on the command line still wins. Only a played
 # game calls this (game.gd); bots and tests keep the whole table. Drop it when world 2 is unparked.
