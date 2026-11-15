@@ -21,6 +21,8 @@ const GANTRY := "res://assets/models/world_one/poi_weighbridge_gantry.glb"
 const RACK := "res://assets/models/world_one/poi_tag_rack.glb"
 const CRATE := "res://assets/models/world_one/poi_tagged_crate.glb"
 const STACKS := "res://assets/models/world_one/poi_furnace_stacks.glb"
+# The four pieces a burst crate leaves, each about its own centre.
+const PIECES := "res://assets/models/world_one/poi_tagged_crate_piece_%s.glb"
 
 # The stretch of the line's end the approach may stand on. A floor line ends at the Warden's engage ring, and the
 # ground the Warden's fight can shut (the yard lock's ring, a fight site) reaches back about 250 m of the flume's
@@ -41,11 +43,16 @@ const CRATE_SCRAP := 1
 const CLUSTER_SCRAP := 4
 const THROW_M := 24.0
 const BURST_S := 0.2
+const PIECE_S := 0.7
+const PIECE_FLY_M := 4.0
 # The weighbridge: the plate's half width and half depth, the gantry's size, and its pay.
 const PLATE_HALF_M := 4.0
 const PLATE_DEEP_M := 2.0
 const GANTRY_WIDE_M := 12.0
 const GANTRY_TALL_M := 7.0
+# The gantry is not drawn for an eye nearer than this, so a leg never fills the chase camera as the ball goes through.
+const GANTRY_NEAR_M := 7.0
+const PLATE_TOP_M := 0.24
 const WEIGH_SCRAP := 3
 const WEIGH_PER_HEFT := 2
 const WEIGH_SCRAP_MAX := 12
@@ -73,6 +80,8 @@ var _rng := RandomNumberGenerator.new()
 var _puffs: Array = []
 var _smoke_clock := 0.0
 var _furnace_home := Vector3.ZERO
+# The crate's piece models, held so the first burst loads nothing on the hit's own tick.
+var _piece_models: Array = []
 
 
 func setup(context) -> void:
@@ -210,6 +219,9 @@ func _build(stage: int) -> void:
 	if planned.is_empty():
 		return
 	_rng.seed = hash([ctx.rng.seed, ctx.run.run_seed, stage, "bowl_approach"])
+	if _piece_models.is_empty() and ResourceLoader.exists(PIECES % "a"):
+		for k in 4:
+			_piece_models.append(load(PIECES % "abcd"[k]))
 	for row in planned["racks"]:
 		var yaw: float = atan2(row["heading"].x, row["heading"].y)
 		var rack := _rack()
@@ -321,9 +333,26 @@ func _burst(row: Dictionary, index: int, ball: Vector3, velocity: Vector3) -> vo
 	crates_burst += 1
 	_throw(ball, velocity.normalized(), CRATE_SCRAP)
 	var crate: Node3D = row["crates"][index]
+	var way := velocity.normalized()
+	if ResourceLoader.exists(PIECES % "a"):
+		# The crate is gone at once and its four pieces fly on, tumble and sink away.
+		crate.hide()
+		for k in 4:
+			var piece := Node3D.new()
+			add_child(piece)
+			ModelKit.whole(PIECES % "abcd"[k], piece)
+			piece.global_position = crate.global_position + Vector3.UP * CRATE_M * 0.5
+			var out := (way + Vector3.UP.cross(way) * (float(k) - 1.5) * 0.5 + Vector3.UP * (0.4 + 0.2 * (k % 2))).normalized()
+			var fly := piece.create_tween()
+			fly.set_parallel(true)
+			fly.tween_property(piece, "global_position", piece.global_position + out * PIECE_FLY_M, PIECE_S).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+			fly.tween_property(piece, "rotation", Vector3(TAU * (k + 1) * 0.3, TAU * 0.5, TAU * (4 - k) * 0.2), PIECE_S)
+			fly.tween_property(piece, "scale", Vector3.ONE * 0.05, PIECE_S).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+			fly.chain().tween_callback(piece.queue_free)
+		return
 	var tween := crate.create_tween()
 	tween.set_parallel(true)
-	tween.tween_property(crate, "global_position", crate.global_position + velocity.normalized() * 3.0 + Vector3.UP * 1.5, BURST_S)
+	tween.tween_property(crate, "global_position", crate.global_position + way * 3.0 + Vector3.UP * 1.5, BURST_S)
 	tween.tween_property(crate, "scale", Vector3.ONE * 0.05, BURST_S).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
 	tween.chain().tween_callback(crate.hide)
 
@@ -386,7 +415,13 @@ func _gantry() -> Node3D:
 		for x in [-GANTRY_WIDE_M * 0.5, GANTRY_WIDE_M * 0.5]:
 			_box(Vector3(1.0, GANTRY_TALL_M, 1.6), Vector3(x, GANTRY_TALL_M * 0.5, 0.0), Palette.RUST, gantry)
 		_box(Vector3(GANTRY_WIDE_M + 1.0, 1.6, 1.6), Vector3(0.0, GANTRY_TALL_M - 0.8, 0.0), Palette.RUST, gantry)
-		_box(Vector3(PLATE_HALF_M * 2.0, 0.12, PLATE_DEEP_M * 2.0), Vector3(0.0, 0.06, 0.0), Palette.AMBER, gantry)
+	for view in gantry.find_children("*", "MeshInstance3D", true, false):
+		if view.visibility_range_begin <= 0.0:
+			view.visibility_range_begin = GANTRY_NEAR_M
+			view.visibility_range_begin_margin = 2.0
+			view.visibility_range_fade_mode = GeometryInstance3D.VISIBILITY_RANGE_FADE_SELF
+	# The plate to roll over, striped so it reads against the ground; it lies on the model's own plate and is always drawn.
+	_box(Vector3(PLATE_HALF_M * 2.0, 0.1, PLATE_DEEP_M * 2.0), Vector3(0.0, PLATE_TOP_M, 0.0), Palette.AMBER, gantry).material_override = Palette.striped(Palette.AMBER, Palette.CHARCOAL)
 	# The board reads from both ways along the line.
 	var board := Label3D.new()
 	board.name = "Board"

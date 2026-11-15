@@ -6,10 +6,14 @@ const ModelKit := preload("res://src/world/model_kit.gd")
 # side the ride goes on (machines climb in on the ring itself, so nothing arrives inside either). The gate stands shut
 # while a count stands and sinks into the ground while the floor is clear, which is when rolling out banks; when the
 # yard is over it sinks for good. Both are solid. The ring itself is not fenced: the ball can still leave anywhere,
-# and the gate marks which way is out.
+# and the gate marks which way is out. Marker flags stand round the ring's edge, clear of the gate; they are not solid
+# and stand only where their model is. A muster, which comes to the ball, has no furniture but the siren mast that
+# stands where it is called (mast()).
 
 const STAND := "res://assets/models/world_one/poi_tally_stand.glb"
 const GATE := "res://assets/models/world_one/poi_yard_gate.glb"
+const FLAG := "res://assets/models/world_one/poi_ring_flag.glb"
+const MAST := "res://assets/models/world_one/poi_siren_mast.glb"
 # The models' sizes: the stand's footprint and height, and the gate's depth, height and width (wide along its Z).
 const STAND_SIZE := Vector3(3.0, 4.0, 3.0)
 const GATE_SIZE := Vector3(2.3, 4.0, 8.0)
@@ -22,6 +26,9 @@ const STAND_ROUND := 0.4
 const SINK_M := 4.3
 const SINK_S := 0.6
 const RISE_CLEAR_M := 7.0
+# Marker flags: this many round the ring, none within this angle of the gate (radians).
+const FLAGS := 14
+const FLAG_GATE_CLEAR := 0.35
 
 var _gate: Node3D
 var _up := 0.0
@@ -93,7 +100,44 @@ func _build(centre: Vector3, ring: float, out: Vector2, ground: Callable) -> boo
 	stand.global_position = Vector3(centre.x + stand_at.x, float(ground.call(centre.x + stand_at.x, centre.z + stand_at.y)), centre.z + stand_at.y)
 	# The stand's front (its X) faces the ring's centre.
 	stand.global_rotation = Vector3(0.0, atan2(stand_at.y, -stand_at.x), 0.0)
+	if ResourceLoader.exists(FLAG):
+		var flags := Node3D.new()
+		flags.name = "Flags"
+		add_child(flags)
+		for spot in flag_spots(ring, out):
+			var flag := Node3D.new()
+			flags.add_child(flag)
+			ModelKit.whole(FLAG, flag)
+			flag.global_position = Vector3(centre.x + spot.x, float(ground.call(centre.x + spot.x, centre.z + spot.y)), centre.z + spot.y)
+			# The pennant flies along the ring.
+			flag.global_rotation = Vector3(0.0, atan2(spot.x, spot.y) + PI * 0.5, 0.0)
 	return true
+
+
+# Where a ring's marker flags stand, as offsets from its centre in plan: FLAGS evenly round a ring of `ring` metres,
+# less any within FLAG_GATE_CLEAR of the way out, where the gate stands.
+static func flag_spots(ring: float, out: Vector2) -> PackedVector2Array:
+	var spots := PackedVector2Array()
+	for i in FLAGS:
+		var spot := out.normalized().rotated(TAU * (i + 0.5) / FLAGS) * ring
+		if absf(spot.angle_to(out)) >= FLAG_GATE_CLEAR:
+			spots.append(spot)
+	return spots
+
+
+# The siren mast that stands where a muster is called, under `parent` at plan point `at`, its horn toward `face`.
+# Not solid. Null where the model is missing.
+static func mast(parent: Node3D, at: Vector2, face: Vector2, ground: Callable) -> Node3D:
+	if not ResourceLoader.exists(MAST):
+		return null
+	var pole := Node3D.new()
+	pole.name = "SirenMast"
+	parent.add_child(pole)
+	ModelKit.whole(MAST, pole)
+	pole.global_position = Vector3(at.x, float(ground.call(at.x, at.y)), at.y)
+	# The model's horn points along its +X.
+	pole.global_rotation = Vector3(0.0, atan2(-face.y, face.x), 0.0)
+	return pole
 
 
 # A solid body the size of the model, with the model on it, base at the body's origin.

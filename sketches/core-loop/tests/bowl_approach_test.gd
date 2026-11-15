@@ -18,7 +18,7 @@ const Posts := preload("res://src/world/survey_posts.gd")
 
 const RUN_SEED := 7
 const EYE_M := 3.0
-const EXPECTED_CHECKS := 36
+const EXPECTED_CHECKS := 39
 
 var _game
 var _t := preload("res://tests/support/t.gd").new("bowl_approach_test")
@@ -176,6 +176,11 @@ func _run() -> void:
 	kept = kept and clear_of.all(func(c: Dictionary) -> bool: return not Posts.near(c, Vector2(plate.x, plate.z)))
 	_t.check("nothing stands near a site or inside a fight's ground", kept, "%d places kept clear" % clear_of.size())
 	_t.check("every crate sits on the ground", seated, str(approach.racks[0]["crates"][0].global_position))
+	var always := 0
+	var views: Array = approach.bridge["node"].find_children("*", "MeshInstance3D", true, false)
+	for view in views:
+		always += 1 if view.visibility_range_begin <= 0.0 else 0
+	_t.check("the gantry gives way to an eye under it and only its plate stays", views.size() >= 2 and always == 1, "%d of %d views always drawn" % [always, views.size()])
 	_t.check("the bridge is on the line's last stretch", float(planned["bridge"]["along"]) >= total - Approach.LAST_M, "%.0f of %.0f m" % [planned["bridge"]["along"], total])
 	# Survey posts keep off the approach: a run seed whose rows would stand on it is found, then played with both
 	# flags on, and the rows the game stands are off it.
@@ -223,6 +228,7 @@ func _run() -> void:
 	print("bowl_approach_test measure: from the tally fields on, the smoke's top is in view from %.0f%% of the floor line and the stacks' top from %.0f%%" % [share * 100.0, stacks * 100.0])
 	_t.check("the smoke is in view from most of the line from the tally fields on", share >= 0.85, "%.2f" % share)
 	# A ball at rest, then a falling ball, burst nothing.
+	var before: int = approach.get_child_count()
 	var row: Dictionary = approach.racks[0]
 	var first: Vector3 = row["crates"][0].global_position
 	_game.player.reset_to(first + Vector3.UP * 1.0, Vector3.ZERO)
@@ -239,6 +245,9 @@ func _run() -> void:
 	_game.player.reset_to(first + Vector3.UP * 1.0, Vector3.ZERO)
 	_game.player.set_velocity_now(heading * 14.0)
 	await _frames(2)
+	# Where the piece models are on the stage, the crate breaks into four of them on the hit.
+	var pieces: int = approach.get_child_count() - before
+	_t.check("a burst crate breaks into its four pieces", pieces == (4 if ResourceLoader.exists(Approach.PIECES % "a") else 0), "%d pieces" % pieces)
 	_t.check("a ball at speed bursts one crate and scrap lands ahead", row["hit"] == 1 and approach.clusters_paid == 0
 		and _game.ctx.build.scrap.count() >= scrap_before + Approach.CRATE_SCRAP, "%d hit, %d pieces against %d" % [row["hit"], _game.ctx.build.scrap.count(), scrap_before])
 	scrap_before = _game.ctx.build.scrap.count()
@@ -255,6 +264,14 @@ func _run() -> void:
 		if gone:
 			break
 	_t.check("the burst crates are gone", gone, "three crates")
+	var tidy := false
+	# Waited in game time, so a fast host's short frames do not run out before the pieces' tween does.
+	var waited := 0.0
+	while not tidy and waited < 20.0:
+		await process_frame
+		waited += root.get_process_delta_time()
+		tidy = approach.get_child_count() <= before
+	_t.check("and their pieces leave nothing behind", tidy, "%d children against %d" % [approach.get_child_count(), before])
 	# The weighbridge: a slow crossing weighs nothing; a fast one weighs once.
 	var along := Vector3(approach.bridge["heading"].x, 0.0, approach.bridge["heading"].y)
 	var board: Label3D = approach.bridge["board"]
