@@ -388,8 +388,8 @@ func _build_gate(at: Vector3, facing: Vector3, offer: Dictionary) -> Node3D:
 		glyph.position = Vector3((float(i) - (ids.size() - 1) * 0.5) * 1.5, HEIGHT + 2.9, 0.0)
 		gate.add_child(glyph)
 	gate.set_meta("pulse", offer["synergy"] != "")
-	# The offer is a screen prompt the HUD keeps in the prompts band (screen_regions.gd),
-	# under the gate's column, so it never climbs into the objective or the toasts.
+	# The offer is a sign the HUD hangs from the gate's crossbar (screen_regions.gd sign room), so
+	# each gate wears its own part and never climbs into the objective or the toasts (PF-22).
 	var label := WorldPrompt.new()
 	label.name = "Prompt"
 	var lines := "%s\n%s" % [offer["headline"], offer["text"]]
@@ -399,11 +399,11 @@ func _build_gate(at: Vector3, facing: Vector3, offer: Dictionary) -> Node3D:
 	var parts := prompt_parts(offer)
 	label.set_parts(parts["title"], parts["detail"], parts["icon"])
 	label.add_theme_color_override("font_color", tint.lerp(Color.WHITE, 0.25))
-	label.attach(gate, Vector3(0.0, HEIGHT + 1.2, 0.0), PROMPT_REACH)
+	label.attach(gate, Vector3(0.0, HEIGHT, 0.0), PROMPT_REACH)
 	# A gate is chosen by steering at it, long before the ball is beside it, so what each gives
 	# shows as far as its name does.
 	label.detail_range = PROMPT_REACH
-	label.leader = true
+	label.on_anchor = true
 	gate.add_child(label)
 	return gate
 

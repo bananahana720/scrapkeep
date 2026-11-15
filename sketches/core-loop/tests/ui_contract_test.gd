@@ -14,6 +14,7 @@ const UiFonts := preload("res://src/ui/ui_fonts.gd")
 const Parts := preload("res://src/build/parts.gd")
 const RewardGates := preload("res://src/build/reward_gates.gd")
 const ScreenRegions := preload("res://src/ui/screen_regions.gd")
+const AimReticle := preload("res://src/ui/aim_reticle.gd")
 const EventDirector := preload("res://src/world/event_director.gd")
 # Every kind the HUD toasts (ruling cx: a Warden break, a rout and a core toast no longer all fire).
 const EXPECTED_TOASTS: Array[String] = ["run_ended", "player_died", "milestone_won", "scrap_lost", "core_gained", "event_announced", "event_ended", "boss_phase_changed"]
@@ -139,7 +140,7 @@ func _check_prompt_parse() -> void:
 
 
 # A reward gate's prompt shows its detail from range (the gate is chosen by steering at it), so three
-# of the widest stand side by side in the band. Wherever the gates' columns fall, every gate keeps a
+# of the widest hang side by side from their gates in the sign room. Wherever the gates' columns fall, every gate keeps a
 # label: with its detail at 1600x900 and up, and by its name alone when 1280x720 has no room for a third.
 func _check_gate_prompts_fit() -> void:
 	var widest := {}
@@ -151,6 +152,7 @@ func _check_gate_prompts_fit() -> void:
 		var parts: Dictionary = RewardGates.prompt_parts({"name": Parts.display_name(id), "verb": d.verb, "punch": d.punch, "text": d.text, "mark": "* completes Tesla Pylon *"})
 		var probe := WorldPrompt.new()
 		probe.set_parts(parts["title"], parts["detail"], parts["icon"])
+		probe.on_anchor = true
 		probe.near = true
 		if probe.shown_extent().x > width:
 			width = probe.shown_extent().x
@@ -159,22 +161,25 @@ func _check_gate_prompts_fit() -> void:
 	var dropped := []
 	var bare := []
 	for size in [Vector2(1280.0, 720.0), Vector2(1600.0, 900.0), Vector2(1920.0, 1080.0)]:
-		var band := ScreenRegions.rect("prompts", size)
+		# The reticle's ring at the centre is kept clear, as the HUD keeps it.
+		var ring := AimReticle.meter_radius() + AimReticle.METER_WIDTH
+		var reticle := Rect2(size * 0.5 - Vector2.ONE * ring, Vector2.ONE * ring * 2.0)
 		for gap in [0.0, 60.0, 300.0]:
 			var x := 0.0
 			while x <= size.x:
-				var placed: Array[Rect2] = []
+				var placed: Array[Rect2] = [reticle]
 				var with_detail := 0
 				for k in [0, -1, 1]:
 					var prompt := WorldPrompt.new()
 					prompt.set_parts(widest["title"], widest["detail"], widest["icon"])
+					prompt.on_anchor = true
 					prompt.near = true
-					var spot: Rect2 = Hud.prompt_spot(prompt, Vector2(x + gap * k, size.y * 0.4), size, placed, band)
+					var spot: Rect2 = Hud.prompt_spot(prompt, Vector2(x + gap * k, size.y * 0.4), size, placed)
 					if spot.size != Vector2.ZERO:
 						placed.append(spot)
 						with_detail += int(prompt.near)
 					prompt.free()
-				if placed.size() < 3:
+				if placed.size() < 4:
 					dropped.append("%dx%d gap %d x %d" % [int(size.x), int(size.y), int(gap), int(x)])
 				elif with_detail < 3 and size.x >= 1600.0:
 					bare.append("%dx%d gap %d x %d" % [int(size.x), int(size.y), int(gap), int(x)])

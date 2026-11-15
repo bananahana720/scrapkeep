@@ -9,8 +9,8 @@ const Keycap := preload("res://src/ui/keycap.gd")
 # A screen-space prompt attached to a point in the world, such as a reward gate's
 # offer or a fabricator's price. At range it shows an icon and a title of at most three
 # words; within its detail_range of the ball (DETAIL_RANGE unless its owner says otherwise) it
-# adds the detail lines. The HUD places every prompt inside the prompts band each frame
-# (ScreenRegions) and tells it whether the ball is near.
+# adds the detail lines. The HUD places every prompt each frame (ScreenRegions): inside the
+# prompts band, or on its anchor when it is a sign, and tells it whether the ball is near.
 #
 # Owners pass structured parts with set_parts(title, detail, icon). Until they do, the
 # text they set is parsed (parse()): the first line is the title, the rest the detail.
@@ -21,6 +21,9 @@ const DETAIL_RANGE := 12.0
 const TITLE_WORDS := 3
 const TITLE_SIZE := UiTokens.BODY
 const DETAIL_SIZE := UiTokens.CAPTION
+# A sign reads a type step larger: it is chosen from across the yard (PF-22, "small blue text").
+const SIGN_TITLE_SIZE := UiTokens.LABEL
+const SIGN_DETAIL_SIZE := UiTokens.BODY
 const ICON := 24.0
 const ICON_GAP := 6.0
 const LINE_GAP := 2.0
@@ -44,11 +47,12 @@ var reach := 60.0
 var detail_range := DETAIL_RANGE
 # Set by the HUD each frame: the ball is within detail_range of the anchor.
 var near := false
-# A prompt the band places far below its anchor (a reward gate's offer, named under a gate across
-# the yard) draws a leader from its name up to the anchor, so the line says which gate gives it
-# (PF-22). `aim` is where the line ends on screen, set by the HUD with aim_at; `aim_cut` is true
-# when the gate stands above the play view and the line stops at the view's top edge.
-var leader := false
+# A sign (on_anchor) names the thing it hangs on (a reward gate's offer): the HUD hangs it from its anchor
+# in the play view, not in the prompts band, so each gate wears its own part (PF-22). When it has
+# to stand aside (another sign, the ball or the reticle is in its place) it draws a leader from its
+# name up to the anchor. `aim` is where the line ends on screen, set by the HUD with aim_at;
+# `aim_cut` is true when the anchor stands above the play view and the line stops at its top edge.
+var on_anchor := false
 var aim := Vector2.INF
 var aim_cut := false
 
@@ -150,6 +154,14 @@ func drawn_words() -> PackedStringArray:
 	return out
 
 
+func title_size() -> int:
+	return SIGN_TITLE_SIZE if on_anchor else TITLE_SIZE
+
+
+func detail_size() -> int:
+	return SIGN_DETAIL_SIZE if on_anchor else DETAIL_SIZE
+
+
 func _cap_width() -> float:
 	return Keycap.size_of(keycap, ICON).x + ICON_GAP if keycap != "" else 0.0
 
@@ -157,11 +169,11 @@ func _cap_width() -> float:
 func shown_extent() -> Vector2:
 	var font := UiFonts.bold()
 	var lines := shown_lines()
-	var width := _cap_width() + ICON + ICON_GAP + font.get_string_size(lines[0], HORIZONTAL_ALIGNMENT_LEFT, -1, TITLE_SIZE).x
-	var height := maxf(ICON, font.get_height(TITLE_SIZE))
+	var width := _cap_width() + ICON + ICON_GAP + font.get_string_size(lines[0], HORIZONTAL_ALIGNMENT_LEFT, -1, title_size()).x
+	var height := maxf(ICON, font.get_height(title_size()))
 	for i in range(1, lines.size()):
-		width = maxf(width, font.get_string_size(lines[i], HORIZONTAL_ALIGNMENT_LEFT, -1, DETAIL_SIZE).x)
-		height += LINE_GAP + font.get_height(DETAIL_SIZE)
+		width = maxf(width, font.get_string_size(lines[i], HORIZONTAL_ALIGNMENT_LEFT, -1, detail_size()).x)
+		height += LINE_GAP + font.get_height(detail_size())
 	return Vector2(minf(width + 8.0, ScreenRegions.PROMPT_WIDTH), height)
 
 
@@ -171,7 +183,7 @@ func shown_extent() -> Vector2:
 func aim_at(point: Vector2, room: Rect2) -> void:
 	aim_cut = false
 	aim = point
-	if not leader or not point.is_finite():
+	if not on_anchor or not point.is_finite():
 		return
 	var start := position + _leader_start()
 	if point.y < room.position.y and start.y > room.position.y:
@@ -181,7 +193,7 @@ func aim_at(point: Vector2, room: Rect2) -> void:
 
 # The leader's far end in the prompt's own space, or Vector2.INF when it draws none.
 func leader_end() -> Vector2:
-	if not leader or not aim.is_finite():
+	if not on_anchor or not aim.is_finite():
 		return Vector2.INF
 	var end := aim - position
 	var start := _leader_start()
@@ -214,8 +226,8 @@ func _draw() -> void:
 		if not aim_cut:
 			draw_circle(end, LEADER_DOT + 1.5, Color(outline, 0.6))
 			draw_circle(end, LEADER_DOT, color)
-	var title_w := font.get_string_size(lines[0], HORIZONTAL_ALIGNMENT_LEFT, -1, TITLE_SIZE).x
-	var row_h := maxf(ICON, font.get_height(TITLE_SIZE))
+	var title_w := font.get_string_size(lines[0], HORIZONTAL_ALIGNMENT_LEFT, -1, title_size()).x
+	var row_h := maxf(ICON, font.get_height(title_size()))
 	var x := (extent.x - (_cap_width() + ICON + ICON_GAP + title_w)) * 0.5
 	if keycap != "":
 		var cap := Keycap.size_of(keycap, ICON)
@@ -227,15 +239,15 @@ func _draw() -> void:
 		var centre := Vector2(x + ICON * 0.5, row_h * 0.5)
 		draw_arc(centre, ICON * 0.72, 0.0, TAU, 32, Color(outline, 0.6), 3.0)
 		draw_arc(centre, ICON * 0.72, -PI * 0.5, -PI * 0.5 + TAU * clampf(gauge, 0.0, 1.0), 32, color, 3.0)
-	var baseline := (row_h + font.get_ascent(TITLE_SIZE) - font.get_descent(TITLE_SIZE)) * 0.5
+	var baseline := (row_h + font.get_ascent(title_size()) - font.get_descent(title_size())) * 0.5
 	var at := Vector2(x + ICON + ICON_GAP, baseline)
-	draw_string_outline(font, at, lines[0], HORIZONTAL_ALIGNMENT_LEFT, -1, TITLE_SIZE, 6, outline)
-	draw_string(font, at, lines[0], HORIZONTAL_ALIGNMENT_LEFT, -1, TITLE_SIZE, color)
+	draw_string_outline(font, at, lines[0], HORIZONTAL_ALIGNMENT_LEFT, -1, title_size(), 6, outline)
+	draw_string(font, at, lines[0], HORIZONTAL_ALIGNMENT_LEFT, -1, title_size(), color)
 	var y := row_h
 	for i in range(1, lines.size()):
-		y += LINE_GAP + font.get_ascent(DETAIL_SIZE)
-		var w := font.get_string_size(lines[i], HORIZONTAL_ALIGNMENT_LEFT, -1, DETAIL_SIZE).x
+		y += LINE_GAP + font.get_ascent(detail_size())
+		var w := font.get_string_size(lines[i], HORIZONTAL_ALIGNMENT_LEFT, -1, detail_size()).x
 		var line_at := Vector2((extent.x - w) * 0.5, y)
-		draw_string_outline(font, line_at, lines[i], HORIZONTAL_ALIGNMENT_LEFT, -1, DETAIL_SIZE, 5, outline)
-		draw_string(font, line_at, lines[i], HORIZONTAL_ALIGNMENT_LEFT, -1, DETAIL_SIZE, Color(color, 0.9))
-		y += font.get_descent(DETAIL_SIZE)
+		draw_string_outline(font, line_at, lines[i], HORIZONTAL_ALIGNMENT_LEFT, -1, detail_size(), 5, outline)
+		draw_string(font, line_at, lines[i], HORIZONTAL_ALIGNMENT_LEFT, -1, detail_size(), Color(color, 0.9))
+		y += font.get_descent(detail_size())

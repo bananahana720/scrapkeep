@@ -5,12 +5,14 @@ extends RefCounted
 #   top      screen titles, the objective with its core pips, the run status
 #   toasts   the stage card or one toast (TOAST_ROWS), then a first-run callout or the
 #            hold-R restart meter
-#   prompts  world-attached prompts: reward gates and fabricators, placed under their
-#            anchor and clamped inside this band
+#   prompts  world-attached prompts such as fabricators, placed under their anchor and
+#            clamped inside this band
 #   bottom   the HUD: speed, health, the ability bar, heft and scrap
 # The middle of the screen between toasts and prompts is left to the play view and
 # the reticle, with the contextual key glyphs beside the ball or target and the edge
-# markers at its rim. Everything that draws text during play asks this file for its band.
+# markers at its rim. A sign (a reward gate's offer) hangs from the thing it names in the
+# sign room, the play view and the prompts band together, clear of the ball and the
+# reticle (PF-22). Everything that draws text during play asks this file for its band.
 
 const BANDS := {
 	"top": Vector2(0.0, 0.14),
@@ -25,6 +27,8 @@ const MAX_PROMPTS := 3
 const PROMPT_WIDTH := 360.0
 const PROMPT_GAP := 12.0
 const PROMPT_GROUP := "world_prompt"
+# A sign's top stands this far under its anchor, so the name hangs from the gate's crossbar.
+const SIGN_DROP := 6.0
 
 
 static func rect(region: String, size: Vector2) -> Rect2:
@@ -43,4 +47,21 @@ static func clamp_prompt(at: Vector2, prompt_size: Vector2, size: Vector2) -> Ve
 	var band := rect("prompts", size)
 	var x := clampf(at.x - prompt_size.x * 0.5, band.position.x, maxf(band.position.x, band.end.x - prompt_size.x))
 	var y := clampf(at.y - prompt_size.y, band.position.y, maxf(band.position.y, band.end.y - prompt_size.y))
+	return Vector2(x, y)
+
+
+# Where a sign may stand: from under the toasts band to the bottom of the prompts band, inside
+# the prompts band's side margins.
+static func sign_room(size: Vector2) -> Rect2:
+	var band := rect("prompts", size)
+	var top := rect("toasts", size).end.y
+	return Rect2(band.position.x, top, band.size.x, band.end.y - top)
+
+
+# Where a sign of sign_size goes when its anchor projects to `at`: centred on the anchor's column
+# and hanging just under it, clamped inside the sign room.
+static func clamp_sign(at: Vector2, sign_size: Vector2, size: Vector2) -> Vector2:
+	var room := sign_room(size)
+	var x := clampf(at.x - sign_size.x * 0.5, room.position.x, maxf(room.position.x, room.end.x - sign_size.x))
+	var y := clampf(at.y + SIGN_DROP, room.position.y, maxf(room.position.y, room.end.y - sign_size.y))
 	return Vector2(x, y)
