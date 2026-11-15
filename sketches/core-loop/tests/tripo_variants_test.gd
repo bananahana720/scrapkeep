@@ -656,6 +656,9 @@ const POI_PROPS := [
 	["poi_tag_rack", 3.03, 3.0, false],
 	["poi_tag_rack_leaning", 3.66, 4.57, false],
 	["poi_scooter_shed", 3.0, 4.0, false],
+	["poi_scooter", 1.05, 1.61, false],
+	["poi_parade_crew_cheer", 1.4, 1.26, false],
+	["poi_parade_crew_standard", 1.4, 1.14, false],
 ]
 
 

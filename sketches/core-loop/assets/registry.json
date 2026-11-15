@@ -22870,10 +22870,9 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_flume.json) through src/presentation/model_variants.gd (--models=tripo)",
    "provenance": {
     "recipe": "tools/tripo/README.md",
-    "note": "Generated in Tripo Studio (studio.tripo3d.ai, Smart Mesh, P2.0, text prompt tools/tripo/prompts/sluice_shed.txt, then Texture; workspace id 05a306ba-03b8-48d6-bc96-2dd5d84cc071, Studio asset name 'desert sluice shed 3d model', the first of four candidates) on Andrew's paid Pro account (Tripo terms 5.2: the outputs belong to the account holder); fitted by tools/tripo/tripo_fit.py inside the authored bounds, turned 90 degrees so the wheel faces as the authored wheel does; LOD by decimation; faces snapped to the authored palette, no texture ships. sha256 928178bbc3301d965c9add28a6cb774144a7cd2d97bd4628331ab27777ff5982"
+    "note": "Generated in Tripo Studio (studio.tripo3d.ai, Smart Mesh, P2.0, text prompt tools/tripo/prompts/sluice_shed_wheel.txt, then Texture; workspace id 2c172e1b-a32c-4c10-b35f-b88b6b8b33fd, Studio asset name 'water wheel shed 3d model', the third of four candidates) on Andrew's paid Pro account (Tripo terms 5.2: the outputs belong to the account holder); it replaces the first generated shed (workspace 05a306ba-03b8-48d6-bc96-2dd5d84cc071), which had lost the big water wheel; fitted by tools/tripo/tripo_prop.py to the authored 5.65 m height, turned 90 degrees so the wheel stands at the front right as the authored wheel does; the texture left the wheel grey, so the wheel's faces are repainted rust red (--region); LOD by decimation; ten flat colours of its own, no texture ships. sha256 456e56e846338ddabb8772b62007228979afe06cc6ae8fcd703867c1aa794a9d"
    },
-   "accepted": false,
-   "accepted_why": "The board's PC look of PR 1024 (14 November 2026): it swaps cleanly and holds its shape from 40 to 160 m, but it loses the big red water wheel, which is the authored shed's landmark shape. Held back until a generated shed keeps a big wheel."
+   "accepted": true
   },
   {
    "id": "dprop_flume_sluice_shed_a_lod2",
@@ -22911,10 +22910,9 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_flume.json) through src/presentation/model_variants.gd (--models=tripo)",
    "provenance": {
     "recipe": "tools/tripo/README.md",
-    "note": "Generated in Tripo Studio (studio.tripo3d.ai, Smart Mesh, P2.0, text prompt tools/tripo/prompts/sluice_shed.txt, then Texture; workspace id 05a306ba-03b8-48d6-bc96-2dd5d84cc071, Studio asset name 'desert sluice shed 3d model', the first of four candidates) on Andrew's paid Pro account (Tripo terms 5.2: the outputs belong to the account holder); fitted by tools/tripo/tripo_fit.py inside the authored bounds, turned 90 degrees so the wheel faces as the authored wheel does; LOD by decimation; faces snapped to the authored palette, no texture ships. sha256 5a9dd926e4973c5a163813e44ef1026257bb5dc9c249700cd2d65d3f875a4f1e"
+    "note": "Generated in Tripo Studio (studio.tripo3d.ai, Smart Mesh, P2.0, text prompt tools/tripo/prompts/sluice_shed_wheel.txt, then Texture; workspace id 2c172e1b-a32c-4c10-b35f-b88b6b8b33fd, Studio asset name 'water wheel shed 3d model', the third of four candidates) on Andrew's paid Pro account (Tripo terms 5.2: the outputs belong to the account holder); it replaces the first generated shed (workspace 05a306ba-03b8-48d6-bc96-2dd5d84cc071), which had lost the big water wheel; fitted by tools/tripo/tripo_prop.py to the authored 5.65 m height, turned 90 degrees so the wheel stands at the front right as the authored wheel does; the texture left the wheel grey, so the wheel's faces are repainted rust red (--region); LOD by decimation; ten flat colours of its own, no texture ships. sha256 e5eff0d5f116ccc5c13d074c0717f8ad2e8730e9e1ec01aabb7355f4b25a9aac"
    },
-   "accepted": false,
-   "accepted_why": "The board's PC look of PR 1024 (14 November 2026): it swaps cleanly and holds its shape from 40 to 160 m, but it loses the big red water wheel, which is the authored shed's landmark shape. Held back until a generated shed keeps a big wheel."
+   "accepted": true
   },
   {
    "id": "sluice_shed_a_tripo",
@@ -22924,10 +22922,9 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_flume.json) through src/presentation/model_variants.gd (--models=tripo)",
    "provenance": {
     "recipe": "tools/tripo/README.md",
-    "note": "Generated in Tripo Studio (studio.tripo3d.ai, Smart Mesh, P2.0, text prompt tools/tripo/prompts/sluice_shed.txt, then Texture; workspace id 05a306ba-03b8-48d6-bc96-2dd5d84cc071, Studio asset name 'desert sluice shed 3d model', the first of four candidates) on Andrew's paid Pro account (Tripo terms 5.2: the outputs belong to the account holder); fitted by tools/tripo/tripo_fit.py inside the authored bounds, turned 90 degrees so the wheel faces as the authored wheel does; LOD by decimation; faces snapped to the authored palette, no texture ships. sha256 747164b788920deb13b3f014752f31b2a0104142d94faf2f376ce86a512656f1"
+    "note": "Generated in Tripo Studio (studio.tripo3d.ai, Smart Mesh, P2.0, text prompt tools/tripo/prompts/sluice_shed_wheel.txt, then Texture; workspace id 2c172e1b-a32c-4c10-b35f-b88b6b8b33fd, Studio asset name 'water wheel shed 3d model', the third of four candidates) on Andrew's paid Pro account (Tripo terms 5.2: the outputs belong to the account holder); it replaces the first generated shed (workspace 05a306ba-03b8-48d6-bc96-2dd5d84cc071), which had lost the big water wheel; fitted by tools/tripo/tripo_prop.py to the authored 5.65 m height, turned 90 degrees so the wheel stands at the front right as the authored wheel does; the texture left the wheel grey, so the wheel's faces are repainted rust red (--region); LOD by decimation; ten flat colours of its own, no texture ships. sha256 54eaa2134038b55202b49de6126eb1d3d41b62ad8b477568902d80c6c6dfa210"
    },
-   "accepted": false,
-   "accepted_why": "The board's PC look of PR 1024 (14 November 2026): it swaps cleanly and holds its shape from 40 to 160 m, but it loses the big red water wheel, which is the authored shed's landmark shape. Held back until a generated shed keeps a big wheel."
+   "accepted": true
   },
   {
    "id": "dprop_flume_sluice_shed_b",
@@ -37907,6 +37904,28 @@
    }
   },
   {
+   "id": "poi_parade_crew_cheer",
+   "path": "res://assets/models/world_one/poi_parade_crew_cheer.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "not placed yet: the points of interest thread loads it (branch claude/project-thread-kjv6sg), with vertex colour as albedo as src/presentation/park_props.gd does",
+   "provenance": {
+    "recipe": "tools/blender/world_one/poi_parade_crew.py",
+    "note": "Vertex coloured, a parade crew member 1.4 m tall, both mittens up, 1.26 m across: the stands' plush crew from assets/models/bosses/arena_bowl_yard.glb put in parade dress (a warning orange hat with a brass band and a warning orange sash), so the parade is the same animal as the crowd; its origin is on the ground under its seat and it faces the way the scooter shed's door faces; made with no generation credits for the Brindle arena surroundings (W1-104). sha256 ee5704b8ee0897ea2069f01983897c8991104905c42f81f99aa42d237f9d7b28"
+   }
+  },
+  {
+   "id": "poi_parade_crew_standard",
+   "path": "res://assets/models/world_one/poi_parade_crew_standard.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "not placed yet: the points of interest thread loads it (branch claude/project-thread-kjv6sg), with vertex colour as albedo as src/presentation/park_props.gd does",
+   "provenance": {
+    "recipe": "tools/blender/world_one/poi_parade_crew.py",
+    "note": "Vertex coloured, a parade crew member 1.4 m tall, holding the tally pennant on its staff, 1.14 m across: the stands' plush crew from assets/models/bosses/arena_bowl_yard.glb put in parade dress (a warning orange hat with a brass band and a warning orange sash), so the parade is the same animal as the crowd; its origin is on the ground under its seat and it faces the way the scooter shed's door faces; made with no generation credits for the Brindle arena surroundings (W1-104). sha256 275b0053a4b77f31cf7e05f6efaf59cdf03293e3b7dafaf97ececebffe66bff3"
+   }
+  },
+  {
    "id": "poi_req_locker",
    "path": "res://assets/models/world_one/poi_req_locker.glb",
    "class": "landmark",
@@ -37937,6 +37956,17 @@
    "provenance": {
     "recipe": "tools/blender/world_one/poi_yard.py",
     "note": "Procedural, vertex coloured, a ring edge marker flag, 2.0 m tall, a sprung pennant on a weighted foot, origin at the foot; built by hand in Blender for the Brindle arena surroundings (W1-104). sha256 ccc16176eda93e0fd2fde67726557a9702671b1a3bd692f4f6b0b9bfc03141be"
+   }
+  },
+  {
+   "id": "poi_scooter",
+   "path": "res://assets/models/world_one/poi_scooter.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "not placed yet: the points of interest thread loads it (branch claude/project-thread-kjv6sg), with vertex colour as albedo as src/presentation/park_props.gd does",
+   "provenance": {
+    "recipe": "tools/blender/world_one/poi_yard.py",
+    "note": "Procedural, vertex coloured, the parade scooter that stands in the scooter shed, a too-small step-through scooter 1.6 m long, 0.64 m wide and 1.05 m tall with a tally pennant on the back; its nose points the way the shed's door faces, so it is placed at the shed's origin; built by hand in Blender for the Brindle arena surroundings (W1-104). sha256 ef8e34544987621eafc1b64ca9e0db9d6c6fd483b788f3263a067a8e6db939c0"
    }
   },
   {
@@ -40720,9 +40750,12 @@
   "poi_camp_tally_post_lod2",
   "poi_fence_panel",
   "poi_furnace_stacks",
+  "poi_parade_crew_cheer",
+  "poi_parade_crew_standard",
   "poi_req_locker",
   "poi_req_locker_door",
   "poi_ring_flag",
+  "poi_scooter",
   "poi_scooter_shed",
   "poi_siren_mast",
   "poi_survey_stake",
