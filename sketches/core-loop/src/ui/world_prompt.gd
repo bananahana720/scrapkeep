@@ -200,6 +200,16 @@ func _line_width(line: String, size: int) -> float:
 	return UiFonts.bold().get_string_size(line, HORIZONTAL_ALIGNMENT_LEFT, -1, size).x
 
 
+# The rows the draw lays out, as {line, size, width}: the title row (its width includes the key cap
+# and icon) and the detail lines. The rectangle's words, text_width and _draw all read these.
+func drawn_rows() -> Array:
+	var lines := shown_lines()
+	var rows: Array = [{"line": lines[0], "size": title_size(), "width": _title_row_width(title_size())}]
+	for i in range(1, lines.size()):
+		rows.append({"line": lines[i], "size": detail_size(), "width": _line_width(lines[i], detail_size())})
+	return rows
+
+
 func _extent_of(title_size_px: int, lines: PackedStringArray, width: float) -> Vector2:
 	var font := UiFonts.bold()
 	var height := maxf(ICON, font.get_height(title_size_px))
@@ -211,19 +221,14 @@ func _extent_of(title_size_px: int, lines: PackedStringArray, width: float) -> V
 func shown_extent() -> Vector2:
 	if on_anchor and _level >= 0 and _level < SIGN_LEVELS:
 		return _sign_extent
-	var lines := shown_lines()
-	var width := _title_row_width(title_size())
-	for i in range(1, lines.size()):
-		width = maxf(width, _line_width(lines[i], detail_size()))
-	return _extent_of(title_size(), lines, minf(width + 8.0, ScreenRegions.PROMPT_WIDTH))
+	return _extent_of(title_size(), shown_lines(), minf(text_width() + 8.0, ScreenRegions.PROMPT_WIDTH))
 
 
 # The widest row the draw lays out, for a reader that checks the words stay inside the rectangle.
 func text_width() -> float:
-	var lines := shown_lines()
-	var width := _title_row_width(title_size())
-	for i in range(1, lines.size()):
-		width = maxf(width, _line_width(lines[i], detail_size()))
+	var width := 0.0
+	for row in drawn_rows():
+		width = maxf(width, row["width"])
 	return width
 
 
@@ -391,9 +396,9 @@ func _draw() -> void:
 		if not aim_cut:
 			draw_circle(end, LEADER_DOT + 1.5, Color(outline, 0.6))
 			draw_circle(end, LEADER_DOT, color)
-	var title_w := font.get_string_size(lines[0], HORIZONTAL_ALIGNMENT_LEFT, -1, title_size()).x
+	var rows := drawn_rows()
 	var row_h := maxf(ICON, font.get_height(title_size()))
-	var x := (extent.x - (_cap_width() + ICON + ICON_GAP + title_w)) * 0.5
+	var x := (extent.x - float(rows[0]["width"])) * 0.5
 	if keycap != "":
 		var cap := Keycap.size_of(keycap, ICON)
 		Keycap.draw(self, Vector2(x + cap.x * 0.5, row_h * 0.5), keycap, color, ICON)
@@ -411,7 +416,7 @@ func _draw() -> void:
 	var y := row_h
 	for i in range(1, lines.size()):
 		y += LINE_GAP + font.get_ascent(detail_size())
-		var w := font.get_string_size(lines[i], HORIZONTAL_ALIGNMENT_LEFT, -1, detail_size()).x
+		var w: float = rows[i]["width"]
 		var line_at := Vector2((extent.x - w) * 0.5, y)
 		draw_string_outline(font, line_at, lines[i], HORIZONTAL_ALIGNMENT_LEFT, -1, detail_size(), 5, outline)
 		draw_string(font, line_at, lines[i], HORIZONTAL_ALIGNMENT_LEFT, -1, detail_size(), Color(color, 0.9))

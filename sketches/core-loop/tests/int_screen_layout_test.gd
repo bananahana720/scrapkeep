@@ -19,6 +19,8 @@ const AimReticle := preload("res://src/ui/aim_reticle.gd")
 #   - the field notes legend shows each shape's glyph, not its key word;
 #   - the two zones carry the world's map titles.
 
+const Parts := preload("res://src/build/parts.gd")
+const RewardGates := preload("res://src/build/reward_gates.gd")
 const SIZES := [Vector2(1600.0, 900.0), Vector2(1280.0, 720.0)]
 const KEY_WORDS := ["star", "chevron", "cross", "diamond", "wave", "core", "burst", "arrow", "ring", "square", "bar"]
 
@@ -242,8 +244,9 @@ func _wears_own_name(p, r: Rect2, at: Vector2, columns: Array, signs: Rect2, rin
 	return holds and nearest and below and (hangs or leads)
 
 
-const SWEEP_TEXTS := [["Rime Rounds", "+6 punch. Shots freeze water."], ["Spare Cell", "+1 special charge. Kills refill it, 12s apart."],
+var _sweep_texts := [["Rime Rounds", "+6 punch. Shots freeze water."], ["Spare Cell", "+1 special charge. Kills refill it, 12s apart."],
 	["Breaker Drive", "+8 punch, +35% weapon damage. From Wrecking Ball."], ["Storm Mast", "+6 punch, +20% fire rate. From Tesla Pylon."]]
+var _opening := {}
 var _sweep_stats := {"cases": 0, "signs": 0, "none_s3": 0, "none_s4": 0, "none_s5": 0, "bad": [], "name_at_1280_close": 0, "detail_at_1280_close": 0}
 
 
@@ -254,6 +257,7 @@ func _sweeps() -> void:
 	for node in get_nodes_in_group(ScreenRegions.PROMPT_GROUP):
 		node.remove_from_group(ScreenRegions.PROMPT_GROUP)
 		node.visible = false
+	_add_widest_real_gate()
 	var original: Vector2i = root.content_scale_size
 	for size in SIZES:
 		root.content_scale_size = Vector2i(size)
@@ -277,8 +281,36 @@ func _sweeps() -> void:
 	_report("sweep: every shown sign wears its own name, every missing one has its reason", s["cases"] > 0 and s["signs"] > 0 and s["bad"].is_empty(),
 		"%d cases, %d signs checked, %d gates with no sign (outside the room or no slot %d, too narrow %d, no row %d); first failures %s" % [s["cases"], s["signs"], s["none_s3"] + s["none_s4"] + s["none_s5"], s["none_s3"], s["none_s4"], s["none_s5"], s["bad"].slice(0, 4)])
 	_report("sweep: gates 160 to 220 px apart at 1280x720 show", s["detail_at_1280_close"] + s["name_at_1280_close"] > 0, "three gates 160 to 220 px apart: %d signs with detail, %d with the name alone" % [s["detail_at_1280_close"], s["name_at_1280_close"]])
+	var keys := _opening.keys()
+	keys.sort()
+	for key in keys:
+		var row: Dictionary = _opening[key]
+		print("[opening spacing 160 to 280 px] %s: %d visible gates in the sign area, %d with no sign (%d too near a neighbour or off the room's sides, %d slot too narrow, %d no row free)" % [key, row["visible"], row["unnamed"], row["near"], row["narrow"], row["row"]])
+	_hysteresis_sweep()
 	_slide_sweep()
 	_four_gates()
+
+
+# The real gate prompt whose name is widest at the floor size joins the sweep's names, so the widest
+# real sign is placed beside the short ones.
+func _add_widest_real_gate() -> void:
+	var widest := 0.0
+	var pick: Array = []
+	for id in Parts.ids():
+		var d: Resource = Parts.offer_def(id, [])
+		if d == null:
+			continue
+		var parts: Dictionary = RewardGates.prompt_parts({"name": Parts.display_name(id), "verb": d.verb, "punch": d.punch, "text": d.text, "mark": ""})
+		var probe := WorldPrompt.new()
+		probe.set_parts(parts["title"], parts["detail"], parts["icon"])
+		probe.on_anchor = true
+		probe.near = true
+		var need := maxf(probe.sign_need(2), probe.sign_need(0) if probe.sign_need(0) != INF else 0.0)
+		if need > widest:
+			widest = need
+			pick = [parts["title"], parts["detail"]]
+		probe.free()
+	_sweep_texts.append(pick)
 
 
 func _gate_set(xs: Array, y: float, texts_from: int = 0) -> Array:
@@ -289,7 +321,7 @@ func _gate_set(xs: Array, y: float, texts_from: int = 0) -> Array:
 		_game.ctx.root.add_child(anchor)
 		anchor.global_position = cam.project_position(Vector2(xs[i], y), 38.0)
 		var prompt := WorldPrompt.new()
-		var text: Array = SWEEP_TEXTS[(i + texts_from) % SWEEP_TEXTS.size()]
+		var text: Array = _sweep_texts[(i + texts_from) % _sweep_texts.size()]
 		prompt.set_parts(text[0], text[1])
 		prompt.on_anchor = true
 		prompt.attach(anchor, Vector3.ZERO, 500.0)
@@ -325,6 +357,7 @@ func _sweep_case(xs: Array, y: float, screen: Vector2, room: Rect2) -> void:
 					lo = maxf(lo, mid + ScreenRegions.PROMPT_GAP * 0.5)
 				else:
 					hi = minf(hi, mid - ScreenRegions.PROMPT_GAP * 0.5)
+		var why := ""
 		var tag := "%dx%d %d gates at %s y %d, gate %d" % [int(screen.x), int(screen.y), gates.size(), xs, int(y), i]
 		if _hud.prompt_rects.has(g):
 			var r: Rect2 = _hud.prompt_rects[g]
@@ -334,6 +367,8 @@ func _sweep_case(xs: Array, y: float, screen: Vector2, room: Rect2) -> void:
 			if r.position.x < lo - 0.5 or r.end.x > hi + 0.5 or not room.grow(0.5).encloses(r): problems.append("outside slot or room %s" % [Rect2(lo, room.position.y, hi - lo, room.size.y)])
 			if not _wears_own_name(g, r, at, columns, room, ring): problems.append("does not wear its own name")
 			if g.text_width() > r.size.x + 0.01: problems.append("text %.1f wider than its rectangle" % g.text_width())
+			var rows: Array = g.drawn_rows()
+			if g.text_width() <= 0.0 or g.text_width() < float(rows[0]["width"]) - 0.01: problems.append("text_width %.1f is less than the title row the draw lays out" % g.text_width())
 			if keep.any(func(k): return (k as Rect2).intersects(r)): problems.append("on the ring or the ball")
 			for other in gates:
 				if other != g and _hud.prompt_rects.has(other) and (_hud.prompt_rects[other] as Rect2).intersects(r): problems.append("overlaps another sign")
@@ -349,12 +384,27 @@ func _sweep_case(xs: Array, y: float, screen: Vector2, room: Rect2) -> void:
 		else:
 			if at.x < room.position.x or at.x > room.end.x or at.x < lo or at.x > hi:
 				s["none_s3"] += 1
+				why = "near" if at.x >= room.position.x and at.x <= room.end.x else ""
 			elif hi - lo < g.sign_need(2) - 0.001:
 				s["none_s4"] += 1
+				why = "narrow"
 			elif _no_row_below(g, at, lo, hi, room, keep):
 				s["none_s5"] += 1
+				why = "row"
 			else:
 				s["bad"].append("%s: no sign though the slot is %.0f wide and a row is free" % [tag, hi - lo])
+		# A gate in sight inside the sign area, at the spacing a real opening has, that still has no sign.
+		var spacing: float = absf(xs[1] - xs[0])
+		if gates.size() >= 3 and spacing >= 160.0 and spacing <= 280.0 and at.x >= room.position.x and at.x <= room.end.x:
+			var key := "%dx%d, %d gates" % [int(screen.x), int(screen.y), gates.size()]
+			var row: Dictionary = _opening.get(key, {"visible": 0, "unnamed": 0, "near": 0, "narrow": 0, "row": 0})
+			row["visible"] += 1
+			if why != "":
+				row["unnamed"] += 1
+				row[why] += 1
+			elif not _hud.prompt_rects.has(g):
+				row["unnamed"] += 1
+			_opening[key] = row
 	_free_gates(gates)
 
 
@@ -405,6 +455,40 @@ func _slide_sweep() -> void:
 	_free_gates(gates)
 	_report("sweep: a column crossing the view changes each sign's fit at most twice and moves it no faster than the column", changes.all(func(c): return c <= 2) and worst <= 1.01,
 		"fit changes per gate %s, the largest step of a sign's middle in a frame %.2f px over %d frames" % [changes, worst, levels[0].size()])
+
+
+# Two gates, the left one's slot width moved a few pixels back and forth inside the hysteresis margin
+# above where its detail starts to fit: a sign showing the name keeps it, and a sign showing detail
+# keeps it, through every frame.
+func _hysteresis_sweep() -> void:
+	var screen: Vector2 = _hud._screen_size()
+	var cam: Camera3D = _game.camera.cam
+	var room := ScreenRegions.sign_room(screen)
+	var y := screen.y * 0.25
+	var a_x := room.position.x + 20.0
+	var gates := _gate_set([a_x, 500.0], y, 1)
+	var need0: float = gates[0].sign_need(0)
+	var changes := 0
+	var levels_seen: Array = []
+	for start in [need0 - 10.0, need0 + 40.0]:
+		for g in gates:
+			g.set_parts(g.parts()["title"], g.parts()["detail"])
+			g._level = -1
+		var held := -2
+		for frame in 60:
+			var width: float = start if frame == 0 else (need0 + 2.0 if frame % 2 == 0 else need0 + 30.0)
+			var b_x: float = 2.0 * (room.position.x + width + ScreenRegions.PROMPT_GAP * 0.5) - a_x
+			gates[1].anchor.global_position = cam.project_position(Vector2(b_x, y), 38.0)
+			_hud.place_prompts(screen, true)
+			var level: int = gates[0].sign_level()
+			if frame > 0 and level != held:
+				changes += 1
+			held = level
+			if frame == 0:
+				levels_seen.append(level)
+	_free_gates(gates)
+	_report("sweep: a slot moving a few px inside the margin does not change a sign's level", changes == 0 and levels_seen == [1, 0],
+		"the name held and the detail held through 59 frames each: %d changes; the first frames showed levels %s (want [1, 0])" % [changes, levels_seen])
 
 
 # How many times the shown fit level changes along a run of frames (-1 is no sign, not a level).

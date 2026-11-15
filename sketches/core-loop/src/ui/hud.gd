@@ -1271,8 +1271,8 @@ static func _clamp_fraction(gate) -> float:
 
 
 # Every world-attached prompt in front of the camera and within its reach is placed. A sign (a
-# reward gate's offer) hangs in its own gate's slot of the sign room (sign_spot), every standing gate
-# named and none counted against the cap; it is placed first and has the room's priority. Any other
+# reward gate's offer) hangs in its own gate's slot of the sign room (sign_spot), none counted against
+# the cap, a gate whose slot cannot hold its name having none (CONTRACTS.md, UI regions); it is placed first and has the room's priority. Any other
 # prompt goes in the prompts band, nearest first, at most MAX_PROMPTS of them, each at the free spot
 # nearest its anchor's column (free_spot), clear of the pickup lines and the signs; the rest wait off
 # screen. A prompt shows its detail only while the ball is within its detail_range.

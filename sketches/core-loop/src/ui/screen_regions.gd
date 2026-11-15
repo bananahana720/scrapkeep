@@ -24,7 +24,7 @@ const BANDS := {
 const ORDER := ["top", "toasts", "prompts", "bottom"]
 const SIDE_MARGIN := 0.06
 const TOAST_ROWS := 1
-# Band prompts only: a reward gate's sign is not counted, every standing gate gets its own name.
+# Band prompts only: a reward gate's sign is not counted; each gate whose slot can hold its name gets one (CONTRACTS.md, UI regions, lists the three cases with none).
 const MAX_PROMPTS := 3
 const PROMPT_WIDTH := 360.0
 const PROMPT_GAP := 12.0
