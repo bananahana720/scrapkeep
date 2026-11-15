@@ -15,7 +15,7 @@ sibling, rejected ones too, so a rejected model can still be judged in the game.
 
 Rejected today (14 November 2026, by the board's PC looks and the render check):
 
-- `world_one/enemy_chaser_tripo.glb`: failed the render check below. In view 1 it sends 0.54 of the authored chaser's brightness, with 0.37 of its pixels near-black against 0.04, and the still shows loose black faces on the shell.
+- No file is rejected today. The first generated chaser failed the render check below (view 1 sent 0.54 of the authored chaser's brightness, with loose black faces on the shell). A new chaser that passes replaced it and is accepted (see its row below); it still needs the PC look.
 - The first generated sluice shed was rejected by the PC look of PR 1024 because it lost the big red water wheel. A second shed that keeps the wheel replaced it and is accepted (see its row below); it still needs the PC look.
 
 **The render check (generated enemy models, from 14 November 2026).** `tools/model_render_check.gd` judges a
@@ -55,6 +55,8 @@ model flag but `--models=tripo-all`.
 | Netcaster | 0.86, 0.31 (0.09) | 0.82, 0.10 (0.10) | fail |
 | Chaser | 0.95, 0.20 (0.12) | 0.54, 0.37 (0.04) | fail |
 
+The chaser was regenerated as a tall slab and shot again on 14 November 2026: view 0 brightness 1.19 with 0.01 near-black (authored 0.12), view 1 brightness 1.02 with 0.04 near-black (authored 0.04), pass. Its legs are shorter and sit under the slab, so from behind and above they are mostly hidden; from the front the visor, the clawed legs and the fin all show.
+
 The hooker and the netcaster were dark for one cause, found the same day: their generated faces read as fully in
 shadow in the second UV set (see "Crew enemies", **The bake**). Both were refitted with the fixed tool and shot
 again, with the swatter as the unchanged control:
@@ -82,9 +84,9 @@ the authored model's own palette.
 2. Generate two candidates (30 credits each, 13 Nov 2026 price):
    `tripo make "$(cat prompts/<stem>.txt)" --model tripo-v3.1 -p smart_low_poly=true -p face_limit=<cap> -n 2 --yes --json -o ~/scratch/tripo/<stem>`
 3. Fit one to the authored model:
-   `blender -b --factory-startup -P tools/tripo/tripo_fit.py -- --in <tripo model.glb> --ref assets/models/<dir>/<stem>.glb --out assets/models/<dir>/<stem>_tripo.glb --yaw <deg> --max-tris <cap> [--fit box] [--split "Part=zmax:0.22:rubber,..."]`
+   `blender -b --factory-startup -P tools/tripo/tripo_fit.py -- --in <tripo model.glb> --ref assets/models/<dir>/<stem>.glb --out assets/models/<dir>/<stem>_tripo.glb --yaw <deg> --max-tris <cap> [--fit box|fill] [--radius <m>] [--slots "slot;x0,y0,z0,x1,y1,z1=slot;..."] [--split "Part=zmax:0.22:rubber,..."]`
    - `--yaw` turns Tripo's +X forward onto the authored forward (-90 for camp models facing glTF +Z, 90 for world-one enemies leading along Blender +Y). The fitter prints each slot's centroid so a wrong turn shows: the accent slot (the visor, the eye) should sit on the forward side.
-   - `--fit height` (default) matches the authored height. `--fit box` keeps the mesh inside the authored bounds, for enemies whose collider is that box.
+   - `--fit height` (default) matches the authored height. `--fit box` keeps the mesh inside the authored bounds, for enemies whose collider is that box. `--fit fill` stretches each axis to fill them. `--radius` then narrows the mesh to stay inside a round hit core, and `--slots` gives faces their material slot by box when the texture's colours land on the wrong slot; the script's header has both rules.
    - `--split` cuts animated parts out by height band and slot, named as the authored nodes the code animates (`enemy_clips.gd` parts), pivoted at the authored node.
 4. Add a row to `assets/registry.d/tripo_variants.json` with the task id and sha256, run `python3 tools/fold_registry.py`, and add the pair to `tests/tripo_variants_test.gd` with its ceilings.
 
@@ -96,10 +98,10 @@ outputs with the account holder. Outputs made on a free account are public domai
 | sibling | Tripo task | prompt | credits | tris (authored) | draws (authored) | fit |
 | --- | --- | --- | --- | --- | --- | --- |
 | camp/camp_pet_tripo.glb | 4bbd2038-8fe8-48d9-8fda-afda32599557 | prompts/camp_pet.txt | 30 | 2,000 (1,100) | 1 (1) | yaw -90, height, 8 sockets |
-| world_one/enemy_chaser_tripo.glb | 6013f673-bd92-4d65-9bc4-7e6abff67f8c | prompts/enemy_chaser.txt | 30 | 3,175 (3,176) | 5 (5) | yaw 90, box, claws below 22 %, fin above 80 % (rubber) |
+| world_one/enemy_chaser_tripo.glb | Studio workspace 2f2966ab-1a15-41d1-bc51-94a44505dede (replaces API task 6013f673, which failed the render check, and Studio workspace 2635ebdc, a squat wedge never shipped) | prompts/enemy_chaser_slab.txt | 240 Studio (two generations of four candidates, two textures) plus 30 API for the first | 3,176 (3,176) | 5 (5) | yaw 180, `--yaw 180 --fit fill --radius 0.97 --max-tris 3176 --slots "fleet_paint;-1,-1,-1.6,1,1.1,-1.02=rubber;-1,-1,1.0,1,1.1,1.6=rubber;-0.43,0.59,0.1,0.47,0.86,0.8=rubber;-0.37,0.45,0.12,0.42,0.745,0.78=requisition_tag" --split "ChaserClaws=zmax:0.22:rubber,ChaserFin=zmin:0.8:rubber"` (body fleet_paint, top and bottom rubber, visor frame rubber, visor panel requisition_tag; claws below 22 %, fin above 80 %). The Studio export it starts from is not in the repo; this command rebuilds the shipped file byte for byte from it |
 | world_one/enemy_lobber_tripo.glb | 904d0a41-6627-44d7-a982-ce68527c27f0 | prompts/enemy_lobber_whole.txt | 120 (four candidates over two prompts) | 6,699 (6,720) | 5 (5) | tripo_fit.py, yaw 90, `--name LobberBody --max-tris 6700`, then lobber_parts.py |
 | world_one/enemy_swatter_tripo.glb (SwatterBody only) | fbbb83dd-0bbc-4636-9f2b-172f3a03d2dd (the second candidate; the row named the first candidate's id until 14 November 2026) | prompts/enemy_swatter_body.txt | 60 | 2,753 (2,760) | 3 (3) | tripo_swap.py, yaw 90, `--fit fill --max-tris 2650 --bright match` |
-| world_one/enemy_hooker_tripo.glb (the barrel and head of HookerBody only) | fbbb83dd-0bbc-4636-9f2b-172f3a03d2dd (the swatter body, used a second time; the first barrel, task 27fecf60-4f86-4d56-92cd-e06c64efbf31, 60 credits, was replaced on 14 November 2026) | prompts/enemy_swatter_body.txt | 0 (a candidate already paid for) | 6,381 (6,414) | 3 (3) | tripo_swap.py, yaw 90, `--fit fill --max-tris 6100 --bright match --region "-0.8,-0.8,-1.15,0.72,0.8,1.65"` |
+| world_one/enemy_hooker_tripo.glb (the barrel and head of HookerBody only) | fbbb83dd-0bbc-4636-9f2b-172f3a03d2dd (the swatter body, used a second time; the first barrel, task 27fecf60-4f86-4d56-92cd-e06c64efbf31, 60 credits, was replaced on 14 November 2026) | prompts/enemy_swatter_body.txt | 0 (a candidate already paid for) | 6,381 (6,414) | 3 (3) | tripo_swap.py, yaw 90, `--fit fill --max-tris 6100 --bright match --region "-0.8,-0.8,-1.15,0.72,0.8,1.65" --crop "0.2,1"` (the crop drops the generated feet, after the PC look of PR 1029 noted them) |
 | world_one/enemy_netcaster_tripo.glb (the control box of NetcasterBody only) | ff17498a-5ed6-4f6b-b933-5f27f62e4cab (the first swatter body candidate, unused by the swatter) | prompts/enemy_swatter_body.txt | 0 (an unused candidate) | 6,993 (7,048) | 2 (2) | tripo_swap.py, yaw 90, `--fit fill --region ... --max-tris 7000 --bright match` |
 | world_one/enemy_boom_tender_tripo.glb (TenderHull only) | cfa436e8-08dc-42f8-b416-53dee2a7619b | prompts/enemy_boom_tender.txt | 30 | 7,375 (7,928) | as authored | tripo_swap.py, yaw 90, box |
 | park/props/dam/gate_wheelhouse_a{,_lod1,_lod2}_tripo.glb | 7f215046-0286-4f10-b0cd-6d0121db046e | prompts/gate_wheelhouse.txt | 30 | 6,000 / 3,000 / 900 (16,588 / 8,294 / 2,488) | 1 | box |
