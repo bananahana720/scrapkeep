@@ -21,7 +21,7 @@ This layer adds the player-side effects the tone bible (TONE-BIBLE.md, project f
 
 ### On the beat
 
-Andrew, Q10 "Sound only" (17 Oct 22:12Z): a hit within 80 ms of a beat the player hears pays in sound and look only. `audio.gd` adds a clap, `onbeat_clap`, over the hit, at most once a beat, about at a ranged hit's level, 8 dB under where the sax stab sat. It was a sax stab until 13 November 2026, when Andrew heard the feedback fighting the melody; the clap joins the band's drums and carries no pitch (SOUND-BIBLE rule 7). The render is at `res://assets/audio/sfx/onbeat_clap.wav`, made by `design-v3/sound/feedback_set.py`. If the file is ever missing, the cue log says "absent". The hit's own sound plays first, on the hit's frame. `player_fx.gd` then makes that hit's word 1.4x bigger, or stamps BWAP when the hit earned no word. Every word, BWAP included, keeps clear of every foe in view, the marks stacked over it and the damage numbers rising now, or goes unsaid (PF-26). Damage never reads the beat. Test: `tests/on_beat_hit_test.gd`.
+Andrew, Q10 "Sound only" (17 Oct 22:12Z): a hit within 80 ms of a beat the player hears pays in sound and look only. `audio.gd` adds a clap, `onbeat_clap`, over the hit, at most once a beat, about at a ranged hit's level, 8 dB under where the sax stab sat. It was a sax stab until 13 November 2026, when Andrew heard the feedback fighting the melody; the clap joins the band's drums and carries no pitch (SOUND-BIBLE rule 7). The render is at `res://assets/audio/sfx/onbeat_clap.wav`, made by `design-v3/sound/feedback_set.py`. If the file is ever missing, the cue log says "absent". The hit's own sound plays first, on the hit's frame. `player_fx.gd` then makes that hit's word 1.4x bigger, or stamps BWAP when the hit earned no word. BWAP keeps the same placement rules as every sound word (see Readability rules). Damage never reads the beat. Test: `tests/on_beat_hit_test.gd`.
 
 ### Pilot voices
 
@@ -57,6 +57,7 @@ Andrew tapped "Presence, centre clear" (17 Oct 17:28Z): a grown hit reads mighti
 
 - **Warnings draw on top** (Andrew, 17 Oct 16:36Z). Every material here sorts at render priority -4, below the threat marks (39 to 42). Words are transparent and write no depth. The test checks this.
 - **The lane ahead stays clear.** A word placed within 2.5 m of the ball's path, up to 30 m ahead, is pushed sideways. Words run away from the ball and stay inside the middle 78% x 70% of the screen. The impact frame draws only in the outer 20% band.
+- **The fight stays visible** (PF-26). A sound word, BWAP included, keeps off every foe on screen, the marks stacked over each foe and the damage numbers rising now, or goes unsaid. A foe answers for its own drawn body: Brindle's hull piece reports the whole ship through `screen_bound_box()` (the model, cockpit and cranes are children of the ship, not of the hull piece), and any other foe is measured from its meshes. A foe counts when any part of it is on screen, even with its origin behind the camera, and is skipped when its column is under 24 px on its longer side. The read words (DENT, ZZAP!) still avoid only warnings and their own foe: they stand beside that foe by design, so the foe's own column cannot be on their avoid list. Not covered: machine_fx's foe-side words, world label text, HUD tags, enemy shots, weak parts of the world 2 and 3 bosses. Tests: `tests/player_fx_test.gd`, `tests/player_fx_brindle_test.gd`.
 - **Caps.** At most 2 words alive, 0.35 s between words, 1.2 s before the same word repeats, and no words or boon bursts in the densest density band. Impact frames are at least 0.6 s apart.
 - **The edge wash** dips the screen edge dark (80% at most), glows orange further in (40% at most) and is gone before the middle, for the same 3 frames as the ink.
 - **Reduced motion** turns off impact frames and the stamp overshoot and slide of the words.
@@ -80,7 +81,7 @@ The particle ceiling is 440, beside `vfx.gd`'s 752. No lights. Script cost measu
 
 ## Checks
 
-- `tests/player_fx_test.gd` (42 checks): might, the word caps and lane rule, the pilot voices, the knockback moments, overdrive hysteresis, carving, render order and the particle ceiling.
+- `tests/player_fx_test.gd` (110 checks): might, the word caps and lane rule, the pilot voices, the knockback moments, overdrive hysteresis, carving, render order and the particle ceiling.
 - `xvfb-run -a -s "-screen 0 1280x720x24" godot --rendering-driver opengl3 --path sketches/core-loop -s tools/player_fx_capture.gd -- --out=DIR [--pilot=N]` writes the stills. They use the Compatibility renderer on llvmpipe, a slowed clock and a frozen ball posed through `PlayerFx.pose`, so they show shape, colour and placement, not Forward+ glow.
 
 ## Open

@@ -76,6 +76,17 @@ func setup(boss_ref, role_name: String, id: String, body_size: Vector3, capsule:
 	add_to_group("enemy")
 
 
+# Set by a piece whose body is drawn outside its own subtree (the Requisition's hull piece answers for
+# the whole ship). A Callable returning the drawn bounds as a world AABB. player_fx reads it through
+# screen_bound_box(), as it does a hostile warning's, instead of walking this piece's own meshes.
+var body_bounds := Callable()
+
+
+# The world box of what this piece stands for on screen; an empty box means "walk my meshes".
+func screen_bound_box() -> AABB:
+	return body_bounds.call() if body_bounds.is_valid() else AABB()
+
+
 # On the enemy layer the ball's contacts reach combat; on the world layer the piece is
 # scenery (the wrecked hull); with neither it is a ghost (the scooter in flight).
 func set_solid(on: bool, as_world := false) -> void:

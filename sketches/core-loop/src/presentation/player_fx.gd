@@ -6,6 +6,7 @@ const SpeedTier := preload("res://src/movement/speed_tier.gd")
 const Density := preload("res://src/presentation/density.gd")
 const FxLibrary := preload("res://src/presentation/fx_library.gd")
 const FlashGuard := preload("res://src/presentation/flash_guard.gd")
+const DamageNumbers := preload("res://src/presentation/damage_numbers.gd")
 const Threat := preload("res://src/combat/threat_grammar.gd")
 const Redline := preload("res://src/combat/redline.gd")
 
@@ -120,8 +121,13 @@ const BEAT_REPEAT_S := 4.0
 # rising damage number.
 # 24 covers the word's ink outline and its tilt at the ends, which _word_rect leaves out.
 const WORD_WARNING_GAP := 24.0
-# A foe farther than this (m) from the camera is too small to cover, so its meshes are not walked.
-const FIGHT_RANGE_M := 70.0
+# A foe's origin is at most this far (m) from any part of its drawn body (Brindle's hull is 14 m long and
+# his cranes stand 7.5 m up), so a foe whose origin is farther than this behind the camera plane or off
+# the screen's edge has none of its body in view and its meshes are not walked.
+const FOE_REACH_M := 25.0
+# A foe whose column is under this many px on its longer side is not avoided: it is no larger than the
+# gap a word already keeps (WORD_WARNING_GAP), so it cannot hide a word, and a far crowd stays cheap.
+const FOE_MIN_PX := 24.0
 const WORD_LIFE := 0.6
 const WORD_STAMP_S := 0.1
 const WORD_EXIT_S := 0.2
@@ -866,36 +872,55 @@ func _warnings() -> Array[Rect2]:
 	return _warn_rects
 
 
-# Everything a word keeps off: the hostile warnings, each visible foe in view with the marks
-# stacked over it (stack_rect), and the paths of the damage numbers rising now, all grown by
+# Everything a word keeps off: the hostile warnings, each foe on screen with the marks stacked
+# over it (stack_rect), and the paths of the damage numbers rising now, all grown by
 # WORD_WARNING_GAP. A damage number stays where the hit landed while its foe moves, so the numbers
-# are read from the HUD layer, not guessed from the foe. Read once a frame. Cost, per refresh: one
-# mesh walk (foe_rect) per foe in group "enemy" that is visible, in front of the camera and within
-# FIGHT_RANGE_M, so a dense fight pays (foes in range) x (meshes per foe) once, and a refresh runs
-# only for a word that passed the gap, repeat, alive and density gates (about 3 a second at most).
+# are read from the HUD layer, not guessed from the foe. A foe answers for its own silhouette when it
+# has a screen_bound_box() (Brindle's hull piece, whose drawn ship is not under it); else its meshes
+# are walked.
+# Which foes count: the box projection's near-plane clip decides what is on screen (a hull whose
+# origin is behind the camera still counts), a cheap origin test rejects a foe more than
+# FOE_REACH_M behind the camera plane or farther off the screen's edge than that reach projects to,
+# and a foe whose whole column (body and marks) is under FOE_MIN_PX on its longer side is skipped, as
+# it is a dot no word can hide behind.
+# Cost: read once per drawn frame, and only when a word asks (a stamped word, a held word, an
+# on-beat grow). A refresh does one mesh walk or one box call per foe that passes the origin test,
+# so a dense fight pays (foes near the view) x (meshes per foe) per drawn frame while events
+# arrive. spawned["fight_refresh"] counts refreshes.
 func _fight_rects() -> Array[Rect2]:
 	var frame := Engine.get_process_frames()
 	if frame == _fight_frame:
 		return _fight_cache
 	_fight_frame = frame
+	spawned["fight_refresh"] = spawned.get("fight_refresh", 0) + 1
 	_fight_cache = _warnings().duplicate()
 	var cam: Camera3D = camera.cam if camera != null else null
 	if cam == null:
 		return _fight_cache
+	var view := cam.get_viewport().get_visible_rect()
+	var focal := view.size.y * 0.5 / tan(deg_to_rad(cam.fov) * 0.5)
+	var forward := -cam.global_transform.basis.z
 	for node in get_tree().get_nodes_in_group("enemy"):
 		if not (node is Node3D) or not node.is_visible_in_tree():
 			continue
-		if cam.is_position_behind(node.global_position) or cam.global_position.distance_to(node.global_position) > FIGHT_RANGE_M:
+		var depth: float = (node.global_position - cam.global_position).dot(forward)
+		if depth < -FOE_REACH_M:
 			continue
+		if depth > cam.near:
+			var reach: float = FOE_REACH_M * focal / depth
+			if not view.grow(reach).has_point(cam.unproject_position(node.global_position)):
+				continue
 		var body := foe_rect(node, cam)
 		if not body.has_area():
 			continue
 		var stack := stack_rect(node, cam)
-		_fight_cache.append((body.merge(stack) if stack.has_area() else body).grow(WORD_WARNING_GAP))
-	for layer in get_tree().get_nodes_in_group("damage_numbers"):
-		if layer.has_method("path_rects"):
-			for r in layer.path_rects():
-				_fight_cache.append(r.grow(WORD_WARNING_GAP))
+		var whole := body.merge(stack) if stack.has_area() else body
+		if maxf(whole.size.x, whole.size.y) < FOE_MIN_PX:
+			continue
+		_fight_cache.append(whole.grow(WORD_WARNING_GAP))
+	for layer in get_tree().get_nodes_in_group(DamageNumbers.GROUP):
+		for r in layer.path_rects():
+			_fight_cache.append(r.grow(WORD_WARNING_GAP))
 	return _fight_cache
 
 
@@ -908,12 +933,18 @@ static func word_spot(spots: Array[Rect2], avoid: Array[Rect2]) -> int:
 	return -1
 
 
-# The screen rect of `foe`'s visible meshes, or an empty rect without one in view.
+# The screen rect of `foe`'s drawn body (its own screen_bound_box() when it has one, else its visible
+# meshes), or an empty rect without one in view.
 static func foe_rect(foe, cam: Camera3D) -> Rect2:
 	if foe == null or not is_instance_valid(foe) or not foe.is_inside_tree() or cam == null:
 		return Rect2()
 	var merged := [AABB(), false]
-	_merge_meshes(foe, merged)
+	if foe.has_method("screen_bound_box"):
+		var owned: AABB = foe.screen_bound_box()
+		if owned.size != Vector3.ZERO:
+			merged = [owned, true]
+	if not merged[1]:
+		_merge_meshes(foe, merged)
 	if not merged[1]:
 		return Rect2()
 	var span := [Vector2(INF, INF), Vector2(-INF, -INF)]

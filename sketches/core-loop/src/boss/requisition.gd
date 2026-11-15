@@ -69,6 +69,7 @@ func build(boss) -> void:
 	hull.setup(boss, "hull", "hull", HULL, Vector2(6.0, 3.0))
 	hull.position = Vector3.UP * HULL.y * 0.5
 	add_child(hull)
+	hull.body_bounds = drawn_bounds
 	_box(hull, HULL, Palette.solid(Palette.RUST), Vector3.ZERO)
 	for side in [-1.0, 1.0]:
 		for z in [-3.5, 3.5]:
@@ -130,6 +131,37 @@ static func _cable_mesh() -> ArrayMesh:
 				surface.add_vertex(points[index])
 	surface.generate_normals()
 	return surface.commit()
+
+
+# The world box of the ship's drawn body: hull, cockpit, cranes' masts and the loaded model, which is
+# a child of this node and not of the hull piece the ball strikes (the hull piece's own box is the
+# 9 x 5 x 14 m placeholder, hidden by render layer once the model loads). Parts a render layer hides
+# and parts `visible` hides are left out. The swinging magnets and cables are left out too: they are
+# strike pieces of their own, and including them would stretch the box across the bowl. player_fx
+# keeps hit words off this box (PF-26). Empty before the build.
+func drawn_bounds() -> AABB:
+	var merged := [AABB(), false]
+	var skip: Array = []
+	skip.append_array(magnets)
+	skip.append_array(_cables)
+	skip.append_array(_model_magnets)
+	skip.append_array(_model_magnet_meshes)
+	skip.append(plate)
+	_merge_drawn(self, skip, merged)
+	return merged[0] if merged[1] else AABB()
+
+
+func _merge_drawn(node: Node, skip: Array, merged: Array) -> void:
+	for child in node.get_children():
+		if skip.has(child) or (child is Node3D and not child.visible):
+			continue
+		if child is VisualInstance3D and child.layers != 0:
+			var box: AABB = child.get_aabb()
+			if box.size != Vector3.ZERO:
+				var world: AABB = child.global_transform * box
+				merged[0] = world.merge(merged[0]) if merged[1] else world
+				merged[1] = true
+		_merge_drawn(child, skip, merged)
 
 
 # Places the ship with its bow along `dir`, on whatever ground is under it.
