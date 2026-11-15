@@ -165,6 +165,32 @@ node scripts/gate/tally.mjs --plan /mnt/project-files/gate/w<N>-<head>-gate-plan
 
 The plan's tally is a table headed `| Shard | Verdict |`, one row per shard: `tests FIRST-LAST`, `bots 1` to the last block of five, `bands A`, `bands B`, `bands C`, `red team <persona>`, and `weekly sweep` while the weekly list names any test. A verdict opens with `PASS` (`CLEAR` for the red team) or with `RED`; the shard receipt's verdict line is written that way, so copy it. The checker refuses CLEAN while a row is missing or empty, a verdict names no receipt, the test windows leave a gap in the list, the newest row for a shard does not open with PASS or CLEAR, the plan's file name gates a head other than the one checked out (the lists are counted in the checkout), a ledger row is past its review date, or the weekly sweep is missing or more than 7 days old. When a shard is read again on a moved head, add a new row under a new table; the newest row for a name wins.
 
+## Check speed and honesty
+
+Andrew, 15 Nov 2026: make the checks as fast as they can be without letting them lie. Two rules outrank speed. Everything runs before anything reaches `main`. A check never gets faster by hiding a failure: no retry that decides a verdict, no wider time limit, no skipped test. Rulings dv to dy in [DECISIONS.md](DECISIONS.md) are the four decisions; the sections above still describe today's gate and change as each step below lands.
+
+The audit behind this (15 Nov, wave 41 gate on `e2770d85`, 100 fast-lane receipts) is on board issue #1044. The gate took 3 h 53 min: bot tests one at a time 131 min, reruns of reds alone 57 min, the bot step waiting for the scheduler at load 8 of 32 threads 34 min, the fast lane run first only to name bot tests 14 min. The fast lane's median is 6 min and its 95th percentile 15 min.
+
+Budgets. A step that runs over its budget is reported in the receipt, and the cause is fixed; the budget is not raised.
+
+| Check | Budget | 15 Nov |
+| --- | --- | --- |
+| Fast lane, median | 5 min | 6 min |
+| Fast lane, 95th percentile | 10 min | 15 min |
+| Promotion gate on a green head, with the weekly list and every bot test | 1 h 45 min | 3 h 53 min without them |
+| Waiting inside the gate (scheduler, slots, load) | 2 min | 34 min |
+| A verdict for a fix commit after a red gate | 30 min | no verdict issued |
+
+The order. Each step is one small pull request with before and after numbers from real runs, and none starts until the one before is green.
+
+1. Gate schedule: weights from measured load so every step starts together, bot lanes filled longest first, windows cut by measured seconds, the bot test names taken without running the fast lane first.
+2. The gate runs the weekly list and every bot test (ruling dw).
+3. The gate posts its verdict on the tested commit and `main` requires it (ruling dv).
+4. Retries stop deciding verdicts (ruling dx); skipped checks are counted and a skip not on the PC's expected list is red.
+5. A fix commit gets its own verdict (ruling dy).
+6. Fast lane: record width, slot wait and per-test start in the receipt; stop taking the width from the load at start; a selected test deferred by the budget is listed for the gate to prove it ran.
+7. Test speed, family by family with a before and after compare of check lines: a fixed-frame-rate marker for tests that count ticks, one shared game for the tests whose body is under 2 s, the music trace run once.
+
 ## After the promotion
 
 The steps are in STATE.md ("After each promotion"). The first one keeps the docs honest: on the new stage, `node scripts/wave-state.mjs --write --board <new board issue> --compare <receipts folder>`. The check passes while the stage head is still the promotion commit itself; from the first commit after it, `npm run check:docs` fails on the new stage until this lands, on purpose.
