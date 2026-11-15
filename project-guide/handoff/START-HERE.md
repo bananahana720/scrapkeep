@@ -1,8 +1,8 @@
 # Start here
 
-The claude.ai project "Scrapkeep" coordinates the alpha (ruling dh). Its coordinator talks to Andrew in the project chat and starts one thread per unit of work. One thread, "Drive the wave <N> board", is the Gate: it alone stacks onto the open stage, runs the wave gate, promotes, and drives Andrew's PC through a Remote Control session for GPU work. [THREADS.md](THREADS.md) lists the roles.
+One local Claude Code session on Andrew's PC coordinates the alpha and is the Gate (ruling ds, 15 Nov 2026). It talks to Andrew in its own chat, alone stacks onto the open stage, runs the wave gate, promotes, and runs the PC work directly. It writes sequential changes itself and starts writer agents in separate worktrees for independent units. The claude.ai project threads are stopped (their coordination, ruling dh, ran 12 to 14 Nov). [THREADS.md](THREADS.md) lists the roles. Where a page below says "the board thread" or "a thread", read "the local session" and "a writer agent".
 
-The rules every thread follows are in [AGENTS.md](../../AGENTS.md), most important first: finish every to-do, one thread one writer, only the board thread stacks, and what needs Andrew's go-ahead.
+The rules every thread follows are in [AGENTS.md](../../AGENTS.md), most important first: finish every to-do, one thread one writer, only the Gate stacks, and what needs Andrew's go-ahead.
 
 **A cloud session cannot read the PC's disk.** It sees the repository, the pull requests, the wave board and, in a project thread, the shared folder `/mnt/project-files`. Gate receipts from the PC are on `scratch/gate-receipts-w<N>-<head>` branches.
 
