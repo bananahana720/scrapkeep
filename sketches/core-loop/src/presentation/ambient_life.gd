@@ -68,6 +68,13 @@ func setup(context) -> void:
 		_build_stage(ctx.terrain.stage)
 
 
+func _exit_tree() -> void:
+	# A call still playing when the tree goes would leave its stream in the AudioServer at exit.
+	for voice in voices:
+		voice.stop()
+		voice.stream = null
+
+
 func _stage_entered(stage: int, _retry: bool) -> void:
 	_active = true
 	_latched = false
