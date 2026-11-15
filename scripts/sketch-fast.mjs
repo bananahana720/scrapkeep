@@ -65,7 +65,7 @@ export const PATH_RULES = [
     // The map standard (ruling ct): a park change faces the checks that read the baked map.
     name: "map standard",
     match: /(^|\/)parks?\/|(^|\/)park_[^/]*$/,
-    tests: ["tests/park_landmark_sight_test.gd", "tests/site_markers_test.gd", "tests/park_fight_bowl_test.gd", "tests/park_feature_census_test.gd", "tests/park_breath_test.gd", "tests/park_rhythm_test.gd", "tests/handover_rows_test.gd", "tests/park_scrap_lines_test.gd", "tests/park_scrap_trail_test.gd"],
+    tests: ["tests/park_landmark_sight_test.gd", "tests/site_markers_test.gd", "tests/park_fight_bowl_test.gd", "tests/park_feature_census_test.gd", "tests/park_breath_test.gd", "tests/park_rhythm_test.gd", "tests/handover_rows_test.gd", "tests/park_scrap_lines_test.gd", "tests/park_scrap_trail_test.gd", "tests/dam_incline_yard_test.gd"],
   },
 ];
 // Node checks a sketch change must face though no script path reaches them.

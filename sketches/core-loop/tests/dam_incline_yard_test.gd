@@ -15,10 +15,17 @@ const T := preload("res://tests/support/t.gd")
 #   airborne or outside never arms;
 # - ride: on the real dam a ball pushed at cruise down the incline at x -30 and x 0 (the PF-46 probe,
 #   tools/sysaudit/roll_speed_probe.gd) never turns back before the apron, keeps at least 2 x cruise
-#   through the foot, and the yard's centre lands on level ground past the foot.
+#   through the foot, and the yard's centre lands on level ground past the foot;
+# - free ride: with the locks and the yard sentry off, the same ride at x -30, 0 and 30 never loses half
+#   its speed within 0.2 s and never turns back through z 400 to 430 (ruling ct point 8c), so a snag in
+#   the map itself, not the lock wall, is caught too. Both rides assert the MINIMUM speed through the
+#   foot: a ball that peaks high and then collapses fails.
 
 const FOOT_Z := 420.0
 const RIDE_S := 5.0
+# A clean concave break at the foot keeps about 92 percent of 2.1 x cruise; measured 2.07 x at the foot.
+const FOOT_MIN_X := 1.9
+const SNAG_TICKS := 18
 
 var _t := T.new("dam_incline_yard_test")
 
@@ -32,6 +39,10 @@ func _run() -> void:
 	_rule()
 	for x in [-30.0, 0.0]:
 		await _ride(x)
+	StageLocks.active = false
+	for x in [-30.0, 0.0, 30.0]:
+		await _ride_free(x)
+	StageLocks.active = true
 	quit(_t.verdict())
 
 
@@ -73,7 +84,8 @@ func _ride(x: float) -> void:
 	game.player.body().global_position = game.ctx.terrain.drop_point(x, 330.0, 1.0)
 	game.player.set_velocity_now(Vector3(0.0, 0.0, cruise), "probe")
 	var turned_at := INF
-	var foot_speed := 0.0
+	var foot_min := INF
+	var foot_n := 0
 	var locked_at := INF
 	var t := 0.0
 	while t < RIDE_S:
@@ -85,18 +97,75 @@ func _ride(x: float) -> void:
 		if ball.z < FOOT_Z + 6.0 and game.player.state.velocity.z < 0.0 and turned_at == INF and t > 0.2:
 			turned_at = ball.z
 		if ball.z >= FOOT_Z - 2.0 and ball.z <= FOOT_Z + 6.0:
-			foot_speed = maxf(foot_speed, Vector2(game.player.state.velocity.x, game.player.state.velocity.z).length())
+			foot_min = minf(foot_min, Vector2(game.player.state.velocity.x, game.player.state.velocity.z).length())
+			foot_n += 1
 		if ball.z > FOOT_Z + 6.0:
 			break
 	_t.check("x %d: the ball never turns back up the incline" % x, turned_at == INF, "turned at z %.1f" % turned_at)
-	_t.check("x %d: it keeps 2 x cruise through the foot" % x, foot_speed >= 2.0 * cruise,
-		"%.2f x cruise" % (foot_speed / cruise))
+	_t.check("x %d: the foot window was sampled" % x, foot_n > 0, "%d ticks" % foot_n)
+	_t.check("x %d: its slowest speed through the foot stays at %.1f x cruise" % [x, FOOT_MIN_X], foot_min >= FOOT_MIN_X * cruise,
+		"min %.2f x cruise over %d ticks" % [foot_min / cruise, foot_n])
 	_t.check("x %d: the yard shuts past the foot, before the ride leaves it" % x, locked_at >= FOOT_Z and locked_at < INF,
 		"locked at z %.1f" % locked_at)
 	if locks.lock_state == "locked":
 		var c: Vector3 = locks.lock_centre
 		var rise: float = absf(game.ctx.terrain.height(c.x, c.z + 4.0) - game.ctx.terrain.height(c.x, c.z - 4.0)) / 8.0
 		_t.check("x %d: the yard's centre is on level ground" % x, rise < 0.2, "grade %.2f at z %.1f" % [rise, c.z])
+	game.queue_free()
+	for i in 3:
+		await process_frame
+
+
+# The ride with the locks off: the map alone, from z 330 to z 430 (past the foot, short of the apron's far wall).
+func _ride_free(x: float) -> void:
+	var game := Game.new()
+	game.test_mode = true
+	game.table = "park"
+	root.add_child(game)
+	await process_frame
+	game.player.source = Intent.Scripted.new()
+	game.flow.press_start()
+	game.flow.choose_class(0)
+	for i in 120:
+		await physics_frame
+	game.ctx.calm = true
+	game.run.set_max_hp(99999.0)
+	var cruise: float = game.player.tuning.tier_cruise()
+	game.player.body().global_position = game.ctx.terrain.drop_point(x, 330.0, 1.0)
+	game.player.set_velocity_now(Vector3(0.0, 0.0, cruise), "probe")
+	var hist: Array[float] = []
+	var snag_at := INF
+	var turned_at := INF
+	var win_min := INF
+	var win_n := 0
+	var prev_z := -INF
+	var ticks := 0
+	var t := 0.0
+	while t < RIDE_S:
+		await physics_frame
+		t += 1.0 / float(Engine.physics_ticks_per_second)
+		ticks += 1
+		var ball: Vector3 = game.player.ball_position()
+		var v: Vector3 = game.player.state.velocity
+		var flat := Vector2(v.x, v.z).length()
+		hist.append(flat)
+		if hist.size() > SNAG_TICKS + 1:
+			hist.pop_front()
+		if hist.size() == SNAG_TICKS + 1 and snag_at == INF and hist[0] > cruise and flat <= 0.5 * hist[0]:
+			snag_at = ball.z
+		if ticks > SNAG_TICKS and ball.z < prev_z - 0.001 and turned_at == INF:
+			turned_at = ball.z
+		prev_z = ball.z
+		if ball.z >= 400.0 and ball.z <= 430.0:
+			win_min = minf(win_min, flat)
+			win_n += 1
+		if ball.z > 430.0:
+			break
+	_t.check("x %d free: the window z 400 to 430 was sampled" % x, win_n > 0, "%d ticks" % win_n)
+	_t.check("x %d free: no half-speed loss within 0.2 s" % x, snag_at == INF, "snag at z %.1f" % snag_at)
+	_t.check("x %d free: the ball never turns back" % x, turned_at == INF, "turned at z %.1f" % turned_at)
+	_t.check("x %d free: its slowest speed through z 400 to 430 stays at %.1f x cruise" % [x, FOOT_MIN_X],
+		win_min >= FOOT_MIN_X * cruise, "min %.2f x cruise over %d ticks" % [win_min / cruise, win_n])
 	game.queue_free()
 	for i in 3:
 		await process_frame
