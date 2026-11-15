@@ -15,7 +15,7 @@ sibling, rejected ones too, so a rejected model can still be judged in the game.
 
 Rejected today (14 November 2026, by the board's PC looks and the render check):
 
-- No file is rejected today. The first generated chaser failed the render check below (view 1 sent 0.54 of the authored chaser's brightness, with loose black faces on the shell). A new chaser that passes replaced it and is accepted (see its row below); it still needs the PC look.
+- One file is rejected today: the generated chaser, `world_one/enemy_chaser_tripo.glb`. The first generated chaser failed the render check below (view 1 sent 0.54 of the authored chaser's brightness, with loose black faces on the shell). The tall slab that replaced it passes the render check but failed the PC look on 15 November 2026: in the wind-up the slab lifts clear of its short claws and floats. A retry needs legs that stay joined at full rear-up.
 - The first generated sluice shed was rejected by the PC look of PR 1024 because it lost the big red water wheel. A second shed that keeps the wheel replaced it and is accepted (see its row below); it still needs the PC look.
 
 **The render check (generated enemy models, from 14 November 2026).** `tools/model_render_check.gd` judges a

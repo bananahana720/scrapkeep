@@ -16,6 +16,7 @@ const SUFFIX := "_tripo"
 const FLAG := "--models=tripo"
 const FLAG_ALL := "--models=tripo-all"
 const REJECTED := {
+	"res://assets/models/world_one/enemy_chaser_tripo.glb": "in the wind-up the slab lifts off its short claws and floats, a gap seen at play distance (PC look, 15 November 2026)",
 }
 
 static var _on := -1
