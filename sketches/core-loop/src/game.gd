@@ -208,7 +208,9 @@ func _ready() -> void:
 			arm_summary_latch())
 	run = RunState.new(events, _session_seed)
 	tuning = Tuning.new()
-	tuning.apply_cmdline("launch")
+	var launch_flags: Dictionary = tuning.apply_cmdline("launch")
+	if not test_mode and not AppShell.headless() and not _launch_flag("--self-play"):
+		tuning.end_players_run_at_world_one(launch_flags)
 
 	player = PlayerBall.new()
 	player.name = "Player"

@@ -72,6 +72,13 @@ func _run() -> void:
 	earned.apply_args(PackedStringArray(["--profile=sitting-earned"]))
 	_t.eq("the earned sitting launch names world 1 too", earned.final_world(), 1)
 	_t.eq("a plain launch names none", Tuning.new().final_world(), 0)
+	# A played game ends at world 1 too while the later worlds are parked; a flag on the line still wins.
+	var played := Tuning.new()
+	played.end_players_run_at_world_one(played.apply_args(PackedStringArray([])))
+	_t.eq("a played plain launch names world 1", played.final_world(), 1)
+	var whole := Tuning.new()
+	whole.end_players_run_at_world_one(whole.apply_args(PackedStringArray(["--final-world=last"])))
+	_t.eq("a played launch that asks for the whole table keeps it", whole.final_world(), 0)
 
 	# Flag off: today's run into world 2.
 	_t.check("flag off: world 1's end does not end the run", not flow.run_ends_after(stages.last_of(1)), "")
