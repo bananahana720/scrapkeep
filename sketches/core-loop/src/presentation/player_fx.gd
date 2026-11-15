@@ -128,6 +128,12 @@ const FOE_REACH_M := 25.0
 # A foe whose column is under this many px on its longer side is not avoided: it is no larger than the
 # gap a word already keeps (WORD_WARNING_GAP), so it cannot hide a word, and a far crowd stays cheap.
 const FOE_MIN_PX := 24.0
+# The owners of a foe's marks (status_marks.gd, machine_fx.gd) join this group and answer marked(foe).
+# Beside-the-ball spots, as shares of the view's half-height at the ball: out to either side, and then
+# down, so the search stays near the ball and low in the view, away from a foe's marks above it.
+const SPOT_BESIDE := 0.32
+const SPOT_DROP := 0.22
+const MARKS_GROUP := "foe_marks"
 const WORD_LIFE := 0.6
 const WORD_STAMP_S := 0.1
 const WORD_EXIT_S := 0.2
@@ -171,6 +177,7 @@ var _warn_frame := -1
 var _warn_rects: Array[Rect2] = []
 var _fight_frame := -1
 var _fight_cache: Array[Rect2] = []
+var _fight_kind: Array[String] = []
 var _rng := RandomNumberGenerator.new()
 var _font: Font
 var _words: Array = []
@@ -739,21 +746,42 @@ func word(id: String, at: Vector3, color := Color.TRANSPARENT, foe = null) -> bo
 		var grow := ONBEAT_GROW if id == "beat" else 1.0
 		var spots: Array = [[placed, right_of_ball], [placed - side * 2.0 * rel.dot(side), not right_of_ball]]
 		var avoid := _fight_rects().duplicate()
-		var body := foe_rect(foe, cam)
-		if body.has_area():
-			# The named foe's whole column: its body and the marks over it. A foe outside the
+		var kinds := _fight_kind.duplicate()
+		var bodies := foe_rects(foe, cam)
+		if not bodies.is_empty():
+			# The named foe's own body and, while it shows a mark, the marks over it. A foe outside the
 			# "enemy" group (a plant, a test box) is covered here too.
-			var stack := stack_rect(foe, cam)
-			var whole := body.merge(stack) if stack.has_area() else body
-			avoid.append(whole.grow(WORD_WARNING_GAP))
+			var whole := bodies[0]
+			for r in bodies:
+				avoid.append(r.grow(WORD_WARNING_GAP))
+				kinds.append("foe")
+				whole = whole.merge(r)
+			var stack := stack_rect(foe, cam) if _marked(foe) else Rect2()
+			if stack.has_area():
+				avoid.append(stack.grow(WORD_WARNING_GAP))
+				kinds.append("marks")
+				whole = whole.merge(stack)
 			var tall := size * grow * WORD_SCREEN * cam.get_viewport().get_visible_rect().size.y
 			var p := cam.unproject_position(placed)
 			var depth := -(cam.global_transform.affine_inverse() * placed).z
 			# A pixel past the gap: placed flush on the grown body's edge, float rounding put it on the foe one run in four.
 			spots.append([cam.project_position(Vector2(p.x, whole.position.y - WORD_WARNING_GAP - tall * 0.6 - 1.0), maxf(depth, cam.near + 0.1)), right_of_ball])
+		# Then a short fixed search beside the ball, so a fight that covers the asked spot still leaves
+		# somewhere to stand: at the ball's height on its two sides, then below it on both. The side the
+		# word was asked on goes first. Each spot is pushed out of the lane ahead of the ball like the
+		# asked one, and the word runs away from the ball (TONE-BIBLE pillar 2).
+		var ball: Vector3 = player.shown_position()
+		var half := _half_height(cam, ball)
+		var first_side := 1.0 if right_of_ball else -1.0
+		for drop in [0.0, SPOT_DROP]:
+			for sgn in [first_side, -first_side]:
+				var near := clear_of_lane(ball + side * half * SPOT_BESIDE * sgn - cam.global_basis.y * half * drop)
+				spots.append([near, sgn > 0.0])
 		var pick := _pick_spot(cam, spots, width_px, size * grow, label.pixel_size, avoid)
 		if pick < 0:
 			spawned["word_held"] = spawned.get("word_held", 0) + 1
+			var why := _held_by(cam, spots[0], width_px, size * grow, label.pixel_size, avoid, kinds)
+			spawned["held_" + why] = spawned.get("held_" + why, 0) + 1
 			return false
 		placed = spots[pick][0]
 		right_of_ball = spots[pick][1]
@@ -819,6 +847,18 @@ static func stack_rect(foe: Node3D, cam: Camera3D) -> Rect2:
 	return span
 
 
+# Whether `foe` is showing a mark now (the interrupted star, the stagger word), asked of the owners
+# of those marks: each joins MARKS_GROUP and answers marked(foe). The class icon is a mesh under
+# the foe, so its body rect already holds it.
+func _marked(foe) -> bool:
+	if foe == null or not is_instance_valid(foe) or get_tree() == null:
+		return false
+	for owner_node in get_tree().get_nodes_in_group(MARKS_GROUP):
+		if owner_node.marked(foe):
+			return true
+	return false
+
+
 # A pooled word that is not showing, else the first of the pool.
 func _free_slot() -> Dictionary:
 	for w in _words:
@@ -872,21 +912,21 @@ func _warnings() -> Array[Rect2]:
 	return _warn_rects
 
 
-# Everything a word keeps off: the hostile warnings, each foe on screen with the marks stacked
-# over it (stack_rect), and the paths of the damage numbers rising now, all grown by
-# WORD_WARNING_GAP. A damage number stays where the hit landed while its foe moves, so the numbers
-# are read from the HUD layer, not guessed from the foe. A foe answers for its own silhouette when it
-# has a screen_bound_box() (Brindle's hull piece, whose drawn ship is not under it); else its meshes
-# are walked.
-# Which foes count: the box projection's near-plane clip decides what is on screen (a hull whose
-# origin is behind the camera still counts), a cheap origin test rejects a foe more than
-# FOE_REACH_M behind the camera plane or farther off the screen's edge than that reach projects to,
-# and a foe whose whole column (body and marks) is under FOE_MIN_PX on its longer side is skipped, as
+# Everything a word keeps off, each rect grown by WORD_WARNING_GAP and tagged with a kind (_fight_kind,
+# so a held word can say why): the hostile warnings ("warning"), each foe on screen ("foe"), the
+# marks over a foe while it shows one ("marks", asked of the owners through MARKS_GROUP), and the
+# paths of the damage numbers rising now ("number"). A damage number stays where the hit landed
+# while its foe moves, so the numbers are read from the HUD layer, not guessed from the foe. A foe
+# answers for its own silhouette when it has screen_bound_boxes() (Brindle's hull piece: the ship's
+# oriented boxes); else its meshes are walked. Every foe rect is cut to the viewport (_view_rect), so
+# a box that passes beside or behind the camera adds nothing instead of a screen-sized rect.
+# Which foes count: a cheap origin test rejects a foe more than FOE_REACH_M behind the camera plane
+# or farther off the screen's edge than that reach projects to, the box clip decides what is on
+# screen, and a foe whose body is under FOE_MIN_PX on its longer side (with no mark) is skipped, as
 # it is a dot no word can hide behind.
 # Cost: read once per drawn frame, and only when a word asks (a stamped word, a held word, an
-# on-beat grow). A refresh does one mesh walk or one box call per foe that passes the origin test,
-# so a dense fight pays (foes near the view) x (meshes per foe) per drawn frame while events
-# arrive. spawned["fight_refresh"] counts refreshes.
+# on-beat grow). A refresh does one mesh walk or one box projection per part per foe that passes the
+# origin test. spawned["fight_refresh"] counts refreshes.
 func _fight_rects() -> Array[Rect2]:
 	var frame := Engine.get_process_frames()
 	if frame == _fight_frame:
@@ -894,6 +934,9 @@ func _fight_rects() -> Array[Rect2]:
 	_fight_frame = frame
 	spawned["fight_refresh"] = spawned.get("fight_refresh", 0) + 1
 	_fight_cache = _warnings().duplicate()
+	_fight_kind = []
+	_fight_kind.resize(_fight_cache.size())
+	_fight_kind.fill("warning")
 	var cam: Camera3D = camera.cam if camera != null else null
 	if cam == null:
 		return _fight_cache
@@ -910,18 +953,42 @@ func _fight_rects() -> Array[Rect2]:
 			var reach: float = FOE_REACH_M * focal / depth
 			if not view.grow(reach).has_point(cam.unproject_position(node.global_position)):
 				continue
-		var body := foe_rect(node, cam)
-		if not body.has_area():
+		var bodies := foe_rects(node, cam)
+		if bodies.is_empty():
 			continue
-		var stack := stack_rect(node, cam)
-		var whole := body.merge(stack) if stack.has_area() else body
-		if maxf(whole.size.x, whole.size.y) < FOE_MIN_PX:
+		var whole := bodies[0]
+		for r in bodies:
+			whole = whole.merge(r)
+		var marks := stack_rect(node, cam) if _marked(node) else Rect2()
+		if maxf(whole.size.x, whole.size.y) < FOE_MIN_PX and not marks.has_area():
 			continue
-		_fight_cache.append(whole.grow(WORD_WARNING_GAP))
+		for r in bodies:
+			_add_avoid(r, "foe")
+		if marks.has_area():
+			_add_avoid(marks, "marks")
 	for layer in get_tree().get_nodes_in_group(DamageNumbers.GROUP):
 		for r in layer.path_rects():
-			_fight_cache.append(r.grow(WORD_WARNING_GAP))
+			_add_avoid(r, "number")
 	return _fight_cache
+
+
+func _add_avoid(r: Rect2, kind: String) -> void:
+	_fight_cache.append(r.grow(WORD_WARNING_GAP))
+	_fight_kind.append(kind)
+
+
+# Why the asked spot (the first) of a held word was refused: "safe" when it stands outside the safe
+# area, else the kind of the first avoided rect it touches ("warning", "foe", "marks", "number").
+static func _held_by(cam: Camera3D, spot: Array, width_px: float, size: float, pixel_size: float, avoid: Array[Rect2], kinds: Array) -> String:
+	var view := cam.get_viewport().get_visible_rect().size
+	var safe := Rect2(view * 0.5 * (Vector2.ONE - WORD_SAFE), view * WORD_SAFE)
+	var r := _word_rect(cam, spot[0], spot[1], width_px, size, pixel_size)
+	if not safe.encloses(r):
+		return "safe"
+	for i in avoid.size():
+		if avoid[i].intersects(r):
+			return kinds[i]
+	return "other"
 
 
 # Which spot a word takes: the first of `spots` (its own, the ball's other side, above the
@@ -933,23 +1000,38 @@ static func word_spot(spots: Array[Rect2], avoid: Array[Rect2]) -> int:
 	return -1
 
 
-# The screen rect of `foe`'s drawn body (its own screen_bound_box() when it has one, else its visible
-# meshes), or an empty rect without one in view.
-static func foe_rect(foe, cam: Camera3D) -> Rect2:
+# The screen rects of `foe`'s drawn body, each cut to the viewport: one per box when the foe reports
+# its own screen_bound_boxes() (Brindle's ship: oriented boxes in its own frame, [Transform3D, AABB]
+# pairs), else one for its visible meshes. Empty without any of it on screen.
+static func foe_rects(foe, cam: Camera3D) -> Array[Rect2]:
+	var out: Array[Rect2] = []
 	if foe == null or not is_instance_valid(foe) or not foe.is_inside_tree() or cam == null:
-		return Rect2()
+		return out
+	if foe.has_method("screen_bound_boxes"):
+		for pair in foe.screen_bound_boxes():
+			var r := _view_rect(_box_points(pair[0], pair[1], cam), cam)
+			if r.has_area():
+				out.append(r)
+		if not out.is_empty():
+			return out
 	var merged := [AABB(), false]
-	if foe.has_method("screen_bound_box"):
-		var owned: AABB = foe.screen_bound_box()
-		if owned.size != Vector3.ZERO:
-			merged = [owned, true]
-	if not merged[1]:
-		_merge_meshes(foe, merged)
-	if not merged[1]:
+	_merge_meshes(foe, merged)
+	if merged[1]:
+		var r := _view_rect(_box_points(Transform3D.IDENTITY, merged[0], cam), cam)
+		if r.has_area():
+			out.append(r)
+	return out
+
+
+# The one rect that holds every rect of foe_rects (the named foe's body, a test's reading).
+static func foe_rect(foe, cam: Camera3D) -> Rect2:
+	var rects := foe_rects(foe, cam)
+	if rects.is_empty():
 		return Rect2()
-	var span := [Vector2(INF, INF), Vector2(-INF, -INF)]
-	_project_box(merged[0], cam, span)
-	return Rect2(span[0], span[1] - span[0]) if span[0].x <= span[1].x else Rect2()
+	var out := rects[0]
+	for r in rects:
+		out = out.merge(r)
+	return out
 
 
 # The screen rect a word of `width_px` at `size` covers when its near end sits at `at` and it
@@ -1146,6 +1228,15 @@ static func _merge_meshes(node: Node, merged: Array) -> void:
 # the frame's band draws), and the crossing points are what put that part in the rect. A
 # box with every corner behind adds nothing.
 static func _project_box(box: AABB, cam: Camera3D, span: Array) -> void:
+	for p in _box_points(Transform3D.IDENTITY, box, cam):
+		_grow_span(span, p)
+
+
+# The screen points a box stands for: its 8 corners (put through `xf` first, so a box in a body's own
+# frame stays tight when the body turns) in front of the camera, and where each of its 12 edges
+# crosses the near plane. Empty when no corner is in front.
+static func _box_points(xf: Transform3D, box: AABB, cam: Camera3D) -> PackedVector2Array:
+	var points := PackedVector2Array()
 	var forward := -cam.global_transform.basis.z
 	var origin := cam.global_transform.origin
 	var plane := cam.near + NEAR_EPSILON
@@ -1153,16 +1244,16 @@ static func _project_box(box: AABB, cam: Camera3D, span: Array) -> void:
 	var depths: Array[float] = []
 	var in_front := 0
 	for c in 8:
-		var corner: Vector3 = box.position + box.size * Vector3(c & 1, (c >> 1) & 1, (c >> 2) & 1)
+		var corner: Vector3 = xf * (box.position + box.size * Vector3(c & 1, (c >> 1) & 1, (c >> 2) & 1))
 		corners.append(corner)
 		depths.append((corner - origin).dot(forward))
 		if depths[c] > plane:
 			in_front += 1
-			_grow_span(span, cam.unproject_position(corner))
+			points.append(cam.unproject_position(corner))
 	# Edges only cross the plane when some corners are in front and some are not; a box wholly
 	# in front (the common case) or wholly behind has no crossing to add.
 	if in_front == 0 or in_front == 8:
-		return
+		return points
 	# The edges join corners that differ in one bit.
 	for c in 8:
 		for bit in [1, 2, 4]:
@@ -1170,7 +1261,33 @@ static func _project_box(box: AABB, cam: Camera3D, span: Array) -> void:
 			if other == c or (depths[c] > plane) == (depths[other] > plane):
 				continue
 			var t: float = (plane - depths[c]) / (depths[other] - depths[c])
-			_grow_span(span, cam.unproject_position(corners[c].lerp(corners[other], t)))
+			points.append(cam.unproject_position(corners[c].lerp(corners[other], t)))
+	return points
+
+
+# The part of the viewport a set of screen points covers: their convex hull (the box's true
+# footprint, as the box is convex) cut to the viewport, then its bounding rect. A box that passes
+# beside or behind the camera has crossing points far off screen, so its bounding rect alone would
+# cover the whole screen with nothing of the box on it; the hull cut leaves nothing, or only the
+# part that is there. Empty when none of it is on screen.
+static func _view_rect(points: PackedVector2Array, cam: Camera3D) -> Rect2:
+	if points.is_empty():
+		return Rect2()
+	var view := cam.get_viewport().get_visible_rect()
+	var hull := Geometry2D.convex_hull(points)
+	if hull.size() < 4:
+		var bounds := Rect2(points[0], Vector2.ZERO)
+		for q in points:
+			bounds = bounds.expand(q)
+		return bounds.intersection(view)
+	var frame := PackedVector2Array([view.position, Vector2(view.end.x, view.position.y), view.end, Vector2(view.position.x, view.end.y)])
+	var out := Rect2()
+	var first := true
+	for poly in Geometry2D.intersect_polygons(hull, frame):
+		for q in poly:
+			out = Rect2(q, Vector2.ZERO) if first else out.expand(q)
+			first = false
+	return out
 
 
 static func _grow_span(span: Array, at: Vector2) -> void:
