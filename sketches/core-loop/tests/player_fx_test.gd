@@ -175,8 +175,7 @@ func _run() -> void:
 	foe.global_position = ball + Vector3(3, 2, 0)
 	var foe_px := PlayerFx.foe_rect(foe, wcam)
 	t.check("the foe has a screen rect", foe_px.has_area(), str(foe_px))
-	t.check("a word naming its foe never lands on it", fx.word("smash", ball + Vector3(3, 2, 0), Color.TRANSPARENT, foe)
-		and not PlayerFx._word_rect(wcam, fx._words_by_id("smash")["at"], float(fx._words_by_id("smash")["away"]) > 0.0, float(fx._words_by_id("smash")["width_px"]),
+	t.check("a word naming its foe never lands on it, or is held", not fx.word("smash", ball + Vector3(3, 2, 0), Color.TRANSPARENT, foe) or not PlayerFx._word_rect(wcam, fx._words_by_id("smash")["at"], float(fx._words_by_id("smash")["away"]) > 0.0, float(fx._words_by_id("smash")["width_px"]),
 			float(fx._words_by_id("smash")["size"]), 0.01).intersects(foe_px), "foe %s" % foe_px)
 	# A foe filling the top of the view: the spot above it is off screen, so the word stays clear
 	# of it or unsaid, never pulled back onto it.
@@ -239,6 +238,90 @@ func _run() -> void:
 	for c in covers:
 		c.free()
 	await _frames(1)
+
+	# PF-26: the fight stays visible. The rings are gone, so a word that is held here is held by the
+	# fight rules alone. A foe in group "enemy" that the word never names is avoided with its marks,
+	# a word beside a foe in view that is far from its spot still stamps, a damage number's rising path is
+	# avoided, and BWAP (the word an on-beat hit earns) takes the same rules.
+	var fight := Node3D.new()
+	var fight_shape := MeshInstance3D.new()
+	var fight_box := BoxMesh.new()
+	fight_box.size = Vector3(1.5, 1.5, 1.5)
+	fight_shape.mesh = fight_box
+	fight.add_child(fight_shape)
+	_game.add_child(fight)
+	fight.add_to_group("enemy")
+	var word_rect := func(id: String) -> Rect2:
+		var w: Dictionary = fx._words_by_id(id)
+		return Rect2() if w.is_empty() else PlayerFx._word_rect(wcam, w["at"], float(w["away"]) > 0.0, float(w["width_px"]), float(w["size"]), 0.01)
+	var reset_words := func() -> void:
+		for w in fx._words:
+			w["t"] = 1.0
+		fx._last_word = -1.0e9
+		fx._word_seen.clear()
+	# (a) A foe in the group, unnamed, sits where the slam would go.
+	fight.global_position = ball + Vector3(3, 2, 0)
+	await _frames(2)
+	reset_words.call()
+	var column := PlayerFx.foe_rect(fight, wcam)
+	column = column.merge(PlayerFx.stack_rect(fight, wcam))
+	held = fx.spawned.get("word_held", 0)
+	var slam_said: bool = fx.word("slam", ball + Vector3(3, 2, 0))
+	var slam_rect: Rect2 = word_rect.call("slam") if slam_said else Rect2()
+	t.check("PF-26: a word that names no foe stays off a foe in view and the marks over it, or is held",
+		column.has_area() and (not slam_said or not slam_rect.intersects(column)) and (slam_said or fx.spawned.get("word_held", 0) == held + 1),
+		"said %s word %s column %s" % [slam_said, slam_rect, column])
+	# (b) The named foe's whole column is avoided, not only its body.
+	reset_words.call()
+	var smash_said: bool = fx.word("smash", ball + Vector3(3, 2, 0), Color.TRANSPARENT, fight)
+	var smash_rect: Rect2 = word_rect.call("smash") if smash_said else Rect2()
+	t.check("PF-26: a word naming its foe clears the marks stacked over it too",
+		not smash_said or (not smash_rect.intersects(column) and not smash_rect.intersects(PlayerFx.stack_rect(fight, wcam))),
+		"said %s word %s column %s" % [smash_said, smash_rect, column])
+	# (c) BWAP, the on-beat word, lands where the ball is: the foe sits on that spot.
+	reset_words.call()
+	fight_box.size = Vector3(6, 6, 6)
+	fight.global_position = fx._beside_ball()
+	await _frames(2)
+	reset_words.call()
+	column = PlayerFx.foe_rect(fight, wcam)
+	column = column.merge(PlayerFx.stack_rect(fight, wcam))
+	var beat_before: int = fx.spawned.get("word_beat", 0)
+	fx._on_beat_word(fight, "ram", fx._clock)
+	var beat_rect: Rect2 = word_rect.call("beat") if fx.spawned.get("word_beat", 0) > beat_before else Rect2()
+	t.check("PF-26: BWAP on a foe is held or lands clear of it and its marks",
+		column.has_area() and (beat_rect == Rect2() or not beat_rect.intersects(column)), "beat %s column %s" % [beat_rect, column])
+	# (d) Positive control, a foe in view and far from the spot: the word still stamps.
+	reset_words.call()
+	fight_box.size = Vector3(1.5, 1.5, 1.5)
+	fight.global_position = ball + Vector3(-14, 2, -6)
+	await _frames(2)
+	reset_words.call()
+	var far_rect := PlayerFx.foe_rect(fight, wcam)
+	var control_said: bool = fx.word("slam", ball + Vector3(3, 2, 0))
+	var control_rect: Rect2 = word_rect.call("slam") if control_said else Rect2()
+	t.check("PF-26 control: with a foe in view far from the spot, the word still stamps",
+		far_rect.has_area() and control_said and not control_rect.intersects(far_rect), "foe %s word %s" % [far_rect, control_rect])
+	fight.free()
+	await _frames(2)
+	# (e) A rising damage number: the word keeps off its path.
+	reset_words.call()
+	var spot_px := wcam.unproject_position(fx.clear_of_lane(ball + Vector3(3, 2, 0)))
+	var layer = _game.hud.damage_numbers
+	layer.clear()
+	layer.add("pf26", 50.0, spot_px + Vector2(0, 40), "kinetic", "player")
+	var path: Array[Rect2] = layer.path_rects() if layer.has_method("path_rects") else ([] as Array[Rect2])
+	t.check("PF-26: a damage number reports the path it rises along", path.size() == 1 and path[0].has_area(), str(path))
+	held = fx.spawned.get("word_held", 0)
+	var num_said: bool = fx.word("slam", ball + Vector3(3, 2, 0))
+	var num_rect: Rect2 = word_rect.call("slam") if num_said else Rect2()
+	t.check("PF-26: a word keeps off a damage number's rising path, or is held",
+		not path.is_empty() and (not num_said or not num_rect.intersects(path[0])) and (num_said or fx.spawned.get("word_held", 0) == held + 1),
+		"said %s word %s path %s" % [num_said, num_rect, path])
+	layer.clear()
+	reset_words.call()
+	t.check("PF-26 control: with the number gone the same word stamps", fx.word("slam", ball + Vector3(3, 2, 0)))
+	reset_words.call()
 
 	# Knockback moments: a blazing ram says WHAM, a bump says nothing; three pins inside
 	# the window stamp STRIKE.

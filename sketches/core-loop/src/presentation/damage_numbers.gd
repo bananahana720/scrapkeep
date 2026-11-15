@@ -91,6 +91,8 @@ static func font_size(value: float, crit := false) -> int:
 
 func _init() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
+	# player_fx finds the layer by this group to keep its words off the rising numbers (path_rects).
+	add_to_group("damage_numbers")
 
 
 # One hit. `at` is a screen point (Vector2) or a world point (Vector3, through `project`).
@@ -120,6 +122,22 @@ func step(delta: float) -> void:
 		number["since"] += delta
 	_numbers = _numbers.filter(func(n): return n["age"] < LIFE_S)
 	queue_redraw()
+
+
+# The screen rect each live number sweeps from where it is stamped to where it fades: the figure's
+# width, and its height plus RISE. player_fx keeps its words off these (PF-26). Numbers whose world
+# point is behind the camera are skipped.
+func path_rects() -> Array[Rect2]:
+	var out: Array[Rect2] = []
+	for number in _numbers:
+		var p = _screen(number)
+		if p == null:
+			continue
+		var size := font_size(number["value"], number["crit"])
+		var pad := float(outline_px(size))
+		var wide := size * 0.65 * str(maxi(1, roundi(number["value"]))).length() + pad * 2.0
+		out.append(Rect2(Vector2(p.x - wide * 0.5, p.y - RISE - size - pad), Vector2(wide, RISE + size + pad * 2.0)))
+	return out
 
 
 func visible_count() -> int:

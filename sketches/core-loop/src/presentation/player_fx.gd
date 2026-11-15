@@ -20,8 +20,9 @@ const Redline := preload("res://src/combat/redline.gd")
 #   boon       a hit throws a second spark burst in the build's dominant element colour
 #   words      comic sound words (KLANG, WHUMP) stamped beside big moments, never ahead of
 #              the ball (TONE-BIBLE pillar 2), never on a hostile warning or the foe they
-#              name (beside it, else above it, else unsaid); an ordinary hit
-#              says only BWAP, beside the ball, when it lands on the beat (PF-26)
+#              name, nor any foe in view, the marks stacked over it or the rising damage
+#              numbers (beside the ball, else its other side, else above the foe's marks,
+#              else unsaid); an ordinary hit says only BWAP when it lands on the beat (PF-26)
 #   overdrive  past SOFT_CAP_MPS the ball burns: white-hot rim, flame flecks and a
 #              hanging ember trail, so "my contact hurts now" reads at a glance
 #   carve      grinding sparks while the ball rides banked ground at speed
@@ -115,9 +116,12 @@ const WORD_REPEAT_S := 1.2
 # repeats far less often than a big moment's word (PF-26: the w37 film's readers said the
 # hit words cover the fight).
 const BEAT_REPEAT_S := 4.0
-# A word keeps this far, in px, off any hostile warning on screen.
+# A word keeps this far, in px, off any hostile warning, any foe in view with its marks, and any
+# rising damage number.
 # 24 covers the word's ink outline and its tilt at the ends, which _word_rect leaves out.
 const WORD_WARNING_GAP := 24.0
+# A foe farther than this (m) from the camera is too small to cover, so its meshes are not walked.
+const FIGHT_RANGE_M := 70.0
 const WORD_LIFE := 0.6
 const WORD_STAMP_S := 0.1
 const WORD_EXIT_S := 0.2
@@ -159,6 +163,8 @@ var _evolutions := 0
 var _clock := 0.0
 var _warn_frame := -1
 var _warn_rects: Array[Rect2] = []
+var _fight_frame := -1
+var _fight_cache: Array[Rect2] = []
 var _rng := RandomNumberGenerator.new()
 var _font: Font
 var _words: Array = []
@@ -601,12 +607,12 @@ func _on_beat_word(enemy, _kind: String, at_clock: float) -> void:
 	spawned["on_beat"] = spawned.get("on_beat", 0) + 1
 	for w in _words:
 		if w["t"] < 1.0 and float(w.get("born", -1.0)) >= at_clock and w["id"] != "read":
-			# The hit's own word grows (a read word is the foe's, never the beat's), unless the bigger word would reach a warning.
+			# The hit's own word grows (a read word is the foe's, never the beat's), unless the bigger word would reach the fight.
 			var grown: Array[Rect2] = []
 			if camera != null and camera.cam != null:
 				grown.append(_word_rect(camera.cam, w["at"], float(w["away"]) > 0.0, float(w["width_px"]),
 					float(w["size"]) * ONBEAT_GROW, w["node"].pixel_size))
-			if grown.is_empty() or word_spot(grown, _warnings()) == 0:
+			if grown.is_empty() or word_spot(grown, _fight_rects()) == 0:
 				w["size"] = float(w["size"]) * ONBEAT_GROW
 			return
 	if not is_instance_valid(enemy) or not enemy.is_inside_tree():
@@ -714,8 +720,9 @@ func word(id: String, at: Vector3, color := Color.TRANSPARENT, foe = null) -> bo
 	var width_px := _text_px(label, text)
 	var size := float(WORDS[id]["size"]) * (1.0 + 0.8 * might)
 	# The word grows away from the ball, so a long one never covers it, and never lands on a
-	# hostile warning or on the foe it names: it takes the ball's other side, or the space just
-	# above the foe, or stays unsaid (PF-26).
+	# hostile warning, on any foe in view, on the marks stacked over a foe or on a rising damage
+	# number: it takes the ball's other side, or the space just above the foe's marks, or stays
+	# unsaid (PF-26).
 	var placed := clear_of_lane(at)
 	var right_of_ball := true
 	if camera != null and camera.cam != null:
@@ -725,15 +732,19 @@ func word(id: String, at: Vector3, color := Color.TRANSPARENT, foe = null) -> bo
 		right_of_ball = rel.dot(side) >= 0.0
 		var grow := ONBEAT_GROW if id == "beat" else 1.0
 		var spots: Array = [[placed, right_of_ball], [placed - side * 2.0 * rel.dot(side), not right_of_ball]]
-		var avoid := _warnings().duplicate()
+		var avoid := _fight_rects().duplicate()
 		var body := foe_rect(foe, cam)
 		if body.has_area():
-			avoid.append(body.grow(WORD_WARNING_GAP))
+			# The named foe's whole column: its body and the marks over it. A foe outside the
+			# "enemy" group (a plant, a test box) is covered here too.
+			var stack := stack_rect(foe, cam)
+			var whole := body.merge(stack) if stack.has_area() else body
+			avoid.append(whole.grow(WORD_WARNING_GAP))
 			var tall := size * grow * WORD_SCREEN * cam.get_viewport().get_visible_rect().size.y
 			var p := cam.unproject_position(placed)
 			var depth := -(cam.global_transform.affine_inverse() * placed).z
 			# A pixel past the gap: placed flush on the grown body's edge, float rounding put it on the foe one run in four.
-			spots.append([cam.project_position(Vector2(p.x, body.position.y - WORD_WARNING_GAP - tall * 0.6 - 1.0), maxf(depth, cam.near + 0.1)), right_of_ball])
+			spots.append([cam.project_position(Vector2(p.x, whole.position.y - WORD_WARNING_GAP - tall * 0.6 - 1.0), maxf(depth, cam.near + 0.1)), right_of_ball])
 		var pick := _pick_spot(cam, spots, width_px, size * grow, label.pixel_size, avoid)
 		if pick < 0:
 			spawned["word_held"] = spawned.get("word_held", 0) + 1
@@ -853,6 +864,39 @@ func _warnings() -> Array[Rect2]:
 		_warn_frame = frame
 		_warn_rects = warning_rects(get_tree(), camera.cam if camera != null else null, WORD_WARNING_GAP)
 	return _warn_rects
+
+
+# Everything a word keeps off: the hostile warnings, each visible foe in view with the marks
+# stacked over it (stack_rect), and the paths of the damage numbers rising now, all grown by
+# WORD_WARNING_GAP. A damage number stays where the hit landed while its foe moves, so the numbers
+# are read from the HUD layer, not guessed from the foe. Read once a frame. Cost, per refresh: one
+# mesh walk (foe_rect) per foe in group "enemy" that is visible, in front of the camera and within
+# FIGHT_RANGE_M, so a dense fight pays (foes in range) x (meshes per foe) once, and a refresh runs
+# only for a word that passed the gap, repeat, alive and density gates (about 3 a second at most).
+func _fight_rects() -> Array[Rect2]:
+	var frame := Engine.get_process_frames()
+	if frame == _fight_frame:
+		return _fight_cache
+	_fight_frame = frame
+	_fight_cache = _warnings().duplicate()
+	var cam: Camera3D = camera.cam if camera != null else null
+	if cam == null:
+		return _fight_cache
+	for node in get_tree().get_nodes_in_group("enemy"):
+		if not (node is Node3D) or not node.is_visible_in_tree():
+			continue
+		if cam.is_position_behind(node.global_position) or cam.global_position.distance_to(node.global_position) > FIGHT_RANGE_M:
+			continue
+		var body := foe_rect(node, cam)
+		if not body.has_area():
+			continue
+		var stack := stack_rect(node, cam)
+		_fight_cache.append((body.merge(stack) if stack.has_area() else body).grow(WORD_WARNING_GAP))
+	for layer in get_tree().get_nodes_in_group("damage_numbers"):
+		if layer.has_method("path_rects"):
+			for r in layer.path_rects():
+				_fight_cache.append(r.grow(WORD_WARNING_GAP))
+	return _fight_cache
 
 
 # Which spot a word takes: the first of `spots` (its own, the ball's other side, above the
