@@ -1,6 +1,7 @@
 extends Node
 
 const EventKinds := preload("res://src/core/event_kinds.gd")
+const PlayerFx := preload("res://src/presentation/player_fx.gd")
 
 # A hit that breaks an enemy's wind-up answers with the STATE_ROWS row "interrupted" over the
 # body: a star in the live colour, so the break reads as yours. It listens to the enemy's own
@@ -29,12 +30,20 @@ func setup(ctx_ref, vfx_ref) -> void:
 	ctx = ctx_ref
 	vfx = vfx_ref
 	name = "StatusMarks"
+	add_to_group(PlayerFx.MARKS_GROUP)
 	if ctx.events.has_signal("enemy_spawned") and not ctx.events.is_connected("enemy_spawned", _on_spawned):
 		ctx.events.connect("enemy_spawned", _on_spawned)
 
 
 func _physics_process(delta: float) -> void:
 	_clock += delta
+
+
+# Whether `enemy` wears its interrupted star now; player_fx keeps its words off the marks over a
+# foe only while one is shown.
+func marked(enemy: Node3D) -> bool:
+	var id := enemy.get_instance_id()
+	return _last.has(id) and _clock - float(_last[id]) < SHOWN_SECONDS
 
 
 func _on_spawned(enemy: Node3D, _kind: String) -> void:

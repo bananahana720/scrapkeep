@@ -26,6 +26,8 @@ const PLAYER_COLOURS := {"kinetic": Palette.COPPER, "frost": Palette.ANCIENT, "a
 # A strike kind that is not kinetic names its element; everything else is the ball's weight.
 const KIND_TYPES := {"arc": "arc", "frost": "frost"}
 
+# player_fx finds the layer by this group to keep its words off the rising numbers (path_rects).
+const GROUP := "damage_numbers"
 const MERGE_WINDOW_S := 0.25
 const LIFE_S := 0.9
 const MAX_VISIBLE := 8
@@ -91,6 +93,7 @@ static func font_size(value: float, crit := false) -> int:
 
 func _init() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_to_group(GROUP)
 
 
 # One hit. `at` is a screen point (Vector2) or a world point (Vector3, through `project`).
@@ -120,6 +123,27 @@ func step(delta: float) -> void:
 		number["since"] += delta
 	_numbers = _numbers.filter(func(n): return n["age"] < LIFE_S)
 	queue_redraw()
+
+
+# The screen rect each live number sweeps from where it is stamped to where it fades: the figure's
+# width, and its height plus RISE. player_fx keeps its words off these (PF-26). Numbers whose world
+# point is behind the camera are skipped.
+func path_rects() -> Array[Rect2]:
+	var out: Array[Rect2] = []
+	for number in _numbers:
+		var p = _screen(number)
+		if p == null:
+			continue
+		var size := font_size(number["value"], number["crit"])
+		var pad := float(outline_px(size))
+		var wide := _text_width(number, size) + pad * 2.0
+		out.append(Rect2(Vector2(p.x - wide * 0.5, p.y - RISE - size - pad), Vector2(wide, RISE + size + pad * 2.0)))
+	return out
+
+
+# The width _draw gives the figure: the same string, font and size, so the two cannot drift.
+func _text_width(number: Dictionary, size: int) -> float:
+	return UiFonts.mono().get_string_size(str(maxi(1, roundi(number["value"]))), HORIZONTAL_ALIGNMENT_LEFT, -1, size).x
 
 
 func visible_count() -> int:
@@ -159,7 +183,7 @@ func _draw() -> void:
 		var size := font_size(number["value"], number["crit"])
 		var text := str(maxi(1, roundi(number["value"])))
 		var font := UiFonts.mono()
-		var spot: Vector2 = p + Vector2(-font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, size).x * 0.5, -RISE * t)
+		var spot: Vector2 = p + Vector2(-_text_width(number, size) * 0.5, -RISE * t)
 		# An ink outline under the figure (FX-02), so a copper number reads on pale sand as on charcoal.
 		var ink := Palette.CHARCOAL
 		ink.a = colour.a

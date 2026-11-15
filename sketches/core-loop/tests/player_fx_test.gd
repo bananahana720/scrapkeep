@@ -13,6 +13,8 @@ const Telegraph := preload("res://src/combat/telegraph.gd")
 const Hazard := preload("res://src/boss/hazard.gd")
 const Threat := preload("res://src/combat/threat_grammar.gd")
 const Palette := preload("res://src/core/palette.gd")
+const UiFonts := preload("res://src/ui/ui_fonts.gd")
+const DamageNumbers := preload("res://src/presentation/damage_numbers.gd")
 
 var t := T.new("player_fx_test")
 var _game
@@ -164,6 +166,7 @@ func _run() -> void:
 	fx._last_word = -1.0e9
 	fx._word_seen.clear()
 	var held: int = fx.spawned.get("word_held", 0)
+	var held_kind := func(kind: String) -> int: return fx.spawned.get("held_" + kind, 0)
 	# The foe a word names is avoided like a warning: a box mesh where the word would go.
 	var foe := Node3D.new()
 	var shape := MeshInstance3D.new()
@@ -175,9 +178,28 @@ func _run() -> void:
 	foe.global_position = ball + Vector3(3, 2, 0)
 	var foe_px := PlayerFx.foe_rect(foe, wcam)
 	t.check("the foe has a screen rect", foe_px.has_area(), str(foe_px))
-	t.check("a word naming its foe never lands on it", fx.word("smash", ball + Vector3(3, 2, 0), Color.TRANSPARENT, foe)
-		and not PlayerFx._word_rect(wcam, fx._words_by_id("smash")["at"], float(fx._words_by_id("smash")["away"]) > 0.0, float(fx._words_by_id("smash")["width_px"]),
-			float(fx._words_by_id("smash")["size"]), 0.01).intersects(foe_px), "foe %s" % foe_px)
+	var rings_before: int = held_kind.call("warning")
+	var ring_said: bool = fx.word("smash", ball + Vector3(3, 2, 0), Color.TRANSPARENT, foe)
+	var ring_word := Rect2()
+	if ring_said:
+		var rw: Dictionary = fx._words_by_id("smash")
+		ring_word = PlayerFx._word_rect(wcam, rw["at"], float(rw["away"]) > 0.0, float(rw["width_px"]), float(rw["size"]), 0.01)
+	t.check("a word naming its foe, with the rings on both sides, stands clear of the foe or is held by a warning",
+		(ring_said and not ring_word.intersects(foe_px)) or (not ring_said and held_kind.call("warning") == rings_before + 1),
+		"said %s word %s foe %s held warning +%d" % [ring_said, ring_word, foe_px, held_kind.call("warning") - rings_before])
+	# PF-26: with both sides covered by the rings, a word naming its foe has only the spot above the foe. It lifts over
+	# the foe's whole mark column, so it never lies on the marks stacked over the foe: held, or clear of them.
+	for w in fx._words:
+		w["t"] = 1.0
+	fx._last_word = -1.0e9
+	fx._word_seen.clear()
+	var named_said: bool = fx.word("smash", ball + Vector3(3, 2, 0), Color.TRANSPARENT, foe)
+	var named_rect := Rect2()
+	if named_said and not fx._words_by_id("smash").is_empty():
+		var nw: Dictionary = fx._words_by_id("smash")
+		named_rect = PlayerFx._word_rect(wcam, nw["at"], float(nw["away"]) > 0.0, float(nw["width_px"]), float(nw["size"]), 0.01)
+	t.check("PF-26: a word naming its foe, with the rings on both sides, never lies on the foe", foe_px.has_area()
+		and (not named_said or not named_rect.intersects(foe_px)), "said %s word %s foe %s" % [named_said, named_rect, foe_px])
 	# A foe filling the top of the view: the spot above it is off screen, so the word stays clear
 	# of it or unsaid, never pulled back onto it.
 	foe.global_position = ball + Vector3(3, 6, 0)
@@ -233,12 +255,231 @@ func _run() -> void:
 	fx._last_word = -1.0e9
 	fx._word_seen.clear()
 	held = fx.spawned.get("word_held", 0)
-	t.check("a warning under both sides holds the word", not PlayerFx.warning_rects(root.get_tree(), wcam, 0.0).is_empty()
-		and not fx.word("slam", ball + Vector3(3, 2, 0)) and fx.spawned.get("word_held", 0) == held + 1,
-		"rects %s" % [PlayerFx.warning_rects(root.get_tree(), wcam, 0.0)])
+	var ring_rects := PlayerFx.warning_rects(root.get_tree(), wcam, PlayerFx.WORD_WARNING_GAP)
+	var both_said: bool = fx.word("slam", ball + Vector3(3, 2, 0))
+	var both_word := Rect2()
+	if both_said:
+		var bw: Dictionary = fx._words_by_id("slam")
+		both_word = PlayerFx._word_rect(wcam, bw["at"], float(bw["away"]) > 0.0, float(bw["width_px"]), float(bw["size"]), 0.01)
+	t.check("a warning under both sides leaves the word a spot beside the ball, clear of both", ring_rects.size() >= 2 and both_said
+		and not ring_rects.any(func(r: Rect2): return r.intersects(both_word)), "said %s word %s rects %s" % [both_said, both_word, ring_rects])
 	for c in covers:
 		c.free()
 	await _frames(1)
+
+	# PF-26: the fight stays visible. The rings are gone, so only the fight rules and the foe's own
+	# rectangles can refuse a word here. Every placement claim below needs the stamp to be clear of the
+	# rectangle it names, or the held counter of that kind (held_foe, held_number) to rise by one; a plain
+	# "held" is not enough, so a word that never speaks cannot pass.
+	var fight := Node3D.new()
+	var fight_shape := MeshInstance3D.new()
+	var fight_box := BoxMesh.new()
+	fight_box.size = Vector3(1.5, 1.5, 1.5)
+	fight_shape.mesh = fight_box
+	fight.add_child(fight_shape)
+	_game.add_child(fight)
+	fight.add_to_group("enemy")
+	var word_rect := func(id: String) -> Rect2:
+		var w: Dictionary = fx._words_by_id(id)
+		return Rect2() if w.is_empty() else PlayerFx._word_rect(wcam, w["at"], float(w["away"]) > 0.0, float(w["width_px"]), float(w["size"]), 0.01)
+	var reset_words := func() -> void:
+		for w in fx._words:
+			w["t"] = 1.0
+		fx._last_word = -1.0e9
+		fx._word_seen.clear()
+	var kinds_in := func(kind: String) -> int:
+		var n := 0
+		for k in fx._fight_kind:
+			if k == kind:
+				n += 1
+		return n
+	# The owner of a foe's marks, as status_marks.gd and machine_fx.gd are: a test double answers marked().
+	var marker_script := GDScript.new()
+	marker_script.source_code = "extends Node\nvar shown = null\nfunc marked(f) -> bool:\n\treturn f == shown\n"
+	marker_script.reload()
+	var marker = marker_script.new()
+	marker.add_to_group(PlayerFx.MARKS_GROUP)
+	_game.add_child(marker)
+	# (a) A foe in the group, unnamed, sits where the slam would go.
+	fight.global_position = ball + Vector3(3, 2, 0)
+	await _frames(2)
+	reset_words.call()
+	var column := PlayerFx.foe_rect(fight, wcam)
+	held = held_kind.call("foe")
+	var slam_said: bool = fx.word("slam", ball + Vector3(3, 2, 0))
+	var slam_rect: Rect2 = word_rect.call("slam") if slam_said else Rect2()
+	t.check("PF-26: a word that names no foe stays off a foe in view, or is held by it",
+		column.has_area() and ((slam_said and not slam_rect.intersects(column)) or (not slam_said and held_kind.call("foe") == held + 1)),
+		"said %s word %s column %s held foe +%d" % [slam_said, slam_rect, column, held_kind.call("foe") - held])
+	# (a2) A foe showing no mark reserves no marks rectangle; the same foe showing one does.
+	await _frames(2)
+	fx._fight_rects()
+	var plain_marks: int = kinds_in.call("marks")
+	var plain_foes: int = kinds_in.call("foe")
+	marker.shown = fight
+	await _frames(2)
+	fx._fight_rects()
+	var shown_marks: int = kinds_in.call("marks")
+	var shown_at := PlayerFx.stack_rect(fight, wcam).grow(PlayerFx.WORD_WARNING_GAP)
+	t.check("PF-26: a foe showing no mark reserves no marks rectangle", plain_foes >= 1 and plain_marks == 0, "foes %d marks %d" % [plain_foes, plain_marks])
+	t.check("PF-26: a foe showing a mark reserves the marks rectangle over it", shown_marks == 1 and fx._fight_rects().has(shown_at),
+		"marks %d want %s" % [shown_marks, shown_at])
+	marker.shown = null
+	# (b) The named foe's body is avoided; this foe is outside the group, so only the named-foe rule sees it.
+	fight.remove_from_group("enemy")
+	reset_words.call()
+	await _frames(2)
+	held = held_kind.call("foe")
+	var smash_said: bool = fx.word("smash", ball + Vector3(3, 2, 0), Color.TRANSPARENT, fight)
+	var smash_rect: Rect2 = word_rect.call("smash") if smash_said else Rect2()
+	t.check("PF-26: a word naming a foe outside the group stays off its body, or is held by it",
+		(smash_said and not smash_rect.intersects(column)) or (not smash_said and held_kind.call("foe") == held + 1),
+		"said %s word %s column %s" % [smash_said, smash_rect, column])
+	fight.add_to_group("enemy")
+	# (c) BWAP, the on-beat word, lands beside the ball: an unnamed foe in the group sits on that spot, and the
+	# foe the hit names is a different one, away from it.
+	reset_words.call()
+	fight_box.size = Vector3(6, 6, 6)
+	fight.global_position = fx._beside_ball()
+	var hit_foe := Node3D.new()
+	_game.add_child(hit_foe)
+	hit_foe.global_position = ball + Vector3(-14, 2, -6)
+	await _frames(2)
+	reset_words.call()
+	column = PlayerFx.foe_rect(fight, wcam)
+	held = held_kind.call("foe")
+	var beat_before: int = fx.spawned.get("word_beat", 0)
+	fx._on_beat_word(hit_foe, "ram", fx._clock)
+	var beat_said: bool = fx.spawned.get("word_beat", 0) > beat_before
+	var beat_rect: Rect2 = word_rect.call("beat") if beat_said else Rect2()
+	t.check("PF-26: BWAP beside the ball stands clear of an unnamed foe there, or is held by it",
+		column.has_area() and ((beat_said and not beat_rect.intersects(column)) or (not beat_said and held_kind.call("foe") == held + 1)),
+		"said %s beat %s column %s held foe +%d" % [beat_said, beat_rect, column, held_kind.call("foe") - held])
+	hit_foe.free()
+	# (d) Control that can fail both ways: a foe in view, well off the spot and inside the screen, is in the avoid
+	# list (the rule sees it) and the word still stamps clear of it (the rule does not hold every word).
+	reset_words.call()
+	fight_box.size = Vector3(1.5, 1.5, 1.5)
+	var vsize_all := wcam.get_viewport().get_visible_rect().size
+	fight.global_position = wcam.project_position(vsize_all * Vector2(0.16, 0.3), 25.0)
+	await _frames(2)
+	reset_words.call()
+	var far_rect := PlayerFx.foe_rect(fight, wcam)
+	var control_said: bool = fx.word("slam", ball + Vector3(3, 2, 0))
+	var control_rect: Rect2 = word_rect.call("slam") if control_said else Rect2()
+	var seen: bool = fx._fight_rects().any(func(r: Rect2): return r.encloses(far_rect))
+	t.check("PF-26 control: a foe in view away from the spot is in the avoid list, and the word still stamps clear of it",
+		far_rect.has_area() and Rect2(Vector2.ZERO, vsize_all).encloses(far_rect) and seen and control_said and not control_rect.intersects(far_rect),
+		"foe %s seen %s word %s" % [far_rect, seen, control_rect])
+	# (d2) A foe 90 m out whose rectangle is bigger than a word, over the spot: the word keeps off it.
+	reset_words.call()
+	var spot_at: Vector3 = fx.clear_of_lane(ball + Vector3(3, 2, 0))
+	fight_box.size = Vector3(20, 20, 20)
+	fight.global_position = wcam.project_position(wcam.unproject_position(spot_at), 90.0)
+	await _frames(2)
+	reset_words.call()
+	var far90 := PlayerFx.foe_rect(fight, wcam)
+	held = held_kind.call("foe")
+	var far_said: bool = fx.word("slam", ball + Vector3(3, 2, 0))
+	var far_word: Rect2 = word_rect.call("slam") if far_said else Rect2()
+	t.check("PF-26: a foe 90 m out, larger on screen than a word, is kept off", far90.size.y > 80.0 and far90.has_point(wcam.unproject_position(spot_at))
+		and ((far_said and not far_word.intersects(far90)) or (not far_said and held_kind.call("foe") == held + 1)),
+		"foe %s said %s word %s" % [far90, far_said, far_word])
+	# (d3) A long foe whose origin is behind the camera plane with its front part on screen: kept off too.
+	reset_words.call()
+	var forward := -wcam.global_basis.z
+	var spot_depth := (spot_at - wcam.global_position).dot(forward)
+	fight_box.size = Vector3(2, 2, 40)
+	fight.global_basis = wcam.global_basis
+	fight.global_position = spot_at - forward * (spot_depth + 10.0)
+	await _frames(2)
+	reset_words.call()
+	var behind := PlayerFx.foe_rect(fight, wcam)
+	held = held_kind.call("foe")
+	var behind_said: bool = fx.word("slam", ball + Vector3(3, 2, 0))
+	var behind_word: Rect2 = word_rect.call("slam") if behind_said else Rect2()
+	t.check("PF-26: a foe whose origin is behind the camera, with part of it on screen, is kept off",
+		(fight.global_position - wcam.global_position).dot(forward) < 0.0 and behind.has_area()
+		and ((behind_said and not behind_word.intersects(behind)) or (not behind_said and held_kind.call("foe") == held + 1)),
+		"foe %s said %s word %s" % [behind, behind_said, behind_word])
+	fight.global_basis = Basis.IDENTITY
+	fight_box.size = Vector3(1.5, 1.5, 1.5)
+	# (d4) A dot of a foe, under FOE_MIN_PX, is skipped: a far crowd costs nothing and hides nothing.
+	reset_words.call()
+	fight.global_position = wcam.project_position(wcam.unproject_position(spot_at), 150.0)
+	await _frames(2)
+	var dot := PlayerFx.foe_rect(fight, wcam)
+	t.check("PF-26: a foe smaller than FOE_MIN_PX is not in the avoid list", dot.has_area() and maxf(dot.size.x, dot.size.y) < PlayerFx.FOE_MIN_PX
+		and fx._fight_rects().size() == fx._warnings().size(), "%s rects %d warnings %d" % [dot, fx._fight_rects().size(), fx._warnings().size()])
+	fight.free()
+	await _frames(2)
+	# The box clip: a box that passes beside the camera and crosses the near plane with nothing of it on screen adds
+	# no rectangle, and one partly on screen adds a rectangle inside the viewport.
+	var origin := wcam.global_position
+	var vb := wcam.global_basis
+	var beside_box := AABB(Vector3(-40, -1, -5), Vector3(10, 2, 10))
+	var beside_rect := PlayerFx._view_rect(PlayerFx._box_points(Transform3D(vb, origin), beside_box, wcam), wcam)
+	var partly_box := AABB(Vector3(-1, -1, -5), Vector3(40, 2, 10))
+	var partly_points := PlayerFx._box_points(Transform3D(vb, origin), partly_box, wcam)
+	var partly_rect := PlayerFx._view_rect(partly_points, wcam)
+	var partly_raw := Rect2(partly_points[0], Vector2.ZERO)
+	for pt in partly_points:
+		partly_raw = partly_raw.expand(pt)
+	var view_all := Rect2(Vector2.ZERO, wcam.get_viewport().get_visible_rect().size)
+	t.check("PF-26: a box beside the camera that crosses the near plane, with nothing of it on screen, adds no rectangle",
+		not beside_rect.has_area(), "%s" % beside_rect)
+	t.check("PF-26: a box partly on screen adds a rectangle inside the viewport, though its raw projection is far larger",
+		partly_rect.has_area() and view_all.encloses(partly_rect) and partly_raw.size.x > view_all.size.x * 3.0, "rect %s raw %s" % [partly_rect, partly_raw])
+	# Cost: forty foes in the view, one refresh per drawn frame however many words ask in it.
+	var crowd: Array = []
+	for i in 40:
+		var c := Node3D.new()
+		var cm := MeshInstance3D.new()
+		var cb := BoxMesh.new()
+		cb.size = Vector3(1.5, 1.5, 1.5)
+		cm.mesh = cb
+		for k in 3:
+			var extra := MeshInstance3D.new()
+			extra.mesh = cb
+			c.add_child(extra)
+		c.add_child(cm)
+		_game.add_child(c)
+		c.add_to_group("enemy")
+		c.global_position = wcam.project_position(vsize_all * Vector2(0.1 + 0.8 * (i % 8) / 8.0, 0.15 + 0.7 * (i / 8) / 5.0), 20.0 + i)
+		crowd.append(c)
+	await _frames(2)
+	var refreshes_before: int = fx.spawned.get("fight_refresh", 0)
+	fx._fight_rects()
+	fx._fight_rects()
+	fx._fight_rects()
+	t.eq("PF-26: three asks in one drawn frame are one refresh", fx.spawned.get("fight_refresh", 0) - refreshes_before, 1)
+	await process_frame
+	var rect_count: int = fx._fight_rects().size()
+	t.check("PF-26: one refresh sees all 40 foes in view", rect_count >= 30, "%d rects" % rect_count)
+	for c in crowd:
+		c.free()
+	await _frames(2)
+	# (e) A rising damage number: the word keeps off its path.
+	reset_words.call()
+	var spot_px := wcam.unproject_position(fx.clear_of_lane(ball + Vector3(3, 2, 0)))
+	var layer = _game.hud.damage_numbers
+	layer.clear()
+	layer.add("pf26", 50.0, spot_px + Vector2(0, 40), "kinetic", "player")
+	var path: Array[Rect2] = layer.path_rects()
+	var figure := UiFonts.mono().get_string_size("50", HORIZONTAL_ALIGNMENT_LEFT, -1, DamageNumbers.font_size(50.0, false)).x
+	t.check("PF-26: a damage number reports the path it rises along, as wide as the figure _draw measures", path.size() == 1 and path[0].has_area()
+		and is_equal_approx(path[0].size.x, figure + 2.0 * DamageNumbers.outline_px(DamageNumbers.font_size(50.0, false))), "%s figure %s" % [path, figure])
+	held = held_kind.call("number")
+	var num_said: bool = fx.word("slam", ball + Vector3(3, 2, 0))
+	var num_rect: Rect2 = word_rect.call("slam") if num_said else Rect2()
+	t.check("PF-26: a word keeps off a damage number's rising path, or is held by it",
+		not path.is_empty() and ((num_said and not num_rect.intersects(path[0])) or (not num_said and held_kind.call("number") == held + 1)),
+		"said %s word %s path %s" % [num_said, num_rect, path])
+	layer.clear()
+	reset_words.call()
+	t.check("PF-26 control: with the number gone the same word stamps", fx.word("slam", ball + Vector3(3, 2, 0)))
+	reset_words.call()
+	marker.free()
 
 	# Knockback moments: a blazing ram says WHAM, a bump says nothing; three pins inside
 	# the window stamp STRIKE.

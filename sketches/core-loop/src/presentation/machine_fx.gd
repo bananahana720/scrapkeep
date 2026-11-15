@@ -9,6 +9,7 @@ const BossPosture := preload("res://src/combat/boss_posture.gd")
 const SpecialCues := preload("res://src/combat/special_cues.gd")
 const ScreenRegions := preload("res://src/ui/screen_regions.gd")
 const FlashGuard := preload("res://src/presentation/flash_guard.gd")
+const PlayerFx := preload("res://src/presentation/player_fx.gd")
 
 # What the machines throw off: how a pack arrives, how a body winds up, takes a hit,
 # staggers and dies, how the four specials tell you what they are about to do, and how
@@ -158,7 +159,14 @@ var director_ref = null
 var kill_mark = null
 
 
+# Whether `enemy` is in its stagger window, which draws the stagger word over it; player_fx keeps its
+# words off the marks over a foe only while one is shown.
+func marked(enemy: Node3D) -> bool:
+	return _dazes.has(enemy.get_instance_id())
+
+
 func setup(ctx_ref) -> void:
+	add_to_group(PlayerFx.MARKS_GROUP)
 	ctx = ctx_ref
 	name = "MachineFx"
 	_cable_rng.seed = 0x1C4
