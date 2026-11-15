@@ -113,9 +113,15 @@ const WALL_S := 1100.0
 # the clamp the same, 1.3 s over the 15 s floor; campers never break. The stack's faster crews reshuffle each seed's
 # fight, as on 2026-11-12. Assumption Andrew can overturn: the flume fight stays as the stack leaves it, inside its
 # band. The margin on the 15 s floor is now thin: a further shortening is a design question (ruling bj).
-const EXPECT_SMALL_S := 21.8
-const EXPECT_GROWN_S := 16.3
-const EXPECT_GROWN_OPEN_S := 16.3
+# 2026-11-15 (wave 41 gate, PC, e2770d85d, three identical runs): small [25.14, 27.09, 24.25, 26.32, 14.43] median
+# 25.1, grown [18.19, 17.58, 18.0, 17.43, 10.88] median 17.6, after the clamp the same, 2.6 s over the 15 s floor;
+# campers never break. The 21.8 / 16.3 pin was one cloud run on PR 845 over the stage at 49e801ad and never saw the
+# 48 stage commits after it. Both arms are longer than that pin and about 5 percent shorter than main (26.5 / 18.5).
+# The mover is not bisected. The pins go back to main's 26.5 / 18.5 / 18.5 (wave 40 gate): this reading sits inside
+# their 10 percent, and the centre does not move down, so a further shortening still turns the test red (ruling cu).
+const EXPECT_SMALL_S := 26.5
+const EXPECT_GROWN_S := 18.5
+const EXPECT_GROWN_OPEN_S := 18.5
 const TOLERANCE := 0.10
 
 

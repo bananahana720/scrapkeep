@@ -188,6 +188,21 @@ func _run() -> void:
 		for word in BANNED:
 			_t.check("%s has no %s" % [path.get_file(), word], not code.contains(word))
 
+	# A call still playing at quit leaves its wav and playback in the AudioServer ("resources still in
+	# use at exit"). Free the view, which stops its voices, then step frames until no playback holds a stream.
+	var held: Array = life._streams.values().filter(func(s): return s != null)
+	print("ambient voices playing at teardown: %d of %d streams loaded" % [life.voices.filter(func(v): return v.playing).size(), held.size()])
+	life.free()
+	var released := false
+	for frame in 600:
+		# `held` and the lambda's own argument are the two references left once the playbacks are gone.
+		if not held.any(func(s): return s.get_reference_count() > 2):
+			print("ambient streams released after %d frames" % frame)
+			released = true
+			break
+		await process_frame
+	_t.check("ambient streams released before quit", released)
+
 
 # The build veto: steep ground and a structure over the ground are unfit, flat open ground is fit, and a ceiling
 # perch needs its roof.

@@ -82,27 +82,31 @@ const Cards := preload("res://src/world/director_cards.gd")
 # 2026-11-14 PR 845 (world 1 difficulty stack re-land, merged with stage/alpha-w40 bd5b30f5 at 7077c2ee): the director
 # schedule moves with the stack (a third clock tier on world 1, mobs.clock_tiers_by_stage): all 20 schedules moved;
 # whole-run hashes unchanged. Recorded with --record-base --section=runtime.
+# 2026-11-15 stage/alpha-w41 re-pin at e2770d85 (wave 41 close): PR 957 (the new apron_yard_bowl row, apron_kicker_ramp size 5 -> 3)
+# and PR 1033 (apron_kicker and apron_kicker_ramp moved from (0,448) to (0,476)) are park-row data in the schedule hash, and the
+# pins were recorded for PR 845 on a tree without either: all 20 schedules moved; whole-run hashes unchanged (20 of 20 equal
+# BASE_RUN). Recorded with --record-base --section=runtime.
 const BASE_SCHEDULE := [
-	"ed17962613691e59a3bb29c66a2f4ca10d129d69aa117d67b94ffc65feda76a8",
-	"acaa5513f167b63efa3081ff8d35d03cef67991cb53cff163c230df850cafc9e",
-	"7b2590add65f318d94f0d17ecc6917df312641c6a3bc031dbc1b435c89c51427",
-	"6e5966ec0f6dca1cebafada6364483a4f3cf1174c3018cd6844ac7a4b23d703c",
-	"81089cf9c3ed111824fb1f05f7d3cc9cf92b4d9114557cdd8461dca0ac7d88e5",
-	"6a7dec29bfe20df281c9ccef457751bb5cf95022e872d206f5222bc21fb76e4d",
-	"9e4f732114630d14811268d23bcaa044d4f6f717ad5891d3aa50017c37aa2645",
-	"509792ea7707fa0dfaecc80490281ea7cb0dde80672de23b0bb5f4e58fdad052",
-	"f26e0e7b5212033d1323c0eae168be31984d2f76e12280cf7791dfdf357e7a56",
-	"92f7675f04a164393e4d8c7da9787ae84314f0e4a881e28968d5c3b078847c67",
-	"60ce065d855699e16b554f7e527e0b56573341a0728307244599cd203c407f77",
-	"14a59a2f25825b81f896dc68252a809ad045b593eceecdf3dceef4fdf8a7c811",
-	"15c9d0af6a50bc2962bf1bdcecb5894c64adb35fc2d4c91736beb9070cc2b635",
-	"34dd0e51d3e1f20d61d514910bfd5ff629203bad813ec7474f1bd0f5e524aeaf",
-	"7152e5a590c515e84a55a6328c20129832047e9d45c6e62d0eae84de69d74977",
-	"e2f7f33d18d98e10e6c21840266435ef76bf2b012f6aa01fc662d8737244318a",
-	"974be8d23247cfa2d4a87796c0009b5c12f817dbda4e9bfb0633dbe40150ce10",
-	"e6542d22a6c2047dee99d4f6758089b2ff5e2ee87eb0a93374917d495169b4c1",
-	"f2b103f8974b429705c577c23ff9f8c67d0d6f529d311bbd0ad8fc46e4ea30c0",
-	"b8ebc250e0b7068c0011d7cf537844c4e5eb0c72690eb7ca674208bed9099161",
+	"a8c351d7ebde115412ca090cc0f9555e5de256ca923b801d2ef6cb6e67deb6a4",
+	"8628cd530d863c297f64fbbb5efd72d776f095308f17d52903a4036120cd5e3c",
+	"d4ce50144ca745c36a24ca4b54bbae24d8b1c045fb4df1333c393f51a945c43e",
+	"4d202eca1c5b6eb2de3b81e1ee6e2b6216e1cad073c3195cad37f659178599a4",
+	"2f442f7373d8af2cc1b9b9a620a0b667947686a1e62b908ddf37e8048fc12293",
+	"e726bf51fba4b5cd0b7f26163354aa1811e5d72b5fdc408f04955c589104da2a",
+	"3406856fd5e35ac1a1744b819a38783bd9a6257a7513405f7bf68eeba7a351df",
+	"22fa7ce3a9f93376a93950691da9007def2e1ce6934994a8b70302e01ce31fc0",
+	"c4d2ee0a320a4a72852d8741c7ae4e6db5f279a86e1a2546e78ce6146a0ee02d",
+	"777cc1ff28829364a78b3ecca69d80a6995a01450b52961463ac715cda81c6c3",
+	"dcb5bbcefc2e0ffc5a84ce31b9e5726e5e157652a71696b65f4c745b53ad5370",
+	"6fc3d8bbc85b32690da6c7da9109f3833d97f7d3c2696ba4215b4207f8c82920",
+	"3b7a5142051982a274185680d3029a899cad9926e485951c22ef279a43875668",
+	"c8b4c4f2bc98cac92905c3d0aa8d46ec472d93d5d881d6eae30db3fda0bf8a2e",
+	"f18ca68ab88302e5a497bacdda607462c9e65a3f3a19ba2995ba3670f2ed7fac",
+	"3a1afda8d87d24b89cd031b22832914f274cf9af09d1d6e79ef9883849510a34",
+	"502a447facdd1910df307b51bba6adab20f7bd7c8f2026ed91e77f95a4232779",
+	"25b6c0b1211ae7857757a38b5e05ab85f89c3f35ae2d7955204b3c4d7313b984",
+	"aba0121eec2f5f511066d29ffcd8cb16ed92e6d4e2eea182e03b6b61590bfa65",
+	"7405a96ae030101ef180289a0345f156c26f323047706370efd4b50efbb427cf",
 ]
 # 2026-10-15 wave-14 re-pin at 8b507ffb (SQ9 speed bank, PC-POOL part rows, SQ19 offer weights and
 # the SQ9 free-rest fix move the default run; schedules unchanged): recorded with --record-base.
