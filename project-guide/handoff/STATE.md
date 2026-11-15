@@ -28,7 +28,7 @@ Open pull requests on w41 and what each waits on, in stacking order:
 3. **1033** (dam apron kicker moved past the shut yard, 2428bea9b): the shut-yard still and the kicker landing pass on the PC (candidate scratch/w41-cand-1033). Its paired band read was cancelled at the pause; run it, then stack.
 4. **1031** (Tripo arena props and a sluice shed that keeps its water wheel): needs a PC look with `--models=tripo` before stacking.
 5. **1034** (a Tripo chaser that passes the render check, and a hooker barrel with no feet): stacks after 1031; needs the same PC look.
-6. **1018** (played launches end at Brindle): its ruling letter dr clashes with the Tripo accept-list ruling dr that 1024 already stacked; re-letter it to du (ds and dt are taken) before stacking.
+6. **1018** (played launches end at Brindle): stacked on 15 Nov as ruling du (its first letter, dr, was already the Tripo accept-list ruling).
 7. **1035** (points of interest look fixes for the PR 1028 stills, and the stocktake_yard_test flake fix, 6efb2aee): sketch:fast and review done; take the stills listed in the project's poi-density hand-off, stack, then drop the stocktake_yard_test flake row.
 
 Known w41 reds to settle before the wave gate: posture_bands_reactor's small median (71.5 s against a 60.2 s pin, same on base, so the pin is stale) and bot_park_trace_repeat timing out at 900 s on a 4-core cloud box (unchecked on the PC). stocktake_yard_test flakes on a repeated part draw (fixed in 1035). Owed follow-ups: the flume trough culls its legs at 120 m and shows as a slab (POI thread); bowl approach look notes (gantry leg crowding the camera, plain weighbridge plate, small camp tally post, survey post contrast); the Tripo hooker barrel reads a little like a small robot at 22 m.
