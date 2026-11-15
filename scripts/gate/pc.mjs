@@ -31,12 +31,12 @@ const BOT_BLOCK = 5;
 const TEST_WINDOWS = 3;
 const SLOT_POOL = 4;
 
-// Godot processes a step keeps busy. A headless Godot test wants about two threads, so these are
-// process counts read against half the thread count. Measured on 10 Nov on a 32-thread PC.
+// The load a step puts on the machine, in busy threads, read against `defaultBudget`. Measured on a 32-thread PC:
+// a test window's two lanes hold a 1-minute load of about 5, one bot test at a time about 8 (wave 41 gate, e2770d85).
 export const WEIGHTS = {
-  tests: 6, // a test shard with two lanes is about 6 Godot processes
+  tests: 6, // a test shard with two lanes: measured load about 5
   bots: 8, // a bot test starts up to 8 children
-  scoped: 16, // the wave gate's bot shard runs two bot lanes, so it waits for the test windows to drain
+  scoped: 16, // the wave gate's bot shard runs two bot lanes of about 8 each
   "weekly-tests": 6, // the same shard, on the weekly list
   "weekly-bots": 8, // the same bot shard, on the weekly list
   "bands-A": 8, // one test at a time, but its bot tests start up to 8 children
@@ -48,6 +48,12 @@ export const WEIGHTS = {
   compare: 0, // reads files
   "plan-file": 0, // reads files
 };
+
+// Busy threads the gate may hold at once: every thread but four. Until 15 Nov 2026 it was half the threads, and the
+// wave 41 gate's bot shard, the longest step, waited 34 minutes for the test windows while the PC sat at load 8 of 32.
+export function defaultBudget(threads = os.availableParallelism()) {
+  return Math.max(1, threads - 4);
+}
 
 // The wave gate's scoped shard always plays world 1 through (GATE.md, "The wave gate and the release gate", step 2).
 export const SCOPED_ALWAYS = ["world1_run_test"];
@@ -104,6 +110,8 @@ export function gatePlan({ wave, head, lists, weekly = null, bands, persona = nu
   const head8 = head.slice(0, 8);
   const steps = [];
   const add = (id, kind, extra = {}) => steps.push({ id, kind, weight: WEIGHTS[kind === "shard" ? extra.weightKey : kind], exclusive: false, out: id, needsBase: false, ...extra });
+  // The wave gate's bot shard is its longest step, so it starts first and the windows fill the room beside it.
+  if (scoped) add("scoped", "shard", { weightKey: "scoped", row: "scoped", args: ["--bots", scopedNames(scoped, lists).join(","), "--lanes", "2"], names: scopedNames(scoped, lists) });
   const size = Math.ceil(lists.tests.length / TEST_WINDOWS);
   for (let first = 1; first <= lists.tests.length; first += size) {
     const last = Math.min(first + size - 1, lists.tests.length);
@@ -114,8 +122,6 @@ export function gatePlan({ wave, head, lists, weekly = null, bands, persona = nu
     if (weekly?.bots.length > 0) add("weekly-bots", "shard", { weightKey: "weekly-bots", row: "weekly sweep", args: ["--weekly", "--bots", windowOf(1, weekly.bots.length)] });
   };
   if (scoped) {
-    const names = scopedNames(scoped, lists);
-    add("scoped", "shard", { weightKey: "scoped", row: "scoped", args: ["--bots", names.join(","), "--lanes", "2"], names });
     addWeekly();
     add("node", "node", { row: "node tests" });
     add("plan-file", "plan-file", { barrier: true });
@@ -135,7 +141,7 @@ export function gatePlan({ wave, head, lists, weekly = null, bands, persona = nu
 }
 
 export function formatPlan(steps, budget) {
-  const lines = [`Budget ${budget} Godot processes. Steps start in this order; a step waits until its weight fits, and a lighter step behind it may start in the gap when it cannot delay it.`];
+  const lines = [`Budget ${budget} busy threads. Steps start in this order; a step waits until its weight fits, and a lighter step behind it may start in the gap when it cannot delay it.`];
   steps.forEach((step, index) => lines.push(`${String(index + 1).padStart(3)}  ${step.id.padEnd(18)} weight ${String(step.weight).padStart(2)}${step.exclusive ? "  exclusive: runs with nothing else" : step.barrier ? "  after every other step" : ""}${step.names ? `  ${step.names.join(" ")}` : ""}`));
   lines.push("A retime step (exclusive, weight 2) is added at run time for each shard that comes back INCONCLUSIVE.");
   return lines.join("\n");
@@ -160,7 +166,7 @@ export function spareWhileWaiting(runningWeights, headWeight, budget) {
   return least === Infinity ? 0 : least - need;
 }
 
-// Starts steps in plan order, never above `budget` Godot processes. A step that does not fit waits at the
+// Starts steps in plan order, never above `budget` busy threads. A step that does not fit waits at the
 // head of the queue; a later ordinary step may start in the gap only when it cannot delay that head
 // (`spareWhileWaiting`), so none is starved. Exclusive and barrier steps run with nothing else and nothing
 // passes them; a step heavier than the budget runs alone. `isDone(step)` returns a truthy value (or { exit })
@@ -637,7 +643,7 @@ function retimeFor(step, receipts) {
 }
 
 function parseArguments(argv) {
-  const options = { command: argv[0], wave: null, head: null, root: path.join(os.homedir(), "scratch", "gate"), base: null, persona: null, budget: Math.floor(os.availableParallelism() / 2), weekly: true, redo: [], tally: false, scoped: null };
+  const options = { command: argv[0], wave: null, head: null, root: path.join(os.homedir(), "scratch", "gate"), base: null, persona: null, budget: defaultBudget(), weekly: true, redo: [], tally: false, scoped: null };
   for (let index = 1; index < argv.length; index++) {
     const argument = argv[index];
     const value = () => {
