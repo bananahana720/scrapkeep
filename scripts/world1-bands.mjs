@@ -12,15 +12,25 @@
 // --frames    scripts/frametime-check.mjs summary.json, one per frame_scenes entry.
 // --sitting   also grade rows with cadence "sitting" (the difficulty table, 24 seeds): without it they
 //             print as "not run" and never fail.
+// --receipt  <row id>=<receipt.json>, or --receipts <dir> holding <row id>.json files: the output of a
+//             check this reader does not run itself (a gate tally, a film read, a model check). A receipt
+//             is { head, pass, measured, plant_caught }. See "Receipts" below.
+// --head     the commit being judged: a receipt written at another head counts as no data.
+// --today    YYYY-MM-DD for the known-failing review dates (default: today, UTC).
 // Placeholders are scanned in-process (placeholder-gate.mjs) and story-beat rows are checked in the
 // beat rows file. Exit 0 when no gate row fails, 1 otherwise. A report row never fails the read.
+//
+// With --sitting this is the one read that says whether world 1 is done (ruling dt). A row with status
+// "sitting" is a thing only Andrew can judge at his sitting: it is listed, never graded, never blocks.
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { median } from "./checkpoint.mjs";
 import { cellVerdict, meets, targetFor } from "./challenge/lib.mjs";
+import { LEDGER_FILE, parseLedger, pastReview } from "./known-failing.mjs";
 import { scan } from "./placeholder-gate.mjs";
+import { FINDINGS_FILE, parseFindings } from "./redteam/lib.mjs";
 import { readRuns } from "./run-summary.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -313,6 +323,42 @@ function recordedBands(targets) {
   return bands.length ? `harness targets; recorded: ${bands.join(", ")}` : "harness targets";
 }
 
+// --- Done rows: findings, the ledger and receipts ---------------------------------------------
+
+// PLAY-FINDINGS.tsv has no world column. A row about another world opens its "meets" cell with
+// "World 2" or "World 3" (the list's own habit since PF-41); every other row is world 1 or shared.
+export const otherWorld = (finding) => /^World [23]\b/.test(finding.meets ?? "");
+
+// Open play findings of the grades the row names, in world 1.
+function findingsRow(row, findings) {
+  if (!findings) return { measured: "play findings file not on this base", pass: false, noData: true };
+  if (findings.problems.length) return { measured: `the findings file does not parse (${findings.problems.length} problem(s))`, pass: false, noData: true };
+  const mine = findings.rows.filter((f) => row.grades.includes(f.grade) && !otherWorld(f));
+  return { measured: `${mine.length}${mine.length ? " (" + mine.map((f) => f.id).join(", ") + ")" : ""}`, pass: within(mine.length, row) };
+}
+
+// Known-failing rows past their review date: a carried red nobody has looked at again.
+function ledgerRow(row, ledger, today) {
+  if (!ledger) return { measured: "known-failing ledger not on this base", pass: false, noData: true };
+  if (ledger.problems.length) return { measured: `the ledger does not parse (${ledger.problems.length} problem(s))`, pass: false, noData: true };
+  const late = pastReview(ledger.rows, today);
+  return { measured: `${late.length} of ${ledger.rows.length} past review on ${today}${late.length ? " (" + late.slice(0, 4).map((r) => r.test).join(", ") + (late.length > 4 ? ", ..." : "") + ")" : ""}`, pass: within(late.length, row) };
+}
+
+// Receipts. A check this reader cannot run (it starts no Godot) hands in a JSON receipt:
+//   { "head": "<commit judged>", "pass": true, "measured": "<one line>", "plant_caught": true }
+// The row names the command that writes it (`producer`) and the fault it must catch (`plant`).
+// A receipt passes only when it is for the head being judged and, where the row names a plant, the
+// receipt says the plant was caught on that head: a check never seen failing decides nothing.
+export function receiptRow(row, receipt, head) {
+  if (!receipt) return { measured: `no receipt (${row.producer ?? "no producer yet"})`, pass: false, noData: true };
+  if (typeof receipt.head !== "string" || receipt.head.length < 7) return { measured: "the receipt names no head", pass: false, noData: true };
+  if (head && !(head.startsWith(receipt.head) || receipt.head.startsWith(head))) return { measured: `stale receipt: written at ${receipt.head.slice(0, 9)}, judging ${head.slice(0, 9)}`, pass: false, noData: true };
+  const said = typeof receipt.measured === "string" && receipt.measured ? receipt.measured : receipt.pass === true ? "pass" : "fail";
+  if (row.plant && receipt.plant_caught !== true) return { measured: `void, the planted fault was not shown caught: ${said}`, pass: false };
+  return { measured: said, pass: receipt.pass === true };
+}
+
 // --- Evaluate --------------------------------------------------------------------------------
 
 // inputs: { runs, pacing, challenge, frames, findings, beatRowsText, phases, sitting }
@@ -332,6 +378,7 @@ export function evaluate(spec, inputs) {
       row = { ...row, max };
     }
     let result;
+    if (row.status === "sitting") return { id: row.id, area: row.area, label: row.label, status: row.status, enforced_from: null, measured: "-", threshold: "-", verdict: "his call", blocks: false };
     if (row.cadence === "sitting" && !inputs.sitting) result = { measured: "not run (sitting cadence; pass --sitting)", pass: null, skipped: true };
     else if (row.source === "bots") result = runs.length ? botRow(row, runs, ctx) : { measured: "no bot runs given", pass: false, noData: true };
     else if (row.source === "pacing") result = pacingRow(row, runs, inputs.pacing);
@@ -339,6 +386,9 @@ export function evaluate(spec, inputs) {
     else if (row.source === "placeholders") result = placeholderRow(row, inputs.findings ?? []);
     else if (row.source === "frames") result = frameRow(row, inputs.frames ?? {}, spec.frame_scenes ?? []);
     else if (row.source === "challenge") result = challengeRow(row, inputs.challenge, spec.challenge_cells ?? []);
+    else if (row.source === "findings") result = findingsRow(row, inputs.playFindings ?? null);
+    else if (row.source === "ledger") result = ledgerRow(row, inputs.ledger ?? null, inputs.today);
+    else if (row.source === "receipt") result = receiptRow(row, inputs.receipts?.[row.id] ?? null, inputs.head ?? null);
     else result = { measured: `unknown source ${row.source}`, pass: false };
     if (row.band_from) {
       const band = constBand(inputs.bandTexts?.[row.band_from.file] ?? null, row.band_from.const);
@@ -371,19 +421,21 @@ export function renderTable(rows, meta = {}) {
     "| Row | Area | Measured | Band | Verdict | Status |",
     "| --- | --- | --- | --- | --- | --- |",
   ];
-  for (const r of rows) {
+  for (const r of rows.filter((x) => x.status !== "sitting")) {
     const status = r.status === "report" && r.enforced_from ? `report until ${r.enforced_from.join(", ")}` : r.status;
     lines.push(`| ${r.label} | ${r.area} | ${r.measured.replace(/\|/g, "/")} | ${r.threshold} | ${r.verdict}${r.blocks ? " (blocks)" : ""} | ${status} |`);
   }
   const blocking = rows.filter((r) => r.blocks);
   lines.push("", blocking.length ? `world 1 bands: NOT READY (${blocking.length} gate row(s): ${blocking.map((r) => r.id).join(", ")})` : "world 1 bands: READY (every gate row passes)");
+  const his = rows.filter((r) => r.status === "sitting");
+  if (his.length) lines.push("", "Only Andrew decides these, at his sitting (listed, never graded):", ...his.map((r) => `- ${r.area}: ${r.label}`));
   return lines.join("\n");
 }
 
 // --- CLI -------------------------------------------------------------------------------------
 
 export function parseArgs(argv) {
-  const args = { bots: [], challenge: null, frames: {}, sitting: false, json: false, out: null, rows: ROWS_FILE, project: path.join(root, "sketches/core-loop") };
+  const args = { bots: [], challenge: null, frames: {}, sitting: false, json: false, out: null, receipts: {}, receiptDirs: [], head: null, today: new Date().toISOString().slice(0, 10), rows: ROWS_FILE, project: path.join(root, "sketches/core-loop") };
   const value = (i, name) => {
     const v = argv[i + 1];
     if (v === undefined || v === "" || v.startsWith("--")) throw new Error(`${name} needs a value`);
@@ -398,7 +450,15 @@ export function parseArgs(argv) {
       const eq = v.indexOf("=");
       if (eq < 1 || eq === v.length - 1) throw new Error(`--frames takes <scene>=<summary.json>: ${v}`);
       args.frames[v.slice(0, eq)] = v.slice(eq + 1);
-    } else if (a === "--sitting") args.sitting = true;
+    } else if (a === "--receipt") {
+      const v = value(i++, a);
+      const eq = v.indexOf("=");
+      if (eq < 1 || eq === v.length - 1) throw new Error(`--receipt takes <row id>=<receipt.json>: ${v}`);
+      args.receipts[v.slice(0, eq)] = v.slice(eq + 1);
+    } else if (a === "--receipts") args.receiptDirs.push(value(i++, a));
+    else if (a === "--head") args.head = value(i++, a);
+    else if (a === "--today") args.today = value(i++, a);
+    else if (a === "--sitting") args.sitting = true;
     else if (a === "--json") args.json = true;
     else if (a === "--out") args.out = value(i++, a);
     else if (a === "--rows") args.rows = path.resolve(value(i++, a));
@@ -413,6 +473,11 @@ function main() {
   const spec = JSON.parse(read(args.rows));
   const runs = args.bots.flatMap((d) => readBotDir(path.resolve(d)));
   const frames = Object.fromEntries(Object.entries(args.frames).map(([k, f]) => [k, JSON.parse(readFileSync(f, "utf8"))]));
+  // A named receipt wins over the same row's file in a --receipts folder.
+  const receiptFiles = {};
+  for (const dir of args.receiptDirs) for (const row of spec.rows.filter((r) => r.source === "receipt")) if (existsSync(path.join(dir, `${row.id}.json`))) receiptFiles[row.id] = path.join(dir, `${row.id}.json`);
+  Object.assign(receiptFiles, args.receipts);
+  const receipts = Object.fromEntries(Object.entries(receiptFiles).map(([k, f]) => [k, JSON.parse(readFileSync(f, "utf8"))]));
   const bandFiles = spec.rows.filter((r) => r.band_from).map((r) => r.band_from.file);
   const inputs = {
     runs,
@@ -421,6 +486,11 @@ function main() {
     challenge: args.challenge ? JSON.parse(readFileSync(args.challenge, "utf8")) : null,
     frames,
     findings: scan(args.project),
+    playFindings: has(FINDINGS_FILE) ? parseFindings(read(FINDINGS_FILE)) : null,
+    ledger: has(LEDGER_FILE) ? parseLedger(read(LEDGER_FILE)) : null,
+    receipts,
+    head: args.head,
+    today: args.today,
     beatRowsText: has(spec.beat_rows_file) ? read(spec.beat_rows_file) : null,
     phases: has(spec.brindle_phase_names_file) ? phaseCount(read(spec.brindle_phase_names_file)) : null,
     bandTexts: Object.fromEntries(bandFiles.filter(has).map((f) => [f, read(f)])),

@@ -123,6 +123,16 @@ node scripts/known-failing.mjs --promotion          # fails if any row is past i
 
 [PLAY-FINDINGS.tsv](PLAY-FINDINGS.tsv) lists every open thing a player would feel that a red team pass has found: what the player meets, where it was seen, grade (`blocker`, `major`, `minor`, or `check` when a PC film must decide first), owner, date added, review date (ruling cn). The testing lane owns the file. It is not a gate: a finding never holds a promotion, and no gate step or test reads the file. `node scripts/redteam/findings.mjs --print` lists it by owner and `--overdue` names the rows past their date, for the wave's red team receipt. [scripts/redteam/README.md](../../scripts/redteam/README.md) has the pass that fills it.
 
+## The world 1 done read
+
+`npm run sketch:world1-bands -- --sitting --head <sha>` is the one read that says whether world 1 is done (ruling dt). It starts no Godot. It reads `scripts/world1-bands.rows.json`, which gives each of the 11 areas its rows, and prints READY only when every gate row passes on the head named.
+
+- **A gate row** is decided by a machine. Some rows read files in the tree: the open play findings (blocker, major and minor rows about world 1; a row that opens with "World 2" or "World 3" is left out), the play findings a PC film has not decided yet (`check` rows), the known-failing rows past their review date, and the placeholder scan. The rest read what the Gate hands in: `--bots`, `--challenge`, `--frames`, and receipts.
+- **A receipt** is the JSON output of a check the reader cannot run: `{ "head": "<commit>", "pass": true, "measured": "<one line>", "plant_caught": true }`. Pass one as `--receipt <row id>=<file>` or put `<row id>.json` files in a folder and pass `--receipts <folder>`. The row names the command that writes its receipt (`producer`) and the fault that check must catch (`plant`). A receipt for another head is no data. A passing receipt that does not say its planted fault was caught is void, because a check nobody has seen fail decides nothing.
+- **A sitting row** is a thing only Andrew can judge: feel, fun, taste, by-ear sound, real hardware. There is one for each area. It is listed under the table, never graded, and never counted as passed.
+
+A missing input is "no data" and blocks, so the read starts NOT READY and each wave turns rows green. Rows whose producer says "not built yet" name the wave that builds them. The read never holds a wave promotion; it decides only the sitting build. Record its result on the board after each promotion.
+
 ## The node tests, once per promotion
 
 The fast lane runs only the node tests a diff selects, and the shards run Godot tests. So once per promotion the whole node suite runs on the PC, where no test is skipped for the box: a full clone, an ordinary user, installed packages. The board thread queues it on the PC lane when the Gate calls the promotion.
