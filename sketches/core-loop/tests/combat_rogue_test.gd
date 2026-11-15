@@ -76,11 +76,14 @@ func _physics_process(delta: float) -> bool:
 				_next("await_weak")
 		"await_weak":
 			if state == "weak":
-				var hit := _hits.size() > _hits_before
+				# Only the rogue's own hits are judged: a stage hazard (a silt boil) that reaches the held
+				# ball in the same window says nothing about the rogue's shape.
+				var since: Array = _hits.slice(_hits_before)
+				var own: int = since.count(_kind)
 				# The haul runs its lane out and back, so a ball that stays in the lane is hit on each leg.
 				var want := (2 if _boss.attack == "haul" else 1) if _inside else 0
-				_report("%s %s honest" % [_kind, _boss.attack], _hits.size() - _hits_before == want,
-					"ball inside %s, hit %s (player_hit %s)" % [_inside, hit, _hits.slice(_hits_before)])
+				_report("%s %s honest" % [_kind, _boss.attack], own == want,
+					"ball inside %s, own hits %d, want %d (player_hit %s)" % [_inside, own, want, since])
 				_seen.append(_boss.attack)
 				var before: float = _boss.hp
 				_game.ctx.spawner.strike(_boss, "runner", PROBE)
