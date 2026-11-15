@@ -6,10 +6,12 @@ import {
   constBand,
   evaluate,
   joinRuns,
+  otherWorld,
   pacingBand,
   parseArgs,
   passed,
   phaseCount,
+  receiptRow,
   renderTable,
   ROWS_FILE,
   world1Placeholders,
@@ -55,6 +57,14 @@ const PACING = {
 const BEATS_TEXT = SPEC.beats.map((id) => `"${id}": {}`).join("\n");
 const FULL_BEATS = SPEC.beats.map((id) => ({ id, s: 4, full: true, skipped: false, held: 0 }));
 
+const HEAD = "0123456789abcdef0123456789abcdef01234567";
+
+// A measured column, inside its band, for every band the difficulty row records for the cell.
+function bandColumns(cell) {
+  const bands = SPEC.rows.find((r) => r.id === "difficulty").targets?.[cell] ?? {};
+  return Object.fromEntries(Object.entries(bands).map(([col, t]) => [col, { rate: t.min != null && t.max != null ? (t.min + t.max) / 2 : t.max != null ? t.max / 2 : t.min }]));
+}
+
 function finished() {
   return {
     runs: [
@@ -67,14 +77,19 @@ function finished() {
     beatRowsText: BEATS_TEXT,
     phases: 3,
     frames: Object.fromEntries(SPEC.frame_scenes.map((s) => [s, { pass: true, p99_ms: 12, over_hitch: 0, budget: { hitch_ms: 33 } }])),
-    challenge: { table: SPEC.challenge_cells.map((cell) => ({ cell, columns: { expert: { ok: true } } })) },
+    challenge: { table: SPEC.challenge_cells.map((cell) => ({ cell, columns: { expert: { ok: true }, ...bandColumns(cell) } })) },
     sitting: true,
+    playFindings: { rows: [], problems: [] },
+    ledger: { rows: [], problems: [] },
+    today: "2026-11-15",
+    head: HEAD,
+    receipts: Object.fromEntries(SPEC.rows.filter((r) => r.source === "receipt").map((r) => [r.id, { head: HEAD, pass: true, measured: "ok", plant_caught: true }])),
   };
 }
 
 test("a finished world 1 passes every row", () => {
   const rows = evaluate(SPEC, finished());
-  const off = rows.filter((r) => !["pass", "info"].includes(r.verdict));
+  const off = rows.filter((r) => !["pass", "info", "his call"].includes(r.verdict));
   // No run carries the panels, rogue or secrets fields yet, and the panel band file is not in the input.
   assert.deepEqual(off.map((r) => r.id), ["panels-at-brindle", "rogue-reached", "secrets-completionist", "secrets-skipper"]);
   assert.ok(off.every((r) => r.status === "report" && !r.blocks));
@@ -176,8 +191,14 @@ test("helpers: phase count, const band, run join", () => {
 
 test("the rows file names a status and a known source on every row", () => {
   for (const r of SPEC.rows) {
-    assert.ok(["gate", "report", "info"].includes(r.status), r.id);
-    assert.ok(["bots", "pacing", "beats", "placeholders", "frames", "challenge"].includes(r.source), r.id);
+    assert.ok(["gate", "report", "info", "sitting"].includes(r.status), r.id);
+    if (r.status === "sitting") {
+      assert.equal(r.source, undefined, r.id);
+      continue;
+    }
+    assert.ok(["bots", "pacing", "beats", "placeholders", "frames", "challenge", "findings", "ledger", "receipt"].includes(r.source), r.id);
+    // A receipt row says which command writes its receipt and which planted fault that check must catch.
+    if (r.source === "receipt") assert.ok(r.status === "gate" && r.producer && r.plant, r.id);
     if (r.status === "report") assert.ok(Array.isArray(r.enforced_from) && r.enforced_from.length, r.id);
   }
   assert.equal(new Set(SPEC.rows.map((r) => r.id)).size, SPEC.rows.length);
@@ -255,27 +276,149 @@ test("the difficulty row grades stored rates again: its own recorded bands, and 
   assert.match(row(evaluate(banded, inputs), "difficulty").measured, /w1 pass/);
   w1.columns.novice = col(0.375, true);
   assert.match(row(evaluate(banded, inputs), "difficulty").measured, /w1 fail/);
-  // The shipped band is <= 42% (ruling bk, w31): 10 of 24 (41.7%) passes it, 11 of 24 (45.8%) does not.
-  w1.columns.novice = col(10 / 24, true);
+  // The shipped band is ruling cu's <= 20% (ruling dt): 4 of 24 (16.7%) passes it, 5 of 24 (20.8%) does not.
+  // The shipped row also records a Learner a5 band, so that column must be measured for the cell to be graded.
+  w1.columns.learner5 = col(0.45, true);
+  w1.columns.novice = col(4 / 24, true);
   assert.match(row(evaluate(SPEC, inputs), "difficulty").measured, /w1 pass/);
-  w1.columns.novice = col(11 / 24, true);
+  w1.columns.novice = col(5 / 24, true);
   assert.match(row(evaluate(SPEC, inputs), "difficulty").measured, /w1 fail/);
   // Today's target applies to a stored pass: 33% was marked ✓ on an old table, and <= 15% fails it.
   w1.columns.novice = col(0.33, true);
   assert.match(row(evaluate(spec, inputs), "difficulty").measured, /w1 fail/);
-  // The shipped row: w1 Novice 33% passes its recorded <= 35% band, and the bands are printed.
+  // The shipped row: the last measured w1 Novice, 35%, misses ruling cu's band, and the bands are printed.
+  w1.columns.novice = col(0.35, true);
   const shipped = row(evaluate(SPEC, inputs), "difficulty");
-  assert.match(shipped.measured, /w1 pass/);
-  assert.match(shipped.threshold, /recorded: w1 novice <= 42%, park1/);
-  assert.doesNotMatch(shipped.threshold, /learner5/);
-  // Ruling bb's w29 waiver (>= 58%) is retired (w33): w1 Learner a5 grades against the >= 60% harness target.
-  // 15 of 24 (62.5%) passes it; 14 of 24 (58.3%), the waiver's pass, does not, whatever mark its table stored.
-  w1.columns.learner5 = col(15 / 24, true);
-  assert.match(row(evaluate(SPEC, inputs), "difficulty").measured, /w1 pass/);
+  assert.match(shipped.measured, /w1 fail/);
+  assert.match(shipped.threshold, /recorded: w1 novice <= 20%, w1 learner5 >= 30% <= 60%, w2 novice <= 15%/);
+  // Ruling cu: w1 Learner a5 wins 30 to 60%. 14 of 24 (58.3%) is inside; 15 of 24 (62.5%) and 7 of 24 (29.2%) are not.
+  w1.columns.novice = col(4 / 24, true);
   w1.columns.learner5 = col(14 / 24, true);
-  assert.match(row(evaluate(SPEC, inputs), "difficulty").measured, /w1 fail/);
+  assert.match(row(evaluate(SPEC, inputs), "difficulty").measured, /w1 pass/);
   w1.columns.learner5 = col(15 / 24, true);
-  // An incomplete column is never a pass.
+  assert.match(row(evaluate(SPEC, inputs), "difficulty").measured, /w1 fail/);
+  w1.columns.learner5 = col(7 / 24, false);
+  assert.match(row(evaluate(SPEC, inputs), "difficulty").measured, /w1 fail/);
+  w1.columns.learner5 = col(14 / 24, true);
+  // An incomplete column is never a pass: a banded one counts as not measured, any other as incomplete.
   w1.columns.novice = { ...col(0.1, true), incomplete: true };
+  assert.match(row(evaluate(SPEC, inputs), "difficulty").measured, /w1 not measured \(novice\)/);
+  w1.columns.novice = col(0.1, true);
+  w1.columns.expert = { ...col(1, true), incomplete: true };
   assert.match(row(evaluate(SPEC, inputs), "difficulty").measured, /w1 incomplete/);
+});
+
+// --- The done rows (ruling dt) ------------------------------------------------------------------
+
+const finding = (id, grade, meets = "The warning does not say where safe ground is") => ({ id, grade, meets, evidence: "film", owner: "look", added: "2026-11-10", review: "2026-11-20" });
+
+test("done: every one of the 11 areas has a gate row and one row only Andrew decides", () => {
+  const areas = ["Core feel", "Wardens and bosses", "In-run growth", "Progression across runs", "Pilots", "Stages and world", "Look", "Sound and music", "Clarity", "Difficulty and pacing", "Stability"];
+  assert.deepEqual([...new Set(SPEC.rows.map((r) => r.area))].sort(), [...areas].sort());
+  for (const area of areas) {
+    assert.ok(SPEC.rows.some((r) => r.area === area && r.status === "gate"), `${area} has no gate row`);
+    assert.equal(SPEC.rows.filter((r) => r.area === area && r.status === "sitting").length, 1, `${area} needs one sitting row`);
+  }
+});
+
+test("done: an open major finding in world 1 blocks; another world's finding and a regraded one do not", () => {
+  const inputs = finished();
+  inputs.playFindings = { rows: [finding("PF-16", "major"), finding("PF-42", "blocker", "World 2 stage 3, the Dig: the Warden never breaks"), finding("PF-01", "check")], problems: [] };
+  let rows = evaluate(SPEC, inputs);
+  assert.equal(row(rows, "findings-open").measured, "1 (PF-16)");
+  assert.ok(row(rows, "findings-open").blocks);
+  assert.equal(row(rows, "findings-undecided").measured, "1 (PF-01)");
+  assert.ok(row(rows, "findings-undecided").blocks);
+  assert.equal(passed(rows), false);
+  assert.equal(otherWorld(finding("PF-41", "major", "World 2, the sinkhole")), true);
+  assert.equal(otherWorld(finding("PF-46", "major", "The dam's construction incline snags")), false);
+  inputs.playFindings = { rows: [finding("PF-42", "blocker", "World 2 stage 3, the Dig: the Warden never breaks")], problems: [] };
+  rows = evaluate(SPEC, inputs);
+  assert.equal(row(rows, "findings-open").verdict, "pass");
+  // A file that does not parse, or is missing, is no data and still blocks: silence is never a pass.
+  inputs.playFindings = { rows: [], problems: [{ line: 2, message: "bad" }] };
+  assert.equal(row(evaluate(SPEC, inputs), "findings-open").verdict, "no data");
+  inputs.playFindings = null;
+  assert.ok(row(evaluate(SPEC, inputs), "findings-open").blocks);
+  // Without --sitting the finding rows are not graded (a finding never holds a promotion, ruling cn).
+  assert.equal(row(evaluate(SPEC, { ...finished(), sitting: false, playFindings: { rows: [finding("PF-16", "major")], problems: [] } }), "findings-open").verdict, "not run");
+});
+
+test("done: a known-failing row past its review date blocks, on the day itself it does not", () => {
+  const inputs = finished();
+  inputs.ledger = { rows: [{ test: "a_test", review: "2026-11-15" }, { test: "b_test", review: "2026-11-14" }], problems: [] };
+  const late = row(evaluate(SPEC, inputs), "ledger-reviewed");
+  assert.match(late.measured, /^1 of 2 past review on 2026-11-15 \(b_test\)/);
+  assert.ok(late.blocks);
+  inputs.today = "2026-11-14";
+  assert.equal(row(evaluate(SPEC, inputs), "ledger-reviewed").verdict, "pass");
+});
+
+test("done: a receipt passes only for the head judged, with its planted fault shown caught", () => {
+  const spec = { id: "release-gate", producer: "the gate", plant: "a red test" };
+  assert.deepEqual(receiptRow(spec, { head: HEAD, pass: true, measured: "CLEAN", plant_caught: true }, HEAD), { measured: "CLEAN", pass: true });
+  assert.equal(receiptRow(spec, { head: HEAD.slice(0, 9), pass: true, plant_caught: true }, HEAD).pass, true);
+  // No receipt, no head, or another head: no data.
+  assert.match(receiptRow(spec, null, HEAD).measured, /^no receipt \(the gate\)/);
+  assert.equal(receiptRow(spec, { pass: true, plant_caught: true }, HEAD).noData, true);
+  const stale = receiptRow(spec, { head: "ffffffffffff", pass: true, plant_caught: true }, HEAD);
+  assert.match(stale.measured, /^stale receipt: written at fffffffff, judging 012345678/);
+  assert.equal(stale.pass, false);
+  // No head to judge against, or one too short to name a commit: a receipt from any commit must not pass.
+  for (const none of [null, undefined, "", "0", "012345", "not-a-sha"]) {
+    const unjudged = receiptRow(spec, { head: HEAD, pass: true, measured: "CLEAN", plant_caught: true }, none);
+    assert.equal(unjudged.pass, false, String(none));
+    assert.equal(unjudged.noData, true, String(none));
+    assert.match(unjudged.measured, /^no head to judge the receipt against/);
+  }
+  assert.throws(() => parseArgs(["--head", "0"]), /--head takes 7 to 40 hex/);
+  assert.throws(() => parseArgs(["--today", "1"]), /--today takes YYYY-MM-DD/);
+  assert.equal(parseArgs(["--head", HEAD.slice(0, 9)]).head, HEAD.slice(0, 9));
+  // A pass whose plant was never shown caught is void: a check never seen failing decides nothing.
+  const blind = receiptRow(spec, { head: HEAD, pass: true, measured: "CLEAN" }, HEAD);
+  assert.match(blind.measured, /^void, the planted fault was not shown caught: CLEAN/);
+  assert.equal(blind.pass, false);
+  assert.equal(receiptRow(spec, { head: HEAD, pass: false, measured: "2 new reds", plant_caught: true }, HEAD).pass, false);
+  // In the table: one missing receipt keeps world 1 NOT READY and names the command that writes it.
+  const inputs = finished();
+  delete inputs.receipts["release-gate"];
+  const rows = evaluate(SPEC, inputs);
+  assert.equal(row(rows, "release-gate").verdict, "no data");
+  assert.match(row(rows, "release-gate").measured, /pc\.mjs run/);
+  assert.match(renderTable(rows), /NOT READY \(1 gate row\(s\): release-gate\)/);
+});
+
+test("done: the rows only Andrew decides are listed, never graded, and never block", () => {
+  const rows = evaluate(SPEC, finished());
+  const his = rows.filter((r) => r.status === "sitting");
+  assert.equal(his.length, 11);
+  assert.ok(his.every((r) => r.verdict === "his call" && !r.blocks));
+  const text = renderTable(rows);
+  assert.match(text, /Only Andrew decides these, at his sitting \(listed, never graded\):/);
+  assert.match(text, /- Sound and music: by ear/);
+  assert.doesNotMatch(text, /\| by ear/);
+});
+
+test("done: CLI takes receipts, a head and a date", () => {
+  const args = parseArgs(["--receipt", "release-gate=r.json", "--receipts", "dir", "--head", HEAD, "--today", "2026-11-20", "--sitting"]);
+  assert.equal(args.receipts["release-gate"], "r.json");
+  assert.deepEqual(args.receiptDirs, ["dir"]);
+  assert.equal(args.head, HEAD);
+  assert.equal(args.today, "2026-11-20");
+  assert.throws(() => parseArgs(["--receipt", "nofile"]), /--receipt takes/);
+});
+
+test("done: a difficulty cell that never measured its recorded band is no data, not a pass", () => {
+  // Seeded fault: the w1 cell holds only an Expert tick, so ruling cu's Novice and Learner bands were never applied.
+  const inputs = finished();
+  inputs.challenge.table = inputs.challenge.table.map((c) => (c.cell === "w1" ? { cell: "w1", columns: { expert: { ok: true } } } : c));
+  const rows = evaluate(SPEC, inputs);
+  const d = row(rows, "difficulty");
+  assert.equal(d.verdict, "no data");
+  assert.match(d.measured, /w1 not measured \(novice, learner5\)/);
+  assert.equal(passed(rows), false);
+  // An incomplete column counts as not measured too.
+  const partial = finished();
+  partial.challenge.table.find((c) => c.cell === "w1").columns.novice.incomplete = true;
+  assert.match(row(evaluate(SPEC, partial), "difficulty").measured, /w1 not measured \(novice\)/);
 });
