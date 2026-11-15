@@ -40,7 +40,7 @@ Parked until after the sitting: dam perf remainders (the f4045 riser, the Warden
 
 ### Andrew plays
 
-Ruling cs (10 Nov): he plays the promotion that closes the polish program in [STATE.md](STATE.md), launched from the menu entry "Scrapkeep sitting (fresh profile, unlocks earned)" (`--profile=sitting-earned`, W1-78). That launch carries the loops of rulings da, dd and df and ends the run won at Brindle (ruling dk) on a profile that keeps what it earns; the plain entry has none of the loops and plays on the player's own save, though since ruling dr (14 Nov) it also ends at Brindle. He plays world 1 as often as he likes and marks the world 1 areas on the [Sitting Kit](https://claude.ai/artifact/HxmWTSrJf1vifhjXXPW1qT). The sheet tells him what to try. A capture is void if he plays during it.
+Ruling cs (10 Nov): he plays the promotion that closes the polish program in [STATE.md](STATE.md), launched from the menu entry "Scrapkeep sitting (fresh profile, unlocks earned)" (`--profile=sitting-earned`, W1-78). That launch carries the loops of rulings da, dd and df and ends the run won at Brindle (ruling dk) on a profile that keeps what it earns; the plain entry has none of the loops and plays on the player's own save, though since ruling du (14 Nov) it also ends at Brindle. He plays world 1 as often as he likes and marks the world 1 areas on the [Sitting Kit](https://claude.ai/artifact/HxmWTSrJf1vifhjXXPW1qT). The sheet tells him what to try. A capture is void if he plays during it.
 
 ### Re-read after the sitting (already ruled to wait)
 
