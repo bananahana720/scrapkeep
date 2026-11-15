@@ -351,10 +351,12 @@ test("on the PC's default budget the wave gate's bot shard starts at once beside
     .filter((step) => !step.barrier)
     .map((step) => ({ ...step, ms: step.id === "scoped" ? 120 : 40 }));
   const { log, run } = harness(defaultBudget(32), steps);
-  const racing = run();
-  await new Promise((resolve) => setTimeout(resolve, 15));
-  assert.deepEqual(log.started, ["scoped", "tests-1-350", "tests-351-700"], "the longest step is not left waiting for the windows to drain");
-  await racing;
+  let atThirdStart = null;
+  const watch = steps.find((step) => step.id === "tests-701-1049");
+  Object.defineProperty(watch, "ms", { get: () => ((atThirdStart ??= [...log.started]), 40) });
+  await run();
+  assert.deepEqual(log.started.slice(0, 3), ["scoped", "tests-1-350", "tests-351-700"], "the longest step starts first, beside two windows");
+  assert.deepEqual(atThirdStart.slice(0, 4), ["scoped", "tests-1-350", "tests-351-700", "tests-701-1049"], "the third window takes the room a finished window leaves");
   assert.ok(log.peak <= 28);
   assert.deepEqual(log.aloneViolations, []);
 });
