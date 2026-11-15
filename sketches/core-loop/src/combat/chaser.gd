@@ -210,7 +210,7 @@ func _physics_process(delta: float) -> void:
 				return
 			_move(delta, lane.dir * LUNGE_LENGTH / LUNGE_TIME)
 			var along: float = (global_position - lane.center).dot(lane.dir)
-			lane.run_body(along, radius + 1.4)
+			lane.run_body(along, hit_reach())
 			_check_hit(lane)
 			if _clock >= LUNGE_TIME or along >= lane.length:
 				_end_attack(State.RECOVER)
@@ -297,7 +297,12 @@ func _begin_windup(to_ball: Vector3) -> void:
 	state = State.WINDUP
 	_clock = 0.0
 	_landed = false
-	_commit_lane(Threat.Type.LANE, global_position, to_ball, LUNGE_LENGTH, LUNGE_WIDTH).run_body(0.0, radius + 1.4)
+	_commit_lane(Threat.Type.LANE, global_position, to_ball, LUNGE_LENGTH, LUNGE_WIDTH).run_body(0.0, hit_reach())
+
+
+# How close the body must come to the ball to hit it; the lane's running-body mark reads the same.
+func hit_reach() -> float:
+	return radius + 1.4
 
 
 # The ball is hit when it is inside the committed lane and the chaser's body has
@@ -307,7 +312,7 @@ func _check_hit(lane: Node3D) -> void:
 		return
 	var ball := _ball()
 	var flat := Vector3(ball.x - global_position.x, 0.0, ball.z - global_position.z)
-	if flat.length() > radius + 1.4 or not lane.contains(ball):
+	if flat.length() > hit_reach() or not lane.contains(ball):
 		return
 	_landed = true
 	hit_player.emit(DAMAGE, lane.dir * SHOVE + Vector3.UP * 2.0)

@@ -112,7 +112,12 @@ func _watched() -> void:
 	_t.check("the running body keeps the mark and a way out while it runs", track[1]["held"] >= 2 and track[1]["way_ok"])
 	var hit: Dictionary = await _scenario(true, true)
 	_t.eq("a hit then a shove pays no near miss", hit["fired"], 0)
-	_t.check("the mark clears once the body has arrived", hit["cleared"])
+	var arrival: Dictionary = await _arrival(true)
+	_t.check("the ball stays in the lane: the mark is up on every tick the body is short of its reach", arrival["samples_up"] >= 10 and arrival["all_up"])
+	_t.check("and is down on every tick once the reach covers the ball, the lane still live", arrival["samples_down"] >= 10 and arrival["all_down"])
+	_t.check("the arrival ran past the 0.25 s grace, so a done watch holds the mark too", arrival["up_ticks"] > int(0.25 * 60.0))
+	var plain: Dictionary = await _arrival(false)
+	_t.check("planted: the same track on a lane with no body never holds a mark", plain["samples_up"] >= 10 and plain["none_up"])
 
 
 # Ball in the lane, lane goes live, body runs 0 -> past the ball in steps. The ball leaves 0.13 s
@@ -134,28 +139,64 @@ func _scenario(with_body: bool, hit_case: bool) -> Dictionary:
 	lane.set_progress(1.0)
 	var held := 0
 	var way_ok := true
-	var cleared := false
 	var body := 0.0
 	for i in 40:
 		tick[0] = i
 		if i == 8 and not hit_case:
 			at[0] = Vector3(6.0, 0.0, -8.0)
-		if with_body and body < 11.0:
+		if body < 11.0:
 			body += 1.0 if hit_case else 0.5
-			_run_body(lane, body, 2.4)
+			if with_body:
+				_run_body(lane, body, 2.4)
 		if hit_case and body >= 5.6 and i < 30:
 			bus.player_hit.emit(10.0, "chaser")
 			at[0] = Vector3(6.0, 0.0, -8.0)
 		watch.step(1.0 / 60.0)
 		var gap := 8.0 - body
-		if with_body and not hit_case and i < 8 and gap > 2.9 and watch.standing_in() >= 0.0:
+		if not hit_case and i < 8 and gap > 2.9 and watch.standing_in() >= 0.0:
 			held += 1
 			way_ok = way_ok and not watch.escape().is_empty() and absf(watch.escape()["dir"].x) > 0.9
-		if hit_case and body >= 8.0 and watch.standing_in() < 0.0:
-			cleared = true
 	lane.free()
 	watch.free()
-	return {"fired": fired.size(), "fired_at": fired[0] if not fired.is_empty() else -1, "held": held, "way_ok": way_ok, "cleared": cleared}
+	return {"fired": fired.size(), "fired_at": fired[0] if not fired.is_empty() else -1, "held": held, "way_ok": way_ok}
+
+
+# The ball stays in the lane the whole time and nothing hits it. The body runs 0.25 m a tick, past the
+# grace, from the lane's start to past the ball (8 m down); reach 2.4. The mark must be up while the
+# gap to the ball is above the reach and down from the first tick it is at or below, with the lane live.
+func _arrival(with_body: bool) -> Dictionary:
+	var at := Vector3(0.0, 0.0, -8.0)
+	var watch := NearMiss.new()
+	watch.setup(_Bus.new(), func(): return at)
+	root.add_child(watch)
+	var lane := _lane()
+	lane.set_progress(0.5)
+	if with_body:
+		_run_body(lane, 0.0, 2.4)
+	watch.step(1.0 / 60.0)
+	lane.set_progress(1.0)
+	var up := 0
+	var down := 0
+	var all_up := true
+	var all_down := true
+	var none_up := true
+	var body := 0.0
+	for i in 60:
+		body += 0.25
+		if with_body:
+			_run_body(lane, body, 2.4)
+		watch.step(1.0 / 60.0)
+		var standing := watch.standing_in() >= 0.0
+		if 8.0 - body > 2.4:
+			up += 1
+			all_up = all_up and standing
+			none_up = none_up and not standing
+		else:
+			down += 1
+			all_down = all_down and not standing
+	lane.free()
+	watch.free()
+	return {"samples_up": up, "samples_down": down, "up_ticks": up, "all_up": all_up, "all_down": all_down, "none_up": none_up}
 
 
 func _boot() -> void:
@@ -178,6 +219,32 @@ func _boot() -> void:
 		enemy.free()
 
 
+# The reach the lane advertises is the distance the enemy's own hit test uses: a ball just inside it
+# is hit, a ball just outside it is not, and the descriptor's body_reach is that same number.
+func _reach_pin(kind: String, enemy) -> void:
+	enemy.set_physics_process(false)
+	enemy._clear_telegraph()
+	if kind == "chaser":
+		enemy._begin_windup(Vector3.FORWARD)
+	else:
+		enemy._next_attack = 1
+		enemy._begin_attack(Vector3.FORWARD)
+	var lane = enemy.telegraph()
+	var reach := float(lane.descriptor().get("body_reach", -1.0))
+	var results := []
+	for offset in [-0.05, 0.05]:
+		enemy._landed = false
+		var at: Vector3 = enemy.global_position + Vector3.FORWARD * (reach + offset)
+		at.y = lane.center.y + 1.0
+		_game.player.body().global_position = at
+		if kind == "chaser":
+			enemy._check_hit(lane)
+		else:
+			enemy._check_charge(lane)
+		results.append(enemy._landed)
+	_t.check("%s: the lane's body_reach (%.2f) is the reach its hit test uses" % [kind, reach], reach > 0.0 and results == [true, false])
+
+
 # A real enemy, the ball held `ahead` metres down its lane: on the first ticks of its run the
 # descriptor has a body short of the ball, the watch still stands in it with a way out, and the
 # dense band is not drawn; once the enemy's reach covers the ball the mark is gone.
@@ -191,6 +258,11 @@ func _live(kind: String, begin: Callable, ahead: float, run_state: String) -> vo
 	var checked := false
 	var early_ok := false
 	var cleared := false
+	var up_ok := true
+	var down_ok := true
+	var down_samples := 0
+	var up_samples := 0
+	var near: Node = _game.combat.near_miss
 	for i in 240:
 		_game.player.body().global_position = ball_at
 		await physics_frame
@@ -199,13 +271,27 @@ func _live(kind: String, begin: Callable, ahead: float, run_state: String) -> vo
 			checked = true
 			var d: Dictionary = lane.descriptor()
 			var along := absf(ball_at.z - lane.center.z)
-			var near: Node = _game.combat.near_miss
 			early_ok = d.get("live", false) and d.has("body_m") and float(d["body_m"]) < along and not Threat.live_band(d) \
 				and near.standing_in() >= 0.0 and not near.escape().is_empty()
+		# The ball is pinned each frame, so a hit cannot shove it out: the mark must follow the body
+		# alone. The watch reads the body one tick apart from this sample, so a 0.6 m band either side
+		# of the reach (about one tick of the body's 33 m/s) is left out.
+		if lane != null and enemy.state == in_run and lane.descriptor().has("body_m"):
+			var gap := absf(ball_at.z - lane.center.z) - float(lane.descriptor()["body_m"])
+			var reach := float(lane.descriptor()["body_reach"])
+			if gap > reach + 0.6:
+				up_samples += 1
+				up_ok = up_ok and near.standing_in() >= 0.0
+			elif gap < reach - 0.6:
+				down_samples += 1
+				down_ok = down_ok and near.standing_in() < 0.0
 		if checked and lane == null and _game.combat.near_miss.standing_in() < 0.0:
 			cleared = true
 			break
 	_t.check("%s: in the first ticks of its run the mark and way out stay and no dense band" % kind, early_ok)
 	_t.check("%s: once the run is over the mark is gone" % kind, cleared)
+	_t.check("%s: up on every sampled tick short of the reach (%d sampled)" % [kind, up_samples], up_samples >= 1 and up_ok)
+	_t.check("%s: down on every sampled tick the reach covers the ball, the lane still there (%d sampled)" % [kind, down_samples], down_samples >= 1 and down_ok)
+	_reach_pin(kind, enemy)
 	if is_instance_valid(enemy):
 		enemy.free()

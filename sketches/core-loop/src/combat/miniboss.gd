@@ -34,6 +34,8 @@ const DEFAULT_PLATING := 38.0
 const SCRAP := 24
 const WEIGHT := 5.0
 const RADIUS := 2.3
+# How close the body must come to the ball to hit it; the lane's running-body mark reads the same.
+const HIT_REACH := RADIUS + 1.6
 const HALF_HEIGHT := 3.45
 const WALK := 5.5
 const STALK := 1.6
@@ -217,7 +219,7 @@ func _physics_process(delta: float) -> void:
 				return
 			_move(delta, lane.dir * CHARGE_LENGTH / CHARGE_TIME)
 			var along: float = (global_position - lane.center).dot(lane.dir)
-			lane.run_body(along, RADIUS + 1.6)
+			lane.run_body(along, HIT_REACH)
 			_check_charge(lane)
 			if _clock >= CHARGE_TIME or along >= lane.length:
 				_open_weak_window()
@@ -252,7 +254,7 @@ func _begin_attack(to_ball: Vector3) -> void:
 		_enter(State.SLAM_CROUCH)
 	else:
 		var heading := to_ball if to_ball.length() > 0.5 else -global_basis.z
-		_commit_lane(Threat.Type.LANE, global_position, heading, CHARGE_LENGTH, CHARGE_WIDTH, 4.0).run_body(0.0, RADIUS + 1.6)
+		_commit_lane(Threat.Type.LANE, global_position, heading, CHARGE_LENGTH, CHARGE_WIDTH, 4.0).run_body(0.0, HIT_REACH)
 		_enter(State.CHARGE_BRACE)
 	_next_attack = 1 - _next_attack
 
@@ -283,7 +285,7 @@ func _check_charge(lane: Node3D) -> void:
 	if _landed:
 		return
 	var to := _flat_to_ball()
-	if to.length() > RADIUS + 1.6 or not lane.contains(_ball()):
+	if to.length() > HIT_REACH or not lane.contains(_ball()):
 		return
 	_landed = true
 	hits_landed += 1

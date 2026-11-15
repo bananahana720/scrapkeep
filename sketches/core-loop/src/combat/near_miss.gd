@@ -174,7 +174,10 @@ func step(delta: float) -> void:
 func _hold_body_runs(at: Vector3) -> void:
 	for id in _watch.keys():
 		var node: Node = _watch[id]["node"]
-		if not is_instance_valid(node):
+		# Done watches stay: a lunge outlasts the grace, and a ball that steps in after the warning
+		# ended has no open watch. Only a lane that takes run_body can carry a body, so the rest
+		# build no descriptor.
+		if not is_instance_valid(node) or not node.has_method("run_body"):
 			continue
 		var d: Dictionary = node.descriptor()
 		if not (d.has("body_m") and bool(d.get("live", false))) or not node.contains(at):
