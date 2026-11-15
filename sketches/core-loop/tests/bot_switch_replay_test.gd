@@ -6,7 +6,8 @@ const Replay := preload("res://tools/bot_replay.gd")
 const Options := preload("res://tools/bot_options.gd")
 const T := preload("res://tests/support/t.gd")
 const SEED := 3
-const TICKS := 3600
+# The skipper fills the ultimate meter at 38.7 s (tick 3487) on this seed; it fires a little after tick 3600, so 3600 ticks ended just short.
+const TICKS := 4000
 
 
 func _initialize() -> void:
@@ -42,12 +43,24 @@ func _initialize() -> void:
 	var result := Replay.compare(a, b, SEED)
 	t.check("switches preserve outcome, every stage tick and complete logs", result.pass, JSON.stringify(result))
 	var events := FileAccess.get_file_as_string(a.path_join("events-%d.ndjson" % SEED))
-	t.check("replay exercises the ultimate music beat", events.contains('"event":"ultimate_started"'))
+	t.check("replay exercises the ultimate music beat", events.contains('"event":"ultimate_started"'),
+		"ultimate_started events %d, ultimate_ready events %d, last bot record %s" % [
+			events.count('"event":"ultimate_started"'), events.count('"event":"ultimate_ready"'), _ultimate_note(a)])
 	if t.failures == 0:
 		_remove(base)
 	else:
 		print("bot_switch_replay_test: evidence " + base)
 	quit(t.verdict())
+
+
+func _ultimate_note(folder: String) -> String:
+	var path := folder.path_join("bots.ndjson")
+	var rows := FileAccess.get_file_as_string(path).split("\n", false) if FileAccess.file_exists(path) else PackedStringArray()
+	var record = JSON.parse_string(rows[-1]) if not rows.is_empty() else null
+	if not record is Dictionary:
+		return "no bot record"
+	return "ult_fill_s %s, ult_presses %s, ultimates %s, ult_sources %s" % [
+		record.get("ult_fill_s"), record.get("ult_presses"), record.get("ultimates"), record.get("ult_sources")]
 
 
 func _remove(path: String) -> void:
