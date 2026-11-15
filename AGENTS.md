@@ -1,6 +1,6 @@
 # Scrapkeep project instructions
 
-Scrapkeep is a Godot roguelite at `sketches/core-loop` with three worlds. The goal is a finished-feeling Linux alpha. World 1 (the Spillway) comes first; worlds 2 and 3 are parked. Andrew plays a world 1 sitting, then one full-alpha sitting, and no wave asks him to play. The claude.ai project "Scrapkeep" coordinates the work (ruling dh): its coordinator talks to Andrew in the project chat and starts one thread per unit of work. The same rules bind a local session on Andrew's PC. Andrew's personal A stack plugin preferences and host policy still apply.
+Scrapkeep is a Godot roguelite at `sketches/core-loop` with three worlds. The goal is a finished-feeling Linux alpha. World 1 (the Spillway) comes first; worlds 2 and 3 are parked. Andrew plays a world 1 sitting, then one full-alpha sitting, and no wave asks him to play. One local Claude Code session on Andrew's PC coordinates the work and is the Gate (ruling ds, 15 Nov 2026): it talks to Andrew in its own chat and builds each unit itself or through a writer agent in a separate worktree. The rules below say "thread" from the claude.ai project period (ruling dh, 12 to 14 Nov); they bind the local session and its writer agents the same way. Andrew's personal A stack plugin preferences and host policy still apply.
 
 ## Read first, in this order
 

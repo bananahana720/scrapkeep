@@ -36,7 +36,7 @@ How this project actually runs, learned the hard way since 16 Oct 2026. Each les
 ## Gating and testing
 
 19. **No thread grades its own work.** A game change is done only when a tool check passes (smoke, lab gate, placeholder gate) and an independent reviewer agrees.
-20. **The board thread is the gate of record (ruling dh); shards don't push, comment or fix.** Pass tests by base name (`--test bot_six_tally_test`), not `res://` path. The recipe is [GATE.md](GATE.md).
+20. **The Gate is the gate of record (the local session on the PC since 15 Nov, ruling ds; the board thread before that); shards don't push, comment or fix.** Pass tests by base name (`--test bot_six_tally_test`), not `res://` path. The recipe is [GATE.md](GATE.md).
 21. **Known reds live in the ledger.** Each red a promotion may carry has a row in [KNOWN-FAILING.tsv](KNOWN-FAILING.tsv) with a cause, an owner and a review date (ruling bq). The 23 Oct list of cloud-only false fails that stood here is in the archive copy.
 22. **"Flake" is not a cause.** The effects RNG test failed on and off for a day; the real cause was a 65 s limit on a busy machine (now 180 s). Rerunning a red to see whether it repeats is always fine; what needs a found cause is calling it a flake.
 23. **Red team every wave, carrying the last findings.** Camper stalls without a Warden break and traversal stalls are by design. A hitch counts only when it lands at the same run moment across seeds.

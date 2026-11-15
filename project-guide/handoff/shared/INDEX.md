@@ -1,6 +1,6 @@
 # Shared reference files
 
-Reference copies that threads read. The project coordinator owns them (ruling dh). Put a new file in an area folder below, never the root, and add it here. Delete a superseded file; git keeps it.
+Reference copies that threads read. The coordinator owns them (the local session on the PC since 15 Nov 2026, ruling ds). Put a new file in an area folder below, never the root, and add it here. Delete a superseded file; git keeps it.
 
 | File | What it holds |
 | --- | --- |
