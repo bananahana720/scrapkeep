@@ -209,8 +209,9 @@ func _physics_process(delta: float) -> void:
 				_end_attack(State.RECOVER)
 				return
 			_move(delta, lane.dir * LUNGE_LENGTH / LUNGE_TIME)
-			_check_hit(lane)
 			var along: float = (global_position - lane.center).dot(lane.dir)
+			lane.run_body(along, radius + 1.4)
+			_check_hit(lane)
 			if _clock >= LUNGE_TIME or along >= lane.length:
 				_end_attack(State.RECOVER)
 		State.RECOVER:
@@ -296,7 +297,7 @@ func _begin_windup(to_ball: Vector3) -> void:
 	state = State.WINDUP
 	_clock = 0.0
 	_landed = false
-	_commit_lane(Threat.Type.LANE, global_position, to_ball, LUNGE_LENGTH, LUNGE_WIDTH)
+	_commit_lane(Threat.Type.LANE, global_position, to_ball, LUNGE_LENGTH, LUNGE_WIDTH).run_body(0.0, radius + 1.4)
 
 
 # The ball is hit when it is inside the committed lane and the chaser's body has

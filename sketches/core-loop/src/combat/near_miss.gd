@@ -164,6 +164,41 @@ func step(delta: float) -> void:
 			_fire(id, at)
 		elif _clock - w["resolved"] > grace:
 			w["done"] = true
+	_hold_body_runs(at)
+
+
+# A crew lane whose body runs it after the warning ends (the chaser's lunge, the miniboss's charge,
+# telegraph.gd run_body) is judged exactly as any other lane above: it lands, and a near miss is
+# paid, when the warning ends. But the ball standing in it is still in danger until the body's
+# reach covers it, so that stretch keeps the mark and the way out up (PF-16). Display only.
+func _hold_body_runs(at: Vector3) -> void:
+	for id in _watch.keys():
+		var node: Node = _watch[id]["node"]
+		if not is_instance_valid(node):
+			continue
+		var d: Dictionary = node.descriptor()
+		if not (d.has("body_m") and bool(d.get("live", false))) or not node.contains(at):
+			continue
+		if _body_arrived(at, d):
+			continue
+		_standing = maxf(_standing, 1.0)
+		_escape = way_out_reach(d, at)
+		_escape["run"] = 1.0
+
+
+# Whether a running body's reach covers the ball: the flat distance from the body's centre to the
+# ball is within the reach its own hit test uses (a ball off the lane's axis is reached later than
+# one on it), or the body has run past the ball.
+static func _body_arrived(at: Vector3, d: Dictionary) -> bool:
+	var along := _lane_along(at, d)
+	var body := float(d["body_m"])
+	if along <= body:
+		return true
+	var dir: Vector3 = d.get("dir", Vector3.FORWARD)
+	var flat := Vector3(dir.x, 0.0, dir.z).normalized()
+	var c: Vector3 = d["centre"]
+	var from_body := Vector3(at.x - c.x, 0.0, at.z - c.z) - flat * body
+	return from_body.length() <= float(d["body_reach"])
 
 
 static func _landed(node: Node, at: Vector3, d := {}) -> bool:

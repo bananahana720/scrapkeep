@@ -216,8 +216,9 @@ func _physics_process(delta: float) -> void:
 				_open_weak_window()
 				return
 			_move(delta, lane.dir * CHARGE_LENGTH / CHARGE_TIME)
-			_check_charge(lane)
 			var along: float = (global_position - lane.center).dot(lane.dir)
+			lane.run_body(along, RADIUS + 1.6)
+			_check_charge(lane)
 			if _clock >= CHARGE_TIME or along >= lane.length:
 				_open_weak_window()
 		State.WEAK:
@@ -251,7 +252,7 @@ func _begin_attack(to_ball: Vector3) -> void:
 		_enter(State.SLAM_CROUCH)
 	else:
 		var heading := to_ball if to_ball.length() > 0.5 else -global_basis.z
-		_commit_lane(Threat.Type.LANE, global_position, heading, CHARGE_LENGTH, CHARGE_WIDTH, 4.0)
+		_commit_lane(Threat.Type.LANE, global_position, heading, CHARGE_LENGTH, CHARGE_WIDTH, 4.0).run_body(0.0, RADIUS + 1.6)
 		_enter(State.CHARGE_BRACE)
 	_next_attack = 1 - _next_attack
 

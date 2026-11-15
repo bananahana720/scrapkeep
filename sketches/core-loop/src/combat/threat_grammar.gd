@@ -404,7 +404,7 @@ static func _live_lane(d: Dictionary) -> bool:
 # rails, so a camera inside it still sees the floor, the ball and the edges (PF-16: the live band
 # turned the lower screen flat orange before the hull arrived).
 static func live_band(d: Dictionary) -> bool:
-	return d.get("live", false) and not d.has("front_m")
+	return d.get("live", false) and not d.has("front_m") and not d.has("body_m")
 
 
 # The fill now, along the grow axis (a live lane's band: _live_lane): from the centre (a disc from r 0, a band from
