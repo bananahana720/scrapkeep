@@ -98,7 +98,7 @@ static var _shared: Array = []
 static func _parts() -> Array:
 	if not _shared.is_empty():
 		return _shared
-	var scene := (load("res://assets/models/world_one/enemy_lobber.glb") as PackedScene).instantiate()
+	var scene := (load(ModelVariants.path("res://assets/models/world_one/enemy_lobber.glb")) as PackedScene).instantiate()
 	var charcoal := Palette.solid(Palette.CHARCOAL)
 	for node in scene.find_children("*", "MeshInstance3D", true, false):
 		var mi := node as MeshInstance3D
@@ -157,7 +157,7 @@ func _physics_process(delta: float) -> void:
 		return
 	_clock = 0.0
 	_show_charge(0.0)
-	var lead: Vector3 = target.planar_velocity() * FLIGHT * LEAD
+	var lead: Vector3 = target.planar_velocity() * FLIGHT * clampf(float(spec.get("lead", LEAD)), 0.0, 1.0)
 	var aim: Vector3 = _ball() + lead
 	var landing := Vector3(aim.x, Telegraph.ground_under(terrain, aim), aim.z)
 	shots += 1

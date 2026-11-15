@@ -14,15 +14,28 @@ Heads and open pull requests change by the hour, so read them live (`git ls-remo
 
 The board is the GitHub issue in the table. It also holds the file fences of the open pull requests. The stage log (`git log --first-parent origin/stage/alpha-w<N>`) is the stack queue. "Compare against" names the receipts the next full gate reads its base values from, published on a `scratch/gate-receipts-<folder>` branch. The Gate updates the table as its first commit on a new stage: `node scripts/wave-state.mjs --write --board <new board issue> --compare <receipts folder>` (the red team persona rotates by itself).
 
-## Now (14 Nov 2026)
+## Now (15 Nov 2026, resumed on the PC)
 
-Wave 40 is on `main` (8d92764c, pull request 1011). It passed the wave gate on the PC on bd5b30f5c, then closed at 23039d84:
-- three gate reds were fixed (an axis test that planted a real error, a kindless enemy in `director_held`, and the cutaway rider watch connecting twice);
-- the dam (54.4 / 25.6 s) and flume (26.5 / 18.5 s) posture pins were re-cut, because wave 40 shortened both fights (an assumption Andrew can overturn);
-- pocket_entry now counts 17 interiors;
-- bot_fairness_test (red, one-seed design) and stocktake_yard_test (flake) got ledger rows.
+**Resumed 15 Nov 02:30Z.** One local Claude Code session on Andrew's PC is coordinator and Gate (ruling ds); the claude.ai project threads stay stopped and this session finishes their open pull requests. The plan Andrew approved runs five waves. Wave 41 settles the queue below and adds the rows that decide "world 1 done" to `npm run sketch:world1-bands -- --sitting` (ruling dt). Wave 42 is clarity: warnings, the HUD and the camera. Wave 43 is sound, difficulty and frame time. Wave 44 is map sites and bodies. Wave 45 is the sitting build. The pause of 14 Nov 18:30Z is over. Wave 40 is on `main` (8d92764c, pull request 1011). `stage/alpha-w41` is open; read its head with `git log --first-parent origin/stage/alpha-w41`.
 
-Wave 40 shipped the critique build wave, the hitch fixes, the cutaway as the default ball (ruling dm), and the Tripo pilot bodies behind `--models=tripo`. `stage/alpha-w41` is cut at 8d92764c, with the wave board in the table above. Queued for it: 1007, 1008, 1009 (survival forms and survey posts behind flags), 957 (the dam bowl), 1010 (Tripo skin weights), and the difficulty stack 845 and 948, which still lands last. The full-game audit starts on this stage.
+Stacked on w41 since the cut: 1007, 1008, 1010, 1013, 923, 886, 1015, 1016 (rulings dn, do and dp; dq came with it), 1014, 1017, 1019, 1020, 1021, 1022, 1009 (survival forms and survey posts behind flags), 1023, 1025 (far props keep their shape), 1024, 1028 (bowl approach behind `--approach`, dam yard row moved), 1026, 1029, 1030, 957 (dam fight bowl), 1032 (shut-yard camera lift), the import stamp (LESSONS 71), 845 (the difficulty stack) and 1036 (docs cleanup). Every PC look and band read for those passed or went back to its thread as a follow-up.
+
+845 passed its PC band read at the base tier and HARD rungs 2 and 5, harder on every arm (receipts on the board issue). One flag for the gate: at rung 2 learner5 clears rose 19 to 22 while its hull lost rose 1248 to 2169, which passes the rule but is worth a look.
+
+Open pull requests on w41 and what each waits on, in stacking order:
+1. **948** (critique rows, 12aba88a): 845 is in, so this is next. Its paired band read (w41+845 against w41+948) and the W1-66 read were queued and cancelled at the pause; the PC keeps their worktrees. W1-66 opens as its own pull request after 948.
+2. **1027** (same-tick contact order, 3922becb3): fixes the run-to-run split that same-tick contacts caused (its LESSONS 72); its head repeats exactly under load on the PC. Its paired band read was cancelled at the pause; run it, then stack.
+3. **1033** (dam apron kicker moved past the shut yard, 2428bea9b): the shut-yard still and the kicker landing pass on the PC (candidate scratch/w41-cand-1033). Its paired band read was cancelled at the pause; run it, then stack.
+4. **1031** (Tripo arena props and a sluice shed that keeps its water wheel): needs a PC look with `--models=tripo` before stacking.
+5. **1034** (a Tripo chaser that passes the render check, and a hooker barrel with no feet): stacks after 1031; needs the same PC look.
+6. **1018** (played launches end at Brindle): its ruling letter dr clashes with the Tripo accept-list ruling dr that 1024 already stacked; re-letter it to du (ds and dt are taken) before stacking.
+7. **1035** (points of interest look fixes for the PR 1028 stills, and the stocktake_yard_test flake fix, 6efb2aee): sketch:fast and review done; take the stills listed in the project's poi-density hand-off, stack, then drop the stocktake_yard_test flake row.
+
+Known w41 reds to settle before the wave gate: posture_bands_reactor's small median (71.5 s against a 60.2 s pin, same on base, so the pin is stale) and bot_park_trace_repeat timing out at 900 s on a 4-core cloud box (unchecked on the PC). stocktake_yard_test flakes on a repeated part draw (fixed in 1035). Owed follow-ups: the flume trough culls its legs at 120 m and shows as a slab (POI thread); bowl approach look notes (gantry leg crowding the camera, plain weighbridge plate, small camp tally post, survey post contrast); the Tripo hooker barrel reads a little like a small robot at 22 m.
+
+The PC kept the cancelled reads ready under its scratch folder w41-pc: worktrees bj-base2, bj-head2 and bk-head2 (948 and W1-66, script bjk2-band.sh), bq-base and bq-head (1027, bq.sh, band part only), bu (the two reds, bu.sh) and bw-base and bw-cand (1033, bw.sh, step 3 only). Check each one's stamp against the current stage before reusing it.
+
+Every band read and bot run must start from a worktree prepared with `node scripts/import-stamp.mjs import`; never copy a `.godot` between worktrees (LESSONS 71).
 
 Done for the sitting is counted: no major or minor row left in [PLAY-FINDINGS.tsv](PLAY-FINDINGS.tsv), a clean release gate, 4080 frames in budget, zero placeholders, and that build installed on the PC. Andrew has played only the dam (wave 26 build, 30 Oct) and has marked no area yet.
 

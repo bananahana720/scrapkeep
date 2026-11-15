@@ -6,6 +6,69 @@ sibling only when it is launched with `--models=tripo` (`src/presentation/model_
 the switch, and for every model that has no sibling, the authored model loads as before. No authored file
 is replaced. Andrew picks per model which one stays.
 
+**Accepted or rejected, per model (ruling dr).** `--models=tripo` loads only accepted siblings. To reject one,
+add its own `res://` path and a one-line reason to `REJECTED` in `src/presentation/model_variants.gd`, and set
+`"accepted": false` with `"accepted_why"` on its row in `assets/registry.d/tripo_variants.json`, then run
+`python3 tools/fold_registry.py`. A prop has three files (the model and two detail levels), so reject all three.
+`tests/tripo_variants_test.gd` fails when the list and the rows disagree. `--models=tripo-all` loads every
+sibling, rejected ones too, so a rejected model can still be judged in the game.
+
+Rejected today (14 November 2026, by the board's PC looks and the render check):
+
+- `world_one/enemy_chaser_tripo.glb`: failed the render check below. In view 1 it sends 0.54 of the authored chaser's brightness, with 0.37 of its pixels near-black against 0.04, and the still shows loose black faces on the shell.
+- `park/props/flume/sluice_shed_a{,_lod1,_lod2}_tripo.glb`: it swaps cleanly and holds its shape from 40 to 160 m, but it loses the big red water wheel, the authored shed's landmark shape. A retry must keep a big wheel, or keep the authored wheel beside the generated shack.
+
+**The render check (generated enemy models, from 14 November 2026).** `tools/model_render_check.gd` judges a
+generated enemy from rendered pixels, because the light test passed a barrel twice that the game drew near-black.
+It spawns each enemy in the real game, paused, and takes two views from opposite sides (view 0 and view 1). For each
+view it finds the enemy's own pixels and measures the still the game draws: mean brightness, and the share of
+near-black pixels. Shoot once with the authored models and once with `--models=tripo-all`, then compare:
+
+```
+source /home/andrew/scratch/world1/env-pc.sh <name> 1 1
+gamescope --backend headless --prefer-vk-device 10de:2504 -W 800 -H 600 -w 800 -h 600 -- $GODOT_BIN \
+  --path sketches/core-loop --gpu-index 1 --resolution 800x600 --audio-driver Dummy \
+  --script res://tools/model_render_check.gd -- --out=<abs>/authored [--kinds=hooker,lobber]
+<the same> -- --out=<abs>/tripo --models=tripo-all
+$GODOT_BIN --headless --path sketches/core-loop --script res://tools/model_render_check.gd -- \
+  --compare=<abs>/authored,<abs>/tripo --out=<abs>/sheets
+```
+
+The compare step prints one PASS or FAIL line per enemy, writes a side-by-side sheet per enemy (authored left,
+generated right) and exits 1 on any FAIL. An enemy fails when, in either view, the generated model sends under
+0.80 of the authored brightness or has more than 0.15 more near-black pixels. A shoot needs a graphics card, so
+it does not run in `npm run sketch:fast`; run it on the PC before a generated enemy model is marked accepted.
+Its first run (14 November 2026) failed the hooker, which the PC look had failed twice, and passed the lobber
+and the swatter, which the PC look had passed. It also failed the netcaster and the chaser. It covers the
+chaser, lobber, swatter, hooker, netcaster and boom tender. The boom tender's generated hull passed on the same
+day (0.97 and 1.05 of the authored brightness); the tool turns off the shadows of its batched floats too, and
+frames it by its meshes. A prop is still judged by the PC look. The number is for the whole enemy, so an authored mast or tool dilutes a dark swapped part: the
+known-dark hooker scored 0.81 in view 0 and failed only in view 1. A result near the floor still needs the PC look.
+A shoot stops with exit 2 on an enemy name it does not know (the game would spawn a chaser for it) and on any
+model flag but `--models=tripo-all`.
+
+| Enemy | View 0: brightness, near-black (authored) | View 1: brightness, near-black (authored) | Result |
+| --- | --- | --- | --- |
+| Lobber | 1.06, 0.02 (0.00) | 1.11, 0.04 (0.02) | pass |
+| Swatter | 0.96, 0.00 (0.00) | 1.04, 0.10 (0.13) | pass |
+| Hooker | 0.81, 0.12 (0.03) | 0.65, 0.33 (0.04) | fail |
+| Netcaster | 0.86, 0.31 (0.09) | 0.82, 0.10 (0.10) | fail |
+| Chaser | 0.95, 0.20 (0.12) | 0.54, 0.37 (0.04) | fail |
+
+The hooker and the netcaster were dark for one cause, found the same day: their generated faces read as fully in
+shadow in the second UV set (see "Crew enemies", **The bake**). Both were refitted with the fixed tool and shot
+again, with the swatter as the unchanged control:
+
+| Enemy | View 0: brightness, near-black (authored) | View 1: brightness, near-black (authored) | Result |
+| --- | --- | --- | --- |
+| Hooker | 1.07, 0.01 (0.00) | 0.97, 0.01 (0.04) | pass |
+| Netcaster | 1.05, 0.00 (0.01) | 0.82, 0.05 (0.04) | pass |
+| Swatter | 0.97, 0.00 (0.00) | 1.03, 0.13 (0.15) | pass |
+
+Both are accepted again. The netcaster's view 1 is near the floor, so it still needs the PC look. After a model
+file changes, run `$GODOT_BIN --headless --path sketches/core-loop --import` before a shoot: a script run draws
+the last imported copy, and a shoot taken before the import still showed the old dark barrel.
+
 Earlier generated-mesh trials were rejected (docs/decisions.tsv rows 352 to 361, TADR-011): lumps at
 budget, licence problems, colour loss. Row 361 allows a reopen "only with a different model class".
 Tripo's v3.1 smart_low_poly mode is that different class, and Andrew asked for it on 13 Nov 2026. The
@@ -34,12 +97,18 @@ outputs with the account holder. Outputs made on a free account are public domai
 | --- | --- | --- | --- | --- | --- | --- |
 | camp/camp_pet_tripo.glb | 4bbd2038-8fe8-48d9-8fda-afda32599557 | prompts/camp_pet.txt | 30 | 2,000 (1,100) | 1 (1) | yaw -90, height, 8 sockets |
 | world_one/enemy_chaser_tripo.glb | 6013f673-bd92-4d65-9bc4-7e6abff67f8c | prompts/enemy_chaser.txt | 30 | 3,175 (3,176) | 5 (5) | yaw 90, box, claws below 22 %, fin above 80 % (rubber) |
+| world_one/enemy_lobber_tripo.glb | 904d0a41-6627-44d7-a982-ce68527c27f0 | prompts/enemy_lobber_whole.txt | 120 (four candidates over two prompts) | 6,699 (6,720) | 5 (5) | tripo_fit.py, yaw 90, `--name LobberBody --max-tris 6700`, then lobber_parts.py |
+| world_one/enemy_swatter_tripo.glb (SwatterBody only) | fbbb83dd-0bbc-4636-9f2b-172f3a03d2dd (the second candidate; the row named the first candidate's id until 14 November 2026) | prompts/enemy_swatter_body.txt | 60 | 2,753 (2,760) | 3 (3) | tripo_swap.py, yaw 90, `--fit fill --max-tris 2650 --bright match` |
+| world_one/enemy_hooker_tripo.glb (the barrel and head of HookerBody only) | fbbb83dd-0bbc-4636-9f2b-172f3a03d2dd (the swatter body, used a second time; the first barrel, task 27fecf60-4f86-4d56-92cd-e06c64efbf31, 60 credits, was replaced on 14 November 2026) | prompts/enemy_swatter_body.txt | 0 (a candidate already paid for) | 6,381 (6,414) | 3 (3) | tripo_swap.py, yaw 90, `--fit fill --max-tris 6100 --bright match --region "-0.8,-0.8,-1.15,0.72,0.8,1.65"` |
+| world_one/enemy_netcaster_tripo.glb (the control box of NetcasterBody only) | ff17498a-5ed6-4f6b-b933-5f27f62e4cab (the first swatter body candidate, unused by the swatter) | prompts/enemy_swatter_body.txt | 0 (an unused candidate) | 6,993 (7,048) | 2 (2) | tripo_swap.py, yaw 90, `--fit fill --region ... --max-tris 7000 --bright match` |
 | world_one/enemy_boom_tender_tripo.glb (TenderHull only) | cfa436e8-08dc-42f8-b416-53dee2a7619b | prompts/enemy_boom_tender.txt | 30 | 7,375 (7,928) | as authored | tripo_swap.py, yaw 90, box |
 | park/props/dam/gate_wheelhouse_a{,_lod1,_lod2}_tripo.glb | 7f215046-0286-4f10-b0cd-6d0121db046e | prompts/gate_wheelhouse.txt | 30 | 6,000 / 3,000 / 900 (16,588 / 8,294 / 2,488) | 1 | box |
 | park/props/dam/mixer_wreck_a{,_lod1,_lod2}_tripo.glb | see registry row | prompts/mixer_wreck.txt | 60 (2 candidates) | 6,000 / 3,000 / 898 (12,740 / 6,370 / 1,904) | 1 | box |
 | park/props/dam/survey_tent_a{,_lod1,_lod2}_tripo.glb | see registry row | prompts/survey_tent.txt | 60 (2 candidates) | 5,000 / 2,500 / 750 (8,840 / 4,420 / 1,326) | 1 | box |
 | park/props/flume/skiff_on_blocks_a{,_lod1,_lod2}_tripo.glb | Studio workspace 91afa2b0-76cf-452c-8c73-050af720aee6 | typed in Studio, not saved | 20 Pro (texture; the Smart Mesh batch of 4 was free on the trial counter) | 5,435 / 2,700 / 799 (11,524 / 5,762 / 1,728) | 1 | yaw 90, box |
 | park/props/flume/boom_crane_wreck_a{,_lod1,_lod2}_tripo.glb | Studio workspace 5accd8b9-3eec-4698-9050-615d8214c2d5 | typed in Studio, not saved | 20 Pro (texture) | 5,999 / 3,000 / 1,237 (17,782 / 8,890 / 2,666) | 1 | yaw 0, box |
+| park/props/flume/sluice_shed_a{,_lod1,_lod2}_tripo.glb | Studio workspace 05a306ba-03b8-48d6-bc96-2dd5d84cc071 | prompts/sluice_shed.txt | 120 Pro (Smart Mesh set of four, then texture) | 5,499 / 2,700 / 799 (10,364 / 5,182 / 1,553) | 1 | yaw 90, box |
+| park/props/dam/compressor_cart_a{,_lod1,_lod2}_tripo.glb | Studio workspace f54a0591-0944-401c-b714-88dbfc594ca6 | prompts/compressor_cart.txt | 120 Pro | 1,499 / 750 / 216 (1,500 / 750 / 222) | 1 | yaw 0, box |
 
 The two runner-up candidates cost 60 credits more (tasks 4ff28976-cb42-4c54-a38e-3f11ad6ff8d4 and
 bf9a1416-9b54-4d86-9cc2-bc2f7b50791f). Counts are Godot's, from `tests/tripo_variants_test.gd`.
@@ -164,15 +233,36 @@ The fitter drops floating fragments by walking shells whose bounding boxes touch
 inside another shell's box survives; pick another of the four candidates then (Scrap Gravity's first
 candidate had a bolt lying beside its base).
 
+## Props: one generated model for every variant of a kind
+
+A prop kind has variants a, b and c, and each placement picks one at random (`park_props.gd` `expand`). Only variant a has a generated sibling. With the switch on, a variant with no sibling of its own draws a sister's sibling when the sister has one for every detail level, is no more than 1.1 times as wide and is within 15 percent of its height (`park_props.gd` `_stand_in`). A narrower sister is allowed, so a stand-in can look smaller than the prop it stands for: the compressor cart's variants b and c draw a cart 26 to 36 percent narrower. So every sluice shed changes with the switch, not one in three, and the low survey tent b keeps its own model because tent a is too tall for it. The PC look of 14 November 2026 found the nearest sluice shed unchanged by the switch: it was a variant b.
+
+## Generated and not shipped
+
+A generated model ships only when it reads at least as well as the authored one beside it. These did not, and the
+authored model stays. Each is listed so nobody spends credits on the same attempt again.
+
+| Model | What was tried | Why it did not ship |
+| --- | --- | --- |
+| park/props/flume/gauge_dial_shed_a | Tripo Studio, three textured candidates (`prompts/gauge_dial_shed.txt`, workspaces 2be99a2f and b3e31c1b-6c7e-462b-a5d6-2d4eaa3bfc48, 160 Pro credits in all) | The prop is about its chalk-white dial. The dial face came out grey, then teal, and never white, even with the authored colours named in the prompt. |
+| park/props/dam/cable_drum_a | Tripo Studio, one textured candidate (workspace ba236b15-44b1-4c72-ac28-fbe3ef28433f, 120 Pro credits) | It textured as one dark colour, standing on its rims. The authored drum lies flat, with tan wooden ends and a wound grey cable. |
+| The other crew enemies (bola thrower, deflector, gyro jammer, jolt layer, mag trapper, winch drone, catch trap, ramp flipper) | A spare generated torso swapped into the drum of the bola thrower and the deflector with `tripo_swap.py --region`, no credits | These enemies share one authored drum that carries the crew number plate. The generated torso reads no better and loses the plate. |
+| world_one/enemy_netcaster (whole model) | See "Crew enemies" below | Its own test failed it. |
+
+**Colour match by tint.** `tripo_fit.py --match tone` snaps each face to the authored colour of the nearest tint and
+counts lightness at a quarter weight. Use it when a generated texture is a lighter or darker shade of the authored
+paint, so a sky-blue wall lands on the authored teal and not on the pale grey. The default, `--match rgb`, is the
+plain nearest colour.
+
 ## New props (no authored twin)
 
 A prop that does not exist yet has no authored model to fit against. `tripo_prop.py` fits it on its own terms:
 
 `blender -b --factory-startup -P tools/tripo/tripo_prop.py -- --in <tripo model.glb> --out assets/models/world_one/<stem>.glb --name <MeshName> --tall <metres> [--wide <metres>] --max-tris <cap> --lods "0.5,0.15"`
 
-It scales the mesh to `--tall` metres (or to `--wide` metres across its longer ground side), stands it on its origin, groups the texture into eight flat colours of its own, writes them as linear `COLOR_0` on one material named `paint`, drops the texture and the UVs, and writes `_lod1` and `_lod2` files by decimation. The loader must set vertex colour as albedo, as `src/presentation/park_props.gd` does. Register each file in `assets/registry.d/poi_props.json` with its Tripo task and sha256, run `python3 tools/fold_registry.py`, and add the stem to `POI_PROPS` in `tests/tripo_variants_test.gd`.
+It scales the mesh to `--tall` metres (or to `--wide` metres across its longer ground side), stands it on its origin, groups the texture into eight flat colours of its own, writes them as linear `COLOR_0` on one material named `paint`, drops the texture and the UVs, and writes `_lod1` and `_lod2` files by decimation. With both `--tall` and `--wide`, the height and the ground plane are scaled separately. `--span "a:b"` moves points a metres either side of the centre to b metres, which sets an opening to a planned width, and `--paint "n=#rrggbb"` repaints found colour n when the generated texture misses the palette (the script prints the found colours). The loader must set vertex colour as albedo, as `src/presentation/park_props.gd` does. Register each file in `assets/registry.d/poi_props.json` with its Tripo task and sha256, run `python3 tools/fold_registry.py`, and add the stem to `POI_PROPS` in `tests/tripo_variants_test.gd`.
 
-A mesh generator returns a thin shape (a stake, a wire fence) as a lump. Build those by hand: `tools/blender/world_one/poi_yard.py` builds the fence panel and the survey stake in the same format.
+A mesh generator returns a thin shape (a stake, a wire fence) as a lump. Build those by hand: `tools/blender/world_one/poi_yard.py` builds the fence panel, the survey stake, the ring flag and the siren mast in the same format, and the plain box props (the furnace stacks, the tagged crate and its pieces, the requisition locker and its door, the tag rack and the scooter shed), which are cheaper to build than to generate.
 
 World 1 points of interest, 14 November 2026 (API credits, text to model v3.1, smart_low_poly, face limit 4,000, two candidates each at 30 credits; 180 credits, 320 left after):
 
@@ -183,10 +273,47 @@ World 1 points of interest, 14 November 2026 (API credits, text to model v3.1, s
 | `world_one/poi_camp_tally_post.glb` | `prompts/poi_camp_tally_post.txt` | 8b2f90eb-a287-4815-8a9e-58f1d89d3b62 | 1,999 (999, 296) | 2.5 m tall |
 | `world_one/poi_fence_panel.glb` | built by `poi_yard.py` | none | 288 | 6.2 m wide, 2.5 m tall; repeat every 6.2 m, feet touching |
 | `world_one/poi_survey_stake.glb` | built by `poi_yard.py` | none | 168 | 3.16 m tall, origin at the foot |
+| `world_one/poi_weighbridge_gantry.glb` | `prompts/poi_weighbridge_gantry.txt` | Studio workspace e67eb1c6-c217-4e11-a2a1-b9c2798bbd08 (120 Pro) | 3,200 (1,598, 478) | 12.0 m wide, 7.0 m tall, 5.5 m deep, 8 m roll-over plate (`--wide 12 --tall 7 --span 3.1:4.0`, seven colours repainted with `--paint`) |
+| `world_one/poi_ring_flag.glb` | built by `poi_yard.py` | none | 204 | 2.0 m tall, origin at the foot |
+| `world_one/poi_siren_mast.glb` | built by `poi_yard.py` | none | 328 | 6.0 m tall, horn along +X, origin at the foot |
+| `world_one/poi_furnace_stacks.glb` | built by `poi_yard.py` | none | 396 | 46.6 m wide, 60.2 m tall, for a 600 m view |
+| `world_one/poi_tagged_crate.glb` | built by `poi_yard.py` | none | 204 | 1.2 m cube, brass tag on the front |
+| `world_one/poi_tagged_crate_piece_{a,b,c,d}.glb` | built by `poi_yard.py` | none | 36 each | the four pieces a broken crate leaves, each with its origin at its centre |
+| `world_one/poi_req_locker.glb` | built by `poi_yard.py` | none | 156 | 3.0 m wide, 2.5 m tall, 1.5 m deep, open at the front |
+| `world_one/poi_req_locker_door.glb` | built by `poi_yard.py` | none | 120 | 2.56 by 1.8 m, origin at the hinge foot; place at (-1.28, 0.3, 0.7) on the locker and turn about the up axis |
+| `world_one/poi_tag_rack.glb` | built by `poi_yard.py` | none | 444 | 3.0 m wide, 3.0 m tall, 2.0 m deep; tags face the front |
+| `world_one/poi_tag_rack_leaning.glb` | built by `poi_yard.py` | none | 492 | the rack tipped 14 degrees with a seventh crate on the ground beside it; 4.6 m wide, 3.7 m tall |
+| `world_one/poi_scooter_shed.glb` | built by `poi_yard.py` | none | 352 | 4.0 m wide, 3.0 m deep, 3.0 m tall with its pennant; the scooter stands inside at the origin |
 
 The stand and the gate came back narrower and taller than the placement asked for (2 m across, and 6.7 m tall), so both are fitted with `--wide` and `--tall` together, which scales the ground plane and the height separately. Look at the render when using both: these two chunky shapes take it, a thin or round one may not.
 
 The runner-up candidates are tasks f5a7ba00-eb9f-4153-a98c-f80c4fc5fc28 (stand), 3caed186-71a7-42da-b675-1e4eb764475f (gate) and 90a8c17b-94b5-4bec-b359-f07be0b83963 (post). All six candidates were usable. The count boards came back with painted digits although the prompt said no text; they ship as flat colour patches, and the game should draw the live number itself.
+
+## Crew enemies (a new body, the authored tool kept)
+
+The Spillway crew are a body mesh plus a tool mesh (the swatter's paddle, the hooker's harpoon). The tool carries the enemy's warning, so it stays authored and only the body is swapped:
+
+`blender -b --factory-startup -P tools/tripo/tripo_swap.py -- --in <tripo model.glb> --ref assets/models/world_one/enemy_swatter.glb --node SwatterBody --out assets/models/world_one/enemy_swatter_tripo.glb --yaw 90 --fit fill --max-tris 2650`
+
+- **Colour.** The game paints the crew from vertex colour, and the two slots only say which surface flashes. `tripo_swap.py` sees this (a white slot beside a coloured one) and gives each face the nearest of the authored node's own vertex colours, in that colour's slot. Before 14 November 2026 it flattened such a body to one colour.
+- **Size.** `--fit fill` stretches the new body to the authored body's bounds on each axis, so the collider, the tool's pivot and the enemy's height stay as they were. `--fit box` keeps the generated proportions and left the swatter half its height.
+- **The enemy's own test decides.** Run `tests/enemy_<name>_asset_test.gd -- --models=tripo`. A whole generated netcaster failed it: the authored body is a frame with an open window where the game draws the net, and a stout generated robot put 804 triangles in that window (`prompts/enemy_netcaster_whole.txt`, task 76b8b5f4-ce6a-4468-8a4a-0fde6507f4d3, 60 credits, not shipped).
+- **A body that holds a frame** (the netcaster). `--region "x0,y0,z0,x1,y1,z1"` (the node's own Blender space, Z up) swaps only the faces whose centres lie in that box and keeps the node's other faces as authored. The netcaster keeps its masts, crossbar and feet, and only its control box becomes a generated torso: `--node NetcasterBody --yaw 90 --fit fill --region "-0.5,-0.85,-1.15,0.5,0.11,1.0" --max-tris 7000`. The torso is the unused first swatter body candidate, so it cost no credits.
+- **Brightness.** Add `--bright match`. A generated texture is darker than the authored paint, so many faces snapped to charcoal and the PC look of 14 November 2026 found the swatter and the hooker standing out less against the dam rock. The option lifts the sampled colours until the body's mean brightness (weighted by area, kept faces included) reaches the authored body's. The tool prints the new part's brightness and the brightness of the faces it replaced (`lum`, `lum_ref`); with `--region` neither is the whole-body mean, which only the test measures: `tests/tripo_variants_test.gd` (`BODIES`) fails a body under 95 percent of the authored one.
+- **The bake.** An authored crew body has a second UV set that holds the polish bake (x: the share of the face out of shadow, y: edge wear), and the game multiplies the rust paint by it (`src/presentation/bake_look.gd`). With `--region` the kept authored faces bring that set along, and until 14 November 2026 the generated faces read (0, 0) in it, fully in shadow: the hooker barrel and the netcaster torso rendered near-black in the game while every calculated brightness passed. `tripo_swap.py` now writes the unshaded value (1, 0.5) on the generated faces. A whole-node swap (the swatter) has no second set and is not shaded.
+- **Silhouette.** The hooker's authored body is a barrel beside a thin mast. Swapping the whole node stretched one robot over both and read as a tall block, so its swap is limited to the barrel with `--region`, as the netcaster's is.
+- **What the camera gets.** The mean brightness above passed a hooker barrel that the PC look of 14 November 2026 showed as a thin near-black figure: the mean is taken over the whole node, mast included, and says nothing about how much of the body faces the camera. `tests/tripo_variants_test.gd` (`_part_seen`) now also adds up the light each body sends to a chase camera from four sides and holds the worst side to 0.65 of the authored body. That hooker barrel sent 0.48; the swatter and the netcaster, which the same look passed, send 0.71 and 0.81. Pick a generated torso that fills the authored barrel: a robot figure with legs and arms does not.
+- **Skinned bodies** (the plated brute, the foreman, the dispatcher, the linker, the splitter) cannot be swapped by this tool. They need the pilot route below.
+
+## The lobber (a whole model split into moving parts)
+
+The game moves the lobber's tube and swells its bulb, so its file must hold three meshes at the authored pivots. `lobber_parts.py` cuts them out of a whole fitted model:
+
+`blender -b --factory-startup -P tools/tripo/lobber_parts.py -- --in <tripo_fit output> --ref assets/models/world_one/enemy_lobber.glb --out assets/models/world_one/enemy_lobber_tripo.glb`
+
+It squeezes the model inside the 2.4 m collider, finds the brass ball (the largest joined brass patch; it stops if that patch is not a ball on the axis), stretches the model so the ball's centre lands on the authored bulb pivot, scales the ball to reach 0.9 m from that pivot, as the authored bulb does, and cuts body, tube and bulb in the authored slot order. The prompt must ask for a brass ball joint between the chassis and the tube, and for an upright tube: the first prompt's leaning tube reached outside the collider and the lobber's own test (`enemy_lobber_asset_test -- --models=tripo`) failed it.
+
+**A warning must never read weaker than the one it replaces** (the board, 14 November 2026). The first lobber shipped a 0.65 m bulb, and the PC look measured about half the bright area of the authored 0.9 m bulb before a shot. Any Tripo part that carries a tell (a glow, a swell, a raised tool) is sized to the authored part, not to what looks tidy on the new body.
 
 ## Pilots (a new body on the authored skeleton)
 

@@ -35,7 +35,9 @@ const GLANCE_STEP_CAP := 0.05
 # player's pitch; shake_cap is the most total shake allowed while the row is active.
 const PROFILES := {
 	"falling": {"arm": 12.0, "pitch_bias": -0.21, "fov_add": 6.0, "shake_cap": 1.2},
-	"locked": {"arm": 0.0, "pitch_bias": 0.035, "fov_add": 3.0, "shake_cap": 1.2},
+	# A shut yard (stage_locks.gd, through juice.gd): the arm reaches out and up over the yard's rim so a
+	# fight in a bowl (the dam's apron) sees its floor and its crew past the far wall.
+	"locked": {"arm": 12.0, "pitch_bias": -0.21, "fov_add": 3.0, "shake_cap": 1.2},
 	"boss": {"arm": 12.0, "pitch_bias": 0.07, "fov_add": 0.0, "shake_cap": 0.6},
 }
 
@@ -220,7 +222,7 @@ func _step_glance(delta: float) -> void:
 		_glance_subject = null
 
 
-# A harpoon lock point, or null to release. A lock changes the arm, pitch bias and lens
+# A shut yard's centre (juice.gd, from stage_locks.gd), or null to release. A lock changes the arm, pitch bias and lens
 # only; the player's yaw is never touched.
 func set_lock(point) -> void:
 	_locked = point != null

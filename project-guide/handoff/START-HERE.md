@@ -1,19 +1,16 @@
 # Start here
 
-The claude.ai project "Scrapkeep" coordinates the alpha (ruling dh). Its coordinator talks to Andrew in the project chat and starts one thread per unit of work. One thread, "Drive the wave <N> board", is the Gate: it alone stacks onto the open stage, runs the wave gate, promotes, and drives Andrew's PC through a Remote Control session for GPU work. [THREADS.md](THREADS.md) lists the roles.
+One local Claude Code session on Andrew's PC coordinates the alpha and is the Gate (ruling ds, 15 Nov 2026). It talks to Andrew in its own chat, alone stacks onto the open stage, runs the wave gate, promotes, and runs the PC work directly. It writes sequential changes itself and starts writer agents in separate worktrees for independent units. The claude.ai project threads are stopped (their coordination, ruling dh, ran 12 to 14 Nov). [THREADS.md](THREADS.md) lists the roles. Where a page below says "the board thread" or "a thread", read "the local session" and "a writer agent".
 
-The rules every thread follows are in [AGENTS.md](../../AGENTS.md), most important first: finish every to-do, one thread one writer, only the board thread stacks, and what needs Andrew's go-ahead.
+The rules every thread follows are in [AGENTS.md](../../AGENTS.md), most important first: finish every to-do, one thread one writer, only the Gate stacks, and what needs Andrew's go-ahead.
 
 **A cloud session cannot read the PC's disk.** It sees the repository, the pull requests, the wave board and, in a project thread, the shared folder `/mnt/project-files`. Gate receipts from the PC are on `scratch/gate-receipts-w<N>-<head>` branches.
 
-## Read in this order
+## Read first
 
-1. [AGENTS.md](../../AGENTS.md): the rules, and the steps that need no approval.
-2. [STATE.md](STATE.md): where the wave stands. Its Wave facts table is the one place that names the open stage and the live board.
-3. The board issue (it holds the open pull requests' file fences) and your brief. Post a claim before you build.
-4. The rows of [DECISIONS.md](DECISIONS.md) your brief cites. Newest wins; do not re-ask one. Search it before you ask Andrew anything.
+The read order is in [AGENTS.md](../../AGENTS.md) ("Read first, in this order"): this page, then [STATE.md](STATE.md), then your brief and the board issue, then the [DECISIONS.md](DECISIONS.md) rows it cites. Post a claim on the board before you build.
 
-Everything else is read when the work calls for it; the table below says which page. A fresh coordinator also reads [ROADMAP.md](ROADMAP.md) (phone copy: https://claude.ai/artifact/55bppMdvsEXW52ZVFyhNna), the shared folder map `/mnt/project-files/INDEX.md` and the phone start page https://claude.ai/artifact/LQF6h696vYdtJee3soD2Pi. The log, briefs and scripts of the local PC session that coordinated on 10 and 11 November are on branch `scratch/coordinator-notes-2026-11-11`.
+Everything else is read when the work calls for it; the table below says which page. A coordinator's extra reads are on its row in [THREADS.md](THREADS.md). The log, briefs and scripts of the local PC session that coordinated on 10 and 11 November are on branch `scratch/coordinator-notes-2026-11-11`.
 
 ## Where to go when
 

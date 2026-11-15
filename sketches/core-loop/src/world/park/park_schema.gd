@@ -174,6 +174,10 @@ const RESCUE_FIELDS := {"id": "s", "site": "s", "at": "v2", "face": "v2", "quest
 # form; activities.gd builds one row of a form a run, and only with --stocktake=on). They are not activity rows, so
 # nothing that reads the stage's activities sees them.
 const SURVIVAL_FIELDS := {"id": "s", "form": ["yard", "muster", "ring"], "at": "v2"}
+# Optional at the top: "approach", the last of the floor line dressed as the way to the boss's bowl
+# (bowl_approach.gd, only with --approach=on). to names the bowl; smoke is where its furnace stands, which may be
+# off the map, in the direction the stage's launch leaves.
+const APPROACH_FIELDS := {"to": "s", "smoke": "v2"}
 const LANDMARK_FIELDS := {
 	"id": "s", "kind": LANDMARK_KINDS, "at": "v2", "size": "v3", "yaw_deg": "n", "recipe": "s",
 	"budget": ["hero_landmark"], "sight_top": "v3", "sight_share": "n", "beacon": "v2", "reach_m": "n",
@@ -282,6 +286,8 @@ static func validate(park: Dictionary, ctx: Dictionary = {}) -> Array:
 	var rescues := _rows(out, park, "rescue_rows", RESCUE_FIELDS) if park.has("rescue_rows") else {}
 	if park.has("survival_rows"):
 		_rows(out, park, "survival_rows", SURVIVAL_FIELDS)
+	if park.has("approach"):
+		_fields(out, "approach", park["approach"], APPROACH_FIELDS)
 
 	var landmark: Dictionary = park["landmark"]
 	_landmark(out, landmark, ctx)

@@ -218,16 +218,11 @@ func _mount_marks() -> Array[Dictionary]:
 	return out
 
 
-# The activity sites still standing: built, valid and not done. Field finds (secrets.gd FINDS)
-# are left out, so neither a marker nor the HUD's count gives a secret away.
+# The activity sites still standing (activities.gd on_offer()).
 func unfinished_sites() -> Array:
-	var out: Array = []
 	if game == null or game.world == null or game.world.activities == null:
-		return out
-	for site in game.world.activities.sites:
-		if is_instance_valid(site) and not site.done and not site.has_meta("find"):
-			out.append(site)
-	return out
+		return []
+	return game.world.activities.on_offer()
 
 
 # Each caged pilot still waiting (rescue_site.gd waiting()), in the cage's own ally colour and glyph: the

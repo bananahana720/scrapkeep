@@ -1,6 +1,6 @@
 # Sitting Kit
 
-The page where Andrew marks the 11 areas at his one playtest sitting, at the end of wave 21 (DECISIONS.md section 1: "Verdicts are recorded on the Sitting Kit page"). Each area has a verdict control (Accept, Accept with fixes, Not yet), a "Try" list with where to look, the rulings that apply, the coordinator calls he may veto, and a notes box. Verdicts, ticks, vetoes and notes save as he clicks.
+The page where Andrew marks the 11 areas at the full-alpha sitting (older records call it "wave 21") (DECISIONS.md section 1: "Verdicts are recorded on the Sitting Kit page"). Each area has a verdict control (Accept, Accept with fixes, Not yet), a "Try" list with where to look, the rulings that apply, the coordinator calls he may veto, and a notes box. Verdicts, ticks, vetoes and notes save as he clicks.
 
 ## Run
 

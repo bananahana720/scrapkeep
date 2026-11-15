@@ -1,11 +1,11 @@
-# Threads and who owns what (14 Nov 2026)
+# Roles and who owns what (15 Nov 2026)
 
-The claude.ai project "Scrapkeep" coordinates the alpha. Each role below is a thread in that project unless it says otherwise. Earlier set-ups (the PC-coordinator lanes of 22 Oct, the project roles at the 10 Nov hand-off, the local PC coordinator of 10 to 11 Nov) are in git history.
+Since 15 Nov 2026 one local Claude Code session on Andrew's PC is the coordinator and the Gate (ruling ds); it holds the first two roles below, and the unit work is done by that session or by its writer agents in separate worktrees. The rows after those two keep the claude.ai project wording of 12 to 14 Nov (ruling dh); those threads are stopped, and their open work is listed in [STATE.md](STATE.md). Earlier set-ups (the PC-coordinator lanes of 22 Oct, the project roles at the 10 Nov hand-off, the local PC coordinator of 10 to 11 Nov) are in git history.
 
 | Role | Where | What it does |
 | --- | --- | --- |
-| Coordinator | project chat | Talks to Andrew, starts and messages threads, writes the register and memory. Andrew reads the project chat on his phone, not threads |
-| Gate | thread "Drive the wave <N> board" | The only thread that stacks onto the open stage. Cuts each `stage/alpha-w<N>`, opens the wave board, stacks reviewed pull requests, runs the wave gate per promotion and the release gate once per sprint (ruling cy), promotes. Owns the shared flow, launch, arena, boss and world files, and the PC Remote Control session for GPU work ([DEVICES.md](DEVICES.md)) |
+| Coordinator | the local session on the PC (ruling ds) | Talks to Andrew in its own chat, starts writer agents, writes the register and memory. A fresh coordinator also reads [STATE.md](STATE.md), [ROADMAP.md](ROADMAP.md) and [DECISIONS.md](DECISIONS.md). The library map and phone start page of the claude.ai period are on branch `project-files-export-2026-11-14` |
+| Gate | the same local session | The only one that stacks onto the open stage. Runs the PC work directly, with no Remote Control session. Cuts each `stage/alpha-w<N>`, opens the wave board, stacks reviewed pull requests, runs the wave gate per promotion and the release gate once per sprint (ruling cy), promotes. Owns the shared flow, launch, arena, boss and world files,, and the PC lane ([DEVICES.md](DEVICES.md)) |
 | Unit threads | cloud threads | One unit each, built from the open stage: claim on the board with a file fence, build, run focused tests and `sketch:fast`, one independent review, a draft pull request with its receipt, a "ready" comment on the board ([COMMS.md](COMMS.md)) |
 | Systems audit | thread "Audit and improve game systems" | The systems audit passes A to F (`docs/systems-audit/`), cards SA-A to SA-F in [BACKLOG.md](../../BACKLOG.md). Brings Andrew only a cut or merge of a feature, a pillar conflict, or a balance fix that needs a design change |
 | Full-game audit | thread "Audit the whole game" | Audits the whole game on the open stage, started 14 Nov; its UI part runs on [the UI audit loop](../../sketches/core-loop/design-v3/ui-audit/README.md) |

@@ -36,7 +36,7 @@ How this project actually runs, learned the hard way since 16 Oct 2026. Each les
 ## Gating and testing
 
 19. **No thread grades its own work.** A game change is done only when a tool check passes (smoke, lab gate, placeholder gate) and an independent reviewer agrees.
-20. **The board thread is the gate of record (ruling dh); shards don't push, comment or fix.** Pass tests by base name (`--test bot_six_tally_test`), not `res://` path. The recipe is [GATE.md](GATE.md).
+20. **The Gate is the gate of record (the local session on the PC since 15 Nov, ruling ds; the board thread before that); shards don't push, comment or fix.** Pass tests by base name (`--test bot_six_tally_test`), not `res://` path. The recipe is [GATE.md](GATE.md).
 21. **Known reds live in the ledger.** Each red a promotion may carry has a row in [KNOWN-FAILING.tsv](KNOWN-FAILING.tsv) with a cause, an owner and a review date (ruling bq). The 23 Oct list of cloud-only false fails that stood here is in the archive copy.
 22. **"Flake" is not a cause.** The effects RNG test failed on and off for a day; the real cause was a 65 s limit on a busy machine (now 180 s). Rerunning a red to see whether it repeats is always fine; what needs a found cause is calling it a flake.
 23. **Red team every wave, carrying the last findings.** Camper stalls without a Warden break and traversal stalls are by design. A hitch counts only when it lands at the same run moment across seeds.
@@ -142,3 +142,7 @@ He said he won't dictate anything but direction (19:55Z 17 Oct), so the filing i
 ## A finding seen twice, 13 Nov
 
 70. **A kind of UI miss found twice gets a test or a lint, not a second note.** A written rule needs the next reader to notice it; a guard does not. The UI audit's ledger ([UI-FINDINGS.tsv](UI-FINDINGS.tsv)) gives every row a class, and `npm run sketch:ui-audit` fails while a class with two or more rows names no guard. A guard that would start red holds the line with a list of today's misses that may only shrink. [The UI audit loop](../../sketches/core-loop/design-v3/ui-audit/README.md) has the steps.
+
+## A .godot from another tree, 14 Nov
+
+71. **A `.godot` folder imported at one tree and run at another gives a run that is not the checked-out code, with no error line.** In the cloud, a tree imported at one commit and switched without a new import played learner1 seed 40322 as a 32,916-tick run where the proper import plays 51,332. Every passing import now writes `.godot/scrapkeep-import.json` with the sketch's git tree (the fast lane, the smoke runner, the gate shard and the PC gate), and the band harness (`scripts/challenge/run.mjs`) refuses a `.godot` whose stamp is missing or names another tree, or a sketch with uncommitted tracked edits. For a hand-made worktree, run `node scripts/import-stamp.mjs import` (imports twice, then stamps); `check` says whether the stamp matches. Never copy a `.godot` between worktrees. The PC parting on PR 1009 that started this hunt was not a stale import: two launches of the same base build, fresh and stamped, part at tick 8,598 of 40322 because one ram dealt 74.2 damage in one launch and 50.3 in the other with identical ball state and RNG, so run-to-run physics noise makes a few band pairs differ (about 2 in 96 there). Read a lone parted seed as noise until it repeats.

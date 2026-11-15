@@ -229,12 +229,14 @@ func _check_kits(fixture_kit: Dictionary) -> void:
 				bad_colour.append_array(ParkProps.colour_errors(probe.mesh, label, probe))
 				probe.free()
 	_t.check("%d kit variants read" % variants, variants > 0)
-	_t.eq("LOD triangles: LOD0 in the class floor and cap, LOD1 40 to 60%, LOD2 10 to 20% (props at least 40)", bad_tris.slice(0, 4), [])
+	_t.eq("LOD triangles: LOD0 in the class floor and cap, LOD1 40 to 75%, LOD2 10 to 75% (props at least 40)", bad_tris.slice(0, 4), [])
 	_t.eq("every kit LOD0 mesh has ARRAY_COLOR and a vertex-colour material", bad_colour.slice(0, 4), [])
 	_t.eq("every perch is three finite numbers inside the variant's bounds and at least 6 m up", bad_perch.slice(0, 4), [])
 	# Planted: the budget and perch checks must catch a bad row, and a mesh whose imported material ignores COLOR_0 must fail.
 	_t.check("planted: LOD0 under the hero floor fails", not _tri_errors("p", ParkProps.HERO, [5000, 2500, 750], false).is_empty())
-	_t.check("planted: LOD1 at 70% fails", not _tri_errors("p", ParkProps.PROP, [1000, 700, 150], false).is_empty())
+	_t.check("planted: LOD1 at 80% fails", not _tri_errors("p", ParkProps.PROP, [1000, 800, 150], false).is_empty())
+	_t.check("planted: LOD2 over LOD1 fails", not _tri_errors("p", ParkProps.PROP, [1000, 500, 520], false).is_empty())
+	_t.check("planted: LOD2 at 80% fails", not _tri_errors("p", ParkProps.PROP, [1000, 500, 800], false).is_empty())
 	_t.check("planted: a prop LOD2 under 40 triangles fails", not _tri_errors("p", ParkProps.PROP, [300, 150, 39], false).is_empty())
 	_t.check("planted: a prop at 1000 / 500 / 150 passes", _tri_errors("p", ParkProps.PROP, [1000, 500, 150], false).is_empty())
 	var perch_kit := {"kinds": {"k": {"variants": {"a": {"height": 7.0, "radius": 2.0, "perch": [0.0, 7.0, 0.0]}}}}}
@@ -263,7 +265,9 @@ func _raw_mesh(path: String) -> Mesh:
 	return mesh
 
 
-# LOD0 within the class floor and cap (the fixture's stand-in GLBs are exempt from the floor), LOD1 40 to 60%, LOD2 10 to 20% of LOD0.
+# LOD0 within the class floor and cap (the fixture's stand-in GLBs are exempt from the floor), LOD1 40 to 75%, LOD2 10 to 75% of LOD0.
+# The kit aims at 50% and 15% (bands 40 to 60 and 10 to 20) and goes past a band's top only to keep a LOD filling LOD0's outline
+# (kit.py COVER_STEP, W1-29); scripts/far-faults.mjs checks the outline.
 func _tri_errors(label: String, klass: String, tris: Array, fixture: bool) -> Array:
 	var errors := []
 	var lod0 := float(tris[0])
@@ -272,10 +276,12 @@ func _tri_errors(label: String, klass: String, tris: Array, fixture: bool) -> Ar
 		errors.append("%s LOD0 %d tris outside %s %d to %d" % [label, tris[0], klass, bounds[0], bounds[1]])
 	if fixture:
 		return errors
-	if float(tris[1]) < lod0 * 0.4 or float(tris[1]) > lod0 * 0.6:
-		errors.append("%s LOD1 %d is %.0f%% of LOD0, want 40 to 60" % [label, tris[1], 100.0 * tris[1] / lod0])
-	if float(tris[2]) < lod0 * 0.1 or float(tris[2]) > lod0 * 0.2 or (klass == ParkProps.PROP and tris[2] < PROP_LOD2_MIN_TRIS):
-		errors.append("%s LOD2 %d is %.0f%% of LOD0, want 10 to 20 (props at least %d)" % [label, tris[2], 100.0 * tris[2] / lod0, PROP_LOD2_MIN_TRIS])
+	if float(tris[1]) < lod0 * 0.4 or float(tris[1]) > lod0 * 0.75:
+		errors.append("%s LOD1 %d is %.0f%% of LOD0, want 40 to 75" % [label, tris[1], 100.0 * tris[1] / lod0])
+	if int(tris[2]) > int(tris[1]):
+		errors.append("%s LOD2 %d has more triangles than LOD1 %d" % [label, tris[2], tris[1]])
+	if float(tris[2]) < lod0 * 0.1 or float(tris[2]) > lod0 * 0.75 or (klass == ParkProps.PROP and tris[2] < PROP_LOD2_MIN_TRIS):
+		errors.append("%s LOD2 %d is %.0f%% of LOD0, want 10 to 75 (props at least %d)" % [label, tris[2], 100.0 * tris[2] / lod0, PROP_LOD2_MIN_TRIS])
 	return errors
 
 
