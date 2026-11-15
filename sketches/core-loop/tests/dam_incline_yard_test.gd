@@ -14,7 +14,7 @@ const T := preload("res://tests/support/t.gd")
 # - rule: level ground arms in the circle; a slope or a gripped wall arms only in the inner share;
 #   airborne or outside never arms;
 # - ride: on the real dam a ball pushed at cruise down the incline at x -30 and x 0 (the PF-46 probe,
-#   tools/sysaudit/roll_speed_probe.gd) never turns back before the apron, keeps at least 2 x cruise
+#   tools/sysaudit/roll_speed_probe.gd) never turns back before the apron, never drops under 1.9 x cruise
 #   through the foot, and the yard's centre lands on level ground past the foot;
 # - free ride: with the locks and the yard sentry off, the same ride at x -30, 0 and 30 never loses half
 #   its speed within 0.2 s and never turns back through z 400 to 430 (ruling ct point 8c), so a snag in
