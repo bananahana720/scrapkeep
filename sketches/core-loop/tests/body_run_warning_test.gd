@@ -219,8 +219,11 @@ func _boot() -> void:
 		enemy.free()
 
 
-# The reach the lane advertises is the distance the enemy's own hit test uses: a ball just inside it
-# is hit, a ball just outside it is not, and the descriptor's body_reach is that same number.
+# The hit distance in metres, pinned absolutely by behaviour: a ball 0.05 m inside the enemy's reach
+# is hit and one 0.05 m outside is not, where the reach is computed here from the enemy's own radius
+# (chaser: radius + 1.4, 2.4 m at its radius of 1.0; miniboss: 2.3 + 1.6 = 3.9 m), never from
+# hit_reach() or HIT_REACH. The committed lane's body_reach must equal it too. The hit test is the one
+# the lunge and the charge run each tick (_check_hit, _check_charge).
 func _reach_pin(kind: String, enemy) -> void:
 	enemy.set_physics_process(false)
 	enemy._clear_telegraph()
@@ -230,7 +233,8 @@ func _reach_pin(kind: String, enemy) -> void:
 		enemy._next_attack = 1
 		enemy._begin_attack(Vector3.FORWARD)
 	var lane = enemy.telegraph()
-	var reach := float(lane.descriptor().get("body_reach", -1.0))
+	var reach: float = enemy.radius + 1.4 if kind == "chaser" else 2.3 + 1.6
+	var advertised := float(lane.descriptor().get("body_reach", -1.0))
 	var results := []
 	for offset in [-0.05, 0.05]:
 		enemy._landed = false
@@ -242,7 +246,7 @@ func _reach_pin(kind: String, enemy) -> void:
 		else:
 			enemy._check_charge(lane)
 		results.append(enemy._landed)
-	_t.check("%s: the lane's body_reach (%.2f) is the reach its hit test uses" % [kind, reach], reach > 0.0 and results == [true, false])
+	_t.check("%s: the lane's body_reach (%.2f) is the reach its hit test uses" % [kind, reach], is_equal_approx(advertised, reach) and results == [true, false])
 
 
 # A real enemy, the ball held `ahead` metres down its lane: on the first ticks of its run the
@@ -261,6 +265,9 @@ func _live(kind: String, begin: Callable, ahead: float, run_state: String) -> vo
 	var up_ok := true
 	var down_ok := true
 	var down_samples := 0
+	var reach_samples := 0
+	var reach_ok := true
+	var want_reach: float = enemy.hit_reach() if kind == "chaser" else enemy.HIT_REACH
 	var up_samples := 0
 	var near: Node = _game.combat.near_miss
 	for i in 240:
@@ -277,6 +284,8 @@ func _live(kind: String, begin: Callable, ahead: float, run_state: String) -> vo
 		# alone. The watch reads the body one tick apart from this sample, so a 0.6 m band either side
 		# of the reach (about one tick of the body's 33 m/s) is left out.
 		if lane != null and enemy.state == in_run and lane.descriptor().has("body_m"):
+			reach_samples += 1
+			reach_ok = reach_ok and is_equal_approx(float(lane.descriptor()["body_reach"]), want_reach)
 			var gap := absf(ball_at.z - lane.center.z) - float(lane.descriptor()["body_m"])
 			var reach := float(lane.descriptor()["body_reach"])
 			if gap > reach + 0.6:
@@ -292,6 +301,7 @@ func _live(kind: String, begin: Callable, ahead: float, run_state: String) -> vo
 	_t.check("%s: once the run is over the mark is gone" % kind, cleared)
 	_t.check("%s: up on every sampled tick short of the reach (%d sampled)" % [kind, up_samples], up_samples >= 1 and up_ok)
 	_t.check("%s: down on every sampled tick the reach covers the ball, the lane still there (%d sampled)" % [kind, down_samples], down_samples >= 1 and down_ok)
+	_t.check("%s: on every run tick the descriptor's body_reach is the owner's hit reach %.2f (%d sampled)" % [kind, want_reach, reach_samples], reach_samples >= 1 and reach_ok)
 	_reach_pin(kind, enemy)
 	if is_instance_valid(enemy):
 		enemy.free()
