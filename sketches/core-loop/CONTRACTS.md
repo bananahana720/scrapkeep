@@ -343,12 +343,12 @@ During play the screen is four horizontal bands, as shares of the visible height
 | --- | --- | --- |
 | `top` | 0 to 14% | screen titles, the objective line with its core pips, the run status |
 | `toasts` | 15 to 29% | notable facts, at most 2 at once, and the hold-R restart meter |
-| `prompts` | 62 to 84%, 6% side margins | world-attached prompts: reward gates and fabricators |
+| `prompts` | 62 to 84%, 6% side margins | world-attached prompts such as fabricators |
 | `bottom` | 86 to 100% | the HUD: speed, heft and the key hints |
 
-- The middle between `toasts` and `prompts` is the play view and the reticle.
+- The middle between `toasts` and `prompts` is the play view and the reticle. A reward gate's offer is a sign, not a band prompt, and follows the gate-slot rule. Every standing gate in front of the camera, placed or not, owns a slot of the sign room (`ScreenRegions.sign_room`: from under `toasts` to the bottom of `prompts`, inside the `prompts` side margins): from the midpoint to its left neighbour's column to the midpoint to its right neighbour's, an outermost gate's side running to the room's, each shared side inset by half `PROMPT_GAP`. A sign's rectangle lies wholly inside its own slot and holds its gate's column, so it never holds another gate's column, signs never stack and two signs never collide. All of its drawn words lie inside its rectangle, and the draw lays them out from the same measurement that sizes the rectangle. A sign hangs at its gate's crossbar point (6 px under it) or lower, never above it. The ring, the ball's square and the pickup lines move it down inside its slot only, never aside, and a sign is never clamped away from its own column. A fabricator's band prompt yields to a sign. The fit is by the slot's width, best first: the name and its detail wrapped to at most two lines; the name alone; the name alone at the floor size (`UiTokens.BODY`); no sign. A level is kept down to the width its words need, and a better level is taken only when the slot is wider than that need plus 32 px (`SIGN_HYSTERESIS` twice), so a column crossing the screen does not flicker between levels. A sign pushed down 24 px or more draws a leader to its gate, cut at the room's top and at the ring's edge. **A gate shows no sign** in exactly three cases: (1) its column is outside the sign room's sides, or within 12 px of a neighbour's column, so that no slot holds it; (2) its slot is narrower than its name at the floor size; (3) no row at or below its crossbar point is free of the ring, the ball's square and the pickup lines inside the room, at any level. Elsewhere in this document and in the design notes, "every standing gate is named" means every standing gate that none of these three cases stops.
 - A toast whose words are already showing is not repeated; the showing one stays up for another full beat.
-- A module that labels something in the world uses `src/ui/world_prompt.gd` (a `Label`), sets its text and colour, and calls `attach(anchor, offset, reach)`. It never uses a `Label3D` for words. The HUD places every prompt each frame: nearest first, at most 3, under its anchor's column where there is room, clamped inside `prompts`, never overlapping another prompt.
+- A module that labels something in the world uses `src/ui/world_prompt.gd` (a `Label`), sets its text and colour, and calls `attach(anchor, offset, reach)`. It never uses a `Label3D` for words. The HUD places every prompt each frame. A reward gate's sign (`on_anchor`) is placed first, in its gate's slot (above), and is not counted against the cap: every standing gate whose slot can hold its name gets one, up to the four that stand (the three no-sign cases are listed with the gate-slot rule above). Every other prompt is placed nearest first, at most 3 (`MAX_PROMPTS`), under its anchor's column where there is room, clamped inside `prompts`, never overlapping another prompt or a sign.
 - Grey panel pickup lines (`src/ui/pickup_lines.gd`) rise from the top edge of `bottom` at its left, over the speed and cogs readouts, in at most two rows; `presentation/panel_fx.gd` says what each line says and when (its `popped` signal), and a prompt stands clear of the lines while they show (PF-14).
 - Screens (title, class select, death, summary), the field notes and the tuning panel draw only while flow is out of play or the game is paused, when the HUD bands are hidden.
 - Presentation's discovery banner follows the same rule: it belongs in `toasts` or in the middle view, never in `top` or `prompts`.
@@ -435,7 +435,7 @@ The event_kinds shapes (`ring`, `diamond`, `chevron` and the rest) are glyphs, n
 
 ### World prompt parts
 
-A world prompt (`src/ui/world_prompt.gd`) shows an icon and a title of at most three words at range, and adds its detail lines within 12 m of the ball (`DETAIL_RANGE`).
+A world prompt (`src/ui/world_prompt.gd`) shows an icon and a title of at most three words at range, and adds its detail lines within 12 m of the ball (`DETAIL_RANGE`). A reward gate sets its `detail_range` to its reach (`LOST_BEYOND`, 110 m), since a gate is chosen by steering at it from across the yard, so the ball is near every gate in view. The slot's width mostly decides whether its sign shows detail, with two more cases: when no row is free below the crossbar the sign drops a level and loses its detail, and a detail whose wrapped words need a third line (a mark line after a long first line) never shows at any width.
 
 - **Structured.** An owner calls `prompt.set_parts(title, detail, icon)`:
   - `title` is at most three words.
@@ -444,7 +444,7 @@ A world prompt (`src/ui/world_prompt.gd`) shows an icon and a title of at most t
 - **Parsed.** Until the owner calls it, the text it sets is parsed.
   - The first line is the title. Text after a colon, and words past the third, move to the front of the detail. The remaining lines are the detail.
   - The icon is `obj_vault` for a title starting "Vault", `obj_fabricator` for "FABRICATING..." or a detail that names a price in scrap, and `obj_gate` otherwise.
-- **Unchanged.** The prompt's `text` stays what the owner wrote, so owners and tests that read it keep working. The HUD places the drawn size (`shown_extent()`) in the prompts band as before.
+- **Unchanged.** The prompt's `text` stays what the owner wrote, so owners and tests that read it keep working. The HUD places the drawn size (`shown_extent()`) in the prompts band as before. A sign (`on_anchor`) is the exception: its drawn size comes from `fit_sign(slot width)`, and its detail is wrapped to at most two lines inside its rectangle.
 
 ## Threat grammar
 
