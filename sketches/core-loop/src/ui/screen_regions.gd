@@ -10,9 +10,10 @@ extends RefCounted
 #   bottom   the HUD: speed, health, the ability bar, heft and scrap
 # The middle of the screen between toasts and prompts is left to the play view and
 # the reticle, with the contextual key glyphs beside the ball or target and the edge
-# markers at its rim. A sign (a reward gate's offer) hangs from the thing it names in the
-# sign room, the play view and the prompts band together, clear of the ball and the
-# reticle (PF-22). Everything that draws text during play asks this file for its band.
+# markers at its rim. A sign (a reward gate's offer) hangs from the thing it names in its own
+# slot of the sign room (sign_slot), the play view and the prompts band together, clear of the
+# ball and the reticle and moved only down (PF-22). Everything that draws text during play asks
+# this file for its band.
 
 const BANDS := {
 	"top": Vector2(0.0, 0.14),
@@ -23,6 +24,7 @@ const BANDS := {
 const ORDER := ["top", "toasts", "prompts", "bottom"]
 const SIDE_MARGIN := 0.06
 const TOAST_ROWS := 1
+# Band prompts only: a reward gate's sign is not counted, every standing gate gets its own name.
 const MAX_PROMPTS := 3
 const PROMPT_WIDTH := 360.0
 const PROMPT_GAP := 12.0
@@ -58,10 +60,24 @@ static func sign_room(size: Vector2) -> Rect2:
 	return Rect2(band.position.x, top, band.size.x, band.end.y - top)
 
 
-# Where a sign of sign_size goes when its anchor projects to `at`: centred on the anchor's column
-# and hanging just under it, clamped inside the sign room.
-static func clamp_sign(at: Vector2, sign_size: Vector2, size: Vector2) -> Vector2:
+# The slot of the sign room that gate `index` owns, given the screen columns of every standing gate
+# (placed or not): from the midpoint to its left neighbour's column to the midpoint to its right
+# neighbour's, each shared side inset by half PROMPT_GAP, an outermost gate's side running to the
+# room's. Slots never overlap, so no sign can reach another gate's column. An empty rect when the gate's
+# own column is not inside its slot (the gate stands off the room's sides, or too near a neighbour).
+static func sign_slot(columns: Array[float], index: int, size: Vector2) -> Rect2:
 	var room := sign_room(size)
-	var x := clampf(at.x - sign_size.x * 0.5, room.position.x, maxf(room.position.x, room.end.x - sign_size.x))
-	var y := clampf(at.y + SIGN_DROP, room.position.y, maxf(room.position.y, room.end.y - sign_size.y))
-	return Vector2(x, y)
+	var own := columns[index]
+	var lo := room.position.x
+	var hi := room.end.x
+	for i in columns.size():
+		if i == index:
+			continue
+		var mid := (columns[i] + own) * 0.5
+		if columns[i] < own or (columns[i] == own and i < index):
+			lo = maxf(lo, mid + PROMPT_GAP * 0.5)
+		else:
+			hi = minf(hi, mid - PROMPT_GAP * 0.5)
+	if own < lo or own > hi:
+		return Rect2()
+	return Rect2(lo, room.position.y, hi - lo, room.size.y)

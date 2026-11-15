@@ -14,7 +14,6 @@ const UiFonts := preload("res://src/ui/ui_fonts.gd")
 const Parts := preload("res://src/build/parts.gd")
 const RewardGates := preload("res://src/build/reward_gates.gd")
 const ScreenRegions := preload("res://src/ui/screen_regions.gd")
-const AimReticle := preload("res://src/ui/aim_reticle.gd")
 const EventDirector := preload("res://src/world/event_director.gd")
 # Every kind the HUD toasts (ruling cx: a Warden break, a rout and a core toast no longer all fire).
 const EXPECTED_TOASTS: Array[String] = ["run_ended", "player_died", "milestone_won", "scrap_lost", "core_gained", "event_announced", "event_ended", "boss_phase_changed"]
@@ -139,52 +138,40 @@ func _check_prompt_parse() -> void:
 	_report("prompt parse", ok, "gate %s; vault %s; long first line %s; fabricator icon %s" % [gate, vault, long, fab["icon"]])
 
 
-# A reward gate's prompt shows its detail from range (the gate is chosen by steering at it), so three
-# of the widest hang from their gates in the sign room, side by side or stacked in their own columns. Wherever the gates' columns fall, every gate keeps a
-# label: with its detail at 1600x900 and up, and by its name alone when 1280x720 has no room for a third.
+# A reward gate's sign fits a slot of the sign room (ScreenRegions.sign_slot): its detail wraps to at
+# most two lines inside a 360 px slot for every part, the name alone needs far less, and a detail with
+# a mark line that needs a third line shows the name alone. The rectangle always holds its drawn words (the sweep in
+# int_screen_layout_test places real gates).
 func _check_gate_prompts_fit() -> void:
-	var widest := {}
-	var width := 0.0
+	var widest := 0.0
+	var widest_name := ""
+	var name_floor := 0.0
+	var no_detail := []
+	var marked_names := []
 	for id in Parts.ids():
 		var d: Resource = Parts.offer_def(id, [])
 		if d == null:
 			continue
-		var parts: Dictionary = RewardGates.prompt_parts({"name": Parts.display_name(id), "verb": d.verb, "punch": d.punch, "text": d.text, "mark": "* completes Tesla Pylon *"})
+		var offer := {"name": Parts.display_name(id), "verb": d.verb, "punch": d.punch, "text": d.text, "mark": ""}
+		var parts: Dictionary = RewardGates.prompt_parts(offer)
 		var probe := WorldPrompt.new()
 		probe.set_parts(parts["title"], parts["detail"], parts["icon"])
 		probe.on_anchor = true
 		probe.near = true
-		if probe.shown_extent().x > width:
-			width = probe.shown_extent().x
-			widest = parts
+		if probe.sign_need(0) == INF or probe.sign_need(0) > ScreenRegions.PROMPT_WIDTH:
+			no_detail.append(id)
+		elif probe.sign_need(0) > widest:
+			widest = probe.sign_need(0)
+			widest_name = parts["title"]
+		name_floor = maxf(name_floor, probe.sign_need(2))
+		if probe.fit_sign(ScreenRegions.PROMPT_WIDTH) != 0 or probe.text_width() > probe.shown_extent().x + 0.01:
+			no_detail.append(id)
+		offer["mark"] = "* completes Tesla Pylon *"
+		parts = RewardGates.prompt_parts(offer)
+		probe.set_parts(parts["title"], parts["detail"], parts["icon"])
+		var marked := probe.fit_sign(ScreenRegions.PROMPT_WIDTH)
+		marked_names.append(marked if marked <= 1 and probe.shown_lines().size() <= 3 and probe.text_width() <= probe.shown_extent().x + 0.01 else -1)
 		probe.free()
-	var dropped := []
-	var bare := []
-	for size in [Vector2(1280.0, 720.0), Vector2(1600.0, 900.0), Vector2(1920.0, 1080.0)]:
-		# The reticle's ring at the centre is kept clear, as the HUD keeps it.
-		var ring := AimReticle.meter_radius() + AimReticle.METER_WIDTH
-		var reticle := Rect2(size * 0.5 - Vector2.ONE * ring, Vector2.ONE * ring * 2.0)
-		for gap in [0.0, 60.0, 300.0]:
-			var x := 0.0
-			while x <= size.x:
-				var placed: Array[Rect2] = [reticle]
-				var with_detail := 0
-				var columns: Array[float] = [x, x - gap, x + gap]
-				for k in [0, -1, 1]:
-					var prompt := WorldPrompt.new()
-					prompt.set_parts(widest["title"], widest["detail"], widest["icon"])
-					prompt.on_anchor = true
-					prompt.near = true
-					var spot: Rect2 = Hud.prompt_spot(prompt, Vector2(x + gap * k, size.y * 0.4), size, placed, columns)
-					if spot.size != Vector2.ZERO:
-						placed.append(spot)
-						with_detail += int(prompt.near)
-					prompt.free()
-				if placed.size() < 4:
-					dropped.append("%dx%d gap %d x %d" % [int(size.x), int(size.y), int(gap), int(x)])
-				elif with_detail < 3 and size.x >= 1600.0:
-					bare.append("%dx%d gap %d x %d" % [int(size.x), int(size.y), int(gap), int(x)])
-				x += 40.0
-	_report("gate prompts fit", width > 0.0 and dropped.is_empty() and bare.is_empty(),
-		"widest gate prompt %d px (%s); a gate left with no label at %s; a detail given up at 1600x900 or more at %s" % [int(width), widest.get("title", ""), dropped, bare])
+	_report("gate prompts fit", widest > 0.0 and no_detail.is_empty() and marked_names.all(func(l): return l >= 0),
+		"widest detail %d px wide (%s), widest floor-size name %d px; parts whose detail does not fit 360 px in two lines %s; with a mark line every sign still fits in two detail lines or shows the name alone %s" % [int(widest), widest_name, int(name_floor), no_detail, marked_names.all(func(l): return l >= 0)])
 

@@ -203,83 +203,228 @@ func _check_prompts() -> void:
 	_report("prompts in place", gates_open and rects.size() == ScreenRegions.MAX_PROMPTS and not gate_prompts.is_empty() and inside and apart and clear and clear_of_bands,
 		"gates open %s; %d prompts placed at %s; gates in the sign room %s and the other in the prompts band %s: %s, apart %s, gate signs clear of the ball and reticle %s, clear of the top, toast and bottom bands %s"
 			% [gates_open, rects.size(), rects, signs, band, inside, apart, clear, clear_of_bands])
-	# A gate is chosen by steering at it from across the yard, so its prompt says what it gives
-	# (the verb, the effect) at that range, not only beside it; any other prompt keeps the short range.
+	# A gate is chosen by steering at it from across the yard, so the ball is "near" every gate from range,
+	# and a sign shows what it gives (the verb, the effect) wherever its slot is wide enough for it; any
+	# other prompt keeps the short range.
 	var far: Array = gate_prompts.filter(func(p): return ball.distance_to(p.anchor_point()) > WorldPrompt.DETAIL_RANGE)
-	_report("gate prompts say what they give from range", not far.is_empty() and far.all(func(p): return p.near and p.shown_lines().size() >= 2 and String(p.shown_lines()[1]).strip_edges() != "")
+	_report("gate prompts say what they give from range", not far.is_empty() and far.all(func(p): return p.near and p.sign_level() >= 0 and p.sign_level() <= 1 and (p.sign_level() > 0 or p.shown_lines().size() >= 2))
 			and high.all(func(p): return not p.near and is_equal_approx(p.detail_range, WorldPrompt.DETAIL_RANGE)),
-		"%d gate prompts, %d beyond %d m, their lines %s; the other prompt near %s"
-			% [gate_prompts.size(), far.size(), int(WorldPrompt.DETAIL_RANGE), far.map(func(p): return p.shown_lines()), high.map(func(p): return p.near)])
-	# PF-22: each gate wears its own name. Its sign stays in its own gate's column (the gate's column is
-	# inside the sign and no other gate's column is nearer its middle) and either hangs where the anchor
-	# puts it or draws a leader that ends on its own gate. This reads the placed rectangles only, so it
-	# fails on the old band placement.
+		"%d gate prompts, %d beyond %d m, their lines %s and levels %s; the other prompt near %s"
+			% [gate_prompts.size(), far.size(), int(WorldPrompt.DETAIL_RANGE), far.map(func(p): return p.shown_lines()), far.map(func(p): return p.sign_level()), high.map(func(p): return p.near)])
+	# PF-22: each gate wears its own name (_wears_own_name), and the other prompt draws no leader.
 	var cam: Camera3D = _game.camera.cam
 	var columns: Array = gate_prompts.map(func(p): return cam.unproject_position(p.anchor_point()))
 	var own := true
 	var notes: Array = []
 	for i in gate_prompts.size():
 		var p = gate_prompts[i]
-		var wears := _wears_own_name(p, _hud.prompt_rects[p], columns[i], columns, signs, Rect2())
+		var wears := _wears_own_name(p, _hud.prompt_rects[p], columns[i], columns, signs, _hud.part_name.avoid)
 		own = own and wears
 		notes.append("%s at %s, sign %s: wears it %s" % [p.parts()["title"], columns[i], _hud.prompt_rects[p], wears])
 	_report("each gate wears its own name", not gate_prompts.is_empty() and own and high.all(func(p): return not p.leader_end().is_finite()),
 		"%d gate prompts: %s; the other prompt draws a leader %s" % [gate_prompts.size(), notes, high.map(func(p): return p.leader_end().is_finite())])
-	# The gate being steered at projects onto the reticle's ring, and a neighbour stands beside it: the
-	# sign is pushed down off the ring inside its own column, never sideways under the neighbour.
-	for steer in [[1.0, 334.0], [-334.0, 1.0, 334.0]]:
-		var result := _steered_signs(steer)
-		_report("steered gates keep their own signs (%d)" % steer.size(), result["count"] == steer.size() and result["ok"], result["note"])
+	_sweeps()
 
 
-# Whether a placed sign wears its own gate's name: its column is inside the sign and no other column is
-# nearer its middle, and it either hangs where the anchor puts it (6 px under it, kept in the sign room)
-# or its leader ends on its gate, or at the reticle's ring when the ring is in the way, or is too short
-# to draw while the sign stands in the gate's column. `at` is the gate's column on screen.
+# Whether a placed sign wears its own gate's name: its rectangle holds its own column and no other
+# gate's, the column's own is the one nearest its middle, it stands at its crossbar point or below
+# (never above it), and it either hangs where the point puts it (6 px under it, kept in the sign room)
+# or draws a leader that ends on its gate, at the ring's edge when the ring is in the way, or at the
+# room's top when the gate is above it. `at` is the gate's point on screen.
 func _wears_own_name(p, r: Rect2, at: Vector2, columns: Array, signs: Rect2, ring: Rect2) -> bool:
 	var mid := r.get_center().x
 	var nearest := columns.all(func(c): return absf(c.x - mid) >= absf(at.x - mid) - 0.5)
-	var under := at.x >= r.position.x and at.x <= r.end.x and nearest
-	var want_top := clampf(at.y + ScreenRegions.SIGN_DROP, signs.position.y, maxf(signs.position.y, signs.end.y - r.size.y))
-	var hangs := absf(r.position.y - want_top) < 1.0
+	var holds := at.x >= r.position.x and at.x <= r.end.x and columns.all(func(c): return c == at or c.x < r.position.x or c.x > r.end.x)
+	var below := r.position.y >= at.y - 0.01
+	var hangs := absf(r.position.y - maxf(at.y + ScreenRegions.SIGN_DROP, signs.position.y)) < 1.0
 	var end: Vector2 = p.position + p.leader_end() if p.leader_end().is_finite() else Vector2.INF
-	var leads: bool = end.is_finite() and (end.distance_to(at) < 1.0 or (p.aim_cut and ring.has_area() and ring.grow(1.0).has_point(end)))
-	var cut_at_top: bool = p.aim_cut and at.y < signs.position.y
-	return under and (hangs or leads or cut_at_top or r.position.y - at.y < WorldPrompt.LEADER_MIN)
+	var leads: bool = end.is_finite() and (end.distance_to(at) < 1.0 or (p.aim_cut and ((ring.has_area() and ring.grow(1.0).has_point(end)) or absf(end.y - signs.position.y) < 1.0)))
+	return holds and nearest and below and (hangs or leads)
 
 
-# Gates at the given offsets from the screen's centre, anchored just above the reticle, placed one after
-# the other as the HUD does with its real keep-clear list. `ok` when each sign wears its own name.
-func _steered_signs(offsets: Array) -> Dictionary:
-	var size: Vector2 = _hud._screen_size()
-	var signs := ScreenRegions.sign_room(size)
+const SWEEP_TEXTS := [["Rime Rounds", "+6 punch. Shots freeze water."], ["Spare Cell", "+1 special charge. Kills refill it, 12s apart."],
+	["Breaker Drive", "+8 punch, +35% weapon damage. From Wrecking Ball."], ["Storm Mast", "+6 punch, +20% fire rate. From Tesla Pylon."]]
+var _sweep_stats := {"cases": 0, "signs": 0, "none_s3": 0, "none_s4": 0, "none_s5": 0, "bad": [], "name_at_1280_close": 0, "detail_at_1280_close": 0}
+
+
+# Real WorldPrompt gates, anchored in the world at chosen screen points, placed by the HUD's own
+# place_prompts: T1 sweeps 2, 3 and 4 gates over spacings, positions and the steered gate at the reticle
+# at both sizes; T3 slides three gates across the view; T4 stands four.
+func _sweeps() -> void:
+	for node in get_nodes_in_group(ScreenRegions.PROMPT_GROUP):
+		node.remove_from_group(ScreenRegions.PROMPT_GROUP)
+		node.visible = false
+	var original: Vector2i = root.content_scale_size
+	for size in SIZES:
+		root.content_scale_size = Vector2i(size)
+		var screen: Vector2 = _hud._screen_size()
+		var room := ScreenRegions.sign_room(screen)
+		var rows := [screen.y * 0.25, screen.y * 0.47, screen.y * 0.78]
+		var case_index := 0
+		for n in [2, 3, 4]:
+			for spacing in range(0, 401, 20):
+				var lefts: Array = range(-200, int(screen.x) + 1, 40)
+				for k in n:
+					lefts.append(int(screen.x * 0.5) - k * spacing)
+				for left in lefts:
+					var xs: Array = []
+					for k in n:
+						xs.append(float(left + k * spacing))
+					_sweep_case(xs, rows[case_index % 3], screen, room)
+					case_index += 1
+	root.content_scale_size = original
+	var s := _sweep_stats
+	_report("sweep: every shown sign wears its own name, every missing one has its reason", s["cases"] > 0 and s["signs"] > 0 and s["bad"].is_empty(),
+		"%d cases, %d signs checked, %d gates with no sign (outside the room or no slot %d, too narrow %d, no row %d); first failures %s" % [s["cases"], s["signs"], s["none_s3"] + s["none_s4"] + s["none_s5"], s["none_s3"], s["none_s4"], s["none_s5"], s["bad"].slice(0, 4)])
+	_report("sweep: gates 160 to 220 px apart at 1280x720 show", s["detail_at_1280_close"] + s["name_at_1280_close"] > 0, "three gates 160 to 220 px apart: %d signs with detail, %d with the name alone" % [s["detail_at_1280_close"], s["name_at_1280_close"]])
+	_slide_sweep()
+	_four_gates()
+
+
+func _gate_set(xs: Array, y: float, texts_from: int = 0) -> Array:
+	var cam: Camera3D = _game.camera.cam
+	var out: Array = []
+	for i in xs.size():
+		var anchor := Node3D.new()
+		_game.ctx.root.add_child(anchor)
+		anchor.global_position = cam.project_position(Vector2(xs[i], y), 38.0)
+		var prompt := WorldPrompt.new()
+		var text: Array = SWEEP_TEXTS[(i + texts_from) % SWEEP_TEXTS.size()]
+		prompt.set_parts(text[0], text[1])
+		prompt.on_anchor = true
+		prompt.attach(anchor, Vector3.ZERO, 500.0)
+		prompt.detail_range = 500.0
+		anchor.add_child(prompt)
+		out.append(prompt)
+	return out
+
+
+func _free_gates(gates: Array) -> void:
+	for prompt in gates:
+		prompt.get_parent().free()
+
+
+func _sweep_case(xs: Array, y: float, screen: Vector2, room: Rect2) -> void:
+	var gates := _gate_set(xs, y, int(xs[0]) % 3)
+	_hud.place_prompts(screen, true)
+	var cam: Camera3D = _game.camera.cam
+	var columns: Array = gates.map(func(g): return cam.unproject_position(g.anchor_point()))
+	var keep: Array = _hud._sign_keep_clear()
 	var ring: Rect2 = _hud.part_name.avoid
-	var columns: Array = []
-	var floats: Array[float] = []
-	for dx in offsets:
-		columns.append(Vector2(size.x * 0.5 + dx, size.y * 0.47))
-		floats.append(size.x * 0.5 + dx)
-	var taken: Array[Rect2] = []
-	taken.append_array(_hud._sign_keep_clear())
-	var ok := true
+	var s := _sweep_stats
+	s["cases"] += 1
+	for i in gates.size():
+		var g = gates[i]
+		var at: Vector2 = columns[i]
+		var lo := room.position.x
+		var hi := room.end.x
+		for j in gates.size():
+			if j != i:
+				var mid: float = (columns[j].x + at.x) * 0.5
+				if columns[j].x < at.x or (columns[j].x == at.x and j < i):
+					lo = maxf(lo, mid + ScreenRegions.PROMPT_GAP * 0.5)
+				else:
+					hi = minf(hi, mid - ScreenRegions.PROMPT_GAP * 0.5)
+		var tag := "%dx%d %d gates at %s y %d, gate %d" % [int(screen.x), int(screen.y), gates.size(), xs, int(y), i]
+		if _hud.prompt_rects.has(g):
+			var r: Rect2 = _hud.prompt_rects[g]
+			s["signs"] += 1
+			var problems: Array = []
+			if not (at.x >= lo and at.x <= hi): problems.append("column outside its slot")
+			if r.position.x < lo - 0.5 or r.end.x > hi + 0.5 or not room.grow(0.5).encloses(r): problems.append("outside slot or room %s" % [Rect2(lo, room.position.y, hi - lo, room.size.y)])
+			if not _wears_own_name(g, r, at, columns, room, ring): problems.append("does not wear its own name")
+			if g.text_width() > r.size.x + 0.01: problems.append("text %.1f wider than its rectangle" % g.text_width())
+			if keep.any(func(k): return (k as Rect2).intersects(r)): problems.append("on the ring or the ball")
+			for other in gates:
+				if other != g and _hud.prompt_rects.has(other) and (_hud.prompt_rects[other] as Rect2).intersects(r): problems.append("overlaps another sign")
+			var drop := r.position.y - maxf(at.y, room.position.y)
+			if g.leader_end().is_finite() != (drop >= WorldPrompt.LEADER_MIN): problems.append("leader %s with a drop of %.1f" % [g.leader_end().is_finite(), drop])
+			if not problems.is_empty():
+				s["bad"].append("%s: %s" % [tag, problems])
+			if int(screen.x) == 1280 and gates.size() == 3 and absf(xs[1] - xs[0]) >= 160.0 and absf(xs[1] - xs[0]) <= 220.0:
+				if g.sign_level() == 0:
+					s["detail_at_1280_close"] += 1
+				else:
+					s["name_at_1280_close"] += 1
+		else:
+			if at.x < room.position.x or at.x > room.end.x or at.x < lo or at.x > hi:
+				s["none_s3"] += 1
+			elif hi - lo < g.sign_need(2) - 0.001:
+				s["none_s4"] += 1
+			elif _no_row_below(g, at, lo, hi, room, keep):
+				s["none_s5"] += 1
+			else:
+				s["bad"].append("%s: no sign though the slot is %.0f wide and a row is free" % [tag, hi - lo])
+	_free_gates(gates)
+
+
+# Whether no row at or below the crossbar point holds the sign at any level its slot is wide enough for.
+func _no_row_below(g, at: Vector2, lo: float, hi: float, room: Rect2, keep: Array) -> bool:
+	for level in range(0, WorldPrompt.SIGN_LEVELS):
+		if level == 0 and not g.near:
+			continue
+		if not g.apply_level(level, hi - lo):
+			continue
+		var extent: Vector2 = g.shown_extent()
+		var x := clampf(at.x - extent.x * 0.5, lo, hi - extent.x)
+		var y := maxf(at.y + ScreenRegions.SIGN_DROP, room.position.y)
+		while y + extent.y <= room.end.y + 0.5:
+			if not keep.any(func(k): return (k as Rect2).intersects(Rect2(x, y, extent.x, extent.y))):
+				return false
+			y += 2.0
+	return true
+
+
+# T3: three gates 220 px apart, the middle one's column moved 1 px per frame across the whole view.
+# Each sign changes its fit level at most twice and never moves sideways by more than the column did.
+func _slide_sweep() -> void:
+	var screen: Vector2 = _hud._screen_size()
+	var cam: Camera3D = _game.camera.cam
+	var gates := _gate_set([0.0, 220.0, 440.0], screen.y * 0.3)
+	var levels := [[], [], []]
+	var centres := [[], [], []]
+	var worst := 0.0
+	var m := -300
+	while m <= int(screen.x) + 300:
+		for i in 3:
+			gates[i].anchor.global_position = cam.project_position(Vector2(m + (i - 1) * 220.0, screen.y * 0.3), 38.0)
+		_hud.place_prompts(screen, true)
+		for i in 3:
+			if _hud.prompt_rects.has(gates[i]):
+				var level: int = gates[i].sign_level()
+				var centre: float = (_hud.prompt_rects[gates[i]] as Rect2).get_center().x
+				if not levels[i].is_empty() and levels[i][-1] == level and centres[i].size() > 0 and centres[i][-1][0] == m - 1:
+					worst = maxf(worst, absf(centre - centres[i][-1][1]))
+				levels[i].append(level)
+				centres[i].append([m, centre])
+			else:
+				levels[i].append(-1)
+				centres[i].append([m, 0.0])
+		m += 1
+	var changes: Array = levels.map(func(l): return _fit_changes(l))
+	_free_gates(gates)
+	_report("sweep: a column crossing the view changes each sign's fit at most twice and moves it no faster than the column", changes.all(func(c): return c <= 2) and worst <= 1.01,
+		"fit changes per gate %s, the largest step of a sign's middle in a frame %.2f px over %d frames" % [changes, worst, levels[0].size()])
+
+
+# How many times the shown fit level changes along a run of frames (-1 is no sign, not a level).
+func _fit_changes(levels: Array) -> int:
 	var count := 0
-	var notes: Array = []
-	for i in columns.size():
-		var probe := WorldPrompt.new()
-		probe.set_parts("Rime Rounds", "+1 special charge. Kills refill it, 12s apart.")
-		probe.on_anchor = true
-		probe.near = true
-		var spot: Rect2 = Hud.prompt_spot(probe, columns[i], size, taken, floats)
-		if spot.size != Vector2.ZERO:
+	var last := -2
+	for v in levels:
+		if v < 0:
+			continue
+		if last >= 0 and v != last:
 			count += 1
-			probe.position = spot.position
-			probe.size = spot.size
-			Hud.aim_sign(probe, columns[i], size, ring)
-			taken.append(spot)
-			var wears := _wears_own_name(probe, spot, columns[i], columns, signs, ring)
-			# These gates stand 334 px or more apart, so a sign keeps clear of every other gate's column.
-			var intruded: bool = columns.any(func(c): return c != columns[i] and c.x >= spot.position.x and c.x <= spot.end.x)
-			ok = ok and wears and not intruded
-			notes.append("gate at x %d: sign %s wears it %s, leader %s" % [int(columns[i].x), spot, wears, probe.leader_end().is_finite()])
-		probe.free()
-	return {"ok": ok, "count": count, "note": "%d of %d signs placed with the HUD's keep-clear list %s: %s" % [count, offsets.size(), taken.slice(0, 2), notes]}
+		last = v
+	return count
+
+
+# T4: four gates in view are all named.
+func _four_gates() -> void:
+	var screen: Vector2 = _hud._screen_size()
+	var gates := _gate_set([320.0, 600.0, 880.0, 1160.0], screen.y * 0.3)
+	_hud.place_prompts(screen, true)
+	var named: int = gates.filter(func(g): return _hud.prompt_rects.has(g)).size()
+	_free_gates(gates)
+	_report("four gates in view are all named", named == 4, "%d of 4 gates have a sign" % named)
