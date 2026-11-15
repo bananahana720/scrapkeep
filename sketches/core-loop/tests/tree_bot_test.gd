@@ -5,10 +5,12 @@ const ChildRuns := preload("res://tests/trees/child_runs.gd")
 
 # Every class's bot still clears stage 1 with a random upgrade branch: char_bot_test's
 # skipper run for seeds 0 to 5 (Sable, Rivet, Kest, Tarn, Tally, the remembered cannon), with
-# the bot taking one of the offered picks at class select, when stage 1 clears and, if the class rises inside stage 1, at that rise. The six run
-# in child processes at a fixed 90 fps, so the ticks are the real game's. At most one fewer than
-# the machine's cores run at once (3 on a 4 vCPU box, all 6 on the PC): six at once on 4 vCPU took
-# 106 to 122 s a child against the 110 s child cap (w33 gate, main and stage alike).
+# the bot taking one of the offered picks at class select, when stage 1 clears and, if the class rises inside stage 1, at that rise. The first
+# seed then runs a second time and must give the same stage 1 record, so a run that stops replaying is red. The
+# seven run in child processes at a fixed 90 fps, so the ticks are the real game's. At most one fewer than
+# the machine's cores run at once (all 7 on the PC; 3 on a 4 vCPU box, so three batches there): six at once on
+# 4 vCPU took 106 to 122 s a child against the 110 s child cap (w33 gate, main and stage alike). Three batches
+# reach the 300 s limit only if children run to their own 110 s cap, which is already a failure of this test.
 #
 # Evidence limit: one seeded branch per class through stage 1 and the later pick
 # offers; tree_play_test plays all 16 builds per class. Nothing here measures feel.
@@ -31,7 +33,10 @@ func _initialize() -> void:
 	if not replays:
 		failures += 1
 	print("[seed %d replays] first %s; again %s -> %s" % [SEEDS[0], first, again, "PASS" if replays else "FAIL"])
-	for i in SEEDS.size():
+	# Every child is judged, the replay child too: a script error or a different pick in the second run of a
+	# seed is the failure this test is for.
+	for i in results.size():
+		var seed_number: int = SEEDS[i] if i < SEEDS.size() else SEEDS[0]
 		var s := ChildRuns.summary(results[i])
 		var ok: bool = results[i]["code"] == 0 and String(s["verdict"]).ends_with(": PASS") and s["errors"].is_empty()
 		if not ok:
@@ -41,7 +46,7 @@ func _initialize() -> void:
 				print("  ", line)
 		for line in s["errors"]:
 			print("  child: ", line)
-		print("[seed %d random branch] exit %d%s in %.0f s, %s -> %s" % [SEEDS[i], results[i]["code"],
+		print("[seed %d random branch%s] exit %d%s in %.0f s, %s -> %s" % [seed_number, "" if i < SEEDS.size() else ", again", results[i]["code"],
 			" (timed out)" if results[i]["timed_out"] else "", results[i]["seconds"], s["verdict"] if s["verdict"] != "" else "no verdict",
 			"PASS" if ok else "FAIL"])
 	print("tree_bot_test: %s" % ("PASS" if failures == 0 else "FAIL (%d)" % failures))
