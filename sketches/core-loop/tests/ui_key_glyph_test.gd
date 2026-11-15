@@ -63,6 +63,30 @@ func _physics_process(_delta: float) -> bool:
 	_report("harpoon retires", fresh == ["harpoon", "boost"] and "HOOK" in words and after == ["boost"] and glyphs.retired("harpoon"),
 		"fresh profile shows %s with %s; after 3 bites it shows %s" % [fresh, words, after])
 
+	# W1-77: the boost prompt waits for the ball's first fast roll, or BOOST_WAIT_MAX seconds of rolling.
+	var slow: Dictionary = view.duplicate()
+	slow["fast"] = false
+	glyphs.new_run()
+	glyphs.step(0.016, slow)
+	var held: bool = not "boost" in glyphs.shown_verbs()
+	var waited := 0.016
+	while waited < glyphs.BOOST_WAIT_MAX - 0.5:
+		glyphs.step(0.5, slow)
+		waited += 0.5
+	var still: bool = not "boost" in glyphs.shown_verbs()
+	glyphs.step(1.0, slow)
+	var timed_out: bool = "boost" in glyphs.shown_verbs()
+	glyphs.new_run()
+	glyphs.step(0.016, slow)
+	var fast: Dictionary = view.duplicate()
+	fast["fast"] = true
+	glyphs.step(0.016, fast)
+	glyphs.step(0.016, slow)
+	var after_fast: bool = "boost" in glyphs.shown_verbs()
+	_report("boost waits for the first fast roll", held and still and timed_out and after_fast,
+		"held at the drop %s, still held near the wait %s, shown past the wait %s, shown once fast %s" % [held, still, timed_out, after_fast])
+	glyphs.new_run()
+
 	_game.events.line_state_changed.emit("smash_committed", null, Vector3.ZERO, "")
 	_game.events.boosted.emit(Vector3.ZERO)
 	_game.events.mounted.emit(Vector3.ZERO, 5.0)
