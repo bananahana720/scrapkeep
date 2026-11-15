@@ -1,4 +1,4 @@
-# smoke: solo timeout=300s (six bot children at a fixed 90 fps, one fewer at once than the machine has cores)
+# smoke: solo timeout=300s (seven bot children at a fixed 90 fps, one fewer at once than the machine has cores)
 extends SceneTree
 
 const ChildRuns := preload("res://tests/trees/child_runs.gd")
@@ -21,15 +21,23 @@ func _initialize() -> void:
 	var jobs := []
 	for seed_number in SEEDS:
 		jobs.append({"script": "res://tests/trees/tree_bot_run.gd", "args": ["--seed=%d" % seed_number]})
+	# The first seed runs a second time: a seeded bot run must replay tick for tick.
+	jobs.append({"script": "res://tests/trees/tree_bot_run.gd", "args": ["--seed=%d" % SEEDS[0]]})
 	var results := ChildRuns.run(jobs, TIMEOUT_S, _parallel())
 	var failures := 0
-	for i in results.size():
+	var first := _record(results[0])
+	var again := _record(results[SEEDS.size()])
+	var replays := first != "" and first == again
+	if not replays:
+		failures += 1
+	print("[seed %d replays] first %s; again %s -> %s" % [SEEDS[0], first, again, "PASS" if replays else "FAIL"])
+	for i in SEEDS.size():
 		var s := ChildRuns.summary(results[i])
 		var ok: bool = results[i]["code"] == 0 and String(s["verdict"]).ends_with(": PASS") and s["errors"].is_empty()
 		if not ok:
 			failures += 1
 		for line in s["checks"]:
-			if line.begins_with("[stage 1 cleared]") or line.begins_with("[tree picks]"):
+			if line.begins_with("[stage 1 cleared]") or line.begins_with("[stage 1 record]") or line.begins_with("[tree picks]"):
 				print("  ", line)
 		for line in s["errors"]:
 			print("  child: ", line)
@@ -40,7 +48,15 @@ func _initialize() -> void:
 	quit(0 if failures == 0 else 1)
 
 
+# The child's stage 1 record line: the tick the Warden broke at, the heft at exit and the parts.
+static func _record(result: Dictionary) -> String:
+	for line in ChildRuns.summary(result)["checks"]:
+		if line.begins_with("[stage 1 record]"):
+			return line
+	return ""
+
+
 # One core stays free for the parent and the box; a child at a fixed fps gets slower, not wrong, when
 # it shares a core, so the cap is about time.
 static func _parallel() -> int:
-	return clampi(OS.get_processor_count() - 1, 1, SEEDS.size())
+	return clampi(OS.get_processor_count() - 1, 1, SEEDS.size() + 1)

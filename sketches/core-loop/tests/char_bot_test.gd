@@ -4,6 +4,7 @@ const Game := preload("res://src/game.gd")
 const BotDriver := preload("res://tools/bot_driver.gd")
 const RunLog := preload("res://src/core/run_log.gd")
 const T := preload("res://tests/support/t.gd")
+const SimClock := preload("res://src/core/sim_clock.gd")
 
 # loop_bot_test for another class (v2 W3). The feedback loop's bot, end to end
 # (DEMO-SPEC, "Bot runs"): one seeded skipper run
@@ -30,6 +31,10 @@ var _done := false
 
 func _initialize() -> void:
 	_t = T.new(get_script().resource_path.get_file().get_basename())
+	# A seeded run replays only on the tick clock with the run named by its seed, as tools/bot_run.gd sets both.
+	# Until 15 Nov 2026 this run kept the wall clock and a clock-made run id, and one seed broke stage 1's
+	# Warden at 4050 to 6438 ticks across five launches of one commit.
+	SimClock.ticks = true
 	_game = Game.new()
 	_game.test_mode = true
 	root.add_child(_game)
@@ -57,6 +62,7 @@ func _physics_process(delta: float) -> bool:
 	if _done or _game.flow == null:
 		return false
 	if _driver == null:
+		_game.run.run_seed_override = _seed()
 		_driver = BotDriver.new(_game, "skipper", _seed())
 		_game.events.stage_cleared.connect(func(stage: int): _cleared.append(stage))
 		_configure(_driver)
