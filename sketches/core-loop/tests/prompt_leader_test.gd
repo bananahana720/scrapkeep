@@ -44,16 +44,32 @@ func _initialize() -> void:
 		and signs.position.y >= ScreenRegions.rect("toasts", size).end.y, "%s room %s" % [high, signs])
 	var low := ScreenRegions.clamp_sign(Vector2(800.0, 880.0), Vector2(200.0, 60.0), size)
 	_t.check("an anchor in the bottom band keeps the sign above it", low.y + 60.0 <= ScreenRegions.rect("bottom", size).position.y, "%s" % low)
+	var Hud := load("res://src/ui/hud.gd")
 	var sign_prompt := WorldPrompt.new()
 	sign_prompt.set_parts("Impact Driver", "+6 punch")
 	var band_size := sign_prompt.shown_extent()
 	sign_prompt.on_anchor = true
 	_t.check("a sign reads a type step larger than a band prompt", sign_prompt.shown_extent().x > band_size.x and sign_prompt.title_size() > WorldPrompt.TITLE_SIZE)
-	var Hud := load("res://src/ui/hud.gd")
 	# A sign short of the minimum leader length draws none: the column inside it says whose it is.
 	sign_prompt.position = Vector2(700.0, 406.0)
 	sign_prompt.aim_at(Vector2(800.0, 400.0), signs)
 	_t.eq("a leader shorter than the minimum is not drawn", sign_prompt.leader_end(), Vector2.INF)
+	# Planted: a sign standing at the room's very top, its gate above the view, draws nothing up into the
+	# toast and objective bands (CONTRACTS.md, UI regions): the cut leaves a line of no length.
+	sign_prompt.position = Vector2(700.0, signs.position.y)
+	sign_prompt.aim_at(Vector2(800.0, 40.0), signs)
+	_t.check("a sign at the room's top draws no leader", sign_prompt.leader_end() == Vector2.INF and sign_prompt.aim_cut, "%s cut %s" % [sign_prompt.leader_end(), sign_prompt.aim_cut])
+	# A sign pushed below the reticle's ring, its gate above the ring: the leader ends at the ring's
+	# edge rather than running through it.
+	var ring := Rect2(Vector2(740.0, 380.0), Vector2(120.0, 120.0))
+	sign_prompt.position = Vector2(620.0, 520.0)
+	sign_prompt.size = sign_prompt.shown_extent()
+	Hud.aim_sign(sign_prompt, Vector2(800.0, 300.0), size, ring)
+	var tip: Vector2 = sign_prompt.position + sign_prompt.leader_end()
+	_t.check("a leader that would cross the ring ends at its edge", sign_prompt.aim_cut and ring.grow(1.0).has_point(tip) and not ring.grow(-1.0).has_point(tip), "%s" % tip)
+	var open_ring := Rect2(Vector2(100.0, 380.0), Vector2(120.0, 120.0))
+	Hud.aim_sign(sign_prompt, Vector2(800.0, 300.0), size, open_ring)
+	_t.check("a ring off the line leaves the leader whole", not sign_prompt.aim_cut and sign_prompt.position + sign_prompt.leader_end() == Vector2(800.0, 300.0))
 	# A sign pushed past the ball's square and the reticle's ring is placed beside them, not dropped.
 	var ball_square := Rect2(Vector2(740.0, 420.0), Vector2(120.0, 120.0))
 	var pushed: Rect2 = Hud.prompt_spot(sign_prompt, Vector2(800.0, 400.0), size, [ball_square] as Array[Rect2])
@@ -72,10 +88,5 @@ func _initialize() -> void:
 	_t.check("a band prompt keeps its type size", not band_prompt.on_anchor and band_prompt.title_size() == WorldPrompt.TITLE_SIZE and band_prompt.detail_size() == WorldPrompt.DETAIL_SIZE and sample_extent.x > 0.0)
 	band_prompt.free()
 	sign_prompt.free()
-	var other := WorldPrompt.new()
-	var rects := {p: Rect2(p.position, Vector2(200, 40)), other: Rect2(600, 360, 120, 40)}
-	_t.check("a line through another prompt crosses it", Hud.crosses(Vector2(500, 460), Vector2(660, 300), rects, p))
-	_t.check("a line clear of the other prompt does not", not Hud.crosses(Vector2(500, 460), Vector2(520, 300), rects, p))
-	other.free()
 	p.free()
 	quit(_t.verdict())

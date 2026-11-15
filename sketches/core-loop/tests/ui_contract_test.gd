@@ -140,7 +140,7 @@ func _check_prompt_parse() -> void:
 
 
 # A reward gate's prompt shows its detail from range (the gate is chosen by steering at it), so three
-# of the widest hang side by side from their gates in the sign room. Wherever the gates' columns fall, every gate keeps a
+# of the widest hang from their gates in the sign room, side by side or stacked in their own columns. Wherever the gates' columns fall, every gate keeps a
 # label: with its detail at 1600x900 and up, and by its name alone when 1280x720 has no room for a third.
 func _check_gate_prompts_fit() -> void:
 	var widest := {}
@@ -169,12 +169,13 @@ func _check_gate_prompts_fit() -> void:
 			while x <= size.x:
 				var placed: Array[Rect2] = [reticle]
 				var with_detail := 0
+				var columns: Array[float] = [x, x - gap, x + gap]
 				for k in [0, -1, 1]:
 					var prompt := WorldPrompt.new()
 					prompt.set_parts(widest["title"], widest["detail"], widest["icon"])
 					prompt.on_anchor = true
 					prompt.near = true
-					var spot: Rect2 = Hud.prompt_spot(prompt, Vector2(x + gap * k, size.y * 0.4), size, placed)
+					var spot: Rect2 = Hud.prompt_spot(prompt, Vector2(x + gap * k, size.y * 0.4), size, placed, columns)
 					if spot.size != Vector2.ZERO:
 						placed.append(spot)
 						with_detail += int(prompt.near)

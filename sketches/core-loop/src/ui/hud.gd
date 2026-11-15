@@ -1297,6 +1297,11 @@ func place_prompts(size: Vector2, playing: bool) -> void:
 	if pickup_lines.rect().has_area():
 		taken.append(pickup_lines.rect())
 	var sign_keep_clear := _sign_keep_clear()
+	# Every standing gate's column, placed or not: a sign keeps to its own (sign_spot).
+	var columns: Array[float] = []
+	for entry in near:
+		if entry[1].on_anchor:
+			columns.append(cam.unproject_position(entry[2]).x)
 	for entry in near:
 		if placed.size() >= ScreenRegions.MAX_PROMPTS:
 			break
@@ -1305,20 +1310,17 @@ func place_prompts(size: Vector2, playing: bool) -> void:
 		var avoid: Array[Rect2] = taken.duplicate()
 		if prompt.on_anchor:
 			avoid.append_array(sign_keep_clear)
-		var spot := prompt_spot(prompt, cam.unproject_position(entry[2]), size, avoid)
+		var column: Vector2 = cam.unproject_position(entry[2])
+		var spot := prompt_spot(prompt, column, size, avoid, columns)
 		if spot.size == Vector2.ZERO:
 			continue
 		prompt.position = spot.position
 		prompt.size = spot.size
-		prompt.aim_at(cam.unproject_position(entry[2]), ScreenRegions.sign_room(size))
+		aim_sign(prompt, column, size, part_name.avoid)
 		prompt.visible = true
 		placed.append(spot)
 		taken.append(spot)
 		prompt_rects[prompt] = spot
-	# A gate's leader that would cross another prompt's words is not drawn: the column says it.
-	for prompt in prompt_rects:
-		if prompt.leader_end().is_finite() and crosses(prompt.position + prompt.leader_end(), prompt.position + Vector2(prompt.size.x * 0.5, 0.0), prompt_rects, prompt):
-			prompt.aim_at(Vector2.INF, Rect2())
 
 
 # What a sign keeps off, on top of what every prompt keeps off: the ball and the reticle's ring.
@@ -1331,28 +1333,15 @@ func _sign_keep_clear() -> Array[Rect2]:
 	return out
 
 
-# Whether the segment from `a` to `b` runs through any placed prompt but `own`.
-static func crosses(a: Vector2, b: Vector2, rects: Dictionary, own) -> bool:
-	for other in rects:
-		if other == own:
-			continue
-		var r: Rect2 = rects[other]
-		if r.has_point(a) or r.has_point(b):
-			return true
-		var corners := [r.position, Vector2(r.end.x, r.position.y), r.end, Vector2(r.position.x, r.end.y)]
-		for i in 4:
-			if Geometry2D.segment_intersects_segment(a, b, corners[i], corners[(i + 1) % 4]) != null:
-				return true
-	return false
-
-
-# The spot for a prompt whose anchor projects to `at`, clear of `taken`: a sign's under that
-# anchor in the sign room, any other prompt's in the prompts band. A prompt showing its detail
-# that finds no room gives the detail up and is placed by its name alone, as it reads at range: a
-# label with less on it beats no label (three reward gates' details side by side do not always
-# fit 1280x720).
-static func prompt_spot(prompt, at: Vector2, size: Vector2, taken: Array[Rect2]) -> Rect2:
-	var room := ScreenRegions.sign_room(size) if prompt.on_anchor else ScreenRegions.rect("prompts", size)
+# The spot for a prompt whose anchor projects to `at`, clear of `taken`: a sign's in its own gate's
+# column in the sign room (sign_spot), any other prompt's in the prompts band. A band prompt showing
+# its detail that finds no room gives the detail up and is placed by its name alone, as it reads at
+# range: a label with less on it beats no label. `columns` are the screen columns of every standing
+# gate, this one's among them.
+static func prompt_spot(prompt, at: Vector2, size: Vector2, taken: Array[Rect2], columns: Array[float] = []) -> Rect2:
+	if prompt.on_anchor:
+		return sign_spot(prompt, at, size, taken, columns)
+	var room := ScreenRegions.rect("prompts", size)
 	var spot := free_spot(_wanted(prompt, at, size), taken, room)
 	if spot.size == Vector2.ZERO and prompt.near:
 		prompt.near = false
@@ -1362,8 +1351,90 @@ static func prompt_spot(prompt, at: Vector2, size: Vector2, taken: Array[Rect2])
 
 static func _wanted(prompt, at: Vector2, size: Vector2) -> Rect2:
 	var extent: Vector2 = prompt.shown_extent()
-	var place := ScreenRegions.clamp_sign(at, extent, size) if prompt.on_anchor else ScreenRegions.clamp_prompt(at, extent, size)
-	return Rect2(place, extent)
+	return Rect2(ScreenRegions.clamp_prompt(at, extent, size), extent)
+
+
+# A sign stays in its own gate's column: it is centred on the column and moves only up or down, never
+# sideways under a neighbouring gate, so the side cannot flip as the gates cross the screen. It tries,
+# in order: its detail kept inside the room between its neighbours' columns, the same detail centred
+# and stacked above or below its neighbour's sign, its name alone between the columns, its name
+# alone stacked. A sign that finds no row in the room is zero.
+static func sign_spot(prompt, at: Vector2, size: Vector2, taken: Array[Rect2], columns: Array[float]) -> Rect2:
+	var room := ScreenRegions.sign_room(size)
+	var lo := room.position.x
+	var hi := room.end.x
+	for c in columns:
+		if absf(c - at.x) < 1.0:
+			continue
+		if c < at.x:
+			lo = maxf(lo, (c + at.x) * 0.5 + ScreenRegions.PROMPT_GAP * 0.5)
+		else:
+			hi = minf(hi, (c + at.x) * 0.5 - ScreenRegions.PROMPT_GAP * 0.5)
+	var detailed: bool = prompt.near
+	for pass_index in 4:
+		var with_detail := detailed and pass_index < 2
+		var between := pass_index % 2 == 0
+		prompt.near = with_detail
+		var extent: Vector2 = prompt.shown_extent()
+		var span := Vector2(lo, hi) if between else Vector2(room.position.x, room.end.x)
+		if between and extent.x > span.y - span.x:
+			continue
+		var x := clampf(at.x - extent.x * 0.5, span.x, maxf(span.x, span.y - extent.x))
+		var spot := column_spot(Rect2(x, ScreenRegions.clamp_sign(at, extent, size).y, extent.x, extent.y), taken, room)
+		if spot.size != Vector2.ZERO:
+			return spot
+	prompt.near = false
+	return Rect2()
+
+
+# The spot for `want` kept in its own x: its own row if free, else the row just below or above
+# each taken rect, whichever is nearest. A zero rect when nothing fits the room.
+static func column_spot(want: Rect2, taken: Array[Rect2], room: Rect2) -> Rect2:
+	var gap := ScreenRegions.PROMPT_GAP
+	var rows: Array[float] = [want.position.y]
+	for other in taken:
+		rows.append(other.end.y + gap)
+		rows.append(other.position.y - gap - want.size.y)
+	var best := Rect2()
+	var best_cost := INF
+	for y in rows:
+		var spot := Rect2(Vector2(want.position.x, y), want.size)
+		if not room.grow(0.5).encloses(spot) or taken.any(func(r): return r.intersects(spot)):
+			continue
+		var cost := absf(y - want.position.y)
+		if cost < best_cost:
+			best_cost = cost
+			best = spot
+	return best
+
+
+# Points a placed sign's leader at its gate. The line stops at the sign room's top (aim_at) and at
+# the edge of the reticle's ring `ring` when it would run through it: the ring is the player's.
+static func aim_sign(prompt, anchor_screen: Vector2, size: Vector2, ring: Rect2) -> void:
+	prompt.aim_at(anchor_screen, ScreenRegions.sign_room(size))
+	if not prompt.aim.is_finite() or not ring.has_area():
+		return
+	var start: Vector2 = prompt.position + Vector2(prompt.size.x * 0.5, 0.0)
+	var entry := ring_entry(start, prompt.aim, ring)
+	if entry.is_finite():
+		prompt.aim = entry
+		prompt.aim_cut = true
+
+
+# Where the segment from `a` to `b` first meets `ring`, walking from `a`; Vector2.INF when it does not
+# or when `a` is already inside it.
+static func ring_entry(a: Vector2, b: Vector2, ring: Rect2) -> Vector2:
+	if ring.has_point(a):
+		return Vector2.INF
+	var corners := [ring.position, Vector2(ring.end.x, ring.position.y), ring.end, Vector2(ring.position.x, ring.end.y)]
+	var best := Vector2.INF
+	var best_d := INF
+	for i in 4:
+		var hit = Geometry2D.segment_intersects_segment(a, b, corners[i], corners[(i + 1) % 4])
+		if hit != null and a.distance_to(hit) < best_d:
+			best_d = a.distance_to(hit)
+			best = hit
+	return best
 
 
 # The spot for `want` that overlaps nothing already placed and stays in the band: its

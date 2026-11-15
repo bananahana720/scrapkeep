@@ -8,16 +8,14 @@ const FieldNotes := preload("res://src/ui/field_notes.gd")
 const StageDefs := preload("res://src/core/stage_defs.gd")
 const Hud := preload("res://src/ui/hud.gd")
 const AimReticle := preload("res://src/ui/aim_reticle.gd")
-# How far under its anchor a sign's top stands (ScreenRegions.SIGN_DROP, held here so the check reads
-# the same on the old placement).
-const SIGN_DROP := 6.0
 
 # Integration I2, the screen layout from the first windowed visual QA pass:
 #   - the four bands (top, toasts, prompts, bottom) never overlap at 1600x900 or
 #     1280x720, and every HUD piece sits inside its own band at both sizes;
 #   - three identical toasts show once, and the band holds one (v2: the newest wins);
-#   - reward-gate prompts and a prompt whose anchor stands high above the camera are
-#     placed inside the prompts band, apart from one another;
+#   - a reward gate's name hangs from its own gate in the sign room, clear of the ball and the
+#     reticle's ring, and a prompt whose anchor stands high above the camera is placed inside
+#     the prompts band, apart from one another;
 #   - the field notes legend shows each shape's glyph, not its key word;
 #   - the two zones carry the world's map titles.
 
@@ -212,61 +210,76 @@ func _check_prompts() -> void:
 			and high.all(func(p): return not p.near and is_equal_approx(p.detail_range, WorldPrompt.DETAIL_RANGE)),
 		"%d gate prompts, %d beyond %d m, their lines %s; the other prompt near %s"
 			% [gate_prompts.size(), far.size(), int(WorldPrompt.DETAIL_RANGE), far.map(func(p): return p.shown_lines()), high.map(func(p): return p.near)])
-	# PF-22: each gate wears its own name. Its sign hangs from its own gate: the gate's column is inside
-	# the sign and no other gate's column is nearer its middle, and the top stands where the anchor puts it
-	# (6 px under it, kept inside the sign room). Or, pushed aside, its leader ends on its own gate, or is
-	# cut at the room's top when the gate is above the view. A leader shorter than the minimum is not drawn,
-	# and then the column still lies inside the sign. This reads the placed rectangles only, so it runs on
-	# the old placement too and fails there.
+	# PF-22: each gate wears its own name. Its sign stays in its own gate's column (the gate's column is
+	# inside the sign and no other gate's column is nearer its middle) and either hangs where the anchor
+	# puts it or draws a leader that ends on its own gate. This reads the placed rectangles only, so it
+	# fails on the old band placement.
 	var cam: Camera3D = _game.camera.cam
 	var columns: Array = gate_prompts.map(func(p): return cam.unproject_position(p.anchor_point()))
 	var own := true
 	var notes: Array = []
 	for i in gate_prompts.size():
 		var p = gate_prompts[i]
-		var r: Rect2 = _hud.prompt_rects[p]
-		var at: Vector2 = columns[i]
-		var mid := r.get_center().x
-		var nearest := columns.all(func(c): return absf(c.x - mid) >= absf(at.x - mid) - 0.5)
-		var under := at.x >= r.position.x and at.x <= r.end.x and nearest
-		var want_top := clampf(at.y + SIGN_DROP, signs.position.y, maxf(signs.position.y, signs.end.y - r.size.y))
-		var hangs := under and absf(r.position.y - want_top) < 1.0
-		var leads: bool = (p.leader_end().is_finite() and (p.position + p.leader_end()).distance_to(at) < 1.0) \
-			or (p.aim_cut and at.y < signs.position.y)
-		own = own and (hangs or leads or (under and r.position.y - at.y < WorldPrompt.LEADER_MIN))
-		notes.append("%s at %s, sign %s: hangs %s, leads %s" % [p.parts()["title"], at, r, hangs, leads])
+		var wears := _wears_own_name(p, _hud.prompt_rects[p], columns[i], columns, signs, Rect2())
+		own = own and wears
+		notes.append("%s at %s, sign %s: wears it %s" % [p.parts()["title"], columns[i], _hud.prompt_rects[p], wears])
 	_report("each gate wears its own name", not gate_prompts.is_empty() and own and high.all(func(p): return not p.leader_end().is_finite()),
 		"%d gate prompts: %s; the other prompt draws a leader %s" % [gate_prompts.size(), notes, high.map(func(p): return p.leader_end().is_finite())])
-	# The gate being steered at projects at the reticle's ring: its sign is not the one dropped.
-	var steered := _steered_sign()
-	_report("the gate steered at keeps a sign", steered["placed"] and steered["clear"] and steered["leads"],
-		"a gate anchored at the screen centre: placed %s, clear of the reticle and the ball %s, hangs or leads to it %s" % [steered["placed"], steered["clear"], steered["leads"]])
+	# The gate being steered at projects onto the reticle's ring, and a neighbour stands beside it: the
+	# sign is pushed down off the ring inside its own column, never sideways under the neighbour.
+	for steer in [[1.0, 334.0], [-334.0, 1.0, 334.0]]:
+		var result := _steered_signs(steer)
+		_report("steered gates keep their own signs (%d)" % steer.size(), result["count"] == steer.size() and result["ok"], result["note"])
 
 
-# A sign whose gate projects onto the centre of the screen, as the one the ball steers at does. It
-# is pushed off the reticle's ring, not hidden, and still names its gate.
-func _steered_sign() -> Dictionary:
+# Whether a placed sign wears its own gate's name: its column is inside the sign and no other column is
+# nearer its middle, and it either hangs where the anchor puts it (6 px under it, kept in the sign room)
+# or its leader ends on its gate, or at the reticle's ring when the ring is in the way, or is too short
+# to draw while the sign stands in the gate's column. `at` is the gate's column on screen.
+func _wears_own_name(p, r: Rect2, at: Vector2, columns: Array, signs: Rect2, ring: Rect2) -> bool:
+	var mid := r.get_center().x
+	var nearest := columns.all(func(c): return absf(c.x - mid) >= absf(at.x - mid) - 0.5)
+	var under := at.x >= r.position.x and at.x <= r.end.x and nearest
+	var want_top := clampf(at.y + ScreenRegions.SIGN_DROP, signs.position.y, maxf(signs.position.y, signs.end.y - r.size.y))
+	var hangs := absf(r.position.y - want_top) < 1.0
+	var end: Vector2 = p.position + p.leader_end() if p.leader_end().is_finite() else Vector2.INF
+	var leads: bool = end.is_finite() and (end.distance_to(at) < 1.0 or (p.aim_cut and ring.has_area() and ring.grow(1.0).has_point(end)))
+	var cut_at_top: bool = p.aim_cut and at.y < signs.position.y
+	return under and (hangs or leads or cut_at_top or r.position.y - at.y < WorldPrompt.LEADER_MIN)
+
+
+# Gates at the given offsets from the screen's centre, anchored just above the reticle, placed one after
+# the other as the HUD does with its real keep-clear list. `ok` when each sign wears its own name.
+func _steered_signs(offsets: Array) -> Dictionary:
 	var size: Vector2 = _hud._screen_size()
-	var centre := size * 0.5
-	var probe := WorldPrompt.new()
-	probe.set_parts("Probe", "a line of detail")
-	probe.near = true
-	probe.position = Vector2.ZERO
+	var signs := ScreenRegions.sign_room(size)
+	var ring: Rect2 = _hud.part_name.avoid
+	var columns: Array = []
+	var floats: Array[float] = []
+	for dx in offsets:
+		columns.append(Vector2(size.x * 0.5 + dx, size.y * 0.47))
+		floats.append(size.x * 0.5 + dx)
 	var taken: Array[Rect2] = []
-	if _hud.has_method("_sign_keep_clear"):
-		taken.append_array(_hud._sign_keep_clear())
-	var ring := AimReticle.meter_radius() + AimReticle.METER_WIDTH
-	taken.append(Rect2(centre - Vector2.ONE * ring, Vector2.ONE * ring * 2.0))
-	if "on_anchor" in probe:
+	taken.append_array(_hud._sign_keep_clear())
+	var ok := true
+	var count := 0
+	var notes: Array = []
+	for i in columns.size():
+		var probe := WorldPrompt.new()
+		probe.set_parts("Rime Rounds", "+1 special charge. Kills refill it, 12s apart.")
 		probe.on_anchor = true
-	var spot: Rect2 = Hud.prompt_spot(probe, centre, size, taken)
-	probe.position = spot.position
-	probe.size = spot.size
-	probe.aim_at(centre, ScreenRegions.sign_room(size))
-	var clear := not taken.any(func(t): return (t as Rect2).intersects(spot))
-	var leads: bool = (spot.position.x <= centre.x and centre.x <= spot.end.x and absf(spot.position.y - (centre.y + SIGN_DROP)) < 1.0) \
-		or (probe.leader_end().is_finite() and (probe.position + probe.leader_end()).distance_to(centre) < 1.0) \
-		or (spot.position.y - centre.y < WorldPrompt.LEADER_MIN and spot.position.x <= centre.x and centre.x <= spot.end.x)
-	var out := {"placed": spot.size != Vector2.ZERO, "clear": clear, "leads": leads}
-	probe.free()
-	return out
+		probe.near = true
+		var spot: Rect2 = Hud.prompt_spot(probe, columns[i], size, taken, floats)
+		if spot.size != Vector2.ZERO:
+			count += 1
+			probe.position = spot.position
+			probe.size = spot.size
+			Hud.aim_sign(probe, columns[i], size, ring)
+			taken.append(spot)
+			var wears := _wears_own_name(probe, spot, columns[i], columns, signs, ring)
+			# These gates stand 334 px or more apart, so a sign keeps clear of every other gate's column.
+			var intruded: bool = columns.any(func(c): return c != columns[i] and c.x >= spot.position.x and c.x <= spot.end.x)
+			ok = ok and wears and not intruded
+			notes.append("gate at x %d: sign %s wears it %s, leader %s" % [int(columns[i].x), spot, wears, probe.leader_end().is_finite()])
+		probe.free()
+	return {"ok": ok, "count": count, "note": "%d of %d signs placed with the HUD's keep-clear list %s: %s" % [count, offsets.size(), taken.slice(0, 2), notes]}

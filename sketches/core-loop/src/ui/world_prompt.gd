@@ -186,7 +186,7 @@ func aim_at(point: Vector2, room: Rect2) -> void:
 	if not on_anchor or not point.is_finite():
 		return
 	var start := position + _leader_start()
-	if point.y < room.position.y and start.y > room.position.y:
+	if point.y < room.position.y and start.y >= room.position.y:
 		aim = start.lerp(point, (start.y - room.position.y) / (start.y - point.y))
 		aim_cut = true
 
