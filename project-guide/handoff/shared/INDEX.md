@@ -1,6 +1,6 @@
 # Shared reference files
 
-Reference copies that lanes read. The local coordinator owns them. Put a new file in an area folder below, never the root, and add it here. Delete a superseded file; git keeps it.
+Reference copies that threads read. The coordinator owns them (the local session on the PC since 15 Nov 2026, ruling ds). Put a new file in an area folder below, never the root, and add it here. Delete a superseded file; git keeps it.
 
 | File | What it holds |
 | --- | --- |
@@ -16,3 +16,5 @@ Reference copies that lanes read. The local coordinator owns them. Put a new fil
 | [world1/difficulty-plan.md](world1/difficulty-plan.md) | Where each skill band stands, the levers that raise difficulty through movement (ruling cu), and how each is measured |
 | [world1/transitions-audit.md](world1/transitions-audit.md) | Every hand-over in a world 1 run (ruling cv): what the player leaves, what they arrive in, and the fix for each |
 | [world1/effects-critique.md](world1/effects-critique.md) | World 1 effects judged clarity first, then delight: inventory, ranked findings with stills, and how effects scale to worlds 2 and 3 (rows FX-01 to FX-25 in BACKLOG.md) |
+| [world1/gameplay-critique.md](world1/gameplay-critique.md) | World 1 gameplay critique of 12 Nov: ranked findings and the rows they became in BACKLOG.md |
+| [world1/visual-assets-audit.md](world1/visual-assets-audit.md) | World 1 visual assets critique: models, materials, pickups, icons and HUD pieces against the sight persona |

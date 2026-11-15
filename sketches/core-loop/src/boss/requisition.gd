@@ -32,6 +32,11 @@ const SCOOTER_MODEL := "res://assets/models/bosses/boss_brindle_scooter.glb"
 static var model_path := MODEL
 static var scooter_path := SCOOTER_MODEL
 # The model parts the loader needs; a model that lacks any of them is dropped, not half used.
+# The model parts drawn_boxes() lists.
+const BODY_PARTS := ["Hull", "BowRam", "CockpitShield", "CraneMasts", "CraneElbowPort", "CraneElbowStarboard", "DeckDressing",
+	"Armour0", "Armour1", "Armour2", "Armour3"]
+# The drums and hatches on the hull's sides: one box together, in the hull's own frame.
+const FITTING_PARTS := ["DrumL0", "DrumL1", "DrumL2", "DrumL3", "DrumR0", "DrumR1", "DrumR2", "DrumR3", "HatchL", "HatchR"]
 const MODEL_PARTS := ["Hull", "CockpitShield", "CraneMasts", "CranePort", "CraneStarboard", "CableSpans", "MagnetSocketPort",
 	"MagnetSocketStarboard", "MagnetPort", "MagnetStarboard", "Cap0", "Cap1", "Cap2", "Armour0", "Armour1", "Armour2", "Armour3"]
 
@@ -61,6 +66,8 @@ var _model_magnets: Array = []
 var _model_magnet_meshes: Array = []
 var _model_shield: Node3D
 var _pending_hides := {}
+# [node, local AABB] of each drawn part, found once (drawn_boxes).
+var _drawn_parts: Array = []
 
 
 func build(boss) -> void:
@@ -69,6 +76,7 @@ func build(boss) -> void:
 	hull.setup(boss, "hull", "hull", HULL, Vector2(6.0, 3.0))
 	hull.position = Vector3.UP * HULL.y * 0.5
 	add_child(hull)
+	hull.body_boxes = drawn_boxes
 	_box(hull, HULL, Palette.solid(Palette.RUST), Vector3.ZERO)
 	for side in [-1.0, 1.0]:
 		for z in [-3.5, 3.5]:
@@ -130,6 +138,60 @@ static func _cable_mesh() -> ArrayMesh:
 				surface.add_vertex(points[index])
 	surface.generate_normals()
 	return surface.commit()
+
+
+# The ship's drawn body as a short list of oriented boxes, [Transform3D, AABB] pairs, each part's own
+# box in its own frame, so a turned ship keeps tight boxes (one world box around a 9 x 14 m hull grows
+# to 16.5 x 16.5 m at 45 degrees). The loaded model's body parts are listed (BODY_PARTS: the hull and bow
+# ram, the cockpit shield, the crane masts and elbows, the deck dressing, the armour panels; one box for
+# the drums and hatches on the hull's sides) with the crane cables, which are drawn outside every
+# piece's own shape. Without the model: the hull piece's primitives, the cockpit and the crane posts.
+# Left out: the magnets, caps and sockets (strike pieces of their own, in group "enemy"), the name plate
+# and the posture ring. The parts and their local boxes are found once; a call reads each part's live
+# transform and skips a hidden one (a shed armour panel, folded cranes). The hull piece's own box is the
+# 9 x 5 x 14 m placeholder, hidden by render layer when the model loads, so it is not what the ship looks
+# like. player_fx keeps hit words off these boxes (PF-26). Empty before the build.
+func drawn_boxes() -> Array:
+	if _drawn_parts.is_empty():
+		_find_drawn_parts()
+	var out: Array = []
+	for part in _drawn_parts:
+		var node: Node3D = part[0]
+		if is_instance_valid(node) and node.is_visible_in_tree():
+			out.append([node.global_transform, part[1]])
+	return out
+
+
+func _find_drawn_parts() -> void:
+	var nodes: Array = []
+	if model != null:
+		for part in BODY_PARTS:
+			var found := model.find_child(part, true, false)
+			if found != null:
+				nodes.append(found)
+		var hull_mesh := model.find_child("Hull", true, false) as Node3D
+		var fittings := AABB()
+		var any := false
+		for part in FITTING_PARTS:
+			var f := model.find_child(part, true, false) as VisualInstance3D
+			if f != null and hull_mesh != null:
+				var local: AABB = hull_mesh.global_transform.affine_inverse() * f.global_transform * f.get_aabb()
+				fittings = local if not any else fittings.merge(local)
+				any = true
+		if any:
+			# The drums turn with the idle clip, so their box is grown past a drum's corners.
+			_drawn_parts.append([hull_mesh, fittings.grow(0.6)])
+	else:
+		for prim in _prims:
+			var owner_piece = prim.get_parent()
+			if not (owner_piece is Target) or owner_piece == hull:
+				nodes.append(prim)
+	nodes.append_array(_cables)
+	for node in nodes:
+		if node is VisualInstance3D and (node as VisualInstance3D).layers != 0:
+			var box: AABB = (node as VisualInstance3D).get_aabb()
+			if box.size != Vector3.ZERO:
+				_drawn_parts.append([node, box])
 
 
 # Places the ship with its bow along `dir`, on whatever ground is under it.

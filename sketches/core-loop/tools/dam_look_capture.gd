@@ -78,6 +78,10 @@ func _main() -> void:
 	cam.far = 2000.0
 	_game.add_child(cam)
 	cam.make_current()
+	# Terrain3D keeps the detail rings round the camera it took at start (the chase camera, now far off with the
+	# frozen ball), so a free still camera must take them over or the far rings' coarse ground pokes through drapes.
+	for terrain in root.find_children("*", "Terrain3D", true, false):
+		terrain.set_camera(cam)
 	var record := {}
 	for id: String in SHOTS:
 		if not _only.is_empty() and not _only.has(id):

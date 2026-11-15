@@ -206,6 +206,16 @@ func setup(ctx_ref) -> void:
 			events.connect(signal_name, _reset.unbind(argc) if argc > 0 else _reset)
 	events.run_started.connect(func(_class_id: String): _heft_class = 1)
 	_wire_loop_rumble(events)
+	# A shut yard lifts the camera over its rim (chase_camera.gd "locked" row) until it opens.
+	events.world_fact.connect(func(kind: String, at: Vector3):
+		if camera != null and kind == "arena_locked":
+			camera.set_lock(at)
+		elif camera != null and kind == "arena_unlocked":
+			camera.set_lock(null))
+	# A yard also ends on these flow states with no arena_unlocked (stage_locks.gd _on_flow_changed).
+	events.flow_changed.connect(func(state: String):
+		if camera != null and state in ["gates", "launch", "summary", "title", "victory"]:
+			camera.set_lock(null))
 	if ctx.spawner != null and ctx.spawner.has_method("resolve"):
 		resolve_of = Callable(ctx.spawner, "resolve")
 	if ctx.spawner != null and ctx.spawner.has_method("plating_of"):
@@ -229,6 +239,7 @@ func wire_optional() -> void:
 	SignalWire.listen(events, "rocket_jumped", _on_rocket_jumped)
 	SignalWire.listen(events, "part_gained", _on_part)
 	SignalWire.listen(events, "core_gained", _on_core)
+	SignalWire.listen(events, "quick_break", _on_quick_break)
 	SignalWire.listen(events, "harpoon_bit", _on_harpoon_bit)
 	SignalWire.listen(events, "carved", _on_carved)
 	SignalWire.listen(events, "bumped", _on_bumped)
@@ -305,6 +316,8 @@ func _reset() -> void:
 	# A retry restores mass, so the shell follows the restored class.
 	if ctx.run.has_method("heft_class"):
 		_heft_class = int(ctx.run.heft_class())
+	if camera != null:
+		camera.set_lock(null)
 	_squash = 0.0
 	_squash_velocity = 0.0
 	_plant_t = -1.0
@@ -725,6 +738,14 @@ static func part_tint(part_id: String) -> Color:
 func _on_core(_source: String, at: Vector3, _count: int) -> void:
 	if vfx != null:
 		vfx.burst("fountain", at + Vector3.UP * 0.6, EventKinds.color("core_gained"), int(EventKinds.juice("core_gained")["fountain"]))
+
+
+# A quick Warden break's extra arch: an amber fountain from its crossbar and a pulse of the shell.
+func _on_quick_break(_stage: int, _seconds: float, at: Vector3) -> void:
+	pulse(0.12)
+	if vfx != null:
+		var row := EventKinds.juice("quick_break")
+		vfx.burst("fountain", at + Vector3.UP * float(row["rise"]), EventKinds.color("quick_break"), int(row["fountain"]))
 
 
 # --- Dodges and hits taken ------------------------------------------------------------

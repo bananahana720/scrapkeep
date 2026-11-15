@@ -55,6 +55,8 @@ const PATH_SAMPLES := 6
 const PROBE_RADIUS := 1.0
 const RUN_OUT := 6.0
 const BLOCK_PENALTY := 1000.0
+# How far a gate stood past the map's slot row may sit off the slots' mean ground (_slot_plan).
+const SLOT_LINE_DROP := 1.5
 # A gate's offer prompt shows while the gate is this close, the whole time it can be chosen.
 const PROMPT_REACH := LOST_BEYOND
 
@@ -203,23 +205,33 @@ func choose_placement(ball: Vector3, heading: Vector3) -> Dictionary:
 # than slots the outermost slots are used, and a single gate takes the middle one. A map
 # with one slot (the pit, the sinkhole) stands more gates in a row centred on it, across its
 # facing, 2 * SPREAD apart: the ordinary placement put the sinkhole's two gates on its bowl's
-# rim, 4 m up a bank from a ball at the bottom. More gates than several slots fall back to
-# the ordinary placement, which keeps them off a Highdraft island's edge.
+# rim, 4 m up a bank from a ball at the bottom. More gates than several slots stand on the
+# slots' own line, centred on the row at the slots' spacing (a quick Warden break's third part
+# beside the hot-wired one puts four gates on the dam's three slots), unless a spot past the
+# row stands off the slots' ground by more than SLOT_LINE_DROP (a Highdraft island's edge), when
+# the ordinary placement takes them.
 func _slot_plan(count: int) -> Dictionary:
 	var m = _terrain.map() if _terrain.has_method("map") else null
 	if m == null or not "gate_slots" in m or (m.gate_slots as Array).is_empty():
 		return {}
 	var slots: Array = m.gate_slots
-	if count > slots.size() and slots.size() > 1:
-		return {}
 	var facing: Vector3 = slots[0]["facing"]
 	var spots: Array[Vector3] = []
 	if count > slots.size():
-		var centre: Vector2 = slots[0]["at"]
+		var first: Vector2 = slots[0]["at"]
+		var last: Vector2 = slots[-1]["at"]
+		var centre := (first + last) * 0.5
 		var across := facing.cross(Vector3.UP)
-		var side := Vector2(across.x, across.z).normalized()
+		var step := Vector2(across.x, across.z).normalized() * 2.0 * SPREAD
+		if slots.size() > 1:
+			step = (last - first) / float(slots.size() - 1)
+		var ground := 0.0
+		for slot in slots:
+			ground += _terrain.height(slot["at"].x, slot["at"].y) / slots.size()
 		for i in count:
-			var at := centre + side * (float(i) - (count - 1) * 0.5) * 2.0 * SPREAD
+			var at := centre + step * (float(i) - (count - 1) * 0.5)
+			if slots.size() > 1 and absf(_terrain.height(at.x, at.y) - ground) > SLOT_LINE_DROP:
+				return {}
 			spots.append(_terrain.drop_point(at.x, at.y, 0.0))
 		return {"facing": facing, "spots": spots, "climb": 0.0, "distance": 0.0, "blocked": false, "fixed": true}
 	for i in count:
@@ -376,8 +388,8 @@ func _build_gate(at: Vector3, facing: Vector3, offer: Dictionary) -> Node3D:
 		glyph.position = Vector3((float(i) - (ids.size() - 1) * 0.5) * 1.5, HEIGHT + 2.9, 0.0)
 		gate.add_child(glyph)
 	gate.set_meta("pulse", offer["synergy"] != "")
-	# The offer is a screen prompt the HUD keeps in the prompts band (screen_regions.gd),
-	# under the gate's column, so it never climbs into the objective or the toasts.
+	# The offer is a sign the HUD hangs from the gate's crossbar (screen_regions.gd sign room), so
+	# each gate wears its own part and never climbs into the objective or the toasts (PF-22).
 	var label := WorldPrompt.new()
 	label.name = "Prompt"
 	var lines := "%s\n%s" % [offer["headline"], offer["text"]]
@@ -387,11 +399,11 @@ func _build_gate(at: Vector3, facing: Vector3, offer: Dictionary) -> Node3D:
 	var parts := prompt_parts(offer)
 	label.set_parts(parts["title"], parts["detail"], parts["icon"])
 	label.add_theme_color_override("font_color", tint.lerp(Color.WHITE, 0.25))
-	label.attach(gate, Vector3(0.0, HEIGHT + 1.2, 0.0), PROMPT_REACH)
+	label.attach(gate, Vector3(0.0, HEIGHT, 0.0), PROMPT_REACH)
 	# A gate is chosen by steering at it, long before the ball is beside it, so what each gives
 	# shows as far as its name does.
 	label.detail_range = PROMPT_REACH
-	label.leader = true
+	label.on_anchor = true
 	gate.add_child(label)
 	return gate
 

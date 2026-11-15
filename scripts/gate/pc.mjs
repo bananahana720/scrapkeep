@@ -22,6 +22,7 @@ import { isDeepStrictEqual } from "node:util";
 import { fileURLToPath } from "node:url";
 
 import { chunks, gateLists, namedPool, testName } from "./shard.mjs";
+import { checkImportStamp, writeImportStamp } from "../import-stamp.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 const SKETCH = "sketches/core-loop";
@@ -35,6 +36,7 @@ const SLOT_POOL = 4;
 export const WEIGHTS = {
   tests: 6, // a test shard with two lanes is about 6 Godot processes
   bots: 8, // a bot test starts up to 8 children
+  scoped: 16, // the wave gate's bot shard runs two bot lanes, so it waits for the test windows to drain
   "weekly-tests": 6, // the same shard, on the weekly list
   "weekly-bots": 8, // the same bot shard, on the weekly list
   "bands-A": 8, // one test at a time, but its bot tests start up to 8 children
@@ -113,7 +115,7 @@ export function gatePlan({ wave, head, lists, weekly = null, bands, persona = nu
   };
   if (scoped) {
     const names = scopedNames(scoped, lists);
-    add("scoped", "shard", { weightKey: "bots", row: "scoped", args: ["--bots", names.join(",")], names });
+    add("scoped", "shard", { weightKey: "scoped", row: "scoped", args: ["--bots", names.join(","), "--lanes", "2"], names });
     addWeekly();
     add("node", "node", { row: "node tests" });
     add("plan-file", "plan-file", { barrier: true });
@@ -178,9 +180,9 @@ export async function runPlan(steps, { budget, start, isDone = () => null, onExi
   };
   const racers = new Map();
   const solo = (step) => step.exclusive || step.barrier || step.weight > budget;
-  // The first ordinary step behind a waiting head that fits the spare. It never looks past a solo step.
+  // The first ordinary step behind a waiting head that fits the spare and the budget now. It never looks past a solo step.
   const gapStep = (head) => {
-    const spare = spareWhileWaiting([...running].map((entry) => entry.weight), head.weight, budget);
+    const spare = Math.min(spareWhileWaiting([...running].map((entry) => entry.weight), head.weight, budget), budget - used);
     for (let at = 1; at < queue.length && !solo(queue[at]); at++) if (queue[at].weight <= spare) return at;
     return -1;
   };
@@ -506,13 +508,14 @@ export function nodeSummary(logText) {
 
 async function importOnce(wt, env, log) {
   const marker = path.join(wt, "artifacts", "local", "gate-import.done");
-  if (existsSync(marker)) return true;
+  if (existsSync(marker) && checkImportStamp(wt, SKETCH).ok) return true;
   for (let attempt = 1; attempt <= 3; attempt++) {
     const file = `${log}.import-${attempt}`;
     const exit = await runLogged(env.GODOT_BIN, ["--headless", "--path", path.join(wt, SKETCH), "--editor", "--import"], { cwd: wt, env, log: file });
     if (attempt >= 2 && exit === 0 && !/SCRIPT ERROR/.test(readIf(file) ?? "")) {
       mkdirSync(path.dirname(marker), { recursive: true });
       writeFileSync(marker, "ok\n");
+      writeImportStamp(wt, SKETCH);
       return true;
     }
   }

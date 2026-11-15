@@ -60,7 +60,7 @@ const SPECS := [
 	{"key": "discovery", "label": "Discovery", "min": 0.0, "max": 1.0, "step": 1.0, "value": 1.0, "options": ["banner", "cards"]},
 	# The attack warnings' look (threat_grammar.gd LOOKS). "clear" (the default since 13 Nov 2026, a
 	# taste call Andrew can overturn) and "edges" are haze made less obstructive.
-	{"key": "telegraph", "label": "Telegraph", "min": 0.0, "max": 3.0, "step": 1.0, "value": 2.0, "options": ["classic", "haze", "clear", "edges"]},
+	{"key": "telegraph", "label": "Telegraph", "min": 0.0, "max": 4.0, "step": 1.0, "value": 2.0, "options": ["classic", "haze", "clear", "edges", "tape"]},
 	# The ball's look (presentation/ball_looks.gd): Andrew picked the cutaway on 13 Nov 2026 (ruling
 	# dm); gyro and bell are the two he passed over. "today" keeps the lattice shells. The cutaway is
 	# the default since 14 Nov 2026, when he had seen it rendered on his PC.
@@ -84,6 +84,12 @@ const SPECS := [
 	# The survival yard (BACKLOG W1-101, src/world/survival_count.gd): off by default, so no yard is built and
 	# bots, tests and the sitting play the game without it until its band read is in.
 	{"key": "stocktake", "label": "Stocktake", "min": 0.0, "max": 1.0, "step": 1.0, "value": 0.0, "options": ["off", "on"]},
+	# Survey posts (BACKLOG W1-103, src/world/survey_posts.gd): rows of posts to weave through on the floor line.
+	# Off by default, so bots, tests and the sitting ride the line as it was until its read is in.
+	{"key": "posts", "label": "Survey posts", "min": 0.0, "max": 1.0, "step": 1.0, "value": 0.0, "options": ["off", "on"]},
+	# The approach to the boss's bowl (BACKLOG W1-104, src/world/bowl_approach.gd): tag racks, a weighbridge and the
+	# furnace's smoke on the last of the flume's floor line. Off by default, as the survey posts are.
+	{"key": "approach", "label": "Bowl approach", "min": 0.0, "max": 1.0, "step": 1.0, "value": 0.0, "options": ["off", "on"]},
 	# The harpoon (DESIGN-NOTES, "Harpoon and winch"): one mode for every pilot, locking on an enemy inside
 	# harpoon_lock_deg and flying the ball in.
 	{"key": "harpoon_smash_speed", "label": "Harpoon smash speed", "min": 10.0, "max": 45.0, "step": 1.0, "value": 24.0},
@@ -262,6 +268,8 @@ const FLAGS := {
 	"overtime": ["overtime", "option", "launch"],
 	"called-shot": ["called_shot", "option", "launch"],
 	"stocktake": ["stocktake", "option", "launch"],
+	"posts": ["posts", "option", "launch"],
+	"approach": ["approach", "option", "launch"],
 	"final-world": ["final_world", "option", "launch"],
 }
 
@@ -326,6 +334,15 @@ func sitting_earned() -> bool:
 func final_world() -> int:
 	var value := option("final_world")
 	return int(value) if value.is_valid_int() else 0
+
+
+# A player's launch ends the run won at world 1's boss while worlds 2 and 3 are parked (ruling du;
+# Andrew, 14 Nov 2026), as the sitting launch does: the Dig is not ready to be rolled into. `applied`
+# is what apply_cmdline returned, so a --final-world on the command line still wins. Only a played
+# game calls this (game.gd); bots and tests keep the whole table. Drop it when world 2 is unparked.
+func end_players_run_at_world_one(applied: Dictionary) -> void:
+	if not applied.has("final-world") and set_option("final_world", "1"):
+		_launch["final_world"] = _values["final_world"]
 
 
 func world_one() -> bool:

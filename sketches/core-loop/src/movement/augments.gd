@@ -405,6 +405,13 @@ static func commit_smash(kit, tuning, velocity: Vector3) -> void:
 	kit.slamming = false
 
 
+# The body a committed haul is landing on, or null: the one body whose contact pays the landing.
+static func landing_body(kit):
+	if kit == null or not kit.hooked or kit.line_state != LINE_SMASH or not is_instance_valid(kit.anchor_body):
+		return null
+	return kit.anchor_body
+
+
 # Whether Ctrl may commit the haul on the line now: always on an enemy line, only inside the
 # stagger on an anchor line, never on a flail line (the flail hangs behind the ball; its slam is
 # a later unit, POLES-FLAILS section 5).

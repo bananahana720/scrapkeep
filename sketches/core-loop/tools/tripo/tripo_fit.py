@@ -1,6 +1,6 @@
 """Fit a Tripo-generated GLB to an authored Scrapkeep asset's conventions.
 
-blender -b --factory-startup -P tripo_fit.py -- --in tripo.glb --ref authored.glb --out fitted.glb [--yaw DEG] [--max-tris N]
+blender -b --factory-startup -P tripo_fit.py -- --in tripo.glb --ref authored.glb --out fitted.glb [--yaw DEG] [--max-tris N] [--name BodyMeshName] [--match rgb|tone] [--fit height|box|fill] [--radius 0.98] [--slots "fleet_paint;x0,y0,z0,x1,y1,z1=rubber;..."]
 
 What it does, in order:
 1. Reads the authored asset: its bounds, its socket empties, and its palette. The palette is the
@@ -12,7 +12,23 @@ What it does, in order:
    colour stays flat per slot (the colour law); faces take that slot's material (enemy style) or
    that vertex colour on the single material (camp style). The texture and its image are dropped.
 4. Decimates to --max-tris if over, copies the authored sockets, names the mesh after the authored
-   one, and exports a GLB with no images.
+   one (--name picks which, when the authored model has several meshes and the first is not the body),
+   and exports a GLB with no images.
+With --fit fill, each axis is scaled on its own until the mesh fills the authored bounds, which squashes or
+stretches the shape: look at the render. (--fit box scales uniformly until it fits inside them; the default,
+height, matches the authored height only.)
+With --radius, the mesh is then narrowed about the model's up axis (X and Y together, the height stays) until no
+point is farther than that many metres from the axis, and again after the triangle reduction if that moved a point
+out (0, the default, turns it off; a negative value or a non-number stops the script; the FIT line prints the
+exported "reach"): an enemy must stay inside its round hit core, and a
+box-shaped body that fills the authored bounds has corners that the authored shape does not.
+With --slots (an enemy-style model only), the texture no longer decides the slot. An item with no "=" names the
+slot every face takes (put it first: it overwrites every box before it); each "x0,y0,z0,x1,y1,z1=slot" item then gives the faces that lie wholly in that box
+(every corner inside; metres, Blender axes, Z up, after the fit) that slot, later items winning. A face that
+crosses a box edge keeps what it had, so a slot never spills past its box (as assigned; the triangle reduction
+that follows can move an edge slightly). This is for a generated texture whose
+colours land on the wrong authored slot. A slot name the authored model lacks, or a box that holds no face, stops
+the script.
 Prints one JSON line with counts.
 """
 import json, math, sys
@@ -21,10 +37,24 @@ import numpy as np
 from mathutils import Vector, Matrix
 
 argv = sys.argv[sys.argv.index("--") + 1:]
-opt = {"yaw": "0", "max-tris": "0", "fit": "height", "split": ""}
+opt = {"yaw": "0", "max-tris": "0", "fit": "height", "split": "", "match": "rgb", "slots": "", "radius": "0"}
 i = 0
 while i < len(argv):
     opt[argv[i][2:]] = argv[i + 1]; i += 2
+try:
+    radius = float(opt["radius"])
+except ValueError:
+    radius = float("nan")
+if not (radius >= 0.0 and math.isfinite(radius)):
+    raise SystemExit("tripo_fit: --radius takes a number of metres, 0 or more (0 turns it off), not %r" % opt["radius"])
+
+def narrow(mesh):
+    """Scale X and Y about the up axis until no point is farther than --radius from it; returns the factor."""
+    reach = max(math.hypot(v.co.x, v.co.y) for v in mesh.vertices)
+    if radius <= 0 or reach <= radius + 1e-4:
+        return 1.0
+    mesh.transform(Matrix.Diagonal((radius / reach, radius / reach, 1.0, 1.0)))
+    return radius / reach
 
 def srgb(c):
     c = np.clip(np.asarray(c, float), 0, 1)
@@ -47,7 +77,7 @@ ref_meshes = [o for o in ref if o.type == "MESH"]
 rmn, rmx = bounds(ref_meshes)
 sockets = [(o.name, o.matrix_world.translation.copy()) for o in ref if o.type == "EMPTY" and o.parent is not None]
 root_name = next((o.name for o in ref if o.parent is None), "root")
-mesh_name = next((o.name for o in ref_meshes if o.parent is not None and o.parent.type != "MESH"), ref_meshes[0].name)
+mesh_name = opt.get("name") or next((o.name for o in ref_meshes if o.parent is not None and o.parent.type != "MESH"), ref_meshes[0].name)
 pivots = {o.name: o.matrix_world.translation.copy() for o in ref_meshes}
 mats = []
 for o in ref_meshes:
@@ -113,7 +143,10 @@ mn, mx = bounds([ob])
 ext = mx - mn; rext = rmx - rmn
 s = (rext.z / max(ext.z, 1e-6)) if opt["fit"] == "height" else min(rext[k] / max(ext[k], 1e-6) for k in range(3))
 rc = (rmn + rmx) / 2; c = (mn + mx) / 2
-ob.data.transform(Matrix.Translation(Vector((rc.x, rc.y, rmn.z))) @ Matrix.Scale(s, 4) @ Matrix.Translation(Vector((-c.x, -c.y, -mn.z))))
+sv = [rext[k] / max(ext[k], 1e-6) for k in range(3)] if opt["fit"] == "fill" else [s, s, s]
+ob.data.transform(Matrix.Translation(Vector((rc.x, rc.y, rmn.z))) @ Matrix.Diagonal((*sv, 1.0)) @ Matrix.Translation(Vector((-c.x, -c.y, -mn.z))))
+k = narrow(ob.data)
+sv = [sv[0] * k, sv[1] * k, sv[2]]
 
 # Weld the vertices Tripo split along its UV seams; a vertex-coloured asset needs no UVs, so they
 # go first and the vertex count drops to what the colour borders need.
@@ -132,6 +165,15 @@ for sl in ob.material_slots:
     if img: break
 pal = np.array([p[0] for pal_i, p in enumerate(palette)]) if palette else np.zeros((1, 3))
 pal_s = srgb(pal)
+LUMA = np.array([0.2126, 0.7152, 0.0722])
+
+
+def tone_dist(col):
+    # --match tone: compare the tint first and the lightness at a quarter weight, so a lighter or darker shade of
+    # an authored colour still lands on that colour (a sky-blue wall on the authored teal, not on the pale grey).
+    dl = pal_s @ LUMA - float(np.asarray(col) @ LUMA)
+    dc = (pal_s - (pal_s @ LUMA)[:, None]) - (np.asarray(col) - float(np.asarray(col) @ LUMA))
+    return 0.25 * dl ** 2 + np.sum(dc ** 2, axis=1)
 face_slot = np.zeros(len(me.polygons), int)
 if img is not None and me.uv_layers:
     W, H = img.size
@@ -149,7 +191,7 @@ if img is not None and me.uv_layers:
             x = min(W - 1, max(0, int((u.x % 1.0) * W))); y = min(H - 1, max(0, int((u.y % 1.0) * H)))
             cols.append(px_s[y, x])
         col = np.median(np.array(cols), axis=0)
-        face_slot[p.index] = int(np.argmin(np.sum((pal_s - col) ** 2, axis=1)))
+        face_slot[p.index] = int(np.argmin(tone_dist(col) if opt["match"] == "tone" else np.sum((pal_s - col) ** 2, axis=1)))
 # Two passes of neighbour-majority smoothing: palette snapping turns painted rust spots and bolt
 # dots into one-face speckles, which read as noise at game distance.
 bm = bmesh.new(); bm.from_mesh(me); bm.faces.ensure_lookup_table()
@@ -163,6 +205,32 @@ for _ in range(int(opt.get("smooth", "2"))):
                 new[f.index] = vals[cnt.argmax()]
     face_slot = new
 bm.free()
+if opt["slots"]:
+    if style != "slots":
+        raise SystemExit("tripo_fit: --slots needs an authored model with several material slots")
+    names = [m.name for m in keep_mats]
+    vco = np.array([v.co[:] for v in me.vertices])
+    corners = [list(q.vertices) for q in me.polygons]
+    for item in [x.strip() for x in opt["slots"].split(";") if x.strip()]:
+        box, _, name = item.rpartition("=")
+        if name not in names:
+            raise SystemExit("tripo_fit: --slots names slot %s, the authored model has %s" % (name, names))
+        k = next(i for i, q in enumerate(palette) if q[1] == names.index(name))
+        if not box:
+            face_slot[:] = k
+            continue
+        try:
+            b = [float(x) for x in box.split(",")]
+        except ValueError:
+            b = []
+        if len(b) != 6:
+            raise SystemExit("tripo_fit: --slots needs six numbers and a slot name, got " + item)
+        lo, hi = np.minimum(b[:3], b[3:]), np.maximum(b[:3], b[3:])
+        vin = np.all((vco >= lo) & (vco <= hi), axis=1)
+        inside = np.array([bool(vin[c].all()) for c in corners])
+        if not inside.any():
+            raise SystemExit("tripo_fit: --slots box %s holds no whole face" % box)
+        face_slot[inside] = k
 me.materials.clear()
 for m in keep_mats:
     me.materials.append(m)
@@ -189,6 +257,8 @@ if cap and tris > cap:
     md = ob.modifiers.new("dec", "DECIMATE"); md.ratio = cap / tris
     bpy.ops.object.modifier_apply(modifier=md.name)
     tris = sum(len(p.vertices) - 2 for p in me.polygons)
+    narrow(me)  # the reduction can move a point out again; the radius is a promise about the exported mesh
+reach_out = round(max(math.hypot(v.co.x, v.co.y) for v in me.vertices), 4)
 ob.name = mesh_name; me.name = mesh_name
 root = bpy.data.objects.new(root_name, None); bpy.context.scene.collection.objects.link(root)
 ob.parent = root
@@ -235,6 +305,6 @@ fwd = {}
 for k in used:
     cs = [p.center for p in me.polygons if p.material_index == k]
     if cs: fwd[k] = [round(sum(c[a] for c in cs) / len(cs), 2) for a in range(3)]
-print("FIT " + json.dumps({"out": opt["out"], "tris": tris, "verts": len(me.vertices), "style": style,
+print("FIT " + json.dumps({"out": opt["out"], "tris": tris, "reach": reach_out, "verts": len(me.vertices), "style": style,
                           "palette": len(palette), "slots_used": used, "had_texture": img is not None,
-                          "scale": round(s, 4), "sockets": len(sockets), "parts": parts, "slot_centroids_blender_xyz": fwd}))
+                          "scale": [round(float(x), 4) for x in sv], "sockets": len(sockets), "parts": parts, "slot_centroids_blender_xyz": fwd}))

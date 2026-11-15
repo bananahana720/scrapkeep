@@ -6,19 +6,34 @@ Heads and open pull requests change by the hour, so read them live (`git ls-remo
 
 | Fact | Value |
 | --- | --- |
-| Last promotion | wave 39, main cd095277, #933 |
-| Open stage | stage/alpha-w40 |
-| Live board | #934 |
-| Red team | line-rider |
-| Compare against | gate/w39-bfa6cc0c/ |
+| Last promotion | wave 40, main 8d92764c, #1011 |
+| Open stage | stage/alpha-w41 |
+| Live board | #1012 |
+| Red team | speedrunner |
+| Compare against | gate/w40-bd5b30f5/ |
 
 The board is the GitHub issue in the table. It also holds the file fences of the open pull requests. The stage log (`git log --first-parent origin/stage/alpha-w<N>`) is the stack queue. "Compare against" names the receipts the next full gate reads its base values from, published on a `scratch/gate-receipts-<folder>` branch. The Gate updates the table as its first commit on a new stage: `node scripts/wave-state.mjs --write --board <new board issue> --compare <receipts folder>` (the red team persona rotates by itself).
 
-## Now (12 Nov 2026)
+## Now (15 Nov 2026, resumed on the PC)
 
-Wave 39 is on `main` (cd095277, pull request 933): CLEAN on bfa6cc0c after two load timeouts passed 3 of 3 alone; the receipt is on the wave 39 board. Its red team filed three stage 3 Warden blocker candidates and four majors as findings (ruling cn); the replays run on the PC and each one that reproduces becomes a PLAY-FINDINGS row. `stage/alpha-w40` is cut at ef3bd72e, whose tree equals `cand/w40` f1291acd: the first build wave from the three world 1 critiques (UI reads, kill and hit looks, sounds, crew heads, models, the earned sitting launch set). Waiting on paired PC band reads before they stack: the Brindle reel, chain pay with the blazing cache, and the dam incline fix. The difficulty stack still lands last in the sprint. Rulings dj (the four look rebuilds before the sitting) and dk (the sitting run ends won at Brindle) were added on 12 Nov.
+**Resumed 15 Nov 02:30Z.** One local Claude Code session on Andrew's PC is coordinator and Gate (ruling ds); the claude.ai project threads stay stopped and this session finishes their open pull requests. The plan Andrew approved runs five waves. Wave 41 settles the queue below and adds the rows that decide "world 1 done" to `npm run sketch:world1-bands -- --sitting` (ruling dt). Wave 42 is clarity: warnings, the HUD and the camera. Wave 43 is sound, difficulty and frame time. Wave 44 is map sites and bodies. Wave 45 is the sitting build. The pause of 14 Nov 18:30Z is over. Wave 40 is on `main` (8d92764c, pull request 1011). `stage/alpha-w41` is open; read its head with `git log --first-parent origin/stage/alpha-w41`.
 
-Done for the sitting is counted: no major or minor row left in [PLAY-FINDINGS.tsv](PLAY-FINDINGS.tsv), a clean release gate, 4080 frames in budget, zero placeholders, and that build installed on the PC. Andrew has played only the dam (wave 26 build, 30 Oct) and has marked no area yet.
+Stacked on w41 since the cut: 1007, 1008, 1010, 1013, 923, 886, 1015, 1016 (rulings dn, do and dp; dq came with it), 1014, 1017, 1019, 1020, 1021, 1022, 1009 (survival forms and survey posts behind flags), 1023, 1025 (far props keep their shape), 1024, 1028 (bowl approach behind `--approach`, dam yard row moved), 1026, 1029, 1030, 957 (dam fight bowl), 1032 (shut-yard camera lift), the import stamp (LESSONS 71), 845 (the difficulty stack), 1036 (docs cleanup), 1031, 1034, 1018 (ruling du), 1035, the done-read table (ruling dt), 1027 (same-tick contact order), 1041 (warnings stay up until the body reaches the ball, PF-16), 1040 (each reward gate wears its own name, PF-22), the bot_switch_replay_test span fix, 1042 (hit words stay off foes, marks and damage numbers, PF-26) and 1033 (dam kicker moved past the shut yard). Every PC look and band read for those passed or went back to its thread as a follow-up.
+
+845 passed its PC band read at the base tier and HARD rungs 2 and 5, harder on every arm (receipts on the board issue). One flag for the gate: at rung 2 learner5 clears rose 19 to 22 while its hull lost rose 1248 to 2169, which passes the rule but is worth a look.
+
+Open pull request held out of wave 41:
+1. **948** (critique rows W1-63/77, W1-65 and W1-67, 12aba88a): held. The 72-seed band read of 15 Nov (stage 7ab5aee0 against the stage plus 948) shows the dam easier for Learner rung 1: clears 40 to 50, deaths 17 to 7, median hull lost 107 to 77. Rung 5 moved 56 to 59 clears. Every death is at the dam, so the flume Warden row (W1-67) is not the cause. Next: a 72-seed Learner rung 1 read of the stage plus W1-65 alone and the stage plus W1-63/77 alone; the rows that are equal or harder land in wave 42, and W1-66 opens as its own pull request after that.
+
+Band read of 15 Nov for the pull requests that stacked (72 seeds per band): 1033 moved Learner rung 1 clears 40 to 47 and deaths 17 to 10, and rung 5 clears 56 to 54 with median hull lost 49 to 62; the rungs move in opposite directions inside the noise, read as equal. 1027 gave 95 of 96 seeds identical over 24 seeds per band. PF-16, PF-22 and PF-26 have their fixes on the stage and keep their rows until the wave 42 film read. Two stalled runs from the read are PF-48 (flume exit) and PF-49 (Brindle fight never ends).
+
+Wave 41 reds, settled on the idle PC on 15 Nov (fab0aa76): posture_bands_reactor_test is re-pinned (small 73.09 s, grown 31.34 s, two identical runs; the ratio check now passes at 2.33) and its ledger row is gone. Small 73.1 s is 3 s over the 45 to 70 s ordinary-pilot ruling; ruling cu is the newer one, so it goes to Andrew at the sitting. combat_rogue_test failed 3 of 3 alone because its honesty check counted a silt boil that reached the held ball; the check now counts only the rogue's own hits (4 of 4 green, a planted fault caught) and its row is gone. world1_run_test passed 2 of 2 alone (95 checks) and its row is gone. bot_park_trace_repeat_test passed alone in 428 s. aerial_reach_test, telegraph_held_looks_test and vx_wire_test failed once each under load and pass alone; each has a flake row. Owed follow-ups: the flume trough culls its legs at 120 m and shows as a slab (POI thread); bowl approach look notes (gantry leg crowding the camera, plain weighbridge plate, small camp tally post, survey post contrast); the Tripo hooker barrel reads a little like a small robot at 22 m.
+
+Follow-ups from the three clarity fixes, for wave 42: hostile-warning rectangles keep a near-plane artefact and hold back most hit words; Brindle's magnets, sockets and caps are avoided by placeholder shapes; a mark made by the hit itself is drawn after the word; a word's stamp-in overshoot is not counted; no test pins the safe-area rule on the new word spots. Warnings: the swarm dive, the rogue crane sweep and haul, the landing crack ring timing, escape precedence and a sideways-shoved chaser are not yet held to the body-arrival rule, and the near-miss award timing (0.25 s) is an owner call. Gate names: 5 to 7 percent of visible gates at opening spacing get no sign (an icon-only level would close it), and the steered gate can lose its sign at 1280x720.
+
+Every band read and bot run must start from a worktree prepared with `node scripts/import-stamp.mjs import`; never copy a `.godot` between worktrees (LESSONS 71).
+
+Done for the sitting is one read: `npm run sketch:world1-bands -- --sitting --head <sha>` prints READY ([GATE.md](GATE.md), "The world 1 done read"; ruling dt). Its gate rows cover all 11 areas: no blocker, major or minor world 1 row left in [PLAY-FINDINGS.tsv](PLAY-FINDINGS.tsv) and no undecided `check` row, a clean release gate, 4080 frames in budget, zero placeholders, the difficulty targets of ruling cu, and that build installed on the PC. Each row that reads a receipt names a planted fault its check must catch. What only Andrew can judge is listed beside them and is never counted as passed. The first read, on 15 Nov, is NOT READY on 31 gate rows. Andrew has played only the dam (wave 26 build, 30 Oct) and has marked no area yet.
 
 **After each promotion,** in this order: (1) the Gate cuts the next stage at the new main, opens its board and runs `node scripts/wave-state.mjs --write` as above, so the first pull request on the new stage passes `check:docs`; (2) the deep-modules sweep runs on the promoted main ([DEEP-SWEEP.md](DEEP-SWEEP.md)) and never holds a promotion; (3) the merged-branch list goes to Andrew's PC prune script (the cloud proxy refuses `git push --delete`). Past promotions: `git log --first-parent origin/main`.
 

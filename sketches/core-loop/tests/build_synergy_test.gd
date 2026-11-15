@@ -175,7 +175,8 @@ func _check_alpha_parts() -> void:
 	# 2026-10-15 (wave 14 SQ19b): 45 parts (kit commons, four shelf parts, Tally's winch_pawl, the
 	# seventh part with a pitch); was 19 parts, 19 distinct ids and 6 with a pitch.
 	# 2026-10-27 (wave 20 cobalt rung): 49 parts, adding four catalogue rares; was 45 and 45.
-	_report("alpha parts", bad.is_empty() and AlphaDefs.PARTS.size() == 49 and distinct.size() == 49 and added.size() == 7,
+	# 2026-11-12 (W1-64): Spare Cell gains a kill refill, two numbers, so it leaves the pitch parts; was 7.
+	_report("alpha parts", bad.is_empty() and AlphaDefs.PARTS.size() == 49 and distinct.size() == 49 and added.size() == 6,
 		"%d parts by verb %s, %d with a pitch %s; problems %s" % [AlphaDefs.PARTS.size(), families, added.size(), added, bad])
 
 

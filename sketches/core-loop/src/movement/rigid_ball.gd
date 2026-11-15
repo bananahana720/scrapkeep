@@ -53,6 +53,11 @@ var placing := false
 const CARVE_MIN_S := 0.3
 var _carve_s := 0.0
 var _bump_wait := 0.0
+# Enemy contacts by instance id: in the contact list last tick, first met this tick and not yet
+# reported (in order), and reported this tick.
+var _touching := {}
+var _met: Array = []
+var _told := {}
 
 
 func setup(tuning_ref, state_ref) -> void:
@@ -149,6 +154,7 @@ func _physics_process(_delta: float) -> void:
 
 
 func _integrate_forces(body_state: PhysicsDirectBodyState3D) -> void:
+	_note_enemies(body_state)
 	if _pending_position != null:
 		body_state.transform = Transform3D(body_state.transform.basis, _pending_position)
 		_pending_position = null
@@ -319,6 +325,38 @@ func _publish_kit(body_state: PhysicsDirectBodyState3D) -> void:
 			kit_fact.emit(fact[0], fact[1])
 
 
+# The enemies the ball first meets this tick, put in an order the game's own state sets: the
+# body a committed haul is landing on, then the nearest, then scene-tree order. The physics
+# server lists a tick's contacts in the order its worker threads found them, and body_entered
+# follows that list, so two launches of one seed could report the same two bodies in either
+# order; a haul through a pair then landed on its body or was spent on the bystander by chance.
+func _note_enemies(body_state: PhysicsDirectBodyState3D) -> void:
+	var now := {}
+	_met.clear()
+	_told.clear()
+	for i in body_state.get_contact_count():
+		var body = body_state.get_contact_collider_object(i)
+		if not (body is Node3D and body.is_in_group("enemy")) or now.has(body.get_instance_id()):
+			continue
+		now[body.get_instance_id()] = true
+		if not _touching.has(body.get_instance_id()):
+			_met.append(body)
+	_touching = now
+	if _met.size() > 1:
+		_met.sort_custom(Contact.meets_first.bind(body_state.transform.origin, Augments.landing_body(kit)))
+
+
+# body_entered arrives once per new body, right after _integrate_forces, in the server's order.
+# The first one reports every enemy met this tick in the ball's order; the rest find theirs told.
+# A body the server names that the ball's own list missed (a boss whose contact moved between
+# two of its shapes) is told when its signal arrives, after the ordered ones.
 func _on_body_entered(body: Node) -> void:
-	if _active and body.is_in_group("enemy"):
-		enemy_touched.emit(body, Contact.normal_between(global_position, body.global_position))
+	var met := _met.duplicate()
+	_met.clear()
+	if not _told.has(body.get_instance_id()) and not met.has(body):
+		met.append(body)
+	for enemy in met:
+		if not _active or not is_instance_valid(enemy) or not enemy.is_in_group("enemy"):
+			continue
+		_told[enemy.get_instance_id()] = true
+		enemy_touched.emit(enemy, Contact.normal_between(global_position, enemy.global_position))

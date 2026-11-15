@@ -69,6 +69,12 @@ var _flashed := false
 # calls land() at each hit itself (the jolt layer's pulses), so no landing marks a moment that
 # cannot hurt.
 var lands_on_live := true
+# LANE: a crew body that runs its lane after the warning goes live (the chaser's lunge, the
+# miniboss's charge). run_body() says how far along the lane, from its start, the body's centre is
+# and how close it must come to hurt; only the drawing and the dodge watch's way-out read it, so the
+# danger mark and the way-out paint stay up until the body reaches the ball. -1 reach: no running body.
+var _body_m := 0.0
+var _body_reach := -1.0
 # Driven: the motion marks were built once and each frame only moves them (E1). Every type
 # except a wave is driven; a wave is driven only when it is full and its area layer is not
 # "motion" (Threat.can_drive), so a partial wave or a motion wave is repainted instead.
@@ -254,6 +260,13 @@ func land() -> void:
 	Threat.flash(get_parent(), descriptor(), center.y, LIFT, _painter.ground if floor else Callable(), _painter.ground_many if floor else Callable())
 
 
+# The owner's one call per tick: its body's centre is `along` metres down the lane and hurts a ball
+# within `reach` of it (the same distance its own hit test uses). contains() and the damage are untouched.
+func run_body(along: float, reach: float) -> void:
+	_body_m = along
+	_body_reach = reach
+
+
 # The committed numbers the drawing reads: the same fields contains() reads.
 func descriptor() -> Dictionary:
 	var d := {"type": type, "tone": color, "centre": center, "reach": reach_up, "progress": progress, "live": progress >= 1.0}
@@ -265,6 +278,9 @@ func descriptor() -> Dictionary:
 			d.merge({"form": "radial", "r_in": 0.0, "r_out": radius, "a0": mid - half_angle, "a1": mid + half_angle, "pull": true})
 		Shape.LANE:
 			d.merge({"form": "lane", "dir": dir, "back": 0.0, "length": length, "half_width": width * 0.5})
+			if _body_reach >= 0.0:
+				d["body_m"] = _body_m
+				d["body_reach"] = _body_reach
 	if aerial:
 		d["aerial"] = true
 	if type == Threat.Type.WAVE:

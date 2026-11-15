@@ -82,6 +82,13 @@ test("the scheduler never runs above the budget, skips done steps, and keeps exc
   assert.deepEqual(log.started, ["a", "b", "c", "d", "huge", "e", "x", "after"], "admission follows the plan's order");
 });
 
+test("a step that takes the whole budget keeps later steps out while a lighter step waits behind it", async () => {
+  const steps = [fake("full", 16, { ms: 30 }), fake("wait", 6, { ms: 10 }), fake("gap", 8, { ms: 10 })];
+  const { log, run } = harness(16, steps);
+  await run();
+  assert.equal(log.peak, 16, "the gap rule admits only what fits the budget now");
+});
+
 test("a scheduler that honours weights peaks at 14 on this input, and one that starts everything does not", async () => {
   const steps = [fake("a", 6, { ms: 10 }), fake("b", 6, { ms: 30 }), fake("c", 6, { ms: 30 }), fake("d", 8, { ms: 30 })];
   const { log, run } = harness(16, steps);
@@ -325,7 +332,7 @@ test("the wave gate plan (--scoped) is the three windows, one scoped shard by na
   const waveLists = { ...lists, bots: [...lists.bots, ...SCOPED_ALWAYS].sort() };
   const steps = gatePlan({ wave: 37, head, lists: waveLists, weekly: lists.weekly, bands: null, persona: "cautious", scoped: ["bot_c_test", "bot_a_test.gd", "w_bot_test", "a_one_test"] });
   assert.deepEqual(steps.map((step) => step.id), ["tests-1-350", "tests-351-700", "tests-701-1049", "scoped", "weekly-tests", "weekly-bots", "node", "plan-file"]);
-  assert.deepEqual(steps.find((step) => step.id === "scoped").args, ["--bots", "bot_a_test,bot_c_test,w_bot_test,world1_run_test"]);
+  assert.deepEqual(steps.find((step) => step.id === "scoped").args, ["--bots", "bot_a_test,bot_c_test,w_bot_test,world1_run_test", "--lanes", "2"]);
   assert.throws(() => gatePlan({ wave: 37, head, lists: waveLists, bands: null, scoped: ["no_such_test"] }), /on no gate list: no_such_test/);
   assert.throws(() => gatePlan({ wave: 37, head, lists, bands: null, scoped: [] }), /on no gate list: world1_run_test/);
   const text = planFileText({ wave: 37, head, persona: null, base: null, results: allPass(steps), compare: null, steps, today });

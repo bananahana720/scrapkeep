@@ -1,5 +1,5 @@
 {
-  "about": "World 1 acceptance bands: the rows the Gate reads for a finished Spillway (dam, flume, Brindle). scripts/world1-bands.mjs evaluates them. status gate: a miss or a missing input fails the read. status report: measured and printed but never fails, until the units in enforced_from land and the coordinator flips it to gate. status info: shown, no threshold. Run length lives in the pacing file (source pacing) and the panel band in #398's drop sim; neither is restated here. Thresholds are the integrator ledger's (/mnt/project-files/world1/BUDGETS.md); change a number there first.",
+  "about": "World 1 acceptance bands: the rows the Gate reads for a finished Spillway (dam, flume, Brindle). scripts/world1-bands.mjs evaluates them. status gate: a miss or a missing input fails the read. status report: measured and printed but never fails, until the units in enforced_from land and the coordinator flips it to gate. status info: shown, no threshold. status sitting: a thing only Andrew can judge at his sitting, listed and never graded. With --sitting the rows are the whole definition of world 1 done (ruling dt): every one of the 11 areas has gate rows and one sitting row, a source receipt row reads the JSON receipt of a check this reader cannot run and names the command that writes it (producer), and a receipt row with a plant passes only when its receipt says that planted fault was caught on the head being judged. Run length lives in the pacing file (source pacing) and the panel band in #398's drop sim; neither is restated here. Thresholds are the integrator ledger's (/mnt/project-files/world1/BUDGETS.md); change a number there first.",
   "bots": {
     "measure": "the pacing file's measure block (table, stages, seeds, pilots, bot_args, policy_args) is the run recipe; the completionist explores until done with --explore-by=900 as a safety clock (ruling ag)",
     "policies": [
@@ -328,7 +328,7 @@
     },
     {
       "id": "placeholders",
-      "area": "Zero placeholders",
+      "area": "Look",
       "source": "placeholders",
       "label": "placeholders a world 1 run can show",
       "max": 0,
@@ -337,14 +337,13 @@
     },
     {
       "id": "frames",
-      "area": "Frames in budget",
+      "area": "Stability",
       "source": "frames",
       "label": "dam, flume and Slag Bowl inside the frame budget",
-      "status": "report",
-      "basis": "BUG-BAR budget via frametime-check summary.json",
-      "enforced_from": [
-        "World 1 frame times (4080)"
-      ]
+      "status": "gate",
+      "cadence": "sitting",
+      "plant": "a capture with a planted 40 ms stall every second must read as a miss",
+      "basis": "BUG-BAR budget via frametime-check summary.json, from a vsync-off capture of the sitting launch on the idle 4080 (ruling dt: only the 4080 has a budget)"
     },
     {
       "id": "difficulty",
@@ -353,13 +352,350 @@
       "label": "Novice, Learner, Expert on w1, w2, Brindle, park1, park2",
       "status": "gate",
       "cadence": "sitting",
-      "basis": "DECISIONS section 5, 19 Oct 01:58; 24 seeds",
+      "basis": "ruling cu (DECISIONS section 5, 10 Nov) for w1 and w2; DECISIONS section 5, 19 Oct 01:58 for the rest; 24 seeds",
       "targets": {
-        "w1": { "novice": { "max": 0.42 } },
-        "park1": { "novice": { "max": 1.0 } },
-        "park2": { "novice": { "max": 1.0 } }
+        "w1": {
+          "novice": {
+            "max": 0.2
+          },
+          "learner5": {
+            "min": 0.3,
+            "max": 0.6
+          }
+        },
+        "w2": {
+          "novice": {
+            "max": 0.15
+          },
+          "learner5": {
+            "min": 0.3,
+            "max": 0.6
+          }
+        },
+        "park1": {
+          "novice": {
+            "max": 1.0
+          }
+        },
+        "park2": {
+          "novice": {
+            "max": 1.0
+          }
+        }
       },
-      "targets_note": "Recorded bands (coordinator ruling ab, DECISIONS section 5, 26 Oct 20:58Z row, PR #504): w1 Novice <= 40% (two seeds of margin over the measured 33% at 24 seeds) at dam mob hits x1.5 (33%, 24 seeds, receipt /mnt/project-files/world1/bands-w19/); park1 and park2 Novice reach stays at the measured 100%: re-read after the pacing lock rows landed (24 seeds a band on d30a2965, library learner-0e2bc2f0, receipt /mnt/project-files/world1/bands-w20/park-reach-d30a2965/), Novice 100% [86%-100%] and Learner a1 100% on both parks. The yard lock and the Warden clamp sit on the way to the Warden or in its fight, and a parkN cell wins when the Warden is engaged, so neither moves reach; a cell that grades the park clear would see them. w1 Learner a5 grades against the >= 60% harness target again (9 Nov, wave 33, DECISIONS section 10): ruling bb's wave 29 waiver (>= 58%) is retired, measured 83% (20/24) on w31 and w32, receipt /mnt/project-files/gate/w32-58a6de62/bands-B.md. w1 Novice <= 42% for w31 (coordinator, ruling ab re-pin, DECISIONS row bk, 8 Nov): measured 42% (10/24) on stage/alpha-w31 1013c7d1 and 0786c1a8, every run identical; #619's reseed plus rulings bf and bg make every band stronger (overpowered pays); re-read after the sitting; provisional until the bands B rerun on the ruling bl head (the bot's point-blank bite cadence), which decides the number. Every other cell and column grades against scripts/challenge/lib.mjs TARGETS."
+      "targets_note": "15 Nov 2026, ruling dt: the w1 and w2 Novice and Learner attempt 5 bands are ruling cu's targets (dam Novice at most 20%, flume Novice at most 15%, Learner attempt 5 between 30% and 60%), which replace the w1 Novice <= 42% re-pin and the >= 60% Learner attempt 5 reading below; the last measured w1 Novice is 35% (wave 37 read, 12 Nov), so this row misses until the difficulty work lands. History: Recorded bands (coordinator ruling ab, DECISIONS section 5, 26 Oct 20:58Z row, PR #504): w1 Novice <= 40% (two seeds of margin over the measured 33% at 24 seeds) at dam mob hits x1.5 (33%, 24 seeds, receipt /mnt/project-files/world1/bands-w19/); park1 and park2 Novice reach stays at the measured 100%: re-read after the pacing lock rows landed (24 seeds a band on d30a2965, library learner-0e2bc2f0, receipt /mnt/project-files/world1/bands-w20/park-reach-d30a2965/), Novice 100% [86%-100%] and Learner a1 100% on both parks. The yard lock and the Warden clamp sit on the way to the Warden or in its fight, and a parkN cell wins when the Warden is engaged, so neither moves reach; a cell that grades the park clear would see them. w1 Learner a5 grades against the >= 60% harness target again (9 Nov, wave 33, DECISIONS section 10): ruling bb's wave 29 waiver (>= 58%) is retired, measured 83% (20/24) on w31 and w32, receipt /mnt/project-files/gate/w32-58a6de62/bands-B.md. w1 Novice <= 42% for w31 (coordinator, ruling ab re-pin, DECISIONS row bk, 8 Nov): measured 42% (10/24) on stage/alpha-w31 1013c7d1 and 0786c1a8, every run identical; #619's reseed plus rulings bf and bg make every band stronger (overpowered pays); re-read after the sitting; provisional until the bands B rerun on the ruling bl head (the bot's point-blank bite cadence), which decides the number. Every other cell and column grades against scripts/challenge/lib.mjs TARGETS."
+    },
+    {
+      "id": "findings-open",
+      "area": "Clarity",
+      "source": "findings",
+      "label": "open blocker, major and minor play findings in world 1",
+      "grades": [
+        "blocker",
+        "major",
+        "minor"
+      ],
+      "max": 0,
+      "status": "gate",
+      "cadence": "sitting",
+      "basis": "STATE.md: no major or minor row left in PLAY-FINDINGS.tsv; rows that open with World 2 or World 3 are left out"
+    },
+    {
+      "id": "findings-undecided",
+      "area": "Clarity",
+      "source": "findings",
+      "label": "play findings a PC film has not decided yet",
+      "grades": [
+        "check"
+      ],
+      "max": 0,
+      "status": "gate",
+      "cadence": "sitting",
+      "basis": "a check row is a finding nobody has settled: fix it, regrade it or close it from a PC film before the sitting"
+    },
+    {
+      "id": "ledger-reviewed",
+      "area": "Stability",
+      "source": "ledger",
+      "label": "known-failing rows past their review date",
+      "max": 0,
+      "status": "gate",
+      "basis": "ruling bq: a carried red needs a cause, an owner and a review date that has not passed"
+    },
+    {
+      "id": "release-gate",
+      "area": "Stability",
+      "source": "receipt",
+      "label": "the release gate is clean on this head",
+      "status": "gate",
+      "cadence": "sitting",
+      "producer": "node scripts/gate/pc.mjs run --wave <N> --head <sha> --base <receipts> --persona first-timer --tally",
+      "plant": "a test made to fail on a scratch copy of the head must turn the tally red",
+      "basis": "STATE.md: a clean release gate; ORCHESTRATOR tiered gate"
+    },
+    {
+      "id": "installed-build",
+      "area": "Stability",
+      "source": "receipt",
+      "label": "the installed build is this head",
+      "status": "gate",
+      "cadence": "sitting",
+      "producer": "not built yet: compare the installed AppImage's build stamp with the release head (wave 45)",
+      "plant": "an image built from another commit must read as a miss",
+      "basis": "STATE.md: that build installed on the PC"
+    },
+    {
+      "id": "run-always-ends",
+      "area": "Stability",
+      "source": "receipt",
+      "label": "a run always ends, and ends once",
+      "status": "gate",
+      "cadence": "sitting",
+      "producer": "not built yet: the run flow model in the scrapkeep-verify-formal skill (wave 42)",
+      "plant": "the model without the vanished-Warden fallback must show a run that never ends",
+      "basis": "plan track V3, check F-A: src/core/flow.gd has no stall guard, and two world 2 findings are runs that never end"
+    },
+    {
+      "id": "same-seed-same-run",
+      "area": "Stability",
+      "source": "receipt",
+      "label": "the same seed plays the same run whatever order contacts arrive in",
+      "status": "gate",
+      "cadence": "sitting",
+      "producer": "not built yet: every arrival order of up to four same-tick contacts on the real code (wave 43)",
+      "plant": "the contact sort removed must make two orders part",
+      "basis": "plan track V3, check F-C; LESSONS 71 and pull request 1027"
+    },
+    {
+      "id": "rewards-banked-once",
+      "area": "Progression across runs",
+      "source": "receipt",
+      "label": "an earned reward is banked once and never lost",
+      "status": "gate",
+      "cadence": "sitting",
+      "producer": "not built yet: the profile and run store model in the scrapkeep-verify-formal skill (wave 43)",
+      "plant": "the settle ledger removed from the model must show a reward banked twice",
+      "basis": "plan track V3, check F-B: src/core/profile.gd, progress.gd and run_store.gd across a crash at every step"
+    },
+    {
+      "id": "sitting-launch-played",
+      "area": "In-run growth",
+      "source": "receipt",
+      "label": "a played run on the sitting launch fires all six loops and keeps what it earns",
+      "status": "gate",
+      "cadence": "sitting",
+      "producer": "not built yet: a bot run with the sitting set on a scratch data folder, read from the run log (wave 42)",
+      "plant": "one loop switched off must read as a miss",
+      "basis": "audit of 13 Nov, unit A3: no test plays --profile=sitting-earned, and five of its six loops never ran in a played run"
+    },
+    {
+      "id": "strong-build-shows",
+      "area": "In-run growth",
+      "source": "receipt",
+      "label": "a strong build beats Brindle faster and with more parts than a plain one",
+      "status": "gate",
+      "cadence": "sitting",
+      "producer": "not built yet: parts and fight time for a top build against the base build, from the band read (wave 43)",
+      "plant": "a top build with its parts stripped must read as a miss",
+      "basis": "Direction: overpowered pays; audit of 13 Nov, finding 5"
+    },
+    {
+      "id": "six-pilots-clear",
+      "area": "Pilots",
+      "source": "receipt",
+      "label": "all six pilots play title, dam, flume and Brindle with no error",
+      "status": "gate",
+      "cadence": "sitting",
+      "producer": "world1_run_test in the wave gate's scoped shard; the receipt is its shard row",
+      "plant": "a script error planted in one pilot's kit must fail that pilot",
+      "basis": "world1_run_test, always in the scoped shard (GATE.md)"
+    },
+    {
+      "id": "core-feel-tests",
+      "area": "Core feel",
+      "source": "receipt",
+      "label": "hit-stop, juice budget and launch speed hold with no carried flake",
+      "status": "gate",
+      "cadence": "sitting",
+      "producer": "not built yet: the six core feel tests alone on a quiet PC, three runs each (wave 42)",
+      "plant": "a hit-stop of zero ticks must fail",
+      "basis": "KNOWN-FAILING.tsv carries six core feel flakes that only fail under load"
+    },
+    {
+      "id": "warden-fairness",
+      "area": "Wardens and bosses",
+      "source": "receipt",
+      "label": "every killing hit is telegraphed, a stopped ball pays double, and the first hit waits 3 s",
+      "status": "gate",
+      "cadence": "sitting",
+      "producer": "not built yet: grade fairness lines F1 to F3 from the band read (wave 43)",
+      "plant": "a Warden attack with its telegraph removed must read as a miss",
+      "basis": "ruling cu fairness lines; scripts/challenge/fairness.json prints them and grades nothing today"
+    },
+    {
+      "id": "novice-deaths",
+      "area": "Difficulty and pacing",
+      "source": "receipt",
+      "label": "at least 60% of Novice non-wins are deaths, not time caps",
+      "status": "gate",
+      "cadence": "sitting",
+      "producer": "not built yet: death share from the band read's runs.ndjson (wave 43)",
+      "plant": "a band where every loss is a time cap must read as a miss",
+      "basis": "ruling cu; 46% on the 10 Nov read"
+    },
+    {
+      "id": "map-standard",
+      "area": "Stages and world",
+      "source": "receipt",
+      "label": "every map standard point has a check, and nothing is owed that was not ruled to wait",
+      "status": "gate",
+      "cadence": "sitting",
+      "producer": "not built yet: collect the MAPCHECK lines of the park tests for the dam and the flume; points 4 and 5 have no check yet (wave 44)",
+      "plant": "a dam with one landmark removed must fail point 1",
+      "basis": "ruling ct, the ten-point map standard; shared/world1/map-audit.md section G"
+    },
+    {
+      "id": "snag-sweep",
+      "area": "Stages and world",
+      "source": "receipt",
+      "label": "no snag on the riding lines of the dam and the flume",
+      "status": "gate",
+      "cadence": "sitting",
+      "producer": "tools/qa/snag_sweep.gd, sharded, about 35 minutes a map",
+      "plant": "the planted snag of snag_sweep_test must be found",
+      "basis": "map standard point 8c; PF-46 is an open snag at the dam incline foot"
+    },
+    {
+      "id": "sound-own-recipes",
+      "area": "Sound and music",
+      "source": "receipt",
+      "label": "no world 1 sound plays a stand-in",
+      "status": "gate",
+      "cadence": "sitting",
+      "producer": "not built yet: count world 1 cues with no recipe of their own (wave 43)",
+      "plant": "a cue with its recipe removed must be counted",
+      "basis": "audit of 13 Nov, finding 7: about 95 of 110 named sounds have no recipe"
+    },
+    {
+      "id": "sound-levels",
+      "area": "Sound and music",
+      "source": "receipt",
+      "label": "loudness, true peak and loop seams inside their limits",
+      "status": "gate",
+      "cadence": "sitting",
+      "producer": "scripts/audio-gate.mjs loudness, peak and seam checks, not yet in a gate lane (wave 43)",
+      "plant": "a stem 6 LU too loud must fail",
+      "basis": "audio-gate.mjs: -16 LUFS within 0.5 LU, true peak at or below -1 dBTP"
+    },
+    {
+      "id": "models-render",
+      "area": "Look",
+      "source": "receipt",
+      "label": "every generated model passes the render check",
+      "status": "gate",
+      "cadence": "sitting",
+      "producer": "tools/model_render_check.gd, which has no pass line wired yet (wave 44)",
+      "plant": "the rejected dark hooker body must fail",
+      "basis": "ruling dr: each Tripo model is accepted on its own"
+    },
+    {
+      "id": "no-code-stand-ins",
+      "area": "Look",
+      "source": "receipt",
+      "label": "no code-built stand-in left in world 1",
+      "status": "gate",
+      "cadence": "sitting",
+      "producer": "prim_census_test against tools/prim_census_pin.tsv, with the world 1 pin at zero (wave 44)",
+      "plant": "a new code-built box in the dam must fail",
+      "basis": "STATE.md: zero placeholders; the pin holds 89 lines today"
+    },
+    {
+      "id": "first-timer-read",
+      "area": "Clarity",
+      "source": "receipt",
+      "label": "a first-timer film read finds no new blocker, major or minor",
+      "status": "gate",
+      "cadence": "sitting",
+      "producer": "node scripts/redteam/eye.mjs --persona=first-timer --film=whole on a PC film of this head",
+      "plant": "the control film with its planted fault must be caught, or the read is void",
+      "basis": "scripts/redteam/README.md, the player's-eye pass"
+    },
+    {
+      "id": "words-on-screen",
+      "area": "Clarity",
+      "source": "receipt",
+      "label": "word lint and the HUD word budget pass",
+      "status": "gate",
+      "cadence": "sitting",
+      "producer": "npm run sketch:lint and the two ui_word_budget tests; the receipt is the fast lane's",
+      "plant": "a label that restates its value must fail the lint",
+      "basis": "LEGIBILITY.md section 13; ruling cx"
+    },
+    {
+      "id": "sitting-01",
+      "area": "Core feel",
+      "label": "how the ball feels in the hand: weight, speed, the hit",
+      "status": "sitting"
+    },
+    {
+      "id": "sitting-02",
+      "area": "Wardens and bosses",
+      "label": "whether the two Wardens and Brindle are fun to fight",
+      "status": "sitting"
+    },
+    {
+      "id": "sitting-03",
+      "area": "In-run growth",
+      "label": "whether the choices on a run feel like they matter",
+      "status": "sitting"
+    },
+    {
+      "id": "sitting-04",
+      "area": "Progression across runs",
+      "label": "whether he wants to play again after the summary",
+      "status": "sitting"
+    },
+    {
+      "id": "sitting-05",
+      "area": "Pilots",
+      "label": "which pilots he likes, and whether each has a character",
+      "status": "sitting"
+    },
+    {
+      "id": "sitting-06",
+      "area": "Stages and world",
+      "label": "whether world 1 rides as one journey from the camp to Brindle",
+      "status": "sitting"
+    },
+    {
+      "id": "sitting-07",
+      "area": "Look",
+      "label": "taste: the dam, the title, the crew, Brindle",
+      "status": "sitting"
+    },
+    {
+      "id": "sitting-08",
+      "area": "Sound and music",
+      "label": "by ear: the music, the cues, whether melody leads",
+      "status": "sitting"
+    },
+    {
+      "id": "sitting-09",
+      "area": "Clarity",
+      "label": "whether he always knows what is happening and what to do next",
+      "status": "sitting"
+    },
+    {
+      "id": "sitting-10",
+      "area": "Difficulty and pacing",
+      "label": "his wall time against the bot's, and whether it is hard in a fair way",
+      "status": "sitting"
+    },
+    {
+      "id": "sitting-11",
+      "area": "Stability",
+      "label": "real hardware over a whole sitting: no hitch, no crash",
+      "status": "sitting"
     }
   ],
   "beat_rows_file": "sketches/core-loop/src/presentation/flourish_rows.gd",

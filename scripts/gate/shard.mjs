@@ -12,7 +12,8 @@
 // machine, then runs the named tests alone, and says whether a time-out was the machine's.
 //
 // `run` imports the sketch twice (a third time when the second was not clean), runs its window of the sorted list (non-bot
-// tests in chunks, bot tests one at a time), reruns every failure alone, sorts
+// tests in chunks, bot tests one at a time or, with --lanes n, n at a time with the BOT_ALONE tests alone
+// afterwards), reruns every failure alone (once when a check fails alone and the test has no flake row), sorts
 // the failures with the known-failing ledger and writes <folder>/receipt.md
 // and <folder>/shard.json. Every step is recorded in <folder>/state.json, so
 // the same command picks up where a killed run stopped. It never edits the
@@ -29,6 +30,7 @@ import { WEEKLY_FILE, weeklyNames as readWeeklyNames } from "./weekly.mjs";
 
 export { WEEKLY_FILE, WEEKLY_HEADER, parseWeekly } from "./weekly.mjs";
 import { IMPORT_TRIES, failingLines, importTry, isBot, scriptErrorCount, testScripts, testTimeoutMs, timeScale } from "../sketch-smoke.mjs";
+import { writeImportStamp } from "../import-stamp.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 const SKETCH = "sketches/core-loop";
@@ -36,6 +38,16 @@ const CLOUD_GODOT = "/opt/scrapkeep-toolchain/Godot_v4.7.2-stable_linux.x86_64";
 const IMPORT_TIMEOUT_MS = 900_000;
 const DEFAULT_CHUNK = 60;
 const DEFAULT_SOLO_RUNS = 2;
+// Bot tests that never share the PC with another bot lane: the wall clock decides their result, or they
+// fill the machine alone. Every other bot test is driven by ticks at a fixed frame rate.
+export const BOT_ALONE = new Set([
+  "restart_latency_test", // pass or fail is a wall-time median
+  "world1_run_test", // launches the real game, which runs on the wall clock
+  "run_tier_test", // fresh-process children with a 70 s wall cap
+  "posture_bands_swarm_test", // starts one child per thread pair (48 at once on the PC)
+  "bot_skill_bar_test", // 16 children at once
+  "alpha_posture_bands_w23_test", // 12 children at once
+]);
 const NEAR_LIMIT = 0.85;
 const DEFAULT_RETIME_RUNS = 3;
 const QUIET_FACTOR = 0.25;
@@ -477,19 +489,22 @@ async function run(options) {
     if (imported !== "ok") console.log(`import ${pass} of ${IMPORT_TRIES}: ${imported}`);
   }
   if (imported !== "ok") throw new Error(`the last import was not clean (${imported}); no test ran. Read ${options.out}/import-*.log, then start again in a new folder`);
+  writeImportStamp(root, SKETCH);
 
   const groups = options.bots ? names.map((name) => [name]) : chunks(names, options.chunk);
   const groupName = (index) => (options.bots ? `bot-${names[index]}` : `chunk${String(index).padStart(2, "0")}`);
   const firstEnv = { ...env, SMOKE_LOG_DIR: path.join(options.out, "logs") };
+  const runGroup = (index) => step(groupName(index), () => runToFile(process.execPath, smokeArgs(options.bots, groups[index]), path.join(options.out, groupName(index) + ".log"), firstEnv));
+  // With more than one bot lane, the bot tests in BOT_ALONE wait and run one at a time after the lanes drain.
+  const alone = (index) => options.bots && options.lanes > 1 && BOT_ALONE.has(names[index]);
+  const shared = groups.map((_, index) => index).filter((index) => !alone(index));
   let next = 0;
   await Promise.all(
-    Array.from({ length: Math.min(options.lanes, groups.length) }, async () => {
-      while (next < groups.length) {
-        const index = next++;
-        await step(groupName(index), () => runToFile(process.execPath, smokeArgs(options.bots, groups[index]), path.join(options.out, groupName(index) + ".log"), firstEnv));
-      }
+    Array.from({ length: Math.min(options.lanes, shared.length) }, async () => {
+      while (next < shared.length) await runGroup(shared[next++]);
     }),
   );
+  for (const index of groups.keys()) if (alone(index)) await runGroup(index);
 
   const results = groups.flatMap((_, index) => parseSmokeLog(readFileSync(path.join(options.out, groupName(index) + ".log"), "utf8")));
   const seen = new Set(results.map((result) => result.test));
@@ -506,8 +521,15 @@ async function run(options) {
     solo.get(test).push(outcome.ok);
     soloEvidence.get(test).runs.push({ timedOut: outcome.timedOut, failLines: outcome.failLines, load: state.steps[name].load_start ?? 0 });
   };
+  const flakeRow = (test) => judgeFailures([test], ledger.rows).listed[0]?.kind === "flake";
   for (const test of failed) {
-    for (let attempt = 1; attempt <= options.solo; attempt++) await soloRun(test, attempt);
+    for (let attempt = 1; attempt <= options.solo; attempt++) {
+      await soloRun(test, attempt);
+      // A check that failed alone settles the call (new-red, or carried by a red row), so a second
+      // run adds nothing. A pass, a time-out and a flake row still get every run.
+      const last = soloEvidence.get(test).runs.at(-1);
+      if (!solo.get(test).at(-1) && !last.timedOut && last.failLines > 0 && !flakeRow(test)) break;
+    }
     // A listed flake that failed every solo run would block as a mismatch. Some flakes fail
     // alone one run in three, so it gets the same number of runs again before that call.
     if (classifyFailure(test, solo.get(test), ledger.rows, soloEvidence.get(test)).call === "mismatch") {

@@ -79,27 +79,34 @@ const Cards := preload("res://src/world/director_cards.gd")
 # 2026-10-31 stage/alpha-w30 re-pin at 860ee797 (ruling j integration commit): #605's dam crevice fill is park-row data in the
 # schedule hash, so all 20 schedules moved; #608, #609 and #610 move none (the values equal #605's own record at a9c379cb,
 # #607 comment 6539679622). Whole-run hashes unchanged. Recorded with --record-base --section=runtime --seed=N at 860ee797.
+# 2026-11-14 PR 845 (world 1 difficulty stack re-land, merged with stage/alpha-w40 bd5b30f5 at 7077c2ee): the director
+# schedule moves with the stack (a third clock tier on world 1, mobs.clock_tiers_by_stage): all 20 schedules moved;
+# whole-run hashes unchanged. Recorded with --record-base --section=runtime.
+# 2026-11-15 stage/alpha-w41 re-pin at e2770d85 (wave 41 close): PR 957 (the new apron_yard_bowl row, apron_kicker_ramp size 5 -> 3)
+# and PR 1033 (apron_kicker and apron_kicker_ramp moved from (0,448) to (0,476)) are park-row data in the schedule hash, and the
+# pins were recorded for PR 845 on a tree without either: all 20 schedules moved; whole-run hashes unchanged (20 of 20 equal
+# BASE_RUN). Recorded with --record-base --section=runtime.
 const BASE_SCHEDULE := [
-	"babfc41f183280405f05779dca7f27253ea67ce65acc9a0a2ed830324164f5f6",
-	"09507fadf35aaf8047446e75dcebd089cd8e8a52f957388bc2d48e836492b619",
-	"f11ab7858da83fa59c7a9b3ff8445a9846fd6c5b19b870dcacb537a5e55285b9",
-	"5f02444e05433d92fde378527506e78c9863dc487ef74127d4f7b3623f742d4a",
-	"6f0e0eee105cf421217fd196b5835666df624ab85b7519a94874e0fefb10d173",
-	"d52090fdbc2b219430024ea0301e447bfc5f5d61809455cc3a176442461cb31a",
-	"c3ab396707766dff3ec16ab195197c8ad7a1de940835c74c903c384205ddcc15",
-	"74a59c690b860ba04c3f1a912024fe221d44f79bb59dcfb4afce9b329ad6f413",
-	"ac1d67238f1d33c124a15784dc4f5b93eb40b62ba49d605f28b9992d712e4df9",
-	"1478177cd4f653e31ca137c3f932a4df457c4fb4404a7a9a8d771047faebdd19",
-	"1966155e78a2d6fe81f7c21685a3466a7aa5ed990a35f476e785a73f4ef8daaa",
-	"7929c672f7671444875bbea27d92bc689a80c52e31ee758b84d05f815183326f",
-	"b5b1db6da857fccc6669673c9595e180c67b3467100c116376fc4e868e2f2756",
-	"896a29c8e4cb69ef39a39b6301edae734e8d0c973ce0933c5c5e46335e9a56cb",
-	"b1cbb507573693855bcf651c8fb81df2e4844d89829ce7023baf44f6e81e3bba",
-	"6f36612548e8c7cd3cd0d4f4a712c16cd78f4ed7316e02c19509eca9886cd365",
-	"b68ad21a754dced2cca4313384c3931979808dd1dc47158a9612e6e7114bc013",
-	"4535b5ae3f61d0c616acfe3a6bd8c2039e7258bf73a71c8741039f03bfb4632e",
-	"93df57fe9448369d2ca97bce33800f1cea50c8c309baa13f6ed802117a6a3d0c",
-	"deca5c2462a3808f13e1e349f6b8ad8476c12d046ffb0a5e19312933baa71cf8",
+	"a8c351d7ebde115412ca090cc0f9555e5de256ca923b801d2ef6cb6e67deb6a4",
+	"8628cd530d863c297f64fbbb5efd72d776f095308f17d52903a4036120cd5e3c",
+	"d4ce50144ca745c36a24ca4b54bbae24d8b1c045fb4df1333c393f51a945c43e",
+	"4d202eca1c5b6eb2de3b81e1ee6e2b6216e1cad073c3195cad37f659178599a4",
+	"2f442f7373d8af2cc1b9b9a620a0b667947686a1e62b908ddf37e8048fc12293",
+	"e726bf51fba4b5cd0b7f26163354aa1811e5d72b5fdc408f04955c589104da2a",
+	"3406856fd5e35ac1a1744b819a38783bd9a6257a7513405f7bf68eeba7a351df",
+	"22fa7ce3a9f93376a93950691da9007def2e1ce6934994a8b70302e01ce31fc0",
+	"c4d2ee0a320a4a72852d8741c7ae4e6db5f279a86e1a2546e78ce6146a0ee02d",
+	"777cc1ff28829364a78b3ecca69d80a6995a01450b52961463ac715cda81c6c3",
+	"dcb5bbcefc2e0ffc5a84ce31b9e5726e5e157652a71696b65f4c745b53ad5370",
+	"6fc3d8bbc85b32690da6c7da9109f3833d97f7d3c2696ba4215b4207f8c82920",
+	"3b7a5142051982a274185680d3029a899cad9926e485951c22ef279a43875668",
+	"c8b4c4f2bc98cac92905c3d0aa8d46ec472d93d5d881d6eae30db3fda0bf8a2e",
+	"f18ca68ab88302e5a497bacdda607462c9e65a3f3a19ba2995ba3670f2ed7fac",
+	"3a1afda8d87d24b89cd031b22832914f274cf9af09d1d6e79ef9883849510a34",
+	"502a447facdd1910df307b51bba6adab20f7bd7c8f2026ed91e77f95a4232779",
+	"25b6c0b1211ae7857757a38b5e05ab85f89c3f35ae2d7955204b3c4d7313b984",
+	"aba0121eec2f5f511066d29ffcd8cb16ed92e6d4e2eea182e03b6b61590bfa65",
+	"7405a96ae030101ef180289a0345f156c26f323047706370efd4b50efbb427cf",
 ]
 # 2026-10-15 wave-14 re-pin at 8b507ffb (SQ9 speed bank, PC-POOL part rows, SQ19 offer weights and
 # the SQ9 free-rest fix move the default run; schedules unchanged): recorded with --record-base.
@@ -264,8 +271,10 @@ func _component(seed_value: int, tier_value: int) -> Dictionary:
 		var measured := _schedule(d)
 		members += measured.members
 		if not record:
-			var cap_expected := mini(Director.HARD_CAP, roundi((6 + 2 * Director.MAX_TIME_TIERS) * row.threat * row.pressure.pack_scale * config.cap_weight))
-			var interval_expected := maxf(Director.MIN_INTERVAL, (Director.BASE_INTERVAL - 0.7 * Director.MAX_TIME_TIERS) / row.threat * row.pressure.interval_scale * config.interval_weight)
+			# The stage's last clock tier (mobs.clock_tiers_by_stage: +3 on world 1 since wave 37, +2 elsewhere).
+			var last_tier := Director.clock_tiers(d.dial_stage)
+			var cap_expected := mini(Director.HARD_CAP, roundi((6 + 2 * last_tier) * row.threat * row.pressure.pack_scale * config.cap_weight))
+			var interval_expected := maxf(Director.MIN_INTERVAL, (Director.BASE_INTERVAL - 0.7 * last_tier) / row.threat * row.pressure.interval_scale * config.interval_weight)
 			t.eq("independent cap seed %d tier %d stage %d" % [seed_value, tier_value, row.stage], measured.cap, cap_expected)
 			t.near("independent interval seed %d tier %d stage %d" % [seed_value, tier_value, row.stage], measured.interval, interval_expected)
 			# Ruling al: no tier raises enemy health.

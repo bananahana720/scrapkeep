@@ -70,7 +70,7 @@ Data the checks read, all public today unless noted: stage graph `src/world/park
 | dam | riding-line nodes that see the landmark | 1.00 | 0.85 | pass |
 | flume | open ground that sees the landmark | 0.87 | 0.85 | pass |
 | flume | riding-line nodes that see the landmark | 1.00 | 0.85 | pass |
-| dam yard | rim minus centre, worst site median | 2.97 m | 2.0 m | thin pass (one direction is 11 m below) |
+| dam yard | rim minus centre, worst site median | 2.35 m (14 Nov, the kicker moved past the ring; 3.25 m with it inside; 0.72 after PF-46, 2.97 before it) | 2.0 m | pass: a bowl 116 m across the incline foot (clear of both lane fins), 48 m along the ride and 5 m deep, centred on (0, 432), where the yard shuts since PF-46. The test reads the line nodes near x 0; a probe of lock centres at z 430 every 6 m from x -54 to 54 (every lane down the incline) reads at least 2.1 m. The apron kicker (3 m ramp, not 5 m) stands just past the shut yard's ring, centred on (0, 476) instead of (0, 448), so the yard's floor is open ground, and while the yard is shut the play camera reaches out 12 m and lifts to the steepest pitch it allows (chase_camera.gd "locked" row); the flat flume yard gets the same lift, a wider look at its crew (both assumptions Andrew can overturn, 14 Nov). The dark band PC stills showed at the west lane fin's foot is the terrain's coarse far rings drawn round the chase camera while a free still camera looks elsewhere; tools/dam_look_capture.gd hands the rings to its camera, and from the yard in play the foot reads clean |
 | flume yard | rim minus centre, worst site median | -0.41 m | 2.0 m | OWED: the fight floor is flat |
 | Slag Bowl | rim minus centre | 10.0 m | 2.0 m | pass |
 | dam | player-changed features near a line | 5 | 2 | pass |

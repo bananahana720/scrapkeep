@@ -85,10 +85,15 @@ func _write_record() -> void:
 
 
 func _check_schedule() -> void:
+	var per_stage := true
+	for stage in range(0, 8):
+		var clock := RunClock.new()
+		clock.stage = stage
+		per_stage = per_stage and clock.tiers() == Director.clock_tiers(stage)
 	_report("difficulty schedule is the director's", RunClock.DIFFICULTY_TICK == Director.TIER_SECONDS
-			and RunClock.DIFFICULTY_TIERS == Director.MAX_TIME_TIERS,
-		"build %.0f s x %d tiers, director %.0f s x %d" % [RunClock.DIFFICULTY_TICK, RunClock.DIFFICULTY_TIERS,
-			Director.TIER_SECONDS, Director.MAX_TIME_TIERS])
+			and RunClock.DIFFICULTY_TIERS == Director.MAX_TIME_TIERS and per_stage,
+		"build %.0f s x %d tiers, director %.0f s x %d; every stage's last tier agrees: %s" % [RunClock.DIFFICULTY_TICK, RunClock.DIFFICULTY_TIERS,
+			Director.TIER_SECONDS, Director.MAX_TIME_TIERS, per_stage])
 
 
 func _check_record() -> void:
@@ -98,7 +103,7 @@ func _check_record() -> void:
 	var ticks_per_second := float(Engine.physics_ticks_per_second)
 	var best_ok: bool = par["best"] != null and absf(float(par["best"]) - 900.0 / ticks_per_second) < 0.01
 	var split_ok: bool = par["split"] != null and absf(float(par["split"]) - (r["stage_seconds"] - float(par["best"]))) < 0.01
-	_report("clock record", d["fraction"] > _start["difficulty"]["fraction"] and d["tiers"] == 2 and d["tier"] == 0
+	_report("clock record", d["fraction"] > _start["difficulty"]["fraction"] and d["tiers"] == Director.clock_tiers(1) and d["tier"] == 0
 			and not d["paused"] and d["icon"] == "res_difficulty" and r["timer_icon"] == "res_timer" and r["tags"] == ["par"],
 		"45 ticks in stage 1: difficulty %.4f -> %.4f of the bar, tier %d of %d; tags %s" % [_start["difficulty"]["fraction"],
 			d["fraction"], d["tier"], d["tiers"], r["tags"]])

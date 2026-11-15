@@ -68,8 +68,15 @@ const DRIVER_PATH := "res://src/combat/warden_reactor.gd"
 # bands A run and its solo rerun: small [52.62, 60.23, 90.12], grown [31.80, 51.40, 26.78], campers 120, rides per
 # run [3, 5, 6, 0, 2, 0, 2, 3, 1]. Small 60.2 s sits inside the 45-70 s ordinary-pilot ruling. The ratio band reads
 # 1.89 and stays the owed red check, as before.
-const EXPECT_SMALL_S := 60.23
-const EXPECT_GROWN_S := 31.80
+# 2026-11-15 (coordinator, wave 41 close): small re-pin 60.23 -> 73.09 s, grown 31.80 -> 31.34 s. Two direct runs
+# alone on an idle PC on stage/alpha-w41 fab0aa76, byte-identical: small [48.95, 73.09, 120.00], grown
+# [31.34, 38.67, 18.82], campers 120, rides per run [1, 2, 7, 0, 1, 0, 1, 1, 3]. The small median already read
+# 71.5 s on the wave 41 cut (49e801ad) and 73.1 s with the difficulty stack (PR 845), so the move is the harder
+# stage and not a later change. The ratio now reads 2.33 and the twice-grown check passes. Small 73.1 s is 3 s
+# over the 45-70 s ordinary-pilot ruling (DECISIONS section 5); ruling cu (harder, never easier) is the newer
+# one, and the overshoot is on the list for Andrew's sitting.
+const EXPECT_SMALL_S := 73.09
+const EXPECT_GROWN_S := 31.34
 const TOLERANCE := 0.10
 const WALL_S := 330.0
 

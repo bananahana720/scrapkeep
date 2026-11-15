@@ -14,6 +14,7 @@ const Palette := preload("res://src/core/palette.gd")
 const BakeLook := preload("res://src/presentation/bake_look.gd")
 const Parts := preload("res://src/build/parts.gd")
 const ParkGraph := preload("res://src/world/park/park_graph.gd")
+const StocktakeDress := preload("res://src/world/stocktake_dress.gd")
 const PocketFog := preload("res://src/world/events/pocket_fog.gd")
 const TradePockets := preload("res://src/world/trade_pockets.gd")
 const StakeDevices := preload("res://src/world/stake_devices.gd")
@@ -145,6 +146,17 @@ const RULES := {
 		"pay_ahead_m": 12.0, "pay": {"scrap": 0, "rarities": [], "source": "activity_yard", "where": "gate"},
 		"cue": {"view": "hauler_bounty", "word": "Stocktake"},
 	},
+	# The Stocktake muster (BACKLOG W1-101, the form that comes to the ball): the yard's rule on ground that travels.
+	# One run in `one_in`, by the run's seed. When the ball comes within `call_m` of the park's muster row a siren
+	# announces it, and `siren_s` later the ring lands where the ball is and count 1 climbs in. The ring then rides
+	# survival_count.gd's loop (FORMS muster), setting off the way the ball was heading. Gate, bank and forfeit are
+	# the yard's.
+	"stocktake_muster": {
+		"starts": "ring", "ring": 24.0, "finishes": "count", "pack": [], "form": "muster", "arrive_s": 0.4, "out_s": 4.0,
+		"one_in": 3, "call_m": 100.0, "siren_s": 6.0,
+		"pay_ahead_m": 12.0, "pay": {"scrap": 0, "rarities": [], "source": "activity_yard", "where": "gate"},
+		"cue": {"view": "hauler_bounty", "word": "Stocktake"},
+	},
 	# The surge course in a park (surge_course.gd): rolling into the ring by the head of the activity row's `route`
 	# opens the sluice (the park's sluice_surge event row, triggered on this row), and when the gate lands the water
 	# chases the ball down the route's grind rows through the gates. A ring with no sluice heard opens anyway after
@@ -163,6 +175,21 @@ const RULES := {
 
 const PICKUP_REACH := 1.7
 const PICKUP_HEIGHT := 3.0
+# The activity kinds that stand a survival count (survival_count.gd), each on a park survival_rows row of its form.
+# Ground inside the ring may stand this far off an even slope through the ring's centre, and that slope may be this
+# steep (rise over run; survey_posts.gd stands its posts on no steeper).
+const RING_RISE_M := 10.0
+const RING_SLOPE := 0.45
+# A travelling ring keeps this far past another site's own ring: a pocket's walls and cover stand outside its ring.
+const SITE_PAD_M := 20.0
+# How far apart the ground inside a ring is read for a rise.
+const RING_READ_M := 6.0
+# A muster whose siren has ended waits this long for the ball to reach ground a ring fits on, then stands down; it
+# can be called again once the ball has been out of its call range.
+const MUSTER_WAIT_S := 20.0
+# A contraption row with no size of its own (a valve, a lift, a launcher) is taken as this wide a disc.
+const CONTRAPTION_M := 6.0
+const SURVIVAL_KINDS := ["stocktake_yard", "stocktake_muster"]
 const RING_HEIGHT := 8.0
 const BRUTE_DROP := 2.4
 const SPAWN_CLEARANCE := 2.4
@@ -229,6 +256,8 @@ const LET_GO_M := 100.0
 
 var ctx
 var sites: Array = []
+var _keep_map
+var _keep_rows: Array = []
 var _piece_paid := false
 var _pending_stage := false
 var _elite_arrivals := 0
@@ -366,11 +395,22 @@ class Site extends Node3D:
 	var yard_out := 0.0
 	# The ball has been inside the ring with this gate open, so crossing out is its choice to bank.
 	var yard_may_bank := false
+	# A muster: called (its siren has sounded), the seconds of siren left before it lands (under 0, the seconds it
+	# has waited for ground a ring fits on), and stood down (it found none; the ball must leave before a new call).
+	var yard_called := false
+	var yard_siren := -1.0
+	var yard_stood := false
+	# The yard's stand and gate (stocktake_dress.gd), or null.
+	var yard_dress
+	var yard_mast: Node3D
 
 	func _exit_tree() -> void:
 		for enemy in pack + minibosses:
 			if is_instance_valid(enemy):
 				enemy.queue_free()
+		# The muster's mast stands under the sites' parent, not under this site, so it goes with it here.
+		if is_instance_valid(yard_mast):
+			yard_mast.queue_free()
 
 
 func setup(ctx_ref) -> void:
@@ -571,9 +611,10 @@ func _plan(map, entry_data: Dictionary) -> Dictionary:
 				built_spec.pack = spec.pack.duplicate()
 				built_spec.tell = spec.get("tell", {}).duplicate(true)
 		out.append({"kind": "row", "id": id, "at": spec["at"], "spec": built_spec})
-	var yard := yard_spec(map)
-	if not yard.is_empty():
-		out.append({"kind": "row", "id": "stocktake_yard", "at": yard["at"], "spec": yard})
+	for kind in SURVIVAL_KINDS:
+		var stand := survival_spec(map, kind)
+		if not stand.is_empty():
+			out.append({"kind": "row", "id": kind, "at": stand["at"], "spec": stand})
 	if _graph_map != "":
 		var tuning = ctx.get("tuning")
 		var sitting: bool = tuning != null and tuning.has_method("sitting") and tuning.sitting()
@@ -604,15 +645,18 @@ func _plan(map, entry_data: Dictionary) -> Dictionary:
 	return {"sites": out, "modifier": modifier}
 
 
-# The survival yard this run stands on `map`, or {} for none: --stocktake=on, not calm, a world with a roster, and
-# one of the map's yard rows drawn by the run's seed, so a replay or a retry stands the same one.
-func yard_spec(map) -> Dictionary:
+# The survival site of `kind` (SURVIVAL_KINDS) this run stands on `map`, or {} for none: --stocktake=on, not calm, a
+# world with a roster, and one of the map's rows of the kind's form drawn by the run's seed, so a replay or a retry
+# stands the same one. A kind with `one_in` stands on one run in that many, by the same seed.
+func survival_spec(map, kind: String) -> Dictionary:
 	var tuning = ctx.get("tuning")
 	if tuning == null or tuning.option("stocktake") != "on" or ctx.calm or not "survival_sites" in map:
 		return {}
-	var form := String(RULES["stocktake_yard"]["form"])
+	var form := String(RULES[kind]["form"])
 	var rows: Array = map.survival_sites.filter(func(row: Dictionary) -> bool: return row["form"] == form)
 	if rows.is_empty() or not SurvivalCount.ROSTERS.has(ctx.stages.world_of(ctx.run.stage)):
+		return {}
+	if posmod(hash([ctx.rng.seed, ctx.run.run_seed, "survival_called_" + form]), int(RULES[kind].get("one_in", 1))) != 0:
 		return {}
 	return rows[posmod(hash([ctx.rng.seed, ctx.run.run_seed, "survival_" + form]), rows.size())]
 
@@ -809,7 +853,8 @@ func _uncover(ahead: Dictionary) -> void:
 		return
 	# Every other child goes, a failed build's part-made site too.
 	for child in ahead.holder.get_children():
-		if not child in taken:
+		# A site's furniture that stands beside it (a muster's siren mast) stays with its site.
+		if not child in taken and not taken.any(func(site): return site.yard_mast == child):
 			ahead.holder.remove_child(child)
 			child.queue_free()
 	ahead.holder.visible = true
@@ -852,6 +897,12 @@ func clear() -> void:
 	_pending_stage = false
 
 
+# The sites a player is offered now: built, not done, shown (a muster is hidden until it lands) and not a field
+# find, which is found, never pointed at. The markers and the HUD's count read this.
+func on_offer() -> Array:
+	return sites.filter(func(s) -> bool: return is_instance_valid(s) and not s.done and not s.has_meta("find") and s.visible)
+
+
 func site(id: String) -> Site:
 	for s in sites:
 		if s.id == id:
@@ -891,7 +942,7 @@ func _build_site(id: String, at: Vector2, spec: Dictionary) -> Site:
 	s.drawn = spec.get("drawn", false)
 	s.trade = spec.get("trade", {})
 	var spec_pay: Dictionary = spec.get("pay", {})
-	if id in ["enemy_camp", "hold_the_relay", "ambush_altar", "stocktake_yard"] or not spec_pay.is_empty() or spec.has("face") or s.rule.has("bundle") or not s.interior.is_empty():
+	if id in ["enemy_camp", "hold_the_relay", "ambush_altar"] or id in SURVIVAL_KINDS or not spec_pay.is_empty() or spec.has("face") or s.rule.has("bundle") or not s.interior.is_empty():
 		s.rule = s.rule.duplicate(true)
 	if not s.interior.is_empty():
 		s.footprint = spec.footprint
@@ -938,9 +989,17 @@ func _build_site(id: String, at: Vector2, spec: Dictionary) -> Site:
 	match id:
 		"hold_the_relay":
 			_build_relay(s)
-		"stocktake_yard":
+		"stocktake_yard", "stocktake_muster":
 			s.yard = SurvivalCount.new(ctx.stages.world_of(ctx.run.stage), String(s.rule["form"]))
 			s.view.say(String(s.rule.cue.word))
+			# A form that comes to the ball shows nothing until it lands; its only furniture is the siren mast at its row.
+			s.visible = not s.rule.has("siren_s")
+			var onward: Vector2 = ctx.terrain.map().beacon - Vector2(s.global_position.x, s.global_position.z)
+			if s.visible:
+				s.yard_dress = StocktakeDress.attach(s, float(s.rule["ring"]), onward, ctx.terrain.height)
+			else:
+				# The mast stands where the muster is called, under the sites' parent: the site itself is hidden.
+				s.yard_mast = StocktakeDress.mast(s.get_parent(), Vector2(s.global_position.x, s.global_position.z), onward, ctx.terrain.height)
 		"surge_run":
 			_build_surge(s, spec)
 		"ambush_altar":
@@ -2048,14 +2107,25 @@ func yard_standing(s: Site) -> int:
 
 func _watch_yard(s: Site, delta: float, ball: Vector3) -> void:
 	var yard = s.yard
-	var inside := _planar(ball, s.global_position) <= float(s.rule["ring"])
 	if not s.started:
-		if not inside or absf(ball.y - s.global_position.y) > RING_HEIGHT or not ctx.can_spawn():
+		if not ctx.can_spawn():
+			return
+		if s.rule.has("siren_s"):
+			if not _muster_lands(s, delta, ball):
+				return
+		elif _planar(ball, s.global_position) > float(s.rule["ring"]) or absf(ball.y - s.global_position.y) > RING_HEIGHT:
 			return
 		s.started = true
-		yard.begin(Vector2(s.global_position.x, s.global_position.z))
+		var going: Vector3 = ctx.player.planar_velocity()
+		var landed := Vector2(s.global_position.x, s.global_position.z)
+		var heading := Vector2(going.x, going.z)
+		yard.begin(landed, heading, func(lap: PackedVector2Array) -> bool: return clear_ground(lap, float(s.rule["ring"]), s))
 		_yard_owe(s)
 		ctx.events.event_started.emit(s.id)
+	elif s.rule.has("siren_s"):
+		var ground: Vector2 = yard.ground()
+		s.global_position = ctx.terrain.drop_point(ground.x, ground.y, 0.0)
+	var inside := _planar(ball, s.global_position) <= float(s.rule["ring"])
 	s.pack = s.pack.filter(func(enemy): return is_instance_valid(enemy) and not (enemy.has_method("is_dead") and enemy.is_dead()))
 	s.yard_wait -= delta
 	if s.yard_wait <= 0.0 and not s.yard_owed.is_empty():
@@ -2070,6 +2140,8 @@ func _watch_yard(s: Site, delta: float, ball: Vector3) -> void:
 		"pile":
 			_yard_owe(s)
 	s.view.say(str(yard.count))
+	if s.yard_dress != null:
+		s.yard_dress.step(delta, yard.gate_open, [ball] + s.pack.map(func(enemy): return enemy.global_position))
 	if inside:
 		s.yard_out = 0.0
 		s.yard_may_bank = yard.gate_open
@@ -2081,6 +2153,116 @@ func _watch_yard(s: Site, delta: float, ball: Vector3) -> void:
 		s.yard_out += delta
 		if s.yard_out >= float(s.rule["out_s"]):
 			_yard_forfeit(s)
+
+
+# The muster comes to the ball: within `call_m` of its row the siren announces it, and `siren_s` later its ring
+# lands on the ground under the ball. True on the frame it lands. It neither calls nor lands on a ball the Warden
+# has engaged: the siren waits, and a ball that goes to the fight is not followed in. The announcement names no
+# place (the ring lands wherever the ball is by then), so no edge marker points at one.
+func _muster_lands(s: Site, delta: float, ball: Vector3) -> bool:
+	if ctx.flow.engaged():
+		return false
+	if not s.yard_called:
+		var close: bool = _planar(ball, s.global_position) <= float(s.rule["call_m"])
+		s.yard_stood = s.yard_stood and close
+		if close and not s.yard_stood:
+			s.yard_called = true
+			s.yard_siren = float(s.rule["siren_s"])
+			ctx.events.event_announced.emit(s.id, s.yard_siren, Vector3.INF)
+		return false
+	# The ring lands when the siren ends, or as soon after as the ball is on ground a ring fits on: never on another
+	# fight's ground, the Warden's, a rock rise or the map's edge (ground_fault). The wait runs the siren below zero to
+	# -MUSTER_WAIT_S, where the muster stands down as if never called.
+	s.yard_siren -= delta
+	if s.yard_siren > 0.0:
+		return false
+	if not clear_ground(PackedVector2Array([Vector2(ball.x, ball.z)]), float(s.rule["ring"]), s):
+		if s.yard_siren < -MUSTER_WAIT_S:
+			s.yard_called = false
+			s.yard_stood = true
+		return false
+	s.global_position = ctx.terrain.drop_point(ball.x, ball.z, 0.0)
+	s.visible = true
+	return true
+
+
+# True when a ring of `ring` metres fits on every one of `points` in turn (ground_fault() finds none).
+func clear_ground(points: PackedVector2Array, ring: float, but: Site = null) -> bool:
+	return ground_fault(points, ring, but) == ""
+
+
+# Why a ring of `ring` metres does not fit on `points` in turn, or "" when it does. "edge": off the play area.
+# "taken": on a fight's own ground or the Warden's ring (ParkMap.fight_sites()), on a place a contraption row names,
+# or within SITE_PAD_M of another site standing this run (a drawn pocket too; `but` is the asking site). "rise":
+# the ground inside the ring is not one even slope: two reads straight across the centre from each other stand
+# RING_RISE_M off the line through the centre between them (a butte, a mesa, a pit), or the slope between them is
+# over RING_SLOPE. Read every RING_READ_M across a lone point's ring and round the outer part of a lap's (its
+# neighbours read the middle), so a wall or a drop between two points of a lap is inside a ring that reads it.
+# Water and hole cells are not looked at.
+func ground_fault(points: PackedVector2Array, ring: float, but: Site = null) -> String:
+	var map = ctx.terrain.map()
+	var keep := _keep_off(map)
+	for other in sites:
+		if other != but and is_instance_valid(other) and other.visible:
+			keep.append({"at": Vector2(other.global_position.x, other.global_position.z), "r": float(other.rule.get("ring", 0.0)) + SITE_PAD_M})
+	var inside: Rect2 = map.play_rect.grow(-ring)
+	var reads := PackedVector2Array()
+	for band in range(1 if points.size() == 1 else 2, int(ring / RING_READ_M) + 1):
+		var around := 6 * band
+		for k in around / 2:
+			var read := Vector2.RIGHT.rotated(TAU * k / around) * minf(ring, band * RING_READ_M)
+			reads.append(read)
+			reads.append(-read)
+	var centres: PackedFloat64Array = ctx.terrain.heights(points)
+	var under := PackedVector2Array()
+	under.resize(reads.size())
+	for i in points.size():
+		var p := points[i]
+		if not inside.has_point(p):
+			return "edge"
+		for row in keep:
+			var local: Vector2 = p - row["at"]
+			var reach: float = float(row["r"]) + ring
+			if row.has("half"):
+				local = local.rotated(deg_to_rad(float(row["yaw_deg"])))
+				var half: Vector2 = row["half"]
+				local = Vector2(maxf(0.0, absf(local.x) - half.x), maxf(0.0, absf(local.y) - half.y))
+			if local.length() < reach:
+				return "taken"
+		for k in reads.size():
+			under[k] = p + reads[k]
+		# Each read is followed by the one straight across the centre from it (reads come in opposite pairs).
+		var across: PackedFloat64Array = ctx.terrain.heights(under)
+		for k in range(0, across.size(), 2):
+			var lump: float = absf(across[k] + across[k + 1] - 2.0 * centres[i])
+			var slope: float = absf(across[k] - across[k + 1]) / (2.0 * reads[k].length())
+			if lump > RING_RISE_M or slope > RING_SLOPE:
+				return "rise"
+	return ""
+
+
+# What a map's own rows keep a travelling ring off, each {"at", "r"} for a disc or {"at", "half", "yaw_deg", "r"} for
+# a box with `r` the pad past it: each fight site's ground, and every place a contraption row names on the ground (its
+# own spot, a valve's door and cache, a cable's two ends, a launcher's landing), none of which is in the height grid.
+func _keep_off(map) -> Array:
+	if map != _keep_map:
+		_keep_map = map
+		_keep_rows = []
+		for fight in (map.fight_sites() if map.has_method("fight_sites") else []):
+			if fight.has("half"):
+				_keep_rows.append({"at": fight["at"], "half": fight["half"], "yaw_deg": float(fight.get("yaw_deg", 0.0)), "r": 0.0})
+			else:
+				_keep_rows.append({"at": fight["at"], "r": float((fight["ring"] as Vector2).y)})
+		for row in (map.park.get("contraption_rows", []) if "park" in map else []):
+			var wide := CONTRAPTION_M
+			for part in [row] + row.values().filter(func(v): return v is Dictionary):
+				for n in (part.get("size", []) as Array) + [2.0 * float(part.get("radius", 0.0))]:
+					wide = maxf(wide, float(n) * 0.5)
+			for part in [row] + row.values().filter(func(v): return v is Dictionary):
+				for key in ["at", "from", "to", "target"]:
+					if part.get(key) is Array:
+						_keep_rows.append({"at": Vector2(float(part[key][0]), float(part[key][-1])), "r": wide})
+	return _keep_rows.duplicate()
 
 
 # The standing count's machines join the ones owed, at that count's strength.
@@ -2122,6 +2304,8 @@ func _yard_pay(s: Site, pay: Dictionary, ball: Vector3) -> void:
 		ctx.run.add_scrap(scrap, at)
 		ctx.run.add_cogs(scrap)
 	ctx.events.event_ended.emit(s.id, "won")
+	if s.yard_dress != null:
+		s.yard_dress.stand_down()
 	_finish(s, at)
 
 
@@ -2130,6 +2314,8 @@ func _yard_forfeit(s: Site) -> void:
 	s.yard.forfeit()
 	s.yard_owed = []
 	s.done = true
+	if s.yard_dress != null:
+		s.yard_dress.stand_down()
 	s.view.finish()
 	ctx.events.event_ended.emit(s.id, "lost")
 

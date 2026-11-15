@@ -37,6 +37,7 @@ const OPEN_WITHIN := FIND_FRAMES + 60
 const NEXT_WITHIN := 60
 const CALM_WITHIN := 900
 const QUIET_FRAMES := 30
+const FIRST_FIGHT := ["settle", "hold", "repeat_fight", "open"]
 const STEP_S := 1.0 / 60.0
 const SliceDefs := preload("res://src/core/slice_defs.gd")
 const PLATING: float = SliceDefs.DEFS[0]["warden_plating"]
@@ -165,6 +166,14 @@ func _physics_process(_delta: float) -> bool:
 	if _game.flow == null:
 		return false
 	_wait += 1
+	# The first fight times the gate, not the crews: a roaming machine that telegraphs at the inputless ball
+	# in the second before the Warden's break holds the card for the gate's own calm (WhyCallout.CALM_SECONDS),
+	# and how soon the first one arrives moves with every crew dial (wave 37: the lead, the chaser speed). So,
+	# as with the bounty brute, no roaming machine stands until the first card has opened.
+	if _phase in FIRST_FIGHT:
+		for enemy in get_nodes_in_group("enemy"):
+			if is_instance_valid(enemy) and enemy != _game.flow.warden and not enemy.is_queued_for_deletion():
+				enemy.queue_free()
 	match _phase:
 		"boot":
 			var source := Intent.Scripted.new()
@@ -217,6 +226,8 @@ func _physics_process(_delta: float) -> bool:
 						and _ceremony()._cards.size() == 1 and _ceremony().queued() == 0 and _name_showing()
 						and presented.all(func(p: Array): return p[1] in ["common", "rare"]),
 					"common and relic repeats for %d frames in a fight: no card, no pop; tiers %s" % [QUIET_FRAMES, presented.map(func(p: Array): return p[1])])
+				# A quick break (RunClock) would stand a third arch on the middle slot too: not this fight's.
+				_game.ctx.build.clock.engaged_at = -1.0
 				_game.flow.warden._die()
 				# The Warden's crowd is really removed (not announced away): the screen's quiet clock then runs.
 				_remove_crowd()

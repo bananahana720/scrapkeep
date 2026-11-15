@@ -173,8 +173,8 @@ The shipped rows are in `src/world/park/park_dam.json`; this table follows that 
 | Centre: the incline | `construction_incline` | drop / mesa_rim / dam_era | ramp | [0, 330], [230, 1, 100], 180 | drop, `ride_drop` | routes `incline_line`; `dam_era_incline_tally` |
 | Centre: the incline | `incline_spine` | elevated_line / mesa_rim / dam_era | ridge | [15, 370], [100, 20, 16], 0 | roll, `ride_ledge` |  |
 | Centre: the incline | `tailwater_bar` | flow_line / dry_wash / none | wash | [-20, 460], [70, 2, 60], 0 | roll, `ride_chute` | routes `incline_line` |
-| Centre: the incline | `apron_kicker` | kicker / dry_wash / none | plateau | [0, 448], [20, 0, 26], 0 | launch, `kicker_launch` |  |
-| Centre: the incline | `apron_kicker_ramp` | ground / dry_wash / none | ramp | [0, 448], [20, 5, 26], 180 | roll |  |
+| Centre: the incline | `apron_kicker` | kicker / dry_wash / none | plateau | [0, 476], [20, 0, 26], 0 | launch, `kicker_launch` |  |
+| Centre: the incline | `apron_kicker_ramp` | ground / dry_wash / none | ramp | [0, 476], [20, 3, 26], 180 | roll |  |
 | Centre: the incline | `east_lane_fin` | elevated_line / mesa_rim / none | ridge | [70, 392.5], [155, 26, 20], 0 | roll, `ride_ledge` |  |
 | East: bridge, bench, canal, crest | `pipeline_bridge` | grind_line / pipeline / dam_era | ridge | [130, 260], [80, 3, 6], 0 | grind, `ride_grapple_line` | routes `canal_run`, `dropship_ramp`, `crest_line`; `dam_era_bridge_plate` |
 | East: bridge, bench, canal, crest | `east_bench_flats` | ground / slickrock / none | none | [165, 475], [90, 6, 70], 0 | roll | home `dropship_winches`; routes `canal_run`, `dropship_ramp`, `crest_line` |

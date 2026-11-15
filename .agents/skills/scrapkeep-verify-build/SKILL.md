@@ -16,7 +16,7 @@ All commands run from the repository root. `B=.agents/skills/scrapkeep-verify-bu
 1. Cloud: `GODOT_BIN=/opt/scrapkeep-toolchain/Godot_v4.7.2-stable_linux.x86_64 $B export` runs `node scripts/cloud/export-headless.mjs`: import, the release gate's placeholder test, the "Linux x64" export, and two headless boots. It took 41 seconds on an imported checkout and writes the build under the gitignored cloud-export folder in `artifacts/local/`. It has no recorded stems, no Vulkan boss smoke and no tarball. (VBD-01)
 2. PC: the package is cut by `npm run sketch:export` (stems, boss smoke, tarball), which is the Gate's job and needs an idle card. To drive one, set `VERIFY_BUILD_EXE=<path to its core-loop.x86_64>`; do not cut one from this skill.
 3. There is no server to keep alive. Each drive is one short game process on a display of its own: `$B drive <steps file> [<evidence name>] [-- <game flags>]`.
-4. Ready is the line `SCRAPKEEP_MENU_READY ms=<n> profile=<default|sitting> pilots=<open>/<all>` in the evidence's game log, and a first step `until clickable "Settings" 120`.
+4. Ready is the line `SCRAPKEEP_MENU_READY ms=<n> profile=<default|sitting> pilots=<open>/<all> stages=<in the run>` in the evidence's game log, and a first step `until clickable "Settings" 120`.
 
 ## Doctor
 
