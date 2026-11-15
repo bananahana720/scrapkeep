@@ -3,7 +3,7 @@
 ## The PC
 
 - **Machine:** "ahana", Omarchy (Arch Linux), RTX 4080 as GPU device 0 and an RTX 3060 as device 1. Checkout: `/home/andrew/Projects/scrapkeep`.
-- **How work reaches it.** The board thread drives it through a Remote Control session; the session can end silently, so check its status when the PC queue goes quiet. A PC session waits on a background job for at most about 45 minutes, then takes a short turn, so the app's idle sweep does not stop it (ruling dn). Godot runs there only with the scratch folder, and Andrew's saves and settings (`~/.local/share/godot/app_userdata/core-loop`) need his go-ahead.
+- **How work reaches it.** Since 15 Nov the Gate is a local session on this PC and runs the work directly (ruling ds). Until 14 Nov the board thread drove it through a Remote Control session, which could end silently. A PC session waits on a background job for at most about 45 minutes, then takes a short turn, so the app's idle sweep does not stop it (ruling dn). Godot runs there only with the scratch folder, and Andrew's saves and settings (`~/.local/share/godot/app_userdata/core-loop`) need his go-ahead.
 - **The 4080 is device 0 for perf.** Pin all frame-time and timing work to it, through headless gamescope. Readings count only on an idle card: a capture is void if Andrew plays or another process touches the card during it. Run the stems sync first. Power caps: 4080 280 W, 3060 140 W (#446).
 - **Wallpaper.** The live wallpaper pauses only for a process named exactly `godot`, so launch captures through a `godot` link and count `mpvpaper` as foreign (#446).
 - **The 3060 renders music** (ACE-Step renders and stem splits) and stills. Music renders pause while a 4080 perf reading runs.

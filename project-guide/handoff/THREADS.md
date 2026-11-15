@@ -1,6 +1,6 @@
-# Threads and who owns what (14 Nov 2026)
+# Roles and who owns what (15 Nov 2026)
 
-The claude.ai project "Scrapkeep" coordinates the alpha. Each role below is a thread in that project unless it says otherwise. Earlier set-ups (the PC-coordinator lanes of 22 Oct, the project roles at the 10 Nov hand-off, the local PC coordinator of 10 to 11 Nov) are in git history.
+Since 15 Nov 2026 one local Claude Code session on Andrew's PC is the coordinator and the Gate (ruling ds); it holds the first two roles below, and the unit work is done by that session or by its writer agents in separate worktrees. The table keeps the claude.ai project wording of 12 to 14 Nov (ruling dh) for the other roles, which are stopped; their open work is listed in [STATE.md](STATE.md). Earlier set-ups (the PC-coordinator lanes of 22 Oct, the project roles at the 10 Nov hand-off, the local PC coordinator of 10 to 11 Nov) are in git history.
 
 | Role | Where | What it does |
 | --- | --- | --- |
