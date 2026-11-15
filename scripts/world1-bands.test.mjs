@@ -59,6 +59,12 @@ const FULL_BEATS = SPEC.beats.map((id) => ({ id, s: 4, full: true, skipped: fals
 
 const HEAD = "0123456789abcdef0123456789abcdef01234567";
 
+// A measured column, inside its band, for every band the difficulty row records for the cell.
+function bandColumns(cell) {
+  const bands = SPEC.rows.find((r) => r.id === "difficulty").targets?.[cell] ?? {};
+  return Object.fromEntries(Object.entries(bands).map(([col, t]) => [col, { rate: t.min != null && t.max != null ? (t.min + t.max) / 2 : t.max != null ? t.max / 2 : t.min }]));
+}
+
 function finished() {
   return {
     runs: [
@@ -71,7 +77,7 @@ function finished() {
     beatRowsText: BEATS_TEXT,
     phases: 3,
     frames: Object.fromEntries(SPEC.frame_scenes.map((s) => [s, { pass: true, p99_ms: 12, over_hitch: 0, budget: { hitch_ms: 33 } }])),
-    challenge: { table: SPEC.challenge_cells.map((cell) => ({ cell, columns: { expert: { ok: true } } })) },
+    challenge: { table: SPEC.challenge_cells.map((cell) => ({ cell, columns: { expert: { ok: true }, ...bandColumns(cell) } })) },
     sitting: true,
     playFindings: { rows: [], problems: [] },
     ledger: { rows: [], problems: [] },
@@ -271,6 +277,8 @@ test("the difficulty row grades stored rates again: its own recorded bands, and 
   w1.columns.novice = col(0.375, true);
   assert.match(row(evaluate(banded, inputs), "difficulty").measured, /w1 fail/);
   // The shipped band is ruling cu's <= 20% (ruling dt): 4 of 24 (16.7%) passes it, 5 of 24 (20.8%) does not.
+  // The shipped row also records a Learner a5 band, so that column must be measured for the cell to be graded.
+  w1.columns.learner5 = col(0.45, true);
   w1.columns.novice = col(4 / 24, true);
   assert.match(row(evaluate(SPEC, inputs), "difficulty").measured, /w1 pass/);
   w1.columns.novice = col(5 / 24, true);
@@ -292,8 +300,11 @@ test("the difficulty row grades stored rates again: its own recorded bands, and 
   w1.columns.learner5 = col(7 / 24, false);
   assert.match(row(evaluate(SPEC, inputs), "difficulty").measured, /w1 fail/);
   w1.columns.learner5 = col(14 / 24, true);
-  // An incomplete column is never a pass.
+  // An incomplete column is never a pass: a banded one counts as not measured, any other as incomplete.
   w1.columns.novice = { ...col(0.1, true), incomplete: true };
+  assert.match(row(evaluate(SPEC, inputs), "difficulty").measured, /w1 not measured \(novice\)/);
+  w1.columns.novice = col(0.1, true);
+  w1.columns.expert = { ...col(1, true), incomplete: true };
   assert.match(row(evaluate(SPEC, inputs), "difficulty").measured, /w1 incomplete/);
 });
 
@@ -353,6 +364,16 @@ test("done: a receipt passes only for the head judged, with its planted fault sh
   const stale = receiptRow(spec, { head: "ffffffffffff", pass: true, plant_caught: true }, HEAD);
   assert.match(stale.measured, /^stale receipt: written at fffffffff, judging 012345678/);
   assert.equal(stale.pass, false);
+  // No head to judge against, or one too short to name a commit: a receipt from any commit must not pass.
+  for (const none of [null, undefined, "", "0", "012345", "not-a-sha"]) {
+    const unjudged = receiptRow(spec, { head: HEAD, pass: true, measured: "CLEAN", plant_caught: true }, none);
+    assert.equal(unjudged.pass, false, String(none));
+    assert.equal(unjudged.noData, true, String(none));
+    assert.match(unjudged.measured, /^no head to judge the receipt against/);
+  }
+  assert.throws(() => parseArgs(["--head", "0"]), /--head takes 7 to 40 hex/);
+  assert.throws(() => parseArgs(["--today", "1"]), /--today takes YYYY-MM-DD/);
+  assert.equal(parseArgs(["--head", HEAD.slice(0, 9)]).head, HEAD.slice(0, 9));
   // A pass whose plant was never shown caught is void: a check never seen failing decides nothing.
   const blind = receiptRow(spec, { head: HEAD, pass: true, measured: "CLEAN" }, HEAD);
   assert.match(blind.measured, /^void, the planted fault was not shown caught: CLEAN/);
@@ -385,4 +406,19 @@ test("done: CLI takes receipts, a head and a date", () => {
   assert.equal(args.head, HEAD);
   assert.equal(args.today, "2026-11-20");
   assert.throws(() => parseArgs(["--receipt", "nofile"]), /--receipt takes/);
+});
+
+test("done: a difficulty cell that never measured its recorded band is no data, not a pass", () => {
+  // Seeded fault: the w1 cell holds only an Expert tick, so ruling cu's Novice and Learner bands were never applied.
+  const inputs = finished();
+  inputs.challenge.table = inputs.challenge.table.map((c) => (c.cell === "w1" ? { cell: "w1", columns: { expert: { ok: true } } } : c));
+  const rows = evaluate(SPEC, inputs);
+  const d = row(rows, "difficulty");
+  assert.equal(d.verdict, "no data");
+  assert.match(d.measured, /w1 not measured \(novice, learner5\)/);
+  assert.equal(passed(rows), false);
+  // An incomplete column counts as not measured too.
+  const partial = finished();
+  partial.challenge.table.find((c) => c.cell === "w1").columns.novice.incomplete = true;
+  assert.match(row(evaluate(SPEC, partial), "difficulty").measured, /w1 not measured \(novice\)/);
 });

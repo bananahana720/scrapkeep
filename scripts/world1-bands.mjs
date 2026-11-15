@@ -15,7 +15,8 @@
 // --receipt  <row id>=<receipt.json>, or --receipts <dir> holding <row id>.json files: the output of a
 //             check this reader does not run itself (a gate tally, a film read, a model check). A receipt
 //             is { head, pass, measured, plant_caught }. See "Receipts" below.
-// --head     the commit being judged: a receipt written at another head counts as no data.
+// --head     the commit being judged, 7 to 40 hex characters (default: this checkout's HEAD): a receipt
+//             written at another head counts as no data.
 // --today    YYYY-MM-DD for the known-failing review dates (default: today, UTC).
 // Placeholders are scanned in-process (placeholder-gate.mjs) and story-beat rows are checked in the
 // beat rows file. Exit 0 when no gate row fails, 1 otherwise. A report row never fails the read.
@@ -23,6 +24,7 @@
 // With --sitting this is the one read that says whether world 1 is done (ruling dt). A row with status
 // "sitting" is a thing only Andrew can judge at his sitting: it is listed, never graded, never blocks.
 
+import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -308,10 +310,24 @@ function regrade(cell, overrides = {}) {
 function challengeRow(row, table, cells) {
   if (!table) return { measured: "no challenge table given", pass: false, noData: true };
   const byCell = new Map((table.table ?? []).map((c) => [c.cell, regrade(c, row.targets?.[c.cell])]));
-  const verdicts = cells.map((id) => [id, !byCell.has(id) ? "missing" : byCell.get(id).columns ? cellVerdict(byCell.get(id)) : "no columns"]);
+  // A band the row records for a cell decides nothing unless the table measured that column: a cell that
+  // holds only other columns must not pass with its recorded band never applied.
+  const unmeasured = (id) => Object.keys(row.targets?.[id] ?? {}).filter((col) => {
+    const c = byCell.get(id).columns[col];
+    return typeof c?.rate !== "number" || c.incomplete;
+  });
+  const verdictOf = (id) => {
+    if (!byCell.has(id)) return "missing";
+    if (!byCell.get(id).columns) return "no columns";
+    const gap = unmeasured(id);
+    return gap.length ? `not measured (${gap.join(", ")})` : cellVerdict(byCell.get(id));
+  };
+  const verdicts = cells.map((id) => [id, verdictOf(id)]);
+  const ungraded = verdicts.some(([, v]) => v === "missing" || v === "no columns" || v.startsWith("not measured"));
   return {
     measured: verdicts.map(([id, v]) => `${id} ${v}`).join(", ") + (table.commit ? ` (table at ${String(table.commit).slice(0, 8)})` : ""),
     pass: verdicts.every(([, v]) => v === "pass"),
+    ...(ungraded ? { noData: true } : {}),
     threshold: recordedBands(row.targets),
   };
 }
@@ -349,11 +365,15 @@ function ledgerRow(row, ledger, today) {
 //   { "head": "<commit judged>", "pass": true, "measured": "<one line>", "plant_caught": true }
 // The row names the command that writes it (`producer`) and the fault it must catch (`plant`).
 // A receipt passes only when it is for the head being judged and, where the row names a plant, the
-// receipt says the plant was caught on that head: a check never seen failing decides nothing.
+// receipt says the plant was caught on that head: a check never seen failing decides nothing. With no
+// head to judge against (or one too short to name a commit) every receipt is no data, so a receipt from
+// any commit can never pass by default.
+export const COMMIT = /^[0-9a-f]{7,40}$/;
 export function receiptRow(row, receipt, head) {
   if (!receipt) return { measured: `no receipt (${row.producer ?? "no producer yet"})`, pass: false, noData: true };
-  if (typeof receipt.head !== "string" || receipt.head.length < 7) return { measured: "the receipt names no head", pass: false, noData: true };
-  if (head && !(head.startsWith(receipt.head) || receipt.head.startsWith(head))) return { measured: `stale receipt: written at ${receipt.head.slice(0, 9)}, judging ${head.slice(0, 9)}`, pass: false, noData: true };
+  if (typeof head !== "string" || !COMMIT.test(head)) return { measured: "no head to judge the receipt against (--head <commit>)", pass: false, noData: true };
+  if (typeof receipt.head !== "string" || !COMMIT.test(receipt.head)) return { measured: "the receipt names no head", pass: false, noData: true };
+  if (!(head.startsWith(receipt.head) || receipt.head.startsWith(head))) return { measured: `stale receipt: written at ${receipt.head.slice(0, 9)}, judging ${head.slice(0, 9)}`, pass: false, noData: true };
   const said = typeof receipt.measured === "string" && receipt.measured ? receipt.measured : receipt.pass === true ? "pass" : "fail";
   if (row.plant && receipt.plant_caught !== true) return { measured: `void, the planted fault was not shown caught: ${said}`, pass: false };
   return { measured: said, pass: receipt.pass === true };
@@ -456,8 +476,13 @@ export function parseArgs(argv) {
       if (eq < 1 || eq === v.length - 1) throw new Error(`--receipt takes <row id>=<receipt.json>: ${v}`);
       args.receipts[v.slice(0, eq)] = v.slice(eq + 1);
     } else if (a === "--receipts") args.receiptDirs.push(value(i++, a));
-    else if (a === "--head") args.head = value(i++, a);
-    else if (a === "--today") args.today = value(i++, a);
+    else if (a === "--head") {
+      args.head = value(i++, a);
+      if (!COMMIT.test(args.head)) throw new Error(`--head takes 7 to 40 hex characters of a commit: ${args.head}`);
+    } else if (a === "--today") {
+      args.today = value(i++, a);
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(args.today) || Number.isNaN(Date.parse(args.today))) throw new Error(`--today takes YYYY-MM-DD: ${args.today}`);
+    }
     else if (a === "--sitting") args.sitting = true;
     else if (a === "--json") args.json = true;
     else if (a === "--out") args.out = value(i++, a);
@@ -468,8 +493,18 @@ export function parseArgs(argv) {
   return args;
 }
 
+// The commit this checkout is on, or null outside a git checkout (every receipt is then no data).
+function checkoutHead() {
+  try {
+    return execFileSync("git", ["-C", root, "rev-parse", "HEAD"], { encoding: "utf8" }).trim();
+  } catch {
+    return null;
+  }
+}
+
 function main() {
   const args = parseArgs(process.argv.slice(2));
+  const head = args.head ?? checkoutHead();
   const spec = JSON.parse(read(args.rows));
   const runs = args.bots.flatMap((d) => readBotDir(path.resolve(d)));
   const frames = Object.fromEntries(Object.entries(args.frames).map(([k, f]) => [k, JSON.parse(readFileSync(f, "utf8"))]));
@@ -489,7 +524,7 @@ function main() {
     playFindings: has(FINDINGS_FILE) ? parseFindings(read(FINDINGS_FILE)) : null,
     ledger: has(LEDGER_FILE) ? parseLedger(read(LEDGER_FILE)) : null,
     receipts,
-    head: args.head,
+    head,
     today: args.today,
     beatRowsText: has(spec.beat_rows_file) ? read(spec.beat_rows_file) : null,
     phases: has(spec.brindle_phase_names_file) ? phaseCount(read(spec.brindle_phase_names_file)) : null,
@@ -498,9 +533,10 @@ function main() {
   const rows = evaluate(spec, inputs);
   const out = args.json ? JSON.stringify({ ready: passed(rows), rows }, null, 2) : renderTable(rows);
   console.log(out);
+  if (!args.json) console.log(`Read ${args.sitting ? "with" : "without"} --sitting, judging ${head ? head.slice(0, 12) : "no head"}.`);
   if (args.out) {
     mkdirSync(args.out, { recursive: true });
-    writeFileSync(path.join(args.out, "world1-bands.json"), JSON.stringify({ ready: passed(rows), bots: args.bots, rows }, null, 2) + "\n");
+    writeFileSync(path.join(args.out, "world1-bands.json"), JSON.stringify({ ready: passed(rows), sitting: args.sitting, head, bots: args.bots, rows }, null, 2) + "\n");
     writeFileSync(path.join(args.out, "world1-bands.md"), renderTable(rows) + "\n");
   }
   process.exitCode = passed(rows) ? 0 : 1;
