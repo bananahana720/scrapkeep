@@ -57,6 +57,16 @@ func _initialize() -> void:
 	var thin_rec := Capture.measure(thin, mid, AREA, Color8(111, 127, 143))
 	_t.eq("a one-pixel outline is judged with the ground around it", thin_rec.get("surround", ""), "ring")
 	_t.check("and scores under the full outline's score", thin_rec["contrast"] < out_rec["contrast"] - 1.0, "%s vs %s" % [thin_rec["contrast"], out_rec["contrast"]])
+	# A three-pixel outline whose inner two pixels blend slate into black, the way a font rasterises:
+	# the blend is not what the eye reads against, so the solid outer pixel judges.
+	var soft := mid.duplicate()
+	soft.fill_rect(Rect2i(10, 10, 20, 20), Color8(0, 0, 0))
+	soft.fill_rect(Rect2i(11, 11, 18, 18), Color8(40, 46, 52))
+	soft.fill_rect(Rect2i(12, 12, 16, 16), Color8(75, 86, 97))
+	soft.fill_rect(Rect2i(13, 13, 14, 14), Color8(111, 127, 143))
+	var soft_rec := Capture.measure(soft, mid, AREA, Color8(111, 127, 143))
+	_t.eq("a blended outline is still judged as an outline", soft_rec.get("surround", ""), "outline")
+	_t.check("and scores as slate against its solid black (5.1), not against its blend", absf(soft_rec["contrast"] - out_rec["contrast"]) < 0.2 and soft_rec["contrast"] > 4.5, "%s vs solid %s" % [soft_rec["contrast"], out_rec["contrast"]])
 	_t.check("its ring ratio is its score", is_equal_approx(thin_rec["contrast"], thin_rec["ring_contrast"]), str(thin_rec))
 
 	# A mark (alpha below zero): every changed pixel is the glyph.

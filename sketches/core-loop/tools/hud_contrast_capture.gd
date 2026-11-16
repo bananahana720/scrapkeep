@@ -20,9 +20,9 @@ extends SceneTree
 # alone, the contrast the glyph would have with no outline or panel, for reading only.
 # An element with fewer than MIN_GLYPH glyph pixels is `unseen` and not scored; the run fails when
 # nothing at all was scored. --plant=close adds a word with no outline in a colour a few levels
-# from the ground behind it, beside a matched control word in white; the plant run's verdict is the
+# from the ground behind it, beside a matched control word in white or black, whichever stands further from the ground; the plant run's verdict is the
 # plant's alone: fail (exit 1) when the planted word falls under the line, pass (exit 0) when the
-# measure missed it, 3 when the control word also fails. Real run: exit 0 pass, 1 fail. Both: 2 for
+# measure missed it, 3 when the control word also fails or was not seen. Real run: exit 0 pass, 1 fail. Both: 2 for
 # no display or no --out.
 # Covered: only Label and TextureRect nodes under game.hud. Not covered: words and marks a control
 # draws itself with draw_string or _draw (run_status THREAT, ui_draw's ARMOUR and HEALTH values,
@@ -131,7 +131,7 @@ func _run() -> void:
 	var code := 0 if pass_all else 1
 	if plant == "close":
 		pass_all = plant_close >= WORD_LINE
-		code = 3 if plant_control < WORD_LINE else (0 if pass_all else 1)
+		code = 3 if plant_control < WORD_LINE or plant_control == INF else (0 if pass_all else 1)
 	var head: Array = []
 	OS.execute("git", ["rev-parse", "HEAD"], head)
 	var f := FileAccess.open(out.path_join("frames.json"), FileAccess.WRITE)
@@ -318,6 +318,7 @@ static func measure(shot: Image, ground: Image, rect: Rect2i, font: Color) -> Di
 				continue
 			shown[j * w + i] = 1
 			if is_mark:
+				# A mark has no outline of its own here: every drawn pixel is the mark, so it is judged by the ring.
 				glyph[j * w + i] = 1
 				count += 1
 			else:
@@ -355,7 +356,12 @@ static func measure(shot: Image, ground: Image, rect: Rect2i, font: Color) -> Di
 	rec["outline_share"] = snappedf(share, 0.01)
 	rec["scored"] = true
 	var core := _median(core_lum)
-	rec["contrast"] = snappedf(ratio(core, _median(around_lum)), 0.01)
+	# An outline's inner edge blends into the glyph, so its median reads lighter than the outline
+	# the eye sees; the outline is judged by its solid part, the quartile farthest from the glyph.
+	var around := _median(around_lum)
+	if around_lum == drawn_lum:
+		around = _quantile(drawn_lum, 0.25 if core > around else 0.75)
+	rec["contrast"] = snappedf(ratio(core, around), 0.01)
 	rec["ring_contrast"] = snappedf(ratio(core, _median(ring_lum)), 0.01)
 	rec["ground_contrast"] = snappedf(ratio(core, _median(ground_lum)), 0.01)
 	return rec
@@ -377,6 +383,12 @@ static func _dilate(mask: PackedByteArray, w: int, h: int, r: int) -> PackedByte
 					for di in range(maxi(0, i - r), mini(w, i + r + 1)):
 						out_mask[dj * w + di] = 1
 	return out_mask
+
+
+static func _quantile(values: Array, q: float) -> float:
+	var sorted := values.duplicate()
+	sorted.sort()
+	return sorted[clampi(int(q * float(sorted.size())), 0, sorted.size() - 1)]
 
 
 static func _median(values: Array) -> float:
