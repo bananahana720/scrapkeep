@@ -27,6 +27,7 @@ const Palette := preload("res://src/core/palette.gd")
 const UiFonts := preload("res://src/ui/ui_fonts.gd")
 const ScreenRegions := preload("res://src/ui/screen_regions.gd")
 const Inset := preload("res://src/presentation/flourish_inset.gd")
+const PlayerFx := preload("res://src/presentation/player_fx.gd")
 
 const LAYER := 39
 const SKIP_GRACE := 1.5
@@ -93,6 +94,7 @@ var _tweens: Array[Tween] = []
 
 func setup(ctx_ref) -> void:
 	name = "FlourishPlayer"
+	add_to_group(PlayerFx.KEEP_GROUP)
 	ctx = ctx_ref
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	_layer = CanvasLayer.new()
@@ -389,7 +391,9 @@ func _build(piece: Dictionary) -> Node:
 			label.name = "FlourishWord"
 			label.rotation_degrees = -6.0
 			_overlay.add_child(label)
-			_place_word(label, piece)
+			if not _place_word(label, piece):
+				label.queue_free()
+				return null
 			_pop(label, 1.5)
 			return label
 		"inset":
@@ -621,8 +625,24 @@ func _stamp_at(label: Control) -> Vector2:
 	return Vector2(x, top.position.y + top.size.y * 0.5 - label.size.y * 0.5)
 
 
-# A sound word sits at its anchor's screen point, or at its at_share, clamped in the play view.
-func _place_word(label: Control, piece: Dictionary) -> void:
+# The screen the row's own pieces cover now, for the sound words of player_fx and machine_fx to keep off
+# (PlayerFx.KEEP_GROUP). Its own words are left out: the row places them against everything else.
+func keep_clear_rects() -> Array[Rect2]:
+	var out: Array[Rect2] = []
+	for entry in _live:
+		if String(entry.piece.kind) == "sfx_word" or not is_instance_valid(entry.node) or not entry.node is Control:
+			continue
+		var node: Control = entry.node
+		if node.is_visible_in_tree():
+			out.append(node.get_global_rect())
+	return out
+
+
+# A sound word sits at its anchor's screen point, or at its at_share, clamped in the play view. It
+# takes the first of its spots (the asked one, the mirror across the screen's centre, then under the
+# play view) that covers none of the row's pieces, the HUD or a screen; with none free it is not
+# drawn. It never slides onto something else (PF-26).
+func _place_word(label: Control, piece: Dictionary) -> bool:
 	var screen := _screen()
 	var share: Vector2 = piece.get("at_share", Vector2(0.62, 0.36))
 	var anchor = _anchors.get(String(piece.get("anchor", "")))
@@ -632,16 +652,24 @@ func _place_word(label: Control, piece: Dictionary) -> void:
 		share = camera.unproject_position(anchor.global_position + Vector3.UP * 2.0) / screen
 	label.reset_size()
 	var view := Rect2(PLAY_VIEW.position * screen, PLAY_VIEW.size * screen)
-	var at := share * screen - label.size * 0.5
-	var placed := Vector2(clampf(at.x, view.position.x, maxf(view.position.x, view.end.x - label.size.x)),
-		clampf(at.y, view.position.y, maxf(view.position.y, view.end.y - label.size.y)))
-	for rect in _avoid_rects():
-		if Rect2(placed, label.size).intersects(rect):
-			placed.y = minf(rect.end.y + AVOID_GAP * _scale(), view.end.y - label.size.y)
-		# No room under it inside the play view (a close-up panel is as tall as the view): beside it.
-		if Rect2(placed, label.size).intersects(rect):
-			placed.x = maxf(view.position.x, rect.position.x - AVOID_GAP * _scale() - label.size.x)
-	label.position = placed
+	var asked := share * screen - label.size * 0.5
+	var spots: Array[Vector2] = [asked, screen - asked - label.size,
+		Vector2(asked.x, view.end.y + AVOID_GAP * _scale())]
+	var room = get_tree().get_first_node_in_group(PlayerFx.ROOM_GROUP) if is_inside_tree() else null
+	var avoid := _avoid_rects()
+	for i in spots.size():
+		var at := spots[i]
+		if i == 0:
+			at = Vector2(clampf(at.x, view.position.x, maxf(view.position.x, view.end.x - label.size.x)),
+				clampf(at.y, view.position.y, maxf(view.position.y, view.end.y - label.size.y)))
+		var rect := Rect2(at, label.size)
+		if avoid.any(func(r): return r.intersects(rect)):
+			continue
+		if room != null and not room.spot_free(rect):
+			continue
+		label.position = at
+		return true
+	return false
 
 
 # Three frames of overshoot; reduced motion just shows the piece.

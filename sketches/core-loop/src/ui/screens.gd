@@ -175,6 +175,7 @@ func setup(game_ref) -> void:
 	game = game_ref
 	layer = 5
 	process_mode = Node.PROCESS_MODE_ALWAYS
+	add_to_group("word_keep_clear")
 	_veil = ColorRect.new()
 	_veil.color = Color(Palette.CHARCOAL, 0.84)
 	_veil.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -299,6 +300,21 @@ func setup(game_ref) -> void:
 	game.events.run_started.connect(func(_class_id): _victory_boss = {})
 	if game.run_moments != null:
 		game.run_moments.page_ready.connect(_show_comic_page)
+
+
+# What a menu or end screen covers while one is showing (word_keep_clear): its title, its mark and
+# each piece of its content. Nothing while play shows.
+func keep_clear_rects() -> Array[Rect2]:
+	var out: Array[Rect2] = []
+	if not visible or not _content.visible or _content.modulate.a < 0.05:
+		return out
+	for piece in [_title, _mark]:
+		if piece.is_visible_in_tree():
+			out.append(piece.get_global_rect())
+	for piece in _content.get_children():
+		if piece != _title and piece != _mark and piece is Control and piece.is_visible_in_tree():
+			out.append(piece.get_global_rect())
+	return out
 
 
 func _label(font_size: int) -> Label:

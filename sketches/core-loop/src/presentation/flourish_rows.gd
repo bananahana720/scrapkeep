@@ -195,7 +195,6 @@ const ROWS := {
 	# the victory card; the card is the walk-in, the stamp is the contract.
 	"tarn_sign_on": {"priority": 3, "on": "sign_on", "boss": "brindle", "earned": "brindle_routed",
 		"full": [
-			{"kind": "sfx_word", "at": 0.0, "for": 0.8, "text": "CLANK", "at_share": Vector2(0.50, 0.40)},
 			{"kind": "card", "at": 0.0, "for": 2.0, "slot": "left_top",
 				"card": ["TARN", "Tiger · claw bruiser", "Temperament", "gentle", "Machine", "is not", "Claws issued", "none"]},
 			{"kind": "stamp", "at": 0.7, "for": 1.3, "text": "HIRED", "colour": "AMBER"},
