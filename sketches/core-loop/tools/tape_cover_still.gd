@@ -3,6 +3,7 @@ extends SceneTree
 # Stills for UA-02: how much of the screen a live hostile ground warning covers in the clear look
 # and in the tape look (hostile stripes back as faint bands), at the play camera on the park map,
 # and a player's own ring beside a hostile ring in each look. frames.json records, per look:
+#   noise_share    (top level) the share two no-mark grabs of the view differ by: the floor;
 #   changed_share  the share of screen pixels that differ from the same view with no warning;
 #   stripe_share   the share of pixels where this look's still differs from the clear look's
 #                  (the stripes alone; 0 for clear itself);
@@ -78,6 +79,9 @@ func _run() -> void:
 	var side := ahead.cross(Vector3.UP)
 	var at := spot + ahead * AHEAD
 	var base := await _grab(spot, ahead)
+	# Two grabs of the same view with no mark: the sky and the dust move, so this share is the floor
+	# a mark's changed_share must clear.
+	var noise := _share(await _grab(spot, ahead), base)
 	var records := []
 	var clear_image: Image = null
 	var clear_changed := 0.0
@@ -105,6 +109,7 @@ func _run() -> void:
 		records.append({"id": look, "look": Threat.look(), "changed_share": snappedf(changed, 0.0001),
 			"stripe_share": snappedf(stripe, 0.0001), "stripe_added": snappedf(changed - clear_changed, 0.0001),
 			"png": path, "sha256": FileAccess.get_sha256(path)})
+		print("COVER noise %.4f" % noise)
 		print("COVER %s changed_share %.4f stripe_share %.4f" % [look, changed, stripe])
 		var own = Telegraph.ring(game.ctx.root, ground, Threat.Type.INSTANT, at - side * SIDE, RADIUS, 3.5, Palette.AMBER)
 		var foe = Telegraph.ring(game.ctx.root, ground, Threat.Type.INSTANT, at + side * SIDE, RADIUS)
@@ -126,7 +131,7 @@ func _run() -> void:
 		return
 	var size := root.get_visible_rect().size
 	file.store_string(JSON.stringify({"tool": "tape_cover_still.gd", "size": [size.x, size.y], "change_distance": CHANGE_DISTANCE,
-		"radius_m": RADIUS, "adapter": RenderingServer.get_video_adapter_name(), "frames": records}, "\t"))
+		"radius_m": RADIUS, "noise_share": snappedf(noise, 0.0001), "adapter": RenderingServer.get_video_adapter_name(), "frames": records}, "\t"))
 	file.close()
 	Threat.set_look("clear")
 	quit(0)
