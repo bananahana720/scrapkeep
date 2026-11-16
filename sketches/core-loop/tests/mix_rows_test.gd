@@ -35,6 +35,7 @@ func _physics_process(_delta: float) -> bool:
 	_states()
 	_glide_and_focus()
 	_make_room()
+	_whoosh_room()
 	_game.free()
 	print("mix_rows_test: %s" % ("PASS" if _failures == 0 else "FAIL (%d)" % _failures))
 	quit(0 if _failures == 0 else 1)
@@ -150,3 +151,33 @@ func _make_room() -> void:
 	_check("the hold runs on the wall clock, not the audio clock slow motion scales", audio._room_offset("reactor_erupt") != 0.0)
 	audio._room_until_ms = 0
 	_check("the room ends after its hold", audio._room_offset("reactor_erupt") == 0.0)
+
+
+# FX-28: the dodge's whoosh ducks the lane attack's tear, and only that, for a short hold.
+func _whoosh_room() -> void:
+	var audio = _game.presentation.audio
+	var has_row: bool = MixRows.MAKE_ROOM.has("near_whoosh")
+	_check("near_whoosh has a room row", has_row)
+	if not has_row:
+		return
+	var row: Dictionary = MixRows.MAKE_ROOM.get("near_whoosh", {})
+	_check("the whoosh's duck is audible but short", float(row["db"]) <= -6.0 and float(row["hold_s"]) <= 0.35, str(row))
+	audio.sound_ready = true
+	audio._room_until_ms = 0
+	audio._last_start.clear()
+	audio.cue_log.clear()
+	audio.play("near_miss")
+	var rooms: Array = audio.cue_log.filter(func(c): return c[2] == "room")
+	_check("a dodge logs its room", rooms.size() == 1 and rooms[0][1] == "near_whoosh" and is_equal_approx(float(rooms[0][5]), float(row["db"])), str(audio.cue_log))
+	_check("the tear steps under the whoosh", is_equal_approx(audio._room_offset("threat_tear"), float(row["db"])), str(audio._room_offset("threat_tear")))
+	_check("the other warnings keep their level", audio._room_offset("threat_hum") == 0.0 and audio._room_offset("boss_telegraph") == 0.0 and audio._room_offset("hurt") == 0.0)
+	_check("a reward is not ducked by the whoosh", audio._room_offset("shop_bell") == 0.0 and audio._room_offset("crit_ping") == 0.0 and audio._room_offset("chain_step") == 0.0)
+	_check("the whoosh keeps its own level", audio._room_offset("near_whoosh") == 0.0)
+	audio._room_until_ms = 0
+	_check("the tear returns after the hold", audio._room_offset("threat_tear") == 0.0)
+	audio._last_start.clear()
+	audio.play("player_hit")
+	audio._last_start.clear()
+	audio.play("near_miss")
+	_check("a hit's room is not cut short by a whoosh", audio._room_for == "hurt", audio._room_for)
+	audio._room_until_ms = 0

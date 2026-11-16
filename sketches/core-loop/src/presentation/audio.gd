@@ -1748,6 +1748,9 @@ var _room_until_ms := -1
 
 func _make_room(kind: String, sound: String) -> void:
 	var hold := float(MixRows.MAKE_ROOM[sound]["hold_s"])
+	# A narrow room (an "only" row) never cuts a held room short; a hit's room wins over it.
+	if MixRows.MAKE_ROOM[sound].has("only") and Time.get_ticks_msec() < _room_until_ms and _room_for != sound:
+		return
 	_room_for = sound
 	_room_until_ms = Time.get_ticks_msec() + int(hold * 1000.0)
 	cue_log.append([kind, sound, "room", engine.clock, hold, float(MixRows.MAKE_ROOM[sound]["db"])])
