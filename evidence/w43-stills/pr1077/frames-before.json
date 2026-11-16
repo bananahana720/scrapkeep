@@ -1,0 +1,104 @@
+{
+	"adapter": "NVIDIA GeForce RTX 4080",
+	"frames": [
+		{
+			"crew_line": false,
+			"flash_guard_on": false,
+			"fuse_left": 1.39,
+			"heat": 0.7,
+			"id": "kettle-high",
+			"kettle_pulse_from_fuse": 1.0,
+			"kettle_pulse_game": null,
+			"rim": [
+				1.0,
+				0.980000019073486,
+				0.920000016689301
+			],
+			"sha256": "f0670665927efa8c7a17be945fb34c73c7ba54fb9025ab19a622bff9fa904eb3"
+		},
+		{
+			"crew_line": false,
+			"flash_guard_on": false,
+			"fuse_left": 1.148,
+			"heat": 0.7,
+			"id": "kettle-low",
+			"kettle_pulse_from_fuse": 0.0,
+			"kettle_pulse_game": null,
+			"rim": [
+				1.0,
+				0.980000019073486,
+				0.920000016689301
+			],
+			"sha256": "b36f4b4272f6056293566189e7000ec5726a09c192667d31effac90f100913f0"
+		},
+		{
+			"crew_line": false,
+			"flash_guard_on": true,
+			"fuse_left": 1.148,
+			"heat": 0.7,
+			"id": "kettle-reduce",
+			"kettle_pulse_from_fuse": 0.0,
+			"kettle_pulse_game": null,
+			"rim": [
+				1.0,
+				0.980000019073486,
+				0.920000016689301
+			],
+			"sha256": "fda82bcaabe38b4dae7cfb6e2d1613f7203fe6227f34c12af5c4dc587e705cd3"
+		},
+		{
+			"core_albedo": [
+				0.211764708161354,
+				0.341176480054855,
+				0.329411774873734
+			],
+			"core_scale": 1.0,
+			"crew_line": false,
+			"cue_showing": false,
+			"cues_sounded": 1,
+			"id": "rogue-cue",
+			"rogue_kind": "rogue_crane",
+			"rogue_state": "cue",
+			"sha256": "2a5f6ee50a67edadeb928223d8bd3e933ca3c88690b49e6c4655ad6e3227d4b5"
+		},
+		{
+			"crew_line": false,
+			"cross_up": false,
+			"id": "yard-half",
+			"lock_state": "locked",
+			"next_wave_index": 1,
+			"sha256": "dfc205a402e649b6263275a823d55d00d7b6fc1ffcfa55315b7283e1b76459f5",
+			"wait_left_s": 1.741,
+			"wait_total_s": 3.5,
+			"wave_index": 0
+		},
+		{
+			"crew_line": false,
+			"cross_up": false,
+			"id": "yard-late",
+			"lock_state": "locked",
+			"next_wave_index": 1,
+			"sha256": "e666ee6f7537578469866408fb23efeea42b0c0d3af0677a9736d78bf59e86ad",
+			"wait_left_s": 0.041,
+			"wait_total_s": 3.5,
+			"wave_index": 0
+		},
+		{
+			"crew_landed": 6,
+			"crew_line": false,
+			"cross_marks": 0,
+			"id": "overtime-land",
+			"overtime_state": "offered",
+			"rings": 1,
+			"sha256": "65f76578d43b792c93029dcf60f5fc8866065a7e45bb6155e58162a10a71d5a2",
+			"whistles_sounded": 1
+		}
+	],
+	"limits": "Same seed and camera in both checkouts, but enemy timing and the ball's exact spot are the game's own; the state recorded per still is what proves the moment. The kettle's fuse and the rogue's cue are set by hand on the game's own objects. Size, place and read only; not final look or sound.",
+	"side": "before",
+	"size": [
+		1600.0,
+		900.0
+	],
+	"tool": "twin_stills.gd"
+}
