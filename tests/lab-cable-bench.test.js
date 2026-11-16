@@ -21,8 +21,14 @@ import {
 } from "../scripts/lab/metrics/index.mjs";
 import cableBench, { measure } from "../scripts/lab/metrics/cable-bench.mjs";
 
+// Its own identity, as the other lab tests do: the gate runs node with a scratch XDG_CONFIG_HOME,
+// which hides the machine's.
 function git(cwd, ...args) {
-  const result = spawnSync("git", args, { cwd, encoding: "utf8" });
+  const result = spawnSync(
+    "git",
+    ["-c", "user.name=Lab Test", "-c", "user.email=lab@example.invalid", "-c", "commit.gpgsign=false", ...args],
+    { cwd, encoding: "utf8" },
+  );
   assert.equal(result.status, 0, result.stderr);
   return result.stdout.trim();
 }
