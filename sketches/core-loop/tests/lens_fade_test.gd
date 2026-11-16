@@ -1,9 +1,10 @@
 extends SceneTree
 
 # PF-53: the ball's dust and a kill's burst mark are world-space, and the chase camera flies
-# through them at speed, so one puff 1 to 3 m from the lens filled the screen. Both fade out by
-# view distance, like the ball's trail (vfx.gd TRAIL_NEAR). Headless: this pins the fade's
-# distances, the shader text that applies them and the parameters the materials carry.
+# through them at speed, so one puff 1 to 3 m from the lens filled the screen. The dust fades out by
+# view distance, like the ball's trail (vfx.gd TRAIL_NEAR); the kill mark keeps its alpha and shrinks
+# to a share of the view instead. Headless: this pins the fade's distances, the shader text that
+# applies them, the parameters the materials carry and the mark's size cap.
 const T := preload("res://tests/support/t.gd")
 const FxLibrary := preload("res://src/presentation/fx_library.gd")
 const KillMark := preload("res://src/presentation/kill_mark.gd")
@@ -64,4 +65,23 @@ func _run() -> void:
 	t.check("at 7.5 m the mark is today's size", is_equal_approx(drawn[7.5], natural))
 	t.check("beyond that the mark is today's size", is_equal_approx(drawn[12.0], natural))
 	t.check("at 2 m the mark is capped to the share of the view", is_equal_approx(drawn[2.0], cap_half) and drawn[2.0] < natural * 0.5)
+
+	# The largest mark the game draws: a merged kill at the density cap (2.5) by a full-might build
+	# (1.15), at its pop peak. The cap eases in, so crossing the edge mid-pop never snaps its size.
+	var big := 1.5 * 2.5 * 1.15 * KillMark.OVERSHOOT
+	var fov := 65.0
+	var edge_ratio := KillMark.cap(big, 7.49, fov) / KillMark.cap(big, 7.5, fov)
+	t.check("a merged mark does not snap at the edge (%.3f of its size just inside)" % edge_ratio, edge_ratio > 0.98)
+	var steps := 0
+	var rising := true
+	var last := 0.0
+	for i in range(0, 76):
+		var eye := 2.0 + i * 0.1
+		var size := big * KillMark.cap(big, eye, fov)
+		rising = rising and size >= last - 0.0001
+		last = size
+		steps += 1
+	t.check("a merged mark grows steadily from 2 m to the edge (%d steps)" % steps, steps > 0 and rising)
+	t.check("a merged mark is still capped well inside the edge",
+		big * KillMark.cap(big, 6.0, fov) < big * 0.6)
 	quit(t.verdict())

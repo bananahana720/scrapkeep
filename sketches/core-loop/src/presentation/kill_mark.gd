@@ -33,9 +33,12 @@ const HEAT := 0.8
 # Near the lens the mark keeps its alpha (a kill must never read as a hit) but shrinks so its width
 # is at most this share of the view's height (PF-53: with the arm against a wall the lens sits about
 # 2 m from the ball and a 3 m mark filled the screen). 0.4 leaves today's mark whole at the play
-# distance; inside CAP_WITHIN_M only, so a merged kill's bigger mark at range is not touched.
+# distance; inside CAP_WITHIN_M only, so a merged kill's bigger mark at range is not touched. The cap
+# eases in from CAP_WITHIN_M down to CAP_FULL_M, so a big merged mark never snaps in size when the
+# lens crosses the edge during its pop.
 const SCREEN_CAP := 0.4
 const CAP_WITHIN_M := 7.5
+const CAP_FULL_M := 6.0
 
 const _SHADER := """
 shader_type spatial;
@@ -213,7 +216,8 @@ static func cap(half_m: float, eye_m: float, fov_deg: float) -> float:
 	if eye_m >= CAP_WITHIN_M or half_m <= 0.0:
 		return 1.0
 	var view_h := 2.0 * eye_m * tan(deg_to_rad(fov_deg) * 0.5)
-	return minf(1.0, SCREEN_CAP * view_h * 0.5 / half_m)
+	var capped := minf(1.0, SCREEN_CAP * view_h * 0.5 / half_m)
+	return lerpf(capped, 1.0, clampf((eye_m - CAP_FULL_M) / (CAP_WITHIN_M - CAP_FULL_M), 0.0, 1.0))
 
 
 func _draw(slot: Dictionary) -> void:
