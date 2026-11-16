@@ -1,7 +1,9 @@
 // The known-failing ledger: project-guide/handoff/KNOWN-FAILING.tsv.
 //
 // A promotion may carry a red test only while that test has a row here with a
-// cause, an owner and a review date (ruling bq, Andrew, 9 Nov 2026). At a
+// cause, an owner and a review date (ruling bq, Andrew, 9 Nov 2026). A red row
+// also names the checks it covers, and carries no other failing check of that
+// test (ruling dx, Andrew, 15 Nov 2026; `uncoveredChecks`). At a
 // promotion the row never changes how a test runs or whether a run fails; it
 // changes what a failure means. In the fast lane a flake row buys more head
 // runs before the test is the pull request's red (scripts/sketch-fast.mjs).
@@ -30,6 +32,14 @@ export const TESTS_DIRECTORY = "sketches/core-loop/tests";
 // red: fails alone, on the head and on main, with the check the cause names.
 // flake: passes alone and fails under load, or fails some runs alone.
 export const KINDS = ["red", "flake"];
+// The seventh column (ruling dx, 15 Nov 2026): the checks a red row covers, as the test prints them between
+// the square brackets of a "-> FAIL" line, joined by " ;; ". A star stands for any text ("class * builds").
+// TIME-OUT covers a run killed at its limit, and ERROR-LINE a run that fails with no failing check (an ERROR
+// line at exit). A flake row has "-": the listed flakes keep their allowance until each is fixed.
+export const CHECK_COLUMN = "check";
+export const CHECK_SEPARATOR = ";;";
+export const TIME_OUT = "TIME-OUT";
+export const ERROR_LINE = "ERROR-LINE";
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -46,21 +56,27 @@ export function parseLedger(text) {
   const problems = [];
   const rows = [];
   const header = lines[0] ?? "";
-  if (header !== LEDGER_HEADER.join("\t")) {
-    problems.push({ line: 1, message: `the header must be: ${LEDGER_HEADER.join(" TAB ")}` });
-    return { rows, problems };
+  const columns = [...LEDGER_HEADER, CHECK_COLUMN];
+  const hasChecks = header === columns.join("\t");
+  if (!hasChecks && header !== LEDGER_HEADER.join("\t")) {
+    problems.push({ line: 1, message: `the header must be: ${columns.join(" TAB ")}` });
+    return { rows, problems, hasChecks };
   }
+  const width = hasChecks ? columns.length : LEDGER_HEADER.length;
   const seen = new Map();
   lines.slice(1).forEach((line, index) => {
     const number = index + 2;
     if (line.trim() === "") return;
     const cells = line.split("\t").map((cell) => cell.trim());
-    if (cells.length !== LEDGER_HEADER.length || cells.some((cell) => cell === "")) {
-      problems.push({ line: number, message: `a row needs ${LEDGER_HEADER.join(", ")}, with no cell empty` });
+    if (cells.length !== width || cells.some((cell) => cell === "")) {
+      problems.push({ line: number, message: `a row needs ${(hasChecks ? columns : LEDGER_HEADER).join(", ")}, with no cell empty` });
       return;
     }
-    const [test, kind, cause, owner, added, review] = cells;
-    const row = { test, kind, cause, owner, added, review, line: number };
+    const [test, kind, cause, owner, added, review, check] = cells;
+    const named = hasChecks && check !== "-" ? check.split(CHECK_SEPARATOR).map((part) => part.trim()).filter(Boolean) : null;
+    const row = { test, kind, cause, owner, added, review, checks: kind === "red" ? named : null, line: number };
+    if (hasChecks && kind === "red" && !named?.length) problems.push({ line: number, message: `a red row names the check it covers in the ${CHECK_COLUMN} column (ruling dx), not "-"` });
+    if (hasChecks && kind === "flake" && check !== "-") problems.push({ line: number, message: `a flake row has "-" in the ${CHECK_COLUMN} column` });
     if (test !== testName(test)) problems.push({ line: number, message: `"${test}" must be the test's base name, with no folder and no .gd` });
     if (!KINDS.includes(kind)) problems.push({ line: number, message: `kind "${kind}" must be one of: ${KINDS.join(", ")}` });
     for (const [label, value] of [["added", added], ["review", review]]) {
@@ -73,7 +89,20 @@ export function parseLedger(text) {
     else seen.set(test, number);
     rows.push(row);
   });
-  return { rows, problems };
+  return { rows, problems, hasChecks };
+}
+
+const checkPattern = (named) => new RegExp("^" + named.split("*").map((part) => part.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join(".*") + "$");
+
+// What a failed run did that its red row does not cover. `failed` is { labels, timedOut }: the labels of the
+// run's failing checks, and whether it was killed at its limit. A run with no failing check failed some other
+// way: TIME-OUT when it was killed, ERROR-LINE otherwise. A row with no named checks (a flake row, or a ledger
+// without the column) covers by test name only, so nothing is uncovered.
+export function uncoveredChecks(row, { labels = [], timedOut = false } = {}) {
+  if (!row?.checks) return [];
+  const patterns = row.checks.map(checkPattern);
+  const did = labels.length > 0 ? labels : [timedOut ? TIME_OUT : ERROR_LINE];
+  return did.filter((label) => !patterns.some((pattern) => pattern.test(label)));
 }
 
 // Rows whose review date has passed. The day itself is still in time.
@@ -112,9 +141,10 @@ export function judgeLines({ listed, unlisted }) {
 }
 
 export function renderLedger(rows) {
-  const lines = ["| Test | Kind | Cause | Owner | Added | Review |", "| --- | --- | --- | --- | --- | --- |"];
+  const checks = rows.some((row) => row.checks);
+  const lines = [`| Test | Kind | Cause | Owner | Added | Review |${checks ? " Check |" : ""}`, `| --- | --- | --- | --- | --- | --- |${checks ? " --- |" : ""}`];
   for (const row of rows) {
-    lines.push(`| ${row.test} | ${row.kind} | ${row.cause.replaceAll("|", "\\|")} | ${row.owner} | ${row.added} | ${row.review} |`);
+    lines.push(`| ${row.test} | ${row.kind} | ${row.cause.replaceAll("|", "\\|")} | ${row.owner} | ${row.added} | ${row.review} |${checks ? ` ${(row.checks ?? ["-"]).join(` ${CHECK_SEPARATOR} `).replaceAll("|", "\\|")} |` : ""}`);
   }
   return lines.join("\n");
 }
@@ -129,10 +159,14 @@ export async function readLedger(root) {
 // With `promotion`, a row past its review date is a failure; without it, a note.
 // `notRun` names the tests a promotion does not run (the weekly list, ruling ca):
 // their rows are judged by the weekly sweep, so a late one is a note here.
-export async function checkLedger(root, { today = new Date().toISOString().slice(0, 10), promotion = false, notRun = new Set() } = {}) {
+// `requireChecks` is what the real callers pass: the checked-in ledger must have the check column.
+export async function checkLedger(root, { today = new Date().toISOString().slice(0, 10), promotion = false, notRun = new Set(), requireChecks = false } = {}) {
   const ledger = await readLedger(root);
   if (ledger === null) return [];
   const findings = ledger.problems.map((problem) => ({ level: "failure", file: LEDGER_FILE, line: problem.line, message: problem.message }));
+  if (requireChecks && !ledger.hasChecks && ledger.problems.length === 0) {
+    findings.push({ level: "failure", file: LEDGER_FILE, line: 1, message: `the ledger has no ${CHECK_COLUMN} column: every red row must name the check it covers (ruling dx)` });
+  }
   const tests = path.join(root, TESTS_DIRECTORY);
   if (existsSync(tests)) {
     for (const row of ledger.rows) {
@@ -181,7 +215,7 @@ async function main() {
     return verdict.unlisted.length > 0 ? 1 : 0;
   }
   const notRun = options.mode === "promotion" ? weeklyNames(options.root) : new Set();
-  const findings = await checkLedger(options.root, { today: options.today, promotion: options.mode === "promotion", notRun });
+  const findings = await checkLedger(options.root, { today: options.today, promotion: options.mode === "promotion", notRun, requireChecks: true });
   for (const finding of findings) {
     console.log(`${finding.level.toUpperCase()} known-failing ${finding.file}:${finding.line} ${finding.message}`);
   }

@@ -8,7 +8,7 @@ import { parseLedger } from "../known-failing.mjs";
 import { place, sortChanges, testsToRerun } from "./carry.mjs";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
-import { WEEKLY_HEADER, chunks, classifyFailure, errorCounts, gateLists, importOutcome, nearLimit, numbered, parseSmokeLog, parseWeekly, parseWindow, renderReceipt, windowNames, namedPool, testName, retime, shardVerdict, soloEnvironment, soloTests } from "./shard.mjs";
+import { WEEKLY_HEADER, chunks, classifyFailure, errorCounts, gateLists, importOutcome, nearLimit, numbered, parseSmokeLog, parseWeekly, parseWindow, renderReceipt, windowNames, namedPool, testName, retime, shardVerdict, soloEnvironment, soloTests, failedChecks } from "./shard.mjs";
 import { WEEKLY_MAX_DAYS, checkTally, checkWeeklySweep, expectedShards, isDeferred, isPass, planHead, tallyRows } from "./tally.mjs";
 import { WEEKLY_FILE, checkWeekly } from "./weekly.mjs";
 
@@ -90,6 +90,20 @@ test("a failed test with a red row is carried from its first run and is not reru
   for (const runs of [[false], [true], [false, false], [true, true]]) assert.equal(classifyFailure("red_test", runs, ledger).call, "carried");
   // Without a row, no solo run is never a pass.
   assert.equal(classifyFailure("fresh_test", [], ledger).call, "new-red");
+});
+
+test("a red row carries only the check it names; another failing check in the same test is a new red (ruling dx)", () => {
+  const named = parseLedger(["test\tkind\tcause\towner\tadded\treview\tcheck", "red_test\tred\tpin off by 2 s\tcoordinator\t2026-11-09\t2026-11-23\tpin within 2 s"].join("\n")).rows;
+  assert.equal(classifyFailure("red_test", [], named, null, { labels: ["pin within 2 s"] }).call, "carried");
+  const second = classifyFailure("red_test", [], named, null, { labels: ["pin within 2 s", "stage 1 draw"] });
+  assert.equal(second.call, "new-red");
+  assert.match(second.note, /fails a check its row does not name: stage 1 draw/);
+  assert.deepEqual(shardVerdict([second]), { ok: false, line: "RED: 1 new red (red_test)" });
+  // The same holds when the test was rerun alone.
+  assert.equal(classifyFailure("red_test", [false], named, null, { labels: ["stage 1 draw"] }).call, "new-red");
+  // A killed run is not the named check either.
+  assert.equal(classifyFailure("red_test", [false], named, null, { labels: [], timedOut: true }).call, "new-red");
+  assert.deepEqual(failedChecks("[a] 1 -> PASS\n  >> [pin within 2 s] got 3 -> FAIL\n[pin within 2 s] got 3 -> FAIL\n[stage 1 draw] got \"x\", want \"y\" -> FAIL\n"), ["pin within 2 s", "stage 1 draw"]);
 });
 
 test("a shard is red only for a new red, and its verdict names what it carried", () => {

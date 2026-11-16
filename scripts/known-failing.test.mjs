@@ -17,6 +17,7 @@ import {
   pastReview,
   renderLedger,
   testName,
+  uncoveredChecks,
 } from "./known-failing.mjs";
 
 const script = fileURLToPath(new URL("./known-failing.mjs", import.meta.url));
@@ -142,11 +143,15 @@ test("the judge command exits 1 only when a failed test has no row", () => {
 });
 
 test("the promotion command holds on a past date and the check command does not", () => {
-  const root = fixture(ledger(row("a_test")));
+  const root = fixture(checked(row("a_test") + "\tpin within 2 s"));
+  const old = fixture(ledger(row("a_test")));
   try {
-    const run = (mode) => spawnSync(process.execPath, [script, "--root", root, mode, "--today", "2026-12-01"], { encoding: "utf8" });
+    const run = (mode, at = root) => spawnSync(process.execPath, [script, "--root", at, mode, "--today", "2026-12-01"], { encoding: "utf8" });
     assert.equal(run("--check").status, 0);
     assert.equal(run("--promotion").status, 1);
+    // The command checks the real ledger, which must have the check column.
+    assert.equal(run("--check", old).status, 1);
+    rmSync(old, { recursive: true, force: true });
   } finally {
     rmSync(root, { recursive: true, force: true });
   }
@@ -163,4 +168,52 @@ test("the checked-in ledger parses, names real tests and gives every row a date"
   assert.ok(rows.length > 0);
   const findings = await checkLedger(repoRoot, { today: "2026-11-09" });
   assert.deepEqual(findings, []);
+});
+
+// ---- the check a red row names (ruling dx) ----
+
+const checked = (...rows) => [header + "\tcheck", ...rows].join("\n") + "\n";
+
+test("with a check column, a red row must name its check and a flake row must not", () => {
+  const good = parseLedger(checked(row("a_test") + "\tpin within 2 s ;; TIME-OUT", row("b_test", "flake") + "\t-"));
+  assert.deepEqual(good.problems, []);
+  assert.deepEqual(good.rows[0].checks, ["pin within 2 s", "TIME-OUT"]);
+  assert.equal(good.rows[1].checks, null);
+  const bad = parseLedger(checked(row("a_test") + "\t-", row("b_test", "flake") + "\tsome check", row("c_test")));
+  assert.match(bad.problems[0].message, /a red row names the check it covers/);
+  assert.match(bad.problems[1].message, /a flake row has "-"/);
+  assert.match(bad.problems[2].message, /a row needs/);
+});
+
+test("a ledger without the check column still parses, and the docs check fails it", async () => {
+  const text = ledger(row("a_test"));
+  assert.deepEqual(parseLedger(text).problems, []);
+  assert.equal(parseLedger(text).rows[0].checks, null);
+  const root = fixture(text);
+  try {
+    const findings = await checkLedger(root, { today: "2026-11-10", requireChecks: true });
+    assert.equal((await checkLedger(root, { today: "2026-11-10" })).length, 0);
+    assert.equal(findings.filter((finding) => finding.level === "failure" && /check column/.test(finding.message)).length, 1);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("a red row covers only the checks it names", () => {
+  const [rowA] = parseLedger(checked(row("a_test") + "\tstage 5: more pockets ;; class * builds")).rows;
+  assert.deepEqual(uncoveredChecks(rowA, { labels: ["stage 5: more pockets"] }), []);
+  assert.deepEqual(uncoveredChecks(rowA, { labels: ["class 5 builds", "class 0 builds"] }), []);
+  // The case that hid for a wave: a second failing check in a listed test (stage_modifier_test, wave 41).
+  assert.deepEqual(uncoveredChecks(rowA, { labels: ["stage 5: more pockets", "stage 1: draw matches"] }), ["stage 1: draw matches"]);
+  // A star is the only wildcard; every other character is literal.
+  assert.deepEqual(uncoveredChecks(rowA, { labels: ["stage 5. more pockets", "xclass 5 builds"] }), ["stage 5. more pockets", "xclass 5 builds"]);
+  // A time-out and a run that fails with no failing check are covered only by their own words.
+  assert.deepEqual(uncoveredChecks(rowA, { labels: [], timedOut: true }), ["TIME-OUT"]);
+  assert.deepEqual(uncoveredChecks(rowA, { labels: [] }), ["ERROR-LINE"]);
+  const [rowB] = parseLedger(checked(row("b_test") + "\tTIME-OUT ;; ERROR-LINE")).rows;
+  assert.deepEqual(uncoveredChecks(rowB, { labels: [], timedOut: true }), []);
+  assert.deepEqual(uncoveredChecks(rowB, { labels: [] }), []);
+  assert.deepEqual(uncoveredChecks(rowB, { labels: ["any check"] }), ["any check"]);
+  // A row from a ledger with no check column covers nothing by name, so nothing is called uncovered.
+  assert.deepEqual(uncoveredChecks(parseLedger(ledger(row("a_test"))).rows[0], { labels: ["x"] }), []);
 });

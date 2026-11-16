@@ -27,7 +27,7 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { LEDGER_FILE, judgeFailures, parseLedger } from "../known-failing.mjs";
+import { LEDGER_FILE, judgeFailures, parseLedger, uncoveredChecks } from "../known-failing.mjs";
 import { WEEKLY_FILE, weeklyNames as readWeeklyNames } from "./weekly.mjs";
 
 export { WEEKLY_FILE, WEEKLY_HEADER, parseWeekly } from "./weekly.mjs";
@@ -155,8 +155,13 @@ export const SUSPECT_LOAD_FACTOR = 0.5;
 //   suspect-load  would be new-red or mismatch, but every failed solo run timed out with no failing check
 //                 line and one started on an overloaded machine: it blocks, and is neither red nor pass
 // `evidence` is { threads, runs: [{ timedOut, failLines, load }] }, one run per entry of soloResults.
-export function classifyFailure(test, soloResults, ledgerRows, evidence = null) {
-  const call = callFailure(test, soloResults, ledgerRows);
+// `failed` is { labels, timedOut } for the run that decides the call (the last failed solo run, or the first run
+// when the test was not rerun). A red row carries only the checks it names (ruling dx): any other failing check,
+// a time-out or an error line the row does not name makes the failure a new red.
+export function classifyFailure(test, soloResults, ledgerRows, evidence = null, failed = null) {
+  const carried = callFailure(test, soloResults, ledgerRows);
+  const unnamed = failed && carried.call === "carried" && carried.row.kind === "red" ? uncoveredChecks(carried.row, failed) : [];
+  const call = unnamed.length > 0 ? { ...carried, call: "new-red", note: `fails a check its row does not name: ${unnamed.join("; ")}. The row covers only ${carried.row.checks.join("; ")} (ruling dx): fix it, or have the coordinator add the check to the row with its cause` } : carried;
   if ((call.call === "new-red" || call.call === "mismatch") && evidence) {
     const failed = evidence.runs.filter((_, index) => !soloResults[index]);
     const line = evidence.threads * SUSPECT_LOAD_FACTOR;
@@ -180,6 +185,14 @@ function callFailure(test, soloResults, ledgerRows) {
     return { test, call: "new-flake", alone, row: null, note: `fails under load only; add a flake row to ${LEDGER_FILE}` };
   }
   return { test, call: "new-red", alone, row: null, note: "no ledger row and it fails alone: a new red, which blocks (ruling ai)" };
+}
+
+// The labels of a log's failing checks, once each in the order they first fail: the text between the square
+// brackets of a "[label] ... -> FAIL" line (the runner repeats a failing line with a ">>" mark).
+export function failedChecks(text) {
+  const labels = [];
+  for (const match of text.matchAll(/^\s*(?:>> )?\[(.+?)\] .*-> FAIL\s*$/gm)) if (!labels.includes(match[1])) labels.push(match[1]);
+  return labels;
 }
 
 // The failed tests that are rerun alone. A test with a red row whose first run failed a check is not: the row
@@ -559,12 +572,16 @@ async function run(options) {
   refuse();
 
   const failures = failed.map((test) => {
-    const failure = classifyFailure(test, solo.get(test), ledger.rows, soloEvidence.get(test));
     const lastFailed = solo.get(test).lastIndexOf(false) + 1;
     const soloLog = lastFailed > 0 ? path.join(options.out, `solo-logs-${lastFailed}`, test + ".log") : null;
     // A test that was not rerun (a red row) shows the failing lines of its first run.
     const shownLog = soloLog ?? (solo.get(test).length === 0 ? path.join(options.out, "logs", test + ".log") : null);
-    const lines = shownLog && existsSync(shownLog) ? failingLines(readFileSync(shownLog, "utf8"), 12) : [];
+    const shownText = shownLog && existsSync(shownLog) ? readFileSync(shownLog, "utf8") : null;
+    const lines = shownText === null ? [] : failingLines(shownText, 12);
+    // The run the row is read against: the last failed solo run, or the first run when there was none. When
+    // every solo run passed there is no failed run alone to read, and the row carries as before.
+    const timedOut = lastFailed > 0 ? Boolean(soloEvidence.get(test).runs[lastFailed - 1]?.timedOut) : Boolean(firstRun(test)?.timedOut);
+    const failure = classifyFailure(test, solo.get(test), ledger.rows, soloEvidence.get(test), shownText === null ? null : { labels: failedChecks(shownText), timedOut });
     return { ...failure, lines, linesFrom: soloLog ? "alone" : "in its first run", ...(missing.includes(test) ? { note: `no verdict line in the first run (killed or never started); ${failure.note}` } : {}) };
   });
   const logsDir = path.join(options.out, "logs");

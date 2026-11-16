@@ -54,7 +54,7 @@ How a failure is called:
 
 | Call | Meaning | Blocks? |
 | --- | --- | --- |
-| carried | the test has a ledger row | No, if it fails the check its row names. A different failing check in the same test is a new red |
+| carried | the test has a ledger row, and for a `red` row every failing check of the run is one the row's `check` column names | No. The shard reads the run's failing check lines against the row (since 15 Nov 2026): a failing check the row does not name, a time-out without `TIME-OUT` or an error-only failure without `ERROR-LINE` makes it a new red |
 | mismatch | its row says `flake` and it failed every solo run (it gets twice the solo runs before this call) | Yes. The run contradicts the ledger: read the solo log, then re-list the test as `red` with its failing check, or fix it |
 | new-flake | no row; it passed every solo run | No. Add a flake row in the receipt's follow-up |
 | new-red | no row; it failed alone at least once | Yes. A new deterministic red goes to the pull request's owner (ruling ai). Confirm it is green on main before blaming the stage |
@@ -105,7 +105,7 @@ The band shards read numbers, not only pass or fail, so they keep their own lane
 
 ## The known-failing ledger
 
-[KNOWN-FAILING.tsv](KNOWN-FAILING.tsv) lists every red test a promotion may carry: test, kind (`red` fails alone; `flake` fails under load or some runs; since ruling dx no new `flake` row is added: a new failure that shows only under load gets no row and blocks, and a row that was already `red` for such a failure, like `tree_play_test`, stays `red` with a cause that says so until the test is fixed), cause, owner, date added, review date (ruling bq). The coordinator owns the file; a row is added, re-dated or removed by a pull request on the open stage.
+[KNOWN-FAILING.tsv](KNOWN-FAILING.tsv) lists every red test a promotion may carry: test, kind (`red` fails alone; `flake` fails under load or some runs; since ruling dx no new `flake` row is added: a new failure that shows only under load gets no row and blocks, and a row that was already `red` for such a failure, like `tree_play_test`, stays `red` with a cause that says so until the test is fixed), cause, owner, date added, review date (ruling bq), and check (ruling dx): for a `red` row, the checks it covers as the test prints them between the square brackets of a `-> FAIL` line, joined by ` ;; `, where a star stands for any text, `TIME-OUT` covers a run killed at its limit and `ERROR-LINE` a run that fails with no failing check; a `flake` row has `-` and keeps its allowance until it is fixed. The coordinator owns the file; a row is added, re-dated or removed by a pull request on the open stage.
 
 ```
 node scripts/known-failing.mjs --check              # shape; part of npm run check:docs
@@ -114,7 +114,7 @@ node scripts/known-failing.mjs --promotion          # fails if any row is past i
 ```
 
 - At a promotion a row never changes how a test runs or whether a run fails. The shard still reads which check failed: from the first run when that run failed a check and the row is `red` (since 15 Nov 2026; the rerun could not change the call, and two of them took 14 minutes of the timed gate on `375fe11a`), and from a rerun alone otherwise, which covers a time-out, a killed run and every `flake` row. In the fast lane a `flake` row buys more head runs before the test fails a pull request; ORCHESTRATOR, "Tiered gate", has the rule.
-- The cost of a row: while a test is listed, a second fault in the same test is easy to miss. That is why the cause names the failing check and the receipt asks the thread to read the failing lines. It has happened: `stage_modifier_test` gained a second failing check in wave 41 (the stage 1 draw pin) under its row for a stage 5 check, and nothing flagged it until the receipt lines were read on 15 Nov. Ruling dx (a row covers only the check it names) is the rule; step 4 of "Check speed and honesty" is where the shard starts to enforce it.
+- The cost of a row: while a test is listed, a second fault in the same test is easy to miss. That is why the cause names the failing check and the receipt asks the thread to read the failing lines. It has happened: `stage_modifier_test` gained a second failing check in wave 41 (the stage 1 draw pin) under its row for a stage 5 check, and nothing flagged it until the receipt lines were read on 15 Nov. Ruling dx (a row covers only the check it names) is the rule, and the shard enforces it for `red` rows from the `check` column: replayed on the wave 41 and wave 42 gate logs, that test reads new red, and on the wave 40 log it reads carried. Not yet enforced: a `flake` row still covers its whole test, and the fast lane still reads "red on the base too" by test and not by check.
 - A test that has passed in two full gates in a row comes off the ledger. If it fails again it is judged fresh.
 - A row past its review date holds the next promotion. Either the owner fixed it (remove the row) or the coordinator gives it a new date and says why in the pull request.
 - `sketches/core-loop/tests/QUARANTINE.tsv` is a different tool with a different job: at most three rows, a listed test stops failing runs, and a release candidate carries none. Nothing is in it today.
