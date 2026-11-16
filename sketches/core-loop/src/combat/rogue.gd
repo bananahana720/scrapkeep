@@ -646,8 +646,8 @@ func _pose(delta: float) -> void:
 		plate.position = plate.position.lerp(rest + Vector3(side * (0.9 if weak else 0.0), 0.0, 0.0), blend)
 		plate.rotation.y = lerpf(plate.rotation.y, side * (0.9 if weak else 0.0), blend)
 	var pulse := 1.0 + 0.12 * sin(Time.get_ticks_msec() * 0.018) if weak else 1.0
-	_core.scale = Vector3.ONE * (1.5 * pulse if weak else 1.0)
-	_core.material_override = _weak_material() if weak else _core_material
+	_core.scale = Vector3.ONE * (1.5 * pulse if weak else (1.3 if state == State.CUE else 1.0))
+	_core.material_override = _weak_material() if weak else (_cue_material() if state == State.CUE else _core_material)
 	# A null or freed target leaves the facing where it is (F008).
 	if not is_instance_valid(target):
 		return
@@ -663,6 +663,21 @@ func _pose(delta: float) -> void:
 
 
 var _weak: StandardMaterial3D
+var _cue: StandardMaterial3D
+
+
+# The cue's twin (attack_cued, brass in event_kinds): over the CUE_LEAD beat the core burns brass
+# and swells, so a muted player sees the chained strike coming. It is brass, not the vented
+# window's live colour, so it never reads as a chance to hit.
+func _cue_material() -> StandardMaterial3D:
+	if _cue == null:
+		_cue = Palette.solid(Palette.BRASS, 1.0)
+	_cue.emission_energy_multiplier = FlashGuard.spike(1.2, 4.0)
+	return _cue
+
+
+func cue_showing() -> bool:
+	return state == State.CUE and _core != null and _core.material_override == _cue
 
 
 func _weak_material() -> StandardMaterial3D:
