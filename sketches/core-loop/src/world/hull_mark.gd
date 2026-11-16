@@ -15,6 +15,7 @@ extends RefCounted
 # The launch flag `--marked-hull=on` (Tuning "marked_hull") lets a stake device mark; lifting
 # needs no flag, because with the flag off nothing is ever marked.
 
+const LoopTally := preload("res://src/core/loop_tally.gd")
 const KEY := "hull_mark"
 const FLOOR_SHARE := 0.1
 
@@ -43,6 +44,7 @@ static func ceiling(run, unmarked: float) -> float:
 static func stake(run, amount: float) -> void:
 	if amount <= 0.0:
 		return
+	LoopTally.note(run, "marked_hull")
 	run.trade_memory[KEY] = held(run) + amount
 	run.set_max_hp(run.max_hp - amount)
 
