@@ -9,7 +9,7 @@ rcfg() {
   shift 2
   declare -A c=(
     [Procs]="{p1}" [MaxCrashes]=2 [MaxFails]=2 [MaxGen]=6
-    [ReconcileImports]=TRUE [LedgerChecked]=TRUE [GrantSavesOnce]=TRUE
+    [ReconcileCopies]="\"all\"" [LedgerChecked]=TRUE [GrantSavesOnce]=TRUE
   )
   local kv key
   for kv in "$@"; do
@@ -37,15 +37,15 @@ TWO=("Procs={p1, p2}" MaxCrashes=1 MaxGen=5)
 rcfg today-one "$BOTH"
 rcfg today-one-nofail "$BOTH" MaxFails=0
 rcfg today-two-once "AtMostOnce" "${TWO[@]}" MaxFails=1
-rcfg today-two-lost "NeverLost" "${TWO[@]}" MaxFails=1
+rcfg today-two-lost "NeverLost" "${TWO[@]}" MaxFails=2
 rcfg today-two-nofail-once "AtMostOnce" "${TWO[@]}" MaxFails=0
 rcfg today-two-nofail-lost "NeverLost" "${TWO[@]}" MaxFails=0
-# The candidate fix: Continue no longer copies the run document's settled ids into the profile.
-rcfg guarded-one "$BOTH" ReconcileImports=FALSE
-rcfg guarded-two-once "AtMostOnce" "${TWO[@]}" MaxFails=1 ReconcileImports=FALSE
-rcfg guarded-two-lost "NeverLost" "${TWO[@]}" MaxFails=1 ReconcileImports=FALSE
+# The candidate fix: Continue copies the run document's ledger ids into the profile, never its reward keys.
+rcfg guarded-one "$BOTH" ReconcileCopies=\"ledger\"
+rcfg guarded-two-once "AtMostOnce" "${TWO[@]}" MaxFails=1 ReconcileCopies=\"ledger\"
+rcfg guarded-two-lost "NeverLost" "${TWO[@]}" MaxFails=2 ReconcileCopies=\"ledger\"
 # One guard off each, from guarded-one: the named rule must break.
-rcfg broken-ledger "AtMostOnce" ReconcileImports=FALSE LedgerChecked=FALSE
-rcfg broken-midsave "NeverLost" ReconcileImports=FALSE GrantSavesOnce=FALSE
+rcfg broken-ledger "AtMostOnce" ReconcileCopies=\"ledger\" LedgerChecked=FALSE
+rcfg broken-midsave "NeverLost" ReconcileCopies=\"ledger\" GrantSavesOnce=FALSE
 # Reach probes: each MUST break, or an action has gone dead.
 rcfg reach "ProbeLands ProbeContinue ProbeFail ProbeCrash ProbeTomb ProbeRunSettled"

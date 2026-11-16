@@ -20,7 +20,8 @@ CONSTANTS
   MaxFails,         \* bound on failed file writes (disk full, a refused save)
   MaxGen,           \* bound on file generations (state constraint only)
   \* Behaviour of today's code. A config that flips one is a variant.
-  ReconcileImports, \* progress.reconcile_settled copies the run document's settled ids into the profile
+  ReconcileCopies,  \* which run-document settled ids progress.reconcile_settled copies into the profile:
+                    \* "all" (today), "ledger" (the narrow fix: ledger.found.* ids, never reward:* keys)
   LedgerChecked,    \* _grant_reward and grant_once refuse an id the ledger already holds
   GrantSavesOnce    \* grant_once saves once, after the unlock (FALSE: it saves between settle and unlock)
 
@@ -94,12 +95,12 @@ NewRun(p) ==
   /\ todo' = [todo EXCEPT ![p] = <<"P", "R">>]
   /\ UNCHANGED <<disk, mEarned, mSettled, mUnlock, pGen, rGen, nx, pend, landed, crashes, fails, continued>>
 
-\* A fact meets the row: progress._evaluate -> _earn: profile.earn, then _grant_reward (step G),
-\* then _earn's own profile save.
+\* A fact meets the row: progress._evaluate -> _earn: profile.earn, then _grant_reward (step G,
+\* which adds grant_once's save when it grants), then _earn's own profile save (progress.gd:419).
 Earn(p) ==
   /\ up[p] = "run" /\ Idle(p) /\ ~mEarned[p]
   /\ mEarned' = [mEarned EXCEPT ![p] = TRUE]
-  /\ todo' = [todo EXCEPT ![p] = <<"G">>]
+  /\ todo' = [todo EXCEPT ![p] = <<"G", "P">>]
   /\ UNCHANGED <<disk, up, mSettled, mUnlock, pGen, mRunSettled, rGen, nx, pend, landed, crashes, fails, continued>>
 
 \* A run document save point: flow.enter_stage, _save_boss_won (PF-55) or _on_death_saved, each
@@ -119,13 +120,15 @@ EndRun(p) ==
 
 \* Continue at the title: flow.resume_run loads the run document (run_state.from_entrance_doc
 \* restores settled), progress.reconcile_settled makes both lists one set and saves when the
-\* profile gained an id, then the resumed stage saves its entrance.
+\* profile gained an id, then the resumed stage saves its entrance. Under "ledger" the reward key
+\* is never copied, but a ledger id the run holds may still be, and that triggers the same save.
 Continue(p) ==
   /\ up[p] = "title" /\ Idle(p) /\ rDoc = "live"
-  /\ LET added == ReconcileImports /\ rSettled /\ ~mSettled[p]
+  /\ LET added == ReconcileCopies = "all" /\ rSettled /\ ~mSettled[p]
      IN /\ mSettled' = [mSettled EXCEPT ![p] = mSettled[p] \/ added]
         /\ mRunSettled' = [mRunSettled EXCEPT ![p] = rSettled \/ mSettled[p]]
-        /\ todo' = [todo EXCEPT ![p] = IF added THEN <<"P", "R">> ELSE <<"R">>]
+        /\ \E ledgerAdded \in IF ReconcileCopies = "ledger" THEN BOOLEAN ELSE {FALSE} :
+             todo' = [todo EXCEPT ![p] = IF added \/ ledgerAdded THEN <<"P", "R">> ELSE <<"R">>]
   /\ up' = [up EXCEPT ![p] = "run"]
   /\ rGen' = [rGen EXCEPT ![p] = rGenD]
   /\ continued' = TRUE
@@ -162,12 +165,12 @@ StepB(p) ==
   /\ UNCHANGED <<disk, up, mEarned, mSettled, mUnlock, pGen, mRunSettled, rGen, nx, pend, landed, crashes, fails, continued>>
 
 \* progress._grant_reward and grant_once: refuse a key either list holds (_is_settled), else
-\* settle it in both lists and apply the unlock. Every path ends in a profile save (grant_once's,
-\* and _earn's; the two saves of one unchanged document are one step P here).
+\* settle it in both lists, apply the unlock and save (grant_once, progress.gd:229). A refused grant
+\* saves nothing here; the caller's own save follows.
 StepG(p) ==
   /\ At(p, "G")
   /\ IF LedgerChecked /\ (mSettled[p] \/ mRunSettled[p])
-     THEN /\ Then(p, <<"P">>)
+     THEN /\ Then(p, <<>>)
           /\ UNCHANGED <<mSettled, mRunSettled, mUnlock, pend>>
      ELSE /\ mSettled' = [mSettled EXCEPT ![p] = TRUE]
           /\ mRunSettled' = [mRunSettled EXCEPT ![p] = TRUE]

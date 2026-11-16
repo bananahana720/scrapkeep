@@ -5,6 +5,7 @@ extends SceneTree
 # would hold them. Steps: Launch A, Launch B, A earns and saves, B earns and saves (its save merges A's).
 # It prints REPRODUCED when both games ran the grant (each grant_once path returned a fresh settle) and
 # the file holds the unlock once, NOT REPRODUCED otherwise.
+# The control (`-- --control` after the script) loads game B after A's save; it must print NOT REPRODUCED.
 # Copy it into sketches/core-loop/tests/ to run it (SKILL.md, "Read a result"); it is not a suite test.
 
 const Profile := preload("res://src/core/profile.gd")
@@ -13,6 +14,8 @@ const RunState := preload("res://src/core/run_state.gd")
 const GameEvents := preload("res://src/core/game_events.gd")
 
 const DIR := "user://replay_reward_twice/"
+
+var control := OS.get_cmdline_user_args().has("--control")
 const ROW := "replay_row"
 const PAINT := "paint_replay"
 const ROWS := {ROW: {"name": "Replay", "on": "boss_defeated", "count": 1, "reward": {"cosmetic": PAINT}}}
@@ -48,12 +51,14 @@ func _replay() -> bool:
 	var events_a := GameEvents.new()
 	var events_b := GameEvents.new()
 	var a := _game(events_a)
-	var b := _game(events_b)
+	var b := [] if control else _game(events_b)
 	var paid := [0, 0]
 	events_a.achievement_earned.connect(func(_id): paid[0] += 1)
 	events_b.achievement_earned.connect(func(_id): paid[1] += 1)
 	events_a.boss_defeated.emit()
 	print("step A earns: A cosmetic %s, earn announced %d, file generation %d" % [a[0].has_cosmetic(PAINT), paid[0], a[0].generation()])
+	if control:
+		b = _game(events_b)
 	events_b.boss_defeated.emit()
 	print("step B earns: B cosmetic %s, earn announced %d, file generation %d" % [b[0].has_cosmetic(PAINT), paid[1], b[0].generation()])
 	var disk := Profile.new(DIR + "profile.json")

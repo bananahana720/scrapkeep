@@ -9,6 +9,8 @@ extends SceneTree
 # profile.save() returns false through its own write path. No game code is changed.
 # It prints REPRODUCED when the profile ends holding the id settled without the cosmetic and a fresh
 # earn and a fresh launch both leave it unpaid, NOT REPRODUCED otherwise.
+# The control (`-- --control` after the script) is the same steps with the write failure left out; it must print
+# NOT REPRODUCED.
 # Copy it into sketches/core-loop/tests/ to run it (SKILL.md, "Read a result"); it is not a suite test.
 
 const Profile := preload("res://src/core/profile.gd")
@@ -19,6 +21,8 @@ const SafeStore := preload("res://src/core/safe_store.gd")
 const GameEvents := preload("res://src/core/game_events.gd")
 
 const DIR := "user://replay_reward_lost/"
+
+var control := OS.get_cmdline_user_args().has("--control")
 const ROW := "replay_row"
 const PAINT := "paint_replay"
 const KEY := "reward:replay_row:cosmetic:paint_replay"
@@ -73,7 +77,8 @@ func _replay() -> bool:
 	print("step launch+newrun: profile saved %s, run saved '%s'" % [profile.save(), store.save(run.to_entrance_doc())])
 	# Earn, with every profile write failing.
 	var blocker := SafeStore.tmp_path(profile.path)
-	DirAccess.make_dir_recursive_absolute(blocker)
+	if not control:
+		DirAccess.make_dir_recursive_absolute(blocker)
 	events.boss_defeated.emit()
 	print("step earn: earned %s, cosmetic in memory %s, run settled %s, save warnings %d" % [
 		profile.earned(ROW), profile.has_cosmetic(PAINT), run.settled.has(KEY), progress.warnings])
