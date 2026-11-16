@@ -92,7 +92,7 @@ func _rules() -> void:
 	_t.eq("a bad command-line list is refused", ChallengeDials.rejected.size(), 4)
 	ChallengeDials.set_overrides({"mobs.damage_by_stage": 1.5, "brindle.damage_by_phase": 2.0})
 	_t.eq("a scalar for a list dial is refused (by_stage and by_phase)", ChallengeDials.rejected.size(), 6)
-	_t.eq("and leaves the (tuned) default", ChallengeDials.value("brindle.damage_by_phase"), [1.0, 4.0, 2.7, 1.0])
+	_t.eq("and leaves the (tuned) default", ChallengeDials.value("brindle.damage_by_phase"), [1.0, 3.0, 2.0, 1.0])
 	ChallengeDials.reset()
 
 
