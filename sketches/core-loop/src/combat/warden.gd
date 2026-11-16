@@ -445,6 +445,8 @@ func _slag_phase(lane: Dictionary, phase: String) -> void:
 	if lane["phase"] == phase:
 		return
 	lane["phase"] = phase
+	if phase == PHASE_STRIKE and not _dead:
+		_strike_frames = STRIKE_FRAMES
 	var node = lane["node"]
 	var geometry: Dictionary = node.descriptor() if is_instance_valid(node) else {}
 	attack_phase.emit({"instance": lane["instance"], "row": "W01", "owner": kind, "phase": phase,
@@ -763,6 +765,8 @@ func _step_counter(delta: float) -> void:
 		var charge := counter_telegraph(stage)
 		_counter_ring.set_progress(_counter_time / charge)
 		if _counter_time >= charge:
+			if not _dead:
+				_strike_frames = STRIKE_FRAMES
 			if _counter_ring.contains(_ball()):
 				target.crowd_control("warden_counter", Vector3.UP * PULSE_LIFT / get_physics_process_delta_time())
 				counter_hit.emit(counter_damage(stage), Vector3.ZERO)
@@ -844,6 +848,9 @@ func _pulse() -> void:
 	last_pulse_lifted = ring != null and ring.contains(ball)
 	if last_pulse_lifted:
 		target.crowd_control("warden_pulse", Vector3.UP * PULSE_LIFT / get_physics_process_delta_time())
+	# The core ring's landing (it reached progress 1 this tick): the body wears the release flash.
+	if is_instance_valid(_core_ring) and not _dead:
+		_strike_frames = STRIKE_FRAMES
 	if is_instance_valid(_core_ring) and _core_ring.contains(ball):
 		hit_player.emit(PULSE_DAMAGE * ChallengeDials.stage_mult("warden.pulse_damage", stage), Vector3.ZERO)
 	if _flaring >= 0:
