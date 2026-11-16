@@ -1310,10 +1310,11 @@ func _site_row(site, metres: int, words := "") -> Dictionary:
 		"words": words if words != "" else Objectives.activity_words(kind, game.world.activities.called(kind)), "distance": metres}
 
 
-# The named site's done or lost tick. While its run is at hand the goal row already says it, so the
-# row stays held on the site (no other site takes it) and draws nothing.
+# The named site's done or lost tick. While its run is at hand, or while the goal row ticks the same
+# result, the goal row already says it, so the row stays held on the site (no other site takes it)
+# and draws nothing; it carries the tick only when the goal row has moved on early.
 func _held_detour(running: bool) -> Dictionary:
-	if running:
+	if running or (_done.showing() and _done.words == _detour_done.words):
 		return {}
 	var row := _site_row(_detour_site, -1, _detour_done.words) if is_instance_valid(_detour_site) else {"what": "", "icon": "", "words": _detour_done.words, "color": Color.WHITE, "distance": -1}
 	row["color"] = EventKinds.color("activity_done") if _detour_done.won else Palette.RUST

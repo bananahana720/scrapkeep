@@ -60,9 +60,15 @@ func _run() -> void:
 	_hud = _game.hud
 	_acts = _game.world.activities
 	_acts.set_physics_process(false)
+	# Only sites a live run can bring to hand are offered here: a trade spot never comes to hand, and a
+	# bounty or a find site needs its own trigger, so which one happened to be nearest made the test flaky.
 	for site in _acts.sites:
 		site.started = false
+		if site.rule.finishes == "trade" or site.id == "hauler_bounty" or site.has_meta("find"):
+			site.failed = true
 	_hud._engaged = false
+	# A still ball: which sites lie ahead must not drift between runs.
+	_game.player._rigid.freeze = true
 	var cage = _game.world.rescue.cage("rivet")
 	if cage != null:
 		cage.fire()
@@ -77,7 +83,7 @@ func _run() -> void:
 	ahead.sort_custom(func(a, b): return _game.player.shown_position().distance_to(a.global_position) < _game.player.shown_position().distance_to(b.global_position))
 	var first = ahead[0]
 	var row := _row()
-	_t.eq("the row names the nearest site ahead", row.get("what"), String(first.id))
+	_t.eq("the row names the nearest site ahead (%s at %d m)" % [first.id, int(_game.player.shown_position().distance_to(first.global_position))], row.get("what"), String(first.id))
 
 	# The run begins: the site is started and at hand (a live surge is at hand wherever the ball is).
 	first.started = true
@@ -102,31 +108,34 @@ func _run() -> void:
 	first.done = true
 	_game.events.activity_done.emit(String(first.id), first.global_position)
 	await _frames(1)
-	row = _row()
 	var won_words := Objectives.done_words(String(first.id), _acts.called(String(first.id)))
-	_t.eq("won, the row ticks the done words", [row.get("words"), row.get("done")], [won_words, "won"])
-	_t.eq("the view is handed the tick", _hud._objective.get("detour_done"), "won")
-	_t.check("the view draws the done words", _hud._objective.drawn_words().has(won_words), str(_hud._objective.drawn_words()))
 	var hold_frames := int(ceil(Objectives.Done.SECONDS * Engine.physics_ticks_per_second))
-	var shown := 0
+	# The result shows once on the plate for the hold: on the goal row while it ticks it, never on both.
+	var once := 0
+	var twice := 0
 	var next_id := ""
 	var early := 0
 	for i in hold_frames + 20:
-		await _frames(1)
 		row = _row()
-		if i < hold_frames - 4 and row.get("done", "") != "won":
-			early += 1
-		if row.get("done", "") == "won":
-			shown += 1
-		elif next_id == "":
+		var count: int = _hud._objective.drawn_words().count(won_words)
+		if i < hold_frames - 4:
+			once += 1 if count == 1 else 0
+			early += 1 if not row.is_empty() and row.get("done", "") == "" else 0
+		twice += 1 if count > 1 else 0
+		if row.get("done", "") == "" and not row.is_empty() and next_id == "":
 			next_id = String(row.get("what", ""))
-	_t.check("the tick holds for Done.SECONDS", shown > 0 and absi(shown - hold_frames) <= 3, "%d of %d frames" % [shown, hold_frames])
+		await _frames(1)
+	_t.check("won, the done words show once for the hold", once == hold_frames - 4, "%d of %d frames" % [once, hold_frames - 4])
+	_t.check("never on both rows at once", twice == 0, "%d frames" % twice)
 	_t.check("no other site showed before the tick ended", early == 0, "%d frames" % early)
-	_t.check("then the next site takes the row", next_id != "" and _named() != first and row.get("distance", -1) >= 0, "%s" % next_id)
+	_t.check("then the next site takes the row", next_id != "" and _named() != first and _row().get("distance", -1) >= 0, "%s" % next_id)
 
 	# Lost: a run lost ticks its own lost words.
 	var near_second := _ahead(first)
 	near_second.sort_custom(func(a, b): return _game.player.shown_position().distance_to(a.global_position) < _game.player.shown_position().distance_to(b.global_position))
+	if not _t.check("a site is left ahead for the lost run", not near_second.is_empty(), "%d" % near_second.size()):
+		quit(_t.verdict())
+		return
 	var second = near_second[0]
 	_row()
 	var real_id: String = second.id
@@ -140,7 +149,12 @@ func _run() -> void:
 	_game.events.event_ended.emit("surge_run", "lost")
 	await _frames(1)
 	row = _row()
-	_t.eq("lost, the row ticks the lost words", [row.get("words"), row.get("done")], [Objectives.lost_words("surge_run"), "lost"])
+	var lost_words := Objectives.lost_words("surge_run")
+	_t.check("lost, the lost words show once", _hud._objective.drawn_words().count(lost_words) == 1, str(_hud._objective.drawn_words()))
+	_t.eq("the goal row has them, the detour row stays held", [_hud.plate_shown()["done"], row, _named() == second], ["lost", {}, true])
+	_hud._done.clear()
+	row = _row()
+	_t.eq("goal row moved on, the detour row crosses the run", [row.get("words"), row.get("done")], [lost_words, "lost"])
 	_t.eq("the view is handed the cross", _hud._objective.get("detour_done"), "lost")
 	await _frames(hold_frames + 10)
 	_t.check("the lost tick gives way", _row().get("done", "") == "", str(_row()))
