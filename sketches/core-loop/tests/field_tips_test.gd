@@ -312,6 +312,7 @@ func _run() -> void:
 	_game.events.enemy_killed.emit("grunt", Vector3.ZERO, 1)
 	_tip("active", func(): rack.active_id = "torch")
 	_game.combat.actives = real_rack
+	_ultimate_tip()
 	# A new run on the same profile repeats none of them, every verb met again.
 	var count := _prompts.size()
 	_game.events.run_started.emit("pylon_engineer")
@@ -381,3 +382,27 @@ func _radio_waits_for_the_pick() -> void:
 	tips.profile = old_profile
 	DirAccess.remove_absolute(fresh_dir.path_join(UiProfile.FILE))
 	DirAccess.remove_absolute(fresh_dir)
+
+
+# The ultimate tip: the meter full while no fight is live, once per profile, never in a fight.
+func _ultimate_tip() -> void:
+	var tips = _game.hud.field_tips
+	var meter = _game.player.abilities.meter
+	tips._run_time = maxf(tips._run_time, FieldTips.OPENING)
+	_advance(3.0)
+	_fight(true)
+	meter.value = meter.CAP
+	var in_fight := _advance(3.0)
+	_report("a full meter in a fight tells nothing", in_fight.count("ultimate") == 0 and not tips.seen("ultimate")
+		and _prompts.count("tip_ultimate") == 0, "frames %d, prompts %s" % [in_fight.count("ultimate"), _prompts])
+	_fight(false)
+	var calm := _advance(3.0)
+	_report("the meter full outside a fight tells the ultimate", calm.count("ultimate") > 0 and tips.seen("ultimate")
+		and _prompts.count("tip_ultimate") == 1, "frames %d, prompts %s" % [calm.count("ultimate"), _prompts])
+	meter.spend()
+	_advance(1.0)
+	meter.value = meter.CAP
+	var again := _advance(3.0)
+	_report("the ultimate tip tells once", again.count("ultimate") == 0 and _prompts.count("tip_ultimate") == 1,
+		"frames %d, prompts %s" % [again.count("ultimate"), _prompts])
+	meter.spend()
