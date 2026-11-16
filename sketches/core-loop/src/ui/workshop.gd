@@ -6,6 +6,7 @@ const UiFonts := preload("res://src/ui/ui_fonts.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const Keycap := preload("res://src/ui/keycap.gd")
 const TreePick := preload("res://src/ui/tree_pick.gd")
+const PickQuiet := preload("res://src/ui/pick_quiet.gd")
 const ShopCounter := preload("res://src/ui/shop_counter.gd")
 const MossBubble := preload("res://src/ui/moss_bubble.gd")
 const SfxBank := preload("res://src/presentation/sfx_bank.gd")
@@ -66,6 +67,7 @@ var _counter_ready := true
 var _ball_parked := false
 var _offer_pending := false
 var _held := false
+var _brief_hush: Array = []
 var _paused := false
 
 
@@ -364,6 +366,7 @@ func card_holds_only() -> bool:
 
 func _apply_hold() -> void:
 	var briefed := briefing()
+	_hold_quiet(armed and _start_card_showing())
 	var held_now: bool = pick.is_open() or counter.is_open() or briefed
 	var pause: bool = pick.is_open() or briefed
 	_show_briefing(briefed)
@@ -391,6 +394,20 @@ func _enforce_hold() -> void:
 		game.capture_mouse(false)
 	if _paused and not get_tree().paused:
 		get_tree().paused = true
+
+
+# The start card's briefing hushes the fight's words as the kit pick does, so a hit number does
+# not hang frozen over the card. It holds across a kit pick opened over the card (a counted hold).
+func _hold_quiet(on: bool) -> void:
+	if on and _brief_hush.is_empty():
+		_brief_hush = PickQuiet.hush(self)
+	elif not on and not _brief_hush.is_empty():
+		PickQuiet.restore(_brief_hush)
+		_brief_hush = []
+
+
+func _exit_tree() -> void:
+	_hold_quiet(false)
 
 
 # Moss's line goes quiet behind the kit pick and comes back after it (pick_quiet.gd, PF-30).

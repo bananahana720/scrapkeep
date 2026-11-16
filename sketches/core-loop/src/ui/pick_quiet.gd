@@ -9,19 +9,38 @@ const WordFxWord := preload("res://src/presentation/world_fx/world_fx_word.gd")
 # here changes what those owners track; they only stop drawing.
 
 
+# Holds are counted, so a kit pick and the start card's briefing can overlap and neither one's
+# release undoes the other's: the HUD and the word effects come back when the last hold lets go.
+static var _holds := {}
+static var _total := 0
+
+
 # Hushes the fight's transient words and returns what to give back.
 static func hush(host) -> Array:
 	var game = host.get("game") if host != null else null
 	if game == null:
 		return []
-	game.hud.quiet(true)
+	var hud = game.hud
+	_holds[hud] = int(_holds.get(hud, 0)) + 1
+	if _holds[hud] == 1:
+		hud.quiet(true)
+	_total += 1
 	WordFxWord.quiet(true)
-	return [game.hud]
+	return [hud]
 
 
 # Gives back what hush hid.
 static func restore(hidden: Array) -> void:
 	for hud in hidden:
-		if is_instance_valid(hud):
-			hud.quiet(false)
-	WordFxWord.quiet(false)
+		if _total <= 0:
+			continue
+		_total -= 1
+		if _holds.has(hud):
+			_holds[hud] -= 1
+			if _holds[hud] <= 0:
+				_holds.erase(hud)
+				if is_instance_valid(hud):
+					hud.quiet(false)
+	if _total <= 0:
+		_total = 0
+		WordFxWord.quiet(false)

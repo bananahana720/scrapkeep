@@ -9,7 +9,9 @@ const Push := preload("res://tests/workshop/push.gd")
 # The kit pick a first-timer can read (PF-01, PF-10, PF-30):
 #   - copy: no sentence appears on two world-one cards, none of the old jargon lines survives, and
 #     every card's first sentence is within the word budget;
-#   - taking a card marks it "Taken" before the screen leaves and the kit's name toasts once;
+#   - taking a card marks it with the amber, the edge weight and the pop, and no word, and the kit's
+#     name toasts once, after the screen has left; a skipped depth reopens the screen without
+#     closing it, and its two kits share one toast after the final close;
 #   - while a pick card is up in the middle of a fight, the "Paused" line shows and the hit
 #     word, the synergy callout, the toast row and Moss's line behind it do not; they come back
 #     after the pick;
@@ -28,6 +30,12 @@ var _phase := "boot"
 var _wait := 0
 var _word: Label3D
 var _hidden_words := 0
+var _name := ""
+var _chain: Array = []
+var _skip_names: Array = []
+var _watched := 0
+var _after_card := false
+var _early: Array = []
 
 
 func _initialize() -> void:
@@ -103,16 +111,35 @@ func _process(_delta: float) -> bool:
 				var name_of: String = String(cards[0].node.get("name", ""))
 				_report("held line on the first pick", _ws.pick.held_text() != "" and paused, "line '%s', tree paused %s" % [_ws.pick.held_text(), paused])
 				Push.key(root, KEY_1)
-				_report("taken card marked", cards[0].taken_text() == "Taken" and cards[1].taken_text() == "" and _ws.pick.visible,
-					"card 0 '%s', card 1 '%s', screen still up %s" % [cards[0].taken_text(), cards[1].taken_text(), _ws.pick.visible])
-				var toasts: Array = _game.hud.toast_texts()
-				_report("kit named once", toasts == [name_of + " taken"], "toast %s for %s" % [toasts, name_of])
+				_report("a1 taken card marked, with no word", cards[0].is_taken() and not cards[1].is_taken() and _ws.pick.visible and _no_taken_label(cards[0]),
+					"card 0 taken %s, card 1 taken %s, screen still up %s" % [cards[0].is_taken(), cards[1].is_taken(), _ws.pick.visible])
+				_report("a2 no toast while the pick is up", _game.hud.toast_texts().is_empty() and _ws.pick.visible, "toasts %s" % [_game.hud.toast_texts()])
+				_name = name_of
 				_next("brief")
 		"brief":
-			if _wait == SETTLE:
+			if _wait >= SETTLE and _ws.pick.visible and _wait < 600:
+				return false
+			if _wait >= SETTLE:
+				var toasts: Array = _game.hud.toast_texts()
+				_report("a2 kit named once after the pick is gone", not _ws.pick.visible and toasts == [_name + " taken"], "toast %s for %s, pick visible %s" % [toasts, _name, _ws.pick.visible])
 				Push.key(root, KEY_D)
 				Push.key(root, KEY_ENTER)
-				_next("fight")
+				_next("stage_card")
+		"stage_card":
+			if _game.hud.launch_card.showing() and _wait < 1500:
+				return false
+			if not _after_card:
+				_after_card = true
+				return false
+			var left: float = float(_game.hud._toast.get("left", 0.0))
+			_report("t2 the kit toast is shown when the stage card ends, with its life intact", _game.hud.toast_texts() == [_name + " taken"] and left > 2.4,
+				"toasts %s, %.2f s left after %d frames" % [_game.hud.toast_texts(), left, _wait])
+			_next("t_expire")
+		"t_expire":
+			if not _game.hud.toast_texts().is_empty() and _wait < 900:
+				return false
+			_report("t3 the kit toast then expires", _game.hud.toast_texts().is_empty(), "toasts %s after %d frames" % [_game.hud.toast_texts(), _wait])
+			_next("fight")
 		"fight":
 			if _wait == SETTLE:
 				# A fight in progress: a hit word in the world, a synergy callout and Moss's line up.
@@ -144,10 +171,119 @@ func _process(_delta: float) -> bool:
 				_report("the toast row returns after the pick", not _game.hud.toast_texts().is_empty() and _game.hud._toast_row.is_visible_in_tree(), "toast row visible %s, toasts %s" % [_game.hud._toast_row.is_visible_in_tree(), _game.hud.toast_texts()])
 				_report("fight words return after the pick", not _ws.pick.is_open() and _word.is_visible_in_tree() and _ws.bubble.showing() and _game.hud.why_callout.is_visible_in_tree(),
 					"pick open %s, hit word %s, Moss's line %s, callout %s" % [_ws.pick.is_open(), _word.is_visible_in_tree(), _ws.bubble.showing(), _game.hud.why_callout.is_visible_in_tree()])
-				print("pick_card_clarity_test: %s" % ("PASS" if _failures == 0 else "FAIL (%d)" % _failures))
-				quit(0 if _failures == 0 else 1)
+				_next("chain_open")
+		"chain_open":
+			if _wait >= 3 and not _ws.pick.visible:
+				_game.hud.launch_card.visible = false
+				_game.player.tree.open_checkpoint()
+				_next("chain_pick")
+		"chain_pick":
+			if _wait > 600:
+				_report("a3 the pick opened", false, "no open pick after %d frames" % _wait)
+				_finish()
 				return true
+			if _wait >= SETTLE and _ws.pick.is_open():
+				_name = String(_ws.pick.cards()[1].node.get("name", ""))
+				Push.key(root, KEY_2)
+				_next("chain_gone")
+		"chain_gone":
+			if _ws.pick.visible and _wait < 600:
+				return false
+			_report("a3 the screen has gone", not _ws.pick.visible, "visible %s after %d frames" % [_ws.pick.visible, _wait])
+			var seen: Array = _game.hud.toast_texts()
+			_chain.append(seen.duplicate())
+			_report("a3 pick %d toasts its kit once" % _chain.size(), seen.count(_name + " taken") == 1, "toasts %s for %s" % [seen, _name])
+			if _chain.size() < 2:
+				_next("chain_open")
+				return false
+			_next("skip_open")
+		"skip_open":
+			# A fresh tree owing two picks at once: choosing the first reopens the same screen.
+			if _wait == 3:
+				_game.hud.drop_toast(_game.hud.toast_texts()[0] if not _game.hud.toast_texts().is_empty() else "")
+				_game.hud.launch_card.visible = false
+				var tree = _game.player.tree
+				tree.reset(tree.class_id)
+				tree.open_checkpoint()
+				tree.open_checkpoint()
+				_next("skip_first")
+		"skip_first":
+			if _wait > 600:
+				_report("s1 the first pick opened", false, "no open pick after %d frames" % _wait)
+				_finish()
+				return true
+			if _wait >= SETTLE * 2 and _ws.pick.is_open() and _ws.pick.depth == 1:
+				_skip_names.append(String(_ws.pick.cards()[0].node.get("name", "")))
+				Push.key(root, KEY_1)
+				_next("skip_second")
+		"skip_second":
+			if _wait > 600:
+				_report("s1 the second pick opened", false, "no reopened pick after %d frames" % _wait)
+				_finish()
+				return true
+			_watch_toasts()
+			if _wait >= SETTLE and _ws.pick.is_open() and _ws.pick.depth == 2:
+				_skip_names.append(String(_ws.pick.cards()[1].node.get("name", "")))
+				Push.key(root, KEY_2)
+				_next("skip_gone")
+		"skip_gone":
+			_watch_toasts()
+			if _ws.pick.visible and _wait < 600:
+				return false
+			var seen: Array = _game.hud.toast_texts()
+			var want: String = ", ".join(_skip_names) + " taken"
+			_report("s2 the screen has gone", not _ws.pick.visible, "visible %s after %d frames" % [_ws.pick.visible, _wait])
+			_report("s3 no toast at any frame while the pick was up", _watched > 0 and _early.is_empty(), "%d frames watched, toasts seen %s" % [_watched, _early])
+			_report("s4 one toast names both kits in order", _skip_names.size() == 2 and seen == [want], "toast %s, want [%s]" % [seen, want])
+			_toast_life()
+			_finish()
+			return true
 	return false
+
+
+# The HUD's toast lifetime, stepped by hand: the hold for an unseen toast must not freeze one in
+# play, and a toast hushed or held under a card shows for its full life once it can be seen.
+func _toast_life() -> void:
+	var hud = _game.hud
+	hud.drop_toast(hud.toast_texts()[0] if not hud.toast_texts().is_empty() else "")
+	hud.launch_card.visible = false
+	hud.toast("Plain toast")
+	hud._step_toast(0.0)
+	hud._step_toast(2.0)
+	var mid: bool = hud.toast_texts() == ["Plain toast"]
+	hud._step_toast(0.8)
+	_report("t4 an ordinary toast expires in its normal time", mid and hud.toast_texts().is_empty(), "present at 2.0 s %s, after 2.8 s %s" % [mid, hud.toast_texts()])
+	hud.quiet(true)
+	hud.toast("Hushed toast")
+	hud._step_toast(10.0)
+	var held: bool = hud.toast_texts() == ["Hushed toast"]
+	hud.quiet(false)
+	hud._step_toast(0.0)
+	hud._step_toast(2.5)
+	var shown: bool = hud.toast_texts() == ["Hushed toast"]
+	hud._step_toast(0.4)
+	_report("t5 a toast held under quiet shows for its full life after quiet ends", held and shown and hud.toast_texts().is_empty(),
+		"kept through 10 s of quiet %s, still up 2.5 s after %s, gone after 2.9 s %s" % [held, shown, hud.toast_texts().is_empty()])
+
+
+func _watch_toasts() -> void:
+	if _ws.pick.visible:
+		_watched += 1
+		for text in _game.hud.toast_texts():
+			_early.append(text)
+
+
+func _finish() -> void:
+	print("pick_card_clarity_test: %s" % ("PASS" if _failures == 0 else "FAIL (%d)" % _failures))
+	quit(0 if _failures == 0 else 1)
+
+
+# No label on the card says "Taken": the colour carries it.
+func _no_taken_label(card: Control) -> bool:
+	for node in card.find_children("*", "Label", true, false):
+		if (node as Label).text == "Taken":
+			return false
+	return true
 
 
 func _next(phase: String) -> void:
