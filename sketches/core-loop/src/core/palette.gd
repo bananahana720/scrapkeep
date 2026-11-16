@@ -26,6 +26,9 @@ const BRASS := Color("d9b44a")
 const LEDGER := Color("e6d9b8")
 # "Not yet": out of range, a glancing hit, a locked thing. Cool, so no warm colour shares it.
 const SLATE := Color("6f7f8f")
+# Slate as a word on the moving world (the event warning line): the same cool hue, light enough to
+# hold 4.5 to 1 inside the HUD's dark outline, which SLATE (5.1 to 1 against pure black) cannot (UA-04).
+const SLATE_INK := Color("a3b3c3")
 # Worn steel: the cog, the money, and the grey panels' hardware (W1-21). Neutral and light, so it is
 # neither Brindle's brass nor the relic's amber to any eye, nor slate's cool "not yet".
 const STEEL := Color("9aa0a0")
