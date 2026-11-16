@@ -78,15 +78,19 @@ class LockGlyph extends Control:
 		draw_rect(Rect2(w * 0.14, h * 0.48, w * 0.72, h * 0.44), tint)
 
 
-# The square paint swatch; a click on it cycles the paint.
+# The square paint swatch; a click on it cycles the paint. The square draws at FACE px in the middle of a
+# TARGET px control, so the click target meets the 44 px floor (UA-09) without a bigger square.
 class Swatch extends Control:
+	const FACE := 26.0
+	const TARGET := 44.0
 	var color := Color.WHITE
 	var edge := Color.WHITE
 	signal clicked
 
 	func _draw() -> void:
-		draw_rect(Rect2(Vector2.ZERO, size), color)
-		draw_rect(Rect2(Vector2.ZERO, size), edge, false, 2.0)
+		var face := Rect2((size - Vector2(FACE, FACE)) * 0.5, Vector2(FACE, FACE))
+		draw_rect(face, color)
+		draw_rect(face, edge, false, 2.0)
 
 	func _gui_input(event: InputEvent) -> void:
 		if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
@@ -313,7 +317,7 @@ func _build_overlay(width: float, color: Color) -> void:
 	_paint_row.visible = false
 	add_child(_paint_row)
 	_swatch = Swatch.new()
-	_swatch.custom_minimum_size = Vector2(26.0, 26.0)
+	_swatch.custom_minimum_size = Vector2(Swatch.TARGET, Swatch.TARGET)
 	_swatch.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	_swatch.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 	_swatch.clicked.connect(func(): if openness > 0.5: cycle_paint())
