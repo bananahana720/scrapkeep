@@ -59,7 +59,8 @@ func _physics_process(_delta: float) -> bool:
 				_report("lens", lens.size() == 3 and Vector3(lens[0], lens[1], lens[2]).distance_to(at) < 0.1, "lens %s, camera at %s" % [lens, at])
 				_report("ball on screen", row["ball_on_screen"] == true, "camera behind the ball: %s" % row["ball_on_screen"])
 				var arm: Dictionary = row["arm"] if row["arm"] != null else {}
-				_report("arm open", arm.has("wanted") and arm["wanted"] > 1.0 and arm["body"] == null, "arm %s" % [arm])
+				_report("arm open", arm.has("wanted") and arm["wanted"] > 1.0 and arm["body"] == null
+					and arm.get("easing") == (arm["hit"] < arm["wanted"] - 0.01), "arm %s" % [arm])
 				var truth: Dictionary = _film._truth()
 				_report("truth merges", truth.has("lens") and truth.has("slots") and truth.has("pos"), "keys %s" % [truth.keys()])
 				_game.camera.set_process(false)
@@ -97,9 +98,22 @@ func _physics_process(_delta: float) -> bool:
 			if _wait == 40:
 				var row: Dictionary = _film.view_truth()
 				var arm: Dictionary = row["arm"]
-				_report("arm hit named", arm["body"] != null and String(arm["body"]).contains("FilmTestWall") and arm["hit"] < arm["wanted"] - 0.5,
-					"arm %s" % [arm])
+				_report("arm hit named", arm["body"] != null and String(arm["body"]).contains("FilmTestWall") and arm["hit"] < arm["wanted"] - 0.5
+					and arm.get("easing") == false, "arm %s" % [arm])
 				_wall.queue_free()
+				_phase = "ease"
+				_wait = 0
+		"ease":
+			# The wall is gone and the arm is open. It wants 3 m more than it reached last tick, with
+			# nothing in the way: the arm is easing out, so no body is named and the row says so.
+			if _wait == 6:
+				var rig = _game.camera
+				rig.set_process(false)
+				rig.arm.spring_length += 3.0
+				var arm: Dictionary = _film.view_truth()["arm"]
+				_report("arm easing out", arm["body"] == null and arm.get("easing") == true and arm["hit"] < arm["wanted"] - 2.5, "arm %s" % [arm])
+				rig.arm.spring_length -= 3.0
+				rig.set_process(true)
 				_phase = "slots"
 				_wait = 0
 		"slots":
