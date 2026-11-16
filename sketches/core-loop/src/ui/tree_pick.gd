@@ -38,6 +38,8 @@ var _column: VBoxContainer
 var _heading: Label
 var _held_line: Label
 var _hidden: Array = []
+# Kit names taken but not yet toasted: the toast waits for the screen to be gone.
+var _taken_names: Array = []
 var _offered: Array = []
 var _crumb
 var _row: HBoxContainer
@@ -128,6 +130,9 @@ func open(class_id: String, pick_depth: int, nodes: Array, path: Array, color: C
 	_generation += 1
 	_open = true
 	_pad_ready = false
+	# A pick that opens straight after a pick still owes that pick its toast; the HUD is hushed
+	# behind this screen, so it shows once this one closes.
+	_flush_taken_toasts()
 	depth = pick_depth
 	visible = true
 	_offered = nodes
@@ -200,16 +205,25 @@ func close(chosen_index := -1) -> void:
 
 
 # A pick was taken: its card wears the taken mark before the screen leaves, and the kit's name
-# shows once on the HUD's toast row.
+# shows once on the HUD's toast row after the screen has gone (it would sit under the veil).
 func _on_picked(_class_id: String, node_id: String, _depth: int) -> void:
 	if not _open:
 		return
 	for card in cards():
 		if card.node_id() == node_id:
 			card.mark_taken()
-			var hud = get_parent().game.get("hud")
-			if hud != null:
-				hud.toast(TAKEN_TOAST % String(card.node.get("name", "")), Palette.SAND, "diamond", 3)
+			_taken_names.append(String(card.node.get("name", "")))
+
+
+func _flush_taken_toasts() -> void:
+	var names := _taken_names
+	_taken_names = []
+	var host = get_parent()
+	var hud = host.get("game").get("hud") if host != null and host.get("game") != null else null
+	if hud == null:
+		return
+	for taken in names:
+		hud.toast(TAKEN_TOAST % taken, Palette.SAND, "diamond", 3)
 
 
 func focused_index() -> int:
@@ -315,4 +329,5 @@ func _play_out(chosen_index: int) -> void:
 	_tween.tween_property(_later, "modulate:a", 0.0, FADE_OUT).set_ease(Tween.EASE_IN)
 	_tween.chain().tween_callback(func():
 		if generation == _generation and not _open:
-			visible = false)
+			visible = false
+			_flush_taken_toasts())

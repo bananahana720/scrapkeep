@@ -36,7 +36,7 @@ var _effect: Label
 var _set_piece: Label
 var _skip_prompt: Label
 var _depth_table: Button
-var _taken: Label
+var _taken := false
 var _lift := 0.0
 
 
@@ -88,25 +88,20 @@ func _init(node_row := {}, key_id := "", class_color := Palette.SAND, node_depth
 	# Nothing here a first pick can use: the Build page and the slot's key tag come in with the
 	# second pick (PF-01).
 	_depth_table.visible = depth > 1
-	_taken = _text("Taken", UiTokens.BODY, Palette.AMBER)
-	_taken.visible = false
-	_taken.set_anchors_preset(Control.PRESET_TOP_RIGHT)
-	_taken.position = Vector2(WIDTH - 100.0, 20.0)
-	add_child(_taken)
 	mouse_entered.connect(func():
 		if not disabled:
 			grab_focus())
 
 
-# Marks this card as the one taken: a "Taken" word and an amber edge that stays while the card
-# leaves, so the pick reads as made.
+# Marks this card as the one taken: an amber edge that stays while the card leaves, so the pick
+# reads as made. The colour carries it; no word restates it.
 func mark_taken() -> void:
-	_taken.visible = true
+	_taken = true
 	add_theme_stylebox_override("disabled", ClassCard._plate(Palette.AMBER, 4))
 
 
-func taken_text() -> String:
-	return _taken.text if _taken.visible else ""
+func is_taken() -> bool:
+	return _taken
 
 
 # The slot key the node changes, as a key glyph id (design-v3/SKILL-BAR.md section 5): the bar

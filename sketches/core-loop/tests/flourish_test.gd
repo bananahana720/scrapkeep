@@ -57,6 +57,7 @@ func _run() -> void:
 	_game.player.source = Intent.Scripted.new()
 	var player = _game.presentation.flourish
 	_t.check("10 presentation builds the player", player is FlourishPlayer, str(player))
+	_stage_name_once()
 	await _live(player)
 	await _sweep(player)
 	await _order(player)
@@ -93,6 +94,20 @@ func _rows() -> void:
 
 func _in_piece(piece: Dictionary, line: String) -> bool:
 	return str(piece.get("text", "")).contains(line) or str(piece.get("texts", "")).contains(line) or str(piece.get("card", "")).contains(line)
+
+
+# The stage card owns the stage's name, so the cold open's captions do not open with it.
+func _stage_name_once() -> void:
+	var names: Array = [String(_game.ctx.stages.of(1)["name"]), String(Worlds.ROWS[0]["name"])]
+	var begins: Array = []
+	var seen := 0
+	for piece in Rows.pieces("cold_open", false).filter(func(p): return p.kind == "caption"):
+		var variants: Array = piece.text if piece.text is Array else [piece.text]
+		for line in variants:
+			seen += 1
+			if names.any(func(n): return String(line).begins_with(n)):
+				begins.append(line)
+	_t.check("c1 no cold open caption begins with the stage's name", seen > 0 and begins.is_empty(), "%d lines, names %s, begin with one: %s" % [seen, names, begins])
 
 
 func _named_once() -> void:

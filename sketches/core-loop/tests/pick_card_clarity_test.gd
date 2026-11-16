@@ -9,7 +9,8 @@ const Push := preload("res://tests/workshop/push.gd")
 # The kit pick a first-timer can read (PF-01, PF-10, PF-30):
 #   - copy: no sentence appears on two world-one cards, none of the old jargon lines survives, and
 #     every card's first sentence is within the word budget;
-#   - taking a card marks it "Taken" before the screen leaves and the kit's name toasts once;
+#   - taking a card marks it with the amber edge and no word, and the kit's name toasts once, after
+#     the screen has left (two picks in a row toast once each);
 #   - while a pick card is up in the middle of a fight, the "Paused" line shows and the hit
 #     word, the synergy callout, the toast row and Moss's line behind it do not; they come back
 #     after the pick;
@@ -28,6 +29,8 @@ var _phase := "boot"
 var _wait := 0
 var _word: Label3D
 var _hidden_words := 0
+var _name := ""
+var _chain: Array = []
 
 
 func _initialize() -> void:
@@ -103,13 +106,17 @@ func _process(_delta: float) -> bool:
 				var name_of: String = String(cards[0].node.get("name", ""))
 				_report("held line on the first pick", _ws.pick.held_text() != "" and paused, "line '%s', tree paused %s" % [_ws.pick.held_text(), paused])
 				Push.key(root, KEY_1)
-				_report("taken card marked", cards[0].taken_text() == "Taken" and cards[1].taken_text() == "" and _ws.pick.visible,
-					"card 0 '%s', card 1 '%s', screen still up %s" % [cards[0].taken_text(), cards[1].taken_text(), _ws.pick.visible])
-				var toasts: Array = _game.hud.toast_texts()
-				_report("kit named once", toasts == [name_of + " taken"], "toast %s for %s" % [toasts, name_of])
+				_report("a1 taken card marked, with no word", cards[0].is_taken() and not cards[1].is_taken() and _ws.pick.visible and _no_taken_label(cards[0]),
+					"card 0 taken %s, card 1 taken %s, screen still up %s" % [cards[0].is_taken(), cards[1].is_taken(), _ws.pick.visible])
+				_report("a2 no toast while the pick is up", _game.hud.toast_texts().is_empty() and _ws.pick.visible, "toasts %s" % [_game.hud.toast_texts()])
+				_name = name_of
 				_next("brief")
 		"brief":
-			if _wait == SETTLE:
+			if _wait >= SETTLE and _ws.pick.visible and _wait < 600:
+				return false
+			if _wait >= SETTLE:
+				var toasts: Array = _game.hud.toast_texts()
+				_report("a2 kit named once after the pick is gone", not _ws.pick.visible and toasts == [_name + " taken"], "toast %s for %s, pick visible %s" % [toasts, _name, _ws.pick.visible])
 				Push.key(root, KEY_D)
 				Push.key(root, KEY_ENTER)
 				_next("fight")
@@ -144,10 +151,38 @@ func _process(_delta: float) -> bool:
 				_report("the toast row returns after the pick", not _game.hud.toast_texts().is_empty() and _game.hud._toast_row.is_visible_in_tree(), "toast row visible %s, toasts %s" % [_game.hud._toast_row.is_visible_in_tree(), _game.hud.toast_texts()])
 				_report("fight words return after the pick", not _ws.pick.is_open() and _word.is_visible_in_tree() and _ws.bubble.showing() and _game.hud.why_callout.is_visible_in_tree(),
 					"pick open %s, hit word %s, Moss's line %s, callout %s" % [_ws.pick.is_open(), _word.is_visible_in_tree(), _ws.bubble.showing(), _game.hud.why_callout.is_visible_in_tree()])
-				print("pick_card_clarity_test: %s" % ("PASS" if _failures == 0 else "FAIL (%d)" % _failures))
-				quit(0 if _failures == 0 else 1)
-				return true
+				_next("chain_open")
+		"chain_open":
+			if _wait == 3:
+				_game.hud.launch_card.visible = false
+				_game.player.tree.open_checkpoint()
+				_next("chain_pick")
+		"chain_pick":
+			if _wait == SETTLE and _ws.pick.is_open():
+				_name = String(_ws.pick.cards()[1].node.get("name", ""))
+				Push.key(root, KEY_2)
+				_next("chain_gone")
+		"chain_gone":
+			if _ws.pick.visible and _wait < 600:
+				return false
+			var seen: Array = _game.hud.toast_texts()
+			_chain.append(seen.duplicate())
+			_report("a3 pick %d toasts its kit once" % _chain.size(), seen.count(_name + " taken") == 1, "toasts %s for %s" % [seen, _name])
+			if _chain.size() < 2:
+				_next("chain_open")
+				return false
+			print("pick_card_clarity_test: %s" % ("PASS" if _failures == 0 else "FAIL (%d)" % _failures))
+			quit(0 if _failures == 0 else 1)
+			return true
 	return false
+
+
+# No label on the card says "Taken": the colour carries it.
+func _no_taken_label(card: Control) -> bool:
+	for node in card.find_children("*", "Label", true, false):
+		if (node as Label).text == "Taken":
+			return false
+	return true
 
 
 func _next(phase: String) -> void:

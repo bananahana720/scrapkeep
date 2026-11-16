@@ -46,7 +46,7 @@ const ROWS := {
 	"cold_open": {"priority": 1,
 		"full": [
 			{"kind": "caption", "at": 0.0, "for": 2.0, "slot": "left_low",
-				"text": ["Spillway Works. Dawn. Probably a Tuesday.", "Spillway Works. Dawn. Definitely a Wednesday.", "Spillway Works. Dawn. The kettle is on."]},
+				"text": ["Dawn. Probably a Tuesday.", "Dawn. Definitely a Wednesday.", "Dawn. The kettle is on."]},
 			{"kind": "caption", "at": 2.0, "for": 2.0, "slot": "left_low",
 				"text": ["Moss's shift note: bring the runner back up.", "Moss's shift note: seals first. Then the runner.",
 					"Moss's shift note: nothing's out of place. Yet.", "Moss's shift note: very tidy out there. Boots on."]},
@@ -183,8 +183,8 @@ const ROWS := {
 		"world": {"full": [{"kind": "eject", "at": 0.0, "seconds": 1.8}], "short": [{"kind": "eject", "at": 0.0, "seconds": 1.1}]},
 		"full": [
 			{"kind": "sfx_word", "at": 0.0, "for": 0.9, "text": "FWOOMP", "anchor": "scooter"},
-			{"kind": "stamp", "at": 0.9, "for": 1.5, "text": "ROUTED", "colour": "AMBER", "slot": "centre"},
-			{"kind": "caption", "at": 1.2, "for": 1.2, "slot": "left_low",
+			{"kind": "stamp", "at": 0.0, "for": 1.5, "text": "ROUTED", "colour": "AMBER", "slot": "centre"},
+			{"kind": "caption", "at": 0.3, "for": 2.1, "slot": "left_low",
 				"text": ["A tactical withdrawal. (Rounded up.)", "Brindle: \"Noted.\"", "The Admiral departs. On schedule."]},
 		],
 		"short": [

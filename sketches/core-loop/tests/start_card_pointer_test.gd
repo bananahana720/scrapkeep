@@ -57,8 +57,10 @@ func _run() -> void:
 	await process_frame
 	await _fresh()
 	await _counter()
+	await _hush()
 	await _rung()
 	await _summary()
+	await _freed_briefed()
 	game.free()
 	quit(t.verdict())
 
@@ -178,6 +180,57 @@ func _counter() -> void:
 	game.build.shop.leave()
 	ws.armed = false
 	await _frames(2)
+
+
+# The briefing hushes the fight's words as the kit pick does (a frozen hit number hung over the
+# start card), and the two holds are counted so neither one's release undoes the other's.
+func _hush() -> void:
+	await _begin(false)
+	var ws = game.get_node("Workshop")
+	var hud = game.hud
+	ws.armed = true
+	hud.damage_numbers.add("k", 37.0, Vector2(640.0, 400.0), "arc", "player")
+	await _frames(3)
+	t.check("b1 the briefing holds the game", ws.briefing() and get_root_paused())
+	t.check("b1 a hit number is hidden while the briefing holds", not hud.damage_numbers.is_visible_in_tree() and hud._quiet)
+	game.flow.take_start_pick(0)
+	await _frames(3)
+	t.check("b1 after the start tile the HUD is not quiet and the number can show", not hud._quiet and hud.damage_numbers.is_visible_in_tree())
+	# A kit pick opened over a start card and closed again.
+	await _begin(false)
+	ws.armed = true
+	await _frames(3)
+	var tree = game.player.tree
+	tree.open_checkpoint()
+	await _frames(3)
+	t.check("b2 the kit pick is up over the start card", ws.pick.is_open() and hud._quiet)
+	ws.close_pick()
+	await _frames(3)
+	t.check("b2 quiet holds after the pick closes, while the briefing lasts", ws.briefing() and hud._quiet, "briefing %s, quiet %s" % [ws.briefing(), hud._quiet])
+	game.flow.take_start_pick(0)
+	await _frames(3)
+	t.check("b2 quiet ends with the briefing", not hud._quiet)
+	ws.armed = false
+	tree.pick(String(tree.offered(tree.class_id, 1)[0]["id"]))
+	await _frames(2)
+
+
+# A workshop that leaves the tree while briefed gives its hold back. Last, since the game needs
+# its workshop.
+func _freed_briefed() -> void:
+	await _begin(false)
+	var ws = game.get_node("Workshop")
+	var hud = game.hud
+	ws.armed = true
+	await _frames(3)
+	t.check("b3 setup: briefed", ws.briefing() and hud._quiet)
+	ws.queue_free()
+	await _frames(3)
+	t.check("b3 a workshop freed while briefed leaves the HUD not quiet", not hud._quiet, "quiet %s" % hud._quiet)
+
+
+func get_root_paused() -> bool:
+	return paused
 
 
 func _rung() -> void:

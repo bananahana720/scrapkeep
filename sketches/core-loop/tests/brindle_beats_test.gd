@@ -138,6 +138,9 @@ func _first_run() -> void:
 	_t.check("22 the window grows by the rout and sign-on, capped", is_equal_approx(hold, clampf(expect, 0.0, Cues.HOLD_CAP)) and is_equal_approx(flow._victory_left, Flow.VICTORY_SECONDS + hold),
 		"hold %.2f, left %.2f" % [hold, flow._victory_left])
 	_t.check("23 the victory card waits over the world", screens != null and not screens.visible and flow.victory_veil == Rows.length("brindle_rout", false), "veil %.2f" % flow.victory_veil)
+	player.advance(0.1)
+	_t.check("23b the ROUTED stamp is up 0.1 s into victory", flow.state_name() == "victory" and player.id == "brindle_rout" and player.live_kinds().has("stamp") and player.reading("brindle_rout"),
+		"%s %s %s" % [flow.state_name(), player.id, player.live_kinds()])
 	var prop = boss.arena.find_child("RoutScooter", true, false) if boss.arena != null else null
 	_t.check("24 the scooter sails out of the catch", prop != null, "")
 	screens._step_veil_wait(flow.victory_veil + 0.01)
