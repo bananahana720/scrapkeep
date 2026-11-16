@@ -31,6 +31,8 @@ class TwoWorldGame extends "res://src/game.gd":
 var _game
 var _failures := 0
 var _final := false
+# The worlds announced (world_entered) during the last _resume.
+var _worlds: Array = []
 
 
 func _initialize() -> void:
@@ -71,6 +73,8 @@ func _frames(n: int) -> void:
 func _resume() -> bool:
 	_game = _boot()
 	await _frames(2)
+	_worlds = []
+	_game.events.world_entered.connect(func(world: int): _worlds.append(world))
 	var resumed: bool = _game.flow.resume_run()
 	await _frames(2)
 	return resumed
@@ -117,6 +121,8 @@ func _run() -> void:
 		and run.cogs == held_cogs and Array(run.parts) == held_parts and held_cogs > at_entry_cogs,
 		"in beat %s; resumed %s at stage %d, arena %s, flow %s, cogs %d (held %d), parts %s (held %s)" % [in_beat, resumed,
 			run.stage, _game.flow.in_arena, _game.flow.state_name(), run.cogs, held_cogs, Array(run.parts), held_parts])
+	# Entering world 2 is announced once, as on the uninterrupted path; world 1 is not announced again.
+	_report("the resumed run announces world 2 once", _worlds == [2], "worlds announced %s" % [_worlds])
 	_game.free()
 
 	resumed = await _resume()

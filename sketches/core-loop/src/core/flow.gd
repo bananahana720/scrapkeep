@@ -1107,13 +1107,10 @@ func _advance_from(cleared: int, velocity = null) -> void:
 	enter_stage(cleared + 1, ctx.player.state.velocity if velocity == null else velocity, false)
 
 
-# A Continue from a save written at a boss's fall (_save_boss_won) skips the arena the player already won.
+# A Continue from a save written at a boss's fall (_save_boss_won) skips the arena the player already won. The next
+# stage's entry announces its world; the world just finished is not announced again.
 func _resume_after_boss(velocity: Vector3) -> void:
 	ctx.run.extra.erase(BOSS_WON_KEY)
-	var world: int = ctx.stages.world_of(ctx.run.stage)
-	if world != _world:
-		_world = world
-		ctx.events.world_entered.emit(world)
 	_advance_from(ctx.run.stage, velocity)
 
 
@@ -1125,6 +1122,8 @@ func _save_boss_won() -> void:
 	var v: Vector3 = ctx.player.state.velocity
 	var doc: Dictionary = ctx.run.to_cleared_doc(_tree(), v)
 	doc[BOSS_WON_KEY] = true
+	# The earned save rewrites _entrance on a death; past the fall that must be this doc, not the arena's entrance.
+	_entrance = doc
 	_save(doc)
 
 
