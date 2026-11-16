@@ -511,8 +511,8 @@ func _process(delta: float) -> void:
 	_place_names()
 
 
-# The shown names' rects in viewport pixels, for the words that stamp on screen to keep off (group
-# KEEP_CLEAR_GROUP). A gate behind the camera or off the screen's sides, or whose name is hidden, has none.
+# The shown names' rects in viewport pixels, for the words that stamp on screen (KEEP_CLEAR_GROUP) and
+# the speech bubble (SPEECH_KEEP_CLEAR_GROUP) to keep off. A gate behind the camera or off the screen's sides, or whose name is hidden, has none.
 func keep_clear_rects() -> Array[Rect2]:
 	if offers.is_empty():
 		return []
