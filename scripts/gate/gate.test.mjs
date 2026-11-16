@@ -8,7 +8,7 @@ import { parseLedger } from "../known-failing.mjs";
 import { place, sortChanges, testsToRerun } from "./carry.mjs";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
-import { WEEKLY_HEADER, chunks, classifyFailure, errorCounts, gateLists, importOutcome, nearLimit, numbered, parseSmokeLog, parseWeekly, parseWindow, renderReceipt, windowNames, namedPool, testName, retime, shardVerdict, soloEnvironment } from "./shard.mjs";
+import { WEEKLY_HEADER, chunks, classifyFailure, errorCounts, gateLists, importOutcome, nearLimit, numbered, parseSmokeLog, parseWeekly, parseWindow, renderReceipt, windowNames, namedPool, testName, retime, shardVerdict, soloEnvironment, soloTests } from "./shard.mjs";
 import { WEEKLY_MAX_DAYS, checkTally, checkWeeklySweep, expectedShards, isDeferred, isPass, planHead, tallyRows } from "./tally.mjs";
 import { WEEKLY_FILE, checkWeekly } from "./weekly.mjs";
 
@@ -72,6 +72,24 @@ test("a failure is carried only with a ledger row, and blocks when it fails alon
   assert.equal(flake.alone, "2/2 pass alone");
   assert.equal(classifyFailure("fresh_test", [true, false], ledger).call, "new-red");
   assert.equal(classifyFailure("fresh_test", [false, false], ledger).call, "new-red");
+});
+
+test("a failed test with a red row is carried from its first run and is not rerun alone", () => {
+  // A red row carries the test whatever a solo run says, so the run could never change the call.
+  // (Trial gate on 375fe11a, 15 Nov: two such reruns took 832 s of the bot shard's 6922 s.)
+  const failedACheck = () => ({ timedOut: false, failLines: 1 });
+  assert.deepEqual(soloTests(["red_test", "wobble_test", "fresh_test"], ledger, failedACheck), ["wobble_test", "fresh_test"]);
+  // A time-out, a kill or a run with no failing check does not show which check failed, so it is still rerun.
+  assert.deepEqual(soloTests(["red_test"], ledger, () => ({ timedOut: true, failLines: 0 })), ["red_test"]);
+  assert.deepEqual(soloTests(["red_test"], ledger, () => ({ timedOut: false, failLines: 0 })), ["red_test"]);
+  assert.deepEqual(soloTests(["red_test"], ledger, () => null), ["red_test"]);
+  const carried = classifyFailure("red_test", [], ledger);
+  assert.equal(carried.call, "carried");
+  assert.equal(carried.alone, "not rerun: red row, a check failed in the first run");
+  // The same call as with solo runs, pass or fail: skipping them hides nothing.
+  for (const runs of [[false], [true], [false, false], [true, true]]) assert.equal(classifyFailure("red_test", runs, ledger).call, "carried");
+  // Without a row, no solo run is never a pass.
+  assert.equal(classifyFailure("fresh_test", [], ledger).call, "new-red");
 });
 
 test("a shard is red only for a new red, and its verdict names what it carried", () => {
