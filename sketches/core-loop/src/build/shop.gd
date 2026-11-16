@@ -1,6 +1,7 @@
 extends RefCounted
 
 const Parts := preload("res://src/build/parts.gd")
+const LoopTally := preload("res://src/core/loop_tally.gd")
 const Relics := preload("res://src/build/relics.gd")
 const Items := preload("res://src/build/items.gd")
 const Fabricators := preload("res://src/build/fabricators.gd")
@@ -371,6 +372,7 @@ func weigh() -> Dictionary:
 	if int(quote["cogs"]) <= 0:
 		return _result(false, TOO_LIGHT)
 	var taken: int = ctx.run.weigh_out(int(quote["mass"]))
+	LoopTally.note(ctx.run, "moss_scale")
 	var paid := int(floor(taken / float(Fabricators.COG_PRICES["mass_per_cog"])))
 	_refund(paid)
 	if build != null:
@@ -396,6 +398,7 @@ func stow_core() -> Dictionary:
 		return _result(false, LOCKED)
 	if not ctx.run.stow_core():
 		return _result(false, CAPPED if ctx.run.carried_core > 0 else CANT_AFFORD)
+	LoopTally.note(ctx.run, "carry_core")
 	return _result(true, OK)
 
 

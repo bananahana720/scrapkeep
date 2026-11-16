@@ -3,6 +3,7 @@ extends Node3D
 const Activities := preload("res://src/world/activities.gd")
 const DamageFamilies := preload("res://src/combat/damage_families.gd")
 const Palette := preload("res://src/core/palette.gd")
+const LoopTally := preload("res://src/core/loop_tally.gd")
 
 # Reservoir (docs/design/loops.md Spec 2; Andrew approved the top three loops on 11 Nov 2026
 # 18:42Z and asked for them before the sitting): a keeper's gamble on a won yard. Behind
@@ -136,6 +137,7 @@ func ring() -> bool:
 	if state != "offered" or rings >= MAX_RINGS:
 		return false
 	rings += 1
+	LoopTally.note(ctx.run, "overtime")
 	ctx.events.world_fact.emit("overtime_rung", _bell.global_position)
 	_land_wave()
 	_dress_pot()
