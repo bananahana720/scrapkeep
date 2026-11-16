@@ -123,7 +123,8 @@ for t, sound in stops:
 # that row's time until the next one, matched by sound and start time.
 for c in cues:
     g = np.ones(len(c["x"]))
-    for t, db in sorted(gains.get((c["sound"], c["t"]), [])):
+    # Sorted by time only: rows from one call share a time and keep the order the game logged them in.
+    for t, db in sorted(gains.get((c["sound"], c["t"]), []), key=lambda r: r[0]):
         g[max(int(t * RATE) - c["a"], 0):] = 10 ** (db / 20)
     c["x"] *= g
 for c in cues:

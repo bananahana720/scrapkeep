@@ -48,6 +48,8 @@ def run():
     early = sim(STARTS + [ROOM, [1.2, 'near_miss', 'threat_tear', 'duck', 1.0, -8.0], [1.25, 'hurt', 'threat_tear', 'restore', 1.0, 0.0]])
     # A planted disagreement: the rows duck the bell, which the old rule would never do, and not the tear, which it would.
     planted = sim(STARTS + [ROOM, [1.2, 'near_miss', 'bell', 'duck', 1.0, -6.0]])
+    # A second hit inside the first hit's hold: the game restores and ducks again in one call, so the rows share a time.
+    again = sim(STARTS + [[1.2, 'hurt', 'bell', 'duck', 1.0, -10.0], [1.3, 'hurt', 'bell', 'restore', 1.0, 0.0], [1.3, 'hurt', 'bell', 'duck', 1.0, -10.0]])
     old_log = None
     try:
         sim(STARTS + [ROOM], duck_log=False)
@@ -62,6 +64,7 @@ def run():
         ('a restore row ends the duck early', abs(level(early[key_a], 1.0, 1.22) - G8) < 0.03 and abs(level(early[key_a], 1.0, 1.3) - 1.0) < 0.03),
         ('planted: the rows duck the bell, so it is ducked', abs(level(planted[key_bell], 1.0, 1.3) - 10 ** (-6.0 / 20)) < 0.03),
         ('planted: the rows leave the tear alone, so it is at full level', abs(level(planted[key_a], 1.0, 1.3) - 1.0) < 0.03),
+        ('a restore and a duck at one time keep the logged order, so the voice stays ducked', abs(level(again[key_bell], 1.0, 1.35) - 10 ** (-10.0 / 20)) < 0.03),
         ('a take with room rows and no duck log is refused', old_log == 2),
     ]
     bad = 0
