@@ -27,11 +27,13 @@ func _configure(driver) -> void:
 func _extra_checks() -> void:
 	var picks: Array[String] = _driver.tree_picks
 	var cid: String = _driver.class_id()
-	# 2026-10-04: the default table is the alpha ruleset, where a class rise opens a pick
-	# (PICK_ON_CLASS_UP), so a bot that reaches class III inside stage 1 is offered a third
-	# depth. Two picks or three are both on the path; which happens depends on the run.
-	var want_depths: Array = [1, 2] if picks.size() == 2 else [1, 2, 3]
-	var on_path: bool = picks.size() in [2, 3] and UpgradeTree.path_to(cid, picks[picks.size() - 1]) == picks
+	# The alpha ruleset opens a pick at each class rise (PICK_ON_CLASS_UP): depth 1 at class select, then
+	# one more per class reached inside stage 1 and at its clear, up to UpgradeTree.DEPTHS. Class II
+	# (heft 1.5) gives the third pick and class III (heft 2.2) the fourth. The check is the rule, not a
+	# count: the offers came in depth order with none skipped, and the picks are one path down the tree.
+	# Until 15 Nov 2026 it allowed two or three picks only and failed a run that reached heft 2.2.
+	var want_depths: Array = range(1, picks.size() + 1)
+	var on_path: bool = picks.size() >= 2 and picks.size() <= UpgradeTree.DEPTHS and UpgradeTree.path_to(cid, picks[picks.size() - 1]) == picks
 	_report("tree picks", on_path and _offered == want_depths and _game.player.tree.path() == picks,
 		"offered depths %s; the bot took %s; tree path %s; tags %s"
 			% [_offered, picks, _game.player.tree.path(), _game.player.tree.branch_tags()])
