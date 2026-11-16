@@ -5,6 +5,7 @@ const Audio := preload("res://src/presentation/audio.gd")
 const SfxBank := preload("res://src/presentation/sfx_bank.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const Rows := preload("res://src/presentation/rows.gd")
+const ClassDef := preload("res://src/core/class_def.gd")
 const GameEvents := preload("res://src/core/game_events.gd")
 const RunState := preload("res://src/core/run_state.gd")
 
@@ -42,6 +43,8 @@ func _run() -> void:
 	var t := T.new("brindle_flume_ride_sounds_test")
 	_telegraphs(t)
 	_rows(t)
+	_releases(t)
+	_attack_sites(t)
 	_bank(t)
 	quit(t.verdict())
 
@@ -123,6 +126,34 @@ func _rows(t) -> void:
 		t.eq("%s hears its own sound" % kind, heard, RIDES[kind])
 		t.eq("%s is heard by that row alone" % RIDES[kind], hearers.get(RIDES[kind], []), [kind])
 	t.eq("looped over ten ride and movement rows", looped, 10)
+
+
+# A row's own planned sound must never become a class's special release (Rows.releases).
+func _releases(t) -> void:
+	var looped := 0
+	for def in ClassDef.all():
+		looped += 1
+		var found: Array = Rows.releases(def.motif)
+		t.eq("%s has exactly one release candidate" % def.motif, found.size(), 1)
+		t.check("%s hears a release of its own" % def.motif, Rows.release_of(def.motif) != "", str(found))
+	t.check("looped over every class", looped >= 6, str(looped))
+
+
+# boss.gd has no public list of its attack ids, so the source is read: every literal id it publishes
+# must have a row in ATTACKS, and the four publish sites are all that exist (the slag id is computed
+# and its two values are the two slag entries).
+func _attack_sites(t) -> void:
+	var text := FileAccess.get_file_as_string("res://src/boss/boss.gd")
+	var sites := 0
+	var at := text.find("_publish(\"boss_attack_telegraphed\"")
+	while at >= 0:
+		sites += 1
+		var line := text.substr(at, text.find("\n", at) - at)
+		for lit in ["crane_sweep", "charge_wall", "eject"]:
+			if line.contains("\"%s\"" % lit):
+				t.check("%s has a telegraph sound" % lit, ATTACKS.has(lit))
+		at = text.find("_publish(\"boss_attack_telegraphed\"", at + 1)
+	t.eq("boss.gd publishes its telegraph at four sites", sites, 4)
 
 
 func _bank(t) -> void:

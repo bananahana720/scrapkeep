@@ -107,8 +107,8 @@ const KEYED_SOUNDS := ["panel_note", "panel_jackpot", "line_claw_drag", "armor_r
 	"drop_landing", "return_launch_arpeggio", "crater_hold", "shell_spring",
 	"core_slam", "ultimate_land", "kest_demo_knock", "rivet_skid_plate",
 	"active_cutting_torch",
-	# The flume head gate's two-tone siren.
-	"sluice_siren_two_tone",
+	# The flume head gate's two-tone siren, and the pitched ride cues that took over a keyed stand-in.
+	"sluice_siren_two_tone", "ride_cable_clink", "steam_whistle_rise",
 	# --- P-C Tally keyed sounds ---
 	"plate_tally", "clip_tally", "stroke_tally", "settle_tally",
 	# --- end Tally ---
@@ -199,7 +199,7 @@ const TRIM_DB := {
 	# Brindle's five wind-ups: each opens on the boss_telegraph's D and Eb pulses, then goes its own way.
 	"tele_crane_sweep": -4.0, "tele_slag_ring": -4.0, "tele_charge": -4.0, "tele_charge_wall": -4.0, "tele_eject": -4.0,
 	# The flume's head-gate siren, and the ride and movement facts that heard a stand-in: the chute, the bowl,
-	# the drop, the ledge, the hop, the grapple line, the water sheet, the launcher's charge, the lift and the sluice.
+	# the drop, the ledge, the hop, the grapple line, the water sheet, the launcher's charge, the cannon and the sluice.
 	"sluice_siren_two_tone": -6.0, "ride_rolling_metal": -9.0, "ride_bowl_carve": -9.0, "ride_drop_swoop": -8.0,
 	"ride_ledge_scuff": -10.0, "ride_hop_lift": -10.0, "ride_cable_clink": -9.0, "ride_sheet_swell": -9.0,
 	"steam_whistle_rise": -8.0, "cannon_bang_rail_whoosh": -3.0, "sluice_gush_roar": -5.0,
