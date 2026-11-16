@@ -1766,6 +1766,7 @@ func _make_room(kind: String, sound: String) -> void:
 		if room != 0.0 and not _roomed.has(id) and _sfx.is_stream_playing(id):
 			_roomed[id] = row[1]
 			_sfx.set_stream_volume(id, float(row[1]) + room)
+			_log_gain(kind, row[0], "duck", row[2], room)
 
 
 # What a voice of sound takes now: the held room's offset, or 0. A voice that has not started
@@ -1776,12 +1777,22 @@ func _room_offset(sound: String, sounding := true) -> float:
 	return MixRows.room_db(_room_for, sound, sound in DANGER_SOUNDS, sounding)
 
 
+# One row per voice gain the room applies, so mixsim.py replays what the game did and holds no copy
+# of the rule. [kind, sound, "duck" or "restore", clock now, the voice's start clock, dB offset]: the
+# voice is the one whose "now" row has that sound and start clock; a duck row sets its offset from the
+# clock now, a restore row sets it back to 0. The start clock is the voice's key (the log has no voice ids).
+func _log_gain(kind: String, sound: String, how: String, start: int, db: float) -> void:
+	cue_log.append([kind, sound, how, engine.clock, start, db])
+
+
 # The voices a room pushed down go back to their own level.
 func _restore_roomed() -> void:
 	if _sfx != null:
 		for id in _roomed:
 			if _sfx.is_stream_playing(id):
 				_sfx.set_stream_volume(id, float(_roomed[id]))
+				var voice: Array = _voice_db.get(id, ["", 0.0, -1])
+				_log_gain(_room_for, voice[0], "restore", voice[2], 0.0)
 	_roomed.clear()
 
 
@@ -1970,9 +1981,10 @@ func _start(kind: String, sound: String, stream: AudioStream, volume: float, pit
 		if id != AudioStreamPlaybackPolyphonic.INVALID_ID:
 			live.append(id)
 			if playback == _sfx:
-				_voice_db[id] = [sound, volume]
+				_voice_db[id] = [sound, volume, engine.clock]
 				if room != 0.0:
 					_roomed[id] = volume
+					_log_gain(kind, sound, "duck", engine.clock, room)
 		_voices[sound] = live
 	last_play_frame = Engine.get_process_frames()
 	cue_log.append([kind, sound, "now", engine.clock, pitch if _logged_pitch < 0.0 else _logged_pitch, volume])

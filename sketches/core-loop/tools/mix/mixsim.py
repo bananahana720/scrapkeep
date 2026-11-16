@@ -27,10 +27,6 @@ VOICE_LIMIT = {"weapon_zap": 3, "scrap_tick": 3, "cog_tick": 3, "hit_thwack": 3,
                "beacon_hum": 1, "hop": 2, "land_thud": 2, "hurt": 2, "babble": 1, "rarity_tick": 2, "panel_note": 3,
                "clank": 2, "grapple_clink": 2, "swarm_buzz": 2, "kill_chain_tier": 1, "achievement_chime": 1,
                "rescue_fanfare": 1}
-# audio.gd DANGER_SOUNDS (sfx_bank.gd): warnings keep their level under a room row.
-DANGER_SOUNDS = {"hurt", "enemy_arrive", "boss_telegraph", "ratchet_cue", "klaxon", "threat_up", "death",
-                 "threat_tick", "threat_whoosh", "threat_whistle", "threat_hum", "threat_tear", "hold_pit", "hold_bola",
-                 "hold_tether", "hold_net", "heat_kettle"}
 VOICE_DEFAULT = int(os.environ.get("VOICE_DEFAULT", "3"))
 WIN = int(0.15 * RATE)
 
@@ -60,16 +56,21 @@ missing = Counter()
 unlevelled = Counter()
 other = Counter()
 stops = []
-rooms = []
+gains = defaultdict(list)
+has_room = False
 for row in run["cue_rows"]:
     t, kind, sound, how = row[0], row[1], row[2], row[3]
     if how == "stop" and t >= 0:
         stops.append((t, sound))
         continue
-    if how == "room" and t >= 0:
-        # [t, kind, sound, "room", hold seconds, dB, only]: the game's MixRows.MAKE_ROOM. A row
-        # with an "only" list (audio.gd logs it; older logs have none) ducks just those sounds.
-        rooms.append((t, sound, float(row[4]), float(row[5]), list(row[6]) if len(row) > 6 and row[6] else []))
+    if how == "room":
+        # The room row says a room was made; what it did to each voice is in the duck rows.
+        has_room = True
+        continue
+    if how in ("duck", "restore") and t >= 0:
+        # [t, kind, sound, how, voice start, dB]: audio.gd _log_gain. The game says which voice
+        # takes which gain and when; nothing here decides it.
+        gains[(sound, float(row[4]))].append((t, float(row[5]) if how == "duck" else 0.0))
         continue
     # June's answers (the set director) are booked on the grid and log the level they play at.
     placed = how == "now" or (kind == "set_answer" and len(row) > 5 and row[5] is not None)
@@ -87,6 +88,9 @@ for row in run["cue_rows"]:
     pitch = float(row[4]) if row[4] else 1.0
     vol = float(row[5])
     cues.append({"t": t, "kind": kind, "sound": sound, "pitch": pitch if 0.1 < pitch < 8 else 1.0, "db": vol})
+if has_room and not run.get("duck_log"):
+    print("This take predates duck logging: its room rows say a room was made, not which voices it ducked, so the room effect is not modelled. Record the take again with the current game.")
+    sys.exit(2)
 cues.sort(key=lambda c: c["t"])
 total_len = int((max(c["t"] for c in cues) + 6) * RATE)
 mix = np.zeros(total_len)
@@ -115,23 +119,13 @@ for t, sound in stops:
             c["cut"] = at - c["a"]
             c["stolen"] = True
             c["stopped"] = True
-# A room row: every voice but the asking sound's own and a warning sits db lower for the hold
-# (audio.gd _make_room), voices already sounding and ones starting inside it alike. A row with an
-# "only" list ducks just the sounds it names, warnings included, and leaves every other voice.
-for t, owner, hold, db, only in rooms:
-    r0, r1 = int(t * RATE), int((t + hold) * RATE)
-    g = 10 ** (db / 20)
-    for c in cues:
-        if c["sound"] == owner:
-            continue
-        if only:
-            if c["sound"] not in only:
-                continue
-        elif c["sound"] in DANGER_SOUNDS:
-            continue
-        s0, s1 = max(r0 - c["a"], 0), min(r1 - c["a"], len(c["x"]))
-        if s0 < s1:
-            c["x"][s0:s1] *= g
+# The game's own duck and restore rows (audio.gd _log_gain): a voice takes each row's dB offset from
+# that row's time until the next one, matched by sound and start time.
+for c in cues:
+    g = np.ones(len(c["x"]))
+    for t, db in sorted(gains.get((c["sound"], c["t"]), [])):
+        g[max(int(t * RATE) - c["a"], 0):] = 10 ** (db / 20)
+    c["x"] *= g
 for c in cues:
     x = c["x"][:c["cut"]].copy()
     if c.get("stolen") and len(x) > 64:
