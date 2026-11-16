@@ -50,7 +50,9 @@ const BallState := preload("res://src/movement/ball_state.gd")
 # apron_kicker_ramp in park_dam.json, then the park_dam rebake: 294 line nodes become 291, sight_ok 8428 -> 8422,
 # door_ok 40018 -> 40021), which moved the anchors the draw may use (37c6a9b6... -> ae7ed324...). Bisected on the
 # first-parent stage history: fa2115af (PR 1030) still draws 37c6a9b6..., f99ea994 (the PR 957 merge) draws
-# ae7ed324..., and so does every later head; stages 2 to 6 kept their pins. The pin sat red for a wave under this
+# ae7ed324..., and so does every later head; stages 2 to 6 kept their pins. The dam was baked once more after that
+# (2428bea9 moved apron_kicker_ramp from z 448 to z 476; sight_ok 8422 -> 8425, line and door_ok unchanged), and
+# that bake did not move the draw: the wave 41 gate head e2770d85, which holds it, and this head draw ae7ed324.... The pin sat red for a wave under this
 # test's known-failing row for the stage 5 check, which names only that check.
 const GOLDEN := {
 	1: "ae7ed324419020fbd8c81a6fb71107220f87c991fc84611aa790cd30b93ca70e",
