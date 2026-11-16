@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { userDataEnv } from "./godot-home.mjs";
 import { spawn, spawnSync } from "node:child_process";
 import { once } from "node:events";
 import {
@@ -95,7 +96,7 @@ function botTierFixture(args, check) {
   try {
     mkdirSync(path.join(dir, "scripts"));
     writeFileSync(path.join(dir, "scripts/sketch-smoke.mjs"), readFileSync(new URL("./sketch-smoke.mjs", import.meta.url)));
-    writeFileSync(path.join(dir, "scripts/import-stamp.mjs"), readFileSync(new URL("./import-stamp.mjs", import.meta.url)));
+    for (const module of ["import-stamp.mjs", "godot-home.mjs"]) writeFileSync(path.join(dir, "scripts", module), readFileSync(new URL(`./${module}`, import.meta.url)));
     const tests = path.join(dir, "sketches/core-loop/tests");
     mkdirSync(tests, { recursive: true });
     writeFileSync(path.join(dir, "sketches/core-loop/project.godot"), "config_version=5\n");
@@ -207,6 +208,19 @@ test("the runner reads the res:// script from the sketch directory", () => {
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
+});
+
+test("a test's data home also moves HOME on macOS, where Godot ignores XDG_DATA_HOME", () => {
+  assert.deepEqual(userDataEnv("/t/a", "darwin"), { XDG_DATA_HOME: "/t/a", HOME: "/t/a" });
+  assert.deepEqual(userDataEnv("/t/a", "linux"), { XDG_DATA_HOME: "/t/a" });
+  assert.deepEqual(userDataEnv("/t/a", "win32"), { XDG_DATA_HOME: "/t/a" });
+});
+
+test("the dummy renderer's shutdown report on macOS is not an error line; any other error still is", () => {
+  const leak = "x_test: PASS (1 checks)\nERROR: 2 RID allocations of type 'N13RendererDummy15MaterialStorage11DummyShaderE' were leaked at exit.\n";
+  assert.equal(smoke.judge({ test: "res://tests/x_test.gd", status: 0, output: leak }).ok, true);
+  assert.equal(smoke.judge({ test: "res://tests/x_test.gd", status: 0, output: leak + "ERROR: 1 RID allocations of type 'P12GodotShape3D' were leaked at exit.\n" }).ok, false);
+  assert.deepEqual(smoke.failingLines(leak), []);
 });
 
 test("a glob matches a base name with or without .gd and * as the only wildcard", () => {

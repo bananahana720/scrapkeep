@@ -1,5 +1,6 @@
 import { spawn, spawnSync } from "node:child_process";
 import {
+  realpathSync,
   existsSync,
   mkdirSync,
   mkdtempSync,
@@ -17,12 +18,17 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { writeImportStamp } from "./import-stamp.mjs";
+import { scratchHomeEnv, userDataEnv } from "./godot-home.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const recordedBinary =
   "/home/andrew/.local/share/godot/4.7.2/Godot_v4.7.2-stable_linux.x86_64";
 export const binary = process.env.GODOT_BIN || recordedBinary;
 const errorLine = /^(SCRIPT ERROR|ERROR|FAIL)\b/m;
+// On macOS the headless engine reports the dummy renderer's unreleased handles as it shuts down,
+// after the verdict line; Linux prints nothing for the same run. The line names no game fault.
+const TEARDOWN_NOISE = /^ERROR: \d+ RID allocations of type '\w*RendererDummy\w*' were leaked at exit\.\r?\n?/gm;
+export const withoutTeardownNoise = (output) => output.replace(TEARDOWN_NOISE, "");
 // 180 s since 2026-10-04: the solo bot bands (alpha_posture_bands_test, bot_chain_hand_test)
 // legitimately run 110 to 120 s on a loaded machine; a hang still fails, three minutes later.
 const TIMEOUT_MS = 180_000;
@@ -560,7 +566,8 @@ const failVerdictLine = /^[\w.-]+: FAIL\b/m;
 
 // A test ends with one verdict line. A skip line exempts it only when no check ran. A FAIL
 // verdict fails the test whatever the exit code. The reason names the cause that applies.
-export function judge({ test, status, output }) {
+export function judge({ test, status, output: raw }) {
+  const output = withoutTeardownNoise(raw);
   // A script path binds the verdict to its file stem. Boolean callers retain the
   // legacy API until their owners supply the path (play.mjs and sketch-nightly.mjs).
   const verdict = test
@@ -591,7 +598,7 @@ const MAX_FAILING_LINES = 60;
 
 export function failingLines(output, limit = MAX_FAILING_LINES) {
   const counts = new Map();
-  for (const line of output.split("\n").map((text) => text.replace(/\r$/, "")).filter((text) => FAILING_LINE.test(text) && !PASSING_LINE.test(text))) counts.set(line, (counts.get(line) ?? 0) + 1);
+  for (const line of withoutTeardownNoise(output).split("\n").map((text) => text.replace(/\r$/, "")).filter((text) => FAILING_LINE.test(text) && !PASSING_LINE.test(text))) counts.set(line, (counts.get(line) ?? 0) + 1);
   const lines = [...counts].map(([line, count]) => (count > 1 ? `${line} (x${count})` : line));
   if (lines.length <= limit) return lines;
   return [...lines.slice(0, limit), `... ${lines.length - limit} more failing lines (set SMOKE_LOG_DIR for the full output)`];
@@ -634,7 +641,7 @@ export const scriptErrorCount = (output) => (output.match(/^SCRIPT ERROR\b/gm) ?
 // Import writes the sketch's .godot cache, so it runs alone before anything reads it.
 function runSync(job) {
   const started = Date.now();
-  const result = spawnSync(binary, job.args, { encoding: "utf8", timeout: TIMEOUT_MS });
+  const result = spawnSync(binary, job.args, { encoding: "utf8", timeout: TIMEOUT_MS, env: { ...process.env, ...scratchHomeEnv(() => mkdtempSync(path.join(os.tmpdir(), "sketch-smoke-"))) } });
   const output = (result.stdout || "") + (result.stderr || "");
   return { ...report(job, result.status, output, Date.now() - started, result.signal), scriptErrors: scriptErrorCount(output) };
 }
@@ -669,12 +676,13 @@ export function importWithRetry(name, base, run = runSync, log = console.log) {
   return { ok: false, results: tries, tries };
 }
 
-// Every test gets its own XDG_DATA_HOME, so user:// is never shared between parallel runs.
+// Every test gets its own data home (and on macOS its own HOME), so user:// is never shared
+// between parallel runs.
 function runAsync(job) {
   return new Promise((resolve) => {
     const started = Date.now();
     const dataHome = mkdtempSync(path.join(os.tmpdir(), "sketch-smoke-"));
-    const child = spawn(binary, job.args, { env: { ...process.env, XDG_DATA_HOME: dataHome } });
+    const child = spawn(binary, job.args, { env: { ...process.env, ...userDataEnv(dataHome) } });
     let output = "";
     child.stdout.on("data", (chunk) => (output += chunk));
     child.stderr.on("data", (chunk) => (output += chunk));
@@ -841,4 +849,6 @@ async function main() {
   process.exit(receiptFailure ?? (ok ? 0 : 1));
 }
 
-if (process.argv[1] === fileURLToPath(import.meta.url)) main();
+// Node resolves the module's own path through symlinks, so the launch path must be resolved too
+// (macOS keeps its temp folder behind one).
+if (process.argv[1] && realpathSync(process.argv[1]) === fileURLToPath(import.meta.url)) main();

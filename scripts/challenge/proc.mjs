@@ -3,6 +3,7 @@
 import { spawn } from "node:child_process";
 import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
+import { userDataEnv } from "../godot-home.mjs";
 
 export function runProcess(godot, cwd, args, { env, timeout, logFile }) {
   return new Promise((resolve) => {
@@ -38,5 +39,5 @@ export async function pool(tasks, slots) {
 
 export function stateEnv(dir) {
   for (const d of ["data", "config", "cache"]) mkdirSync(path.join(dir, d), { recursive: true });
-  return { XDG_DATA_HOME: path.join(dir, "data"), XDG_CONFIG_HOME: path.join(dir, "config"), XDG_CACHE_HOME: path.join(dir, "cache") };
+  return { ...userDataEnv(path.join(dir, "data")), XDG_CONFIG_HOME: path.join(dir, "config"), XDG_CACHE_HOME: path.join(dir, "cache") };
 }
