@@ -552,6 +552,18 @@ func _check_fill_classes() -> void:
 	_report("live slag over pending fill", Threat.haze() and instant_pending > 0.39 and slag_step >= LIVE_STEP and old_step < LIVE_STEP,
 		"modeled over L* %.2f: pending %.1f, live %.1f, step %.1f (at least %.0f; model; the 3060 sweep measured 13.0 L* in stage 2 and 11.4 in the arena, #241 6345835130; ATTACK-READS.md:27); the old HAZARD tint at 0.61 gives live %.1f, step %.1f and fails"
 			% [PALE_L, pending_l, live_l, slag_step, LIVE_STEP, old_l, old_step])
+	# The live ring's pulse (hazard.gd live_age) must keep that step at every age of its period, or for
+	# part of each period a live ring looks like a warning that has not landed.
+	var worst_step := INF
+	var swept := 0
+	for i in 33:
+		var pulsing := _live_desc()
+		pulsing["live_age"] = Threat.LIVE_PULSE_SECONDS * float(i) / 32.0
+		var pulse_l := _model_lstar(PALE_L, [Color(Palette.HAZARD, Threat.AREA_ALPHA * Threat.HAZE_FILL), Color(Palette.HAZARD, Threat.FILL_ALPHA * Threat.HAZE_FILL), Threat.fill_tint(pulsing)])
+		worst_step = minf(worst_step, pending_l - pulse_l)
+		swept += 1
+	_report("live slag keeps its step through the whole pulse", Threat.haze() and swept == 33 and worst_step >= LIVE_STEP + 1.0,
+		"%d ages over one period; the smallest step is %.1f L* (at least %.0f plus 1 margin; model)" % [swept, worst_step, LIVE_STEP])
 	var step := 1.0 / 255.0
 	var pending_target: float = Threat.RUN_ALPHA * Threat.HAZE_FILL
 	var live_target: float = Threat.live_alpha() * Threat.HAZE_FILL

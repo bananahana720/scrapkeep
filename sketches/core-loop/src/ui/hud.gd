@@ -1450,6 +1450,10 @@ func _process(delta: float) -> void:
 		for piece in [_toasts, why_callout, damage_numbers, part_name]:
 			piece.visible = false
 	danger_mark.show_run(game.combat.near_miss.standing_in() if playing else -1.0)
+	if playing:
+		danger_mark.aim(game.camera.cam, game.player.shown_position(), game.combat.near_miss.escape())
+	else:
+		danger_mark.aim(null, Vector3.ZERO, {})
 	danger_mark.visible = danger_mark.shown()
 	_armor.visible = playing and game.run.armor_mode
 	_step_companion(playing)
