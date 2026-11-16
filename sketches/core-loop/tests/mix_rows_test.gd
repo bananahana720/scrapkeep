@@ -27,6 +27,15 @@ func _check(label: String, ok: bool, detail := "") -> void:
 
 
 func _physics_process(_delta: float) -> bool:
+	if _wait_tear != -2:
+		# The hold runs on the wall clock: step frames until the audio says the room is over.
+		_wait_frames += 1
+		if _game.presentation.audio._room_offset("threat_tear") == 0.0:
+			_whoosh_return()
+		elif _wait_frames > 1200:
+			_check("the whoosh's hold ends", false, "still held after %d frames" % _wait_frames)
+			_whoosh_return()
+		return false
 	if _done or _game.flow == null or _game.presentation == null:
 		return false
 	_done = true
@@ -35,9 +44,7 @@ func _physics_process(_delta: float) -> bool:
 	_states()
 	_glide_and_focus()
 	_make_room()
-	_game.free()
-	print("mix_rows_test: %s" % ("PASS" if _failures == 0 else "FAIL (%d)" % _failures))
-	quit(0 if _failures == 0 else 1)
+	_whoosh_room()
 	return false
 
 
@@ -150,3 +157,113 @@ func _make_room() -> void:
 	_check("the hold runs on the wall clock, not the audio clock slow motion scales", audio._room_offset("reactor_erupt") != 0.0)
 	audio._room_until_ms = 0
 	_check("the room ends after its hold", audio._room_offset("reactor_erupt") == 0.0)
+
+
+const AceBounce := preload("res://tools/ace_bounce.gd")
+
+
+func _tear() -> int:
+	_game.presentation.audio._last_start.clear()
+	_game.presentation.audio.play("threat_tear_test", 0.0, 1.0, "SFX", "threat_tear")
+	var live: Array = _game.presentation.audio._voices.get("threat_tear", [])
+	return -1 if live.is_empty() else int(live[-1])
+
+
+# FX-28: the dodge's whoosh ducks the voices of the lane attack's tear already sounding, only
+# those, only for its short hold, and a tear that starts during the hold keeps its level.
+func _whoosh_room() -> void:
+	var audio = _game.presentation.audio
+	var has_row: bool = MixRows.MAKE_ROOM.has("near_whoosh")
+	_check("near_whoosh has a room row", has_row)
+	if not has_row:
+		_finish()
+		return
+	var row: Dictionary = MixRows.MAKE_ROOM.get("near_whoosh", {})
+	var db := float(row["db"])
+	_check("the whoosh's duck is audible but short", db <= -6.0 and float(row["hold_s"]) <= 0.35, str(row))
+	audio.sound_ready = true
+	# The headless audio driver starts no effect voices, so give the audio a real polyphonic player.
+	var player := AudioStreamPlayer.new()
+	player.stream = AudioStreamPolyphonic.new()
+	player.bus = "SFX"
+	_game.add_child(player)
+	player.play()
+	audio._sfx = player.get_stream_playback() as AudioStreamPlaybackPolyphonic
+	_check("a real polyphonic playback backs the voices", audio._sfx != null)
+	audio._room_until_ms = 0
+	audio._roomed.clear()
+	audio._voice_db.clear()
+	audio.cue_log.clear()
+	var old_tear := _tear()
+	_check("a tear voice is live to duck", old_tear >= 0 and audio._voice_db.has(old_tear), str(audio._voices.get("threat_tear")))
+	audio._last_start.clear()
+	audio.play("near_miss")
+	var rooms: Array = audio.cue_log.filter(func(c): return c[2] == "room")
+	_check("a dodge logs its room", rooms.size() == 1 and rooms[0][1] == "near_whoosh" and is_equal_approx(float(rooms[0][5]), db), str(audio.cue_log))
+	_check("the room log carries the only list for the mix simulator", rooms[0].size() > 6 and rooms[0][6] == ["threat_tear"], str(rooms))
+	_check("the recorder passes the only list through", AceBounce._cue_rows(rooms, 0)[0].size() > 6 and AceBounce._cue_rows(rooms, 0)[0][6] == ["threat_tear"], str(AceBounce._cue_rows(rooms, 0)))
+	_check("the recorder keeps a six-field row six", AceBounce._cue_rows([["k", "s", "now", 10, 1.0, -3.0]], 0)[0].size() == 6)
+	_check("the tear already sounding is ducked by the row's amount", audio._roomed.has(old_tear) and is_equal_approx(audio._room_offset("threat_tear"), db), str(audio._roomed))
+	_check("a tear that starts in the hold keeps its full level", audio._room_offset("threat_tear", false) == 0.0 and audio._room_offset("threat_tear") == db)
+	var new_tear := _tear()
+	_check("the new tear voice is not ducked", new_tear >= 0 and not audio._roomed.has(new_tear), str(audio._roomed))
+	var ducks: Array = audio.cue_log.filter(func(c): return c[2] == "duck")
+	_check("the log holds one duck row, for the tear already sounding", ducks.size() == 1 and ducks[0][1] == "threat_tear" and is_equal_approx(float(ducks[0][5]), db), str(ducks))
+	_check("the recorder passes the duck row through", not ducks.is_empty() and AceBounce._cue_rows(ducks, 0)[0][3] == "duck" and AceBounce._cue_rows(ducks, 0)[0].size() == 6, str(AceBounce._cue_rows(ducks, 0)))
+	_check("other warnings and rewards keep their level", audio._room_offset("threat_hum") == 0.0 and audio._room_offset("hurt") == 0.0 and audio._room_offset("crit_ping") == 0.0 and audio._room_offset("chain_step") == 0.0)
+	_check("the whoosh keeps its own level", audio._room_offset("near_whoosh") == 0.0)
+	# Whoosh, then a hit inside the hold: the ducked tear is back at its level at once.
+	audio._last_start.clear()
+	audio.play("player_hit")
+	_check("a hit's room gives the ducked tear back", not audio._roomed.has(old_tear) and audio._room_for == "hurt", str(audio._roomed))
+	var restores: Array = audio.cue_log.filter(func(c): return c[2] == "restore")
+	_check("the hit logs the restore of the ducked tear", restores.size() == 1 and restores[0][1] == "threat_tear" and float(restores[0][5]) == 0.0, str(restores))
+	audio._room_until_ms = 0
+	audio._tend_room()
+	# Whoosh then whoosh: a tear that started at full level between the two is ducked by the second,
+	# and both are given back when the new hold ends, through the real _tend_room.
+	for id in audio._voice_db.keys():
+		audio._sfx.stop_stream(id)
+	audio._voice_db.clear()
+	audio._roomed.clear()
+	audio._voices.clear()
+	audio._last_start.clear()
+	audio.cue_log.clear()
+	var first := _tear()
+	audio._last_start.clear()
+	audio.play("near_miss")
+	var between := _tear()
+	_check("a tear started between the two whooshes is at full level", not audio._roomed.has(between) and audio._roomed.has(first), str(audio._roomed))
+	audio._last_start.clear()
+	audio.play("near_miss")
+	var tear := between
+	_check("the second whoosh ducks the tear that started between", audio._roomed.has(between) and audio._roomed.has(first), str(audio._roomed))
+	var duck_ids: Array = audio.cue_log.filter(func(c): return c[2] == "duck")
+	_check("the log holds a duck row for each tear, the first once", duck_ids.size() == 2, str(duck_ids))
+	_wait_tear = tear
+	_wait_player = player
+	audio._tend_room()
+
+
+var _wait_tear := -2
+var _wait_frames := 0
+var _wait_player: AudioStreamPlayer
+
+
+# The way back after the hold: _tend_room, called after the real hold has run, gives the voice its level.
+func _whoosh_return() -> void:
+	var audio = _game.presentation.audio
+	var tear := _wait_tear
+	_wait_tear = -2
+	audio._tend_room()
+	_check("the tear returns after the hold, by _tend_room", not audio._roomed.has(tear) and audio._room_offset("threat_tear") == 0.0, str(audio._roomed))
+	_check("nothing stays in _roomed after the hold (a 0.18 s tear has ended by then, so no restore row)", audio._roomed.is_empty(), str(audio._roomed))
+	audio._sfx = null
+	_wait_player.queue_free()
+	_finish()
+
+
+func _finish() -> void:
+	_game.free()
+	print("mix_rows_test: %s" % ("PASS" if _failures == 0 else "FAIL (%d)" % _failures))
+	quit(0 if _failures == 0 else 1)

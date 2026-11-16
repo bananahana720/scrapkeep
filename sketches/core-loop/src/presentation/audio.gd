@@ -1748,9 +1748,16 @@ var _room_until_ms := -1
 
 func _make_room(kind: String, sound: String) -> void:
 	var hold := float(MixRows.MAKE_ROOM[sound]["hold_s"])
+	# A narrow room (an "only" row) never cuts a held room short; a hit's room wins over it.
+	if MixRows.MAKE_ROOM[sound].has("only") and Time.get_ticks_msec() < _room_until_ms and _room_for != sound:
+		return
+	# A room without "only" takes over: the voices an "only" room ducked go back to their level.
+	if not MixRows.MAKE_ROOM[sound].has("only"):
+		_restore_roomed()
 	_room_for = sound
 	_room_until_ms = Time.get_ticks_msec() + int(hold * 1000.0)
-	cue_log.append([kind, sound, "room", engine.clock, hold, float(MixRows.MAKE_ROOM[sound]["db"])])
+	# [kind, sound, "room", clock, hold, dB, the row's "only" list, empty when it names none]: tools/mix/mixsim.py reads it.
+	cue_log.append([kind, sound, "room", engine.clock, hold, float(MixRows.MAKE_ROOM[sound]["db"]), MixRows.MAKE_ROOM[sound].get("only", [])])
 	if _sfx == null:
 		return
 	for id in _voice_db:
@@ -1759,13 +1766,34 @@ func _make_room(kind: String, sound: String) -> void:
 		if room != 0.0 and not _roomed.has(id) and _sfx.is_stream_playing(id):
 			_roomed[id] = row[1]
 			_sfx.set_stream_volume(id, float(row[1]) + room)
+			_log_gain(kind, row[0], "duck", row[2], room)
 
 
-# What a voice of sound takes now: the held room's offset, or 0.
-func _room_offset(sound: String) -> float:
+# What a voice of sound takes now: the held room's offset, or 0. A voice that has not started
+# yet (sounding false) takes none from a row that names its sounds.
+func _room_offset(sound: String, sounding := true) -> float:
 	if Time.get_ticks_msec() >= _room_until_ms:
 		return 0.0
-	return MixRows.room_db(_room_for, sound, sound in DANGER_SOUNDS)
+	return MixRows.room_db(_room_for, sound, sound in DANGER_SOUNDS, sounding)
+
+
+# One row per voice gain the room applies, so mixsim.py replays what the game did and holds no copy
+# of the rule. [kind, sound, "duck" or "restore", clock now, the voice's start clock, dB offset]: the
+# voice is the one whose "now" row has that sound and start clock; a duck row sets its offset from the
+# clock now, a restore row sets it back to 0. The start clock is the voice's key (the log has no voice ids).
+func _log_gain(kind: String, sound: String, how: String, start: int, db: float) -> void:
+	cue_log.append([kind, sound, how, engine.clock, start, db])
+
+
+# The voices a room pushed down go back to their own level.
+func _restore_roomed() -> void:
+	if _sfx != null:
+		for id in _roomed:
+			if _sfx.is_stream_playing(id):
+				_sfx.set_stream_volume(id, float(_roomed[id]))
+				var voice: Array = _voice_db.get(id, ["", 0.0, -1])
+				_log_gain(_room_for, voice[0], "restore", voice[2], 0.0)
+	_roomed.clear()
 
 
 # The room ends: the voices it pushed down come back to their own level, and the record of
@@ -1773,10 +1801,7 @@ func _room_offset(sound: String) -> float:
 func _tend_room() -> void:
 	if Time.get_ticks_msec() < _room_until_ms or _sfx == null:
 		return
-	for id in _roomed:
-		if _sfx.is_stream_playing(id):
-			_sfx.set_stream_volume(id, float(_roomed[id]))
-	_roomed.clear()
+	_restore_roomed()
 	if _voice_db.size() > 64:
 		for id in _voice_db.keys():
 			if not _sfx.is_stream_playing(id):
@@ -1951,14 +1976,15 @@ func _start(kind: String, sound: String, stream: AudioStream, volume: float, pit
 		live = live.filter(func(id: int): return playback.is_stream_playing(id))
 		if live.size() >= int(VOICE_LIMIT.get(sound, MixRows.VOICE_DEFAULT)):
 			playback.stop_stream(live.pop_front())
-		var room := _room_offset(sound) if playback == _sfx else 0.0
+		var room := _room_offset(sound, false) if playback == _sfx else 0.0
 		var id := playback.play_stream(stream, 0.0, volume + room, pitch, AudioServer.PLAYBACK_TYPE_DEFAULT, bus)
 		if id != AudioStreamPlaybackPolyphonic.INVALID_ID:
 			live.append(id)
 			if playback == _sfx:
-				_voice_db[id] = [sound, volume]
+				_voice_db[id] = [sound, volume, engine.clock]
 				if room != 0.0:
 					_roomed[id] = volume
+					_log_gain(kind, sound, "duck", engine.clock, room)
 		_voices[sound] = live
 	last_play_frame = Engine.get_process_frames()
 	cue_log.append([kind, sound, "now", engine.clock, pitch if _logged_pitch < 0.0 else _logged_pitch, volume])

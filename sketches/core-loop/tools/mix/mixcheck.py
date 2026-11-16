@@ -24,8 +24,8 @@ raw = np.frombuffer(w.readframes(n), dtype=np.int16).astype(np.float64) / 32768.
 x = raw.reshape(-1, ch)
 mono = x.mean(axis=1)
 meta = json.load(open(path.rsplit(".", 1)[0] + ".json"))
-# A "room" row (MixRows.MAKE_ROOM) is a level change, not a start.
-cues = [c for c in meta.get("cue_rows", []) if c[0] >= 0 and c[3] != "room"]
+# A "room", "duck" or "restore" row (MixRows.MAKE_ROOM, audio.gd _log_gain) is a level change, not a start.
+cues = [c for c in meta.get("cue_rows", []) if c[0] >= 0 and c[3] not in ("room", "duck", "restore")]
 out = []
 
 

@@ -205,12 +205,21 @@ static func _cue_counts(rows: Array) -> Dictionary:
 
 
 # Cues with a start sample inside the recording, timed in seconds of the WAV, each with the
-# pitch and the level the game played it at (tools/mix/mixsim.py places them from these).
-func _cue_rows(rows: Array) -> Array:
+# pitch and the level the game played it at (tools/mix/mixsim.py places them from these). A room
+# row's seventh field, its "only" list, goes through; a six-field row stays six. Duck and restore
+# rows (audio.gd _log_gain) go through with their voice's start timed the same way.
+static func _cue_rows(rows: Array, base_sample: int) -> Array:
 	var out := []
 	for row in rows:
-		if row.size() > 3 and int(row[3]) >= _base_sample:
-			out.append([snappedf((int(row[3]) - _base_sample) / RATE, 0.0001), row[0], row[1], row[2], row[4] if row.size() > 4 else 1.0, row[5] if row.size() > 5 else null])
+		if row.size() > 3 and int(row[3]) >= base_sample:
+			var line := [snappedf((int(row[3]) - base_sample) / RATE, 0.0001), row[0], row[1], row[2], row[4] if row.size() > 4 else 1.0, row[5] if row.size() > 5 else null]
+			if row[2] == "duck" or row[2] == "restore":
+				# [t, kind, sound, how, voice start in seconds of the WAV, dB offset]: the voice's start is
+				# timed like the "now" row it matches (audio.gd _log_gain).
+				line[4] = snappedf((int(row[4]) - base_sample) / RATE, 0.0001)
+			if row.size() > 6:
+				line.append(row[6])
+			out.append(line)
 	return out
 
 
@@ -263,7 +272,7 @@ func _finish() -> void:
 		"ace_bands": _bands.size(), "ace_misses": misses if ace != null else -1, "ace_short_reads": short_reads if ace != null else -1,
 		"ace_render_ms_per_second": snappedf(render_usec / 1000.0 / maxf(rendered / RATE, 0.001), 0.01) if ace != null else -1.0,
 		"note": "section times are the render head in seconds from the recording's start; the ring and device add about 75 ms",
-		"facts": _facts, "ace_sections": sections, "mix_states": _mix_states, "cue_counts": _cue_counts(audio.cue_log), "cue_rows": _cue_rows(audio.cue_log)}
+		"facts": _facts, "ace_sections": sections, "mix_states": _mix_states, "cue_counts": _cue_counts(audio.cue_log), "cue_rows": _cue_rows(audio.cue_log, _base_sample), "duck_log": true}
 	var file := FileAccess.open(out.get_basename() + ".json", FileAccess.WRITE)
 	file.store_string(JSON.stringify(info, "  "))
 	file.close()
