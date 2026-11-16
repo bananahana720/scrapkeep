@@ -14,6 +14,8 @@ extends Node
 #   --self-play-from=<stage>  enter that stage directly (tools/bot_run.gd --from-stage)
 #   --self-play-until=<what>  <n>: stop once stage n is entered (default 2); exit<n>: once
 #                             stage n's exit is taken; win: once the run is won
+#   --self-play-hand-off=<h>  switch one of the sitting hand's hands off (bot_loops.gd hands: called_shot, bay, trade, overtime), so a test
+#                             can show its loop reads as not fired; only on a --profile=sitting launch
 #   --self-play-hold=<s>      keep playing this long after the goal (default 30)
 #   --self-play-min=<s>       and until this many seconds since launch (default 0)
 #   --self-play-stall=<s>     seconds the exit may stay untaken after the fight ends, and seconds the
@@ -102,6 +104,7 @@ var game: Node
 var _driver
 var _goal_at := -1.0
 var _hold := 30.0
+var _hands_off: Array = []
 var _min := 0.0
 var _seed := 1
 var _pilot := ""
@@ -163,6 +166,8 @@ func _ready() -> void:
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--self-play-hold="):
 			_hold = float(arg.trim_prefix("--self-play-hold="))
+		elif arg.begins_with("--self-play-hand-off="):
+			_hands_off.append(arg.trim_prefix("--self-play-hand-off="))
 		elif arg.begins_with("--self-play-min="):
 			_min = float(arg.trim_prefix("--self-play-min="))
 		elif arg.begins_with("--self-play-seed="):
@@ -502,6 +507,7 @@ func _start() -> void:
 	if _pilot != "":
 		_driver.class_index = BotDriver.class_index_for(_seed, _pilot)
 	game.run.run_seed_override = _seed
+	_driver.hands_off = _hands_off
 	# The played game's workshop pauses the tree on an upgrade pick (bot_run's test_mode game has no
 	# workshop); the driver answers each offer as it arrives, with a seeded random pick.
 	_driver.tree_policy = "random"

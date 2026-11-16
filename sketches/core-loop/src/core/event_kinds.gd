@@ -64,7 +64,7 @@ const ROWS := {
 	"scrap_lost": {"group": "economy", "color": Palette.RUST, "shape": "cross", "sound": "scrap_rip", "hud": "Chase your scrap", "objective": "", "priority": 2},
 	"core_gained": {"group": "economy", "color": Palette.AMBER, "shape": "core", "sound": "core_socket", "hud": "Gates may offer rares", "objective": "", "priority": 3},
 	"synergy_discovered": {"group": "economy", "color": Palette.AMBER, "shape": "star", "sound": "synergy_fanfare", "hud": "Synergy {name}", "objective": "", "priority": 3},
-	"interaction_found": {"group": "event", "color": Palette.SANDSTONE, "shape": "diamond", "sound": "found_chime", "hud": "", "objective": "", "priority": 1},
+	"interaction_found": {"group": "event", "color": Palette.SANDSTONE, "shape": "diamond", "sound": "found_chime", "sound_next": "found_twinkle", "hud": "", "objective": "", "priority": 1},
 	"jumped": {"group": "movement", "color": Palette.SAND, "shape": "chevron", "sound": "hop", "hud": "", "objective": "", "priority": 1},
 	"boosted": {"group": "movement", "color": Palette.AMBER, "shape": "arrow", "sound": "boost_whoosh", "hud": "", "objective": "", "priority": 1},
 	"dashed": {"group": "movement", "color": Palette.AMBER, "shape": "arrow", "sound": "dash_whoosh", "hud": "", "objective": "", "priority": 1},
@@ -179,7 +179,7 @@ const ROWS := {
 	# LINE_ROWS, STATE_ROWS, Bindings.VERBS or CAUSE_ROWS, so these are the quiet stand-ins the
 	# schema asks for.
 	"line_state_changed": {"group": "movement", "color": Palette.SAND, "shape": "none", "sound": "ui_tick", "hud": "", "objective": "", "priority": 0},
-	"verb_failed": {"group": "movement", "color": Palette.SAND, "shape": "none", "sound": "ui_tick", "hud": "", "objective": "", "priority": 0},
+	"verb_failed": {"group": "movement", "color": Palette.SAND, "shape": "none", "sound": "ui_tick", "sound_next": "verb_fail", "hud": "", "objective": "", "priority": 0},
 	# The key-prompt rising edge the run log counts; the prompt has its own HUD motion, so the row is quiet (no listener, listed in GRAMMAR_SIGNALS).
 	"prompt_shown": {"group": "movement", "color": Palette.SAND, "shape": "none", "sound": "ui_tick", "hud": "", "objective": "", "priority": 0},
 	"cause_armed": {"group": "combat", "color": Palette.SAND, "shape": "none", "sound": "ui_tick", "hud": "", "objective": "", "priority": 0},
