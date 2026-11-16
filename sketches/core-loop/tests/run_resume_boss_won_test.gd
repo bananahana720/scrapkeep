@@ -139,6 +139,8 @@ func _wipe() -> void:
 	for name in DirAccess.get_files_at(DIR):
 		DirAccess.remove_absolute(DIR + name)
 	var storage := "user://test-%d" % OS.get_process_id()
+	if not DirAccess.dir_exists_absolute(storage):
+		return
 	for name in DirAccess.get_files_at(storage):
 		if name.begins_with("profile"):
 			DirAccess.remove_absolute(storage.path_join(name))
