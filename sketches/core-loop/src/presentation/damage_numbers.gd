@@ -30,7 +30,7 @@ const KIND_TYPES := {"arc": "arc", "frost": "frost"}
 const GROUP := "damage_numbers"
 const MERGE_WINDOW_S := 0.25
 const LIFE_S := 0.9
-const MAX_VISIBLE := 8
+const MAX_VISIBLE := 4
 const FONT := 22
 const CRIT_FONT := 30
 # Overpowered pays (17 Oct): a bigger hit draws a bigger number. From BIG_FROM up, every
@@ -44,6 +44,8 @@ const OUTLINE_MIN := 6
 const FADE_FROM := 0.6
 
 var project: Callable
+# The screen rects a new number starts clear of (the reticle's ring and the target tags); the HUD sets it.
+var keep_off: Callable
 
 var _numbers: Array = []
 
@@ -107,14 +109,79 @@ func add(key: String, value: float, at, type: String, team: String, crit := fals
 			number["crit"] = number["crit"] or crit
 			number["color"] = effect_colour(type, team, number["crit"])
 			return
-	_numbers.append({"key": key, "value": value, "at": at, "type": type, "team": team, "crit": crit,
-		"color": effect_colour(type, team, crit), "age": 0.0, "since": 0.0})
-	while _numbers.size() > MAX_VISIBLE:
-		var oldest := 0
+	var fresh := {"key": key, "value": value, "at": at, "type": type, "team": team, "crit": crit,
+		"color": effect_colour(type, team, crit), "age": 0.0, "since": 0.0, "shift": Vector2.ZERO}
+	_numbers.append(fresh)
+	# A new number always shows. Over the cap, counted apart for damage dealt and damage taken, the
+	# smallest figure already up goes (the oldest of equals), so a run of small hits never evicts a big
+	# one early and damage taken never competes with damage dealt.
+	var dealt := team == "player"
+	while _numbers.filter(func(n): return (n["team"] == "player") == dealt).size() > MAX_VISIBLE:
+		var least := -1
 		for i in _numbers.size():
-			if _numbers[i]["age"] > _numbers[oldest]["age"]:
-				oldest = i
-		_numbers.remove_at(oldest)
+			var n: Dictionary = _numbers[i]
+			if is_same(n, fresh) or (n["team"] == "player") != dealt:
+				continue
+			if least < 0 or n["value"] < _numbers[least]["value"] \
+					or (n["value"] == _numbers[least]["value"] and n["age"] > _numbers[least]["age"]):
+				least = i
+		_numbers.remove_at(least)
+	_make_room(fresh)
+
+
+# Where a new number starts, so it never lands on another, on the reticle, the ball or a tag (PF-26).
+# keep_off answers {"ring": rects its start must clear (the reticle's ring, the ball), "tags": rects
+# its whole rise must clear}, read once per add. The reticle's ring pushes it out to the right edge;
+# the ball's rect pushes it right too, and a tag pushes it to its nearer side. At most MAX_PUSHES sideways pushes, then at most MAX_LINES
+# lifts of one line each while its start rect meets a live number's path. The anchor stays on the hit;
+# only the drawn figure shifts, by at most MAX_PUSHES rect widths sideways and MAX_LINES lines up.
+func _make_room(fresh: Dictionary) -> void:
+	if _screen(fresh) == null:
+		return
+	var off: Dictionary = keep_off.call() if keep_off.is_valid() else {}
+	var ring: Array = off.get("ring", [])
+	var tags: Array = off.get("tags", [])
+	var pushes := 0
+	var lines := 0
+	for pass_no in MAX_PUSHES + MAX_LINES:
+		var start := start_rect(fresh)
+		var rise := Rect2(start.position - Vector2(0.0, RISE), start.size + Vector2(0.0, RISE))
+		var moved := false
+		if pushes < MAX_PUSHES:
+			for i in ring.size() + tags.size():
+				var r: Rect2 = ring[i] if i < ring.size() else tags[i - ring.size()]
+				var hit := (start if i < ring.size() else rise).intersects(r)
+				if r.has_area() and hit:
+					var right := r.end.x - start.position.x
+					var left := r.position.x - start.end.x
+					fresh["shift"].x += right if i < ring.size() or absf(right) <= absf(left) else left
+					pushes += 1
+					moved = true
+					break
+		if not moved and lines < MAX_LINES:
+			# After the pushes, a figure still on a ring rect lifts clear of it; with no lift left it stays.
+			var on_ring := pushes >= MAX_PUSHES and ring.any(func(r): return r.has_area() and r.intersects(start))
+			if on_ring or path_rects(fresh).any(func(r): return r.intersects(start)):
+				fresh["shift"].y -= start.size.y
+				lines += 1
+				moved = true
+		if not moved:
+			return
+
+
+const MAX_LINES := 4
+const MAX_PUSHES := 3
+
+
+# The rect a figure covers the frame it is stamped: its width and one line, at its anchor plus its shift.
+func start_rect(number: Dictionary) -> Rect2:
+	var p = _screen(number)
+	if p == null:
+		return Rect2()
+	var size := font_size(number["value"], number["crit"])
+	var pad := float(outline_px(size))
+	var wide := _text_width(number, size) + pad * 2.0
+	return Rect2(Vector2(p.x - wide * 0.5, p.y - size - pad), Vector2(wide, size + pad * 2.0))
 
 
 func step(delta: float) -> void:
@@ -128,9 +195,11 @@ func step(delta: float) -> void:
 # The screen rect each live number sweeps from where it is stamped to where it fades: the figure's
 # width, and its height plus RISE. player_fx keeps its words off these (PF-26). Numbers whose world
 # point is behind the camera are skipped.
-func path_rects() -> Array[Rect2]:
+func path_rects(except: Dictionary = {}) -> Array[Rect2]:
 	var out: Array[Rect2] = []
 	for number in _numbers:
+		if is_same(number, except):
+			continue
 		var p = _screen(number)
 		if p == null:
 			continue
@@ -168,8 +237,8 @@ func _screen(number: Dictionary) -> Variant:
 	if at is Vector3:
 		if not project.is_valid():
 			return null
-		return project.call(at)
-	return at
+		at = project.call(at)
+	return at + number.get("shift", Vector2.ZERO) if at != null else null
 
 
 func _draw() -> void:

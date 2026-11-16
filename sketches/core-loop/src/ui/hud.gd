@@ -34,6 +34,7 @@ const DangerMark := preload("res://src/ui/danger_mark.gd")
 const BossPlate := preload("res://src/ui/boss_plate.gd")
 const ChainCounter := preload("res://src/ui/chain_counter.gd")
 const DamageNumbers := preload("res://src/presentation/damage_numbers.gd")
+const PlayerFx := preload("res://src/presentation/player_fx.gd")
 const PickupLines := preload("res://src/ui/pickup_lines.gd")
 const PanelFx := preload("res://src/presentation/panel_fx.gd")
 const Companion := preload("res://src/core/companion.gd")
@@ -301,6 +302,7 @@ var layout_runs := 0
 func setup(game_ref) -> void:
 	game = game_ref
 	layer = 1
+	add_to_group(PlayerFx.KEEP_GROUP)
 	profile = UiProfile.new(game.storage_dir)
 
 	edge_markers = EdgeMarkers.new()
@@ -365,6 +367,8 @@ func setup(game_ref) -> void:
 	add_child(chain_counter)
 	damage_numbers = DamageNumbers.new()
 	damage_numbers.project = _project_to_screen
+	damage_numbers.keep_off = func() -> Dictionary:
+		return {"ring": [reticle.rect(), _ball_rect()], "tags": edge_markers.tag_rects()}
 	add_child(damage_numbers)
 	pickup_lines = PickupLines.new()
 	add_child(pickup_lines)
@@ -1157,6 +1161,18 @@ func _ball_readouts() -> Array[Rect2]:
 	for rect in [part_name.rect(), danger_mark.rect()]:
 		if rect.has_area():
 			out.append(rect)
+	return out
+
+
+# What the sound words of player_fx and machine_fx keep off (word_keep_clear): the reticle's outer
+# ring, the ball, every drawn target mark with its tag, the prompts, the part name and the danger mark.
+func keep_clear_rects() -> Array[Rect2]:
+	var out: Array[Rect2] = [reticle.rect(), _ball_rect()]
+	out.append_array(edge_markers.drawn_rects())
+	for rect in prompt_rects.values():
+		out.append(rect)
+	out.append(part_name.rect())
+	out.append(danger_mark.rect())
 	return out
 
 

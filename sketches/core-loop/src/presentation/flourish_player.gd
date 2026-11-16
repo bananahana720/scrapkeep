@@ -27,6 +27,7 @@ const Palette := preload("res://src/core/palette.gd")
 const UiFonts := preload("res://src/ui/ui_fonts.gd")
 const ScreenRegions := preload("res://src/ui/screen_regions.gd")
 const Inset := preload("res://src/presentation/flourish_inset.gd")
+const PlayerFx := preload("res://src/presentation/player_fx.gd")
 
 const LAYER := 39
 const SKIP_GRACE := 1.5
@@ -37,6 +38,8 @@ const PLAY_ACTIONS := ["cl_forward", "cl_back", "cl_left", "cl_right", "cl_jump"
 const AVOID_GROUP := "flourish_avoid"
 const AVOID_GAP := 12.0
 # The pieces that are read: a stamp and a sound word are looked at.
+# The pieces that carry a fact a sound word must not cover; one that starts hides a live word it meets.
+const FACT_KINDS := ["card", "caption", "panels", "stamp", "inset"]
 const WRITTEN := ["card", "caption", "panels"]
 # What holds the other voices (reading()): the written pieces and the stamp, which is a voice too
 # and sits where Moss's message box goes when a second run's short cold open is only a stamp.
@@ -93,6 +96,7 @@ var _tweens: Array[Tween] = []
 
 func setup(ctx_ref) -> void:
 	name = "FlourishPlayer"
+	add_to_group(PlayerFx.KEEP_GROUP)
 	ctx = ctx_ref
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	_layer = CanvasLayer.new()
@@ -276,14 +280,20 @@ func advance(delta: float) -> void:
 	if clock >= length():
 		_finish("")
 		return
-	for i in _pieces.size():
-		var piece: Dictionary = _pieces[i]
-		if not _started[i] and clock >= float(piece.at):
-			_started[i] = true
-			var node := _build(piece)
-			if node != null:
-				node.set_meta("flourish_kind", String(piece.kind))
-				_live.append({"piece": piece, "node": node, "end": float(piece.at) + float(piece["for"])})
+	# Sound words start last, so a stamp or card that starts the same frame is already live for the word to keep off.
+	for words_pass in [false, true]:
+		for i in _pieces.size():
+			var piece: Dictionary = _pieces[i]
+			if (String(piece.kind) == "sfx_word") != words_pass:
+				continue
+			if not _started[i] and clock >= float(piece.at):
+				_started[i] = true
+				var node := _build(piece)
+				if node != null:
+					node.set_meta("flourish_kind", String(piece.kind))
+					_live.append({"piece": piece, "node": node, "end": float(piece.at) + float(piece["for"])})
+					if String(piece.kind) in FACT_KINDS:
+						_yield_words(node)
 	for entry in _live.duplicate():
 		if clock >= float(entry.end):
 			_drop(entry)
@@ -359,11 +369,30 @@ func _mark_seen(key: String) -> void:
 
 func _drop(entry: Dictionary) -> void:
 	_live.erase(entry)
+	if String(entry.piece.kind) in FACT_KINDS:
+		_room_changed()
 	if String(entry.piece.kind) == "speed_lines":
 		_lines.set("mode", "")
 	var node = entry.node
 	if is_instance_valid(node) and node is Node:
 		node.queue_free()
+
+
+# A card, caption, panel, stamp or inset carries the fact, so a sound word that is already up and meets
+# it is hidden at once; player_fx reads the new list.
+func _yield_words(node: Control) -> void:
+	_room_changed()
+	var rect := node.get_global_rect()
+	for entry in _live:
+		if String(entry.piece.kind) == "sfx_word" and is_instance_valid(entry.node) and entry.node.visible \
+				and entry.node.get_global_rect().intersects(rect):
+			entry.node.visible = false
+
+
+func _room_changed() -> void:
+	var room = get_tree().get_first_node_in_group(PlayerFx.ROOM_GROUP) if is_inside_tree() else null
+	if room != null:
+		room.keep_clear_changed()
 
 
 func _screen() -> Vector2:
@@ -389,7 +418,9 @@ func _build(piece: Dictionary) -> Node:
 			label.name = "FlourishWord"
 			label.rotation_degrees = -6.0
 			_overlay.add_child(label)
-			_place_word(label, piece)
+			if not _place_word(label, piece):
+				label.queue_free()
+				return null
 			_pop(label, 1.5)
 			return label
 		"inset":
@@ -621,8 +652,24 @@ func _stamp_at(label: Control) -> Vector2:
 	return Vector2(x, top.position.y + top.size.y * 0.5 - label.size.y * 0.5)
 
 
-# A sound word sits at its anchor's screen point, or at its at_share, clamped in the play view.
-func _place_word(label: Control, piece: Dictionary) -> void:
+# The screen the row's own pieces cover now, for the sound words of player_fx and machine_fx to keep off
+# (PlayerFx.KEEP_GROUP). Its own words are left out: the row places them against everything else.
+func keep_clear_rects() -> Array[Rect2]:
+	var out: Array[Rect2] = []
+	for entry in _live:
+		if String(entry.piece.kind) == "sfx_word" or not is_instance_valid(entry.node) or not entry.node is Control:
+			continue
+		var node: Control = entry.node
+		if node.is_visible_in_tree():
+			out.append(node.get_global_rect())
+	return out
+
+
+# A sound word sits at its anchor's screen point, or at its at_share, clamped in the play view. It
+# takes the first of its spots (the asked one, then above, below and beside it, each clamped to the
+# play view) that covers none of the row's pieces, the HUD or a screen; with none free it is not
+# drawn. It never slides onto something else (PF-26).
+func _place_word(label: Control, piece: Dictionary) -> bool:
 	var screen := _screen()
 	var share: Vector2 = piece.get("at_share", Vector2(0.62, 0.36))
 	var anchor = _anchors.get(String(piece.get("anchor", "")))
@@ -632,16 +679,24 @@ func _place_word(label: Control, piece: Dictionary) -> void:
 		share = camera.unproject_position(anchor.global_position + Vector3.UP * 2.0) / screen
 	label.reset_size()
 	var view := Rect2(PLAY_VIEW.position * screen, PLAY_VIEW.size * screen)
-	var at := share * screen - label.size * 0.5
-	var placed := Vector2(clampf(at.x, view.position.x, maxf(view.position.x, view.end.x - label.size.x)),
-		clampf(at.y, view.position.y, maxf(view.position.y, view.end.y - label.size.y)))
-	for rect in _avoid_rects():
-		if Rect2(placed, label.size).intersects(rect):
-			placed.y = minf(rect.end.y + AVOID_GAP * _scale(), view.end.y - label.size.y)
-		# No room under it inside the play view (a close-up panel is as tall as the view): beside it.
-		if Rect2(placed, label.size).intersects(rect):
-			placed.x = maxf(view.position.x, rect.position.x - AVOID_GAP * _scale() - label.size.x)
-	label.position = placed
+	var asked := share * screen - label.size * 0.5
+	var gap := AVOID_GAP * _scale()
+	# Near its anchor: where it was asked, above it, below it, then beside it.
+	var spots: Array[Vector2] = [asked, asked + Vector2(0.0, -label.size.y - gap), asked + Vector2(0.0, label.size.y + gap),
+		asked + Vector2(label.size.x + gap, 0.0), asked - Vector2(label.size.x + gap, 0.0)]
+	var room = get_tree().get_first_node_in_group(PlayerFx.ROOM_GROUP) if is_inside_tree() else null
+	var avoid := _avoid_rects()
+	for i in spots.size():
+		var at := Vector2(clampf(spots[i].x, view.position.x, maxf(view.position.x, view.end.x - label.size.x)),
+			clampf(spots[i].y, view.position.y, maxf(view.position.y, view.end.y - label.size.y)))
+		var rect := Rect2(at, label.size)
+		if avoid.any(func(r): return r.intersects(rect)):
+			continue
+		if room != null and not room.spot_free(rect):
+			continue
+		label.position = at
+		return true
+	return false
 
 
 # Three frames of overshoot; reduced motion just shows the piece.
