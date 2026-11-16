@@ -25,9 +25,10 @@ const recordedBinary =
   "/home/andrew/.local/share/godot/4.7.2/Godot_v4.7.2-stable_linux.x86_64";
 export const binary = process.env.GODOT_BIN || recordedBinary;
 const errorLine = /^(SCRIPT ERROR|ERROR|FAIL)\b/m;
-// On macOS the headless engine reports the dummy renderer's unreleased handles as it shuts down,
-// after the verdict line; Linux prints nothing for the same run. The line names no game fault.
-const TEARDOWN_NOISE = /^ERROR: \d+ RID allocations of type '\w*RendererDummy\w*' were leaked at exit\.\r?\n?/gm;
+// On macOS the headless engine reports the dummy renderer's unreleased handles and the resources
+// still loaded as it shuts down, after the verdict line; Linux prints nothing for the same run
+// (13 tests on the wave 43 stage, 16 Nov 2026). The lines name no game fault.
+const TEARDOWN_NOISE = /^ERROR: \d+ (?:RID allocations of type '\w*RendererDummy\w*' were leaked|resources still in use) at exit\b.*\r?\n?/gm;
 export const withoutTeardownNoise = (output) => output.replace(TEARDOWN_NOISE, "");
 // 180 s since 2026-10-04: the solo bot bands (alpha_posture_bands_test, bot_chain_hand_test)
 // legitimately run 110 to 120 s on a loaded machine; a hang still fails, three minutes later.

@@ -221,6 +221,7 @@ test("the dummy renderer's shutdown report on macOS is not an error line; any ot
   assert.equal(smoke.judge({ test: "res://tests/x_test.gd", status: 0, output: leak }).ok, true);
   assert.equal(smoke.judge({ test: "res://tests/x_test.gd", status: 0, output: leak + "ERROR: 1 RID allocations of type 'P12GodotShape3D' were leaked at exit.\n" }).ok, false);
   assert.deepEqual(smoke.failingLines(leak), []);
+  assert.equal(smoke.judge({ test: "res://tests/x_test.gd", status: 0, output: "x_test: PASS\nERROR: 2 resources still in use at exit (run with --verbose for details).\n" }).ok, true);
 });
 
 test("a glob matches a base name with or without .gd and * as the only wildcard", () => {
