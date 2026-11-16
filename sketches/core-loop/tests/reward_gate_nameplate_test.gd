@@ -623,8 +623,8 @@ func _game_part() -> void:
 	game.free()
 	await process_frame
 	# A retry in the launch flight restores the run without the part: the swipe must not stamp it. The same for a run
-	# that ends in the flight.
-	for how in ["retry", "run end"]:
+	# that ends in the flight, and for a new run begun in the flight (a held R, the pause menu's Restart).
+	for how in ["retry", "run end", "new run"]:
 		game = await _boot()
 		game.launch_take.force_live = true
 		game.flow._set_state(game.flow.GATES)
@@ -634,8 +634,10 @@ func _game_part() -> void:
 		var had_snapshot: bool = game.ctx.run.has_snapshot()
 		if how == "retry":
 			game.flow.retry_stage()
-		else:
+		elif how == "run end":
 			game.flow._end_run(false)
+		else:
+			game.flow.new_run()
 		_t.check("G. a %s in the launch flight: the take is told no part and stamps the plain word" % how, named_first and (had_snapshot) and game.launch_take.busy() and game.launch_take._wordless and game.launch_take._word.text == LaunchTake.WORD,
 			"named first %s, snapshot %s, busy %s, word %s wordless %s" % [named_first, had_snapshot, game.launch_take.busy(), game.launch_take._word.text, game.launch_take._wordless])
 		game.free()

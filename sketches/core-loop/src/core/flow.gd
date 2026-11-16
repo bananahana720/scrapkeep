@@ -482,6 +482,8 @@ func choose_run_tier(value: int, check_unlock := true) -> bool:
 
 
 func _begin_run(chosen: Resource) -> void:
+	# A new run begun in a launch flight holds no part: the swipe still on screen must not name the old run's.
+	_untake()
 	in_arena = false
 	boss_active = false
 	lap_stats = {}

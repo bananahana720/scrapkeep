@@ -12,6 +12,7 @@ Each directory here is one skill that Claude Code loads. Claude reaches it throu
 | `scrapkeep-verify-game` | project | play the launched game from a step file and keep the proof a feature works |
 | `scrapkeep-verify-build` | project | check and play the packed Linux build Andrew installs |
 | `scrapkeep-verify-web` | project | drive the Sitting Kit and the two preserved browser proofs in a real browser |
+| `scrapkeep-verify-formal` | project | model-check the run flow and launch swipe under every interruption |
 | `reactive-model-loop` | portable | design and evaluate a fast model that decides inside a running system |
 
 `reactive-model-loop` is a mirror. Since 2026-09-26 its canonical copy is the A stack plugin (`/home/andrew/.config/astack/plugin/skills/reactive-model-loop`), so every project on both hosts gets it. Change the A stack copy first, then copy it here byte for byte; `python /home/andrew/.config/astack/verify.py --project <this repo>` fails when the two differ. The RML origin map in `scrapkeep-lab/references/lessons.md` still covers every lesson id.
