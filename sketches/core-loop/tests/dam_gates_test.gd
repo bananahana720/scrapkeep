@@ -29,6 +29,8 @@ class Reactor:
 	var spec := {}
 	var target = null
 	var dead := false
+	# The driver closes a sheet whose charge a stagger cancelled (W1-67), so it reads this.
+	var _charging := true
 
 	func is_dead() -> bool:
 		return dead
