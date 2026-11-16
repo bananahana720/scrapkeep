@@ -67,6 +67,10 @@ const MOBS_DAMAGE_W1 := [2.0, 1.0, 1.0, 1.0, 1.0, 1.0]
 # slower than cruise). A ball that stops or dawdles is run down; a ball at cruise (14 m/s) is never caught by
 # running. The lunge, its lane and its wind-up are as they were.
 const CHASER_SPEED_W1 := [9.0, 9.0, 0.0, 0.0, 0.0, 0.0]
+# The flume's crowd comes sooner (W1-31, gameplay critique section 6): the director's spawn interval x0.7 on stage 2, so the
+# opening carries packs instead of a walk. Interval, not hit size: it asks the ball to keep moving and no warning, shape
+# or damage changes. The dam keeps its own pace.
+const INTERVAL_W1 := [1.0, 0.7, 1.0, 1.0, 1.0, 1.0]
 const PackPressure := preload("res://src/combat/pack_pressure.gd")
 
 const DEFAULTS := {
@@ -80,7 +84,11 @@ const DEFAULTS := {
 	# 30% of a 120 hull, and the fight asks for more dodges, not one-shot luck. Eight random-policy runs a side
 	# (seeds 2860 to 2867, PR 787): the worst minute at Brindle took a median 40% of max hull before and 71% after,
 	# against 76% to 79% at the dam Warden. Every run that reached Brindle cleared it.
-	"brindle.damage_mult": 1.0, "brindle.damage_by_phase": [1.0, 3.0, 2.0, 1.0],
+	# W1-31: slag x4 (48) and charge x2.7 (48), the hull-share match to the dam Warden's worst minute (paired band read in the
+	# card's report). Damage and not cadence: the slag rings run 2.5 s of warning and 6 s live on a 0.5 s gap, and a charge
+	# cycle is 1.4 s of warning, the run and 1 s of recovery, so the period dials move a cycle by a few percent at most. The
+	# first phase's cranes only steal scrap (no hull hit exists to scale), so its row stays.
+	"brindle.damage_mult": 1.0, "brindle.damage_by_phase": [1.0, 4.0, 2.7, 1.0],
 	"brindle.period_mult": 1.0, "brindle.period_by_phase": [0.6, 0.35, 0.5, 1.0],
 	"brindle.tell_mult": 1.0, "brindle.punish_mult": 1.0, "brindle.combo": 0.0,
 	# Fight phases (fight_phases.gd, Andrew 23 Oct 19:02Z): cued follow-ups after each lead attack, per
@@ -133,7 +141,7 @@ const DEFAULTS := {
 	# the director's crowd cap and spawn interval, and the elite repeat chance. The attack_budget
 	# caps and Director.HARD_CAP stay hard ceilings.
 	"mobs.damage_mult": 1.0, "mobs.pack_scale_mult": 1.0, "mobs.interval_scale_mult": 1.0, "mobs.elite_rate_mult": 1.0,
-	"mobs.damage_by_stage": MOBS_DAMAGE_W1, "mobs.pack_scale_by_stage": ONES6, "mobs.interval_scale_by_stage": ONES6, "mobs.elite_rate_by_stage": ONES6,
+	"mobs.damage_by_stage": MOBS_DAMAGE_W1, "mobs.pack_scale_by_stage": ONES6, "mobs.interval_scale_by_stage": INTERVAL_W1, "mobs.elite_rate_by_stage": ONES6,
 	# A chaser's run speed in m/s per stage (chaser.gd stage_speed): 0 keeps the chaser's own SPEED, a value
 	# can only raise it, and it is held under Chaser.SPEED_CEILING, below the ball's cruise.
 	"mobs.chaser_speed_by_stage": CHASER_SPEED_W1,

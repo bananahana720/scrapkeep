@@ -24,6 +24,7 @@ const W37_TUNED := [
 	"mobs.lobber_share_step_by_stage",  # D4: ships at its old 0.07, which is not 1
 	"pilot.regen_rolling_by_stage",  # D7
 	"warden.pulse_ratchet_by_stage",  # W1-67 (13 Nov): world 1 Wardens tighten per chunk lost
+	"mobs.interval_scale_by_stage",  # W1-31: the flume's crowd comes sooner
 ]
 const T := preload("res://tests/support/t.gd")
 
@@ -66,7 +67,7 @@ func _rules() -> void:
 	_t.near("default damage is the base", ChallengeDials.damage("mind", 10.0, 2), 10.0, 0.0)
 	# Brindle ships tuned (Spillway PR): the per-phase lists carry the band-swept values, every other key is identity.
 	_t.eq("brindle tuned period_by_phase", ChallengeDials.value("brindle.period_by_phase"), [0.6, 0.35, 0.5, 1.0])
-	_t.eq("brindle tuned damage_by_phase", ChallengeDials.value("brindle.damage_by_phase"), [1.0, 3.0, 2.0, 1.0])
+	_t.eq("brindle tuned damage_by_phase", ChallengeDials.value("brindle.damage_by_phase"), [1.0, 4.0, 2.7, 1.0])
 	_t.near("tuned Requisition period", ChallengeDials.period("brindle", Rules.CRANE_PERIOD, 1), Rules.CRANE_PERIOD * 0.6, 1e-6)
 	_t.near("tuned Furnace period", ChallengeDials.period("brindle", 2.0, 2), 0.7, 1e-6)
 	_t.near("tuned Scuttle period", ChallengeDials.period("brindle", 2.0, 3), 1.0, 1e-6)
@@ -107,6 +108,7 @@ func _rules() -> void:
 	_t.eq("W1-67: the flume Warden's cycle tightens x0.9 per chunk lost, the rest stay flat", ChallengeDials.value("warden.pulse_ratchet_by_stage"), [1.0, 0.9, 1.0, 1.0, 1.0, 1.0])
 	_t.eq("the clock climbs three tiers on world 1, two after it", ChallengeDials.value("mobs.clock_tiers_by_stage"), [3.0, 3.0, 2.0, 2.0, 2.0, 2.0])
 	_t.eq("the boils read the stall on world 1, the loop after it", ChallengeDials.value("hazard.boil_stall_by_stage"), [1.0, 1.0, 0.0, 0.0, 0.0, 0.0])
+	_t.eq("W1-31: the director's spawn interval is x0.7 on the flume and untouched elsewhere", ChallengeDials.value("mobs.interval_scale_by_stage"), [1.0, 0.7, 1.0, 1.0, 1.0, 1.0])
 	_t.eq("the hull regenerates only while rolling on world 1, at any speed after it", ChallengeDials.value("pilot.regen_rolling_by_stage"), [1.0, 1.0, 0.0, 0.0, 0.0, 0.0])
 	_t.eq("weak points ship off on both bosses for wave 18", [ChallengeDials.value("waking.weak_points"), ChallengeDials.value("mind.weak_points")], [0.0, 0.0])
 	_t.near("default tell is the base", ChallengeDials.tell("brindle", Rules.CRANE_WARN), Rules.CRANE_WARN, 0.0)
