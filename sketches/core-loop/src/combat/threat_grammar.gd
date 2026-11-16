@@ -1529,6 +1529,30 @@ class Painter:
 			return LINE_PRIORITY
 		return PRIORITY
 
+	# A material cannot pull its vertices, so a depth-tested tinted layer is moved instead: DEPTH_PULL
+	# metres along the line from its middle to the camera, so the ground under it never hides it and
+	# a ridge between the lens and it still does. Every owner of a Painter (a telegraph, a boss
+	# hazard, a landing's Flash) gets this from _process; a Flash also calls it as it repaints.
+	func pull_toward_eye() -> void:
+		var cam := get_viewport().get_camera_3d() if is_inside_tree() else null
+		if cam == null:
+			return
+		for layer in TINTED_LAYERS:
+			if not _layers.has(layer):
+				continue
+			var instance: MeshInstance3D = _layers[layer]
+			if instance.mesh == null or (instance.material_override as StandardMaterial3D).no_depth_test:
+				continue
+			instance.global_position = Vector3.ZERO
+			var middle := instance.global_transform * instance.mesh.get_aabb().get_center()
+			instance.global_position = (cam.global_position - middle).normalized() * DEPTH_PULL
+
+	func _init() -> void:
+		set_process(false)
+
+	func _process(_delta: float) -> void:
+		pull_toward_eye()
+
 	func _layer(layer: String) -> MeshInstance3D:
 		if _layers.has(layer):
 			return _layers[layer]
@@ -1546,7 +1570,7 @@ class Painter:
 		# A soft look draws every mark but the tinted ones with the shared depth-tested shader, so a
 		# body standing on a line or an area draws over it too; the fence keeps its far fade ("fence").
 		# A tinted layer (the landing's flash, crack and dust) keeps its own StandardMaterial3D, which
-		# tint() writes. A soft look depth tests it (below), and the Flash pulls it toward the eye.
+		# tint() writes. A soft look depth tests it (below), and the Painter pulls it toward the eye.
 		if soft_on() and not layer in TINTED_LAYERS:
 			instance.material_override = mark_material("fence" if layer == "fence" else "", layer.begins_with("stripe") and striped_on(), _priority(layer), false)
 			add_child(instance)
@@ -1557,6 +1581,8 @@ class Painter:
 		mat.cull_mode = BaseMaterial3D.CULL_DISABLED
 		mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 		mat.no_depth_test = not (soft_on() and layer in TINTED_LAYERS)
+		if not mat.no_depth_test:
+			set_process(true)
 		mat.vertex_color_use_as_albedo = true
 		mat.vertex_color_is_srgb = true
 		mat.render_priority = _priority(layer)
@@ -1612,6 +1638,7 @@ class Flash:
 		if _crack:
 			layers.append("crack")
 		paint(fill + crack, layers)
+		set_process(true)
 		_show(0.0)
 
 	func _process(delta: float) -> void:
@@ -1623,23 +1650,7 @@ class Flash:
 
 	func _show(age: float) -> void:
 		_show_marks(age)
-		_pull_toward_eye()
-
-	# A material cannot pull its vertices, so a soft look moves each depth-tested layer instead:
-	# DEPTH_PULL metres along the line from the layer's middle to the camera.
-	func _pull_toward_eye() -> void:
-		var cam := get_viewport().get_camera_3d() if is_inside_tree() else null
-		if cam == null:
-			return
-		for layer in TINTED_LAYERS:
-			if not _layers.has(layer):
-				continue
-			var instance: MeshInstance3D = _layers[layer]
-			if instance.mesh == null or (instance.material_override as StandardMaterial3D).no_depth_test:
-				continue
-			instance.global_position = Vector3.ZERO
-			var middle := instance.global_transform * instance.mesh.get_aabb().get_center()
-			instance.global_position = (cam.global_position - middle).normalized() * DEPTH_PULL
+		pull_toward_eye()
 
 	func _show_marks(age: float) -> void:
 		if _fill:
