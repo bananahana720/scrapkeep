@@ -10,17 +10,23 @@ extends SceneTree
 #   glyph   for a word, the shown pixels that match the label's own colour laid over G at its alpha
 #           (so an outline or a panel behind the glyph does not count as the glyph); for a mark,
 #           every shown pixel;
-#   around  the pixels of H within AROUND pixels outside the glyph, which holds a drawn outline or a
-#           backing panel when there is one, and the bare ground when there is none.
+#   around  the pixels of H within AROUND pixels outside the glyph (the ring). When drawn HUD pixels
+#           (an outline or a backing panel) fill at least OUTLINE_SHARE of the ring, only they count;
+#           otherwise the whole ring counts, because a thin outline lets the ground through.
 # The score is the WCAG 2.2 contrast ratio between the median relative luminance of the glyph and
 # of the around pixels: the contrast the player sees between a glyph and what touches it. It must
-# reach WORD_LINE for a word and MARK_LINE for a mark. `ground` records the same ratio against G
+# reach WORD_LINE for a word and MARK_LINE for a mark. `ring_contrast` records the whole ring's ratio
+# and `surround` which one judged. `ground` records the same ratio against G
 # alone, the contrast the glyph would have with no outline or panel, for reading only.
 # An element with fewer than MIN_GLYPH glyph pixels is `unseen` and not scored; the run fails when
 # nothing at all was scored. --plant=close adds a word with no outline in a colour a few levels
-# from the ground behind it, and must fail. Exit 0 pass, 1 fail, 2 no display or no --out.
-# Not covered: marks drawn by a control's own _draw (the ability icons, the gauges) are not
-# TextureRects, so only the words on them and the textured marks are measured.
+# from the ground behind it, beside a matched control word in white; the plant run's verdict is the
+# plant's alone: fail (exit 1) when the planted word falls under the line, pass (exit 0) when the
+# measure missed it, 3 when the control word also fails. Real run: exit 0 pass, 1 fail. Both: 2 for
+# no display or no --out.
+# Covered: only Label and TextureRect nodes under game.hud. Not covered: words and marks a control
+# draws itself with draw_string or _draw (run_status THREAT, ui_draw's ARMOUR and HEALTH values,
+# the ability icons, the gauges), which is most of the HUD's words; `scored` counts what was read.
 #   gpu-run.sh <worktree> hud --path sketches/core-loop --script res://tools/hud_contrast_capture.gd -- \
 #     [--plant=close] --out=<abs dir>
 
@@ -38,6 +44,7 @@ const MATCH := 10
 const MIN_GLYPH := 8
 const PAD := 8
 const AROUND := 3
+const OUTLINE_SHARE := 0.5
 const LANDED := 1.6
 const SETTLE := 12
 
@@ -121,6 +128,10 @@ func _run() -> void:
 			if rec["event_line"]:
 				event_worst = minf(event_worst, rec["contrast"])
 	var pass_all := scored > 0 and failed == 0
+	var code := 0 if pass_all else 1
+	if plant == "close":
+		pass_all = plant_close >= WORD_LINE
+		code = 3 if plant_control < WORD_LINE else (0 if pass_all else 1)
 	var head: Array = []
 	OS.execute("git", ["rev-parse", "HEAD"], head)
 	var f := FileAccess.open(out.path_join("frames.json"), FileAccess.WRITE)
@@ -135,7 +146,7 @@ func _run() -> void:
 		"verdict": "pass" if pass_all else "fail", "elements": records}, "\t"))
 	f.close()
 	print("hud_contrast_capture: plant=%s scored %d, failed %d, worst word %s, worst mark %s, event line %s -> %s" % [plant, scored, failed, worst_word, worst_mark, event_worst, "pass" if pass_all else "fail"])
-	quit(0 if pass_all else 1)
+	quit(code)
 
 
 # The ball is held still once it has rested, then the chase camera eases in behind it.
@@ -320,7 +331,8 @@ static func measure(shot: Image, ground: Image, rect: Rect2i, font: Color) -> Di
 	var near := _dilate(glyph, w, h, AROUND)
 	var core_lum := []
 	var ground_lum := []
-	var around_lum := []
+	var ring_lum := []
+	var drawn_lum := []
 	for j in h:
 		for i in w:
 			var k := j * w + i
@@ -329,13 +341,22 @@ static func measure(shot: Image, ground: Image, rect: Rect2i, font: Color) -> Di
 				core_lum.append(luminance(s))
 				ground_lum.append(luminance(ground.get_pixel(rect.position.x + i, rect.position.y + j)))
 			elif near[k] == 1:
-				around_lum.append(luminance(s))
-	rec["around_px"] = around_lum.size()
-	if around_lum.is_empty():
+				ring_lum.append(luminance(s))
+				if shown[k] == 1:
+					drawn_lum.append(luminance(s))
+	if ring_lum.is_empty():
 		return rec
+	# The surround is the drawn outline or panel when it fills at least half the ring; a thinner
+	# outline lets the ground show through, so the whole ring is what the glyph touches.
+	var share := float(drawn_lum.size()) / float(ring_lum.size())
+	var around_lum: Array = drawn_lum if share >= OUTLINE_SHARE else ring_lum
+	rec["around_px"] = around_lum.size()
+	rec["surround"] = "outline" if share >= OUTLINE_SHARE else "ring"
+	rec["outline_share"] = snappedf(share, 0.01)
 	rec["scored"] = true
 	var core := _median(core_lum)
 	rec["contrast"] = snappedf(ratio(core, _median(around_lum)), 0.01)
+	rec["ring_contrast"] = snappedf(ratio(core, _median(ring_lum)), 0.01)
 	rec["ground_contrast"] = snappedf(ratio(core, _median(ground_lum)), 0.01)
 	return rec
 

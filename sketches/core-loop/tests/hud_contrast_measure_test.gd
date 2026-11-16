@@ -5,7 +5,7 @@ const T := preload("res://tests/support/t.gd")
 
 # UA-04 (principle P3): the arithmetic behind tools/hud_contrast_capture.gd, on synthetic frames, no
 # GPU. A white word on a dark ground reaches the 4.5 line, a word a few levels from its ground does
-# not, a drawn outline counts as what the glyph touches, and an empty or unseen element scores nothing.
+# not, a drawn outline counts as what the glyph touches when it fills half the ring, and an empty or unseen element scores nothing.
 
 var _t := T.new("hud_contrast_measure_test")
 const AREA := Rect2i(0, 0, 40, 40)
@@ -49,6 +49,15 @@ func _initialize() -> void:
 	var bare_rec := Capture.measure(bare, mid, AREA, Color8(111, 127, 143))
 	_t.check("an outlined glyph scores against its outline, above the bare glyph's score", out_rec["scored"] and bare_rec["scored"] and out_rec["contrast"] > bare_rec["contrast"] + 1.0, "%s vs %s" % [out_rec["contrast"], bare_rec["contrast"]])
 	_t.check("its ground ratio is the same either way", is_equal_approx(out_rec["ground_contrast"], bare_rec["ground_contrast"]), "%s vs %s" % [out_rec["ground_contrast"], bare_rec["ground_contrast"]])
+	_t.eq("a two-pixel outline fills two thirds of the three-pixel ring, so the outline judges", out_rec.get("surround", ""), "outline")
+	# A one-pixel outline fills about a third of the ring: the ground shows through, so the whole ring judges.
+	var thin := mid.duplicate()
+	thin.fill_rect(Rect2i(12, 12, 16, 16), Color8(0, 0, 0))
+	thin.fill_rect(Rect2i(13, 13, 14, 14), Color8(111, 127, 143))
+	var thin_rec := Capture.measure(thin, mid, AREA, Color8(111, 127, 143))
+	_t.eq("a one-pixel outline is judged with the ground around it", thin_rec.get("surround", ""), "ring")
+	_t.check("and scores under the full outline's score", thin_rec["contrast"] < out_rec["contrast"] - 1.0, "%s vs %s" % [thin_rec["contrast"], out_rec["contrast"]])
+	_t.check("its ring ratio is its score", is_equal_approx(thin_rec["contrast"], thin_rec["ring_contrast"]), str(thin_rec))
 
 	# A mark (alpha below zero): every changed pixel is the glyph.
 	var mark := Capture.measure(white, ground, AREA, Color(0, 0, 0, -1))
