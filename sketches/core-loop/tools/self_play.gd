@@ -14,7 +14,7 @@ extends Node
 #   --self-play-from=<stage>  enter that stage directly (tools/bot_run.gd --from-stage)
 #   --self-play-until=<what>  <n>: stop once stage n is entered (default 2); exit<n>: once
 #                             stage n's exit is taken; win: once the run is won
-#   --self-play-hand-off=<h>  switch one of the sitting hand's hands off (bot_loops.gd: called_shot, bay), so a test
+#   --self-play-hand-off=<h>  switch one of the sitting hand's hands off (bot_loops.gd hands: called_shot, bay, trade, overtime), so a test
 #                             can show its loop reads as not fired; only on a --profile=sitting launch
 #   --self-play-hold=<s>      keep playing this long after the goal (default 30)
 #   --self-play-min=<s>       and until this many seconds since launch (default 0)
