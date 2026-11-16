@@ -40,5 +40,5 @@ func _initialize() -> void:
 	if not replays:
 		failures += 1
 	print("[seed %d replays] first %s; again %s -> %s" % [SEED, records[0], records[1], "PASS" if replays else "FAIL"])
-	print("bot_replay_test: %s" % ("PASS" if failures == 0 else "FAIL (%d)" % failures))
+	print("seed_replay_test: %s" % ("PASS" if failures == 0 else "FAIL (%d)" % failures))
 	quit(0 if failures == 0 else 1)
