@@ -42,7 +42,7 @@ extends RefCounted
 # Moving a row to ACT means building the twin first; the test cannot see game changes that add a
 # new warning, only that the new fact is listed.
 
-const OPEN_PINNED := 7
+const OPEN_PINNED := 6
 # Rows read only by name, not traced through code. This number may only go down.
 const UNTRACED_PINNED := 305
 # Not-act rows for a cue in DANGER_SOUNDS (printed by the test with their reasons).
@@ -132,6 +132,8 @@ const ACT := [
 		"script": "res://src/combat/rogue.gd", "fn": "_finish_strike", "token": "_show_core()"},
 	{"facts": ["site:audio.gd:_tend_kettle:heat_kettle"], "traced": true, "what": "the shell's rim beats to full heat in the hazard colour over the same last Redline.KETTLE_S as the whistle",
 		"script": "res://src/presentation/player_fx.gd", "fn": "_draw_overdrive", "token": "red.kettle_pulse()"},
+	{"facts": ["tele@boss.gd:_begin_eject:eject"], "traced": true, "what": "the scooter's landing spot is marked on the ground in the harmless bone style from the same call that publishes the telegraph (W1-107)",
+		"script": "res://src/boss/boss.gd", "fn": "_begin_eject", "token": "_commit_eject_mark(land)"},
 	{"facts": ["emit:sluice_warning@overtime.gd:open_sluice"], "traced": true, "what": "the water shows at the warning",
 		"script": "res://src/world/overtime.gd", "fn": "open_sluice", "token": "_show_water(true)"},
 	{"facts": ["emit:sluice_open@overtime.gd:_step_sluice"], "traced": true, "what": "the flood water shows as the sluice opens",
@@ -202,8 +204,6 @@ const OPEN := [
 		"what": "the flume head gate's siren: industrial.gd handle returns for sluice_surge so no mark is laid; the toast and edge marker show. The water chases but never hurts, hence info. The sound is beacon_hum because sluice_siren_two_tone has no recipe", "severity": "info"},
 	{"fact": "cued@boss.gd:_step_reprise:slag_ring_a", "traced": true, "plays": "src/boss/boss.gd:_step_reprise", "pattern": "_phases.cue(",
 		"what": "Brindle's slag ring reprise: the cue sounds, the ring commits CUE_LEAD later with the shorter CUED_WARN because the cue paid for it; nothing is drawn during the lead, so a muted player gets a shorter warning and no tell", "severity": "fairness"},
-	{"fact": "tele@boss.gd:_begin_eject:eject", "traced": true, "plays": "src/boss/boss.gd:_begin_eject", "pattern": "_publish(\"boss_attack_telegraphed\"",
-		"what": "Brindle's eject publishes boss_attack_telegraphed with no hazard or ring committed", "severity": "warning"},
 	{"fact": "sig:weak_point_opened@mind_hand.gd:_go_live", "traced": false, "plays": "src/combat/mind_hand.gd:_go_live", "pattern": "weak_point_opened.emit(",
 		"what": "the Mind hand's lens opens on go-live; world 3, no twin traced", "severity": "info"},
 ]

@@ -388,8 +388,8 @@ func _step_lock(delta: float) -> void:
 					_unlock(true)
 				else:
 					_wave_wait = float(lock_row().get("wave_gap_s", 1.5))
-					ctx.events.world_fact.emit("arena_wave", lock_centre)
 					_mark_wave()
+					ctx.events.world_fact.emit("arena_wave", lock_centre)
 			elif _wave_wait >= 0.0:
 				_wave_wait -= delta
 				if _wave_wait < 0.0:

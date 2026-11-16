@@ -27,8 +27,9 @@ const T := preload("res://tests/support/t.gd")
 # world_fact.emit of a kind the list marks as relayed, each pressure cue, each warn_sound
 # assignment, and each file-level const, play() or Foley call that names a bank cue ("site:").
 # Park telegraph sounds and the riser and stinger cues are covered by their WORLD_ROWS and
-# MusicRows.CUES rows. A scanned id is "<kind>@<file>#<n>", the nth match in that file, so adding
-# or removing a call site shifts the ids and fails the test until the list is updated.
+# MusicRows.CUES rows. A scanned id names its file and the function that holds the call
+# ("emit:arena_wave@overtime.gd:_land_wave"), so a new call site, or one moved to another
+# function, fails the test until the list is updated.
 # Not covered: a sound played from a call pattern the scan does not know (an id built at run time
 # from two strings), and the weather rows' music cues in the park files.
 
