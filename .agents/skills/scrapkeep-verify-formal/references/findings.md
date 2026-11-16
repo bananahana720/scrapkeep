@@ -1,6 +1,6 @@
 # Findings from the run-flow model
 
-A finding is a break that replayed on the real game. A break that did not replay is a lesson in [lessons.md](lessons.md), not a row here.
+A finding is a break that replayed on the real game. A break that did not replay is a lesson in [lessons.md](lessons.md), not a row here. Findings from the rewards model are in [rewards-findings.md](rewards-findings.md).
 
 ## Open
 
