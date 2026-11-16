@@ -23,6 +23,7 @@ const TITLE_SIZE := UiTokens.BODY
 const DETAIL_SIZE := UiTokens.CAPTION
 # A reward gate's name (owner_placed) reads from across the yard: its cap height is at least 14 px on a
 # 1280x720 window, where the 1600x900 canvas draws at 0.8 and a capital is 0.714 of the font size.
+# 25 is off the type scale on purpose: reading at distance; an exception recorded on pull request 1064.
 const SIGN_NAME_SIZE := 25
 const SIGN_DETAIL_SIZE := UiTokens.BODY
 const SIGN_PAD := 4.0

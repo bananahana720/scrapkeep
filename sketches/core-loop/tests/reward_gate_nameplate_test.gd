@@ -295,6 +295,42 @@ func _gates_part() -> void:
 	_t.check("C. holding a distance at a name's threshold with the camera moving about a pixel, the named set changes at most once", found > 0.0 and held_changes <= 1, "threshold at %.2f m, %d changes, sets %s" % [found, held_changes, held_sets])
 	gates.close()
 
+	# C. A pause keeps the names: walk out from close until the next step would hide a name, so the last shown name has
+	# only a few px clear, then pause and unpause. The same set shows on the first frame back.
+	gates.open(long4, Vector3.ZERO, Vector3.FORWARD)
+	_stand(gates, [-24.0, -8.0, 8.0, 24.0], 0.0, -100.0)
+	_cam.rotation.y = 0.0
+	_cam.position = Vector3(0.0, 8.0, -100.0 + 30.0)
+	gates._ball = _cam.position
+	await process_frame
+	var out_set := _named(gates)
+	var edge := out_set
+	var edge_d := 30.0
+	var out_d := 30.0
+	while out_d < 118.0:
+		out_d += 0.25
+		_cam.position = Vector3(0.0, 8.0, -100.0 + out_d)
+		gates._ball = _cam.position
+		await process_frame
+		var out_now := _named(gates)
+		if out_now.size() < out_set.size():
+			break
+		edge = out_now
+		edge_d = out_d
+		out_set = out_now
+	_cam.position = Vector3(0.0, 8.0, -100.0 + edge_d)
+	gates._ball = _cam.position
+	await process_frame
+	var before_pause := _named(gates)
+	paused = true
+	await process_frame
+	var while_paused := _named(gates)
+	paused = false
+	await process_frame
+	var after_pause := _named(gates)
+	_t.check("C. a pause hides every name and the unpause brings the same set back on the first frame, with a name shown on a few px clear", before_pause.size() > 0 and before_pause.size() < 4 and while_paused.is_empty() and after_pause == before_pause, "at %.2f m before %s, paused %s, after %s" % [edge_d, before_pause, while_paused, after_pause])
+	gates.close()
+
 	# D. Approach on the dam row's spacing (16 m), three and four gates: typical names, then the longest there are.
 	var typical := ["impact_driver", "brace_frame", "chain_arc", "rime_rounds"]
 	for count in [3, 4]:
@@ -366,8 +402,9 @@ func _named_at(gates: Node3D, d: float) -> Array:
 
 # The ids a gate can offer, longest on two rows first (the width of the longer row at the name size). A gate's
 # parts come from Parts.roll_gate over offer_pool, which reads every row with no stage filter, plus a hot-wired
-# part (build._hotwire_gate_ids); each name is cut to three words by prompt_parts. Generated item names are never
-# offered at a gate.
+# part (build._hotwire_gate_ids); each name is cut to three words by prompt_parts. Parts.roll rolls a generated
+# recipe (ItemGen name) 25% of the time only on a table that does not list its parts (Parts.listed_only); the alpha,
+# park and slice tables all list theirs, so no generated name reaches a world 1 gate and none is measured.
 func _longest_parts(count: int) -> Array:
 	var ids: Array = Parts.ids().duplicate()
 	for id in Parts.HOTWIRED:
@@ -574,6 +611,24 @@ func _game_part() -> void:
 		"word %s wordless %s" % [game.launch_take._word.text, game.launch_take._wordless])
 	game.free()
 	await process_frame
+	# A retry in the launch flight restores the run without the part: the swipe must not stamp it. The same for a run
+	# that ends in the flight.
+	for how in ["retry", "run end"]:
+		game = await _boot()
+		game.launch_take.force_live = true
+		game.flow._set_state(game.flow.GATES)
+		game.flow._on_reward_chosen("impact_driver")
+		game.flow._on_launched(Vector3(0.0, 0.0, -20.0))
+		var named_first: bool = game.launch_take.busy() and game.launch_take._word.text == "Impact Driver"
+		var had_snapshot: bool = game.ctx.run.has_snapshot()
+		if how == "retry":
+			game.flow.retry_stage()
+		else:
+			game.flow._end_run(false)
+		_t.check("G. a %s in the launch flight: the take is told no part and stamps the plain word" % how, named_first and (had_snapshot) and game.launch_take.busy() and game.launch_take._wordless and game.launch_take._word.text == LaunchTake.WORD,
+			"named first %s, snapshot %s, busy %s, word %s wordless %s" % [named_first, had_snapshot, game.launch_take.busy(), game.launch_take._word.text, game.launch_take._wordless])
+		game.free()
+		await process_frame
 	# A finished run leaves no id behind: the run's last gate launches no take, and the next run, scrapless, starts clean.
 	game = await _boot()
 	var last_stage := 1

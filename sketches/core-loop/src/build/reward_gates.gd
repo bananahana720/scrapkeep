@@ -546,7 +546,7 @@ func _place_names() -> void:
 			var hidden := gate.get_node_or_null("Name") as Label
 			if hidden != null:
 				hidden.visible = false
-		_shown.clear()
+		# _shown and _rows stay: the same names return with the play, not only once each has 32 px clear.
 		return
 	var from: Vector3 = _ball if _ball.is_finite() else (cam.global_position if cam != null else Vector3.ZERO)
 	var entries: Array = []
