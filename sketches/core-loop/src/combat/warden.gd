@@ -2,6 +2,7 @@ extends "res://src/combat/enemy.gd"
 
 # The fastest the body may read as moving while mounted, m/s.
 const MOUNT_SPEED_MAX: float = preload("res://src/movement/contact.gd").SOFT_CAP_SPEED
+const ChaseCamera := preload("res://src/movement/chase_camera.gd")
 const WardenLook := preload("res://src/combat/warden_look.gd")
 const WardenKit := preload("res://src/combat/warden_kit.gd")
 const Roster := preload("res://src/combat/roster.gd")
@@ -893,6 +894,7 @@ func _build_body() -> void:
 	cylinder.height = HALF_HEIGHT * 2.0
 	shape.shape = cylinder
 	add_child(shape)
+	_build_camera_shell()
 	# Everything seen is in warden_look.gd and collides with nothing; this node keeps the
 	# collider above and every number the fight uses.
 	_look = WardenLook.new()
@@ -903,6 +905,28 @@ func _build_body() -> void:
 	_kit.build(self, family)
 	_base_color = Palette.CHARCOAL
 	_material = _look.body_material
+
+
+# The drawn drums (mesh bounds of warden_reactor.glb and warden_swarm.glb: radius, height and the body's
+# lowest point from the ground under the Warden) as camera-only shapes. The contact cylinder or sphere is
+# damage geometry and stays as it is, far smaller than the drawn body. The mind hangs, so it has none.
+const CAMERA_SHELLS := {"reactor": Vector3(3.3, 8.5, -1.525), "swarm": Vector3(3.5, 9.4, 0.0)}
+
+
+func _build_camera_shell() -> void:
+	if not CAMERA_SHELLS.has(family):
+		return
+	var row: Vector3 = CAMERA_SHELLS[family]
+	var body := ChaseCamera.camera_body()
+	body.name = "CameraShell"
+	var shell := CollisionShape3D.new()
+	var drum := CylinderShape3D.new()
+	drum.radius = row.x
+	drum.height = row.y
+	shell.shape = drum
+	body.add_child(shell)
+	add_child(body)
+	body.position = Vector3(0.0, -HALF_HEIGHT + row.z + row.y * 0.5, 0.0)
 
 
 func _pose(_delta: float) -> void:

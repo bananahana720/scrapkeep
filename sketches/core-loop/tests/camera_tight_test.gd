@@ -3,6 +3,9 @@ extends SceneTree
 const ChaseCamera := preload("res://src/movement/chase_camera.gd")
 const BallState := preload("res://src/movement/ball_state.gd")
 const T := preload("res://tests/support/t.gd")
+const Requisition := preload("res://src/boss/requisition.gd")
+const RigidBall := preload("res://src/movement/rigid_ball.gd")
+const Warden := preload("res://src/combat/warden.gd")
 
 # W1-14 / PF-06: with a wall close behind the ball the arm shortens until the ball fills the lens.
 # The camera rises over the ball instead, keeps the player's aim, and goes back down when the wall
@@ -29,6 +32,9 @@ class Target:
 	func shown_position() -> Vector3:
 		return Vector3.ZERO
 
+	func ball_position() -> Vector3:
+		return Vector3.ZERO
+
 
 func _initialize() -> void:
 	_run()
@@ -42,6 +48,10 @@ func _run() -> void:
 	await _floor()
 	await _pillar()
 	await _unstepped()
+	await _ship()
+	await _grunt()
+	await _warden()
+	_layers()
 	quit(_t.verdict())
 
 
@@ -187,3 +197,123 @@ func _settle(cam, frames: int) -> void:
 func _rise(cam) -> float:
 	var from: Vector3 = cam.cam.global_position - cam.global_position
 	return atan2(from.y, Vector2(from.x, from.z).length())
+
+
+# PF-06 (film 124): the lens inside Brindle's hull. The ship is built as boss.gd builds it, 10 m behind
+# the ball, and its drawn boxes (not the hidden 9 x 5 x 14 placeholder) must stop the arm.
+func _ship() -> void:
+	var cam := _rig()
+	await _settle(cam, 90)
+	var open_rise := _rise(cam)
+	var ship := Requisition.new()
+	root.add_child(ship)
+	ship.build(null)
+	ship.move_to(Vector3(0.0, -1.0, 10.0), Vector3.FORWARD)
+	await _settle(cam, 120)
+	var boxes: Array = ship.drawn_boxes()
+	var hit: float = cam.arm.get_hit_length()
+	var lens: Vector3 = cam.cam.global_position
+	var inside := ""
+	for pair in boxes:
+		var local: Vector3 = (pair[0] as Transform3D).affine_inverse() * lens
+		if (pair[1] as AABB).has_point(local):
+			inside = "%s" % [pair]
+	_t.check("B0 the ship lists drawn boxes", boxes.size() > 0, "%d boxes, model loaded: %s" % [boxes.size(), ship.model != null])
+	_t.check("B1 the lens is outside every drawn box and the arm is cut short", inside == "" and hit < 7.5 and boxes.size() > 0, "hit length %.2f, lens %s, inside box %s" % [hit, lens, inside])
+	_t.check("B2 the wall lift raises the lens over the ship", _rise(cam) > open_rise + 0.2, "elevation %.2f rad against %.2f" % [_rise(cam), open_rise])
+	ship.free()
+	cam.free()
+
+
+# Negative control: an enemy-layer (3) box in the arm's path is a grunt, not a wall.
+func _grunt() -> void:
+	var cam := _rig()
+	await _settle(cam, 90)
+	var open_hit: float = cam.arm.get_hit_length()
+	var grunt := _box(Vector3(1.0, 1.0, 1.0), Vector3(0.0, 0.8, 4.0))
+	grunt.collision_layer = 4
+	await _settle(cam, 90)
+	var hit: float = cam.arm.get_hit_length()
+	_t.check("B3 a layer-3 body does not shorten the arm", absf(hit - open_hit) < 0.2, "hit length %.2f, open %.2f" % [hit, open_hit])
+	grunt.free()
+	cam.free()
+
+
+func _dam() -> Node3D:
+	var warden = Warden.new()
+	var world := Node3D.new()
+	root.add_child(world)
+	world.add_child(warden)
+	warden.setup(Target.new(), Terrain.new(), world, func(): return true, 1.0, {"family": "reactor", "mounting": "dam_face"})
+	warden.set_physics_process(false)
+	warden.set_process(false)
+	return warden
+
+
+func _shell(warden: Node3D) -> StaticBody3D:
+	for child in warden.get_children():
+		if child is PhysicsBody3D and (child.collision_layer & 8) != 0:
+			return child
+	return null
+
+
+class Terrain:
+	func height(_x: float, _z: float) -> float:
+		return 0.0
+
+
+func _warden() -> void:
+	var warden := _dam()
+	var shell := _shell(warden)
+	var cyl: CylinderShape3D = null
+	if shell != null:
+		cyl = shell.get_child(0).shape as CylinderShape3D
+	_t.check("W1 the Warden has a camera-only body of its drawn size", cyl != null and cyl.radius >= 3.2 and cyl.height >= 8.0, "shell %s, radius %s, height %s" % [shell, cyl.radius if cyl else -1, cyl.height if cyl else -1])
+	if shell == null:
+		warden.free()
+		return
+	var contact: CylinderShape3D = null
+	for child in warden.get_children():
+		if child is CollisionShape3D:
+			contact = child.shape as CylinderShape3D
+	_t.check("G1 the contact collider is still the 2.8 m cylinder", contact != null and absf(contact.radius - Warden.RADIUS) < 0.001 and absf(contact.height - Warden.HALF_HEIGHT * 2.0) < 0.001, "%s" % [contact.radius if contact else null])
+	var cam := _rig()
+	# The drum's centre 4 m behind the pivot.
+	var centre_y: float = shell.global_position.y - warden.global_position.y
+	warden.global_position = Vector3(0.0, 0.8 - centre_y, 4.0)
+	await _settle(cam, 120)
+	var hit: float = cam.arm.get_hit_length()
+	var lens: Vector3 = cam.cam.global_position
+	var rel: Vector3 = lens - shell.global_position
+	var in_drum := Vector2(rel.x, rel.z).length() < cyl.radius and absf(rel.y) < cyl.height * 0.5
+	_t.check("W1 the lens is outside the drum", not in_drum and hit < 4.0, "hit length %.2f, lens %s, shell at %s" % [hit, lens, shell.global_position])
+	# The ball (the origin) inside the drum: the arm must not collapse onto it.
+	warden.global_position = Vector3(0.0, 0.8 - centre_y, 0.0)
+	await _settle(cam, 60)
+	var inside_hit: float = cam.arm.get_hit_length()
+	_t.check("W2 with the ball inside the drum the arm keeps over half its length", inside_hit >= 4.0, "hit length %.2f" % inside_hit)
+	warden.global_position = Vector3(0.0, 0.8 - centre_y, 4.0)
+	await _settle(cam, 60)
+	var out_hit: float = cam.arm.get_hit_length()
+	_t.check("W2 once the ball is out the drum shortens the arm again", out_hit < 4.0, "hit length %.2f" % out_hit)
+	cam.free()
+	warden.free()
+
+
+# The camera layer must not have changed any contact: the ball, every enemy and the Warden.
+func _layers() -> void:
+	var warden := _dam()
+	_t.check("G1 the Warden is on layer 3 only and masks the world", warden.collision_layer == 4 and warden.collision_mask == 1, "layer %d mask %d" % [warden.collision_layer, warden.collision_mask])
+	var shell := _shell(warden)
+	_t.check("G1 the camera shell masks nothing and is on layer 4 only", shell != null and shell.collision_mask == 0 and shell.collision_layer == 8, "")
+	warden.free()
+	var ship := Requisition.new()
+	root.add_child(ship)
+	ship.build(null)
+	_t.check("G1 the ship's hull piece is still on layer 3 with no mask", ship.hull.collision_layer == 4 and ship.hull.collision_mask == 0, "layer %d mask %d" % [ship.hull.collision_layer, ship.hull.collision_mask])
+	ship.free()
+	var ball := RigidBall.new()
+	root.add_child(ball)
+	ball.setup(Tuning.new(), BallState.new())
+	_t.check("G1 the ball is on layer 2 and masks layers 1 and 3 only", ball.collision_layer == 2 and ball.collision_mask == 5, "layer %d mask %d" % [ball.collision_layer, ball.collision_mask])
+	ball.free()

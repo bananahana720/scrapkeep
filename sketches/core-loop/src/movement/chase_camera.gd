@@ -45,6 +45,9 @@ const TIGHT_FULL := 1.5
 const TIGHT_LIFT := 0.6
 # The arm never tips past this, just short of straight up (1.57), where the yaw frame would flip.
 const MAX_ARM_PITCH := -1.5
+# Physics layer 4: bodies only the camera sees, built to a boss's drawn body (the Warden's drum, Brindle's
+# drawn boxes). They sit on no other layer and mask nothing, so no contact in play meets them.
+const CAMERA_BODY_BIT := 8
 # A lifted probe must free at least this much arm over the unlifted one, or the lift is not worth it.
 const LIFT_GAIN := 0.3
 # Situation rows. arm 0.0 means no opinion; pitch_bias tilts the arm without touching the
@@ -97,12 +100,23 @@ var _boss_reach := false
 var _pitch_bias := 0.0
 var _tight := 0.0
 var _query := PhysicsShapeQueryParameters3D.new()
+var _inside := PhysicsPointQueryParameters3D.new()
+var _ignored: Array[RID] = []
 var _fov_add := 0.0
 var _glance_subject: Node3D
 var _glance_seconds := 0.0
 var _glance_age := 0.0
 var _glance_from := Vector2.ZERO
 var _glance_drift := 0.0
+
+
+# A body for a camera-only shape: layer 4, no mask, moved by its owner's node each tick.
+static func camera_body() -> AnimatableBody3D:
+	var body := AnimatableBody3D.new()
+	body.sync_to_physics = false
+	body.collision_layer = CAMERA_BODY_BIT
+	body.collision_mask = 0
+	return body
 
 
 func setup(target_ref, tuning_ref) -> void:
@@ -116,8 +130,9 @@ func setup(target_ref, tuning_ref) -> void:
 	arm.spring_length = 8.0
 	arm.margin = 0.25
 	# SpringArm3D is a plain Node3D: only the raw mask is available, and it must see
-	# the world (layer 1) without catching the player ball (layer 2).
-	arm.collision_mask = 1
+	# the world (layer 1) and the camera-only bodies of what a boss draws (layer 4), without
+	# catching the player ball (layer 2) or enemies (layer 3: a grunt rolling past would snap the arm in).
+	arm.collision_mask = 1 | CAMERA_BODY_BIT
 	_query.collision_mask = arm.collision_mask
 	add_child(arm)
 	# The arm rewrites its direct child's transform every physics tick, so shake and
@@ -249,6 +264,25 @@ func set_lock(point) -> void:
 	_locked = point != null
 
 
+# A camera-only shape the ball's centre is inside (a Warden's drawn drum is far bigger than the contact
+# sphere the ball meets) is left out of the arm and the lift's probe, or the cast would start inside it
+# and collapse the arm onto the ball. It counts again once the ball is out.
+func _ignore_shapes_around_ball() -> void:
+	var held: Array[RID] = []
+	if is_inside_tree():
+		_inside.collision_mask = CAMERA_BODY_BIT
+		_inside.position = target.shown_position()
+		for hit in get_world_3d().direct_space_state.intersect_point(_inside, 8):
+			held.append(hit["rid"])
+	if held == _ignored:
+		return
+	_ignored = held
+	arm.clear_excluded_objects()
+	for rid in held:
+		arm.add_excluded_object(rid)
+	_query.exclude = held
+
+
 func set_boss_reach(on: bool) -> void:
 	_boss_reach = on
 
@@ -342,6 +376,7 @@ func _process(delta: float) -> void:
 	# engine scaled this delta by the scale the frame began with, so on the frame a slow motion
 	# or a hit stop starts the division overshoots: the step is capped at a slow frame's worth.
 	_step_glance(minf(delta / maxf(Engine.time_scale, 0.01), GLANCE_STEP_CAP))
+	_ignore_shapes_around_ball()
 	var velocity: Vector3 = target.state.velocity
 	var fraction := SpeedTier.fraction(velocity.length(), tuning.f("cruise"))
 	shoulder_blend = move_toward(shoulder_blend, clampf(shoulder_target, 0.0, 1.0), SHOULDER_RATE * delta)
