@@ -2,6 +2,8 @@ extends "res://src/combat/enemy.gd"
 
 # The fastest the body may read as moving while mounted, m/s.
 const MOUNT_SPEED_MAX: float = preload("res://src/movement/contact.gd").SOFT_CAP_SPEED
+const ChaseCamera := preload("res://src/movement/chase_camera.gd")
+const Tuning := preload("res://src/movement/tuning.gd")
 const WardenLook := preload("res://src/combat/warden_look.gd")
 const WardenKit := preload("res://src/combat/warden_kit.gd")
 const Roster := preload("res://src/combat/roster.gd")
@@ -903,6 +905,59 @@ func _build_body() -> void:
 	_kit.build(self, family)
 	_base_color = Palette.CHARCOAL
 	_material = _look.body_material
+	fit_camera_shell()
+
+
+# The widest camera drum that a ball touching the contact cylinder leaves clear of the arm's probe: the ball's centre
+# sits RADIUS + the ball's radius from the axis, and a cast that starts inside a shape skips it. The drawn body may stand
+# up to about 0.4 m outside the drum on its widest parts.
+static func camera_shell_reach() -> float:
+	return RADIUS + Tuning.RADIUS - ChaseCamera.PROBE_RADIUS - 0.05
+
+
+# A camera-only drum round what the Warden draws now, so the lens never sits inside its body. The contact
+# cylinder and the weak-point sphere are damage geometry and stay as they are. Sized from the drawn meshes
+# (those still on a render layer, outside the floating badge), so the primitive look, the clamp base and a
+# hero body each get their own: built with the look, refitted by hero_assets once it has dressed the body.
+func fit_camera_shell() -> void:
+	# The mind hangs and sprawls (a 12 m reach), so no cylinder fits it; a shell that big would wall off the air
+	# round it. The camera meets it as it did before.
+	if family == Roster.MIND:
+		var old := get_node_or_null("CameraShell")
+		if old != null:
+			old.queue_free()
+		return
+	var inverse := global_transform.affine_inverse()
+	var badge := _look.get_node_or_null("Badge")
+	var box := AABB()
+	var any := false
+	for view in find_children("*", "MeshInstance3D", true, false):
+		var mesh := view as MeshInstance3D
+		if mesh.mesh == null or mesh.layers == 0 or not mesh.is_visible_in_tree() or (badge != null and badge.is_ancestor_of(mesh)):
+			continue
+		var local: AABB = inverse * mesh.global_transform * mesh.get_aabb()
+		box = local if not any else box.merge(local)
+		any = true
+	var shell := get_node_or_null("CameraShell")
+	if not any:
+		if shell != null:
+			shell.queue_free()
+		return
+	var radius := 0.0
+	for corner in 8:
+		var point: Vector3 = box.get_endpoint(corner)
+		radius = maxf(radius, maxf(absf(point.x), absf(point.z)))
+	radius = minf(radius, camera_shell_reach())
+	if shell == null:
+		shell = ChaseCamera.camera_body()
+		shell.name = "CameraShell"
+		shell.add_child(CollisionShape3D.new())
+		add_child(shell)
+	var drum := CylinderShape3D.new()
+	drum.radius = radius
+	drum.height = box.size.y
+	(shell.get_child(0) as CollisionShape3D).shape = drum
+	shell.position = Vector3(0.0, box.get_center().y, 0.0)
 
 
 func _pose(_delta: float) -> void:

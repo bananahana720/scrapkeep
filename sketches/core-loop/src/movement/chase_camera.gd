@@ -45,6 +45,12 @@ const TIGHT_FULL := 1.5
 const TIGHT_LIFT := 0.6
 # The arm never tips past this, just short of straight up (1.57), where the yaw frame would flip.
 const MAX_ARM_PITCH := -1.5
+# Physics layer 4: bodies only the camera sees, built to a boss's drawn body (the Warden's drum, Brindle's
+# drawn boxes). They sit on no other layer and mask nothing, so no contact in play meets them.
+const CAMERA_BODY_BIT := 8
+# The arm's probe sphere. A camera-only body must stay clear of it where the ball touches what it covers
+# (Warden.fit_camera_shell), or the cast starts inside it and skips it.
+const PROBE_RADIUS := 0.3
 # A lifted probe must free at least this much arm over the unlifted one, or the lift is not worth it.
 const LIFT_GAIN := 0.3
 # Situation rows. arm 0.0 means no opinion; pitch_bias tilts the arm without touching the
@@ -105,19 +111,29 @@ var _glance_from := Vector2.ZERO
 var _glance_drift := 0.0
 
 
+# A body for a camera-only shape: layer 4, no mask, moved by its owner's node each tick.
+static func camera_body() -> AnimatableBody3D:
+	var body := AnimatableBody3D.new()
+	body.sync_to_physics = false
+	body.collision_layer = CAMERA_BODY_BIT
+	body.collision_mask = 0
+	return body
+
+
 func setup(target_ref, tuning_ref) -> void:
 	target = target_ref
 	tuning = tuning_ref
 	arm = SpringArm3D.new()
 	var probe := SphereShape3D.new()
-	probe.radius = 0.3
+	probe.radius = PROBE_RADIUS
 	arm.shape = probe
 	_query.shape = probe
 	arm.spring_length = 8.0
 	arm.margin = 0.25
 	# SpringArm3D is a plain Node3D: only the raw mask is available, and it must see
-	# the world (layer 1) without catching the player ball (layer 2).
-	arm.collision_mask = 1
+	# the world (layer 1) and the camera-only bodies of what a boss draws (layer 4), without
+	# catching the player ball (layer 2) or enemies (layer 3: a grunt rolling past would snap the arm in).
+	arm.collision_mask = 1 | CAMERA_BODY_BIT
 	_query.collision_mask = arm.collision_mask
 	add_child(arm)
 	# The arm rewrites its direct child's transform every physics tick, so shake and
