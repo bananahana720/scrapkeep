@@ -36,6 +36,8 @@ const SetDirector := preload("res://src/presentation/set_director.gd")
 const CHIRP_COOLDOWN := 0.75
 const CHIRP_LOG_CAP := 256
 const SpecialAudio := preload("res://src/presentation/special_audio.gd")
+const MenuSounds := preload("res://src/presentation/menu_sounds.gd")
+var _menu_sounds := MenuSounds.new()
 # The live kill-first specials: enemy instance id -> {"node", "name", "player"}.
 var _specials := {}
 const PhaseMusic := preload("res://src/presentation/phase_music.gd")
@@ -688,11 +690,15 @@ func bake_now() -> void:
 func _enter_tree() -> void:
 	if not get_tree().node_added.is_connected(_on_node_added):
 		get_tree().node_added.connect(_on_node_added)
+	if not get_viewport().gui_focus_changed.is_connected(_on_focus_changed):
+		get_viewport().gui_focus_changed.connect(_on_focus_changed)
 
 
 func _exit_tree() -> void:
 	if get_tree().node_added.is_connected(_on_node_added):
 		get_tree().node_added.disconnect(_on_node_added)
+	if get_viewport().gui_focus_changed.is_connected(_on_focus_changed):
+		get_viewport().gui_focus_changed.disconnect(_on_focus_changed)
 	_settle_workers()
 	# Stop every player and drop the playbacks, or the polyphonic ones outlive the tree.
 	for child in get_children():
@@ -925,6 +931,26 @@ func _poly_player(bus: String, node_name: String) -> AudioStreamPlayer:
 	return player
 
 
+func _on_focus_changed(_control: Control) -> void:
+	_menu_sounds.focus_moved()
+
+
+# Move, confirm and back for every page a pad or the keys can move through (menu_sounds.gd).
+func _step_menu_sounds() -> void:
+	var nav := false
+	for action in MenuSounds.NAV:
+		nav = nav or Input.is_action_pressed(action)
+	var held := get_viewport().gui_get_focus_owner() != null
+	for kind in _menu_sounds.step(nav, Input.is_action_pressed("ui_accept"), Input.is_action_pressed("ui_cancel"), held):
+		match kind:
+			"menu_move":
+				play("menu_move", 0.0, 1.0, "UI", "menu_move", 0)
+			"menu_confirm":
+				play("menu_confirm", 0.0, 1.0, "UI", "menu_confirm", 1)
+			"menu_back":
+				play("menu_back", 0.0, 1.0, "UI", "menu_back", 1)
+
+
 func _process(delta: float) -> void:
 	clock += delta
 	_step_cannon_cues()
@@ -937,6 +963,8 @@ func _process(delta: float) -> void:
 			# A cancelled bake leaves nobody running it; the survivor starts it again.
 			_start_bake()
 			return
+	if is_inside_tree():
+		_step_menu_sounds()
 	engine.pause_gain = 0.45 if get_tree().paused else 1.0
 	if ace != null:
 		ace.pause_gain = engine.pause_gain
@@ -1816,6 +1844,8 @@ func _tend_room() -> void:
 # override the kind's row decides, resolved for the run's class.
 func play(kind: String, db := 0.0, pitch := 1.0, bus := "SFX", sound_override := "", priority_override := -1) -> bool:
 	var sound: String = sound_override if sound_override != "" else Rows.sound(kind, cue_context())
+	if kind.ends_with("_refused"):
+		_menu_sounds.refused()
 	if not _admit(kind, sound, pitch):
 		return false
 	# A tiered key plays its tier's file, picked by the rung the caller sent as its pitch,

@@ -15,6 +15,7 @@ const BossRules := preload("res://src/boss/boss_rules.gd")
 const Requisition := preload("res://src/boss/requisition.gd")
 const BotKite := preload("res://tools/bot_kite.gd")
 const BotFairness := preload("res://tools/bot_fairness.gd")
+const BotLoops := preload("res://tools/bot_loops.gd")
 
 # One scripted player for the design feedback loop (DEMO-SPEC, "Bot runs"). It plays a
 # real Game through the same doors a person uses: an Intent.Scripted source for the
@@ -449,6 +450,10 @@ var late_offer_policy := ""
 # the game's own set_stakes before it rolls in, works it to its pay, then goes on to the Warden.
 # 0 leaves every code path below untouched.
 var relay_stake := 0
+# The sitting hand (bot_loops.gd), made on the first tick of a --profile=sitting launch; null elsewhere.
+var loops
+# Hands of the sitting hand to leave off (--self-play-hand-off), read when it is made.
+var hands_off: Array = []
 # The pacing lab's switch (bot_run --explore-by=<s>, scripts/pacing-check.mjs): the stage second the
 # completionist stops its optional rolling for the Warden. Left at ENGAGE_BY unless the flag is given.
 var engage_by := ENGAGE_BY
@@ -886,6 +891,10 @@ func tick(delta: float) -> bool:
 			and game.run.stage_time - float(fight_start) > fight_limit:
 		_end("fight_capped")
 		return true
+	if loops == null and game.ctx.tuning != null and (game.ctx.tuning.sitting() or game.ctx.tuning.sitting_earned()):
+		loops = BotLoops.new(self, game)
+		for name in hands_off:
+			loops.hands[name] = false
 	_boost_clock -= delta
 	_play_clock += delta
 	_min_hp = minf(_min_hp, float(game.run.hp))
@@ -919,9 +928,11 @@ func tick(delta: float) -> bool:
 				game.player.kit.hooked, game.player.kit.on_body])
 	match state:
 		"stage", "beacon":
-			_roam(delta)
+			if loops == null or not loops.stage(delta):
+				_roam(delta)
 		"gates":
-			_to_gate(delta)
+			if loops == null or not loops.gates(delta):
+				_to_gate(delta)
 		"boss":
 			_boss_clock += delta
 			if _boss_clock > BOSS_LIMIT:
@@ -932,6 +943,8 @@ func tick(delta: float) -> bool:
 			_lap_roll()
 		_:
 			source.hold = {}
+	if loops != null:
+		loops.step(delta)
 	_set_piece_hands()
 	return outcome != ""
 

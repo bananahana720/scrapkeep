@@ -2,6 +2,7 @@ extends Node3D
 
 const Augments := preload("res://src/movement/augments.gd")
 const Palette := preload("res://src/core/palette.gd")
+const LoopTally := preload("res://src/core/loop_tally.gd")
 const Parts := preload("res://src/build/parts.gd")
 const SpeedTier := preload("res://src/movement/speed_tier.gd")
 
@@ -162,6 +163,7 @@ func _release() -> void:
 		return
 	called = verb
 	state = "called"
+	LoopTally.note(ctx.run, "called_shot")
 	_show(called, true)
 	ctx.events.world_fact.emit("shot_called", _stamp.global_position)
 	changed.emit(state, called)
