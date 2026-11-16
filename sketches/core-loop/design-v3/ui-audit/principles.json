@@ -84,8 +84,10 @@
       "id": "P9", "name": "No fact arrives by sound alone",
       "rule": "Every sound cue the player must act on has a visible twin.",
       "standing": "established", "source": "Game Accessibility Guidelines (basic); Xbox Accessibility Guideline 103",
-      "checks": [],
-      "gap": "No list of act-on-it sound cues and their visible twins."
+      "checks": [
+        {"kind": "test", "ref": "sound_twins_test.gd"}
+      ],
+      "gap": "Six act-on cues have no visible twin yet (the four crowd-control holds, the gyro hold and the arena wave whistle); src/presentation/sound_twins.gd lists them as open."
     },
     {
       "id": "P10", "name": "Marks before words, one name for one thing",
