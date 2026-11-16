@@ -1258,6 +1258,9 @@ func pad_screen_key(event: InputEvent) -> int:
 				return KEY_NONE
 			return KEY_SPACE
 		if state == "summary" or state == "dead":
+			# Once the stick has put the highlight on a button, A presses that button (as on the title).
+			if get_viewport().gui_get_focus_owner() != null:
+				return KEY_NONE
 			return KEY_N
 	elif event.button_index == JOY_BUTTON_B:
 		if state == "summary":

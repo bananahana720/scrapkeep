@@ -16,7 +16,7 @@ const ChoiceButton := preload("res://src/ui/choice_button.gd")
 
 const SHELF_COLORS := [Palette.AMBER, Palette.COPPER, Palette.SANDSTONE, Palette.LEDGER]
 const DETENTS := ["Idle", "Cruise", "Full tilt"]
-const SLEEVE_SIZE := Vector2(232.0, 40.0)
+const SLEEVE_SIZE := Vector2(232.0, 44.0)
 const DECK := 300.0
 const CRATE_H := 360.0
 

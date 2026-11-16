@@ -1304,17 +1304,17 @@ func _backs(event: InputEvent) -> bool:
 	return event is InputEventKey and event.pressed and not event.echo and event.physical_keycode == KEY_ESCAPE
 
 
-# On the title with nothing focused, a pad's d-pad or stick lands on the first button so A
+# On the title, the death screen and the summary with nothing focused, a pad's d-pad or stick lands on the first button so A
 # can press it. Pad events only: the keyboard's arrows keep doing what they did.
 func _pad_enters_title(event: InputEvent) -> bool:
 	if not (event is InputEventJoypadButton or event is InputEventJoypadMotion) or overlay_open():
 		return false
-	if game.flow.state_name() != "title" or get_viewport().gui_get_focus_owner() != null:
+	if not _state in ["title", "dead", "summary"] or get_viewport().gui_get_focus_owner() != null:
 		return false
 	for action in ["ui_down", "ui_up", "ui_left", "ui_right"]:
 		if event.is_action_pressed(action):
 			for child in _actions.get_children():
-				if child is Button and child.focus_mode != Control.FOCUS_NONE:
+				if child is Button and child.focus_mode != Control.FOCUS_NONE and not child.disabled:
 					child.grab_focus()
 					return true
 	return false
