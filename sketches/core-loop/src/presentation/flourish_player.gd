@@ -278,14 +278,18 @@ func advance(delta: float) -> void:
 	if clock >= length():
 		_finish("")
 		return
-	for i in _pieces.size():
-		var piece: Dictionary = _pieces[i]
-		if not _started[i] and clock >= float(piece.at):
-			_started[i] = true
-			var node := _build(piece)
-			if node != null:
-				node.set_meta("flourish_kind", String(piece.kind))
-				_live.append({"piece": piece, "node": node, "end": float(piece.at) + float(piece["for"])})
+	# Sound words start last, so a stamp or card that starts the same frame is already live for the word to keep off.
+	for words_pass in [false, true]:
+		for i in _pieces.size():
+			var piece: Dictionary = _pieces[i]
+			if (String(piece.kind) == "sfx_word") != words_pass:
+				continue
+			if not _started[i] and clock >= float(piece.at):
+				_started[i] = true
+				var node := _build(piece)
+				if node != null:
+					node.set_meta("flourish_kind", String(piece.kind))
+					_live.append({"piece": piece, "node": node, "end": float(piece.at) + float(piece["for"])})
 	for entry in _live.duplicate():
 		if clock >= float(entry.end):
 			_drop(entry)

@@ -277,6 +277,28 @@ func _run() -> void:
 	var lone := _starts(layer)
 	t.check("h: a lone number is not moved (start rect centred on its point)", lone.size() == 1 and absf(lone[0].get_center().x - _view.x * 0.8) < 1.0)
 
+	# i: a word that starts in the same frame as its own row's stamp
+	_reset()
+	_fl.play("bowl_handoff", 1, {}, "short")
+	_fl.stop_all()
+	_fl.playing = true
+	_fl.id = "bowl_handoff"
+	_fl.short = true
+	_fl.clock = 0.0
+	_fl._pieces = [{"kind": "sfx_word", "at": 0.0, "for": 0.8, "text": "FWOOMP", "at_share": Vector2(0.5, 0.40)},
+		{"kind": "stamp", "at": 0.0, "for": 0.9, "text": "ROUTED", "colour": "AMBER", "slot": "centre"}]
+	_fl._started.assign([false, false])
+	_fl.advance(0.0)
+	var sw: Array = _fl.live_nodes().filter(func(n): return n.get_meta("flourish_kind", "") == "sfx_word")
+	var ss: Array = _fl.live_nodes().filter(func(n): return n.get_meta("flourish_kind", "") == "stamp")
+	var meets := 0
+	for w in sw:
+		if w.is_visible_in_tree() and Rect2(w.position, w.size).intersects(Rect2(ss[0].position, ss[0].size)):
+			meets += 1
+	t.check("i: the row's stamp is live (%d)" % ss.size(), ss.size() == 1)
+	t.check("i: a word starting with its own row's stamp is held or clear of it (%d words, %d over)" % [sw.size(), meets], meets == 0)
+	_fl.stop_all()
+
 	# Cost: rect tests per placement
 	_reset()
 	var before: int = _tests()
