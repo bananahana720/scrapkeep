@@ -13,9 +13,13 @@ const Game := preload("res://src/game.gd")
 const Harness := preload("res://tests/doubles/boss_harness.gd")
 const PlayerFx := preload("res://src/presentation/player_fx.gd")
 const Requisition := preload("res://src/boss/requisition.gd")
+const BossModel := preload("res://src/boss/boss_model.gd")
 
 # Close enough that the 5 m above the placeholder box is taller on screen than a word.
 const CAM_M := 26.0
+# The chase camera eases its field of view with how fast the ball went, over game time, so the same frame count
+# shows the ship a few percent larger on a slower run. Every try sets the same field of view.
+const FOV := 74.0
 
 var t := T.new("player_fx_brindle_test")
 var _game
@@ -38,10 +42,34 @@ func _run() -> void:
 	Harness.enter(_game, Vector3(18.0, 0.0, 0.0))
 	for _i in 30:
 		await process_frame
+	# Brindle's arrival row puts a caption and a close-up panel on screen for a game-time span, and how much of it
+	# has played by a frame count depends on the machine's load. The tries below ask for clear screen, so no row
+	# is showing: stop it, as a screen change does. (Waiting for it to end instead runs on into the fight's first
+	# attacks, whose warnings are also game-time driven.)
+	_game.presentation.flourish.stop_all()
+	for _i in 2:
+		await process_frame
+	# The boss walks the ship along its route every frame (requisition.move_to), by game time, so how far it has
+	# gone when the tries start depends on the machine's load, and so do the hull's screen rects. Hold it still.
+	_game.boss.process_mode = Node.PROCESS_MODE_DISABLED
 	var fx = _game.presentation.player_fx
 	var ship: Node3D = _game.boss.ship
 	var cam: Camera3D = _game.camera.cam
 	t.check("Brindle's model loaded over the primitives", ship.model != null)
+	# The intro arcs the model over the rim on a tween bound to it (flourish_cues._rise), by game time, so under load
+	# the tries met the hull up to 2 m along that arc. Stop the model processing, which pauses the tween, and stand
+	# it where the arc lands.
+	ship.model.process_mode = Node.PROCESS_MODE_DISABLED
+	ship.model.position = Vector3.ZERO
+	# The idle roll loops on game time, so the hull's screen rects (and the room beside them) shift by a few dozen
+	# pixels with how far the clip has run when the tries start. Hold it at its first frame.
+	var idle := BossModel.player_of(ship.model)
+	if idle != null:
+		# Under load the fight has reached its next clip by now, whose first frame poses the hull elsewhere, so put
+		# the idle roll back with no blend before holding it.
+		idle.play("idle_roll", 0.0)
+		idle.seek(0.0, true)
+		idle.speed_scale = 0.0
 	_game.player.set_frozen(true)
 	var meshes: Array[MeshInstance3D] = []
 	for m in ship.model.find_children("*", "MeshInstance3D", true, false):
@@ -57,8 +85,11 @@ func _run() -> void:
 	var first_hit := ""
 	for setup in 3:
 		var label: String = ["side", "turned 45", "beside the hull"][setup]
+		# The screen spots sit at a third and a half of the height. At 0.7 a word beside the ball reached the hull's
+		# lower rects once the model stood at rest, so those were not clear screen: the old pass came from the intro arc
+		# holding the model about 2 m up when the tries began.
 		for spot in [Vector3(-4.5, 6.5, -2.0), Vector3(4.5, 6.5, 2.0), Vector3(0.0, 6.5, 4.8), Vector3(0.0, 3.0, 0.0), Vector3(0.0, 6.0, -5.0), Vector3(0.0, 8.5, 0.0), Vector3(-7.0, 8.0, -4.5), Vector3(3.0, 8.0, 4.5), Vector3(-6.0, 7.5, 2.0),
-				Vector2(0.14, 0.5), Vector2(0.86, 0.5), Vector2(0.14, 0.7), Vector2(0.86, 0.7)]:
+				Vector2(0.14, 0.5), Vector2(0.86, 0.5), Vector2(0.14, 0.3), Vector2(0.86, 0.3)]:
 			ship.global_transform = base_xf
 			if setup == 1:
 				ship.global_transform = Transform3D(base_xf.basis.rotated(Vector3.UP, deg_to_rad(45.0)), base_xf.origin)
@@ -73,13 +104,18 @@ func _run() -> void:
 			await process_frame
 			cam.global_position = ship.to_global(cam_at)
 			cam.look_at(ship.to_global(look), Vector3.UP)
+			cam.fov = FOV
 			if on_screen:
 				ball_at = cam.project_position(cam.get_viewport().get_visible_rect().size * spot, 40.0)
 				Harness.put_ball(_game, ball_at)
 				cam.global_position = ship.to_global(cam_at)
 				cam.look_at(ship.to_global(look), Vector3.UP)
+			cam.fov = FOV
 			fx._last_word = -1.0e9
 			fx._word_seen.clear()
+			# The fight rects are cached per frame, and this frame's were taken through the chase camera before the
+			# test moved it. Under load that camera has eased further, so the stale rects covered the asked spots.
+			fx._fight_frame = -1
 			for w in fx._words:
 				w["t"] = 1.0
 			var said: bool = fx.word("slam", ball_at)
