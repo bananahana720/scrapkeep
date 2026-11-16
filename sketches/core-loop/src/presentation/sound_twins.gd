@@ -26,14 +26,36 @@ extends RefCounted
 #           these and pins their count, so none can be added silently.
 #   RELAY   a shared row or emitter whose facts are judged at their callers.
 #   NOT_ACT not act-on, one reason per group.
+# World 1. The test derives the facts that can fire in world 1 (the dam and flume park files' forms and
+# music cues, the roster units those files name or mark world 1, the scanned sites in WORLD1_FILES, and
+# every table fact with a firing site) and FAILS any of them marked not traced. A not-act row counts as
+# traced when its firing site was found; its reason was judged from the row and the site, not by reading
+# each consequence. A row outside the world 1 check (world 2 and 3 forms, bank sounds with no fact) may be
+# untraced, and the count is pinned.
+#
+# The toast rule. A toast is a twin only for the fact that IS that toast's event (event_announced's klaxon
+# and event_ended's "lost" toast). The toast and the edge marker that the park director's announced fact
+# shows name an event, not a place on the ground, so for a world warning the player must move for (a park
+# telegraph, a siren) the twin must be a mark in the world; a toast alone leaves the row OPEN, severity
+# info, with a note that the toast shows.
+#
 # Moving a row to ACT means building the twin first; the test cannot see game changes that add a
 # new warning, only that the new fact is listed.
 
-const OPEN_PINNED := 16
+const OPEN_PINNED := 10
 # Rows read only by name, not traced through code. This number may only go down.
-const UNTRACED_PINNED := 473
+const UNTRACED_PINNED := 305
 # Not-act rows for a cue in DANGER_SOUNDS (printed by the test with their reasons).
 const DANGER_NOT_ACT_PINNED := 1
+
+# Files whose scanned call sites are world 1's own (Brindle, the yard locks and overtime, the called shot,
+# the Wardens, the Spillway rogue and miniboss) or core audio and effects that play in every world.
+const WORLD1_FILES := ["boss.gd", "stage_locks.gd", "overtime.gd", "called_shot.gd", "warden.gd", "stub_boss.gd", "miniboss.gd", "rogue.gd", "audio.gd", "juice.gd", "panel_fx.gd", "projectile.gd"]
+# Facts that can fire in world 1 and no rule finds: fact id -> why (none today).
+const WORLD1_EXTRA := {}
+# Table facts with no firing site found by the emit scan (their signal is emitted some other way). They
+# sit outside the world 1 check; this number may only go down.
+const UNSITED_PINNED := 128
 
 const ACT := [
 	{"facts": ["ROWS:event_announced"], "traced": true, "what": "the toast \"<event> incoming\"",
@@ -44,10 +66,10 @@ const ACT := [
 		"script": "res://src/presentation/machine_fx.gd", "fn": "boss_phase", "token": "fire(row[\"phase\"], at + lift, row[\"tint\"], \"P1\")"},
 	{"facts": ["ROWS:player_hit"], "traced": true, "what": "the screen-edge flash toward the hit",
 		"script": "res://src/presentation/juice.gd", "fn": "_on_player_hit", "token": "vfx.edge_flash(_screen_direction(from)"},
-	{"facts": ["ROWS:threat_rose"], "traced": true, "what": "the threat tier on the run status line",
-		"script": "res://src/ui/hud.gd", "fn": "setup", "token": "game.events.threat_rose.connect("},
-	{"facts": ["ROWS:beacon_unsealed"], "traced": true, "what": "the done-line tick for the sealed beacon",
-		"script": "res://src/ui/hud.gd", "fn": "setup", "token": "game.events.beacon_unsealed.connect(func("},
+	{"facts": ["ROWS:threat_rose"], "traced": true, "what": "the threat tier drawn on the run status line (hud.gd setup stores it from threat_rose; _process hands it to set_status)",
+		"script": "res://src/ui/hud.gd", "fn": "_process", "token": "_status.set_status(tbl.local(run.stage), world_stages, has_boss, flow.in_arena, _threat)"},
+	{"facts": ["ROWS:beacon_unsealed"], "traced": true, "what": "the done-line tick that the Warden goal is finished",
+		"script": "res://src/ui/hud.gd", "fn": "setup", "token": "_done.note(Objectives.done_words(\"warden\"))"},
 	{"facts": ["ROWS:scrap_lost"], "traced": true, "what": "the toast \"Chase your scrap\"",
 		"script": "res://src/ui/hud.gd", "fn": "toast_kind", "token": "toast(toast_text(kind, fields), EventKinds.color(kind)", "toast": "scrap_lost"},
 	{"facts": ["ROWS:player_died"], "traced": true, "what": "the toast \"Scrapped\"",
@@ -56,16 +78,16 @@ const ACT := [
 		"script": "res://src/core/flow.gd", "fn": "objective_text", "token": "EventKinds.objective(\"reward_offered\")"},
 	{"facts": ["ROWS:pack_arrived"], "traced": true, "what": "the pack's edge marker with its faction icon",
 		"script": "res://src/ui/edge_markers.gd", "fn": "targets", "token": "\"kind\": \"pack_arrived\""},
-	{"facts": ["ROWS:vent_charging"], "traced": false, "what": "the vent's committed ring on the ground where it will blow",
-		"script": "res://src/combat/reactor_relic.gd", "fn": "_commit", "token": "_commit_ring(Threat.Type.INSTANT, aim, VENT_RADIUS"},
-	{"facts": ["ROWS:line_skill_loaded", "LINE_ROWS:locked"], "traced": false, "what": "the HOOK word on the harpoon key when the line locks",
-		"script": "res://src/ui/key_glyphs.gd", "fn": "word_for", "token": "EventKinds.LINE_ROWS[\"locked\"][\"word\"]"},
+	{"facts": ["ROWS:vent_charging"], "traced": true, "what": "the Reactor Warden's own core ring laid on the ground at warden.gd:746 where it will blow (and the counter ring at :776; reactor_relic.gd also commits a vent ring)",
+		"script": "res://src/combat/warden.gd", "fn": "_step_pulse", "token": "_core_ring = Telegraph.ring(world_root, terrain, Threat.Type.INSTANT, global_position, CORE_RADIUS)",
+		"also": [{"what": "the counter ring the Warden lays on its second emit", "script": "res://src/combat/warden.gd", "fn": "_step_counter", "token": "_counter_ring = Telegraph.ring(world_root, terrain, Threat.Type.INSTANT, global_position, CORE_RADIUS)"}, {"what": "the relic's own vent ring", "script": "res://src/combat/reactor_relic.gd", "fn": "_commit", "token": "_commit_ring(Threat.Type.INSTANT, aim, VENT_RADIUS"}]},
+	{"facts": ["ROWS:line_skill_loaded", "LINE_ROWS:locked"], "traced": true, "what": "the lock bracket drawn on the target in the lock colour (the HOOK word on the key retires after the first bite, so the bracket is the lasting twin)",
+		"script": "res://src/presentation/line_view.gd", "fn": "_draw_lock", "token": "_bracket_material.albedo_color = EventKinds.line_color(\"locked\")"},
 	{"facts": ["ROWS:ultimate_ready", "UI_ROWS:ability_ready"], "traced": true, "what": "the slot's ready swell on the ability bar",
 		"script": "res://src/ui/ability_bar.gd", "fn": "update_slots", "token": "_pulses[id] = PULSE_SECONDS"},
-	{"facts": ["THREAT_ROWS:threat_instant", "THREAT_ROWS:threat_wave", "THREAT_ROWS:threat_projectile"], "traced": true, "what": "the hazard's floor mark, painted in the shared threat grammar while it warns",
-		"script": "res://src/boss/hazard.gd", "fn": "step", "token": "_paint(reshaped)"},
-	{"facts": ["THREAT_ROWS:threat_lane"], "traced": true, "what": "the lane's mark, repainted live as the fill ends",
-		"script": "res://src/boss/hazard.gd", "fn": "step", "token": "_paint(reshaped)"},
+	{"facts": ["THREAT_ROWS:threat_instant", "THREAT_ROWS:threat_wave", "THREAT_ROWS:threat_projectile", "THREAT_ROWS:threat_lane"], "traced": true, "what": "a boss Hazard's floor mark, repainted each step in the shared threat grammar",
+		"script": "res://src/boss/hazard.gd", "fn": "step", "token": "_paint(reshaped)",
+		"also": [{"what": "the combat Telegraph's fill advanced each step (the Warden's pulse ring and the crews' telegraphs; audio.gd _warn_threat sounds both kinds)", "script": "res://src/combat/telegraph.gd", "fn": "step", "token": "set_progress(age / maxf(warn_seconds, 0.001))"}]},
 	{"facts": ["WORLD_ROWS:flood_rising", "WORLD_ROWS:trestle_groan", "WORLD_ROWS:lightning_charge"], "traced": true, "what": "the telegraph mark the natural family lays on the ground at the telegraph action",
 		"script": "res://src/world/events/natural.gd", "fn": "handle", "token": "\"mark\": _mark(row, state.geometry)"},
 	{"facts": ["WORLD_ROWS:ground_slump", "WORLD_ROWS:crust_crack", "WORLD_ROWS:lightning_mark", "WORLD_ROWS:impact_incoming"], "traced": false, "what": "the same natural-family telegraph mark",
@@ -82,35 +104,35 @@ const ACT := [
 		"script": "res://src/world/events/rubble_fall.gd", "fn": "_commit", "token": "hazard.commit_annulus(id, Threat.Type.INSTANT, centre"},
 	{"facts": ["WORLD_ROWS:cinder_glow", "WORLD_ROWS:cinder_burn"], "traced": false, "what": "the floor's cinder glow",
 		"script": "res://src/world/contraptions.gd", "fn": "set_cinder_glow", "token": "_cinder_glow = glow"},
-	{"facts": ["tele@boss.gd#1"], "traced": true, "what": "Brindle's crane sweep floor sector, committed in the same function",
+	{"facts": ["tele@boss.gd:_commit_crane:crane_sweep"], "traced": true, "what": "Brindle's crane sweep floor sector, committed in the same function",
 		"script": "res://src/boss/boss.gd", "fn": "_commit_crane", "token": "h.commit_sector(\"crane_%d\" % i"},
-	{"facts": ["tele@boss.gd#2"], "traced": true, "what": "Brindle's slag ring, committed in the same function",
+	{"facts": ["tele@boss.gd:_commit_slag:id"], "traced": true, "what": "Brindle's slag ring, committed in the same function",
 		"script": "res://src/boss/boss.gd", "fn": "_commit_slag", "token": "h.commit_annulus(id, Hazard.Threat.Type.INSTANT, arena.global_position"},
-	{"facts": ["tele@boss.gd#3"], "traced": true, "what": "Brindle's charge lane, committed in the same function",
+	{"facts": ["tele@boss.gd:_commit_charge:charge_wall"], "traced": true, "what": "Brindle's charge lane, committed in the same function",
 		"script": "res://src/boss/boss.gd", "fn": "_commit_charge", "token": "h.commit_lane(\"charge\""},
-	{"facts": ["tele@mind.gd#1"], "traced": false, "what": "the Mind's committed hazard, laid before the publish",
+	{"facts": ["tele@mind.gd:_commit_attack:String"], "traced": false, "what": "the Mind's committed hazard, laid before the publish",
 		"script": "res://src/boss/mind.gd", "fn": "_commit_attack", "token": "laid.append(h)"},
-	{"facts": ["cued@boss.gd#2"], "traced": true, "what": "the hull swings its bow round after the ball through the cue lead",
+	{"facts": ["cued@boss.gd:_run_charge:charge"], "traced": true, "what": "the hull swings its bow round after the ball through the cue lead",
 		"script": "res://src/boss/boss.gd", "fn": "_step_charges", "token": "_turn_ship(_aim_at(ball), Rules.CHARGE_TURN_RATE, delta)"},
-	{"facts": ["cued@miniboss.gd#1"], "traced": true, "what": "the miniboss raises its fists through the cue lead",
+	{"facts": ["cued@miniboss.gd:_after_slam:E04"], "traced": true, "what": "the miniboss raises its fists through the cue lead",
 		"script": "res://src/combat/miniboss.gd", "fn": "_model_pose", "token": "fists = Vector3(0.0, 0.2, -0.5) * t"},
-	{"facts": ["emit:arena_locked@stage_locks.gd#1"], "traced": true, "what": "the yard wall rises",
+	{"facts": ["emit:arena_locked@stage_locks.gd:_lock"], "traced": true, "what": "the yard wall rises",
 		"script": "res://src/world/stage_locks.gd", "fn": "_lock", "token": "_build_wall(radius)"},
-	{"facts": ["emit:arena_unlocked@stage_locks.gd#1"], "traced": true, "what": "the yard wall drops",
+	{"facts": ["emit:arena_unlocked@stage_locks.gd:_unlock"], "traced": true, "what": "the yard wall drops",
 		"script": "res://src/world/stage_locks.gd", "fn": "_unlock", "token": "_drop_wall()"},
-	{"facts": ["emit:warden_gate_refused@stage_locks.gd#1"], "traced": true, "what": "the objective line \"The Warden's clamp is shut: break N crews\"",
+	{"facts": ["emit:warden_gate_refused@stage_locks.gd:_on_enemy_struck"], "traced": true, "what": "the objective line \"The Warden's clamp is shut: break N crews\"",
 		"script": "res://src/world/stage_locks.gd", "fn": "objective", "token": "\"The Warden's clamp is shut: break %d crews"},
-	{"facts": ["emit:warden_gate_opened@stage_locks.gd#1"], "traced": true, "what": "the Warden's collar drops away",
+	{"facts": ["emit:warden_gate_opened@stage_locks.gd:_step_gate"], "traced": true, "what": "the Warden's collar drops away",
 		"script": "res://src/world/stage_locks.gd", "fn": "_step_gate", "token": "_drop_collar()"},
-	{"facts": ["emit:arena_wave@overtime.gd#1"], "traced": true, "what": "the wave's enemies are spawned in the same function, just before the emit",
+	{"facts": ["emit:arena_wave@overtime.gd:_land_wave"], "traced": true, "what": "the wave's enemies are spawned in the same function, just before the emit",
 		"script": "res://src/world/overtime.gd", "fn": "_land_wave", "token": "ctx.spawner.spawn_enemy(String(kinds[i])"},
-	{"facts": ["emit:sluice_warning@overtime.gd#1"], "traced": true, "what": "the water shows at the warning",
+	{"facts": ["emit:sluice_warning@overtime.gd:open_sluice"], "traced": true, "what": "the water shows at the warning",
 		"script": "res://src/world/overtime.gd", "fn": "open_sluice", "token": "_show_water(true)"},
-	{"facts": ["emit:sluice_open@overtime.gd#1"], "traced": true, "what": "the flood water shows as the sluice opens",
+	{"facts": ["emit:sluice_open@overtime.gd:_step_sluice"], "traced": true, "what": "the flood water shows as the sluice opens",
 		"script": "res://src/world/overtime.gd", "fn": "_step_sluice", "token": "_show_water(true)"},
 	{"facts": ["roster:hooker.tag", "roster:ramp_flipper.tag"], "traced": true, "what": "the unit's telegraph floor mark carries the tag, set on the same object",
 		"script": "res://src/combat/counter.gd", "fn": "_voice", "token": "tele.mechanic_tag = Roster.voiced("},
-	{"facts": ["roster:mag_trapper.tag", "roster:netcaster.tag", "roster:bola_thrower.tag", "roster:plated_brute.tag", "roster:deflector.tag", "roster:winch_drone.tag", "roster:gyro_jammer.tag", "roster:swatter.tag", "roster:catch_trap.tag", "roster:reactor_relic.tag", "roster:mind_hand.tag"], "traced": false, "what": "the unit's telegraph floor mark carries the tag, set on the same object",
+	{"facts": ["roster:mag_trapper.tag", "roster:netcaster.tag", "roster:bola_thrower.tag", "roster:plated_brute.tag", "roster:deflector.tag", "roster:winch_drone.tag", "roster:gyro_jammer.tag", "roster:swatter.tag", "roster:catch_trap.tag", "roster:reactor_relic.tag", "roster:mind_hand.tag"], "traced": true, "what": "the unit's telegraph floor mark carries the tag, set on the same object",
 		"script": "res://src/combat/counter.gd", "fn": "_voice", "token": "tele.mechanic_tag = Roster.voiced("},
 	{"facts": ["roster:swarm_remnant.tag"], "traced": false, "what": "the swarm's formation lane carries the tag",
 		"script": "res://src/combat/swarm_remnant.gd", "fn": "commit_formation_lane", "token": "lane.mechanic_tag = String("},
@@ -128,15 +150,15 @@ const ACT := [
 		"script": "res://src/presentation/machine_fx.gd", "fn": "special_moment", "token": "fire(row[moment], top, tint, cls)"},
 	{"facts": ["pressure:flank_call", "pressure:boil_rumble"], "traced": true, "what": "a hazard chevron over the caller until the telegraph",
 		"script": "res://src/presentation/presentation.gd", "fn": "_on_pressure_cue", "token": "vfx.glyph(\"enemy_spawned\", at + Vector3.UP * 2.5"},
-	{"facts": ["warn_sound:prop_crew_strain@prop_crew.gd", "warn_sound:cave_in_rumble@cave_ins.gd"], "traced": false, "what": "the committed floor warning under the falling slab",
+	{"facts": ["warn_sound:prop_crew_strain@prop_crew.gd:knock_prop", "warn_sound:cave_in_rumble@cave_ins.gd:surface_at"], "traced": false, "what": "the committed floor warning under the falling slab",
 		"script": "res://src/world/events/rubble_fall.gd", "fn": "_commit", "token": "hazard.commit_annulus(id, Threat.Type.INSTANT, centre"},
-	{"facts": ["site:fleet.gd:zipline_whine"], "traced": false, "what": "the trolley itself, riding the line the whine is attached to",
+	{"facts": ["site:fleet.gd:_step_line:zipline_whine"], "traced": false, "what": "the trolley itself, riding the line the whine is attached to",
 		"script": "res://src/world/events/fleet.gd", "fn": "_step_line", "token": "FoleyAudio.player(\"zipline_whine\", trolley)"},
-	{"facts": ["site:fleet.gd:lift_cage_arrive"], "traced": false, "what": "the cage's landing mark the clank is placed on",
+	{"facts": ["site:fleet.gd:_lift:lift_cage_arrive"], "traced": false, "what": "the cage's landing mark the clank is placed on",
 		"script": "res://src/world/events/fleet.gd", "fn": "_lift", "token": "FoleyAudio.one_shot(\"lift_cage_arrive\", self, state.mark"},
-	{"facts": ["site:waking.gd:seal_ratchet"], "traced": false, "what": "the crew casting's seam strip brightens with seal progress",
+	{"facts": ["site:waking.gd:top:seal_ratchet"], "traced": false, "what": "the crew casting's seam strip brightens with seal progress",
 		"script": "res://src/combat/crew_fitter.gd", "fn": "_update_cue", "token": "energy = lerpf(SEAM_LIT, SEAM_SEALING"},
-	{"facts": ["site:projectile.gd:vault_rise"], "traced": true, "what": "the incoming shell's rim lights when the ball can bat it",
+	{"facts": ["site:projectile.gd:top:vault_rise"], "traced": true, "what": "the incoming shell's rim lights when the ball can bat it",
 		"script": "res://src/combat/projectile.gd", "fn": "_build_rim", "token": "_rim_quad.size = Vector2.ONE * RIM_SIZE"},
 	{"facts": ["music:riser_natural", "music:riser_dam_siren"], "traced": true, "what": "the natural family's telegraph mark, laid while the riser plays",
 		"script": "res://src/world/events/natural.gd", "fn": "handle", "token": "\"mark\": _mark(row, state.geometry)"},
@@ -146,7 +168,7 @@ const ACT := [
 		"script": "res://src/world/events/industrial.gd", "fn": "_telegraph", "token": "hazard.commit_annulus(row.id, Threat.Type.INSTANT, at"},
 	{"facts": ["family:cause_note_"], "traced": false, "what": "the Warden ring's arcs light with posture (the posture phrase); the same notes also spell a synergy motif, which is a reward",
 		"script": "res://src/presentation/warden_ring.gd", "fn": "_sync", "token": "visible = active()"},
-	{"facts": ["tele@waking.gd#1"], "traced": false, "what": "the Mind-arena hazard laid before the publish (the floor-drop warning at waking.gd:239 shares this emit and is not traced)",
+	{"facts": ["tele@waking.gd:_warned:id"], "traced": false, "what": "the Mind-arena hazard laid before the publish (the floor-drop warning at waking.gd:239 shares this emit and is not traced)",
 		"script": "res://src/boss/waking.gd", "fn": "_lay_pending", "token": "ctx.root.add_child(h)"},
 	{"facts": ["bank:sable_ready", "bank:rivet_ready", "bank:kest_ready", "bank:tarn_ready", "bank:tally_ready", "bank:cannon_ready"], "traced": true, "what": "the slot's ready swell on the ability bar (heard through UI_ROWS:ability_ready as the class's own ready pulse)",
 		"script": "res://src/ui/ability_bar.gd", "fn": "update_slots", "token": "_pulses[id] = PULSE_SECONDS"},
@@ -154,49 +176,45 @@ const ACT := [
 		"script": "res://src/ui/ability_bar.gd", "fn": "refuse", "token": "_refusals[slot] = SHAKE_TIME"},
 	{"facts": ["bank:threat_tear"], "traced": true, "what": "the lane's mark repaints live as the fill ends",
 		"script": "res://src/boss/hazard.gd", "fn": "step", "token": "_paint(reshaped)"},
+	{"facts": ["sig:weak_point_opened@warden.gd:_begin_stagger", "sig:weak_point_opened@stub_boss.gd:_publish_posture"], "traced": true, "what": "the Warden ring's lit arcs take the plate's open colour while the Warden is staggered",
+		"script": "res://src/presentation/warden_ring.gd", "fn": "_sync", "token": "_arc_materials[i].albedo_color = arc_color(i)"},
+	{"facts": ["sig:weak_point_opened@stub_boss.gd:_open_weak"], "traced": true, "what": "the opened part is redrawn on the same call",
+		"script": "res://src/boss/stub_boss.gd", "fn": "_open_weak", "token": "_sync_part(id)"},
+	{"facts": ["roster:hooker.hold", "roster:mag_trapper.hold", "roster:netcaster.hold", "roster:bola_thrower.hold", "roster:winch_drone.hold", "roster:gyro_jammer.hold", "roster:catch_trap.hold"], "traced": true, "what": "holds.gd draws the striped binding line from the holder to the ball and a bracket on the ball for as long as the hold lasts",
+		"script": "res://src/combat/holds.gd", "fn": "_process", "token": "_stripes(mesh, from, ball)",
+		"also": [{"what": "the bracket on the held ball", "script": "res://src/combat/holds.gd", "fn": "_process", "token": "_draw_bracket(ball)"}]},
 ]
 
 const OPEN := [
-	{"fact": "WORLD_ROWS:ancient_stirring", "traced": true, "plays": "src/world/event_director.gd:511",
-		"what": "the ancient family's telegraph only prepares an overlay (ancient.gd handle, _prepare); nothing is drawn until the land action. Fires in the dam (toe_vents_wake) and the flume (bend_relic_wakes)", "severity": "warning"},
-	{"fact": "music:riser_ancient", "traced": true, "plays": "src/world/event_director.gd:511",
-		"what": "the riser that plays under ancient_stirring: the same missing telegraph", "severity": "warning"},
-	{"fact": "music:riser_mind_quote", "traced": false, "plays": "src/world/event_director.gd:511",
-		"what": "the Mind's riser, ancient family: same missing telegraph", "severity": "warning"},
-	{"fact": "WORLD_ROWS:sluice_siren", "traced": true, "plays": "src/world/event_director.gd:511",
-		"what": "the flume head gate's siren; industrial.gd handle returns for sluice_surge so nothing is committed or drawn at the telegraph; the water only shows when the course goes live. The sound is beacon_hum because sluice_siren_two_tone has no recipe", "severity": "info"},
-	{"fact": "emit:arena_wave@stage_locks.gd#1", "traced": true, "plays": "src/world/stage_locks.gd:389",
+	{"fact": "WORLD_ROWS:ancient_stirring", "traced": true, "plays": "src/world/event_director.gd:_advance_park", "pattern": "_park_world(selected, selected.row.telegraph.form, \"telegraph\")",
+		"what": "the ancient family's telegraph only prepares an overlay (ancient.gd handle, _prepare); nothing is drawn in the world until the land action. The announce toast and the edge marker do show, but name no place on the ground, so under the rule in this file the row stays open. Fires in the dam (toe_vents_wake) and the flume (bend_relic_wakes)", "severity": "info"},
+	{"fact": "music:riser_ancient", "traced": true, "plays": "src/world/event_director.gd:_advance_park", "pattern": "_park_world(selected, selected.row.telegraph.form, \"telegraph\")",
+		"what": "the riser that plays under ancient_stirring: the same missing mark in the world", "severity": "info"},
+	{"fact": "music:riser_mind_quote", "traced": false, "plays": "src/world/event_director.gd:_advance_park", "pattern": "_park_world(selected, selected.row.telegraph.form, \"telegraph\")",
+		"what": "the Mind's riser, ancient family: same missing mark (world 3, not traced)", "severity": "info"},
+	{"fact": "WORLD_ROWS:sluice_siren", "traced": true, "plays": "src/world/event_director.gd:_advance_park", "pattern": "_park_world(selected, selected.row.telegraph.form, \"telegraph\")",
+		"what": "the flume head gate's siren: industrial.gd handle returns for sluice_surge so no mark is laid; the toast and edge marker show. The water chases but never hurts, hence info. The sound is beacon_hum because sluice_siren_two_tone has no recipe", "severity": "info"},
+	{"fact": "emit:arena_wave@stage_locks.gd:_step_lock", "traced": true, "plays": "src/world/stage_locks.gd:_step_lock", "pattern": "world_fact.emit(\"arena_wave\", lock_centre)",
 		"what": "the yard's next wave is coming; the emit fires when the crew is dead and the wave lands _wave_wait seconds later, nothing on screen at the cue", "severity": "warning"},
-	{"fact": "cued@boss.gd#1", "traced": true, "plays": "src/boss/boss.gd:826",
+	{"fact": "cued@boss.gd:_step_reprise:slag_ring_a", "traced": true, "plays": "src/boss/boss.gd:_step_reprise", "pattern": "_phases.cue(",
 		"what": "Brindle's slag ring reprise: the cue sounds, the ring commits CUE_LEAD later with the shorter CUED_WARN because the cue paid for it; nothing is drawn during the lead, so a muted player gets a shorter warning and no tell", "severity": "fairness"},
-	{"fact": "cued@rogue.gd#1", "traced": true, "plays": "src/combat/rogue.gd:305",
+	{"fact": "cued@rogue.gd:_finish_strike:emit", "traced": true, "plays": "src/combat/rogue.gd:_finish_strike", "pattern": "attack_cued.emit(",
 		"what": "the rogue's chained attack: _enter(State.CUE) moves with zero velocity and draws no pose; the cue is the only tell before the geometry", "severity": "warning"},
-	{"fact": "tele@boss.gd#4", "traced": true, "plays": "src/boss/boss.gd:1197",
+	{"fact": "tele@boss.gd:_begin_eject:eject", "traced": true, "plays": "src/boss/boss.gd:_begin_eject", "pattern": "_publish(\"boss_attack_telegraphed\"",
 		"what": "Brindle's eject publishes boss_attack_telegraphed with no hazard or ring committed", "severity": "warning"},
-	{"fact": "site:audio.gd:heat_kettle", "traced": true, "plays": "src/presentation/audio.gd:4224",
+	{"fact": "site:audio.gd:_tend_kettle:heat_kettle", "traced": true, "plays": "src/presentation/audio.gd:_tend_kettle", "pattern": "\"heat_kettle\"",
 		"what": "the kettle sounds only in the last 2 s of a 4 s fuse, but the shell rim is white for the whole redline, so nothing on screen says 2 s left", "severity": "warning"},
-	{"fact": "roster:hooker.hold", "traced": true, "plays": "src/presentation/audio.gd:2305",
-		"what": "the hold loop while the ball is held; only audio listens to hold_started, no screen script does", "severity": "warning"},
-	{"fact": "roster:mag_trapper.hold", "traced": false, "plays": "src/presentation/audio.gd:2305",
-		"what": "the hold loop while the ball is held; only audio listens to hold_started, no screen script does", "severity": "warning"},
-	{"fact": "roster:netcaster.hold", "traced": false, "plays": "src/presentation/audio.gd:2305",
-		"what": "the hold loop while the ball is held; only audio listens to hold_started, no screen script does", "severity": "warning"},
-	{"fact": "roster:bola_thrower.hold", "traced": false, "plays": "src/presentation/audio.gd:2305",
-		"what": "the hold loop while the ball is held; only audio listens to hold_started, no screen script does", "severity": "warning"},
-	{"fact": "roster:winch_drone.hold", "traced": false, "plays": "src/presentation/audio.gd:2305",
-		"what": "the hold loop while the ball is held; only audio listens to hold_started, no screen script does", "severity": "warning"},
-	{"fact": "roster:gyro_jammer.hold", "traced": false, "plays": "src/presentation/audio.gd:2305",
-		"what": "the hold loop while the ball is held; only audio listens to hold_started, no screen script does", "severity": "warning"},
-	{"fact": "roster:catch_trap.hold", "traced": false, "plays": "src/presentation/audio.gd:2305",
-		"what": "the hold loop while the ball is held; only audio listens to hold_started, no screen script does", "severity": "warning"},
+	{"fact": "sig:weak_point_opened@mind_hand.gd:_go_live", "traced": false, "plays": "src/combat/mind_hand.gd:_go_live", "pattern": "weak_point_opened.emit(",
+		"what": "the Mind hand's lens opens on go-live; world 3, no twin traced", "severity": "info"},
 ]
 
 const RELAY := {
 	"ROWS:boss_attack_telegraphed": "judged at each place that publishes it (the tele@ rows)",
 	"ROWS:attack_cued": "judged at each place that cues it (the cued@ rows)",
+	"ROWS:weak_point_opened": "judged at each emit site (the sig@ rows)",
 	"ROWS:hold_started": "the heard sound is chosen per unit at the roster hold rows",
 	"STATE_ROWS:held": "the heard sound is chosen per unit at the roster hold rows",
-	"cued@fight_phases.gd#1": "the shared relay: its callers are the cued@ rows",
+	"cued@fight_phases.gd:cue:emit": "the shared relay: its callers are the cued@ rows",
 	"WORLD_ROWS:arena_locked": "judged at each world_fact.emit site (the emit@ rows)",
 	"WORLD_ROWS:arena_wave": "judged at each world_fact.emit site (the emit@ rows)",
 	"WORLD_ROWS:arena_unlocked": "judged at each world_fact.emit site (the emit@ rows)",
@@ -216,11 +234,13 @@ const RELAY := {
 
 const NOT_ACT := [
 	{"why": "a stinger, music line or flow mark: a card, the HUD or the world already shows the same state", "traced": false,
-		"facts": ["ROWS:run_started", "ROWS:flow_changed", "ROWS:world_entered", "ROWS:stage_entered", "ROWS:stage_cleared", "ROWS:run_ended", "ROWS:beacon_charge_changed", "ROWS:warden_sighted", "ROWS:warden_engaged", "ROWS:stage_content_cleared", "ROWS:milestone_won", "ROWS:enemy_spawned", "ROWS:event_started", "ROWS:event_progress", "ROWS:launched", "ROWS:pressure_changed", "ROWS:boss_arena_entered", "ROWS:fight_phase_changed", "ROWS:boss_defeated", "ROWS:vent_erupted", "ROWS:swarm_scattered", "ROWS:mind_adapted", "ROWS:weak_point_opened", "ROWS:bay_entered", "ROWS:bay_left", "ROWS:world_fact", "ROWS:line_state_changed", "UI_ROWS:run_timer", "WORLD_ROWS:layer_undercroft", "WORLD_ROWS:layer_shelf", "WORLD_ROWS:layer_sky", "WORLD_ROWS:layer_crown_hoodoos", "WORLD_ROWS:layer_crown_alcove", "WORLD_ROWS:layer_crown_toppled", "WORLD_ROWS:layer_crown_ramp", "WORLD_ROWS:layer_mind_quote_spillway", "WORLD_ROWS:landmark_hum"]},
+		"facts": ["ROWS:run_started", "ROWS:flow_changed", "ROWS:world_entered", "ROWS:stage_entered", "ROWS:stage_cleared", "ROWS:run_ended", "ROWS:beacon_charge_changed", "ROWS:warden_sighted", "ROWS:warden_engaged", "ROWS:stage_content_cleared", "ROWS:milestone_won", "ROWS:event_started", "ROWS:event_progress", "ROWS:launched", "ROWS:pressure_changed", "ROWS:boss_arena_entered", "ROWS:fight_phase_changed", "ROWS:boss_defeated", "ROWS:vent_erupted", "ROWS:swarm_scattered", "ROWS:mind_adapted", "ROWS:bay_entered", "ROWS:bay_left", "ROWS:world_fact", "ROWS:line_state_changed", "UI_ROWS:run_timer", "WORLD_ROWS:layer_undercroft", "WORLD_ROWS:layer_shelf", "WORLD_ROWS:layer_sky", "WORLD_ROWS:layer_crown_hoodoos", "WORLD_ROWS:layer_crown_alcove", "WORLD_ROWS:layer_crown_toppled", "WORLD_ROWS:layer_crown_ramp", "WORLD_ROWS:layer_mind_quote_spillway", "WORLD_ROWS:landmark_hum"]},
 	{"why": "a reward, pickup, score or discovery: pays the player and asks nothing", "traced": false,
 		"facts": ["ROWS:achievement_earned", "ROWS:rescue_completed", "ROWS:quick_break", "ROWS:scrap_collected", "ROWS:cogs_collected", "ROWS:part_gained", "ROWS:panel_gained", "ROWS:heft_class_changed", "ROWS:heft_class_dropped", "ROWS:core_gained", "ROWS:synergy_discovered", "ROWS:interaction_found", "ROWS:reward_chosen", "ROWS:tree_offered", "ROWS:tree_picked", "ROWS:ambush_ended", "ROWS:bet_resolved", "ROWS:activity_done", "ROWS:drop_landed", "ROWS:missed_drop", "ROWS:evolution_fired", "ROWS:radio_take_found", "ROWS:relay_stake_paid", "ROWS:maker_set_completed", "ROWS:overflow_cashed", "ROWS:trade_taken", "LOOT_ROWS:item_proc", "LOOT_ROWS:par_split", "WORLD_ROWS:ledger_returned"]},
 	{"why": "echo of the player's own move, hit, press or ride; they see it as it happens", "traced": false,
 		"facts": ["ROWS:escape_window", "ROWS:enemy_killed", "ROWS:jumped", "ROWS:boosted", "ROWS:dashed", "ROWS:landed", "ROWS:bumped", "ROWS:slammed", "ROWS:carved", "ROWS:grapple_fired", "ROWS:grapple_released", "ROWS:mounted", "ROWS:dismounted", "ROWS:enemy_struck", "ROWS:shot_fired", "ROWS:special_used", "ROWS:strike_deflected", "ROWS:element_resolved", "ROWS:boss_weak_point_hit", "ROWS:boss_reeled", "ROWS:enemy_rebounded", "ROWS:enemy_pinned", "ROWS:enemy_walled", "ROWS:enemy_ringed_out", "ROWS:vault_kicked", "ROWS:gauge_charging", "ROWS:gauge_released", "ROWS:gauge_cancelled", "ROWS:sprint_started", "ROWS:cc_ignored", "ROWS:cloak_started", "ROWS:cloak_broken", "ROWS:sticky_detonated", "ROWS:rocket_jumped", "ROWS:blink_used", "ROWS:arc_slammed", "ROWS:skid_smashed", "ROWS:demo_slammed", "ROWS:hold_broken", "ROWS:hold_ended", "ROWS:tenacity_gained", "ROWS:shield_vaulted", "ROWS:near_miss", "ROWS:interact_armed", "ROWS:interact_fired", "ROWS:verb_failed", "ROWS:prompt_shown", "ROWS:cause_armed", "ROWS:cause_fired", "ROWS:posture_changed", "ROWS:slot_selected", "ROWS:slot_cast", "ROWS:line_skill_fired", "ROWS:line_skill_expired", "ROWS:active_fired", "ROWS:active_heat", "ROWS:ultimate_started", "ROWS:ultimate_peak", "ROWS:ultimate_landed", "ROWS:ultimate_cancelled", "ROWS:special_broken", "UI_ROWS:posture_break", "UI_ROWS:ability_cooling", "UI_ROWS:ability_active", "UI_ROWS:ability_unavailable", "UI_ROWS:cooldown_refunded", "UI_ROWS:key_glyph", "WORLD_ROWS:drain_gurgle", "WORLD_ROWS:shell_air_shift", "WORLD_ROWS:lift_fired", "WORLD_ROWS:launcher_charging", "WORLD_ROWS:cannon_fired", "WORLD_ROWS:trebuchet_fired", "WORLD_ROWS:glaze_skim", "WORLD_ROWS:cinder_cooled", "WORLD_ROWS:geyser_fired", "WORLD_ROWS:valve_smashed", "WORLD_ROWS:route_opened", "WORLD_ROWS:wall_crumbled", "WORLD_ROWS:steam_lift_fired", "WORLD_ROWS:breach_opened"]},
+	{"why": "danger-listed enemy_arrive: the spawned body appears at the same call (combat.gd spawn_enemy adds it before the emit) and asks nothing until its windup, which is its own row", "traced": true,
+		"facts": ["ROWS:enemy_spawned"]},
 	{"why": "a menu, shop, camp, ride or tutorial sound: the screen in use shows it", "traced": false,
 		"facts": ["UI_ROWS:callout_scrap", "UI_ROWS:callout_warden", "UI_ROWS:callout_gates", "UI_ROWS:callout_notes", "UI_ROWS:hint_wall_bait", "UI_ROWS:companion_ready", "UI_ROWS:companion_spent", "UI_ROWS:escape_acted", "LOOT_ROWS:shop_entered", "LOOT_ROWS:shop_left", "LOOT_ROWS:shop_bought", "LOOT_ROWS:shop_charge", "LOOT_ROWS:shop_rerolled", "LOOT_ROWS:shop_sold", "LOOT_ROWS:shop_refused", "LOOT_ROWS:moss_beat", "LOOT_ROWS:moss_relent", "LOOT_ROWS:reward_common", "LOOT_ROWS:reward_rare", "LOOT_ROWS:reward_reveal", "LOOT_ROWS:reward_ceremony", "LOOT_ROWS:reward_payoff", "LOOT_ROWS:armor_hit", "LOOT_ROWS:armor_reclaim", "LOOT_ROWS:armor_deflect", "WORLD_ROWS:crater_ride", "WORLD_ROWS:ride_grapple_line", "WORLD_ROWS:ride_glide_drop", "WORLD_ROWS:ride_skylight", "WORLD_ROWS:ride_chute", "WORLD_ROWS:ride_bowl", "WORLD_ROWS:ride_drop", "WORLD_ROWS:ride_ledge", "WORLD_ROWS:ride_hop", "WORLD_ROWS:ride_sheet", "WORLD_ROWS:hoist_ride", "WORLD_ROWS:pool_swell", "WORLD_ROWS:thermal_ride", "WORLD_ROWS:reactor_vented", "WORLD_ROWS:bay_bell", "WORLD_ROWS:bay_jukebox", "WORLD_ROWS:bay_marble_note", "WORLD_ROWS:bay_pins", "WORLD_ROWS:lap_started", "WORLD_ROWS:lap_checkpoint", "WORLD_ROWS:lap_finished"]},
 	{"why": "lands after its warning, which sounded and showed first; the result is already in view", "traced": false,
@@ -238,15 +258,15 @@ const NOT_ACT := [
 	{"why": "music, a class motif or a mood sound: the matching state is already on a card, the HUD or the world", "traced": false,
 		"facts": ["bank:babble", "bank:cannon_break", "bank:crater_hold", "bank:door_tick", "bank:kest_break", "bank:lift_hiss", "bank:mind_cannon", "bank:mind_kest", "bank:mind_rivet", "bank:mind_tally", "bank:mind_tarn", "bank:mind_wrong_cannon", "bank:mind_wrong_kest", "bank:mind_wrong_rivet", "bank:mind_wrong_sable", "bank:mind_wrong_tally", "bank:mind_wrong_tarn", "bank:rivet_break", "bank:sable_break", "bank:stinger_world_down5", "bank:stinger_world_up5", "bank:tally_break", "bank:tarn_break"]},
 	{"why": "a special's presence loop, spawn or death sting, or a landing after its warning: already in view or already warned", "traced": false,
-		"facts": ["bank:ballast_brace_slam", "bank:boiler_burst", "bank:cave_in_debris", "bank:dispatcher_break", "bank:dispatcher_presence", "bank:dispatcher_spawn", "bank:fleet_anvil", "bank:foreman_break", "bank:foreman_presence", "bank:foreman_spawn", "bank:gap_net_charge_live", "bank:jolt_layer_break", "bank:jolt_layer_fizzle", "bank:jolt_layer_jam", "bank:jolt_layer_presence", "bank:linker_break", "bank:linker_presence", "bank:linker_spawn", "bank:prop_crew_collapse", "bank:splitter_break_clean", "bank:splitter_break_split", "bank:splitter_presence", "bank:splitter_spawn", "site:prop_crew.gd:prop_crew_presence"]},
+		"facts": ["bank:ballast_brace_slam", "bank:boiler_burst", "bank:cave_in_debris", "bank:dispatcher_break", "bank:dispatcher_presence", "bank:dispatcher_spawn", "bank:fleet_anvil", "bank:foreman_break", "bank:foreman_presence", "bank:foreman_spawn", "bank:gap_net_charge_live", "bank:jolt_layer_break", "bank:jolt_layer_fizzle", "bank:jolt_layer_jam", "bank:jolt_layer_presence", "bank:linker_break", "bank:linker_presence", "bank:linker_spawn", "bank:prop_crew_collapse", "bank:splitter_break_clean", "bank:splitter_break_split", "bank:splitter_presence", "bank:splitter_spawn", "site:prop_crew.gd:_build_tool:prop_crew_presence"]},
 	{"why": "in the bank but no code in src/ plays it (checked by literal search): not heard today", "traced": true,
 		"facts": ["bank:ballast_brace_tell", "bank:gap_net_charge_tell"]},
 	{"why": "the called shot is the player's own wager; its stamp and the Warden mark are on screen", "traced": false,
-		"facts": ["emit:call_met@called_shot.gd#1", "emit:call_missed@called_shot.gd#1", "emit:call_window@called_shot.gd#1", "emit:shot_called@called_shot.gd#1"]},
+		"facts": ["emit:call_met@called_shot.gd:settle", "emit:call_missed@called_shot.gd:settle", "emit:call_window@called_shot.gd:_on_engaged", "emit:shot_called@called_shot.gd:_release"]},
 	{"why": "the overtime bell and pot are world props that offer and pay: a reward", "traced": false,
-		"facts": ["emit:overtime_offered@overtime.gd#1", "emit:overtime_paid@overtime.gd#1", "emit:overtime_rung@overtime.gd#1"]},
+		"facts": ["emit:overtime_offered@overtime.gd:offer", "emit:overtime_paid@overtime.gd:cash", "emit:overtime_rung@overtime.gd:ring"]},
 	{"why": "progress tick: the pip lights on the Warden's collar in the same step (stage_locks.gd _dress_collar)", "traced": true,
-		"facts": ["emit:warden_gate_pip@stage_locks.gd#1", "emit:warden_gate_pip@stage_locks.gd#2"]},
+		"facts": ["emit:warden_gate_pip@stage_locks.gd:_count_packs", "emit:warden_gate_pip@stage_locks.gd:_unlock"]},
 	{"why": "the companion's assist sting: the assist is on screen", "traced": false,
 		"facts": ["family:companion_assist_"]},
 	{"why": "a note placed on the band grid for a landing, a near miss, a dunk or a death: scores a moment", "traced": false,
@@ -260,7 +280,7 @@ const NOT_ACT := [
 	{"why": "lands after its riser and the telegraph mark: the result is in view", "traced": false,
 		"facts": ["music:drop_ancient", "music:drop_boiler", "music:drop_cave_in", "music:drop_collapse", "music:drop_cracked_wall", "music:drop_drain", "music:drop_flash_flood", "music:drop_fleet", "music:drop_fleet_anvil", "music:drop_flood", "music:drop_flood_horn", "music:drop_impact", "music:drop_industrial", "music:drop_lightning", "music:drop_mind_wrong", "music:drop_natural", "music:drop_reactor_blow", "music:drop_relic_wake", "music:drop_sluice_surge", "music:drop_spill_boiler", "music:drop_spill_dropship", "music:stinger_lightning"]},
 	{"why": "echo of the player's own hit or move, or a hit result, seen as it happens", "traced": false,
-		"facts": ["site:audio.gd:armor_deflect", "site:audio.gd:armor_reclaim", "site:audio.gd:chain_crash", "site:audio.gd:chunk_low", "site:audio.gd:element_resolved", "site:audio.gd:smash_crack", "site:audio.gd:smash_whistle", "site:audio.gd:synergy_hit", "site:audio.gd:vault_drop", "site:audio.gd:vault_rise", "site:audio.gd:wear_sputter", "site:audio.gd:womp", "site:juice.gd:kill_pop", "site:panel_fx.gd:panel_jackpot", "site:panel_fx.gd:panel_note"]},
+		"facts": ["site:audio.gd:_on_player_hit:armor_deflect", "site:audio.gd:_on_spill_recovered:armor_reclaim", "site:audio.gd:top:chain_crash", "site:audio.gd:top:chunk_low", "site:audio.gd:wire_optional:element_resolved", "site:audio.gd:_connect_dunk:smash_crack", "site:audio.gd:_connect_redline:smash_crack", "site:audio.gd:_connect_redline:smash_crack#2", "site:audio.gd:_connect_dunk:smash_whistle", "site:audio.gd:_connect_redline:smash_whistle", "site:audio.gd:_on_struck:synergy_hit", "site:audio.gd:top:vault_drop", "site:audio.gd:_on_struck:vault_rise", "site:audio.gd:_on_wear_patch:wear_sputter", "site:audio.gd:_on_slammed:womp", "site:juice.gd:_flush_kills:kill_pop", "site:panel_fx.gd:_on_panel_gained:panel_jackpot", "site:panel_fx.gd:_on_panel_gained:panel_note"]},
 	{"why": "lands after its warning (the whine and the trolley) which sounded and showed first", "traced": false,
-		"facts": ["site:fleet.gd:zipline_snap"]},
+		"facts": ["site:fleet.gd:_zipline:zipline_snap", "site:fleet.gd:cut_line:zipline_snap"]},
 ]
