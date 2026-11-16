@@ -27,7 +27,8 @@ const EXPECTED_TOASTS: Array[String] = ["run_ended", "player_died", "milestone_w
 #     every objective it shows in 5 (the rows' own wording in objectives.gd), every callout in 4, and every UI row
 #     is well formed;
 #   - a world prompt's parsed title is at most 3 words, with the rest as its detail;
-#   - three reward gates' prompts, the widest there is, all get a label wherever they stand.
+#   - a reward gate's name (its own owner-placed prompt, reward_gates.gd) takes one row or two for every part, never wider
+#     than a band prompt, and its rectangle holds its drawn words.
 
 var _failures := 0
 
@@ -138,40 +139,31 @@ func _check_prompt_parse() -> void:
 	_report("prompt parse", ok, "gate %s; vault %s; long first line %s; fabricator icon %s" % [gate, vault, long, fab["icon"]])
 
 
-# A reward gate's sign fits a slot of the sign room (ScreenRegions.sign_slot): its detail wraps to at
-# most two lines inside a 360 px slot for every part, the name alone needs far less, and a detail with
-# a mark line that needs a third line shows the name alone. The rectangle always holds its drawn words (the sweep in
-# int_screen_layout_test places real gates).
+# A reward gate's name is its own prompt (reward_gates.gd _name_prompt, owner_placed): for every part it fits
+# one row or two within a band prompt's width, and its rectangle holds its drawn words in both forms.
 func _check_gate_prompts_fit() -> void:
 	var widest := 0.0
 	var widest_name := ""
-	var name_floor := 0.0
-	var no_detail := []
-	var marked_names := []
+	var too_wide := []
+	var loose := []
 	for id in Parts.ids():
 		var d: Resource = Parts.offer_def(id, [])
 		if d == null:
 			continue
-		var offer := {"name": Parts.display_name(id), "verb": d.verb, "punch": d.punch, "text": d.text, "mark": ""}
-		var parts: Dictionary = RewardGates.prompt_parts(offer)
-		var probe := WorldPrompt.new()
-		probe.set_parts(parts["title"], parts["detail"], parts["icon"])
-		probe.on_anchor = true
-		probe.near = true
-		if probe.sign_need(0) == INF or probe.sign_need(0) > ScreenRegions.PROMPT_WIDTH:
-			no_detail.append(id)
-		elif probe.sign_need(0) > widest:
-			widest = probe.sign_need(0)
-			widest_name = parts["title"]
-		name_floor = maxf(name_floor, probe.sign_need(2))
-		if probe.fit_sign(ScreenRegions.PROMPT_WIDTH) != 0 or probe.text_width() > probe.shown_extent().x + 0.01:
-			no_detail.append(id)
-		offer["mark"] = "* completes Tesla Pylon *"
-		parts = RewardGates.prompt_parts(offer)
-		probe.set_parts(parts["title"], parts["detail"], parts["icon"])
-		var marked := probe.fit_sign(ScreenRegions.PROMPT_WIDTH)
-		marked_names.append(marked if marked <= 1 and probe.shown_lines().size() <= 3 and probe.text_width() <= probe.shown_extent().x + 0.01 else -1)
+		var offer := {"name": Parts.display_name(id), "verb": d.verb, "punch": d.punch, "text": d.text, "mark": "* completes Tesla Pylon *"}
+		var probe = RewardGates._name_prompt(offer, Color.WHITE)
+		var fit: Dictionary = probe.get_meta("fit")
+		var two_rows: bool = float(fit["w1"]) > ScreenRegions.PROMPT_WIDTH
+		var width: float = fit["w2"] if two_rows else fit["w1"]
+		if width > widest:
+			widest = width
+			widest_name = probe.parts()["title"]
+		if width > ScreenRegions.PROMPT_WIDTH:
+			too_wide.append(id)
+		probe.name_rows = fit["two"] if two_rows else PackedStringArray([probe.parts()["title"]])
+		probe.detail_shown = true
+		if probe.text_width() + 2.0 * WorldPrompt.SIGN_PAD > probe.shown_extent().x + 0.01:
+			loose.append(id)
 		probe.free()
-	_report("gate prompts fit", widest > 0.0 and no_detail.is_empty() and marked_names.all(func(l): return l >= 0),
-		"widest detail %d px wide (%s), widest floor-size name %d px; parts whose detail does not fit 360 px in two lines %s; with a mark line every sign still fits in two detail lines or shows the name alone %s" % [int(widest), widest_name, int(name_floor), no_detail, marked_names.all(func(l): return l >= 0)])
-
+	_report("gate prompts fit", widest > 0.0 and too_wide.is_empty() and loose.is_empty(),
+		"widest name %d px (%s); parts wider than %d px on two rows %s; parts whose rectangle does not hold its words %s" % [int(widest), widest_name, int(ScreenRegions.PROMPT_WIDTH), too_wide, loose])

@@ -45,6 +45,7 @@ const INTRO_HOLD := 4.0
 # down below any rect it would cover and never up, and stops above the prompts band.
 const KEEP_CLEAR_GROUP := "word_keep_clear"
 const KEEP_CLEAR_GAP := 8.0
+const SEAT_SPEED := 900.0
 # A caller's plate stands at the bubble's left: where it sits, how far the bubble's box moves
 # right to clear it, and the head room the name tag takes over the first line of words.
 const PLATE_AT := Vector2(6.0, 4.0)
@@ -601,10 +602,7 @@ func _say(line: String, fact: String, mood_now: String, level: float, grumbles: 
 	size = Vector2(TAIL + _lead + _body.x + 12.0, _body.y + HAND * 3.5)
 	pivot_offset = Vector2(0.0, _body.y * 0.5)
 	_hold = HOLD_BASE + HOLD_PER_WORD * line.split(" ", false).size()
-	if not is_equal_approx(position.y, _seated_y):
-		_seat_base = position.y
 	visible = true
-	_seat()
 	if _tween != null:
 		_tween.kill()
 	_tween = create_tween().set_parallel(true)
@@ -687,7 +685,7 @@ func _process(delta: float) -> void:
 		return
 	_clock += delta
 	_gesture_clock += delta
-	_seat()
+	_seat(delta)
 	if not _exchange.is_empty() and _rolled_off():
 		_end_exchange()
 		return
@@ -701,17 +699,23 @@ func _process(delta: float) -> void:
 	queue_redraw()
 
 
-# Moves the bubble down from where it was asked to sit, below any rect in KEEP_CLEAR_GROUP it would
-# cover, each frame from that base so it comes back up when the rects go.
-func _seat() -> void:
+# Eases the bubble down from where its owner put it, below any rect in KEEP_CLEAR_GROUP it would cover, and
+# back up when the rects go. Whatever y its owner last set is the seat (the workshop sets it after the line
+# is said, the hello before), so it is read here each frame, never remembered from the line. When no seat
+# above the prompts band clears a rect, the bubble stops at the band and covers part of the rect: a speech
+# line is short and cannot move aside (its tail runs off the screen's left edge).
+func _seat(delta: float) -> void:
 	if not is_inside_tree():
 		return
+	if not is_equal_approx(position.y, _seated_y):
+		_seat_base = position.y
 	var rects: Array[Rect2] = []
 	for node in get_tree().get_nodes_in_group(KEEP_CLEAR_GROUP):
 		if node.has_method("keep_clear_rects"):
 			rects.append_array(node.keep_clear_rects())
 	var limit := ScreenRegions.rect("prompts", get_viewport().get_visible_rect().size).position.y
-	position.y = seat_y(_seat_base, Rect2(position, size), rects, limit)
+	var want := seat_y(_seat_base, Rect2(position.x, _seat_base, size.x, size.y), rects, limit)
+	position.y = move_toward(position.y, want, SEAT_SPEED * delta)
 	_seated_y = position.y
 
 

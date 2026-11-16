@@ -131,7 +131,8 @@ func _begin(on_cover: Callable, wind: Callable, ready_check: Callable, cover_gat
 	_ready_check = ready_check
 	_cover_gate = cover_gate
 	_wind_s = wind_s
-	_wordless = wordless and not _dress_word(taken_part)
+	var stamped := _dress_word(taken_part)
+	_wordless = wordless and not stamped
 	_t = 0.0
 	_layer.visible = true
 	_set_progress(0.0)
@@ -222,6 +223,7 @@ func _end() -> void:
 	phase = IDLE
 	_ready_check = Callable()
 	_cover_gate = Callable()
+	_dress_word("")
 	_layer.visible = false
 	_set_progress(0.0)
 	set_process(false)

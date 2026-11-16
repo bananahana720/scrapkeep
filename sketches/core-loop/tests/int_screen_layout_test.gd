@@ -180,6 +180,15 @@ func _open_prompts() -> void:
 	prompt.text = "a prompt anchored high above the view"
 	prompt.attach(_high, Vector3.ZERO, 200.0)
 	_high.add_child(prompt)
+	# Three more band prompts in view, so the cap (MAX_PROMPTS) is reached with one left waiting.
+	for i in 3:
+		var anchor := Node3D.new()
+		_game.ctx.root.add_child(anchor)
+		anchor.global_position = cam.global_position - cam.global_basis.z * (24.0 + 4.0 * i) + cam.global_basis.x * (float(i) - 1.0) * 5.0 - Vector3.UP * 2.0
+		var extra := WorldPrompt.new()
+		extra.text = "band prompt %d\n3 cogs" % i
+		extra.attach(anchor, Vector3.ZERO, 200.0)
+		anchor.add_child(extra)
 
 
 func _check_prompts() -> void:
@@ -187,17 +196,20 @@ func _check_prompts() -> void:
 	var band := ScreenRegions.rect("prompts", size)
 	var rects: Array = _hud.prompt_rects.values()
 	var gates: Node3D = _game.ctx.build.gates
-	# A reward gate's name is a plate on the gate (reward_gates.gd), not a 2D prompt: no gate prompt is placed.
+	# A reward gate's name is its own prompt, placed by its gate (reward_gates.gd): the HUD places none of them.
 	var gate_prompts: Array = _hud.prompt_rects.keys().filter(func(p): return gates.is_ancestor_of(p))
-	var gate_labels: Array = gates.find_children("*", "WorldPrompt", true, false)
+	var names: Array = gates.find_children("Name", "Label", true, false)
 	var high: Array = _hud.prompt_rects.keys().filter(func(p): return p.get_parent() == _high)
 	var inside := rects.all(func(r): return band.grow(0.5).encloses(r))
+	var apart := true
+	for i in rects.size():
+		for j in range(i + 1, rects.size()):
+			apart = apart and not (rects[i] as Rect2).intersects(rects[j])
 	var clear_of_bands := rects.all(func(r): return ["top", "toasts", "bottom"].all(func(b): return not (r as Rect2).intersects(ScreenRegions.rect(b, size))))
-	_report("prompts in place", gates.is_open() and high.size() == 1 and rects.size() == 1 and inside and clear_of_bands,
-		"gates open %s; %d prompts placed at %s, the high one in the prompts band %s: %s, clear of the top, toast and bottom bands %s"
-			% [gates.is_open(), rects.size(), rects, band, inside, clear_of_bands])
-	_report("no gate wears a 2D sign", gate_prompts.is_empty() and gates.get_child_count() > 0 and not gates.find_children("Nameplate", "Label3D", true, false).is_empty(),
-		"%d gate prompts placed, %d gate nodes with a 2D sign, %d name plates" % [gate_prompts.size(), gate_labels.size(), gates.find_children("Nameplate", "Label3D", true, false).size()])
-	var high_prompts: Array = high
-	_report("the other prompt keeps its short range", high_prompts.all(func(p): return not p.near and is_equal_approx(p.detail_range, WorldPrompt.DETAIL_RANGE)),
-		"the prompt near %s" % [high_prompts.map(func(p): return p.near)])
+	_report("prompts in place", gates.is_open() and rects.size() == ScreenRegions.MAX_PROMPTS and inside and apart and clear_of_bands,
+		"gates open %s; %d prompts placed (cap %d) at %s in the prompts band %s: %s, apart %s, clear of the top, toast and bottom bands %s"
+			% [gates.is_open(), rects.size(), ScreenRegions.MAX_PROMPTS, rects, band, inside, apart, clear_of_bands])
+	_report("each gate wears its own name prompt, placed by the gate", gate_prompts.is_empty() and names.size() == gates.offers.size() and names.all(func(p): return p.owner_placed),
+		"%d gate prompts placed by the HUD, %d name prompts for %d offers" % [gate_prompts.size(), names.size(), gates.offers.size()])
+	_report("the high prompt keeps the short range", high.all(func(p): return not p.near and is_equal_approx(p.detail_range, WorldPrompt.DETAIL_RANGE)),
+		"near %s" % [high.map(func(p): return p.near)])

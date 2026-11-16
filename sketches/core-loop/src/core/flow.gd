@@ -1230,11 +1230,13 @@ func _record_end(won: bool) -> void:
 
 
 func _on_reward_chosen(part_id: String) -> void:
-	# World's handler can launch first, so the take may already be running: it takes the part's name late.
-	if _seam_take and ctx.root != null and ctx.root.get("launch_take") != null:
-		ctx.root.launch_take.stamp_taken(part_id)
+	# A scrapless run takes no part from a gate, so the take has nothing to name. World's handler can launch
+	# first, so the take may already be running: it takes the part's name late.
+	var granted := part_id if ctx.build == null or not ctx.build.scrapless() else ""
+	if _seam_take and ctx.root != null and ctx.root.has_method("stamp_launch_take"):
+		ctx.root.stamp_launch_take(granted)
 	else:
-		_taken_part = part_id
+		_taken_part = granted
 	if state == GATES:
 		_set_state(LAUNCH)
 

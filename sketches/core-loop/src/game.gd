@@ -861,6 +861,11 @@ func play_launch_take(on_cover: Callable, flight_over: Callable, ready_check: Ca
 	return launch_take.play_over_flight(on_cover, flight_over, ready_check, flight_s, taken_part)
 
 
+# The part a gate gave, told to a launch take that began before the gate's event reached flow.
+func stamp_launch_take(part_id: String) -> void:
+	launch_take.stamp_taken(part_id)
+
+
 # A pilot picked on pilot select: the deck camera lifts, the swipe covers, the run starts under it.
 func pick_pilot(index: int) -> void:
 	launch_take.live = _take_live()

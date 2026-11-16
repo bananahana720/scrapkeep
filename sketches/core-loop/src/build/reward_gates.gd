@@ -16,10 +16,9 @@ const ActiveDefs := preload("res://src/combat/actives/active_defs.gd")
 # choosing never costs speed. If you roll past both, they are put ahead of you again
 # rather than waiting behind you.
 #
-# Each gate says what it gives while you approach, in the order you need it:
-# "{name}: {verb}. Punch +{n}", its effect in one line, and a star line when it would
-# complete a named synergy ("* completes Storm Lattice *") or is a known ingredient
-# ("* ingredient: ??? *"). Rarity shows twice: the arch's colour and the topper's shape
+# Each gate says what it gives while you approach: the part's name, then (when there is room) its effect in
+# one line, and a star line when it would complete a named synergy ("* completes Storm Lattice *") or is a
+# known ingredient ("* ingredient: ??? *"); prompt_parts builds them. Rarity shows twice: the arch's colour and the topper's shape
 # (a bar for common, a star for rare, a tall star with a mint
 # heart for relic), so colour never carries it alone. Red is only for what hurts
 # you (DESIGN-V2 section 11), so relic is mint with its own heart. A hot-wired offer adds an amber stripe.
@@ -28,14 +27,13 @@ const ActiveDefs := preload("res://src/combat/actives/active_defs.gd")
 # (trg_) and element glyph (el_) beside the topper, the same ids the shop and the
 # cards use; a gate whose part completes a synergy pulses.
 #
-# The name is a plate in the world, under the crossbar, facing the ball's approach (a gate that
-# opens both ways wears a second one back to back): the part's name and one short effect line.
-# It shows whenever its gate stands, so a name is never apart from its gate (PF-22). A name's
-# drawn cap height never falls under NAME_FLOOR_PX on screen: the plate grows with distance
-# (_fit_plates). When two names would overlap at that size, the nearer to the ball keeps its size and
-# the farther shrinks to NAME_MIN_PX and then hides, plate and all; nothing moves off its gate
-# (fit_names). The group "word_keep_clear" carries keep_clear_rects(), the plates' screen rects,
-# for the words that stamp on screen.
+# The name is a screen prompt (WorldPrompt, owner_placed) that its own gate places every frame at the
+# gate's projected crossbar point, centred on the gate's column, so a name is never apart from its gate (PF-22).
+# It is never slotted, moved aside or clamped to a band. One type size, the name on one row or two when
+# its room is narrow; the effect lines under a one-row name when they fit the room. When names would still
+# overlap, the gate farther from the ball hides its name only (fit_names), with hysteresis so the set of
+# named gates does not flip with a pixel of camera sway. The group "word_keep_clear" carries keep_clear_rects(),
+# the shown names' screen rects, for the words that stamp on screen.
 
 signal chosen(part_id: String)
 
@@ -67,26 +65,16 @@ const RUN_OUT := 6.0
 const BLOCK_PENALTY := 1000.0
 # How far a gate stood past the map's slot row may sit off the slots' mean ground (_slot_plan).
 const SLOT_LINE_DROP := 1.5
-# The plate: the name's cap height in metres before any growth (a name too wide for the arch
-# shrinks to fit it), the effect line's, and the share of the font's size that is cap height.
-const NAME_CAP_M := 0.9
-const EFFECT_CAP_M := 0.5
-const CAP_RATIO := 0.714
-const PLATE_FONT := 64
-const PLATE_FIT_WIDTH := WIDTH - 0.6
-const PLATE_DROP := 0.25
-const NAME_DROP := 0.75
-const EFFECT_DROP := 1.75
-const PLATE_DEPTH := 0.15
-const EFFECT_WORDS := 6
-# On screen at 1280x720 (they scale with the screen's height): the name's cap height never falls under the floor; an overlap shrinks the
-# farther name to the minimum, then hides it. The effect line shows while it is this tall.
-const NAME_FLOOR_PX := 14.0
-const NAME_MIN_PX := 10.0
-const EFFECT_MIN_PX := 8.0
+# The name's top stands this far under the crossbar point. A name or effect line is "room" wide: the
+# distance to the nearest other gate's column less NAME_GAP. A shown name stays until it overlaps another by
+# more than NAME_HOLD px, and a hidden one returns only with NAME_HOLD px clear. The effect lines come back
+# only with DETAIL_BACK px to spare.
+const NAME_DROP := 6.0
+const NAME_GAP := 12.0
+const NAME_HOLD := 32.0
+const DETAIL_BACK := 16.0
+const NAME_TIE_M := 1.0
 const KEEP_CLEAR_GROUP := "word_keep_clear"
-const PLATE_BOARD_H := 2.3
-const NAME_ONLY_SHARE := 0.62
 
 var offers: Array = []
 # Build's offer_mark(part_id) -> String; the star line under an offer, or "".
@@ -97,8 +85,11 @@ var active_row: Callable
 
 var _terrain
 var _ball := Vector3.INF
-var _plate_rects := {}
-var _plate_frame := -1
+var _name_rects: Array[Rect2] = []
+var _name_frame := -1
+# Per gate index: whether its name and its effect lines were shown last frame (the hysteresis).
+var _shown := {}
+var _detail := {}
 var _ids: Array = []
 var _held: Array = []
 var _last_side := {}
@@ -131,7 +122,9 @@ func open(part_ids: Array, ball: Vector3, heading: Vector3, held: Array = []) ->
 func close() -> void:
 	visible = false
 	offers = []
-	_plate_rects.clear()
+	_name_rects.clear()
+	_shown.clear()
+	_detail.clear()
 	for gate in _gates:
 		gate.queue_free()
 	_gates.clear()
@@ -177,6 +170,8 @@ func _place(ball: Vector3, heading: Vector3) -> void:
 	_gates.clear()
 	offers = []
 	_last_side = {}
+	_shown.clear()
+	_detail.clear()
 	var plan := choose_placement(ball, heading)
 	_fixed = plan.get("fixed", false)
 	var facing: Vector3 = plan["facing"]
@@ -425,75 +420,40 @@ func _build_gate(at: Vector3, facing: Vector3, offer: Dictionary) -> Node3D:
 		glyph.position = Vector3((float(i) - (ids.size() - 1) * 0.5) * 1.5, HEIGHT + 2.9, 0.0)
 		gate.add_child(glyph)
 	gate.set_meta("pulse", offer["synergy"] != "")
-	_build_plate(gate, offer, tint)
+	gate.add_child(_name_prompt(offer, tint))
 	return gate
 
 
-# The plate under the crossbar: a dark board with the name and one effect line, facing the ball's
-# approach (the gate's local +Z; the gate looks along -Z). Its pivot is the crossbar's underside,
-# so growing it with distance (_fit_plates) hangs it lower and never over the topper or the glyphs.
-func _build_plate(gate: Node3D, offer: Dictionary, tint: Color) -> void:
+# The gate's name: its own prompt, sized and placed each frame (_place_names). Its measurements are what
+# fit_names reads: the name on one row and on two, and the effect lines.
+static func _name_prompt(offer: Dictionary, tint: Color) -> Label:
 	var parts := prompt_parts(offer)
-	var title: String = parts["title"]
-	var effect := " ".join(String(parts["detail"]).split("\n", false)[0].split(" ", false).slice(0, EFFECT_WORDS))
+	var prompt := WorldPrompt.new()
+	prompt.name = "Name"
+	prompt.owner_placed = true
+	prompt.set_parts(parts["title"], parts["detail"], parts["icon"])
+	prompt.add_theme_color_override("font_color", tint.lerp(Color.WHITE, 0.25))
+	prompt.visible = false
+	var one := PackedStringArray([parts["title"]])
+	var two := WorldPrompt.split_name(parts["title"])
+	var lines := String(parts["detail"]).split("\n", false)
+	var big := WorldPrompt.SIGN_NAME_SIZE
+	var small := WorldPrompt.SIGN_DETAIL_SIZE
 	var font := UiFonts.bold()
-	var name_pixel := _fit_pixel(font, title, NAME_CAP_M)
-	var effect_pixel := _fit_pixel(font, effect, EFFECT_CAP_M)
-	var name_w := font.get_string_size(title, HORIZONTAL_ALIGNMENT_LEFT, -1, PLATE_FONT).x * name_pixel
-	var effect_w := font.get_string_size(effect, HORIZONTAL_ALIGNMENT_LEFT, -1, PLATE_FONT).x * effect_pixel
-	var plate := Node3D.new()
-	plate.name = "Plate"
-	plate.position = Vector3(0.0, HEIGHT - PLATE_DROP, 0.0)
-	plate.set_meta("name_cap_m", PLATE_FONT * name_pixel * CAP_RATIO)
-	plate.set_meta("effect_cap_m", PLATE_FONT * effect_pixel * CAP_RATIO)
-	plate.set_meta("name_w_m", name_w)
-	plate.set_meta("board_w_m", maxf(name_w, effect_w) + 0.8)
-	gate.add_child(plate)
-	var board := MeshInstance3D.new()
-	board.name = "Board"
-	var box := BoxMesh.new()
-	box.size = Vector3(maxf(name_w, effect_w) + 0.8, PLATE_BOARD_H, PLATE_DEPTH)
-	board.mesh = box
-	board.material_override = Palette.solid(tint.darkened(0.75), 0.4)
-	board.position = Vector3(0.0, -0.05 - PLATE_BOARD_H * 0.5, 0.0)
-	plate.add_child(board)
-	var sides: Array = [[0.0, PLATE_DEPTH * 0.5 + 0.01]]
-	if _fixed:
-		sides.append([PI, PLATE_DEPTH * 0.5 + 0.01])
-	for side in sides:
-		var face := Node3D.new()
-		face.name = "Face"
-		face.rotation.y = side[0]
-		plate.add_child(face)
-		face.add_child(_plate_label("Nameplate", title, name_pixel, -NAME_DROP, side[1], tint.lerp(Color.WHITE, 0.7)))
-		face.add_child(_plate_label("Effect", effect, effect_pixel, -EFFECT_DROP, side[1], tint.lerp(Color.WHITE, 0.45)))
-
-
-# The size of a plate line's pixels so its cap is cap_m tall, or smaller when the line would be wider than the arch.
-static func _fit_pixel(font: Font, text: String, cap_m: float) -> float:
-	var pixel := cap_m / (PLATE_FONT * CAP_RATIO)
-	var width := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, PLATE_FONT).x * pixel
-	return pixel * minf(1.0, PLATE_FIT_WIDTH / width) if width > 0.0 else pixel
-
-
-# One line of a plate. Single-sided: seen from behind it is culled, so each face of a gate that opens both ways reads right.
-static func _plate_label(label_name: String, text: String, pixel: float, y: float, z: float, color: Color) -> Label3D:
-	var label := Label3D.new()
-	label.name = label_name
-	label.text = text
-	label.font = UiFonts.bold()
-	label.font_size = PLATE_FONT
-	label.pixel_size = pixel
-	label.billboard = BaseMaterial3D.BILLBOARD_DISABLED
-	label.double_sided = false
-	label.shaded = false
-	label.modulate = color
-	label.outline_modulate = Color(0.04, 0.04, 0.05)
-	label.outline_size = 14
-	label.render_priority = 2
-	label.outline_render_priority = 1
-	label.position = Vector3(0.0, y, z)
-	return label
+	var detail_w := 0.0
+	for line in lines:
+		detail_w = maxf(detail_w, WorldPrompt.row_width(line, small))
+	var two_w := 0.0
+	for row in two:
+		two_w = maxf(two_w, WorldPrompt.row_width(row, big))
+	prompt.set_meta("fit", {
+		"w1": WorldPrompt.row_width(one[0], big) + 2.0 * WorldPrompt.SIGN_PAD,
+		"w2": two_w + 2.0 * WorldPrompt.SIGN_PAD, "two": two,
+		"h1": font.get_height(big), "h2": 2.0 * font.get_height(big) + WorldPrompt.LINE_GAP,
+		"dw": detail_w + 2.0 * WorldPrompt.SIGN_PAD,
+		"dh": lines.size() * (font.get_height(small) + WorldPrompt.LINE_GAP),
+	})
+	return prompt
 
 
 # The hot-wired flag, drawn as a thin diagonal amber band across the topper. It does not
@@ -534,20 +494,17 @@ func _process(delta: float) -> void:
 			topper.rotation = Vector3(0.0, _spin, 0.0)
 			var pulse: float = 1.0 + 0.18 * sin(_spin * 3.0) if gate.get_meta("pulse", false) else 1.0
 			topper.scale = Vector3.ONE * pulse
-	_fit_plates()
+	_place_names()
 
 
-# The standing plates' rects in viewport pixels, for the words that stamp on screen to keep off
-# (group KEEP_CLEAR_GROUP). A plate behind the camera, or one whose name the overlap rule hid, has none.
+# The shown names' rects in viewport pixels, for the words that stamp on screen to keep off (group
+# KEEP_CLEAR_GROUP). A gate behind the camera or off the screen's sides, or whose name is hidden, has none.
 func keep_clear_rects() -> Array[Rect2]:
-	var out: Array[Rect2] = []
-	if offers.is_empty() or not visible:
-		return out
-	if _plate_frame != Engine.get_process_frames():
-		_fit_plates()
-	for rect in _plate_rects.values():
-		out.append(rect)
-	return out
+	if offers.is_empty():
+		return []
+	if _name_frame != Engine.get_process_frames():
+		_place_names()
+	return _name_rects.duplicate()
 
 
 # What a taken part looks like on the launch take: its name, its family glyph id and its rarity colour. {} for an id that
@@ -566,86 +523,105 @@ static func taken_look(part_id: String) -> Dictionary:
 	}
 
 
-# Sizes every plate for this frame: the name's cap height on screen is at least NAME_FLOOR_PX and
-# the overlap rule (fit_names) shrinks or hides the farther name. Sets _plate_rects to each shown plate's
-# board rect in viewport pixels.
-func _fit_plates() -> void:
-	_plate_frame = Engine.get_process_frames()
-	_plate_rects.clear()
+# Puts every gate's name at its own crossbar point for this frame.
+func _place_names() -> void:
+	_name_frame = Engine.get_process_frames()
+	_name_rects.clear()
 	var cam := get_viewport().get_camera_3d() if is_inside_tree() else null
-	if cam == null or cam.projection != Camera3D.PROJECTION_PERSPECTIVE:
-		return
-	var view := get_viewport().get_visible_rect().size
-	var focal := view.y * 0.5 / tan(deg_to_rad(cam.fov) * 0.5) if cam.keep_aspect == Camera3D.KEEP_HEIGHT \
-		else view.x * 0.5 / tan(deg_to_rad(cam.fov) * 0.5)
-	var tall := view.y / 720.0
-	var from: Vector3 = _ball if _ball.is_finite() else cam.global_position
-	var live: Array = []
+	var view := get_viewport().get_visible_rect()
+	var from: Vector3 = _ball if _ball.is_finite() else (cam.global_position if cam != null else Vector3.ZERO)
 	var entries: Array = []
-	for gate in _gates:
-		var plate := gate.get_node_or_null("Plate") as Node3D
-		if plate == null or cam.is_position_behind(plate.global_position):
+	var live: Array = []
+	for i in _gates.size():
+		var gate: Node3D = _gates[i]
+		var prompt := gate.get_node_or_null("Name") as Label
+		if prompt == null:
 			continue
-		var depth := (plate.global_position - cam.global_position).dot(-cam.global_basis.z)
-		if depth <= 0.1:
+		var point := gate.global_position + Vector3.UP * HEIGHT
+		var col := Vector2.ZERO if cam == null or cam.is_position_behind(point) else cam.unproject_position(point)
+		if cam == null or cam.is_position_behind(point) or col.x < view.position.x or col.x > view.end.x or col.y > view.end.y:
+			prompt.visible = false
+			_shown[i] = false
 			continue
-		var cap_m: float = plate.get_meta("name_cap_m")
-		var natural := cap_m * focal / depth
-		var start := maxf(natural, NAME_FLOOR_PX * tall)
-		var up := gate.global_basis.y.normalized()
-		var centre := cam.unproject_position(plate.global_position - up * NAME_DROP * start / natural)
-		live.append({"gate": gate, "plate": plate, "depth": depth, "natural": natural})
-		entries.append({"dist": from.distance_to(plate.global_position), "centre": centre, "natural": natural,
-			"aspect": float(plate.get_meta("name_w_m")) / cap_m})
-	var fitted := fit_names(entries, NAME_FLOOR_PX * tall, NAME_MIN_PX * tall)
-	for i in live.size():
-		var plate: Node3D = live[i]["plate"]
-		var gate: Node3D = live[i]["gate"]
-		var cap: float = fitted[i]["cap"]
-		var grow: float = cap / float(live[i]["natural"])
-		plate.visible = not fitted[i]["hidden"]
-		if fitted[i]["hidden"]:
+		var fit: Dictionary = prompt.get_meta("fit")
+		entries.append(fit.merged({"index": i, "col": col, "dist": from.distance_to(gate.global_position),
+			"was_shown": _shown.get(i, false), "was_detail": _detail.get(i, false)}))
+		live.append(prompt)
+	var out := fit_names(entries)
+	for k in live.size():
+		var prompt: Label = live[k]
+		var i: int = entries[k]["index"]
+		var got: Dictionary = out[k]
+		_shown[i] = got["shown"]
+		_detail[i] = got["shown"] and got["detail"]
+		prompt.visible = got["shown"]
+		if not got["shown"]:
 			continue
-		plate.scale = Vector3.ONE * grow
-		var shows_effect := float(plate.get_meta("effect_cap_m")) * grow * focal / float(live[i]["depth"]) >= EFFECT_MIN_PX * tall
-		for label in plate.find_children("Effect", "Label3D", true, false):
-			label.visible = shows_effect
-		var board := plate.get_node("Board") as Node3D
-		var share := 1.0 if shows_effect else NAME_ONLY_SHARE
-		board.scale.y = share
-		board.position.y = -0.05 - PLATE_BOARD_H * 0.5 * share
-		var up := gate.global_basis.y.normalized()
-		var mid: Vector3 = plate.global_position + up * board.position.y * grow
-		var px := focal / float(live[i]["depth"]) * grow
-		var size := Vector2(float(plate.get_meta("board_w_m")), PLATE_BOARD_H * share) * px
-		_plate_rects[plate] = Rect2(cam.unproject_position(mid) - size * 0.5, size)
+		prompt.name_rows = entries[k]["two"] if got["rows"] == 2 else PackedStringArray([prompt.parts()["title"]])
+		prompt.detail_shown = got["detail"]
+		prompt.position = (got["rect"] as Rect2).position
+		prompt.size = got["rect"].size
+		_name_rects.append(got["rect"])
 
 
-# The names' sizes, a pure rule. Each entry is {dist: distance from the ball, centre: the name's
-# screen point, natural: its cap height in px at the plate's own size, aspect: its width over its
-# cap height}. Each name is drawn at least floor_px tall (its own size when that is more),
-# centred on its own point. Nearest first, a name whose rect would overlap one already drawn
-# shrinks px by px to min_px, and when it still overlaps it is hidden. Returns {cap, hidden} per
-# entry, in the entries' order. A hidden name takes no room from a farther one.
-static func fit_names(entries: Array, floor_px := NAME_FLOOR_PX, min_px := NAME_MIN_PX) -> Array:
+# Which names show and how, a pure rule over screen numbers. Each entry: index (the gate's), col (its crossbar
+# point on screen), dist (from the ball), w1 and h1 (the name on one row), w2 and h2 (on two), dw and dh (its
+# effect lines, widths including padding), was_shown and was_detail (last frame). A name hangs under its
+# column, centred on it, and never moves. A name wider than its room (the distance to the nearest other gate's
+# column less NAME_GAP) takes two rows before anything hides; the effect lines show only under a one-row name
+# and only when they fit the room. Nearest gates first (distance in NAME_TIE_M steps, then a name already shown,
+# then the lower index, so a tie never depends on sort order): a name whose rect would overlap one placed by
+# more than NAME_HOLD px (a hidden name: by less than NAME_HOLD px of clear room) hides, and that gate's name only.
+# Returns, per entry in order, {shown, rows, detail, rect}.
+static func fit_names(entries: Array) -> Array:
 	var order: Array = range(entries.size())
-	order.sort_custom(func(a, b): return entries[a]["dist"] < entries[b]["dist"])
+	order.sort_custom(func(a, b):
+		var ea: Dictionary = entries[a]
+		var eb: Dictionary = entries[b]
+		var da := snappedf(float(ea["dist"]), NAME_TIE_M)
+		var db := snappedf(float(eb["dist"]), NAME_TIE_M)
+		if da != db:
+			return da < db
+		if bool(ea["was_shown"]) != bool(eb["was_shown"]):
+			return bool(ea["was_shown"])
+		return int(ea["index"]) < int(eb["index"]))
 	var out: Array = []
 	out.resize(entries.size())
-	var drawn: Array[Rect2] = []
-	for i in order:
-		var e: Dictionary = entries[i]
-		var cap := maxf(float(e["natural"]), floor_px)
-		var placed := false
-		while true:
-			var size := Vector2(cap * float(e["aspect"]), cap)
-			var rect := Rect2((e["centre"] as Vector2) - size * 0.5, size).grow(2.0)
-			if not drawn.any(func(r): return r.intersects(rect)):
-				drawn.append(rect)
-				placed = true
+	var placed: Array[Rect2] = []
+	for k in order:
+		var e: Dictionary = entries[k]
+		var room := INF
+		for other in entries:
+			if other != e:
+				room = minf(room, absf(float(other["col"].x) - float(e["col"].x)) - NAME_GAP)
+		var forms: Array = []
+		if float(e["w1"]) <= room:
+			var spare := 0.0 if e["was_detail"] else DETAIL_BACK
+			if float(e["dh"]) > 0.0 and float(e["dw"]) + spare <= room:
+				forms.append({"rows": 1, "detail": true})
+			forms.append({"rows": 1, "detail": false})
+		else:
+			forms.append({"rows": 2, "detail": false})
+		var reach := NAME_HOLD if e["was_shown"] else -NAME_HOLD
+		var result := {"shown": false, "rows": 1, "detail": false, "rect": Rect2()}
+		for form in forms:
+			var width: float = e["w1"] if form["rows"] == 1 else e["w2"]
+			var height: float = e["h1"] if form["rows"] == 1 else e["h2"]
+			if form["detail"]:
+				width = maxf(width, float(e["dw"]))
+				height += float(e["dh"])
+			var rect := Rect2(Vector2(float(e["col"].x) - width * 0.5, float(e["col"].y) + NAME_DROP), Vector2(width, height))
+			if placed.all(func(r): return _overlap(rect, r) <= reach):
+				result = {"shown": true, "rows": form["rows"], "detail": form["detail"], "rect": rect}
 				break
-			if cap <= min_px:
-				break
-			cap = maxf(min_px, cap - 1.0)
-		out[i] = {"cap": cap, "hidden": not placed}
+		if result["shown"]:
+			placed.append(result["rect"])
+		out[entries.find(e)] = result
 	return out
+
+
+# How far two rects overlap: the smaller of their overlaps along x and y, negative by the clear room when apart.
+static func _overlap(a: Rect2, b: Rect2) -> float:
+	var ix := minf(a.end.x, b.end.x) - maxf(a.position.x, b.position.x)
+	var iy := minf(a.end.y, b.end.y) - maxf(a.position.y, b.position.y)
+	return minf(ix, iy)

@@ -1272,14 +1272,16 @@ static func _clamp_fraction(gate) -> float:
 
 # Every world-attached prompt in front of the camera and within its reach is placed in the prompts
 # band, nearest first, at most MAX_PROMPTS of them, each at the free spot nearest its anchor's column
-# (free_spot), clear of the pickup lines; the rest wait off screen. A reward gate's name is not a
-# prompt: it is a plate on the gate in the world (reward_gates.gd). A prompt shows its detail only while the ball is within its detail_range.
+# (free_spot), clear of the pickup lines; the rest wait off screen. A reward gate's name is its
+# gate's own prompt (owner_placed): the gate places it, the HUD skips it (reward_gates.gd). A prompt shows its detail only while the ball is within its detail_range.
 func place_prompts(size: Vector2, playing: bool) -> void:
 	prompt_rects.clear()
 	var cam: Camera3D = game.camera.cam
 	var ball: Vector3 = game.player.shown_position()
 	var near: Array = []
 	for prompt in get_tree().get_nodes_in_group(ScreenRegions.PROMPT_GROUP):
+		if prompt.owner_placed:
+			continue
 		prompt.visible = false
 		if not playing or prompt.is_empty():
 			continue
