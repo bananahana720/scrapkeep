@@ -137,6 +137,21 @@ static func slot_reason(entry: Dictionary) -> String:
 	return "empty" if String(entry.get("refill", "time")) == "contact" else "clock"
 
 
+# One word per published slot for a log: what the bar draws it as. ready, cooling (a clock),
+# empty (a drained charge), unavailable or active, and dimmed-for-set-piece for all while the set
+# piece dims the bar. A jam reads unavailable here: the caller that knows the jam says jammed.
+func slot_words() -> Dictionary:
+	var out := {}
+	for entry in slots:
+		var word := String(entry["state"])
+		if slot_reason(entry) == "empty":
+			word = "empty"
+		if set_piece:
+			word = "dimmed-for-set-piece"
+		out[slot_name(entry)] = word
+	return out
+
+
 # The pips an empty slot shows: its pool's, so a drained slot 2 wears slot 1's empty pips.
 func pool_pips(entry: Dictionary) -> int:
 	var pool := String(entry.get("pool", slot_name(entry)))
