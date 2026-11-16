@@ -24,6 +24,7 @@ extends Node
 const Worlds := preload("res://src/core/worlds.gd")
 
 const WORLD := 1
+const CLEAR_KEY := "spillway_clear"
 const SHOWN_SECONDS := 0.5
 const STOP_SCREENS := ["title", "class_select", "dead", "summary"]
 # The sting each row plays when it starts: assets/audio/stingers/1_1/<name>.wav (tools/ace/
@@ -43,6 +44,8 @@ var _asked := {}
 var _after_fight: Array = []
 # The cold open is due and waits for the title's turn.
 var _open_due := false
+# The shift log is due and waits its turn behind the world card and the cards on the screen's line (screen_busy.gd).
+var _clear_due := false
 
 
 func setup(ctx_ref, flourish_player) -> void:
@@ -65,6 +68,7 @@ func setup(ctx_ref, flourish_player) -> void:
 		opening.turned.connect(_on_turned)
 	events.flow_changed.connect(func(state: String):
 		if state in STOP_SCREENS:
+			_drop_clear()
 			_after_fight.clear()
 			player.stop_all())
 
@@ -76,6 +80,7 @@ func _on_run_started(_class_id: String) -> void:
 	_asked.clear()
 	_after_fight.clear()
 	_open_due = false
+	_drop_clear()
 
 
 func _on_boss_defeated() -> void:
@@ -95,6 +100,7 @@ func _on_stage_entered(stage: int, retry: bool) -> void:
 	_after_fight.clear()
 	_open_due = false
 	if retry:
+		_drop_clear()
 		player.stop_all()
 	elif stage == 1 and _in_world_one(stage):
 		var opening = _opening()
@@ -166,7 +172,42 @@ func _on_beacon_unsealed(stage: int) -> void:
 func _on_world_entered(world: int) -> void:
 	if world == WORLD + 1 and _brindle_beaten:
 		_brindle_beaten = false
-		player.play("spillway_clear")
+		_clear_due = true
+		if ctx.get("screen_busy") != null:
+			ctx.screen_busy.request(CLEAR_KEY, true)
+		# A table of several worlds draws the world card from this same signal, after this
+		# handler: the first ask waits for the next frame, when the card is up to be seen.
+		if ctx.stages.worlds().size() <= 1:
+			_ask_clear()
+
+
+func _process(_delta: float) -> void:
+	if _clear_due:
+		_ask_clear()
+
+
+# The shift log takes its turn on the screen's one line: no hold, but never over the world card.
+func _ask_clear() -> void:
+	# The world and stage card are the HUD's and sit outside the line: the row waits them out first.
+	var hud = ctx.root.get("hud") if ctx.root != null else null
+	var busy = ctx.get("screen_busy")
+	if hud != null and hud.launch_card.showing():
+		# Still in line, first: a card that can wait does not take the slot while the world card is up.
+		if busy != null:
+			busy.ready(CLEAR_KEY)
+		return
+	if busy != null and not busy.may_show(CLEAR_KEY, 0.0):
+		return
+	_clear_due = false
+	if not player.play("spillway_clear") and busy != null:
+		busy.done(CLEAR_KEY)
+
+
+func _drop_clear() -> void:
+	_clear_due = false
+	var busy = ctx.get("screen_busy") if ctx != null else null
+	if busy != null:
+		busy.done(CLEAR_KEY)
 
 
 func _on_started(id: String) -> void:
@@ -180,6 +221,8 @@ func _on_started(id: String) -> void:
 # A once-per-run row counts as played once it reached the screen; one that expired in the queue,
 # or was stopped within SHOWN_SECONDS, may play on the next trigger.
 func _on_finished(id: String, _skipped: bool) -> void:
+	if id == "spillway_clear" and ctx.get("screen_busy") != null:
+		ctx.screen_busy.done(CLEAR_KEY)
 	if not _asked.erase(id):
 		return
 	var record: Dictionary = player.played.back() if not player.played.is_empty() else {}

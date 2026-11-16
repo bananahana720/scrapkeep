@@ -104,17 +104,17 @@ const ROWS := {
 	# named once, by the ROUTED stamp (ruling cx): this row logs the shift and never names it again.
 	"spillway_clear": {"priority": 0,
 		"full": [
-			{"kind": "card", "at": 0.0, "for": 4.2, "slot": "left_top",
+			{"kind": "card", "at": 0.0, "for": 2.6, "slot": "left_top",
 				"card": ["SPILLWAY WORKS", "World one · shift log", "Pumps", "running", "Seals", "holding", "Overtime", "logged, not paid"]},
-			{"kind": "stamp", "at": 0.4, "for": 2.4, "text": "SHIFT COMPLETE", "colour": "AMBER"},
-			{"kind": "caption", "at": 2.4, "for": 3.0, "slot": "left_low", "text": [
+			{"kind": "stamp", "at": 2.6, "for": 1.4, "text": "SHIFT COMPLETE", "colour": "AMBER"},
+			{"kind": "caption", "at": 4.0, "for": 2.0, "slot": "left_low", "text": [
 				"Shift log: seals checked. Gauges agree, for once.",
 				"Shift log: dam held. Flume drained. Weather blamed.",
 				"Shift log: pumps running. The river kept its side of it."]},
 		],
 		"short": [
-			{"kind": "stamp", "at": 0.0, "for": 2.0, "text": "SHIFT COMPLETE", "colour": "AMBER"},
-			{"kind": "caption", "at": 0.2, "for": 1.8, "slot": "left_low", "text": [
+			{"kind": "stamp", "at": 0.0, "for": 1.2, "text": "SHIFT COMPLETE", "colour": "AMBER"},
+			{"kind": "caption", "at": 1.2, "for": 1.3, "slot": "left_low", "text": [
 				"Shift log: seals checked. Gauges agree, for once.",
 				"Shift log: dam held. Flume drained. Weather blamed.",
 				"Shift log: pumps running. The river kept its side of it."]},

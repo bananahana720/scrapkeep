@@ -60,7 +60,7 @@ func _run() -> void:
 	await _live(player)
 	await _sweep(player)
 	await _order(player)
-	_hooks(player)
+	await _hooks(player)
 	_game.free()
 	await _frames(2)
 	quit(_t.verdict())
@@ -333,9 +333,16 @@ func _hooks(player) -> void:
 	_t.check("75b the hand-off plays once per run", not player.playing, player.id)
 	events.world_entered.emit(2)
 	_t.check("76a world 2's entry without Brindle beaten plays nothing (a Continue)", not player.playing, player.id)
+	# The cards earlier checks raised would queue ahead of the shift log; this check is about the world card.
+	_game.hud.clear_achievement_toasts()
 	events.boss_defeated.emit()
 	events.world_entered.emit(2)
-	_t.eq("76 world 2's entry after Brindle's defeat plays spillway_clear", player.id, "spillway_clear")
+	# The shift log takes its turn behind the world card (screen_busy.gd): it starts when the card is gone.
+	var waited := 0.0
+	while player.id != "spillway_clear" and waited < 20.0:
+		await process_frame
+		waited += _game.get_process_delta_time()
+	_t.eq("76 world 2's entry after Brindle's defeat plays spillway_clear (after the world card)", player.id, "spillway_clear")
 	events.stage_entered.emit(1, true)
 	_t.check("76b a retry ends the row", not player.playing, player.id)
 	player.play("cold_open")
