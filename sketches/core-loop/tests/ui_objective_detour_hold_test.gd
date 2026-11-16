@@ -160,11 +160,47 @@ func _run() -> void:
 	_t.check("the lost tick gives way", _row().get("done", "") == "", str(_row()))
 	second.id = real_id
 
-	# Behind: a site passed on the way to the Warden is no longer on offer, and its metres never grow.
+	# Rolled away: a run started but not at hand (its sluice still shut, or the ball rode on) keeps the
+	# row with its own words and metres, so no other site takes it before its result; past the run's
+	# let-go range the player has left it, and the row moves on.
 	for s in _acts.sites:
 		s.started = false
 		s.done = false
 	var warden = _game.flow.warden
+	var away_site = _ahead()[0]
+	var back: Vector3 = away_site.global_position - warden.global_position
+	back.y = 0.0
+	back = back.normalized()
+	# At the site's height, so the planar range is the distance (the dam's sites sit tens of metres up or down).
+	var y: float = away_site.global_position.y + 1.0
+	var near_at: Vector3 = away_site.global_position + back * 30.0
+	_game.player.reset_to(Vector3(near_at.x, y, near_at.z))
+	await _frames(2)
+	_row()
+	_t.check("rolled away: the site is named from 30 m", _named() == away_site, str(_row()))
+	var far_at: Vector3 = away_site.global_position + back * 90.0
+	_game.player.reset_to(Vector3(far_at.x, y, far_at.z))
+	away_site.started = true
+	await _frames(2)
+	row = _row()
+	_t.check("rolled away: the run is not at hand at 90 m", _hud.get("_site") != away_site,
+		"%s started %s done %s failed %s finishes %s, %.0f m (planar %.0f), named %s" % [away_site.id, away_site.started, away_site.done,
+		away_site.failed, away_site.rule.get("finishes", ""), _game.player.shown_position().distance_to(away_site.global_position),
+		Vector2(_game.player.shown_position().x - away_site.global_position.x, _game.player.shown_position().z - away_site.global_position.z).length(),
+		_named().id if _named() != null else "none"])
+	_t.check("rolled away: the row keeps the run with its metres", _named() == away_site and row.get("what", "") == String(away_site.id)
+		and absi(int(row.get("distance", -1)) - 90) <= 5 and away_site.started, str(row))
+	var gone_at: Vector3 = away_site.global_position + back * 130.0
+	_game.player.reset_to(Vector3(gone_at.x, y, gone_at.z))
+	await _frames(2)
+	row = _row()
+	# Another site may share the id (the dam has more than one cache), so the row is told apart by its metres.
+	_t.check("rolled away: past the let-go range the row moves on", _named() != away_site and absi(int(row.get("distance", -1)) - 130) > 5, str(row))
+
+	# Behind: a site passed on the way to the Warden is no longer on offer, and its metres never grow.
+	for s in _acts.sites:
+		s.started = false
+		s.done = false
 	var site = _ahead()[0]
 	var toward: Vector3 = (warden.global_position - site.global_position)
 	toward.y = 0.0

@@ -1283,12 +1283,17 @@ func detour_reading(goal: Dictionary) -> Dictionary:
 		if m < best_m:
 			best = site
 			best_m = m
-	# A site the ball has just started stays the named one until it is at hand (its run may start a frame
-	# before `_site` says so); a trade spot never comes to hand, so it is not kept.
-	var kept = is_instance_valid(_detour_site) and _detour_site.started and not _detour_site.done and not _detour_site.failed \
-		and _detour_site.rule.finishes != "trade"
-	if not kept:
-		_detour_site = best
+	# A started site whose run is not at hand (the frame before `_site` says so, a surge still waiting
+	# for its sluice, a run the ball rolled away from) keeps the row with its own words and metres, so no
+	# other site takes it before its result. It lets go once the ball is past the run's own let-go range
+	# (the player left it) unless its surge is live. A trade spot never comes to hand, so it is not kept.
+	if is_instance_valid(_detour_site) and _detour_site.started and not _detour_site.done and not _detour_site.failed \
+			and _detour_site.rule.finishes != "trade":
+		var to_kept: Vector3 = _detour_site.global_position - ball
+		# On the ground plane, as the run's own let-go (activities.gd at_hand) measures it.
+		if _detour_site.surge_live or Vector2(to_kept.x, to_kept.z).length() <= game.world.activities.LET_GO_M:
+			return _site_row(_detour_site, int(to_kept.length()))
+	_detour_site = best
 	if best == null:
 		return {}
 	return _site_row(best, int(best_m))
