@@ -9,6 +9,7 @@ const Redline := preload("res://src/combat/redline.gd")
 const Rogue := preload("res://src/combat/rogue.gd")
 const WaveCross := preload("res://src/world/wave_cross.gd")
 const Palette := preload("res://src/core/palette.gd")
+const FlashGuard := preload("res://src/presentation/flash_guard.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const T := preload("res://tests/support/t.gd")
 
@@ -267,6 +268,30 @@ func _kettle_drawn(game) -> void:
 					beat_lo += 1
 					quiet_ok = quiet_ok and heat <= fx.shell_heat() + 0.1 and absf(rim.r - base.r) + absf(rim.g - base.g) + absf(rim.b - base.b) < 0.4
 	_t.check("kettle drawn: the rim beats to full heat in the hazard colour over the whistle window, and is the shell colour before it", checked == 80 and beat_hi > 0 and beat_lo > 0 and quiet_ok, "hi %d lo %d" % [beat_hi, beat_lo])
+	# Reduce flashes (flash_guard.gd): the beat runs 4 to 10 Hz, past WCAG 2.3.1's three flashes a second.
+	# With the toggle on, count the rim's swings over the window, sampled well above 10 Hz.
+	FlashGuard.on = true
+	var swings := 0
+	var samples := 0
+	var tinted := 0
+	var last_heat := -1.0
+	var last_dir := 0
+	for i in 200:
+		red.value = Redline.MAX
+		red.waited = Redline.COOK_OFF_S - Redline.KETTLE_S + float(i) * 0.01
+		fx._draw_overdrive(0.016)
+		var g_heat: float = fx._rim_mat.get_shader_parameter("heat")
+		var g_rim: Color = fx._rim_mat.get_shader_parameter("rim")
+		samples += 1
+		tinted += 1 if g_rim.is_equal_approx(fx.shell_color(red).lerp(hazard, 1.0)) else 0
+		if last_heat >= 0.0 and absf(g_heat - last_heat) > 0.001:
+			var dir := 1 if g_heat > last_heat else -1
+			if last_dir != 0 and dir != last_dir:
+				swings += 1
+			last_dir = dir
+		last_heat = g_heat
+	FlashGuard.on = false
+	_t.check("kettle drawn, reduce flashes: no swing faster than 3 a second, and the hazard colour still shows", samples == 200 and swings <= 6 and tinted > 150, "%d swings in 2 s, %d of %d samples tinted" % [swings, tinted, samples])
 	red.clear()
 	red.set_mode(Redline.OFF)
 

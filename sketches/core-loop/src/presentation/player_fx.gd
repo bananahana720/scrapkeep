@@ -1685,8 +1685,11 @@ func _draw_overdrive(delta: float) -> void:
 		var rim: Color = shell_color(red) if shell_wins else OVERDRIVE_RIM
 		# The kettle's twin: over the last Redline.KETTLE_S of the fuse the rim beats to full heat
 		# in the hazard colour, in step with the whistle (redline.gd kettle_pulse).
-		var kettle: float = red.kettle_pulse() if red != null else 0.0
-		_rim_mat.set_shader_parameter("heat", lerpf(lit, 1.0, kettle))
+		# The beat runs 4 to 10 Hz, so Reduce flashes holds it steady, as FlashGuard.blink does.
+		var kettle := 0.0
+		if red != null:
+			kettle = (1.0 if red.kettle_live() else 0.0) if FlashGuard.on else red.kettle_pulse()
+		_rim_mat.set_shader_parameter("heat", FlashGuard.spike(lit, lerpf(lit, 1.0, kettle)))
 		_rim_mat.set_shader_parameter("rim", rim.lerp(Palette.HAZARD, kettle))
 	if on:
 		_rim_mat.set_shader_parameter("pilot", player.class_color())
