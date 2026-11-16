@@ -1,0 +1,13 @@
+diff --git c/sketches/core-loop/tests/park_reactor_fight_test.gd w/sketches/core-loop/tests/park_reactor_fight_test.gd
+index c24f30fd6..87473eda1 100644
+--- c/sketches/core-loop/tests/park_reactor_fight_test.gd
++++ w/sketches/core-loop/tests/park_reactor_fight_test.gd
+@@ -47,6 +47,8 @@ func _initialize() -> void:
+ 	_out = _absolute(String(_settings.get("out", OS.get_user_data_dir().path_join("park-reactor-fight"))))
+ 	DirAccess.make_dir_recursive_absolute(_out)
+ 	_seeds = [13]
++	if OS.has_environment("READ_SEED"):
++		_seeds[0] = int(OS.get_environment("READ_SEED"))
+ 	node_added.connect(_on_node_added)
+ 	_next()
+ 

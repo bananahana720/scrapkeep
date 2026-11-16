@@ -1,0 +1,49 @@
+diff --git c/sketches/core-loop/tools/sysaudit/break_run.gd w/sketches/core-loop/tools/sysaudit/break_run.gd
+index 4d0e80d77..02d773998 100644
+--- c/sketches/core-loop/tools/sysaudit/break_run.gd
++++ w/sketches/core-loop/tools/sysaudit/break_run.gd
+@@ -25,6 +25,9 @@ const StageModifier := preload("res://src/world/events/stage_modifier.gd")
+ #          --quit-in=<state>:<s> quits once after s seconds in a flow state (beacon is the Warden
+ #          fight, gates the open gates after a break, launch the flight, boss the boss arena; the
+ #          seconds may be a decimal, and launch lasts 0.6 s headless). A run that is over is never quit.
++#          --live-swipe=1 plays the comic launch swipe under the bot (launch_take.force_live), as a played
++#          game does, so a quit can land inside it (SA-F4); run it rendered. The quit row's take_phase
++#          names the swipe phase at the quit (0 idle, 1 wind, 2 cover, 3 hold, 4 reveal).
+ #   stack  stacks every buff with every debuff: a random legal build of 6 to 14 parts (item_fuzz's
+ #          draft), a curse deal taken, scrap wear on (the default), and the hull set to 15% at each
+ #          new stage. Stage modifiers are the run seed's own; a "modifier" row names each stage's.
+@@ -104,6 +107,7 @@ var _resumed_tick := 0
+ # --quit-in=<state>:<s> quits once, after s seconds in that flow state, in place of the seeded moments.
+ var _quit_state := ""
+ var _quit_state_s := 0.0
++var _live_swipe := false
+ # stack
+ var _drafted := false
+ var _stacked_stages := {}
+@@ -117,6 +121,8 @@ func _initialize() -> void:
+ 			var parts := arg.substr(10).split(":")
+ 			_quit_state = parts[0]
+ 			_quit_state_s = float(parts[1]) if parts.size() > 1 else 1.0
++		elif arg == "--live-swipe=1":
++			_live_swipe = true
+ 		elif arg.begins_with("--spam-until="):
+ 			_spam_until = float(arg.substr(13))
+ 	if _mode not in ["spam", "quit", "stack"]:
+@@ -164,6 +170,8 @@ func _hook() -> void:
+ 	_second = -1.0
+ 	_game.events.stage_entered.connect(_on_stage_entered)
+ 	_game.events.flow_changed.connect(_on_flow_changed)
++	if _live_swipe and _game.launch_take != null:
++		_game.launch_take.force_live = true
+ 	if _resuming:
+ 		_resuming = false
+ 		_check_resume.call_deferred()
+@@ -297,6 +305,8 @@ func _maybe_quit() -> void:
+ 	_saved = doc
+ 	_before = {"stage": run.stage, "cogs": run.cogs, "parts": run.parts.size(), "cores": run.bonus_cores,
+ 		"death_save_spent": run.death_save_spent, "hp": run.hp, "state": _game.flow.state_name()}
++	if _live_swipe and _game.launch_take != null:
++		_before["take_phase"] = int(_game.launch_take.phase)
+ 	_row("quit", {"saved_stage": int(doc.get("stage", 0)), "before": _before})
+ 	_settings["from-stage"] = str(int(doc.get("stage", 1)))
+ 	_resuming = true
