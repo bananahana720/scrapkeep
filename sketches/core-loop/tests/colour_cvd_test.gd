@@ -36,7 +36,7 @@ const SIGHTS := {
 # yet names its finding in project-guide/handoff/UI-FINDINGS.tsv.
 const CLOSE := {
 	"AMBER|BRASS": {"carrier": "a relic reward's frame is doubled with bolt heads (shop_tile.gd:37 RARITY, drawn at :160 to :165) and its gate topper is a prism where a boss fact never is (reward_gates.gd:428); Brindle's ground warnings carry brass rim ticks (boss.gd _new_hazard colours them brass, hazard.gd:298 sets the owner, threat_grammar.gd:459 draws it); the Mind's and the Waking's warnings (mind_attacks.gd build) are plain danger with no boss mark; all checked below. An event toast in either colour (event_kinds.gd, a star for both stage_cleared and boss_defeated) relies on its words", "finding": ""},
-	"AMBER|HAZARD": {"carrier": "a relic reward is a doubled bolt-headed frame or a prism topper (as above), the cost strike on a shop tile is one diagonal line (shop_tile.gd:130), and the pilot's danger mark is a diamond with a bang (danger_mark.gd:102); relic is never drawn as a ground fill", "finding": "UF-03: the player's own amber rings (projectile.gd:134, silo_battery.gd) and a hostile ground warning share the clear look, the default, which draws no stripes; stripes exist only in the classic and tape looks (threat_grammar.gd:1227), and the dashed edge on own rings is not built"},
+	"AMBER|HAZARD": {"carrier": "a relic reward is a doubled bolt-headed frame or a prism topper (as above), the cost strike on a shop tile is one diagonal line (shop_tile.gd:130), and the pilot's danger mark is a diamond with a bang (danger_mark.gd:102); relic is never drawn as a ground fill; on the ground the player's own ring (projectile.gd:134, silo_battery.gd) has a dashed edge every OWN_DASH metres in every look where a hostile ring's edge is solid and a bone ring's dashes are over twice as sparse (threat_grammar.gd _own_edge_tris, checked below and in telegraph_own_dash_test)", "finding": ""},
 	"BRASS|HAZARD": {"carrier": "Brindle's ground warning is a danger-toned warning plus brass rim ticks, and the ticks draw in every look (threat_grammar.gd:459, checked below); the Mind's and the Waking's warnings carry no boss mark, so on the ground they read as danger only; a boss's body and badge are brass solids (boss.gd:1185, :1287), where danger is a ground fill", "finding": "UF-03: boss_attack_telegraphed and attack_cued (brass) draw the wave glyph, as do event_announced and event_started (danger red) in event_kinds.gd; their sounds differ, but no shape does"},
 	"ANCIENT|ARC": {"carrier": "ancient seams carry a pattern cue (material_slots.gd, the pattern field)", "finding": ""},
 }
@@ -80,6 +80,13 @@ func _initialize() -> void:
 	_t.check("a plain danger hazard draws no rim ticks", _owner_mark(plain_hazard.descriptor()).is_empty())
 	boss_hazard.free()
 	plain_hazard.free()
+	# The player's own ring's dashed edge: it covers well under what a hostile ring's solid edge does.
+	var ring := {"type": Threat.Type.INSTANT, "centre": Vector3.ZERO, "reach": 3.5, "progress": 0.0, "live": false,
+		"form": "radial", "r_in": 0.0, "r_out": 6.0, "a0": 0.0, "a1": TAU}
+	var own_area := _edge_area(ring.merged({"tone": Palette.AMBER}))
+	var hostile_area := _edge_area(ring.merged({"tone": Palette.HAZARD}))
+	_t.check("the player's own ring edge is dashed where a hostile ring's is solid (%.2f against %.2f m2)" % [own_area, hostile_area],
+		hostile_area > 0.0 and own_area > 0.0 and own_area < hostile_area * 0.8)
 	# The gate topper: a flat slab for common, a prism for rare and relic.
 	var shapes := {}
 	for rung in ["common", "rare", "relic"]:
@@ -197,3 +204,14 @@ static func _lab(v: Vector3) -> Vector3:
 
 static func _f(t: float) -> float:
 	return pow(t, 1.0 / 3.0) if t > 0.008856 else 7.787 * t + 16.0 / 116.0
+
+
+# The ground area, m2, of a descriptor's edge mark.
+func _edge_area(d: Dictionary) -> float:
+	var area := 0.0
+	for m in Threat.marks(d, false):
+		if m["role"] == "edge":
+			var tris: PackedVector3Array = m["tris"]
+			for i in range(0, tris.size() - 2, 3):
+				area += absf((tris[i + 1] - tris[i]).cross(tris[i + 2] - tris[i]).y) * 0.5
+	return area

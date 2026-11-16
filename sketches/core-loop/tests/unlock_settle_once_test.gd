@@ -24,6 +24,7 @@ func _initialize() -> void:
 	_survives_reload()
 	_union_when_run_doc_and_profile_disagree()
 	_grant_fires_once_across_runs()
+	_reward_never_settled_without_its_unlock()
 	_entrance_doc_field()
 	_grant_saves_once_never_the_middle()
 	_events.free()
@@ -104,6 +105,33 @@ func _union_when_run_doc_and_profile_disagree() -> void:
 	_t.check("RS4 reconcile gives both sides the union", other_run.settled.size() == 2 and other_profile.settled_ids().size() == 2 and other_run.settled.has("from_disk") and other_profile.is_settled("from_doc"), "%s %s" % [other_run.settled, other_profile.settled_ids()])
 	_t.check("RS4 reconcile saved the profile", _profile(other_profile.path).is_settled("from_doc"))
 	other.free()
+
+
+# F-B R-1 (Andrew, 16 Nov: never lost wins): a run document that settled a reward its profile
+# never saved (both profile saves of the earn failed) must not make Continue mark the reward paid
+# with no unlock. The run's own list still refuses it this run; the next launch pays it, once.
+func _reward_never_settled_without_its_unlock() -> void:
+	var path := _path()
+	var profile := _profile(path)
+	var run := RunState.new()
+	for id in ["reward:fb_row:cosmetic", "reward:fb_row:cosmetic:paint_rust", "ledger.found.3"]:
+		run.settled.append(id)
+	var resumed := _progress(profile, run)
+	resumed.reconcile_settled()
+	_t.check("FB Continue copies no reward key into a profile that lacks its unlock", not profile.is_settled("reward:fb_row:cosmetic") and not profile.is_settled("reward:fb_row:cosmetic:paint_rust"), str(profile.settled_ids()))
+	_t.check("FB Continue still copies a ledger id, whose settle is its grant", profile.is_settled("ledger.found.3"))
+	_t.check("FB the ledger id reached the profile file", _profile(path).is_settled("ledger.found.3"))
+	_t.check("FB the continued run still refuses the reward its own list settled", not resumed._grant_reward("fb_row", "cosmetic", "paint_rust") and not profile.has_cosmetic("paint_rust"))
+	resumed.free()
+	var relaunched := _profile(path)
+	var next := _progress(relaunched, RunState.new())
+	_t.check("FB the next launch pays the reward", next._grant_reward("fb_row", "cosmetic", "paint_rust") and relaunched.has_cosmetic("paint_rust"))
+	_t.check("FB and pays it once", not next._grant_reward("fb_row", "cosmetic", "paint_rust"))
+	next.free()
+	var again := _profile(path)
+	var later := _progress(again, RunState.new())
+	_t.check("FB a later launch pays nothing more", not later._grant_reward("fb_row", "cosmetic", "paint_rust") and again._doc["cosmetics"] == ["paint_rust"], str(again._doc["cosmetics"]))
+	later.free()
 
 
 func _grant_fires_once_across_runs() -> void:
