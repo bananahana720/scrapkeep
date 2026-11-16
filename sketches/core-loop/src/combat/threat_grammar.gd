@@ -134,6 +134,9 @@ const UNDERLAY_ALPHA := 1.0
 # Half the width of a wave's front: the band drawn and the band contains() tests.
 const WAVE_EDGE := 1.0
 const DASH := 2.2
+# Dash rhythm tells owner apart by shape: hostile edges are solid, the player's own (AMBER) are
+# dashed every OWN_DASH metres, and a harmless bone ring every DASH, over twice as sparse.
+const OWN_DASH := 1.0
 const CHEVRON_HALF := 1.6
 const CHEVRON_DEPTH := 1.3
 const CHEVRON_LINE := 0.2
@@ -773,7 +776,7 @@ static func _projectile(d: Dictionary, motion: bool, out: Array) -> void:
 	if not motion:
 		out.append(_mark("area", _area_layer(d, false), _area_tone(d, SHELL_AREA_ALPHA), _footprint(d)))
 		var w := outline_width(d)
-		_lined(out, "edge", false, Color(tone, EDGE_ALPHA * 0.8), func(grow: float): return _arc(d, r - w - grow, r + grow, 0.0, TAU),
+		_lined(out, "edge", false, Color(tone, EDGE_ALPHA * 0.8), func(grow: float): return _own_edge_tris(d, grow) if stance(tone) == "owned" else _arc(d, r - w - grow, r + grow, 0.0, TAU),
 			{"r_out": r, "centre": c})
 		return
 	if stance(tone) == "hostile":
@@ -1046,6 +1049,8 @@ static func _footprint(d: Dictionary) -> PackedVector3Array:
 
 # The solid boundary: rings inside the radial edge, or rails and a far cap on a lane.
 static func _edge_tris(d: Dictionary, grow: float) -> PackedVector3Array:
+	if stance(d["tone"]) == "owned":
+		return _own_edge_tris(d, grow)
 	var tris := PackedVector3Array()
 	if d["form"] == "lane":
 		var back: float = d["back"]
@@ -1067,6 +1072,41 @@ static func _edge_tris(d: Dictionary, grow: float) -> PackedVector3Array:
 		var c: Vector3 = d["centre"]
 		for a in [a0, a1]:
 			_seg(tris, _at(c, a, r_in), _at(c, a, r_out), w * 0.5 + grow)
+	return tris
+
+
+# The player's own edge: _edge_tris' shape cut into OWN_DASH dashes, so it reads as neither a
+# hostile solid edge nor a bone ring.
+static func _own_edge_tris(d: Dictionary, grow: float) -> PackedVector3Array:
+	var tris := PackedVector3Array()
+	if d["form"] == "lane":
+		var back: float = d["back"]
+		var length: float = d["length"]
+		var half: float = d["half_width"]
+		var count := maxi(2, int(round((length + back) / OWN_DASH)))
+		for side in [-1.0, 1.0]:
+			for i in count:
+				tris.append_array(_lane_strip(d, lerpf(-back, length, (i + 0.225) / count) - grow, lerpf(-back, length, (i + 0.775) / count) + grow,
+					side * half - RAIL - grow, side * half + RAIL + grow))
+		var across := maxi(1, int(round(2.0 * half / OWN_DASH)))
+		for i in across:
+			tris.append_array(_lane_strip(d, length - CAP - grow, length + grow, lerpf(-half, half, (i + 0.225) / across) - grow,
+				lerpf(-half, half, (i + 0.775) / across) + grow))
+		return tris
+	var w := outline_width(d)
+	var r_in: float = d["r_in"]
+	var r_out: float = d["r_out"]
+	var a0: float = d["a0"]
+	var a1: float = d["a1"]
+	tris.append_array(_dashes(d, r_out - w * 0.5, w * 0.5 + grow, a0, a1, OWN_DASH))
+	if r_in > 0.05:
+		tris.append_array(_dashes(d, r_in + w * 0.5, w * 0.5 + grow, a0, a1, OWN_DASH))
+	if not is_full(d):
+		var c: Vector3 = d["centre"]
+		for a in [a0, a1]:
+			var n := maxi(2, int(round((r_out - r_in) / OWN_DASH)))
+			for i in n:
+				_seg(tris, _at(c, a, lerpf(r_in, r_out, (i + 0.225) / n)), _at(c, a, lerpf(r_in, r_out, (i + 0.775) / n)), w * 0.5 + grow)
 	return tris
 
 
@@ -1111,9 +1151,9 @@ static func _dashed_lane(d: Dictionary, half: float) -> PackedVector3Array:
 	return tris
 
 
-static func _dashes(d: Dictionary, r: float, half: float, a0: float, a1: float) -> PackedVector3Array:
+static func _dashes(d: Dictionary, r: float, half: float, a0: float, a1: float, period := DASH) -> PackedVector3Array:
 	var tris := PackedVector3Array()
-	var count := maxi(3, int(round(absf(a1 - a0) * r / DASH)))
+	var count := maxi(3, int(round(absf(a1 - a0) * r / period)))
 	for i in count:
 		var b0 := lerpf(a0, a1, (i + 0.225) / count)
 		var b1 := lerpf(a0, a1, (i + 0.775) / count)
