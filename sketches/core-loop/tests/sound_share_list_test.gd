@@ -62,7 +62,7 @@ const FIVE := {
 	"drop_landed": {"sound": "drop_thud", "danger": false},
 	"missed_drop": {"sound": "drop_whiff", "danger": false},
 	"evolution_fired": {"sound": "evolution_fired", "danger": false},
-	"guard_critical": {"sound": "guard_creak", "danger": true},
+	"guard_critical": {"sound": "guard_creak", "danger": false},
 }
 const BEACON := {"beacon_unsealed": "stinger_unseal", "beacon_open": "beacon_open_chime"}
 

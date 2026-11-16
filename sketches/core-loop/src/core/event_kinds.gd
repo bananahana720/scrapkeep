@@ -1014,7 +1014,7 @@ const UI_ROWS := {
 	# A presentation sub-fact of posture_changed, not another bus signal.
 	"posture_break": {"group": "combat", "color": Palette.SAND, "shape": "burst", "sound": "drop_landing", "hud": "", "objective": "", "priority": 1},
 	# Another sub-fact of posture_changed: the Warden's guard climbed to GUARD_CRITICAL, one more hit from the stagger (audio.gd).
-	"guard_critical": {"group": "combat", "color": Palette.HAZARD, "shape": "bar", "sound": "guard_creak", "hud": "", "objective": "", "priority": 2},
+	"guard_critical": {"group": "combat", "color": Palette.SAND, "shape": "bar", "sound": "guard_creak", "hud": "", "objective": "", "priority": 2},
 	"ability_ready": {"group": "combat", "color": Palette.SAND, "shape": "ring", "sound": "class_motif", "hud": "", "objective": "", "priority": 1},
 	"ability_cooling": {"group": "combat", "color": Palette.VERDIGRIS, "shape": "ring", "sound": "ui_tick", "hud": "", "objective": "", "priority": 0},
 	"ability_active": {"group": "combat", "color": Palette.SAND, "shape": "star", "sound": "ui_tick", "hud": "", "objective": "", "priority": 0},

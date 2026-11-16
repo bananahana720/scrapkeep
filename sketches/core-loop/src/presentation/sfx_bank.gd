@@ -88,8 +88,6 @@ const DANGER_SOUNDS := ["hurt", "enemy_arrive", "boss_telegraph", "ratchet_cue",
 	# A rubble fall's warnings (rubble_fall.gd warn_sound) and the arena's crew-arrival whistle (arena_wave,
 	# sluice_warning): each comes before a hit or a crew, as enemy_arrive does.
 	"prop_crew_strain", "cave_in_rumble", "arena_wave_whistle",
-	# The Warden's guard about to break (audio.gd, guard_critical): it comes before the stagger and the hit it answers.
-	"guard_creak",
 	# Brindle's five wind-ups (audio.gd BRINDLE_TELEGRAPHS), each its own tell of the attack it warns of.
 	"tele_crane_sweep", "tele_slag_ring", "tele_charge", "tele_charge_wall", "tele_eject"]
 # Pitched cues that follow the live key (a lifted Warden plays its chimes in Eb). The combat
@@ -3066,7 +3064,7 @@ static func _drop_whiff() -> PackedFloat32Array:
 	return _mix([[_noise(0.22, 3200.0, 900.0, 14.0, 0.02), 0, 0.5], [_tone(0.2, _hz(67), _hz(60), "sine", 14.0), Synth.seconds(0.03), 0.5]])
 
 
-# The Warden's guard about to break: a dark saw straining upward under a groaning metal sweep, then one dry crack.
+# The Warden's guard about to break, the player's opening one hit away (not a danger cue, so it keeps the bass): a dark saw straining upward under a groaning metal sweep, then one dry crack.
 static func _guard_creak() -> PackedFloat32Array:
 	return _mix([[_tone(0.45, _hz(38), _hz(45), "saw_dark", 4.0), 0, 0.8], [_fm_sweep(0.4, 380.0, 1700.0, 0.7, 6.0), Synth.seconds(0.04), 0.5],
 		[_noise(0.04, 3500.0, 2500.0, 90.0, 0.001), Synth.seconds(0.3), 0.5]])
