@@ -105,7 +105,7 @@ The band shards read numbers, not only pass or fail, so they keep their own lane
 
 ## The known-failing ledger
 
-[KNOWN-FAILING.tsv](KNOWN-FAILING.tsv) lists every red test a promotion may carry: test, kind (`red` fails alone; `flake` fails under load or some runs), cause, owner, date added, review date (ruling bq). The coordinator owns the file; a row is added, re-dated or removed by a pull request on the open stage.
+[KNOWN-FAILING.tsv](KNOWN-FAILING.tsv) lists every red test a promotion may carry: test, kind (`red` fails alone; `flake` fails under load or some runs; since ruling dx no new `flake` row is added: a new failure that shows only under load gets no row and blocks, and a row that was already `red` for such a failure, like `tree_play_test`, stays `red` with a cause that says so until the test is fixed), cause, owner, date added, review date (ruling bq). The coordinator owns the file; a row is added, re-dated or removed by a pull request on the open stage.
 
 ```
 node scripts/known-failing.mjs --check              # shape; part of npm run check:docs
