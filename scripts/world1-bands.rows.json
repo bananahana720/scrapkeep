@@ -484,7 +484,7 @@
       "label": "a played run on the sitting launch fires all six loops and keeps what it earns",
       "status": "gate",
       "cadence": "sitting",
-      "producer": "sketches/core-loop/tests/sitting_played_run_test.gd plays the sitting launch with the self-play bot to the win and once more with heat off; node scripts/gate/sitting-played-receipt.mjs --log <test output> --head <commit> --out <dir>/sitting-launch-played.json writes the receipt",
+      "producer": "sketches/core-loop/tests/sitting_played_run_test.gd plays the sitting launch with the self-play bot to the win, once with heat off and once with the called-shot hand off; node scripts/gate/sitting-played-receipt.mjs --log <test output> --head <commit> --out <dir>/sitting-launch-played.json writes the receipt",
       "plant": "one loop switched off must read as a miss",
       "basis": "audit of 13 Nov, unit A3: no test plays --profile=sitting-earned, and five of its six loops never ran in a played run"
     },
