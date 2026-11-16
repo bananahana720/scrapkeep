@@ -1,0 +1,311 @@
+{
+	"adapter": "NVIDIA GeForce RTX 4080",
+	"busy_regions": [
+		{
+			"flashes_per_second": 0.0,
+			"frames": 64,
+			"luminance_max": 0.232,
+			"luminance_min": 0.221,
+			"region": 0
+		},
+		{
+			"flashes_per_second": 0.0,
+			"frames": 64,
+			"luminance_max": 0.171,
+			"luminance_min": 0.161,
+			"region": 1
+		},
+		{
+			"flashes_per_second": 0.0,
+			"frames": 64,
+			"luminance_max": 0.188,
+			"luminance_min": 0.181,
+			"region": 2
+		},
+		{
+			"flashes_per_second": 0.0,
+			"frames": 64,
+			"luminance_max": 0.164,
+			"luminance_min": 0.151,
+			"region": 3
+		},
+		{
+			"flashes_per_second": 0.0,
+			"frames": 64,
+			"luminance_max": 0.188,
+			"luminance_min": 0.182,
+			"region": 4
+		},
+		{
+			"flashes_per_second": 0.0,
+			"frames": 64,
+			"luminance_max": 0.12,
+			"luminance_min": 0.115,
+			"region": 5
+		},
+		{
+			"flashes_per_second": 0.0,
+			"frames": 64,
+			"luminance_max": 0.107,
+			"luminance_min": 0.105,
+			"region": 6
+		},
+		{
+			"flashes_per_second": 0.0,
+			"frames": 64,
+			"luminance_max": 0.149,
+			"luminance_min": 0.145,
+			"region": 7
+		},
+		{
+			"flashes_per_second": 1.0,
+			"frames": 64,
+			"luminance_max": 0.136,
+			"luminance_min": 0.068,
+			"region": 8
+		},
+		{
+			"flashes_per_second": 0.0,
+			"frames": 64,
+			"luminance_max": 0.111,
+			"luminance_min": 0.08,
+			"region": 9
+		},
+		{
+			"flashes_per_second": 0.0,
+			"frames": 64,
+			"luminance_max": 0.129,
+			"luminance_min": 0.097,
+			"region": 10
+		},
+		{
+			"flashes_per_second": 0.0,
+			"frames": 64,
+			"luminance_max": 0.15,
+			"luminance_min": 0.139,
+			"region": 11
+		}
+	],
+	"delta": 0.05,
+	"floor_regions": [
+		{
+			"flashes_per_second": 0.0,
+			"frames": 43,
+			"luminance_max": 0.257,
+			"luminance_min": 0.228,
+			"region": 0
+		},
+		{
+			"flashes_per_second": 0.0,
+			"frames": 43,
+			"luminance_max": 0.163,
+			"luminance_min": 0.162,
+			"region": 1
+		},
+		{
+			"flashes_per_second": 0.0,
+			"frames": 43,
+			"luminance_max": 0.187,
+			"luminance_min": 0.186,
+			"region": 2
+		},
+		{
+			"flashes_per_second": 0.0,
+			"frames": 43,
+			"luminance_max": 0.163,
+			"luminance_min": 0.153,
+			"region": 3
+		},
+		{
+			"flashes_per_second": 0.0,
+			"frames": 43,
+			"luminance_max": 0.374,
+			"luminance_min": 0.182,
+			"region": 4
+		},
+		{
+			"flashes_per_second": 0.0,
+			"frames": 43,
+			"luminance_max": 0.137,
+			"luminance_min": 0.112,
+			"region": 5
+		},
+		{
+			"flashes_per_second": 0.0,
+			"frames": 43,
+			"luminance_max": 0.107,
+			"luminance_min": 0.105,
+			"region": 6
+		},
+		{
+			"flashes_per_second": 0.0,
+			"frames": 43,
+			"luminance_max": 0.145,
+			"luminance_min": 0.144,
+			"region": 7
+		},
+		{
+			"flashes_per_second": 0.0,
+			"frames": 43,
+			"luminance_max": 0.068,
+			"luminance_min": 0.068,
+			"region": 8
+		},
+		{
+			"flashes_per_second": 0.0,
+			"frames": 43,
+			"luminance_max": 0.08,
+			"luminance_min": 0.08,
+			"region": 9
+		},
+		{
+			"flashes_per_second": 0.0,
+			"frames": 43,
+			"luminance_max": 0.099,
+			"luminance_min": 0.097,
+			"region": 10
+		},
+		{
+			"flashes_per_second": 0.0,
+			"frames": 43,
+			"luminance_max": 0.139,
+			"luminance_min": 0.139,
+			"region": 11
+		}
+	],
+	"floor_seconds": 2.0,
+	"floor_worst_flashes_per_second": 0.0,
+	"frame_count": 107,
+	"frames_per_second": 21.4,
+	"grid": [
+		4,
+		3
+	],
+	"guard": false,
+	"head": "f2bbd51293660455b774d79444f1b0bd5e12db5d",
+	"line": 3.0,
+	"mode": "clip",
+	"plant": "",
+	"shots": [
+		{
+			"file": "clip-0.00.png",
+			"frame": 268,
+			"guard": false
+		},
+		{
+			"file": "clip-0.26.png",
+			"frame": 276,
+			"guard": false
+		},
+		{
+			"file": "clip-0.53.png",
+			"frame": 283,
+			"guard": false
+		},
+		{
+			"file": "clip-0.76.png",
+			"frame": 288,
+			"guard": false
+		},
+		{
+			"file": "clip-1.01.png",
+			"frame": 293,
+			"guard": false
+		},
+		{
+			"file": "clip-1.27.png",
+			"frame": 298,
+			"guard": false
+		},
+		{
+			"file": "clip-1.50.png",
+			"frame": 303,
+			"guard": false
+		},
+		{
+			"file": "clip-1.76.png",
+			"frame": 307,
+			"guard": false
+		},
+		{
+			"file": "clip-2.02.png",
+			"frame": 311,
+			"guard": false
+		},
+		{
+			"file": "clip-2.27.png",
+			"frame": 316,
+			"guard": false
+		},
+		{
+			"file": "clip-2.51.png",
+			"frame": 322,
+			"guard": false
+		},
+		{
+			"file": "clip-2.76.png",
+			"frame": 327,
+			"guard": false
+		},
+		{
+			"file": "clip-3.01.png",
+			"frame": 333,
+			"guard": false
+		},
+		{
+			"file": "clip-3.27.png",
+			"frame": 339,
+			"guard": false
+		},
+		{
+			"file": "clip-3.50.png",
+			"frame": 343,
+			"guard": false
+		},
+		{
+			"file": "clip-3.78.png",
+			"frame": 349,
+			"guard": false
+		},
+		{
+			"file": "clip-4.02.png",
+			"frame": 354,
+			"guard": false
+		},
+		{
+			"file": "clip-4.25.png",
+			"frame": 359,
+			"guard": false
+		},
+		{
+			"file": "clip-4.51.png",
+			"frame": 365,
+			"guard": false
+		},
+		{
+			"file": "clip-4.77.png",
+			"frame": 369,
+			"guard": false
+		},
+		{
+			"file": "clip-5.01.png",
+			"frame": 374,
+			"guard": false
+		}
+	],
+	"sites": [
+		"edge",
+		"pop_glyph",
+		"ring_glyph",
+		"enemy_hit",
+		"word"
+	],
+	"tool": "flash_capture.gd",
+	"verdict": "pass",
+	"volleys_at_s": [
+		2.0,
+		2.5
+	],
+	"worst_flashes_per_second": 1.0,
+	"worst_region": 8
+}

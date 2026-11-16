@@ -1,0 +1,167 @@
+{
+	"adapter": "NVIDIA GeForce RTX 4080",
+	"ball_px": 641,
+	"changed": 24,
+	"crew_px": 6157,
+	"head": "f2bbd51293660455b774d79444f1b0bd5e12db5d",
+	"line": 0.25,
+	"noise_first": {
+		"ball": 0.0,
+		"body": 0.000162416761409777,
+		"screen": 0.00000108506944444444
+	},
+	"plant": "",
+	"poses": [
+		{
+			"ball": 0.0,
+			"body": 0.204969952899139,
+			"control_body": 0.00552216988793243,
+			"cover": 0.199447783011207,
+			"line": 0.25,
+			"look": "haze",
+			"pass": true,
+			"png": "/home/andrew/scratch/w43-pc/ua-out/f2bb/cover-real/cover-lane-pending-haze.png",
+			"pose": "lane-pending",
+			"screen": 0.273371310763889
+		},
+		{
+			"ball": 0.135725429017161,
+			"body": 0.210492122787072,
+			"control_body": 0.001461750852688,
+			"cover": 0.209030371934384,
+			"line": 0.25,
+			"look": "haze",
+			"pass": true,
+			"png": "/home/andrew/scratch/w43-pc/ua-out/f2bb/cover-real/cover-lane-live-haze.png",
+			"pose": "lane-live",
+			"screen": 0.324851345486111
+		},
+		{
+			"ball": 0.0998439937597504,
+			"body": 0.205132369660549,
+			"control_body": 0.00584700341075199,
+			"cover": 0.199285366249797,
+			"line": 0.25,
+			"look": "haze",
+			"pass": true,
+			"png": "/home/andrew/scratch/w43-pc/ua-out/f2bb/cover-real/cover-ring-pending-haze.png",
+			"pose": "ring-pending",
+			"screen": 0.0389019097222222
+		},
+		{
+			"ball": 0.0046801872074883,
+			"body": 0.0496995289913919,
+			"control_body": 0.00438525255806399,
+			"cover": 0.0453142764333279,
+			"line": 0.25,
+			"look": "clear",
+			"pass": true,
+			"png": "/home/andrew/scratch/w43-pc/ua-out/f2bb/cover-real/cover-lane-pending-clear.png",
+			"pose": "lane-pending",
+			"screen": 0.0877918836805556
+		},
+		{
+			"ball": 0.0904836193447738,
+			"body": 0.0539223647880461,
+			"control_body": 0.00617183693357154,
+			"cover": 0.0477505278544746,
+			"line": 0.25,
+			"look": "clear",
+			"pass": true,
+			"png": "/home/andrew/scratch/w43-pc/ua-out/f2bb/cover-real/cover-lane-live-clear.png",
+			"pose": "lane-live",
+			"screen": 0.139037543402778
+		},
+		{
+			"ball": 0.0592823712948518,
+			"body": 0.0451518596719181,
+			"control_body": 0.00519733636511288,
+			"cover": 0.0399545233068053,
+			"line": 0.25,
+			"look": "clear",
+			"pass": true,
+			"png": "/home/andrew/scratch/w43-pc/ua-out/f2bb/cover-real/cover-ring-pending-clear.png",
+			"pose": "ring-pending",
+			"screen": 0.0338433159722222
+		},
+		{
+			"ball": 0.0670826833073323,
+			"body": 0.0522981971739484,
+			"control_body": 0.000487250284229332,
+			"cover": 0.051810946889719,
+			"line": 0.25,
+			"look": "edges",
+			"pass": true,
+			"png": "/home/andrew/scratch/w43-pc/ua-out/f2bb/cover-real/cover-lane-pending-edges.png",
+			"pose": "lane-pending",
+			"screen": 0.0909613715277778
+		},
+		{
+			"ball": 0.0561622464898596,
+			"body": 0.0498619457528017,
+			"control_body": 0.00259866818255644,
+			"cover": 0.0472632775702452,
+			"line": 0.25,
+			"look": "edges",
+			"pass": true,
+			"png": "/home/andrew/scratch/w43-pc/ua-out/f2bb/cover-real/cover-lane-live-edges.png",
+			"pose": "lane-live",
+			"screen": 0.0918272569444444
+		},
+		{
+			"ball": 0.196567862714509,
+			"body": 0.0384927724541173,
+			"control_body": 0.00324833522819555,
+			"cover": 0.0352444372259217,
+			"line": 0.25,
+			"look": "edges",
+			"pass": true,
+			"png": "/home/andrew/scratch/w43-pc/ua-out/f2bb/cover-real/cover-ring-pending-edges.png",
+			"pose": "ring-pending",
+			"screen": 0.0338368055555556
+		},
+		{
+			"ball": 0.0031201248049922,
+			"body": 0.0466136105246061,
+			"control_body": 0.00714633750203021,
+			"cover": 0.0394672730225759,
+			"line": 0.25,
+			"look": "tape",
+			"pass": true,
+			"png": "/home/andrew/scratch/w43-pc/ua-out/f2bb/cover-real/cover-lane-pending-tape.png",
+			"pose": "lane-pending",
+			"screen": 0.106438802083333
+		},
+		{
+			"ball": 0.0452418096723869,
+			"body": 0.0508364463212604,
+			"control_body": 0.00487250284229332,
+			"cover": 0.045963943478967,
+			"line": 0.25,
+			"look": "tape",
+			"pass": true,
+			"png": "/home/andrew/scratch/w43-pc/ua-out/f2bb/cover-real/cover-lane-live-tape.png",
+			"pose": "lane-live",
+			"screen": 0.138914930555556
+		},
+		{
+			"ball": 0.180967238689548,
+			"body": 0.0443397758648693,
+			"control_body": 0.00243625142114666,
+			"cover": 0.0419035244437226,
+			"line": 0.25,
+			"look": "tape",
+			"pass": true,
+			"png": "/home/andrew/scratch/w43-pc/ua-out/f2bb/cover-real/cover-ring-pending-tape.png",
+			"pose": "ring-pending",
+			"screen": 0.0344574652777778
+		}
+	],
+	"size": [
+		1280,
+		720
+	],
+	"tool": "mark_cover_capture.gd",
+	"verdict": "pass",
+	"worst_cover": 0.209030371934384
+}
