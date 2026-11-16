@@ -117,6 +117,9 @@ class NoteKey extends Control:
 const TOAST_IN := 0.12
 const TOAST_OUT := 0.2
 const TOAST_HOLD := {3: 2.4, 2: 1.6}
+# An event's warning line stays up for its lead, no longer than this (W1-110): a line that
+# outlives a few seconds of its own warning is the one a crew's hit gets blamed on.
+const EVENT_LINE_CAP := 12.0
 const TOAST_FONT := {3: UiTokens.LABEL, 2: UiTokens.BODY}
 const TOAST_WORDS := 4
 # What the cores held do for the gates, by count (parts.gd gate_rarities reads min(count, RunState.CORE_TIER_CAP)):
@@ -750,11 +753,11 @@ static func _drop_args(callable: Callable, count: int) -> Callable:
 	return callable.unbind(count) if count > 0 else callable
 
 
-func _on_field_fact(value, kind: String) -> void:
+func _on_field_fact(value, kind: String, hold := -1.0) -> void:
 	var shown = value
 	if value is String:
 		shown = (value as String).replace("_", " ").capitalize()
-	toast_kind(kind, {FIELD_ARGS[kind]: shown})
+	toast_kind(kind, {FIELD_ARGS[kind]: shown}, hold)
 
 
 func _on_fact(kind: String) -> void:
@@ -831,7 +834,9 @@ func _on_posture(enemy: Node3D, posture: float, staggered: bool) -> void:
 func _on_event_announced(event_id: String, seconds_until: float, _at: Vector3) -> void:
 	if seconds_until > 0.0:
 		var called: String = game.world.activities.called(event_id)
-		_on_field_fact(called if called != "" else event_id, "event_announced")
+		# The line lives as long as the lead, so it ends when the event starts and never reads as a later hit's cause.
+		var life := minf(seconds_until, EVENT_LINE_CAP)
+		_on_field_fact(called if called != "" else event_id, "event_announced", maxf(life - TOAST_IN - TOAST_OUT, 0.0))
 
 
 # Only a lost event gets a toast: a win already has its milestone toast.
@@ -842,17 +847,18 @@ func _on_event_ended(event_id: String, outcome: String) -> void:
 		toast(toast_text("event_ended", {"event": called if called != "" else event_id.replace("_", " ").capitalize()}), Palette.RUST, "wave", 2)
 
 
-func toast_kind(kind: String, fields := {}) -> void:
-	toast(toast_text(kind, fields), EventKinds.color(kind), EventKinds.row(kind).get("shape", "none"), mini(EventKinds.priority(kind), 3))
+func toast_kind(kind: String, fields := {}, hold := -1.0) -> void:
+	toast(toast_text(kind, fields), EventKinds.color(kind), EventKinds.row(kind).get("shape", "none"), mini(EventKinds.priority(kind), 3), hold)
 
 
 # One toast at a time: a new one replaces the one showing, and the same words already
 # showing stay up for another full beat instead (the gates re-publish their offers
 # whenever they move). While the stage card is up, the newest toast waits for it.
-func toast(text: String, color := Palette.SAND, shape := "diamond", priority := 3) -> void:
+# A hold of 0 or more overrides the priority's hold, in seconds.
+func toast(text: String, color := Palette.SAND, shape := "diamond", priority := 3, hold_s := -1.0) -> void:
 	if text == "":
 		return
-	var hold: float = TOAST_HOLD.get(priority, TOAST_HOLD[2])
+	var hold: float = hold_s if hold_s >= 0.0 else TOAST_HOLD.get(priority, TOAST_HOLD[2])
 	if not _toast.is_empty() and _toast["text"] == text:
 		_toast["left"] = maxf(_toast["left"], hold + TOAST_OUT)
 		return

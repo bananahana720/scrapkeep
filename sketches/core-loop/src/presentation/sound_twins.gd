@@ -59,7 +59,7 @@ const UNSITED_PINNED := 128
 
 const ACT := [
 	{"facts": ["ROWS:event_announced"], "traced": true, "what": "the toast \"<event> incoming\"",
-		"script": "res://src/ui/hud.gd", "fn": "_on_event_announced", "token": "_on_field_fact(called if called != \"\" else event_id, \"event_announced\")"},
+		"script": "res://src/ui/hud.gd", "fn": "_on_event_announced", "token": "_on_field_fact(called if called != \"\" else event_id, \"event_announced\""},
 	{"facts": ["ROWS:event_ended"], "traced": true, "what": "the toast \"<event> lost\" in the hazard colour",
 		"script": "res://src/ui/hud.gd", "fn": "_on_event_ended", "token": "toast(toast_text(\"event_ended\", {"},
 	{"facts": ["ROWS:boss_phase_changed"], "traced": true, "what": "the boss's phase burst and word, fired on the same call",

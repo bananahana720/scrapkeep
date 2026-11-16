@@ -148,7 +148,8 @@ func _physics_process(_delta: float) -> bool:
 			var icons_ok := true
 			for faction in [Roster.FLEET] + Roster.WARDEN_FAMILIES:
 				icons_ok = icons_ok and Icons.has(EventKinds.faction_icon(faction))
-			_report("pack_arrived", ok and icons_ok and EventKinds.ROWS["pack_arrived"]["color"] == EventKinds.color("event_announced"),
+			# event_started keeps the hazard red that event_announced left (W1-110).
+			_report("pack_arrived", ok and icons_ok and EventKinds.ROWS["pack_arrived"]["color"] == EventKinds.color("event_started"),
 				"a trapper and a thrower in one frame: %s; every faction has its fac_ icon %s" % [_packs, icons_ok])
 			_packs.clear()
 			ctx.spawner.spawn_enemy("chaser", ctx.terrain.drop_point(ball.x - 30.0, ball.z, 1.8))
