@@ -408,10 +408,24 @@ func check_shell(warden, body: Node3D, label: String) -> void:
 	for corner in 8:
 		var point: Vector3 = box.get_endpoint(corner)
 		radius = maxf(radius, maxf(absf(point.x), absf(point.z)))
-	print("shell %s %s: drum r %.2f h %.2f, body r %.2f h %.2f" % [label, warden.family, drum.radius, drum.height, radius, box.size.y])
+	var capped := minf(radius, Warden.camera_shell_reach())
+	print("shell %s %s: fitted r %.2f, capped r %.2f (drum r %.2f), height %.2f (drum %.2f)" % [label, warden.family, radius, capped, drum.radius, box.size.y, drum.height])
 	# The primitive look alone is 3.61 m by 7.6 m, so a shell that kept that size was never refitted to the body.
 	check("%s: the shell was refitted to the dressed body, not left at the primitive look" % label, drum.height > 7.6 + 0.3)
-	check("%s: the camera shell matches the drawn body within 0.3 m" % label, any and drum.radius >= radius - 0.3 and drum.height >= box.size.y - 0.3 and drum.radius <= radius + 3.0)
+	check("%s: the camera shell is the drawn body's capped radius and fitted height" % label, any and absf(drum.radius - capped) < 0.01 and absf(drum.height - box.size.y) < 0.3)
+	var overlaps := 0
+	var space: PhysicsDirectSpaceState3D = warden.get_world_3d().direct_space_state
+	var query := PhysicsShapeQueryParameters3D.new()
+	var probe := SphereShape3D.new()
+	probe.radius = ChaseCamera.PROBE_RADIUS
+	query.shape = probe
+	query.collision_mask = ChaseCamera.CAMERA_BODY_BIT
+	for i in 16:
+		var angle := TAU * i / 16.0
+		query.transform = Transform3D(Basis.IDENTITY, warden.global_position + Vector3(cos(angle), 0.0, sin(angle)) * (Warden.RADIUS + 1.0) + Vector3(0.0, shell.position.y, 0.0))
+		if not space.intersect_shape(query, 1).is_empty():
+			overlaps += 1
+	check("%s: a ball touching the contact cylinder starts the arm's probe clear of the shell, all 16 sides" % label, overlaps == 0)
 
 
 # A park Warden of each family (the harpoon-anchor spec) wears its own model; its shell is that model's size.

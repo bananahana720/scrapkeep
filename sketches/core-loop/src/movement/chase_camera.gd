@@ -48,6 +48,9 @@ const MAX_ARM_PITCH := -1.5
 # Physics layer 4: bodies only the camera sees, built to a boss's drawn body (the Warden's drum, Brindle's
 # drawn boxes). They sit on no other layer and mask nothing, so no contact in play meets them.
 const CAMERA_BODY_BIT := 8
+# The arm's probe sphere. A camera-only body must stay clear of it where the ball touches what it covers
+# (Warden.fit_camera_shell), or the cast starts inside it and skips it.
+const PROBE_RADIUS := 0.3
 # A lifted probe must free at least this much arm over the unlifted one, or the lift is not worth it.
 const LIFT_GAIN := 0.3
 # Situation rows. arm 0.0 means no opinion; pitch_bias tilts the arm without touching the
@@ -100,8 +103,6 @@ var _boss_reach := false
 var _pitch_bias := 0.0
 var _tight := 0.0
 var _query := PhysicsShapeQueryParameters3D.new()
-var _start := PhysicsShapeQueryParameters3D.new()
-var _inside := PhysicsPointQueryParameters3D.new()
 var _fov_add := 0.0
 var _glance_subject: Node3D
 var _glance_seconds := 0.0
@@ -124,7 +125,7 @@ func setup(target_ref, tuning_ref) -> void:
 	tuning = tuning_ref
 	arm = SpringArm3D.new()
 	var probe := SphereShape3D.new()
-	probe.radius = 0.3
+	probe.radius = PROBE_RADIUS
 	arm.shape = probe
 	_query.shape = probe
 	arm.spring_length = 8.0
@@ -134,9 +135,6 @@ func setup(target_ref, tuning_ref) -> void:
 	# catching the player ball (layer 2) or enemies (layer 3: a grunt rolling past would snap the arm in).
 	arm.collision_mask = 1 | CAMERA_BODY_BIT
 	_query.collision_mask = arm.collision_mask
-	_start.shape = probe
-	_start.collision_mask = CAMERA_BODY_BIT
-	_inside.collision_mask = CAMERA_BODY_BIT
 	add_child(arm)
 	# The arm rewrites its direct child's transform every physics tick, so shake and
 	# roll go on a grandchild; writing them on the arm's child snapped the camera to
@@ -292,9 +290,6 @@ func _free_arm(arm_pitch: float) -> float:
 		return TIGHT_ARM
 	var space := get_world_3d().direct_space_state
 	var dir: Vector3 = yaw_basis() * Basis(Vector3.RIGHT, arm_pitch) * Vector3.BACK
-	var blocked := _blocked_at_start(space, dir)
-	if blocked >= 0.0:
-		return minf(blocked, TIGHT_ARM)
 	_query.transform = Transform3D(Basis.IDENTITY, global_position)
 	_query.motion = dir * TIGHT_ARM
 	var fractions := space.cast_motion(_query)
@@ -307,28 +302,6 @@ func _free_arm(arm_pitch: float) -> float:
 	if not rest.is_empty() and (rest["normal"] as Vector3).y > BallState.MAX_SLOPE_DOT:
 		return TIGHT_ARM
 	return fractions[0] * TIGHT_ARM
-
-
-# How much arm is free, or -1 when the arm is not blocked at its start. Blocked is: the arm's probe already
-# overlaps a camera-only body at the pivot, the ball's centre is outside that body, and the arm points into it.
-# The ball is then touching a boss's drawn body (its contact shape is far smaller than the drawn one), so the
-# body is a wall right behind the ball. A cast that starts inside a shape skips it, so without this the arm
-# would run its full length through the body. The free length is what a layer-1 wall at that distance leaves:
-# the distance to the body's face along the arm less the probe's radius, and none when the face is closer than
-# the probe. A ball whose centre is inside the body, or an arm pointing away from it, is not blocked.
-func _blocked_at_start(space: PhysicsDirectSpaceState3D, dir: Vector3) -> float:
-	_start.transform = Transform3D(Basis.IDENTITY, global_position)
-	var rest := space.get_rest_info(_start)
-	if rest.is_empty() or (rest["normal"] as Vector3).dot(dir) >= 0.0:
-		return -1.0
-	_inside.position = target.shown_position()
-	for hit in space.intersect_point(_inside, 8):
-		if hit["rid"] == rest["rid"]:
-			return -1.0
-	var face := space.intersect_ray(PhysicsRayQueryParameters3D.create(global_position, global_position + dir * TIGHT_ARM, CAMERA_BODY_BIT))
-	if face.is_empty():
-		return 0.0
-	return maxf((face["position"] as Vector3).distance_to(global_position) - (_start.shape as SphereShape3D).radius, 0.0)
 
 
 func active_profiles() -> Array:
@@ -421,10 +394,6 @@ func _process(delta: float) -> void:
 
 	rotation = Vector3(0.0, yaw, 0.0)
 	arm.rotation = Vector3(pitch + _pitch_bias + lift, 0.0, 0.0)
-	if is_inside_tree():
-		var blocked := _blocked_at_start(get_world_3d().direct_space_state, yaw_basis() * Basis(Vector3.RIGHT, arm.rotation.x) * Vector3.BACK)
-		if blocked >= 0.0:
-			arm.spring_length = minf(arm.spring_length, blocked)
 
 	var accel := (velocity - _previous_velocity) / maxf(delta, 0.0001)
 	_previous_velocity = velocity

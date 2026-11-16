@@ -3,6 +3,7 @@ extends "res://src/combat/enemy.gd"
 # The fastest the body may read as moving while mounted, m/s.
 const MOUNT_SPEED_MAX: float = preload("res://src/movement/contact.gd").SOFT_CAP_SPEED
 const ChaseCamera := preload("res://src/movement/chase_camera.gd")
+const Tuning := preload("res://src/movement/tuning.gd")
 const WardenLook := preload("res://src/combat/warden_look.gd")
 const WardenKit := preload("res://src/combat/warden_kit.gd")
 const Roster := preload("res://src/combat/roster.gd")
@@ -907,6 +908,13 @@ func _build_body() -> void:
 	fit_camera_shell()
 
 
+# The widest camera drum that a ball touching the contact cylinder leaves clear of the arm's probe: the ball's centre
+# sits RADIUS + the ball's radius from the axis, and a cast that starts inside a shape skips it. The drawn body may stand
+# up to about 0.4 m outside the drum on its widest parts.
+static func camera_shell_reach() -> float:
+	return RADIUS + Tuning.RADIUS - ChaseCamera.PROBE_RADIUS - 0.05
+
+
 # A camera-only drum round what the Warden draws now, so the lens never sits inside its body. The contact
 # cylinder and the weak-point sphere are damage geometry and stay as they are. Sized from the drawn meshes
 # (those still on a render layer, outside the floating badge), so the primitive look, the clamp base and a
@@ -939,6 +947,7 @@ func fit_camera_shell() -> void:
 	for corner in 8:
 		var point: Vector3 = box.get_endpoint(corner)
 		radius = maxf(radius, maxf(absf(point.x), absf(point.z)))
+	radius = minf(radius, camera_shell_reach())
 	if shell == null:
 		shell = ChaseCamera.camera_body()
 		shell.name = "CameraShell"

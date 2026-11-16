@@ -6,6 +6,7 @@ const T := preload("res://tests/support/t.gd")
 const Requisition := preload("res://src/boss/requisition.gd")
 const RigidBall := preload("res://src/movement/rigid_ball.gd")
 const Warden := preload("res://src/combat/warden.gd")
+const RealTuning := preload("res://src/movement/tuning.gd")
 
 # W1-14 / PF-06: with a wall close behind the ball the arm shortens until the ball fills the lens.
 # The camera rises over the ball instead, keeps the player's aim, and goes back down when the wall
@@ -53,9 +54,10 @@ func _run() -> void:
 	await _warden()
 	await _ball_in_drum()
 	await _lift_in_drum()
+	await _clear_all_round()
 	await _touching_drum()
+	await _like_a_wall()
 	await _touching_ship()
-	await _wall_touching()
 	_layers()
 	quit(_t.verdict())
 
@@ -247,12 +249,12 @@ func _grunt() -> void:
 	cam.free()
 
 
-func _dam() -> Node3D:
+func _dam(family := "reactor") -> Node3D:
 	var warden = Warden.new()
 	var world := Node3D.new()
 	root.add_child(world)
 	world.add_child(warden)
-	warden.setup(Target.new(), Terrain.new(), world, func(): return true, 1.0, {"family": "reactor", "mounting": "dam_face"})
+	warden.setup(Target.new(), Terrain.new(), world, func(): return true, 1.0, {"family": family})
 	warden.set_physics_process(false)
 	warden.set_process(false)
 	return warden
@@ -269,7 +271,7 @@ func _holds_drawn(warden: Node3D, shell: Node3D) -> bool:
 		var local: AABB = inverse * mesh.global_transform * mesh.get_aabb()
 		for corner in 8:
 			var at: Vector3 = local.get_endpoint(corner) - shell.position
-			if maxf(absf(at.x), absf(at.z)) > drum.radius + 0.01 or absf(at.y) > drum.height * 0.5 + 0.01:
+			if maxf(absf(at.x), absf(at.z)) > drum.radius + 0.4 or absf(at.y) > drum.height * 0.5 + 0.01:
 				return false
 		count += 1
 	return count > 0
@@ -297,7 +299,7 @@ func _warden() -> void:
 	if shell == null:
 		warden.free()
 		return
-	_t.check("W1 the shell holds every drawn primitive mesh", _holds_drawn(warden, shell), "")
+	_t.check("W1 the shell holds every drawn primitive mesh to within 0.4 m (the cap on its radius)", _holds_drawn(warden, shell), "")
 	var contact: CylinderShape3D = null
 	for child in warden.get_children():
 		if child is CollisionShape3D:
@@ -363,31 +365,72 @@ func _lift_in_drum() -> void:
 	cam.free()
 
 
-# T-cases: the ball touching a Warden. Its contact cylinder is 2.8 m and the ball 1 m, so the ball's centre
-# is 3.8 m out, and the arm's 0.3 m probe already overlaps a drum wider than 3.5 m. The cast must still stop
-# at the drum, not run its full length through it. The drum is the park reactor's fitted size (3.77 m by
-# 10.35 m) and the primitive look's own.
+# T-cases: the ball touching a Warden. The contact cylinder is Warden.RADIUS and the ball RealTuning.RADIUS, so the
+# ball's centre is 3.8 m from the axis, and the camera drum is capped (Warden.camera_shell_reach) so the arm's 0.3 m
+# probe starts clear of it there: a cast that starts inside a shape skips it. Each fitted size below is a Warden
+# kind's drawn drum (radius, height) from hero_warden_assets_test's table; the real fit caps the radius, so the
+# drums here do too.
+const FITTED := [["primitive look", 3.61, 7.6], ["clamp reactor", 3.85, 8.71], ["clamp swarm", 3.85, 8.45],
+	["park reactor", 3.77, 10.35], ["park swarm", 3.72, 9.33]]
+const TOUCH := Warden.RADIUS + RealTuning.RADIUS
+
+
+func _drum(warden: Node3D, fitted_radius: float, height: float) -> Node3D:
+	var old := _shell(warden)
+	if old != null:
+		old.free()
+	var shell := ChaseCamera.camera_body()
+	shell.name = "CameraShell"
+	var shape := CollisionShape3D.new()
+	var cylinder := CylinderShape3D.new()
+	cylinder.radius = minf(fitted_radius, Warden.camera_shell_reach())
+	cylinder.height = height
+	shape.shape = cylinder
+	shell.add_child(shape)
+	warden.add_child(shell)
+	return shell
+
+
+func _overlaps_probe(at: Vector3) -> bool:
+	var query := PhysicsShapeQueryParameters3D.new()
+	var probe := SphereShape3D.new()
+	probe.radius = ChaseCamera.PROBE_RADIUS
+	query.shape = probe
+	query.transform = Transform3D(Basis.IDENTITY, at)
+	query.collision_mask = ChaseCamera.CAMERA_BODY_BIT
+	return not root.get_world_3d().direct_space_state.intersect_shape(query, 1).is_empty()
+
+
+# 3a, the invariant: a ball touching the contact cylinder from any side starts the arm's probe clear of the drum.
+func _clear_all_round() -> void:
+	for family in ["reactor", "swarm"]:
+		var warden := _dam(family)
+		var shell := _shell(warden)
+		warden.global_position = Vector3(0.0, 0.8 - shell.position.y, 0.0)
+		await physics_frame
+		await physics_frame
+		var overlaps := 0
+		var checked := 0
+		for i in 16:
+			var angle := TAU * i / 16.0
+			var ball := Vector3(cos(angle), 0.0, sin(angle)) * TOUCH + Vector3(0.0, 0.8, 0.0)
+			checked += 1
+			if _overlaps_probe(ball):
+				overlaps += 1
+		var drum: CylinderShape3D = shell.get_child(0).shape
+		_t.check("C1 a ball touching a %s Warden starts the probe clear of its shell from all %d sides" % [family, checked], checked == 16 and overlaps == 0, "%d of %d directions overlap, shell radius %.2f, ball centre %.2f m out, probe %.2f" % [overlaps, checked, drum.radius, TOUCH, ChaseCamera.PROBE_RADIUS])
+		warden.free()
+
+
 func _touching_drum() -> void:
-	for drum in [[3.77, 10.35], [0.0, 0.0]]:
-		for dist in [3.85, 3.80, 4.05]:
+	for row in FITTED:
+		for dist in [3.8, 3.85, 4.05]:
 			var cam := _rig()
 			var warden := _dam()
-			if drum[0] > 0.0:
-				warden.get_node("CameraShell").free()
-				var shell := ChaseCamera.camera_body()
-				shell.name = "CameraShell"
-				var shape := CollisionShape3D.new()
-				var cylinder := CylinderShape3D.new()
-				cylinder.radius = drum[0]
-				cylinder.height = drum[1]
-				shape.shape = cylinder
-				shell.add_child(shape)
-				warden.add_child(shell)
-			var body: Node3D = _shell(warden)
+			var body := _drum(warden, row[1], row[2])
 			var cyl: CylinderShape3D = body.get_child(0).shape
-			var label := "r %.2f at %.2f m" % [cyl.radius, dist]
-			var rise_y: float = 0.8 - body.position.y
-			warden.global_position = Vector3(0.0, rise_y, dist)
+			var label := "%s, r %.2f, at %.2f m" % [row[0], cyl.radius, dist]
+			warden.global_position = Vector3(0.0, 0.8 - body.position.y, dist)
 			await _settle(cam, 120)
 			var lens: Vector3 = cam.cam.global_position
 			var rel: Vector3 = lens - body.global_position
@@ -401,6 +444,18 @@ func _touching_drum() -> void:
 			_t.check("T2 touching a Warden (%s) the drum is not between the ball and the lens" % label, not crossed, "hit length %.2f, lens %s" % [cam.arm.get_hit_length(), lens])
 			warden.free()
 			cam.free()
+	# 3c: the arm turned 80 degrees off the radial, along the drum's side: the view is clear, so the arm stays long.
+	for row in FITTED:
+		for side in [-1.0, 1.0]:
+			var cam := _rig()
+			var warden := _dam()
+			var body := _drum(warden, row[1], row[2])
+			warden.global_position = Vector3(0.0, 0.8 - body.position.y, 3.85)
+			cam.yaw = deg_to_rad(80.0) * side
+			await _settle(cam, 120)
+			_t.check("S1 touching a Warden (%s) the arm 80 degrees off the radial keeps over 4 m" % row[0], cam.arm.get_hit_length() > 4.0, "hit length %.2f, side %.0f, lens %s" % [cam.arm.get_hit_length(), side, cam.cam.global_position])
+			warden.free()
+			cam.free()
 	# The far side: the ball touches the Warden, the lens trails away from it, and keeps its full arm.
 	var cam := _rig()
 	var warden := _dam()
@@ -408,6 +463,39 @@ func _touching_drum() -> void:
 	warden.global_position = Vector3(0.0, 0.8 - body.position.y, -3.85)
 	await _settle(cam, 120)
 	_t.check("T3 touching a Warden with the lens on the far side keeps the full arm", cam.arm.get_hit_length() > 7.0, "hit length %.2f" % cam.arm.get_hit_length())
+	warden.free()
+	cam.free()
+
+
+# 3e: the touching radial case settles where a layer-1 cylinder of the same size in the same place settles.
+func _like_a_wall() -> void:
+	var radius := Warden.camera_shell_reach()
+	var height := 8.0
+	var centre := Vector3(0.0, 0.8, 3.85)
+	var cam := _rig()
+	var wall := StaticBody3D.new()
+	var shape := CollisionShape3D.new()
+	var cylinder := CylinderShape3D.new()
+	cylinder.radius = radius
+	cylinder.height = height
+	shape.shape = cylinder
+	wall.add_child(shape)
+	wall.collision_layer = 1
+	root.add_child(wall)
+	wall.global_position = centre
+	await _settle(cam, 120)
+	var wall_hit: float = cam.arm.get_hit_length()
+	var wall_rise := _rise(cam)
+	var wall_lens: Vector3 = cam.cam.global_position
+	wall.free()
+	cam.free()
+	cam = _rig()
+	var warden := _dam()
+	var body := _drum(warden, 9.0, height)
+	warden.global_position = Vector3(0.0, 0.8 - body.position.y, 3.85)
+	await _settle(cam, 120)
+	var lens: Vector3 = cam.cam.global_position
+	_t.check("N1 the camera drum acts as a layer-1 cylinder of its size", absf(cam.arm.get_hit_length() - wall_hit) < 0.05 and absf(_rise(cam) - wall_rise) < 0.02 and lens.distance_to(wall_lens) < 0.05 and wall_hit < 2.0, "drum: hit %.3f rise %.3f lens %s; layer-1 cylinder: hit %.3f rise %.3f lens %s" % [cam.arm.get_hit_length(), _rise(cam), lens, wall_hit, wall_rise, wall_lens])
 	warden.free()
 	cam.free()
 
@@ -423,6 +511,7 @@ func _touching_ship() -> void:
 		ship.move_to(pose[0], pose[1])
 		await _settle(cam, 120)
 		var lens: Vector3 = cam.cam.global_position
+		_t.check("T4 touching the hull's %s the probe starts clear of every camera box" % pose[2], not _overlaps_probe(cam.global_position), "ball at %s, nearest face 1.0 m out, probe %.2f" % [cam.global_position, ChaseCamera.PROBE_RADIUS])
 		var held := ""
 		for pair in ship.drawn_boxes():
 			for i in range(0, 21):
@@ -431,35 +520,6 @@ func _touching_ship() -> void:
 					held = "%s at step %d" % [pair[1], i]
 		_t.check("T4 touching the hull's %s no drawn box holds the lens or lies between it and the ball" % pose[2], held == "", "hit length %.2f, lens %s, box %s" % [cam.arm.get_hit_length(), lens, held])
 		ship.free()
-		cam.free()
-
-
-# N1: a camera-only face the probe does not reach into leaves what a layer-1 wall at that distance leaves, so the
-# two cannot drift apart. A face closer than the probe's 0.3 m cannot be compared with a layer-1 wall: the cast
-# starts inside it and skips it, which is the fault; there the arm is none and the lens sits on the ball (T1).
-func _wall_touching() -> void:
-	for face in [0.4, 1.0]:
-		var cam := _rig()
-		var wall := _box(Vector3(40.0, 40.0, 1.0), Vector3(0.0, 0.0, face + 0.5))
-		await _settle(cam, 120)
-		var wall_hit: float = cam.arm.get_hit_length()
-		var wall_rise := _rise(cam)
-		var wall_lens: Vector3 = cam.cam.global_position
-		wall.free()
-		cam.free()
-		cam = _rig()
-		var camera_wall := ChaseCamera.camera_body()
-		var shape := CollisionShape3D.new()
-		var box := BoxShape3D.new()
-		box.size = Vector3(40.0, 40.0, 1.0)
-		shape.shape = box
-		camera_wall.add_child(shape)
-		root.add_child(camera_wall)
-		camera_wall.global_position = Vector3(0.0, 0.0, face + 0.5)
-		await _settle(cam, 120)
-		var lens: Vector3 = cam.cam.global_position
-		_t.check("N1 a camera-only face %.1f m behind the ball acts as a layer-1 wall there" % face, absf(cam.arm.get_hit_length() - wall_hit) < 0.05 and absf(_rise(cam) - wall_rise) < 0.02 and lens.distance_to(wall_lens) < 0.05, "camera body: hit %.3f rise %.3f lens %s; layer-1 wall: hit %.3f rise %.3f lens %s" % [cam.arm.get_hit_length(), _rise(cam), lens, wall_hit, wall_rise, wall_lens])
-		camera_wall.free()
 		cam.free()
 
 
