@@ -1,4 +1,4 @@
-# Andrew's PC and the cloud box
+# Andrew's PC, the Mac Studio and the cloud box
 
 ## The PC
 
@@ -10,6 +10,26 @@
 - **Reboot rule.** An NVIDIA driver auto-update locks the GPU ("Driver/library version mismatch") until a reboot. Ask Andrew to reboot after any update, and don't pin the driver.
 - **One script, not compound shells.** Pipes, `&&` and `cd` chains trigger allow-once prompts. Use one checked-in script with subcommands (`scripts/music/mx` for music), called as one plain command.
 - **Allow-list.** The PC allows test and check scripts, read-only git, and pushes to `cand/*` and `scratch/*`. A push to main follows the standing merge authority in [DECISIONS.md](DECISIONS.md); a force-push or an install needs Andrew's go-ahead first.
+
+## The Mac Studio
+
+- **Machine:** M5 Max, 32 GB unified memory, 512 GB disk, macOS. Andrew's main development machine from 16 Nov 2026. Checkout: `~/Projects/scrapkeep`.
+- **Saves are not isolated on the Mac yet.** Godot on macOS ignores `XDG_DATA_HOME` and keeps `user://` under `$HOME/Library/Application Support/godot/app_userdata/core-loop` (upstream `platform/macos/os_macos.mm`: `get_data_path` returns `get_config_path`, which returns `$HOME/Library/Application Support`). Every script that gives a test its own `XDG_DATA_HOME` (`sketch-fast.mjs`, `sketch-smoke.mjs`, `challenge/run.mjs`, `gate/pc.mjs`) therefore shares one folder on the Mac: parallel tests collide, and they write where the Mac game keeps its saves. Until those spawns also set `HOME` on macOS, run Godot commands with `HOME` set to a scratch folder and run the per-pull-request check `npm run sketch:fast` with `--width 1`, so its tests run one at a time.
+- **What stays on the PC.** Frame-time and timing captures (the 4080 and headless gamescope), GPU stills, band reads (the bot difficulty runs of `scripts/challenge/run.mjs`) and the wave gate. The PC is on Tailscale as `ahana`; it runs no SSH server.
+- **Packed music.** The Oggs are gitignored. The copy on the PC (`~/scratch/repage/music_ace`, packed as `~/scratch/archive/music_ace-repaged-2026-11-16.tar`) already has the short 20 ms Ogg pages that `sketches/core-loop/tools/ace/repage.py` writes, but it does not hash as `STEMS.sha256` lists, so `stems-sync` refuses it and an export with it reports stale stems. Tests do not need the Oggs. An export does: run `repage.py apply`, rewrite the list with `scripts/music/mx stem-hashes`, and land the list in its own pull request first. To move the tar to the Mac, join the Mac to the same Tailscale network and send it from the PC with `tailscale file cp <tar> <mac name>:`.
+
+### Set up the Mac
+
+1. Install the tools: `xcode-select --install`, then with Homebrew `brew install git gh node ffmpeg python`. Node must match `package.json#engines` (20.19 or 22.12 and later).
+2. Install Godot 4.7.2: download `Godot_v4.7.2-stable_macos.universal.zip` from the Godot releases on GitHub, unzip it, rename the `Godot.app` it holds to `Godot_4.7.2.app`, move that into `~/Applications`, and run it once from Finder so macOS clears its quarantine. Add `export GODOT_BIN="$HOME/Applications/Godot_4.7.2.app/Contents/MacOS/Godot"` to `~/.zshrc`.
+3. Sign in and clone: `gh auth login`, then `git clone https://github.com/bananahana720/scrapkeep.git ~/Projects/scrapkeep`, then `cd ~/Projects/scrapkeep`. Set `git config --global user.name` and `user.email` to the same values as on the PC.
+4. Switch to the stage, install the locked packages and import the project: `git switch --detach origin/stage/alpha-w43`, `npm ci`, `mkdir -p artifacts/local/mac-home`, then `HOME="$PWD/artifacts/local/mac-home" node scripts/import-stamp.mjs import`. The import writes `.godot/`, so the first run takes several minutes.
+5. Check the setup: `HOME="$PWD/artifacts/local/mac-home" npm run sketch:fast -- --base origin/stage/alpha-w43 --width 1`. A clean stage passes.
+6. Bring Claude's project memory across. It lives only on the PC under `~/.claude/projects/-home-andrew-Projects-scrapkeep/memory/`, packed as `~/scratch/archive/scrapkeep-claude-memory-2026-11-16.tar.gz`; send it the same way as the music. On the Mac it goes under `~/.claude/projects/-Users-<you>-Projects-scrapkeep/memory/`. The folder name is the checkout path with each `/` written as `-`.
+
+### Pick up wave 43
+
+Start a Claude Code session in `~/Projects/scrapkeep`. Tell it to read AGENTS.md and then the newest handoff comment on the wave 43 board (issue #1076). It names the open branches and what each still owes. The first Mac card is the saves isolation above, because `npm run sketch:fast` can run its tests in parallel on the Mac only after it lands.
 
 ## The cloud box
 
