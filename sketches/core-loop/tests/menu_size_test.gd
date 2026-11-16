@@ -29,9 +29,11 @@ func _small(scope: Node) -> Array:
 	return out
 
 
-func _check(name: String, scope: Node) -> void:
-	var all := Screens.targets(scope)
+func _check(name: String, scope: Node, showing: bool) -> void:
 	_screens_seen += 1
+	if not _t.check("%s: is the screen showing" % name, showing):
+		return
+	var all := Screens.targets(scope)
 	_controls_seen += all.size()
 	var small := _small(scope)
 	_t.check("%s: all %d buttons and focusable controls are %d px or more" % [name, all.size(), int(MIN)], small.is_empty(), "too small: %s" % str(small))
@@ -55,6 +57,17 @@ func _run() -> void:
 	await process_frame
 	var flagged := _small(holder)
 	_t.check("planted: the 30 px button is flagged and the 60 px one is not", flagged.size() == 1 and flagged[0].contains("Tiny"), str(flagged))
+	# Plant 2: a plain Control that takes clicks through its own _gui_input, 20 px square, neither a button
+	# nor focusable (the shape of the pilot card's paint swatch). The scan must see and flag it.
+	var hand := Control.new()
+	hand.name = "HandMade"
+	hand.set_script(preload("res://tests/support/click_plant.gd"))
+	holder.add_child(hand)
+	hand.position = Vector2(200, 0)
+	hand.size = Vector2(20, 20)
+	await process_frame
+	var flagged2 := _small(holder)
+	_t.check("planted: a 20 px control that takes clicks by hand is flagged", flagged2.size() == 2 and str(flagged2).contains("HandMade"), str(flagged2))
 	holder.free()
 
 	var count: int = await _kit.visit(_check)
