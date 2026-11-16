@@ -1120,7 +1120,7 @@ func _resume_after_boss(velocity: Vector3) -> void:
 # The fall moves the saved run past the arena: the cleared doc as the run stands now, marked won. Rewards the win
 # pays are banked when the run advances, which a resumed run does once, so the marker is the only addition.
 func _save_boss_won() -> void:
-	if store == null or ctx.run.over:
+	if store == null or ctx.run.over or state != VICTORY:
 		return
 	var v: Vector3 = ctx.player.state.velocity
 	var doc: Dictionary = ctx.run.to_cleared_doc(_tree(), v)
@@ -1145,7 +1145,8 @@ func _on_boss_defeated() -> void:
 	var boss := String(Worlds.row(ctx.stages.world_of(ctx.run.stage)).get("boss", ""))
 	if Secrets.note_rout(ctx.profile, boss, ctx.run.run_time):
 		_save_profile("profile_door_save")
-	_save_boss_won()
+	# After the other listeners: progress joins the bus later than flow and settles the world's ledger on this fall.
+	_save_boss_won.call_deferred()
 	_set_state(VICTORY)
 
 
