@@ -1547,8 +1547,11 @@ class Painter:
 			var middle := instance.global_transform * instance.mesh.get_aabb().get_center()
 			instance.global_position = (cam.global_position - middle).normalized() * DEPTH_PULL
 
-	func _init() -> void:
-		set_process(false)
+	var _pulls := false
+
+	# Godot switches processing on at ready for any script with _process, so it is set here, not in _init.
+	func _ready() -> void:
+		set_process(_pulls)
 
 	func _process(_delta: float) -> void:
 		pull_toward_eye()
@@ -1582,6 +1585,7 @@ class Painter:
 		mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 		mat.no_depth_test = not (soft_on() and layer in TINTED_LAYERS)
 		if not mat.no_depth_test:
+			_pulls = true
 			set_process(true)
 		mat.vertex_color_use_as_albedo = true
 		mat.vertex_color_is_srgb = true
@@ -1640,6 +1644,10 @@ class Flash:
 		paint(fill + crack, layers)
 		set_process(true)
 		_show(0.0)
+
+	# A landing ages and fades in every look, so it always processes, pull or not.
+	func _ready() -> void:
+		set_process(true)
 
 	func _process(delta: float) -> void:
 		_age += delta

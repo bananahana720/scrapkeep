@@ -103,3 +103,6 @@ func _owner_fill(look: String, who: String, painter, cam: Camera3D) -> void:
 	var moved := instance.global_position.length()
 	_t.check("%s: the %s fill %s" % [look, who, "sits DEPTH_PULL metres toward the eye" if want else "stays where it was drawn"],
 		absf(moved - Threat.DEPTH_PULL) < 0.001 if want else moved < 0.001, "moved %.3f m" % moved)
+	# The pull runs each frame only where it has work: a painter in haze or classic does not process.
+	_t.check("%s: the %s painter %s" % [look, who, "processes for the pull" if want else "does not process"],
+		painter.is_processing() == want)
