@@ -14,7 +14,8 @@
 // `run` imports the sketch twice (a third time when the second was not clean), runs its window of the sorted list (non-bot
 // tests in chunks, bot tests one at a time or, with --lanes n, n at a time with the BOT_ALONE tests alone
 // afterwards), reruns every failure alone (once when a check fails alone and the test has no flake row; not at all
-// when the test has a red row, which carries it whatever a rerun says), sorts
+// when the test has a red row and its first run failed a check without timing out: the row carries it whatever a
+// rerun says), sorts
 // the failures with the known-failing ledger and writes <folder>/receipt.md
 // and <folder>/shard.json. Every step is recorded in <folder>/state.json, so
 // the same command picks up where a killed run stopped. It never edits the
