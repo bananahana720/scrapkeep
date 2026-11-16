@@ -34,9 +34,14 @@
   State a rule at the moment the player meets the fact. A rule held for as long as a word stays on screen fails on a death one frame after a correct launch, which is noise.
   Evidence: `TakeNamesHeldPart` first read the swipe's hold phase and broke on a death after the cut; it now reads the moment the swipe closes.
   Overturned by: —
+- **VFM-09** · status: provisional · since: 2026-11-16 · origin: the first cold follow of this skill
+  The check for "is this change covered" compares the sync commit with the working tree, and a change to a named guard is run by flipping that guard on the `today-*` configs. A replay of a break that comes from a change also runs on the sync commit as a control.
+  Evidence: a fresh agent (Haiku 5.5) followed the skill against a planted removal of `_untake()` from `retry_stage`. The first wording, `<sync>..HEAD`, showed no diff for the uncommitted change; the agent still caught the break through `broken-retry`, replayed it (`word 'Impact Driver' visible true, run holds the part: false`) and got `word 'FWOOSH!'`, not reproduced, on the sync commit.
+  Overturned by: —
 
 ## Changelog
 
 | Date | Change |
 | --- | --- |
 | 2026-11-16 | VFM-01 to VFM-08 added with the skill. Model confirmed at `3adc2fd0e`. |
+| 2026-11-16 | VFM-09 added after the cold follow; SKILL.md steps for the diff, guard flips and the replay command corrected. |

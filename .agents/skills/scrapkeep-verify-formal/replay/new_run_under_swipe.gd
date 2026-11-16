@@ -4,7 +4,7 @@ extends SceneTree
 #   GateTaken (a real part is taken, the swipe starts and names it), NewRun (flow.new_run, the call a held R
 #   or the pause menu's Restart makes), TakeWind (the swipe closes).
 # It prints REPRODUCED when the swipe closes naming a part the new run does not hold, NOT REPRODUCED otherwise.
-# Copy it into sketches/core-loop/tests/ to run it (SKILL.md, "Replay a counterexample"); it is not a suite test.
+# Copy it into sketches/core-loop/tests/ to run it (SKILL.md, "Read a result"); it is not a suite test.
 
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")

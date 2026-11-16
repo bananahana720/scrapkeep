@@ -27,14 +27,14 @@ Each rule is one promise to the player. [references/coverage.md](references/cove
 
 ## Is this change covered?
 
-1. Run `git diff --stat <sync commit>..HEAD -- sketches/core-loop/src/core/flow.gd sketches/core-loop/src/presentation/launch_take.gd sketches/core-loop/src/game.gd sketches/core-loop/src/ui/pause_menu.gd sketches/core-loop/src/ui/screens.gd`. The sync commit is the last line of [references/coverage.md](references/coverage.md). No output: the model still describes the code, go to "Run it". (design choice)
+1. Run `git diff --stat <sync commit> -- sketches/core-loop/src/core/flow.gd sketches/core-loop/src/presentation/launch_take.gd sketches/core-loop/src/game.gd sketches/core-loop/src/ui/pause_menu.gd sketches/core-loop/src/ui/screens.gd`. The sync commit is the last line of [references/coverage.md](references/coverage.md). That form compares the sync commit with the working tree, so it sees uncommitted changes too (VFM-09). No output: the model still describes the code, go to "Run it".
 2. With output, read the diff of every function named in the coverage table, and look for a new caller of a covered function or a new writer of `_seam_take`, `_taken_part`, `_launched`, `run.over` or the swipe's `phase`. A new way to interrupt a run is a new action even when no covered function changed (VFM-05).
-3. Change the model from the code before you run it, never from what makes it pass. One call in the code is one action in the model; two handlers of one signal are one action with an order choice (VFM-06). Then move the sync commit.
+3. A change that removes or adds a guard the coverage table names: set that constant on the two `today-*` lines of `models/make-configs.sh` to what the code now does, so `today-*` stands for the code under check (VFM-09). Any other change: change the model from the code before you run it, never from what makes it pass. One call in the code is one action in the model; two handlers of one signal are one action with an order choice (VFM-06). Then move the sync commit.
 
 ## Run it
 
 1. Run `bash $F/models/make-configs.sh`. It rewrites every `.cfg` from the one table of guards in that script, so a config never drifts from its neighbours. (design choice)
-2. Check each config with the `astack:statechart` skill, giving it `RunFlow.tla` and the config. That skill owns the checker command and reads a result as a shortest path in plain words. Each run takes a few seconds.
+2. Check each config with the `astack:statechart` skill, giving it `RunFlow.tla` and the config. That skill owns the checker command and reads a result as a shortest path in plain words; give each run a new output folder outside the repository. Each run takes a few seconds.
 3. Compare with this table. Anything else is a result to explain, in "Read a result".
 
 | Config | Stands for | Must report |
@@ -54,7 +54,7 @@ A `broken-*` config that reports no break means the model can no longer see that
 ## Read a result
 
 1. A break in a `guarded-*` or `today-*` config is a candidate, not a bug. Tell it as steps in the code's words, using the coverage table. (VFM-02)
-2. Replay it on the real game, one model step per call, before you report it. Copy the closest script from `$F/replay/` into `sketches/core-loop/tests/` under a name starting `zz_replay_`, change its steps, and run it as [GATE.md](../../../project-guide/handoff/GATE.md) runs one test (headless Godot with a scratch data folder, `--script res://tests/<name>.gd`). Delete the copy afterwards. (VFM-02)
+2. Replay it on the real game, one model step per call, before you report it. Copy the closest script from `$F/replay/` into `sketches/core-loop/tests/` under a name starting `zz_replay_`, change its steps, and run it with `"$GODOT_BIN" --headless --path sketches/core-loop --script res://tests/<name>.gd`, with `XDG_DATA_HOME` set to a scratch folder as `AGENTS.md` requires on the PC. Run the same script on the sync commit as a control when the break comes from a change. Delete the copy afterwards. (VFM-02, VFM-09)
 3. If a step cannot be made in the game, the model is wrong. Ask what stops the step: an input rule (the swipe swallows screen keys), a clock (a stage cannot be cleared inside one swipe), or a guard you did not model. Put that in the model as a named constant, keep a config that turns it off, and record the lesson. Do not delete the step to get a pass. (VFM-01, VFM-02)
 4. If every step replays, it is a finding about the code. Add it to [references/findings.md](references/findings.md) with the steps, the harm and the replay's output. Do not weaken the rule, and do not change game code unless the task is that fix. (design choice)
 5. When a fix lands, its guard constant flips in `make-configs.sh` (`today-*` must then match `guarded-*`), the finding closes, and the sync commit moves.

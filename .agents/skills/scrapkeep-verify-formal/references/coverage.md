@@ -19,7 +19,7 @@ Each action in the model (`RunFlow.tla`, in the `models` folder beside this one)
 | `TakeWind`, `TakeHold`, `TakeEnd` | `sketches/core-loop/src/presentation/launch_take.gd` `advance`, `_end` | the swipe's phases; it runs through a pause |
 | `TakeCover` with `cut` | `sketches/core-loop/src/core/flow.gd` `_cut_under_cover`, `_finish_stage` | the cut under full cover |
 | `Death` | `sketches/core-loop/src/core/flow.gd` `_on_player_died`, `_end_run` | with a store the run ends; without one the death screen shows |
-| `Retry` | `sketches/core-loop/src/core/flow.gd` `retry_stage`, `_untake`, `_retry_arena` | store-less flows only: back to the stage's checkpoint |
+| `Retry` | `sketches/core-loop/src/core/flow.gd` `retry_stage`, `_untake`, `_retry_arena` | store-less flows only: back to the stage's checkpoint. `replay_stage` (T on the death screen, which only a store-less flow shows) also ends in `retry_stage` and is not a separate action |
 | `BossDefeated`, `VictoryEnds` | `sketches/core-loop/src/core/flow.gd` `_on_boss_defeated`, `_end_run_won`, `_end_run` | the boss falls, then the run ends as won |
 
 ## Guard constants
