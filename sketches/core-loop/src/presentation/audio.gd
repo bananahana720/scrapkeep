@@ -4227,7 +4227,7 @@ func _connect_redline() -> void:
 	if redline == null:
 		return
 	_hits_hot_heard = redline.hits_hot
-	redline.changed.connect(func(_value: float, band: int):
+	redline.changed.connect(func(value: float, band: int):
 		if band > _redline_band:
 			play("slammed", -6.0, Harmony.ratio(REDLINE_RUNGS[band]), "SFX", "smash_whistle")
 		# One sound per crossing of the hot line, not per frame the value moves.
@@ -4235,19 +4235,18 @@ func _connect_redline() -> void:
 			_cool_due = false
 			play("slammed", -2.0, 1.0, "SFX", "heat_rise")
 		elif band < HOT_BAND and _redline_band >= HOT_BAND:
-			_cool_due = true
+			# The shell drains a little each frame, so a drop straight to empty is never a cooling: it is a
+			# blast or a cook-off (each has its own crack), or a clear on a death, a new stage or a mode change.
+			_cool_due = value > 0.0
 		_redline_band = band)
-	# A blast or a cook-off drops the value to 0 and has its own crack, so it is not a cooling.
 	redline.detonated.connect(func(_at: Vector3, _force: float):
-		_cool_due = false
 		play("slammed", 2.0, Harmony.ratio(-5.0), "SFX", "smash_crack"))
 	redline.cooked_off.connect(func(_at: Vector3, _force: float):
-		_cool_due = false
 		play("slammed", 0.0, Harmony.ratio(-7.0), "SFX", "smash_crack"))
 
 
-# The hot line (Redline.HOT_AT) is band 2. The cooling waits one frame so the blast that empties a
-# redline shell can cancel it, and a hit taken hot is read off Redline's own count.
+# The hot line (Redline.HOT_AT) is band 2. The cooling plays on the next frame's tend, and a hit taken
+# hot is read off Redline's own count.
 const HOT_BAND := 2
 var _cool_due := false
 var _hits_hot_heard := 0

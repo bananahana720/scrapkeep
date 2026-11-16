@@ -113,7 +113,6 @@ func _rig(redline) -> Dictionary:
 	var audio := Audio.new()
 	audio.setup(ctx)
 	audio.bake_now()
-	audio._connect_redline()
 	audio.cue_log.clear()
 	return {"audio": audio, "events": events}
 
@@ -158,7 +157,20 @@ func _heat(t) -> void:
 	t.eq("a hit while cool plays nothing", _played(audio, func(): redline.note_hit()), [])
 	# A blast empties a redline shell: it has its own crack, so no cooling sound.
 	_played(audio, func(): redline._set_value(Redline.MAX))
+	var blasts: int = redline.detonations
 	var blast := _played(audio, func(): redline.spend("ram", Vector3.ZERO, 5.0))
+	t.eq("the ram blasted the shell", redline.detonations, blasts + 1)
 	t.check("a blast is not a cooling", not blast.has("heat_cool"), str(blast))
+	# A cook-off, a death or a new stage (both clear()) and a mode change each empty a hot shell: none is a cooling.
+	_played(audio, func(): redline._set_value(Redline.MAX))
+	var cooks: int = redline.cook_offs
+	var cook := _played(audio, func(): redline.tick(Redline.COOK_OFF_S + 0.1, 0))
+	t.eq("the shell cooked off", redline.cook_offs, cooks + 1)
+	t.check("a cook-off is not a cooling", not cook.has("heat_cool"), str(cook))
+	_played(audio, func(): redline._set_value(Redline.HOT_AT + 1.0))
+	t.check("hot again before the clear", redline.hot(), str(redline.value))
+	t.eq("a clear on a death or a new stage is silent", _played(audio, func(): redline.clear()), [])
+	_played(audio, func(): redline._set_value(Redline.HOT_AT + 1.0))
+	t.eq("turning heat off while hot is silent", _played(audio, func(): redline.set_mode(Redline.OFF)), [])
 	for node in [audio, rig["events"]]:
 		node.free()

@@ -84,7 +84,10 @@ const DANGER_SOUNDS := ["hurt", "enemy_arrive", "boss_telegraph", "ratchet_cue",
 	# The wind-up tells of the roster's attacks (windup_rows.gd), the pack pressure calls and the vent's charge:
 	# each warns of a hit, so each pulls the bass down like the threat rows do.
 	"warn_burrow", "warn_bore", "warn_lure", "warn_cut", "warn_winch", "warn_dive", "warn_tether", "warn_flap", "warn_reel",
-	"jolt_layer_tell", "flank_call", "boil_rumble", "reactor_tick"]
+	"jolt_layer_tell", "flank_call", "boil_rumble", "reactor_tick",
+	# A rubble fall's warnings (rubble_fall.gd warn_sound) and the arena's crew-arrival whistle (arena_wave,
+	# sluice_warning): each comes before a hit or a crew, as enemy_arrive does.
+	"prop_crew_strain", "cave_in_rumble", "arena_wave_whistle"]
 # Pitched cues that follow the live key (a lifted Warden plays its chimes in Eb). The combat
 # feedback percussion (feedback_set.py) has no key, so it is not here.
 const KEYED_SOUNDS := ["panel_note", "panel_jackpot", "line_claw_drag", "armor_reclaim", "scrap_tick", "cog_tick", "part_get", "core_socket", "found_chime", "gate_through",
