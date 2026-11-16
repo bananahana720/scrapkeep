@@ -1,0 +1,43 @@
+{
+	"adapter": "NVIDIA GeForce RTX 4080",
+	"change_distance": 0.06,
+	"frames": [
+		{
+			"changed_share": 0.0517,
+			"id": "clear",
+			"look": "clear",
+			"png": "/home/andrew/scratch/w43-pc/stills-ua02/after/clear.png",
+			"sha256": "2fd836e2ca2004c1967666cd68ddcd4a231126c3ba13afc21882fa76e82c371e",
+			"stripe_added": 0.0,
+			"stripe_share": 0.0
+		},
+		{
+			"id": "pair_clear",
+			"look": "clear",
+			"png": "/home/andrew/scratch/w43-pc/stills-ua02/after/pair_clear.png",
+			"sha256": "153ca2dd2fe410d11aad91debfff5fe66a4726d6be2ceeb9a529b2d90b023c64"
+		},
+		{
+			"changed_share": 0.0794,
+			"id": "tape",
+			"look": "tape",
+			"png": "/home/andrew/scratch/w43-pc/stills-ua02/after/tape.png",
+			"sha256": "7d9dd5bb579439daff34e55ead0cea8332e9e4378a890208431aa4392488bba4",
+			"stripe_added": 0.0277,
+			"stripe_share": 0.03
+		},
+		{
+			"id": "pair_tape",
+			"look": "tape",
+			"png": "/home/andrew/scratch/w43-pc/stills-ua02/after/pair_tape.png",
+			"sha256": "a0859358c3df5656dd1a405e67272d5768c17cc84857a3077a9aaabae2a0a444"
+		}
+	],
+	"noise_share": 0.014,
+	"radius_m": 5.0,
+	"size": [
+		1600.0,
+		900.0
+	],
+	"tool": "tape_cover_still.gd"
+}
