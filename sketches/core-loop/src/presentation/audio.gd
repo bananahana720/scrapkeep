@@ -1751,6 +1751,9 @@ func _make_room(kind: String, sound: String) -> void:
 	# A narrow room (an "only" row) never cuts a held room short; a hit's room wins over it.
 	if MixRows.MAKE_ROOM[sound].has("only") and Time.get_ticks_msec() < _room_until_ms and _room_for != sound:
 		return
+	# A room without "only" takes over: the voices an "only" room ducked go back to their level.
+	if not MixRows.MAKE_ROOM[sound].has("only"):
+		_restore_roomed()
 	_room_for = sound
 	_room_until_ms = Time.get_ticks_msec() + int(hold * 1000.0)
 	# [kind, sound, "room", clock, hold, dB, the row's "only" list, empty when it names none]: tools/mix/mixsim.py reads it.
@@ -1765,11 +1768,21 @@ func _make_room(kind: String, sound: String) -> void:
 			_sfx.set_stream_volume(id, float(row[1]) + room)
 
 
-# What a voice of sound takes now: the held room's offset, or 0.
-func _room_offset(sound: String) -> float:
+# What a voice of sound takes now: the held room's offset, or 0. A voice that has not started
+# yet (sounding false) takes none from a row that names its sounds.
+func _room_offset(sound: String, sounding := true) -> float:
 	if Time.get_ticks_msec() >= _room_until_ms:
 		return 0.0
-	return MixRows.room_db(_room_for, sound, sound in DANGER_SOUNDS)
+	return MixRows.room_db(_room_for, sound, sound in DANGER_SOUNDS, sounding)
+
+
+# The voices a room pushed down go back to their own level.
+func _restore_roomed() -> void:
+	if _sfx != null:
+		for id in _roomed:
+			if _sfx.is_stream_playing(id):
+				_sfx.set_stream_volume(id, float(_roomed[id]))
+	_roomed.clear()
 
 
 # The room ends: the voices it pushed down come back to their own level, and the record of
@@ -1777,10 +1790,7 @@ func _room_offset(sound: String) -> float:
 func _tend_room() -> void:
 	if Time.get_ticks_msec() < _room_until_ms or _sfx == null:
 		return
-	for id in _roomed:
-		if _sfx.is_stream_playing(id):
-			_sfx.set_stream_volume(id, float(_roomed[id]))
-	_roomed.clear()
+	_restore_roomed()
 	if _voice_db.size() > 64:
 		for id in _voice_db.keys():
 			if not _sfx.is_stream_playing(id):
@@ -1955,7 +1965,7 @@ func _start(kind: String, sound: String, stream: AudioStream, volume: float, pit
 		live = live.filter(func(id: int): return playback.is_stream_playing(id))
 		if live.size() >= int(VOICE_LIMIT.get(sound, MixRows.VOICE_DEFAULT)):
 			playback.stop_stream(live.pop_front())
-		var room := _room_offset(sound) if playback == _sfx else 0.0
+		var room := _room_offset(sound, false) if playback == _sfx else 0.0
 		var id := playback.play_stream(stream, 0.0, volume + room, pitch, AudioServer.PLAYBACK_TYPE_DEFAULT, bus)
 		if id != AudioStreamPlaybackPolyphonic.INVALID_ID:
 			live.append(id)

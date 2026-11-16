@@ -96,19 +96,22 @@ const DROP_ROOM_LEAD_S := 0.1
 # hurt under reactor_erupt both times it played: the vent that erupts is what hit the player.
 # A row with "only" makes room for just the sounds it names, warnings among them: the dodge's
 # whoosh ducks the lane attack's tear (FX-28; the PC's read of 13 Nov had it under the tear in
-# 22 of 55 starts, 65% buried). The tear's first sound already warned the player, and the hold
-# is short, so the warning is heard before the dodge it announced.
+# 22 of 55 starts, 65% buried). It ducks only voices of those sounds already sounding when the
+# room is made, so a tear that starts during the hold plays at full level: a warning from an
+# attack that is still a threat is never turned down. A hit's room (a row without "only") takes
+# the ducked voices back to their level the moment it starts.
 const MAKE_ROOM := {"hurt": {"db": -10.0, "hold_s": 0.35},
 	"near_whoosh": {"db": -8.0, "hold_s": 0.3, "only": ["threat_tear"]}}
 
 
 # The offset a voice of sound takes while room is held for room_for: none for room_for's own
-# voices or a warning, unless the row names its sounds in "only", which then alone take it.
-static func room_db(room_for: String, sound: String, warning: bool) -> float:
+# voices or a warning. A row with "only" gives its offset to the sounds it names when they are
+# already sounding (sounding), never to a voice that starts while it is held.
+static func room_db(room_for: String, sound: String, warning: bool, sounding := true) -> float:
 	if sound == room_for or not MAKE_ROOM.has(room_for):
 		return 0.0
 	if MAKE_ROOM[room_for].has("only"):
-		return float(MAKE_ROOM[room_for]["db"]) if sound in MAKE_ROOM[room_for]["only"] else 0.0
+		return float(MAKE_ROOM[room_for]["db"]) if sounding and sound in MAKE_ROOM[room_for]["only"] else 0.0
 	if warning:
 		return 0.0
 	return float(MAKE_ROOM[room_for]["db"])
