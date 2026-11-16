@@ -39,7 +39,7 @@ Each rule is one promise to the player. [references/coverage.md](references/cove
 
 | Config | Stands for | Must report |
 | --- | --- | --- |
-| `guarded-store`, `guarded-nostore` | every guard in place, the real game and the store-less test flow | no break |
+| `guarded-store`, `guarded-nostore`, `guarded-lastgate` | every guard in place: the real game, the store-less test flow, and a run with no swipe at its last gate | no break |
 | `today-store`, `today-nostore` | the code at the sync commit | only the open findings in [references/findings.md](references/findings.md) |
 | `broken-newrun` | `_begin_run` without `_untake` | `TakeNamesHeldPart` breaks |
 | `broken-retry` | `retry_stage` without `_untake` | `TakeNamesHeldPart` breaks |
@@ -47,7 +47,8 @@ Each rule is one promise to the player. [references/coverage.md](references/cove
 | `broken-vanish` | no `_warden_vanished` tick | `WardenGoneOpens` breaks |
 | `broken-endguard` | `_on_player_died` without its `in_play` guard | `EndsOnce` breaks |
 | `broken-keys` | screen keys not swallowed under the swipe | `PickHeard` breaks |
-| `broken-busy` | `play_launch_take` not refusing a busy swipe | `SeamOwned`, `StampOnlySeam`, `LaunchLands` break |
+| `broken-busy` | a busy swipe not refused, with the time assumption off too (a busy swipe cannot meet a launch otherwise) | `SeamOwned`, `StampOnlySeam`, `LaunchLands` break |
+| `reach-store`, `reach-nostore` | probes that say "never" about things that must happen | every probe breaks; one that holds means an action can no longer fire (VFM-10) |
 | `untimed` | the time assumption off | `TakeNamesHeldPart` breaks, by a path no player can make |
 
 A `broken-*` config that reports no break means the model can no longer see that fault. Fix the model before trusting any pass (VFM-03).
@@ -63,13 +64,13 @@ A `broken-*` config that reports no break means the model can no longer see that
 ## Change the model on purpose
 
 - A new interruption (a new screen, key, menu entry or signal that can fire during a launch or at a run's end): add an action, enabled in every state where the code allows the call, not only where it is expected. (VFM-05)
-- A new guard in the code: add a constant that defaults to TRUE in `models/mkcfg.sh`, use it in the action, and add a `broken-*` config that turns it off and names the rule that must break. A guard no rule can see failing does not get a constant. (VFM-03, VFM-04)
+- A new guard in the code: add a constant to the `CONSTANTS` block of `models/RunFlow.tla` and, defaulting to TRUE, to the table in `models/mkcfg.sh`, use it in the action, and add a `broken-*` config that turns it off and names the rule that must break. A guard no rule can see failing does not get a constant. (VFM-03, VFM-04)
 - A rule is stated at the moment the player sees it. `TakeNamesHeldPart` is read when the swipe closes, not for as long as the word stays up. (VFM-08)
-- Bounds: two stages before the boss, two runs. Raise `Stages` or `MaxRuns` in `mkcfg.sh` when a change depends on a third. (design choice)
+- Bounds: a world 1 run as the sitting launch plays it (two stages, the boss, then the summary) and two runs. Raise `Stages` or `MaxRuns` in `mkcfg.sh` when a change depends on a third. A run that goes on past the boss into another world is not modelled. (design choice)
 
 ## What a pass does not cover
 
-A pass covers the model within its bounds and its time assumption (VFM-07). Not modelled: the camp gate's way into a run, the victory lap, stage replay from the death screen, the arena's own retry beyond "the run stays in the boss state", saves beyond one run document, seconds, and anything drawn. `references/coverage.md` lists them.
+A pass covers the model within its bounds and its time assumption (VFM-07). Not modelled: the camp gate's way into a run, the victory lap, stage replay from the death screen, the arena's own retry beyond "the run stays in the boss state", a run that continues past the boss, saves beyond one run document, the difference between the swipe's own word and no word, seconds, and anything drawn. `references/coverage.md` lists them.
 
 ## Lessons and updates
 

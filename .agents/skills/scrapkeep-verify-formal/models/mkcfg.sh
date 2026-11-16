@@ -2,12 +2,13 @@
 # Writes one TLC config beside RunFlow.tla.
 # usage: mkcfg.sh <name> "<rules to check, space separated>" [Constant=VALUE ...]
 # Every guard constant defaults to TRUE (the guard is in place). Name the ones a config turns off.
+# A new constant goes in two places: the CONSTANTS block of RunFlow.tla and the table below.
 # LaunchLands and WardenGoneOpens are rules about time (PROPERTIES); the rest are INVARIANTS.
 name=$1
 rules=$2
 shift 2
 declare -A c=(
-  [Stages]=2 [MaxRuns]=2 [Store]=TRUE
+  [Stages]=2 [MaxRuns]=2 [RunLast]=6 [Store]=TRUE
   [UntakeOnRetry]=TRUE [UntakeOnEnd]=TRUE [UntakeOnNewRun]=TRUE
   [VanishGuard]=TRUE [EndGuard]=TRUE [BusyRefuses]=TRUE [SwipeOwnsKeys]=TRUE [StageOutlastsSwipe]=TRUE
 )
@@ -31,7 +32,7 @@ done
 {
   echo "SPECIFICATION Spec"
   echo "CONSTANTS"
-  for key in Stages MaxRuns Store UntakeOnRetry UntakeOnEnd UntakeOnNewRun VanishGuard EndGuard BusyRefuses SwipeOwnsKeys StageOutlastsSwipe; do
+  for key in $(printf '%s\n' "${!c[@]}" | sort); do
     echo "  $key = ${c[$key]}"
   done
   echo "INVARIANTS TypeOK$inv"

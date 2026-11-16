@@ -38,6 +38,10 @@
   The check for "is this change covered" compares the sync commit with the working tree, and a change to a named guard is run by flipping that guard on the `today-*` configs. A replay of a break that comes from a change also runs on the sync commit as a control.
   Evidence: a fresh agent (Haiku 5.5) followed the skill against a planted removal of `_untake()` from `retry_stage`. The first wording, `<sync>..HEAD`, showed no diff for the uncommitted change; the agent still caught the break through `broken-retry`, replayed it (`word 'Impact Driver' visible true, run holds the part: false`) and got `word 'FWOOSH!'`, not reproduced, on the sync commit.
   Overturned by: —
+- **VFM-10** · status: provisional · since: 2026-11-16 · origin: the first independent review of the model
+  After the model passes, check that every action can fire and that each stage rule reads the same function the code reads. An action that never fires is coverage the skill claims and does not have.
+  Evidence: the review of pull request 1070 found `Resume` unreachable (no quit action led to a Continue with a store) and the swipe skipped at the world's last stage where the code skips it at the run's last (`is_run_last`), so the launch into the boss was never explored with a swipe. Both are corrected (`QuitRelaunch`, `RunLast`).
+  Overturned by: —
 
 ## Changelog
 
@@ -45,3 +49,4 @@
 | --- | --- |
 | 2026-11-16 | VFM-01 to VFM-08 added with the skill. Model confirmed at `3adc2fd0e`. |
 | 2026-11-16 | VFM-09 added after the cold follow; SKILL.md steps for the diff, guard flips and the replay command corrected. |
+| 2026-11-16 | VFM-10 added after the review of pull request 1070: `QuitRelaunch` and `RunLast` added to the model, `guarded-lastgate` config added, the `broken-busy` and stage replay rows corrected. |

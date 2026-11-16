@@ -12,6 +12,8 @@ EXTENDS Naturals, FiniteSets
 CONSTANTS
   Stages,          \* stages before the boss arena (world 1: 2)
   MaxRuns,         \* bound on runs in one session
+  RunLast,         \* the stage whose launch plays no swipe: worlds.is_run_last (stage 6 in the alpha table, so
+                   \* outside this world 1 run by default; a config sets it to Stages to explore that gate)
   Store,           \* TRUE: the real game (a death ends the run, R starts a new run). FALSE: tests and bots.
   \* The guards below are in the code today. A config that turns one off is a
   \* broken variant: it shows that the property watching it can fail.
@@ -42,10 +44,11 @@ VARIABLES
   scrapless, \* build.scrapless() for this run
   tPhase, tKind, tWord, tCb,   \* the one launch_take node: phase, who started it, its stamp, its on_cover
   pickLost,  \* a pilot pick whose on_cover was dropped
+  resumed,   \* history only: a Continue has happened (for the reach probes)
   svHeld, svCleared, svStage   \* the saved run document (run_store)
 
 vars == <<fs, stage, run, over, ended, sealed, warden, launched, seam, taken, held, snap,
-          scrapless, tPhase, tKind, tWord, tCb, pickLost, svHeld, svCleared, svStage>>
+          scrapless, tPhase, tKind, tWord, tCb, pickLost, resumed, svHeld, svCleared, svStage>>
 
 States == {"TITLE", "CLASS_SELECT", "STAGE", "BEACON", "GATES", "LAUNCH", "SUMMARY", "DEAD", "BOSS", "VICTORY"}
 InPlay == fs \in {"STAGE", "BEACON", "GATES", "LAUNCH", "BOSS"}     \* flow.in_play (LAP is folded into VICTORY)
@@ -59,7 +62,7 @@ Init ==
   /\ sealed = FALSE /\ warden = FALSE /\ launched = FALSE /\ seam = FALSE /\ taken = 0
   /\ held = {} /\ snap = {} /\ scrapless = FALSE
   /\ tPhase = "idle" /\ tKind = "none" /\ tWord = 0 /\ tCb = "none"
-  /\ pickLost = FALSE /\ svHeld = {} /\ svCleared = FALSE /\ svStage = 0
+  /\ pickLost = FALSE /\ resumed = FALSE /\ svHeld = {} /\ svCleared = FALSE /\ svStage = 0
 
 \* ---- pieces used inside actions (not actions themselves) ----
 
@@ -91,7 +94,7 @@ PressStart ==
   /\ fs \in {"TITLE", "SUMMARY"} /\ KeysHeard
   /\ fs' = "CLASS_SELECT"
   /\ UNCHANGED <<stage, run, over, ended, sealed, warden, launched, seam, taken, held, snap,
-                 scrapless, tPhase, tKind, tWord, tCb, pickLost, svHeld, svCleared, svStage>>
+                 scrapless, tPhase, tKind, tWord, tCb, pickLost, resumed, svHeld, svCleared, svStage>>
 
 \* game.pick_pilot: launch_take.play(on_cover = choose_class). A busy take refuses and drops on_cover.
 PickPilot ==
@@ -102,6 +105,7 @@ PickPilot ==
           /\ UNCHANGED <<tPhase, tKind, tWord, tCb>>
      ELSE /\ tPhase' = "wind" /\ tKind' = "pilot" /\ tWord' = 0 /\ tCb' = "choose"
           /\ UNCHANGED pickLost
+  /\ UNCHANGED resumed
   /\ UNCHANGED <<fs, stage, run, over, ended, sealed, warden, launched, seam, taken, held, snap,
                  scrapless, svHeld, svCleared, svStage>>
 
@@ -112,7 +116,7 @@ BeginRun ==
   /\ scrapless' \in BOOLEAN
   /\ tWord' = Untaken(UntakeOnNewRun)
   /\ EnterStage(1, {})
-  /\ UNCHANGED <<seam, tPhase, tKind, tCb, pickLost>>
+  /\ UNCHANGED <<seam, tPhase, tKind, tCb, pickLost, resumed>>
 
 \* flow.new_run: N on the death screen and the summary (screen keys), and in play the pause menu's Restart
 \* (pause_menu.gd) and, with a store, an R held for RESTART_HOLD (game.gd). The two in-play ways are not
@@ -128,7 +132,7 @@ ShowTitle ==
   /\ fs \in {"CLASS_SELECT", "SUMMARY", "DEAD"} /\ KeysHeard
   /\ fs' = "TITLE"
   /\ UNCHANGED <<stage, run, over, ended, sealed, warden, launched, seam, taken, held, snap,
-                 scrapless, tPhase, tKind, tWord, tCb, pickLost, svHeld, svCleared, svStage>>
+                 scrapless, tPhase, tKind, tWord, tCb, pickLost, resumed, svHeld, svCleared, svStage>>
 
 \* flow.resume_run (Continue): the saved document comes back; a cleared stage lands its flight.
 Resume ==
@@ -140,7 +144,17 @@ Resume ==
      ELSE LET s == IF svCleared THEN svStage + 1 ELSE svStage
           IN /\ stage' = s /\ launched' = FALSE /\ sealed' = TRUE /\ warden' = TRUE /\ fs' = "STAGE"
              /\ svHeld' = svHeld /\ svCleared' = FALSE /\ svStage' = s
+  /\ resumed' = TRUE
   /\ UNCHANGED <<run, over, ended, seam, scrapless, tPhase, tKind, tWord, tCb, pickLost>>
+
+\* The player quits to the desktop (the pause menu's Quit, or the window closes) and starts the game again.
+\* Everything in memory is gone: the swipe, _seam_take, _taken_part. The saved run document stays.
+QuitRelaunch ==
+  /\ Store /\ run > 0 /\ fs # "TITLE"
+  /\ fs' = "TITLE" /\ launched' = FALSE /\ seam' = FALSE /\ taken' = 0
+  /\ sealed' = FALSE /\ warden' = FALSE /\ held' = {} /\ snap' = {}
+  /\ tPhase' = "idle" /\ tKind' = "none" /\ tWord' = 0 /\ tCb' = "none"
+  /\ UNCHANGED <<stage, run, over, ended, scrapless, pickLost, resumed, svHeld, svCleared, svStage>>
 
 \* ---- a stage ----
 
@@ -148,7 +162,7 @@ Resume ==
 ToBeacon ==
   /\ fs = "STAGE" /\ fs' = "BEACON"
   /\ UNCHANGED <<stage, run, over, ended, sealed, warden, launched, seam, taken, held, snap,
-                 scrapless, tPhase, tKind, tWord, tCb, pickLost, svHeld, svCleared, svStage>>
+                 scrapless, tPhase, tKind, tWord, tCb, pickLost, resumed, svHeld, svCleared, svStage>>
 
 \* flow._on_enemy_killed -> _unseal: the Warden breaks and the gates open.
 WardenBroken ==
@@ -156,14 +170,14 @@ WardenBroken ==
   /\ StageOutlastsSwipe => ~TakeBusy
   /\ sealed' = FALSE /\ warden' = FALSE /\ fs' = "GATES"
   /\ UNCHANGED <<stage, run, over, ended, launched, seam, taken, held, snap,
-                 scrapless, tPhase, tKind, tWord, tCb, pickLost, svHeld, svCleared, svStage>>
+                 scrapless, tPhase, tKind, tWord, tCb, pickLost, resumed, svHeld, svCleared, svStage>>
 
 \* The Warden's node leaves the tree with no kill recorded (a seam fault somewhere else).
 WardenFreed ==
   /\ fs \in {"STAGE", "BEACON"} /\ sealed /\ warden
   /\ warden' = FALSE
   /\ UNCHANGED <<fs, stage, run, over, ended, sealed, launched, seam, taken, held, snap,
-                 scrapless, tPhase, tKind, tWord, tCb, pickLost, svHeld, svCleared, svStage>>
+                 scrapless, tPhase, tKind, tWord, tCb, pickLost, resumed, svHeld, svCleared, svStage>>
 
 \* flow's tick -> _warden_vanished -> _unseal.
 WardenVanished ==
@@ -172,7 +186,7 @@ WardenVanished ==
   /\ fs \in {"STAGE", "BEACON"} /\ sealed /\ ~warden
   /\ sealed' = FALSE /\ fs' = "GATES"
   /\ UNCHANGED <<stage, run, over, ended, warden, launched, seam, taken, held, snap,
-                 scrapless, tPhase, tKind, tWord, tCb, pickLost, svHeld, svCleared, svStage>>
+                 scrapless, tPhase, tKind, tWord, tCb, pickLost, resumed, svHeld, svCleared, svStage>>
 
 \* One gate choice. world.gd launches inside the reward_chosen signal, so flow hears reward_chosen and
 \* launched in one synchronous emission, in either order (launchFirst). build grants the part in the same
@@ -182,8 +196,8 @@ GateTaken(launchFirst) ==
   /\ LET id      == PartOf(run, stage)
          granted == IF scrapless THEN 0 ELSE id
          parts   == IF scrapless THEN held ELSE held \cup {id}
-         starts  == (stage # Stages) /\ ~TakeBusy     \* a take really starts
-         plays   == IF BusyRefuses THEN starts ELSE (stage # Stages)   \* what _play_seam_take returns
+         starts  == (stage # RunLast) /\ ~TakeBusy    \* a take really starts
+         plays   == IF BusyRefuses THEN starts ELSE (stage # RunLast)  \* what _play_seam_take returns
          spend(t) == 0                                 \* _play_seam_take always empties _taken_part
      IN /\ held' = parts
         /\ fs' = "LAUNCH" /\ launched' = TRUE
@@ -206,20 +220,20 @@ GateTaken(launchFirst) ==
                    THEN /\ tPhase' = "wind" /\ tKind' = "seam" /\ tCb' = "cut"
                         /\ tWord' = t1 /\ taken' = spend(t1)
                    ELSE /\ UNCHANGED <<tPhase, tKind, tCb>> /\ tWord' = w1 /\ taken' = spend(t1)
-  /\ UNCHANGED <<stage, run, over, ended, sealed, warden, snap, scrapless, pickLost>>
+  /\ UNCHANGED <<stage, run, over, ended, sealed, warden, snap, scrapless, pickLost, resumed>>
 
 \* flow's tick in LAUNCH: with no take, the flight's end finishes the stage.
 FlightEnds ==
   /\ fs = "LAUNCH" /\ launched /\ ~seam
   /\ FinishStage(held)
-  /\ UNCHANGED <<run, over, ended, seam, taken, scrapless, tPhase, tKind, tWord, tCb, pickLost>>
+  /\ UNCHANGED <<run, over, ended, seam, taken, scrapless, tPhase, tKind, tWord, tCb, pickLost, resumed>>
 
 \* ---- the launch swipe (launch_take.advance; it runs through a pause) ----
 
 TakeWind ==
   /\ tPhase = "wind" /\ tPhase' = "cover"
   /\ UNCHANGED <<fs, stage, run, over, ended, sealed, warden, launched, seam, taken, held, snap,
-                 scrapless, tKind, tWord, tCb, pickLost, svHeld, svCleared, svStage>>
+                 scrapless, tKind, tWord, tCb, pickLost, resumed, svHeld, svCleared, svStage>>
 
 \* Full cover: on_cover runs once. "cut" is flow._cut_under_cover; "choose" is game.pick_pilot's closure.
 TakeCover ==
@@ -238,18 +252,18 @@ TakeCover ==
                /\ UNCHANGED seam
           ELSE UNCHANGED <<fs, stage, run, over, ended, sealed, warden, launched, seam, taken, held, snap,
                            scrapless, tWord, svHeld, svCleared, svStage>>
-  /\ UNCHANGED <<tKind, pickLost>>
+  /\ UNCHANGED <<tKind, pickLost, resumed>>
 
 TakeHold ==
   /\ tPhase = "hold" /\ tPhase' = "reveal"
   /\ UNCHANGED <<fs, stage, run, over, ended, sealed, warden, launched, seam, taken, held, snap,
-                 scrapless, tKind, tWord, tCb, pickLost, svHeld, svCleared, svStage>>
+                 scrapless, tKind, tWord, tCb, pickLost, resumed, svHeld, svCleared, svStage>>
 
 \* launch_take._end: idle again, the stamp is plain again.
 TakeEnd ==
   /\ tPhase = "reveal" /\ tPhase' = "idle" /\ tKind' = "none" /\ tWord' = 0
   /\ UNCHANGED <<fs, stage, run, over, ended, sealed, warden, launched, seam, taken, held, snap,
-                 scrapless, tCb, pickLost, svHeld, svCleared, svStage>>
+                 scrapless, tCb, pickLost, resumed, svHeld, svCleared, svStage>>
 
 \* ---- interruptions ----
 
@@ -259,10 +273,10 @@ Death ==
   /\ IF Store
      THEN /\ EndRun
           /\ UNCHANGED <<stage, run, sealed, warden, launched, seam, taken, held, snap,
-                         scrapless, tPhase, tKind, tCb, pickLost, svHeld, svCleared, svStage>>
+                         scrapless, tPhase, tKind, tCb, pickLost, resumed, svHeld, svCleared, svStage>>
      ELSE /\ fs' = "DEAD"
           /\ UNCHANGED <<stage, run, over, ended, sealed, warden, launched, seam, taken, held, snap,
-                         scrapless, tPhase, tKind, tWord, tCb, pickLost, svHeld, svCleared, svStage>>
+                         scrapless, tPhase, tKind, tWord, tCb, pickLost, resumed, svHeld, svCleared, svStage>>
 
 \* flow.retry_stage (store-less flows; the arena has its own retry, which calls no _untake).
 Retry ==
@@ -275,23 +289,23 @@ Retry ==
           /\ held' = snap /\ launched' = FALSE
           /\ sealed' = TRUE /\ warden' = TRUE /\ fs' = "STAGE"
           /\ UNCHANGED stage
-  /\ UNCHANGED <<run, over, ended, seam, taken, snap, scrapless, tPhase, tKind, tCb, pickLost,
+  /\ UNCHANGED <<run, over, ended, seam, taken, snap, scrapless, tPhase, tKind, tCb, pickLost, resumed,
                  svHeld, svCleared, svStage>>
 
 \* flow._on_boss_defeated, then the victory clock: flow._end_run_won -> _end_run(true).
 BossDefeated ==
   /\ fs = "BOSS" /\ fs' = "VICTORY"
   /\ UNCHANGED <<stage, run, over, ended, sealed, warden, launched, seam, taken, held, snap,
-                 scrapless, tPhase, tKind, tWord, tCb, pickLost, svHeld, svCleared, svStage>>
+                 scrapless, tPhase, tKind, tWord, tCb, pickLost, resumed, svHeld, svCleared, svStage>>
 
 VictoryEnds ==
   /\ fs = "VICTORY"
   /\ EndRun
   /\ UNCHANGED <<stage, run, sealed, warden, launched, seam, taken, held, snap,
-                 scrapless, tPhase, tKind, tCb, pickLost, svHeld, svCleared, svStage>>
+                 scrapless, tPhase, tKind, tCb, pickLost, resumed, svHeld, svCleared, svStage>>
 
 Next ==
-  \/ PressStart \/ PickPilot \/ NewRun \/ ShowTitle \/ Resume
+  \/ PressStart \/ PickPilot \/ NewRun \/ ShowTitle \/ Resume \/ QuitRelaunch
   \/ ToBeacon \/ WardenBroken \/ WardenFreed \/ WardenVanished
   \/ GateTaken(TRUE) \/ GateTaken(FALSE) \/ FlightEnds
   \/ TakeWind \/ TakeCover \/ TakeHold \/ TakeEnd
@@ -327,6 +341,13 @@ EndsOnce == ended <= 1
 
 \* P4. A pilot pick is never silently dropped.
 PickHeard == ~pickLost
+
+\* Reach probes. Each one says "this never happens" about something that must be able to happen, so each
+\* MUST break (the reach config). A probe that holds means an action has gone dead.
+ProbeContinue == ~resumed
+ProbeBossUnderSwipe == ~(fs = "BOSS" /\ tKind = "seam" /\ tPhase = "hold")
+ProbeRetryUnderSwipe == ~(fs = "STAGE" /\ tKind = "seam" /\ tPhase = "wind" /\ ~launched /\ ~Store)
+ProbeSummary == fs # "SUMMARY"
 
 \* P5. A launch always lands: the flight never waits for a cut nobody will make.
 LaunchLands == (fs = "LAUNCH" /\ launched) ~> ~(fs = "LAUNCH" /\ launched)
