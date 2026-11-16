@@ -140,7 +140,7 @@ async function main() {
   const problems = checkTally(rows, { testCount: lists.tests.length, botCount: lists.bots.length, planHead: gated, head, weeklyCount: weekly, scope });
   console.log(scope === "wave" ? `wave gate (ruling cy): every non-bot test and the "${SCOPED_SHARD}" row; bot blocks, bands and the red team wait for the release gate` : "release gate: every shard, nothing deferred");
   const notRun = new Set([...lists.weekly.tests, ...lists.weekly.bots]);
-  const ledger = (await checkLedger(root, { promotion: true, notRun })).filter((finding) => finding.level === "failure");
+  const ledger = (await checkLedger(root, { promotion: true, notRun, requireChecks: true })).filter((finding) => finding.level === "failure");
   for (const finding of ledger) problems.push(`ledger line ${finding.line}: ${finding.message}`);
   for (const problem of problems) console.log("PROBLEM " + problem);
   if (weekly > 0) console.log(`weekly: ${weekly} tests not run this promotion (${WEEKLY_FILE}, ruling ca); they run on a change to their files and in the weekly sweep, which the "${WEEKLY_SHARD}" row dates`);

@@ -824,7 +824,7 @@ async function checkRulingLetters(docs) {
 // date is only a note in this check; it fails at the promotion gate
 // (scripts/known-failing.mjs --promotion).
 async function checkLedgerStage(docs) {
-  const findings = await checkLedger(docs.root);
+  const findings = await checkLedger(docs.root, { requireChecks: true });
   for (const finding of findings) {
     if (finding.level === "failure")
       docs.fail("known-failing", finding.file, finding.line, finding.message);
