@@ -162,7 +162,12 @@ func _check_gate_prompts_fit() -> void:
 			too_wide.append(id)
 		probe.name_rows = fit["two"] if two_rows else PackedStringArray([probe.parts()["title"]])
 		probe.detail_shown = true
-		if probe.text_width() + 2.0 * WorldPrompt.SIGN_PAD > probe.shown_extent().x + 0.01:
+		# The rectangle is as wide as the widest row the font measures, plus the padding, and no wider.
+		var measured := 0.0
+		for i in probe.shown_lines().size():
+			var row_size: int = WorldPrompt.SIGN_NAME_SIZE if i < probe.name_rows.size() else WorldPrompt.SIGN_DETAIL_SIZE
+			measured = maxf(measured, UiFonts.bold().get_string_size(probe.shown_lines()[i], HORIZONTAL_ALIGNMENT_LEFT, -1, row_size).x)
+		if absf(probe.shown_extent().x - (measured + 2.0 * WorldPrompt.SIGN_PAD)) > 0.01:
 			loose.append(id)
 		probe.free()
 	_report("gate prompts fit", widest > 0.0 and too_wide.is_empty() and loose.is_empty(),

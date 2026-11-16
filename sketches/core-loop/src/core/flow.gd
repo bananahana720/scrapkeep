@@ -507,6 +507,7 @@ func _begin_run(chosen: Resource) -> void:
 	ctx.run.route_seed = int(ctx.tuning.base("route_seed")) if ctx.tuning != null else 0
 	ctx.run.begin(chosen)
 	_seed_companion()
+	_taken_part = ""
 	ctx.events.run_started.emit(chosen.id)
 	if store != null and not store.keep_prev():
 		warn_once("run_prev_backup", "flow: could not keep the old run: %s" % store.last_error)
@@ -586,6 +587,7 @@ func resume_run() -> bool:
 	if ctx.run_log != null:
 		ctx.run_log.abandon_open_run()
 	ctx.run.begin(chosen)
+	_taken_part = ""
 	ctx.events.run_started.emit(chosen.id)
 	ctx.run.from_entrance_doc(doc)
 	_keep_found_pieces()
@@ -1268,10 +1270,11 @@ func _save_cleared(velocity: Vector3) -> void:
 # headless runs cut at once as before. Returns true when the take plays.
 func _play_seam_take() -> bool:
 	var root = ctx.root
-	if root == null or not root.has_method("play_launch_take") or ctx.stages.is_run_last(ctx.run.stage):
-		return false
+	# Whatever launch this is, the part it gave is spent: no id outlives it to dress a later take.
 	var taken := _taken_part
 	_taken_part = ""
+	if root == null or not root.has_method("play_launch_take") or ctx.stages.is_run_last(ctx.run.stage):
+		return false
 	return root.play_launch_take(_cut_under_cover, _flight_over, _next_drawn, LAUNCH_FLIGHT, taken)
 
 

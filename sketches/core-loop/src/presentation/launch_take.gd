@@ -146,10 +146,9 @@ func _begin(on_cover: Callable, wind: Callable, ready_check: Callable, cover_gat
 
 # The part a gate gave, told after the take began (the launch can start before the gate's event reaches its owner).
 func stamp_taken(part_id: String) -> void:
-	if phase == IDLE or part_id == "":
+	if phase == IDLE:
 		return
-	if _dress_word(part_id):
-		_wordless = false
+	_wordless = not _dress_word(part_id)
 
 
 # The stamp's look: FWOOSH! as ever, or the taken part's name and family glyph in its rarity colour.

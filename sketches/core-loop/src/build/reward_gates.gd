@@ -10,6 +10,7 @@ const Icons := preload("res://src/ui/icons.gd")
 const UiFonts := preload("res://src/ui/ui_fonts.gd")
 const ActiveOffers := preload("res://src/combat/actives/active_offers.gd")
 const ActiveDefs := preload("res://src/combat/actives/active_defs.gd")
+const ScreenRegions := preload("res://src/ui/screen_regions.gd")
 
 # The roll-through reward gates after the beacon. Two arches stand ahead of the ball on
 # its line; rolling through one takes its part. There is no collider and no menu, so
@@ -67,12 +68,13 @@ const BLOCK_PENALTY := 1000.0
 const SLOT_LINE_DROP := 1.5
 # The name's top stands this far under the crossbar point. A name or effect line is "room" wide: the
 # distance to the nearest other gate's column less NAME_GAP. A shown name stays until it overlaps another by
-# more than NAME_HOLD px, and a hidden one returns only with NAME_HOLD px clear. The effect lines come back
-# only with DETAIL_BACK px to spare.
+# at all, and a hidden one returns only with NAME_HOLD px clear. The effect lines come back only with
+# DETAIL_BACK px to spare, and a name goes back to one row only with ROWS_BACK px to spare.
 const NAME_DROP := 6.0
 const NAME_GAP := 12.0
 const NAME_HOLD := 32.0
 const DETAIL_BACK := 16.0
+const ROWS_BACK := 16.0
 const NAME_TIE_M := 1.0
 const KEEP_CLEAR_GROUP := "word_keep_clear"
 
@@ -90,6 +92,9 @@ var _name_frame := -1
 # Per gate index: whether its name and its effect lines were shown last frame (the hysteresis).
 var _shown := {}
 var _detail := {}
+var _rows := {}
+# Asked each frame: is the game in play? Build sets it from flow. Names hide when it is not.
+var playing := Callable()
 var _ids: Array = []
 var _held: Array = []
 var _last_side := {}
@@ -102,6 +107,8 @@ var _fixed := false
 
 func _init() -> void:
 	add_to_group(KEEP_CLEAR_GROUP)
+	# Runs through a pause only to hide the names, so a menu over the world is not wearing them.
+	process_mode = Node.PROCESS_MODE_ALWAYS
 
 
 func setup(terrain) -> void:
@@ -125,6 +132,7 @@ func close() -> void:
 	_name_rects.clear()
 	_shown.clear()
 	_detail.clear()
+	_rows.clear()
 	for gate in _gates:
 		gate.queue_free()
 	_gates.clear()
@@ -172,6 +180,7 @@ func _place(ball: Vector3, heading: Vector3) -> void:
 	_last_side = {}
 	_shown.clear()
 	_detail.clear()
+	_rows.clear()
 	var plan := choose_placement(ball, heading)
 	_fixed = plan.get("fixed", false)
 	var facing: Vector3 = plan["facing"]
@@ -487,6 +496,9 @@ static func _topper(rarity: String, mat: Material) -> MeshInstance3D:
 func _process(delta: float) -> void:
 	if offers.is_empty():
 		return
+	if get_tree().paused:
+		_place_names()
+		return
 	_spin += delta * 1.8
 	for gate in _gates:
 		var topper := gate.get_node_or_null("Topper") as Node3D
@@ -529,6 +541,13 @@ func _place_names() -> void:
 	_name_rects.clear()
 	var cam := get_viewport().get_camera_3d() if is_inside_tree() else null
 	var view := get_viewport().get_visible_rect()
+	if is_inside_tree() and (get_tree().paused or (playing.is_valid() and not playing.call())):
+		for gate in _gates:
+			var hidden := gate.get_node_or_null("Name") as Label
+			if hidden != null:
+				hidden.visible = false
+		_shown.clear()
+		return
 	var from: Vector3 = _ball if _ball.is_finite() else (cam.global_position if cam != null else Vector3.ZERO)
 	var entries: Array = []
 	var live: Array = []
@@ -545,15 +564,17 @@ func _place_names() -> void:
 			continue
 		var fit: Dictionary = prompt.get_meta("fit")
 		entries.append(fit.merged({"index": i, "col": col, "dist": from.distance_to(gate.global_position),
-			"was_shown": _shown.get(i, false), "was_detail": _detail.get(i, false)}))
+			"was_shown": _shown.get(i, false), "was_detail": _detail.get(i, false), "was_rows": _rows.get(i, 1)}))
 		live.append(prompt)
-	var out := fit_names(entries)
+	var out := fit_names(entries, ScreenRegions.rect("top", view.size).end.y)
 	for k in live.size():
 		var prompt: Label = live[k]
 		var i: int = entries[k]["index"]
 		var got: Dictionary = out[k]
 		_shown[i] = got["shown"]
 		_detail[i] = got["shown"] and got["detail"]
+		if got["shown"]:
+			_rows[i] = got["rows"]
 		prompt.visible = got["shown"]
 		if not got["shown"]:
 			continue
@@ -571,9 +592,11 @@ func _place_names() -> void:
 # column less NAME_GAP) takes two rows before anything hides; the effect lines show only under a one-row name
 # and only when they fit the room. Nearest gates first (distance in NAME_TIE_M steps, then a name already shown,
 # then the lower index, so a tie never depends on sort order): a name whose rect would overlap one placed by
-# more than NAME_HOLD px (a hidden name: by less than NAME_HOLD px of clear room) hides, and that gate's name only.
+# at all (a hidden name: by less than NAME_HOLD px of clear room) hides, and that gate's name only. A name on two rows
+# goes back to one only with ROWS_BACK px to spare (was_rows). A name whose crossbar point is above band_end (the top
+# HUD band's lower edge) drops straight down its own column to just under it, and returns to the point below the band.
 # Returns, per entry in order, {shown, rows, detail, rect}.
-static func fit_names(entries: Array) -> Array:
+static func fit_names(entries: Array, band_end := 0.0) -> Array:
 	var order: Array = range(entries.size())
 	order.sort_custom(func(a, b):
 		var ea: Dictionary = entries[a]
@@ -595,14 +618,15 @@ static func fit_names(entries: Array) -> Array:
 			if other != e:
 				room = minf(room, absf(float(other["col"].x) - float(e["col"].x)) - NAME_GAP)
 		var forms: Array = []
-		if float(e["w1"]) <= room:
+		var one_row := float(e["w1"]) + (ROWS_BACK if int(e.get("was_rows", 1)) == 2 else 0.0) <= room
+		if one_row:
 			var spare := 0.0 if e["was_detail"] else DETAIL_BACK
 			if float(e["dh"]) > 0.0 and float(e["dw"]) + spare <= room:
 				forms.append({"rows": 1, "detail": true})
 			forms.append({"rows": 1, "detail": false})
 		else:
 			forms.append({"rows": 2, "detail": false})
-		var reach := NAME_HOLD if e["was_shown"] else -NAME_HOLD
+		var reach := 0.0 if e["was_shown"] else -NAME_HOLD
 		var result := {"shown": false, "rows": 1, "detail": false, "rect": Rect2()}
 		for form in forms:
 			var width: float = e["w1"] if form["rows"] == 1 else e["w2"]
@@ -610,7 +634,7 @@ static func fit_names(entries: Array) -> Array:
 			if form["detail"]:
 				width = maxf(width, float(e["dw"]))
 				height += float(e["dh"])
-			var rect := Rect2(Vector2(float(e["col"].x) - width * 0.5, float(e["col"].y) + NAME_DROP), Vector2(width, height))
+			var rect := Rect2(Vector2(float(e["col"].x) - width * 0.5, maxf(float(e["col"].y) + NAME_DROP, band_end)), Vector2(width, height))
 			if placed.all(func(r): return _overlap(rect, r) <= reach):
 				result = {"shown": true, "rows": form["rows"], "detail": form["detail"], "rect": rect}
 				break

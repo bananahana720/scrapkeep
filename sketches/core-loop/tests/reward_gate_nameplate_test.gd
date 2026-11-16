@@ -30,7 +30,8 @@ const ScreenRegions := preload("res://src/ui/screen_regions.gd")
 const FRAMES := 120
 # The project's canvas is 1600x900; a 1280x720 window draws it at 0.8.
 const WINDOW_SCALE := 720.0 / 900.0
-const CAP_RATIO := 0.714
+const TYPICAL_FROM := {3: 75.0, 4: 75.0}
+const LONGEST_FROM := {3: 45.0, 4: 45.0}
 
 var _t := T.new("reward_gate_nameplate_test")
 var _cam: Camera3D
@@ -70,6 +71,13 @@ func _entry(index: int, col_x: float, dist: float, w1 := 140.0, was_shown := fal
 		"h1": 30.0, "h2": 62.0, "dw": dw, "dh": 40.0 if dw > 0.0 else 0.0, "was_shown": was_shown, "was_detail": false}
 
 
+# A pair 140 px apart (room 128): the one-row width is 124 and the two-row width 80. `was_rows` says what it was last frame.
+func _two_rows_entry(was_rows: int, w1: float) -> Array:
+	var a := _entry(0, 400.0, 50.0, w1)
+	a["was_rows"] = was_rows
+	return RewardGates.fit_names([a, _entry(1, 540.0, 80.0, w1)])
+
+
 # B. The rule, with numbers.
 func _fit_part() -> void:
 	var lone := RewardGates.fit_names([_entry(0, 400.0, 50.0, 140.0, false, 80.0, 200.0)])
@@ -87,10 +95,10 @@ func _fit_part() -> void:
 	var tie_swapped := RewardGates.fit_names([_entry(1, 440.0, 60.0), _entry(0, 400.0, 60.0)])
 	_t.check("B. equal distances: the lower index keeps its name, in either list order", tie[0]["shown"] and not tie[1]["shown"] and tie_swapped[1]["shown"] and not tie_swapped[0]["shown"], "%s %s" % [tie, tie_swapped])
 	# Hysteresis: a shown name stays until the overlap exceeds 32 px; a hidden one returns with 32 px clear.
-	var stays := RewardGates.fit_names([_entry(0, 400.0, 50.0, 140.0, true), _entry(1, 460.0, 80.0, 140.0, true)])
-	_t.check("B. a shown name stays at 20 px of overlap", stays[1]["shown"], str(stays))
-	var goes := RewardGates.fit_names([_entry(0, 400.0, 50.0, 140.0, true), _entry(1, 440.0, 80.0, 140.0, true)])
-	_t.check("B. a shown name hides at 40 px of overlap", not goes[1]["shown"], str(goes))
+	var stays := RewardGates.fit_names([_entry(0, 400.0, 50.0, 140.0, true), _entry(1, 480.0, 80.0, 140.0, true)])
+	_t.check("B. a shown name stays while the two do not overlap at all", stays[1]["shown"], str(stays))
+	var goes := RewardGates.fit_names([_entry(0, 400.0, 50.0, 140.0, true), _entry(1, 470.0, 80.0, 140.0, true)])
+	_t.check("B. a shown name hides as soon as it overlaps another shown name (10 px)", not goes[1]["shown"], str(goes))
 	var held := RewardGates.fit_names([_entry(0, 400.0, 50.0, 140.0, true), _entry(1, 500.0, 80.0, 140.0, false)])
 	_t.check("B. a hidden name stays hidden with 20 px clear", not held[1]["shown"], str(held))
 	var back := RewardGates.fit_names([_entry(0, 400.0, 50.0, 140.0, true), _entry(1, 520.0, 80.0, 140.0, false)])
@@ -103,6 +111,24 @@ func _fit_part() -> void:
 	var split := RewardGates.fit_names([_entry(0, 400.0, 50.0, 140.0, false, 80.0, 60.0), _entry(1, 520.0, 80.0, 140.0, false, 80.0, 60.0)])
 	_t.check("B. no effect lines under a name on two rows", split.all(func(r): return r["rows"] == 2 and not r["detail"]), str(split))
 	_t.check("B. fit_names of nothing is nothing", RewardGates.fit_names([]).is_empty())
+	# Rows: back to one row only with 16 px to spare. Room 128 (140 apart less 12): the one-row name is 120 wide.
+	var rows_one := RewardGates.fit_names([_entry(0, 400.0, 50.0, 120.0), _entry(1, 540.0, 80.0, 120.0)])
+	_t.check("B. a name that fits its room takes one row", rows_one[0]["rows"] == 1, str(rows_one))
+	var rows_kept := _two_rows_entry(2, 120.0)
+	_t.check("B. a name on two rows stays on two while it has less than 16 px to spare", rows_kept[0]["rows"] == 2, str(rows_kept))
+	var rows_back := _two_rows_entry(2, 100.0)
+	_t.check("B. and goes back to one row with 16 px to spare", rows_back[0]["rows"] == 1, str(rows_back))
+	var rows_new := _two_rows_entry(1, 120.0)
+	_t.check("B. a name that was on one row stays on one row at the same room", rows_new[0]["rows"] == 1, str(rows_new))
+	# The top band: the name drops straight down its own column to the band's lower edge, and returns below it.
+	var high := Dictionary(_entry(0, 400.0, 50.0))
+	high["col"] = Vector2(400.0, 95.0)
+	var dropped := RewardGates.fit_names([high], 126.0)
+	_t.check("B. a crossbar point in the top band drops the name to the band's lower edge, same column", is_equal_approx((dropped[0]["rect"] as Rect2).position.y, 126.0) and is_equal_approx((dropped[0]["rect"] as Rect2).get_center().x, 400.0), str(dropped[0]["rect"]))
+	var low := Dictionary(_entry(0, 400.0, 50.0))
+	low["col"] = Vector2(400.0, 300.0)
+	var kept := RewardGates.fit_names([low], 126.0)
+	_t.check("B. below the band the name hangs at the crossbar point", is_equal_approx((kept[0]["rect"] as Rect2).position.y, 300.0 + RewardGates.NAME_DROP), str(kept[0]["rect"]))
 
 
 func _focal() -> float:
@@ -166,9 +192,10 @@ func _gates_part() -> void:
 	_t.check("A. each name is centred on its own gate's column", prompts == 3 and centred, "worst %.2f px" % worst)
 	_t.check("A. each name hangs under its crossbar point", prompts == 3 and hangs)
 	_t.check("A. no gate wears a Label3D or a 2D prompt the HUD places", gates.find_children("*", "Label3D", true, false).is_empty() and gates.find_children("*", "MeshInstance3D", true, false).all(func(m): return m.name != "Board"))
-	var cap := float(WorldPrompt.SIGN_NAME_SIZE) * WINDOW_SCALE * CAP_RATIO
-	_t.check("A. the name's cap height is at least 14 px on a 1280x720 window", cap >= 14.0, "%.1f px" % cap)
-	# In the top HUD band the name stays at its gate's crossbar point, never clamped down.
+	var cap := _font_cap_px(WorldPrompt.SIGN_NAME_SIZE) * WINDOW_SCALE
+	print("reward_gate_nameplate_test: measured cap height of the name font at size %d: %.2f canvas px, %.2f px on a 1280x720 window" % [WorldPrompt.SIGN_NAME_SIZE, cap / WINDOW_SCALE, cap])
+	_t.check("A. the name font's measured cap height is at least 14 px on a 1280x720 window", cap >= 14.0, "%.2f px" % cap)
+	# In the top HUD band the name drops straight down its own gate's column to the band's lower edge.
 	_stand(gates, [-9.0, 0.0, 9.0], 24.0, -38.0)
 	await process_frame
 	var top_ok := true
@@ -177,10 +204,16 @@ func _gates_part() -> void:
 	for gate in gates._gates:
 		var prompt := _name_of(gate)
 		var col := _cam.unproject_position(gate.global_position + Vector3.UP * RewardGates.HEIGHT)
-		top_ok = top_ok and prompt.visible and absf(prompt.position.y - (col.y + RewardGates.NAME_DROP)) < 0.6 and col.y < band_end
-		notes.append("%.0f" % col.y)
-	_t.check("A. a gate whose crossbar point is in the top HUD band keeps its name there", top_ok, "crossbar y %s, band ends %.0f" % [notes, band_end])
+		top_ok = top_ok and prompt.visible and prompt.position.y >= band_end - 0.01 and absf(prompt.position.y - band_end) < 0.6 and absf(Rect2(prompt.position, prompt.size).get_center().x - col.x) < 0.6 and col.y < band_end
+		notes.append("col %.0f,%.0f name top %.0f" % [col.x, col.y, prompt.position.y])
+	_t.check("A. a crossbar point in the top HUD band: the name's top is at the band's lower edge and its centre x is its gate's column", top_ok, "%s, band ends %.0f" % [notes, band_end])
 	_stand(gates, [-9.0, 0.0, 9.0], 0.0, -38.0)
+	await process_frame
+	var back_ok := true
+	for gate in gates._gates:
+		var col := _cam.unproject_position(gate.global_position + Vector3.UP * RewardGates.HEIGHT)
+		back_ok = back_ok and absf(_name_of(gate).position.y - (col.y + RewardGates.NAME_DROP)) < 0.6 and col.y > band_end
+	_t.check("A. and returns to the crossbar point once that is below the band", back_ok)
 
 	# E. keep_clear_rects.
 	await process_frame
@@ -198,13 +231,16 @@ func _gates_part() -> void:
 	_cam.rotation.y = 0.0
 	gates.close()
 
-	# C. Stability: the ball crosses a symmetric row's centre line, the camera sways a pixel.
-	gates.open(["impact_driver", "brace_frame", "chain_arc", "rime_rounds"], Vector3.ZERO, Vector3.FORWARD)
-	_stand(gates, [-27.0, -9.0, 9.0, 27.0], 0.0, -70.0)
+	# C. Stability on a layout where names do hide: the dam row's 16 m spacing at 100 m with the longest names. The ball
+	# crosses the row's centre line once while the camera sways a pixel.
+	var long4 := _longest_parts(4)
+	gates.open(long4, Vector3.ZERO, Vector3.FORWARD)
+	_stand(gates, [-24.0, -8.0, 8.0, 24.0], 0.0, -100.0)
 	var sway := 1.0 / _focal()
 	var last := []
 	var changes := 0
 	var sets := []
+	var change_frames := []
 	for f in FRAMES:
 		var ball := Vector3(lerpf(-3.0, 3.0, float(f) / (FRAMES - 1)), 0.0, 0.0)
 		_cam.position = Vector3(ball.x, 8.0, 0.0)
@@ -214,23 +250,60 @@ func _gates_part() -> void:
 		var now := _named(gates)
 		if f > 0 and now != last:
 			changes += 1
+			change_frames.append(f)
 		if not sets.has(now):
 			sets.append(now)
 		last = now
-	print("reward_gate_nameplate_test: stability, %d frames, named set changed %d times, sets %s" % [FRAMES, changes, sets])
-	_t.check("C. the set of named gates changes at most once over %d frames of a centre-line crossing and a pixel of sway" % FRAMES, changes <= 1 and not sets.is_empty(), "%d changes, sets %s" % [changes, sets])
+	print("reward_gate_nameplate_test: stability, %d frames, named set changed %d times at frames %s, sets in order %s" % [FRAMES, changes, change_frames, sets])
+	_t.check("C. names do hide on this layout (the test is not vacuous)", sets.all(func(s): return s.size() < 4), str(sets))
+	_t.check("C. one crossing of the centre line with a pixel of sway changes the named set at most once over %d frames" % FRAMES, changes <= 1 and not sets.is_empty(), "%d changes at %s, sets %s" % [changes, change_frames, sets])
 	_t.check("C. at least one gate is named throughout", sets.all(func(s): return not s.is_empty()), str(sets))
+	gates.close()
+
+	# C. Holding a distance where a name's return threshold sits: the ball comes in until the named set first
+	# changes, then holds there with the camera dollying a fraction of a pixel's worth back and forth.
+	gates.open(long4, Vector3.ZERO, Vector3.FORWARD)
+	_stand(gates, [-24.0, -8.0, 8.0, 24.0], 0.0, -100.0)
+	_cam.rotation.y = 0.0
+	var first := _named_at(gates, 120.0)
+	await process_frame
+	var found := 0.0
+	var d := 120.0
+	while d > 30.0 and found == 0.0:
+		d -= 0.25
+		_cam.position = Vector3(0.0, 8.0, -100.0 + d)
+		gates._ball = _cam.position
+		await process_frame
+		var now_set := _named(gates)
+		if now_set != first and d < 119.0:
+			found = d
+		first = now_set
+	var held_changes := 0
+	var held_sets := []
+	var before := _named(gates)
+	for f in FRAMES:
+		_cam.position = Vector3(0.0, 8.0, -100.0 + found + (0.2 if f % 2 == 0 else -0.2))
+		gates._ball = _cam.position
+		await process_frame
+		var held_now := _named(gates)
+		if held_now != before:
+			held_changes += 1
+		if not held_sets.has(held_now):
+			held_sets.append(held_now)
+		before = held_now
+	print("reward_gate_nameplate_test: threshold hold at %.2f m, %d frames, named set changed %d times, sets %s" % [found, FRAMES, held_changes, held_sets])
+	_t.check("C. holding a distance at a name's threshold with the camera moving about a pixel, the named set changes at most once", found > 0.0 and held_changes <= 1, "threshold at %.2f m, %d changes, sets %s" % [found, held_changes, held_sets])
 	gates.close()
 
 	# D. Approach on the dam row's spacing (16 m), three and four gates: typical names, then the longest there are.
 	var typical := ["impact_driver", "brace_frame", "chain_arc", "rime_rounds"]
 	for count in [3, 4]:
 		var got := await _approach(gates, typical, count)
-		_t.check("D. %d gates 16 m apart, typical names: every gate is named from 60 m in" % count, got["frames"] == 101 and got["from"] >= 60.0 - 0.001 and got["from"] != INF, "all named from %s m over %d frames" % [got["from"], got["frames"]])
+		_t.check("D. %d gates 16 m apart, typical names: every gate is named from 60 m in" % count, got["frames"] == 101 and got["from"] >= 60.0 - 0.001 and got["from"] != INF and absf(got["from"] - TYPICAL_FROM[count]) <= 2.0, "all named from %s m (observed %s m, tolerance 2) over %d frames" % [got["from"], TYPICAL_FROM[count], got["frames"]])
 	var longest := _longest_parts(4)
 	for count in [3, 4]:
 		var got := await _approach(gates, longest, count)
-		_t.check("D. %d gates 16 m apart, the longest names: every gate is named from 50 m in" % count, got["frames"] == 101 and got["from"] >= 50.0 - 0.001 and got["from"] != INF, "all named from %s m over %d frames" % [got["from"], got["frames"]])
+		_t.check("D. %d gates 16 m apart, the longest names: every gate is named from about %d m in" % [count, LONGEST_FROM[count]], got["frames"] == 101 and got["from"] != INF and absf(got["from"] - LONGEST_FROM[count]) <= 2.0, "all named from %s m (observed %s m, tolerance 2) over %d frames" % [got["from"], LONGEST_FROM[count], got["frames"]])
 	holder.queue_free()
 	await process_frame
 
@@ -271,14 +344,46 @@ func _approach(gates: Node3D, ids: Array, count: int) -> Dictionary:
 	return {"from": all_named_from, "frames": frames}
 
 
-# The ids of the parts with the longest titles, longest first.
+# The font's own cap height in canvas px at a size: the height of the glyph H's outline.
+func _font_cap_px(size: int) -> float:
+	var font: Font = preload("res://src/ui/ui_fonts.gd").bold()
+	var ts := TextServerManager.get_primary_interface()
+	var rid: RID = font.get_rids()[0]
+	var contours := ts.font_get_glyph_contours(rid, size, ts.font_get_glyph_index(rid, size, ord("H"), 0))
+	var lo := INF
+	var hi := -INF
+	for point in contours.get("points", PackedVector3Array()):
+		lo = minf(lo, point.y)
+		hi = maxf(hi, point.y)
+	return hi - lo
+
+
+func _named_at(gates: Node3D, d: float) -> Array:
+	_cam.position = Vector3(0.0, 8.0, -100.0 + d)
+	gates._ball = _cam.position
+	return _named(gates)
+
+
+# The ids a gate can offer, longest on two rows first (the width of the longer row at the name size). A gate's
+# parts come from Parts.roll_gate over offer_pool, which reads every row with no stage filter, plus a hot-wired
+# part (build._hotwire_gate_ids); each name is cut to three words by prompt_parts. Generated item names are never
+# offered at a gate.
 func _longest_parts(count: int) -> Array:
+	var ids: Array = Parts.ids().duplicate()
+	for id in Parts.HOTWIRED:
+		if not ids.has(id):
+			ids.append(id)
 	var rows := []
-	for id in Parts.ids():
-		var d: Resource = Parts.offer_def(id, [])
-		if d != null:
-			rows.append([RewardGates.prompt_parts({"name": Parts.display_name(id)}).title.length(), id])
+	for id in ids:
+		if Parts.offer_def(id, []) == null:
+			continue
+		var title: String = RewardGates.prompt_parts({"name": Parts.display_name(id)}).title
+		var widest := 0.0
+		for row in WorldPrompt.split_name(title):
+			widest = maxf(widest, WorldPrompt.row_width(row, WorldPrompt.SIGN_NAME_SIZE))
+		rows.append([widest, id])
 	rows.sort_custom(func(a, b): return a[0] > b[0] or (a[0] == b[0] and a[1] < b[1]))
+	print("reward_gate_nameplate_test: longest name a gate can show: %s (%d px on two rows, %d px on one) of %d parts; the next: %s" % [Parts.display_name(rows[0][1]), int(rows[0][0]), int(WorldPrompt.row_width(Parts.display_name(rows[0][1]), WorldPrompt.SIGN_NAME_SIZE)), rows.size(), rows.slice(1, 4).map(func(r): return Parts.display_name(r[1]))])
 	return rows.slice(0, count).map(func(r): return r[1])
 
 
@@ -312,6 +417,23 @@ func _take_part() -> void:
 		guard += 1
 	_stamp_at_cover(take, "impact_driver")
 	_t.check("F. a take that ends leaves the word dressed as the run-start word", take._word.text == LaunchTake.WORD and not take._glyph.visible, "word %s" % take._word.text)
+	take.play_over_flight(func(): pass, func(): return true, Callable(), 1.0, "impact_driver")
+	take.stamp_taken("no_such_part")
+	var late := 0
+	while take.phase != LaunchTake.HOLD and late < 600:
+		take.advance(1.0 / 60.0)
+		late += 1
+	take.advance(1.0 / 60.0)
+	_t.check("F. a part's name followed by an id that names no part leaves the take wordless", not take._word.visible and not take._glyph.visible, "word %s visible %s" % [take._word.text, take._word.visible])
+	while take.phase != LaunchTake.IDLE and late < 2000:
+		take.advance(1.0 / 60.0)
+		late += 1
+	take.play_over_flight(func(): pass, func(): return true, Callable(), 1.0, "impact_driver")
+	take.stamp_taken("")
+	_t.check("F. an empty id told late makes a running take wordless", take._wordless and take._word.text == LaunchTake.WORD)
+	while take.phase != LaunchTake.IDLE and late < 4000:
+		take.advance(1.0 / 60.0)
+		late += 1
 	take.queue_free()
 	await process_frame
 
@@ -404,6 +526,23 @@ func _game_part() -> void:
 	low.queue_free()
 	await process_frame
 
+	# Names hide when the game is not in play: the run ends under the standing gates, or a menu pauses the game.
+	var showing := _named(gates).size()
+	game.flow._set_state(game.flow.DEAD)
+	for _i in 3:
+		await process_frame
+	_t.check("G. the ball dies under standing gates: no name shows and no rect is kept", showing > 0 and _named(gates).is_empty() and gates.keep_clear_rects().is_empty(), "%d named before, %d after, %d rects" % [showing, _named(gates).size(), gates.keep_clear_rects().size()])
+	game.flow._set_state(game.flow.STAGE)
+	for _i in 3:
+		await process_frame
+	_t.check("G. and the names are back when play resumes", _named(gates).size() == showing, "%d named" % _named(gates).size())
+	game.get_tree().paused = true
+	for _i in 3:
+		await process_frame
+	var paused_named := _named(gates).size()
+	game.get_tree().paused = false
+	_t.check("G. a pause (a menu over the world) hides the names", paused_named == 0, "%d named while paused" % paused_named)
+
 	# G. The hand-over, as the game emits it. Flow and world both hear reward_chosen; whichever is first, the
 	# take's stamp is the part's name.
 	game.launch_take.force_live = true
@@ -433,6 +572,27 @@ func _game_part() -> void:
 	game.flow._on_launched(Vector3(0.0, 0.0, -20.0))
 	_t.check("G. the choice heard first, the launch after: the take names the part", game.launch_take.busy() and game.launch_take._word.text == "Impact Driver" and not game.launch_take._wordless,
 		"word %s wordless %s" % [game.launch_take._word.text, game.launch_take._wordless])
+	game.free()
+	await process_frame
+	# A finished run leaves no id behind: the run's last gate launches no take, and the next run, scrapless, starts clean.
+	game = await _boot()
+	var last_stage := 1
+	while not game.ctx.stages.is_run_last(last_stage) and last_stage < 40:
+		last_stage += 1
+	game.ctx.run.stage = last_stage
+	game.launch_take.force_live = true
+	game.flow._set_state(game.flow.GATES)
+	game.events.reward_chosen.emit("impact_driver")
+	game.build.set_modifiers({"scrapless": true})
+	game.flow.new_run()
+	for _i in 10:
+		await process_frame
+	game.launch_take.force_live = true
+	game.flow._set_state(game.flow.GATES)
+	game.flow._on_launched(Vector3(0.0, 0.0, -20.0))
+	game.flow._on_reward_chosen("impact_driver")
+	_t.check("G. after a run that ended at its last gate, a scrapless run's first take is wordless", game.build.scrapless() and game.launch_take.busy() and game.launch_take._wordless and game.launch_take._word.text == LaunchTake.WORD,
+		"last stage %d, scrapless %s, busy %s, word %s wordless %s" % [last_stage, game.build.scrapless(), game.launch_take.busy(), game.launch_take._word.text, game.launch_take._wordless])
 	game.free()
 	await process_frame
 	# Scrapless: no part is granted, so the take stays wordless.
