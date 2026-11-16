@@ -87,7 +87,9 @@ const DANGER_SOUNDS := ["hurt", "enemy_arrive", "boss_telegraph", "ratchet_cue",
 	"jolt_layer_tell", "flank_call", "boil_rumble", "reactor_tick",
 	# A rubble fall's warnings (rubble_fall.gd warn_sound) and the arena's crew-arrival whistle (arena_wave,
 	# sluice_warning): each comes before a hit or a crew, as enemy_arrive does.
-	"prop_crew_strain", "cave_in_rumble", "arena_wave_whistle"]
+	"prop_crew_strain", "cave_in_rumble", "arena_wave_whistle",
+	# Brindle's five wind-ups (audio.gd BRINDLE_TELEGRAPHS), each its own tell of the attack it warns of.
+	"tele_crane_sweep", "tele_slag_ring", "tele_charge", "tele_charge_wall", "tele_eject"]
 # Pitched cues that follow the live key (a lifted Warden plays its chimes in Eb). The combat
 # feedback percussion (feedback_set.py) has no key, so it is not here.
 const KEYED_SOUNDS := ["panel_note", "panel_jackpot", "line_claw_drag", "armor_reclaim", "scrap_tick", "cog_tick", "part_get", "core_socket", "found_chime", "gate_through",
@@ -105,6 +107,8 @@ const KEYED_SOUNDS := ["panel_note", "panel_jackpot", "line_claw_drag", "armor_r
 	"drop_landing", "return_launch_arpeggio", "crater_hold", "shell_spring",
 	"core_slam", "ultimate_land", "kest_demo_knock", "rivet_skid_plate",
 	"active_cutting_torch",
+	# The flume head gate's two-tone siren, and the pitched ride cues that took over a keyed stand-in.
+	"sluice_siren_two_tone", "ride_cable_clink", "steam_whistle_rise",
 	# --- P-C Tally keyed sounds ---
 	"plate_tally", "clip_tally", "stroke_tally", "settle_tally",
 	# --- end Tally ---
@@ -192,6 +196,13 @@ const TRIM_DB := {
 	# Heat's own three: the shell turning hot, cooling back, and a hit landing on it hot.
 	"overtime_offer": -8.0, "overtime_ring": -5.0, "overtime_pay": -6.0,
 	"heat_rise": -8.0, "heat_cool": -10.0, "heat_hot_hit": -6.0,
+	# Brindle's five wind-ups: each opens on the boss_telegraph's D and Eb pulses, then goes its own way.
+	"tele_crane_sweep": -4.0, "tele_slag_ring": -4.0, "tele_charge": -4.0, "tele_charge_wall": -4.0, "tele_eject": -4.0,
+	# The flume's head-gate siren, and the ride and movement facts that heard a stand-in: the chute, the bowl,
+	# the drop, the ledge, the hop, the grapple line, the water sheet, the launcher's charge, the cannon and the sluice.
+	"sluice_siren_two_tone": -6.0, "ride_rolling_metal": -9.0, "ride_bowl_carve": -9.0, "ride_drop_swoop": -8.0,
+	"ride_ledge_scuff": -10.0, "ride_hop_lift": -10.0, "ride_cable_clink": -9.0, "ride_sheet_swell": -9.0,
+	"steam_whistle_rise": -8.0, "cannon_bang_rail_whoosh": -3.0, "sluice_gush_roar": -5.0,
 	# Durability prototype: the plate shed in three sizes and the reclaim chime.
 	"armor_shed_small": -6.0, "armor_shed": -5.0, "armor_shed_big": -4.0, "armor_reclaim": -7.0,
 	"armor_deflect": -10.0,
@@ -1346,6 +1357,38 @@ static func _bake(id: String) -> PackedFloat32Array:
 			return _heat_cool()
 		"heat_hot_hit":
 			return _heat_hot_hit()
+		"tele_crane_sweep":
+			return _tele_crane_sweep()
+		"tele_slag_ring":
+			return _tele_slag_ring()
+		"tele_charge":
+			return _tele_charge()
+		"tele_charge_wall":
+			return _tele_charge_wall()
+		"tele_eject":
+			return _tele_eject()
+		"sluice_siren_two_tone":
+			return _sluice_siren_two_tone()
+		"ride_rolling_metal":
+			return _ride_rolling_metal()
+		"ride_bowl_carve":
+			return _ride_bowl_carve()
+		"ride_drop_swoop":
+			return _ride_drop_swoop()
+		"ride_ledge_scuff":
+			return _ride_ledge_scuff()
+		"ride_hop_lift":
+			return _ride_hop_lift()
+		"ride_cable_clink":
+			return _ride_cable_clink()
+		"ride_sheet_swell":
+			return _ride_sheet_swell()
+		"steam_whistle_rise":
+			return _steam_whistle_rise()
+		"cannon_bang_rail_whoosh":
+			return _cannon_bang_rail_whoosh()
+		"sluice_gush_roar":
+			return _sluice_gush_roar()
 	if id.begins_with(CAUSE_NOTE):
 		return _mix([[_cut(_n("mallet", int(id.trim_prefix(CAUSE_NOTE))), 0.6), 0, 1.0]])
 	if id.begins_with(GRID_NOTE):
@@ -2767,6 +2810,138 @@ static func _heat_cool() -> PackedFloat32Array:
 static func _heat_hot_hit() -> PackedFloat32Array:
 	return _mix([[_fm(0.3, _hz(60), 1.41, 5.0, 12.0), 0, 0.9], [_noise(0.3, 6200.0, 2600.0, 10.0, 0.002), 0, 0.5],
 		[_tone(0.14, _hz(40), _hz(36), "sine", 20.0), 0, 0.7]])
+
+
+# --- Brindle's wind-ups, the flume's siren and the ride sounds ---------------------------------
+
+# A buffer's loudness rising to `peak` (0 to 1 of its length) and falling after it.
+static func _arch(buf: PackedFloat32Array, peak := 0.5) -> PackedFloat32Array:
+	var n := buf.size()
+	for i in n:
+		var x := float(i) / n
+		buf[i] *= x / peak if x < peak else (1.0 - x) / (1.0 - peak)
+	return buf
+
+
+# The opening every Brindle wind-up shares with boss_telegraph: two low minor-second pulses (D, Eb).
+static func _tele_open() -> PackedFloat32Array:
+	return _mix([[_tone(0.1, _hz(50), _hz(50), "square_dark", 12.0), 0, 0.8],
+		[_tone(0.14, _hz(51), _hz(52), "square_dark", 10.0), Synth.seconds(0.11), 0.85]], true)
+
+
+# The crane's sweep: the pulses, then a rushing band of air that swells across and fades out.
+static func _tele_crane_sweep() -> PackedFloat32Array:
+	var air := _arch(_noise(0.55, 500.0, 3200.0, 0.0, 0.05), 0.45)
+	var sweep := _arch(_tone(0.5, _hz(62), _hz(74), "saw_dark", 0.0), 0.5)
+	return _mix([[_tele_open(), 0, 0.8], [air, Synth.seconds(0.12), 0.6], [sweep, Synth.seconds(0.12), 0.25]])
+
+
+# A slag ring: the pulses, then a low molten bubble and two bells that spread one after the other, like a ring widening.
+static func _tele_slag_ring() -> PackedFloat32Array:
+	var bubble := _arch(_noise(0.5, 160.0, 420.0, 0.0, 0.1), 0.4)
+	for i in bubble.size():
+		bubble[i] *= 0.6 + 0.4 * sin(TAU * 16.0 * i * Synth.INV_RATE)
+	return _mix([[_tele_open(), 0, 0.8], [bubble, Synth.seconds(0.1), 0.7],
+		[_tone(0.4, _hz(38), _hz(43), "sine", 3.0), Synth.seconds(0.1), 0.6],
+		[_cut(_n("bell", 74), 0.3), Synth.seconds(0.28), 0.5], [_cut(_n("bell", 81), 0.3), Synth.seconds(0.4), 0.45]])
+
+
+# The charge: the pulses, then dull clicks that come faster and climb, an engine winding up to run.
+static func _tele_charge() -> PackedFloat32Array:
+	var parts := [[_tele_open(), 0, 0.8]]
+	var at := 0.3
+	var gap := 0.11
+	for i in 6:
+		parts.append([_tone(0.05, _hz(45 + i * 2), _hz(45 + i * 2), "square_dark", 30.0), Synth.seconds(at), 0.7])
+		at += gap
+		gap *= 0.8
+	parts.append([_tone(0.25, _hz(57), _hz(69), "saw_dark", 5.0), Synth.seconds(at), 0.5])
+	return _mix(parts, true)
+
+
+# The charge at a wall: slower, falling clicks and a clang waiting at the end, a hull about to meet masonry.
+static func _tele_charge_wall() -> PackedFloat32Array:
+	var parts := [[_tele_open(), 0, 0.8]]
+	var at := 0.3
+	for i in 4:
+		parts.append([_tone(0.06, _hz(48 - i * 2), _hz(48 - i * 2), "square_dark", 26.0), Synth.seconds(at), 0.7])
+		at += 0.12
+	parts.append([_fm(0.4, _hz(46), 1.41, 4.0, 9.0), Synth.seconds(at), 0.9])
+	parts.append([_tone(0.16, _hz(38), _hz(34), "sine", 14.0), Synth.seconds(at), 0.7])
+	return _mix(parts, true)
+
+
+# The eject: the pulses, then a thin whistle that climbs and ends on a pop, the scooter leaving the deck.
+static func _tele_eject() -> PackedFloat32Array:
+	return _mix([[_tele_open(), 0, 0.8], [_fm_sweep(0.4, 450.0, 1900.0, 0.6, 2.5), Synth.seconds(0.28), 0.55],
+		[_tone(0.07, _hz(86), _hz(74), "sine", 40.0), Synth.seconds(0.66), 0.7]], true)
+
+
+# The head gate's siren: a high and a low tone, twice over, a wail over a swelling run of water.
+static func _sluice_siren_two_tone() -> PackedFloat32Array:
+	var parts := [[_arch(_noise(0.9, 300.0, 1100.0, 0.0, 0.2), 0.6), 0, 0.22]]
+	for i in 4:
+		parts.append([_fm(0.2, _hz(74 if i % 2 == 0 else 67), 1.0, 1.2, 6.0), Synth.seconds(i * 0.21), 0.8])
+	return _mix(parts)
+
+
+# A chute's rolling metal: a rumble pulsing about 22 times a second under a low saw.
+static func _ride_rolling_metal() -> PackedFloat32Array:
+	var rumble := _noise(0.5, 250.0, 900.0, 0.0, 0.05)
+	for i in rumble.size():
+		rumble[i] *= 0.55 + 0.45 * sin(TAU * 22.0 * i * Synth.INV_RATE)
+	return _mix([[_arch(rumble, 0.3), 0, 0.8], [_arch(_tone(0.5, _hz(43), _hz(43), "saw_dark", 0.0), 0.3), 0, 0.35]])
+
+
+# A bowl's carve: a smooth curve, the air and a tone rising to the lip and settling.
+static func _ride_bowl_carve() -> PackedFloat32Array:
+	return _mix([[_arch(_noise(0.55, 700.0, 1800.0, 0.0, 0.1), 0.5), 0, 0.5],
+		[_arch(_tone(0.55, _hz(55), _hz(64), "sine", 0.0), 0.5), 0, 0.8]])
+
+
+# A drop: the floor falls away, a sweep falling fast through its air.
+static func _ride_drop_swoop() -> PackedFloat32Array:
+	return _mix([[_fm_sweep(0.45, 1500.0, 220.0, 0.8, 4.0), 0, 0.8], [_noise(0.4, 3200.0, 500.0, 5.0, 0.02), 0, 0.4]])
+
+
+# A ledge: a short scuff of grit and a small low knock.
+static func _ride_ledge_scuff() -> PackedFloat32Array:
+	return _mix([[_noise(0.2, 1800.0, 800.0, 14.0, 0.004), 0, 0.8], [_tone(0.1, _hz(45), _hz(41), "sine", 25.0), 0, 0.5]])
+
+
+# A hop: a quick lift of pitch and a tiny pop.
+static func _ride_hop_lift() -> PackedFloat32Array:
+	return _mix([[_tone(0.16, 330.0, 760.0, "sine", 9.0), 0, 0.8], [_noise(0.05, 3000.0, 5000.0, 40.0, 0.001), 0, 0.3]])
+
+
+# The grapple line takes up the slack: two bright metal clinks, the second higher.
+static func _ride_cable_clink() -> PackedFloat32Array:
+	return _mix([[_fm(0.16, _hz(86), 2.76, 2.0, 22.0), 0, 0.8], [_fm(0.2, _hz(91), 2.76, 2.0, 20.0), Synth.seconds(0.08), 0.7]])
+
+
+# A water sheet carries the ball up: low water swelling in, and a tone that climbs with it.
+static func _ride_sheet_swell() -> PackedFloat32Array:
+	var water := _noise(0.7, 350.0, 1900.0, 0.0, 0.3)
+	var n := water.size()
+	for i in n:
+		water[i] *= float(i) / n
+	return _mix([[water, 0, 0.7], [_tone(0.7, _hz(50), _hz(57), "sine", -2.0), 0, 0.5]])
+
+
+# The launcher charges: a steam whistle climbing a fifth on a breath of hiss.
+static func _steam_whistle_rise() -> PackedFloat32Array:
+	return _mix([[_fm(0.7, 520.0, 1.0, 0.5, 0.0, 7.0), 0, 0.8], [_noise(0.7, 4200.0, 5500.0, 0.0, 0.2), 0, 0.2]])
+
+
+# The cannon fires: a flat bang and a falling thump, then the shot's rushing whoosh down its rail.
+static func _cannon_bang_rail_whoosh() -> PackedFloat32Array:
+	return _mix([[_noise(0.1, 2400.0, 900.0, 25.0, 0.001), 0, 0.9], [_tone(0.2, _hz(45), _hz(33), "sine", 12.0), 0, 0.9],
+		[_arch(_noise(0.5, 900.0, 3800.0, 0.0, 0.05), 0.25), Synth.seconds(0.08), 0.5]], true)
+
+
+# The sluice lands: a wall of water, a roar that opens fast and drains away over a falling sub.
+static func _sluice_gush_roar() -> PackedFloat32Array:
+	return _mix([[_noise(0.95, 220.0, 1700.0, 2.2, 0.04), 0, 0.9], [_tone(0.8, _hz(40), _hz(34), "sine", 2.5), 0, 0.8]])
 
 
 static func _lift_hiss() -> PackedFloat32Array:

@@ -5,7 +5,7 @@ extends RefCounted
 # tests/sound_twins_test.gd holds it. A row is a FACT (the source that decides to make the sound),
 # never a bare cue id, because one cue serves several facts and a cue's status belongs to the fact
 # (ratchet_cue is a warning at Brindle's hook turn and at the rogue's chained attack, and the
-# beacon_hum fallback is a warning at the flume's sluice siren). The test builds the list of facts
+# beacon_hum fallback is a warning at the Warden's charge and the weak point's opening). The test builds the list of facts
 # from the game's own tables and call sites (its header says how); this file only judges them.
 #
 # The rule for "act on". A fact is act-on when its sound tells the player to do something, or tells
@@ -110,6 +110,14 @@ const ACT := [
 		"script": "res://src/boss/boss.gd", "fn": "_commit_slag", "token": "h.commit_annulus(id, Hazard.Threat.Type.INSTANT, arena.global_position"},
 	{"facts": ["tele@boss.gd:_commit_charge:charge_wall"], "traced": true, "what": "Brindle's charge lane, committed in the same function",
 		"script": "res://src/boss/boss.gd", "fn": "_commit_charge", "token": "h.commit_lane(\"charge\""},
+	{"facts": ["bank:tele_crane_sweep"], "traced": true, "what": "Brindle's crane sweep wind-up, heard with the sector committed in the same function",
+		"script": "res://src/boss/boss.gd", "fn": "_commit_crane", "token": "h.commit_sector(\"crane_%d\" % i"},
+	{"facts": ["bank:tele_slag_ring"], "traced": true, "what": "Brindle's slag ring wind-up, heard with the ring committed in the same function",
+		"script": "res://src/boss/boss.gd", "fn": "_commit_slag", "token": "h.commit_annulus(id, Hazard.Threat.Type.INSTANT, arena.global_position"},
+	{"facts": ["bank:tele_charge", "bank:tele_charge_wall"], "traced": true, "what": "Brindle's charge and wall-charge wind-ups, heard with the lane committed in the same function",
+		"script": "res://src/boss/boss.gd", "fn": "_commit_charge", "token": "h.commit_lane(\"charge\""},
+	{"facts": ["bank:tele_eject"], "traced": true, "what": "Brindle's eject wind-up, heard with the landing mark from the same call",
+		"script": "res://src/boss/boss.gd", "fn": "_begin_eject", "token": "_commit_eject_mark(land)"},
 	{"facts": ["tele@mind.gd:_commit_attack:String"], "traced": false, "what": "the Mind's committed hazard, laid before the publish",
 		"script": "res://src/boss/mind.gd", "fn": "_commit_attack", "token": "laid.append(h)"},
 	{"facts": ["cued@boss.gd:_run_charge:charge"], "traced": true, "what": "the hull swings its bow round after the ball through the cue lead",
@@ -203,7 +211,7 @@ const OPEN := [
 	{"fact": "music:riser_mind_quote", "traced": false, "plays": "src/world/event_director.gd:_advance_park", "pattern": "_park_world(selected, selected.row.telegraph.form, \"telegraph\")",
 		"what": "the Mind's riser, ancient family: same missing mark (world 3, not traced)", "severity": "info"},
 	{"fact": "WORLD_ROWS:sluice_siren", "traced": true, "plays": "src/world/event_director.gd:_advance_park", "pattern": "_park_world(selected, selected.row.telegraph.form, \"telegraph\")",
-		"what": "the flume head gate's siren: industrial.gd handle returns for sluice_surge so no mark is laid; the toast and edge marker show. The water chases but never hurts, hence info. The sound is beacon_hum because sluice_siren_two_tone has no recipe", "severity": "info"},
+		"what": "the flume head gate's siren: industrial.gd handle returns for sluice_surge so no mark is laid; the toast and edge marker show. The water chases but never hurts, hence info. The sound is sluice_siren_two_tone, shared with no other row", "severity": "info"},
 	{"fact": "cued@boss.gd:_step_reprise:slag_ring_a", "traced": true, "plays": "src/boss/boss.gd:_step_reprise", "pattern": "_phases.cue(",
 		"what": "Brindle's slag ring reprise: the cue sounds, the ring commits CUE_LEAD later with the shorter CUED_WARN because the cue paid for it; nothing is drawn during the lead, so a muted player gets a shorter warning and no tell", "severity": "fairness"},
 	{"fact": "sig:weak_point_opened@mind_hand.gd:_go_live", "traced": false, "plays": "src/combat/mind_hand.gd:_go_live", "pattern": "weak_point_opened.emit(",
