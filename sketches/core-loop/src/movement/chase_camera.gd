@@ -1,6 +1,7 @@
 extends Node3D
 
 const SpeedTier := preload("res://src/movement/speed_tier.gd")
+const BallState := preload("res://src/movement/ball_state.gd")
 const SENSITIVITY := 0.0022
 const STICK_YAW := 2.6
 const STICK_PITCH := 1.6
@@ -37,7 +38,8 @@ const GLANCE_STEP_CAP := 0.05
 # _free_arm), never from the arm being turned, so the lift cannot change its own input.
 # At 4 m the 1 m ball spans about 28 degrees, near half the 65 degree lens: where it starts to crowd.
 const TIGHT_ARM := 4.0
-# At 1.5 m the lens is half a ball-radius off the shell and the ball fills the lens whatever follows.
+# At 1.5 m of arm the lens is about 0.9 m off the ball's shell at the default pitch and the ball spans more
+# than the 65 degree lens, so a shorter arm is no worse: the lift is whole from here.
 const TIGHT_FULL := 1.5
 # 0.6 rad lifts the lens about 1 m at a 2 m arm, enough to clear the top of the 1 m ball.
 const TIGHT_LIFT := 0.6
@@ -94,7 +96,7 @@ var _locked := false
 var _boss_reach := false
 var _pitch_bias := 0.0
 var _tight := 0.0
-var _probe := SphereShape3D.new()
+var _query := PhysicsShapeQueryParameters3D.new()
 var _fov_add := 0.0
 var _glance_subject: Node3D
 var _glance_seconds := 0.0
@@ -110,7 +112,9 @@ func setup(target_ref, tuning_ref) -> void:
 	var probe := SphereShape3D.new()
 	probe.radius = 0.3
 	arm.shape = probe
-	_probe.radius = probe.radius
+	_query.shape = probe
+	_query.collision_mask = arm.collision_mask
+	_query.margin = arm.margin
 	arm.spring_length = 8.0
 	arm.margin = 0.25
 	# SpringArm3D is a plain Node3D: only the raw mask is available, and it must see
@@ -262,19 +266,27 @@ func _tight_target(arm_pitch: float) -> float:
 	return clampf((TIGHT_ARM - free) / (TIGHT_ARM - TIGHT_FULL), 0.0, 1.0)
 
 
-# Metres of arm free along a pitch from the pivot, up to TIGHT_ARM: the arm's own probe shape, mask
-# and margin.
+# Metres of arm free along a pitch from the pivot, up to TIGHT_ARM, and whether what stops it is a
+# wall: the arm's own shape, mask and margin, one query reused. Ground (a contact normal the ball
+# itself calls floor, BallState.MAX_SLOPE_DOT) is no wall, so it reads as a free arm: looking up on
+# open ground shortens the arm as it always did.
 func _free_arm(arm_pitch: float) -> float:
 	if not is_inside_tree():
 		return TIGHT_ARM
-	var query := PhysicsShapeQueryParameters3D.new()
-	query.shape = _probe
-	query.transform = Transform3D(Basis.IDENTITY, global_position)
-	query.motion = yaw_basis() * Basis(Vector3.RIGHT, arm_pitch) * Vector3.BACK * TIGHT_ARM
-	query.collision_mask = arm.collision_mask
-	query.margin = arm.margin
-	var fractions := get_world_3d().direct_space_state.cast_motion(query)
-	return fractions[0] * TIGHT_ARM if fractions.size() > 0 else TIGHT_ARM
+	var space := get_world_3d().direct_space_state
+	var dir: Vector3 = yaw_basis() * Basis(Vector3.RIGHT, arm_pitch) * Vector3.BACK
+	_query.transform = Transform3D(Basis.IDENTITY, global_position)
+	_query.motion = dir * TIGHT_ARM
+	var fractions := space.cast_motion(_query)
+	if fractions.size() < 2 or fractions[0] >= 1.0:
+		return TIGHT_ARM
+	# At the first contact the shape touches what stopped it; its normal says wall or floor.
+	_query.transform = Transform3D(Basis.IDENTITY, global_position + dir * TIGHT_ARM * fractions[1])
+	_query.motion = Vector3.ZERO
+	var rest := space.get_rest_info(_query)
+	if not rest.is_empty() and (rest["normal"] as Vector3).y > BallState.MAX_SLOPE_DOT:
+		return TIGHT_ARM
+	return fractions[0] * TIGHT_ARM
 
 
 func active_profiles() -> Array:
@@ -356,7 +368,10 @@ func _process(delta: float) -> void:
 	var profile_ease := 1.0 - exp(-PROFILE_EASE * delta)
 	_pitch_bias = lerpf(_pitch_bias, clampf(bias_target, -BIAS_LIMIT, BIAS_LIMIT), profile_ease)
 	_fov_add = lerpf(_fov_add, add_target, profile_ease)
-	_tight = lerpf(_tight, _tight_target(pitch + _pitch_bias), profile_ease)
+	# The lift eases in but drops at once: the spring arm springs back to full length the frame a wall
+	# goes, and a lift that lingered would throw the lens up with it (a pillar pass bobbed 1.9 m).
+	var tight_target := _tight_target(pitch + _pitch_bias)
+	_tight = tight_target if tight_target < _tight else lerpf(_tight, tight_target, profile_ease)
 	var lift := maxf(-TIGHT_LIFT * _tight, MAX_ARM_PITCH - (pitch + _pitch_bias))
 	arm.spring_length = lerpf(arm.spring_length, lerpf(speed_arm, SHOULDER_ARM, shoulder_blend), maxf(ease, shoulder_blend * 0.25))
 	_punch = move_toward(_punch, 0.0, _punch_decay * delta)

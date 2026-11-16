@@ -38,6 +38,8 @@ func _run() -> void:
 	await _tall_wall()
 	await _low_wall()
 	await _roof()
+	await _floor()
+	await _pillar()
 	await _unstepped()
 	quit(_t.verdict())
 
@@ -120,6 +122,48 @@ func _roof() -> void:
 	await _settle(cam, 240)
 	_t.check("R2 the lens is where the roof alone left it after the wall goes", absf(_rise(cam) - roof_rise) < 0.02, "elevation %.2f rad, roof alone %.2f" % [_rise(cam), roof_rise])
 	roof.free()
+	cam.free()
+
+
+# Looking up on open ground the arm points at the floor and shortens, as it always did. A floor is not
+# a wall: no lift, and the arm angle is the player's pitch plus the bias, which is none here.
+func _floor() -> void:
+	var cam := _rig()
+	var floor := _box(Vector3(40.0, 1.0, 40.0), Vector3(0.0, -1.5, 0.0))
+	cam.pitch = 0.5
+	await _settle(cam, 120)
+	_t.check("F1 looking up over open ground the arm is not lifted", absf(cam.arm.rotation.x - 0.5) < 0.001, "arm %.3f, pitch 0.500, hit length %.2f" % [cam.arm.rotation.x, cam.arm.get_hit_length()])
+	floor.free()
+	cam.free()
+
+
+# A pillar pass: a wall behind the ball for 9 frames (0.15 s), then gone. The lens must not lurch.
+func _pillar() -> void:
+	var cam := _rig()
+	await _settle(cam, 90)
+	var open_y: float = cam.cam.global_position.y
+	var wall := _box(Vector3(40.0, 40.0, 1.0), Vector3(0.0, 0.0, 2.75))
+	var peak := -INF
+	var low := INF
+	for i in 9:
+		cam._process(DT)
+		await physics_frame
+		peak = maxf(peak, cam.cam.global_position.y - open_y)
+		low = minf(low, cam.cam.global_position.y - open_y)
+	wall.free()
+	var back := -1
+	for i in 240:
+		cam._process(DT)
+		await physics_frame
+		peak = maxf(peak, cam.cam.global_position.y - open_y)
+		low = minf(low, cam.cam.global_position.y - open_y)
+		if back < 0 and absf(cam.cam.global_position.y - open_y) < 0.05:
+			back = i + 1
+	# The lens may dip as the arm shortens (the arm's own behaviour, 1.4 m) but must never rise past its
+	# open height by more than 0.3 m: under a third of the ball's 1 m radius, so it reads as the camera
+	# settling, not lurching up as the wall goes. Before the lift dropped at once it rose 1.9 m.
+	_t.check("P1 a pillar pass never lifts the lens over its open height", peak < 0.3, "peak rise %.2f m, lowest %.2f m" % [peak, low])
+	_t.check("P2 the lens is back within 0.05 m of open soon after the wall goes", back > 0 and back <= 40, "back after %d frames" % back)
 	cam.free()
 
 
