@@ -39,7 +39,8 @@ const StageModifier := preload("res://src/world/events/stage_modifier.gd")
 #   frozen     the flow sat in one state outside play (title, pilot select; not the death screen or the summary) for FROZEN_S of ticks
 #   paused     the tree left paused for PAUSED_S of ticks after the bot lifted its pause
 #   resume     (quit) the continued run differs from the saved entrance, holds more than it held
-#              at the quit, or restarts a stage the quit came after clearing ("cleared_stage_lost")
+#              at the quit, restarts a stage the quit came after clearing ("cleared_stage_lost"), or
+#              puts a boss beaten before the quit back in front of the player ("won_boss_refought")
 #   resurrect  (quit) a run that ended (death or the summary) still offers a Continue; a "terminal"
 #              row records each check
 # Quit timers and the pause watch count bot_run ticks, which --frame-log=1 resets each frame, so
@@ -343,6 +344,10 @@ func _check_resume() -> void:
 	if String(_before["state"]) in ["gates", "launch", "boss", "victory"] and run.stage == int(_before["stage"]) \
 			and _game.flow.state_name() == "stage" and (run.cogs < int(_before["cogs"]) or run.parts.size() < int(_before["parts"])):
 		wrong.append("cleared_stage_lost")
+	# Quit in the victory beat after a boss fell and continued back into that boss's arena: the run
+	# file is written before the arena, not at the fall, so the win is fought again.
+	if String(_before["state"]) == "victory" and _game.flow.state_name() == "boss":
+		wrong.append("won_boss_refought")
 	_row("resume", {"ok": wrong.is_empty(), "wrong": wrong, "now": now, "saved": want, "before": _before})
 
 
