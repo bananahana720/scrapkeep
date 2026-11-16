@@ -12,6 +12,7 @@ const NearMiss := preload("res://src/combat/near_miss.gd")
 const DangerMark := preload("res://src/ui/danger_mark.gd")
 const Chaser := preload("res://src/combat/chaser.gd")
 const Projectile := preload("res://src/combat/projectile.gd")
+const UiTokens := preload("res://src/ui/ui_tokens.gd")
 const T := preload("res://tests/support/t.gd")
 
 var _t := T.new("danger_mark_source_test")
@@ -81,6 +82,7 @@ func _run() -> void:
 
 	_directions(ball)
 	_geometry(ball)
+	_held()
 	quit(_t.verdict())
 
 
@@ -88,67 +90,99 @@ func _angle(a: Vector2, b: Vector2) -> float:
 	return rad_to_deg(absf(a.angle_to(b)))
 
 
+# A real mark over a real camera: the escape goes in through aim(), the HUD's own call.
+func _mark_for(ball: Vector3, source: Vector3) -> Node:
+	var mark := DangerMark.new()
+	root.add_child(mark)
+	mark.show_run(0.5)
+	mark.aim(_cam, ball, {"source": source, "dir": Vector3.ZERO})
+	mark.follow(_cam.unproject_position(ball + _cam.global_basis.y * 1.0))
+	return mark
+
+
 func _directions(ball: Vector3) -> void:
 	var ball_px := _cam.unproject_position(ball)
 	var seen := 0
-	for source in [Vector3(8.0, 0.0, -10.0), Vector3(-12.0, 0.0, -4.0), Vector3(5.0, 0.0, 9.0), Vector3(-3.0, 6.0, -25.0)]:
+	for k in 8:
+		var screen := Vector2(sin(k * TAU / 8.0), -cos(k * TAU / 8.0))
+		var source := _cam.project_position(ball_px + screen * 300.0, 30.0)
 		var want: Vector2 = (_cam.unproject_position(source) - ball_px).normalized()
-		var got := DangerMark.screen_dir(_cam, ball, source)
+		var mark := _mark_for(ball, source)
+		var tip: Vector2 = mark.spike_tip() - mark._at
 		seen += 1
-		_t.check("2a on screen %s: points from the ball's screen point to the source's" % [source], got != Vector2.ZERO and _angle(got, want) <= 5.0, "got %s want %s, %.1f deg apart" % [got, want, _angle(got, want)])
-	_t.check("2a looped", seen == 4)
+		_t.check("2a on screen, direction %d: the spike's tip points from the ball's screen point to the source's" % k, tip != Vector2.ZERO and _angle(tip, want) <= 5.0, "tip %s want %s, %.1f deg apart" % [tip, want, _angle(tip, want)])
+		var pts: PackedVector2Array = DangerMark.spike_points(mark.pointer, DangerMark.spike_reach(mark.pointer, mark._at, mark.ball_box))
+		_t.check("2a direction %d: the drawn outline's tip is that tip" % k, pts.size() == 3 and pts[2].distance_to(tip) < 0.01)
+		mark.free()
+	_t.check("2a looped", seen == 8)
 	# Behind the camera (it looks toward -z from z 16): the way the source lies across the camera's
 	# own right and up from the ball, which is the screen edge nearest it.
 	var behind := 0
 	for source in [Vector3(9.0, 1.0, 30.0), Vector3(-9.0, 1.0, 30.0), Vector3(0.0, 1.0, 40.0)]:
 		var off: Vector3 = source - ball
 		var want := Vector2(off.dot(_cam.global_basis.x), -off.dot(_cam.global_basis.y)).normalized()
-		var got := DangerMark.screen_dir(_cam, ball, source)
+		var mark := _mark_for(ball, source)
+		var tip: Vector2 = mark.spike_tip() - mark._at
 		behind += 1
-		_t.check("2b behind the camera %s: points to its screen edge" % [source], _cam.is_position_behind(source) and _angle(got, want) <= 5.0, "got %s want %s" % [got, want])
+		_t.check("2b behind the camera %s: the tip points to its screen edge" % [source], _cam.is_position_behind(source) and tip != Vector2.ZERO and _angle(tip, want) <= 5.0, "tip %s want %s" % [tip, want])
+		mark.free()
 	_t.check("2b looped", behind == 3)
 	_t.check("2c a source on the ball has no direction", DangerMark.screen_dir(_cam, ball, ball) == Vector2.ZERO)
 
 
 func _geometry(ball: Vector3) -> void:
-	var mark := DangerMark.new()
-	root.add_child(mark)
-	mark.show_run(0.5)
-	var top := ball + _cam.global_basis.y * 1.0
-	mark.follow(_cam.unproject_position(top))
-	var diamond: Rect2 = mark.rect()
-	var clear := 0
-	var overlapped_unpushed := 0
+	var mark := _mark_for(ball, Vector3(8.0, 0.0, -10.0))
+	var diamond: Rect2 = mark._box(mark._at)
+	var looped := 0
 	for k in 8:
 		var dir := Vector2(sin(k * TAU / 8.0), -cos(k * TAU / 8.0))
-		var fill := DangerMark.pointer_fill(dir)
-		var line := DangerMark.pointer_keyline(dir)
-		var lo := INF
-		var hi := -INF
-		for p in fill:
-			lo = minf(lo, p.dot(dir))
-			hi = maxf(hi, p.dot(dir))
-		var placed := PackedVector2Array()
-		for p in line:
-			placed.append(mark._at + p)
-		var corners := PackedVector2Array([diamond.position, Vector2(diamond.end.x, diamond.position.y), diamond.end, Vector2(diamond.position.x, diamond.end.y)])
-		var shared := Geometry2D.intersect_polygons(placed, corners)
-		_t.check("3a direction %d: the pointer stands outside the diamond's box" % k, shared.is_empty(), "%d overlapping pieces" % shared.size())
-		_t.check("3a direction %d: it is at least the diamond's half size long" % k, hi - lo >= DangerMark.HALF, "%.1f px" % (hi - lo))
-		for w in 8:
-			var a := w * TAU / 8.0
-			var way := Vector3(cos(a), 0.0, sin(a))
-			var keep := DangerMark.way_rect(_cam, ball, way)
+		mark.pointer = dir
+		mark.ball_box = Rect2()
+		var reach := DangerMark.spike_reach(dir, mark._at, mark.ball_box)
+		var tip: Vector2 = mark.spike_tip()
+		looped += 1
+		_t.near("3a direction %d: the tip is 22 px beyond the diamond's edge" % k, (tip - mark._at).length() - DangerMark.edge_along(dir), DangerMark.SPIKE_LEN, 0.01)
+		_t.check("3a direction %d: the tip is outside the diamond's box" % k, not diamond.has_point(tip))
+		_t.check("3b direction %d: rect() contains the tip" % k, mark.rect().grow(0.5).has_point(tip), "rect %s tip %s" % [mark.rect(), tip])
+		_t.check("3b direction %d: and the diamond's own box" % k, mark.rect().encloses(diamond))
+	_t.check("3 looped", looped == 8)
+	_t.eq("3c the spike is the diamond's fill colour", DangerMark.spike_color(), DangerMark.FILL_COLOR)
+	_t.check("3c and not the chevrons' bone", DangerMark.spike_color() != UiTokens.TEXT)
+	# The ball under the mark: the tip keeps 2 px off its box, and is left out when under 8 px remain.
+	var stopped := 0
+	for gap in [30.0, 20.0, 14.0, 6.0]:
+		for k in 8:
+			var dir := Vector2(sin(k * TAU / 8.0), -cos(k * TAU / 8.0))
 			mark.pointer = dir
-			mark.keep_clear = keep
-			if DangerMark._poly_box(line, mark._at).intersects(keep):
-				overlapped_unpushed += 1
-			var pushed := DangerMark._poly_box(DangerMark.pointer_keyline(dir, mark._push()), mark._at)
-			if keep.size != Vector2.ZERO and not pushed.intersects(keep):
-				clear += 1
-			else:
-				_t.check("3b pointer %d vs way-out %d clear" % [k, w], false, "pointer %s way %s" % [pushed, keep])
-	print("pointer/way-out combinations clear: %d of 64, %d would overlap without the step-out" % [clear, overlapped_unpushed])
-	_t.eq("3b every combination is clear", clear, 64)
-	_t.check("3b the step-out is needed somewhere (the check can fail)", overlapped_unpushed > 0)
+			# A ball box straight under the mark, its top `gap` px under the diamond's box.
+			mark.ball_box = Rect2(Vector2(mark._at.x - 22.0, diamond.end.y + gap), Vector2(44.0, 44.0))
+			var tip: Vector2 = mark.spike_tip()
+			var reach := DangerMark.spike_reach(dir, mark._at, mark.ball_box)
+			stopped += 1
+			_t.check("4 gap %d direction %d: the tip never enters the ball's box" % [gap, k], not mark.ball_box.has_point(tip), "tip %s box %s" % [tip, mark.ball_box])
+			_t.check("4 gap %d direction %d: and no spike under 8 px is drawn" % [gap, k], reach == 0.0 or reach >= DangerMark.SPIKE_MIN)
+			if k == 4 and gap == 20.0:
+				_t.check("4 straight down with the ball 20 px under: shortened, not full", reach > 0.0 and reach < DangerMark.SPIKE_LEN, "reach %.1f" % reach)
+				_t.check("4 and it stops 2 px short of the box", absf(tip.y - (mark.ball_box.position.y - DangerMark.BALL_CLEAR)) <= 1.0, "tip y %.1f box top %.1f" % [tip.y, mark.ball_box.position.y])
+			if k == 4 and gap == 6.0:
+				_t.eq("4 straight down with the ball 6 px under: no spike", reach, 0.0)
+				_t.check("4 and rect() is the diamond's box alone", mark.rect() == diamond)
+	_t.eq("4 looped", stopped, 32)
+	# The reticle's box (avoid) is kept clear the same way: the HUD's name and tags avoid rect().
+	mark.ball_box = Rect2()
+	mark.pointer = Vector2.DOWN
+	mark.avoid = Rect2(Vector2(mark._at.x - 40.0, diamond.end.y + 10.0), Vector2(80.0, 80.0))
+	_t.check("4 a spike aimed at the reticle's box stops short of it", not mark.avoid.has_point(mark.spike_tip()) and not mark.rect().intersects(mark.avoid), "rect %s avoid %s" % [mark.rect(), mark.avoid])
 	mark.free()
+
+
+# The source also rides the held body run (the chaser's lunge after its warning ends).
+func _held() -> void:
+	var from := Vector3(0.0, 0.0, 0.0)
+	var lane: Node3D = Telegraph.lane(_world, _ground, Threat.Type.LANE, from, Vector3(0, 0, -1), 11.0, 2.8)
+	lane.run_body(0.0, 2.4)
+	lane.set_progress(1.0)
+	var e := _escape_for(lane, Vector3(0.0, 0.0, -8.0))
+	_t.check("5 held body run: the live lane keeps the escape up", float(e.get("run", -1.0)) == 1.0, str(e))
+	_t.check("5 and it carries the lane's start as the source", e.has("source") and e["source"].is_equal_approx(lane.center), str(e.get("source")))
+	lane.free()

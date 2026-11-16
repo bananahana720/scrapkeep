@@ -3,7 +3,6 @@ extends Control
 const UiTokens := preload("res://src/ui/ui_tokens.gd")
 # The diamond is the world's hazard warning (meaning, not chrome); its keyline and bang are chrome.
 const Palette := preload("res://src/core/palette.gd")
-const WayOutPaint := preload("res://src/presentation/way_out_paint.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
 
 # The mark over the ball while it stands where a hit will land: a hazard diamond with a
@@ -13,10 +12,11 @@ const Tuning := preload("res://src/movement/tuning.gd")
 # the reader could say what was coming before none). This says the one thing a floor mark
 # cannot from inside: you are in it, and this much warning is left.
 #
-# A bone pointer stands outside the diamond toward the attack's source (a shell's launch point,
-# a lane's start, a ring's middle), so "you are in danger" also says "from there" (PF-16, w42
-# film). It is a solid triangle: a shape, no word, and not the floor's way-out chevrons, which
-# are open, lie on the ground and say where to go. Bone with an ink keyline, not another red.
+# A spike grows out of the diamond toward the attack's source (a shell's launch point, a lane's
+# start, a ring's middle), so "you are in danger" also says "from there" (PF-16, w42 film). It is
+# the diamond's own fill and keyline, one danger shape with a point, so it cannot be taken for the
+# floor's way-out chevrons (bone, open, lying on the ground, saying where to go). No word. It
+# shortens to stop short of the ball, and is left out when under SPIKE_MIN px would remain.
 #
 # It reads the dodge watch (combat/near_miss.gd standing_in), so it shows for exactly the
 # threats a near miss is judged on, and leaving or jumping clear takes it down where the
@@ -39,20 +39,19 @@ const BANG_FOOT := 3.0
 const DOT_TOP := 6.0
 const DOT_SIZE := 5.0
 
-# The pointer: a unit screen direction toward the source (zero for none), and the screen box of
-# the way-out chevrons' first stretch, which the pointer steps out past rather than cover.
-const POINTER_LEN := 22.0
-const POINTER_WIDTH := 22.0
-const POINTER_GAP := float(UiTokens.GAP_XS)
-const POINTER_STEP := 6.0
-const POINTER_PUSH_MAX := 120.0
+# The spike: a unit screen direction toward the source (zero for none) and the ball's screen box.
+# Its tip stands SPIKE_LEN past the diamond's edge, or 2 px short of the ball when that is nearer.
+const SPIKE_LEN := 22.0
+const SPIKE_MIN := 8.0
+const SPIKE_HALF := 12.0
+const BALL_CLEAR := 2.0
 # A source nearer the ball than this on screen has no direction worth drawing.
 const POINTER_MIN_PX := 14.0
-const WAY_CHEVRONS := 2
+const FILL_COLOR := Palette.HAZARD
 
 var avoid := Rect2()
 var pointer := Vector2.ZERO
-var keep_clear := Rect2()
+var ball_box := Rect2()
 # How far the warning has run, 0 to 1, or -1 when the ball stands in none.
 var run := -1.0
 var _at := Vector2.ZERO
@@ -75,17 +74,20 @@ func shown() -> bool:
 	return run >= 0.0
 
 
-# One call from the HUD each frame: points at the source in the dodge watch's escape (near_miss.gd)
-# and keeps clear of that escape's chevrons. `ball` is the ball's centre in the world.
+# One call from the HUD each frame: points at the source in the dodge watch's escape (near_miss.gd).
+# `ball` is the ball's centre in the world.
 func aim(cam: Camera3D, ball: Vector3, escape: Dictionary) -> void:
 	var dir := Vector2.ZERO
-	var clear := Rect2()
+	var box := Rect2()
 	if cam != null and escape.has("source"):
 		dir = screen_dir(cam, ball, escape["source"])
-		clear = way_rect(cam, ball, escape.get("dir", Vector3.ZERO))
-	if dir != pointer or clear != keep_clear:
+		if not cam.is_position_behind(ball):
+			var c := cam.unproject_position(ball)
+			var r := (cam.unproject_position(ball + cam.global_basis.x * Tuning.RADIUS) - c).length()
+			box = Rect2(c - Vector2(r, r), Vector2(r, r) * 2.0)
+	if dir != pointer or box != ball_box:
 		pointer = dir
-		keep_clear = clear
+		ball_box = box
 		queue_redraw()
 
 
@@ -102,65 +104,52 @@ static func screen_dir(cam: Camera3D, ball: Vector3, source: Vector3) -> Vector2
 	return flat.normalized() if flat.length() > 0.01 else Vector2.DOWN
 
 
-# The screen box of the first chevrons of the floor's way out from the ball (way_out_paint.gd).
-static func way_rect(cam: Camera3D, ball: Vector3, way: Vector3) -> Rect2:
-	if way.length_squared() <= 0.0:
-		return Rect2()
-	var foot := ball - Vector3.UP * Tuning.RADIUS
-	var side := Vector3(-way.z, 0.0, way.x)
-	var far := WayOutPaint.START_M + WayOutPaint.SPACING_M * WAY_CHEVRONS
-	var box := Rect2()
-	var first := true
-	for along in [WayOutPaint.START_M - WayOutPaint.SWEEP_M, far]:
-		for across in [-WayOutPaint.HALF_SPAN_M, WayOutPaint.HALF_SPAN_M]:
-			var p: Vector3 = foot + way * along + side * across
-			if cam.is_position_behind(p):
-				continue
-			var q := cam.unproject_position(p)
-			box = Rect2(q, Vector2.ZERO) if first else box.expand(q)
-			first = false
-	return box
+# Where the diamond's outer edge lies along the unit direction `dir`, from its centre.
+static func edge_along(dir: Vector2) -> float:
+	return (HALF + KEYLINE + RIM) / (absf(dir.x) + absf(dir.y))
 
 
-# The pointer's outline (keyline) polygon about the mark's centre, for a unit direction `dir`
-# pushed `push` px further out: a triangle whose flat foot lies past the mark's box, whatever the
-# angle, and whose tip is POINTER_LEN beyond the foot.
-static func pointer_keyline(dir: Vector2, push := 0.0) -> PackedVector2Array:
-	return _pointer(dir, push, KEYLINE)
-
-
-static func pointer_fill(dir: Vector2, push := 0.0) -> PackedVector2Array:
-	return _pointer(dir, push, 0.0)
-
-
-static func _pointer(dir: Vector2, push: float, grow: float) -> PackedVector2Array:
+# How far past the diamond's edge the spike reaches along `dir` from a mark at `at`: SPIKE_LEN,
+# less where its tip would come within BALL_CLEAR of the ball's box or `keep` (the reticle's); 0 when under SPIKE_MIN is left.
+static func spike_reach(dir: Vector2, at: Vector2, ball: Rect2, keep := Rect2()) -> float:
 	if dir == Vector2.ZERO:
-		return PackedVector2Array()
-	var reach := HALF + KEYLINE + RIM
-	var foot := reach * (absf(dir.x) + absf(dir.y)) + POINTER_GAP + KEYLINE + push
-	var perp := Vector2(-dir.y, dir.x)
-	var half := POINTER_WIDTH * 0.5 + grow
-	var base := foot - grow
-	return PackedVector2Array([dir * base + perp * half, dir * base - perp * half, dir * (foot + POINTER_LEN + grow * 1.5)])
-
-
-# How far past its resting place the pointer must stand to clear `keep_clear`, in whole steps.
-func _push() -> float:
-	if keep_clear.size == Vector2.ZERO and keep_clear.position == Vector2.ZERO:
 		return 0.0
-	var push := 0.0
-	while push <= POINTER_PUSH_MAX:
-		if not _poly_box(pointer_keyline(pointer, push), _at).intersects(keep_clear):
-			return push
-		push += POINTER_STEP
-	return 0.0
+	var edge := edge_along(dir)
+	var reach := 0.0
+	while reach < SPIKE_LEN:
+		var next := minf(reach + 1.0, SPIKE_LEN)
+		var tip := at + dir * (edge + next)
+		if (ball.size != Vector2.ZERO and ball.grow(BALL_CLEAR).has_point(tip)) \
+				or (keep.size != Vector2.ZERO and keep.grow(BALL_CLEAR).has_point(tip)):
+			break
+		reach = next
+	return reach if reach >= SPIKE_MIN else 0.0
 
 
-static func _poly_box(poly: PackedVector2Array, at: Vector2) -> Rect2:
-	var box := Rect2(at + poly[0], Vector2.ZERO)
-	for p in poly:
-		box = box.expand(at + p)
-	return box
+# The spike's outline about the mark's centre: a triangle fused into the diamond, `inset` px inside
+# its outer edge (the rim, keyline and fill layers are the diamond's own, drawn in step with it).
+static func spike_points(dir: Vector2, reach: float, inset := 0.0) -> PackedVector2Array:
+	if dir == Vector2.ZERO or reach <= 0.0:
+		return PackedVector2Array()
+	var edge := edge_along(dir)
+	var foot := edge * 0.5
+	var width := SPIKE_HALF + KEYLINE + RIM
+	var length := edge + reach - foot
+	var hyp := sqrt(width * width + length * length)
+	var half := width - inset * hyp / length
+	var tip := edge + reach - inset * hyp / width
+	var perp := Vector2(-dir.y, dir.x)
+	return PackedVector2Array([dir * foot + perp * half, dir * foot - perp * half, dir * tip])
+
+
+static func spike_color() -> Color:
+	return FILL_COLOR
+
+
+# The spike's drawn tip on screen, or the mark's centre when there is none.
+func spike_tip() -> Vector2:
+	var reach := spike_reach(pointer, _at, ball_box, avoid)
+	return _at + pointer * (edge_along(pointer) + reach) if reach > 0.0 else _at
 
 
 # Where the ball's top edge is on screen; the mark stands above it.
@@ -175,7 +164,14 @@ func follow(ball_top: Vector2) -> void:
 
 # Where the mark sits on screen while it shows, for what must stay clear of it.
 func rect() -> Rect2:
-	return _box(_at) if shown() else Rect2()
+	if not shown():
+		return Rect2()
+	var box := _box(_at)
+	var reach := spike_reach(pointer, _at, ball_box, avoid)
+	if reach > 0.0:
+		for p in spike_points(pointer, reach):
+			box = box.expand(_at + p)
+	return box
 
 
 func _box(at: Vector2) -> Rect2:
@@ -205,18 +201,17 @@ func _draw() -> void:
 	if not shown():
 		return
 	draw_set_transform(_at)
-	draw_colored_polygon(_diamond(HALF + KEYLINE + RIM), UiTokens.TEXT)
-	draw_colored_polygon(_diamond(HALF + KEYLINE), UiTokens.INK)
-	draw_colored_polygon(_diamond(HALF), Palette.HAZARD)
+	var reach := spike_reach(pointer, _at, ball_box, avoid)
+	var layers := [[HALF + KEYLINE + RIM, 0.0, UiTokens.TEXT], [HALF + KEYLINE, RIM, UiTokens.INK], [HALF, RIM + KEYLINE, spike_color()]]
+	for layer in layers:
+		draw_colored_polygon(_diamond(layer[0]), layer[2])
+		if reach > 0.0:
+			draw_colored_polygon(spike_points(pointer, reach, layer[1]), layer[2])
 	var inner := HALF - EDGE
-	draw_colored_polygon(_diamond(inner), Palette.HAZARD.lerp(UiTokens.INK, EMPTY_SHADE))
+	draw_colored_polygon(_diamond(inner), FILL_COLOR.lerp(UiTokens.INK, EMPTY_SHADE))
 	var filled := fill_points(inner, run)
 	if filled.size() >= 3:
-		draw_colored_polygon(filled, Palette.HAZARD)
+		draw_colored_polygon(filled, FILL_COLOR)
 	draw_rect(Rect2(-BANG_HALF, BANG_TOP, BANG_HALF * 2.0, BANG_FOOT - BANG_TOP), UiTokens.TEXT)
 	draw_rect(Rect2(-DOT_SIZE * 0.5, DOT_TOP, DOT_SIZE, DOT_SIZE), UiTokens.TEXT)
-	if pointer != Vector2.ZERO:
-		var push := _push()
-		draw_colored_polygon(pointer_keyline(pointer, push), UiTokens.INK)
-		draw_colored_polygon(pointer_fill(pointer, push), UiTokens.TEXT)
 	draw_set_transform(Vector2.ZERO)
