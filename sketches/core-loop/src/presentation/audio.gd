@@ -4328,12 +4328,21 @@ func _on_heft_dropped(heft_class: int, _heft: float) -> void:
 	_heft_class = heft_class
 
 
+# Brindle's attack ids (boss.gd) and the wind-up each warns with. Every one keeps the boss_telegraph
+# opening, so all read as "Brindle is about to hit", and goes its own way after it. An id not named here
+# (the Mind's, the Warden's) keeps the shared boss_telegraph.
+const BRINDLE_TELEGRAPHS := {
+	"crane_sweep": "tele_crane_sweep", "slag_ring_a": "tele_slag_ring", "slag_ring_b": "tele_slag_ring",
+	"charge": "tele_charge", "charge_wall": "tele_charge_wall", "eject": "tele_eject",
+}
+
+
 # Danger is never quantized: the telegraph sounds the frame the boss winds up, and
 # the shorter the warning the higher it sits, so a quick swing reads as urgent.
-func _on_boss_telegraph(_attack_id: String, seconds_until: float) -> void:
+func _on_boss_telegraph(attack_id: String, seconds_until: float) -> void:
 	if engine.track == "warden":
 		engine.parameter_danger("boss_attack_telegraphed")
-	play("boss_attack_telegraphed", 0.0, Harmony.ratio(lerpf(3.0, 0.0, clampf(seconds_until / 1.5, 0.0, 1.0))))
+	play("boss_attack_telegraphed", 0.0, Harmony.ratio(lerpf(3.0, 0.0, clampf(seconds_until / 1.5, 0.0, 1.0))), "SFX", String(BRINDLE_TELEGRAPHS.get(attack_id, "")))
 
 
 # A mini-boss's later phase (fight_phases.gd): its live anthem moment moves to the phase
