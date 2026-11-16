@@ -74,14 +74,17 @@ func _run() -> void:
 	t.check("a merged mark does not snap at the edge (%.3f of its size just inside)" % edge_ratio, edge_ratio > 0.98)
 	var steps := 0
 	var rising := true
-	var last := 0.0
+	var widest_step := 0.0
+	var last := big * KillMark.cap(big, 1.9, fov)
 	for i in range(0, 76):
 		var eye := 2.0 + i * 0.1
 		var size := big * KillMark.cap(big, eye, fov)
 		rising = rising and size >= last - 0.0001
+		widest_step = maxf(widest_step, absf(size - last) / big)
 		last = size
 		steps += 1
-	t.check("a merged mark grows steadily from 2 m to the edge (%d steps)" % steps, steps > 0 and rising)
+	t.check("a merged mark never shrinks as the eye backs off, 2 to 9.5 m (%d steps)" % steps, steps > 0 and rising)
+	t.check("no 0.1 m step changes it by more than 6%% of its size (widest %.3f)" % widest_step, steps > 0 and widest_step < 0.06)
 	t.check("a merged mark is still capped well inside the edge",
 		big * KillMark.cap(big, 6.0, fov) < big * 0.6)
 	quit(t.verdict())
