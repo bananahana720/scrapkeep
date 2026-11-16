@@ -109,6 +109,9 @@ const KEYED_SOUNDS := ["panel_note", "panel_jackpot", "line_claw_drag", "armor_r
 	"active_cutting_torch",
 	# The flume head gate's two-tone siren, and the pitched ride cues that took over a keyed stand-in.
 	"sluice_siren_two_tone", "ride_cable_clink", "steam_whistle_rise",
+	# The camp, the menus' rise and fall, and the ready and found sounds.
+	"lounge_flip", "bay_bell_ring", "marble_tick_ladder", "bay_lounge_in", "menu_move", "menu_confirm", "menu_back",
+	"ultimate_ready", "found_twinkle",
 	# --- P-C Tally keyed sounds ---
 	"plate_tally", "clip_tally", "stroke_tally", "settle_tally",
 	# --- end Tally ---
@@ -203,6 +206,11 @@ const TRIM_DB := {
 	"sluice_siren_two_tone": -6.0, "ride_rolling_metal": -9.0, "ride_bowl_carve": -9.0, "ride_drop_swoop": -8.0,
 	"ride_ledge_scuff": -10.0, "ride_hop_lift": -10.0, "ride_cable_clink": -9.0, "ride_sheet_swell": -9.0,
 	"steam_whistle_rise": -8.0, "cannon_bang_rail_whoosh": -3.0, "sluice_gush_roar": -5.0,
+	# The camp (a record dropped on the jukebox, the bell, the marble toy, the pins, the way in and out), the menus' move,
+	# confirm and back, the ultimate's ready tune, a found discovery, and the two soft nos a failed verb and a cancelled gauge play.
+	"lounge_flip": -7.0, "bay_bell_ring": -6.0, "marble_tick_ladder": -10.0, "pins_crash": -5.0, "bay_lounge_in": -8.0,
+	"bay_slingshot_out": -7.0, "menu_move": -13.0, "menu_confirm": -10.0, "menu_back": -10.0, "ultimate_ready": -5.0,
+	"found_twinkle": -8.0, "verb_fail": -9.0, "gauge_dry_click": -10.0,
 	# Durability prototype: the plate shed in three sizes and the reclaim chime.
 	"armor_shed_small": -6.0, "armor_shed": -5.0, "armor_shed_big": -4.0, "armor_reclaim": -7.0,
 	"armor_deflect": -10.0,
@@ -1389,6 +1397,30 @@ static func _bake(id: String) -> PackedFloat32Array:
 			return _cannon_bang_rail_whoosh()
 		"sluice_gush_roar":
 			return _sluice_gush_roar()
+		"lounge_flip":
+			return _lounge_flip()
+		"bay_bell_ring":
+			return _bay_bell_ring()
+		"marble_tick_ladder":
+			return _marble_tick_ladder()
+		"pins_crash":
+			return _pins_crash()
+		"bay_lounge_in":
+			return _bay_lounge_in()
+		"bay_slingshot_out":
+			return _bay_slingshot_out()
+		"menu_move":
+			return _cut(_n("mallet", 79), 0.09)
+		"menu_confirm":
+			return _mix([[_cut(_n("mallet", 74), 0.18), 0, 0.7], [_cut(_n("mallet", 81), 0.22), Synth.seconds(0.07), 0.8]])
+		"menu_back":
+			return _mix([[_cut(_n("mallet", 81), 0.18), 0, 0.7], [_cut(_n("mallet", 77), 0.22), Synth.seconds(0.07), 0.7]])
+		"ultimate_ready":
+			return _ultimate_ready()
+		"found_twinkle":
+			return _found_twinkle()
+		"gauge_dry_click":
+			return _gauge_dry_click()
 	if id.begins_with(CAUSE_NOTE):
 		return _mix([[_cut(_n("mallet", int(id.trim_prefix(CAUSE_NOTE))), 0.6), 0, 1.0]])
 	if id.begins_with(GRID_NOTE):
@@ -2942,6 +2974,75 @@ static func _cannon_bang_rail_whoosh() -> PackedFloat32Array:
 # The sluice lands: a wall of water, a roar that opens fast and drains away over a falling sub.
 static func _sluice_gush_roar() -> PackedFloat32Array:
 	return _mix([[_noise(0.95, 220.0, 1700.0, 2.2, 0.04), 0, 0.9], [_tone(0.8, _hz(40), _hz(34), "sine", 2.5), 0, 0.8]])
+
+
+# --- The camp, the ready and found tunes, and the soft no ------------------------------------
+
+# A record goes on: the needle drops with a thump and a crackle, then the first bar of a warm tune.
+static func _lounge_flip() -> PackedFloat32Array:
+	var parts := [[_noise(0.9, 3000.0, 5000.0, 3.0, 0.01), 0, 0.12], [_tone(0.09, _hz(43), _hz(38), "sine", 30.0), 0, 0.8],
+		[_noise(0.03, 2000.0, 900.0, 80.0, 0.001), 0, 0.5]]
+	var tune := [[69, 0.12, 0.2], [74, 0.26, 0.2], [77, 0.4, 0.2], [76, 0.54, 0.15], [74, 0.68, 0.45]]
+	for note in tune:
+		parts.append([_cut(_n("keys", note[0]), note[2]), Synth.seconds(note[1]), 0.6])
+	return _mix(parts)
+
+
+# The camp bell: one struck bell and its octave ring, a little out of tune with it like cast metal.
+static func _bay_bell_ring() -> PackedFloat32Array:
+	return _mix([[_cut(_n("bell", 79), 1.0, 2400), 0, 0.8], [_fm(0.9, _hz(86), 2.76, 1.2, 4.5), 0, 0.35],
+		[_noise(0.01, 3000.0, 3000.0, 200.0, 0.001), 0, 0.3]])
+
+
+# The marble toy's note: a glass tick. The world fact carries no step, so every step is this one tick.
+static func _marble_tick_ladder() -> PackedFloat32Array:
+	return _mix([[_fm(0.12, _hz(91), 3.5, 1.0, 26.0), 0, 0.8], [_noise(0.012, 5000.0, 4000.0, 200.0, 0.001), 0, 0.3]])
+
+
+# The pins go down: a crack of wood, then four knocks falling over each other and a low thud.
+static func _pins_crash() -> PackedFloat32Array:
+	var parts := [[_noise(0.12, 2600.0, 1100.0, 22.0, 0.001), 0, 0.9], [_tone(0.22, _hz(46), _hz(38), "sine", 12.0), 0, 0.6]]
+	var at := 0.06
+	for i in 4:
+		parts.append([_noise(0.05, 1800.0 - i * 220.0, 900.0, 40.0, 0.001), Synth.seconds(at), 0.6 - i * 0.08])
+		at += 0.05 + i * 0.025
+	return _mix(parts, true)
+
+
+# Back in the workshop: a soft rising fifth on the keys over a breath of room.
+static func _bay_lounge_in() -> PackedFloat32Array:
+	return _mix([[_arch(_noise(0.5, 400.0, 1500.0, 0.0, 0.05), 0.5), 0, 0.15], [_cut(_n("keys", 67), 0.35), 0, 0.6],
+		[_cut(_n("keys", 74), 0.5), Synth.seconds(0.1), 0.65]])
+
+
+# Out of the workshop: the slingshot's band stretches, then lets go.
+static func _bay_slingshot_out() -> PackedFloat32Array:
+	return _mix([[_tone(0.16, _hz(62), _hz(55), "saw_dark", 6.0), 0, 0.4], [_fm_sweep(0.3, 300.0, 2500.0, 0.6, 7.0), Synth.seconds(0.16), 0.7],
+		[_noise(0.25, 800.0, 4000.0, 9.0, 0.01), Synth.seconds(0.16), 0.35]])
+
+
+# The big move is charged: D, F, A, D climbing fast on the mallet, then a bell and its high shimmer on top.
+static func _ultimate_ready() -> PackedFloat32Array:
+	var parts := []
+	var notes := [74, 77, 81, 86]
+	for i in notes.size():
+		parts.append([_cut(_n("mallet", notes[i]), 0.25), Synth.seconds(i * 0.06), 0.7])
+	parts.append([_cut(_n("bell", 86), 0.8, 2400), Synth.seconds(0.2), 0.8])
+	parts.append([_cut(_n("bell", 93), 0.6, 2400), Synth.seconds(0.24), 0.35])
+	parts.append([_fm_sweep(0.24, 300.0, 1400.0, 0.5, 6.0), 0, 0.3])
+	return _mix(parts)
+
+
+# A discovery: a bright three-note twinkle up the pentatonic and a glint on top.
+static func _found_twinkle() -> PackedFloat32Array:
+	return _mix([[_cut(_n("mallet", 86), 0.2), 0, 0.7], [_cut(_n("mallet", 89), 0.2), Synth.seconds(0.07), 0.7],
+		[_cut(_n("bell", 93), 0.5, 1800), Synth.seconds(0.14), 0.8], [_noise(0.15, 6000.0, 6000.0, 22.0, 0.002), Synth.seconds(0.14), 0.15]])
+
+
+# A gauge let go: two dry clicks and a short low drop, a no that asks nothing of the player.
+static func _gauge_dry_click() -> PackedFloat32Array:
+	return _mix([[_noise(0.012, 3200.0, 2200.0, 160.0, 0.001), 0, 0.7], [_noise(0.012, 2800.0, 1800.0, 160.0, 0.001), Synth.seconds(0.07), 0.55],
+		[_tone(0.1, _hz(55), _hz(50), "sine", 30.0), Synth.seconds(0.07), 0.5]])
 
 
 static func _lift_hiss() -> PackedFloat32Array:

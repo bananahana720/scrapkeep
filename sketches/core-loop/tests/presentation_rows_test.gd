@@ -129,12 +129,12 @@ func _process(_delta: float) -> bool:
 			_audio._last_start.clear()
 			events.emit_signal("element_resolved", "kinetic", "ice", "shatter", Vector3.ZERO)
 			var want := [["scrap_lost", "scrap_rip", "now"], ["strike_deflected", "clank", "now"], ["threat_rose", "threat_up", "beat"],
-				["core_gained", "core_socket", "now"], ["interaction_found", "found_chime", "now"]]
+				["core_gained", "core_socket", "now"], ["interaction_found", "found_twinkle", "now"]]
 			var missing: Array = []
 			for w in want:
 				if _audio.cue_log.filter(func(c: Array): return c[0] == w[0] and c[1] == w[1] and c[2] == w[2]).is_empty():
 					missing.append(w[0])
-			_check("rows reach cues", missing.is_empty(), "scrap_rip, clank and core_socket now; threat_up on the beat; found_chime now; missing %s" % [missing])
+			_check("rows reach cues", missing.is_empty(), "scrap_rip, clank and core_socket now; threat_up on the beat; found_twinkle now; missing %s" % [missing])
 			var elements: Array = _audio.cue_log.filter(func(c: Array): return c[0] == "element_resolved").map(func(c: Array): return c[1])
 			_check("element voices", elements == ["ice_form", "zap_hum", "shatter"], "freeze, electrify and shatter pick %s" % [elements])
 			_check_overcharge(engine)
