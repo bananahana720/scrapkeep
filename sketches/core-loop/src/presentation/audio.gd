@@ -952,6 +952,7 @@ func _process(delta: float) -> void:
 	_tend_hum()
 	_tend_specials()
 	_tend_kettle()
+	_tend_heat()
 	_tend_champions()
 	_tend_moments()
 	_follow_warden()
@@ -4225,14 +4226,43 @@ func _connect_redline() -> void:
 	var redline = ctx.player.get("redline") if ctx != null and ctx.get("player") != null else null
 	if redline == null:
 		return
-	redline.changed.connect(func(_value: float, band: int):
+	_hits_hot_heard = redline.hits_hot
+	redline.changed.connect(func(value: float, band: int):
 		if band > _redline_band:
 			play("slammed", -6.0, Harmony.ratio(REDLINE_RUNGS[band]), "SFX", "smash_whistle")
+		# One sound per crossing of the hot line, not per frame the value moves.
+		if band >= HOT_BAND and _redline_band < HOT_BAND:
+			_cool_due = false
+			play("slammed", -2.0, 1.0, "SFX", "heat_rise")
+		elif band < HOT_BAND and _redline_band >= HOT_BAND:
+			# The shell drains a little each frame, so a drop straight to empty is never a cooling: it is a
+			# blast or a cook-off (each has its own crack), or a clear on a death, a new stage or a mode change.
+			_cool_due = value > 0.0
 		_redline_band = band)
 	redline.detonated.connect(func(_at: Vector3, _force: float):
 		play("slammed", 2.0, Harmony.ratio(-5.0), "SFX", "smash_crack"))
 	redline.cooked_off.connect(func(_at: Vector3, _force: float):
 		play("slammed", 0.0, Harmony.ratio(-7.0), "SFX", "smash_crack"))
+
+
+# The hot line (Redline.HOT_AT) is band 2. The cooling plays on the next frame's tend, and a hit taken
+# hot is read off Redline's own count.
+const HOT_BAND := 2
+var _cool_due := false
+var _hits_hot_heard := 0
+
+
+func _tend_heat() -> void:
+	var redline = ctx.player.get("redline") if ctx != null and ctx.get("player") != null else null
+	if redline == null:
+		return
+	if _cool_due:
+		_cool_due = false
+		play("slammed", 0.0, 1.0, "SFX", "heat_cool")
+	var hits: int = redline.hits_hot
+	if hits > _hits_hot_heard:
+		play("slammed", 0.0, 1.0, "SFX", "heat_hot_hit")
+	_hits_hot_heard = hits
 
 
 # The cook-off's warning (loops.md Spec 1): over the last Redline.KETTLE_S of a shell held at redline the
