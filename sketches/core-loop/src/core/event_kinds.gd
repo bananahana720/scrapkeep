@@ -64,7 +64,7 @@ const ROWS := {
 	"scrap_lost": {"group": "economy", "color": Palette.RUST, "shape": "cross", "sound": "scrap_rip", "hud": "Chase your scrap", "objective": "", "priority": 2},
 	"core_gained": {"group": "economy", "color": Palette.AMBER, "shape": "core", "sound": "core_socket", "hud": "Gates may offer rares", "objective": "", "priority": 3},
 	"synergy_discovered": {"group": "economy", "color": Palette.AMBER, "shape": "star", "sound": "synergy_fanfare", "hud": "Synergy {name}", "objective": "", "priority": 3},
-	"interaction_found": {"group": "event", "color": Palette.SANDSTONE, "shape": "diamond", "sound": "found_chime", "hud": "", "objective": "", "priority": 1},
+	"interaction_found": {"group": "event", "color": Palette.SANDSTONE, "shape": "diamond", "sound": "found_chime", "sound_next": "found_twinkle", "hud": "", "objective": "", "priority": 1},
 	"jumped": {"group": "movement", "color": Palette.SAND, "shape": "chevron", "sound": "hop", "hud": "", "objective": "", "priority": 1},
 	"boosted": {"group": "movement", "color": Palette.AMBER, "shape": "arrow", "sound": "boost_whoosh", "hud": "", "objective": "", "priority": 1},
 	"dashed": {"group": "movement", "color": Palette.AMBER, "shape": "arrow", "sound": "dash_whoosh", "hud": "", "objective": "", "priority": 1},
@@ -179,7 +179,7 @@ const ROWS := {
 	# LINE_ROWS, STATE_ROWS, Bindings.VERBS or CAUSE_ROWS, so these are the quiet stand-ins the
 	# schema asks for.
 	"line_state_changed": {"group": "movement", "color": Palette.SAND, "shape": "none", "sound": "ui_tick", "hud": "", "objective": "", "priority": 0},
-	"verb_failed": {"group": "movement", "color": Palette.SAND, "shape": "none", "sound": "ui_tick", "hud": "", "objective": "", "priority": 0},
+	"verb_failed": {"group": "movement", "color": Palette.SAND, "shape": "none", "sound": "ui_tick", "sound_next": "verb_fail", "hud": "", "objective": "", "priority": 0},
 	# The key-prompt rising edge the run log counts; the prompt has its own HUD motion, so the row is quiet (no listener, listed in GRAMMAR_SIGNALS).
 	"prompt_shown": {"group": "movement", "color": Palette.SAND, "shape": "none", "sound": "ui_tick", "hud": "", "objective": "", "priority": 0},
 	"cause_armed": {"group": "combat", "color": Palette.SAND, "shape": "none", "sound": "ui_tick", "hud": "", "objective": "", "priority": 0},
@@ -1253,9 +1253,9 @@ const WORLD_ROWS := {
 	# Reservoir (src/world/overtime.gd, docs/design/loops.md Spec 2): a won yard lights a keeper's bell; a
 	# ring calls overtime (its crew lands on arena_wave's whistle); the pot pays on the till; the sluice
 	# warns on the whistle for its whole lead, then the water comes down with the lock's slam.
-	"overtime_offered": {"group": "event", "color": Palette.BRASS, "shape": "ring", "sound": "found_chime", "sound_next": "warden_gate_pip", "hud": "", "objective": "", "priority": 1},
-	"overtime_rung": {"group": "event", "color": Palette.BRASS, "shape": "burst", "sound": "found_chime", "sound_next": "arena_unlock_bells", "hud": "", "objective": "", "priority": 2},
-	"overtime_paid": {"group": "event", "color": Palette.BRASS, "shape": "star", "sound": "found_chime", "sound_next": "warden_gate_release", "hud": "", "objective": "", "priority": 2},
+	"overtime_offered": {"group": "event", "color": Palette.BRASS, "shape": "ring", "sound": "overtime_offer", "hud": "", "objective": "", "priority": 1},
+	"overtime_rung": {"group": "event", "color": Palette.BRASS, "shape": "burst", "sound": "overtime_ring", "hud": "", "objective": "", "priority": 2},
+	"overtime_paid": {"group": "event", "color": Palette.BRASS, "shape": "star", "sound": "overtime_pay", "hud": "", "objective": "", "priority": 2},
 	"sluice_warning": {"group": "event", "color": Palette.HAZARD, "shape": "arrow", "sound": "threat_whistle", "sound_next": "arena_wave_whistle", "hud": "", "objective": "", "priority": 2},
 	# Called Shot (src/build/called_shot.gd, loops.md Spec 3): the window opens on a pip (no hazard
 	# colour or threat sound: a call is the player's, LEGIBILITY section 1), the call inks with a

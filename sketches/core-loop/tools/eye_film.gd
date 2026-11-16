@@ -31,8 +31,10 @@ extends RefCounted
 #                    then the frame after
 #   death            the same lead-in for the killing hit, then the death screen
 # Rows go to film.ndjson in the folder, one a frame: t (game seconds filmed), file, why, flow,
-# paused, stage, stage_s, plate (the HUD's objective words), hp, hp_max, mass, pos, and for a hit
-# its source and amount. The reader is not shown the rows.
+# paused, stage, stage_s, plate (the HUD's objective words), hp, hp_max, mass, pos, lens (the camera's
+# position), ball_on_screen, arm {wanted, hit, body: what stopped the arm, or null} and slots (each
+# ability slot to ready, cooling, empty, unavailable, jammed, active or dimmed-for-set-piece),
+# and for a hit its source and amount. The reader is not shown the rows.
 # Evidence limit: the picture is this machine's renderer. In the cloud that is a software
 # renderer: words, layout, marks and what is on screen read true; colour, light, bloom and
 # frame pacing do not, and belong to a PC film.
@@ -276,7 +278,29 @@ func _truth() -> Dictionary:
 	var ball: Vector3 = _game.player.ball_position() if _game.player != null else Vector3.ZERO
 	return {"flow": _game.flow.state_name(), "paused": _game.get_tree().paused, "stage": run.stage, "stage_s": snappedf(run.stage_time, 0.1),
 		"plate": _plate_words(), "hp": snappedf(run.hp, 0.1), "hp_max": snappedf(run.max_hp, 0.1), "mass": snappedf(run.mass, 0.1),
-		"pos": [snappedf(ball.x, 0.1), snappedf(ball.y, 0.1), snappedf(ball.z, 0.1)]}
+		"pos": [snappedf(ball.x, 0.1), snappedf(ball.y, 0.1), snappedf(ball.z, 0.1)]}.merged(view_truth())
+
+
+# Where the lens is, whether the ball is in the picture, what the arm reached and each ability
+# slot's word: what a reader needs to say why a picture is jammed or a slot is grey.
+func view_truth() -> Dictionary:
+	var out := {"lens": null, "ball_on_screen": false, "arm": null, "slots": {}}
+	var rig = _game.get("camera")
+	if rig != null and rig.cam != null:
+		var at: Vector3 = rig.cam.global_position
+		out["lens"] = [snappedf(at.x, 0.1), snappedf(at.y, 0.1), snappedf(at.z, 0.1)]
+		if _game.player != null:
+			out["ball_on_screen"] = rig.shows(_game.player.ball_position())
+		out["arm"] = rig.arm_reading()
+	var bar = _game.hud.ability_bar if _game.hud != null else null
+	if bar != null:
+		var words: Dictionary = bar.slot_words()
+		var abilities = _game.player.get("abilities") if _game.player != null else null
+		for id in words:
+			if words[id] == "unavailable" and abilities != null and abilities.silenced(id):
+				words[id] = "jammed"
+		out["slots"] = words
+	return out
 
 
 func _plate_words() -> String:

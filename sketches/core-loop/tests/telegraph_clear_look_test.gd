@@ -90,10 +90,8 @@ func _run() -> void:
 	_t.near("clear's live lane band", clear["live"] * Threat.RUN_ALPHA, Threat.CLEAR_LIVE_ALPHA)
 	_t.near("haze's live lane band is unchanged", haze["live"] * Threat.RUN_ALPHA, Threat.LIVE_ALPHA)
 	_t.check("the soft looks draw driven marks depth tested", clear["depth"] and edges["depth"])
-	var tested := true
-	for layer in clear["materials"]:
-		tested = tested and clear["materials"][layer][0] == not layer in Threat.TINTED_LAYERS
-	_t.check("clear draws every lane layer depth tested but the tinted fill", tested, str(clear["materials"]))
+	var tested: bool = not clear["materials"].is_empty() and clear["materials"].values().all(func(m): return m[0])
+	_t.check("clear draws every lane layer depth tested, the tinted fill too (PF-52)", tested, str(clear["materials"]))
 	_t.check("haze draws no lane layer depth tested", haze["materials"].values().all(func(m): return not m[0]), str(haze["materials"]))
 	_t.eq("clear's fence fades out further from the lens", clear["materials"].get("fence", [false, Vector2.ZERO])[1], Vector2(Threat.FENCE_CLEAR, Threat.FENCE_FULL))
 	_t.near("edges halves the area fill", edges["run"], haze["run"] * Threat.EDGES_FILL)

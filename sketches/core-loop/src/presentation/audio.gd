@@ -16,6 +16,7 @@ const Tuning := preload("res://src/movement/tuning.gd")
 const Streak := preload("res://src/presentation/streak.gd")
 const SimClock := preload("res://src/core/sim_clock.gd")
 const Bindings := preload("res://src/core/bindings.gd")
+const Redline := preload("res://src/combat/redline.gd")
 # v2 W3 characters: the vault cap the vault cue is pitched against.
 const Augments := preload("res://src/movement/augments.gd")
 # v2 W9: the class row names the motif every class cue resolves through, and the roster
@@ -35,6 +36,8 @@ const SetDirector := preload("res://src/presentation/set_director.gd")
 const CHIRP_COOLDOWN := 0.75
 const CHIRP_LOG_CAP := 256
 const SpecialAudio := preload("res://src/presentation/special_audio.gd")
+const MenuSounds := preload("res://src/presentation/menu_sounds.gd")
+var _menu_sounds := MenuSounds.new()
 # The live kill-first specials: enemy instance id -> {"node", "name", "player"}.
 var _specials := {}
 const PhaseMusic := preload("res://src/presentation/phase_music.gd")
@@ -687,11 +690,15 @@ func bake_now() -> void:
 func _enter_tree() -> void:
 	if not get_tree().node_added.is_connected(_on_node_added):
 		get_tree().node_added.connect(_on_node_added)
+	if not get_viewport().gui_focus_changed.is_connected(_on_focus_changed):
+		get_viewport().gui_focus_changed.connect(_on_focus_changed)
 
 
 func _exit_tree() -> void:
 	if get_tree().node_added.is_connected(_on_node_added):
 		get_tree().node_added.disconnect(_on_node_added)
+	if get_viewport().gui_focus_changed.is_connected(_on_focus_changed):
+		get_viewport().gui_focus_changed.disconnect(_on_focus_changed)
 	_settle_workers()
 	# Stop every player and drop the playbacks, or the polyphonic ones outlive the tree.
 	for child in get_children():
@@ -924,6 +931,26 @@ func _poly_player(bus: String, node_name: String) -> AudioStreamPlayer:
 	return player
 
 
+func _on_focus_changed(_control: Control) -> void:
+	_menu_sounds.focus_moved()
+
+
+# Move, confirm and back for every page a pad or the keys can move through (menu_sounds.gd).
+func _step_menu_sounds() -> void:
+	var nav := false
+	for action in MenuSounds.NAV:
+		nav = nav or Input.is_action_pressed(action)
+	var held := get_viewport().gui_get_focus_owner() != null
+	for kind in _menu_sounds.step(nav, Input.is_action_pressed("ui_accept"), Input.is_action_pressed("ui_cancel"), held):
+		match kind:
+			"menu_move":
+				play("menu_move", 0.0, 1.0, "UI", "menu_move", 0)
+			"menu_confirm":
+				play("menu_confirm", 0.0, 1.0, "UI", "menu_confirm", 1)
+			"menu_back":
+				play("menu_back", 0.0, 1.0, "UI", "menu_back", 1)
+
+
 func _process(delta: float) -> void:
 	clock += delta
 	_step_cannon_cues()
@@ -936,6 +963,8 @@ func _process(delta: float) -> void:
 			# A cancelled bake leaves nobody running it; the survivor starts it again.
 			_start_bake()
 			return
+	if is_inside_tree():
+		_step_menu_sounds()
 	engine.pause_gain = 0.45 if get_tree().paused else 1.0
 	if ace != null:
 		ace.pause_gain = engine.pause_gain
@@ -951,6 +980,7 @@ func _process(delta: float) -> void:
 	_tend_hum()
 	_tend_specials()
 	_tend_kettle()
+	_tend_heat()
 	_tend_champions()
 	_tend_moments()
 	_follow_warden()
@@ -1814,6 +1844,8 @@ func _tend_room() -> void:
 # override the kind's row decides, resolved for the run's class.
 func play(kind: String, db := 0.0, pitch := 1.0, bus := "SFX", sound_override := "", priority_override := -1) -> bool:
 	var sound: String = sound_override if sound_override != "" else Rows.sound(kind, cue_context())
+	if kind.ends_with("_refused"):
+		_menu_sounds.refused()
 	if not _admit(kind, sound, pitch):
 		return false
 	# A tiered key plays its tier's file, picked by the rung the caller sent as its pitch,
@@ -4224,9 +4256,18 @@ func _connect_redline() -> void:
 	var redline = ctx.player.get("redline") if ctx != null and ctx.get("player") != null else null
 	if redline == null:
 		return
-	redline.changed.connect(func(_value: float, band: int):
+	_hits_hot_heard = redline.hits_hot
+	redline.changed.connect(func(value: float, band: int):
 		if band > _redline_band:
 			play("slammed", -6.0, Harmony.ratio(REDLINE_RUNGS[band]), "SFX", "smash_whistle")
+		# One sound per crossing of the hot line, not per frame the value moves.
+		if band >= HOT_BAND and _redline_band < HOT_BAND:
+			_cool_due = false
+			play("slammed", -2.0, 1.0, "SFX", "heat_rise")
+		elif band < HOT_BAND and _redline_band >= HOT_BAND:
+			# The shell drains a little each frame, so a drop straight to empty is never a cooling: it is a
+			# blast or a cook-off (each has its own crack), or a clear on a death, a new stage or a mode change.
+			_cool_due = value > 0.0
 		_redline_band = band)
 	redline.detonated.connect(func(_at: Vector3, _force: float):
 		play("slammed", 2.0, Harmony.ratio(-5.0), "SFX", "smash_crack"))
@@ -4234,16 +4275,35 @@ func _connect_redline() -> void:
 		play("slammed", 0.0, Harmony.ratio(-7.0), "SFX", "smash_crack"))
 
 
-# The cook-off's warning (loops.md Spec 1): over the last KETTLE_S of a shell held at redline the
+# The hot line (Redline.HOT_AT) is band 2. The cooling plays on the next frame's tend, and a hit taken
+# hot is read off Redline's own count.
+const HOT_BAND := 2
+var _cool_due := false
+var _hits_hot_heard := 0
+
+
+func _tend_heat() -> void:
+	var redline = ctx.player.get("redline") if ctx != null and ctx.get("player") != null else null
+	if redline == null:
+		return
+	if _cool_due:
+		_cool_due = false
+		play("slammed", 0.0, 1.0, "SFX", "heat_cool")
+	var hits: int = redline.hits_hot
+	if hits > _hits_hot_heard:
+		play("slammed", 0.0, 1.0, "SFX", "heat_hot_hit")
+	_hits_hot_heard = hits
+
+
+# The cook-off's warning (loops.md Spec 1): over the last Redline.KETTLE_S of a shell held at redline the
 # kettle whistles, climbing to the tritone; it stops the moment the heat is spent, cooks off or falls.
-const KETTLE_S := 2.0
 var _kettle_on := false
 
 
 func _tend_kettle() -> void:
 	var redline = ctx.player.get("redline") if ctx != null and ctx.get("player") != null else null
 	var left: float = redline.fuse_left() if redline != null else -1.0
-	var due := left > 0.0 and left <= KETTLE_S
+	var due := left > 0.0 and left <= Redline.KETTLE_S
 	# A pause or slow motion can outlast the 2 s whistle on a game-time fuse: whistle again.
 	var sounding: bool = _kettle_on and _sfx != null and Array(_voices.get("heat_kettle", [])).any(func(id: int): return _sfx.is_stream_playing(id))
 	if due and not sounding:
@@ -4298,12 +4358,21 @@ func _on_heft_dropped(heft_class: int, _heft: float) -> void:
 	_heft_class = heft_class
 
 
+# Brindle's attack ids (boss.gd) and the wind-up each warns with. Every one keeps the boss_telegraph
+# opening, so all read as "Brindle is about to hit", and goes its own way after it. An id not named here
+# (the Mind's, the Warden's) keeps the shared boss_telegraph.
+const BRINDLE_TELEGRAPHS := {
+	"crane_sweep": "tele_crane_sweep", "slag_ring_a": "tele_slag_ring", "slag_ring_b": "tele_slag_ring",
+	"charge": "tele_charge", "charge_wall": "tele_charge_wall", "eject": "tele_eject",
+}
+
+
 # Danger is never quantized: the telegraph sounds the frame the boss winds up, and
 # the shorter the warning the higher it sits, so a quick swing reads as urgent.
-func _on_boss_telegraph(_attack_id: String, seconds_until: float) -> void:
+func _on_boss_telegraph(attack_id: String, seconds_until: float) -> void:
 	if engine.track == "warden":
 		engine.parameter_danger("boss_attack_telegraphed")
-	play("boss_attack_telegraphed", 0.0, Harmony.ratio(lerpf(3.0, 0.0, clampf(seconds_until / 1.5, 0.0, 1.0))))
+	play("boss_attack_telegraphed", 0.0, Harmony.ratio(lerpf(3.0, 0.0, clampf(seconds_until / 1.5, 0.0, 1.0))), "SFX", String(BRINDLE_TELEGRAPHS.get(attack_id, "")))
 
 
 # A mini-boss's later phase (fight_phases.gd): its live anthem moment moves to the phase

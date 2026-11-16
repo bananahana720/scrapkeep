@@ -242,6 +242,44 @@ func in_view(point: Vector3) -> bool:
 	return absf(Vector2(forward.x, forward.z).angle_to(Vector2(to.x, to.z))) < half * GLANCE_IN_VIEW
 
 
+# Whether a world point falls inside the lens's picture: in front of the lens and inside the
+# viewport rectangle. The eye film logs it for the ball.
+func shows(point: Vector3) -> bool:
+	if cam == null or not cam.is_inside_tree() or cam.is_position_behind(point):
+		return false
+	return get_viewport().get_visible_rect().has_point(cam.unproject_position(point))
+
+
+# What the arm is doing, for a log: the length it wants, the length it reached before it hit
+# something, and the body that stopped it (its node path, or its name outside the tree; null
+# when nothing did). The body comes from the arm's own shape cast, as _free_arm does, out past the
+# arm's margin as the arm's own cast reaches. A short reach with nothing in the way is the arm
+# easing back out after a wall (it lags the length it wants), logged as easing.
+func arm_reading() -> Dictionary:
+	var wanted := arm.spring_length
+	var out := {"wanted": snappedf(wanted, 0.01), "hit": snappedf(arm.get_hit_length(), 0.01), "body": null, "easing": false}
+	if not is_inside_tree() or arm.get_hit_length() >= wanted - 0.01:
+		return out
+	var space := get_world_3d().direct_space_state
+	var dir: Vector3 = arm.global_basis * Vector3.BACK
+	var reach := wanted + arm.margin
+	_query.transform = Transform3D(Basis.IDENTITY, arm.global_position)
+	_query.motion = dir * reach
+	var fractions := space.cast_motion(_query)
+	if fractions.size() < 2 or fractions[0] >= 1.0:
+		out["easing"] = true
+		return out
+	_query.transform = Transform3D(Basis.IDENTITY, arm.global_position + dir * reach * fractions[1])
+	_query.motion = Vector3.ZERO
+	var rest := space.get_rest_info(_query)
+	if rest.is_empty():
+		return out
+	var body = instance_from_id(int(rest["collider_id"]))
+	if body is Node:
+		out["body"] = String(body.get_path()) if body.is_inside_tree() else String(body.name)
+	return out
+
+
 func _step_glance(delta: float) -> void:
 	if _glance_subject == null:
 		return
