@@ -118,6 +118,10 @@ func _on() -> void:
 	var last: Array = LockRows.row("park_dam")["lock"]["waves"].back()
 	var crew: Array = ot.crew_alive()
 	_t.eq("one ring lands the last wave and a brute", crew.size(), last.size() + 1)
+	var marks = ot.get_node_or_null("ArenaWaveMarks")
+	_t.check("the whistle's cross shows with the crew, one per member, held off the floor",
+		marks != null and marks.get_child_count() == crew.size() and marks.get_children().all(func(m: MeshInstance3D):
+			return m.global_position.y - game.ctx.terrain.height(m.global_position.x, m.global_position.z) >= 1.5))
 	_t.check("the overtime crew is yard crew", crew.all(func(e): return e.has_meta("yard_crew")))
 	_t.eq("a brute among them", crew.filter(func(e): return e.kind == Overtime.ELITE_KIND).size(), 1)
 	ot.ring()

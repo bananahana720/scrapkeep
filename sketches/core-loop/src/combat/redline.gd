@@ -120,6 +120,26 @@ func fuse_left() -> float:
 	return maxf(COOK_OFF_S - waited, 0.0)
 
 
+# The kettle's twin (audio.gd _tend_kettle whistles over the last KETTLE_S of the fuse): 0 outside
+# that window, else a 0-to-1 flash that starts at 1 on the whistle's first frame and beats faster
+# as the cook-off nears. It reads the same fuse the whistle reads, so sound and flash cannot drift.
+const KETTLE_S := 2.0
+const KETTLE_HZ := Vector2(4.0, 10.0)
+
+
+func kettle_live() -> bool:
+	var left := fuse_left()
+	return left > 0.0 and left <= KETTLE_S
+
+
+func kettle_pulse() -> float:
+	if not kettle_live():
+		return 0.0
+	var t := KETTLE_S - fuse_left()
+	var phase := t * KETTLE_HZ.x + 0.5 * t * t / KETTLE_S * (KETTLE_HZ.y - KETTLE_HZ.x)
+	return 0.5 + 0.5 * cos(TAU * phase)
+
+
 # What a hit on the ball is multiplied by right now.
 func taken_scale() -> float:
 	return HOT_DAMAGE_TAKEN if hot() else 1.0
