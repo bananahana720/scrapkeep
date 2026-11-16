@@ -47,6 +47,9 @@ var reach := 60.0
 var detail_range := DETAIL_RANGE
 # Set by the HUD each frame: the ball is within detail_range of the anchor.
 var near := false
+# No owner sets on_anchor now: the reward gates wear their names as plates in the world (reward_gates.gd),
+# and the HUD no longer places signs. The sign mode below stays only for the two tests that still drive it
+# (ui_contract_test, prompt_leader_test); it goes with them.
 # A sign (on_anchor) names the thing it hangs on (a reward gate's offer): the HUD hangs it from its
 # anchor in the gate's own slot of the sign room, not in the prompts band, so each gate wears its own
 # part (PF-22). The HUD gives it the slot's width (fit_sign) and it chooses how much to show (below).

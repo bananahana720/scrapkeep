@@ -121,6 +121,8 @@ var _launched := false
 var _flight := 0.0
 # The launch take (launch_take.gd) rides this launch: it closes during the flight and cuts to the next place under it.
 var _seam_take := false
+# The part the gate just gave, for the launch take to stamp (launch_take.gd); "" when none.
+var _taken_part := ""
 var _last_percent := -1
 
 # Run saves (RS3): game hands flow a RunStore in play. Every zone entrance and stage launch is written to it,
@@ -1227,7 +1229,12 @@ func _record_end(won: bool) -> void:
 		push_warning("flow: run save not cleared: %s" % store.last_error)
 
 
-func _on_reward_chosen(_part_id: String) -> void:
+func _on_reward_chosen(part_id: String) -> void:
+	# World's handler can launch first, so the take may already be running: it takes the part's name late.
+	if _seam_take and ctx.root != null and ctx.root.get("launch_take") != null:
+		ctx.root.launch_take.stamp_taken(part_id)
+	else:
+		_taken_part = part_id
 	if state == GATES:
 		_set_state(LAUNCH)
 
@@ -1261,7 +1268,9 @@ func _play_seam_take() -> bool:
 	var root = ctx.root
 	if root == null or not root.has_method("play_launch_take") or ctx.stages.is_run_last(ctx.run.stage):
 		return false
-	return root.play_launch_take(_cut_under_cover, _flight_over, _next_drawn, LAUNCH_FLIGHT)
+	var taken := _taken_part
+	_taken_part = ""
+	return root.play_launch_take(_cut_under_cover, _flight_over, _next_drawn, LAUNCH_FLIGHT, taken)
 
 
 func _flight_over() -> bool:

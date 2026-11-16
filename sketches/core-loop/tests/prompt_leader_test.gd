@@ -1,11 +1,8 @@
 extends SceneTree
 
-# PF-22 (w37 player's-eye film, pictures 042-046, 074-079): the reward gates' names sat in the
-# prompts band far below the gates, and no reader could tell which gate gives which part. A gate's
-# prompt is now a sign: it hangs from its own gate's crossbar in the gate's own slot of the sign room,
-# a type step larger, and when the ball or the reticle's ring pushes it lower it draws a leader up to
-# its gate. This checks the leader's geometry, the slots, how a sign fits its slot and the rows it
-# takes; the real gates through the real HUD are checked in int_screen_layout_test.
+# The 2D sign mode of WorldPrompt (leader geometry, slots, how a sign fits its slot). The reward gates
+# no longer use it: their names are plates on the gates (reward_gates.gd, reward_gate_nameplate_test).
+# The mode stays while this test and ui_contract_test drive it, and goes with them.
 
 const WorldPrompt := preload("res://src/ui/world_prompt.gd")
 const ScreenRegions := preload("res://src/ui/screen_regions.gd")
@@ -93,14 +90,6 @@ func _initialize() -> void:
 	g.near = true
 	_t.check("a detail that needs more than two lines (with its mark) shows the name alone", g.sign_need(0) == INF and g.fit_sign(360.0) == 1)
 	g.free()
-	# Rows: a sign hangs at or below its point and is pushed down, never up, past what it keeps off.
-	var want := Rect2(Vector2(700.0, 400.0), Vector2(200.0, 60.0))
-	var ball_square := Rect2(Vector2(740.0, 420.0), Vector2(120.0, 120.0))
-	var row := Hud.hang_row(want, [ball_square] as Array[Rect2], signs)
-	_t.check("a sign over the ball is moved down past it", row.size != Vector2.ZERO and row.position.y >= ball_square.end.y and row.position.x == want.position.x and signs.grow(0.5).encloses(row), "%s" % row)
-	var above := Rect2(Vector2(700.0, 300.0), Vector2(200.0, 60.0))
-	_t.check("a rect above the sign is no reason to move it, and no row above is offered", Hud.hang_row(want, [above] as Array[Rect2], signs) == want)
-	_t.check("no row below in the room means no sign", Hud.hang_row(Rect2(Vector2(700.0, 690.0), Vector2(200.0, 60.0)), [Rect2(Vector2(700.0, 650.0), Vector2(200.0, 80.0))] as Array[Rect2], signs).size == Vector2.ZERO)
 	# Another prompt's place does not move: a band prompt lands where the band gave it before signs
 	# (clamp_prompt, then free_spot in the band) and keeps its type size.
 	var band_prompt := WorldPrompt.new()

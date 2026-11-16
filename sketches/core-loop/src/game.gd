@@ -854,11 +854,11 @@ func _take_live() -> bool:
 
 # A stage launch of flight_s asks for the take (flow.gd): the panel closes over the flight's end and on_cover waits under
 # it until flight_over() says so. False when no take plays, and then nothing was called: the caller cuts as it always did.
-func play_launch_take(on_cover: Callable, flight_over: Callable, ready_check: Callable, flight_s: float) -> bool:
+func play_launch_take(on_cover: Callable, flight_over: Callable, ready_check: Callable, flight_s: float, taken_part := "") -> bool:
 	if launch_take.busy() or not _take_live():
 		return false
 	launch_take.live = true
-	return launch_take.play_over_flight(on_cover, flight_over, ready_check, flight_s)
+	return launch_take.play_over_flight(on_cover, flight_over, ready_check, flight_s, taken_part)
 
 
 # A pilot picked on pilot select: the deck camera lifts, the swipe covers, the run starts under it.
