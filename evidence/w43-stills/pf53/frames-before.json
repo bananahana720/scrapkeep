@@ -1,0 +1,55 @@
+{
+	"adapter": "NVIDIA GeForce RTX 4080",
+	"frames": [
+		{
+			"id": "roll",
+			"note": {
+				"speed": 13.9347457885742
+			},
+			"sha256": "2c37ef3772871f14eb72544467900abbb5dddbaf9f537cb1e48526cc8f6e9e37",
+			"share": 0.0028,
+			"tone": "c6a274"
+		},
+		{
+			"id": "dust_lens",
+			"note": {
+				"m": 2.0
+			},
+			"sha256": "15916a04446915f79baab0059b9b6379fe6f1c31d3339f703f5aa8c3e63dd553",
+			"share": 0.0396,
+			"tone": "c6a274"
+		},
+		{
+			"id": "dust_play",
+			"note": {
+				"m": 8.0
+			},
+			"sha256": "b071094ac3a3ade45c3e535fce55215c081ca1b2e1e0751ffe059e6d09722fa9",
+			"share": 0.0029,
+			"tone": "c6a274"
+		},
+		{
+			"id": "mark_lens",
+			"note": {
+				"m": 2.0
+			},
+			"sha256": "2fe9c08b7602209dedc293988dc0ec10c9680171a68c89bf553e0962c9a412cf",
+			"share": 0.02,
+			"tone": "00e0ff"
+		},
+		{
+			"id": "mark_play",
+			"note": {},
+			"sha256": "6b627b0b9e481aa73df9591347e951bf73b3c99221691450b4ebd7e6113f496f",
+			"share": 0.005,
+			"tone": "00e0ff"
+		}
+	],
+	"lens_fade": "none",
+	"size": [
+		1600.0,
+		900.0
+	],
+	"tone_distance": 0.12,
+	"tool": "lens_fade_still.gd"
+}
