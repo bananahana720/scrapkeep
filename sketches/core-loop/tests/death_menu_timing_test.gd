@@ -117,6 +117,12 @@ func _run() -> void:
 	_t.check("New run is the first button, on N", first_id == "new" and String(actions[0].key) == "key_n", "first button '%s'" % first_id)
 	_t.check("Choose class stays", screens.button_for("class") != null, text.replace("\n", " | "))
 	_t.eq("a pad A on the dead screen is N", _game.pad_screen_key(_pad(JOY_BUTTON_A)), KEY_N)
+	# A stick player who has moved the highlight presses what is highlighted: A is left to the focused button.
+	var chosen: Control = screens.button_for("class")
+	chosen.grab_focus()
+	_t.eq("a pad A with a button highlighted is left to that button", _game.pad_screen_key(_pad(JOY_BUTTON_A)), KEY_NONE)
+	chosen.release_focus()
+	_t.eq("a pad A with nothing highlighted is N again", _game.pad_screen_key(_pad(JOY_BUTTON_A)), KEY_N)
 	_t.check("R does nothing on the dead screen", not _game._screen_key(KEY_R) and _game.flow.state_name() == "dead", "flow %s" % _game.flow.state_name())
 	_game._screen_key(KEY_N)
 	await _frames(3)
