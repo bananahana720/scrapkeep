@@ -8,6 +8,7 @@ const UiFonts := preload("res://src/ui/ui_fonts.gd")
 const LoreRows := preload("res://src/core/lore_rows.gd")
 const WhyCallout := preload("res://src/ui/why_callout.gd")
 const CallerTile := preload("res://src/ui/caller_tile.gd")
+const ScreenRegions := preload("res://src/ui/screen_regions.gd")
 
 # Moss is never seen (DESIGN-V2 sections 12 and 15): a voice from the hatch and a pair
 # of hands. His line is a speech bubble whose tail runs off the screen's left edge, the
@@ -40,6 +41,11 @@ const FADE := 0.25
 const HAND := 15.0
 const GESTURE_SECONDS := 0.6
 const INTRO_HOLD := 4.0
+# Words keep off these (the reward gates' name plates, group "word_keep_clear"): the bubble moves
+# down below any rect it would cover and never up, and stops above the prompts band.
+const KEEP_CLEAR_GROUP := "word_keep_clear"
+const KEEP_CLEAR_GAP := 8.0
+const SEAT_SPEED := 900.0
 # A caller's plate stands at the bubble's left: where it sits, how far the bubble's box moves
 # right to clear it, and the head room the name tag takes over the first line of words.
 const PLATE_AT := Vector2(6.0, 4.0)
@@ -67,6 +73,9 @@ var _clock := 0.0
 var _hold := 0.0
 var _gesture_clock := 0.0
 var _body := Vector2.ZERO
+# Where the line was asked to sit, and where the last seat left it.
+var _seat_base := 0.0
+var _seated_y := -1.0
 var _spin := 0.0
 var _pop := 1.0
 var _tween: Tween
@@ -676,6 +685,7 @@ func _process(delta: float) -> void:
 		return
 	_clock += delta
 	_gesture_clock += delta
+	_seat(delta)
 	if not _exchange.is_empty() and _rolled_off():
 		_end_exchange()
 		return
@@ -687,6 +697,41 @@ func _process(delta: float) -> void:
 			# The line had its whole time, and a caller's time is at least their voice's.
 			hush(true)
 	queue_redraw()
+
+
+# Eases the bubble down from where its owner put it, below any rect in KEEP_CLEAR_GROUP it would cover, and
+# back up when the rects go. Whatever y its owner last set is the seat (the workshop sets it after the line
+# is said, the hello before), so it is read here each frame, never remembered from the line. When no seat
+# above the prompts band clears a rect, the bubble stops at the band and covers part of the rect: a speech
+# line is short and cannot move aside (its tail runs off the screen's left edge).
+func _seat(delta: float) -> void:
+	if not is_inside_tree():
+		return
+	if not is_equal_approx(position.y, _seated_y):
+		_seat_base = position.y
+	var rects: Array[Rect2] = []
+	for node in get_tree().get_nodes_in_group(KEEP_CLEAR_GROUP):
+		if node.has_method("keep_clear_rects"):
+			rects.append_array(node.keep_clear_rects())
+	var limit := ScreenRegions.rect("prompts", get_viewport().get_visible_rect().size).position.y
+	var want := seat_y(_seat_base, Rect2(position.x, _seat_base, size.x, size.y), rects, limit)
+	position.y = move_toward(position.y, want, SEAT_SPEED * delta)
+	_seated_y = position.y
+
+
+# The top edge for a box asked to sit at base_y: below every rect it would cover, and no lower than leaves
+# its bottom above limit_y (when the base is already lower, the base).
+static func seat_y(base_y: float, box: Rect2, rects: Array[Rect2], limit_y: float) -> float:
+	var y := base_y
+	for _pass in rects.size() + 1:
+		var moved := false
+		for r in rects:
+			if r.intersects(Rect2(box.position.x, y, box.size.x, box.size.y)):
+				y = r.end.y + KEEP_CLEAR_GAP
+				moved = true
+		if not moved:
+			break
+	return minf(y, maxf(base_y, limit_y - box.size.y))
 
 
 # The bubble's outline: a rounded box whose corners tighten and whose edge grows teeth
