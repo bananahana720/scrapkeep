@@ -31,13 +31,20 @@ const GLANCE_BREAK_STICK := 0.25
 const GLANCE_IN_VIEW := 0.7
 # The longest wall step one frame gives the glance (see _process).
 const GLANCE_STEP_CAP := 0.05
-# A wall close behind the ball shortens the arm until the 1 m ball fills the lens (PF-06). Below
-# TIGHT_ARM metres of free arm the arm tips up by up to TIGHT_LIFT rad, full at TIGHT_FULL, so the
-# lens rises over the ball instead of sitting inside it. 4 m is where the ball is a seventh of the
-# view's height; the lens is turned back by the lift, so the aim stays the player's.
+# A wall close behind the ball shortens the arm until the 1 m ball fills the lens (PF-06). The arm
+# then tips up so the lens rises over the ball; the lens is turned back by the lift, so the aim stays
+# the player's. How tight the view is comes from a probe of the arm's own unlifted direction (see
+# _free_arm), never from the arm being turned, so the lift cannot change its own input.
+# At 4 m the 1 m ball spans about 28 degrees, near half the 65 degree lens: where it starts to crowd.
 const TIGHT_ARM := 4.0
+# At 1.5 m the lens is half a ball-radius off the shell and the ball fills the lens whatever follows.
 const TIGHT_FULL := 1.5
+# 0.6 rad lifts the lens about 1 m at a 2 m arm, enough to clear the top of the 1 m ball.
 const TIGHT_LIFT := 0.6
+# The arm never tips past this, just short of straight up (1.57), where the yaw frame would flip.
+const MAX_ARM_PITCH := -1.5
+# A lifted probe must free at least this much arm over the unlifted one, or the lift is not worth it.
+const LIFT_GAIN := 0.3
 # Situation rows. arm 0.0 means no opinion; pitch_bias tilts the arm without touching the
 # player's pitch; shake_cap is the most total shake allowed while the row is active.
 const PROFILES := {
@@ -87,6 +94,7 @@ var _locked := false
 var _boss_reach := false
 var _pitch_bias := 0.0
 var _tight := 0.0
+var _probe := SphereShape3D.new()
 var _fov_add := 0.0
 var _glance_subject: Node3D
 var _glance_seconds := 0.0
@@ -102,6 +110,7 @@ func setup(target_ref, tuning_ref) -> void:
 	var probe := SphereShape3D.new()
 	probe.radius = 0.3
 	arm.shape = probe
+	_probe.radius = probe.radius
 	arm.spring_length = 8.0
 	arm.margin = 0.25
 	# SpringArm3D is a plain Node3D: only the raw mask is available, and it must see
@@ -180,6 +189,7 @@ func snap(heading: Vector3, pitch_value := -0.30) -> void:
 	global_position = target.shown_position() + Vector3.UP * 0.8
 	_previous_velocity = target.state.velocity
 	_kick = Vector3.ZERO
+	_tight = 0.0
 	_glance_subject = null
 
 
@@ -238,6 +248,33 @@ func set_lock(point) -> void:
 
 func set_boss_reach(on: bool) -> void:
 	_boss_reach = on
+
+
+# 0..1: how far the free arm along `arm_pitch` is under TIGHT_ARM, or 0 when tipping the arm up
+# would not free LIFT_GAIN metres of it (a roof). Reads two probes of its own, so the turn the arm
+# is under does not feed back; an arm outside the tree or in a world with no walls reads free.
+func _tight_target(arm_pitch: float) -> float:
+	var free := _free_arm(arm_pitch)
+	if free >= TIGHT_ARM:
+		return 0.0
+	if _free_arm(maxf(arm_pitch - TIGHT_LIFT, MAX_ARM_PITCH)) < free + LIFT_GAIN:
+		return 0.0
+	return clampf((TIGHT_ARM - free) / (TIGHT_ARM - TIGHT_FULL), 0.0, 1.0)
+
+
+# Metres of arm free along a pitch from the pivot, up to TIGHT_ARM: the arm's own probe shape, mask
+# and margin.
+func _free_arm(arm_pitch: float) -> float:
+	if not is_inside_tree():
+		return TIGHT_ARM
+	var query := PhysicsShapeQueryParameters3D.new()
+	query.shape = _probe
+	query.transform = Transform3D(Basis.IDENTITY, global_position)
+	query.motion = yaw_basis() * Basis(Vector3.RIGHT, arm_pitch) * Vector3.BACK * TIGHT_ARM
+	query.collision_mask = arm.collision_mask
+	query.margin = arm.margin
+	var fractions := get_world_3d().direct_space_state.cast_motion(query)
+	return fractions[0] * TIGHT_ARM if fractions.size() > 0 else TIGHT_ARM
 
 
 func active_profiles() -> Array:
@@ -319,11 +356,8 @@ func _process(delta: float) -> void:
 	var profile_ease := 1.0 - exp(-PROFILE_EASE * delta)
 	_pitch_bias = lerpf(_pitch_bias, clampf(bias_target, -BIAS_LIMIT, BIAS_LIMIT), profile_ease)
 	_fov_add = lerpf(_fov_add, add_target, profile_ease)
-	# The arm's collided length from the last physics tick; 0..1 as it drops from TIGHT_ARM to TIGHT_FULL.
-	var tight_target := clampf((TIGHT_ARM - arm.get_hit_length()) / (TIGHT_ARM - TIGHT_FULL), 0.0, 1.0)
-	_tight = lerpf(_tight, tight_target, profile_ease)
-	# The arm never tips past straight up, whatever the player's pitch already is.
-	var lift := minf(maxf(-TIGHT_LIFT * _tight, -1.5 - (pitch + _pitch_bias)), 0.0)
+	_tight = lerpf(_tight, _tight_target(pitch + _pitch_bias), profile_ease)
+	var lift := maxf(-TIGHT_LIFT * _tight, MAX_ARM_PITCH - (pitch + _pitch_bias))
 	arm.spring_length = lerpf(arm.spring_length, lerpf(speed_arm, SHOULDER_ARM, shoulder_blend), maxf(ease, shoulder_blend * 0.25))
 	_punch = move_toward(_punch, 0.0, _punch_decay * delta)
 	_base_fov = lerpf(_base_fov, lerpf(FOV_REST, FOV_FAST, fraction), ease)
