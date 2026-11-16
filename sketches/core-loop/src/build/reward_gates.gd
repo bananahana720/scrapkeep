@@ -33,8 +33,8 @@ const ScreenRegions := preload("res://src/ui/screen_regions.gd")
 # It is never slotted, moved aside or clamped to a band. One type size, the name on one row or two when
 # its room is narrow; the effect lines under a one-row name when they fit the room. When names would still
 # overlap, the gate farther from the ball hides its name only (fit_names), with hysteresis so the set of
-# named gates does not flip with a pixel of camera sway. The group "word_keep_clear" carries keep_clear_rects(),
-# the shown names' screen rects, for the words that stamp on screen.
+# named gates does not flip with a pixel of camera sway. The groups "word_keep_clear" (sound words) and
+# "speech_keep_clear" (the speech bubble) carry keep_clear_rects(), the shown names' screen rects.
 
 signal chosen(part_id: String)
 
@@ -77,6 +77,7 @@ const DETAIL_BACK := 16.0
 const ROWS_BACK := 16.0
 const NAME_TIE_M := 1.0
 const KEEP_CLEAR_GROUP := "word_keep_clear"
+const SPEECH_KEEP_CLEAR_GROUP := "speech_keep_clear"
 
 var offers: Array = []
 # Build's offer_mark(part_id) -> String; the star line under an offer, or "".
@@ -107,6 +108,7 @@ var _fixed := false
 
 func _init() -> void:
 	add_to_group(KEEP_CLEAR_GROUP)
+	add_to_group(SPEECH_KEEP_CLEAR_GROUP)
 	# Runs through a pause only to hide the names, so a menu over the world is not wearing them.
 	process_mode = Node.PROCESS_MODE_ALWAYS
 

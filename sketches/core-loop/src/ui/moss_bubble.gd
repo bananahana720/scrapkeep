@@ -41,9 +41,11 @@ const FADE := 0.25
 const HAND := 15.0
 const GESTURE_SECONDS := 0.6
 const INTRO_HOLD := 4.0
-# Words keep off these (the reward gates' name plates, group "word_keep_clear"): the bubble moves
-# down below any rect it would cover and never up, and stops above the prompts band.
-const KEEP_CLEAR_GROUP := "word_keep_clear"
+# The bubble keeps off these (the reward gates' name plates, group "speech_keep_clear"): it moves
+# down below any rect it would cover and never up, and stops above the prompts band. Its own group,
+# not the sound words' "word_keep_clear": that one also holds the reticle, the ball and the target tags,
+# which pass under a speech line all the time and must not push it around.
+const KEEP_CLEAR_GROUP := "speech_keep_clear"
 const KEEP_CLEAR_GAP := 8.0
 const SEAT_SPEED := 900.0
 # A caller's plate stands at the bubble's left: where it sits, how far the bubble's box moves
