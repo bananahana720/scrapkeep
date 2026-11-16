@@ -217,3 +217,21 @@ test("a red row covers only the checks it names", () => {
   // A row from a ledger with no check column covers nothing by name, so nothing is called uncovered.
   assert.deepEqual(uncoveredChecks(parseLedger(ledger(row("a_test"))).rows[0], { labels: ["x"] }), []);
 });
+
+test("a kill or an error line beside a named check still needs its own word on the row (PR 1051 review)", () => {
+  const [rowA] = parseLedger(checked(row("a_test") + "\tpin within 2 s")).rows;
+  // bot_fairness_test, wave 40 gate: the named check failed, then a SCRIPT ERROR, then the runner killed it.
+  assert.deepEqual(uncoveredChecks(rowA, { labels: ["pin within 2 s"], timedOut: true }), ["TIME-OUT"]);
+  assert.deepEqual(uncoveredChecks(rowA, { labels: ["pin within 2 s"], errorLine: true }), ["ERROR-LINE"]);
+  assert.deepEqual(uncoveredChecks(rowA, { labels: ["pin within 2 s"], timedOut: true, errorLine: true }), ["TIME-OUT", "ERROR-LINE"]);
+  const [rowB] = parseLedger(checked(row("b_test") + "\tpin within 2 s ;; TIME-OUT ;; ERROR-LINE")).rows;
+  assert.deepEqual(uncoveredChecks(rowB, { labels: ["pin within 2 s"], timedOut: true, errorLine: true }), []);
+});
+
+test("a star never stands for a kill or an error line, and a check of stars alone is refused", () => {
+  const [wide] = parseLedger(checked(row("a_test") + "\tclass * builds ;; T*")).rows;
+  assert.deepEqual(uncoveredChecks(wide, { labels: ["class 1 builds"], timedOut: true, errorLine: true }), ["TIME-OUT", "ERROR-LINE"]);
+  const bad = parseLedger(checked(row("a_test") + "\t*", row("b_test") + "\tpin ;; * *"));
+  assert.equal(bad.problems.length, 2);
+  assert.match(bad.problems[0].message, /a check of stars alone covers every check/);
+});

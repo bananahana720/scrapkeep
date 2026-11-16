@@ -8,7 +8,7 @@ import { parseLedger } from "../known-failing.mjs";
 import { place, sortChanges, testsToRerun } from "./carry.mjs";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
-import { WEEKLY_HEADER, chunks, classifyFailure, errorCounts, gateLists, importOutcome, nearLimit, numbered, parseSmokeLog, parseWeekly, parseWindow, renderReceipt, windowNames, namedPool, testName, retime, shardVerdict, soloEnvironment, soloTests, failedChecks } from "./shard.mjs";
+import { WEEKLY_HEADER, chunks, classifyFailure, errorCounts, gateLists, importOutcome, nearLimit, numbered, parseSmokeLog, parseWeekly, parseWindow, renderReceipt, windowNames, namedPool, testName, retime, shardVerdict, soloEnvironment, soloTests, failedChecks, whatFailed } from "./shard.mjs";
 import { WEEKLY_MAX_DAYS, checkTally, checkWeeklySweep, expectedShards, isDeferred, isPass, planHead, tallyRows } from "./tally.mjs";
 import { WEEKLY_FILE, checkWeekly } from "./weekly.mjs";
 
@@ -104,6 +104,27 @@ test("a red row carries only the check it names; another failing check in the sa
   // A killed run is not the named check either.
   assert.equal(classifyFailure("red_test", [false], named, null, { labels: [], timedOut: true }).call, "new-red");
   assert.deepEqual(failedChecks("[a] 1 -> PASS\n  >> [pin within 2 s] got 3 -> FAIL\n[pin within 2 s] got 3 -> FAIL\n[stage 1 draw] got \"x\", want \"y\" -> FAIL\n"), ["pin within 2 s", "stage 1 draw"]);
+});
+
+test("every failed run of a listed test is read against its row, not only the last one (PR 1051 review)", () => {
+  const named = parseLedger(["test\tkind\tcause\towner\tadded\treview\tcheck", "red_test\tred\tpin off by 2 s\tcoordinator\t2026-11-09\t2026-11-23\tpin within 2 s"].join("\n")).rows;
+  const pin = "[pin within 2 s] got 3 -> FAIL\n";
+  const other = "[stage 1 draw] got 1 -> FAIL\n";
+  // First run killed after an unnamed check failed; alone it fails only the named check.
+  const mixed = whatFailed([{ ok: false, text: other, timedOut: true }, { ok: false, text: pin, timedOut: false }]);
+  assert.deepEqual(mixed, { labels: ["stage 1 draw", "pin within 2 s"], timedOut: true, errorLine: false });
+  assert.equal(classifyFailure("red_test", [false], named, null, mixed).call, "new-red");
+  // Every solo run passed: the first run is still read, so a retry does not decide the call.
+  const retried = whatFailed([{ ok: false, text: other, timedOut: false }, { ok: true, text: "[a] 1 -> PASS\n", timedOut: false }]);
+  assert.deepEqual(retried.labels, ["stage 1 draw"]);
+  assert.equal(classifyFailure("red_test", [true], named, null, retried).call, "new-red");
+  assert.equal(classifyFailure("red_test", [true], named, null, whatFailed([{ ok: false, text: pin, timedOut: false }, { ok: true, text: "", timedOut: false }])).call, "carried");
+  // A passing run's lines are not read; an ERROR line of a failed run is.
+  assert.deepEqual(whatFailed([{ ok: false, text: pin + "ERROR: resumed after await\n", timedOut: false }, { ok: true, text: other, timedOut: false }]), { labels: ["pin within 2 s"], timedOut: false, errorLine: true });
+  assert.equal(whatFailed([{ ok: false, text: pin + "   SCRIPT ERROR: Invalid call\n", timedOut: false }]).errorLine, true);
+  // A failed run with no log, and a failing line the pattern cannot label, are never read as nothing.
+  assert.deepEqual(whatFailed([{ ok: false, text: null, timedOut: false }]).labels, ["a failed run left no log"]);
+  assert.deepEqual(failedChecks("CUA check -> FAIL: door\n[pin within 2 s] got 3 -> FAIL\n"), ["unlabelled failing line: CUA check -> FAIL: door", "pin within 2 s"]);
 });
 
 test("a shard is red only for a new red, and its verdict names what it carried", () => {

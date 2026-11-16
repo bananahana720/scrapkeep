@@ -155,9 +155,9 @@ export const SUSPECT_LOAD_FACTOR = 0.5;
 //   suspect-load  would be new-red or mismatch, but every failed solo run timed out with no failing check
 //                 line and one started on an overloaded machine: it blocks, and is neither red nor pass
 // `evidence` is { threads, runs: [{ timedOut, failLines, load }] }, one run per entry of soloResults.
-// `failed` is { labels, timedOut } for the run that decides the call (the last failed solo run, or the first run
-// when the test was not rerun). A red row carries only the checks it names (ruling dx): any other failing check,
-// a time-out or an error line the row does not name makes the failure a new red.
+// `failed` is what every failed run of the test did (`whatFailed`: the first run and each solo run). A red row
+// carries only what it names (ruling dx): any other failing check, and a kill or an error line the row does not
+// name, makes the failure a new red, also when the test passed alone afterwards.
 export function classifyFailure(test, soloResults, ledgerRows, evidence = null, failed = null) {
   const carried = callFailure(test, soloResults, ledgerRows);
   const unnamed = failed && carried.call === "carried" && carried.row.kind === "red" ? uncoveredChecks(carried.row, failed) : [];
@@ -188,11 +188,34 @@ function callFailure(test, soloResults, ledgerRows) {
 }
 
 // The labels of a log's failing checks, once each in the order they first fail: the text between the square
-// brackets of a "[label] ... -> FAIL" line (the runner repeats a failing line with a ">>" mark).
+// brackets of a "[label] ... -> FAIL" line (the runner repeats a failing line with a ">>" mark). A failing line
+// with no label in brackets, or a line that starts with FAIL, is returned whole under "unlabelled failing line",
+// so no ledger row covers it by accident.
 export function failedChecks(text) {
   const labels = [];
-  for (const match of text.matchAll(/^\s*(?:>> )?\[(.+?)\] .*-> FAIL\s*$/gm)) if (!labels.includes(match[1])) labels.push(match[1]);
+  for (const raw of text.split("\n")) {
+    const line = raw.replace(/^\s*(?:>> )?/, "").trimEnd();
+    if (!/-> FAIL\b/.test(line) && !/^FAIL\b/.test(line)) continue;
+    const label = line.match(/^\[(.+?)\] .*-> FAIL\b/)?.[1] ?? `unlabelled failing line: ${line}`;
+    if (!labels.includes(label)) labels.push(label);
+  }
   return labels;
+}
+
+// What the failed runs of one test did, read together: `runs` is [{ ok, text, timedOut }] for the first run and
+// each solo run, in order. Every failed run counts, so a check that failed once is not dropped because a later
+// run passed or failed another way (ruling dx: a retry never decides a verdict). A passing run is not read.
+export function whatFailed(runs) {
+  const failed = runs.filter((run) => !run.ok);
+  const labels = [];
+  for (const run of failed) {
+    for (const label of run.text === null ? ["a failed run left no log"] : failedChecks(run.text)) if (!labels.includes(label)) labels.push(label);
+  }
+  return {
+    labels,
+    timedOut: failed.some((run) => run.timedOut),
+    errorLine: failed.some((run) => run.text !== null && /^\s*(?:SCRIPT ERROR|ERROR)\b/m.test(run.text)),
+  };
 }
 
 // The failed tests that are rerun alone. A test with a red row whose first run failed a check is not: the row
@@ -487,6 +510,7 @@ async function run(options) {
   // Read before the first step, so the calls below use the ledger of the gated head.
   const ledger = parseLedger(readFileSync(path.join(root, LEDGER_FILE), "utf8"));
   if (ledger.problems.length > 0) throw new Error(`${LEDGER_FILE} does not parse; run \`node scripts/known-failing.mjs --check\``);
+  if (!ledger.hasChecks) throw new Error(`${LEDGER_FILE} has no check column, so a red row would carry every check of its test (ruling dx); run \`node scripts/known-failing.mjs --check\``);
 
   mkdirSync(options.out, { recursive: true });
   const stateFile = path.join(options.out, "state.json");
@@ -574,14 +598,17 @@ async function run(options) {
   const failures = failed.map((test) => {
     const lastFailed = solo.get(test).lastIndexOf(false) + 1;
     const soloLog = lastFailed > 0 ? path.join(options.out, `solo-logs-${lastFailed}`, test + ".log") : null;
-    // A test that was not rerun (a red row) shows the failing lines of its first run.
-    const shownLog = soloLog ?? (solo.get(test).length === 0 ? path.join(options.out, "logs", test + ".log") : null);
-    const shownText = shownLog && existsSync(shownLog) ? readFileSync(shownLog, "utf8") : null;
+    const read = (file) => (existsSync(file) ? readFileSync(file, "utf8") : null);
+    const firstText = read(path.join(options.out, "logs", test + ".log"));
+    // The receipt shows the last failed solo run, or the first run when no solo run failed.
+    const shownText = soloLog ? read(soloLog) : firstText;
     const lines = shownText === null ? [] : failingLines(shownText, 12);
-    // The run the row is read against: the last failed solo run, or the first run when there was none. When
-    // every solo run passed there is no failed run alone to read, and the row carries as before.
-    const timedOut = lastFailed > 0 ? Boolean(soloEvidence.get(test).runs[lastFailed - 1]?.timedOut) : Boolean(firstRun(test)?.timedOut);
-    const failure = classifyFailure(test, solo.get(test), ledger.rows, soloEvidence.get(test), shownText === null ? null : { labels: failedChecks(shownText), timedOut });
+    // The row is read against every failed run: the first run and each solo run.
+    const runs = [
+      { ok: false, text: firstText, timedOut: firstRun(test)?.timedOut ?? true },
+      ...solo.get(test).map((ok, index) => ({ ok, text: read(path.join(options.out, `solo-logs-${index + 1}`, test + ".log")), timedOut: soloEvidence.get(test).runs[index].timedOut })),
+    ];
+    const failure = classifyFailure(test, solo.get(test), ledger.rows, soloEvidence.get(test), whatFailed(runs));
     return { ...failure, lines, linesFrom: soloLog ? "alone" : "in its first run", ...(missing.includes(test) ? { note: `no verdict line in the first run (killed or never started); ${failure.note}` } : {}) };
   });
   const logsDir = path.join(options.out, "logs");

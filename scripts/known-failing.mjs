@@ -34,8 +34,9 @@ export const TESTS_DIRECTORY = "sketches/core-loop/tests";
 export const KINDS = ["red", "flake"];
 // The seventh column (ruling dx, 15 Nov 2026): the checks a red row covers, as the test prints them between
 // the square brackets of a "-> FAIL" line, joined by " ;; ". A star stands for any text ("class * builds").
-// TIME-OUT covers a run killed at its limit, and ERROR-LINE a run that fails with no failing check (an ERROR
-// line at exit). A flake row has "-": the listed flakes keep their allowance until each is fixed.
+// TIME-OUT covers a run killed at its limit (or one that left no exit code), and ERROR-LINE a run that prints
+// an ERROR or SCRIPT ERROR line or fails with no failing check; each is needed also beside a named check, and
+// neither is matched by a star. A flake row has "-": the listed flakes keep their allowance until each is fixed.
 export const CHECK_COLUMN = "check";
 export const CHECK_SEPARATOR = ";;";
 export const TIME_OUT = "TIME-OUT";
@@ -76,6 +77,7 @@ export function parseLedger(text) {
     const named = hasChecks && check !== "-" ? check.split(CHECK_SEPARATOR).map((part) => part.trim()).filter(Boolean) : null;
     const row = { test, kind, cause, owner, added, review, checks: kind === "red" ? named : null, line: number };
     if (hasChecks && kind === "red" && !named?.length) problems.push({ line: number, message: `a red row names the check it covers in the ${CHECK_COLUMN} column (ruling dx), not "-"` });
+    if (kind === "red" && named?.some((part) => /^[*\s]+$/.test(part))) problems.push({ line: number, message: `a check of stars alone covers every check of the test; name the check (ruling dx)` });
     if (hasChecks && kind === "flake" && check !== "-") problems.push({ line: number, message: `a flake row has "-" in the ${CHECK_COLUMN} column` });
     if (test !== testName(test)) problems.push({ line: number, message: `"${test}" must be the test's base name, with no folder and no .gd` });
     if (!KINDS.includes(kind)) problems.push({ line: number, message: `kind "${kind}" must be one of: ${KINDS.join(", ")}` });
@@ -92,17 +94,20 @@ export function parseLedger(text) {
   return { rows, problems, hasChecks };
 }
 
+const RESERVED = [TIME_OUT, ERROR_LINE];
 const checkPattern = (named) => new RegExp("^" + named.split("*").map((part) => part.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join(".*") + "$");
 
-// What a failed run did that its red row does not cover. `failed` is { labels, timedOut }: the labels of the
-// run's failing checks, and whether it was killed at its limit. A run with no failing check failed some other
-// way: TIME-OUT when it was killed, ERROR-LINE otherwise. A row with no named checks (a flake row, or a ledger
-// without the column) covers by test name only, so nothing is uncovered.
-export function uncoveredChecks(row, { labels = [], timedOut = false } = {}) {
+// What the failed runs of a test did that its red row does not cover. `failed` is { labels, timedOut, errorLine }:
+// the labels of the failing checks, whether a run was killed at its limit, and whether a run printed an ERROR or
+// SCRIPT ERROR line. A kill and an error line each need their own word on the row (TIME-OUT, ERROR-LINE), also
+// beside a failing check the row names, and the two words are matched whole, never by a star. A run that failed
+// with none of the three counts as an error line. A row with no named checks (a flake row, or a ledger without
+// the column) covers by test name only, so nothing is uncovered.
+export function uncoveredChecks(row, { labels = [], timedOut = false, errorLine = false } = {}) {
   if (!row?.checks) return [];
-  const patterns = row.checks.map(checkPattern);
-  const did = labels.length > 0 ? labels : [timedOut ? TIME_OUT : ERROR_LINE];
-  return did.filter((label) => !patterns.some((pattern) => pattern.test(label)));
+  const patterns = row.checks.filter((named) => !RESERVED.includes(named)).map(checkPattern);
+  const words = [...(timedOut ? [TIME_OUT] : []), ...(errorLine || (labels.length === 0 && !timedOut) ? [ERROR_LINE] : [])];
+  return [...labels.filter((label) => !patterns.some((pattern) => pattern.test(label))), ...words.filter((word) => !row.checks.includes(word))];
 }
 
 // Rows whose review date has passed. The day itself is still in time.
