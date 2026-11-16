@@ -1,0 +1,80 @@
+---
+name: scrapkeep-verify-formal
+description: "Check by model the promises Scrapkeep's run flow and launch swipe make under every interruption (death, retry, new run, quit, Continue, either order of the gate's two signals), with a TLA+ model kept beside this skill. Use when a change touches flow.gd, launch_take.gd or the launch swipe calls in game.gd, when a review finds an interruption that breaks a launch or a run's end, or when asked to formally verify or model-check the run flow; which tests qualify a diff stays in scrapkeep-verify, and playing the game stays in scrapkeep-verify-game."
+---
+
+# Check the run flow against its model
+
+Resolve this skill directory through symlinks, then run `git -C <resolved-skill-directory> rev-parse --show-toplevel` to identify the repository root. Read `AGENTS.md` and `docs/project/README.md`. Use root-relative source paths below. The linked Claude skill resolves to this same body.
+
+This skill owns one formal check. A test plays the orders of events someone wrote down. This check tries every order of the steps in `models/RunFlow.tla`, a small model of a run from the title to its summary and of the launch swipe (the comic panel that covers the cut between stages). It does not replace a test: `scrapkeep-verify` still picks the tests for a diff, and a model result says nothing about feel, timing in seconds or drawing.
+
+`F=.agents/skills/scrapkeep-verify-formal`. Paths in the tables are under `sketches/core-loop/src`.
+
+## The rules
+
+Each rule is one promise to the player. [references/coverage.md](references/coverage.md) has the code behind every step of the model.
+
+| Rule | The promise | What breaks for the player |
+| --- | --- | --- |
+| `TakeNamesHeldPart` | When the swipe closes over a launch, it names a part only if the live run holds it. | The screen says a part was taken that the run does not have. |
+| `SeamOwned` | The flow waits for the swipe's cut only while a swipe really owes one. | The launch never lands and the run hangs in the air. |
+| `LaunchLands` | Every launch ends: the next stage, the boss or the summary. | The same hang, as a rule about time. |
+| `WardenGoneOpens` | A sealed stage whose Warden is gone opens its gates. | A stage with nothing to fight and no way on. |
+| `EndsOnce` | A run ends at most once. | Rewards and the run log are written twice. |
+| `PickHeard` | A pilot pick is never dropped without a sign. | A press on pilot select does nothing. |
+| `StampOnlySeam` | A pilot pick's swipe never carries a part's name. | The run-start swipe shows a part instead of its own word. |
+
+## Is this change covered?
+
+1. Run `git diff --stat <sync commit>..HEAD -- sketches/core-loop/src/core/flow.gd sketches/core-loop/src/presentation/launch_take.gd sketches/core-loop/src/game.gd sketches/core-loop/src/ui/pause_menu.gd sketches/core-loop/src/ui/screens.gd`. The sync commit is the last line of [references/coverage.md](references/coverage.md). No output: the model still describes the code, go to "Run it". (design choice)
+2. With output, read the diff of every function named in the coverage table, and look for a new caller of a covered function or a new writer of `_seam_take`, `_taken_part`, `_launched`, `run.over` or the swipe's `phase`. A new way to interrupt a run is a new action even when no covered function changed (VFM-05).
+3. Change the model from the code before you run it, never from what makes it pass. One call in the code is one action in the model; two handlers of one signal are one action with an order choice (VFM-06). Then move the sync commit.
+
+## Run it
+
+1. Run `bash $F/models/make-configs.sh`. It rewrites every `.cfg` from the one table of guards in that script, so a config never drifts from its neighbours. (design choice)
+2. Check each config with the `astack:statechart` skill, giving it `RunFlow.tla` and the config. That skill owns the checker command and reads a result as a shortest path in plain words. Each run takes a few seconds.
+3. Compare with this table. Anything else is a result to explain, in "Read a result".
+
+| Config | Stands for | Must report |
+| --- | --- | --- |
+| `guarded-store`, `guarded-nostore` | every guard in place, the real game and the store-less test flow | no break |
+| `today-store`, `today-nostore` | the code at the sync commit | only the open findings in [references/findings.md](references/findings.md) |
+| `broken-retry` | `retry_stage` without `_untake` | `TakeNamesHeldPart` breaks |
+| `broken-end` | `_end_run` without `_untake` | `TakeNamesHeldPart` breaks |
+| `broken-vanish` | no `_warden_vanished` tick | `WardenGoneOpens` breaks |
+| `broken-endguard` | `_on_player_died` without its `in_play` guard | `EndsOnce` breaks |
+| `broken-keys` | screen keys not swallowed under the swipe | `PickHeard` breaks |
+| `broken-busy` | `play_launch_take` not refusing a busy swipe | `SeamOwned`, `StampOnlySeam`, `LaunchLands` break |
+| `untimed` | the time assumption off | `TakeNamesHeldPart` breaks, by a path no player can make |
+
+A `broken-*` config that reports no break means the model can no longer see that fault. Fix the model before trusting any pass (VFM-03).
+
+## Read a result
+
+1. A break in a `guarded-*` or `today-*` config is a candidate, not a bug. Tell it as steps in the code's words, using the coverage table. (VFM-02)
+2. Replay it on the real game, one model step per call, before you report it. Copy the closest script from `$F/replay/` into `sketches/core-loop/tests/` under a name starting `zz_replay_`, change its steps, and run it as [GATE.md](../../../project-guide/handoff/GATE.md) runs one test (headless Godot with a scratch data folder, `--script res://tests/<name>.gd`). Delete the copy afterwards. (VFM-02)
+3. If a step cannot be made in the game, the model is wrong. Ask what stops the step: an input rule (the swipe swallows screen keys), a clock (a stage cannot be cleared inside one swipe), or a guard you did not model. Put that in the model as a named constant, keep a config that turns it off, and record the lesson. Do not delete the step to get a pass. (VFM-01, VFM-02)
+4. If every step replays, it is a finding about the code. Add it to [references/findings.md](references/findings.md) with the steps, the harm and the replay's output. Do not weaken the rule, and do not change game code unless the task is that fix. (design choice)
+5. When a fix lands, its guard constant flips in `make-configs.sh` (`today-*` must then match `guarded-*`), the finding closes, and the sync commit moves.
+
+## Change the model on purpose
+
+- A new interruption (a new screen, key, menu entry or signal that can fire during a launch or at a run's end): add an action, enabled in every state where the code allows the call, not only where it is expected. (VFM-05)
+- A new guard in the code: add a constant that defaults to TRUE in `models/mkcfg.sh`, use it in the action, and add a `broken-*` config that turns it off and names the rule that must break. A guard no rule can see failing does not get a constant. (VFM-03, VFM-04)
+- A rule is stated at the moment the player sees it. `TakeNamesHeldPart` is read when the swipe closes, not for as long as the word stays up. (VFM-08)
+- Bounds: two stages before the boss, two runs. Raise `Stages` or `MaxRuns` in `mkcfg.sh` when a change depends on a third. (design choice)
+
+## What a pass does not cover
+
+A pass covers the model within its bounds and its time assumption (VFM-07). Not modelled: the camp gate's way into a run, the victory lap, stage replay from the death screen, the arena's own retry beyond "the run stays in the boss state", saves beyond one run document, seconds, and anything drawn. `references/coverage.md` lists them.
+
+## Lessons and updates
+
+[references/lessons.md](references/lessons.md) holds VFM-01 onward. Status is `established`, `provisional` or `retracted`. When a result overturns a lesson, retract it, fill `Overturned by`, change the rule line above in the same commit, and add a changelog row. `/astack:create-formal-verification-skill maintain` brings the model back in line after changes that skipped this skill.
+
+## Host adapter
+
+- Claude Code: `/scrapkeep-verify-formal`.
+- Report the actual model and `CLAUDE_EFFORT` or its absence.
