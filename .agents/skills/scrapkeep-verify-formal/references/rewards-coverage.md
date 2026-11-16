@@ -38,14 +38,14 @@ One reward id stands for every id: ids do not interact. The legacy key `reward:<
 | --- | --- |
 | `Launch` | the game starts: `sketches/core-loop/src/core/profile.gd:77` `load_profile`, the title's `sketches/core-loop/src/core/run_store.gd:60` `load`, then `sketches/core-loop/src/game.gd:618` `progress.setup`, whose `backfill_rewards` (`sketches/core-loop/src/core/progress.gd:85`) is step `B` |
 | `NewRun` | `sketches/core-loop/src/core/flow.gd:485` `_begin_run`: the door save (`:506`), `ctx.run.begin` clears the settled list (`sketches/core-loop/src/core/run_state.gd:285`), `enter_stage(1)` saves the entrance (`sketches/core-loop/src/core/flow.gd:742`) |
-| `Earn` | a fact meets the row: `sketches/core-loop/src/core/progress.gd:337` `_evaluate` to `:409` `_earn`, then step `G` |
-| `Checkpoint` | a run save point: `sketches/core-loop/src/core/flow.gd:742` (`enter_stage`), `:1119` `_save_boss_won` (pull request 1081, PF-55), `:649` `_on_death_saved`; each goes through `:703` `_save`, whose `_persist_companion` may save the profile first |
+| `Earn` | a fact meets the row: `sketches/core-loop/src/core/progress.gd:337` `_evaluate` to `:409` `_earn`, then step `G`, then `_earn`'s own profile save (`:419`). A granting earn therefore makes two profile saves, `grant_once`'s (`:229`) and `_earn`'s, and both are modelled: for the earn to leave nothing on disk, both must fail |
+| `Checkpoint` | a run save point: `sketches/core-loop/src/core/flow.gd:742` (`enter_stage`), `:1119` `_save_boss_won` (pull request 1081, PF-55), `:649` `_on_death_saved`, `:1291` `_save_cleared`; each goes through `:703` `_save`, whose `_persist_companion` may save the profile first |
 | `EndRun` | `sketches/core-loop/src/core/flow.gd:1247` `_record_end` clears the run to a tombstone (`:1259`, step `C`), then `run_ended` reaches progress, which saves the profile (`sketches/core-loop/src/core/progress.gd:331`) |
 | `Continue` | `sketches/core-loop/src/core/flow.gd:579` `resume_run`: `from_entrance_doc` restores the settled list (`:595`, `sketches/core-loop/src/core/run_state.gd:1392`), `reconcile_settled` (`sketches/core-loop/src/core/flow.gd:599`, `sketches/core-loop/src/core/progress.gd:195`) adds the run's ids to the profile and saves, then the resumed stage saves its entrance |
 | `Quit` | the game closes between calls; `sketches/core-loop/src/game.gd:1363` `_quit` saves nothing |
 | `Crash` | the process dies with file steps still to do (bounded by `MaxCrashes`) |
 | `StepB` | `sketches/core-loop/src/core/progress.gd:85-96` `backfill_rewards`: an earned row goes to `_grant_reward` |
-| `StepG` | `sketches/core-loop/src/core/progress.gd:104-114` `_grant_reward` and `:213-232` `grant_once`: refuse a key either list holds (`_is_settled`, `:117`), else settle it in both lists (`settle`, `:178`) and apply the unlock; the following profile save stands for `grant_once`'s save and `_earn`'s (`:419`), two saves of one unchanged document |
+| `StepG` | `sketches/core-loop/src/core/progress.gd:104-114` `_grant_reward` and `:213-232` `grant_once`: refuse a key either list holds (`_is_settled`, `:117`), else settle it in both lists (`settle`, `:178`), apply the unlock and save (`:229`). A refused grant saves nothing; the caller's save follows (`_earn`'s at `:419`; `backfill_rewards` makes none) |
 | `StepU` | the unlock applied after a save, in `broken-midsave` only |
 | `StepP` | `sketches/core-loop/src/core/profile.gd:110-133` `save`, first half: read the file, merge when its generation is not the one loaded |
 | `StepW`, `FailW` | `sketches/core-loop/src/core/profile.gd:135-147` and `sketches/core-loop/src/core/safe_store.gd:13` `write_atomic`: the write lands whole or fails and leaves the old file |
@@ -57,8 +57,8 @@ One reward id stands for every id: ids do not interact. The legacy key `reward:<
 | Constant | Today | What a config changes |
 | --- | --- | --- |
 | `Procs` | `{p1}` or `{p1, p2}` | one game, or two on one `user://` folder |
-| `MaxCrashes`, `MaxFails`, `MaxGen` | 2, 2, 6 (two games: 1, 1, 5) | bounds; `MaxGen` is a state constraint |
-| `ReconcileImports` | TRUE | FALSE in `guarded-*`: the candidate fix, Continue no longer copies the run document's settled ids into the profile |
+| `MaxCrashes`, `MaxFails`, `MaxGen` | 2, 2, 6 (two games: 1 crash, generation 5, and 0, 1 or 2 failed writes as the config says) | bounds; `MaxGen` is a state constraint |
+| `ReconcileCopies` | `"all"` | `"ledger"` in `guarded-*` and the `broken-*` configs built on it: the narrow candidate fix. `reconcile_settled` still copies ledger ids (`ledger.found.*`, settled at `sketches/core-loop/src/core/progress.gd:325-326`), never `reward:*` keys. The model holds one reward key and no ledger id, so it shows the fix's one effect on the reward: the key is not copied, and Continue may still save the profile because a ledger id was copied |
 | `LedgerChecked` | TRUE | FALSE in `broken-ledger`: grants ignore the settled ledger |
 | `GrantSavesOnce` | TRUE | FALSE in `broken-midsave`: `grant_once` saves between the settle and the unlock (the comment at `sketches/core-loop/src/core/progress.gd:214` names this fault) |
 
@@ -70,9 +70,9 @@ One reward id stands for every id: ids do not interact. The legacy key `reward:<
 | `rewards-today-one-nofail` | the code, one game, no failed write | both hold |
 | `rewards-today-two-once`, `rewards-today-two-nofail-once` | the code, two games | `AtMostOnce` breaks: each game grants the id it earned (R-2) |
 | `rewards-today-two-lost`, `rewards-today-two-nofail-lost` | the code, two games | `NeverLost` breaks; with no failed write, by the lost-update route in R-1 |
-| `rewards-guarded-one` | the candidate fix, one game | both hold |
-| `rewards-guarded-two-once` | the candidate fix, two games | `AtMostOnce` breaks as today (R-2) |
-| `rewards-guarded-two-lost` | the candidate fix, two games | `NeverLost` holds (about 44 million states, under three minutes on 8 workers) |
+| `rewards-guarded-one` | the narrow fix, one game | both hold |
+| `rewards-guarded-two-once` | the narrow fix, two games | `AtMostOnce` breaks as today (R-2) |
+| `rewards-guarded-two-lost` | the narrow fix, two games, up to two failed writes | `NeverLost` holds (98,483,331 states, about six minutes on 8 workers) |
 | `rewards-broken-ledger` | `guarded-one` with grants ignoring the ledger | `AtMostOnce` breaks |
 | `rewards-broken-midsave` | `guarded-one` with a save between settle and unlock | `NeverLost` breaks |
 | `rewards-reach` | probes that say "never" about a grant landing, a Continue, a failed write, a crash, a tombstone and a run document holding the settled id | every probe breaks |
@@ -80,5 +80,11 @@ One reward id stands for every id: ids do not interact. The legacy key `reward:<
 ## Not modelled
 
 The `.prev` run copy (`keep_prev`, `restore_prev`) and its restore; a profile file that cannot be read or comes from a newer build (both stop all profile saves for the session: covered as failed writes, not as their own state); the profile backup on a schema upgrade; the ledger leaves (`ledger.found.*`, where the settle is itself the grant, so a run-document settle without a profile save loses nothing); a row's reward target changing after the earn; more than one reward id; a run's merge of an older in-memory run document on load (`sketches/core-loop/src/core/run_store.gd:95`).
+
+Known gaps in the save points:
+
+- `EndRun` leaves out `_record_end`'s own profile saves before the tombstone: the ladder save on a win (`sketches/core-loop/src/core/flow.gd:1253`) and `_persist_companion` (`:1257`). A save that succeeds there writes the grant, so leaving them out only adds paths that lose; it hides no loss.
+- `Checkpoint` writes the run's current settled list. `_on_death_saved` (`sketches/core-loop/src/core/flow.gd:652-653`) rewrites the stored `_entrance` document, which was built at the last entrance or cleared save and can predate an earn, so in the code that save may carry an older settled list than the model's. It can only drop a key from the run file, which makes R-1 need a later save point; it adds no path.
+- `_save_cleared` (`sketches/core-loop/src/core/flow.gd:1291-1295`) is folded into `Checkpoint` with the other `_save` callers.
 
 Sync commit: 04a7311c4
