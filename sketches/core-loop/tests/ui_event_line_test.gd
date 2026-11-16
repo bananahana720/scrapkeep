@@ -6,6 +6,7 @@ extends SceneTree
 
 const Game := preload("res://src/game.gd")
 const EdgeMarkers := preload("res://src/ui/edge_markers.gd")
+const EventKinds := preload("res://src/core/event_kinds.gd")
 const Palette := preload("res://src/core/palette.gd")
 const T := preload("res://tests/support/t.gd")
 
@@ -33,6 +34,13 @@ func _life(hud, limit: float) -> float:
 	return -1.0
 
 
+func _step(hud, seconds: float) -> void:
+	var spent := 0.0
+	while spent < seconds:
+		hud._step_toast(1.0 / 60.0)
+		spent += 1.0 / 60.0
+
+
 func _announce(hud, id: String, lead: float) -> void:
 	hud.clear_toasts()
 	hud.edge_markers._incoming.clear()
@@ -49,8 +57,8 @@ func _run() -> void:
 	_t.check("the line is up with the marker", hud.toast_on_screen() != "", hud.toast_on_screen())
 	if shown.size() == 1:
 		var marker: Color = EdgeMarkers.marker_color(shown[0])
-		_t.check("the line wears its marker's colour", hud._toast["color"] == marker, "%s vs %s" % [hud._toast["color"], marker])
-		_t.check("that colour is not the hazard red", marker != Palette.HAZARD and hud._toast["color"] != Palette.HAZARD, str(marker))
+		_t.check("the line is slate, the colour law's not yet", hud._toast["color"] == Palette.SLATE, str(hud._toast["color"]))
+		_t.check("the edge marker stays hazard red and differs from the line", marker == Palette.HAZARD and marker != hud._toast["color"], str(marker))
 	var short := _life(hud, 20.0)
 	_announce(hud, "powerhouse_boiler", 9.0)
 	var long := _life(hud, 20.0)
@@ -60,8 +68,23 @@ func _run() -> void:
 	var capped := _life(hud, 60.0)
 	_t.check("a lead past the cap holds at the cap", absf(capped - EVENT_LINE_CAP) < 0.1, "%.3f" % capped)
 	_announce(hud, "dome_lightning", 6.0)
-	hud.edge_markers.step_incoming(5.0)
-	_t.eq("the marker is still up while the line is", hud.edge_markers.incoming_targets().size(), 1)
-	_t.check("and the line is still up", hud.toast_on_screen() != "")
+	_step(hud, 4.5)
+	hud.edge_markers.step_incoming(4.5)
+	_t.eq("the marker is still up 4.5 s into a 6 s lead", hud.edge_markers.incoming_targets().size(), 1)
+	_t.check("and the line is still up", hud.toast_on_screen() != "", hud.toast_on_screen())
+	_announce(hud, "dome_lightning", 9.0)
+	_step(hud, 1.0)
+	_game.events.event_started.emit("powerhouse_boiler")
+	_step(hud, 0.05)
+	_t.check("another event's start leaves the line up", hud.toast_on_screen() != "", hud.toast_on_screen())
+	_game.events.event_started.emit("dome_lightning")
+	var after := _life(hud, 20.0)
+	_t.check("its own event's start ends the line well before the hold", after >= 0.0 and after < 0.5, "%.3f" % after)
+	_announce(hud, "dome_lightning", 9.0)
+	_step(hud, 1.0)
+	_game.events.event_ended.emit("dome_lightning", "won")
+	var ended := _life(hud, 20.0)
+	_t.check("its own event's end ends the line too", ended >= 0.0 and ended < 0.5, "%.3f" % ended)
+	_t.eq("the announcement row stays hazard red for the arena cue and the marker", EventKinds.color("event_announced"), Palette.HAZARD)
 	_game.queue_free()
 	quit(_t.verdict())

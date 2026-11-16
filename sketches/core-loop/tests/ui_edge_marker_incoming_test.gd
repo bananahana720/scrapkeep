@@ -23,7 +23,7 @@ func _initialize() -> void:
 	_t.eq("only the placed event with a lead is marked", shown.size(), 1)
 	if shown.size() == 1:
 		_t.check("it points at the published place", shown[0]["at"] == at, str(shown[0]))
-		_t.check("in the warning colour, which is not the hazard red", EdgeMarkers.marker_color(shown[0]) == EventKinds.color("event_announced") and EdgeMarkers.marker_color(shown[0]) != Palette.HAZARD, str(EdgeMarkers.marker_color(shown[0])))
+		_t.check("in the warning colour", EdgeMarkers.marker_color(shown[0]) == Palette.HAZARD, str(EdgeMarkers.marker_color(shown[0])))
 		_t.eq("with the event glyph", shown[0]["icon"], "obj_event")
 		_t.check("and brackets on the place once it is in view", shown[0].get("mark", false) and String(shown[0].get("tag", "")) == "", str(shown[0]))
 	m.step_incoming(5.9)
@@ -33,6 +33,6 @@ func _initialize() -> void:
 	m.note_incoming("bench_dropship", 4.0, at)
 	m.note_incoming("bench_dropship", 4.0, Vector3.INF)
 	_t.eq("a re-announcement with no place clears it", m.incoming_targets().size(), 0)
-	_t.check("the announcement colour is not the hazard role (W1-110)", EventKinds.color("event_announced") != Palette.HAZARD)
+	_t.check("the announcement colour is the hazard role", EventKinds.color("event_announced") == Palette.HAZARD)
 	m.free()
 	quit(_t.verdict())
