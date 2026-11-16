@@ -89,6 +89,8 @@ const KNOWN := [
 		"why": "the strike through a core's cost is danger red; a cost is loss"},
 	{"path": "res://src/combat/actives/cutting_torch.gd", "colour": "HAZARD", "kind": "overload",
 		"why": "the cutting torch, a player active, draws in danger red"},
+	{"path": "res://src/presentation/player_fx.gd", "colour": "HAZARD", "kind": "ruled",
+		"why": "the heat kettle's twin (W1-108): over the fuse's last 2 s the shell is about to cook off and hurt the player, so its rim beats in danger red"},
 	{"path": "res://src/presentation/player_fx.gd", "colour": "BRASS", "kind": "overload",
 		"why": "heft up, fused and STRIKE words and the growth column are boss brass"},
 	{"path": "res://src/combat/jolt_layer.gd", "colour": "ARC", "kind": "overload",
