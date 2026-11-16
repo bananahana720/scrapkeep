@@ -616,7 +616,7 @@
       "label": "a first-timer film read finds no new blocker, major or minor",
       "status": "gate",
       "cadence": "sitting",
-      "producer": "node scripts/redteam/eye.mjs --persona=first-timer --film=whole on a PC film of this head",
+      "producer": "node scripts/redteam/eye.mjs --persona=first-timer --film=whole on a PC film of this head, taken once at the release gate (ruling dz); findings are clustered by cause, fixed as batches, and closed by one confirm film",
       "plant": "the control film with its planted fault must be caught, or the read is void",
       "basis": "scripts/redteam/README.md, the player's-eye pass"
     },

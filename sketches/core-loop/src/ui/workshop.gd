@@ -6,6 +6,7 @@ const UiFonts := preload("res://src/ui/ui_fonts.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const Keycap := preload("res://src/ui/keycap.gd")
 const TreePick := preload("res://src/ui/tree_pick.gd")
+const PickQuiet := preload("res://src/ui/pick_quiet.gd")
 const ShopCounter := preload("res://src/ui/shop_counter.gd")
 const MossBubble := preload("res://src/ui/moss_bubble.gd")
 const SfxBank := preload("res://src/presentation/sfx_bank.gd")
@@ -66,6 +67,7 @@ var _counter_ready := true
 var _ball_parked := false
 var _offer_pending := false
 var _held := false
+var _brief_hush: Array = []
 var _paused := false
 
 
@@ -364,6 +366,7 @@ func card_holds_only() -> bool:
 
 func _apply_hold() -> void:
 	var briefed := briefing()
+	_hold_quiet(armed and _start_card_showing())
 	var held_now: bool = pick.is_open() or counter.is_open() or briefed
 	var pause: bool = pick.is_open() or briefed
 	_show_briefing(briefed)
@@ -393,6 +396,20 @@ func _enforce_hold() -> void:
 		get_tree().paused = true
 
 
+# The start card's briefing hushes the fight's words as the kit pick does, so a hit number does
+# not hang frozen over the card. It holds across a kit pick opened over the card (a counted hold).
+func _hold_quiet(on: bool) -> void:
+	if on and _brief_hush.is_empty():
+		_brief_hush = PickQuiet.hush(self)
+	elif not on and not _brief_hush.is_empty():
+		PickQuiet.restore(_brief_hush)
+		_brief_hush = []
+
+
+func _exit_tree() -> void:
+	_hold_quiet(false)
+
+
 # Moss's line goes quiet behind the kit pick and comes back after it (pick_quiet.gd, PF-30).
 func quiet(on: bool) -> void:
 	if on:
@@ -407,7 +424,8 @@ func quiet(on: bool) -> void:
 # ---- The briefing ----
 
 # The run's briefing: the kit pick (the pick above), then the start pick of three (flow's start
-# card), one after the other on a paused screen before the ball rolls. The start card is flow's
+# card), one after the other on a paused screen: before the ball rolls, or, on a stage with a yard
+# lock, at the yard's clear (flow.start_pick_waits). The start card is flow's
 # and draws on its own layer over this one; this layer gives it the veil, the heading and the
 # hold. Only an armed workshop briefs, so tests and bots see the card as flow shows it.
 func briefing() -> bool:
@@ -434,8 +452,11 @@ func _show_briefing(on: bool) -> void:
 	if not on:
 		return
 	var card = game.flow.start_card
+	# At the yard's clear (flow.start_pick_at_yard) the run is well under way: the opening line stays off.
+	var mid_run: bool = game.flow.start_pick_at_yard()
 	for i in BRIEF_ROWS.size():
 		var words: Label = brief.get_child(i)
+		words.visible = not (mid_run and BRIEF_ROWS[i][0] == BRIEF_LINE)
 		words.position = Vector2(0.0, card.position.y - float(BRIEF_ROWS[i][2]))
 		words.size = Vector2(screen_size().x, BRIEF_ROW_H)
 

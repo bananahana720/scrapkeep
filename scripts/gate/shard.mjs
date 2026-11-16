@@ -13,7 +13,9 @@
 //
 // `run` imports the sketch twice (a third time when the second was not clean), runs its window of the sorted list (non-bot
 // tests in chunks, bot tests one at a time or, with --lanes n, n at a time with the BOT_ALONE tests alone
-// afterwards), reruns every failure alone (once when a check fails alone and the test has no flake row), sorts
+// afterwards), reruns every failure alone (once when a check fails alone and the test has no flake row; not at all
+// when the test has a red row and its first run failed a check without timing out: that run's failing checks are
+// read against the row, and a rerun would only cost time), sorts
 // the failures with the known-failing ledger and writes <folder>/receipt.md
 // and <folder>/shard.json. Every step is recorded in <folder>/state.json, so
 // the same command picks up where a killed run stopped. It never edits the
@@ -25,7 +27,7 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { LEDGER_FILE, judgeFailures, parseLedger } from "../known-failing.mjs";
+import { LEDGER_FILE, TIME_OUT, judgeFailures, parseLedger, uncoveredChecks } from "../known-failing.mjs";
 import { WEEKLY_FILE, weeklyNames as readWeeklyNames } from "./weekly.mjs";
 
 export { WEEKLY_FILE, WEEKLY_HEADER, parseWeekly } from "./weekly.mjs";
@@ -145,17 +147,25 @@ export function errorCounts(text) {
 export const SUSPECT_LOAD_FACTOR = 0.5;
 
 // What one failed test means for the promotion.
-//   carried       it has a ledger row (a red that fails alone, or a known flake)
+//   carried       it has a ledger row (a known flake, or a red whose row names everything its failed runs did)
 //   mismatch      its row says flake and it failed every solo run: the run contradicts the
 //                 ledger, so it blocks until someone reads it and re-lists or fixes it
-//   new-flake     no row, and every solo run passed: record a flake row, it does not block
+//   new-flake     no row, and every solo run passed: it does not block yet, and gets no row (ruling dx)
 //   new-red       no row, and it failed alone: it blocks (ruling ai)
 //   suspect-load  would be new-red or mismatch, but every failed solo run timed out with no failing check
 //                 line and one started on an overloaded machine: it blocks, and is neither red nor pass
 // `evidence` is { threads, runs: [{ timedOut, failLines, load }] }, one run per entry of soloResults.
-export function classifyFailure(test, soloResults, ledgerRows, evidence = null) {
-  const call = callFailure(test, soloResults, ledgerRows);
-  if ((call.call === "new-red" || call.call === "mismatch") && evidence) {
+// `failed` is what every failed run of the test did (`whatFailed`: the first run and each solo run). A red row
+// carries only what it names (ruling dx): any other failing check, and a kill or an error line the row does not
+// name, makes the failure a new red, also when the test passed alone afterwards.
+export function classifyFailure(test, soloResults, ledgerRows, evidence = null, failed = null) {
+  const carried = callFailure(test, soloResults, ledgerRows);
+  const unnamed = failed && carried.call === "carried" && carried.row.kind === "red" ? uncoveredChecks(carried.row, failed) : [];
+  const call = unnamed.length > 0 ? { ...carried, call: "new-red", note: `fails a check its row does not name: ${unnamed.join("; ")}. The row covers only ${carried.row.checks.join("; ")} (ruling dx): fix it, or have the coordinator add the check to the row with its cause` } : carried;
+  // A check or an error line the row does not name is a new red whatever the load was: a retime reads neither the
+  // ledger nor the first run, so it must never be what settles one. Only an unnamed kill can be the load's doing.
+  const loadCanExplain = unnamed.every((word) => word === TIME_OUT);
+  if ((call.call === "new-red" || call.call === "mismatch") && evidence && loadCanExplain) {
     const failed = evidence.runs.filter((_, index) => !soloResults[index]);
     const line = evidence.threads * SUSPECT_LOAD_FACTOR;
     if (failed.length > 0 && failed.every((run) => run.timedOut && run.failLines === 0) && failed.some((run) => run.load > line)) {
@@ -169,15 +179,63 @@ export function classifyFailure(test, soloResults, ledgerRows, evidence = null) 
 function callFailure(test, soloResults, ledgerRows) {
   const soloPasses = soloResults.filter(Boolean).length;
   const row = judgeFailures([test], ledgerRows).listed[0] ?? null;
-  const alone = `${soloPasses}/${soloResults.length} pass alone`;
+  const alone = row?.kind === "red" && soloResults.length === 0 ? "not rerun: red row, a check failed in the first run" : `${soloPasses}/${soloResults.length} pass alone`;
   if (row && row.kind === "flake" && soloResults.length > 0 && soloPasses === 0) {
     return { test, call: "mismatch", alone, row, note: `listed as a flake (owner ${row.owner}: ${row.cause}) but it failed every solo run. Read the solo log, then re-list it as red with its failing check or fix it; until then it blocks` };
   }
   if (row) return { test, call: "carried", alone, row, note: `${row.kind}, owner ${row.owner}, review ${row.review}: ${row.cause}` };
   if (soloResults.length > 0 && soloPasses === soloResults.length) {
-    return { test, call: "new-flake", alone, row: null, note: `fails under load only; add a flake row to ${LEDGER_FILE}` };
+    return { test, call: "new-flake", alone, row: null, note: `fails under load only. No flake row is added since ruling dx: the test's owner fixes it` };
   }
   return { test, call: "new-red", alone, row: null, note: "no ledger row and it fails alone: a new red, which blocks (ruling ai)" };
+}
+
+// The labels of a log's failing checks, once each in the order they first fail: the text between the square
+// brackets of a "[label] ... -> FAIL" line (the runner repeats a failing line with a ">>" mark). A failing line
+// with no label in brackets, or a line that starts with FAIL, is returned whole under "unlabelled failing line",
+// so no ledger row covers it by accident.
+export function failedChecks(text) {
+  const labels = [];
+  for (const raw of text.split("\n")) {
+    const line = raw.replace(/^\s*(?:>> )?/, "").trimEnd();
+    // The last arrow on a line is its verdict, so a detail that quotes the other word does not flip it.
+    if ((!/-> FAIL\b/.test(line) && !/^FAIL\b/.test(line)) || line.lastIndexOf("-> PASS") > line.lastIndexOf("-> FAIL")) continue;
+    const label = line.match(/^\[(.+?)\] .*-> FAIL\b/)?.[1] ?? `unlabelled failing line: ${line}`;
+    if (!labels.includes(label)) labels.push(label);
+  }
+  return labels;
+}
+
+// What the failed runs of one test did, read together: `runs` is [{ ok, text, timedOut }] for the first run and
+// each solo run, in order. Every failed run counts, so a check that failed once is not dropped because a later
+// run passed or failed another way (ruling dx: a retry never decides a verdict). A passing run is not read. An
+// error line is one at the start of a line, as the runner counts it (sketch-smoke.mjs); a passing check line
+// that carries the words "-> FAIL" is not a failing check.
+export function whatFailed(runs) {
+  const failed = runs.filter((run) => !run.ok);
+  const labels = [];
+  for (const run of failed) {
+    for (const label of run.text === null ? ["a failed run left no log"] : failedChecks(run.text)) if (!labels.includes(label)) labels.push(label);
+  }
+  return {
+    labels,
+    timedOut: failed.some((run) => run.timedOut),
+    errorLine: failed.some((run) => run.text !== null && /^(?:SCRIPT ERROR|ERROR)\b/m.test(run.text)),
+  };
+}
+
+// The failed tests that are rerun alone. A test with a red row whose first run failed a check is not: the first
+// run's failing checks are read against the row (whatFailed), which settles the call without a rerun, and the
+// receipt prints those lines beside the row's cause. A red-row test that timed out, was killed or printed no
+// failing check is still rerun, so the receipt always shows which check failed.
+// `firstRun(test)` is { timedOut, failLines } for the first run, or null when it left no verdict line.
+// (Trial gate on 375fe11a, 15 Nov 2026: two such reruns took 832 s of the bot shard's 6922 s.)
+export function soloTests(failed, ledgerRows, firstRun) {
+  const red = new Set(ledgerRows.filter((row) => row.kind === "red").map((row) => row.test));
+  return failed.filter((test) => {
+    const first = firstRun(test);
+    return !(red.has(test) && first && !first.timedOut && first.failLines > 0);
+  });
 }
 
 export function shardVerdict(failures) {
@@ -191,7 +249,7 @@ export function shardVerdict(failures) {
   if (suspect) return { ok: false, inconclusive: true, line: `INCONCLUSIVE: ${suspect}; rerun alone on a quiet machine with "node scripts/gate/shard.mjs retime"` };
   const parts = [];
   if (count("carried") > 0) parts.push(`${count("carried")} carried on the ledger`);
-  if (count("new-flake") > 0) parts.push(`${count("new-flake")} new load flake${count("new-flake") === 1 ? "" : "s"} to list`);
+  if (count("new-flake") > 0) parts.push(`${count("new-flake")} new load flake${count("new-flake") === 1 ? "" : "s"} for ${count("new-flake") === 1 ? "its owner" : "their owners"} to fix`);
   return { ok: true, line: `PASS, no new red${parts.length ? ` (${parts.join(", ")})` : ""}` };
 }
 
@@ -225,8 +283,8 @@ export function renderReceipt({ title, head, box, threads, godot, scale, window,
   else {
     lines.push("| Test | Alone | Call | Why |", "| --- | --- | --- | --- |");
     for (const failure of failures) lines.push(`| ${failure.test} | ${failure.alone} | ${failure.call} | ${failure.note.replaceAll("|", "\\|")} |`);
-    lines.push("", "A carried red must fail the check its row names; a different failing check in the same test is a new red. Read the solo logs before posting.");
-    for (const failure of failures.filter((entry) => entry.lines?.length > 0)) lines.push("", `Failing lines of ${failure.test} alone (${failure.call}):`, "", "```", ...failure.lines, "```");
+    lines.push("", "A carried red must fail the check its row names; a different failing check in the same test is a new red. Read the failing lines below before posting.");
+    for (const failure of failures.filter((entry) => entry.lines?.length > 0)) lines.push("", `Failing lines of ${failure.test} ${failure.linesFrom ?? "alone"} (${failure.call}):`, "", "```", ...failure.lines, "```");
   }
   lines.push(
     "",
@@ -319,10 +377,10 @@ export function soloEnvironment(env, out, logDir) {
 const smokeArgs = (bots, tests) => [path.join(root, "scripts", "sketch-smoke.mjs"), "--sketch", "core-loop", ...(bots ? ["--bots"] : []), ...tests.flatMap((test) => ["--test", test])];
 
 // What a solo run did, read from the runner's line and the test's own log.
+const failLineCount = (testLog) => (existsSync(testLog) ? (readFileSync(testLog, "utf8").match(/-> FAIL/g) ?? []).length : 0);
 function soloOutcome(out, name, logDir, test) {
   const parsed = parseSmokeLog(readFileSync(path.join(out, name + ".log"), "utf8")).find((result) => result.test === test);
-  const testLog = path.join(out, logDir, test + ".log");
-  const failLines = existsSync(testLog) ? (readFileSync(testLog, "utf8").match(/-> FAIL/g) ?? []).length : 0;
+  const failLines = failLineCount(path.join(out, logDir, test + ".log"));
   return { ok: Boolean(parsed?.ok), exit: parsed?.exit ?? "none", seconds: parsed?.seconds ?? 0, timedOut: parsed?.exit === "null", failLines };
 }
 
@@ -458,6 +516,7 @@ async function run(options) {
   // Read before the first step, so the calls below use the ledger of the gated head.
   const ledger = parseLedger(readFileSync(path.join(root, LEDGER_FILE), "utf8"));
   if (ledger.problems.length > 0) throw new Error(`${LEDGER_FILE} does not parse; run \`node scripts/known-failing.mjs --check\``);
+  if (!ledger.hasChecks) throw new Error(`${LEDGER_FILE} has no check column, so a red row would carry every check of its test (ruling dx); run \`node scripts/known-failing.mjs --check\``);
 
   mkdirSync(options.out, { recursive: true });
   const stateFile = path.join(options.out, "state.json");
@@ -522,7 +581,11 @@ async function run(options) {
     soloEvidence.get(test).runs.push({ timedOut: outcome.timedOut, failLines: outcome.failLines, load: state.steps[name].load_start ?? 0 });
   };
   const flakeRow = (test) => judgeFailures([test], ledger.rows).listed[0]?.kind === "flake";
-  for (const test of failed) {
+  const firstRun = (test) => {
+    const result = results.find((entry) => entry.test === test);
+    return result ? { timedOut: result.exit === "null", failLines: failLineCount(path.join(options.out, "logs", test + ".log")) } : null;
+  };
+  for (const test of soloTests(failed, ledger.rows, firstRun)) {
     for (let attempt = 1; attempt <= options.solo; attempt++) {
       await soloRun(test, attempt);
       // A check that failed alone settles the call (new-red, or carried by a red row), so a second
@@ -539,11 +602,20 @@ async function run(options) {
   refuse();
 
   const failures = failed.map((test) => {
-    const failure = classifyFailure(test, solo.get(test), ledger.rows, soloEvidence.get(test));
     const lastFailed = solo.get(test).lastIndexOf(false) + 1;
     const soloLog = lastFailed > 0 ? path.join(options.out, `solo-logs-${lastFailed}`, test + ".log") : null;
-    const lines = soloLog && existsSync(soloLog) ? failingLines(readFileSync(soloLog, "utf8"), 12) : [];
-    return { ...failure, lines, ...(missing.includes(test) ? { note: `no verdict line in the first run (killed or never started); ${failure.note}` } : {}) };
+    const read = (file) => (existsSync(file) ? readFileSync(file, "utf8") : null);
+    const firstText = read(path.join(options.out, "logs", test + ".log"));
+    // The receipt shows the last failed solo run, or the first run when no solo run failed.
+    const shownText = soloLog ? read(soloLog) : firstText;
+    const lines = shownText === null ? [] : failingLines(shownText, 12);
+    // The row is read against every failed run: the first run and each solo run.
+    const runs = [
+      { ok: false, text: firstText, timedOut: firstRun(test)?.timedOut ?? true },
+      ...solo.get(test).map((ok, index) => ({ ok, text: read(path.join(options.out, `solo-logs-${index + 1}`, test + ".log")), timedOut: soloEvidence.get(test).runs[index].timedOut })),
+    ];
+    const failure = classifyFailure(test, solo.get(test), ledger.rows, soloEvidence.get(test), whatFailed(runs));
+    return { ...failure, lines, linesFrom: soloLog ? "alone" : "in its first run", ...(missing.includes(test) ? { note: `no verdict line in the first run (killed or never started); ${failure.note}` } : {}) };
   });
   const logsDir = path.join(options.out, "logs");
   const allLogs = existsSync(logsDir) ? readdirSync(logsDir).filter((name) => !name.includes("import")).map((name) => readFileSync(path.join(logsDir, name), "utf8")).join("\n") : "";

@@ -10,6 +10,7 @@ const StageLocks := preload("res://src/world/stage_locks.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const SfxBank := preload("res://src/presentation/sfx_bank.gd")
 const Rows := preload("res://src/presentation/rows.gd")
+const RunTier := preload("res://src/core/run_tier.gd")
 const T := preload("res://tests/support/t.gd")
 const Palette := preload("res://src/core/palette.gd")
 
@@ -89,6 +90,17 @@ func _game():
 	return game
 
 
+# Whether flow shows the start card to a played game (the scripted hand is a bot, whose card stays hidden).
+func _card_as_played(game) -> bool:
+	var bot: bool = game.bot_driven
+	game.bot_driven = false
+	game.flow.show_start_card()
+	var up: bool = game.flow.start_card.showing()
+	game.bot_driven = bot
+	game.flow.show_start_card()
+	return up
+
+
 # The clamp row's crew markers (edge_markers.gd), as the HUD reads them this frame.
 func _crew_markers(game) -> Array:
 	return game.hud.edge_markers.targets().filter(func(m): return m["kind"] == "pack_arrived")
@@ -109,6 +121,10 @@ func _rows() -> void:
 				_t.check("%s lock kind %s is a director kind" % [map, kind], kind in preload("res://src/world/director.gd").KIND_NAMES)
 			for kept_out in ["boom_tender", "mag_trapper", "plated_brute"]:
 				_t.check("%s keeps %s out of the ring" % [map, kept_out], not kept_out in wave)
+		# W1-65: the last two waves each carry one of the world's lesson kinds that never holds the ball.
+		var late: Array = (row["lock"]["waves"] as Array).slice(-2)
+		_t.check("%s second-last wave lays a jolt mat" % map, "jolt_layer" in late[0], str(late[0]))
+		_t.check("%s last wave drops a sluice flap" % map, "ramp_flipper" in late[1], str(late[1]))
 	_t.check("other parks have no row", LockRows.row("park_pit").is_empty() and LockRows.row("park_test").is_empty())
 	for kind in ["arena_locked", "arena_wave", "arena_unlocked", "warden_gate_pip", "warden_gate_refused", "warden_gate_opened"]:
 		var entry: Dictionary = EventKinds.world_row(kind)
@@ -299,6 +315,9 @@ func _lock() -> void:
 	var locks = game.flow.gate
 	var row: Dictionary = LockRows.row("park_dam")["lock"]
 	_t.eq("lock armed on entry", locks.lock_state, "armed")
+	# W1-63, W1-77: stage 1's start pick waits for the yard, so the drop holds one thing.
+	_t.check("the start pick waits for the yard", game.flow.start_pick_waits() and game.flow.start_pick_at_yard())
+	_t.check("no start card over the drop", not _card_as_played(game))
 	var beacon: Vector3 = game.flow.beacon.global_position
 	# On the apron past the incline foot: the circle's outer ring there is the incline, where the yard
 	# waits for level ground (PF-46, dam_incline_yard_test).
@@ -366,6 +385,7 @@ func _lock() -> void:
 			_t.eq("wave %d lands" % (w + 2), crew.size(), (waves[w + 1] as Array).size())
 	_t.eq("the last crew down opens the yard", locks.lock_state, "spent")
 	_t.check("won", locks.lock_won)
+	_t.check("the yard's clear brings the start pick up", not game.flow.start_pick_waits() and _card_as_played(game))
 	_t.eq("the bells play", _count("arena_unlocked"), 1)
 	game.hud._process(0.0)
 	_t.check("the open yard hands the plate back", game.hud.objective_reading()["id"] != "break_yard_crew", game.hud.objective_reading()["id"])
@@ -486,6 +506,13 @@ func _skipped_when_engaged() -> void:
 	await physics_frame
 	await physics_frame
 	_t.eq("an awake Warden leaves the lock unfired", locks.lock_state, "spent")
+	_t.check("a yard skipped for the Warden lets the start pick up", not game.flow.start_pick_waits())
+	game.free()
+	await process_frame
+	# A profile with a harder rung open chooses its tier on the card at the drop, before the yard.
+	game = await _game()
+	game.ctx.profile.earn(RunTier.UNLOCK, 0.0)
+	_t.check("a rung-holder's start pick (and tier) comes at the drop", game.flow.gate.yard_ahead() and not game.flow.start_pick_waits() and not game.flow.start_pick_at_yard())
 	game.free()
 	await process_frame
 
@@ -496,6 +523,7 @@ func _off() -> void:
 	var locks = game.flow.gate
 	_t.check("off: no clamp", not locks.locked() and not locks.has_gate())
 	_t.eq("off: no lock", locks.lock_state, "")
+	_t.check("off: the start pick comes at the drop", not game.flow.start_pick_waits() and not game.flow.start_pick_at_yard())
 	_t.check("off: the Warden spec has no gate", not game.flow.warden.spec.has("posture_gate"))
 	StageLocks.active = true
 	game.free()

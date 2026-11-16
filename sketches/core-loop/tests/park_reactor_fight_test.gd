@@ -19,6 +19,10 @@ var checked_map := ""
 # hand and moved least across that change (34.18 s vs 33.28 s); it is not known to reproduce the
 # rolling-approach miss, so this test now holds the allowance only. The seed median belongs to the
 # writer's bot table.
+# 15 Nov 2026, wave 42: the dam yard's fight bowl and moved kicker (PRs 957, 1033) moved seed 13 from 36.16 s to
+# 61.92 s. Over 72 skipper seeds on 7b232972 the median is 40.6 s (41.2 s with the yard camera lift of PR 1032 taken
+# out, longer on 37 seeds and shorter on 35, so the lift is not the cause), 19 of 72 over the allowance. Seed 21 sits
+# at the median in both arms (41.10 s and 37.85 s) and replaces seed 13; the allowance stays (DECISIONS, ruling ai).
 # The run replays itself once in a child at a fixed 90 fps, one physics tick per frame, as
 # bot_run's children do. Paced by the clock, a loaded machine dropped ticks and seed 1
 # broke the Warden in 40.9 s or 97.3 s (2 fails in 8 solo runs, shard 6, 18 Oct); fixed, it is
@@ -46,7 +50,7 @@ func _initialize() -> void:
 	_settings["stages"] = "1"
 	_out = _absolute(String(_settings.get("out", OS.get_user_data_dir().path_join("park-reactor-fight"))))
 	DirAccess.make_dir_recursive_absolute(_out)
-	_seeds = [13]
+	_seeds = [21]
 	node_added.connect(_on_node_added)
 	_next()
 

@@ -2,6 +2,8 @@ extends "res://src/combat/enemy.gd"
 
 # The fastest the body may read as moving while mounted, m/s.
 const MOUNT_SPEED_MAX: float = preload("res://src/movement/contact.gd").SOFT_CAP_SPEED
+const ChaseCamera := preload("res://src/movement/chase_camera.gd")
+const Tuning := preload("res://src/movement/tuning.gd")
 const WardenLook := preload("res://src/combat/warden_look.gd")
 const WardenKit := preload("res://src/combat/warden_kit.gd")
 const Roster := preload("res://src/combat/roster.gd")
@@ -76,6 +78,8 @@ const PULSE_CYCLE := 6.0
 const PULSE_TELEGRAPH := 2.0
 const PULSE_LIFT := 10.0
 const PULSE_DAMAGE := 10.0
+# The least rest between a pulse and the next charge however far the cycle has ratcheted (cycle_now).
+const REST_FLOOR := 1.0
 const CORE_RADIUS := 6.0
 const LIFT_REACH_UP := 8.0
 const GUARD_RESPAWN := 10.0
@@ -151,6 +155,9 @@ var shrugs := 0
 var harpoon_anchor := false
 
 var _pulse_clock := 0.0
+var _lost_peak := 0
+# The chunks lost when this pulse cycle started (cycle_now).
+var _cycle_lost := 0
 var _charging := false
 var _charge_time := 0.0
 var _core_ring: Node3D
@@ -440,6 +447,8 @@ func _slag_phase(lane: Dictionary, phase: String) -> void:
 	if lane["phase"] == phase:
 		return
 	lane["phase"] = phase
+	if phase == PHASE_STRIKE and not _dead:
+		_strike_frames = STRIKE_FRAMES
 	var node = lane["node"]
 	var geometry: Dictionary = node.descriptor() if is_instance_valid(node) else {}
 	attack_phase.emit({"instance": lane["instance"], "row": "W01", "owner": kind, "phase": phase,
@@ -731,7 +740,7 @@ func _step_pulse(delta: float, inside: bool) -> void:
 	if not inside:
 		return
 	_pulse_clock += delta
-	if _pulse_clock >= pulse_cycle(stage) - pulse_telegraph(stage) and _charge_allowed():
+	if _pulse_clock >= cycle_now() - pulse_telegraph(stage) and _charge_allowed():
 		_charging = true
 		_charge_time = 0.0
 		_charge_len = pulse_telegraph(stage)
@@ -758,6 +767,8 @@ func _step_counter(delta: float) -> void:
 		var charge := counter_telegraph(stage)
 		_counter_ring.set_progress(_counter_time / charge)
 		if _counter_time >= charge:
+			if not _dead:
+				_strike_frames = STRIKE_FRAMES
 			if _counter_ring.contains(_ball()):
 				target.crowd_control("warden_counter", Vector3.UP * PULSE_LIFT / get_physics_process_delta_time())
 				counter_hit.emit(counter_damage(stage), Vector3.ZERO)
@@ -807,6 +818,28 @@ static func pulse_cycle(at_stage := 0) -> float:
 	return ChallengeDials.floored(PULSE_CYCLE, ChallengeDials.stage_mult("warden.pulse_cycle", at_stage))
 
 
+# The most chunks this Warden has lost at once, by the count its fight phases read (phase_chunks_left).
+# It never goes back: the dam's bar can drain, and its fight does not relax with it.
+func chunks_lost() -> int:
+	_lost_peak = maxi(_lost_peak, BossPosture.CHUNKS - phase_chunks_left())
+	return _lost_peak
+
+
+# The pulse cycle this Warden runs now (W1-67): the stage's cycle times the stage's ratchet
+# (challenge dial warden.pulse_ratchet_by_stage) once per chunk lost, as the fight phases count
+# chunks (phase_chunks_left, so the dam's sheet counts its bar's quarters). The count is read when
+# the pulse clock starts a cycle (_cycle_lost), so a chunk lost mid-cycle tightens the next cycle,
+# never the one running, and the charge it starts keeps its whole tell. The rest between pulses
+# never drops under REST_FLOOR, or under a mount driver's own rest_floor (the dam's sheet runs out).
+func cycle_now() -> float:
+	var base := pulse_cycle(stage)
+	var rest := REST_FLOOR
+	if mount_driver != null and mount_driver.has_method("rest_floor"):
+		rest = maxf(rest, mount_driver.rest_floor(self))
+	var ratchet := ChallengeDials.by_stage_or("warden.pulse_ratchet_by_stage", stage, 1.0)
+	return maxf(minf(base, pulse_telegraph(stage) + rest), base * pow(ratchet, _cycle_lost))
+
+
 static func pulse_telegraph(at_stage := 0) -> float:
 	return minf(PULSE_TELEGRAPH, pulse_cycle(at_stage))
 
@@ -817,6 +850,9 @@ func _pulse() -> void:
 	last_pulse_lifted = ring != null and ring.contains(ball)
 	if last_pulse_lifted:
 		target.crowd_control("warden_pulse", Vector3.UP * PULSE_LIFT / get_physics_process_delta_time())
+	# The core ring's landing (it reached progress 1 this tick): the body wears the release flash.
+	if is_instance_valid(_core_ring) and not _dead:
+		_strike_frames = STRIKE_FRAMES
 	if is_instance_valid(_core_ring) and _core_ring.contains(ball):
 		hit_player.emit(PULSE_DAMAGE * ChallengeDials.stage_mult("warden.pulse_damage", stage), Vector3.ZERO)
 	if _flaring >= 0:
@@ -833,6 +869,7 @@ func _pulse() -> void:
 	_since_pulse = 0.0
 	_charging = false
 	_pulse_clock = 0.0
+	_cycle_lost = chunks_lost()
 	_clear_telegraph()
 	if is_instance_valid(_core_ring):
 		_core_ring.queue_free()
@@ -868,6 +905,59 @@ func _build_body() -> void:
 	_kit.build(self, family)
 	_base_color = Palette.CHARCOAL
 	_material = _look.body_material
+	fit_camera_shell()
+
+
+# The widest camera drum that a ball touching the contact cylinder leaves clear of the arm's probe: the ball's centre
+# sits RADIUS + the ball's radius from the axis, and a cast that starts inside a shape skips it. The drawn body may stand
+# up to about 0.4 m outside the drum on its widest parts.
+static func camera_shell_reach() -> float:
+	return RADIUS + Tuning.RADIUS - ChaseCamera.PROBE_RADIUS - 0.05
+
+
+# A camera-only drum round what the Warden draws now, so the lens never sits inside its body. The contact
+# cylinder and the weak-point sphere are damage geometry and stay as they are. Sized from the drawn meshes
+# (those still on a render layer, outside the floating badge), so the primitive look, the clamp base and a
+# hero body each get their own: built with the look, refitted by hero_assets once it has dressed the body.
+func fit_camera_shell() -> void:
+	# The mind hangs and sprawls (a 12 m reach), so no cylinder fits it; a shell that big would wall off the air
+	# round it. The camera meets it as it did before.
+	if family == Roster.MIND:
+		var old := get_node_or_null("CameraShell")
+		if old != null:
+			old.queue_free()
+		return
+	var inverse := global_transform.affine_inverse()
+	var badge := _look.get_node_or_null("Badge")
+	var box := AABB()
+	var any := false
+	for view in find_children("*", "MeshInstance3D", true, false):
+		var mesh := view as MeshInstance3D
+		if mesh.mesh == null or mesh.layers == 0 or not mesh.is_visible_in_tree() or (badge != null and badge.is_ancestor_of(mesh)):
+			continue
+		var local: AABB = inverse * mesh.global_transform * mesh.get_aabb()
+		box = local if not any else box.merge(local)
+		any = true
+	var shell := get_node_or_null("CameraShell")
+	if not any:
+		if shell != null:
+			shell.queue_free()
+		return
+	var radius := 0.0
+	for corner in 8:
+		var point: Vector3 = box.get_endpoint(corner)
+		radius = maxf(radius, maxf(absf(point.x), absf(point.z)))
+	radius = minf(radius, camera_shell_reach())
+	if shell == null:
+		shell = ChaseCamera.camera_body()
+		shell.name = "CameraShell"
+		shell.add_child(CollisionShape3D.new())
+		add_child(shell)
+	var drum := CylinderShape3D.new()
+	drum.radius = radius
+	drum.height = box.size.y
+	(shell.get_child(0) as CollisionShape3D).shape = drum
+	shell.position = Vector3(0.0, box.get_center().y, 0.0)
 
 
 func _pose(_delta: float) -> void:
@@ -1031,6 +1121,7 @@ func _begin_stagger() -> void:
 	_charging = false
 	_charge_time = 0.0
 	_pulse_clock = 0.0
+	_cycle_lost = chunks_lost()
 	_clear_telegraph()
 	if is_instance_valid(_core_ring):
 		_core_ring.queue_free()

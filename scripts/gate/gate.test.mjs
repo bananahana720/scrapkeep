@@ -8,7 +8,7 @@ import { parseLedger } from "../known-failing.mjs";
 import { place, sortChanges, testsToRerun } from "./carry.mjs";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
-import { WEEKLY_HEADER, chunks, classifyFailure, errorCounts, gateLists, importOutcome, nearLimit, numbered, parseSmokeLog, parseWeekly, parseWindow, renderReceipt, windowNames, namedPool, testName, retime, shardVerdict, soloEnvironment } from "./shard.mjs";
+import { WEEKLY_HEADER, chunks, classifyFailure, errorCounts, gateLists, importOutcome, nearLimit, numbered, parseSmokeLog, parseWeekly, parseWindow, renderReceipt, windowNames, namedPool, testName, retime, shardVerdict, soloEnvironment, soloTests, failedChecks, whatFailed } from "./shard.mjs";
 import { WEEKLY_MAX_DAYS, checkTally, checkWeeklySweep, expectedShards, isDeferred, isPass, planHead, tallyRows } from "./tally.mjs";
 import { WEEKLY_FILE, checkWeekly } from "./weekly.mjs";
 
@@ -74,12 +74,82 @@ test("a failure is carried only with a ledger row, and blocks when it fails alon
   assert.equal(classifyFailure("fresh_test", [false, false], ledger).call, "new-red");
 });
 
+test("a failed test with a red row is carried from its first run and is not rerun alone", () => {
+  // The first run already shows which check failed, and that run is read against the row, so a rerun adds only time.
+  // (Trial gate on 375fe11a, 15 Nov: two such reruns took 832 s of the bot shard's 6922 s.)
+  const failedACheck = () => ({ timedOut: false, failLines: 1 });
+  assert.deepEqual(soloTests(["red_test", "wobble_test", "fresh_test"], ledger, failedACheck), ["wobble_test", "fresh_test"]);
+  // A time-out, a kill or a run with no failing check does not show which check failed, so it is still rerun.
+  assert.deepEqual(soloTests(["red_test"], ledger, () => ({ timedOut: true, failLines: 0 })), ["red_test"]);
+  assert.deepEqual(soloTests(["red_test"], ledger, () => ({ timedOut: false, failLines: 0 })), ["red_test"]);
+  assert.deepEqual(soloTests(["red_test"], ledger, () => null), ["red_test"]);
+  const carried = classifyFailure("red_test", [], ledger);
+  assert.equal(carried.call, "carried");
+  assert.equal(carried.alone, "not rerun: red row, a check failed in the first run");
+  // By test name alone the call is the same with solo runs; what each failed run did is read separately (whatFailed).
+  for (const runs of [[false], [true], [false, false], [true, true]]) assert.equal(classifyFailure("red_test", runs, ledger).call, "carried");
+  // Without a row, no solo run is never a pass.
+  assert.equal(classifyFailure("fresh_test", [], ledger).call, "new-red");
+});
+
+test("a red row carries only the check it names; another failing check in the same test is a new red (ruling dx)", () => {
+  const named = parseLedger(["test\tkind\tcause\towner\tadded\treview\tcheck", "red_test\tred\tpin off by 2 s\tcoordinator\t2026-11-09\t2026-11-23\tpin within 2 s"].join("\n")).rows;
+  assert.equal(classifyFailure("red_test", [], named, null, { labels: ["pin within 2 s"] }).call, "carried");
+  const second = classifyFailure("red_test", [], named, null, { labels: ["pin within 2 s", "stage 1 draw"] });
+  assert.equal(second.call, "new-red");
+  assert.match(second.note, /fails a check its row does not name: stage 1 draw/);
+  assert.deepEqual(shardVerdict([second]), { ok: false, line: "RED: 1 new red (red_test)" });
+  // The same holds when the test was rerun alone.
+  assert.equal(classifyFailure("red_test", [false], named, null, { labels: ["stage 1 draw"] }).call, "new-red");
+  // A killed run is not the named check either.
+  assert.equal(classifyFailure("red_test", [false], named, null, { labels: [], timedOut: true }).call, "new-red");
+  assert.deepEqual(failedChecks("[a] 1 -> PASS\n  >> [pin within 2 s] got 3 -> FAIL\n[pin within 2 s] got 3 -> FAIL\n[stage 1 draw] got \"x\", want \"y\" -> FAIL\n"), ["pin within 2 s", "stage 1 draw"]);
+});
+
+test("every failed run of a listed test is read against its row, not only the last one (PR 1051 review)", () => {
+  const named = parseLedger(["test\tkind\tcause\towner\tadded\treview\tcheck", "red_test\tred\tpin off by 2 s\tcoordinator\t2026-11-09\t2026-11-23\tpin within 2 s"].join("\n")).rows;
+  const pin = "[pin within 2 s] got 3 -> FAIL\n";
+  const other = "[stage 1 draw] got 1 -> FAIL\n";
+  // First run killed after an unnamed check failed; alone it fails only the named check.
+  const mixed = whatFailed([{ ok: false, text: other, timedOut: true }, { ok: false, text: pin, timedOut: false }]);
+  assert.deepEqual(mixed, { labels: ["stage 1 draw", "pin within 2 s"], timedOut: true, errorLine: false });
+  assert.equal(classifyFailure("red_test", [false], named, null, mixed).call, "new-red");
+  // Every solo run passed: the first run is still read, so a retry does not decide the call.
+  const retried = whatFailed([{ ok: false, text: other, timedOut: false }, { ok: true, text: "[a] 1 -> PASS\n", timedOut: false }]);
+  assert.deepEqual(retried.labels, ["stage 1 draw"]);
+  assert.equal(classifyFailure("red_test", [true], named, null, retried).call, "new-red");
+  assert.equal(classifyFailure("red_test", [true], named, null, whatFailed([{ ok: false, text: pin, timedOut: false }, { ok: true, text: "", timedOut: false }])).call, "carried");
+  // A passing run's lines are not read; an ERROR line of a failed run is.
+  assert.deepEqual(whatFailed([{ ok: false, text: pin + "ERROR: resumed after await\n", timedOut: false }, { ok: true, text: other, timedOut: false }]), { labels: ["pin within 2 s"], timedOut: false, errorLine: true });
+  assert.equal(whatFailed([{ ok: false, text: pin + "SCRIPT ERROR: Invalid call\n", timedOut: false }]).errorLine, true);
+  // A failed run with no log, and a failing line the pattern cannot label, are never read as nothing.
+  assert.deepEqual(whatFailed([{ ok: false, text: null, timedOut: false }]).labels, ["a failed run left no log"]);
+  assert.deepEqual(failedChecks("CUA check -> FAIL: door\n[pin within 2 s] got 3 -> FAIL\n"), ["unlabelled failing line: CUA check -> FAIL: door", "pin within 2 s"]);
+});
+
+test("a load time-out never hides a check the row does not name (PR 1051, second review)", () => {
+  const named = parseLedger(["test\tkind\tcause\towner\tadded\treview\tcheck", "red_test\tred\tpin off by 2 s\tcoordinator\t2026-11-09\t2026-11-23\tpin within 2 s"].join("\n")).rows;
+  const loaded = { threads: 32, runs: [{ timedOut: true, failLines: 0, load: 20 }, { timedOut: true, failLines: 0, load: 20 }] };
+  // First run failed an unnamed check and was killed; both solo runs were killed under load with no check.
+  const hidden = classifyFailure("red_test", [false, false], named, loaded, { labels: ["stage 1 draw"], timedOut: true, errorLine: false });
+  assert.equal(hidden.call, "new-red");
+  assert.match(hidden.note, /stage 1 draw/);
+  // Only the kill is unnamed: that is what a retime on a quiet machine can settle.
+  assert.equal(classifyFailure("red_test", [false, false], named, loaded, { labels: ["pin within 2 s"], timedOut: true, errorLine: false }).call, "suspect-load");
+  assert.equal(classifyFailure("red_test", [false, false], named, loaded, { labels: [], timedOut: true, errorLine: false }).call, "suspect-load");
+  // A passing check line is not a failing check, and an error line counts as the runner counts it: at column 0.
+  assert.deepEqual(failedChecks("[x] expected -> FAIL, got it -> PASS\n"), []);
+  // The last arrow on the line is the verdict: a failing check whose detail quotes "-> PASS" still fails.
+  assert.deepEqual(failedChecks('[stage 1 draw] wanted an "a -> PASS" line, got none -> FAIL\n'), ["stage 1 draw"]);
+  assert.equal(whatFailed([{ ok: false, text: "[pin within 2 s] got 3 -> FAIL\n  child: ERROR: echoed\n   ERROR: indented\n", timedOut: false }]).errorLine, false);
+});
+
 test("a shard is red only for a new red, and its verdict names what it carried", () => {
   const carried = classifyFailure("red_test", [false, false], ledger);
   const flake = classifyFailure("fresh_test", [true, true], ledger);
   const red = classifyFailure("broken_test", [false, false], ledger);
   assert.deepEqual(shardVerdict([]), { ok: true, line: "PASS, no new red" });
-  assert.deepEqual(shardVerdict([carried, flake]), { ok: true, line: "PASS, no new red (1 carried on the ledger, 1 new load flake to list)" });
+  assert.deepEqual(shardVerdict([carried, flake]), { ok: true, line: "PASS, no new red (1 carried on the ledger, 1 new load flake for its owner to fix)" });
   assert.deepEqual(shardVerdict([carried, red]), { ok: false, line: "RED: 1 new red (broken_test)" });
 });
 

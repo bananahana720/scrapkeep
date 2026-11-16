@@ -26,6 +26,7 @@ const Chaser := preload("res://src/combat/chaser.gd")
 const Lobber := preload("res://src/combat/lobber.gd")
 const Swarm := preload("res://src/combat/swarm.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
+const ChallengeDials := preload("res://src/core/challenge_dials.gd")
 const T := preload("res://tests/support/t.gd")
 const RECORD_PATH := "res://src/combat/telegraph_record.gd"
 const LEGIBILITY_PATH := "res://design-v3/LEGIBILITY.md"
@@ -65,6 +66,10 @@ func _boot() -> void:
 	while _game.flow == null:
 		await physics_frame
 	_game.ctx.calm = true
+	# The ball is held still, so world 1's silt boils arm under it. In about 1 run in 12 one erupted
+	# beside a recovering swarm, and its knock scattered the drones (swarm_remnant.knock), which read
+	# as the pack moving and warning in its recovery. Only the pack's own tail is measured here.
+	ChallengeDials.set_overrides({"hazard.boil_by_stage": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]})
 	_game.ctx.rng.seed = 11
 	_game.player.source = Intent.Scripted.new()
 	_game.flow.press_start()

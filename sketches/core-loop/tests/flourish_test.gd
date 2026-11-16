@@ -57,10 +57,11 @@ func _run() -> void:
 	_game.player.source = Intent.Scripted.new()
 	var player = _game.presentation.flourish
 	_t.check("10 presentation builds the player", player is FlourishPlayer, str(player))
+	_stage_name_once()
 	await _live(player)
 	await _sweep(player)
 	await _order(player)
-	_hooks(player)
+	await _hooks(player)
 	_game.free()
 	await _frames(2)
 	quit(_t.verdict())
@@ -93,6 +94,20 @@ func _rows() -> void:
 
 func _in_piece(piece: Dictionary, line: String) -> bool:
 	return str(piece.get("text", "")).contains(line) or str(piece.get("texts", "")).contains(line) or str(piece.get("card", "")).contains(line)
+
+
+# The stage card owns the stage's name, so the cold open's captions do not open with it.
+func _stage_name_once() -> void:
+	var names: Array = [String(_game.ctx.stages.of(1)["name"]), String(Worlds.ROWS[0]["name"])]
+	var begins: Array = []
+	var seen := 0
+	for piece in Rows.pieces("cold_open", false).filter(func(p): return p.kind == "caption"):
+		var variants: Array = piece.text if piece.text is Array else [piece.text]
+		for line in variants:
+			seen += 1
+			if names.any(func(n): return String(line).begins_with(n)):
+				begins.append(line)
+	_t.check("c1 no cold open caption begins with the stage's name", seen > 0 and begins.is_empty(), "%d lines, names %s, begin with one: %s" % [seen, names, begins])
 
 
 func _named_once() -> void:
@@ -333,9 +348,16 @@ func _hooks(player) -> void:
 	_t.check("75b the hand-off plays once per run", not player.playing, player.id)
 	events.world_entered.emit(2)
 	_t.check("76a world 2's entry without Brindle beaten plays nothing (a Continue)", not player.playing, player.id)
+	# The cards earlier checks raised would queue ahead of the shift log; this check is about the world card.
+	_game.hud.clear_achievement_toasts()
 	events.boss_defeated.emit()
 	events.world_entered.emit(2)
-	_t.eq("76 world 2's entry after Brindle's defeat plays spillway_clear", player.id, "spillway_clear")
+	# The shift log takes its turn behind the world card (screen_busy.gd): it starts when the card is gone.
+	var waited := 0.0
+	while player.id != "spillway_clear" and waited < 20.0:
+		await process_frame
+		waited += _game.get_process_delta_time()
+	_t.eq("76 world 2's entry after Brindle's defeat plays spillway_clear (after the world card)", player.id, "spillway_clear")
 	events.stage_entered.emit(1, true)
 	_t.check("76b a retry ends the row", not player.playing, player.id)
 	player.play("cold_open")

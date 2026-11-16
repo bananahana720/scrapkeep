@@ -854,11 +854,16 @@ func _take_live() -> bool:
 
 # A stage launch of flight_s asks for the take (flow.gd): the panel closes over the flight's end and on_cover waits under
 # it until flight_over() says so. False when no take plays, and then nothing was called: the caller cuts as it always did.
-func play_launch_take(on_cover: Callable, flight_over: Callable, ready_check: Callable, flight_s: float) -> bool:
+func play_launch_take(on_cover: Callable, flight_over: Callable, ready_check: Callable, flight_s: float, taken_part := "") -> bool:
 	if launch_take.busy() or not _take_live():
 		return false
 	launch_take.live = true
-	return launch_take.play_over_flight(on_cover, flight_over, ready_check, flight_s)
+	return launch_take.play_over_flight(on_cover, flight_over, ready_check, flight_s, taken_part)
+
+
+# The part a gate gave, told to a launch take that began before the gate's event reached flow.
+func stamp_launch_take(part_id: String) -> void:
+	launch_take.stamp_taken(part_id)
 
 
 # A pilot picked on pilot select: the deck camera lifts, the swipe covers, the run starts under it.
@@ -1258,6 +1263,9 @@ func pad_screen_key(event: InputEvent) -> int:
 				return KEY_NONE
 			return KEY_SPACE
 		if state == "summary" or state == "dead":
+			# Once the stick has put the highlight on a button, A presses that button (as on the title).
+			if get_viewport().gui_get_focus_owner() != null:
+				return KEY_NONE
 			return KEY_N
 	elif event.button_index == JOY_BUTTON_B:
 		if state == "summary":

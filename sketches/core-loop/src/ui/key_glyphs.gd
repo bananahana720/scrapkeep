@@ -38,6 +38,11 @@ const UiDraw := preload("res://src/ui/ui_draw.gd")
 
 const AimReticle := preload("res://src/ui/aim_reticle.gd")
 const FieldTips := preload("res://src/ui/field_tips.gd")
+const SpeedTier := preload("res://src/movement/speed_tier.gd")
+# W1-77 (gameplay critique finding 14): the first seconds hold one thing. The boost prompt waits until
+# the ball first reaches the fast tier, when going faster is the next thing to want, or BOOST_WAIT_MAX
+# seconds of play, so a ball that never gets there still learns the key.
+const BOOST_WAIT_MAX := 20.0
 
 const PROMPT_VERBS := ["haul", "interact", "jump", "harpoon", "boost", "ultimate"]
 const BALL_VERBS := ["boost", "interact", "jump"]
@@ -76,6 +81,8 @@ var _points := {}
 var _vault := Vector3.INF
 var _placed: Array = []
 var _was_drawn := {}
+# Seconds the boost prompt has waited for the first fast roll; BOOST_WAIT_MAX or more once it has come.
+var _boost_wait := 0.0
 
 
 func setup(game_ref, profile_ref) -> void:
@@ -110,6 +117,7 @@ func new_run() -> void:
 	_stood = 0.0
 	_winch_held = false
 	_letgo_latch = 0
+	_boost_wait = 0.0
 	shown = []
 	_was_drawn = {}
 
@@ -218,6 +226,7 @@ static func view_of(player) -> Dictionary:
 		"charging": (special != null and special.charging) or kit.slingshot.charging,
 		"mounted": kit.mounted,
 		"airborne": not player.state.grounded,
+		"fast": player.speed_tier() >= SpeedTier.FAST,
 		"winching": kit.winching,
 		"points": {"harpoon": kit.aim.get("point", Vector3.INF), "haul": kit.anchor, "boost": player.shown_position(),
 			"interact": player.shown_position(), "jump": player.shown_position()},
@@ -250,6 +259,9 @@ func step(delta: float, view: Dictionary) -> void:
 			ready[verb] = false
 	if view.get("fight", false) and profile.uses("ultimate") == 0:
 		ready["ultimate"] = false
+	_boost_wait = BOOST_WAIT_MAX if view.get("fast", true) else _boost_wait + delta
+	if _boost_wait < BOOST_WAIT_MAX:
+		ready["boost"] = false
 	var vault_open: bool = _vault != Vector3.INF and view.get("jump_possible", true)
 	var vault_only: bool = vault_open and not ready["jump"]
 	if vault_open:

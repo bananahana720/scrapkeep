@@ -46,7 +46,7 @@ const ROWS := {
 	"cold_open": {"priority": 1,
 		"full": [
 			{"kind": "caption", "at": 0.0, "for": 2.0, "slot": "left_low",
-				"text": ["Spillway Works. Dawn. Probably a Tuesday.", "Spillway Works. Dawn. Definitely a Wednesday.", "Spillway Works. Dawn. The kettle is on."]},
+				"text": ["Dawn. Probably a Tuesday.", "Dawn. Definitely a Wednesday.", "Dawn. The kettle is on."]},
 			{"kind": "caption", "at": 2.0, "for": 2.0, "slot": "left_low",
 				"text": ["Moss's shift note: bring the runner back up.", "Moss's shift note: seals first. Then the runner.",
 					"Moss's shift note: nothing's out of place. Yet.", "Moss's shift note: very tidy out there. Boots on."]},
@@ -104,17 +104,17 @@ const ROWS := {
 	# named once, by the ROUTED stamp (ruling cx): this row logs the shift and never names it again.
 	"spillway_clear": {"priority": 0,
 		"full": [
-			{"kind": "card", "at": 0.0, "for": 4.2, "slot": "left_top",
+			{"kind": "card", "at": 0.0, "for": 2.6, "slot": "left_top",
 				"card": ["SPILLWAY WORKS", "World one · shift log", "Pumps", "running", "Seals", "holding", "Overtime", "logged, not paid"]},
-			{"kind": "stamp", "at": 0.4, "for": 2.4, "text": "SHIFT COMPLETE", "colour": "AMBER"},
-			{"kind": "caption", "at": 2.4, "for": 3.0, "slot": "left_low", "text": [
+			{"kind": "stamp", "at": 2.6, "for": 1.4, "text": "SHIFT COMPLETE", "colour": "AMBER"},
+			{"kind": "caption", "at": 4.0, "for": 2.0, "slot": "left_low", "text": [
 				"Shift log: seals checked. Gauges agree, for once.",
 				"Shift log: dam held. Flume drained. Weather blamed.",
 				"Shift log: pumps running. The river kept its side of it."]},
 		],
 		"short": [
-			{"kind": "stamp", "at": 0.0, "for": 2.0, "text": "SHIFT COMPLETE", "colour": "AMBER"},
-			{"kind": "caption", "at": 0.2, "for": 1.8, "slot": "left_low", "text": [
+			{"kind": "stamp", "at": 0.0, "for": 1.2, "text": "SHIFT COMPLETE", "colour": "AMBER"},
+			{"kind": "caption", "at": 1.2, "for": 1.3, "slot": "left_low", "text": [
 				"Shift log: seals checked. Gauges agree, for once.",
 				"Shift log: dam held. Flume drained. Weather blamed.",
 				"Shift log: pumps running. The river kept its side of it."]},
@@ -183,8 +183,8 @@ const ROWS := {
 		"world": {"full": [{"kind": "eject", "at": 0.0, "seconds": 1.8}], "short": [{"kind": "eject", "at": 0.0, "seconds": 1.1}]},
 		"full": [
 			{"kind": "sfx_word", "at": 0.0, "for": 0.9, "text": "FWOOMP", "anchor": "scooter"},
-			{"kind": "stamp", "at": 0.9, "for": 1.5, "text": "ROUTED", "colour": "AMBER", "slot": "centre"},
-			{"kind": "caption", "at": 1.2, "for": 1.2, "slot": "left_low",
+			{"kind": "stamp", "at": 0.0, "for": 1.5, "text": "ROUTED", "colour": "AMBER", "slot": "centre"},
+			{"kind": "caption", "at": 0.3, "for": 2.1, "slot": "left_low",
 				"text": ["A tactical withdrawal. (Rounded up.)", "Brindle: \"Noted.\"", "The Admiral departs. On schedule."]},
 		],
 		"short": [
@@ -195,7 +195,6 @@ const ROWS := {
 	# the victory card; the card is the walk-in, the stamp is the contract.
 	"tarn_sign_on": {"priority": 3, "on": "sign_on", "boss": "brindle", "earned": "brindle_routed",
 		"full": [
-			{"kind": "sfx_word", "at": 0.0, "for": 0.8, "text": "CLANK", "at_share": Vector2(0.50, 0.40)},
 			{"kind": "card", "at": 0.0, "for": 2.0, "slot": "left_top",
 				"card": ["TARN", "Tiger · claw bruiser", "Temperament", "gentle", "Machine", "is not", "Claws issued", "none"]},
 			{"kind": "stamp", "at": 0.7, "for": 1.3, "text": "HIRED", "colour": "AMBER"},

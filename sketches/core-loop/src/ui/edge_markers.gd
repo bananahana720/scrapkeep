@@ -493,6 +493,24 @@ static func mark_view(size: Vector2) -> Rect2:
 	return Rect2(inset, top, size.x - 2.0 * inset, bottom - top)
 
 
+# The screen each mark in view takes, brackets and tag, for the words to keep off.
+func drawn_rects() -> Array[Rect2]:
+	var out: Array[Rect2] = []
+	for marker in _shown:
+		if marker.has("box"):
+			out.append(mark_rect(marker["box"], marker["tag"], marker["under"], marker["shift"]))
+	return out
+
+
+# Only the tags' chips: a damage number may stand in the brackets, on its target, but not on a tag.
+func tag_rects() -> Array[Rect2]:
+	var out: Array[Rect2] = []
+	for marker in _shown:
+		if marker.has("box") and String(marker["tag"]) != "":
+			out.append(tag_rect(marker["box"], marker["tag"], marker["under"], marker["shift"]))
+	return out
+
+
 # The tags drawn now, for the HUD's word budget (word_budget.gd).
 func drawn_words() -> PackedStringArray:
 	var out := PackedStringArray()

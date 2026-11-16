@@ -7,25 +7,34 @@ const ItemGen := preload("res://src/build/item_gen.gd")
 const Synergies := preload("res://src/build/synergies.gd")
 const WorldPrompt := preload("res://src/ui/world_prompt.gd")
 const Icons := preload("res://src/ui/icons.gd")
+const UiFonts := preload("res://src/ui/ui_fonts.gd")
 const ActiveOffers := preload("res://src/combat/actives/active_offers.gd")
+const ActiveDefs := preload("res://src/combat/actives/active_defs.gd")
+const ScreenRegions := preload("res://src/ui/screen_regions.gd")
 
 # The roll-through reward gates after the beacon. Two arches stand ahead of the ball on
 # its line; rolling through one takes its part. There is no collider and no menu, so
 # choosing never costs speed. If you roll past both, they are put ahead of you again
 # rather than waiting behind you.
 #
-# Each gate says what it gives while you approach, in the order you need it:
-# "{name}: {verb}. Punch +{n}", its effect in one line, and a star line when it would
-# complete a named synergy ("* completes Storm Lattice *") or is a known ingredient
-# ("* ingredient: ??? *"). Rarity shows twice: the arch's colour and the topper's shape
+# Each gate says what it gives while you approach: the part's name, then (when there is room) its effect in
+# one line, and a star line when it would complete a named synergy ("* completes Storm Lattice *") or is a
+# known ingredient ("* ingredient: ??? *"); prompt_parts builds them. Rarity shows twice: the arch's colour and the topper's shape
 # (a bar for common, a star for rare, a tall star with a mint
 # heart for relic), so colour never carries it alone. Red is only for what hurts
 # you (DESIGN-V2 section 11), so relic is mint with its own heart. A hot-wired offer adds an amber stripe.
 #
 # v2 W4: a gate also reads without words, as its family glyph (cat_), trigger glyph
 # (trg_) and element glyph (el_) beside the topper, the same ids the shop and the
-# cards use; a gate whose part completes a synergy pulses. The prompt passes its parts
-# through set_parts(title, detail, "obj_gate").
+# cards use; a gate whose part completes a synergy pulses.
+#
+# The name is a screen prompt (WorldPrompt, owner_placed) that its own gate places every frame at the
+# gate's projected crossbar point, centred on the gate's column, so a name is never apart from its gate (PF-22).
+# It is never slotted, moved aside or clamped to a band. One type size, the name on one row or two when
+# its room is narrow; the effect lines under a one-row name when they fit the room. When names would still
+# overlap, the gate farther from the ball hides its name only (fit_names), with hysteresis so the set of
+# named gates does not flip with a pixel of camera sway. The groups "word_keep_clear" (sound words) and
+# "speech_keep_clear" (the speech bubble) carry keep_clear_rects(), the shown names' screen rects.
 
 signal chosen(part_id: String)
 
@@ -57,8 +66,18 @@ const RUN_OUT := 6.0
 const BLOCK_PENALTY := 1000.0
 # How far a gate stood past the map's slot row may sit off the slots' mean ground (_slot_plan).
 const SLOT_LINE_DROP := 1.5
-# A gate's offer prompt shows while the gate is this close, the whole time it can be chosen.
-const PROMPT_REACH := LOST_BEYOND
+# The name's top stands this far under the crossbar point. A name or effect line is "room" wide: the
+# distance to the nearest other gate's column less NAME_GAP. A shown name stays until it overlaps another by
+# at all, and a hidden one returns only with NAME_HOLD px clear. The effect lines come back only with
+# DETAIL_BACK px to spare, and a name goes back to one row only with ROWS_BACK px to spare.
+const NAME_DROP := 6.0
+const NAME_GAP := 12.0
+const NAME_HOLD := 32.0
+const DETAIL_BACK := 16.0
+const ROWS_BACK := 16.0
+const NAME_TIE_M := 1.0
+const KEEP_CLEAR_GROUP := "word_keep_clear"
+const SPEECH_KEEP_CLEAR_GROUP := "speech_keep_clear"
 
 var offers: Array = []
 # Build's offer_mark(part_id) -> String; the star line under an offer, or "".
@@ -68,6 +87,15 @@ var mark_for: Callable
 var active_row: Callable
 
 var _terrain
+var _ball := Vector3.INF
+var _name_rects: Array[Rect2] = []
+var _name_frame := -1
+# Per gate index: whether its name and its effect lines were shown last frame (the hysteresis).
+var _shown := {}
+var _detail := {}
+var _rows := {}
+# Asked each frame: is the game in play? Build sets it from flow. Names hide when it is not.
+var playing := Callable()
 var _ids: Array = []
 var _held: Array = []
 var _last_side := {}
@@ -76,6 +104,13 @@ var _spin := 0.0
 var _warned_blocked := false
 # Gates standing on the map's slots never move to follow the ball, so they open from both sides.
 var _fixed := false
+
+
+func _init() -> void:
+	add_to_group(KEEP_CLEAR_GROUP)
+	add_to_group(SPEECH_KEEP_CLEAR_GROUP)
+	# Runs through a pause only to hide the names, so a menu over the world is not wearing them.
+	process_mode = Node.PROCESS_MODE_ALWAYS
 
 
 func setup(terrain) -> void:
@@ -96,6 +131,10 @@ func open(part_ids: Array, ball: Vector3, heading: Vector3, held: Array = []) ->
 func close() -> void:
 	visible = false
 	offers = []
+	_name_rects.clear()
+	_shown.clear()
+	_detail.clear()
+	_rows.clear()
 	for gate in _gates:
 		gate.queue_free()
 	_gates.clear()
@@ -110,6 +149,7 @@ func is_open() -> bool:
 func step(ball: Vector3, heading: Vector3) -> bool:
 	if offers.is_empty():
 		return false
+	_ball = ball
 	var passed_all := true
 	for i in offers.size():
 		var offer: Dictionary = offers[i]
@@ -140,6 +180,9 @@ func _place(ball: Vector3, heading: Vector3) -> void:
 	_gates.clear()
 	offers = []
 	_last_side = {}
+	_shown.clear()
+	_detail.clear()
+	_rows.clear()
 	var plan := choose_placement(ball, heading)
 	_fixed = plan.get("fixed", false)
 	var facing: Vector3 = plan["facing"]
@@ -388,24 +431,40 @@ func _build_gate(at: Vector3, facing: Vector3, offer: Dictionary) -> Node3D:
 		glyph.position = Vector3((float(i) - (ids.size() - 1) * 0.5) * 1.5, HEIGHT + 2.9, 0.0)
 		gate.add_child(glyph)
 	gate.set_meta("pulse", offer["synergy"] != "")
-	# The offer is a sign the HUD hangs from the gate's crossbar (screen_regions.gd sign room), so
-	# each gate wears its own part and never climbs into the objective or the toasts (PF-22).
-	var label := WorldPrompt.new()
-	label.name = "Prompt"
-	var lines := "%s\n%s" % [offer["headline"], offer["text"]]
-	if offer["mark"] != "":
-		lines += "\n" + offer["mark"]
-	label.text = lines
-	var parts := prompt_parts(offer)
-	label.set_parts(parts["title"], parts["detail"], parts["icon"])
-	label.add_theme_color_override("font_color", tint.lerp(Color.WHITE, 0.25))
-	label.attach(gate, Vector3(0.0, HEIGHT, 0.0), PROMPT_REACH)
-	# A gate is chosen by steering at it, long before the ball is beside it, so what each gives
-	# shows as far as its name does.
-	label.detail_range = PROMPT_REACH
-	label.on_anchor = true
-	gate.add_child(label)
+	gate.add_child(_name_prompt(offer, tint))
 	return gate
+
+
+# The gate's name: its own prompt, sized and placed each frame (_place_names). Its measurements are what
+# fit_names reads: the name on one row and on two, and the effect lines.
+static func _name_prompt(offer: Dictionary, tint: Color) -> Label:
+	var parts := prompt_parts(offer)
+	var prompt := WorldPrompt.new()
+	prompt.name = "Name"
+	prompt.owner_placed = true
+	prompt.set_parts(parts["title"], parts["detail"], parts["icon"])
+	prompt.add_theme_color_override("font_color", tint.lerp(Color.WHITE, 0.25))
+	prompt.visible = false
+	var one := PackedStringArray([parts["title"]])
+	var two := WorldPrompt.split_name(parts["title"])
+	var lines := String(parts["detail"]).split("\n", false)
+	var big := WorldPrompt.SIGN_NAME_SIZE
+	var small := WorldPrompt.SIGN_DETAIL_SIZE
+	var font := UiFonts.bold()
+	var detail_w := 0.0
+	for line in lines:
+		detail_w = maxf(detail_w, WorldPrompt.row_width(line, small))
+	var two_w := 0.0
+	for row in two:
+		two_w = maxf(two_w, WorldPrompt.row_width(row, big))
+	prompt.set_meta("fit", {
+		"w1": WorldPrompt.row_width(one[0], big) + 2.0 * WorldPrompt.SIGN_PAD,
+		"w2": two_w + 2.0 * WorldPrompt.SIGN_PAD, "two": two,
+		"h1": font.get_height(big), "h2": 2.0 * font.get_height(big) + WorldPrompt.LINE_GAP,
+		"dw": detail_w + 2.0 * WorldPrompt.SIGN_PAD,
+		"dh": lines.size() * (font.get_height(small) + WorldPrompt.LINE_GAP),
+	})
+	return prompt
 
 
 # The hot-wired flag, drawn as a thin diagonal amber band across the topper. It does not
@@ -439,6 +498,9 @@ static func _topper(rarity: String, mat: Material) -> MeshInstance3D:
 func _process(delta: float) -> void:
 	if offers.is_empty():
 		return
+	if get_tree().paused:
+		_place_names()
+		return
 	_spin += delta * 1.8
 	for gate in _gates:
 		var topper := gate.get_node_or_null("Topper") as Node3D
@@ -446,3 +508,146 @@ func _process(delta: float) -> void:
 			topper.rotation = Vector3(0.0, _spin, 0.0)
 			var pulse: float = 1.0 + 0.18 * sin(_spin * 3.0) if gate.get_meta("pulse", false) else 1.0
 			topper.scale = Vector3.ONE * pulse
+	_place_names()
+
+
+# The shown names' rects in viewport pixels, for the words that stamp on screen (KEEP_CLEAR_GROUP) and
+# the speech bubble (SPEECH_KEEP_CLEAR_GROUP) to keep off. A gate behind the camera or off the screen's sides, or whose name is hidden, has none.
+func keep_clear_rects() -> Array[Rect2]:
+	if offers.is_empty():
+		return []
+	if _name_frame != Engine.get_process_frames():
+		_place_names()
+	return _name_rects.duplicate()
+
+
+# What a taken part looks like on the launch take: its name, its family glyph id and its rarity colour. {} for an id that
+# names no part.
+static func taken_look(part_id: String) -> Dictionary:
+	if ActiveOffers.is_offer(part_id):
+		var row := ActiveDefs.row(ActiveOffers.active_of(part_id))
+		return {"name": String(row.get("name", "")), "icon": ActiveOffers.ICON, "color": rarity_color(ActiveOffers.rarity_of(row))}
+	var d: Resource = Parts.def(part_id)
+	if d == null and Parts.token(part_id).is_empty():
+		return {}
+	return {
+		"name": Parts.display_name(part_id),
+		"icon": "cat_" + d.icon_category if d != null and d.icon_category != "" else "",
+		"color": rarity_color(d.rarity if d != null else "common"),
+	}
+
+
+# Puts every gate's name at its own crossbar point for this frame.
+func _place_names() -> void:
+	_name_frame = Engine.get_process_frames()
+	_name_rects.clear()
+	var cam := get_viewport().get_camera_3d() if is_inside_tree() else null
+	var view := get_viewport().get_visible_rect()
+	if is_inside_tree() and (get_tree().paused or (playing.is_valid() and not playing.call())):
+		for gate in _gates:
+			var hidden := gate.get_node_or_null("Name") as Label
+			if hidden != null:
+				hidden.visible = false
+		# _shown and _rows stay: the same names return with the play, not only once each has 32 px clear.
+		return
+	var from: Vector3 = _ball if _ball.is_finite() else (cam.global_position if cam != null else Vector3.ZERO)
+	var entries: Array = []
+	var live: Array = []
+	for i in _gates.size():
+		var gate: Node3D = _gates[i]
+		var prompt := gate.get_node_or_null("Name") as Label
+		if prompt == null:
+			continue
+		var point := gate.global_position + Vector3.UP * HEIGHT
+		var col := Vector2.ZERO if cam == null or cam.is_position_behind(point) else cam.unproject_position(point)
+		if cam == null or cam.is_position_behind(point) or col.x < view.position.x or col.x > view.end.x or col.y > view.end.y:
+			prompt.visible = false
+			_shown[i] = false
+			continue
+		var fit: Dictionary = prompt.get_meta("fit")
+		entries.append(fit.merged({"index": i, "col": col, "dist": from.distance_to(gate.global_position),
+			"was_shown": _shown.get(i, false), "was_detail": _detail.get(i, false), "was_rows": _rows.get(i, 1)}))
+		live.append(prompt)
+	var out := fit_names(entries, ScreenRegions.rect("top", view.size).end.y)
+	for k in live.size():
+		var prompt: Label = live[k]
+		var i: int = entries[k]["index"]
+		var got: Dictionary = out[k]
+		_shown[i] = got["shown"]
+		_detail[i] = got["shown"] and got["detail"]
+		if got["shown"]:
+			_rows[i] = got["rows"]
+		prompt.visible = got["shown"]
+		if not got["shown"]:
+			continue
+		prompt.name_rows = entries[k]["two"] if got["rows"] == 2 else PackedStringArray([prompt.parts()["title"]])
+		prompt.detail_shown = got["detail"]
+		prompt.position = (got["rect"] as Rect2).position
+		prompt.size = got["rect"].size
+		_name_rects.append(got["rect"])
+
+
+# Which names show and how, a pure rule over screen numbers. Each entry: index (the gate's), col (its crossbar
+# point on screen), dist (from the ball), w1 and h1 (the name on one row), w2 and h2 (on two), dw and dh (its
+# effect lines, widths including padding), was_shown and was_detail (last frame). A name hangs under its
+# column, centred on it, and never moves. A name wider than its room (the distance to the nearest other gate's
+# column less NAME_GAP) takes two rows before anything hides; the effect lines show only under a one-row name
+# and only when they fit the room. Nearest gates first (distance in NAME_TIE_M steps, then a name already shown,
+# then the lower index, so a tie never depends on sort order): a name whose rect would overlap one placed by
+# at all (a hidden name: by less than NAME_HOLD px of clear room) hides, and that gate's name only. A name on two rows
+# goes back to one only with ROWS_BACK px to spare (was_rows). A name whose crossbar point is above band_end (the top
+# HUD band's lower edge) drops straight down its own column to just under it, and returns to the point below the band.
+# Returns, per entry in order, {shown, rows, detail, rect}.
+static func fit_names(entries: Array, band_end := 0.0) -> Array:
+	var order: Array = range(entries.size())
+	order.sort_custom(func(a, b):
+		var ea: Dictionary = entries[a]
+		var eb: Dictionary = entries[b]
+		var da := snappedf(float(ea["dist"]), NAME_TIE_M)
+		var db := snappedf(float(eb["dist"]), NAME_TIE_M)
+		if da != db:
+			return da < db
+		if bool(ea["was_shown"]) != bool(eb["was_shown"]):
+			return bool(ea["was_shown"])
+		return int(ea["index"]) < int(eb["index"]))
+	var out: Array = []
+	out.resize(entries.size())
+	var placed: Array[Rect2] = []
+	for k in order:
+		var e: Dictionary = entries[k]
+		var room := INF
+		for other in entries:
+			if other != e:
+				room = minf(room, absf(float(other["col"].x) - float(e["col"].x)) - NAME_GAP)
+		var forms: Array = []
+		var one_row := float(e["w1"]) + (ROWS_BACK if int(e.get("was_rows", 1)) == 2 else 0.0) <= room
+		if one_row:
+			var spare := 0.0 if e["was_detail"] else DETAIL_BACK
+			if float(e["dh"]) > 0.0 and float(e["dw"]) + spare <= room:
+				forms.append({"rows": 1, "detail": true})
+			forms.append({"rows": 1, "detail": false})
+		else:
+			forms.append({"rows": 2, "detail": false})
+		var reach := 0.0 if e["was_shown"] else -NAME_HOLD
+		var result := {"shown": false, "rows": 1, "detail": false, "rect": Rect2()}
+		for form in forms:
+			var width: float = e["w1"] if form["rows"] == 1 else e["w2"]
+			var height: float = e["h1"] if form["rows"] == 1 else e["h2"]
+			if form["detail"]:
+				width = maxf(width, float(e["dw"]))
+				height += float(e["dh"])
+			var rect := Rect2(Vector2(float(e["col"].x) - width * 0.5, maxf(float(e["col"].y) + NAME_DROP, band_end)), Vector2(width, height))
+			if placed.all(func(r): return _overlap(rect, r) <= reach):
+				result = {"shown": true, "rows": form["rows"], "detail": form["detail"], "rect": rect}
+				break
+		if result["shown"]:
+			placed.append(result["rect"])
+		out[entries.find(e)] = result
+	return out
+
+
+# How far two rects overlap: the smaller of their overlaps along x and y, negative by the clear room when apart.
+static func _overlap(a: Rect2, b: Rect2) -> float:
+	var ix := minf(a.end.x, b.end.x) - maxf(a.position.x, b.position.x)
+	var iy := minf(a.end.y, b.end.y) - maxf(a.position.y, b.position.y)
+	return minf(ix, iy)

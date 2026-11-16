@@ -1193,11 +1193,49 @@ func _begin_eject() -> void:
 	var from: Vector3 = ship.to_global(Vector3(0.0, Requisition.DECK + 1.5, 4.8))
 	scooter.global_position = from
 	_eject = {"t": 0.0, "from": from, "angle": land, "landed": false, "dir": 1.0, "slow_until": -1.0}
+	_commit_eject_mark(land)
 	_publish("boss_phase_changed", [CHASE_PHASE, CHASE_NAME])
 	_publish("boss_attack_telegraphed", ["eject", Rules.EJECT_FLIGHT])
 
 
+# The scooter drives off the landing at SCOOTER_SPEED and leaves the catch circle after about 0.32 s,
+# so the mark stays live no longer than that.
+const EJECT_MARK_LIVE := 0.3
+
+
+# The scooter's landing spot, marked on the ground from the cue until it lands. The eject
+# hurts nothing: what the mark covers is the catch, the SCOOTER_TOUCH circle the ball must
+# be inside, so it draws in the harmless bone style (like the phase previews) and goes live
+# on the step the scooter lands. It is stepped here, not with the slag hazards, because a
+# live ring in that list hits the ball.
+func _commit_eject_mark(angle: float) -> void:
+	var to: Vector3 = arena.point_at(angle, Rules.SCOOTER_RING, 0.7)
+	var h = Hazard.new()
+	h.ground = arena.ground
+	h.color = Palette.SAND
+	h.commit_annulus("eject_landing", Hazard.Threat.Type.INSTANT, Vector3(to.x, arena.ground(to), to.z),
+		Vector2(0.0, Rules.SCOOTER_TOUCH), Rules.SCOOTER_TOUCH, Rules.EJECT_FLIGHT, EJECT_MARK_LIVE)
+	arena.add_child(h)
+	_eject["mark"] = h
+
+
+func eject_mark() -> Node3D:
+	var h = _eject.get("mark")
+	return h if is_instance_valid(h) else null
+
+
+func _step_eject_mark(delta: float) -> void:
+	var h = eject_mark()
+	if h == null:
+		return
+	h.step(delta)
+	if h.is_done():
+		h.queue_free()
+		_eject.erase("mark")
+
+
 func _step_scooter(delta: float) -> void:
+	_step_eject_mark(delta)
 	if not is_instance_valid(scooter):
 		return
 	if not _eject["landed"]:
@@ -1320,6 +1358,10 @@ func _add_hazard(h) -> void:
 # the cranes, so a hold left at the phase end would never be paid back.
 func _cancel_hazards() -> void:
 	_clear_preview()
+	var mark = eject_mark()
+	if mark != null:
+		mark.queue_free()
+		_eject.erase("mark")
 	for h in hazards:
 		if is_instance_valid(h):
 			h.queue_free()

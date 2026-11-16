@@ -46,11 +46,18 @@ func standing_in() -> float:
 	return _standing
 
 
-# The way out of the warning the ball stands in, as of the last step: {dir, metres, run}, the
+# The way out of the warning the ball stands in, as of the last step: {dir, metres, run, source}, the
 # flat unit way to its nearest edge, how far that edge is and how far the warning has run; {}
 # when it stands in none. The ground paint (presentation/way_out_paint.gd) draws it on the floor.
 func escape() -> Dictionary:
 	return _escape
+
+
+# Where the attack comes from, for the danger mark's pointer (PF-16: the mark said "you are in
+# danger" and not "from there"): a shell's launch point, else the committed centre, which is a
+# lane's start and a ring's middle.
+static func source_of(d: Dictionary) -> Vector3:
+	return d.get("launch", d.get("centre", Vector3.ZERO))
 
 
 # The shortest way out of a warning for a ball at `at`, flat and unit length, from its committed
@@ -157,6 +164,7 @@ func step(delta: float) -> void:
 						_standing = ran
 						_escape = way_out_reach(d, at)
 						_escape["run"] = ran
+						_escape["source"] = source_of(d)
 			continue
 		if _last_hit >= w["resolved"]:
 			w["done"] = true
@@ -187,6 +195,7 @@ func _hold_body_runs(at: Vector3) -> void:
 		_standing = maxf(_standing, 1.0)
 		_escape = way_out_reach(d, at)
 		_escape["run"] = 1.0
+		_escape["source"] = source_of(d)
 
 
 # Whether a running body's reach covers the ball: the flat distance from the body's centre to the

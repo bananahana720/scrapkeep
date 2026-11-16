@@ -26,7 +26,8 @@ const WordBudget := preload("res://src/ui/word_budget.gd")
 # readers took the difficulty bar for health, the armour bar for a resource and the steps for
 # a signal meter; the three words are what the reads asked for. The budget stays 25.
 # 21 since wave 35 (PF-03): the Shift prompt reads BOOST, because a key and an icon alone told a new player nothing.
-const HUD_WORDS := 21
+# 20 since wave 42 (W1-63 with W1-77): the BOOST word waits until the ball has speed, so it is off the first frame.
+const HUD_WORDS := 20
 
 var _game
 var _frames := 0

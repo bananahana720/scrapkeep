@@ -128,6 +128,12 @@ func lock_active() -> bool:
 	return lock_state == "locked"
 
 
+# The yard is still ahead of the ball: its lock is armed or shut, so its clear is still to come.
+# Stage 1's start pick waits for it (flow.gd show_start_card; W1-63, W1-77).
+func yard_ahead() -> bool:
+	return lock_state in ["armed", "locked"]
+
+
 # The live crew of the shut yard.
 func crew_alive() -> Array:
 	return _crew.map(func(ref: WeakRef): return ref.get_ref()).filter(func(enemy): return _alive(enemy))
@@ -358,6 +364,7 @@ func _step_lock(delta: float) -> void:
 		"armed":
 			if _engaged_s >= 0.0 or not ctx.flow.sealed:
 				lock_state = "spent"
+				ctx.flow.show_start_card()
 				return
 			var ball: Vector3 = ctx.player.ball_position()
 			var beacon: Vector3 = ctx.flow.beacon.global_position
@@ -477,6 +484,9 @@ func _unlock(won: bool) -> void:
 	if won and not gate_open:
 		cleared += 1
 		ctx.events.world_fact.emit("warden_gate_pip", ctx.player.ball_position())
+	# The yard is over, won or run out: stage 1's start pick, which waited for it, comes up now,
+	# after the yard's panel and the overtime offer are on the ground.
+	ctx.flow.show_start_card()
 
 
 # The wall springs a ball back once it is past the ring, harder the further and faster it goes;

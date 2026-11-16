@@ -2,6 +2,7 @@ extends CanvasLayer
 
 const ResultsOdds := preload("res://src/ui/results_odds.gd")
 const UiTokens := preload("res://src/ui/ui_tokens.gd")
+const PlayerFx := preload("res://src/presentation/player_fx.gd")
 
 const Palette := preload("res://src/core/palette.gd")
 const SummaryRows := preload("res://src/ui/summary_rows.gd")
@@ -175,6 +176,7 @@ func setup(game_ref) -> void:
 	game = game_ref
 	layer = 5
 	process_mode = Node.PROCESS_MODE_ALWAYS
+	add_to_group(PlayerFx.KEEP_GROUP)
 	_veil = ColorRect.new()
 	_veil.color = Color(Palette.CHARCOAL, 0.84)
 	_veil.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -299,6 +301,21 @@ func setup(game_ref) -> void:
 	game.events.run_started.connect(func(_class_id): _victory_boss = {})
 	if game.run_moments != null:
 		game.run_moments.page_ready.connect(_show_comic_page)
+
+
+# What a menu or end screen covers while one is showing (word_keep_clear): its title, its mark and
+# each piece of its content. Nothing while play shows.
+func keep_clear_rects() -> Array[Rect2]:
+	var out: Array[Rect2] = []
+	if not visible or not _content.visible or _content.modulate.a < 0.05:
+		return out
+	for piece in [_title, _mark]:
+		if piece.is_visible_in_tree():
+			out.append(piece.get_global_rect())
+	for piece in _content.get_children():
+		if piece != _title and piece != _mark and piece is Control and piece.is_visible_in_tree():
+			out.append(piece.get_global_rect())
+	return out
 
 
 func _label(font_size: int) -> Label:
@@ -1304,17 +1321,17 @@ func _backs(event: InputEvent) -> bool:
 	return event is InputEventKey and event.pressed and not event.echo and event.physical_keycode == KEY_ESCAPE
 
 
-# On the title with nothing focused, a pad's d-pad or stick lands on the first button so A
+# On the title, the death screen and the summary with nothing focused, a pad's d-pad or stick lands on the first button so A
 # can press it. Pad events only: the keyboard's arrows keep doing what they did.
 func _pad_enters_title(event: InputEvent) -> bool:
 	if not (event is InputEventJoypadButton or event is InputEventJoypadMotion) or overlay_open():
 		return false
-	if game.flow.state_name() != "title" or get_viewport().gui_get_focus_owner() != null:
+	if not _state in ["title", "dead", "summary"] or get_viewport().gui_get_focus_owner() != null:
 		return false
 	for action in ["ui_down", "ui_up", "ui_left", "ui_right"]:
 		if event.is_action_pressed(action):
 			for child in _actions.get_children():
-				if child is Button and child.focus_mode != Control.FOCUS_NONE:
+				if child is Button and child.focus_mode != Control.FOCUS_NONE and not child.disabled:
 					child.grab_focus()
 					return true
 	return false

@@ -5,7 +5,7 @@ import path from "node:path";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 
 import { checkTally, expectedShards, tallyRows, planHead } from "./tally.mjs";
-import { SCOPED_ALWAYS, challengeArgs, receiptBotShards, checkBands, compareBands, compareLines, compareRuns, gatePlan, loadBands, nodeSummary, planFileText, runPlan, sortedLines, spareWhileWaiting, stepEnv, worktreePool } from "./pc.mjs";
+import { SCOPED_ALWAYS, defaultBudget, challengeArgs, receiptBotShards, checkBands, compareBands, compareLines, compareRuns, gatePlan, loadBands, nodeSummary, planFileText, runPlan, sortedLines, spareWhileWaiting, stepEnv, worktreePool } from "./pc.mjs";
 
 const names = (count, prefix) => Array.from({ length: count }, (_, index) => `${prefix}${String(index).padStart(4, "0")}_test`);
 const lists = {
@@ -331,16 +331,34 @@ test("challenge arguments carry the label, jobs and resume the way the lane scri
 test("the wave gate plan (--scoped) is the three windows, one scoped shard by name, the node suite and the plan file", () => {
   const waveLists = { ...lists, bots: [...lists.bots, ...SCOPED_ALWAYS].sort() };
   const steps = gatePlan({ wave: 37, head, lists: waveLists, weekly: lists.weekly, bands: null, persona: "cautious", scoped: ["bot_c_test", "bot_a_test.gd", "w_bot_test", "a_one_test"] });
-  assert.deepEqual(steps.map((step) => step.id), ["tests-1-350", "tests-351-700", "tests-701-1049", "scoped", "weekly-tests", "weekly-bots", "node", "plan-file"]);
+  assert.deepEqual(steps.map((step) => step.id), ["scoped", "tests-1-350", "tests-351-700", "tests-701-1049", "weekly-tests", "weekly-bots", "node", "plan-file"]);
   assert.deepEqual(steps.find((step) => step.id === "scoped").args, ["--bots", "bot_a_test,bot_c_test,w_bot_test,world1_run_test", "--lanes", "2"]);
   assert.throws(() => gatePlan({ wave: 37, head, lists: waveLists, bands: null, scoped: ["no_such_test"] }), /on no gate list: no_such_test/);
   assert.throws(() => gatePlan({ wave: 37, head, lists, bands: null, scoped: [] }), /on no gate list: world1_run_test/);
   const text = planFileText({ wave: 37, head, persona: null, base: null, results: allPass(steps), compare: null, steps, today });
   const rows = tallyRows(text);
-  assert.deepEqual(rows.map((row) => row.shard), ["tests 1-350", "tests 351-700", "tests 701-1049", "scoped", "weekly sweep"]);
+  assert.deepEqual(rows.map((row) => row.shard), ["scoped", "tests 1-350", "tests 351-700", "tests 701-1049", "weekly sweep"]);
   assert.deepEqual(checkTally(rows, { testCount: 1049, botCount: waveLists.bots.length, weeklyCount: 2, today, scope: "wave" }), []);
   assert.match(text, /tally\.mjs --wave --plan/);
   assert.notDeepEqual(checkTally(rows, { testCount: 1049, botCount: waveLists.bots.length, today }), [], "the release tally still wants every shard");
+});
+
+test("on the PC's default budget the wave gate's bot shard starts at once beside two test windows, with no wait", async () => {
+  assert.equal(defaultBudget(32), 28, "the budget is the thread count less four, read against measured load");
+  assert.equal(defaultBudget(2), 1);
+  const waveLists = { ...lists, bots: [...lists.bots, ...SCOPED_ALWAYS].sort() };
+  const steps = gatePlan({ wave: 42, head, lists: waveLists, weekly: null, bands: null, scoped: ["bot_a_test"] })
+    .filter((step) => !step.barrier)
+    .map((step) => ({ ...step, ms: step.id === "scoped" ? 120 : 40 }));
+  const { log, run } = harness(defaultBudget(32), steps);
+  let atThirdStart = null;
+  const watch = steps.find((step) => step.id === "tests-701-1049");
+  Object.defineProperty(watch, "ms", { get: () => ((atThirdStart ??= [...log.started]), 40) });
+  await run();
+  assert.deepEqual(log.started.slice(0, 3), ["scoped", "tests-1-350", "tests-351-700"], "the longest step starts first, beside two windows");
+  assert.deepEqual(atThirdStart.slice(0, 4), ["scoped", "tests-1-350", "tests-351-700", "tests-701-1049"], "the third window takes the room a finished window leaves");
+  assert.ok(log.peak <= 28);
+  assert.deepEqual(log.aloneViolations, []);
 });
 
 test("the scoped names can come from a sketch:fast receipt's bot shards", () => {

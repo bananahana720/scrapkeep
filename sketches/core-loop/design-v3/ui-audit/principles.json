@@ -58,16 +58,17 @@
         {"kind": "test", "ref": "ui_tokens_test.gd"},
         {"kind": "test", "ref": "ui_settings_pad_rebind_test.gd"},
         {"kind": "test", "ref": "menu_structure_test.gd"},
+        {"kind": "test", "ref": "menu_reach_test.gd"},
         {"kind": "capture", "ref": "ui_capture.gd"}
       ],
-      "gap": "No check that every focusable control on every screen is reachable from the first focus."
+      "gap": "menu_reach_test walks 17 screens with the stick. Not covered: the camp strip and customize page, the camp stations, the start card and the companion panel, which open only from inside the 3D camp or a run."
     },
     {
       "id": "P7", "name": "Targets are big enough",
       "rule": "44 px or more on the real screen.",
       "standing": "established", "source": "WCAG 2.2 2.5.5",
-      "checks": [{"kind": "capture", "ref": "ui_capture.gd"}],
-      "gap": "Held only when stills are taken: ui_capture lists every small control, and no headless test does."
+      "checks": [{"kind": "test", "ref": "menu_size_test.gd"}, {"kind": "capture", "ref": "ui_capture.gd"}],
+      "gap": "menu_size_test holds 44 px on 17 screens. The camp screens, the start card and the companion panel are held only when stills are taken."
     },
     {
       "id": "P8", "name": "Motion is optional and nothing flashes fast",

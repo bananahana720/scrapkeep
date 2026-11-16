@@ -3,6 +3,7 @@ extends SceneTree
 const Game := preload("res://src/game.gd")
 const Palette := preload("res://src/core/palette.gd")
 const Warden := preload("res://src/combat/warden.gd")
+const ChaseCamera := preload("res://src/movement/chase_camera.gd")
 const Clearance := preload("res://tests/lantern_beacon_clearance_test.gd")
 
 # F6 2026-10-04: caps, magnet, brace, tint and shred checks are gone; the weak point opens on a stagger.
@@ -56,6 +57,8 @@ func _physics_process(_delta: float) -> bool:
 		game.flow.choose_class(0)
 	if ticks in [5, 15, 25]:
 		check_family()
+	if ticks == 6:
+		check_park_shell()
 	if ticks in [10, 20]:
 		game.flow.enter_stage(2 if ticks == 10 else 3, Vector3.ZERO, false)
 	if ticks == 28:
@@ -107,8 +110,12 @@ func check_family() -> void:
 	prior_id = warden.get_instance_id()
 	hook._dress_warden(warden)
 	check("idempotent attachment", hook.warden_of(warden).base == rec.base and warden.find_children("HeroWarden", "", false, false).size() == 1)
-	var shapes: Array = warden.find_children("*", "CollisionShape3D", true, false)
+	var shapes: Array = warden.find_children("*", "CollisionShape3D", true, false).filter(func(s): return not _camera_only(s.get_parent()))
+	var camera_bodies: Array = warden.find_children("*", "PhysicsBody3D", true, false).filter(_camera_only)
 	check("original collider only", shapes.size() == 1 and is_equal_approx(shapes[0].shape.radius, Warden.RADIUS) and is_equal_approx(shapes[0].shape.height, Warden.HALF_HEIGHT * 2.0))
+	if warden.family == "reactor":
+		check("one camera-only body", camera_bodies.size() == 1)
+	check_shell(warden, rec.base, "clamp body")
 	check("mount meets kit", rec.base.get_node("Tower/KitMount").global_position.distance_to(rec.kit.global_position) < 0.0001)
 	for angle in [0.0, 0.7, -2.4]:
 		warden._look._jaws.rotation.y = angle
@@ -366,3 +373,82 @@ func check_chunk_asset(hook) -> void:
 	for i in 4:
 		check("loss %d changes the facing crown silhouette" % (i + 1), silhouettes[i] > silhouettes[i + 1])
 	base.free()
+
+
+# A body only the chase camera sees: its layer is the camera bit and it masks nothing.
+func _camera_only(body) -> bool:
+	return body is PhysicsBody3D and body.collision_layer == ChaseCamera.CAMERA_BODY_BIT and body.collision_mask == 0
+
+
+# The camera drum follows what is drawn: its radius and height are within 0.3 m of the dressed body's own
+# meshes (the ones still on a render layer), measured in the Warden's frame.
+func check_shell(warden, body: Node3D, label: String) -> void:
+	var shell = null
+	for child in warden.get_children():
+		if _camera_only(child) and not child.is_queued_for_deletion():
+			shell = child
+	if warden.family == "mind":
+		print("shell %s mind: none" % label)
+		check("%s: the hanging mind has no camera shell" % label, shell == null)
+		return
+	if shell == null:
+		check("%s: a camera shell exists" % label, false)
+		return
+	var inverse: Transform3D = warden.global_transform.affine_inverse()
+	var box := AABB()
+	var any := false
+	for view in body.find_children("*", "MeshInstance3D", true, false):
+		if view.mesh == null or view.layers == 0 or not view.is_visible_in_tree():
+			continue
+		var local: AABB = inverse * view.global_transform * view.get_aabb()
+		box = local if not any else box.merge(local)
+		any = true
+	var drum: CylinderShape3D = shell.get_child(0).shape
+	var radius := 0.0
+	for corner in 8:
+		var point: Vector3 = box.get_endpoint(corner)
+		radius = maxf(radius, maxf(absf(point.x), absf(point.z)))
+	var capped := minf(radius, Warden.camera_shell_reach())
+	print("shell %s %s: fitted r %.2f, capped r %.2f (drum r %.2f), height %.2f (drum %.2f)" % [label, warden.family, radius, capped, drum.radius, box.size.y, drum.height])
+	# The primitive look alone is 3.61 m by 7.6 m, so a shell that kept that size was never refitted to the body.
+	check("%s: the shell was refitted to the dressed body, not left at the primitive look" % label, drum.height > 7.6 + 0.3)
+	check("%s: the camera shell is the drawn body's capped radius and fitted height" % label, any and absf(drum.radius - capped) < 0.01 and absf(drum.height - box.size.y) < 0.3)
+	var overlaps := 0
+	var space: PhysicsDirectSpaceState3D = warden.get_world_3d().direct_space_state
+	var query := PhysicsShapeQueryParameters3D.new()
+	var probe := SphereShape3D.new()
+	probe.radius = ChaseCamera.PROBE_RADIUS
+	query.shape = probe
+	query.collision_mask = ChaseCamera.CAMERA_BODY_BIT
+	for i in 16:
+		var angle := TAU * i / 16.0
+		query.transform = Transform3D(Basis.IDENTITY, warden.global_position + Vector3(cos(angle), 0.0, sin(angle)) * (Warden.RADIUS + 1.0) + Vector3(0.0, shell.position.y, 0.0))
+		if not space.intersect_shape(query, 1).is_empty():
+			overlaps += 1
+	check("%s: a ball touching the contact cylinder starts the arm's probe clear of the shell, all 16 sides" % label, overlaps == 0)
+
+
+# A park Warden of each family (the harpoon-anchor spec) wears its own model; its shell is that model's size.
+func check_park_shell() -> void:
+	var hook = game.presentation.hero_assets
+	var base = game.flow.warden
+	var mountings := {"reactor": "dam_face", "swarm": "headframe", "mind": "under_island"}
+	for family in ["reactor", "swarm", "mind"]:
+		var world := Node3D.new()
+		game.add_child(world)
+		var park = Warden.new()
+		world.add_child(park)
+		park.setup(base.target, base.terrain, base.world_root, base.live, 1.0, {"family": family, "harpoon_anchor": true, "mounting": mountings[family]})
+		park.set_physics_process(false)
+		hook._dress_warden(park)
+		var rec: Dictionary = hook.warden_of(park)
+		check("park %s wears the model" % family, not rec.is_empty() and rec.base.name == "HeroWarden")
+		if not rec.is_empty():
+			check_shell(park, rec.base, "park " + family)
+
+
+func _drum_of(warden) -> CylinderShape3D:
+	for child in warden.get_children():
+		if _camera_only(child):
+			return child.get_child(0).shape
+	return null
