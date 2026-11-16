@@ -51,6 +51,7 @@ func _run() -> void:
 	await _ship()
 	await _grunt()
 	await _warden()
+	await _ball_in_drum()
 	_layers()
 	quit(_t.verdict())
 
@@ -287,11 +288,29 @@ func _warden() -> void:
 	var rel: Vector3 = lens - shell.global_position
 	var in_drum := Vector2(rel.x, rel.z).length() < cyl.radius and absf(rel.y) < cyl.height * 0.5
 	_t.check("W1 the lens is outside the drum", not in_drum and hit < 4.0, "hit length %.2f, lens %s, shell at %s" % [hit, lens, shell.global_position])
+	cam.free()
+	warden.free()
+
+
+# W2 stands alone, so it cannot hide behind a missing shell: with the shell absent it fails on the
+# second check, and with the ignore-around-ball code removed it fails on the first.
+func _ball_in_drum() -> void:
+	var warden := _dam()
+	var shell := _shell(warden)
+	var cam := _rig()
+	var centre_y := 0.0
+	if shell != null:
+		centre_y = shell.global_position.y - warden.global_position.y
 	# The ball (the origin) inside the drum: the arm must not collapse onto it.
 	warden.global_position = Vector3(0.0, 0.8 - centre_y, 0.0)
 	await _settle(cam, 60)
 	var inside_hit: float = cam.arm.get_hit_length()
 	_t.check("W2 with the ball inside the drum the arm keeps over half its length", inside_hit >= 4.0, "hit length %.2f" % inside_hit)
+	# 0.1 m inside the face the arm points out of: the arm's own shape already overlaps the wall.
+	warden.global_position = Vector3(0.0, 0.8 - centre_y, -3.2)
+	await _settle(cam, 60)
+	var edge_hit: float = cam.arm.get_hit_length()
+	_t.check("W2 with the ball just inside the drum's face the arm keeps over half its length", edge_hit >= 4.0, "hit length %.2f" % edge_hit)
 	warden.global_position = Vector3(0.0, 0.8 - centre_y, 4.0)
 	await _settle(cam, 60)
 	var out_hit: float = cam.arm.get_hit_length()

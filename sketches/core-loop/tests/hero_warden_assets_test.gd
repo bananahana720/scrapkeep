@@ -3,6 +3,7 @@ extends SceneTree
 const Game := preload("res://src/game.gd")
 const Palette := preload("res://src/core/palette.gd")
 const Warden := preload("res://src/combat/warden.gd")
+const ChaseCamera := preload("res://src/movement/chase_camera.gd")
 const Clearance := preload("res://tests/lantern_beacon_clearance_test.gd")
 
 # F6 2026-10-04: caps, magnet, brace, tint and shred checks are gone; the weak point opens on a stagger.
@@ -107,8 +108,11 @@ func check_family() -> void:
 	prior_id = warden.get_instance_id()
 	hook._dress_warden(warden)
 	check("idempotent attachment", hook.warden_of(warden).base == rec.base and warden.find_children("HeroWarden", "", false, false).size() == 1)
-	var shapes: Array = warden.find_children("*", "CollisionShape3D", true, false)
+	var shapes: Array = warden.find_children("*", "CollisionShape3D", true, false).filter(func(s): return not _camera_only(s.get_parent()))
+	var camera_bodies: Array = warden.find_children("*", "PhysicsBody3D", true, false).filter(_camera_only)
 	check("original collider only", shapes.size() == 1 and is_equal_approx(shapes[0].shape.radius, Warden.RADIUS) and is_equal_approx(shapes[0].shape.height, Warden.HALF_HEIGHT * 2.0))
+	if warden.family == "reactor":
+		check("one camera-only body", camera_bodies.size() == 1)
 	check("mount meets kit", rec.base.get_node("Tower/KitMount").global_position.distance_to(rec.kit.global_position) < 0.0001)
 	for angle in [0.0, 0.7, -2.4]:
 		warden._look._jaws.rotation.y = angle
@@ -366,3 +370,8 @@ func check_chunk_asset(hook) -> void:
 	for i in 4:
 		check("loss %d changes the facing crown silhouette" % (i + 1), silhouettes[i] > silhouettes[i + 1])
 	base.free()
+
+
+# A body only the chase camera sees: its layer is the camera bit and it masks nothing.
+func _camera_only(body) -> bool:
+	return body is PhysicsBody3D and body.collision_layer == ChaseCamera.CAMERA_BODY_BIT and body.collision_mask == 0
