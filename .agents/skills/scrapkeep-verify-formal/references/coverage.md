@@ -42,6 +42,8 @@ Each action in the model (`RunFlow.tla`, in the `models` folder beside this one)
 - `RunLast` is the stage whose launch plays no swipe (`worlds.is_run_last`). It is 6 by default, outside the model, so both world 1 launches play the swipe; `guarded-lastgate` sets it to 2.
 - The swipe's word is a part id or 0. The model cannot tell the swipe's own word from no word at all.
 - The camp gate's way into a run (`sketches/core-loop/src/game.gd`, the second `launch_take.play` call) is not modelled; it starts the same swipe as a pilot pick.
+- Unprobed actions: only the four reach probes (`RunFlow.tla`, `ProbeContinue`, `ProbeBossUnderSwipe`, `ProbeRetryUnderSwipe`, `ProbeSummary`) show an action can fire; every other action is unprobed.
+- No rule watches a quit in the victory state. The model reaches it, and on the game a Continue from there fights the beaten boss again with the arena's earnings gone (PF-55, seed 2883; `sketches/core-loop/tools/sysaudit/break_run.gd` now flags it as `won_boss_refought`). The rule belongs with the fix, in wave 43.
 - The victory lap is folded into the victory state. Stage replay from the death screen and the pilot-select page opened from the death screen are not modelled.
 - The arena's retry is one step that restores the checkpoint and stays in the boss state.
 - The save is one run document: what the run holds, the stage, and whether the stage is cleared. Profile unlocks and a failed write are not modelled.

@@ -14,7 +14,11 @@ Heads and open pull requests change by the hour, so read them live (`git ls-remo
 
 The board is the GitHub issue in the table. It also holds the file fences of the open pull requests. The stage log (`git log --first-parent origin/stage/alpha-w<N>`) is the stack queue. "Compare against" names the receipts the next full gate reads its base values from, published on a `scratch/gate-receipts-<folder>` branch. The Gate updates the table as its first commit on a new stage: `node scripts/wave-state.mjs --write --board <new board issue> --compare <receipts folder>` (the red team persona rotates by itself).
 
-## Now (15 Nov 2026, resumed on the PC)
+## Now (16 Nov 2026, wave 42 closing)
+
+**Wave 42 closes on what it has (16 Nov).** The coordinator session on the PC hit a usage limit at 10:22Z and was picked up by a new local session at 10:35Z; the PC rebooted between them. Wave 42's remaining rows move to wave 43 (Andrew accepted the reorder at 09:30Z), and ruling dz moves the whole-run film to the release, so the wave closes on its records, the wave gate and the promotion. Landed after PR 1070: hit words (PR 1063, its Brindle test made load-proof), Brindle's eject ground mark (PR 1071, W1-107) and the radio names (PR 1072, PF-51). In review: sound twins with the UA-07 list (W1-108). Moved to wave 43: the sitting launch's played run (one of six loops fired; it would add a red test) and PF-55, a Continue after a quit in Brindle's victory beat that fights him again (replayed on seed 2883; `break_run.gd` flags it as `won_boss_refought`, PR 1073). Five fixed findings read "open until the release film" (PF-06, PF-16, PF-22, PF-26, PF-50).
+
+### Earlier (15 Nov 2026, resumed on the PC)
 
 **Resumed 15 Nov 02:30Z.** One local Claude Code session on Andrew's PC is coordinator and Gate (ruling ds); the claude.ai project threads stay stopped and this session finishes their open pull requests. The plan Andrew approved runs five waves. Wave 41 settles the queue below and adds the rows that decide "world 1 done" to `npm run sketch:world1-bands -- --sitting` (ruling dt). Wave 42 is clarity: warnings, the HUD and the camera. Wave 43 is sound, difficulty and frame time. Wave 44 is map sites and bodies. Wave 45 is the sitting build. The pause of 14 Nov 18:30Z is over. Wave 40 is on `main` (8d92764c, pull request 1011). `stage/alpha-w41` is open; read its head with `git log --first-parent origin/stage/alpha-w41`.
 
