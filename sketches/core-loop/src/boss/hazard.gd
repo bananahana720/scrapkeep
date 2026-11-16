@@ -152,6 +152,7 @@ func step(delta: float) -> void:
 	if state == WARN and age >= warn_seconds:
 		state = LIVE
 		went_live.emit()
+		land()
 	if state == LIVE and age >= warn_seconds + live_seconds:
 		state = DONE
 	var reshaped := false
@@ -214,6 +215,18 @@ func front() -> float:
 	if state == WARN:
 		return -1.0
 	return absf(a_to - a_from) * live_fraction()
+
+
+# The landing on the step the warning ends (FX-05, as Telegraph.land does for a crew mark): the
+# ink crack ring and dust kick, and an INSTANT's solid flash, drawn from descriptor(), the
+# numbers contains() reads. Nothing for a harmless mark, a wave's sweep (its front is its
+# landing) or a hazard outside the tree.
+func land() -> void:
+	if not is_inside_tree() or not is_hostile():
+		return
+	var floor: bool = _painter != null
+	Threat.flash(get_parent(), descriptor(), centre.y, DRAW_LIFT, _painter.ground if floor else Callable(),
+		_painter.ground_many if floor else Callable())
 
 
 func finish() -> void:
