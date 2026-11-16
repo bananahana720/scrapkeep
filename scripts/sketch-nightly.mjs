@@ -5,6 +5,7 @@ import {
   existsSync,
   mkdirSync,
   readFileSync,
+  realpathSync,
   rmSync,
   symlinkSync,
   writeFileSync,
@@ -732,7 +733,7 @@ async function main() {
   process.exitCode = outcome.exit;
 }
 
-if (process.argv[1] === fileURLToPath(import.meta.url))
+if (process.argv[1] && realpathSync(process.argv[1]) === fileURLToPath(import.meta.url))
   main().catch((error) => {
     console.error(`sketch:nightly: ${error.message}`);
     process.exitCode = 2;

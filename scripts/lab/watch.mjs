@@ -20,7 +20,7 @@
 // call in the session, the preflight's included, counts against --call-cap
 // (60 by default). Watch keeps its own verdict cache and runs root, so a demo
 // verdict never answers an evidence batch.
-import { existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, realpathSync, writeFileSync } from "node:fs";
 import { appendFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -421,6 +421,6 @@ async function main(argv) {
   return EXIT.pass;
 }
 
-if (process.argv[1] === fileURLToPath(import.meta.url)) {
+if (process.argv[1] && realpathSync(process.argv[1]) === fileURLToPath(import.meta.url)) {
   process.exitCode = await main(process.argv.slice(2));
 }

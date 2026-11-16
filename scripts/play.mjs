@@ -12,6 +12,7 @@ import {
   existsSync,
   mkdirSync,
   readFileSync,
+  realpathSync,
   rmSync,
   watch as watchFs,
   writeFileSync,
@@ -1108,5 +1109,5 @@ async function main(argv) {
   }
 }
 
-if (process.argv[1] === fileURLToPath(import.meta.url))
+if (process.argv[1] && realpathSync(process.argv[1]) === fileURLToPath(import.meta.url))
   main(process.argv.slice(2));

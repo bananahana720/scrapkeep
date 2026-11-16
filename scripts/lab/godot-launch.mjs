@@ -16,7 +16,7 @@
 //
 // The binary is the one sketch-smoke.mjs pins, or GODOT_BIN.
 import { spawnSync } from "node:child_process";
-import { existsSync } from "node:fs";
+import { existsSync, realpathSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
@@ -288,6 +288,6 @@ async function main(argv) {
   return EXIT[record.result];
 }
 
-if (process.argv[1] === fileURLToPath(import.meta.url)) {
+if (process.argv[1] && realpathSync(process.argv[1]) === fileURLToPath(import.meta.url)) {
   process.exitCode = await main(process.argv.slice(2));
 }

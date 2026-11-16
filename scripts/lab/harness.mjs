@@ -56,7 +56,7 @@
 //     [--cache verdict-dir] [--replay]
 //     [--stall-at N | --crash-at N | --invalid-at N | --error-at N]
 import { spawn } from "node:child_process";
-import { existsSync } from "node:fs";
+import { existsSync, realpathSync } from "node:fs";
 import { mkdir, readFile, readdir } from "node:fs/promises";
 import path from "node:path";
 import { performance } from "node:perf_hooks";
@@ -1100,7 +1100,7 @@ function parseArgs(argv) {
   return options;
 }
 
-if (process.argv[1] === fileURLToPath(import.meta.url)) {
+if (process.argv[1] && realpathSync(process.argv[1]) === fileURLToPath(import.meta.url)) {
   let options;
   try {
     options = parseArgs(process.argv.slice(2));
