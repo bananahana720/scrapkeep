@@ -86,7 +86,7 @@ test("a failed test with a red row is carried from its first run and is not reru
   const carried = classifyFailure("red_test", [], ledger);
   assert.equal(carried.call, "carried");
   assert.equal(carried.alone, "not rerun: red row, a check failed in the first run");
-  // The same call as with solo runs, pass or fail: skipping them hides nothing.
+  // By test name alone the call is the same with solo runs; what each failed run did is read separately (whatFailed).
   for (const runs of [[false], [true], [false, false], [true, true]]) assert.equal(classifyFailure("red_test", runs, ledger).call, "carried");
   // Without a row, no solo run is never a pass.
   assert.equal(classifyFailure("fresh_test", [], ledger).call, "new-red");
@@ -121,10 +121,25 @@ test("every failed run of a listed test is read against its row, not only the la
   assert.equal(classifyFailure("red_test", [true], named, null, whatFailed([{ ok: false, text: pin, timedOut: false }, { ok: true, text: "", timedOut: false }])).call, "carried");
   // A passing run's lines are not read; an ERROR line of a failed run is.
   assert.deepEqual(whatFailed([{ ok: false, text: pin + "ERROR: resumed after await\n", timedOut: false }, { ok: true, text: other, timedOut: false }]), { labels: ["pin within 2 s"], timedOut: false, errorLine: true });
-  assert.equal(whatFailed([{ ok: false, text: pin + "   SCRIPT ERROR: Invalid call\n", timedOut: false }]).errorLine, true);
+  assert.equal(whatFailed([{ ok: false, text: pin + "SCRIPT ERROR: Invalid call\n", timedOut: false }]).errorLine, true);
   // A failed run with no log, and a failing line the pattern cannot label, are never read as nothing.
   assert.deepEqual(whatFailed([{ ok: false, text: null, timedOut: false }]).labels, ["a failed run left no log"]);
   assert.deepEqual(failedChecks("CUA check -> FAIL: door\n[pin within 2 s] got 3 -> FAIL\n"), ["unlabelled failing line: CUA check -> FAIL: door", "pin within 2 s"]);
+});
+
+test("a load time-out never hides a check the row does not name (PR 1051, second review)", () => {
+  const named = parseLedger(["test\tkind\tcause\towner\tadded\treview\tcheck", "red_test\tred\tpin off by 2 s\tcoordinator\t2026-11-09\t2026-11-23\tpin within 2 s"].join("\n")).rows;
+  const loaded = { threads: 32, runs: [{ timedOut: true, failLines: 0, load: 20 }, { timedOut: true, failLines: 0, load: 20 }] };
+  // First run failed an unnamed check and was killed; both solo runs were killed under load with no check.
+  const hidden = classifyFailure("red_test", [false, false], named, loaded, { labels: ["stage 1 draw"], timedOut: true, errorLine: false });
+  assert.equal(hidden.call, "new-red");
+  assert.match(hidden.note, /stage 1 draw/);
+  // Only the kill is unnamed: that is what a retime on a quiet machine can settle.
+  assert.equal(classifyFailure("red_test", [false, false], named, loaded, { labels: ["pin within 2 s"], timedOut: true, errorLine: false }).call, "suspect-load");
+  assert.equal(classifyFailure("red_test", [false, false], named, loaded, { labels: [], timedOut: true, errorLine: false }).call, "suspect-load");
+  // A passing check line is not a failing check, and an error line counts as the runner counts it: at column 0.
+  assert.deepEqual(failedChecks("[x] expected -> FAIL, got it -> PASS\n"), []);
+  assert.equal(whatFailed([{ ok: false, text: "[pin within 2 s] got 3 -> FAIL\n  child: ERROR: echoed\n   ERROR: indented\n", timedOut: false }]).errorLine, false);
 });
 
 test("a shard is red only for a new red, and its verdict names what it carried", () => {

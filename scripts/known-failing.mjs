@@ -14,9 +14,10 @@
 //   node scripts/known-failing.mjs --print            the ledger as a Markdown table
 //
 // --check is a stage of `npm run check:docs`. --promotion is a step of the
-// promotion gate (scripts/gate/tally.mjs runs it). --judge is how a gate shard
-// sorts the tests that failed solo: a listed test is carried, an unlisted one
-// is a new red, and it exits 1 when any name is unlisted.
+// promotion gate (scripts/gate/tally.mjs runs it). --judge sorts test names by
+// whether they have a row, and exits 1 when any name is unlisted. It reads no
+// log, so it cannot say a failure is carried: the gate shard does that, by
+// reading the failed runs against the row's named checks (scripts/gate/shard.mjs).
 
 import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
@@ -34,7 +35,7 @@ export const TESTS_DIRECTORY = "sketches/core-loop/tests";
 export const KINDS = ["red", "flake"];
 // The seventh column (ruling dx, 15 Nov 2026): the checks a red row covers, as the test prints them between
 // the square brackets of a "-> FAIL" line, joined by " ;; ". A star stands for any text ("class * builds").
-// TIME-OUT covers a run killed at its limit (or one that left no exit code), and ERROR-LINE a run that prints
+// TIME-OUT covers a run killed at its limit, and ERROR-LINE a run that prints
 // an ERROR or SCRIPT ERROR line or fails with no failing check; each is needed also beside a named check, and
 // neither is matched by a star. A flake row has "-": the listed flakes keep their allowance until each is fixed.
 export const CHECK_COLUMN = "check";

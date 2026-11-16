@@ -235,3 +235,22 @@ test("a star never stands for a kill or an error line, and a check of stars alon
   assert.equal(bad.problems.length, 2);
   assert.match(bad.problems[0].message, /a check of stars alone covers every check/);
 });
+
+test("the checked-in ledger has the check column, and every named check is text its test can print", () => {
+  const { rows, hasChecks } = parseLedger(readFileSync(path.join(repoRoot, LEDGER_FILE), "utf8"));
+  assert.equal(hasChecks, true);
+  const red = rows.filter((entry) => entry.kind === "red");
+  assert.ok(red.length > 0);
+  for (const entry of red) {
+    const source = readFileSync(path.join(repoRoot, "sketches/core-loop/tests", entry.test + ".gd"), "utf8");
+    for (const named of entry.checks.filter((check) => check !== "TIME-OUT" && check !== "ERROR-LINE")) {
+      // A check can be built from parts ("[class %d builds]", label + ": Surplus Yard ..."), so the longest fixed
+      // piece of it must be in the test's source.
+      const piece = named.split(/\d+|\*|: /).map((part) => part.trim()).sort((a, b) => b.length - a.length)[0];
+      assert.ok(piece.length >= 6 && source.includes(piece), `${entry.test}: no check "${named}" in its source`);
+    }
+  }
+  // tree_play_test prints one check per class, numbered from 0 (PR 1051 review: the row first named 1 to 6).
+  const tree = red.find((entry) => entry.test === "tree_play_test");
+  if (tree) assert.deepEqual(tree.checks, [0, 1, 2, 3, 4, 5].map((index) => `class ${index} builds`));
+});
