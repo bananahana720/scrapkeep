@@ -25,7 +25,8 @@ const ClassDef := preload("res://src/core/class_def.gd")
 # not show what a real server lists.
 
 const SEED := 4301
-const ARRIVAL_COUNT_FLOOR := 1
+# 2 + 6 + 6 + 24 + 24 over SETS: a fixed count, so the check cannot agree with itself.
+const ORDERS_EXPECTED := 62
 
 # Each set is a list of contact kinds. Touches: heavy (rebounds the ball), kill (a ram that
 # kills), soft (a ram that does not kill), stomp (a drop onto an enemy below). Direct: hit,
@@ -42,7 +43,7 @@ const SETS := [
 const CONTROL_SETS := [["heavy", "heavy"], ["heavy", "heavy", "stomp"]]
 # Written by _process (a render frame, so its timing is not the game's state): the drawn roll.
 const RENDER_ONLY := {"player._roll": true}
-# A pickup before a hit lets the scrap absorb part of it (run_state.gd _damage_armored); the
+# A pickup before damage (a hazard here) lets the scrap absorb part of it (run_state.gd _damage_armored); the
 # game orders them by process order, not by a physics server list, so this pair is not part of
 # the "same state" claim. The test pins that the comparison can see it.
 const KNOWN_PAIR := ["pickup", "hazard"]
@@ -282,10 +283,12 @@ func _order(set: Array, order: Array, bypass: bool) -> Dictionary:
 		for slot in touches:
 			fake.listed.append(made[slot])
 		ball.set("_touching", {})
+	# The ball's own signal, one per enemy it reports: proof the sorted path ran (review, 16 Nov).
+	var reported := [0]
+	if not bypass:
+		ball.enemy_touched.connect(func(_enemy, _normal): reported[0] += 1)
 	var told := false
-	var arrived := 0
 	for slot in order:
-		arrived += 1
 		match set[slot]:
 			"heavy", "kill", "soft", "stomp":
 				if bypass:
@@ -302,7 +305,8 @@ func _order(set: Array, order: Array, bypass: bool) -> Dictionary:
 			"hazard":
 				game.run.damage(35.0, "hazard")
 	var snap := _snapshot(game, made, log)
-	snap["arrived"] = arrived
+	snap["reported"] = reported[0]
+	snap["touches"] = touches.size()
 	game.queue_free()
 	await physics_frame
 	return snap
@@ -336,6 +340,8 @@ func _all_orders(set: Array, bypass: bool, noise: Dictionary) -> Dictionary:
 		var snap := await _order(set, order, bypass)
 		ran += 1
 		_runs += 1
+		if not bypass and snap["reported"] != snap["touches"]:
+			findings.append([order, ["the ball reported %d of %d touches" % [snap["reported"], snap["touches"]]]])
 		if first.is_empty():
 			first = snap
 			continue
@@ -371,7 +377,7 @@ func _run() -> void:
 			detail += "; first differing order %s, fields: %s" % [str(worst[0]), str(worst[1].slice(0, 6))]
 		_check("same state: " + "+".join(set), result["findings"].is_empty() and result["ran"] == result["expected"], detail)
 		print("note: %s event lists in raw order differ in %d of %d orders" % ["+".join(set), result["list_differs"], result["ran"]])
-	_check("orders ran", total_ran >= ARRIVAL_COUNT_FLOOR and total_ran == total_expected, "%d orders of %d expected (2+6+24 per set)" % [total_ran, total_expected])
+	_check("orders ran", total_ran == ORDERS_EXPECTED and total_expected == ORDERS_EXPECTED, "%d orders of %d expected (2+6+24 per set)" % [total_ran, total_expected])
 
 	# Planted control: no sort. At least one set must show an order-dependent state.
 	var control_hits := 0
