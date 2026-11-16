@@ -9,8 +9,9 @@ const Push := preload("res://tests/workshop/push.gd")
 # The kit pick a first-timer can read (PF-01, PF-10, PF-30):
 #   - copy: no sentence appears on two world-one cards, none of the old jargon lines survives, and
 #     every card's first sentence is within the word budget;
-#   - taking a card marks it with the amber edge and no word, and the kit's name toasts once, after
-#     the screen has left (two picks in a row toast once each);
+#   - taking a card marks it with the amber, the edge weight and the pop, and no word, and the kit's
+#     name toasts once, after the screen has left; a skipped depth reopens the screen without
+#     closing it, and its two kits share one toast after the final close;
 #   - while a pick card is up in the middle of a fight, the "Paused" line shows and the hit
 #     word, the synergy callout, the toast row and Moss's line behind it do not; they come back
 #     after the pick;
@@ -31,6 +32,9 @@ var _word: Label3D
 var _hidden_words := 0
 var _name := ""
 var _chain: Array = []
+var _skip_names: Array = []
+var _watched := 0
+var _early: Array = []
 
 
 func _initialize() -> void:
@@ -119,8 +123,19 @@ func _process(_delta: float) -> bool:
 				_report("a2 kit named once after the pick is gone", not _ws.pick.visible and toasts == [_name + " taken"], "toast %s for %s, pick visible %s" % [toasts, _name, _ws.pick.visible])
 				Push.key(root, KEY_D)
 				Push.key(root, KEY_ENTER)
-				_next("fight")
+				_next("stage_card")
+		"stage_card":
+			if _game.hud.launch_card.showing() and _wait < 1500:
+				return false
+			# Observation, not a check: the toast ages under the stage card and is gone when it ends
+			# (hud.gd _step_toast counts "left" down while the row is hidden). Reported, not fixed here.
+			print("note: kit toast after the stage card ended (%d frames): %s" % [_wait, _game.hud.toast_texts()])
+			_next("fight")
 		"fight":
+			if _wait == 2:
+				# The kit toast waited behind the briefing; once the start pick is taken it is still the toast.
+				_report("t1 the kit toast survives the briefing", _game.hud.toast_texts() == [_name + " taken"] and not _game.hud._quiet,
+					"toasts %s, quiet %s, row visible %s, stage card %s, briefing %s" % [_game.hud.toast_texts(), _game.hud._quiet, _game.hud._toast_row.is_visible_in_tree(), _game.hud.launch_card.showing(), _ws.briefing()])
 			if _wait == SETTLE:
 				# A fight in progress: a hit word in the world, a synergy callout and Moss's line up.
 				_word = WordFxWord.stamp(_game, "KA-CHUNK", Vector3.ZERO)
@@ -153,28 +168,83 @@ func _process(_delta: float) -> bool:
 					"pick open %s, hit word %s, Moss's line %s, callout %s" % [_ws.pick.is_open(), _word.is_visible_in_tree(), _ws.bubble.showing(), _game.hud.why_callout.is_visible_in_tree()])
 				_next("chain_open")
 		"chain_open":
-			if _wait == 3:
+			if _wait >= 3 and not _ws.pick.visible:
 				_game.hud.launch_card.visible = false
 				_game.player.tree.open_checkpoint()
 				_next("chain_pick")
 		"chain_pick":
-			if _wait == SETTLE and _ws.pick.is_open():
+			if _wait > 600:
+				_report("a3 the pick opened", false, "no open pick after %d frames" % _wait)
+				_finish()
+				return true
+			if _wait >= SETTLE and _ws.pick.is_open():
 				_name = String(_ws.pick.cards()[1].node.get("name", ""))
 				Push.key(root, KEY_2)
 				_next("chain_gone")
 		"chain_gone":
 			if _ws.pick.visible and _wait < 600:
 				return false
+			_report("a3 the screen has gone", not _ws.pick.visible, "visible %s after %d frames" % [_ws.pick.visible, _wait])
 			var seen: Array = _game.hud.toast_texts()
 			_chain.append(seen.duplicate())
 			_report("a3 pick %d toasts its kit once" % _chain.size(), seen.count(_name + " taken") == 1, "toasts %s for %s" % [seen, _name])
 			if _chain.size() < 2:
 				_next("chain_open")
 				return false
-			print("pick_card_clarity_test: %s" % ("PASS" if _failures == 0 else "FAIL (%d)" % _failures))
-			quit(0 if _failures == 0 else 1)
+			_next("skip_open")
+		"skip_open":
+			# A fresh tree owing two picks at once: choosing the first reopens the same screen.
+			if _wait == 3:
+				_game.hud.drop_toast(_game.hud.toast_texts()[0] if not _game.hud.toast_texts().is_empty() else "")
+				_game.hud.launch_card.visible = false
+				var tree = _game.player.tree
+				tree.reset(tree.class_id)
+				tree.open_checkpoint()
+				tree.open_checkpoint()
+				_next("skip_first")
+		"skip_first":
+			if _wait > 600:
+				_report("s1 the first pick opened", false, "no open pick after %d frames" % _wait)
+				_finish()
+				return true
+			if _wait >= SETTLE * 2 and _ws.pick.is_open() and _ws.pick.depth == 1:
+				_skip_names.append(String(_ws.pick.cards()[0].node.get("name", "")))
+				Push.key(root, KEY_1)
+				_next("skip_second")
+		"skip_second":
+			if _wait > 600:
+				_report("s1 the second pick opened", false, "no reopened pick after %d frames" % _wait)
+				_finish()
+				return true
+			_watch_toasts()
+			if _wait >= SETTLE and _ws.pick.is_open() and _ws.pick.depth == 2:
+				_skip_names.append(String(_ws.pick.cards()[1].node.get("name", "")))
+				Push.key(root, KEY_2)
+				_next("skip_gone")
+		"skip_gone":
+			_watch_toasts()
+			if _ws.pick.visible and _wait < 600:
+				return false
+			var seen: Array = _game.hud.toast_texts()
+			var want: String = ", ".join(_skip_names) + " taken"
+			_report("s2 the screen has gone", not _ws.pick.visible, "visible %s after %d frames" % [_ws.pick.visible, _wait])
+			_report("s3 no toast at any frame while the pick was up", _watched > 0 and _early.is_empty(), "%d frames watched, toasts seen %s" % [_watched, _early])
+			_report("s4 one toast names both kits in order", _skip_names.size() == 2 and seen == [want], "toast %s, want [%s]" % [seen, want])
+			_finish()
 			return true
 	return false
+
+
+func _watch_toasts() -> void:
+	if _ws.pick.visible:
+		_watched += 1
+		for text in _game.hud.toast_texts():
+			_early.append(text)
+
+
+func _finish() -> void:
+	print("pick_card_clarity_test: %s" % ("PASS" if _failures == 0 else "FAIL (%d)" % _failures))
+	quit(0 if _failures == 0 else 1)
 
 
 # No label on the card says "Taken": the colour carries it.

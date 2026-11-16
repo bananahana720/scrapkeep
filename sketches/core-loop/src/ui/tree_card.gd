@@ -94,7 +94,7 @@ func _init(node_row := {}, key_id := "", class_color := Palette.SAND, node_depth
 
 
 # Marks this card as the one taken: an amber edge that stays while the card leaves, so the pick
-# reads as made. The colour carries it; no word restates it.
+# reads as made. The amber, the edge weight and the pop carry it; no word restates it.
 func mark_taken() -> void:
 	_taken = true
 	add_theme_stylebox_override("disabled", ClassCard._plate(Palette.AMBER, 4))
