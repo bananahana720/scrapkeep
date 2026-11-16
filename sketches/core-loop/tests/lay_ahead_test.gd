@@ -21,6 +21,19 @@ class Ball extends RefCounted:
 		return v
 
 
+# The commits run for real; only the drawing they hand to the telegraph layer is stubbed, so no world is needed.
+class Mat extends "res://src/combat/jolt_layer.gd":
+	func _commit_ring(_type: int, _at: Vector3, _radius: float, _reach := 3.5, _tint := Palette.HAZARD) -> Node3D:
+		return null
+	func _on_water(_at: Vector3) -> bool:
+		return false
+
+
+class Boom extends "res://src/combat/boom_tender.gd":
+	func _commit_lane(_type: int, _from: Vector3, _heading: Vector3, _length: float, _width: float, _reach := 3.5) -> Node3D:
+		return null
+
+
 class Still extends RefCounted:
 	func ball_position() -> Vector3:
 		return Vector3(1.0, 0.0, 1.0)
@@ -51,6 +64,32 @@ func _run() -> void:
 		enemy.target = Still.new()
 		_t.eq("%s: a target with no velocity is aimed at as it stands" % name, enemy._ahead(1.0, 12.0), Vector3(1.0, 0.0, 1.0))
 		enemy.free()
+	# The commits themselves (review, 16 Nov): a revert of either kind to the ball's own spot fails here.
+	ball.v = Vector3(6.0, 0.0, 0.0)
+	var mat = Mat.new()
+	root.add_child(mat)
+	mat.global_position = ball.at + Vector3(0.0, 0.0, 8.0)
+	mat.target = ball
+	mat._commit(ball.at - mat.global_position)
+	var laid: Vector3 = mat.field.centre if mat.field != null else Vector3.INF
+	_t.check("the mat is laid where a rolling ball is when it goes live", laid.is_equal_approx(ball.at + ball.v * mat.warn_seconds), str(laid))
+	var boom = Boom.new()
+	root.add_child(boom)
+	boom.global_position = ball.at + Vector3(0.0, 0.0, 8.0)
+	boom.target = ball
+	boom._commit(ball.at - boom.global_position)
+	_t.check("the boom's lane turns ahead of a rolling ball, not at it", boom._heading.x > 0.5, str(boom._heading))
+	# At cruise, a row that fades the lead to nothing aims at the ball as it stands.
+	PackPressure.observe(ball.v, ball.v.length())
+	var cruising = JoltLayer.new()
+	root.add_child(cruising)
+	cruising.global_position = mat.global_position
+	cruising.target = ball
+	cruising.spec = {"pressure": {"lead_cruise": 0.0}}
+	_t.eq("a ball at cruise on a row that fades the lead is met where it is", cruising._ahead(1.0, 12.0), ball.at)
+	cruising.spec = {}
+	_t.check("a row with no fade still leads a ball at cruise", cruising._ahead(1.0, 12.0).is_equal_approx(ball.at + ball.v), str(cruising._ahead(1.0, 12.0)))
+	PackPressure.observe(Vector3.ZERO)
 	_t.check("the mat leads at most two of its radii", JoltLayer.LAY_AHEAD <= 12.0 + 0.001)
 	_t.check("the boom leads no further than its lane plus the cruise of half a sweep", BoomTender.LEAD_REACH <= BoomTender.LANE_LENGTH + 2.0)
 	quit(_t.verdict())
