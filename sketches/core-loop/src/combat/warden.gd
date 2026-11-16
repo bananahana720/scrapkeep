@@ -912,6 +912,13 @@ func _build_body() -> void:
 # (those still on a render layer, outside the floating badge), so the primitive look, the clamp base and a
 # hero body each get their own: built with the look, refitted by hero_assets once it has dressed the body.
 func fit_camera_shell() -> void:
+	# The mind hangs and sprawls (a 12 m reach), so no cylinder fits it; a shell that big would wall off the air
+	# round it. The camera meets it as it did before.
+	if family == Roster.MIND:
+		var old := get_node_or_null("CameraShell")
+		if old != null:
+			old.queue_free()
+		return
 	var inverse := global_transform.affine_inverse()
 	var badge := _look.get_node_or_null("Badge")
 	var box := AABB()

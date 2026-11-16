@@ -385,8 +385,12 @@ func _camera_only(body) -> bool:
 func check_shell(warden, body: Node3D, label: String) -> void:
 	var shell = null
 	for child in warden.get_children():
-		if _camera_only(child):
+		if _camera_only(child) and not child.is_queued_for_deletion():
 			shell = child
+	if warden.family == "mind":
+		print("shell %s mind: none" % label)
+		check("%s: the hanging mind has no camera shell" % label, shell == null)
+		return
 	if shell == null:
 		check("%s: a camera shell exists" % label, false)
 		return
@@ -404,26 +408,29 @@ func check_shell(warden, body: Node3D, label: String) -> void:
 	for corner in 8:
 		var point: Vector3 = box.get_endpoint(corner)
 		radius = maxf(radius, maxf(absf(point.x), absf(point.z)))
-	print("shell %s: drum r %.2f h %.2f, body r %.2f h %.2f" % [label, drum.radius, drum.height, radius, box.size.y])
+	print("shell %s %s: drum r %.2f h %.2f, body r %.2f h %.2f" % [label, warden.family, drum.radius, drum.height, radius, box.size.y])
+	# The primitive look alone is 3.61 m by 7.6 m, so a shell that kept that size was never refitted to the body.
+	check("%s: the shell was refitted to the dressed body, not left at the primitive look" % label, drum.height > 7.6 + 0.3)
 	check("%s: the camera shell matches the drawn body within 0.3 m" % label, any and drum.radius >= radius - 0.3 and drum.height >= box.size.y - 0.3 and drum.radius <= radius + 3.0)
 
 
-# A park reactor Warden (the harpoon-anchor spec) wears the reactor model; its shell is that model's size.
+# A park Warden of each family (the harpoon-anchor spec) wears its own model; its shell is that model's size.
 func check_park_shell() -> void:
 	var hook = game.presentation.hero_assets
 	var base = game.flow.warden
-	var world := Node3D.new()
-	game.add_child(world)
-	var park = Warden.new()
-	world.add_child(park)
-	park.setup(base.target, base.terrain, base.world_root, base.live, 1.0, {"family": "reactor", "harpoon_anchor": true, "mounting": "dam_face"})
-	park.set_physics_process(false)
-	hook._dress_warden(park)
-	var rec: Dictionary = hook.warden_of(park)
-	check("park reactor wears the model", not rec.is_empty() and rec.base.name == "HeroWarden")
-	if not rec.is_empty():
-		check_shell(park, rec.base, "park reactor")
-		check("park reactor: the drum is at least the model's rest size", _drum_of(park).radius >= 3.2 and _drum_of(park).height >= 8.4)
+	var mountings := {"reactor": "dam_face", "swarm": "headframe", "mind": "under_island"}
+	for family in ["reactor", "swarm", "mind"]:
+		var world := Node3D.new()
+		game.add_child(world)
+		var park = Warden.new()
+		world.add_child(park)
+		park.setup(base.target, base.terrain, base.world_root, base.live, 1.0, {"family": family, "harpoon_anchor": true, "mounting": mountings[family]})
+		park.set_physics_process(false)
+		hook._dress_warden(park)
+		var rec: Dictionary = hook.warden_of(park)
+		check("park %s wears the model" % family, not rec.is_empty() and rec.base.name == "HeroWarden")
+		if not rec.is_empty():
+			check_shell(park, rec.base, "park " + family)
 
 
 func _drum_of(warden) -> CylinderShape3D:
