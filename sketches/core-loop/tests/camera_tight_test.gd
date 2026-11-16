@@ -10,7 +10,8 @@ const T := preload("res://tests/support/t.gd")
 # the camera sits on the +Z side of the ball, so the wall goes there. T1-T6: a tall wall. L1: a low
 # wall whose top the lifted arm clears (the lift must not read its own result and cycle). R1-R2: a
 # low roof over the wall, where lifting would shorten the arm further, so the camera must not lift
-# and must come back when the wall goes. U1: a rig whose physics never ticked is not lifted.
+# and must come back when the wall goes. U1: a rig whose physics never ticked is not lifted. F1: open
+# ground is not a wall. P1-P2: a wall that is there for 9 frames does not throw the lens up.
 
 const DT := 1.0 / 60.0
 
@@ -129,11 +130,11 @@ func _roof() -> void:
 # a wall: no lift, and the arm angle is the player's pitch plus the bias, which is none here.
 func _floor() -> void:
 	var cam := _rig()
-	var floor := _box(Vector3(40.0, 1.0, 40.0), Vector3(0.0, -1.5, 0.0))
+	var ground := _box(Vector3(40.0, 1.0, 40.0), Vector3(0.0, -1.5, 0.0))
 	cam.pitch = 0.5
 	await _settle(cam, 120)
 	_t.check("F1 looking up over open ground the arm is not lifted", absf(cam.arm.rotation.x - 0.5) < 0.001, "arm %.3f, pitch 0.500, hit length %.2f" % [cam.arm.rotation.x, cam.arm.get_hit_length()])
-	floor.free()
+	ground.free()
 	cam.free()
 
 

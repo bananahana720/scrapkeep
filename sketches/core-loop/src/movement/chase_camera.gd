@@ -113,13 +113,12 @@ func setup(target_ref, tuning_ref) -> void:
 	probe.radius = 0.3
 	arm.shape = probe
 	_query.shape = probe
-	_query.collision_mask = arm.collision_mask
-	_query.margin = arm.margin
 	arm.spring_length = 8.0
 	arm.margin = 0.25
 	# SpringArm3D is a plain Node3D: only the raw mask is available, and it must see
 	# the world (layer 1) without catching the player ball (layer 2).
 	arm.collision_mask = 1
+	_query.collision_mask = arm.collision_mask
 	add_child(arm)
 	# The arm rewrites its direct child's transform every physics tick, so shake and
 	# roll go on a grandchild; writing them on the arm's child snapped the camera to
@@ -267,7 +266,7 @@ func _tight_target(arm_pitch: float) -> float:
 
 
 # Metres of arm free along a pitch from the pivot, up to TIGHT_ARM, and whether what stops it is a
-# wall: the arm's own shape, mask and margin, one query reused. Ground (a contact normal the ball
+# wall: the arm's own shape and mask, one query reused. Ground (a contact normal the ball
 # itself calls floor, BallState.MAX_SLOPE_DOT) is no wall, so it reads as a free arm: looking up on
 # open ground shortens the arm as it always did.
 func _free_arm(arm_pitch: float) -> float:
