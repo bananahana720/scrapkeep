@@ -147,7 +147,7 @@ export function errorCounts(text) {
 export const SUSPECT_LOAD_FACTOR = 0.5;
 
 // What one failed test means for the promotion.
-//   carried       it has a ledger row (a red that fails alone, or a known flake)
+//   carried       it has a ledger row (a known flake, or a red whose row names everything its failed runs did)
 //   mismatch      its row says flake and it failed every solo run: the run contradicts the
 //                 ledger, so it blocks until someone reads it and re-lists or fixes it
 //   new-flake     no row, and every solo run passed: it does not block yet, and gets no row (ruling dx)
@@ -198,7 +198,8 @@ export function failedChecks(text) {
   const labels = [];
   for (const raw of text.split("\n")) {
     const line = raw.replace(/^\s*(?:>> )?/, "").trimEnd();
-    if ((!/-> FAIL\b/.test(line) && !/^FAIL\b/.test(line)) || /-> PASS\b/.test(line)) continue;
+    // The last arrow on a line is its verdict, so a detail that quotes the other word does not flip it.
+    if ((!/-> FAIL\b/.test(line) && !/^FAIL\b/.test(line)) || line.lastIndexOf("-> PASS") > line.lastIndexOf("-> FAIL")) continue;
     const label = line.match(/^\[(.+?)\] .*-> FAIL\b/)?.[1] ?? `unlabelled failing line: ${line}`;
     if (!labels.includes(label)) labels.push(label);
   }
@@ -248,7 +249,7 @@ export function shardVerdict(failures) {
   if (suspect) return { ok: false, inconclusive: true, line: `INCONCLUSIVE: ${suspect}; rerun alone on a quiet machine with "node scripts/gate/shard.mjs retime"` };
   const parts = [];
   if (count("carried") > 0) parts.push(`${count("carried")} carried on the ledger`);
-  if (count("new-flake") > 0) parts.push(`${count("new-flake")} new load flake${count("new-flake") === 1 ? "" : "s"} to list`);
+  if (count("new-flake") > 0) parts.push(`${count("new-flake")} new load flake${count("new-flake") === 1 ? "" : "s"} for ${count("new-flake") === 1 ? "its owner" : "their owners"} to fix`);
   return { ok: true, line: `PASS, no new red${parts.length ? ` (${parts.join(", ")})` : ""}` };
 }
 

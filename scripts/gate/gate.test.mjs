@@ -75,7 +75,7 @@ test("a failure is carried only with a ledger row, and blocks when it fails alon
 });
 
 test("a failed test with a red row is carried from its first run and is not rerun alone", () => {
-  // A red row carries the test whatever a solo run says, so the run could never change the call.
+  // The first run already shows which check failed, and that run is read against the row, so a rerun adds only time.
   // (Trial gate on 375fe11a, 15 Nov: two such reruns took 832 s of the bot shard's 6922 s.)
   const failedACheck = () => ({ timedOut: false, failLines: 1 });
   assert.deepEqual(soloTests(["red_test", "wobble_test", "fresh_test"], ledger, failedACheck), ["wobble_test", "fresh_test"]);
@@ -139,6 +139,8 @@ test("a load time-out never hides a check the row does not name (PR 1051, second
   assert.equal(classifyFailure("red_test", [false, false], named, loaded, { labels: [], timedOut: true, errorLine: false }).call, "suspect-load");
   // A passing check line is not a failing check, and an error line counts as the runner counts it: at column 0.
   assert.deepEqual(failedChecks("[x] expected -> FAIL, got it -> PASS\n"), []);
+  // The last arrow on the line is the verdict: a failing check whose detail quotes "-> PASS" still fails.
+  assert.deepEqual(failedChecks('[stage 1 draw] wanted an "a -> PASS" line, got none -> FAIL\n'), ["stage 1 draw"]);
   assert.equal(whatFailed([{ ok: false, text: "[pin within 2 s] got 3 -> FAIL\n  child: ERROR: echoed\n   ERROR: indented\n", timedOut: false }]).errorLine, false);
 });
 
@@ -147,7 +149,7 @@ test("a shard is red only for a new red, and its verdict names what it carried",
   const flake = classifyFailure("fresh_test", [true, true], ledger);
   const red = classifyFailure("broken_test", [false, false], ledger);
   assert.deepEqual(shardVerdict([]), { ok: true, line: "PASS, no new red" });
-  assert.deepEqual(shardVerdict([carried, flake]), { ok: true, line: "PASS, no new red (1 carried on the ledger, 1 new load flake to list)" });
+  assert.deepEqual(shardVerdict([carried, flake]), { ok: true, line: "PASS, no new red (1 carried on the ledger, 1 new load flake for its owner to fix)" });
   assert.deepEqual(shardVerdict([carried, red]), { ok: false, line: "RED: 1 new red (broken_test)" });
 });
 
