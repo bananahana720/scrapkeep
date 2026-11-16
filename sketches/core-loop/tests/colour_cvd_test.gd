@@ -3,6 +3,9 @@ extends SceneTree
 const Meanings := preload("res://src/core/colour_meanings.gd")
 const Palette := preload("res://src/core/palette.gd")
 const ShopTile := preload("res://src/ui/shop_tile.gd")
+const Threat := preload("res://src/combat/threat_grammar.gd")
+const Hazard := preload("res://src/boss/hazard.gd")
+const RewardGates := preload("res://src/build/reward_gates.gd")
 const T := preload("res://tests/support/t.gd")
 
 # Colour never works alone (UI principle P2, design-v3/ui-audit/principles.json; WCAG 1.4.1).
@@ -32,15 +35,15 @@ const SIGHTS := {
 # name order. `carrier` is what tells the two facts apart without colour; a row with no carrier
 # yet names its finding in project-guide/handoff/UI-FINDINGS.tsv.
 const CLOSE := {
-	"AMBER|BRASS": {"carrier": "a relic reward's frame is doubled with bolt heads (shop_tile.gd RARITY, checked below); a boss's ground warning carries rim ticks (threat_grammar.gd, the owner mark)", "finding": ""},
-	"AMBER|HAZARD": {"carrier": "", "finding": "UF-03"},
-	"BRASS|HAZARD": {"carrier": "", "finding": "UF-03"},
+	"AMBER|BRASS": {"carrier": "a relic reward's frame is doubled with bolt heads (shop_tile.gd:37 RARITY, drawn at :160 to :165) and its gate topper is a prism where a boss fact never is (reward_gates.gd:428); a boss's ground warning carries brass rim ticks (hazard.gd:298 sets the owner, threat_grammar.gd:459 draws it); all checked below. An event toast in either colour (event_kinds.gd, a star for both stage_cleared and boss_defeated) relies on its words", "finding": ""},
+	"AMBER|HAZARD": {"carrier": "a relic reward is a doubled bolt-headed frame or a prism topper (as above), the cost strike on a shop tile is one diagonal line (shop_tile.gd:130), and the pilot's danger mark is a diamond with a bang (danger_mark.gd:102); relic is never drawn as a ground fill", "finding": "UF-03: the player's own amber rings (projectile.gd:134, silo_battery.gd) and a hostile ground warning share the clear look, the default, which draws no stripes; stripes exist only in the classic and tape looks (threat_grammar.gd:1227), and the dashed edge on own rings is not built"},
+	"BRASS|HAZARD": {"carrier": "a boss's ground warning is HAZARD stripes plus brass rim ticks, in every look (threat_grammar.gd:459, checked below); a boss's body and badge are brass solids (boss.gd:1185, :1287), where danger is a ground fill", "finding": "UF-03: boss_attack_telegraphed and attack_cued (brass) draw the wave glyph, as do event_announced and event_started (danger red) in event_kinds.gd; their sounds differ, but no shape does"},
 	"ANCIENT|ARC": {"carrier": "ancient seams carry a pattern cue (material_slots.gd, the pattern field)", "finding": ""},
 }
 
 # One palette colour named for two facts: the same question with a difference of zero.
 const SHARED := {
-	"ARC": {"carrier": "the common reward is the one single-line frame on a tile (shop_tile.gd RARITY, checked below); live is drawn on an enemy part or a key, never in a frame", "finding": ""},
+	"ARC": {"carrier": "the common reward is the one single-line frame on a tile (shop_tile.gd:35 RARITY, checked below) and a flat slab gate topper (reward_gates.gd:432, checked below); live is drawn on an enemy part, the rogue's weak point and the miniboss's core (rogue.gd:670, miniboss.gd:500), or a key, never in a frame or on a gate", "finding": ""},
 }
 
 var _t := T.new("colour_cvd_test")
@@ -70,10 +73,39 @@ func _initialize() -> void:
 	_t.eq("every reward rung has a frame", frame_faults(Meanings.REWARD_RUNGS.keys(), ShopTile.RARITY), [])
 	_t.check("the common reward is the one single-line frame", _single_lines(ShopTile.RARITY) == ["common"], str(_single_lines(ShopTile.RARITY)))
 	_t.eq("the relic reward's frame carries bolt heads", ShopTile.RARITY["relic"]["notches"], "bolt")
+	# The boss's rim ticks: a brass-owned hazard carries an owner mark and a danger-owned one does not.
+	var boss_hazard := _hazard(Palette.BRASS)
+	var plain_hazard := _hazard(Palette.HAZARD)
+	_t.check("a boss hazard draws brass rim ticks over HAZARD stripes", _owner_mark(boss_hazard.descriptor()).get("tone") == Color(Palette.BRASS, 1.0) and boss_hazard.descriptor()["tone"] == Palette.HAZARD)
+	_t.check("a plain danger hazard draws no rim ticks", _owner_mark(plain_hazard.descriptor()).is_empty())
+	boss_hazard.free()
+	plain_hazard.free()
+	# The gate topper: a flat slab for common, a prism for rare and relic.
+	var shapes := {}
+	for rung in ["common", "rare", "relic"]:
+		var topper: MeshInstance3D = RewardGates._topper(rung, null)
+		shapes[rung] = topper.mesh.get_class()
+		topper.free()
+	_t.eq("the gate topper is a slab for common and a prism for rare and relic", shapes, {"common": "BoxMesh", "rare": "PrismMesh", "relic": "PrismMesh"})
 	var twins := {"a": {"color": Color.RED, "width": 2.0, "double": false, "notches": "", "dashed": false},
 		"b": {"color": Color.BLUE, "width": 2.0, "double": false, "notches": "", "dashed": false}}
 	_t.eq("planted: two frames that differ only by colour are named", frame_faults(["a", "b", "c"], twins), ["a and b differ by colour alone", "c has no frame"])
 	quit(_t.verdict())
+
+
+func _hazard(colour: Color) -> Node3D:
+	var h: Node3D = Hazard.new()
+	h.ground = func(_p: Vector3) -> float: return 0.0
+	h.color = colour
+	h.commit_annulus("cvd_test", Threat.Type.INSTANT, Vector3(60.0, 0.0, -90.0), Vector2(8.0, 14.0), 1.8, 2.5, 6.0)
+	return h
+
+
+func _owner_mark(d: Dictionary) -> Dictionary:
+	for m in Threat.all_marks(d):
+		if m["role"] == "owner":
+			return m
+	return {}
 
 
 # facts is fact -> palette name. Every pair of names under FLOOR needs a close row, every name
