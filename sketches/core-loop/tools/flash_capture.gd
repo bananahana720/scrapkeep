@@ -300,7 +300,9 @@ func _clip_finish() -> void:
 		floor_worst = maxf(floor_worst, row["flashes_per_second"])
 	var fps := float(_times.size()) / maxf(0.001, _times[_times.size() - 1]) if _times.size() > 0 else 0.0
 	var pass_clip := _times.size() >= 60 and worst <= FLASH_LINE
-	var info := {"tool": "flash_capture.gd", "mode": "clip", "plant": _plant, "line": FLASH_LINE, "delta": FLASH_DELTA,
+	var head: Array = []
+	OS.execute("git", ["rev-parse", "HEAD"], head)
+	var info := {"tool": "flash_capture.gd", "mode": "clip", "head": String(head[0]).strip_edges() if head.size() > 0 else "", "plant": _plant, "line": FLASH_LINE, "delta": FLASH_DELTA,
 		"grid": [GRID.x, GRID.y], "sites": SITES, "volleys_at_s": VOLLEYS, "floor_seconds": FLOOR_SECONDS, "guard": FlashGuard.on,
 		"frame_count": _times.size(), "frames_per_second": snappedf(fps, 0.1),
 		"floor_worst_flashes_per_second": floor_worst, "worst_flashes_per_second": worst, "worst_region": worst_region,
