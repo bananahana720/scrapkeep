@@ -1844,6 +1844,8 @@ func _tend_room() -> void:
 # override the kind's row decides, resolved for the run's class.
 func play(kind: String, db := 0.0, pitch := 1.0, bus := "SFX", sound_override := "", priority_override := -1) -> bool:
 	var sound: String = sound_override if sound_override != "" else Rows.sound(kind, cue_context())
+	if kind.ends_with("_refused"):
+		_menu_sounds.refused()
 	if not _admit(kind, sound, pitch):
 		return false
 	# A tiered key plays its tier's file, picked by the rung the caller sent as its pitch,

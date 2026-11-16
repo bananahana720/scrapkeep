@@ -7,6 +7,7 @@ const Synth := preload("res://src/presentation/synth.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const Rows := preload("res://src/presentation/rows.gd")
 const Push := preload("res://tests/workshop/push.gd")
+const MenuSounds := preload("res://src/presentation/menu_sounds.gd")
 
 # World 1's camp, every menu a pad moves through, and the three facts that shared generic sounds.
 # Cue decisions are read from audio.cue_log, so this is the director's choice, not a listen.
@@ -167,6 +168,27 @@ func _press(button: int) -> void:
 		await _frames(4)
 
 
+# The rules frame by frame, on the module alone.
+func _menu_rules() -> void:
+	var m := MenuSounds.new()
+	m.step(false, false, false, true)
+	m.refused()
+	_t.eq("menu rule: a refused press plays no confirm (its own no is the voice)", m.step(false, true, false, true), [])
+	m.step(false, false, false, true)
+	_t.eq("menu rule: the next press confirms again", m.step(false, true, false, true), ["menu_confirm"])
+	var held := MenuSounds.new()
+	held.step(true, false, false, false)
+	held.step(true, false, false, false)
+	held.focus_moved()
+	_t.eq("menu rule: a page taking focus under a held direction is no move", held.step(true, false, false, true), [])
+	held.focus_moved()
+	_t.eq("menu rule: the held direction moving focus on the page is a move", held.step(true, false, false, true), ["menu_move"])
+	var fresh := MenuSounds.new()
+	fresh.step(false, false, false, false)
+	fresh.focus_moved()
+	_t.eq("menu rule: a fresh press taking focus from nothing is a move", fresh.step(true, false, false, true), ["menu_move"])
+
+
 func _menus() -> void:
 	var audio = _game.presentation.audio
 	audio.bake_now()
@@ -227,6 +249,27 @@ func _menus() -> void:
 	await _press(JOY_BUTTON_A)
 	_t.eq("menu pause: A on Resume plays one confirm", _menu_cues(audio, from), ["menu_confirm"])
 	await _frames(20)
+	# Pausing mid-roll with a direction still held: the page's own focus grab is no move.
+	if root.gui_get_focus_owner() != null:
+		root.gui_get_focus_owner().release_focus()
+	var hold := InputEventJoypadButton.new()
+	hold.button_index = JOY_BUTTON_DPAD_DOWN
+	hold.pressed = true
+	Input.parse_input_event(hold)
+	await _frames(6)
+	from = audio.cue_log.size()
+	_game.get_node("PauseMenu").open()
+	await _frames(20)
+	_t.check("menu pause: opened with a direction held", _game.get_node("PauseMenu").is_open() and Input.is_action_pressed("ui_down"))
+	_t.eq("menu pause: opening it with a direction held plays nothing", _menu_cues(audio, from), [])
+	var let_go := InputEventJoypadButton.new()
+	let_go.button_index = JOY_BUTTON_DPAD_DOWN
+	let_go.pressed = false
+	Input.parse_input_event(let_go)
+	await _frames(4)
+	_game.get_node("PauseMenu").close()
+	await _frames(20)
+	_menu_rules()
 	# In play nothing is focused, so a pad A or B is a game input and plays no menu sound.
 	if root.gui_get_focus_owner() != null:
 		root.gui_get_focus_owner().release_focus()
