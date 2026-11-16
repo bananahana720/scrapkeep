@@ -25,8 +25,13 @@ func _frames(count: int) -> void:
 		await tree.process_frame
 
 
+# Steps frames until the game has been handed this much frame time (the click guard and the card's opening
+# both run on frame time).
 func _wait(seconds: float) -> void:
-	await tree.create_timer(seconds).timeout
+	var left := seconds
+	while left > 0.0:
+		await tree.process_frame
+		left -= tree.root.get_process_delta_time()
 
 
 # Builds the game at the project's base resolution (1600x900, project.godot).
