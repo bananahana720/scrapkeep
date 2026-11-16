@@ -214,8 +214,11 @@ const TELEGRAPH_FLAG := "telegraph"
 #          the 4.2 m mount arm, whole at the 8 m arm), so a camera inside a lane is not caged; a live lane's band is lighter (CLEAR_LIVE_ALPHA); and the driven marks draw
 #          behind bodies: depth tested, pulled DEPTH_PULL metres toward the eye so the ground under
 #          them never wins, so the crew winding up and the ball stay whole over a fill. A wall or ridge
-#          between the lens and a mark now hides it too. The tinted layers (TINTED_LAYERS) keep no
-#          depth test.
+#          between the lens and a mark now hides it too. The tinted layers (TINTED_LAYERS: a landing's
+#          flash, crack ring and dust) are depth tested too, and the Flash moves each one DEPTH_PULL
+#          metres along the line to the eye, so a ridge between the lens and the landing hides them
+#          and the ground under them does not (PF-52: a landing behind a ridge painted the screen
+#          flat orange). Haze and classic keep their no-depth-test draw, as for every other mark.
 #   edges  clear, with every area fill at EDGES_FILL of its alpha: the outline and its keyline carry
 #          the shape, the fill only the timing.
 #   tape   clear, with the hostile stripes back as a faint pattern in the haze: bands of the same red
@@ -1526,6 +1529,33 @@ class Painter:
 			return LINE_PRIORITY
 		return PRIORITY
 
+	# A material cannot pull its vertices, so a depth-tested tinted layer is moved instead: DEPTH_PULL
+	# metres along the line from its middle to the camera, so the ground under it never hides it and
+	# a ridge between the lens and it still does. Every owner of a Painter (a telegraph, a boss
+	# hazard, a landing's Flash) gets this from _process; a Flash also calls it as it repaints.
+	func pull_toward_eye() -> void:
+		var cam := get_viewport().get_camera_3d() if is_inside_tree() else null
+		if cam == null:
+			return
+		for layer in TINTED_LAYERS:
+			if not _layers.has(layer):
+				continue
+			var instance: MeshInstance3D = _layers[layer]
+			if instance.mesh == null or (instance.material_override as StandardMaterial3D).no_depth_test:
+				continue
+			instance.global_position = Vector3.ZERO
+			var middle := instance.global_transform * instance.mesh.get_aabb().get_center()
+			instance.global_position = (cam.global_position - middle).normalized() * DEPTH_PULL
+
+	var _pulls := false
+
+	# Godot switches processing on at ready for any script with _process, so it is set here, not in _init.
+	func _ready() -> void:
+		set_process(_pulls)
+
+	func _process(_delta: float) -> void:
+		pull_toward_eye()
+
 	func _layer(layer: String) -> MeshInstance3D:
 		if _layers.has(layer):
 			return _layers[layer]
@@ -1542,9 +1572,8 @@ class Painter:
 			return instance
 		# A soft look draws every mark but the tinted ones with the shared depth-tested shader, so a
 		# body standing on a line or an area draws over it too; the fence keeps its far fade ("fence").
-		# A tinted layer (the live INSTANT fill, the landing's crack and dust) keeps its own
-		# StandardMaterial3D, which tint() writes, and its old no-depth-test draw: it has no pull, and
-		# on convex ground a single quad from centre to rim would sink under the floor.
+		# A tinted layer (the landing's flash, crack and dust) keeps its own StandardMaterial3D, which
+		# tint() writes. A soft look depth tests it (below), and the Painter pulls it toward the eye.
 		if soft_on() and not layer in TINTED_LAYERS:
 			instance.material_override = mark_material("fence" if layer == "fence" else "", layer.begins_with("stripe") and striped_on(), _priority(layer), false)
 			add_child(instance)
@@ -1554,7 +1583,10 @@ class Painter:
 		mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 		mat.cull_mode = BaseMaterial3D.CULL_DISABLED
 		mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-		mat.no_depth_test = true
+		mat.no_depth_test = not (soft_on() and layer in TINTED_LAYERS)
+		if not mat.no_depth_test:
+			_pulls = true
+			set_process(true)
 		mat.vertex_color_use_as_albedo = true
 		mat.vertex_color_is_srgb = true
 		mat.render_priority = _priority(layer)
@@ -1610,7 +1642,12 @@ class Flash:
 		if _crack:
 			layers.append("crack")
 		paint(fill + crack, layers)
+		set_process(true)
 		_show(0.0)
+
+	# A landing ages and fades in every look, so it always processes, pull or not.
+	func _ready() -> void:
+		set_process(true)
 
 	func _process(delta: float) -> void:
 		_age += delta
@@ -1620,6 +1657,10 @@ class Flash:
 		_show(_age)
 
 	func _show(age: float) -> void:
+		_show_marks(age)
+		pull_toward_eye()
+
+	func _show_marks(age: float) -> void:
 		if _fill:
 			if age >= FLASH_SECONDS:
 				_fill = false
