@@ -6,15 +6,21 @@ Heads and open pull requests change by the hour, so read them live (`git ls-remo
 
 | Fact | Value |
 | --- | --- |
-| Last promotion | wave 41, main 3996f591, #1043 |
-| Open stage | stage/alpha-w42 |
-| Live board | #1044 |
-| Red team | first-timer |
-| Compare against | gate/w41-e2770d85/ |
+| Last promotion | wave 42, main a76ccfd3, #1075 |
+| Open stage | stage/alpha-w43 |
+| Live board | #1076 |
+| Red team | cautious |
+| Compare against | /home/andrew/scratch/gate/w42-52304036/ |
 
 The board is the GitHub issue in the table. It also holds the file fences of the open pull requests. The stage log (`git log --first-parent origin/stage/alpha-w<N>`) is the stack queue. "Compare against" names the receipts the next full gate reads its base values from, published on a `scratch/gate-receipts-<folder>` branch. The Gate updates the table as its first commit on a new stage: `node scripts/wave-state.mjs --write --board <new board issue> --compare <receipts folder>` (the red team persona rotates by itself).
 
-## Now (16 Nov 2026, wave 42 closing)
+## Now (16 Nov 2026, wave 43 open)
+
+**Wave 42 is on main** (a76ccfd3, PR 1075, 16 Nov). The wave gate ran on 52304036 and was red on two test-side faults, both fixed in the close commit 8c772605: pack_telegraph_record_test failed about 1 run in 11 because the held ball armed world 1's silt boils beside a recovering swarm (the test now holds the boils off; 48 of 48 after, 4 of 44 failing before), and lab-cable-bench.test.js committed with the machine's git identity, which the gate hides. A fresh weekly sweep ran on 52304036 (16 Nov) and carries until 23 Nov; its two reds, both already on the ledger, had one check each added to their rows in 1ccc1984.
+
+**Wave 43 is sound, difficulty by movement and frame time**, on `stage/alpha-w43` (cut at a76ccfd3). The board in the table lists the lanes and what is carried. First to stack: W1-108 with the UA-07 sound twin list (branch `w43/sound-twin-sites`, reviewed and spot-checked; owes stills). Fable's monthly limit is spent until 19 Nov, so the top-tier reviewer cannot run before then.
+
+### Earlier (16 Nov 2026, wave 42 closing)
 
 **Wave 42 closes on what it has (16 Nov).** The coordinator session on the PC hit a usage limit at 10:22Z and was picked up by a new local session at 10:35Z; the PC rebooted between them. Wave 42's remaining rows move to wave 43 (Andrew accepted the reorder at 09:30Z), and ruling dz moves the whole-run film to the release, so the wave closes on its records, the wave gate and the promotion. Landed after PR 1070: hit words (PR 1063, its Brindle test made load-proof), Brindle's eject ground mark (PR 1071, W1-107) and the radio names (PR 1072, PF-51). In review: a visible sign for each sound the player must act on, with the UA-07 list (W1-108). Moved to wave 43: the sitting launch's played run (one of six loops fired; it would add a red test) and PF-55, a Continue after a quit in Brindle's victory beat that fights him again (replayed on seed 2883; `break_run.gd` flags it as `won_boss_refought`, PR 1073). Six fixed findings read "open until the release film" (PF-06, PF-16, PF-22, PF-26, PF-38, PF-50).
 
