@@ -86,11 +86,16 @@ func _run() -> void:
 	row = _row()
 	var live_words := Objectives.activity_words(String(first.id), _acts.called(String(first.id)))
 	_t.eq("the goal row takes the run at hand", _hud.objective_reading()["id"], "find_activity")
-	_t.eq("the run keeps the detour row on its site", [row.get("what"), row.get("words"), row.get("distance")], [String(first.id), live_words, -1])
-	_t.check("the live row is not a done tick", not row.has("done"))
-	await _frames(120)
-	row = _row()
-	_t.eq("it holds through a long run", row.get("what"), String(first.id))
+	_t.eq("the goal row says the run's words", _hud.objective_reading()["words"], live_words)
+	_t.eq("during the run the detour row draws nothing", row, {})
+	_t.check("the view draws the run's words once", _hud._objective.drawn_words().count(live_words) == 1, str(_hud._objective.drawn_words()))
+	_t.check("the row stays held on the run's site", _named() == first)
+	var others := 0
+	for i in 120:
+		await _frames(1)
+		row = _row()
+		others += 1 if not row.is_empty() else 0
+	_t.check("no other site takes the row mid-run", others == 0 and _named() == first, "%d frames" % others)
 
 	# Won: the done words tick in the detour row for the hold, then the next site takes it.
 	first.surge_live = false
@@ -105,14 +110,18 @@ func _run() -> void:
 	var hold_frames := int(ceil(Objectives.Done.SECONDS * Engine.physics_ticks_per_second))
 	var shown := 0
 	var next_id := ""
+	var early := 0
 	for i in hold_frames + 20:
 		await _frames(1)
 		row = _row()
+		if i < hold_frames - 4 and row.get("done", "") != "won":
+			early += 1
 		if row.get("done", "") == "won":
 			shown += 1
 		elif next_id == "":
 			next_id = String(row.get("what", ""))
 	_t.check("the tick holds for Done.SECONDS", shown > 0 and absi(shown - hold_frames) <= 3, "%d of %d frames" % [shown, hold_frames])
+	_t.check("no other site showed before the tick ended", early == 0, "%d frames" % early)
 	_t.check("then the next site takes the row", next_id != "" and _named() != first and row.get("distance", -1) >= 0, "%s" % next_id)
 
 	# Lost: a run lost ticks its own lost words.
@@ -125,7 +134,7 @@ func _run() -> void:
 	second.started = true
 	second.surge_live = true
 	await _frames(2)
-	_t.eq("a second run holds its row", _row().get("what"), "surge_run")
+	_t.eq("a second run holds its row empty", [_row(), _named() == second], [{}, true])
 	second.surge_live = false
 	second.started = false
 	_game.events.event_ended.emit("surge_run", "lost")

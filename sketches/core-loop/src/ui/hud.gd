@@ -1250,7 +1250,7 @@ func objective_reading() -> Dictionary:
 # one waits, else the nearest side site not yet started that lies ahead of the ball on its way to the
 # Warden, each with its metres (as the goal row's) and in its own marker's colour and glyph, so the
 # row and the chevron at the edge read as one thing. The site the row named keeps the row while its
-# run is at hand (its live words) and for Done.SECONDS after it is won or lost (its tick or cross),
+# run is at hand (the goal row has its live words, the row draws nothing) and for Done.SECONDS after it is won or lost (its tick or cross),
 # then the next site takes it. {} for none.
 func detour_reading(goal: Dictionary) -> Dictionary:
 	if game.world == null:
@@ -1310,10 +1310,11 @@ func _site_row(site, metres: int, words := "") -> Dictionary:
 		"words": words if words != "" else Objectives.activity_words(kind, game.world.activities.called(kind)), "distance": metres}
 
 
-# The named site's row while its run is at hand (no metres, the ball is there) or its done or lost tick.
+# The named site's done or lost tick. While its run is at hand the goal row already says it, so the
+# row stays held on the site (no other site takes it) and draws nothing.
 func _held_detour(running: bool) -> Dictionary:
 	if running:
-		return _site_row(_detour_site, -1)
+		return {}
 	var row := _site_row(_detour_site, -1, _detour_done.words) if is_instance_valid(_detour_site) else {"what": "", "icon": "", "words": _detour_done.words, "color": Color.WHITE, "distance": -1}
 	row["color"] = EventKinds.color("activity_done") if _detour_done.won else Palette.RUST
 	row["done"] = "won" if _detour_done.won else "lost"
