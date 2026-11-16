@@ -127,6 +127,11 @@ float seed_of(int id) {
 	return fract(sin(float(id) * 12.9898 + 78.233) * 43758.5453);
 }
 """
+# A puff nearer the eye than this fades out: gone at LENS_FADE.x metres, whole at .y. The chase camera
+# trails the ball by 7.5 to 10.5 m, so at speed the ball's own dust lies back through the lens and one
+# 0.5 m puff 1 to 3 m away covers hundreds of pixels (PF-53). Metres, not a share of the arm: the cut
+# is about what the lens can swallow. The kill mark fades by the same two numbers (kill_mark.gd).
+const LENS_FADE := Vector2(1.5, 4.0)
 const _BILLBOARD := """
 void vertex() {
 	v_life = INSTANCE_CUSTOM.y;
@@ -142,6 +147,7 @@ void vertex() {
 """
 const _LOOKS := {
 	"puff": ["unshaded, cull_disabled, blend_mix, depth_draw_never", "billboard", """
+uniform vec2 lens_fade;
 void fragment() {
 	vec2 p = vec2(UV.x * 2.0 - 1.0, 1.0 - UV.y * 2.0);
 	float r = length(p);
@@ -156,7 +162,7 @@ void fragment() {
 	vec3 shade = mix(base * vec3(0.84, 0.85, 0.9), base * 1.06, lit);
 	float ink = smoothstep(edge - 0.07, edge - 0.02, r);
 	ALBEDO = mix(shade, base * 0.7, ink * 0.5);
-	ALPHA = tint.a * COLOR.a;
+	ALPHA = tint.a * COLOR.a * smoothstep(lens_fade.x, lens_fade.y, length(VERTEX));
 }
 """],
 	"glow": ["unshaded, cull_disabled, blend_add, depth_draw_never", "billboard", """
@@ -260,6 +266,11 @@ const HEAT := {"glow": 0.55, "streak": 0.7, "bead": 0.35, "puff": 0.0, "chunk": 
 static var _shaders := {}
 static var _meshes := {}
 
+# The shader's fade by eye distance, for tests and for the kill mark's own check.
+static func lens_alpha(eye_m: float) -> float:
+	return smoothstep(LENS_FADE.x, LENS_FADE.y, eye_m)
+
+
 static func spec(id: String) -> Dictionary:
 	return SPECS.get(id, {})
 
@@ -333,6 +344,8 @@ static func look_material(kind: String, blend := "mix") -> ShaderMaterial:
 		var mat := ShaderMaterial.new()
 		mat.shader = shader
 		mat.set_shader_parameter("ink_colour", Palette.CHARCOAL)
+		if kind == "puff":
+			mat.set_shader_parameter("lens_fade", LENS_FADE)
 		_shaders[key] = mat
 	return _shaders[key]
 

@@ -2,6 +2,7 @@ extends Node3D
 
 const Palette := preload("res://src/core/palette.gd")
 const FlashGuard := preload("res://src/presentation/flash_guard.gd")
+const FxLibrary := preload("res://src/presentation/fx_library.gd")
 
 # The kill mark (FX-01): a kill's own punctuation, so a kill never reads as a bigger hit. The
 # hit draws thin copper spokes (vfx.gd "burst"); a kill draws a filled comic burst with ten
@@ -43,6 +44,9 @@ uniform int mode = 0;
 uniform vec3 INK : source_color;
 uniform vec3 LEDGER : source_color;
 uniform vec3 RUST : source_color;
+// Fades out near the lens, by the puffs' distances (PF-53): metres from the eye, gone at x, whole at y.
+uniform vec2 lens_fade;
+varying float v_eye;
 
 float hash(float n) {
 	return fract(sin(n * 91.345) * 47453.5453);
@@ -55,6 +59,7 @@ void vertex() {
 	float k = length(MODEL_MATRIX[0].xyz);
 	vec3 world = MODEL_MATRIX[3].xyz + (INV_VIEW_MATRIX[0].xyz * v.x + INV_VIEW_MATRIX[1].xyz * v.y) * k;
 	POSITION = PROJECTION_MATRIX * VIEW_MATRIX * vec4(world, 1.0);
+	v_eye = length((VIEW_MATRIX * vec4(MODEL_MATRIX[3].xyz, 1.0)).xyz);
 }
 
 vec4 burst(vec2 p) {
@@ -92,7 +97,7 @@ void fragment() {
 		discard;
 	}
 	ALBEDO = c.rgb;
-	ALPHA = alpha;
+	ALPHA = alpha * smoothstep(lens_fade.x, lens_fade.y, v_eye);
 }
 """
 
@@ -119,6 +124,7 @@ func _init() -> void:
 		mat.set_shader_parameter("INK", Palette.CHARCOAL)
 		mat.set_shader_parameter("LEDGER", Palette.LEDGER)
 		mat.set_shader_parameter("RUST", Palette.RUST)
+		mat.set_shader_parameter("lens_fade", FxLibrary.LENS_FADE)
 		node.material_override = mat
 		node.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		node.top_level = true
