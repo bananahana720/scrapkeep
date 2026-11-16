@@ -847,8 +847,10 @@ func _on_event_announced(event_id: String, seconds_until: float, _at: Vector3) -
 
 # The event's own line has done its job once the event starts or ends: it fades out at once.
 func _end_event_line(event_id: String) -> void:
+	if event_id == "":
+		return
 	for entry in [_toast, _held_toast]:
-		if entry.get("event", "") == event_id:
+		if entry.has("event") and entry["event"] == event_id:
 			entry["left"] = minf(entry["left"], TOAST_OUT)
 			entry["event"] = ""
 

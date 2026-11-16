@@ -75,7 +75,8 @@ func _run() -> void:
 	_announce(hud, "dome_lightning", 9.0)
 	_step(hud, 1.0)
 	_game.events.event_started.emit("powerhouse_boiler")
-	_step(hud, 0.05)
+	# Past the fade out, so a wrong cut would already have taken the line.
+	_step(hud, 0.3)
 	_t.check("another event's start leaves the line up", hud.toast_on_screen() != "", hud.toast_on_screen())
 	_game.events.event_started.emit("dome_lightning")
 	var after := _life(hud, 20.0)
