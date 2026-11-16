@@ -57,6 +57,8 @@ func _physics_process(_delta: float) -> bool:
 		game.flow.choose_class(0)
 	if ticks in [5, 15, 25]:
 		check_family()
+	if ticks == 6:
+		check_park_shell()
 	if ticks in [10, 20]:
 		game.flow.enter_stage(2 if ticks == 10 else 3, Vector3.ZERO, false)
 	if ticks == 28:
@@ -113,6 +115,7 @@ func check_family() -> void:
 	check("original collider only", shapes.size() == 1 and is_equal_approx(shapes[0].shape.radius, Warden.RADIUS) and is_equal_approx(shapes[0].shape.height, Warden.HALF_HEIGHT * 2.0))
 	if warden.family == "reactor":
 		check("one camera-only body", camera_bodies.size() == 1)
+	check_shell(warden, rec.base, "clamp body")
 	check("mount meets kit", rec.base.get_node("Tower/KitMount").global_position.distance_to(rec.kit.global_position) < 0.0001)
 	for angle in [0.0, 0.7, -2.4]:
 		warden._look._jaws.rotation.y = angle
@@ -375,3 +378,56 @@ func check_chunk_asset(hook) -> void:
 # A body only the chase camera sees: its layer is the camera bit and it masks nothing.
 func _camera_only(body) -> bool:
 	return body is PhysicsBody3D and body.collision_layer == ChaseCamera.CAMERA_BODY_BIT and body.collision_mask == 0
+
+
+# The camera drum follows what is drawn: its radius and height are within 0.3 m of the dressed body's own
+# meshes (the ones still on a render layer), measured in the Warden's frame.
+func check_shell(warden, body: Node3D, label: String) -> void:
+	var shell = null
+	for child in warden.get_children():
+		if _camera_only(child):
+			shell = child
+	if shell == null:
+		check("%s: a camera shell exists" % label, false)
+		return
+	var inverse: Transform3D = warden.global_transform.affine_inverse()
+	var box := AABB()
+	var any := false
+	for view in body.find_children("*", "MeshInstance3D", true, false):
+		if view.mesh == null or view.layers == 0 or not view.is_visible_in_tree():
+			continue
+		var local: AABB = inverse * view.global_transform * view.get_aabb()
+		box = local if not any else box.merge(local)
+		any = true
+	var drum: CylinderShape3D = shell.get_child(0).shape
+	var radius := 0.0
+	for corner in 8:
+		var point: Vector3 = box.get_endpoint(corner)
+		radius = maxf(radius, maxf(absf(point.x), absf(point.z)))
+	print("shell %s: drum r %.2f h %.2f, body r %.2f h %.2f" % [label, drum.radius, drum.height, radius, box.size.y])
+	check("%s: the camera shell matches the drawn body within 0.3 m" % label, any and drum.radius >= radius - 0.3 and drum.height >= box.size.y - 0.3 and drum.radius <= radius + 3.0)
+
+
+# A park reactor Warden (the harpoon-anchor spec) wears the reactor model; its shell is that model's size.
+func check_park_shell() -> void:
+	var hook = game.presentation.hero_assets
+	var base = game.flow.warden
+	var world := Node3D.new()
+	game.add_child(world)
+	var park = Warden.new()
+	world.add_child(park)
+	park.setup(base.target, base.terrain, base.world_root, base.live, 1.0, {"family": "reactor", "harpoon_anchor": true, "mounting": "dam_face"})
+	park.set_physics_process(false)
+	hook._dress_warden(park)
+	var rec: Dictionary = hook.warden_of(park)
+	check("park reactor wears the model", not rec.is_empty() and rec.base.name == "HeroWarden")
+	if not rec.is_empty():
+		check_shell(park, rec.base, "park reactor")
+		check("park reactor: the drum is at least the model's rest size", _drum_of(park).radius >= 3.2 and _drum_of(park).height >= 8.4)
+
+
+func _drum_of(warden) -> CylinderShape3D:
+	for child in warden.get_children():
+		if _camera_only(child):
+			return child.get_child(0).shape
+	return null

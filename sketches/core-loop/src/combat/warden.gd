@@ -894,7 +894,6 @@ func _build_body() -> void:
 	cylinder.height = HALF_HEIGHT * 2.0
 	shape.shape = cylinder
 	add_child(shape)
-	_build_camera_shell()
 	# Everything seen is in warden_look.gd and collides with nothing; this node keeps the
 	# collider above and every number the fight uses.
 	_look = WardenLook.new()
@@ -905,28 +904,44 @@ func _build_body() -> void:
 	_kit.build(self, family)
 	_base_color = Palette.CHARCOAL
 	_material = _look.body_material
+	fit_camera_shell()
 
 
-# The drawn drums (mesh bounds of warden_reactor.glb and warden_swarm.glb: radius, height and the body's
-# lowest point from the ground under the Warden) as camera-only shapes. The contact cylinder or sphere is
-# damage geometry and stays as it is, far smaller than the drawn body. The mind hangs, so it has none.
-const CAMERA_SHELLS := {"reactor": Vector3(3.3, 8.5, -1.525), "swarm": Vector3(3.5, 9.4, 0.0)}
-
-
-func _build_camera_shell() -> void:
-	if not CAMERA_SHELLS.has(family):
+# A camera-only drum round what the Warden draws now, so the lens never sits inside its body. The contact
+# cylinder and the weak-point sphere are damage geometry and stay as they are. Sized from the drawn meshes
+# (those still on a render layer, outside the floating badge), so the primitive look, the clamp base and a
+# hero body each get their own: built with the look, refitted by hero_assets once it has dressed the body.
+func fit_camera_shell() -> void:
+	var inverse := global_transform.affine_inverse()
+	var badge := _look.get_node_or_null("Badge")
+	var box := AABB()
+	var any := false
+	for view in find_children("*", "MeshInstance3D", true, false):
+		var mesh := view as MeshInstance3D
+		if mesh.mesh == null or mesh.layers == 0 or not mesh.is_visible_in_tree() or (badge != null and badge.is_ancestor_of(mesh)):
+			continue
+		var local: AABB = inverse * mesh.global_transform * mesh.get_aabb()
+		box = local if not any else box.merge(local)
+		any = true
+	var shell := get_node_or_null("CameraShell")
+	if not any:
+		if shell != null:
+			shell.queue_free()
 		return
-	var row: Vector3 = CAMERA_SHELLS[family]
-	var body := ChaseCamera.camera_body()
-	body.name = "CameraShell"
-	var shell := CollisionShape3D.new()
+	var radius := 0.0
+	for corner in 8:
+		var point: Vector3 = box.get_endpoint(corner)
+		radius = maxf(radius, maxf(absf(point.x), absf(point.z)))
+	if shell == null:
+		shell = ChaseCamera.camera_body()
+		shell.name = "CameraShell"
+		shell.add_child(CollisionShape3D.new())
+		add_child(shell)
 	var drum := CylinderShape3D.new()
-	drum.radius = row.x
-	drum.height = row.y
-	shell.shape = drum
-	body.add_child(shell)
-	add_child(body)
-	body.position = Vector3(0.0, -HALF_HEIGHT + row.z + row.y * 0.5, 0.0)
+	drum.radius = radius
+	drum.height = box.size.y
+	(shell.get_child(0) as CollisionShape3D).shape = drum
+	shell.position = Vector3(0.0, box.get_center().y, 0.0)
 
 
 func _pose(_delta: float) -> void:

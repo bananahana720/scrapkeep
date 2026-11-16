@@ -52,6 +52,7 @@ func _run() -> void:
 	await _grunt()
 	await _warden()
 	await _ball_in_drum()
+	await _lift_in_drum()
 	_layers()
 	quit(_t.verdict())
 
@@ -219,23 +220,26 @@ func _ship() -> void:
 		var local: Vector3 = (pair[0] as Transform3D).affine_inverse() * lens
 		if (pair[1] as AABB).has_point(local):
 			inside = "%s" % [pair]
-	_t.check("B0 the ship lists drawn boxes", boxes.size() > 0, "%d boxes, model loaded: %s" % [boxes.size(), ship.model != null])
+	_t.check("B0 the ship's model loaded, so B1 does not test the primitive fallback", ship.model != null and boxes.size() > 0, "%d boxes, model loaded: %s" % [boxes.size(), ship.model != null])
 	_t.check("B1 the lens is outside every drawn box and the arm is cut short", inside == "" and hit < 7.5 and boxes.size() > 0, "hit length %.2f, lens %s, inside box %s" % [hit, lens, inside])
 	_t.check("B2 the wall lift raises the lens over the ship", _rise(cam) > open_rise + 0.2, "elevation %.2f rad against %.2f" % [_rise(cam), open_rise])
 	ship.free()
 	cam.free()
 
 
-# Negative control: an enemy-layer (3) box in the arm's path is a grunt, not a wall.
+# Negative control: a tall enemy-layer (3) wall on the arm's line is a grunt, not a wall. Red if the arm's
+# mask gains layer 3 (the arm would shorten to under 4 m here).
 func _grunt() -> void:
 	var cam := _rig()
 	await _settle(cam, 90)
 	var open_hit: float = cam.arm.get_hit_length()
-	var grunt := _box(Vector3(1.0, 1.0, 1.0), Vector3(0.0, 0.8, 4.0))
+	var open_rise := _rise(cam)
+	var grunt := _box(Vector3(40.0, 40.0, 1.0), Vector3(0.0, 0.0, 2.75))
 	grunt.collision_layer = 4
 	await _settle(cam, 90)
 	var hit: float = cam.arm.get_hit_length()
-	_t.check("B3 a layer-3 body does not shorten the arm", absf(hit - open_hit) < 0.2, "hit length %.2f, open %.2f" % [hit, open_hit])
+	_t.check("B3 a layer-3 wall on the arm's line does not shorten the arm", absf(hit - open_hit) < 0.2, "hit length %.2f, open %.2f" % [hit, open_hit])
+	_t.check("B3 a layer-3 wall does not lift the lens", absf(_rise(cam) - open_rise) < 0.02, "elevation %.2f rad, open %.2f" % [_rise(cam), open_rise])
 	grunt.free()
 	cam.free()
 
@@ -249,6 +253,23 @@ func _dam() -> Node3D:
 	warden.set_physics_process(false)
 	warden.set_process(false)
 	return warden
+
+
+func _holds_drawn(warden: Node3D, shell: Node3D) -> bool:
+	var drum: CylinderShape3D = shell.get_child(0).shape
+	var inverse := warden.global_transform.affine_inverse()
+	var count := 0
+	for view in warden.find_children("*", "MeshInstance3D", true, false):
+		var mesh := view as MeshInstance3D
+		if mesh.mesh == null or mesh.layers == 0 or not mesh.is_visible_in_tree() or mesh.get_parent().name == "Badge":
+			continue
+		var local: AABB = inverse * mesh.global_transform * mesh.get_aabb()
+		for corner in 8:
+			var at: Vector3 = local.get_endpoint(corner) - shell.position
+			if maxf(absf(at.x), absf(at.z)) > drum.radius + 0.01 or absf(at.y) > drum.height * 0.5 + 0.01:
+				return false
+		count += 1
+	return count > 0
 
 
 func _shell(warden: Node3D) -> StaticBody3D:
@@ -269,10 +290,11 @@ func _warden() -> void:
 	var cyl: CylinderShape3D = null
 	if shell != null:
 		cyl = shell.get_child(0).shape as CylinderShape3D
-	_t.check("W1 the Warden has a camera-only body of its drawn size", cyl != null and cyl.radius >= 3.2 and cyl.height >= 8.0, "shell %s, radius %s, height %s" % [shell, cyl.radius if cyl else -1, cyl.height if cyl else -1])
+	_t.check("W1 the primitive Warden has a camera-only body at its jaws' size", cyl != null and cyl.radius >= 3.4 and cyl.height >= 7.0, "shell %s, radius %s, height %s" % [shell, cyl.radius if cyl else -1, cyl.height if cyl else -1])
 	if shell == null:
 		warden.free()
 		return
+	_t.check("W1 the shell holds every drawn primitive mesh", _holds_drawn(warden, shell), "")
 	var contact: CylinderShape3D = null
 	for child in warden.get_children():
 		if child is CollisionShape3D:
@@ -292,8 +314,8 @@ func _warden() -> void:
 	warden.free()
 
 
-# W2 stands alone, so it cannot hide behind a missing shell: with the shell absent it fails on the
-# second check, and with the ignore-around-ball code removed it fails on the first.
+# W2 stands alone, so it cannot hide behind a missing shell. It guards that the arm stays long with the
+# ball inside the drum; it is green with or without any ignore code (Jolt skips a shape a cast starts in).
 func _ball_in_drum() -> void:
 	var warden := _dam()
 	var shell := _shell(warden)
@@ -317,6 +339,25 @@ func _ball_in_drum() -> void:
 	_t.check("W2 once the ball is out the drum shortens the arm again", out_hit < 4.0, "hit length %.2f" % out_hit)
 	cam.free()
 	warden.free()
+
+
+# D1: the lift probe reads get_rest_info at the first contact. With the ball inside a Warden's drum and a world
+# wall behind it, also inside the drum, the lift must be what the same wall gives alone.
+func _lift_in_drum() -> void:
+	var cam := _rig()
+	var wall := _box(Vector3(40.0, 40.0, 1.0), Vector3(0.0, 0.0, 2.75))
+	await _settle(cam, 120)
+	var alone := _rise(cam)
+	var alone_hit: float = cam.arm.get_hit_length()
+	var warden := _dam()
+	var shell := _shell(warden)
+	var centre_y: float = shell.global_position.y - warden.global_position.y
+	warden.global_position = Vector3(0.0, 0.8 - centre_y, 0.0)
+	await _settle(cam, 120)
+	_t.check("D1 a wall inside a Warden's drum lifts the lens as the wall alone does", absf(_rise(cam) - alone) < 0.02 and alone > 0.5, "elevation %.3f rad in the drum, %.3f alone; hit length %.2f, %.2f alone" % [_rise(cam), alone, cam.arm.get_hit_length(), alone_hit])
+	warden.free()
+	wall.free()
+	cam.free()
 
 
 # The camera layer must not have changed any contact: the ball, every enemy and the Warden.

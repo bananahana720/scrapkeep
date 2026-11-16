@@ -89,7 +89,7 @@ static func heights(model_ref, rows: PackedStringArray, park: Dictionary, ground
 		var id: String = rows[segment] if segment < rows.size() else ""
 		var y: float = tops[id] if tops.has(id) else (float(ground.call(g.x, g.y)) if ground.is_valid() else 0.0)
 		if space != null:
-			var hit := space.intersect_ray(PhysicsRayQueryParameters3D.create(Vector3(g.x, y + RAY_ABOVE_M, g.y), Vector3(g.x, y - RAY_BELOW_M, g.y)))
+			var hit := space.intersect_ray(PhysicsRayQueryParameters3D.create(Vector3(g.x, y + RAY_ABOVE_M, g.y), Vector3(g.x, y - RAY_BELOW_M, g.y), 1))
 			if not hit.is_empty():
 				y = hit.position.y
 		out.append(y)

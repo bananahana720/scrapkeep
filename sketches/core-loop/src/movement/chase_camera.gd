@@ -100,8 +100,6 @@ var _boss_reach := false
 var _pitch_bias := 0.0
 var _tight := 0.0
 var _query := PhysicsShapeQueryParameters3D.new()
-var _inside := PhysicsPointQueryParameters3D.new()
-var _ignored: Array[RID] = []
 var _fov_add := 0.0
 var _glance_subject: Node3D
 var _glance_seconds := 0.0
@@ -264,25 +262,6 @@ func set_lock(point) -> void:
 	_locked = point != null
 
 
-# A camera-only shape the ball's centre is inside (a Warden's drawn drum is far bigger than the contact
-# sphere the ball meets) is left out of the arm and the lift's probe, or the cast would start inside it
-# and collapse the arm onto the ball. It counts again once the ball is out.
-func _ignore_shapes_around_ball() -> void:
-	var held: Array[RID] = []
-	if is_inside_tree():
-		_inside.collision_mask = CAMERA_BODY_BIT
-		_inside.position = target.shown_position()
-		for hit in get_world_3d().direct_space_state.intersect_point(_inside, 8):
-			held.append(hit["rid"])
-	if held == _ignored:
-		return
-	_ignored = held
-	arm.clear_excluded_objects()
-	for rid in held:
-		arm.add_excluded_object(rid)
-	_query.exclude = held
-
-
 func set_boss_reach(on: bool) -> void:
 	_boss_reach = on
 
@@ -376,7 +355,6 @@ func _process(delta: float) -> void:
 	# engine scaled this delta by the scale the frame began with, so on the frame a slow motion
 	# or a hit stop starts the division overshoots: the step is capped at a slow frame's worth.
 	_step_glance(minf(delta / maxf(Engine.time_scale, 0.01), GLANCE_STEP_CAP))
-	_ignore_shapes_around_ball()
 	var velocity: Vector3 = target.state.velocity
 	var fraction := SpeedTier.fraction(velocity.length(), tuning.f("cruise"))
 	shoulder_blend = move_toward(shoulder_blend, clampf(shoulder_target, 0.0, 1.0), SHOULDER_RATE * delta)

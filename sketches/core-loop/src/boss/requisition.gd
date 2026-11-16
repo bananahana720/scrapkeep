@@ -128,13 +128,16 @@ func build(boss) -> void:
 func _build_camera_bodies() -> void:
 	drawn_boxes()
 	for part in _drawn_parts:
+		# A cable's 0.25 m swing across the arm would snap the lens in; other readers still see it in drawn_boxes().
+		if part[0] in _cables:
+			continue
 		var body := ChaseCamera.camera_body()
 		body.name = "CameraBox"
 		var shape := CollisionShape3D.new()
 		shape.shape = BoxShape3D.new()
 		body.add_child(shape)
 		add_child(body)
-		_camera_bodies.append([body, part[0], part[1]])
+		_camera_bodies.append([body, part[0], part[1], Vector3.ZERO])
 	_follow_drawn_parts()
 
 
@@ -155,7 +158,10 @@ func _follow_drawn_parts() -> void:
 		var box: AABB = row[2]
 		var scale := at.basis.get_scale().abs()
 		body.global_transform = Transform3D(at.basis.orthonormalized(), at * box.get_center())
-		(shape.shape as BoxShape3D).size = (box.size * scale).max(Vector3.ONE * 0.05)
+		var size := (box.size * scale).max(Vector3.ONE * 0.05)
+		if not size.is_equal_approx(row[3]):
+			(shape.shape as BoxShape3D).size = size
+			row[3] = size
 
 
 static func _cable_mesh() -> ArrayMesh:
