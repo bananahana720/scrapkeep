@@ -1637,6 +1637,9 @@ func _step_toast(delta: float) -> void:
 	_toast_row.visible = not _toast.is_empty() and not launch_card.showing() and not _quiet
 	if _toast.is_empty():
 		return
+	# A toast nobody can see (a stage card or a hush covers its row) does not run down.
+	if not _toast_row.visible:
+		return
 	_toast["left"] -= delta
 	_toast["age"] += delta
 	_toast_row.modulate.a = clampf(minf(_toast["age"] / TOAST_IN, _toast["left"] / TOAST_OUT), 0.0, 1.0)

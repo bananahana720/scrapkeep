@@ -34,6 +34,7 @@ var _name := ""
 var _chain: Array = []
 var _skip_names: Array = []
 var _watched := 0
+var _after_card := false
 var _early: Array = []
 
 
@@ -127,15 +128,19 @@ func _process(_delta: float) -> bool:
 		"stage_card":
 			if _game.hud.launch_card.showing() and _wait < 1500:
 				return false
-			# Observation, not a check: the toast ages under the stage card and is gone when it ends
-			# (hud.gd _step_toast counts "left" down while the row is hidden). Reported, not fixed here.
-			print("note: kit toast after the stage card ended (%d frames): %s" % [_wait, _game.hud.toast_texts()])
+			if not _after_card:
+				_after_card = true
+				return false
+			var left: float = float(_game.hud._toast.get("left", 0.0))
+			_report("t2 the kit toast is shown when the stage card ends, with its life intact", _game.hud.toast_texts() == [_name + " taken"] and left > 2.4,
+				"toasts %s, %.2f s left after %d frames" % [_game.hud.toast_texts(), left, _wait])
+			_next("t_expire")
+		"t_expire":
+			if not _game.hud.toast_texts().is_empty() and _wait < 900:
+				return false
+			_report("t3 the kit toast then expires", _game.hud.toast_texts().is_empty(), "toasts %s after %d frames" % [_game.hud.toast_texts(), _wait])
 			_next("fight")
 		"fight":
-			if _wait == 2:
-				# The kit toast waited behind the briefing; once the start pick is taken it is still the toast.
-				_report("t1 the kit toast survives the briefing", _game.hud.toast_texts() == [_name + " taken"] and not _game.hud._quiet,
-					"toasts %s, quiet %s, row visible %s, stage card %s, briefing %s" % [_game.hud.toast_texts(), _game.hud._quiet, _game.hud._toast_row.is_visible_in_tree(), _game.hud.launch_card.showing(), _ws.briefing()])
 			if _wait == SETTLE:
 				# A fight in progress: a hit word in the world, a synergy callout and Moss's line up.
 				_word = WordFxWord.stamp(_game, "KA-CHUNK", Vector3.ZERO)
@@ -230,9 +235,35 @@ func _process(_delta: float) -> bool:
 			_report("s2 the screen has gone", not _ws.pick.visible, "visible %s after %d frames" % [_ws.pick.visible, _wait])
 			_report("s3 no toast at any frame while the pick was up", _watched > 0 and _early.is_empty(), "%d frames watched, toasts seen %s" % [_watched, _early])
 			_report("s4 one toast names both kits in order", _skip_names.size() == 2 and seen == [want], "toast %s, want [%s]" % [seen, want])
+			_toast_life()
 			_finish()
 			return true
 	return false
+
+
+# The HUD's toast lifetime, stepped by hand: the hold for an unseen toast must not freeze one in
+# play, and a toast hushed or held under a card shows for its full life once it can be seen.
+func _toast_life() -> void:
+	var hud = _game.hud
+	hud.drop_toast(hud.toast_texts()[0] if not hud.toast_texts().is_empty() else "")
+	hud.launch_card.visible = false
+	hud.toast("Plain toast")
+	hud._step_toast(0.0)
+	hud._step_toast(2.0)
+	var mid: bool = hud.toast_texts() == ["Plain toast"]
+	hud._step_toast(0.8)
+	_report("t4 an ordinary toast expires in its normal time", mid and hud.toast_texts().is_empty(), "present at 2.0 s %s, after 2.8 s %s" % [mid, hud.toast_texts()])
+	hud.quiet(true)
+	hud.toast("Hushed toast")
+	hud._step_toast(10.0)
+	var held: bool = hud.toast_texts() == ["Hushed toast"]
+	hud.quiet(false)
+	hud._step_toast(0.0)
+	hud._step_toast(2.5)
+	var shown: bool = hud.toast_texts() == ["Hushed toast"]
+	hud._step_toast(0.4)
+	_report("t5 a toast held under quiet shows for its full life after quiet ends", held and shown and hud.toast_texts().is_empty(),
+		"kept through 10 s of quiet %s, still up 2.5 s after %s, gone after 2.9 s %s" % [held, shown, hud.toast_texts().is_empty()])
 
 
 func _watch_toasts() -> void:
