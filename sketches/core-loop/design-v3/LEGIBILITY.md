@@ -21,7 +21,7 @@ One meaning per colour, enforced by a row test.
 | Hazard stripes (`Palette.HAZARD`) | This will hurt you | The floor belongs to it alone, plus the attacker's wind-up |
 | Live (`Palette.live()`) | Your verb works on this right now | Hook brackets, the cable, the collar, an open core, a rim that will break |
 | Amber (`Palette.AMBER`) | The world is offering or paying | Rides, landing rings, activity beams, rewards, things you now own |
-| Slate (`Palette.SLATE`, new) | Not yet | Out of range, a glancing hit, a locked thing |
+| Slate (`Palette.SLATE`, new) | Not yet | Out of range, a glancing hit, a locked thing. A word on the moving world (the event warning line) takes `Palette.SLATE_INK`, the same hue lighter, so it holds 4.5 to 1 (UA-04) |
 | Rust (`Palette.RUST`) | You lost something | A forced line break, scrap knocked off, a hull hit |
 
 Sand (`Palette.SAND`) is neutral ink and carries no meaning: keycaps, the searching cross, a posture step. Rows name it as the role `neutral`.

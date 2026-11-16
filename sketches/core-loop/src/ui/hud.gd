@@ -832,14 +832,14 @@ func _on_posture(enemy: Node3D, posture: float, staggered: bool) -> void:
 
 # "incoming" warns of something still on its way. An announcement with no lead is already here
 # (a stage's resting weather starts with the stage: "Dawn Still"), so it warns of nothing.
-# The line reads "not yet" (slate), and the red edge marker says where: hazard red is for what
+# The line reads "not yet" (slate ink, slate lightened for a word), and the red edge marker says where: hazard red is for what
 # hurts now, so a crew's hit never reads as this line's cause (W1-110). It lives as long as the
 # lead (capped) and ends when its event starts or ends.
 func _on_event_announced(event_id: String, seconds_until: float, _at: Vector3) -> void:
 	if seconds_until > 0.0:
 		var called: String = game.world.activities.called(event_id)
 		var life := minf(seconds_until, EVENT_LINE_CAP)
-		_on_field_fact(called if called != "" else event_id, "event_announced", maxf(life - TOAST_IN - TOAST_OUT, 0.0), Palette.SLATE)
+		_on_field_fact(called if called != "" else event_id, "event_announced", maxf(life - TOAST_IN - TOAST_OUT, 0.0), Palette.SLATE_INK)
 		var line := _held_toast if launch_card.showing() else _toast
 		if not line.is_empty():
 			line["event"] = event_id

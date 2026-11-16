@@ -57,7 +57,7 @@ func _run() -> void:
 	_t.check("the line is up with the marker", hud.toast_on_screen() != "", hud.toast_on_screen())
 	if shown.size() == 1:
 		var marker: Color = EdgeMarkers.marker_color(shown[0])
-		_t.check("the line is slate, the colour law's not yet", hud._toast["color"] == Palette.SLATE, str(hud._toast["color"]))
+		_t.check("the line is slate ink, the colour law's not yet in a word's lightness", hud._toast["color"] == Palette.SLATE_INK, str(hud._toast["color"]))
 		_t.check("the edge marker stays hazard red and differs from the line", marker == Palette.HAZARD and marker != hud._toast["color"], str(marker))
 	var short := _life(hud, 20.0)
 	_announce(hud, "powerhouse_boiler", 9.0)

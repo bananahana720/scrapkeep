@@ -14,6 +14,8 @@ const ClassDef := preload("res://src/core/class_def.gd")
 
 const MIN_LIVE_DISTANCE := 35.0
 const MIN_SLATE_DISTANCE := 35.0
+# Slate ink against worn steel, the nearest other meaning on the HUD (the cog and money chip): 11.5 apart today.
+const MIN_INK_STEEL_DISTANCE := 10.0
 const VOCAB_TABLES := {"LINE_ROWS": EventKinds.LINE_ROWS, "STATE_ROWS": EventKinds.STATE_ROWS,
 	"CAUSE_ROWS": EventKinds.CAUSE_ROWS, "ACTIVITY_ROWS": EventKinds.ACTIVITY_ROWS}
 const OTHER_TABLES := {"ROWS": EventKinds.ROWS, "UI_ROWS": EventKinds.UI_ROWS, "LOOT_ROWS": EventKinds.LOOT_ROWS,
@@ -80,6 +82,17 @@ func run(t) -> void:
 			slate_close.append("%s %.1f" % [name, gap])
 	t.check("slate sits clear of the warm colours and the ancients' blue", slate_close.is_empty(),
 		"slate is under %.0f CIE76 from: %s" % [MIN_SLATE_DISTANCE, slate_close])
+	var ink_close: Array = []
+	for name in ["amber", "rust", "hazard", "ancient blue", "sandstone"]:
+		var gap := _cie76(Palette.SLATE_INK, rivals[name])
+		if gap < MIN_SLATE_DISTANCE:
+			ink_close.append("%s %.1f" % [name, gap])
+	var steel_gap := _cie76(Palette.SLATE_INK, Palette.STEEL)
+	if steel_gap < MIN_INK_STEEL_DISTANCE:
+		ink_close.append("steel %.1f" % steel_gap)
+	t.check("slate ink sits clear of the warm colours, the ancients' blue and worn steel", ink_close.is_empty(), "slate ink is too close to: %s" % [ink_close])
+	t.check("slate ink is slate's own hue, lighter", absf(Palette.SLATE_INK.h - Palette.SLATE.h) < 0.03 and Palette.SLATE_INK.v > Palette.SLATE.v,
+		"hue %.3f vs %.3f, value %.2f vs %.2f" % [Palette.SLATE_INK.h, Palette.SLATE.h, Palette.SLATE_INK.v, Palette.SLATE.v])
 	var not_mint: Array = []
 	for class_def in ClassDef.all():
 		var pilot_live: Color = Palette.live(class_def)
