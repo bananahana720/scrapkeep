@@ -1,0 +1,33 @@
+{
+	"adapter": "NVIDIA GeForce RTX 4080",
+	"frames": [
+		{
+			"at": [
+				-147.637313842773,
+				149.4755859375,
+				-668.622497558594
+			],
+			"id": "hidden",
+			"sha256": "f00ce8432f9f6f3afd91c6b6e5b2fc73b3d7af626ce7971c1f3b5b9afbf5c1b4",
+			"tone_share": 0.0212
+		},
+		{
+			"at": [
+				-148.816192626953,
+				152.678619384766,
+				-678.552734375
+			],
+			"id": "visible",
+			"sha256": "d0f5bad2961a75cd9c785e56fce57ebb7ddb9c8eec4da54e25abce1514aaeda7",
+			"tone_share": 0.0162
+		}
+	],
+	"look": "clear",
+	"size": [
+		1600.0,
+		900.0
+	],
+	"tone": "ff5a3c",
+	"tone_distance": 0.12,
+	"tool": "pf52_occlusion_still.gd"
+}
