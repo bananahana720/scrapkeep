@@ -5,7 +5,7 @@ const JoltAudio := preload("res://src/presentation/jolt_layer_audio.gd")
 
 # The jolt layer (design-v3/FIELDS-AND-CASTS.md section 2.3): a Spillway crew under a cable
 # spool that unrolls a live mat where the ball is going. The warning is an instant ring laid
-# over the ball, the field the mat will cover. Live, the mat pulses every AreaField row
+# across the ball's line ahead (LAY_AHEAD), the field the mat will cover. Live, the mat pulses every AreaField row
 # `pulse` seconds; the ring fills over each pulse's lead so the jolt is read before it lands.
 # A pulse that finds the ball rolling slow on the mat jolts it: charging gauges and casts drop
 # with nothing spent and the specials and line skill jam for half a second. Speed (FAST tier),
@@ -18,6 +18,10 @@ const JoltAudio := preload("res://src/presentation/jolt_layer_audio.gd")
 const FIELD := "static_jam"
 const HP := 45.0
 const WET_SPREAD := 1.5
+# W1-66 (gameplay critique finding 4): the mat is laid across the ball's line where its roll will carry
+# it by the time the mat is live (warn_seconds on), at most LAY_AHEAD metres on, so a ball holding its
+# line meets it live and the answer is a jump over it (or a turn off the line); speed still slips it.
+const LAY_AHEAD := 12.0
 
 var field = null
 # Pulses that landed on the ball, and pulses it slipped by its own verb, for tests and the lab.
@@ -76,7 +80,7 @@ static func _parts() -> Array:
 
 
 func _commit(_to_ball: Vector3) -> Node3D:
-	var at := _ball()
+	var at := _ahead(warn_seconds, LAY_AHEAD)
 	field = AreaField.new(FIELD, at, self)
 	if _on_water(at):
 		field.spread = WET_SPREAD
