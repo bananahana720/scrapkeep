@@ -134,6 +134,14 @@ const FOE_MIN_PX := 24.0
 const SPOT_BESIDE := 0.32
 const SPOT_DROP := 0.22
 const MARKS_GROUP := "foe_marks"
+# Whatever draws something a word must not cover joins KEEP_GROUP and answers keep_clear_rects()
+# (viewport pixels): the HUD, the flourish player, the screens, a reward gate. player_fx reads the
+# group and never names a member. Every stamper of candy words asks this node (ROOM_GROUP) through
+# spot_free() and candy_room(), so one module owns what a word keeps off.
+const KEEP_GROUP := "word_keep_clear"
+const ROOM_GROUP := "word_room"
+# Rect-versus-rect tests made by word placement (a count for the notes and the cost check).
+static var rect_tests := 0
 const WORD_LIFE := 0.6
 const WORD_STAMP_S := 0.1
 const WORD_EXIT_S := 0.2
@@ -161,6 +169,8 @@ var player
 var camera
 var vfx
 var root: Node3D
+# The words' own parent: only they hide while the tree is paused, not the aura, coil or sparks.
+var _word_root: Node3D
 var reduced_motion := false
 # Facts drawn, by layer, for the tests and the notes.
 var spawned := {}
@@ -215,12 +225,19 @@ func setup(ctx_ref, vfx_ref = null) -> void:
 	ctx = ctx_ref
 	vfx = vfx_ref
 	name = "PlayerFx"
+	add_to_group(ROOM_GROUP)
 	player = ctx.player
 	camera = ctx.camera
 	_rng.seed = 1717
 	root = Node3D.new()
 	root.name = "PlayerFxRoot"
 	ctx.root.add_child(root)
+	_word_root = Node3D.new()
+	_word_root.name = "Words"
+	root.add_child(_word_root)
+	var pause_guard := PauseGuard.new()
+	pause_guard.root = _word_root
+	add_child(pause_guard)
 	_font = word_font()
 	for i in WORD_POOL:
 		_words.append(_make_word())
@@ -625,7 +642,9 @@ func _on_beat_word(enemy, _kind: String, at_clock: float) -> void:
 			if camera != null and camera.cam != null:
 				grown.append(_word_rect(camera.cam, w["at"], float(w["away"]) > 0.0, float(w["width_px"]),
 					float(w["size"]) * ONBEAT_GROW, w["node"].pixel_size))
-			if grown.is_empty() or word_spot(grown, _fight_rects()) == 0:
+			var around := _fight_rects().duplicate()
+			around.append_array(_keep_rects())
+			if grown.is_empty() or word_spot(grown, around) == 0:
 				w["size"] = float(w["size"]) * ONBEAT_GROW
 			return
 	if not is_instance_valid(enemy) or not enemy.is_inside_tree():
@@ -670,7 +689,7 @@ func clear() -> void:
 func _make_word() -> Dictionary:
 	var label := word_label(_font)
 	label.visible = false
-	root.add_child(label)
+	_word_root.add_child(label)
 	return {"node": label, "t": 1.0, "id": "", "tilt": 0.0, "size": 1.0, "at": Vector3.ZERO}
 
 
@@ -715,6 +734,60 @@ func words_alive() -> int:
 	return n
 
 
+# Whether another candy sound word may show: the budget WORDS_ALIVE counts this module's words and
+# the ones machine_fx has up (its candy_alive()), so the two stampers share it. Reads and tells
+# stand outside it.
+func candy_room() -> bool:
+	var n := words_alive()
+	if not is_instance_valid(_machine) and is_inside_tree():
+		for other in get_tree().get_nodes_in_group(MARKS_GROUP):
+			if other != self and other.has_method("candy_alive"):
+				_machine = other
+				break
+	if is_instance_valid(_machine):
+		n += _machine.candy_alive()
+	return n < WORDS_ALIVE
+
+
+# Whether a word covering `r` (viewport pixels) would stand clear of everything that joined KEEP_GROUP.
+# The one test the other stampers ask; it holds no foe or warning, which a machine word is stamped on
+# by design.
+func spot_free(r: Rect2) -> bool:
+	for k in _keep_rects():
+		rect_tests += 1
+		if k.intersects(r):
+			return false
+	return true
+
+
+var _machine = null
+var _keep_frame := -1
+
+
+# A member's rects changed (a card, caption, stamp or inset started or ended): read the list again.
+func keep_clear_changed() -> void:
+	_keep_frame = -1
+var _keep_cache: Array[Rect2] = []
+
+
+# KEEP_GROUP's rects, grown by WORD_WARNING_GAP, read once a frame.
+func _keep_rects() -> Array[Rect2]:
+	var frame := Engine.get_process_frames()
+	if frame == _keep_frame:
+		return _keep_cache
+	_keep_frame = frame
+	_keep_cache = []
+	if not is_inside_tree():
+		return _keep_cache
+	for node in get_tree().get_nodes_in_group(KEEP_GROUP):
+		if not node.has_method("keep_clear_rects"):
+			continue
+		for r in node.keep_clear_rects():
+			if r.has_area():
+				_keep_cache.append(r.grow(WORD_WARNING_GAP))
+	return _keep_cache
+
+
 # Stamps a sound word at `at`, pushed off the line ahead of the ball. Refused inside the
 # gap since the last word, inside a word's own repeat window, with two alive, or in the
 # densest band, where only the reads may speak.
@@ -725,7 +798,7 @@ func word(id: String, at: Vector3, color := Color.TRANSPARENT, foe = null) -> bo
 	var repeat := BEAT_REPEAT_S if id == "beat" else WORD_REPEAT_S
 	if _clock - _last_word < WORD_GAP_S or _clock - float(_word_seen.get(id, -1.0e9)) < repeat:
 		return false
-	if words_alive() >= WORDS_ALIVE or Density.live().band()["max"] > 0.7:
+	if not candy_room() or Density.live().band()["max"] > 0.7:
 		return false
 	var slot := _free_slot()
 	var label: Label3D = slot["node"]
@@ -747,6 +820,9 @@ func word(id: String, at: Vector3, color := Color.TRANSPARENT, foe = null) -> bo
 		var spots: Array = [[placed, right_of_ball], [placed - side * 2.0 * rel.dot(side), not right_of_ball]]
 		var avoid := _fight_rects().duplicate()
 		var kinds := _fight_kind.duplicate()
+		for r in _keep_rects():
+			avoid.append(r)
+			kinds.append("keep")
 		var bodies := foe_rects(foe, cam)
 		if not bodies.is_empty():
 			# The named foe's own body and, while it shows a mark, the marks over it. A foe outside the
@@ -767,13 +843,14 @@ func word(id: String, at: Vector3, color := Color.TRANSPARENT, foe = null) -> bo
 			# A pixel past the gap: placed flush on the grown body's edge, float rounding put it on the foe one run in four.
 			spots.append([cam.project_position(Vector2(p.x, whole.position.y - WORD_WARNING_GAP - tall * 0.6 - 1.0), maxf(depth, cam.near + 0.1)), right_of_ball])
 		# Then a short fixed search beside the ball, so a fight that covers the asked spot still leaves
-		# somewhere to stand: at the ball's height on its two sides, then below it on both. The side the
+		# somewhere to stand: at the ball's height on its two sides, then below it, then above it, then two
+		# drops below and above (a caption or a close-up panel beside the ball covers the near ones). The side the
 		# word was asked on goes first. Each spot is pushed out of the lane ahead of the ball like the
 		# asked one, and the word runs away from the ball (TONE-BIBLE pillar 2).
 		var ball: Vector3 = player.shown_position()
 		var half := _half_height(cam, ball)
 		var first_side := 1.0 if right_of_ball else -1.0
-		for drop in [0.0, SPOT_DROP]:
+		for drop in [0.0, SPOT_DROP, -SPOT_DROP, 2.0 * SPOT_DROP, -2.0 * SPOT_DROP]:
 			for sgn in [first_side, -first_side]:
 				var near := clear_of_lane(ball + side * half * SPOT_BESIDE * sgn - cam.global_basis.y * half * drop)
 				spots.append([near, sgn > 0.0])
@@ -821,6 +898,7 @@ func read_word(text: String, foe: Node3D, color: Color) -> bool:
 			[Vector2(whole.get_center().x - wide * 0.5, whole.position.y - gap - tall * 0.6), true]]:
 		spots.append([cam.project_position(s[0], depth), s[1]])
 	var avoid := _warnings().duplicate()
+	avoid.append_array(_keep_rects())
 	avoid.append(body.grow(WORD_WARNING_GAP))
 	if stack.has_area():
 		avoid.append(stack.grow(WORD_WARNING_GAP))
@@ -995,7 +1073,15 @@ static func _held_by(cam: Camera3D, spot: Array, width_px: float, size: float, p
 # foe) that covers none of `avoid`, or -1 when every one does.
 static func word_spot(spots: Array[Rect2], avoid: Array[Rect2]) -> int:
 	for i in spots.size():
-		if spots[i].has_area() and not avoid.any(func(r): return r.intersects(spots[i])):
+		if not spots[i].has_area():
+			continue
+		var clear := true
+		for r in avoid:
+			rect_tests += 1
+			if r.intersects(spots[i]):
+				clear = false
+				break
+		if clear:
 			return i
 	return -1
 
@@ -1679,11 +1765,18 @@ func _draw_overdrive(delta: float) -> void:
 	var ball: Vector3 = player.shown_position()
 	if lit > 0.01:
 		_rim.global_position = ball
-		_rim_mat.set_shader_parameter("heat", lit)
 		# A hot shell keeps its own colour over overdrive's: the risk reads first.
 		var red = player.get("redline")
 		var shell_wins: bool = shell > 0.0 and (heat < shell or red.hot())
-		_rim_mat.set_shader_parameter("rim", shell_color(red) if shell_wins else OVERDRIVE_RIM)
+		var rim: Color = shell_color(red) if shell_wins else OVERDRIVE_RIM
+		# The kettle's twin: over the last Redline.KETTLE_S of the fuse the rim beats to full heat
+		# in the hazard colour, in step with the whistle (redline.gd kettle_pulse).
+		# The beat runs 4 to 10 Hz, so Reduce flashes holds it steady, as FlashGuard.blink does.
+		var kettle := 0.0
+		if red != null:
+			kettle = (1.0 if red.kettle_live() else 0.0) if FlashGuard.on else red.kettle_pulse()
+		_rim_mat.set_shader_parameter("heat", FlashGuard.spike(lit, lerpf(lit, 1.0, kettle)))
+		_rim_mat.set_shader_parameter("rim", rim.lerp(Palette.HAZARD, kettle))
 	if on:
 		_rim_mat.set_shader_parameter("pilot", player.class_color())
 		if speed > 1.0:
@@ -1974,3 +2067,16 @@ func _process(delta: float) -> void:
 	_draw_dunk_glow()
 	_draw_overdrive(delta)
 	_draw_carve()
+
+
+# Hides the word layer while the tree is paused, as flourish_player hides its own: a word stamped
+# before a pause would otherwise stay frozen over the menu.
+class PauseGuard extends Node:
+	var root: Node3D
+
+	func _init() -> void:
+		process_mode = Node.PROCESS_MODE_ALWAYS
+
+	func _process(_delta: float) -> void:
+		if root != null and is_instance_valid(root):
+			root.visible = not get_tree().paused

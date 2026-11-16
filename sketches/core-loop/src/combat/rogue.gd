@@ -304,6 +304,8 @@ func _finish_strike() -> void:
 		if is_instance_valid(_reaction_bus) and _reaction_bus.has_signal("attack_cued"):
 			_reaction_bus.attack_cued.emit(kind, ATTACK_IDS[next], CUED_TOTAL)
 		_enter(State.CUE)
+		if _core != null:
+			_show_core()
 		return
 	_open_weak_window()
 
@@ -645,9 +647,7 @@ func _pose(delta: float) -> void:
 		var rest: Vector3 = entry["rest"]
 		plate.position = plate.position.lerp(rest + Vector3(side * (0.9 if weak else 0.0), 0.0, 0.0), blend)
 		plate.rotation.y = lerpf(plate.rotation.y, side * (0.9 if weak else 0.0), blend)
-	var pulse := 1.0 + 0.12 * sin(Time.get_ticks_msec() * 0.018) if weak else 1.0
-	_core.scale = Vector3.ONE * (1.5 * pulse if weak else 1.0)
-	_core.material_override = _weak_material() if weak else _core_material
+	_show_core()
 	# A null or freed target leaves the facing where it is (F008).
 	if not is_instance_valid(target):
 		return
@@ -662,7 +662,31 @@ func _pose(delta: float) -> void:
 			rotation.y = lerp_angle(rotation.y, atan2(-to.x, -to.z), 1.0 - exp(-8.0 * delta))
 
 
+# The core's size and colour for the state. The cue's beat calls it as it begins, so the twin shows on
+# the same tick as the sound and not one physics tick later (_pose runs before the state machine).
+func _show_core() -> void:
+	var weak := state == State.WEAK
+	var pulse := 1.0 + 0.12 * sin(Time.get_ticks_msec() * 0.018) if weak else 1.0
+	_core.scale = Vector3.ONE * (1.5 * pulse if weak else (1.3 if state == State.CUE else 1.0))
+	_core.material_override = _weak_material() if weak else (_cue_material() if state == State.CUE else _core_material)
+
+
 var _weak: StandardMaterial3D
+var _cue: StandardMaterial3D
+
+
+# The cue's twin (attack_cued, brass in event_kinds): over the CUE_LEAD beat the core burns brass
+# and swells, so a muted player sees the chained strike coming. It is brass, not the vented
+# window's live colour, so it never reads as a chance to hit.
+func _cue_material() -> StandardMaterial3D:
+	if _cue == null:
+		_cue = Palette.solid(Palette.BRASS, 1.0)
+	_cue.emission_energy_multiplier = FlashGuard.spike(1.2, 4.0)
+	return _cue
+
+
+func cue_showing() -> bool:
+	return state == State.CUE and _core != null and _core.material_override == _cue
 
 
 func _weak_material() -> StandardMaterial3D:
