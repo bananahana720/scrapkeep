@@ -61,7 +61,7 @@
  },
  {
   "id": "take-second-line-warden",
-  "display_name": "Second Line for a Warden",
+  "display_name": "Second Line for the Shelf",
   "station": "backroom",
   "tier": "take",
   "parent": "warden-1-1",
@@ -76,7 +76,7 @@
  },
  {
   "id": "take-bench-warden-bop",
-  "display_name": "Bench Warden Bop",
+  "display_name": "Bench Hammer Bop",
   "station": "backroom",
   "tier": "b-side",
   "parent": "warden-2-1",
@@ -477,7 +477,7 @@
  },
  {
   "id": "take-works-warden-half-time",
-  "display_name": "Works Warden, Half Time",
+  "display_name": "Works Grind, Half Time",
   "station": "lowshaft",
   "tier": "b-side",
   "parent": "warden-2-2",
@@ -612,7 +612,7 @@
  },
  {
   "id": "take-draft-warden-updraft",
-  "display_name": "Draft Warden, Updraft",
+  "display_name": "Draft Surge, Updraft",
   "station": "updraft",
   "tier": "b-side",
   "parent": "warden-3-1",
@@ -627,7 +627,7 @@
  },
  {
   "id": "take-crown-warden-ascending",
-  "display_name": "Crown Warden, Ascending",
+  "display_name": "Crown Peal, Ascending",
   "station": "updraft",
   "tier": "take",
   "parent": "warden-3-2",
