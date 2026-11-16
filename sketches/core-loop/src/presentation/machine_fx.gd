@@ -21,7 +21,9 @@ const PlayerFx := preload("res://src/presentation/player_fx.gd")
 # owns the read and draws above all of this; these effects sit on or over the body, never
 # across the footprint. Body effects are P5 and steam and motes P7, so the density
 # governor thins them. A special's tell is the exception: it is a read, so it is never
-# thinned and always gets its word. One pack's arrival effects start on the frame its
+# thinned; its word is stamped unless no spot is free of the HUD, the reticle and the ball
+# (player_fx's room), when it stays silent and the telegraph, the tell's sound and its sparks
+# carry the fact. One pack's arrival effects start on the frame its
 # arrival rings do, so they share the rings' timing and the 0.2 s gap rule between packs.
 #
 # Timing contract with audio: a special fires its tell through SpecialCues.tell(), which
@@ -148,6 +150,7 @@ var _hits_window := 0
 var _hits_clock := 0.0
 var _words: Array = []
 var _word_root: Node3D
+var _room = null
 var _word_next := 0
 var _last_word := -INF
 var _cables: Array = []
@@ -381,7 +384,9 @@ func word(text: String, at: Vector3, tint: Color, force := false, life := WORD_L
 	# One owner of what a word keeps off (player_fx): a candy word needs a free place in the shared
 	# budget, and every word, read or candy, takes the first free spot of its own short list or is not
 	# drawn (PF-26).
-	var room = get_tree().get_first_node_in_group(PlayerFx.ROOM_GROUP)
+	if not is_instance_valid(_room):
+		_room = get_tree().get_first_node_in_group(PlayerFx.ROOM_GROUP)
+	var room = _room
 	if room != null:
 		if not force and not room.candy_room():
 			return false
@@ -717,7 +722,8 @@ func _on_special_tell(moment: String, enemy: Node3D) -> void:
 
 
 # One special's moment: "spawn", "tell", "break", "break_split" or "break_clean". A tell
-# is a read (P1): never thinned, always worded. Returns the sound id the moment plays.
+# is a read (P1): never thinned, worded unless no spot is free (then the telegraph, the sound and
+# the sparks carry it). Returns the sound id the moment plays.
 func special_moment(special: String, moment: String, enemy: Node3D, at := Vector3.INF) -> String:
 	var row: Dictionary = SPECIALS.get(special, {})
 	if row.is_empty() or not row.has(moment):

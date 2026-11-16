@@ -2,6 +2,7 @@ extends CanvasLayer
 
 const ResultsOdds := preload("res://src/ui/results_odds.gd")
 const UiTokens := preload("res://src/ui/ui_tokens.gd")
+const PlayerFx := preload("res://src/presentation/player_fx.gd")
 
 const Palette := preload("res://src/core/palette.gd")
 const SummaryRows := preload("res://src/ui/summary_rows.gd")
@@ -175,7 +176,7 @@ func setup(game_ref) -> void:
 	game = game_ref
 	layer = 5
 	process_mode = Node.PROCESS_MODE_ALWAYS
-	add_to_group("word_keep_clear")
+	add_to_group(PlayerFx.KEEP_GROUP)
 	_veil = ColorRect.new()
 	_veil.color = Color(Palette.CHARCOAL, 0.84)
 	_veil.set_anchors_preset(Control.PRESET_FULL_RECT)

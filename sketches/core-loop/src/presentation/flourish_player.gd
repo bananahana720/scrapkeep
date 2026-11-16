@@ -38,6 +38,8 @@ const PLAY_ACTIONS := ["cl_forward", "cl_back", "cl_left", "cl_right", "cl_jump"
 const AVOID_GROUP := "flourish_avoid"
 const AVOID_GAP := 12.0
 # The pieces that are read: a stamp and a sound word are looked at.
+# The pieces that carry a fact a sound word must not cover; one that starts hides a live word it meets.
+const FACT_KINDS := ["card", "caption", "panels", "stamp", "inset"]
 const WRITTEN := ["card", "caption", "panels"]
 # What holds the other voices (reading()): the written pieces and the stamp, which is a voice too
 # and sits where Moss's message box goes when a second run's short cold open is only a stamp.
@@ -290,6 +292,8 @@ func advance(delta: float) -> void:
 				if node != null:
 					node.set_meta("flourish_kind", String(piece.kind))
 					_live.append({"piece": piece, "node": node, "end": float(piece.at) + float(piece["for"])})
+					if String(piece.kind) in FACT_KINDS:
+						_yield_words(node)
 	for entry in _live.duplicate():
 		if clock >= float(entry.end):
 			_drop(entry)
@@ -365,11 +369,30 @@ func _mark_seen(key: String) -> void:
 
 func _drop(entry: Dictionary) -> void:
 	_live.erase(entry)
+	if String(entry.piece.kind) in FACT_KINDS:
+		_room_changed()
 	if String(entry.piece.kind) == "speed_lines":
 		_lines.set("mode", "")
 	var node = entry.node
 	if is_instance_valid(node) and node is Node:
 		node.queue_free()
+
+
+# A card, caption, panel, stamp or inset carries the fact, so a sound word that is already up and meets
+# it is hidden at once; player_fx reads the new list.
+func _yield_words(node: Control) -> void:
+	_room_changed()
+	var rect := node.get_global_rect()
+	for entry in _live:
+		if String(entry.piece.kind) == "sfx_word" and is_instance_valid(entry.node) and entry.node.visible \
+				and entry.node.get_global_rect().intersects(rect):
+			entry.node.visible = false
+
+
+func _room_changed() -> void:
+	var room = get_tree().get_first_node_in_group(PlayerFx.ROOM_GROUP) if is_inside_tree() else null
+	if room != null:
+		room.keep_clear_changed()
 
 
 func _screen() -> Vector2:
@@ -643,7 +666,7 @@ func keep_clear_rects() -> Array[Rect2]:
 
 
 # A sound word sits at its anchor's screen point, or at its at_share, clamped in the play view. It
-# takes the first of its spots (the asked one, the mirror across the screen's centre, then under the
+# takes the first of its spots (the asked one, then above, below and beside it, each clamped to the
 # play view) that covers none of the row's pieces, the HUD or a screen; with none free it is not
 # drawn. It never slides onto something else (PF-26).
 func _place_word(label: Control, piece: Dictionary) -> bool:
@@ -657,15 +680,15 @@ func _place_word(label: Control, piece: Dictionary) -> bool:
 	label.reset_size()
 	var view := Rect2(PLAY_VIEW.position * screen, PLAY_VIEW.size * screen)
 	var asked := share * screen - label.size * 0.5
-	var spots: Array[Vector2] = [asked, screen - asked - label.size,
-		Vector2(asked.x, view.end.y + AVOID_GAP * _scale())]
+	var gap := AVOID_GAP * _scale()
+	# Near its anchor: where it was asked, above it, below it, then beside it.
+	var spots: Array[Vector2] = [asked, asked + Vector2(0.0, -label.size.y - gap), asked + Vector2(0.0, label.size.y + gap),
+		asked + Vector2(label.size.x + gap, 0.0), asked - Vector2(label.size.x + gap, 0.0)]
 	var room = get_tree().get_first_node_in_group(PlayerFx.ROOM_GROUP) if is_inside_tree() else null
 	var avoid := _avoid_rects()
 	for i in spots.size():
-		var at := spots[i]
-		if i == 0:
-			at = Vector2(clampf(at.x, view.position.x, maxf(view.position.x, view.end.x - label.size.x)),
-				clampf(at.y, view.position.y, maxf(view.position.y, view.end.y - label.size.y)))
+		var at := Vector2(clampf(spots[i].x, view.position.x, maxf(view.position.x, view.end.x - label.size.x)),
+			clampf(spots[i].y, view.position.y, maxf(view.position.y, view.end.y - label.size.y)))
 		var rect := Rect2(at, label.size)
 		if avoid.any(func(r): return r.intersects(rect)):
 			continue

@@ -18,6 +18,7 @@ const Game := preload("res://src/game.gd")
 const PlayerFx := preload("res://src/presentation/player_fx.gd")
 const DamageNumbers := preload("res://src/presentation/damage_numbers.gd")
 const Palette := preload("res://src/core/palette.gd")
+const Rows := preload("res://src/presentation/flourish_rows.gd")
 
 var t := T.new("word_room_test")
 var _game
@@ -61,6 +62,25 @@ func _reset() -> void:
 		w["t"] = INF
 		w["node"].visible = false
 	_fl.stop_all()
+
+
+# Runs `pieces` as a row so several start in one frame (the rows' own times are fixed constants).
+func _force_row(pieces: Array) -> void:
+	_fl.play("bowl_handoff", 1, {}, "short")
+	_fl.stop_all()
+	_fl.playing = true
+	_fl.id = "bowl_handoff"
+	_fl.short = true
+	_fl.clock = 0.0
+	_fl._pieces = pieces
+	var started: Array[bool] = []
+	started.resize(pieces.size())
+	started.fill(false)
+	_fl._started = started
+
+
+func _kind_nodes(kind: String) -> Array:
+	return _fl.live_nodes().filter(func(n): return n.get_meta("flourish_kind", "") == kind)
 
 
 func _tests() -> int:
@@ -142,17 +162,48 @@ func _run() -> void:
 
 	# a: a player word at the centre, ball still
 	_reset()
+	var held_before: int = _fx.spawned.get("held_keep", 0)
 	var stamped: bool = _fx.word("smash", _world(Vector2(0.5, 0.5) + Vector2(10.0, 0.0) / _view))
 	var rects := _player_rects()
-	t.check("a: a player word at the centre is held or drawn clear of the reticle (stamped %s, %d on screen)" % [stamped, rects.size()],
-		(not stamped and rects.is_empty()) or (stamped and rects.size() == 1 and not _any_meets(rects, _reticle())))
+	var held_keep: int = _fx.spawned.get("held_keep", 0) - held_before
+	t.check("a: a player word at the centre is drawn clear of the reticle, or held because the keep list covers it (stamped %s, %d on screen, %d held by keep)" % [stamped, rects.size(), held_keep],
+		(stamped and rects.size() == 1 and not _any_meets(rects, _reticle())) or (not stamped and rects.is_empty() and held_keep == 1))
 
 	# b: a machine KLANG at the centre
 	_reset()
-	var klang: bool = _mfx.word("KLANG", _world(Vector2(0.5, 0.5)), Palette.BRASS)
+	var centre_at := _world(Vector2(0.5, 0.5))
+	var no_spot: bool = _mfx._free_spot(_fx, 100.0, centre_at, 1.0) == null
+	var klang: bool = _mfx.word("KLANG", centre_at, Palette.BRASS)
 	var machine := _machine_rects()
-	t.check("b: a machine KLANG at the centre is refused or drawn clear of the reticle (stamped %s, %d on screen)" % [klang, machine.size()],
-		(not klang and machine.is_empty()) or (klang and machine.size() == 1 and not _any_meets(machine, _reticle())))
+	t.check("b: a machine KLANG at the centre is drawn clear of the reticle, or refused because no spot is free (stamped %s, no free spot %s, %d on screen)" % [klang, no_spot, machine.size()],
+		(klang and machine.size() == 1 and not _any_meets(machine, _reticle())) or (not klang and no_spot and machine.is_empty()))
+
+	# b2: a member without keep_clear_rects() cannot break the list (a bad member, not a crash)
+	_reset()
+	var odd := Node.new()
+	odd.add_to_group("word_keep_clear")
+	root.add_child(odd)
+	await _frames(1)
+	t.check("b: a group member without keep_clear_rects() leaves a word on clear screen drawn", _fx.word("smash", _world(Vector2(0.2, 0.45))) and _player_rects().size() == 1)
+	odd.remove_from_group("word_keep_clear")
+	odd.queue_free()
+	# b3: the list is read again when a member says its rects changed within the frame
+	_reset()
+	var late := Plate.new()
+	late.add_to_group("word_keep_clear")
+	root.add_child(late)
+	await _frames(1)
+	var probe := Rect2(_view * Vector2(0.15, 0.4), Vector2(120.0, 60.0))
+	var before_free: bool = _fx.spot_free(probe)
+	late.rects = [probe]
+	var stale_free: bool = _fx.spot_free(probe)
+	_fx.keep_clear_changed()
+	var after_free: bool = _fx.spot_free(probe)
+	t.check("b: a keep rect that appears mid-frame is seen once keep_clear_changed() is called (free %s, stale read %s, after %s)" % [before_free, stale_free, after_free],
+		before_free and stale_free and not after_free)
+	late.remove_from_group("word_keep_clear")
+	late.queue_free()
+	await _frames(1)
 
 	# c: a member of the group around (0.70, 0.32)
 	_reset()
@@ -185,13 +236,10 @@ func _run() -> void:
 	label.text = "KLANG"
 	label.add_theme_font_size_override("font_size", 72)
 	_fl._overlay.add_child(label)
-	_fl._place_word(label, {"at_share": centre_share})
+	var placed: bool = _fl._place_word(label, {"at_share": centre_share})
 	var asked := Rect2(label.position, label.size)
-	var drawn: bool = label.visible
 	t.check("d: the victory title shows and has an area (%s)" % title, _game.screens.visible and title.has_area())
-	t.check("d: a flourish word played over the title is not drawn over it (drawn %s at %s, title %s)" % [drawn, asked, title],
-		not drawn or not asked.intersects(title))
-	# Precondition: with no member in the group, the same word does land on the title.
+	t.check("d: a flourish word played over the title gets no spot, so its node is not built (placed %s at %s, title %s)" % [placed, asked, title], not placed)
 	label.queue_free()
 	_game.screens._on_flow_changed("stage")
 	await _frames(60)
@@ -199,32 +247,40 @@ func _run() -> void:
 	bare.text = "KLANG"
 	bare.add_theme_font_size_override("font_size", 72)
 	_fl._overlay.add_child(bare)
-	_fl._place_word(bare, {"at_share": centre_share})
+	var placed_bare: bool = _fl._place_word(bare, {"at_share": centre_share})
 	var landed := Rect2(bare.position, bare.size)
-	t.check("d: the control word, with the screen down, lands on the title's place (%s vs %s)" % [landed, title], bare.visible and landed.intersects(title))
+	t.check("d: the control word, with the screen down, is placed over the title's place (%s vs %s)" % [landed, title], placed_bare and landed.intersects(title))
 	bare.queue_free()
 	await _frames(3)
 
-	# e: pause
+	# e: pause hides the words only
 	_reset()
 	var spot := _world(Vector2(0.2, 0.45))
 	t.check("e: a word stamps before the pause", _fx.word("heft_up", spot))
+	_fx._aura.visible = true
+	_fx._dunk_glow.visible = true
+	var live_word: Dictionary = _fx._words.filter(func(w): return w["t"] < 1.0)[0]
+	var life_before: float = live_word["t"]
 	paused = true
 	await _frames(2)
 	var shown := 0
 	for w in _fx._words:
 		if w["node"].is_visible_in_tree():
 			shown += 1
-	t.check("e: after 2 paused frames no player_fx word shows (%d showing, root visible %s)" % [shown, _fx.root.visible], shown == 0 and not _fx.root.visible)
+	t.check("e: after 2 paused frames no player_fx word shows (%d showing, words node visible %s)" % [shown, _fx._word_root.visible], shown == 0 and not _fx._word_root.visible)
+	t.check("e: the aura and the dunk coil stay visible while paused (aura %s, coil %s, root %s)" % [_fx._aura.is_visible_in_tree(), _fx._dunk_glow.is_visible_in_tree(), _fx.root.visible],
+		_fx._aura.is_visible_in_tree() and _fx._dunk_glow.is_visible_in_tree() and _fx.root.visible)
+	t.check("e: the paused word's life did not run (t %f before, %f now)" % [life_before, live_word["t"]], is_equal_approx(life_before, live_word["t"]))
 	paused = false
-	await _frames(2)
-	t.check("e: the word shows again after the pause", _fx.root.visible)
+	await _frames(1)
+	t.check("e: the word shows again with its remaining life, not restarted, not gone (t %f from %f, visible %s)" % [live_word["t"], life_before, live_word["node"].is_visible_in_tree()],
+		live_word["node"].is_visible_in_tree() and live_word["t"] >= life_before and live_word["t"] < 1.0)
 
 	# f: three numbers on one point
 	var layer = _game.hud.damage_numbers
 	layer.clear()
 	var tag := Rect2(_view * 0.5 + Vector2(-40.0, -100.0), Vector2(80.0, 28.0))
-	layer.set("keep_off", func() -> Array[Rect2]: return [_reticle(), tag])
+	layer.set("keep_off", func() -> Dictionary: return {"ring": [_reticle()], "tags": [tag]})
 	var at := _view * 0.5 + Vector2(0.0, -40.0)
 	layer.add("k", 20.0, at, "kinetic", "player")
 	layer.add("k", 20.0, at, "frost", "player")
@@ -239,6 +295,32 @@ func _run() -> void:
 				clash += 1
 	t.check("f: three numbers on one point show three start rects (%d)" % starts.size(), starts.size() == 3)
 	t.check("f: their start rects meet no other number, the reticle or the planted tag (%d meetings: %s)" % [clash, starts], clash == 0)
+	# f2: the ball beside the ring: a number pushed off the reticle does not land on the ball
+	layer.clear()
+	var ball := Rect2(_reticle().end + Vector2(0.0, -30.0), Vector2(120.0, 120.0))
+	layer.set("keep_off", func() -> Dictionary: return {"ring": [_reticle(), ball], "tags": []})
+	layer.add("b", 20.0, _view * 0.5, "kinetic", "player")
+	var on_ball := _starts(layer)
+	t.check("f: a number at the reticle is pushed clear of the ring and of the ball beside it (%s)" % [on_ball],
+		on_ball.size() == 1 and not on_ball[0].intersects(_reticle()) and not on_ball[0].intersects(ball))
+	# f3: a tag above the number is not crossed by its rise
+	layer.clear()
+	var high_tag := Rect2(_view * Vector2(0.3, 0.3), Vector2(100.0, 24.0))
+	layer.set("keep_off", func() -> Dictionary: return {"ring": [], "tags": [high_tag]})
+	layer.add("t", 20.0, Vector2(_view.x * 0.3 + 50.0, _view.y * 0.3 + 60.0), "kinetic", "player")
+	var low := _starts(layer)
+	var rise := Rect2(low[0].position - Vector2(0.0, DamageNumbers.RISE), low[0].size + Vector2(0.0, DamageNumbers.RISE)) if low.size() == 1 else Rect2()
+	t.check("f: a number's whole rise misses the tag above it (rise %s, tag %s)" % [rise, high_tag], low.size() == 1 and not rise.intersects(high_tag))
+	# f4: the push is bounded: a wall of rects cannot move a number past MAX_PUSHES widths
+	layer.clear()
+	var wall: Array = []
+	for i in 8:
+		wall.append(Rect2(_view * 0.5 + Vector2(-30.0 + 80.0 * i, -200.0), Vector2(80.0, 400.0)))
+	layer.set("keep_off", func() -> Dictionary: return {"ring": wall, "tags": []})
+	layer.add("w", 20.0, _view * 0.5, "kinetic", "player")
+	var walled := _starts(layer)
+	var moved_x: float = absf(walled[0].get_center().x - _view.x * 0.5) if walled.size() == 1 else INF
+	t.check("f: a number's sideways push is bounded by MAX_PUSHES (moved %f px, 3 rects wide at most %f)" % [moved_x, 3.0 * 80.0 + 40.0], moved_x <= 3.0 * 80.0 + 40.0)
 	layer.set("keep_off", Callable())
 	layer.clear()
 	layer.add("a", 5.0, at, "kinetic", "player")
@@ -249,6 +331,19 @@ func _run() -> void:
 		layer.add("n%d" % i, 5.0, Vector2(100.0 + 300.0 * i, 200.0), "kinetic", "player")
 	t.check("f: at most 4 numbers show at once (%d)" % layer.visible_count(), layer.visible_count() == 4)
 	layer.clear()
+	layer.add("big", 90.0, Vector2(100.0, 300.0), "kinetic", "player")
+	for i in 4:
+		layer.add("small%d" % i, 2.0, Vector2(300.0 + 200.0 * i, 300.0), "kinetic", "player")
+	var kept: Array = layer.shown().map(func(n): return n["key"])
+	t.check("f: one big number and four small ones, the big one survives (%s)" % [kept], layer.visible_count() == 4 and "big" in kept)
+	layer.clear()
+	# f5: a hidden reticle has no rect
+	var ret = _game.hud.reticle
+	var was_visible: bool = ret.visible
+	ret.visible = false
+	var hidden_rect: Rect2 = ret.rect() if ret.has_method("rect") else Rect2(Vector2.ZERO, Vector2.ONE)
+	ret.visible = was_visible
+	t.check("f: a hidden reticle reports an empty rect (%s)" % hidden_rect, not hidden_rect.has_area())
 
 	# g: the budget
 	_reset()
@@ -277,26 +372,70 @@ func _run() -> void:
 	var lone := _starts(layer)
 	t.check("h: a lone number is not moved (start rect centred on its point)", lone.size() == 1 and absf(lone[0].get_center().x - _view.x * 0.8) < 1.0)
 
-	# i: a word that starts in the same frame as its own row's stamp
+	await _frames(1)
+	# i: a word that starts with a stamp of its own row, in the same frame or after it
 	_reset()
-	_fl.play("bowl_handoff", 1, {}, "short")
-	_fl.stop_all()
-	_fl.playing = true
-	_fl.id = "bowl_handoff"
-	_fl.short = true
-	_fl.clock = 0.0
-	_fl._pieces = [{"kind": "sfx_word", "at": 0.0, "for": 0.8, "text": "FWOOMP", "at_share": Vector2(0.5, 0.40)},
-		{"kind": "stamp", "at": 0.0, "for": 0.9, "text": "ROUTED", "colour": "AMBER", "slot": "centre"}]
-	_fl._started.assign([false, false])
+	var word_piece := {"kind": "sfx_word", "at": 0.0, "for": 0.8, "text": "FWOOMP", "at_share": Vector2(0.5, 0.40)}
+	var stamp_piece := {"kind": "stamp", "at": 0.0, "for": 0.9, "text": "ROUTED", "colour": "AMBER", "slot": "centre"}
+	_force_row([word_piece.duplicate(), stamp_piece.duplicate()])
 	_fl.advance(0.0)
-	var sw: Array = _fl.live_nodes().filter(func(n): return n.get_meta("flourish_kind", "") == "sfx_word")
-	var ss: Array = _fl.live_nodes().filter(func(n): return n.get_meta("flourish_kind", "") == "stamp")
+	var sw := _kind_nodes("sfx_word")
+	var ss := _kind_nodes("stamp")
 	var meets := 0
 	for w in sw:
-		if w.is_visible_in_tree() and Rect2(w.position, w.size).intersects(Rect2(ss[0].position, ss[0].size)):
+		if w.is_visible_in_tree() and w.get_global_rect().intersects(ss[0].get_global_rect()):
 			meets += 1
 	t.check("i: the row's stamp is live (%d)" % ss.size(), ss.size() == 1)
-	t.check("i: a word starting with its own row's stamp is held or clear of it (%d words, %d over)" % [sw.size(), meets], meets == 0)
+	t.check("i: a word starting in the same frame as its stamp is clear of it or was refused for it (%d words, %d over)" % [sw.size(), meets], meets == 0)
+	# Control: the same word with no stamp is placed, so the check above did not pass on an empty list.
+	_fl.stop_all()
+	_force_row([word_piece.duplicate()])
+	_fl.advance(0.0)
+	var lone_word := _kind_nodes("sfx_word")
+	t.check("i: control, the same word with no stamp is placed (%d)" % lone_word.size(), lone_word.size() == 1)
+	_fl.stop_all()
+	# The real brindle_rout row: FWOOMP at 0.0, ROUTED later; the stamp carries the fact, so the word yields.
+	var real: Array = Rows.resolve("brindle_rout", true, 1)
+	var stamp_at: float = real.filter(func(pc): return pc["kind"] == "stamp")[0]["at"]
+	_force_row(real.duplicate(true))
+	_fl.advance(0.0)
+	var up_first := _kind_nodes("sfx_word")
+	t.check("i: on the real brindle_rout row the word is up before the stamp (%d words, stamp at %.1f s)" % [up_first.size(), stamp_at], up_first.size() == 1 and up_first[0].is_visible_in_tree() and _kind_nodes("stamp").is_empty())
+	var word_rect: Rect2 = up_first[0].get_global_rect() if up_first.size() == 1 else Rect2()
+	_fl.advance(stamp_at + 0.05)
+	var stamp_now := _kind_nodes("stamp")
+	var word_now := _kind_nodes("sfx_word")
+	var yielded := true
+	for w in word_now:
+		if w.is_visible_in_tree() and stamp_now.size() == 1 and w.get_global_rect().intersects(stamp_now[0].get_global_rect()):
+			yielded = false
+	t.check("i: the real row's stamp starts and no visible word meets it (%d stamps, %d words)" % [stamp_now.size(), word_now.size()], stamp_now.size() == 1 and yielded)
+	_fl.stop_all()
+	# The real row with both at 0.0.
+	var both: Array = real.duplicate(true)
+	for pc in both:
+		pc["at"] = 0.0
+	_force_row(both)
+	_fl.advance(0.0)
+	var b_stamp := _kind_nodes("stamp")
+	var b_word := _kind_nodes("sfx_word")
+	var b_meets := 0
+	for w in b_word:
+		if w.is_visible_in_tree() and b_stamp.size() == 1 and w.get_global_rect().intersects(b_stamp[0].get_global_rect()):
+			b_meets += 1
+	t.check("i: the real row with both at 0.0 puts the stamp up and no word over it (%d stamps, %d words, %d over)" % [b_stamp.size(), b_word.size(), b_meets], b_stamp.size() == 1 and b_meets == 0)
+	_fl.stop_all()
+	# A word forced to meet a later stamp is hidden at once, whatever the real row's spots allow.
+	_force_row([{"kind": "sfx_word", "at": 0.0, "for": 2.0, "text": "FWOOMP", "at_share": Vector2(0.5, 0.40)},
+		{"kind": "stamp", "at": 0.5, "for": 1.0, "text": "ROUTED", "colour": "AMBER", "slot": "centre"}])
+	_fl.advance(0.0)
+	var pre := _kind_nodes("sfx_word")
+	_fl.advance(0.6)
+	var post_stamp := _kind_nodes("stamp")
+	var post_word := _kind_nodes("sfx_word")
+	var overlapped: bool = pre.size() == 1 and post_stamp.size() == 1 and pre[0].get_global_rect().intersects(post_stamp[0].get_global_rect())
+	t.check("i: a live word that a later stamp would cover is hidden at once (word up %d, overlap %s, visible after %s)" % [pre.size(), overlapped, post_word[0].visible if post_word.size() == 1 else "gone"],
+		pre.size() == 1 and overlapped and (post_word.is_empty() or not post_word[0].visible))
 	_fl.stop_all()
 
 	# Cost: rect tests per placement

@@ -112,39 +112,50 @@ func add(key: String, value: float, at, type: String, team: String, crit := fals
 	var fresh := {"key": key, "value": value, "at": at, "type": type, "team": team, "crit": crit,
 		"color": effect_colour(type, team, crit), "age": 0.0, "since": 0.0, "shift": Vector2.ZERO}
 	_numbers.append(fresh)
-	_make_room(fresh)
+	# Over the cap the smallest figure goes (the oldest of equals), so a run of small hits never
+	# evicts a big one early.
 	while _numbers.size() > MAX_VISIBLE:
-		var oldest := 0
+		var least := 0
 		for i in _numbers.size():
-			if _numbers[i]["age"] > _numbers[oldest]["age"]:
-				oldest = i
-		_numbers.remove_at(oldest)
+			if _numbers[i]["value"] < _numbers[least]["value"] \
+					or (_numbers[i]["value"] == _numbers[least]["value"] and _numbers[i]["age"] > _numbers[least]["age"]):
+				least = i
+		_numbers.remove_at(least)
+	if _numbers.has(fresh):
+		_make_room(fresh)
 
 
-# Where a new number starts, so it never lands on another or on the reticle or a tag (PF-26): out
-# of the reticle's ring to its right edge, out of a tag's chip to its nearer side, and up one line
-# at a time while its start rect meets a live number's path. Its anchor stays on the hit; only the
-# drawn figure shifts.
+# Where a new number starts, so it never lands on another, on the reticle, the ball or a tag (PF-26).
+# keep_off answers {"ring": rects its start must clear (the reticle's ring, the ball), "tags": rects
+# its whole rise must clear}, read once per add. The reticle's ring pushes it out to the right edge;
+# the ball's rect pushes it right too, and a tag pushes it to its nearer side. At most MAX_PUSHES sideways pushes, then at most MAX_LINES
+# lifts of one line each while its start rect meets a live number's path. The anchor stays on the hit;
+# only the drawn figure shifts, by at most MAX_PUSHES rect widths sideways and MAX_LINES lines up.
 func _make_room(fresh: Dictionary) -> void:
-	var p = _screen(fresh)
-	if p == null:
+	if _screen(fresh) == null:
 		return
+	var off: Dictionary = keep_off.call() if keep_off.is_valid() else {}
+	var ring: Array = off.get("ring", [])
+	var tags: Array = off.get("tags", [])
+	var pushes := 0
 	var lines := 0
-	for pass_no in 6:
-		var moved := false
+	for pass_no in MAX_PUSHES + MAX_LINES:
 		var start := start_rect(fresh)
-		var off: Array = keep_off.call() if keep_off.is_valid() else []
-		for i in off.size():
-			var r: Rect2 = off[i]
-			if r.has_area() and r.intersects(start):
-				var right := r.end.x - start.position.x
-				var left := r.position.x - start.end.x
-				fresh["shift"].x += right if i == 0 or absf(right) <= absf(left) else left
-				moved = true
-				break
+		var rise := Rect2(start.position - Vector2(0.0, RISE), start.size + Vector2(0.0, RISE))
+		var moved := false
+		if pushes < MAX_PUSHES:
+			for i in ring.size() + tags.size():
+				var r: Rect2 = ring[i] if i < ring.size() else tags[i - ring.size()]
+				var hit := (start if i < ring.size() else rise).intersects(r)
+				if r.has_area() and hit:
+					var right := r.end.x - start.position.x
+					var left := r.position.x - start.end.x
+					fresh["shift"].x += right if i < ring.size() or absf(right) <= absf(left) else left
+					pushes += 1
+					moved = true
+					break
 		if not moved and lines < MAX_LINES:
-			var paths := path_rects(fresh)
-			if paths.any(func(r): return r.intersects(start)):
+			if path_rects(fresh).any(func(r): return r.intersects(start)):
 				fresh["shift"].y -= start.size.y
 				lines += 1
 				moved = true
@@ -153,6 +164,7 @@ func _make_room(fresh: Dictionary) -> void:
 
 
 const MAX_LINES := 4
+const MAX_PUSHES := 3
 
 
 # The rect a figure covers the frame it is stamped: its width and one line, at its anchor plus its shift.

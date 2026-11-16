@@ -169,6 +169,8 @@ var player
 var camera
 var vfx
 var root: Node3D
+# The words' own parent: only they hide while the tree is paused, not the aura, coil or sparks.
+var _word_root: Node3D
 var reduced_motion := false
 # Facts drawn, by layer, for the tests and the notes.
 var spawned := {}
@@ -230,8 +232,11 @@ func setup(ctx_ref, vfx_ref = null) -> void:
 	root = Node3D.new()
 	root.name = "PlayerFxRoot"
 	ctx.root.add_child(root)
+	_word_root = Node3D.new()
+	_word_root.name = "Words"
+	root.add_child(_word_root)
 	var pause_guard := PauseGuard.new()
-	pause_guard.root = root
+	pause_guard.root = _word_root
 	add_child(pause_guard)
 	_font = word_font()
 	for i in WORD_POOL:
@@ -684,7 +689,7 @@ func clear() -> void:
 func _make_word() -> Dictionary:
 	var label := word_label(_font)
 	label.visible = false
-	root.add_child(label)
+	_word_root.add_child(label)
 	return {"node": label, "t": 1.0, "id": "", "tilt": 0.0, "size": 1.0, "at": Vector3.ZERO}
 
 
@@ -734,10 +739,13 @@ func words_alive() -> int:
 # stand outside it.
 func candy_room() -> bool:
 	var n := words_alive()
-	if is_inside_tree():
+	if not is_instance_valid(_machine) and is_inside_tree():
 		for other in get_tree().get_nodes_in_group(MARKS_GROUP):
 			if other != self and other.has_method("candy_alive"):
-				n += other.candy_alive()
+				_machine = other
+				break
+	if is_instance_valid(_machine):
+		n += _machine.candy_alive()
 	return n < WORDS_ALIVE
 
 
@@ -752,7 +760,14 @@ func spot_free(r: Rect2) -> bool:
 	return true
 
 
+var _machine = null
 var _keep_frame := -1
+
+
+# A member's rects changed (a card, caption, stamp or inset started or ended): read the list again.
+func keep_clear_changed() -> void:
+	_keep_frame = -1
+	_fight_frame = -1
 var _keep_cache: Array[Rect2] = []
 
 
@@ -766,6 +781,8 @@ func _keep_rects() -> Array[Rect2]:
 	if not is_inside_tree():
 		return _keep_cache
 	for node in get_tree().get_nodes_in_group(KEEP_GROUP):
+		if not node.has_method("keep_clear_rects"):
+			continue
 		for r in node.keep_clear_rects():
 			if r.has_area():
 				_keep_cache.append(r.grow(WORD_WARNING_GAP))

@@ -172,6 +172,8 @@ func harpoon_readiness() -> float:
 
 # The screen the reticle covers: its outermost ring, the ultimate meter, round the centre it is drawn at.
 func rect() -> Rect2:
+	if not is_visible_in_tree():
+		return Rect2()
 	var centre := get_viewport_rect().size * 0.5 + shake_offset()
 	var r := GAUGE_RING + METER_GAP + METER_WIDTH
 	return Rect2(centre - Vector2(r, r), Vector2(r, r) * 2.0)
