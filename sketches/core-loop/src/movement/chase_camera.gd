@@ -31,6 +31,13 @@ const GLANCE_BREAK_STICK := 0.25
 const GLANCE_IN_VIEW := 0.7
 # The longest wall step one frame gives the glance (see _process).
 const GLANCE_STEP_CAP := 0.05
+# A wall close behind the ball shortens the arm until the 1 m ball fills the lens (PF-06). Below
+# TIGHT_ARM metres of free arm the arm tips up by up to TIGHT_LIFT rad, full at TIGHT_FULL, so the
+# lens rises over the ball instead of sitting inside it. 4 m is where the ball is a seventh of the
+# view's height; the lens is turned back by the lift, so the aim stays the player's.
+const TIGHT_ARM := 4.0
+const TIGHT_FULL := 1.5
+const TIGHT_LIFT := 0.6
 # Situation rows. arm 0.0 means no opinion; pitch_bias tilts the arm without touching the
 # player's pitch; shake_cap is the most total shake allowed while the row is active.
 const PROFILES := {
@@ -79,6 +86,7 @@ var _base_fov := FOV_REST
 var _locked := false
 var _boss_reach := false
 var _pitch_bias := 0.0
+var _tight := 0.0
 var _fov_add := 0.0
 var _glance_subject: Node3D
 var _glance_seconds := 0.0
@@ -311,12 +319,17 @@ func _process(delta: float) -> void:
 	var profile_ease := 1.0 - exp(-PROFILE_EASE * delta)
 	_pitch_bias = lerpf(_pitch_bias, clampf(bias_target, -BIAS_LIMIT, BIAS_LIMIT), profile_ease)
 	_fov_add = lerpf(_fov_add, add_target, profile_ease)
+	# The arm's collided length from the last physics tick; 0..1 as it drops from TIGHT_ARM to TIGHT_FULL.
+	var tight_target := clampf((TIGHT_ARM - arm.get_hit_length()) / (TIGHT_ARM - TIGHT_FULL), 0.0, 1.0)
+	_tight = lerpf(_tight, tight_target, profile_ease)
+	# The arm never tips past straight up, whatever the player's pitch already is.
+	var lift := minf(maxf(-TIGHT_LIFT * _tight, -1.5 - (pitch + _pitch_bias)), 0.0)
 	arm.spring_length = lerpf(arm.spring_length, lerpf(speed_arm, SHOULDER_ARM, shoulder_blend), maxf(ease, shoulder_blend * 0.25))
 	_punch = move_toward(_punch, 0.0, _punch_decay * delta)
 	_base_fov = lerpf(_base_fov, lerpf(FOV_REST, FOV_FAST, fraction), ease)
 
 	rotation = Vector3(0.0, yaw, 0.0)
-	arm.rotation = Vector3(pitch + _pitch_bias, 0.0, 0.0)
+	arm.rotation = Vector3(pitch + _pitch_bias + lift, 0.0, 0.0)
 
 	var accel := (velocity - _previous_velocity) / maxf(delta, 0.0001)
 	_previous_velocity = velocity
@@ -329,7 +342,7 @@ func _process(delta: float) -> void:
 	var jitter := Vector3(_shake_rng.randf_range(-1.0, 1.0), _shake_rng.randf_range(-1.0, 1.0), 0.0) * _shake * 0.22
 	cam.position = jitter + cam.get_parent().global_basis.inverse() * _kick
 	# The lens turns back by the bias so the view direction, and with it the aim, stays the player's.
-	cam.rotation = Vector3(-_pitch_bias, 0.0, _roll + jitter.x * 0.1)
+	cam.rotation = Vector3(-_pitch_bias - lift, 0.0, _roll + jitter.x * 0.1)
 	cam.fov = minf(_base_fov + _fov_add + _punch, FOV_CAP)
 
 

@@ -215,7 +215,17 @@ func setup(ctx_ref) -> void:
 	# A yard also ends on these flow states with no arena_unlocked (stage_locks.gd _on_flow_changed).
 	events.flow_changed.connect(func(state: String):
 		if camera != null and state in ["gates", "launch", "summary", "title", "victory"]:
-			camera.set_lock(null))
+			camera.set_lock(null)
+		# Any state but the fight itself ends the boss arm (a death, a retry or a stage entry).
+		if camera != null and state != "boss":
+			camera.set_boss_reach(false))
+	# The warden's bowl reaches the arm out (chase_camera.gd "boss" row); nothing else switched it on.
+	events.boss_arena_entered.connect(func():
+		if camera != null:
+			camera.set_boss_reach(true))
+	events.boss_defeated.connect(func():
+		if camera != null:
+			camera.set_boss_reach(false))
 	if ctx.spawner != null and ctx.spawner.has_method("resolve"):
 		resolve_of = Callable(ctx.spawner, "resolve")
 	if ctx.spawner != null and ctx.spawner.has_method("plating_of"):
