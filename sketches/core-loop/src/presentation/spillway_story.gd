@@ -143,6 +143,8 @@ func _fight_live() -> bool:
 
 func _on_warden_engaged(_stage: int) -> void:
 	if player.id in ROWS or player.queued().any(func(queued): return queued in ROWS):
+		# stop_all sends no finished for a row still waiting behind another, so give the screen's line back here.
+		_drop_clear()
 		player.stop_all()
 
 
