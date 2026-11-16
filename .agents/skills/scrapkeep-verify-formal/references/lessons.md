@@ -39,7 +39,7 @@
   Evidence: a fresh agent (Haiku 5.5) followed the skill against a planted removal of `_untake()` from `retry_stage`. The first wording, `<sync>..HEAD`, showed no diff for the uncommitted change; the agent still caught the break through `broken-retry`, replayed it (`word 'Impact Driver' visible true, run holds the part: false`) and got `word 'FWOOSH!'`, not reproduced, on the sync commit.
   Overturned by: —
 - **VFM-10** · status: provisional · since: 2026-11-16 · origin: the first independent review of the model
-  After the model passes, check that every action can fire and that each stage rule reads the same function the code reads. An action that never fires is coverage the skill claims and does not have.
+  After the model passes, run the reach probes (`reach-store`, `reach-nostore`); each must break. They prove four paths can happen (a Continue, the boss entered under the swipe, a retry under the swipe, the summary), not every action. An action no probe names is not shown to fire, so a new action gets its own probe or a line in `references/coverage.md` saying it is unprobed. Also check that each stage rule reads the same function the code reads.
   Evidence: the review of pull request 1070 found `Resume` unreachable (no quit action led to a Continue with a store) and the swipe skipped at the world's last stage where the code skips it at the run's last (`is_run_last`), so the launch into the boss was never explored with a swipe. Both are corrected (`QuitRelaunch`, `RunLast`).
   Overturned by: —
 

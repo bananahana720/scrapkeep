@@ -170,6 +170,15 @@ func harpoon_readiness() -> float:
 	return clampf(1.0 - player.kit.rewind_left / total, 0.0, 1.0)
 
 
+# The screen the reticle covers: its outermost ring, the ultimate meter, round the centre it is drawn at.
+func rect() -> Rect2:
+	if not is_visible_in_tree():
+		return Rect2()
+	var centre := get_viewport_rect().size * 0.5 + shake_offset()
+	var r := GAUGE_RING + METER_GAP + METER_WIDTH
+	return Rect2(centre - Vector2(r, r), Vector2(r, r) * 2.0)
+
+
 # How far a dry fire has pushed the reticle off the centre, in pixels: at most DRY_SHAKE.
 func shake_offset() -> Vector2:
 	if reduced_motion or _shake_left <= 0.0:

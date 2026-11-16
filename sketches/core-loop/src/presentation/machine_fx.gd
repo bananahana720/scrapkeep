@@ -21,7 +21,9 @@ const PlayerFx := preload("res://src/presentation/player_fx.gd")
 # owns the read and draws above all of this; these effects sit on or over the body, never
 # across the footprint. Body effects are P5 and steam and motes P7, so the density
 # governor thins them. A special's tell is the exception: it is a read, so it is never
-# thinned and always gets its word. One pack's arrival effects start on the frame its
+# thinned; its word is stamped unless no spot is free of the HUD, the reticle and the ball
+# (player_fx's room), when it stays silent and the telegraph, the tell's sound and its sparks
+# carry the fact. One pack's arrival effects start on the frame its
 # arrival rings do, so they share the rings' timing and the 0.2 s gap rule between packs.
 #
 # Timing contract with audio: a special fires its tell through SpecialCues.tell(), which
@@ -121,6 +123,9 @@ const HIT_GAP := 0.12
 const HITS_PER_TENTH := 8
 const DAZE_SPIN := 4.0
 const SAMPLE_SECONDS := 0.1
+# Where a word looks for room, in its own widths and heights from the asked spot (x right, y down).
+const SPOT_STEPS := [Vector2(0, 0), Vector2(0, -1), Vector2(0, 1), Vector2(0, -2), Vector2(0, 2), Vector2(-1, 0), Vector2(1, 0),
+		Vector2(0, -3), Vector2(0, 3), Vector2(-2, 0), Vector2(2, 0), Vector2(-3, 0), Vector2(3, 0), Vector2(0, -4), Vector2(0, 4)]
 
 var ctx
 var root: Node3D
@@ -144,6 +149,8 @@ var _last_hit := {}
 var _hits_window := 0
 var _hits_clock := 0.0
 var _words: Array = []
+var _word_root: Node3D
+var _room = null
 var _word_next := 0
 var _last_word := -INF
 var _cables: Array = []
@@ -184,6 +191,12 @@ func setup(ctx_ref) -> void:
 			pool.append(p)
 		_fx[id] = pool
 		_fx_next[id] = 0
+	_word_root = Node3D.new()
+	_word_root.name = "Words"
+	root.add_child(_word_root)
+	var pause_guard := PlayerFx.PauseGuard.new()
+	pause_guard.root = _word_root
+	add_child(pause_guard)
 	for i in WORD_POOL:
 		_words.append(_make_word())
 	var view := MeshInstance3D.new()
@@ -326,8 +339,8 @@ func _note(moment: String, who: String, at: Vector3) -> void:
 func _make_word() -> Dictionary:
 	var label := word_label()
 	label.visible = false
-	root.add_child(label)
-	return {"node": label, "t": INF, "life": WORD_LIFE, "at": Vector3.ZERO, "scale": 1.0}
+	_word_root.add_child(label)
+	return {"node": label, "t": INF, "life": WORD_LIFE, "at": Vector3.ZERO, "scale": 1.0, "candy": false}
 
 
 static func word_label() -> Label3D:
@@ -363,6 +376,24 @@ func word(text: String, at: Vector3, tint: Color, force := false, life := WORD_L
 		return false
 	if not force and (_clock - _last_word < WORD_GAP or Density.live().value >= 0.7):
 		return false
+	var font: Font = ThemeDB.fallback_font
+	var probe: Label3D = _words[0]["node"]
+	if probe.font != null:
+		font = probe.font
+	var width_px := font.get_string_size(text.to_upper(), HORIZONTAL_ALIGNMENT_LEFT, -1, probe.font_size).x + probe.outline_size
+	# One owner of what a word keeps off (player_fx): a candy word needs a free place in the shared
+	# budget, and every word, read or candy, takes the first free spot of its own short list or is not
+	# drawn (PF-26).
+	if not is_instance_valid(_room):
+		_room = get_tree().get_first_node_in_group(PlayerFx.ROOM_GROUP)
+	var room = _room
+	if room != null:
+		if not force and not room.candy_room():
+			return false
+		var spot = _free_spot(room, width_px, at, size)
+		if spot == null:
+			return false
+		at = spot
 	_last_word = _clock
 	var slot: Dictionary = _words[_word_next]
 	_word_next = (_word_next + 1) % _words.size()
@@ -374,11 +405,43 @@ func word(text: String, at: Vector3, tint: Color, force := false, life := WORD_L
 	slot["life"] = life
 	slot["at"] = at
 	slot["scale"] = size
-	var font: Font = label.font if label.font != null else ThemeDB.fallback_font
-	slot["width_px"] = font.get_string_size(text.to_upper(), HORIZONTAL_ALIGNMENT_LEFT, -1, label.font_size).x + label.outline_size
+	slot["candy"] = not force
+	slot["width_px"] = width_px
 	_draw_word(slot)
 	_note("word", text, at)
 	return true
+
+
+# The candy words showing, for player_fx's shared budget (candy_room).
+func candy_alive() -> int:
+	var n := 0
+	for slot in _words:
+		if slot["candy"] and slot["t"] < slot["life"]:
+			n += 1
+	return n
+
+
+# The first of `at` and the spots round it (up, down, then a word's width left and right, in steps of
+# the word's own size) where the word stands clear of what player_fx keeps words off; null when none is.
+func _free_spot(room, width_px: float, at: Vector3, size: float):
+	var cam := get_viewport().get_camera_3d() if is_inside_tree() else null
+	if cam == null or cam.is_position_behind(at):
+		return at
+	var slot := {"width_px": width_px, "node": _words[0]["node"]}
+	var fitted := _fit(slot, at, size)
+	var shown := _below_top(slot, at, fitted)
+	var depth := -(cam.global_transform.affine_inverse() * at).z
+	var label: Label3D = _words[0]["node"]
+	var px_per_m := cam.unproject_position(at + cam.global_basis.y).distance_to(cam.unproject_position(at))
+	var half := Vector2(width_px * label.pixel_size * fitted * px_per_m, label.font_size * label.pixel_size * fitted * px_per_m) * 0.5
+	var centre := cam.unproject_position(shown)
+	for step in SPOT_STEPS:
+		var move: Vector2 = step * half * 2.0
+		if room.spot_free(Rect2(centre + move - half, half * 2.0)):
+			if move == Vector2.ZERO:
+				return at
+			return cam.project_position(cam.unproject_position(at) + move, maxf(depth, cam.near + 0.1))
+	return null
 
 
 func _draw_word(slot: Dictionary) -> void:
@@ -659,7 +722,8 @@ func _on_special_tell(moment: String, enemy: Node3D) -> void:
 
 
 # One special's moment: "spawn", "tell", "break", "break_split" or "break_clean". A tell
-# is a read (P1): never thinned, always worded. Returns the sound id the moment plays.
+# is a read (P1): never thinned, worded unless no spot is free (then the telegraph, the sound and
+# the sparks carry it). Returns the sound id the moment plays.
 func special_moment(special: String, moment: String, enemy: Node3D, at := Vector3.INF) -> String:
 	var row: Dictionary = SPECIALS.get(special, {})
 	if row.is_empty() or not row.has(moment):
