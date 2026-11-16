@@ -35,9 +35,9 @@ const SIGHTS := {
 # name order. `carrier` is what tells the two facts apart without colour; a row with no carrier
 # yet names its finding in project-guide/handoff/UI-FINDINGS.tsv.
 const CLOSE := {
-	"AMBER|BRASS": {"carrier": "a relic reward's frame is doubled with bolt heads (shop_tile.gd:37 RARITY, drawn at :160 to :165) and its gate topper is a prism where a boss fact never is (reward_gates.gd:428); a boss's ground warning carries brass rim ticks (hazard.gd:298 sets the owner, threat_grammar.gd:459 draws it); all checked below. An event toast in either colour (event_kinds.gd, a star for both stage_cleared and boss_defeated) relies on its words", "finding": ""},
+	"AMBER|BRASS": {"carrier": "a relic reward's frame is doubled with bolt heads (shop_tile.gd:37 RARITY, drawn at :160 to :165) and its gate topper is a prism where a boss fact never is (reward_gates.gd:428); Brindle's ground warnings carry brass rim ticks (boss.gd _new_hazard colours them brass, hazard.gd:298 sets the owner, threat_grammar.gd:459 draws it); the Mind's and the Waking's warnings (mind_attacks.gd build) are plain danger with no boss mark; all checked below. An event toast in either colour (event_kinds.gd, a star for both stage_cleared and boss_defeated) relies on its words", "finding": ""},
 	"AMBER|HAZARD": {"carrier": "a relic reward is a doubled bolt-headed frame or a prism topper (as above), the cost strike on a shop tile is one diagonal line (shop_tile.gd:130), and the pilot's danger mark is a diamond with a bang (danger_mark.gd:102); relic is never drawn as a ground fill", "finding": "UF-03: the player's own amber rings (projectile.gd:134, silo_battery.gd) and a hostile ground warning share the clear look, the default, which draws no stripes; stripes exist only in the classic and tape looks (threat_grammar.gd:1227), and the dashed edge on own rings is not built"},
-	"BRASS|HAZARD": {"carrier": "a boss's ground warning is HAZARD stripes plus brass rim ticks, in every look (threat_grammar.gd:459, checked below); a boss's body and badge are brass solids (boss.gd:1185, :1287), where danger is a ground fill", "finding": "UF-03: boss_attack_telegraphed and attack_cued (brass) draw the wave glyph, as do event_announced and event_started (danger red) in event_kinds.gd; their sounds differ, but no shape does"},
+	"BRASS|HAZARD": {"carrier": "Brindle's ground warning is a danger-toned warning plus brass rim ticks, and the ticks draw in every look (threat_grammar.gd:459, checked below); the Mind's and the Waking's warnings carry no boss mark, so on the ground they read as danger only; a boss's body and badge are brass solids (boss.gd:1185, :1287), where danger is a ground fill", "finding": "UF-03: boss_attack_telegraphed and attack_cued (brass) draw the wave glyph, as do event_announced and event_started (danger red) in event_kinds.gd; their sounds differ, but no shape does"},
 	"ANCIENT|ARC": {"carrier": "ancient seams carry a pattern cue (material_slots.gd, the pattern field)", "finding": ""},
 }
 
@@ -76,7 +76,7 @@ func _initialize() -> void:
 	# The boss's rim ticks: a brass-owned hazard carries an owner mark and a danger-owned one does not.
 	var boss_hazard := _hazard(Palette.BRASS)
 	var plain_hazard := _hazard(Palette.HAZARD)
-	_t.check("a boss hazard draws brass rim ticks over HAZARD stripes", _owner_mark(boss_hazard.descriptor()).get("tone") == Color(Palette.BRASS, 1.0) and boss_hazard.descriptor()["tone"] == Palette.HAZARD)
+	_t.check("a brass-owned hazard draws brass rim ticks on a danger-toned warning", _owner_mark(boss_hazard.descriptor()).get("tone") == Color(Palette.BRASS, 1.0) and boss_hazard.descriptor()["tone"] == Palette.HAZARD)
 	_t.check("a plain danger hazard draws no rim ticks", _owner_mark(plain_hazard.descriptor()).is_empty())
 	boss_hazard.free()
 	plain_hazard.free()
