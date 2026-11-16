@@ -38,10 +38,15 @@ const QaWatch := preload("res://tools/qa_watch.gd")
 # prove (each row made to fire); the control here proves the milestone and exit-code lines.
 
 const PILOTS := ["pylon_engineer", "runner_gunner", "demolitions_caster", "tarn", "tally", "remembered_cannon"]
-const PARALLEL := 3
+# One launched game for every four threads: three at once on a box of up to 15 threads, as before
+# 15 Nov 2026, and all seven on the 32-thread PC, where the gate runs this test alone. Each child
+# plays in real time, so the count changes the wall time and never what a run does.
+# (Trial gate on 375fe11a, three at once: 832 s, the longest step of the gate's last half hour.)
+const THREADS_PER_CHILD := 4
+const PARALLEL_MIN := 3
 const CHILD_S := 1500.0
-# All seven children share this wall, under the marker's 1800 s: a pilot that hangs in the second
-# three is killed here and named in its own row, not left running when the runner kills this test.
+# All seven children share this wall, under the marker's 1800 s: a pilot that hangs in a later
+# turn is killed here and named in its own row, not left running when the runner kills this test.
 const BUDGET_S := 1650.0
 const PLATE_BLANK_S := 10.0
 const BAR_OFF_S := 3.0
@@ -61,16 +66,21 @@ const NEEDS := [
 ]
 
 
+static func _parallel(jobs: int) -> int:
+	return clampi(floori(OS.get_processor_count() / float(THREADS_PER_CHILD)), PARALLEL_MIN, maxi(PARALLEL_MIN, jobs))
+
+
 func _initialize() -> void:
 	var t := T.new("world1_run_test")
 	var jobs := []
+	print("world1_run_test: up to %d launched games at once on %d threads" % [_parallel(PILOTS.size() + 1), OS.get_processor_count()])
 	for pilot in PILOTS:
 		jobs.append({"name": pilot, "pilot": pilot, "args": _pilot_args(pilot, 1)})
 	# The control: a run planted to end at once must read red on the same lines a pilot is judged by.
 	jobs.append({"name": "planted_end", "args": ["--self-play", "--self-play-until=3", "--self-play-watch=1", "--self-play-plant-end"]})
 	var base := ProjectSettings.globalize_path("user://").path_join("world1-run-%d" % OS.get_process_id())
 	# A pilot that died plays once more in what is left of the budget; no other ending does, nor the control.
-	var both := ChildRuns.run_launched_twice(jobs, base, CHILD_S, PARALLEL, BUDGET_S, _settled, _second_go)
+	var both := ChildRuns.run_launched_twice(jobs, base, CHILD_S, _parallel(jobs.size()), BUDGET_S, _settled, _second_go)
 	var runs: Array = both["first"]
 	var again := {}
 	for i in both["again"]:
