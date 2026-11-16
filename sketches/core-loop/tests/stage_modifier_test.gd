@@ -46,8 +46,14 @@ const BallState := preload("res://src/movement/ball_state.gd")
 # may draw; the draw picks among the rooms it can afford, so all six stages moved (3f989714... -> 37c6a9b6..., 36c277f7...
 # -> 6a062ee3..., c428c12b... -> 55d86bc8..., de3a6b7c... -> 09e28c2c..., 5b1da6fc... -> 70807e39..., 17825245... ->
 # ee063c31...).
+# 2026-11-15, Gate: stage 1 re-captured after PR 957's dam yard bowl (the apron_yard_bowl row and a lower
+# apron_kicker_ramp in park_dam.json, then the park_dam rebake: 294 line nodes become 291, sight_ok 8428 -> 8422,
+# door_ok 40018 -> 40021), which moved the anchors the draw may use (37c6a9b6... -> ae7ed324...). Bisected on the
+# first-parent stage history: fa2115af (PR 1030) still draws 37c6a9b6..., f99ea994 (the PR 957 merge) draws
+# ae7ed324..., and so does every later head; stages 2 to 6 kept their pins. The pin sat red for a wave under this
+# test's known-failing row for the stage 5 check, which names only that check.
 const GOLDEN := {
-	1: "37c6a9b642914fa639033a4c22cdfe0fbdd86952e1451f5c6f6a2883fb0cbb31",
+	1: "ae7ed324419020fbd8c81a6fb71107220f87c991fc84611aa790cd30b93ca70e",
 	2: "6a062ee367b7523c7260c9e5c742929d66b7383cf1e0d84c38a6d313d0eb8651",
 	3: "55d86bc8cf198a63c7a692c8c29f5e4efe58b7aa99312e02c345f42de7c22f7b",
 	4: "09e28c2ca5f2f22a286ee5e4495eab8d1e3d3724483816f053be9cccc4bcb99b",
