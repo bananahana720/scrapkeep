@@ -220,7 +220,7 @@ func _gates_part() -> void:
 	var rects := gates.keep_clear_rects()
 	var same := rects.size() == 3 and gates._gates.all(func(g): return rects.has(Rect2(_name_of(g).position, _name_of(g).size)))
 	_t.check("E. keep_clear_rects returns each shown name's rect", same, "%d rects" % rects.size())
-	_t.check("E. the gates join the group word_keep_clear", gates.is_in_group("word_keep_clear"))
+	_t.check("E. the gates join the groups word_keep_clear and speech_keep_clear", gates.is_in_group("word_keep_clear") and gates.is_in_group("speech_keep_clear"))
 	var behind := gates._gates[1] as Node3D
 	behind.global_position = Vector3(0.0, 0.0, 40.0)
 	await process_frame
@@ -495,7 +495,7 @@ func _game_part() -> void:
 	# A rect planted in its seat: it eases down below it, clear of it, and comes back up when the rect goes.
 	var fake := FakeKeepClear.new()
 	fake.rect = Rect2(0.0, base_y, 500.0, 80.0)
-	fake.add_to_group("word_keep_clear")
+	fake.add_to_group("speech_keep_clear")
 	root.add_child(fake)
 	await process_frame
 	var eased: float = bubble.position.y
@@ -508,6 +508,17 @@ func _game_part() -> void:
 	for _i in 40:
 		await process_frame
 	_t.check("G. it comes back to its seat when the rect goes", is_equal_approx(bubble.position.y, base_y), "y %.1f seat %.1f" % [bubble.position.y, base_y])
+	# What sound words keep off (the reticle, the ball, target tags) is not the bubble's business: a rect
+	# only in the sound words' group leaves the bubble in its seat.
+	var other := FakeKeepClear.new()
+	other.rect = Rect2(0.0, base_y, 500.0, 80.0)
+	other.add_to_group("word_keep_clear")
+	root.add_child(other)
+	for _i in 40:
+		await process_frame
+	_t.check("G. a rect only in the sound words' group does not move the bubble", is_equal_approx(bubble.position.y, base_y), "y %.1f seat %.1f" % [bubble.position.y, base_y])
+	other.queue_free()
+	await process_frame
 	# Gates open: the bubble is clear of the shown names.
 	var names: Array[Rect2] = gates.keep_clear_rects()
 	var box := Rect2(bubble.position, bubble.size)
@@ -516,7 +527,7 @@ func _game_part() -> void:
 	# A rect so low the bubble cannot clear it before the prompts band: it moved, then stopped at the band.
 	var low := FakeKeepClear.new()
 	low.rect = Rect2(0.0, base_y, 500.0, view.y)
-	low.add_to_group("word_keep_clear")
+	low.add_to_group("speech_keep_clear")
 	root.add_child(low)
 	for _i in 60:
 		await process_frame
