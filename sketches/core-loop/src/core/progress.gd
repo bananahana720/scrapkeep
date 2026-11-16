@@ -202,8 +202,9 @@ func reconcile_settled() -> void:
 	for id in _run.settled:
 		# A reward key reaches the profile only through grant_once, in the same save as its unlock.
 		# Copied alone it would mark the reward paid with nothing paid (F-B R-1; Andrew, 16 Nov 2026:
-		# never lost outranks at most once). The run's own list still refuses it this run, and the
-		# next launch pays it once. Ledger ids still copy: their settle is their grant.
+		# never lost outranks at most once). The run's own list still refuses it this run; the first
+		# launch after the row is earned again pays it once (backfill_rewards needs the earned row,
+		# which the same failed save may have lost). Ledger ids still copy: their settle is their grant.
 		if String(id).begins_with("reward:"):
 			continue
 		if _profile.settle(id):
