@@ -112,17 +112,21 @@ func add(key: String, value: float, at, type: String, team: String, crit := fals
 	var fresh := {"key": key, "value": value, "at": at, "type": type, "team": team, "crit": crit,
 		"color": effect_colour(type, team, crit), "age": 0.0, "since": 0.0, "shift": Vector2.ZERO}
 	_numbers.append(fresh)
-	# Over the cap the smallest figure goes (the oldest of equals), so a run of small hits never
-	# evicts a big one early.
-	while _numbers.size() > MAX_VISIBLE:
-		var least := 0
+	# A new number always shows. Over the cap, counted apart for damage dealt and damage taken, the
+	# smallest figure already up goes (the oldest of equals), so a run of small hits never evicts a big
+	# one early and damage taken never competes with damage dealt.
+	var dealt := team == "player"
+	while _numbers.filter(func(n): return (n["team"] == "player") == dealt).size() > MAX_VISIBLE:
+		var least := -1
 		for i in _numbers.size():
-			if _numbers[i]["value"] < _numbers[least]["value"] \
-					or (_numbers[i]["value"] == _numbers[least]["value"] and _numbers[i]["age"] > _numbers[least]["age"]):
+			var n: Dictionary = _numbers[i]
+			if is_same(n, fresh) or (n["team"] == "player") != dealt:
+				continue
+			if least < 0 or n["value"] < _numbers[least]["value"] \
+					or (n["value"] == _numbers[least]["value"] and n["age"] > _numbers[least]["age"]):
 				least = i
 		_numbers.remove_at(least)
-	if _numbers.has(fresh):
-		_make_room(fresh)
+	_make_room(fresh)
 
 
 # Where a new number starts, so it never lands on another, on the reticle, the ball or a tag (PF-26).
@@ -155,7 +159,9 @@ func _make_room(fresh: Dictionary) -> void:
 					moved = true
 					break
 		if not moved and lines < MAX_LINES:
-			if path_rects(fresh).any(func(r): return r.intersects(start)):
+			# After the pushes, a figure still on a ring rect lifts clear of it; with no lift left it stays.
+			var on_ring := pushes >= MAX_PUSHES and ring.any(func(r): return r.has_area() and r.intersects(start))
+			if on_ring or path_rects(fresh).any(func(r): return r.intersects(start)):
 				fresh["shift"].y -= start.size.y
 				lines += 1
 				moved = true

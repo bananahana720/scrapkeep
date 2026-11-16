@@ -65,7 +65,7 @@ func _reset() -> void:
 
 
 # Runs `pieces` as a row so several start in one frame (the rows' own times are fixed constants).
-func _force_row(pieces: Array) -> void:
+func _force_row(pieces: Array, anchors := {}) -> void:
 	_fl.play("bowl_handoff", 1, {}, "short")
 	_fl.stop_all()
 	_fl.playing = true
@@ -73,6 +73,7 @@ func _force_row(pieces: Array) -> void:
 	_fl.short = true
 	_fl.clock = 0.0
 	_fl._pieces = pieces
+	_fl._anchors = anchors
 	var started: Array[bool] = []
 	started.resize(pieces.size())
 	started.fill(false)
@@ -239,7 +240,7 @@ func _run() -> void:
 	var placed: bool = _fl._place_word(label, {"at_share": centre_share})
 	var asked := Rect2(label.position, label.size)
 	t.check("d: the victory title shows and has an area (%s)" % title, _game.screens.visible and title.has_area())
-	t.check("d: a flourish word played over the title gets no spot, so its node is not built (placed %s at %s, title %s)" % [placed, asked, title], not placed)
+	t.check("d: a flourish word aimed over the title is not built, or drawn clear of it (placed %s at %s, title %s)" % [placed, asked, title], not (placed and asked.intersects(title)))
 	label.queue_free()
 	_game.screens._on_flow_changed("stage")
 	await _frames(60)
@@ -278,6 +279,7 @@ func _run() -> void:
 
 	# f: three numbers on one point
 	var layer = _game.hud.damage_numbers
+	var real_off: Callable = layer.get("keep_off")
 	layer.clear()
 	var tag := Rect2(_view * 0.5 + Vector2(-40.0, -100.0), Vector2(80.0, 28.0))
 	layer.set("keep_off", func() -> Dictionary: return {"ring": [_reticle()], "tags": [tag]})
@@ -336,6 +338,44 @@ func _run() -> void:
 		layer.add("small%d" % i, 2.0, Vector2(300.0 + 200.0 * i, 300.0), "kinetic", "player")
 	var kept: Array = layer.shown().map(func(n): return n["key"])
 	t.check("f: one big number and four small ones, the big one survives (%s)" % [kept], layer.visible_count() == 4 and "big" in kept)
+	layer.clear()
+	# f6: the cap, a new number always shows; damage dealt and taken count apart
+	layer.set("keep_off", Callable())
+	layer.clear()
+	for i in 4:
+		layer.add("L%d" % i, 50.0 + 10.0 * i, Vector2(100.0 + 300.0 * i, 300.0), "kinetic", "player")
+	layer.add("tick", 1.0, Vector2(1200.0, 500.0), "kinetic", "player")
+	var keys: Array = layer.shown().map(func(n): return n["key"])
+	t.check("f: a small new dealt number shows over four large ones and the smallest old one goes (%s)" % [keys],
+		layer.visible_count() == 4 and "tick" in keys and not ("L0" in keys) and "L3" in keys)
+	layer.clear()
+	for i in 4:
+		layer.add("D%d" % i, 50.0 + 10.0 * i, Vector2(100.0 + 300.0 * i, 300.0), "kinetic", "player")
+	layer.add("hurt", 1.0, Vector2(1200.0, 500.0), "kinetic", "monster")
+	t.check("f: four dealt numbers and a taken one all show (%d)" % layer.visible_count(), layer.visible_count() == 5)
+	layer.clear()
+	# f7: a tag close on the reticle's right: three numbers on the centre, none ends inside the ring
+	var side_ball := Rect2(_reticle().end - Vector2(0.0, 40.0), Vector2(60.0, 120.0))
+	var near_tag := Rect2(side_ball.end.x, side_ball.position.y - 30.0, 50.0, 180.0)
+	layer.set("keep_off", func() -> Dictionary: return {"ring": [_reticle(), side_ball], "tags": [near_tag]})
+	layer.add("r1", 20.0, _view * 0.5, "kinetic", "player")
+	layer.add("r2", 20.0, _view * 0.5, "frost", "player")
+	layer.add("r3", 20.0, _view * 0.5, "arc", "player")
+	var inside := 0
+	for r in _starts(layer):
+		if r.intersects(_reticle()) or r.intersects(side_ball):
+			inside += 1
+	t.check("f: with a tag close on the reticle's right no number of three ends inside the ring or the ball (%d inside of %d)" % [inside, layer.visible_count()], layer.visible_count() == 3 and inside == 0)
+	layer.clear()
+	# f8: through the HUD's own keep-off hook, a real reticle and a real ball
+	layer.set("keep_off", real_off)
+	var real_ring: Rect2 = _game.hud.reticle.rect()
+	var real_ball: Rect2 = _game.hud._ball_rect()
+	layer.add("real", 20.0, _view * 0.5, "kinetic", "player")
+	var real_start := _starts(layer)
+	t.check("f: the HUD's real hook has a reticle and a ball rect (%s, %s)" % [real_ring, real_ball], real_off.is_valid() and real_ring.has_area() and real_ball.has_area())
+	t.check("f: through the HUD's real hook a number at the centre misses the real reticle and ball (%s)" % [real_start],
+		real_start.size() == 1 and not real_start[0].intersects(real_ring) and not real_start[0].intersects(real_ball))
 	layer.clear()
 	# f5: a hidden reticle has no rect
 	var ret = _game.hud.reticle
@@ -397,7 +437,10 @@ func _run() -> void:
 	# The real brindle_rout row: FWOOMP at 0.0, ROUTED later; the stamp carries the fact, so the word yields.
 	var real: Array = Rows.resolve("brindle_rout", true, 1)
 	var stamp_at: float = real.filter(func(pc): return pc["kind"] == "stamp")[0]["at"]
-	_force_row(real.duplicate(true))
+	var scooter := Node3D.new()
+	root.add_child(scooter)
+	scooter.global_position = _world(Vector2(0.62, 0.45))
+	_force_row(real.duplicate(true), {"scooter": scooter})
 	_fl.advance(0.0)
 	var up_first := _kind_nodes("sfx_word")
 	t.check("i: on the real brindle_rout row the word is up before the stamp (%d words, stamp at %.1f s)" % [up_first.size(), stamp_at], up_first.size() == 1 and up_first[0].is_visible_in_tree() and _kind_nodes("stamp").is_empty())
@@ -415,7 +458,7 @@ func _run() -> void:
 	var both: Array = real.duplicate(true)
 	for pc in both:
 		pc["at"] = 0.0
-	_force_row(both)
+	_force_row(both, {"scooter": scooter})
 	_fl.advance(0.0)
 	var b_stamp := _kind_nodes("stamp")
 	var b_word := _kind_nodes("sfx_word")
@@ -425,6 +468,7 @@ func _run() -> void:
 			b_meets += 1
 	t.check("i: the real row with both at 0.0 puts the stamp up and no word over it (%d stamps, %d words, %d over)" % [b_stamp.size(), b_word.size(), b_meets], b_stamp.size() == 1 and b_meets == 0)
 	_fl.stop_all()
+	scooter.queue_free()
 	# A word forced to meet a later stamp is hidden at once, whatever the real row's spots allow.
 	_force_row([{"kind": "sfx_word", "at": 0.0, "for": 2.0, "text": "FWOOMP", "at_share": Vector2(0.5, 0.40)},
 		{"kind": "stamp", "at": 0.5, "for": 1.0, "text": "ROUTED", "colour": "AMBER", "slot": "centre"}])

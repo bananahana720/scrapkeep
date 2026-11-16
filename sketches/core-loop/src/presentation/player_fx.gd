@@ -767,7 +767,6 @@ var _keep_frame := -1
 # A member's rects changed (a card, caption, stamp or inset started or ended): read the list again.
 func keep_clear_changed() -> void:
 	_keep_frame = -1
-	_fight_frame = -1
 var _keep_cache: Array[Rect2] = []
 
 
