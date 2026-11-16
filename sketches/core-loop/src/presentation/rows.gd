@@ -30,7 +30,7 @@ const ELEMENT_SOUNDS := {"freeze": "ice_form", "ice": "ice_form", "frost": "ice_
 static func row(kind: String) -> Dictionary:
 	if EventKinds.has(kind):
 		return EventKinds.row(kind)
-	for table in [EventKinds.UI_ROWS, EventKinds.LOOT_ROWS, FALLBACK]:
+	for table in [EventKinds.UI_ROWS, EventKinds.LOOT_ROWS, EventKinds.WORLD_ROWS, FALLBACK]:
 		if table.has(kind):
 			return table[kind]
 	return {}
