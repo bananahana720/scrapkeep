@@ -1,6 +1,6 @@
 ---
 name: scrapkeep-verify-formal
-description: "Check by model the promises Scrapkeep's run flow and launch swipe make under every interruption (death, retry, new run, quit, Continue, either order of the gate's two signals), with a TLA+ model kept beside this skill. Use when a change touches flow.gd, launch_take.gd or the launch swipe calls in game.gd, when a review finds an interruption that breaks a launch or a run's end, or when asked to formally verify or model-check the run flow; which tests qualify a diff stays in scrapkeep-verify, and playing the game stays in scrapkeep-verify-game."
+description: "Check by model the promises Scrapkeep's run flow and launch swipe make under every interruption (death, retry, new run, quit, Continue, either order of the gate's two signals), with a TLA+ model kept beside this skill, and check by a second model that an earned reward is banked once and never lost through crashes, failed saves and two games on one profile. Use when a change touches flow.gd, launch_take.gd or the launch swipe calls in game.gd, or profile.gd, safe_store.gd, run_store.gd or the settle and grant calls in progress.gd, when a review finds an interruption that breaks a launch or a run's end, or when asked to formally verify or model-check the run flow; which tests qualify a diff stays in scrapkeep-verify, and playing the game stays in scrapkeep-verify-game."
 ---
 
 # Check the run flow against its model
@@ -71,6 +71,17 @@ A `broken-*` config that reports no break means the model can no longer see that
 ## What a pass does not cover
 
 A pass covers the model within its bounds and its time assumption (VFM-07). Not modelled: the camp gate's way into a run, the victory lap, stage replay from the death screen, the arena's own retry beyond "the run stays in the boss state", a run that continues past the boss, saves beyond one run document, the difference between the swipe's own word and no word, seconds, and anything drawn. `references/coverage.md` lists them.
+
+## The rewards model
+
+A second model, `models/Rewards.tla`, checks how an earned reward is banked: `sketches/core-loop/src/core/progress.gd`'s earn, settle, `grant_once` and `reconcile_settled`, the profile and run stores, and `sketches/core-loop/src/core/safe_store.gd`'s writes, with a crash between any two file writes, failed writes and two game processes on one profile. Its rules:
+
+| Rule | The promise | What breaks for the player |
+| --- | --- | --- |
+| `AtMostOnce` | No reward id is granted twice. | The earn is announced and paid twice. |
+| `NeverLost` | An earned and settled reward id is granted after any crash and reload. | A cosmetic or world the player earned never arrives. |
+
+Run it with `bash $F/models/make-rewards-configs.sh`, then each `rewards-*.cfg` as in "Run it"; the two-game configs need plain TLC with several workers. [references/rewards-coverage.md](references/rewards-coverage.md) has the code behind each step, the config table with what each config must report, and what is not modelled. Its findings are in [references/rewards-findings.md](references/rewards-findings.md). The rest of this skill (covered changes, reading a result, replays, broken variants, reach probes) applies to it unchanged.
 
 ## Lessons and updates
 
