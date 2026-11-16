@@ -745,6 +745,7 @@ func parameters_run_started() -> void:
 	parameters_stage_entered()
 	parameter_committed_released = false
 	parameter_committed_values.erase("armour")
+	parameters.erase("armour")
 
 
 # An arena has no landing phrase to wait for: the fight's band starts with the melody, so

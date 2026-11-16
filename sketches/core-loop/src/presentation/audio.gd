@@ -174,7 +174,8 @@ var _line_claw_stream: AudioStreamWAV
 const RIVET_LINE := {"punch": "rivet_line_punch", "arrive": "rivet_line_arrive", "motif": "rivet", "roll_step": 0.0625}
 # --- end Rivet ---
 const POSTURE_QUARTER := 25.0
-# The guard bar level at which the Warden is one hit from its stagger: guard_critical sounds once on the way up.
+# The guard bar level at which a posture body (a Warden, or Brindle's hull on the same rule) is one hit
+# from its stagger: guard_critical sounds once on the way up.
 const GUARD_CRITICAL := 85.0
 const GUARD_CRITICAL_REARM := 60.0
 const BEACON_OPEN_DB := -4.0
@@ -4163,7 +4164,7 @@ func _on_posture_changed(enemy: Node3D, posture: float, staggered: bool) -> void
 		_follow_warden_form(posture, staggered, (fell or (shattered and chunks > 0)) and not staggered)
 
 
-# The guard bar reaching GUARD_CRITICAL while the Warden stands: one warning per climb, re-armed once
+# The guard bar reaching GUARD_CRITICAL while a posture body stands: one warning per climb, re-armed once
 # the bar falls back under GUARD_CRITICAL_REARM or a stagger opens.
 func _guard_warning(enemy: Node3D, posture: float, staggered: bool) -> void:
 	if not _on_posture_fight(enemy):
@@ -4632,11 +4633,12 @@ func _flush_flow() -> void:
 					# The heaviest drop of the stage, on the next beat, with the unseal
 					# stinger on the same downbeat.
 					var at := engine.unseal_drop()
-					engine.schedule_stinger_at(Rows.sound("beacon_unsealed"), at, story_duck_db("beacon_unsealed"))
+					var stinger_db := story_duck_db("beacon_unsealed")
+					engine.schedule_stinger_at(Rows.sound("beacon_unsealed"), at, stinger_db)
 					cue_log.append(["beacon_unsealed", Rows.sound("beacon_unsealed"), "beat", at, 1.0])
-					# The ring turning open rides the stinger's downbeat, under it.
+					# The ring turning open rides the stinger's downbeat, under it, and under a story sting's duck with it.
 					var opened := Rows.heard(EventKinds.state_row("beacon_open"))
-					engine.schedule_stinger_at(opened, at, BEACON_OPEN_DB)
+					engine.schedule_stinger_at(opened, at, stinger_db + BEACON_OPEN_DB)
 					cue_log.append(["beacon_open", opened, "beat", at, 1.0])
 				else:
 					# A Warden broken inside its pivot bar: the track switch is void.
