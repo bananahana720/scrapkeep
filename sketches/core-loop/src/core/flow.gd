@@ -27,6 +27,7 @@ enum { TITLE, CLASS_SELECT, STAGE, BEACON, GATES, LAUNCH, SUMMARY, DEAD, BOSS, V
 const NAMES := ["title", "class_select", "stage", "beacon", "gates", "launch", "summary", "dead", "boss", "victory", "lap"]
 # The beat between Brindle's defeat and the summary: the ball keeps rolling.
 const VICTORY_SECONDS := 2.5
+const BOSS_WON_KEY := "boss_won"
 # How long the ball flies after the launch before the next stage takes it; the
 # velocity at that moment is what the next stage receives.
 const LAUNCH_FLIGHT := 0.6
@@ -603,7 +604,10 @@ func resume_run() -> bool:
 	if ctx.run.cleared:
 		# The loaded doc stays the one the earned save's spend rewrites (the boss arena writes none).
 		_entrance = doc
-		_finish_stage(Vector3(p[0], p[1], p[2]))
+		if ctx.run.extra.has(BOSS_WON_KEY):
+			_resume_after_boss(Vector3(p[0], p[1], p[2]))
+		else:
+			_finish_stage(Vector3(p[0], p[1], p[2]))
 	else:
 		enter_stage(ctx.run.stage, Vector3(p[0], p[1], p[2]), false)
 	show_start_card()
@@ -1103,6 +1107,27 @@ func _advance_from(cleared: int, velocity = null) -> void:
 	enter_stage(cleared + 1, ctx.player.state.velocity if velocity == null else velocity, false)
 
 
+# A Continue from a save written at a boss's fall (_save_boss_won) skips the arena the player already won.
+func _resume_after_boss(velocity: Vector3) -> void:
+	ctx.run.extra.erase(BOSS_WON_KEY)
+	var world: int = ctx.stages.world_of(ctx.run.stage)
+	if world != _world:
+		_world = world
+		ctx.events.world_entered.emit(world)
+	_advance_from(ctx.run.stage, velocity)
+
+
+# The fall moves the saved run past the arena: the cleared doc as the run stands now, marked won. Rewards the win
+# pays are banked when the run advances, which a resumed run does once, so the marker is the only addition.
+func _save_boss_won() -> void:
+	if store == null or ctx.run.over:
+		return
+	var v: Vector3 = ctx.player.state.velocity
+	var doc: Dictionary = ctx.run.to_cleared_doc(_tree(), v)
+	doc[BOSS_WON_KEY] = true
+	_save(doc)
+
+
 func _on_boss_defeated() -> void:
 	if state != BOSS:
 		return
@@ -1120,6 +1145,7 @@ func _on_boss_defeated() -> void:
 	var boss := String(Worlds.row(ctx.stages.world_of(ctx.run.stage)).get("boss", ""))
 	if Secrets.note_rout(ctx.profile, boss, ctx.run.run_time):
 		_save_profile("profile_door_save")
+	_save_boss_won()
 	_set_state(VICTORY)
 
 
