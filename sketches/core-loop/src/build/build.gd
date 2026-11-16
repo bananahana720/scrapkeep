@@ -262,7 +262,7 @@ func setup(ctx_ref) -> void:
 	called_shot.setup(ctx)
 	gates.mark_for = offer_mark
 	gates.active_row = _active_row
-	gates.playing = func() -> bool: return ctx.flow.in_play()
+	gates.playing = func() -> bool: return ctx.flow == null or ctx.flow.in_play()
 	gates.chosen.connect(_on_gate_chosen)
 	fabricators = Fabricators.new()
 	fabricators.name = "Fabricators"

@@ -771,6 +771,7 @@ func retry_stage() -> void:
 	if in_arena:
 		_retry_arena()
 		return
+	_untake()
 	ctx.run.restore()
 	_launched = false
 	_flight = 0.0
@@ -1209,6 +1210,7 @@ func _drop_lap() -> void:
 # The run is over for good, won or lost: the saved run becomes a tombstone so no Continue
 # can bring it back.
 func _end_run(won: bool) -> void:
+	_untake()
 	_record_end(won)
 	_set_state(SUMMARY)
 	ctx.events.run_ended.emit(won)
@@ -1276,6 +1278,12 @@ func _play_seam_take() -> bool:
 	if root == null or not root.has_method("play_launch_take") or ctx.stages.is_run_last(ctx.run.stage):
 		return false
 	return root.play_launch_take(_cut_under_cover, _flight_over, _next_drawn, LAUNCH_FLIGHT, taken)
+
+
+# A retry or a run's end in the flight leaves the part the swipe was told about unheld: the take is told none.
+func _untake() -> void:
+	if _seam_take and ctx.root != null and ctx.root.has_method("stamp_launch_take"):
+		ctx.root.stamp_launch_take("")
 
 
 func _flight_over() -> bool:
