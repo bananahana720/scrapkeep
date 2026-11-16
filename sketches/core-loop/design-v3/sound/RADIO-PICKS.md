@@ -8,8 +8,8 @@ Andrew tapped "Music thread picks" (2026-10-17 22:28:36Z): the music thread pick
 | Cable Reach Bebop | backroom | b-side | take-cable-reach-bebop-s5101.wav | both pass; more room around the lead (0.14 vs 0.11) |
 | Admiral's Ballroom | backroom | take | take-admirals-ballroom-s5101.wav | both pass; more room around the lead (0.18 vs 0.13) |
 | Shift Over, Slow | backroom | b-side | take-shift-over-slow-s5101.wav | both pass; more room around the lead (0.13 vs 0.12) |
-| Second Line for a Warden | backroom | take | take-second-line-warden-s5101.wav | both pass; more room around the lead (0.28 vs 0.12) |
-| Bench Warden Bop | backroom | b-side | take-bench-warden-bop-s5101.wav | both pass; more room around the lead (0.19 vs 0.13) |
+| Second Line for the Shelf | backroom | take | take-second-line-warden-s5101.wav | both pass; more room around the lead (0.28 vs 0.12) |
+| Bench Hammer Bop | backroom | b-side | take-bench-warden-bop-s5101.wav | both pass; more room around the lead (0.19 vs 0.13) |
 | Lights On, Late Set | backroom | b-side | take-lights-on-late-set-s5101.wav | both pass; more room around the lead (0.24 vs 0.13) |
 | Crown, Last Call | backroom | take | take-crown-last-call-s5101.wav | both pass; more room around the lead (0.16 vs 0.13) |
 | The Mind, Modal | backroom | legend | take-mind-modal-s5101.wav | both pass; more room around the lead (0.27 vs 0.12) |
@@ -32,7 +32,7 @@ Andrew tapped "Music thread picks" (2026-10-17 22:28:36Z): the music thread pick
 | Sinkhole Trip | lowshaft | take | take-sinkhole-trip-s5102.wav | the other fails balance |
 | Lost Tape, Rewound | lowshaft | b-side | take-lost-tape-rewound-s5101.wav | both pass; more room around the lead (0.29 vs 0.17) |
 | Flood Gates, Submerged | lowshaft | take | take-flood-gates-submerged-s5101.wav | both pass; more room around the lead (0.40 vs 0.15) |
-| Works Warden, Half Time | lowshaft | b-side | take-works-warden-half-time-s5102.wav | both pass; more room around the lead (0.35 vs 0.23) |
+| Works Grind, Half Time | lowshaft | b-side | take-works-warden-half-time-s5102.wav | both pass; more room around the lead (0.35 vs 0.23) |
 | Shift Over, Tape Hiss | lowshaft | b-side | take-shift-over-tape-hiss-s5101.wav | both pass; more room around the lead (0.19 vs 0.11) |
 | Cave-In Version | lowshaft | legend | take-cave-in-version-s5101.wav | both pass; more room around the lead (0.25 vs 0.23) |
 | Penstock, Low Pressure | lowshaft | b-side | take-penstock-low-pressure-s5101.wav | both pass; more room around the lead (0.16 vs 0.10) |
@@ -41,8 +41,8 @@ Andrew tapped "Music thread picks" (2026-10-17 22:28:36Z): the music thread pick
 | Hanging Isle, Liquid | updraft | take | take-hanging-isle-liquid-s5101.wav | both pass; more room around the lead (0.15 vs 0.10) |
 | Crown Spire, Fusion | updraft | take | take-crown-spire-fusion-s5101.wav | both pass; more room around the lead (0.15 vs 0.12) |
 | Rain, Second Coat | updraft | b-side | take-rain-second-coat-s5101.wav | both pass; more room around the lead (0.25 vs 0.11) |
-| Draft Warden, Updraft | updraft | b-side | take-draft-warden-updraft-s5101.wav | both pass; more room around the lead (0.16 vs 0.12) |
-| Crown Warden, Ascending | updraft | take | take-crown-warden-ascending-s5101.wav | both pass; more room around the lead (0.44 vs 0.15) |
+| Draft Surge, Updraft | updraft | b-side | take-draft-warden-updraft-s5101.wav | both pass; more room around the lead (0.16 vs 0.12) |
+| Crown Peal, Ascending | updraft | take | take-crown-warden-ascending-s5101.wav | both pass; more room around the lead (0.44 vs 0.15) |
 | Highdraft, First Light | updraft | legend | take-highdraft-first-light-s5101.wav | both pass; more room around the lead (0.17 vs 0.11) |
 | The Mind, Choir Loft | updraft | take | take-mind-choir-loft-s5101.wav | both pass; more room around the lead (0.25 vs 0.12) |
 | Cable Reach, Liquid | updraft | b-side | take-cable-reach-liquid-s5101.wav | both pass; more room around the lead (0.30 vs 0.08) |
