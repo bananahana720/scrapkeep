@@ -1679,11 +1679,15 @@ func _draw_overdrive(delta: float) -> void:
 	var ball: Vector3 = player.shown_position()
 	if lit > 0.01:
 		_rim.global_position = ball
-		_rim_mat.set_shader_parameter("heat", lit)
 		# A hot shell keeps its own colour over overdrive's: the risk reads first.
 		var red = player.get("redline")
 		var shell_wins: bool = shell > 0.0 and (heat < shell or red.hot())
-		_rim_mat.set_shader_parameter("rim", shell_color(red) if shell_wins else OVERDRIVE_RIM)
+		var rim: Color = shell_color(red) if shell_wins else OVERDRIVE_RIM
+		# The kettle's twin: over the last Redline.KETTLE_S of the fuse the rim beats to full heat
+		# in the hazard colour, in step with the whistle (redline.gd kettle_pulse).
+		var kettle: float = red.kettle_pulse() if red != null else 0.0
+		_rim_mat.set_shader_parameter("heat", lerpf(lit, 1.0, kettle))
+		_rim_mat.set_shader_parameter("rim", rim.lerp(Palette.HAZARD, kettle))
 	if on:
 		_rim_mat.set_shader_parameter("pilot", player.class_color())
 		if speed > 1.0:

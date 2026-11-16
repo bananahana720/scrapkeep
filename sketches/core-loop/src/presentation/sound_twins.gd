@@ -42,7 +42,7 @@ extends RefCounted
 # Moving a row to ACT means building the twin first; the test cannot see game changes that add a
 # new warning, only that the new fact is listed.
 
-const OPEN_PINNED := 10
+const OPEN_PINNED := 7
 # Rows read only by name, not traced through code. This number may only go down.
 const UNTRACED_PINNED := 305
 # Not-act rows for a cue in DANGER_SOUNDS (printed by the test with their reasons).
@@ -124,8 +124,14 @@ const ACT := [
 		"script": "res://src/world/stage_locks.gd", "fn": "objective", "token": "\"The Warden's clamp is shut: break %d crews"},
 	{"facts": ["emit:warden_gate_opened@stage_locks.gd:_step_gate"], "traced": true, "what": "the Warden's collar drops away",
 		"script": "res://src/world/stage_locks.gd", "fn": "_step_gate", "token": "_drop_collar()"},
-	{"facts": ["emit:arena_wave@overtime.gd:_land_wave"], "traced": true, "what": "the wave's enemies are spawned in the same function, just before the emit",
-		"script": "res://src/world/overtime.gd", "fn": "_land_wave", "token": "ctx.spawner.spawn_enemy(String(kinds[i])"},
+	{"facts": ["emit:arena_wave@overtime.gd:_land_wave"], "traced": true, "what": "the registry's hazard cross holds at each drop spot of the landing crew (wave_cross.gd), shown before the emit",
+		"script": "res://src/world/overtime.gd", "fn": "_land_wave", "token": "WaveCross.mark(self, drops"},
+	{"facts": ["emit:arena_wave@stage_locks.gd:_step_lock"], "traced": true, "what": "the registry's hazard cross at each spot the next wave lands on, closing until the crew lands (wave_cross.gd, shown before the emit)",
+		"script": "res://src/world/stage_locks.gd", "fn": "_mark_wave", "token": "WaveCross.mark(self, _wave_spots(_wave + 1)"},
+	{"facts": ["cued@rogue.gd:_finish_strike:emit"], "traced": true, "what": "the rogue's core swells and burns brass from the same call that emits the cue",
+		"script": "res://src/combat/rogue.gd", "fn": "_finish_strike", "token": "_show_core()"},
+	{"facts": ["site:audio.gd:_tend_kettle:heat_kettle"], "traced": true, "what": "the shell's rim beats to full heat in the hazard colour over the same last Redline.KETTLE_S as the whistle",
+		"script": "res://src/presentation/player_fx.gd", "fn": "_draw_overdrive", "token": "red.kettle_pulse()"},
 	{"facts": ["emit:sluice_warning@overtime.gd:open_sluice"], "traced": true, "what": "the water shows at the warning",
 		"script": "res://src/world/overtime.gd", "fn": "open_sluice", "token": "_show_water(true)"},
 	{"facts": ["emit:sluice_open@overtime.gd:_step_sluice"], "traced": true, "what": "the flood water shows as the sluice opens",
@@ -194,16 +200,10 @@ const OPEN := [
 		"what": "the Mind's riser, ancient family: same missing mark (world 3, not traced)", "severity": "info"},
 	{"fact": "WORLD_ROWS:sluice_siren", "traced": true, "plays": "src/world/event_director.gd:_advance_park", "pattern": "_park_world(selected, selected.row.telegraph.form, \"telegraph\")",
 		"what": "the flume head gate's siren: industrial.gd handle returns for sluice_surge so no mark is laid; the toast and edge marker show. The water chases but never hurts, hence info. The sound is beacon_hum because sluice_siren_two_tone has no recipe", "severity": "info"},
-	{"fact": "emit:arena_wave@stage_locks.gd:_step_lock", "traced": true, "plays": "src/world/stage_locks.gd:_step_lock", "pattern": "world_fact.emit(\"arena_wave\", lock_centre)",
-		"what": "the yard's next wave is coming; the emit fires when the crew is dead and the wave lands _wave_wait seconds later, nothing on screen at the cue", "severity": "warning"},
 	{"fact": "cued@boss.gd:_step_reprise:slag_ring_a", "traced": true, "plays": "src/boss/boss.gd:_step_reprise", "pattern": "_phases.cue(",
 		"what": "Brindle's slag ring reprise: the cue sounds, the ring commits CUE_LEAD later with the shorter CUED_WARN because the cue paid for it; nothing is drawn during the lead, so a muted player gets a shorter warning and no tell", "severity": "fairness"},
-	{"fact": "cued@rogue.gd:_finish_strike:emit", "traced": true, "plays": "src/combat/rogue.gd:_finish_strike", "pattern": "attack_cued.emit(",
-		"what": "the rogue's chained attack: _enter(State.CUE) moves with zero velocity and draws no pose; the cue is the only tell before the geometry", "severity": "warning"},
 	{"fact": "tele@boss.gd:_begin_eject:eject", "traced": true, "plays": "src/boss/boss.gd:_begin_eject", "pattern": "_publish(\"boss_attack_telegraphed\"",
 		"what": "Brindle's eject publishes boss_attack_telegraphed with no hazard or ring committed", "severity": "warning"},
-	{"fact": "site:audio.gd:_tend_kettle:heat_kettle", "traced": true, "plays": "src/presentation/audio.gd:_tend_kettle", "pattern": "\"heat_kettle\"",
-		"what": "the kettle sounds only in the last 2 s of a 4 s fuse, but the shell rim is white for the whole redline, so nothing on screen says 2 s left", "severity": "warning"},
 	{"fact": "sig:weak_point_opened@mind_hand.gd:_go_live", "traced": false, "plays": "src/combat/mind_hand.gd:_go_live", "pattern": "weak_point_opened.emit(",
 		"what": "the Mind hand's lens opens on go-live; world 3, no twin traced", "severity": "info"},
 ]

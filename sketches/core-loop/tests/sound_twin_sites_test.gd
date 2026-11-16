@@ -7,19 +7,23 @@ const LockRows := preload("res://src/world/lock_rows.gd")
 const Director := preload("res://src/world/event_director.gd")
 const Redline := preload("res://src/combat/redline.gd")
 const Rogue := preload("res://src/combat/rogue.gd")
-const Audio := preload("res://src/presentation/audio.gd")
+const WaveCross := preload("res://src/world/wave_cross.gd")
+const Palette := preload("res://src/core/palette.gd")
+const EventKinds := preload("res://src/core/event_kinds.gd")
 const T := preload("res://tests/support/t.gd")
 
 # Backlog W1-108: five sounds the player must act on each get a visible twin that starts with the
 # sound and is gone after it (ruling cx, LEGIBILITY section 13).
-# - the yard's wave whistle (arena_wave): a hazard ring on the ground at each spot the next wave
-#   lands on, while the gap runs, gone the tick the crew lands;
+# - the yard's wave whistle (arena_wave): the registry row's cross, held up where the crew drops from
+#   (not a floor ring, ruling on the colour law), at each spot the next wave lands on while the gap
+#   runs, gone the tick the crew lands; overtime's whistle shows the same cross through the same call;
 # - ancient_stirring and sluice_siren: the director's announced fact carries the same place as the
 #   world fact on the same tick, and the world turns it into an edge marker that stays until the
 #   event starts (already in place before this row; these checks hold it);
 # - the heat kettle (audio.gd _tend_kettle): redline.gd's kettle_pulse flashes over the same last
-#   KETTLE_S of the fuse, and is 0 outside it;
-# - the rogue's cue (attack_cued): its core burns brass for the CUE_LEAD beat.
+#   KETTLE_S of the fuse, and is 0 outside it; player_fx draws it on the shell's rim in the hazard colour;
+# - the rogue's cue (attack_cued): its core burns brass for the CUE_LEAD beat, from the physics tick that
+#   emits the cue.
 
 class Map:
 	extends RefCounted
@@ -48,8 +52,10 @@ func _run() -> void:
 	for i in 8:
 		await physics_frame
 	_stirring_and_siren(game)
+	await _kettle_drawn(game)
 	_rogue_cue(game)
 	await _whistle(game)
+	await _held_cross(game)
 	game.free()
 	await process_frame
 	quit(_t.verdict())
@@ -65,13 +71,15 @@ func _kettle() -> void:
 	r.set_mode(Redline.ON)
 	r.value = Redline.MAX
 	var window: float = float(r.get_script().get_script_constant_map().get("KETTLE_S", -1.0))
-	_t.eq("kettle: the twin's window is the whistle's window", window, Audio.KETTLE_S)
+	var audio_source := FileAccess.get_file_as_string("res://src/presentation/audio.gd")
+	_t.check("kettle: audio.gd does not define its own window (one home, redline.gd)", audio_source.length() > 0 and not audio_source.contains("const KETTLE_S") and audio_source.contains("Redline.KETTLE_S"))
+	_t.check("kettle: the window is 2 s", is_equal_approx(window, 2.0), str(window))
 	_t.check("kettle: the shell has a flash to show", r.has_method("kettle_pulse"))
 	if not r.has_method("kettle_pulse"):
 		return
 	_t.near("kettle: dark while the fuse is longer than the whistle", r.call("kettle_pulse"), 0.0)
 	r.waited = Redline.COOK_OFF_S - window
-	_t.check("kettle: fuse_left matches the whistle's first frame", is_equal_approx(r.fuse_left(), Audio.KETTLE_S))
+	_t.check("kettle: fuse_left matches the whistle's first frame", is_equal_approx(r.fuse_left(), window))
 	_t.near("kettle: lit on the whistle's first frame", r.call("kettle_pulse"), 1.0)
 	var lit := 0
 	var dark := 0
@@ -147,20 +155,18 @@ func _rogue_cue(game) -> void:
 	game.events.attack_cued.connect(func(fight: String, attack: String, _s: float): cued.append([fight, attack]))
 	rogue.enter_phase(2)
 	rogue._enter(Rogue.State.STALK)
-	rogue.state = Rogue.State.STRIKE
 	rogue._begin_attack(Vector3(0, 0, -10))
 	rogue.state = Rogue.State.STRIKE
-	rogue._finish_strike()
-	rogue._pose(0.016)
-	_t.check("rogue: the cue sounds", rogue.state == Rogue.State.CUE and cued.size() == 1, str(cued))
-	_t.check("rogue: the core is showing the cue on the sound's frame", rogue.has_method("cue_showing") and rogue.call("cue_showing"))
+	rogue._clock = 99.0
+	rogue._physics_process(0.016)
+	_t.check("rogue: the cue sounds on the real physics step", rogue.state == Rogue.State.CUE and cued.size() == 1, str(cued))
+	_t.check("rogue: the core shows the cue on that same step", rogue.has_method("cue_showing") and rogue.call("cue_showing"))
 	rogue._physics_process(Rogue.CUE_LEAD + 0.001)
-	rogue._pose(0.016)
 	_t.check("rogue: the cue is gone once the attack commits", rogue.state == Rogue.State.WIND and not (rogue.has_method("cue_showing") and rogue.call("cue_showing")),
 		rogue.state_name())
 	rogue.state = Rogue.State.STRIKE
-	rogue._finish_strike()
-	rogue._pose(0.016)
+	rogue._clock = 99.0
+	rogue._physics_process(0.016)
 	_t.check("rogue: a vented window after the second attack is not the cue", rogue.state == Rogue.State.WEAK and not (rogue.has_method("cue_showing") and rogue.call("cue_showing")))
 	rogue._clear_telegraph()
 	rogue.free()
@@ -190,18 +196,87 @@ func _whistle(game) -> void:
 		loops += 1
 	_t.eq("whistle: the whistle sounded", _count("arena_wave"), 1)
 	var shown: bool = locks.has_method("has_wave_marks") and locks.call("has_wave_marks")
-	_t.check("whistle: a ring shows on the whistle's frame", shown)
+	_t.check("whistle: a mark shows on the whistle's frame", shown)
 	if shown:
-		var rings: Array = locks.get_node("ArenaWaveMarks").get_children()
+		var marks: Node3D = locks.get_node("ArenaWaveMarks")
+		var crosses: Array = marks.get_children()
 		var spots: Array = locks.call("_wave_spots", 1)
-		_t.eq("whistle: one ring per member of the next wave", rings.size(), (waves[1] as Array).size())
-		var at_spots := rings.size() == spots.size() and rings.size() > 0
-		for i in mini(rings.size(), spots.size()):
-			at_spots = at_spots and (rings[i].global_position - spots[i]).length() < 0.5
-		_t.check("whistle: each ring is on a landing spot", at_spots)
+		_t.eq("whistle: one mark per member of the next wave", crosses.size(), (waves[1] as Array).size())
+		var at_spots := crosses.size() == spots.size() and crosses.size() > 0
+		var high := crosses.size() > 0
+		var not_floor_ring := crosses.size() > 0
+		var colour := crosses.size() > 0
+		var wanted: Color = EventKinds.world_row("arena_wave")["color"]
+		for i in mini(crosses.size(), spots.size()):
+			var cross: MeshInstance3D = crosses[i]
+			at_spots = at_spots and (cross.global_position - spots[i]).length() < 0.05
+			var p := cross.global_position
+			high = high and p.y - game.ctx.terrain.height(p.x, p.z) >= 1.5
+			var box: AABB = cross.mesh.get_aabb()
+			var mat := cross.material_override as StandardMaterial3D
+			not_floor_ring = not_floor_ring and not (cross.mesh is TorusMesh) and box.size.y > 1.0 and box.size.z < 0.01 \
+				and mat.billboard_mode == BaseMaterial3D.BILLBOARD_ENABLED and cross.rotation.is_zero_approx()
+			colour = colour and mat.albedo_color.is_equal_approx(wanted)
+		_t.check("whistle: each mark is on a landing spot", at_spots)
+		_t.check("whistle: each mark is at least 1.5 m above the ground", high)
+		_t.check("whistle: the mark is a camera-facing cross, not a floor ring", not_floor_ring)
+		_t.check("whistle: the mark's colour is the registry row's colour", colour and wanted.is_equal_approx(Palette.HAZARD))
+		_t.eq("whistle: the mark's shape is the registry row's shape", String(marks.get("shape")), String(EventKinds.world_row("arena_wave")["shape"]))
+		_t.eq("whistle: the registry shape is a cross", String(EventKinds.world_row("arena_wave")["shape"]), "cross")
 	var ticks := 0
 	while locks.crew_alive().is_empty() and ticks < 900:
 		await physics_frame
 		ticks += 1
 	_t.eq("whistle: the next wave landed", locks.crew_alive().size(), (waves[1] as Array).size())
 	_t.check("whistle: the rings are gone once the crew lands", not (locks.has_method("has_wave_marks") and locks.call("has_wave_marks")))
+
+
+# --- the kettle drawn on the shell, and overtime's whistle -------------------------------------
+func _kettle_drawn(game) -> void:
+	var red = game.player.get("redline")
+	var fx = game.presentation.player_fx
+	_t.check("kettle drawn: the game has a shell with heat and a rim", red != null and fx != null)
+	if red == null or fx == null:
+		return
+	red.set_mode(Redline.ON)
+	red.value = Redline.MAX
+	fx._shell_band = 3
+	var hazard := Palette.HAZARD
+	var checked := 0
+	var quiet_ok := true
+	var beat_hi := 0
+	var beat_lo := 0
+	for window in [false, true]:
+		for i in 40:
+			red.value = Redline.MAX
+			red.waited = (Redline.COOK_OFF_S - Redline.KETTLE_S + float(i) * 0.04) if window else 0.0
+			fx._draw_overdrive(0.016)
+			var rim: Color = fx._rim_mat.get_shader_parameter("rim")
+			var heat: float = fx._rim_mat.get_shader_parameter("heat")
+			var pulse: float = red.kettle_pulse()
+			checked += 1
+			var base: Color = fx.shell_color(red)
+			if not window:
+				quiet_ok = quiet_ok and rim.is_equal_approx(base) and pulse == 0.0
+			else:
+				quiet_ok = quiet_ok and rim.is_equal_approx(base.lerp(hazard, pulse)) and heat >= fx.shell_heat() - 0.001
+				if pulse > 0.9:
+					beat_hi += 1
+					quiet_ok = quiet_ok and rim.is_equal_approx(base.lerp(hazard, pulse)) and heat > 0.95
+				elif pulse < 0.1:
+					beat_lo += 1
+					quiet_ok = quiet_ok and heat <= fx.shell_heat() + 0.1 and absf(rim.r - base.r) + absf(rim.g - base.g) + absf(rim.b - base.b) < 0.4
+	_t.check("kettle drawn: the rim beats to full heat in the hazard colour over the whistle window, and is the shell colour before it", checked == 80 and beat_hi > 0 and beat_lo > 0 and quiet_ok, "hi %d lo %d" % [beat_hi, beat_lo])
+	red.clear()
+	red.set_mode(Redline.OFF)
+
+
+# A cross with a hold (overtime's whistle) frees itself once the hold is over.
+func _held_cross(game) -> void:
+	var held: Node3D = WaveCross.mark(game, [Vector3(0.0, 5.0, 0.0)], 0.0, 0.2)
+	_t.check("held cross: it shows", is_instance_valid(held) and held.get_child_count() == 1)
+	var frames := 0
+	while is_instance_valid(held) and frames < 120:
+		await physics_frame
+		frames += 1
+	_t.check("held cross: it frees itself after its hold", not is_instance_valid(held) and frames > 5, str(frames))

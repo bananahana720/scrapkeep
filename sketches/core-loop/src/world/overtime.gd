@@ -3,6 +3,7 @@ extends Node3D
 const Activities := preload("res://src/world/activities.gd")
 const DamageFamilies := preload("res://src/combat/damage_families.gd")
 const Palette := preload("res://src/core/palette.gd")
+const WaveCross := preload("res://src/world/wave_cross.gd")
 
 # Reservoir (docs/design/loops.md Spec 2; Andrew approved the top three loops on 11 Nov 2026
 # 18:42Z and asked for them before the sitting): a keeper's gamble on a won yard. Behind
@@ -39,6 +40,7 @@ const ARC_JUMP_M := 8.0
 const ARC_JUMP_SHARE := 0.6
 const ELITE_KIND := "plated_brute"
 const OVERTIME_SEQ := 910000
+const WAVE_CROSS_HOLD_S := 1.5
 const WATER_ALPHA := 0.45
 const WARN_ALPHA := 0.15
 
@@ -283,15 +285,19 @@ func _land_wave() -> void:
 	kinds.append(ELITE_KIND)
 	var ball: Vector3 = ctx.player.ball_position()
 	var away := atan2(centre.z - ball.z, centre.x - ball.x)
+	var drops: Array[Vector3] = []
 	for i in kinds.size():
 		var a := away + (float(i) - (kinds.size() - 1) * 0.5) * 0.5
 		var spot := centre + Vector3(cos(a), 0.0, sin(a)) * radius * 0.6
-		var enemy = ctx.spawner.spawn_enemy(String(kinds[i]), ctx.terrain.drop_point(spot.x, spot.z, 2.4))
+		drops.append(ctx.terrain.drop_point(spot.x, spot.z, 2.4))
+		var enemy = ctx.spawner.spawn_enemy(String(kinds[i]), drops[i])
 		if enemy is Node3D:
 			enemy.set_meta("pack_seq", OVERTIME_SEQ + rings)
 			# The pot pays for the crew, as the yard does (ruling af): no panel roll per kill.
 			enemy.set_meta("yard_crew", true)
 			_crew.append(weakref(enemy))
+	# The whistle sounds as the crew lands here, so its cross holds at the drop spots for a beat.
+	WaveCross.mark(self, drops, 0.0, WAVE_CROSS_HOLD_S)
 	ctx.events.world_fact.emit("arena_wave", centre)
 
 

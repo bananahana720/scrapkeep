@@ -304,6 +304,8 @@ func _finish_strike() -> void:
 		if is_instance_valid(_reaction_bus) and _reaction_bus.has_signal("attack_cued"):
 			_reaction_bus.attack_cued.emit(kind, ATTACK_IDS[next], CUED_TOTAL)
 		_enter(State.CUE)
+		if _core != null:
+			_show_core()
 		return
 	_open_weak_window()
 
@@ -645,9 +647,7 @@ func _pose(delta: float) -> void:
 		var rest: Vector3 = entry["rest"]
 		plate.position = plate.position.lerp(rest + Vector3(side * (0.9 if weak else 0.0), 0.0, 0.0), blend)
 		plate.rotation.y = lerpf(plate.rotation.y, side * (0.9 if weak else 0.0), blend)
-	var pulse := 1.0 + 0.12 * sin(Time.get_ticks_msec() * 0.018) if weak else 1.0
-	_core.scale = Vector3.ONE * (1.5 * pulse if weak else (1.3 if state == State.CUE else 1.0))
-	_core.material_override = _weak_material() if weak else (_cue_material() if state == State.CUE else _core_material)
+	_show_core()
 	# A null or freed target leaves the facing where it is (F008).
 	if not is_instance_valid(target):
 		return
@@ -660,6 +660,15 @@ func _pose(delta: float) -> void:
 			to.y = 0.0
 		if to.length() > 0.5:
 			rotation.y = lerp_angle(rotation.y, atan2(-to.x, -to.z), 1.0 - exp(-8.0 * delta))
+
+
+# The core's size and colour for the state. The cue's beat calls it as it begins, so the twin shows on
+# the same tick as the sound and not one physics tick later (_pose runs before the state machine).
+func _show_core() -> void:
+	var weak := state == State.WEAK
+	var pulse := 1.0 + 0.12 * sin(Time.get_ticks_msec() * 0.018) if weak else 1.0
+	_core.scale = Vector3.ONE * (1.5 * pulse if weak else (1.3 if state == State.CUE else 1.0))
+	_core.material_override = _weak_material() if weak else (_cue_material() if state == State.CUE else _core_material)
 
 
 var _weak: StandardMaterial3D
