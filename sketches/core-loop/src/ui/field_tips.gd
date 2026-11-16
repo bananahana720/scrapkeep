@@ -1,5 +1,6 @@
 extends Node
 
+const AbilitySlots := preload("res://src/ui/ability_slots.gd")
 const AbilityState := preload("res://src/core/ability_state.gd")
 const Palette := preload("res://src/core/palette.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
@@ -17,6 +18,8 @@ const Tuning := preload("res://src/movement/tuning.gd")
 #   companion  SPIL-9's halo gauge fills (combat.companion_assist_full)
 #   active     an active is racked and the run has met a fight: a hit taken or a kill
 #   dunk       an air slam first stores a dunk charge (player.dunk.stored_count rises)
+#   ultimate   the ultimate meter is full while no fight is live (the first calm frame of it; a
+#              meter that filled in a fight is met once the fight is down). Its tip points at the bar.
 # Pacing (systems audit pass E, docs/systems-audit/first-15): the first OPENING seconds of a
 # run's play teach rolling, so at most one tip goes up in them; the rest wait. Radio, active and
 # cast are met where they matter, not on the drop. The radio's tip points at the dial, which draws
@@ -49,6 +52,7 @@ const TIPS := {
 	"stake": "Hold at the relay mast for a bigger fight and more part rolls.",
 	"companion": "SPIL-9 is full. Your next ram calls it in.",
 	"active": "Your active waits on the bar. Press the key under it to fire.",
+	"ultimate": "Your ultimate is full. Press the key under it on the bar.",
 	"dunk": "Slam in the air, then reel into what you hooked to land the slam on it.",
 }
 const WAIT_FOR_PICK := ["radio", "active"]
@@ -132,6 +136,8 @@ func _physics_process(delta: float) -> void:
 	if fight_live(game.flow):
 		_withdraw()
 		return
+	if not seen("ultimate") and AbilitySlots.ultimate_of(game)["state"] == AbilityState.READY:
+		meet("ultimate")
 	_step_showing(delta)
 	if showing == "" and not pending.is_empty() and hud.toast_texts().is_empty() and not game.opening.waits("tip") \
 			and not opening_full():
