@@ -147,7 +147,7 @@ void vertex() {
 """
 const _LOOKS := {
 	"puff": ["unshaded, cull_disabled, blend_mix, depth_draw_never", "billboard", """
-uniform vec2 lens_fade;
+uniform vec2 lens_fade = vec2(1.5, 4.0);
 void fragment() {
 	vec2 p = vec2(UV.x * 2.0 - 1.0, 1.0 - UV.y * 2.0);
 	float r = length(p);

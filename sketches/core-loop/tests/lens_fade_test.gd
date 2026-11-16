@@ -34,15 +34,34 @@ func _run() -> void:
 
 	var puff := FxLibrary.look_material("puff")
 	t.check("the puff shader fades by view distance", puff.shader.code.contains("smoothstep(lens_fade.x, lens_fade.y, length(VERTEX))"))
+	t.check("the puff shader defines its own default fade", puff.shader.code.contains("uniform vec2 lens_fade = vec2(1.5, 4.0)"))
 	t.check("the puff material carries the same distances", puff.get_shader_parameter("lens_fade") == fade)
 	for kind in ["glow", "bead", "star"]:
 		t.check("the %s look is untouched" % kind, not FxLibrary.look_material(kind).shader.code.contains("lens_fade"))
 
+	# The kill mark keeps its alpha and caps its size instead: a kill must never read as a hit.
+	var cam := Camera3D.new()
+	root.add_child(cam)
+	cam.global_position = Vector3(0.0, 0.0, 0.0)
+	cam.make_current()
 	var mark := KillMark.new()
 	root.add_child(mark)
-	mark.fire(Vector3.ZERO, 3.0, Color.WHITE)
-	var mat: ShaderMaterial = mark._slots[0]["mat"]
-	t.check("the kill mark shader fades by eye distance", mat.shader.code.contains("smoothstep(lens_fade.x, lens_fade.y, v_eye)"))
-	t.check("the kill mark carries the same distances", mat.get_shader_parameter("lens_fade") == fade)
-	t.check("the mark's own alpha is still the pop curve's", is_equal_approx(float(mat.get_shader_parameter("alpha")), 1.0))
+	t.check("the mark's fade is gone", not mark._SHADER.contains("lens_fade"))
+	var drawn := {}
+	for d in [2.0, 7.5, 12.0]:
+		mark.clear()
+		mark.fire(Vector3(0.0, 0.0, -d), 3.0, Color.WHITE)
+		var slot: Dictionary = mark._slots[mark._next - 1 if mark._next > 0 else KillMark.POOL - 1]
+		slot["t"] = KillMark.POP
+		mark._draw(slot)
+		drawn[d] = (slot["node"] as Node3D).basis.get_scale().x
+		var m: ShaderMaterial = slot["mat"]
+		t.check("alpha at %s m is the pop curve's, not faded" % d, is_equal_approx(float(m.get_shader_parameter("alpha")),
+			float(KillMark.shape_at(KillMark.POP, 0)["alpha"])))
+	var natural := 1.5 * KillMark.OVERSHOOT
+	var screen_cap: float = (KillMark as GDScript).get_script_constant_map().get("SCREEN_CAP", 0.0)
+	var cap_half: float = screen_cap * 2.0 * 2.0 * tan(deg_to_rad(cam.fov) * 0.5) * 0.5
+	t.check("at 7.5 m the mark is today's size", is_equal_approx(drawn[7.5], natural))
+	t.check("beyond that the mark is today's size", is_equal_approx(drawn[12.0], natural))
+	t.check("at 2 m the mark is capped to the share of the view", is_equal_approx(drawn[2.0], cap_half) and drawn[2.0] < natural * 0.5)
 	quit(t.verdict())

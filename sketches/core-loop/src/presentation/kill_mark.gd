@@ -2,7 +2,6 @@ extends Node3D
 
 const Palette := preload("res://src/core/palette.gd")
 const FlashGuard := preload("res://src/presentation/flash_guard.gd")
-const FxLibrary := preload("res://src/presentation/fx_library.gd")
 
 # The kill mark (FX-01): a kill's own punctuation, so a kill never reads as a bigger hit. The
 # hit draws thin copper spokes (vfx.gd "burst"); a kill draws a filled comic burst with ten
@@ -31,6 +30,12 @@ const CARD_TILT := 0.21
 const RENDER_PRIORITY := 0
 # How hot the burst starts, before FlashGuard.whiten.
 const HEAT := 0.8
+# Near the lens the mark keeps its alpha (a kill must never read as a hit) but shrinks so its width
+# is at most this share of the view's height (PF-53: with the arm against a wall the lens sits about
+# 2 m from the ball and a 3 m mark filled the screen). 0.4 leaves today's mark whole at the play
+# distance; inside CAP_WITHIN_M only, so a merged kill's bigger mark at range is not touched.
+const SCREEN_CAP := 0.4
+const CAP_WITHIN_M := 7.5
 
 const _SHADER := """
 shader_type spatial;
@@ -44,9 +49,6 @@ uniform int mode = 0;
 uniform vec3 INK : source_color;
 uniform vec3 LEDGER : source_color;
 uniform vec3 RUST : source_color;
-// Fades out near the lens, by the puffs' distances (PF-53): metres from the eye, gone at x, whole at y.
-uniform vec2 lens_fade;
-varying float v_eye;
 
 float hash(float n) {
 	return fract(sin(n * 91.345) * 47453.5453);
@@ -59,7 +61,6 @@ void vertex() {
 	float k = length(MODEL_MATRIX[0].xyz);
 	vec3 world = MODEL_MATRIX[3].xyz + (INV_VIEW_MATRIX[0].xyz * v.x + INV_VIEW_MATRIX[1].xyz * v.y) * k;
 	POSITION = PROJECTION_MATRIX * VIEW_MATRIX * vec4(world, 1.0);
-	v_eye = length((VIEW_MATRIX * vec4(MODEL_MATRIX[3].xyz, 1.0)).xyz);
 }
 
 vec4 burst(vec2 p) {
@@ -97,7 +98,7 @@ void fragment() {
 		discard;
 	}
 	ALBEDO = c.rgb;
-	ALPHA = alpha * smoothstep(lens_fade.x, lens_fade.y, v_eye);
+	ALPHA = alpha;
 }
 """
 
@@ -124,7 +125,6 @@ func _init() -> void:
 		mat.set_shader_parameter("INK", Palette.CHARCOAL)
 		mat.set_shader_parameter("LEDGER", Palette.LEDGER)
 		mat.set_shader_parameter("RUST", Palette.RUST)
-		mat.set_shader_parameter("lens_fade", FxLibrary.LENS_FADE)
 		node.material_override = mat
 		node.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		node.top_level = true
@@ -200,12 +200,28 @@ static func shape_at(t: float, mode: int, still := false) -> Dictionary:
 		"alpha": 1.0 if t < 0.45 else 1.0 - (t - 0.45) / 0.55}
 
 
+# The multiplier (1 or less) that keeps a mark of half-width `half_m` at `node` within SCREEN_CAP of
+# the view's height.
+func _cap_for(node: Node3D, half_m: float) -> float:
+	var cam := get_viewport().get_camera_3d() if is_inside_tree() else null
+	if cam == null:
+		return 1.0
+	return cap(half_m, node.global_position.distance_to(cam.global_position), cam.fov)
+
+
+static func cap(half_m: float, eye_m: float, fov_deg: float) -> float:
+	if eye_m >= CAP_WITHIN_M or half_m <= 0.0:
+		return 1.0
+	var view_h := 2.0 * eye_m * tan(deg_to_rad(fov_deg) * 0.5)
+	return minf(1.0, SCREEN_CAP * view_h * 0.5 / half_m)
+
+
 func _draw(slot: Dictionary) -> void:
 	var t: float = slot["t"]
 	var mode: int = slot["mode"]
 	var look := shape_at(t, mode, reduced_motion)
 	var node: MeshInstance3D = slot["node"]
-	node.basis = Basis.IDENTITY.scaled(Vector3.ONE * slot["size"] * float(look["scale"]))
+	node.basis = Basis.IDENTITY.scaled(Vector3.ONE * slot["size"] * float(look["scale"]) * _cap_for(node, slot["size"] * float(look["scale"])))
 	var mat: ShaderMaterial = slot["mat"]
 	mat.set_shader_parameter("heat", look["heat"])
 	mat.set_shader_parameter("alpha", float(look["alpha"]) * float(slot["alpha"]))
