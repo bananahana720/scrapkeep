@@ -198,6 +198,12 @@ const HAZE_FILL := 1.15
 const LIVE_SCORCH := 0.4
 const LIVE_SCORCH_ALPHA := 0.8
 const AIR_LIVE_ALPHA := 0.61
+# A live ring's fill breathes (PF-16, w42 film: Brindle's live slag ring read as floor paint
+# because a full fill reads no time). The tint runs from its scorched core at the moment the ring
+# goes live toward the hazard tone by LIVE_PULSE_MIX and back, once every LIVE_PULSE_SECONDS.
+# Only the tint moves: alpha, geometry and contains() are the committed ring's.
+const LIVE_PULSE_SECONDS := 1.6
+const LIVE_PULSE_MIX := 0.65
 const TELEGRAPH_FLAG := "telegraph"
 # The telegraph row's looks, Tuning's option order. "clear" and "edges" are the haze look made less
 # obstructive (Andrew, 13 Nov 2026: the warnings hid the attack they warn of; ruling cq candidates):
@@ -442,9 +448,19 @@ static func fill_tint(d: Dictionary) -> Color:
 	if haze() and stance(d["tone"]) == "hostile":
 		if d.get("air", false):
 			return Color(d.get("live_tone", d["tone"]), AIR_LIVE_ALPHA)
-		return Color(Palette.HAZARD.lerp(Palette.CHARCOAL, LIVE_SCORCH), LIVE_SCORCH_ALPHA)
+		return Color(_pulsed(Palette.HAZARD.lerp(Palette.CHARCOAL, LIVE_SCORCH), Palette.HAZARD, d), LIVE_SCORCH_ALPHA)
 	var live_tone: Color = d.get("live_tone", d["tone"])
-	return Color(live_tone, LIVE_ALPHA)
+	return Color(_pulsed(live_tone, d["tone"], d), LIVE_ALPHA)
+
+
+# `core` while the mark has no live age (a descriptor that does not carry one stays still), else
+# a slow swing from `core` toward `tone` and back, starting at `core` the moment it goes live.
+static func _pulsed(core: Color, tone: Color, d: Dictionary) -> Color:
+	if not d.has("live_age"):
+		return core
+	var swing := 0.5 - 0.5 * cos(TAU * float(d["live_age"]) / LIVE_PULSE_SECONDS)
+	# Squared, so the first moments after going live are still the scorched core's own tone.
+	return core.lerp(tone, LIVE_PULSE_MIX * swing * swing)
 
 
 # Every mark a descriptor draws, static (drawn once) or motion (redrawn as it runs).
