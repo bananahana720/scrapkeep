@@ -843,13 +843,14 @@ func word(id: String, at: Vector3, color := Color.TRANSPARENT, foe = null) -> bo
 			# A pixel past the gap: placed flush on the grown body's edge, float rounding put it on the foe one run in four.
 			spots.append([cam.project_position(Vector2(p.x, whole.position.y - WORD_WARNING_GAP - tall * 0.6 - 1.0), maxf(depth, cam.near + 0.1)), right_of_ball])
 		# Then a short fixed search beside the ball, so a fight that covers the asked spot still leaves
-		# somewhere to stand: at the ball's height on its two sides, then below it on both. The side the
+		# somewhere to stand: at the ball's height on its two sides, then below it, then above it, then two
+		# drops below and above (a caption or a close-up panel beside the ball covers the near ones). The side the
 		# word was asked on goes first. Each spot is pushed out of the lane ahead of the ball like the
 		# asked one, and the word runs away from the ball (TONE-BIBLE pillar 2).
 		var ball: Vector3 = player.shown_position()
 		var half := _half_height(cam, ball)
 		var first_side := 1.0 if right_of_ball else -1.0
-		for drop in [0.0, SPOT_DROP]:
+		for drop in [0.0, SPOT_DROP, -SPOT_DROP, 2.0 * SPOT_DROP, -2.0 * SPOT_DROP]:
 			for sgn in [first_side, -first_side]:
 				var near := clear_of_lane(ball + side * half * SPOT_BESIDE * sgn - cam.global_basis.y * half * drop)
 				spots.append([near, sgn > 0.0])
