@@ -184,9 +184,9 @@ const ROWS := {
 	"prompt_shown": {"group": "movement", "color": Palette.SAND, "shape": "none", "sound": "ui_tick", "hud": "", "objective": "", "priority": 0},
 	"cause_armed": {"group": "combat", "color": Palette.SAND, "shape": "none", "sound": "ui_tick", "hud": "", "objective": "", "priority": 0},
 	"cause_fired": {"group": "combat", "color": Palette.SAND, "shape": "none", "sound": "ui_tick", "hud": "", "objective": "", "priority": 0},
-	"drop_landed": {"group": "movement", "color": Palette.SAND, "shape": "none", "sound": "ui_tick", "hud": "", "objective": "", "priority": 0},
-	"missed_drop": {"group": "movement", "color": Palette.SAND, "shape": "none", "sound": "ui_tick", "hud": "", "objective": "", "priority": 0},
-	"evolution_fired": {"group": "economy", "color": Palette.SAND, "shape": "none", "sound": "ui_tick", "hud": "", "objective": "", "priority": 0},
+	"drop_landed": {"group": "movement", "color": Palette.SAND, "shape": "none", "sound": "ui_tick", "sound_next": "drop_thud", "hud": "", "objective": "", "priority": 1},
+	"missed_drop": {"group": "movement", "color": Palette.SAND, "shape": "none", "sound": "ui_tick", "sound_next": "drop_whiff", "hud": "", "objective": "", "priority": 1},
+	"evolution_fired": {"group": "economy", "color": Palette.SAND, "shape": "none", "sound": "ui_tick", "sound_next": "evolution_fired", "hud": "", "objective": "", "priority": 1},
 	"posture_changed": {"group": "combat", "color": Palette.SAND, "shape": "none", "sound": "drop_landing", "hud": "", "objective": "", "priority": 0},
 	# The skill bar and the ultimate (design-v3/SKILL-BAR.md section 7). `sound` is a baked id
 	# standing in; `sound_next` names the new cue the ultimate unit bakes. Live mint is "your
@@ -878,7 +878,7 @@ const STATE_ROWS := {
 	"interrupted": {"color": "live", "motion": "none", "shape": "star", "sound": NONE, "verb": NONE, "word": ""},
 	"held": {"color": "hazard", "motion": "steady", "shape": "bar", "sound": "hold_pit", "verb": NONE, "word": ""},
 	"beacon_sealed": {"color": "slate", "motion": "none", "shape": "ring", "sound": NONE, "verb": NONE, "word": ""},
-	"beacon_open": {"color": "amber", "motion": "steady", "shape": "ring", "sound": NONE, "verb": NONE, "word": ""},
+	"beacon_open": {"color": "amber", "motion": "steady", "shape": "ring", "sound": "beacon_open_chime", "verb": NONE, "word": ""},
 	"wearing": {"color": "rust", "motion": "steady", "shape": "chevron", "sound": NONE, "verb": NONE, "word": ""},
 	# Damage families (FIELDS-AND-CASTS section 6): the first resisted and weak hit on an armour
 	# class each run stamp their word; once its codex entry is known the class wears its icon.
@@ -1013,6 +1013,8 @@ static func activity_color(id: String) -> Color:
 const UI_ROWS := {
 	# A presentation sub-fact of posture_changed, not another bus signal.
 	"posture_break": {"group": "combat", "color": Palette.SAND, "shape": "burst", "sound": "drop_landing", "hud": "", "objective": "", "priority": 1},
+	# Another sub-fact of posture_changed: the Warden's guard climbed to GUARD_CRITICAL, one more hit from the stagger (audio.gd).
+	"guard_critical": {"group": "combat", "color": Palette.HAZARD, "shape": "bar", "sound": "guard_creak", "hud": "", "objective": "", "priority": 2},
 	"ability_ready": {"group": "combat", "color": Palette.SAND, "shape": "ring", "sound": "class_motif", "hud": "", "objective": "", "priority": 1},
 	"ability_cooling": {"group": "combat", "color": Palette.VERDIGRIS, "shape": "ring", "sound": "ui_tick", "hud": "", "objective": "", "priority": 0},
 	"ability_active": {"group": "combat", "color": Palette.SAND, "shape": "star", "sound": "ui_tick", "hud": "", "objective": "", "priority": 0},
@@ -1024,7 +1026,7 @@ const UI_ROWS := {
 	"key_glyph": {"group": "flow", "color": Palette.SAND, "shape": "square", "sound": "ui_tick", "hud": "", "objective": "", "priority": 1},
 	"run_timer": {"group": "flow", "color": Palette.SAND, "shape": "ring", "sound": "ui_tick", "hud": "", "objective": "", "priority": 0},
 	"callout_scrap": {"group": "economy", "color": Palette.AMBER, "shape": "square", "sound": "callout_chime", "hud": "Scrap = heft", "objective": "", "priority": 2},
-	"callout_warden": {"group": "flow", "color": Palette.HAZARD, "shape": "cross", "sound": "callout_chime", "hud": "Break it", "objective": "", "priority": 2},
+	"callout_warden": {"group": "flow", "color": Palette.HAZARD, "shape": "cross", "sound": "callout_chime", "sound_next": "callout_warden_chime", "hud": "Break it", "objective": "", "priority": 2},
 	"callout_gates": {"group": "economy", "color": Palette.AMBER, "shape": "diamond", "sound": "callout_chime", "hud": "Roll through", "objective": "", "priority": 2},
 	"callout_notes": {"group": "flow", "color": Palette.SAND, "shape": "square", "sound": "callout_chime", "hud": "Hold {key_tab} for notes", "objective": "", "priority": 2},
 	# A fight's own hint, toasted whenever its boss module asks (hud.gd _step_fight_hint). Brindle's

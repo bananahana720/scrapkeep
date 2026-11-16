@@ -88,6 +88,8 @@ const DANGER_SOUNDS := ["hurt", "enemy_arrive", "boss_telegraph", "ratchet_cue",
 	# A rubble fall's warnings (rubble_fall.gd warn_sound) and the arena's crew-arrival whistle (arena_wave,
 	# sluice_warning): each comes before a hit or a crew, as enemy_arrive does.
 	"prop_crew_strain", "cave_in_rumble", "arena_wave_whistle",
+	# The Warden's guard about to break (audio.gd, guard_critical): it comes before the stagger and the hit it answers.
+	"guard_creak",
 	# Brindle's five wind-ups (audio.gd BRINDLE_TELEGRAPHS), each its own tell of the attack it warns of.
 	"tele_crane_sweep", "tele_slag_ring", "tele_charge", "tele_charge_wall", "tele_eject"]
 # Pitched cues that follow the live key (a lifted Warden plays its chimes in Eb). The combat
@@ -111,7 +113,7 @@ const KEYED_SOUNDS := ["panel_note", "panel_jackpot", "line_claw_drag", "armor_r
 	"sluice_siren_two_tone", "ride_cable_clink", "steam_whistle_rise",
 	# The camp, the menus' rise and fall, and the ready and found sounds.
 	"lounge_flip", "bay_bell_ring", "marble_tick_ladder", "bay_lounge_in", "menu_move", "menu_confirm", "menu_back",
-	"ultimate_ready", "found_twinkle",
+	"ultimate_ready", "found_twinkle", "beacon_open_chime", "callout_warden_chime",
 	# --- P-C Tally keyed sounds ---
 	"plate_tally", "clip_tally", "stroke_tally", "settle_tally",
 	# --- end Tally ---
@@ -211,6 +213,8 @@ const TRIM_DB := {
 	"lounge_flip": -7.0, "bay_bell_ring": -6.0, "marble_tick_ladder": -10.0, "pins_crash": -5.0, "bay_lounge_in": -8.0,
 	"bay_slingshot_out": -7.0, "menu_move": -13.0, "menu_confirm": -10.0, "menu_back": -10.0, "ultimate_ready": -5.0,
 	"found_twinkle": -8.0, "verb_fail": -9.0, "gauge_dry_click": -10.0,
+	# The fight facts that had no sound: a drop that threw enemies, a drop that threw none, the guard about to break, the beacon opening.
+	"drop_thud": -7.0, "drop_whiff": -11.0, "guard_creak": -6.0, "beacon_open_chime": -9.0, "callout_warden_chime": -8.0,
 	# Durability prototype: the plate shed in three sizes and the reclaim chime.
 	"armor_shed_small": -6.0, "armor_shed": -5.0, "armor_shed_big": -4.0, "armor_reclaim": -7.0,
 	"armor_deflect": -10.0,
@@ -1421,6 +1425,16 @@ static func _bake(id: String) -> PackedFloat32Array:
 			return _found_twinkle()
 		"gauge_dry_click":
 			return _gauge_dry_click()
+		"drop_thud":
+			return _drop_thud()
+		"drop_whiff":
+			return _drop_whiff()
+		"guard_creak":
+			return _guard_creak()
+		"beacon_open_chime":
+			return _beacon_open_chime()
+		"callout_warden_chime":
+			return _callout_warden_chime()
 	if id.begins_with(CAUSE_NOTE):
 		return _mix([[_cut(_n("mallet", int(id.trim_prefix(CAUSE_NOTE))), 0.6), 0, 1.0]])
 	if id.begins_with(GRID_NOTE):
@@ -3037,6 +3051,36 @@ static func _ultimate_ready() -> PackedFloat32Array:
 static func _found_twinkle() -> PackedFloat32Array:
 	return _mix([[_cut(_n("mallet", 86), 0.2), 0, 0.7], [_cut(_n("mallet", 89), 0.2), Synth.seconds(0.07), 0.7],
 		[_cut(_n("bell", 93), 0.5, 1800), Synth.seconds(0.14), 0.8], [_noise(0.15, 6000.0, 6000.0, 22.0, 0.002), Synth.seconds(0.14), 0.15]])
+
+
+# --- The fight facts that had no sound ---------------------------------------------------------
+
+# A drop that threw enemies: a soft low thud with a short woody knock over it, a reward that asks nothing.
+static func _drop_thud() -> PackedFloat32Array:
+	return _mix([[_tone(0.16, _hz(55), _hz(41), "sine", 22.0), 0, 0.9], [_noise(0.05, 1400.0, 600.0, 60.0, 0.001), 0, 0.35],
+		[_cut(_n("mallet", 62), 0.12), Synth.seconds(0.02), 0.3]])
+
+
+# A drop that threw nobody: a breath of air and a soft sigh downward, no knock. A no that costs nothing.
+static func _drop_whiff() -> PackedFloat32Array:
+	return _mix([[_noise(0.22, 3200.0, 900.0, 14.0, 0.02), 0, 0.5], [_tone(0.2, _hz(67), _hz(60), "sine", 14.0), Synth.seconds(0.03), 0.5]])
+
+
+# The Warden's guard about to break: a dark saw straining upward under a groaning metal sweep, then one dry crack.
+static func _guard_creak() -> PackedFloat32Array:
+	return _mix([[_tone(0.45, _hz(38), _hz(45), "saw_dark", 4.0), 0, 0.8], [_fm_sweep(0.4, 380.0, 1700.0, 0.7, 6.0), Synth.seconds(0.04), 0.5],
+		[_noise(0.04, 3500.0, 2500.0, 90.0, 0.001), Synth.seconds(0.3), 0.5]])
+
+
+# The Warden callout: the callout's bell, dropped to a falling minor third so "break it" sounds like a task, not a prize.
+static func _callout_warden_chime() -> PackedFloat32Array:
+	return _mix([[_cut(_n("bell", 77), 0.4, 1800), 0, 0.8], [_cut(_n("bell", 74), 0.55, 1800), Synth.seconds(0.1), 0.75]])
+
+
+# The beacon's ring turning open: two bells a fifth apart rising, with a glint on top.
+static func _beacon_open_chime() -> PackedFloat32Array:
+	return _mix([[_cut(_n("bell", 81), 0.5, 1800), 0, 0.8], [_cut(_n("bell", 88), 0.7, 2200), Synth.seconds(0.12), 0.85],
+		[_cut(_n("bell", 93), 0.5, 2200), Synth.seconds(0.2), 0.3]])
 
 
 # A gauge let go: two dry clicks and a short low drop, a no that asks nothing of the player.

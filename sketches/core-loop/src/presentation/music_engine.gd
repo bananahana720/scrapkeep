@@ -738,6 +738,15 @@ func parameters_stage_entered() -> void:
 	_parameter_danger_floor = 0.0
 
 
+# A new run reads nothing from the run before: the release a Warden's break left, and the armour
+# reading a death left (below ARMOUR_STRIP_AT it strips the lead), are gone before the band's
+# first stage primes from the committed values.
+func parameters_run_started() -> void:
+	parameters_stage_entered()
+	parameter_committed_released = false
+	parameter_committed_values.erase("armour")
+
+
 # An arena has no landing phrase to wait for: the fight's band starts with the melody, so
 # the committed release clears now as well, and the ACE player (audio.gd) is told the same.
 func parameters_arena_entered() -> void:

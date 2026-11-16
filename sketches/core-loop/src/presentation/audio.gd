@@ -174,6 +174,10 @@ var _line_claw_stream: AudioStreamWAV
 const RIVET_LINE := {"punch": "rivet_line_punch", "arrive": "rivet_line_arrive", "motif": "rivet", "roll_step": 0.0625}
 # --- end Rivet ---
 const POSTURE_QUARTER := 25.0
+# The guard bar level at which the Warden is one hit from its stagger: guard_critical sounds once on the way up.
+const GUARD_CRITICAL := 85.0
+const GUARD_CRITICAL_REARM := 60.0
+const BEACON_OPEN_DB := -4.0
 const POSTURE_PHRASE := 0
 const SHATTER_LOW := "chunk_low"
 # Event progress until the spine publishes event_progress(event_id, fraction): the
@@ -196,6 +200,8 @@ var ctx
 var _posture_seen := {}
 # The fewest guard steps each Warden has been seen with (_guard_step_fell).
 var _guard_steps := {}
+# Warden instance ids whose guard already warned on this climb (cleared when the bar falls or staggers).
+var _guard_warned := {}
 # True from a charge cue the Warden began until vent_erupted or a stagger cuts it.
 var _warden_charging := false
 # Events announced with no lead, until each starts: see _on_event_announced.
@@ -2291,6 +2297,9 @@ func wire_optional() -> void:
 		if not Activities.RULES.get(id, {}).has("bundle"):
 			play("activity_done", 0.0, 1.0, "SFX", Rows.heard(EventKinds.activity_row(id), cue_context())))
 	_listen_optional(events, "core_gained", _on_core)
+	_listen_optional(events, "drop_landed", func(_hits: int): play("drop_landed"))
+	_listen_optional(events, "missed_drop", func(): play("missed_drop"), true)
+	_listen_optional(events, "evolution_fired", func(_part: String): play("evolution_fired"))
 	_listen_optional(events, "quick_break", func(_stage: int, _seconds: float, _at: Vector3): play("quick_break"))
 	_listen_optional(events, "near_miss", _on_near_miss)
 	_listen_optional(events, "synergy_discovered", _on_synergy)
@@ -4138,6 +4147,7 @@ func _on_posture_changed(enemy: Node3D, posture: float, staggered: bool) -> void
 		_stagger_chord()
 		_cut_charge()
 	var shattered := chunks < int(seen[1])
+	_guard_warning(enemy, posture, staggered)
 	if shattered:
 		play("posture_changed", 6.0, 1.0, "SFX", Rows.heard(EventKinds.state_row("chunk_shatter"), cue_context()))
 		play("posture_changed", 6.0, 1.0, "SFX", SHATTER_LOW)
@@ -4151,6 +4161,20 @@ func _on_posture_changed(enemy: Node3D, posture: float, staggered: bool) -> void
 		# quarter gone: a real chunk shattered with some left lands the drop there too.
 		var fell := _guard_step_fell(enemy, bool(seen[0]) and not staggered)
 		_follow_warden_form(posture, staggered, (fell or (shattered and chunks > 0)) and not staggered)
+
+
+# The guard bar reaching GUARD_CRITICAL while the Warden stands: one warning per climb, re-armed once
+# the bar falls back under GUARD_CRITICAL_REARM or a stagger opens.
+func _guard_warning(enemy: Node3D, posture: float, staggered: bool) -> void:
+	if not _on_posture_fight(enemy):
+		return
+	var id := enemy.get_instance_id()
+	if staggered or posture < GUARD_CRITICAL_REARM:
+		_guard_warned.erase(id)
+		return
+	if posture >= GUARD_CRITICAL and not _guard_warned.has(id):
+		_guard_warned[id] = true
+		play("guard_critical")
 
 
 # Whether this reading took a step off the Warden's guard and left it standing: the hit that
@@ -4498,6 +4522,7 @@ func _flush_flow() -> void:
 				_radio_drop("flow")
 				_disarm_launch()
 				engine.cancel_pending()
+				engine.parameters_run_started()
 				var start := on_beat("run_started", 0.0, true)
 				if start >= 0:
 					engine.schedule_restart(start, MusicEngine.PLAY, _stage_theme(1))
@@ -4609,6 +4634,10 @@ func _flush_flow() -> void:
 					var at := engine.unseal_drop()
 					engine.schedule_stinger_at(Rows.sound("beacon_unsealed"), at, story_duck_db("beacon_unsealed"))
 					cue_log.append(["beacon_unsealed", Rows.sound("beacon_unsealed"), "beat", at, 1.0])
+					# The ring turning open rides the stinger's downbeat, under it.
+					var opened := Rows.heard(EventKinds.state_row("beacon_open"))
+					engine.schedule_stinger_at(opened, at, BEACON_OPEN_DB)
+					cue_log.append(["beacon_open", opened, "beat", at, 1.0])
 				else:
 					# A Warden broken inside its pivot bar: the track switch is void.
 					engine.drop_pending_track("warden")
