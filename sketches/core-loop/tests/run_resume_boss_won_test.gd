@@ -1,4 +1,5 @@
 extends SceneTree
+# smoke: timeout=300s (74 s run alone at load 51 on the PC at stage/alpha-w43 d99352d2 on 2026-11-16, killed once at the 180 s default cap in sketch:fast at load 86 with every check passed)
 
 const Intent := preload("res://src/movement/intent.gd")
 const RunStore := preload("res://src/core/run_store.gd")
