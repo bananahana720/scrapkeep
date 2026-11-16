@@ -112,7 +112,10 @@ func _physics_process(_delta: float) -> bool:
 				rig.arm.spring_length += 3.0
 				var arm: Dictionary = _film.view_truth()["arm"]
 				_report("arm easing out", arm["body"] == null and arm.get("easing") == true and arm["hit"] < arm["wanted"] - 2.5, "arm %s" % [arm])
-				rig.arm.spring_length -= 3.0
+				# Settled: the arm wants no more than it reached, nothing in the way, so it is not easing.
+				rig.arm.spring_length = rig.arm.get_hit_length()
+				var settled: Dictionary = _film.view_truth()["arm"]
+				_report("arm settled", settled["body"] == null and settled.get("easing") == false, "arm %s" % [settled])
 				rig.set_process(true)
 				_phase = "slots"
 				_wait = 0
