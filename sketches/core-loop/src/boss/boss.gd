@@ -1198,7 +1198,9 @@ func _begin_eject() -> void:
 	_publish("boss_attack_telegraphed", ["eject", Rules.EJECT_FLIGHT])
 
 
-const EJECT_MARK_LIVE := 0.5
+# The scooter drives off the landing at SCOOTER_SPEED and leaves the catch circle after about 0.32 s,
+# so the mark stays live no longer than that.
+const EJECT_MARK_LIVE := 0.3
 
 
 # The scooter's landing spot, marked on the ground from the cue until it lands. The eject
