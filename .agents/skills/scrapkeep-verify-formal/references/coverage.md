@@ -28,7 +28,7 @@ Each action in the model (`RunFlow.tla`, in the `models` folder beside this one)
 | --- | --- | --- |
 | `UntakeOnRetry` | `retry_stage` calls `_untake` | in place |
 | `UntakeOnEnd` | `_end_run` calls `_untake` | in place |
-| `UntakeOnNewRun` | `_begin_run` calls `_untake` | missing (finding F-1) |
+| `UntakeOnNewRun` | `_begin_run` calls `_untake` | in place (added for finding F-1) |
 | `VanishGuard` | the tick calls `_warden_vanished` | in place |
 | `EndGuard` | `_on_player_died` returns unless `in_play()` | in place |
 | `BusyRefuses` | `sketches/core-loop/src/game.gd` `play_launch_take` returns false while the swipe is busy | in place |
@@ -49,4 +49,4 @@ Each action in the model (`RunFlow.tla`, in the `models` folder beside this one)
 
 The model was last confirmed to describe the code at:
 
-`3adc2fd0e` (stage/alpha-w42, 16 November 2026)
+`bbd157f44` (branch w43/new-run-untake, 16 November 2026; before it, `3adc2fd0e`)

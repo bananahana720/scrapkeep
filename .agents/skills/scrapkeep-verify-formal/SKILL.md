@@ -41,6 +41,7 @@ Each rule is one promise to the player. [references/coverage.md](references/cove
 | --- | --- | --- |
 | `guarded-store`, `guarded-nostore` | every guard in place, the real game and the store-less test flow | no break |
 | `today-store`, `today-nostore` | the code at the sync commit | only the open findings in [references/findings.md](references/findings.md) |
+| `broken-newrun` | `_begin_run` without `_untake` | `TakeNamesHeldPart` breaks |
 | `broken-retry` | `retry_stage` without `_untake` | `TakeNamesHeldPart` breaks |
 | `broken-end` | `_end_run` without `_untake` | `TakeNamesHeldPart` breaks |
 | `broken-vanish` | no `_warden_vanished` tick | `WardenGoneOpens` breaks |

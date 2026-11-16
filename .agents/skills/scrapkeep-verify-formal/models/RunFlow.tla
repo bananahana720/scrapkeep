@@ -17,7 +17,7 @@ CONSTANTS
   \* broken variant: it shows that the property watching it can fail.
   UntakeOnRetry,   \* flow.retry_stage calls _untake
   UntakeOnEnd,     \* flow._end_run calls _untake
-  UntakeOnNewRun,  \* flow._begin_run calls _untake (missing at the sync commit: references/findings.md F-1)
+  UntakeOnNewRun,  \* flow._begin_run calls _untake (added for references/findings.md F-1)
   VanishGuard,     \* flow's tick calls _warden_vanished for a sealed stage with no Warden
   EndGuard,        \* flow._on_player_died returns unless in_play
   BusyRefuses,     \* game.play_launch_take returns false while the swipe node is busy
