@@ -67,8 +67,9 @@ for row in run["cue_rows"]:
         stops.append((t, sound))
         continue
     if how == "room" and t >= 0:
-        # [t, kind, sound, "room", hold seconds, dB]: the game's MixRows.MAKE_ROOM.
-        rooms.append((t, sound, float(row[4]), float(row[5])))
+        # [t, kind, sound, "room", hold seconds, dB, only]: the game's MixRows.MAKE_ROOM. A row
+        # with an "only" list (audio.gd logs it; older logs have none) ducks just those sounds.
+        rooms.append((t, sound, float(row[4]), float(row[5]), list(row[6]) if len(row) > 6 and row[6] else []))
         continue
     # June's answers (the set director) are booked on the grid and log the level they play at.
     placed = how == "now" or (kind == "set_answer" and len(row) > 5 and row[5] is not None)
@@ -115,12 +116,18 @@ for t, sound in stops:
             c["stolen"] = True
             c["stopped"] = True
 # A room row: every voice but the asking sound's own and a warning sits db lower for the hold
-# (audio.gd _make_room), voices already sounding and ones starting inside it alike.
-for t, owner, hold, db in rooms:
+# (audio.gd _make_room), voices already sounding and ones starting inside it alike. A row with an
+# "only" list ducks just the sounds it names, warnings included, and leaves every other voice.
+for t, owner, hold, db, only in rooms:
     r0, r1 = int(t * RATE), int((t + hold) * RATE)
     g = 10 ** (db / 20)
     for c in cues:
-        if c["sound"] == owner or c["sound"] in DANGER_SOUNDS:
+        if c["sound"] == owner:
+            continue
+        if only:
+            if c["sound"] not in only:
+                continue
+        elif c["sound"] in DANGER_SOUNDS:
             continue
         s0, s1 = max(r0 - c["a"], 0), min(r1 - c["a"], len(c["x"]))
         if s0 < s1:

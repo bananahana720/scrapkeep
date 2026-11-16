@@ -1753,7 +1753,8 @@ func _make_room(kind: String, sound: String) -> void:
 		return
 	_room_for = sound
 	_room_until_ms = Time.get_ticks_msec() + int(hold * 1000.0)
-	cue_log.append([kind, sound, "room", engine.clock, hold, float(MixRows.MAKE_ROOM[sound]["db"])])
+	# [kind, sound, "room", clock, hold, dB, the row's "only" list, empty when it names none]: tools/mix/mixsim.py reads it.
+	cue_log.append([kind, sound, "room", engine.clock, hold, float(MixRows.MAKE_ROOM[sound]["db"]), MixRows.MAKE_ROOM[sound].get("only", [])])
 	if _sfx == null:
 		return
 	for id in _voice_db:

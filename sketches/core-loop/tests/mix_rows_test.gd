@@ -169,6 +169,7 @@ func _whoosh_room() -> void:
 	audio.play("near_miss")
 	var rooms: Array = audio.cue_log.filter(func(c): return c[2] == "room")
 	_check("a dodge logs its room", rooms.size() == 1 and rooms[0][1] == "near_whoosh" and is_equal_approx(float(rooms[0][5]), float(row["db"])), str(audio.cue_log))
+	_check("the room log carries the only list for the mix simulator", rooms[0].size() > 6 and rooms[0][6] == ["threat_tear"], str(rooms))
 	_check("the tear steps under the whoosh", is_equal_approx(audio._room_offset("threat_tear"), float(row["db"])), str(audio._room_offset("threat_tear")))
 	_check("the other warnings keep their level", audio._room_offset("threat_hum") == 0.0 and audio._room_offset("boss_telegraph") == 0.0 and audio._room_offset("hurt") == 0.0)
 	_check("a reward is not ducked by the whoosh", audio._room_offset("shop_bell") == 0.0 and audio._room_offset("crit_ping") == 0.0 and audio._room_offset("chain_step") == 0.0)
