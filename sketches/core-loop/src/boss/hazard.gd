@@ -295,6 +295,8 @@ static func _flat(v: Vector3) -> Vector3:
 func descriptor() -> Dictionary:
 	var d := {"type": type, "tone": Palette.HAZARD if color == Palette.BRASS else color, "centre": centre, "reach": reach, "progress": clampf(age / warn_seconds, 0.0, 1.0),
 		"live": state == LIVE}
+	if state == LIVE:
+		d["live_age"] = maxf(age - warn_seconds, 0.0)
 	match shape:
 		Shape.SECTOR:
 			d.merge({"form": "radial", "r_in": r_in, "r_out": r_out, "a0": a_from, "a1": a_to})

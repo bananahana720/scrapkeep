@@ -121,6 +121,8 @@ var _launched := false
 var _flight := 0.0
 # The launch take (launch_take.gd) rides this launch: it closes during the flight and cuts to the next place under it.
 var _seam_take := false
+# The part the gate just gave, for the launch take to stamp (launch_take.gd); "" when none.
+var _taken_part := ""
 var _last_percent := -1
 
 # Run saves (RS3): game hands flow a RunStore in play. Every zone entrance and stage launch is written to it,
@@ -480,6 +482,8 @@ func choose_run_tier(value: int, check_unlock := true) -> bool:
 
 
 func _begin_run(chosen: Resource) -> void:
+	# A new run begun in a launch flight holds no part: the swipe still on screen must not name the old run's.
+	_untake()
 	in_arena = false
 	boss_active = false
 	lap_stats = {}
@@ -505,6 +509,7 @@ func _begin_run(chosen: Resource) -> void:
 	ctx.run.route_seed = int(ctx.tuning.base("route_seed")) if ctx.tuning != null else 0
 	ctx.run.begin(chosen)
 	_seed_companion()
+	_taken_part = ""
 	ctx.events.run_started.emit(chosen.id)
 	if store != null and not store.keep_prev():
 		warn_once("run_prev_backup", "flow: could not keep the old run: %s" % store.last_error)
@@ -584,6 +589,7 @@ func resume_run() -> bool:
 	if ctx.run_log != null:
 		ctx.run_log.abandon_open_run()
 	ctx.run.begin(chosen)
+	_taken_part = ""
 	ctx.events.run_started.emit(chosen.id)
 	ctx.run.from_entrance_doc(doc)
 	_keep_found_pieces()
@@ -767,6 +773,7 @@ func retry_stage() -> void:
 	if in_arena:
 		_retry_arena()
 		return
+	_untake()
 	ctx.run.restore()
 	_launched = false
 	_flight = 0.0
@@ -1205,6 +1212,7 @@ func _drop_lap() -> void:
 # The run is over for good, won or lost: the saved run becomes a tombstone so no Continue
 # can bring it back.
 func _end_run(won: bool) -> void:
+	_untake()
 	_record_end(won)
 	_set_state(SUMMARY)
 	ctx.events.run_ended.emit(won)
@@ -1227,7 +1235,14 @@ func _record_end(won: bool) -> void:
 		push_warning("flow: run save not cleared: %s" % store.last_error)
 
 
-func _on_reward_chosen(_part_id: String) -> void:
+func _on_reward_chosen(part_id: String) -> void:
+	# A scrapless run takes no part from a gate, so the take has nothing to name. World's handler can launch
+	# first, so the take may already be running: it takes the part's name late.
+	var granted := part_id if ctx.build == null or not ctx.build.scrapless() else ""
+	if _seam_take and ctx.root != null and ctx.root.has_method("stamp_launch_take"):
+		ctx.root.stamp_launch_take(granted)
+	else:
+		_taken_part = granted
 	if state == GATES:
 		_set_state(LAUNCH)
 
@@ -1259,9 +1274,18 @@ func _save_cleared(velocity: Vector3) -> void:
 # headless runs cut at once as before. Returns true when the take plays.
 func _play_seam_take() -> bool:
 	var root = ctx.root
+	# Whatever launch this is, the part it gave is spent: no id outlives it to dress a later take.
+	var taken := _taken_part
+	_taken_part = ""
 	if root == null or not root.has_method("play_launch_take") or ctx.stages.is_run_last(ctx.run.stage):
 		return false
-	return root.play_launch_take(_cut_under_cover, _flight_over, _next_drawn, LAUNCH_FLIGHT)
+	return root.play_launch_take(_cut_under_cover, _flight_over, _next_drawn, LAUNCH_FLIGHT, taken)
+
+
+# A retry or a run's end in the flight leaves the part the swipe was told about unheld: the take is told none.
+func _untake() -> void:
+	if _seam_take and ctx.root != null and ctx.root.has_method("stamp_launch_take"):
+		ctx.root.stamp_launch_take("")
 
 
 func _flight_over() -> bool:

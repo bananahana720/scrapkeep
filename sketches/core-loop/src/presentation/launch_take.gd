@@ -10,7 +10,8 @@ extends Node
 # Reduced motion keeps the panel still (no lines turning, no camera move) and shortens the wind to nothing.
 # A stage launch (flow.gd, dam to flume and flume to the Slag Bowl) rides the same take with play_over_flight: the cannon
 # shot is the wind, so the player watches it go, the panel closes over the flight's last COVER_S, and on_cover waits for
-# cover_gate (the flight's end). The launch has stamped its own word, so this take stamps none.
+# cover_gate (the flight's end). The launch has stamped its own word, so this take stamps none, except the part a reward
+# gate just gave: its name and family glyph in its rarity colour, so the gate that vanished on the take is confirmed (PF-22).
 #
 # Only a played game runs it: bots, tests and every headless run call on_cover at once (live is false), so run timing
 # and every run-start test stay as they were. A test sets live (and steps it with advance()) to drive the phases.
@@ -19,6 +20,8 @@ const HighdraftFx := preload("res://src/presentation/highdraft_fx.gd")
 const Palette := preload("res://src/core/palette.gd")
 const UiFonts := preload("res://src/ui/ui_fonts.gd")
 const SHADER := preload("res://src/presentation/launch_take.gdshader")
+const RewardGates := preload("res://src/build/reward_gates.gd")
+const Icons := preload("res://src/ui/icons.gd")
 
 enum { IDLE, WIND, COVER, HOLD, REVEAL }
 
@@ -50,6 +53,7 @@ var _wordless := false
 var _layer: CanvasLayer
 var _panel: ColorRect
 var _word: Label
+var _glyph: TextureRect
 var _material: ShaderMaterial
 
 
@@ -87,6 +91,13 @@ func _ready() -> void:
 	_word.rotation = -0.12
 	_word.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_layer.add_child(_word)
+	_glyph = TextureRect.new()
+	_glyph.name = "PartGlyph"
+	_glyph.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	_glyph.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	_glyph.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_glyph.visible = false
+	_word.add_child(_glyph)
 	_set_progress(0.0)
 	set_process(false)
 
@@ -103,12 +114,12 @@ func play(on_cover: Callable, wind := Callable(), ready_check := Callable()) -> 
 
 # The take over a cannon shot of flight_s: the shot is the wind, so the panel waits and closes over the flight's last
 # COVER_S, and on_cover waits at full cover until cover_gate() says the flight is over. Then the same hold and reveal as
-# play. No word: the launch stamped its own.
-func play_over_flight(on_cover: Callable, cover_gate: Callable, ready_check := Callable(), flight_s := 0.0) -> bool:
-	return _begin(on_cover, Callable(), ready_check, cover_gate, maxf(0.0, flight_s - COVER_S), true)
+# play. No word: the launch stamped its own. With a taken part's id, the stamp is that part's name and glyph; "" keeps it wordless.
+func play_over_flight(on_cover: Callable, cover_gate: Callable, ready_check := Callable(), flight_s := 0.0, taken_part := "") -> bool:
+	return _begin(on_cover, Callable(), ready_check, cover_gate, maxf(0.0, flight_s - COVER_S), true, taken_part)
 
 
-func _begin(on_cover: Callable, wind: Callable, ready_check: Callable, cover_gate: Callable, wind_s: float, wordless: bool) -> bool:
+func _begin(on_cover: Callable, wind: Callable, ready_check: Callable, cover_gate: Callable, wind_s: float, wordless: bool, taken_part := "") -> bool:
 	if busy():
 		return false
 	if not live:
@@ -120,7 +131,8 @@ func _begin(on_cover: Callable, wind: Callable, ready_check: Callable, cover_gat
 	_ready_check = ready_check
 	_cover_gate = cover_gate
 	_wind_s = wind_s
-	_wordless = wordless
+	var stamped := _dress_word(taken_part)
+	_wordless = wordless and not stamped
 	_t = 0.0
 	_layer.visible = true
 	_set_progress(0.0)
@@ -130,6 +142,33 @@ func _begin(on_cover: Callable, wind: Callable, ready_check: Callable, cover_gat
 		wind.call()
 	set_process(true)
 	return true
+
+
+# The part a gate gave, told after the take began (the launch can start before the gate's event reaches its owner).
+func stamp_taken(part_id: String) -> void:
+	if phase == IDLE:
+		return
+	_wordless = not _dress_word(part_id)
+
+
+# The stamp's look: FWOOSH! as ever, or the taken part's name and family glyph in its rarity colour.
+# True when it stamps a part.
+func _dress_word(taken_part: String) -> bool:
+	var look := RewardGates.taken_look(taken_part) if taken_part != "" else {}
+	_word.text = String(look["name"]) if not look.is_empty() else WORD
+	var color: Color = look["color"] if not look.is_empty() else Palette.CHARCOAL
+	_word.add_theme_color_override("font_color", color)
+	_word.add_theme_color_override("font_outline_color", Palette.CHARCOAL if not look.is_empty() else Palette.AMBER)
+	var icon := String(look.get("icon", ""))
+	_glyph.visible = icon != ""
+	if icon != "":
+		var side := 96.0
+		_glyph.texture = Icons.texture(icon)
+		_glyph.modulate = Icons.tint(icon, color)
+		_glyph.size = Vector2(side, side)
+		var extent := _word.get_minimum_size()
+		_glyph.position = Vector2(-side - 16.0, (extent.y - side) * 0.5)
+	return not look.is_empty()
 
 
 func _process(delta: float) -> void:
@@ -183,6 +222,7 @@ func _end() -> void:
 	phase = IDLE
 	_ready_check = Callable()
 	_cover_gate = Callable()
+	_dress_word("")
 	_layer.visible = false
 	_set_progress(0.0)
 	set_process(false)

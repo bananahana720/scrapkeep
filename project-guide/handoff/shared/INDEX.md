@@ -18,3 +18,4 @@ Reference copies that threads read. The coordinator owns them (the local session
 | [world1/effects-critique.md](world1/effects-critique.md) | World 1 effects judged clarity first, then delight: inventory, ranked findings with stills, and how effects scale to worlds 2 and 3 (rows FX-01 to FX-25 in BACKLOG.md) |
 | [world1/gameplay-critique.md](world1/gameplay-critique.md) | World 1 gameplay critique of 12 Nov: ranked findings and the rows they became in BACKLOG.md |
 | [world1/visual-assets-audit.md](world1/visual-assets-audit.md) | World 1 visual assets critique: models, materials, pickups, icons and HUD pieces against the sight persona |
+| [world1/film-w42-88a75e7b/JUDGE.md](world1/film-w42-88a75e7b/JUDGE.md) | The 15 Nov PC film of a first-timer's world 1 run on stage/alpha-w42: the verdict per play finding with picture numbers, the three readers' answers, the game's own row per picture, and the control read |

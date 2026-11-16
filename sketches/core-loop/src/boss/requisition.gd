@@ -3,6 +3,7 @@ extends Node3D
 const AppShell := preload("res://src/core/app_shell.gd")
 const Palette := preload("res://src/core/palette.gd")
 const Target := preload("res://src/boss/boss_target.gd")
+const ChaseCamera := preload("res://src/movement/chase_camera.gd")
 const WorldPrompt := preload("res://src/ui/world_prompt.gd")
 const BossModel := preload("res://src/boss/boss_model.gd")
 const BakeLook := preload("res://src/presentation/bake_look.gd")
@@ -68,6 +69,8 @@ var _model_shield: Node3D
 var _pending_hides := {}
 # [node, local AABB] of each drawn part, found once (drawn_boxes).
 var _drawn_parts: Array = []
+# One camera-only body per drawn box, [body, node, local AABB], so the chase camera meets what is drawn.
+var _camera_bodies: Array = []
 
 
 func build(boss) -> void:
@@ -117,6 +120,48 @@ func build(boss) -> void:
 	plate.name = "BrindlePlate"
 	plate.attach(self, Vector3.UP * PLATE_LIFT, PLATE_REACH)
 	add_child(plate)
+	_build_camera_bodies()
+
+
+# The chase camera's arm and lift probe see layer 4 only for the ship, not the layer-3 hull (the
+# placeholder box is hidden when the model loads). The bodies follow their drawn parts each physics tick.
+func _build_camera_bodies() -> void:
+	drawn_boxes()
+	for part in _drawn_parts:
+		# A cable's 0.25 m swing across the arm would snap the lens in; other readers still see it in drawn_boxes().
+		if part[0] in _cables:
+			continue
+		var body := ChaseCamera.camera_body()
+		body.name = "CameraBox"
+		var shape := CollisionShape3D.new()
+		shape.shape = BoxShape3D.new()
+		body.add_child(shape)
+		add_child(body)
+		_camera_bodies.append([body, part[0], part[1], Vector3.ZERO])
+	_follow_drawn_parts()
+
+
+func _physics_process(_delta: float) -> void:
+	_follow_drawn_parts()
+
+
+func _follow_drawn_parts() -> void:
+	for row in _camera_bodies:
+		var node: Node3D = row[1]
+		var body: AnimatableBody3D = row[0]
+		var shape: CollisionShape3D = body.get_child(0)
+		var live: bool = is_instance_valid(node) and node.is_visible_in_tree()
+		shape.disabled = not live
+		if not live:
+			continue
+		var at: Transform3D = node.global_transform
+		var box: AABB = row[2]
+		var scale := at.basis.get_scale().abs()
+		body.global_transform = Transform3D(at.basis.orthonormalized(), at * box.get_center())
+		var size := (box.size * scale).max(Vector3.ONE * 0.05)
+		if not size.is_equal_approx(row[3]):
+			(shape.shape as BoxShape3D).size = size
+			row[3] = size
 
 
 static func _cable_mesh() -> ArrayMesh:

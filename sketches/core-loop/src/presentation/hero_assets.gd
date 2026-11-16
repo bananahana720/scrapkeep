@@ -2298,6 +2298,7 @@ void fragment() {
 	_hide_warden_tree(warden._kit, rec)
 	_add_warden_strokes(base, warden._look, warden, rec)
 	_wardens[warden.get_instance_id()] = rec
+	warden.fit_camera_shell()
 	warden.tree_exiting.connect(_forget_warden.bind(warden.get_instance_id()), CONNECT_ONE_SHOT)
 	_update_warden(rec)
 	if warden.fight() == "posture" and warden.fleet != null:
@@ -2380,6 +2381,7 @@ func _dress_warden_body(warden) -> void:
 		SignalLifetime.listen(body, warden.mount_driver.took_off, func(_a: int, _b: int): _play_body(rec, ["takeoff", "glide"]))
 		SignalLifetime.listen(body, warden.mount_driver.landed, func(_p: int): _play_body(rec, ["land"]))
 	_wardens[id] = rec
+	warden.fit_camera_shell()
 	warden.tree_exiting.connect(_forget_warden.bind(id), CONNECT_ONE_SHOT)
 	_play_body(rec, ["idle"])
 	_update_warden(rec)
