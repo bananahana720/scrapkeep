@@ -64,6 +64,9 @@ func _rules() -> void:
 		if key == "warden.pulse_cycle_by_stage":
 			_t.eq("warden.pulse_cycle_by_stage ships x0.85 on the flume only", ChallengeDials.value(key), [1.0, 0.85, 1.0, 1.0, 1.0, 1.0])
 			continue
+		if key == "mobs.interval_scale_by_stage":
+			_t.eq("mobs.interval_scale_by_stage ships x0.7 on the flume only (W1-31)", ChallengeDials.value(key), [1.0, 0.7, 1.0, 1.0, 1.0, 1.0])
+			continue
 		_t.eq("%s defaults to six 1.0" % key, ChallengeDials.value(key), [1.0, 1.0, 1.0, 1.0, 1.0, 1.0])
 		var all_one := true
 		for stage in [-1, 0, 1, 2, 3, 4, 5, 6, 7, 99]:
