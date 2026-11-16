@@ -1215,9 +1215,31 @@ func _on_player_hit(amount: float, source_id: String) -> void:
 			if hull > float(into.get("largest_hull_hit", 0.0)):
 				into["largest_hull_hit"] = snappedf(hull, 0.1)
 				into["largest_hull_hit_share"] = snappedf(hull / maxf(float(game.run.max_hp), 1.0), 0.001)
+			_note_worst_window(into, "boss" if in_boss else "s%d" % int(_note.get("stage", 0)), fight_s, amount, hull)
 			if fight_s <= FIRST_45_S:
 				into["hp_lost_45s"] = snappedf(float(into.get("hp_lost_45s", 0.0)) + amount, 0.1)
 				into["hull_lost_45s"] = snappedf(float(into.get("hull_lost_45s", 0.0)) + hull, 0.1)
+
+
+# The fight's worst WORST_WINDOW_S of damage, as hull and as whole hits, for the curve cards (W1-31): a window's sum
+# peaks at a hit, so it is checked at each hit over the hits still inside it. Record only.
+const WORST_WINDOW_S := 60.0
+var _window_hits := {}
+
+
+func _note_worst_window(into: Dictionary, key: String, fight_s: float, amount: float, hull: float) -> void:
+	var hits: Array = _window_hits.get(key, [])
+	hits.append([fight_s, amount, hull])
+	while float(hits[0][0]) <= fight_s - WORST_WINDOW_S:
+		hits.pop_front()
+	_window_hits[key] = hits
+	var hp_sum := 0.0
+	var hull_sum := 0.0
+	for h in hits:
+		hp_sum += float(h[1])
+		hull_sum += float(h[2])
+	into["worst_60s_hp"] = snappedf(maxf(float(into.get("worst_60s_hp", 0.0)), hp_sum), 0.1)
+	into["worst_60s_hull"] = snappedf(maxf(float(into.get("worst_60s_hull", 0.0)), hull_sum), 0.1)
 
 
 func _on_enemy_struck(enemy: Node3D, kind: String, _force: float) -> void:
