@@ -80,7 +80,11 @@ const VOICE_LIMIT := MixRows.VOICE_LIMIT
 const MIN_GAP_MS := MixRows.MIN_GAP_MS
 # Danger sounds pull the bass down so the low end never masks a warning.
 const DANGER_SOUNDS := ["hurt", "enemy_arrive", "boss_telegraph", "ratchet_cue", "klaxon", "threat_up", "death",
-	"threat_tick", "threat_whoosh", "threat_whistle", "threat_hum", "threat_tear", "hold_pit", "hold_bola", "hold_tether", "hold_net", "heat_kettle"]
+	"threat_tick", "threat_whoosh", "threat_whistle", "threat_hum", "threat_tear", "hold_pit", "hold_bola", "hold_tether", "hold_net", "heat_kettle",
+	# The wind-up tells of the roster's attacks (windup_rows.gd), the pack pressure calls and the vent's charge:
+	# each warns of a hit, so each pulls the bass down like the threat rows do.
+	"warn_burrow", "warn_bore", "warn_lure", "warn_cut", "warn_winch", "warn_dive", "warn_tether", "warn_flap", "warn_reel",
+	"jolt_layer_tell", "flank_call", "boil_rumble", "reactor_tick"]
 # Pitched cues that follow the live key (a lifted Warden plays its chimes in Eb). The combat
 # feedback percussion (feedback_set.py) has no key, so it is not here.
 const KEYED_SOUNDS := ["panel_note", "panel_jackpot", "line_claw_drag", "armor_reclaim", "scrap_tick", "cog_tick", "part_get", "core_socket", "found_chime", "gate_through",
@@ -181,6 +185,10 @@ const TRIM_DB := {
 	# Called Shot (loops.md Spec 3) and Heat (Spec 1), each its own sound (sound-gaps 12 Nov): the call
 	# inks with a stamp that climbs, a miss drops dry, and a shell about to cook off whistles like a kettle.
 	"call_ink": -6.0, "call_drop": -8.0, "heat_kettle": -9.0,
+	# Overtime is a bet (loops.md Spec 2): the offer asks, the ring raises the stakes, the pay resolves.
+	# Heat's own three: the shell turning hot, cooling back, and a hit landing on it hot.
+	"overtime_offer": -8.0, "overtime_ring": -5.0, "overtime_pay": -6.0,
+	"heat_rise": -8.0, "heat_cool": -10.0, "heat_hot_hit": -6.0,
 	# Durability prototype: the plate shed in three sizes and the reclaim chime.
 	"armor_shed_small": -6.0, "armor_shed": -5.0, "armor_shed_big": -4.0, "armor_reclaim": -7.0,
 	"armor_deflect": -10.0,
@@ -1323,6 +1331,18 @@ static func _bake(id: String) -> PackedFloat32Array:
 			return _call_drop()
 		"heat_kettle":
 			return _heat_kettle()
+		"overtime_offer":
+			return _overtime_offer()
+		"overtime_ring":
+			return _overtime_ring()
+		"overtime_pay":
+			return _overtime_pay()
+		"heat_rise":
+			return _heat_rise()
+		"heat_cool":
+			return _heat_cool()
+		"heat_hot_hit":
+			return _heat_hot_hit()
 	if id.begins_with(CAUSE_NOTE):
 		return _mix([[_cut(_n("mallet", int(id.trim_prefix(CAUSE_NOTE))), 0.6), 0, 1.0]])
 	if id.begins_with(GRID_NOTE):
@@ -2697,6 +2717,53 @@ static func _heat_kettle() -> PackedFloat32Array:
 		whistle[i] *= swell
 		breath[i] *= swell
 	return _mix([[whistle, 0, 0.8], [breath, 0, 0.18]])
+
+
+# The keeper's bell offers overtime: two soft mallet notes climb and stop on a ninth, a question
+# left open. Nothing is paid yet, so it never resolves to the chord a found item rings.
+static func _overtime_offer() -> PackedFloat32Array:
+	var score := [[0, 69, 1, "mallet", 0.6], [1, 72, 1, "mallet", 0.65], [2, 76, 3, "bell", 0.55]]
+	return _mix([[Synth.render_score(score, 0.1), 0, 1.0]])
+
+
+# The bell is rung and the crew is called: a low toll, a riser that tightens, and a tritone
+# clang on top. It is the risk, so it leans on the dissonance the pay then answers.
+static func _overtime_ring() -> PackedFloat32Array:
+	var toll := [[0, 50, 6, "bell", 0.8], [0, 38, 6, "sub", 0.6], [3, 62, 3, "bell", 0.6], [3, 68, 3, "bell", 0.5]]
+	return _mix([[Synth.render_score(toll, 0.15), 0, 1.0], [_noise(0.5, 500.0, 3600.0, 0.0, 0.3), 0, 0.35]])
+
+
+# The pot pays on the till: a quick spill of coin ticks lands on a D major chord, the bet answered.
+static func _overtime_pay() -> PackedFloat32Array:
+	var parts := []
+	for i in 5:
+		parts.append([_noise(0.025, 3600.0 + 400.0 * i, 2400.0, 90.0), Synth.seconds(0.04 * i), 0.4])
+	var chord := [[0, 62, 5, "keys", 0.5], [0, 66, 5, "keys", 0.4], [0, 69, 5, "keys", 0.4], [0, 78, 5, "bell", 0.55]]
+	parts.append([Synth.render_score(chord, 0.1), Synth.seconds(0.2), 1.0])
+	return _mix(parts)
+
+
+# The shell crosses its hot line: a sweep climbs through a hiss and ends on a brass note.
+static func _heat_rise() -> PackedFloat32Array:
+	var sweep := _fm_sweep(0.5, 180.0, 900.0, 2.5, 3.0)
+	var hiss := _noise(0.5, 1200.0, 5200.0, 0.0, 0.3)
+	var n := hiss.size()
+	for i in n:
+		hiss[i] *= float(i) / n
+	var tail := [[0, 69, 2, "brass", 0.55]]
+	return _mix([[sweep, 0, 0.7], [hiss, 0, 0.25], [Synth.render_score(tail, 0.1), Synth.seconds(0.35), 0.8]])
+
+
+# The shell falls back under the hot line: the same sweep run down and a quick breath of steam.
+static func _heat_cool() -> PackedFloat32Array:
+	var sweep := _fm_sweep(0.55, 700.0, 150.0, 1.5, 4.0)
+	return _mix([[sweep, 0, 0.6], [_noise(0.5, 4200.0, 900.0, 5.0, 0.01), 0, 0.3]])
+
+
+# A hit lands on a hot shell and bites harder: a hard clang over a sizzle.
+static func _heat_hot_hit() -> PackedFloat32Array:
+	return _mix([[_fm(0.3, _hz(60), 1.41, 5.0, 12.0), 0, 0.9], [_noise(0.3, 6200.0, 2600.0, 10.0, 0.002), 0, 0.5],
+		[_tone(0.14, _hz(40), _hz(36), "sine", 20.0), 0, 0.7]])
 
 
 static func _lift_hiss() -> PackedFloat32Array:

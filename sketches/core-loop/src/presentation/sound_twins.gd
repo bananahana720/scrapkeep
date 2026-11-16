@@ -132,6 +132,8 @@ const ACT := [
 		"script": "res://src/combat/rogue.gd", "fn": "_finish_strike", "token": "_show_core()"},
 	{"facts": ["site:audio.gd:_tend_kettle:heat_kettle"], "traced": true, "what": "the shell's rim beats to full heat in the hazard colour over the same last Redline.KETTLE_S as the whistle",
 		"script": "res://src/presentation/player_fx.gd", "fn": "_draw_overdrive", "token": "red.kettle_pulse()"},
+	{"facts": ["site:audio.gd:_connect_redline:heat_rise", "site:audio.gd:_tend_heat:heat_cool"], "traced": true, "what": "the shell's rim turns from green toward amber as it climbs to the hot line and back as it cools",
+		"script": "res://src/presentation/player_fx.gd", "fn": "_draw_overdrive", "token": "shell_color(red)"},
 	{"facts": ["tele@boss.gd:_begin_eject:eject"], "traced": true, "what": "the scooter's landing spot is marked on the ground in the harmless bone style from the same call that publishes the telegraph (W1-107)",
 		"script": "res://src/boss/boss.gd", "fn": "_begin_eject", "token": "_commit_eject_mark(land)"},
 	{"facts": ["emit:sluice_warning@overtime.gd:open_sluice"], "traced": true, "what": "the water shows at the warning",
@@ -235,6 +237,8 @@ const RELAY := {
 const NOT_ACT := [
 	{"why": "a stinger, music line or flow mark: a card, the HUD or the world already shows the same state", "traced": false,
 		"facts": ["ROWS:run_started", "ROWS:flow_changed", "ROWS:world_entered", "ROWS:stage_entered", "ROWS:stage_cleared", "ROWS:run_ended", "ROWS:beacon_charge_changed", "ROWS:warden_sighted", "ROWS:warden_engaged", "ROWS:stage_content_cleared", "ROWS:milestone_won", "ROWS:event_started", "ROWS:event_progress", "ROWS:launched", "ROWS:pressure_changed", "ROWS:boss_arena_entered", "ROWS:fight_phase_changed", "ROWS:boss_defeated", "ROWS:vent_erupted", "ROWS:swarm_scattered", "ROWS:mind_adapted", "ROWS:bay_entered", "ROWS:bay_left", "ROWS:world_fact", "ROWS:line_state_changed", "UI_ROWS:run_timer", "WORLD_ROWS:layer_undercroft", "WORLD_ROWS:layer_shelf", "WORLD_ROWS:layer_sky", "WORLD_ROWS:layer_crown_hoodoos", "WORLD_ROWS:layer_crown_alcove", "WORLD_ROWS:layer_crown_toppled", "WORLD_ROWS:layer_crown_ramp", "WORLD_ROWS:layer_mind_quote_spillway", "WORLD_ROWS:landmark_hum"]},
+	{"why": "a hit taken while the shell is hot: the same hit already sounds hurt and flashes, and this only adds the bite", "traced": true,
+		"facts": ["site:audio.gd:_tend_heat:heat_hot_hit"]},
 	{"why": "a reward, pickup, score or discovery: pays the player and asks nothing", "traced": false,
 		"facts": ["ROWS:achievement_earned", "ROWS:rescue_completed", "ROWS:quick_break", "ROWS:scrap_collected", "ROWS:cogs_collected", "ROWS:part_gained", "ROWS:panel_gained", "ROWS:heft_class_changed", "ROWS:heft_class_dropped", "ROWS:core_gained", "ROWS:synergy_discovered", "ROWS:interaction_found", "ROWS:reward_chosen", "ROWS:tree_offered", "ROWS:tree_picked", "ROWS:ambush_ended", "ROWS:bet_resolved", "ROWS:activity_done", "ROWS:drop_landed", "ROWS:missed_drop", "ROWS:evolution_fired", "ROWS:radio_take_found", "ROWS:relay_stake_paid", "ROWS:maker_set_completed", "ROWS:overflow_cashed", "ROWS:trade_taken", "LOOT_ROWS:item_proc", "LOOT_ROWS:par_split", "WORLD_ROWS:ledger_returned"]},
 	{"why": "echo of the player's own move, hit, press or ride; they see it as it happens", "traced": false,
