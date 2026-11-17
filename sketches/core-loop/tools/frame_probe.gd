@@ -5,7 +5,9 @@ extends RefCounted
 #   t            seconds since launch at the frame's end (the self-play lines' clock)
 #   ms           the drawn frame, post_draw to post_draw (the frame log's ms)
 #   stage, state, stage_time   where the run was
-#   bot_ms       the self-play node's own physics callbacks (the bot driver's tick), not game cost
+#   bot_ms       the self-play bot's cost, not the game's: its own physics callbacks (the driver's tick,
+#                at its own priority) plus its subtree's node _process and _physics_process spans
+#   net_ms       ms less bot_ms: read a hitch by this (LESSONS 56)
 #   draw_ms      frame_pre_draw to frame_post_draw: the render server's draw of the frame
 #   split        tools/frame_split.gd's parts: phys_ms, tick_max_ms, proc_ms, pre_proc_ms, post_proc_ms
 #   added        nodes that entered the tree this frame, and the busiest sources by script or scene
@@ -32,6 +34,8 @@ var rows: Array[Dictionary] = []
 var bot_us := 0
 
 var _game: Node
+var _bot: Node
+var _bot_label := ""
 var _split
 var _signals
 var _last_post := -1
@@ -86,6 +90,8 @@ func _place_markers(root: Node, depth: int) -> void:
 		if own.begins_with("@") and child.get_script() != null:
 			own = child.get_script().resource_path.get_file()
 		marker.label = "%s/%s" % [root.name, own] if root != _game else own
+		if child == _bot:
+			_bot_label = marker.label
 		marker.process_mode = Node.PROCESS_MODE_ALWAYS
 		root.add_child(marker)
 		root.move_child(marker, child.get_index())
@@ -123,8 +129,9 @@ static func _top(spans: Dictionary) -> Array:
 	return out
 
 
-func watch(game: Node, file: String, time_signals: bool) -> void:
+func watch(game: Node, file: String, time_signals: bool, bot: Node = null) -> void:
 	_game = game
+	_bot = bot
 	path = file
 	var tree := game.get_tree()
 	_split = FrameSplit.new()
@@ -178,9 +185,10 @@ func _on_post_draw() -> void:
 			for label in top.slice(0, TOP_SOURCES):
 				sources[label] = _sources[label]
 			var run = _game.run
+			var bot_ms := (bot_us + int(_proc.get(_bot_label, 0)) + int(_phys.get(_bot_label, 0))) / 1000.0
 			var row := {"t": snappedf(now / 1000000.0, 0.001), "ms": snappedf(ms, 0.01), "stage": run.stage if run != null else 0,
 				"state": _game.flow.state_name() if _game.flow != null else "", "stage_time": snappedf(run.stage_time, 0.01) if run != null else 0.0,
-				"bot_ms": snappedf(bot_us / 1000.0, 0.01), "draw_ms": snappedf((now - _pre_draw) / 1000.0, 0.01),
+				"bot_ms": snappedf(bot_ms, 0.01), "net_ms": snappedf(ms - bot_ms, 0.01), "draw_ms": snappedf((now - _pre_draw) / 1000.0, 0.01),
 				"split": {"phys_ms": snappedf(split.phys_ms, 0.01), "tick_max_ms": snappedf(split.tick_max_ms, 0.01), "proc_ms": snappedf(split.proc_ms, 0.01),
 					"pre_proc_ms": snappedf(split.pre_proc_ms, 0.01), "post_proc_ms": snappedf(split.post_proc_ms, 0.01)},
 				"added": _added, "sources": sources, "freed": _freed,
@@ -204,6 +212,12 @@ func _on_post_draw() -> void:
 
 
 func write() -> void:
+	# The render server outlives the tree: a frame signal still bound to this probe or its split at
+	# engine shutdown crashed the quit (signal 11), so every connection goes first.
+	for sig in [RenderingServer.frame_pre_draw, RenderingServer.frame_post_draw]:
+		for c in sig.get_connections():
+			if c.callable.get_object() in [self, _split]:
+				sig.disconnect(c.callable)
 	if path.is_empty():
 		return
 	var file := FileAccess.open(path, FileAccess.WRITE)

@@ -229,7 +229,7 @@ func _ready() -> void:
 			_eyes = arg.trim_prefix("--self-play-eyes=") == "1"
 		elif arg.begins_with("--self-play-probe="):
 			_probe = FrameProbe.new()
-			_probe.watch(game, arg.trim_prefix("--self-play-probe="), "--self-play-probe-signals=1" in OS.get_cmdline_user_args())
+			_probe.watch(game, arg.trim_prefix("--self-play-probe="), "--self-play-probe-signals=1" in OS.get_cmdline_user_args(), self)
 		elif arg == "--self-play-probe-signals=1":
 			pass  # read with --self-play-probe=
 	if not (_policy in BotDriver.POLICIES or _policy in BotDriver.PROFILES):

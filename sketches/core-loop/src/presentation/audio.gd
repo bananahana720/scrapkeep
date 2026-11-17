@@ -1992,7 +1992,7 @@ func _tend_babble() -> void:
 	var key: String = _babble_job.key
 	if not _babble.has(key) and not _babble_job.out.is_empty():
 		_babble[key] = Synth.to_wav(_babble_job.out[0])
-	if _babble.has(key):
+	if _babble.has(key) and not _babble_job.get("silent", false):
 		_start(_babble_job.kind, "babble", _babble[key], SfxBank.trim_db("babble"), 1.0, "SFX")
 	_babble_job = {}
 	_next_babble()
@@ -2003,6 +2003,14 @@ func _settle_babble() -> void:
 		WorkerThreadPool.wait_for_task_completion(_babble_job.task)
 	_babble_job = {}
 	_babble_queue.clear()
+
+
+# The lines still waiting or rendering never sound (their bubble went, or the stage changed); the
+# one rendering keeps its worker and lands in the cache, silent.
+func _drop_babble() -> void:
+	_babble_queue.clear()
+	if not _babble_job.is_empty():
+		_babble_job["silent"] = true
 
 
 # A caller's line on the call card (SOUND-STORY section 8, "Who talks on what"): the caller's
@@ -2034,6 +2042,8 @@ func call_in(kind: String, speaker: String, text: String) -> float:
 # may talk. Nothing happens when nobody is talking. A shorter dip another cue asked for in
 # that moment is freed with it.
 func call_end() -> void:
+	# A babble line still rendering belongs to the bubble that just went: it never sounds.
+	_drop_babble()
 	if _calling == "" or clock >= float(_gates.get("call_in", -1000.0)):
 		return
 	engine.cancel_stinger(_calling)
@@ -2994,6 +3004,7 @@ func mix_state() -> String:
 
 
 func _on_stage_entered(stage: int, retry: bool) -> void:
+	_drop_babble()
 	_stage_now = stage
 	_set_overtime = false
 	_set_incoming_at = -1.0

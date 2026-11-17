@@ -49,11 +49,7 @@ func _process(_delta: float) -> bool:
 	_t.check("BA-4 a babble line is asked for without rendering it on the asking frame",
 		spoke and not audio._babble_job.is_empty() and audio.cue_log.size() == cues and asked_ms < 10.0,
 		"spoke %s, job %s, cues %d -> %d, the ask took %.1f ms" % [spoke, not audio._babble_job.is_empty(), cues, audio.cue_log.size(), asked_ms])
-	var waited := 0
-	while not WorkerThreadPool.is_task_completed(audio._babble_job.task) and waited < 5000:
-		OS.delay_msec(5)
-		waited += 5
-	audio._tend_babble()
+	_settle(audio)
 	var said: Array = audio.cue_log.back() if audio.cue_log.size() > cues else []
 	_t.check("BA-4 it sounds once its worker is done, and is kept", said.size() >= 3 and said[0] == "shop_left" and said[1] == "babble" and said[2] == "now"
 		and audio._babble_job.is_empty() and audio._babble.size() == 1, "cue %s, cached %d" % [said, audio._babble.size()])
@@ -61,6 +57,20 @@ func _process(_delta: float) -> bool:
 	audio.speak("shop_left", line, 0)
 	_t.check("BA-4 a kept line sounds on the frame it is asked for", audio.cue_log.size() == cues + 1 and audio._babble_job.is_empty(),
 		"cues %d -> %d" % [cues, audio.cue_log.size()])
+	# A line still rendering when its bubble goes (the bubble ends its voice through call_end), or
+	# when the stage changes, never sounds.
+	for ending in ["bubble", "stage"]:
+		var text := "Shelf's there. Hook's not for sale." if ending == "bubble" else "Back again. The Warden keeps your last shell."
+		audio.speak("shop_entered", text, 0)
+		cues = audio.cue_log.size()
+		if ending == "bubble":
+			audio.call_end()
+		else:
+			audio._on_stage_entered(2, false)
+		_settle(audio)
+		var babbled: Array = audio.cue_log.slice(cues).filter(func(row: Array): return row[1] == "babble" and row[2] == "now")
+		_t.check("BA-5 a line whose %s went before it rendered stays silent" % ending, babbled.is_empty() and audio._babble_job.is_empty(),
+			"babble cues after: %s" % [babbled])
 	root.remove_child(_game)
 	_t.check("BA-3 leaving the tree lets go of them", Audio._opening_task == -1 and Audio._rest_task == -1,
 		"opening %d, rest %d" % [Audio._opening_task, Audio._rest_task])
@@ -68,3 +78,12 @@ func _process(_delta: float) -> bool:
 	_game = null
 	quit(_t.verdict())
 	return true
+
+
+# Waits out the babble worker, then gives the audio the frame step that sounds a finished line.
+func _settle(audio) -> void:
+	var waited := 0
+	while not audio._babble_job.is_empty() and not WorkerThreadPool.is_task_completed(audio._babble_job.task) and waited < 5000:
+		OS.delay_msec(5)
+		waited += 5
+	audio._tend_babble()
