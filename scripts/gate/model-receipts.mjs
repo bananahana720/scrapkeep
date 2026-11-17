@@ -43,15 +43,22 @@ export const ROWS = {
   "rewards-banked-once": {
     spec: "Rewards.tla",
     real: [
-      { cfg: "rewards-today-one.cfg", label: "one game" },
-      { cfg: "rewards-today-two-once.cfg", label: "two games on one profile, each paying the reward (finding R-2)" },
+      { cfg: "rewards-today-one.cfg", label: "one game, from a fresh start or an older build's run file (W1-117)" },
+      { cfg: "rewards-today-two-once.cfg", label: "two games on one profile paying once (finding R-2)" },
+      { cfg: "rewards-today-two-lost.cfg", label: "two games on one profile losing nothing" },
     ],
     plants: [
       { cfg: "rewards-broken-ledger.cfg", rule: "AtMostOnce" },
       { cfg: "rewards-broken-midsave.cfg", rule: "NeverLost" },
+      { cfg: "rewards-broken-legacyrun.cfg", rule: "NeverLost" },
+      { cfg: "rewards-broken-stale.cfg", rule: "AtMostOnce" },
+      { cfg: "rewards-broken-nolock.cfg", rule: "AtMostOnce" },
     ],
     coverage: "references/rewards-coverage.md",
-    gaps: ["the old-key loss route of W1-117 is not modelled (the model holds the old and new reward keys as one flag)"],
+    gaps: [
+      "the profile's save lock is taken as perfect: a game that waits longer than 250 ms for it, a stale lock broken while its holder still lives, and an older build saving beside this one (it takes no lock) are not modelled",
+      "two games pay twice when both profile saves of the first game's earn fail (ruling ea: never lost outranks at most once; rewards-ruled-two-twofail-once)",
+    ],
   },
 };
 

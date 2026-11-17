@@ -53,9 +53,14 @@ const SHAPE := {
 	"camp": SafeStore.DICT,
 }
 
+const LOCK_WAIT_MS := 250
+const LOCK_POLL_MS := 2
+
 var path := ""
 var last_error := ""
 var can_save := false
+# Seconds after which a save lock is taken as left by a game that died inside a save. A test sets its own.
+var lock_stale_s := 5.0
 
 var _doc := {}
 var _refusal := ""
@@ -66,6 +71,7 @@ var _backup_bytes := PackedByteArray()
 var _loaded_tally_prefixes := {}
 var _pending_tally_settlements := {}
 var _last_closed_tally_run := ""
+var _lock_depth := 0
 
 
 func _init(file_path := "user://profile.json") -> void:
@@ -107,6 +113,76 @@ func save() -> bool:
 	if not can_save:
 		last_error = _refusal
 		return false
+	if not _lock():
+		last_error = "not saving: another game is saving %s" % path
+		return false
+	var saved := _save_locked()
+	_unlock()
+	return saved
+
+
+# Runs change, a Callable, as one step against the newest file, and returns what it returns. It holds
+# the save lock, so no other game's save comes between, and first takes in what another game saved
+# since this one last read or wrote the file (the same merge as save). A save inside change writes
+# under the same lock. A profile that cannot save, or a lock it cannot get, runs change on memory as
+# before: never lost outranks at most once (ruling ea).
+func transact(change: Callable) -> Variant:
+	if not can_save or not _lock():
+		return change.call()
+	var read := _read()
+	if _newer_on_disk(read):
+		_discard_compacted_tallies(_doc["stats"], read["doc"]["stats"])
+		_doc = merge(_doc, read["doc"])
+		_on_disk = true
+		_loaded_generation = int(read["doc"]["generation"])
+		_remember_run_tallies()
+		if _backup_path.is_empty() and read["from_version"] < SCHEMA:
+			_backup_path = "%s.v%d" % [path, read["from_version"]]
+			_backup_bytes = read["bytes"]
+	var result = change.call()
+	_unlock()
+	return result
+
+
+# The save lock is a directory beside the file: making it is atomic, so one game holds it at a time.
+# Held for one save or one transact (milliseconds); taken again inside them it nests. A game waits
+# LOCK_WAIT_MS for another's save to finish, and breaks a lock older than lock_stale_s, which only a
+# game that died inside a save leaves.
+func _lock() -> bool:
+	if _lock_depth > 0:
+		_lock_depth += 1
+		return true
+	var dir := path + ".lock"
+	var waited := 0
+	while waited <= LOCK_WAIT_MS:
+		var err := DirAccess.make_dir_absolute(dir)
+		if err == OK:
+			_lock_depth = 1
+			return true
+		if err != ERR_ALREADY_EXISTS:
+			return false
+		# 0 when the holder let go between the two calls: try again.
+		var made := FileAccess.get_modified_time(dir) if DirAccess.dir_exists_absolute(dir) else 0
+		if made > 0 and Time.get_unix_time_from_system() - made > lock_stale_s:
+			DirAccess.remove_absolute(dir)
+		else:
+			OS.delay_msec(LOCK_POLL_MS)
+		waited += LOCK_POLL_MS
+	return false
+
+
+func _unlock() -> void:
+	_lock_depth -= 1
+	if _lock_depth == 0:
+		DirAccess.remove_absolute(path + ".lock")
+
+
+# True when the file holds what another game saved since this one last read or wrote it.
+func _newer_on_disk(read: Dictionary) -> bool:
+	return read["state"] == "ok" and (not _on_disk or int(read["doc"]["generation"]) != _loaded_generation)
+
+
+func _save_locked() -> bool:
 	var read := _read()
 	var next := _doc.duplicate(true)
 	var backup_path := _backup_path
@@ -117,7 +193,7 @@ func save() -> bool:
 	if read["state"] != "missing" and read["state"] != "ok":
 		last_error = "not saving: %s changed since it was loaded and cannot be read (%s)" % [path, read["why"]]
 		return false
-	if read["state"] == "ok" and (not _on_disk or int(read["doc"]["generation"]) != _loaded_generation):
+	if _newer_on_disk(read):
 		_discard_compacted_tallies(next["stats"], read["doc"]["stats"])
 		next = merge(next, read["doc"])
 		if backup_path.is_empty() and read["from_version"] < SCHEMA:

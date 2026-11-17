@@ -101,10 +101,20 @@ func backfill_rewards() -> int:
 # joined the key holds only "reward:<row>:<kind>": with no targeted key for that row and kind yet,
 # the legacy key covers the current target (it is what that profile was paid), once. The legacy
 # key is still settled beside the targeted one, so older builds reading the profile pay nothing twice.
+# The decision is one profile.transact, so a reward another game on this profile paid is seen, and
+# paid here no more.
 func _grant_reward(id: String, kind: String, target: String) -> bool:
+	return bool(_profile.transact(_grant_reward_now.bind(id, kind, target)))
+
+
+func _grant_reward_now(id: String, kind: String, target: String) -> bool:
 	var legacy := "reward:%s:%s" % [id, kind]
 	var key := "%s:%s" % [legacy, target]
-	if _is_settled(legacy) and not _has_targeted(legacy):
+	# Only the profile shows that an older build paid: it saved the legacy key in the same write as
+	# the unlock. A run file from such a build may hold the key after both profile saves of the earn
+	# failed; read from there it would settle the targeted key with nothing paid (W1-117), so the
+	# reward is paid instead.
+	if _profile.is_settled(legacy) and not _has_targeted(legacy):
 		settle(key, false)
 		return false
 	if _is_settled(key):
@@ -413,10 +423,19 @@ func _need_met(row: Dictionary) -> bool:
 	return float(value) != 0.0
 
 
+# The earn, its grants and its save are one profile.transact: a row another game on this profile
+# already saved as earned is taken in from the file, and neither announced nor paid again here.
 func _earn(id: String, row: Dictionary) -> void:
 	var silent: bool = Secrets.PAINT_ROWS.values().has(id)
-	if not _profile.earn(id, float(_now.call())):
+	if not bool(_profile.transact(_earn_now.bind(id, row))):
 		return
+	if not silent:
+		_events.achievement_earned.emit(id)
+
+
+func _earn_now(id: String, row: Dictionary) -> bool:
+	if not _profile.earn(id, float(_now.call())):
+		return false
 	var reward: Dictionary = row.get("reward", {})
 	for kind in reward:
 		_grant_reward(id, String(kind), String(reward[kind]))
@@ -426,5 +445,4 @@ func _earn(id: String, row: Dictionary) -> void:
 	if not _profile.save():
 		warnings += 1
 		push_warning("progress: %s earned but not saved: %s" % [id, _profile.last_error])
-	if not silent:
-		_events.achievement_earned.emit(id)
+	return true
