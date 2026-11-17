@@ -325,6 +325,9 @@ func on_exit(_warden) -> void:
 func _close_sheet() -> void:
 	riding = false
 	if is_instance_valid(_sheet_view):
+		# Out of the tree now, so a sheet shown this frame (the pulse replacing the lane tell) is named ReactorSheet,
+		# not @MeshInstance3D@.
+		_sheet_view.get_parent().remove_child(_sheet_view)
 		_sheet_view.queue_free()
 	_sheet_view = null
 
