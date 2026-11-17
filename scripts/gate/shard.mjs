@@ -52,7 +52,7 @@ export const BOT_ALONE = new Set([
 ]);
 const NEAR_LIMIT = 0.85;
 const DEFAULT_RETIME_RUNS = 3;
-const QUIET_FACTOR = 0.25;
+export const QUIET_FACTOR = 0.25;
 export const QUIET_POLL_MS = 20_000;
 export const QUIET_POLLS = 90;
 
