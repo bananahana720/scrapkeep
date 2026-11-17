@@ -1132,7 +1132,8 @@ func set_quality(level: int) -> void:
 
 
 # Reduced motion: the camera holds still, the hit-edge flash drops to a quarter, enemy idle
-# and the net-deck fx go quiet. Telegraph motion reads none of these, so it keeps its timing.
+# and the net-deck fx go quiet, and the spillway water runs slower. Telegraph motion reads none of
+# these, so it keeps its timing.
 func set_reduced_motion(on: bool) -> void:
 	EnemyMotion.motion_scale = 0.0 if on else 1.0
 	HighdraftFx.preferred = on
@@ -1146,6 +1147,7 @@ func set_reduced_motion(on: bool) -> void:
 	ClassPreview.reduced_motion = on
 	BossPlate.reduced_motion = on
 	WorldFx.preferred = on
+	preload("res://src/presentation/spillway_scenery.gd").set_water_calm(on)
 	preload("res://src/presentation/flourish_player.gd").reduced_motion = on
 	if is_instance_valid(WorldFx.current):
 		WorldFx.current.set_quality(WorldFx.current.low, on)
