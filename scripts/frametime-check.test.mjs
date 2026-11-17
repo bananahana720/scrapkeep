@@ -415,3 +415,9 @@ test("main on macOS launches the engine capture under a scratch HOME and grades 
   assert.equal(summary.frames, 200);
   assert.equal(summary.self_play.stages[0].log_s, 2);
 });
+
+test("an engine reading says whether it measured a packed build and on what caches", async () => {
+  const { engineContext } = await import("./frametime-check.mjs");
+  assert.deepEqual(engineContext({ exe: null }, "darwin"), { target: "debug-editor", cache: "cold" });
+  assert.deepEqual(engineContext({ exe: "/b/game" }, "linux"), { target: "packed", cache: "shared" });
+});

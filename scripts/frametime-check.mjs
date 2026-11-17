@@ -361,7 +361,12 @@ function stamp(date = new Date()) {
     .replace(/-\d{3}Z$/, "Z");
 }
 
-function analyse(logFile, args, outDir, selfPlay = null) {
+// What a reading measured: a packed build or a debug run of the project, on warm or cold caches.
+export function engineContext(args, platform = process.platform) {
+  return { target: args.exe ? "packed" : "debug-editor", cache: platform === "darwin" ? "cold" : "shared" };
+}
+
+function analyse(logFile, args, outDir, selfPlay = null, context = null) {
   const text = readFileSync(logFile, "utf8");
   const frames = parseLog(text);
   const summary = summarize(frames, {
@@ -391,9 +396,13 @@ function analyse(logFile, args, outDir, selfPlay = null) {
   mkdirSync(outDir, { recursive: true });
   writeFileSync(
     path.join(outDir, "summary.json"),
-    JSON.stringify({ log: logFile, ...summary, ...extra }, null, 2) + "\n",
+    JSON.stringify({ log: logFile, ...summary, ...extra, ...(context ?? {}) }, null, 2) + "\n",
   );
   console.log(report(summary, logFile, logLabel(text)));
+  if (context)
+    console.log(
+      `Measured: ${context.target === "packed" ? "a packed build" : "a debug run of the project (not the packed build)"}, ${context.cache} shader caches.`,
+    );
   for (const note of notes) console.log(note);
   console.log("Summary: " + path.join(outDir, "summary.json"));
   if (selfPlay && selfPlay.exit !== 0) return selfPlay.exit === 2 ? 2 : 1;
@@ -445,7 +454,7 @@ export function main(
 }
 
 // After the game closes, either capture: keep the self-play lines, then grade the run folder's log.
-function collect(run, args, outDir, noLogMessage) {
+function collect(run, args, outDir, noLogMessage, context = null) {
   if (run.error)
     throw new FrametimeError("could not launch: " + run.error.message);
   let selfPlay = null;
@@ -460,7 +469,7 @@ function collect(run, args, outDir, noLogMessage) {
     console.error(noLogMessage);
     return 2;
   }
-  return analyse(logFile, args, outDir, selfPlay);
+  return analyse(logFile, args, outDir, selfPlay, context);
 }
 
 function engineCapture(args, env, outDir, platform) {
@@ -493,6 +502,7 @@ function engineCapture(args, env, outDir, platform) {
     args,
     outDir,
     `The game wrote no frame log at ${csv}. It closed before the log ended, or the build has no src/core/frame_log.gd. Run again and play past ${minutes} min.`,
+    engineContext(args, platform),
   );
 }
 
