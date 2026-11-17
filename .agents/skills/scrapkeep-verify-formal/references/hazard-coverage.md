@@ -36,4 +36,4 @@ One model tick is 0.3 s: `TellTicks` 4 is the 1.2 s tell and `MinTell` 2 the 0.6
 
 The dome's own fixed strike circle, floods, the boiler's steam cone and the reactor's fallout ring (each strikes enemies through the same `HazardHits.strike` call; the test and `park_events_industrial_test` cover them), more than one enemy, the enemy's death and drop, and anything drawn or heard.
 
-Sync commit: f2aab5a7b (branch w44/hazards-hit-everyone, 17 November 2026, the stage dial and its test-double guard; before it, fcc359e25)
+Sync commit: 158d11f47 (branch w44/hazards-hit-everyone, 17 November 2026, plants moved to a test-only static; before it, f2aab5a7b and fcc359e25)
