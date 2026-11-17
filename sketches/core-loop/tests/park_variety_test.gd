@@ -38,6 +38,8 @@ const SETS_MIN := 10
 const PART_MIN := 2
 # game.gd SEED: ctx.rng.seed for the whole session, the layout seed of every draw.
 const LAYOUT_SEED := 20260926
+# The value a set carries for a part the run did not draw; it is never counted as a drawn rogue site or modifier.
+const NONE := "none"
 
 var t := T.new("park_variety_test")
 
@@ -64,7 +66,7 @@ static func draw_set(g, map, map_id: String, stage: int, run_seed: int, prepared
 		pockets.append("%s@%d" % [spec.interior.id, int(spec.node)])
 	pockets.sort()
 	var rogue := RogueDirector.plan(stage_seed(run_seed, stage) ^ 0x706e, WORLD, sites_doc)
-	var out := {"pockets": ",".join(pockets), "rogue": String(rogue.get("site", "none")), "modifier": String(modifier.get("id", "none"))}
+	var out := {"pockets": ",".join(pockets), "rogue": String(rogue.get("site", NONE)), "modifier": String(modifier.get("id", NONE))}
 	out["key"] = "%s|%s|%s" % [out["pockets"], out["rogue"], out["modifier"]]
 	return out
 
@@ -93,7 +95,9 @@ func _stage(map_id: String, stage: int) -> void:
 		var d := draw_set(g, map, map_id, stage, s + 1, prepared, pool, sites_doc)
 		keys[d["key"]] = true
 		for p in parts:
-			parts[p][d[p]] = int(parts[p].get(d[p], 0)) + 1
+			# A run that draws no rogue site or no modifier adds a set, not a drawn value.
+			if d[p] != NONE:
+				parts[p][d[p]] = int(parts[p].get(d[p], 0)) + 1
 	var again := draw_set(g, map, map_id, stage, 1, prepared, pool, sites_doc)
 	var first := draw_set(g, map, map_id, stage, 1, prepared, pool, sites_doc)
 	t.check("%s: the same seed draws the same set" % map_id, again["key"] == first["key"], again["key"])
