@@ -12,6 +12,8 @@ extends Node
 # Cost: without the flag this node is never made. With it, one clock read and one append a frame.
 # It only reads the clock: nothing in the game or the simulation reads it back.
 
+const SafeStore := preload("res://src/core/safe_store.gd")
+
 const FLAG := "--frame-log="
 const WARMUP_FLAG := "--frame-log-warmup="
 const SECONDS_FLAG := "--frame-log-seconds="
@@ -68,18 +70,15 @@ func frame(now_usec: int) -> void:
 func write() -> void:
 	written = true
 	_exit_tree()
-	var file := FileAccess.open(path, FileAccess.WRITE)
-	if file == null:
-		push_error("frame_log: cannot write %s: %s" % [path, error_string(FileAccess.get_open_error())])
-		return
-	file.store_line(",".join([INFO, "engine", "driver", "adapter", "vsync"]))
 	var info := PackedStringArray([INFO])
 	for value in [Engine.get_version_info().get("string", ""), RenderingServer.get_current_rendering_driver_name(),
 			RenderingServer.get_video_adapter_name(), DisplayServer.window_get_vsync_mode()]:
 		info.append(str(value).replace(",", " ").replace("\n", " "))
-	file.store_line(",".join(info))
-	file.store_line("frametime")
+	var lines := PackedStringArray([",".join([INFO, "engine", "driver", "adapter", "vsync"]), ",".join(info), "frametime"])
 	for ms in _frames:
-		file.store_line("%.3f" % ms)
-	file.close()
+		lines.append("%.3f" % ms)
+	var err := SafeStore.write_atomic(path, "\n".join(lines) + "\n")
+	if err != OK:
+		push_error("frame_log: cannot write %s: %s" % [path, error_string(err)])
+		return
 	print("SCRAPKEEP_FRAME_LOG %d frames %s" % [_frames.size(), path])
