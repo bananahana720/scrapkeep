@@ -1,16 +1,16 @@
 #!/usr/bin/env node
-// Turns a difficulty band read (scripts/challenge/run.mjs, its folder's runs.ndjson) into the receipts that
-// scripts/world1-bands.mjs reads for three rows: strong-build-shows, warden-fairness and novice-deaths.
-// Each receipt is { head, pass, measured, plant_caught }. Each row's plant is applied to a copy of the same runs and
-// graded by the same function; plant_caught is true only when the planted copy misses on the check the plant targets.
-// A receipt passes only when its own check passes and its plant was caught.
+// Turns a difficulty band read (scripts/challenge/run.mjs: its folder's runs.ndjson, and table.json for the early-stop
+// record) into the receipts that scripts/world1-bands.mjs reads for three rows: strong-build-shows, warden-fairness and
+// novice-deaths. Each receipt is { head, pass, measured, plant_caught }. Each row's plant is applied to a copy of the same
+// read and graded by the same function; plant_caught is true only when the planted copy misses on every check the plant
+// targets. A receipt passes only when its own checks pass and its plant was caught.
 //
-//   node scripts/gate/band-receipts.mjs --band <band read folder> --head <commit> --out <receipts folder>
+//   node scripts/gate/band-receipts.mjs --band <band read folder> [--band <shard folder> ...] --head <commit> --out <dir>
 //
 // Produce the band read with:
-//   npm run challenge:bands -- --library=<dir> --only=w1,w2,brindle --label=<name>
+//   npm run challenge:bands -- --library=<library dir> --only=w1,w2,brindle,w1clear --seeds=48 --label=<name>
 // It writes <out>/strong-build-shows.json, <out>/warden-fairness.json and <out>/novice-deaths.json.
-import { mkdirSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -18,36 +18,71 @@ import { EXCLUDED, FAIRNESS, fairnessPool, gradeRun, median, parseNdjson } from 
 
 // World 1's fight cells in the band table: the dam Warden, the flume Warden and Admiral Brindle.
 export const W1_FIGHTS = ["w1", "w2", "brindle"];
-// difficulty-plan.md, "Targets and fairness checks": "Novice non-wins that are deaths | >= 60%".
+// difficulty-plan.md, "Targets and fairness checks": "Novice non-wins that are deaths | >= 60%" (line 57).
 export const NOVICE_DEATH_SHARE = 0.6;
+// Seeds a pool needs, from the same table (project-guide/handoff/shared/world1/difficulty-plan.md):
+export const SEEDS = {
+  expert: 48, // line 54, "Expert on each fight cell"; the Expert fight time reads the same runs (line 58)
+  fairness: 24, // lines 59 to 61, F1 to F3
+  novice: { w1: 48, w2: 24, w1clear: 24 }, // lines 51, 52 and 56; the death share reads the same runs (line 57)
+};
+// The Novice cells the plan names (lines 51, 52, 56). It names no Novice row for Brindle, so Brindle is not graded here.
+export const NOVICE_CELLS = ["w1", "w2", "w1clear"];
 
 const gradeOf = (run) => run.grade ?? gradeRun(run.kind, run.row, run);
 const counted = (run) => run.row != null && run.row.resumed !== false && !EXCLUDED.includes(gradeOf(run).result);
+export const COMMIT = /^[0-9a-f]{7,40}$/;
 const sameHead = (commit, head) => typeof commit === "string" && commit.length >= 7 && (head.startsWith(commit) || commit.startsWith(head));
 const pct = (x) => `${Math.round(x * 100)}%`;
 const fmt = (x) => (Number.isFinite(x) ? (Math.round(x * 10) / 10).toString() : String(x));
-const clone = (runs) => JSON.parse(JSON.stringify(runs));
+const clone = (x) => JSON.parse(JSON.stringify(x));
+
+// A run is counted once: shard folders that repeat it are keyed by cell, column and seed, the last one winning.
+export function dedupeRuns(runs) {
+  const m = new Map();
+  for (const r of runs) m.set(`${r.cell}\u0000${r.column ?? r.band}\u0000${r.seed}`, r);
+  return [...m.values()];
+}
 
 // Runs of the named cells, or the reason the band read cannot judge this head.
-function select(runs, head, cells) {
-  const mine = runs.filter((r) => cells.includes(r.cell));
-  const other = mine.find((r) => !sameHead(r.commit, head));
+function select(read, head, cells) {
+  const all = dedupeRuns(read.runs).filter((r) => cells.includes(r.cell));
+  const other = all.find((r) => !sameHead(r.commit, head));
   if (other) return { error: `band read ran on ${String(other.commit ?? "no commit").slice(0, 9)}, not ${head.slice(0, 9)}` };
-  return { runs: mine.filter(counted) };
+  return { all, runs: all.filter(counted) };
 }
+
+// Whether one pool (cell and column) has the seeds it needs. Fewer counted runs pass only when the read's own record
+// (table.json early_stop, ruling dg) says the column stopped early, planned at least the seeds needed, and how many ran,
+// and those runs are all here.
+export function enough(sel, earlyStop, cell, column, need) {
+  const n = sel.runs.filter((r) => r.cell === cell && r.column === column).length;
+  if (n >= need) return { ok: true, n, text: `${cell} ${column} n=${n}` };
+  const present = sel.all.filter((r) => r.cell === cell && r.column === column).length;
+  const stop = (earlyStop ?? []).find((s) => s.cell === cell && s.column === column);
+  if (stop && Number.isInteger(stop.ran) && Number.isInteger(stop.planned) && stop.planned >= need && present >= stop.ran && n > 0) {
+    return { ok: true, n, text: `${cell} ${column} n=${n} (stopped early: ${stop.ran} of ${stop.planned} ran, the rest could not change its mark)` };
+  }
+  return { ok: false, n, text: `${cell} ${column} n=${n} of ${need}` };
+}
+
+const tooFew = (counts) => `too few runs: ${counts.filter((c) => !c.ok).map((c) => c.text).join(", ")}`;
 
 // --- strong-build-shows: a strong build beats Brindle faster and with more parts than a plain one ----------------------
 
 // Brindle's cell, the Expert with a top build (column expertTop) against the Expert with an ordinary build (expert).
 // More parts: the median parts carried into the fight (boss.entry_parts, tools/bot_driver.gd) is higher for the top build.
-// Faster: the median fight time of its wins (boss.defeated_s) is lower. The row names no margin, so any gap counts.
-export function gradeStrongBuild(runs, head) {
-  const sel = select(runs, head, ["brindle"]);
-  if (sel.error) return { pass: false, measured: sel.error, checks: { parts: null, faster: null } };
+// Faster: the median fight time of its wins (the graded fightS) is lower. The row names no margin, so any gap counts.
+// Both columns need the Expert's 48 seeds; the top column plays the same seeds as the ordinary one.
+export function gradeStrongBuild(read, head) {
+  const none = { parts: null, faster: null };
+  const sel = select(read, head, ["brindle"]);
+  if (sel.error) return { pass: false, measured: sel.error, checks: none };
+  const counts = ["expertTop", "expert"].map((c) => enough(sel, read.earlyStop, "brindle", c, SEEDS.expert));
+  if (counts.some((c) => !c.ok)) return { pass: false, measured: `Brindle, Expert: ${tooFew(counts)}`, checks: none };
   const col = (id) => sel.runs.filter((r) => r.column === id);
   const top = col("expertTop");
   const ord = col("expert");
-  if (!top.length || !ord.length) return { pass: false, measured: `brindle needs both Expert columns; top ${top.length} runs, ordinary ${ord.length}`, checks: { parts: null, faster: null } };
   const parts = (rs) => median(rs.map((r) => r.row?.boss?.entry_parts).filter((x) => typeof x === "number"));
   const fight = (rs) => median(rs.map(gradeOf).filter((g) => g.result === "win").map((g) => g.fightS));
   const p = { top: parts(top), ord: parts(ord) };
@@ -57,66 +92,67 @@ export function gradeStrongBuild(runs, head) {
     faster: t.top == null || t.ord == null ? null : t.top < t.ord,
   };
   const partsText = p.top == null || p.ord == null ? "parts not recorded (boss.entry_parts)" : `parts ${fmt(p.top)} top against ${fmt(p.ord)} ordinary`;
-  const fightText = t.top == null || t.ord == null ? `no win to time (top ${top.length} runs, ordinary ${ord.length})` : `fight ${fmt(t.top)} s top against ${fmt(t.ord)} s ordinary`;
-  return { pass: checks.parts === true && checks.faster === true, measured: `Brindle, Expert medians: ${partsText}; ${fightText}`, checks };
+  const fightText = t.top == null || t.ord == null ? "no win to time" : `fight ${fmt(t.top)} s top against ${fmt(t.ord)} s ordinary`;
+  return { pass: checks.parts === true && checks.faster === true, measured: `Brindle, Expert medians: ${partsText}; ${fightText} (${counts.map((c) => c.text).join(", ")})`, checks };
 }
 
-// The plant: the top build's parts stripped. Only the record can be stripped here, so the parts check must miss.
-export function plantStrongBuild(runs) {
-  return clone(runs).map((r) => (r.cell === "brindle" && r.column === "expertTop" && r.row?.boss ? { ...r, row: { ...r.row, boss: { ...r.row.boss, entry_parts: 0 } } } : r));
+// The plant: the top and ordinary labels swapped, so the plain build is read as the strong one. Each run keeps its own
+// grade and record, so the parts and the fight time the grader reads both change sides, and both checks must miss.
+export function plantStrongBuild(read) {
+  const swap = { expertTop: "expert", expert: "expertTop" };
+  return { ...clone(read), runs: clone(read.runs).map((r) => (r.cell === "brindle" && swap[r.column] ? { ...r, column: swap[r.column], build: r.build === "top" ? "ordinary" : "top" } : r)) };
 }
 
 // --- warden-fairness: fairness lines F1 to F3 (difficulty-plan.md; lines in scripts/challenge/fairness.json) ------------
 
-// One pool per world 1 fight cell and column, as the band table prints them (fairnessPool in scripts/challenge/lib.mjs).
-// F1: telegraph share >= FAIRNESS.telegraphShare and every killing hit shown, in every pool that measured it; a pool whose
-//     unknown hull is over the line carries no F1 mark and reads as a miss, since the hit sources are not all owned.
-// F2: stop tax >= FAIRNESS.stopTax in every pool that measured it.
-// F3: median first hit >= FAIRNESS.firstHitS s, in the Learner attempt 1 pools only (the plan's F3 row: "(Learner 1)").
-// Each line needs at least one measured pool and each world 1 fight cell needs a fairness record.
-export function gradeFairness(runs, head) {
-  const sel = select(runs, head, W1_FIGHTS);
-  if (sel.error) return { pass: false, measured: sel.error, checks: { F1: null, F1marked: null, F2: null, F3: null } };
-  const groups = new Map();
-  for (const r of sel.runs) {
-    const key = `${r.cell} ${r.column ?? r.band}`;
-    if (!groups.has(key)) groups.set(key, []);
-    groups.get(key).push(r);
-  }
-  const pools = [...groups.entries()].map(([key, rs]) => ({ key, column: rs[0].column ?? rs[0].band, cell: rs[0].cell, ...fairnessPool(rs) })).filter((p) => p.measured > 0);
-  const missingCells = W1_FIGHTS.filter((c) => !pools.some((p) => p.cell === c));
-  const f1 = pools.filter((p) => p.telegraphShare != null);
-  const f1Bad = f1.filter((p) => !p.shareMarked || p.telegraphShare < FAIRNESS.telegraphShare - 1e-9 || (p.kills && p.killsShown !== p.kills));
+// One pool per world 1 fight cell and column (fairnessPool in scripts/challenge/lib.mjs), each needing the plan's 24 seeds.
+// F1: telegraph share >= FAIRNESS.telegraphShare and every killing hit telegraphed, in every pool. A killing hit whose
+//     bucket is contact or unknown is a miss here (the row says every killing hit is telegraphed), and so is a pool whose
+//     unknown hull is over the line (F1 carries no mark there) or that measured no F1 at all.
+// F2: stop tax >= FAIRNESS.stopTax in every pool; a pool with no stop tax is a miss.
+// F3: median first hit >= FAIRNESS.firstHitS s in every Learner attempt 1 pool (the plan's F3 row: "(Learner 1)").
+// Each world 1 fight cell needs a Learner attempt 1 pool.
+export function gradeFairness(read, head) {
+  const none = { F1: null, F1marked: null, F2: null, F3: null };
+  const sel = select(read, head, W1_FIGHTS);
+  if (sel.error) return { pass: false, measured: sel.error, checks: none };
+  const keys = [...new Set(sel.all.map((r) => `${r.cell}\u0000${r.column}`))].map((k) => k.split("\u0000"));
+  const counts = keys.map(([cell, column]) => enough(sel, read.earlyStop, cell, column, SEEDS.fairness));
+  const noLearner = W1_FIGHTS.filter((c) => !keys.some(([cell, column]) => cell === c && column === "learner1"));
+  if (noLearner.length) return { pass: false, measured: `no Learner attempt 1 runs for ${noLearner.join(", ")}`, checks: none };
+  if (counts.some((c) => !c.ok)) return { pass: false, measured: tooFew(counts), checks: none };
+  const pools = keys.map(([cell, column]) => ({ key: `${cell} ${column}`, cell, column, ...fairnessPool(sel.runs.filter((r) => r.cell === cell && r.column === column)) }));
+  const f1Fails = (p) => p.telegraphShare == null || !p.shareMarked || p.telegraphShare < FAIRNESS.telegraphShare - 1e-9 || p.killsShown !== p.kills || p.killsOther > 0;
+  const f1Bad = pools.filter(f1Fails);
   // F1 judged only where it carries a mark: what the plant must be seen to move.
-  const f1Marked = f1.filter((p) => p.shareMarked);
-  const f2 = pools.filter((p) => p.stopTax != null);
-  const f2Bad = f2.filter((p) => p.stopTax < FAIRNESS.stopTax - 1e-9);
-  const f3 = pools.filter((p) => p.column === "learner1" && p.firstHitS != null);
-  const f3Bad = f3.filter((p) => p.firstHitS < FAIRNESS.firstHitS - 1e-9);
+  const f1Marked = pools.filter((p) => p.shareMarked);
+  const f2Bad = pools.filter((p) => p.stopTax == null || p.stopTax < FAIRNESS.stopTax - 1e-9);
+  const f3 = pools.filter((p) => p.column === "learner1");
+  const f3Bad = f3.filter((p) => p.firstHitS == null || p.firstHitS < FAIRNESS.firstHitS - 1e-9);
   const checks = {
-    F1: f1.length ? f1Bad.length === 0 : null,
+    F1: f1Bad.length === 0,
     F1marked: f1Marked.length ? f1Marked.every((p) => !f1Bad.includes(p)) : null,
-    F2: f2.length ? f2Bad.length === 0 : null,
-    F3: f3.length ? f3Bad.length === 0 : null,
+    F2: f2Bad.length === 0,
+    F3: f3Bad.length === 0,
   };
-  const say = (name, all, bad, show) => (!all.length ? `${name} not measured` : bad.length ? `${name} misses in ${bad.length} of ${all.length} pools (${bad.slice(0, 3).map(show).join(", ")})` : `${name} holds in ${all.length} pools`);
+  const f1Why = (p) => (p.telegraphShare == null ? "not measured" : !p.shareMarked ? `unknown hull ${pct(p.unknownShare)}` : `${pct(p.telegraphShare)}, kills shown ${p.killsShown}/${p.kills + p.killsOther}`);
+  const say = (name, all, bad, show) => (bad.length ? `${name} misses in ${bad.length} of ${all.length} pools (${bad.slice(0, 3).map(show).join(", ")})` : `${name} holds in ${all.length} pools`);
   const parts = [
-    say("F1", f1, f1Bad, (p) => `${p.key} ${!p.shareMarked ? "unknown hull " + pct(p.unknownShare) : pct(p.telegraphShare) + ", kills " + p.killsShown + "/" + p.kills}`),
-    say("F2", f2, f2Bad, (p) => `${p.key} ${p.stopTax.toFixed(2)}`),
-    say("F3", f3, f3Bad, (p) => `${p.key} ${fmt(p.firstHitS)} s`),
+    say("F1", pools, f1Bad, (p) => `${p.key} ${f1Why(p)}`),
+    say("F2", pools, f2Bad, (p) => `${p.key} ${p.stopTax == null ? `not measured (${p.stopTaxNote})` : p.stopTax.toFixed(2)}`),
+    say("F3", f3, f3Bad, (p) => `${p.key} ${p.firstHitS == null ? "not measured" : fmt(p.firstHitS) + " s"}`),
+    `n ${Math.min(...counts.map((c) => c.n))} to ${Math.max(...counts.map((c) => c.n))} a pool over ${pools.length} pools`,
   ];
-  if (missingCells.length) parts.push(`no fairness record for ${missingCells.join(", ")}`);
-  const pass = missingCells.length === 0 && checks.F1 === true && checks.F2 === true && checks.F3 === true;
-  return { pass, measured: parts.join("; "), checks };
+  return { pass: checks.F1 && checks.F2 && checks.F3, measured: parts.join("; "), checks };
 }
 
 // The plant: a Warden attack with its telegraph removed. In the Warden cells' runs, the hull of one source (the Warden's
 // own, or the source that cost the most hull when the Warden landed nothing) moves from telegraphed to untelegraphed, as
 // far as the run's telegraphed hull allows, and a killing hit from that source becomes untelegraphed. F1 must miss in a
 // pool that carries its mark, so a read whose F1 is unmarked everywhere cannot count the plant as caught.
-export function plantFairness(runs) {
-  const out = clone(runs);
-  const wardens = out.filter((r) => (r.cell === "w1" || r.cell === "w2") && r.row?.fairness);
+export function plantFairness(read) {
+  const out = clone(read);
+  const wardens = out.runs.filter((r) => (r.cell === "w1" || r.cell === "w2") && r.row?.fairness);
   const bySource = {};
   for (const r of wardens) for (const [s, h] of Object.entries(r.row.fairness.hit_sources ?? {})) bySource[s] = (bySource[s] ?? 0) + (h ?? 0);
   const source = bySource.warden > 0 ? "warden" : Object.entries(bySource).sort((a, b) => b[1] - a[1])[0]?.[0] ?? "warden";
@@ -132,64 +168,87 @@ export function plantFairness(runs) {
 
 // --- novice-deaths: at least 60% of Novice non-wins are deaths, not time caps ------------------------------------------
 
-// The Novice column of the world 1 fight cells, pooled. A death is a graded loss; a time cap is any timeout (fight cap,
-// stall, tick guard). Errors and harness kills are left out, as the band table leaves them out.
-export function gradeNoviceDeaths(runs, head) {
-  const sel = select(runs, head, W1_FIGHTS);
+// Graded per cell, never pooled: every Novice cell the plan names with a non-win must reach the line on its own. A death is
+// a graded loss; a time cap is any timeout (fight cap, stall, tick guard). Errors and harness kills are left out, as the
+// band table leaves them out. A cell with no non-win is reported and does not fail.
+export function gradeNoviceDeaths(read, head) {
+  const sel = select(read, head, NOVICE_CELLS);
   if (sel.error) return { pass: false, measured: sel.error, checks: { share: null } };
-  const novice = sel.runs.filter((r) => r.column === "novice");
-  const per = W1_FIGHTS.map((cell) => {
-    const gs = novice.filter((r) => r.cell === cell).map(gradeOf);
-    return { cell, deaths: gs.filter((g) => g.result === "loss").length, caps: gs.filter((g) => g.result === "timeout").length };
+  const counts = NOVICE_CELLS.map((cell) => enough(sel, read.earlyStop, cell, "novice", SEEDS.novice[cell]));
+  if (counts.some((c) => !c.ok)) return { pass: false, measured: `Novice: ${tooFew(counts)}`, checks: { share: null } };
+  const per = NOVICE_CELLS.map((cell, i) => {
+    const gs = sel.runs.filter((r) => r.cell === cell && r.column === "novice").map(gradeOf);
+    const deaths = gs.filter((g) => g.result === "loss").length;
+    const caps = gs.filter((g) => g.result === "timeout").length;
+    const share = deaths + caps ? deaths / (deaths + caps) : null;
+    return { cell, n: counts[i].n, deaths, caps, share, ok: share == null || share >= NOVICE_DEATH_SHARE - 1e-9 };
   });
-  const deaths = per.reduce((a, c) => a + c.deaths, 0);
-  const caps = per.reduce((a, c) => a + c.caps, 0);
-  const cells = per.filter((c) => c.deaths + c.caps > 0).map((c) => `${c.cell} ${c.deaths}/${c.deaths + c.caps}`).join(", ");
-  if (deaths + caps === 0) return { pass: false, measured: `no Novice non-win in ${W1_FIGHTS.join(", ")} (${novice.length} runs)`, checks: { share: null } };
-  const share = deaths / (deaths + caps);
-  const ok = share >= NOVICE_DEATH_SHARE - 1e-9;
-  return { pass: ok, measured: `Novice non-wins that are deaths: ${deaths} of ${deaths + caps} (${pct(share)}, line ${pct(NOVICE_DEATH_SHARE)}); ${cells}`, checks: { share: ok } };
+  const graded = per.filter((c) => c.share != null);
+  const text = per.map((c) => (c.share == null ? `${c.cell} no non-win (n=${c.n})` : `${c.cell} ${c.deaths} of ${c.deaths + c.caps} (${pct(c.share)}, n=${c.n})`)).join(", ");
+  if (!graded.length) return { pass: false, measured: `Novice non-wins that are deaths: no cell has a non-win; ${text}`, checks: { share: null } };
+  const ok = per.every((c) => c.ok);
+  const bad = per.filter((c) => !c.ok).map((c) => c.cell);
+  return { pass: ok, measured: `Novice non-wins that are deaths, per cell, line ${pct(NOVICE_DEATH_SHARE)}: ${text}${bad.length ? `; under the line: ${bad.join(", ")}` : ""}`, checks: { share: ok } };
 }
 
 // The plant: a band where every loss is a time cap.
-export function plantNoviceDeaths(runs) {
-  return clone(runs).map((r) => {
+export function plantNoviceDeaths(read) {
+  return { ...clone(read), runs: clone(read.runs).map((r) => {
     if (r.column !== "novice" || gradeOf(r).result !== "loss") return r;
     return { ...r, row: r.row ? { ...r.row, outcome: "fight_capped" } : r.row, grade: { ...gradeOf(r), result: "timeout", reason: "fight_capped", diedS: undefined } };
-  });
+  }) };
 }
 
 // --- receipts -----------------------------------------------------------------------------------------------------
 
-// Each row: its grader, its plant, and the check the plant must make miss.
+// Each row: its grader, its plant, and the checks the plant must make miss.
 export const ROWS = {
-  "strong-build-shows": { grade: gradeStrongBuild, plant: plantStrongBuild, target: "parts" },
-  "warden-fairness": { grade: gradeFairness, plant: plantFairness, target: "F1marked" },
-  "novice-deaths": { grade: gradeNoviceDeaths, plant: plantNoviceDeaths, target: "share" },
+  "strong-build-shows": { grade: gradeStrongBuild, plant: plantStrongBuild, targets: ["parts", "faster"] },
+  "warden-fairness": { grade: gradeFairness, plant: plantFairness, targets: ["F1marked"] },
+  "novice-deaths": { grade: gradeNoviceDeaths, plant: plantNoviceDeaths, targets: ["share"] },
 };
 
-export function buildReceipt(id, runs, head) {
-  const { grade, plant, target } = ROWS[id];
-  const real = grade(runs, head);
-  const planted = grade(plant(runs), head);
-  const caught = planted.checks[target] === false && planted.pass === false;
+// read: { runs: runs.ndjson rows, earlyStop: table.json early_stop entries (or none) }.
+export function buildReceipt(id, read, head) {
+  if (typeof head !== "string" || !COMMIT.test(head)) throw new Error(`--head must be a commit of 7 to 40 hex characters, not ${JSON.stringify(head)}`);
+  const { grade, plant, targets } = ROWS[id];
+  const real = grade(read, head);
+  const planted = grade(plant(read), head);
+  const caught = planted.pass === false && targets.every((t) => planted.checks[t] === false);
   const measured = caught ? real.measured : `${real.measured}; plant not caught (${planted.measured})`;
   return { head, pass: real.pass && caught, measured, plant_caught: caught };
 }
 
-export function buildReceipts(runs, head) {
-  return Object.fromEntries(Object.keys(ROWS).map((id) => [id, buildReceipt(id, runs, head)]));
+export function buildReceipts(read, head) {
+  return Object.fromEntries(Object.keys(ROWS).map((id) => [id, buildReceipt(id, read, head)]));
+}
+
+// One or more band read folders (shards may repeat a run; it is counted once).
+export function loadRead(dirs) {
+  const runs = dirs.flatMap((d) => parseNdjson(readFileSync(path.join(d, "runs.ndjson"), "utf8")));
+  const earlyStop = dirs.flatMap((d) => {
+    const file = path.join(d, "table.json");
+    return existsSync(file) ? JSON.parse(readFileSync(file, "utf8")).early_stop ?? [] : [];
+  });
+  return { runs, earlyStop };
 }
 
 function main(argv) {
-  const args = {};
-  for (let i = 0; i < argv.length; i += 2) args[argv[i].replace(/^--/, "")] = argv[i + 1];
-  if (!args.band || !args.head || !args.out) {
-    console.error("usage: band-receipts.mjs --band <band read folder> --head <commit> --out <receipts folder>");
+  const args = { band: [] };
+  for (let i = 0; i < argv.length; i += 2) {
+    const k = argv[i].replace(/^--/, "");
+    if (k === "band") args.band.push(argv[i + 1]);
+    else args[k] = argv[i + 1];
+  }
+  if (!args.band.length || !args.head || !args.out) {
+    console.error("usage: band-receipts.mjs --band <band read folder> [--band <folder> ...] --head <commit> --out <receipts folder>");
     return 2;
   }
-  const runs = parseNdjson(readFileSync(path.join(args.band, "runs.ndjson"), "utf8"));
-  const receipts = buildReceipts(runs, args.head);
+  if (!COMMIT.test(args.head)) {
+    console.error(`--head must be a commit of 7 to 40 hex characters, not ${args.head}`);
+    return 2;
+  }
+  const receipts = buildReceipts(loadRead(args.band), args.head);
   mkdirSync(args.out, { recursive: true });
   for (const [id, receipt] of Object.entries(receipts)) {
     writeFileSync(path.join(args.out, `${id}.json`), JSON.stringify(receipt, null, 2) + "\n");
