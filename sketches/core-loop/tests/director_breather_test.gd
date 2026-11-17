@@ -1,7 +1,7 @@
 extends SceneTree
 
 # Breathers (map audit unit 7, map points 2, 3 and 9; breather_rows.gd, ParkMap.breathers(), director.gd):
-# 1. Data: park_dam and park_flume have one breather each. Each stands on the riding lines (at least LINE_MIN line nodes
+# 1. Data: park_dam has one breather and park_flume none (W1-31). Each stands on the riding lines (at least LINE_MIN line nodes
 #    inside it) and its edge keeps CLEAR_M from every fight site, and its radius sits inside breather_rows.gd RADIUS.
 #    Planted: a breather on the Warden's beacon fails the clearance line, a 400 m one the radius line.
 # 2. Live wiring, on a director given each world 1 stage row as world.gd gives it (author, then use_row): it reads the
@@ -21,7 +21,7 @@ const BreatherRows := preload("res://src/world/breather_rows.gd")
 const FightReach := preload("res://tests/support/fight_reach.gd")
 const Breath := preload("res://tests/park_breath_test.gd")
 
-const WANT := {"park_dam": 1, "park_flume": 1}
+const WANT := {"park_dam": 1, "park_flume": 0}
 # Line nodes inside a breather with no crew home in the window: where the director's own packs would land.
 const FREE_MIN := 10
 const LINE_MIN := 10

@@ -7,16 +7,13 @@ extends RefCounted
 # changes no ground. ParkMap.breathers() reads them; director_breather_test checks each one stands on the lines, keeps
 # clear of the fights, and has a radius inside RADIUS.
 const RADIUS := Vector2(20.0, 120.0)
+# The flume has none (W1-31, gameplay critique section 6): its landing was a breath after the dam launch, and the curve
+# after the dam must not rest on its opening.
 const ROWS := {
 	"park_dam": [
 		# Below the shelf, where no crew home is in the window ahead (so the director's own packs land here) and the
 		# riding lines run 92 m clear of every fight site. 23 of the 29 such line nodes on the dam are inside it.
 		{"id": "shelf_foot_breather", "at": Vector2(8.0, -104.0), "radius_m": 60.0},
-	],
-	"park_flume": [
-		# Where the dam launch lands: a breath after the flight, before the flume reach. No crew home is in the window
-		# there and the lines run 89 m clear of every fight site.
-		{"id": "landing_breather", "at": Vector2(-464.0, -648.0), "radius_m": 60.0},
 	],
 }
 
