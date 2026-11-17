@@ -59,6 +59,32 @@ func _initialize() -> void:
 	_t.check("a false change in a control fails the case", not noisy["pass"] and noisy["false_changes"] == 2, str(noisy))
 	_t.check("no presses is not a pass", not Capture.summarize([], [], 100.0)["pass"])
 
+	# The window is timed: a fast machine (5 ms frames) still reads to 125 ms, and a frame count never ends it early.
+	_t.check("a fast machine's 13th frame at 65 ms is still read", Capture.window_open(65_000, 13, Capture.WINDOW_US, 0))
+	_t.check("the window closes at its time", not Capture.window_open(Capture.WINDOW_US, 25, Capture.WINDOW_US, 0))
+	_t.check("a plant's hold extends it", Capture.window_open(Capture.WINDOW_US + 10_000, 30, Capture.WINDOW_US, Capture.PLANT_HOLD_US))
+	_t.check("the runaway guard ends it", not Capture.window_open(1_000, Capture.MAX_WINDOW_FRAMES, Capture.WINDOW_US, 0))
+	var fast_frames: Array = []
+	for i in 24:
+		fast_frames.append(_frame(t0 + 5_000 * (i + 1), 400 if i == 15 else 0))
+	var late := Capture.first_change(t0, fast_frames, Capture.MIN_PX)
+	_t.check("an answer at 80 ms on 5 ms frames is found", late["answered"] and late["us"] == 80_000, str(late))
+
+	# Only a "now" row is a sound that started: skips, beat-timed plans and duck rows are not an answer.
+	var rows := [["jump", "hop", "skip", -1, 1.0], ["landed", "drop", "beat", 9000, 1.0], ["k", "hop", "duck", 1, 1, -6.0],
+		["boss", "track", "bar", 9000, 1.0], ["jump", "hop", "now", 100, 1.0, -3.0]]
+	var started := Capture.sounds_started(rows)
+	_t.eq("one row of five started a sound", started.size(), 1)
+	_t.eq("and it is the now row", str(started[0][1]), "hop")
+	_t.eq("skips and plans alone start nothing", Capture.sounds_started(rows.slice(0, 4)).size(), 0)
+
+	_t.eq("every case name is known", Capture.unknown_cases(["roll", "pilots_back", "title_to_pilots", "pilot_confirm"]).size(), 0)
+	_t.eq("a misspelt case is caught", Capture.unknown_cases(["pilot_back", "roll"]), ["pilot_back"])
+
+	_t.check("a user folder under artifacts/local is scratch", Capture.scratch_user_dir("/r/artifacts/local/ua08/home/Library/x", "/r"))
+	_t.check("the real saves folder is not", not Capture.scratch_user_dir("/Users/a/Library/Application Support/Godot/app_userdata/core-loop", "/r"))
+	_t.check("a sibling folder named like it is not", not Capture.scratch_user_dir("/r/artifacts/local-other/x", "/r"))
+
 	var a := Image.create(64, 36, false, Image.FORMAT_RGB8)
 	a.fill(Color8(50, 50, 50))
 	var b := a.duplicate() as Image

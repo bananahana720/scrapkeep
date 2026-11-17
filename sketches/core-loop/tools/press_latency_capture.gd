@@ -8,7 +8,9 @@ extends SceneTree
 #           press, for the first one) by MIN_PX or more pixels, each differing by DIFFER or more in a channel,
 #           on the picture shrunk to SMALL. It is the step from the frame before, not the distance from the
 #           frame before the press: the park's smoke and dust drift all the time and add up against a fixed frame;
-#   sound   the first frame at which the audio module's cue_log has grown since the press.
+#   sound   the first frame at which the audio module's cue_log holds a new "now" row since the press: a sound that
+#           started (sounds_started). Skipped cues, beat-timed plans and gain rows do not count. `cue_rows` in
+#           frames.json keeps each press's first logged rows with their mode.
 # Whichever answers first is recorded in `by`. Time = Time.get_ticks_usec from the injection to that
 # frame's draw. This is ENGINE-SIDE latency: display scan-out and the operating system's input stack are
 # not included, so the true figure on a monitor is higher. The press lands at a random point inside a
@@ -16,7 +18,7 @@ extends SceneTree
 # The menu's title is a live 3D park (birds, sparks, water) whose steps reach about 130 of these pixels, so the menu
 # line is MENU_MIN_PX: a press whose only change is smaller than about 5000 full-size pixels is not seen on the menu.
 # Before each press a matched control runs the same window with no press: any frame that differs, or any
-# cue that grows, is a false change. A case's controls must show zero false changes or the case is
+# sound that starts, is a false change. A case's controls must show zero false changes or the case is
 # `noisy` and fails. Each case takes TRIALS presses; the median and the worst are kept; a case passes when
 # its worst is at most LINE_MS and every press was answered. A press nothing answered in WINDOW_US is an
 # unanswered press and fails the case, with the worst recorded as null.
@@ -30,6 +32,9 @@ extends SceneTree
 # prompt rows by the ball (key_glyphs, first_steps) breathe on their own and are hidden, so a press answered only by
 # one of them is not seen. A control window that is not still is settled and run again, at most RETRIES times per press; every window run and every one
 # that was not still is reported (`control_windows`, `control_windows_not_still`), and `false_changes` counts the control paired with each press.
+# A case with any control window that was not still is FLAGGED in the output: its pass stands on a clean paired control,
+# but the scene moved on its own around it. The tool refuses to run (exit 2) unless the user data folder is under the
+# repo's artifacts/local/, or when --cases names an unknown case.
 # --plant=slow holds one named press (jump) for PLANT_HOLD_US inside the tool before it is released to the
 # game: that case must fail, and the run exits 1. Real run: exit 0 pass, 1 fail. Both: 2 with no display or
 # no --out. 3 when the plant run's control reports a false change.
@@ -62,6 +67,7 @@ const REST_FRAMES := 90
 const RETRIES := 3
 
 # name, part, input kind, code. Keys are physical keycodes; "mouse" is a button index.
+const MENU_CASES := ["title_move", "help_open", "help_back", "title_to_pilots", "pilots_back", "pilot_move", "pilot_confirm"]
 const VERBS := [
 	{"name": "roll", "kind": "key", "code": KEY_W},
 	{"name": "jump", "kind": "key", "code": KEY_SPACE},
@@ -86,6 +92,8 @@ var cases: Array = []
 var _adapter := ""
 var _rest_pose := Transform3D()
 var _min_px := MIN_PX
+var _dead := false
+var _pilot := ""
 
 
 # The first frame that answers a press. `frames` is a list of {"t": usec, "px": pixels differing from the
@@ -101,6 +109,38 @@ static func first_change(t0: int, frames: Array, min_px: int) -> Dictionary:
 		if seen or heard:
 			return {"answered": true, "us": int(f["t"]) - t0, "by": "both" if seen and heard else ("screen" if seen else "sound"), "frame": i}
 	return {"answered": false, "us": -1, "by": "none", "frame": -1}
+
+
+# Whether a window is still reading: until `window_us` (plus a plant's hold) of real time has passed since the
+# press, whatever the frame rate. `frames` only guards against a runaway loop.
+static func window_open(elapsed_us: int, frames: int, window_us: int, hold_us: int) -> bool:
+	return elapsed_us < window_us + hold_us and frames < MAX_WINDOW_FRAMES
+
+
+# The cue_log rows (audio.gd) that started a sound now. Its other rows are not a sound the player hears at that
+# moment: "skip" (bank not ready, empty row, inside the cue's minimum gap), "beat", "bar" and "grid" (decided now,
+# played on a later beat), "duck" and "restore" (a voice's gain), "stop", "room" and the rest. A "now" row is
+# written by audio.gd _start (a voice played) and note_cue (a sound played outside the director).
+static func sounds_started(rows: Array) -> Array:
+	var out_rows: Array = []
+	for r in rows:
+		if r is Array and r.size() > 2 and str(r[2]) == "now":
+			out_rows.append(r)
+	return out_rows
+
+
+# The names in `names` that are not a case of this tool.
+static func unknown_cases(names: Array) -> Array:
+	var known: Array = MENU_CASES.duplicate()
+	for v in VERBS:
+		known.append(v["name"])
+	return names.filter(func(n): return not known.has(n))
+
+
+# The user data folder must sit under the repo's artifacts/local/, so a played-mode run never writes the real saves.
+static func scratch_user_dir(user_dir: String, repo_root: String) -> bool:
+	var scratch := repo_root.simplify_path().path_join("artifacts/local") + "/"
+	return (user_dir.simplify_path() + "/").begins_with(scratch)
 
 
 # How many frames of a control window changed: the false changes of a case's no-press run.
@@ -167,6 +207,16 @@ func _initialize() -> void:
 		printerr("needs a display and --out")
 		quit(2)
 		return
+	var unknown := unknown_cases(only)
+	if not unknown.is_empty():
+		printerr("press_latency: unknown case %s; cases are %s and the verbs" % [", ".join(PackedStringArray(unknown)), ", ".join(PackedStringArray(MENU_CASES))])
+		quit(2)
+		return
+	var repo := ProjectSettings.globalize_path("res://").path_join("../..")
+	if not scratch_user_dir(OS.get_user_data_dir(), repo):
+		printerr("press_latency: the user data folder %s is not under %s; the menu cases write the profile, so set HOME and XDG_DATA_HOME to a folder there" % [OS.get_user_data_dir(), repo.simplify_path().path_join("artifacts/local")])
+		quit(2)
+		return
 	root.size = SIZE
 	root.content_scale_size = SIZE
 	root.content_scale_mode = Window.CONTENT_SCALE_MODE_VIEWPORT
@@ -184,23 +234,42 @@ func _run() -> void:
 	if plant == "slow":
 		part = "verbs"
 		only = [PLANT_CASE]
-	if part == "verbs" or part == "all":
+	if (part == "verbs" or part == "all") and VERBS.any(func(v): return _wanted(v["name"])):
 		await _verbs()
-	if part == "menu" or part == "all":
+	if (part == "menu" or part == "all") and MENU_CASES.any(func(n): return _wanted(n)) and not _dead:
 		await _menu()
 	_finish()
 
 
+# A lookup the tool depends on is gone (renamed in the game): stop with exit 2 rather than time the wrong thing.
+func _die(why: String) -> void:
+	if _dead:
+		return
+	_dead = true
+	printerr("press_latency: " + why)
+	quit(2)
+
+
 func _finish() -> void:
+	if _dead:
+		return
 	var failed := 0
 	var false_total := 0
 	var plant_pass := true
+	var plant_case := {}
+	var flagged := 0
 	for c in cases:
+		# A flagged case had a control window that was not still before the one that counts: its paired control is
+		# clean, but the scene moved on its own around it, so a pass is weaker evidence. It is printed, not dropped.
+		c["flagged"] = int(c.get("control_windows_not_still", 0)) > 0
+		if c["flagged"]:
+			flagged += 1
 		if not c["pass"]:
 			failed += 1
 		false_total += int(c["false_changes"])
 		if plant != "" and c["name"] == PLANT_CASE:
 			plant_pass = c["pass"]
+			plant_case = c
 	var verdict := "pass" if cases.size() > 0 and failed == 0 else "fail"
 	var code := 0 if verdict == "pass" else 1
 	if plant == "slow":
@@ -214,11 +283,17 @@ func _finish() -> void:
 		"principle": "P5: A press shows on screen or in sound within 100 ms", "scope": "engine-side latency; display scan-out and the OS input stack are not included",
 		"plant": plant, "adapter": _adapter, "size": [SIZE.x, SIZE.y], "line_ms": LINE_MS, "differ": DIFFER, "min_px_verbs": MIN_PX, "min_px_menu": MENU_MIN_PX,
 		"compare_size": [SMALL.x, SMALL.y], "window_us": WINDOW_US, "trials": trials, "cases_run": cases.size(), "cases_failed": failed,
-		"false_changes": false_total, "verdict": verdict, "cases": cases}, "\t"))
+		"false_changes": false_total, "cases_flagged": flagged, "pilot": _pilot, "verdict": verdict, "cases": cases}, "\t"))
 	f.close()
 	for c in cases:
-		print("press_latency: %-16s n=%d answered=%d median=%s worst=%s by=%s false=%d -> %s" % [c["name"], c["n"], c["answered"], c["median_ms"], c["worst_ms"], c["by"], c["false_changes"], "pass" if c["pass"] else "FAIL"])
-	print("press_latency: plant=%s cases %d, failed %d, false changes %d -> %s" % [plant, cases.size(), failed, false_total, verdict])
+		print("press_latency: %-16s n=%d answered=%d unanswered=%d median=%s worst=%s by=%s false=%d not_still=%d/%d -> %s%s" % [c["name"], c["n"], c["answered"], c["unanswered"],
+			c["median_ms"], c["worst_ms"], c["by"], c["false_changes"], c["control_windows_not_still"], c["control_windows"], "pass" if c["pass"] else "FAIL", ", FLAGGED" if c["flagged"] else ""])
+	if plant == "slow" and not plant_case.is_empty():
+		# A held press that is answered late and one that is never answered both fail; the line says which.
+		var how: String = "unanswered in %d of %d presses" % [plant_case["unanswered"], plant_case["n"]] if int(plant_case["unanswered"]) > 0 \
+			else "answered late, worst %s ms" % plant_case["worst_ms"]
+		print("press_latency: plant %s %s" % [PLANT_CASE, how])
+	print("press_latency: plant=%s cases %d, failed %d, flagged %d, false changes %d -> %s" % [plant, cases.size(), failed, flagged, false_total, verdict])
 	quit(code)
 
 
@@ -258,6 +333,12 @@ func _cues() -> int:
 	return a.cue_log.size() if a != null else 0
 
 
+# The sounds started since cue_log held `from` rows.
+func _started_since(from: int) -> Array:
+	var a = _audio()
+	return sounds_started(a.cue_log.slice(from)) if a != null else []
+
+
 # --- the verbs ---
 
 func _verbs() -> void:
@@ -265,6 +346,7 @@ func _verbs() -> void:
 	await _boot_game(false)
 	game.ctx.calm = true
 	game.flow.press_start()
+	_pilot = str(game.flow.classes[0].display_name)
 	game.flow.choose_class(0)
 	game.run.set_max_hp(999999.0)
 	var keyboard := Intent.Keyboard.new()
@@ -293,9 +375,16 @@ func _verbs() -> void:
 func _rest_ball() -> bool:
 	var body = game.player.body()
 	if _rest_pose != Transform3D():
-		body.freeze = true
-		body.global_transform = _rest_pose
-		await _frames(REST_FRAMES)
+		# Put back at the rest pose while frozen, the ball's shown pose and what follows it (the camera) still move
+		# when it is first let go, about 1000 pixels a frame for 125 ms, so every first control read as not still.
+		# One short let-go and a second put-back first leaves the shown pose at rest, as the old retry did.
+		for k in 2:
+			body.freeze = true
+			body.global_transform = _rest_pose
+			await _frames(REST_FRAMES)
+			if k == 0:
+				_let_go()
+				await _frames(8)
 		return true
 	body.freeze = false
 	var landed := 0
@@ -306,8 +395,7 @@ func _rest_ball() -> bool:
 		if landed >= 30:
 			body.freeze = true
 			_rest_pose = body.global_transform
-			await _frames(REST_FRAMES)
-			return true
+			return await _rest_ball()
 	return false
 
 
@@ -319,12 +407,15 @@ func _menu() -> void:
 	if _wanted("title_move"):
 		# The title's buttons are one row, so the move is Right, from Play (focused again before each press) to Camp.
 		await _case({"name": "title_move", "kind": "key", "code": KEY_RIGHT}, "menu", Callable(self, "_focus_play"))
-	if _wanted("help_open") or _wanted("help_back"):
+	if _wanted("help_open"):
 		await _case({"name": "help_open", "kind": "key", "code": KEY_H, "undo": KEY_ESCAPE}, "menu", Callable(self, "_title_idle"))
+	if _wanted("help_back"):
 		await _case({"name": "help_back", "kind": "key", "code": KEY_ESCAPE, "setup_key": KEY_H}, "menu", Callable(self, "_title_idle"))
-	if _wanted("pilot_confirm") or _wanted("pilot_back") or _wanted("pilot_move"):
+	if _wanted("title_to_pilots"):
 		await _case({"name": "title_to_pilots", "kind": "key", "code": KEY_SPACE, "undo": KEY_ESCAPE}, "menu", Callable(self, "_title_idle"))
+	if _wanted("pilots_back"):
 		await _case({"name": "pilots_back", "kind": "key", "code": KEY_ESCAPE, "setup_key": KEY_SPACE}, "menu", Callable(self, "_title_idle"))
+	if _wanted("pilot_move"):
 		await _pilot_move_case()
 	await _drop_game()
 	if _wanted("pilot_confirm"):
@@ -343,6 +434,9 @@ func _boot_menu() -> void:
 func _wait_title() -> void:
 	var guard := 0
 	while guard < 3600:
+		if game.presentation != null and not "title_stage" in game.presentation:
+			_die("presentation has no title_stage; the tool cannot tell when the title intro ends")
+			return
 		var stage = game.presentation.get("title_stage") if game.presentation != null else null
 		var playing: bool = stage != null and stage.intro_playing()
 		if game.flow.state_name() == "title" and not playing and game.get("screens") != null and game.screens.button_for("start") != null:
@@ -465,7 +559,7 @@ func _case(spec: Dictionary, group: String, settle: Callable) -> void:
 
 func _dead_case(name: String, group: String, why: String) -> Dictionary:
 	return {"name": name, "group": group, "n": 0, "answered": 0, "unanswered": 0, "median_ms": null, "worst_ms": null, "by": "none",
-		"control_trials": 0, "false_changes": 0, "pass": false, "why": why, "samples_ms": [], "frames": []}
+		"control_trials": 0, "control_windows": 0, "control_windows_not_still": 0, "false_changes": 0, "pass": false, "why": why, "samples_ms": [], "frames": []}
 
 
 func _add_case(name: String, group: String, results: Array, controls: Array, keep: Dictionary, windows := 0, noisy := 0) -> void:
@@ -557,13 +651,13 @@ func _window(spec: Dictionary, press: bool, hold_us: int) -> Dictionary:
 	_let_go()
 	var grabs: Array = []
 	var injected := not press
-	while Time.get_ticks_usec() - t0 < WINDOW_US + hold_us and grabs.size() < MAX_WINDOW_FRAMES:
+	while window_open(Time.get_ticks_usec() - t0, grabs.size(), WINDOW_US, hold_us):
 		if press and not injected and Time.get_ticks_usec() - t0 >= hold_us:
 			Input.parse_input_event(_event(spec, true))
 			injected = true
 		await RenderingServer.frame_post_draw
 		var t := Time.get_ticks_usec()
-		grabs.append({"t": t, "img": root.get_texture().get_image(), "cues": _cues() - cue0})
+		grabs.append({"t": t, "img": root.get_texture().get_image(), "cues": _started_since(cue0).size()})
 	if press:
 		Input.parse_input_event(_event(spec, false))
 	var inject_t0 := t0 + hold_us
@@ -585,12 +679,16 @@ func _window(spec: Dictionary, press: bool, hold_us: int) -> Dictionary:
 		gap = maxi(gap, int(g["t"]) - last_t)
 		last_t = int(g["t"])
 	var rows: Array = []
+	var logged: Array = []
 	if _audio() != null:
-		rows = _audio().cue_log.slice(cue0)
+		rows = _started_since(cue0)
+		for r in _audio().cue_log.slice(cue0).slice(0, 8):
+			logged.append([str(r[1]), str(r[2])] if r is Array and r.size() > 2 else [str(r), ""])
 	var result := {"answered": false, "us": -1, "by": "none", "frame": -1}
 	if press:
 		result = first_change(t0, frames, _min_px)
 		result["gap_us"] = gap
+		result["cue_rows"] = logged
 		if result["answered"]:
 			result["cue"] = str(rows[0][1]) if not rows.is_empty() else ""
 	return {"frames": frames, "result": result, "before": before, "after": after if after != null else before}
@@ -604,8 +702,10 @@ func _let_go() -> void:
 	if body != null and body.freeze:
 		body.linear_velocity = Vector3.ZERO
 		body.angular_velocity = Vector3.ZERO
-		if body.has_method("set_velocity_now"):
-			body.set_velocity_now(Vector3.ZERO)
+		if not body.has_method("set_velocity_now"):
+			_die("the player body has no set_velocity_now; the tool cannot let the held ball go from rest")
+			return
+		body.set_velocity_now(Vector3.ZERO)
 		body.freeze = false
 
 
