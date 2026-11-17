@@ -67,6 +67,10 @@ const MOBS_DAMAGE_W1 := [2.0, 1.0, 1.0, 1.0, 1.0, 1.0]
 # slower than cruise). A ball that stops or dawdles is run down; a ball at cruise (14 m/s) is never caught by
 # running. The lunge, its lane and its wind-up are as they were.
 const CHASER_SPEED_W1 := [9.0, 9.0, 0.0, 0.0, 0.0, 0.0]
+# The flume's crowd comes sooner (W1-31, gameplay critique section 6): the director's spawn interval x0.7 on stage 2, so the
+# opening carries packs instead of a walk. Interval, not hit size: it asks the ball to keep moving and no warning, shape
+# or damage changes. The dam keeps its own pace.
+const INTERVAL_W1 := [1.0, 0.7, 1.0, 1.0, 1.0, 1.0]
 const PackPressure := preload("res://src/combat/pack_pressure.gd")
 
 const DEFAULTS := {
@@ -133,7 +137,7 @@ const DEFAULTS := {
 	# the director's crowd cap and spawn interval, and the elite repeat chance. The attack_budget
 	# caps and Director.HARD_CAP stay hard ceilings.
 	"mobs.damage_mult": 1.0, "mobs.pack_scale_mult": 1.0, "mobs.interval_scale_mult": 1.0, "mobs.elite_rate_mult": 1.0,
-	"mobs.damage_by_stage": MOBS_DAMAGE_W1, "mobs.pack_scale_by_stage": ONES6, "mobs.interval_scale_by_stage": ONES6, "mobs.elite_rate_by_stage": ONES6,
+	"mobs.damage_by_stage": MOBS_DAMAGE_W1, "mobs.pack_scale_by_stage": ONES6, "mobs.interval_scale_by_stage": INTERVAL_W1, "mobs.elite_rate_by_stage": ONES6,
 	# A chaser's run speed in m/s per stage (chaser.gd stage_speed): 0 keeps the chaser's own SPEED, a value
 	# can only raise it, and it is held under Chaser.SPEED_CEILING, below the ball's cruise.
 	"mobs.chaser_speed_by_stage": CHASER_SPEED_W1,
