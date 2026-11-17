@@ -1,10 +1,11 @@
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
 import { mkdtempSync, mkdirSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { test } from "node:test";
 
-import { MIN_CUES, buildReceipt as recipesReceipt } from "./sound-recipes-receipt.mjs";
+import { buildReceipt as recipesReceipt, produce } from "./sound-recipes-receipt.mjs";
 import { PLANT_RATE, buildReceipt as levelsReceipt, measure, runPlants, tone } from "./sound-levels-receipt.mjs";
 import { hasFfmpeg } from "../audio-gate.mjs";
 import { receiptRow } from "../world1-bands.mjs";
@@ -15,31 +16,32 @@ const ffmpeg = hasFfmpeg();
 // --- sound-own-recipes ----------------------------------------------------------------------
 
 const recipesRow = { id: "sound-own-recipes", plant: "a cue with its recipe removed must be counted", producer: "x" };
-const cue = (name, own = true, how = own ? "recipe" : "fallback blip") => `CUE ${JSON.stringify({ cue: name, own, how, facts: 1, fact: `ROWS:${name}` })}`;
-const recipesLog = ({ n = 40, standins = [], unjudged = [], plant = true, fail = 0, checks = 5 } = {}) => {
-  const before = standins.length;
+const cue = (name, own = true, plays = own ? name : "slam_boom") => `CUE ${JSON.stringify({ cue: name, own, how: own ? "own sound" : "plays its row's shared sound, not a sound of its own", plays, facts: 1, fact: `ROWS:${name}` })}`;
+const recipesLog = ({ n = 40, short = [], plant = true, fail = 0, checks = 5, summary = null } = {}) => {
+  const before = short.length;
+  const total = n + short.length;
   return [
     ...Array.from({ length: checks }, (_, i) => `[check ${i}] detail -> ${i < fail ? "FAIL" : "PASS"}`),
     ...Array.from({ length: n }, (_, i) => cue(`cue_${i}`)),
-    ...standins.map((c) => cue(c, false)),
-    ...unjudged.map((c) => cue(c, true, "unjudged: resolves from the event's own context")),
+    ...short.map((c) => cue(c, false)),
     ...(plant ? [`PLANT ${JSON.stringify({ fact: "ROWS:cue_0", cue: "plant_recipe_removed", before, after: before + 1, caught: true })}`] : []),
+    `SUMMARY ${JSON.stringify(summary ?? { facts: 60, cues: total, pinned: total, short: before })}`,
   ].join("\n");
 };
 
-test("recipes: every world 1 cue has its own recipe and the plant was counted, so the done table passes it", () => {
+test("recipes: every world 1 cue plays its own sound and the plant was counted, so the done table passes it", () => {
   const r = recipesReceipt(recipesLog(), HEAD);
   assert.equal(r.pass, true);
   assert.equal(r.plant_caught, true);
-  assert.match(r.measured, /^0 of 40 world 1 cues play a stand-in; plant: ROWS:cue_0's cue removed read 0 -> 1/);
+  assert.match(r.measured, /^all 40 world 1 cues play a sound of their own; plant: ROWS:cue_0's recipe removed read 0 -> 1/);
   assert.deepEqual(receiptRow(recipesRow, r, HEAD), { measured: r.measured, pass: true });
 });
 
-test("recipes: a cue on the fallback blip fails the receipt and is named", () => {
-  const r = recipesReceipt(recipesLog({ standins: ["drop_thud", "guard_creak"] }), HEAD);
+test("recipes: a cue with no sound of its own fails the receipt and names what plays in its place", () => {
+  const r = recipesReceipt(recipesLog({ short: ["flood_drop", "line_load"] }), HEAD);
   assert.equal(r.pass, false);
   assert.equal(r.plant_caught, true);
-  assert.match(r.measured, /^2 of 42 world 1 cues play a stand-in: drop_thud \(fallback blip\), guard_creak \(fallback blip\)/);
+  assert.match(r.measured, /^2 of 42 world 1 cues play no sound of their own: flood_drop -> slam_boom, line_load -> slam_boom/);
 });
 
 test("recipes: no PLANT line, or a plant that did not raise the count by one, voids the receipt", () => {
@@ -50,15 +52,32 @@ test("recipes: no PLANT line, or a plant that did not raise the count by one, vo
   assert.equal(recipesReceipt(flat, HEAD).plant_caught, false);
 });
 
-test("recipes: unjudged cues are named but do not fail; a short count, a failed check and an empty log fail", () => {
-  const u = recipesReceipt(recipesLog({ unjudged: ["hold_by_kind"] }), HEAD);
-  assert.equal(u.pass, true);
-  assert.match(u.measured, /1 resolve from the event's own context and are not judged \(hold_by_kind\)/);
-  assert.match(recipesReceipt(recipesLog({ n: MIN_CUES - 5 }), HEAD).measured, /derivation broke/);
+test("recipes: cues that vanish against the SUMMARY or the pin fail; a failed check and an empty log fail", () => {
+  const vanished = recipesReceipt(recipesLog({ summary: { facts: 60, cues: 182, pinned: 182, short: 0 } }), HEAD);
+  assert.equal(vanished.pass, false);
+  assert.match(vanished.measured, /^40 CUE lines, SUMMARY counted 182, pinned 182: world 1 cues appeared or vanished/);
+  assert.equal(recipesReceipt(recipesLog({ summary: { facts: 60, cues: 40, pinned: 182, short: 0 } }), HEAD).pass, false);
   assert.equal(recipesReceipt(recipesLog({ fail: 1 }), HEAD).pass, false);
   assert.equal(recipesReceipt(recipesLog({ checks: 2 }), HEAD).pass, false);
   assert.equal(recipesReceipt("", HEAD).pass, false);
-  assert.match(recipesReceipt("", HEAD).measured, /^no CUE lines/);
+  assert.match(recipesReceipt("", HEAD).measured, /^no CUE or SUMMARY lines/);
+});
+
+test("recipes: the producer takes the head from git and refuses a checkout with uncommitted tracked changes", () => {
+  const repo = mkdtempSync(path.join(os.tmpdir(), "sound-recipes-git-"));
+  const git = (...args) => spawnSync("git", ["-c", "user.name=t", "-c", "user.email=t@t", ...args], { cwd: repo, encoding: "utf8" });
+  git("init", "-q");
+  writeFileSync(path.join(repo, "a.txt"), "one");
+  git("add", "a.txt");
+  git("commit", "-q", "-m", "one");
+  const head = git("rev-parse", "HEAD").stdout.trim();
+  let ran = 0;
+  const r = produce({ cwd: repo, run: () => { ran += 1; return recipesLog(); } });
+  assert.equal(r.head, head);
+  assert.equal(r.pass, true);
+  writeFileSync(path.join(repo, "a.txt"), "two");
+  assert.throws(() => produce({ cwd: repo, run: () => { ran += 1; return recipesLog(); } }), /refusing: uncommitted changes/);
+  assert.equal(ran, 1, "a dirty checkout never runs the test");
 });
 
 // --- sound-levels ---------------------------------------------------------------------------
@@ -79,7 +98,7 @@ test("levels: no stems on this machine is no data, never a pass", () => {
 test("levels: every clip measured inside the limits, plant caught: passes in the done table", () => {
   const r = levelsReceipt({ head: HEAD, clips: 2, present: 2, rows: [row("a/x"), row("b/y", -15.8, -1.4)], found: [], plant: caught });
   assert.equal(r.pass, true);
-  assert.match(r.measured, /^2 of 2 music clips measured: -16 to -15.8 LUFS, true peak at most -1.4 dBTP, 2 loop seams; all inside the limits/);
+  assert.match(r.measured, /^2 of 2 music clips measured: true peak on 2 \(at most -1.4 dBTP\), loudness on 2 \(-16 to -15.8 LUFS\) \(0 under 10 s, skipped by EBU R 128 programme loudness\), seams on 2 loops; every check that ran is inside the limits/);
   assert.deepEqual(receiptRow(levelsRow, r, HEAD), { measured: r.measured, pass: true });
 });
 
@@ -100,7 +119,7 @@ test("levels: the plants run through audio-gate's own judge, and a judge that se
   assert.equal(real.caught, true, real.what);
   const blind = runPlants({ judgeFn: (name) => ({ row: { name }, found: [] }) });
   assert.equal(blind.caught, false);
-  assert.match(blind.what, /loudness, peak, seam/);
+  assert.match(blind.what, /loudness, peak, seam, short_peak/);
 });
 
 // A WAV of a float stereo buffer, 16-bit, so ffmpeg reads it as a stem.

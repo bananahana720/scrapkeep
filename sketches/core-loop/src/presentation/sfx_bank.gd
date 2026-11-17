@@ -434,6 +434,14 @@ static func has_recipe(id: String) -> bool:
 		or _assist_parts(id).size() > 0 or id in EVENT_CUES)
 
 
+# True when the bank plays a sound made for this id: a recorded sound whose file is there, or a recipe
+# (has_recipe). False when it would bake the fallback blip. A read-only query; nothing is baked.
+static func plays_own(id: String) -> bool:
+	if FILE_SOUNDS.has(id) or id.begins_with(STINGER_PREFIX):
+		return file_exists(id)
+	return has_recipe(id)
+
+
 static func trim_db(id: String) -> float:
 	if id.begins_with(CAUSE_NOTE):
 		return CAUSE_NOTE_DB
