@@ -13,6 +13,7 @@ extends "res://tools/bot_run.gd"
 
 const ChildRuns := preload("res://tests/trees/child_runs.gd")
 const T := preload("res://tests/support/t.gd")
+const PlatformPin := preload("res://tests/support/platform_pin.gd")
 
 # KF3 (wardens/swarm.md section 7): the swarm band on its first stage, stage 3's headframe hive,
 # with the hoist live. tools/bot_run.gd plays the alpha table from stage 3 to the stage's end
@@ -47,7 +48,12 @@ const ARM_ROWS := {"small": {"policy": "skipper", "mass": 0}, "grown": {"policy"
 	"camper": {"policy": "camper", "mass": 0}}
 const STAGE := 3
 const GROWN_BAND_S := Vector2(25.0, 45.0)
+# 2026-11-17 (ruling eb, Mac gate; tests/support/platform_pin.gd): the measured first-stagger median has a Mac value
+# beside the Linux 50.32 s, with the same plus or minus 10 s. One run of this test on w43/gate-mac-reds 30c61601 (stage
+# alpha-w43 35e0fc83, Mac Studio M5 Max, Godot 4.7.2, 24 seeds a side) read small first-stagger median 36.61 s, as the
+# wave 43 gate's four solo runs did; small 71.24 s and grown 31.98 s pass their Linux pins there, so those stay single.
 const FIRST_STAGGER_BAND_S := Vector2(40.32, 60.32)
+const FIRST_STAGGER_BAND_S_MAC := Vector2(26.61, 46.61)
 const SMALL_FACTOR := 2.0
 const HOIST_TOP := 29.0
 const RUN_CAP_S := 300.0
@@ -215,8 +221,9 @@ func _judge(t, sweep: Dictionary) -> void:
 		"%d of %d grown seeds took a chunk with a haul from a latch, per seed %s" % [grown_latched, SEED_COUNT, latch_finishes["grown"]])
 	t.check("grown breaks the hive in 25 to 45 s", grown >= GROWN_BAND_S.x and grown <= GROWN_BAND_S.y, "grown median %.2f s" % grown)
 	t.check("small takes at least twice grown's time", grown > 0.0 and small >= SMALL_FACTOR * grown, "small %.2f s, grown %.2f s" % [small, grown])
-	t.check("an ordinary pilot first staggers the hive within 10 s of the measured 50.32 s", first_small >= FIRST_STAGGER_BAND_S.x
-		and first_small <= FIRST_STAGGER_BAND_S.y, "small first-stagger median %.2f s" % first_small)
+	var first_band: Vector2 = PlatformPin.pick(FIRST_STAGGER_BAND_S, FIRST_STAGGER_BAND_S_MAC)
+	t.check("an ordinary pilot first staggers the hive within 10 s of the measured %.2f s" % (first_band.x + 10.0), first_small >= first_band.x
+		and first_small <= first_band.y, "small first-stagger median %.2f s" % first_small)
 	t.check("small and grown medians are measured under the run cap", small < RUN_CAP_S and grown < RUN_CAP_S,
 		"small %.2f s, grown %.2f s, cap %.0f s" % [small, grown, RUN_CAP_S])
 	t.check("small median within 10 percent of the pin", EXPECT_SMALL_S > 0.0 and absf(small - EXPECT_SMALL_S) <= TOLERANCE * EXPECT_SMALL_S,

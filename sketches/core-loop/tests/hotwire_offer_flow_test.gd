@@ -289,8 +289,18 @@ func _physics_process(delta: float) -> bool:
 				_speed(1.0)
 				_game.events.enemy_struck.emit(_a, "ram", 10.0)
 				_check("fires after recovery", _game.build.tread_fires == 2, "fires %d at %.2f s" % [_game.build.tread_fires, _clock])
-				_phase = "gates"
+				# A target the same attack kills is freed before the bonus resolves in the next physics step:
+				# the step must skip it (a freed object passed on is a script error, which fails the run) and
+				# still pay the live target.
+				var gone := Dummy.new()
+				_game.ctx.root.add_child(gone)
+				_game.events.enemy_struck.emit(gone, "ram", 10.0)
+				gone.free()
+				_phase = "freed"
 				_clock = 0.0
+		"freed":
+			_check("the bonus skips a freed target and pays the live one", _a.taken.size() == 2, "a took %d" % _a.taken.size())
+			_phase = "gates"
 		"gates":
 			# Recovery spent again; a slow ball and then a massless one take nothing.
 			if _clock >= 3.2:

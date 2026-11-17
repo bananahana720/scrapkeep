@@ -122,6 +122,11 @@ test("every failed run of a listed test is read against its row, not only the la
   // A passing run's lines are not read; an ERROR line of a failed run is.
   assert.deepEqual(whatFailed([{ ok: false, text: pin + "ERROR: resumed after await\n", timedOut: false }, { ok: true, text: other, timedOut: false }]), { labels: ["pin within 2 s"], timedOut: false, errorLine: true });
   assert.equal(whatFailed([{ ok: false, text: pin + "SCRIPT ERROR: Invalid call\n", timedOut: false }]).errorLine, true);
+  // macOS prints the dummy renderer's shutdown lines on a clean run; only there they are not an error line.
+  const shutdown = pin + "ERROR: 2 RID allocations of type 'N13RendererDummy15MaterialStorage11DummyShaderE' were leaked at exit.\n";
+  assert.equal(whatFailed([{ ok: false, text: shutdown, timedOut: false }], "darwin").errorLine, false);
+  assert.equal(whatFailed([{ ok: false, text: shutdown, timedOut: false }], "linux").errorLine, true);
+  assert.equal(whatFailed([{ ok: false, text: shutdown + "ERROR: resumed after await\n", timedOut: false }], "darwin").errorLine, true);
   // A failed run with no log, and a failing line the pattern cannot label, are never read as nothing.
   assert.deepEqual(whatFailed([{ ok: false, text: null, timedOut: false }]).labels, ["a failed run left no log"]);
   assert.deepEqual(failedChecks("CUA check -> FAIL: door\n[pin within 2 s] got 3 -> FAIL\n"), ["unlabelled failing line: CUA check -> FAIL: door", "pin within 2 s"]);
