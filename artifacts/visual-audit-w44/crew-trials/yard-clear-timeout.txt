@@ -1,0 +1,225 @@
+[park_dam has a gate and a lock]  -> PASS
+[park_dam gate wants packs]  -> PASS
+[park_dam lock lands in waves]  -> PASS
+[park_dam lock kind chaser is a director kind]  -> PASS
+[park_dam lock kind chaser is a director kind]  -> PASS
+[park_dam lock kind lobber is a director kind]  -> PASS
+[park_dam keeps boom_tender out of the ring]  -> PASS
+[park_dam keeps mag_trapper out of the ring]  -> PASS
+[park_dam keeps plated_brute out of the ring]  -> PASS
+[park_dam lock kind lobber is a director kind]  -> PASS
+[park_dam lock kind lobber is a director kind]  -> PASS
+[park_dam lock kind chaser is a director kind]  -> PASS
+[park_dam keeps boom_tender out of the ring]  -> PASS
+[park_dam keeps mag_trapper out of the ring]  -> PASS
+[park_dam keeps plated_brute out of the ring]  -> PASS
+[park_dam lock kind chaser is a director kind]  -> PASS
+[park_dam lock kind chaser is a director kind]  -> PASS
+[park_dam lock kind chaser is a director kind]  -> PASS
+[park_dam lock kind lobber is a director kind]  -> PASS
+[park_dam keeps boom_tender out of the ring]  -> PASS
+[park_dam keeps mag_trapper out of the ring]  -> PASS
+[park_dam keeps plated_brute out of the ring]  -> PASS
+[park_dam lock kind lobber is a director kind]  -> PASS
+[park_dam lock kind chaser is a director kind]  -> PASS
+[park_dam lock kind chaser is a director kind]  -> PASS
+[park_dam lock kind jolt_layer is a director kind]  -> PASS
+[park_dam keeps boom_tender out of the ring]  -> PASS
+[park_dam keeps mag_trapper out of the ring]  -> PASS
+[park_dam keeps plated_brute out of the ring]  -> PASS
+[park_dam lock kind chaser is a director kind]  -> PASS
+[park_dam lock kind chaser is a director kind]  -> PASS
+[park_dam lock kind lobber is a director kind]  -> PASS
+[park_dam lock kind lobber is a director kind]  -> PASS
+[park_dam lock kind ramp_flipper is a director kind]  -> PASS
+[park_dam keeps boom_tender out of the ring]  -> PASS
+[park_dam keeps mag_trapper out of the ring]  -> PASS
+[park_dam keeps plated_brute out of the ring]  -> PASS
+[park_dam second-last wave lays a jolt mat] ["lobber", "chaser", "chaser", "jolt_layer"] -> PASS
+[park_dam last wave drops a sluice flap] ["chaser", "chaser", "lobber", "lobber", "ramp_flipper"] -> PASS
+[park_flume has a gate and a lock]  -> PASS
+[park_flume gate wants packs]  -> PASS
+[park_flume lock lands in waves]  -> PASS
+[park_flume lock kind chaser is a director kind]  -> PASS
+[park_flume lock kind chaser is a director kind]  -> PASS
+[park_flume lock kind lobber is a director kind]  -> PASS
+[park_flume keeps boom_tender out of the ring]  -> PASS
+[park_flume keeps mag_trapper out of the ring]  -> PASS
+[park_flume keeps plated_brute out of the ring]  -> PASS
+[park_flume lock kind chaser is a director kind]  -> PASS
+[park_flume lock kind lobber is a director kind]  -> PASS
+[park_flume lock kind lobber is a director kind]  -> PASS
+[park_flume keeps boom_tender out of the ring]  -> PASS
+[park_flume keeps mag_trapper out of the ring]  -> PASS
+[park_flume keeps plated_brute out of the ring]  -> PASS
+[park_flume lock kind chaser is a director kind]  -> PASS
+[park_flume lock kind chaser is a director kind]  -> PASS
+[park_flume lock kind lobber is a director kind]  -> PASS
+[park_flume lock kind lobber is a director kind]  -> PASS
+[park_flume keeps boom_tender out of the ring]  -> PASS
+[park_flume keeps mag_trapper out of the ring]  -> PASS
+[park_flume keeps plated_brute out of the ring]  -> PASS
+[park_flume lock kind lobber is a director kind]  -> PASS
+[park_flume lock kind chaser is a director kind]  -> PASS
+[park_flume lock kind chaser is a director kind]  -> PASS
+[park_flume keeps boom_tender out of the ring]  -> PASS
+[park_flume keeps mag_trapper out of the ring]  -> PASS
+[park_flume keeps plated_brute out of the ring]  -> PASS
+[park_flume lock kind chaser is a director kind]  -> PASS
+[park_flume lock kind lobber is a director kind]  -> PASS
+[park_flume lock kind lobber is a director kind]  -> PASS
+[park_flume keeps boom_tender out of the ring]  -> PASS
+[park_flume keeps mag_trapper out of the ring]  -> PASS
+[park_flume keeps plated_brute out of the ring]  -> PASS
+[park_flume lock kind chaser is a director kind]  -> PASS
+[park_flume lock kind chaser is a director kind]  -> PASS
+[park_flume lock kind lobber is a director kind]  -> PASS
+[park_flume lock kind jolt_layer is a director kind]  -> PASS
+[park_flume keeps boom_tender out of the ring]  -> PASS
+[park_flume keeps mag_trapper out of the ring]  -> PASS
+[park_flume keeps plated_brute out of the ring]  -> PASS
+[park_flume lock kind chaser is a director kind]  -> PASS
+[park_flume lock kind chaser is a director kind]  -> PASS
+[park_flume lock kind chaser is a director kind]  -> PASS
+[park_flume lock kind lobber is a director kind]  -> PASS
+[park_flume lock kind ramp_flipper is a director kind]  -> PASS
+[park_flume keeps boom_tender out of the ring]  -> PASS
+[park_flume keeps mag_trapper out of the ring]  -> PASS
+[park_flume keeps plated_brute out of the ring]  -> PASS
+[park_flume second-last wave lays a jolt mat] ["chaser", "chaser", "lobber", "jolt_layer"] -> PASS
+[park_flume last wave drops a sluice flap] ["chaser", "chaser", "chaser", "lobber", "ramp_flipper"] -> PASS
+[other parks have no row]  -> PASS
+[arena_locked has a WORLD_ROWS row]  -> PASS
+[arena_locked plays its own baked sound] arena_lock_slam -> PASS
+[arena_locked bakes audio]  -> PASS
+[arena_wave has a WORLD_ROWS row]  -> PASS
+[arena_wave plays its own baked sound] arena_wave_whistle -> PASS
+[arena_wave bakes audio]  -> PASS
+[arena_unlocked has a WORLD_ROWS row]  -> PASS
+[arena_unlocked plays its own baked sound] arena_unlock_bells -> PASS
+[arena_unlocked bakes audio]  -> PASS
+[warden_gate_pip has a WORLD_ROWS row]  -> PASS
+[warden_gate_pip plays its own baked sound] warden_gate_pip -> PASS
+[warden_gate_pip bakes audio]  -> PASS
+[warden_gate_refused has a WORLD_ROWS row]  -> PASS
+[warden_gate_refused plays its own baked sound] warden_gate_clunk -> PASS
+[warden_gate_refused bakes audio]  -> PASS
+[warden_gate_opened has a WORLD_ROWS row]  -> PASS
+[warden_gate_opened plays its own baked sound] warden_gate_release -> PASS
+[warden_gate_opened bakes audio]  -> PASS
+[flow.gate is the world's locks]  -> PASS
+[stage 1 is park_dam] got "park_dam", want "park_dam" -> PASS
+[gate shut on entry]  -> PASS
+[the clamp keeps quiet before the Warden wakes] Break the Warden at the beacon (1273 m). Punch 28 / plating 90. Break its guard, then smash the core. -> PASS
+[park Warden spec carries the gate]  -> PASS
+[shut clamp: a hit gains no posture] got 0.0, want 0.0 -> PASS
+[shut clamp answers a hit] got 1, want 1 -> PASS
+[objective names the clamp once it is awake] The Warden's clamp is shut: break 5 crews (0 of 5). -> PASS
+[the plate says the clamp is shut while it holds] got ["break_clamp_crews", "Break the clamp crews"], want ["break_clamp_crews", "Break the clamp crews"] -> PASS
+[its ring starts empty] got 0.0, want 0.0 -> PASS
+[in slate, a locked thing] got Color(0.43529412, 0.49803922, 0.56078434, 1), want Color(0.43529412, 0.49803922, 0.56078434, 1) -> PASS
+[lone and spoiled packs count nothing] got 0, want 0 -> PASS
+[no crew that can count, no crew marker] got Array[Dictionary]([]), want [] -> PASS
+[a pack with one standing counts nothing] got 0, want 0 -> PASS
+[the clamp row's marker points at the crew still standing] [{ "at": (-141.7021, 147.5127, -719.1814), "kind": "pack_arrived", "icon": "cat_defense" }] -> PASS
+[the crew marker carries the plate's glyph]  -> PASS
+[the Warden's marker keeps the Warden's glyph] [{ "at": (0.0, 22.0, 590.0), "kind": "warden_engaged", "icon": "obj_warden" }] -> PASS
+[a broken pack lights one pip] got 1, want 1 -> PASS
+[the pip plays] got 1, want 1 -> PASS
+[the collar shows on the Warden]  -> PASS
+[the collar holds one pip per wanted pack]  -> PASS
+[first pip lit, second dark]  -> PASS
+[the plate's ring fills with the pips] got 0.2, want 0.2 -> PASS
+[a late kill still counts] got 2, want 2 -> PASS
+[the clamp holds at 2 of 5]  -> PASS
+[the clamp holds at 3 of 5]  -> PASS
+[the clamp holds at 4 of 5]  -> PASS
+[the wanted packs open the clamp] cleared 5 of 5 -> PASS
+[the release plays once] got 1, want 1 -> PASS
+[the open clamp hands the plate back to the dam Warden's own row] got "ride_sheet", want "ride_sheet" -> PASS
+[the open clamp shows no crew marker] got Array[Dictionary]([]), want [] -> PASS
+[the collar goes]  -> PASS
+[open clamp: a hit gains posture] 67.5 -> PASS
+[the hand finishes the crew nearest a pip, not its rider] @CharacterBody3D@5132:<CharacterBody3D#1344727424726> -> PASS
+[the rider still stands]  -> PASS
+[a crew with a live rider counts once its housed members are dead] got 1, want 1 -> PASS
+[its pip plays] got 1, want 1 -> PASS
+[the hand leaves a counted crew's rider for the next crew] @CharacterBody3D@5140:<CharacterBody3D#1345583062751> -> PASS
+[a rider gone alive spoils nothing: its crew counts] got 2, want 2 -> PASS
+[a crew of riders waits for every member] got 0, want 0 -> PASS
+[a crew of riders counts like a plain pack] got 1, want 1 -> PASS
+[a crew left behind leaves]  -> PASS
+[a yard crew left behind stays]  -> PASS
+[planted: a crew by the ball stays]  -> PASS
+[only the crew by the ball lights a pip] got 1, want 1 -> PASS
+[lock armed on entry] got "armed", want "armed" -> PASS
+[the start pick waits for the yard]  -> PASS
+[no start card over the drop]  -> PASS
+[the yard shuts once the ball is grounded inside the circle] got "locked", want "locked" -> PASS
+[the slam plays] got 1, want 1 -> PASS
+[the first wave lands] got 3, want 3 -> PASS
+[the wall stands]  -> PASS
+[objective names the yard] Yard locked: break its crew. -> PASS
+[the plate says the yard is locked] got ["break_yard_crew", "Break the yard crew"], want ["break_yard_crew", "Break the yard crew"] -> PASS
+[the only edge marker points at the crew member nearest, none past the wall] [{ "at": (-15.40794, -2.426642, 447.4404), "kind": "pack_arrived", "icon": "cat_damage" }] -> PASS
+[the yard row's bar starts empty] got 0.0, want 0.0 -> PASS
+[the bot hand goes for the crew]  -> PASS
+[an escaping ball is sent back in] (-13.32667, -0.577698, 0.0) -> PASS
+[wave 1 down: the yard holds] got "locked", want "locked" -> PASS
+[one wave down fills the bar by its share of the crew] got 0.15789473684211, want 0.15789473684211 within 0.0001 -> PASS
+[wave 1 down: the next whistles in] got 1, want 1 -> PASS
+[wave 2 waits out the gap] 318 of 315 ticks -> PASS
+[wave 2 lands within a frame of the gap] 318 of 315 ticks -> PASS
+[wave 2 lands] got 3, want 3 -> PASS
+[wave 2 down: the yard holds] got "locked", want "locked" -> PASS
+[wave 2 down: the next whistles in] got 2, want 2 -> PASS
+[wave 3 waits out the gap] 318 of 315 ticks -> PASS
+[wave 3 lands within a frame of the gap] 318 of 315 ticks -> PASS
+[wave 3 lands] got 4, want 4 -> PASS
+[wave 3 down: the yard holds] got "locked", want "locked" -> PASS
+[wave 3 down: the next whistles in] got 3, want 3 -> PASS
+[wave 4 waits out the gap] 318 of 315 ticks -> PASS
+[wave 4 lands within a frame of the gap] 318 of 315 ticks -> PASS
+[wave 4 lands] got 4, want 4 -> PASS
+[wave 4 down: the yard holds] got "locked", want "locked" -> PASS
+[wave 4 down: the next whistles in] got 4, want 4 -> PASS
+[wave 5 waits out the gap] 318 of 315 ticks -> PASS
+[wave 5 lands within a frame of the gap] 318 of 315 ticks -> PASS
+[wave 5 lands] got 5, want 5 -> PASS
+[the last crew down opens the yard] got "spent", want "spent" -> PASS
+[won]  -> PASS
+[the yard's clear brings the start pick up]  -> PASS
+[the bells play] got 1, want 1 -> PASS
+[the open yard hands the plate back] find_warden -> PASS
+[the open yard shows its markers again]  -> PASS
+[the crew counts toward the gate] got 1, want 1 -> PASS
+[every crew kill is logged as the yard's] got 19, want 19 -> PASS
+[no crew kill drops a panel]  -> PASS
+[the cleared yard pays one panel] got 1, want 1 -> PASS
+[the yard leaves pity alone] got 0, want 0; kills outside the crew: [] -> PASS
+[its panel lies in the field] got 4, want 4 -> PASS
+[the dam's sentry is a lobber] got "lobber", want "lobber" -> PASS
+[the sentry lands before the yard shuts]  -> PASS
+[one lobber lands] got 1, want 1 -> PASS
+[the yard is still armed] got "armed", want "armed" -> PASS
+[it stands ahead_m up the line to the beacon] got 60.0015716552734, want 60.0 within 3.0 -> PASS
+[it is in shell range of the ball]  -> PASS
+[it is no crew]  -> PASS
+[it lands once] got 1, want 1 -> PASS
+[the yard shuts] got "locked", want "locked" -> PASS
+[a sentry outside the wall leaves as the yard shuts]  -> PASS
+[the crew is the first wave alone] got 3, want 3 -> PASS
+[the timed yard shuts with a crew]  -> PASS
+[max_s opens the yard] got "spent", want "spent" -> PASS
+[a timed-out yard is not won]  -> PASS
+[its survivors leave the crew]  -> PASS
+[a survivor's kill rolls like any kill] [[1, "chaser", false, 1.0, false, false]] -> PASS
+[a timed-out yard pays nothing] got 0, want 0 -> PASS
+[an awake Warden leaves the lock unfired] got "spent", want "spent" -> PASS
+[a yard skipped for the Warden lets the start pick up]  -> PASS
+[a rung-holder's start pick (and tier) comes at the drop]  -> PASS
+[off: no clamp]  -> PASS
+[off: no lock] got "", want "" -> PASS
+[off: the start pick comes at the drop]  -> PASS
+[off: the Warden spec has no gate]  -> PASS
+stage_locks_test: PASS (224 checks)

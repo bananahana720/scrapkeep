@@ -1,0 +1,30 @@
+Godot 4.7.2 stable ed1daf0bf. Staged on bf80564798868331c1d86bc51939d97d305abcaf.
+
+Focused sketch:smoke, selected test scripts:
+PASS sketches/core-loop import exit=0 3.8s
+PASS sketches/core-loop res://tests/body_run_warning_test.gd exit=0 12.0s
+PASS sketches/core-loop res://tests/director_breather_test.gd exit=0 2.0s
+FAIL sketches/core-loop res://tests/crew_lamp_test.gd exit=1 16.0s
+PASS sketches/core-loop res://tests/director_route_test.gd exit=0 1.8s
+PASS sketches/core-loop res://tests/director_stage_packs_test.gd exit=0 8.2s
+PASS sketches/core-loop res://tests/director_homes_test.gd exit=0 19.4s
+PASS sketches/core-loop res://tests/enemy_chaser_windup_test.gd exit=0 22.4s
+PASS sketches/core-loop res://tests/enemy_clips_test.gd exit=0 16.1s
+PASS sketches/core-loop res://tests/enemy_ground_contact_test.gd exit=0 46.4s
+PASS sketches/core-loop res://tests/sound_twins_test.gd exit=0 3.6s
+PASS sketches/core-loop res://tests/spillway_roster_test.gd exit=0 11.7s
+PASS sketches/core-loop res://tests/overtime_test.gd exit=0 72.5s
+PASS sketches/core-loop res://tests/attack_budget_test.gd exit=0 129.9s
+PASS sketches/core-loop res://tests/chaser_lead_test.gd exit=0 22.3s
+PASS sketches/core-loop res://tests/chaser_speed_test.gd exit=0 46.6s
+PASS sketches/core-loop res://tests/pack_pressure_test.gd exit=0 4.2s
+PASS sketches/core-loop res://tests/pocket_entry_test.gd exit=0 353.0s
+PASS sketches/core-loop res://tests/stage_locks_test.gd exit=0 67.1s
+
+Crew-lamp rerun alone, followed by the new direct regressions:
+crew_lamp_test: PASS (80 checks)
+[the five float pops each pay one piece] got 5, want 5 -> PASS
+[the same spent line pays nothing on a return crossing] got [5, 1], want [5, 1] -> PASS
+spillway_roster_test: PASS (24 checks)
+enemy_ground_contact_test: PASS (23 checks)
+stage_locks_test: PASS (224 checks)
