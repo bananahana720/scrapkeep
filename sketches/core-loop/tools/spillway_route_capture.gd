@@ -6,6 +6,7 @@ extends SceneTree
 const ParkRecipes := preload("res://src/world/park/park_recipes.gd")
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
+const Tuning := preload("res://src/movement/tuning.gd")
 const Arena := preload("res://src/boss/arena.gd")
 const Quality := preload("res://src/presentation/graphics_preset.gd")
 
@@ -25,6 +26,8 @@ var sites := {}
 var waypoints := {}
 var extras := {}
 var watch_side: Camera3D
+var damage_events := []
+var chased_by := []
 
 
 func _initialize() -> void:
@@ -67,6 +70,7 @@ func _run() -> void:
 		game.flow.enter_stage(2, Vector3.ZERO, false)
 		await _ready_stage(2)
 	game.run.set_max_hp(99999.0)
+	game.ctx.events.player_hit.connect(func(amount, from): damage_events.append([from, amount]))
 	game.get_node("Workshop").close_all()
 	game.flow.start_card.hide_card()
 	if grown:
@@ -85,11 +89,19 @@ func _run() -> void:
 			for tree in root.find_children("Cottonwood*", "Node3D", true, false):
 				if Vector2(tree.global_position.x, tree.global_position.z).distance_to(Vector2(40, 255)) < 65:
 					extras[str(tree.get_path())] = _vec(tree.global_position)
-			await _road("upper", [Vector2(14, 212),
-				Vector2(40, 247), Vector2(70, 284), Vector2(124, 350), Vector2(207, 450)], true)
-			await _road("kicker", [Vector2(14, 220), Vector2(40, 255), Vector2(70, 294), Vector2(124, 350), Vector2(207, 438)])
-			await _road("lower", [Vector2(14, 220), Vector2(24, 255), Vector2(55, 300), Vector2(85, 335), Vector2(148, 418)])
-			await _road("miss", [Vector2(14, 220), Vector2(47, 251), Vector2(58, 286), Vector2(85, 335), Vector2(148, 418)])
+			if live:
+				await _road("live-wasteway", [Vector2(14, 220), Vector2(24, 255), Vector2(55, 300),
+					Vector2(85, 335), Vector2(148, 418), Vector2(188, 438), Vector2(210, 452)])
+			else:
+				await _road("upper", [Vector2(14, 212),
+					Vector2(40, 247), Vector2(70, 284), Vector2(124, 350), Vector2(207, 450)], true)
+				await _road("kicker", [Vector2(14, 220), Vector2(40, 255), Vector2(70, 294), Vector2(124, 350), Vector2(207, 438)])
+				await _road("lower", [Vector2(14, 220), Vector2(24, 255), Vector2(55, 300), Vector2(85, 335), Vector2(148, 418),
+					Vector2(188, 438), Vector2(210, 452)])
+				await _road("miss", [Vector2(14, 220), Vector2(47, 251), Vector2(58, 286), Vector2(85, 335), Vector2(148, 418),
+					Vector2(188, 438), Vector2(210, 452)])
+				await _road("upper-spill", [Vector2(14, 212), Vector2(53, 236), Vector2(69, 274),
+					Vector2(85, 335), Vector2(148, 418), Vector2(188, 438), Vector2(210, 452)], true)
 		"hook":
 			await _hooks()
 		"bowl":
@@ -107,6 +119,7 @@ func _run() -> void:
 
 
 func _bowl() -> void:
+	game.ctx.calm = false
 	var carried := Vector3(20, -2, 0)
 	game.flow.enter_boss(carried)
 	var boss = game.ctx.boss
@@ -121,7 +134,7 @@ func _bowl() -> void:
 	extras["arrival_heading"] = _vec(arena.entry_heading())
 	sites["entry"] = _vec(arena.entry_point())
 	sites["bank"] = _vec(arena.point_at(deg_to_rad(290), 49, 0.7))
-	for mode in ["entry", "reverse", "ramp", "mast", "slag", "charge"]:
+	for mode in ["entry", "reverse", "ramp", "mast", "slag", "slag-exposed", "charge"]:
 		var heading: Vector3 = arena.entry_heading()
 		if mode == "reverse":
 			heading = -heading
@@ -130,13 +143,17 @@ func _bowl() -> void:
 			game.camera.snap(heading)
 			source.press = {}
 			source.hold = {"move": Vector2(0, 1)}
-		if mode == "slag":
+		if mode.begins_with("slag"):
 			boss.jump_to_phase(2)
+		if mode == "slag-exposed":
+			var in_band: Vector3 = arena.point_at(deg_to_rad(245), (Arena.RING_A.x + Arena.RING_A.y) * 0.5, 1.0)
+			game.player.reset_to(in_band, Vector3.ZERO)
+			source.hold = {"move": Vector2.ZERO}
 		if mode == "charge":
 			boss.jump_to_phase(3)
 		var first := -1
 		var held := false
-		for tick in (1080 if mode in ["slag", "charge"] else 330):
+		for tick in (1080 if mode.begins_with("slag") or mode == "charge" else 330):
 			await physics_frame
 			var ball: Vector3 = game.player.ball_position()
 			var angle: float = arena.angle_of(ball)
@@ -155,9 +172,9 @@ func _bowl() -> void:
 				if tick == 170:
 					source.hold.erase("harpoon_held")
 					source.press["harpoon_released"] = true
-			elif tick > 42:
+			elif tick > 42 and mode != "slag-exposed":
 				_steer(track)
-			if first < 0 and ((mode == "charge" and boss.charge_coming()) or (mode == "slag" and boss.active_hazards().any(func(h): return h.attack_id.begins_with("slag")))):
+			if first < 0 and ((mode == "charge" and boss.charge_coming()) or (mode.begins_with("slag") and boss.active_hazards().any(func(h): return h.attack_id.begins_with("slag")))):
 				first = tick
 			if tick in [1, 30, 115, 260] or (first >= 0 and tick in [first, first + 65, first + 180]):
 				await _shot("bowl-%s-%04d" % [mode, tick])
@@ -193,7 +210,11 @@ func _start(p: Vector2, dir: Vector3, high := false) -> void:
 	game.camera.snap(dir)
 	source.press = {}
 	source.hold = {"move": Vector2(0, 1)}
-	await physics_frame
+	for _tick in 8:
+		await physics_frame
+		if game.player.ball_position().distance_to(pos) < 2.0:
+			break
+	game.player.set_velocity_now(dir * 19.0)
 	game.camera.snap(dir)
 
 
@@ -307,8 +328,11 @@ func _hooks() -> void:
 		contact_path = ""
 		await _start(Vector2(start.x, start.z), h)
 		if mode == "chase":
+			game.ctx.calm = false
 			for lateral in [-4.0, 0.0, 4.0]:
-				game.ctx.spawner.spawn_enemy("chaser", game.player.ball_position() - h * 9.0 + h.cross(Vector3.UP) * lateral)
+				var enemy = game.ctx.spawner.spawn_enemy("chaser", game.player.ball_position() - h * 9.0 + h.cross(Vector3.UP) * lateral)
+				if enemy != null:
+					chased_by.append(weakref(enemy))
 		var release := 80 if mode=="early" else 145 if mode=="late" else 110
 		for tick in 680:
 			await physics_frame
@@ -363,7 +387,12 @@ func _sample(label: String, tick: int) -> void:
 			var query := PhysicsRayQueryParameters3D.create(p, ray[1], 1, [game.player.body().get_rid()])
 			var hit := world.intersect_ray(query)
 			if not hit.is_empty() and (ray[0] == "underside" or hit.collider == hook_body):
-				clearances[ray[0]] = snappedf(p.distance_to(hit.position) - game.player.Tuning.RADIUS, 0.01)
+				clearances[ray[0]] = snappedf(p.distance_to(hit.position) - Tuning.RADIUS, 0.01)
+	var chase := []
+	for ref: WeakRef in chased_by:
+		var enemy = ref.get_ref()
+		if is_instance_valid(enemy):
+			chase.append([enemy.get_instance_id(), _vec(enemy.global_position)])
 	var threats := []
 	if section == "bowl":
 		for hazard in game.ctx.boss.active_hazards():
@@ -371,10 +400,11 @@ func _sample(label: String, tick: int) -> void:
 	var gate = game.flow.gate
 	var lock_state: String = gate.lock_state if gate != null else ""
 	var yard_crew: int = gate.crew_alive().size() if gate != null and gate.lock_active() else 0
-	rows.append({"clearances": clearances, "yard": lock_state, "crew": yard_crew, "threats": threats, "hp": game.run.hp, "trial": label, "tick": tick, "position": _vec(p), "velocity": _vec(v), "ground": game.player.state.grounded,
+	rows.append({"damage": damage_events.duplicate(), "chase": chase, "clearances": clearances, "yard": lock_state, "crew": yard_crew, "threats": threats, "hp": game.run.hp, "trial": label, "tick": tick, "position": _vec(p), "velocity": _vec(v), "ground": game.player.state.grounded,
 		"contact": contact_path, "input": [source.hold.move.x, source.hold.move.y, source.hold.get("harpoon_held", false), source.hold.get("brake_held", false)],
 		"view": _visible_sites(), "yaw": game.camera.yaw, "pitch": game.camera.pitch, "cam": _vec(game.camera.cam.global_position),
 		"enemies": get_nodes_in_group("enemy").size(), "stage": game.run.stage, "frozen": game.player.frozen(), "hooked": kit.hooked, "anchor": _vec(kit.anchor), "rope": kit.rope, "heft": game.player.heft()})
+	damage_events.clear()
 
 
 func _visible_sites() -> Array:

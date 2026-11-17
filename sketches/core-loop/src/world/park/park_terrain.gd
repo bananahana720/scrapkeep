@@ -66,19 +66,6 @@ const GROUND_STRATA_ID := 1
 # Metres per tile of the floor texture: sandstone.gdshader's floor_metres default (:9), which the
 # `ground` slot leaves alone (palette.gd sets only strata_metres, from triplanar_scale).
 const GROUND_FLOOR_METRES := 5.0
-# The old haul track turns west below the Eye. At the siphon a scoured wash follows the
-# outside of the low return, under the high trough. Both are wear in the actual ground
-# colour map: no mesh to clip through, collider, live warning, or material change.
-const HAUL_TRACKS := {
-	"park_dam": [[Vector2(-7, 205), Vector2(-5, 246), Vector2(-82, 287)]],
-	"park_flume": [
-		[Vector2(12, 222), Vector2(14, 266), Vector2(69, 310)],
-		# The trestle's stand of timbers obscures the far bank on approach. A worn
-		# turn starts beside the working face and continues to the near lip.
-		[Vector2(-168, -129), Vector2(-166, -93), Vector2(-186, -57)],
-	],
-}
-
 const HALF := 800.0
 const STEP := 2.0
 const CELLS := 800
@@ -655,14 +642,19 @@ func _load_tints(path: String) -> void:
 			pixels[at + 2] = lookup[from + 2]
 	var image := Image.create_from_data(CELLS, CELLS, false, Image.FORMAT_RGBA8, pixels)
 	_tints = feather(image)
-	for track in HAUL_TRACKS.get(map_id, []):
-		_wear_track(track)
+	# Worn haul lanes belong to the park that drew them. Painting the tint map
+	# lets the same ground keep its collider, dress, alpha and material slots.
+	var wear_path := path.get_base_dir().path_join("haul_wear.json")
+	if FileAccess.file_exists(wear_path):
+		var tracks: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(wear_path))
+		for track in tracks.values():
+			_wear_track(track)
 
 
 func _wear_track(track: Array) -> void:
-	var start: Vector2 = track[0]
-	var bend: Vector2 = track[1]
-	var end: Vector2 = track[2]
+	var start := Vector2(track[0][0], track[0][1])
+	var bend := Vector2(track[1][0], track[1][1])
+	var end := Vector2(track[2][0], track[2][1])
 	for z in range(int(start.y), int(end.y) + 1):
 		# Both bends sit halfway along Z, so t gives the quadratic's exact world Z.
 		var t := inverse_lerp(start.y, end.y, float(z))
