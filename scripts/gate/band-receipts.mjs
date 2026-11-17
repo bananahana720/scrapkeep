@@ -218,22 +218,28 @@ export function plantNoviceDeaths(read) {
 // fight's worst 60 s (worst_60s_hull over fightMaxHp, tools/bot_driver.gd, W1-31) is taken per fight, and its lower-middle
 // median (med, the worst-window read's own) at Brindle must reach the bar: the larger of the dam's median in the same read
 // and the column's floor in the rows file (the row's "floor"), so the two fights cannot sink together.
-// A column needs SEEDS.worstMinute runs and SEEDS.worstMinuteFights fights on each side. Every dam fight must carry
-// worst_60s_hull. A Brindle note without it reads 0 when its "hits" count is 0 (the boss note starts at hits 0 and every
+// A column needs SEEDS.worstMinute runs and SEEDS.worstMinuteFights fights on each side. A dam fight without
+// worst_60s_hull reads 0 once any dam fight in the read's graded columns carries it (see worstSide); with none carrying
+// it the dam is no data. A Brindle note without it reads 0 when its "hits" count is 0 (the boss note starts at hits 0 and every
 // hit in the fight writes the window, so no hit landed); with no hit count, or hits counted but no window, it is no data.
 // No data is a miss.
 export const WORST_COLUMNS = ["learner5", "expert"];
 const ROWS_FILE = JSON.parse(readFileSync(new URL("../world1-bands.rows.json", import.meta.url), "utf8"));
 export const WORST_FLOOR = ROWS_FILE.rows.find((r) => r.id === "brindle-worst-minute")?.floor ?? {};
 
-// One side's per-fight shares, or why the side cannot be read. zeroWhenNoHit: read a note with a hit count and no window as 0.
-function worstSide(pairs, zeroWhenNoHit) {
+// One side's per-fight shares, or why the side cannot be read. A fight with no worst-window field reads 0 when it is known
+// to be a fight no hit landed in: at Brindle the boss note's hit count is 0 (clean === "hits"); at the dam the field is
+// written only when a hit lands inside the Warden fight and the stage's hit count covers the whole stage, so a missing
+// field is a clean fight once any dam fight in the read's graded columns carries the field (records), which shows the
+// build records it: a read is one commit, so one column's evidence holds for the other. With no dam fight carrying it
+// the side is unread. Brindle's notes never count as that evidence, so a break in the dam's recording alone is caught.
+function worstSide(pairs, clean, records = false) {
   const vals = [];
   let unread = 0;
   let noHit = 0;
   for (const { note, row } of pairs) {
     if (typeof note.worst_60s_hull === "number") vals.push(note.worst_60s_hull / fightMaxHp(note, row).maxHp);
-    else if (zeroWhenNoHit && note.hits === 0) (vals.push(0), noHit++);
+    else if (clean === "hits" ? note.hits === 0 : records === true) (vals.push(0), noHit++);
     else unread++;
   }
   return { n: pairs.length, unread, noHit, median: unread ? null : med(vals) };
@@ -246,15 +252,16 @@ export function gradeWorstMinute(read, head) {
   const counts = WORST_COLUMNS.map((c) => enough(sel, "w1clear", c, SEEDS.worstMinute));
   if (counts.some((c) => !c.ok)) return { pass: false, measured: `Brindle against the dam, whole clear: ${tooFew(counts)}`, checks: none };
   const checks = {};
+  const damRecorded = sel.runs.some((r) => WORST_COLUMNS.includes(r.column) && typeof fightNotes(r.row).dam?.worst_60s_hull === "number");
   const texts = WORST_COLUMNS.map((column) => {
     const fought = (key) => sel.runs.filter((r) => r.column === column).map((r) => ({ note: fightNotes(r.row)[key], row: r.row })).filter((p) => p.note);
-    const dam = worstSide(fought("dam"), false);
-    const boss = worstSide(fought("brindle"), true);
+    const dam = worstSide(fought("dam"), "recorded", damRecorded);
+    const boss = worstSide(fought("brindle"), "hits");
     const floor = WORST_FLOOR[column];
     const need = SEEDS.worstMinuteFights;
     const gap = dam.n < need ? `too few dam fights: ${dam.n} of ${need}`
       : boss.n < need ? `too few Brindle fights: ${boss.n} of ${need}`
-      : dam.unread ? `dam no data (worst_60s_hull not recorded on ${dam.unread} of ${dam.n} fights)`
+      : dam.unread ? `dam no data (worst_60s_hull not recorded on any of ${dam.n} fights)`
       : boss.unread ? `Brindle no data (no worst_60s_hull and no hit count of 0 on ${boss.unread} of ${boss.n} fights)`
       : typeof floor !== "number" ? "no data (no floor for this column in the rows file)"
       : dam.median == null || boss.median == null ? "no data (no median)" : null;
@@ -265,7 +272,7 @@ export function gradeWorstMinute(read, head) {
     const bar = Math.max(dam.median, floor);
     checks[column] = boss.median >= bar - 1e-9;
     const hits = boss.noHit === boss.n ? `no hit landed, n=${boss.n}` : boss.noHit ? `n=${boss.n}, ${boss.noHit} with no hit landed` : `n=${boss.n}`;
-    return `${column} Brindle ${pct(boss.median)} (${hits}) against ${pct(bar)} (dam ${pct(dam.median)}, n=${dam.n}; floor ${pct(floor)})`;
+    return `${column} Brindle ${pct(boss.median)} (${hits}) against ${pct(bar)} (dam ${pct(dam.median)}, n=${dam.n}${dam.noHit ? `, ${dam.noHit} with no hit landed` : ""}; floor ${pct(floor)})`;
   });
   return { pass: WORST_COLUMNS.every((c) => checks[c] === true), measured: `median worst-minute hull lost, share of max hull: ${texts.join("; ")} (${counts.map((c) => c.text).join(", ")})`, checks };
 }
