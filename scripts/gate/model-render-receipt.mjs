@@ -11,22 +11,26 @@
 // caller's environment reaches the real shoot, which then names the plant, so the receipt fails.
 // The head comes from cleanHead (clean-head.mjs).
 //
-// Not run yet: a shoot needs a graphics display, and scripts/sketch-smoke.mjs, the only way a gate may start Godot,
-// runs it headless (the dummy renderer draws no pixels). Until a display lane exists, the default runner shoots
-// nothing and the receipt fails with that reason; buildReceipt is complete and tested on fixtures.
+// A shoot needs a graphics display, so every run goes through display-run.mjs (a machine slot, a window, a scratch
+// HOME): the authored shoot, the --models=tripo-all shoot, the compare, then the planted tripo-all shoot and its
+// compare. Shoots and sheets land in a new folder under artifacts/local/. Where display-run.mjs has no display (Linux
+// without one; the PC's gamescope lane is not built), the receipt fails with that reason.
 //
 //   node scripts/gate/model-render-receipt.mjs --out <file>
-import { realpathSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, realpathSync, writeFileSync } from "node:fs";
+import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { cleanHead, root } from "./clean-head.mjs";
+import { runWindowed } from "./display-run.mjs";
 
 export const TOOL = "tools/model_render_check.gd";
+export const ENGINE_ARGS = ["--resolution", "800x600", "--audio-driver", "Dummy"];
 export const PINNED_KINDS = 6;
 export const PLANT_ENV = { RENDER_PLANT: "dark_hooker" };
 export const PLANT_KIND = "hooker";
 export const NOT_SEEN = "what the numbers cannot say: rendered brightness against the authored model is all that is measured, so shape, fit, floating parts and how a model looks to a person still need the PC look; props are not judged";
-export const NO_DISPLAY = "not run: the shoot needs a graphics display and scripts/sketch-smoke.mjs runs Godot headless only (no display lane yet)";
+export const NO_DISPLAY = "not run: the shoot needs a graphics display and display-run.mjs found none";
 
 const summaryOf = (text) => {
   const line = String(text ?? "").split("\n").find((l) => l.startsWith("SUMMARY {"));
@@ -61,28 +65,50 @@ export function buildReceipt(real, plant, head) {
   return { head, pass, measured, plant_caught: caught };
 }
 
-// The real shoot and compare, then the planted ones. No runner may start Godot outside sketch-smoke, which is
-// headless only, so this shoots nothing (see the header).
-export function runShoots() {
-  return { real: { log: NO_DISPLAY }, plant: { log: NO_DISPLAY } };
+// A failed step's log: what ran, its exit, and the output's last lines (no SUMMARY in it, so the receipt misses).
+const stepFailed = (name, r) => `${name} ${r.timedOut ? "timed out" : `exit ${r.exit}`}: ${String(r.output).trim().split("\n").slice(-4).join(" | ")}`;
+
+// The real shoot and compare, then the planted ones, each through display-run.mjs. window is injectable for the tests.
+export async function runShoots(cwd, { window = runWindowed } = {}) {
+  mkdirSync(path.join(cwd, "artifacts/local"), { recursive: true });
+  const dir = mkdtempSync(path.join(cwd, "artifacts/local/model-render-"));
+  const at = (name) => path.join(dir, name);
+  const step = (args, extraEnv = {}) => window({ cwd, script: `res://${TOOL}`, args, engineArgs: ENGINE_ARGS, extraEnv });
+  const shots = [
+    ["authored shoot", [`--out=${at("authored")}`]],
+    ["tripo-all shoot", [`--out=${at("tripo")}`, "--models=tripo-all"]],
+  ];
+  for (const [name, args] of shots) {
+    const r = await step(args);
+    if (r.exit !== 0) {
+      const log = r.supported === false ? `${NO_DISPLAY}: ${r.output}` : stepFailed(name, r);
+      return { real: { log }, plant: { log: "not run: the real shoot failed" } };
+    }
+  }
+  const real = await step([`--compare=${at("authored")},${at("tripo")}`, `--out=${at("sheets")}`]);
+  const planted = await step([`--out=${at("tripo-planted")}`, "--models=tripo-all"], PLANT_ENV);
+  const plant = planted.exit === 0
+    ? await step([`--compare=${at("authored")},${at("tripo-planted")}`, `--out=${at("sheets-planted")}`])
+    : { output: stepFailed("planted shoot", planted) };
+  return { real: { log: real.output }, plant: { log: plant.output }, dir };
 }
 
 // The receipt for the checkout at cwd. run is injectable so the refusal can be tested without Godot.
-export function produce({ cwd = root, run = runShoots } = {}) {
+export async function produce({ cwd = root, run = runShoots } = {}) {
   const head = cleanHead(cwd);
-  const { real, plant } = run(cwd);
+  const { real, plant } = await run(cwd);
   return buildReceipt(real, plant, head);
 }
 
-function main(argv) {
+async function main(argv) {
   const args = {};
   for (let i = 0; i < argv.length; i += 2) args[argv[i].replace(/^--/, "")] = argv[i + 1];
   let receipt;
-  try { receipt = produce(); } catch (e) { console.error(String(e.message ?? e)); return 2; }
+  try { receipt = await produce(); } catch (e) { console.error(String(e.message ?? e)); return 2; }
   const text = JSON.stringify(receipt, null, 2) + "\n";
   if (args.out) writeFileSync(args.out, text);
   else process.stdout.write(text);
   return receipt.pass ? 0 : 1;
 }
 
-if (process.argv[1] && realpathSync(process.argv[1]) === fileURLToPath(import.meta.url)) process.exit(main(process.argv.slice(2)));
+if (process.argv[1] && realpathSync(process.argv[1]) === fileURLToPath(import.meta.url)) main(process.argv.slice(2)).then((code) => process.exit(code));

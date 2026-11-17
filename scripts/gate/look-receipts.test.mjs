@@ -7,6 +7,7 @@ import { test } from "node:test";
 
 import * as render from "./model-render-receipt.mjs";
 import * as census from "./stand-ins-receipt.mjs";
+import * as display from "./display-run.mjs";
 
 const HEAD = "abc1234";
 const KINDS = ["chaser", "lobber", "swatter", "hooker", "netcaster", "boom_tender"];
@@ -71,17 +72,86 @@ test("models-render: a plant switch that reached the real shoot fails the receip
   assert.match(r.measured, /^the real shoot ran planted \(dark_hooker\)/);
 });
 
-test("models-render: the producer takes the head from git, refuses a dirty checkout, and fails with no display", () => {
+test("models-render: the producer takes the head from git and refuses a dirty checkout", async () => {
   const { dir, head } = repo();
   let ran = 0;
-  const ok = render.produce({ cwd: dir, run: () => { ran += 1; return { real: compareLog(), plant: plantedLog() }; } });
+  const ok = await render.produce({ cwd: dir, run: async () => { ran += 1; return { real: compareLog(), plant: plantedLog() }; } });
   assert.equal(ok.head, head);
   assert.equal(ok.pass, true);
-  const stub = render.produce({ cwd: dir });
-  assert.equal(stub.pass, false, "the default runner shoots nothing, so it never passes");
   writeFileSync(path.join(dir, "a.txt"), "two");
-  assert.throws(() => render.produce({ cwd: dir, run: () => { ran += 1; return {}; } }), /refusing: uncommitted changes/);
+  await assert.rejects(render.produce({ cwd: dir, run: async () => { ran += 1; return {}; } }), /refusing: uncommitted changes/);
   assert.equal(ran, 1, "a dirty checkout never runs the shoot");
+});
+
+test("models-render: runShoots shoots authored, tripo-all, compares, then shoots and compares the plant", async () => {
+  const { dir } = repo();
+  const calls = [];
+  const window = async ({ args, extraEnv, engineArgs, script }) => {
+    calls.push({ args, extraEnv });
+    assert.equal(script, "res://tools/model_render_check.gd");
+    assert.ok(!engineArgs.includes("--headless"));
+    const compare = args.find((a) => a.startsWith("--compare="));
+    if (!compare) return { exit: 0, output: "shot", supported: true };
+    return { exit: 0, output: (compare.includes("tripo-planted") ? plantedLog() : compareLog()).log, supported: true };
+  };
+  const r = await render.runShoots(dir, { window });
+  assert.equal(calls.length, 5);
+  assert.deepEqual(calls.map((c) => c.extraEnv), [{}, {}, {}, { RENDER_PLANT: "dark_hooker" }, {}]);
+  assert.ok(calls[1].args.includes("--models=tripo-all") && calls[3].args.includes("--models=tripo-all"));
+  assert.ok(!calls[0].args.includes("--models=tripo-all"));
+  assert.ok(r.dir.startsWith(path.join(dir, "artifacts/local/model-render-")));
+  assert.equal(render.buildReceipt(r.real, r.plant, HEAD).pass, true);
+});
+
+test("models-render: no display, or a failed shoot, is a miss that says why", async () => {
+  const { dir } = repo();
+  const none = await render.runShoots(dir, { window: async () => ({ exit: null, output: "not supported here: no DISPLAY", supported: false }) });
+  const r = render.buildReceipt(none.real, none.plant, HEAD);
+  assert.equal(r.pass, false);
+  assert.match(r.measured, /^no SUMMARY line, so no model was judged: not run: the shoot needs a graphics display and display-run\.mjs found none: not supported here/);
+  const crash = await render.runShoots(dir, { window: async () => ({ exit: 2, output: "x\nmodel_render_check: a kind drew under 2000 pixels", supported: true }) });
+  assert.match(render.buildReceipt(crash.real, crash.plant, HEAD).measured, /authored shoot exit 2: x \| model_render_check: a kind drew under 2000 pixels/);
+});
+
+// --- display-run ---
+
+test("display-run: takes a slot, sets a scratch home, never passes --headless, returns exit and output", async () => {
+  const { dir } = repo();
+  const events = [];
+  const acquire = async () => { events.push("acquire"); return { release: () => events.push("release") }; };
+  const start = async (command, argv, { env }) => { events.push("start"); return { exit: 0, signal: null, output: `${command} ${argv.join(" ")} HOME=${env.HOME} XDG=${env.XDG_DATA_HOME}`, timedOut: false }; };
+  const r = await display.runWindowed({ cwd: dir, script: "res://tools/x.gd", args: ["--out=/a"], binary: "/bin/godot", platform: "darwin", env: { HOME: "/Users/real" }, acquire, start });
+  assert.deepEqual(events, ["acquire", "start", "release"]);
+  assert.equal(r.exit, 0);
+  assert.ok(r.home.startsWith(path.join(dir, "artifacts/local/display-run/home-")));
+  assert.match(r.output, new RegExp(`^/bin/godot --path ${dir}/sketches/core-loop --script res://tools/x.gd -- --out=/a HOME=${r.home} XDG=${r.home}$`));
+  assert.ok(!r.output.includes("--headless") && !r.output.includes("/Users/real"));
+  await assert.rejects(display.runWindowed({ cwd: dir, script: "res://x.gd", engineArgs: ["--headless"], binary: "/bin/godot", platform: "darwin", acquire, start }), /--headless/);
+  assert.equal(events.at(-1), "release", "the slot is given back on a throw");
+});
+
+test("display-run: a real child that outlives the timeout is killed and reported", async () => {
+  const { dir } = repo();
+  const fake = path.join(dir, "fake-godot.sh");
+  writeFileSync(fake, "#!/bin/sh\necho started \"$@\"\nsleep 30\n", { mode: 0o755 });
+  let released = 0;
+  const r = await display.runWindowed({ cwd: dir, script: "res://x.gd", binary: fake, platform: "darwin", timeoutMs: 300, acquire: async () => ({ release: () => { released += 1; } }) });
+  assert.equal(r.timedOut, true);
+  assert.equal(r.exit, null);
+  assert.match(r.output, /^started --path .* --script res:\/\/x\.gd --/);
+  assert.equal(released, 1);
+});
+
+test("display-run: no display on Linux, or another platform, is not supported and starts nothing", async () => {
+  let started = 0;
+  const start = async () => { started += 1; return {}; };
+  const acquire = async () => { throw new Error("no slot needed"); };
+  const linux = await display.runWindowed({ script: "res://x.gd", binary: "/bin/godot", platform: "linux", env: {}, acquire, start });
+  assert.equal(linux.supported, false);
+  assert.match(linux.output, /^not supported here: no DISPLAY or WAYLAND_DISPLAY/);
+  assert.equal((await display.runWindowed({ script: "res://x.gd", binary: "/bin/godot", platform: "win32", env: {}, acquire, start })).supported, false);
+  assert.equal(display.displayProblem("linux", { DISPLAY: ":0" }), "");
+  assert.equal(started, 0);
 });
 
 // --- no-code-stand-ins ---

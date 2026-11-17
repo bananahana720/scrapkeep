@@ -594,7 +594,7 @@
       "label": "every generated model passes the render check",
       "status": "gate",
       "cadence": "sitting",
-      "producer": "node scripts/gate/model-render-receipt.mjs --out <dir>/models-render.json, on a clean checkout of the head: it judges the SUMMARY line of tools/model_render_check.gd's compare (all 6 enemy kinds pinned, none too dark beside the authored model) and a planted compare with RENDER_PLANT=dark_hooker that must fail the hooker. Not run yet: a shoot needs a graphics display and scripts/sketch-smoke.mjs is headless only, so the receipt fails with that reason until a display lane exists",
+      "producer": "node scripts/gate/model-render-receipt.mjs --out <dir>/models-render.json, on a clean checkout of the head: it judges the SUMMARY line of tools/model_render_check.gd's compare (all 6 enemy kinds pinned, none too dark beside the authored model) and a planted compare with RENDER_PLANT=dark_hooker that must fail the hooker. Every shoot and compare runs with a window through scripts/gate/display-run.mjs (a machine slot and a scratch HOME); with no display (the PC's gamescope lane is not built) the receipt fails with that reason",
       "plant": "the rejected dark hooker body must fail",
       "basis": "ruling dr: each Tripo model is accepted on its own"
     },
